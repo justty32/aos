@@ -2,7 +2,7 @@
 
 ← [通用 tick 核心](../tick.md)｜[tick 子篇入口](README.md)｜格式：[tick 協議](../protocol/tick.md)
 
-**狀態：待實作，依賴暫緩。`aos-mq` 要靠暫緩區的 daemon 通道；`aos-publish` 待實作。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出。
+**狀態：待實作，依賴暫緩。`aos-mq` 要靠暫緩區的 daemon 通道。發摘要 `aos-publish` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出。
 
 ## B-623：系統訊息佇列：取件（mq-get）；檔案收件 aos 不管
 
@@ -37,7 +37,7 @@
 
 ## B-624：派出：系統訊息佇列送出（mq-post）與發摘要（Q2）
 
-派出只剩兩項系統級任務：`aos-mq post`（任務 id `mq-post`）把本工作資料夾要送的訊息經通道送進對方的佇列；`aos-publish` 發布摘要。**檔案投件（寫對方的 `requests/`、`responses/`）是普通程式的事，aos 不管。**
+派出只剩一項系統級任務：`aos-mq post`（任務 id `mq-post`）把本工作資料夾要送的訊息經通道送進對方的佇列。原本的另一項、發布摘要 `aos-publish`，2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)〔使用者 2026-10-01 第五批〕；標題的「與發摘要」只是舊名，條號不變。**檔案投件（寫對方的 `requests/`、`responses/`）是普通程式的事，aos 不管。**
 
 ### aos-mq post：只走通道
 
@@ -68,18 +68,14 @@
 - once 由 module 經通道用 `node.mount` 掛到 daemon（[B-613](../deferred/daemon/channel.md)），不往 `.aos/mq/post/` 塞 IPC。
 - 〔暫定〕**鬧鐘撤**：原本的鬧鐘看對方收件區的原件還在不在；aos 不再寫對方收件區，佇列裡的訊息 daemon 也不說有沒有被取走，所以 `alarm_ticks` 與 `.aos/alarms/` 撤出 aos。要等回覆的任務，自己在領域狀態裡記、自己以格數判逾時。
 
-### 發布摘要〔建議預設，未拍板〕
+### 發布摘要
 
-- 發摘要任務 `aos-publish` 排在 `mq-post` 之後：把 `.aos/summary/summary.json` 目前的原 bytes，用暫存檔再 rename 的方式整份發布成 ignored 的 `.aos/summary/published.json`（格式與權限見 [P-307](../../protocol/messages.md)），給只有摘要讀權的上層讀；讀者一次 open 就拿到完整一版。
-- 有 git 版範本把它排在 `aos-git close` 之後，發布的就是剛提交的那一版；沒有 git 時不保證跟其他檔是同一版。
-- 發布失敗：留舊值、stderr 報錯、回 1，下一格再發。過時或缺失不等於 idle。
-- 有 repo 讀權的上層讀 `summary.json`，讀的是目前檔案。兩種讀法都要核對 `node_id` 是自己的直接下層（[B-628](../deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)，上下層判定在暫緩區）。
-- 摘要是觀測，不能蓋掉較新的收件事件。上層不為了查詢而叫醒成員 tick，也不因要讀摘要就取得成員 repo 或下層內容的權限。
+**2026-10-01 整段搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)。** 使用者 2026-10-01 第五批裁定：`aos-publish` 先不做，「把這一格總結成 JSON」的程式（暫名 `aos-summarize`）也暫時不需要；之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（會跟傳訊混）。
 
 ### 檔案投件 aos 不管
 
 寫對方 `requests/`、`responses/` 的是普通程式：目標是不是工作資料夾、權限不夠、暫時性錯誤怎麼辦，都由那個程式定。原本「投件只查目標是不是 node」「`channel:true` 才改走通道、其餘走檔案」撤出基礎。
 
-依據：使用者方向 2026-09-29；第十五批（鬧鐘，第二十批撤）；第十九批第 9 條與疑點裁定 6（經通道送）；第二十批疑點裁定 4、進行順序（送出排在使用者任務之後）；astra 審整理區同日定案（`aos-mq post` 只走通道，檔案投件是普通程式）；納入 cgroup 與 git 疑-4（送出與發摘要不認得 git，靠順序）；修正輪暫定的裁定（回應也走佇列；送不出去的留失敗紀錄、下一格清）。
+依據：使用者方向 2026-09-29；第十五批（鬧鐘，第二十批撤）；第十九批第 9 條與疑點裁定 6（經通道送）；第二十批疑點裁定 4、進行順序（送出排在使用者任務之後）；astra 審整理區同日定案（`aos-mq post` 只走通道，檔案投件是普通程式）；納入 cgroup 與 git 疑-4（送出與發摘要不認得 git，靠順序）；修正輪暫定的裁定（回應也走佇列；送不出去的留失敗紀錄、下一格清）；使用者 2026-10-01 第五批（發布摘要搬暫緩區）。
 
 **驗收：**`.aos/mq/post/` 有一件給同一 daemon 底下 tick 的訊息時，`mq-post` 經通道送出並移除該檔，對方的 `requests/` 沒有多出檔案；對方回 `mailbox_full` 時檔留著、下一格再送；目標不在這個 daemon（`not_registered`）時 stderr 有 `post_failed`、檔搬到 `.aos/mq/failed/`，下一格 `mq-post` 跑之前還讀得到、跑過之後就沒了；寫在 `.aos/mq/post/` 的回應物件同樣送進對方佇列；直接跑的格（沒有通道）檔都留著、回 0。

@@ -43,7 +43,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 - argv 直接 exec，不經 shell。大資料走 stdin 或檔案，不塞 argv；key 不進 argv 或環境，見 [S-301](../scheduling/llm.md)。
 - aos 自己的環境變數用 `AOS_` 開頭；環境不是授權依據。〔使用者方向 2026-09-30，第二十批〕tick 給任務的變數，整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（`AOS_TASK_ID` 是該項 `id` 字串原樣、`AOS_TASK_INDEX` 從 0 起，清單見 [P-203](../settled/protocol/tick.md)）。〔使用者方向 2026-09-30，第十九批〕唯一例外是 daemon 開 tick 與掛載行程時放的通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`（[B-612](../settled/deferred/daemon/channel.md)，格式見 [P-117](../settled/deferred/protocol/daemon/channel.md)）：憑證由 daemon 發、在通道上核對，變數本身仍不授予任何權限。
 - 結束碼共同意思〔astra 報告必修 3：現行 `aos-daemon`、`aos-ctl` 照 [C-08](../settled/conventions.md) 只有 0／1，程式名與環境變數也不同，見[daemon 協議入口「共用約定哪些不適用」](../settled/protocol/daemon/README.md#共用約定哪些不適用-p-120p-121astra-報告必修-3)〕：`0` 成功；`2` 用法或設定錯，還沒開始做事；`125` 自己無法開始（如身分不准）；runner 收尾失敗也是 125，須以 P-110 的 started／error 區分，不能只看碼。其他碼由各篇自己定；被訊號殺掉由父程序看 wait 狀態，不猜 `128+n`。
-- 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。〔第二十批〕系統級任務與普通程式的程式名、argv 與結束碼見 [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)（`aos-needs`）、P-212（`aos-as`）、[P-205](../settled/protocol/tick.md)（`aos-git`）、P-211（`aos-cg`）。新公開指令用 `aos <用途> <動作> [更深]`。
+- 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。〔第二十批〕系統級任務與普通程式的程式名、argv 與結束碼見 [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)（`aos-tick-check-task`，2026-10-01 取代 `aos-needs`）、P-212（`aos-as`）、[P-205](../settled/protocol/tick.md)（`aos-git`）、P-211（`aos-cg`）。新公開指令用 `aos <用途> <動作> [更深]`。
 
 ### 集中碼表
 
@@ -56,7 +56,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | （暫緩）舊 daemon IPC 與 helper 私有通道的 `data.code` | [P-111](../settled/deferred/protocol/daemon/provision-and-runner.md) |
 | runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](../settled/deferred/protocol/daemon/provision-and-runner.md) |
 | inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
-| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：停掉本格靠停格檔）；系統級任務 `aos-git`、普通程式 `aos-needs`、`aos-as`、`aos-cg` 的結束碼 | [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)、P-212、[P-205](../settled/protocol/tick.md)、P-211（[tick 協議](../settled/protocol/tick.md)） |
+| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：停掉本格靠停格檔）；系統級任務 `aos-git`、普通程式 `aos-tick-check-task`（原 `aos-needs`）、`aos-as`、`aos-cg` 的結束碼 | [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)、P-212、[P-205](../settled/protocol/tick.md)、P-211（[tick 協議](../settled/protocol/tick.md)） |
 | tick–daemon 通道的 `data.code`（含部件關閉的 `not_available`）；客戶端的 `no_channel` | [P-119](../settled/deferred/protocol/daemon/channel.md) |
 | `aos-mq get`／`post` 結束碼及 `not_available` 診斷 | [P-206](../settled/protocol/tick.md) |
 | 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
@@ -167,9 +167,9 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-201 | inst 的格式與展開驗證 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-202 | 任務註冊表 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-203 | aos-tick 與任意任務程式 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
-| P-204 | 成敗與 aos-needs | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-204 | 成敗與 aos-tick-check-task（2026-10-01 取代 aos-needs） | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-205 | aos-git：開格、存檔點、收尾 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
-| P-206 | 收件、派送與發摘要 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-206 | 收件、派送與發摘要（發摘要 `aos-publish` 那列 2026-10-01 搬暫緩區） | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-207 | 加入普通設定與重要設定手改〔暫緩，2026-10-01〕 | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-208 | 收件區權限 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-209 | 待決與跨篇 | [settled/protocol/tick.md](../settled/protocol/tick.md) |

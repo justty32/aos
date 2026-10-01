@@ -6,7 +6,7 @@
 
 讀之前先知道四件事：
 
-- **本篇只寫已實作的核心**（B-626、B-602、B-620、B-633、B-627），由現行程式 `aos-tick` 實作。標準任務表範本與各系統級任務、普通程式（`aos-git`、`aos-mq`、`aos-needs`、`aos-cg`…）在 [tick 子篇](tick/README.md)，一篇一個主題，大多還沒有程式，每篇開頭標了狀態。〔astra 報告建議 1；使用者 2026-10-01〕
+- **本篇只寫已實作的核心**（B-626、B-602、B-620、B-633、B-627），由現行程式 `aos-tick` 實作。標準任務表範本與各系統級任務、普通程式（`aos-git`、`aos-mq`、`aos-tick-check-task`、`aos-cg`…）在 [tick 子篇](tick/README.md)，一篇一個主題，大多還沒有程式，每篇開頭標了狀態。〔astra 報告建議 1；使用者 2026-10-01〕
 - **工作資料夾**（英文 `tick dir`）＝這一格 `aos-tick` 跑的資料夾（它的 cwd），由命令列給的目標決定（`aos-tick [<目標>]`，B-620）。tick 這層只講工作資料夾；「node」是之後 node 模組才出場的詞，暫緩區講上下層時的「上層 node／下層 node」照舊。〔使用者 2026-10-01〕
 - 「任務表」指工作資料夾裡的任務註冊表 `.aos/tasks.json`，跟舊 daemon 的登記表是兩回事（[T-02](../terms.md)）。
 - 本篇寫的 `.aos/…` 都是環境變數 `AOS_DIRNAME` 沒設時的樣子（[C-09](conventions.md)）；結束碼照 aos 慣例：0＝預料之中、非 0＝要處理、1＝通用錯誤（[C-08](conventions.md)）。
@@ -33,8 +33,8 @@ tick 裡的東西分四類：
 | 類 | 是什麼 | 有哪些 |
 |---|---|---|
 | tick 核心 | `aos-tick` 本身，只做三件事 | 簡單互斥鎖（B-602）、照任務表依序跑（B-620）、每項結束碼紀錄（B-633） |
-| 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，以 `kind:"system"` 標記；**寫在表上才跑，沒寫就不跑** | 系統訊息佇列 `aos-mq`：開頭取件 `aos-mq get`（[B-623](tick/mq.md)）、收尾送出 `aos-mq post`（[B-624](tick/mq.md)）；發布摘要 `aos-publish`（[B-624](tick/mq.md)）；清理 `aos-clean`（[B-404](../base/storage.md)）；git 開格、存檔點與收尾 `aos-git open`／`mark`／`close`（[B-630](tick/git.md)） |
-| 普通程式 | 任務會用到的工具，要的任務自己在 argv 包；不是系統級任務 | 切換帳號 `aos-as`（[B-303](deferred/helper.md)，在暫緩區）、前置沒成功就不跑 `aos-needs`（[B-621](tick/needs.md)）、每項一框 `aos-cg`（[B-634](tick/cg.md)） |
+| 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，以 `kind:"system"` 標記；**寫在表上才跑，沒寫就不跑** | 系統訊息佇列 `aos-mq`：開頭取件 `aos-mq get`（[B-623](tick/mq.md)）、收尾送出 `aos-mq post`（[B-624](tick/mq.md)）；清理 `aos-clean`（[B-404](../base/storage.md)）；git 開格、存檔點與收尾 `aos-git open`／`mark`／`close`（[B-630](tick/git.md)） |
+| 普通程式 | 任務會用到的工具；不是系統級任務 | 要的任務自己在 argv 包的：切換帳號 `aos-as`（[B-303](deferred/helper.md)，在暫緩區）、每項一框 `aos-cg`（[B-634](tick/cg.md)）；自己占一項的：檢查前面的項、沒跑好就停格 `aos-tick-check-task`（[B-621](tick/check-task.md)，2026-10-01 取代包裝 `aos-needs`）。發布摘要 `aos-publish` 2026-10-01 搬到[暫緩區](deferred/tick.md#暫緩b-624-發布摘要aos-publish) |
 | 其他任務 | kernel、agent、clock、檔案收件程式、自訂任務等 | 它們的外殼、逾時與取消延後（[P-008](../protocol/README.md#p-008)）；檔案收件 aos 不管（[B-623](tick/mq.md)） |
 
 **核心**：照表跑時另外只認兩個檔——停格檔與擋板檔（B-620）；**任務沒有 `user`**（寫了照陌生鍵），一律用 tick 自己的帳號跑。核心只要 Python 3.9 與 flock，不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。上下層判定原本是第四件事，使用者 2026-10-01 說「也不需要判斷上下層」，整條搬到[暫緩區](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)。
@@ -52,7 +52,7 @@ tick 裡的東西分四類：
 
 依據：第二十批追答 8、9（推翻第十九批「三層：核心／標準配備／其他掛載」、疑點裁定 1「標準配備跟核心同一支 `aos-tick`、不另做包裝」；`kind:"system"` 取代第十九批「留給以後真正屬於標準配備的任務、範本沒有 system 類」；`aos-clean` 取代第十九批疑點裁定 2「範本裡仍是 custom 類」）；第十九批第 2、5 條（管轄權）；astra 審整理區裁定（收送改成系統訊息佇列 `aos-mq`，檔案收件與投件是普通程式、aos 不管）；使用者 2026-10-01（核心不判上下層、不看 `user`）。
 
-**驗收：**拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`，直接跑 `aos-tick`：互斥、照表跑與結束碼紀錄照常成立，回 0；任務寫了 `user` 也當陌生鍵、照 tick 自己的帳號跑；佇列沒人取也沒人送、不發摘要。
+**驗收：**拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`，直接跑 `aos-tick`：互斥、照表跑與結束碼紀錄照常成立，回 0；任務寫了 `user` 也當陌生鍵、照 tick 自己的帳號跑；佇列沒人取也沒人送。
 
 ## B-602：同一資料夾一次一格：互斥鎖
 
@@ -120,7 +120,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 ### 任務表
 
 - **每項任務是 inst 的超集**：一份 [inst](../base/inst.md) 加 aos 的欄位（`id`、`kind`）。
-- **先只定基本欄位**：不認得的鍵照收、核心忽略（任務是 inst 的超集，沿 [P-007](../protocol/README.md)）。第十九批的 `group`、`needs` 不再是欄位，寫了就當陌生鍵：前置改用包裝 `aos-needs`（[B-621](tick/needs.md)），組改由存檔點劃分（[B-630](tick/git.md)）。第十七批的 `methods` 也拿掉了（使用者 2026-10-01），寫了一樣當陌生鍵。
+- **先只定基本欄位**：不認得的鍵照收、核心忽略（任務是 inst 的超集，沿 [P-007](../protocol/README.md)）。第十九批的 `group`、`needs` 不再是欄位，寫了就當陌生鍵：前置改用 `aos-tick-check-task`（[B-621](tick/check-task.md)，自己占一項、沒跑好就停格），組改由存檔點劃分（[B-630](tick/git.md)）。第十七批的 `methods` 也拿掉了（使用者 2026-10-01），寫了一樣當陌生鍵。
 - **`id`**：可以不寫。沒寫時，這一項的 id 就是它在 `tasks` 陣列的位置轉成字串（第 1 項是 `"0"`，第 4 項是 `"3"`）；紀錄、`AOS_TASK_ID`、`stopped_after` 都用它。跟別項寫的 id 撞了不管（默認不重複）。
 - **`kind`**：可以不寫；只是標記（B-626），核心不看。
 - **一個 module 一項任務**：產生請求、處理結果都在該項內做；要經佇列送的訊息交給系統級任務 `aos-mq post`（[B-624](tick/mq.md)）。檔案收件與投件是任務表上的普通任務，aos 不管（[B-623](tick/mq.md)、[B-624](tick/mq.md)）。
@@ -245,6 +245,8 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 兩個檔都 ignored。使用者裁定的是分工：停格檔靠偵測檔案停掉本格、只在任務層面、daemon 不看、下一格核心開頭刪；擋板檔擋之後的格。檔名、內容、stderr 細節是〔建議預設，未拍板〕；兩種都回 0 照 [C-08](conventions.md)。
 
+〔未來方向，記錄用、現在不做〕使用者 2026-10-01 第五批：「我覺得tick-stop這個檔案會變成特定json格式，存放一些資訊，然後可以用aos-tick-check-task-continue來去檢查其中的一些資訊，滿足後修改stop中的資訊。所以aos-tick仍會執行所有任務，但會變成執行前檢查stop，看看是否滿足特定條件，滿足的話就可以執行該任務。」也就是：停格檔之後可能改成特定 JSON 格式；`aos-tick-check-task-continue` 檢查其中的資訊、滿足後改寫它；`aos-tick` 照樣走完整張表，但每項執行前先看停格檔，滿足條件才執行該項。**現在停格檔的規定不變**（上表）；現行會建停格檔的普通程式見 [`aos-tick-check-task`（B-621）](tick/check-task.md)。
+
 ### 任務的帳號
 
 - **任務沒有 `user`**〔使用者方向 2026-10-01〕：inst 頂層沒有 `user`（[inst](../base/inst.md)），任務是 inst 的超集，所以也沒有；寫了就是陌生鍵、照收不理，一律用 tick 自己的帳號跑。原本「帶了不同帳號就那一項回 125」的歷史記錄在[暫緩區](deferred/tick.md#暫緩b-620-任務的帳號125)，隨 `user` 一起撤回、不會回來。
@@ -358,6 +360,6 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 當機、Q1／Q2、設定的故障驗收，統一見 [V-03](../conformance.md)。
 
 - **本篇（核心）**：各條驗收寫在各條底下。任務表格式以 [P-202](protocol/tick.md) 為準。〔使用者方向 2026-09-30，第二十批〕任務表先只定基本欄位，`group`、`needs` 當陌生鍵（2026-10-01 起 `methods` 也是）；2026-10-01 加了頂層預設與 `modules`。
-- **子篇**：範本、`aos-needs`、`aos-cg`、`aos-mq`／`aos-publish`、`aos-git`、恢復與設定的驗收寫在 [tick 子篇](tick/README.md) 各篇，都還沒有程式。git 與 cgroup 是有就用（[B-630、B-622](tick/git.md)、[B-634](tick/cg.md)）。
+- **子篇**：範本、`aos-tick-check-task`、`aos-cg`、`aos-mq`、`aos-git`、恢復與設定的驗收寫在 [tick 子篇](tick/README.md) 各篇，都還沒有程式。git 與 cgroup 是有就用（[B-630、B-622](tick/git.md)、[B-634](tick/cg.md)）。
 - **暫緩**：上下層判定、完整互斥、帳號核對、紀錄落盤與失效處理在 [tick 暫緩區](deferred/tick.md)。
 - **工程預設**：停格檔的位置、結束碼紀錄的位置與欄位、各系統級任務與普通程式的程式名。這輪先寫成暫定的列在 [README 疑點](README.md#疑點)。

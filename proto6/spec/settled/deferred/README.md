@@ -18,8 +18,8 @@
 
 | 檔 | 內容 |
 |---|---|
-| [tick.md](tick.md) | B-628 上下層判定（整條）；B-602、B-620、B-625、B-633 的暫緩部分；篇末「已撤回／被取代」 |
-| [protocol/tick.md](protocol/tick.md) | tick 協議先不做的條：P-207 `aos-config-add` 的格式 |
+| [tick.md](tick.md) | B-628 上下層判定（整條）；B-602、B-620、B-624、B-625、B-633 的暫緩部分；篇末「已撤回／被取代」 |
+| [protocol/tick.md](protocol/tick.md) | tick 協議先不做的條：P-207 `aos-config-add` 的格式；P-206 的 `aos-publish` 那列 |
 | [terms.md](terms.md) | T-09 收尾、排空停機、熱重載、逃生口（舊 daemon 用語） |
 | [helper.md](helper.md) | B-303 可選 root helper 與 `aos-as` |
 | [daemon/](daemon/README.md) | 舊 daemon 設計各條（B-504、B-601、B-603～615）與 systemd 範例 |
@@ -39,6 +39,8 @@
 | B-633（部分） | 落盤、寫不進與讀不懂 | 暫緩 | 使用者：默認紀錄是好的、`--firstdo-fsync` 先不做 | [tick.md](tick.md) |
 | B-625（部分） | 加入普通設定（`aos-config-add`） | 暫緩 | 使用者 2026-10-01 第四批裁定搬暫緩區：09-29 規劃、從沒寫過程式；改 `config/` 就自己改。當機恢復、重要設定手改、恢復前驗證仍在 [tick/recovery.md](../tick/recovery.md) | [tick.md](tick.md) |
 | P-207 | 加入普通設定（`aos-config-add` 的 argv 與結束碼） | 暫緩 | 同 B-625（部分） | [protocol/tick.md](protocol/tick.md) |
+| B-624（部分） | 發布摘要（`aos-publish`） | 暫緩 | 使用者 2026-10-01 第五批：「aos-publish我覺得要改名，我預期它的作用，就是把這一格的一些狀況總結成json檔案寫好」，討論後「那看來aos-summarize其實是暫時不需要了，拿掉。」之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（會跟傳訊混）。`aos-mq post` 仍在 [tick/mq.md](../tick/mq.md) | [tick.md](tick.md) |
+| P-206（部分） | `aos-publish` 那列 | 暫緩 | 同 B-624（部分） | [protocol/tick.md](protocol/tick.md) |
 | T-09 | 收尾、排空停機、熱重載、逃生口 | 暫緩 | 全是舊 daemon 用語，最核心 daemon 第一版不做 | [terms.md](terms.md) |
 
 撤回、不會回來的 tick 舊做法（沒有 `.aos/` 時交給 aos-exec 的退路、inst.json 路徑正規化、`--node` 旗標、讀表驗四件事與表壞回 2、`methods` 欄、整格回 1／2／75 的碼表、`AOS_NODE_DIR`、`AOS_TICK_RECORD`、`aos-tick` 目標給檔就拿它當任務表，以及 2026-10-01 撤回的 inst 頂層與任務表的 `user`、inst「先決定身分，切完才解析」整節）列在 [tick.md 篇末](tick.md#已撤回被取代)。
@@ -86,7 +88,7 @@
 
 ### 區外暫緩的段落
 
-整理區以外也有跟著暫緩的段落，就地標了「暫緩」，沒有搬家：[驗收入口 V-03](../../conformance.md) 裡跟上表各條有關的場景；`aos-config-add`（B-625 部分、P-207）的 [H-004 第 16 列](../../cli/commands.md)、[A-102](../../agent/configuration.md) 的鎖與提交流程、[C-07](../../contracts.md) 裡「同 `aos-config-add`」一句（2026-10-01 第四批）。原本也在這裡的 [inst](../../base/inst.md)「先決定身分，切完才解析」與頂層整份指示詞裡講 `user` 的部分，2026-10-01 隨 inst 頂層 `user` 撤回、直接刪掉（不搬暫緩，見 [tick.md 篇末](tick.md#已撤回被取代)）。
+整理區以外也有跟著暫緩的段落，就地標了「暫緩」，沒有搬家：[驗收入口 V-03](../../conformance.md) 裡跟上表各條有關的場景；`aos-config-add`（B-625 部分、P-207）的 [H-004 第 16 列](../../cli/commands.md)、[A-102](../../agent/configuration.md) 的鎖與提交流程、[C-07](../../contracts.md) 裡「同 `aos-config-add`」一句（2026-10-01 第四批）；發摘要 `aos-publish`（B-624 部分、P-206 那列）的 [P-307](../../protocol/messages.md) 發布檔與讀法、[kernel P-803、P-813](../../protocol/kernel-tasks.md)與 [agent P-703](../../protocol/agent-tasks.md)講「提交後發布 `published.json`」的句子、[驗收入口](../../conformance.md)的相關場景（2026-10-01 第五批）。原本也在這裡的 [inst](../../base/inst.md)「先決定身分，切完才解析」與頂層整份指示詞裡講 `user` 的部分，2026-10-01 隨 inst 頂層 `user` 撤回、直接刪掉（不搬暫緩，見 [tick.md 篇末](tick.md#已撤回被取代)）。
 
 ### 已知的設計問題（記錄，這輪不改）
 

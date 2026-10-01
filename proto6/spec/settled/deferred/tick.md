@@ -5,8 +5,8 @@
 **這篇整篇在暫緩區。** 2026-10-01 使用者定 POC「默認一切正常、先不考慮邊緣狀況」，tick 核心縮成三件事：簡單互斥鎖、照表跑、每項結束碼紀錄（[B-626](../tick.md#b-626核心與系統級任務的界線)）。原本寫在 [tick](../tick.md) 裡、現在先不做的規定搬到這裡，原文照留，條號保留、不重用。現行規定一律看 [tick](../tick.md) 與 [tick 協議](../protocol/tick.md)。
 
 - 整條搬來的：B-628 上下層判定。
-- 部分搬來的：B-602、B-620、B-633 各有一段（標題寫成「暫緩：B-xxx …」，原條還在 tick.md）；B-625 的 `aos-config-add` 那段（原條還在 [tick/recovery.md](../tick/recovery.md)）。
-- 協議那側整條搬來的：P-207 `aos-config-add` 的格式，在 [protocol/tick.md](protocol/tick.md)。
+- 部分搬來的：B-602、B-620、B-633 各有一段（標題寫成「暫緩：B-xxx …」，原條還在 tick.md）；B-625 的 `aos-config-add` 那段（原條還在 [tick/recovery.md](../tick/recovery.md)）；B-624 的發布摘要 `aos-publish` 那段（原條還在 [tick/mq.md](../tick/mq.md)，2026-10-01 第五批）。
+- 協議那側搬來的：P-207 `aos-config-add` 的格式（整條）、P-206 的 `aos-publish` 那列，在 [protocol/tick.md](protocol/tick.md)。
 - 篇末「已撤回／被取代」列的是被新設計換掉的舊做法，不是暫緩，以後也不會回來。
 
 原文裡的「node」在 tick 這層讀成「工作資料夾」；`.aos` 是 `AOS_DIRNAME` 沒設時的名字（[C-09](../conventions.md)）；原文的結束碼 75、2、125 等是舊碼表，回來時要照 [C-08](../conventions.md) 重定。
@@ -118,6 +118,21 @@
 
 **原驗收：**`aos-config-add` 寫入後下一格讀得到新值，寫到一半被殺時目標是舊版或新版、不會半份，有 git 時不產生 commit；有擋板時回 125、目標不變。
 
+## 暫緩：B-624 發布摘要（`aos-publish`）
+
+> **暫緩**（2026-10-01）：使用者 2026-10-01 第五批裁定 `aos-publish` 搬暫緩區。使用者原話：「aos-publish我覺得要改名，我預期它的作用，就是把這一格的一些狀況總結成json檔案寫好」；討論後「那看來aos-summarize其實是暫時不需要了，拿掉。」所以「把這一格總結成 JSON」的程式（暫名 `aos-summarize`）也不做。**之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（publish 會跟傳訊混）。** 原條 B-624 的 `aos-mq post`（送出）還在 [tick/mq.md](../tick/mq.md)；格式 P-206 的 `aos-publish` 那列一起搬來，見 [protocol/tick.md](protocol/tick.md)。摘要檔本身的格式 [P-307](../../protocol/messages.md) 在整理區外，就地標了暫緩。條號保留、不重用。
+
+原文（2026-10-01 搬家前的版本，B-624「發布摘要」一節與相關句）：
+
+- 發摘要任務 `aos-publish` 排在 `mq-post` 之後：把 `.aos/summary/summary.json` 目前的原 bytes，用暫存檔再 rename 的方式整份發布成 ignored 的 `.aos/summary/published.json`（格式與權限見 [P-307](../../protocol/messages.md)），給只有摘要讀權的上層讀；讀者一次 open 就拿到完整一版。
+- 有 git 版範本把它排在 `aos-git close` 之後，發布的就是剛提交的那一版；沒有 git 時不保證跟其他檔是同一版。
+- 發布失敗：留舊值、stderr 報錯、回 1，下一格再發。過時或缺失不等於 idle。
+- 有 repo 讀權的上層讀 `summary.json`，讀的是目前檔案。兩種讀法都要核對 `node_id` 是自己的直接下層（B-628，在本篇）。
+- 摘要是觀測，不能蓋掉較新的收件事件。上層不為了查詢而叫醒成員 tick，也不因要讀摘要就取得成員 repo 或下層內容的權限。
+- 範本（[B-629](../tick/template.md)）原本的位置：沒有 git 版排在 `mq-post` 之後、`clean` 之前（id `summary`）；有 git 版排在最後（`mq-post` 之後）。沒有 git 時（[B-632](../tick/git.md)）「從目前的 `summary.json` 發布」。
+
+**原驗收：**（B-624 原驗收沒有發摘要的專條；B-632、B-629 的驗收提到「發布摘要從目前的 `summary.json` 發布」。）
+
 ## 已撤回／被取代
 
 下面這些不是暫緩，是被 2026-10-01 的新規定換掉了，原文不再適用。
@@ -136,3 +151,4 @@
 | 環境變數 `AOS_NODE_DIR`（node id） | **已被 `AOS_TICK_CWD` 取代**：工作資料夾的絕對路徑（使用者 2026-10-01：「node 這個概念目前還沒到出場的時候」） |
 | inst 頂層的 `user`（帳號名稱或 UID，省略繼承上層）、[inst](../../base/inst.md)「先決定身分，切完才解析」整節（daemon 取原始 `user` 做額度檢查、切身分後才解析、`UserInvalid`／`UserNotGranted`／`UserMismatch`／`SourceChanged`、整份 `$ref` 不能偷換身分）；任務表的 `user`（任務是 inst 超集，可帶自己的帳號，跟 tick 不同時回 125） | **已撤回**（使用者 2026-10-01：「inst頂層的user欄位不留。」）。直接從正式篇刪掉，沒有搬來暫緩區；寫了 `user` 就是不認得的鍵、照未知頂層鍵規則忽略，照目前身分跑。要換帳號包 `aos-as`。本篇 B-628 的「身分繼承」與「暫緩：B-620 任務的帳號（125）」只是歷史記錄 |
 | 環境變數 `AOS_TICK_RECORD`（本格紀錄的絕對路徑） | **已被 `AOS_TICK_CWD` 取代**：任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找紀錄（使用者 2026-10-01：「反正有 AOS_TICK_CWD，就從那邊找就好」） |
+| 包裝 `aos-needs <前置任務 id…> -- <原指令…>`（前置都 `exit:0` 才 exec 原指令，否則不跑、回 125 `needs_unmet`／`no_record`；B-621、P-204 原文） | **已被 `aos-tick-check-task` 取代**〔使用者 2026-10-01 第五批：「其實可以簡單一些，也就是它會檢查指定的東西是否跑好，沒跑好，就去寫tick stop檔案」「那就aos-tick-check-task」〕：自己是任務表上一項，檢查指定的項（不寫＝前面全部）有沒有 `exit:0`，沒有就建停格檔、本格後面全不跑；都回 0，自己的錯回 1（[B-621](../tick/check-task.md)、[P-204](../protocol/tick.md)） |

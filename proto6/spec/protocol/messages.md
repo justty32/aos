@@ -53,7 +53,7 @@ responses/<id>.json  # RpcResponse
 
 有業務資料的命令從 stdin 讀一份 JSON；inst.stdin 是收件者可讀的絕對檔案路徑，不是 JSON 內容。發件者將資料隨請求固定並保留至消費完成；收件者用自己的權限開檔。無資料的命令省略 stdin。需要結果的串流用 `{"$opt":"inherit"}`，由接件執行器捕獲；其餘串流規則沿 inst。輸入形狀與 argv 的一致性須在展開及讀檔後另驗，schema 不代替開放命令檢查。
 
-〔使用者方向 2026-09-30，第十八批〕**本地動作的 stdout 落點**：當格就做完的命令（下表除 `kernel.work.submit`、`llm.chat` 以外的各列），執行的任務把 stdout 存成追蹤的 `state/messages/requests/<id>.stdout`，跟消費副本放一起、同一組提交（組見 [B-621](../settled/tick/needs.md)）；回應 result 的 `stdout.path` 指這個檔的絕對路徑，不填 null，這樣結果可以被引用（[B-103](../base/work.md)）。清理跟那份請求副本一起（[B-404](../base/storage.md)）。
+〔使用者方向 2026-09-30，第十八批〕**本地動作的 stdout 落點**：當格就做完的命令（下表除 `kernel.work.submit`、`llm.chat` 以外的各列），執行的任務把 stdout 存成追蹤的 `state/messages/requests/<id>.stdout`，跟消費副本放一起、同一組提交（組見 [B-621](../settled/tick/check-task.md)）；回應 result 的 `stdout.path` 指這個檔的絕對路徑，不填 null，這樣結果可以被引用（[B-103](../base/work.md)）。清理跟那份請求副本一起（[B-404](../base/storage.md)）。
 
 | method／完整命令 | stdin JSON／本地動作與 stdout |
 |---|---|
@@ -75,9 +75,9 @@ responses/<id>.json  # RpcResponse
 
 成員的追蹤檔 `.aos/summary/summary.json` 用 [msg-summary](schemas/msg-summary.schema.json)：必填 version:1、node_id、observed_seq、ready、due_after_ticks、status。〔使用者方向 2026-09-30，第二十批疑點裁定 7〕`observed_seq` 取代 `observed_at_ms`：寫這份摘要時是成員自己的第幾格（[B-633](../settled/tick.md)），上層只比有沒有前進，不跟自己的格數相減。〔暫定，第二十批疑-10 照 a〕`due_after_ticks` 取代 `due_ms`：希望上層從讀到這一版摘要起再過幾格叫醒我，算上層的格；上層讀到新一版時換成自己的到期格。沒到期事件用 null，ready 可同時成立。status 為 idle、queued、waiting_resources、waiting_result、running、paused、canceling、unknown、needs_attention；reason 可省。可選 `usage` 引用 [res-usage](schemas/res-usage.schema.json)，必須與摘要是同一版（有 git 時同一 commit；沒有 git 時同一次寫出，[B-632](../settled/tick/git.md)）、同一 node，缺量測不補零。不放成員清單、history 或 key。
 
-**發布檔**：ignored 的 `.aos/summary/published.json`，內容是已提交 `summary.json` 的同一版原 bytes，usage 不拆檔；父目錄只授 traverse、檔案只授 read。它會被整份替換，是 P-003 不覆蓋規則的明示例外。
+**發布檔**（〔暫緩（2026-10-01）〕發布它的 `aos-publish` 隨 B-624 發摘要搬到[暫緩區](../settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)，現在沒有人寫這個檔；下面照留）：ignored 的 `.aos/summary/published.json`，內容是已提交 `summary.json` 的同一版原 bytes，usage 不拆檔；父目錄只授 traverse、檔案只授 read。它會被整份替換，是 P-003 不覆蓋規則的明示例外。
 
-〔第十九批依方案 A 縮短〕誰何時發布、發布失敗怎麼辦、上層怎麼讀與核對、摘要跟收件事件誰優先，以 [B-624](../settled/tick/mq.md) 為正本；〔使用者方向 2026-09-30，第十八批〕多久沒更新算失聯、失聯時做什麼由父 kernel 自己定，見 [S-202](../scheduling/admission.md)。aos 提供的訊號是 `observed_seq` 有沒有前進，與 daemon `node.show` 的 `last_tick`。
+〔第十九批依方案 A 縮短〕誰何時發布、發布失敗怎麼辦、上層怎麼讀與核對、摘要跟收件事件誰優先，以 B-624 的發布摘要一節為正本（〔暫緩（2026-10-01）〕那節已搬到[暫緩區](../settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)）；〔使用者方向 2026-09-30，第十八批〕多久沒更新算失聯、失聯時做什麼由父 kernel 自己定，見 [S-202](../scheduling/admission.md)。aos 提供的訊號是 `observed_seq` 有沒有前進，與 daemon `node.show` 的 `last_tick`。
 
 ## P-308．schema 與最小範例〔建議預設，未拍板〕
 
