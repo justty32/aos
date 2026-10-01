@@ -12,6 +12,8 @@
 - 開起來（root）：cgroup 子樹整棵 chown 給預設帳號 → fork＋exec root 端 `bin/aos-daemon-root`、交 socketpair
   的一頭 → 主程式 `initgroups`／`setgid`／`setuid` 永久降成預設帳號（`HOME`、`USER`、`LOGNAME` 也換掉）。
 - 預設帳號的項主程式自己開；別的帳號的項經 root 端開（`Account.run()`），一條執行緒收回應、照 id 分給等的那一項。
+  控制模組的 `kill`／`restart`（第十九批）對這種項經 root 端送訊號（`Account.signal()`，root 端對那個子程序的
+  程序群組送）；主程式降權了送不到別的帳號。
   root 端不見了（讀到 EOF）：stderr 一行、整個 daemon 回 1（A5）。
 
 〔使用者方向 2026-10-01〕POC 默認一切正常。
@@ -159,7 +161,8 @@ class Account:
             slot[0].set()
 
     def run(self, item, start, argv, out_fd, err_fd, frame):
-        """請 root 端用 item.user 開 argv，等它結束。回 (碼, 錯誤說明或 None)。out_fd／err_fd 交出去後由呼叫的人關。"""
+        """請 root 端用 item.user 開 argv，等它結束。回 (碼, 錯誤說明或 None)。out_fd／err_fd 交出去後由呼叫的人關。
+        等的時候 `item.root_rid` 是這次請求的 id（第十九批 kill 用）。"""
         slot = [threading.Event(), None]
         with self._send:
             self._ids += 1
@@ -168,26 +171,36 @@ class Account:
             req = {"id": rid, "user": item.user, "argv": argv, "cwd": start,
                    "env": dict(item.env if item.env is not None else os.environ), "frame": frame}
             socket.send_fds(self.sock, [json.dumps(req, ensure_ascii=False).encode("utf-8")], [out_fd, err_fd])
+            item.root_rid = rid
         slot[0].wait()
+        item.root_rid = None
         rep = slot[1]
         if "error" in rep:
             return 1, rep["error"]
         return rep["exit"], None
 
+    def signal(self, rid, final):
+        """第十九批：請 root 端對請求 rid 開的那個子程序送 SIGTERM（final=False）或 SIGKILL（final=True），
+        對象照 `aos_daemon.kill_targets()` 的規則；不等回應（已經結束就沒事）。"""
+        with self._send:
+            self.sock.send(json.dumps({"signal": rid, "final": bool(final)}).encode("utf-8"))
+
 
 def run_via_root(acct, item, start, argv):
     """`aos_daemon.run_once()` 的帳號分支：開好 pipe 交給 root 端，回 (碼, 毫秒, 有沒有收屍, out, err)。"""
+    import aos_daemon
     t0 = time.monotonic()
     ends, readers, got = [], [], {}
     for name, path in (("out", item.out_path), ("err", item.err_path)):
         if path is None:
             fd = os.open(os.devnull, os.O_WRONLY)
             ends.append(fd)
-            got[name] = b""
+            got[name] = (b"", 0)
         else:
             r, w = os.pipe()
             ends.append(w)
-            t = threading.Thread(target=_drain, args=(r, name, got), daemon=True)
+            # 第十九批：邊讀邊丟最早的，最多留 item.out_max
+            t = threading.Thread(target=aos_daemon.drain, args=(r, item.out_max, got, name), daemon=True)
             t.start()
             readers.append(t)
     try:
@@ -206,14 +219,3 @@ def run_via_root(acct, item, start, argv):
     for t in readers:
         t.join()
     return code, ms, reaped, got["out"], got["err"]
-
-
-def _drain(fd, name, got):
-    chunks = []
-    with os.fdopen(fd, "rb") as f:
-        while True:
-            b = f.read(65536)
-            if not b:
-                break
-            chunks.append(b)
-    got[name] = b"".join(chunks)

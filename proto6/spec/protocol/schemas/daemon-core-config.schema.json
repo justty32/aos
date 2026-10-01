@@ -39,6 +39,17 @@
       "minLength": 1,
       "description": "aos-exec 的 stderr 接到哪個檔（接在檔尾、每次收齊加標頭）；相對以起點為準；<inst> 換成這一項的位置。省略＝丟掉（/dev/null）；寫 /dev/stderr 可接回 daemon 自己的 stderr"
     },
+    "exec_output_max_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 1048576,
+      "description": "〔第十九批〕aos-exec 的 stdout／stderr 每一次、每條最多留幾 bytes，超過丟最早的、標頭加 dropped=。只有頂層、各項共用（寫在某一項裡照不認得的鍵忽略）"
+    },
+    "lock_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "〔第十九批〕鎖檔路徑，相對以設定檔所在資料夾為準；省略＝設定檔路徑加 .lock。拿不到鎖（另一個 daemon 正用這份設定）回 1"
+    },
     "modules": {
       "type": "object",
       "description": "一個模組一個鍵，有寫就開；目前認 control、reload、state、cgroup、mq、account，其他鍵照收不看",
@@ -54,6 +65,12 @@
               "type": "string",
               "minLength": 1,
               "description": "控制 socket 的路徑；相對以起點為準"
+            },
+            "kill_grace_ms": {
+              "type": "number",
+              "minimum": 0,
+              "default": 5000,
+              "description": "〔第十九批〕kill／restart 送 SIGTERM 後等多久（毫秒）還沒結束就 SIGKILL"
             }
           }
         },

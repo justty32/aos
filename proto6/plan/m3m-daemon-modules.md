@@ -544,3 +544,5 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 - spec：[B-646](../spec/settled/daemon/account.md)、[P-126](../spec/settled/protocol/daemon/account.md)；schema `daemon-core-config` 加 `modules.account` 與每項 `account`；範例 `examples/daemon/core-config.account*`；暫緩區 B-303、B-609、P-102、P-107、P-108 標部分取代。
 
 模組五 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十三批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十三批帳號模組)。五個模組都做完了；node 模組不做。
+
+**第十九批（2026-10-01 晚，AI 隊）：daemon 跑 daemon 用到的三件事**——不是新模組，改核心與控制模組：頂層 `exec_output_max_bytes`（輸出上限，邊讀邊丟最早的）、設定檔鎖檔（拿不到回 1）、控制模組 `kill`／`restart`。上層 daemon 把下層 daemon 當一項跑時，監督（掛了重開）與權限分層（root 上層＋帳號模組開各帳號的下層）原本就有；這三件補上「輸出不堆爆記憶體」「同一份設定不重複開」「上層停得掉、重開得了下層」。「下層的任務跟上層講話」（`AOS_PARENT_*`）使用者還在想要不要跟 tick 那套分開，這次不做。見 [verdicts 11 第十九批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十九批daemon-上下層用到的三件事)；測試 `tests/test_daemon_kill.py`（20 條）。

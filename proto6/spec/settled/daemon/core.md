@@ -65,6 +65,7 @@ daemon 有一個「起點」資料夾，用在三處：
 - **`aos-exec` 的 stdout、stderr** 兩條各由頂層一個鍵決定寫到哪：`exec_out_path` 管 stdout、`exec_err_path` 管 stderr。〔使用者方向 2026-10-01〕**沒寫就丟掉**（等於 `/dev/null`），不再接到 daemon 自己的 stdout／stderr；想接回來就寫 `"/dev/stdout"`、`"/dev/stderr"`。
 - 兩個鍵規則一樣：接在檔尾、父資料夾不在就建；相對路徑以起點為準；裡面的 `<inst>` 會換成這一項的位置：inst 是資料夾就換成字面值本身，是檔就換成它字面上的資料夾部分（沒有資料夾部分就用 `.`）。兩個鍵可以指同一個檔。
 - 每次**收齊**（讀到底）再一次寫出，有內容才寫；前面一律加一行標頭，寫明時間、是 stdout 還是 stderr、第幾項、inst 字面值。寫出跟 daemon 自己那一行共用一把鎖，多項同時結束也不會交錯。
+- **收的時候有上限**〔使用者 2026-10-01 第十九批：「上層這邊要做記憶體上限，超過就丟棄早的」「上限必須共用，然後每項不覆蓋」〕：每一次、每條串流最多留頂層 `exec_output_max_bytes` 這麼多（預設 1 MiB），超過就**邊讀邊丟最早的**、留最新的；寫出時標頭多寫丟掉了多少。上限只有頂層一個、各項共用，寫在某一項裡照不認得的鍵忽略。這是為了 daemon 跑 daemon：下層 daemon 永遠不結束、一直印，上層不能先全收再截。沒寫 `exec_out_path`／`exec_err_path` 的那條直接接 `/dev/null`，不收、不受影響。
 - inst 裡任務自己的 stdout／stderr 照 inst 規則（預設丟掉，寫 `{"$opt":"inherit"}` 才會跟著 `aos-exec` 出來）。
 - 確切格式見 [P-120](../protocol/daemon/core.md)。
 
@@ -74,6 +75,16 @@ daemon 有一個「起點」資料夾，用在三處：
 - **不殺也不等**正在跑的 `aos-exec`。每次 `aos-exec` 都開在自己的 session 裡，終端機的 Ctrl-C 不會順帶打到它。
 - daemon 退出後，還在跑的 `aos-exec` 若有設 `exec_out_path`／`exec_err_path`，再寫那一條會因為沒人讀而被 SIGPIPE 殺掉（沒設的那條接的是 `/dev/null`，不會）。照「POC 默認一切正常」不處理（使用者 2026-10-01 同意）。
 - 舊設計的收尾寬限、排空停機、`state.json` 都不做（[暫緩區 B-604](../deferred/daemon/lifecycle.md)）。
+
+### 同一份設定只能開一個：鎖檔
+
+〔使用者 2026-10-01 第十九批：「用socket檔案作爲daemon是否正在運行的依據，感覺不太好，換成另一檔案吧，畢竟socket以後會有多個，且權限管理複雜」「拿不到鎖就報錯退出」〕
+
+- daemon 開起來先對**鎖檔**取獨占鎖（flock，不等）：預設是設定檔路徑後面加 `.lock`（`--config F` 就是 `F.lock`），頂層 `lock_path` 可以改（相對以設定檔所在的資料夾為準）。鎖檔不在就建。
+- **拿不到＝另一個 daemon 正用這份設定：stderr 一行、回 1**，不開任何 socket、不建 cgroup、不開帳號模組的 root 端，也不搶別人的 socket 檔。
+- 鎖一直握到 daemon 結束（程序結束系統就放）；不傳給子程序。鎖檔本身不刪。
+- 不靠 socket 檔判斷：socket 之後會有很多個，權限也各自不同。
+- 兩份不同的設定檔開兩個 daemon 照樣可以（各鎖各的）；它們若指到同一個 socket 路徑，後開的照舊先刪再開（默認一切正常，自己承擔）。
 
 ### 模組：`modules`
 
@@ -88,6 +99,6 @@ daemon 有一個「起點」資料夾，用在三處：
 
 〔使用者方向 2026-10-01〕POC 默認環境一切正常：設定檔讀得懂、路徑都對、`aos-exec` 叫得起來。daemon 自己查的只有幾件事（缺 `interval_ms`、`modules` 不是物件、指示詞錯），其他出事就讓程式自然丟錯、回 1。哪些算設定錯、怎麼報，見 [P-120](../protocol/daemon/core.md)。
 
-依據：使用者方向 2026-10-01（daemon 叫 `aos-exec`、管 node 變成模組、週期與停機、設定檔追加裁定、m3 待問裁定、m3 實作後追加裁定、`insts` 改成物件、`exec_out_path` 與輸出預設丟掉）。
+依據：使用者方向 2026-10-01（daemon 叫 `aos-exec`、管 node 變成模組、週期與停機、設定檔追加裁定、m3 待問裁定、m3 實作後追加裁定、`insts` 改成物件、`exec_out_path` 與輸出預設丟掉）；[第十九批](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十九批daemon-上下層用到的三件事)（輸出上限、鎖檔）。
 
-**驗收：**兩項各自照自己的週期跑、互不等待；剛開時每項立刻跑一次；某項回非 0 且 `stop_on_nonzero` 時印 `stopped`、之後不再叫，其他項照跑，全部停掉 daemon 仍開著；相對的 inst、`cwd`、`exec_out_path`、`exec_err_path` 照起點算，`$ref` 照設定檔資料夾算；沒寫 `exec_out_path`／`exec_err_path` 時 `aos-exec` 的輸出不出現在 daemon 的 stdout／stderr；兩項同時結束時寫出不交錯；Ctrl-C 後 daemon 回 0、正在跑的 `aos-exec` 沒被殺。測試見 `proto6/src/py/tests/test_daemon.py`。
+**驗收：**兩項各自照自己的週期跑、互不等待；剛開時每項立刻跑一次；某項回非 0 且 `stop_on_nonzero` 時印 `stopped`、之後不再叫，其他項照跑，全部停掉 daemon 仍開著；相對的 inst、`cwd`、`exec_out_path`、`exec_err_path` 照起點算，`$ref` 照設定檔資料夾算；沒寫 `exec_out_path`／`exec_err_path` 時 `aos-exec` 的輸出不出現在 daemon 的 stdout／stderr；兩項同時結束時寫出不交錯；Ctrl-C 後 daemon 回 0、正在跑的 `aos-exec` 沒被殺；〔第十九批〕任務印超過 `exec_output_max_bytes` 時檔裡只留最後那麼多、標頭有 `dropped=`，一直印 20 MB 的任務記憶體不跟著漲；同一份設定再開一個 daemon：回 1、stderr 一行、第一個的 socket 沒被搶、照跑。測試見 `proto6/src/py/tests/test_daemon.py`、`test_daemon_kill.py`。
