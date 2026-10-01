@@ -153,16 +153,16 @@ proto6/src/py/bin/aos-daemon --config daemon.json     # Ctrl-C／SIGTERM 直接�
   "interval_ms": 60000,
   "stop_on_nonzero": false,
   "exec_err_path": "<inst>/err.log",
-  "insts": [
-    {"inst": "a"},
-    {"inst": "jobs/report.json", "interval_ms": 5000, "stop_on_nonzero": true}
-  ]
+  "insts": {
+    "a": {},
+    "jobs/report.json": {"interval_ms": 5000, "stop_on_nonzero": true}
+  }
 }
 ```
 
 | 鍵 | 意思 |
 |---|---|
-| `insts[].inst` | 必填，**原樣**當 aos-exec 的參數（資料夾或檔都行），印出來也照字面 |
+| `insts` | 物件（使用者 2026-10-01 改；陣列寫法撤掉、不相容）。**鍵＝inst 字面值**，**原樣**當 aos-exec 的參數（資料夾或檔都行），印出來也照字面；**值＝該項設定**（`interval_ms`、`stop_on_nonzero` 蓋過頂層；`{}`＝全用頂層預設）。第幾項照鍵的順序（JSON 讀入保序）從 0 數；同一個鍵寫兩次時 JSON 讀入只留後面那個 |
 | `cwd`（頂層） | 起點：aos-exec 子程序的工作目錄、相對路徑的基準。沒寫＝daemon 啟動時的工作目錄；相對的也以它為準 |
 | `interval_ms` | 上一次結束後隔多久再叫（剛開時每項先立刻跑一次）。頂層是預設、每項可蓋過；兩邊都沒有＝設定錯、回 1 |
 | `stop_on_nonzero` | 碼不是 0 時這一項就不再叫、多印一行 `stopped`。頂層是預設、每項可蓋過；都沒有＝`false`。所有項都停了 daemon 照樣開著 |
@@ -180,7 +180,7 @@ proto6/src/py/bin/aos-daemon --config daemon.json     # Ctrl-C／SIGTERM 直接�
 {"interval_ms": {"$ref": "defaults.json#/interval_ms"}, "insts": {"$ref": "list.json"}}
 ```
 
-讀的是 `conf/defaults.json`、`conf/list.json`；`list.json` 裡寫 `{"inst": "x.json"}` 跑的是 `/w/x.json`。指示詞錯（讀不到、循環、位置找不到…）stderr 一行 `aos-daemon: config: <代號>: …`、回 1。
+讀的是 `conf/defaults.json`、`conf/list.json`；`list.json` 裡寫 `{"x.json": {}}` 跑的是 `/w/x.json`。指示詞錯（讀不到、循環、位置找不到…）stderr 一行 `aos-daemon: config: <代號>: …`、回 1。
 
 stdout 每次一行（時間是印出那刻的本地時間，ISO 8601 帶時區）：
 
@@ -190,7 +190,7 @@ stdout 每次一行（時間是印出那刻的本地時間，ISO 8601 帶時區�
 2026-10-01T15:04:05+08:00 inst=jobs/report.json stopped
 ```
 
-aos-exec 的 stderr 每次收齊（讀到 pipe 底）再一次寫出，有內容才寫，前面一律加一行標頭（第幾項從 0 起、inst 字面值；寫到 `<inst>` 個別檔也加，使用者 2026-10-01 同意）；stdout 那一行跟它共用一把鎖，多項同時結束也不交錯：
+aos-exec 的 stderr 每次收齊（讀到 pipe 底）再一次寫出，有內容才寫，前面一律加一行標頭（第幾項＝`insts` 鍵的順序從 0 起、inst 字面值；寫到 `<inst>` 個別檔也加，使用者 2026-10-01 同意）；stdout 那一行跟它共用一把鎖，多項同時結束也不交錯：
 
 ```text
 == 2026-10-01T15:04:05+08:00 index=1 inst=jobs/report.json ==

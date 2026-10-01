@@ -10,6 +10,8 @@
 
 > **10-01 追加裁定（使用者，原話節錄）**：「關於印出來的樣子，其實不用是id，應該是inst=j/r.json這樣。id這個概念其實可以不存在於daemon核心了。」「daemon config json的頂層可以加上一個key: modules。然後整份daemon config都可以用aos dirictive去解析」「$ref 照建議，從設定檔所在資料夾算，算完之後才讓cwd那個key被應用。」另同意實作回報三點：stderr 標頭一律加（含 `<inst>` 個別檔）、inst 沒有資料夾部分時 `<inst>` 換成 `.`、daemon 退出後 aos-exec 寫 stderr 吃 SIGPIPE 不處理。下面各步已照改：**核心沒有 id**（一項＝`inst` 字面值＋在 `insts` 的位置）、**整份設定檔先展開指示詞**、**頂層 `modules` 認得不解讀**（步驟 1）、印 `inst=…`（步驟 2、4、6）。
 
+> **10-01 再追加：`insts` 改成物件（使用者原話「daemon config中，其實可以是{"insts":{"jobs/report.json":{...},"haha.json":{...}}}」）**：鍵＝inst 字面值，值＝該項設定物件（可為 `{}`）；陣列寫法與項內 `inst` 鍵撤掉、不相容。第幾項（stderr 標頭的 `index`）照鍵的順序從 0 數。步驟 1、2 與測試已照改；verdicts 11 篇末同步記了（待統一更新 spec）。
+
 > **POC 總原則**：默認一切正常——設定檔讀得懂、路徑都對、`aos-exec` 叫得起來、沒有兩個 daemon 跑同一份清單。不寫異常處理，出事讓 Python 自然丟錯（traceback、回 1）。
 
 > **結束碼**（使用者 2026-10-01）：0＝預料之中；0 以外＝要額外處理；1＝通用錯誤，沒特別設的錯一律 1。`aos-tick` 的忙、擋板、停格都回 0；`aos-exec` 用法錯回 1（這兩處程式改動另有人做，本段當它已改好）。
@@ -22,7 +24,7 @@
 
 ## 步驟 1：讀設定檔
 
-- **要做到**：`aos-daemon --config F` 讀設定檔，得到一份清單，每項有 `inst` 字面值、在 `insts` 的位置、週期、非 0 停不停（沒有另外的 id）；另外算好一個「起點資料夾」給步驟 2 開子程序用。
+- **要做到**：`aos-daemon --config F` 讀設定檔，得到一份清單，每項有 `inst` 字面值（`insts` 物件的鍵）、鍵的位置、週期、非 0 停不停（沒有另外的 id）；另外算好一個「起點資料夾」給步驟 2 開子程序用。
 - **依據**：草稿裁定 1、7 與[設定檔追加裁定](../notes/2026-10-01-daemon-core-sketch.md#設定檔追加裁定使用者-2026-10-01)；[B-606](../spec/settled/daemon/registration.md#b-606登記解除換父與身分額度)「頂層從設定載入」只留這條路；[P-101](../spec/settled/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板) 的設定欄位這版不沿用（裁定 7 隨意）。
 - **設定檔**（使用者 2026-10-01 認可）：
 
@@ -32,32 +34,33 @@
     "interval_ms": 60000,
     "stop_on_nonzero": false,
     "exec_err_path": "<inst>/err.log",
-    "insts": [
-      {"inst": "a"},
-      {"inst": "jobs/report.json", "interval_ms": 5000, "stop_on_nonzero": true}
-    ]
+    "insts": {
+      "a": {},
+      "jobs/report.json": {"interval_ms": 5000, "stop_on_nonzero": true}
+    }
   }
   ```
 
   上例：`a` 是資料夾（aos-exec 自己去找 `a/.aos/inst.json` 或 `a/inst.json`），用頂層的 60 秒、非 0 不停；`jobs/report.json` 是檔，自己蓋成 5 秒、非 0 就停。兩項都相對 `/home/u/nodes`。aos-exec 的 stderr 分別接到 `/home/u/nodes/a/err.log`、`/home/u/nodes/jobs/err.log`（見下面 `exec_err_path`）。
-  - `insts`：陣列。每項 `inst` 必填，可另寫 `interval_ms`、`stop_on_nonzero` 蓋過頂層。
-  - `inst`：**原樣交給 aos-exec**，資料夾或檔都行，只要合 aos-exec 的目標規則（見 [src/py README 改動 2](../src/py/README.md#改動-2資料夾目標怎麼找-inst)）；daemon 不檢查、不解析、不轉絕對路徑。
+  - `insts`：物件（使用者 2026-10-01 改；~~陣列、每項 `inst` 必填~~）。**鍵＝inst 字面值**，**值＝該項設定物件**：可寫 `interval_ms`、`stop_on_nonzero` 蓋過頂層，`{}`＝全用頂層。第幾項照鍵的順序（Python `json` 讀入保序）從 0 數。
+  - inst（`insts` 的鍵）：**原樣交給 aos-exec**，資料夾或檔都行，只要合 aos-exec 的目標規則（見 [src/py README 改動 2](../src/py/README.md#改動-2資料夾目標怎麼找-inst)）；daemon 不檢查、不解析、不轉絕對路徑。
   - 頂層 `cwd`（可省略）：相對路徑的起點。沒寫＝daemon 啟動時的工作目錄；本身是相對路徑時也以 daemon 啟動時的工作目錄為起點。daemon 開起來時算成一個絕對路徑（`os.path.abspath`，不解符號連結）。
   - 頂層 `interval_ms`、`stop_on_nonzero`（可省略）：所有項的預設；每項自己寫的蓋過頂層。`interval_ms` 正整數，兩邊都沒有＝設定錯、回 1（沒有叫醒，沒週期就永遠不會跑）；`stop_on_nonzero` 布林，兩邊都沒有＝`false`。
   - 頂層 `exec_err_path`（可省略；使用者 2026-10-01，見待問 5）：aos-exec 子程序的 stderr（fd 2）往哪寫。相對路徑以起點為準。路徑裡的 `<inst>` 換成該項 `inst` 字面值；`inst` 指的是檔時換成它字面上的 dirname（`x.json` 的 dirname 是空的，用 `.`），是資料夾就照字面（daemon 開起來時在起點底下看一次是不是資料夾）。沒寫＝daemon 自己的 stderr。細節見步驟 2。
   - 頂層 `modules`（可選；使用者 2026-10-01）：要是物件，不是＝設定錯、回 1。之後一個模組一個鍵（例如 `"modules": {"control": {...}}`）；目前沒有任何模組，核心照收、不看裡面。
-  - 其他鍵（頂層或每一項）一律忽略，所以寫 `_metainfo` 也沒關係。
+  - 其他鍵（頂層或每一項的設定物件裡）一律忽略，所以寫 `_metainfo` 也沒關係。
   - 不驗格式（默認是對的），缺鍵或型別錯就自然丟錯、回 1。
 - **整份先經 aos 指示詞展開**（使用者 2026-10-01）：跟 inst 同一套 `lib/aos_directives.py`（`$ref`／`$fmt`／`$env`）。順序：
   1. 先展開：從根一路走進物件與陣列、每格解到底（`expand()`）。`$ref` 的相對檔名**一律以設定檔所在資料夾**為準（`os.path.abspath`，不解符號連結；被引進來的檔裡再 `$ref` 也照這個資料夾）。`$opt` 物件原樣留著不走進去（核心沒有吃選項的位置）。引到祖先＝`ReferenceCycle`。
   2. 展開完才讀鍵：`cwd`（可以是引進來的值）照上面規則算起點——相對的 `cwd` 以 **daemon 啟動時的工作目錄**為準；`inst`、`exec_err_path` 再以起點為準。
   - 兩種起點不同：`$ref` 檔名看設定檔放哪，`cwd`／`inst` 的值看 daemon 從哪開。為什麼選設定檔資料夾：指示詞規範說中心路徑由宿主給；設定檔沒有像 inst 那樣「解出來的 cwd」可當中心（daemon 的 `cwd` 是給 aos-exec 的，相對值還以 daemon 啟動目錄為準），用文件所在資料夾是 `Context` 沒給中心時的預設，最不意外。
-- **沒有 id**（使用者 2026-10-01）：~~id 就是 `inst` 的字面值~~ 核心沒有 id 這個概念，一項就是它的 `inst` 字面值，印出來、標頭都照字面。同字面值重複默認不會發生，不檢查。
-- **做法**：argv 只認 `--config F`（必填；`F` 相對路徑照常以 daemon 啟動時的工作目錄為準）；用法錯 stderr 一行、回 1（argparse 預設 2，改了：`_Parser`）。讀設定是 `load_config()`（先 `read_config()` 讀檔、`expand()` 展開），回起點與 `Item` 清單（每項記 `index`＝在 `insts` 的位置、`inst`、週期、停不停、算好的 stderr 檔路徑 `err_path_for()`）。兩邊都沒有 `interval_ms`、`modules` 不是物件時 stderr 一行 `aos-daemon: config: …`、回 1；檔不存在、JSON 壞、指示詞錯也走這條（`aos-daemon: config: <代號>: …`，例如 `ReferenceReadFailed`），缺 `insts`／`inst` 是 traceback、回 1。
+- **沒有 id**（使用者 2026-10-01）：~~id 就是 `inst` 的字面值~~ 核心沒有 id 這個概念，一項就是它的 `inst` 字面值，印出來、標頭都照字面。`insts` 改成物件後同字面值本來就寫不出兩項（同一個鍵寫兩次，JSON 讀入只留後面那個），不檢查。
+- **做法**：argv 只認 `--config F`（必填；`F` 相對路徑照常以 daemon 啟動時的工作目錄為準）；用法錯 stderr 一行、回 1（argparse 預設 2，改了：`_Parser`）。讀設定是 `load_config()`（先 `read_config()` 讀檔、`expand()` 展開），回起點與 `Item` 清單（每項記 `index`＝鍵在 `insts` 的位置、`inst`＝鍵、週期、停不停、算好的 stderr 檔路徑 `err_path_for()`）。兩邊都沒有 `interval_ms`、`modules` 不是物件時 stderr 一行 `aos-daemon: config: …`、回 1；檔不存在、JSON 壞、指示詞錯也走這條（`aos-daemon: config: <代號>: …`，例如 `ReferenceReadFailed`），缺 `insts`、`insts` 不是物件或某項的值不是物件是 traceback、回 1。
 - **要使用者裁定的點**：無（原待問 1、2 已因追加裁定結案）。
 - **驗收**：
+  - `insts` 物件：`index` 照鍵的順序（`{"z":{},"a":{},"m":{}}` 是 0、1、2，不排序）；值 `{}` 用頂層預設。
   - inst 照字面印：`a`、`./a`、`/abs/a/inst.json` 印出來就是 `inst=` 後面這三個字串。
-  - 指示詞（`Step1Directives`）：設定檔放 `conf/`、daemon 從別處開，`insts` 用 `$ref` 拆到 `conf/list.json`、頂層預設從 `conf/defaults.json` 引進、陣列單項用 `$ref`；`cwd` 從別檔引進、相對值照 daemon 啟動目錄；讀不到檔、循環回 1。
+  - 指示詞（`Step1Directives`）：設定檔放 `conf/`、daemon 從別處開，`insts` 用 `$ref` 拆到 `conf/list.json`、頂層預設從 `conf/defaults.json` 引進、單一項的設定物件用 `$ref`；`cwd` 從別檔引進、相對值照 daemon 啟動目錄；讀不到檔、循環回 1。
   - `modules`：寫了任意內容照跑、不理；不是物件回 1。
   - 起點：沒寫 `cwd` 時用 daemon 啟動時的工作目錄；`"cwd": "sub"` 是啟動時工作目錄底下的 `sub`；`"cwd": "/abs"` 就是 `/abs`。
   - 頂層預設與覆蓋：頂層 `interval_ms` 套到沒寫的項，有寫的項用自己的；`stop_on_nonzero` 同理，兩邊都沒有＝不停。
@@ -73,7 +76,7 @@
 - **做法**：
   - 子程序自成 session（`start_new_session=True`），stdin 接 `/dev/null`，stdout 繼承 daemon 的，**stderr 接一條 pipe，讀到底收齊**（下面「stderr」）。inst 裡任務自己的串流照 inst 規則（預設 `/dev/null`；寫 `inherit` 就跟著 aos-exec 的，也就進了這條 pipe），不歸 daemon。**子程序的工作目錄設成起點資料夾**（`Popen(cwd=…)`），`inst` 字面值原樣當參數：相對的 `inst` 由 aos-exec 照它自己的規則、從起點解析，跟人站在起點手打 `aos-exec <inst>` 一模一樣，daemon 不碰路徑。環境變數照 daemon 的。inst 自己的 `cwd` 預設是 inst 所在資料夾（資料夾目標是那個資料夾），由 aos-exec 處理，不受起點影響。
   - 一行的格式（使用者 2026-10-01 加時間，見待問 4）：`<當下時間> inst=<inst 字面值> exit=<碼> ms=<毫秒>`，例如 `2026-10-01T15:04:05+08:00 inst=a exit=0 ms=812`（~~`id=`~~，使用者 2026-10-01 改）。時間是印出那一刻的本地時間，ISO 8601 到秒、帶時區（`now()`）。寫完立刻 flush。碼照實印；aos-exec 被訊號殺（`returncode` 是負的）印成 `128+N`，跟 shell 一致。`ms` 從開子程序到 `wait` 回來。
-  - **stderr**（使用者 2026-10-01，見待問 5）：子程序結束後，把收齊的 stderr 一次寫出（`write_err()`）；沒內容就什麼都不寫。寫出去的是一行標頭加原樣內容（最後沒換行就補一個），純文字、不包 JSON。標頭 `== <當下時間> index=<在 insts 的位置，從 0 起> inst=<inst 字面值> ==`。有寫 `exec_err_path` 就**接在那個檔尾**（`ab`；父資料夾不在就建），沒寫就寫到 daemon 自己的 stderr。
+  - **stderr**（使用者 2026-10-01，見待問 5）：子程序結束後，把收齊的 stderr 一次寫出（`write_err()`）；沒內容就什麼都不寫。寫出去的是一行標頭加原樣內容（最後沒換行就補一個），純文字、不包 JSON。標頭 `== <當下時間> index=<鍵在 insts 的位置，照鍵的順序從 0 起> inst=<inst 字面值> ==`。有寫 `exec_err_path` 就**接在那個檔尾**（`ab`；父資料夾不在就建），沒寫就寫到 daemon 自己的 stderr。
   - **標頭一律加**（使用者 2026-10-01 同意）：使用者說有 `<inst>` 的個別檔可加可不加，這裡選「有內容就加」一條規則。理由：同一個資料夾裡的兩份 inst（`a/x.json`、`a/y.json`）換完 `<inst>` 是同一個檔，本來就是共用的；標頭也帶了時間。
   - 不交錯：stdout 那一行與 stderr 那一段都在同一把鎖（`_out`）底下一次寫完，多項同時結束時誰都插不進誰。
   - 一次叫的全程是 `run_once()`。
@@ -177,3 +180,4 @@
 - 沒照 plan 原字面做的：步驟 3 第一條「1 秒大約 9～10 行」放寬成「會重複」（aos-exec 每次有 Python 起動時間）。
 - daemon 退出後，還在跑的 aos-exec 的 stderr pipe 沒人讀了；它之後再寫 stderr 會收到 SIGPIPE。照「默認一切正常」不處理（使用者 2026-10-01 同意）。
 - 10-01 追加裁定（去 id、整份展開指示詞、`modules`）已照改，測試 444 條全過。
+- 10-01 再追加（`insts` 改成物件，鍵＝inst 字面值）已照改：`load_config()` 改讀物件、`test_daemon.py` 全部改寫法並加一條鍵順序的檢查（條數不變），測試 444 條全過。

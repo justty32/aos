@@ -297,9 +297,21 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **實作回報三點照建議**：stderr 標頭一律加（含 `<inst>` 個別檔）；inst 沒有資料夾部分時 `<inst>` 換成 `.`；daemon 退出後 aos-exec 寫 stderr 吃 SIGPIPE 被殺，照默認一切正常不處理。
 - **整份設定檔先經 aos 指示詞展開再讀**（跟 inst 同一套）：`$ref` 相對檔名以設定檔所在資料夾為準；展開完才套頂層 `cwd`（可以是引進來的值；相對的照舊以 daemon 啟動時的工作目錄為準），`inst` 值再以起點為準。
 - **頂層 `modules`**：可選、是物件；之後一個模組一個鍵（例如 `"modules": {"control": {...}}`）。核心只認得、不解讀內容；目前沒有任何模組。
-- **控制模組細節使用者還在想**：[m3n](../../plan/m3n-control-module.md) 暫停、待重寫。
+- ~~**控制模組細節使用者還在想**：m3n 暫停、待重寫。~~（同日裁定，見下一小節）
 
 **待改的 spec 處**（追加）：P-101 的設定檔長相補 `modules` 與「整份先展開指示詞、`$ref` 以設定檔資料夾為準、展開完才套 `cwd`」；[inst.md](../../spec/base/inst.md)「登記的 id」改成「daemon 核心沒有 id」。
+
+**`insts` 改成物件＋控制模組裁定（使用者 2026-10-01，待統一更新 spec）**
+
+使用者原話：「daemon config中，其實可以是{"insts":{"jobs/report.json":{...},"haha.json":{...}}}。然後控制模組這塊，wake的功能改一下，改成可以調設定，比如正在跑的話是否就不跑了(但仍然叫幾次都只補一次)，或是這次跑完，原本後續週期性的那次就不跑了，或是弄成單獨指令也可以。aos-ctl status應該要只能看一個項的狀態，也就是自己所在的這項。1.夠了。2.可以。3.隨便放，就一個。4.算。5.訊息模組不算在此。」追補：「應該說wake/pause/resume/status都是指向某一項inst任務」。細節見 [m3 步驟 1](../../plan/m3-daemon-core.md#步驟-1讀設定檔)、[m3n](../../plan/m3n-control-module.md)。
+
+- **`insts` 是物件**：鍵＝inst 字面值，值＝該項設定物件（`interval_ms`、`stop_on_nonzero`；`{}`＝全用頂層預設）。撤掉陣列寫法與項內 `inst` 鍵，不相容。stderr 標頭的 `index` 照鍵的順序從 0 數。（已改程式）
+- **控制模組**（m3n，只寫了 plan）：設定放 `"modules": {"control": {"socket": "<路徑>"}}`，有寫就是開、沒寫就是沒掛（不要 `enable_control`）；一個 daemon 一個 socket，路徑隨設定；能連 socket 就能做所有事，不另設權限。
+- **指令只收四個**：`wake`、`pause`、`resume`、`status`（不收 reload、shutdown）；**每個都指向單一一項**（以 inst 字面值指名），沒有「對全部」的形式；叫醒算控制模組的一部分；訊息模組（aos-mq）不走這條 socket。
+- **wake 可帶選項**：正在跑時要不要補一次（叫幾次都只補一次照舊）、跑完後原本週期要不要照舊；細節見 m3n。使用者定名：「正在跑就不補」＝`"skip_while_running": true`（預設 `false`＝跑完補一次）；「不影響原本排程」＝`"keep_schedule": true`（預設 `false`＝叫醒跑完後週期從這次結束重新算，原本那次不另外跑；`true`＝原本那次照常跑）。兩個都留在 wake 上，不拆單獨指令。
+- **`aos-ctl status` 只看一項**：不帶參數就看自己所在那項（`AOS_DAEMON_INST`）。環境變數 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`（取代先前草稿的 `AOS_DAEMON_ID`）。
+
+**待改的 spec 處**（追加）：P-101 的設定檔長相改成 `insts` 物件；B-607 叫醒／暫停照 m3n；[P-117 通道變數](../../spec/settled/protocol/daemon/channel.md) 的 `AOS_DAEMON_SOCKET` 留、加 `AOS_DAEMON_INST`、憑證不做。
 
 ## node 模組方向（2026-10-01，記錄用，未排程）
 

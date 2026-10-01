@@ -105,8 +105,8 @@ class Step1Config(DaemonCase):
     def test_inst_is_literal(self):
         self.inst({"argv": ["true"]}, "a/inst.json")
         abs_inst = os.path.join(self.d, "a", "inst.json")
-        cfg = self.config({"interval_ms": 100, "insts": [{"inst": "a"}, {"inst": "./a"},
-                                                         {"inst": abs_inst}]})
+        cfg = self.config({"interval_ms": 100, "insts": {"a": {}, "./a": {},
+                                                         abs_inst: {}}})
         _, out, _ = self.start(cfg)
         for inst in ("a", "./a", abs_inst):
             self.wait_for(lambda: self.results(out, inst) and True)
@@ -117,14 +117,14 @@ class Step1Config(DaemonCase):
         self.inst({"argv": ["true"]}, "other/y.json")
         os.makedirs(os.path.join(self.d, "run"))
         # 相對的 cwd 以 daemon 啟動時的工作目錄為起點
-        cfg = self.config({"cwd": "../sub", "interval_ms": 100, "insts": [{"inst": "x.json"}]})
+        cfg = self.config({"cwd": "../sub", "interval_ms": 100, "insts": {"x.json": {}}})
         _, out, _ = self.start(cfg, cwd=os.path.join(self.d, "run"))
         # 絕對的 cwd
         cfg2 = self.config({"cwd": os.path.join(self.d, "other"), "interval_ms": 100,
-                            "insts": [{"inst": "y.json"}]}, "c2.json")
+                            "insts": {"y.json": {}}}, "c2.json")
         _, out2, _ = self.start(cfg2)
         # 沒寫 cwd：daemon 啟動時的工作目錄
-        cfg3 = self.config({"interval_ms": 100, "insts": [{"inst": "sub/x.json"}]}, "c3.json")
+        cfg3 = self.config({"interval_ms": 100, "insts": {"sub/x.json": {}}}, "c3.json")
         _, out3, _ = self.start(cfg3)
         self.wait_for(lambda: self.results(out, "x.json") and self.results(out2, "y.json")
                       and self.results(out3, "sub/x.json"))
@@ -134,13 +134,17 @@ class Step1Config(DaemonCase):
 
     def test_defaults_and_override(self):
         cfg = self.config({"cwd": "/base", "interval_ms": 7, "stop_on_nonzero": True,
-                           "exec_err_path": "<inst>/err.log", "insts": [
-                               {"inst": "a"}, {"inst": "b", "interval_ms": 9, "stop_on_nonzero": False}]})
+                           "exec_err_path": "<inst>/err.log", "insts": {
+                               "a": {}, "b": {"interval_ms": 9, "stop_on_nonzero": False}}})
         start, items = aos_daemon.load_config(cfg)
         self.assertEqual(start, "/base")
         self.assertEqual([(i.index, i.inst, i.interval_ms, i.stop_on_nonzero) for i in items],
                          [(0, "a", 7, True), (1, "b", 9, False)])
-        cfg = self.config({"insts": [{"inst": "a", "interval_ms": 5}]})
+        # index 照物件鍵的順序（不是字母序）
+        cfg = self.config({"interval_ms": 5, "insts": {"z": {}, "a": {}, "m": {}}}, "order.json")
+        self.assertEqual([(i.index, i.inst) for i in aos_daemon.load_config(cfg)[1]],
+                         [(0, "z"), (1, "a"), (2, "m")])
+        cfg = self.config({"insts": {"a": {"interval_ms": 5}}})
         start, items = aos_daemon.load_config(cfg)
         self.assertEqual(start, os.getcwd())
         self.assertFalse(items[0].stop_on_nonzero)
@@ -157,13 +161,13 @@ class Step1Config(DaemonCase):
         self.assertIsNone(f(None, "dir", "/s"))
 
     def test_no_interval(self):
-        r = self.run_cfg(self.config({"insts": [{"inst": "a", "interval_ms": 5}, {"inst": "b"}]}))
+        r = self.run_cfg(self.config({"insts": {"a": {"interval_ms": 5}, "b": {}}}))
         self.assertEqual(r.returncode, 1)
-        self.assertIn("insts[1]", r.stderr)
+        self.assertIn('insts 的 "b"', r.stderr)
 
     def test_usage(self):
         self.assertEqual(self.run_cfg([]).returncode, 1)
-        cfg = self.config({"interval_ms": 5, "insts": []})
+        cfg = self.config({"interval_ms": 5, "insts": {}})
         self.assertEqual(self.run_cfg(["--config", cfg, "--what"]).returncode, 1)
 
     def test_bad_file(self):
@@ -179,7 +183,7 @@ class Step1Directives(DaemonCase):
     def test_ref_split_insts_and_defaults(self):
         # 設定檔放在 conf/，daemon 從 self.d 開：$ref 照 conf/ 找，inst 照 daemon 的工作目錄找
         self.inst({"argv": ["true"]}, "x.json")
-        self.write("conf/list.json", json.dumps([{"inst": "x.json"}, {"inst": "y", "interval_ms": 9}]))
+        self.write("conf/list.json", json.dumps({"x.json": {}, "y": {"interval_ms": 9}}))
         self.write("conf/defaults.json", json.dumps({"interval_ms": 100, "stop_on_nonzero": True}))
         cfg = self.config({"interval_ms": {"$ref": "defaults.json#/interval_ms"},
                            "stop_on_nonzero": {"$ref": "defaults.json", "$at": "/stop_on_nonzero"},
@@ -187,9 +191,9 @@ class Step1Directives(DaemonCase):
         start, items = aos_daemon.load_config(cfg)
         self.assertEqual([(i.index, i.inst, i.interval_ms, i.stop_on_nonzero) for i in items],
                          [(0, "x.json", 100, True), (1, "y", 9, True)])
-        # 陣列裡單一項也能引：list.json 的第 0 項
+        # 單一項的設定也能引：list.json 裡 x.json 那項
         cfg2 = self.config({"interval_ms": {"$ref": "defaults.json#/interval_ms"},
-                            "insts": [{"$ref": "list.json#/0"}]}, "conf/one.json")
+                            "insts": {"x.json": {"$ref": "list.json", "$at": "/x.json"}}}, "conf/one.json")
         _, out, _ = self.start(cfg2)
         self.wait_for(lambda: len(self.results(out, "x.json")) >= 2)
         self.assertEqual(set(self.results(out, "x.json")), {0})
@@ -199,26 +203,26 @@ class Step1Directives(DaemonCase):
         self.inst({"argv": ["true"]}, "nodes/x.json")
         self.write("conf/where.json", json.dumps({"cwd": "nodes"}))
         cfg = self.config({"cwd": {"$ref": "where.json#/cwd"}, "interval_ms": 100,
-                           "insts": [{"inst": "x.json"}]}, "conf/daemon.json")
+                           "insts": {"x.json": {}}}, "conf/daemon.json")
         _, out, _ = self.start(cfg)
         self.wait_for(lambda: self.results(out, "x.json"))
         self.assertEqual(self.results(out, "x.json")[0], 0)
 
     def test_modules_ignored(self):
         self.inst({"argv": ["true"]}, "x.json")
-        cfg = self.config({"interval_ms": 100, "insts": [{"inst": "x.json"}],
+        cfg = self.config({"interval_ms": 100, "insts": {"x.json": {}},
                            "modules": {"control": {"socket": "./aos.sock", "whatever": [1, {"$opt": "x"}]},
                                        "other": 3}})
         _, out, err = self.start(cfg)
         self.wait_for(lambda: self.results(out, "x.json"))
         self.assertEqual(self.results(out, "x.json")[0], 0)
         self.assertFalse(self.exists("aos.sock"))
-        r = self.run_cfg(self.config({"interval_ms": 5, "insts": [], "modules": []}, "bad.json"))
+        r = self.run_cfg(self.config({"interval_ms": 5, "insts": {}, "modules": []}, "bad.json"))
         self.assertEqual(r.returncode, 1)
         self.assertIn("modules", r.stderr)
 
     def test_directive_error(self):
-        r = self.run_cfg(self.config({"interval_ms": {"$ref": "nope.json"}, "insts": []}))
+        r = self.run_cfg(self.config({"interval_ms": {"$ref": "nope.json"}, "insts": {}}))
         self.assertEqual(r.returncode, 1)
         self.assertIn("ReferenceReadFailed", r.stderr)
         r = self.run_cfg(self.config({"interval_ms": 5, "insts": {"$ref": "", "$at": ".."}}, "c.json"))
@@ -230,7 +234,7 @@ class Step2Once(DaemonCase):
     def test_exit_codes_and_line(self):
         self.inst(sh("exit 3"), "three.json")
         self.inst({"argv": ["true"]}, "ok.json")
-        cfg = self.config({"interval_ms": 100, "insts": [{"inst": "three.json"}, {"inst": "ok.json"}]})
+        cfg = self.config({"interval_ms": 100, "insts": {"three.json": {}, "ok.json": {}}})
         _, out, _ = self.start(cfg)
         self.wait_for(lambda: self.results(out, "three.json") and self.results(out, "ok.json"))
         self.assertEqual(self.results(out, "three.json")[0], 3)
@@ -242,7 +246,7 @@ class Step2Once(DaemonCase):
         # 任務的父程序就是 aos-exec；它自成 session＝sid 等於自己的 pid
         self.inst({"argv": [PY, "-c", "import os; p=os.getppid(); print(p, os.getsid(p))"],
                    "stdout": "sid.txt"}, "s.json")
-        p, out, _ = self.start(self.config({"interval_ms": 10000, "insts": [{"inst": "s.json"}]}))
+        p, out, _ = self.start(self.config({"interval_ms": 10000, "insts": {"s.json": {}}}))
         self.wait_for(lambda: self.results(out, "s.json"))
         ppid, sid = self.read("sid.txt").split()
         self.assertEqual(ppid, sid)
@@ -251,7 +255,7 @@ class Step2Once(DaemonCase):
     def test_stderr_to_daemon(self):
         self.inst(sh("echo oops >&2; echo two >&2", stderr=INHERIT), "loud.json")
         self.inst(sh("echo hidden >&2"), "quiet.json")
-        cfg = self.config({"interval_ms": 10000, "insts": [{"inst": "quiet.json"}, {"inst": "loud.json"}]})
+        cfg = self.config({"interval_ms": 10000, "insts": {"quiet.json": {}, "loud.json": {}}})
         _, out, err = self.start(cfg)
         self.wait_for(lambda: self.results(out, "loud.json") and self.results(out, "quiet.json"))
         self.wait_for(lambda: len(err) >= 3)
@@ -262,7 +266,7 @@ class Step2Once(DaemonCase):
 
     def test_exec_own_stderr(self):
         # aos-exec 自己的錯（目標不存在＝用法錯 1）也在它的 stderr 裡
-        _, out, err = self.start(self.config({"interval_ms": 10000, "insts": [{"inst": "nope"}]}))
+        _, out, err = self.start(self.config({"interval_ms": 10000, "insts": {"nope": {}}}))
         self.wait_for(lambda: self.results(out, "nope"))
         self.assertEqual(self.results(out, "nope"), [1])
         self.wait_for(lambda: len(err) >= 2)
@@ -272,7 +276,7 @@ class Step2Once(DaemonCase):
         self.inst(sh("echo from-j >&2", stderr=INHERIT), "j/x.json")
         self.inst(sh("echo from-a >&2", stderr=INHERIT), "a/inst.json")
         cfg = self.config({"interval_ms": 100, "exec_err_path": "<inst>/logs/err.log",
-                           "insts": [{"inst": "j/x.json"}, {"inst": "a"}]})
+                           "insts": {"j/x.json": {}, "a": {}}})
         _, out, err = self.start(cfg)
         self.wait_for(lambda: len(self.results(out, "j/x.json")) >= 2 and len(self.results(out, "a")) >= 2)
         for rel, idx, inst, text in (("j/logs/err.log", "0", "j/x.json", "from-j"),
@@ -288,7 +292,7 @@ class Step2Once(DaemonCase):
         self.inst(sh(burst % "A", stderr=INHERIT), "a.json")
         self.inst(sh(burst % "B", stderr=INHERIT), "b.json")
         cfg = self.config({"interval_ms": 20, "exec_err_path": "logs/all.err",
-                           "insts": [{"inst": "a.json"}, {"inst": "b.json"}]})
+                           "insts": {"a.json": {}, "b.json": {}}})
         _, out, _ = self.start(cfg)
         self.wait_for(lambda: len(self.results(out, "a.json")) >= 3 and len(self.results(out, "b.json")) >= 3)
         letter = None
@@ -308,13 +312,13 @@ class Step3Period(DaemonCase):
 
     def test_first_run_and_repeat(self):
         self.inst(sh("echo x >> runs"), "r.json")
-        _, out, _ = self.start(self.config({"interval_ms": 100, "insts": [{"inst": "r.json"}]}))
+        _, out, _ = self.start(self.config({"interval_ms": 100, "insts": {"r.json": {}}}))
         self.wait_for(lambda: self.exists("runs"), timeout=2)
         self.wait_for(lambda: len(self.results(out, "r.json")) >= 4, timeout=3)
 
     def test_no_overlap(self):
         self.inst(sh("echo start >> log; sleep 0.3; echo end >> log"), "s.json")
-        _, out, _ = self.start(self.config({"interval_ms": 50, "insts": [{"inst": "s.json"}]}))
+        _, out, _ = self.start(self.config({"interval_ms": 50, "insts": {"s.json": {}}}))
         self.wait_for(lambda: len(self.results(out, "s.json")) >= 3)
         log = self.read("log").split()
         self.assertEqual(log[:6], ["start", "end"] * 3)
@@ -324,7 +328,7 @@ class Step3Period(DaemonCase):
     def test_stuck_does_not_block_others(self):
         self.inst(sh("echo $$ >> pids; exec sleep 30"), "stuck.json")
         self.inst({"argv": ["true"]}, "ok.json")
-        cfg = self.config({"interval_ms": 50, "insts": [{"inst": "stuck.json"}, {"inst": "ok.json"}]})
+        cfg = self.config({"interval_ms": 50, "insts": {"stuck.json": {}, "ok.json": {}}})
         _, out, _ = self.start(cfg)
         self.wait_for(lambda: len(self.results(out, "ok.json")) >= 4)
         self.assertEqual(self.results(out, "stuck.json"), [])
@@ -335,8 +339,8 @@ class Step4Stop(DaemonCase):
     def test_stop(self):
         self.inst({"argv": ["false"]}, "f.json")
         self.inst({"argv": ["true"]}, "ok.json")
-        cfg = self.config({"interval_ms": 50, "insts": [
-            {"inst": "f.json", "stop_on_nonzero": True}, {"inst": "ok.json"}]})
+        cfg = self.config({"interval_ms": 50, "insts": {
+            "f.json": {"stop_on_nonzero": True}, "ok.json": {}}})
         p, out, _ = self.start(cfg)
         self.wait_for(lambda: any(l.endswith(" inst=f.json stopped") for l in list(out)))
         n_ok = len(self.results(out, "ok.json"))
@@ -348,7 +352,7 @@ class Step4Stop(DaemonCase):
 
     def test_all_stopped_stays_open(self):
         p, out, _ = self.start(self.config({"interval_ms": 50, "stop_on_nonzero": True,
-                                            "insts": [{"inst": "nope"}]}))
+                                            "insts": {"nope": {}}}))
         self.wait_for(lambda: any(l.endswith("stopped") for l in list(out)))
         self.assertEqual(self.results(out, "nope"), [1])     # 目標不存在：aos-exec 用法錯 1
         time.sleep(0.4)
@@ -356,7 +360,7 @@ class Step4Stop(DaemonCase):
 
     def test_no_stop(self):
         self.inst({"argv": ["false"]}, "f.json")
-        _, out, _ = self.start(self.config({"interval_ms": 50, "insts": [{"inst": "f.json"}]}))
+        _, out, _ = self.start(self.config({"interval_ms": 50, "insts": {"f.json": {}}}))
         self.wait_for(lambda: len(self.results(out, "f.json")) >= 3)
         self.assertEqual(set(self.results(out, "f.json")), {1})
         self.assertFalse(any(l.endswith("stopped") for l in list(out)))
@@ -364,7 +368,7 @@ class Step4Stop(DaemonCase):
     def test_zero_never_stops(self):
         self.inst({"argv": ["true"]}, "t.json")
         _, out, _ = self.start(self.config({"interval_ms": 50, "stop_on_nonzero": True,
-                                            "insts": [{"inst": "t.json"}]}))
+                                            "insts": {"t.json": {}}}))
         self.wait_for(lambda: len(self.results(out, "t.json")) >= 3)
         self.assertFalse(any(l.endswith("stopped") for l in list(out)))
 
@@ -373,7 +377,7 @@ class Step5Signals(DaemonCase):
 
     def check(self, sig):
         self.inst({"argv": ["true"]}, "t.json")
-        p, out, _ = self.start(self.config({"interval_ms": 50, "insts": [{"inst": "t.json"}]}))
+        p, out, _ = self.start(self.config({"interval_ms": 50, "insts": {"t.json": {}}}))
         self.wait_for(lambda: out)
         os.kill(p.pid, sig)
         self.assertEqual(p.wait(timeout=1), 0)
@@ -386,7 +390,7 @@ class Step5Signals(DaemonCase):
 
     def test_children_survive(self):
         self.inst(sh("echo $$ >> pids; touch began; sleep 0.5; touch done"), "s.json")
-        p, out, _ = self.start(self.config({"interval_ms": 10000, "insts": [{"inst": "s.json"}]}))
+        p, out, _ = self.start(self.config({"interval_ms": 10000, "insts": {"s.json": {}}}))
         self.wait_for(lambda: self.exists("began"))
         os.kill(p.pid, signal.SIGTERM)
         self.assertEqual(p.wait(timeout=1), 0)
@@ -416,20 +420,20 @@ class Step6Tick(DaemonCase):
 
     def test_inst_path(self):
         inst = os.path.join(self.node, "inst.json")
-        _, out, _ = self.start(self.config({"interval_ms": 100, "insts": [{"inst": inst}]}))
+        _, out, _ = self.start(self.config({"interval_ms": 100, "insts": {inst: {}}}))
         self.wait_for(lambda: self.seq() >= 3)
         self.wait_for(lambda: len(self.results(out, inst)) >= 3)
         self.assertEqual(set(self.results(out, inst)), {0})
 
     def test_dir_path(self):
-        _, out, _ = self.start(self.config({"interval_ms": 100, "insts": [{"inst": self.node}]}))
+        _, out, _ = self.start(self.config({"interval_ms": 100, "insts": {self.node: {}}}))
         self.wait_for(lambda: len(self.results(out, self.node)) >= 2)
         self.assertEqual(set(self.results(out, self.node)), {0})
         self.assertGreaterEqual(self.seq(), 2)
 
     def test_blocked(self):
         self.write("n/a/.aos/tick-blocked", "人手暫停")
-        _, out, err = self.start(self.config({"interval_ms": 50, "insts": [{"inst": "n/a"}]}))
+        _, out, err = self.start(self.config({"interval_ms": 50, "insts": {"n/a": {}}}))
         self.wait_for(lambda: len(self.results(out, "n/a")) >= 3)
         self.assertEqual(set(self.results(out, "n/a")), {0})
         self.assertEqual(self.seq(), 0)
@@ -440,12 +444,12 @@ class Step6Tick(DaemonCase):
     def test_bad_table(self):
         self.write("n/a/.aos/tasks.json", "{")
         _, out, _ = self.start(self.config({"interval_ms": 50, "stop_on_nonzero": True,
-                                            "insts": [{"inst": "n/a"}]}))
+                                            "insts": {"n/a": {}}}))
         self.wait_for(lambda: any(l.endswith(" inst=n/a stopped") for l in list(out)))
         self.assertEqual(self.results(out, "n/a"), [1])
 
     def test_two_daemons(self):
-        cfg = self.config({"interval_ms": 10, "insts": [{"inst": "n/a"}]})
+        cfg = self.config({"interval_ms": 10, "insts": {"n/a": {}}})
         _, out1, _ = self.start(cfg)
         _, out2, _ = self.start(cfg)
         self.wait_for(lambda: len(self.results(out1, "n/a")) >= 5 and len(self.results(out2, "n/a")) >= 5)
