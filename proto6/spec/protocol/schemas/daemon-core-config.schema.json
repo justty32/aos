@@ -41,7 +41,7 @@
     },
     "modules": {
       "type": "object",
-      "description": "一個模組一個鍵，有寫就開；目前認 control、reload、state、cgroup、mq，其他鍵照收不看",
+      "description": "一個模組一個鍵，有寫就開；目前認 control、reload、state、cgroup、mq、account，其他鍵照收不看",
       "properties": {
         "control": {
           "type": "object",
@@ -82,6 +82,39 @@
         "cgroup": {
           "type": "object",
           "description": "收屍／cgroup 模組（P-124）：每項一個 cgroup 框，跑完清掉殘留；子樹根＝daemon 自己所在的 cgroup；裡面沒有鍵"
+        },
+        "account": {
+          "type": "object",
+          "description": "帳號模組（P-126）：要用 root 開；主程式永久降成預設帳號，別的帳號的項由 root 端開。名單准不准、帳號查不查得到、deny 比不比得到預設帳號是執行時核的",
+          "properties": {
+            "user": {
+              "type": "string",
+              "minLength": 1,
+              "description": "預設帳號；省了用 SUDO_USER"
+            },
+            "allow": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^*]*\\*?$",
+                "description": "完整帳號名，或結尾一個 * 當前綴（單獨 * 比所有帳號）；* 不能在別處"
+              },
+              "default": [],
+              "description": "白名單；省略＝空（只有預設帳號能用）"
+            },
+            "deny": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^*]*\\*?$",
+                "description": "完整帳號名，或結尾一個 * 當前綴（單獨 * 比所有帳號）；* 不能在別處"
+              },
+              "default": [],
+              "description": "黑名單；比到就不准，比得到預設帳號是設定錯"
+            }
+          }
         }
       }
     }
@@ -127,6 +160,17 @@
           "description": "收屍／cgroup 模組掛著時這一項的上限（P-124）：鍵＝cgroup 檔名（memory.max、cpu.max、pids.max…），值＝字串，原樣寫進框；模組沒掛時忽略",
           "additionalProperties": {
             "type": "string"
+          }
+        },
+        "account": {
+          "type": "object",
+          "description": "帳號模組掛著時這一項用哪個帳號（P-126）；模組沒掛時忽略",
+          "properties": {
+            "user": {
+              "type": "string",
+              "minLength": 1,
+              "description": "帳號名；省了＝預設帳號"
+            }
           }
         }
       }

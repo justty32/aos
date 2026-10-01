@@ -50,7 +50,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | `stop_on_nonzero` | 布林，可省 | 各項的預設；省略＝false |
 | `exec_out_path` | 字串，可省 | `aos-exec` 的 stdout 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 這幾個字換成這一項的位置（規則見 [B-640](../../daemon/core.md)「輸出」）。省略＝丟掉（`/dev/null`）；寫 `/dev/stdout` 接回 daemon 自己的 stdout |
 | `exec_err_path` | 字串，可省 | `aos-exec` 的 stderr 接到哪個檔，規則同 `exec_out_path`。省略＝丟掉（`/dev/null`）；寫 `/dev/stderr` 接回 daemon 自己的 stderr |
-| `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）、`reload`（`{}`，見 [P-122](reload.md)）、`state`（原始檔必須是 `{"$ref": "<狀態檔>"}`，展開後是狀態檔內容，見 [P-123](state.md)）、`cgroup`（`{}`，見 [P-124](cgroup.md)）、`mq`（`{"socket": <路徑>}`，見 [P-125](mq.md)）；其他鍵照收、不看 |
+| `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）、`reload`（`{}`，見 [P-122](reload.md)）、`state`（原始檔必須是 `{"$ref": "<狀態檔>"}`，展開後是狀態檔內容，見 [P-123](state.md)）、`cgroup`（`{}`，見 [P-124](cgroup.md)）、`mq`（`{"socket": <路徑>}`，見 [P-125](mq.md)）、`account`（`{"user"?, "allow"?, "deny"?}`，見 [P-126](account.md)）；其他鍵照收、不看 |
 
 **`insts` 每一項的值**
 
@@ -59,6 +59,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | `interval_ms` | 非負整數毫秒，可省 | 蓋過頂層 |
 | `stop_on_nonzero` | 布林，可省 | 蓋過頂層 |
 | `cgroup` | 物件，可省 | 〔第十二批〕收屍／cgroup 模組掛著時這一項的上限：鍵＝cgroup 檔名、值＝字串（[P-124](cgroup.md)）；模組沒掛時忽略 |
+| `account` | 物件，可省 | 〔第十三批〕帳號模組掛著時這一項用哪個帳號：`{"user": "<帳號>"}`（[P-126](account.md)）；模組沒掛時忽略 |
 
 - 不認得的欄位（頂層、每一項、`modules` 裡）一律忽略（持久檔，[C-07](../../../contracts.md)）。daemon 不另外印出不認得的欄位。
 - **某一項自己沒寫、頂層也沒寫 `interval_ms`＝設定錯**。〔astra 報告設計 3〕schema 用條件規則表達（頂層沒有 `interval_ms` 時，`insts` 每一項都必填），直接拿 schema 驗的工具也擋得到；程式自己的檢查照留（錯誤訊息見下面「daemon 自己的 stderr」）。
@@ -120,7 +121,7 @@ boom
 | 碼 | 什麼時候 |
 |---|---|
 | 0 | 收到 SIGINT／SIGTERM 退出（正常停機）；`-h`／`--help` |
-| 1 | 用法錯、設定錯、設定檔讀不到、指示詞錯、其他沒接住的錯（含掛了 cgroup 模組卻沒有委派好的 cgroup v2，[P-124](cgroup.md)） |
+| 1 | 用法錯、設定錯、設定檔讀不到、指示詞錯、其他沒接住的錯（含掛了 cgroup 模組卻沒有委派好的 cgroup v2，[P-124](cgroup.md)；掛了帳號模組卻沒用 root 開、帳號設定錯、root 端不見了，[P-126](account.md)） |
 
 daemon 正常運作時不會自己結束（所有項都停了也照樣開著），所以 0 只會來自訊號。
 
