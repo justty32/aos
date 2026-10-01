@@ -126,7 +126,7 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | 照表跑完（不管任務回幾、成敗） | 0 |
 | 看到停格檔 `.aos/tick/stop`，剩下不跑（不算中斷，暫定） | 0 |
 | 同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，stderr `busy:`），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
-| 有擋板檔 `.aos/tick-blocked`（stderr `blocked:`），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
+| 有擋板檔 `.aos/tick-blocked`（只看存不存在、stderr 不印、hooks 不跑，第十六批），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
 | argv 用法錯、`AOS_DIRNAME` 不合法、目標給的是檔、目標指的東西不存在、目標資料夾底下沒有 `.aos/tasks.json`、任務表不合極簡檢查（stderr `usage:`／`no_target:`／`no_tasks:`／`bad_table:`；表壞不換紀錄、不加 `seq`） | 1 |
 | tick 自用檔（`tick-blocked`、`stop`、`tick/current/`、`tick/last/` 裡的紀錄檔）讀不到／寫不進／格式壞 | 1（自然丟錯，traceback 進 stderr） |
 

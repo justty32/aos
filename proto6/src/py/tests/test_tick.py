@@ -250,14 +250,39 @@ class Step2Blocked(TickCase):
         cur, last_exists = self.snap(".aos/tick/current"), self.exists(".aos/tick/last")
         self.write(".aos/tick-blocked", "壞了\n")
         r = self.tick()
-        self.assertEqual(r.returncode, 0)                 # 正常中斷也是 0（使用者 2026-10-01 再改）
-        self.assertIn("blocked: 壞了", r.stderr)
+        self.assertEqual(r.returncode, 0)                 # 正常機制結束：回 0、stderr 不印（第十六批）
+        self.assertEqual(r.stderr, "")
         self.assertEqual(self.read("ran.txt"), "ran\n")
         self.assertEqual(self.snap(".aos/tick/current"), cur)
         self.assertEqual(self.exists(".aos/tick/last"), last_exists)
         os.unlink(os.path.join(self.d, ".aos/tick-blocked"))
         self.assertEqual(self.tick().returncode, 0)
         self.assertEqual(self.rec()["seq"], 2)
+
+    def blocked_quietly(self):
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertFalse(self.exists("ran.txt"))
+        self.assertFalse(self.exists(".aos/tick"))
+
+    def test_blocked_only_existence(self):
+        # 只看存不存在：空檔、資料夾、沒讀權、壞 symlink 都一樣靜靜回 0（第十六批）
+        self.tasks(sh("t", "echo ran >> ran.txt"))
+        path = os.path.join(self.d, ".aos/tick-blocked")
+        self.write(".aos/tick-blocked", "")
+        self.blocked_quietly()
+        os.unlink(path)
+        os.mkdir(path)
+        self.blocked_quietly()
+        os.rmdir(path)
+        os.symlink(os.path.join(self.d, "nowhere"), path)
+        self.blocked_quietly()
+        os.unlink(path)
+        if os.geteuid() != 0:                             # root 讀得到 000 的檔，測不出來
+            self.write(".aos/tick-blocked", "x")
+            os.chmod(path, 0)
+            self.blocked_quietly()
+            os.chmod(path, 0o644)
 
 
 class Step3Seq(TickCase):
@@ -597,8 +622,8 @@ class DirName(TickCase):
         self.assertEqual(sorted(os.listdir(os.path.join(self.d, ".aos2"))), ["tasks.json", "tick", "tick.lock"])
         self.write(".aos2/tick-blocked", "擋\n")
         r = self.tick(env=self.ENV)
-        self.assertEqual(r.returncode, 0)
-        self.assertIn("blocked: 擋", r.stderr)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertFalse(self.exists("c.ran"))
         os.unlink(os.path.join(self.d, ".aos2/tick-blocked"))
         self.assertTrue(self.exists(".aos2/tick/stop"))
         self.write(".aos2/tasks.json", json.dumps(table(sh("c", "touch c.ran"))))
@@ -652,8 +677,8 @@ class EmptyDirName(TickCase):
         self.assertEqual(os.listdir(os.path.join(self.d, ".aos")), ["tasks.json"])   # .aos/ 沒被碰
         self.write("tick-blocked", "擋\n")
         r = self.tick(env=self.ENV)
-        self.assertEqual(r.returncode, 0)
-        self.assertIn("blocked: 擋", r.stderr)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertFalse(self.exists("c.ran"))
         os.unlink(os.path.join(self.d, "tick-blocked"))
         self.write("tasks.json", json.dumps(table(sh("c", "touch c.ran"))))
         self.assertEqual(self.tick(env=self.ENV).returncode, 0)

@@ -190,7 +190,7 @@ class NotRun(HooksCase):
         self.write(".aos/tick-blocked", "壞了\n")
         r = self.tick()
         self.assertEqual(r.returncode, 0)
-        self.assertIn("blocked:", r.stderr)
+        self.assertEqual(r.stderr, "")                    # 第十六批：靜靜結束，hooks 根本不啟動
         self.assertFalse(self.exists("h.ran"))
         self.assertFalse(self.exists(".aos/tick"))
 

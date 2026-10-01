@@ -649,3 +649,17 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 4. 人在 shell 沒有 `AOS_DAEMON_INST` 時 `take`、`peek` 都回 `no_inst`，照「手打這塊我們不管」不另外處理。
 
 改到的地方：程式 `lib/aos_daemon_mq.py`（`peek`、`from` 陣列）、`lib/aos_mq.py`；測試 `tests/test_mq.py`（20 條，新 `test_from_many`、`test_from_nothing_is_null`、`test_from_repeated_adds_up`、`test_peek_does_not_take`、`test_flag_after_from`）；spec [B-645](../../spec/settled/daemon/mq.md)、[P-125](../../spec/settled/protocol/daemon/mq.md)、[驗收入口](../../spec/conformance.md)；schema `daemon-mq`（`peek`、take／peek 的 `from` 陣列）、範例 `mq_request.take-from.valid.json` 改陣列、新 `mq_request.peek-from.valid.json`、`mq_request.take-from-empty.invalid.json`、`mq_request.peek-from-string.invalid.json`；[src/py README](../../src/py/README.md#訊息與-aos-mqm3m-模組四)；[plan m3m](../../plan/m3m-daemon-modules.md) 模組四。
+
+<a id="2026-10-01-第十六批擋板檔只看存不存在"></a>
+
+## 2026-10-01 第十六批：擋板檔只看存不存在
+
+〔使用者裁定 2026-10-01 晚〕使用者原話：「先來做tick-blocked這塊的微調：首先我覺得改一下，改成只看存不存在，然後存在的話就直接結束tick，stderr不印東西，這算是正常機制結束。正常機制結束的話stderr不應該印東西。hook也根本不會啓動。」
+
+- **擋板檔 `<狀態資料夾>/tick-blocked` 只看存不存在**（`os.path.lexists`）：空檔、資料夾、沒讀權、壞 symlink 都算在；核心不打開、不讀原因。內容 aos 不看，要留原因給人看可以寫。
+- **在就直接結束**：回 0、**stderr 不印**（拿掉原本的 `blocked:` 那行）、不開格、不寫紀錄、不加 `seq`、hooks 根本不啟動。
+- **原則記進慣例 C-08**：正常機制結束，stderr 不印。`busy:`、停格檔的 `stopped:` 現在還印，要不要跟著改沒裁定（AI 隊只記一句「另議」，沒改）。
+- 停格檔 `tick/stop` 改名 `tasks-blocked`、內容可指定行為那段還在跟使用者討論，這批沒動。
+
+改到的地方：程式 `lib/aos_tick.py`（`_run_locked()` 改用 `lexists`、`read_reason()` 只剩停格檔用）；測試 `tests/test_tick.py`（`Step2Blocked` 改看 stderr 空、新 `test_blocked_only_existence`：空檔／資料夾／壞 symlink／chmod 000；`AOS_DIRNAME` 兩條）、`tests/test_tick_hooks.py`（`NotRun.test_blocked`）、`tests/test_daemon.py`（`test_blocked` 改成 stderr 沒有 blocked）；spec [tick 核心](../../spec/settled/tick.md) B-620 停格檔與擋板檔表與結束碼表、[tick 協議](../../spec/settled/protocol/tick.md) P-203（拿掉 `blocked` 代碼）、P-213、[hooks](../../spec/settled/tick/hooks.md)、[名詞](../../spec/settled/terms.md)、[慣例 C-08](../../spec/settled/conventions.md)、[驗收入口](../../spec/conformance.md)；[src/py README](../../src/py/README.md)。
+
