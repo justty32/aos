@@ -308,7 +308,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 **結束碼紀錄與格數**
 
 - 任務第二項讀得到第一項的結束碼；第三項被 SIGKILL 時紀錄是 `signal:9`；tick 在某項中途被殺，下一格的 `last.json` 是 `ended:false`（B-633）。
-- 同一資料夾連跑十格，`seq` 從 1 到 10，daemon 與 cron 交替跑仍連續；斷電後 `seq` 不倒退只在帶 `--firstdo-fsync`（或 daemon 帶了旗標）時要求，沒帶時不要求（B-633）；鎖被占回 75 時兩份紀錄都不變；資料夾唯讀時仍照表跑完、stderr 有 `record_unwritable`（B-633、B-627）。
+- 同一資料夾連跑十格，`seq` 從 1 到 10，daemon 與 cron 交替跑仍連續；斷電後 `seq` 不倒退只在帶 `--firstdo-fsync`（或 daemon 帶了旗標）時要求，沒帶時不要求（B-633）；鎖被占回 75 時兩份紀錄都不變；~~資料夾唯讀時仍照表跑完、stderr 有 `record_unwritable`~~（作廢，2026-09-30 晚）（B-633、B-627）。
 - 牆鐘倒退時，以格數計的保留期不提早也不延後到期（C-01、B-404）。
 
 **系統級任務與普通程式**

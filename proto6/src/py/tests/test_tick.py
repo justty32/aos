@@ -267,53 +267,19 @@ class Step6Stop(TickCase):
         self.assertFalse(self.exists(".aos/tick/stop"))
 
 
-class Step7Unwritable(TickCase):
-
-    @unittest.skipIf(os.geteuid() == 0, "root 不受 chmod 限制")
-    def test_readonly_tick_dir(self):
-        self.tasks({"id": "t", "argv": ["true"]})
-        self.assertEqual(self.tick().returncode, 0)
-        self.tasks(sh("a", 'echo "${AOS_TICK_RECORD-unset}" > rec.txt'))
-        d = os.path.join(self.d, ".aos/tick")
-        os.chmod(d, 0o555)
-        try:
-            r = self.tick()
-        finally:
-            os.chmod(d, 0o755)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stderr.count("record_unwritable"), 1)
-        self.assertEqual(self.read("rec.txt"), "unset\n")
-
-    def test_fail_midway(self):
-        self.tasks(sh("a", "true"), sh("b", "true"), sh("c", 'echo "${AOS_TICK_RECORD-unset}" > rec.txt'))
-        r = self.tick(env={"AOS_TICK_TEST_FAIL_WRITE": "3"})       # 1＝開格、2＝a 之後、3＝b 之後
-        self.assertIn("record_unwritable", r.stderr)
-        self.assertEqual(self.read("rec.txt"), "unset\n")
-        self.tasks()
-        self.tick()
-        last = self.rec("last")
-        self.assertFalse(last["ended"])
-        self.assertEqual(last["tasks"], [{"id": "a", "exit": 0}])   # 留最後一次寫成功的那份
-
-    def test_fail_at_open(self):
-        self.tasks({"id": "t", "argv": ["true"]})
-        self.tick()
-        self.tick()
-        r = self.tick(env={"AOS_TICK_TEST_FAIL_WRITE": "1"})
-        self.assertIn("record_unwritable", r.stderr)
-        self.assertFalse(self.exists(".aos/tick/current.json"))
-        self.tick()
-        self.assertFalse(self.exists(".aos/tick/last.json"))
-        self.assertEqual(self.rec()["seq"], 3)
+class Step7RecordAndFsync(TickCase):
 
     def test_both_unreadable(self):
-        self.tasks({"id": "t", "argv": ["true"]})
+        self.tasks(sh("t", 'echo "${AOS_TICK_RECORD-unset}" > rec.txt'))
         self.write(".aos/tick/current.json", "壞")
         self.write(".aos/tick/last.json", "{")
         r = self.tick()
         self.assertEqual(r.returncode, 0)
         self.assertIn("record_unreadable", r.stderr)
         self.assertEqual(self.read(".aos/tick/current.json"), "壞")
+        self.assertEqual(self.read(".aos/tick/last.json"), "{")
+        self.assertEqual(self.read("rec.txt"), "unset\n")              # 本格沒有紀錄就不設
+        self.assertNotIn("record_unwritable", r.stderr)
 
     def test_fsync_flag_runs(self):
         self.tasks({"id": "t", "argv": ["true"]})
