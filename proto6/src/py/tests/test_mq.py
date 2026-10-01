@@ -53,9 +53,10 @@ class MqCase(CtlCase):
     def peek(self, inst, *args):
         return self.take(inst, *args, cmd="peek")
 
-    def letter(self, sender, msg, sock=True):
-        """一封信：用 aos-mq 寄的 from_socket 是 self.mq_sock（第二十一批）；直接連 socket 寄的沒帶就是 null。"""
-        return {"from": sender, "from_socket": self.mq_sock if sock is True else sock, "msg": msg}
+    def letter(self, sender, msg, sock=True, to="b.json"):
+        """一封信：用 aos-mq 寄的 from_socket 是 self.mq_sock（第二十一批）；直接連 socket 寄的沒帶就是 null。
+        to＝收件地址（第二十二批：單寄是收件 inst、全體 "*"、頻道 "#名字"）。"""
+        return {"from": sender, "from_socket": self.mq_sock if sock is True else sock, "to": to, "msg": msg}
 
 
 class Send(MqCase):
@@ -86,7 +87,7 @@ class Send(MqCase):
         self.up_mq({"b.json": {}}, 10000)
         self.mq("send", "b.json", "[1]")
         r = self.mq("take", AOS_DAEMON_INST="b.json")
-        self.assertEqual(r.stdout, '{"from":null,"from_socket":%s,"msg":[1]}\n' % json.dumps(self.mq_sock))
+        self.assertEqual(r.stdout, '{"from":null,"from_socket":%s,"to":"b.json","msg":[1]}\n' % json.dumps(self.mq_sock))
         r = self.mq("take", "b.json", AOS_DAEMON_INST="b.json")     # 不收 <inst>
         self.assertEqual(r.returncode, 1)
         self.assertTrue(r.stderr.startswith("usage: "))
@@ -200,7 +201,7 @@ class Urgent(MqCase):
         self.wait_for(lambda: len(self.read("p.runs").split()) == 2, timeout=1)
         time.sleep(0.3)
         self.assertEqual(len(self.read("s.runs").split()), 1)
-        self.assertEqual(self.take("s.json"), [self.letter(None, 1)])
+        self.assertEqual(self.take("s.json"), [self.letter(None, 1, to="s.json")])
         self.assertTrue(self.send({"status": "p.json"})["paused"])
 
 
@@ -251,7 +252,7 @@ class Errors(MqCase):
                     b'{"send":"b.json","msg":1,"from":3}\n', b'{"send":"b.json","msg":1,"from_socket":3}\n', b'{"take":"b.json","from":3}\n', b'{"take":"b.json","from":"a.json"}\n', b'{"take":"b.json","from":[]}\n',
                     b'{"peek":"b.json","from":[1]}\n', b'{"peek":"b.json","take":"b.json"}\n', b'{"send":"b.json"'):
             self.assertEqual(self.send(bad, self.mq_sock)["error"], "bad_request", bad)
-        self.assertEqual(self.send({"send": "b.json", "msg": None}, self.mq_sock), {"ok": True})
+        self.assertEqual(self.send({"send": "b.json", "msg": None}, self.mq_sock), {"ok": True, "delivered": 1})
         self.assertEqual(self.send({"peek": "b.json", "from": [None, "x"]}, self.mq_sock),
                          {"ok": True, "messages": [self.letter(None, None, None)]})
         self.assertEqual(self.send({"take": "b.json", "msg": 1}, self.mq_sock),
@@ -301,14 +302,14 @@ class CrossDaemon(MqCase):
         r = self.mq("take", AOS_DAEMON_MQ_SOCKET=self.b_mq, AOS_DAEMON_INST="b.json")
         self.assertEqual(r.returncode, 0, r.stderr)
         got = [json.loads(l) for l in r.stdout.splitlines()]
-        self.assertEqual(got, [{"from": "a.json", "from_socket": self.a_mq, "msg": {"hi": 1}}])
+        self.assertEqual(got, [{"from": "a.json", "from_socket": self.a_mq, "to": "b.json", "msg": {"hi": 1}}])
         # 照 from_socket 回信回得去
         r = self.mq("send", "--socket", got[0]["from_socket"], got[0]["from"], '"pong"',
                     AOS_DAEMON_MQ_SOCKET=self.b_mq, AOS_DAEMON_INST="b.json")
         self.assertEqual(r.returncode, 0, r.stderr)
         r = self.mq("take", AOS_DAEMON_MQ_SOCKET=self.a_mq, AOS_DAEMON_INST="a.json")
         self.assertEqual([json.loads(l) for l in r.stdout.splitlines()],
-                         [{"from": "b.json", "from_socket": self.b_mq, "msg": "pong"}])
+                         [{"from": "b.json", "from_socket": self.b_mq, "to": "a.json", "msg": "pong"}])
 
     def test_relative_socket_from_cwd(self):
         # --socket 的相對路徑以呼叫者的 cwd 為準；沒有自己的 daemon 時 from_socket 是 null
@@ -320,7 +321,7 @@ class CrossDaemon(MqCase):
                            capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 0, r.stderr)
         r = self.mq("peek", AOS_DAEMON_MQ_SOCKET=self.b_mq, AOS_DAEMON_INST="b.json")
-        self.assertEqual(json.loads(r.stdout), {"from": None, "from_socket": None, "msg": 1})
+        self.assertEqual(json.loads(r.stdout), {"from": None, "from_socket": None, "to": "b.json", "msg": 1})
 
     def test_ctl_socket_other_daemon(self):
         self.two()
@@ -342,6 +343,123 @@ class CrossDaemon(MqCase):
         self.assertTrue(r.stderr.startswith("connect: "), r.stderr)
 
 
+class Broadcast(MqCase):
+    """第二十二批：--all 全體廣播、--channel 頻道（每項設定 mq.subscribe），都不寄給寄件人自己；信多 to；--to 篩選。"""
+
+    def three(self, subs=None, modules=None, interval_ms=3600000):
+        subs = subs or {}
+        for n in ("a", "b", "c"):
+            self.inst({"argv": ["true"]}, n + ".json")
+        insts = {n + ".json": ({"mq": {"subscribe": subs[n]}} if n in subs else {}) for n in ("a", "b", "c")}
+        return self.up_mq(insts, interval_ms, modules)
+
+    def box(self, inst):
+        return self.take(inst)
+
+    def test_all_excludes_sender(self):
+        self.three()
+        r = self.mq("send", "--all", '{"hi":1}', AOS_DAEMON_INST="a.json")
+        self.assertEqual((r.returncode, r.stdout), (0, "2\n"), r.stderr)
+        for n in ("b.json", "c.json"):
+            self.assertEqual(self.box(n), [self.letter("a.json", {"hi": 1}, to="*")])
+        self.assertEqual(self.box("a.json"), [])
+
+    def test_all_from_null_reaches_everyone(self):
+        self.three()
+        r = self.mq("send", "--all", "1")
+        self.assertEqual(r.stdout, "3\n")
+        self.assertEqual([len(self.box(n)) for n in ("a.json", "b.json", "c.json")], [1, 1, 1])
+
+    def test_all_from_other_daemon_not_excluded(self):
+        # 寄件人的 from_socket 不是這個 daemon 的 socket（跨 daemon 來的）：同名的項不算自己
+        self.three()
+        other = os.path.join(self.d, "other", "mq.sock")
+        r = self.mq("send", "--socket", self.mq_sock, "--all", "1",
+                    AOS_DAEMON_MQ_SOCKET=other, AOS_DAEMON_INST="a.json")
+        self.assertEqual(r.stdout, "3\n", r.stderr)
+        self.assertEqual(self.box("a.json"), [self.letter("a.json", 1, sock=other, to="*")])
+
+    def test_channel_subscribers_only(self):
+        self.three({"a": ["deploy"], "b": ["deploy", "alerts"], "c": []})
+        r = self.mq("send", "--channel", "deploy", '"v2"', AOS_DAEMON_INST="c.json")
+        self.assertEqual(r.stdout, "2\n", r.stderr)
+        r = self.mq("send", "--channel", "deploy", '"v3"', AOS_DAEMON_INST="a.json")     # 自己訂了也不收
+        self.assertEqual(r.stdout, "1\n")
+        r = self.mq("send", "--channel", "nobody", '"x"')                                # 沒人訂：回 0、丟掉
+        self.assertEqual((r.returncode, r.stdout), (0, "0\n"))
+        self.assertEqual(self.box("a.json"), [self.letter("c.json", "v2", to="#deploy")])
+        self.assertEqual(self.box("b.json"), [self.letter("c.json", "v2", to="#deploy"),
+                                              self.letter("a.json", "v3", to="#deploy")])
+        self.assertEqual(self.box("c.json"), [])
+
+    def test_single_send_prints_nothing(self):
+        self.three()
+        r = self.mq("send", "b.json", "1")
+        self.assertEqual((r.returncode, r.stdout), (0, ""))
+
+    def test_urgent_wakes_many(self):
+        for n in ("b", "c"):
+            self.inst(task("echo x >> %s.runs" % n), n + ".json")
+        self.up_mq({"b.json": {}, "c.json": {}}, 3600000)
+        self.wait_for(lambda: self.exists("b.runs") and self.exists("c.runs"))
+        self.assertEqual(self.mq("send", "--all", "--urgent", "1").stdout, "2\n")
+        self.wait_for(lambda: all(len(self.read(n + ".runs").split()) == 2 for n in ("b", "c")), timeout=2)
+
+    def test_reload_changes_subscription(self):
+        modules = dict(MQMOD, reload={})
+        p, out, _ = self.three({"b": []}, modules)
+        self.assertEqual(self.mq("send", "--channel", "x", "1").stdout, "0\n")
+        self.config({"interval_ms": 3600000, "modules": modules,
+                     "insts": {"a.json": {}, "b.json": {"mq": {"subscribe": ["x"]}}, "c.json": {}}})
+        p.send_signal(1)
+        self.wait_for(lambda: self.has(out, "reloaded"))
+        self.assertEqual(self.mq("send", "--channel", "x", "2").stdout, "1\n")
+        self.assertEqual(self.box("b.json"), [self.letter(None, 2, to="#x")])
+
+    def test_to_filter(self):
+        self.three({"b": ["deploy"]})
+        self.mq("send", "b.json", "1", AOS_DAEMON_INST="a.json")
+        self.mq("send", "--all", "2", AOS_DAEMON_INST="a.json")
+        self.mq("send", "--channel", "deploy", "3", AOS_DAEMON_INST="a.json")
+        msgs = lambda got: [m["msg"] for m in got]
+        self.assertEqual(msgs(self.peek("b.json", "--to", "*")), [2])
+        self.assertEqual(msgs(self.peek("b.json", "--to", "#deploy", "b.json")), [1, 3])
+        self.assertEqual(msgs(self.peek("b.json", "--to")), [])                     # to 不會是 null
+        self.assertEqual(msgs(self.take("b.json", "--to", "*", "--from", "a.json")), [2])
+        self.assertEqual(msgs(self.take("b.json")), [1, 3])
+
+    def test_usage_three_way(self):
+        self.three()
+        for args in (("send", "--all", "b.json", "1"), ("send", "--all", "--channel", "x", "1"),
+                     ("send", "1"), ("send", "--channel"), ("send", "--channel", "x", "b.json", "1"),
+                     ("send", "--channel", "x", "--channel", "y", "1")):
+            r = self.mq(*args)
+            self.assertEqual(r.returncode, 1, args)
+            self.assertTrue(r.stderr.startswith("usage: "), (args, r.stderr))
+        for cmd in ("take", "peek"):
+            for flag in ("--all", "--channel"):
+                r = self.mq(cmd, flag, AOS_DAEMON_INST="b.json")
+                self.assertTrue(r.stderr.startswith("usage: "), (cmd, flag, r.stderr))
+
+    def test_bad_requests(self):
+        self.three()
+        for bad in (b'{"broadcast":1,"msg":1}\n', b'{"broadcast":false,"msg":1}\n', b'{"channel":"","msg":1}\n',
+                    b'{"channel":3,"msg":1}\n', b'{"broadcast":true}\n', b'{"broadcast":true,"send":"b.json","msg":1}\n',
+                    b'{"take":"b.json","to":[]}\n', b'{"peek":"b.json","to":"*"}\n'):
+            self.assertEqual(self.send(bad, self.mq_sock)["error"], "bad_request", bad)
+        self.assertEqual(self.send({"broadcast": True, "msg": 1}, self.mq_sock), {"ok": True, "delivered": 3})
+        self.assertEqual(self.send({"channel": "x", "msg": 1}, self.mq_sock), {"ok": True, "delivered": 0})
+
+    def test_subscribe_config(self):
+        # 掛了模組時 mq.subscribe 格式不對＝設定錯；沒掛時 "mq" 照不認得的鍵忽略
+        self.inst({"argv": ["true"]}, "b.json")
+        for bad in ({"mq": 5}, {"mq": {"subscribe": "x"}}, {"mq": {"subscribe": [""]}}, {"mq": {"subscribe": [3]}}):
+            r = self.run_cfg(self.config({"interval_ms": 5, "modules": MQMOD, "insts": {"b.json": bad}}))
+            self.assertEqual(r.returncode, 1, bad)
+        _, out, _ = self.start(self.config({"interval_ms": 10000, "insts": {"b.json": {"mq": 5}}}))
+        self.wait_for(lambda: self.results(out, "b.json") == [0])
+
+
 class WithReload(MqCase):
 
     def test_kept_item_keeps_mail_removed_drops(self):
@@ -356,7 +474,7 @@ class WithReload(MqCase):
         self.inst({"argv": ["true"]}, "c.json")
         p.send_signal(1)
         self.wait_for(lambda: self.has(out, "reloaded"))
-        self.assertEqual(self.take("a.json"), [self.letter(None, 1)])
+        self.assertEqual(self.take("a.json"), [self.letter(None, 1, to="a.json")])
         self.assertEqual(self.mq("send", "b.json", "3").stderr, "unknown_inst: b.json\n")
         self.config(dict(cfg, insts={"a.json": {}, "b.json": {}}))
         p.send_signal(1)
