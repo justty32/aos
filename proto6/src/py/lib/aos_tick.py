@@ -3,8 +3,8 @@
 一格的順序（B-620「一格怎麼走」，POC 版）：
 
     認工作資料夾與任務表（目標要是資料夾、底下要有 .aos/tasks.json）→ 取鎖 → 看擋板檔 → 讀表
-    → 換紀錄 → 照表跑（每項前看 tasks-blocked、每項後寫紀錄〔ran 加 1、不是 0 才記〕）→ 收尾紀錄 → 跑 hooks 的 after_all（有寫才跑）
-    → 刪 tasks-blocked → 回結束碼
+    → 換紀錄 → before_all → 照表跑（每項前看 tasks-blocked、每項後寫紀錄〔ran 加 1、不是 0 才記〕、跑 after_task／after_every_task）
+    → 跑 hooks 的 after_all（有寫才跑）→ 收尾紀錄（第十八批：hooks 全跑完才寫 ended:true）→ 刪 tasks-blocked → 回結束碼
 
 `run_tick()` 就是照這個順序寫的，從它讀起。紀錄在 aos_tick_record.py、任務表在
 aos_tick_table.py、跑單項在 aos_tick_run.py、hooks（掛點，目前只有 after_all）的讀表在 aos_tick_table.py、跑在 aos_tick_hooks.py。
@@ -170,9 +170,10 @@ def _run_locked(cwd, table):
         # 第十七批：先 after_task.<id>、再 after_every_task；不看 tasks-blocked
         aos_tick_hooks.run_after_task(cwd, tbl, task_id, index, kind, value, record, run_one)
 
-    record.finish(EXIT_OK, blocked_before)
     if tbl.after_all is not None:  # B-635：照表跑完或被 tasks-blocked 擋下之後；不看 tasks-blocked、碼只記下、不影響 tick 的結束碼
         aos_tick_hooks.run_point(cwd, tbl.defaults, "after_all", tbl.after_all, record, run_one)
+    # 第十八批：所有 hooks（含 after_all）跑完才寫 ended:true——tick 在跑 hook 時被殺，下一格的 last/ 是 ended:false
+    record.finish(EXIT_OK, blocked_before)
     clear_tasks_blocked()
     return EXIT_OK
 

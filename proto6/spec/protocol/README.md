@@ -24,14 +24,14 @@
 - **發布**：暫存檔放目標資料夾的 `.tmp/`；名字以 `.` 開頭的檔不算已發布。寫入、同步、rename 與撞名的行為見 [B-402](../base/storage.md)、[B-503](../base/transport.md)。
 - **收件區**〔使用者方向 2026-09-29〕：每個 node 根下的 `requests/`（別人問我）與 `responses/`（我問別人、別人回我），都在 `.gitignore` 裡；`inbox` 這名字保留給日後的工具，不當資料夾名。權限布置見 [P-208](../settled/protocol/tick.md)；通知的意思見 [B-504](../settled/deferred/daemon/runtime.md)。
 - **去重**：檔名就是請求 ID；比對規則見 [B-503](../base/transport.md)。
-- **消費與送出**：待送檔放 `.aos/outbox/`，格式見 P-206；提交順序見 [B-623](../settled/tick/mq.md)（Q1）、[B-624](../settled/tick/mq.md)（Q2），由標準任務表範本裡的系統級任務做（[B-629](../settled/tick/template.md)）。
+- **消費與送出**：待送檔放 `.aos/outbox/`，格式見 P-206；提交順序見 [B-623](../settled/deferred/mq.md)（Q1）、[B-624](../settled/deferred/mq.md)（Q2），由標準任務表範本裡的系統級任務做（[B-629](../settled/deferred/template.md)）。
 
 ## P-004．JSON-RPC 的兩種載體〔建議預設，未拍板〕
 
 物件形狀照 JSON-RPC 2.0：請求 `{"jsonrpc":"2.0","id":"<ID>","method":"...","params":{...}}`，回應 `{"jsonrpc":"2.0","id":"<ID>","result":{...}}` 或 `"error":{...}`。`id` 必填且是 P-002 的 ID；唯解析／請求錯誤（-32700／-32600）取不到合法 ID 時，回應用 `id:null`，成功回應與請求仍不准 null；不用 batch、不用 notification。公開 method 就是對應指令去掉 `aos`、以 `.` 連接，例如 `agent.say` 對 `aos agent say`；內部 helper 用 `daemon.helper.*` 對 `aos daemon helper ...`，仍只走私有通道。
 
 1. **socket（daemon IPC）**：Unix stream socket，一行一個 object、以 LF 結尾，單行上限 256 KiB。呼叫者怎麼認見 [B-601](../settled/deferred/daemon/runtime.md)：人手與 CLI 看 `SO_PEERCRED`，封包裡自稱的身分不算；〔使用者方向 2026-09-30，第十九批〕tick–daemon 通道上的請求在 params 帶本格憑證，daemon 以憑證認 tick（[B-612](../settled/deferred/daemon/channel.md)，欄位見 P-117）。〔astra 報告必修 3〕這是舊 daemon（暫緩）；現行控制 socket（P-121）不用 JSON-RPC、不驗身分，見[daemon 協議入口「共用約定哪些不適用」](../settled/protocol/daemon/README.md#共用約定哪些不適用-p-120p-121astra-報告必修-3)。
-2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`；-32601 的條件見 [B-501](../base/transport.md)，由收件這項系統級任務回（[B-623](../settled/tick/mq.md)）。回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄格式見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，不產生 `null.json`；壞件怎麼處理見 [B-623](../settled/tick/mq.md)。檔案上限 256 KiB，大內容放檔案、用路徑引用。查詢或重送用同一個 `id`，見 [B-503](../base/transport.md)。通道上轉交的訊息就是這個請求物件（[B-614](../settled/deferred/daemon/messaging.md)）。
+2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`；-32601 的條件見 [B-501](../base/transport.md)，由收件這項系統級任務回（[B-623](../settled/deferred/mq.md)）。回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄格式見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，不產生 `null.json`；壞件怎麼處理見 [B-623](../settled/deferred/mq.md)。檔案上限 256 KiB，大內容放檔案、用路徑引用。查詢或重送用同一個 `id`，見 [B-503](../base/transport.md)。通道上轉交的訊息就是這個請求物件（[B-614](../settled/deferred/daemon/messaging.md)）。
 
 ## P-005．錯誤〔建議預設，未拍板〕
 
@@ -58,7 +58,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
 | `aos-tick` 結束碼（0／1／2／75，沒有特別碼：擋下本格後面的項靠 tasks-blocked）；系統級任務 `aos-git`、普通程式 `aos-cg` 的結束碼（`aos-tick-check-task`、`aos-as` 暫緩） | [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)、P-212、[P-205](../settled/protocol/tick.md)、P-211（[tick 協議](../settled/protocol/tick.md)） |
 | tick–daemon 通道的 `data.code`（含部件關閉的 `not_available`）；客戶端的 `no_channel` | [P-119](../settled/deferred/protocol/daemon/channel.md) |
-| `aos-mq get`／`post` 結束碼及 `not_available` 診斷 | [P-206](../settled/protocol/tick.md) |
+| （暫緩，第十八批）`aos-mq get`／`post` 結束碼及 `not_available` 診斷 | [P-206](../settled/deferred/protocol/tick.md) |
 | 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
 | 工作拒收 | [P-404](work.md) |
 | work／LLM 程式結束碼 | [P-408](work.md) |
@@ -106,7 +106,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | agent 內部機制：agent 請求被拒收（新裁-2）、卡在 unknown 的使用者輸入（裁-10）、agent 設定檢查的結束碼要不要跟 kernel 統一（第 20 題，記錄者歸類） | 裁定 12 | [P-705](agent-tasks.md)、[P-707](agent-tasks.md)、[P-708](agent-tasks.md)、[P-712](agent-tasks.md)、[P-716](agent-tasks.md)、[P-404](work.md)、[P-603](ops.md)、[P-609](ops.md)、[P-805](kernel-tasks.md) |
 | agent 之間的問答 | 裁定 11 | [P-705](agent-tasks.md)、[P-306](messages.md)、[P-803](kernel-tasks.md)、[S-406](../scheduling/operations.md) |
 | agent 自己開的 once：做完照第十七批不叫醒、結果由 agent 自己收；回查間隔放哪（Q29）；LLM 請求與 agent 自開 once 的取消（裁-5：下一輪要在 forward-state 與 agent 請求加 `submitter_uid`、`canceling` 階段） | 裁定 10、12 | [P-704](agent-tasks.md)、[P-707](agent-tasks.md)、[P-411](work.md) |
-| 預設鬧鐘和「投件被丟掉」對不上（Q26） | 裁定 12、13 | [P-706](agent-tasks.md)、[P-206](../settled/protocol/tick.md)、[B-624](../settled/tick/mq.md) |
+| 預設鬧鐘和「投件被丟掉」對不上（Q26） | 裁定 12、13 | [P-706](agent-tasks.md)、[P-206](../settled/protocol/tick.md)、[B-624](../settled/deferred/mq.md) |
 | 通用外部資源池（設-15）：LLM 池是外部計算的第一個實例，其他外部計算由各 kernel 以資源任務自訂；通用介面隨第一列一起延後 | 裁定 1、Q4 | [S-301](../scheduling/llm.md) |
 | git 歷史回收 | 裁定 14 | [B-404](../base/storage.md)、[P-606](ops.md)、[H-034](../cli/gaps.md) |
 
@@ -169,7 +169,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-203 | aos-tick 與任意任務程式 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-204 | aos-tick-check-task（暫緩〔2026-10-01 第十六批〕） | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-205 | aos-git：開格、存檔點、收尾 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
-| P-206 | 收件、派送與發摘要（發摘要 `aos-publish` 那列 2026-10-01 搬暫緩區） | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-206 | 收件、派送與發摘要（暫緩〔2026-10-01 第十八批〕） | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-207 | 加入普通設定與重要設定手改〔暫緩，2026-10-01〕 | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-208 | 收件區權限 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-209 | 待決與跨篇 | [settled/protocol/tick.md](../settled/protocol/tick.md) |

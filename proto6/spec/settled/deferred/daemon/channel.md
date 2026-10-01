@@ -48,7 +48,7 @@
 
 其他所有事都必須在某一格 tick 裡做，不准有別的背景程序或常駐服務繞過 tick；要常駐就用 `node.mount` 掛（B-613）。
 
-**通道事務由任務自己呼叫**，都不是 daemon 的事：系統訊息佇列由系統級任務 `aos-mq post` 送、`aos-mq get` 取（[B-624](../../tick/mq.md)、[B-623](../../tick/mq.md)）；once 由任務掛行程；換帳號由普通程式 `aos-as` 呼叫 `spawn_as`（B-609）。method 形狀、參數與錯誤碼見 [P-117～119](../protocol/daemon/channel.md)。
+**通道事務由任務自己呼叫**，都不是 daemon 的事：系統訊息佇列由系統級任務 `aos-mq post` 送、`aos-mq get` 取（[B-624](../mq.md)、[B-623](../mq.md)）；once 由任務掛行程；換帳號由普通程式 `aos-as` 呼叫 `spawn_as`（B-609）。method 形狀、參數與錯誤碼見 [P-117～119](../protocol/daemon/channel.md)。
 
 依據：第十九批第 9 條；第二十批方向 4、追答 5。
 
@@ -93,7 +93,7 @@
 
 > **暫緩**（2026-10-01）：掛行程與砍掉；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
 
-**把一個行程掛到 daemon 上跑、之後再砍掉，是通道的核心事務。** 原本 daemon 端的 once 登記改成這一套；once 是任務自己經通道呼叫的事務，不是系統級任務（[B-629](../../tick/template.md)）。要在格外常駐的程序，一律用這一套掛，daemon 追得到、`node.kill` 砍得掉。被掛的可以是任何 inst，也可以是另一個 tick 的資料夾（daemon 就跑它一格）。
+**把一個行程掛到 daemon 上跑、之後再砍掉，是通道的核心事務。** 原本 daemon 端的 once 登記改成這一套；once 是任務自己經通道呼叫的事務，不是系統級任務（[B-629](../template.md)）。要在格外常駐的程序，一律用這一套掛，daemon 追得到、`node.kill` 砍得掉。被掛的可以是任何 inst，也可以是另一個 tick 的資料夾（daemon 就跑它一格）。
 
 依據：第十九批第 3、9、10 條；第二十批追答 5。
 

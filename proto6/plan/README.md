@@ -53,7 +53,7 @@
 ### 第四段：daemon 部件——訊息與 cgroup
 
 - **目標**：B-615 的兩個可掛部件。訊息：`node.send`／`node.take`、急件叫醒，加上 tick 那側的 `aos-mq get`／`post`。cgroup：node 框與上限、格後與重啟清框，加上普通程式 `aos-cg`。
-- **主要 spec**：[B-615](../spec/settled/deferred/daemon/components.md)、[B-614](../spec/settled/deferred/daemon/messaging.md)、[B-623、B-624（佇列）、B-634](../spec/settled/tick/mq.md)、[B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；格式 P-119、[P-206、P-211](../spec/settled/protocol/tick.md)。
+- **主要 spec**：[B-615](../spec/settled/deferred/daemon/components.md)、[B-614](../spec/settled/deferred/daemon/messaging.md)、[B-623、B-624（佇列）、B-634](../spec/settled/deferred/mq.md)、[B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；格式 P-119、[P-206、P-211](../spec/settled/protocol/tick.md)。
 - **可單獨跑的樣子**：兩個 node 在同一個 daemon 底下互送訊息；`enable_messaging:false` 時 `mq-post` 回 1、檔搬到 `.aos/mq/failed/`。用 `systemd-run --user --scope -p Delegate=yes` 開 daemon 看框；`enable_cgroup:false` 時退回第三段的做法。
 - **界線**：每個部件各自可關，關掉時跑的就是第三段的樣子。
 

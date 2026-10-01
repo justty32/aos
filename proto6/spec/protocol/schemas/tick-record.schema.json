@@ -36,7 +36,8 @@
       }
     },
     "ended": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "照表跑完（或被 tasks-blocked 擋下）而且所有 hooks（含 after_all）跑完之後才是 true〔使用者 2026-10-01 第十八批〕；tick 中途出錯或被殺（含跑 hook 時）停在 false"
     },
     "exit": {
       "const": 0,

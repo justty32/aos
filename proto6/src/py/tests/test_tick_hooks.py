@@ -91,14 +91,26 @@ class AfterAll(HooksCase):
             self.assertNotIn(k, tenv)
         self.assertEqual(self.read("work/hook.pwd"), os.path.join(self.d, "work") + "\n")
 
-    def test_hook_sees_ended_record(self):
-        # 寫在收尾之後：hook 讀得到 ended:true、本格各項與前面 hook 的碼
+    def test_hook_sees_record_not_yet_ended(self):
+        # 第十八批：所有 hooks 跑完才收尾——after_all 跑的時候讀到 ended:false、本格各項與前面 hook 的碼；跑完才是 ended:true
         self.hooks([sh("first", "exit 4"), sh("look", CAT_REC + " > seen.json")])
         r = self.tick()
         self.assertEqual(r.returncode, 0, r.stderr)
         seen = json.loads(self.read("seen.json"))
-        self.assertEqual((seen["ended"], seen["exit"], seen["ran"], seen["tasks"]), (True, 0, 1, []))
+        self.assertEqual((seen["ended"], "exit" in seen, seen["ran"], seen["tasks"]), (False, False, 1, []))
         self.assertEqual(seen["hooks"], {"after_all": [{"id": "first", "index": 0, "exit": 4}]})
+        self.assertEqual((self.rec()["ended"], self.rec()["exit"]), (True, 0))
+
+    def test_killed_during_hook_leaves_not_ended(self):
+        # 第十八批：tick 在跑 hook 時被殺，下一格的 last/ 是 ended:false（before_all 的當機還原看得到）
+        self.hooks([sh("die", "kill -9 $PPID; sleep 5")])
+        r = self.tick()
+        self.assertEqual(r.returncode, -9)
+        self.put({"tasks": [sh("a", "true")], "hooks": {"before_all": [sh("look", 'd=.aos; ' + CAT_REC.replace("tick/current", "tick/last") + " > last.json")]}})
+        self.assertEqual(self.tick().returncode, 0)
+        last = json.loads(self.read("last.json"))
+        self.assertEqual((last["ended"], last["ran"]), (False, 1))
+        self.assertFalse(self.rec("last")["ended"])
 
     def test_nonzero_recorded_tick_0_next_runs(self):
         self.hooks([sh("f", "exit 3"), sh("k", "kill -9 $$"), task("n", ["no-such-program-aos"]),
@@ -170,15 +182,16 @@ class AfterAll(HooksCase):
         self.assertFalse(self.exists(".aos/tick/current/hook-exits.json"))
 
     def test_hook_exits_file(self):
-        # 第九批：有 hooks 時收尾先寫 hook-exits.json（{"after_all":[]}）、record.json 加 "hooks":{"$ref":"hook-exits.json"}；
-        # 之後只有不是 0 的 hook 才重寫它
+        # 有 hooks 時開格就寫 hook-exits.json（{"after_all":[]}）、record.json 帶 "hooks":{"$ref":"hook-exits.json"}（第十七批）；
+        # 之後只有不是 0 的 hook 才重寫它；所有 hooks 跑完才收尾寫 ended:true（第十八批）
         self.hooks([sh("look", "cat .aos/tick/current/hook-exits.json > h0.json; "
                                "cat .aos/tick/current/record.json > r0.json"), sh("bad", "exit 6")])
         self.assertEqual(self.tick().returncode, 0)
         self.assertEqual(json.loads(self.read("h0.json")), {"after_all": []})
         r0 = json.loads(self.read("r0.json"))
-        self.assertEqual((r0["hooks"], r0["ended"]), ({"$ref": "hook-exits.json"}, True))
-        self.assertEqual(json.loads(self.read(".aos/tick/current/record.json")), r0)   # hooks 跑時 record.json 不再寫
+        self.assertEqual((r0["hooks"], r0["ended"]), ({"$ref": "hook-exits.json"}, False))
+        r1 = json.loads(self.read(".aos/tick/current/record.json"))
+        self.assertEqual((r1["hooks"], r1["ended"], r1["exit"]), ({"$ref": "hook-exits.json"}, True, 0))
         self.assertEqual(json.loads(self.read(".aos/tick/current/hook-exits.json")),
                          {"after_all": [{"id": "bad", "index": 1, "exit": 6}]})
 

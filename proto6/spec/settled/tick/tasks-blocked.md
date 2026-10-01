@@ -18,6 +18,7 @@
 - **同一項之前只跑一次**：跑完檔還在就擋下，不重跑。放行之後，後面某一項之前又發現檔（例如某任務又寫了），那一項之前再跑一次。
 - **結束碼不記進紀錄、非 0 沒影響**：不算進 `ran`、不進 `tasks`，誰回幾都只看檔在不在。彼此之間也不看結束碼，一律全部跑完。
 - **環境變數**：照任務的規則——`AOS_TASK_ID`、`AOS_TASK_INDEX` 是**被擋下的那一項**的，加上 `AOS_TICK_CWD`；不給 `AOS_HOOK_*`。tasks-blocked 的路徑從 `AOS_TICK_CWD` 與 `AOS_DIRNAME` 找得到，不另給變數。
+- **tasks-blocked 的內容**〔使用者 2026-10-01 第十八批：「3.對，我就不想了。」〕：tick 永遠不讀；要放什麼、怎麼解讀，由這一串 insts 自己讀檔決定（路徑 `$AOS_TICK_CWD/<狀態資料夾>/tick/tasks-blocked`）。
 - **insts 自己不看 tasks-blocked**；它們之間寫了、刪了都只在全部跑完後那一次看。
 - **寫法比照 `hooks.after_all`**（[B-635](hooks.md)）：每一項是 inst（可以整項 `$ref`），合併任務表頂層預設；`tasks_blocked`、`insts`、每一元素讀表時各解一層，內部跑到時才照 inst 規則展開（所以 `$ref:""`／`#…` 指合併後的這一項）。`modules` 其他鍵照舊讀表時整個展開。
 - **讀表檢查**：`tasks_blocked` 要是物件、要有 `insts` 陣列、每項是物件、合併頂層預設後有 `argv`；不合＝`bad_table`、回 1。`insts` 是空陣列可以（掛了但什麼都不跑，檔還在就擋）。

@@ -21,14 +21,14 @@
 | `.aos/tasks.json` | 任務註冊表（P-202），只有這一個位置（`AOS_DIRNAME` 空字串時是 `tasks.json`）；`aos-tick` 認資料夾就看它在不在（P-203） | 追蹤 |
 | `config/` | 任務使用的正式設定；領域格式由使用它的任務定義 | 追蹤 |
 | `state/` | 已消費收件、請求、結果與必要進度；子結構由各協議篇定義 | 追蹤 |
-| `requests/`、`responses/` | 檔案收件區，各含發布用 `.tmp/`；由普通程式收與寫，aos 不管（[B-623](../tick/mq.md)） | ignore |
+| `requests/`、`responses/` | 檔案收件區，各含發布用 `.tmp/`；由普通程式收與寫，aos 不管（[B-623](../deferred/mq.md)） | ignore |
 | `work/` | 任務的暫存工作進度 | ignore |
 | `.aos/jobs/<id>/` | 替成員跑工具、打 LLM 的 once 工作；〔暫緩〕`aos-as` 的暫存 inst（`as-<seq>-<pid>.json`，P-212）也放這裡 | ignore |
 | `.aos/attention/` | 本工作資料夾的待處理事項，含 daemon 發現的問題 | ignore |
 | `.aos/summary/` | 給上層讀的摘要，見 P-307；發布成 `published.json` 的 `aos-publish` 2026-10-01 搬暫緩區（[暫緩區](../deferred/protocol/tick.md#暫緩p-206-aos-publish-那列發摘要)） | `summary.json` 追蹤、`published.json` ignore |
 | `.aos/mq/post/` | 要經系統訊息佇列送出的訊息（`<id>.req.json`／`<id>.resp.json`），見 P-206 | 追蹤 |
 | `.aos/mq/get/` | 寄件帳號要能在這裡建檔，是 `node.send` 的授權判準（[B-614](../deferred/daemon/messaging.md)）；`aos-mq get` 要不要拿來放取出的訊息由它自己定 | 追蹤 |
-| `.aos/mq/failed/` | `mq-post` 送不出去的失敗紀錄；下一格 `mq-post` 開始送之前清掉（[B-624](../tick/mq.md)），格式見 P-206 | ignore |
+| `.aos/mq/failed/` | `mq-post` 送不出去的失敗紀錄；下一格 `mq-post` 開始送之前清掉（[B-624](../deferred/mq.md)），格式見 P-206 | ignore |
 | `.aos/tick.lock` | 核心的鎖檔：不存在就建、tick 不刪；只有那一格的 tick 握著，不傳給任務（[B-602](../tick.md)） | ignore |
 | `.aos/tick/` | 核心的結束碼紀錄資料夾 `current/`、`last/`（各有 `record.json` 與它 `$ref` 的檔）與 tasks-blocked（原停格檔 `stop`，〔使用者 2026-10-01 第十六批〕改名；[B-633](../tick.md)、[B-620](../tick.md)、P-213）；不隨還原、不被清理 | ignore |
 | `.aos/tick-blocked` | 擋板檔：有它時核心不開格（[B-620](../tick.md)、P-213）。現行 daemon 照常叫，由 `aos-tick` 自己擋；舊 daemon 是有它就不開格（[B-607](../deferred/daemon/registration.md)，在暫緩區）〔astra 報告必修 1〕 | ignore |
@@ -38,7 +38,7 @@
 
 補充：
 
-- **收件分兩處**〔慣例；第二十批起檔案收件與投件是普通程式，aos 不管，[B-623](../tick/mq.md)〕：請求放在被問者的 `requests/<id>.json`，回應放在發問者的 `responses/<id>.json`。
+- **收件分兩處**〔慣例；第二十批起檔案收件與投件是普通程式，aos 不管，[B-623](../deferred/mq.md)〕：請求放在被問者的 `requests/<id>.json`，回應放在發問者的 `responses/<id>.json`。
 - **找 inst**：`aos-exec` 的目標是資料夾時先找 `.aos/inst.json`、沒有再找 `inst.json`，base 是那個資料夾；目標是單檔 inst 時 base 是該檔所在資料夾。正本見 [inst 目標](../../base/inst.md#inst-目標檔案或資料夾)。舊 daemon 的登記與掛載行程也照這套（[B-613](../deferred/daemon/channel.md)、[P-118](../deferred/protocol/daemon/channel.md)，在暫緩區）。
 - **鎖檔與 git 管理目錄**：鎖檔 `.aos/tick.lock` 不在 git 管理目錄（[B-602](../tick.md)）。git 管理目錄用 `git rev-parse --absolute-git-dir` 找，不能假設 `.git` 一定是資料夾。巢狀 tick 的排除寫在 git 管理目錄的 `info/exclude`、存檔點記在 `refs/aos/marks/<任務 id>`（P-205），都不在工作樹；不做救援 ref（[B-602](../tick.md)）。
 - **事項**：待處理事項放 `.aos/attention/`，不隨還原，見 [ops](../../protocol/ops.md)。
@@ -103,7 +103,7 @@
 
 範例：
 
-- 正例：[最小](../../protocol/examples/tick/tasks.minimal.valid.json)（登記普通程式）、[沒寫 `id` 與 `kind`](../../protocol/examples/tick/tasks.no-id.valid.json)（id 用位置字串）、[包 `aos-as`](../../protocol/examples/tick/tasks.as.valid.json)（〔暫緩，P-212〕argv 包 `aos-as`；核心只當普通 argv）、[陌生鍵](../../protocol/examples/tick/tasks.unknown-key.valid.json)（帶 `group`、`needs` 照收）、[標準任務表範本](../../protocol/examples/tick/tasks.template.valid.json)（照 [B-629](../tick/template.md) 沒有 git 版）、[有 git 版範本](../../protocol/examples/tick/tasks.template-git.valid.json)（`aos-git` 開格、存檔點、收尾）、[`methods`](../../protocol/examples/tick/tasks.methods.valid.json) 與 [`methods` 裡重複](../../protocol/examples/tick/tasks.methods-duplicate.valid.json)（都當陌生鍵照收）、[自訂種類](../../protocol/examples/tick/tasks.custom-kind.valid.json)（`agent.review`）。
+- 正例：[最小](../../protocol/examples/tick/tasks.minimal.valid.json)（登記普通程式）、[沒寫 `id` 與 `kind`](../../protocol/examples/tick/tasks.no-id.valid.json)（id 用位置字串）、[包 `aos-as`](../../protocol/examples/tick/tasks.as.valid.json)（〔暫緩，P-212〕argv 包 `aos-as`；核心只當普通 argv）、[陌生鍵](../../protocol/examples/tick/tasks.unknown-key.valid.json)（帶 `group`、`needs` 照收）、〔暫緩，第十八批：範本 B-629 與裡面的系統級任務全部搬暫緩區；兩份範例照留、照樣過 schema，只當舊範本的紀錄〕[標準任務表範本](../../protocol/examples/tick/tasks.template.valid.json)（照 [B-629](../deferred/template.md) 沒有 git 版）、[有 git 版範本](../../protocol/examples/tick/tasks.template-git.valid.json)（`aos-git` 開格、存檔點、收尾）、[`methods`](../../protocol/examples/tick/tasks.methods.valid.json) 與 [`methods` 裡重複](../../protocol/examples/tick/tasks.methods-duplicate.valid.json)（都當陌生鍵照收）、[自訂種類](../../protocol/examples/tick/tasks.custom-kind.valid.json)（`agent.review`）。
 - 指示詞的正例：[整項 `$ref`](../../protocol/examples/tick/tasks.reference.valid.json)（讀表時解一層）、[`argv` 帶指示詞](../../protocol/examples/tick/tasks.directive.valid.json)（跑到那一項才展開）。
 - 頂層 `hooks`〔使用者 2026-10-01 第六批〕：正例 [`after_all` 一串](../../protocol/examples/tick/tasks.hooks.valid.json)（吃頂層 `envs`、一項沒寫 id、一項自己蓋 `envs`）；正例 [四個掛點都寫](../../protocol/examples/tick/tasks.hooks-points.valid.json)（含用 git 的寫法）；反例 [`after_task` 寫成陣列](../../protocol/examples/tick/tasks.hooks-after-task-array.invalid.json)、[`after_all` 某項沒 `argv`、頂層也沒有](../../protocol/examples/tick/tasks.hooks-no-argv.invalid.json)、[`after_all` 不是陣列](../../protocol/examples/tick/tasks.hooks-not-array.invalid.json)。
 - 頂層預設與 `modules` 的正例〔使用者 2026-10-01〕：[頂層預設](../../protocol/examples/tick/tasks.defaults.valid.json)（B-620 的例子：頂層 `cwd`、`envs`、`stdout`，一項自己寫 cwd、一項整項 `$ref`）、[頂層給 `argv`](../../protocol/examples/tick/tasks.defaults-argv.valid.json)（項只寫 `id`）、[頂層 `modules`](../../protocol/examples/tick/tasks.modules.valid.json)（照收不理）、[沒寫 `_metainfo`](../../protocol/examples/tick/tasks.no-metainfo.valid.json)（外層與某項都省）〔使用者裁定 2026-10-01〕。
@@ -134,7 +134,7 @@
 | stdin | 不讀；inst 預設 `/dev/null` |
 | stdout | tick 自己不寫。任務的輸出照各自 inst 走（預設 `/dev/null`，明寫 inherit 才會跟 tick 共用） |
 | stderr | tick 自己只印 `代碼: 說明` 一行（下表），或沒接住的錯的 traceback |
-| 讀寫 | 讀任務表、持鎖、寫 `.aos/tick/` 的紀錄、每一項前看 tasks-blocked、整格最後刪它（P-213）。送收訊息是系統級任務的事（[B-629](../tick/template.md)）；任務自己直接讀寫檔案 |
+| 讀寫 | 讀任務表、持鎖、寫 `.aos/tick/` 的紀錄、每一項前看 tasks-blocked、整格最後刪它（P-213）。送收訊息是系統級任務的事（[B-629](../deferred/template.md)）；任務自己直接讀寫檔案 |
 | 身分 | tick 自己不切 UID；直接呼叫也不會替你取得 inst 的身分 |
 
 核心自己的 stderr 代碼：
@@ -212,58 +212,9 @@ hooks 的項（[B-635](../tick/hooks.md)）跑法跟任務一樣，環境變數�
 
 > **暫緩**（2026-10-01 第十七批）〔使用者 2026-10-01 第十七批：「git這塊先不要進範本。」〕整條搬到 [tick 協議暫緩區](../deferred/protocol/tick.md#p-205aos-git開格存檔點收尾使用者方向-2026-09-30格式為建議預設)，條號保留、不重用。行為那側（B-630、B-622、B-632）在 [暫緩區 git](../deferred/git.md)。
 
-## P-206．系統訊息佇列 aos-mq 與發摘要〔使用者方向 2026-09-30，astra 審整理區同日定案〕
+## P-206．系統訊息佇列 aos-mq 與發摘要
 
-本條只定檔案格式與 argv。行為正本：取 [B-623](../tick/mq.md)；送 [B-624](../tick/mq.md)。**發摘要 `aos-publish` 那列 2026-10-01 搬到[暫緩區](../deferred/protocol/tick.md#暫緩p-206-aos-publish-那列發摘要)**〔使用者 2026-10-01 第五批〕，標題的「與發摘要」只是舊名，條號不變。佇列裡的訊息可以是請求或回應物件〔使用者方向 2026-09-30，修正輪暫定的裁定〕。檔案收件區 `requests/`、`responses/` 的格式屬普通程式，不在本條。
-
-### argv 與結束碼〔建議預設〕
-
-| 程式 | 任務 id（範本） | 做什麼 |
-|---|---|---|
-| `aos-mq get` | `mq-get` | 用 `node.take` 取本工作資料夾佇列裡的訊息，取到空為止 |
-| `aos-mq post` | `mq-post` | 把 `.aos/mq/post/` 的訊息一件一件用 `node.send` 送出 |
-
-兩者都是系統級任務，都在工作資料夾（cwd）跑、不收其他參數。在 tick 內靠繼承的鎖；不在 tick 內時自己取同一把鎖，拿不到回 75。「在不在 tick 內」靠暫緩區的「鎖 fd 傳給任務」（[tick 暫緩區](../deferred/tick.md#暫緩b-602-完整互斥的其餘細節)）；最簡鎖下，任務在 tick 內去取鎖一定拿不到，這段要等它回來再對。
-
-| 結束碼 | 意思 |
-|---|---|
-| `0` | 成功（含沒事做、本格沒有通道） |
-| `1` | 有件處理失敗（例如 `node.take` 回錯、寫檔 I/O 錯）；或用法錯 |
-| `75` | 不在 tick 內又拿不到鎖（特別指定的碼） |
-
-〔建議預設，未拍板〕daemon 訊息部件關閉：`aos-mq get` 回 0；`aos-mq post` 有待送件回 1，stderr 印 `post_failed: <to> <id> not_available`，失敗檔 `error.code` 為 `not_available`；沒件回 0。行為見 [B-614](../deferred/daemon/messaging.md)、[B-624](../tick/mq.md)，RPC 錯誤碼見 [P-119](../deferred/protocol/daemon/channel.md)。
-
-### 要送的訊息
-
-`.aos/mq/post/<id>.req.json`（請求）或 `<id>.resp.json`（回應）（追蹤），`<id>` 是訊息的 ID；請求與回應各用一個後綴，同一個工作資料夾同一格送出同 ID 的請求與回應不會撞檔名〔使用者 2026-09-30 同意照暫定〕。`message` 是請求物件就得用 `.req.json`、是回應物件就得用 `.resp.json`。〔暫定〕形狀是 `node.send` 的 params 去掉 `token`、加 `version`：
-
-```json
-{"version":1,"to":"/目標工作資料夾","message":{...},"urgent"?:true}
-```
-
-| 欄位 | 約束 |
-|---|---|
-| `version` | 必填，1 |
-| `to` | 必填；收件 tick 的工作資料夾絕對路徑（P-200；暫緩區叫 node id） |
-| `message` | 必填；一份請求或回應物件（[P-301](../../protocol/messages.md)），它的 `id` 要跟檔名去掉後綴的部分相同；序列化後最多 196608 bytes（[P-119](../deferred/protocol/daemon/channel.md)） |
-| `urgent` | 可省，布林，預設 false；true＝急件 |
-
-schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-outbox.schema.json) 是檔案投件的格式（`target_node`、`alarm_ticks`、`channel`），已不適用，列在 [README 待放入](../README.md#待放入)。鬧鐘紀錄 `.aos/alarms/` 隨鬧鐘撤（[B-624](../tick/mq.md)）。
-
-### 送不出去的失敗紀錄
-
-`.aos/mq/failed/<id>.req.json` 或 `<id>.resp.json`（ignore，檔名同原檔）〔使用者 2026-09-30 同意照暫定〕：`mq-post` 把送不了的那份原檔搬過來，內容是原檔的欄位再加一個 `error:{"code":"<代碼>"}`。沒有 schema。下一格 `mq-post` 開始送之前整個清掉（[B-624](../tick/mq.md)）。
-
-### stderr 診斷行
-
-| 行 | 意思 |
-|---|---|
-| `post_failed: <to> <id> <code>` | 送不了、已移除（[B-624](../tick/mq.md)） |
-| `no_channel` | 本格沒有通道，什麼都沒做 |
-
-依據：第十九批（經通道送、急件）；第二十批（系統級任務的 argv）；astra 審整理區同日定案（`aos-mq`；檔案收件、投件、鬧鐘撤出 aos）。
-
-**P-207（加入普通設定，`aos-config-add`）2026-10-01 整條搬到[暫緩區](../deferred/protocol/tick.md)。** 使用者 2026-10-01 裁定：這個指令從沒寫過程式，先不做；要改 `config/` 就自己改。條號保留、不重用。
+> **暫緩**（2026-10-01 第十八批）〔使用者 2026-10-01 第十八批：「1. 都按你建議 2.好 3.對，我就不想了。」〕整條搬到 [tick 協議暫緩區](../deferred/protocol/tick.md#p-206系統訊息佇列-aos-mq-與發摘要使用者方向-2026-09-30astra-審整理區同日定案)，條號保留、不重用。現行收發信是 daemon 訊息模組的 `aos-mq send`／`take`（[P-125](daemon/mq.md)）。
 
 ## P-208．收件區權限〔建議預設，未拍板〕
 
@@ -314,7 +265,7 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 
 ## P-213．每項結束碼紀錄、tasks-blocked 與擋板檔〔建議預設，未拍板〕
 
-行為正本：紀錄 [B-633](../tick.md)；tasks-blocked 與擋板檔 [B-620](../tick.md)（機制使用者之後會詳細設計，目前是〔暫定〕；〔使用者 2026-10-01 第十六批〕停格檔改名 tasks-blocked、只看存不存在、整格最後 tick 刪；未來方向見 B-620「tasks-blocked 與擋板檔」）。本條只定檔名與內容。
+行為正本：紀錄 [B-633](../tick.md)；tasks-blocked 與擋板檔 [B-620](../tick.md)（機制使用者之後會詳細設計，目前是〔暫定〕；〔使用者 2026-10-01 第十六批〕停格檔改名 tasks-blocked、只看存不存在、整格最後 tick 刪；〔使用者 2026-10-01 第十八批：「3.對，我就不想了。」〕內容定案：tick 永遠不讀，交給 `modules.tasks_blocked` 的 insts 自己讀；未來方向見 B-620「tasks-blocked 與擋板檔」）。本條只定檔名與內容。
 
 ### 結束碼紀錄
 
@@ -348,7 +299,7 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 | `seq` | 本資料夾的格數，共用 `TickSeq`（從 1 起）。沒有紀錄的格（busy、擋板檔、bad_table）不佔號 |
 | `ran` | 本格到目前為止跑完幾項 tasks（含結束碼不是 0 的；被 tasks-blocked 擋掉、沒跑到的不算）。開格時 `0`，每跑完一項加 1、重寫 `ran.json`〔使用者 2026-10-01 第八批；第九批拆檔〕 |
 | `tasks` | 已跑完**而且結束碼不是 0** 的項，照順序；**結束碼 0 的不記**〔使用者 2026-10-01 第八批：「tasks如果結果是0，那就不用紀錄了。」〕。每筆 `id`（任務表那一項的 id，沒寫 id 時是位置字串，例如 `"3"`）、`index`（它在 `tasks` 陣列的位置，從 0 起，同 `AOS_TASK_INDEX`），加上 `exit`（1～255）與 `signal`（1～64）二選一，照實記原碼。沒跑到的不列 |
-| `ended` | 照表跑完或被 tasks-blocked 擋下時是 true，這時必須有 `exit`；false 時不得有 `exit`、`blocked_before`。tick 中途出錯或被殺時停在 false |
+| `ended` | 照表跑完或被 tasks-blocked 擋下、而且所有 hooks（含 `after_all`）跑完之後〔使用者 2026-10-01 第十八批〕是 true，這時必須有 `exit`；false 時不得有 `exit`、`blocked_before`。tick 中途出錯或被殺（含跑 hook 時）時停在 false |
 | `exit` | 這格 tick 的結束碼。有紀錄收尾時 tick 一定回 0，所以只會是 `0`（busy、擋板檔、bad_table 不寫紀錄） |
 | `blocked_before` | 〔使用者 2026-10-01 第十六批〕（原 `stopped_after`）被 tasks-blocked 擋下時，被擋下、沒跑的那一項的 id（就是位置 `ran` 那一項；第一項就被擋時 `ran` 是 0）；只在 `ended:true` 時可有，這時 `exit` 也是 `0` |
 | `started_at_ms` | 只給人看，不參與計算 |

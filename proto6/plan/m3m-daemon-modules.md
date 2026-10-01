@@ -264,7 +264,7 @@ node 框 `n-<h>` 與它底下的 `tick`、`task-*`、`mount-*`、子 node 框（
 
 > ~~暫緩~~（第十一批：「aos-mq先不做」）→ **已做**（2026-10-01 第十二批：M1～M4 照建議）。下面草稿照原樣留著；做法與 AI 隊定的細節見篇末[做完了沒](#做完了沒)，正本 [B-645](../spec/settled/daemon/mq.md)。
 
-舊規劃：[暫緩區 B-614 暫存訊息與急件](../spec/settled/deferred/daemon/messaging.md)、格式 [P-119](../spec/settled/deferred/protocol/daemon/channel.md#p-119送訊息取訊息與通道錯誤碼使用者方向-2026-09-30第十九批參數與上限為建議預設)；tick 側 [`aos-mq get`／`post`（B-623、B-624）](../spec/settled/tick/mq.md)。
+舊規劃：[暫緩區 B-614 暫存訊息與急件](../spec/settled/deferred/daemon/messaging.md)、格式 [P-119](../spec/settled/deferred/protocol/daemon/channel.md#p-119送訊息取訊息與通道錯誤碼使用者方向-2026-09-30第十九批參數與上限為建議預設)；tick 側 [`aos-mq get`／`post`（B-623、B-624）](../spec/settled/deferred/mq.md)。
 
 **單位換了**：舊規劃是「node 寄給 node」，收件人是 node id、權限看收件 node 資料夾 `.aos/mq/get/` 的寫權。使用者預感 node 會消失，所以這裡**收件人就是 daemon 的一項**（inst 字面值）；不認得資料夾，inst 是檔也收得到信。
 
@@ -304,7 +304,7 @@ node 框 `n-<h>` 與它底下的 `tick`、`task-*`、`mount-*`、子 node 框（
 
 ### 為什麼不能只靠包一層
 
-**一部分可以**：寄件方把檔寫進收件方的資料夾、再 `aos-ctl wake <收件 inst>`，就有「信＋急件叫醒」。這是普通程式的事，aos 本來就不管（[B-623「檔案收件 aos 不管」](../spec/settled/tick/mq.md#檔案收件-aos-不管)）。模組多給的只有：不用對收件方的資料夾有寫權（跨帳號時有差）、收件方是檔不是資料夾也行、信不進 git 追蹤的範圍。使用者已定「值得做成模組」，所以做，但只做這三點用得到的最小部分。
+**一部分可以**：寄件方把檔寫進收件方的資料夾、再 `aos-ctl wake <收件 inst>`，就有「信＋急件叫醒」。這是普通程式的事，aos 本來就不管（[B-623「檔案收件 aos 不管」](../spec/settled/deferred/mq.md#檔案收件-aos-不管)）。模組多給的只有：不用對收件方的資料夾有寫權（跨帳號時有差）、收件方是檔不是資料夾也行、信不進 git 追蹤的範圍。使用者已定「值得做成模組」，所以做，但只做這三點用得到的最小部分。
 
 ### 舊前提已不在
 

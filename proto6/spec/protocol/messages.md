@@ -2,11 +2,11 @@
 
 ← [共用約定](README.md)｜[投件正本](../base/transport.md)｜[Q1／Q2](../settled/tick.md)｜[第九批裁定](../../notes/2026-09-29-verdicts.md)
 
-本篇只定 node 之間的檔案格式，行為以主規格為正本（[P-009](README.md)）；工作與 LLM 的業務參數由分工表指定篇章定義。agent 預設接件、正式回覆及人手入口見 [agent 任務](agent-tasks.md)；檔案命令由收件 node 的普通任務處理，〔第二十批，astra 審整理區定案〕系統級任務只剩系統訊息佇列 `aos-mq`（[B-629](../settled/tick/template.md)）；檔案投件與收件清理改由普通程式做、aos 不管，本篇下一輪跟上。
+本篇只定 node 之間的檔案格式，行為以主規格為正本（[P-009](README.md)）；工作與 LLM 的業務參數由分工表指定篇章定義。agent 預設接件、正式回覆及人手入口見 [agent 任務](agent-tasks.md)；檔案命令由收件 node 的普通任務處理，〔第二十批，astra 審整理區定案〕系統級任務只剩系統訊息佇列 `aos-mq`（[B-629](../settled/deferred/template.md)）；檔案投件與收件清理改由普通程式做、aos 不管，本篇下一輪跟上。
 
 ## P-300．兩條路各做什麼〔使用者方向 2026-09-29〕
 
-兩條請求路線依 [P-001](README.md)；跨隊有投件權就直投，不經上層轉送。〔第十九批〕同一 daemon 底下的 tick 之間，待送封套也可以標 `channel` 改經通道送，訊息格式不變（[B-624](../settled/tick/mq.md)、[node P-206](../settled/protocol/tick.md)）。權限配置見 [node P-208](../settled/protocol/tick.md)。
+兩條請求路線依 [P-001](README.md)；跨隊有投件權就直投，不經上層轉送。〔第十九批〕同一 daemon 底下的 tick 之間，待送封套也可以標 `channel` 改經通道送，訊息格式不變（[B-624](../settled/deferred/mq.md)、[node P-206](../settled/protocol/tick.md)）。權限配置見 [node P-208](../settled/protocol/tick.md)。
 
 ## P-301．收件區分請求與回應〔使用者方向 2026-09-29，收件分兩格〕
 
@@ -33,7 +33,7 @@ responses/<id>.json  # RpcResponse
 
 ## P-303．回應路由與來源〔建議預設，未拍板〕
 
-〔第十九批依方案 A 搬上〕本條不另定格式（`reply_to` 的格式見 P-302），行為都在主規格：接件前核對回址、固定回址與回應投遞見 [B-623](../settled/tick/mq.md)；`reply_to` 不是來源或授權證明、可信來源與同 UID 的信任界線見 [B-501](../base/transport.md)；投回應時回址不是 node 或沒有寫入權限照 [B-624](../settled/tick/mq.md)；回不了錯誤回應的壞件只報一次照 B-623。
+〔第十九批依方案 A 搬上〕本條不另定格式（`reply_to` 的格式見 P-302），行為都在主規格：接件前核對回址、固定回址與回應投遞見 [B-623](../settled/deferred/mq.md)；`reply_to` 不是來源或授權證明、可信來源與同 UID 的信任界線見 [B-501](../base/transport.md)；投回應時回址不是 node 或沒有寫入權限照 [B-624](../settled/deferred/mq.md)；回不了錯誤回應的壞件只報一次照 B-623。
 
 ## P-304．同 ID、衝突與重送〔建議預設，未拍板〕
 
@@ -45,11 +45,11 @@ responses/<id>.json  # RpcResponse
 
 ## P-305．送出、消費與門鈴順序〔使用者方向 2026-09-29〕
 
-〔第十九批依方案 A 縮短；第二十批改順序〕順序（備好待送封套與消費副本 → 本格使用者任務跑完後投件 → 下一格收件任務在上一格正常收尾時刪相符原件；叫醒另計；有 git 時 `aos-git close` 排在送出之前）以 [B-623／B-624](../settled/tick/mq.md) 為正本；誰來叫醒見 [S-201／202](../scheduling/admission.md)。
+〔第十九批依方案 A 縮短；第二十批改順序〕順序（備好待送封套與消費副本 → 本格使用者任務跑完後投件 → 下一格收件任務在上一格正常收尾時刪相符原件；叫醒另計；有 git 時 `aos-git close` 排在送出之前）以 [B-623／B-624](../settled/deferred/mq.md) 為正本；誰來叫醒見 [S-201／202](../scheduling/admission.md)。
 
 ## P-306．method 就是指令〔使用者方向 2026-09-29〕
 
-檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致。收件 node 接哪些 method、什麼時候回 -32601、什麼時候回 -32000 業務碼，以 [B-501](../base/transport.md) 與 [B-623](../settled/tick/mq.md) 為正本；宣告格式是任務表的 `methods`（[node P-202](../settled/protocol/tick.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權，而且會傳遞（[B-501](../base/transport.md)）。
+檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致。收件 node 接哪些 method、什麼時候回 -32601、什麼時候回 -32000 業務碼，以 [B-501](../base/transport.md) 與 [B-623](../settled/deferred/mq.md) 為正本；宣告格式是任務表的 `methods`（[node P-202](../settled/protocol/tick.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權，而且會傳遞（[B-501](../base/transport.md)）。
 
 有業務資料的命令從 stdin 讀一份 JSON；inst.stdin 是收件者可讀的絕對檔案路徑，不是 JSON 內容。發件者將資料隨請求固定並保留至消費完成；收件者用自己的權限開檔。無資料的命令省略 stdin。需要結果的串流用 `{"$opt":"inherit"}`，由接件執行器捕獲；其餘串流規則沿 inst。輸入形狀與 argv 的一致性須在展開及讀檔後另驗，schema 不代替開放命令檢查。
 
@@ -67,9 +67,9 @@ responses/<id>.json  # RpcResponse
 
 全部回應用 [work-result](schemas/work-result.schema.json)。`kernel.work.submit`、`llm.chat` 跨格接續、業務結果回來才完成命令，不先用 ACK 占住 RPC id（[work P-401](work.md)、[llm-work P-406](llm-work.md)）；kernel 收一般回話見 [S-406](../scheduling/operations.md)；agent 之間的問答機制延後（[P-008](README.md#p-008)）。
 
-授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：-32601 與 -32000 怎麼分依 [B-501](../base/transport.md)，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict`、`resource_observation_failed`，或 work.cancel 的 `cancel_not_authorized`、`work_not_found`（[work P-411](work.md)）。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址的回不了錯誤回應，照 [B-623](../settled/tick/mq.md) 只報一次事項。
+授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：-32601 與 -32000 怎麼分依 [B-501](../base/transport.md)，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict`、`resource_observation_failed`，或 work.cancel 的 `cancel_not_authorized`、`work_not_found`（[work P-411](work.md)）。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址的回不了錯誤回應，照 [B-623](../settled/deferred/mq.md) 只報一次事項。
 
-**驗收：**-32601 的驗收見 [B-501](../base/transport.md)、[B-623](../settled/tick/mq.md)。本條另驗：本地動作的回應 `stdout.path` 指到存在的 `.stdout` 檔；listen 只讀 history，不開模型；RPC 收件確認不再引發回話。
+**驗收：**-32601 的驗收見 [B-501](../base/transport.md)、[B-623](../settled/deferred/mq.md)。本條另驗：本地動作的回應 `stdout.path` 指到存在的 `.stdout` 檔；listen 只讀 history，不開模型；RPC 收件確認不再引發回話。
 
 ## P-307．上層直接讀成員摘要〔建議預設，未拍板〕
 
