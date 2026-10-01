@@ -3,7 +3,7 @@
 一格的順序（B-620「一格怎麼走」，POC 版）：
 
     認工作資料夾與任務表（目標要是資料夾、底下要有 .aos/tasks.json）→ 取鎖 → 看擋板檔 → 讀表
-    → 換紀錄 → 刪停格檔 → 照表跑（每項後寫紀錄、查停格檔）→ 收尾紀錄 → 跑 hooks 的 after_all（有寫才跑）→ 回結束碼
+    → 換紀錄 → 刪停格檔 → 照表跑（每項後寫紀錄〔ran 加 1、不是 0 才記〕、查停格檔）→ 收尾紀錄 → 跑 hooks 的 after_all（有寫才跑）→ 回結束碼
 
 `run_tick()` 就是照這個順序寫的，從它讀起。紀錄在 aos_tick_record.py、任務表在
 aos_tick_table.py、跑單項在 aos_tick_run.py、hooks（掛點，目前只有 after_all）的讀表在 aos_tick_table.py、跑在 aos_tick_hooks.py。
@@ -154,7 +154,7 @@ def _run_locked(cwd, table):
     stopped_after = None
     for index, (item, task_id) in enumerate(zip(tbl.items, tbl.ids)):
         kind, value = run_one(cwd, tbl.defaults, item, task_id, index)
-        record.add_task(task_id, kind, value)       # 任務怎麼結束只記下，不影響 tick 的結束碼
+        record.add_task(task_id, index, kind, value)   # 只記不是 0 的（第八批）；不影響 tick 的結束碼
         reason = read_reason(state("tick", "stop"))
         if reason is not None:
             # 停格檔不算中斷，回 0（暫定，擋板檔與停格檔的機制使用者之後會詳細設計）

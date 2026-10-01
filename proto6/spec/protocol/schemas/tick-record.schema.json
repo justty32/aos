@@ -2,11 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "tick-record.schema.json",
   "title": "每項結束碼紀錄",
-  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格各項怎麼結束、本工作資料夾的格數與是否被停格檔停下（B-633、P-213）。取代第十九批的 node-journal。任務表寫了 hooks.after_all 時另記 hooks.after_all（B-635）。不認得的欄位忽略（P-007）。跨欄位關係（stopped_after 是最後一項）schema 表達不了，由 validate.py 的補充檢查驗。",
+  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格跑了幾項（ran）、哪些項結束碼不是 0、本工作資料夾的格數與是否被停格檔停下（B-633、P-213）。〔使用者 2026-10-01 第八批〕tasks 與 hooks.after_all 只記結束碼不是 0 的項，結束碼 0 的不記。取代第十九批的 node-journal。任務表寫了 hooks.after_all 時另記 hooks.after_all（B-635）。不認得的欄位忽略（P-007）。跨欄位關係（index 遞增且小於 ran、stopped_after 跟最後一筆失敗的關係）schema 表達不了，由 validate.py 的補充檢查驗。",
   "type": "object",
   "required": [
     "version",
     "seq",
+    "ran",
     "tasks",
     "ended"
   ],
@@ -22,9 +23,14 @@
       "$ref": "common.schema.json#/$defs/TimeMs",
       "description": "只給人看，不參與計算"
     },
+    "ran": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "本格到目前為止跑完幾項 tasks（含結束碼不是 0 的；被停格檔擋掉、沒跑到的不算）；開格時 0，每跑完一項加 1（第八批）。hooks 不算在內"
+    },
     "tasks": {
       "type": "array",
-      "description": "已跑完的項，照順序；沒跑到的不列",
+      "description": "已跑完而且結束碼不是 0（含被訊號殺）的項，照順序；結束碼 0 的不記、沒跑到的不列（第八批）",
       "items": {
         "$ref": "#/$defs/TaskEnd"
       }
@@ -38,7 +44,7 @@
     },
     "stopped_after": {
       "$ref": "common.schema.json#/$defs/ID",
-      "description": "被停格檔 .aos/tick/stop 停下時，是哪一項跑完後停的（任務表那一項的 id，沒寫 id 時是位置字串）；只在 ended 為 true 時有，這時 exit 也是 0（B-620、P-213）"
+      "description": "被停格檔 .aos/tick/stop 停下時，是哪一項跑完後停的（任務表那一項的 id，沒寫 id 時是位置字串；它就是位置 ran-1 那一項，可能成功所以不一定在 tasks 裡）；只在 ended 為 true 時有，這時 exit 也是 0（B-620、P-213）"
     },
     "hooks": {
       "type": "object",
@@ -46,7 +52,7 @@
       "properties": {
         "after_all": {
           "type": "array",
-          "description": "已跑完的 after_all 項，照順序；格式同 tasks 每項（id 是 hook 項的 id，沒寫是它在 after_all 的位置字串）",
+          "description": "已跑完而且結束碼不是 0 的 after_all 項，照順序；格式同 tasks 每項（id 是 hook 項的 id，沒寫是它在 after_all 的位置字串；index 是它在 after_all 的位置）；結束碼 0 的不記（第八批）。開始跑 hooks 前先寫成空陣列；hooks 不記 ran",
           "items": {
             "$ref": "#/$defs/TaskEnd"
           }
@@ -95,17 +101,24 @@
     "TaskEnd": {
       "type": "object",
       "required": [
-        "id"
+        "id",
+        "index"
       ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/ID",
           "description": "任務表那一項的 id（同 AOS_TASK_ID；沒寫 id 時是位置字串）"
         },
-        "exit": {
+        "index": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 255
+          "description": "這一項在 tasks（或 after_all）陣列的位置，從 0 起；同 AOS_TASK_INDEX"
+        },
+        "exit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 255,
+          "description": "結束碼；0 不記，所以從 1 起（第八批）"
         },
         "signal": {
           "type": "integer",
@@ -124,7 +137,8 @@
             "signal"
           ]
         }
-      ]
+      ],
+      "description": "一項結束碼不是 0 的紀錄（第八批）：{id, index, exit} 或 {id, index, signal}"
     }
   }
 }

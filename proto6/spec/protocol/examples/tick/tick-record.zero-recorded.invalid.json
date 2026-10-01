@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "seq": 1236,
+  "seq": 3,
   "ran": 2,
   "tasks": [
     {
-      "id": "agent",
-      "index": 1,
-      "signal": 9
+      "id": "a",
+      "index": 0,
+      "exit": 0
     }
   ],
   "ended": true,

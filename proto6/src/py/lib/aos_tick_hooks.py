@@ -9,6 +9,8 @@
   `AOS_TASK_INDEX`——ID／INDEX 是該 hook 在 after_all 裡的 id／位置）。
 - 不看停格檔、每項的碼照實記、接著跑下一項，不影響 tick 的結束碼。
 - 紀錄：本格 `current.json` 的 `hooks.after_all`（格式同 `tasks` 每項），寫在 `ended:true` 之後（Record.add_hook）。
+  〔使用者 2026-10-01 第八批〕「hooks也是」：只記不是 0 的，每筆 `{"id","index","exit"}`；hooks 不記 ran
+  （hooks 不看停格檔、一定全跑，`after_all: []` 先寫好就知道開始跑了；tick 中途被殺的情況照 POC 默認不管）。
 
 POC 總原則：默認一切正常，不寫邊緣處理。
 """
@@ -21,4 +23,4 @@ def run_after_all(cwd, defaults, after_all, record, run_one):
     record.start_hooks("after_all")
     for index, (item, hook_id) in enumerate(after_all):
         kind, value = run_one(cwd, defaults, item, hook_id, index, label="after_all/")
-        record.add_hook("after_all", hook_id, kind, value)
+        record.add_hook("after_all", hook_id, index, kind, value)

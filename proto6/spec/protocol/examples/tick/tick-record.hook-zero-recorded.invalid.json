@@ -1,15 +1,16 @@
 {
   "version": 1,
-  "seq": 7,
+  "seq": 3,
   "ran": 1,
   "tasks": [],
-  "ended": false,
+  "ended": true,
+  "exit": 0,
   "hooks": {
     "after_all": [
       {
-        "id": "notify",
+        "id": "h",
         "index": 0,
-        "exit": 1
+        "exit": 0
       }
     ]
   }

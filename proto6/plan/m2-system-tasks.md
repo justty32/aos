@@ -6,7 +6,7 @@
 
 **做完的樣子**（照建議裁定的話）：在沒有 daemon、cgroup、helper 的機器上，直接跑 `aos-tick <資料夾>`：
 
-- 表上可以掛一項 `aos-tick-check-task a b`：本格 `a`、`b` 都 `exit:0` 就什麼都不做；不然建停格檔，本格後面的項都不跑。不寫 id＝檢查前面全部。
+- 表上可以掛一項 `aos-tick-check-task a b`：本格 `a`、`b` 都沒出現在紀錄的失敗清單就什麼都不做；有出現就建停格檔，本格後面的項都不跑。不寫 id＝失敗清單非空就停（第八批）。
 - 資料夾是 git repo、表上掛 `aos-git open`／`mark`／`close`：每格最多一個 commit `aos-tick <seq>`，只含狀態資料夾（預設 `.aos/`）裡的東西；上一格沒正常收尾，下一格開頭把 `.aos/` 還原；某一組任務失敗，那組在 `.aos/` 寫的東西被還原、不提交。不是 repo 時 `aos-git` 只印 `no_git`、回 0。
 - 兩份第二段版範本任務表（沒 git、有 git）照常跑完。
 
@@ -29,7 +29,7 @@
 |---|---|---|
 | 工作資料夾 | 環境變數 `AOS_TICK_CWD` | 這一格 tick 的資料夾絕對路徑。**不能用自己的 cwd**：任務表頂層 `cwd` 會把每一項（含系統級任務）的 cwd 帶走（[B-620](../spec/settled/tick.md)「頂層預設」） |
 | 狀態資料夾名 | 環境變數 `AOS_DIRNAME` | 沒設＝`.aos`；空字串＝工作資料夾本身（[C-09](../spec/settled/conventions.md)） |
-| 本格第幾格、前面各項怎麼結束 | `<狀態資料夾>/tick/current.json` | `seq`、`tasks`（照順序，第 i 筆就是表上第 i 項；每筆 `exit` 或 `signal`）；**只列跑完的** |
+| 本格第幾格、前面哪幾項失敗 | `<狀態資料夾>/tick/current.json` | `seq`、`ran`（到目前跑完幾項）、`tasks`（**只列結束碼不是 0 的**，照順序；每筆 `id`、`index`＝表上位置、`exit` 或 `signal`；2026-10-01 第八批起，原本「第 i 筆就是表上第 i 項」不再成立，要照 `index` 對） |
 | 上一格有沒有正常收尾 | `<狀態資料夾>/tick/last.json` | 正常收尾＝`ended:true` 而且沒有 `stopped_after`；檔不在＝不知道 |
 | 自己是第幾項、叫什麼 | `AOS_TASK_INDEX`、`AOS_TASK_ID` | 位置從 0 起、一定不重複；id 可能重複（核心不查）、可能是位置字串 |
 | 叫停本格 | 建 `<狀態資料夾>/tick/stop`（停格檔） | 後面的項不跑，tick 回 0。`aos-tick-check-task` 就靠它 |
@@ -42,7 +42,7 @@
 |---|---|---|---|
 | `aos-git` | 「在不在 tick 內」靠繼承的鎖 fd 核對，不在回 125 `not_in_tick`（B-622、P-205） | 鎖 fd 不傳給任務，**沒有判法**；任務自己去取鎖一定拿不到（tick 握著） | 不判斷（待問 6） |
 | `aos-git` | 存檔點叫 `refs/aos/marks/<任務 id>`；id 當不了 ref 名（`.lock` 結尾）算故障 `mark_id_invalid` | `id` 可省（變位置字串）、**重複不查**，重複時存檔點互相蓋掉 | 改用 `AOS_TASK_INDEX` 命名（待問 2） |
-| `aos-git` | 「兩個存檔點之間全是 `kind:"system"` 的段，所有改動都算 aos 範圍」，`kind` 照紀錄 `id` 回查任務表（B-630） | 核心不看 `kind`；回查要自己照 B-620 把表解一層；id 重複時查錯項 | 拿掉，aos 範圍只剩狀態資料夾（待問 1） |
+| `aos-git` | 「兩個存檔點之間全是 `kind:"system"` 的段，所有改動都算 aos 範圍」，`kind` 照紀錄 `id` 回查任務表（B-630） | 核心不看 `kind`；回查要自己照 B-620 把表解一層；id 重複時查錯項；第八批起紀錄只列失敗的項，照紀錄逐項回查本來就不行，要改照表上位置 | 拿掉，aos 範圍只剩狀態資料夾（待問 1） |
 | `aos-git` | 巢狀排除下層 tick 資料夾（B-622） | 上下層判定 B-628 在暫緩區，沒有判準 | 不做 |
 | `aos-git` | `-c core.fsync=…`、`safe.directory`、git ≥ 2.36、當機後清 git 鎖檔、HEAD 換分支當故障 | tick 自己都不 fsync；沒有多帳號；默認一切正常 | 不做（待問 8） |
 | `aos-git` | 故障時寫擋板檔＋建停格檔、回 1（B-622） | 默認 git 不會失敗 | 只回 1（待問 5） |
@@ -55,19 +55,19 @@
 
 ## 步驟 1：aos-tick-check-task
 
-- **要做到**：`aos-tick-check-task [<任務 id…>]`，自己是任務表上的一項。讀本格紀錄：指定的 id 都在紀錄的 `tasks` 裡而且 `exit:0` → 什麼都不做、回 0；有任一個不是 0（含 `signal`）或還沒跑（不在紀錄裡）→ 建停格檔 `<狀態資料夾>/tick/stop`、回 0。不寫 id＝檢查紀錄裡已有的每一項。
+- **要做到**：`aos-tick-check-task [<任務 id…>]`，自己是任務表上的一項。讀本格紀錄（第八批起 `tasks` 只列結束碼不是 0 的）：指定的 id 有任一個出現在紀錄的 `tasks` 裡 → 建停格檔 `<狀態資料夾>/tick/stop`、回 0；都沒出現 → 當成功、什麼都不做、回 0（不分辨「還沒跑」，照 POC 默認一切正常，使用者把它排在那些項後面）。不寫 id＝`tasks` 非空就建停格檔。
 - **依據**：[B-621](../spec/settled/tick/check-task.md)、[P-204](../spec/settled/protocol/tick.md)（2026-10-01 使用者裁定改寫，見文末「裁定紀錄」）；停格檔照現行 [P-213](../spec/settled/protocol/tick.md)。
 - **做法**：
   - 紀錄路徑：`$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（狀態資料夾照 `aos_dirname.name()`）；停格檔建在同一個 `tick/` 底下。
   - 沒有 `AOS_TICK_CWD`、紀錄讀不到：自己的錯，回 1（照 POC 總原則讓 Python 自然丟錯即可，不另外處理）。
-  - 比對：紀錄裡的 `id` 先 `str()` 再跟參數比（id 寫成數字時紀錄存的是數字）。同一個 id 出現好幾筆（id 重複）看**最後一筆**；默認不重複，不另外處理。
-  - 停格檔內容一行原因，建議 `check_failed: <第一個沒跑好的 id>`（核心會印在 stderr 的 `stopped:` 後面）。停格檔已經在（同一格前面有人建過）就照樣覆寫，結果一樣。
+  - 比對：紀錄裡的 `id` 先 `str()` 再跟參數比（id 寫成數字時紀錄存的是數字）。id 重複時，只要失敗清單裡有一筆是它就算失敗（第八批起成功的不記，原本「看最後一筆」不再適用）；默認不重複，不另外處理。
+  - 停格檔內容一行原因，建議 `check_failed: <第一個沒跑好的 id>`（不寫 id 時用失敗清單第一筆的 id）（核心會印在 stderr 的 `stopped:` 後面）。停格檔已經在（同一格前面有人建過）就照樣覆寫，結果一樣。
   - 停格檔擋掉整格剩下的全部項（使用者接受）。有 git 時這格作廢：`git-close` 不跑，下一格 `git-open` 還原。
 - **要使用者裁定的點**：無（已裁定）。
 - **驗收**：
-  - 表 `[a: true, chk: aos-tick-check-task a, b: 建檔]`：`chk` 記 `exit:0`、沒有停格檔，`b` 照跑。
-  - `a` 是 `false`：`chk` 記 `exit:0`；紀錄 `ended:true`、`stopped_after` 是 `chk`；`b` 沒跑（它要建的檔不存在）。
-  - 指定一個還沒跑到的 id（排在後面）：停格。
+  - 表 `[a: true, chk: aos-tick-check-task a, b: 建檔]`：`chk` 回 0（不記進 `tasks`）、沒有停格檔，`b` 照跑；紀錄 `ran:3`、`tasks:[]`。
+  - `a` 是 `false`：`chk` 回 0；紀錄 `ended:true`、`ran:2`、`tasks` 只有 `{"id":"a","index":0,"exit":1}`、`stopped_after` 是 `chk`；`b` 沒跑（它要建的檔不存在）。
+  - 指定一個還沒跑到的 id（排在後面）：不在失敗清單裡，當成功、不停格（第八批）。
   - 不寫 id：前面全是 0 不停；有一項非 0（或被訊號殺）就停。
   - 不在 tick 裡直接跑（沒有 `AOS_TICK_CWD`）：回 1。
   - `AOS_DIRNAME=st` 時讀 `st/tick/current.json`、建 `st/tick/stop`。
@@ -81,7 +81,7 @@
   - **能不能用**：`git` 叫得起來，而且在工作資料夾跑 `git rev-parse --absolute-git-dir` 成功，就算能用。不能用（沒裝、不是 repo）：stderr 一行 `no_git: <原因>`、回 0，不寫擋板。不查 git 版本（這台是 2.43）。
   - **呼叫 git**：一律 `cwd=工作資料夾`；先清掉繼承的 `GIT_*` 環境變數；帶 `-c gc.auto=0 -c maintenance.auto=false -c core.hooksPath=/dev/null -c commit.gpgSign=false`（免得背景整理、hook、簽章卡住）。不帶 `core.fsync`、`safe.directory`（待問 8）。repo 與全域都沒設作者時，帶 `-c user.name=aos -c user.email=aos@localhost`。git 回非 0 就丟例外、回 1（待問 5）。
   - **aos 範圍**（待問 1）：狀態資料夾整個（`AOS_DIRNAME` 空字串時＝整個工作資料夾），扣掉 B-622 固定排除的那張表（`tick.lock`、`tick/`、`tick-blocked`、`jobs/`、`attention/`、`runner-stderr.log`、`summary/published.json`、`mq/failed/`，加上 `requests/`、`responses/`、`work/`），不管 `.gitignore` 寫了什麼。做成一組 git pathspec（`.aos` 加一串 `:(exclude)…`），三個子命令都用同一組。`.gitignore` 忽略的檔本來就不碰。
-  - **現在第幾格、前面怎麼結束**：讀 `current.json`；上一格讀 `last.json`。
+  - **現在第幾格、前面哪幾項失敗**：讀 `current.json`（`tasks` 只列不是 0 的，照 `index` 對表上位置）；上一格讀 `last.json`。
 - **要使用者裁定的點**：待問 1、5、7、8。
 - **驗收**（併在步驟 3、4 一起測）：
   - 資料夾不是 repo、或 PATH 裡沒有 git：三個子命令都 stderr `no_git`、回 0。
@@ -117,13 +117,13 @@
 
 ## 步驟 4：aos-git mark（存檔點）
 
-- **要做到**：把剛結束那一組的失敗擋下來——組裡有一項不是 `exit:0`，就把這組在 aos 範圍寫的東西還原到上一個存檔點，然後打點。後面的組看不到失敗組寫的東西，close 只要提交。
+- **要做到**：把剛結束那一組的失敗擋下來——組裡有一項出現在紀錄的失敗清單（不是 0），就把這組在 aos 範圍寫的東西還原到上一個存檔點，然後打點。後面的組看不到失敗組寫的東西，close 只要提交。
 - **依據**：[B-630](../spec/settled/tick/git.md)「組與存檔點」。
 - **做法**：
   - **存檔點名字用位置**（待問 2）：`refs/aos/marks/<AOS_TASK_INDEX>`。open、close 自己也在各自的位置算「點」（close 不留 ref）。
   - **打點**：把「HEAD 的樣子＋此刻 aos 範圍的樣子」做成一個不掛在任何分支上的暫存提交，記在那個 ref。不動 HEAD、分支、正式 index（建議用 `GIT_INDEX_FILE` 指一個暫時 index：`read-tree HEAD` → `add -A -- <範圍>` → `write-tree` → `commit-tree` → `update-ref`）。還沒有任何 commit 時從空樹開始。
-  - **哪一組**：上一個存檔點的位置是 p、自己是 i，組＝紀錄 `tasks` 的第 p+1 到 i−1 筆（紀錄第 k 筆就是表上第 k 項）。上一個點＝`refs/aos/marks/` 底下比 i 小的最大那個；一個都沒有（表上沒放 `git-open`）就把 HEAD 當上一個點、組從第 0 筆算。
-  - **有失敗**（某筆不是 `exit:0`，含 `signal`）：把 aos 範圍還原成上一個點的樣子（含新增、刪除），再打點。沒失敗就直接打點。
+  - **哪一組**：上一個存檔點的位置是 p、自己是 i，組＝表上第 p+1 到 i−1 項。上一個點＝`refs/aos/marks/` 底下比 i 小的最大那個；一個都沒有（表上沒放 `git-open`）就把 HEAD 當上一個點、組從第 0 項算。〔第八批改〕原本寫「組＝紀錄 `tasks` 的第 p+1 到 i−1 筆（紀錄第 k 筆就是表上第 k 項）」，紀錄改成只列失敗的以後不成立，改看下一條的 `index`。
+  - **有失敗**（紀錄 `tasks` 裡有一筆的 `index` 落在 p+1～i−1，含 `signal`）：把 aos 範圍還原成上一個點的樣子（含新增、刪除），再打點。沒失敗就直接打點。
   - 不收路徑參數（`aos-git mark <路徑…>` 先不做，待問 3）；不看 argv、不看 `kind`。
   - close 處理最後一組：同上，組＝上一個點之後到 close 前一項。
 - **要使用者裁定的點**：待問 1、2、3、4。
@@ -151,7 +151,7 @@
 - **驗收**：
   - 沒有 git 版在不是 repo 的資料夾跑三格：每格回 0，`seq` 1～3。
   - 有 git 版在 repo 裡跑三格，每格使用者任務改 `.aos/data.txt`：三個 commit `aos-tick 1`～`3`，每個 commit 裡的 `data.txt` 是那一格寫的。
-  - 有 git 版放在**不是** repo 的資料夾：`aos-git` 三項都印 `no_git`、記 `exit:0`，其他結果跟沒有 git 版一樣（B-632）。
+  - 有 git 版放在**不是** repo 的資料夾：`aos-git` 三項都印 `no_git`、回 0（不進紀錄的 `tasks`），其他結果跟沒有 git 版一樣（B-632）。
   - 有 git 版裡使用者任務失敗：它寫進 `.aos/` 的東西被 `mark-user` 還原、不進 commit；`git-close` 照樣提交其他的。
   - 有 git 版裡插一項 `aos-tick-check-task` 而它沒過：建停格檔，`git-close` 沒跑、沒 commit；下一格 `git-open` 還原。
 
@@ -205,3 +205,9 @@
 1. **`aos-publish` 搬暫緩區**（原步驟 2 拿掉，後面步驟往前補號）。使用者原話：「aos-publish我覺得要改名，我預期它的作用，就是把這一格的一些狀況總結成json檔案寫好」；討論後「那看來aos-summarize其實是暫時不需要了，拿掉。」所以「總結這一格成 JSON」的程式（暫名 `aos-summarize`）也不做。之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（publish 會跟傳訊混）。spec：[暫緩區 B-624 部分](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、[P-206 那列](../spec/settled/deferred/protocol/tick.md#暫緩p-206-aos-publish-那列發摘要)。
 2. **`aos-needs` 改寫成 `aos-tick-check-task`**（步驟 1 改寫）。使用者原話：「aos-needs原來是一個程式...，其實可以簡單一些，也就是它會檢查指定的東西是否跑好，沒跑好，就去寫tick stop檔案」「那就aos-tick-check-task」。用法 `aos-tick-check-task [<任務 id…>]`，自己是一項、不包別的指令；指定的都 `exit:0` 就不做事，否則建停格檔；不寫 id＝檢查前面全部；都回 0，自己的錯回 1；停格擋掉整格剩下的全部項，接受。spec：[B-621](../spec/settled/tick/check-task.md)、[P-204](../spec/settled/protocol/tick.md)。
 3. **停格檔的未來方向（只記錄，不做）**。使用者原話：「我覺得tick-stop這個檔案會變成特定json格式，存放一些資訊，然後可以用aos-tick-check-task-continue來去檢查其中的一些資訊，滿足後修改stop中的資訊。所以aos-tick仍會執行所有任務，但會變成執行前檢查stop，看看是否滿足特定條件，滿足的話就可以執行該任務。」記在 [B-620「停格檔與擋板檔」](../spec/settled/tick.md)；現在停格檔規定不變。
+
+### 2026-10-01（[第八批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第八批紀錄只記非-0)：紀錄只記非 0）
+
+4. **紀錄只記結束碼不是 0 的項**（B-633、P-213；`aos-tick` 已改）。使用者原話：「記錄這一塊，tasks如果結果是0，那就不用紀錄了。hooks也是。」`tasks`、`hooks.after_all` 每筆 `{"id","index","exit"}`（訊號殺的是 `signal`），另加 `ran`＝本格到目前跑完幾項。跟著改：
+   - **`aos-tick-check-task` 的判斷**（步驟 1）：寫了 id＝有出現在失敗清單才停格，沒出現當成功（不分辨「還沒跑」，照 POC 默認一切正常）；不寫 id＝失敗清單非空就停。
+   - **`aos-git mark` 的「哪一組有失敗」**（步驟 4）：改照紀錄每筆的 `index` 落在哪一組，不再靠「紀錄第 k 筆就是表上第 k 項」。

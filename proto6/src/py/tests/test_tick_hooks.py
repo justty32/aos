@@ -4,6 +4,7 @@
 直接讓他變頂層key」，展開時機比照 tasks）；目前只開 `after_all`
 （照表跑完、含被停格檔停下之後跑），值是一串、寫法比照 tasks、吃頂層預設；不看停格檔；碼照實記進
 `current.json` 的 `hooks.after_all`、不影響 tick 的結束碼；擋板、busy、表壞時不跑。
+第八批（使用者 2026-10-01）：「hooks也是」——只記不是 0 的，每筆 {"id","index","exit"}；hooks 不記 ran。
 """
 import fcntl
 import json
@@ -35,7 +36,7 @@ class NoHooks(HooksCase):
             self.assertEqual((r.returncode, r.stderr), (0, ""), extra)
             rec = self.rec()
             self.assertNotIn("hooks", rec)
-            self.assertEqual(rec["tasks"], [{"id": "a", "exit": 0}])
+            self.assertEqual((rec["ran"], rec["tasks"]), (1, []))
             check_record(self, rec)
 
     def test_modules_hooks_is_not_hooks(self):
@@ -58,9 +59,8 @@ class AfterAll(HooksCase):
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(self.read("h.log"), "task\n0 0 top\ntwo 1 own\nthird\n")
         rec = self.rec()
-        self.assertEqual(rec["tasks"], [{"id": "a", "exit": 0}])
-        self.assertEqual(rec["hooks"], {"after_all": [{"id": "0", "exit": 0}, {"id": "two", "exit": 0},
-                                                      {"id": "2", "exit": 0}]})
+        self.assertEqual((rec["ran"], rec["tasks"]), (1, []))
+        self.assertEqual(rec["hooks"], {"after_all": []})         # 三個都是 0，不記（第八批）
         self.assertEqual((rec["ended"], rec["exit"]), (True, 0))
         check_record(self, rec)
 
@@ -81,8 +81,8 @@ class AfterAll(HooksCase):
         r = self.tick()
         self.assertEqual(r.returncode, 0, r.stderr)
         seen = json.loads(self.read("seen.json"))
-        self.assertEqual((seen["ended"], seen["exit"], seen["tasks"]), (True, 0, [{"id": "a", "exit": 0}]))
-        self.assertEqual(seen["hooks"], {"after_all": [{"id": "first", "exit": 4}]})
+        self.assertEqual((seen["ended"], seen["exit"], seen["ran"], seen["tasks"]), (True, 0, 1, []))
+        self.assertEqual(seen["hooks"], {"after_all": [{"id": "first", "index": 0, "exit": 4}]})
 
     def test_nonzero_recorded_tick_0_next_runs(self):
         self.hooks([sh("f", "exit 3"), sh("k", "kill -9 $$"), task("n", ["no-such-program-aos"]),
@@ -92,8 +92,8 @@ class AfterAll(HooksCase):
         self.assertIn("exec_failed: after_all/n:", r.stderr)
         self.assertTrue(self.exists("z.ran"))
         self.assertEqual(self.rec()["hooks"]["after_all"],
-                         [{"id": "f", "exit": 3}, {"id": "k", "signal": 9}, {"id": "n", "exit": 127},
-                          {"id": "z", "exit": 0}])
+                         [{"id": "f", "index": 0, "exit": 3}, {"id": "k", "index": 1, "signal": 9},
+                          {"id": "n", "index": 2, "exit": 127}])          # z 是 0，不記
         check_record(self, self.rec())
 
     def test_runs_after_stop_and_ignores_stop_file(self):
@@ -106,8 +106,8 @@ class AfterAll(HooksCase):
         self.assertFalse(self.exists("b.ran"))
         self.assertTrue(self.exists("h.ran"))
         rec = self.rec()
-        self.assertEqual(rec["stopped_after"], "a")
-        self.assertEqual(rec["hooks"]["after_all"], [{"id": "s", "exit": 0}, {"id": "h", "exit": 0}])
+        self.assertEqual((rec["stopped_after"], rec["ran"], rec["tasks"]), ("a", 1, []))
+        self.assertEqual(rec["hooks"]["after_all"], [])
         check_record(self, rec)
 
     def test_empty_after_all_and_unknown_points(self):
@@ -120,8 +120,9 @@ class AfterAll(HooksCase):
 
     def test_ref_layers_like_tasks(self):
         # 展開時機比照 tasks：hooks、after_all、每一元素各解一層（整串、整項都可以 $ref）
-        self.write("hooks.d/one.json", json.dumps(sh("one", "touch one.ran")))
-        self.write("hooks.d/list.json", json.dumps([{"$ref": "hooks.d/one.json"}, sh("two", "touch two.ran")]))
+        self.write("hooks.d/one.json", json.dumps(sh("one", "touch one.ran; exit 1")))
+        self.write("hooks.d/list.json", json.dumps([{"$ref": "hooks.d/one.json"},
+                                                    sh("two", "touch two.ran; exit 2")]))
         self.write("hooks.d/hooks.json", json.dumps({"after_all": {"$ref": "hooks.d/list.json"}}))
         self.put({"tasks": [sh("a", "true")], "hooks": {"$ref": "hooks.d/hooks.json"}})
         r = self.tick()
@@ -145,7 +146,7 @@ class AfterAll(HooksCase):
         self.put({"tasks": [sh("a", "true")]})                # 第二格沒 hooks
         self.assertEqual(self.tick().returncode, 0)
         last, cur = self.rec("last"), self.rec()
-        self.assertEqual((last["seq"], last["hooks"]), (1, {"after_all": [{"id": "h", "exit": 2}]}))
+        self.assertEqual((last["seq"], last["hooks"]), (1, {"after_all": [{"id": "h", "index": 0, "exit": 2}]}))
         self.assertEqual(cur["seq"], 2)
         self.assertNotIn("hooks", cur)
         check_record(self, last)
