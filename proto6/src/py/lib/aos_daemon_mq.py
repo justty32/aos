@@ -6,9 +6,12 @@
 
 - 寄：`{"send":"<收件 inst>","msg":<任何 JSON 值>,"from":"<寄件 inst>"|null,"urgent":false}` → `{"ok":true}`。
   `from`、`urgent` 可省（null、false）。`from` 原樣存、不核對（M1）。
-- 取：`{"take":"<inst>","from":"<寄件 inst>"}` → `{"ok":true,"messages":[{"from":…,"msg":…},…]}`。
-  沒給 `from`＝信箱全部取走；給了＝只取那個寄件人的，其他照順序留著（使用者 2026-10-01 第十四批）。
-  「只能取自己的信箱」是 `aos-mq take` 那一側做的（只用 AOS_DAEMON_INST）；socket 不驗身分，直接連 socket 照樣取得到別項的。
+- 取：`{"take":"<inst>","from":[<寄件 inst 或 null>,…]}` → `{"ok":true,"messages":[{"from":…,"msg":…},…]}`。
+  沒給 `from`＝信箱全部取走；給了＝只取寄件人在陣列裡的（`null`＝寄件人是 null 的信），其他照順序留著
+  （使用者 2026-10-01 第十四批；第十五批 `from` 改成可以多個）。
+- 看：`{"peek":"<inst>","from":…}`，回應同取，但信不取走（第十五批）。
+- 「只能取／看自己的信箱」是 `aos-mq` 那一側做的（只用 AOS_DAEMON_INST）；daemon 不驗身分，照 POC「能連就能做」，
+  直接連 socket 照樣取得到別項的（使用者 2026-10-01 第十五批 1.a；之後設計各 socket 權限時再說）。
 - 急件：放進信箱後照控制模組 wake（不帶選項）的規則叫醒收件那一項——正在跑就補一次、暫停中跑一次、
   已停不跑（信照樣收下、回 ok）。不用掛控制模組也做得到。
 - 收件人不在清單上回 `unknown_inst`；格式不對回 `bad_request`（只影響那一條連線）。
@@ -19,7 +22,7 @@ import json
 
 from aos_daemon_ctl import BadRequest, _want, serve as _serve
 
-COMMANDS = ("send", "take")
+COMMANDS = ("send", "take", "peek")
 
 
 def serve(path, items):
@@ -42,10 +45,14 @@ def parse(line):
     if not isinstance(inst, str):
         raise BadRequest("%s 的值要是字串（inst 字面值）" % cmd)
     rest = {}
-    if cmd == "take":                   # take 只看 from（寄件人過濾）；msg、urgent 忽略
-        rest["from"] = req.get("from")
-        if rest["from"] is not None and not isinstance(rest["from"], str):
-            raise BadRequest("from 要是字串")
+    if cmd in ("take", "peek"):         # 只看 from（寄件人過濾）；msg、urgent 忽略
+        want = req.get("from")
+        if want is not None:
+            if not isinstance(want, list) or not want:
+                raise BadRequest("from 要是非空陣列（元素是寄件 inst 或 null）")
+            if not all(w is None or isinstance(w, str) for w in want):
+                raise BadRequest("from 的元素要是字串或 null")
+        rest["from"] = want
     if cmd == "send":
         if "msg" not in req:
             raise BadRequest("send 要有 msg")
@@ -65,10 +72,12 @@ def handle(request, items):
     if item is None:
         return {"ok": False, "error": "unknown_inst", "detail": inst}
     with item.cond:
-        if cmd == "take":
+        if cmd in ("take", "peek"):
             want = rest["from"]
-            got = [m for m in item.mailbox if want is None or m["from"] == want]
-            item.mailbox = [] if want is None else [m for m in item.mailbox if m["from"] != want]
+            pick = lambda m: want is None or m["from"] in want
+            got = [m for m in item.mailbox if pick(m)]
+            if cmd == "take":
+                item.mailbox = [m for m in item.mailbox if not pick(m)]
             return {"ok": True, "messages": got}
         item.mailbox.append({"from": rest["from"], "msg": rest["msg"]})
         if rest["urgent"] and not item.stopped:

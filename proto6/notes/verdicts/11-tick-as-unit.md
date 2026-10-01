@@ -630,3 +630,22 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 改到的地方：程式 `lib/aos_daemon_mq.py`、`lib/aos_mq.py`；測試 `tests/test_mq.py`（15 條，新 `test_take_own_mailbox_only`、`test_take_from_filter`）；spec [B-645](../../spec/settled/daemon/mq.md)、[P-125](../../spec/settled/protocol/daemon/mq.md)、[驗收入口](../../spec/conformance.md)；schema `daemon-mq`（take 的 `from`）、範例 `mq_request.take-from.valid.json`、`mq_request.take-from-number.invalid.json`；[src/py README](../../src/py/README.md#訊息與-aos-mqm3m-模組四)；[plan m3m](../../plan/m3m-daemon-modules.md) 模組四。
 
+<a id="2026-10-01-第十五批aos-mq-peek-與多個寄件人"></a>
+
+## 2026-10-01 第十五批：aos-mq peek 與多個寄件人
+
+〔使用者裁定 2026-10-01 晚〕對第十四批後攤出的四題。使用者原話：「1.a,2.可以有aos-mq peek，但手打這塊我們不管。 3.--from可以多個，比如--from a c d...。不管shell手打，from是null的，那就是--from後面不接任何東西。 4.跨daemon寄信不管。」
+
+1. **daemon 不核對取信的人**（選 a）：照 POC「能連就能做」，直接連 socket 送 `{"take":"<別項>"}` 照樣取得到；「只能取自己」只在 `aos-mq` 那一側擋。之後設計各 socket 權限時再說。
+2. **加 `aos-mq peek [--from …]`**：跟 `take` 一樣只對自己的信箱（`AOS_DAEMON_INST`）、一樣的輸出，但信不取走。socket 加 `{"peek":"<inst>","from":…}`，回應同 `take`。是給任務用的；人在 shell 手打怎麼看信 aos 不管。
+3. **`--from` 收多個**：`--from a c d`；`--from` 後面什麼都不接＝取寄件人是 `null` 的信。`take`、`peek` 都適用，篩掉的照原順序留著。
+4. **跨 daemon 寄信不管**：從「先不做」改成「不在規劃中」，aos 不管、不保證。
+
+**AI 隊定的細節**（使用者可改）：
+
+1. `--from` 後面接的參數收到下一個 `--` 開頭的參數為止（`-x` 這種一個 `-` 開頭的也算寄件人）；`take`／`peek` 不認得的旗標（例如 `--urgent`）照舊回 `usage`。
+2. `--from` 可以重複寫、全部疊起來：`--from --from a`＝null 加 a。
+3. socket 上 `take`／`peek` 的 `from` 改成**非空陣列**，元素是寄件 inst 字串或 `null`；不給＝全部；空陣列、字串、數字都是 `bad_request`（第十四批的單一字串寫法不再收）。CLI 不會送出空陣列。
+4. 人在 shell 沒有 `AOS_DAEMON_INST` 時 `take`、`peek` 都回 `no_inst`，照「手打這塊我們不管」不另外處理。
+
+改到的地方：程式 `lib/aos_daemon_mq.py`（`peek`、`from` 陣列）、`lib/aos_mq.py`；測試 `tests/test_mq.py`（20 條，新 `test_from_many`、`test_from_nothing_is_null`、`test_from_repeated_adds_up`、`test_peek_does_not_take`、`test_flag_after_from`）；spec [B-645](../../spec/settled/daemon/mq.md)、[P-125](../../spec/settled/protocol/daemon/mq.md)、[驗收入口](../../spec/conformance.md)；schema `daemon-mq`（`peek`、take／peek 的 `from` 陣列）、範例 `mq_request.take-from.valid.json` 改陣列、新 `mq_request.peek-from.valid.json`、`mq_request.take-from-empty.invalid.json`、`mq_request.peek-from-string.invalid.json`；[src/py README](../../src/py/README.md#訊息與-aos-mqm3m-模組四)；[plan m3m](../../plan/m3m-daemon-modules.md) 模組四。

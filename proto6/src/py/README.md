@@ -417,21 +417,23 @@ AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell �
 
 ```text
 aos-mq send [--urgent] <收件 inst> <JSON|->     # from 自動填 AOS_DAEMON_INST（沒有＝null）
-aos-mq take [--from <寄件 inst>]                 # 只取自己（AOS_DAEMON_INST）的信箱；每封一行 {"from":…,"msg":…}
+aos-mq take [--from [<寄件 inst>…]]…            # 只取自己（AOS_DAEMON_INST）的信箱；每封一行 {"from":…,"msg":…}
+aos-mq peek [--from [<寄件 inst>…]]…            # 同上，但不取走
 ```
 
 結束碼照 `aos-ctl`：成功 0；`usage:`（含 `<JSON>` 不是 JSON）、`no_inst:`、`no_daemon:`、`connect:`、`unknown_inst:`、`bad_request:` 一律 1，stderr 一行。
 
 | 函式 | 做什麼 |
 |---|---|
-| `aos_daemon_mq.serve()`、`parse()`、`handle()` | 收 send／take、放信取信、急件叫醒 |
+| `aos_daemon_mq.serve()`、`parse()`、`handle()` | 收 send／take／peek、放信取信看信、急件叫醒 |
 | `aos_daemon.give_env()` | 放 `AOS_DAEMON_SOCKET`／`AOS_DAEMON_MQ_SOCKET`／`AOS_DAEMON_INST` |
 | `aos_daemon._quit()` | 退出前刪兩個 socket 檔 |
 | `aos_mq.main()`、`bin/aos-mq` | 小工具 |
 
-- **取信只能取自己的信箱**（2026-10-01 第十四批）：`take` 不收 `<inst>`、只用 `AOS_DAEMON_INST`；`--from` 只取那個寄件人的、其他照順序留著。socket 不驗身分，這是 `aos-mq` 那一側擋的。
+- **取信只能取自己的信箱**（2026-10-01 第十四批）：`take` 不收 `<inst>`、只用 `AOS_DAEMON_INST`；`--from` 只取那個寄件人的、其他照順序留著。socket 不驗身分，這是 `aos-mq` 那一側擋的（第十五批：照「能連就能做」，daemon 不核對）。
+- **`peek` 與多個寄件人**（2026-10-01 第十五批）：`peek` 跟 `take` 一樣但不取走。`--from a c d` 收到下一個 `--` 開頭的參數為止；`--from` 不接＝寄件人是 null 的信；可以重複寫、疊加。socket 上 `from` 是非空陣列（元素字串或 null）。
 
-測試 `tests/test_mq.py`（15 條，約 4 秒）。
+測試 `tests/test_mq.py`（20 條，約 5 秒）。
 
 ## 帳號（m3m 模組五）
 
