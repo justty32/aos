@@ -66,18 +66,18 @@
 - 順序只看 `tasks` 陣列位置；`tasks` 可以是空陣列，維持陣列。
 - 每項是 **inst 的超集**：一份 inst 加下面「每一項」表的欄位，也可以用整份 `$ref`。
 - 頂層可以放每一項的預設與 `modules`（下面「頂層」表）〔使用者 2026-10-01〕。跑到某一項時，頂層預設＋這一項淺層合併（項寫了的鍵整個蓋過，`envs` 也整包換），合併結果當一份獨立的 inst 展開：`cwd` 以工作資料夾為中心，其他欄位以解出的 cwd 為中心。頂層 `cwd` 不改 tick 自己的 cwd。
-- **指示詞展開時機**〔使用者 2026-10-01〕：讀表時只解到每一項那一層（整份、頂層七個預設欄位與 `modules` 的值、`tasks`、陣列元素各解一層，頂層其他鍵不解；`$ref` 以工作資料夾為中心，`$ref:""`／`#…` 指整份表）；值的內部跑到那一項、合併後才展開，這時 `$ref:""`／`#…` 指合併後的這一項。正本見 [B-620](../tick.md)「頂層預設」「指示詞什麼時候展開」；跟 daemon 設定檔的對照見 [C-11](../conventions.md)。
-- 格式上外層與每項的 `_metainfo` 照寫；核心不擋，開格只做極簡檢查（有 `tasks` 陣列、每項解一層後是物件、合併頂層預設後有 `argv`，[B-620](../tick.md)）。
+- **指示詞展開時機**〔使用者 2026-10-01〕：讀表時只解到每一項那一層（整份、頂層七個預設欄位的值、`tasks`、陣列元素各解一層，頂層其他鍵不解；頂層 `modules` 例外，讀表時整個展開〔使用者裁定 2026-10-01〕；`$ref` 以工作資料夾為中心，`$ref:""`／`#…` 指整份表）；值的內部跑到那一項、合併後才展開，這時 `$ref:""`／`#…` 指合併後的這一項。正本見 [B-620](../tick.md)「頂層預設」「指示詞什麼時候展開」；跟 daemon 設定檔的對照見 [C-11](../conventions.md)。
+- **`_metainfo` 可省**〔使用者裁定 2026-10-01〕：外層 `_metainfo` 不是必填，核心不看。每項的 `_metainfo` 照 inst（上面 P-201、[inst](../../base/inst.md)）的規則：可省，沒寫＝posix 第 1 版；寫了就照 inst 規則驗，但跑到那一項、合併頂層預設後才驗，驗不過跟其他「跑到某項展開失敗」一樣（自然丟錯、回 1，[B-620](../tick.md)「誰驗什麼」）。開格只做極簡檢查（有 `tasks` 陣列、每項解一層後是物件、合併頂層預設後有 `argv`、`modules` 展開得了，[B-620](../tick.md)）。
 - 核心只看合併後的 inst 部分與 `id`；不看 `kind`、`modules`。順序、類別與讀表檢查以 [B-620](../tick.md) 為正本。
 
 頂層：
 
 | 欄位 | 約束 |
 |---|---|
-| `_metainfo` | 整份表的格式標記（`aos-tasks` 第 1 版）；不是預設 |
+| `_metainfo` | 可省〔使用者裁定 2026-10-01〕；整份表的格式標記（`aos-tasks` 第 1 版），核心不看；不是預設 |
 | `tasks` | 必填，陣列 |
 | `argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit` | 可省；每一項的預設，格式照 inst。項自己寫了就整個蓋過〔使用者 2026-10-01〕 |
-| `modules` | 可省；tick 模組的設定，一個模組一個鍵，比照 daemon 設定檔的 `modules`（[P-120](daemon/core.md)）。目前沒有任何模組：核心照收不理、型別不查、不當預設合併；讀表時只解一層，內部留給模組自己展開〔使用者 2026-10-01〕 |
+| `modules` | 可省；tick 模組的設定，一個模組一個鍵，比照 daemon 設定檔的 `modules`（[P-120](daemon/core.md)）。目前沒有任何模組：核心照收不理、型別不查、不當預設合併〔使用者 2026-10-01〕。讀表時整個展開指示詞（跟 daemon 設定檔一致；`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點），展開失敗＝`bad_table`、回 1〔使用者裁定 2026-10-01〕 |
 
 頂層的 `id`、`kind` 不是預設；頂層其他鍵當陌生鍵忽略。
 
@@ -86,6 +86,7 @@
 | 欄位 | 約束 |
 |---|---|
 | `id` | 可省；寫了是共用 `ID`。沒寫時，這一項的 id＝它在 `tasks` 陣列的位置轉字串（`"0"`、`"3"`）。紀錄、`AOS_TASK_ID`、`stopped_after` 都用它。默認不重複，核心不查 |
+| `_metainfo` | 可省，照 inst 規則（沒寫＝posix 第 1 版）；跑到這一項才驗，驗不過＝跑到某項展開失敗〔使用者裁定 2026-10-01〕 |
 | `kind` | 可省。`system`、`kernel`、`agent`、`custom`；〔暫定〕或自訂的「類別.名稱」：類別限 `kernel`／`agent`／`custom`，名稱是小寫英數與 `_`、`-`（例如 `agent.review`）。`system` 標記系統級任務（[B-626](../tick.md)），只是標記，不驗順序；`system.x` 不接受（schema 擋，核心不擋） |
 
 **不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號就在 argv 包 `aos-as`（P-212）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-needs`（P-204、[B-621](../tick/needs.md)），組改由存檔點劃分（P-205、[B-630](../tick/git.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
@@ -96,10 +97,10 @@
 
 - 正例：[最小](../../protocol/examples/tick/tasks.minimal.valid.json)（登記普通程式）、[沒寫 `id` 與 `kind`](../../protocol/examples/tick/tasks.no-id.valid.json)（id 用位置字串）、[包 `aos-as`](../../protocol/examples/tick/tasks.as.valid.json)（用別的帳號跑）、[陌生鍵](../../protocol/examples/tick/tasks.unknown-key.valid.json)（帶 `group`、`needs` 照收）、[標準任務表範本](../../protocol/examples/tick/tasks.template.valid.json)（照 [B-629](../tick/template.md) 沒有 git 版）、[有 git 版範本](../../protocol/examples/tick/tasks.template-git.valid.json)（`aos-git` 開格、存檔點、收尾）、[`methods`](../../protocol/examples/tick/tasks.methods.valid.json) 與 [`methods` 裡重複](../../protocol/examples/tick/tasks.methods-duplicate.valid.json)（都當陌生鍵照收）、[自訂種類](../../protocol/examples/tick/tasks.custom-kind.valid.json)（`agent.review`）。
 - 指示詞的正例：[整項 `$ref`](../../protocol/examples/tick/tasks.reference.valid.json)（讀表時解一層）、[`argv` 帶指示詞](../../protocol/examples/tick/tasks.directive.valid.json)（跑到那一項才展開）。
-- 頂層預設與 `modules` 的正例〔使用者 2026-10-01〕：[頂層預設](../../protocol/examples/tick/tasks.defaults.valid.json)（B-620 的例子：頂層 `cwd`、`envs`、`stdout`，一項自己寫 cwd、一項整項 `$ref`）、[頂層給 `argv`](../../protocol/examples/tick/tasks.defaults-argv.valid.json)（項只寫 `id`）、[頂層 `modules`](../../protocol/examples/tick/tasks.modules.valid.json)（照收不理）。
+- 頂層預設與 `modules` 的正例〔使用者 2026-10-01〕：[頂層預設](../../protocol/examples/tick/tasks.defaults.valid.json)（B-620 的例子：頂層 `cwd`、`envs`、`stdout`，一項自己寫 cwd、一項整項 `$ref`）、[頂層給 `argv`](../../protocol/examples/tick/tasks.defaults-argv.valid.json)（項只寫 `id`）、[頂層 `modules`](../../protocol/examples/tick/tasks.modules.valid.json)（照收不理）、[沒寫 `_metainfo`](../../protocol/examples/tick/tasks.no-metainfo.valid.json)（外層與某項都省）〔使用者裁定 2026-10-01〕。
 - 反例：[自訂 `system.x`](../../protocol/examples/tick/tasks.custom-kind.invalid.json)、[某項沒 `argv`、頂層也沒有](../../protocol/examples/tick/tasks.no-argv.invalid.json)〔使用者 2026-10-01〕。
 
-依據：〔暫定〕第十八批（自訂種類）、第十九批（撤 `user` 的永遠禁止）、〔使用者方向 2026-09-30〕第二十批（只定基本欄位、疑點裁定 6）；使用者 2026-10-01（`kind` 不填、`id` 可省、拿掉 `methods`、極簡檢查、不看 `user`；同日撤回 inst 與任務的 `user`；同日第二批：任務表只有一個位置、頂層預設、指示詞只解到 tasks、頂層 `modules`）。
+依據：〔暫定〕第十八批（自訂種類）、第十九批（撤 `user` 的永遠禁止）、〔使用者方向 2026-09-30〕第二十批（只定基本欄位、疑點裁定 6）；使用者 2026-10-01（`kind` 不填、`id` 可省、拿掉 `methods`、極簡檢查、不看 `user`；同日撤回 inst 與任務的 `user`；同日第二批：任務表只有一個位置、頂層預設、指示詞只解到 tasks、頂層 `modules`；同日裁定：`_metainfo` 可省、每項 `_metainfo` 照 inst、`modules` 讀表時整個展開，見[第二十批裁定篇末](../../../notes/verdicts/11-tick-as-unit.md)）。
 
 ## P-203．aos-tick 與任意任務程式〔建議預設，未拍板〕
 

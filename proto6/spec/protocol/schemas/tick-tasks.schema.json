@@ -2,10 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "tick-tasks.schema.json",
   "title": "工作資料夾的任務註冊表",
-  "description": "<工作資料夾>/.aos/tasks.json（AOS_DIRNAME 空字串時是 <工作資料夾>/tasks.json）。整份是指示詞時先解開再驗。這是完整格式，給恢復前驗證與工具用；aos-tick 核心開格只做極簡檢查（有 tasks 陣列、每項解一層後是物件、合併頂層預設後有 argv，B-620）。任務是 inst 的超集；id、kind 可省（沒寫 id 時 id 是陣列位置字串，P-202）；沒有 user（inst 頂層沒有，2026-10-01 撤回），寫了照陌生鍵。不認得的鍵照收、核心忽略（P-007），group、needs、methods 都當陌生鍵。id 是否重複不驗（默認不重複）。〔使用者 2026-10-01〕頂層可放 inst 的七個欄位（argv、cwd、envs、stdin、stdout、stderr、exit）當每一項的預設：淺層合併，項自己寫了某個鍵就整個蓋過頂層那個鍵（envs 也整包換）；頂層 _metainfo 是整份表的格式標記、id／kind 是 aos 欄位，都不是預設。頂層 cwd 不改 tick 自己的 cwd（tick 永遠在工作資料夾跑），只是任務的預設 cwd，相對路徑以工作資料夾為起點。指示詞展開時機：讀表時頂層每個鍵的值、tasks 本身、tasks 每一元素各解一層（$ref 相對工作資料夾）；值的內部讀表時不解；跑到某一項時先合併預設，再把合併結果當一份 inst 照 inst 規則展開（這時 $ref:\"\"／#… 指合併後的這一項）。頂層 modules 是模組設定（比照 daemon 設定檔），不是預設值，核心不看。",
+  "description": "<工作資料夾>/.aos/tasks.json（AOS_DIRNAME 空字串時是 <工作資料夾>/tasks.json）。整份是指示詞時先解開再驗。〔使用者裁定 2026-10-01〕頂層 _metainfo 可省（核心不看）；每項 _metainfo 照 inst 規則：可省，沒寫＝posix 第 1 版，寫了跑到那一項時照 inst 規則驗，驗不過照「跑到某項展開失敗」處理（tick 回 1）。這是完整格式，給恢復前驗證與工具用；aos-tick 核心開格只做極簡檢查（有 tasks 陣列、每項解一層後是物件、合併頂層預設後有 argv，B-620）。任務是 inst 的超集；id、kind 可省（沒寫 id 時 id 是陣列位置字串，P-202）；沒有 user（inst 頂層沒有，2026-10-01 撤回），寫了照陌生鍵。不認得的鍵照收、核心忽略（P-007），group、needs、methods 都當陌生鍵。id 是否重複不驗（默認不重複）。〔使用者 2026-10-01〕頂層可放 inst 的七個欄位（argv、cwd、envs、stdin、stdout、stderr、exit）當每一項的預設：淺層合併，項自己寫了某個鍵就整個蓋過頂層那個鍵（envs 也整包換）；頂層 _metainfo 是整份表的格式標記、id／kind 是 aos 欄位，都不是預設。頂層 cwd 不改 tick 自己的 cwd（tick 永遠在工作資料夾跑），只是任務的預設 cwd，相對路徑以工作資料夾為起點。指示詞展開時機：讀表時頂層七個預設欄位的值、tasks 本身、tasks 每一元素各解一層，頂層 modules 整個展開（$ref 相對工作資料夾，$ref:\"\"／#… 指整份 tasks.json；展開失敗＝bad_table）；其餘值的內部讀表時不解；跑到某一項時先合併預設，再把合併結果當一份 inst 照 inst 規則展開（這時 $ref:\"\"／#… 指合併後的這一項）。頂層 modules 是模組設定（比照 daemon 設定檔），不是預設值，讀表時整個展開、核心照收不理。",
   "type": "object",
   "required": [
-    "_metainfo",
     "tasks"
   ],
   "properties": {
@@ -32,6 +31,7 @@
     },
     "_metainfo": {
       "type": "object",
+      "description": "可省（使用者裁定 2026-10-01）；整份表的格式標記，核心不看，不是預設",
       "properties": {
         "_type": {
           "const": "aos-tasks"
@@ -71,7 +71,7 @@
     },
     "modules": {
       "type": "object",
-      "description": "〔使用者 2026-10-01〕一個模組一個鍵，內容不限；不是 inst 欄位、不當任務預設值；核心照收不理、內部不展開（留給之後的模組）"
+      "description": "〔使用者 2026-10-01〕一個模組一個鍵，內容不限；不是 inst 欄位、不當任務預設值；核心照收不理；〔使用者裁定 2026-10-01〕讀表時整個展開指示詞（跟 daemon 設定檔一致，$opt 物件原樣留），$ref:\"\"／#… 指整份 tasks.json、相對檔名以工作資料夾為起點；展開失敗＝bad_table、tick 回 1"
     }
   },
   "if": {
@@ -148,7 +148,8 @@
           ]
         },
         "_metainfo": {
-          "$ref": "inst.schema.json#/$defs/Inst/properties/_metainfo"
+          "$ref": "inst.schema.json#/$defs/Inst/properties/_metainfo",
+          "description": "照 inst（aos-exec）的規則（使用者裁定 2026-10-01）：可省，沒寫＝posix 第 1 版；寫了跑到這一項、合併頂層預設後才照 inst 規則驗，驗不過照「跑到某項展開失敗」處理（tick 回 1）"
         },
         "argv": {
           "$ref": "inst.schema.json#/$defs/Inst/properties/argv"
