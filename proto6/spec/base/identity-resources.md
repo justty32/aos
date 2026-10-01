@@ -2,6 +2,11 @@
 
 ← [基底](README.md)｜[kernel 樹](../scheduling/README.md)｜[架構與裁定](../../notes/2026-09-29-kernel-tree.md)
 
+> **〔2026-10-01 殘留註記〕本篇是 2026-10-01 之前的設計，下列內容現在不是現行的**；原文照留，以這裡指的正本為準（各批裁定見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）：
+> - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
+> - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
+> - 舊 daemon 的通道與憑證（`AOS_TICK_TOKEN`）、登記、runner、`state.json`：整套在暫緩區（[舊 daemon](../settled/deferred/daemon/README.md)）；現行 daemon 只定期叫 `aos-exec` 加各模組（[B-640](../settled/daemon/core.md)）。
+
 ## B-301：權限與額度歸屬〔使用者方向 2026-09-29〕
 
 通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。〔使用者方向 2026-09-30，第二十批〕UID 隔離由普通程式 `aos-as` 經 helper 落實（B-303）；沒有 helper 只算功能受限。需要隔離時一 node 一 Linux 帳號；kernel node 也一樣用自己的帳號，不另設服務帳號（第九批）。工具沿用呼叫 node 的身分、權限及資源範圍。〔使用者方向 2026-10-01〕inst 頂層沒有 `user`，任務是 inst 的超集所以也沒有（撤回第十九批疑點裁定 4、第二十批疑點裁定 6 裡任務帶 `user`、不同帳號回 125 的部分）；核心不切帳號，要用別的帳號跑就包 `aos-as`，同樣要在該 node 的額度內（[B-620](../settled/tick.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權而且會傳遞（[B-501](transport.md)、[T-08](../terms.md)），所以 UID 隔離與 key 保護**只對整條投件鏈以外的帳號**成立；key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。

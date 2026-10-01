@@ -9,7 +9,7 @@
 - [spec 規格草案](../spec/README.md)：欄位、合法狀態、提交與失敗恢復、驗收，現行以它為準。
 - [裁定紀錄](2026-09-29-verdicts.md)：09-29 使用者分十七批逐條裁定，**以它為準、後批優先**；分冊與每批摘要見 [verdicts/](verdicts/README.md)。
 - [第十八批方向](verdicts/09-special-computing-os.md)（09-30，後批優先，數條已被第十九批推翻；spec 已依它改寫）：aos 是給特殊計算用的 OS，多層多 kernel，各 kernel 自訂抽象、資源、隔離，以 Linux 為底。
-- [第二十批方向](verdicts/11-tick-as-unit.md)（09-30，**最新方向、後批優先，推翻第十九批標準配備結構**；**spec 正在依它改寫中**）：tick 是 aos 的衡量基準（排程以 tick 為單位、整個體系基於 tick）；tick 核心只有四樣（鎖、照表跑、上下層、每項結束碼紀錄）；git 開格／收尾、收件、投件、發摘要、清理等是掛在任務表上的系統級任務（`kind:"system"`），`aos-cg`、`aos-as`、`aos-needs` 是普通程式；tick–daemon 通道是唯一逃生口；不再有標準配備、全掛、兩級。
+- [第二十批方向](verdicts/11-tick-as-unit.md)（09-30，**最新方向、後批優先，推翻第十九批標準配備結構**；**spec 正在依它改寫中**）：tick 是 aos 的衡量基準（排程以 tick 為單位、整個體系基於 tick）；tick 核心只有四樣（鎖、照表跑、上下層、每項結束碼紀錄）；git 開格／收尾、收件、投件、發摘要、清理等是掛在任務表上的系統級任務（`kind:"system"`），`aos-cg`、`aos-as`、`aos-needs` 是普通程式；tick–daemon 通道是唯一逃生口；不再有標準配備、全掛、兩級。 〔2026-10-01 殘留註記〕這份的系統級任務結構後來都暫緩了（第十三、十六～十八批：`aos-as`、`aos-tick-check-task`、`aos-git`、範本、`aos-mq get`／`post`、`aos-clean`）；現況看[篇末 10-01 各批](verdicts/11-tick-as-unit.md)。
 - [第十九批方向](verdicts/10-tick-minimal-core.md)（09-30，**標準配備、全掛、兩級等已被第二十批取代**、推翻第十八批數條；spec 已依它改寫，落點見該份文末）：三層架構——tick 核心只有互斥鎖、照任務表跑、上下層（預設看資料夾包含、可登記覆蓋）；標準配備（git 提交、needs、收件、切換使用者、cgroup 框、once 等，跟核心同一支 aos-tick、必須全掛；cgroup v2 與 git 是完整保證的條件，沒有時走內建備援、仍算全掛）；其他掛載（kernel、agent、clock、自訂任務）；tick 與 daemon 之間有通道傳訊；spec 的保證以標準配備全掛為前提。
 - [09-30 審稿](reviews/2026-09-30/README.md)：Fable 與 astra 兩輪審 notes／spec，77 條待處理，要依第十八批重新分類。
 - [09-30 待議：daemon 職責與多 daemon](2026-09-30-daemon-split-and-multi-daemon.md)：多 daemon 範圍已答（a 多帳號、c 巢狀、e 備援，互不轉送，備援交外部重開）；已裁定：daemon 拆成開格核心＋可掛部件（同程式設定開關），spec 改寫中。
