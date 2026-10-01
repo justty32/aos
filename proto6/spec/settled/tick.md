@@ -237,14 +237,14 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 |---|---|---|
 | 擋什麼 | **只擋本格**剩下的項；下一格照常開、照常跑 | 擋住**之後各格** |
 | 誰建 | 任務。系統級任務與普通程式要叫停也建它 | 任務（例如發現需要人處理的故障）或人手；`aos-git` 故障時也寫它（[B-622](tick/git.md)） |
-| 內容 | 不拘，建議一行 UTF-8 原因 | 一行 UTF-8 原因 |
+| 內容 | 不拘，建議一行 UTF-8 原因 | 〔使用者 2026-10-01 第十六批〕aos 不看，**只看存不存在**（空檔、資料夾、讀不到、壞 symlink 都算在）；要寫原因給人看可以 |
 | 核心什麼時候看 | 每跑完一項就檢查 | 取鎖後、讀表前 |
-| 核心看到時 | 不開後面的項；stderr 印 `stopped:` 加檔內原因；紀錄寫 `ended:true`、`exit:0` 與 `stopped_after`（在哪一項之後停，[P-213](protocol/tick.md)）；這格回 0——該停就停，不算中斷 | 一項都不跑、不寫結束碼紀錄、不加 `seq`、不刪停格檔；stderr 印 `blocked:` 加檔內原因，回 0。所以人手或 cron 直接跑也被擋 |
+| 核心看到時 | 不開後面的項；stderr 印 `stopped:` 加檔內原因；紀錄寫 `ended:true`、`exit:0` 與 `stopped_after`（在哪一項之後停，[P-213](protocol/tick.md)）；這格回 0——該停就停，不算中斷 | 直接結束：一項都不跑、hooks 不啟動、不寫結束碼紀錄、不加 `seq`、不刪停格檔；**stderr 不印**（正常機制結束不印，[C-08](conventions.md)）〔使用者 2026-10-01 第十六批〕，回 0。所以人手或 cron 直接跑也被擋 |
 | 誰刪 | 核心：換完紀錄後、開第一項前，刪掉上一格留下的 | **只有人手**，修好後刪；aos 不自動刪 |
 | daemon | 不看它 | 現行 daemon 核心照常叫，由 `aos-tick` 自己擋；舊設計是有它就不開格（[B-607](deferred/daemon/registration.md)，在暫緩區） |
 
 - **有 git 時，停格檔等於這格作廢**：排在後面的 `aos-git close` 不跑、不提交，下一格 `aos-git open` 把 aos 範圍還原（[B-630](tick/git.md)）。想提早結束又保住結果的任務，別建停格檔，改讓後面的項讀紀錄自己跳過。〔使用者方向 2026-09-30，納入 cgroup 與 git 疑-1〕
-- 要知道這格是不是被停下，讀紀錄的 `stopped_after`；外層要分出 `busy`、`blocked`，看 stderr。
+- 要知道這格是不是被停下，讀紀錄的 `stopped_after`；外層要分出 `busy` 看 stderr。被擋板檔擋下的格什麼都不留（stderr 空、紀錄與 `seq` 不變），要知道就自己看擋板檔在不在〔使用者 2026-10-01 第十六批〕。
 
 兩個檔都 ignored。使用者裁定的是分工：停格檔靠偵測檔案停掉本格、只在任務層面、daemon 不看、下一格核心開頭刪；擋板檔擋之後的格。檔名、內容、stderr 細節是〔建議預設，未拍板〕；兩種都回 0 照 [C-08](conventions.md)。
 
@@ -263,7 +263,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | 回 | 什麼時候 |
 |---|---|
 | `0` | 照表跑完（不管任務成敗、回幾）；被停格檔停下；拿不到鎖（`busy`）；有擋板檔（`blocked`） |
-| `1` | argv 用法錯（含目標是檔）、`AOS_DIRNAME` 不合法、`no_target`、`no_tasks`、`bad_table`；tick 自用的檔（擋板檔、停格檔、`tick/current/`、`tick/last/` 裡的紀錄檔）讀不到、寫不進或格式壞——這種就讓程式自然丟錯（traceback 進 stderr），不分發生時機、不補救 |
+| `1` | argv 用法錯（含目標是檔）、`AOS_DIRNAME` 不合法、`no_target`、`no_tasks`、`bad_table`；tick 自用的檔（停格檔、`tick/current/`、`tick/last/` 裡的紀錄檔；擋板檔只看存不存在、不讀，不在此列〔使用者 2026-10-01 第十六批〕）讀不到、寫不進或格式壞——這種就讓程式自然丟錯（traceback 進 stderr），不分發生時機、不補救 |
 
 stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`busy`、`blocked`、`stopped`、`no_target`、`no_tasks`、`bad_table`、`exec_failed`。
 

@@ -478,7 +478,7 @@ class Step6Tick(DaemonCase):
         self.wait_for(lambda: len(self.results(out, "n/a")) >= 3)
         self.assertEqual(set(self.results(out, "n/a")), {0})
         self.assertEqual(self.seq(), 0)
-        self.assertTrue(any(l.startswith("blocked:") for l in list(err)), err)
+        self.assertFalse(any("blocked" in l for l in list(err)), err)   # 第十六批：擋板檔不印 stderr
         os.remove(os.path.join(self.node, ".aos", "tick-blocked"))
         self.wait_for(lambda: self.seq() >= 2)
 

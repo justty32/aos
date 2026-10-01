@@ -144,7 +144,6 @@
 | `no_target` | 目標不存在 | 1 |
 | `no_tasks` | 目標是資料夾，底下沒有 `.aos/tasks.json` | 1 |
 | `busy` | 拿不到 `.aos/tick.lock`：同資料夾上一格還沒跑完（[B-602](../tick.md)） | 0 |
-| `blocked` | 有擋板檔；後面附擋板檔裡的原因 | 0 |
 | `bad_table` | 任務表沒過極簡檢查（[B-620](../tick.md)） | 1 |
 | `stopped` | 被停格檔停下；後面附停格檔裡的原因 | 0（照表跑完的那格） |
 | `exec_failed` | 某項沒跑成：mkdir／cwd／重導向失敗（記 `exit:125`）、沒執行權（126）、找不到程式（127）；附那一項的 id（`hooks.after_all` 的項寫成 `after_all/<id>`，B-635） | 不影響，照常跑下一項 |
@@ -192,10 +191,10 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 
 | tick 結束碼 | 意思 |
 |---|---|
-| `0` | 預料之中：照表跑完（不管任務成敗）、被停格檔停下、`busy`、`blocked` |
+| `0` | 預料之中：照表跑完（不管任務成敗）、被停格檔停下、`busy`、有擋板檔（stderr 不印〔使用者 2026-10-01 第十六批〕） |
 | `1` | tick 自己出錯：`usage`、`no_target`、`no_tasks`、`bad_table`；tick 自用的檔讀不到、寫不進或格式壞（自然丟錯，traceback 進 stderr） |
 
-- **停掉本格靠停格檔 `.aos/tick/stop`，不靠結束碼**；要知道是不是被停下，讀紀錄的 `stopped_after`。外層要分出 busy、blocked，看 stderr。
+- **停掉本格靠停格檔 `.aos/tick/stop`，不靠結束碼**；要知道是不是被停下，讀紀錄的 `stopped_after`。外層要分出 busy，看 stderr；被擋板檔擋下的格 stderr 是空的、紀錄與 `seq` 都不動〔使用者 2026-10-01 第十六批〕。
 - 第十九批「標準配備」的 3（提交故障）與 125（格首看到擋板）撤；第二十批的 2（argv 或任務表不合法）、75（鎖被占）也撤（[tick 暫緩區](../deferred/tick.md)「已撤回／被取代」）。
 - 父程序看 wait 狀態辨識 tick 被訊號結束，不把 `128+N` 當訊號證據。inst 的文字 `exit` 編碼仍照 P-201。
 - kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
@@ -400,6 +399,6 @@ schema 管得到的：`exit` 只收 0、`ran` 必填、`ended` 跟 `exit`／`sto
 | 檔 | 內容 | 行為 |
 |---|---|---|
 | `.aos/tick/stop`（停格檔，ignored） | 任何內容都算；建議一行 UTF-8 原因，核心印在 stderr 的 `stopped:` 後面 | 只停本格，這格照樣回 0，見 [B-620](../tick.md) |
-| `.aos/tick-blocked`（擋板檔，ignored） | 一行 UTF-8 原因，核心印在 stderr 的 `blocked:` 後面 | 擋之後各格（不開格、回 0），見 [B-620](../tick.md) |
+| `.aos/tick-blocked`（擋板檔，ignored） | 〔使用者 2026-10-01 第十六批〕核心只看存不存在、不讀內容（可以是空檔、資料夾）；要留原因給人看可以寫 | 擋之後各格（不開格、hooks 不跑、stderr 不印、回 0），見 [B-620](../tick.md) |
 
 範例：正例 [跑到一半](../../protocol/examples/tick/tick-record.minimal.valid.json)、[全部成功](../../protocol/examples/tick/tick-record.done.valid.json)、[被停格檔停下](../../protocol/examples/tick/tick-record.stopped-exit-0.valid.json)、[有任務失敗照樣回 0](../../protocol/examples/tick/tick-record.exit-0-with-failure.valid.json)、[沒寫 id 的位置字串](../../protocol/examples/tick/tick-record.position-id.valid.json)、[停下後照跑 hooks](../../protocol/examples/tick/tick-record.hooks.valid.json)（B-635）；反例 [沒收場卻有 hooks](../../protocol/examples/tick/tick-record.hooks-not-ended.invalid.json)、 [同一項同時有 exit 與 signal](../../protocol/examples/tick/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](../../protocol/examples/tick/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 stopped_after](../../protocol/examples/tick/tick-record.stopped-not-ended.invalid.json)、[整格回 1](../../protocol/examples/tick/tick-record.stopped-exit-1.invalid.json)、[整格回 2](../../protocol/examples/tick/tick-record.exit-2.invalid.json)、[整格回 3](../../protocol/examples/tick/tick-record.exit-3.invalid.json)；[記了結束碼 0](../../protocol/examples/tick/tick-record.zero-recorded.invalid.json)、[hook 記了結束碼 0](../../protocol/examples/tick/tick-record.hook-zero-recorded.invalid.json)、[沒有 ran](../../protocol/examples/tick/tick-record.no-ran.invalid.json)、[沒有 index](../../protocol/examples/tick/tick-record.no-index.invalid.json)；`record.json` 本體：正例 [開格時](../../protocol/examples/tick/tick-record-file.open.valid.json)、[有 hooks 而且被停下](../../protocol/examples/tick/tick-record-file.hooks.valid.json)，反例 [ran 直接寫數字](../../protocol/examples/tick/tick-record-file.inline-ran.invalid.json)、[$ref 指錯檔](../../protocol/examples/tick/tick-record-file.wrong-ref.invalid.json)、[沒收場卻有 hooks](../../protocol/examples/tick/tick-record-file.hooks-not-ended.invalid.json)；補查反例 [停在不是最後一項](../../protocol/examples/tick/tick-record.stopped-not-last.invalid.json)、[index 不小於 ran](../../protocol/examples/tick/tick-record.index-not-below-ran.invalid.json)、[停下卻一項都沒跑](../../protocol/examples/tick/tick-record.stopped-ran-0.invalid.json)。

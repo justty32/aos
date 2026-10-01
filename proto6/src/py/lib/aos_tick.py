@@ -12,7 +12,7 @@ aos_tick_table.py、跑單項在 aos_tick_run.py、hooks（掛點，目前只有
 0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤。aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影響它。
 
 - 0：照表跑完（不管任務成敗、回幾）；看到停格檔、剩下不跑；同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，
-  stderr `busy:`）；有擋板檔（stderr `blocked:`）。後兩種不開格（不寫紀錄、不加 seq）。
+  stderr `busy:`）；有擋板檔（只看存不存在、stderr 不印、hooks 不跑，第十六批）。後兩種不開格（不寫紀錄、不加 seq）。
 - 1：tick 自己出錯——argv 用法錯（含目標給的是檔）、目標指的東西不存在、資料夾底下沒有 .aos/tasks.json、
   任務表不合極簡檢查（aos_tick_table.check_table，stderr `bad_table:`；在換紀錄之前，不算開過一格）；tick 自用的檔讀不到／寫不進／
   格式壞就讓 Python 自然丟錯（traceback 進 stderr、回 1），不分發生時機、不補救。
@@ -138,10 +138,10 @@ def run_tick(cwd, table):
 
 
 def _run_locked(cwd, table):
-    reason = read_reason(state("tick-blocked"))
-    if reason is not None:
-        say("blocked", reason or "（擋板檔沒寫原因）")
-        return EXIT_OK             # 使用者 2026-10-01 再改：正常中斷也是 0（原 2）
+    # 擋板檔（使用者 2026-10-01 第十六批）：只看存不存在（資料夾、沒讀權、壞 symlink 都算），不讀內容；
+    # 在就直接結束：回 0、stderr 不印（正常機制結束不印）、不開格、hooks 不跑
+    if os.path.lexists(state("tick-blocked")):
+        return EXIT_OK
 
     try:
         tbl = aos_tick_table.read_table(table, cwd)     # 只解到 tasks 這層；每項內部跑到時才解
@@ -186,7 +186,7 @@ def take_lock():
 
 
 def read_reason(path):
-    """B-620、P-213 停格檔與擋板檔：檔在回第一行原因（可能是空字串），不在回 None。"""
+    """B-620、P-213 停格檔：檔在回第一行原因（可能是空字串），不在回 None。擋板檔不讀（第十六批）。"""
     if not os.path.exists(path):
         return None
     with open(path, encoding="utf-8") as f:
