@@ -133,7 +133,7 @@ class FileRules(StateCase):
         self.send({"resume": "a.json"})
         self.assertEqual(self.state(), {"insts": {}})
         self.assertEqual(sorted(os.listdir(self.d)),
-                         ["a.json", "aos-state.json", "aos.sock", "b.json", "config.json"])
+                         ["a.json", "aos-state.json", "aos.sock", "b.json", "config.json", "config.json.lock"])
 
     def test_ref_relative_to_config(self):
         # $ref 照其他 $ref，以設定檔所在資料夾為準（不是起點）

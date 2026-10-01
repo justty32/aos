@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | `aos-tick` | 照表跑完、被 tasks-blocked 擋下、上一格還沒跑完（`busy`）、有擋板檔（stderr 不印）；任務自己回幾都不影響 | 用法錯（含目標給了檔〔使用者 2026-10-01〕）、`AOS_DIRNAME` 不合法、目標不存在或沒有任務表、任務表不合極簡檢查、tick 自用檔出錯 | 無 | [B-620](tick.md)、[P-203](protocol/tick.md) |
 | `aos-exec` | 子程式回 0；`-h` | 用法錯（argv、目標不存在、資料夾找不到 inst、`AOS_DIRNAME` 不合法…）；沒接住的例外 | 125 自己失敗、那次沒跑；子程式的碼原樣傳出（126、127、128+N…） | [inst](../base/inst.md) |
-| `aos-daemon` | 被 SIGINT／SIGTERM 叫停 | 用法錯、設定錯、設定檔讀不到、指示詞展開錯、掛了 cgroup 模組卻沒有委派好的 cgroup（[B-644](daemon/cgroup.md)）、掛了帳號模組卻沒用 root 開或帳號設定錯、帳號模組的 root 端不見了（[B-646](daemon/account.md)） | 無（重讀設定時設定壞了不退出；沒掛重讀設定時 SIGHUP 照 Python 預設被殺，[B-642](daemon/reload.md)） | [B-640](daemon/core.md)、[P-120](protocol/daemon/core.md) |
+| `aos-daemon` | 被 SIGINT／SIGTERM 叫停 | 用法錯、設定錯、設定檔讀不到、指示詞展開錯、掛了 cgroup 模組卻沒有委派好的 cgroup（[B-644](daemon/cgroup.md)）、掛了帳號模組卻沒用 root 開或帳號設定錯、帳號模組的 root 端不見了（[B-646](daemon/account.md)）、〔第十九批〕鎖檔被另一個 daemon 握著（[B-640](daemon/core.md)） | 無（重讀設定時設定壞了不退出；沒掛重讀設定時 SIGHUP 照 Python 預設被殺，[B-642](daemon/reload.md)） | [B-640](daemon/core.md)、[P-120](protocol/daemon/core.md) |
 | `aos-ctl` | 指令成功 | 其他全部（用法錯、連不上、daemon 回錯） | 無 | [B-641](daemon/control.md)、[P-121](protocol/daemon/control.md) |
 
 整理區裡其他還沒實作的程式（系統級任務、`aos-git` 等）：用法錯一律 1；條文裡已定的 125、75 這類碼算特別指定的碼，照各條。整理區以外（kernel、agent、LLM、CLI、ops 等篇）還寫著「2＝用法錯」或拿 2 表示「不合法」的地方，這輪沒動，等那幾篇整理時逐條決定改 1 或列為特別指定。

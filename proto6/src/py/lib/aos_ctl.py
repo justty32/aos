@@ -1,7 +1,7 @@
 """aos-ctl：送一個控制指令給 aos-daemon 的控制模組（plan m3n-control-module.md 步驟 5）。
 
     aos-ctl wake [--skip-while-running] [--keep-schedule] [<inst>]
-    aos-ctl pause|resume|status [<inst>]
+    aos-ctl pause|resume|status|kill|restart [<inst>]
 
 每個指令都只對一項；沒給 <inst> 用 AOS_DAEMON_INST。socket 只從 AOS_DAEMON_SOCKET 拿。
 連上、送一行、讀一行、關掉；不重試、不另設逾時（默認一切正常）。
@@ -12,10 +12,10 @@ import os
 import socket
 import sys
 
-COMMANDS = ("wake", "pause", "resume", "status")
+COMMANDS = ("wake", "pause", "resume", "status", "kill", "restart")
 FLAGS = {"--skip-while-running": "skip_while_running", "--keep-schedule": "keep_schedule"}
 USAGE = ("aos-ctl wake [--skip-while-running] [--keep-schedule] [<inst>]"
-         "｜aos-ctl pause|resume|status [<inst>]")
+         "｜aos-ctl pause|resume|status|kill|restart [<inst>]")
 
 
 def fail(code, detail):

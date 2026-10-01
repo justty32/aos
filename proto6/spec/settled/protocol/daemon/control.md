@@ -16,7 +16,7 @@ daemon 設定檔（[P-120](core.md)）頂層 `modules` 裡寫：
 {"modules": {"control": {"socket": "./aos.sock"}}}
 ```
 
-`socket` 必填，字串；相對以起點為準，daemon 算成絕對路徑。
+`socket` 必填，字串；相對以起點為準，daemon 算成絕對路徑。〔第十九批〕`kill_grace_ms` 可省，非負數（毫秒），`kill`／`restart` 送 SIGTERM 後等多久才送 SIGKILL；省略＝5000。
 
 ### socket 上的一來一回
 
@@ -35,11 +35,13 @@ daemon 設定檔（[P-120](core.md)）頂層 `modules` 裡寫：
 {"pause":"a"}
 {"resume":"a"}
 {"status":"a"}
+{"kill":"a"}
+{"restart":"daemons/lorkhan.json"}
 ```
 
 | 欄位 | 型別 | 意思 |
 |---|---|---|
-| `wake`／`pause`／`resume`／`status` | 字串 | 四個裡剛好出現一個；值是 inst 字面值，跟設定檔 `insts` 的鍵逐字比對 |
+| `wake`／`pause`／`resume`／`status`／`kill`／`restart` | 字串 | 六個裡剛好出現一個（後兩個〔第十九批〕）；值是 inst 字面值，跟設定檔 `insts` 的鍵逐字比對 |
 | `skip_while_running` | 布林，可省，預設 false | 只有 `wake` 看；正在跑就不補，這次請求什麼都不改（已記下的補跑與它的選項照舊，[B-641](../../daemon/control.md)）〔astra 報告必修 4〕 |
 | `keep_schedule` | 布林，可省，預設 false | 只有 `wake` 看；不動原本的週期排程 |
 
@@ -50,7 +52,7 @@ daemon 設定檔（[P-120](core.md)）頂層 `modules` 裡寫：
 
 | 情況 | 回應 |
 |---|---|
-| 成功（`wake`、`pause`、`resume`） | `{"ok":true}` |
+| 成功（`wake`、`pause`、`resume`、`kill`、`restart`） | `{"ok":true}`（`kill`／`restart` 送出 SIGTERM 就回，不等那一次結束） |
 | 成功（`status`） | `{"ok":true,"inst":…,"running":…,"pending":…,"paused":…,"stopped":…,"last_exit":…,"last_end":…,"next":…}`（下表） |
 | 失敗 | `{"ok":false,"error":"<代碼>","detail":"<字串>"}` |
 
@@ -59,7 +61,7 @@ daemon 設定檔（[P-120](core.md)）頂層 `modules` 裡寫：
 | `error` | 什麼時候 | `detail` |
 |---|---|---|
 | `unknown_inst` | 指名的 inst 不在 `insts` 裡 | 那個 inst 字面值 |
-| `stopped` | 對被 `stop_on_nonzero` 停掉的項送 `wake` | 那個 inst 字面值 |
+| `stopped` | 對被 `stop_on_nonzero` 停掉的項送 `wake` 或 `restart` | 那個 inst 字面值 |
 | `bad_request` | 不是 JSON、不是物件、指令名不是剛好一個、指令的值不是字串、`wake` 的選項不是布林、沒送完一行 | 白話說明 |
 
 **`status` 的欄位**
@@ -77,7 +79,7 @@ daemon 設定檔（[P-120](core.md)）頂層 `modules` 裡寫：
 
 回應一律是不帶多餘空白的一行 JSON，非 ASCII 字照原樣輸出。
 
-schema：[daemon-ctl](../../../protocol/schemas/daemon-ctl.schema.json)（請求與回應都在裡面）。〔astra 報告必修 5、設計 3〕請求與回應**分開驗**：請求照 `$defs/Request`、回應照 `$defs/Reply`，不為了合併成一個驗證入口而多加協議沒有的限制（例如請求的陌生欄位要照收）。範例：請求 [wake 帶選項](../../../protocol/examples/daemon/ctl_request.wake.valid.json)、[status](../../../protocol/examples/daemon/ctl_request.status.valid.json)、[帶不認得的欄位照收](../../../protocol/examples/daemon/ctl_request.extra-field.valid.json)；反例 [兩個指令名](../../../protocol/examples/daemon/ctl_request.two-commands.invalid.json)、[inst 不是字串](../../../protocol/examples/daemon/ctl_request.inst-not-string.invalid.json)。回應 [成功](../../../protocol/examples/daemon/ctl_reply.ok.valid.json)、[status](../../../protocol/examples/daemon/ctl_reply.status.valid.json)、[已停](../../../protocol/examples/daemon/ctl_reply.stopped.valid.json)；反例 [錯誤代碼不認得](../../../protocol/examples/daemon/ctl_reply.unknown-error.invalid.json)、[status 缺 next](../../../protocol/examples/daemon/ctl_reply.status-missing-next.invalid.json)。
+schema：[daemon-ctl](../../../protocol/schemas/daemon-ctl.schema.json)（請求與回應都在裡面）。〔astra 報告必修 5、設計 3〕請求與回應**分開驗**：請求照 `$defs/Request`、回應照 `$defs/Reply`，不為了合併成一個驗證入口而多加協議沒有的限制（例如請求的陌生欄位要照收）。範例：請求 [wake 帶選項](../../../protocol/examples/daemon/ctl_request.wake.valid.json)、[status](../../../protocol/examples/daemon/ctl_request.status.valid.json)、[帶不認得的欄位照收](../../../protocol/examples/daemon/ctl_request.extra-field.valid.json)；反例 [兩個指令名](../../../protocol/examples/daemon/ctl_request.two-commands.invalid.json)、[inst 不是字串](../../../protocol/examples/daemon/ctl_request.inst-not-string.invalid.json)。回應 [成功](../../../protocol/examples/daemon/ctl_reply.ok.valid.json)、[status](../../../protocol/examples/daemon/ctl_reply.status.valid.json)、[已停](../../../protocol/examples/daemon/ctl_reply.stopped.valid.json)；反例 [錯誤代碼不認得](../../../protocol/examples/daemon/ctl_reply.unknown-error.invalid.json)、[status 缺 next](../../../protocol/examples/daemon/ctl_reply.status-missing-next.invalid.json)。〔第十九批〕請求 [kill](../../../protocol/examples/daemon/ctl_request.kill.valid.json)、[restart](../../../protocol/examples/daemon/ctl_request.restart.valid.json)；反例 [kill 與 restart 同時](../../../protocol/examples/daemon/ctl_request.kill-and-restart.invalid.json)。
 
 ### 環境變數
 
@@ -101,6 +103,8 @@ aos-ctl wake [--skip-while-running] [--keep-schedule] [<inst>]
 aos-ctl pause [<inst>]
 aos-ctl resume [<inst>]
 aos-ctl status [<inst>]
+aos-ctl kill [<inst>]
+aos-ctl restart [<inst>]
 AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell 手打
 ```
 
@@ -124,4 +128,4 @@ AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell �
 | `connect` | 連不上 socket |
 | `unknown_inst`、`stopped`、`bad_request` | daemon 回的錯，原樣轉出；說明是 daemon 回的 `detail` |
 
-依據：使用者方向 2026-10-01（控制模組裁定：一個 socket、能連就能做、四指令各對一項、wake 的 `skip_while_running`／`keep_schedule`、status 只看一項、兩個環境變數）；plan m3n。
+依據：[第十九批](../../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十九批daemon-上下層用到的三件事)（`kill`、`restart`、`kill_grace_ms`）；使用者方向 2026-10-01（控制模組裁定：一個 socket、能連就能做、四指令各對一項、wake 的 `skip_while_running`／`keep_schedule`、status 只看一項、兩個環境變數）；plan m3n。

@@ -42,6 +42,8 @@ sudo aos-daemon --config F
 - **記住狀態**（[B-643](state.md)）：狀態檔由主程式寫，歸預設帳號。
 - **收屍／cgroup**（[B-644](cgroup.md)）：子樹開起來時整棵交給預設帳號，主程式自己建框、寫上限、清框、刪框；別的帳號的子程序由 root 端放進框。留下的背景程序照樣被清掉。
 
+- **控制模組的 `kill`／`restart`**〔第十九批〕（[B-641](control.md)）：別的帳號的項，降權後的主程式送不到訊號，請 root 端送（[P-126](../protocol/daemon/account.md)「送訊號」）。
+
 ### 先不做
 
 一格裡某個任務換帳號（`aos-as`，暫緩）、佈建（建帳號、群組、chown、quota）、多帳號交接檔案的群組規劃、多個 socket 各自的權限、root 端死掉後重開。舊設計的身分額度、登記綁 UID、通道憑證、runner、`provision` 動作都在暫緩區（[B-303](../deferred/helper.md)、[B-609](../deferred/daemon/helper-actions.md)）。
