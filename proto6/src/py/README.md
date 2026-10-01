@@ -8,16 +8,16 @@ inst 與 `aos-exec` 直接從 proto5 複製（proto5 `470f5a04`，即 `git log -
 |---|---|---|
 | `bin/aos-exec` | `proto5/cli/aos-exec` | 沒改（它本來就找 `../lib`）。repo 的 `.gitignore` 擋 `bin/`，這檔是 `git add -f` 進來的 |
 | `lib/aos_directives.py` | `proto5/lib/` 同名檔 | 沒改 |
-| `lib/aos_exec.py`、`aos_exec_run.py`、`aos_exec_spawn.py` | `proto5/lib/` 同名檔 | 改動 2、改動 3 |
+| `lib/aos_exec.py`、`aos_exec_run.py`、`aos_exec_spawn.py` | `proto5/lib/` 同名檔 | 改動 2、改動 3、改動 4 |
 | `lib/aos_dirname.py` | 新寫 | 改動 3：`AOS_DIRNAME`，aos-exec 與 aos-tick 共用 |
 | `lib/aos_inst.py` | `proto5/lib/aos_inst.py` | 沒改（改動 1 已撤回，2026-10-01） |
 | `tests/test_inst.py`、`test_directives.py` | `proto5/lib/test/` 同名檔 | 沒改 |
-| `tests/test_exec.py`、`test_exec_full.py` | `proto5/lib/test/` 同名檔 | 跟著改動 2、3 改，另加一條「頂層 `user` 忽略」（標「proto6 改／新增」） |
+| `tests/test_exec.py`、`test_exec_full.py` | `proto5/lib/test/` 同名檔 | 跟著改動 2、3、4 改，另加一條「頂層 `user` 忽略」（標「proto6 改／新增」） |
 | `tests/test_exec_spawn.py` | `proto5/lib/test/` 同名檔 | 只加改動 3 的一條（標「proto6 新增」） |
 | `tests/_util.py` | `proto5/lib/test/_util.py` | 只改 `LIB`、`EXEC` 兩行路徑 |
 | ~~`tests/test_user.py`~~ | ~~新寫~~ | 2026-10-01 跟改動 1 一起刪掉 |
 
-現在跟 proto5 不同的只剩改動 2（資料夾目標找 inst 的位置）與改動 3（那個位置的 `.aos` 照 `AOS_DIRNAME`），都只在「資料夾目標」那一處。
+現在跟 proto5 不同的只剩改動 2（資料夾目標找 inst 的位置）、改動 3（那個位置的 `.aos` 照 `AOS_DIRNAME`）與改動 4（用法錯回 1）。
 
 ## ~~改動 1：認得頂層 `user`~~（2026-10-01 撤回）
 
@@ -29,7 +29,7 @@ inst 與 `aos-exec` 直接從 proto5 複製（proto5 `470f5a04`，即 `git log -
 
 照 [inst.md「inst 目標」](../../spec/base/inst.md)：
 
-- 目標是資料夾：先找 `xxx/.aos/inst.json`，沒有再找 `xxx/inst.json`；兩個都有跑前者；都沒有＝用法錯（2）。base 是 `xxx` 自己。
+- 目標是資料夾：先找 `xxx/.aos/inst.json`，沒有再找 `xxx/inst.json`；兩個都有跑前者；都沒有＝用法錯（~~2~~ 1，見改動 4）。base 是 `xxx` 自己。
 - 拿掉 proto5 的 `--dir-target` 旗標、`run_target`／`run_target_full`／`spawn_target` 的 `dir_target` 參數與 `DEFAULT_DIR_TARGET` 常數（改成 `DIR_TARGETS` 兩個位置）。給 `--dir-target` 現在是用法錯。
 - 檔案目標照 proto5 不動。~~tick 那條「`.aos/inst.json`／`inst.json` 路徑正規化成資料夾」不在這裡做。~~（2026-10-01：tick 不再做這個正規化，`--node` 怎麼認見下面 aos-tick 一節）
 
@@ -37,8 +37,22 @@ inst 與 `aos-exec` 直接從 proto5 複製（proto5 `470f5a04`，即 `git log -
 
 使用者 2026-10-01（[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos_dirname-狀態資料夾的名字待統一更新-spec)，待統一更新 spec）：環境變數 `AOS_DIRNAME` 決定狀態資料夾的名字，之後 aos 所有程式都照它。判斷只在 `lib/aos_dirname.py` 一處（`name()`、`error()`）。
 
-- 沒設或空字串＝`.aos`；含 `/`、或是 `.`、`..` 算不合法。
-- aos-exec：資料夾目標改成先找 `xxx/<名字>/inst.json`、再找 `xxx/inst.json`（`aos_exec_run._dir_targets()`；`DIR_TARGETS` 常數留著當預設名字的樣子）。名字不合法：資料夾目標算用法錯，**照 aos-exec 現有的碼回 2**（碼表不動；照 aos 結束碼慣例本該是 1，見 verdicts 待改清單）；`spawn_target` 丟 `SpawnFailed`。直接給檔、`.json` 目標不受影響。
+- 三態（同日再改）：**沒設**＝`.aos`；**設了但空字串**＝不用子資料夾、直接用資料夾本身（`name()` 回 `""`）；其他值＝這個名字。含 `/`、或是 `.`、`..` 算不合法（空字串合法）。
+- aos-exec：資料夾目標改成先找 `xxx/<名字>/inst.json`、再找 `xxx/inst.json`（`aos_exec_run._dir_targets()`；`DIR_TARGETS` 常數留著當預設名字的樣子）；空字串時只找 `xxx/inst.json`。名字不合法：資料夾目標算用法錯，~~照 aos-exec 現有的碼回 2~~ 回 1（改動 4）；`spawn_target` 丟 `SpawnFailed`。直接給檔、`.json` 目標不受影響。
+
+## 改動 4：結束碼慣例，用法錯回 1（2026-10-01）
+
+使用者 2026-10-01 改版的 aos 結束碼慣例（[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)，待統一更新 spec）：0＝預料之中、非 0＝要額外處理、1＝通用錯誤，沒特別指定碼的錯都 1。aos-exec 的用法錯由 proto5 的 2 改 1（`aos_exec_run.EXIT_USAGE`；argparse 的用法錯也改回 1，見 `aos_exec._Parser`）。`run_target()` 回的 `(code, "usage")` 的 code 也是 1。
+
+aos-exec 現在的碼：
+
+| 狀況 | 回 |
+|---|---|
+| 子程式跑完一次：它的碼原樣（含 0、128+N、找不到程式 127、沒執行權 126） | 原碼 |
+| aos-exec 自己失敗、那次沒跑（inst 壞、`.json` 不存在、mkdir／cwd／重導向失敗） | 125 |
+| 用法錯（argv、`--timeout-ms` 負數、目標不存在、資料夾找不到 inst、inst 目標給 `--`、`AOS_DIRNAME` 不合法） | 1 |
+| 沒接住的例外 | 1（Python 預設） |
+| `-h`／`--help` | 0 |
 
 ## aos-tick（第一段 tick 核心，新寫）
 
@@ -64,20 +78,20 @@ proto6/src/py/bin/aos-tick --node /tmp/m/t.json       # 給檔：拿它當任務
 | `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、四個 `AOS_*`、分 exit／signal |
 | `tests/test_tick.py` | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes` |
 
-**同資料夾互斥與讀表時機（使用者 2026-10-01，見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-tick-最簡互斥與讀表時機待統一更新-spec)、[plan 待問 12](../../plan/m1-tick-core.md#待問)）**：一格照「認 node 與任務表 → 取鎖 → 擋板 → 讀表 → 換紀錄 → 刪停格檔 → 照表跑」。鎖是 `.aos/tick.lock` 的非阻塞 `flock`（不存在就建），拿不到 `busy:`、回 2；鎖 fd 不傳給任務（`os.open` 預設不可繼承）。表壞在換紀錄之前，不算開過一格。
+**同資料夾互斥與讀表時機（使用者 2026-10-01，見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-tick-最簡互斥與讀表時機待統一更新-spec)、[plan 待問 12](../../plan/m1-tick-core.md#待問)）**：一格照「認 node 與任務表 → 取鎖 → 擋板 → 讀表 → 換紀錄 → 刪停格檔 → 照表跑」。鎖是 `.aos/tick.lock` 的非阻塞 `flock`（不存在就建），拿不到 `busy:`、回 ~~2~~ 0（結束碼慣例改版）；鎖 fd 不傳給任務（`os.open` 預設不可繼承）。表壞在換紀錄之前，不算開過一格。
 
-**`AOS_DIRNAME`（使用者 2026-10-01，見上面改動 3、[plan 待問 13](../../plan/m1-tick-core.md#待問)）**：本節所有 `.aos` 都是這個名字；不合法 stderr `usage:`、回 1。
+**`AOS_DIRNAME`（使用者 2026-10-01，見上面改動 3、[plan 待問 13、15](../../plan/m1-tick-core.md#待問)）**：本節所有 `.aos` 都是這個名字；不合法 stderr `usage:`、回 1。設成空字串時 `tasks.json`、`tick.lock`、`tick-blocked`、`tick/stop`、`tick/current.json`／`last.json` 都直接在 node 資料夾下，檔案模式「檔在 `.aos/` 裡就往上取一層」不適用（`take_lock()` 不建資料夾）。
 
 **POC 默認一切正常（使用者 2026-10-01，見 [plan 第一段待問 8](../../plan/m1-tick-core.md#待問)）**：~~不取鎖（不回 75、沒有 `AOS_TICK_LOCK_FD`）、~~（同日加回最簡互斥，見上段；仍不回 75、沒有 `AOS_TICK_LOCK_FD`）不驗表（不回 2、沒有 `config_invalid`）、不看 `user`（不回 125、沒有 `user_mismatch`）、不判上下層、不做 `--firstdo-fsync`、不處理紀錄讀不懂或寫不進。出事就讓 Python 自然丟錯（traceback、回 1）。~~整格只回 0／1；argv 用法錯回 2。~~（10-01 再改，見下段）
 
-**結束碼照 aos 體系慣例（使用者 2026-10-01，見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)、[plan 待問 9](../../plan/m1-tick-core.md#待問)，待統一更新 spec）**：0 正常結束、1 錯誤結束、2 正常中斷。`aos-tick` 的碼只講 tick 自己：
+**結束碼照 aos 體系慣例（使用者 2026-10-01，同日改版，見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)、[plan 待問 9、15](../../plan/m1-tick-core.md#待問)，待統一更新 spec）**：0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤（~~0 正常結束、1 錯誤結束、2 正常中斷~~）。`aos-tick` 的碼只講 tick 自己，現在只回 0／1：
 
 | 狀況 | 回 |
 |---|---|
 | 照表跑完（不管任務回幾、成敗） | 0 |
 | 看到停格檔 `.aos/tick/stop`，剩下不跑（不算中斷，暫定） | 0 |
-| 同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，stderr `busy:`），不開格（不寫紀錄、不加 `seq`） | 2 |
-| 有擋板檔 `.aos/tick-blocked`，不開格（不寫紀錄、不加 `seq`） | 2 |
+| 同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，stderr `busy:`），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
+| 有擋板檔 `.aos/tick-blocked`（stderr `blocked:`），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
 | argv 用法錯、`AOS_DIRNAME` 不合法、`--node` 指的東西不存在、`--node` 資料夾底下沒有 `.aos/tasks.json`、任務表不合極簡檢查（stderr `usage:`／`no_node:`／`no_tasks:`／`bad_table:`；表壞不換紀錄、不加 `seq`） | 1 |
 | tick 自用檔（`tick-blocked`、`stop`、`current.json`、`last.json`）讀不到／寫不進／格式壞 | 1（自然丟錯，traceback 進 stderr） |
 
@@ -93,7 +107,7 @@ proto6/src/py/bin/aos-tick --node /tmp/m/t.json       # 給檔：拿它當任務
 3. `lib/aos_tick_record.py`：`Record.open()`（換檔四步）→ `add_task()`／`finish()` → `_rewrite()`。
 4. `lib/aos_tick_table.py`：`read_table()` → `check_table()`、`load_inst()`。
 5. `lib/aos_tick_run.py`：`run_item()`。
-6. `tests/test_tick.py`：`Step1Node`、`Step1Lock`…`Step9Whole`、`DirName`，對著 plan 各步的驗收讀。
+6. `tests/test_tick.py`：`Step1Node`、`Step1Lock`…`Step9Whole`、`DirName`、`EmptyDirName`，對著 plan 各步的驗收讀。
 
 每個函式開頭一行註明對應的 spec 條號。
 

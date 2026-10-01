@@ -80,7 +80,7 @@ class FullTargetTests(Base):
         for target, kw in ((os.path.join(self.d, "missing"), {}), (self.d, {}),
                            (inst, {"args": []})):
             with self.subTest(target=target, kw=kw):
-                self.assert_result(self.run_full(target, **kw), 2, "usage")
+                self.assert_result(self.run_full(target, **kw), 1, "usage")   # proto6 改：用法錯 1
 
     def test_missing_program_is_child(self):
         path = self.inst({"argv": ["/no-such-full-test-program"], "exit": "status"}, "inst.json")

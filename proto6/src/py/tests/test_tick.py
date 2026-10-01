@@ -1,8 +1,8 @@
 """aos-tick 第一段驗收（plan m1-tick-core.md）。真的開 bin/aos-tick 子程序。
 
 〔使用者方向 2026-10-01〕POC 默認一切正常：驗表、`user`、上下層、fsync、異常處理的測試都拿掉了。
-同資料夾互斥同日加回最簡版（拿不到鎖回 2，見 Step1Lock）；表壞在換紀錄之前，不佔 seq。
-結束碼照 aos 體系慣例（0 正常結束、1 錯誤結束、2 正常中斷；notes/verdicts/11 篇末 2026-10-01）：
+同資料夾互斥同日加回最簡版（拿不到鎖回 0，見 Step1Lock）；表壞在換紀錄之前，不佔 seq。
+結束碼照 aos 體系慣例（0＝預料之中，含正常中斷；非 0＝要額外處理；1＝通用錯誤；notes/verdicts/11 篇末 2026-10-01）：
 aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影響它。
 """
 import json
@@ -174,7 +174,7 @@ class Step1Node(TickCase):
 
 class Step1Lock(TickCase):
     """使用者 2026-10-01 加回最簡互斥：外層定期跑，上一格沒跑完下一格就來是正常使用。
-    拿不到 `.aos/tick.lock` 就 stderr `busy:`、回 2，不寫紀錄、不加 seq。"""
+    拿不到 `.aos/tick.lock` 就 stderr `busy:`、回 0（使用者 2026-10-01 再改：預料之中），不寫紀錄、不加 seq。"""
 
     def wait_for(self, rel):
         for _ in range(500):
@@ -194,7 +194,7 @@ class Step1Lock(TickCase):
             cur, last = self.read(".aos/tick/current.json"), self.read(".aos/tick/last.json")
             self.write(".aos/tick-blocked", "壞了\n")                 # 鎖先：上一格沒跑完時回 busy 不是 blocked
             r = self.tick()
-            self.assertEqual(r.returncode, 2)
+            self.assertEqual(r.returncode, 0)
             self.assertIn("busy:", r.stderr)
             self.assertNotIn("blocked:", r.stderr)
             self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
@@ -231,7 +231,7 @@ class Step2Blocked(TickCase):
         cur, last_exists = self.read(".aos/tick/current.json"), self.exists(".aos/tick/last.json")
         self.write(".aos/tick-blocked", "壞了\n")
         r = self.tick()
-        self.assertEqual(r.returncode, 2)                 # 正常中斷
+        self.assertEqual(r.returncode, 0)                 # 正常中斷也是 0（使用者 2026-10-01 再改）
         self.assertIn("blocked: 壞了", r.stderr)
         self.assertEqual(self.read("ran.txt"), "ran\n")
         self.assertEqual(self.read(".aos/tick/current.json"), cur)
@@ -428,7 +428,7 @@ class ExitCodes(TickCase):
 
 class DirName(TickCase):
     """使用者 2026-10-01（待統一更新 spec）：環境變數 `AOS_DIRNAME` 決定 node 狀態資料夾的名字（只換名字、位置不變）。
-    沒設或空＝`.aos`；含 `/`、是 `.`、`..` 算用法錯回 1。"""
+    沒設＝`.aos`；空字串＝node 本身（見 EmptyDirName）；含 `/`、是 `.`、`..` 算用法錯回 1。"""
 
     ENV = {"AOS_DIRNAME": ".aos2"}
 
@@ -448,7 +448,7 @@ class DirName(TickCase):
         self.assertEqual(sorted(os.listdir(os.path.join(self.d, ".aos2"))), ["tasks.json", "tick", "tick.lock"])
         self.write(".aos2/tick-blocked", "擋\n")
         r = self.tick(env=self.ENV)
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 0)
         self.assertIn("blocked: 擋", r.stderr)
         os.unlink(os.path.join(self.d, ".aos2/tick-blocked"))
         self.assertTrue(self.exists(".aos2/tick/stop"))
@@ -465,7 +465,7 @@ class DirName(TickCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("no_tasks:", r.stderr)
         self.assertFalse(self.exists(".aos2"))
-        self.assertEqual(self.tick(env={"AOS_DIRNAME": ""}).returncode, 0)   # 空字串＝.aos
+        self.assertEqual(self.tick().returncode, 0)                   # 沒設＝.aos
         self.assertEqual(self.rec()["seq"], 1)
 
     def test_file_mode_parent_rule_follows_name(self):
@@ -489,6 +489,65 @@ class DirName(TickCase):
         self.assertFalse(self.exists("ran"))
         self.assertEqual(sorted(os.listdir(self.d)), [".aos"])
         self.assertEqual(os.listdir(os.path.join(self.d, ".aos")), ["tasks.json"])
+
+
+class EmptyDirName(TickCase):
+    """使用者 2026-10-01 再改（待統一更新 spec）：`AOS_DIRNAME` 設了但是空字串＝不用子資料夾，
+    tasks.json、tick.lock、tick-blocked、tick/stop、tick/current.json、last.json 都直接在 node 下；
+    檔案模式「所在資料夾名等於 dirname 就往上取一層」不適用。跟「沒設」（＝.aos）分得開。"""
+
+    ENV = {"AOS_DIRNAME": ""}
+
+    def test_all_directly_under_node(self):
+        self.tasks(sh("wrong", "touch wrong.ran"))                     # .aos/tasks.json 不該被用
+        self.write("tasks.json", json.dumps(table(
+            sh("a", 'echo "[$AOS_DIRNAME] $AOS_TICK_RECORD" > a.txt'),
+            sh("b", "echo 停 > tick/stop"), sh("c", "touch c.ran"))))
+        r = self.tick(env=self.ENV)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("stopped: 停", r.stderr)
+        self.assertFalse(self.exists("c.ran"))
+        self.assertEqual(self.read("a.txt"), "[] %s\n" % os.path.join(self.d, "tick/current.json"))
+        self.assertEqual(json.loads(self.read("tick/current.json"))["seq"], 1)
+        self.assertTrue(self.exists("tick.lock"))
+        self.assertEqual(os.listdir(os.path.join(self.d, ".aos")), ["tasks.json"])   # .aos/ 沒被碰
+        self.write("tick-blocked", "擋\n")
+        r = self.tick(env=self.ENV)
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("blocked: 擋", r.stderr)
+        os.unlink(os.path.join(self.d, "tick-blocked"))
+        self.write("tasks.json", json.dumps(table(sh("c", "touch c.ran"))))
+        self.assertEqual(self.tick(env=self.ENV).returncode, 0)
+        self.assertTrue(self.exists("c.ran"))                         # 停格檔 tick/stop 被刪
+        self.assertFalse(self.exists("tick/stop"))
+        self.assertEqual(json.loads(self.read("tick/last.json"))["seq"], 1)
+        self.assertFalse(self.exists("wrong.ran"))
+        self.assertFalse(self.exists(".aos/tick"))
+
+    def test_unset_vs_empty(self):
+        self.tasks(sh("t", "touch aos.ran"))                           # 只有 .aos/tasks.json
+        r = self.tick(env=self.ENV)
+        self.assertEqual(r.returncode, 1)                              # 空字串：node 下沒有 tasks.json
+        self.assertIn("no_tasks:", r.stderr)
+        self.assertFalse(self.exists("tick.lock"))
+        self.assertEqual(self.tick().returncode, 0)                   # 沒設：.aos/tasks.json
+        self.assertTrue(self.exists("aos.ran"))
+        self.assertTrue(self.exists(".aos/tick/current.json"))
+        self.assertFalse(self.exists("tick"))
+
+    def test_file_mode_no_parent_rule(self):
+        tbl = self.write(".aos/t.json", json.dumps(table(task("t", ["true"]))))
+        r = self.tick("--node", tbl, env=self.ENV)                    # 空字串：檔所在的資料夾照字面當 node
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.exists(".aos/tick/current.json"))
+        self.assertTrue(self.exists(".aos/tick.lock"))
+        self.assertFalse(self.exists("tick"))
+        os.makedirs(os.path.join(self.d, "sub"))
+        tbl = self.write("sub/t.json", json.dumps(table(sh("t", "pwd > where"))))
+        r = self.tick("--node", tbl, env=self.ENV)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("sub/where"), os.path.join(self.d, "sub") + "\n")
+        self.assertTrue(self.exists("sub/tick/current.json"))
 
 
 class Step9Whole(TickCase):

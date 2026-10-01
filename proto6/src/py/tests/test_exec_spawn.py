@@ -56,7 +56,12 @@ class SpawnTargetTests(Base):
         with mock.patch.dict(os.environ, {"AOS_DIRNAME": "a/b"}):
             self.bad(self.d, "SpawnFailed")
         with mock.patch.dict(os.environ, {"AOS_DIRNAME": ""}):
-            self.bad(self.d, "SpawnFailed")                       # 空＝.aos，這裡沒有
+            self.bad(self.d, "SpawnFailed")                       # 空＝目標本身，只找 inst.json，這裡沒有
+            self.inst({"argv": ["true"]}, "inst.json")
+            child = self.spawn(self.d)
+            os.write(child.process.stdin.fileno(), b'{"jsonrpc":"2.0","method":"go"}\n')
+            self.wait(lambda: child.process.poll() is not None)
+            self.assertEqual(child.finish(), (0, "child"))
 
     def test_pipe_waits_for_caller_go(self):
         marker = os.path.join(self.d, "marker")

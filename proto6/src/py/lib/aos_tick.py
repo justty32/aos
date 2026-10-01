@@ -8,11 +8,11 @@
 `run_tick()` 就是照這個順序寫的，從它讀起。紀錄在 aos_tick_record.py、任務表在
 aos_tick_table.py、跑單項在 aos_tick_run.py。
 
-結束碼照 aos 體系慣例（使用者 2026-10-01，notes/verdicts/11-tick-as-unit.md 篇末，待統一更新 spec）：
-0＝正常結束、1＝錯誤結束、2＝正常中斷。aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影響它。
+結束碼照 aos 體系慣例（使用者 2026-10-01 再改，notes/verdicts/11-tick-as-unit.md 篇末，待統一更新 spec）：
+0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤。aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影響它。
 
-- 0：照表跑完（不管任務成敗、回幾）；看到停格檔、剩下不跑也是 0。
-- 2：同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，stderr `busy:`）、有擋板檔；都不開格（不寫紀錄、不加 seq）。
+- 0：照表跑完（不管任務成敗、回幾）；看到停格檔、剩下不跑；同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，
+  stderr `busy:`）；有擋板檔（stderr `blocked:`）。後兩種不開格（不寫紀錄、不加 seq）。
 - 1：tick 自己出錯——argv 用法錯、--node 指的東西不存在、資料夾底下沒有 .aos/tasks.json、
   任務表不合極簡檢查（aos_tick_table.check_table，stderr `bad_table:`；在換紀錄之前，不算開過一格）；tick 自用的檔讀不到／寫不進／
   格式壞就讓 Python 自然丟錯（traceback 進 stderr、回 1），不分發生時機、不補救。
@@ -23,15 +23,15 @@ stderr 只印 tick 自己的 `代碼: 說明` 行（或 traceback），任務的
 
 〔使用者方向 2026-10-01〕POC 默認一切正常：檔案寫得進、讀得懂、不斷電、帳號是對的。
 所以表只做極簡檢查、不看 `user`（不回 125）、不做 `--firstdo-fsync`、不判上下層（B-628）。
-同資料夾互斥同日加回最簡版（外層定期跑，上一格沒跑完下一格就來是正常使用）：拿不到鎖回 2，
+同資料夾互斥同日加回最簡版（外層定期跑，上一格沒跑完下一格就來是正常使用）：拿不到鎖回 0，
 不回 75、鎖 fd 不傳給任務、沒有 `AOS_TICK_LOCK_FD`；任務逾時、tick 被殺時清孩子不做（留給 daemon 段）。
 
 〔使用者方向 2026-10-01，待統一更新 spec〕`--node` 怎麼認（notes/verdicts/11 篇末）：
 省略用 `./`；相對路徑轉絕對；資料夾要有 `.aos/tasks.json`（跟 inst.json 無關）；
 是檔就拿這個檔當這一格的任務表、它所在的資料夾當 node（檔在 `.aos/` 裡時 node 取 `.aos` 的上一層）。
 
-〔使用者方向 2026-10-01，待統一更新 spec〕node 狀態資料夾的名字照環境變數 `AOS_DIRNAME`（沒設或空＝`.aos`；
-含 `/`、是 `.`、`..` 算用法錯回 1）。本檔與 aos_tick_record／aos_tick_table 說的 `.aos` 都是這個名字。
+〔使用者方向 2026-10-01，待統一更新 spec〕node 狀態資料夾的名字照環境變數 `AOS_DIRNAME`（沒設＝`.aos`；
+空字串＝不用子資料夾，狀態檔直接在 node 資料夾下；含 `/`、是 `.`、`..` 算用法錯回 1）。本檔與 aos_tick_record／aos_tick_table 說的 `.aos` 都是這個名字。
 環境變數照常傳給任務，不另處理。
 """
 import fcntl
@@ -46,8 +46,8 @@ from aos_tick_record import Record
 __all__ = ["main", "run_tick", "resolve_node"]
 
 USAGE = "用法：aos-tick [--node <node>]"
-EXIT_OK, EXIT_ERROR, EXIT_INTERRUPTED = 0, 1, 2   # aos 結束碼慣例
-EXIT_USAGE = EXIT_ERROR          # 慣例：argv 用法錯也算錯誤結束
+EXIT_OK, EXIT_ERROR = 0, 1     # aos 結束碼慣例：0＝預料之中（含正常中斷）、1＝通用錯誤
+EXIT_USAGE = EXIT_ERROR          # 慣例：argv 用法錯也算通用錯誤
 
 def state(*parts):
     """node 狀態資料夾裡的相對路徑（run_tick 已 chdir 到 node）：鎖、擋板、停格檔。"""
@@ -96,6 +96,7 @@ def resolve_node(arg):
     - 檔：這個檔就是這一格的表（跟資料夾模式同一套極簡檢查，見 aos_tick_table.check_table）；它所在的資料夾當 node，
       但那個資料夾若叫 `.aos`，node 取它的上一層（`--node yyy/.aos/tasks.json` 跟 `--node yyy` 一樣）。
     - 上面的 `.aos` 都是 aos_dirname.name()（環境變數 `AOS_DIRNAME`，預設 `.aos`）。
+      設成空字串時狀態檔直接在 node 下（資料夾要有 `tasks.json`），檔案模式「往上取一層」的特判不適用。
     - 都不是（不存在）：回 None。
     """
     path = os.path.abspath(arg if arg is not None else ".")
@@ -107,7 +108,7 @@ def resolve_node(arg):
         return path, table
     if os.path.isfile(path):
         node = os.path.dirname(path)
-        if os.path.basename(node) == aos_dirname.name():
+        if aos_dirname.name() and os.path.basename(node) == aos_dirname.name():
             node = os.path.dirname(node)
         return node, path
     say("no_node", "--node 指的東西不存在：%s" % arg)
@@ -122,7 +123,7 @@ def run_tick(node, table):
     lock_fd = take_lock()
     if lock_fd is None:
         say("busy", "這個資料夾上一格還沒跑完：%s" % node)
-        return EXIT_INTERRUPTED
+        return EXIT_OK             # 使用者 2026-10-01 再改：預料之中，回 0（原 2）
     try:
         return _run_locked(node, table)
     finally:
@@ -133,7 +134,7 @@ def _run_locked(node, table):
     reason = read_reason(state("tick-blocked"))
     if reason is not None:
         say("blocked", reason or "（擋板檔沒寫原因）")
-        return EXIT_INTERRUPTED
+        return EXIT_OK             # 使用者 2026-10-01 再改：正常中斷也是 0（原 2）
 
     try:
         items, ids = aos_tick_table.read_table(table, node)
@@ -163,7 +164,8 @@ def take_lock():
     """B-602 的最簡版（使用者 2026-10-01 加回）：對 `.aos/tick.lock` 取非阻塞獨占 flock（不存在就建）。
     拿到回 fd，拿不到回 None。`os.open` 開的 fd 預設不可繼承（PEP 446），子程序又是 close_fds，
     所以任務拿不到這把鎖；不設 `AOS_TICK_LOCK_FD`。"""
-    os.makedirs(aos_dirname.name(), exist_ok=True)
+    if aos_dirname.name():         # 空字串＝node 本身，不用建
+        os.makedirs(aos_dirname.name(), exist_ok=True)
     fd = os.open(state("tick.lock"), os.O_RDWR | os.O_CREAT, 0o644)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
