@@ -85,6 +85,9 @@ class OutputCap(DaemonCase):
         for v in (-1, "1", True, 1.5):
             r = self.run_cfg(self.config({"interval_ms": 5, "exec_output_max_bytes": v, "insts": {"x": {}}}))
             self.assertEqual(r.returncode, 1, v)
+            self.assertEqual(r.stderr, "aos-daemon: config: exec_output_max_bytes 要是非負整數\n")
+        r = self.run_cfg(self.config({"interval_ms": 5, "lock_path": "", "insts": {}}))
+        self.assertEqual(r.stderr, "aos-daemon: config: lock_path 要是非空字串\n")
 
 
 class ConfigLock(DaemonCase):
@@ -212,9 +215,11 @@ class Kill(CtlCase):
         self.assertEqual(self.send({"restart": "p.json"})["error"], "stopped")
 
     def test_bad_grace(self):
-        r = self.run_cfg(self.config({"interval_ms": 5, "insts": {},
-                                      "modules": {"control": {"socket": "./s", "kill_grace_ms": -1}}}))
-        self.assertEqual(r.returncode, 1)
+        for v in (-1, "5", True):
+            r = self.run_cfg(self.config({"interval_ms": 5, "insts": {},
+                                          "modules": {"control": {"socket": "./s", "kill_grace_ms": v}}}))
+            self.assertEqual(r.returncode, 1)
+            self.assertEqual(r.stderr, "aos-daemon: config: modules.control.kill_grace_ms 要是非負數\n")
 
     def test_kills_whole_tree(self):
         # 任務底下再開一個 setsid 的孫子（還在親子樹裡）：TERM 那一步也送到

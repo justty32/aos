@@ -43,6 +43,7 @@ schema 見 [daemon-core-config](../../../protocol/schemas/daemon-core-config.sch
 |---|---|
 | 主程式→root 端，第一則 | `{"default":"<預設帳號>","allow":[…],"deny":[…]}` |
 | 主程式→root 端，請求 | `{"id":<整數>,"user":"<帳號>","argv":[…],"cwd":"<絕對路徑>","env":{…},"frame":"<框的絕對路徑>"或null}`，附兩個 fd（`SCM_RIGHTS`）：子程序的 stdout、stderr。stdin 是 `/dev/null` |
+| 主程式→root 端，送訊號〔第十九批〕 | `{"signal":<請求 id>,"final":false\|true}`：控制模組 `kill`／`restart` 用。對那個請求開的子程序（`aos-exec`）照 [B-641](../../daemon/control.md)「kill 與 restart」的規則送 SIGTERM（`final:false`）或 SIGKILL（`final:true`）；已經結束或不認得的 id 不做事；不回應 |
 | root 端→主程式，結束 | `{"id":<同一個>,"exit":<碼>}`；被訊號 N 殺是 128+N |
 | root 端→主程式，開不了 | `{"id":<同一個>,"error":"no such user <帳號>"}`，或 `"not allowed: <帳號>"`、`"not allowed: <帳號> is root"` |
 

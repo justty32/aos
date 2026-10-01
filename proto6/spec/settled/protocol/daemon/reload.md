@@ -36,6 +36,7 @@ SIGINT／SIGTERM 照 [P-120](core.md)。
 | 頂層 `modules` 跟開起來時不同 | `reload: need restart: modules` |
 | 頂層 `exec_out_path` 跟開起來時不同（比設定裡的原字）〔第十二批〕 | `reload: need restart: exec_out_path` |
 | 頂層 `exec_err_path` 跟開起來時不同〔第十二批〕 | `reload: need restart: exec_err_path` |
+| 鎖檔路徑（`lock_path` 算出來的）跟開起來時不同〔第十九批〕 | `reload: need restart: lock_path` |
 | 拿掉一項（每項一行） | `inst=<inst 字面值> removed` |
 | 加了一項（每項一行） | `inst=<inst 字面值> added`；掛了 cgroup 模組時緊接著 `inst=<inst 字面值> cgroup=i-<h>`（[P-124](cgroup.md)） |
 | 套用完 | `reloaded` |

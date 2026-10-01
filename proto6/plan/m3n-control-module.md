@@ -223,6 +223,8 @@
 
 ## 做完了沒
 
+> 〔2026-10-01 第十九批〕之後加了 `kill`、`restart` 兩個指令與 `modules.control.kill_grace_ms`（先 TERM、寬限後 KILL），見 [verdicts 11 第十九批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十九批daemon-上下層用到的三件事)、spec [B-641](../spec/settled/daemon/control.md)「kill 與 restart」、測試 `tests/test_daemon_kill.py`。
+
 **做完了**（2026-10-01，AI 隊）：步驟 1～7 都照上面做了，驗收寫進 `tests/test_ctl.py`（25 條，約 18 秒）、全過；三項檢查（全部測試、`check_ids.py --strict`、`wf-lint`）都過。待問 1 照建議先做（見上）。等使用者看。
 
 - 程式：`lib/aos_daemon.py`（`load_setup()`、`Item` 的狀態與 `cond`、`loop()`／`_next_run()`、`run_once()` 帶 `env=`、`_quit()` 刪 socket、`main()` 開 socket）、新的 `lib/aos_daemon_ctl.py`（伺服器端）、`lib/aos_ctl.py` 與 `bin/aos-ctl`（`.gitignore` 擋 `bin/`，要 `git add -f`）。用法見 [src/py README](../src/py/README.md#控制模組與-aos-ctlm3n)。

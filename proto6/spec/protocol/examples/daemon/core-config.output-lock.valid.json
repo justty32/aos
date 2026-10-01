@@ -1,0 +1,1 @@
+{"interval_ms": 60000, "exec_out_path": "<inst>/daemon.log", "exec_output_max_bytes": 65536, "lock_path": "run/aos-daemon.lock", "modules": {"control": {"socket": "./aos.sock", "kill_grace_ms": 3000}}, "insts": {"daemons/lorkhan.json": {"interval_ms": 5000}}}

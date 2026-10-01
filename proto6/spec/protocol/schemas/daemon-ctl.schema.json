@@ -17,7 +17,7 @@
     },
     "Request": {
       "type": "object",
-      "description": "指令名當鍵、inst 字面值當值，四個指令名剛好出現一個；其他欄位（含 ok）照收不理。wake 的兩個選項只在 wake 時看，其他指令帶了也不理",
+      "description": "指令名當鍵、inst 字面值當值，六個指令名剛好出現一個（kill、restart 是第十九批加的）；其他欄位（含 ok）照收不理。wake 的兩個選項只在 wake 時看，其他指令帶了也不理",
       "properties": {
         "wake": {
           "$ref": "#/$defs/Inst"
@@ -29,6 +29,12 @@
           "$ref": "#/$defs/Inst"
         },
         "status": {
+          "$ref": "#/$defs/Inst"
+        },
+        "kill": {
+          "$ref": "#/$defs/Inst"
+        },
+        "restart": {
           "$ref": "#/$defs/Inst"
         }
       },
@@ -51,6 +57,16 @@
         {
           "required": [
             "status"
+          ]
+        },
+        {
+          "required": [
+            "kill"
+          ]
+        },
+        {
+          "required": [
+            "restart"
           ]
         }
       ],

@@ -1,0 +1,1 @@
+{"interval_ms": 60000, "modules": {"control": {"socket": "./aos.sock", "kill_grace_ms": "5s"}}, "insts": {"a": {}}}
