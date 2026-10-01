@@ -80,7 +80,7 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | `bin/aos-tick` | 命令列薄殼（`.gitignore` 擋 `bin/`，`git add -f` 進來的） |
 | `lib/aos_tick.py` | argv、`AOS_DIRNAME` 檢查、認工作資料夾與任務表 `resolve_target()`、取鎖 `take_lock()`、擋板、tasks-blocked `tasks_blocked()`／`clear_tasks_blocked()`、整格順序 `run_tick()` |
 | `lib/aos_tick_record.py` | 結束碼紀錄資料夾 `tick/current/`／`last/`：開格換紀錄（整個資料夾 rename）、每項寫 `ran.json`、不是 0 才寫 `task-exits.json`／`hook-exits.json`、收尾寫 `record.json`（使用者 2026-10-01 第八、九批）；`read_record()` 讀展開 `$ref` 後的完整紀錄 |
-| `lib/aos_tick_table.py` | 讀任務表（`.aos/tasks.json`）、只解到 `tasks` 這層、頂層預設、極簡檢查 `check_table()`、每項的 `id`、跑到時合併預設再展開成 inst `load_inst()` |
+| `lib/aos_tick_table.py` | 讀任務表（`.aos/tasks.json`）、開格整份展開（第二十批）、頂層預設、極簡檢查 `check_table()`、每項的 `id`、跑到時合併預設交給 inst 規則 `load_inst()` |
 | `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、這一項的 `AOS_*`（先拿掉繼承來的 `AOS_TASK_*`／`AOS_HOOK_*`）、分 exit／signal |
 | `lib/aos_tick_hooks.py` | hooks（外掛掛點，m1h；第十七批四個掛點）：`run_point()` 跑一個掛點的一串、`run_after_task()` 在每項之後跑 `after_task.<id>` 與 `after_every_task`（讀表與極簡檢查在 `aos_tick_table.check_table()`，結果是 `Table.before_all`／`after_task`／`after_every_task`／`after_all`） |
 | `tests/test_tick.py` | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes` |
@@ -94,9 +94,9 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 
 頂層 `cwd` 不改 tick 自己的 cwd（tick 永遠在工作資料夾跑，鎖、紀錄都在工作資料夾的 `.aos/`），只是任務的預設 cwd，相對以工作資料夾為起點。
 
-讀表時（開格）只解到 `tasks` 這層：整份是指示詞先解；`modules` 整個展開；`tasks` 與七個預設鍵的值各解一層（跟著 `$ref`／`$fmt`／`$env` 走到不是指示詞為止，`$opt` 選項物件原樣留）；`tasks` 每一元素解一層（整項 `$ref`）。這層的相對檔名以工作資料夾為中心，`$ref:""`／`#…` 指整份 tasks.json；解不開＝`bad_table:`。
+讀表時（開格）**整份展開**〔使用者 2026-10-01 第二十批：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」〕：整份是指示詞先解；七個預設鍵、`modules`、`tasks`／`hooks` 各掛點／`modules["tasks-blocked"].insts` 每一元素（整項解一層後）裡的已知鍵（七個 inst 欄位、`id`、`kind`）都一路展開到底；選項物件 `$opt` 原樣留、`$val` 也展開。頂層與每項的陌生鍵、`_metainfo` 不解。相對檔名以工作資料夾為中心，`$ref:""`／`#…` 指整份 tasks.json；任何一個解不開＝`bad_table:`、不開格。
 
-值的內部（`envs` 裡的 `$env`、`argv` 元素的 `$fmt`、`cwd` 的 `$opt mkdir`…）讀表時不解（`modules` 例外，整個展開）。跑到某一項才合併（預設＋這一項），合併結果當一份獨立的記憶體 inst 照 inst 規則展開（`cwd` 先解、以工作資料夾為中心，其他欄位以解出的 cwd 為中心）；這時 `$ref:""`／`#…` 指合併後的這一項，不是整份 tasks.json，也不是預設原本來自的那個檔。沒跑到的項內部壞了不影響這一格；跑到時解不開就自然丟錯回 1。
+值在開格那一刻就定了：前面的任務改了被 `$ref` 的檔，後面的項看不到；指向前面任務才會產生的檔，開格就 `bad_table`。跑到某一項只合併（預設＋這一項）、交給 `aos_inst.load_obj` 照 inst 規則驗與換算路徑（`cwd` 以工作資料夾為中心，其他路徑以解出的 cwd 為中心）；~~這時才展開、`$ref:""`／`#…` 指合併後的這一項~~（第二十批推翻）。
 
 ```json
 {
@@ -167,7 +167,7 @@ plan 步驟對到哪：
 | 4 讀表 | `aos_tick_table.read_table()`、`check_table()` |
 | 5 照表跑 | `run_tick()` 迴圈、`run_one()`、`aos_tick_run.run_item()` |
 | 6 tasks-blocked（原停格檔，第十六批） | `run_tick()` 迴圈裡每項之前的 `tasks_blocked()`、最後的 `clear_tasks_blocked()` |
-| 6b `modules.tasks_blocked`（B-636，第十六批） | 讀表 `aos_tick_table._tasks_blocked()`（`Table.on_blocked`）、跑 `aos_tick.run_on_blocked()` |
+| 6b `modules["tasks-blocked"]`（B-636，第十六批） | 讀表 `aos_tick_table._tasks_blocked()`（`Table.on_blocked`）、跑 `aos_tick.run_on_blocked()` |
 | 7、8 | 2026-10-01 取消（fsync、上下層） |
 
 我自己做的判斷（spec 沒寫死、照「最小合理」做，都可以改）：
@@ -175,8 +175,8 @@ plan 步驟對到哪：
 - ~~沒有 `.aos/`：整個交給 `aos_exec.run_target` 跑這個資料夾（不寫紀錄、退出碼照 aos-exec）；連 `inst.json` 也沒有時是 aos-exec 自己的用法錯 2。~~（2026-10-01 作廢：退路拿掉，沒有 `.aos/inst.json` 就 stderr `no_inst:`、回 1；只看在不在，不讀它的內容。）~~見 `aos_tick.run_tick` 開頭。~~（2026-10-01 再改：改看 `.aos/tasks.json`，見 `aos_tick.resolve_target`）
 - 新增的 stderr 代碼：`usage`（argv 錯、`AOS_DIRNAME` 不合法、目標給的是檔）、`busy`（拿不到鎖）、~~`no_inst`（沒有 `.aos/inst.json`）~~、`no_tasks`（資料夾沒有 `.aos/tasks.json`）、`no_target`（目標指的東西不存在；原 `no_node`）、`bad_table`（任務表不合極簡檢查）、`exec_failed`（某項沒跑成：mkdir／cwd／重導向失敗、126／127）。
 - 某項沒跑成（mkdir、cwd、重導向失敗）記 `exit:125`，跟 aos-exec 命令列一致（inst 的規定，不是帳號判定）。
-- 項目（合併頂層預設後）是純記憶體文件（跟 `load_obj` 一樣），所以項目裡的 `$ref:""` 指合併後的這一項，不是整份 tasks.json（使用者 2026-10-01 頂層預設時確認）。
-- 任務的 id 用開格讀表時拿到的；跑到時只展開 inst 部分。
+- ~~項目（合併頂層預設後）是純記憶體文件，所以項目裡的 `$ref:""` 指合併後的這一項~~〔第二十批〕開格整份展開，`$ref:""` 指整份 tasks.json。
+- 任務的 id 用開格讀表時拿到的（已展開）；跑到時只做 inst 規則的驗證與路徑換算。
 - `envs` 清空時一個 `AOS_*` 都不放。
 - 任務表極簡檢查（使用者 2026-10-01，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-tick-讀任務表的極簡檢查待統一更新-spec)）：合法 JSON、頂層物件有 `tasks` 陣列、每項（解一層後）是物件、合併頂層預設後有 `argv`（讀表那層解不開也算）；不過 stderr 一行 `bad_table:`、回 1。~~檢查在換紀錄之後，表壞仍佔 `seq`、紀錄停在 `ended:false`。~~（使用者 2026-10-01 改：在換紀錄之前，表壞不換紀錄、不加 `seq`）每項沒寫 `_metainfo` 照跑（`aos_inst` 當 posix 第 1 版）；寫錯了跑到那項時 `aos_inst` 自然丟錯回 1。
 - 沒 `id` 的項（使用者 2026-10-01）：id＝它在 `tasks` 陣列的位置（從 0 起）轉字串，紀錄、`AOS_TASK_ID`、`blocked_before` 都用它；跟別項撞了不管。`id` 不是字串時 `AOS_TASK_ID` 用 `str()`（我自己定的）。
@@ -205,7 +205,7 @@ plan 步驟對到哪：
 | `after_every_task` | 每一項跑完；同一項也有 `after_task` 時排在它後面 | 同上 |
 | `after_all` | 照表跑完或被 tasks-blocked 擋下之後 | `AOS_HOOK_*` |
 
-- 寫法與指示詞展開時機都比照 `tasks`（`hooks`、每個掛點〔`after_task` 再多一層〕、每一元素讀表時各解一層，內部跑到時才展開）：每項一個 inst 物件，`id` 可省（沒寫＝在自己那個陣列的位置字串）、吃頂層預設、跑法跟任務一樣。`AOS_HOOK_INDEX` 是在自己那個陣列的位置（`after_task` 每個任務 id 各自從 0 數）。
+- 寫法與指示詞展開都比照 `tasks`（開格整份展開，第二十批）：每項一個 inst 物件，`id` 可省（沒寫＝在自己那個陣列的位置字串）、吃頂層預設、跑法跟任務一樣。`AOS_HOOK_INDEX` 是在自己那個陣列的位置（`after_task` 每個任務 id 各自從 0 數）。
 - 跑每一項前，`AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`、`AOS_HOOK_*` 一律先從繼承的環境拿掉（`aos_tick_run.RUN_VARS`），所以 `AOS_TASK_EXIT` 只有那兩個掛點有。`aos_tick_hooks.run_point()`、`run_after_task()` 組變數。
 - 不看 tasks-blocked；被它擋下沒跑的任務不觸發 `after_task`、`after_every_task`。每項的碼照實記、接著跑下一項；不影響 tick 的結束碼（照舊 0）。擋板、busy、表壞時一個都不跑。
 - 格式錯（`hooks` 不是物件、陣列的掛點不是陣列、`after_task` 不是物件或某個值不是陣列、某項不是物件、合併後沒 `argv`）＝`bad_table:`、回 1，開格前就擋。`hooks` 裡其他鍵照收不理。寫在 `modules.hooks` 底下的不會跑。
@@ -213,17 +213,17 @@ plan 步驟對到哪：
 - 某個 hook 沒跑成時 stderr 是 `exec_failed: <掛點>/<id>: …`（`after_task` 是 `after_task/<任務 id>/<id>`）。
 - 用 hooks 加普通 git 指令取代 `aos-git`（第十七批暫緩）的寫法見 [B-635 範例](../../spec/settled/tick/hooks.md#範例用-hook-加普通-git-指令管版本)。
 
-## tick 模組 `modules.tasks_blocked`（B-636）
+## tick 模組 `modules["tasks-blocked"]`（B-636）
 
 使用者 2026-10-01 第十六批，spec [B-636](../../spec/settled/tick/tasks-blocked.md)、格式 P-214。任務表 `modules` 底下寫：
 
 ```json
-"modules": {"tasks_blocked": {"insts": [{"id": "notify", "argv": ["sh", "-c", "echo $AOS_TASK_ID >> blocked.log"]}]}}
+"modules": {"tasks-blocked": {"insts": [{"id": "notify", "argv": ["sh", "-c", "echo $AOS_TASK_ID >> blocked.log"]}]}}
 ```
 
 - 某一項之前發現 `<狀態資料夾>/tick/tasks-blocked`：先依序跑 `insts`（全部跑完、不看彼此的碼），再看一次——檔被刪了就放行這一項與後面的，還在就照預設擋下（`blocked_before`）。同一項之前只跑一次；放行後又被擋，那一項之前再跑。
 - 碼不記進紀錄、非 0 沒影響。環境照任務：`AOS_TASK_ID`／`AOS_TASK_INDEX`＝被擋下的那一項、`AOS_TICK_CWD`；沒有 `AOS_HOOK_*`。
-- 寫法與展開時機比照 `hooks.after_all`（讀表各解一層、內部跑到才展開）；`modules` 其他鍵照舊整個展開。開不起來印 `exec_failed: tasks_blocked/<id>`。
+- 寫法與展開比照 `tasks`（開格整份展開；〔第二十批〕模組鍵由 `tasks_blocked` 改名 `tasks-blocked`，跟檔名一樣）。開不起來印 `exec_failed: tasks-blocked/<id>`。
 - 沒掛＝看到就擋下。整格最後照樣刪 tasks-blocked。
 
 測試 `tests/test_tick.py` 的 `TasksBlockedModule`（7 條）。

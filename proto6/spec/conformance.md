@@ -117,7 +117,7 @@
 | B-632 | settled/deferred/git.md（〔2026-10-01 第十七批〕暫緩） | 〔第二十批換主題〕結束碼紀錄取代日誌：沒有 git 時怎麼做 | T3 |
 | B-633 | settled/tick.md | 〔第二十批〕每項結束碼紀錄與格數 | T3 |
 | B-635 | settled/tick/hooks.md | 〔2026-10-01 第六批〕hooks：照表跑完之後跑的一串（頂層鍵 `hooks.after_all`）；〔2026-10-01 第十七批〕加 `before_all`、`after_task`、`after_every_task`、`AOS_TASK_EXIT` | 第六批、第十七批 |
-| B-636 | settled/tick/tasks-blocked.md | 〔2026-10-01 第十六批〕tick 模組 `modules.tasks_blocked`：發現 tasks-blocked 時先跑一串 inst | 第十六批 |
+| B-636 | settled/tick/tasks-blocked.md | 〔2026-10-01 第十六批〕tick 模組 `modules["tasks-blocked"]`：發現 tasks-blocked 時先跑一串 inst | 第十六批 |
 | S-205 | scheduling/admission.md | 套用、調整與故障 | T5 |
 | S-206 | scheduling/admission.md | 中間層 kernel 卡住 | T5 |
 | S-207 | scheduling/admission.md | 用量收集與去重 | T5 |
@@ -132,7 +132,7 @@
 | P-211 | settled/protocol/tick.md | 〔第二十批〕`aos-cg`：每項一框 | T3 |
 | P-212 | settled/deferred/protocol/tick.md | 〔第二十批〕`aos-as`：切換帳號（〔2026-10-01 第十三批〕暫緩） | T3 |
 | P-213 | settled/protocol/tick.md | 〔第二十批〕每項結束碼紀錄、停格檔與擋板檔（〔2026-10-01 第十六批〕停格檔改名 tasks-blocked） | T3 |
-| P-214 | settled/protocol/tick.md | 〔2026-10-01 第十六批〕`modules.tasks_blocked` 的寫法 | 第十六批 |
+| P-214 | settled/protocol/tick.md | 〔2026-10-01 第十六批〕`modules["tasks-blocked"]` 的寫法 | 第十六批 |
 | C-08 | settled/conventions.md | 〔2026-10-01〕aos 結束碼慣例 | 統一更新 |
 | C-09 | settled/conventions.md | 〔2026-10-01〕狀態資料夾的名字 `AOS_DIRNAME` | 統一更新 |
 | C-10 | settled/conventions.md | 〔2026-10-01〕aos 環境變數總表 | 統一更新 |
@@ -339,7 +339,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 **tick 核心、tasks-blocked 與擋板檔**
 
-- 〔2026-10-01 第十六批〕掛了 `modules.tasks_blocked`：某一項之前發現 tasks-blocked 時先跑那一串（拿被擋下那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`、碼不記、非 0 沒影響），一串刪了檔就放行這一項與後面的、沒刪就擋下；同一項之前只跑一次；沒掛＝看到就擋下（B-636、P-214）。
+- 〔2026-10-01 第十六批〕掛了 `modules["tasks-blocked"]`：某一項之前發現 tasks-blocked 時先跑那一串（拿被擋下那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`、碼不記、非 0 沒影響），一串刪了檔就放行這一項與後面的、沒刪就擋下；同一項之前只跑一次；沒掛＝看到就擋下（B-636、P-214）。
 
 - 拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`：互斥、照表跑與每項結束碼紀錄都成立；佇列沒人取也沒人送、不發摘要（T-07、B-626）。
 - 〔2026-10-01 第十六批〕某項建了 `.aos/tick/tasks-blocked`（內容不管）：本格後面的項不跑、stderr 空，紀錄 `ended:true` 並有 `blocked_before`（被擋下的那一項），`after_all` 照跑，tick 回 0；整格最後核心刪掉它，下一格照常開。格與格之間放的：第一項之前就擋下（`ran:0`）（B-620、B-633）。
@@ -384,9 +384,10 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - `aos-tick [<目標>]`：不給目標時用目前目錄；給相對路徑也行（B-620、P-203）。
 - 目標是資料夾但沒有 `.aos/tasks.json`：stderr `no_tasks:`、回 1；目標不存在：stderr `no_target:`、回 1（B-620、P-203）。
 - 〔使用者 2026-10-01〕目標給一個檔：stderr `usage: …`、回 1，一項不跑（目標只能是資料夾；原「給檔就拿它當任務表」撤回，見[暫緩區撤回表](settled/deferred/tick.md#已撤回被取代)）（B-620、P-203）。
-- 任務表沒有 `tasks` 陣列、某項（解一層後）不是物件、或合併頂層預設後沒有 `argv`〔使用者 2026-10-01〕：stderr `bad_table:`、回 1，不換紀錄、不加 `seq`；沒寫 `id`、`kind`、`_metainfo` 都照跑，沒寫 `id` 的項在紀錄裡是位置字串（`"0"`、`"1"`…）（B-620、B-633）。
+- 任務表沒有 `tasks` 陣列、某項（整項解一層後）不是物件、或合併頂層預設後沒有 `argv`〔使用者 2026-10-01〕：stderr `bad_table:`、回 1，不換紀錄、不加 `seq`；沒寫 `id`、`kind`、`_metainfo` 都照跑，沒寫 `id` 的項在紀錄裡是位置字串（`"0"`、`"1"`…）（B-620、B-633）。
 - 〔使用者 2026-10-01〕任務表頂層 `{"cwd":"work","envs":{"LANG":"C.UTF-8"},"tasks":[{"id":"build","argv":["make"]},{"id":"report","argv":["./report.sh"],"cwd":"reports"}]}`：`build` 在 `<工作資料夾>/work` 跑、拿到 `LANG`；`report` 在 `<工作資料夾>/reports` 跑；`aos-tick` 自己的 cwd 仍是工作資料夾。頂層給 `argv`、項只寫 `id` 也照跑（B-620、P-202、C-11）。
-- 〔使用者 2026-10-01〕項的 `envs` 物件裡某個值的 `$env` 讀表時不解；項自己寫了 `envs` 就整包蓋過頂層的、不逐變數合併（B-620、C-11）。
+- 〔使用者 2026-10-01〕項自己寫了 `envs` 就整包蓋過頂層的、不逐變數合併（B-620、C-11）。~~項的 `envs` 物件裡某個值的 `$env` 讀表時不解~~（第二十批推翻）。
+- 〔2026-10-01 第二十批〕開格整份展開：第二項的 `envs` 裡有解不開的 `$env`：`bad_table`、回 1、第一項也沒跑；頂層 `envs` 寫 `{"WHO":{"$ref":"#/id"}}`、頂層 `id` 是 `TOP`：每項拿到 `TOP`（`#…` 指整份 tasks.json）；項的 `cwd` 是 `sub` 時 `{"$ref":"v.json"}` 讀工作資料夾的 `v.json`；前一項改了 `v.json`，後一項讀到的仍是開格時的值；`cwd: {"$opt":"mkdir","$val":{"$ref":"#/dir"}}` 照建資料夾；頂層與每項的陌生鍵、`_metainfo` 寫壞的指示詞不影響開格；模組鍵寫舊名 `tasks_blocked` 不掛（B-620、P-202、B-636）。
 
 **最核心 daemon 與控制模組**
 

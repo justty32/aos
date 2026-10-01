@@ -692,6 +692,8 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 ### 第十六批（續）：tick 模組 `modules.tasks_blocked`
 
+> 〔第二十批〕模組鍵改名 `tasks-blocked`（跟檔名一樣），展開時機也不再比照 `hooks.after_all`（整份 tasks.json 開格就展開），見[第二十批](#2026-10-01-第二十批tasksjson-全部解完模組鍵改名)。下面照當時原文留著。
+
 〔使用者裁定 2026-10-01 晚〕對「發現 tasks-blocked 時要跑的 insts」那個 tick 模組（上一節第 3 段的方向）的五題，使用者原話：「1.modules底下 2.對 3.b 4.對，不記錄進記錄，非0沒影響。 5.對」。五題是：
 
 1. 寫在 `tasks.json` 的 `modules` 底下（不是 `hooks` 的掛點）。
@@ -700,7 +702,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 4. insts 拿得到被擋下那一項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`；結束碼不記進紀錄、非 0 沒影響。
 5. 沒掛模組＝現在的預設行為。
 
-已做，正本 [B-636](../../spec/settled/tick/tasks-blocked.md)、格式 [P-214](../../spec/settled/protocol/tick.md#p-214modulestasks_blocked使用者-2026-10-01-第十六批)。
+已做，正本 [B-636](../../spec/settled/tick/tasks-blocked.md)、格式 [P-214](../../spec/settled/protocol/tick.md#p-214tick-模組-tasks-blocked使用者-2026-10-01-第十六批第二十批改名)。
 
 **AI 隊定的細節**（使用者可改）：
 
@@ -761,3 +763,29 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 改到的地方：程式 `lib/aos_tick.py`（`record.finish()` 移到 after_all 之後）、`lib/aos_tick_record.py`（說明）；測試 `tests/test_tick_hooks.py`；spec [tick 核心](../../spec/settled/tick.md) B-626 系統級任務那列與幾處「範本、系統級任務」、B-620 tasks-blocked 內容定案、B-633 `ended`；[hooks B-635](../../spec/settled/tick/hooks.md)；[tasks_blocked B-636](../../spec/settled/tick/tasks-blocked.md)；[tick 協議](../../spec/settled/protocol/tick.md) P-202 範例、P-206 搬暫緩、P-213 `ended`；[tick 子篇入口](../../spec/settled/tick/README.md)；[名詞](../../spec/settled/terms.md)；[整理區入口](../../spec/settled/README.md)；暫緩區 [總表](../../spec/settled/deferred/README.md)、[mq.md](../../spec/settled/deferred/mq.md)、[template.md](../../spec/settled/deferred/template.md)、[tick](../../spec/settled/deferred/tick.md)、[tick 協議](../../spec/settled/deferred/protocol/tick.md)；[base/storage B-404](../../spec/base/storage.md) 就地標暫緩；[驗收入口](../../spec/conformance.md)；[protocol README](../../spec/protocol/README.md)；schema `tick-record` 的 `ended` 說明；[tick 系統級任務整理筆記](../2026-10-01-tick-system-tasks.md)「ended:true 太早」的洞標已解決；連到原 `tick/mq.md`、`tick/template.md` 的連結全部改指暫緩區。
 
+<a id="2026-10-01-第二十批tasksjson-全部解完模組鍵改名"></a>
+
+## 2026-10-01 第二十批：tasks.json 全部解完、模組鍵改名
+
+〔使用者裁定 2026-10-01〕使用者原話：「模組的鍵改成 tasks-blocked，tasks.json改成全部解完」；補充：「除了陌生鍵和_metainfo」。
+
+- **模組鍵改名**：`modules.tasks_blocked` → `modules["tasks-blocked"]`，跟檔名 `<狀態資料夾>/tick/tasks-blocked` 一樣；`exec_failed:` 的標籤跟著變 `tasks-blocked/<id>`。寫舊名 `tasks_blocked` 就是陌生的模組鍵，不掛。
+- **tasks.json 開格時整份展開**（推翻第二批「展開指示詞的時候不整份解好，而是只解到tasks。」），跟 daemon 設定檔的展開同一做法：整份文件、頂層七個預設鍵、`modules`（含 `tasks-blocked`，不再例外）、`tasks`／`hooks` 各掛點／`modules["tasks-blocked"].insts` 每一元素裡的已知鍵，全部一路展開到底。展開失敗＝`bad_table`、回 1、不開格。之後每項只做「頂層預設＋這一項」淺層合併、交給 `aos_inst.load_obj`（只剩驗證、拆選項、路徑換算）。
+- **不解的**（使用者補充「除了陌生鍵和_metainfo」）：頂層的陌生鍵與 `_metainfo`；每一項裡的 `_metainfo`（留給 `load_obj` 照 inst 規則驗）與陌生鍵（`group`、`needs`、`methods`…）；`hooks` 裡不認得的掛點。陌生鍵裡寫壞的指示詞不影響開格。
+
+**語意變化**（寫進 B-620「指示詞什麼時候展開」）：
+
+1. `$ref:""`／`#…` 一律指整份 tasks.json（整項 `$ref` 引進來的元素裡則指被引用的那份檔），不再指「合併後的這一項」。
+2. `$ref` 的相對檔名一律以工作資料夾為準，不再以那一項的 cwd 為準。
+3. `$env`／`$fmt`／`$ref` 讀到的是開格那一刻的值；前面的任務改了檔或環境，後面的項看不到。
+4. 「跑到某項時才展開失敗」不再發生，全在開格時回 `bad_table`；跑到時還會錯的只剩 inst 規則本身（`_metainfo`、型別…）。
+5. 讀不到的 `$ref`（例如指向前面任務才會產生的檔）開格就 `bad_table`。
+
+**AI 隊定的細節**（使用者可改）：
+
+1. 每一項「已知的鍵」＝七個 inst 欄位加 `id`、`kind`；`id` 也展開（展開後的值才是紀錄與 `after_task` 比對用的 id）。
+2. 選項物件（`$opt`）的 `$opt` 原樣留、`$val` 也展開（daemon 的 `expand()` 是整個原樣留；這裡為了「全部解完」多走進 `$val`），所以展開完只剩選項物件、沒有取值指示詞。
+3. `modules` 裡 `tasks-blocked` 以外的模組鍵照舊整個展開（模組鍵不分已知陌生）；`tasks-blocked` 物件裡除了 `insts` 的鍵是陌生鍵、不解。
+4. 整項 `$ref` 引進來的元素：先解那一層、再在被引用的檔的位置展開裡面的已知鍵，所以那裡的 `#…` 指被引用的那份檔（`resolve_located` 原本的行為）。
+
+改到的地方：程式 `lib/aos_tick_table.py`（檔頭說明改寫；`check_table()` 整份展開、`_items()` 展開已知鍵、`_full()`、`_expand()` 走進 `$val`、`BLOCKED_KEY`、`ITEM_KEYS`）、`lib/aos_tick.py`（標籤、說明）；測試 `tests/test_tick.py`（`Step4Defaults` 改成新語意：`#…` 指整份表、相對工作資料夾、開格展開失敗 bad_table、值是開格那一刻的、選項物件照用、陌生鍵與 `_metainfo` 不解；`TasksBlockedModule` 改鍵名、insts 開格展開、舊鍵名不掛）、`tests/test_tick_hooks.py`（hook 內部開格展開、`#…` 指整份表）；spec [B-620](../../spec/settled/tick.md)「指示詞什麼時候展開」「頂層 modules」「讀表：極簡檢查」、[P-202、P-214](../../spec/settled/protocol/tick.md)、[B-635](../../spec/settled/tick/hooks.md)、[B-636](../../spec/settled/tick/tasks-blocked.md)、[C-11](../../spec/settled/conventions.md)、[名詞](../../spec/settled/terms.md)、[整理區入口](../../spec/settled/README.md)、[tick 子篇入口](../../spec/settled/tick/README.md)、[驗收入口](../../spec/conformance.md)、[protocol README](../../spec/protocol/README.md)、schema `tick-tasks`、範例 `examples/tick/tasks.tasks-blocked*.json`；[src/py README](../../src/py/README.md)。

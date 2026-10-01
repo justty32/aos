@@ -66,8 +66,8 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 |---|---|---|---|---|
 | `AOS_DIRNAME` | 使用者（或外層環境） | `aos-tick`、`aos-exec` | 狀態資料夾的名字；三態見 C-09 | [C-09](#c-09狀態資料夾的名字aos_dirname) |
 | `AOS_TICK_CWD` | `aos-tick` 給每項任務與每個 hook（`hooks.after_all` 的項） | 任務 | 這一格 tick 的工作資料夾的絕對路徑（命令列給的目標資料夾）。任務要讀本格結束碼紀錄，就讀 `$AOS_TICK_CWD/<AOS_DIRNAME>/tick/current/`（`record.json` 加上它 `$ref` 的 `ran.json`、`task-exits.json`、`hook-exits.json`，P-213） | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| `AOS_TASK_ID` | `aos-tick` 給每項任務；`after_task`、`after_every_task` 的 hook 也給，值是剛跑完那一項（`before_all`、`after_all` **不給**）；`modules.tasks_blocked` 的 insts 也給，值是被擋下的那一項（[B-636](tick/tasks-blocked.md)） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串 | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上，含 `tasks_blocked` 的 insts 與那兩個掛點） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起 | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_ID` | `aos-tick` 給每項任務；`after_task`、`after_every_task` 的 hook 也給，值是剛跑完那一項（`before_all`、`after_all` **不給**）；`modules["tasks-blocked"]` 的 insts 也給，值是被擋下的那一項（[B-636](tick/tasks-blocked.md)） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串 | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上，含 `tasks-blocked` 的 insts 與那兩個掛點） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起 | [B-620](tick.md)、[P-203](protocol/tick.md) |
 | `AOS_TASK_EXIT` | 〔使用者 2026-10-01 第十七批〕`aos-tick` 只給 `after_task`、`after_every_task` 的 hook | hook | 剛跑完那一項任務的結束碼；被訊號 N 殺＝128+N | [B-635](tick/hooks.md)、[P-203](protocol/tick.md) |
 | `AOS_HOOK_POINT` | `aos-tick` 給每個 hook（任務不給） | hook | 掛點名：`before_all`、`after_task`、`after_every_task`、`after_all` | [B-635](tick/hooks.md)、[P-203](protocol/tick.md) |
 | `AOS_HOOK_INDEX` | 同上 | hook | 這個 hook 在該掛點陣列的位置，從 0 起 | 同上 |
@@ -101,14 +101,14 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 |---|---|---|
 | 頂層 `cwd` 影不影響程式自己 | 不影響 daemon 自己（只設給 `aos-exec` 子程序當起點）；掛了重讀設定時改了不套用、印警告要重開（[B-642](daemon/reload.md)） | 不影響 tick 自己（tick 永遠在工作資料夾跑；只是任務的預設 cwd） |
 | 相對路徑起點 | daemon 啟動時的 cwd | tick 的工作資料夾 |
-| 指示詞 | 整份先展開（〔第十一批〕`modules.state` 例外：原始檔必須是 `$ref`，指的檔不在當空的，[B-643](daemon/state.md)） | 只展開到 `tasks` 這層（`modules` 例外，整個展開）；每一項內部跑到時才展開 |
-| 頂層 `modules` | 可選，一個模組一個鍵；隨整份展開 | 可選，一個模組一個鍵，目前 tick 沒有模組、核心照收不理；讀表時整個展開（展開失敗＝`bad_table`）〔使用者裁定 2026-10-01〕；不當任務預設 |
+| 指示詞 | 整份先展開（〔第十一批〕`modules.state` 例外：原始檔必須是 `$ref`，指的檔不在當空的，[B-643](daemon/state.md)） | 〔第二十批〕開格時整份展開，但頂層與每項的陌生鍵、`_metainfo` 不解；`$ref:""`／`#…` 指整份 tasks.json |
+| 頂層 `modules` | 可選，一個模組一個鍵；隨整份展開 | 可選，一個模組一個鍵，目前 tick 只認 `tasks-blocked`（B-636）、其他照收不理；讀表時整個展開（展開失敗＝`bad_table`）〔使用者裁定 2026-10-01〕；不當任務預設 |
 | 正本 | [B-640](daemon/core.md)、[P-120](protocol/daemon/core.md) | [B-620](tick.md)、[P-202](protocol/tick.md) |
 
 - tasks.json 頂層能當每一項預設的只有 inst 的七個欄位（`argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`），淺層合併、項自己寫了就整個蓋過。`_metainfo`、`id`、`kind`、`modules` 都不是預設。合併與展開的細節以 B-620、P-202 為準。
 - ~~`modules` 在 tasks.json 只解一層的理由：tick 核心不讀它，整份展開只會讓寫壞的模組設定害整格 `bad_table`。~~ 〔使用者裁定 2026-10-01〕改成讀表時整個展開，跟 daemon 設定檔一致；`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點，展開失敗＝`bad_table`、回 1。
 - tasks.json 頂層 `_metainfo` 可省；每項 `_metainfo` 照 inst 規則（可省＝posix 第 1 版，跑到那一項才驗）〔使用者裁定 2026-10-01〕。
 
-依據：使用者 2026-10-01 原話：「好，就這個。tick執行時後他自己有自己的cwd，這個頂層key cwd不會影響tick自己的cwd，但是其相對路徑由tick的cwd開始算。」「展開指示詞的時候不整份解好，而是只解到tasks。」「daemon config file也是，最頂層cwd不影響daemon自身，相對路徑也是基於daemon的cwd。但是指示詞這塊，daemon config file是全部產開」「tasks.json頂層也應該有modules。」出處：[第二十批裁定篇末「2026-10-01 第二批」](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)；`modules` 整個展開與 `_metainfo` 可省見 [第二十批裁定篇末「2026-10-01 第三批」](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)。
+依據：使用者 2026-10-01 原話：「好，就這個。tick執行時後他自己有自己的cwd，這個頂層key cwd不會影響tick自己的cwd，但是其相對路徑由tick的cwd開始算。」「展開指示詞的時候不整份解好，而是只解到tasks。」（第二十批推翻：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」）「daemon config file也是，最頂層cwd不影響daemon自身，相對路徑也是基於daemon的cwd。但是指示詞這塊，daemon config file是全部產開」「tasks.json頂層也應該有modules。」出處：[第二十批裁定篇末「2026-10-01 第二批」](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)；`modules` 整個展開與 `_metainfo` 可省見 [第二十批裁定篇末「2026-10-01 第三批」](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)。
 
 **驗收：**daemon 設定檔頂層 `"cwd":"w"` 時 daemon 自己的工作目錄不變、`aos-exec` 在 `w` 跑；tasks.json 頂層 `"cwd":"work"`、某項沒寫 `cwd` 時那項在 `<工作資料夾>/work` 跑，`aos-tick` 自己仍在工作資料夾；tasks.json 頂層 `modules` 裡的 `$ref` 讀表時就展開，展開不了＝`bad_table`、回 1；展開得了時照表跑都一樣。

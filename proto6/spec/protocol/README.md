@@ -177,7 +177,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-211 | aos-cg：每項一框 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-212 | aos-as：切換帳號（暫緩） | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-213 | 每項結束碼紀錄、tasks-blocked 與擋板檔 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
-| P-214 | `modules.tasks_blocked`（第十六批） | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-214 | `modules["tasks-blocked"]`（第十六批） | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-300 | 兩條路各做什麼 | [messages.md](messages.md) |
 | P-301 | 收件區分請求與回應 | [messages.md](messages.md) |
 | P-302 | 完整封包 | [messages.md](messages.md) |
