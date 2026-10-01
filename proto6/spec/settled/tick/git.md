@@ -39,7 +39,7 @@
 ### 開格 `aos-git open`
 
 1. **看 git 能不能用**（B-622）。不能用就印 `no_git` 警告、回 0，這格照 B-632。
-2. **上一格沒正常收尾就還原**：`last.json` 是 `ended:false`、有 `stopped_after`（B-633），都算沒正常收尾。還原範圍是 `.aos/`（`AOS_DIRNAME` 空字串時就是整個工作資料夾），加上上一格留下的存檔點記的 aos 範圍，一律回到 HEAD。上一格正常收尾，或沒有 `last.json`，不還原。
+2. **上一格沒正常收尾就還原**：上一格紀錄 `last/`（`record.json`）是 `ended:false`、有 `stopped_after`（B-633），都算沒正常收尾。還原範圍是 `.aos/`（`AOS_DIRNAME` 空字串時就是整個工作資料夾），加上上一格留下的存檔點記的 aos 範圍，一律回到 HEAD。上一格正常收尾，或沒有 `last/`，不還原。
 3. **清殘留**：上一格留下的 `refs/aos/marks/*` 清掉。〔建議預設〕上一格是當機（`ended:false`）時，一併清掉 git 管理目錄裡 aos 自己可能留下的鎖檔（`index.lock`、`HEAD.lock`、`refs/**/*.lock`）。
 4. HEAD 不在上一格提交時的那個分支上（任務自己換了 HEAD 或分支）：不碰工作樹，當故障（B-622）。
 5. **巢狀排除**（B-622），再打本格第一個存檔點 `refs/aos/marks/<本項 id>`。
@@ -103,7 +103,7 @@ aos 自己呼叫 git 時一律帶：
 
 ### 範圍怎麼切
 
-- **固定排除**：不管 `.gitignore` 寫了什麼，[P-200](../protocol/tick.md) 表裡 ignore 的核心檔一律不提交、不還原：`.aos/tick.lock`、`.aos/tick/`、`.aos/tick-blocked`、`.aos/jobs/`、`.aos/attention/`、`.aos/runner-stderr.log`、`.aos/summary/published.json`、`.aos/mq/failed/`、`requests/`、`responses/`、`work/`。否則 `.gitignore` 漏列時，結束碼紀錄會被還原、`seq` 倒退。
+- **固定排除**：不管 `.gitignore` 寫了什麼，[P-200](../protocol/tick.md) 表裡 ignore 的核心檔一律不提交、不還原：`.aos/tick.lock`、`.aos/tick/`（整個資料夾，含紀錄 `current/`、`last/` 與停格檔）、`.aos/tick-blocked`、`.aos/jobs/`、`.aos/attention/`、`.aos/runner-stderr.log`、`.aos/summary/published.json`、`.aos/mq/failed/`、`requests/`、`responses/`、`work/`。否則 `.gitignore` 漏列時，結束碼紀錄會被還原、`seq` 倒退。
 - **`AOS_DIRNAME` 換名或是空字串時**〔使用者 2026-10-01〕：上面帶 `.aos/` 的各項換成狀態資料夾的名字；空字串時去掉前綴，直接在工作資料夾頂層排除 `tick.lock`、`tick/`、`tick-blocked`、`jobs/`、`attention/`、`runner-stderr.log`、`summary/published.json`、`mq/failed/`，連同 `requests/`、`responses/`、`work/`。這些以外、git 追蹤的檔全在 aos 範圍（B-630）。〔建議預設〕使用者自己的檔剛好叫這些名字時也一起被排除，不提交、不還原，風險自負。
 - **巢狀**：下層 tick 的資料夾（判準照 [B-628](../deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)；那條在暫緩區，回來前沒有正式判準）寫進 git 管理目錄的 `info/exclude`，不改 `.gitignore`。open、mark、close 存之前都重掃一次，免得格中新建的下層資料夾被上層提交（已追蹤的檔不會因為之後才排除就不追）。下層資料夾自己是 repo 時不進去。
 - **不遍歷**：不用全樹 `git clean -x`，不進 git 管理目錄或子 repo。
@@ -143,4 +143,4 @@ git 與無 git 合成同一種模式：**核心的結束碼紀錄（B-633）直�
 
 依據：第二十批追答 8、疑點裁定 5（取代第十九批「git 提交的備援：檔案日誌」）；astra 審整理區同日定案（收送改成系統訊息佇列）；納入 cgroup 與 git 疑-4（下游不認得 git）、疑-5（git 不能用照本條）。
 
-**驗收：**沒有 git 的機器上，兩版範本任務表都照常跑完、每格都有結束碼紀錄；上一格被殺時下一格的 `last.json` 是 `ended:false`。git 沒裝、低於 2.36、不是 repo、repo 壞到讀不了 HEAD 時，`aos-git` 三項都印 `no_git` 警告、回 0、不寫擋板。
+**驗收：**沒有 git 的機器上，兩版範本任務表都照常跑完、每格都有結束碼紀錄；上一格被殺時下一格的 `last/` 是 `ended:false`。git 沒裝、低於 2.36、不是 repo、repo 壞到讀不了 HEAD 時，`aos-git` 三項都印 `no_git` 警告、回 0、不寫擋板。

@@ -29,8 +29,8 @@
 |---|---|---|
 | 工作資料夾 | 環境變數 `AOS_TICK_CWD` | 這一格 tick 的資料夾絕對路徑。**不能用自己的 cwd**：任務表頂層 `cwd` 會把每一項（含系統級任務）的 cwd 帶走（[B-620](../spec/settled/tick.md)「頂層預設」） |
 | 狀態資料夾名 | 環境變數 `AOS_DIRNAME` | 沒設＝`.aos`；空字串＝工作資料夾本身（[C-09](../spec/settled/conventions.md)） |
-| 本格第幾格、前面哪幾項失敗 | `<狀態資料夾>/tick/current.json` | `seq`、`ran`（到目前跑完幾項）、`tasks`（**只列結束碼不是 0 的**，照順序；每筆 `id`、`index`＝表上位置、`exit` 或 `signal`；2026-10-01 第八批起，原本「第 i 筆就是表上第 i 項」不再成立，要照 `index` 對） |
-| 上一格有沒有正常收尾 | `<狀態資料夾>/tick/last.json` | 正常收尾＝`ended:true` 而且沒有 `stopped_after`；檔不在＝不知道 |
+| 本格第幾格、前面哪幾項失敗 | `<狀態資料夾>/tick/current/`（第九批拆檔：`record.json` 用 `$ref` 指 `ran.json`、`task-exits.json`；用 `aos_tick_record.read_record()` 讀展開後的完整紀錄） | `seq`、`ran`（到目前跑完幾項）、`tasks`（**只列結束碼不是 0 的**，照順序；每筆 `id`、`index`＝表上位置、`exit` 或 `signal`；2026-10-01 第八批起，原本「第 i 筆就是表上第 i 項」不再成立，要照 `index` 對） |
+| 上一格有沒有正常收尾 | `<狀態資料夾>/tick/last/`（同上結構） | 正常收尾＝`ended:true` 而且沒有 `stopped_after`；資料夾不在＝不知道 |
 | 自己是第幾項、叫什麼 | `AOS_TASK_INDEX`、`AOS_TASK_ID` | 位置從 0 起、一定不重複；id 可能重複（核心不查）、可能是位置字串 |
 | 叫停本格 | 建 `<狀態資料夾>/tick/stop`（停格檔） | 後面的項不跑，tick 回 0。`aos-tick-check-task` 就靠它 |
 
@@ -58,7 +58,7 @@
 - **要做到**：`aos-tick-check-task [<任務 id…>]`，自己是任務表上的一項。讀本格紀錄（第八批起 `tasks` 只列結束碼不是 0 的）：指定的 id 有任一個出現在紀錄的 `tasks` 裡 → 建停格檔 `<狀態資料夾>/tick/stop`、回 0；都沒出現 → 當成功、什麼都不做、回 0（不分辨「還沒跑」，照 POC 默認一切正常，使用者把它排在那些項後面）。不寫 id＝`tasks` 非空就建停格檔。
 - **依據**：[B-621](../spec/settled/tick/check-task.md)、[P-204](../spec/settled/protocol/tick.md)（2026-10-01 使用者裁定改寫，見文末「裁定紀錄」）；停格檔照現行 [P-213](../spec/settled/protocol/tick.md)。
 - **做法**：
-  - 紀錄路徑：`$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（狀態資料夾照 `aos_dirname.name()`）；停格檔建在同一個 `tick/` 底下。
+  - 紀錄路徑：`$AOS_TICK_CWD/<狀態資料夾>/tick/current/`（狀態資料夾照 `aos_dirname.name()`；第九批拆檔後用 `aos_tick_record.read_record()` 讀，`tasks` 在 `task-exits.json`）；停格檔建在同一個 `tick/` 底下。
   - 沒有 `AOS_TICK_CWD`、紀錄讀不到：自己的錯，回 1（照 POC 總原則讓 Python 自然丟錯即可，不另外處理）。
   - 比對：紀錄裡的 `id` 先 `str()` 再跟參數比（id 寫成數字時紀錄存的是數字）。id 重複時，只要失敗清單裡有一筆是它就算失敗（第八批起成功的不記，原本「看最後一筆」不再適用）；默認不重複，不另外處理。
   - 停格檔內容一行原因，建議 `check_failed: <第一個沒跑好的 id>`（不寫 id 時用失敗清單第一筆的 id）（核心會印在 stderr 的 `stopped:` 後面）。停格檔已經在（同一格前面有人建過）就照樣覆寫，結果一樣。
@@ -70,7 +70,7 @@
   - 指定一個還沒跑到的 id（排在後面）：不在失敗清單裡，當成功、不停格（第八批）。
   - 不寫 id：前面全是 0 不停；有一項非 0（或被訊號殺）就停。
   - 不在 tick 裡直接跑（沒有 `AOS_TICK_CWD`）：回 1。
-  - `AOS_DIRNAME=st` 時讀 `st/tick/current.json`、建 `st/tick/stop`。
+  - `AOS_DIRNAME=st` 時讀 `st/tick/current/`、建 `st/tick/stop`。
 
 ## 步驟 2：aos-git 的共通部分
 
@@ -81,7 +81,7 @@
   - **能不能用**：`git` 叫得起來，而且在工作資料夾跑 `git rev-parse --absolute-git-dir` 成功，就算能用。不能用（沒裝、不是 repo）：stderr 一行 `no_git: <原因>`、回 0，不寫擋板。不查 git 版本（這台是 2.43）。
   - **呼叫 git**：一律 `cwd=工作資料夾`；先清掉繼承的 `GIT_*` 環境變數；帶 `-c gc.auto=0 -c maintenance.auto=false -c core.hooksPath=/dev/null -c commit.gpgSign=false`（免得背景整理、hook、簽章卡住）。不帶 `core.fsync`、`safe.directory`（待問 8）。repo 與全域都沒設作者時，帶 `-c user.name=aos -c user.email=aos@localhost`。git 回非 0 就丟例外、回 1（待問 5）。
   - **aos 範圍**（待問 1）：狀態資料夾整個（`AOS_DIRNAME` 空字串時＝整個工作資料夾），扣掉 B-622 固定排除的那張表（`tick.lock`、`tick/`、`tick-blocked`、`jobs/`、`attention/`、`runner-stderr.log`、`summary/published.json`、`mq/failed/`，加上 `requests/`、`responses/`、`work/`），不管 `.gitignore` 寫了什麼。做成一組 git pathspec（`.aos` 加一串 `:(exclude)…`），三個子命令都用同一組。`.gitignore` 忽略的檔本來就不碰。
-  - **現在第幾格、前面哪幾項失敗**：讀 `current.json`（`tasks` 只列不是 0 的，照 `index` 對表上位置）；上一格讀 `last.json`。
+  - **現在第幾格、前面哪幾項失敗**：讀 `current/`（`read_record()` 展開；`tasks` 只列不是 0 的，照 `index` 對表上位置）；上一格讀 `last/`。
 - **要使用者裁定的點**：待問 1、5、7、8。
 - **驗收**（併在步驟 3、4 一起測）：
   - 資料夾不是 repo、或 PATH 裡沒有 git：三個子命令都 stderr `no_git`、回 0。
@@ -95,7 +95,7 @@
 - **做法**：
   - **open**：
     1. 不能用 → `no_git`、回 0。
-    2. 上一格沒正常收尾（`last.json` 是 `ended:false` 或有 `stopped_after`）**而且 HEAD 已經有 commit**：把 aos 範圍還原成 HEAD 的樣子——追蹤的檔改回去、刪掉的補回來；新多出來的檔要不要刪見待問 4。`last.json` 不在、上一格正常收尾、或還沒有任何 commit：不還原。
+    2. 上一格沒正常收尾（`last/` 是 `ended:false` 或有 `stopped_after`）**而且 HEAD 已經有 commit**：把 aos 範圍還原成 HEAD 的樣子——追蹤的檔改回去、刪掉的補回來；新多出來的檔要不要刪見待問 4。`last/` 不在、上一格正常收尾、或還沒有任何 commit：不還原。
     3. 清掉上一格留下的 `refs/aos/marks/*`。
     4. 打本格第一個存檔點（步驟 4 的做法；步驟 4 還沒做時這步先跳過）。
   - **close**：
@@ -111,9 +111,9 @@
   - `.gitignore` 沒列 `/.aos/tick/`：紀錄還是不進 commit、`seq` 連續。
   - 使用者先 `git add` 了一個 `.aos` 外的檔：close 的 commit 不含它，它仍在 index 裡。
   - 中間一項建停格檔：close 沒跑、沒 commit；下一格 open 把 `.aos/data.txt` 改回 HEAD 的內容。
-  - tick 在任務中途被 SIGKILL（`last.json` 是 `ended:false`）：下一格 open 一樣還原。
+  - tick 在任務中途被 SIGKILL（`last/` 是 `ended:false`）：下一格 open 一樣還原。
   - `AOS_DIRNAME=` 空字串：任務改的使用者檔也進 commit；`tick.lock`、`tick/` 不進。
-  - 每格最多一個 commit，訊息裡的數字等於 `current.json` 的 `seq`。
+  - 每格最多一個 commit，訊息裡的數字等於 `current/record.json` 的 `seq`。
 
 ## 步驟 4：aos-git mark（存檔點）
 

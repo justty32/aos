@@ -7,11 +7,13 @@ aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影�
 """
 import json
 import os
+import shlex
 import subprocess
 import time
 import unittest
 
-from _util import Base, PY
+from _util import Base, LIB, PY
+from aos_tick_record import read_record
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TICK = os.path.join(os.path.dirname(HERE), "bin", "aos-tick")
@@ -35,9 +37,12 @@ def sh(tid, script, **extra):
     return task(tid, ["sh", "-c", script], **extra)
 
 
-# 使用者 2026-10-01：沒有 AOS_TICK_RECORD，任務從 $AOS_TICK_CWD/<dirname>/tick/current.json 找紀錄；
-# dirname 照 AOS_DIRNAME 三態（沒設＝.aos、空字串＝直接在工作資料夾下、其他＝那個名字）
-CAT_REC = 'd=${AOS_DIRNAME-.aos}; cat "$AOS_TICK_CWD/${d:+$d/}tick/current.json"'
+# 使用者 2026-10-01：沒有 AOS_TICK_RECORD，任務從 $AOS_TICK_CWD/<dirname>/tick/current/ 找紀錄；
+# dirname 照 AOS_DIRNAME 三態（沒設＝.aos、空字串＝直接在工作資料夾下、其他＝那個名字）。
+# 第九批（2026-10-01）拆檔：record.json 用 $ref 指向 ran.json 等，任務用 aos_tick_record.read_record() 印展開後的完整紀錄
+CAT_REC = ('d=${AOS_DIRNAME-.aos}; %s -c "import sys, json; sys.path.insert(0, sys.argv[1]); '
+           'import aos_tick_record as r; print(json.dumps(r.read_record(sys.argv[2])))" %s '
+           '"$AOS_TICK_CWD/${d:+$d/}tick/current"' % (shlex.quote(PY), shlex.quote(LIB)))
 
 
 class TickCase(Base):
@@ -54,8 +59,16 @@ class TickCase(Base):
         args = args or (self.d,)
         return subprocess.run([PY, TICK] + list(args), capture_output=True, text=True, env=e, timeout=30)
 
-    def rec(self, name="current", cwd=""):
-        return json.loads(self.read(os.path.join(cwd, ".aos/tick/%s.json" % name)))
+    def rec(self, name="current", cwd="", dirname=".aos"):
+        """展開後的完整紀錄（第九批：`<cwd>/<dirname>/tick/<name>/record.json` 加上它 $ref 的檔）。"""
+        return read_record(os.path.join(self.d, cwd, dirname, "tick", name))
+
+    def snap(self, rel):
+        """一格紀錄資料夾裡每個檔的原文（{檔名: 內容}）；資料夾不在回 None。"""
+        p = os.path.join(self.d, rel)
+        if not os.path.isdir(p):
+            return None
+        return {n: self.read(os.path.join(rel, n)) for n in sorted(os.listdir(p))}
 
 
 class Step1Target(TickCase):
@@ -197,15 +210,15 @@ class Step1Lock(TickCase):
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
             self.wait_for("started")
-            cur, last = self.read(".aos/tick/current.json"), self.read(".aos/tick/last.json")
+            cur, last = self.snap(".aos/tick/current"), self.snap(".aos/tick/last")
             self.write(".aos/tick-blocked", "壞了\n")                 # 鎖先：上一格沒跑完時回 busy 不是 blocked
             r = self.tick()
             self.assertEqual(r.returncode, 0)
             self.assertIn("busy:", r.stderr)
             self.assertNotIn("blocked:", r.stderr)
             self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
-            self.assertEqual(self.read(".aos/tick/current.json"), cur)   # 紀錄與 seq 都不動
-            self.assertEqual(self.read(".aos/tick/last.json"), last)
+            self.assertEqual(self.snap(".aos/tick/current"), cur)   # 紀錄與 seq 都不動
+            self.assertEqual(self.snap(".aos/tick/last"), last)
             self.assertEqual((self.rec()["seq"], self.rec("last")["seq"]), (2, 1))
             os.unlink(os.path.join(self.d, ".aos/tick-blocked"))
         finally:
@@ -234,14 +247,14 @@ class Step2Blocked(TickCase):
     def test_blocked(self):
         self.tasks(sh("t", "echo ran >> ran.txt"))
         self.assertEqual(self.tick().returncode, 0)
-        cur, last_exists = self.read(".aos/tick/current.json"), self.exists(".aos/tick/last.json")
+        cur, last_exists = self.snap(".aos/tick/current"), self.exists(".aos/tick/last")
         self.write(".aos/tick-blocked", "壞了\n")
         r = self.tick()
         self.assertEqual(r.returncode, 0)                 # 正常中斷也是 0（使用者 2026-10-01 再改）
         self.assertIn("blocked: 壞了", r.stderr)
         self.assertEqual(self.read("ran.txt"), "ran\n")
-        self.assertEqual(self.read(".aos/tick/current.json"), cur)
-        self.assertEqual(self.exists(".aos/tick/last.json"), last_exists)
+        self.assertEqual(self.snap(".aos/tick/current"), cur)
+        self.assertEqual(self.exists(".aos/tick/last"), last_exists)
         os.unlink(os.path.join(self.d, ".aos/tick-blocked"))
         self.assertEqual(self.tick().returncode, 0)
         self.assertEqual(self.rec()["seq"], 2)
@@ -267,7 +280,7 @@ class Step3Seq(TickCase):
         self.tasks()
         self.assertEqual(self.tick().returncode, 0)
         self.assertEqual(self.rec(), dict(self.rec(), seq=1, tasks=[], ended=True, exit=0))
-        self.assertFalse(self.exists(".aos/tick/last.json"))
+        self.assertFalse(self.exists(".aos/tick/last"))
 
 
 class Step4Table(TickCase):
@@ -324,13 +337,13 @@ class Step4Check(TickCase):
         self.tasks(task("t", ["true"]))
         self.assertEqual(self.tick().returncode, 0)
         self.assertEqual(self.tick().returncode, 0)
-        cur, last = self.read(".aos/tick/current.json"), self.read(".aos/tick/last.json")
+        cur, last = self.snap(".aos/tick/current"), self.snap(".aos/tick/last")
         self.write(".aos/tasks.json", "{壞")
         r = self.tick()
         self.assertEqual(r.returncode, 1)
         self.assertIn("bad_table:", r.stderr)
-        self.assertEqual(self.read(".aos/tick/current.json"), cur)
-        self.assertEqual(self.read(".aos/tick/last.json"), last)
+        self.assertEqual(self.snap(".aos/tick/current"), cur)
+        self.assertEqual(self.snap(".aos/tick/last"), last)
         self.tasks(task("t", ["true"]))
         self.assertEqual(self.tick().returncode, 0)
         self.assertEqual((self.rec()["seq"], self.rec("last")["seq"]), (3, 2))
@@ -545,9 +558,9 @@ class ExitCodes(TickCase):
         self.assertEqual(rec["exit"], 0)
         check_record(self, rec)
 
-    def test_bad_current_json_is_error(self):
+    def test_bad_current_record_is_error(self):
         self.tasks(sh("t", "touch ran"))
-        self.write(".aos/tick/current.json", "{壞")
+        self.write(".aos/tick/current/record.json", "{壞")
         r = self.tick()
         self.assertEqual(r.returncode, 1)
         self.assertIn("Error", r.stderr)                  # 沒接住的例外：traceback 進 stderr
@@ -579,7 +592,7 @@ class DirName(TickCase):
         self.assertFalse(self.exists("c.ran"))
         self.assertEqual(self.read("a.txt"), ".aos2\n")
         self.assertEqual(json.loads(self.read("a.json"))["seq"], 1)        # 從 $AOS_TICK_CWD/.aos2/tick/ 找得到
-        rec = json.loads(self.read(".aos2/tick/current.json"))
+        rec = self.rec(dirname=".aos2")
         self.assertEqual((rec["seq"], rec["stopped_after"]), (1, "b"))
         self.assertEqual(sorted(os.listdir(os.path.join(self.d, ".aos2"))), ["tasks.json", "tick", "tick.lock"])
         self.write(".aos2/tick-blocked", "擋\n")
@@ -591,7 +604,7 @@ class DirName(TickCase):
         self.write(".aos2/tasks.json", json.dumps(table(sh("c", "touch c.ran"))))
         self.assertEqual(self.tick(env=self.ENV).returncode, 0)
         self.assertTrue(self.exists("c.ran"))                         # 停格檔在 .aos2/tick/ 被刪
-        self.assertEqual(json.loads(self.read(".aos2/tick/last.json"))["seq"], 1)
+        self.assertEqual(self.rec("last", dirname=".aos2")["seq"], 1)
         self.assertFalse(self.exists("wrong.ran"))
         self.assertEqual(sorted(os.listdir(os.path.join(self.d, ".aos"))), before)   # .aos/ 沒被碰
 
@@ -618,7 +631,7 @@ class DirName(TickCase):
 
 class EmptyDirName(TickCase):
     """使用者 2026-10-01 再改（待統一更新 spec）：`AOS_DIRNAME` 設了但是空字串＝不用子資料夾，
-    tasks.json、tick.lock、tick-blocked、tick/stop、tick/current.json、last.json 都直接在工作資料夾下。
+    tasks.json、tick.lock、tick-blocked、tick/stop、tick/current/、tick/last/ 都直接在工作資料夾下。
     跟「沒設」（＝.aos）分得開。"""
 
     ENV = {"AOS_DIRNAME": ""}
@@ -634,7 +647,7 @@ class EmptyDirName(TickCase):
         self.assertFalse(self.exists("c.ran"))
         self.assertEqual(self.read("a.txt"), "[]\n")
         self.assertEqual(json.loads(self.read("a.json"))["seq"], 1)        # 從 $AOS_TICK_CWD/tick/ 找得到
-        self.assertEqual(json.loads(self.read("tick/current.json"))["seq"], 1)
+        self.assertEqual(self.rec(dirname="")["seq"], 1)
         self.assertTrue(self.exists("tick.lock"))
         self.assertEqual(os.listdir(os.path.join(self.d, ".aos")), ["tasks.json"])   # .aos/ 沒被碰
         self.write("tick-blocked", "擋\n")
@@ -646,7 +659,7 @@ class EmptyDirName(TickCase):
         self.assertEqual(self.tick(env=self.ENV).returncode, 0)
         self.assertTrue(self.exists("c.ran"))                         # 停格檔 tick/stop 被刪
         self.assertFalse(self.exists("tick/stop"))
-        self.assertEqual(json.loads(self.read("tick/last.json"))["seq"], 1)
+        self.assertEqual(self.rec("last", dirname="")["seq"], 1)
         self.assertFalse(self.exists("wrong.ran"))
         self.assertFalse(self.exists(".aos/tick"))
 
@@ -658,7 +671,7 @@ class EmptyDirName(TickCase):
         self.assertFalse(self.exists("tick.lock"))
         self.assertEqual(self.tick().returncode, 0)                   # 沒設：.aos/tasks.json
         self.assertTrue(self.exists("aos.ran"))
-        self.assertTrue(self.exists(".aos/tick/current.json"))
+        self.assertTrue(self.exists(".aos/tick/current/record.json"))
         self.assertFalse(self.exists("tick"))
 
 class RecordOnlyFailures(TickCase):
@@ -685,8 +698,8 @@ class RecordOnlyFailures(TickCase):
         self.assertEqual((a["ran"], a["tasks"], a["ended"]), (0, [], False))      # 開格時 ran 是 0
         self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (2, []))
 
-    def test_stop_ran_excludes_skipped_and_last_json(self):
-        # 停在 b（b 自己失敗）：c 沒跑、不算進 ran；下一格的 last.json 原樣帶著
+    def test_stop_ran_excludes_skipped_and_last(self):
+        # 停在 b（b 自己失敗）：c 沒跑、不算進 ran；下一格的 last/ 原樣帶著
         self.tasks(sh("a", "exit 3"), sh("b", "echo 停 > .aos/tick/stop; exit 9"), sh("c", "exit 5"))
         self.assertEqual(self.tick().returncode, 0)
         first = self.rec()
@@ -699,6 +712,59 @@ class RecordOnlyFailures(TickCase):
         self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (1, []))
 
 
+class RecordFiles(TickCase):
+    """第九批（使用者 2026-10-01）：「把容易被改動的弄成$ref指向其他檔案，不容易被改動的留在current.json」。
+    一格紀錄是資料夾 tick/current/：record.json（開格、收尾各寫一次）用 $ref 指向 ran.json、task-exits.json、
+    hook-exits.json（有 hooks 才有）；換紀錄＝刪 last/、current/ 整個改名成 last/、建新的 current/。"""
+
+    RAW = 'cat .aos/tick/current/record.json > raw.json; cat .aos/tick/current/ran.json > ran.txt'
+
+    def raw(self, rel):
+        return json.loads(self.read(rel))
+
+    def test_layout_and_refs(self):
+        self.tasks(sh("a", "exit 4"), sh("b", self.RAW), sh("c", "kill -9 $$"))
+        self.assertEqual(self.tick().returncode, 0)
+        during = self.raw("raw.json")                     # b 跑的時候：record.json 還是開格那份
+        self.assertEqual({k: during[k] for k in ("ran", "tasks", "ended")},
+                         {"ran": {"$ref": "ran.json"}, "tasks": {"$ref": "task-exits.json"}, "ended": False})
+        self.assertEqual(self.read("ran.txt"), "1\n")
+        cur = os.path.join(self.d, ".aos/tick/current")
+        self.assertEqual(sorted(os.listdir(cur)), ["ran.json", "record.json", "task-exits.json"])   # 沒 hooks：沒有 hook-exits.json
+        rec = self.raw(".aos/tick/current/record.json")
+        self.assertEqual(set(rec), {"version", "seq", "started_at_ms", "ran", "tasks", "ended", "exit"})
+        self.assertEqual((rec["ran"], rec["tasks"], rec["ended"], rec["exit"]),
+                         ({"$ref": "ran.json"}, {"$ref": "task-exits.json"}, True, 0))
+        check_record(self, rec, raw=True)
+        self.assertEqual(self.raw(".aos/tick/current/ran.json"), 3)
+        self.assertEqual(self.raw(".aos/tick/current/task-exits.json"),
+                         [{"id": "a", "index": 0, "exit": 4}, {"id": "c", "index": 2, "signal": 9}])
+        full = self.rec()
+        self.assertEqual((full["ran"], full["tasks"]), (3, self.raw(".aos/tick/current/task-exits.json")))
+        self.assertNotIn("hooks", full)
+        check_record(self, full)
+        before = self.snap(".aos/tick/current")
+        self.tasks(sh("x", "true"))
+        self.assertEqual(self.tick().returncode, 0)
+        self.assertEqual(self.snap(".aos/tick/last"), before)          # 整個資料夾改名，檔原樣
+        self.assertEqual(self.rec("last"), full)                       # $ref 是相對路徑，改名後仍指得對
+        self.assertEqual(self.raw(".aos/tick/current/task-exits.json"), [])
+        self.assertEqual(sorted(os.listdir(os.path.join(self.d, ".aos/tick"))), ["current", "last"])
+
+    def test_no_current_drops_last(self):
+        # 沒有 current/ 卻有 last/：上一格沒留下紀錄＝不知道，刪 last/；seq 從 last 接
+        self.tasks(task("t", ["true"]))
+        self.tick(), self.tick()
+        import shutil
+        shutil.rmtree(os.path.join(self.d, ".aos/tick/current"))
+        self.assertEqual(self.tick().returncode, 0)
+        self.assertEqual(self.rec()["seq"], 2)
+        self.assertFalse(self.exists(".aos/tick/last"))
+
+    def test_read_record_missing(self):
+        self.assertIsNone(read_record(os.path.join(self.d, "nope")))
+
+
 class Step9Whole(TickCase):
 
     def test_b626_only_true_no_daemon(self):
@@ -709,8 +775,10 @@ class Step9Whole(TickCase):
         check_record(self, self.rec())
 
 
-def check_record(case, rec):
-    """P-213 的跨欄位規則＋（有 jsonschema 時）tick-record schema。"""
+def check_record(case, rec, raw=False):
+    """P-213 的跨欄位規則＋（有 jsonschema 時）tick-record schema。raw＝傳進來的是 record.json 本體，只驗 schema 的 RecordFile。"""
+    if raw:
+        return _check_schema(rec, raw=True)
     if rec.get("ended"):
         case.assertEqual(rec["exit"], 0)                  # 寫得到收尾就是 0，任務成敗不影響
         if "stopped_after" in rec:                     # 第八批：停在第 ran-1 項；它失敗的話是 tasks 最後一筆
@@ -723,10 +791,10 @@ def check_record(case, rec):
     case.assertEqual(idx, sorted(set(idx)))
     case.assertTrue(all(0 <= i < rec["ran"] for i in idx))
     case.assertNotIn({"exit": 0}, [{k: v for k, v in t.items() if k == "exit"} for t in rec["tasks"]])
-    if rec.get("ended"):
-        pass
-    else:
-        case.assertNotIn("exit", rec)
+    _check_schema(rec)
+
+
+def _check_schema(rec, raw=False):
     try:
         from jsonschema import Draft202012Validator
         from referencing import Registry, Resource
@@ -738,7 +806,10 @@ def check_record(case, rec):
         with open(os.path.join(sd, n), encoding="utf-8") as f:
             res[n] = Resource.from_contents(json.load(f))
     reg = Registry().with_resources(res.items())
-    Draft202012Validator(res["tick-record.schema.json"].contents, registry=reg).validate(rec)
+    schema = res["tick-record.schema.json"].contents
+    if raw:                                            # 第九批：record.json 本體（ran／tasks／hooks 是 $ref）
+        schema = {"$ref": "tick-record.schema.json#/$defs/RecordFile"}
+    Draft202012Validator(schema, registry=reg).validate(rec)
 
 
 if __name__ == "__main__":

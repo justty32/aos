@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "seq": 7,
+  "started_at_ms": 1790000000000,
+  "ran": {
+    "$ref": "ran.json"
+  },
+  "tasks": {
+    "$ref": "task-exits.json"
+  },
+  "hooks": {
+    "$ref": "hook-exits.json"
+  },
+  "ended": true,
+  "exit": 0,
+  "stopped_after": "check"
+}

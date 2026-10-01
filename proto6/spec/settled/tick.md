@@ -220,7 +220,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 | 變數 | 內容 |
 |---|---|
-| `AOS_TICK_CWD` | 工作資料夾的絕對路徑，也就是這一格 tick 的 cwd。本格紀錄在 `$AOS_TICK_CWD/.aos/tick/current.json`（B-633） |
+| `AOS_TICK_CWD` | 工作資料夾的絕對路徑，也就是這一格 tick 的 cwd。本格紀錄在 `$AOS_TICK_CWD/.aos/tick/current/`（B-633；`record.json` 加上它 `$ref` 的檔） |
 | `AOS_TASK_ID` | 這一項的 id（沒寫 id 時是位置字串；id 不是字串時轉成字串） |
 | `AOS_TASK_INDEX` | 這一項在任務表陣列的位置，從 0 起 |
 
@@ -263,7 +263,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | 回 | 什麼時候 |
 |---|---|
 | `0` | 照表跑完（不管任務成敗、回幾）；被停格檔停下；拿不到鎖（`busy`）；有擋板檔（`blocked`） |
-| `1` | argv 用法錯（含目標是檔）、`AOS_DIRNAME` 不合法、`no_target`、`no_tasks`、`bad_table`；tick 自用的檔（擋板檔、停格檔、`current.json`、`last.json`）讀不到、寫不進或格式壞——這種就讓程式自然丟錯（traceback 進 stderr），不分發生時機、不補救 |
+| `1` | argv 用法錯（含目標是檔）、`AOS_DIRNAME` 不合法、`no_target`、`no_tasks`、`bad_table`；tick 自用的檔（擋板檔、停格檔、`tick/current/`、`tick/last/` 裡的紀錄檔）讀不到、寫不進或格式壞——這種就讓程式自然丟錯（traceback 進 stderr），不分發生時機、不補救 |
 
 stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`busy`、`blocked`、`stopped`、`no_target`、`no_tasks`、`bad_table`、`exec_failed`。
 
@@ -284,11 +284,22 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 
 核心多開放一件事：**本格跑了幾項、哪幾項結束碼不是 0，寫成一份檔，讓後面的任務讀得到。**〔使用者 2026-10-01 第八批：「tasks如果結果是0，那就不用紀錄了。hooks也是。」〕 本資料夾的**格數**也記在這裡。這份紀錄直接取代第十九批的 git 備援日誌（[B-632](tick/git.md)）：git 與無 git 合成同一種模式。
 
-依據：第二十批追答 8、疑點裁定 5；修正輪暫定的裁定（格數不倒退改成不保證）；納入 cgroup／git 輪疑點 10：使用者 2026-09-30 同意照暫定；使用者 2026-10-01（默認紀錄是好的、`--firstdo-fsync` 先不做、拿掉 `AOS_TICK_RECORD`）；同日第八批（只記不是 0 的、加 `ran`，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）。以下位置、欄位與寫法都是〔建議預設，未拍板〕。落盤、寫不進、讀不懂的處理在[暫緩區](deferred/tick.md#暫緩b-633-落盤寫不進與讀不懂)。
+依據：第二十批追答 8、疑點裁定 5；修正輪暫定的裁定（格數不倒退改成不保證）；納入 cgroup／git 輪疑點 10：使用者 2026-09-30 同意照暫定；使用者 2026-10-01（默認紀錄是好的、`--firstdo-fsync` 先不做、拿掉 `AOS_TICK_RECORD`）；同日第八批（只記不是 0 的、加 `ran`，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）；同日第九批（紀錄拆檔、用 `$ref` 引用）。以下位置、欄位與寫法都是〔建議預設，未拍板〕。落盤、寫不進、讀不懂的處理在[暫緩區](deferred/tick.md#暫緩b-633-落盤寫不進與讀不懂)。
 
 ### 放哪、記什麼
 
-兩個檔都 ignored：`.aos/tick/current.json`（本格）與 `.aos/tick/last.json`（上一格）。任務從 `$AOS_TICK_CWD/.aos/tick/current.json` 讀本格紀錄（狀態資料夾名照 `AOS_DIRNAME`）。格式見 [P-213](protocol/tick.md)。**只有核心寫**，而且只在持鎖時寫。
+一格的紀錄是一個資料夾，兩個都 ignored：`.aos/tick/current/`（本格）與 `.aos/tick/last/`（上一格，同結構）。任務從 `$AOS_TICK_CWD/.aos/tick/current/` 讀本格紀錄（狀態資料夾名照 `AOS_DIRNAME`）。格式見 [P-213](protocol/tick.md)。**只有核心寫**，而且只在持鎖時寫。
+
+〔使用者 2026-10-01 第九批〕「current.json這邊，也要引入指示詞，把容易被改動的弄成$ref指向其他檔案，不容易被改動的留在current.json」：常變的欄位各自一個檔，`record.json` 用 `$ref`（[指示詞](../../../proto5/spec/directives/README.md)）指過去：
+
+| 檔 | 內容 | 什麼時候寫 |
+|---|---|---|
+| `record.json` | `version`、`seq`、`started_at_ms`、`ended`、`exit`、`stopped_after`，加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}` | 開格一次、收尾一次 |
+| `ran.json` | 一個數字＝下表的 `ran` | 開格寫 `0`，每跑完一項重寫 |
+| `task-exits.json` | 下表的 `tasks`（陣列） | 開格寫 `[]`，有項結束碼不是 0 才重寫 |
+| `hook-exits.json` | 下表的 `hooks`（`{"after_all":[...]}`） | 任務表有寫 `hooks.after_all` 時，收尾那次先寫好 `{"after_all":[]}`；之後有 hook 不是 0 才重寫 |
+
+`$ref` 都是相對路徑（相對 `record.json` 所在資料夾），整個資料夾改名成 `last/` 後仍指得對。讀的一方展開 `record.json` 頂層各鍵的 `$ref`，得到下表的完整紀錄。下表講的都是展開後的欄位。
 
 | 欄位 | 意思 |
 |---|---|
@@ -308,36 +319,36 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 - **沒有紀錄的格不佔號**：拿不到鎖（busy）、被擋板擋住（blocked）、表沒過極簡檢查（bad_table）的格，都不加 `seq`。這些格裡沒有任務拿得到 `seq`，所以下一格用同一個號也不會重複。
 - 跟舊 daemon 每筆登記的 `tick_seq` 是兩回事：那個只用在叫醒後等新格，登記換了就重算（[B-607](deferred/daemon/registration.md)，在暫緩區）。
 
-### 開格：換檔
+### 開格：換紀錄
 
 讀表過了之後、刪停格檔之前（B-620「一格怎麼走」第 5 步）：
 
-1. **算新的 `seq`**：有 `current.json` 就取它的 `seq` 加 1；沒有就取 `last.json` 的加 1；都沒有就是 1。默認兩份都讀得懂；讀不懂就自然丟錯、回 1。
-2. **寫新紀錄**（`ended:false`、`ran:0`、`tasks:[]`）到暫存檔。`.aos/tick/` 不在就建。
-3. **換檔**：有 `current.json` 就 rename 成 `last.json`；沒有 `current.json` 卻有 `last.json`，表示上一格沒留下紀錄，就刪掉 `last.json`，讓讀的人看到「不知道上一格」。
-4. 暫存檔 rename 成 `current.json`。
+1. **算新的 `seq`**：有 `current/record.json` 就取它的 `seq` 加 1；沒有就取 `last/record.json` 的加 1；都沒有就是 1。默認兩份都讀得懂；讀不懂就自然丟錯、回 1。
+2. **寫新紀錄**到暫存資料夾 `.aos/tick/.current.tmp/`：`record.json`（`ended:false`）、`ran.json`（`0`）、`task-exits.json`（`[]`）。`.aos/tick/` 不在就建；上次留下的暫存資料夾先刪。
+3. **換紀錄**：刪掉 `last/`；有 `current/` 就把整個資料夾 rename 成 `last/`。沒有 `current/` 卻有 `last/`，表示上一格沒留下紀錄，刪掉之後讀的人看到「不知道上一格」。
+4. 暫存資料夾 rename 成 `current/`。
 
 做完第 4 步才開第一項。
 
 ### 每項之後
 
-- `ran` 加 1；結束碼不是 0（含被訊號殺）才在 `tasks` 加一筆。
-- 整份重寫：寫暫存檔 → rename。不 fsync。每項之後都重寫（就算這項是 0、`tasks` 沒變，`ran` 也變了）。
-- 照表跑完、被停格檔停下時寫 `ended:true`、`exit:0`（停下的另加 `stopped_after`）。
+- `ran` 加 1（重寫 `ran.json`）；結束碼不是 0（含被訊號殺）才在 `tasks` 加一筆（重寫 `task-exits.json`，先於 `ran.json`）。
+- 每個檔都整份重寫：寫同資料夾的暫存檔 → rename。不 fsync。`record.json` 這時不動。
+- 照表跑完、被停格檔停下時重寫 `record.json`：`ended:true`、`exit:0`（停下的另加 `stopped_after`；有 hooks 的先寫好 `hook-exits.json` 再加 `hooks` 的 `$ref`）。
 - tick 中途出錯（自然丟錯）或被殺時，紀錄停在最後一次寫成的樣子，`ended:false`。
 
 ### 誰讀
 
-- 任務讀 `current.json` 看本格前面跑了幾項（`ran`）、哪幾項失敗（`tasks`），讀 `last.json` 看上一格有沒有正常收尾。某項不在 `tasks` 裡＝它成功或還沒跑到；要分這兩種，比它的位置跟 `ran`。
+- 任務讀 `current/` 看本格前面跑了幾項（`ran`）、哪幾項失敗（`tasks`），讀 `last/` 看上一格有沒有正常收尾。讀的時候展開 `record.json` 的 `$ref`（Python 版：`aos_tick_record.read_record(資料夾)`）。某項不在 `tasks` 裡＝它成功或還沒跑到；要分這兩種，比它的位置跟 `ran`。
 - **正常收尾**＝`ended:true` 而且沒有 `stopped_after`。
 - 核心自己除了算 `seq`，不拿它做任何決定。
 
 ### 其他
 
 - **被擋板檔擋住的格**不寫紀錄、不加 `seq`（B-620），跟 busy 一樣當成沒開過格。
-- **別刪它**：`.aos/tick/` 不被 `aos-clean` 清；`aos-git` 固定排除它，不靠 `.gitignore`，提交與還原都不碰（[B-622](tick/git.md)）。人手刪掉兩份檔，`seq` 從 1 重數，以格數算的保留期會算錯，風險自負。
+- **別刪它**：`.aos/tick/` 不被 `aos-clean` 清；`aos-git` 固定排除它，不靠 `.gitignore`，提交與還原都不碰（[B-622](tick/git.md)）。人手刪掉兩份紀錄，`seq` 從 1 重數，以格數算的保留期會算錯，風險自負。
 
-**驗收：**有 `.aos/tick-blocked` 時直接跑 `aos-tick` 回 0、stderr 有 `blocked`、沒有任務跑、兩份紀錄與 `seq` 都不變，刪掉擋板後下一格照常；第一項回 7 時第二項讀得到 `ran:1`、`tasks:[{"id":…,"index":0,"exit":7}]`，第一項回 0 時讀到 `ran:1`、`tasks:[]`；第三項被 SIGKILL 時紀錄那筆是 `"index":2,"signal":9`；tick 在第二項中途被殺，下一格的 `last.json` 是 `ended:false`；同一資料夾連跑十格，`seq` 從 1 到 10，換成 cron 跑仍接著數；busy 或 bad_table 時兩份紀錄都不變。
+**驗收：**有 `.aos/tick-blocked` 時直接跑 `aos-tick` 回 0、stderr 有 `blocked`、沒有任務跑、兩份紀錄與 `seq` 都不變，刪掉擋板後下一格照常；第一項回 7 時第二項讀得到 `ran:1`、`tasks:[{"id":…,"index":0,"exit":7}]`，第一項回 0 時讀到 `ran:1`、`tasks:[]`；第三項被 SIGKILL 時紀錄那筆是 `"index":2,"signal":9`；tick 在第二項中途被殺，下一格的 `last/` 是 `ended:false`；同一資料夾連跑十格，`seq` 從 1 到 10，換成 cron 跑仍接著數；busy 或 bad_table 時兩份紀錄都不變；`current/` 裡有 `record.json`、`ran.json`、`task-exits.json` 三個檔（有 hooks 時多 `hook-exits.json`），`record.json` 的 `ran`、`tasks` 是 `$ref`，換成 `last/` 後展開結果不變。
 
 ## B-627：人手或 cron 直接跑一格：風險自負
 

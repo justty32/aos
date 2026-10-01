@@ -478,3 +478,25 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **另一條**：hook 跑到時展開失敗→tick 回 1，但紀錄已是 `ended:true`／`exit:0`，兩邊對不上。使用者 2026-10-01：照 POC 默認一切正常，**先不管**。
 
 改到的地方：程式 `lib/aos_tick_record.py`、`lib/aos_tick.py`、`lib/aos_tick_hooks.py`；測試 `tests/test_tick.py`（新增 `RecordOnlyFailures`）、`tests/test_tick_hooks.py`；[tick 核心](../../spec/settled/tick.md) B-620、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-204、P-213；[tick/hooks.md](../../spec/settled/tick/hooks.md)；[tick/check-task.md](../../spec/settled/tick/check-task.md)；[tick/git.md](../../spec/settled/tick/git.md)（`kind` 回查與組的成敗判法各一句）；[驗收入口](../../spec/conformance.md)一句；schema `tick-record` 與 `examples/tick/tick-record.*`（14 份改寫、6 份新反例）、`examples/messages/validate.py` 補充檢查；[src/py README](../../src/py/README.md)；[plan m1-tick-core](../../plan/m1-tick-core.md)、[m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註、[m2-system-tasks](../../plan/m2-system-tasks.md)（步驟 1、4 與裁定紀錄）。
+
+<a id="2026-10-01-第九批紀錄拆檔"></a>
+
+## 2026-10-01 第九批：紀錄拆檔
+
+〔使用者裁定 2026-10-01〕使用者原話：「應該說，每跑一次task就要更新一次current.json，實在是...我是覺得啦，current.json這邊，也要引入指示詞，把容易被改動的弄成$ref指向其他檔案，不容易被改動的留在current.json」；AI 隊提的方案使用者確認：「1. 各一個檔。 2.隨你。 3.原位。」（1＝常改的欄位各一個檔；2＝檔名與細節由 AI 隊定；3＝停格檔 `tick/stop`、擋板檔 `tick-blocked`、鎖 `tick.lock` 原位不動。）
+
+- **一格紀錄是一個資料夾**：`<狀態資料夾>/tick/current/`（本格）、`tick/last/`（上一格，同結構），四個檔：
+  - `record.json`：不常改的 `version`、`seq`、`started_at_ms`、`ended`、`exit`、`stopped_after`，加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}`。只在開格、收尾各寫一次。
+  - `ran.json`：一個數字，每跑完一項重寫。
+  - `task-exits.json`：結束碼不是 0 的任務 `[{"id","index","exit"|"signal"}…]`；開格寫 `[]`，有失敗時才重寫。
+  - `hook-exits.json`：`{"after_all":[…]}`，結束碼不是 0 的 hook。
+- **換紀錄**：在暫存資料夾 `tick/.current.tmp/` 寫好新的三個檔 → 刪 `last/` → `current/` 整個 rename 成 `last/`（沒有 `current/` 就只刪 `last/`，上一格算不知道）→ 暫存資料夾 rename 成 `current/`。`$ref` 是相對路徑，整個資料夾改名後仍指得對。`seq` 從 `current/record.json`、沒有就 `last/record.json` 接著數（照舊算法）。
+- **讀的一方展開 `$ref`**：`aos_tick_record.read_record(資料夾)` 回展開後的完整紀錄（用 `aos_directives` 現成函式，只展開頂層各鍵），測試與之後的 `aos-tick-check-task` 都用它。schema `tick-record` 的根描述展開後的完整紀錄，`$defs/RecordFile` 描述 `record.json` 本體。
+- **「隨你」由 AI 隊定的細節**：
+  - `hook-exits.json` 何時建：任務表有寫 `hooks.after_all` 時，收尾那次先寫好 `{"after_all":[]}`、再寫 `record.json`（`ended:true` 加 `hooks` 的 `$ref`），所以 `record.json` 一樣只寫兩次（原本「開始跑 hooks 前寫 `after_all: []`」併進收尾那次，hook 開跑時讀得到）。沒寫 hooks 的格沒有這個檔、`record.json` 也沒有 `hooks` 鍵——展開後的語意跟拆檔前一樣。
+  - 每項之後先寫 `task-exits.json`（有失敗時）再寫 `ran.json`，讀到 `ran:N` 時前 N 項的失敗一定看得到。
+  - `record.json` 的鍵順序：`ran`、`tasks`、`hooks` 排在 `ended`、`exit`、`stopped_after` 前面（只為好看）。
+  - 每個檔都是同資料夾暫存檔（`.<檔名>.tmp`）→ rename；開格前若有上次留下的 `.current.tmp/` 先刪。
+- **舊的 `tick/current.json`、`tick/last.json` 不再使用**，POC 不管舊紀錄遷移；照 POC 總原則默認一切正常。
+
+改到的地方：程式 `lib/aos_tick_record.py`（改寫，加 `read_record()`）、`lib/aos_tick.py`（收尾時告訴紀錄有沒有 hooks）、`lib/aos_tick_hooks.py`（拿掉 `start_hooks`）；測試 `tests/test_tick.py`（任務改用 `read_record()` 印紀錄、比對整個資料夾、新 `RecordFiles` 3 條）、`tests/test_tick_hooks.py`（新 1 條）、`tests/test_daemon.py`（讀 `seq` 的路徑）；[tick 核心](../../spec/settled/tick.md) B-620 環境變數表、結束碼表、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-200、P-203、P-204、P-211、P-212、P-213；[tick/hooks.md](../../spec/settled/tick/hooks.md)；[tick/check-task.md](../../spec/settled/tick/check-task.md)；[tick/git.md](../../spec/settled/tick/git.md)（固定排除的 `.aos/tick/` 本來就涵蓋整個資料夾，只補一句說明）；[tick/recovery.md](../../spec/settled/tick/recovery.md)；[暫緩區 tick](../../spec/settled/deferred/tick.md)（檔名註）；[慣例 C-10](../../spec/settled/conventions.md)；[名詞](../../spec/settled/terms.md)；[驗收入口](../../spec/conformance.md)；schema `tick-record`（加 `$defs/RecordFile`）、`examples/tick/tick-record-file.*`（2 正 3 反）、`examples/messages/validate.py`；[src/py README](../../src/py/README.md)；[plan m1-tick-core](../../plan/m1-tick-core.md)、[m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註、[m2-system-tasks](../../plan/m2-system-tasks.md)。

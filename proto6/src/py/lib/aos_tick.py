@@ -38,7 +38,8 @@ stderr 只印 tick 自己的 `代碼: 說明` 行（或 traceback），任務的
 
 〔使用者 2026-10-01，待統一更新 spec〕「工作資料夾」＝這一格 aos-tick 的 cwd（run_tick 會 chdir 過去），
 給任務的 `AOS_TICK_CWD` 就是它的絕對路徑（原 `AOS_NODE_DIR` 改名）；`AOS_TICK_RECORD` 拿掉，
-任務要看紀錄就從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找。node 是之後 aos-tick 的 node 模組的事，
+任務要看紀錄就從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current/` 找（第九批拆檔：record.json 用 $ref 指向
+ran.json、task-exits.json、hook-exits.json，aos_tick_record.read_record() 讀展開後的完整紀錄）。node 是之後 aos-tick 的 node 模組的事，
 tick 這層不談。同日再改：參數 `--node` 改名 `--target`（不留舊名，跟 aos-daemon、aos-exec 一樣叫「目標」；
 aos-exec 的目標是位置參數，這裡照使用者原話用 `--target`），`resolve_node()` 改 `resolve_target()`、
 stderr `no_node:` 改 `no_target:`。同日三改：`--target` 旗標拿掉（不留），目標改成位置參數 `aos-tick [<目標>]`，
@@ -123,7 +124,7 @@ def resolve_target(arg):
 
 def run_tick(cwd, table):
     """B-620「一格怎麼走」：整格照這個順序，回整格結束碼。cwd（工作資料夾）、table 由 resolve_target() 給（絕對路徑）。
-    工作資料夾的 `.aos/` 不在時由 take_lock() 建、`.aos/tick/` 由 Record.open() 建（只建資料夾）；`.aos` 是 aos_dirname.name()。"""
+    工作資料夾的 `.aos/` 不在時由 take_lock() 建、`.aos/tick/current/` 由 Record.open() 建；`.aos` 是 aos_dirname.name()。"""
     os.chdir(cwd)
 
     lock_fd = take_lock()
@@ -162,7 +163,8 @@ def _run_locked(cwd, table):
             stopped_after = task_id
             break
 
-    record.finish(EXIT_OK, stopped_after)
+    hook_points = ("after_all",) if tbl.after_all is not None else ()
+    record.finish(EXIT_OK, stopped_after, hook_points)   # 有 hooks 時先備好 hook-exits.json（第九批）
     if tbl.after_all is not None:  # B-635：照表跑完或被停格檔停下之後；不看停格檔、碼只記下、不影響 tick 的結束碼
         aos_tick_hooks.run_after_all(cwd, tbl.defaults, tbl.after_all, record, run_one)
     return EXIT_OK

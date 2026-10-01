@@ -60,14 +60,14 @@
 | 有擋板檔（`blocked`） | 不跑 |
 | tick 自己出錯（`bad_table`、用法錯、中途自然丟錯…） | 不跑 |
 
-- 跑的時機：本格紀錄已收尾（`ended:true`、`exit:0`，被停下的還有 `stopped_after`）之後。所以 hook 讀 `current.json` 看得到整格的結果（`ran` 與失敗清單 `tasks`），也看得到前面 hook 裡結束碼不是 0 的（0 不記，第八批）。
+- 跑的時機：本格紀錄已收尾（`ended:true`、`exit:0`，被停下的還有 `stopped_after`）之後。所以 hook 讀本格紀錄（`current/`，展開 `$ref` 後）看得到整格的結果（`ran` 與失敗清單 `tasks`），也看得到前面 hook 裡結束碼不是 0 的（0 不記，第八批）。
 - **不看停格檔**：hook 之間不查停格檔，hook 自己建了停格檔也不擋下一個 hook；留著的停格檔照舊由下一格開頭刪（[B-620](../tick.md)）。
 - **每項結束碼不是 0 的照實記（0 不記）、接著跑下一項**，跟任務一樣；**不影響 tick 的結束碼**（照舊回 0，[C-08](../conventions.md)）。
 - 某個 hook 跑到時展開失敗（合併後的 inst 不合規則）：跟任務一樣自然丟錯、tick 回 1；紀錄停在已寫的樣子（`ended:true`、`exit:0`，`hooks.after_all` 只到前一項）。這時 tick 回 1 而紀錄寫著 `exit:0`，兩邊對不上——**使用者 2026-10-01：先不管**（照 POC 默認一切正常，不另處理）。
 
 ### 紀錄
 
-記在本格紀錄 `current.json`（[B-633](../tick.md)、[P-213](../protocol/tick.md)），跟 `tasks` 分開：
+記在本格紀錄（[B-633](../tick.md)、[P-213](../protocol/tick.md)），跟 `tasks` 分開。〔使用者 2026-10-01 第九批：紀錄拆檔〕實際存在 `tick/current/hook-exits.json`，`record.json` 用 `"hooks":{"$ref":"hook-exits.json"}` 指過去；下面是展開後的樣子：
 
 ```json
 {"version":1,"seq":7,"started_at_ms":1790000000000,
@@ -78,12 +78,12 @@
 
 （任務 `a`、`b` 都回 0、`b` 建了停格檔；hook `notify` 回 0 不記，第 2 個 hook 沒寫 id、回 3。）
 
-- 有寫 `after_all` 的格，收尾之後先寫 `hooks.after_all: []`，每跑完一個結束碼不是 0 的 hook 加一筆（整份重寫，跟任務一樣）；格式跟 `tasks` 每筆相同（`id`、`index`＝它在 `after_all` 的位置，加 `exit` 或 `signal`）。**結束碼 0 的不記**〔使用者 2026-10-01 第八批：「hooks也是」〕。
+- 有寫 `after_all` 的格，收尾那次先寫好 `hook-exits.json`（`{"after_all":[]}`）、再寫 `record.json`（`ended:true` 加 `hooks` 的 `$ref`），所以 `record.json` 一樣只寫開格、收尾兩次；之後每跑完一個結束碼不是 0 的 hook 加一筆（整份重寫 `hook-exits.json`）；格式跟 `tasks` 每筆相同（`id`、`index`＝它在 `after_all` 的位置，加 `exit` 或 `signal`）。**結束碼 0 的不記**〔使用者 2026-10-01 第八批：「hooks也是」〕。
 - hooks 不記 `ran`：hooks 不看停格檔、一定全跑，先寫好的 `after_all: []` 就表示開始跑了；tick 跑到一半被殺時看不出跑到第幾個，照 POC 默認一切正常不管。
-- 表裡沒寫 `after_all` 的格，紀錄沒有 `hooks` 鍵；`after_all` 是空陣列時是 `"hooks":{"after_all":[]}`。
-- 換紀錄時跟著整份進 `last.json`。
+- 表裡沒寫 `after_all` 的格，紀錄沒有 `hooks` 鍵（`record.json` 沒有 `hooks` 的 `$ref`，也沒有 `hook-exits.json`）；`after_all` 是空陣列時是 `"hooks":{"after_all":[]}`。
+- 換紀錄時整個 `current/` 改名成 `last/`，`hook-exits.json` 跟著過去。
 - `hooks` 只會出現在 `ended:true` 的紀錄裡。
 
-依據：使用者 2026-10-01 第六批裁定（[verdicts 11 篇末](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第六批tick-的-hooks外掛掛點)）：「那就做外掛掛點，這個hooks就是模組」「after_cell？我以為是after_all，我們有cell嗎？ 2.可以一串。 3.吃，hooks中的掛點所提供的，比如"after_cell":[{},{},...]，就比照tasks。4.會記錄。 剩下都建議」；同日改成頂層鍵：「所以目前唯一的模組就是hooks...就不讓他當模組了，直接讓他變頂層key」。
+依據：使用者 2026-10-01 第九批（紀錄拆檔，`hook-exits.json`）；使用者 2026-10-01 第六批裁定（[verdicts 11 篇末](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第六批tick-的-hooks外掛掛點)）：「那就做外掛掛點，這個hooks就是模組」「after_cell？我以為是after_all，我們有cell嗎？ 2.可以一串。 3.吃，hooks中的掛點所提供的，比如"after_cell":[{},{},...]，就比照tasks。4.會記錄。 剩下都建議」；同日改成頂層鍵：「所以目前唯一的模組就是hooks...就不讓他當模組了，直接讓他變頂層key」。
 
-**驗收：**沒寫 `hooks`（或 `hooks` 裡沒 `after_all`）時紀錄沒有 `hooks`、行為照舊；寫在 `modules.hooks` 底下的不跑。`after_all` 三項依序在任務之後跑，沒寫 id 的用位置字串；頂層 `argv`、`envs` 當預設，項自己寫的 `envs` 整包蓋過。`hooks`、`after_all`、某項各自 `$ref` 到別的檔照跑；項裡 `argv` 元素的 `#/k` 指合併後的這一項。hook 拿到的 `AOS_TICK_CWD` 是工作資料夾、`AOS_TASK_ID`／`AOS_TASK_INDEX` 是自己的。任務建了停格檔：後面的任務不跑、`after_all` 照跑，hook 再建停格檔也不擋下一個 hook。hook 回 3、被 SIGKILL、找不到程式（127，stderr `exec_failed: after_all/<id>:`）都照記（帶 `index`）、回 0 的不記、下一個照跑、tick 回 0。擋板、busy、表壞時一個 hook 都不跑。`after_all` 不是陣列、某項不是物件、合併後沒 `argv`、`hooks` 不是物件、讀表那一層 `$ref` 解不開：`bad_table`、回 1、紀錄與 `seq` 不動。紀錄的 `hooks.after_all` 下一格進 `last.json`。測試：`src/py/tests/test_tick_hooks.py`。
+**驗收：**沒寫 `hooks`（或 `hooks` 裡沒 `after_all`）時紀錄沒有 `hooks`、行為照舊；寫在 `modules.hooks` 底下的不跑。`after_all` 三項依序在任務之後跑，沒寫 id 的用位置字串；頂層 `argv`、`envs` 當預設，項自己寫的 `envs` 整包蓋過。`hooks`、`after_all`、某項各自 `$ref` 到別的檔照跑；項裡 `argv` 元素的 `#/k` 指合併後的這一項。hook 拿到的 `AOS_TICK_CWD` 是工作資料夾、`AOS_TASK_ID`／`AOS_TASK_INDEX` 是自己的。任務建了停格檔：後面的任務不跑、`after_all` 照跑，hook 再建停格檔也不擋下一個 hook。hook 回 3、被 SIGKILL、找不到程式（127，stderr `exec_failed: after_all/<id>:`）都照記（帶 `index`）、回 0 的不記、下一個照跑、tick 回 0。擋板、busy、表壞時一個 hook 都不跑。`after_all` 不是陣列、某項不是物件、合併後沒 `argv`、`hooks` 不是物件、讀表那一層 `$ref` 解不開：`bad_table`、回 1、紀錄與 `seq` 不動。紀錄的 `hooks.after_all` 下一格進 `last/`（`hook-exits.json`）。測試：`src/py/tests/test_tick_hooks.py`。

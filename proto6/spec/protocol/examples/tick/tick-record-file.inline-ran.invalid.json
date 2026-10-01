@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "seq": 7,
+  "ran": 2,
+  "tasks": {
+    "$ref": "task-exits.json"
+  },
+  "ended": true,
+  "exit": 0
+}

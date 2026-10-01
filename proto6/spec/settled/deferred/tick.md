@@ -67,6 +67,8 @@
 
 > **暫緩**（2026-10-01）：使用者 2026-10-01：「紀錄這邊，我們都默認紀錄是好的」「舊紀錄不管，我們都默認紀錄能讀得懂」「--firstdo-fsync...先不做吧，我們先做單純的」。現在預設不 fsync、斷電後 `seq` 可能倒退，不保證；紀錄讀不懂或寫不進就讓程式自然丟錯（[B-633](../tick.md#b-633每項結束碼紀錄與格數)）。條號保留、不重用。
 
+> **檔名註**（2026-10-01 第九批）：本節寫於紀錄拆檔之前，`current.json`／`last.json` 現在是資料夾 `current/`／`last/`（`record.json` 用 `$ref` 指 `ran.json`、`task-exits.json`、`hook-exits.json`，[B-633](../tick.md#b-633每項結束碼紀錄與格數)）；暫存檔、fsync 的對象跟著換成那幾個檔與 `.aos/tick/`、`current/` 目錄。下文照原樣留著，回來時再改寫。
+
 ### 斷電不倒退（原「格數」一條）
 
 **斷電不倒退：預設不保證，開了 `--firstdo-fsync` 才保證**（下面「落盤」）。〔使用者方向 2026-09-30，修正輪暫定的裁定〕沒開時，斷電或 WSL 強關後格數可能退回幾格。依賴格數單調的地方——保留期與清理（[B-404](../../base/storage.md)）、摘要的 `observed_seq`、以格數算的起算點（[C-01](../../contracts.md)）——同樣不保證，除非開旗標。
@@ -150,5 +152,5 @@
 | 紀錄收尾的 `exit` 收 0／1／2，跨欄位規則「`stopped_after` 時 `exit` 是 1」「`exit` 0 時每項都成功」 | **已改**：有紀錄收尾時 tick 一定回 0，`exit` 只會是 0（[P-213](../protocol/tick.md)） |
 | 環境變數 `AOS_NODE_DIR`（node id） | **已被 `AOS_TICK_CWD` 取代**：工作資料夾的絕對路徑（使用者 2026-10-01：「node 這個概念目前還沒到出場的時候」） |
 | inst 頂層的 `user`（帳號名稱或 UID，省略繼承上層）、[inst](../../base/inst.md)「先決定身分，切完才解析」整節（daemon 取原始 `user` 做額度檢查、切身分後才解析、`UserInvalid`／`UserNotGranted`／`UserMismatch`／`SourceChanged`、整份 `$ref` 不能偷換身分）；任務表的 `user`（任務是 inst 超集，可帶自己的帳號，跟 tick 不同時回 125） | **已撤回**（使用者 2026-10-01：「inst頂層的user欄位不留。」）。直接從正式篇刪掉，沒有搬來暫緩區；寫了 `user` 就是不認得的鍵、照未知頂層鍵規則忽略，照目前身分跑。要換帳號包 `aos-as`。本篇 B-628 的「身分繼承」與「暫緩：B-620 任務的帳號（125）」只是歷史記錄 |
-| 環境變數 `AOS_TICK_RECORD`（本格紀錄的絕對路徑） | **已被 `AOS_TICK_CWD` 取代**：任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找紀錄（使用者 2026-10-01：「反正有 AOS_TICK_CWD，就從那邊找就好」） |
+| 環境變數 `AOS_TICK_RECORD`（本格紀錄的絕對路徑） | **已被 `AOS_TICK_CWD` 取代**：任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current/` 找紀錄（使用者 2026-10-01：「反正有 AOS_TICK_CWD，就從那邊找就好」；當時是 `current.json`，同日第九批拆成資料夾） |
 | 包裝 `aos-needs <前置任務 id…> -- <原指令…>`（前置都 `exit:0` 才 exec 原指令，否則不跑、回 125 `needs_unmet`／`no_record`；B-621、P-204 原文） | **已被 `aos-tick-check-task` 取代**〔使用者 2026-10-01 第五批：「其實可以簡單一些，也就是它會檢查指定的東西是否跑好，沒跑好，就去寫tick stop檔案」「那就aos-tick-check-task」〕：自己是任務表上一項，檢查指定的項（不寫＝前面全部）有沒有 `exit:0`，沒有就建停格檔、本格後面全不跑；都回 0，自己的錯回 1（[B-621](../tick/check-task.md)、[P-204](../protocol/tick.md)） |
