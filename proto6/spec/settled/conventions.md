@@ -24,7 +24,7 @@
 |---|---|---|---|---|
 | `aos-tick` | 照表跑完、停格檔停下、上一格還沒跑完（`busy`）、有擋板檔（`blocked`）；任務自己回幾都不影響 | 用法錯（含目標給了檔〔使用者 2026-10-01〕）、`AOS_DIRNAME` 不合法、目標不存在或沒有任務表、任務表不合極簡檢查、tick 自用檔出錯 | 無 | [B-620](tick.md)、[P-203](protocol/tick.md) |
 | `aos-exec` | 子程式回 0；`-h` | 用法錯（argv、目標不存在、資料夾找不到 inst、`AOS_DIRNAME` 不合法…）；沒接住的例外 | 125 自己失敗、那次沒跑；子程式的碼原樣傳出（126、127、128+N…） | [inst](../base/inst.md) |
-| `aos-daemon` | 被 SIGINT／SIGTERM 叫停 | 用法錯、設定錯、設定檔讀不到、指示詞展開錯 | 無 | [B-640](daemon/core.md)、[P-120](protocol/daemon/core.md) |
+| `aos-daemon` | 被 SIGINT／SIGTERM 叫停 | 用法錯、設定錯、設定檔讀不到、指示詞展開錯 | 無（重讀設定時設定壞了不退出；沒掛重讀設定時 SIGHUP 照 Python 預設被殺，[B-642](daemon/reload.md)） | [B-640](daemon/core.md)、[P-120](protocol/daemon/core.md) |
 | `aos-ctl` | 指令成功 | 其他全部（用法錯、連不上、daemon 回錯） | 無 | [B-641](daemon/control.md)、[P-121](protocol/daemon/control.md) |
 
 整理區裡其他還沒實作的程式（系統級任務、`aos-tick-check-task`、`aos-git` 等）：用法錯一律 1；條文裡已定的 125、75 這類碼算特別指定的碼，照各條。整理區以外（kernel、agent、LLM、CLI、ops 等篇）還寫著「2＝用法錯」或拿 2 表示「不合法」的地方，這輪沒動，等那幾篇整理時逐條決定改 1 或列為特別指定。
@@ -96,9 +96,9 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 
 | | daemon 設定檔 | tasks.json |
 |---|---|---|
-| 頂層 `cwd` 影不影響程式自己 | 不影響 daemon 自己（只設給 `aos-exec` 子程序當起點） | 不影響 tick 自己（tick 永遠在工作資料夾跑；只是任務的預設 cwd） |
+| 頂層 `cwd` 影不影響程式自己 | 不影響 daemon 自己（只設給 `aos-exec` 子程序當起點）；掛了重讀設定時改了不套用、印警告要重開（[B-642](daemon/reload.md)） | 不影響 tick 自己（tick 永遠在工作資料夾跑；只是任務的預設 cwd） |
 | 相對路徑起點 | daemon 啟動時的 cwd | tick 的工作資料夾 |
-| 指示詞 | 整份先展開 | 只展開到 `tasks` 這層（`modules` 例外，整個展開）；每一項內部跑到時才展開 |
+| 指示詞 | 整份先展開（〔第十一批〕`modules.state` 例外：原始檔必須是 `$ref`，指的檔不在當空的，[B-643](daemon/state.md)） | 只展開到 `tasks` 這層（`modules` 例外，整個展開）；每一項內部跑到時才展開 |
 | 頂層 `modules` | 可選，一個模組一個鍵；隨整份展開 | 可選，一個模組一個鍵，目前 tick 沒有模組、核心照收不理；讀表時整個展開（展開失敗＝`bad_table`）〔使用者裁定 2026-10-01〕；不當任務預設 |
 | 正本 | [B-640](daemon/core.md)、[P-120](protocol/daemon/core.md) | [B-620](tick.md)、[P-202](protocol/tick.md) |
 

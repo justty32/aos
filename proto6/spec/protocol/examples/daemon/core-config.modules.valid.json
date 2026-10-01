@@ -1,0 +1,22 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "control": {
+      "socket": "./aos.sock"
+    },
+    "reload": {},
+    "state": {
+      "insts": {
+        "a": {
+          "paused": true
+        }
+      }
+    }
+  },
+  "insts": {
+    "a": {},
+    "jobs/report.json": {
+      "stop_on_nonzero": true
+    }
+  }
+}

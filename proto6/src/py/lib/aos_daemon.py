@@ -9,6 +9,9 @@
 設定檔寫了 `modules.control` 就掛上控制模組（plan m3n-control-module.md，`lib/aos_daemon_ctl.py`）：
 多開一個 unix socket 收 wake／pause／resume／status，並把 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`
 放進每次 aos-exec 的環境。沒寫時跟 m3 一模一樣（沒人叫醒迴圈、不傳 env=）。
+寫了 `modules.reload` 就收 SIGHUP 重讀同一份設定檔（plan m3m 模組一，`lib/aos_daemon_reload.py`）；
+寫了 `modules.state`（原始值必須是 `{"$ref": "<檔>"}`）就把暫停／已停記進那個檔、重開時讀回
+（plan m3m 模組三，`lib/aos_daemon_state.py`）。
 """
 import argparse
 import datetime
@@ -27,6 +30,14 @@ INST_MARK = "<inst>"
 
 # 控制模組的 socket 絕對路徑；沒掛＝None。退出前要刪（m3n 步驟 6）
 _sock_path = None
+
+# 記住狀態模組（aos_daemon_state.StateFile）；沒掛＝None
+_state = None
+
+# 目前的清單 {inst 字面值: Item}。控制模組、記住狀態、重讀設定共用同一個 dict 物件；
+# 重讀設定加減項時在 _items_lock 底下原地改（m3m 模組一）
+_items = {}
+_items_lock = threading.Lock()
 
 # stdout 那一行與 aos-exec 的 stdout／stderr 都在這把鎖底下一次寫完，多項同時結束也不交錯（m3 步驟 2）
 _out = threading.Lock()
@@ -70,7 +81,9 @@ class Item:
         self.stopped = False            # 被 stop_on_nonzero 停掉
         self.last_exit = None
         self.last_end = None            # now() 格式的字串
+        self.end_mono = None            # 上一次結束的 monotonic 時刻（重讀設定改週期時用）
         self.due = time.monotonic()     # 下次照週期該跑的時刻（monotonic）；剛開時立刻跑
+        self.removed = False            # 重讀設定時被拿掉：跑完這次（若在跑）就結束執行緒
 
 
 def err_path_for(template, inst, start):
@@ -111,12 +124,56 @@ def load_config(path):
 
 
 def load_setup(path):
-    """m3 步驟 1 加 m3n 步驟 1：回 (起點資料夾, [Item], 控制模組 socket 絕對路徑或 None)。
-    兩邊都沒有 interval_ms、`modules` 不是物件丟 ValueError；`modules.control` 沒寫 `socket` 自然丟錯。"""
-    top = read_config(path)
+    """m3 步驟 1 加 m3n 步驟 1：回 (起點資料夾, [Item], 控制模組 socket 絕對路徑或 None)。"""
+    s = load_full(path)
+    return s.start, s.items, s.sock
+
+
+class Setup:
+    """`load_full()` 的結果。`modules` 是展開後的 `modules`，但 `state` 換成狀態檔的絕對路徑
+    （重讀設定比對「模組改了沒」用）；`state_data` 是狀態檔的內容（沒讀或不在＝`{"insts": {}}`）。"""
+
+    def __init__(self, start, items, sock, modules, state_path, state_data):
+        self.start, self.items, self.sock = start, items, sock
+        self.modules, self.state_path, self.state_data = modules, state_path, state_data
+
+    @property
+    def reload(self):
+        return "reload" in self.modules
+
+
+def _state_ref(raw, base_dir):
+    """m3m 模組三：原始設定檔的 `modules.state` 必須是 `{"$ref": "<檔名>"}`（不帶 `#` 位置、不帶 `$at`），
+    回 (狀態檔絕對路徑, 拿掉 state 之後的原始根)；沒寫 state 回 (None, 原始根)。
+    相對檔名照其他 `$ref`，以設定檔所在資料夾為準。"""
+    mods = raw.get("modules") if isinstance(raw, dict) else None
+    if not isinstance(mods, dict) or "state" not in mods:
+        return None, raw
+    ref = mods["state"]
+    if not (isinstance(ref, dict) and set(ref) == {"$ref"} and isinstance(ref["$ref"], str)
+            and ref["$ref"] and "#" not in ref["$ref"]):
+        raise ValueError('modules.state 要直接寫成 {"$ref": "<狀態檔>"}（不帶 # 位置）')
+    rest = dict(raw, modules={k: v for k, v in mods.items() if k != "state"})
+    return os.path.join(base_dir, ref["$ref"]), rest
+
+
+def load_full(path, read_state=True):
+    """讀設定檔、展開指示詞，回 `Setup`。兩邊都沒有 interval_ms、`modules` 不是物件丟 ValueError；
+    `modules.control` 沒寫 `socket` 自然丟錯。
+
+    `modules.state` 先從原始檔拿出來（它指的檔第一次要寫時才建，不在時不能算 `$ref` 讀不到），
+    其餘照整份展開；狀態檔在就照一般 `$ref` 展開讀進來，不在＝`{"insts": {}}`。
+    `read_state=False`（重讀設定用）不讀狀態檔：重讀時以記憶體為準。"""
+    doc = load_document(path)
+    base_dir = os.path.dirname(os.path.abspath(path))
+    ctx = Context(doc, base_dir=base_dir)
+    state_path, raw = _state_ref(doc.root, base_dir)
+    top = expand(raw, ctx, [])
     modules = top.get("modules", {})
     if not isinstance(modules, dict):
-        raise ValueError("modules 要是物件")       # 核心只認得它；目前只讀 control，其他鍵不看
+        raise ValueError("modules 要是物件")       # 核心只認得它；目前讀 control、reload、state
+    if state_path is None and "state" in modules:   # 例如整個 modules 是 $ref 引進來的
+        raise ValueError('modules.state 要直接寫成 {"$ref": "<狀態檔>"}（不帶 # 位置）')
     # 展開完才看 cwd（它也可以是 $ref 引進來的值）；相對的 cwd 以 daemon 啟動時的工作目錄為起點，不是設定檔的資料夾
     start = os.path.abspath(top.get("cwd", "."))
     items = []
@@ -132,7 +189,12 @@ def load_setup(path):
     sock = None
     if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
         sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
-    return start, items, sock
+    state_data = {"insts": {}}
+    if state_path is not None:
+        modules = dict(modules, state=state_path)
+        if read_state and os.path.exists(state_path):
+            state_data = expand(doc.root["modules"]["state"], ctx, ["modules", "state"])
+    return Setup(start, items, sock, modules, state_path, state_data)
 
 
 def _block(item, stream, data):
@@ -176,8 +238,10 @@ def run_once(item, start):
 
 def _next_run(item):
     """在 cond 的鎖底下等到該跑：有待補就跑（回它的 keep_schedule）；暫停、已停就一直等；
-    否則等到 due（照週期跑的那次，回 False）。m3n 步驟 2。"""
+    否則等到 due（照週期跑的那次，回 False）。m3n 步驟 2。被重讀設定拿掉了回 None。"""
     while True:
+        if item.removed:
+            return None
         if item.pending and not item.stopped:
             keep = item.pending_keep
             item.pending = item.pending_keep = False
@@ -194,25 +258,55 @@ def _next_run(item):
 def loop(item, start):
     """m3 步驟 3、4：叫 → 等 → 印 → 睡 interval_ms；非 0 且 stop_on_nonzero 就印 stopped、不再叫。
     m3n 步驟 2：睡改成等 cond（叫得醒）；停掉時執行緒不結束、一直等（resume 救得回來）。
-    控制模組沒掛時沒人碰狀態，行為跟 m3 一樣。"""
+    控制模組沒掛時沒人碰狀態，行為跟 m3 一樣。
+    m3m：被重讀設定拿掉的項，正在跑的那次照樣跑完印完，之後執行緒結束。"""
     while True:
         with item.cond:
             keep = _next_run(item)
+            if keep is None:
+                return
             item.running = True
         code, ms = run_once(item, start)
         say("inst=%s exit=%d ms=%d" % (item.inst, code, ms))
+        stopped = False
         with item.cond:
             t = time.monotonic()
             item.running = False
-            item.last_exit, item.last_end = code, now()
+            item.last_exit, item.last_end, item.end_mono = code, now(), t
+            if item.removed:
+                return
             # 照週期跑的、不帶 keep_schedule 的叫醒：週期從這次結束重新算；帶 keep_schedule 的
             # 不碰 due，除非 due 已經被這次蓋過去（不補跑漏掉的）
             if not keep or item.due <= t:
                 item.due = t + item.interval_ms / 1000.0
             if code != 0 and item.stop_on_nonzero:
-                item.stopped = True
+                item.stopped = stopped = True
                 item.pending = False
                 say("inst=%s stopped" % item.inst)
+        if stopped:
+            state_changed()
+
+
+def state_changed():
+    """暫停或已停變了（pause、resume、stop_on_nonzero 停掉、重讀設定拿掉項）：掛了記住狀態模組就當場寫整份。"""
+    if _state is not None:
+        _state.save(snapshot())
+
+
+def snapshot():
+    """目前清單的 [Item]（照鍵的順序），在 _items_lock 底下拷一份。"""
+    with _items_lock:
+        return list(_items.values())
+
+
+def give_env(item, sock):
+    """控制模組掛著時，開 aos-exec 的環境多放兩個變數（m3n 步驟 4）。"""
+    if sock is not None:
+        item.env = dict(os.environ, AOS_DAEMON_SOCKET=sock, AOS_DAEMON_INST=item.inst)
+
+
+def start_item(item, start):
+    threading.Thread(target=loop, args=(item, start), daemon=True).start()
 
 
 def _quit(signum, frame):
@@ -234,25 +328,51 @@ class _Parser(argparse.ArgumentParser):
         self.exit(1, "%s: error: %s\n" % (self.prog, message))
 
 
+def _catch_hup():
+    """m3m 模組一：接 SIGHUP，回一個 pipe 的讀端；主執行緒讀它等 SIGHUP。
+    用 `signal.set_wakeup_fd`：每個訊號的編號都會寫進 pipe，所以訊號來在任何時候都不會漏；
+    重讀中又來幾次，讀出來是同一批，讀完再重讀一次就好。SIGHUP 的 Python handler 什麼都不做
+    （只為了不被預設動作殺掉）。"""
+    r, w = os.pipe()
+    os.set_blocking(w, False)
+    signal.set_wakeup_fd(w)
+    signal.signal(signal.SIGHUP, lambda signum, frame: None)
+    return r
+
+
 def main(argv=None):
     ap = _Parser(prog="aos-daemon", description="照設定檔的清單，定期叫 aos-exec")
     ap.add_argument("--config", required=True, metavar="F", help="設定檔（JSON）")
     a = ap.parse_args(argv)
-    global _sock_path
+    global _sock_path, _state
     try:
-        start, items, sock = load_setup(a.config)
+        setup = load_full(a.config)
     except (ValueError, DirectiveError) as e:
         sys.stderr.write("aos-daemon: config: %s\n" % e)
         return 1
+    start, items, sock = setup.start, setup.items, setup.sock
     signal.signal(signal.SIGINT, _quit)
     signal.signal(signal.SIGTERM, _quit)
+    with _items_lock:
+        _items.update((item.inst, item) for item in items)
+    if setup.state_path is not None:    # m3m 模組三：照檔恢復暫停、已停（不在清單上的鍵丟掉）
+        import aos_daemon_state
+        _state = aos_daemon_state.StateFile(setup.state_path, setup.state_data)
+        aos_daemon_state.restore(items, setup.state_data)
     if sock is not None:                # m3n：先開好 socket 再起各項，任務一開始就叫得到
         import aos_daemon_ctl
         for item in items:
-            item.env = dict(os.environ, AOS_DAEMON_SOCKET=sock, AOS_DAEMON_INST=item.inst)
+            give_env(item, sock)
         _sock_path = sock               # 先記好再 bind：bind 完立刻來的訊號也刪得到
-        aos_daemon_ctl.serve(sock, {item.inst: item for item in items})
+        aos_daemon_ctl.serve(sock, _items)
+    hup = None
+    if setup.reload:                    # m3m 模組一：沒掛時 SIGHUP 照 Python 預設（daemon 被殺）
+        import aos_daemon_reload
+        hup = _catch_hup()
     for item in items:
-        threading.Thread(target=loop, args=(item, start), daemon=True).start()
+        start_item(item, start)
     while True:                         # 所有項都停了也照樣開著（使用者 2026-10-01）
-        signal.pause()
+        if hup is None:
+            signal.pause()
+        elif signal.SIGHUP in os.read(hup, 512):
+            aos_daemon_reload.reload(a.config, setup)

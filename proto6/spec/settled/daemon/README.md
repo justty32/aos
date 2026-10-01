@@ -16,8 +16,11 @@
 
 - **核心**（[B-640](core.md)）：讀設定檔、照週期叫 `aos-exec`、印結果、非 0 時停不停、Ctrl-C 直接退出。只有這些。
 - **模組**：設定檔頂層 `modules` 物件裡一個模組一個鍵，**有寫就開**。核心只認得這個位置，不解讀內容。
-- 目前只有一個模組：**控制模組**（[B-641](control.md)），開一個 socket，讓人或任務對某一項下 `wake`／`pause`／`resume`／`status`，小工具是 `aos-ctl`。
-- 之後打算另做的模組（還沒排程）：管 node（掃資料夾找 node、上下層與叫醒往上傳）、訊息、cgroup、helper。方向見[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)。
+- 目前有三個模組：
+  - **控制模組**（[B-641](control.md)），開一個 socket，讓人或任務對某一項下 `wake`／`pause`／`resume`／`status`，小工具是 `aos-ctl`。
+  - **重讀設定**（[B-642](reload.md)），送 SIGHUP 就重讀設定檔，加減項、改週期不用重開。
+  - **記住狀態**（[B-643](state.md)），把暫停、已停記進 `$ref` 指的狀態檔，重開時讀回。
+- 之後的模組（[plan m3m](../../../plan/m3m-daemon-modules.md)）：收屍／cgroup 等使用者裁定；訊息（`aos-mq`）、helper／跨帳號〔使用者 2026-10-01 第十一批〕先不做。node 模組不做（使用者：「node這塊不要動，我有預感，node相關概念以後會不存在。」），方向照留在[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)。
 
 **第一版默認一切正常**〔使用者方向 2026-10-01〕：設定檔讀得懂、路徑都對、`aos-exec` 叫得起來。不為異常寫處理，出事讓程式自然丟錯、回 1。結束碼照 [C-08](../conventions.md)，環境變數總表見 [C-10](../conventions.md)。
 
@@ -27,8 +30,12 @@
 |---|---|---|
 | [core.md](core.md) | B-640 | 最核心 daemon：清單、起點、指示詞展開、週期、非 0 停不停、輸出、停機、`modules` |
 | [control.md](control.md) | B-641 | 控制模組：socket、四個指令、wake 的選項、環境變數、`aos-ctl` |
+| [reload.md](reload.md) | B-642 | 重讀設定模組：SIGHUP、清單比對、要重開的鍵、設定壞了舊的照跑 |
+| [state.md](state.md) | B-643 | 記住狀態模組：`$ref` 指的狀態檔、何時寫、開起來讀回 |
 | [協議 core.md](../protocol/daemon/core.md) | P-120 | `aos-daemon` 的 argv、設定檔欄位、輸出格式、結束碼 |
 | [協議 control.md](../protocol/daemon/control.md) | P-121 | 控制 socket 的一行 JSON、錯誤代碼、`aos-ctl` 的 argv 與結束碼 |
+| [協議 reload.md](../protocol/daemon/reload.md) | P-122 | 重讀設定的設定、訊號、stdout／stderr 的行 |
+| [協議 state.md](../protocol/daemon/state.md) | P-123 | `modules.state` 的寫法、狀態檔格式 |
 
 行為寫在這個資料夾，格式（欄位、JSON、argv、結束碼）寫在 [daemon 協議](../protocol/daemon/README.md)。
 

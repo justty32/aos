@@ -1,0 +1,11 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "state": {
+      "path": "./aos-state.json"
+    }
+  },
+  "insts": {
+    "a": {}
+  }
+}

@@ -33,7 +33,7 @@
 | P-113 | 待決與跨篇 | [README.md](README.md) | 暫緩 |
 | P-114 | 停機：訊號與設定 | [shutdown.md](shutdown.md) | 暫緩 |
 | P-115 | 啟動 ID 與按需重建 | [registration.md](registration.md) | 暫緩 |
-| P-116 | state.json 格式 | [shutdown.md](shutdown.md) | 暫緩 |
+| P-116 | state.json 格式 | [shutdown.md](shutdown.md) | 部分已被 [P-123](../../../protocol/daemon/state.md) 取代，其餘暫緩 |
 | P-117 | 通道變數與憑證 | [channel.md](channel.md) | 部分被 P-121 取代、其餘暫緩 |
 | P-118 | 掛行程與砍掉 | [channel.md](channel.md) | 暫緩 |
 | P-119 | 送訊息、取訊息與通道錯誤碼 | [channel.md](channel.md) | 暫緩 |

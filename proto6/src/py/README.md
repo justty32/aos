@@ -18,6 +18,7 @@ inst 與 `aos-exec` 直接從 proto5 複製（proto5 `470f5a04`，即 `git log -
 | ~~`tests/test_user.py`~~ | ~~新寫~~ | 2026-10-01 跟改動 1 一起刪掉 |
 | `bin/aos-daemon`、`lib/aos_daemon.py`、`tests/test_daemon.py` | 新寫 | 第三段最核心 daemon，見下面 [aos-daemon](#aos-daemon第三段最核心-daemon) |
 | `lib/aos_daemon_ctl.py`、`bin/aos-ctl`、`lib/aos_ctl.py`、`tests/test_ctl.py` | 新寫 | daemon 的控制模組與送指令的小工具，見下面 [控制模組與 aos-ctl](#控制模組與-aos-ctlm3n)。`bin/aos-ctl` 一樣被 `.gitignore` 擋，要 `git add -f` |
+| `lib/aos_daemon_reload.py`、`lib/aos_daemon_state.py`、`tests/test_daemon_reload.py`、`tests/test_daemon_state.py` | 新寫 | daemon 的重讀設定、記住狀態兩個模組，見下面 [重讀設定與記住狀態](#重讀設定與記住狀態m3m) |
 
 現在跟 proto5 不同的只剩改動 2（資料夾目標找 inst 的位置）、改動 3（那個位置的 `.aos` 照 `AOS_DIRNAME`）與改動 4（用法錯回 1）。
 
@@ -303,7 +304,7 @@ inst 裡任務自己的 stdout／stderr 照 inst 規則（預設 `/dev/null`，�
 | `resume` | 清掉暫停與已停，馬上跑一次。stdout 印 `inst=<inst> resumed` |
 | `status` | `{"ok":true,"inst":…,"running":…,"pending":…,"paused":…,"stopped":…,"last_exit":…,"last_end":…,"next":…}`；還沒跑完過時 `last_exit`／`last_end` 是 `null`，正在跑、暫停、已停時 `next` 是 `null` |
 
-「暫停中 wake 跑一次」「停掉的 wake 回 `stopped`」「resume 一律跑一次」三條是 m3n 待問 1 照建議先做的，使用者可改。暫停只在記憶體，重開 daemon 就沒了。
+「暫停中 wake 跑一次」「停掉的 wake 回 `stopped`」「resume 一律跑一次」三條是 m3n 待問 1 照建議先做的，使用者可改。暫停只在記憶體，重開 daemon 就沒了（掛了[記住狀態](#重讀設定與記住狀態m3m)時例外）。
 
 `aos-ctl`（socket 只從 `AOS_DAEMON_SOCKET` 拿；沒給 `<inst>` 用 `AOS_DAEMON_INST`）：
 
@@ -325,6 +326,46 @@ AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell �
 | `aos_daemon_ctl.serve()` 先刪舊檔、`aos_daemon._quit()` 刪 socket | 6 socket 檔的開與收 |
 
 測試 `tests/test_ctl.py`：`Step1Config`～`Step6SocketFile`，一個類別一步，整檔約 18 秒。任務量週期用 `/proc/uptime` 寫時間、不用 `date`：WSL 的牆上時鐘偶爾被校時往前跳好幾秒，`test_keep_schedule` 約十次錯一次就是這個（2026-10-01 改）。
+
+## 重讀設定與記住狀態（m3m）
+
+照 [plan m3m](../../plan/m3m-daemon-modules.md) 模組一、三寫的（2026-10-01 第十一批）。各自有寫才掛，沒寫時 daemon 跟上面一模一樣。
+
+```json
+{"interval_ms": 60000,
+ "modules": {"control": {"socket": "./aos.sock"}, "reload": {}, "state": {"$ref": "aos-state.json"}},
+ "insts": {"a": {}, "jobs/report.json": {}}}
+```
+
+**重讀設定**（`modules.reload`，`lib/aos_daemon_reload.py`，spec [B-642](../../spec/settled/daemon/reload.md)）：改了設定檔就 `kill -HUP <pid>`，daemon 重讀同一份（照樣整份展開指示詞）：
+
+- 新的鍵：立刻跑一次，stdout `inst=<inst> added`；不見的鍵：不再排，正在跑的那次跑完照樣印 `exit=`，之後控制指令回 `unknown_inst`，stdout `inst=<inst> removed`；還在的鍵：換新設定，暫停、已停、待補照留，`interval_ms` 改了下一次＝上次結束＋新週期（過了就立刻跑）。最後一行 `reloaded`。
+- 頂層 `cwd`、`modules` 改了不套用，stdout `reload: need restart: cwd`／`modules`；`exec_out_path`／`exec_err_path` 照新的。
+- 設定壞了：整份不套用、stderr `aos-daemon: reload: <說明>`、舊的照跑。
+- 沒掛時 SIGHUP 照 Python 預設殺掉 daemon。掛了時用 `signal.set_wakeup_fd` 收（不會漏），主執行緒讀 pipe、重讀。
+
+```text
+2026-10-01T16:45:49+08:00 reload: need restart: cwd
+2026-10-01T16:45:49+08:00 inst=c.json removed
+2026-10-01T16:45:49+08:00 inst=b.json added
+2026-10-01T16:45:49+08:00 reloaded
+```
+
+**記住狀態**（`modules.state`，`lib/aos_daemon_state.py`，spec [B-643](../../spec/settled/daemon/state.md)）：原始設定檔的 `modules.state` 必須寫成 `{"$ref": "<檔>"}`（以設定檔所在資料夾為準、不帶 `#`），那個檔就是狀態檔：`{"insts": {"a": {"paused": true}, "jobs/report.json": {"stopped": true}}}`，只列不正常的項。
+
+- pause、resume、`stop_on_nonzero` 停掉、重讀拿掉項時當場寫整份（暫檔 → rename），內容沒變不寫；檔不在＝全部正常，沒異常就不建。
+- 開起來時照檔恢復：暫停、已停的項不先跑那一次，stdout 先印 `inst=<inst> paused`／`stopped`；檔裡有、設定沒有的鍵丟掉。
+- 跟重讀設定一起掛時，重讀以記憶體為準，不重讀狀態檔。
+
+| 函式 | 做什麼 |
+|---|---|
+| `aos_daemon.load_full()`、`Setup`、`_state_ref()` | 讀設定；先把 `modules.state` 的 `$ref` 拿出來（檔不在不算錯），其餘照整份展開 |
+| `aos_daemon._items`、`_items_lock`、`snapshot()`、`give_env()`、`start_item()` | 共用的清單（控制模組查的也是它），重讀時原地改 |
+| `aos_daemon._catch_hup()`、`main()` 的主迴圈 | 收 SIGHUP |
+| `aos_daemon_reload.reload()`、`_update()` | 比對清單、套用 |
+| `aos_daemon.state_changed()`、`aos_daemon_state.StateFile.save()`、`restore()`、`dump()` | 寫檔、讀回 |
+
+測試 `tests/test_daemon_reload.py`（15 條，約 11 秒）、`tests/test_daemon_state.py`（11 條，約 4 秒）。
 
 ## 跑測試
 
