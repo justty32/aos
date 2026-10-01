@@ -16,9 +16,19 @@
 寫了 `modules.mq` 就另開一個 unix socket 收寄信、取信，每項一個信箱（plan m3m 模組四，`lib/aos_daemon_mq.py`）；
 寫了 `modules.account` 就要用 root 開：開出 root 端 `aos-daemon-root` 後主程式永久降成預設帳號，別的帳號的項
 經 root 端開（plan m3m 模組五，`lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`）。
+
+〔使用者 2026-10-01 第十九批〕三件跟「daemon 跑 daemon」有關的事：
+- 收 aos-exec 的 stdout／stderr 每次、每條最多留頂層 `exec_output_max_bytes`（預設 1 MiB；各項共用，
+  每項不能覆蓋——寫在某項裡照不認得的鍵忽略），邊讀邊丟最早的，標頭多 `dropped=<bytes>`
+  （下層 daemon 永遠不結束，不能先全收）。
+- 開起來對鎖檔（預設 `<設定檔>.lock`，頂層 `lock_path` 可改）取非阻塞 flock；拿不到＝另一個 daemon 正用這份設定：
+  stderr `aos-daemon: lock: another aos-daemon holds <鎖檔>`、回 1（在開 socket、建 cgroup、開 root 端之前）。
+- 控制模組的 `kill`／`restart`（`aos_daemon_ctl`）要的：記下那一次的程序群組（`Item.pid`）或 root 端的請求 id、
+  每次跑一個序號（`Item.run_seq`），`signal_run()`／`kill_run()` 送訊號。
 """
 import argparse
 import datetime
+import fcntl
 import json
 import os
 import signal
@@ -43,6 +53,11 @@ _cg = None
 
 # 帳號模組（aos_daemon_account.Account）；沒掛＝None
 _acct = None
+
+# 第十九批：設定檔的鎖檔 fd（握到程序結束；os.open 開的預設不可繼承）
+_lock_fd = None
+
+OUTPUT_MAX = 1 << 20            # exec_output_max_bytes 的預設（第十九批）
 
 # 目前的清單 {inst 字面值: Item}。控制模組、記住狀態、重讀設定共用同一個 dict 物件；
 # 重讀設定加減項時在 _items_lock 底下原地改（m3m 模組一）
@@ -74,7 +89,8 @@ def say(text):
 class Item:
     """清單的一項：`inst` 字面值＝`insts` 物件的鍵（原樣交給 aos-exec、也原樣印出）；index＝鍵的位置（從 0 起）。"""
 
-    def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path, out_path=None, cgroup=None, user=None):
+    def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path, out_path=None, cgroup=None, user=None,
+                 out_max=OUTPUT_MAX):
         self.index = index
         self.inst = inst
         self.interval_ms = interval_ms
@@ -85,6 +101,7 @@ class Item:
         self.cgroup = cgroup or {}      # 這一項的 cgroup 上限 {檔名: 值}（設定的 "cgroup" 鍵；模組沒掛時不看）
         self.frame = None               # 這一項的 cgroup 框（絕對路徑）；None＝cgroup 模組沒掛
         self.user = user                # 帳號模組：這一項用哪個帳號跑（設定的 "account.user"）；None＝預設帳號
+        self.out_max = out_max          # 第十九批：每次、每條串流最多留幾 bytes（超過丟最早的；頂層共用）
         # m3n 步驟 2：以下狀態都在 cond 的鎖底下改；控制模組沒掛時只有 loop() 自己動它們
         self.cond = threading.Condition()
         self.running = False
@@ -98,6 +115,11 @@ class Item:
         self.due = time.monotonic()     # 下次照週期該跑的時刻（monotonic）；剛開時立刻跑
         self.removed = False            # 重讀設定時被拿掉：跑完這次（若在跑）就結束執行緒
         self.mailbox = []               # 訊息模組的信箱 [{"from", "msg"}]，先進先出；只在記憶體（m3m 模組四）
+        # 第十九批 kill／restart：正在跑的那一次是誰（主程式開的＝程序群組 id；經 root 端開的＝請求 id）
+        self.pid = None
+        self.root_rid = None
+        self.run_seq = 0                # 每開一次加 1（在 cond 底下）；kill 認「還是不是同一次」
+        self.restart_seq = None         # restart 殺的是哪一次：那一次非 0 不算 stop_on_nonzero
 
 
 def err_path_for(template, inst, start):
@@ -148,8 +170,9 @@ class Setup:
     （重讀設定比對「模組改了沒」用）；`state_data` 是狀態檔的內容（沒讀或不在＝`{"insts": {}}`）。"""
 
     def __init__(self, start, items, sock, modules, state_path, state_data, out_tmpl=None, err_tmpl=None,
-                 mq_sock=None):
+                 mq_sock=None, lock_path=None):
         self.start, self.items, self.sock, self.mq_sock = start, items, sock, mq_sock
+        self.lock_path = lock_path      # 第十九批：設定檔的鎖檔（絕對路徑）
         self.modules, self.state_path, self.state_data = modules, state_path, state_data
         self.out_tmpl, self.err_tmpl = out_tmpl, err_tmpl     # 頂層 exec_out_path／exec_err_path 原字（重讀比對用）
 
@@ -200,6 +223,10 @@ def load_full(path, read_state=True):
         raise ValueError('modules.state 要直接寫成 {"$ref": "<狀態檔>"}（不帶 # 位置）')
     # 展開完才看 cwd（它也可以是 $ref 引進來的值）；相對的 cwd 以 daemon 啟動時的工作目錄為起點，不是設定檔的資料夾
     start = os.path.abspath(top.get("cwd", "."))
+    # 第十九批：輸出上限只有頂層一個，各項共用（使用者：「上限必須共用，然後每項不覆蓋」）
+    out_max = top.get("exec_output_max_bytes", OUTPUT_MAX)
+    if isinstance(out_max, bool) or not isinstance(out_max, int) or out_max < 0:
+        raise ValueError("exec_output_max_bytes 要是非負整數")
     items = []
     if "account" in modules:                        # m3m 模組五：模組沒掛時 "account" 照不認得的鍵忽略
         import aos_daemon_account
@@ -215,7 +242,7 @@ def load_full(path, read_state=True):
         items.append(Item(i, inst, interval, stop,
                           err_path_for(top.get("exec_err_path"), inst, start),
                           err_path_for(top.get("exec_out_path"), inst, start),
-                          entry.get("cgroup"), user_of(entry)))
+                          entry.get("cgroup"), user_of(entry), out_max))
     sock = None
     if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
         sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
@@ -227,26 +254,51 @@ def load_full(path, read_state=True):
         modules = dict(modules, state=state_path)
         if read_state and os.path.exists(state_path):
             state_data = expand(doc.root["modules"]["state"], ctx, ["modules", "state"])
+    lock = top.get("lock_path")                     # 第十九批：相對以設定檔所在資料夾為準
+    if lock is not None and not (isinstance(lock, str) and lock):
+        raise ValueError("lock_path 要是非空字串")
+    lock_path = os.path.join(base_dir, lock) if lock else os.path.abspath(path) + ".lock"
     return Setup(start, items, sock, modules, state_path, state_data,
-                 top.get("exec_out_path"), top.get("exec_err_path"), mq_sock)
+                 top.get("exec_out_path"), top.get("exec_err_path"), mq_sock, lock_path)
 
 
-def _block(item, stream, data):
-    """收齊的一段輸出加標頭：`== <時間> <stdout|stderr> index=<n> inst=<inst> ==`；內容沒換行結尾就補一個。"""
-    head = ("== %s %s index=%d inst=%s ==\n" % (now(), stream, item.index, item.inst)).encode("utf-8")
+def _block(item, stream, data, dropped=0):
+    """收齊的一段輸出加標頭：`== <時間> <stdout|stderr> index=<n> inst=<inst> ==`；有丟掉東西時標頭多
+    `dropped=<bytes>`（第十九批）。內容沒換行結尾就補一個。"""
+    extra = " dropped=%d" % dropped if dropped else ""
+    head = ("== %s %s index=%d inst=%s%s ==\n" % (now(), stream, item.index, item.inst, extra)).encode("utf-8")
     if not data.endswith(b"\n"):
         data += b"\n"
     return head + data
 
 
+def drain(fd, cap, got, key):
+    """第十九批：讀 fd 讀到 EOF，最多留最後 cap bytes（邊讀邊丟最早的），結果 (資料, 丟掉幾 bytes) 放進 got[key]。
+    下層 daemon 這種永遠不結束、一直印的任務，記憶體也只到 cap。讀完關 fd。"""
+    buf, dropped = bytearray(), 0
+    try:
+        while True:
+            b = os.read(fd, 65536)
+            if not b:
+                break
+            buf += b
+            if len(buf) > cap:
+                cut = len(buf) - cap
+                dropped += cut
+                del buf[:cut]
+    finally:
+        os.close(fd)
+    got[key] = (bytes(buf), dropped)
+
+
 def write_outputs(item, out, err):
-    """aos-exec 這次的 stdout、stderr（已收齊）：各自有內容才寫，前面一行標頭，接在 `out_path`／`err_path`
-    指的檔尾（父資料夾不在就建）。兩段在同一把鎖底下寫完，多項同時結束也不交錯。"""
+    """aos-exec 這次的 stdout、stderr（各是 (資料, 丟掉幾 bytes)）：各自有內容（或有丟掉）才寫，前面一行標頭，
+    接在 `out_path`／`err_path` 指的檔尾（父資料夾不在就建）。兩段在同一把鎖底下寫完，多項同時結束也不交錯。"""
     parts = []
-    if out and item.out_path:
-        parts.append((item.out_path, _block(item, "stdout", out)))
-    if err and item.err_path:
-        parts.append((item.err_path, _block(item, "stderr", err)))
+    if (out[0] or out[1]) and item.out_path:
+        parts.append((item.out_path, _block(item, "stdout", *out)))
+    if (err[0] or err[1]) and item.err_path:
+        parts.append((item.err_path, _block(item, "stderr", *err)))
     if not parts:
         return
     with _out:
@@ -262,7 +314,8 @@ def run_once(item, start):
 
     m3m 模組二（掛了 cgroup，`item.frame` 有值）：子程序先進那一項的框再 exec aos-exec；aos-exec 一結束
     （毫秒算到這裡）就清框（框裡還有程序就 `cgroup.kill`、等清空），清完才收齊輸出、回來。
-    殘留的程序可能還拿著輸出的 pipe，所以 pipe 另開執行緒讀，清完框它才讀得到結尾。"""
+    殘留的程序可能還拿著輸出的 pipe，所以 pipe 另開執行緒讀，清完框它才讀得到結尾。
+    收的時候每條最多留 `item.out_max` bytes（第十九批，`drain()`）；沒掛 cgroup 時毫秒照舊算到輸出也收齊。"""
     t0 = time.monotonic()
     pipe = lambda path: subprocess.DEVNULL if path is None else subprocess.PIPE
     argv = [EXEC, item.inst]
@@ -275,23 +328,99 @@ def run_once(item, start):
         argv = _cg.argv(item.frame, argv)
     p = subprocess.Popen(argv, cwd=start, env=item.env, start_new_session=True,
                          stdin=subprocess.DEVNULL, stdout=pipe(item.out_path), stderr=pipe(item.err_path))
+    item.pid = p.pid                    # 第十九批：新 session，程序群組 id＝pid（kill 用）
+    got = {"out": (b"", 0), "err": (b"", 0)}
+    readers = []
+    for key, f in (("out", p.stdout), ("err", p.stderr)):
+        if f is not None:
+            t = threading.Thread(target=drain, args=(os.dup(f.fileno()), item.out_max, got, key), daemon=True)
+            f.close()
+            t.start()
+            readers.append(t)
+    p.wait()
     reaped = False
     if item.frame is None:
-        out, err = p.communicate()
+        for t in readers:
+            t.join()
         ms = int((time.monotonic() - t0) * 1000)
     else:
-        got = {}
-        reader = threading.Thread(target=lambda: got.update(r=p.communicate()), daemon=True)
-        reader.start()
-        p.wait()
         ms = int((time.monotonic() - t0) * 1000)
         import aos_daemon_cgroup
         reaped = aos_daemon_cgroup.clear(item.frame)
-        reader.join()
-        out, err = got["r"]
+        for t in readers:
+            t.join()
+    item.pid = None
     code = p.returncode
-    write_outputs(item, out, err)
+    write_outputs(item, got["out"], got["err"])
     return (128 - code if code < 0 else code), ms, reaped
+
+
+def kill_targets(pid, final):
+    """第十九批 kill：pid（aos-exec）底下要送訊號的程序群組。aos-exec 把任務開在另一個 session，所以只送
+    aos-exec 自己的群組會讓任務變孤兒。從 /proc 找 pid 所有後代的程序群組：
+    - SIGTERM 那一步（final=False）只送後代的群組、不送 aos-exec 自己——任務收到 TERM 自己收尾、結束，
+      aos-exec 照常回任務的碼；沒有後代才送 aos-exec 自己。
+    - SIGKILL 那一步（final=True）後代的群組加 aos-exec 自己，全部送。
+    已經脫離親子樹的（setsid＋double fork 被收養的）找不到；那些靠 cgroup 模組清框。"""
+    parents = {}
+    for name in os.listdir("/proc"):
+        if not name.isdigit():
+            continue
+        try:
+            with open("/proc/%s/stat" % name) as f:
+                fields = f.read().rsplit(")", 1)[1].split()
+            parents[int(name)] = (int(fields[1]), int(fields[2]))
+        except (OSError, ValueError, IndexError):
+            continue
+    below, frontier = set(), {pid}
+    while frontier:
+        frontier = {p for p, (parent, _) in parents.items() if parent in frontier} - below
+        below |= frontier
+    groups = {parents[p][1] for p in below if p in parents} - {pid, os.getpgrp()}
+    if final or not groups:
+        groups.add(pid)
+    return groups
+
+
+def signal_run(item, final):
+    """第十九批：對那一項正在跑的那一次送 SIGTERM（final=False）或 SIGKILL（final=True），對象見 `kill_targets()`。
+    主程式開的自己送；經帳號模組 root 端開的請 root 端送（主程式降權了，送不到別的帳號）。沒在跑就什麼都不做。"""
+    rid = item.root_rid
+    if rid is not None and _acct is not None:
+        _acct.signal(rid, final)
+        return
+    pid = item.pid
+    if pid is None:
+        return
+    sig = signal.SIGKILL if final else signal.SIGTERM
+    for g in kill_targets(pid, final):
+        try:
+            os.killpg(g, sig)
+        except ProcessLookupError:
+            pass
+
+
+def kill_run(item, seq, grace_s):
+    """第十九批 `kill`：先 SIGTERM；等 grace_s 秒那一次（序號 seq）還沒結束就 SIGKILL，掛了 cgroup 再把整個框
+    `cgroup.kill`。在自己的執行緒裡跑（控制指令送完訊號就回）。"""
+    signal_run(item, False)
+    deadline = time.monotonic() + grace_s
+    with item.cond:
+        while item.running and item.run_seq == seq:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                break
+            item.cond.wait(left)
+        still = item.running and item.run_seq == seq
+    if not still:
+        return
+    signal_run(item, True)
+    if item.frame is not None:
+        try:
+            with open(os.path.join(item.frame, "cgroup.kill"), "w") as f:
+                f.write("1")
+        except FileNotFoundError:
+            pass
 
 
 def _next_run(item):
@@ -324,6 +453,8 @@ def loop(item, start):
             keep = _next_run(item)
             if keep is not None:
                 item.running = True
+                item.run_seq += 1
+                seq = item.run_seq
         if keep is None:
             _gone(item)
             return
@@ -335,6 +466,7 @@ def loop(item, start):
         with item.cond:
             t = time.monotonic()
             item.running = False
+            item.cond.notify_all()      # 第十九批：等這一次結束的 kill_run() 醒來
             item.last_exit, item.last_end, item.end_mono = code, now(), t
             removed = item.removed
             if not removed:
@@ -342,7 +474,8 @@ def loop(item, start):
                 # 不碰 due，除非 due 已經被這次蓋過去（不補跑漏掉的）
                 if not keep or item.due <= t:
                     item.due = t + item.interval_ms / 1000.0
-                if code != 0 and item.stop_on_nonzero:
+                # restart 殺掉的那一次不算（第十九批）；kill 殺掉的照算
+                if code != 0 and item.stop_on_nonzero and item.restart_seq != seq:
                     item.stopped = stopped = True
                     item.pending = False
                     say("inst=%s stopped" % item.inst)
@@ -432,11 +565,19 @@ def main(argv=None):
     ap = _Parser(prog="aos-daemon", description="照設定檔的清單，定期叫 aos-exec")
     ap.add_argument("--config", required=True, metavar="F", help="設定檔（JSON）")
     a = ap.parse_args(argv)
-    global _state, _cg, _acct
+    global _state, _cg, _acct, _lock_fd
     try:
         setup = load_full(a.config)
     except (ValueError, DirectiveError) as e:
         sys.stderr.write("aos-daemon: config: %s\n" % e)
+        return 1
+    # 第十九批：鎖檔先開（開 socket、建 cgroup、開 root 端、降權之前；fd 握到結束）。
+    # 拿不到＝另一個 daemon 正用這份設定：stderr 一行、回 1（使用者：「拿不到鎖就報錯退出」）
+    _lock_fd = os.open(setup.lock_path, os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        sys.stderr.write("aos-daemon: lock: another aos-daemon holds %s\n" % setup.lock_path)
         return 1
     policy = None
     if setup.account:                   # m3m 模組五：先核帳號（還是 root，A6：查不到就回 1）
@@ -474,6 +615,7 @@ def main(argv=None):
         give_env(item, setup)
     if sock is not None:                # m3n：先開好 socket 再起各項，任務一開始就叫得到
         import aos_daemon_ctl
+        aos_daemon_ctl.set_grace(setup.modules["control"])
         _sock_paths.append(sock)        # 先記好再 bind：bind 完立刻來的訊號也刪得到
         aos_daemon_ctl.serve(sock, _items)
         if _acct is not None:           # m3m 模組五：別的帳號的任務也連得上（第十二批：先 666）

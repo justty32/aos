@@ -10,6 +10,13 @@
 
 待問 1 照建議先做（使用者可改）：暫停中 wake 跑一次、跑完照樣暫停；被 stop_on_nonzero 停掉的項
 wake 回 `stopped`、不跑；resume 一律馬上跑一次。
+
+〔使用者 2026-10-01 第十九批〕`kill`、`restart`：
+- kill：那一項正在跑就先送 SIGTERM，`modules.control.kill_grace_ms`（預設 5000）內還沒結束就 SIGKILL，掛了 cgroup
+  再 `cgroup.kill` 整個框（`aos_daemon.kill_run()`，另開執行緒、送出 SIGTERM 就回）。沒在跑：回 ok、什麼都不做。
+  被殺的那次照常印 `exit=`（128+N）、照週期排下一次；`stop_on_nonzero` 照算。
+- restart：被 stop_on_nonzero 停掉的回 `stopped`（同 wake）；有在跑就照 kill、記一次待補（結束後立刻再跑，
+  被殺的那次不算 stop_on_nonzero）；沒在跑＝不帶選項的 wake。
 """
 import json
 import os
@@ -19,13 +26,23 @@ import time
 
 from aos_daemon import clock, say, state_changed
 
-COMMANDS = ("wake", "pause", "resume", "status")
+COMMANDS = ("wake", "pause", "resume", "status", "kill", "restart")
+KILL_GRACE = 5.0        # 秒；modules.control.kill_grace_ms（第十九批）
 WAKE_OPTIONS = ("skip_while_running", "keep_schedule")
 TIMEOUT = 1.0           # 每條連線最多等這麼久（連上不送的客戶端不能卡住後面的人）
 
 
 class BadRequest(Exception):
     pass
+
+
+def set_grace(conf):
+    """`modules.control.kill_grace_ms`：非負數，沒寫＝5000。不合丟 ValueError（開起來時自然丟錯、回 1）。"""
+    global KILL_GRACE
+    ms = conf.get("kill_grace_ms", 5000)
+    if isinstance(ms, bool) or not isinstance(ms, (int, float)) or ms < 0:
+        raise ValueError("modules.control.kill_grace_ms 要是非負數")
+    KILL_GRACE = ms / 1000.0
 
 
 def serve(path, items, answer=None):
@@ -114,6 +131,8 @@ def _handle(request, items):
     with item.cond:
         if cmd == "status":
             return status(item)
+        if cmd in ("kill", "restart"):
+            return _kill(item, inst, cmd == "restart")
         if cmd == "wake":
             if item.stopped:
                 return {"ok": False, "error": "stopped", "detail": inst}
@@ -128,6 +147,21 @@ def _handle(request, items):
             say("inst=%s resumed" % inst)
             _want(item, False)
         item.cond.notify_all()
+    return {"ok": True}
+
+
+def _kill(item, inst, restart):
+    """在 item.cond 底下：kill／restart（第十九批）。"""
+    import aos_daemon
+    if restart:
+        if item.stopped:
+            return {"ok": False, "error": "stopped", "detail": inst}
+        _want(item, False)
+        if item.running:
+            item.restart_seq = item.run_seq
+        item.cond.notify_all()
+    if item.running:
+        threading.Thread(target=aos_daemon.kill_run, args=(item, item.run_seq, KILL_GRACE), daemon=True).start()
     return {"ok": True}
 
 

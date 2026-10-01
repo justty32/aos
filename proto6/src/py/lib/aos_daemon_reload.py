@@ -35,7 +35,8 @@ from aos_daemon import err_path_for, give_env, load_full, say, start_item, state
 
 # R3：頂層這幾個改了不套用、stdout 警告（Setup 的屬性名, 印出的鍵名）
 NEED_RESTART = (("start", "cwd"), ("modules", "modules"),
-                ("out_tmpl", "exec_out_path"), ("err_tmpl", "exec_err_path"))
+                ("out_tmpl", "exec_out_path"), ("err_tmpl", "exec_err_path"),
+                ("lock_path", "lock_path"))     # 第十九批：鎖檔換了也要重開
 
 
 def reload(path, first):
@@ -108,6 +109,7 @@ def _update(cur, n):
         cur.index = n.index
         cur.interval_ms = n.interval_ms
         cur.stop_on_nonzero = n.stop_on_nonzero
+        cur.out_max = n.out_max         # 第十九批：輸出上限下一次起生效
         cur.cgroup = n.cgroup
         cur.user = n.user
         if changed and not cur.running and cur.end_mono is not None:

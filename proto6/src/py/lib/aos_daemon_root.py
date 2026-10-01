@@ -10,6 +10,10 @@
 - 請求（主程式→這裡）：`{"id": n, "user": "<帳號>", "argv": [...], "cwd": "...", "env": {...}, "frame": "<框>"|null}`，
   附兩個 fd（SCM_RIGHTS）：子程序的 stdout、stderr。stdin 是 /dev/null。
 - 回應（這裡→主程式）：`{"id": n, "exit": <碼，被訊號 N 殺＝128+N>}`；開不了：`{"id": n, "error": "<說明>"}`。
+- 送訊號（主程式→這裡，第十九批 kill／restart）：`{"signal": n, "final": false|true}`：對請求 n 開的子程序
+  （aos-exec）底下送 SIGTERM（final false：只送後代的程序群組，沒有後代才送它自己）或 SIGKILL（final true：
+  後代的群組加它自己）；規則同 `aos_daemon.kill_targets()`，這裡另寫一份（不 import aos 其他模組）。
+  已經結束或不認得的 n 就不做事；不回應。
 
 開之前再核一次：帳號照名單是准的、`getpwnam` 查得到、不是 root（UID 0）。子程序：開新 session、有框就先把
 自己寫進框的 `cgroup.procs`（還是 root，別的帳號的程序才搬得進去）、`initgroups`／`setgid`／`setuid`、
@@ -45,6 +49,28 @@ def check(policy, name):
     if any(match(p, name) for p in policy["deny"]) or not any(match(p, name) for p in policy["allow"]):
         return "not allowed: %s" % name
     return pw
+
+
+def targets(pid, final):
+    """同 aos_daemon.kill_targets()。"""
+    parents = {}
+    for name in os.listdir("/proc"):
+        if not name.isdigit():
+            continue
+        try:
+            with open("/proc/%s/stat" % name) as f:
+                fields = f.read().rsplit(")", 1)[1].split()
+            parents[int(name)] = (int(fields[1]), int(fields[2]))
+        except (OSError, ValueError, IndexError):
+            continue
+    below, frontier = set(), {pid}
+    while frontier:
+        frontier = {p for p, (parent, _) in parents.items() if parent in frontier} - below
+        below |= frontier
+    groups = {parents[p][1] for p in below if p in parents} - {pid, os.getpgrp()}
+    if final or not groups:
+        groups.add(pid)
+    return groups
 
 
 def child(req, pw, out_fd, err_fd):
@@ -106,6 +132,18 @@ def main(argv=None):
             if not data:
                 return 0
             req = json.loads(data.decode("utf-8"))
+            if "signal" in req:
+                for fd in fds:
+                    os.close(fd)
+                sig = signal.SIGKILL if req.get("final") else signal.SIGTERM
+                for pid, rid in list(running.items()):
+                    if rid == req["signal"]:
+                        for g in targets(pid, req.get("final")):
+                            try:
+                                os.killpg(g, sig)
+                            except ProcessLookupError:
+                                pass
+                continue
             pw = check(policy, req["user"])
             if isinstance(pw, str):
                 for fd in fds:
