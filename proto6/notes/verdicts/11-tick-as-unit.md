@@ -433,3 +433,33 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 3. **停格檔的未來方向（只記錄，不做）。** 使用者原話：「我覺得tick-stop這個檔案會變成特定json格式，存放一些資訊，然後可以用aos-tick-check-task-continue來去檢查其中的一些資訊，滿足後修改stop中的資訊。所以aos-tick仍會執行所有任務，但會變成執行前檢查stop，看看是否滿足特定條件，滿足的話就可以執行該任務。」記在 [B-620「停格檔與擋板檔」](../../spec/settled/tick.md)與 P-213 旁；現在停格檔規定不變。
 
 改到的地方：[tick/check-task.md](../../spec/settled/tick/check-task.md)（原 needs.md，B-621 改寫）、[tick 協議](../../spec/settled/protocol/tick.md)（P-204 改寫、P-206 拿掉 `aos-publish` 列、P-200／P-202／P-208／P-213 各一句）、[tick/mq.md](../../spec/settled/tick/mq.md)（發布摘要一節搬走）、[tick/template.md](../../spec/settled/tick/template.md)（拿掉 `summary`、前置改用 `aos-tick-check-task`）、[tick/git.md](../../spec/settled/tick/git.md)、[tick/ 入口](../../spec/settled/tick/README.md)、[tick 核心](../../spec/settled/tick.md)（含停格檔未來方向）、[名詞](../../spec/settled/terms.md)、[慣例](../../spec/settled/conventions.md)、[整理區 README](../../spec/settled/README.md)、[暫緩區](../../spec/settled/deferred/README.md)與其 tick、tick 協議兩篇；範例 `tasks.template.valid.json`、`tasks.template-git.valid.json`；區外就地標註：[P-307](../../spec/protocol/messages.md)、[kernel 任務](../../spec/protocol/kernel-tasks.md)、[agent 任務](../../spec/protocol/agent-tasks.md)、[驗收入口](../../spec/conformance.md)、[協議入口](../../spec/protocol/README.md)、[spec 入口](../../spec/README.md)、[名詞](../../spec/terms.md)、[base 入口](../../spec/base/README.md)、[proto6 README](../../README.md)；[plan README](../../plan/README.md)、[m1-tick-core](../../plan/m1-tick-core.md)、[m2-system-tasks](../../plan/m2-system-tasks.md)。
+
+<a id="2026-10-01-第六批tick-的-hooks外掛掛點"></a>
+
+## 2026-10-01 第六批：tick 的 hooks（外掛掛點）（已寫入 spec（commit 前由我補號））
+
+〔使用者裁定 2026-10-01〕使用者原話：「那就做外掛掛點，這個hooks就是模組」「after_cell？我以為是after_all，我們有cell嗎？ 2.可以一串。 3.吃，hooks中的掛點所提供的，比如"after_cell":[{},{},...]，就比照tasks。4.會記錄。 剩下都建議」。同日改裁定：「所以目前唯一的模組就是hooks...就不讓他當模組了，直接讓他變頂層key」。
+
+- **hooks 是 tasks.json 的頂層鍵**，跟 `tasks` 同層：`{"hooks": {"after_all": [...]}, "tasks": [...]}`。起初定成模組（放 `modules.hooks`），同日改成頂層鍵，**不叫模組**；`modules` 照舊照收不理、讀表時整個展開，寫在 `modules.hooks` 底下的不會跑。沒寫 `hooks` 或沒寫 `after_all`：行為跟原本完全一樣。
+- **只開一個掛點 `after_all`**（使用者說的 `after_cell` 就是它）：照表跑完之後跑，含被停格檔停下的那格。`before_all`、`before_task`、`after_task` 先不開；`hooks` 裡不認得的鍵照收不理。
+- **一串、比照 `tasks`**：`after_all` 是陣列，每元素一個 inst 物件；`id` 可省（沒寫＝在 `after_all` 的位置轉字串，從 0 起）；吃 tasks.json 頂層預設（淺層合併、項蓋過）；跑法跟任務一模一樣（cwd 規則、`AOS_TICK_CWD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`——ID／INDEX 是 hook 項自己的）。
+- **展開時機比照 `tasks`**：讀表時 `hooks` 本身、`after_all`、每一元素各解一層；值的內部跑到時、合併預設後才照 inst 規則展開（這時 `$ref:""`／`#…` 指合併後的這一項）。不用 `modules` 那種整個展開。
+- **極簡檢查比照 tasks**：`hooks` 是物件、`after_all` 是陣列、每項是物件、合併後有 `argv`，讀表那一層解得開；不合＝`bad_table`、回 1（開格前）。
+- **不看停格檔**：停格了也照跑（這是它存在的理由）；每項的碼照實記、接著跑下一項；不影響 tick 的結束碼（照舊 0）。
+- **會記錄**：寫在本格 `current.json` 的 `hooks.after_all`，格式同 `tasks` 每項，跟著換進 `last.json`。
+- **不跑的時候**：擋板檔、busy、tick 自己出錯（表壞等）。
+- **「剩下都建議」由 AI 隊定的細節**：紀錄在收尾（`ended:true`、`exit:0`）之後才寫 `hooks`，hook 讀 `current.json` 看得到整格結果與前面 hook 的碼；`after_all` 是空陣列時記 `"hooks":{"after_all":[]}`；`hooks` 不是物件也算 `bad_table`；`exec_failed` 那行的 id 寫成 `after_all/<id>`；hook 跑到時展開失敗照任務的規則自然丟錯、回 1（紀錄停在 `ended:true`、hooks 只到前一項）。新條號 B-635，協議擴充 P-202、P-203、P-213，不另開 P 號。
+
+改到的地方：新篇 [tick/hooks.md](../../spec/settled/tick/hooks.md)（B-635）、[tick 核心](../../spec/settled/tick.md)（先講重點、一格怎麼走、任務表、頂層 `modules`、指示詞展開時機、極簡檢查、B-633 欄位表）、[tick/ 入口](../../spec/settled/tick/README.md)、[tick 協議](../../spec/settled/protocol/tick.md)（P-202 頂層 `hooks` 表、P-203 `exec_failed` 與環境變數、P-213 `hooks` 紀錄）、[慣例 C-10](../../spec/settled/conventions.md)、[名詞 T-10](../../spec/settled/terms.md)、[整理區 README](../../spec/settled/README.md)、[驗收入口](../../spec/conformance.md)新條號表；schema `tick-tasks`、`tick-record` 與 5 個新範例；程式 `lib/aos_tick_table.py`（讀 `hooks`、極簡檢查）、`lib/aos_tick_hooks.py`（新，跑 `after_all`）、`lib/aos_tick.py`、`lib/aos_tick_record.py`、測試 `tests/test_tick_hooks.py`（新）；[plan m1h](../../plan/m1h-hooks-module.md)（新）、[plan README](../../plan/README.md)、[src/py README](../../src/py/README.md)。
+
+<a id="2026-10-01-第七批tick-模組的取捨node逾時歷史紀錄"></a>
+
+## 2026-10-01 第七批：tick 模組的取捨（node、逾時、歷史紀錄）
+
+〔使用者裁定 2026-10-01〕起頭：「我們改成來看aos-tick應該有啥模組」。候選有收尾、node、git、關卡、逾時、收屍、歷史紀錄、訊息。使用者原話：「node, 逾時跟我說說。歷史紀錄就不需要了。剩下都可以用hooks實現」「可以，node 跟逾時都照建議。node這塊我之後還會再想想，感覺總有哪裡不對」。
+
+- **原則（建議，使用者接受）**：能寫成任務表一項的就不做模組；只有任務表做不到的（插在每項前後、停格後也得跑、要看 tick 內部狀態）才考慮模組。
+- **歷史紀錄**：不做。
+- **node**：tick 這邊不做 node 模組。「找 node」（有 `.aos/tasks.json` 的資料夾）若要做，是 daemon 的模組；上下層照路徑算；往上叫醒用 [hooks](../../spec/settled/tick/hooks.md) 的 `after_all` 掛 `aos-ctl wake <上層>`（前提：daemon `insts` 的鍵直接寫資料夾）。上層 git 不要提交下層 node 的 `.aos` 是 git 的事，跟 git 一起想。**使用者還在想，感覺總有哪裡不對**。
+- **逾時**：不做模組，直接用系統的 `timeout`（如 `["timeout","300","make"]`，超時回 124，照一般失敗記）；整格逾時包在 daemon 那項 inst 外。要所有項套同一時限時再考慮 `modules.timeout`。
+- **其餘候選**（收尾、關卡、收屍等）：用 hooks 實現或之後再說。停格與 git 先不動（使用者：「算了，停格這一塊先不動吧。git也先不動。」）。

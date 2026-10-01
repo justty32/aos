@@ -5,6 +5,7 @@
 - `open()`：開格換檔（算 `seq` → 寫暫存檔 → current 換成 last（沒有 current 就刪 last）
   → 暫存檔換成 current）。
 - `add_task()`／`finish()`：每項之後、收尾時整份重寫。
+- `start_hooks()`／`add_hook()`：hooks（B-635）在收尾之後記 `hooks.after_all`，一樣整份重寫。
 - 〔使用者方向 2026-10-01〕POC 默認紀錄寫得進、讀得懂、不斷電：不處理寫不進（待問 7）、
   舊紀錄讀不懂（`record_unreadable`）、不做 `--firstdo-fsync`。出事就讓 OSError／ValueError 往外丟。
 """
@@ -58,6 +59,16 @@ class Record:
         self.data["exit"] = code
         if stopped_after is not None:
             self.data["stopped_after"] = stopped_after
+        self._rewrite()
+
+    def start_hooks(self, point):
+        """hooks（B-635）：收尾之後、跑第一個 hook 前寫 `hooks.<掛點>: []`（目前只有 after_all）。"""
+        self.data.setdefault("hooks", {})[point] = []
+        self._rewrite()
+
+    def add_hook(self, point, hook_id, kind, value):
+        """記一個 hook 項，格式同 add_task。"""
+        self.data["hooks"][point].append({"id": hook_id, kind: value})
         self._rewrite()
 
     def _write_tmp(self):

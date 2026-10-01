@@ -2,12 +2,13 @@
 
 ← [通用 tick 核心](../tick.md)｜[整理區](../README.md)
 
-2026-10-01 把 [tick.md](../tick.md) 拆成兩層：已實作的核心（B-626、B-602、B-620、B-633、B-627）留在 tick.md；範本與各系統級任務、普通程式移到這裡，一篇一個主題。條號不變。tick 這層（含各子篇）講的是**工作資料夾**（`aos-tick` 這一格的 cwd），原本寫 node 的地方 2026-10-01 已改；暫緩區講上下層的「上層 node／下層 node」與舊 RPC 名稱（`node.take`、`node.send`…）照舊〔使用者 2026-10-01〕。
+2026-10-01 把 [tick.md](../tick.md) 拆成兩層：已實作的核心（B-626、B-602、B-620、B-633、B-627）留在 tick.md；範本與各系統級任務、普通程式移到這裡，一篇一個主題。條號不變。同日加外掛掛點（hooks.md，B-635）。tick 這層（含各子篇）講的是**工作資料夾**（`aos-tick` 這一格的 cwd），原本寫 node 的地方 2026-10-01 已改；暫緩區講上下層的「上層 node／下層 node」與舊 RPC 名稱（`node.take`、`node.send`…）照舊〔使用者 2026-10-01〕。
 
 **閱讀順序**：先讀 [tick.md](../tick.md) 的核心；再讀 [template.md](template.md) 看範本把各系統級任務排成什麼順序；之後照需要讀各篇，git 那篇最長，放最後。
 
 | 篇 | 條號 | 狀態 |
 |---|---|---|
+| [hooks.md](hooks.md) | B-635 | **已實作**（2026-10-01）。外掛掛點：任務表頂層鍵 `hooks`（跟 `tasks` 同層，不是模組），目前只開 `after_all`（照表跑完、含被停格檔停下之後跑一串 inst，碼記進紀錄 `hooks.after_all`）。 |
 | [template.md](template.md) | B-629 | 待實作。範本裡的系統級任務（`aos-mq`、`aos-git`、`aos-clean`）都還沒有程式（`aos-publish` 2026-10-01 搬暫緩區、從範本拿掉）；`mq-get`／`mq-post` 要靠暫緩區的 daemon 通道。 |
 | [check-task.md](check-task.md) | B-621 | 待實作。普通程式 `aos-tick-check-task`（2026-10-01 由 `aos-needs` 改寫），不依賴暫緩區。 |
 | [cg.md](cg.md) | B-631、B-634 | 待實作。普通程式；工作資料夾的框與資源上限（daemon 那側）在暫緩區。 |

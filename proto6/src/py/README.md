@@ -80,9 +80,11 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | `lib/aos_tick_record.py` | 結束碼紀錄 `current.json`／`last.json`：開格換檔、每項重寫 |
 | `lib/aos_tick_table.py` | 讀任務表（`.aos/tasks.json`）、只解到 `tasks` 這層、頂層預設、極簡檢查 `check_table()`、每項的 `id`、跑到時合併預設再展開成 inst `load_inst()` |
 | `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、三個 `AOS_*`、分 exit／signal |
+| `lib/aos_tick_hooks.py` | hooks（外掛掛點，m1h）：收尾後依序跑 `after_all` 的 `run_after_all()`（讀表與極簡檢查在 `aos_tick_table.check_table()`，結果是 `Table.after_all`） |
 | `tests/test_tick.py` | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes` |
+| `tests/test_tick_hooks.py` | hooks 的驗收（m1h） |
 
-**任務表的頂層預設與展開時機（使用者 2026-10-01，待統一更新 spec）**：頂層可放 inst 的七個欄位 `argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit` 當每一項的預設；頂層 `_metainfo`（整份表的格式標記，可省）、`id`、`kind` 不是預設，其他鍵當陌生鍵忽略。頂層也可選 `modules`（比照 daemon 設定檔，放 tick 模組的設定；目前沒有模組，核心照收不理、不當預設）。
+**任務表的頂層預設與展開時機（使用者 2026-10-01，待統一更新 spec）**：頂層可放 inst 的七個欄位 `argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit` 當每一項的預設；頂層 `_metainfo`（整份表的格式標記，可省）、`id`、`kind` 不是預設，其他鍵當陌生鍵忽略。頂層也可選 `modules`（比照 daemon 設定檔，放 tick 模組的設定；目前沒有模組，核心照收不理、不當預設）。頂層還可選 `hooks`（外掛掛點，不是模組，見下面「hooks」一節）。
 
 〔使用者裁定 2026-10-01，[verdicts 11 第三批](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)〕頂層 `_metainfo` 可省；每項 `_metainfo` 照 inst 規則（沒寫＝posix 第 1 版，寫了跑到那一項才由 `aos_inst` 驗，驗不過自然丟錯回 1）。`modules` 讀表時整個展開（跟 daemon 設定檔的 `expand()` 同做法），展開失敗＝`bad_table:`、回 1。
 
@@ -165,6 +167,34 @@ plan 步驟對到哪：
 - 任務表極簡檢查（使用者 2026-10-01，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-tick-讀任務表的極簡檢查待統一更新-spec)）：合法 JSON、頂層物件有 `tasks` 陣列、每項（解一層後）是物件、合併頂層預設後有 `argv`（讀表那層解不開也算）；不過 stderr 一行 `bad_table:`、回 1。~~檢查在換紀錄之後，表壞仍佔 `seq`、紀錄停在 `ended:false`。~~（使用者 2026-10-01 改：在換紀錄之前，表壞不換紀錄、不加 `seq`）每項沒寫 `_metainfo` 照跑（`aos_inst` 當 posix 第 1 版）；寫錯了跑到那項時 `aos_inst` 自然丟錯回 1。
 - 沒 `id` 的項（使用者 2026-10-01）：id＝它在 `tasks` 陣列的位置（從 0 起）轉字串，紀錄、`AOS_TASK_ID`、`stopped_after` 都用它；跟別項撞了不管。`id` 不是字串時 `AOS_TASK_ID` 用 `str()`（我自己定的）。
 - ~~目標給的檔在 `.aos/` 裡時工作資料夾取 `.aos` 的上一層；目標給檔時，項目裡的相對檔名以工作資料夾為中心。~~（使用者 2026-10-01 撤回「目標給檔就當任務表」，兩條跟著作廢；給檔現在是用法錯）
+
+## hooks：外掛掛點（m1h）
+
+照 [plan m1h](../../plan/m1h-hooks-module.md) 寫的，spec 正本 [B-635](../../spec/settled/tick/hooks.md)。在任務表頂層寫 `hooks`（跟 `tasks` 同層；使用者 2026-10-01 同日改：不當模組、直接當頂層鍵），裡面寫 `after_all`，`aos-tick` 照表跑完（含被停格檔停下）之後就依序跑那一串。
+
+```json
+{
+  "envs": {"LANG": "C.UTF-8"},
+  "tasks": [{"id": "build", "argv": ["make"]}],
+  "hooks": {"after_all": [
+    {"id": "notify", "argv": ["./notify.sh"]},
+    {"argv": ["sh", "-c", "date >> ticks.log"]}
+  ]}
+}
+```
+
+- 寫法與指示詞展開時機都比照 `tasks`（`hooks`、`after_all`、每一元素讀表時各解一層，內部跑到時才展開）：每項一個 inst 物件，`id` 可省（沒寫＝在 `after_all` 的位置字串）、吃頂層預設、跑法與環境變數（`AOS_TICK_CWD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`，ID／INDEX 是 hook 自己的）都跟任務一樣。
+- 不看停格檔；每項的碼照實記、接著跑下一項；不影響 tick 的結束碼（照舊 0）。擋板、busy、表壞時不跑。
+- 格式錯（`hooks` 不是物件、`after_all` 不是陣列、某項不是物件、合併後沒 `argv`）＝`bad_table:`、回 1，開格前就擋。只開 `after_all`，`hooks` 裡其他鍵照收不理。寫在 `modules.hooks` 底下的不會跑。
+- 紀錄：收尾（`ended:true`）之後在 `current.json` 加 `hooks.after_all`，每跑完一個加一項，格式同 `tasks`；下一格跟著進 `last.json`。例：
+
+  ```json
+  {"version":1,"seq":7,"started_at_ms":1790000000000,
+   "tasks":[{"id":"build","exit":0}],"ended":true,"exit":0,
+   "hooks":{"after_all":[{"id":"notify","exit":0},{"id":"1","exit":3}]}}
+  ```
+
+- 某個 hook 沒跑成時 stderr 是 `exec_failed: after_all/<id>: …`。
 
 ## aos-daemon（第三段最核心 daemon）
 

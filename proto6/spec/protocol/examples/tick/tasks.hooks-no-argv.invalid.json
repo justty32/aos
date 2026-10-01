@@ -1,0 +1,17 @@
+{
+  "tasks": [
+    {
+      "id": "build",
+      "argv": [
+        "make"
+      ]
+    }
+  ],
+  "hooks": {
+    "after_all": [
+      {
+        "id": "notify"
+      }
+    ]
+  }
+}

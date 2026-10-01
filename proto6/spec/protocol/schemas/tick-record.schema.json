@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "tick-record.schema.json",
   "title": "每項結束碼紀錄",
-  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格各項怎麼結束、本工作資料夾的格數與是否被停格檔停下（B-633、P-213）。取代第十九批的 node-journal。不認得的欄位忽略（P-007）。跨欄位關係（stopped_after 是最後一項）schema 表達不了，由 validate.py 的補充檢查驗。",
+  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格各項怎麼結束、本工作資料夾的格數與是否被停格檔停下（B-633、P-213）。取代第十九批的 node-journal。任務表寫了 hooks.after_all 時另記 hooks.after_all（B-635）。不認得的欄位忽略（P-007）。跨欄位關係（stopped_after 是最後一項）schema 表達不了，由 validate.py 的補充檢查驗。",
   "type": "object",
   "required": [
     "version",
@@ -39,6 +39,19 @@
     "stopped_after": {
       "$ref": "common.schema.json#/$defs/ID",
       "description": "被停格檔 .aos/tick/stop 停下時，是哪一項跑完後停的（任務表那一項的 id，沒寫 id 時是位置字串）；只在 ended 為 true 時有，這時 exit 也是 0（B-620、P-213）"
+    },
+    "hooks": {
+      "type": "object",
+      "description": "外掛掛點的紀錄（B-635，使用者 2026-10-01 第六批）：只在任務表寫了 hooks.after_all 的格才有，而且只在 ended 為 true 時有（收尾之後才跑）。其他鍵留給之後的掛點",
+      "properties": {
+        "after_all": {
+          "type": "array",
+          "description": "已跑完的 after_all 項，照順序；格式同 tasks 每項（id 是 hook 項的 id，沒寫是它在 after_all 的位置字串）",
+          "items": {
+            "$ref": "#/$defs/TaskEnd"
+          }
+        }
+      }
     }
   },
   "if": {
@@ -66,6 +79,13 @@
         "not": {
           "required": [
             "stopped_after"
+          ]
+        }
+      },
+      {
+        "not": {
+          "required": [
+            "hooks"
           ]
         }
       }

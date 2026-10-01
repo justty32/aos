@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "seq": 7,
+  "started_at_ms": 1790000000000,
+  "tasks": [
+    {"id": "build", "exit": 0},
+    {"id": "check", "exit": 0}
+  ],
+  "ended": true,
+  "exit": 0,
+  "stopped_after": "check",
+  "hooks": {
+    "after_all": [
+      {"id": "notify", "exit": 0},
+      {"id": "1", "exit": 3}
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "envs": {
+    "LANG": "C.UTF-8"
+  },
+  "tasks": [
+    {
+      "id": "build",
+      "argv": [
+        "make"
+      ]
+    },
+    {
+      "id": "check",
+      "argv": [
+        "aos-tick-check-task",
+        "build"
+      ]
+    }
+  ],
+  "hooks": {
+    "after_all": [
+      {
+        "id": "notify",
+        "argv": [
+          "./notify.sh"
+        ]
+      },
+      {
+        "argv": [
+          "sh",
+          "-c",
+          "date >> logs/ticks.log"
+        ],
+        "envs": {
+          "TZ": "UTC"
+        }
+      }
+    ]
+  }
+}

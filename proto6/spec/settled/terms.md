@@ -57,6 +57,7 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 格數 | 本工作資料夾第幾格〔使用者 2026-10-01 改名〕，記在結束碼紀錄裡；aos 內部的時長與起算點都用它數 | [B-633](tick.md)、[C-01](../contracts.md) |
 | 停格檔 | 任務建它，核心跑完那一項就不開本格後面的項；只管本格，daemon 不看它 | [B-620](tick.md) |
 | 擋板檔 | 擋住之後的格：有它時 daemon 照常叫，由 tick 自己擋——核心取鎖後看到它就一項不跑、回 0；只由人手刪。〔astra 報告必修 1〕舊 daemon「有擋板就不開格」在暫緩區（[B-607](deferred/daemon/registration.md)） | [B-620](tick.md) |
+| 掛點（hooks） | 任務表頂層鍵 `hooks`（跟 `tasks` 同層，不是模組）：讓使用者在 tick 的某個時機插一串 inst，寫法比照 `tasks`；目前只開 `after_all`：照表跑完（含被停格檔停下）之後跑，碼記進紀錄 `hooks.after_all`，不影響 tick 的結束碼 | [B-635](tick/hooks.md) |
 | 任務環境變數 | 整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*` | [B-620](tick.md)、[P-203](protocol/tick.md) |
 | 包裝 | 先做一件事、再跑原指令、照原指令的結果結束的普通程式，例如 `aos-cg -- 原指令` | [B-634](tick/cg.md)、[B-303](deferred/helper.md) |
 | 有效上層 | （暫緩）有登記覆蓋就是覆蓋指定的那個，否則是資料夾推得的上層；覆蓋只改管理關係 | [B-628](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)、[B-606](deferred/daemon/registration.md) |
