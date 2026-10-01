@@ -23,6 +23,10 @@
 收屍／cgroup 模組掛著時（plan m3m 模組二）：新加的項建框、寫上限，`added` 之後印 `inst=<inst> cgroup=i-<h>`；
 還在的項上限改了就重寫新設定裡的那幾個檔（拿掉的鍵不還原）；拿掉的項由它自己的執行緒在最後一次跑完、
 清完之後刪框。建框、寫上限出錯算重讀出錯（R4），但出錯前已經寫進去的不還原。
+
+帳號模組掛著時（plan m3m 模組五）：每一項的帳號照**開起來時**的名單核（名單本身改了算 `modules` 改了、只警告），
+名單不准或帳號查不到算重讀出錯（R4、A6）；還在的項帳號改了，下一次開 `aos-exec` 起用新帳號。
+重讀是主程式（已降成預設帳號）做的，設定檔要讀得到。
 """
 import sys
 
@@ -64,6 +68,8 @@ def _apply(new, first, added, removed):
     """在 _items_lock 底下比對、套用。cgroup 的建框、寫上限先做（出錯就丟出去、清單一點都不改）。"""
     items = aos_daemon._items
     cg = aos_daemon._cg
+    if aos_daemon._acct is not None:    # m3m 模組五：照開起來時的名單核每一項的帳號，不合整份不套用
+        aos_daemon._acct.policy.check_items(new.items)
     if cg is not None:
         for n in new.items:
             cur = items.get(n.inst)
@@ -103,6 +109,7 @@ def _update(cur, n):
         cur.interval_ms = n.interval_ms
         cur.stop_on_nonzero = n.stop_on_nonzero
         cur.cgroup = n.cgroup
+        cur.user = n.user
         if changed and not cur.running and cur.end_mono is not None:
             # R2：上一次結束＋新週期；已經過了就立刻跑（due 在過去，_next_run 馬上回）
             cur.due = cur.end_mono + n.interval_ms / 1000.0
