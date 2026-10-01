@@ -48,7 +48,7 @@ aos-clean [--node <node>] --config <設定檔>
 
 [ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；〔第二十批，時長改格數，算本 node 的格〕`interval_ticks` 預設 1000、`retention_ticks` 預設 100000（〔使用者方向 2026-09-30，第二十批〕直接用格數訂：週期 1 秒時約 17 分鐘與 28 小時，週期 30 秒時約 8 小時與 35 日；取代 `interval_seconds` 86400、`retention_ms` 2592000000）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 requests／responses；無效設定回 2。
 
-預設 agent／kernel 任務表各有一項 `aos-clean --config config/clean.json`，每格呼叫；任務表不加間隔欄位。aos-clean 自己在追蹤的 `state/ops/clean.json` 記 `{version:1,last_cleaned_seq}`（〔第二十批〕上次清理完成是本 node 第幾格，取代 `last_cleaned_at_ms`）；沒有這個檔就算已到期。現在第幾格：讀 `.aos/tick/current.json`——在 tick 內就是本格（`$AOS_TICK_CWD/.aos/tick/current.json`，[P-213](../settled/protocol/tick.md)），tick 外直接跑就是最近一格；都讀不到（不知道 `seq`）時不清、回 0、stderr 印 `no_record`。何時更新見 [B-404](../base/storage.md)。
+預設 agent／kernel 任務表各有一項 `aos-clean --config config/clean.json`，每格呼叫；任務表不加間隔欄位。aos-clean 自己在追蹤的 `state/ops/clean.json` 記 `{version:1,last_cleaned_seq}`（〔第二十批〕上次清理完成是本 node 第幾格，取代 `last_cleaned_at_ms`）；沒有這個檔就算已到期。現在第幾格：讀 `.aos/tick/current/record.json` 的 `seq`——在 tick 內就是本格（`$AOS_TICK_CWD/.aos/tick/current/record.json`，[P-213](../settled/protocol/tick.md)；2026-10-01 第九批紀錄拆成資料夾，原 `current.json`），tick 外直接跑就是最近一格；都讀不到（不知道 `seq`）時不清、回 0、stderr 印 `no_record`。何時更新見 [B-404](../base/storage.md)。
 
 直接跑與在 tick 內跑時怎麼持鎖、誰提交，以 [B-404](../base/storage.md) 與 [B-602](../settled/tick.md) 為正本。〔使用者方向 2026-09-29〕不為清理另開全域定時程序或叫醒冷 node，有權限者可直接清退役 node。
 

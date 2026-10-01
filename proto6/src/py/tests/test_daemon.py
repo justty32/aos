@@ -452,7 +452,7 @@ class Step6Tick(DaemonCase):
         self.write("n/a/.aos/tasks.json", tasks_json({"id": "t", "argv": ["true"]}))
 
     def seq(self):
-        p = os.path.join(self.node, ".aos", "tick", "current.json")
+        p = os.path.join(self.node, ".aos", "tick", "current", "record.json")   # 第九批拆檔：seq 在 record.json
         if not os.path.exists(p):
             return 0
         with open(p, encoding="utf-8") as f:

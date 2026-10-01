@@ -335,7 +335,8 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 **結束碼紀錄與格數**
 
-- 〔第八批〕紀錄只記結束碼不是 0 的項：第一項回 7 時第二項讀得到 `ran:1` 與 `{"id":…,"index":0,"exit":7}`，第一項回 0 時 `tasks` 是空的；第三項被 SIGKILL 時那筆是 `"index":2,"signal":9`；tick 在某項中途被殺，下一格的 `last.json` 是 `ended:false`（B-633）。
+- 〔第八批〕紀錄只記結束碼不是 0 的項：第一項回 7 時第二項讀得到 `ran:1` 與 `{"id":…,"index":0,"exit":7}`，第一項回 0 時 `tasks` 是空的；第三項被 SIGKILL 時那筆是 `"index":2,"signal":9`；tick 在某項中途被殺，下一格的 `last/` 是 `ended:false`（B-633）。
+- 〔第九批〕紀錄是資料夾 `current/`：`record.json`（開格、收尾各寫一次）的 `ran`、`tasks`、`hooks` 是 `$ref`，指向 `ran.json`、`task-exits.json`、`hook-exits.json`（沒寫 hooks 時沒有）；換紀錄後 `last/` 展開結果跟換之前的 `current/` 一樣（B-633、P-213）。
 - 同一資料夾連跑十格，`seq` 從 1 到 10，daemon 與 cron 交替跑仍連續；預設不 fsync，斷電後 `seq` 可能倒退，不要求（B-633；落盤旗標 `--firstdo-fsync` 暫緩）；上一格還沒跑完（`busy`）或任務表不合極簡檢查時，兩份紀錄與 `seq` 都不變（B-633、B-620、B-627）。
 - 牆鐘倒退時，以格數計的保留期不提早也不延後到期（C-01、B-404）。
 

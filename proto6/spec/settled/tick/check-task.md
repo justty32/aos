@@ -9,7 +9,7 @@
 `needs` 的意思不變：前置成功才往下跑。原本做成包裝 `aos-needs <前置…> -- <原指令…>`（前置沒成功就不跑原指令、回 125）；2026-10-01 使用者改成更簡單的一項：**自己是任務表上的一項，檢查指定的項有沒有跑好，沒跑好就建停格檔**，本格後面的項就不跑〔使用者 2026-10-01：「其實可以簡單一些，也就是它會檢查指定的東西是否跑好，沒跑好，就去寫tick stop檔案」「那就aos-tick-check-task」〕。
 
 - **`aos-tick-check-task [<任務 id…>]`**（argv 見 [P-204](../protocol/tick.md)）：不包別的指令，自己就是任務表上的一項。
-- **讀本格紀錄**：`$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（B-633；狀態資料夾照 `AOS_DIRNAME`，沒設是 `.aos`，[C-09](../conventions.md)）。
+- **讀本格紀錄**：`$AOS_TICK_CWD/<狀態資料夾>/tick/current/`，展開 `record.json` 的 `$ref` 後看 `tasks`（實際在 `task-exits.json`；B-633，使用者 2026-10-01 第九批拆檔；狀態資料夾照 `AOS_DIRNAME`，沒設是 `.aos`，[C-09](../conventions.md)）。
 - **判斷**〔使用者 2026-10-01 第八批：紀錄的 `tasks` 只記結束碼不是 0 的項（B-633），判斷跟著改〕：指定的 id 有任一個出現在本格紀錄的 `tasks`（失敗清單，含被訊號殺的 `signal`）裡 → 建停格檔 `<狀態資料夾>/tick/stop`（照現行停格檔規定，[B-620](../tick.md)「停格檔與擋板檔」、[P-213](../protocol/tick.md)），檔內寫一行原因；核心看到就不開本格後面的項。都沒出現 → 當成功、什麼都不做。**不分辨「還沒跑」**：照 POC 默認一切正常，使用者會把它排在要檢查的項後面。
 - **不寫 id＝檢查本格到目前為止跑過的每一項**：`tasks` 失敗清單不是空的就建停格檔，空的就什麼都不做。
 - **結束碼**：不管有沒有建停格檔都回 0（停格是預料之中，[C-08](../conventions.md)）；自己的錯（沒有 `AOS_TICK_CWD`、讀不到紀錄等）回 1。照 POC 總原則默認正常，不另做異常處理。
@@ -22,4 +22,4 @@
 
 依據：使用者方向 2026-09-29（needs 的意思）；第二十批疑點裁定 2（改成普通程式）；使用者 2026-10-01 第五批（改寫成 `aos-tick-check-task`：自己一項、沒跑好就建停格檔、都回 0）；同日第八批（紀錄只記不是 0 的，判斷改成「出現在失敗清單才停格」，[verdicts 11 篇末](../../../notes/verdicts/11-tick-as-unit.md)）。
 
-**驗收：**表 `[a: true, chk: aos-tick-check-task a, b: …]`：`b` 照跑、`chk` 回 0（不記進 `tasks`）、沒有停格檔，紀錄 `ran:3`、`tasks:[]`。`a` 是 `false`：`chk` 回 0、建了停格檔，`b` 沒跑，紀錄 `ran:2`、`tasks` 只有 `{"id":"a","index":0,"exit":1}`、`stopped_after` 是 `chk`。指定一個還沒跑到的 id（排在後面）：不在失敗清單裡，當成功、不停格。不寫 id 時前面任一項不是 0 就停格、全是 0 就不停。不在 tick 裡直接跑（沒有 `AOS_TICK_CWD`）：回 1。`AOS_DIRNAME=st` 時讀 `st/tick/current.json`、建 `st/tick/stop`。
+**驗收：**表 `[a: true, chk: aos-tick-check-task a, b: …]`：`b` 照跑、`chk` 回 0（不記進 `tasks`）、沒有停格檔，紀錄 `ran:3`、`tasks:[]`。`a` 是 `false`：`chk` 回 0、建了停格檔，`b` 沒跑，紀錄 `ran:2`、`tasks` 只有 `{"id":"a","index":0,"exit":1}`、`stopped_after` 是 `chk`。指定一個還沒跑到的 id（排在後面）：不在失敗清單裡，當成功、不停格。不寫 id 時前面任一項不是 0 就停格、全是 0 就不停。不在 tick 裡直接跑（沒有 `AOS_TICK_CWD`）：回 1。`AOS_DIRNAME=st` 時讀 `st/tick/current/`、建 `st/tick/stop`。

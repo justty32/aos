@@ -63,6 +63,8 @@
   > **2026-10-01 第八批補註**（[verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第八批紀錄只記非-0)）：使用者「tasks如果結果是0，那就不用紀錄了。hooks也是。」上面的例子是當時的格式。現在 `tasks`、`hooks.after_all` 只記結束碼不是 0 的，每筆加 `index`；另有 `ran`（只算 tasks，hooks 不記 ran）。同一格現在寫成：
   > `{"version":1,"seq":7,"started_at_ms":1790000000000,"ran":2,"tasks":[],"ended":true,"exit":0,"stopped_after":"b","hooks":{"after_all":[{"id":"1","index":1,"exit":3}]}}`
   > 另外，hook 跑到時展開失敗→tick 回 1、但紀錄已是 `ended:true`／`exit:0`，兩邊對不上：使用者 2026-10-01：先不管（POC 默認一切正常）。
+  >
+  > **2026-10-01 第九批補註**（[verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第九批紀錄拆檔)）：使用者「current.json這邊，也要引入指示詞，把容易被改動的弄成$ref指向其他檔案，不容易被改動的留在current.json」。上面講的 `current.json`／`last.json` 現在是資料夾 `tick/current/`／`last/`；`hooks` 實際存在 `hook-exits.json`，收尾那次先寫好 `{"after_all":[]}`、`record.json` 同時加 `"hooks":{"$ref":"hook-exits.json"}`（`record.json` 只在開格、收尾各寫一次，不再另有「開始跑 hooks 前」那次寫）；沒寫 `after_all` 的格沒有這個檔也沒有這個 `$ref`。
 
   - 表裡沒寫 `after_all` 的格沒有 `hooks` 鍵；`hooks` 只會出現在 `ended:true` 的紀錄裡（schema 管）。
   - 因為寫在收尾之後，hook 讀 `current.json` 看得到整格結果與前面 hook 的碼。

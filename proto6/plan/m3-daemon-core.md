@@ -143,7 +143,7 @@
   inst 的 `cwd` 預設就是 `/n/a`，tick 不帶目標（原 `--node`，2026-10-01 改名 `--target`、再改成位置參數）用 `./`。測試裡 `argv[0]` 寫 `bin/aos-tick` 的絕對路徑，不靠 PATH。
 - **要使用者裁定的點**：無。
 - **驗收**：
-  - 清單放 `/n/a/inst.json`、週期 100 ms，跑 1 秒：每次印 `inst=/n/a/inst.json exit=0`，`.aos/tick/current.json` 的 `seq` 一直往上加。
+  - 清單放 `/n/a/inst.json`、週期 100 ms，跑 1 秒：每次印 `inst=/n/a/inst.json exit=0`，`.aos/tick/current/record.json` 的 `seq` 一直往上加（2026-10-01 第九批：紀錄拆成資料夾，原 `current.json`）。
   - 清單改寫資料夾 `/n/a`：一樣跑得起來（aos-exec 自己找到 `inst.json`），印 `inst=/n/a`。
   - 放上擋板檔：照樣每次 `exit=0`，`seq` 不動，daemon 的 stderr 有帶標頭的 `blocked: …`（inst 寫了 `inherit`）；拿掉後又開始加。
   - 任務表寫壞：tick 回 1，daemon 印 `exit=1`；`stop_on_nonzero: true` 時印 `stopped`。

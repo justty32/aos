@@ -64,7 +64,7 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 | 變數 | 誰設 | 誰讀 | 內容 | 正本 |
 |---|---|---|---|---|
 | `AOS_DIRNAME` | 使用者（或外層環境） | `aos-tick`、`aos-exec` | 狀態資料夾的名字；三態見 C-09 | [C-09](#c-09狀態資料夾的名字aos_dirname) |
-| `AOS_TICK_CWD` | `aos-tick` 給每項任務（`hooks.after_all` 的項也給） | 任務 | 這一格 tick 的工作資料夾的絕對路徑（命令列給的目標資料夾）。任務要讀本格結束碼紀錄，就讀 `$AOS_TICK_CWD/<AOS_DIRNAME>/tick/current.json` | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TICK_CWD` | `aos-tick` 給每項任務（`hooks.after_all` 的項也給） | 任務 | 這一格 tick 的工作資料夾的絕對路徑（命令列給的目標資料夾）。任務要讀本格結束碼紀錄，就讀 `$AOS_TICK_CWD/<AOS_DIRNAME>/tick/current/`（`record.json` 加上它 `$ref` 的 `ran.json`、`task-exits.json`、`hook-exits.json`，P-213） | [B-620](tick.md)、[P-203](protocol/tick.md) |
 | `AOS_TASK_ID` | `aos-tick` 給每項任務（`hooks.after_all` 的項也給） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串。`after_all` 項是它在 `after_all` 陣列裡的 id／位置 | [B-620](tick.md)、[B-635](tick/hooks.md) |
 | `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起；`after_all` 項是它在 `after_all` 陣列的位置 | [B-620](tick.md)、[B-635](tick/hooks.md) |
 | `AOS_DAEMON_SOCKET` | `aos-daemon`（掛了控制模組時）給每次 `aos-exec` | `aos-ctl` | 控制模組 socket 的絕對路徑 | [B-641](daemon/control.md)、[P-121](protocol/daemon/control.md) |

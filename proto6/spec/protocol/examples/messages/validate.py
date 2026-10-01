@@ -31,7 +31,9 @@ def schema_name(path):
     if group in ('agent-tasks', 'kernel-tasks'):
         return topic
     if group == 'tick':
-        return {'tasks': 'tick-tasks', 'tick-record': 'tick-record', 'inst': 'inst'}[topic]
+        # 第九批（2026-10-01）紀錄拆檔：tick-record.* 是展開後的完整紀錄，tick-record-file.* 是 record.json 本體
+        return {'tasks': 'tick-tasks', 'tick-record': 'tick-record', 'inst': 'inst',
+                'tick-record-file': 'tick-record#/$defs/RecordFile'}[topic]
     if group == 'ops':
         return 'ops-' + topic
     if group == 'resources':

@@ -3,7 +3,7 @@
 使用者裁定 2026-10-01：hooks 設定在 tasks.json 頂層 `hooks`（跟 `tasks` 同層；同日改：「就不讓他當模組了，
 直接讓他變頂層key」，展開時機比照 tasks）；目前只開 `after_all`
 （照表跑完、含被停格檔停下之後跑），值是一串、寫法比照 tasks、吃頂層預設；不看停格檔；碼照實記進
-`current.json` 的 `hooks.after_all`、不影響 tick 的結束碼；擋板、busy、表壞時不跑。
+本格紀錄的 `hooks.after_all`（第九批拆檔後在 `tick/current/hook-exits.json`，record.json 用 $ref 指過去）、不影響 tick 的結束碼；擋板、busy、表壞時不跑。
 第八批（使用者 2026-10-01）：「hooks也是」——只記不是 0 的，每筆 {"id","index","exit"}；hooks 不記 ran。
 """
 import fcntl
@@ -140,7 +140,7 @@ class AfterAll(HooksCase):
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(self.read("h.out"), "這一項的 top\n")
 
-    def test_into_last_json(self):
+    def test_into_last(self):
         self.hooks([sh("h", "exit 2")])
         self.assertEqual(self.tick().returncode, 0)
         self.put({"tasks": [sh("a", "true")]})                # 第二格沒 hooks
@@ -150,6 +150,21 @@ class AfterAll(HooksCase):
         self.assertEqual(cur["seq"], 2)
         self.assertNotIn("hooks", cur)
         check_record(self, last)
+        self.assertTrue(self.exists(".aos/tick/last/hook-exits.json"))
+        self.assertFalse(self.exists(".aos/tick/current/hook-exits.json"))
+
+    def test_hook_exits_file(self):
+        # 第九批：有 hooks 時收尾先寫 hook-exits.json（{"after_all":[]}）、record.json 加 "hooks":{"$ref":"hook-exits.json"}；
+        # 之後只有不是 0 的 hook 才重寫它
+        self.hooks([sh("look", "cat .aos/tick/current/hook-exits.json > h0.json; "
+                               "cat .aos/tick/current/record.json > r0.json"), sh("bad", "exit 6")])
+        self.assertEqual(self.tick().returncode, 0)
+        self.assertEqual(json.loads(self.read("h0.json")), {"after_all": []})
+        r0 = json.loads(self.read("r0.json"))
+        self.assertEqual((r0["hooks"], r0["ended"]), ({"$ref": "hook-exits.json"}, True))
+        self.assertEqual(json.loads(self.read(".aos/tick/current/record.json")), r0)   # hooks 跑時 record.json 不再寫
+        self.assertEqual(json.loads(self.read(".aos/tick/current/hook-exits.json")),
+                         {"after_all": [{"id": "bad", "index": 1, "exit": 6}]})
 
 
 class NotRun(HooksCase):
@@ -187,7 +202,7 @@ class NotRun(HooksCase):
         # 在開格前查到：一項都不跑、紀錄與 seq 都不動
         self.put({"tasks": [sh("a", "true")]})
         self.assertEqual(self.tick().returncode, 0)
-        cur = self.read(".aos/tick/current.json")
+        cur = self.snap(".aos/tick/current")
         bad = [{"after_all": sh("h", "true")},              # 不是陣列
                {"after_all": [sh("h", "true"), "true"]},    # 某項不是物件
                {"after_all": [{"id": "h"}]},                # 合併預設後沒 argv
@@ -201,8 +216,8 @@ class NotRun(HooksCase):
             self.assertIn("bad_table:", r.stderr)
             self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
             self.assertFalse(self.exists("a.ran"))
-            self.assertEqual(self.read(".aos/tick/current.json"), cur)
-            self.assertFalse(self.exists(".aos/tick/last.json"))
+            self.assertEqual(self.snap(".aos/tick/current"), cur)
+            self.assertFalse(self.exists(".aos/tick/last"))
 
     def test_top_argv_satisfies_hook(self):
         self.put({"argv": ["sh", "-c", "touch \"$AOS_TASK_ID.ran\""], "tasks": [{"id": "a"}],

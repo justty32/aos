@@ -60,6 +60,7 @@
 
 - **要做到**：每格開頭把 `current.json` 換成 `last.json`，寫一份新的（`seq` 加 1、`ended:false`、`tasks:[]`）；每跑完一項整份重寫；跑完寫 `ended:true` 與整格結束碼。
   - **2026-10-01 第八批補註**（[verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第八批紀錄只記非-0)）：使用者「tasks如果結果是0，那就不用紀錄了。hooks也是。」新紀錄開格時多 `ran:0`；每跑完一項 `ran` 加 1，結束碼不是 0 的才在 `tasks` 加一筆 `{"id","index","exit"}`（訊號殺的是 `signal`）。已改程式與測試（`RecordOnlyFailures` 等）。
+  - **2026-10-01 第九批補註**（[verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第九批紀錄拆檔)）：使用者「current.json這邊，也要引入指示詞，把容易被改動的弄成$ref指向其他檔案，不容易被改動的留在current.json」。本節的 `current.json`／`last.json` 改成資料夾 `tick/current/`／`tick/last/`：`record.json`（開格、收尾各寫一次）用 `$ref` 指 `ran.json`（每項後重寫）、`task-exits.json`（有失敗才重寫）、`hook-exits.json`（有 hooks 才有）；換紀錄＝刪 `last/`、`current/` 整個 rename 成 `last/`、暫存資料夾 rename 成 `current/`；讀的一方用 `aos_tick_record.read_record()` 展開。已改程式與測試（新 `RecordFiles` 3 條、hooks 加 1 條）；舊檔不遷移。
 - **spec**：[B-633](../spec/settled/tick.md#b-633每項結束碼紀錄與格數)；格式 P-213 與 [tick-record schema](../spec/protocol/schemas/tick-record.schema.json)。
 - **做法**：
   - 算 `seq`：有 `current.json` 取它加 1，沒有取 `last.json` 加 1，都沒有是 1；~~讀不懂的當沒有~~（2026-10-01 作廢：默認讀得懂）。
