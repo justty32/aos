@@ -56,7 +56,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | （暫緩）舊 daemon IPC 與 helper 私有通道的 `data.code` | [P-111](../settled/deferred/protocol/daemon/provision-and-runner.md) |
 | runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](../settled/deferred/protocol/daemon/provision-and-runner.md) |
 | inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
-| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：停掉本格靠停格檔）；系統級任務 `aos-git`、普通程式 `aos-tick-check-task`（原 `aos-needs`）、`aos-as`、`aos-cg` 的結束碼 | [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)、P-212、[P-205](../settled/protocol/tick.md)、P-211（[tick 協議](../settled/protocol/tick.md)） |
+| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：擋下本格後面的項靠 tasks-blocked）；系統級任務 `aos-git`、普通程式 `aos-cg` 的結束碼（`aos-tick-check-task`、`aos-as` 暫緩） | [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)、P-212、[P-205](../settled/protocol/tick.md)、P-211（[tick 協議](../settled/protocol/tick.md)） |
 | tick–daemon 通道的 `data.code`（含部件關閉的 `not_available`）；客戶端的 `no_channel` | [P-119](../settled/deferred/protocol/daemon/channel.md) |
 | `aos-mq get`／`post` 結束碼及 `not_available` 診斷 | [P-206](../settled/protocol/tick.md) |
 | 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
@@ -131,7 +131,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | 協議檔／條款 | 本篇只留 | 行為正本（主規格） |
 |---|---|---|
 | [daemon](../settled/protocol/daemon/README.md)／P-100～126 | 現行：`aos-daemon` 的 argv、設定檔、輸出與結束碼（P-120），控制 socket 與 `aos-ctl`（P-121），重讀設定（P-122），記住狀態（P-123），收屍／cgroup（P-124），訊息 socket 與 `aos-mq`（P-125），帳號模組（P-126）；暫緩：舊設定欄位、IPC method、tick–daemon 通道（P-117～119）、helper 通道、runner 回報、錯誤碼 | [daemon](../settled/daemon/README.md)（現行 B-640～646；暫緩 B-601～614，通道 B-612～614）；[身分](../base/identity-resources.md)；[inst](../base/inst.md) |
-| [tick 協議](../settled/protocol/tick.md)／P-200～213 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、結束碼紀錄、停格檔與擋板檔、系統級任務與普通程式的 argv、鬧鐘與待送檔格式 | [tick](../settled/tick.md)（B-602、B-620～633）；[儲存](../base/storage.md)；[投件](../base/transport.md)；[執行器 B-202](../base/execution.md) |
+| [tick 協議](../settled/protocol/tick.md)／P-200～213 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、結束碼紀錄、tasks-blocked 與擋板檔、系統級任務與普通程式的 argv、鬧鐘與待送檔格式 | [tick](../settled/tick.md)（B-602、B-620～633）；[儲存](../base/storage.md)；[投件](../base/transport.md)；[執行器 B-202](../base/execution.md) |
 | [messages](messages.md)／P-300～309 | 請求／回應檔、method 目錄、摘要檔 | [投件](../base/transport.md)；[tick](../settled/tick.md)；[S-201](../scheduling/admission.md) |
 | [work](work.md)／P-400～404、408～411 | 工作 payload、結果 JSON、`work.cancel` 形狀、程式 argv | [工作材料](../base/work.md)；[執行器](../base/execution.md) |
 | [llm-work](llm-work.md)／P-405～407 | 池設定、LLM 請求與結果 | [LLM S-301～307](../scheduling/llm.md) |
@@ -167,7 +167,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-201 | inst 的格式與展開驗證 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-202 | 任務註冊表 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-203 | aos-tick 與任意任務程式 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
-| P-204 | 成敗與 aos-tick-check-task（2026-10-01 取代 aos-needs） | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-204 | aos-tick-check-task（暫緩〔2026-10-01 第十六批〕） | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-205 | aos-git：開格、存檔點、收尾 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-206 | 收件、派送與發摘要（發摘要 `aos-publish` 那列 2026-10-01 搬暫緩區） | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-207 | 加入普通設定與重要設定手改〔暫緩，2026-10-01〕 | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
@@ -176,7 +176,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-210 | 預設範本與恢復前驗證 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-211 | aos-cg：每項一框 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-212 | aos-as：切換帳號（暫緩） | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
-| P-213 | 每項結束碼紀錄、停格檔與擋板檔 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-213 | 每項結束碼紀錄、tasks-blocked 與擋板檔 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-300 | 兩條路各做什麼 | [messages.md](messages.md) |
 | P-301 | 收件區分請求與回應 | [messages.md](messages.md) |
 | P-302 | 完整封包 | [messages.md](messages.md) |

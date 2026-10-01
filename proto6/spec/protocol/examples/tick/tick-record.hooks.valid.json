@@ -6,7 +6,7 @@
   "tasks": [],
   "ended": true,
   "exit": 0,
-  "stopped_after": "check",
+  "blocked_before": "agent",
   "hooks": {
     "after_all": [
       {

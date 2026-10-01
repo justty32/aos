@@ -429,10 +429,10 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
    - 不寫 id＝檢查本格前面已跑過的每一項。
    - 不管有沒有停格都回 0（停格是預料之中）；自己的錯（沒有 `AOS_TICK_CWD`、讀不到紀錄等）回 1。照 POC 總原則默認正常。
    - 停格擋掉整格剩下的全部項，接受。
-   - 檔名 `tick/needs.md` 改成 [`tick/check-task.md`](../../spec/settled/tick/check-task.md)。舊的包裝寫法（`-- 原指令`、125）記在[暫緩區 tick 篇末「已撤回／被取代」](../../spec/settled/deferred/tick.md#已撤回被取代)。
+   - 檔名 `tick/needs.md` 改成 [`tick/check-task.md`](../../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)。舊的包裝寫法（`-- 原指令`、125）記在[暫緩區 tick 篇末「已撤回／被取代」](../../spec/settled/deferred/tick.md#已撤回被取代)。
 3. **停格檔的未來方向（只記錄，不做）。** 使用者原話：「我覺得tick-stop這個檔案會變成特定json格式，存放一些資訊，然後可以用aos-tick-check-task-continue來去檢查其中的一些資訊，滿足後修改stop中的資訊。所以aos-tick仍會執行所有任務，但會變成執行前檢查stop，看看是否滿足特定條件，滿足的話就可以執行該任務。」記在 [B-620「停格檔與擋板檔」](../../spec/settled/tick.md)與 P-213 旁；現在停格檔規定不變。
 
-改到的地方：[tick/check-task.md](../../spec/settled/tick/check-task.md)（原 needs.md，B-621 改寫）、[tick 協議](../../spec/settled/protocol/tick.md)（P-204 改寫、P-206 拿掉 `aos-publish` 列、P-200／P-202／P-208／P-213 各一句）、[tick/mq.md](../../spec/settled/tick/mq.md)（發布摘要一節搬走）、[tick/template.md](../../spec/settled/tick/template.md)（拿掉 `summary`、前置改用 `aos-tick-check-task`）、[tick/git.md](../../spec/settled/tick/git.md)、[tick/ 入口](../../spec/settled/tick/README.md)、[tick 核心](../../spec/settled/tick.md)（含停格檔未來方向）、[名詞](../../spec/settled/terms.md)、[慣例](../../spec/settled/conventions.md)、[整理區 README](../../spec/settled/README.md)、[暫緩區](../../spec/settled/deferred/README.md)與其 tick、tick 協議兩篇；範例 `tasks.template.valid.json`、`tasks.template-git.valid.json`；區外就地標註：[P-307](../../spec/protocol/messages.md)、[kernel 任務](../../spec/protocol/kernel-tasks.md)、[agent 任務](../../spec/protocol/agent-tasks.md)、[驗收入口](../../spec/conformance.md)、[協議入口](../../spec/protocol/README.md)、[spec 入口](../../spec/README.md)、[名詞](../../spec/terms.md)、[base 入口](../../spec/base/README.md)、[proto6 README](../../README.md)；[plan README](../../plan/README.md)、[m1-tick-core](../../plan/m1-tick-core.md)、[m2-system-tasks](../../plan/m2-system-tasks.md)。
+改到的地方：[tick/check-task.md](../../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（原 needs.md，B-621 改寫）、[tick 協議](../../spec/settled/protocol/tick.md)（P-204 改寫、P-206 拿掉 `aos-publish` 列、P-200／P-202／P-208／P-213 各一句）、[tick/mq.md](../../spec/settled/tick/mq.md)（發布摘要一節搬走）、[tick/template.md](../../spec/settled/tick/template.md)（拿掉 `summary`、前置改用 `aos-tick-check-task`）、[tick/git.md](../../spec/settled/tick/git.md)、[tick/ 入口](../../spec/settled/tick/README.md)、[tick 核心](../../spec/settled/tick.md)（含停格檔未來方向）、[名詞](../../spec/settled/terms.md)、[慣例](../../spec/settled/conventions.md)、[整理區 README](../../spec/settled/README.md)、[暫緩區](../../spec/settled/deferred/README.md)與其 tick、tick 協議兩篇；範例 `tasks.template.valid.json`、`tasks.template-git.valid.json`；區外就地標註：[P-307](../../spec/protocol/messages.md)、[kernel 任務](../../spec/protocol/kernel-tasks.md)、[agent 任務](../../spec/protocol/agent-tasks.md)、[驗收入口](../../spec/conformance.md)、[協議入口](../../spec/protocol/README.md)、[spec 入口](../../spec/README.md)、[名詞](../../spec/terms.md)、[base 入口](../../spec/base/README.md)、[proto6 README](../../README.md)；[plan README](../../plan/README.md)、[m1-tick-core](../../plan/m1-tick-core.md)、[m2-system-tasks](../../plan/m2-system-tasks.md)。
 
 <a id="2026-10-01-第六批tick-的-hooks外掛掛點"></a>
 
@@ -477,7 +477,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **`aos-tick-check-task` 的判斷跟著改**（B-621、P-204；程式還沒寫）：寫了 id＝有出現在本格紀錄的失敗清單才建停格檔，沒出現當成功（不分辨「還沒跑」，照 POC 默認一切正常，使用者把它排在那些項後面）；不寫 id＝失敗清單非空就停格。
 - **另一條**：hook 跑到時展開失敗→tick 回 1，但紀錄已是 `ended:true`／`exit:0`，兩邊對不上。使用者 2026-10-01：照 POC 默認一切正常，**先不管**。
 
-改到的地方：程式 `lib/aos_tick_record.py`、`lib/aos_tick.py`、`lib/aos_tick_hooks.py`；測試 `tests/test_tick.py`（新增 `RecordOnlyFailures`）、`tests/test_tick_hooks.py`；[tick 核心](../../spec/settled/tick.md) B-620、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-204、P-213；[tick/hooks.md](../../spec/settled/tick/hooks.md)；[tick/check-task.md](../../spec/settled/tick/check-task.md)；[tick/git.md](../../spec/settled/tick/git.md)（`kind` 回查與組的成敗判法各一句）；[驗收入口](../../spec/conformance.md)一句；schema `tick-record` 與 `examples/tick/tick-record.*`（14 份改寫、6 份新反例）、`examples/messages/validate.py` 補充檢查；[src/py README](../../src/py/README.md)；[plan m1-tick-core](../../plan/m1-tick-core.md)、[m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註、[m2-system-tasks](../../plan/m2-system-tasks.md)（步驟 1、4 與裁定紀錄）。
+改到的地方：程式 `lib/aos_tick_record.py`、`lib/aos_tick.py`、`lib/aos_tick_hooks.py`；測試 `tests/test_tick.py`（新增 `RecordOnlyFailures`）、`tests/test_tick_hooks.py`；[tick 核心](../../spec/settled/tick.md) B-620、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-204、P-213；[tick/hooks.md](../../spec/settled/tick/hooks.md)；[tick/check-task.md](../../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)；[tick/git.md](../../spec/settled/tick/git.md)（`kind` 回查與組的成敗判法各一句）；[驗收入口](../../spec/conformance.md)一句；schema `tick-record` 與 `examples/tick/tick-record.*`（14 份改寫、6 份新反例）、`examples/messages/validate.py` 補充檢查；[src/py README](../../src/py/README.md)；[plan m1-tick-core](../../plan/m1-tick-core.md)、[m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註、[m2-system-tasks](../../plan/m2-system-tasks.md)（步驟 1、4 與裁定紀錄）。
 
 <a id="2026-10-01-第九批紀錄拆檔"></a>
 
@@ -499,7 +499,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
   - 每個檔都是同資料夾暫存檔（`.<檔名>.tmp`）→ rename；開格前若有上次留下的 `.current.tmp/` 先刪。
 - **舊的 `tick/current.json`、`tick/last.json` 不再使用**，POC 不管舊紀錄遷移；照 POC 總原則默認一切正常。
 
-改到的地方：程式 `lib/aos_tick_record.py`（改寫，加 `read_record()`）、`lib/aos_tick.py`（收尾時告訴紀錄有沒有 hooks）、`lib/aos_tick_hooks.py`（拿掉 `start_hooks`）；測試 `tests/test_tick.py`（任務改用 `read_record()` 印紀錄、比對整個資料夾、新 `RecordFiles` 3 條）、`tests/test_tick_hooks.py`（新 1 條）、`tests/test_daemon.py`（讀 `seq` 的路徑）；[tick 核心](../../spec/settled/tick.md) B-620 環境變數表、結束碼表、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-200、P-203、P-204、P-211、P-212、P-213；[tick/hooks.md](../../spec/settled/tick/hooks.md)；[tick/check-task.md](../../spec/settled/tick/check-task.md)；[tick/git.md](../../spec/settled/tick/git.md)（固定排除的 `.aos/tick/` 本來就涵蓋整個資料夾，只補一句說明）；[tick/recovery.md](../../spec/settled/tick/recovery.md)；[暫緩區 tick](../../spec/settled/deferred/tick.md)（檔名註）；[慣例 C-10](../../spec/settled/conventions.md)；[名詞](../../spec/settled/terms.md)；[驗收入口](../../spec/conformance.md)；schema `tick-record`（加 `$defs/RecordFile`）、`examples/tick/tick-record-file.*`（2 正 3 反）、`examples/messages/validate.py`；[src/py README](../../src/py/README.md)；[plan m1-tick-core](../../plan/m1-tick-core.md)、[m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註、[m2-system-tasks](../../plan/m2-system-tasks.md)。
+改到的地方：程式 `lib/aos_tick_record.py`（改寫，加 `read_record()`）、`lib/aos_tick.py`（收尾時告訴紀錄有沒有 hooks）、`lib/aos_tick_hooks.py`（拿掉 `start_hooks`）；測試 `tests/test_tick.py`（任務改用 `read_record()` 印紀錄、比對整個資料夾、新 `RecordFiles` 3 條）、`tests/test_tick_hooks.py`（新 1 條）、`tests/test_daemon.py`（讀 `seq` 的路徑）；[tick 核心](../../spec/settled/tick.md) B-620 環境變數表、結束碼表、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-200、P-203、P-204、P-211、P-212、P-213；[tick/hooks.md](../../spec/settled/tick/hooks.md)；[tick/check-task.md](../../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)；[tick/git.md](../../spec/settled/tick/git.md)（固定排除的 `.aos/tick/` 本來就涵蓋整個資料夾，只補一句說明）；[tick/recovery.md](../../spec/settled/tick/recovery.md)；[暫緩區 tick](../../spec/settled/deferred/tick.md)（檔名註）；[慣例 C-10](../../spec/settled/conventions.md)；[名詞](../../spec/settled/terms.md)；[驗收入口](../../spec/conformance.md)；schema `tick-record`（加 `$defs/RecordFile`）、`examples/tick/tick-record-file.*`（2 正 3 反）、`examples/messages/validate.py`；[src/py README](../../src/py/README.md)；[plan m1-tick-core](../../plan/m1-tick-core.md)、[m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註、[m2-system-tasks](../../plan/m2-system-tasks.md)。
 
 <a id="2026-10-01-第十批hook-的環境變數"></a>
 
@@ -662,4 +662,31 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - 停格檔 `tick/stop` 改名 `tasks-blocked`、內容可指定行為那段還在跟使用者討論，這批沒動。
 
 改到的地方：程式 `lib/aos_tick.py`（`_run_locked()` 改用 `lexists`、`read_reason()` 只剩停格檔用）；測試 `tests/test_tick.py`（`Step2Blocked` 改看 stderr 空、新 `test_blocked_only_existence`：空檔／資料夾／壞 symlink／chmod 000；`AOS_DIRNAME` 兩條）、`tests/test_tick_hooks.py`（`NotRun.test_blocked`）、`tests/test_daemon.py`（`test_blocked` 改成 stderr 沒有 blocked）；spec [tick 核心](../../spec/settled/tick.md) B-620 停格檔與擋板檔表與結束碼表、[tick 協議](../../spec/settled/protocol/tick.md) P-203（拿掉 `blocked` 代碼）、P-213、[hooks](../../spec/settled/tick/hooks.md)、[名詞](../../spec/settled/terms.md)、[慣例 C-08](../../spec/settled/conventions.md)、[驗收入口](../../spec/conformance.md)；[src/py README](../../src/py/README.md)。
+
+### 第十六批（續）：停格檔改名 tasks-blocked、`aos-tick-check-task` 暫緩
+
+〔使用者裁定 2026-10-01 晚〕原話（同批，分三段說）：
+
+1. 「然後是stop，我要稍微改個名字：.aos/tick/tasks-blocked。然後我覺得可以稍微複雜一些，也就是tick發現其存在後，會讀取其中的內容，看看具體怎麽做。……關於默認行爲，那就是後續任務都不跑，但hook的before_all/after_all會跑，還有與實際task無聯繫的hook種類無關的都會跑(cell/kind等，都是有關的)，然後如果是在執行一個task前發現有這個檔案，那就是該task相關的hook都不跑，如果是執行task後要接着執行相關hook，那就不會看這檔案。」
+2. 追答：「tasks-blocked的內容這塊我還在想。他會跨格留着，tick不管。hook的種類現在先不要管，反正現在就先這樣定下。4.〔擋下時 stderr 不印〕對 5.〔紀錄怎麼記〕隨意。6.aos-tick-check-task這個先放進暫緩。」
+3. 再改（蓋過 1、2 的對應部分）：「啊不對，task_blocked要改成tick在最後會自動刪掉。然後tasks-blocked中的內容，tick不管。但我們可以弄一個tick的module，用於設定讀取tasks-blocked的時候，要做的事情，類似hook，但是是在發現有tasks-blocked這個檔案之後，要做的insts」
+
+定下來的：
+
+- **改名**：停格檔 `<狀態資料夾>/tick/stop` → `<狀態資料夾>/tick/tasks-blocked`。
+- **每一項跑之前看**（含第一項），**只看存不存在**（`os.path.lexists`；資料夾、沒讀權、壞 symlink 都算），內容 tick 不管、不讀。
+- **在**＝這一項與後面的都不跑；stderr 不印（正常機制，拿掉原本的 `stopped:`）；回 0；`after_all` 照跑（跟任務無關）。
+- **tick 自己刪**：整格最後刪。
+- **hook 種類不擴充**，只記方向：之後若有跟某項任務有關的掛點，在那一項之前被擋下時那一項相關的 hook 都不跑；任務跑完接著跑它的 hook 時不看 tasks-blocked。
+- **`aos-tick-check-task`（B-621、P-204）整條搬暫緩區**；原檔 `spec/settled/tick/check-task.md` 刪，內容搬進 [tick 暫緩區](../../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)，P-204 搬進 [tick 協議暫緩區](../../spec/settled/deferred/protocol/tick.md)。
+- 「發現 tasks-blocked 時跑設定好的 insts」的 tick 模組：這段只記方向，同晚另一批裁定後實作（見下一節）。
+
+**AI 隊定的細節**（使用者可改）：
+
+1. 刪的時機：**整格最後**——`after_all` 跑完、回結束碼之前。被擋下的格刪；沒被擋、但最後才出現的（例如最後一項或 hook 寫的）也刪。**開格時不刪**，所以格與格之間有人放的，下一格第一項之前就擋下（`ran:0`）。是資料夾就整個刪（它在 aos 自己的 `tick/` 底下）。
+2. 紀錄：`stopped_after` 改成 **`blocked_before`**＝被擋下、沒跑的那一項的 id（位置 `ran` 那一項；第一項就被擋也記得到）。沒有東西被擋下（例如最後一項才寫）就不記。schema `tick-record` 改欄位名；範例 `tick-record.stopped-*` 改成 `blocked-*`（拿掉 `stopped-not-last`，`stopped-ran-0` 從反例變成正例 `blocked-first`，加 `blocked-not-id` 反例）；validate.py 拿掉原本 `stopped_after` 跟最後一筆失敗對得上的補查（`blocked_before` 那一項沒跑，跟 `tasks` 沒有可驗的關係）。
+3. tick 子篇裡還沒實作的程式（`aos-git`、`aos-cg`、`aos-mq`）寫「建停格檔」的地方沒逐條改，B-620 加一句「現在讀成建 tasks-blocked、回來實作時照新規定重看」。
+4. 曾經短暫實作過「讀內容：空檔或 `{}`＝預設、其他＝`tasks_blocked_invalid`」，被第 3 段「內容 tick 不管」推翻，已拿掉。
+
+改到的地方：程式 `lib/aos_tick.py`（`tasks_blocked()`、`clear_tasks_blocked()`，拿掉 `read_reason()`、`remove_stop_file()`）、`lib/aos_tick_record.py`（`finish(blocked_before=…)`）；測試 `tests/test_tick.py`（新 `Step6TasksBlocked` 4 條，其餘改用 `tasks-blocked`、`blocked_before`）、`tests/test_tick_hooks.py`；spec [tick 核心](../../spec/settled/tick.md) B-620「tasks-blocked 與擋板檔」、一格怎麼走、結束碼表、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-200、P-202、P-203（拿掉 `stopped` 代碼）、P-213（改標題）；[hooks](../../spec/settled/tick/hooks.md)；[git](../../spec/settled/tick/git.md)；[範本](../../spec/settled/tick/template.md)；[tick 子篇入口](../../spec/settled/tick/README.md)；[名詞](../../spec/settled/terms.md)；[慣例](../../spec/settled/conventions.md)；[整理區入口](../../spec/settled/README.md)；暫緩區 [總表](../../spec/settled/deferred/README.md)、[tick](../../spec/settled/deferred/tick.md)、[tick 協議](../../spec/settled/deferred/protocol/tick.md)；[驗收入口](../../spec/conformance.md)；[protocol README](../../spec/protocol/README.md)；schema `tick-record` 與範例、validate.py；連到原 `check-task.md` 的連結全部改指暫緩區；[src/py README](../../src/py/README.md)。
 

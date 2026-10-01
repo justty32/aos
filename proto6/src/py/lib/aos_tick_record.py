@@ -3,7 +3,7 @@
 〔使用者 2026-10-01 第九批〕「current.json這邊，也要引入指示詞，把容易被改動的弄成$ref指向其他檔案，
 不容易被改動的留在current.json」：一格的紀錄是一個資料夾，裡面四個檔（各一個檔、原位）：
 
-    record.json      開格寫一次、收尾寫一次：version、seq、started_at_ms、ended、exit、stopped_after，
+    record.json      開格寫一次、收尾寫一次：version、seq、started_at_ms、ended、exit、blocked_before，
                      加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，
                      有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}`
     ran.json         一個數字＝本格到目前跑了幾項 tasks（含失敗的，被停格擋掉的不算），每跑完一項重寫
@@ -113,8 +113,9 @@ class Record:
             _write(os.path.join(self.current, TASK_EXITS), self.tasks)
         _write(os.path.join(self.current, RAN), self.ran)
 
-    def finish(self, code, stopped_after=None, hook_points=()):
-        """收尾：ended:true、exit＝整格結束碼（照表跑完就是 0，任務成敗不影響），被停格檔停下時加 stopped_after。
+    def finish(self, code, blocked_before=None, hook_points=()):
+        """收尾：ended:true、exit＝整格結束碼（照表跑完就是 0，任務成敗不影響），被 tasks-blocked 擋下時加
+        blocked_before＝被擋下（沒跑）的那一項 id（第十六批；原 stopped_after）。
         hook_points：這格接著要跑的 hooks 掛點（目前只有 "after_all"）；有的話先寫 hook-exits.json（每個掛點 `[]`）、
         record.json 加 `hooks` 的 $ref，hook 一開跑就讀得到（B-635）。沒寫 hooks 時紀錄沒有 `hooks`。"""
         if hook_points:
@@ -124,8 +125,8 @@ class Record:
         self.meta.pop("ended")                                  # 重新放到後面：鍵的順序 ran、tasks、hooks、ended、exit…
         self.meta["ended"] = True
         self.meta["exit"] = code
-        if stopped_after is not None:
-            self.meta["stopped_after"] = stopped_after
+        if blocked_before is not None:
+            self.meta["blocked_before"] = blocked_before
         _write(os.path.join(self.current, RECORD), self.meta)
 
     def add_hook(self, point, hook_id, index, kind, value):

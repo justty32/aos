@@ -12,7 +12,7 @@ T-09（收尾、排空停機、熱重載、逃生口）全是舊 daemon 的用�
 
 | 詞 | 一句話 | 正本 |
 |---|---|---|
-| tick 核心 | 只做三件事：簡單互斥鎖、照表跑、每項結束碼紀錄；照表跑時另外只認停格檔與擋板檔；任務沒有 `user`（寫了照陌生鍵）。不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。上下層判定已搬暫緩區（[B-628](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)） | [B-626](tick.md)、[B-620](tick.md) |
+| tick 核心 | 只做三件事：簡單互斥鎖、照表跑、每項結束碼紀錄；照表跑時另外只認 tasks-blocked 與擋板檔（只看存不存在）；任務沒有 `user`（寫了照陌生鍵）。不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。上下層判定已搬暫緩區（[B-628](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)） | [B-626](tick.md)、[B-620](tick.md) |
 | 工作資料夾 | 這一格 `aos-tick` 跑的資料夾（它的 cwd），由命令列的目標決定（`aos-tick [<目標>]`）；任務拿到的 `AOS_TICK_CWD` 就是它的絕對路徑。tick 這層只講工作資料夾（英文 `tick dir`〔使用者 2026-10-01〕）；node 是之後 node 模組才出場的詞 | [B-620](tick.md)、[P-203](protocol/tick.md) |
 | 拆出去的 | 原本算在 tick 裡的其餘事，成了系統級任務或普通程式（T-10）；舊設計裡一格結束後殺殘留歸 daemon，那套在暫緩區、現行 daemon 不做〔astra 報告必修 1〕 | [B-626](tick.md)、[B-601](deferred/daemon/runtime.md) |
 | 衡量基準 | 整個 aos 以格計：「花十格」算安排它的上層的格；排程本身也是任務表上每格跑一次的程式；反應速度就是一格，只有通道急件例外 | [C-01](../contracts.md)、[B-614](deferred/daemon/messaging.md) |
@@ -38,7 +38,7 @@ tick 不跟其他計算單位（once、LLM 嘗試、agent 一輪等）放進同�
 |---|---|---|
 | tick 核心 | `aos-tick` 本身（T-07） | [B-626](tick.md) |
 | 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，`kind:"system"` 標記，寫在表上才跑：系統訊息佇列 `aos-mq get`／`aos-mq post`、清理、git 開格／存檔點／收尾 `aos-git` | [B-626](tick.md)、[B-629](tick/template.md) |
-| 普通程式 | 任務會用到的工具：要的任務自己在 argv 包的 `aos-cg`（`aos-as` 暫緩）；自己占一項的 `aos-tick-check-task` | [B-303](deferred/helper.md)、[B-621](tick/check-task.md)、[B-634](tick/cg.md) |
+| 普通程式 | 任務會用到的工具：要的任務自己在 argv 包的 `aos-cg`（`aos-as` 暫緩）；自己占一項的 `aos-tick-check-task`（第十六批暫緩） | [B-303](deferred/helper.md)、[B-621](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[B-634](tick/cg.md) |
 | 其他任務 | kernel、agent、clock、檔案收件與投件程式、自訂任務 | [B-623](tick/mq.md)、[scheduling](../scheduling/README.md)、[agent](../agent/README.md) |
 
 daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11）；舊設計裡 daemon 跟 tick 之間的通道、node 框與資源上限（[B-601](deferred/daemon/runtime.md)、[B-607](deferred/daemon/registration.md)、[B-605](deferred/daemon/cgroup.md)）都在暫緩區；現行的框與上限以 daemon 的一項為單位，是收屍／cgroup 模組（[B-644](daemon/cgroup.md)）。範本只是預設，拿掉哪一項就沒有那一項的保證（[B-629](tick/template.md)、[T-01](../terms.md)）。
@@ -55,9 +55,9 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 存檔點 | 任務表上的 `aos-git mark` 項；相鄰兩個之間的項是一組，組裡有失敗就當場還原那組改的 aos 範圍 | [B-630](tick/git.md) |
 | 每項結束碼紀錄 | 核心每格寫的一份紀錄，記本格跑了幾項、哪幾項結束碼不是 0，後面的任務讀得到；取代第十九批的日誌。〔使用者 2026-10-01 第九批〕一格是一個資料夾（`tick/current/`，上一格 `tick/last/`）：不常改的欄位在 `record.json`，常改的 `ran`、`tasks`、`hooks` 各自一個檔，由 `record.json` 用 `$ref` 指過去 | [B-633](tick.md)、[B-632](tick/git.md) |
 | 格數 | 本工作資料夾第幾格〔使用者 2026-10-01 改名〕，記在結束碼紀錄裡；aos 內部的時長與起算點都用它數 | [B-633](tick.md)、[C-01](../contracts.md) |
-| 停格檔 | 任務建它，核心跑完那一項就不開本格後面的項；只管本格，daemon 不看它 | [B-620](tick.md) |
+| tasks-blocked（原停格檔） | 〔使用者 2026-10-01 第十六批〕`<狀態資料夾>/tick/tasks-blocked`：核心每一項之前看、只看存不存在；在就這一項與後面都不跑（stderr 不印、`after_all` 照跑），整格最後核心刪掉；daemon 不看它 | [B-620](tick.md) |
 | 擋板檔 | 擋住之後的格：有它時 daemon 照常叫，由 tick 自己擋——核心取鎖後看到它就直接結束：一項不跑、hooks 不跑、stderr 不印、回 0；只看存不存在、不讀內容〔使用者 2026-10-01 第十六批〕；只由人手刪。〔astra 報告必修 1〕舊 daemon「有擋板就不開格」在暫緩區（[B-607](deferred/daemon/registration.md)） | [B-620](tick.md) |
-| 掛點（hooks） | 任務表頂層鍵 `hooks`（跟 `tasks` 同層，不是模組）：讓使用者在 tick 的某個時機插一串 inst，寫法比照 `tasks`；目前只開 `after_all`：照表跑完（含被停格檔停下）之後跑，碼記進紀錄 `hooks.after_all`，不影響 tick 的結束碼 | [B-635](tick/hooks.md) |
+| 掛點（hooks） | 任務表頂層鍵 `hooks`（跟 `tasks` 同層，不是模組）：讓使用者在 tick 的某個時機插一串 inst，寫法比照 `tasks`；目前只開 `after_all`：照表跑完（含被 tasks-blocked 擋下）之後跑，碼記進紀錄 `hooks.after_all`，不影響 tick 的結束碼 | [B-635](tick/hooks.md) |
 | 任務環境變數 | 整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`，hook 專屬的叫 `AOS_HOOK_*`（`AOS_HOOK_POINT`、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`；hook 不給 `AOS_TASK_*`） | [B-620](tick.md)、[P-203](protocol/tick.md)、[B-635](tick/hooks.md) |
 | 包裝 | 先做一件事、再跑原指令、照原指令的結果結束的普通程式，例如 `aos-cg -- 原指令` | [B-634](tick/cg.md)、[B-303](deferred/helper.md) |
 | 有效上層 | （暫緩）有登記覆蓋就是覆蓋指定的那個，否則是資料夾推得的上層；覆蓋只改管理關係 | [B-628](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)、[B-606](deferred/daemon/registration.md) |

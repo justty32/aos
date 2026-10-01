@@ -53,7 +53,7 @@ responses/<id>.json  # RpcResponse
 
 有業務資料的命令從 stdin 讀一份 JSON；inst.stdin 是收件者可讀的絕對檔案路徑，不是 JSON 內容。發件者將資料隨請求固定並保留至消費完成；收件者用自己的權限開檔。無資料的命令省略 stdin。需要結果的串流用 `{"$opt":"inherit"}`，由接件執行器捕獲；其餘串流規則沿 inst。輸入形狀與 argv 的一致性須在展開及讀檔後另驗，schema 不代替開放命令檢查。
 
-〔使用者方向 2026-09-30，第十八批〕**本地動作的 stdout 落點**：當格就做完的命令（下表除 `kernel.work.submit`、`llm.chat` 以外的各列），執行的任務把 stdout 存成追蹤的 `state/messages/requests/<id>.stdout`，跟消費副本放一起、同一組提交（組見 [B-621](../settled/tick/check-task.md)）；回應 result 的 `stdout.path` 指這個檔的絕對路徑，不填 null，這樣結果可以被引用（[B-103](../base/work.md)）。清理跟那份請求副本一起（[B-404](../base/storage.md)）。
+〔使用者方向 2026-09-30，第十八批〕**本地動作的 stdout 落點**：當格就做完的命令（下表除 `kernel.work.submit`、`llm.chat` 以外的各列），執行的任務把 stdout 存成追蹤的 `state/messages/requests/<id>.stdout`，跟消費副本放一起、同一組提交（組見 [B-621](../settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）；回應 result 的 `stdout.path` 指這個檔的絕對路徑，不填 null，這樣結果可以被引用（[B-103](../base/work.md)）。清理跟那份請求副本一起（[B-404](../base/storage.md)）。
 
 | method／完整命令 | stdin JSON／本地動作與 stdout |
 |---|---|

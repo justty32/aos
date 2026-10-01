@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "seq": 3,
+  "seq": 4,
   "ran": 0,
   "tasks": [],
   "ended": true,
   "exit": 0,
-  "stopped_after": "a"
+  "blocked_before": 3
 }

@@ -3,7 +3,8 @@
 一格的順序（B-620「一格怎麼走」，POC 版）：
 
     認工作資料夾與任務表（目標要是資料夾、底下要有 .aos/tasks.json）→ 取鎖 → 看擋板檔 → 讀表
-    → 換紀錄 → 刪停格檔 → 照表跑（每項後寫紀錄〔ran 加 1、不是 0 才記〕、查停格檔）→ 收尾紀錄 → 跑 hooks 的 after_all（有寫才跑）→ 回結束碼
+    → 換紀錄 → 照表跑（每項前看 tasks-blocked、每項後寫紀錄〔ran 加 1、不是 0 才記〕）→ 收尾紀錄 → 跑 hooks 的 after_all（有寫才跑）
+    → 刪 tasks-blocked → 回結束碼
 
 `run_tick()` 就是照這個順序寫的，從它讀起。紀錄在 aos_tick_record.py、任務表在
 aos_tick_table.py、跑單項在 aos_tick_run.py、hooks（掛點，目前只有 after_all）的讀表在 aos_tick_table.py、跑在 aos_tick_hooks.py。
@@ -11,13 +12,13 @@ aos_tick_table.py、跑單項在 aos_tick_run.py、hooks（掛點，目前只有
 結束碼照 aos 體系慣例（使用者 2026-10-01 再改，notes/verdicts/11-tick-as-unit.md 篇末，待統一更新 spec）：
 0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤。aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影響它。
 
-- 0：照表跑完（不管任務成敗、回幾）；看到停格檔、剩下不跑；同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，
+- 0：照表跑完（不管任務成敗、回幾）；被 tasks-blocked 擋下、剩下不跑（第十六批）；同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，
   stderr `busy:`）；有擋板檔（只看存不存在、stderr 不印、hooks 不跑，第十六批）。後兩種不開格（不寫紀錄、不加 seq）。
 - 1：tick 自己出錯——argv 用法錯（含目標給的是檔）、目標指的東西不存在、資料夾底下沒有 .aos/tasks.json、
   任務表不合極簡檢查（aos_tick_table.check_table，stderr `bad_table:`；在換紀錄之前，不算開過一格）；tick 自用的檔讀不到／寫不進／
   格式壞就讓 Python 自然丟錯（traceback 進 stderr、回 1），不分發生時機、不補救。
 
-擋板檔與停格檔的機制使用者之後會詳細設計，目前做法是暫定。
+擋板檔與 tasks-blocked（原停格檔 tick/stop，第十六批改名）的機制使用者之後會詳細設計，目前做法是暫定。
 
 stderr 只印 tick 自己的 `代碼: 說明` 行（或 traceback），任務的輸出照 inst 走。
 
@@ -47,6 +48,7 @@ stderr `no_node:` 改 `no_target:`。同日三改：`--target` 旗標拿掉（�
 """
 import fcntl
 import os
+import shutil
 import sys
 
 import aos_dirname
@@ -151,22 +153,20 @@ def _run_locked(cwd, table):
 
     record = Record(cwd, aos_dirname.name())
     record.open()
-    remove_stop_file()
-    stopped_after = None
+    blocked_before = None
     for index, (item, task_id) in enumerate(zip(tbl.items, tbl.ids)):
+        if tasks_blocked():
+            # 第十六批：這一項與後面的都不跑；正常機制，stderr 不印、回 0；after_all 照跑（跟任務無關）
+            blocked_before = task_id
+            break
         kind, value = run_one(cwd, tbl.defaults, item, task_id, task_vars(task_id, index))
         record.add_task(task_id, index, kind, value)   # 只記不是 0 的（第八批）；不影響 tick 的結束碼
-        reason = read_reason(state("tick", "stop"))
-        if reason is not None:
-            # 停格檔不算中斷，回 0（暫定，擋板檔與停格檔的機制使用者之後會詳細設計）
-            say("stopped", reason or "（停格檔沒寫原因，停在 %s 之後）" % task_id)
-            stopped_after = task_id
-            break
 
     hook_points = ("after_all",) if tbl.after_all is not None else ()
-    record.finish(EXIT_OK, stopped_after, hook_points)   # 有 hooks 時先備好 hook-exits.json（第九批）
+    record.finish(EXIT_OK, blocked_before, hook_points)  # 有 hooks 時先備好 hook-exits.json（第九批）
     if tbl.after_all is not None:  # B-635：照表跑完或被停格檔停下之後；不看停格檔、碼只記下、不影響 tick 的結束碼
         aos_tick_hooks.run_after_all(cwd, tbl.defaults, tbl.after_all, record, run_one)
+    clear_tasks_blocked()
     return EXIT_OK
 
 
@@ -185,19 +185,24 @@ def take_lock():
     return fd
 
 
-def read_reason(path):
-    """B-620、P-213 停格檔：檔在回第一行原因（可能是空字串），不在回 None。擋板檔不讀（第十六批）。"""
-    if not os.path.exists(path):
-        return None
-    with open(path, encoding="utf-8") as f:
-        return f.readline().strip()
+def tasks_blocked():
+    """B-620、P-213 `<狀態資料夾>/tick/tasks-blocked`（使用者 2026-10-01 第十六批，原停格檔 tick/stop）：
+    每一項跑之前看，**只看存不存在**（資料夾、沒讀權、壞 symlink 都算在），內容 tick 不管。
+    在＝這一項與後面都不跑（正常機制：stderr 不印、回 0）；after_all 照跑。整格最後由 tick 刪掉（clear_tasks_blocked）。"""
+    return os.path.lexists(state("tick", "tasks-blocked"))
 
 
-def remove_stop_file():
-    """B-620：開第一項前刪掉上一格留下的停格檔。"""
-    stop = state("tick", "stop")
-    if os.path.exists(stop):
-        os.unlink(stop)
+def clear_tasks_blocked():
+    """第十六批：「task_blocked要改成tick在最後會自動刪掉」。時機（AI 隊定、可改）：整格最後——after_all 跑完、
+    回結束碼之前；被擋下的格與沒被擋、但最後有這個檔的格（例如 hook 寫的）都刪。開格時不刪，所以格與格之間
+    有人放的，下一格第一項之前就擋得到。是資料夾就整個刪（它在 aos 自己的 tick/ 底下）。"""
+    path = state("tick", "tasks-blocked")
+    if not os.path.lexists(path):
+        return
+    if os.path.isdir(path) and not os.path.islink(path):
+        shutil.rmtree(path)
+    else:
+        os.unlink(path)
 
 
 def task_vars(task_id, index):

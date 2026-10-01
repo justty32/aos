@@ -5,5 +5,5 @@
   "tasks": [],
   "ended": true,
   "exit": 0,
-  "stopped_after": "mq-get"
+  "blocked_before": "agent"
 }

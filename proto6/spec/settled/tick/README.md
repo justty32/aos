@@ -8,9 +8,9 @@
 
 | 篇 | 條號 | 狀態 |
 |---|---|---|
-| [hooks.md](hooks.md) | B-635 | **已實作**（2026-10-01）。外掛掛點：任務表頂層鍵 `hooks`（跟 `tasks` 同層，不是模組），目前只開 `after_all`（照表跑完、含被停格檔停下之後跑一串 inst，碼記進紀錄 `hooks.after_all`）。 |
+| [hooks.md](hooks.md) | B-635 | **已實作**（2026-10-01）。外掛掛點：任務表頂層鍵 `hooks`（跟 `tasks` 同層，不是模組），目前只開 `after_all`（照表跑完、含被 tasks-blocked 擋下之後跑一串 inst，碼記進紀錄 `hooks.after_all`）。 |
 | [template.md](template.md) | B-629 | 待實作。範本裡的系統級任務（`aos-mq`、`aos-git`、`aos-clean`）都還沒有程式（`aos-publish` 2026-10-01 搬暫緩區、從範本拿掉）；`mq-get`／`mq-post` 要靠暫緩區的 daemon 通道。 |
-| [check-task.md](check-task.md) | B-621 | 待實作。普通程式 `aos-tick-check-task`（2026-10-01 由 `aos-needs` 改寫），不依賴暫緩區。 |
+| [暫緩區 B-621](../deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task) | B-621 | **暫緩**〔使用者 2026-10-01 第十六批〕。普通程式 `aos-tick-check-task`（2026-10-01 由 `aos-needs` 改寫），從沒寫過程式；原檔 `check-task.md` 整篇搬到 tick 暫緩區。 |
 | [cg.md](cg.md) | B-631、B-634 | 待實作。普通程式；工作資料夾的框與資源上限（daemon 那側）在暫緩區。 |
 | [mq.md](mq.md) | B-623、B-624 | 待實作，依賴暫緩。`aos-mq` 要靠暫緩區的 daemon 通道；發摘要 `aos-publish` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)。 |
 | [git.md](git.md) | B-630、B-622、B-632 | 待實作。`aos-git` 三項還沒有程式。主體不依賴暫緩區；只有「在不在 tick 內」的核對（要等「鎖 fd 傳給任務」）與巢狀排除的判準（要等上下層判定）在暫緩區。 |
