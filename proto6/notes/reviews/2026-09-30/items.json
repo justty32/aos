@@ -592,7 +592,7 @@
    "category": "建議",
    "title": "P-202 的兩份 methods 範例沒在正文說明，反例驗的不是正文說的那種錯",
    "astra_verdict": "部分成立",
-   "astra_reason": "`proto6/spec/protocol/node.md:56` 漏說明新增 methods 反例，不符合 `proto6/spec/protocol/README.md:52` 的範例說明要求；但 `proto6/spec/protocol/examples/node/tasks.methods-duplicate.invalid.json:18` 的同任務重複確實違規，`proto6/spec/protocol/schemas/node-tasks.schema.json:85` 也已說跨任務唯一性另由 tick 驗。",
+   "astra_reason": "`proto6/spec/protocol/node.md:56` 漏說明新增 methods 反例，不符合 `proto6/spec/protocol/README.md:52` 的範例說明要求；但 `proto6/spec/protocol/examples/tick/tasks.methods-duplicate.invalid.json:18` 的同任務重複確實違規，`proto6/spec/protocol/schemas/tick-tasks.schema.json:85` 也已說跨任務唯一性另由 tick 驗。",
    "status": "已分類",
    "batch18": "直接修",
    "plan": "P-202 補一句連到 methods-duplicate 等範例，並註明「同任務重複由 schema 擋、跨任務重複 schema 驗不到由 tick 驗」。"

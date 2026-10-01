@@ -29,14 +29,14 @@
 ### 第一段：tick 核心
 
 - **目標**：`aos-tick` 直接跑得動一格：照任務表依序跑、每項結束碼紀錄（含 `seq`、停格檔、擋板檔），~~整格回 0／1~~ 照表跑完、擋板、busy 都回 0，tick 自己出錯 1（2026-10-01 結束碼慣例改版）。B-626 原本的核心四件事裡，同資料夾互斥與上下層判定〔使用者方向 2026-10-01：POC 先不做〕。
-- **主要 spec**：[B-626、B-602、B-620、B-633、B-627](../spec/settled/tick.md)（B-628 上下層判定已搬[暫緩區](../spec/settled/deferred/tick.md)）；結束碼與 `AOS_DIRNAME` [C-08、C-09](../spec/settled/conventions.md)；格式 [P-202、P-203、P-213](../spec/settled/protocol/node.md)。
+- **主要 spec**：[B-626、B-602、B-620、B-633、B-627](../spec/settled/tick.md)（B-628 上下層判定已搬[暫緩區](../spec/settled/deferred/tick.md)）；結束碼與 `AOS_DIRNAME` [C-08、C-09](../spec/settled/conventions.md)；格式 [P-202、P-203、P-213](../spec/settled/protocol/tick.md)。
 - **可單獨跑的樣子**：不要 daemon、git、cgroup、helper。手建一個資料夾、寫 `.aos/tasks.json`，`aos-tick <資料夾>`（2026-10-01：原 `--node`，再改 `--target`，再改成位置參數） 或 cron 直接跑，看結束碼與 `.aos/tick/current.json`。
 - **界線**：核心不認得任何系統級任務，也不清任務留下的後代。細部見 [m1-tick-core.md](m1-tick-core.md)。
 
 ### 第二段：不靠 daemon 的系統級任務與普通程式
 
 - **目標**：掛在任務表上的 `aos-git open／mark／close`、`aos-publish`、`aos-clean`，普通程式 `aos-needs`，以及 tick 外的 `aos-config-add`、恢復前驗證；兩版標準任務表範本跑得起來。
-- **主要 spec**：[B-630、B-622、B-632、B-621、B-624（發摘要）、B-625、B-629](../spec/settled/tick.md)；[B-404](../spec/base/storage.md)；格式 [P-204、P-205、P-207、P-210](../spec/settled/protocol/node.md)。
+- **主要 spec**：[B-630、B-622、B-632、B-621、B-624（發摘要）、B-625、B-629](../spec/settled/tick/git.md)；[B-404](../spec/base/storage.md)；格式 [P-204、P-205、P-207、P-210](../spec/settled/protocol/tick.md)。
 - **可單獨跑的樣子**：一樣直接跑 `aos-tick`。有 git 的機器上每格最多一個 commit；沒 git 時 `aos-git` 只印 `no_git`、回 0。
 - **界線**：全部是「讀寫檔案」就做得完的事，不碰通道。恢復前驗證只寫檢查本身，送 `node.resume` 等第三段。
 
@@ -52,14 +52,14 @@
 ### 第四段：daemon 部件——訊息與 cgroup
 
 - **目標**：B-615 的兩個可掛部件。訊息：`node.send`／`node.take`、急件叫醒，加上 tick 那側的 `aos-mq get`／`post`。cgroup：node 框與上限、格後與重啟清框，加上普通程式 `aos-cg`。
-- **主要 spec**：[B-615](../spec/settled/deferred/daemon/components.md)、[B-614](../spec/settled/deferred/daemon/messaging.md)、[B-623、B-624（佇列）、B-634](../spec/settled/tick.md)、[B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；格式 P-119、[P-206、P-211](../spec/settled/protocol/node.md)。
+- **主要 spec**：[B-615](../spec/settled/deferred/daemon/components.md)、[B-614](../spec/settled/deferred/daemon/messaging.md)、[B-623、B-624（佇列）、B-634](../spec/settled/tick/mq.md)、[B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；格式 P-119、[P-206、P-211](../spec/settled/protocol/tick.md)。
 - **可單獨跑的樣子**：兩個 node 在同一個 daemon 底下互送訊息；`enable_messaging:false` 時 `mq-post` 回 1、檔搬到 `.aos/mq/failed/`。用 `systemd-run --user --scope -p Delegate=yes` 開 daemon 看框；`enable_cgroup:false` 時退回第三段的做法。
 - **界線**：每個部件各自可關，關掉時跑的就是第三段的樣子。
 
 ### 第五段：helper 與跨帳號
 
 - **目標**：sudo 開 daemon 時 fork 出 root helper、主程式降權；佈建固定動作；普通程式 `aos-as <帳號> -- 原指令` 經 helper 用別的帳號開程序、交鎖 fd；多帳號之間用群組交接檔案。
-- **主要 spec**：[B-303](../spec/settled/deferred/helper.md)、[B-609](../spec/settled/deferred/daemon/helper-actions.md)、[B-301、B-302](../spec/base/identity-resources.md)；格式 P-102、P-107、P-108、[P-208、P-212](../spec/settled/protocol/node.md)。
+- **主要 spec**：[B-303](../spec/settled/deferred/helper.md)、[B-609](../spec/settled/deferred/daemon/helper-actions.md)、[B-301、B-302](../spec/base/identity-resources.md)；格式 P-102、P-107、P-108、[P-208、P-212](../spec/settled/protocol/tick.md)。
 - **可單獨跑的樣子**：在可丟棄的機器上建兩個測試帳號，sudo 開 daemon，任務包 `aos-as` 以另一個帳號跑，任務裡核對得到同一把鎖。
 - **界線**：只做 tick／daemon 基礎用得到的帳號切換；kernel 分配身分額度那一側不在這裡。
 

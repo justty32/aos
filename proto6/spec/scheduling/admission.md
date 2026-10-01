@@ -10,7 +10,7 @@
 
 〔使用者方向 2026-09-30，第十八批；審稿新必-2〕**「叫醒後新的一格已做完」看格次序號，不看時間**（daemon 那側見 [B-607](../settled/deferred/daemon/registration.md)）。kernel 叫醒成員時，記下 wake 回應的 `registration_id` 與 `tick_seq`（還沒跑過任何一格是 0）。之後 `node.show` 看到 `registration_id` 相同、`last_tick.tick_seq` 較大且那格不是 `running`，才算新的一格已完成，這時才重新採用成員摘要；`registration_id` 變了（重新登記、換父、daemon 重啟），表示舊的等待已結束，直接重新核對收件與摘要，不再等舊的那格。在那之前舊的 ready 不拿來反覆叫醒。牆鐘可能校正，格的結束時間不拿來判斷新舊。格式見 [P-803](../protocol/kernel-tasks.md)。
 
-〔使用者方向 2026-09-30，第十九批〕**叫醒走通道**：kernel 在自己的格裡用 `node.wake` 帶本格憑證叫醒成員（找 daemon 的規則見 [P-801](../protocol/kernel-tasks.md)，通道見 [B-612](../settled/deferred/daemon/channel.md)）；授權看憑證所屬的 tick 在成員的有效上層鏈上。`registration_id` 與 `tick_seq` 只有在 daemon 登記的成員才有；kernel 找不到 daemon 時不叫醒，也就沒有要等的新格，只看收件與已發布摘要。成員走 git 備援時沒有 commit 可釘（[B-632](../settled/tick.md)），讀它目前發布的摘要。
+〔使用者方向 2026-09-30，第十九批〕**叫醒走通道**：kernel 在自己的格裡用 `node.wake` 帶本格憑證叫醒成員（找 daemon 的規則見 [P-801](../protocol/kernel-tasks.md)，通道見 [B-612](../settled/deferred/daemon/channel.md)）；授權看憑證所屬的 tick 在成員的有效上層鏈上。`registration_id` 與 `tick_seq` 只有在 daemon 登記的成員才有；kernel 找不到 daemon 時不叫醒，也就沒有要等的新格，只看收件與已發布摘要。成員走 git 備援時沒有 commit 可釘（[B-632](../settled/tick/git.md)），讀它目前發布的摘要。
 
 〔建議預設，未拍板；第十九批由 P-803 搬來〕**預設範本什麼算 ready、叫誰**：成員有收件、摘要 `ready`、`due` 到期或還在 bootstrap，才算 ready；缺摘要不當 idle，改看收件與 bootstrap 判斷並記事項。paused 或 stopping 的不叫醒，running 或已有 pending 的不重複叫；同時叫醒不超過 `max_active_members`，先後照 S-204。wake 成功但本格提交失敗時，下一格先查 daemon（`node.show`）合併判斷，不當沒叫過。
 
@@ -41,7 +41,7 @@
 
 ## S-203．逐層分配與資源 module
 
-〔使用者方向 2026-09-30，第十八批〕**aos 只給框架，資源由各 kernel 定義。** 資源 module 就是任務註冊表裡的普通任務（[B-620](../settled/tick.md)），裝哪些、怎麼記帳、怎麼分，由各 kernel 決定，沒有所有部署必填的一組全域上限。CPU、記憶體、pids、LLM、磁碟記帳與網路這六類是**預設 kernel 範本**的資源（[P-500～507](../protocol/resources.md)）；kernel 可以登記自己的資源名稱，意思由定義它的 kernel 解釋，只有 CPU、記憶體、pids 由標準配備的 cgroup 框寫進 cgroup（[T-06](../terms.md)、[B-629](../settled/tick.md)）。
+〔使用者方向 2026-09-30，第十八批〕**aos 只給框架，資源由各 kernel 定義。** 資源 module 就是任務註冊表裡的普通任務（[B-620](../settled/tick.md)），裝哪些、怎麼記帳、怎麼分，由各 kernel 決定，沒有所有部署必填的一組全域上限。CPU、記憶體、pids、LLM、磁碟記帳與網路這六類是**預設 kernel 範本**的資源（[P-500～507](../protocol/resources.md)）；kernel 可以登記自己的資源名稱，意思由定義它的 kernel 解釋，只有 CPU、記憶體、pids 由標準配備的 cgroup 框寫進 cgroup（[T-06](../terms.md)、[B-629](../settled/tick/template.md)）。
 
 〔使用者方向 2026-09-30，第十八批〕**上下層不必對齊。** 上層只用自己認得的資源與規則管下層，下層不必知道自己被怎麼管；上下層資源定義不同就各管各的，上層不認得下層的自訂資源時不代管、不報錯。**只有 Linux 管的兩樣維持巢狀**：cgroup 上限與身分額度（含佈建授權），子層只能在已分得的範圍內再分（[B-301](../base/identity-resources.md)、[B-605](../settled/deferred/daemon/cgroup.md)）。kernel 自己定義、Linux 管不到的資源與隔離可以比上層寬；預設範本「子層在父層配額內再分」是範本的預設，不是 aos 的要求。
 
@@ -49,7 +49,7 @@
 
 〔使用者方向 2026-09-29〕**沒裝 module，就不在該層另記／另限；已生效的父層限制照舊。** CPU、記憶體與 pids 由已啟用 module 配合標準配備的 cgroup 框落實，cgroup 子樹對上 node 的資源分配層級；磁碟額度可選且只記帳，見 [身分與 OS 資源](../base/identity-resources.md)。LLM module 的份額與池端限制見 [LLM](llm.md)。同一資料夾的 tick 互斥屬 tick 核心（[B-602](../settled/tick.md)），不是可關掉的資源 module。
 
-〔使用者方向 2026-09-30，第十九批，疑點裁定 8〕**cgroup 相關的保證分兩級**。標準配備的 cgroup 框走完整路（cgroup v2 委派子樹，[B-605](../settled/deferred/daemon/cgroup.md)）時，上面的 CPU、記憶體、pids 上限是 node 框的**總量**上限，照父子框巢狀。走備援（[B-631](../settled/tick.md)）仍算全掛，但只剩：
+〔使用者方向 2026-09-30，第十九批，疑點裁定 8〕**cgroup 相關的保證分兩級**。標準配備的 cgroup 框走完整路（cgroup v2 委派子樹，[B-605](../settled/deferred/daemon/cgroup.md)）時，上面的 CPU、記憶體、pids 上限是 node 框的**總量**上限，照父子框巢狀。走備援（[B-631](../settled/tick/cg.md)）仍算全掛，但只剩：
 
 - 每個程序各自的上限（記憶體、CPU 時間），不是總量，也不照父子巢狀：子層多開幾個程序就能超過分到的額度；
 - 沒有 pids 上限；
@@ -95,7 +95,7 @@
 
 〔使用者方向 2026-09-29〕沒裝 module＝該層不另記／另限，不等於父層限制消失；tick 互斥與程序清空不是可關閉的 module。已安裝但 controller／權限不可用是失敗，不能降成「沒裝」後繼續派工；走 cgroup 備援不算這種失敗，見下。
 
-〔使用者方向 2026-09-30，第十九批，疑點裁定 8；範本落法暫定〕**走 cgroup 備援時**（daemon 的 `cgroup_*` 佈建動作回 `unsupported`、`node.show` 的 `cgroup` 是 null，[B-605](../settled/deferred/daemon/cgroup.md)）：預設範本把它當成備援級，不當套用失敗。CPU、記憶體、pids 配額照算、照記帳，照額度決定放不放新派工；資源狀態檔該成員記 `fallback:true`、`applied:true`（[P-804](../protocol/kernel-tasks.md)），不寫事項。硬限制只剩 [B-631](../settled/tick.md) 的每程序上限（S-203）。總用量量不到，CPU、記憶體、pids 的用量照缺項處理，不當成零，也不記 `over_limit`。
+〔使用者方向 2026-09-30，第十九批，疑點裁定 8；範本落法暫定〕**走 cgroup 備援時**（daemon 的 `cgroup_*` 佈建動作回 `unsupported`、`node.show` 的 `cgroup` 是 null，[B-605](../settled/deferred/daemon/cgroup.md)）：預設範本把它當成備援級，不當套用失敗。CPU、記憶體、pids 配額照算、照記帳，照額度決定放不放新派工；資源狀態檔該成員記 `fallback:true`、`applied:true`（[P-804](../protocol/kernel-tasks.md)），不寫事項。硬限制只剩 [B-631](../settled/tick/cg.md) 的每程序上限（S-203）。總用量量不到，CPU、記憶體、pids 的用量照缺項處理，不當成零，也不記 `over_limit`。
 
 驗收：工作在途時弄壞父配額或讓資源任務失敗，仍能收結果、接受取消，但不開新工作。有程序在跑時調低記憶體上限，aos 直接寫入、不等全空，資源狀態檔留下一筆超用紀錄。頂層額度檔改小到低於已分出的合計，不自動收回，只記超分、寫事項、停新派工。daemon 走 cgroup 備援時，資源任務不報套用失敗，成員記 `fallback:true`，新派工照額度記帳放行。
 
@@ -113,7 +113,7 @@
 
 〔建議預設，未拍板；第十八批由 P-810、P-502 搬來〕成員自記用量、所屬 kernel 只收集的路線（[S-301](llm.md) 的「kernel 不管」、工具 `tools.target_node=null` 自跑）用這條；檔案與 argv 見 [P-810](../protocol/kernel-tasks.md)。
 
-- **讀什麼**：只讀直接成員**已提交**的逐次用量檔，成員有 git 時固定同一 commit 讀，記下這個 commit；〔第十九批，[B-632](../settled/tick.md)〕成員走 git 備援時沒有 commit 可釘，改讀目前的檔案，並記下成員最新一筆完成紀錄的 `seq`（讀不到它的 `.aos/journal/` 就只記讀取時間）。備援時**不保證是一致快照**：同一次收集可能讀到相鄰兩格的檔，也可能讀到失敗組留下、沒被還原的檔（備援不還原）。設定直接開檔讀，不用歷史 commit 當設定來源；跨層只讀下層摘要。資源摘要的並行數不能冒充逐次 provider usage。收集只記觀測，不假裝攔住請求或替遠端池釋放占用。
+- **讀什麼**：只讀直接成員**已提交**的逐次用量檔，成員有 git 時固定同一 commit 讀，記下這個 commit；〔第十九批，[B-632](../settled/tick/git.md)〕成員走 git 備援時沒有 commit 可釘，改讀目前的檔案，並記下成員最新一筆完成紀錄的 `seq`（讀不到它的 `.aos/journal/` 就只記讀取時間）。備援時**不保證是一致快照**：同一次收集可能讀到相鄰兩格的檔，也可能讀到失敗組留下、沒被還原的檔（備援不還原）。設定直接開檔讀，不用歷史 commit 當設定來源；跨層只讀下層摘要。資源摘要的並行數不能冒充逐次 provider usage。收集只記觀測，不假裝攔住請求或替遠端池釋放占用。
 - **怎麼存**：原格式存進 kernel 自己的 repo，以 node／request／attempt 逐鍵替換，不把累積檔每格再加，所以同一筆重讀幾次都只算一次；這一點不靠 commit，備援時照樣成立。commit（或備援時的完成紀錄 `seq`）只當「有沒有新東西」的游標：跟上次記的相同就不重讀，不同或沒有游標（只記時間）就到補查期重讀、照鍵替換。
 - **缺了不當零**：pending、unknown、null 照實保留；不可讀、過時、壞格式分別記 missing、stale、invalid，不造零。
 - **去重**：同一次嘗試在成員、轉交 kernel、池都可能有紀錄；彙總按原發起 node 加 attempt 去重，同一筆 HTTP 不加三次。同一件工作只選轉交或自記其中一種統計來源。

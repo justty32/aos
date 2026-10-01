@@ -1,14 +1,14 @@
 # 預設 kernel 範本：最小任務
 
-← [協議入口](README.md)｜[node](../settled/protocol/node.md)｜[daemon](../settled/protocol/daemon/README.md)｜[資源](resources.md)｜[走查](../cli.md)｜[裁定](../../notes/2026-09-29-verdicts.md)
+← [協議入口](README.md)｜[node](../settled/protocol/tick.md)｜[daemon](../settled/protocol/daemon/README.md)｜[資源](resources.md)｜[走查](../cli.md)｜[裁定](../../notes/2026-09-29-verdicts.md)
 
-〔使用者方向 2026-09-30，第十八批〕本篇是 aos 附的**預設 kernel 範本**：kernel 是裝了下列任務的 node。任務種類、資源與排程規則都是範本的預設，各 kernel 可以換掉、刪掉，或登記自己的任務種類與資源名稱（[T-06](../terms.md)）。本篇只定範本的檔案、argv、欄位與結束碼；行為以 [scheduling](../scheduling/README.md)（S-201～207、S-401、S-405、S-406）、[daemon](../settled/daemon/README.md) 與 [tick](../settled/tick.md) 為正本。〔使用者方向 2026-09-30，第十九批〕kernel 範本是掛在 tick 上的「其他掛載」，靠標準配備（git 提交、收件、投件、once、通道等）運作，保證以標準配備全掛為前提（[B-626](../settled/tick.md)、[B-629](../settled/tick.md)）。
+〔使用者方向 2026-09-30，第十八批〕本篇是 aos 附的**預設 kernel 範本**：kernel 是裝了下列任務的 node。任務種類、資源與排程規則都是範本的預設，各 kernel 可以換掉、刪掉，或登記自己的任務種類與資源名稱（[T-06](../terms.md)）。本篇只定範本的檔案、argv、欄位與結束碼；行為以 [scheduling](../scheduling/README.md)（S-201～207、S-401、S-405、S-406）、[daemon](../settled/daemon/README.md) 與 [tick](../settled/tick.md) 為正本。〔使用者方向 2026-09-30，第十九批〕kernel 範本是掛在 tick 上的「其他掛載」，靠標準配備（git 提交、收件、投件、once、通道等）運作，保證以標準配備全掛為前提（[B-626](../settled/tick.md)、[B-629](../settled/tick/template.md)）。
 
 ## P-800．共同契約〔第十二批裁定；工程預設〕
 
 每個 module 一項任務（[B-620](../settled/tick.md)）：check、members、resources、work、LLM forward、LLM pool、usage、schedule，另有 custom 的 aos-clean；它的輸出及到期間隔依 [P-605](ops.md)。各用 node inst 的帳號（任務沒有 `user`，[B-620](../settled/tick.md)）、直接開檔讀設定；stdin 不讀、stderr 診斷，除 clean 外的任務 stdout 空。`--node N` 可省，預設 cwd；tick 在 node 根跑任務。在 tick 裡一律繼承並核對 `AOS_TICK_LOCK_FD`（[B-602](../settled/tick.md)），提交交給 tick。〔使用者方向 2026-09-30，第十九批，追答 10；2026-10-01 任務的 `user` 撤回〕任務要用別的帳號跑就在 argv 包 `aos-as`，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`（[B-620](../settled/tick.md)）。有 `AOS_TICK_LOCK_FD` 卻核對不過就回 125、不改檔，不改成自己取鎖（開它的 tick 還握著鎖）。
 
-任務把完整請求／回應放追蹤的 `.aos/outbox/{requests,responses}/<id>.json`，把已消費原件逐 byte 複製到 `state/messages/{requests,responses}/<id>.json`。收件與派出的先後（組提交後才投件、才刪原件）屬標準配備，以 [B-623、B-624](../settled/tick.md) 為正本，封套見 [P-206](../settled/protocol/node.md)。〔使用者方向 2026-09-30，第十九批〕要找 daemon 的任務照 P-801 找 socket、走通道；once 由 module 經通道 `node.mount` 掛上、`node.kill` 砍掉（[B-613](../settled/deferred/daemon/channel.md)），當格新材料先提交、下一格才掛（[S-401](../scheduling/operations.md)）。不在任務中等工具／HTTP；取消時同步等 `node.kill` 收尾到全空是唯一例外，上限是 daemon 的 `shutdown_grace_ms`（[B-203](../base/execution.md)）。
+任務把完整請求／回應放追蹤的 `.aos/outbox/{requests,responses}/<id>.json`，把已消費原件逐 byte 複製到 `state/messages/{requests,responses}/<id>.json`。收件與派出的先後（組提交後才投件、才刪原件）屬標準配備，以 [B-623、B-624](../settled/tick/mq.md) 為正本，封套見 [P-206](../settled/protocol/tick.md)。〔使用者方向 2026-09-30，第十九批〕要找 daemon 的任務照 P-801 找 socket、走通道；once 由 module 經通道 `node.mount` 掛上、`node.kill` 砍掉（[B-613](../settled/deferred/daemon/channel.md)），當格新材料先提交、下一格才掛（[S-401](../scheduling/operations.md)）。不在任務中等工具／HTTP；取消時同步等 `node.kill` 收尾到全空是唯一例外，上限是 daemon 的 `shutdown_grace_ms`（[B-203](../base/execution.md)）。
 
 0 本步完成或等待；2 用法／設定錯；75 鎖忙；125 無法開始；1 無法處理或保存；提交／還原故障回 3 並擋格。個別請求失敗能保存就繼續。沒有變動不 commit、不刷新時間欄；程序回 0 不表示所有成員可派工。
 
@@ -20,7 +20,7 @@
 
 - 本格有 `AOS_TICK_TOKEN`（daemon 開的格，[B-612](../settled/deferred/daemon/channel.md)）：一律用環境變數 `AOS_DAEMON_SOCKET` 那個 socket，設定的 `daemon_socket` 這時不用。只有收憑證的 method（`node.register`、`node.unregister`、`node.wake`、`node.mount`、`node.kill`、`node.send`、`node.take`，[P-117](../settled/deferred/protocol/daemon/channel.md)）帶 `token`；`daemon.info`、`node.show`、`node.provision` 等其他 method 不帶（帶了回 `invalid_params`），照 socket 對面的帳號授權（[P-103](../settled/deferred/protocol/daemon/startup-and-ipc.md)）。憑證只在開這一格的 daemon 有效。
 - 沒有憑證（cron 或人手直接跑，[B-627](../settled/tick.md)）：用設定的 `daemon_socket`，省略時讀 `AOS_DAEMON_SOCKET`；請求不帶 `token`，daemon 照 socket 對面的帳號授權（[P-103](../settled/deferred/protocol/daemon/startup-and-ipc.md)）。
-- 都沒有：沒有 daemon 可找。要 daemon 的那幾步（登記、叫醒、掛行程、佈建、查實際值）這格不做，狀態檔照留、stderr 印一行，下一格再試；讀收件、記帳、寫摘要等本地部分照做。這只是功能受限（[B-629](../settled/tick.md)），不寫事項。
+- 都沒有：沒有 daemon 可找。要 daemon 的那幾步（登記、叫醒、掛行程、佈建、查實際值）這格不做，狀態檔照留、stderr 印一行，下一格再試；讀收件、記帳、寫摘要等本地部分照做。這只是功能受限（[B-629](../settled/tick/template.md)），不寫事項。
 
 | 欄位 | 管什麼 |
 |---|---|
@@ -68,7 +68,7 @@ sync.json 欄位：`boot_id`、`members_revision` 是上次成功同步時的 da
 
 schedule.json 欄位：`next_seq` 是下一個要配的 `ready_seq`；`scan_after`、`next_scan_ms` 是補查游標（上次掃到的成員短名）與下次補查時間；`members[]` 每項記 `ready_seq`（不 ready 為 null）、`due_ms`、讀摘要時釘的 `summary_commit`（成員走 git 備援時沒有 commit，記 null）與 `wake_mark`。〔審稿新必-2〕`wake_mark` 是 wake 回應的 `registration_id` 與 `tick_seq` 連同叫醒時間；沒叫醒過為 null。
 
-同組寫 `.aos/summary/summary.json`；ready 表示本地可推進，due_ms 取最近重試／掃描／冷卻，只有等待結果則 false。標準配備在提交後發布 `.aos/summary/published.json`（[B-624](../settled/tick.md)、[P-307](messages.md)），上層只開摘要權時讀此檔；沒有另列發布任務。
+同組寫 `.aos/summary/summary.json`；ready 表示本地可推進，due_ms 取最近重試／掃描／冷卻，只有等待結果則 false。標準配備在提交後發布 `.aos/summary/published.json`（[B-624](../settled/tick/mq.md)、[P-307](messages.md)），上層只開摘要權時讀此檔；沒有另列發布任務。
 
 ## P-804．分配與量測〔P-500～507、S-203／204；工程預設〕
 
@@ -98,7 +98,7 @@ aos-kernel-check [--node N]
 aos-kernel-check [--node N] --validate-only
 ```
 
-人手 `aos kernel config check N`。直接讀 inst／tasks 及已裝 module 的 config，驗 schema、引用、重名、父額度、路由與池；不發 HTTP、不掛行程、不 resume。validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫；0 合法、2 不合法、125 讀不到。〔使用者方向 2026-09-29，第十七批〕**一般 check 只要跑完、把問題寫進下述 config-state 就回 0**，設定有問題也是 0（問題看 issues）；只有檢查自己跑不起來才非 0：用法錯 2、鎖忙 75、讀不到或前置不符 125、問題紀錄寫不出 1。validate-only 不寫紀錄，照舊用 0／2 告訴持鎖的 caller（例如 [P-210](../settled/protocol/node.md) 的 resume）能不能採用。
+人手 `aos kernel config check N`。直接讀 inst／tasks 及已裝 module 的 config，驗 schema、引用、重名、父額度、路由與池；不發 HTTP、不掛行程、不 resume。validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫；0 合法、2 不合法、125 讀不到。〔使用者方向 2026-09-29，第十七批〕**一般 check 只要跑完、把問題寫進下述 config-state 就回 0**，設定有問題也是 0（問題看 issues）；只有檢查自己跑不起來才非 0：用法錯 2、鎖忙 75、讀不到或前置不符 125、問題紀錄寫不出 1。validate-only 不寫紀錄，照舊用 0／2 告訴持鎖的 caller（例如 [P-210](../settled/protocol/tick.md) 的 resume）能不能採用。
 
 一般 check 寫 `state/kernel/config-state.json`（[schema](schemas/kernel-config-state.schema.json)）的 issues：path、issue_id、resolved。設定無效時擋什麼、不擋什麼（check 失敗不擋收結果）以 [S-205](../scheduling/admission.md) 為正本。修好後重驗、提交設定狀態；人或 agent 確認修好後用 `aos attend done N ID` 標完成。
 
@@ -186,7 +186,7 @@ aos node new /srv/aos/top --template kernel --socket /run/user/1000/aos.sock
 
 建立普通 git node、初始 commit、requests／responses／work／public／`.aos/jobs/`／`.aos/attention/`，不覆蓋既有目標、不試 HTTP。[完整 JSON](examples/kernel-tasks/kernel-template.minimal.valid.json) 與 [schema](schemas/kernel-template.schema.json) 的 files 是實際產物，不另存 template 容器；包括 `.aos/inst.json`、`.aos/tasks.json`、設定與 gitignore。
 
-任務表共 **9 項**，每項是 inst（含 `_metainfo`）加 id／kind／needs／methods；group 省略、各自一組，needs 全空。外層 `_metainfo` 是 aos-tasks 第 1 版。〔使用者方向 2026-09-30，第十九批，疑點裁定 4；2026-10-01 任務的 `user` 撤回〕範本任務照 node inst 的帳號跑；任務沒有 `user`，要換帳號就包 `aos-as`（[B-620](../settled/tick.md)）。〔使用者方向 2026-09-29，第十七批〕`methods` 是該任務處理的檔案請求（[node P-202](../settled/protocol/node.md)）；下表沒列 method 的任務不收請求，別人投來沒人宣告的 method 由標準配備的收件回 -32601（[B-623](../settled/tick.md)）。
+任務表共 **9 項**，每項是 inst（含 `_metainfo`）加 id／kind／needs／methods；group 省略、各自一組，needs 全空。外層 `_metainfo` 是 aos-tasks 第 1 版。〔使用者方向 2026-09-30，第十九批，疑點裁定 4；2026-10-01 任務的 `user` 撤回〕範本任務照 node inst 的帳號跑；任務沒有 `user`，要換帳號就包 `aos-as`（[B-620](../settled/tick.md)）。〔使用者方向 2026-09-29，第十七批〕`methods` 是該任務處理的檔案請求（[node P-202](../settled/protocol/tick.md)）；下表沒列 method 的任務不收請求，別人投來沒人宣告的 method 由標準配備的收件回 -32601（[B-623](../settled/tick/mq.md)）。
 
 | id | kind | 程式（cwd 為 node 根） | needs | methods |
 |---|---|---|---|---|
@@ -200,7 +200,7 @@ aos node new /srv/aos/top --template kernel --socket /run/user/1000/aos.sock
 | schedule | kernel | aos-kernel-schedule | 無 | kernel.schedule.recheck、agent.say |
 | clean | custom | aos-clean --config config/clean.json | 無 | 無 |
 
-〔使用者方向 2026-09-30，第十八批；審稿新必-1〕**範本任務之間都不設 needs**，理由見 [S-205](../scheduling/admission.md)。先後照表的位置（〔暫定〕kind 分段照 [B-620](../settled/tick.md)），每項各自一組，後面的任務讀得到前面已提交的結果。check 是 kernel 類；clean 是 custom 類、排最後，〔第十九批，疑點裁定 2〕但 aos-clean 本身屬標準配備（[B-626](../settled/tick.md)、[B-629](../settled/tick.md)）。kernel 可以在範本上加自己的任務，自訂種類〔暫定〕寫成「類別.名稱」（B-620）。
+〔使用者方向 2026-09-30，第十八批；審稿新必-1〕**範本任務之間都不設 needs**，理由見 [S-205](../scheduling/admission.md)。先後照表的位置（〔暫定〕kind 分段照 [B-620](../settled/tick.md)），每項各自一組，後面的任務讀得到前面已提交的結果。check 是 kernel 類；clean 是 custom 類、排最後，〔第十九批，疑點裁定 2〕但 aos-clean 本身屬標準配備（[B-626](../settled/tick.md)、[B-629](../settled/tick/template.md)）。kernel 可以在範本上加自己的任務，自訂種類〔暫定〕寫成「類別.名稱」（B-620）。
 
 範本 task 用 `stderr:{"$opt":"inherit"}` 讓診斷交 tick。沒有本地池可刪 pool／池設定；〔審稿必-6〕只裝 pool、不裝 forward 時，pool 要自己宣告 `llm.chat`，否則別人投來的 `llm.chat` 由標準配備回 -32601（[S-307](../scheduling/llm.md)）。全體轉交可移除 usage。agent 範本有 agent 與 clean 兩項。清理間隔在 config/clean.json，預設一天，由 aos-clean 自己記時間。
 

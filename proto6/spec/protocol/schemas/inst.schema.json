@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "node-inst.schema.json",
+  "$id": "inst.schema.json",
   "title": "proto6 inst 第 1 版：原始輸入",
   "description": "以 base/inst.md 為正本。普通 inst 與指示詞的未知鍵依主規格忽略；$opt > $ref > $fmt > $env。只驗原始語法，取值後的宿主型別、引用循環另由 runner 驗證。頂層沒有 user（2026-10-01 撤回），寫了照未知鍵忽略。",
   "type": "object",

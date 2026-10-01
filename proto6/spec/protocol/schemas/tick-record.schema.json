@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "node-tick-record.schema.json",
+  "$id": "tick-record.schema.json",
   "title": "每項結束碼紀錄",
-  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格各項怎麼結束、本資料夾的格數與是否被停格檔停下（B-633、P-213）。取代第十九批的 node-journal。不認得的欄位忽略（P-007）。跨欄位關係（stopped_after 是最後一項）schema 表達不了，由 validate.py 的補充檢查驗。",
+  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格各項怎麼結束、本工作資料夾的格數與是否被停格檔停下（B-633、P-213）。取代第十九批的 node-journal。不認得的欄位忽略（P-007）。跨欄位關係（stopped_after 是最後一項）schema 表達不了，由 validate.py 的補充檢查驗。",
   "type": "object",
   "required": [
     "version",
@@ -16,7 +16,7 @@
     },
     "seq": {
       "$ref": "common.schema.json#/$defs/TickSeq",
-      "description": "本資料夾的格數，從 1 起；預設不 fsync，斷電後可能倒退（B-633）"
+      "description": "本工作資料夾的格數，從 1 起；預設不 fsync，斷電後可能倒退（B-633）"
     },
     "started_at_ms": {
       "$ref": "common.schema.json#/$defs/TimeMs",

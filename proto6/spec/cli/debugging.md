@@ -4,7 +4,7 @@
 
 ## H-037．除錯指南〔使用者方向 2026-09-30，第十八批；寫法為工程預設〕
 
-本頁只教人「從哪裡查起」，不定新規則；各處寫什麼、何時寫，以連到的條文為準。想一次看完，用 `aos work trace ID`（[H-004](commands.md) 第 55 列），它會照下面的站自動串起來，讀不到的站標「看不到」。〔第十九批〕懷疑「標準配備走的是完整路還是備援」，先跑 `aos node check`（第 58 列）；每格 stderr 的 `standard: cgroup=… git=…` 也印同樣的資訊（[B-630](../settled/tick.md)）。
+本頁只教人「從哪裡查起」，不定新規則；各處寫什麼、何時寫，以連到的條文為準。想一次看完，用 `aos work trace ID`（[H-004](commands.md) 第 55 列），它會照下面的站自動串起來，讀不到的站標「看不到」。〔第十九批〕懷疑「標準配備走的是完整路還是備援」，先跑 `aos node check`（第 58 列）；每格 stderr 的 `standard: cgroup=… git=…` 也印同樣的資訊（[B-630](../settled/tick/git.md)）。
 
 ### 六個地方
 
@@ -12,10 +12,10 @@
 |---|---|---|---|---|
 | 1 | daemon 的即時狀態 | `aos node show T`、`aos node ls`（含掛載行程的診斷）、`aos daemon info` | 有沒有登記、paused、running、pending；`registration_id`；`mount`（是不是掛載行程）、`parent_override`（上層是不是覆蓋出來的）；最近一格 `last_tick`（outcome、exit_code、`tick_seq`）；掛載行程（原 once）做完的診斷（會自動淘汰，也可 `aos mount clear`） | [B-601](../settled/deferred/daemon/runtime.md)、[B-610](../settled/deferred/daemon/channel.md)、[P-106](../settled/deferred/protocol/daemon/registration.md) |
 | 2 | 待辦事項 | `aos attend ls`／`show`；原檔在 node 的 `.aos/attention/{open,done}/` 與 daemon 的 `state_dir/attention/` | 設定壞了、runner 沒開始、tick 壞掉停格、程序清不乾淨、helper 不見、標準配備本身跑不起來（`standard-incomplete`）等要人處理的事 | [S-405](../scheduling/operations.md)、[P-601](../protocol/ops.md) |
-| 3 | node 的 git 歷史 | `aos node log N [--all]`、`git -C N show <OID>` | 每格每組提交（`aos-tick group …`）、標準配備回 -32601 的提交（`aos-tick unclaimed`）、維護提交；已消費的收件原件在 `state/messages/`，待送封套在 `.aos/outbox/`。沒有 git 的 node 沒有歷史，改看 `.aos/journal/`（完成紀錄，已投出的副本在 `sent/`，失敗組的在 `discarded/`，[B-632](../settled/tick.md)） | [B-622](../settled/tick.md)、[P-205](../settled/protocol/node.md)、[P-206](../settled/protocol/node.md) |
-| 4 | tick 擋板與停格 | `.aos/tick-blocked`；`last_tick` 的 exit_code 3 | 提交／還原故障的原因；看到擋板時下一格回 125、不碰工作樹，要人修好、移除擋板 | [P-203](../settled/protocol/node.md)、[B-607](../settled/deferred/daemon/registration.md) |
+| 3 | node 的 git 歷史 | `aos node log N [--all]`、`git -C N show <OID>` | 每格每組提交（`aos-tick group …`）、標準配備回 -32601 的提交（`aos-tick unclaimed`）、維護提交；已消費的收件原件在 `state/messages/`，待送封套在 `.aos/outbox/`。沒有 git 的 node 沒有歷史，改看 `.aos/journal/`（完成紀錄，已投出的副本在 `sent/`，失敗組的在 `discarded/`，[B-632](../settled/tick/git.md)） | [B-622](../settled/tick/git.md)、[P-205](../settled/protocol/tick.md)、[P-206](../settled/protocol/tick.md) |
+| 4 | tick 擋板與停格 | `.aos/tick-blocked`；`last_tick` 的 exit_code 3 | 提交／還原故障的原因；看到擋板時下一格回 125、不碰工作樹，要人修好、移除擋板 | [P-203](../settled/protocol/tick.md)、[B-607](../settled/deferred/daemon/registration.md) |
 | 5 | 工作區 | 追蹤的 `state/work/<前綴>-<attempt_id>/`；ignored 的 `.aos/jobs/<前綴>-<attempt_id>/`（`inst.json`、`request.json`、`result.json`、`usage.json`、`launch-started`、`stdout.bin`／`stderr.bin`）與 `inst.json.err` | 工作材料、完整結果、用量；掛載行程單檔的 `.err` 表示 runner 根本沒啟動；有 `launch-started` 卻沒結果，就是 unknown，不會自動重跑 | [P-402](../protocol/work.md)、[S-401](../scheduling/operations.md) |
-| 6 | 投件與診斷輸出 | 收件區 `requests/`、`responses/`；`.aos/alarms/`；`.aos/runner-stderr.log`；daemon 自己的 stdout／stderr | 對方還沒取走的原件；設了鬧鐘的待查紀錄；tick 印的 `request_not_handled`、`target_not_writable` 等投件錯誤、`standard: …` 那一行與任務 stderr（每格覆寫）；daemon 寫不進 node 時的警告 | [B-624](../settled/tick.md)、[P-206](../settled/protocol/node.md)、[P-109](../settled/deferred/protocol/daemon/provision-and-runner.md) |
+| 6 | 投件與診斷輸出 | 收件區 `requests/`、`responses/`；`.aos/alarms/`；`.aos/runner-stderr.log`；daemon 自己的 stdout／stderr | 對方還沒取走的原件；設了鬧鐘的待查紀錄；tick 印的 `request_not_handled`、`target_not_writable` 等投件錯誤、`standard: …` 那一行與任務 stderr（每格覆寫）；daemon 寫不進 node 時的警告 | [B-624](../settled/tick/mq.md)、[P-206](../settled/protocol/tick.md)、[P-109](../settled/deferred/protocol/daemon/provision-and-runner.md) |
 
 ### 三套 ID 怎麼對
 
@@ -35,4 +35,4 @@
 | node 不再開格 | 4 的擋板；1 的 paused | 2 的事項；`aos node log` 最後一筆 |
 | 設定改了沒生效 | 2 的 `config_invalid` 事項；`aos agent config check` | 3 的提交有沒有進去；daemon 設定要看 [B-608](../settled/deferred/daemon/reload.md) 是否要重開 |
 | 想經通道送訊息、掛行程，卻報 `no_channel` 或被拒 | 那一格的環境有沒有 `AOS_DAEMON_SOCKET` 與 `AOS_TICK_TOKEN`：只有 daemon 開的格才有，人手、cron 跑的沒有；任務的 `envs` 用了 `clear` 也會被清掉（[B-612](../settled/deferred/daemon/channel.md)） | `token_invalid`：拿了上一格的憑證、或 daemon 重啟過；`forbidden`：寄件帳號對收件 `requests/` 沒寫權，或覆蓋上層只有一方同意；`mailbox_full`：收件方一直沒取，改走檔案收件（[B-614](../settled/deferred/daemon/messaging.md)） |
-| 標準配備是不是在走備援 | `aos node check`；tick stderr 的 `standard: cgroup=… git=…` | cgroup 備援下沒有總量上限與 OOM 判定、後代收不乾淨；git 備援下沒有還原與歷史（[B-631](../settled/tick.md)、[B-632](../settled/tick.md)）；想走完整路，cgroup 首推 `systemd-run --user --scope -p Delegate=yes`（[B-605](../settled/deferred/daemon/cgroup.md)） |
+| 標準配備是不是在走備援 | `aos node check`；tick stderr 的 `standard: cgroup=… git=…` | cgroup 備援下沒有總量上限與 OOM 判定、後代收不乾淨；git 備援下沒有還原與歷史（[B-631](../settled/tick/cg.md)、[B-632](../settled/tick/git.md)）；想走完整路，cgroup 首推 `systemd-run --user --scope -p Delegate=yes`（[B-605](../settled/deferred/daemon/cgroup.md)） |

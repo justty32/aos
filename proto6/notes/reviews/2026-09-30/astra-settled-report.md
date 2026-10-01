@@ -12,7 +12,7 @@
   **建議改法：**明定實際受管群組由誰建立、如何交給 daemon／helper；本輪收尾以 B-601／B-604 為完整正本，區外引用只保留不衝突的串流與取消規則。
 
 - **必-2｜`aos-as` 複製整份環境，破壞憑證與鎖的契約。**  
-  **位置：**[settled/helper.md，B-303](../../../spec/settled/deferred/helper.md)；`settled/protocol/node.md` P-212；`settled/daemon.md` B-609、B-612；P-109。  
+  **位置：**[settled/helper.md，B-303](../../../spec/settled/deferred/helper.md)；`settled/protocol/tick.md` P-212；`settled/daemon.md` B-609、B-612；P-109。  
   **問題：**暫存 inst 要寫入「目前的環境」，正常情況下便會把 `AOS_TICK_TOKEN` 寫到磁碟，違反 B-612「只放記憶體、不寫檔」。另外，fd 經 SCM_RIGHTS 傳遞後編號可能改變；複製進 inst 的舊 `AOS_TICK_LOCK_FD` 又可能覆蓋 runner 補的新編號。  
   **建議改法：**明列通道憑證與 fd 編號不得序列化進 inst；由 runner 在最後建立子程序環境時補入正確值。
 
@@ -27,17 +27,17 @@
   **建議改法：**分開定義「格數」與「每項結果」的落盤要求；至少為開格序號及檔名切換補足必要的持久化步驟。不要讓保留期依賴可能倒退的序號，卻仍宣稱單調。
 
 - **必-5｜恢復流程把 git、needs、group 的舊規則帶回來。**  
-  **位置：**[settled/tick.md，B-625](../../../spec/settled/tick.md)；`settled/daemon.md` B-607；`settled/protocol/node.md` P-207、P-210；對照 A-102。  
+  **位置：**[settled/tick.md，B-625](../../../spec/settled/tick/recovery.md)；`settled/daemon.md` B-607；`settled/protocol/tick.md` P-207、P-210；對照 A-102。  
   **問題：**恢復前必須完成 A-102，但它仍要求檢查 needs、group 連續、kind 順序及提交後 resume。這會拒絕第二十批允許的陌生 key，也使無 git 的基礎流程需要 commit。P-207 自己也同時寫「只做原子替換」及「已提交／commit 故障」。  
   **建議改法：**把通用、無 git 的修改與恢復契約放回整理區；領域驗證只在安裝對應任務時適用。現行碼表描述原子替換結果，git 提交流程移到下一步段落。
 
 - **必-6｜沒有 cgroup 的限制，仍被其他現行段落蓋掉。**  
-  **位置：**[settled/tick.md，B-625](../../../spec/settled/tick.md)；T-09；P-208；[daemon 協議 P-106](../../../spec/settled/deferred/protocol/daemon/registration.md)。  
+  **位置：**[settled/tick.md，B-625](../../../spec/settled/tick/recovery.md)；T-09；P-208；[daemon 協議 P-106](../../../spec/settled/deferred/protocol/daemon/registration.md)。  
   **問題：**B-625 仍說 daemon／VM 重啟先清空舊程序；T-09 也把重啟列入程序群組收尾。這與已接受的「無 cgroup 時 daemon 重啟清不掉」不符。P-208 還把 `cgroup_delegate` 列成當前部署操作；P-106 引用的最小正例則回傳完整 cgroup 配置，與本輪一律 `null` 相反。  
   **建議改法：**重啟描述直接沿 B-603 的已接受限制；交框操作明標下一步；現行查詢正例改成 `cgroup:null`，未來範例另標草稿。
 
 - **必-7｜結束碼 schema 接受正文不允許的結果。**  
-  **位置：**[settled/protocol/node.md，P-213](../../../spec/settled/protocol/node.md)；`protocol/schemas/node-tick-record.schema.json`；B-620、B-633。  
+  **位置：**[settled/protocol/tick.md，P-213](../../../spec/settled/protocol/tick.md)；`protocol/schemas/tick-record.schema.json`；B-620、B-633。  
   **問題：**整格的頂層 `exit` 接受 0～255，包括 3、125；`stopped_after` 也能配成功碼或從未執行的 ID。唯讀實測確認這些資料都通過目前 schema。這裡指整格結果，任務自己的 0～255 沒有問題。  
   **建議改法：**紀錄頂層只收實際會寫入的 0／1／2，75 不寫紀錄；有 `stopped_after` 必須回 1。停在哪個 ID 的跨欄位關係交給補充驗證器，並加入反例。
 
@@ -49,7 +49,7 @@
 **設計問題**
 
 - **設-1｜任務表到底由誰驗 kind／methods，責任沒有接完整。**  
-  **位置：**[settled/tick.md，B-620、B-626](../../../spec/settled/tick.md)；P-202；`node-tasks.schema.json`。  
+  **位置：**[settled/tick.md，B-620、B-626](../../../spec/settled/tick.md)；P-202；`tick-tasks.schema.json`。  
   **問題：**核心說忽略 kind／methods、只驗四件事；schema 卻要求 kind、限制其值及 methods 形狀。收件任務目前只明定檢查跨任務 methods 重複。缺 kind、`system.x`、methods 型別錯時，誰拒收並不清楚。  
   **建議改法：**分清「驗結構」與「解釋行為」，逐項指定負責者；說明完整 schema 是核心必驗，還是供外部工具／系統任務驗證。
 
@@ -88,7 +88,7 @@
 **要使用者裁定**
 
 - **裁-1｜多個任務各自取通道訊息，如何避免拿走別人的件？**  
-  **位置：**[settled/tick.md，B-623](../../../spec/settled/tick.md)；B-614；P-119。  
+  **位置：**[settled/tick.md，B-623](../../../spec/settled/tick/mq.md)；B-614；P-119。  
   **問題：**每個 node 共用一個 FIFO，`node.take` 只有 token／limit，取走即刪；各任務卻必須自己取。任務 A 先取一批，就可能拿走應由 B 處理的訊息。這在正常執行就會發生，不能只用「不保證送達」帶過。  
   **選項：**① `node.take` 加 method／task 選取，各任務只領自己的；② 指定一項普通任務取整批、落到共享收件區，其他任務再處理；③ 每個 node 限一個通道消費者，由它負責分派。
 

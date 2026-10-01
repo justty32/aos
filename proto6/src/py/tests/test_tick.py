@@ -60,7 +60,7 @@ class TickCase(Base):
 
 class Step1Target(TickCase):
     """使用者 2026-10-01（待統一更新 spec）：目標（位置參數）省略用 ./、相對轉絕對；資料夾要有 .aos/tasks.json
-    （不看 inst.json）；是檔就拿它當表、所在資料夾當工作資料夾；不存在回 1。"""
+    （不看 inst.json）；不存在回 1。同日撤回「是檔就拿它當表」：目標只能是資料夾，給檔＝用法錯回 1。"""
 
     def test_cwd_default_and_not_git(self):
         self.tasks(sh("t", 'echo "$AOS_TICK_CWD" > cwd.txt'))
@@ -104,53 +104,28 @@ class Step1Target(TickCase):
         self.assertFalse(self.exists(".aos/inst.json"))
         self.assertEqual(self.tick().returncode, 0)
 
-    def test_file_is_table_dir_is_cwd(self):
-        # 給檔：這個檔就是表、所在資料夾是工作資料夾；它的 .aos/tasks.json 有也不用
-        self.tasks(sh("t", "touch wrong.ran"))
-        tbl = self.write("sub/my.json", json.dumps(table(
-            sh("a", 'echo "$AOS_TICK_CWD" > cwd.txt; touch a.ran'))))
-        r = self.tick(tbl)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(self.exists("sub/a.ran"))          # cwd 是工作資料夾（sub）
-        self.assertEqual(self.read("sub/cwd.txt"), os.path.join(self.d, "sub") + "\n")
-        self.assertFalse(self.exists("wrong.ran"))
-        rec = self.rec(cwd="sub")
-        self.assertEqual((rec["seq"], rec["tasks"]), (1, [{"id": "a", "exit": 0}]))
-        check_record(self, rec)
-        self.assertFalse(self.exists(".aos/tick"))
-        self.assertFalse(self.exists("sub/.aos/tasks.json"))
+    def test_file_target_is_usage_error(self):
+        # 使用者 2026-10-01 撤回「目標是檔就拿它當表」：給檔（不管是不是 .aos/tasks.json 本身）＝stderr usage、回 1，什麼都不建
+        self.tasks(sh("t", "touch ran"))
+        other = self.write("sub/my.json", json.dumps(table(sh("a", "touch a.ran"))))
+        for target in (other, os.path.join(self.d, ".aos", "tasks.json")):
+            r = self.tick(target)
+            self.assertEqual(r.returncode, 1, target)
+            self.assertIn("usage:", r.stderr)
+            self.assertIn("資料夾", r.stderr)
+            self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertFalse(self.exists("ran"))
+        self.assertFalse(self.exists("sub/a.ran"))
+        self.assertEqual(sorted(os.listdir(self.d)), [".aos", "sub"])
+        self.assertEqual(os.listdir(os.path.join(self.d, ".aos")), ["tasks.json"])
+        self.assertEqual(os.listdir(os.path.join(self.d, "sub")), ["my.json"])
 
-    def test_file_mode_creates_aos_dir(self):
-        tbl = self.write("n/t.json", json.dumps(table(task("t", ["true"]))))
-        self.assertFalse(self.exists("n/.aos"))
-        for i in (1, 2):
-            r = self.tick(tbl)
-            self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertEqual(self.rec(cwd="n")["seq"], i)
-        self.assertEqual(sorted(os.listdir(os.path.join(self.d, "n", ".aos"))), ["tick", "tick.lock"])
-
-    def test_file_in_aos_dir_means_parent_cwd(self):
-        # 拿不準的點的決定：檔在 .aos/ 裡時工作資料夾取 .aos 的上一層（跟目標給資料夾同一個）
-        self.tasks(task("t", ["true"]))
-        self.assertEqual(self.tick().returncode, 0)
-        r = self.tick(os.path.join(self.d, ".aos", "tasks.json"))
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.rec()["seq"], 2)
-        self.assertFalse(self.exists(".aos/.aos"))
-
-    def test_bad_table_file_is_error(self):
-        tbl = self.write("n/t.json", "{壞")
-        r = self.tick(tbl)
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("bad_table:", r.stderr)             # 檔案模式也做同一套極簡檢查
-
-    def test_file_mode_base_is_file_dir(self):
-        # 給檔時，表裡的相對路徑與指示詞以檔所在的資料夾（工作資料夾）為中心，不是以啟動時的目錄
-        self.write("n/t.json", json.dumps(table({"$ref": "item.json"})))
+    def test_base_is_tick_dir_not_launch_dir(self):
+        # 表裡的相對路徑與指示詞以工作資料夾為中心，不是以啟動時的目錄
+        self.write("n/.aos/tasks.json", json.dumps(table({"$ref": "item.json"})))
         self.write("n/item.json", json.dumps(sh("r", "touch from-ref")))
         self.write("item.json", json.dumps(sh("wrong", "touch wrong.ran")))
-        r = subprocess.run([PY, TICK, os.path.join("n", "t.json")], cwd=self.d,
-                           env=CLEAN_ENV, capture_output=True, text=True)
+        r = subprocess.run([PY, TICK, "n"], cwd=self.d, env=CLEAN_ENV, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.exists("n/from-ref"))
         self.assertFalse(self.exists("wrong.ran"))
@@ -159,9 +134,8 @@ class Step1Target(TickCase):
     def test_bad_item_metainfo_value_is_error(self):
         # 每項沒寫 `_metainfo` 照跑（aos_inst 當 posix 第 1 版）；寫了但值不對，極簡檢查不看，
         # 跑到這一項展開成 inst 時 aos_inst 自然丟錯（traceback），回 1
-        self.write("n/t.json", json.dumps(table(
-            {"_metainfo": {"_type": "nope", "_version": 1}, "id": "x", "argv": ["true"]})))
-        r = self.tick(os.path.join(self.d, "n", "t.json"))
+        self.tasks({"_metainfo": {"_type": "nope", "_version": 1}, "id": "x", "argv": ["true"]})
+        r = self.tick()
         self.assertEqual(r.returncode, 1)
         self.assertIn("Error", r.stderr)
 
@@ -302,6 +276,13 @@ class Step4Check(TickCase):
         self.bad(table(ok, "x"))                                           # 項不是物件
         self.bad(table(ok, {"_metainfo": POSIX, "id": "b"}))               # 缺 argv
 
+    def test_no_argv_anywhere(self):
+        # 使用者 2026-10-01 頂層預設：合併後要有 argv（項自己有，或頂層有）；都沒有＝bad_table、不開格
+        self.bad({"envs": {"A": "1"}, "tasks": [sh("a", "touch ran"), {"id": "b"}]})
+        self.bad({"tasks": {"$ref": "nope.json"}})                         # 讀表那層解不開
+        self.bad({"envs": {"$ref": "nope.json"}, "tasks": [sh("a", "touch ran")]})
+        self.bad({"modules": {"$ref": "nope.json"}, "tasks": [sh("a", "touch ran")]})
+
     def test_ref_item_checked_after_expand(self):
         self.write("item.json", json.dumps({"id": "b"}))                   # 展開後缺 argv
         self.bad(table(sh("a", "touch ran"), {"$ref": "item.json"}))
@@ -347,6 +328,107 @@ class Step4Check(TickCase):
         self.assertEqual(rec["tasks"], [{"id": "1", "exit": 0}, {"id": "1", "exit": 4},
                                         {"id": "2", "exit": 0}])
         self.assertEqual(rec["stopped_after"], "2")
+
+
+class Step4Defaults(TickCase):
+    """使用者 2026-10-01（待統一更新 spec）：tasks.json 頂層可放 inst 的七個欄位當每一項的預設；淺層合併、項蓋過；
+    頂層 cwd 不改 tick 自己的 cwd、相對以工作資料夾為起點；讀表時只解到 tasks 這層，每項內部跑到時才解；
+    合併後的 `$ref:""`／`#…` 指合併後的這一項。頂層 `_metainfo`、`id`、`kind`、`modules` 不當預設。"""
+
+    def put(self, doc):
+        self.write(".aos/tasks.json", json.dumps(doc, ensure_ascii=False))
+
+    def test_defaults_applied_and_tick_cwd_unchanged(self):
+        # brief 的新例子（cwd、stdout 加了 mkdir 讓測試自己建資料夾）；從上一層用相對目標啟動
+        self.write("tasks.d/clean.json", json.dumps(
+            {"id": "clean", "argv": ["sh", "-c", 'echo "clean $LANG $(pwd)"']}))
+        self.put({
+            "cwd": {"$opt": "mkdir", "$val": "work"},
+            "envs": {"LANG": "C.UTF-8"},
+            "stdout": {"$opt": ["append", "mkdir"], "$val": "logs/tasks.log"},
+            "tasks": [
+                {"id": "build", "argv": ["sh", "-c", 'echo "build $LANG $(pwd) $AOS_TICK_CWD"']},
+                {"id": "report", "argv": ["sh", "-c", 'echo "report $(pwd)"'],
+                 "cwd": {"$opt": "mkdir", "$val": "reports"}},
+                {"$ref": "tasks.d/clean.json"}]})
+        parent, name = os.path.split(self.d)
+        r = subprocess.run([PY, TICK, name], cwd=parent, env=CLEAN_ENV, capture_output=True, text=True)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        work, reports = os.path.join(self.d, "work"), os.path.join(self.d, "reports")
+        self.assertEqual(self.read("work/logs/tasks.log"),
+                         "build C.UTF-8 %s %s\nclean C.UTF-8 %s\n" % (work, self.d, work))
+        self.assertEqual(self.read("reports/logs/tasks.log"), "report %s\n" % reports)
+        # tick 自己的 cwd 不動：鎖、紀錄仍在工作資料夾的 .aos/，work/ 底下沒有
+        self.assertEqual([t["id"] for t in self.rec()["tasks"]], ["build", "report", "clean"])
+        self.assertTrue(self.exists(".aos/tick.lock"))
+        self.assertFalse(self.exists("work/.aos"))
+        check_record(self, self.rec())
+
+    def test_item_keys_override_and_envs_replaced_whole(self):
+        self.put({"envs": {"A": "1", "B": "2"}, "stdout": "top.out", "tasks": [
+            sh("x", 'echo "${A-unset} ${B-unset}"'),
+            sh("y", 'echo "${A-unset} ${B-unset}"', envs={"B": "3"}, stdout="y.out")]})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("top.out"), "1 2\n")
+        self.assertEqual(self.read("y.out"), "unset 3\n")         # envs 整包換掉，不逐變數合併
+
+    def test_tasks_and_defaults_from_ref(self):
+        # 讀表那層：`tasks` 本身可以是 $ref（相對工作資料夾）；頂層預設的 `#…` 指整份 tasks.json
+        self.write("tasks.d/list.json", json.dumps([{"id": "a"}, {"id": "b"}]))
+        self.put({"shared": {"argv": ["sh", "-c", 'echo "$AOS_TASK_ID $V" >> out']},
+                  "argv": {"$ref": "#/shared/argv"}, "envs": {"$ref": "#/shared2"},
+                  "shared2": {"V": "v"},
+                  "tasks": {"$ref": "tasks.d/list.json"}})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("out"), "a v\nb v\n")
+
+    def test_top_argv_default_items_only_id(self):
+        self.put({"argv": ["sh", "-c", 'echo "$AOS_TASK_ID" >> ids'], "tasks": [{"id": "a"}, {}, {"id": "c"}]})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("ids"), "a\n1\nc\n")
+
+    def test_merged_ref_points_to_merged_item(self):
+        # 合併後 `#/id` 指合併後的這一項：同一個頂層預設，每項解出自己的 id
+        self.put({"envs": {"WHO": {"$ref": "#/id"}}, "tasks": [
+            sh("a", 'echo "$WHO" >> who'), sh("b", 'echo "$WHO" >> who')]})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("who"), "a\nb\n")
+
+    def test_item_interior_resolved_only_when_run(self):
+        # 第二項內部有壞 $env／$ref：讀表時不解，第一項建了停格檔、第二項沒跑到，整格回 0
+        broken = {"id": "x", "argv": ["true"], "envs": {"X": {"$env": "AOSTEST_SURELY_NOT_SET"}},
+                  "stdout": {"$ref": "nope.json"}}
+        self.put({"stderr": {"$ref": "nope.json"}, "tasks": [sh("a", "echo > .aos/tick/stop")]})
+        self.assertEqual(self.tick().returncode, 1)              # 對照：頂層預設的值本身讀表時解一層
+        self.put({"tasks": [sh("a", "echo > .aos/tick/stop"), broken]})
+        r = self.tick()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.rec()["tasks"], [{"id": "a", "exit": 0}])
+        self.put({"tasks": [broken]})                             # 對照：跑到時才解，解不開自然丟錯回 1
+        r = self.tick()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("Error", r.stderr)
+
+    def test_top_metainfo_id_kind_modules_not_defaults(self):
+        self.put({"_metainfo": {"_type": "nope", "_version": 9}, "id": "TOP", "kind": "x",
+                  "modules": {"m": {"deep": {"$ref": "nope.json"}}},
+                  "tasks": [{"argv": [PY, "-c", "import os; open('id', 'w').write(os.environ['AOS_TASK_ID'])"]}]})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))       # 頂層 _metainfo 若被合併，aos_inst 會丟錯
+        self.assertEqual(self.read("id"), "0")
+
+    def test_modules_not_merged(self):
+        # 使用者 2026-10-01：「tasks.json頂層也應該有modules。」核心照收不理、內部不展開、不當預設合併
+        import aos_tick_table
+        tbl = aos_tick_table.check_table(
+            {"modules": {"$ref": "#/m"}, "m": {"x": {"$ref": "nope.json"}}, "argv": ["true"],
+             "tasks": [{"id": "a"}]}, self.d)
+        self.assertEqual(tbl.modules, {"x": {"$ref": "nope.json"}})
+        self.assertEqual(aos_tick_table.merge(tbl.defaults, tbl.items[0]), {"argv": ["true"], "id": "a"})
 
 
 class Step5Run(TickCase):
@@ -477,17 +559,6 @@ class DirName(TickCase):
         self.assertEqual(self.tick().returncode, 0)                   # 沒設＝.aos
         self.assertEqual(self.rec()["seq"], 1)
 
-    def test_file_mode_parent_rule_follows_name(self):
-        tbl = self.write(".aos2/tasks.json", json.dumps(table(task("t", ["true"]))))
-        r = self.tick(tbl, env=self.ENV)                    # 檔在 .aos2/ 裡：工作資料夾取上一層
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(self.exists(".aos2/tick/current.json"))
-        tbl = self.write(".aos/t.json", json.dumps(table(task("t", ["true"]))))
-        r = self.tick(tbl, env=self.ENV)                    # 名字不是 .aos2：照字面，工作資料夾是 .aos/
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(self.exists(".aos/.aos2/tick/current.json"))
-        self.assertFalse(self.exists(".aos/tick"))
-
     def test_bad_values_are_usage_errors(self):
         self.tasks(sh("t", "touch ran"))
         for bad in ("a/b", "/tmp", ".", "..", "x/"):
@@ -502,8 +573,8 @@ class DirName(TickCase):
 
 class EmptyDirName(TickCase):
     """使用者 2026-10-01 再改（待統一更新 spec）：`AOS_DIRNAME` 設了但是空字串＝不用子資料夾，
-    tasks.json、tick.lock、tick-blocked、tick/stop、tick/current.json、last.json 都直接在工作資料夾下；
-    檔案模式「所在資料夾名等於 dirname 就往上取一層」不適用。跟「沒設」（＝.aos）分得開。"""
+    tasks.json、tick.lock、tick-blocked、tick/stop、tick/current.json、last.json 都直接在工作資料夾下。
+    跟「沒設」（＝.aos）分得開。"""
 
     ENV = {"AOS_DIRNAME": ""}
 
@@ -545,21 +616,6 @@ class EmptyDirName(TickCase):
         self.assertTrue(self.exists(".aos/tick/current.json"))
         self.assertFalse(self.exists("tick"))
 
-    def test_file_mode_no_parent_rule(self):
-        tbl = self.write(".aos/t.json", json.dumps(table(task("t", ["true"]))))
-        r = self.tick(tbl, env=self.ENV)                    # 空字串：檔所在的資料夾照字面當工作資料夾
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(self.exists(".aos/tick/current.json"))
-        self.assertTrue(self.exists(".aos/tick.lock"))
-        self.assertFalse(self.exists("tick"))
-        os.makedirs(os.path.join(self.d, "sub"))
-        tbl = self.write("sub/t.json", json.dumps(table(sh("t", "pwd > where"))))
-        r = self.tick(tbl, env=self.ENV)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.read("sub/where"), os.path.join(self.d, "sub") + "\n")
-        self.assertTrue(self.exists("sub/tick/current.json"))
-
-
 class Step9Whole(TickCase):
 
     def test_b626_only_true_no_daemon(self):
@@ -571,7 +627,7 @@ class Step9Whole(TickCase):
 
 
 def check_record(case, rec):
-    """P-213 的跨欄位規則＋（有 jsonschema 時）node-tick-record schema。"""
+    """P-213 的跨欄位規則＋（有 jsonschema 時）tick-record schema。"""
     if rec.get("ended"):
         case.assertEqual(rec["exit"], 0)                  # 寫得到收尾就是 0，任務成敗不影響
         if "stopped_after" in rec:
@@ -585,11 +641,11 @@ def check_record(case, rec):
         return
     sd = os.path.join(HERE, "..", "..", "..", "spec", "protocol", "schemas")
     res = {}
-    for n in ("common.schema.json", "node-tick-record.schema.json"):
+    for n in ("common.schema.json", "tick-record.schema.json"):
         with open(os.path.join(sd, n), encoding="utf-8") as f:
             res[n] = Resource.from_contents(json.load(f))
     reg = Registry().with_resources(res.items())
-    Draft202012Validator(res["node-tick-record.schema.json"].contents, registry=reg).validate(rec)
+    Draft202012Validator(res["tick-record.schema.json"].contents, registry=reg).validate(rec)
 
 
 if __name__ == "__main__":

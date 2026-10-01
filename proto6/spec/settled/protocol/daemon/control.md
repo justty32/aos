@@ -40,7 +40,7 @@ daemon 設定檔（[P-120](core.md)）頂層 `modules` 裡寫：
 | 欄位 | 型別 | 意思 |
 |---|---|---|
 | `wake`／`pause`／`resume`／`status` | 字串 | 四個裡剛好出現一個；值是 inst 字面值，跟設定檔 `insts` 的鍵逐字比對 |
-| `skip_while_running` | 布林，可省，預設 false | 只有 `wake` 看；正在跑就不補 |
+| `skip_while_running` | 布林，可省，預設 false | 只有 `wake` 看；正在跑就不補，這次請求什麼都不改（已記下的補跑與它的選項照舊，[B-641](../../daemon/control.md)）〔astra 報告必修 4〕 |
 | `keep_schedule` | 布林，可省，預設 false | 只有 `wake` 看；不動原本的週期排程 |
 
 - 〔使用者方向 2026-10-01〕**不認得的欄位照收不理**，不回 `bad_request`；`pause`／`resume`／`status` 帶了那兩個選項也忽略（不管型別）。
@@ -77,7 +77,7 @@ daemon 設定檔（[P-120](core.md)）頂層 `modules` 裡寫：
 
 回應一律是不帶多餘空白的一行 JSON，非 ASCII 字照原樣輸出。
 
-schema：[daemon-ctl](../../../protocol/schemas/daemon-ctl.schema.json)（請求與回應都在裡面）。範例：請求 [wake 帶選項](../../../protocol/examples/daemon/ctl_request.wake.valid.json)、[status](../../../protocol/examples/daemon/ctl_request.status.valid.json)；反例 [兩個指令名](../../../protocol/examples/daemon/ctl_request.two-commands.invalid.json)、[inst 不是字串](../../../protocol/examples/daemon/ctl_request.inst-not-string.invalid.json)。回應 [成功](../../../protocol/examples/daemon/ctl_reply.ok.valid.json)、[status](../../../protocol/examples/daemon/ctl_reply.status.valid.json)、[已停](../../../protocol/examples/daemon/ctl_reply.stopped.valid.json)；反例 [錯誤代碼不認得](../../../protocol/examples/daemon/ctl_reply.unknown-error.invalid.json)、[status 缺 next](../../../protocol/examples/daemon/ctl_reply.status-missing-next.invalid.json)。
+schema：[daemon-ctl](../../../protocol/schemas/daemon-ctl.schema.json)（請求與回應都在裡面）。〔astra 報告必修 5、設計 3〕請求與回應**分開驗**：請求照 `$defs/Request`、回應照 `$defs/Reply`，不為了合併成一個驗證入口而多加協議沒有的限制（例如請求的陌生欄位要照收）。範例：請求 [wake 帶選項](../../../protocol/examples/daemon/ctl_request.wake.valid.json)、[status](../../../protocol/examples/daemon/ctl_request.status.valid.json)、[帶不認得的欄位照收](../../../protocol/examples/daemon/ctl_request.extra-field.valid.json)；反例 [兩個指令名](../../../protocol/examples/daemon/ctl_request.two-commands.invalid.json)、[inst 不是字串](../../../protocol/examples/daemon/ctl_request.inst-not-string.invalid.json)。回應 [成功](../../../protocol/examples/daemon/ctl_reply.ok.valid.json)、[status](../../../protocol/examples/daemon/ctl_reply.status.valid.json)、[已停](../../../protocol/examples/daemon/ctl_reply.stopped.valid.json)；反例 [錯誤代碼不認得](../../../protocol/examples/daemon/ctl_reply.unknown-error.invalid.json)、[status 缺 next](../../../protocol/examples/daemon/ctl_reply.status-missing-next.invalid.json)。
 
 ### 環境變數
 
@@ -88,7 +88,7 @@ schema：[daemon-ctl](../../../protocol/schemas/daemon-ctl.schema.json)（請求
 | `AOS_DAEMON_SOCKET` | 控制 socket 的絕對路徑 |
 | `AOS_DAEMON_INST` | 這一項的 inst 字面值 |
 
-名字 `AOS_DAEMON_SOCKET` 沿用舊設計 [P-117](../../deferred/protocol/daemon/channel.md)，意思改成控制 socket；舊的通道憑證 `AOS_TICK_TOKEN` 不做。沒掛控制模組時兩個都不放。
+名字 `AOS_DAEMON_SOCKET` 沿用舊設計 [P-117](../../deferred/protocol/daemon/channel.md)，意思改成控制 socket；通道憑證 `AOS_TICK_TOKEN` 現行控制不使用；舊通道憑證暫緩，未來另定〔astra 報告必修 7〕。沒掛控制模組時兩個都不放。
 
 ### socket 檔
 

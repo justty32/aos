@@ -1,8 +1,8 @@
 # tick 暫緩區：上下層判定與核心先不做的細節
 
-← [暫緩區](README.md)｜[通用 tick（現行）](../tick.md)｜[node 協議](../protocol/node.md)｜[慣例](../conventions.md)
+← [暫緩區](README.md)｜[通用 tick（現行）](../tick.md)｜[tick 協議](../protocol/tick.md)｜[慣例](../conventions.md)
 
-**這篇整篇在暫緩區。** 2026-10-01 使用者定 POC「默認一切正常、先不考慮邊緣狀況」，tick 核心縮成三件事：簡單互斥鎖、照表跑、每項結束碼紀錄（[B-626](../tick.md#b-626核心與系統級任務的界線)）。原本寫在 [tick](../tick.md) 裡、現在先不做的規定搬到這裡，原文照留，條號保留、不重用。現行規定一律看 [tick](../tick.md) 與 [node 協議](../protocol/node.md)。
+**這篇整篇在暫緩區。** 2026-10-01 使用者定 POC「默認一切正常、先不考慮邊緣狀況」，tick 核心縮成三件事：簡單互斥鎖、照表跑、每項結束碼紀錄（[B-626](../tick.md#b-626核心與系統級任務的界線)）。原本寫在 [tick](../tick.md) 裡、現在先不做的規定搬到這裡，原文照留，條號保留、不重用。現行規定一律看 [tick](../tick.md) 與 [tick 協議](../protocol/tick.md)。
 
 - 整條搬來的：B-628 上下層判定。
 - 部分搬來的：B-602、B-620、B-633 各有一段（標題寫成「暫緩：B-xxx …」，原條還在 tick.md）。
@@ -47,7 +47,7 @@
 - **後代也擋下一格**：只要還有任何程序握著這份鎖（例如任務留下的後代），下一格就拿不到鎖、回 75；這一點不需要 cgroup。核心不清後代；daemon 開的格，由 daemon 在格後收尾（[B-604](daemon/lifecycle.md)）。經 `aos-as` 用別的帳號開的程序同樣繼承這份鎖 fd（[B-303](helper.md)）。
 - daemon 不同時開同一 node 的兩格，是 daemon 自己的開格安排（[B-601](daemon/runtime.md)），不是互斥的來源。
 
-依賴這段的正式條文：`aos-git` 的「不在 tick 內」核對（[B-622](../tick.md#b-622git-的共同規則)、P-205）、`aos-mq`／`aos-publish` 在 tick 內靠繼承的鎖（P-206）、`aos-as` 交出鎖 fd（P-212、[B-303](helper.md)）。最簡版下這幾條的「在不在 tick 內」還沒有判法，要等這段回來。
+依賴這段的正式條文：`aos-git` 的「不在 tick 內」核對（[B-622](../tick/git.md#b-622git-的共同規則)、P-205）、`aos-mq`／`aos-publish` 在 tick 內靠繼承的鎖（P-206）、`aos-as` 交出鎖 fd（P-212、[B-303](helper.md)）。最簡版下這幾條的「在不在 tick 內」還沒有判法，要等這段回來。
 
 **原驗收：**同資料夾同時跑兩個 `aos-tick`，一個回 75、不改檔；前一格留下握著鎖 fd 的後代時，在沒有 cgroup 的機器上下一格也回 75。包了 `aos-as` 而且有 helper、有通道時，任務內用 `AOS_TICK_LOCK_FD` 核對得到獨占鎖，它結束前下一項不開、同資料夾另一格回 75。
 
@@ -80,7 +80,7 @@
 | 每項之後 | 不 fsync | rename 前 fsync 暫存檔；不 fsync 目錄 |
 | 斷電或 VM 強關後 | 紀錄可能退回較早的一版、壞掉或不見；`seq` 可能倒退 | 只要有任務拿到這格的 `seq`，這個號已經落盤，不倒退。`current.json` 可能退回較早的一版，但一定完整；少掉的結果讓下一格看到 `ended:false`，照「上一格沒正常收尾」處理 |
 
-- **怎麼開**：直接跑時帶 `aos-tick --firstdo-fsync`（[P-203](../protocol/node.md)）。daemon 帶了 `aos daemon --firstdo-fsync`（使用者原話 `aos-daemon --firstdo-fsync`）時，它開的每一格都照開：daemon 在那一格的環境放 `AOS_TICK_FIRSTDO_FSYNC=1`，`aos-tick` 看到它就等於帶了旗標（[B-601](daemon/runtime.md)）。daemon 碰不到 inst 的 argv，所以用環境變數傳〔使用者 2026-09-30 同意照暫定〕。
+- **怎麼開**：直接跑時帶 `aos-tick --firstdo-fsync`（[P-203](../protocol/tick.md)）。daemon 帶了 `aos daemon --firstdo-fsync`（使用者原話 `aos-daemon --firstdo-fsync`）時，它開的每一格都照開：daemon 在那一格的環境放 `AOS_TICK_FIRSTDO_FSYNC=1`，`aos-tick` 看到它就等於帶了旗標（[B-601](daemon/runtime.md)）。daemon 碰不到 inst 的 argv，所以用環境變數傳〔使用者 2026-09-30 同意照暫定〕。
 - 紀錄壞掉時照下面「失效」的「舊紀錄讀不懂」處理。
 
 ### 失效：寫不進時
@@ -110,13 +110,14 @@
 | 舊做法 | 換成什麼 |
 |---|---|
 | 資料夾沒有 `.aos/` 時照 aos-exec 跑 `inst.json`（不取鎖、不寫紀錄）；兩個都沒有回 2（2026-09-30 晚定） | **已撤回**（使用者 2026-10-01：「確實要拿掉退路」）。資料夾要有 `.aos/tasks.json`，沒有就 `no_tasks:`、回 1（[B-620](../tick.md#b-620任務註冊表照表依序跑)） |
-| 認資料夾時把 `.aos/inst.json`／`inst.json` 路徑正規化成資料夾；`--node` 必須是絕對路徑 | **已被「目標」規則取代**（`aos-tick [<目標>]`）：省略＝目前目錄、相對轉絕對、給檔就拿它當任務表（B-620、[P-203](../protocol/node.md)） |
+| 認資料夾時把 `.aos/inst.json`／`inst.json` 路徑正規化成資料夾；`--node` 必須是絕對路徑 | **已被「目標」規則取代**（`aos-tick [<目標>]`）：省略＝目前目錄、相對轉絕對（B-620、[P-203](../protocol/tick.md)）；目標給檔的規則同日撤回，見下一列 |
+| `aos-tick` 目標給檔就拿它當任務表；檔本身在 `.aos/` 裡時工作資料夾取 `.aos` 的上一層；`AOS_TICK_CWD` 給檔時是檔所在的資料夾 | **已撤回**〔使用者 2026-10-01〕：目標只能是資料夾（沒給＝`./`），任務表只有 `<目標>/<AOS_DIRNAME>/tasks.json`（空字串時 `<目標>/tasks.json`）。給檔＝用法錯，stderr `usage: …`、回 1（B-620、[P-203](../protocol/tick.md)）。表只有一個位置，所以 astra 報告設計 2（自訂表交不給 `aos-git`）不成立 |
 | 旗標 `--node`（同日一度改名 `--target`） | **已被位置參數取代**：`aos-tick [<目標>]`，跟 `aos-exec` 一樣（使用者 2026-10-01），不留舊名；找不到目標的 stderr 代碼由 `no_node` 改 `no_target` |
 | 讀表時核心驗四件事（合法 JSON、`_metainfo`、每項是合法 inst、`id` 唯一）；表壞整表拒絕、`config_invalid:`、回 2，紀錄寫 `ended:true`、`exit:2` | **已被極簡檢查取代**：只查 `tasks` 陣列與每項的 `argv`，不過 `bad_table:`、回 1，不換紀錄、不加 `seq`（B-620） |
 | 任務欄位 `methods`（給檔案收件程式讀的 method 宣告，同一項不重複） | **已撤回**（使用者 2026-10-01：「拿掉」）。寫了就當陌生鍵；aos 自己沒有程式用它 |
-| 任務的 `id`、`kind` 必填 | **已改**：`id` 可省（沒寫＝位置字串），`kind` 可省（[P-202](../protocol/node.md)） |
+| 任務的 `id`、`kind` 必填 | **已改**：`id` 可省（沒寫＝位置字串），`kind` 可省（[P-202](../protocol/tick.md)） |
 | 整格結束碼 0／1／2／75：任務失敗、停格檔、擋板檔讓這格回 1；表壞、用法錯回 2；鎖被占回 75 | **已被 [C-08](../conventions.md) 取代**：aos-tick 只回 0／1；任務成敗只記進紀錄、不影響 tick；停格檔、擋板、busy 都回 0 |
-| 紀錄收尾的 `exit` 收 0／1／2，跨欄位規則「`stopped_after` 時 `exit` 是 1」「`exit` 0 時每項都成功」 | **已改**：有紀錄收尾時 tick 一定回 0，`exit` 只會是 0（[P-213](../protocol/node.md)） |
+| 紀錄收尾的 `exit` 收 0／1／2，跨欄位規則「`stopped_after` 時 `exit` 是 1」「`exit` 0 時每項都成功」 | **已改**：有紀錄收尾時 tick 一定回 0，`exit` 只會是 0（[P-213](../protocol/tick.md)） |
 | 環境變數 `AOS_NODE_DIR`（node id） | **已被 `AOS_TICK_CWD` 取代**：工作資料夾的絕對路徑（使用者 2026-10-01：「node 這個概念目前還沒到出場的時候」） |
 | inst 頂層的 `user`（帳號名稱或 UID，省略繼承上層）、[inst](../../base/inst.md)「先決定身分，切完才解析」整節（daemon 取原始 `user` 做額度檢查、切身分後才解析、`UserInvalid`／`UserNotGranted`／`UserMismatch`／`SourceChanged`、整份 `$ref` 不能偷換身分）；任務表的 `user`（任務是 inst 超集，可帶自己的帳號，跟 tick 不同時回 125） | **已撤回**（使用者 2026-10-01：「inst頂層的user欄位不留。」）。直接從正式篇刪掉，沒有搬來暫緩區；寫了 `user` 就是不認得的鍵、照未知頂層鍵規則忽略，照目前身分跑。要換帳號包 `aos-as`。本篇 B-628 的「身分繼承」與「暫緩：B-620 任務的帳號（125）」只是歷史記錄 |
 | 環境變數 `AOS_TICK_RECORD`（本格紀錄的絕對路徑） | **已被 `AOS_TICK_CWD` 取代**：任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找紀錄（使用者 2026-10-01：「反正有 AOS_TICK_CWD，就從那邊找就好」） |

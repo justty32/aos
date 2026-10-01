@@ -4,7 +4,7 @@
 
 ## P-700．範圍〔第十二批裁定；工程預設〕
 
-`aos-agent-step` 推進 module；`aos-agent-tools` 管工具、`aos-agent-check` 查設定、`aos-agent-talk` 說話與查詢。tick 不等 HTTP／工具。各程式沿 [P-203](../settled/protocol/node.md) 使用 node 的 user 與鎖；--node 省略用 cwd，任務直接讀設定。
+`aos-agent-step` 推進 module；`aos-agent-tools` 管工具、`aos-agent-check` 查設定、`aos-agent-talk` 說話與查詢。tick 不等 HTTP／工具。各程式沿 [P-203](../settled/protocol/tick.md) 使用 node 的 user 與鎖；--node 省略用 cwd，任務直接讀設定。
 
 LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，或自己經通道掛 once（`node.mount`，[B-613](../settled/deferred/daemon/channel.md)）。kernel 建立 agent 時決定地址、權限與資源路線，agent 不辨識對方角色。
 
@@ -24,7 +24,7 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，
 | `tools.target_node` | node id＝交該 kernel；null＝agent 自己經通道掛 once |
 | `daemon_socket` | 可省；daemon IPC socket 絕對路徑，省略就讀環境變數 `AOS_DAEMON_SOCKET`（[P-117](../settled/deferred/protocol/daemon/channel.md)）。只有 agent 由人手或 cron 跑、又想連 daemon 時才需要寫 |
 
-設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。〔使用者方向 2026-09-29，第十六批〕**對 LLM 池（`llm.target_node`）有沒有投件權，設定檢查不先擋**：沒權限就在投件那一步報 `target_not_writable`、丟掉待送檔（[B-624](../settled/tick.md)、[S-301](../scheduling/llm.md)）。設定無效就在 `.aos/attention/open/` 記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
+設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。〔使用者方向 2026-09-29，第十六批〕**對 LLM 池（`llm.target_node`）有沒有投件權，設定檢查不先擋**：沒權限就在投件那一步報 `target_not_writable`、丟掉待送檔（[B-624](../settled/tick/mq.md)、[S-301](../scheduling/llm.md)）。設定無效就在 `.aos/attention/open/` 記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
 
 改設定的方式與「任務不改 `config/`」這條軟性原則，以 [A-102](../agent/configuration.md) 為準。
 
@@ -43,7 +43,7 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 | 路徑 | 用途 |
 |---|---|
 | `state/messages/requests/<id>.json`、`state/messages/responses/<id>.json` | 已消費的完整 RPC 原 bytes，供 tick 核對後刪原件 |
-| `.aos/outbox/requests/<id>.json`、`.aos/outbox/responses/<id>.json` | [P-206](../settled/protocol/node.md) 待送封套，tick 提交後投件 |
+| `.aos/outbox/requests/<id>.json`、`.aos/outbox/responses/<id>.json` | [P-206](../settled/protocol/tick.md) 待送封套，tick 提交後投件 |
 | `state/messages/meta/<id>.json` | [agent-request](schemas/agent-request.schema.json)，目標與配對 |
 | `state/agent/inputs/<input_id>.json` | [agent-input](schemas/agent-input.schema.json)，回址／seq／狀態／待收 ID |
 | `state/agent/history/<event_id>.json` | [agent-history](schemas/agent-history.schema.json)，每事件一檔 |
@@ -80,7 +80,7 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 ## P-706．組 context 與發 LLM〔A-302～303、P-406；工程預設〕
 
-行為（選 input、context 順序、估算與 `context_over_budget`、串流、鬧鐘）以 [A-302](../agent/memory.md) 為準。格式：固定的請求 ID、context、meta、usage 存放見 P-703；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；要串流就在業務 JSON 帶 `stream_path`（[llm-work P-406](llm-work.md)）。範本預設在封套設鬧鐘 `alarm_ms`（格式見 [node P-206](../settled/protocol/node.md)，預設值延後，[P-008](README.md#p-008)），所以 [agent-config](schemas/agent-config.schema.json) 這輪不加欄。
+行為（選 input、context 順序、估算與 `context_over_budget`、串流、鬧鐘）以 [A-302](../agent/memory.md) 為準。格式：固定的請求 ID、context、meta、usage 存放見 P-703；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；要串流就在業務 JSON 帶 `stream_path`（[llm-work P-406](llm-work.md)）。範本預設在封套設鬧鐘 `alarm_ms`（格式見 [node P-206](../settled/protocol/tick.md)，預設值延後，[P-008](README.md#p-008)），所以 [agent-config](schemas/agent-config.schema.json) 這輪不加欄。
 
 ## P-707．模型決定與兩種工具路線〔A-401～403、A-503、P-407；工程預設〕
 
@@ -144,7 +144,7 @@ aos-agent-talk context show N --request ID [--json]
 # 人手：aos agent replies N …／aos agent context show N …
 ```
 
-不寫檔、不開 tick。有 git 時只讀同一 commit；〔第十九批，[B-632](../settled/tick.md)〕沒有 git 時讀目前檔案與已完成的紀錄（reply、context 檔各自是完整寫入後才 rename，不會讀到半份），**不保證是一致快照**，同一次查詢內 replies 與 context 可能來自相鄰兩格。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
+不寫檔、不開 tick。有 git 時只讀同一 commit；〔第十九批，[B-632](../settled/tick/git.md)〕沒有 git 時讀目前檔案與已完成的紀錄（reply、context 檔各自是完整寫入後才 rename，不會讀到半份），**不保證是一致快照**，同一次查詢內 replies 與 context 可能來自相鄰兩格。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
 
 ## P-715．new 的完整產物〔[inst 目標](../base/inst.md#inst-目標檔案或資料夾)；工程預設〕
 

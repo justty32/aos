@@ -20,8 +20,8 @@ node id 是資料夾路徑，依 [T-02](terms.md)。其餘用作檔名的 reques
 〔建議預設，未拍板〕寫法：
 
 - 欄位名：時長 `*_ticks`、第幾格 `*_seq`、毫秒時長 `*_ms`、毫秒時間點 `*_at_ms`；schema 型別見 [P-002](protocol/README.md)。
-- 本 node 的格數是核心結束碼紀錄的 `seq`（[B-633](settled/tick.md)），沒 daemon 也有、跨重啟接著數；斷電不倒退只在開了 `--firstdo-fsync` 時保證，否則不保證；daemon 登記的 `tick_seq` 只用在「叫醒後等新格」，不拿來算時長。
-- 〔記錄者理解〕任務表上的任務由它那個 tick 安排，所以任務自己用的時長（保留期、清理間隔、鬧鐘）算本 node 的格；kernel 對成員的判斷（失聯、重試）算 kernel 的格。
+- 本工作資料夾〔使用者 2026-10-01 改名，原「本 node」〕的格數是核心結束碼紀錄的 `seq`（[B-633](settled/tick.md)），沒 daemon 也有、跨重啟接著數；斷電不倒退只在開了 `--firstdo-fsync` 時保證，否則不保證；daemon 登記的 `tick_seq` 只用在「叫醒後等新格」，不拿來算時長。
+- 〔記錄者理解〕任務表上的任務由它那個 tick 安排，所以任務自己用的時長（保留期、清理間隔、鬧鐘）算本工作資料夾的格；kernel 對成員的判斷（失聯、重試）算 kernel 的格。
 - 〔astra 審整理區裁定裁-2〕daemon 的計時：叫醒週期、收尾寬限、排空上限這類外部／作業系統層的保留毫秒；政策性保留期（掛載診斷保留期）改用所屬上層的格數；逐項見舊 daemon 設計的[「時間」表](settled/deferred/daemon/README.md)（暫緩區）；現行的最核心 daemon 只有週期 `interval_ms` 一項，也是毫秒（[B-640](settled/daemon/core.md)）。作業系統與 cgroup 的時間、量測數字、只給人看的紀錄時間也保留原單位。
 - 〔暫定，第二十批疑-12〕預設值直接用格數訂，說明裡附「週期 1 秒時約等於…」，不從毫秒換算。
 
@@ -57,7 +57,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 
 ## C-05．舊提交交易
 
-（09-29 重寫：已刪；git 提交／還原與組見 [B-630、B-622](settled/tick.md)。）
+（09-29 重寫：已刪；git 提交／還原與組見 [B-630、B-622](settled/tick/git.md)。）
 
 ## C-06．最小例子與保留
 

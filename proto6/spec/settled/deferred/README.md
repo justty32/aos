@@ -11,7 +11,7 @@
   - **暫緩**：之後可能照原文（或改寫後）加回來。
   - **已被 X 取代**：同一件事新設計已經換了做法，原文只留作紀錄，不會照原樣回來。
   - **部分已被取代、其餘暫緩**：兩種混在一條裡，狀態行寫明哪部分被誰取代。
-- **原文照 2026-09-30 的樣子留著。** 裡面的結束碼（75、2、整格回 1）、`node` 用語、「本篇是正本」之類的話都是舊設計當時的寫法；加回來時要照 [C-08](../conventions.md) 重定碼、照 [C-09](../conventions.md) 換狀態資料夾名。
+- **原文照 2026-09-30 的樣子留著。** 裡面的結束碼（75、2、整格回 1）、`node` 用語（tick 層現在叫工作資料夾〔使用者 2026-10-01〕；講上下層的「上層 node／下層 node」照留）、「本篇是正本」之類的話都是舊設計當時的寫法；加回來時要照 [C-08](../conventions.md) 重定碼、照 [C-09](../conventions.md) 換狀態資料夾名。
 - **部分暫緩的條**：原條還在正式篇，暫緩的那段在這裡用「暫緩：B-xxx …」當標題。
 
 ## 檔案
@@ -38,7 +38,7 @@
 | B-633（部分） | 落盤、寫不進與讀不懂 | 暫緩 | 使用者：默認紀錄是好的、`--firstdo-fsync` 先不做 | [tick.md](tick.md) |
 | T-09 | 收尾、排空停機、熱重載、逃生口 | 暫緩 | 全是舊 daemon 用語，最核心 daemon 第一版不做 | [terms.md](terms.md) |
 
-撤回、不會回來的 tick 舊做法（沒有 `.aos/` 時交給 aos-exec 的退路、inst.json 路徑正規化、`--node` 旗標、讀表驗四件事與表壞回 2、`methods` 欄、整格回 1／2／75 的碼表、`AOS_NODE_DIR`、`AOS_TICK_RECORD`，以及 2026-10-01 撤回的 inst 頂層與任務表的 `user`、inst「先決定身分，切完才解析」整節）列在 [tick.md 篇末](tick.md#已撤回被取代)。
+撤回、不會回來的 tick 舊做法（沒有 `.aos/` 時交給 aos-exec 的退路、inst.json 路徑正規化、`--node` 旗標、讀表驗四件事與表壞回 2、`methods` 欄、整格回 1／2／75 的碼表、`AOS_NODE_DIR`、`AOS_TICK_RECORD`、`aos-tick` 目標給檔就拿它當任務表，以及 2026-10-01 撤回的 inst 頂層與任務表的 `user`、inst「先決定身分，切完才解析」整節）列在 [tick.md 篇末](tick.md#已撤回被取代)。
 
 ### daemon 與 helper
 
@@ -78,9 +78,13 @@
 | P-113 | 待決與跨篇 | 暫緩 | 跟整套舊協議一起暫緩 | [protocol/daemon/README.md](protocol/daemon/README.md) |
 | P-114 | 停機：訊號與設定 | 暫緩 | 第一版不做；停機見 P-120 | [protocol/daemon/shutdown.md](protocol/daemon/shutdown.md) |
 | P-116 | state.json 格式 | 暫緩 | daemon 不存狀態 | 同上 |
-| P-117 | 通道變數與憑證 | 部分取代、其餘暫緩 | `AOS_DAEMON_SOCKET` 這個名字沿用到 P-121（意思改成控制 socket），另加 `AOS_DAEMON_INST`；憑證 `AOS_TICK_TOKEN` 被「連得上就能用」取代；其餘暫緩 | [protocol/daemon/channel.md](protocol/daemon/channel.md) |
+| P-117 | 通道變數與憑證 | 部分取代、其餘暫緩 | `AOS_DAEMON_SOCKET` 這個名字沿用到 P-121（意思改成控制 socket），另加 `AOS_DAEMON_INST`；現行控制模組連得上就能用、不使用憑證；舊通道憑證 `AOS_TICK_TOKEN` 跟著通道暫緩，未來另定〔astra 報告必修 7〕；其餘暫緩 | [protocol/daemon/channel.md](protocol/daemon/channel.md) |
 | P-118、P-119 | 掛行程與砍掉；送訊息、取訊息 | 暫緩 | 第一版不做 | 同上 |
 
 ### 區外暫緩的段落
 
 整理區以外也有跟著暫緩的段落，就地標了「暫緩」，沒有搬家：[驗收入口 V-03](../../conformance.md) 裡跟上表各條有關的場景。原本也在這裡的 [inst](../../base/inst.md)「先決定身分，切完才解析」與頂層整份指示詞裡講 `user` 的部分，2026-10-01 隨 inst 頂層 `user` 撤回、直接刪掉（不搬暫緩，見 [tick.md 篇末](tick.md#已撤回被取代)）。
+
+### 已知的設計問題（記錄，這輪不改）
+
+- 〔astra 報告設計 1〕`aos-cg` 照舊 daemon 的規定收尾會連自己一起殺掉：監督程式先把自己搬進任務框，再要求殺空、等待、刪框；另外 [B-303](helper.md) 推薦的 `aos-cg -- aos-as …` 已讓框內有人，[B-609](daemon/helper-actions.md) 卻要求空框。astra 建議監督程式留框外、只讓子程序進框，helper 核對框的歸屬與允許的現有程序。daemon 那側本來就暫緩，等 cgroup 加回來時一起定（[B-605](daemon/cgroup.md)、[B-634](../tick/cg.md)）。

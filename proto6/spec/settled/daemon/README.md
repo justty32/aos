@@ -6,7 +6,7 @@
 
 **daemon（`aos-daemon`）就是一個定期叫 `aos-exec` 的 cron。** 設定檔列一串 inst，它照每一項自己的週期叫一次 `aos-exec <inst>`，等它結束，印一行結果。
 
-- 它**不認得 node**。要定期跑一個 `aos-tick`，就放一份 `argv` 開頭是 `aos-tick` 的 inst（例如 `["aos-tick", "<資料夾>"]`，或只寫 `["aos-tick"]`），把它加進清單。
+- 它**不認得 tick 的工作資料夾**（舊稱 node；〔使用者 2026-10-01〕改名）。要定期跑一個 `aos-tick`，就放一份 `argv` 開頭是 `aos-tick` 的 inst（例如 `["aos-tick", "<資料夾>"]`，或只寫 `["aos-tick"]`），把它加進清單。
 - 它**不是 tick 存在的前提**。tick 誰來跑都行：daemon、cron、人手直接跑（[B-627](../tick.md)）。
 - 它**不在任何一格裡**，也不在任何任務表上。
 

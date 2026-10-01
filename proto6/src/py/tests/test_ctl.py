@@ -2,7 +2,9 @@
 
 都用暫存資料夾、短週期、假 inst；不要 root、systemd、網路。socket 放 self.d（/tmp 底下，路徑夠短）。
 會留下來的任務照 test_daemon 的做法把 pid 寫進 `pids`，收尾時殺掉。
-任務自己寫時間（`date +%s.%N`）來量週期；daemon 那一行的時間只到秒。
+任務自己寫時間來量週期；daemon 那一行的時間只到秒。
+任務寫的是 /proc/uptime（開機後的秒數，不會跳），不用 `date`：WSL 的牆上時鐘偶爾會被校時往前跳好幾秒
+（實測 test_keep_schedule 約十次錯一次就是這個：daemon 的 monotonic 只過 0.96 秒，`date` 量到 3.3 秒；2026-10-01）。
 """
 import json
 import os
@@ -18,7 +20,8 @@ from test_daemon import INHERIT, BIN, CLEAN_ENV, TICK, TS, DaemonCase, sh, tasks
 
 CTL = os.path.join(BIN, "aos-ctl")
 CONTROL = {"control": {"socket": "./aos.sock"}}
-STAMP = "date +%s.%N >> runs"
+UPTIME = "cut -d' ' -f1 /proc/uptime"         # 精度 0.01 秒，夠用
+STAMP = UPTIME + " >> runs"
 
 
 class CtlCase(DaemonCase):
@@ -110,15 +113,20 @@ class Step2Loop(CtlCase):
         self.assertGreaterEqual(t3 - t2, 1.45)              # 週期從叫醒那次結束重新算
 
     def test_keep_schedule(self):
+        # 第一次結束（e1）後 due＝e1＋1.5；叫醒那次（帶 keep_schedule）不碰 due，所以第三次在 e1＋1.5 跑。
+        # 要是被重算，第三次會在叫醒那次結束（晚於 t2）＋1.5 之後，t3－t2 一定 ≥ 1.5；所以判準就是「t3－t2 < 1.5」。
+        # 等第一次真的跑完（status 有 last_end、不在跑）再睡 0.5 秒才叫醒，不靠第一次收尾多快，留 0.5 秒的餘裕。
         self.inst(sh(STAMP), "r.json")
         self.up({"r.json": {}}, 1500)
         self.wait_for(lambda: len(self.runs()) == 1)
-        time.sleep(0.3)
+        self.wait_for(lambda: (lambda st: st["last_end"] is not None and not st["running"])(
+            self.send({"status": "r.json"})))
+        time.sleep(0.5)
         self.assertEqual(self.send({"wake": "r.json", "keep_schedule": True}), {"ok": True})
         self.wait_for(lambda: len(self.runs()) == 2, timeout=1)
         self.wait_for(lambda: len(self.runs()) == 3, timeout=4)
         t1, t2, t3 = self.runs()[:3]
-        self.assertLess(t3 - t2, 1.4)                       # 原本那次照跑，不是從第二次重算
+        self.assertLess(t3 - t2, 1.5)                       # 原本那次照跑，不是從第二次重算
         self.assertGreaterEqual(t3 - t1, 1.45)
 
     def busy(self, wake):
@@ -141,7 +149,7 @@ class Step2Loop(CtlCase):
 
     def test_keep_schedule_overrun(self):
         # 叫醒那次跑太久、蓋過原本的時刻：結束後不馬上又跑，due 從這次結束重算
-        self.inst(sh("date +%s.%N >> starts; sleep 0.8; date +%s.%N >> ends"), "k.json")
+        self.inst(sh("%s >> starts; sleep 0.8; %s >> ends" % (UPTIME, UPTIME)), "k.json")
         self.up({"k.json": {}}, 300)
         self.wait_for(lambda: len(self.runs("ends")) == 1)
         self.assertEqual(self.send({"wake": "k.json", "keep_schedule": True}), {"ok": True})

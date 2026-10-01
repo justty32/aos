@@ -2,6 +2,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agent-tasks.schema.json",
   "title": "proto6 agent-tasks",
-  "$ref": "node-tasks.schema.json",
-  "description": "agent 任務表：沿 node-tasks。任務是 inst 的超集；沒有 user（2026-10-01 撤回，寫了照陌生鍵）；不再有禁止鍵。"
+  "$ref": "tick-tasks.schema.json",
+  "description": "agent 任務表：沿 tick-tasks。任務是 inst 的超集；沒有 user（2026-10-01 撤回，寫了照陌生鍵）；不再有禁止鍵。"
 }

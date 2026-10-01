@@ -52,7 +52,7 @@ daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登�
 | `node.wake`、`node.pause`、`node.resume` | 目標 owner 或祖先 owner |
 | `node.mount` | 掛載的上層（`parent_id`；帶憑證時省略＝憑證所屬的 tick）的 owner 或祖先 owner（B-613） |
 | `node.kill` | 掛它的那個上層的 owner 或祖先 owner；看路徑，不看當時的憑證 |
-| `node.send` | 必帶憑證；寄件 tick 的執行帳號對收件 tick 的 `requests/` 有寫權（B-614） |
+| `node.send` | 必帶憑證；誰能送照 [B-614「誰能送」](messaging.md)（看收件 tick 的 `.aos/mq/get/`，不看 `requests/`）〔astra 報告必修 6〕 |
 | `node.take` | 必帶憑證；只取憑證所屬 tick 自己的 |
 | `node.show` | 目標 owner 或祖先 owner；含保留的掛載行程結果（B-610） |
 | `node.ls` | 有 socket 連接權；逐筆只列 peer 是 owner／祖先 owner 的登記及保留的掛載行程結果，沒有可見項回空陣列 |
@@ -168,7 +168,7 @@ argv 與回報形狀見 [P-109、P-110](../protocol/daemon/provision-and-runner.
 > **暫緩**（2026-10-01）：B-605 的共通自檢；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
 
 - **daemon 自己的最低需求**：Python 3.9；不合就報錯退出（125）。
-- **不查 git**：git 只有任務表上的 `aos-git` 會用（[B-630](../../tick.md)），daemon 不查。
+- **不查 git**：git 只有任務表上的 `aos-git` 會用（[B-630](../../tick/git.md)），daemon 不查。
 
 ### 有就用的其他功能
 

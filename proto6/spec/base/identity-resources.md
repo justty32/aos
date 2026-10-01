@@ -18,7 +18,7 @@
 
 註冊關係、node 路徑 ID、IPC 授權及重啟重建以 [daemon](../settled/daemon/README.md) 為正本。
 
-〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應 controller；CPU、記憶體等 module 沒裝不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。〔使用者方向 2026-09-30，第十九批，改寫第十四、十五批「cgroup v2 必要」；第二十批改主詞〕cgroup v2 子樹是 daemon 的 node 框與上限、以及 `aos-cg` 每項一框要的；tick 核心不需要。拿不到時不拒絕啟動。daemon 那側與 `aos-cg` 怎麼用 cgroup，見 [B-605](../settled/deferred/daemon/cgroup.md)、[B-634](../settled/tick.md)。
+〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應 controller；CPU、記憶體等 module 沒裝不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。〔使用者方向 2026-09-30，第十九批，改寫第十四、十五批「cgroup v2 必要」；第二十批改主詞〕cgroup v2 子樹是 daemon 的 node 框與上限、以及 `aos-cg` 每項一框要的；tick 核心不需要。拿不到時不拒絕啟動。daemon 那側與 `aos-cg` 怎麼用 cgroup，見 [B-605](../settled/deferred/daemon/cgroup.md)、[B-634](../settled/tick/cg.md)。
 
 〔建議預設，未拍板〕另設通用 user 時，部署須安排 daemon 的直接啟動路徑實際用該身分；非 root 程序不能只改一個設定就冒稱已切 UID。做不到就報部署錯誤。
 

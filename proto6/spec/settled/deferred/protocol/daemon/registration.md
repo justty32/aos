@@ -78,7 +78,7 @@ schema 見 [daemon-registration](../../../../protocol/schemas/daemon-registratio
 | 停機中的 wake | `stopping` |
 | 對掛載行程送這幾個 method | `kind_mismatch` |
 
-**故障停格**：行為以 [B-607](../../daemon/registration.md) 為正本。一句話：daemon 不看結束碼、不看停格檔，只看擋板檔 `.aos/tick-blocked`，在就不開格（第二十批）。檔案位置見 [node P-200](../../../protocol/node.md)。
+**故障停格**：行為以 [B-607](../../daemon/registration.md) 為正本。一句話：daemon 不看結束碼、不看停格檔，只看擋板檔 `.aos/tick-blocked`，在就不開格（第二十批）。檔案位置見 [tick 協議 P-200](../../../protocol/tick.md)（〔使用者 2026-10-01〕原 node 協議改名）。
 
 ## P-106．查登記與最近一格〔使用者方向 2026-09-29，CLI H-034 D1；欄位為工程預設〕
 

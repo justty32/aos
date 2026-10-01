@@ -349,7 +349,7 @@
 
 ### 建-26．P-202 的兩份 methods 範例沒在正文說明，反例驗的不是正文說的那種錯
 
-- 位置：`spec/protocol/node.md:52`（「兩項任務宣告同一 method 算任務表錯」）、`:56`（正文只連 minimal／user_override 兩例）對 `spec/protocol/examples/node/tasks.methods-duplicate.invalid.json:18-21`（同一任務內寫兩次 `agent.say`，由 schema `uniqueItems` 擋）、`schemas/node-tasks.schema.json:85`（跨項唯一性「由 tick 驗」）。
+- 位置：`spec/protocol/node.md:52`（「兩項任務宣告同一 method 算任務表錯」）、`:56`（正文只連 minimal／user_override 兩例）對 `spec/protocol/examples/tick/tasks.methods-duplicate.invalid.json:18-21`（同一任務內寫兩次 `agent.say`，由 schema `uniqueItems` 擋）、`schemas/tick-tasks.schema.json:85`（跨項唯一性「由 tick 驗」）。
 - 建議：P-202 補一句連結兩份範例，並註明「跨任務重複 schema 驗不到，由 tick 驗」（P-007 要求每個反例在正文說明）。
 
 ### 建-27．`aos agent config recheck` 的結束碼 1 一碼兩義
