@@ -41,7 +41,7 @@
     },
     "modules": {
       "type": "object",
-      "description": "一個模組一個鍵，有寫就開；目前認 control、reload、state，其他鍵照收不看",
+      "description": "一個模組一個鍵，有寫就開；目前認 control、reload、state、cgroup，其他鍵照收不看",
       "properties": {
         "control": {
           "type": "object",
@@ -64,6 +64,10 @@
         "state": {
           "$ref": "daemon-module-state.schema.json",
           "description": "記住狀態模組（P-123）：原始檔必須寫成 {\"$ref\": \"<狀態檔>\"}（不帶 # 位置），展開後就是狀態檔的內容；檔不在＝{\"insts\": {}}"
+        },
+        "cgroup": {
+          "type": "object",
+          "description": "收屍／cgroup 模組（P-124）：每項一個 cgroup 框，跑完清掉殘留；子樹根＝daemon 自己所在的 cgroup；裡面沒有鍵"
         }
       }
     }
@@ -103,6 +107,13 @@
         },
         "stop_on_nonzero": {
           "type": "boolean"
+        },
+        "cgroup": {
+          "type": "object",
+          "description": "收屍／cgroup 模組掛著時這一項的上限（P-124）：鍵＝cgroup 檔名（memory.max、cpu.max、pids.max…），值＝字串，原樣寫進框；模組沒掛時忽略",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     }

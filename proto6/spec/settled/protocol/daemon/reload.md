@@ -34,8 +34,10 @@ SIGINT／SIGTERM 照 [P-120](core.md)。
 |---|---|
 | 頂層 `cwd` 跟開起來時不同（照起點的算法比對） | `reload: need restart: cwd` |
 | 頂層 `modules` 跟開起來時不同 | `reload: need restart: modules` |
+| 頂層 `exec_out_path` 跟開起來時不同（比設定裡的原字）〔第十二批〕 | `reload: need restart: exec_out_path` |
+| 頂層 `exec_err_path` 跟開起來時不同〔第十二批〕 | `reload: need restart: exec_err_path` |
 | 拿掉一項（每項一行） | `inst=<inst 字面值> removed` |
-| 加了一項（每項一行） | `inst=<inst 字面值> added` |
+| 加了一項（每項一行） | `inst=<inst 字面值> added`；掛了 cgroup 模組時緊接著 `inst=<inst 字面值> cgroup=i-<h>`（[P-124](cgroup.md)） |
 | 套用完 | `reloaded` |
 
 ```text
@@ -52,7 +54,7 @@ SIGINT／SIGTERM 照 [P-120](core.md)。
 
 ### stderr
 
-重讀時設定壞了（讀不到、不是 JSON、指示詞錯、缺 `interval_ms`、型別錯……），整份不套用，印一行：
+重讀時設定壞了（讀不到、不是 JSON、指示詞錯、缺 `interval_ms`、型別錯；掛了 cgroup 模組時建框、寫上限失敗……），整份不套用，印一行：
 
 ```text
 aos-daemon: reload: <說明>
@@ -64,4 +66,4 @@ aos-daemon: reload: <說明>
 
 不變（[P-120](core.md)）。重讀出錯不退出。
 
-依據：使用者 2026-10-01 第十一批（R1～R4 照 plan 建議，R3 改成 stdout 警告）。
+依據：使用者 2026-10-01 第十一批（R1～R4 照 plan 建議，R3 改成 stdout 警告）；第十二批 `exec_out_path`／`exec_err_path` 改了也只警告、不套用。

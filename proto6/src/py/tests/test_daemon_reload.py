@@ -152,18 +152,21 @@ class Change(ReloadCase):
         self.assertTrue(self.send({"status": "f.json"})["stopped"])
         self.assertEqual(self.results(out, "f.json"), [1])
 
-    def test_exec_out_path_applied(self):
-        # 頂層 exec_out_path 改了：下一次寫出起照新的；第幾項照新的鍵順序
-        self.inst(sh("echo hi", stdout=INHERIT), "a.json")
-        self.inst({"argv": ["true"]}, "z.json")
-        p, out, _ = self.boot({"a.json": {}}, 300, exec_out_path="one.log")
-        self.wait_for(lambda: self.exists("one.log"))
-        self.rewrite(p, {"z.json": {}, "a.json": {}}, 300, exec_out_path="two.log")
-        self.wait_for(lambda: self.exists("two.log") and "index=1 inst=a.json" in self.read("two.log"),
-                      timeout=5)
-        self.assertNotIn("index=1", self.read("one.log"))
-        self.assertFalse(any("need restart" in l for l in list(out)))
-
+    def test_exec_out_path_not_applied(self):
+        # 頂層 exec_out_path／exec_err_path 改了：不套用（照舊寫 one.log），stdout 警告要重開（第十二批）；
+        # 新加的項也照開起來時的設定寫；第幾項照新的鍵順序
+        self.inst(sh("echo hi; echo oops >&2", stdout=INHERIT, stderr=INHERIT), "a.json")
+        self.inst(sh("echo zz", stdout=INHERIT), "z.json")
+        p, out, _ = self.boot({"a.json": {}}, 300, exec_out_path="one.log", exec_err_path="one.err")
+        self.wait_for(lambda: self.exists("one.log") and self.exists("one.err"))
+        self.rewrite(p, {"z.json": {}, "a.json": {}}, 300, exec_out_path="two.log", exec_err_path="two.err")
+        self.wait_for(lambda: self.reloads(out) == 1)
+        self.assertTrue(self.has(out, "reload: need restart: exec_out_path"))
+        self.assertTrue(self.has(out, "reload: need restart: exec_err_path"))
+        self.assertFalse(self.has(out, "reload: need restart: cwd"))
+        self.wait_for(lambda: "index=1 inst=a.json" in self.read("one.log")
+                      and "index=0 inst=z.json" in self.read("one.log"), timeout=5)
+        self.assertFalse(self.exists("two.log") or self.exists("two.err"))
 
 
 class NeedRestart(ReloadCase):

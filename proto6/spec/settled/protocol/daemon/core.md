@@ -50,7 +50,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | `stop_on_nonzero` | 布林，可省 | 各項的預設；省略＝false |
 | `exec_out_path` | 字串，可省 | `aos-exec` 的 stdout 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 這幾個字換成這一項的位置（規則見 [B-640](../../daemon/core.md)「輸出」）。省略＝丟掉（`/dev/null`）；寫 `/dev/stdout` 接回 daemon 自己的 stdout |
 | `exec_err_path` | 字串，可省 | `aos-exec` 的 stderr 接到哪個檔，規則同 `exec_out_path`。省略＝丟掉（`/dev/null`）；寫 `/dev/stderr` 接回 daemon 自己的 stderr |
-| `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）、`reload`（`{}`，見 [P-122](reload.md)）、`state`（原始檔必須是 `{"$ref": "<狀態檔>"}`，展開後是狀態檔內容，見 [P-123](state.md)）；其他鍵照收、不看 |
+| `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）、`reload`（`{}`，見 [P-122](reload.md)）、`state`（原始檔必須是 `{"$ref": "<狀態檔>"}`，展開後是狀態檔內容，見 [P-123](state.md)）、`cgroup`（`{}`，見 [P-124](cgroup.md)）；其他鍵照收、不看 |
 
 **`insts` 每一項的值**
 
@@ -58,6 +58,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 |---|---|---|
 | `interval_ms` | 非負整數毫秒，可省 | 蓋過頂層 |
 | `stop_on_nonzero` | 布林，可省 | 蓋過頂層 |
+| `cgroup` | 物件，可省 | 〔第十二批〕收屍／cgroup 模組掛著時這一項的上限：鍵＝cgroup 檔名、值＝字串（[P-124](cgroup.md)）；模組沒掛時忽略 |
 
 - 不認得的欄位（頂層、每一項、`modules` 裡）一律忽略（持久檔，[C-07](../../../contracts.md)）。daemon 不另外印出不認得的欄位。
 - **某一項自己沒寫、頂層也沒寫 `interval_ms`＝設定錯**。〔astra 報告設計 3〕schema 用條件規則表達（頂層沒有 `interval_ms` 時，`insts` 每一項都必填），直接拿 schema 驗的工具也擋得到；程式自己的檢查照留（錯誤訊息見下面「daemon 自己的 stderr」）。
@@ -75,8 +76,9 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | 一次 `aos-exec` 結束 | `inst=<inst 字面值> exit=<碼> ms=<毫秒>`；被訊號 N 殺掉時 `<碼>` 是 128+N |
 | 這一項因 `stop_on_nonzero` 停掉 | `inst=<inst 字面值> stopped`：在該次 `exit` 行之後另印一行，中間可能穿插其他項的行〔astra 報告必修 8〕 |
 | 控制模組收到 `pause`／`resume` | `inst=<inst 字面值> paused`、`inst=<inst 字面值> resumed`（[P-121](control.md)） |
-| 重讀設定（SIGHUP） | `reload: need restart: cwd`／`modules`、`inst=<inst 字面值> removed`／`added`、`reloaded`（[P-122](reload.md)） |
+| 重讀設定（SIGHUP） | `reload: need restart: cwd`／`modules`／`exec_out_path`／`exec_err_path`、`inst=<inst 字面值> removed`／`added`、`reloaded`（[P-122](reload.md)） |
 | 記住狀態：開起來恢復 | `inst=<inst 字面值> paused`、`inst=<inst 字面值> stopped`，在任何 `exit=` 行之前（[P-123](state.md)） |
+| 收屍／cgroup：開框、清掉殘留 | `inst=<inst 字面值> cgroup=i-<h>`（開框時一次）、`inst=<inst 字面值> reaped`（在那次 `exit=` 行之後）（[P-124](cgroup.md)） |
 
 ```text
 2026-10-01T15:04:05+08:00 inst=a exit=0 ms=812
@@ -118,7 +120,7 @@ boom
 | 碼 | 什麼時候 |
 |---|---|
 | 0 | 收到 SIGINT／SIGTERM 退出（正常停機）；`-h`／`--help` |
-| 1 | 用法錯、設定錯、設定檔讀不到、指示詞錯、其他沒接住的錯 |
+| 1 | 用法錯、設定錯、設定檔讀不到、指示詞錯、其他沒接住的錯（含掛了 cgroup 模組卻沒有委派好的 cgroup v2，[P-124](cgroup.md)） |
 
 daemon 正常運作時不會自己結束（所有項都停了也照樣開著），所以 0 只會來自訊號。
 
