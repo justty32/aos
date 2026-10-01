@@ -129,7 +129,7 @@
 | P-118 | settled/deferred/protocol/daemon/channel.md | 〔第十九批〕掛行程與砍掉 | T2 |
 | P-119 | settled/deferred/protocol/daemon/channel.md | 〔第十九批〕送訊息、取訊息與通道錯誤碼 | T2 |
 | P-211 | settled/protocol/tick.md | 〔第二十批〕`aos-cg`：每項一框 | T3 |
-| P-212 | settled/protocol/tick.md | 〔第二十批〕`aos-as`：切換帳號 | T3 |
+| P-212 | settled/deferred/protocol/tick.md | 〔第二十批〕`aos-as`：切換帳號（〔2026-10-01 第十三批〕暫緩） | T3 |
 | P-213 | settled/protocol/tick.md | 〔第二十批〕每項結束碼紀錄、停格檔與擋板檔 | T3 |
 | C-08 | settled/conventions.md | 〔2026-10-01〕aos 結束碼慣例 | 統一更新 |
 | C-09 | settled/conventions.md | 〔2026-10-01〕狀態資料夾的名字 `AOS_DIRNAME` | 統一更新 |

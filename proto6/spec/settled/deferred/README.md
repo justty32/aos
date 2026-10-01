@@ -41,6 +41,7 @@
 | P-207 | 加入普通設定（`aos-config-add` 的 argv 與結束碼） | 暫緩 | 同 B-625（部分） | [protocol/tick.md](protocol/tick.md) |
 | B-624（部分） | 發布摘要（`aos-publish`） | 暫緩 | 使用者 2026-10-01 第五批：「aos-publish我覺得要改名，我預期它的作用，就是把這一格的一些狀況總結成json檔案寫好」，討論後「那看來aos-summarize其實是暫時不需要了，拿掉。」之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（會跟傳訊混）。`aos-mq post` 仍在 [tick/mq.md](../tick/mq.md) | [tick.md](tick.md) |
 | P-206（部分） | `aos-publish` 那列 | 暫緩 | 同 B-624（部分） | [protocol/tick.md](protocol/tick.md) |
+| P-212 | `aos-as`：切換帳號 | 暫緩 | 使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」現行切帳號只在 daemon 設定檔做（帳號模組） | [protocol/tick.md](protocol/tick.md) |
 | T-09 | 收尾、排空停機、熱重載、逃生口 | 暫緩 | 全是舊 daemon 用語，最核心 daemon 第一版不做 | [terms.md](terms.md) |
 
 撤回、不會回來的 tick 舊做法（沒有 `.aos/` 時交給 aos-exec 的退路、inst.json 路徑正規化、`--node` 旗標、讀表驗四件事與表壞回 2、`methods` 欄、整格回 1／2／75 的碼表、`AOS_NODE_DIR`、`AOS_TICK_RECORD`、`aos-tick` 目標給檔就拿它當任務表，以及 2026-10-01 撤回的 inst 頂層與任務表的 `user`、inst「先決定身分，切完才解析」整節）列在 [tick.md 篇末](tick.md#已撤回被取代)。

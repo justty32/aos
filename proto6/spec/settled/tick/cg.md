@@ -18,7 +18,7 @@
 - **清不空**：框一直不空時，stderr 印 `frame_not_empty`，建停格檔（[B-620](../tick.md#b-620任務註冊表照表依序跑)）、回 1，不讓後面的項在還有人寫檔時開跑。
 - **結束碼**照原指令；原指令被訊號結束時，`aos-cg` 用同一個訊號結束自己。
 - **不放在 `tick` 底下**：cgroup v2 規定開了 controller 的那層不能同時放程序和子層。每項多約 0.1 毫秒（[實測](../../../notes/probes/per-task-cgroup-cost.md)）。
-- **跟 `aos-as` 一起用**：寫成 `aos-cg -- aos-as <帳號> -- 原指令`；`aos-as` 把自己所在的 `task-*` 框帶給 helper，別的帳號的程序也放進同一框（[B-303](../deferred/helper.md)、[B-609](../deferred/daemon/helper-actions.md)）。反過來寫開不了框，因為框不歸那個帳號。
+- **〔暫緩〕跟 `aos-as` 一起用**（`aos-as` 2026-10-01 第十三批搬暫緩區）：寫成 `aos-cg -- aos-as <帳號> -- 原指令`；`aos-as` 把自己所在的 `task-*` 框帶給 helper，別的帳號的程序也放進同一框（[B-303](../deferred/helper.md)、[B-609](../deferred/daemon/helper-actions.md)）。反過來寫開不了框，因為框不歸那個帳號。
 - **不清上一格留下的 `task-*`**：只有舊 daemon 開的格才有 `task-*`，舊 daemon 每格格後與重啟時都會收（[B-601](../deferred/daemon/runtime.md)、[B-603](../deferred/daemon/lifecycle.md)）。
 - **跑出框的**：`setsid`、double fork 逃不出 cgroup；只有經外部服務開的逃得出。aos 不擋這條路（管轄權是約定，B-626），經外部服務開的不歸 aos 管。
 - 〔暫定，第二十批疑-9 照 a〕沒 cgroup 時退回 subreaper 加程序群組，跟 daemon「沒有就退回」一致。
