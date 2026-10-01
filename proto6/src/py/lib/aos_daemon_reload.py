@@ -112,6 +112,7 @@ def _update(cur, n):
         cur.out_max = n.out_max         # 第十九批：輸出上限下一次起生效
         cur.cgroup = n.cgroup
         cur.user = n.user
+        cur.subscribe = n.subscribe     # 第二十二批：訂閱是那一項的設定，照新設定
         if changed and not cur.running and cur.end_mono is not None:
             # R2：上一次結束＋新週期；已經過了就立刻跑（due 在過去，_next_run 馬上回）
             cur.due = cur.end_mono + n.interval_ms / 1000.0

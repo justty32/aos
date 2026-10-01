@@ -102,6 +102,7 @@ class Item:
         self.frame = None               # 這一項的 cgroup 框（絕對路徑）；None＝cgroup 模組沒掛
         self.user = user                # 帳號模組：這一項用哪個帳號跑（設定的 "account.user"）；None＝預設帳號
         self.out_max = out_max          # 第十九批：每次、每條串流最多留幾 bytes（超過丟最早的；頂層共用）
+        self.subscribe = []             # 第二十二批：訊息模組的頻道訂閱（設定的 "mq.subscribe"；模組沒掛時不看）
         # m3n 步驟 2：以下狀態都在 cond 的鎖底下改；控制模組沒掛時只有 loop() 自己動它們
         self.cond = threading.Condition()
         self.running = False
@@ -233,6 +234,11 @@ def load_full(path, read_state=True):
         user_of = aos_daemon_account.item_user
     else:
         user_of = lambda entry: None
+    if "mq" in modules:                             # 第二十二批：模組沒掛時 "mq" 照不認得的鍵忽略
+        import aos_daemon_mq
+        subs_of = aos_daemon_mq.item_subscribe
+    else:
+        subs_of = lambda entry: []
     # insts 是物件：鍵＝inst 字面值、值＝該項設定（可為 {}）；位置照鍵的順序（JSON 讀入保序）（使用者 2026-10-01）
     for i, (inst, entry) in enumerate(top["insts"].items()):
         interval = entry.get("interval_ms", top.get("interval_ms"))
@@ -243,6 +249,7 @@ def load_full(path, read_state=True):
                           err_path_for(top.get("exec_err_path"), inst, start),
                           err_path_for(top.get("exec_out_path"), inst, start),
                           entry.get("cgroup"), user_of(entry), out_max))
+        items[-1].subscribe = subs_of(entry)
     sock = None
     if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
         sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
