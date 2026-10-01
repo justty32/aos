@@ -2,6 +2,11 @@
 
 ← [基底](README.md)｜[共用契約](../contracts.md)｜[通用 tick](../settled/tick.md)
 
+> **〔2026-10-01 殘留註記〕本篇是 2026-10-01 之前的設計，下列內容現在不是現行的**；原文照留，以這裡指的正本為準（各批裁定見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）：
+> - `aos-git`（開格、存檔點、收尾）與有 git 版範本：第十七批暫緩（[B-630](../settled/deferred/git.md)）；要提交、還原改用 hook 加普通 git 指令（範例在 [B-635](../settled/tick/hooks.md)）。
+> - 標準任務表範本（[B-629](../settled/deferred/template.md)）、`aos-mq get`／`post`（[B-623、B-624](../settled/deferred/mq.md)）、`aos-clean`（[B-404](../base/storage.md) 的系統級任務部分、P-605）：第十八批暫緩，現行沒有系統級任務；kernel／agent 範本裡掛的這些項也跟著不成立。現行收發信是 daemon 訊息模組 `aos-mq send`／`take`／`peek`（[B-645](../settled/daemon/mq.md)）。
+> - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
+
 ## B-401：資料夾就是狀態〔使用者方向 2026-09-29〕
 
 node 的狀態就是裡面的檔案；〔納入 cgroup 與 git〕git 有就用：掛了 `aos-git` 三項時，由它們提交與還原 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔，[B-630](../settled/deferred/git.md)）；沒有 git 時沒有提交與還原，保留期看結束碼紀錄（[B-632](../settled/deferred/git.md)）。

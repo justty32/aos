@@ -26,7 +26,7 @@
     "ran": {
       "type": "integer",
       "minimum": 0,
-      "description": "本格到目前為止跑完幾項 tasks（含結束碼不是 0 的；被停格檔擋掉、沒跑到的不算）；開格時 0，每跑完一項加 1（第八批）。hooks 不算在內。拆檔後存在 ran.json（一個數字）"
+      "description": "本格到目前為止跑完幾項 tasks（含結束碼不是 0 的；被 tasks-blocked 擋掉、沒跑到的不算；第十六批前叫停格檔）；開格時 0，每跑完一項加 1（第八批）。hooks 不算在內。拆檔後存在 ran.json（一個數字）"
     },
     "tasks": {
       "type": "array",

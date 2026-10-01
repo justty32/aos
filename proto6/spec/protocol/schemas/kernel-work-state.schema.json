@@ -19,7 +19,7 @@
       "$ref": "common.schema.json#/$defs/NodeId"
     },
     "owner_exec_uid": {
-      "description": "接件時記下、接件那一項任務實際的有效 UID（就是 node inst 的執行帳號；暫定：任務包了 aos-as 換帳號時記換成的那個帳號）；取消核權的第二種主人（B-203）。",
+      "description": "接件時記下、接件那一項任務實際的有效 UID（就是 node inst 的執行帳號；暫定：任務包了 aos-as 換帳號時記換成的那個帳號；〔2026-10-01 殘留註記〕aos-as 第十三批暫緩，現行切帳號是 daemon 帳號模組 B-646）；取消核權的第二種主人（B-203）。",
       "type": "integer",
       "minimum": 0
     },
