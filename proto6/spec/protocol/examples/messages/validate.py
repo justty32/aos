@@ -39,7 +39,10 @@ def schema_name(path):
     if group == 'daemon':
         if topic.startswith('helper_'):
             return 'daemon-helper'
-        return {'config': 'daemon-config', 'state': 'daemon-state',
+        if topic.startswith('ctl_'):     # P-121 控制模組的請求與回應
+            return 'daemon-ctl'
+        return {'core-config': 'daemon-core-config',     # P-120；config 是暫緩區的 P-101
+                'config': 'daemon-config', 'state': 'daemon-state',
                 'runner_report': 'daemon-runner-report',
                 'launch-error': 'daemon-launch-error'}.get(topic, 'daemon-rpc')
     if group == 'work':
@@ -62,15 +65,16 @@ def extra_errors(path, value):
     """schema 表達不了的跨欄位關係；invalid 範例只要 schema 或這裡任一處報錯就算擋下。"""
     errors = []
     if path.parent.name == 'node' and path.name.startswith('tick-record.') and isinstance(value, dict):
-        # B-633、P-213：stopped_after 是最後一項；exit 0 時每項都成功；exit 1 時有失敗或被停下。
+        # B-633、P-213：stopped_after 是最後一項。（exit 只收 0 由 schema 管；任務成敗不影響整格碼。）
         tasks = value.get('tasks') or []
-        ok = [isinstance(t, dict) and t.get('exit') == 0 and 'signal' not in t for t in tasks]
         if 'stopped_after' in value and (not tasks or tasks[-1].get('id') != value['stopped_after']):
             errors.append('stopped_after is not the last task')
-        if value.get('exit') == 0 and not all(ok):
-            errors.append('exit 0 but some task failed')
-        if value.get('exit') == 1 and 'stopped_after' not in value and all(ok):
-            errors.append('exit 1 without failure or stop')
+    if path.parent.name == 'daemon' and path.name.startswith('core-config.') and isinstance(value, dict):
+        # P-120：某一項自己沒寫、頂層也沒寫 interval_ms＝設定錯。
+        insts = value.get('insts')
+        if isinstance(insts, dict) and 'interval_ms' not in value and any(
+                isinstance(v, dict) and 'interval_ms' not in v for v in insts.values()):
+            errors.append('an inst has no interval_ms and there is no top-level default')
     return errors
 
 
@@ -131,12 +135,10 @@ def main():
             # kernel、agent 範本下一輪才改（T5、T6），過渡期兩種項數都收。
             agent = 'config/agent.json' in files
             assert len(tasks) in ((2, 6) if agent else (9, 12)), path
-            seen, claimed = set(), set()
+            seen = set()
             for task in tasks:
                 assert task['id'] not in seen, path
-                # P-202：同一 method 只能由一項任務宣告。
-                assert not claimed & set(task.get('methods', [])), path
-                claimed.update(task.get('methods', []))
+                # 2026-10-01：`methods` 已從任務表規範拿掉（P-202），舊範本還帶的只當不認得的欄位，不再檢查。
                 # 第二十批撤 needs 欄（改用 aos-needs，B-621）；舊範例還帶的只當不認得的欄位，
                 # 有寫時仍只准指向前面的項，免得過渡期範例自相矛盾。
                 assert set(task.get('needs', [])) <= seen, path

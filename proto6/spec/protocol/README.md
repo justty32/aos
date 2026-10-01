@@ -22,7 +22,7 @@
 ## P-003．檔案發布與收件〔建議預設，未拍板〕
 
 - **發布**：暫存檔放目標資料夾的 `.tmp/`；名字以 `.` 開頭的檔不算已發布。寫入、同步、rename 與撞名的行為見 [B-402](../base/storage.md)、[B-503](../base/transport.md)。
-- **收件區**〔使用者方向 2026-09-29〕：每個 node 根下的 `requests/`（別人問我）與 `responses/`（我問別人、別人回我），都在 `.gitignore` 裡；`inbox` 這名字保留給日後的工具，不當資料夾名。權限布置見 [P-208](../settled/protocol/node.md)；通知的意思見 [B-504](../settled/daemon/runtime.md)。
+- **收件區**〔使用者方向 2026-09-29〕：每個 node 根下的 `requests/`（別人問我）與 `responses/`（我問別人、別人回我），都在 `.gitignore` 裡；`inbox` 這名字保留給日後的工具，不當資料夾名。權限布置見 [P-208](../settled/protocol/node.md)；通知的意思見 [B-504](../settled/deferred/daemon/runtime.md)。
 - **去重**：檔名就是請求 ID；比對規則見 [B-503](../base/transport.md)。
 - **消費與送出**：待送檔放 `.aos/outbox/`，格式見 P-206；提交順序見 [B-623](../settled/tick.md)（Q1）、[B-624](../settled/tick.md)（Q2），由標準任務表範本裡的系統級任務做（[B-629](../settled/tick.md)）。
 
@@ -30,8 +30,8 @@
 
 物件形狀照 JSON-RPC 2.0：請求 `{"jsonrpc":"2.0","id":"<ID>","method":"...","params":{...}}`，回應 `{"jsonrpc":"2.0","id":"<ID>","result":{...}}` 或 `"error":{...}`。`id` 必填且是 P-002 的 ID；唯解析／請求錯誤（-32700／-32600）取不到合法 ID 時，回應用 `id:null`，成功回應與請求仍不准 null；不用 batch、不用 notification。公開 method 就是對應指令去掉 `aos`、以 `.` 連接，例如 `agent.say` 對 `aos agent say`；內部 helper 用 `daemon.helper.*` 對 `aos daemon helper ...`，仍只走私有通道。
 
-1. **socket（daemon IPC）**：Unix stream socket，一行一個 object、以 LF 結尾，單行上限 256 KiB。呼叫者怎麼認見 [B-601](../settled/daemon/runtime.md)：人手與 CLI 看 `SO_PEERCRED`，封包裡自稱的身分不算；〔使用者方向 2026-09-30，第十九批〕tick–daemon 通道上的請求在 params 帶本格憑證，daemon 以憑證認 tick（[B-612](../settled/daemon/channel.md)，欄位見 P-117）。
-2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`；-32601 的條件見 [B-501](../base/transport.md)，由收件這項系統級任務回（[B-623](../settled/tick.md)）。回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄格式見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，不產生 `null.json`；壞件怎麼處理見 [B-623](../settled/tick.md)。檔案上限 256 KiB，大內容放檔案、用路徑引用。查詢或重送用同一個 `id`，見 [B-503](../base/transport.md)。通道上轉交的訊息就是這個請求物件（[B-614](../settled/daemon/messaging.md)）。
+1. **socket（daemon IPC）**：Unix stream socket，一行一個 object、以 LF 結尾，單行上限 256 KiB。呼叫者怎麼認見 [B-601](../settled/deferred/daemon/runtime.md)：人手與 CLI 看 `SO_PEERCRED`，封包裡自稱的身分不算；〔使用者方向 2026-09-30，第十九批〕tick–daemon 通道上的請求在 params 帶本格憑證，daemon 以憑證認 tick（[B-612](../settled/deferred/daemon/channel.md)，欄位見 P-117）。
+2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`；-32601 的條件見 [B-501](../base/transport.md)，由收件這項系統級任務回（[B-623](../settled/tick.md)）。回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄格式見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，不產生 `null.json`；壞件怎麼處理見 [B-623](../settled/tick.md)。檔案上限 256 KiB，大內容放檔案、用路徑引用。查詢或重送用同一個 `id`，見 [B-503](../base/transport.md)。通道上轉交的訊息就是這個請求物件（[B-614](../settled/deferred/daemon/messaging.md)）。
 
 ## P-005．錯誤〔建議預設，未拍板〕
 
@@ -41,7 +41,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 
 - 每支程式的篇章要列：完整 argv、stdin／stdout／stderr 各放什麼、讀寫哪些檔、用誰的身分跑、環境變數、結束碼。
 - argv 直接 exec，不經 shell。大資料走 stdin 或檔案，不塞 argv；key 不進 argv 或環境，見 [S-301](../scheduling/llm.md)。
-- aos 自己的環境變數用 `AOS_` 開頭；環境不是授權依據。〔使用者方向 2026-09-30，第二十批〕tick 給任務的變數，整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（`AOS_TASK_ID` 是該項 `id` 字串原樣、`AOS_TASK_INDEX` 從 0 起，清單見 [P-203](../settled/protocol/node.md)）。〔使用者方向 2026-09-30，第十九批〕唯一例外是 daemon 開 tick 與掛載行程時放的通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`（[B-612](../settled/daemon/channel.md)，格式見 [P-117](../settled/protocol/daemon/channel.md)）：憑證由 daemon 發、在通道上核對，變數本身仍不授予任何權限。
+- aos 自己的環境變數用 `AOS_` 開頭；環境不是授權依據。〔使用者方向 2026-09-30，第二十批〕tick 給任務的變數，整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（`AOS_TASK_ID` 是該項 `id` 字串原樣、`AOS_TASK_INDEX` 從 0 起，清單見 [P-203](../settled/protocol/node.md)）。〔使用者方向 2026-09-30，第十九批〕唯一例外是 daemon 開 tick 與掛載行程時放的通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`（[B-612](../settled/deferred/daemon/channel.md)，格式見 [P-117](../settled/deferred/protocol/daemon/channel.md)）：憑證由 daemon 發、在通道上核對，變數本身仍不授予任何權限。
 - 結束碼共同意思：`0` 成功；`2` 用法或設定錯，還沒開始做事；`125` 自己無法開始（如身分不准）；runner 收尾失敗也是 125，須以 P-110 的 started／error 區分，不能只看碼。其他碼由各篇自己定；被訊號殺掉由父程序看 wait 狀態，不猜 `128+n`。
 - 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。〔第二十批〕系統級任務與普通程式的程式名、argv 與結束碼見 [P-203](../settled/protocol/node.md)、[P-204](../settled/protocol/node.md)（`aos-needs`）、P-212（`aos-as`）、[P-205](../settled/protocol/node.md)（`aos-git`）、P-211（`aos-cg`）。新公開指令用 `aos <用途> <動作> [更深]`。
 
@@ -52,11 +52,11 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | 哪一類 | 碼表在哪 |
 |---|---|
 | JSON-RPC 保留碼、-32000 與 `data.code` 通則 | P-005 |
-| daemon IPC 與 helper 私有通道的 `data.code` | [P-111](../settled/protocol/daemon/provision-and-runner.md) |
-| runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](../settled/protocol/daemon/provision-and-runner.md) |
+| daemon IPC 與 helper 私有通道的 `data.code` | [P-111](../settled/deferred/protocol/daemon/provision-and-runner.md) |
+| runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](../settled/deferred/protocol/daemon/provision-and-runner.md) |
 | inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
 | `aos-tick` 結束碼（0／1／2／75，沒有特別碼：停掉本格靠停格檔）；系統級任務 `aos-git`、普通程式 `aos-needs`、`aos-as`、`aos-cg` 的結束碼 | [P-203](../settled/protocol/node.md)、[P-204](../settled/protocol/node.md)、P-212、[P-205](../settled/protocol/node.md)、P-211（[node](../settled/protocol/node.md)） |
-| tick–daemon 通道的 `data.code`（含部件關閉的 `not_available`）；客戶端的 `no_channel` | [P-119](../settled/protocol/daemon/channel.md) |
+| tick–daemon 通道的 `data.code`（含部件關閉的 `not_available`）；客戶端的 `no_channel` | [P-119](../settled/deferred/protocol/daemon/channel.md) |
 | `aos-mq get`／`post` 結束碼及 `not_available` 診斷 | [P-206](../settled/protocol/node.md) |
 | 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
 | 工作拒收 | [P-404](work.md) |
@@ -110,7 +110,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 
 ### 已裁定（第十一批）
 
-- **once 資源歸屬與啟動失敗證據**〔使用者方向 2026-09-29〕：行為見 [B-613](../settled/daemon/channel.md)（〔使用者方向 2026-09-30，第十九批〕once 經通道把行程掛到 daemon；〔第二十批〕是任務呼叫的通道事務），`.err` 旁檔格式見 [P-110](../settled/protocol/daemon/provision-and-runner.md)。
+- **once 資源歸屬與啟動失敗證據**〔使用者方向 2026-09-29〕：行為見 [B-613](../settled/deferred/daemon/channel.md)（〔使用者方向 2026-09-30，第十九批〕once 經通道把行程掛到 daemon；〔第二十批〕是任務呼叫的通道事務），`.err` 旁檔格式見 [P-110](../settled/deferred/protocol/daemon/provision-and-runner.md)。
 - **首版網路**〔使用者方向 2026-09-29〕：只記用量摘要，不做硬限速，見 [resources P-506](resources.md)。
 
 ### 工程預設與待補接口

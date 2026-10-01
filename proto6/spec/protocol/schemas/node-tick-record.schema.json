@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "node-tick-record.schema.json",
   "title": "每項結束碼紀錄",
-  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格各項怎麼結束、本 node 的格數與是否被停格檔停下（B-633、P-213）。取代第十九批的 node-journal。不認得的欄位忽略（P-007）。跨欄位關係（stopped_after 是最後一項、exit 0 時每項都成功、exit 1 時有失敗或停下）schema 表達不了，由 validate.py 的補充檢查驗。",
+  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格各項怎麼結束、本資料夾的格數與是否被停格檔停下（B-633、P-213）。取代第十九批的 node-journal。不認得的欄位忽略（P-007）。跨欄位關係（stopped_after 是最後一項）schema 表達不了，由 validate.py 的補充檢查驗。",
   "type": "object",
   "required": [
     "version",
@@ -16,7 +16,7 @@
     },
     "seq": {
       "$ref": "common.schema.json#/$defs/TickSeq",
-      "description": "本 node 的格數，從 1 起、跨重啟不倒退"
+      "description": "本資料夾的格數，從 1 起；預設不 fsync，斷電後可能倒退（B-633）"
     },
     "started_at_ms": {
       "$ref": "common.schema.json#/$defs/TimeMs",
@@ -33,16 +33,12 @@
       "type": "boolean"
     },
     "exit": {
-      "enum": [
-        0,
-        1,
-        2
-      ],
-      "description": "這格 tick 的結束碼，只會是 0、1、2（75 不寫紀錄；P-203、B-633）；只在 ended 為 true 時有"
+      "const": 0,
+      "description": "這格 tick 的結束碼。有紀錄收尾時 tick 一定回 0（C-08；busy、blocked、bad_table 不寫紀錄，tick 出錯時停在 ended:false），所以只會是 0（P-203、B-633）；只在 ended 為 true 時有"
     },
     "stopped_after": {
       "$ref": "common.schema.json#/$defs/ID",
-      "description": "被停格檔 .aos/tick/stop 停下時，是哪一項跑完後停的（任務表該項的 id 字串）；只在 ended 為 true 時有，這時 exit 必須是 1（B-620、P-213）"
+      "description": "被停格檔 .aos/tick/stop 停下時，是哪一項跑完後停的（任務表那一項的 id，沒寫 id 時是位置字串）；只在 ended 為 true 時有，這時 exit 也是 0（B-620、P-213）"
     }
   },
   "if": {
@@ -84,7 +80,7 @@
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/ID",
-          "description": "任務表該項的 id 字串（同 AOS_TASK_ID）"
+          "description": "任務表那一項的 id（同 AOS_TASK_ID；沒寫 id 時是位置字串）"
         },
         "exit": {
           "type": "integer",
@@ -110,45 +106,5 @@
         }
       ]
     }
-  },
-  "allOf": [
-    {
-      "if": {
-        "required": [
-          "stopped_after"
-        ]
-      },
-      "then": {
-        "properties": {
-          "exit": {
-            "const": 1
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "exit": {
-            "const": 2
-          }
-        },
-        "required": [
-          "exit"
-        ]
-      },
-      "then": {
-        "properties": {
-          "tasks": {
-            "maxItems": 0
-          }
-        },
-        "not": {
-          "required": [
-            "stopped_after"
-          ]
-        }
-      }
-    }
-  ]
+  }
 }

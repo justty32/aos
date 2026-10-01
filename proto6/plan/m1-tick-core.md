@@ -6,13 +6,13 @@
 
 > **POC 總原則（2026-10-01，見待問 8）**：默認一切正常——寫得進、讀得懂、不斷電、~~沒有別人同時在跑~~（同日加回最簡互斥，見待問 12）、表是對的、帳號是對的。不寫異常處理，出事讓 Python 自然丟錯、回 1。下面各步裡跟這條衝突的句子都劃掉、註明 2026-10-01 作廢。
 >
-> **結束碼（2026-10-01，見待問 9、15）**：照 aos 體系慣例（~~0 正常結束、1 錯誤結束、2 正常中斷~~ 同日改版：0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤；全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)，待統一更新 spec）。`aos-tick` 只回：照表跑完、停格檔停下、鎖被占（busy）、擋板檔 0（擋板、busy 原本 2）、tick 自己出錯 1；任務的碼只記進紀錄、完全不影響 tick。~~`--node` 底下必須有 `.aos/inst.json`，沒有回 1~~（拿掉交給 aos-exec 的退路；inst.json 那半句同日再改，見下條）。下面各步跟這條衝突的句子劃掉、註明。
+> **結束碼（2026-10-01，見待問 9、15）**：照 aos 體系慣例（~~0 正常結束、1 錯誤結束、2 正常中斷~~ 同日改版：0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤；全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)，已寫入 spec（commit 前由我補號））。`aos-tick` 只回：照表跑完、停格檔停下、鎖被占（busy）、擋板檔 0（擋板、busy 原本 2）、tick 自己出錯 1；任務的碼只記進紀錄、完全不影響 tick。~~`--node` 底下必須有 `.aos/inst.json`，沒有回 1~~（拿掉交給 aos-exec 的退路；inst.json 那半句同日再改，見下條）。下面各步跟這條衝突的句子劃掉、註明。
 >
-> **~~`--node`~~ ~~`--target`~~ 目標（位置參數）（2026-10-01，見待問 10、16、17，待統一更新 spec）**：省略用 `./`、相對路徑轉絕對；資料夾要有 `.aos/tasks.json`（不看 `.aos/inst.json`，tick 跟 inst.json 分開），沒有回 1；給檔就拿它當這一格的任務表、它所在的資料夾當~~node~~工作資料夾（檔在 `.aos/` 裡時取上一層）；不存在回 1（stderr ~~`no_node:`~~ `no_target:`）。
+> **~~`--node`~~ ~~`--target`~~ 目標（位置參數）（2026-10-01，見待問 10、16、17，已寫入 spec（commit 前由我補號））**：省略用 `./`、相對路徑轉絕對；資料夾要有 `.aos/tasks.json`（不看 `.aos/inst.json`，tick 跟 inst.json 分開），沒有回 1；給檔就拿它當這一格的任務表、它所在的資料夾當~~node~~工作資料夾（檔在 `.aos/` 裡時取上一層）；不存在回 1（stderr ~~`no_node:`~~ `no_target:`）。
 >
-> **工作資料夾、`AOS_TICK_CWD`（2026-10-01，見待問 16，待統一更新 spec）**：「工作資料夾」＝這一格 aos-tick 的 cwd（目標指的資料夾；給檔時是檔所在的資料夾）。給任務的 ~~`AOS_NODE_DIR`~~ 改名 `AOS_TICK_CWD`（它的絕對路徑）；~~`AOS_TICK_RECORD`~~ 拿掉，任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找紀錄。node 是之後 aos-tick 的 node 模組的事，tick 這層不談；本檔舊文字裡的「node」在 tick 這層都讀成工作資料夾。
+> **工作資料夾、`AOS_TICK_CWD`（2026-10-01，見待問 16，已寫入 spec（commit 前由我補號））**：「工作資料夾」＝這一格 aos-tick 的 cwd（目標指的資料夾；給檔時是檔所在的資料夾）。給任務的 ~~`AOS_NODE_DIR`~~ 改名 `AOS_TICK_CWD`（它的絕對路徑）；~~`AOS_TICK_RECORD`~~ 拿掉，任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找紀錄。node 是之後 aos-tick 的 node 模組的事，tick 這層不談；本檔舊文字裡的「node」在 tick 這層都讀成工作資料夾。
 >
-> **`AOS_DIRNAME`（2026-10-01，見待問 13、15，待統一更新 spec）**：本檔所有 `.aos` 都是環境變數 `AOS_DIRNAME` 給的名字（沒設＝`.aos`；~~空＝`.aos`~~ 設了但空字串＝不用子資料夾，狀態檔直接在 node 資料夾下；含 `/`、是 `.`、`..` 算用法錯回 1）。只換名字、位置仍在 node 資料夾裡；`aos-exec` 找資料夾目標的 inst 也照它（空字串時只找 `<目標>/inst.json`）。
+> **`AOS_DIRNAME`（2026-10-01，見待問 13、15，已寫入 spec（commit 前由我補號））**：本檔所有 `.aos` 都是環境變數 `AOS_DIRNAME` 給的名字（沒設＝`.aos`；~~空＝`.aos`~~ 設了但空字串＝不用子資料夾，狀態檔直接在 node 資料夾下；含 `/`、是 `.`、`..` 算用法錯回 1）。只換名字、位置仍在 node 資料夾裡；`aos-exec` 找資料夾目標的 inst 也照它（空字串時只找 `<目標>/inst.json`）。
 
 - 由 AI 隊實作、照各步驟驗收試跑，做完交使用者看；每步的「要使用者裁定的點」集中在文末待問。
 - Python 3.9、只用標準庫。inst 的解析、驗證、開程序用從 proto5 複製來的 [src/py/lib/](../src/py/README.md)：`aos_inst.load(path, base)`／`aos_inst.load_obj(obj, base)` 讀驗解一份 inst（壞就丟 `InstError`，`str(e)` 是「代號: 白話」），`aos_exec` 開程序。lib 沒有、tick 要自己接的東西寫在步驟 4 的「注意」與步驟 5 的「tick 要自己接」。
@@ -148,7 +148,7 @@
 - **2026-10-01（待問 8）**：不需要判斷上下層，`default_parent()` 與測試已拿掉。下面只當紀錄。
 
 - **要做到**：從本資料夾往上找，最近一個有 `.aos/inst.json` 或 `inst.json` 的資料夾就是預設上層；找不到就沒有。純路徑計算。
-- **spec**：[B-628](../spec/settled/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)（登記覆蓋是第三段 daemon 的事）。
+- **spec**：[B-628](../spec/settled/deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)（登記覆蓋是第三段 daemon 的事）。
 - **做法**：路徑逐段往上比、不展開 symlink、不看 daemon。照 spec 實作判定即可，不另加子命令、旗標或輸出（已裁定）。
 - **要使用者裁定的點**：無。
 - **驗收**：`/a`、`/a/b` 都有 `.aos/inst.json`、`/a/x` 沒有：`/a/b` 與 `/a/x/c` 的上層都是 `/a`，`/a` 沒有上層。上下層判定只是函式，不另加指令或輸出，驗收不用印結果（已裁定，見待問 1）；用單元測試直接呼叫函式核對。
@@ -186,7 +186,7 @@
 | 普通程式 `aos-needs`、`aos-cg`、`aos-as` | 同上，不放進測試表 | 二、四、五段 |
 | daemon、runner、通道、佇列 | 只有直接跑；環境裡沒有 `AOS_DAEMON_SOCKET`，核心也不看它 | 三、四段 |
 | 清任務留下的後代 | 核心本來就不清；測試結束自己殺 | 第三段（runner 格後收屍） |
-| 恢復前驗證（完整 schema、`kind` 的值） | 核心只驗四件事 | 第二段 |
+| 恢復前驗證（完整 schema、`kind` 的值） | 核心只做極簡檢查（B-620） | 第二段 |
 | 任務逾時 | 沒有 | 延後（P-008） |
 | ~~同資料夾互斥、~~上下層判定、驗表、`user` 判定、`--firstdo-fsync`、各種異常處理 | 默認一切正常，出事自然丟錯、回 1（待問 8）；互斥 10-01 加回最簡版（待問 12） | POC 不做；C++11 改寫時再看 |
 | tick 被殺時清它的孩子 | 不做（任務另開 session，tick 被殺孩子照跑） | 留給 daemon 段（待問 12） |
@@ -214,9 +214,9 @@
    - 同資料夾互斥（B-602）整個拿掉：不取鎖、不回 75、不傳鎖 fd。上下層判定（B-628）拿掉。
    - 任務表不驗（不回 2、`config_invalid`）；`user` 不看（不回 125、`user_mismatch`）；`--firstdo-fsync`、`record_unreadable` 不做。
    - ~~整格碼只剩 0／1；argv 用法錯仍回 2（不是一格）。~~（10-01 再改，見待問 9：照表跑完 0、擋板 ~~2~~ 0（待問 15）、tick 自己出錯 1，argv 用法錯也是 1）
-   - spec 規定不刪，只標〔使用者方向 2026-10-01：POC 先不做〕。
+   - spec 規定不刪，2026-10-01 統一更新時搬到[暫緩區](../spec/settled/deferred/README.md)。
 
-9. **aos-tick 的結束碼怎麼對上 aos 體系慣例？已裁定**〔使用者方向 2026-10-01〕：慣例全文（~~0 正常結束、1 錯誤結束、2 正常中斷~~ 同日改版見待問 15）與原話記在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)，**待統一更新 spec**（這輪 spec 一字未動）。
+9. **aos-tick 的結束碼怎麼對上 aos 體系慣例？已裁定**〔使用者方向 2026-10-01〕：慣例全文（~~0 正常結束、1 錯誤結束、2 正常中斷~~ 同日改版見待問 15）與原話記在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)，**已寫入 spec（commit 前由我補號）**（這輪 spec 一字未動）。
    - `aos-tick` 的碼只講 tick 自己：照表跑完 0（不管任務成敗）、停格檔停下 0（不算中斷，暫定）、擋板檔 ~~2~~ 0（待問 15；不寫紀錄、不加 `seq`）、tick 自己出錯 1。
    - tick 自己出錯：argv 用法錯（不再回 2）、`--node` 不是絕對路徑／不是資料夾、`--node` 底下沒有 `.aos/inst.json`；自用檔（`tick-blocked`、`stop`、`current.json`、`last.json`、`tasks.json`）讀不到／寫不進／格式壞就自然丟錯（traceback、回 1），不分時機、不補救。
    - 任務回 0、1、2、其他碼、被訊號殺：都照實記進紀錄、照常跑下一項，不影響 tick 的碼（使用者原話「任務出錯，不算在tick的錯誤內」「任務回2也只記一筆，照常跑下一項」）。
@@ -224,7 +224,7 @@
    - 擋板檔與停格檔的機制使用者之後會詳細設計，目前做法是暫定。
    - 〔2026-10-01 再改，見待問 10〕「`--node` 底下沒有 `.aos/inst.json` 回 1」改成看 `.aos/tasks.json`。
 
-10. **`--node` 怎麼認？已裁定**〔使用者方向 2026-10-01，待統一更新 spec〕：原話與全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick---node-怎麼認待統一更新-spec)（使用者寫 `task.json` 即 `tasks.json`）。
+10. **`--node` 怎麼認？已裁定**〔使用者方向 2026-10-01，已寫入 spec（commit 前由我補號）〕：原話與全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick---node-怎麼認待統一更新-spec)（使用者寫 `task.json` 即 `tasks.json`）。
    - 省略用 `./`；相對路徑一律轉絕對（拿掉「必須絕對路徑」）。
    - 資料夾：合法＝有 `.aos/tasks.json`，不看 `.aos/inst.json`（tick 跟 inst.json 分開）；沒有回 1。
    - 檔：當這一格的任務表，所在資料夾 yyy 當 node（擋板、停格、紀錄都在 `yyy/.aos/`，不在就建資料夾）；`yyy/.aos/tasks.json` 在不在都不管。格式照待問 11 的極簡檢查，不過回 1。
@@ -232,41 +232,41 @@
    - 表裡的相對路徑與指示詞以 node 根為中心（給檔時＝檔所在的資料夾）。
    - 實作自己定的（可改）：檔所在的資料夾叫 `.aos` 時 node 取上一層（`--node yyy/.aos/tasks.json` ≡ `--node yyy`），不照字面當 `yyy/.aos`；舊的 `--node …/.aos/inst.json` 現在會被當任務表讀、讀壞回 1；stderr 代碼 `no_tasks`、`no_node`。
 
-11. **任務表格式錯怎麼算？已裁定**〔使用者方向 2026-10-01，待統一更新 spec〕：全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick-讀任務表的極簡檢查待統一更新-spec)。
+11. **任務表格式錯怎麼算？已裁定**〔使用者方向 2026-10-01，已寫入 spec（commit 前由我補號）〕：全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick-讀任務表的極簡檢查待統一更新-spec)。
    - 格式錯算 tick 自己的錯：stderr 一行 `bad_table:`、回 1（給檔時一樣）。取代待問 8「表不驗」。
    - 只查：合法 JSON、頂層物件有 `tasks` 陣列、每項（`$ref` 展開後）是物件且有 `argv`。外層與每項的 `_metainfo`、`id`、`kind` 都不查（`_metainfo` 格式上照寫）；`kind` 不必填；`methods` 從規範拿掉、當陌生鍵。
    - 沒 `id` 的項：id＝它在 `tasks` 陣列的位置（從 0 起）轉字串（例如 `"3"`），紀錄與 `AOS_TASK_ID` 都用它；撞了不管（「默認不重複」）。
    - ~~實作自己定的（可改）：檢查在換紀錄之後，表壞仍佔 `seq`。~~（2026-10-01 改，見待問 12：移到換紀錄之前，不佔 `seq`）
 
-12. **同資料夾互斥、讀表的時機？已裁定**〔使用者方向 2026-10-01，待統一更新 spec〕：全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick-最簡互斥與讀表時機待統一更新-spec)。
+12. **同資料夾互斥、讀表的時機？已裁定**〔使用者方向 2026-10-01，已寫入 spec（commit 前由我補號）〕：全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick-最簡互斥與讀表時機待統一更新-spec)。
    - 加回最簡互斥（理由：外層定期跑 `aos-tick`，上一格沒跑完下一格就來是正常使用會碰到的）：開格前對 `.aos/tick.lock` 取非阻塞 `flock`（不存在就建）；拿不到 stderr 一行 `busy:`、回 ~~2（正常中斷）~~ 0（待問 15），不寫紀錄、不加 `seq`。鎖 fd 不傳給任務、沒有 `AOS_TICK_LOCK_FD`。取代待問 8「互斥整個拿掉」。
    - 讀表移到換紀錄之前：表讀不到／極簡檢查不過 → 回 1，不算開過一格（不換 current／last、不加 `seq`）。取代待問 11「實作自己定的」那條。
    - 不做：任務逾時、tick 被殺時清孩子（留給 daemon 段）。任務輸出預設照 inst 接 `/dev/null`，不動。
    - 照舊：檔在 `.aos/` 裡時 node 取上一層；只寫 `--node` 不給值算用法錯回 1；`id` 非字串照 `str()`。
    - 實作自己定的（可改）：鎖在擋板之前（照原 B-602／B-620 順序「取鎖是第一件事」）；兩個都在時回 `busy:`（都是 ~~2~~ 0，差別只在 stderr）。鎖檔 tick 不刪，留在 `.aos/` 裡。
 
-13. **狀態資料夾的名字？已裁定**〔使用者方向 2026-10-01，待統一更新 spec〕：全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos_dirname-狀態資料夾的名字待統一更新-spec)。
+13. **狀態資料夾的名字？已裁定**〔使用者方向 2026-10-01，已寫入 spec（commit 前由我補號）〕：全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos_dirname-狀態資料夾的名字待統一更新-spec)。
    - 環境變數 `AOS_DIRNAME` 決定 node 狀態資料夾的**名字**（只換名字，位置仍在 node 資料夾裡）；沒設~~或空字串~~＝`.aos`（空字串同日再改，見待問 15）；含 `/`、或是 `.`、`..` 算用法錯。
    - `aos-tick` 所有寫死 `.aos` 的地方都照它（`tasks.json`、`tick.lock`、`tick-blocked`、`tick/stop`、`tick/current.json`／`last.json`、`--node` 合法判斷、檔案模式「所在資料夾叫這個名字就往上取一層」）；用法錯回 1。環境變數照常傳給任務。
    - `aos-exec` 找資料夾目標的 inst 時 `.aos/inst.json` 的 `.aos` 也照它（使用者原話「aos-exec那邊，我覺得可以加上這個AOS_DIRNAME」）；不合法照 aos-exec 的用法錯回 ~~2（碼表不動）~~ 1（待問 15）。
    - 之後 aos 所有程式都照這個變數。
 
-14. **aos-exec 要不要認得頂層 `user`？已裁定：不要**〔使用者方向 2026-10-01，待統一更新 spec〕：原話「aos-exec應該也不需要認得頂層user吧。」全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-exec-不認得頂層-user待統一更新-spec)。
+14. **aos-exec 要不要認得頂層 `user`？已裁定：不要**〔使用者方向 2026-10-01，已寫入 spec（commit 前由我補號）〕：原話「aos-exec應該也不需要認得頂層user吧。」全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-exec-不認得頂層-user待統一更新-spec)。
    - 從 proto5 複製的 lib 撤回「認得頂層 `user`」：回到 proto5 原樣，`user` 當不認得的鍵照 inst 規則忽略、照目前身分跑；沒有 `UserNotGranted`／`UserInvalid`、不因 `user` 回 125。
    - aos-tick 原本交給 `load_obj` 前先拿掉 `user`，因此多餘，拿掉。
 
-15. **結束碼慣例改版、`AOS_DIRNAME` 空字串？已裁定**〔使用者方向 2026-10-01，同日再改，待統一更新 spec〕：全文在 [verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)與[「`AOS_DIRNAME`」](../notes/verdicts/11-tick-as-unit.md#aos_dirname-狀態資料夾的名字待統一更新-spec)。
+15. **結束碼慣例改版、`AOS_DIRNAME` 空字串？已裁定**〔使用者方向 2026-10-01，同日再改，已寫入 spec（commit 前由我補號）〕：全文在 [verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)與[「`AOS_DIRNAME`」](../notes/verdicts/11-tick-as-unit.md#aos_dirname-狀態資料夾的名字待統一更新-spec)。
    - 原話：「結束碼這塊，我覺得不要2了，只要是正常的，不須多做處理的，通通0，0以外就是需要額外處理的東西。」「只有0才是普通結束，正常中斷也改成0。」「1就是通用錯誤，所以沒特別設置結束碼的錯誤都設1。」「如果AOS_DIRNAME是空的，那就從找.aos/inst.json改成找inst.json。」
    - 慣例：0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤；特別指定的碼（inst 的 125／126／127、子程式碼原樣傳出）保留。取代待問 9 的 0／1／2。
    - `aos-tick`：busy、擋板都改回 0（stderr 那一行照印）；現在只回 0／1。
    - `aos-exec`：用法錯（含 argparse、`AOS_DIRNAME` 不合法）2 → 1；125、126／127、子程式碼照舊。
    - `AOS_DIRNAME` 三態：沒設＝`.aos`；設了但空字串＝不用子資料夾（tick 的 `tasks.json`、`tick.lock`、`tick-blocked`、`tick/stop`、`tick/current.json`／`last.json` 都直接在 node 下，檔案模式「往上取一層」不適用；aos-exec 資料夾目標只找 `<目標>/inst.json`）；其他值照舊。取代待問 13「空字串＝`.aos`」。
 
-16. **`AOS_NODE_DIR`、`AOS_TICK_RECORD`、`--node` 改名？已裁定**〔使用者方向 2026-10-01，待統一更新 spec〕：
+16. **`AOS_NODE_DIR`、`AOS_TICK_RECORD`、`--node` 改名？已裁定**〔使用者方向 2026-10-01，已寫入 spec（commit 前由我補號）〕：
    - 原話：「AOS_NODE_DIR改成AOS_TICK_CWD，也就是aos-tick在跑的時候，他的cwd的絕對路徑。node這個概念目前還沒到出場的時候，那是後續aos-tick的node模組的事情。AOS_TICK_RECORD應該可以拿掉，反正有AOS_TICK_CWD，就從那邊找就好。」「aos-tick --node改成aos-tick --target，也就是跟daemon和aos-exec一樣。」
    - 給任務的變數剩 `AOS_TICK_CWD`（工作資料夾的絕對路徑：`--target` 指的資料夾，給檔時是檔所在的資料夾）、`AOS_TASK_ID`、`AOS_TASK_INDEX`。任務要看紀錄就從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找（狀態資料夾照 `AOS_DIRNAME` 三態，空字串時直接是 `$AOS_TICK_CWD/tick/current.json`）。
    - `--node` 改名 `--target`，不留舊名；語意不變（沒給＝`./`；資料夾要有 `<狀態資料夾>/tasks.json`；給檔就是任務表、所在資料夾當工作資料夾）。
    - 實作自己定的（可改）：stderr `no_node:` 跟著改 `no_target:`；`resolve_node()` 改 `resolve_target()`。aos-exec 的目標是位置參數（`aos-exec [xxx]`），aos-daemon 是設定檔 `insts` 的鍵，都沒有 `--target` 旗標；~~這裡照原話做成 `--target`~~（同日改，見待問 17）。
 
-17. **目標改成位置參數？已裁定**〔使用者 2026-10-01，待統一更新 spec〕：`aos-tick [<目標>]`，跟 aos-exec 一樣；目標可為資料夾或任務表檔，沒給＝`./`；拿掉 `--target` 旗標（剛改的，不留）。其餘語意全不變，stderr `no_target:` 保留。
+17. **目標改成位置參數？已裁定**〔使用者 2026-10-01，已寫入 spec（commit 前由我補號）〕：`aos-tick [<目標>]`，跟 aos-exec 一樣；目標可為資料夾或任務表檔，沒給＝`./`；拿掉 `--target` 旗標（剛改的，不留）。其餘語意全不變，stderr `no_target:` 保留。
    - 實作自己定的（可改）：`-h`／`--help` 照舊印用法回 0；其他 `-` 開頭的參數（含 `--target`）、目標多於一個都算用法錯回 1（stderr `usage:`）。目標名字本身以 `-` 開頭時要寫成 `./-xxx`。

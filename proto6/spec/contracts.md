@@ -22,7 +22,7 @@ node id 是資料夾路徑，依 [T-02](terms.md)。其餘用作檔名的 reques
 - 欄位名：時長 `*_ticks`、第幾格 `*_seq`、毫秒時長 `*_ms`、毫秒時間點 `*_at_ms`；schema 型別見 [P-002](protocol/README.md)。
 - 本 node 的格數是核心結束碼紀錄的 `seq`（[B-633](settled/tick.md)），沒 daemon 也有、跨重啟接著數；斷電不倒退只在開了 `--firstdo-fsync` 時保證，否則不保證；daemon 登記的 `tick_seq` 只用在「叫醒後等新格」，不拿來算時長。
 - 〔記錄者理解〕任務表上的任務由它那個 tick 安排，所以任務自己用的時長（保留期、清理間隔、鬧鐘）算本 node 的格；kernel 對成員的判斷（失聯、重試）算 kernel 的格。
-- 〔astra 審整理區裁定裁-2〕daemon 的計時：叫醒週期、收尾寬限、排空上限這類外部／作業系統層的保留毫秒；政策性保留期（掛載診斷保留期）改用所屬上層的格數；逐項見 [daemon 篇「時間」](settled/daemon/README.md)。作業系統與 cgroup 的時間、量測數字、只給人看的紀錄時間也保留原單位。
+- 〔astra 審整理區裁定裁-2〕daemon 的計時：叫醒週期、收尾寬限、排空上限這類外部／作業系統層的保留毫秒；政策性保留期（掛載診斷保留期）改用所屬上層的格數；逐項見舊 daemon 設計的[「時間」表](settled/deferred/daemon/README.md)（暫緩區）；現行的最核心 daemon 只有週期 `interval_ms` 一項，也是毫秒（[B-640](settled/daemon/core.md)）。作業系統與 cgroup 的時間、量測數字、只給人看的紀錄時間也保留原單位。
 - 〔暫定，第二十批疑-12〕預設值直接用格數訂，說明裡附「週期 1 秒時約等於…」，不從毫秒換算。
 
 UTC 只用於給人看與外部規定的時間點；運行中逾時用經過時間，不因牆鐘倒退無限延長。〔使用者方向 2026-09-29〕排隊先後看所屬 kernel 的持久序號，不靠牆鐘，正本見 [S-204](scheduling/admission.md)；格數本身就是序號，天然不怕牆鐘。
@@ -31,7 +31,7 @@ UTC 只用於給人看與外部規定的時間點；運行中逾時用經過時�
 
 ## C-02．歸屬與可選 run
 
-〔使用者方向 2026-09-30，第十九批〕涉及上下層管理時看**有效上層**：預設是資料夾包含推得的上層，在 daemon 底下可用登記覆蓋；覆蓋要新舊兩個上層都同意，〔使用者方向 2026-09-30，第十九批疑點裁定 11〕舊上層沒在 daemon 登記時只要新上層同意（aos 管不著沒登記的），覆蓋後檔案上的管轄權仍跟著資料夾，只改管理關係（[T-10](settled/terms.md)；判定以 [B-628](settled/tick.md)、登記以 [B-606](settled/daemon/registration.md) 為正本）。都不信正文自報身分。IPC 授權以 [daemon](settled/daemon/README.md) 為正本（通道上以憑證認 tick，見 [B-612](settled/daemon/channel.md)），執行身分與額度以[身分篇](base/identity-resources.md)為正本。
+〔使用者方向 2026-09-30，第十九批〕涉及上下層管理時看**有效上層**：預設是資料夾包含推得的上層，在 daemon 底下可用登記覆蓋；覆蓋要新舊兩個上層都同意，〔使用者方向 2026-09-30，第十九批疑點裁定 11〕舊上層沒在 daemon 登記時只要新上層同意（aos 管不著沒登記的），覆蓋後檔案上的管轄權仍跟著資料夾，只改管理關係（[T-10](settled/terms.md)；判定以 [B-628](settled/tick.md)、登記以 [B-606](settled/deferred/daemon/registration.md) 為正本）。都不信正文自報身分。IPC 授權以 [daemon](settled/daemon/README.md) 為正本（通道上以憑證認 tick，見 [B-612](settled/deferred/daemon/channel.md)），執行身分與額度以[身分篇](base/identity-resources.md)為正本。
 
 採用 run 時才留下 run ID、所屬 node 與必要進度／結果，輪次語意見 [S-101／102](scheduling/runs.md)。設定修改與已派材料見 [A-102](agent/configuration.md)；不要求另一套不可變設定庫或全域 owner 表。
 
@@ -79,7 +79,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 | 檔案 RPC：node 之間的請求、回應與其 payload | 忽略 |
 | daemon IPC（socket 上的請求與回應，含 tick–daemon 通道）、helper 私有通道、runner 回報 | 拒絕（維持嚴格） |
 
-〔建議預設，未拍板〕通道上送訊息時，外層的通道請求照 daemon IPC 嚴格；夾帶的訊息本身跟檔案收件同一個格式（〔使用者方向 2026-09-30，第十九批〕），收件任務取走後照檔案 RPC 放寬（[B-614](settled/daemon/messaging.md)）。
+〔建議預設，未拍板〕通道上送訊息時，外層的通道請求照 daemon IPC 嚴格；夾帶的訊息本身跟檔案收件同一個格式（〔使用者方向 2026-09-30，第十九批〕），收件任務取走後照檔案 RPC 放寬（[B-614](settled/deferred/daemon/messaging.md)）。
 
 〔建議預設，未拍板〕程式改寫整份持久檔時，原樣保留不認得的欄位，不因為不認得就刪掉。daemon 設定檔出現不認得的欄位，啟動與熱重載時照樣忽略，但在 stdout 印一行列出這些欄位名，免得拼錯被默默吃掉。
 
@@ -90,6 +90,6 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 | `api_key` | LLM 池設定 | key 只能用 `key_ref` 指到檔案，不寫進設定（[S-301](scheduling/llm.md)） |
 | `argv` | 事項（attention） | 事項只給人或 agent 看的建議，不會被自動執行（[S-405](scheduling/operations.md)） |
 
-這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**：任務是 inst 的超集，可以帶自己的 `user`；省略時照舊用 node inst 的身分。〔使用者方向 2026-09-30，第二十批疑點裁定 6〕核心不切帳號：`user` 跟 tick 的帳號不同時那一項回 125，要切帳號就在 argv 包普通程式 `aos-as`，額度照 inst 核（[B-620](settled/tick.md)、[B-303](settled/helper.md)）。schema 的寫法見 [P-007](protocol/README.md)。
+這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**：任務是 inst 的超集，可以帶自己的 `user`；省略時照舊用 node inst 的身分。〔使用者方向 2026-09-30，第二十批疑點裁定 6〕核心不切帳號：`user` 跟 tick 的帳號不同時那一項回 125，要切帳號就在 argv 包普通程式 `aos-as`，額度照 inst 核（[B-620](settled/tick.md)、[B-303](settled/deferred/helper.md)）。schema 的寫法見 [P-007](protocol/README.md)。
 
 驗收：持久檔與檔案 RPC 多一個不認得的欄位照樣讀得進來、改寫後欄位還在；daemon IPC 多一個欄位被拒；帶禁止鍵的檔整份拒收，任務表的項目帶 `user` 照收（跟 tick 帳號不同時那一項回 125）；舊版檔經 `aos migrate` 後新程式照讀，比自己新的版本被拒。

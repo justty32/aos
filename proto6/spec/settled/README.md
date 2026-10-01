@@ -1,55 +1,49 @@
 # 整理區：tick 與 daemon 的基礎
 
-← [規格入口](../README.md)｜[第二十批裁定](../../notes/verdicts/11-tick-as-unit.md)
+← [規格入口](../README.md)｜[第二十批裁定](../../notes/verdicts/11-tick-as-unit.md)｜[現行程式](../../src/py/README.md)
 
 ## 這是什麼
 
 整理區（`settled/`）放**已經定案、整理好的 tick 與 daemon 基礎**，跟 kernel、agent、LLM、CLI 等其他篇分開。〔使用者方向 2026-09-30，第二十批「整理區」〕
 
-- **git 與 cgroup 已納入，是「有就用」，不是前提。** 沒有時照原來的做法跑；有時的做法寫在各條（git：[B-630、B-622](tick.md)；cgroup：[B-605](daemon/cgroup.md)、[B-634](tick.md)）。提交與還原只限 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔），使用者任務改的檔 aos 不管。
-- **要能自己讀懂。** 區內各篇互相連結；對區外的依賴盡量少，必要的列在下面「對外依賴」。
-- **條號不變。** 搬進來的條文條號一律不改，只換檔案位置；搬的時候只改寫法（短句、先講結論、表格、來源標記收到段末「依據：」）。之後的修正輪（[astra 審整理區](../../notes/reviews/2026-09-30/astra-settled-report.md)）照使用者裁定改了規則，改了什麼、哪些先寫成暫定，見下面「疑點」。「建議預設」「暫定」「記錄者理解」這些狀態標記仍留在對應規則旁。
-- **收送只管系統訊息佇列**：node 之間經 daemon 通道互送請求與回應，由系統級任務 `aos-mq get`／`aos-mq post` 處理；檔案收件區 `requests/`、`responses/` 的收與寫是普通程式，aos 不管（[B-623、B-624](tick.md)）。
-- **主規格是行為正本，協議篇只留格式**（方案 A，[V-01](../conformance.md)）：`tick.md`、`daemon/`、`helper.md` 寫行為；`protocol/` 底下只寫欄位、JSON、argv、結束碼。
-- **其他篇之後才放進來**：kernel、LLM、agent、CLI、基底其餘各篇、協議篇其餘各檔，等它們整理好、跟上新基礎，再一起放入。
+**2026-10-01 統一更新**：整理區改成跟現行 Python POC（[proto6/src/py](../../src/py/README.md)）與當天的裁定一致，分成兩塊：
+
+- **正式篇**：現在就照著做的規定。tick 核心縮成三件事（簡單互斥鎖、照表跑、每項結束碼紀錄）；daemon 縮成「定期叫 `aos-exec` 的 cron」加一個可掛的控制模組；另開一篇通用慣例（結束碼、狀態資料夾名、環境變數）。
+- **[暫緩區](deferred/README.md)**：已經想好、但現在先不做的規定（完整互斥、上下層判定、任務帳號 125、落盤與紀錄失效、整套舊 daemon、helper、cgroup、訊息）。原文照留、條號保留不重用，每條標「暫緩」或「已被 X 取代」。
+
+其他原則照舊：
+
+- **條號不變、不重用。** 搬家只換檔案位置；新規定開新號。
+- **主規格是行為正本，協議篇只留格式**（方案 A，[V-01](../conformance.md)）：`tick.md`、`daemon/` 寫行為；`protocol/` 底下只寫欄位、JSON、argv、結束碼。
+- **git 與 cgroup 是「有就用」，不是前提**（git：[B-630、B-622](tick.md)；cgroup：`aos-cg` [B-634](tick.md)，daemon 那側在暫緩區）。提交與還原只限 aos 自己的東西，使用者任務改的檔 aos 不管。
+- **系統級任務與普通程式**（`aos-git`、`aos-mq`、`aos-publish`、`aos-clean`、`aos-needs`、`aos-cg`）留在正式篇：它們是之後幾段要做的獨立程式，規定沒被推翻；用到暫緩區東西的地方各條有註明。
+- **要能自己讀懂**：區內各篇互相連結；對區外的依賴列在下面「對外依賴」。
+- **其他篇之後才放進來**：kernel、LLM、agent、CLI、基底其餘各篇，等它們跟上新基礎再放入。
 
 ## 閱讀順序
 
-1. [名詞](terms.md)（T-07 tick 核心、T-09 daemon 用語、T-10 四類程式）：先知道「核心、系統級任務、普通程式、停格檔、擋板檔、通道」這些詞。
-2. [通用 tick](tick.md)：核心四件事、結束碼紀錄、標準任務表範本、系統訊息佇列的取與送；git（`aos-git`，B-630、B-622）與每項一框（`aos-cg`，B-634）。
-3. [daemon](daemon/README.md)：先讀 [B-615 部件／核心開關](daemon/components.md)，再看登記、叫醒、重啟、收尾、熱重載、佈建、tick–daemon 通道；cgroup 子樹、node 框與上限（B-605）。runner 是什麼見[名詞 T-09](terms.md#t-09收尾排空停機熱重載逃生口)。
-4. [helper 與 aos-as](helper.md)：root helper 的界線、怎麼用別的帳號跑任務。
-5. 要看格式時：[node 協議](protocol/node.md)（P-200～213：資料夾、任務表、`aos-tick` 與各系統級任務、普通程式的 argv 與結束碼）→ [daemon 協議](protocol/daemon/README.md)（P-100～119：設定、IPC、通道、helper 私有通道、runner）。
+1. [通用慣例](conventions.md)（C-08 結束碼、C-09 `AOS_DIRNAME`、C-10 環境變數總表）：aos 每支程式都守的規矩，最短，先讀。
+2. [名詞](terms.md)（T-07 tick 核心、T-10 四類程式、T-11 daemon 核心與模組）：先知道「核心、系統級任務、普通程式、停格檔、擋板檔、模組」這些詞。
+3. [通用 tick](tick.md)：核心三件事（B-626、B-602、B-620、B-633），再看系統級任務：標準任務表範本、`aos-needs`、佇列的取與送、git、`aos-cg`。
+4. [daemon](daemon/README.md)：[B-640 最核心 daemon](daemon/core.md) → [B-641 控制模組與 `aos-ctl`](daemon/control.md)。
+5. 要看格式時：[node 協議](protocol/node.md)（P-200～213：資料夾、任務表、`aos-tick` 與各系統級任務的 argv 與結束碼）→ [daemon 協議](protocol/daemon/README.md)（P-120 設定檔與輸出、P-121 控制 socket 與 `aos-ctl`）。
+6. 想知道「以後還會有什麼」：[暫緩區](deferred/README.md)。
 
 ## 檔案清單
 
-| 檔 | 條號 | 從哪裡來 |
+| 檔 | 條號 | 說明 |
 |---|---|---|
-| [README.md](README.md) | — | 新建 |
-| [terms.md](terms.md) | T-07、T-09、T-10 | 從 [名詞與責任](../terms.md) 拆出，原處留一行指向這裡 |
-| [tick.md](tick.md) | B-602、B-620～634 | 整篇從 `spec/tick.md` 搬來；B-634（`aos-cg`）是納入 cgroup 時從 [B-202](../base/execution.md) 的草稿搬進來的新條 |
-| [daemon/](daemon/README.md) | B-504、B-601、B-603～615 | 從 `spec/daemon.md` 搬來，依職責拆檔；落點見 [daemon 目錄](daemon/README.md) |
-| [helper.md](helper.md) | B-303 | 從 [身分與資源](../base/identity-resources.md) 拆出，原處留一行指向這裡 |
-| [protocol/node.md](protocol/node.md) | P-200～213 | 整篇從 `spec/protocol/node.md` 搬來 |
-| [protocol/daemon/](protocol/daemon/README.md) | P-100～119 | 整個資料夾從 `spec/protocol/daemon/` 搬來 |
+| [README.md](README.md) | — | 本篇 |
+| [conventions.md](conventions.md) | C-08、C-09、C-10 | 2026-10-01 新開 |
+| [terms.md](terms.md) | T-07、T-10、T-11 | 從 [名詞與責任](../terms.md) 拆出；T-11 是 2026-10-01 新開；T-09 搬到暫緩區 |
+| [tick.md](tick.md) | B-602、B-620～627、B-629～634 | 從 `spec/tick.md` 搬來；B-628 與 B-602、B-620、B-633 的部分內容搬到暫緩區 |
+| [daemon.md](daemon.md) | — | 舊的 daemon 入口，只指向 daemon 目錄 |
+| [daemon/](daemon/README.md) | B-640、B-641 | 2026-10-01 重寫：[core](daemon/core.md)（B-640）、[control](daemon/control.md)（B-641） |
+| [protocol/node.md](protocol/node.md) | P-200～213 | 從 `spec/protocol/node.md` 搬來 |
+| [protocol/daemon/](protocol/daemon/README.md) | P-100、P-120、P-121 | 2026-10-01 重寫：[core](protocol/daemon/core.md)（P-120）、[control](protocol/daemon/control.md)（P-121） |
+| [deferred/](deferred/README.md) | B-628、T-09、B-303、B-504、B-601、B-603～615、P-101～119 | 暫緩區；總表與每條狀態見它的 README |
 
-`spec/protocol/daemon.md` 是舊的單檔入口，留在原處，只改成指向這裡的 daemon 協議。
-
-### daemon 分檔落點
-
-〔使用者方向 2026-09-30 晚〕核心、可掛部件與可關維運分開；條號不改。細分目錄見 [daemon/](daemon/README.md)。
-
-| 落點 | 內容 |
-|---|---|
-| [components](daemon/components.md) | B-615：分工、開關及未拍板預設 |
-| [runtime](daemon/runtime.md) | B-601、B-504；B-605 共通自檢，runner 清程序留核心 |
-| [registration](daemon/registration.md) | B-606、B-607：登記、叫醒／暫停 |
-| [lifecycle](daemon/lifecycle.md) | B-603、B-604、B-611：重啟、收尾、停機、核心鎖 |
-| [channel](daemon/channel.md) | B-610、B-612、B-613：診斷、憑證、掛行程 |
-| [reload](daemon/reload.md)、[helper-actions](daemon/helper-actions.md) | B-608、B-609：留核心，各自可關 |
-| [messaging](daemon/messaging.md) | B-614：可掛訊息與急件 |
-| [cgroup](daemon/cgroup.md) | B-605；B-601、B-603、B-604、B-609、B-611、B-613 的 cgroup 部分 |
-| [service](daemon/service.md) | 既有部署範例 |
+`spec/protocol/daemon.md` 是更舊的單檔入口，留在原處，只指向這裡的 daemon 協議。
 
 ## 怎麼判斷哪些放進來
 
@@ -112,13 +106,22 @@
 
 ## 疑點
 
-### 09-30 晚拆分：開關細節未拍板
+### 2026-10-01 統一更新：要使用者裁定的
 
-本輪的名稱、預設值、重開時機、關閉行為與 helper 動作界線集中在 [B-615 待拍板](daemon/components.md#這輪待拍板)。本輪只改 Markdown，P-101 的五個設定鍵尚未同步到 schema／範例；不影響這輪拆檔完成，落實前須補。
+這輪照現行程式與裁定改 spec 時發現、先照下面寫法落筆的。每條附暫定寫法。
 
-整理時發現、沒有自己改的；以及這輪修正裡先寫成「暫定」的。每條附條號。
+1. **`aos-as`（P-212）留在正式篇還是搬暫緩區？** 它要靠 helper、通道和「鎖 fd 傳給任務」，三樣都在暫緩區。暫時：整條留在 [node 協議](protocol/node.md)，條頭加一句「依賴暫緩區」。B-303 本體已在暫緩區。
+2. **最簡鎖不傳給任務後，系統級任務沒辦法判斷「我在不在 tick 裡」。** `aos-git` 的 `not_in_tick`、`aos-mq`／`aos-publish` 原本都靠繼承的鎖核對。暫時：各條寫「要等暫緩區的『鎖 fd 傳給任務』回來才有判法」。
+3. **任務 `id` 重複沒人擋。** 核心只做極簡檢查；但 `aos-git` 的存檔點用 `id` 取名，重複會混。暫時：B-620「誰驗什麼」表寫明這個後果，交給恢復前驗證（B-625）。
+4. **上下層判定（B-628）暫緩後，兩處沒有正式判準**：`aos-git` 排除巢狀子資料夾（B-622）、發摘要核對「直接下層」（B-624）。暫時：寫「B-628 回來前沒有正式判準」。
+5. **「node」這個詞在 tick 層還剩不少。** 使用者 2026-10-01 說 node 留給之後的 node 模組；這輪 tick 核心的行文已改成「目標／工作資料夾」，但檔名 `protocol/node.md`、`node-*` schema 名、P-200 第一句「node 根目錄的絕對路徑就是 node id」、系統級任務各條的 node 字樣沒動。要不要全面改名？
+6. **控制 socket 收到不認得的欄位照收不理**（照程式），跟 [C-07](../contracts.md)「daemon IPC 嚴格拒絕不認得的欄位」打架。暫時：[P-121](protocol/daemon/control.md) 寫明照程式；C-07 沒改。
+7. **`aos-daemon` 的設定錯誤處理有三處跟 schema 不一致**（照「默認一切正常」）：只有指示詞錯印 `aos-daemon: config: <代號>: …`，自己的檢查印 `aos-daemon: config: <說明>`；缺 `insts`、`control` 沒寫 `socket`、某項的值不是物件時程式直接丟 traceback 回 1；schema 要求 `interval_ms` 是非負整數，程式不查型別。暫時：[P-120](protocol/daemon/core.md) 照程式寫，schema 照嚴格寫。
+8. **`aos-exec` 的 stdout 直接接到 daemon 的 stdout**，不經 daemon 那把鎖，可能跟 daemon 自己的行交錯（stderr 有收齊、不交錯）。暫時：[B-640](daemon/core.md) 照程式寫明。
+9. **inst 第 1 版的頂層 `user` 要不要留？** `aos-exec`、`aos-tick` 都不認得它（當陌生鍵忽略）。暫時：[inst](../base/inst.md) 留著定義，「先決定身分」一節標暫緩，給之後的切帳號機制用。
+10. **整理區以外還有「2＝用法錯」**（kernel 工具、ops、CLI 等）。照 [C-08](conventions.md) 字面是改 1，但那幾篇不在這輪範圍，沒動；整理那幾篇時逐條定改 1 或列為特別指定的碼。
 
-### 系統訊息佇列改寫後，區外要跟上的（本輪沒改）
+### 系統訊息佇列改寫後，區外要跟上的（還沒改）
 
 檔案收件與投件改成普通程式、aos 不管（B-623、B-624），系統級收送只剩 `aos-mq`，鬧鐘撤。下面這些區外條文還寫著舊保證（-32601 由收件任務回、下一格刪原件、`.aos/outbox/` 待送封套、投件任務寫對方 `requests/`、鬧鐘），下一輪要改：
 
@@ -159,16 +162,18 @@
 - B-625、P-207：`config/` 不在 aos 範圍，`aos-config-add` 不自己提交。
 - B-605、B-601：某 node 建框失敗只有它照沒 cgroup 跑、寫事項。
 - B-609：`cgroup_limits` 不收本格憑證。
-- B-633、B-601：`--firstdo-fsync` 由 daemon 放環境變數 `AOS_TICK_FIRSTDO_FSYNC=1` 傳下去。
+- B-633、B-601：`--firstdo-fsync` 由 daemon 放環境變數 `AOS_TICK_FIRSTDO_FSYNC=1` 傳下去。（2026-10-01 跟落盤一起暫緩，見[暫緩區](deferred/tick.md)）
 - B-614、P-200：佇列授權看收件 tick 的 `.aos/mq/get/`。
 - B-624、P-206：失敗紀錄搬到 `.aos/mq/failed/`，由 `mq-post` 下次開始送之前清掉。
 - **同 ID 撞檔名（原第 13 題，沒有現成做法，落 spec 者挑最簡單的）**：`.aos/mq/post/` 與 `.aos/mq/failed/` 的檔名改成 `<id>.req.json`（請求）、`<id>.resp.json`（回應），同 ID 的請求與回應各有各的檔（P-206、B-624）。
 
 ### 前一輪留下、仍是暫定的（astra 審整理區修正輪）
 
+2026-10-01 起，第 1、2、6、7 題講的條（B-609、B-303、B-606、B-610、B-607）都在[暫緩區](deferred/README.md)，跟著暫緩；第 4 題已由「極簡檢查」取代（核心連 `kind` 都不看）。
+
 1. B-609、B-303：`aos-as` 被殺後，runner 從回報 pipe 斷線發現、清空原指令；從 `aos-as` 結束到 runner 清完之間，本格下一項可能短暫重疊。沒有另設取消介面。
 2. B-609：`aos-as` 寫的暫存 inst 要讓目標帳號讀得到，才過得了 runner 的來源核對；怎麼給讀權（群組？）還沒定。
-3. B-633：沒有紀錄的格不佔 `seq`；~~本格紀錄失效後不再寫、不設 `AOS_TICK_RECORD`~~（作廢，2026-09-30 晚）；兩份舊紀錄都讀不懂時每格都沒有紀錄，要人手修。
+3. B-633：沒有紀錄的格不佔 `seq`（現行）；兩份舊紀錄都讀不懂時每格都沒有紀錄、要人手修（2026-10-01 跟紀錄失效處理一起暫緩，見[暫緩區](deferred/tick.md)）。
 4. B-620「誰驗什麼」：核心看到缺 `kind`、`system.x` 照跑，只有恢復前驗證（B-625）擋。
 5. B-625、P-207：`aos-config-add` 有擋板時回 125。
 6. B-606：名稱綁 UID 只在本次 daemon 存續期內有效，不存檔。
@@ -180,7 +185,7 @@
 ### 這輪關掉的
 
 - 舊第 1 題（B-601 runner 當收屍人）：使用者確認定案，拿掉暫定。
-- 舊第 4 題的「開格一定 fsync」：改成預設不 fsync、格數不倒退不保證，除非開 `--firstdo-fsync`（B-633）；剩下的已定案（見上「原暫定 13 題」）與第 3 題。
+- 舊第 4 題的「開格一定 fsync」：改成預設不 fsync、格數不倒退不保證，除非開 `--firstdo-fsync`（B-633；這個旗標 2026-10-01 暫緩）；剩下的已定案（見上「原暫定 13 題」）與第 3 題。
 - 舊第 8 題的一半：pause 存檔間隔與事項批次保留毫秒，使用者裁定。
 - 舊第 10 題的「回應怎麼回」：回應也走 `aos-mq`（B-623、B-624、B-614、P-119）；送不出去的改成留一格失敗紀錄（已定案，見上）。
 - 舊第 11 題（佇列授權看 `requests/`）：改看 `.aos/mq/get/`（已定案，見上）。

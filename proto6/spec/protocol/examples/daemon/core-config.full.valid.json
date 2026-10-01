@@ -1,0 +1,11 @@
+{
+  "cwd": "/home/u/nodes",
+  "interval_ms": 60000,
+  "stop_on_nonzero": false,
+  "exec_err_path": "<inst>/err.log",
+  "modules": {"control": {"socket": "./aos.sock"}, "later": {"anything": 1}},
+  "insts": {
+    "a": {},
+    "jobs/report.json": {"interval_ms": 5000, "stop_on_nonzero": true}
+  }
+}

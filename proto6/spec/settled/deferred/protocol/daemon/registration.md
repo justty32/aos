@@ -1,6 +1,8 @@
 # daemon 協議：註冊、叫醒與查登記
 
-← [daemon 協議](README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[daemon](../../daemon/README.md)、[helper](../../helper.md)、[身分](../../../base/identity-resources.md)、[inst](../../../base/inst.md)｜[裁定](../../../../notes/2026-09-29-verdicts.md)
+← [舊 daemon 協議（暫緩區）](README.md)｜[共用約定](../../../../protocol/README.md)｜行為正本：[舊 daemon](../../daemon/README.md)、[helper](../../helper.md)、[身分](../../../../base/identity-resources.md)、[inst](../../../../base/inst.md)｜[裁定](../../../../../notes/2026-09-29-verdicts.md)
+
+> **這篇整篇在暫緩區**（2026-10-01）：舊協議的登記、叫醒與查詢 method。現行的叫醒、暫停、恢復、查詢見 [P-121](../../../protocol/daemon/control.md)。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 本檔只留 method 的 params、result 與錯誤碼（第十八批）。行為去這裡找：
 
@@ -14,6 +16,8 @@
 | 掛行程與砍掉 | [P-118](channel.md) |
 
 ## P-104．註冊〔建議預設，未拍板〕
+
+> **暫緩**（2026-10-01）：`node.register`；daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01）。條號保留、不重用。
 
 `node.register` 登記一個非頂層 node；頂層只從設定載入，不走 IPC。
 
@@ -30,7 +34,7 @@
 
 **result**：`{node_id, parent_id, registration_id}`＝正規化後的 id、有效上層、登記識別。
 
-schema 見 [daemon-registration](../../../protocol/schemas/daemon-registration.schema.json) 的 `RegisterParams`。範例：[看資料夾推上層](../../../protocol/examples/daemon/register.minimal.valid.json)、[帶憑證覆蓋上層](../../../protocol/examples/daemon/register.override-token.valid.json)、[回應](../../../protocol/examples/daemon/register_result.minimal.valid.json)、[反例：帶已拿掉的 once](../../../protocol/examples/daemon/register.once.invalid.json)、〔第十八批〕[前綴額度](../../../protocol/examples/daemon/register.grant-prefix.valid.json)。
+schema 見 [daemon-registration](../../../../protocol/schemas/daemon-registration.schema.json) 的 `RegisterParams`。範例：[看資料夾推上層](../../../../protocol/examples/daemon/register.minimal.valid.json)、[帶憑證覆蓋上層](../../../../protocol/examples/daemon/register.override-token.valid.json)、[回應](../../../../protocol/examples/daemon/register_result.minimal.valid.json)、[反例：帶已拿掉的 once](../../../../protocol/examples/daemon/register.once.invalid.json)、〔第十八批〕[前綴額度](../../../../protocol/examples/daemon/register.grant-prefix.valid.json)。
 
 **常見錯誤**（碼表見 P-111、[P-119](channel.md)）：
 
@@ -47,6 +51,8 @@ schema 見 [daemon-registration](../../../protocol/schemas/daemon-registration.s
 
 ## P-105．解除、叫醒、暫停、恢復與清除掛載診斷〔建議預設，未拍板〕
 
+> **部分已被取代、其餘暫緩**（2026-10-01）：`node.wake`／`node.pause`／`node.resume` 被 [P-121](../../../protocol/daemon/control.md) 的 `wake`／`pause`／`resume` 取代（對象改成 inst 字面值，wake 不回 `tick_seq`）；`node.unregister`、`mount.clear` 與故障停格暫緩，daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01）。條號保留、不重用。
+
 | method | params | result |
 |---|---|---|
 | `node.unregister` | `{node_id}`，〔第十九批〕可加 `token` | `{node_id}` |
@@ -59,9 +65,9 @@ schema 見 [daemon-registration](../../../protocol/schemas/daemon-registration.s
 - `registration_id`：目標目前的登記識別。
 - `tick_seq`：接受 wake 當下最近一格的格次序號；還沒開過格為 0。
 - 怎樣算「wake 之後新的一格做完」見 [B-607](../../daemon/registration.md)。
-- 範例：[請求](../../../protocol/examples/daemon/wake.minimal.valid.json)、[回應](../../../protocol/examples/daemon/wake_result.minimal.valid.json)。
+- 範例：[請求](../../../../protocol/examples/daemon/wake.minimal.valid.json)、[回應](../../../../protocol/examples/daemon/wake_result.minimal.valid.json)。
 
-**`mount.clear` 的回應**：`cleared` 是實際清掉的筆數（非負整數）；沒有可清的回 0，不算錯誤。範例：[請求](../../../protocol/examples/daemon/mount_clear.minimal.valid.json)、[回應](../../../protocol/examples/daemon/mount_clear_result.minimal.valid.json)、[反例：多一個欄位](../../../protocol/examples/daemon/mount_clear.extra.invalid.json)。
+**`mount.clear` 的回應**：`cleared` 是實際清掉的筆數（非負整數）；沒有可清的回 0，不算錯誤。範例：[請求](../../../../protocol/examples/daemon/mount_clear.minimal.valid.json)、[回應](../../../../protocol/examples/daemon/mount_clear_result.minimal.valid.json)、[反例：多一個欄位](../../../../protocol/examples/daemon/mount_clear.extra.invalid.json)。
 
 **錯誤**：
 
@@ -72,9 +78,11 @@ schema 見 [daemon-registration](../../../protocol/schemas/daemon-registration.s
 | 停機中的 wake | `stopping` |
 | 對掛載行程送這幾個 method | `kind_mismatch` |
 
-**故障停格**：行為以 [B-607](../../daemon/registration.md) 為正本。一句話：daemon 不看結束碼、不看停格檔，只看擋板檔 `.aos/tick-blocked`，在就不開格（第二十批）。檔案位置見 [node P-200](../node.md)。
+**故障停格**：行為以 [B-607](../../daemon/registration.md) 為正本。一句話：daemon 不看結束碼、不看停格檔，只看擋板檔 `.aos/tick-blocked`，在就不開格（第二十批）。檔案位置見 [node P-200](../../../protocol/node.md)。
 
 ## P-106．查登記與最近一格〔使用者方向 2026-09-29，CLI H-034 D1；欄位為工程預設〕
+
+> **部分已被取代、其餘暫緩**（2026-10-01）：查一項的狀態被 [P-121](../../../protocol/daemon/control.md) 的 `status` 取代；`node.show` 的登記欄位、最近一格 `last_tick`、`node.ls` 分頁暫緩，daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01）。條號保留、不重用。
 
 ### `node.show`
 
@@ -107,7 +115,7 @@ params 只有 `node_id`。result 欄位：
 | 欄位 | 意思 |
 |---|---|
 | `tick_seq`〔第十八批〕 | 格次序號：本次登記內從 1 遞增的整數（[B-607](../../daemon/registration.md)） |
-| `started_at_ms` | daemon 接受這次開格、進入啟動流程的 UTC 毫秒。daemon 在格外，這是給人看的紀錄，保留毫秒（第二十批，[C-01](../../../contracts.md)） |
+| `started_at_ms` | daemon 接受這次開格、進入啟動流程的 UTC 毫秒。daemon 在格外，這是給人看的紀錄，保留毫秒（第二十批，[C-01](../../../../contracts.md)） |
 | `ended_at_ms` | 完成收尾的 UTC 毫秒；還在啟動、執行或清後代時為 null |
 | `exit_code` | 可信 runner 回報的 0～255 整數；執行中或結果不明為 null |
 | `started` | 可信 runner 的 started：completed 為 true、launch_failed 為 false、running 為 null；unknown 只在已有可信 started:true 時填 true，否則 null |
@@ -133,12 +141,14 @@ params 只有 `node_id`。result 欄位：
 
 人手指令：`aos node ls --socket S` 用 `node.ls`，`aos node show N --socket S` 用 `node.show`。
 
-範例：[查一個 node](../../../protocol/examples/daemon/get_result.minimal.valid.json)（沒有 cgroup，`cgroup:null`）、[有 cgroup 時查一個 node](../../../protocol/examples/daemon/get_result.cgroup.valid.json)（`cgroup.path` 是 `/srv/aos/team` 為頂層、子樹根 `/sys/fs/cgroup/aos` 時 `/srv/aos/team/member` 的 `n-<h>`）、[已結束的掛載行程未啟動](../../../protocol/examples/daemon/get_result.launch_failed.valid.json)、[列表](../../../protocol/examples/daemon/list_result.minimal.valid.json)；反例：[launch_failed 卻 exit 0](../../../protocol/examples/daemon/get_result.launch_success.invalid.json)、[缺 running](../../../protocol/examples/daemon/get_result.missing_running.invalid.json)、[running 卻有 exit_code](../../../protocol/examples/daemon/list_result.running_exit.invalid.json)、〔第十八批〕[最近一格缺 tick_seq](../../../protocol/examples/daemon/get_result.missing_tick_seq.invalid.json)。
+範例：[查一個 node](../../../../protocol/examples/daemon/get_result.minimal.valid.json)（沒有 cgroup，`cgroup:null`）、[有 cgroup 時查一個 node](../../../../protocol/examples/daemon/get_result.cgroup.valid.json)（`cgroup.path` 是 `/srv/aos/team` 為頂層、子樹根 `/sys/fs/cgroup/aos` 時 `/srv/aos/team/member` 的 `n-<h>`）、[已結束的掛載行程未啟動](../../../../protocol/examples/daemon/get_result.launch_failed.valid.json)、[列表](../../../../protocol/examples/daemon/list_result.minimal.valid.json)；反例：[launch_failed 卻 exit 0](../../../../protocol/examples/daemon/get_result.launch_success.invalid.json)、[缺 running](../../../../protocol/examples/daemon/get_result.missing_running.invalid.json)、[running 卻有 exit_code](../../../../protocol/examples/daemon/list_result.running_exit.invalid.json)、〔第十八批〕[最近一格缺 tick_seq](../../../../protocol/examples/daemon/get_result.missing_tick_seq.invalid.json)。
 
 驗收見 [B-607](../../daemon/registration.md)、[B-610](../../daemon/channel.md)。
 
 ## P-115．啟動 ID 與按需重建〔使用者方向 2026-09-29，裁定「kernel 別每格都重新註冊」；欄位為工程預設〕
 
+> **暫緩**（2026-10-01）：`daemon.info` 與 `boot_id`；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
+
 `daemon.info`（對應 `aos daemon info`）：params 為 `{}`，result 只有 `boot_id`（共用 ID，建議隨機 UUID）。`node.show`、`node.ls` 回的 `boot_id` 跟它一致。
 
-`boot_id` 的生命週期、逐層重建與「別每格重登」的行為見 [B-603](../../daemon/lifecycle.md)、[B-606](../../daemon/registration.md)（astra 審整理區必-8 從本條搬上）；kernel 那側見 [kernel 任務篇](../../../protocol/kernel-tasks.md)。驗收見 B-603。
+`boot_id` 的生命週期、逐層重建與「別每格重登」的行為見 [B-603](../../daemon/lifecycle.md)、[B-606](../../daemon/registration.md)（astra 審整理區必-8 從本條搬上）；kernel 那側見 [kernel 任務篇](../../../../protocol/kernel-tasks.md)。驗收見 B-603。

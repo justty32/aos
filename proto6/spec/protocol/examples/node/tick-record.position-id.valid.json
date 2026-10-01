@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "seq": 7,
+  "started_at_ms": 1790000180000,
+  "tasks": [
+    {
+      "id": "0",
+      "exit": 0
+    },
+    {
+      "id": "named",
+      "exit": 2
+    },
+    {
+      "id": "2",
+      "signal": 15
+    }
+  ],
+  "ended": true,
+  "exit": 0
+}

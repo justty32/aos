@@ -7,7 +7,7 @@
 | [工作材料與結果](work.md) | 固定一次工作的輸入、識別與結果 |
 | [inst 第 1 版](inst.md) | 跑什麼、用誰、路徑、環境與指示詞 |
 | [執行器](execution.md) | 啟動、後代收尾、取消、逾時與失敗 |
-| [身分與資源](identity-resources.md) | 身分額度、資源限制的落地；可選 helper 與 `aos-as`（B-303）已搬到[整理區](../settled/helper.md) |
+| [身分與資源](identity-resources.md) | 身分額度、資源限制的落地；可選 helper 與 `aos-as`（B-303）已搬到[整理區](../settled/deferred/helper.md) |
 | [儲存](storage.md) | 收件區、追蹤區、完整發布與清理 |
 | [通訊](transport.md) | 投件授權與簡單去重 |
 | [daemon](../settled/daemon/README.md)（整理區） | 定期跑 `aos-tick` 的標準程式：登記、喚醒、程序生命週期、重啟與通道 |

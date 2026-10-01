@@ -8,9 +8,9 @@
 
 ## P-601．兩處事項〔使用者方向 2026-09-29〕
 
-attention 是交給人或 agent 手動處理的待辦清單，誰寫、何時寫以 [S-405](../scheduling/operations.md) 為正本，daemon 那側的停格事項見 [B-607](../settled/daemon/registration.md)。node 的事項放 `.aos/attention/open/<issue_id>.json`，標完成時搬到 `done/`；整個 `.aos/attention/` ignore，不隨 git 還原。once 單檔未啟動仍沿 [P-110](../settled/protocol/daemon/provision-and-runner.md) 的 `.err`。建 node 時須授 daemon 寫權。
+attention 是交給人或 agent 手動處理的待辦清單，誰寫、何時寫以 [S-405](../scheduling/operations.md) 為正本，daemon 那側的停格事項見 [B-607](../settled/deferred/daemon/registration.md)。node 的事項放 `.aos/attention/open/<issue_id>.json`，標完成時搬到 `done/`；整個 `.aos/attention/` ignore，不隨 git 還原。once 單檔未啟動仍沿 [P-110](../settled/deferred/protocol/daemon/provision-and-runner.md) 的 `.err`。建 node 時須授 daemon 寫權。
 
-daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../settled/daemon/registration.md)。daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC 查：ls／show 直接讀 `state_dir/attention/` 的檔案，加上記憶體裡還沒寫出的那幾筆；內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
+daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../settled/deferred/daemon/registration.md)。daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC 查：ls／show 直接讀 `state_dir/attention/` 的檔案，加上記憶體裡還沒寫出的那幾筆；內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
 
 兩處沿用 [ops-attention](schemas/ops-attention.schema.json)：必填 version、source_node、issue_id、reason、白話 `message`；可選 `suggestion` 是「建議處理」文字，可以附建議指令，但不會被自動執行。job_id／attempt_id／request_id 按需附；〔第十八批；第二十批疑點裁定 7 改成格數〕可選 `reported_seq` 是首次回報時寫的那個 node 的第幾格（[B-633](../settled/tick.md)），壞收件原件的保留期從這一格算（[B-404](../base/storage.md)）；取代 `reported_at_ms`。daemon 寫的事項沒有格數，不帶。不帶憑證或完整工作。〔使用者方向 2026-09-30，第十八批〕`argv` 是永遠禁止的鍵（[C-07](../contracts.md)），schema 寫 `"argv": false`，出現就整份拒收。
 
@@ -48,7 +48,7 @@ aos-clean [--node <node>] --config <設定檔>
 
 [ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；〔第二十批，時長改格數，算本 node 的格〕`interval_ticks` 預設 1000、`retention_ticks` 預設 100000（〔使用者方向 2026-09-30，第二十批〕直接用格數訂：週期 1 秒時約 17 分鐘與 28 小時，週期 30 秒時約 8 小時與 35 日；取代 `interval_seconds` 86400、`retention_ms` 2592000000）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 requests／responses；無效設定回 2。
 
-預設 agent／kernel 任務表各有一項 `aos-clean --config config/clean.json`，每格呼叫；任務表不加間隔欄位。aos-clean 自己在追蹤的 `state/ops/clean.json` 記 `{version:1,last_cleaned_seq}`（〔第二十批〕上次清理完成是本 node 第幾格，取代 `last_cleaned_at_ms`）；沒有這個檔就算已到期。現在第幾格：在 tick 內讀 `AOS_TICK_RECORD`，tick 外直接跑讀 `.aos/tick/current.json`（最近一格）；都讀不到（不知道 `seq`）時不清、回 0、stderr 印 `no_record`。何時更新見 [B-404](../base/storage.md)。
+預設 agent／kernel 任務表各有一項 `aos-clean --config config/clean.json`，每格呼叫；任務表不加間隔欄位。aos-clean 自己在追蹤的 `state/ops/clean.json` 記 `{version:1,last_cleaned_seq}`（〔第二十批〕上次清理完成是本 node 第幾格，取代 `last_cleaned_at_ms`）；沒有這個檔就算已到期。現在第幾格：讀 `.aos/tick/current.json`——在 tick 內就是本格（`$AOS_TICK_CWD/.aos/tick/current.json`，[P-213](../settled/protocol/node.md)），tick 外直接跑就是最近一格；都讀不到（不知道 `seq`）時不清、回 0、stderr 印 `no_record`。何時更新見 [B-404](../base/storage.md)。
 
 直接跑與在 tick 內跑時怎麼持鎖、誰提交，以 [B-404](../base/storage.md) 與 [B-602](../settled/tick.md) 為正本。〔使用者方向 2026-09-29〕不為清理另開全域定時程序或叫醒冷 node，有權限者可直接清退役 node。
 

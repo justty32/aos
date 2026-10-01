@@ -1,16 +1,20 @@
 # daemon cgroup：框、上限與啟動自檢
 
-← [daemon 目錄](README.md)｜[整理區](../README.md)
+← [舊 daemon 目錄（暫緩區）](README.md)｜[整理區](../../README.md)
+
+> **這篇整篇在暫緩區**（2026-10-01）：舊 daemon 的 cgroup 部件；cgroup 之後另做成模組。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 ## B-605：依賴與啟動自檢
+
+> **暫緩**（2026-10-01）：cgroup 部件與啟動自檢；最核心 daemon 第一版不做（使用者 2026-10-01），cgroup 之後另做成模組。條號保留、不重用。
 
 〔使用者方向 2026-09-30 晚〕node 框、上限、有框時的清框與 cgroup 子樹鎖都屬可掛的 cgroup 部件；helper 的 cgroup 動作也歸本部件。共通最低需求仍屬核心。
 
 〔建議預設，未拍板〕`enable_cgroup:false` 時不偵測、不建框、不取 cgroup 子樹鎖，也不依 `cgroup_root_last` 清舊框；即使機器可用 cgroup 也走現成 `cgroup=off` 路線：`node.show.cgroup:null`、`cgroup_limits` 與帶 `frame` 的 `spawn_as` 回 `unsupported`，runner 照常開格及收尾。`cgroup_root`、`create_cgroup`（含旗標）仍做既有格式／必填相依驗證，但不執行 cgroup 動作。`spawn_as` 若同時被 helper 動作開關關掉，先照 B-609 回 `not_available`；上述帶 `frame` 回 `unsupported` 指 helper 動作仍開著的情形。以下「有就用」皆以本部件開著為前提。
 
-依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
 
-**tick 核心不需要 cgroup；daemon 有 cgroup 就用、沒有就退回 runner 那一套**（B-601、B-604）。cgroup 給 daemon／helper（node 框與資源上限）與普通程式 `aos-cg`（每項一框，[B-634](../tick.md)）用。
+**tick 核心不需要 cgroup；daemon 有 cgroup 就用、沒有就退回 runner 那一套**（B-601、B-604）。cgroup 給 daemon／helper（node 框與資源上限）與普通程式 `aos-cg`（每項一框，[B-634](../../tick.md)）用。
 
 - 撤掉的：第十四、十五批「沒 cgroup v2 就拒絕啟動」；第十九批的「沒 cgroup 走備援、降到備援級」「完整路／備援路」與啟動時印 `standard: cgroup=…`。
 - 初版不使用 systemd 當執行期依賴；systemd 只當取得委派子樹、開機自動啟動的方式（下面與 [service 範例](service.md)）。
@@ -98,7 +102,7 @@ daemon 共通的最低需求與不查 git 見 [B-605 的共通自檢](runtime.md
 
 ### 逃生口：node 自開的子框，不管
 
-〔使用者方向 2026-09-30，第十八批 Q19；納入 cgroup 與 git 疑-7「准」〕node 可以在自己的 `n-<h>` 下另開子框（名字避開保留名），把程序搬進去、刻意留常駐程序。**這不在 aos 的管轄範圍內，aos 不管**，跟「通道是唯一逃生口」（[T-07](../terms.md)）不算衝突。
+〔使用者方向 2026-09-30，第十八批 Q19；納入 cgroup 與 git 疑-7「准」〕node 可以在自己的 `n-<h>` 下另開子框（名字避開保留名），把程序搬進去、刻意留常駐程序。**這不在 aos 的管轄範圍內，aos 不管**，跟「通道是唯一逃生口」（[T-07](../../terms.md)）不算衝突。
 
 - 格後收尾只看 `tick` 與 `task-*`，不碰這些子框（B-601）。
 - daemon 重啟（B-603）與解除登記（B-606）時殺不殺，照設定 `kill_escape_cgroups`：預設 false，不殺、框留著；設成 true 就一併收尾（[P-101](../protocol/daemon/startup-and-ipc.md)）。
@@ -116,6 +120,8 @@ quota 與初版共通界線見 [B-605 的共通自檢](runtime.md#啟動自檢b-
 
 ## 核心條文的 cgroup 部分
 
+> **暫緩**（2026-10-01）：跟著 B-605 與各條一起暫緩；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
+
 以下各段沿用來源條號，不另編號；核心的 runner、登記、收尾及掛行程仍見各條正本。
 
 ### 格後清框（B-601）
@@ -130,7 +136,7 @@ quota 與初版共通界線見 [B-605 的共通自檢](runtime.md#啟動自檢b-
 | 等不到歸零 | 例如 D 狀態程序：算後代清不空，照 B-607 停格 |
 
 - 框兜得住 runner 清不到的：跳出程序群組又自設 subreaper 的、換成別的帳號的（經 `aos-as` 開、放進本 node 框的）。經外部服務開的仍在框外，不歸 aos 管。
-- 包了 `aos-cg` 的項，自己在 `task-*` 框裡當場收（[B-634](../tick.md)）；daemon 的格後收尾只是兜底。
+- 包了 `aos-cg` 的項，自己在 `task-*` 框裡當場收（[B-634](../../tick.md)）；daemon 的格後收尾只是兜底。
 - 某個 node 建不了框時，那個 node 照沒有 cgroup 的做法跑（B-605「中途失效」）。
 
 ### 重啟清框（B-603）
@@ -155,14 +161,14 @@ quota 與初版共通界線見 [B-605 的共通自檢](runtime.md#啟動自檢b-
 
 〔使用者方向 2026-09-30，第十八批；拿掉「整棵子樹全空才改」〕
 
-- **隨時改**：`cgroup_limits` 調高、調低都隨時寫，不關閘門、不等全空；同一框的寫入依序做。已是相同值就核對後成功，不重寫。改限制值不算中途換資源範圍（[B-302](../../base/identity-resources.md)）。
-- **調低超過現用量**：由 Linux 自己處理（例如記憶體回收或 OOM、新 fork 失敗），aos 不擋；要記一筆的是下指令的 kernel，記在它自己的資源狀態檔（[S-203](../../scheduling/admission.md)）。
+- **隨時改**：`cgroup_limits` 調高、調低都隨時寫，不關閘門、不等全空；同一框的寫入依序做。已是相同值就核對後成功，不重寫。改限制值不算中途換資源範圍（[B-302](../../../base/identity-resources.md)）。
+- **調低超過現用量**：由 Linux 自己處理（例如記憶體回收或 OOM、新 fork 失敗），aos 不擋；要記一筆的是下指令的 kernel，記在它自己的資源狀態檔（[S-203](../../../scheduling/admission.md)）。
 - **controller 往下開**：要在子 node 上寫上限，上一層的 `cgroup.subtree_control` 要開 `+cpu +memory +pids`；daemon 建框時就開。某個 controller 不在（例如使用者層 systemd 沒委派 `cpu`），那一項回 `unsupported`，其餘照用。
 - 上層 node 帳號關掉自己框的 controller，等於撤了自己子 node 的上限；這在它的權限內，不是逃脫，祖先對整棵分支的上限照樣有效（B-605）。
 
 ### spawn_as 的框（B-609）
 
-- **帶 `frame`**（有 cgroup 時）：`aos-as` 在 `aos-cg` 開的 `task-<seq>-<pid>` 框裡時（寫成 `aos-cg -- aos-as <帳號> -- 原指令`，[B-634](../tick.md)），請求帶 `frame`＝那個框。helper 核對它是本 node `n-<h>` 的直接子框、存在且沒有程序，把 runner 放進去再 exec。框仍歸 node 的帳號，`aos-cg` 照 B-634 等它清空、必要時 `cgroup.kill`。
+- **帶 `frame`**（有 cgroup 時）：`aos-as` 在 `aos-cg` 開的 `task-<seq>-<pid>` 框裡時（寫成 `aos-cg -- aos-as <帳號> -- 原指令`，[B-634](../../tick.md)），請求帶 `frame`＝那個框。helper 核對它是本 node `n-<h>` 的直接子框、存在且沒有程序，把 runner 放進去再 exec。框仍歸 node 的帳號，`aos-cg` 照 B-634 等它清空、必要時 `cgroup.kill`。
 - 沒帶 `frame`、daemon 有 cgroup 時，runner 放進本 node 的 `tick` 框，格後收尾一起收（B-601）。
 - 沒有 cgroup 時帶了 `frame` 回 `unsupported`。
 
@@ -186,7 +192,7 @@ cgroup 子樹那把同樣直接對目錄取（cgroup 目錄裡不能另建一般
 
 [B-604 的 runner 收尾](lifecycle.md#收尾)第 6 步，**有 cgroup 時**：對範圍內仍有程序的框寫 `cgroup.kill`，以 `cgroup.events` 的 populated 確認全空。
 
-依據：第十八批；納入 cgroup 與 git 改寫計畫（`cgroup.kill` 兜底）；[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)（拆成部件）。
+依據：第十八批；納入 cgroup 與 git 改寫計畫（`cgroup.kill` 兜底）；[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)（拆成部件）。
 
 **驗收（開關／多實例）：**〔建議預設，未拍板〕部件關掉但機器有 cgroup 時，印 `cgroup=off`、不碰新舊框、只取核心鎖；`node.show.cgroup` 為 null，runner 的格後收尾仍成立。
 

@@ -1,8 +1,12 @@
 # daemon 部件與核心開關
 
-← [daemon 目錄](README.md)｜[設定格式](../protocol/daemon/startup-and-ipc.md)
+← [舊 daemon 目錄（暫緩區）](README.md)｜[設定格式](../protocol/daemon/startup-and-ipc.md)
+
+> **這篇整篇在暫緩區**（2026-10-01）：舊 daemon 的部件開關。現行做法是設定檔的 `modules`（[B-640](../../daemon/core.md)）。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 ## B-615：部件形式與開關
+
+> **已被 [B-640](../../daemon/core.md) 取代**（2026-10-01）：部件改成設定檔頂層 `modules` 物件，一個模組一個鍵、有寫就開；核心只認得這個位置。舊的五個 `enable_*` 開關鍵不做，現在唯一的模組是控制模組（[B-641](../../daemon/control.md)）。原文留作紀錄，不再適用。
 
 〔使用者方向 2026-09-30 晚〕**同一支程式，用設定檔開關。** 不拆成獨立程式，不另開部件介面。保證跟著掛了什麼走：
 
@@ -17,7 +21,7 @@
 
 | 設定開關 | false 時 | 行為正本 |
 |---|---|---|
-| `enable_messaging` | 不提供訊息佇列；合法 send 回 `not_available`，合法 take 回空；不產生急件 wake，任務表照用 | [B-614](messaging.md)；客戶端 [B-623、B-624](../tick.md) |
+| `enable_messaging` | 不提供訊息佇列；合法 send 回 `not_available`，合法 take 回空；不產生急件 wake，任務表照用 | [B-614](messaging.md)；客戶端 [B-623、B-624](../../tick.md) |
 | `enable_cgroup` | 等於沒有 cgroup，走現成 `cgroup=off` 路線；runner 照做 | [B-605](cgroup.md) |
 | `enable_reload` | SIGHUP 只警告、不重讀、不退出 | [B-608](reload.md) |
 | `enable_drain` | `stop_mode` 即使為 drain 也採立即停，照常收尾與存檔 | [B-604](lifecycle.md) |
@@ -25,7 +29,7 @@
 
 〔建議預設，未拍板〕**五個開關一律重開才生效**，不在運行中掛上或卸下部件。熱重載開著時，改開關照 B-608 的 `restart_required` 處理；熱重載關著時，照該條不重讀。啟用只代表允許使用，仍須通過原有授權與環境條件：cgroup 開著但環境不可用仍是 off，helper 動作開著但 helper 不在仍回 `helper_unavailable`，都不繞過原規則。
 
-依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)（A／B／C／D 分工、同程式設定開關）；沒掛時的行為與開關細節為〔建議預設，未拍板〕。
+依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)（A／B／C／D 分工、同程式設定開關）；沒掛時的行為與開關細節為〔建議預設，未拍板〕。
 
 **驗收：**只用同一支 `aos daemon` 及設定檔切換；兩個部件與三個核心功能都關掉時，通用 user 的 node 仍能登記、開格、叫醒／暫停、runner 收尾、重啟與核對通道憑證。〔建議預設，未拍板〕省略五鍵時沿用原行為；每鍵單獨關閉及全部關閉各驗一次，結果見表中正本。部件都關時仍可 mount／kill；同一張任務表不需改，mq-post 回 1 不會讓 daemon 停格。改開關只在重開後生效。
 
@@ -35,4 +39,4 @@
 - cgroup 關閉時沿用 off，設定仍驗格式但不動新舊框；訊息關閉時 send／post 報錯、take／get 回空，以及 `not_available` 不自動重試、沿用失敗紀錄。
 - 關熱重載只警告、關排空改立即停；helper 開關只關對外非 cgroup 動作，保留核心內部路徑的界線。
 
-這些只待裁定，不阻擋本輪規格拆檔。既有暫定事項仍見[整理區疑點](../README.md#疑點)，本輪不重裁。
+這些只待裁定，不阻擋本輪規格拆檔。既有暫定事項仍見[整理區疑點](../../README.md#疑點)，本輪不重裁。

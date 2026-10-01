@@ -10,7 +10,7 @@
 
 > **10-01 追加裁定（使用者，原話節錄）**：「關於印出來的樣子，其實不用是id，應該是inst=j/r.json這樣。id這個概念其實可以不存在於daemon核心了。」「daemon config json的頂層可以加上一個key: modules。然後整份daemon config都可以用aos dirictive去解析」「$ref 照建議，從設定檔所在資料夾算，算完之後才讓cwd那個key被應用。」另同意實作回報三點：stderr 標頭一律加（含 `<inst>` 個別檔）、inst 沒有資料夾部分時 `<inst>` 換成 `.`、daemon 退出後 aos-exec 寫 stderr 吃 SIGPIPE 不處理。下面各步已照改：**核心沒有 id**（一項＝`inst` 字面值＋在 `insts` 的位置）、**整份設定檔先展開指示詞**、**頂層 `modules` 認得不解讀**（步驟 1）、印 `inst=…`（步驟 2、4、6）。
 
-> **10-01 再追加：`insts` 改成物件（使用者原話「daemon config中，其實可以是{"insts":{"jobs/report.json":{...},"haha.json":{...}}}」）**：鍵＝inst 字面值，值＝該項設定物件（可為 `{}`）；陣列寫法與項內 `inst` 鍵撤掉、不相容。第幾項（stderr 標頭的 `index`）照鍵的順序從 0 數。步驟 1、2 與測試已照改；verdicts 11 篇末同步記了（待統一更新 spec）。
+> **10-01 再追加：`insts` 改成物件（使用者原話「daemon config中，其實可以是{"insts":{"jobs/report.json":{...},"haha.json":{...}}}」）**：鍵＝inst 字面值，值＝該項設定物件（可為 `{}`）；陣列寫法與項內 `inst` 鍵撤掉、不相容。第幾項（stderr 標頭的 `index`）照鍵的順序從 0 數。步驟 1、2 與測試已照改；verdicts 11 篇末同步記了（已寫入 spec（commit 前由我補號））。
 
 > **POC 總原則**：默認一切正常——設定檔讀得懂、路徑都對、`aos-exec` 叫得起來、沒有兩個 daemon 跑同一份清單。不寫異常處理，出事讓 Python 自然丟錯（traceback、回 1）。
 

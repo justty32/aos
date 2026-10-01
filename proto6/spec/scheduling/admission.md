@@ -8,9 +8,9 @@
 
 冷成員沒有新事件或到期工作就不反覆開空 tick。等待工具／LLM 結果也不占住 tick；有結果再叫醒。run 是軟性原則，不以「目前 run 還沒結束」一律排除新訊息。收到新件與本格轉 idle 交錯時，下一次核對仍須看見尚未處理的收件，不能拿舊摘要蓋掉新件。
 
-〔使用者方向 2026-09-30，第十八批；審稿新必-2〕**「叫醒後新的一格已做完」看格次序號，不看時間**（daemon 那側見 [B-607](../settled/daemon/registration.md)）。kernel 叫醒成員時，記下 wake 回應的 `registration_id` 與 `tick_seq`（還沒跑過任何一格是 0）。之後 `node.show` 看到 `registration_id` 相同、`last_tick.tick_seq` 較大且那格不是 `running`，才算新的一格已完成，這時才重新採用成員摘要；`registration_id` 變了（重新登記、換父、daemon 重啟），表示舊的等待已結束，直接重新核對收件與摘要，不再等舊的那格。在那之前舊的 ready 不拿來反覆叫醒。牆鐘可能校正，格的結束時間不拿來判斷新舊。格式見 [P-803](../protocol/kernel-tasks.md)。
+〔使用者方向 2026-09-30，第十八批；審稿新必-2〕**「叫醒後新的一格已做完」看格次序號，不看時間**（daemon 那側見 [B-607](../settled/deferred/daemon/registration.md)）。kernel 叫醒成員時，記下 wake 回應的 `registration_id` 與 `tick_seq`（還沒跑過任何一格是 0）。之後 `node.show` 看到 `registration_id` 相同、`last_tick.tick_seq` 較大且那格不是 `running`，才算新的一格已完成，這時才重新採用成員摘要；`registration_id` 變了（重新登記、換父、daemon 重啟），表示舊的等待已結束，直接重新核對收件與摘要，不再等舊的那格。在那之前舊的 ready 不拿來反覆叫醒。牆鐘可能校正，格的結束時間不拿來判斷新舊。格式見 [P-803](../protocol/kernel-tasks.md)。
 
-〔使用者方向 2026-09-30，第十九批〕**叫醒走通道**：kernel 在自己的格裡用 `node.wake` 帶本格憑證叫醒成員（找 daemon 的規則見 [P-801](../protocol/kernel-tasks.md)，通道見 [B-612](../settled/daemon/channel.md)）；授權看憑證所屬的 tick 在成員的有效上層鏈上。`registration_id` 與 `tick_seq` 只有在 daemon 登記的成員才有；kernel 找不到 daemon 時不叫醒，也就沒有要等的新格，只看收件與已發布摘要。成員走 git 備援時沒有 commit 可釘（[B-632](../settled/tick.md)），讀它目前發布的摘要。
+〔使用者方向 2026-09-30，第十九批〕**叫醒走通道**：kernel 在自己的格裡用 `node.wake` 帶本格憑證叫醒成員（找 daemon 的規則見 [P-801](../protocol/kernel-tasks.md)，通道見 [B-612](../settled/deferred/daemon/channel.md)）；授權看憑證所屬的 tick 在成員的有效上層鏈上。`registration_id` 與 `tick_seq` 只有在 daemon 登記的成員才有；kernel 找不到 daemon 時不叫醒，也就沒有要等的新格，只看收件與已發布摘要。成員走 git 備援時沒有 commit 可釘（[B-632](../settled/tick.md)），讀它目前發布的摘要。
 
 〔建議預設，未拍板；第十九批由 P-803 搬來〕**預設範本什麼算 ready、叫誰**：成員有收件、摘要 `ready`、`due` 到期或還在 bootstrap，才算 ready；缺摘要不當 idle，改看收件與 bootstrap 判斷並記事項。paused 或 stopping 的不叫醒，running 或已有 pending 的不重複叫；同時叫醒不超過 `max_active_members`，先後照 S-204。wake 成功但本格提交失敗時，下一格先查 daemon（`node.show`）合併判斷，不當沒叫過。
 
@@ -22,16 +22,16 @@
 
 〔建議預設，未拍板〕正常只處理被通知及已到期的成員；啟動、通知溢出或發現不一致時，分批核對自己的登記、收件與成員摘要。另做低頻補查，避免遺失通知使工作永遠睡著；預設 kernel 範本是每 60 秒一批、每批最多 64 個成員（`scan_interval_ms`、`scan_batch_limit`），按成員短名輪流、記下掃到哪裡（游標），首格也分批掃；數值可調，成員多時怎麼調見下文；不要求每輪全掃或解碼所有 history。daemon 只負責登記與開程序，不代做內容補查。
 
-〔使用者方向 2026-09-29；第十八批重排〕**kernel 何時向 daemon 登記直接成員**（daemon 那側的登記、解除與換父規則見 [B-606](../settled/daemon/registration.md)）：
+〔使用者方向 2026-09-29；第十八批重排〕**kernel 何時向 daemon 登記直接成員**（daemon 那側的登記、解除與換父規則見 [B-606](../settled/deferred/daemon/registration.md)）：
 
-- 〔第十九批〕登記與解除在 kernel 自己的格裡走通道、帶本格憑證（[B-612](../settled/daemon/channel.md)；找 daemon 的規則見 [P-801](../protocol/kernel-tasks.md)）。
+- 〔第十九批〕登記與解除在 kernel 自己的格裡走通道、帶本格憑證（[B-612](../settled/deferred/daemon/channel.md)；找 daemon 的規則見 [P-801](../protocol/kernel-tasks.md)）。
 - 別每格重登：只在第一次、daemon 換了 `boot_id`、或成員清單改版時登記差異；都沒變、也沒有到期的重試就不重登、不列整棵樹。換 boot 時重登所有正常的直接成員，清單改版只處理差異。〔建議預設；第十九批由 P-802 搬來〕每批登記前後核對 `boot_id`，斷線先重查；boot 換了等下一格重判。
-- 〔使用者方向 2026-09-30，第十九批，疑點裁定 5〕**成員的上層**：成員的預設上層照資料夾算（[B-628](../settled/tick.md)）。算出來就是本 kernel（成員資料夾在本 kernel 資料夾裡、中間沒有別的 tick）時，登記不帶 `parent_id`；其他情況帶 `parent_id`＝本 kernel 覆蓋；要哪些上層同意（首次覆蓋、再次換父，以及〔追答 11〕原上層沒在 daemon 登記時只要新上層同意）以 [B-628](../settled/tick.md)、[B-606](../settled/daemon/registration.md) 為正本，被拒就照下面「單一成員失敗」處理。`node.register` 回應的 `parent_id`（有效上層）不是本 kernel，也當這個成員失敗。覆蓋來的成員，檔案仍歸它的資料夾上層管；本 kernel 只管它的排程、資源、叫醒與解除。
-- 第一次登記與換 boot 重登後，由排程核對資源再叫醒一次，讓下層逐層重建（[B-603](../settled/daemon/lifecycle.md)）；沒有變動不反覆叫醒。
+- 〔使用者方向 2026-09-30，第十九批，疑點裁定 5〕**成員的上層**：成員的預設上層照資料夾算（[B-628](../settled/tick.md)）。算出來就是本 kernel（成員資料夾在本 kernel 資料夾裡、中間沒有別的 tick）時，登記不帶 `parent_id`；其他情況帶 `parent_id`＝本 kernel 覆蓋；要哪些上層同意（首次覆蓋、再次換父，以及〔追答 11〕原上層沒在 daemon 登記時只要新上層同意）以 [B-628](../settled/tick.md)、[B-606](../settled/deferred/daemon/registration.md) 為正本，被拒就照下面「單一成員失敗」處理。`node.register` 回應的 `parent_id`（有效上層）不是本 kernel，也當這個成員失敗。覆蓋來的成員，檔案仍歸它的資料夾上層管；本 kernel 只管它的排程、資源、叫醒與解除。
+- 第一次登記與換 boot 重登後，由排程核對資源再叫醒一次，讓下層逐層重建（[B-603](../settled/deferred/daemon/lifecycle.md)）；沒有變動不反覆叫醒。
 - 單一成員登記失敗只隔離那一項、記事項，隔一段時間（預設範本 60 秒）重查，不拖住其他成員；成員看起來失聯時先查 `node.show`。
-- 從清單移除的成員不再排新格；kernel 不對忙碌成員主動解除登記，留待維護。真的要解除時照 [B-606](../settled/daemon/registration.md) 的收尾（會停掉在跑的程序）。
-- 〔使用者方向 2026-09-30，第十九批；改寫第十八批「帶新上層重新登記」一條路〕**要把成員搬到別的上層有兩條路**（[B-628](../settled/tick.md)、[B-606](../settled/daemon/registration.md)）：搬資料夾（新位置最近的包含 tick 自動成為上層；路徑就是 id，等於舊 id 解除、新 id 由新上層登記，舊回址失效），或改登記（新上層帶 `parent_id` 覆蓋，同意規則同上）。兩條都要被搬的整棵先暫停、程序全空。舊上層都要先從自己的成員清單拿掉它，否則下一次同步又會登記回來；新上層把它加進自己的清單。
-- 〔使用者方向 2026-09-30，第十八批，Q8〕上層收小了自己的身分額度或佈建授權，已授給成員、超出的部分不自動收回；重登被 daemon 拒絕的成員照上面「單一成員失敗」處理，daemon 那邊下一格授權核對不過就停格並寫事項（[B-607](../settled/daemon/registration.md)）。
+- 從清單移除的成員不再排新格；kernel 不對忙碌成員主動解除登記，留待維護。真的要解除時照 [B-606](../settled/deferred/daemon/registration.md) 的收尾（會停掉在跑的程序）。
+- 〔使用者方向 2026-09-30，第十九批；改寫第十八批「帶新上層重新登記」一條路〕**要把成員搬到別的上層有兩條路**（[B-628](../settled/tick.md)、[B-606](../settled/deferred/daemon/registration.md)）：搬資料夾（新位置最近的包含 tick 自動成為上層；路徑就是 id，等於舊 id 解除、新 id 由新上層登記，舊回址失效），或改登記（新上層帶 `parent_id` 覆蓋，同意規則同上）。兩條都要被搬的整棵先暫停、程序全空。舊上層都要先從自己的成員清單拿掉它，否則下一次同步又會登記回來；新上層把它加進自己的清單。
+- 〔使用者方向 2026-09-30，第十八批，Q8〕上層收小了自己的身分額度或佈建授權，已授給成員、超出的部分不自動收回；重登被 daemon 拒絕的成員照上面「單一成員失敗」處理，daemon 那邊下一格授權核對不過就停格並寫事項（[B-607](../settled/deferred/daemon/registration.md)）。
 
 〔建議預設，未拍板；審稿設-4、設-18；第十八批由 P-801 搬來〕**成員多時怎麼調**（欄位見 [P-801](../protocol/kernel-tasks.md)）：補查掃完一輪約要「成員數 ÷ `scan_batch_limit` × `scan_interval_ms`」；預設 64 個／60 秒，一萬個成員約 2.6 小時才掃完一輪。補查只救漏掉的通知，平常靠通知與到期，所以一輪慢一點通常可以接受；要縮短就加大 `scan_batch_limit` 或縮短 `scan_interval_ms`，代價是每格讀更多摘要。成員上千時優先改分層：把成員分給幾個子 kernel、每個管幾百個，頂層只管子 kernel。`max_active_members` 只限同時叫醒的數量，不影響補查。子 kernel 的 `interval_ms` 建議 1000 只是建議值；每一跳轉交至少差一個間隔，有收件通知或 wake 時不必靠週期。實際延遲與空轉負載照 [V-04](../conformance.md) 量。
 
@@ -43,13 +43,13 @@
 
 〔使用者方向 2026-09-30，第十八批〕**aos 只給框架，資源由各 kernel 定義。** 資源 module 就是任務註冊表裡的普通任務（[B-620](../settled/tick.md)），裝哪些、怎麼記帳、怎麼分，由各 kernel 決定，沒有所有部署必填的一組全域上限。CPU、記憶體、pids、LLM、磁碟記帳與網路這六類是**預設 kernel 範本**的資源（[P-500～507](../protocol/resources.md)）；kernel 可以登記自己的資源名稱，意思由定義它的 kernel 解釋，只有 CPU、記憶體、pids 由標準配備的 cgroup 框寫進 cgroup（[T-06](../terms.md)、[B-629](../settled/tick.md)）。
 
-〔使用者方向 2026-09-30，第十八批〕**上下層不必對齊。** 上層只用自己認得的資源與規則管下層，下層不必知道自己被怎麼管；上下層資源定義不同就各管各的，上層不認得下層的自訂資源時不代管、不報錯。**只有 Linux 管的兩樣維持巢狀**：cgroup 上限與身分額度（含佈建授權），子層只能在已分得的範圍內再分（[B-301](../base/identity-resources.md)、[B-605](../settled/daemon/cgroup.md)）。kernel 自己定義、Linux 管不到的資源與隔離可以比上層寬；預設範本「子層在父層配額內再分」是範本的預設，不是 aos 的要求。
+〔使用者方向 2026-09-30，第十八批〕**上下層不必對齊。** 上層只用自己認得的資源與規則管下層，下層不必知道自己被怎麼管；上下層資源定義不同就各管各的，上層不認得下層的自訂資源時不代管、不報錯。**只有 Linux 管的兩樣維持巢狀**：cgroup 上限與身分額度（含佈建授權），子層只能在已分得的範圍內再分（[B-301](../base/identity-resources.md)、[B-605](../settled/deferred/daemon/cgroup.md)）。kernel 自己定義、Linux 管不到的資源與隔離可以比上層寬；預設範本「子層在父層配額內再分」是範本的預設，不是 aos 的要求。
 
 〔使用者方向 2026-09-30，第十八批 Q3〕預設範本把給子層的配額發布成公開檔讓子層讀：子層要往下再分就需要知道。〔建議預設，未拍板；審稿建-15，第十八批由 P-804 搬來〕父只發布**已提交**的期望配額，本格改的提交後下一格才發布，道理同 [P-307](../protocol/messages.md) 的 published.json，子層不會讀到還沒提交的值。檔案位置見 [P-804](../protocol/kernel-tasks.md)。
 
 〔使用者方向 2026-09-29〕**沒裝 module，就不在該層另記／另限；已生效的父層限制照舊。** CPU、記憶體與 pids 由已啟用 module 配合標準配備的 cgroup 框落實，cgroup 子樹對上 node 的資源分配層級；磁碟額度可選且只記帳，見 [身分與 OS 資源](../base/identity-resources.md)。LLM module 的份額與池端限制見 [LLM](llm.md)。同一資料夾的 tick 互斥屬 tick 核心（[B-602](../settled/tick.md)），不是可關掉的資源 module。
 
-〔使用者方向 2026-09-30，第十九批，疑點裁定 8〕**cgroup 相關的保證分兩級**。標準配備的 cgroup 框走完整路（cgroup v2 委派子樹，[B-605](../settled/daemon/cgroup.md)）時，上面的 CPU、記憶體、pids 上限是 node 框的**總量**上限，照父子框巢狀。走備援（[B-631](../settled/tick.md)）仍算全掛，但只剩：
+〔使用者方向 2026-09-30，第十九批，疑點裁定 8〕**cgroup 相關的保證分兩級**。標準配備的 cgroup 框走完整路（cgroup v2 委派子樹，[B-605](../settled/deferred/daemon/cgroup.md)）時，上面的 CPU、記憶體、pids 上限是 node 框的**總量**上限，照父子框巢狀。走備援（[B-631](../settled/tick.md)）仍算全掛，但只剩：
 
 - 每個程序各自的上限（記憶體、CPU 時間），不是總量，也不照父子巢狀：子層多開幾個程序就能超過分到的額度；
 - 沒有 pids 上限；
@@ -83,11 +83,11 @@
 
 〔建議預設，未拍板；第十九批由 P-801 搬來〕**期望配額選哪一版**：成員配額有兩處來源——成員清單裡的初始配額，與 `kernel.quota.set` 更新的期望配額檔（[P-801](../protocol/kernel-tasks.md)）。以較新的 `seq` 為準，較舊的不覆蓋較新的；同 `seq` 內容不同報 `resource_conflict`；不用 mtime 選版。新派工等配置核對完成；成員不能自己擴額。
 
-〔使用者方向 2026-09-30，第十八批〕**cgroup 上限隨時改。** 調高、調低都直接寫，不等子樹全空、不暫停子樹（佈建動作見 [B-609](../settled/daemon/helper-actions.md)）。調低時現用量已超過新上限，交給 Linux 處理（例如記憶體回收或 OOM、不能再開新程序），aos 只記一筆：記在 kernel 自己的資源狀態檔（Q17，格式見 [P-804](../protocol/kernel-tasks.md)）。改上限值不算中途換資源範圍（[B-302](../base/identity-resources.md)）。採用新配額表示之後的派工政策更新；調低額度不取消已有工作，依 S-204 等用量回落再派。
+〔使用者方向 2026-09-30，第十八批〕**cgroup 上限隨時改。** 調高、調低都直接寫，不等子樹全空、不暫停子樹（佈建動作見 [B-609](../settled/deferred/daemon/helper-actions.md)）。調低時現用量已超過新上限，交給 Linux 處理（例如記憶體回收或 OOM、不能再開新程序），aos 只記一筆：記在 kernel 自己的資源狀態檔（Q17，格式見 [P-804](../protocol/kernel-tasks.md)）。改上限值不算中途換資源範圍（[B-302](../base/identity-resources.md)）。採用新配額表示之後的派工政策更新；調低額度不取消已有工作，依 S-204 等用量回落再派。
 
-〔使用者方向 2026-09-30，第十八批〕**頂層 kernel 的額度檔只是分配政策**：它只決定頂層怎麼往下分，不承諾頂層自己真的被卡住。頂層的硬上限由部署者在更外層自己設，包括事先把交給 daemon 的 cgroup 子樹設好上限（[B-605](../settled/daemon/cgroup.md)）。
+〔使用者方向 2026-09-30，第十八批〕**頂層 kernel 的額度檔只是分配政策**：它只決定頂層怎麼往下分，不承諾頂層自己真的被卡住。頂層的硬上限由部署者在更外層自己設，包括事先把交給 daemon 的 cgroup 子樹設好上限（[B-605](../settled/deferred/daemon/cgroup.md)）。
 
-〔使用者方向 2026-09-30，第十八批，Q8；範本落法為建議預設〕**上層收小了已授出的範圍**：不自動收回子孫超出的部分，也不等全空。身分額度與佈建授權由 daemon 在下一格核對，不過就停格並寫事項（[B-607](../settled/daemon/registration.md)）。預設範本的配額：kernel 自己分到的額度小於已分給成員的合計時，資源任務在資源狀態檔記下超分（`over_allocated`，[P-804](../protocol/kernel-tasks.md)）、寫一件事項，〔暫定，「超分擋什麼」使用者未答，照 A〕本層暫停會增加占用的新派工，直到人調低成員配額或上層加回；已在跑的工作、收結果、取消照常。
+〔使用者方向 2026-09-30，第十八批，Q8；範本落法為建議預設〕**上層收小了已授出的範圍**：不自動收回子孫超出的部分，也不等全空。身分額度與佈建授權由 daemon 在下一格核對，不過就停格並寫事項（[B-607](../settled/deferred/daemon/registration.md)）。預設範本的配額：kernel 自己分到的額度小於已分給成員的合計時，資源任務在資源狀態檔記下超分（`over_allocated`，[P-804](../protocol/kernel-tasks.md)）、寫一件事項，〔暫定，「超分擋什麼」使用者未答，照 A〕本層暫停會增加占用的新派工，直到人調低成員配額或上層加回；已在跑的工作、收結果、取消照常。
 
 〔使用者方向 2026-09-29；審稿新必-1〕**資源出事只擋新啟動，不擋收件與收尾。**「允不允許新派工」和「能不能收結果、接受取消、收尾」分開：派工的任務讀資源任務**已提交**的狀態決定能不能開新工作；狀態缺、壞、未套用或資源任務本格失敗，都只擋新啟動，收已派結果、接受取消與收尾照做。〔建議預設；第十九批由 P-804 搬來〕預設範本：某成員 `applied=false` 只擋那個成員的新派工；`over_allocated` 非空擋本層會增加占用的新派工；額度不足或狀態不可用的工作記 `queued`，可派的記 `prepared`（[P-806](../protocol/kernel-tasks.md)）。所以預設範本的任務之間不用 `needs` 串資源任務（[P-814](../protocol/kernel-tasks.md)），資源任務失敗不會連帶跳過收件的任務。
 
@@ -95,15 +95,15 @@
 
 〔使用者方向 2026-09-29〕沒裝 module＝該層不另記／另限，不等於父層限制消失；tick 互斥與程序清空不是可關閉的 module。已安裝但 controller／權限不可用是失敗，不能降成「沒裝」後繼續派工；走 cgroup 備援不算這種失敗，見下。
 
-〔使用者方向 2026-09-30，第十九批，疑點裁定 8；範本落法暫定〕**走 cgroup 備援時**（daemon 的 `cgroup_*` 佈建動作回 `unsupported`、`node.show` 的 `cgroup` 是 null，[B-605](../settled/daemon/cgroup.md)）：預設範本把它當成備援級，不當套用失敗。CPU、記憶體、pids 配額照算、照記帳，照額度決定放不放新派工；資源狀態檔該成員記 `fallback:true`、`applied:true`（[P-804](../protocol/kernel-tasks.md)），不寫事項。硬限制只剩 [B-631](../settled/tick.md) 的每程序上限（S-203）。總用量量不到，CPU、記憶體、pids 的用量照缺項處理，不當成零，也不記 `over_limit`。
+〔使用者方向 2026-09-30，第十九批，疑點裁定 8；範本落法暫定〕**走 cgroup 備援時**（daemon 的 `cgroup_*` 佈建動作回 `unsupported`、`node.show` 的 `cgroup` 是 null，[B-605](../settled/deferred/daemon/cgroup.md)）：預設範本把它當成備援級，不當套用失敗。CPU、記憶體、pids 配額照算、照記帳，照額度決定放不放新派工；資源狀態檔該成員記 `fallback:true`、`applied:true`（[P-804](../protocol/kernel-tasks.md)），不寫事項。硬限制只剩 [B-631](../settled/tick.md) 的每程序上限（S-203）。總用量量不到，CPU、記憶體、pids 的用量照缺項處理，不當成零，也不記 `over_limit`。
 
 驗收：工作在途時弄壞父配額或讓資源任務失敗，仍能收結果、接受取消，但不開新工作。有程序在跑時調低記憶體上限，aos 直接寫入、不等全空，資源狀態檔留下一筆超用紀錄。頂層額度檔改小到低於已分出的合計，不自動收回，只記超分、寫事項、停新派工。daemon 走 cgroup 備援時，資源任務不報套用失敗，成員記 `fallback:true`，新派工照額度記帳放行。
 
 ## S-206．中間層 kernel 卡住
 
-〔使用者方向 2026-09-30，第十八批，方向 5；審稿設-16〕中間某層 kernel 停格或卡住時，由它叫醒、轉交的工作會跟著停；pause 不遞迴，本身有週期的下層仍照跑（[B-607](../settled/daemon/registration.md)）。aos 只提供訊號：成員發布摘要的 `observed_at_ms`（[P-307](../protocol/messages.md)），以及 `node.show` 的 `last_tick`、`tick_seq` 與停格狀態。**多久沒前進算失聯、失聯時做什麼，由父 kernel 自己定**；上層不跨層代管孫輩，也不接手中間層的成員。
+〔使用者方向 2026-09-30，第十八批，方向 5；審稿設-16〕中間某層 kernel 停格或卡住時，由它叫醒、轉交的工作會跟著停；pause 不遞迴，本身有週期的下層仍照跑（[B-607](../settled/deferred/daemon/registration.md)）。aos 只提供訊號：成員發布摘要的 `observed_at_ms`（[P-307](../protocol/messages.md)），以及 `node.show` 的 `last_tick`、`tick_seq` 與停格狀態。**多久沒前進算失聯、失聯時做什麼，由父 kernel 自己定**；上層不跨層代管孫輩，也不接手中間層的成員。
 
-〔建議預設，未拍板〕預設 kernel 範本：成員被叫醒後超過 `member_stale_ms`（預設 10 分鐘）還沒完成新的一格（照 S-201 的格次序號判斷），就寫一件事項；同一次失聯沿用同一個 `issue_id`，只寫一件（S-405），恢復後由人標完成。本身有週期的成員停格時，daemon 自己會寫停格事項（[B-607](../settled/daemon/registration.md)）。欄位見 [P-801](../protocol/kernel-tasks.md)、[P-803](../protocol/kernel-tasks.md)。
+〔建議預設，未拍板〕預設 kernel 範本：成員被叫醒後超過 `member_stale_ms`（預設 10 分鐘）還沒完成新的一格（照 S-201 的格次序號判斷），就寫一件事項；同一次失聯沿用同一個 `issue_id`，只寫一件（S-405），恢復後由人標完成。本身有週期的成員停格時，daemon 自己會寫停格事項（[B-607](../settled/deferred/daemon/registration.md)）。欄位見 [P-801](../protocol/kernel-tasks.md)、[P-803](../protocol/kernel-tasks.md)。
 
 〔暫定，「失聯判斷」使用者未答，照上一輪 A；第十九批補〕預設範本只判「叫醒之後」有沒有前進，不另看有週期的成員。格次序號只在 daemon 底下有：沒有 `wake_mark` 的成員（沒被這個 kernel 經 daemon 叫醒過，例如 kernel 自己找不到 daemon、成員不在 daemon 登記而由 cron 或人手跑），沒有格次可看，範本不判失聯、不寫事項；要看它有沒有在動，只能看它發布摘要的 `observed_at_ms`。
 

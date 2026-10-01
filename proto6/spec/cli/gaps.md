@@ -11,7 +11,7 @@
 | D3 回話／context | P-703／708／713／714 定本地 input_id、reply、history、context；回話統一 agent.say＋in_reply_to。 |
 | D4 驗證／待辦／清理 | P-210／712／805／609 定驗證／recheck；P-716／814 定清理遍歷。 |
 | D5 池狀態 | P-808～812 定路由、共享窗口及 pool-status，pool usage 有實際落點。 |
-| D6 停機／JSON | Ctrl-C、存檔重開見 [B-603](../settled/daemon/lifecycle.md)、[B-604](../settled/daemon/lifecycle.md)；〔第十八批〕排空或立即停由 daemon 設定 `stop_mode` 決定，仍沒有 stop IPC 或子命令。JSON 沿原 schema。 |
+| D6 停機／JSON | Ctrl-C、存檔重開見 [B-603](../settled/deferred/daemon/lifecycle.md)、[B-604](../settled/deferred/daemon/lifecycle.md)；〔第十八批〕排空或立即停由 daemon 設定 `stop_mode` 決定，仍沒有 stop IPC 或子命令。JSON 沿原 schema。 |
 
 unknown 處置與自訂清理接口已裁定不做；git 歷史回收延後（第十八批 14，[P-008](../protocol/README.md#p-008)）。
 

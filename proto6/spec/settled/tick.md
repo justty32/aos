@@ -1,21 +1,29 @@
 # 通用 tick：核心與標準任務表範本
 
-← [整理區](README.md)｜[名詞](terms.md)｜[daemon](daemon/README.md)｜[helper 與 aos-as](helper.md)｜格式：[node 協議](protocol/node.md)
+← [整理區](README.md)｜[名詞](terms.md)｜[慣例](conventions.md)｜[daemon](daemon/README.md)｜格式：[node 協議](protocol/node.md)｜先不做的：[tick 暫緩區](deferred/tick.md)、[helper 與 aos-as](deferred/helper.md)
 
-依據：[09-29 新架構](../../notes/2026-09-29-kernel-tree.md)、[使用者裁定](../../notes/2026-09-29-verdicts.md)第三～十二批、[第十八批](../../notes/verdicts/09-special-computing-os.md)、[第十九批](../../notes/verdicts/10-tick-minimal-core.md)、[第二十批](../../notes/verdicts/11-tick-as-unit.md)。下文「任務表」指 node 裡的任務註冊表 `.aos/tasks.json`，跟 daemon 的登記表是兩回事（[T-02](../terms.md)）。
+依據：[09-29 新架構](../../notes/2026-09-29-kernel-tree.md)、[使用者裁定](../../notes/2026-09-29-verdicts.md)第三～十二批、[第十八批](../../notes/verdicts/09-special-computing-os.md)、[第十九批](../../notes/verdicts/10-tick-minimal-core.md)、[第二十批](../../notes/verdicts/11-tick-as-unit.md)與它篇末 2026-10-01 各節；現行程式 [proto6/src/py](../../src/py/README.md)。
+
+讀之前先知道三件事：
+
+- **工作資料夾**＝這一格 `aos-tick` 跑的資料夾（它的 cwd），由命令列給的目標決定（`aos-tick [<目標>]`，B-620）。tick 這層只講工作資料夾；「node」是之後 node 模組才出場的詞。本篇後半（系統級任務、git、佇列各條）還寫著 node，在 tick 這層就讀成工作資料夾。
+- 「任務表」指工作資料夾裡的任務註冊表 `.aos/tasks.json`，跟舊 daemon 的登記表是兩回事（[T-02](../terms.md)）。
+- 本篇寫的 `.aos/…` 都是環境變數 `AOS_DIRNAME` 沒設時的樣子（[C-09](conventions.md)）；結束碼照 aos 慣例：0＝預料之中、非 0＝要處理、1＝通用錯誤（[C-08](conventions.md)）。
 
 ## 先講重點
 
 - **tick 是一個定期被執行的程式**（`aos-tick`）。誰來跑都行：daemon、cron、人手（B-627）。它執行時的目前目錄（cwd）就是它的**管轄區**。
-- **tick 是整個 aos 的衡量基準**：排程以格計，反應最快是下一格；aos 內部的時長與起算點都用本 node 的格數（B-633、[C-01](../contracts.md)）。
+- **核心只做三件事**：同一資料夾一次一格的簡單互斥鎖（B-602）、照任務表依序跑（B-620）、每項結束碼紀錄（B-633）。上下層判定（B-628）已搬到[暫緩區](deferred/tick.md)。
+- **任務怎麼結束都不影響 tick 的結束碼**：任務回幾都照實記進紀錄、照常跑下一項。tick 自己只回 0 或 1。
+- **tick 是整個 aos 的衡量基準**：排程以格計，反應最快是下一格；aos 內部的時長與起算點都用本資料夾的格數（B-633、[C-01](../contracts.md)）。
 - tick 不跟 once、LLM 嘗試、agent 一輪這些計算單位共用外殼（[T-07](terms.md)）。
-- **git 與 cgroup 是「有就用」，不是前提。** 沒有 git、沒有 cgroup 時照原來的做法跑（B-632、[B-601](daemon/runtime.md)）。
+- **git 與 cgroup 是「有就用」，不是前提。** 沒有 git、沒有 cgroup 時照原來的做法跑（B-632、[B-601](deferred/daemon/runtime.md)）。
   - **git**：掛了 `aos-git` 三項系統級任務而且 git 能用，aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔）才有提交與還原（B-630、B-622）。使用者任務改的檔 aos 不提交、不還原。
-  - **cgroup**：node 框與資源上限歸 daemon（[B-605](daemon/cgroup.md)）；每項一框要任務包普通程式 `aos-cg`（B-634）。
-- **收送只管系統訊息佇列**：node 之間經 daemon 通道互送訊息，由系統級任務 `aos-mq get`／`aos-mq post` 處理（B-623、B-624）。檔案收件區 `requests/`、`responses/` 的收與寫是普通程式的事，aos 不管。
-- **保證跟著「掛了什麼」走**：核心四件事（B-626）不靠任何系統級任務也成立；其餘保證看任務表掛了哪幾項系統級任務、任務包了哪些普通程式。〔建議預設，未拍板〕各條只寫「掛了時保證什麼」，沒掛的後果不逐條寫。
+  - **cgroup**：node 框與資源上限歸 daemon（[B-605](deferred/daemon/cgroup.md)，在暫緩區）；每項一框要任務包普通程式 `aos-cg`（B-634）。
+- **收送只管系統訊息佇列**：node 之間經 daemon 通道互送訊息，由系統級任務 `aos-mq get`／`aos-mq post` 處理（B-623、B-624；daemon 通道那側在暫緩區）。檔案收件區 `requests/`、`responses/` 的收與寫是普通程式的事，aos 不管。
+- **保證跟著「掛了什麼」走**：核心三件事（B-626）不靠任何系統級任務也成立；其餘保證看任務表掛了哪幾項系統級任務、任務包了哪些普通程式。〔建議預設，未拍板〕各條只寫「掛了時保證什麼」，沒掛的後果不逐條寫。
 
-依據：第十八批（外殼）；第十九批（定期被執行的程式、管轄區）；第二十批（衡量基準、進行順序；推翻第十九批「本篇的保證以標準配備全掛為前提」與完整／備援兩級）。
+依據：第十八批（外殼）；第十九批（定期被執行的程式、管轄區）；第二十批（衡量基準、進行順序；推翻第十九批「本篇的保證以標準配備全掛為前提」與完整／備援兩級）；使用者 2026-10-01（POC 默認一切正常、核心縮成三件事、目標改成位置參數、工作資料夾）。
 
 ## B-626：核心與系統級任務的界線
 
@@ -23,12 +31,12 @@ tick 裡的東西分四類：
 
 | 類 | 是什麼 | 有哪些 |
 |---|---|---|
-| tick 核心 | `aos-tick` 本身，只做四件事 | 同資料夾互斥鎖（B-602）、照任務表依序跑（B-620）、上下層判定（B-628）、每項結束碼紀錄（B-633） |
+| tick 核心 | `aos-tick` 本身，只做三件事 | 簡單互斥鎖（B-602）、照任務表依序跑（B-620）、每項結束碼紀錄（B-633） |
 | 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，以 `kind:"system"` 標記；**寫在表上才跑，沒寫就不跑** | 系統訊息佇列 `aos-mq`：開頭取件 `aos-mq get`（B-623）、收尾送出 `aos-mq post`（B-624）；發布摘要 `aos-publish`（B-624）；清理 `aos-clean`（[B-404](../base/storage.md)）；git 開格、存檔點與收尾 `aos-git open`／`mark`／`close`（B-630） |
-| 普通程式 | 任務會用到的工具，要的任務自己在 argv 包；不是系統級任務 | 切換帳號 `aos-as`（[B-303](helper.md)）、前置沒成功就不跑 `aos-needs`（B-621）、每項一框 `aos-cg`（B-634） |
+| 普通程式 | 任務會用到的工具，要的任務自己在 argv 包；不是系統級任務 | 切換帳號 `aos-as`（[B-303](deferred/helper.md)，在暫緩區）、前置沒成功就不跑 `aos-needs`（B-621）、每項一框 `aos-cg`（B-634） |
 | 其他任務 | kernel、agent、clock、檔案收件程式、自訂任務等 | 它們的外殼、逾時與取消延後（[P-008](../protocol/README.md#p-008)）；檔案收件 aos 不管（B-623） |
 
-**核心**：照表跑時另外只認兩件事——停格檔，以及任務帶的 `user` 跟 tick 不同（B-620）。核心只要 Python 3.9 與 flock，不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。
+**核心**：照表跑時另外只認兩個檔——停格檔與擋板檔（B-620）；**不看任務的 `user`**，一律用 tick 自己的帳號跑。核心只要 Python 3.9 與 flock，不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。上下層判定原本是第四件事，使用者 2026-10-01 說「也不需要判斷上下層」，整條搬到[暫緩區](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)。
 
 **系統級任務**：
 
@@ -37,31 +45,34 @@ tick 裡的東西分四類：
 - 〔建議預設，未拍板〕不檢查 kind 的先後（撤掉第十九批暫定的「system 最前、custom 最後」）：範本的系統級任務分在頭尾兩段，照陣列順序就好。
 - `aos-clean` 也是系統級任務，範本裡寫 `kind:"system"`。
 
-**daemon 不在任務表上**：一格結束後殺殘留、重啟、排空停機、helper，都歸 daemon（[B-601](daemon/runtime.md)、[B-603～605](daemon/README.md)、[B-609](daemon/helper-actions.md)）。
+**daemon 不在任務表上**：現行 daemon 核心只定期叫 `aos-exec`，不認得 node（[T-11](terms.md)、[B-640](daemon/core.md)）。舊設計裡一格結束後殺殘留、重啟、排空停機、helper 歸 daemon（[B-601](deferred/daemon/runtime.md)、[B-603～605](deferred/daemon/README.md)、[B-609](deferred/daemon/helper-actions.md)），這些在暫緩區。
 
-**管轄權是約定，不是前提**：tick 對管轄區有最高裁量權，這是 aos 體系裡的約定。Linux 權限上碰不到某些東西時，tick 照樣跑完一格，碰不到的那件照各自規則失敗。管轄區可以重疊，風險自己承擔；aos 體系裡的慣例是不重疊、可以包含（B-628）。
+**管轄權是約定，不是前提**：tick 對管轄區有最高裁量權，這是 aos 體系裡的約定。Linux 權限上碰不到某些東西時，tick 照樣跑完一格，碰不到的那件照各自規則失敗。管轄區可以重疊，風險自己承擔；aos 體系裡的慣例是不重疊、可以包含（上下層怎麼算在暫緩區，B-628）。
 
-依據：第二十批追答 8、9（推翻第十九批「三層：核心／標準配備／其他掛載」、疑點裁定 1「標準配備跟核心同一支 `aos-tick`、不另做包裝」；`kind:"system"` 取代第十九批「留給以後真正屬於標準配備的任務、範本沒有 system 類」；`aos-clean` 取代第十九批疑點裁定 2「範本裡仍是 custom 類」）；第十九批第 2、5 條（管轄權）；astra 審整理區裁定（收送改成系統訊息佇列 `aos-mq`，檔案收件與投件是普通程式、aos 不管）。
+依據：第二十批追答 8、9（推翻第十九批「三層：核心／標準配備／其他掛載」、疑點裁定 1「標準配備跟核心同一支 `aos-tick`、不另做包裝」；`kind:"system"` 取代第十九批「留給以後真正屬於標準配備的任務、範本沒有 system 類」；`aos-clean` 取代第十九批疑點裁定 2「範本裡仍是 custom 類」）；第十九批第 2、5 條（管轄權）；astra 審整理區裁定（收送改成系統訊息佇列 `aos-mq`，檔案收件與投件是普通程式、aos 不管）；使用者 2026-10-01（核心不判上下層、不看 `user`）。
 
-**驗收：**拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`，直接跑 `aos-tick`：互斥、照表跑、上下層判定與結束碼紀錄照常成立；佇列沒人取也沒人送、不發摘要。
+**驗收：**拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`，直接跑 `aos-tick`：互斥、照表跑與結束碼紀錄照常成立，回 0；任務帶 `user` 也照 tick 自己的帳號跑；佇列沒人取也沒人送、不發摘要。
 
 ## B-602：同一資料夾一次一格：互斥鎖
 
 **同一資料夾同時只能跑一個 tick。** 這把鎖屬核心，不靠 git、cgroup 或 daemon。
 
-〔使用者方向 2026-10-01：POC 先不做〕POC 默認沒有別人同時在跑：互斥鎖整個不做（不建鎖檔、不回 75、不傳鎖 fd、沒有 `AOS_TICK_LOCK_FD`）；下面「認哪個資料夾」照做，其餘規定留著不刪（[plan 第一段待問 8](../../plan/m1-tick-core.md#待問)）。
+現在只做最簡版（使用者 2026-10-01：外層定期跑 `aos-tick`，上一格沒跑完下一格就來，是正常使用會碰到的）。鎖 fd 傳給任務、後代擋下一格等完整細節在[暫緩區](deferred/tick.md#暫緩b-602-完整互斥的其餘細節)。
 
 ### 鎖怎麼取
 
-- **認哪個資料夾**：看資料夾路徑或 inst.json 路徑。給的是 node 資料夾裡的 `.aos/inst.json` 或 `inst.json` 時，一律正規化成那個資料夾（[inst 目標](../base/inst.md#inst-目標檔案或資料夾)）。tick 在這個資料夾裡跑，cwd 就是它；argv 見 [P-203](protocol/node.md)。
-- **鎖檔**：`.aos/tick.lock`，ignored，不存在就建立。不放在 git 管理目錄；`aos-clean` 與一般清理都不得移除或替換它，`aos-git` 固定排除它，提交與還原都不碰（B-622）。
-- **取鎖**：定位資料夾之後第一件事，對鎖檔取**非阻塞**獨占 flock。拿不到就回 75、什麼都不做（也不寫結束碼紀錄），不在程式內重試。拿到了就整格持鎖。
+- **認哪個資料夾**：照 B-620「認哪個資料夾」（`aos-tick [<目標>]`，argv 見 [P-203](protocol/node.md)）。tick 在那個工作資料夾裡跑，cwd 就是它。
+- **鎖檔**：`.aos/tick.lock`，ignored。不存在就建（`.aos/` 不在也建）；tick 自己不刪它。不放在 git 管理目錄；`aos-clean` 與一般清理都不得移除或替換它，`aos-git` 固定排除它，提交與還原都不碰（B-622）。
+- **取鎖**：認好資料夾之後的第一件事，在看擋板檔之前。對鎖檔取**非阻塞**獨占 flock：
+  - 拿不到：stderr 印一行 `busy: …`、回 0（預料之中，[C-08](conventions.md)）。不寫結束碼紀錄、不加 `seq`、不在程式內重試。被占的同時也有擋板檔時，印的是 `busy`（鎖在前）。
+  - 拿到：整格持鎖，程序結束時自然放掉。
+- 認資料夾失敗（用法錯、`no_target`、`no_tasks`）時還沒取鎖，什麼都不建。
 
 ### 任務與後代
 
-- **任務繼承鎖**：任務繼承同一個 open file description 的鎖 fd，號碼放在環境變數 `AOS_TICK_LOCK_FD`。工具要以 fstat 對上鎖檔、核對是獨占鎖，才算在 tick 內；沒有繼承到鎖就自己取同一把鎖，不能只信環境變數。任務不得解鎖，退出前關掉自己的副本。這是同帳號的合作約定，不是授權。
-- **後代也擋下一格**：只要還有任何程序握著這份鎖（例如任務留下的後代），下一格就拿不到鎖、回 75；這一點不需要 cgroup。核心不清後代；daemon 開的格，由 daemon 在格後收尾（[B-604](daemon/lifecycle.md)）。經 `aos-as` 用別的帳號開的程序同樣繼承這份鎖 fd（[B-303](helper.md)）。
-- daemon 不同時開同一 node 的兩格，是 daemon 自己的開格安排（[B-601](daemon/runtime.md)），不是互斥的來源。
+- **鎖 fd 不傳給任務**：沒有 `AOS_TICK_LOCK_FD`。所以任務留下的後代不會佔住鎖，下一格照樣拿得到。
+- 任務自己去取同一把鎖會拿不到（tick 正握著）。所以「在不在 tick 內」靠鎖判斷的那幾支程式（`aos-git`、`aos-mq`、`aos-as`），要等暫緩區的「鎖 fd 傳給任務」回來才有判法。
+- 核心不清後代，也不管任務逾時；這些留給 daemon 那段（在暫緩區）。
 
 ### tick 外的寫入者
 
@@ -74,138 +85,178 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | 正常收尾 | 被下一格的 `aos-git close` 跟著提交 |
 | 沒正常收尾 | 被下一格的 `aos-git open` 還原掉 |
 
-所以要手改 node：先暫停（[B-607](daemon/registration.md)），改完要保住就自己 `git commit`。aos 不另存救援副本。
+所以要手改 node：先停住排程（經 daemon 跑的用控制模組的 `pause`，[B-641](daemon/control.md)；舊設計的暫停見 [B-607](deferred/daemon/registration.md)，在暫緩區），改完要保住就自己 `git commit`。aos 不另存救援副本。
 
-依據：第十九批（核心；第 7 條認資料夾）；第二十批（核心不清後代）、疑點裁定 8（取代第十九批建議預設「其他寫入者也須協調這把鎖或先暫停 tick」）；納入 cgroup 與 git 疑-3（人手改的不管、不做救援 ref）。
+依據：第十九批（核心；第 7 條認資料夾）；第二十批（核心不清後代）、疑點裁定 8（取代第十九批建議預設「其他寫入者也須協調這把鎖或先暫停 tick」）；納入 cgroup 與 git 疑-3（人手改的不管、不做救援 ref）；使用者 2026-10-01（最簡互斥、拿不到回 0、鎖 fd 不傳給任務）。
 
-**驗收：**同資料夾同時跑兩個 `aos-tick`，一個回 75、不改檔；用資料夾路徑與 `.aos/inst.json` 路徑各跑一次，搶的是同一把鎖；前一格留下握著鎖 fd 的後代時，在沒有 cgroup 的機器上下一格也回 75；沒有 git repo 也取得到鎖。
+**驗收：**同資料夾同時跑兩個 `aos-tick`（第一格的任務卡住）：後到的那個印 `busy`、回 0，兩份紀錄與 `seq` 都不變；第一格照常跑完，之後下一格照常。用資料夾路徑與 `.aos/tasks.json` 路徑各跑一次，搶的是同一把鎖。任務的環境裡沒有 `AOS_TICK_LOCK_FD`，前一格的任務留下的後代還在跑時，下一格照樣拿得到鎖。沒有 git repo 也取得到鎖。
 
 ## B-620：任務註冊表：照表依序跑
 
-任務表只放 `.aos/tasks.json`，**陣列位置就是順序**，核心照順序一項一項跑。欄位、JSON 與 schema 以 [P-202](protocol/node.md) 為準，本節只定意思。
+任務表預設是工作資料夾的 `.aos/tasks.json`（目標給的是檔時就是那個檔）。**陣列位置就是順序**，核心照順序一項一項跑。欄位、JSON 與 schema 以 [P-202](protocol/node.md) 為準，本節只定意思。
 
 ### 一格怎麼走
 
-1. 取鎖（B-602），拿不到回 75。〔使用者方向 2026-10-01：POC 先不做〕
-2. 看擋板檔，有就整格不跑、回 1（下面「擋板檔」）。
-3. 換一份新的結束碼紀錄（讀任務表之前，B-633）。
-4. 讀任務表並驗證，表壞回 2。〔使用者方向 2026-10-01：POC 先不做驗證，默認表是對的〕
-5. 照陣列順序跑每一項；開第一項前刪掉上一格留下的停格檔，每項結束後寫紀錄、查停格檔。
-6. 回結束碼。
+1. 認工作資料夾與任務表（下面「認哪個資料夾」）；不對就回 1。
+2. 取鎖（B-602）；拿不到印 `busy`、回 0。
+3. 看擋板檔；有就印 `blocked`、回 0，不開格（下面「停格檔與擋板檔」）。
+4. 讀表、做極簡檢查（下面「讀表」）；不過就印 `bad_table`、回 1，不開格。
+5. 換一份新的結束碼紀錄（B-633）。做到這一步才算開了一格、佔一個 `seq`。
+6. 刪掉上一格留下的停格檔。
+7. 照陣列順序跑每一項；每項結束後寫紀錄、查停格檔。
+8. 回結束碼（下面「核心的結束碼」）。
+
+### 認哪個資料夾：目標
+
+`aos-tick [<目標>]`，目標是位置參數，跟 `aos-exec` 一樣；沒有 `--node`、`--target` 這類旗標。
+
+- **沒給**：用目前目錄。**相對路徑**一律先轉成絕對路徑；不往上層目錄找。
+- **是資料夾**：要有 `.aos/tasks.json`，它就是這一格的任務表；不看 `.aos/inst.json`（tick 跟 inst.json 分開）。沒有 → stderr `no_tasks:`、回 1。
+- **是檔**：這個檔就是這一格的任務表，它所在的資料夾當工作資料夾。
+  - 檔在 `.aos/` 裡時取上一層：`aos-tick yyy/.aos/tasks.json` 等於 `aos-tick yyy`。`AOS_DIRNAME` 是空字串時不往上取，檔所在的資料夾照字面當工作資料夾。
+  - 鎖、擋板檔、停格檔、紀錄都在那個工作資料夾的 `.aos/` 下，不在就建（只建資料夾）。工作資料夾自己的 `.aos/tasks.json` 在不在都不管。
+- **不存在** → stderr `no_target:`、回 1。
+- **表裡的相對路徑與指示詞**以工作資料夾為中心（給檔時也一樣，不是以那個檔為中心）。每一項當成一份獨立的文件，項目裡的 `$ref:""` 指這一項自己，不是整份任務表。
 
 ### 任務表
 
-- **資料夾沒有 `.aos/` 時**〔使用者方向 2026-09-30 晚〕：照 inst 目標找檔同一套（先 `.aos/`，沒有就 `inst.json`）。沒有 `.aos/` 但有 `inst.json`：像 `aos-exec` 把它跑一次（不取鎖、不寫紀錄，退出碼照 `aos-exec`）；兩個都沒有：報錯回 2，不自建 `.aos/`。（POC 2026-10-01：整個交給 aos-exec，兩個都沒有時是 aos-exec 的用法錯 2）
-- **`aos-tick` 缺檔時**〔使用者方向 2026-09-30 晚〕：資料夾沒有 `.aos/` 就直接報錯、不自建（回 2、`config_invalid`，不取鎖、不寫紀錄）；有 `.aos/` 但沒有 `tasks.json` 算表壞、回 2〔使用者方向 2026-10-01：POC 先不做〕。開格驗過表之後到跑到某項重新展開之間，假設檔案不會變，不為這種情況另做設計。
-- **每項任務是 inst 的超集**：一份 [inst](../base/inst.md) 加 aos 的欄位（`id`、`kind`、`methods`）。
-- **先只定基本欄位**：不認得的鍵照收、核心忽略（任務是 inst 的超集，沿 [P-007](../protocol/README.md)）。第十九批的 `group`、`needs` 不再是欄位，寫了就當陌生鍵：前置改用包裝 `aos-needs`（B-621），組改由存檔點劃分（B-630）。
-- **`kind`、`methods` 與其他欄位核心不看**：`kind` 只是標記（B-626）。`methods` 是給檔案收件程式讀的宣告：這一項處理哪些檔案請求 method。〔暫定，第二十批檔案收件 aos 不管〕它的意思、跨項重複怎麼辦，由收件程式定（B-623）。
+- **每項任務是 inst 的超集**：一份 [inst](../base/inst.md) 加 aos 的欄位（`id`、`kind`）。
+- **先只定基本欄位**：不認得的鍵照收、核心忽略（任務是 inst 的超集，沿 [P-007](../protocol/README.md)）。第十九批的 `group`、`needs` 不再是欄位，寫了就當陌生鍵：前置改用包裝 `aos-needs`（B-621），組改由存檔點劃分（B-630）。第十七批的 `methods` 也拿掉了（使用者 2026-10-01），寫了一樣當陌生鍵。
+- **`id`**：可以不寫。沒寫時，這一項的 id 就是它在 `tasks` 陣列的位置轉成字串（第 1 項是 `"0"`，第 4 項是 `"3"`）；紀錄、`AOS_TASK_ID`、`stopped_after` 都用它。跟別項寫的 id 撞了不管（默認不重複）。
+- **`kind`**：可以不寫；只是標記（B-626），核心不看。
 - **一個 module 一項任務**：產生請求、處理結果都在該項內做；要經佇列送的訊息交給系統級任務 `aos-mq post`（B-624）。檔案收件與投件是任務表上的普通任務，aos 不管（B-623、B-624）。
 - 資源 module、`aos-clean`、收信程式都是同一張表上的項目，不分 pre／post 掛勾。有權限者也能直接跑這些程式；在 tick 外跑算外部世界（B-602）。資源 module 的啟用與父層限制見 [scheduling/admission](../scheduling/admission.md)。
+- 開格讀過表之後、到跑到某項展開之前，假設檔案不會變，不為這種情況另做設計。
 
-### 讀表：核心只驗四件事
+### 讀表：極簡檢查
 
-開格時讀一次表，只驗：是合法 JSON、`_metainfo` 對、每項（整份 `$ref` 展開後）是合法 inst、`id` 在本表唯一。
+開格時讀一次表，**只查這幾件**：
 
-**表壞了**就整表拒絕，任務一項也不跑，也不退回舊表；stderr 印 `config_invalid:` 加哪裡錯，tick 回 2。
+- 讀得到、是合法 JSON；
+- 頂層是物件，而且有 `tasks` 陣列（可以是空的）；
+- 每一項（整份 `$ref` 先展開，展開不了也算不過）是物件，而且有 `argv`。
 
-〔使用者方向 2026-10-01：POC 先不做〕默認表是對的：驗表與回 2 整個不做，表壞了就自然丟錯（回 1）。
+**不過**：stderr 印一行 `bad_table: …`、回 1。這不算開過一格：不換紀錄、不加 `seq`，一項也不跑。
+
+**其他一概不查**：外層與每項的 `_metainfo`、`id`、`kind` 填不填與它們的值、值的型別、`id` 重不重複、陌生鍵。格式上 `_metainfo` 仍照 P-202 寫，只是核心不擋。
+
+- 每項沒寫 `_metainfo`：照 posix 第 1 版跑。
+- 寫了但不對（或 inst 部分有別的錯）：跑到那一項、展開成 inst 時自然丟錯（traceback）、回 1；前面的項已跑，紀錄停在 `ended:false`。
 
 ### 誰驗什麼〔暫定〕
 
-任務表的完整 schema（[P-202](protocol/node.md)）比核心驗的多。分工如下：
+任務表的完整 schema（[P-202](protocol/node.md)）比核心查的多。分工如下：
 
 | 檢查 | 誰驗、什麼時候 | 不合時 |
 |---|---|---|
-| 合法 JSON、`_metainfo`、每項是合法 inst、`id` 唯一 | 核心，每格開格 | 整表拒絕、回 2 |
-| 其餘 schema 限制：缺 `kind`、`kind` 的值（含 `system.x`）、`methods` 的形狀 | 恢復前驗證（B-625）與建立 node 的工具；核心不驗 | 保持暫停、不 resume；核心照跑 |
-| `methods` 的意思、跨項重複 | 檔案收件程式自己（B-623），aos 不管 | 由收件程式定 |
-| 不認得的鍵 | 沒人驗 | 照收、核心忽略 |
+| 讀得到、合法 JSON、有 `tasks` 陣列、每項是物件且有 `argv` | 核心，每格開格 | `bad_table:`、回 1、不開格 |
+| 每項的 inst 部分（`_metainfo`、`argv` 的型別、串流、`envs`…） | 核心，跑到那一項展開時 | 自然丟錯、回 1，紀錄停在 `ended:false` |
+| 其餘 schema 限制：外層 `_metainfo`、`id` 的形狀、`kind` 的值（含 `system.x`） | 恢復前驗證（B-625）與建立 node 的工具；核心不驗 | 保持暫停、不 resume；核心照跑 |
+| `id` 重複 | 沒人驗（默認不重複） | 核心照跑；靠 id 的系統級任務（例如 `aos-git` 的存檔點）自己會混淆 |
+| 不認得的鍵（含 `group`、`needs`、`methods`） | 沒人驗 | 照收、核心忽略 |
 
 所以核心看到缺 `kind` 或 `system.x` 的表照跑；要擋，就在改表後、resume 前照 B-625 驗。完整 schema 是給外部工具與恢復前驗證用的。
 
 ### 跑每一項
 
 - 前一項結束才開下一項。每項結束後寫進結束碼紀錄（B-633）。
-- **成敗**：以可信 wait 的正常退出 0 算成功；exec 失敗、非零、被訊號結束都算失敗。普通程式回 125 不能猜成「沒跑」。
+- **任務的結束碼完全不影響 tick**：回 0、1、2、125～127、被訊號殺，都照實記進紀錄、照常跑下一項。要判斷成敗的人照 [C-08](conventions.md) 只分 0 與非 0：正常退出 0 才算成功。普通程式回 125 不能猜成「沒跑」。
+- **某項沒跑成**：mkdir、cwd、重導向的檔開不起來，記 `exit:125`（照 inst，跟 `aos-exec` 一致）；找不到程式記 127、沒執行權記 126。這幾種 stderr 另印一行 `exec_failed: <id>: 說明`。
 - 「沒事做」可以不改檔、回 0。在途工作存在任務自己的領域狀態裡，不用特殊結束碼當排程訊號。
-- 核心在每項的環境多放下面這些變數（格式見 [P-203](protocol/node.md)）。命名規則：整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`。
+- 任務的 stdin、stdout、stderr 照各自的 inst 走（預設 `/dev/null`）。
+- 核心在每項的環境多放下面這些變數（格式見 [P-203](protocol/node.md)，aos 全部的環境變數見 [C-10](conventions.md)）。命名規則：整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`。
 
 | 變數 | 內容 |
 |---|---|
-| `AOS_NODE_DIR` | node id |
-| `AOS_TICK_LOCK_FD` | 鎖 fd 的號碼（B-602）〔使用者方向 2026-10-01：POC 先不做〕 |
-| `AOS_TICK_RECORD` | 本格結束碼紀錄 `current.json` 的絕對路徑；本格紀錄失效後開的項不設（B-633；寫不進的失效處理已作廢，2026-09-30 晚，見 B-633「失效」） |
-| `AOS_TASK_ID` | 任務表這一項的 `id` 字串，原樣 |
+| `AOS_TICK_CWD` | 工作資料夾的絕對路徑，也就是這一格 tick 的 cwd。本格紀錄在 `$AOS_TICK_CWD/.aos/tick/current.json`（B-633） |
+| `AOS_TASK_ID` | 這一項的 id（沒寫 id 時是位置字串；id 不是字串時轉成字串） |
 | `AOS_TASK_INDEX` | 這一項在任務表陣列的位置，從 0 起 |
 
-### 停格檔與擋板檔
+- 其他環境變數（含 `AOS_DIRNAME`）任務照常繼承。這一項的 inst 用 `envs` 清空環境時，上表的變數也不放。
+- 沒有 `AOS_TICK_LOCK_FD`（鎖 fd 不傳給任務，B-602）。
 
-任務能影響之後的項或之後的格，只有這兩個檔；**結束碼沒有特別意義**，任務回 3、100 都只是一般的失敗。
+### 停格檔與擋板檔〔暫定〕
+
+使用者 2026-10-01：擋板檔與停格檔的機制之後會詳細設計，下面是目前的做法。
+
+任務能影響之後的項或之後的格，只有這兩個檔；**結束碼沒有特別意義**，任務回 3、100 都只是一般的非 0，照記、照跑。
 
 | | 停格檔 `.aos/tick/stop` | 擋板檔 `.aos/tick-blocked` |
 |---|---|---|
 | 擋什麼 | **只擋本格**剩下的項；下一格照常開、照常跑 | 擋住**之後各格** |
 | 誰建 | 任務。系統級任務與普通程式要叫停也建它 | 任務（例如發現需要人處理的故障）或人手；`aos-git` 故障時也寫它（B-622） |
 | 內容 | 不拘，建議一行 UTF-8 原因 | 一行 UTF-8 原因 |
-| 核心什麼時候看 | 每跑完一項就檢查 | 取鎖後第一件事 |
-| 核心看到時 | 不開後面的項；紀錄寫 `ended:true` 與 `stopped_after`（在哪一項之後停，[P-213](protocol/node.md)），這格回 1 | 一項都不跑、不寫結束碼紀錄、不加 `seq`、不刪停格檔；stderr 印 `blocked:` 加檔內原因，回 1。所以人手或 cron 直接跑也被擋 |
-| 誰刪 | 核心：取鎖後、開第一項前刪掉上一格留下的 | **只有人手**，修好後刪；aos 不自動刪 |
-| daemon | 不看它，不因它暫停 node | 有它就不開格（[B-607](daemon/registration.md)） |
+| 核心什麼時候看 | 每跑完一項就檢查 | 取鎖後、讀表前 |
+| 核心看到時 | 不開後面的項；stderr 印 `stopped:` 加檔內原因；紀錄寫 `ended:true`、`exit:0` 與 `stopped_after`（在哪一項之後停，[P-213](protocol/node.md)）；這格回 0——該停就停，不算中斷 | 一項都不跑、不寫結束碼紀錄、不加 `seq`、不刪停格檔；stderr 印 `blocked:` 加檔內原因，回 0。所以人手或 cron 直接跑也被擋 |
+| 誰刪 | 核心：換完紀錄後、開第一項前，刪掉上一格留下的 | **只有人手**，修好後刪；aos 不自動刪 |
+| daemon | 不看它 | 現行 daemon 核心照常叫，由 `aos-tick` 自己擋；舊設計是有它就不開格（[B-607](deferred/daemon/registration.md)，在暫緩區） |
 
 - **有 git 時，停格檔等於這格作廢**：排在後面的 `aos-git close` 不跑、不提交，下一格 `aos-git open` 把 aos 範圍還原（B-630）。想提早結束又保住結果的任務，別建停格檔，改讓後面的項讀紀錄自己跳過。〔使用者方向 2026-09-30，納入 cgroup 與 git 疑-1〕
+- 要知道這格是不是被停下，讀紀錄的 `stopped_after`；外層要分出 `busy`、`blocked`，看 stderr。
 
-兩個檔都 ignored。使用者裁定的是分工：停格檔靠偵測檔案停掉本格、只在任務層面、daemon 不看、下一格核心開頭刪；擋板檔擋之後的格、有它時 daemon 不開格，本輪就啟用。檔名、內容、stderr 與回 1 等細節是〔建議預設，未拍板〕。
+兩個檔都 ignored。使用者裁定的是分工：停格檔靠偵測檔案停掉本格、只在任務層面、daemon 不看、下一格核心開頭刪；擋板檔擋之後的格。檔名、內容、stderr 細節是〔建議預設，未拍板〕；兩種都回 0 照 [C-08](conventions.md)。
 
 ### 任務的帳號
 
-- 任務可以帶 `user`；省略就用 tick 自己的有效帳號。
-- 帶了而且跟 tick 的有效帳號不同（名稱先解析成 UID 再比）時，**核心不切帳號**：那一項不跑，照 inst 算 125、不寫 `exit`，stderr 印 `user_mismatch: <id>`，紀錄記 `exit:125`，其餘照表處理。〔使用者方向 2026-10-01：POC 先不做〕tick 不看 `user`，照自己的帳號跑。
-- 要用別的帳號跑，就在 argv 包普通程式 `aos-as <帳號> -- 原指令`（[B-303](helper.md)）；准不准照該 node 的身分額度核（[B-301](../base/identity-resources.md)）。
-- 不另設服務帳號（第九批）；要 root 的固定步驟交給 helper（[B-609](daemon/helper-actions.md)）；管成員的事由上層 kernel 在自己的 tick 用自己的帳號做。任務類別不授予身分或權限。
+- **核心不看任務的 `user`**：寫了照收、不理它，一律用 tick 自己的帳號跑（`aos-exec` 也不認得 inst 頂層的 `user`，[inst](../base/inst.md)）。原本「帶了不同帳號就那一項回 125」在[暫緩區](deferred/tick.md#暫緩b-620-任務的帳號125)。
+- 要用別的帳號跑，就在 argv 包普通程式 `aos-as <帳號> -- 原指令`（[B-303](deferred/helper.md)，要 helper 與通道，都在暫緩區）；准不准照該 node 的身分額度核（[B-301](../base/identity-resources.md)）。
+- 不另設服務帳號（第九批）；要 root 的固定步驟交給 helper（[B-609](deferred/daemon/helper-actions.md)）；管成員的事由上層 kernel 在自己的 tick 用自己的帳號做。任務類別不授予身分或權限。
 
 ### 核心的結束碼
 
-`0` 全部成功；`1` 有任務失敗（含回 125 的）、被停格檔停下，或被擋板檔擋住；`2` argv 或任務表不合法（尚未開任務）；`75` 鎖被占。碼表見 [P-203](protocol/node.md)。〔使用者方向 2026-10-01：POC 先不做〕POC 整格只回 0／1（argv 用法錯仍回 2）；表不合法的 2、鎖被占的 75、`user` 不同的 125 都不做。
+照 [C-08](conventions.md)，`aos-tick` 只回 0 或 1，只講 tick 自己：
 
-- 〔建議預設〕被停下的格回 1：這格沒把表跑完，對呼叫者就是「沒全部成功」。停格檔只管本格，所以不另設一個會讓 daemon 誤當成暫停訊號的碼；要知道是不是被停下，讀紀錄的 `stopped_after`。
+| 回 | 什麼時候 |
+|---|---|
+| `0` | 照表跑完（不管任務成敗、回幾）；被停格檔停下；拿不到鎖（`busy`）；有擋板檔（`blocked`） |
+| `1` | argv 用法錯、`AOS_DIRNAME` 不合法、`no_target`、`no_tasks`、`bad_table`；tick 自用的檔（擋板檔、停格檔、`current.json`、`last.json`）讀不到、寫不進或格式壞——這種就讓程式自然丟錯（traceback 進 stderr），不分發生時機、不補救 |
 
-依據：使用者方向 2026-09-29；第十七批（`methods`）；第十九批、第二十批改寫（核心）；第二十批（任務表先只定基本欄位、環境變數命名、停格檔與擋板檔並用）；第二十批疑點裁定 1（改：停掉本格靠偵測檔案，不靠結束碼）、6（任務的帳號，取代第十九批「由標準配備的切換使用者開這一項」）、8（tick 外跑算外部世界）。
+stderr 的代碼一覽（格式見 [P-203](protocol/node.md)）：`usage`、`busy`、`blocked`、`stopped`、`no_target`、`no_tasks`、`bad_table`、`exec_failed`。
 
-**驗收：**任務帶 `user` 整份照收；帶了跟 tick 不同的帳號時那一項回 125、紀錄記 125，其餘照表跑〔使用者方向 2026-10-01：POC 先不做〕；包了 `aos-as` 而且有 helper、有通道時以指定帳號跑，任務內用 `AOS_TICK_LOCK_FD` 核對得到獨占鎖，它結束前下一項不開、同資料夾另一格回 75。某項建立 `.aos/tick/stop` 後，後面的項不跑、紀錄 `ended:true` 並記 `stopped_after`、整格回 1，下一格照常跑；任務回 3 或 100 照一般失敗處理，後面照跑。表裡 `id` 重複時一項都不跑、回 2。
+依據：使用者方向 2026-09-29；第十九批、第二十批改寫（核心）；第二十批（任務表先只定基本欄位、環境變數命名、停格檔與擋板檔並用）；第二十批疑點裁定 1（改：停掉本格靠偵測檔案，不靠結束碼）、8（tick 外跑算外部世界）；使用者 2026-10-01（目標改成位置參數、極簡檢查、`id` 與 `kind` 可省、拿掉 `methods`、不看 `user`、結束碼照 C-08、`AOS_TICK_CWD`）。
+
+**驗收：**
+
+- 任務帶 `user` 照收，照 tick 自己的帳號跑。
+- 任務回 1、2、125 或被訊號殺時照實記進紀錄、後面照跑，整格回 0。
+- 某項建立 `.aos/tick/stop` 後，後面的項不跑，stderr 有 `stopped`，紀錄 `ended:true`、`exit:0` 並記 `stopped_after`，整格回 0；下一格照常跑。
+- 任務表不是合法 JSON、沒有 `tasks` 陣列或某項缺 `argv`：stderr 有 `bad_table`、回 1，兩份紀錄與 `seq` 都不變。表裡 `id` 重複、缺 `kind`、沒有 `_metainfo` 都照跑。
+- 第 4 項沒寫 id：紀錄裡與它的 `AOS_TASK_ID` 都是 `"3"`。
+- 目標是資料夾但沒有 `.aos/tasks.json`：`no_tasks`、回 1；給不存在的路徑：`no_target`、回 1；什麼都不建。
+- `aos-tick /m/t.json`：拿它當任務表，鎖與紀錄在 `/m/.aos/` 下；表裡相對的 `cwd` 以 `/m` 為中心。
 
 ## B-633：每項結束碼紀錄與格數
 
-核心多開放一件事：**本格每一項怎麼結束，寫成一份檔，讓後面的任務讀得到。** 本 node 的**格數**也記在這裡。這份紀錄直接取代第十九批的 git 備援日誌（B-632）：git 與無 git 合成同一種模式。
+核心多開放一件事：**本格每一項怎麼結束，寫成一份檔，讓後面的任務讀得到。** 本資料夾的**格數**也記在這裡。這份紀錄直接取代第十九批的 git 備援日誌（B-632）：git 與無 git 合成同一種模式。
 
-依據：第二十批追答 8、疑點裁定 5；修正輪暫定的裁定（格數不倒退改成不保證、`--firstdo-fsync`）；納入 cgroup／git 輪疑點 10：使用者 2026-09-30 同意照暫定。以下位置、欄位與寫法都是〔建議預設，未拍板〕；失效一小節是〔暫定，astra 審整理區設-2〕（該小節已作廢，2026-09-30 晚）。
+依據：第二十批追答 8、疑點裁定 5；修正輪暫定的裁定（格數不倒退改成不保證）；納入 cgroup／git 輪疑點 10：使用者 2026-09-30 同意照暫定；使用者 2026-10-01（默認紀錄是好的、`--firstdo-fsync` 先不做、拿掉 `AOS_TICK_RECORD`）。以下位置、欄位與寫法都是〔建議預設，未拍板〕。落盤、寫不進、讀不懂的處理在[暫緩區](deferred/tick.md#暫緩b-633-落盤寫不進與讀不懂)。
 
 ### 放哪、記什麼
 
-兩個檔都 ignored：`.aos/tick/current.json`（本格）與 `.aos/tick/last.json`（上一格）。任務環境 `AOS_TICK_RECORD` 是 `current.json` 的絕對路徑。格式見 [P-213](protocol/node.md)。**只有核心寫**，而且只在持鎖時寫。
+兩個檔都 ignored：`.aos/tick/current.json`（本格）與 `.aos/tick/last.json`（上一格）。任務從 `$AOS_TICK_CWD/.aos/tick/current.json` 讀本格紀錄（狀態資料夾名照 `AOS_DIRNAME`）。格式見 [P-213](protocol/node.md)。**只有核心寫**，而且只在持鎖時寫。
 
 | 欄位 | 意思 |
 |---|---|
 | `seq` | 格數（下面） |
-| `tasks` | 已跑完的項，照順序；正常結束記 `exit`，被訊號結束記 `signal`；沒跑到的不列 |
-| `ended` | 這格跑完、被停格檔停下或表壞時寫成 true，同時加 `exit`＝這格 tick 的結束碼（只會是 0、1、2；75 不寫紀錄） |
-| `stopped_after` | 被停格檔停下時，是哪一項跑完後停的；記那一項的 `id` 字串，這時 `exit` 一定是 1 |
+| `tasks` | 已跑完的項，照順序；`id` 是任務表那一項的 id（沒寫 id 時是位置字串）；正常結束記 `exit`，被訊號結束記 `signal`；沒跑到的不列 |
+| `ended` | 照表跑完、或被停格檔停下時寫成 true，同時加 `exit`＝這格 tick 的結束碼。有紀錄收尾時 tick 一定回 0，所以 `exit` 只會是 0：busy、blocked、bad_table 根本不寫紀錄；tick 中途出錯時紀錄停在 `ended:false` |
+| `stopped_after` | 被停格檔停下時，是哪一項跑完後停的；記那一項的 id。這時 `exit` 也是 0 |
 | `started_at_ms` | 只給人看，不參與計算 |
 
 ### 格數 `seq`
 
-- 本 node 第幾格，從 1 起，每格加 1。
+- 本資料夾第幾格，從 1 起，每格加 1。
 - **跨重啟、換 daemon、改用 cron 都接著數。** aos 內部的時長與起算點都用它數（[C-01](../contracts.md)）。
-- **斷電不倒退：預設不保證，開了 `--firstdo-fsync` 才保證**（下面「落盤」）。〔使用者方向 2026-10-01：POC 先不做〕〔使用者方向 2026-09-30，修正輪暫定的裁定〕沒開時，斷電或 WSL 強關後格數可能退回幾格。依賴格數單調的地方——保留期與清理（[B-404](../base/storage.md)）、摘要的 `observed_seq`、以格數算的起算點（[C-01](../contracts.md)）——同樣不保證，除非開旗標。
-- **沒有紀錄的格不佔號**：被擋板擋住的格、鎖被占的格、本格紀錄開不起來的格（下面「失效」），都不加 `seq`。這些格裡沒有任務拿得到 `seq`，所以下一格用同一個號也不會重複。
-- 跟 daemon 每筆登記的 `tick_seq` 是兩回事：那個只用在叫醒後等新格，登記換了就重算（[B-607](daemon/registration.md)）。
+- **斷電可能倒退，不保證**：預設不 fsync，斷電或 WSL 強關後 `seq` 可能退回幾格。依賴格數單調的地方——保留期與清理（[B-404](../base/storage.md)）、摘要的 `observed_seq`、以格數算的起算點（[C-01](../contracts.md)）——同樣不保證。保證不倒退的 `--firstdo-fsync` 在暫緩區。
+- **沒有紀錄的格不佔號**：拿不到鎖（busy）、被擋板擋住（blocked）、表沒過極簡檢查（bad_table）的格，都不加 `seq`。這些格裡沒有任務拿得到 `seq`，所以下一格用同一個號也不會重複。
+- 跟舊 daemon 每筆登記的 `tick_seq` 是兩回事：那個只用在叫醒後等新格，登記換了就重算（[B-607](deferred/daemon/registration.md)，在暫緩區）。
 
 ### 開格：換檔
 
-取鎖之後、讀任務表之前：
+讀表過了之後、刪停格檔之前（B-620「一格怎麼走」第 5 步）：
 
-1. **算新的 `seq`**：有 `current.json` 就取它的 `seq` 加 1；沒有就取 `last.json` 的加 1；都沒有就是 1。讀不懂的那份當成沒有〔使用者方向 2026-10-01：默認讀得懂〕。
-2. **寫新紀錄**（`ended:false`、`tasks:[]`）到暫存檔。
+1. **算新的 `seq`**：有 `current.json` 就取它的 `seq` 加 1；沒有就取 `last.json` 的加 1；都沒有就是 1。默認兩份都讀得懂；讀不懂就自然丟錯、回 1。
+2. **寫新紀錄**（`ended:false`、`tasks:[]`）到暫存檔。`.aos/tick/` 不在就建。
 3. **換檔**：有 `current.json` 就 rename 成 `last.json`；沒有 `current.json` 卻有 `last.json`，表示上一格沒留下紀錄，就刪掉 `last.json`，讓讀的人看到「不知道上一格」。
 4. 暫存檔 rename 成 `current.json`。
 
@@ -213,39 +264,9 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 ### 每項之後
 
-- 整份重寫：寫暫存檔 → rename。
-- 跑完、被停格檔停下時寫 `ended:true`；表壞回 2 時寫 `ended:true`、`exit:2`、`tasks:[]`。
-
-### 落盤：`--firstdo-fsync`
-
-〔使用者方向 2026-10-01：POC 先不做〕POC 不做這個旗標與 `AOS_TICK_FIRSTDO_FSYNC`，下面留著不刪。
-
-〔使用者方向 2026-09-30，修正輪暫定的裁定；旗標名照使用者原話〕**預設不 fsync。** 要格數不倒退，就開旗標：
-
-| | 沒開（預設） | 開了 |
-|---|---|---|
-| 開格 | 不 fsync | 第 2 步 fsync 暫存檔，第 4 步後 fsync `.aos/tick/` 目錄 |
-| 每項之後 | 不 fsync | rename 前 fsync 暫存檔；不 fsync 目錄 |
-| 斷電或 VM 強關後 | 紀錄可能退回較早的一版、壞掉或不見；`seq` 可能倒退 | 只要有任務拿到這格的 `seq`，這個號已經落盤，不倒退。`current.json` 可能退回較早的一版，但一定完整；少掉的結果讓下一格看到 `ended:false`，照「上一格沒正常收尾」處理 |
-
-- **怎麼開**：直接跑時帶 `aos-tick --firstdo-fsync`（[P-203](protocol/node.md)）。daemon 帶了 `aos daemon --firstdo-fsync`（使用者原話 `aos-daemon --firstdo-fsync`）時，它開的每一格都照開：daemon 在那一格的環境放 `AOS_TICK_FIRSTDO_FSYNC=1`，`aos-tick` 看到它就等於帶了旗標（[B-601](daemon/runtime.md)）。daemon 碰不到 inst 的 argv，所以用環境變數傳〔使用者 2026-09-30 同意照暫定〕。
-- 紀錄壞掉時照下面「失效」的「舊紀錄讀不懂」處理〔使用者方向 2026-10-01：默認讀得懂〕。
-
-### 失效：寫不進時
-
-〔使用者方向 2026-09-30 晚〕**本小節作廢**：結束碼紀錄寫不寫得進去不管，默認一定寫得進去；`record_unwritable` 與下面的失效處理都不再要求（「舊紀錄讀不懂」若另有規定仍照原文）。
-
-**本格紀錄失效**＝這一格有任何一次寫紀錄失敗（唯讀資料夾、滿碟、rename 失敗）。
-
-| 什麼時候失敗 | 核心怎麼做 | 下一格看到的 |
-|---|---|---|
-| 開格（上面 2～4 步） | 刪掉暫存檔；已經有 `current.json` 的，rename 成 `last.json`（rename 不佔新空間）；本格一項都不設 `AOS_TICK_RECORD` | 沒有 `current.json`：照第 3 步刪 `last.json`，上一格算「不知道」；`seq` 從舊 `last.json` 接著數 |
-| 跑到中途 | 留著最後一次寫成功的 `current.json`（`ended:false`）不動，本格之後不再寫；之後開的項不設 `AOS_TICK_RECORD` | `last.json` 是 `ended:false`，算沒正常收尾 |
-
-- 兩種都照跑完整張表，stderr 印一次 `record_unwritable`。
-- 讀的任務只經 `AOS_TICK_RECORD` 找本格紀錄；沒有這個變數就是「不知道」，不能自己去讀 `.aos/tick/` 裡的殘留檔當本格紀錄。
-- 失效後就算空間回來了，本格也不再寫，免得後面的項把一份缺了幾項的紀錄當成完整的。
-- **舊紀錄讀不懂**（兩份都壞）：當成開格失敗，兩份檔都不動，stderr 另印 `record_unreadable`，要人手修；修好前每格都沒有紀錄。〔使用者方向 2026-10-01：默認讀得懂，POC 先不做〕
+- 整份重寫：寫暫存檔 → rename。不 fsync。
+- 照表跑完、被停格檔停下時寫 `ended:true`、`exit:0`（停下的另加 `stopped_after`）。
+- tick 中途出錯（自然丟錯）或被殺時，紀錄停在最後一次寫成的樣子，`ended:false`。
 
 ### 誰讀
 
@@ -255,36 +276,10 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 ### 其他
 
-- **被擋板檔擋住的格**不寫紀錄、不加 `seq`（B-620），跟鎖被占一樣當成沒開過格。
+- **被擋板檔擋住的格**不寫紀錄、不加 `seq`（B-620），跟 busy 一樣當成沒開過格。
 - **別刪它**：`.aos/tick/` 不被 `aos-clean` 清；`aos-git` 固定排除它，不靠 `.gitignore`，提交與還原都不碰（B-622）。人手刪掉兩份檔，`seq` 從 1 重數，以格數算的保留期會算錯，風險自負。
 
-**驗收：**有 `.aos/tick-blocked` 時直接跑 `aos-tick` 回 1、stderr 有 `blocked`、沒有任務跑、兩份紀錄與 `seq` 都不變，刪掉擋板後下一格照常；任務第二項讀得到第一項的結束碼；第三項被 SIGKILL 時紀錄是 `signal:9`；tick 在第二項中途被殺，下一格的 `last.json` 是 `ended:false`；同一資料夾連跑十格，`seq` 從 1 到 10，換成 cron 跑仍接著數；帶 `--firstdo-fsync`（或 daemon 帶了旗標）時，第一項開跑後模擬斷電（丟掉沒 fsync 的寫入），重開後下一格的 `seq` 仍比斷電那格大；沒帶時不要求〔使用者方向 2026-10-01：POC 先不做〕；~~資料夾唯讀時仍照表跑完、stderr 有 `record_unwritable`、沒有任務拿到 `AOS_TICK_RECORD`~~（作廢，2026-09-30 晚）；~~開格時滿碟，下一格的 `last.json` 不存在、`seq` 接著數~~（作廢，2026-09-30 晚）；~~第二項後滿碟，第三項沒有 `AOS_TICK_RECORD`，下一格的 `last.json` 是 `ended:false` 且只有前兩項~~（作廢，2026-09-30 晚）；鎖被占回 75 時兩份紀錄都不變〔使用者方向 2026-10-01：POC 先不做〕。
-
-## B-628：上下層判定：預設看資料夾包含、可登記覆蓋
-
-每個 tick 都有上層與下層。預設看資料夾，在 daemon 底下可以登記覆蓋。
-
-〔使用者方向 2026-10-01：POC 先不做〕POC 不判上下層，下面規定留著不刪（[plan 第一段待問 8](../../plan/m1-tick-core.md#待問)）。
-
-- **預設上層**：從本 tick 的資料夾往上找，最近一個「有 tick 的資料夾」。〔暫定，計畫疑-10 未答，照 a〕「有 tick」的判準：資料夾裡有 `.aos/inst.json` 或 `inst.json`（[inst 目標](../base/inst.md#inst-目標檔案或資料夾)）。路徑逐段比對，不展開 symlink（沿 [T-03](../terms.md)）。找不到就沒有上層。這是純路徑計算，不靠 daemon。
-- **登記覆蓋**：經 daemon 登記時可以指定上層（`parent_id`），蓋過預設。
-  - 覆蓋要**新舊兩個上層都同意**。〔建議預設〕舊上層指**目前的有效上層**：第一次覆蓋時是資料夾推得的那個，再次換上層時是目前覆蓋的那個（B-606）。
-  - 舊上層沒在 daemon 登記（例如 cron 跑的）時，aos 管不著它，**只要新上層同意**。
-  - 覆蓋後**管轄權仍跟著資料夾**，覆蓋只改管理關係：誰分資源、誰叫醒、誰能解除登記。
-  - 覆蓋存在 daemon 的登記裡，只在 daemon 底下有；cron 或人手跑的 tick 只看資料夾。登記規則與重啟後怎麼長回來見 [B-606](daemon/registration.md)。
-- **有效上層**：有覆蓋就是覆蓋的那個，否則是預設上層。**下層**＝有效上層是我的 tick。
-  - 〔建議預設〕daemon 設定列的頂層（root）有效上層是 null，算部署者在設定裡做的覆蓋。它的資料夾上層沒在同一個 daemon 登記時，照上面「只要新上層同意」（這裡沒有上層，由部署者決定）；已在同一個 daemon 登記時，整份設定不收（[B-606](daemon/registration.md)）。
-- **換上層有兩條路**（撤第十八批「只有重新登記一條路」）：
-  1. **搬資料夾**：搬進別的 tick 的資料夾，新位置最近的那個自動成為預設上層。路徑就是 id，所以等於舊 id 解除、新 id 重登；引用舊路徑的回址會失效，風險自負（T-03）。
-  2. **改登記**：用 `parent_id` 覆蓋（B-606）。
-
-  兩條都要被搬的那棵先暫停、程序全空（沿第十八批 Q10）。
-- 〔建議預設，未拍板〕**身分繼承**：inst 的 `user` 省略時繼承上層，指的是有效上層（[inst](../base/inst.md)）。
-- **巢狀 git**：下層 tick 的資料夾寫進上層 repo 的 `info/exclude`，上層的 `aos-git` 不提交也不還原它們（B-622）。
-
-依據：第十九批第 2、8 條（核心；推翻「上下層看登記、與目錄位置無關」）；第十九批疑點裁定 5、11（登記覆蓋、舊上層沒登記時只要新上層同意）。
-
-**驗收：**`/a` 與 `/a/b` 都有 `.aos/inst.json`、`/a/x` 沒有時，`/a/b` 與 `/a/x/c` 的預設上層都是 `/a`；沒有 daemon 也算得出來。資料夾上層已在 daemon 登記時，只有新上層同意的覆蓋被拒；資料夾上層是 cron 跑、沒在 daemon 登記的，只要新上層同意就收。已覆蓋成 B 再改成 C，要 B 與 C 同意。設定只列 `/a/b` 為頂層、`/a` 由 cron 跑時，daemon 下 `/a/b` 是頂層，直接跑的核心照資料夾仍算出 `/a`。覆蓋後 `/a` 對 `/a/b` 資料夾的管轄不變，叫醒與分資源改由新上層做。
+**驗收：**有 `.aos/tick-blocked` 時直接跑 `aos-tick` 回 0、stderr 有 `blocked`、沒有任務跑、兩份紀錄與 `seq` 都不變，刪掉擋板後下一格照常；任務第二項讀得到第一項的結束碼；第三項被 SIGKILL 時紀錄是 `signal:9`；tick 在第二項中途被殺，下一格的 `last.json` 是 `ended:false`；同一資料夾連跑十格，`seq` 從 1 到 10，換成 cron 跑仍接著數；busy 或 bad_table 時兩份紀錄都不變。
 
 ## B-629：標準任務表範本
 
@@ -302,7 +297,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | # | `id` | `kind` | argv | 做什麼 | 正本 |
 |---|---|---|---|---|---|
 | 1 | `mq-get` | system | `aos-mq get` | 用 `node.take` 取出本 node 佇列裡的訊息；取出後怎麼分派 aos 不管 | B-623 |
-| … | 使用者任務 | kernel／agent／custom | 各自的程式；要換帳號的包 `aos-as <帳號> --`，要前置的包 `aos-needs <前置 id…> --`，要每項一框的包 `aos-cg --`。檔案收件、檔案投件也是這裡的普通任務，aos 不管 | 各自 | [B-303](helper.md)、B-621、B-634、B-623、B-624 |
+| … | 使用者任務 | kernel／agent／custom | 各自的程式；要換帳號的包 `aos-as <帳號> --`，要前置的包 `aos-needs <前置 id…> --`，要每項一框的包 `aos-cg --`。檔案收件、檔案投件也是這裡的普通任務，aos 不管 | 各自 | [B-303](deferred/helper.md)、B-621、B-634、B-623、B-624 |
 | n-2 | `mq-post` | system | `aos-mq post` | 把 `.aos/mq/post/` 裡的訊息用 `node.send` 送出 | B-624 |
 | n-1 | `summary` | system | `aos-publish` | 發布 `published.json` | B-624 |
 | n | `clean` | system | `aos-clean --config config/clean.json` | 過了保留期的清理 | [B-404](../base/storage.md) |
@@ -331,8 +326,8 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - **範本只是預設**（[T-10](terms.md)）：任務表可以拿掉任何一項，拿掉了那一項的保證就沒有。例如沒掛 `mq-get`，佇列裡的訊息就沒人取；沒掛 `mq-post`，要送的訊息就一直留著；沒掛 `aos-git` 三項，就照 B-632 沒有提交與還原。
 - **順序帶來的保證**：「先提交再送」靠 `git-close` 排在 `mq-post`、`summary` 前面（B-624）。使用者自己把送出排到 git 收尾前面，就沒有這個保證；照 [T-01](../terms.md)，沒排對的後果不逐條寫。
 - 預設 kernel 範本（[P-814](../protocol/kernel-tasks.md)）與 agent 範本（[P-715](../protocol/agent-tasks.md)）都照沒有 git 版的順序：頭一項 `mq-get`，中間是原本的任務，尾三項 `mq-post`、`summary`、`clean`。〔那兩份範本還沒改，也還沒有有 git 版，見 README 疑點〕
-- **不在範本上的**：once 是任務自己呼叫的通道事務（[B-613](daemon/channel.md)）；重啟、格後收尾、排空、helper 歸 daemon（[B-601](daemon/runtime.md)、[B-603～605](daemon/README.md)、[B-609](daemon/helper-actions.md)）。
-- **通道**：daemon 開 tick 時給的通道（環境變數、憑證、事務）以 [B-612～614](daemon/README.md) 為正本。任務會繼承這些環境變數，在投件權就是執行權（[T-08](../terms.md)）之下這是預期行為。沒有通道（不是 daemon 開的格）只算功能受限：`aos-mq`、`aos-as`、once 用不了，其他照常。
+- **不在範本上的**：once 是任務自己呼叫的通道事務（[B-613](deferred/daemon/channel.md)）；重啟、格後收尾、排空、helper 歸 daemon（[B-601](deferred/daemon/runtime.md)、[B-603～605](deferred/daemon/README.md)、[B-609](deferred/daemon/helper-actions.md)；daemon 那側在暫緩區）。
+- **通道**：daemon 開 tick 時給的通道（環境變數、憑證、事務）以 [B-612～614](deferred/daemon/README.md) 為正本（daemon 那側在暫緩區）。任務會繼承這些環境變數，在投件權就是執行權（[T-08](../terms.md)）之下這是預期行為。沒有通道（不是 daemon 開的格）只算功能受限：`aos-mq`、`aos-as`、once 用不了，其他照常。
 
 依據：第二十批追答 8、9（推翻第十九批「標準配備：必須全掛、不能拆、跟核心同一支 `aos-tick`」「功能受限不算沒掛」「有備援就算全掛」）；第二十批進行順序、疑點裁定 3、4（存檔點、git 收尾之後才送）；astra 審整理區裁定（系統訊息佇列 `aos-mq` 取代收件與投件，順序照原位置）；aos-git 分工（系統級任務之間夾存檔點，範本自帶）。
 
@@ -342,7 +337,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 `needs` 的意思不變：前置成功才執行。只是改成普通程式 `aos-needs`，核心不做。
 
-- **`aos-needs <前置任務 id…> -- <原指令…>`**（argv 見 [P-204](protocol/node.md)）：讀結束碼紀錄（`AOS_TICK_RECORD`）。每個前置都在本格紀錄裡、而且正常退出 0，才 exec 原指令，結束碼就是原指令的；否則不跑，stderr 印 `needs_unmet: <id>`，回 125。沒有紀錄可讀也回 125（`no_record`）。
+- **`aos-needs <前置任務 id…> -- <原指令…>`**（argv 見 [P-204](protocol/node.md)）：讀本格的結束碼紀錄（`$AOS_TICK_CWD/.aos/tick/current.json`，B-633）。每個前置都在本格紀錄裡、而且正常退出 0，才 exec 原指令，結束碼就是原指令的；否則不跑，stderr 印 `needs_unmet: <id>`，回 125。沒有紀錄可讀（沒有 `AOS_TICK_CWD` 或讀不到）也回 125（`no_record`）。
 - 前置只看本格：不沿用上一格的成功，也不另做跨格任務排程器。
 - 被 `aos-needs` 擋下的項在紀錄裡是 `exit:125`，算失敗；再依賴它的項也會被擋。
 - `aos-needs` 只擋後面的項不跑，自己不還原。失敗任務寫到一半的改動：有 git 時，aos 範圍裡的由它那組的存檔點還原（B-630）；使用者任務自己的檔、以及沒有 git 時的一切，都留在資料夾裡。
@@ -354,7 +349,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 ## B-634：aos-cg：每項一框
 
-〔使用者方向 2026-09-30，第二十批追答 8〕每項任務一框做成普通程式 `aos-cg`，要的任務自己在 argv 包：`aos-cg -- 原指令`（argv、代碼與結束碼見 [P-211](protocol/node.md)）。它不是系統級任務。框的樹與命名見 [B-605](daemon/cgroup.md)。**放棄「沒包的任務一結束就清殘留」**：沒包的任務留下的程序，等格後由 daemon 收（[B-601](daemon/runtime.md)）。
+〔使用者方向 2026-09-30，第二十批追答 8〕每項任務一框做成普通程式 `aos-cg`，要的任務自己在 argv 包：`aos-cg -- 原指令`（argv、代碼與結束碼見 [P-211](protocol/node.md)）。它不是系統級任務。框的樹與命名見 [B-605](deferred/daemon/cgroup.md)。**放棄「沒包的任務一結束就清殘留」**：沒包的任務留下的程序，等格後由 daemon 收（[B-601](deferred/daemon/runtime.md)；daemon 那側在暫緩區，現行 daemon 核心不收）。
 
 | | 有 cgroup | 沒 cgroup |
 |---|---|---|
@@ -366,8 +361,8 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - **清不空**：框一直不空時，stderr 印 `frame_not_empty`，建停格檔（[B-620](#b-620任務註冊表照表依序跑)）、回 1，不讓後面的項在還有人寫檔時開跑。
 - **結束碼**照原指令；原指令被訊號結束時，`aos-cg` 用同一個訊號結束自己。
 - **不放在 `tick` 底下**：cgroup v2 規定開了 controller 的那層不能同時放程序和子層。每項多約 0.1 毫秒（[實測](../../notes/probes/per-task-cgroup-cost.md)）。
-- **跟 `aos-as` 一起用**：寫成 `aos-cg -- aos-as <帳號> -- 原指令`；`aos-as` 把自己所在的 `task-*` 框帶給 helper，別的帳號的程序也放進同一框（[B-303](helper.md)、[B-609](daemon/helper-actions.md)）。反過來寫開不了框，因為框不歸那個帳號。
-- **不清上一格留下的 `task-*`**：只有 daemon 開的格才有 `task-*`，daemon 每格格後與重啟時都會收（[B-601](daemon/runtime.md)、[B-603](daemon/lifecycle.md)）。
+- **跟 `aos-as` 一起用**：寫成 `aos-cg -- aos-as <帳號> -- 原指令`；`aos-as` 把自己所在的 `task-*` 框帶給 helper，別的帳號的程序也放進同一框（[B-303](deferred/helper.md)、[B-609](deferred/daemon/helper-actions.md)）。反過來寫開不了框，因為框不歸那個帳號。
+- **不清上一格留下的 `task-*`**：只有 daemon 開的格才有 `task-*`，daemon 每格格後與重啟時都會收（[B-601](deferred/daemon/runtime.md)、[B-603](deferred/daemon/lifecycle.md)）。
 - **跑出框的**：`setsid`、double fork 逃不出 cgroup；只有經外部服務開的逃得出。aos 不擋這條路（管轄權是約定，B-626），經外部服務開的不歸 aos 管。
 - 〔暫定，第二十批疑-9 照 a〕沒 cgroup 時退回 subreaper 加程序群組，跟 daemon「沒有就退回」一致。
 
@@ -377,7 +372,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 ## B-623：系統訊息佇列：取件（mq-get）；檔案收件 aos 不管
 
-**aos 只管系統訊息佇列。** 佇列是 aos 的系統級 IPC：同一個 daemon 底下的 tick 經通道互送訊息，daemon 替每個 tick 暫存（[B-614](daemon/messaging.md)）。**請求與回應都走佇列**〔使用者方向 2026-09-30，修正輪暫定的裁定〕。本條是取的那一側，送的那一側見 B-624。
+**aos 只管系統訊息佇列。** 佇列是 aos 的系統級 IPC：同一個 daemon 底下的 tick 經通道互送訊息，daemon 替每個 tick 暫存（[B-614](deferred/daemon/messaging.md)）。**請求與回應都走佇列**〔使用者方向 2026-09-30，修正輪暫定的裁定〕。本條是取的那一側，送的那一側見 B-624。
 
 | | 系統訊息佇列 | 檔案收件區（`requests/`、`responses/`） |
 |---|---|---|
@@ -387,12 +382,12 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 ### aos-mq get：只有它取
 
 - **每個 node 只有 `aos-mq get` 用 `node.take` 取佇列**，其他任務不直接取。範本排在第一項（B-629）。
-- 一格裡把佇列取到空為止（回應說還有就再取，[P-119](protocol/daemon/channel.md)）。請求與回應一起取出，不分兩個佇列。
+- 一格裡把佇列取到空為止（回應說還有就再取，[P-119](deferred/protocol/daemon/channel.md)）。請求與回應一起取出，不分兩個佇列。
 - **取出後怎麼分派 aos 不管**：放哪、交給哪一項、先後怎麼排，由 `aos-mq get` 的實作決定，不在規範內。
 - daemon 的憑證一格一張，分不出是哪一項在取，所以「只有它取」是同一個 node 裡的約定，不是授權（跟 [B-602](#b-602同一資料夾一次一格互斥鎖) 的鎖同一種）。
 - 沒掛 `mq-get` 就沒人取：訊息留在 daemon，滿了寄件方收到 `mailbox_full`，daemon 重啟就丟（B-614）。
 - 不保證送達；沒人取的也不回任何錯誤。
-- 〔建議預設，未拍板〕daemon 訊息部件沒掛時，`node.take` 回空，`mq-get` 回 0；任務表不用改（[B-614](daemon/messaging.md)、[B-615](daemon/components.md)）。
+- 〔建議預設，未拍板〕daemon 訊息部件沒掛時，`node.take` 回空，`mq-get` 回 0；任務表不用改（[B-614](deferred/daemon/messaging.md)、[B-615](deferred/daemon/components.md)）。
 - 沒有通道（不是 daemon 開的格）時什麼都不取，回 0（argv 與結束碼見 [P-206](protocol/node.md)）。
 - 有 git 時〔使用者 2026-09-30 同意照暫定〕，這格作廢（停格檔、當機）的話，`mq-get` 這格取出、寫進 aos 範圍的訊息會被下一格 `aos-git open` 還原掉，等於丟了；daemon 那邊已經刪了，不會重取。佇列本來就不保證送達（B-630）。
 
@@ -412,7 +407,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 ### aos-mq post：只走通道
 
-- 任務把要送的訊息寫進追蹤的 `.aos/mq/post/<id>.req.json`（請求）或 `<id>.resp.json`（回應）（格式見 [P-206](protocol/node.md)）。`aos-mq post` 排在使用者任務之後（B-629），用 `node.send` 一件一件送進對方的佇列（[B-614](daemon/messaging.md)）。不寫對方的收件區。
+- 任務把要送的訊息寫進追蹤的 `.aos/mq/post/<id>.req.json`（請求）或 `<id>.resp.json`（回應）（格式見 [P-206](protocol/node.md)）。`aos-mq post` 排在使用者任務之後（B-629），用 `node.send` 一件一件送進對方的佇列（[B-614](deferred/daemon/messaging.md)）。不寫對方的收件區。
 - 訊息是一份請求物件或回應物件（[P-301](../protocol/messages.md)）：回別人的請求，也是寫一份回應進 `.aos/mq/post/`，由 `mq-post` 送回對方的佇列。〔使用者方向 2026-09-30，修正輪暫定的裁定〕請求與回應分檔名後綴，同一格同 ID 的請求與回應不會撞檔名。
 - `urgent:true` 是急件：送到時 daemon 叫醒收件 tick。
 - 誰能送由 daemon 判（B-614）。
@@ -426,7 +421,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 |---|---|
 | 送成功 | 移除那個檔；不保證送達 |
 | `forbidden`、`not_registered`、`kind_mismatch`、`message_too_large`、`invalid_params` | 送不了：不保留、不重試、不改走檔案。stderr 印 `post_failed: <to> <id> <code>`，把那個檔搬到 ignored 的失敗紀錄 `.aos/mq/failed/`（檔名不變）並記下代碼（格式見 [P-206](protocol/node.md)） |
-| `not_available`〔建議預設，未拍板〕 | daemon 訊息部件關閉；同「送不了」搬到 `.aos/mq/failed/`、記代碼且不自動重試；本次有待送件就回 1，沒件照沒事做回 0（[B-614](daemon/messaging.md)）。任務表不用改 |
+| `not_available`〔建議預設，未拍板〕 | daemon 訊息部件關閉；同「送不了」搬到 `.aos/mq/failed/`、記代碼且不自動重試；本次有待送件就回 1，沒件照沒事做回 0（[B-614](deferred/daemon/messaging.md)）。任務表不用改 |
 | 其他錯誤（`mailbox_full`、`stopping`、連不上 socket 等） | 留著，下一格再送 |
 | 本格沒有通道（`no_channel`） | 一件都不送、檔都留著；stderr 印一次，回 0 |
 
@@ -436,7 +431,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - 送成功、還沒移除時當機：下一格再送同一份，對方可能拿到兩次；取的一方靠訊息 ID 去重。
 - 有 git 時〔使用者 2026-09-30 同意照暫定〕，`mq-post` 移除已送檔這一步要到下一格的 `aos-git close` 才提交；下一格作廢的話，這些檔會被還原、再送一次。同樣靠 ID 去重（B-630）。
 - 可重送同一份訊息：這只是補送，不授權重做不明的工具／LLM 執行。無可信結果、又不能證明未執行的工作記 unknown，不自動再執行（[S-401](../scheduling/operations.md)）。
-- once 由 module 經通道用 `node.mount` 掛到 daemon（[B-613](daemon/channel.md)），不往 `.aos/mq/post/` 塞 IPC。
+- once 由 module 經通道用 `node.mount` 掛到 daemon（[B-613](deferred/daemon/channel.md)），不往 `.aos/mq/post/` 塞 IPC。
 - 〔暫定〕**鬧鐘撤**：原本的鬧鐘看對方收件區的原件還在不在；aos 不再寫對方收件區，佇列裡的訊息 daemon 也不說有沒有被取走，所以 `alarm_ticks` 與 `.aos/alarms/` 撤出 aos。要等回覆的任務，自己在領域狀態裡記、自己以格數判逾時。
 
 ### 發布摘要〔建議預設，未拍板〕
@@ -444,7 +439,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - 發摘要任務 `aos-publish` 排在 `mq-post` 之後：把 `.aos/summary/summary.json` 目前的原 bytes，用暫存檔再 rename 的方式整份發布成 ignored 的 `.aos/summary/published.json`（格式與權限見 [P-307](../protocol/messages.md)），給只有摘要讀權的上層讀；讀者一次 open 就拿到完整一版。
 - 有 git 版範本把它排在 `aos-git close` 之後，發布的就是剛提交的那一版；沒有 git 時不保證跟其他檔是同一版。
 - 發布失敗：留舊值、stderr 報錯、回 1，下一格再發。過時或缺失不等於 idle。
-- 有 repo 讀權的上層讀 `summary.json`，讀的是目前檔案。兩種讀法都要核對 `node_id` 是自己的直接下層（B-628）。
+- 有 repo 讀權的上層讀 `summary.json`，讀的是目前檔案。兩種讀法都要核對 `node_id` 是自己的直接下層（[B-628](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)，上下層判定在暫緩區）。
 - 摘要是觀測，不能蓋掉較新的收件事件。上層不為了查詢而叫醒成員 tick，也不因要讀摘要就取得成員 repo 或下層內容的權限。
 
 ### 檔案投件 aos 不管
@@ -461,7 +456,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 ### 當機之後
 
-**程序**：整機或 WSL VM 重開時舊程序本來就沒了。只有 daemon 自己重開時，舊程序可能還在：有 cgroup 時 daemon 先清空舊框才開格；沒有 cgroup 時清不掉（已接受），舊格還握著鎖時新格回 75，等它自己結束（[B-603](daemon/lifecycle.md)）。
+**程序**：整機或 WSL VM 重開時舊程序本來就沒了。只有 daemon 自己重開時，舊程序可能還在：有 cgroup 時 daemon 先清空舊框才開格；沒有 cgroup 時清不掉（已接受），舊格的 tick 還握著鎖時新格印 `busy`、回 0，等它自己結束（[B-603](deferred/daemon/lifecycle.md)；daemon 那側在暫緩區）。
 
 **檔案**：當在哪一步，下一格看到的：
 
@@ -476,8 +471,8 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 | 改什麼 | 怎麼改 |
 |---|---|
-| 普通設定（`config/` 裡的檔） | 在 tick 外用 `aos-config-add`（argv 見 [P-207](protocol/node.md)）：非阻塞取 node 鎖（B-602），拿不到回 75；有擋板檔就不寫、回 125。寫法：在目標旁寫完整暫存檔 → fsync → rename 替換 → fsync 目錄。沒變動就不寫。不能在同 node 的 tick 內呼叫 |
-| 重要設定（inst 的身分、任務表）與其他手改 | 先 `node.pause`，等 `node.show` 看到 `running:false`，持 node 鎖修改，照下面驗過再 resume（[B-607](daemon/registration.md)） |
+| 普通設定（`config/` 裡的檔） | 在 tick 外用 `aos-config-add`（argv 見 [P-207](protocol/node.md)）：非阻塞取同一把 `.aos/tick.lock`（B-602），拿不到回 75（它自己特別指定的碼，[C-08](conventions.md)）；有擋板檔就不寫、回 125。寫法：在目標旁寫完整暫存檔 → fsync → rename 替換 → fsync 目錄。沒變動就不寫。不能在同 node 的 tick 內呼叫 |
+| 重要設定（inst 的身分、任務表）與其他手改 | 先 `node.pause`，等 `node.show` 看到 `running:false`，持 node 鎖修改，照下面驗過再 resume（[B-607](deferred/daemon/registration.md)，舊 daemon 的做法，在暫緩區） |
 
 - tick 裡的任務不改 `config/` 是軟性原則，不檢查也不阻擋；同一格新舊設定混用的風險由寫任務的人承擔（[A-102](../agent/configuration.md)）。
 - **有 git 時**〔暫定〕：
@@ -525,18 +520,18 @@ git 與無 git 合成同一種模式：**核心的結束碼紀錄（B-633）直�
 `aos-tick` 誰都能直接跑（人手、cron、其他程式），照常做完一格；風險由跑的人自己承擔。直接跑的格跟 daemon 開的格差在：
 
 - **沒有通道**：once、系統訊息佇列用不到（`aos-mq` 什麼都不做、回 0），`aos-as` 回 125（`no_channel`）。需要通道的事一律算功能受限，不另設替代路。
-- **沒有 daemon 的格後收尾**：任務留下的後代沒人收，還握著鎖 fd 的會讓下一格回 75（B-602）。
+- **沒有 daemon 的格後收尾**：任務留下的後代沒人收。它們不握鎖（B-602），下一格照常開。
 - **不在 node 框裡**：包了 `aos-cg` 的項照沒 cgroup 的做法退回（B-634）。
 
 其餘照常：
 
-- 同一資料夾 daemon 正在跑一格時，直接跑的那格拿不到鎖、回 75（B-602）；反過來也一樣。
+- 同一資料夾 daemon 正在跑一格時，直接跑的那格拿不到鎖、印 `busy`、回 0（B-602）；反過來也一樣。
 - 直接跑的格同樣寫結束碼紀錄、同樣加 `seq`（B-633）。
-- 想經 daemon 跑一格：送 `node.wake`，以回應的值為起點，再用 `node.show` 等格次前進；怎樣算新的一格已完成、`registration_id` 換了怎麼辦，以 [B-607](daemon/registration.md) 為正本。不另開「跑一格並等結果」的 IPC。CLI 入口見 [H-004](../cli/commands.md)。
+- 想經 daemon 跑一格：現行 daemon 用控制模組的 `wake`（[B-641](daemon/control.md)）。舊設計（在暫緩區）是送 `node.wake`，以回應的值為起點，再用 `node.show` 等格次前進；怎樣算新的一格已完成、`registration_id` 換了怎麼辦，以 [B-607](deferred/daemon/registration.md) 為正本。不另開「跑一格並等結果」的 IPC。CLI 入口見 [H-004](../cli/commands.md)。
 
 依據：第十九批第 12 條（撤第十八批審稿裁定 16「不在框就拒跑」）；第十九批疑點裁定 11（記錄者歸類：需要通道的事算功能受限）。
 
-**驗收：**不經 daemon 直接跑 `aos-tick` 照常做完一格；daemon 正在跑同一 node 時直接跑回 75、不改檔；經 `node.wake` 跑的那一格照 B-607 判定為完成；直接跑與 daemon 跑交替時 `seq` 連續。
+**驗收：**不經 daemon 直接跑 `aos-tick` 照常做完一格；daemon 正在跑同一資料夾時直接跑印 `busy`、回 0、不改檔；直接跑與 daemon 跑交替時 `seq` 連續。
 
 ## B-630：git：開格、存檔點、收尾
 
@@ -601,7 +596,7 @@ close 排在 `mq-post`、發摘要前面（B-629）：它失敗會建停格檔�
 
 - **還原時還有人在寫**：沒包 `aos-cg` 的任務留下的程序，要等格後才被 daemon 收掉，還原之後可能又寫回來。只有包了 `aos-cg` 而且 daemon 有 cgroup，才保證還原時那一項已經沒人在寫（B-634）。
 - **成本**：每個存檔點都掃一遍 aos 範圍；實作用 stat 快取（先複製正式 index 再加，不必每次重算整樹 hash）。
-- **多帳號**：`aos-as` 開的程序寫進 aos 範圍的檔，要讓 tick 帳號讀得到（例如 [B-609](daemon/helper-actions.md) 的共享群組），否則 git 讀不到，當故障。
+- **多帳號**：`aos-as` 開的程序寫進 aos 範圍的檔，要讓 tick 帳號讀得到（例如 [B-609](deferred/daemon/helper-actions.md) 的共享群組），否則 git 讀不到，當故障。
 
 依據：第二十批追答 8（git 做成任務表上的任務；tick 不再保證整格原子）、疑點裁定 3（每組跑完打存檔點）、4（送出在 git 收尾之後）、5（git 與無 git 合成一種模式）；納入 cgroup 與 git 疑-1（停格＝本格作廢）、疑-2（存檔點當場還原）、疑-4（下游不認得 git，拿掉草稿的「開格刪收件原件」「只送 HEAD 裡的」）、疑-12（存檔點獨立一項）；aos-git 分工（開格與收尾管 tick／daemon 基底與系統級任務；提交與還原只限 aos 自己的東西；失敗還原到往前最近的存檔點，暫定）。
 
@@ -625,18 +620,18 @@ aos 自己呼叫 git 時一律帶：
 | 參數 | 為什麼 |
 |---|---|
 | `-c core.fsync=committed,reference` | 落盤〔第十八批〕。存檔點只在本格有用，當機後 open 一律還原到 HEAD，所以存檔點改帶 `core.fsync=none`〔建議預設〕 |
-| `-c gc.auto=0 -c maintenance.auto=false` | 不讓 aos 自己那幾次呼叫觸發背景整理；背景程序會握著鎖 fd 讓下一格回 75，也違反「不准背景程序繞過 tick」〔使用者方向 2026-09-30〕 |
+| `-c gc.auto=0 -c maintenance.auto=false` | 不讓 aos 自己那幾次呼叫觸發背景整理；背景程序違反「不准背景程序繞過 tick」〔使用者方向 2026-09-30〕 |
 | 〔建議預設〕`-c core.hooksPath=/dev/null`、`-c commit.gpgSign=false`、`-c safe.directory=<node 根>` | 不跑 hooks；使用者全域開了簽章也不會卡住；node 根的擁有者跟 tick 帳號不同時（[B-203](../base/execution.md) 的兩種主人）git 仍肯動 |
 
 - **不動使用者的設定**：上面都是命令列參數，只管 aos 自己那幾次呼叫。git 的背景整理（gc、maintenance）aos 不管；文件建議使用者自己關掉（例如 `git config gc.auto 0`、`git config maintenance.auto false`），要整理就先暫停 node 再手動跑。
 - **環境**〔建議預設〕：呼叫前清掉所有繼承的 `GIT_*`，只設自己要的，免得操作到別的 repo。
 - **作者**〔建議預設〕：用 repo 設定；repo 與全域都沒設時用 `aos <aos@localhost>`，不擋。
-- **不在 tick 內**：沒有繼承到鎖（B-602 的核對不過）時回 125、印 `not_in_tick`；人手要提交就直接用 git。
+- **不在 tick 內**：沒有繼承到鎖時回 125、印 `not_in_tick`；人手要提交就直接用 git。這個核對靠「鎖 fd 傳給任務」，那段在[暫緩區](deferred/tick.md#暫緩b-602-完整互斥的其餘細節)；最簡鎖不傳 fd，回來之前這條核對還沒有判法。
 
 ### 範圍怎麼切
 
 - **固定排除**：不管 `.gitignore` 寫了什麼，[P-200](protocol/node.md) 表裡 ignore 的核心檔一律不提交、不還原：`.aos/tick.lock`、`.aos/tick/`、`.aos/tick-blocked`、`.aos/jobs/`、`.aos/attention/`、`.aos/runner-stderr.log`、`.aos/summary/published.json`、`.aos/mq/failed/`、`requests/`、`responses/`、`work/`。否則 `.gitignore` 漏列時，結束碼紀錄會被還原、`seq` 倒退。
-- **巢狀**：下層 tick 的資料夾（判準照 B-628）寫進 git 管理目錄的 `info/exclude`，不改 `.gitignore`。open、mark、close 存之前都重掃一次，免得格中新建的子 node 被上層提交（已追蹤的檔不會因為之後才排除就不追）。子 node 自己是 repo 時不進去。
+- **巢狀**：下層 tick 的資料夾（判準照 [B-628](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)；那條在暫緩區，回來前沒有正式判準）寫進 git 管理目錄的 `info/exclude`，不改 `.gitignore`。open、mark、close 存之前都重掃一次，免得格中新建的子 node 被上層提交（已追蹤的檔不會因為之後才排除就不追）。子 node 自己是 repo 時不進去。
 - **不遍歷**：不用全樹 `git clean -x`，不進 git 管理目錄或子 repo。
 
 ### 故障
@@ -644,7 +639,7 @@ aos 自己呼叫 git 時一律帶：
 還原、存檔點、commit 失敗，HEAD 被換（B-630 open 第 4 步），任務 `id` 當不了 ref 名（`mark_id_invalid`，例如以 `.lock` 結尾），在 tick 內卻沒有結束碼紀錄（`record_missing`）：
 
 1. 寫擋板檔、建停格檔、回 1；
-2. daemon 照 [B-607](daemon/registration.md) 不再開格，錯誤摘要走[待處理事項](../scheduling/operations.md)；
+2. 舊 daemon 照 [B-607](deferred/daemon/registration.md) 不再開格（在暫緩區；現行由 `aos-tick` 自己看擋板），錯誤摘要走[待處理事項](../scheduling/operations.md)；
 3. 修復者暫停、持鎖、核對、自己提交修好的改動，再移除擋板。
 
 ### 其他
@@ -654,14 +649,14 @@ aos 自己呼叫 git 時一律帶：
 
 依據：使用者方向 2026-09-29（每個 node 一個 repo、別濫用 git）；第十八批第 17 條、Q31（落盤）；納入 cgroup 與 git 疑-5（不能用就警告、照沒 git 做）；同日裁定（背景整理 aos 不管，自己呼叫時帶 `gc.auto=0`、`maintenance.auto=false`）。
 
-**驗收：**`.gitignore` 拿掉 `/.aos/tick/` 後 `seq` 仍連續、紀錄不進 commit；格中用 `aos node new` 建的子 node 不進上層的 commit；格結束後沒有 git 程序握著鎖 fd，下一格不回 75；node 根擁有者跟 tick 帳號不同時照常提交；使用者全域開了 commit 簽章也照常提交；滿碟時 commit 失敗：擋板＋停格檔，`mq-post` 不跑。
+**驗收：**`.gitignore` 拿掉 `/.aos/tick/` 後 `seq` 仍連續、紀錄不進 commit；格中用 `aos node new` 建的子 node 不進上層的 commit；格結束後沒有 aos 自己叫起來的 git 背景程序留下；node 根擁有者跟 tick 帳號不同時照常提交；使用者全域開了 commit 簽章也照常提交；滿碟時 commit 失敗：擋板＋停格檔，`mq-post` 不跑。
 
 ## B-631：（撤）cgroup 框的備援
 
-〔使用者方向 2026-09-30，第二十批追答 8〕撤：tick 側的 cgroup 備援（開格設 subreaper、每項後殺程序群組並掃孤兒、`RLIMIT_AS`／`RLIMIT_CPU`、getrusage）與完整／備援對照表。每項一框改成普通程式 `aos-cg`（B-634）；daemon 側的收尾見 [B-604](daemon/lifecycle.md)。
+〔使用者方向 2026-09-30，第二十批追答 8〕撤：tick 側的 cgroup 備援（開格設 subreaper、每項後殺程序群組並掃孤兒、`RLIMIT_AS`／`RLIMIT_CPU`、getrusage）與完整／備援對照表。每項一框改成普通程式 `aos-cg`（B-634）；daemon 側的收尾見 [B-604](deferred/daemon/lifecycle.md)。
 
 ## 驗收與尚未定案
 
 當機、Q1／Q2、設定的故障驗收，統一見 [V-03](../conformance.md)。
 
-註冊表格式以協議篇為準。〔暫定〕「有 tick 的資料夾」看 inst 檔（計畫疑-10）；〔使用者方向 2026-09-30，第二十批〕任務表先只定基本欄位，`group`、`needs` 當陌生鍵。停格檔的位置、結束碼紀錄的位置與欄位、各系統級任務與普通程式的程式名都是工程預設。git 與 cgroup 是有就用（B-630、B-622、B-634）；這輪先寫成暫定的列在 [README 疑點](README.md#疑點)。
+註冊表格式以協議篇為準。〔使用者方向 2026-09-30，第二十批〕任務表先只定基本欄位，`group`、`needs` 當陌生鍵（2026-10-01 起 `methods` 也是）。上下層判定、完整互斥、帳號核對、紀錄落盤與失效處理在 [tick 暫緩區](deferred/tick.md)。停格檔的位置、結束碼紀錄的位置與欄位、各系統級任務與普通程式的程式名都是工程預設。git 與 cgroup 是有就用（B-630、B-622、B-634）；這輪先寫成暫定的列在 [README 疑點](README.md#疑點)。

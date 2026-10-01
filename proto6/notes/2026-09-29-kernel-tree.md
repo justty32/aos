@@ -99,8 +99,8 @@ proto6 的 inst 以 proto5 [inst-posix](../../proto5/spec/inst-posix/README.md) 
 ## 七、待定（附建議）
 
 1. ~~下層 kernel 用不用自己的 Linux 帳號~~：已解（第九批），kernel node 用自己 inst 的 `user`。
-2. **下層 kernel 怎麼啟動成員**：成員要切 UID，得經 root helper。建議把「可用 helper」當成可授予的權限，並限定在被授權 kernel 的子樹內：helper（或替它把關的 daemon）核對「這個成員確實登記在發出請求的 kernel 底下，且這個 kernel 有 helper 權限」。另一種作法是一律往上交給最頂層代開，但每層多一趟轉手。〔標註：已定，見 [P-104](../spec/settled/protocol/daemon/registration.md)。〕
-3. **登記鏈**：誰屬於哪個 kernel，要從最頂層一路接下來，防止下層 kernel 冒名開別隊的成員。〔標註：已定，見 [registration.md](../spec/settled/protocol/daemon/registration.md)。〕
+2. **下層 kernel 怎麼啟動成員**：成員要切 UID，得經 root helper。建議把「可用 helper」當成可授予的權限，並限定在被授權 kernel 的子樹內：helper（或替它把關的 daemon）核對「這個成員確實登記在發出請求的 kernel 底下，且這個 kernel 有 helper 權限」。另一種作法是一律往上交給最頂層代開，但每層多一趟轉手。〔標註：已定，見 [P-104](../spec/settled/deferred/protocol/daemon/registration.md)。〕
+3. **登記鏈**：誰屬於哪個 kernel，要從最頂層一路接下來，防止下層 kernel 冒名開別隊的成員。〔標註：已定，見 [registration.md](../spec/settled/deferred/protocol/daemon/registration.md)。〕
 4. ~~下層自有 endpoint 池的代發服務用誰的帳號跑~~：已解（第九批），用該 kernel node 的帳號。
 5. ~~跨隊傳訊~~：已定（第九批），有權限就直投對方收件處。
 6. **延遲**：每多一層 kernel，一件工作多轉一手；proto5 量 tick 間隔時吃過虧，要在設計時控制層數與喚醒路徑。
