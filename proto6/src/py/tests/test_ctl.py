@@ -84,7 +84,7 @@ class Step1Config(CtlCase):
                                             "insts": {"e.json": {}}}))
         self.wait_for(lambda: self.results(out, "e.json"))
         self.assertEqual(self.read("env.txt").split(), ["none", "none"])
-        self.assertEqual(sorted(os.listdir(self.d)), ["config.json", "e.json", "env.txt"])
+        self.assertEqual(sorted(os.listdir(self.d)), ["config.json", "config.json.lock", "e.json", "env.txt"])
 
     def test_socket_relative_to_start(self):
         self.inst({"argv": ["true"]}, "sub/x.json")
@@ -232,7 +232,7 @@ class Step3Protocol(CtlCase):
         self.up({"a.json": {}}, 10000)
         self.assertEqual(self.send({"wake": "b.json"}),
                          {"ok": False, "error": "unknown_inst", "detail": "b.json"})
-        for bad in ({"kill": "a.json"}, {"wake": "a.json", "pause": "a.json"}, {"status": None},
+        for bad in ({"nuke": "a.json"}, {"wake": "a.json", "pause": "a.json"}, {"status": None},
                     {"wake": "a.json", "keep_schedule": "yes"}, [1], b"hello\n", b"{\"wake\":\"a.json\"}"):
             r = self.send(bad)
             self.assertEqual((r["ok"], r["error"]), (False, "bad_request"), bad)
@@ -330,7 +330,7 @@ class Step5Ctl(CtlCase):
                                 (["status"], {"AOS_DAEMON_INST": None}, "no_inst"),
                                 (["status", "a.json"], {"AOS_DAEMON_SOCKET": os.path.join(self.d, "nope")},
                                  "connect"),
-                                (["kill", "a.json"], {}, "usage"),
+                                (["nuke", "a.json"], {}, "usage"),
                                 ([], {}, "usage"),
                                 (["status", "a.json", "b"], {}, "usage"),
                                 (["pause", "--keep-schedule", "a.json"], {}, "usage")):

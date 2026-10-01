@@ -490,9 +490,11 @@ class Step6Tick(DaemonCase):
         self.assertEqual(self.results(out, "n/a"), [1])
 
     def test_two_daemons(self):
+        # 兩份設定檔（同一份會被鎖檔擋下、回 1，第十九批）
         cfg = self.config({"interval_ms": 10, "insts": {"n/a": {}}})
+        cfg2 = self.config({"interval_ms": 10, "insts": {"n/a": {}}}, "config2.json")
         _, out1, _ = self.start(cfg)
-        _, out2, _ = self.start(cfg)
+        _, out2, _ = self.start(cfg2)
         self.wait_for(lambda: len(self.results(out1, "n/a")) >= 5 and len(self.results(out2, "n/a")) >= 5)
         self.assertEqual(set(self.results(out1, "n/a") + self.results(out2, "n/a")), {0})
         self.assertGreaterEqual(self.seq(), 1)
