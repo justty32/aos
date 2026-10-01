@@ -3,7 +3,7 @@
 照 inst 的規則（mkdir、串流預設 /dev/null、envs 疊加或清空、另開 session）跟從 proto5 複製來的
 `aos_exec_run._execute_inst()` 一樣，只多兩件那裡沒有的事，所以這裡自己開程序、不改 lib：
 
-- 四個 `AOS_*` 變數蓋在繼承的環境上（`envs` 清空時一個都不放）；inst 的 `envs` 最後疊上去。
+- 三個 `AOS_*` 變數（`AOS_TICK_CWD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`）蓋在繼承的環境上（`envs` 清空時一個都不放）；inst 的 `envs` 最後疊上去。
   〔使用者方向 2026-10-01〕鎖 fd 不傳給任務（`os.open` 預設不可繼承、Popen 預設 close_fds），沒有 `AOS_TICK_LOCK_FD`。
 - 自己 wait，分出 `exit` 與 `signal`（`_execute_inst` 把訊號 N 折成 128+N）。
 

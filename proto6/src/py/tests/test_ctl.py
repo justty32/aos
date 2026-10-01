@@ -255,13 +255,13 @@ class Step4Env(CtlCase):
         self.assertEqual(self.read("jobs/env.txt").split(), [self.sock, "jobs/report.json"])
 
     def test_through_nodes(self):
-        # 頂層 a 的 inst 跑 aos-tick；a 的任務一項寫檔、一項跑 aos-tick --node b；b 的任務寫檔，
+        # 頂層 a 的 inst 跑 aos-tick；a 的任務一項寫檔、一項跑 aos-tick --target b；b 的任務寫檔，
         # 第一次還順便 aos-ctl wake（不帶 inst）：叫醒的是頂層 a
-        dump = 'echo "$AOS_DAEMON_INST" > "$AOS_NODE_DIR/%s"'
+        dump = 'echo "$AOS_DAEMON_INST" > "$AOS_TICK_CWD/%s"'
         self.inst({"argv": [TICK], "stderr": INHERIT}, "a/inst.json")
         self.write("a/.aos/tasks.json", tasks_json(
             {"id": "w", "argv": ["sh", "-c", dump % "env.txt"]},
-            {"id": "b", "argv": [TICK, "--node", os.path.join(self.d, "a", "b")]}))
+            {"id": "b", "argv": [TICK, "--target", os.path.join(self.d, "a", "b")]}))
         self.write("a/b/.aos/tasks.json", tasks_json(
             {"id": "w", "argv": ["sh", "-c", (dump % "env.txt") + "; " + STAMP +
                                  "; [ -e woke ] || { touch woke; %s %s wake; }" % (PY, CTL)]}))

@@ -1,6 +1,6 @@
 # 第三段：daemon 核心（最核心版）
 
-← [plan 入口](README.md)｜依據：[最核心 aos-daemon（已裁定 10-01）](../notes/2026-10-01-daemon-core-sketch.md)｜結束碼：[verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)｜正本（大部分先不做）：[B-601](../spec/settled/daemon/runtime.md#b-601記憶體登記與按需執行)、[B-606](../spec/settled/daemon/registration.md#b-606登記解除換父與身分額度)、[B-607](../spec/settled/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)、[P-101](../spec/settled/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板)
+← [plan 入口](README.md)｜依據：[最核心 aos-daemon（已裁定 10-01）](../notes/2026-10-01-daemon-core-sketch.md)｜結束碼：[verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)｜正本（大部分先不做）：[B-601](../spec/settled/deferred/daemon/runtime.md#b-601記憶體登記與按需執行)、[B-606](../spec/settled/deferred/daemon/registration.md#b-606登記解除換父與身分額度)、[B-607](../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)、[P-101](../spec/settled/deferred/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板)
 
 **做完的樣子**：沒有 root、systemd、cgroup、helper 的機器上，一般帳號跑 `aos-daemon --config F`：讀設定檔裡的 inst 路徑清單，每一項照自己的週期叫一次 `bin/aos-exec <inst 路徑>`，每次結束在 stdout 印一行 `<當下時間> inst=… exit=… ms=…`；aos-exec 的 stderr 收齊後帶一行標頭寫到設定的檔或 daemon 的 stderr；非 0 時停不停照該項設定；Ctrl-C 直接退出、回 0。node 資料夾放一份 `argv` 寫 `aos-tick` 的 `inst.json`，把它加進清單，就是「daemon 定期跑一個 node」。
 
@@ -25,7 +25,7 @@
 ## 步驟 1：讀設定檔
 
 - **要做到**：`aos-daemon --config F` 讀設定檔，得到一份清單，每項有 `inst` 字面值（`insts` 物件的鍵）、鍵的位置、週期、非 0 停不停（沒有另外的 id）；另外算好一個「起點資料夾」給步驟 2 開子程序用。
-- **依據**：草稿裁定 1、7 與[設定檔追加裁定](../notes/2026-10-01-daemon-core-sketch.md#設定檔追加裁定使用者-2026-10-01)；[B-606](../spec/settled/daemon/registration.md#b-606登記解除換父與身分額度)「頂層從設定載入」只留這條路；[P-101](../spec/settled/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板) 的設定欄位這版不沿用（裁定 7 隨意）。
+- **依據**：草稿裁定 1、7 與[設定檔追加裁定](../notes/2026-10-01-daemon-core-sketch.md#設定檔追加裁定使用者-2026-10-01)；[B-606](../spec/settled/deferred/daemon/registration.md#b-606登記解除換父與身分額度)「頂層從設定載入」只留這條路；[P-101](../spec/settled/deferred/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板) 的設定欄位這版不沿用（裁定 7 隨意）。
 - **設定檔**（使用者 2026-10-01 認可）：
 
   ```json
@@ -93,7 +93,7 @@
 ## 步驟 3：照週期叫、各跑各的
 
 - **要做到**：每一項 daemon 一開就立刻跑一次；之後每次結束後隔 `interval_ms` 再叫；同一項不疊著開；不同項同時跑、互不等。
-- **依據**：裁定 4；[B-607](../spec/settled/daemon/registration.md#b-607叫醒暫停故障停格與格次序號) 定期那段、[B-601](../spec/settled/daemon/runtime.md#b-601記憶體登記與按需執行) 同一項只一個子程序。
+- **依據**：裁定 4；[B-607](../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號) 定期那段、[B-601](../spec/settled/deferred/daemon/runtime.md#b-601記憶體登記與按需執行) 同一項只一個子程序。
 - **做法**：每一項一條執行緒（`daemon=True`），跑 `loop()`：「叫 → 等 → 印 → 睡 `interval_ms`」。不補跑漏掉的次數，週期是「間隔」不是「時刻表」。
 - **要使用者裁定的點**：無（已裁定）。
 - **驗收**（都用短週期，例如 100 ms）：
@@ -117,7 +117,7 @@
 ## 步驟 5：Ctrl-C 與 SIGTERM
 
 - **要做到**：收到 SIGINT 或 SIGTERM，daemon 直接退出、回 0，不殺也不等正在跑的子程序。
-- **依據**：裁定 5；[B-604](../spec/settled/daemon/lifecycle.md#b-604收尾停機停用與退役) 的收尾這版不做。
+- **依據**：裁定 5；[B-604](../spec/settled/deferred/daemon/lifecycle.md#b-604收尾停機停用與退役) 的收尾這版不做。
 - **做法**：兩個訊號都當「使用者要停」，handler 直接 `os._exit(0)`（`_quit()`；每行都已 flush）。子程序在自己的 session，終端的 Ctrl-C 打不到它們，會自己跑完。
 - **要使用者裁定的點**：無（已裁定）。
 - **驗收**：
@@ -135,7 +135,7 @@
   /n/a/.aos/tasks.json   照第一段的任務表
   ```
 
-  inst 的 `cwd` 預設就是 `/n/a`，tick 不帶 `--node` 用 `./`。測試裡 `argv[0]` 寫 `bin/aos-tick` 的絕對路徑，不靠 PATH。
+  inst 的 `cwd` 預設就是 `/n/a`，tick 不帶 `--target`（原 `--node`，2026-10-01 改名）用 `./`。測試裡 `argv[0]` 寫 `bin/aos-tick` 的絕對路徑，不靠 PATH。
 - **要使用者裁定的點**：無。
 - **驗收**：
   - 清單放 `/n/a/inst.json`、週期 100 ms，跑 1 秒：每次印 `inst=/n/a/inst.json exit=0`，`.aos/tick/current.json` 的 `seq` 一直往上加。
