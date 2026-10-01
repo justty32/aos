@@ -1,23 +1,27 @@
 # daemon 協議：佈建、私有通道與 runner
 
-← [daemon 協議](README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[daemon](../../daemon/README.md)、[helper](../../helper.md)、[身分](../../../base/identity-resources.md)、[inst](../../../base/inst.md)｜[裁定](../../../../notes/2026-09-29-verdicts.md)
+← [舊 daemon 協議（暫緩區）](README.md)｜[共用約定](../../../../protocol/README.md)｜行為正本：[舊 daemon](../../daemon/README.md)、[helper](../../helper.md)、[身分](../../../../base/identity-resources.md)、[inst](../../../../base/inst.md)｜[裁定](../../../../../notes/2026-09-29-verdicts.md)
+
+> **這篇整篇在暫緩區**（2026-10-01）：舊協議的佈建、helper 私有通道與 runner。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 ## P-107．佈建固定動作〔建議預設，未拍板〕
 
+> **暫緩**（2026-10-01）：佈建固定動作；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
+
 本條只留參數。各動作做什麼、要不要 helper、上限隨時改，以 [B-609](../../daemon/helper-actions.md) 為正本（第十八批）。
 
-`node.provision` 的 params 是 `node_id`、`action`，再加下表該動作的欄位。schema 見 [daemon-provision](../../../protocol/schemas/daemon-provision.schema.json)。成功 result 都是 `{"node_id":"…"}`。
+`node.provision` 的 params 是 `node_id`、`action`，再加下表該動作的欄位。schema 見 [daemon-provision](../../../../protocol/schemas/daemon-provision.schema.json)。成功 result 都是 `{"node_id":"…"}`。
 
 | `action` | 其他必填欄位 |
 |---|---|
 | `account_create` | `user`：確切帳號名稱 |
 | `chown` | `path`、`user` |
-| `cgroup_limits` | `limits`：非空 object，可有 `cpu_max:{quota_us,period_us}`、`memory_max_bytes`、`pids_max`，皆正整數；CPU 直接用 cgroup 微秒，是 [P-002](../../../protocol/README.md) 的明示例外。沒有 cgroup（或這個 node 退回沒有框）回 `unsupported` |
+| `cgroup_limits` | `limits`：非空 object，可有 `cpu_max:{quota_us,period_us}`、`memory_max_bytes`、`pids_max`，皆正整數；CPU 直接用 cgroup 微秒，是 [P-002](../../../../protocol/README.md) 的明示例外。沒有 cgroup（或這個 node 退回沒有框）回 `unsupported` |
 | `quota` | `path`、`project_id`：正整數 |
 | `group_create`〔第十八批〕 | `group`：確切群組名稱 |
 | `group_add_member`〔第十八批〕 | `group`、`user` |
 | `chgrp`〔第十八批〕 | `path`、`group` |
-| `spawn_as`〔第十九批；第二十批呼叫者改 `aos-as`〕 | `user`（帳號名稱或 UID）、`path`（本 node `.aos/jobs/` 下 `aos-as` 寫好的那份 inst 的絕對路徑，檔名見 [P-212](../node.md)）、`token`（必帶）；`frame` 可省（`task-<seq>-<pid>`，`aos-as` 在 `aos-cg` 開的框裡時帶；沒有 cgroup 時帶了回 `unsupported`）。請求那一行要以同一個 sendmsg 用 SCM_RIGHTS 附 5 個 fd〔第二十批，從 2 個加 stdio〕：鎖 fd、回報 pipe 寫端、stdin、stdout、stderr，順序固定，數量不符回 `invalid_params` |
+| `spawn_as`〔第十九批；第二十批呼叫者改 `aos-as`〕 | `user`（帳號名稱或 UID）、`path`（本 node `.aos/jobs/` 下 `aos-as` 寫好的那份 inst 的絕對路徑，檔名見 [P-212](../../../protocol/node.md)）、`token`（必帶）；`frame` 可省（`task-<seq>-<pid>`，`aos-as` 在 `aos-cg` 開的框裡時帶；沒有 cgroup 時帶了回 `unsupported`）。請求那一行要以同一個 sendmsg 用 SCM_RIGHTS 附 5 個 fd〔第二十批，從 2 個加 stdio〕：鎖 fd、回報 pipe 寫端、stdin、stdout、stderr，順序固定，數量不符回 `invalid_params` |
 
 原本的 `cgroup_create`、`cgroup_delegate` 撤：建框、交框改由 daemon 開格前自動做（[B-605](../../daemon/cgroup.md)、[B-609](../../daemon/helper-actions.md)；納入 cgroup 與 git 疑-10）。
 
@@ -26,13 +30,15 @@
 **`spawn_as` 跟其他動作不一樣**（第十九批）：
 
 - 它不列在登記的 `provision.actions` 授權裡，看的是身分額度。
-- runner 開起來就回 `{node_id}`；結束碼走回報 pipe，內容是一行 [runner 回報](../../../protocol/schemas/daemon-runner-report.schema.json)（同 P-110）。
+- runner 開起來就回 `{node_id}`；結束碼走回報 pipe，內容是一行 [runner 回報](../../../../protocol/schemas/daemon-runner-report.schema.json)（同 P-110）。
 - 誰能叫、帳號限制、放在哪、怎麼回傳，見 [B-609](../../daemon/helper-actions.md)。
 - daemon IPC 只有它附 fd；其他請求附了 fd，就關掉並回 `invalid_params`（P-103）。
 
-範例：每個動作一個[正例](../../../protocol/examples/daemon/provision_chown.minimal.valid.json)與一個多欄位的反例，檔名 `provision_<動作>.minimal.valid.json`／`.extra.invalid.json`；`spawn_as` 另有[沒帶憑證的反例](../../../protocol/examples/daemon/provision_spawn_as.no-token.invalid.json)。
+範例：每個動作一個[正例](../../../../protocol/examples/daemon/provision_chown.minimal.valid.json)與一個多欄位的反例，檔名 `provision_<動作>.minimal.valid.json`／`.extra.invalid.json`；`spawn_as` 另有[沒帶憑證的反例](../../../../protocol/examples/daemon/provision_spawn_as.no-token.invalid.json)。
 
 ## P-108．daemon 與 helper 的私有通道〔建議預設，未拍板〕
+
+> **暫緩**（2026-10-01）：daemon 與 helper 的私有通道；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
 
 **通道本身**：
 
@@ -55,9 +61,11 @@
 
 成功 result 都是 `{node_id}`。start 與 spawn 何時回、快照與 base、鏡像、失聯與重驗，以 [B-601](../../daemon/runtime.md)、[B-609](../../daemon/helper-actions.md) 為正本。
 
-範例：[spawn](../../../protocol/examples/daemon/helper_spawn.minimal.valid.json)、[反例：spawn 沒帶 path](../../../protocol/examples/daemon/helper_spawn.no-path.invalid.json)、[反例：provision 夾 spawn_as](../../../protocol/examples/daemon/helper_provision.spawn_as.invalid.json)、[建框並交框](../../../protocol/examples/daemon/helper_cgroup_setup.minimal.valid.json)、[反例：建框多一個欄位](../../../protocol/examples/daemon/helper_cgroup_setup.extra.invalid.json)。
+範例：[spawn](../../../../protocol/examples/daemon/helper_spawn.minimal.valid.json)、[反例：spawn 沒帶 path](../../../../protocol/examples/daemon/helper_spawn.no-path.invalid.json)、[反例：provision 夾 spawn_as](../../../../protocol/examples/daemon/helper_provision.spawn_as.invalid.json)、[建框並交框](../../../../protocol/examples/daemon/helper_cgroup_setup.minimal.valid.json)、[反例：建框多一個欄位](../../../../protocol/examples/daemon/helper_cgroup_setup.extra.invalid.json)。
 
 ## P-109．runner argv 與解析〔建議預設，未拍板〕
+
+> **暫緩**（2026-10-01）：runner argv；最核心 daemon 第一版不做（使用者 2026-10-01）。現行 daemon 直接叫 `aos-exec`（[P-120](../../../protocol/daemon/core.md)）。條號保留、不重用。
 
 固定 argv：
 
@@ -69,7 +77,7 @@ aos-runner --inst-fd N --target /absolute/target --authorized-uid UID --status-f
 | 參數 | 意思 |
 |---|---|
 | `--inst-fd` | inst 快照 fd，父層已打開 |
-| `--target` | 照 [inst 目標](../../../base/inst.md#inst-目標檔案或資料夾)定原來源與 base，不改尋找規則。開格與掛載取登記的 `node_id`；`daemon.helper.spawn` 取它的 `path` |
+| `--target` | 照 [inst 目標](../../../../base/inst.md#inst-目標檔案或資料夾)定原來源與 base，不改尋找規則。開格與掛載取登記的 `node_id`；`daemon.helper.spawn` 取它的 `path` |
 | `--authorized-uid` | 只是核對，不授予直接呼叫者切 UID 的能力 |
 | `--status-fd` | 回報 pipe（P-110），只給 runner，子程序 exec 前關閉 |
 | `--stderr` | 由目標身分以覆寫方式開檔，不自建父目錄，蓋過 inst 的 stderr 選項。〔第二十批〕`daemon.helper.spawn` 開時不帶，runner 的 stdin／stdout／stderr 就是 `aos-as` 交來的三個 fd（[B-609](../../daemon/helper-actions.md)） |
@@ -78,13 +86,15 @@ aos-runner --inst-fd N --target /absolute/target --authorized-uid UID --status-f
 
 環境：runner 帶兩個通道變數（[P-117](channel.md)，第十九批），其餘不帶管理 fd 或 key。
 
-開格的順序、串流落點、環境，以及 runner 怎麼清空名下的程序、對 SIGTERM 與回報 pipe 斷線怎麼反應，見 [B-601](../../daemon/runtime.md)；展開、開檔與身分規則以 [inst](../../../base/inst.md) 為正本。
+開格的順序、串流落點、環境，以及 runner 怎麼清空名下的程序、對 SIGTERM 與回報 pipe 斷線怎麼反應，見 [B-601](../../daemon/runtime.md)；展開、開檔與身分規則以 [inst](../../../../base/inst.md) 為正本。
 
 ## P-110．runner 結束與 125〔建議預設，未拍板〕
 
+> **暫緩**（2026-10-01）：runner 回報與 125；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
+
 ### 回報 pipe
 
-一行 JSON、LF 結尾；沒有 version（不是持久檔）。[schema](../../../protocol/schemas/daemon-runner-report.schema.json)。每次完整收尾只回報一次；怎麼判讀見 [B-601](../../daemon/runtime.md)、[B-607](../../daemon/registration.md)。
+一行 JSON、LF 結尾；沒有 version（不是持久檔）。[schema](../../../../protocol/schemas/daemon-runner-report.schema.json)。每次完整收尾只回報一次；怎麼判讀見 [B-601](../../daemon/runtime.md)、[B-607](../../daemon/registration.md)。
 
 | 情況 | 回報 |
 |---|---|
@@ -103,13 +113,13 @@ runner 自己被殺時，父程序讀 wait 狀態，不能從 128+N 猜。這條
 | `125` | 前置的解析、開檔、身分失敗；stderr 印 `代號: 白話` |
 | 其他 | 照 inst |
 
-signal、126／127 是 inst 執行規則對 [P-006](../../../protocol/README.md) 的特例。
+signal、126／127 是 inst 執行規則對 [P-006](../../../../protocol/README.md) 的特例。
 
 ### 掛載行程單檔未啟動的旁檔
 
-`<inst 檔名>.err`（例如 `job.json.err`），格式 `{version:1,node_id,error}`，見 [schema](../../../protocol/schemas/daemon-launch-error.schema.json)。
+`<inst 檔名>.err`（例如 `job.json.err`），格式 `{version:1,node_id,error}`，見 [schema](../../../../protocol/schemas/daemon-launch-error.schema.json)。
 
-- 持久檔：`error` 用開放版 `ErrorOpen`，不認得的欄位忽略（[C-07](../../../contracts.md)）。
+- 持久檔：`error` 用開放版 `ErrorOpen`，不認得的欄位忽略（[C-07](../../../../contracts.md)）。
 - `error` 用 P-005 的小寫代碼；發布照 P-003。
 - 什麼時候寫、寫不出怎麼辦見 [B-613](../../daemon/channel.md)。
 
@@ -117,7 +127,9 @@ signal、126／127 是 inst 執行規則對 [P-006](../../../protocol/README.md)
 
 ## P-111．錯誤〔建議預設，未拍板〕
 
-RPC error 沿 P-005。daemon IPC 與 helper 通道維持嚴格：不認得的欄位拒絕（[C-07](../../../contracts.md)）。`data` 必填 `code`、`retryable`。
+> **暫緩**（2026-10-01）：舊 IPC 的錯誤碼；最核心 daemon 第一版不做（使用者 2026-10-01）。控制模組的錯誤代碼見 [P-121](../../../protocol/daemon/control.md)。條號保留、不重用。
+
+RPC error 沿 P-005。daemon IPC 與 helper 通道維持嚴格：不認得的欄位拒絕（[C-07](../../../../contracts.md)）。`data` 必填 `code`、`retryable`。
 
 **標準碼**：解析、請求、method、參數、內部錯誤各用保留碼，`data.code` 依序為 `parse_error`、`invalid_request`、`method_not_found`、`invalid_params`、`internal_error`，`retryable` 都是 false。
 
@@ -146,16 +158,18 @@ RPC error 沿 P-005。daemon IPC 與 helper 通道維持嚴格：不認得的欄
 
 ## P-112．schema 與最小範例〔建議預設，未拍板〕
 
+> **暫緩**（2026-10-01）：最核心 daemon 第一版不做（使用者 2026-10-01）。舊 schema（`daemon-rpc`、`daemon-registration`、`daemon-state`、`daemon-runner-report`、`daemon-provision`、`daemon-helper`、`daemon-launch-error`）與 `examples/daemon/` 裡對應的範例留作紀錄、不刪不改；現行的是 `daemon-core-config`（[P-120](../../../protocol/daemon/core.md)）與 `daemon-ctl`（[P-121](../../../protocol/daemon/control.md)）。條號保留、不重用。
+
 | schema | 驗什麼 |
 |---|---|
-| [common](../../../protocol/schemas/common.schema.json) | 只放共用型別 |
-| [daemon-rpc](../../../protocol/schemas/daemon-rpc.schema.json) | 公開 IPC，含 P-117～119 的通道 method |
-| [daemon-registration](../../../protocol/schemas/daemon-registration.schema.json)、[daemon-provision](../../../protocol/schemas/daemon-provision.schema.json) | 上面兩類 method 的參數 |
-| [daemon-helper](../../../protocol/schemas/daemon-helper.schema.json) | 私有通道 |
+| [common](../../../../protocol/schemas/common.schema.json) | 只放共用型別 |
+| [daemon-rpc](../../../../protocol/schemas/daemon-rpc.schema.json) | 公開 IPC，含 P-117～119 的通道 method |
+| [daemon-registration](../../../../protocol/schemas/daemon-registration.schema.json)、[daemon-provision](../../../../protocol/schemas/daemon-provision.schema.json) | 上面兩類 method 的參數 |
+| [daemon-helper](../../../../protocol/schemas/daemon-helper.schema.json) | 私有通道 |
 
-**範例**：[examples/daemon/](../../../protocol/examples/daemon/) 的檔名首段對應 schema：`config`、`state`、`runner_report`、`launch-error` 驗同名 schema，`helper_*` 驗 helper，其餘驗 rpc。正反例涵蓋必填、未知欄位、版本、掛行程帶週期、通道憑證、查詢分頁與結果矛盾；解析、授權與 OS 事實仍要照正文驗收。
+**範例**：[examples/daemon/](../../../../protocol/examples/daemon/) 的檔名首段對應 schema：`config`、`state`、`runner_report`、`launch-error` 驗同名 schema，`helper_*` 驗 helper，其餘驗 rpc。正反例涵蓋必填、未知欄位、版本、掛行程帶週期、通道憑證、查詢分頁與結果矛盾；解析、授權與 OS 事實仍要照正文驗收。
 
-**嚴格或放寬**（照 [P-007](../../../protocol/README.md)，第十八批）：
+**嚴格或放寬**（照 [P-007](../../../../protocol/README.md)，第十八批）：
 
 - 持久檔 `daemon-config`、`daemon-state`、`daemon-launch-error`：放寬，不寫 `additionalProperties:false`；它們共用的 `$defs` 用開放版（`TopRegistrationOpen`、`RegistrationOpen`、`ProvisionGrantOpen`、`IdentityGrantOpen`、`GrantItemOpen`、`GroupItemOpen`）。
 - 嚴格：`daemon-rpc`、`daemon-helper`、`daemon-provision`、`daemon-runner-report`，以及 `daemon-registration` 的 `RegisterParams`、`BoundRegistration`、`TopRegistration`、`MountRecord`。

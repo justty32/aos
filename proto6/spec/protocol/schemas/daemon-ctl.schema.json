@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "aos-daemon 控制模組的一行 JSON（P-121）：請求或回應",
+  "description": "一連線一請求：客戶端送一行請求、daemon 回一行回應。不認得的欄位忽略（照現行程式，跟舊 daemon IPC 的嚴格不同）。",
+  "oneOf": [
+    {"$ref": "#/$defs/Request"},
+    {"$ref": "#/$defs/Reply"}
+  ],
+  "$defs": {
+    "Inst": {
+      "type": "string",
+      "description": "inst 字面值，跟設定檔 insts 的鍵逐字比對"
+    },
+    "Request": {
+      "type": "object",
+      "description": "指令名當鍵、inst 字面值當值，四個指令名剛好出現一個",
+      "properties": {
+        "wake": {"$ref": "#/$defs/Inst"},
+        "pause": {"$ref": "#/$defs/Inst"},
+        "resume": {"$ref": "#/$defs/Inst"},
+        "status": {"$ref": "#/$defs/Inst"}
+      },
+      "oneOf": [
+        {"required": ["wake"]},
+        {"required": ["pause"]},
+        {"required": ["resume"]},
+        {"required": ["status"]}
+      ],
+      "not": {"required": ["ok"]},
+      "if": {"required": ["wake"]},
+      "then": {
+        "properties": {
+          "skip_while_running": {"type": "boolean", "default": false, "description": "正在跑就不補"},
+          "keep_schedule": {"type": "boolean", "default": false, "description": "不動原本的週期排程"}
+        }
+      }
+    },
+    "Reply": {
+      "type": "object",
+      "required": ["ok"],
+      "oneOf": [
+        {"$ref": "#/$defs/Ok"},
+        {"$ref": "#/$defs/Status"},
+        {"$ref": "#/$defs/Error"}
+      ]
+    },
+    "Ok": {
+      "description": "wake／pause／resume 成功",
+      "type": "object",
+      "properties": {"ok": {"const": true}},
+      "required": ["ok"],
+      "not": {"anyOf": [{"required": ["inst"]}, {"required": ["error"]}]}
+    },
+    "Status": {
+      "description": "status 成功",
+      "type": "object",
+      "required": ["ok", "inst", "running", "pending", "paused", "stopped", "last_exit", "last_end", "next"],
+      "properties": {
+        "ok": {"const": true},
+        "inst": {"$ref": "#/$defs/Inst"},
+        "running": {"type": "boolean"},
+        "pending": {"type": "boolean", "description": "有一次叫醒記下、還沒跑"},
+        "paused": {"type": "boolean"},
+        "stopped": {"type": "boolean", "description": "被 stop_on_nonzero 停掉"},
+        "last_exit": {"type": ["integer", "null"], "description": "上一次的碼（被訊號 N 殺＝128+N）；還沒跑完過是 null"},
+        "last_end": {"type": ["string", "null"], "minLength": 1, "description": "上一次結束的本地時間（ISO 8601 帶時區，到秒）；還沒跑完過是 null"},
+        "next": {"type": ["string", "null"], "minLength": 1, "description": "下次照週期該跑的本地時間；正在跑、暫停、已停時是 null"}
+      }
+    },
+    "Error": {
+      "type": "object",
+      "required": ["ok", "error", "detail"],
+      "properties": {
+        "ok": {"const": false},
+        "error": {"enum": ["unknown_inst", "stopped", "bad_request"]},
+        "detail": {"type": "string", "description": "unknown_inst／stopped 是那個 inst 字面值；bad_request 是白話說明"}
+      }
+    }
+  }
+}

@@ -12,12 +12,12 @@
   **建議改法：**明定實際受管群組由誰建立、如何交給 daemon／helper；本輪收尾以 B-601／B-604 為完整正本，區外引用只保留不衝突的串流與取消規則。
 
 - **必-2｜`aos-as` 複製整份環境，破壞憑證與鎖的契約。**  
-  **位置：**[settled/helper.md，B-303](../../../spec/settled/helper.md)；`settled/protocol/node.md` P-212；`settled/daemon.md` B-609、B-612；P-109。  
+  **位置：**[settled/helper.md，B-303](../../../spec/settled/deferred/helper.md)；`settled/protocol/node.md` P-212；`settled/daemon.md` B-609、B-612；P-109。  
   **問題：**暫存 inst 要寫入「目前的環境」，正常情況下便會把 `AOS_TICK_TOKEN` 寫到磁碟，違反 B-612「只放記憶體、不寫檔」。另外，fd 經 SCM_RIGHTS 傳遞後編號可能改變；複製進 inst 的舊 `AOS_TICK_LOCK_FD` 又可能覆蓋 runner 補的新編號。  
   **建議改法：**明列通道憑證與 fd 編號不得序列化進 inst；由 runner 在最後建立子程序環境時補入正確值。
 
 - **必-3｜helper 的 spawn 請求缺少 runner 必需的來源路徑。**  
-  **位置：**[settled/protocol/daemon/provision-and-runner.md，P-108、P-109](../../../spec/settled/protocol/daemon/provision-and-runner.md)；B-609；`daemon-helper.schema.json`。  
+  **位置：**[settled/protocol/daemon/provision-and-runner.md，P-108、P-109](../../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)；B-609；`daemon-helper.schema.json`。  
   **問題：**公開 `spawn_as` 有 `.aos/jobs/` 下的 inst 路徑，私有 `daemon.helper.spawn` 卻只傳 node、UID、token 與快照等 fd，沒有原始路徑。helper 因而無法填 runner 必填的 `--target`，也不能依規定重驗原來源 bytes。schema 還拒絕額外欄位。  
   **建議改法：**私有協議傳入已核准的來源路徑，或等效的可信來源 handle 與資訊；同步 schema、範例及 runner 的來源核對規則。
 
@@ -32,7 +32,7 @@
   **建議改法：**把通用、無 git 的修改與恢復契約放回整理區；領域驗證只在安裝對應任務時適用。現行碼表描述原子替換結果，git 提交流程移到下一步段落。
 
 - **必-6｜沒有 cgroup 的限制，仍被其他現行段落蓋掉。**  
-  **位置：**[settled/tick.md，B-625](../../../spec/settled/tick.md)；T-09；P-208；[daemon 協議 P-106](../../../spec/settled/protocol/daemon/registration.md)。  
+  **位置：**[settled/tick.md，B-625](../../../spec/settled/tick.md)；T-09；P-208；[daemon 協議 P-106](../../../spec/settled/deferred/protocol/daemon/registration.md)。  
   **問題：**B-625 仍說 daemon／VM 重啟先清空舊程序；T-09 也把重啟列入程序群組收尾。這與已接受的「無 cgroup 時 daemon 重啟清不掉」不符。P-208 還把 `cgroup_delegate` 列成當前部署操作；P-106 引用的最小正例則回傳完整 cgroup 配置，與本輪一律 `null` 相反。  
   **建議改法：**重啟描述直接沿 B-603 的已接受限制；交框操作明標下一步；現行查詢正例改成 `cgroup:null`，未來範例另標草稿。
 
@@ -42,7 +42,7 @@
   **建議改法：**紀錄頂層只收實際會寫入的 0／1／2，75 不寫紀錄；有 `stopped_after` 必須回 1。停在哪個 ID 的跨欄位關係交給補充驗證器，並加入反例。
 
 - **必-8｜方案 A 尚未完成，協議篇仍是部分行為的唯一正本。**  
-  **位置：**[P-103 授權表](../../../spec/settled/protocol/daemon/startup-and-ipc.md)、P-102、P-108、P-115；node 協議 P-204、P-206、P-213。  
+  **位置：**[P-103 授權表](../../../spec/settled/deferred/protocol/daemon/startup-and-ipc.md)、P-102、P-108、P-115；node 協議 P-204、P-206、P-213。  
   **問題：**包含完整 method 授權、helper 由子到父解除的條件、PID 檔生命週期、boot ID 不持久化，以及「普通程式回 125 不能推定沒跑」「不另做通用收據」等。這些不是單純欄位格式，主規格還直接向協議篇索取行為。  
   **建議改法：**將獨有行為歸入對應 B 條；協議留下欄位、碼義、JSON、schema、範例與定位連結。README 已列疑點，不能代替搬回正本。
 

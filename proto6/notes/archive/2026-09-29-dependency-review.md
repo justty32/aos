@@ -31,7 +31,7 @@
 | 檔案權限、chown | 各 node 資料夾歸自己帳號；投件目錄開寫權 | 必要 | 極穩。坑：WSL 的 `/mnt/c` 沒有 metadata，全部 777、UID 1000〔查證〕 | node 樹不能放 `/mnt/c` |
 | 共享群組、setgid 目錄 | 投件者能寫別人的 `requests/`（[P-208](../../spec/settled/protocol/node.md)） | 多帳號時必要 | 極穩 | — |
 | POSIX ACL | spec 寫「共享群組**或** ACL」，給部署者選 | 可選（初步清單列成必要，其實不是） | ext4／xfs／btrfs／tmpfs 預設都支援；本機 `setfacl` 實測可用〔查證〕。WSL `/mnt/c` 不支援〔推論〕 | 只用群組 |
-| 磁碟 project quota | 磁碟 module 的「計量歸屬」，只記帳不設上限（[P-107](../../spec/settled/protocol/daemon/provision-and-runner.md)） | 可選 | **最麻煩的一項**：ext4 要 `project` feature＋`prjquota` 掛載，根分割區開不了；兩台機器根目錄都是 `noquota`；WSL 要另做 loop 映像〔查證〕。擁有者可以用 `chattr -p` 自己改 project ID 逃掉記帳（notes-review 已提） | 改成掃目錄算用量（見第四節） |
+| 磁碟 project quota | 磁碟 module 的「計量歸屬」，只記帳不設上限（[P-107](../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)） | 可選 | **最麻煩的一項**：ext4 要 `project` feature＋`prjquota` 掛載，根分割區開不了；兩台機器根目錄都是 `noquota`；WSL 要另做 loop 映像〔查證〕。擁有者可以用 `chattr -p` 自己改 project ID 逃掉記帳（notes-review 已提） | 改成掃目錄算用量（見第四節） |
 | mount（tmpfs） | helper 在授權空目錄掛 tmpfs | 可選 | 要 root。WSL 的 `/tmp` 本來就不是 tmpfs〔查證〕 | 拿掉，暫存就在磁碟 |
 
 #### 程序與資源
@@ -41,7 +41,7 @@
 | cgroup v2 | 資源框、限制、量用量、OOM 證據、**殺乾淨整個程序樹** | **實質必要**：資源 module 可選，但 [B-202](../../spec/base/execution.md)「後代要能驗證全空」與 [B-603](../../spec/settled/daemon.md) 重啟全殺，沒有 cgroup 做不到可靠版本 | 主流發行版 2021 年後預設純 v2（Fedora 31+、Ubuntu 21.10+、Debian 11+、RHEL 9+）〔推論〕。本機與 WSL 都是純 v2〔查證〕；**RHEL 8、Ubuntu 20.04 這類舊系統預設 v1／混用，整套不能跑**〔推論〕 | 見第三節第一名 |
 | cgroup.kill、pids.events、memory.events | 一次殺光、判斷 OOM／fork 失敗 | 實質必要 | `cgroup.kill` 要 kernel 5.14〔推論〕，本機有〔查證〕。WSL 發現父層 `pids.events` 不準，要看子層〔查證〕 | 舊 kernel 改成反覆讀 `cgroup.procs` 逐個殺 |
 | Unix socket＋SO_PEERCRED | daemon IPC 認人 | 必要 | 極穩。坑：socket 路徑上限約 107 bytes | — |
-| socketpair SEQPACKET＋SCM_RIGHTS | daemon 與 helper 私有通道、傳 fd（[P-108](../../spec/settled/protocol/daemon/provision-and-runner.md)）；初步清單沒列 | helper 模式必要 | 極穩 | — |
+| socketpair SEQPACKET＋SCM_RIGHTS | daemon 與 helper 私有通道、傳 fd（[P-108](../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)）；初步清單沒列 | helper 模式必要 | 極穩 | — |
 | memfd＋封印（seal） | helper 收到的「密封 inst 快照 fd」；初步清單沒列 | helper 模式必要 | kernel 3.17 起就有〔推論〕 | 改成唯讀暫存檔，但要多防替換 |
 | prctl `PR_SET_PDEATHSIG` | daemon 死了 helper 跟著死；初步清單沒列 | helper 模式必要 | 極穩，但 Python 標準庫沒有，要走 ctypes 叫 glibc〔推論〕 | 靠管道斷線偵測（spec 已要求兩者並用） |
 | signal、pidfd | TERM→2 秒→KILL；安全地指到某個程序 | 必要／pidfd 是「例如」 | pidfd_open 要 kernel 5.3〔推論〕；Python 3.9 起有 `os.pidfd_open`，本機有〔查證〕 | pidfd 可省，靠 cgroup 殺 |
@@ -62,7 +62,7 @@
 
 | 項目 | 拿來做什麼 | 必要？ | 穩定度與坑 | 退路 |
 |---|---|---|---|---|
-| systemd（使用者層） | 無 helper 時提供「委派給我的 cgroup 子樹」（[P-107](../../spec/settled/protocol/daemon/provision-and-runner.md)）；方向上還要管定時、開程序 | 實質必要 | systemd 本身極穩。**坑都在設定**：要 `user@` 有 `Delegate`（本機預設 cpu／memory／pids，沒有 io〔查證〕）；使用者沒登入時要 linger 才有 user manager（本機已開〔查證〕）；`systemd-run --user` 要走使用者 D-Bus 與 `XDG_RUNTIME_DIR`〔推論〕；WSL 從 `wsl.exe` 進來的 shell 在 `/init.scope`，不在委派樹裡〔查證〕 | helper 模式改用系統層 systemd；沒 systemd 見第三節 |
+| systemd（使用者層） | 無 helper 時提供「委派給我的 cgroup 子樹」（[P-107](../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)）；方向上還要管定時、開程序 | 實質必要 | systemd 本身極穩。**坑都在設定**：要 `user@` 有 `Delegate`（本機預設 cpu／memory／pids，沒有 io〔查證〕）；使用者沒登入時要 linger 才有 user manager（本機已開〔查證〕）；`systemd-run --user` 要走使用者 D-Bus 與 `XDG_RUNTIME_DIR`〔推論〕；WSL 從 `wsl.exe` 進來的 shell 在 `/init.scope`，不在委派樹裡〔查證〕 | helper 模式改用系統層 systemd；沒 systemd 見第三節 |
 | systemd（系統層） | 開機拉起 daemon；可選 `CapabilityBoundingSet`、`SystemCallFilter`；方向上的 `systemd-run --uid` | helper 模式實質必要 | 同上。WSL 要在 wsl.conf 開 `systemd=true`（公司機已開，255 版）〔查證〕 | 手動 sudo 前景開 |
 | sudo | 「用 sudo 開＝有 helper」，並用 `SUDO_UID` 找原帳號 | 可選（不隔離就不用） | 極穩。坑：doas 不設 `SUDO_UID`〔推論〕；本機有 `run0`〔查證〕，它設不設 `SUDO_UID` 未查 | spec 已允許在設定檔明寫通用帳號 |
 | git | node 狀態、group 提交與還原、同一 commit 讀摘要 | 必要 | 核心指令十幾年沒變。坑見第四節（作者設定、safe.directory、hooks、殘留 index.lock） | 無，這是狀態模型本身 |

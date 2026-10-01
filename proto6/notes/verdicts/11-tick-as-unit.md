@@ -100,13 +100,15 @@
 - **帳號**：tick 不看 `user`、不回 125，照自己的帳號跑。
 - spec 規定本身不刪，只標〔使用者方向 2026-10-01：POC 先不做〕。
 
-### aos 結束碼慣例（待統一更新 spec）
+<a id="aos-結束碼慣例待統一更新-spec"></a>
+
+### aos 結束碼慣例（已寫入 spec（commit 前由我補號））
 
 〔使用者方向 2026-10-01〕使用者原話：「我預期0是通用正常結束，1是通用錯誤結束，2是通用正常中斷。所以block檔應該算2。任務的結束碼這塊我們也按照這樣的慣例。你可以先規定aos體系下的結束碼慣例。」「確實要拿掉退路，aos-tick就是在指定了--node之後，去吃.aos/inst.json，這是必要。」「以上都拿先記錄下來，之後統一拿去更新spec。」「停格檔算是正常結束，甚至不算中斷。關於block和stop檔案，這塊的機制我之後還會詳細設計」「任務出錯，不算在tick的錯誤內」「任務回2也只記一筆，照常跑下一項」。
 
 **同日改版（取代上面原話裡的「2＝通用正常中斷」「block檔應該算2」）**〔使用者方向 2026-10-01〕使用者原話：「結束碼這塊，我覺得不要2了，只要是正常的，不須多做處理的，通通0，0以外就是需要額外處理的東西。或者說0，就是在我們預料之中，算是正常狀況的事情，一切正常都歸類在0，0以外就是不正常。」「只有0才是普通結束，正常中斷也改成0。」「改成0，還有0以外。1就是通用錯誤，所以沒特別設置結束碼的錯誤都設1。」
 
-**這節是正本，spec 這輪一字未動，待統一更新 spec**（到時新增一篇整理區規定、給新條號，並在舊碼表處標註指過來；見下面「待改的 spec 處」）。使用者的整體圖像：外層是定期執行的 `aos-exec`，它讀的 `inst.json` 的 `argv` 第一個就是 `aos-tick`。
+**這節是正本，已寫入 spec（commit 前由我補號）**（到時新增一篇整理區規定、給新條號，並在舊碼表處標註指過來；見下面「待改的 spec 處」）。使用者的整體圖像：外層是定期執行的 `aos-exec`，它讀的 `inst.json` 的 `argv` 第一個就是 `aos-tick`。
 
 **慣例本身（改版後）**
 
@@ -158,11 +160,13 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - spec 其他命令列（`aos node check`、`aos work trace`、kernel 工具、ops、daemon 設定錯等）也多寫「2 用法錯」、有的用 2 表「不合法」：改版後的慣例照字面是「沒特別指定的錯都 1」，這些是不是一律改 1、還是當「特別指定」保留，統一更新時逐條定（本輪只改了 aos-tick 與 aos-exec 的程式）。
 - [P-203](../../spec/settled/protocol/node.md#p-203aos-tick-與任意任務程式建議預設未拍板) 的 argv 那段與 [B-602](../../spec/settled/tick.md#b-602同一資料夾一次一格互斥鎖)「認哪個資料夾」：`--node` 改照下一節（省略用 `./`、相對轉絕對、資料夾看 `.aos/tasks.json`、給檔當任務表）；拿掉「必須絕對路徑」與「`.aos/inst.json`／`inst.json` 正規化成資料夾」。上面碼表「`--node` 底下沒有 `.aos/inst.json`」也照下一節改成 `.aos/tasks.json`。
 
-### aos-tick `--node` 怎麼認（待統一更新 spec）
+<a id="aos-tick---node-怎麼認待統一更新-spec"></a>
+
+### aos-tick `--node` 怎麼認（已寫入 spec（commit 前由我補號））
 
 〔使用者方向 2026-10-01〕使用者原話：「如果--node xxx，xxx沒指定，那就是默認./。然後這邊我要加個機制：如果xxx是檔案，那該檔案必須符合task.json格式，而該檔案所在的資料夾yyy，將其作為--node yyy，後續正常執行。aos-tick --node xxx，判斷是否合法，應該是要判斷是否有.aos/task.json，和inst.json分開。」（`task.json` 即現有的 `tasks.json`。）
 
-**這節是正本，spec 這輪一字未動，待統一更新 spec**（見上面「待改的 spec 處」P-203 argv 那條）。取代上一節「`--node` 底下必須有 `.aos/inst.json`」那半句；退路照舊拿掉。
+**這節是正本，已寫入 spec（commit 前由我補號）**（見上面「待改的 spec 處」P-203 argv 那條）。取代上一節「`--node` 底下必須有 `.aos/inst.json`」那半句；退路照舊拿掉。
 
 - **沒給 `--node`**：用目前目錄 `./`。**相對路徑**一律轉成絕對路徑再用（拿掉「必須絕對路徑」）；node id 仍是絕對路徑。
 - **`--node` 是資料夾**：合法＝有 `.aos/tasks.json`；不看 `.aos/inst.json`（tick 跟 inst.json 分開）。沒有就回 1、stderr 一行。
@@ -172,11 +176,13 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **表裡的相對路徑與指示詞**（同日追加）：以 node 根為中心——給檔時就是該檔所在的資料夾（叫 `.aos` 時是它的上一層，見下）。
 - 實作時自己定的（使用者沒講，可改）：給的檔所在資料夾叫 `.aos` 時（例如 `yyy/.aos/tasks.json`），node 取 `.aos` 的上一層 `yyy`，不照字面當 `yyy/.aos`；舊的 `--node yyy/.aos/inst.json` 因此變成「拿 inst.json 當任務表」，沒有 `tasks` 陣列、過不了極簡檢查回 1。stderr 代碼 `no_tasks`（資料夾沒有 `.aos/tasks.json`）、`no_node`（不存在）。
 
-### aos-tick 讀任務表的極簡檢查（待統一更新 spec）
+<a id="aos-tick-讀任務表的極簡檢查待統一更新-spec"></a>
+
+### aos-tick 讀任務表的極簡檢查（已寫入 spec（commit 前由我補號））
 
 〔使用者方向 2026-10-01〕使用者原話（依序）：「task.json的格式錯誤的話，那aos-tick就是回1，這應該算在非正常錯誤」「所謂的格式錯誤，就是該填的沒填，然後不符合{"tasks":[]}這樣的格式，其他就不檢查。」「kind不填」「最外層不用檢查_metainfo，每一項也只需要檢查argv」「拿掉」（指任務表的 `methods`）「沒寫id的時候，那就是以其在tasks陣列中的index做id。直接數字轉字串。默認不重複」。檔名確定是 `tasks.json`。
 
-**這節是正本，spec 這輪一字未動，待統一更新 spec。** 取代上面「POC 默認一切正常」裡「任務表不合法：拿掉驗表」那條與「表壞自然丟錯」的做法。
+**這節是正本，已寫入 spec（commit 前由我補號）。** 取代上面「POC 默認一切正常」裡「任務表不合法：拿掉驗表」那條與「表壞自然丟錯」的做法。
 
 - **格式錯算 tick 自己的錯**：stderr 一行（`bad_table: …`）、回 1。給檔（`--node` 是檔）時一樣。
 - **只查這幾件**：讀得到、合法 JSON、頂層是物件且有 `tasks` 陣列；每一項（整份 `$ref` 先展開，展開不了也算格式錯）是物件且有 `argv`。
@@ -194,11 +200,13 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - [B-620](../../spec/settled/tick.md#b-620任務註冊表照表依序跑)「讀表與誰驗什麼」：核心只做上面的極簡檢查，不過回 1。
 - [B-633](../../spec/settled/tick.md#b-633每項結束碼紀錄與格數)／P-213 與 `node-tick-record` schema：`id` 的說明補「任務表沒寫 `id` 時是位置字串」；上面「任務環境變數命名」那條的 `AOS_TASK_ID` 同。
 
-### aos-tick 最簡互斥與讀表時機（待統一更新 spec）
+<a id="aos-tick-最簡互斥與讀表時機待統一更新-spec"></a>
+
+### aos-tick 最簡互斥與讀表時機（已寫入 spec（commit 前由我補號））
 
 〔使用者方向 2026-10-01〕理由：外層定期跑 `aos-tick`，上一格沒跑完下一格就來，這是正常使用會碰到的。
 
-**這節是正本，spec 這輪一字未動，待統一更新 spec。** 取代上面「POC 默認一切正常」裡「同資料夾互斥整個拿掉」那條，和上一節「實作自己定的：檢查在換紀錄之後」那條。
+**這節是正本，已寫入 spec（commit 前由我補號）。** 取代上面「POC 默認一切正常」裡「同資料夾互斥整個拿掉」那條，和上一節「實作自己定的：檢查在換紀錄之後」那條。
 
 - **加回最簡互斥**：開格前對 `<node>/.aos/tick.lock` 取非阻塞 `flock`（不存在就建）。拿不到就 stderr 一行 `busy: …`、回 ~~2（正常中斷）~~ 0（同日結束碼改版：預料之中），不寫紀錄、不加 `seq`。拿到就整格持鎖、程序結束自然放。
 - **鎖 fd 不傳給任務**（Python `os.open` 預設不可繼承、`Popen` 預設 `close_fds`）；沒有 `AOS_TICK_LOCK_FD`、不回 75。任務留下的後代因此也不會佔住鎖。
@@ -216,11 +224,13 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - [B-620](../../spec/settled/tick.md#b-620任務註冊表照表依序跑)「一格怎麼走」：讀表移到換紀錄之前；表壞不佔 `seq`。
 - [B-633](../../spec/settled/tick.md#b-633每項結束碼紀錄與格數)：「表壞的格也佔一個 `seq`」一類的話拿掉。
 
-### `AOS_DIRNAME` 狀態資料夾的名字（待統一更新 spec）
+<a id="aos_dirname-狀態資料夾的名字待統一更新-spec"></a>
+
+### `AOS_DIRNAME` 狀態資料夾的名字（已寫入 spec（commit 前由我補號））
 
 〔使用者方向 2026-10-01〕aos-tick 讀環境變數 `AOS_DIRNAME` 決定 node 狀態資料夾的名字；使用者追加原話：「aos-exec那邊，我覺得可以加上這個AOS_DIRNAME」。
 
-**這節是正本，spec 這輪一字未動，待統一更新 spec。之後 aos 所有程式都照這個變數。**
+**這節是正本，已寫入 spec（commit 前由我補號）。之後 aos 所有程式都照這個變數。**
 
 〔使用者方向 2026-10-01，同日再改〕使用者原話：「如果AOS_DIRNAME是空的，那就從找.aos/inst.json改成找inst.json。」
 
@@ -241,11 +251,13 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - 新增一處通用規定（跟「aos 結束碼慣例」同篇或相鄰）：`AOS_DIRNAME` 的意思、三態（沒設＝`.aos`、空字串＝資料夾本身、其他＝名字）、不合法的值，以及「aos 所有程式都照它」。
 - [inst.md「inst 目標」](../../spec/base/inst.md) 另補：`AOS_DIRNAME` 空字串時只找 `<目標>/inst.json`。
 
-### aos-exec 不認得頂層 `user`（待統一更新 spec）
+<a id="aos-exec-不認得頂層-user待統一更新-spec"></a>
+
+### aos-exec 不認得頂層 `user`（已寫入 spec（commit 前由我補號））
 
 〔使用者方向 2026-10-01〕使用者原話：「aos-exec應該也不需要認得頂層user吧。」
 
-**這節是正本，spec 這輪一字未動，待統一更新 spec。**
+**這節是正本，已寫入 spec（commit 前由我補號）。**
 
 - 從 proto5 複製的 `aos_inst`／`aos-exec` 撤回 proto6 加的「認得頂層 `user`」（解析帳號、跟目前身分不同就 `UserNotGranted`、型別錯 `UserInvalid`、都回 125）。回到 proto5 原樣：`user` 當不認得的鍵照 inst 規則忽略，照目前身分跑。
 - aos-tick 原本「交給 `load_obj` 前先拿掉 `user`」因此多餘，拿掉；tick 本來就不看 `user`（見上面「POC 默認一切正常」）。
@@ -257,11 +269,13 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - B-620「任務的帳號」、P-202 欄位表裡 `user` 的說明：核心與 aos-exec 都不看。
 - 寫「`user` 跟目前身分不同就 125」的地方（含 conformance 場景）。
 
-## 2026-10-01：最核心 daemon（待統一更新 spec）
+<a id="2026-10-01最核心-daemon待統一更新-spec"></a>
+
+## 2026-10-01：最核心 daemon（已寫入 spec（commit 前由我補號））
 
 〔使用者方向 2026-10-01〕使用者原話：「daemon就是叫aos-exec，所以他存著的清單就是inst.json的路徑，以路徑做id……所以daemon管node這件事，會變成可掛載的模組。」草稿與細節見 [daemon 核心草稿](../2026-10-01-daemon-core-sketch.md)，細部 plan 見 [m3-daemon-core](../../plan/m3-daemon-core.md)。
 
-**這節是正本，spec 這輪一字未動，待統一更新 spec。**
+**這節是正本，已寫入 spec（commit 前由我補號）。**
 
 - **daemon 叫 `aos-exec`，不直接叫 `aos-tick`。** 它存的清單是一份份 `inst.json` 的路徑，**以路徑當 id**；~~路徑末段是 `/inst.json` 時省略這段當 id（`/n/a/inst.json` 的 id 是 `/n/a`，`/jobs/b.json` 照原樣）~~（同日撤回，id 就是字面值，見下面「設定檔追加裁定」）。
 - 所以 **「daemon 管 node」變成可掛載的模組**：daemon 核心只是定期叫 `aos-exec` 跑清單上的 inst，不認得 node；要定期跑一個 node，就在 node 放一份 `argv` 開頭是 `aos-tick` 的 `inst.json`，把它的路徑加進清單。
@@ -276,9 +290,9 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 - [daemon 整理區](../../spec/settled/daemon/README.md)（B-601～B-613 等）：開格核心改成「定期叫 `aos-exec` 跑清單上的 inst」；node 登記、socket／IPC、runner、收尾寬限、state 存讀等第一版不做的，標〔使用者方向 2026-10-01：第一版先不做〕。
 - [inst.md](../../spec/base/inst.md)「登記的 id 就是這個目標路徑」與 tick 的正規化：~~改成上面「末段 `/inst.json` 省略」的 id 規則~~ 改成「id 就是清單上 `inst` 的字面值」（設定檔追加裁定）。
-- [P-101](../../spec/settled/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板) 的啟動設定：補上下面的設定檔長相（`insts`、頂層 `cwd`／`interval_ms`／`stop_on_nonzero`）。
+- [P-101](../../spec/settled/deferred/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板) 的啟動設定：補上下面的設定檔長相（`insts`、頂層 `cwd`／`interval_ms`／`stop_on_nonzero`）。
 
-**設定檔追加裁定（使用者 2026-10-01，待統一更新 spec）**
+**設定檔追加裁定（使用者 2026-10-01，已寫入 spec（commit 前由我補號））**
 
 使用者原話：「設定檔這塊可以。其中的inst的值，反正後面的路徑是要直接丟給aos-exec的，所以既可以是資料夾也可以是檔案，反正只要符合aos-exec的解析規範就好。inst寫相對路徑時，改成以daemon啟動時所在的cwd為起點，或是設定檔頂層添加一個key："cwd":"./"在insts旁邊。頂層key還可以加上interval_ms, stop_on_nonzero，作為所有insts的默認設定。所謂id也不用特別算了，就直接是inst的值，捨棄我剛剛說的。」細節見 [m3 步驟 1](../../plan/m3-daemon-core.md#步驟-1讀設定檔)。
 
@@ -287,9 +301,9 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **頂層預設**：頂層可選 `interval_ms`、`stop_on_nonzero`，每項自己寫的蓋過頂層；兩邊都沒有 `interval_ms`＝設定錯、回 1，`stop_on_nonzero` 兩邊都沒有＝`false`。
 - **id 就是 `inst` 字面值**，撤回上面「轉絕對路徑、末段 `/inst.json` 省略」；同字面值重複默認不會發生。
 
-**m3 待問裁定（使用者 2026-10-01，待統一更新 spec）**：所有項都停了 daemon 照樣開著、不退出；每次印的那一行前面加印出那刻的本地時間（ISO 8601 帶時區，例如 `2026-10-01T15:04:05+08:00 id=a exit=0 ms=812`）；aos-exec 子程序的 stderr 由設定檔頂層可選 `exec_err_path` 決定往哪寫（`<inst>` 換成 inst 字面值、指檔時換成所在資料夾，接在檔尾、純文字；沒寫＝daemon 自己的 stderr；共用出口每次先加一行標頭、收齊再寫、不交錯）。細節見 [m3 待問 3～5](../../plan/m3-daemon-core.md#待問)。
+**m3 待問裁定（使用者 2026-10-01，已寫入 spec（commit 前由我補號））**：所有項都停了 daemon 照樣開著、不退出；每次印的那一行前面加印出那刻的本地時間（ISO 8601 帶時區，例如 `2026-10-01T15:04:05+08:00 id=a exit=0 ms=812`）；aos-exec 子程序的 stderr 由設定檔頂層可選 `exec_err_path` 決定往哪寫（`<inst>` 換成 inst 字面值、指檔時換成所在資料夾，接在檔尾、純文字；沒寫＝daemon 自己的 stderr；共用出口每次先加一行標頭、收齊再寫、不交錯）。細節見 [m3 待問 3～5](../../plan/m3-daemon-core.md#待問)。
 
-**m3 實作後追加裁定（使用者 2026-10-01，待統一更新 spec）**
+**m3 實作後追加裁定（使用者 2026-10-01，已寫入 spec（commit 前由我補號））**
 
 使用者原話：「關於印出來的樣子，其實不用是id，應該是inst=j/r.json這樣。id這個概念其實可以不存在於daemon核心了。」「前面1,2,3都按照建議。」「daemon config json的頂層可以加上一個key: modules。然後整份daemon config都可以用aos dirictive去解析，所以這樣就不會太過膨大。」「控制模組這塊的細節我還要再想想」；追問後：「$ref 照建議，從設定檔所在資料夾算，算完之後才讓cwd那個key被應用。」細節見 [m3 步驟 1](../../plan/m3-daemon-core.md#步驟-1讀設定檔)。
 
@@ -301,7 +315,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 **待改的 spec 處**（追加）：P-101 的設定檔長相補 `modules` 與「整份先展開指示詞、`$ref` 以設定檔資料夾為準、展開完才套 `cwd`」；[inst.md](../../spec/base/inst.md)「登記的 id」改成「daemon 核心沒有 id」。
 
-**`insts` 改成物件＋控制模組裁定（使用者 2026-10-01，待統一更新 spec）**
+**`insts` 改成物件＋控制模組裁定（使用者 2026-10-01，已寫入 spec（commit 前由我補號））**
 
 使用者原話：「daemon config中，其實可以是{"insts":{"jobs/report.json":{...},"haha.json":{...}}}。然後控制模組這塊，wake的功能改一下，改成可以調設定，比如正在跑的話是否就不跑了(但仍然叫幾次都只補一次)，或是這次跑完，原本後續週期性的那次就不跑了，或是弄成單獨指令也可以。aos-ctl status應該要只能看一個項的狀態，也就是自己所在的這項。1.夠了。2.可以。3.隨便放，就一個。4.算。5.訊息模組不算在此。」追補：「應該說wake/pause/resume/status都是指向某一項inst任務」。細節見 [m3 步驟 1](../../plan/m3-daemon-core.md#步驟-1讀設定檔)、[m3n](../../plan/m3n-control-module.md)。
 
@@ -311,9 +325,9 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **wake 可帶選項**：正在跑時要不要補一次（叫幾次都只補一次照舊）、跑完後原本週期要不要照舊；細節見 m3n。使用者定名：「正在跑就不補」＝`"skip_while_running": true`（預設 `false`＝跑完補一次）；「不影響原本排程」＝`"keep_schedule": true`（預設 `false`＝叫醒跑完後週期從這次結束重新算，原本那次不另外跑；`true`＝原本那次照常跑）。兩個都留在 wake 上，不拆單獨指令。
 - **`aos-ctl status` 只看一項**：不帶參數就看自己所在那項（`AOS_DAEMON_INST`）。環境變數 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`（取代先前草稿的 `AOS_DAEMON_ID`）。
 
-**待改的 spec 處**（追加）：P-101 的設定檔長相改成 `insts` 物件；B-607 叫醒／暫停照 m3n；[P-117 通道變數](../../spec/settled/protocol/daemon/channel.md) 的 `AOS_DAEMON_SOCKET` 留、加 `AOS_DAEMON_INST`、憑證不做。
+**待改的 spec 處**（追加）：P-101 的設定檔長相改成 `insts` 物件；B-607 叫醒／暫停照 m3n；[P-117 通道變數](../../spec/settled/deferred/protocol/daemon/channel.md) 的 `AOS_DAEMON_SOCKET` 留、加 `AOS_DAEMON_INST`、憑證不做。
 
-**m3n 待問 1 先照建議做（2026-10-01，使用者要直接開工，使用者可改；待統一更新 spec）**
+**m3n 待問 1 先照建議做（2026-10-01，使用者要直接開工，使用者可改；已寫入 spec（commit 前由我補號））**
 
 使用者要控制模組直接開工，m3n 唯一的待問（暫停中、已停時叫醒怎麼辦、resume 要不要順便跑）先照 plan 建議寫進程式，標「照建議先做，使用者可改」（[m3n 待問](../../plan/m3n-control-module.md#待問)）：
 
@@ -321,7 +335,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **被 `stop_on_nonzero` 停掉的項 wake**：回 `{"ok":false,"error":"stopped"}`、不跑；要救用 resume。
 - **resume**：清掉暫停與已停，一律馬上跑一次（等於一次不帶選項的 wake）。
 
-**待改的 spec 處**（追加）：[B-607 叫醒暫停](../../spec/settled/daemon/registration.md#b-607叫醒暫停故障停格與格次序號) 補上這三條。
+**待改的 spec 處**（追加）：[B-607 叫醒暫停](../../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號) 補上這三條。
 
 ## node 模組方向（2026-10-01，記錄用，未排程）
 
@@ -331,3 +345,16 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **node 由 daemon 掃根資料夾自動找**：有 `tasks.json` 的資料夾就是 node，不用一個個寫進清單。
 - **上下層只照資料夾包含關係算**（資料夾在誰裡面，誰就是上層）。
 - **node 模組第一版只做兩件事**：「找 node」與「上下層＋叫醒往上傳」。訊息、cgroup、常駐行程在它之上另成模組。
+
+## 2026-10-01 統一更新 spec
+
+上面各節（含「待改的 spec 處」各條）與當天追加的裁定（`AOS_NODE_DIR` 改名 `AOS_TICK_CWD`、拿掉 `AOS_TICK_RECORD`、`aos-tick` 目標改位置參數、stderr `no_target`）已一起寫進 spec（commit 前由我補號）。原則：spec 跟現行程式與裁定一致；今天加的〔POC 先不做〕〔作廢〕註記收掉；先不做的規定不刪，搬到[暫緩區](../../spec/settled/deferred/README.md)，條號保留、不重用，每條標「暫緩」或「已被 X 取代」。
+
+改了哪些篇：
+
+- **新開**：[通用慣例](../../spec/settled/conventions.md)（C-08 結束碼慣例、C-09 `AOS_DIRNAME`、C-10 環境變數總表）；[daemon/core](../../spec/settled/daemon/core.md)（B-640 最核心 daemon）、[daemon/control](../../spec/settled/daemon/control.md)（B-641 控制模組與 `aos-ctl`）；[protocol/daemon/core](../../spec/settled/protocol/daemon/core.md)（P-120）、[protocol/daemon/control](../../spec/settled/protocol/daemon/control.md)（P-121）；[名詞](../../spec/settled/terms.md) T-11；[暫緩區](../../spec/settled/deferred/README.md) 入口與 `deferred/tick.md`、`deferred/terms.md`、`deferred/protocol/daemon/README.md`。
+- **改寫**：整理區 [README](../../spec/settled/README.md)、[tick](../../spec/settled/tick.md)（B-626、B-602、B-620、B-633 照新規定，其餘各條修打架的句子）、[node 協議](../../spec/settled/protocol/node.md)（P-200～213）、名詞 T-07、T-10、[daemon 入口](../../spec/settled/daemon/README.md)、daemon 協議 P-100。
+- **搬到暫緩區**：B-628、T-09；B-602、B-620、B-633 的部分；整套舊 daemon（B-504、B-601、B-603～615）與舊 daemon 協議（P-101～119）；B-303（helper、`aos-as`）。被新設計取代的：B-615（被 `modules` 取代）、P-101（被 P-120、P-121 取代），B-601、B-607、P-103、P-105、P-106、P-117 部分取代。
+- **區外**：[inst](../../spec/base/inst.md)（`AOS_DIRNAME`、用法錯 1、aos-exec 不認得 `user`、daemon 核心沒有 id）、[驗收入口](../../spec/conformance.md)（V-01 正本表與條號表、V-03 標暫緩並加「2026-10-01 新增場景」）、[contracts](../../spec/contracts.md) C-01 一處連結、[名詞與責任](../../spec/terms.md)、[ops](../../spec/protocol/ops.md) 一處；搬家連帶的相對連結全 repo 重算。
+- **schema／範例**：`node-tasks`（`id`、`kind` 不必填、拿掉 `methods`）、`node-tick-record`（`exit` 只收 0）；新增 `daemon-core-config`、`daemon-ctl` 與範例；`validate.py` 跟著改。
+- 改寫時發現、要使用者裁定的點列在[整理區 README「疑點」](../../spec/settled/README.md#2026-10-01-統一更新要使用者裁定的)。

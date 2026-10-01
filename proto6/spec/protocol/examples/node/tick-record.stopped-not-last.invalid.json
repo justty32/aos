@@ -12,6 +12,6 @@
     }
   ],
   "ended": true,
-  "exit": 1,
+  "exit": 0,
   "stopped_after": "mq-get"
 }

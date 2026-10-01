@@ -1,12 +1,16 @@
 # daemon 核心：登記、叫醒與暫停
 
-← [daemon 目錄](README.md)｜[整理區](../README.md)
+← [舊 daemon 目錄（暫緩區）](README.md)｜[整理區](../../README.md)
+
+> **這篇整篇在暫緩區**（2026-10-01）：舊 daemon 的登記、叫醒、暫停。現行的叫醒、暫停、恢復、查詢見控制模組（[B-641](../../daemon/control.md)）。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 ## B-606：登記、解除、換父與身分額度
 
-〔使用者方向 2026-09-30 晚〕aos 不處理兩個 daemon 管同一個 node；現行同資料夾鎖與回 75 當普通結束（[B-602](../tick.md)、B-607）照舊，不加跨 daemon 協調。
+> **暫緩**（2026-10-01）：登記、解除、換父、身分額度、once；daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01）。「登記 id 就是路徑」不再適用：核心沒有 id，一項就是 inst 字面值（[B-640](../../daemon/core.md)）；「頂層從設定載入」改成設定檔的 `insts`（[B-640](../../daemon/core.md)）。條號保留、不重用。
 
-依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+〔使用者方向 2026-09-30 晚〕aos 不處理兩個 daemon 管同一個 node；現行同資料夾鎖與回 75 當普通結束（[B-602](../../tick.md)、B-607）照舊，不加跨 daemon 協調。
+
+依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
 
 method 形狀見 [P-104～105](../protocol/daemon/registration.md)，誰可呼叫見 B-601。
 
@@ -32,19 +36,19 @@ method 形狀見 [P-104～105](../protocol/daemon/registration.md)，誰可呼�
 - **頂層**只從設定載入，有效上層是 null。〔建議預設〕這算部署者在設定裡做的覆蓋，不是取消資料夾上層：
   - 資料夾上層沒在這個 daemon 登記（例如 `/a` 由 cron 跑、設定只列 `/a/b`）時，照上面的疑點裁定 11 直接成立：daemon 底下 `/a/b` 是頂層，管轄權仍跟著資料夾（`/a` 對 `/a/b` 的檔案仍有最高裁量），直接跑的核心照資料夾仍算出 `/a`（[B-628](../tick.md)）。
   - 資料夾上層已是這個 daemon 裡的登記（另一棵 root 或它底下的 node）時，部署者沒辦法替它同意，整份設定不收（`config_invalid`；熱重載照 [B-608](reload.md#b-608熱重載與免重開要重開) 不套用）。〔暫定〕設定裡兩棵 root 的資料夾互相包含，就是這一種。
-- 身分繼承（inst 的 `user` 省略時繼承上層）跟**有效上層**，見 [inst](../../base/inst.md)。
+- 身分繼承（inst 的 `user` 省略時繼承上層）跟**有效上層**，見 [inst](../../../base/inst.md)。
 
 ### 新登記
 
 - 頂層只從設定載入（增刪走熱重載，B-608）。其餘 node 由有效上層的 owner 或祖先 owner 經 `node.register` 登記（帶憑證時，由有效上層那個 tick 或它的上層鏈上的 tick 登記）。首次必須有上層同意，本版不提供首次自登記。
 - 新登記不自動啟動：上層 kernel 重建子 kernel 時明確再送 wake；頂層由 daemon 自動各排第一格。
 - 每筆登記保存授權時解析出的 `owner_uid`。改 inst 不立即改掉 owner；有效的下一格身分採用、或經原 owner／上層授權的重新登記才更新。
-- inst 尋找依 [inst](../../base/inst.md)。登記的 node 必須是資料夾（單檔 inst 要用掛載行程，B-613）。〔astra 審整理區必-8 從 P-101 搬上〕找不到 inst 時：設定檔裡的頂層算用法錯（daemon 回 2、不啟動）；IPC 登記回 `invalid_params`，daemon 照常跑。同一個 id 不能同時是登記又是掛載行程，衝突回 `registration_conflict`。
+- inst 尋找依 [inst](../../../base/inst.md)。登記的 node 必須是資料夾（單檔 inst 要用掛載行程，B-613）。〔astra 審整理區必-8 從 P-101 搬上〕找不到 inst 時：設定檔裡的頂層算用法錯（daemon 回 2、不啟動）；IPC 登記回 `invalid_params`，daemon 照常跑。同一個 id 不能同時是登記又是掛載行程，衝突回 `registration_conflict`。
 
 ### 登記識別與別每格重登
 
 - 每次新登記（首次登記、解除後再登、換父、daemon 重啟後讀回或重建）daemon 配一個新的 `registration_id`；同一筆登記的重送與內容更新不換。
-- 〔使用例：kernel 那側，正本在 [S-202](../../scheduling/admission.md)〕kernel 在自己的 repo 記下成功同步的 boot id 與成員版本，每格只比對小查詢；兩者沒變且無待修復差異就不重登。重開、清單改變或已知解除時才補差異，並叫醒子 kernel 逐層重建。失敗筆不標成功、不擋其他成員，也不重送結果不明的掛行程。kernel 那側何時登記成員見 [S-202](../../scheduling/admission.md)。
+- 〔使用例：kernel 那側，正本在 [S-202](../../../scheduling/admission.md)〕kernel 在自己的 repo 記下成功同步的 boot id 與成員版本，每格只比對小查詢；兩者沒變且無待修復差異就不重登。重開、清單改變或已知解除時才補差異，並叫醒子 kernel 逐層重建。失敗筆不標成功、不擋其他成員，也不重送結果不明的掛行程。kernel 那側何時登記成員見 [S-202](../../../scheduling/admission.md)。
 
 ### 身分額度
 
@@ -67,7 +71,7 @@ method 形狀見 [P-104～105](../protocol/daemon/registration.md)，誰可呼�
   - 佈建權的動作集合、路徑、群組同樣只能是上層的子集（B-609）；
   - 整條鏈的上限仍受頂層啟動設定限制。
 - 新 node 的 inst user 在登記時必須已存在，不存在就回 `user_invalid`，不延到 wake 才擋（wake 時仍重新解析一次）。額度不是允許 impersonate 呼叫者的欄位。
-- 任務要用別的帳號跑，要包 `aos-as`，那個帳號也要落在這個 node 的額度內，由 daemon 在 `spawn_as` 核（B-609）。任務表只寫 `user` 而沒包 `aos-as` 的，核心那一項回 125、不會來問 daemon（[B-620](../tick.md)；第二十批疑點裁定 6）。
+- 任務要用別的帳號跑，要包 `aos-as`，那個帳號也要落在這個 node 的額度內，由 daemon 在 `spawn_as` 核（B-609）。任務表只寫 `user` 而沒包 `aos-as` 的，核心那一項回 125、不會來問 daemon（[B-620](../../tick.md)；第二十批疑點裁定 6）。
 
 ### 重送與更新
 
@@ -81,7 +85,7 @@ method 形狀見 [P-104～105](../protocol/daemon/registration.md)，誰可呼�
 
 換上層有兩條路（第十九批改寫第十八批審稿裁定 6 與 Q10）：
 
-1. **搬資料夾**：把 node 的資料夾搬進別的 tick 的資料夾，新位置最近的那個自動成為上層。路徑就是 id，所以等於舊 id 解除、新 id 重登：先由舊上層照下面的解除收掉舊 id，搬完再由新上層以新 id 登記。引用舊路徑的回址會失效，風險自負（[T-03](../../terms.md)）。
+1. **搬資料夾**：把 node 的資料夾搬進別的 tick 的資料夾，新位置最近的那個自動成為上層。路徑就是 id，所以等於舊 id 解除、新 id 重登：先由舊上層照下面的解除收掉舊 id，搬完再由新上層以新 id 登記。引用舊路徑的回址會失效，風險自負（[T-03](../../../terms.md)）。
 2. **改登記**：用同一個 `node.register` 讓有效上層變成別人——帶不同的 `parent_id`，或拿掉原本的 `parent_id` 回到資料夾推得的上層。已登記子樹跟著搬。
 
 兩條路共同的條件與效果：
@@ -89,7 +93,7 @@ method 形狀見 [P-104～105](../protocol/daemon/registration.md)，誰可呼�
 - **條件**：被搬的 node 與整棵已登記子樹都已暫停且程序全空，否則 `busy`（沿第十八批 Q10）；新上層不能在被搬的子樹裡（成環回 `registration_conflict`）；頂層不能換父。
 - **授權**：新舊兩個上層都同意（同上面的覆蓋）；額度與佈建權要被新上層包含。
 - **效果**（改登記那條）：子樹跟著搬，暫停狀態保留，由呼叫者 resume；被搬的每筆登記換新 `registration_id`，格次序號從頭算。有 cgroup 時收掉舊框、在新上層的框下重建：上限要由新上層的 kernel 重寫，用量歸零。
-- 舊上層 kernel 要先把它從成員清單拿掉，否則下一格同步又會以舊上層登記回去（[P-802](../../protocol/kernel-tasks.md)）。
+- 舊上層 kernel 要先把它從成員清單拿掉，否則下一格同步又會以舊上層登記回去（[P-802](../../../protocol/kernel-tasks.md)）。
 
 ### 解除
 
@@ -109,11 +113,13 @@ once 不再是登記的一種，是任務自己經通道呼叫的事務。daemon
 
 ## B-607：叫醒、暫停、故障停格與格次序號
 
+> **部分已被取代、其餘暫緩**（2026-10-01）：「定期與叫醒」「暫停與恢復」被 [B-640](../../daemon/core.md)（週期從上一次結束起算、不補跑）與 [B-641](../../daemon/control.md)（`wake`／`pause`／`resume`／`status`，暫停只在記憶體）取代，「查詢」部分被 [B-641](../../daemon/control.md) 的 `status` 取代；故障停格（看擋板檔）、最近一格與格次序號暫緩：daemon 核心不認得 node（使用者 2026-10-01），之後做 node 模組時再說（[第二十批「node 模組方向」](../../../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。條號保留、不重用。
+
 method 形狀見 [P-105～106](../protocol/daemon/registration.md)。
 
 ### 定期與叫醒
 
-- `interval_ms` 是一格的標準長度，屬外部規定、保留毫秒（[C-01](../../contracts.md)）；上下層週期不同造成的落差不管（第二十批追答 1、4）。
+- `interval_ms` 是一格的標準長度，屬外部規定、保留毫秒（[C-01](../../../contracts.md)）；上下層週期不同造成的落差不管（第二十批追答 1、4）。
 - 定期 node 從登記完成起經過 `interval_ms` 才到期；每次完整收尾後重新計時，不補跑漏掉的格數。
 - `node.wake` 要求現在跑一格，把本次到期提前：
   - 正在跑時合併成一個 pending；
@@ -127,7 +133,7 @@ method 形狀見 [P-105～106](../protocol/daemon/registration.md)。
 
 - `node.pause` 只停**該 node** 的新格，不殺本格、不遞迴暫停子樹；回成功代表閘門已關。
 - 要手改：先 `node.pause`，再用 `node.show` 看 `running:false`（包括後代清理期間），再持 node 鎖、修改。
-- `node.resume` 只開該 node 的閘門；呼叫者先照 [B-625](../tick.md) 做恢復前驗證。daemon 不替手改做驗證，也不替 unknown 工作重試。有 git 時，手改要保住就自己提交（[B-602](../tick.md)「tick 外的寫入者」）。
+- `node.resume` 只開該 node 的閘門；呼叫者先照 [B-625](../../tick.md) 做恢復前驗證。daemon 不替手改做驗證，也不替 unknown 工作重試。有 git 時，手改要保住就自己提交（[B-602](../../tick.md)「tick 外的寫入者」）。
 - pending 或到期才開格。pause／resume 同狀態重送無害；它們是關／開閘門，不等於 wake。保存依 B-603 的批次存檔。
 
 依據：第十批；納入 cgroup 與 git 疑-3（人手改的不管，要保住自己提交）。
@@ -139,8 +145,8 @@ method 形狀見 [P-105～106](../protocol/daemon/registration.md)。
 | 情況 | daemon 怎麼做 |
 |---|---|
 | tick 回任何結束碼（含 3、100、125） | 照普通結束處理，不停格 |
-| tick 回 75（鎖被占，例如有人手正在直接跑同一個資料夾，[B-602](../tick.md)） | 普通結束：不停格、不寫事項，pending 照留，收尾後照常再開下一格 |
-| 停格檔 `.aos/tick/stop` | 不看。它只在任務層面，是 tick 核心停掉本格其餘各項（[B-620](../tick.md)），daemon 不因它暫停 node |
+| tick 回 75（鎖被占，例如有人手正在直接跑同一個資料夾，[B-602](../../tick.md)） | 普通結束：不停格、不寫事項，pending 照留，收尾後照常再開下一格 |
+| 停格檔 `.aos/tick/stop` | 不看。它只在任務層面，是 tick 核心停掉本格其餘各項（[B-620](../../tick.md)），daemon 不因它暫停 node |
 | 擋板檔 `.aos/tick-blocked` 在 | 不開這一格（下面細說） |
 | daemon 自己的開格故障 | 停格（下面細說） |
 
@@ -156,10 +162,10 @@ method 形狀見 [P-105～106](../protocol/daemon/registration.md)。
 **停格時怎麼做**：
 
 - daemon 先設 `paused:true`，再處理 pending／到期。
-- 寫該 node 的 `.aos/attention/`（格式見 [P-601](../../protocol/ops.md)，處理見 [S-405](../../scheduling/operations.md)）；不解析 stderr、不靠 tick 再發 IPC。事項寫不出就 stdout 警告，不阻止停格。
+- 寫該 node 的 `.aos/attention/`（格式見 [P-601](../../../protocol/ops.md)，處理見 [S-405](../../../scheduling/operations.md)）；不解析 stderr、不靠 tick 再發 IPC。事項寫不出就 stdout 警告，不阻止停格。
 - 要不要恢復、何時恢復由上層或人決定。手動 pause 與自動停格使用同一閘門；resume 前修復者須清後代、持鎖核對；擋板要另外由人手移除。
 
-**事項批次寫出**（從 P-601 搬上）：daemon 產生的事項（自身的、要寫進 node `.aos/attention/` 的）先暫放記憶體，每 1000 ms 批次寫出，寫完就從記憶體清掉；重開後不讀回記憶體。事項檔的位置與格式見 [P-601](../../protocol/ops.md)。
+**事項批次寫出**（從 P-601 搬上）：daemon 產生的事項（自身的、要寫進 node `.aos/attention/` 的）先暫放記憶體，每 1000 ms 批次寫出，寫完就從記憶體清掉；重開後不讀回記憶體。事項檔的位置與格式見 [P-601](../../../protocol/ops.md)。
 
 依據：第二十批疑點「daemon 何時暫停 node」裁定（取代第十九批「可信子程式退出 `3`／`125` 保留為停格碼」）、第二十批（開格故障仍停格，當安全閘）；第十九批（75 當普通結束）；使用者方向 2026-09-29（事項批次）。
 
@@ -167,7 +173,7 @@ method 形狀見 [P-105～106](../protocol/daemon/registration.md)。
 
 - daemon 為每筆登記只保存最近一格（欄位見 [P-106](../protocol/daemon/registration.md)）；新格派出時取代前格，不是完整歷史。
 - 每開一格，這筆登記的 `tick_seq` 加 1，從 1 起算。配上 B-606 的 `registration_id`，就是「第幾格」的依據，不用牆鐘排序或推算逾時。
-- `tick_seq` 只用在「叫醒後等新格」，跟 tick 核心結束碼紀錄裡的格數 `seq`（[B-633](../tick.md)，跨重啟不倒退、沒 daemon 也有）是兩回事。aos 內部以格計的時長一律數 `seq`，不數 `tick_seq`（做法見 [C-01](../../contracts.md)）。〔暫定〕唯一例外是 daemon 記憶體裡的掛載診斷保留期（B-610）：daemon 不讀 node 的檔，只數得到自己開的格，而且那筆診斷跟 `tick_seq` 一樣重啟就沒了。
+- `tick_seq` 只用在「叫醒後等新格」，跟 tick 核心結束碼紀錄裡的格數 `seq`（[B-633](../../tick.md)，跨重啟不倒退、沒 daemon 也有）是兩回事。aos 內部以格計的時長一律數 `seq`，不數 `tick_seq`（做法見 [C-01](../../../contracts.md)）。〔暫定〕唯一例外是 daemon 記憶體裡的掛載診斷保留期（B-610）：daemon 不讀 node 的檔，只數得到自己開的格，而且那筆診斷跟 `tick_seq` 一樣重啟就沒了。
 
 **怎麼等「wake 之後新的一格做完」**：
 
@@ -175,7 +181,7 @@ method 形狀見 [P-105～106](../protocol/daemon/registration.md)。
 2. 之後 `node.show` 看到 `registration_id` 相同、`last_tick.tick_seq` 較大且 `outcome` 不是 `running`，就算做完；
 3. `registration_id` 已改變，表示舊登記已結束（解除、換父或 daemon 重啟），要重新核對，不再等舊的那格。
 
-人手「經 daemon 跑一格」就用 wake 加上面的等法，不另開 method。人手或 cron 也可以直接跑 `aos-tick`，風險自負；那一格沒有通道，daemon 也不知道（[B-627](../tick.md)）。
+人手「經 daemon 跑一格」就用 wake 加上面的等法，不另開 method。人手或 cron 也可以直接跑 `aos-tick`，風險自負；那一格沒有通道，daemon 也不知道（[B-627](../../tick.md)）。
 
 依據：第十八批；第十九批（直接跑）；第二十批（`seq` 與 `tick_seq` 分開）。
 

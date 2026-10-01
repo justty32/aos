@@ -1,3 +1,3 @@
 # daemon：規格入口
 
-全文已依職責拆到 [daemon 目錄](daemon/README.md)，條號不變。舊路徑保留供歷史筆記引用。
+daemon 的規格在 [daemon 目錄](daemon/README.md)：核心 B-640、控制模組 B-641。2026-10-01 之前的舊設計（B-504、B-601、B-603～615）在[暫緩區](deferred/daemon/README.md)，條號不變。舊路徑保留供歷史筆記引用。

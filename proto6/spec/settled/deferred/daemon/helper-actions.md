@@ -1,14 +1,18 @@
 # daemon 維運：佈建與 helper 動作
 
-← [daemon 目錄](README.md)｜[整理區](../README.md)
+← [舊 daemon 目錄（暫緩區）](README.md)｜[整理區](../../README.md)
+
+> **這篇整篇在暫緩區**（2026-10-01）：舊 daemon 的佈建與 helper 動作。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 ## B-609：佈建固定動作與 helper 動作
+
+> **暫緩**（2026-10-01）：佈建與 helper 動作；最核心 daemon 第一版不做（使用者 2026-10-01），helper 之後另做成模組。條號保留、不重用。
 
 〔使用者方向 2026-09-30 晚〕helper 動作留核心，可單獨關掉；cgroup 上限與框動作拆到 [cgroup 部件](cgroup.md)。
 
 〔建議預設，未拍板〕`enable_helper_actions:false` 時，拒絕本條非 cgroup 的對外 `node.provision` 動作（含 `spawn_as`），回 `not_available`、不執行動作；`aos-as` 照失敗回 125、stderr 印代碼。開格、核權、runner 收尾用的 helper 內部路徑仍按 [B-303](../helper.md) 運作；本開關不是拔掉 helper。`cgroup_limits`、建框／交框／刪框由 `enable_cgroup` 決定，仍受原來授權及 helper 是否存在的限制。
 
-依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
 
 **`node.provision` 每次只做一件固定動作。** helper 與佈建動作屬 daemon（第二十批）；helper 的角色與界線以 [B-303](../helper.md) 為正本。參數見 [P-107](../protocol/daemon/provision-and-runner.md)，helper 私有通道見 [P-108](../protocol/daemon/provision-and-runner.md)。
 
@@ -45,17 +49,17 @@ cgroup 上限動作的規則見 [B-609 的 cgroup 部分](cgroup.md#資源上限
 
 ### 以指定帳號開程序（`spawn_as`）
 
-tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上就是任務 argv 裡包的 `aos-as`（[B-303](../helper.md)、[P-212](../protocol/node.md)）。參數見 [P-107](../protocol/daemon/provision-and-runner.md)。daemon 這一側的規則（誰能叫、帳號限制、開什麼、回傳）不因呼叫者換人而變。以下做法為〔建議預設〕。
+tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上就是任務 argv 裡包的 `aos-as`（[B-303](../helper.md)、[P-212](../../protocol/node.md)）。參數見 [P-107](../protocol/daemon/provision-and-runner.md)。daemon 這一側的規則（誰能叫、帳號限制、開什麼、回傳）不因呼叫者換人而變。以下做法為〔建議預設〕。
 
 - **誰能叫**：只收通道上帶憑證的請求，`node_id` 必須就是憑證所屬、登記中的 node。掛載行程叫回 `kind_mismatch`，不帶憑證回 `forbidden`。不看登記的 `provision` 授權，看的是身分額度。
 - **帳號的限制**：`user` 必須落在這個 node 的身分額度內（B-606 的規則，排除 UID 0 與 root 別名），不合回 `user_not_granted`，不存在回 `user_invalid`；不能用它建帳號。沒有 helper 回 `helper_unavailable`；排空或停機中回 `stopping`。
-- **開什麼**：`path` 必須是這個 node 資料夾裡 `.aos/jobs/` 下的一般檔（`aos-as` 寫好的那份 inst，檔名由它定，見 [P-212](../protocol/node.md)），逐段核對、不跟隨 symlink。daemon 取它的不可變快照，連同這個已核准的路徑交給 helper（`daemon.helper.spawn` 的 `path`，[P-108](../protocol/daemon/provision-and-runner.md)）。helper fork、降成該帳號、exec 固定 aos-runner，以這個路徑當 `--target`；runner 照 B-601 核對原來源的 bytes 跟快照相同（不同回 `source_changed`），再照 [inst](../../base/inst.md) 跑。不收 argv、env 或輸出路徑。〔暫定〕這份暫存 inst 要讓目標帳號讀得到（例如用 B-609 的群組動作），讀不到就是前置失敗。
+- **開什麼**：`path` 必須是這個 node 資料夾裡 `.aos/jobs/` 下的一般檔（`aos-as` 寫好的那份 inst，檔名由它定，見 [P-212](../../protocol/node.md)），逐段核對、不跟隨 symlink。daemon 取它的不可變快照，連同這個已核准的路徑交給 helper（`daemon.helper.spawn` 的 `path`，[P-108](../protocol/daemon/provision-and-runner.md)）。helper fork、降成該帳號、exec 固定 aos-runner，以這個路徑當 `--target`；runner 照 B-601 核對原來源的 bytes 跟快照相同（不同回 `source_changed`），再照 [inst](../../../base/inst.md) 跑。不收 argv、env 或輸出路徑。〔暫定〕這份暫存 inst 要讓目標帳號讀得到（例如用 B-609 的群組動作），讀不到就是前置失敗。
 - **鎖與 fd**：請求同包交來 5 個 fd：鎖 fd、回報 pipe 的寫端，以及 `aos-as` 自己的 stdin、stdout、stderr。
   - helper 以 fstat 核對鎖 fd 就是這個 node 的 `.aos/tick.lock`，不符回 `invalid_params`。
-  - runner 與它開的程序繼承這份鎖 fd（同一個 open file description），照 [B-602](../tick.md) 核對。
+  - runner 與它開的程序繼承這份鎖 fd（同一個 open file description），照 [B-602](../../tick.md) 核對。
   - 〔第二十批，建議預設〕runner 以交來的三個 stdio fd 當自己的 stdin／stdout／stderr（不收集成 `.aos/runner-stderr.log`），原指令照那份 inst 寫的 stdio 走，所以輸出照任務表寫的去處。
   - **環境最後才補**〔暫定，astra 審整理區必-2〕：runner 照 inst 的 `envs` 建好子程式環境之後，最後才放進 `AOS_TICK_LOCK_FD`（runner 收到的鎖 fd 的新號碼；fd 經 SCM_RIGHTS 傳過來號碼可能變了）與這一格的兩個通道變數（B-612）；這三個不受 `clear` 影響，inst 裡寫了同名的也被蓋掉。所以 `aos-as` 寫的 inst 裡不放它們（[B-303](../helper.md)），憑證不會落到磁碟上。
-- **放在哪**：runner 是 helper 的子程序，不掛回 tick；它名下的程序照 B-601 由它自己清空：原指令結束後先清空、再寫回報。清不到的還握著鎖 fd 時，下一格回 75（[B-602](../tick.md)）。
+- **放在哪**：runner 是 helper 的子程序，不掛回 tick；它名下的程序照 B-601 由它自己清空：原指令結束後先清空、再寫回報。清不到的還握著鎖 fd 時，下一格回 75（[B-602](../../tick.md)）。
   - cgroup 的 `frame` 與放框規則見 [B-609 的 cgroup 部分](cgroup.md#spawn_as-的框b-609)。
 
 - **回傳**：runner 開起來就回 `{node_id}`，不等它結束；前置失敗回錯、不開程序。結束碼不經回應：runner 把 [P-110](../protocol/daemon/provision-and-runner.md) 的那一行回報寫進 `aos-as` 交來的 pipe，`aos-as` 讀到 EOF 為止、照它結束。回應說成功、pipe 卻沒有回報就關了，這一項算失敗、結果不明，不重跑。

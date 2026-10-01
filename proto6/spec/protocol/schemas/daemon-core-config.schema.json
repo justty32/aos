@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "aos-daemon 設定檔（P-120）：指示詞展開後的樣子；持久檔，不認得的欄位忽略（C-07）",
+  "description": "原始檔任何位置都可以是 aos 指示詞（$ref／$fmt／$env），先整份展開再照這份 schema 讀。「某一項與頂層都沒有 interval_ms＝設定錯」schema 表達不了，由程式檢查（validate.py 另查範例）。",
+  "type": "object",
+  "required": ["insts"],
+  "properties": {
+    "insts": {
+      "type": "object",
+      "description": "鍵＝inst 字面值（原樣交給 aos-exec，資料夾或檔都行）；值＝這一項的設定，{}＝全用頂層預設。第幾項照鍵的順序從 0 數",
+      "propertyNames": {"minLength": 1},
+      "additionalProperties": {"$ref": "#/$defs/Item"}
+    },
+    "cwd": {
+      "type": "string",
+      "minLength": 1,
+      "description": "起點：aos-exec 子程序的工作目錄、相對 inst 與 exec_err_path 的基準。省略＝daemon 啟動時的工作目錄；相對的也以那裡為準"
+    },
+    "interval_ms": {"$ref": "#/$defs/IntervalMs"},
+    "stop_on_nonzero": {
+      "type": "boolean",
+      "description": "各項的預設；省略＝false"
+    },
+    "exec_err_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "aos-exec 的 stderr 接到哪個檔（接在檔尾）；相對以起點為準；<inst> 換成這一項的位置。省略＝daemon 自己的 stderr"
+    },
+    "modules": {
+      "type": "object",
+      "description": "一個模組一個鍵，有寫就開；目前只認 control，其他鍵照收不看",
+      "properties": {
+        "control": {
+          "type": "object",
+          "description": "控制模組（P-121）",
+          "required": ["socket"],
+          "properties": {
+            "socket": {
+              "type": "string",
+              "minLength": 1,
+              "description": "控制 socket 的路徑；相對以起點為準"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "IntervalMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "上一次結束後隔多久再叫，毫秒（外部規定的時間保留毫秒，C-01）"
+    },
+    "Item": {
+      "type": "object",
+      "description": "insts 的一項；寫了就蓋過頂層",
+      "properties": {
+        "interval_ms": {"$ref": "#/$defs/IntervalMs"},
+        "stop_on_nonzero": {"type": "boolean"}
+      }
+    }
+  }
+}

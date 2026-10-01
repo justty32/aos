@@ -6,7 +6,7 @@
 
 人、agent、工具共用有權限即可使用的檔案或指令入口。可依一般 Linux 權限，把訊息或工具／LLM 結果完整發布到指定的 ignored 收件區，不必先換成 blob 引用，也不必全經一個 RPC gateway。檔案發布依 [B-402](storage.md)，消費依收件任務（[B-623](../settled/tick.md)）；有權限也能直接讀取檔案，正式輸出以已提交版本為準，見 [agent 輸入與輸出](../agent/input.md)。
 
-不能拿內容自稱的 sender 當授權依據。IPC 看 socket 對面的帳號，〔第十九批〕只有 tick–daemon 通道看本格憑證（[B-612](../settled/daemon/channel.md)）；檔案投件靠 OS 權限及可信投遞資料辨認來源，無法驗證的名稱只當自述。收件按[訊息協議](../protocol/messages.md)解析，大小限制與 wire 格式見協議篇。
+不能拿內容自稱的 sender 當授權依據。IPC 看 socket 對面的帳號，〔第十九批〕只有 tick–daemon 通道看本格憑證（[B-612](../settled/deferred/daemon/channel.md)）；檔案投件靠 OS 權限及可信投遞資料辨認來源，無法驗證的名稱只當自述。收件按[訊息協議](../protocol/messages.md)解析，大小限制與 wire 格式見協議篇。
 
 **method 就是指令**〔使用者方向 2026-09-29，第十七批〕：method 是去掉 `aos`、以 `.` 連接的指令，params 是完整 inst，表示「在你那裡跑這條指令」，argv 保留 `aos`；base 是收件 node。收件 node 接哪些 method 由它的任務表決定（[B-620](../settled/tick.md)），跟發件者是誰無關。錯誤分兩種，不混用：
 
@@ -30,8 +30,8 @@ node 登記與喚醒的 IPC 以 [daemon](../settled/daemon/README.md) 為正本�
 權限落點的清單見 [P-208](../settled/protocol/node.md)。
 
 - **基本配置**：建 node 時開 daemon 對 `.aos/attention/` 的寫權。node 帳號要能遍歷根路徑、讀寫 repo、清理收件；投件者只授必要父目錄的 traverse，以及 `requests/`、`responses/` 與各自 `.tmp/` 的寫入與遍歷權。〔使用者方向 2026-09-29 晚〕首版只用共享群組（可配 setgid 目錄）、不用 ACL，保證 node 讀得到、消費提交後刪得掉，不依賴投件者的 umask，不一律 world-writable。
-- **開投件權就是交出身分**〔使用者方向 2026-09-30，第十八批〕：照 B-501，能投件就能用收件 node 的身分跑任意程式，也讀得到它讀得到的 repo、設定與 key；投件者之間也不保證不能改檔，不覆蓋與內容核對見 [P-003](../protocol/README.md)。權限由上層 kernel 用自己的帳號配，共享群組與要 root 的步驟經 helper 的固定動作（[B-609](../settled/daemon/helper-actions.md)）；key 保護的範圍見 [llm-work P-405](../protocol/llm-work.md)。
-- **建 agent 時核對路線**〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕：LLM 經自己的 kernel 轉交時，agent 要能投進該 kernel 的 `requests/`，kernel 要能回投 agent 的 `responses/`；轉交下一站時再配 kernel 與下一站之間的兩個方向。agent 直接投 LLM kernel 時，開 agent→LLM kernel 的 `requests/` 與 LLM kernel→agent 的 `responses/`，不要求自己的 kernel 代投。工具路線由 `tools.target_node` 決定：有位址就開往該 kernel 的請求與回件權；null 就准 agent 經通道自己掛 once（`node.mount`，[B-613](../settled/daemon/channel.md)）、自己記用量。正式副本由接件帳號可讀、提交後可清。回址不是授權證明（B-501）。
+- **開投件權就是交出身分**〔使用者方向 2026-09-30，第十八批〕：照 B-501，能投件就能用收件 node 的身分跑任意程式，也讀得到它讀得到的 repo、設定與 key；投件者之間也不保證不能改檔，不覆蓋與內容核對見 [P-003](../protocol/README.md)。權限由上層 kernel 用自己的帳號配，共享群組與要 root 的步驟經 helper 的固定動作（[B-609](../settled/deferred/daemon/helper-actions.md)）；key 保護的範圍見 [llm-work P-405](../protocol/llm-work.md)。
+- **建 agent 時核對路線**〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕：LLM 經自己的 kernel 轉交時，agent 要能投進該 kernel 的 `requests/`，kernel 要能回投 agent 的 `responses/`；轉交下一站時再配 kernel 與下一站之間的兩個方向。agent 直接投 LLM kernel 時，開 agent→LLM kernel 的 `requests/` 與 LLM kernel→agent 的 `responses/`，不要求自己的 kernel 代投。工具路線由 `tools.target_node` 決定：有位址就開往該 kernel 的請求與回件權；null 就准 agent 經通道自己掛 once（`node.mount`，[B-613](../settled/deferred/daemon/channel.md)）、自己記用量。正式副本由接件帳號可讀、提交後可清。回址不是授權證明（B-501）。
 - **kernel 對成員的觀察權**：自己的 kernel 另外取得成員 `requests/`、`responses/` 的必要列目錄權與摘要讀權，供收件與到期喚醒；只做這項觀察時用唯讀摘要（[B-624](../settled/tick.md)）。用量收集另要 repo 讀權，讀法見 [S-207](../scheduling/admission.md)；只有摘要讀權不夠。部署不願開 repo 讀權，就不能宣稱已啟用這條收集路線；也不因此授寫設定或讀池 key 的權限。持久成員、路由與建立範本見 [kernel 任務篇](../protocol/kernel-tasks.md)。
 
 **驗收：**兩種 LLM 路線都能送請求並收結果；刻意拿掉回件寫權時拒絕接納新的副作用；只有摘要讀權的上層讀不到成員的其他追蹤檔。

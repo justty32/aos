@@ -1,6 +1,8 @@
 # daemon 協議：tick–daemon 通道
 
-← [daemon 協議](README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[daemon](../../daemon/README.md)｜[第十九批](../../../../notes/verdicts/10-tick-minimal-core.md)
+← [舊 daemon 協議（暫緩區）](README.md)｜[共用約定](../../../../protocol/README.md)｜行為正本：[舊 daemon](../../daemon/README.md)｜[第十九批](../../../../../notes/verdicts/10-tick-minimal-core.md)
+
+> **這篇整篇在暫緩區**（2026-10-01）：舊協議的 tick–daemon 通道。`AOS_DAEMON_SOCKET` 這個名字沿用到 [P-121](../../../protocol/daemon/control.md)。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 本檔只留通道的環境變數、憑證格式、method 的 params／result 與錯誤碼（第十九批）。行為去這裡找：
 
@@ -8,16 +10,18 @@
 |---|---|
 | 誰有通道；憑證怎麼發放、核對、作廢 | [B-612](../../daemon/channel.md) |
 | 掛行程與砍掉 | [B-613](../../daemon/channel.md) |
-| 系統訊息佇列與急件 | [B-614](../../daemon/messaging.md)；tick 那一側 [B-623、B-624](../../tick.md) |
+| 系統訊息佇列與急件 | [B-614](../../daemon/messaging.md)；tick 那一側 [B-623、B-624](../../../tick.md) |
 
-封包、schema 與通用錯誤同 [P-103](startup-and-ipc.md)、[P-111](provision-and-runner.md)，一律嚴格（[C-07](../../../contracts.md)）。
+封包、schema 與通用錯誤同 [P-103](startup-and-ipc.md)、[P-111](provision-and-runner.md)，一律嚴格（[C-07](../../../../contracts.md)）。
 
 ## P-117．通道變數與憑證〔使用者方向 2026-09-30，第十九批；名字與格式為建議預設〕
+
+> **部分已被取代、其餘暫緩**（2026-10-01）：`AOS_DAEMON_SOCKET` 這個名字沿用到 [P-121](../../../protocol/daemon/control.md)，意思改成控制 socket，另加 `AOS_DAEMON_INST`；憑證 `AOS_TICK_TOKEN` 已被控制模組取代（連得上 socket 就能用，不驗身分）；其餘（哪些 method 收憑證、`no_channel`、helper 那一段）暫緩，最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
 
 | 環境變數 | 值 |
 |---|---|
 | `AOS_DAEMON_SOCKET` | daemon 設定的 `socket_path`（絕對路徑） |
-| `AOS_TICK_TOKEN` | 本格憑證：32 個小寫 hex（128 位元），schema 見 [daemon-registration](../../../protocol/schemas/daemon-registration.schema.json) 的 `Token` |
+| `AOS_TICK_TOKEN` | 本格憑證：32 個小寫 hex（128 位元），schema 見 [daemon-registration](../../../../protocol/schemas/daemon-registration.schema.json) 的 `Token` |
 
 **哪些 method 收 `token`**：
 
@@ -34,6 +38,8 @@
 **helper 那一段**：私有通道的 `daemon.helper.start` 另帶 `token`，由 helper 放進 runner 的環境（[P-108](provision-and-runner.md)）。
 
 ## P-118．掛行程與砍掉〔使用者方向 2026-09-30，第十九批；參數為建議預設〕
+
+> **暫緩**（2026-10-01）：掛行程與砍掉；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
 
 | method | params | result |
 |---|---|---|
@@ -54,16 +60,18 @@
 | 排空或停機中 | `stopping` |
 | 收尾確認不了全空 | `cleanup_failed` |
 
-範例：[掛行程](../../../protocol/examples/daemon/mount.minimal.valid.json)、[回應](../../../protocol/examples/daemon/mount_result.minimal.valid.json)、[反例：帶週期](../../../protocol/examples/daemon/mount.interval.invalid.json)、[反例：沒憑證也沒上層](../../../protocol/examples/daemon/mount.no-token-no-parent.invalid.json)、[砍掉](../../../protocol/examples/daemon/kill.minimal.valid.json)、[反例：多一個欄位](../../../protocol/examples/daemon/kill.extra.invalid.json)。
+範例：[掛行程](../../../../protocol/examples/daemon/mount.minimal.valid.json)、[回應](../../../../protocol/examples/daemon/mount_result.minimal.valid.json)、[反例：帶週期](../../../../protocol/examples/daemon/mount.interval.invalid.json)、[反例：沒憑證也沒上層](../../../../protocol/examples/daemon/mount.no-token-no-parent.invalid.json)、[砍掉](../../../../protocol/examples/daemon/kill.minimal.valid.json)、[反例：多一個欄位](../../../../protocol/examples/daemon/kill.extra.invalid.json)。
 
 ## P-119．送訊息、取訊息與通道錯誤碼〔使用者方向 2026-09-30，第十九批；參數與上限為建議預設〕
+
+> **暫緩**（2026-10-01）：送訊息、取訊息；最核心 daemon 第一版不做（使用者 2026-10-01），訊息之後另做成模組，不走控制 socket。條號保留、不重用。
 
 | method | params | result |
 |---|---|---|
 | `node.send` | `token`、`to`（收件 tick 的 node id）、`message` 必填；`urgent` 可省，布林，預設 false | `{node_id}`（收件 tick 的 id） |
 | `node.take` | `token` 必填；`limit` 可省，1～256，預設 256 | `{messages, more}` |
 
-**`message`**：一份請求或回應物件（common 的 `FileRpcRequest` 或 `FileRpcResponse`，[P-301](../../../protocol/messages.md)；回應也走佇列〔使用者方向 2026-09-30，修正輪暫定的裁定〕）。`node.take` 回的 `messages` 也是兩種都有。它照檔案 RPC 放寬、不認得的欄位忽略；外層 params 仍嚴格（[C-07](../../../contracts.md)）。序列化後最多 196608 bytes。
+**`message`**：一份請求或回應物件（common 的 `FileRpcRequest` 或 `FileRpcResponse`，[P-301](../../../../protocol/messages.md)；回應也走佇列〔使用者方向 2026-09-30，修正輪暫定的裁定〕）。`node.take` 回的 `messages` 也是兩種都有。它照檔案 RPC 放寬、不認得的欄位忽略；外層 params 仍嚴格（[C-07](../../../../contracts.md)）。序列化後最多 196608 bytes。
 
 **`node.take` 的回應**：
 
@@ -74,7 +82,7 @@
 
 **上限**：每個收件 tick 最多 256 件、合計 16 MiB（照 `message` 序列化後的 bytes 算）。寫死，不開放設定（[B-608](../../daemon/reload.md)）。
 
-範例：[送急件](../../../protocol/examples/daemon/send.minimal.valid.json)、[送回應](../../../protocol/examples/daemon/send.response.valid.json)、[反例：沒帶憑證](../../../protocol/examples/daemon/send.no-token.invalid.json)、[取](../../../protocol/examples/daemon/take.minimal.valid.json)、[回應](../../../protocol/examples/daemon/take_result.minimal.valid.json)、[反例：憑證格式不對](../../../protocol/examples/daemon/take.bad-token.invalid.json)、[憑證不認得](../../../protocol/examples/daemon/error.token_invalid.valid.json)。
+範例：[送急件](../../../../protocol/examples/daemon/send.minimal.valid.json)、[送回應](../../../../protocol/examples/daemon/send.response.valid.json)、[反例：沒帶憑證](../../../../protocol/examples/daemon/send.no-token.invalid.json)、[取](../../../../protocol/examples/daemon/take.minimal.valid.json)、[回應](../../../../protocol/examples/daemon/take_result.minimal.valid.json)、[反例：憑證格式不對](../../../../protocol/examples/daemon/take.bad-token.invalid.json)、[憑證不認得](../../../../protocol/examples/daemon/error.token_invalid.valid.json)。
 
 ### 通道的業務錯誤碼
 

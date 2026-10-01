@@ -6,7 +6,7 @@
 
 `aos-agent-step` 推進 module；`aos-agent-tools` 管工具、`aos-agent-check` 查設定、`aos-agent-talk` 說話與查詢。tick 不等 HTTP／工具。各程式沿 [P-203](../settled/protocol/node.md) 使用 node 的 user 與鎖；--node 省略用 cwd，任務直接讀設定。
 
-LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，或自己經通道掛 once（`node.mount`，[B-613](../settled/daemon/channel.md)）。kernel 建立 agent 時決定地址、權限與資源路線，agent 不辨識對方角色。
+LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，或自己經通道掛 once（`node.mount`，[B-613](../settled/deferred/daemon/channel.md)）。kernel 建立 agent 時決定地址、權限與資源路線，agent 不辨識對方角色。
 
 ## P-701．設定檔〔A-101～102；工程預設〕
 
@@ -22,7 +22,7 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，
 | `system_prompt` | system 文字，可空 |
 | `tools_file` | 固定 `config/tools.json` |
 | `tools.target_node` | node id＝交該 kernel；null＝agent 自己經通道掛 once |
-| `daemon_socket` | 可省；daemon IPC socket 絕對路徑，省略就讀環境變數 `AOS_DAEMON_SOCKET`（[P-117](../settled/protocol/daemon/channel.md)）。只有 agent 由人手或 cron 跑、又想連 daemon 時才需要寫 |
+| `daemon_socket` | 可省；daemon IPC socket 絕對路徑，省略就讀環境變數 `AOS_DAEMON_SOCKET`（[P-117](../settled/deferred/protocol/daemon/channel.md)）。只有 agent 由人手或 cron 跑、又想連 daemon 時才需要寫 |
 
 設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。〔使用者方向 2026-09-29，第十六批〕**對 LLM 池（`llm.target_node`）有沒有投件權，設定檢查不先擋**：沒權限就在投件那一步報 `target_not_writable`、丟掉待送檔（[B-624](../settled/tick.md)、[S-301](../scheduling/llm.md)）。設定無效就在 `.aos/attention/open/` 記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
 
@@ -84,7 +84,7 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 ## P-707．模型決定與兩種工具路線〔A-401～403、A-503、P-407；工程預設〕
 
-行為以 [A-401](../agent/tools.md)、[A-503](../agent/README.md) 為準。格式：`tools.target_node` 是 node id 時用 `kernel.work.submit`，params.argv 對應 `aos kernel work submit`，業務 JSON 經 stdin；`null` 時下一格由 agent 經通道用 `node.mount` 掛 `.aos/jobs/<attempt_id>/` 裡的 inst，帶 `token`、省略 `parent_id`（上層就是憑證所屬的 tick）、不帶 `identity_grant`、不另 wake（[P-118](../settled/protocol/daemon/channel.md)）。兩路都沿 [P-402](work.md)、[P-404](work.md)，結果下格收。
+行為以 [A-401](../agent/tools.md)、[A-503](../agent/README.md) 為準。格式：`tools.target_node` 是 node id 時用 `kernel.work.submit`，params.argv 對應 `aos kernel work submit`，業務 JSON 經 stdin；`null` 時下一格由 agent 經通道用 `node.mount` 掛 `.aos/jobs/<attempt_id>/` 裡的 inst，帶 `token`、省略 `parent_id`（上層就是憑證所屬的 tick）、不帶 `identity_grant`、不另 wake（[P-118](../settled/deferred/protocol/daemon/channel.md)）。兩路都沿 [P-402](work.md)、[P-404](work.md)，結果下格收。
 
 ## P-708．正式回覆〔A-203；工程預設〕
 
@@ -92,7 +92,7 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 ## P-709．投件故障與恢復〔Q1／Q2、P-304；工程預設〕
 
-行為以 [A-403](../agent/tools.md) 為準（補投只補交付、不授權重跑；自跑 once 的掛行程照 [B-613](../settled/daemon/channel.md)，`launch-started` 與 unknown 照 [S-401](../scheduling/operations.md)、[kernel P-807](kernel-tasks.md)）。
+行為以 [A-403](../agent/tools.md) 為準（補投只補交付、不授權重跑；自跑 once 的掛行程照 [B-613](../settled/deferred/daemon/channel.md)，`launch-started` 與 unknown 照 [S-401](../scheduling/operations.md)、[kernel P-807](kernel-tasks.md)）。
 
 ## P-710．agent 自記用量〔工具與 LLM 兩路裁定；工程預設〕
 

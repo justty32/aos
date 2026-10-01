@@ -110,7 +110,7 @@
 
 [proto6/spec/protocol/kernel-tasks.md:21](../../../spec/protocol/kernel-tasks.md) 要 daemon 開的格「請求帶 token」。
 
-但 [proto6/spec/protocol/daemon/channel.md:14](../../../spec/settled/protocol/daemon/channel.md) 只允許 register／unregister／wake／mount／kill／send／take 帶 token，其他 method 帶了回 `invalid_params`。kernel 自己又必須呼叫 `daemon.info`、`node.show`、`node.provision`。
+但 [proto6/spec/protocol/daemon/channel.md:14](../../../spec/settled/deferred/protocol/daemon/channel.md) 只允許 register／unregister／wake／mount／kill／send／take 帶 token，其他 method 帶了回 `invalid_params`。kernel 自己又必須呼叫 `daemon.info`、`node.show`、`node.provision`。
 
 **建議：P-801 明寫只對允許清單附 token，其他 method 沿既有 socket 帳號授權。**
 
@@ -150,7 +150,7 @@ tick 是帳號 A、接件任務是 B 時，兩套規則會讓 `work.cancel` 認�
 
 **14. node.mount schema 少了「無 token 必填 parent_id」條件**
 
-[proto6/spec/protocol/daemon/channel.md:22](../../../spec/settled/protocol/daemon/channel.md) 明定：沒有 token 時，`parent_id` 必填。
+[proto6/spec/protocol/daemon/channel.md:22](../../../spec/settled/deferred/protocol/daemon/channel.md) 明定：沒有 token 時，`parent_id` 必填。
 
 但 [proto6/spec/protocol/schemas/daemon-rpc.schema.json:819](../../../spec/protocol/schemas/daemon-rpc.schema.json) 只要求 `node_id`。記憶體驗證確認，只給 `node_id`、兩者都不帶的請求仍通過 schema。
 
@@ -169,7 +169,7 @@ tick 是帳號 A、接件任務是 B 時，兩套規則會讓 `work.cancel` 認�
 | 3 Q3 仍標未拍板 | 已處理 | [scheduling/admission.md:48](../../../spec/scheduling/admission.md) 已分開裁定與工程細節。 |
 | 4 notes 設定不變保證 | 已處理 | [between-ticks-configuration.md:11](../../../notes/between-ticks-configuration.md) 已改軟性原則。 |
 | 5 共用協議入口行為 | 已處理 | P-003～006、P-008 主要流程已縮成介面或主規格引用。 |
-| 6 daemon 協議流程 | 部分 | [provision-and-runner.md:33](../../../spec/settled/protocol/daemon/provision-and-runner.md) 起仍有 helper 啟動、收尾、回收後才回覆等流程。 |
+| 6 daemon 協議流程 | 部分 | [provision-and-runner.md:33](../../../spec/settled/deferred/protocol/daemon/provision-and-runner.md) 起仍有 helper 啟動、收尾、回收後才回覆等流程。 |
 | 7 node 協議流程 | 部分 | [protocol/node.md:134](../../../spec/settled/protocol/node.md) 起仍有完整配權與建立核對步驟。 |
 | 8 messages 投件／補投流程 | 部分 | [protocol/messages.md:78](../../../spec/protocol/messages.md) 仍有取 commit、原子發布、失敗留舊值的流程。 |
 | 9 work／LLM 流程 | 部分 | [protocol/llm-work.md:46](../../../spec/protocol/llm-work.md) 起仍有收齊回應、失敗／unknown 判定等行為。 |
@@ -177,7 +177,7 @@ tick 是帳號 A、接件任務是 B 時，兩套規則會讓 `work.cancel` 認�
 | 11 ops 清理／事項流程 | 部分 | [protocol/ops.md:81](../../../spec/protocol/ops.md) 起仍有修復、重驗、取鎖、提交與標完成流程。 |
 | 12 agent 狀態機 | 部分 | [protocol/agent-tasks.md:110](../../../spec/protocol/agent-tasks.md)、第 124 行仍有工具設定與 recheck 操作流程。 |
 | 13 kernel 同步／排程流程 | 部分 | [protocol/kernel-tasks.md:109](../../../spec/protocol/kernel-tasks.md) 仍完整規定跨格掛載與收結果流程。 |
-| 14 排空卻要求全停格 | 已處理 | [protocol/daemon/shutdown.md:13](../../../spec/settled/protocol/daemon/shutdown.md) 已改引用 B-604。 |
+| 14 排空卻要求全停格 | 已處理 | [protocol/daemon/shutdown.md:13](../../../spec/settled/deferred/protocol/daemon/shutdown.md) 已改引用 B-604。 |
 | 15 取消兩套判定 | 已處理 | [base/execution.md:52](../../../spec/base/execution.md) 已統一；TERM 後正常退出且完整發布，照原結果，逾時另外處理。 |
 
 **五、檢查結果**
