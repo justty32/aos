@@ -402,6 +402,35 @@ AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell �
 
 測試 `tests/test_daemon_cgroup.py`（15 條，約 9 秒）：每條用 `systemd-run --user --scope -p Delegate=yes` 包 daemon，拿不到委派的 scope 時整組跳過；`NotDelegated` 一條在測試自己所在的 cgroup 寫得進去時跳過（模擬不了沒委派）。2026-10-01 晚在家裡 Manjaro 實跑 14 過、1 跳過。
 
+## 訊息與 aos-mq（m3m 模組四）
+
+照 [plan m3m](../../plan/m3m-daemon-modules.md) 模組四寫的（2026-10-01 第十二批，M1～M4 照建議），`lib/aos_daemon_mq.py`、`lib/aos_mq.py`、`bin/aos-mq`。設定檔寫 `modules.mq` 才掛，沒寫時 daemon 跟上面一模一樣。
+
+```json
+{"interval_ms": 60000, "modules": {"mq": {"socket": "./aos-mq.sock"}}, "insts": {"a": {}, "b": {}}}
+```
+
+- 另開一個 unix socket（`socket` 相對以起點為準；不走控制 socket），一連線一請求、一行 JSON 來回，伺服器那套跟控制模組共用（`aos_daemon_ctl.serve()` 多收一個 `answer`）。
+- **每項一個信箱**（`Item.mailbox`），記憶體裡、先進先出，daemon 重開就丟。重讀設定時還在的項信箱照留，拿掉的項連信箱一起丟，加回來從空的開始。
+- 掛了之後每次開 `aos-exec` 多放 `AOS_DAEMON_MQ_SOCKET`；`AOS_DAEMON_INST` 掛了控制或訊息任一個就放（M2）。
+- **急件**（`--urgent`）：信放進信箱後照控制模組 `wake`（不帶選項）叫醒收件那一項：正在跑就補一次、暫停中跑一次、已停不跑（信照收）。不用掛控制模組。
+
+```text
+aos-mq send [--urgent] <收件 inst> <JSON|->     # from 自動填 AOS_DAEMON_INST（沒有＝null）
+aos-mq take [<inst>]                             # 每封一行 {"from":…,"msg":…}；沒給 inst 用 AOS_DAEMON_INST
+```
+
+結束碼照 `aos-ctl`：成功 0；`usage:`（含 `<JSON>` 不是 JSON）、`no_inst:`、`no_daemon:`、`connect:`、`unknown_inst:`、`bad_request:` 一律 1，stderr 一行。
+
+| 函式 | 做什麼 |
+|---|---|
+| `aos_daemon_mq.serve()`、`parse()`、`handle()` | 收 send／take、放信取信、急件叫醒 |
+| `aos_daemon.give_env()` | 放 `AOS_DAEMON_SOCKET`／`AOS_DAEMON_MQ_SOCKET`／`AOS_DAEMON_INST` |
+| `aos_daemon._quit()` | 退出前刪兩個 socket 檔 |
+| `aos_mq.main()`、`bin/aos-mq` | 小工具 |
+
+測試 `tests/test_mq.py`（14 條，約 4 秒）。
+
 ## 跑測試
 
 ```sh
