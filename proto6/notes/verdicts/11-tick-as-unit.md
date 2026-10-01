@@ -583,5 +583,8 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - 使用者問：`SUDO_USER` 現在用的話會不會是 lorkhan？——是：從 lorkhan 的 shell 打 `sudo aos-daemon …`（或 `sudo -i` 之後再開）就是 `lorkhan`；`su -`、root 直接登入、root 的 systemd unit／cron 開的沒有這個變數，要在 `modules.account.user` 寫明。
 - 使用者問：帳號沒先在 Linux 建好會怎樣？——daemon 不建帳號。AI 隊提了 A6（開起來與重讀時就查、跑的時候才不見的那次 `exit=1`），待裁定。
 
+- **追加**：使用者原話：「名單這塊OK，但如果allow不寫，然後deny裏面又出現預設賬號，那就報錯。」——`allow` 省略、`deny` 比得到預設帳號（含前綴、單獨 `*`，「出現」照比得到算，AI 隊解讀）＝設定錯、回 1。`allow` 有寫時同樣情況怎麼辦，AI 隊提了 A7（建議一樣報錯），待裁定。
+- 使用者問：帳號這功能目前用在哪、是不是只出現在 daemon 設定？——現行程式沒有任何地方切帳號（全部用開的人的帳號跑）；inst 與任務的 `user` 已撤回（寫了當陌生鍵）。spec 裡另外還提到帳號的，都是暫緩或舊設計：tick 任務包 `aos-as` 換帳號（B-303，暫緩）、身分額度（B-301）、工作接件記 UID（base/execution.md）。帳號模組做出來後，它是唯一現行的切帳號方式，只出現在 daemon 設定檔（`modules.account` 與每項的 `account`）。
+
 還沒動工，程式與 spec 都沒改。
 
