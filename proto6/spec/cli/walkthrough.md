@@ -41,7 +41,7 @@ aos daemon info --socket "$S" --json
 B 建頂層，準備測試 HTTP：
 
 ```sh
-aos node new "$DEMO/top" --template kernel --user "$(id -u)" --socket "$S"
+aos node new "$DEMO/top" --template kernel --socket "$S"
 # created …/top; initial_commit=…; tasks=9
 cat > "$DEMO/mock.py" <<'PY'
 import json
@@ -91,7 +91,7 @@ aos node pause "$DEMO/top" --socket "$S"
 cat > "$DEMO/drafts/agent.json" <<EOFJSON
 {"version":1,"llm":{"target_node":"$DEMO/top","pool":"local","model":"demo-model","context_tokens":32768,"max_completion_tokens":256,"timeout_ms":30000},"system_prompt":"照使用者要求回答。","tools_file":"config/tools.json","tools":{"target_node":"$DEMO/top"}}
 EOFJSON
-aos node new "$DEMO/top/a" --template agent --agent-config "$DEMO/drafts/agent.json" --user "$(id -u)"
+aos node new "$DEMO/top/a" --template agent --agent-config "$DEMO/drafts/agent.json"
 # created …/top/a; initial_commit=…; tasks=2
 aos node check "$DEMO/top/a"
 # cgroup=fallback（人手的 shell 不在 node 的框裡；daemon 開的格會是 full）

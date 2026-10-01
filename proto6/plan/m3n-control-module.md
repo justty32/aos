@@ -117,7 +117,7 @@
   ```
 
   - 四個指令名裡剛好出現一個；值一定是字串（inst 字面值，跟設定檔 `insts` 的鍵逐字比對）。
-  - 其他鍵：wake 認 `skip_while_running`、`keep_schedule`（要是布林）；其餘一律忽略（照 m3「其他鍵一律忽略」）。
+  - 其他鍵：wake 認 `skip_while_running`、`keep_schedule`（要是布林）；其餘一律忽略（照 m3「其他鍵一律忽略」；使用者 2026-10-01 確認「socket收到看不懂的欄位就不理他」，C-07 已單列控制 socket 放寬）。
 - **回應**（一行 JSON，`\n` 結尾）：
 
   | 狀況 | 回應 |

@@ -8,7 +8,7 @@
 
 `kernel.work.submit` 的 params 是執行 `aos kernel work submit` 的 [inst](inst.md)，工具 inst 與輸入材料由該指令讀取。工作執行限制：`timeout_ms` 建議預設 60000（〔暫定，第二十批疑-11 未答，照 a〕保留毫秒：程序在格外跑，由 runner 用 monotonic 時鐘量，[B-203](execution.md)）、`output_limit_bytes` 建議每條捕獲串流 1048576。兩者須為正整數，屬工作材料／執行器設定，不加進 inst。stdin 用一般檔案引用；需要固定 bytes 的輸入，隨請求保存成該次材料。固定材料不代表凍結程式、整個 workspace、環境或外部 `$ref`；指示詞仍在目標身分下才解，外部可變輸入的可重現性由呼叫方安排。
 
-〔第十九批依方案 A 從 [P-402](../protocol/work.md) 搬上〕**掛載行程的身分**：掛到 daemon 跑的工作（[B-613](../settled/deferred/daemon/channel.md)），外層 inst 用工作所屬 node 已授權的有效身分；內層（工具）inst 省略 `user` 時繼承這個身分，寫了就必須解成同一個 UID，否則照 [inst](inst.md) 回 125。kernel 替成員派工時不可讓工具繼承 kernel 自己較高的權限。
+〔第十九批依方案 A 從 [P-402](../protocol/work.md) 搬上〕**掛載行程的身分**：掛到 daemon 跑的工作（[B-613](../settled/deferred/daemon/channel.md)），外層 inst 用工作所屬 node 已授權的有效身分；內層（工具）inst 照這個身分跑（〔使用者方向 2026-10-01〕inst 頂層沒有 `user`，寫了照不認得的鍵忽略，[inst](inst.md)）。kernel 替成員派工時不可讓工具繼承 kernel 自己較高的權限。
 
 派送、消費與失敗恢復以 [Q1／Q2](../settled/tick.md)（收件、投件與 git 任務，B-623、B-624）為正本。
 

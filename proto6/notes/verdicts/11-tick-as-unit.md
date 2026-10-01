@@ -358,3 +358,16 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **區外**：[inst](../../spec/base/inst.md)（`AOS_DIRNAME`、用法錯 1、aos-exec 不認得 `user`、daemon 核心沒有 id）、[驗收入口](../../spec/conformance.md)（V-01 正本表與條號表、V-03 標暫緩並加「2026-10-01 新增場景」）、[contracts](../../spec/contracts.md) C-01 一處連結、[名詞與責任](../../spec/terms.md)、[ops](../../spec/protocol/ops.md) 一處；搬家連帶的相對連結全 repo 重算。
 - **schema／範例**：`node-tasks`（`id`、`kind` 不必填、拿掉 `methods`）、`node-tick-record`（`exit` 只收 0）；新增 `daemon-core-config`、`daemon-ctl` 與範例；`validate.py` 跟著改。
 - 改寫時發現、要使用者裁定的點列在[整理區 README「疑點」](../../spec/settled/README.md#2026-10-01-統一更新要使用者裁定的)。
+
+<a id="2026-10-01daemon-輸出socket-欄位inst-user"></a>
+
+## 2026-10-01：daemon 輸出、socket 欄位、inst `user`（已寫入 spec（commit 前由我補號））
+
+〔使用者方向 2026-10-01〕使用者原話：「aos-exec的輸出，也可以放在aos daemon config的頂層，類似exec error path那樣去設定。不設定的話默認/dev/null。然後exec error path沒設定的話也幫我改成默認/dev/null。socket收到看不懂的欄位就不理他。inst頂層的user欄位不留。」
+
+- **`exec_out_path`**：daemon 設定檔頂層新鍵，接 `aos-exec` 子程序的 stdout；規則全照 `exec_err_path`（`<inst>` 替換、inst 是檔換成所在資料夾、沒有資料夾部分換 `.`、相對以起點為準、接檔尾、父資料夾自動建、每次收齊再一次寫出、有內容才寫、一律加標頭）。標頭在時間後面多一欄 `stdout`／`stderr`：`== <時間> stdout index=<n> inst=<inst> ==`。同一次兩條都有就先 stdout 段再 stderr 段。
+- **兩個鍵沒寫都丟到 `/dev/null`**，不再接到 daemon 自己的 stdout／stderr；要接回就寫 `"/dev/stdout"`、`"/dev/stderr"`。daemon 自己印的那一行（`inst=… exit=… ms=…`、`stopped`、`paused`、`resumed`）照舊在 daemon 的 stdout。整理區疑點 8（`aos-exec` 的 stdout 可能跟 daemon 的行交錯）因此結案。
+- **控制 socket 看不懂的欄位照收不理**（程式本來就是這樣）。C-07 放寬表單列一行「現行控制 socket：忽略」，嚴格拒絕只剩舊設計的 daemon IPC（暫緩區）。疑點 6 結案。
+- **inst 頂層 `user` 不留**：inst.md 拿掉 `user` 的定義與「先決定身分，切完才解析」整節（直接刪、不搬暫緩，記在[暫緩區撤回表](../../spec/settled/deferred/tick.md#已撤回被取代)）；任務是 inst 超集，任務表的 `user` 一併拿掉；schema、範例、P-201／P-202 等照改。寫了 `user` 就是不認得的鍵、忽略。疑點 9 結案。程式 `aos_inst` 本來就忽略，不用改。
+
+改到的地方：[B-640](../../spec/settled/daemon/core.md)、[P-120](../../spec/settled/protocol/daemon/core.md)、[P-121](../../spec/settled/protocol/daemon/control.md)、[C-07](../../spec/contracts.md)、[inst](../../spec/base/inst.md) 等；程式 `lib/aos_daemon.py`、測試 `test_daemon.py`／`test_ctl.py`；[plan m3](../../plan/m3-daemon-core.md)、[src/py README](../../src/py/README.md#aos-daemon第三段最核心-daemon)。

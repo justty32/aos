@@ -43,8 +43,8 @@ daemon 設定檔（[P-120](core.md)）頂層 `modules` 裡寫：
 | `skip_while_running` | 布林，可省，預設 false | 只有 `wake` 看；正在跑就不補 |
 | `keep_schedule` | 布林，可省，預設 false | 只有 `wake` 看；不動原本的週期排程 |
 
-- 不認得的欄位忽略；`pause`／`resume`／`status` 帶了那兩個選項也忽略（不管型別）。
-- 這跟舊設計「daemon IPC 一律嚴格」不同（[C-07](../../../contracts.md) 的表、[暫緩區 P-103](../../deferred/protocol/daemon/startup-and-ipc.md)）：控制 socket 照現行程式放寬。
+- 〔使用者方向 2026-10-01〕**不認得的欄位照收不理**，不回 `bad_request`；`pause`／`resume`／`status` 帶了那兩個選項也忽略（不管型別）。
+- 這是 [C-07](../../../contracts.md)「哪裡放寬」表裡單列的一行：現行控制 socket 忽略不認得的欄位；嚴格拒絕只剩舊設計的 daemon IPC（[暫緩區 P-103](../../deferred/protocol/daemon/startup-and-ipc.md)）。
 
 ### 回應
 

@@ -28,7 +28,7 @@ INST_MARK = "<inst>"
 # 控制模組的 socket 絕對路徑；沒掛＝None。退出前要刪（m3n 步驟 6）
 _sock_path = None
 
-# stdout 那一行與 aos-exec 的 stderr 都在這把鎖底下一次寫完，多項同時結束也不交錯（m3 步驟 2）
+# stdout 那一行與 aos-exec 的 stdout／stderr 都在這把鎖底下一次寫完，多項同時結束也不交錯（m3 步驟 2）
 _out = threading.Lock()
 
 
@@ -53,12 +53,13 @@ def say(text):
 class Item:
     """清單的一項：`inst` 字面值＝`insts` 物件的鍵（原樣交給 aos-exec、也原樣印出）；index＝鍵的位置（從 0 起）。"""
 
-    def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path):
+    def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path, out_path=None):
         self.index = index
         self.inst = inst
         self.interval_ms = interval_ms
         self.stop_on_nonzero = stop_on_nonzero
-        self.err_path = err_path        # 絕對路徑；None＝接到 daemon 自己的 stderr
+        self.err_path = err_path        # aos-exec 的 stderr 寫到哪（絕對路徑）；None＝丟掉（使用者 2026-10-01）
+        self.out_path = out_path        # aos-exec 的 stdout 寫到哪；None＝丟掉
         self.env = None                 # 開 aos-exec 的環境；None＝照 daemon 的（控制模組沒掛）
         # m3n 步驟 2：以下狀態都在 cond 的鎖底下改；控制模組沒掛時只有 loop() 自己動它們
         self.cond = threading.Condition()
@@ -73,8 +74,8 @@ class Item:
 
 
 def err_path_for(template, inst, start):
-    """m3 步驟 1：`exec_err_path` 換掉 `<inst>`（inst 是檔＝它字面上的 dirname，是資料夾＝照字面），
-    相對路徑以起點為準。沒寫 `exec_err_path` 回 None。"""
+    """m3 步驟 1：`exec_err_path`／`exec_out_path` 換掉 `<inst>`（inst 是檔＝它字面上的 dirname，
+    是資料夾＝照字面），相對路徑以起點為準。沒寫回 None（＝丟掉）。"""
     if template is None:
         return None
     if INST_MARK in template:
@@ -126,42 +127,50 @@ def load_setup(path):
             raise ValueError("insts 的 %s 沒有 interval_ms，頂層也沒有" % json.dumps(inst, ensure_ascii=False))
         stop = entry.get("stop_on_nonzero", top.get("stop_on_nonzero", False))
         items.append(Item(i, inst, interval, stop,
-                          err_path_for(top.get("exec_err_path"), inst, start)))
+                          err_path_for(top.get("exec_err_path"), inst, start),
+                          err_path_for(top.get("exec_out_path"), inst, start)))
     sock = None
     if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
         sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
     return start, items, sock
 
 
-def write_err(item, data):
-    """aos-exec 這次的 stderr（已收齊）：先一行標頭，再原樣接上；有內容才寫。
-    寫到 `item.err_path`（接在檔尾、父資料夾不在就建）或 daemon 自己的 stderr。"""
-    if not data:
-        return
-    head = ("== %s index=%d inst=%s ==\n" % (now(), item.index, item.inst)).encode("utf-8")
+def _block(item, stream, data):
+    """收齊的一段輸出加標頭：`== <時間> <stdout|stderr> index=<n> inst=<inst> ==`；內容沒換行結尾就補一個。"""
+    head = ("== %s %s index=%d inst=%s ==\n" % (now(), stream, item.index, item.inst)).encode("utf-8")
     if not data.endswith(b"\n"):
         data += b"\n"
+    return head + data
+
+
+def write_outputs(item, out, err):
+    """aos-exec 這次的 stdout、stderr（已收齊）：各自有內容才寫，前面一行標頭，接在 `out_path`／`err_path`
+    指的檔尾（父資料夾不在就建）。兩段在同一把鎖底下寫完，多項同時結束也不交錯。"""
+    parts = []
+    if out and item.out_path:
+        parts.append((item.out_path, _block(item, "stdout", out)))
+    if err and item.err_path:
+        parts.append((item.err_path, _block(item, "stderr", err)))
+    if not parts:
+        return
     with _out:
-        if item.err_path is None:
-            sys.stderr.flush()
-            sys.stderr.buffer.write(head + data)
-            sys.stderr.buffer.flush()
-        else:
-            os.makedirs(os.path.dirname(item.err_path), exist_ok=True)
-            with open(item.err_path, "ab") as f:
-                f.write(head + data)
+        for path, data in parts:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "ab") as f:
+                f.write(data)
 
 
 def run_once(item, start):
-    """m3 步驟 2：叫一次 aos-exec，等它結束，回 (碼, 毫秒)。被訊號殺的碼換成 128+N。"""
+    """m3 步驟 2：叫一次 aos-exec，等它結束，回 (碼, 毫秒)。被訊號殺的碼換成 128+N。
+    stdout／stderr 沒設路徑就直接丟到 /dev/null；有設就收齊再一次寫出（共用出口才不交錯）。"""
     t0 = time.monotonic()
+    pipe = lambda path: subprocess.DEVNULL if path is None else subprocess.PIPE
     p = subprocess.Popen([EXEC, item.inst], cwd=start, env=item.env, start_new_session=True,
-                         stdin=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    err = p.stderr.read()               # 收齊再一次寫出，共用出口才不交錯
-    p.stderr.close()
-    code = p.wait()
+                         stdin=subprocess.DEVNULL, stdout=pipe(item.out_path), stderr=pipe(item.err_path))
+    out, err = p.communicate()
+    code = p.returncode
     ms = int((time.monotonic() - t0) * 1000)
-    write_err(item, err)
+    write_outputs(item, out, err)
     return (128 - code if code < 0 else code), ms
 
 

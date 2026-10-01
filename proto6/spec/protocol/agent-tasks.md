@@ -32,7 +32,7 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，
 
 [agent-tools](schemas/agent-tools.schema.json) 是 `{version:1,tools:[...]}`，空清單可用。每項含 `name,description,parameters,argv,cwd,result,timeout_ms,output_limit_bytes`；名稱唯一。parameters 是 JSON Schema 2020-12，根資料是 object，不用外部引用；〔使用者方向 2026-09-29 晚〕執行期驗參數可用第三方 `jsonschema`，這是「Python 只用標準庫」的唯一例外；`result.kind` 為 text 或 json，後者必填 `result.schema`。
 
-arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.stdin；argv 直接 exec、不插值，cwd 沿工具設定、base 是發起 node。工具 inst 不填 user，stdout／stderr 由 runner 捕獲；不吃 JSON stdin 的程式另接普通 adapter。模型只看到 name、description、parameters。
+arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.stdin；argv 直接 exec、不插值，cwd 沿工具設定、base 是發起 node。stdout／stderr 由 runner 捕獲；不吃 JSON stdin 的程式另接普通 adapter。模型只看到 name、description、parameters。
 
 派出時將工具定義存 `state/work/<attempt_id>/tool.json`，另存參數，結果按那份定義解讀，不因設定改動換 schema。文字驗 UTF-8；JSON 驗完整 stdout。截斷、缺失、非零退出照實呈現，格式錯不改原程序證據、不自動重跑。
 
@@ -63,14 +63,14 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 
 ## P-704．一項 module、一項任務〔第十二批裁定；工程預設〕
 
-行為（每格做什麼、一格處理幾件）以 [agent 預設任務](../agent/README.md)、[A-201](../agent/input.md) 為準，本條只留介面。完整 argv 是 `aos-agent-step [--node N]`，省略 node 就用 cwd（tick 設為 node 根）；人手入口為 `aos agent task run N`。必須繼承並核對 `AOS_TICK_LOCK_FD`。〔第十九批，使用者方向 10〕任務帶別的 `user` 時，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」動作開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`，沒有 helper 時該項依 [B-620](../settled/tick.md) 回 125（功能受限）。〔第十九批〕手動跑完整一格：`aos node tick N` 經 daemon 跑並等格次，或直接跑 `aos-tick`（風險自負，沒有通道，[B-627](../settled/tick.md)）。
+行為（每格做什麼、一格處理幾件）以 [agent 預設任務](../agent/README.md)、[A-201](../agent/input.md) 為準，本條只留介面。完整 argv 是 `aos-agent-step [--node N]`，省略 node 就用 cwd（tick 設為 node 根）；人手入口為 `aos agent task run N`。必須繼承並核對 `AOS_TICK_LOCK_FD`。〔第十九批，使用者方向 10〕〔2026-10-01 任務的 `user` 撤回〕任務要用別的帳號跑就在 argv 包 `aos-as`，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」動作開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`（[B-620](../settled/tick.md)）。〔第十九批〕手動跑完整一格：`aos node tick N` 經 daemon 跑並等格次，或直接跑 `aos-tick`（風險自負，沒有通道，[B-627](../settled/tick.md)）。
 
 | 任務 id | kind／group／needs | 內容 |
 |---|---|---|
 | agent | agent／省略／省略 | 收話與結果、推進輸入、準備工作及回覆、記用量與摘要 |
 | clean | custom／省略／省略 | `aos-clean --config config/clean.json`，到期才清理 |
 
-[任務表](examples/agent-tasks/agent-tasks.minimal.valid.json) 最外層是 `{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[...]}`；每項是帶 `_metainfo` 的 inst，加 `id`、`kind`。〔使用者方向 2026-09-30，第十九批，撤 C-07 永遠禁止鍵〕任務可帶 `user`（[正例](examples/agent-tasks/agent-tasks.task-user.valid.json)，[B-620](../settled/tick.md)），[schema](schemas/agent-tasks.schema.json) 不再擋；一般任務的 group、needs、指示詞及整份 `$ref` 沿 P-202。
+[任務表](examples/agent-tasks/agent-tasks.minimal.valid.json) 最外層是 `{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[...]}`；每項是帶 `_metainfo` 的 inst，加 `id`、`kind`。〔使用者方向 2026-09-30，第十九批，撤 C-07 永遠禁止鍵；2026-10-01 撤回任務的 `user`〕任務沒有 `user`，寫了當陌生鍵、[schema](schemas/agent-tasks.schema.json) 不擋（[B-620](../settled/tick.md)）；一般任務的 group、needs、指示詞及整份 `$ref` 沿 P-202。
 
 aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、stdout 空、stderr 診斷。0 成功或沒事；2 用法錯；125 鎖或前置不符；1 處理／保存失敗，交標準配備還原組。可保存的 failed／unknown／設定問題是業務狀態；commit／還原故障由標準配備回 3 並停格。clean 的輸出與結束碼依 [P-605](ops.md)。
 
@@ -148,7 +148,7 @@ aos-agent-talk context show N --request ID [--json]
 
 ## P-715．new 的完整產物〔[inst 目標](../base/inst.md#inst-目標檔案或資料夾)；工程預設〕
 
-`aos node new N --template agent --agent-config F [--user U]` 讀 F、填 N／已授權 U，建 repo 與初始 commit；無效回 2，不猜地址或授額外權限。持久登記由 kernel 做。
+`aos node new N --template agent --agent-config F` 讀 F、填 N，建 repo 與初始 commit；無效回 2，不猜地址或授額外權限。持久登記由 kernel 做。
 
 [完整產物](examples/agent-tasks/agent-template.minimal.valid.json) 的 files 列 `.aos/inst.json`、`.aos/tasks.json`（**2 項**）、agent.json、空 tools.json、clean.json、gitignore；〔第十八批〕範本的 agent 任務對每個送出的請求預設帶鬧鐘（P-706），預設值延後、這輪不加設定欄；不把 template 容器存進 node。另建 requests、responses、work、public、`.aos/jobs/` 與 ignored `.aos/attention/{open,done}/`；state／summary 按需建立。[cat 工具清單](examples/agent-tasks/agent-tools.minimal.valid.json) 可從任意可讀路徑 add。
 
@@ -158,6 +158,6 @@ aos-agent-talk context show N --request ID [--json]
 
 ## P-717．格式驗收〔P-007〕
 
-[範例](examples/agent-tasks/) 依同名前綴驗 schema；template 另核對 node、argv、路徑。〔第十八批〕agent 的 schema 都已放寬：不認得的欄位照收，不再有「多一個欄位」的反例，改由[正例](examples/agent-tasks/agent-config.extra-field.valid.json)示範多一個欄位仍收（[C-07](../contracts.md)、[P-007](README.md)）。〔第十九批〕任務表的 `user` 不再是禁止鍵：原本的反例改成[正例](examples/agent-tasks/agent-tasks.task-user.valid.json)（任務可帶自己的 `user`，[B-620](../settled/tick.md)）；`daemon_socket` 可省，最小設定範例就不寫。反例涵蓋相對地址、工具結果缺 schema、done 缺時間、history 越界、final 缺 outcome、負估算、缺 attempt、用量狀態矛盾、錯 commit、負序號、template 缺任務表。線上 agent.say 回話例子見 messages。
+[範例](examples/agent-tasks/) 依同名前綴驗 schema；template 另核對 node、argv、路徑。〔第十八批〕agent 的 schema 都已放寬：不認得的欄位照收，不再有「多一個欄位」的反例，改由[正例](examples/agent-tasks/agent-config.extra-field.valid.json)示範多一個欄位仍收（[C-07](../contracts.md)、[P-007](README.md)）。〔第十九批〕任務表的 `user` 不再是禁止鍵；〔2026-10-01〕任務的 `user` 撤回，原本的正例刪掉（[B-620](../settled/tick.md)）；`daemon_socket` 可省，最小設定範例就不寫。反例涵蓋相對地址、工具結果缺 schema、done 缺時間、history 越界、final 缺 outcome、負估算、缺 attempt、用量狀態矛盾、錯 commit、負序號、template 缺任務表。線上 agent.say 回話例子見 messages。
 
 正例全過、反例全拒；`bash wf/tools/wf-lint.sh proto6` broken=0。格式驗證不代替權限、狀態配對與端到端循環驗收。

@@ -56,7 +56,7 @@
 | 05 | 寬限與強殺（daemon 端） | B-604（「收尾」：對 runner 送 SIGTERM→`shutdown_grace_ms`→第二次 SIGTERM 由 runner 清空名下→確認全空，有 cgroup 時最後對框 `cgroup.kill` 兜底；重啟、停機、解除、helper 停程序、砍掉掛載行程（B-613）都用它；〔納入 cgroup 與 git 疑-7〕逃生口准，`kill_escape_cgroups` 恢復、預設不殺）＋B-202（執行器：attempt 逾時照 inst 的寬限）＋B-634（`aos-cg` 對 `task-*` 殘留 `cgroup.kill`） | P-101 `shutdown_grace_ms`；P-108 helper 停程序帶設定值，不寫死 2 秒 | P-108、B-603 的寬限句；inst 的 2 秒只指 inst 自己的逾時 | T2、T3 |
 | 06 | pause 批次存檔 | B-603 | P-116 存檔格式；P-101 `pause_save_interval_ms` | P-116 行為句、H-004（刪「每秒」） | T2、T6 |
 | 07 | 停格檔、擋板檔、故障停格與 node 事項 | 〔第二十批〕停格檔：B-620（任務建 `.aos/tick/stop`，核心不開本格後面的項、tick 回 0〔2026-10-01，C-08〕；只管本格，daemon 不因它暫停）；擋板檔：B-620（核心取鎖後看到 `.aos/tick-blocked` 就一項不跑）＋B-607（有擋板時 daemon 不開格；daemon 不看結束碼；daemon 自己的開格故障仍停格）；事項：S-405 | P-213 停格檔與擋板檔；P-601 事項檔位置與 `daemon.attention.*` 表；P-203 結束碼表 | P-105、P-205、P-609、P-601 行為句、B-601 的事項句 | T2、T5（S-405）、T3（P-203、P-213、P-601、P-609） |
-| 08 | tick 任務表 | B-620（tick.md「任務註冊表」節：順序、類別與自訂種類、`methods` 欄的意思、一個 module 一項任務；〔2026-10-01〕核心只照陣列順序跑、只做極簡檢查（有 `tasks` 陣列、每項有 `argv`）；`id` 可省（用位置）、`kind` 可不填、`methods` 拿掉；核心不看 `user`；-32601 搬到 B-623；核心每項後查停格檔、開格先看擋板檔，給任務 `AOS_TICK_CWD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`；`kind:"system"` 只是系統級任務的標記；`group`、`needs` 欄撤，needs 改用 `aos-needs`（B-621）） | P-202 欄位表、JSON、schema；P-203 任務環境 | tick.md 欄位表刪、H-004 | T3、T6 |
+| 08 | tick 任務表 | B-620（tick.md「任務註冊表」節：順序、類別與自訂種類、`methods` 欄的意思、一個 module 一項任務；〔2026-10-01〕核心只照陣列順序跑、只做極簡檢查（有 `tasks` 陣列、每項有 `argv`）；`id` 可省（用位置）、`kind` 可不填、`methods` 拿掉；任務沒有 `user`（2026-10-01 撤回，寫了照陌生鍵）；-32601 搬到 B-623；核心每項後查停格檔、開格先看擋板檔，給任務 `AOS_TICK_CWD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`；`kind:"system"` 只是系統級任務的標記；`group`、`needs` 欄撤，needs 改用 `aos-needs`（B-621）） | P-202 欄位表、JSON、schema；P-203 任務環境 | tick.md 欄位表刪、H-004 | T3、T6 |
 | 09 | Q1／Q2 | B-623（Q1）、B-624（Q2）（tick.md 兩節；〔第二十批〕屬收件、投件、發摘要這幾項系統級任務。astra 審整理區定案後只剩系統訊息佇列 `aos-mq get`／`aos-mq post` 與發摘要，檔案收件與投件 aos 不管；有 git 時 `mq-post` 與發摘要排在 `aos-git close` 之後；P-206 的交接行為搬上） | P-206 只留待送檔與鬧鐘檔格式 | P-003、P-206、P-305、B-402、B-503、A-201、agent/README、P-704、P-800 | T3、T1（P-003）、T6、T5（P-800） |
 | 10 | 投件失敗、鬧鐘 | B-624 | P-206 鬧鐘與待送檔欄位 | S-301、P-303、P-701、P-706、V-03、H-004 | T3、T4（S-301）、T6、T1（V-03） |
 | 11 | method 開放、-32601 | B-501（method 就是指令；-32601 只表示沒任務宣告或 argv 不符，未授權走 -32000 業務碼；投件權即執行權）＋B-620（`methods` 欄）；〔第二十批〕沒人宣告的由收件任務回（B-623） | P-202 `methods` 格式；P-306 method 目錄 | P-004、P-306（兩處）、H-030 | T3、T1（P-004）、T6（H-030） |
@@ -70,7 +70,7 @@
 | 19 | agent 設定原則、`in_reply_to` | A-102（原則；〔第十九批〕接住 P-207 的鎖與提交、P-210 的建立與恢復流程）＋A-201（`in_reply_to` 配對，從 P-705 搬上） | P-705 欄位；P-207、P-210 只留 argv 與檔名 | P-203、P-207、P-210、P-701、P-805 的原則句；H-036；其餘 `in_reply_to` 各處 | T6、T3（P-203）、T5（P-805） |
 | 20 | 清理、保留期、待辦 | B-404（清理資格、保留期；〔第二十批〕`aos-clean` 是系統級任務，保留期與清理間隔以格計）＋S-405（`aos attend` 三個動作）＋A-304（agent 的清理遍歷，〔第十九批〕從 P-716 搬上） | P-605／606 清理設定與報告；P-603 argv 與輸出；P-716 只留殘根 | P-601、P-716、P-814、H-004、P-603 行為句 | T3、T5、T6 |
 | 21 | 錯誤碼與結束碼 | C-04（原則）；碼值屬格式，正本 P-005／P-006 與各篇碼表 | 各篇自己的碼表；集中碼表在 P-006 | H-002 連集中碼表；設定檢查 kernel 2、agent 1 的不一致延後 | T1、各隊 |
-| 22 | helper 與切換帳號（〔第二十批〕普通程式 `aos-as`） | B-303（角色與界線；〔第二十批〕`aos-as` 怎麼請 helper 開程序、交鎖）＋B-609（新：固定動作清單與各動作做什麼，含新加的動作，從 P-107 搬上；〔第十九批〕`spawn_as` 以指定帳號開程序、任務繼承鎖；〔第二十批〕呼叫者是帶本格憑證的程序，實際就是 `aos-as`）＋B-620（任務的 `user` 跟 tick 不同時回 125）＋B-601（helper 開格何時回，從 P-108 搬上） | P-107 參數；P-108 私有通道；P-212 `aos-as` argv | B-601、P-102、H-004、B-605 | T3（B-303）、T2、T6 |
+| 22 | helper 與切換帳號（〔第二十批〕普通程式 `aos-as`） | B-303（角色與界線；〔第二十批〕`aos-as` 怎麼請 helper 開程序、交鎖）＋B-609（新：固定動作清單與各動作做什麼，含新加的動作，從 P-107 搬上；〔第十九批〕`spawn_as` 以指定帳號開程序、任務繼承鎖；〔第二十批〕呼叫者是帶本格憑證的程序，實際就是 `aos-as`）＋B-601（helper 開格何時回，從 P-108 搬上） | P-107 參數；P-108 私有通道；P-212 `aos-as` argv | B-601、P-102、H-004、B-605 | T3（B-303）、T2、T6 |
 | 23 | inst | [inst](base/inst.md)（新增「inst 目標：檔案或資料夾」節，從 P-010 搬上） | node-inst schema | P-010（inst 篇寫好後由 T1 縮成殘根）、P-200、P-201、P-109 | T3、T1、T2（P-109） |
 | 24 | 結構問題 | — | — | B-504：transport 的標題改成非標題的一行殘根；P-100～119 條號表只留 daemon/README，protocol/daemon.md 縮成一句連結；P-001 改寫 | T3、T2、T1 |
 | 25 | 〔第二十批改〕tick 核心、系統級任務、普通程式、結束碼紀錄 | T-07（核心三件事〔2026-10-01：上下層判定暫緩〕、衡量基準、停格檔）、T-10（四類與管轄區）、T-01（保證跟著掛了什麼走；git 與 cgroup 有就用）；B-626（核心與系統級任務的界線）、B-602（最簡互斥）、B-620（照表跑、停格檔、擋板檔、任務環境變數）、B-633（每項結束碼紀錄與格數）、B-629（標準任務表範本）、B-632（結束碼紀錄取代日誌：沒有 git 時怎麼做）、B-631（殘根）；普通程式 B-621（`aos-needs`）、B-303（`aos-as`，暫緩）、B-634（`aos-cg`）；git B-630、B-622 | P-203 結束碼與任務環境；P-202 任務表；P-204 `aos-needs`、P-212 `aos-as`；P-213 結束碼紀錄、停格檔與擋板檔；P-205 `aos-git`、P-211 `aos-cg` | README 定位與依賴段、T-06、B-605 啟動輸出、B-302、P-101、P-203、H-004、H-036、V-03 | T1、T3、T2（B-605、P-101）、T6（H-004、H-036） |
@@ -193,7 +193,7 @@ cgroup 子樹依 [B-605](settled/deferred/daemon/cgroup.md) 至少驗三種：�
 
 啟動自檢依 [B-605](settled/deferred/daemon/cgroup.md)：〔使用者方向 2026-09-30，第二十批〕沒有 cgroup v2 時 daemon 照常啟動、照常開格，stdout 沒有 `standard:` 行；cgroup 部件關掉時不查 cgroup，daemon 一律不查 git；只有 Python 版本不足才報錯退出。quota 偵測到但設定強制關時不用。
 
-測 socket 冒名、超額授予／宣告 user、不懂 user 語意、無 helper 繼承與切 UID 後開檔。超額須 125、不啟動、不寫 `exit` 並留待辦；整份 `$ref` 可用但不能偷換身分，搬資料夾也不能取得新身分。
+測 socket 冒名、超額授予、無 helper 繼承與切 UID 後開檔。超額須 125、不啟動、不寫 `exit` 並留待辦；搬資料夾也不能取得新身分。〔使用者方向 2026-10-01〕原本「宣告 user、不懂 user 語意、整份 `$ref` 不能偷換身分」隨 inst 頂層 `user` 撤回。
 
 ### 收件與派出
 
@@ -237,7 +237,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 **任務表、method 與人手跑一格**
 
-- 任務表沒有任何 system 類也能正常跑；`kind:"agent.review"` 照收，`system.x` 核心照跑、不擋（只有恢復前驗證擋，B-620、B-625、B-626）。〔2026-10-01〕任務項帶 `user` 照收，`aos-tick` 不看它、照自己的帳號跑（B-620、C-07）；帳號不同回 125 的規定暫緩。
+- 任務表沒有任何 system 類也能正常跑；`kind:"agent.review"` 照收，`system.x` 核心照跑、不擋（只有恢復前驗證擋，B-620、B-625、B-626）。〔2026-10-01〕任務沒有 `user`：寫了當陌生鍵照收，`aos-tick` 照自己的帳號跑（B-620、C-07）；帳號不同回 125 的規定撤回。
 - 〔第十九批〕不經 daemon 直接跑 `aos-tick` 照常跑完一格，只是沒有通道（B-627）。〔暫緩〕`aos node tick` 經 daemon：送 wake 後看到 `tick_seq` 變大才回 0，逾時回 101，paused 回 1 不等（B-607、H-004）。
 - 沒人宣告的 method 由收件任務回 -32601；有宣告但來源未授權回 -32000 加業務碼（B-501、B-623）。
 
@@ -245,7 +245,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 - 同一個壞收件連跑多格只有一件事項；過保留期由 `aos-clean` 刪，期內留著（B-623、B-404）。
 - 同 ID 重送時，照 [B-503](base/transport.md) 處理（檔案投件的補投由處理它的普通程式定，aos 不管）；本地動作回應的 `stdout.path` 指向存在的 `.stdout` 檔（B-503、B-624、B-632）。
-- 取消：node 根目錄擁有者與 inst 執行帳號不同時，兩者送的取消都收；其他人回 `cancel_not_authorized`，原工作照跑；once 自己 inst 的 user 被拒（B-203）。記了 canceling 的那格不送 `node.kill`；`not_registered` 又沒有可信證據時記 unknown；進 canceling 前已經有完整結果的照原結果（B-203、P-411）。
+- 取消：node 根目錄擁有者與 inst 執行帳號不同時，兩者送的取消都收；其他人回 `cancel_not_authorized`，原工作照跑（B-203）。記了 canceling 的那格不送 `node.kill`；`not_registered` 又沒有可信證據時記 unknown；進 canceling 前已經有完整結果的照原結果（B-203、P-411）。
 - `aos work trace` 用請求 ID 或 attempt ID 都查得到同一件工作；讀不到的站標「看不到」、不回錯；全找不到回 1（H-037）。
 
 **資源、kernel 與 agent**
@@ -264,7 +264,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 **版本與禁止鍵**
 
-- LLM 池設定帶 `api_key` 整份拒收；〔第十九批〕agent／kernel 範本的任務表項目帶 `user` 照收；agent 設定、kernel 持久檔、LLM 池設定多一個不認得的欄位照樣讀進（C-07）。`work-result` 的 signal 65 拒收（P-403）。
+- LLM 池設定帶 `api_key` 整份拒收；〔2026-10-01〕任務表項目寫了 `user` 當陌生鍵照收；agent 設定、kernel 持久檔、LLM 池設定多一個不認得的欄位照樣讀進（C-07）。`work-result` 的 signal 65 拒收（P-403）。
 
 ### 第十九批新增場景
 
@@ -278,9 +278,9 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - 〔暫緩〕沒 cgroup：daemon 照常啟動、印 `cgroup=off`、開格，`cgroup_limits` 回 `unsupported`、`node.show` 的 `cgroup` 為 null（B-605、B-609）；kernel 的資源任務不報套用失敗，新派工照額度放行（S-205）。
 - 沒 git：兩版範本任務表都照常跑完、每格都有結束碼紀錄；掛了 `aos-git` 的只印 `no_git` 警告、回 0（B-632、B-622）。發布摘要從目前的 `summary.json` 發布（B-624）；unknown 的保留期從 `aos-clean` 記下的格數起算，不會提早清（B-404）。
 
-**任務帶 `user` 與 `aos-as`**
+**任務的帳號與 `aos-as`**
 
-- 任務表項目（含 agent、kernel 範本）帶 `user` 照收、schema 通過；`aos-tick` 不看它（B-620、C-07、P-814、P-717）。〔暫緩〕帶了跟 tick 不同帳號的那一項不跑、回 125、stderr 印 `user_mismatch`、紀錄記 `exit:125`。
+- 〔2026-10-01〕任務沒有 `user`（inst 頂層撤回）：任務表項目（含 agent、kernel 範本）寫了 `user` 當陌生鍵照收、schema 通過，`aos-tick` 照自己的帳號跑（B-620、C-07）。原本「不同帳號那一項回 125、`user_mismatch`」撤回。
 - 〔暫緩，B-303 在暫緩區〕argv 包 `aos-as <帳號> --`、有 helper 也有通道時，經 `node.provision` 的 `spawn_as` 用那個帳號跑：任務（含 kernel、agent 的工具）用 `AOS_TICK_LOCK_FD` 核對得到同一把獨占鎖；它在跑時同資料夾另一格回 75、下一項不開；`aos-as` 照原指令的結果結束（B-303、B-609、B-602）。直接跑的格沒有通道，`aos-as` 回 125、印 `no_channel`（B-303、B-627）。
 - 〔暫緩〕`spawn_as` 的帳號在身分額度外回 `user_not_granted`；不帶憑證、由掛載行程叫、或交來的鎖 fd 不是本 node 的 `.aos/tick.lock`，都被拒；交來的 fd 不是 5 個或帶 `frame` 被拒；沒 helper 回 `helper_unavailable`（B-609、P-107）。
 
@@ -369,7 +369,8 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - 設定檔 `insts` 兩項、週期 1 秒：開起來每項先各跑一次，之後每項從上一次結束起算再跑；stdout 每次一行 `<時間> inst=<鍵> exit=<碼> ms=<毫秒>`（B-640、P-120）。
 - 某項 `stop_on_nonzero:true` 且 aos-exec 回非 0：多印一行 `stopped`，之後不再叫；其他項照跑；全部停了 daemon 也不退出（B-640）。
 - 頂層與該項都沒寫 `interval_ms`：回 1；設定檔裡的 `$ref` 以設定檔所在資料夾為準，相對的 `cwd` 以 daemon 啟動時的目錄為準（B-640、P-120）。
-- aos-exec 寫了 stderr：收齊後加一行標頭 `== <時間> index=<第幾項> inst=<鍵> ==` 一次寫出，多項同時結束也不交錯（B-640）。
+- 沒寫 `exec_out_path`／`exec_err_path`：aos-exec 的 stdout／stderr 都丟掉，daemon 的 stdout 只有自己的行、stderr 空；寫了的那條收齊後加一行標頭 `== <時間> stdout|stderr index=<第幾項> inst=<鍵> ==` 一次寫到指的檔（`/dev/stdout`、`/dev/stderr` 也行），多項同時結束也不交錯（B-640、P-120）。
+- 控制 socket 的請求多帶看不懂的欄位：照收不理（P-121、C-07）。
 - Ctrl-C：daemon 馬上回 0，正在跑的 aos-exec 不殺也不等（B-640）。
 - 寫了 `modules.control.socket`：每次 aos-exec 的環境有 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`；任務裡跑 `aos-ctl wake` 叫醒的是頂層那一項；正在跑時連叫三次只補一次；帶 `--skip-while-running` 時正在跑就不補（B-641、P-121）。
 - `aos-ctl pause` 後那一項不再照週期跑、正在跑的不殺；`resume` 後馬上跑一次；被 `stop_on_nonzero` 停掉的項 `wake` 回 `stopped`、不跑（B-641）。

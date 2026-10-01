@@ -231,6 +231,9 @@ class Step3Protocol(CtlCase):
         # pause 帶 wake 的選項、多帶別的鍵：忽略
         self.assertEqual(self.send({"pause": "a.json", "keep_schedule": "x", "who": 1}), {"ok": True})
         self.assertEqual(self.send({"resume": "a.json"}), {"ok": True})
+        # 看不懂的欄位照收不理（使用者 2026-10-01）：wake、status 也一樣
+        self.assertEqual(self.send({"wake": "a.json", "why": {"x": [1]}}), {"ok": True})
+        self.assertEqual(self.send({"status": "a.json", "verbose": True})["inst"], "a.json")
 
     def test_silent_client(self):
         self.inst({"argv": ["true"]}, "a.json")

@@ -118,4 +118,5 @@
 | 整格結束碼 0／1／2／75：任務失敗、停格檔、擋板檔讓這格回 1；表壞、用法錯回 2；鎖被占回 75 | **已被 [C-08](../conventions.md) 取代**：aos-tick 只回 0／1；任務成敗只記進紀錄、不影響 tick；停格檔、擋板、busy 都回 0 |
 | 紀錄收尾的 `exit` 收 0／1／2，跨欄位規則「`stopped_after` 時 `exit` 是 1」「`exit` 0 時每項都成功」 | **已改**：有紀錄收尾時 tick 一定回 0，`exit` 只會是 0（[P-213](../protocol/node.md)） |
 | 環境變數 `AOS_NODE_DIR`（node id） | **已被 `AOS_TICK_CWD` 取代**：工作資料夾的絕對路徑（使用者 2026-10-01：「node 這個概念目前還沒到出場的時候」） |
+| inst 頂層的 `user`（帳號名稱或 UID，省略繼承上層）、[inst](../../base/inst.md)「先決定身分，切完才解析」整節（daemon 取原始 `user` 做額度檢查、切身分後才解析、`UserInvalid`／`UserNotGranted`／`UserMismatch`／`SourceChanged`、整份 `$ref` 不能偷換身分）；任務表的 `user`（任務是 inst 超集，可帶自己的帳號，跟 tick 不同時回 125） | **已撤回**（使用者 2026-10-01：「inst頂層的user欄位不留。」）。直接從正式篇刪掉，沒有搬來暫緩區；寫了 `user` 就是不認得的鍵、照未知頂層鍵規則忽略，照目前身分跑。要換帳號包 `aos-as`。本篇 B-628 的「身分繼承」與「暫緩：B-620 任務的帳號（125）」只是歷史記錄 |
 | 環境變數 `AOS_TICK_RECORD`（本格紀錄的絕對路徑） | **已被 `AOS_TICK_CWD` 取代**：任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找紀錄（使用者 2026-10-01：「反正有 AOS_TICK_CWD，就從那邊找就好」） |

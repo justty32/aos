@@ -38,7 +38,7 @@
 | B-633（部分） | 落盤、寫不進與讀不懂 | 暫緩 | 使用者：默認紀錄是好的、`--firstdo-fsync` 先不做 | [tick.md](tick.md) |
 | T-09 | 收尾、排空停機、熱重載、逃生口 | 暫緩 | 全是舊 daemon 用語，最核心 daemon 第一版不做 | [terms.md](terms.md) |
 
-撤回、不會回來的 tick 舊做法（沒有 `.aos/` 時交給 aos-exec 的退路、inst.json 路徑正規化、`--node` 旗標、讀表驗四件事與表壞回 2、`methods` 欄、整格回 1／2／75 的碼表、`AOS_NODE_DIR`、`AOS_TICK_RECORD`）列在 [tick.md 篇末](tick.md#已撤回被取代)。
+撤回、不會回來的 tick 舊做法（沒有 `.aos/` 時交給 aos-exec 的退路、inst.json 路徑正規化、`--node` 旗標、讀表驗四件事與表壞回 2、`methods` 欄、整格回 1／2／75 的碼表、`AOS_NODE_DIR`、`AOS_TICK_RECORD`，以及 2026-10-01 撤回的 inst 頂層與任務表的 `user`、inst「先決定身分，切完才解析」整節）列在 [tick.md 篇末](tick.md#已撤回被取代)。
 
 ### daemon 與 helper
 
@@ -83,4 +83,4 @@
 
 ### 區外暫緩的段落
 
-整理區以外也有跟著暫緩的段落，就地標了「暫緩」，沒有搬家：[inst](../../base/inst.md)「先決定身分，切完才解析」與頂層整份指示詞裡講 `user` 的部分；[驗收入口 V-03](../../conformance.md) 裡跟上表各條有關的場景。
+整理區以外也有跟著暫緩的段落，就地標了「暫緩」，沒有搬家：[驗收入口 V-03](../../conformance.md) 裡跟上表各條有關的場景。原本也在這裡的 [inst](../../base/inst.md)「先決定身分，切完才解析」與頂層整份指示詞裡講 `user` 的部分，2026-10-01 隨 inst 頂層 `user` 撤回、直接刪掉（不搬暫緩，見 [tick.md 篇末](tick.md#已撤回被取代)）。

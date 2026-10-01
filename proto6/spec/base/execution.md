@@ -40,7 +40,7 @@
 2. node 根目錄的擁有 UID；
 3. 該 node inst 的執行帳號 UID，**接件時記下**（接件那格 tick 的有效 UID；〔暫定；第二十批改寫〕處理這件的任務包了 `aos-as` 換帳號時，記它換成的那個帳號的 UID），存進該工作的狀態，之後核權看這筆，不當場重解 inst。
 
-2、3 是 node 的兩種主人，兩者不同時都算；once 自己 inst 的 `user` 不算主人。在[投件權就是執行權](../terms.md)（T-08）之下，這只是防手滑，不是安全界線。
+2、3 是 node 的兩種主人，兩者不同時都算。在[投件權就是執行權](../terms.md)（T-08）之下，這只是防手滑，不是安全界線。
 
 **排隊中**（還沒建 launch-started 標記）：直接拿掉，原請求回 canceled、`started:false`，不開 once。
 
@@ -56,7 +56,7 @@
 
 **逾時**〔暫定，第二十批疑-11 未答，照 a：工作的 `timeout_ms` 保留毫秒，程序在格外跑、由 runner 量〕：用 monotonic 經過時間，從放行起算，不含排隊；重啟照全殺與 unknown 規則，不重新給一次 timeout。逾時先處理的，收尾後即使取得 exit 0 也記 timeout。取消、逾時與完成的競態由負責該工作的執行器串行處理，只發布一次最終結果：已有完整結果檔就回已結束；取消照上面 (c) 判定。結果檔一旦完整發布就不被後來的取消覆寫；發布前崩潰且結果不明則按 unknown。kernel 下格收結果，不以全域交易排序。
 
-**驗收：**交錯取消、逾時、exit 0 與結果發布，每個 attempt 只有一個結果；重送取消不重複釋放名額。node 根目錄擁有者與 inst 執行帳號不同時，兩者各送一次都收；其他帳號（含只是 once 自己 inst 的 `user`）送的回 `cancel_not_authorized`，原工作照跑。記 `canceling` 那格不收尾；`not_registered` 又沒有可信證據時記 unknown。取消的收尾送出 TERM 後，程序自己 exit 0 並完整發布結果，回的是原結果，不是 canceled。
+**驗收：**交錯取消、逾時、exit 0 與結果發布，每個 attempt 只有一個結果；重送取消不重複釋放名額。node 根目錄擁有者與 inst 執行帳號不同時，兩者各送一次都收；其他帳號送的回 `cancel_not_authorized`，原工作照跑。記 `canceling` 那格不收尾；`not_registered` 又沒有可信證據時記 unknown。取消的收尾送出 TERM 後，程序自己 exit 0 並完整發布結果，回的是原結果，不是 canceled。
 
 ## B-204：資源造成的失敗〔建議預設，未拍板〕
 

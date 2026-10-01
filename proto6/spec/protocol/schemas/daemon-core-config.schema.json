@@ -14,17 +14,22 @@
     "cwd": {
       "type": "string",
       "minLength": 1,
-      "description": "起點：aos-exec 子程序的工作目錄、相對 inst 與 exec_err_path 的基準。省略＝daemon 啟動時的工作目錄；相對的也以那裡為準"
+      "description": "起點：aos-exec 子程序的工作目錄、相對 inst 與 exec_out_path／exec_err_path 的基準。省略＝daemon 啟動時的工作目錄；相對的也以那裡為準"
     },
     "interval_ms": {"$ref": "#/$defs/IntervalMs"},
     "stop_on_nonzero": {
       "type": "boolean",
       "description": "各項的預設；省略＝false"
     },
+    "exec_out_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "aos-exec 的 stdout 接到哪個檔（接在檔尾、每次收齊加標頭）；相對以起點為準；<inst> 換成這一項的位置。省略＝丟掉（/dev/null）；寫 /dev/stdout 可接回 daemon 自己的 stdout"
+    },
     "exec_err_path": {
       "type": "string",
       "minLength": 1,
-      "description": "aos-exec 的 stderr 接到哪個檔（接在檔尾）；相對以起點為準；<inst> 換成這一項的位置。省略＝daemon 自己的 stderr"
+      "description": "aos-exec 的 stderr 接到哪個檔（接在檔尾、每次收齊加標頭）；相對以起點為準；<inst> 換成這一項的位置。省略＝丟掉（/dev/null）；寫 /dev/stderr 可接回 daemon 自己的 stderr"
     },
     "modules": {
       "type": "object",

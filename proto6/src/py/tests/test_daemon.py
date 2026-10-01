@@ -26,7 +26,7 @@ CLEAN_ENV = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
 
 TS = r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d"
 LINE = re.compile(r"^(%s) inst=(\S+) (?:exit=(\d+) ms=(\d+)|(stopped))$" % TS)
-HEAD = re.compile(r"^== %s index=(\d+) inst=(\S+) ==$" % TS)
+HEAD = re.compile(r"^== %s (stdout|stderr) index=(\d+) inst=(\S+) ==$" % TS)
 
 
 def sh(script, **extra):
@@ -148,7 +148,8 @@ class Step1Config(DaemonCase):
         start, items = aos_daemon.load_config(cfg)
         self.assertEqual(start, os.getcwd())
         self.assertFalse(items[0].stop_on_nonzero)
-        self.assertIsNone(items[0].err_path)
+        self.assertIsNone(items[0].err_path)       # 沒寫＝丟掉（/dev/null，使用者 2026-10-01）
+        self.assertIsNone(items[0].out_path)
 
     def test_err_path(self):
         os.makedirs(os.path.join(self.d, "dir"))
@@ -253,25 +254,43 @@ class Step2Once(DaemonCase):
         self.assertEqual(ppid, sid)
         self.assertNotEqual(int(sid), os.getsid(p.pid))
 
-    def test_stderr_to_daemon(self):
-        self.inst(sh("echo oops >&2; echo two >&2", stderr=INHERIT), "loud.json")
+    def test_default_discard(self):
+        # exec_out_path／exec_err_path 沒寫＝丟到 /dev/null：daemon 的 stdout 只有自己那幾行、stderr 空
+        self.inst(sh("echo said; echo oops >&2", stdout=INHERIT, stderr=INHERIT), "loud.json")
+        p, out, err = self.start(self.config({"interval_ms": 50, "insts": {"loud.json": {}, "nope": {}}}))
+        self.wait_for(lambda: len(self.results(out, "loud.json")) >= 3 and self.results(out, "nope"))
+        for line in list(out):
+            self.assertRegex(line, LINE)
+        self.assertEqual(err, [])
+        self.assertIsNone(p.poll())
+
+    def test_to_daemon_streams(self):
+        # 寫成 /dev/stderr、/dev/stdout 就接回 daemon 自己的 stderr／stdout，照樣帶標頭
+        self.inst(sh("echo oops >&2; echo two >&2; echo said", stdout=INHERIT, stderr=INHERIT),
+                  "loud.json")
         self.inst(sh("echo hidden >&2"), "quiet.json")
-        cfg = self.config({"interval_ms": 10000, "insts": {"quiet.json": {}, "loud.json": {}}})
+        cfg = self.config({"interval_ms": 10000, "exec_err_path": "/dev/stderr",
+                           "exec_out_path": "/dev/stdout",
+                           "insts": {"quiet.json": {}, "loud.json": {}}})
         _, out, err = self.start(cfg)
         self.wait_for(lambda: self.results(out, "loud.json") and self.results(out, "quiet.json"))
         self.wait_for(lambda: len(err) >= 3)
         m = HEAD.match(err[0])
         self.assertTrue(m, err)
-        self.assertEqual(m.groups(), ("1", "loud.json"))
+        self.assertEqual(m.groups(), ("stderr", "1", "loud.json"))
         self.assertEqual(err[1:], ["oops", "two"])
+        i = next(k for k, l in enumerate(list(out)) if HEAD.match(l))
+        self.assertEqual(HEAD.match(out[i]).groups(), ("stdout", "1", "loud.json"))
+        self.assertEqual(out[i + 1], "said")
 
     def test_exec_own_stderr(self):
         # aos-exec 自己的錯（目標不存在＝用法錯 1）也在它的 stderr 裡
-        _, out, err = self.start(self.config({"interval_ms": 10000, "insts": {"nope": {}}}))
+        _, out, err = self.start(self.config({"interval_ms": 10000, "exec_err_path": "/dev/stderr",
+                                              "insts": {"nope": {}}}))
         self.wait_for(lambda: self.results(out, "nope"))
         self.assertEqual(self.results(out, "nope"), [1])
         self.wait_for(lambda: len(err) >= 2)
-        self.assertEqual(HEAD.match(err[0]).groups(), ("0", "nope"))
+        self.assertEqual(HEAD.match(err[0]).groups(), ("stderr", "0", "nope"))
 
     def test_err_file_per_inst(self):
         self.inst(sh("echo from-j >&2", stderr=INHERIT), "j/x.json")
@@ -284,8 +303,28 @@ class Step2Once(DaemonCase):
                                      ("a/logs/err.log", "1", "a", "from-a")):
             lines = self.read(rel).splitlines()
             self.assertGreaterEqual(len(lines), 4)          # 接在檔尾：至少兩次
-            self.assertEqual(HEAD.match(lines[0]).groups(), (idx, inst))
+            self.assertEqual(HEAD.match(lines[0]).groups(), ("stderr", idx, inst))
             self.assertEqual(lines[1], text)
+        self.assertEqual(err, [])
+
+    def test_out_file_per_inst_and_shared(self):
+        # exec_out_path 同一套規則：<inst> 替換、接檔尾、父資料夾自動建；跟 err 寫同一個檔時用標頭分
+        self.inst(sh("echo out-j; echo err-j >&2", stdout=INHERIT, stderr=INHERIT), "j/x.json")
+        cfg = self.config({"interval_ms": 100, "exec_out_path": "<inst>/logs/out.log",
+                           "exec_err_path": "logs/e1.log", "insts": {"j/x.json": {}}})
+        _, out, err = self.start(cfg)
+        self.wait_for(lambda: len(self.results(out, "j/x.json")) >= 2)
+        lines = self.read("j/logs/out.log").splitlines()
+        self.assertGreaterEqual(len(lines), 4)
+        self.assertEqual(HEAD.match(lines[0]).groups(), ("stdout", "0", "j/x.json"))
+        self.assertEqual(lines[1], "out-j")
+        cfg2 = self.config({"interval_ms": 100, "exec_out_path": "logs/both.log",
+                            "exec_err_path": "logs/both.log", "insts": {"j/x.json": {}}}, "c2.json")
+        _, out2, _ = self.start(cfg2)
+        self.wait_for(lambda: len(self.results(out2, "j/x.json")) >= 2)
+        lines = self.read("logs/both.log").splitlines()
+        self.assertEqual([HEAD.match(l).group(1) for l in lines[0:4:2]], ["stdout", "stderr"])
+        self.assertEqual(lines[1:4:2], ["out-j", "err-j"])
         self.assertEqual(err, [])
 
     def test_err_file_shared_no_interleave(self):
@@ -302,8 +341,8 @@ class Step2Once(DaemonCase):
             m = HEAD.match(line)
             if m:
                 heads += 1
-                letter = {"a.json": "A", "b.json": "B"}[m.group(2)]
-                self.assertEqual(m.group(1), {"A": "0", "B": "1"}[letter])
+                letter = {"a.json": "A", "b.json": "B"}[m.group(3)]
+                self.assertEqual(m.group(2), {"A": "0", "B": "1"}[letter])
             else:
                 self.assertEqual(line[0], letter, line)
         self.assertGreaterEqual(heads, 6)
@@ -434,7 +473,8 @@ class Step6Tick(DaemonCase):
 
     def test_blocked(self):
         self.write("n/a/.aos/tick-blocked", "人手暫停")
-        _, out, err = self.start(self.config({"interval_ms": 50, "insts": {"n/a": {}}}))
+        _, out, err = self.start(self.config({"interval_ms": 50, "exec_err_path": "/dev/stderr",
+                                              "insts": {"n/a": {}}}))
         self.wait_for(lambda: len(self.results(out, "n/a")) >= 3)
         self.assertEqual(set(self.results(out, "n/a")), {0})
         self.assertEqual(self.seq(), 0)

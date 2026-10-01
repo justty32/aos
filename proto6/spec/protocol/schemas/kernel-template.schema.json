@@ -39,7 +39,7 @@
         },
         ".aos/tasks.json": {
           "$ref": "node-tasks.schema.json",
-          "description": "範本任務表；範本任務不填 user，但任務可以帶 user（B-620，第十九批）。"
+          "description": "範本任務表；任務沒有 user（2026-10-01 撤回），照 node inst 的帳號跑。"
         }
       },
       "required": [
