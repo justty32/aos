@@ -139,12 +139,6 @@ def take_lock():
     """
     try:
         fd = os.open(LOCK, os.O_RDWR | os.O_CREAT, 0o644)
-    except PermissionError:
-        try:
-            fd = os.open(LOCK, os.O_RDONLY)       # 唯讀資料夾：鎖檔已在就照樣鎖得到
-        except OSError as e:
-            say("lock_unavailable", "開不了鎖檔 %s：%s" % (LOCK, e))
-            return None
     except OSError as e:
         say("lock_unavailable", "開不了鎖檔 %s：%s" % (LOCK, e))
         return None

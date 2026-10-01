@@ -110,7 +110,7 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 |---|---|
 | `config_invalid` | 任務表不合法 |
 | `user_mismatch` | 某項的 `user` 跟 tick 帳號不同 |
-| `record_unwritable` | 本格結束碼紀錄寫不進、失效（[B-633](../tick.md)） |
+| ~~`record_unwritable`~~ | ~~本格結束碼紀錄寫不進、失效~~（作廢，2026-09-30 晚）（[B-633](../tick.md)） |
 | `record_unreadable` | 舊的兩份紀錄都讀不懂 |
 | `stopped` | 被停格檔停下；後面附停格檔裡的原因 |
 | `blocked` | 有擋板檔；後面附擋板檔裡的原因 |
@@ -131,7 +131,7 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 |---|---|
 | `AOS_NODE_DIR` | node id |
 | `AOS_TICK_LOCK_FD` | 鎖 fd 的號碼（[B-602](../tick.md)） |
-| `AOS_TICK_RECORD` | `.aos/tick/current.json` 的絕對路徑；本格紀錄失效後開的項不設（[B-633](../tick.md)） |
+| `AOS_TICK_RECORD` | `.aos/tick/current.json` 的絕對路徑；本格紀錄失效後開的項不設（[B-633](../tick.md)；寫不進的失效處理已作廢，2026-09-30 晚） |
 | `AOS_TASK_ID` | 任務表該項的 `id` 字串，原樣 |
 | `AOS_TASK_INDEX` | 這一項在 `tasks` 陣列的位置，十進位，從 0 起 |
 
