@@ -37,8 +37,8 @@ tick 不跟其他計算單位（once、LLM 嘗試、agent 一輪等）放進同�
 | 類 | 一句話 | 正本 |
 |---|---|---|
 | tick 核心 | `aos-tick` 本身（T-07） | [B-626](tick.md) |
-| 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，`kind:"system"` 標記，寫在表上才跑：系統訊息佇列 `aos-mq get`／`aos-mq post`、發摘要、清理、git 開格／存檔點／收尾 `aos-git` | [B-626](tick.md)、[B-629](tick/template.md) |
-| 普通程式 | 任務會用到的工具，要的任務自己在 argv 包：`aos-as`、`aos-needs`、`aos-cg` | [B-303](deferred/helper.md)、[B-621](tick/needs.md)、[B-634](tick/cg.md) |
+| 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，`kind:"system"` 標記，寫在表上才跑：系統訊息佇列 `aos-mq get`／`aos-mq post`、清理、git 開格／存檔點／收尾 `aos-git` | [B-626](tick.md)、[B-629](tick/template.md) |
+| 普通程式 | 任務會用到的工具：要的任務自己在 argv 包的 `aos-as`、`aos-cg`；自己占一項的 `aos-tick-check-task` | [B-303](deferred/helper.md)、[B-621](tick/check-task.md)、[B-634](tick/cg.md) |
 | 其他任務 | kernel、agent、clock、檔案收件與投件程式、自訂任務 | [B-623](tick/mq.md)、[scheduling](../scheduling/README.md)、[agent](../agent/README.md) |
 
 daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11）；舊設計裡 daemon 跟 tick 之間的通道、node 框與資源上限（[B-601](deferred/daemon/runtime.md)、[B-607](deferred/daemon/registration.md)、[B-605](deferred/daemon/cgroup.md)）都在暫緩區。範本只是預設，拿掉哪一項就沒有那一項的保證（[B-629](tick/template.md)、[T-01](../terms.md)）。
@@ -58,7 +58,7 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 停格檔 | 任務建它，核心跑完那一項就不開本格後面的項；只管本格，daemon 不看它 | [B-620](tick.md) |
 | 擋板檔 | 擋住之後的格：有它時 daemon 照常叫，由 tick 自己擋——核心取鎖後看到它就一項不跑、回 0；只由人手刪。〔astra 報告必修 1〕舊 daemon「有擋板就不開格」在暫緩區（[B-607](deferred/daemon/registration.md)） | [B-620](tick.md) |
 | 任務環境變數 | 整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*` | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| 包裝 | 先做一件事、再跑原指令、照原指令的結果結束的普通程式，例如 `aos-needs a -- 原指令` | [B-621](tick/needs.md)、[B-303](deferred/helper.md) |
+| 包裝 | 先做一件事、再跑原指令、照原指令的結果結束的普通程式，例如 `aos-cg -- 原指令` | [B-634](tick/cg.md)、[B-303](deferred/helper.md) |
 | 有效上層 | （暫緩）有登記覆蓋就是覆蓋指定的那個，否則是資料夾推得的上層；覆蓋只改管理關係 | [B-628](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)、[B-606](deferred/daemon/registration.md) |
 | 通道 | （暫緩）舊 daemon 開的 tick 跟 daemon 之間的 IPC，也是唯一逃生口；不是 daemon 開的 tick 沒有通道 | [B-612](deferred/daemon/channel.md) |
 | 系統訊息佇列 | aos 的系統級 IPC：tick 之間經通道互送請求與回應，daemon 暫存；`aos-mq post` 送、`aos-mq get` 取 | [B-614](deferred/daemon/messaging.md)、[B-623](tick/mq.md)、[B-624](tick/mq.md) |

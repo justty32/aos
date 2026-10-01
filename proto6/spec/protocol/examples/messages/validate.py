@@ -138,7 +138,7 @@ def main():
             for task in tasks:
                 assert task['id'] not in seen, path
                 # 2026-10-01：`methods` 已從任務表規範拿掉（P-202），舊範本還帶的只當不認得的欄位，不再檢查。
-                # 第二十批撤 needs 欄（改用 aos-needs，B-621）；舊範例還帶的只當不認得的欄位，
+                # 第二十批撤 needs 欄（改用普通程式，B-621；2026-10-01 是 aos-tick-check-task）；舊範例還帶的只當不認得的欄位，
                 # 有寫時仍只准指向前面的項，免得過渡期範例自相矛盾。
                 assert set(task.get('needs', [])) <= seen, path
                 seen.add(task['id'])

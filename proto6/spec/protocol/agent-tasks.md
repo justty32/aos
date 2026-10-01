@@ -57,7 +57,7 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 | `state/agent/replies/<reply_id>.json` | [agent-reply](schemas/agent-reply.schema.json)，本地 progress／final |
 | `state/agent/usage/<request_id>.json` | [agent-usage](schemas/agent-usage.schema.json)，LLM 或自跑工具用量 |
 | `state/agent/sequence.json`、`config-state.json` | 序號與設定診斷 |
-| `.aos/summary/summary.json` | P-307 摘要；tick 提交後發布 ignored `published.json` 供上層讀 |
+| `.aos/summary/summary.json` | P-307 摘要；tick 提交後發布 ignored `published.json` 供上層讀（〔暫緩（2026-10-01）〕發布的 `aos-publish` 在[暫緩區](../settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)） |
 
 序號在鎖內遞增、同組提交，首次從 0 開始；不靠牆鐘排輸入，清理不倒退序號。input_id 是原 `agent.say` RPC id；工具自用 LLM 可為 null。request／job／attempt 配自己的 ID，模型 call ID 不作檔名。派出時保存的請求與工具定義就是執行依據。
 

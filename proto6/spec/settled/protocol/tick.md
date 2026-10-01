@@ -25,7 +25,7 @@
 | `work/` | 任務的暫存工作進度 | ignore |
 | `.aos/jobs/<id>/` | 替成員跑工具、打 LLM 的 once 工作；`aos-as` 的暫存 inst（`as-<seq>-<pid>.json`，P-212）也放這裡 | ignore |
 | `.aos/attention/` | 本工作資料夾的待處理事項，含 daemon 發現的問題 | ignore |
-| `.aos/summary/` | 給上層讀的摘要，見 P-307 | `summary.json` 追蹤、`published.json` ignore |
+| `.aos/summary/` | 給上層讀的摘要，見 P-307；發布成 `published.json` 的 `aos-publish` 2026-10-01 搬暫緩區（[暫緩區](../deferred/protocol/tick.md#暫緩p-206-aos-publish-那列發摘要)） | `summary.json` 追蹤、`published.json` ignore |
 | `.aos/mq/post/` | 要經系統訊息佇列送出的訊息（`<id>.req.json`／`<id>.resp.json`），見 P-206 | 追蹤 |
 | `.aos/mq/get/` | 寄件帳號要能在這裡建檔，是 `node.send` 的授權判準（[B-614](../deferred/daemon/messaging.md)）；`aos-mq get` 要不要拿來放取出的訊息由它自己定 | 追蹤 |
 | `.aos/mq/failed/` | `mq-post` 送不出去的失敗紀錄；下一格 `mq-post` 開始送之前清掉（[B-624](../tick/mq.md)），格式見 P-206 | ignore |
@@ -89,7 +89,7 @@
 | `_metainfo` | 可省，照 inst 規則（沒寫＝posix 第 1 版）；跑到這一項才驗，驗不過＝跑到某項展開失敗〔使用者裁定 2026-10-01〕 |
 | `kind` | 可省。`system`、`kernel`、`agent`、`custom`；〔暫定〕或自訂的「類別.名稱」：類別限 `kernel`／`agent`／`custom`，名稱是小寫英數與 `_`、`-`（例如 `agent.review`）。`system` 標記系統級任務（[B-626](../tick.md)），只是標記，不驗順序；`system.x` 不接受（schema 擋，核心不擋） |
 
-**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號就在 argv 包 `aos-as`（P-212）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-needs`（P-204、[B-621](../tick/needs.md)），組改由存檔點劃分（P-205、[B-630](../tick/git.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
+**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號就在 argv 包 `aos-as`（P-212）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-tick-check-task`（P-204、[B-621](../tick/check-task.md)），組改由存檔點劃分（P-205、[B-630](../tick/git.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
 
 誰驗哪些欄位見 [B-620](../tick.md)「誰驗什麼」：核心只做極簡檢查，其餘 schema 限制由工具或人工在 `aos-ctl resume` 前先驗（恢復前驗證，[B-625](../tick/recovery.md)；daemon 不代驗）〔astra 報告必修 2〕。
 
@@ -184,21 +184,21 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 
 依據：〔使用者方向 2026-09-30〕第十九批（argv）、第二十批（環境變數命名、撤 `--check`）、第二十批疑點裁定 1（改：停格靠檔案）；使用者 2026-10-01（目標改成位置參數、結束碼照 C-08、`AOS_TICK_CWD` 取代 `AOS_NODE_DIR` 與 `AOS_TICK_RECORD`、`--firstdo-fsync` 暫緩；同日第二批：目標只能是資料夾）。
 
-## P-204．aos-needs〔使用者方向 2026-09-29；第二十批改寫〕
+## P-204．aos-tick-check-task〔使用者方向 2026-09-29；第二十批改寫；使用者 2026-10-01 第五批改寫〕
 
 任務的成敗怎麼算以 [B-620](../tick.md)「跑每一項」為正本；要停掉本格用停格檔（P-213）。
 
-**`aos-needs`**〔建議預設，未拍板〕：普通程式，前置沒成功就不跑原指令。行為以 [B-621](../tick/needs.md) 為正本。
+**`aos-tick-check-task`**〔使用者 2026-10-01〕：普通程式，自己是任務表上的一項，檢查指定的項有沒有跑好，沒跑好就建停格檔。行為以 [B-621](../tick/check-task.md) 為正本。原本的包裝 `aos-needs <前置…> -- <原指令…>`（回 125）2026-10-01 由它取代。
 
-- argv：`aos-needs <前置任務 id…> -- <原指令…>`；前置至少一個，`--` 必填。
-- 讀本格紀錄 `$AOS_TICK_CWD/.aos/tick/current.json`（P-213）；每個前置都在紀錄的 `tasks` 裡而且 `exit:0`，才 exec 原指令。
-- stdin、stdout、stderr 原樣交給原指令。
+- argv：`aos-tick-check-task [<任務 id…>]`；不寫 id＝檢查本格前面已跑過的每一項。不包別的指令。
+- 讀本格紀錄 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（P-213；狀態資料夾照 `AOS_DIRNAME`，[C-09](../conventions.md)）。紀錄裡的 `id` 跟參數比字串。
+- 指定的 id 都在紀錄的 `tasks` 裡而且 `exit:0`：什麼都不做。有任一個不是 0（含 `signal`）或不在紀錄裡：建停格檔 `<狀態資料夾>/tick/stop`（P-213），內容一行原因，建議 `check_failed: <id>`。
+- stdin 不讀、stdout 不印。
 
 | 結束碼 | 意思 |
 |---|---|
-| 原指令的碼 | 前置都成功，已 exec 原指令 |
-| `1` | 用法錯（沒有前置、少了 `--` 或原指令） |
-| `125` | 沒跑（特別指定的碼）。stderr 印 `needs_unmet: <id>`（前置不在紀錄或不是 0），或 `no_record`（沒有 `AOS_TICK_CWD` 或紀錄讀不到） |
+| `0` | 檢查完：都跑好了（沒動作），或有沒跑好的、已建停格檔——停格是預料之中（[C-08](../conventions.md)） |
+| `1` | 自己的錯：沒有 `AOS_TICK_CWD`、紀錄讀不到等；照 POC 總原則默認正常，出事讓程式自然丟錯 |
 
 ## P-205．aos-git：開格、存檔點、收尾〔使用者方向 2026-09-30；格式為建議預設〕
 
@@ -236,7 +236,7 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 
 ## P-206．系統訊息佇列 aos-mq 與發摘要〔使用者方向 2026-09-30，astra 審整理區同日定案〕
 
-本條只定檔案格式與 argv。行為正本：取 [B-623](../tick/mq.md)；送與發摘要 [B-624](../tick/mq.md)。佇列裡的訊息可以是請求或回應物件〔使用者方向 2026-09-30，修正輪暫定的裁定〕。檔案收件區 `requests/`、`responses/` 的格式屬普通程式，不在本條。
+本條只定檔案格式與 argv。行為正本：取 [B-623](../tick/mq.md)；送 [B-624](../tick/mq.md)。**發摘要 `aos-publish` 那列 2026-10-01 搬到[暫緩區](../deferred/protocol/tick.md#暫緩p-206-aos-publish-那列發摘要)**〔使用者 2026-10-01 第五批〕，標題的「與發摘要」只是舊名，條號不變。佇列裡的訊息可以是請求或回應物件〔使用者方向 2026-09-30，修正輪暫定的裁定〕。檔案收件區 `requests/`、`responses/` 的格式屬普通程式，不在本條。
 
 ### argv 與結束碼〔建議預設〕
 
@@ -244,14 +244,13 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 |---|---|---|
 | `aos-mq get` | `mq-get` | 用 `node.take` 取本工作資料夾佇列裡的訊息，取到空為止 |
 | `aos-mq post` | `mq-post` | 把 `.aos/mq/post/` 的訊息一件一件用 `node.send` 送出 |
-| `aos-publish` | `summary` | 發布摘要 |
 
-三者都是系統級任務，都在工作資料夾（cwd）跑、不收其他參數。在 tick 內靠繼承的鎖；不在 tick 內時自己取同一把鎖，拿不到回 75。「在不在 tick 內」靠暫緩區的「鎖 fd 傳給任務」（[tick 暫緩區](../deferred/tick.md#暫緩b-602-完整互斥的其餘細節)）；最簡鎖下，任務在 tick 內去取鎖一定拿不到，這段要等它回來再對。
+兩者都是系統級任務，都在工作資料夾（cwd）跑、不收其他參數。在 tick 內靠繼承的鎖；不在 tick 內時自己取同一把鎖，拿不到回 75。「在不在 tick 內」靠暫緩區的「鎖 fd 傳給任務」（[tick 暫緩區](../deferred/tick.md#暫緩b-602-完整互斥的其餘細節)）；最簡鎖下，任務在 tick 內去取鎖一定拿不到，這段要等它回來再對。
 
 | 結束碼 | 意思 |
 |---|---|
 | `0` | 成功（含沒事做、本格沒有通道） |
-| `1` | 有件處理失敗（例如 `node.take` 回錯、發布摘要失敗、寫檔 I/O 錯）；或用法錯 |
+| `1` | 有件處理失敗（例如 `node.take` 回錯、寫檔 I/O 錯）；或用法錯 |
 | `75` | 不在 tick 內又拿不到鎖（特別指定的碼） |
 
 〔建議預設，未拍板〕daemon 訊息部件關閉：`aos-mq get` 回 0；`aos-mq post` 有待送件回 1，stderr 印 `post_failed: <to> <id> not_available`，失敗檔 `error.code` 為 `not_available`；沒件回 0。行為見 [B-614](../deferred/daemon/messaging.md)、[B-624](../tick/mq.md)，RPC 錯誤碼見 [P-119](../deferred/protocol/daemon/channel.md)。
@@ -298,7 +297,7 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 | 工作資料夾的帳號（跑 tick 的帳號） | 根路徑可遍歷；repo 讀寫；`requests/`、`responses/` 可清理 |
 | 檔案投件的程式 | 必要父目錄的 traverse；`requests/` 或 `responses/` 及其 `.tmp/` 的寫與遍歷 |
 | 寄件 tick 的帳號 | 收件 tick 的 `.aos/mq/get/` 寫與遍歷，以及上層各段的 traverse（[B-614](../deferred/daemon/messaging.md)） |
-| 只讀摘要的上層 | `.aos/summary/` 只授 traverse、`published.json` 只授 read（[P-307](../../protocol/messages.md)） |
+| 只讀摘要的上層 | `.aos/summary/` 只授 traverse、`published.json` 只授 read（[P-307](../../protocol/messages.md)）。發摘要 2026-10-01 搬暫緩區，現在沒有人寫 `published.json` |
 
 共享群組與 setgid 目錄，用 helper 的固定動作 `group_create`、`group_add_member`、`chgrp`（參數見 [P-107](../deferred/protocol/daemon/provision-and-runner.md)）。cgroup 框交給工作資料夾的帳號由舊 daemon 開格前自動做，不是佈建動作（[B-605](../deferred/daemon/cgroup.md)，在暫緩區）。
 
@@ -361,7 +360,7 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 
 ## P-213．每項結束碼紀錄、停格檔與擋板檔〔建議預設，未拍板〕
 
-行為正本：紀錄 [B-633](../tick.md)；停格檔與擋板檔 [B-620](../tick.md)（擋板與停格檔的機制使用者之後會詳細設計，目前是〔暫定〕；2026-10-01 使用者：先照現狀）。本條只定檔名與內容。
+行為正本：紀錄 [B-633](../tick.md)；停格檔與擋板檔 [B-620](../tick.md)（擋板與停格檔的機制使用者之後會詳細設計，目前是〔暫定〕；2026-10-01 使用者：先照現狀；停格檔的未來方向見 B-620「停格檔與擋板檔」，現在不做）。本條只定檔名與內容。
 
 ### 結束碼紀錄
 

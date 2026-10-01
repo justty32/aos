@@ -60,10 +60,19 @@
         "_version": 1
       },
       "argv": [
+        "aos-tick-check-task",
+        "talk"
+      ],
+      "id": "check-talk",
+      "kind": "custom"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
         "aos-cg",
-        "--",
-        "aos-needs",
-        "talk",
         "--",
         "my-report"
       ],
@@ -117,17 +126,6 @@
         "post"
       ],
       "id": "mq-post",
-      "kind": "system"
-    },
-    {
-      "_metainfo": {
-        "_type": "posix",
-        "_version": 1
-      },
-      "argv": [
-        "aos-publish"
-      ],
-      "id": "summary",
       "kind": "system"
     }
   ]

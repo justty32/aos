@@ -16,7 +16,7 @@
 
 ## 怎麼用這份 plan
 
-1. 一次做一段。每段有自己的細部檔（目前寫了[第一段](m1-tick-core.md)、[第三段](m3-daemon-core.md)與它之後的[控制模組](m3n-control-module.md)，其他段開工前再寫）。
+1. 一次做一段。每段有自己的細部檔（目前寫了[第一段](m1-tick-core.md)、[第二段（草稿，等使用者裁定）](m2-system-tasks.md)、[第三段](m3-daemon-core.md)與它之後的[控制模組](m3n-control-module.md)，其他段開工前再寫）。
 2. 每段拆成幾步，每步都寫：要做到什麼、對哪幾條 spec、**要使用者裁定的點**（沒有就寫無）、驗收。
 3. 每段由 AI 隊實作，照驗收那一欄試跑；做完交使用者看。
 4. 使用者看結果、裁定該段的待問；裁定後 AI 隊照改。檔案怎麼切、函式叫什麼 AI 隊自己定，標「建議」的只是參考。
@@ -35,8 +35,8 @@
 
 ### 第二段：不靠 daemon 的系統級任務與普通程式
 
-- **目標**：掛在任務表上的 `aos-git open／mark／close`、`aos-publish`、`aos-clean`，普通程式 `aos-needs`，以及 tick 外的 ~~`aos-config-add`~~（2026-10-01 使用者裁定搬[暫緩區](../spec/settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)）、恢復前驗證；兩版標準任務表範本跑得起來。
-- **主要 spec**：[B-630、B-622、B-632、B-621、B-624（發摘要）、B-625、B-629](../spec/settled/tick/git.md)；[B-404](../spec/base/storage.md)；格式 [P-204、P-205、P-210](../spec/settled/protocol/tick.md)（~~P-207~~ 隨 `aos-config-add` 搬暫緩區）。
+- **目標**：掛在任務表上的 `aos-git open／mark／close`、~~`aos-publish`~~（2026-10-01 第五批搬[暫緩區](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)）、`aos-clean`，普通程式 `aos-tick-check-task`（2026-10-01 第五批由 `aos-needs` 改寫），以及 tick 外的 ~~`aos-config-add`~~（2026-10-01 使用者裁定搬[暫緩區](../spec/settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)）、恢復前驗證；兩版標準任務表範本跑得起來。細部（草稿）見 [m2-system-tasks.md](m2-system-tasks.md)。
+- **主要 spec**：[B-630、B-622、B-632、B-621、~~B-624（發摘要）~~、B-625、B-629](../spec/settled/tick/git.md)；[B-404](../spec/base/storage.md)；格式 [P-204、P-205、P-210](../spec/settled/protocol/tick.md)（~~P-207~~ 隨 `aos-config-add` 搬暫緩區）。
 - **可單獨跑的樣子**：一樣直接跑 `aos-tick`。有 git 的機器上每格最多一個 commit；沒 git 時 `aos-git` 只印 `no_git`、回 0。
 - **界線**：全部是「讀寫檔案」就做得完的事，不碰通道。恢復前驗證只寫檢查本身，送 `node.resume` 等第三段。
 
@@ -77,7 +77,7 @@
 | 東西 | 原本 | 挪到 | 為什麼 |
 |---|---|---|---|
 | `aos-mq get`／`post` | 第二段 | 第四段 | 它只走通道；第二段沒有 daemon，寫出來只會「沒通道、回 0」，等於空殼。跟訊息部件一起做才驗得到 |
-| `aos-needs` | 沒排 | 第二段 | 只讀結束碼紀錄，不靠 daemon；也是第一段紀錄格式的第一個使用者 |
+| `aos-needs`（2026-10-01 改寫成 `aos-tick-check-task`） | 沒排 | 第二段 | 只讀結束碼紀錄，不靠 daemon；也是第一段紀錄格式的第一個使用者 |
 | `aos-cg` | 沒排 | 第四段 | 有 cgroup 時要在 daemon 開的 node 框裡才有意義；沒 cgroup 的退回做法可以先寫，但驗不到主路線 |
 
 ## 跨段待問
