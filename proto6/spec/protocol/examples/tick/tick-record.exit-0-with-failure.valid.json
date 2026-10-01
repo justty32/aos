@@ -1,13 +1,11 @@
 {
   "version": 1,
   "seq": 1236,
+  "ran": 2,
   "tasks": [
     {
-      "id": "mq-get",
-      "exit": 0
-    },
-    {
       "id": "agent",
+      "index": 1,
       "signal": 9
     }
   ],

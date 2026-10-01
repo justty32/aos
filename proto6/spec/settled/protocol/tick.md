@@ -200,9 +200,9 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 
 **`aos-tick-check-task`**〔使用者 2026-10-01〕：普通程式，自己是任務表上的一項，檢查指定的項有沒有跑好，沒跑好就建停格檔。行為以 [B-621](../tick/check-task.md) 為正本。原本的包裝 `aos-needs <前置…> -- <原指令…>`（回 125）2026-10-01 由它取代。
 
-- argv：`aos-tick-check-task [<任務 id…>]`；不寫 id＝檢查本格前面已跑過的每一項。不包別的指令。
+- argv：`aos-tick-check-task [<任務 id…>]`；不寫 id＝檢查本格到目前為止跑過的每一項。不包別的指令。
 - 讀本格紀錄 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（P-213；狀態資料夾照 `AOS_DIRNAME`，[C-09](../conventions.md)）。紀錄裡的 `id` 跟參數比字串。
-- 指定的 id 都在紀錄的 `tasks` 裡而且 `exit:0`：什麼都不做。有任一個不是 0（含 `signal`）或不在紀錄裡：建停格檔 `<狀態資料夾>/tick/stop`（P-213），內容一行原因，建議 `check_failed: <id>`。
+- 〔使用者 2026-10-01 第八批：紀錄只記不是 0 的〕寫了 id：有任一個出現在紀錄的 `tasks`（失敗清單）裡＝建停格檔 `<狀態資料夾>/tick/stop`（P-213），內容一行原因，建議 `check_failed: <id>`；都沒出現＝當成功、什麼都不做（不分辨「還沒跑」，照 POC 默認一切正常，使用者把它排在那些項後面）。不寫 id：`tasks` 不是空的就建停格檔，空的就什麼都不做。
 - stdin 不讀、stdout 不印。
 
 | 結束碼 | 意思 |
@@ -379,24 +379,25 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 - **寫法**：只有核心寫；每次整份重寫（暫存檔→rename），預設不 fsync。斷電後可能倒退或壞掉，不保證（[B-633](../tick.md)）。
 
 ```json
-{"version":1,"seq":N,"started_at_ms":毫秒,
- "tasks":[{"id":…,"exit":碼}|{"id":…,"signal":號}],
+{"version":1,"seq":N,"started_at_ms":毫秒,"ran":跑了幾項,
+ "tasks":[{"id":…,"index":位置,"exit":非0碼}|{"id":…,"index":位置,"signal":號}],
  "ended":bool,"exit"?:0,"stopped_after"?:"<id>",
- "hooks"?:{"after_all":[{"id":…,"exit":碼}|{"id":…,"signal":號}]}}
+ "hooks"?:{"after_all":[{"id":…,"index":位置,"exit":非0碼}|{"id":…,"index":位置,"signal":號}]}}
 ```
 
 | 欄位 | 約束 |
 |---|---|
 | `seq` | 本資料夾的格數，共用 `TickSeq`（從 1 起）。沒有紀錄的格（busy、blocked、bad_table）不佔號 |
-| `tasks` | 已跑完的項，照順序；`id` 是任務表那一項的 id（沒寫 id 時是位置字串，例如 `"3"`）；每項 `exit`（0～255）與 `signal`（1～64）二選一，照實記原碼。沒跑到的不列 |
+| `ran` | 本格到目前為止跑完幾項 tasks（含結束碼不是 0 的；被停格檔擋掉、沒跑到的不算）。開格時 `0`，每跑完一項加 1、整份重寫〔使用者 2026-10-01 第八批〕 |
+| `tasks` | 已跑完**而且結束碼不是 0** 的項，照順序；**結束碼 0 的不記**〔使用者 2026-10-01 第八批：「tasks如果結果是0，那就不用紀錄了。」〕。每筆 `id`（任務表那一項的 id，沒寫 id 時是位置字串，例如 `"3"`）、`index`（它在 `tasks` 陣列的位置，從 0 起，同 `AOS_TASK_INDEX`），加上 `exit`（1～255）與 `signal`（1～64）二選一，照實記原碼。沒跑到的不列 |
 | `ended` | 照表跑完或被停格檔停下時是 true，這時必須有 `exit`；false 時不得有 `exit`、`stopped_after`。tick 中途出錯或被殺時停在 false |
 | `exit` | 這格 tick 的結束碼。有紀錄收尾時 tick 一定回 0，所以只會是 `0`（busy、blocked、bad_table 不寫紀錄） |
-| `stopped_after` | 被停格檔停下時，是哪一項跑完後停的，記那一項的 id；只在 `ended:true` 時可有，這時 `exit` 也是 `0` |
+| `stopped_after` | 被停格檔停下時，是哪一項跑完後停的，記那一項的 id（就是位置 `ran-1` 那一項；它成功時不在 `tasks` 裡）；只在 `ended:true` 時可有，這時 `exit` 也是 `0` |
 | `started_at_ms` | 只給人看，不參與計算 |
-| `hooks` | 外掛掛點的紀錄（[B-635](../tick/hooks.md)）；只在任務表寫了 `hooks.after_all` 的格才有，而且只在 `ended:true` 時可有。收尾之後先寫 `{"after_all":[]}`，每跑完一個 hook 加一項 |
-| `hooks.after_all` | 已跑完的 `after_all` 項，照順序；每項格式同 `tasks`（`id` 是 hook 項的 id，沒寫是它在 `after_all` 的位置字串；`exit` 與 `signal` 二選一）。沒跑到的不列。`hooks` 裡其他鍵留給之後的掛點 |
+| `hooks` | 外掛掛點的紀錄（[B-635](../tick/hooks.md)）；只在任務表寫了 `hooks.after_all` 的格才有，而且只在 `ended:true` 時可有。收尾之後先寫 `{"after_all":[]}`，每跑完一個結束碼不是 0 的 hook 加一筆 |
+| `hooks.after_all` | 已跑完**而且結束碼不是 0** 的 `after_all` 項，照順序；每筆格式同 `tasks`（`id` 是 hook 項的 id，沒寫是它在 `after_all` 的位置字串；`index` 是它在 `after_all` 的位置；`exit` 與 `signal` 二選一）。結束碼 0 的不記〔第八批：「hooks也是」〕；hooks 不記 `ran`（hooks 不看停格檔、會全跑）。沒跑到的不列。`hooks` 裡其他鍵留給之後的掛點 |
 
-schema 管得到的：`exit` 只收 0、`ended` 跟 `exit`／`stopped_after`／`hooks` 的搭配、每項（含 `hooks.after_all` 每項）`exit` 與 `signal` 二選一。schema 管不到、由 [validate.py](../../protocol/examples/messages/validate.py) 補查的：`stopped_after` 是 `tasks` 的最後一項。
+schema 管得到的：`exit` 只收 0、`ran` 必填、`ended` 跟 `exit`／`stopped_after`／`hooks` 的搭配、每筆（含 `hooks.after_all` 每筆）必有 `index`、`exit`（1～255，不收 0）與 `signal` 二選一。schema 管不到、由 [validate.py](../../protocol/examples/messages/validate.py) 補查的：`tasks`、`hooks.after_all` 的 `index` 嚴格遞增；`tasks` 的 `index` 都小於 `ran`；有 `stopped_after` 時 `ran` 至少 1，而且 `tasks` 最後一筆的 `index` 是 `ran-1` 時它的 `id` 要等於 `stopped_after`（停下的那項失敗了）。
 
 ### 停格檔與擋板檔
 
@@ -405,4 +406,4 @@ schema 管得到的：`exit` 只收 0、`ended` 跟 `exit`／`stopped_after`／`
 | `.aos/tick/stop`（停格檔，ignored） | 任何內容都算；建議一行 UTF-8 原因，核心印在 stderr 的 `stopped:` 後面 | 只停本格，這格照樣回 0，見 [B-620](../tick.md) |
 | `.aos/tick-blocked`（擋板檔，ignored） | 一行 UTF-8 原因，核心印在 stderr 的 `blocked:` 後面 | 擋之後各格（不開格、回 0），見 [B-620](../tick.md) |
 
-範例：正例 [跑到一半](../../protocol/examples/tick/tick-record.minimal.valid.json)、[全部成功](../../protocol/examples/tick/tick-record.done.valid.json)、[被停格檔停下](../../protocol/examples/tick/tick-record.stopped-exit-0.valid.json)、[有任務失敗照樣回 0](../../protocol/examples/tick/tick-record.exit-0-with-failure.valid.json)、[沒寫 id 的位置字串](../../protocol/examples/tick/tick-record.position-id.valid.json)、[停下後照跑 hooks](../../protocol/examples/tick/tick-record.hooks.valid.json)（B-635）；反例 [沒收場卻有 hooks](../../protocol/examples/tick/tick-record.hooks-not-ended.invalid.json)、 [同一項同時有 exit 與 signal](../../protocol/examples/tick/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](../../protocol/examples/tick/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 stopped_after](../../protocol/examples/tick/tick-record.stopped-not-ended.invalid.json)、[整格回 1](../../protocol/examples/tick/tick-record.stopped-exit-1.invalid.json)、[整格回 2](../../protocol/examples/tick/tick-record.exit-2.invalid.json)、[整格回 3](../../protocol/examples/tick/tick-record.exit-3.invalid.json)；補查反例 [停在不是最後一項](../../protocol/examples/tick/tick-record.stopped-not-last.invalid.json)。
+範例：正例 [跑到一半](../../protocol/examples/tick/tick-record.minimal.valid.json)、[全部成功](../../protocol/examples/tick/tick-record.done.valid.json)、[被停格檔停下](../../protocol/examples/tick/tick-record.stopped-exit-0.valid.json)、[有任務失敗照樣回 0](../../protocol/examples/tick/tick-record.exit-0-with-failure.valid.json)、[沒寫 id 的位置字串](../../protocol/examples/tick/tick-record.position-id.valid.json)、[停下後照跑 hooks](../../protocol/examples/tick/tick-record.hooks.valid.json)（B-635）；反例 [沒收場卻有 hooks](../../protocol/examples/tick/tick-record.hooks-not-ended.invalid.json)、 [同一項同時有 exit 與 signal](../../protocol/examples/tick/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](../../protocol/examples/tick/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 stopped_after](../../protocol/examples/tick/tick-record.stopped-not-ended.invalid.json)、[整格回 1](../../protocol/examples/tick/tick-record.stopped-exit-1.invalid.json)、[整格回 2](../../protocol/examples/tick/tick-record.exit-2.invalid.json)、[整格回 3](../../protocol/examples/tick/tick-record.exit-3.invalid.json)；[記了結束碼 0](../../protocol/examples/tick/tick-record.zero-recorded.invalid.json)、[hook 記了結束碼 0](../../protocol/examples/tick/tick-record.hook-zero-recorded.invalid.json)、[沒有 ran](../../protocol/examples/tick/tick-record.no-ran.invalid.json)、[沒有 index](../../protocol/examples/tick/tick-record.no-index.invalid.json)；補查反例 [停在不是最後一項](../../protocol/examples/tick/tick-record.stopped-not-last.invalid.json)、[index 不小於 ran](../../protocol/examples/tick/tick-record.index-not-below-ran.invalid.json)、[停下卻一項都沒跑](../../protocol/examples/tick/tick-record.stopped-ran-0.invalid.json)。

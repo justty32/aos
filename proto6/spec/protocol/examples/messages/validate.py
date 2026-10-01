@@ -65,10 +65,23 @@ def extra_errors(path, value):
     """schema 表達不了的跨欄位關係；invalid 範例只要 schema 或這裡任一處報錯就算擋下。"""
     errors = []
     if path.parent.name == 'tick' and path.name.startswith('tick-record.') and isinstance(value, dict):
-        # B-633、P-213：stopped_after 是最後一項。（exit 只收 0 由 schema 管；任務成敗不影響整格碼。）
+        # B-633、P-213（第八批：tasks 只記不是 0 的，每筆帶 index；ran＝跑了幾項）。exit 只收 0 由 schema 管。
         tasks = value.get('tasks') or []
-        if 'stopped_after' in value and (not tasks or tasks[-1].get('id') != value['stopped_after']):
-            errors.append('stopped_after is not the last task')
+        ran = value.get('ran')
+        idx = [t.get('index') for t in tasks if isinstance(t, dict)]
+        if any(not isinstance(i, int) for i in idx) or idx != sorted(set(idx)):
+            errors.append('task index not strictly increasing')
+        elif isinstance(ran, int) and idx and idx[-1] >= ran:
+            errors.append('task index not below ran')
+        hidx = [h.get('index') for h in ((value.get('hooks') or {}).get('after_all') or []) if isinstance(h, dict)]
+        if any(not isinstance(i, int) for i in hidx) or hidx != sorted(set(hidx)):
+            errors.append('hook index not strictly increasing')
+        # stopped_after 是位置 ran-1 那一項：ran 至少 1；那一項失敗時就是 tasks 最後一筆，id 要對得上
+        if 'stopped_after' in value and isinstance(ran, int):
+            if ran < 1:
+                errors.append('stopped_after but ran is 0')
+            elif tasks and tasks[-1].get('index') == ran - 1 and tasks[-1].get('id') != value['stopped_after']:
+                errors.append('stopped_after is not the last task')
     # P-120「頂層沒有 interval_ms 時每一項必填」已由 daemon-core-config 的 if／then 表達，不再另查。
     return errors
 

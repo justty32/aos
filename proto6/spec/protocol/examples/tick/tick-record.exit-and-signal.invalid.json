@@ -1,10 +1,12 @@
 {
   "version": 1,
   "seq": 1234,
+  "ran": 1,
   "tasks": [
     {
       "id": "agent",
-      "exit": 0,
+      "index": 0,
+      "exit": 1,
       "signal": 9
     }
   ],

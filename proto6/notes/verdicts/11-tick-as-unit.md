@@ -463,3 +463,18 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **node**：tick 這邊不做 node 模組。「找 node」（有 `.aos/tasks.json` 的資料夾）若要做，是 daemon 的模組；上下層照路徑算；往上叫醒用 [hooks](../../spec/settled/tick/hooks.md) 的 `after_all` 掛 `aos-ctl wake <上層>`（前提：daemon `insts` 的鍵直接寫資料夾）。上層 git 不要提交下層 node 的 `.aos` 是 git 的事，跟 git 一起想。**使用者還在想，感覺總有哪裡不對**。
 - **逾時**：不做模組，直接用系統的 `timeout`（如 `["timeout","300","make"]`，超時回 124，照一般失敗記）；整格逾時包在 daemon 那項 inst 外。要所有項套同一時限時再考慮 `modules.timeout`。
 - **其餘候選**（收尾、關卡、收屍等）：用 hooks 實現或之後再說。停格與 git 先不動（使用者：「算了，停格這一塊先不動吧。git也先不動。」）。
+
+<a id="2026-10-01-第八批紀錄只記非-0"></a>
+
+## 2026-10-01 第八批：紀錄只記非 0
+
+〔使用者裁定 2026-10-01〕使用者原話：「記錄這一塊，tasks如果結果是0，那就不用紀錄了。hooks也是。」AI 隊提的做法使用者回「好」。
+
+- **`tasks` 只記結束碼不是 0 的項**，每筆 `{"id":…,"index":…,"exit":…}`（`index`＝它在 `tasks` 陣列的位置，同 `AOS_TASK_INDEX`；被訊號殺的照舊記 `signal` 不記 `exit`）。結束碼 0 的不記。
+- **加 `ran`**：本格到目前為止跑完幾項 tasks（含失敗的；被停格檔擋掉的不算）。開格時 0，每跑完一項加 1、整份重寫。
+- **`hooks.after_all` 一樣只記不是 0 的**，每筆 `{"id","index","exit"}`（index 是 hook 在 `after_all` 的位置）。hooks 不記 `ran`〔AI 隊定，簡單為主〕：hooks 不看停格檔、一定全跑，開始前先寫的 `after_all: []` 就表示開始跑了；tick 跑到一半被殺時看不出跑到第幾個，照 POC 默認不管。
+- **`stopped_after` 照舊**記停下那項的 id；它就是位置 `ran-1` 那一項（成功的話不在 `tasks` 裡）。validate.py 的補充檢查改成：`index` 嚴格遞增、都小於 `ran`；有 `stopped_after` 時 `ran` 至少 1，`tasks` 最後一筆的 `index` 是 `ran-1` 時 id 要對得上。
+- **`aos-tick-check-task` 的判斷跟著改**（B-621、P-204；程式還沒寫）：寫了 id＝有出現在本格紀錄的失敗清單才建停格檔，沒出現當成功（不分辨「還沒跑」，照 POC 默認一切正常，使用者把它排在那些項後面）；不寫 id＝失敗清單非空就停格。
+- **另一條**：hook 跑到時展開失敗→tick 回 1，但紀錄已是 `ended:true`／`exit:0`，兩邊對不上。使用者 2026-10-01：照 POC 默認一切正常，**先不管**。
+
+改到的地方：程式 `lib/aos_tick_record.py`、`lib/aos_tick.py`、`lib/aos_tick_hooks.py`；測試 `tests/test_tick.py`（新增 `RecordOnlyFailures`）、`tests/test_tick_hooks.py`；[tick 核心](../../spec/settled/tick.md) B-620、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-204、P-213；[tick/hooks.md](../../spec/settled/tick/hooks.md)；[tick/check-task.md](../../spec/settled/tick/check-task.md)；[tick/git.md](../../spec/settled/tick/git.md)（`kind` 回查與組的成敗判法各一句）；[驗收入口](../../spec/conformance.md)一句；schema `tick-record` 與 `examples/tick/tick-record.*`（14 份改寫、6 份新反例）、`examples/messages/validate.py` 補充檢查；[src/py README](../../src/py/README.md)；[plan m1-tick-core](../../plan/m1-tick-core.md)、[m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註、[m2-system-tasks](../../plan/m2-system-tasks.md)（步驟 1、4 與裁定紀錄）。

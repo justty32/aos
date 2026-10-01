@@ -2,17 +2,16 @@
   "version": 1,
   "seq": 7,
   "started_at_ms": 1790000180000,
+  "ran": 3,
   "tasks": [
     {
-      "id": "0",
-      "exit": 0
-    },
-    {
       "id": "named",
+      "index": 1,
       "exit": 2
     },
     {
       "id": "2",
+      "index": 2,
       "signal": 15
     }
   ],

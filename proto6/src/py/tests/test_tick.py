@@ -129,7 +129,7 @@ class Step1Target(TickCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.exists("n/from-ref"))
         self.assertFalse(self.exists("wrong.ran"))
-        self.assertEqual(self.rec(cwd="n")["tasks"], [{"id": "r", "exit": 0}])
+        self.assertEqual((self.rec(cwd="n")["ran"], self.rec(cwd="n")["tasks"]), (1, []))
 
     def test_metainfo_optional(self):
         # 裁定 2026-10-01：頂層 _metainfo 不是必填；每項 _metainfo 照 inst 規則可省（沒寫＝posix 第 1 版）
@@ -139,7 +139,7 @@ class Step1Target(TickCase):
         r = self.tick()
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(self.read("ran"), "a\nb\n")
-        self.assertEqual(self.rec()["tasks"], [{"id": "a", "exit": 0}, {"id": "b", "exit": 0}])
+        self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (2, []))
 
     def test_bad_item_metainfo_only_when_run(self):
         # 裁定 2026-10-01：每項 _metainfo 跑到那一項才照 inst 規則驗；驗不過＝既有「跑到某項展開失敗」行為
@@ -154,7 +154,7 @@ class Step1Target(TickCase):
         self.tasks(sh("a", "echo > .aos/tick/stop"), bad)
         r = self.tick()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.rec()["tasks"], [{"id": "a", "exit": 0}])
+        self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (1, []))
 
     def test_bad_item_metainfo_value_is_error(self):
         # 每項沒寫 `_metainfo` 照跑（aos_inst 當 posix 第 1 版）；寫了但值不對，極簡檢查不看，
@@ -344,7 +344,7 @@ class Step4Check(TickCase):
         r = self.tick()
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(self.read("ran"), "a\na2\nb\n")
-        self.assertEqual([t["id"] for t in self.rec()["tasks"]], ["a", "a", "b"])
+        self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (3, []))
 
     def test_no_id(self):
         # 使用者 2026-10-01：沒寫 id 就用它在 tasks 陣列的位置（從 0 起）轉字串；撞了不管
@@ -356,8 +356,8 @@ class Step4Check(TickCase):
         self.assertEqual(self.read("id.txt"), "1\n")
         self.assertFalse(self.exists("d.ran"))
         rec = self.rec()
-        self.assertEqual(rec["tasks"], [{"id": "1", "exit": 0}, {"id": "1", "exit": 4},
-                                        {"id": "2", "exit": 0}])
+        self.assertEqual(rec["tasks"], [{"id": "1", "index": 1, "exit": 4}])   # 0 不記（第八批）
+        self.assertEqual(rec["ran"], 3)
         self.assertEqual(rec["stopped_after"], "2")
 
 
@@ -390,7 +390,7 @@ class Step4Defaults(TickCase):
                          "build C.UTF-8 %s %s\nclean C.UTF-8 %s\n" % (work, self.d, work))
         self.assertEqual(self.read("reports/logs/tasks.log"), "report %s\n" % reports)
         # tick 自己的 cwd 不動：鎖、紀錄仍在工作資料夾的 .aos/，work/ 底下沒有
-        self.assertEqual([t["id"] for t in self.rec()["tasks"]], ["build", "report", "clean"])
+        self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (3, []))
         self.assertTrue(self.exists(".aos/tick.lock"))
         self.assertFalse(self.exists("work/.aos"))
         check_record(self, self.rec())
@@ -438,7 +438,7 @@ class Step4Defaults(TickCase):
         self.put({"tasks": [sh("a", "echo > .aos/tick/stop"), broken]})
         r = self.tick()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.rec()["tasks"], [{"id": "a", "exit": 0}])
+        self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (1, []))
         self.put({"tasks": [broken]})                             # 對照：跑到時才解，解不開自然丟錯回 1
         r = self.tick()
         self.assertEqual(r.returncode, 1)
@@ -492,12 +492,12 @@ class Step5Run(TickCase):
         self.assertNotIn("AOS_TICK_RECORD", env)             # 使用者 2026-10-01 拿掉
         self.assertNotIn("AOS_NODE_DIR", env)                # 改名 AOS_TICK_CWD
         self.assertNotIn("AOS_TICK_LOCK_FD", env)
-        self.assertEqual(json.loads(self.read("rec.json"))["tasks"], [{"id": "a", "exit": 0}])
+        seen = json.loads(self.read("rec.json"))                # b 跑的時候：a 跑完、0 沒記
+        self.assertEqual((seen["ran"], seen["tasks"]), (1, []))
         self.assertNotIn("user_mismatch", r.stderr)          # user 不看，照 tick 自己的帳號跑
-        self.assertEqual(self.rec()["tasks"], [{"id": "a", "exit": 0}, {"id": "b", "exit": 0},
-                                               {"id": "c", "signal": 9}, {"id": "d", "exit": 0},
-                                               {"id": "f", "exit": 3},
-                                               {"id": "g", "exit": 0}])
+        self.assertEqual(self.rec()["tasks"], [{"id": "c", "index": 2, "signal": 9},
+                                               {"id": "f", "index": 4, "exit": 3}])
+        self.assertEqual(self.rec()["ran"], 6)
         check_record(self, self.rec())
 
 class Step6Stop(TickCase):
@@ -510,7 +510,7 @@ class Step6Stop(TickCase):
         self.assertIn("stopped: 手動停", r.stderr)
         self.assertFalse(self.exists("c.ran"))
         rec = self.rec()
-        self.assertEqual((rec["stopped_after"], rec["exit"], len(rec["tasks"])), ("b", 0, 2))
+        self.assertEqual((rec["stopped_after"], rec["exit"], rec["ran"], rec["tasks"]), ("b", 0, 2, []))
         check_record(self, rec)
         self.tasks(sh("a", "true"), sh("b", "true"), sh("c", "touch c.ran"))
         self.assertEqual(self.tick().returncode, 0)
@@ -524,6 +524,7 @@ class Step6Stop(TickCase):
         self.assertFalse(self.exists("c.ran"))
         rec = self.rec()
         self.assertEqual((rec["stopped_after"], rec["exit"]), ("b", 0))
+        self.assertEqual((rec["ran"], rec["tasks"]), (2, [{"id": "a", "index": 0, "exit": 1}]))
         check_record(self, rec)
 
 
@@ -537,9 +538,10 @@ class ExitCodes(TickCase):
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertTrue(self.exists("e.ran"))             # 回 2、回錯都照常跑下一項
         rec = self.rec()
-        self.assertEqual(rec["tasks"], [{"id": "a", "exit": 1}, {"id": "b", "exit": 2},
-                                        {"id": "c", "exit": 127}, {"id": "d", "signal": 2},
-                                        {"id": "e", "exit": 0}])     # 照實記原碼
+        self.assertEqual(rec["tasks"], [{"id": "a", "index": 0, "exit": 1}, {"id": "b", "index": 1, "exit": 2},
+                                        {"id": "c", "index": 2, "exit": 127},
+                                        {"id": "d", "index": 3, "signal": 2}])     # 照實記原碼；e 是 0 不記
+        self.assertEqual(rec["ran"], 5)
         self.assertEqual(rec["exit"], 0)
         check_record(self, rec)
 
@@ -659,6 +661,44 @@ class EmptyDirName(TickCase):
         self.assertTrue(self.exists(".aos/tick/current.json"))
         self.assertFalse(self.exists("tick"))
 
+class RecordOnlyFailures(TickCase):
+    """第八批（使用者 2026-10-01）：「tasks如果結果是0，那就不用紀錄了。」——`tasks` 只記不是 0 的，
+    每筆 {"id","index","exit"}（訊號殺的是 "signal"）；`ran`＝本格到目前跑了幾項（含失敗的，被停格擋掉的不算）。"""
+
+    def test_zero_not_recorded_nonzero_with_index_and_ran(self):
+        self.tasks(sh("a", "true"), {"argv": ["sh", "-c", "exit 7"]},
+                   sh("c", CAT_REC + " > c.json"), sh("d", "exit 1"), sh("e", CAT_REC + " > e.json"))
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        c, e = json.loads(self.read("c.json")), json.loads(self.read("e.json"))
+        self.assertEqual((c["ran"], c["tasks"]), (2, [{"id": "1", "index": 1, "exit": 7}]))   # 每跑完一項就更新
+        self.assertEqual((e["ran"], e["tasks"]), (4, [{"id": "1", "index": 1, "exit": 7},
+                                                      {"id": "d", "index": 3, "exit": 1}]))
+        rec = self.rec()
+        self.assertEqual((rec["ran"], rec["tasks"], rec["ended"]), (5, e["tasks"], True))
+        check_record(self, rec)
+
+    def test_all_zero_empty_and_open_ran_0(self):
+        self.tasks(sh("a", CAT_REC + " > a.json"), sh("b", "true"))
+        self.assertEqual(self.tick().returncode, 0)
+        a = json.loads(self.read("a.json"))
+        self.assertEqual((a["ran"], a["tasks"], a["ended"]), (0, [], False))      # 開格時 ran 是 0
+        self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (2, []))
+
+    def test_stop_ran_excludes_skipped_and_last_json(self):
+        # 停在 b（b 自己失敗）：c 沒跑、不算進 ran；下一格的 last.json 原樣帶著
+        self.tasks(sh("a", "exit 3"), sh("b", "echo 停 > .aos/tick/stop; exit 9"), sh("c", "exit 5"))
+        self.assertEqual(self.tick().returncode, 0)
+        first = self.rec()
+        self.assertEqual((first["ran"], first["stopped_after"]), (2, "b"))
+        self.assertEqual(first["tasks"], [{"id": "a", "index": 0, "exit": 3}, {"id": "b", "index": 1, "exit": 9}])
+        check_record(self, first)
+        self.tasks(sh("x", "true"))
+        self.assertEqual(self.tick().returncode, 0)
+        self.assertEqual(self.rec("last"), first)
+        self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (1, []))
+
+
 class Step9Whole(TickCase):
 
     def test_b626_only_true_no_daemon(self):
@@ -673,8 +713,18 @@ def check_record(case, rec):
     """P-213 的跨欄位規則＋（有 jsonschema 時）tick-record schema。"""
     if rec.get("ended"):
         case.assertEqual(rec["exit"], 0)                  # 寫得到收尾就是 0，任務成敗不影響
-        if "stopped_after" in rec:
-            case.assertEqual(rec["tasks"][-1]["id"], rec["stopped_after"])
+        if "stopped_after" in rec:                     # 第八批：停在第 ran-1 項；它失敗的話是 tasks 最後一筆
+            case.assertGreaterEqual(rec["ran"], 1)
+            if rec["tasks"] and rec["tasks"][-1]["index"] == rec["ran"] - 1:
+                case.assertEqual(rec["tasks"][-1]["id"], rec["stopped_after"])
+    else:
+        case.assertNotIn("exit", rec)
+    idx = [t["index"] for t in rec["tasks"]]           # 第八批：只記不是 0 的，index 遞增、都 < ran
+    case.assertEqual(idx, sorted(set(idx)))
+    case.assertTrue(all(0 <= i < rec["ran"] for i in idx))
+    case.assertNotIn({"exit": 0}, [{k: v for k, v in t.items() if k == "exit"} for t in rec["tasks"]])
+    if rec.get("ended"):
+        pass
     else:
         case.assertNotIn("exit", rec)
     try:

@@ -6,6 +6,9 @@
   → 暫存檔換成 current）。
 - `add_task()`／`finish()`：每項之後、收尾時整份重寫。
 - `start_hooks()`／`add_hook()`：hooks（B-635）在收尾之後記 `hooks.after_all`，一樣整份重寫。
+- 〔使用者 2026-10-01 第八批〕「tasks如果結果是0，那就不用紀錄了。hooks也是。」：`tasks`、`hooks.after_all`
+  只記結束碼不是 0 的項，每筆 `{"id","index","exit"}`（被訊號殺的是 `{"id","index","signal"}`）；
+  另有 `ran`＝本格到目前跑了幾項 tasks（含失敗的，被停格擋掉的不算），每跑完一項就加 1。hooks 不另記 ran。
 - 〔使用者方向 2026-10-01〕POC 默認紀錄寫得進、讀得懂、不斷電：不處理寫不進（待問 7）、
   舊紀錄讀不懂（`record_unreadable`）、不做 `--firstdo-fsync`。出事就讓 OSError／ValueError 往外丟。
 """
@@ -24,6 +27,12 @@ def _read_seq(path):
         return json.load(f)["seq"]
 
 
+def _add_failed(items, item_id, index, kind, value):
+    """第八批：exit 0 不記；其他記 {"id","index",kind}。"""
+    if not (kind == "exit" and value == 0):
+        items.append({"id": item_id, "index": index, kind: value})
+
+
 class Record:
     """一格的結束碼紀錄。任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（即 `current`）找（使用者 2026-10-01 拿掉 `AOS_TICK_RECORD`）。"""
 
@@ -39,7 +48,7 @@ class Record:
         cur_seq, last_seq = _read_seq(self.current), _read_seq(self.last)    # 第 1 步
         seq = (cur_seq if cur_seq is not None else last_seq if last_seq is not None else 0) + 1
         self.data = {"version": 1, "seq": seq, "started_at_ms": int(time.time() * 1000),
-                     "tasks": [], "ended": False}
+                     "ran": 0, "tasks": [], "ended": False}
         os.makedirs(self.dir, exist_ok=True)
         self._write_tmp()                                       # 第 2 步
         if cur_seq is not None:                                 # 第 3 步
@@ -48,9 +57,10 @@ class Record:
             os.unlink(self.last)                                # 上一格沒留下紀錄＝不知道
         os.rename(self.tmp, self.current)                       # 第 4 步
 
-    def add_task(self, task_id, kind, value):
-        """記一項：kind 是 "exit" 或 "signal"。"""
-        self.data["tasks"].append({"id": task_id, kind: value})
+    def add_task(self, task_id, index, kind, value):
+        """跑完一項：`ran` 加 1；kind 是 "exit" 或 "signal"，不是 exit 0 才記進 `tasks`（第八批）。"""
+        self.data["ran"] += 1
+        _add_failed(self.data["tasks"], task_id, index, kind, value)
         self._rewrite()
 
     def finish(self, code, stopped_after=None):
@@ -66,9 +76,9 @@ class Record:
         self.data.setdefault("hooks", {})[point] = []
         self._rewrite()
 
-    def add_hook(self, point, hook_id, kind, value):
-        """記一個 hook 項，格式同 add_task。"""
-        self.data["hooks"][point].append({"id": hook_id, kind: value})
+    def add_hook(self, point, hook_id, index, kind, value):
+        """跑完一個 hook 項：跟 add_task 一樣只記不是 exit 0 的（index 是它在 after_all 的位置）；不記 ran。"""
+        _add_failed(self.data["hooks"][point], hook_id, index, kind, value)
         self._rewrite()
 
     def _write_tmp(self):
