@@ -31,7 +31,7 @@
 
 ## P-116．state.json 格式〔使用者方向 2026-09-29〕
 
-> **暫緩**（2026-10-01）：`state.json`；最核心 daemon 第一版不做（使用者 2026-10-01），現行 daemon 不存狀態。條號保留、不重用。
+> **部分已被 [P-123](../../../protocol/daemon/state.md) 取代，其餘暫緩**（2026-10-01；第十一批改）：現行記住狀態模組的狀態檔見 P-123（只記暫停、已停，schema `daemon-module-state`）；本條的 `state.json`（登記、wake、`clean_shutdown`、`cgroup_root_last`）暫緩。條號保留、不重用。
 
 `state_dir/state.json` 用 [daemon-state schema](../../../../protocol/schemas/daemon-state.schema.json)。持久檔，不認得的欄位忽略（[C-07](../../../../contracts.md)）。
 

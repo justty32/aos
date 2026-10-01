@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "aos-daemon 記住狀態模組的狀態檔（P-123）＝設定檔 modules.state 展開後的樣子；持久檔，不認得的欄位忽略（C-07）",
+  "description": "只列不正常的項；每項只寫是 true 的狀態。daemon 寫檔時不寫 false",
+  "type": "object",
+  "required": [
+    "insts"
+  ],
+  "properties": {
+    "insts": {
+      "type": "object",
+      "description": "鍵＝inst 字面值（跟設定檔 insts 的鍵逐字比對）",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "paused": {
+            "const": true,
+            "description": "暫停中（B-641）"
+          },
+          "stopped": {
+            "const": true,
+            "description": "被 stop_on_nonzero 停掉（B-640）"
+          }
+        }
+      }
+    }
+  }
+}

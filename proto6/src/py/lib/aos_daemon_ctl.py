@@ -17,7 +17,7 @@ import socket
 import threading
 import time
 
-from aos_daemon import clock, say
+from aos_daemon import clock, say, state_changed
 
 COMMANDS = ("wake", "pause", "resume", "status")
 WAKE_OPTIONS = ("skip_while_running", "keep_schedule")
@@ -95,7 +95,15 @@ def parse(line):
 
 
 def handle(request, items):
-    """改狀態、回應答（不等那一項跑完）。"""
+    """改狀態、回應答（不等那一項跑完）。items＝daemon 的 {inst: Item}（重讀設定會原地改它）。
+    pause／resume 改完通知記住狀態模組（m3m 模組三；沒掛時什麼都不做），鎖放開後才寫檔。"""
+    reply = _handle(request, items)
+    if reply.get("ok") and request[0] in ("pause", "resume"):
+        state_changed()
+    return reply
+
+
+def _handle(request, items):
     cmd, inst, opts = request
     item = items.get(inst)
     if item is None:

@@ -1,0 +1,10 @@
+{
+  "insts": {
+    "a": {
+      "paused": true
+    },
+    "jobs/report.json": {
+      "stopped": true
+    }
+  }
+}

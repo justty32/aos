@@ -79,7 +79,9 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 項（inst 字面值） | `insts` 的一個鍵就是一項，鍵就是交給 `aos-exec` 的 inst 字面值（資料夾或檔）。核心沒有 id，一項就是它的字面值 | [B-640](daemon/core.md) |
 | 跑 tick 的項 | 就是一份 `argv` 開頭是 `aos-tick` 的 inst；把它加進 `insts`，daemon 就會定期跑那個工作資料夾的 tick。daemon 不認得工作資料夾；node 這個詞留給之後的 node 模組〔使用者 2026-10-01 改名〕 | [B-640](daemon/core.md)、[B-620](tick.md) |
 | 模組 | 設定檔頂層 `modules` 底下，一個鍵一個模組；寫了才掛上。核心只認得 `modules` 這個鍵，不解讀別的模組的內容 | [B-640](daemon/core.md) |
-| 控制模組 | 目前唯一的模組 `control`：開一個 Unix socket，收 `wake`、`pause`、`resume`、`status` 四種指令，每個指令只對一項；送指令的小工具是 `aos-ctl` | [B-641](daemon/control.md) |
+| 控制模組 | 模組 `control`：開一個 Unix socket，收 `wake`、`pause`、`resume`、`status` 四種指令，每個指令只對一項；送指令的小工具是 `aos-ctl` | [B-641](daemon/control.md) |
+| 重讀設定模組 | 模組 `reload`：收到 SIGHUP 重讀同一份設定檔，加減項、改週期免重開；`cwd`、`modules` 改了只印警告 | [B-642](daemon/reload.md) |
+| 記住狀態模組 | 模組 `state`：設定寫成 `{"$ref": "<狀態檔>"}`，把每項的暫停、已停記進那個檔，重開時讀回 | [B-643](daemon/state.md) |
 
 - 「daemon 管 node」（自動找 node、上下層、叫醒往上傳）之後另做成 node 模組，還沒排程（[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。
 - 舊 daemon 的登記、通道、收尾等用語在暫緩區（[T-09](deferred/terms.md)、[舊 daemon](deferred/daemon/README.md)）。

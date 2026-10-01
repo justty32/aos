@@ -41,7 +41,7 @@
     },
     "modules": {
       "type": "object",
-      "description": "一個模組一個鍵，有寫就開；目前只認 control，其他鍵照收不看",
+      "description": "一個模組一個鍵，有寫就開；目前認 control、reload、state，其他鍵照收不看",
       "properties": {
         "control": {
           "type": "object",
@@ -56,6 +56,14 @@
               "description": "控制 socket 的路徑；相對以起點為準"
             }
           }
+        },
+        "reload": {
+          "type": "object",
+          "description": "重讀設定模組（P-122）：收 SIGHUP 重讀同一份設定檔；裡面沒有鍵"
+        },
+        "state": {
+          "$ref": "daemon-module-state.schema.json",
+          "description": "記住狀態模組（P-123）：原始檔必須寫成 {\"$ref\": \"<狀態檔>\"}（不帶 # 位置），展開後就是狀態檔的內容；檔不在＝{\"insts\": {}}"
         }
       }
     }

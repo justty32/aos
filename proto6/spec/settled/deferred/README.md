@@ -51,7 +51,7 @@
 |---|---|---|---|---|
 | B-601 | 記憶體登記與按需執行 | 部分取代、其餘暫緩 | 照週期開跑改由 [B-640](../daemon/core.md) 叫 `aos-exec`；核心沒有 id；登記、IPC 授權、helper、runner 與收屍暫緩 | [daemon/runtime.md](daemon/runtime.md) |
 | B-504 | 通知只是提示 | 暫緩 | 收件與急件叫醒屬之後的訊息模組；現在只照週期（B-640）或 `wake`（B-641）跑 | [daemon/runtime.md](daemon/runtime.md) |
-| B-603 | 重啟先清空，再讓樹長回來 | 暫緩 | 第一版不做；daemon 重開什麼都不帶，暫停只在記憶體 | [daemon/lifecycle.md](daemon/lifecycle.md) |
+| B-603 | 重啟先清空，再讓樹長回來 | 部分取代、其餘暫緩 | 「存檔與讀回」「pause 批次存檔」的暫停部分已被 [B-643](../daemon/state.md) 取代（記住狀態模組：暫停與已停每次變動當場寫、重開讀回）；重啟清空、登記讀回、未處理 wake、`clean_shutdown`、批次存檔、逐層重建暫緩 | [daemon/lifecycle.md](daemon/lifecycle.md) |
 | B-604 | 收尾、停機、停用與退役 | 暫緩 | 第一版不做；停機改成 B-640 的「Ctrl-C 直接退出、回 0」 | [daemon/lifecycle.md](daemon/lifecycle.md) |
 | B-611 | 一棵資源樹只准一個 daemon | 暫緩 | 第一版不做 | [daemon/lifecycle.md](daemon/lifecycle.md) |
 | B-606 | 登記、解除、換父與身分額度 | 暫緩 | daemon 不認得 node；清單改成設定檔 `insts`，核心沒有 id | [daemon/registration.md](daemon/registration.md) |
@@ -60,7 +60,7 @@
 | B-612 | tick–daemon 通道 | 暫緩 | 第一版不做；控制模組的 socket 不是這條通道，沒有 `AOS_TICK_TOKEN` | [daemon/channel.md](daemon/channel.md) |
 | B-613 | 掛行程與砍掉 | 暫緩 | 第一版不做 | [daemon/channel.md](daemon/channel.md) |
 | B-615 | 部件形式與開關 | 已被 B-640 取代 | 改成設定檔頂層 `modules`：一個模組一個鍵、有寫就開；五個 `enable_*` 開關不做 | [daemon/components.md](daemon/components.md) |
-| B-608 | 熱重載 | 暫緩 | 第一版不做；改設定就重開 daemon | [daemon/reload.md](daemon/reload.md) |
+| B-608 | 熱重載 | 部分取代、其餘暫緩 | SIGHUP 重讀已被 [B-642](../daemon/reload.md) 取代（重讀設定模組：加減項、改週期免重開，`cwd`／`modules` 改了印警告要重開，設定壞了舊的照跑）；roots、身分、helper、daemon 事項、排空中不重載等暫緩 | [daemon/reload.md](daemon/reload.md) |
 | B-609 | 佈建固定動作與 helper 動作 | 暫緩 | 第一版不做；helper 之後另成模組 | [daemon/helper-actions.md](daemon/helper-actions.md) |
 | B-605 | cgroup：依賴與啟動自檢（含各條的 cgroup 部分） | 暫緩 | 第一版不做；cgroup 之後另成模組 | [daemon/cgroup.md](daemon/cgroup.md)、[daemon/runtime.md](daemon/runtime.md) |
 | B-614 | 暫存訊息與急件 | 暫緩 | 訊息之後另成模組（`aos-mq`），不走控制 socket | [daemon/messaging.md](daemon/messaging.md) |
@@ -82,7 +82,7 @@
 | P-112 | schema 與最小範例 | 暫緩 | 七份舊 schema 與範例照留作紀錄 | 同上 |
 | P-113 | 待決與跨篇 | 暫緩 | 跟整套舊協議一起暫緩 | [protocol/daemon/README.md](protocol/daemon/README.md) |
 | P-114 | 停機：訊號與設定 | 暫緩 | 第一版不做；停機見 P-120 | [protocol/daemon/shutdown.md](protocol/daemon/shutdown.md) |
-| P-116 | state.json 格式 | 暫緩 | daemon 不存狀態 | 同上 |
+| P-116 | state.json 格式 | 部分取代、其餘暫緩 | 現行狀態檔是 [P-123](../protocol/daemon/state.md)（只記暫停、已停；`modules.state` 用 `$ref` 指檔）；舊 `state.json` 的登記、wake、`clean_shutdown`、`cgroup_root_last` 暫緩 | 同上 |
 | P-117 | 通道變數與憑證 | 部分取代、其餘暫緩 | `AOS_DAEMON_SOCKET` 這個名字沿用到 P-121（意思改成控制 socket），另加 `AOS_DAEMON_INST`；現行控制模組連得上就能用、不使用憑證；舊通道憑證 `AOS_TICK_TOKEN` 跟著通道暫緩，未來另定〔astra 報告必修 7〕；其餘暫緩 | [protocol/daemon/channel.md](protocol/daemon/channel.md) |
 | P-118、P-119 | 掛行程與砍掉；送訊息、取訊息 | 暫緩 | 第一版不做 | 同上 |
 

@@ -6,7 +6,7 @@
 
 ## B-608：熱重載與「免重開／要重開」
 
-> **暫緩**（2026-10-01）：熱重載（SIGHUP）；最核心 daemon 第一版不做（使用者 2026-10-01）。現行改設定要重開 daemon。條號保留、不重用。
+> **部分已被 [B-642](../../daemon/reload.md) 取代，其餘暫緩**（2026-10-01 第十一批）：SIGHUP 重讀設定改由重讀設定模組做（`modules.reload`，以 daemon 設定檔 `insts` 的一項為單位）；本條的 roots、身分額度、helper、`enable_reload`、daemon 事項（`restart_required`／`config_invalid`）、排空中不重載與「免重開／要重開」大表暫緩。條號保留、不重用。
 
 〔使用者方向 2026-09-30 晚〕熱重載留核心，可單獨關掉。〔建議預設，未拍板〕`enable_reload:false` 時，SIGHUP 只印一行警告、不重讀設定、不套用任何欄位，也不因此退出；更改設定須重開。
 

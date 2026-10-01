@@ -50,7 +50,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | `stop_on_nonzero` | 布林，可省 | 各項的預設；省略＝false |
 | `exec_out_path` | 字串，可省 | `aos-exec` 的 stdout 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 這幾個字換成這一項的位置（規則見 [B-640](../../daemon/core.md)「輸出」）。省略＝丟掉（`/dev/null`）；寫 `/dev/stdout` 接回 daemon 自己的 stdout |
 | `exec_err_path` | 字串，可省 | `aos-exec` 的 stderr 接到哪個檔，規則同 `exec_out_path`。省略＝丟掉（`/dev/null`）；寫 `/dev/stderr` 接回 daemon 自己的 stderr |
-| `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前只認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）；其他鍵照收、不看 |
+| `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）、`reload`（`{}`，見 [P-122](reload.md)）、`state`（原始檔必須是 `{"$ref": "<狀態檔>"}`，展開後是狀態檔內容，見 [P-123](state.md)）；其他鍵照收、不看 |
 
 **`insts` 每一項的值**
 
@@ -64,7 +64,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 - 其他型別錯（例如 `insts` 不是物件、某一項的值不是物件、`control` 缺 `socket`）照「POC 默認一切正常」不另外檢查，出事時程式自然丟錯、回 1。
 - 舊設計的設定檔（`version`、`socket_path`、`roots`……，`daemon-config.schema.json`）屬[暫緩區 P-101](../../deferred/protocol/daemon/startup-and-ipc.md)，跟這份不相容。
 
-範例：[最小](../../../protocol/examples/daemon/core-config.minimal.valid.json)、[每項蓋過頂層、掛控制模組、帶不認得的模組鍵](../../../protocol/examples/daemon/core-config.full.valid.json)；反例：[`insts` 寫成陣列（舊寫法）](../../../protocol/examples/daemon/core-config.insts-array.invalid.json)、[頂層與那一項都沒有 `interval_ms`](../../../protocol/examples/daemon/core-config.no-interval.invalid.json)、[只有一項且是 `{}`、頂層沒有 `interval_ms`](../../../protocol/examples/daemon/core-config.inst-no-interval.invalid.json)〔astra 報告設計 3〕、[`control` 缺 `socket`](../../../protocol/examples/daemon/core-config.control-no-socket.invalid.json)。
+範例：[最小](../../../protocol/examples/daemon/core-config.minimal.valid.json)、[每項蓋過頂層、掛控制模組、帶不認得的模組鍵](../../../protocol/examples/daemon/core-config.full.valid.json)；反例：[`insts` 寫成陣列（舊寫法）](../../../protocol/examples/daemon/core-config.insts-array.invalid.json)、[頂層與那一項都沒有 `interval_ms`](../../../protocol/examples/daemon/core-config.no-interval.invalid.json)、[只有一項且是 `{}`、頂層沒有 `interval_ms`](../../../protocol/examples/daemon/core-config.inst-no-interval.invalid.json)〔astra 報告設計 3〕、[`control` 缺 `socket`](../../../protocol/examples/daemon/core-config.control-no-socket.invalid.json)。〔2026-10-01 第十一批〕掛 `reload` 與 `state`（展開後）：[範例](../../../protocol/examples/daemon/core-config.modules.valid.json)；反例 [`state` 不是狀態檔內容（例如寫成 `path`）](../../../protocol/examples/daemon/core-config.state-not-expanded.invalid.json)。
 
 ### stdout
 
@@ -75,6 +75,8 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | 一次 `aos-exec` 結束 | `inst=<inst 字面值> exit=<碼> ms=<毫秒>`；被訊號 N 殺掉時 `<碼>` 是 128+N |
 | 這一項因 `stop_on_nonzero` 停掉 | `inst=<inst 字面值> stopped`：在該次 `exit` 行之後另印一行，中間可能穿插其他項的行〔astra 報告必修 8〕 |
 | 控制模組收到 `pause`／`resume` | `inst=<inst 字面值> paused`、`inst=<inst 字面值> resumed`（[P-121](control.md)） |
+| 重讀設定（SIGHUP） | `reload: need restart: cwd`／`modules`、`inst=<inst 字面值> removed`／`added`、`reloaded`（[P-122](reload.md)） |
+| 記住狀態：開起來恢復 | `inst=<inst 字面值> paused`、`inst=<inst 字面值> stopped`，在任何 `exit=` 行之前（[P-123](state.md)） |
 
 ```text
 2026-10-01T15:04:05+08:00 inst=a exit=0 ms=812
@@ -104,7 +106,7 @@ boom
 | 情況 | 那一行 |
 |---|---|
 | 設定檔讀不到、不是 JSON、指示詞錯 | `aos-daemon: config: <代號>: <說明>`；代號照指示詞的錯誤代號，例如 `ReferenceReadFailed`、`ReferenceJsonInvalid`、`ReferenceCycle`、`ReferencePointerInvalid`、`EnvironmentVariableMissing` |
-| 某一項與頂層都沒有 `interval_ms`；`modules` 不是物件 | `aos-daemon: config: <說明>`（沒有代號） |
+| 某一項與頂層都沒有 `interval_ms`；`modules` 不是物件；`modules.state` 不是 `$ref`（[P-123](state.md)） | `aos-daemon: config: <說明>`（沒有代號） |
 | 用法錯 | argparse 的用法說明加一行 `aos-daemon: error: <說明>` |
 
 其他沒接住的錯照 Python 預設印 traceback。

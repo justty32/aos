@@ -1,8 +1,18 @@
-# 第三段之三：daemon 的五個模組（草稿，等使用者裁定）
+# 第三段之三：daemon 的五個模組
 
 ← [plan 入口](README.md)｜**接在 [m3 核心](m3-daemon-core.md)、[m3n 控制模組](m3n-control-module.md) 之後。**｜spec 正本：[B-640 核心](../spec/settled/daemon/core.md)、[B-641 控制](../spec/settled/daemon/control.md)、格式 [P-120](../spec/settled/protocol/daemon/core.md)、[P-121](../spec/settled/protocol/daemon/control.md)｜舊規劃（暫緩區）：[總表](../spec/settled/deferred/README.md#daemon-與-helper)
 
-**這份是草稿。** 五個模組各寫「最單純的版本長怎樣」與要使用者裁定的點；裁定前不開工。
+**狀態（2026-10-01 第十一批裁定後）**：
+
+| 模組 | 狀態 | spec |
+|---|---|---|
+| 一、重讀設定 `reload` | **已做**（R1～R4 照建議，R3 改成 stdout 警告） | [B-642](../spec/settled/daemon/reload.md)、[P-122](../spec/settled/protocol/daemon/reload.md) |
+| 二、收屍／cgroup `cgroup` | **待裁定**（C1～C4 還沒定），不做 | — |
+| 三、記住狀態 `state` | **已做**（S1～S3 照建議，設定改成 `$ref`） | [B-643](../spec/settled/daemon/state.md)、[P-123](../spec/settled/protocol/daemon/state.md) |
+| 四、訊息 `mq` | **暫緩**（使用者：「aos-mq先不做」） | — |
+| 五、helper／跨帳號 `helper` | **暫緩**（使用者：「帳號也先不做」） | — |
+
+做了什麼、自己定的細節見篇末[做完了沒](#做完了沒)；裁定原話見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十一批daemon-模組)。下面各節保留原本的草稿，裁定處就地標註。
 
 > **使用者方向（2026-10-01，原話）**：「node這塊不要動，我有預感，node相關概念以後會不存在。剩下這些都值得做成模組。」「剩下這些」＝重讀設定、收屍／cgroup、記住狀態、訊息、helper／跨帳號五個。所以：**不做 node 模組**（[verdicts 11「node 模組方向」](../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)照留、不排程），**五個模組一律以「daemon 設定檔 `insts` 裡的一項」為單位**，不認得資料夾、任務表、上下層。
 
@@ -39,6 +49,8 @@
 ---
 
 ## 模組一：重讀設定（`modules.reload`）
+
+> **已做**（2026-10-01 第十一批）：R1～R4 照建議，但 **R3 改**：使用者原話「R3這邊，如果最上層這些改了，那就stdout輸出警告。」——`cwd`、`modules` 改了不套用、在 **stdout** 印 `reload: need restart: cwd`（或 `modules`）。R4 照建議（stderr 一行、舊的照跑）。spec [B-642](../spec/settled/daemon/reload.md)。
 
 舊規劃：[暫緩區 B-608 熱重載](../spec/settled/deferred/daemon/reload.md)。
 
@@ -109,6 +121,8 @@ roots、`node_id` 改名、`identity_grant`、`provision`、helper 固定設定�
 ---
 
 ## 模組二：收屍與資源上限（`modules.cgroup`）
+
+> **待裁定、這次不做**（2026-10-01 第十一批）：C1～C4 使用者還沒裁定。
 
 舊規劃：[暫緩區 B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；tick 側 [`aos-cg`（B-634）](../spec/settled/tick/cg.md)。
 
@@ -181,6 +195,8 @@ node 框 `n-<h>` 與它底下的 `tick`、`task-*`、`mount-*`、子 node 框（
 
 ## 模組三：記住狀態（`modules.state`）
 
+> **已做**（2026-10-01 第十一批）：S1～S3 照建議（不記上次結束時間；已停也跨重開；每次變動當場寫整份）。**設定改了**：使用者原話「"state":{"$ref":...}會比較好，因為有時候它會頻繁被改動。」——下面「設定與檔案」那段的 `{"path": …}` 作廢，改成 `"modules": {"state": {"$ref": "aos-state.json"}}`，`$ref` 指的檔就是狀態檔，展開後 `modules.state` 就是目前狀態。spec [B-643](../spec/settled/daemon/state.md)。
+
 舊規劃：[暫緩區 B-603「存檔與讀回」「pause 批次存檔」](../spec/settled/deferred/daemon/lifecycle.md#存檔與讀回)、格式 [P-116 state.json](../spec/settled/deferred/protocol/daemon/shutdown.md)。
 
 ### 要做到什麼（最單純的版本）
@@ -191,11 +207,13 @@ node 框 `n-<h>` 與它底下的 `tick`、`task-*`、`mount-*`、子 node 框（
 
 ### 設定與檔案
 
+~~`"modules": {"state": {"path": "./aos-state.json"}}`，`path` 必填，相對以起點為準。~~（第十一批改成下面這樣）
+
 ```json
-"modules": {"state": {"path": "./aos-state.json"}}
+"modules": {"state": {"$ref": "aos-state.json"}}
 ```
 
-- `path` 必填，相對以起點為準（跟控制 socket 同一套）。
+- 原始值必須是 `$ref`（不帶 `#` 位置），相對以**設定檔所在資料夾**為準（跟其他 `$ref` 一樣）；檔不在＝全部正常，第一次要寫時才建（先寫暫檔再 rename）。
 - 檔的內容只列「不是普通狀態」的項：
 
   ```json
@@ -243,6 +261,8 @@ node 框 `n-<h>` 與它底下的 `tick`、`task-*`、`mount-*`、子 node 框（
 ---
 
 ## 模組四：訊息（`modules.mq`）
+
+> **暫緩**（使用者 2026-10-01 第十一批：「aos-mq先不做」）。下面草稿照留。
 
 舊規劃：[暫緩區 B-614 暫存訊息與急件](../spec/settled/deferred/daemon/messaging.md)、格式 [P-119](../spec/settled/deferred/protocol/daemon/channel.md#p-119送訊息取訊息與通道錯誤碼使用者方向-2026-09-30第十九批參數與上限為建議預設)；tick 側 [`aos-mq get`／`post`（B-623、B-624）](../spec/settled/tick/mq.md)。
 
@@ -320,6 +340,8 @@ node id 當收件人；`node.send`／`node.take` 的 method 名、封包與通�
 ---
 
 ## 模組五：helper 與跨帳號（`modules.helper`）
+
+> **暫緩**（使用者 2026-10-01 第十一批：「帳號也先不做」）。下面草稿照留。
 
 舊規劃：[暫緩區 B-303 root helper 與 `aos-as`](../spec/settled/deferred/helper.md)、[B-609 佈建與 helper 動作](../spec/settled/deferred/daemon/helper-actions.md)、P-102、P-107、P-108（[暫緩區 daemon 協議](../spec/settled/deferred/protocol/daemon/README.md)）。
 
@@ -401,7 +423,7 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 
 - **G1．模組鍵名**：`reload`、`cgroup`、`state`、`mq`、`helper`。**建議照這五個**；`cgroup` 也可以叫 `reap`（重點是收屍），但上限也在它裡面，叫 `cgroup` 比較貼。
 - **G2．跟某一項有關的模組設定放哪？** **建議：放在 `insts` 那一項的設定物件裡，用模組名當鍵**（`"a": {"cgroup": {...}, "helper": {"user": "bob"}}`）；模組沒掛時核心照「不認得的鍵忽略」。另一種是全部放在 `modules.<名字>` 底下用 inst 字面值當鍵的對照表，好處是「沒掛模組時那一項的設定一個字都不多」。
-- **G3．這五個要不要都進 spec 正本（B-642 起編號）？** **建議：每個模組做完、使用者看過再寫進 spec**，跟控制模組 B-641 一樣；暫緩區對應的舊條（B-608、B-605、B-603、B-614、B-303、B-609）屆時標「部分已被 B-xxx 取代」。
+- **G3．這五個要不要都進 spec 正本（B-642 起編號）？** **建議：每個模組做完、使用者看過再寫進 spec**，跟控制模組 B-641 一樣；暫緩區對應的舊條（B-608、B-605、B-603、B-614、B-303、B-609）屆時標「部分已被 B-xxx 取代」。〔第十一批：重讀設定、記住狀態做完就照使用者指示寫進 spec，B-642、B-643；B-608、B-603 已標部分取代。鍵名 `reload`、`state` 照 G1。〕
 
 ## 待問總表
 
@@ -430,3 +452,23 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 | G2 | 共通 | 每項的模組設定放哪 | `insts` 那一項裡、模組名當鍵 |
 | G3 | 共通 | 何時進 spec | 每個做完、看過再寫，編 B-642 起 |
 | — | 順序 | 實作順序 | 重讀設定 → 記住狀態 → 收屍 → 訊息 → helper |
+
+## 做完了沒
+
+**模組一、三做完了**（2026-10-01，AI 隊）：照上面與第十一批裁定做，驗收寫進 `tests/test_daemon_reload.py`（15 條）、`tests/test_daemon_state.py`（11 條），全過、兩檔單獨連跑 10 次都過；全部測試由 502 條變 528 條。模組二待裁定，四、五暫緩。
+
+- 程式：`lib/aos_daemon.py`（`load_full()`／`Setup`、`_state_ref()`、共用的 `_items` 與 `_items_lock`、`Item.removed`／`end_mono`、`state_changed()`、`_catch_hup()`）、新的 `lib/aos_daemon_reload.py`、`lib/aos_daemon_state.py`；`lib/aos_daemon_ctl.py` 的 `handle()` 在 pause／resume 後通知記住狀態。`load_config()`、`load_setup()` 照舊。用法見 [src/py README](../src/py/README.md#重讀設定與記住狀態m3m)。
+- spec：[B-642](../spec/settled/daemon/reload.md)、[B-643](../spec/settled/daemon/state.md)、[P-122](../spec/settled/protocol/daemon/reload.md)、[P-123](../spec/settled/protocol/daemon/state.md)；schema `daemon-core-config` 加 `modules.reload`、`modules.state`，新 schema `daemon-module-state`（舊的 `daemon-state` 是暫緩區 P-116）；暫緩區 B-608、B-603、P-116 標部分取代。
+
+**AI 隊自己定的細節**（使用者可改）：
+
+1. **重讀時狀態以記憶體為準**：重讀不讀狀態檔、不拿檔覆蓋還在的項；新加的項一律從頭（跟「拿掉又加回來＝新的一項」一致）。套用完照記憶體寫一次檔，拿掉的項就不見了。
+2. **狀態檔內容沒變就不寫**（跟上次寫的、或開起來讀到的比）。所以沒有任何異常時不會建檔；暫停又恢復之後檔留著、內容是 `{"insts":{}}`。
+3. **沒掛 `reload` 時 SIGHUP 照 Python 預設**：daemon 被殺（跟 m3、m3n 一樣，socket 檔不刪）。掛了才接。
+4. **SIGHUP 不會漏**：用 `signal.set_wakeup_fd` 把訊號編號寫進 pipe，主執行緒讀 pipe 再重讀；重讀中連來幾次，讀完再重讀一次。
+5. **`exec_out_path`／`exec_err_path` 改了照套**（plan 表上那列），不算 R3 的「要重開」；R3 只警告 `cwd`、`modules`。`modules` 裡任何改動都算（含換狀態檔、換 socket 路徑、加不認得的模組鍵）。警告每次重讀都印，直到重開或改回。
+6. **重讀時設定壞了**：所有例外都接（不只 JSON／指示詞錯，型別錯也算），stderr `aos-daemon: reload: <說明>`，stdout 不印 `reloaded`。
+7. **重讀後第幾項照新的鍵順序**（`aos-exec` 輸出標頭的 `index=` 跟著變）；`interval_ms` 改了但那一項還沒跑完過一次（例如開起來就恢復成暫停）照原本的排程。
+8. **`modules.state` 的格式檢查**：原始值必須是只有 `$ref` 一個鍵、非空、不帶 `#`；`modules` 本身也要直接寫在設定檔裡。不合就是設定錯、回 1。狀態檔在但壞掉：照一般 `$ref` 錯回 1（默認一切正常）。
+9. 開起來恢復時印 `inst=<inst> paused`／`stopped`（兩個都有先 paused），在任何 `exit=` 行之前。
+10. 拿掉的項正在跑、還沒結束時又被加回來：新的一項會立刻開跑，可能跟舊的那次短暫疊著（同一個 inst 兩個 `aos-exec`）。照「默認一切正常」不處理。

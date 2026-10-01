@@ -54,10 +54,10 @@ daemon 不是 tick 存在的前提：tick 怎麼被執行不管，cron、人手�
 |---|---|---|
 | [部件與核心開關](components.md) | B-615；含待拍板預設 | 已被 [B-640](../../daemon/core.md) 的 `modules` 取代 |
 | [核心：開格與 runner](runtime.md) | B-601、B-504；B-605 共通自檢 | B-601 部分被 B-640 取代、其餘暫緩；其他暫緩 |
-| [核心：重啟、收尾與停機](lifecycle.md) | B-603、B-604、B-611 | 暫緩（第一版停機見 B-640） |
+| [核心：重啟、收尾與停機](lifecycle.md) | B-603、B-604、B-611 | 暫緩（第一版停機見 B-640；B-603 的暫停存讀部分已被 [B-643](../../daemon/state.md) 取代） |
 | [核心：登記、叫醒與暫停](registration.md) | B-606、B-607 | B-606 暫緩；B-607 部分被 B-640、[B-641](../../daemon/control.md) 取代、其餘暫緩 |
 | [核心：通道、掛行程與診斷](channel.md) | B-610、B-612、B-613 | 暫緩 |
-| [維運：熱重載](reload.md) | B-608 | 暫緩 |
+| [維運：熱重載](reload.md) | B-608 | 部分已被 [B-642](../../daemon/reload.md) 取代，其餘暫緩 |
 | [維運：佈建與 helper 動作](helper-actions.md) | B-609 | 暫緩 |
 | [cgroup：框、上限與啟動自檢](cgroup.md) | B-605；B-601、B-603、B-604、B-609、B-611、B-613 的 cgroup 部分 | 暫緩 |
 | [訊息：暫存與急件](messaging.md) | B-614 | 暫緩 |

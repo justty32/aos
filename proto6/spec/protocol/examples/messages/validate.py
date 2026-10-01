@@ -44,6 +44,7 @@ def schema_name(path):
         if topic in ('ctl_request', 'ctl_reply'):     # P-121 控制模組：請求與回應分開驗
             return 'daemon-ctl#/$defs/' + ('Request' if topic == 'ctl_request' else 'Reply')
         return {'core-config': 'daemon-core-config',     # P-120；config 是暫緩區的 P-101
+                'module-state': 'daemon-module-state',   # P-123；state 是暫緩區的 P-116
                 'config': 'daemon-config', 'state': 'daemon-state',
                 'runner_report': 'daemon-runner-report',
                 'launch-error': 'daemon-launch-error'}.get(topic, 'daemon-rpc')
