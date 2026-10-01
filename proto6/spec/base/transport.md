@@ -2,6 +2,11 @@
 
 ← [基底](README.md)｜[共用契約](../contracts.md)｜[檔案與清理](storage.md)
 
+> **〔2026-10-01 殘留註記〕本篇是 2026-10-01 之前的設計，下列內容現在不是現行的**；原文照留，以這裡指的正本為準（各批裁定見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）：
+> - `aos-git`（開格、存檔點、收尾）與有 git 版範本：第十七批暫緩（[B-630](../settled/deferred/git.md)）；要提交、還原改用 hook 加普通 git 指令（範例在 [B-635](../settled/tick/hooks.md)）。
+> - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
+> - 舊 daemon 的通道與憑證（`AOS_TICK_TOKEN`）、登記、runner、`state.json`：整套在暫緩區（[舊 daemon](../settled/deferred/daemon/README.md)）；現行 daemon 只定期叫 `aos-exec` 加各模組（[B-640](../settled/daemon/core.md)）。
+
 ## B-501：投件入口與授權〔使用者方向 2026-09-29〕
 
 人、agent、工具共用有權限即可使用的檔案或指令入口。可依一般 Linux 權限，把訊息或工具／LLM 結果完整發布到指定的 ignored 收件區，不必先換成 blob 引用，也不必全經一個 RPC gateway。檔案發布依 [B-402](storage.md)，消費依收件任務（[B-623](../settled/deferred/mq.md)）；有權限也能直接讀取檔案，正式輸出以已提交版本為準，見 [agent 輸入與輸出](../agent/input.md)。

@@ -91,6 +91,6 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 | `api_key` | LLM 池設定 | key 只能用 `key_ref` 指到檔案，不寫進設定（[S-301](scheduling/llm.md)） |
 | `argv` | 事項（attention） | 事項只給人或 agent 看的建議，不會被自動執行（[S-405](scheduling/operations.md)） |
 
-這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**。〔使用者方向 2026-10-01〕inst 頂層沒有 `user`（撤回，[inst](base/inst.md)），任務是 inst 的超集所以也沒有：寫了就是不認得的鍵、照收忽略，照 tick 自己的帳號跑；原本「跟 tick 帳號不同時那一項回 125」一併撤回。要切帳號就在 argv 包普通程式 `aos-as`（[B-620](settled/tick.md)、[B-303](settled/deferred/helper.md)）。schema 的寫法見 [P-007](protocol/README.md)。
+這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**。〔使用者方向 2026-10-01〕inst 頂層沒有 `user`（撤回，[inst](base/inst.md)），任務是 inst 的超集所以也沒有：寫了就是不認得的鍵、照收忽略，照 tick 自己的帳號跑；原本「跟 tick 帳號不同時那一項回 125」一併撤回。要切帳號就在 argv 包普通程式 `aos-as`（[B-620](settled/tick.md)、[B-303](settled/deferred/helper.md)）。schema 的寫法見 [P-007](protocol/README.md)。 〔2026-10-01 殘留註記〕`aos-as` 第十三批暫緩（[P-212](settled/deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](settled/daemon/account.md)）。
 
 驗收：持久檔與檔案 RPC 多一個不認得的欄位照樣讀得進來、改寫後欄位還在；現行控制 socket 的請求多一個欄位照收、舊設計的 daemon IPC 多一個欄位被拒；帶禁止鍵的檔整份拒收，任務表的項目寫了 `user` 當不認得的鍵照收；舊版檔經 `aos migrate` 後新程式照讀，比自己新的版本被拒。

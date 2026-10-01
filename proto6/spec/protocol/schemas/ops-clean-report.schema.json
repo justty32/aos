@@ -9,7 +9,7 @@
       "$ref": "common.schema.json#/$defs/NodeId"
     },
     "outcome": {
-      "description": "staged＝在 tick 內備好、待本格 aos-git close 提交；committed＝直接執行已自己提交；unchanged＝未到期或沒有變動；failed＝失敗（P-606）",
+      "description": "staged＝在 tick 內備好、待本格 aos-git close 提交（〔2026-10-01 殘留註記〕aos-clean 第十八批、aos-git 第十七批暫緩）；committed＝直接執行已自己提交；unchanged＝未到期或沒有變動；failed＝失敗（P-606）",
       "enum": [
         "staged",
         "committed",
