@@ -154,7 +154,7 @@ def _run_locked(cwd, table):
     remove_stop_file()
     stopped_after = None
     for index, (item, task_id) in enumerate(zip(tbl.items, tbl.ids)):
-        kind, value = run_one(cwd, tbl.defaults, item, task_id, index)
+        kind, value = run_one(cwd, tbl.defaults, item, task_id, task_vars(task_id, index))
         record.add_task(task_id, index, kind, value)   # 只記不是 0 的（第八批）；不影響 tick 的結束碼
         reason = read_reason(state("tick", "stop"))
         if reason is not None:
@@ -200,15 +200,19 @@ def remove_stop_file():
         os.unlink(stop)
 
 
-def run_one(cwd, defaults, item, task_id, index, label=""):
+def task_vars(task_id, index):
+    """一般任務的 `AOS_*`：`AOS_TASK_ID`、`AOS_TASK_INDEX`（不給 `AOS_HOOK_*`；P-203）。id 型別不查，要字串就 str()。"""
+    return {"AOS_TASK_ID": str(task_id), "AOS_TASK_INDEX": str(index)}
+
+
+def run_one(cwd, defaults, item, item_id, run_vars, label=""):
     """B-620「跑每一項」：跑到時才合併頂層預設、展開這一項（plan 待問 3；使用者 2026-10-01 頂層預設）再跑。回 (kind, value)。
     cwd 是工作資料夾（絕對路徑），原樣給任務當 `AOS_TICK_CWD`（使用者 2026-10-01；沒有 `AOS_TICK_RECORD`）；
-    頂層 `cwd` 只是任務的預設 cwd，不改 tick 自己的 cwd。hooks 的 after_all 項也走這裡（B-635），
-    `label`＝`after_all/`，只加在 `exec_failed:` 那行的 id 前面。"""
+    頂層 `cwd` 只是任務的預設 cwd，不改 tick 自己的 cwd。`run_vars` 是這一項自己的 `AOS_*`：任務是
+    task_vars()，hook 是 aos_tick_hooks.hook_vars()（使用者 2026-10-01 第十批）；沒給到的那一類從繼承的環境拿掉
+    （aos_tick_run._env）。hooks 的 after_all 項也走這裡（B-635），`label`＝`after_all/`，只加在 `exec_failed:` 那行的 id 前面。"""
     inst = aos_tick_table.load_inst(defaults, item, cwd)
-    # id 型別不查（極簡檢查），環境變數要字串就 str()
-    task_vars = {"AOS_TICK_CWD": cwd, "AOS_TASK_ID": str(task_id), "AOS_TASK_INDEX": str(index)}
-    kind, value, note = aos_tick_run.run_item(inst, task_vars)
+    kind, value, note = aos_tick_run.run_item(inst, dict(run_vars, AOS_TICK_CWD=cwd))
     if note:
-        say("exec_failed", "%s%s: %s" % (label, task_id, note))
+        say("exec_failed", "%s%s: %s" % (label, item_id, note))
     return kind, value

@@ -42,11 +42,12 @@
   - 照表跑完、被停格檔停下：跑。擋板、busy、tick 自己出錯：走不到這裡，不跑。
   - 不看停格檔：hook 之間不查，hook 自己建停格檔也不擋下一個 hook（留著的由下一格開頭刪）。
   - 每項的碼照實記、接著跑下一項；tick 照舊回 0。
-  - 環境：`AOS_TICK_CWD`；`AOS_TASK_ID`／`AOS_TASK_INDEX` 是這個 hook 自己在 `after_all` 的 id／位置。
+  - 環境：`AOS_TICK_CWD`；~~`AOS_TASK_ID`／`AOS_TASK_INDEX` 是這個 hook 自己在 `after_all` 的 id／位置。~~
+    〔使用者 2026-10-01 第十批，已實作〕改給 `AOS_HOOK_POINT`（`after_all`）、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`，不給 `AOS_TASK_*`（繼承來的也拿掉）；任務拿不到 `AOS_HOOK_*`。之後開 `before_task`／`after_task` 時那種 hook 另有指向被掛任務的 `AOS_TASK_*`（只寫進 spec）。見 [B-635](../spec/settled/tick/hooks.md)。
   - 沒跑成（125／126／127）stderr 印 `exec_failed: after_all/<id>: …`〔AI 隊定〕。
   - hook 跑到時展開失敗：照任務的規則自然丟錯、回 1〔AI 隊定，照總原則不另處理〕。
 - **要使用者裁定的點**：無。
-- **驗收**：三個 hook 依序在任務之後跑，沒寫 id 的用位置；頂層 `envs` 當預設、項自己的 `envs` 整包蓋過；hook 的環境變數是自己的 id／位置。任務建停格檔：後面任務不跑、hook 照跑。hook 回 3、被 SIGKILL、找不到程式都照記、下一個照跑、tick 回 0。擋板、busy、表壞時不跑。
+- **驗收**：三個 hook 依序在任務之後跑，沒寫 id 的用位置；頂層 `envs` 當預設、項自己的 `envs` 整包蓋過；hook 的環境變數是自己的 id／位置（第十批後是 `AOS_HOOK_*`、沒有 `AOS_TASK_*`）。任務建停格檔：後面任務不跑、hook 照跑。hook 回 3、被 SIGKILL、找不到程式都照記、下一個照跑、tick 回 0。擋板、busy、表壞時不跑。
 
 ## 步驟 3：紀錄
 

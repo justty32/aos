@@ -24,7 +24,7 @@
 - **碼不影響 tick**：hook 回幾都只記進 `hooks.after_all`（0 不記），tick 照舊回 0。
 - **擋板檔、拿不到鎖（busy）、表壞時一個都不跑**。
 - **紀錄在 hook 跑之前就寫成 `ended:true`**：hook 跑到一半 tick 被殺，下一格的 `last/` 看起來仍是「正常收尾」，看不出 hook 沒跑完；hooks 也不記 `ran`。
-- **hook 的 `AOS_TASK_INDEX` 從 0 數起，跟 `tasks` 的位置各算各的**：拿 index 當名字的東西（例如 `aos-git` 存檔點，plan 待問 2 的建議）會跟任務撞號。
+- **hook 的 `AOS_TASK_INDEX` 從 0 數起，跟 `tasks` 的位置各算各的**：拿 index 當名字的東西（例如 `aos-git` 存檔點，plan 待問 2 的建議）會跟任務撞號。**已解決**（使用者 2026-10-01 第十批）：hook 改拿 `AOS_HOOK_POINT`／`AOS_HOOK_INDEX`／`AOS_HOOK_ID`，不再有 `AOS_TASK_INDEX`（[B-635](../spec/settled/tick/hooks.md)）；要用 index 當名字時，hook 跟任務的變數名本來就不同，自己加前綴（例如掛點名）即可。
 
 ## 怎麼讀每一項
 
@@ -69,7 +69,7 @@
   - 留在 `tasks` 當一般項：它本來就是「夾在兩項之間」，`after_all` 做不到。
   - 等開 `after_task`：每項後自動打點＝每項自成一組，使用者不用自己插；代價是每項都掃一遍 aos 範圍（成本）、組變細。
   - `mark-get` 只在有 `mq-get` 時才需要；`mq-get` 如果搬去 `before_all`，`mark-get` 可能跟著併進去。
-  - 若 hook 也要打點，ref 名不能只用 `AOS_TASK_INDEX`（會跟任務撞號），要加前綴之類。
+  - 若 hook 也要打點，ref 名不能只用 `AOS_TASK_INDEX`（會跟任務撞號），要加前綴之類。（第十批後 hook 沒有 `AOS_TASK_INDEX`，改用 `AOS_HOOK_POINT`＋`AOS_HOOK_INDEX`。）
 
 ### aos-git close（`git-close`）
 

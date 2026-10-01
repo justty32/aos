@@ -72,7 +72,7 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 
 **目標怎麼認（使用者 2026-10-01，見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-tick---node-怎麼認待統一更新-spec)、[plan 待問 10、16、17](../../plan/m1-tick-core.md#待問)，待統一更新 spec；同日 `--node` 改名 `--target`，再改成位置參數 `aos-tick [<目標>]`（跟 aos-exec 一樣），`--target` 旗標不留，給了算用法錯；目標多於一個也是）**：省略用 `./`，相對路徑轉成絕對。目標只能是資料夾，任務表只有 `<目標>/.aos/tasks.json` 一個位置（不看 `.aos/inst.json`），沒有回 1、stderr `no_tasks:`。給的是檔回 1、stderr `usage:`（說明目標要是資料夾），什麼都不建。不存在回 1、stderr `no_target:`（原 `no_node:`）。~~是檔：拿這個檔當這一格的任務表、它所在的資料夾當工作資料夾；檔在 `.aos/` 裡時取 `.aos` 的上一層。~~（使用者 2026-10-01 撤回）
 
-**工作資料夾與給任務的環境變數（使用者 2026-10-01，見 [plan 待問 16](../../plan/m1-tick-core.md#待問)，待統一更新 spec）**：「工作資料夾」＝這一格 aos-tick 的 cwd（目標指的資料夾）。每項任務的環境多三個變數：`AOS_TICK_CWD`（工作資料夾的絕對路徑，原 `AOS_NODE_DIR`）、`AOS_TASK_ID`、`AOS_TASK_INDEX`。~~`AOS_TICK_RECORD`~~ 拿掉：任務要看紀錄就讀 `$AOS_TICK_CWD/<狀態資料夾>/tick/current/`（`AOS_DIRNAME` 空字串時是 `$AOS_TICK_CWD/tick/current/`；第九批拆檔，見下面「結束碼紀錄」）。node 是之後 aos-tick 的 node 模組的事，tick 這層不談。
+**工作資料夾與給任務的環境變數（使用者 2026-10-01，見 [plan 待問 16](../../plan/m1-tick-core.md#待問)，待統一更新 spec）**：「工作資料夾」＝這一格 aos-tick 的 cwd（目標指的資料夾）。每項任務的環境多三個變數：`AOS_TICK_CWD`（工作資料夾的絕對路徑，原 `AOS_NODE_DIR`）、`AOS_TASK_ID`、`AOS_TASK_INDEX`（hooks 的項改給 `AOS_HOOK_*`，見下面「hooks」一節；繼承來的 `AOS_TASK_*`／`AOS_HOOK_*` 先拿掉再放這一項的，`aos_tick_run.RUN_VARS`）。~~`AOS_TICK_RECORD`~~ 拿掉：任務要看紀錄就讀 `$AOS_TICK_CWD/<狀態資料夾>/tick/current/`（`AOS_DIRNAME` 空字串時是 `$AOS_TICK_CWD/tick/current/`；第九批拆檔，見下面「結束碼紀錄」）。node 是之後 aos-tick 的 node 模組的事，tick 這層不談。
 
 | 檔 | 內容 |
 |---|---|
@@ -80,7 +80,7 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | `lib/aos_tick.py` | argv、`AOS_DIRNAME` 檢查、認工作資料夾與任務表 `resolve_target()`、取鎖 `take_lock()`、擋板、停格檔、整格順序 `run_tick()` |
 | `lib/aos_tick_record.py` | 結束碼紀錄資料夾 `tick/current/`／`last/`：開格換紀錄（整個資料夾 rename）、每項寫 `ran.json`、不是 0 才寫 `task-exits.json`／`hook-exits.json`、收尾寫 `record.json`（使用者 2026-10-01 第八、九批）；`read_record()` 讀展開 `$ref` 後的完整紀錄 |
 | `lib/aos_tick_table.py` | 讀任務表（`.aos/tasks.json`）、只解到 `tasks` 這層、頂層預設、極簡檢查 `check_table()`、每項的 `id`、跑到時合併預設再展開成 inst `load_inst()` |
-| `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、三個 `AOS_*`、分 exit／signal |
+| `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、這一項的 `AOS_*`（先拿掉繼承來的 `AOS_TASK_*`／`AOS_HOOK_*`）、分 exit／signal |
 | `lib/aos_tick_hooks.py` | hooks（外掛掛點，m1h）：收尾後依序跑 `after_all` 的 `run_after_all()`（讀表與極簡檢查在 `aos_tick_table.check_table()`，結果是 `Table.after_all`） |
 | `tests/test_tick.py` | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes` |
 | `tests/test_tick_hooks.py` | hooks 的驗收（m1h） |
@@ -195,7 +195,8 @@ plan 步驟對到哪：
 }
 ```
 
-- 寫法與指示詞展開時機都比照 `tasks`（`hooks`、`after_all`、每一元素讀表時各解一層，內部跑到時才展開）：每項一個 inst 物件，`id` 可省（沒寫＝在 `after_all` 的位置字串）、吃頂層預設、跑法與環境變數（`AOS_TICK_CWD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`，ID／INDEX 是 hook 自己的）都跟任務一樣。
+- 寫法與指示詞展開時機都比照 `tasks`（`hooks`、`after_all`、每一元素讀表時各解一層，內部跑到時才展開）：每項一個 inst 物件，`id` 可省（沒寫＝在 `after_all` 的位置字串）、吃頂層預設、跑法跟任務一樣。
+- 環境變數（使用者 2026-10-01 第十批）：`AOS_TICK_CWD` 跟任務一樣；另給 `AOS_HOOK_POINT`（掛點名，`after_all`）、`AOS_HOOK_INDEX`（在 `after_all` 的位置）、`AOS_HOOK_ID`（hook 的 id，沒寫＝位置字串），**不給** `AOS_TASK_ID`／`AOS_TASK_INDEX`（tick 繼承來的也拿掉）；任務也拿不到 `AOS_HOOK_*`。`aos_tick_hooks.hook_vars()` 組、`aos_tick.run_one()` 收 `run_vars`。
 - 不看停格檔；每項的碼照實記、接著跑下一項；不影響 tick 的結束碼（照舊 0）。擋板、busy、表壞時不跑。
 - 格式錯（`hooks` 不是物件、`after_all` 不是陣列、某項不是物件、合併後沒 `argv`）＝`bad_table:`、回 1，開格前就擋。只開 `after_all`，`hooks` 裡其他鍵照收不理。寫在 `modules.hooks` 底下的不會跑。
 - 紀錄：收尾（`ended:true`）那次先寫 `hook-exits.json`（`{"after_all":[]}`）、`record.json` 加 `hooks` 的 `$ref`，每跑完一個**結束碼不是 0** 的 hook 在 `hook-exits.json` 加一筆，格式同 `tasks`（`id`、`index`、`exit` 或 `signal`）；0 的不記，hooks 不記 `ran`；下一格跟著進 `last/`。例（展開後；`build`、`notify` 都回 0 不記，第 2 個 hook 回 3）：

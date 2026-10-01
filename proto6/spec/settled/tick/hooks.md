@@ -35,7 +35,16 @@
   - 可以寫 `id`；沒寫時 id＝它在 `after_all` 陣列的位置轉字串，從 `"0"` 起。跟 `tasks` 的 id 各算各的，撞了不管。
   - **吃 tasks.json 頂層預設**：淺層合併，項自己寫了某個鍵就整個蓋過（`envs` 也整包換），跟 `tasks` 一樣。
   - 跑到時照 inst 規則展開、執行：同樣的 cwd 規則（合併後沒有 cwd 時是工作資料夾；頂層 `cwd` 是預設）、同樣的串流預設、`exec_failed`（125／126／127）。
-- **環境變數跟任務一樣**：`AOS_TICK_CWD`；`AOS_TASK_ID`、`AOS_TASK_INDEX` 是**這個 hook 項自己**在 `after_all` 裡的 id 與位置（不是 `tasks` 的）。不另開 `AOS_HOOK_*`。
+- **環境變數**〔使用者裁定 2026-10-01 第十批〕：`AOS_TICK_CWD` 跟任務一樣；另外給 hook 自己的三個，**取代** `AOS_TASK_ID`／`AOS_TASK_INDEX`：
+
+  | 變數 | 值 |
+  |---|---|
+  | `AOS_HOOK_POINT` | 掛點名，例如 `after_all`（使用者暫名 `AOS_HOOK_TYPE`；值就是掛點名，所以叫 POINT，跟「掛點」一致） |
+  | `AOS_HOOK_INDEX` | 這個 hook 在該掛點陣列裡的位置，十進位，從 0 起（跟 `tasks` 各算各的） |
+  | `AOS_HOOK_ID` | 這個 hook 的 id；沒寫時是位置字串；不是字串時轉成字串 |
+
+  - `after_all` 不屬於任何任務，所以 hook **拿不到** `AOS_TASK_ID`、`AOS_TASK_INDEX`；tick 自己的環境裡剛好有（例如這個 tick 本身是別的 tick 的任務）也先拿掉，不會漏給 hook。反過來，一般任務拿不到 `AOS_HOOK_*`（繼承來的同樣拿掉）。`envs` 清空時一個都不放、inst 的 `envs` 最後疊上去，跟任務一樣。
+  - **之後開「掛在某個任務前後」的掛點時的規則**（`before_task`、`after_task` 這類；目前沒開、沒實作）：hook 除了 `AOS_HOOK_*`，還會有 `AOS_TASK_ID`、`AOS_TASK_INDEX`，這時它們指向**被掛的那個任務**（不是 hook 自己）。
 - **指示詞展開時機比照 `tasks`**（[B-620](../tick.md)「指示詞什麼時候展開」）：讀表時 `hooks` 本身、`after_all`、它的每一元素各解一層（所以 `hooks`、整串、整項都可以 `$ref`；這一步 `$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點）；`hooks` 裡其他鍵不解。值的內部（`argv` 元素的 `$fmt`、`envs` 裡的 `$env`…）跑到那一項、合併頂層預設後才照 inst 規則展開，這時 `$ref:""`／`#…` 指合併後的這一項。不用 `modules` 那種整個展開。
 
 ### 極簡檢查（開格前）
@@ -84,6 +93,6 @@
 - 換紀錄時整個 `current/` 改名成 `last/`，`hook-exits.json` 跟著過去。
 - `hooks` 只會出現在 `ended:true` 的紀錄裡。
 
-依據：使用者 2026-10-01 第九批（紀錄拆檔，`hook-exits.json`）；使用者 2026-10-01 第六批裁定（[verdicts 11 篇末](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第六批tick-的-hooks外掛掛點)）：「那就做外掛掛點，這個hooks就是模組」「after_cell？我以為是after_all，我們有cell嗎？ 2.可以一串。 3.吃，hooks中的掛點所提供的，比如"after_cell":[{},{},...]，就比照tasks。4.會記錄。 剩下都建議」；同日改成頂層鍵：「所以目前唯一的模組就是hooks...就不讓他當模組了，直接讓他變頂層key」。
+依據：使用者 2026-10-01 第十批（hook 的環境變數：「hook這塊，幫我添加AOS_HOOK_TYPE, AOS_HOOK_INDEX, AOS_HOOK_ID……AOS_HOOK_INDEX, _ID會替代TASK_ID, INDEX。但對於hook到特定任務的前後的，還是會有AOS_TASK_INDEX, AOS_TASK_ID，只是這時候他就是指向那個被hook的任務。」，[verdicts 11 篇末](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十批hook-的環境變數)）；使用者 2026-10-01 第九批（紀錄拆檔，`hook-exits.json`）；使用者 2026-10-01 第六批裁定（[verdicts 11 篇末](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第六批tick-的-hooks外掛掛點)）：「那就做外掛掛點，這個hooks就是模組」「after_cell？我以為是after_all，我們有cell嗎？ 2.可以一串。 3.吃，hooks中的掛點所提供的，比如"after_cell":[{},{},...]，就比照tasks。4.會記錄。 剩下都建議」；同日改成頂層鍵：「所以目前唯一的模組就是hooks...就不讓他當模組了，直接讓他變頂層key」。
 
-**驗收：**沒寫 `hooks`（或 `hooks` 裡沒 `after_all`）時紀錄沒有 `hooks`、行為照舊；寫在 `modules.hooks` 底下的不跑。`after_all` 三項依序在任務之後跑，沒寫 id 的用位置字串；頂層 `argv`、`envs` 當預設，項自己寫的 `envs` 整包蓋過。`hooks`、`after_all`、某項各自 `$ref` 到別的檔照跑；項裡 `argv` 元素的 `#/k` 指合併後的這一項。hook 拿到的 `AOS_TICK_CWD` 是工作資料夾、`AOS_TASK_ID`／`AOS_TASK_INDEX` 是自己的。任務建了停格檔：後面的任務不跑、`after_all` 照跑，hook 再建停格檔也不擋下一個 hook。hook 回 3、被 SIGKILL、找不到程式（127，stderr `exec_failed: after_all/<id>:`）都照記（帶 `index`）、回 0 的不記、下一個照跑、tick 回 0。擋板、busy、表壞時一個 hook 都不跑。`after_all` 不是陣列、某項不是物件、合併後沒 `argv`、`hooks` 不是物件、讀表那一層 `$ref` 解不開：`bad_table`、回 1、紀錄與 `seq` 不動。紀錄的 `hooks.after_all` 下一格進 `last/`（`hook-exits.json`）。測試：`src/py/tests/test_tick_hooks.py`。
+**驗收：**沒寫 `hooks`（或 `hooks` 裡沒 `after_all`）時紀錄沒有 `hooks`、行為照舊；寫在 `modules.hooks` 底下的不跑。`after_all` 三項依序在任務之後跑，沒寫 id 的用位置字串；頂層 `argv`、`envs` 當預設，項自己寫的 `envs` 整包蓋過。`hooks`、`after_all`、某項各自 `$ref` 到別的檔照跑；項裡 `argv` 元素的 `#/k` 指合併後的這一項。hook 拿到的 `AOS_TICK_CWD` 是工作資料夾、`AOS_HOOK_POINT` 是 `after_all`、`AOS_HOOK_INDEX`／`AOS_HOOK_ID` 是自己的（沒寫 id 時是位置字串），沒有 `AOS_TASK_ID`／`AOS_TASK_INDEX`（外層環境帶進來的也沒有）；任務拿不到 `AOS_HOOK_*`。任務建了停格檔：後面的任務不跑、`after_all` 照跑，hook 再建停格檔也不擋下一個 hook。hook 回 3、被 SIGKILL、找不到程式（127，stderr `exec_failed: after_all/<id>:`）都照記（帶 `index`）、回 0 的不記、下一個照跑、tick 回 0。擋板、busy、表壞時一個 hook 都不跑。`after_all` 不是陣列、某項不是物件、合併後沒 `argv`、`hooks` 不是物件、讀表那一層 `$ref` 解不開：`bad_table`、回 1、紀錄與 `seq` 不動。紀錄的 `hooks.after_all` 下一格進 `last/`（`hook-exits.json`）。測試：`src/py/tests/test_tick_hooks.py`。

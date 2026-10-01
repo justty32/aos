@@ -500,3 +500,21 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **舊的 `tick/current.json`、`tick/last.json` 不再使用**，POC 不管舊紀錄遷移；照 POC 總原則默認一切正常。
 
 改到的地方：程式 `lib/aos_tick_record.py`（改寫，加 `read_record()`）、`lib/aos_tick.py`（收尾時告訴紀錄有沒有 hooks）、`lib/aos_tick_hooks.py`（拿掉 `start_hooks`）；測試 `tests/test_tick.py`（任務改用 `read_record()` 印紀錄、比對整個資料夾、新 `RecordFiles` 3 條）、`tests/test_tick_hooks.py`（新 1 條）、`tests/test_daemon.py`（讀 `seq` 的路徑）；[tick 核心](../../spec/settled/tick.md) B-620 環境變數表、結束碼表、B-633；[tick 協議](../../spec/settled/protocol/tick.md) P-200、P-203、P-204、P-211、P-212、P-213；[tick/hooks.md](../../spec/settled/tick/hooks.md)；[tick/check-task.md](../../spec/settled/tick/check-task.md)；[tick/git.md](../../spec/settled/tick/git.md)（固定排除的 `.aos/tick/` 本來就涵蓋整個資料夾，只補一句說明）；[tick/recovery.md](../../spec/settled/tick/recovery.md)；[暫緩區 tick](../../spec/settled/deferred/tick.md)（檔名註）；[慣例 C-10](../../spec/settled/conventions.md)；[名詞](../../spec/settled/terms.md)；[驗收入口](../../spec/conformance.md)；schema `tick-record`（加 `$defs/RecordFile`）、`examples/tick/tick-record-file.*`（2 正 3 反）、`examples/messages/validate.py`；[src/py README](../../src/py/README.md)；[plan m1-tick-core](../../plan/m1-tick-core.md)、[m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註、[m2-system-tasks](../../plan/m2-system-tasks.md)。
+
+<a id="2026-10-01-第十批hook-的環境變數"></a>
+
+## 2026-10-01 第十批：hook 的環境變數
+
+〔使用者裁定 2026-10-01〕使用者原話：「hook這塊，幫我添加AOS_HOOK_TYPE, AOS_HOOK_INDEX, AOS_HOOK_ID，我不確定怎麼命名，但反正就是標明他是屬於hook的哪類，然後AOS_HOOK_INDEX, _ID會替代TASK_ID, INDEX。但對於hook到特定任務的前後的，還是會有AOS_TASK_INDEX, AOS_TASK_ID，只是這時候他就是指向那個被hook的任務。」
+
+- **三個變數**（命名由 AI 隊定）：
+  - `AOS_HOOK_POINT`：掛點名，例如 `after_all`。使用者暫名 `AOS_HOOK_TYPE`；值就是掛點名，所以叫 POINT，跟 spec 名詞「掛點」一致（TYPE 容易跟任務表的 `kind` 混）。
+  - `AOS_HOOK_INDEX`：這個 hook 在該掛點陣列裡的位置，從 0 起。
+  - `AOS_HOOK_ID`：這個 hook 的 id；沒寫＝位置轉字串，不是字串時 `str()`。
+- **hook 不再給 `AOS_TASK_ID`／`AOS_TASK_INDEX`**（`after_all` 不屬於任何任務）。`AOS_TICK_CWD` 照給。
+- **一般任務照舊只有 `AOS_TASK_ID`／`AOS_TASK_INDEX`**，不給 `AOS_HOOK_*`。
+- **繼承漏出**〔AI 隊定〕：原本任務的 `AOS_TASK_*` 是蓋在繼承環境上，外層的值會被蓋掉；但 hook 不放 `AOS_TASK_*`、任務不放 `AOS_HOOK_*`，外層（例如這個 tick 本身是別的 tick 的任務或 hook）帶進來的會漏下去。所以跑每一項前先把這五個（`AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_HOOK_POINT`、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`）從繼承的環境拿掉，再放這一項該有的；`envs` 清空、`envs` 最後疊上去的規則不變。
+- **之後開掛在某個任務前後的掛點**（`before_task`、`after_task` 這類，目前沒開）：那種 hook 除了 `AOS_HOOK_*`，還會有 `AOS_TASK_ID`、`AOS_TASK_INDEX`，指向被掛的那個任務。只寫進 spec，不實作。
+- 順帶解掉 [tick 系統級任務清單](../2026-10-01-tick-system-tasks.md) 記的「hook 的 `AOS_TASK_INDEX` 會跟任務撞號」。
+
+改到的地方：程式 `lib/aos_tick.py`（`task_vars()`、`run_one()` 改收 `run_vars`）、`lib/aos_tick_hooks.py`（`hook_vars()`）、`lib/aos_tick_run.py`（`RUN_VARS`，先拿掉繼承來的）；測試 `tests/test_tick_hooks.py`（hook 拿到 `AOS_HOOK_*`、拿不到 `AOS_TASK_*`，任務拿不到 `AOS_HOOK_*`，外層環境帶進來的都不漏）；[tick 核心](../../spec/settled/tick.md) B-620 環境變數；[tick/hooks.md](../../spec/settled/tick/hooks.md) B-635；[tick 協議](../../spec/settled/protocol/tick.md) P-203；[慣例 C-10](../../spec/settled/conventions.md)；[名詞](../../spec/settled/terms.md)；[驗收入口](../../spec/conformance.md)；[protocol README](../../spec/protocol/README.md)；[src/py README](../../src/py/README.md)；[plan m1h-hooks-module](../../plan/m1h-hooks-module.md) 補註；[tick 系統級任務清單](../2026-10-01-tick-system-tasks.md)。
