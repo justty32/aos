@@ -57,7 +57,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 
 ## C-05．舊提交交易
 
-（09-29 重寫：已刪；git 提交／還原與組見 [B-630、B-622](settled/tick/git.md)。）
+（09-29 重寫：已刪；git 提交／還原與組見 [B-630、B-622](settled/deferred/git.md)。）
 
 ## C-06．最小例子與保留
 

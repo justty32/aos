@@ -1,6 +1,8 @@
 # git：開格、存檔點、收尾
 
-← [通用 tick 核心](../tick.md)｜[tick 子篇入口](README.md)｜格式：[tick 協議](../protocol/tick.md)
+← [通用 tick 核心](../tick.md)｜[tick 子篇入口](../tick/README.md)｜格式：[tick 協議](../protocol/tick.md)
+
+> **這篇整篇在暫緩區**（2026-10-01 第十七批）〔使用者 2026-10-01 第十七批：「git這塊先不要進範本。」〕`aos-git` 三項（開格、存檔點、收尾）與它的共同規則（B-630、B-622）、沒有 git 時的下游做法（B-632）都暫緩；原檔 `tick/git.md` 整篇搬來，原文照留、條號保留不重用。暫緩理由：用 hooks 加普通 git 指令就做得到——`before_all` 看上一格紀錄 `ended:false` 就還原、`after_task`／`after_every_task` 看 `AOS_TASK_EXIT` 成功就 commit、失敗就還原那一項（寫法見 [B-635 的範例](../tick/hooks.md#範例用-hook-加普通-git-指令管版本)）。固定排除、`AOS_DIRNAME` 空字串時提交整個資料夾等規則跟著暫緩。下面的「停格檔」現在叫 tasks-blocked（[B-620](../tick.md)）。
 
 **狀態：待實作。`aos-git` 三項還沒有程式。主體不依賴暫緩區；只有「在不在 tick 內」的核對與巢狀排除的判準要等暫緩區（B-622）。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出；節的順序改成先講有 git 時怎麼做（B-630）、共同規則（B-622），最後才是沒有 git（B-632）。
 
@@ -31,7 +33,7 @@
 ### 組與存檔點
 
 - **存檔點**＝`aos-git mark` 這一項，把此刻的 aos 範圍存成暫存提交，記在 `refs/aos/marks/<本項 id>`（取 `AOS_TASK_ID`）。不動分支、HEAD 與正式 index。`aos-git open` 也打一個。
-- **組**＝相鄰兩個存檔點之間的各項；最後一組是最後一個存檔點到 `aos-git close` 之間。組內每項 `exit:0` 才算成功〔2026-10-01 第八批：紀錄只列不是 0 的項，所以判法是「紀錄 `tasks` 裡沒有一筆的 `index` 落在這組」〕；〔2026-10-01〕原本的「被 `aos-needs` 擋下的（`exit:125`）也算失敗」隨 `aos-needs` 改寫成 `aos-tick-check-task` 失效：它沒跑好時建停格檔，這格作廢、close 不跑（見下面停格檔那列，[B-621](../deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）。
+- **組**＝相鄰兩個存檔點之間的各項；最後一組是最後一個存檔點到 `aos-git close` 之間。組內每項 `exit:0` 才算成功〔2026-10-01 第八批：紀錄只列不是 0 的項，所以判法是「紀錄 `tasks` 裡沒有一筆的 `index` 落在這組」〕；〔2026-10-01〕原本的「被 `aos-needs` 擋下的（`exit:125`）也算失敗」隨 `aos-needs` 改寫成 `aos-tick-check-task` 失效：它沒跑好時建停格檔，這格作廢、close 不跑（見下面停格檔那列，[B-621](tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）。
 - **失敗就當場還原**（疑-2）：存檔點發現剛結束那組有失敗，就把那組改過的 aos 範圍路徑（含新增、刪除）還原到**往前最近的存檔點**〔使用者 2026-09-30 同意照暫定：不分範本放的或任務自己打的〕，再打點。所以後面的組看不到失敗組寫的東西，close 只要提交。
 - 存檔點只看結束碼紀錄與已打的存檔點；不看 argv，也不管任務在格內改了表。
 - 存檔點各占一項（疑-12），不另設包裝寫法。
@@ -69,7 +71,7 @@ close 排在 `mq-post` 前面（B-629；發摘要 2026-10-01 搬暫緩區）：�
 
 - **還原時還有人在寫**：沒包 `aos-cg` 的任務留下的程序，要等格後才被 daemon 收掉，還原之後可能又寫回來。只有包了 `aos-cg` 而且 daemon 有 cgroup，才保證還原時那一項已經沒人在寫（B-634）。
 - **成本**：每個存檔點都掃一遍 aos 範圍；實作用 stat 快取（先複製正式 index 再加，不必每次重算整樹 hash）。
-- **多帳號**：別的帳號（daemon 帳號模組的項；〔暫緩〕`aos-as`）開的程序寫進 aos 範圍的檔，要讓 tick 帳號讀得到（例如 [B-609](../deferred/daemon/helper-actions.md) 的共享群組），否則 git 讀不到，當故障。
+- **多帳號**：別的帳號（daemon 帳號模組的項；〔暫緩〕`aos-as`）開的程序寫進 aos 範圍的檔，要讓 tick 帳號讀得到（例如 [B-609](daemon/helper-actions.md) 的共享群組），否則 git 讀不到，當故障。
 
 依據：第二十批追答 8（git 做成任務表上的任務；tick 不再保證整格原子）、疑點裁定 3（每組跑完打存檔點）、4（送出在 git 收尾之後）、5（git 與無 git 合成一種模式）；納入 cgroup 與 git 疑-1（停格＝本格作廢）、疑-2（存檔點當場還原）、疑-4（下游不認得 git，拿掉草稿的「開格刪收件原件」「只送 HEAD 裡的」）、疑-12（存檔點獨立一項）；aos-git 分工（開格與收尾管 tick／daemon 基底與系統級任務；提交與還原只限 aos 自己的東西；失敗還原到往前最近的存檔點，暫定）；使用者 2026-10-01（`AOS_DIRNAME` 空字串時管整個工作資料夾；任務表只有一個位置）。
 
@@ -99,13 +101,13 @@ aos 自己呼叫 git 時一律帶：
 - **不動使用者的設定**：上面都是命令列參數，只管 aos 自己那幾次呼叫。git 的背景整理（gc、maintenance）aos 不管；文件建議使用者自己關掉（例如 `git config gc.auto 0`、`git config maintenance.auto false`），要整理就先暫停這個工作資料夾的排程（經 daemon 跑的用 `aos-ctl pause`，[B-641](../daemon/control.md)）再手動跑。
 - **環境**〔建議預設〕：呼叫前清掉所有繼承的 `GIT_*`，只設自己要的，免得操作到別的 repo。
 - **作者**〔建議預設〕：用 repo 設定；repo 與全域都沒設時用 `aos <aos@localhost>`，不擋。
-- **不在 tick 內**：沒有繼承到鎖時回 125、印 `not_in_tick`；人手要提交就直接用 git。這個核對靠「鎖 fd 傳給任務」，那段在[暫緩區](../deferred/tick.md#暫緩b-602-完整互斥的其餘細節)；最簡鎖不傳 fd，回來之前這條核對還沒有判法。
+- **不在 tick 內**：沒有繼承到鎖時回 125、印 `not_in_tick`；人手要提交就直接用 git。這個核對靠「鎖 fd 傳給任務」，那段在[暫緩區](tick.md#暫緩b-602-完整互斥的其餘細節)；最簡鎖不傳 fd，回來之前這條核對還沒有判法。
 
 ### 範圍怎麼切
 
 - **固定排除**：不管 `.gitignore` 寫了什麼，[P-200](../protocol/tick.md) 表裡 ignore 的核心檔一律不提交、不還原：`.aos/tick.lock`、`.aos/tick/`（整個資料夾，含紀錄 `current/`、`last/` 與停格檔）、`.aos/tick-blocked`、`.aos/jobs/`、`.aos/attention/`、`.aos/runner-stderr.log`、`.aos/summary/published.json`、`.aos/mq/failed/`、`requests/`、`responses/`、`work/`。否則 `.gitignore` 漏列時，結束碼紀錄會被還原、`seq` 倒退。
 - **`AOS_DIRNAME` 換名或是空字串時**〔使用者 2026-10-01〕：上面帶 `.aos/` 的各項換成狀態資料夾的名字；空字串時去掉前綴，直接在工作資料夾頂層排除 `tick.lock`、`tick/`、`tick-blocked`、`jobs/`、`attention/`、`runner-stderr.log`、`summary/published.json`、`mq/failed/`，連同 `requests/`、`responses/`、`work/`。這些以外、git 追蹤的檔全在 aos 範圍（B-630）。〔建議預設〕使用者自己的檔剛好叫這些名字時也一起被排除，不提交、不還原，風險自負。
-- **巢狀**：下層 tick 的資料夾（判準照 [B-628](../deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)；那條在暫緩區，回來前沒有正式判準）寫進 git 管理目錄的 `info/exclude`，不改 `.gitignore`。open、mark、close 存之前都重掃一次，免得格中新建的下層資料夾被上層提交（已追蹤的檔不會因為之後才排除就不追）。下層資料夾自己是 repo 時不進去。
+- **巢狀**：下層 tick 的資料夾（判準照 [B-628](tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)；那條在暫緩區，回來前沒有正式判準）寫進 git 管理目錄的 `info/exclude`，不改 `.gitignore`。open、mark、close 存之前都重掃一次，免得格中新建的下層資料夾被上層提交（已追蹤的檔不會因為之後才排除就不追）。下層資料夾自己是 repo 時不進去。
 - **不遍歷**：不用全樹 `git clean -x`，不進 git 管理目錄或子 repo。
 
 ### 故障
@@ -113,7 +115,7 @@ aos 自己呼叫 git 時一律帶：
 還原、存檔點、commit 失敗，HEAD 被換（B-630 open 第 4 步），任務 `id` 當不了 ref 名（`mark_id_invalid`，例如以 `.lock` 結尾），在 tick 內卻沒有結束碼紀錄（`record_missing`）：
 
 1. 寫擋板檔、建停格檔、回 1；
-2. 之後各格：現行 daemon 照常叫，由 `aos-tick` 自己看到擋板、一項都不跑（[B-620](../tick.md#b-620任務註冊表照表依序跑)）；舊 daemon 照 [B-607](../deferred/daemon/registration.md) 不再開格（在暫緩區）。錯誤摘要走[待處理事項](../../scheduling/operations.md)；
+2. 之後各格：現行 daemon 照常叫，由 `aos-tick` 自己看到擋板、一項都不跑（[B-620](../tick.md#b-620任務註冊表照表依序跑)）；舊 daemon 照 [B-607](daemon/registration.md) 不再開格（在暫緩區）。錯誤摘要走[待處理事項](../../scheduling/operations.md)；
 3. 修復者（經 daemon 跑的先 `aos-ctl pause`）持鎖、核對、自己提交修好的改動，再移除擋板。〔astra 報告必修 1〕
 
 ### 其他

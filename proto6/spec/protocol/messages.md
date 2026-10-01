@@ -73,7 +73,7 @@ responses/<id>.json  # RpcResponse
 
 ## P-307．上層直接讀成員摘要〔建議預設，未拍板〕
 
-成員的追蹤檔 `.aos/summary/summary.json` 用 [msg-summary](schemas/msg-summary.schema.json)：必填 version:1、node_id、observed_seq、ready、due_after_ticks、status。〔使用者方向 2026-09-30，第二十批疑點裁定 7〕`observed_seq` 取代 `observed_at_ms`：寫這份摘要時是成員自己的第幾格（[B-633](../settled/tick.md)），上層只比有沒有前進，不跟自己的格數相減。〔暫定，第二十批疑-10 照 a〕`due_after_ticks` 取代 `due_ms`：希望上層從讀到這一版摘要起再過幾格叫醒我，算上層的格；上層讀到新一版時換成自己的到期格。沒到期事件用 null，ready 可同時成立。status 為 idle、queued、waiting_resources、waiting_result、running、paused、canceling、unknown、needs_attention；reason 可省。可選 `usage` 引用 [res-usage](schemas/res-usage.schema.json)，必須與摘要是同一版（有 git 時同一 commit；沒有 git 時同一次寫出，[B-632](../settled/tick/git.md)）、同一 node，缺量測不補零。不放成員清單、history 或 key。
+成員的追蹤檔 `.aos/summary/summary.json` 用 [msg-summary](schemas/msg-summary.schema.json)：必填 version:1、node_id、observed_seq、ready、due_after_ticks、status。〔使用者方向 2026-09-30，第二十批疑點裁定 7〕`observed_seq` 取代 `observed_at_ms`：寫這份摘要時是成員自己的第幾格（[B-633](../settled/tick.md)），上層只比有沒有前進，不跟自己的格數相減。〔暫定，第二十批疑-10 照 a〕`due_after_ticks` 取代 `due_ms`：希望上層從讀到這一版摘要起再過幾格叫醒我，算上層的格；上層讀到新一版時換成自己的到期格。沒到期事件用 null，ready 可同時成立。status 為 idle、queued、waiting_resources、waiting_result、running、paused、canceling、unknown、needs_attention；reason 可省。可選 `usage` 引用 [res-usage](schemas/res-usage.schema.json)，必須與摘要是同一版（有 git 時同一 commit；沒有 git 時同一次寫出，[B-632](../settled/deferred/git.md)）、同一 node，缺量測不補零。不放成員清單、history 或 key。
 
 **發布檔**（〔暫緩（2026-10-01）〕發布它的 `aos-publish` 隨 B-624 發摘要搬到[暫緩區](../settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)，現在沒有人寫這個檔；下面照留）：ignored 的 `.aos/summary/published.json`，內容是已提交 `summary.json` 的同一版原 bytes，usage 不拆檔；父目錄只授 traverse、檔案只授 read。它會被整份替換，是 P-003 不覆蓋規則的明示例外。
 

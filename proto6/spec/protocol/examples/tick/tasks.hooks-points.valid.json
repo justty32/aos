@@ -1,0 +1,62 @@
+{
+  "tasks": [
+    {
+      "id": "fetch",
+      "argv": [
+        "./fetch.sh"
+      ]
+    },
+    {
+      "argv": [
+        "./report.sh"
+      ]
+    }
+  ],
+  "hooks": {
+    "before_all": [
+      {
+        "id": "recover",
+        "argv": [
+          "./recover-if-crashed.sh"
+        ]
+      }
+    ],
+    "after_task": {
+      "fetch": [
+        {
+          "id": "commit-fetch",
+          "argv": [
+            "sh",
+            "-c",
+            "[ \"$AOS_TASK_EXIT\" = 0 ] && git add -A data && git commit -qm fetch || git checkout -- data"
+          ]
+        }
+      ],
+      "1": [
+        {
+          "id": "notify",
+          "argv": [
+            "./notify.sh"
+          ]
+        }
+      ]
+    },
+    "after_every_task": [
+      {
+        "id": "log",
+        "argv": [
+          "sh",
+          "-c",
+          "echo \"$AOS_TASK_ID $AOS_TASK_EXIT\" >> tasks.log"
+        ]
+      }
+    ],
+    "after_all": [
+      {
+        "argv": [
+          "./summary.sh"
+        ]
+      }
+    ]
+  }
+}

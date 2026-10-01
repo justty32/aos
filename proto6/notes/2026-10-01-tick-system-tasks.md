@@ -44,14 +44,14 @@
 
 ## 二、git 三項（B-630、B-622、B-632）
 
-使用者 10-01：「git也先不動」。plan 待問 1～8 都還在想。共通前提：[git.md](../spec/settled/tick/git.md)、格式 P-205。
+使用者 10-01：「git也先不動」。plan 待問 1～8 都還在想。共通前提：[git.md](../spec/settled/deferred/git.md)、格式 P-205。
 
 ### aos-git open（`git-open`）
 
 - **做什麼**：上一格沒正常收尾（`last/` 是 `ended:false` 或有 `stopped_after`）就把 aos 範圍還原到 HEAD；清掉殘留的 `refs/aos/marks/*`；打本格第一個存檔點。
 - **原本位置**：有 git 版第 1 項。
 - **機制**：讀上一格紀錄；「在不在 tick 內」靠繼承的鎖 fd；故障時寫擋板＋停格檔。
-- **狀態**：待實作（[B-630](../spec/settled/tick/git.md)）。
+- **狀態**：待實作（[B-630](../spec/settled/deferred/git.md)）。
 - **前提不在了**：鎖 fd 不傳給任務（`not_in_tick` 判不了）；`kind` 回查、巢狀排除（上下層判定 B-628 暫緩）都沒依據；紀錄只記非 0，存檔點命名、組的判法 plan 已改照 `index`。
 - **hooks 想法（待使用者想）**：
   - 留在 `tasks` 第一項：最單純，沒什麼不行。
@@ -63,7 +63,7 @@
 - **做什麼**：打存檔點；剛結束那組有失敗，就把那組改的 aos 範圍還原到往前最近的存檔點再打點。`mark <路徑…>` 可把使用者的檔加進 aos 範圍。
 - **原本位置**：有 git 版的 `mark-get`（`mq-get` 之後，把取件那段隔開）、`mark-user`（使用者任務之後、`clean` 之前）；使用者任務要存檔就自己插一項。存檔點各占一項，不做包裝寫法（疑-12）。
 - **機制**：讀本格紀錄判斷「組」有沒有失敗（現在照 `index`）；ref 名原用 `AOS_TASK_ID`，plan 建議改 `AOS_TASK_INDEX`。
-- **狀態**：待實作（[B-630](../spec/settled/tick/git.md)）；`mark <路徑…>` plan 建議先不做（待問 3）。
+- **狀態**：待實作（[B-630](../spec/settled/deferred/git.md)）；`mark <路徑…>` plan 建議先不做（待問 3）。
 - **前提不在了**：「兩個存檔點之間全是 `kind:"system"` 就整段算 aos 範圍」要回查 `kind`，plan 建議拿掉（待問 1）；`id` 可重複、可省。
 - **hooks 想法（待使用者想）**：
   - 留在 `tasks` 當一般項：它本來就是「夾在兩項之間」，`after_all` 做不到。
@@ -76,7 +76,7 @@
 - **做什麼**：處理最後一組（失敗就還原）、把 aos 範圍剩下的改動提交一次（`aos-tick <seq>`）、刪本格存檔點。
 - **原本位置**：有 git 版倒數第二，`clean` 之後、`mq-post` 之前。
 - **機制**：**被停格擋住是刻意的**——停格＝這格作廢，close 不跑、不提交，交給下一格 open 還原。close 失敗建停格檔，保住「先提交再送」。
-- **狀態**：待實作（[B-630](../spec/settled/tick/git.md)）；故障處理 plan 建議只回 1（待問 5）。
+- **狀態**：待實作（[B-630](../spec/settled/deferred/git.md)）；故障處理 plan 建議只回 1（待問 5）。
 - **前提不在了**：同 open；故障寫擋板＋停格檔 plan 建議拿掉。
 - **hooks 想法（待使用者想）**：
   - 留在 `tasks` 倒數：照原設計，停格自然不跑。
@@ -205,7 +205,7 @@
 | 收件 aos-inbox → aos-intake → `aos-sysinbox`；投件 aos-outbox | `aos-mq get`／`post` | verdicts 11「astra 審整理區」 |
 | 檔案收件、檔案投件（`requests/`、`responses/`） | 普通程式，aos 不管 | [B-623、B-624](../spec/settled/tick/mq.md) |
 | 鬧鐘 `alarm_ticks`、`.aos/alarms/` | 撤，任務自己記 | B-624 |
-| `.aos/journal/`、`aos-tick adopt` | 結束碼紀錄取代 | [B-632](../spec/settled/tick/git.md) |
+| `.aos/journal/`、`aos-tick adopt` | 結束碼紀錄取代 | [B-632](../spec/settled/deferred/git.md) |
 | tick 側 cgroup 備援 | 撤，改 `aos-cg` | [B-631](../spec/settled/tick/cg.md) |
 | 第十九批「標準配備」（同一支 aos-tick、必須全掛） | 標準任務表範本 | verdicts 11 追答 8、9 |
 

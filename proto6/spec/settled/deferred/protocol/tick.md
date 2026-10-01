@@ -2,7 +2,7 @@
 
 ← [暫緩區](../README.md)｜[tick 暫緩區](../tick.md)｜[現行 tick 協議](../../protocol/tick.md)｜[慣例](../../conventions.md)
 
-> **這篇整篇在暫緩區**（2026-10-01）。[tick 協議](../../protocol/tick.md)裡先不做的條（P-207 整條、P-206 的 `aos-publish` 那列、P-212 `aos-as` 整條、P-204 `aos-tick-check-task` 整條）搬到這裡，原文照留，條號保留、不重用。行為那側見 [tick 暫緩區](../tick.md)。
+> **這篇整篇在暫緩區**（2026-10-01）。[tick 協議](../../protocol/tick.md)裡先不做的條（P-207 整條、P-206 的 `aos-publish` 那列、P-212 `aos-as` 整條、P-204 `aos-tick-check-task` 整條、P-205 `aos-git` 整條）搬到這裡，原文照留，條號保留、不重用。行為那側見 [tick 暫緩區](../tick.md)。
 
 ## P-207．加入普通設定〔建議預設，未拍板〕
 
@@ -23,7 +23,7 @@
 | `75` | 鎖被占（busy，特別指定的碼） |
 | `125` | 前置失敗（例如有擋板檔），沒寫目標（特別指定的碼） |
 
-不自己提交：`config/` 不在 aos 範圍（[B-630](../../tick/git.md)、[B-625](../../tick/recovery.md)），要留歷史就自己 `git commit`。
+不自己提交：`config/` 不在 aos 範圍（[B-630](../git.md)、[B-625](../../tick/recovery.md)），要留歷史就自己 `git commit`。
 
 依據：第十九批依方案 A 縮短；第二十批（不在任務表上、沒有 git）；astra 審整理區必-5（撤掉 git 殘句）。
 
@@ -85,3 +85,39 @@
 |---|---|
 | `0` | 檢查完：都跑好了（沒動作），或有沒跑好的、已建停格檔——停格是預料之中（[C-08](../../conventions.md)） |
 | `1` | 自己的錯：沒有 `AOS_TICK_CWD`、紀錄讀不到等；照 POC 總原則默認正常，出事讓程式自然丟錯 |
+
+## P-205．aos-git：開格、存檔點、收尾〔使用者方向 2026-09-30；格式為建議預設〕
+
+> **暫緩**（2026-10-01 第十七批）〔使用者 2026-10-01 第十七批：「git這塊先不要進範本。」〕原文照搬家前的樣子留著。
+
+本條只定格式。行為正本：開格、存檔點、收尾與 aos 範圍 [B-630](../git.md)；能不能用、呼叫參數、固定排除、故障 [B-622](../git.md)；沒有 git 時 [B-632](../git.md)。
+
+- **argv**：三者都是系統級任務（`kind:"system"`），都在工作資料夾（cwd）跑。
+
+| argv | 做什麼 |
+|---|---|
+| `aos-git open` | 上一格沒正常收尾就還原；清殘留；打本格第一個存檔點 |
+| `aos-git mark [<路徑…>]` | 打存檔點；剛結束那組有失敗就先還原。帶路徑＝把使用者任務自己的檔加進 aos 範圍，從這點起到本格結束；路徑相對工作資料夾〔使用者 2026-09-30 同意照暫定〕。`AOS_DIRNAME` 空字串時整個工作資料夾本來就在 aos 範圍，帶不帶路徑都一樣（[B-630](../git.md)） |
+| `aos-git close` | 處理最後一組、提交、刪本格存檔點 |
+
+- **在 tick 內**：靠繼承的鎖。不在 tick 內回 125、印 `not_in_tick`，不自己取鎖。這個判法靠「鎖 fd 傳給任務」，那段在[暫緩區](../tick.md#暫緩b-602-完整互斥的其餘細節)；最簡鎖不傳 fd，回來之前還沒有判法（[B-622](../git.md)）。
+- **git 參數**（每次呼叫都帶，[B-622](../git.md)）：`-c core.fsync=committed,reference`（存檔點改帶 `core.fsync=none`）、`-c gc.auto=0`、`-c maintenance.auto=false`、`-c core.hooksPath=/dev/null`、`-c commit.gpgSign=false`、`-c safe.directory=<工作資料夾>`；呼叫前清掉繼承的 `GIT_*`。最低 git 2.36。
+- **commit 訊息**：`aos-tick <seq>`，`seq` 是結束碼紀錄的格數（P-213）；每格最多一個。可另加一行 `aos-failed: <存檔點 id…>`，只給人看。〔第二十批〕第十九批的 `aos-tick group <first>..<last>`、`aos-tick unclaimed`、`aos-tick adopt` 撤。
+- **存檔點**：暫存提交，記在 git 管理目錄的 `refs/aos/marks/<任務 id>`（取 `AOS_TASK_ID`）；不在任何分支上，close 用完就刪，open 開格先清掉殘留的。不做救援 ref。
+- **stderr 代碼**：
+
+| 代碼 | 什麼時候 |
+|---|---|
+| `no_git` | git 不能用；只是警告，回 0 |
+| `git_failed` | 還原、存檔點、commit 失敗（附 git 的錯誤行） |
+| `record_missing` | 在 tick 內卻沒有結束碼紀錄 |
+| `mark_id_invalid` | 任務 `id` 當不了 ref 名（例如以 `.lock` 結尾） |
+| `not_in_tick` | 不在 tick 內 |
+
+| 結束碼 | 意思 |
+|---|---|
+| `0` | 成功；含有組失敗但已還原、含 `no_git` |
+| `1` | 故障：已寫擋板檔、建停格檔（P-213）；或用法錯 |
+| `125` | 不在 tick 內（特別指定的碼） |
+
+〔第二十批疑點裁定 5〕第十九批的完成紀錄 `.aos/journal/<seq>.json`、`sent/`、`discarded/` 與 `node-journal` schema 撤，由結束碼紀錄取代（P-213、[B-632](../git.md)）。

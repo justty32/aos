@@ -15,8 +15,8 @@
 
 - **條號不變、不重用。** 搬家只換檔案位置；新規定開新號。
 - **主規格是行為正本，協議篇只留格式**（方案 A，[V-01](../conformance.md)）：`tick.md`、`daemon/` 寫行為；`protocol/` 底下只寫欄位、JSON、argv、結束碼。
-- **git 與 cgroup 是「有就用」，不是前提**（git：[B-630、B-622](tick/git.md)；cgroup：`aos-cg` [B-634](tick/cg.md)，daemon 那側在暫緩區）。提交與還原只限 aos 自己的東西，使用者任務改的檔 aos 不管。
-- **系統級任務與普通程式**（`aos-git`、`aos-mq`、`aos-clean`、`aos-cg`；`aos-publish` 2026-10-01、`aos-tick-check-task` 第十六批搬暫緩區）放在正式篇的 [tick/ 子篇](tick/README.md)：它們是之後幾段要做的獨立程式，規定沒被推翻；每篇開頭一行標狀態（已實作／待實作／依賴暫緩），用到暫緩區東西的地方各條有註明。〔使用者 2026-10-01；astra 報告建議 1〕
+- **git 與 cgroup 是「有就用」，不是前提**（git：[B-630、B-622](deferred/git.md)；cgroup：`aos-cg` [B-634](tick/cg.md)，daemon 那側在暫緩區）。提交與還原只限 aos 自己的東西，使用者任務改的檔 aos 不管。
+- **系統級任務與普通程式**（`aos-mq`、`aos-clean`、`aos-cg`；`aos-publish` 2026-10-01、`aos-tick-check-task` 第十六批、`aos-git` 第十七批搬暫緩區）放在正式篇的 [tick/ 子篇](tick/README.md)：它們是之後幾段要做的獨立程式，規定沒被推翻；每篇開頭一行標狀態（已實作／待實作／依賴暫緩），用到暫緩區東西的地方各條有註明。〔使用者 2026-10-01；astra 報告建議 1〕
 - **要能自己讀懂**：區內各篇互相連結；對區外的依賴列在下面「對外依賴」。
 - **其他篇之後才放進來**：kernel、LLM、agent、CLI、基底其餘各篇，等它們跟上新基礎再放入。
 
@@ -37,7 +37,7 @@
 | [conventions.md](conventions.md) | C-08、C-09、C-10、C-11 | 2026-10-01 新開；C-11 是第二批新開 |
 | [terms.md](terms.md) | T-07、T-10、T-11 | 從 [名詞與責任](../terms.md) 拆出；T-11 是 2026-10-01 新開；T-09 搬到暫緩區 |
 | [tick.md](tick.md) | B-626、B-602、B-620、B-633、B-627 | tick 核心（已實作）。從 `spec/tick.md` 搬來；B-628 與 B-602、B-620、B-633 的部分內容搬到暫緩區；2026-10-01 其餘各條拆到 tick/〔使用者 2026-10-01〕 |
-| [tick/](tick/README.md) | B-629、B-636、B-634、B-631（撤）、B-623、B-624、B-630、B-622、B-632、B-625、B-635 | 2026-10-01 從 tick.md 拆出，條號不變；同日第六批新開 [hooks](tick/hooks.md)（B-635，外掛掛點，已實作）：[template](tick/template.md)（B-629）、[check-task](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（B-621）、[cg](tick/cg.md)（B-634、B-631）、[mq](tick/mq.md)（B-623、B-624）、[git](tick/git.md)（B-630、B-622、B-632）、[recovery](tick/recovery.md)（B-625）；狀態見[子篇入口](tick/README.md) |
+| [tick/](tick/README.md) | B-629、B-636、B-634、B-631（撤）、B-623、B-624、B-630、B-622、B-632、B-625、B-635 | 2026-10-01 從 tick.md 拆出，條號不變；同日第六批新開 [hooks](tick/hooks.md)（B-635，外掛掛點，已實作）：[template](tick/template.md)（B-629）、[check-task](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（B-621）、[cg](tick/cg.md)（B-634、B-631）、[mq](tick/mq.md)（B-623、B-624）、[git](deferred/git.md)（B-630、B-622、B-632）、[recovery](tick/recovery.md)（B-625）；狀態見[子篇入口](tick/README.md) |
 | [daemon.md](daemon.md) | — | 舊的 daemon 入口，只指向 daemon 目錄 |
 | [daemon/](daemon/README.md) | B-640～646 | 2026-10-01 重寫：[core](daemon/core.md)（B-640）、[control](daemon/control.md)（B-641）、[reload](daemon/reload.md)（B-642）、[state](daemon/state.md)（B-643）、[cgroup](daemon/cgroup.md)（B-644）、[mq](daemon/mq.md)（B-645）、[account](daemon/account.md)（B-646） |
 | [protocol/tick.md](protocol/tick.md) | P-200～214 | tick 協議。從 `spec/protocol/node.md` 搬來；2026-10-01 由 `protocol/node.md` 改名〔使用者 2026-10-01〕 |
@@ -139,13 +139,13 @@
 - **設計 3（`interval_ms` 規則拆成 schema 與腳本兩套）**：改用 schema 的條件規則表達，範例腳本不再重複判定（[P-120](protocol/daemon/core.md)）。
 - **建議 1（核心與待做程式分篇）**：已拆成 [tick.md](tick.md) 核心＋[tick/ 子篇](tick/README.md)，各篇開頭標狀態。
 - **建議 2（疑點分清哪些要問人）**：上面「要使用者裁定的」已把有裁定的第 3、7 題改記結案、第 10 題改記編輯事項。
-- **要使用者裁定 1（`AOS_DIRNAME=""` 時 git 管什麼）**：使用者定「不用特別弄清單，就全部」（[C-09](conventions.md)、[B-630](tick/git.md)）。
+- **要使用者裁定 1（`AOS_DIRNAME=""` 時 git 管什麼）**：使用者定「不用特別弄清單，就全部」（[C-09](conventions.md)、[B-630](deferred/git.md)）。
 - **要使用者裁定 2（檔觸發入口與控制模組的關係）**：node 模組方向裡「用檔觸發、不開 socket」那句已被控制模組（B-641）取代。
 
 這輪落筆時發現、先照下面寫法、要使用者裁定的：
 
 1. ~~**`aos-config-add` 的旗標**：tick 層改名時從 `--node <node_dir>` 改成 `--dir <工作資料夾>`（P-207）。程式還沒寫，沒有相容問題；名字請確認。~~ **已裁定：搬暫緩區**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第四批aos-config-add-搬暫緩區擋板檔與停格檔照現狀)）：`aos-config-add` 從沒寫過程式，整個指令（B-625 那段與 P-207）搬到[暫緩區](deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)；旗標名等加回來時再定。
-2. ~~**`AOS_DIRNAME=""` 時的固定排除**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：狀態資料夾就是工作資料夾，`aos-git` 固定排除的 `tick/`、`tick.lock` 等直接落在工作資料夾頂層；使用者自己的檔剛好同名就不提交也不還原，風險自負（[B-622](tick/git.md)）。
+2. ~~**`AOS_DIRNAME=""` 時的固定排除**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：狀態資料夾就是工作資料夾，`aos-git` 固定排除的 `tick/`、`tick.lock` 等直接落在工作資料夾頂層；使用者自己的檔剛好同名就不提交也不還原，風險自負（[B-622](deferred/git.md)）。
 3. ~~**tasks.json 頂層 `_metainfo` 在 schema 是必填**，要不要改成可省？~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：頂層 `_metainfo` 可省，schema 的 `required` 拿掉；每項的 `_metainfo` 照 inst 規則可省（沒寫＝posix 第 1 版），寫了跑到那一項才驗，驗不過＝跑到某項展開失敗（[B-620](tick.md)、[P-202](protocol/tick.md)）。
 4. ~~**`modules` 內部 tick 不展開，daemon 那邊整份展開**，兩邊不同。~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：tasks.json 的 `modules` 讀表時也整個展開，跟 daemon 設定檔一致；展開失敗＝`bad_table`、回 1（[C-11](conventions.md)、[B-620](tick.md)）。
 5. ~~**頂層陌生鍵讀表時不解**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：只有七個預設欄位、`tasks` 解一層、`modules` 整個展開；其他頂層鍵（含 `_metainfo`）不解，寫壞了也不會 `bad_table`（[B-620](tick.md)）。

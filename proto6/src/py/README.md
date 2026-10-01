@@ -82,7 +82,7 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | `lib/aos_tick_record.py` | 結束碼紀錄資料夾 `tick/current/`／`last/`：開格換紀錄（整個資料夾 rename）、每項寫 `ran.json`、不是 0 才寫 `task-exits.json`／`hook-exits.json`、收尾寫 `record.json`（使用者 2026-10-01 第八、九批）；`read_record()` 讀展開 `$ref` 後的完整紀錄 |
 | `lib/aos_tick_table.py` | 讀任務表（`.aos/tasks.json`）、只解到 `tasks` 這層、頂層預設、極簡檢查 `check_table()`、每項的 `id`、跑到時合併預設再展開成 inst `load_inst()` |
 | `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、這一項的 `AOS_*`（先拿掉繼承來的 `AOS_TASK_*`／`AOS_HOOK_*`）、分 exit／signal |
-| `lib/aos_tick_hooks.py` | hooks（外掛掛點，m1h）：收尾後依序跑 `after_all` 的 `run_after_all()`（讀表與極簡檢查在 `aos_tick_table.check_table()`，結果是 `Table.after_all`） |
+| `lib/aos_tick_hooks.py` | hooks（外掛掛點，m1h；第十七批四個掛點）：`run_point()` 跑一個掛點的一串、`run_after_task()` 在每項之後跑 `after_task.<id>` 與 `after_every_task`（讀表與極簡檢查在 `aos_tick_table.check_table()`，結果是 `Table.before_all`／`after_task`／`after_every_task`／`after_all`） |
 | `tests/test_tick.py` | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes` |
 | `tests/test_tick_hooks.py` | hooks 的驗收（m1h） |
 
@@ -139,7 +139,7 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | `record.json` | `version`、`seq`、`started_at_ms`、`ended`、`exit`、`blocked_before`，加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}` | 開格、收尾各一次 |
 | `ran.json` | 一個數字：本格跑完幾項 | 開格 `0`，每跑完一項 |
 | `task-exits.json` | 結束碼不是 0 的任務 `[{"id","index","exit"\|"signal"}…]` | 開格 `[]`，有失敗才重寫 |
-| `hook-exits.json` | `{"after_all":[…]}`，結束碼不是 0 的 hook | 任務表有 `hooks.after_all` 時收尾先寫 `{"after_all":[]}`，有失敗才重寫 |
+| `hook-exits.json` | `{"before_all":[…],"after_task":[…],"after_every_task":[…],"after_all":[…]}`（寫了哪幾個掛點就有哪幾個），結束碼不是 0 的 hook；跟任務有關的帶 `task_index` | 任務表有 hooks 時**開格**就寫好各掛點的 `[]`（第十七批），有失敗才重寫 |
 
 換紀錄＝刪 `last/`、`current/` 整個 rename 成 `last/`、暫存資料夾 `.current.tmp/` rename 成 `current/`；`$ref` 是相對路徑，改名後仍指得對。`seq` 從 `current/record.json`（沒有就 `last/record.json`）接著數。舊的 `current.json`／`last.json` 不再使用、不遷移。
 
@@ -184,32 +184,34 @@ plan 步驟對到哪：
 
 ## hooks：外掛掛點（m1h）
 
-照 [plan m1h](../../plan/m1h-hooks-module.md) 寫的，spec 正本 [B-635](../../spec/settled/tick/hooks.md)。在任務表頂層寫 `hooks`（跟 `tasks` 同層；使用者 2026-10-01 同日改：不當模組、直接當頂層鍵），裡面寫 `after_all`，`aos-tick` 照表跑完（含被停格檔停下）之後就依序跑那一串。
+照 [plan m1h](../../plan/m1h-hooks-module.md) 寫的，spec 正本 [B-635](../../spec/settled/tick/hooks.md)。在任務表頂層寫 `hooks`（跟 `tasks` 同層；不當模組）。2026-10-01 第十七批起四個掛點：
 
 ```json
 {
-  "envs": {"LANG": "C.UTF-8"},
-  "tasks": [{"id": "build", "argv": ["make"]}],
-  "hooks": {"after_all": [
-    {"id": "notify", "argv": ["./notify.sh"]},
-    {"argv": ["sh", "-c", "date >> ticks.log"]}
-  ]}
+  "tasks": [{"id": "build", "argv": ["make"]}, {"argv": ["./report.sh"]}],
+  "hooks": {
+    "before_all": [{"id": "recover", "argv": ["./recover.sh"]}],
+    "after_task": {"build": [{"id": "notify", "argv": ["./notify.sh"]}], "1": [{"argv": ["./after-report.sh"]}]},
+    "after_every_task": [{"id": "log", "argv": ["sh", "-c", "echo \"$AOS_TASK_ID $AOS_TASK_EXIT\" >> tasks.log"]}],
+    "after_all": [{"argv": ["sh", "-c", "date >> ticks.log"]}]
+  }
 }
 ```
 
-- 寫法與指示詞展開時機都比照 `tasks`（`hooks`、`after_all`、每一元素讀表時各解一層，內部跑到時才展開）：每項一個 inst 物件，`id` 可省（沒寫＝在 `after_all` 的位置字串）、吃頂層預設、跑法跟任務一樣。
-- 環境變數（使用者 2026-10-01 第十批）：`AOS_TICK_CWD` 跟任務一樣；另給 `AOS_HOOK_POINT`（掛點名，`after_all`）、`AOS_HOOK_INDEX`（在 `after_all` 的位置）、`AOS_HOOK_ID`（hook 的 id，沒寫＝位置字串），**不給** `AOS_TASK_ID`／`AOS_TASK_INDEX`（tick 繼承來的也拿掉）；任務也拿不到 `AOS_HOOK_*`。`aos_tick_hooks.hook_vars()` 組、`aos_tick.run_one()` 收 `run_vars`。
-- 不看 tasks-blocked（被它擋下的格照跑）；每項的碼照實記、接著跑下一項；不影響 tick 的結束碼（照舊 0）。擋板、busy、表壞時不跑。
-- 格式錯（`hooks` 不是物件、`after_all` 不是陣列、某項不是物件、合併後沒 `argv`）＝`bad_table:`、回 1，開格前就擋。只開 `after_all`，`hooks` 裡其他鍵照收不理。寫在 `modules.hooks` 底下的不會跑。
-- 紀錄：收尾（`ended:true`）那次先寫 `hook-exits.json`（`{"after_all":[]}`）、`record.json` 加 `hooks` 的 `$ref`，每跑完一個**結束碼不是 0** 的 hook 在 `hook-exits.json` 加一筆，格式同 `tasks`（`id`、`index`、`exit` 或 `signal`）；0 的不記，hooks 不記 `ran`；下一格跟著進 `last/`。例（展開後；`build`、`notify` 都回 0 不記，第 2 個 hook 回 3）：
+| 掛點 | 什麼時候 | 另給的環境變數 |
+|---|---|---|
+| `before_all` | 開格後、第一項（含 tasks-blocked 的檢查）之前 | `AOS_HOOK_*` |
+| `after_task.<任務 id>` | 那一項跑完（沒寫 id 的任務用位置字串當鍵；不存在的 id 不跑、不報錯） | `AOS_HOOK_*`＋剛跑完那一項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`（被訊號 N 殺＝128+N） |
+| `after_every_task` | 每一項跑完；同一項也有 `after_task` 時排在它後面 | 同上 |
+| `after_all` | 照表跑完或被 tasks-blocked 擋下之後 | `AOS_HOOK_*` |
 
-  ```json
-  {"version":1,"seq":7,"started_at_ms":1790000000000,
-   "ran":1,"tasks":[],"ended":true,"exit":0,
-   "hooks":{"after_all":[{"id":"1","index":1,"exit":3}]}}
-  ```
-
-- 某個 hook 沒跑成時 stderr 是 `exec_failed: after_all/<id>: …`。
+- 寫法與指示詞展開時機都比照 `tasks`（`hooks`、每個掛點〔`after_task` 再多一層〕、每一元素讀表時各解一層，內部跑到時才展開）：每項一個 inst 物件，`id` 可省（沒寫＝在自己那個陣列的位置字串）、吃頂層預設、跑法跟任務一樣。`AOS_HOOK_INDEX` 是在自己那個陣列的位置（`after_task` 每個任務 id 各自從 0 數）。
+- 跑每一項前，`AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`、`AOS_HOOK_*` 一律先從繼承的環境拿掉（`aos_tick_run.RUN_VARS`），所以 `AOS_TASK_EXIT` 只有那兩個掛點有。`aos_tick_hooks.run_point()`、`run_after_task()` 組變數。
+- 不看 tasks-blocked；被它擋下沒跑的任務不觸發 `after_task`、`after_every_task`。每項的碼照實記、接著跑下一項；不影響 tick 的結束碼（照舊 0）。擋板、busy、表壞時一個都不跑。
+- 格式錯（`hooks` 不是物件、陣列的掛點不是陣列、`after_task` 不是物件或某個值不是陣列、某項不是物件、合併後沒 `argv`）＝`bad_table:`、回 1，開格前就擋。`hooks` 裡其他鍵照收不理。寫在 `modules.hooks` 底下的不會跑。
+- 紀錄：任務表寫了哪幾個掛點，**開格**時就把 `hook-exits.json`（各掛點 `[]`）寫好、`record.json` 帶 `hooks` 的 `$ref`；每跑完一個**結束碼不是 0** 的 hook 加一筆，格式同 `tasks`（`id`、`index`、`exit` 或 `signal`），`after_task`、`after_every_task` 另帶 `task_index`；0 的不記，hooks 不記 `ran`；下一格跟著進 `last/`。
+- 某個 hook 沒跑成時 stderr 是 `exec_failed: <掛點>/<id>: …`（`after_task` 是 `after_task/<任務 id>/<id>`）。
+- 用 hooks 加普通 git 指令取代 `aos-git`（第十七批暫緩）的寫法見 [B-635 範例](../../spec/settled/tick/hooks.md#範例用-hook-加普通-git-指令管版本)。
 
 ## tick 模組 `modules.tasks_blocked`（B-636）
 

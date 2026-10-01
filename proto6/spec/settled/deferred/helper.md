@@ -54,7 +54,7 @@
 3. 讀 pipe 到 EOF，拿到 runner 的回報（[P-110](protocol/daemon/provision-and-runner.md)），照它結束：正常結束回同一碼，被訊號結束就用同一個訊號結束自己；刪掉那份 inst。runner 先清空它名下的程序才寫回報（B-601），所以 `aos-as` 結束時原指令與它的後代都已結束。
 
 - **鎖**：別的帳號的程序繼承同一份鎖 fd，照 [B-602](../tick.md) 核對得到。
-- **有 git 時**：別的帳號的程序寫進 aos 範圍的檔，要讓 tick 帳號讀得到（例如用 [B-609](daemon/helper-actions.md) 的共享群組），否則 `aos-git` 讀不到、當故障（[B-630](../tick/git.md)）。`aos-as` 等到 pipe EOF 才結束，所以它結束前核心不會開下一項。
+- **有 git 時**：別的帳號的程序寫進 aos 範圍的檔，要讓 tick 帳號讀得到（例如用 [B-609](daemon/helper-actions.md) 的共享群組），否則 `aos-git` 讀不到、當故障（[B-630](git.md)）。`aos-as` 等到 pipe EOF 才結束，所以它結束前核心不會開下一項。
 - **被取消**：呼叫方對 `aos-as` 送 SIGTERM／SIGINT，它就結束（不刪那份 inst，留給清理）；runner 發現回報 pipe 斷了就清空原指令、結束。中間可能有一小段跟下一項重疊，見 [B-609](daemon/helper-actions.md)「呼叫方不在了」〔暫定〕。
 - 〔建議預設，未拍板〕helper 動作被開關關掉時，`spawn_as` 回 `not_available`，`aos-as` 回 125、stderr 印代碼、不開原指令。
 - **不行時**：沒有通道變數（不是 daemon 開的格），或 daemon 回 `helper_unavailable`、`user_not_granted`、`user_invalid`、`stopping`，都回 125、不寫 `exit`，stderr 印代碼。回應成功但 pipe 沒回報就關了，也回 125（`result_unknown`），呼叫它的一方不能重跑。不另設替代路。

@@ -8,7 +8,8 @@
                      有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}`
     ran.json         一個數字＝本格到目前跑了幾項 tasks（含失敗的，被停格擋掉的不算），每跑完一項重寫
     task-exits.json  結束碼不是 0 的任務 [{"id","index","exit"|"signal"}...]；開格寫 `[]`，有失敗才重寫
-    hook-exits.json  {"after_all":[...]}，結束碼不是 0 的 hook；收尾時有 hooks 要跑才建（先寫 `[]`）
+    hook-exits.json  {"before_all":[...],"after_task":[...],"after_every_task":[...],"after_all":[...]}，結束碼不是 0 的 hook；
+                     任務表寫了哪幾個掛點就有哪幾個鍵（第十七批：開格就建，先寫 `[]`）
 
 $ref 是相對路徑（相對於 record.json 所在資料夾），整個資料夾改名後仍指得對。
 每個檔都是整份重寫（暫存檔 → rename）。只有核心寫；讀的一方用 `read_record()` 拿展開後的完整紀錄。
@@ -16,9 +17,10 @@ $ref 是相對路徑（相對於 record.json 所在資料夾），整個資料�
 - `open()`：開格換紀錄（算 `seq` → 在 `.current.tmp/` 寫好 record.json、ran.json、task-exits.json →
   刪 `last/`、`current/` 整個換成 `last/`（沒有 current 就只刪 last）→ `.current.tmp/` 換成 `current/`）。
 - `add_task()`：每項之後寫 ran.json；不是 exit 0 才重寫 task-exits.json。
-- `finish()`：收尾寫 record.json；這格有 hooks 要跑時先寫好 hook-exits.json（`after_all: []`）再寫 record.json，
-  所以 record.json 只在開格與收尾各寫一次。
-- `add_hook()`：hooks（B-635）跑完一項，不是 exit 0 才重寫 hook-exits.json。
+- `finish()`：收尾寫 record.json，所以 record.json 只在開格與收尾各寫一次。
+- `add_hook()`：hooks（B-635）跑完一項，不是 exit 0 才重寫 hook-exits.json。第十七批起 hooks 在格中也會跑
+  （before_all、after_task、after_every_task），所以任務表有寫 hooks 時 hook-exits.json 開格就建好、record.json 開格就帶 `hooks` 的 $ref；
+  after_task／after_every_task 的每筆另帶 `task_index`＝觸發它的那一項任務的位置。
 - 〔第八批〕只記結束碼不是 0 的項，每筆 `{"id","index","exit"}`（被訊號殺的是 `{"id","index","signal"}`）。
 - 〔使用者方向 2026-10-01〕POC 默認紀錄寫得進、讀得懂、不斷電：不處理寫不進、舊紀錄讀不懂、
   不做 `--firstdo-fsync`；舊的 `current.json`／`last.json` 不再使用、不遷移。出事就讓 OSError／ValueError 往外丟。
@@ -64,11 +66,15 @@ def _write(path, value):
     os.rename(tmp, path)
 
 
-def _add_failed(items, item_id, index, kind, value):
-    """第八批：exit 0 不記；其他記 {"id","index",kind}。回有沒有記。"""
+def _add_failed(items, item_id, index, kind, value, task_index=None):
+    """第八批：exit 0 不記；其他記 {"id","index",kind}（跟任務有關的 hook 另帶 "task_index"，第十七批）。回有沒有記。"""
     if kind == "exit" and value == 0:
         return False
-    items.append({"id": item_id, "index": index, kind: value})
+    entry = {"id": item_id, "index": index}
+    if task_index is not None:
+        entry["task_index"] = task_index
+    entry[kind] = value
+    items.append(entry)
     return True
 
 
@@ -86,17 +92,24 @@ class Record:
         self.tasks = []
         self.hooks = {}
 
-    def open(self):
-        """開格換紀錄（B-633「開格：換紀錄」）。"""
+    def open(self, hook_points=()):
+        """開格換紀錄（B-633「開格：換紀錄」）。hook_points：任務表寫了的掛點（第十七批）；有的話 hook-exits.json
+        跟著建（每個掛點 `[]`）、record.json 帶 `hooks` 的 $ref。沒寫 hooks 時紀錄沒有 `hooks`。"""
         cur_seq, last_seq = _read_seq(self.current), _read_seq(self.last)     # 第 1 步
         seq = (cur_seq if cur_seq is not None else last_seq if last_seq is not None else 0) + 1
         self.meta = {"version": 1, "seq": seq, "started_at_ms": int(time.time() * 1000),
-                     "ran": {"$ref": RAN}, "tasks": {"$ref": TASK_EXITS}, "ended": False}
+                     "ran": {"$ref": RAN}, "tasks": {"$ref": TASK_EXITS}}
+        self.hooks = {p: [] for p in hook_points}
+        if hook_points:
+            self.meta["hooks"] = {"$ref": HOOK_EXITS}
+        self.meta["ended"] = False
         if os.path.exists(self.tmp):                            # 第 2 步：上次開格寫到一半留下的
             shutil.rmtree(self.tmp)
         os.makedirs(self.tmp)
         _write(os.path.join(self.tmp, RAN), 0)
         _write(os.path.join(self.tmp, TASK_EXITS), [])
+        if hook_points:
+            _write(os.path.join(self.tmp, HOOK_EXITS), self.hooks)
         _write(os.path.join(self.tmp, RECORD), self.meta)
         if os.path.exists(self.last):                           # 第 3 步
             shutil.rmtree(self.last)                            # 沒有 current 時＝上一格沒留下紀錄＝不知道
@@ -113,15 +126,9 @@ class Record:
             _write(os.path.join(self.current, TASK_EXITS), self.tasks)
         _write(os.path.join(self.current, RAN), self.ran)
 
-    def finish(self, code, blocked_before=None, hook_points=()):
+    def finish(self, code, blocked_before=None):
         """收尾：ended:true、exit＝整格結束碼（照表跑完就是 0，任務成敗不影響），被 tasks-blocked 擋下時加
-        blocked_before＝被擋下（沒跑）的那一項 id（第十六批；原 stopped_after）。
-        hook_points：這格接著要跑的 hooks 掛點（目前只有 "after_all"）；有的話先寫 hook-exits.json（每個掛點 `[]`）、
-        record.json 加 `hooks` 的 $ref，hook 一開跑就讀得到（B-635）。沒寫 hooks 時紀錄沒有 `hooks`。"""
-        if hook_points:
-            self.hooks = {p: [] for p in hook_points}
-            _write(os.path.join(self.current, HOOK_EXITS), self.hooks)
-            self.meta["hooks"] = {"$ref": HOOK_EXITS}
+        blocked_before＝被擋下（沒跑）的那一項 id（第十六批；原 stopped_after）。"""
         self.meta.pop("ended")                                  # 重新放到後面：鍵的順序 ran、tasks、hooks、ended、exit…
         self.meta["ended"] = True
         self.meta["exit"] = code
@@ -129,7 +136,8 @@ class Record:
             self.meta["blocked_before"] = blocked_before
         _write(os.path.join(self.current, RECORD), self.meta)
 
-    def add_hook(self, point, hook_id, index, kind, value):
-        """跑完一個 hook 項：跟 add_task 一樣只記不是 exit 0 的（index 是它在 after_all 的位置）；不記 ran。"""
-        if _add_failed(self.hooks[point], hook_id, index, kind, value):
+    def add_hook(self, point, hook_id, index, kind, value, task_index=None):
+        """跑完一個 hook 項：跟 add_task 一樣只記不是 exit 0 的（index 是它在自己那個陣列的位置；after_task 每個任務 id
+        各自從 0 數）；跟任務有關的掛點另記 task_index（第十七批）。不記 ran。"""
+        if _add_failed(self.hooks[point], hook_id, index, kind, value, task_index):
             _write(os.path.join(self.current, HOOK_EXITS), self.hooks)

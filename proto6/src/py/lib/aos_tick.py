@@ -152,7 +152,9 @@ def _run_locked(cwd, table):
         return EXIT_ERROR
 
     record = Record(cwd, aos_dirname.name())
-    record.open()
+    record.open(tbl.hook_points)       # 第十七批：hooks 在格中也會跑，hook-exits.json 開格就建
+    if tbl.before_all is not None:     # 第十七批：第一項（含 tasks-blocked 的檢查）之前跑一次
+        aos_tick_hooks.run_point(cwd, tbl.defaults, "before_all", tbl.before_all, record, run_one)
     blocked_before = None
     for index, (item, task_id) in enumerate(zip(tbl.items, tbl.ids)):
         if tasks_blocked():
@@ -165,11 +167,12 @@ def _run_locked(cwd, table):
                 break
         kind, value = run_one(cwd, tbl.defaults, item, task_id, task_vars(task_id, index))
         record.add_task(task_id, index, kind, value)   # 只記不是 0 的（第八批）；不影響 tick 的結束碼
+        # 第十七批：先 after_task.<id>、再 after_every_task；不看 tasks-blocked
+        aos_tick_hooks.run_after_task(cwd, tbl, task_id, index, kind, value, record, run_one)
 
-    hook_points = ("after_all",) if tbl.after_all is not None else ()
-    record.finish(EXIT_OK, blocked_before, hook_points)  # 有 hooks 時先備好 hook-exits.json（第九批）
-    if tbl.after_all is not None:  # B-635：照表跑完或被停格檔停下之後；不看停格檔、碼只記下、不影響 tick 的結束碼
-        aos_tick_hooks.run_after_all(cwd, tbl.defaults, tbl.after_all, record, run_one)
+    record.finish(EXIT_OK, blocked_before)
+    if tbl.after_all is not None:  # B-635：照表跑完或被 tasks-blocked 擋下之後；不看 tasks-blocked、碼只記下、不影響 tick 的結束碼
+        aos_tick_hooks.run_point(cwd, tbl.defaults, "after_all", tbl.after_all, record, run_one)
     clear_tasks_blocked()
     return EXIT_OK
 

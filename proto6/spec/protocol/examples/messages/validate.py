@@ -78,9 +78,18 @@ def extra_errors(path, value):
             errors.append('task index not strictly increasing')
         elif isinstance(ran, int) and idx and idx[-1] >= ran:
             errors.append('task index not below ran')
-        hidx = [h.get('index') for h in ((value.get('hooks') or {}).get('after_all') or []) if isinstance(h, dict)]
-        if any(not isinstance(i, int) for i in hidx) or hidx != sorted(set(hidx)):
-            errors.append('hook index not strictly increasing')
+        hooks = value.get('hooks') or {}
+        for point in ('before_all', 'after_all'):
+            hidx = [h.get('index') for h in (hooks.get(point) or []) if isinstance(h, dict)]
+            if any(not isinstance(i, int) for i in hidx) or hidx != sorted(set(hidx)):
+                errors.append('hook index not strictly increasing')
+        # 第十七批：after_task／after_every_task 的 task_index 照任務跑的順序（不遞減）、都小於 ran
+        for point in ('after_task', 'after_every_task'):
+            tidx = [h.get('task_index') for h in (hooks.get(point) or []) if isinstance(h, dict)]
+            if any(not isinstance(i, int) for i in tidx) or tidx != sorted(tidx):
+                errors.append('hook task_index decreasing')
+            elif isinstance(ran, int) and tidx and tidx[-1] >= ran:
+                errors.append('hook task_index not below ran')
         # 第十六批：blocked_before 是位置 ran 那一項（沒跑），跟 tasks 沒有可驗的關係（id 可能重複），不另查
     # P-120「頂層沒有 interval_ms 時每一項必填」已由 daemon-core-config 的 if／then 表達，不再另查。
     return errors

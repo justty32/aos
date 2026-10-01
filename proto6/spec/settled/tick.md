@@ -6,7 +6,7 @@
 
 讀之前先知道四件事：
 
-- **本篇只寫已實作的核心**（B-626、B-602、B-620、B-633、B-627），由現行程式 `aos-tick` 實作。標準任務表範本與各系統級任務、普通程式（`aos-git`、`aos-mq`、`aos-cg`…；`aos-tick-check-task` 第十六批搬暫緩區）在 [tick 子篇](tick/README.md)，一篇一個主題，大多還沒有程式，每篇開頭標了狀態。〔astra 報告建議 1；使用者 2026-10-01〕
+- **本篇只寫已實作的核心**（B-626、B-602、B-620、B-633、B-627），由現行程式 `aos-tick` 實作。標準任務表範本與各系統級任務、普通程式（`aos-mq`、`aos-cg`…；`aos-tick-check-task` 第十六批、`aos-git` 第十七批搬暫緩區）在 [tick 子篇](tick/README.md)，一篇一個主題，大多還沒有程式，每篇開頭標了狀態。〔astra 報告建議 1；使用者 2026-10-01〕
 - **工作資料夾**（英文 `tick dir`）＝這一格 `aos-tick` 跑的資料夾（它的 cwd），由命令列給的目標決定（`aos-tick [<目標>]`，B-620）。tick 這層只講工作資料夾；「node」是之後 node 模組才出場的詞，暫緩區講上下層時的「上層 node／下層 node」照舊。〔使用者 2026-10-01〕
 - 「任務表」指工作資料夾裡的任務註冊表 `.aos/tasks.json`，跟舊 daemon 的登記表是兩回事（[T-02](../terms.md)）。
 - 本篇寫的 `.aos/…` 都是環境變數 `AOS_DIRNAME` 沒設時的樣子（[C-09](conventions.md)）；結束碼照 aos 慣例：0＝預料之中、非 0＝要處理、1＝通用錯誤（[C-08](conventions.md)）。
@@ -19,8 +19,8 @@
 - **任務怎麼結束都不影響 tick 的結束碼**：任務回幾都照實記進紀錄、照常跑下一項。tick 自己只回 0 或 1。
 - **tick 是整個 aos 的衡量基準**：排程以格計，反應最快是下一格；aos 內部的時長與起算點都用本資料夾的格數（B-633、[C-01](../contracts.md)）。
 - tick 不跟 once、LLM 嘗試、agent 一輪這些計算單位共用外殼（[T-07](terms.md)）。
-- **git 與 cgroup 是「有就用」，不是前提。** 沒有 git、沒有 cgroup 時照原來的做法跑（[B-632](tick/git.md)、[B-601](deferred/daemon/runtime.md)）。
-  - **git**：掛了 `aos-git` 三項系統級任務而且 git 能用，aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔）才有提交與還原（[B-630、B-622](tick/git.md)）。使用者任務改的檔 aos 不提交、不還原；`AOS_DIRNAME` 是空字串時例外，整個工作資料夾都算 aos 的（[B-630](tick/git.md)）。
+- **git 與 cgroup 是「有就用」，不是前提。** 沒有 git、沒有 cgroup 時照原來的做法跑（[B-632](deferred/git.md)、[B-601](deferred/daemon/runtime.md)）。
+  - **git**：〔使用者 2026-10-01 第十七批〕`aos-git` 整套暫緩（[暫緩區 git](deferred/git.md)）；要用 git 就用 hooks 加普通 git 指令（[B-635 範例](tick/hooks.md#範例用-hook-加普通-git-指令管版本)）。以下是暫緩前的規定：掛了 `aos-git` 三項系統級任務而且 git 能用，aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔）才有提交與還原（[B-630、B-622](deferred/git.md)）。使用者任務改的檔 aos 不提交、不還原；`AOS_DIRNAME` 是空字串時例外，整個工作資料夾都算 aos 的（[B-630](deferred/git.md)）。
   - **cgroup**：工作資料夾的框與資源上限歸舊 daemon（[B-605](deferred/daemon/cgroup.md)，在暫緩區）；每項一框要任務包普通程式 `aos-cg`（[B-634](tick/cg.md)）。
 - **收送只管系統訊息佇列**：工作資料夾之間經舊 daemon 的通道互送訊息，由系統級任務 `aos-mq get`／`aos-mq post` 處理（[B-623、B-624](tick/mq.md)；daemon 通道那側在暫緩區）。檔案收件區 `requests/`、`responses/` 的收與寫是普通程式的事，aos 不管。
 - **保證跟著「掛了什麼」走**：核心三件事（B-626）不靠任何系統級任務也成立；其餘保證看任務表掛了哪幾項系統級任務、任務包了哪些普通程式。〔建議預設，未拍板〕各條只寫「掛了時保證什麼」，沒掛的後果不逐條寫。
@@ -34,7 +34,7 @@ tick 裡的東西分四類：
 | 類 | 是什麼 | 有哪些 |
 |---|---|---|
 | tick 核心 | `aos-tick` 本身，只做三件事 | 簡單互斥鎖（B-602）、照任務表依序跑（B-620）、每項結束碼紀錄（B-633） |
-| 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，以 `kind:"system"` 標記；**寫在表上才跑，沒寫就不跑** | 系統訊息佇列 `aos-mq`：開頭取件 `aos-mq get`（[B-623](tick/mq.md)）、收尾送出 `aos-mq post`（[B-624](tick/mq.md)）；清理 `aos-clean`（[B-404](../base/storage.md)）；git 開格、存檔點與收尾 `aos-git open`／`mark`／`close`（[B-630](tick/git.md)） |
+| 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，以 `kind:"system"` 標記；**寫在表上才跑，沒寫就不跑** | 系統訊息佇列 `aos-mq`：開頭取件 `aos-mq get`（[B-623](tick/mq.md)）、收尾送出 `aos-mq post`（[B-624](tick/mq.md)）；清理 `aos-clean`（[B-404](../base/storage.md)）；git 開格、存檔點與收尾 `aos-git open`／`mark`／`close`（[B-630](deferred/git.md)） |
 | 普通程式 | 任務會用到的工具；不是系統級任務 | 要的任務自己在 argv 包的：每項一框 `aos-cg`（[B-634](tick/cg.md)）；〔暫緩，第十六批〕自己占一項、檢查前面的項沒跑好就停格的 `aos-tick-check-task`（[B-621](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)，2026-10-01 取代包裝 `aos-needs`）。發布摘要 `aos-publish` 2026-10-01 搬到[暫緩區](deferred/tick.md#暫緩b-624-發布摘要aos-publish) |
 | 其他任務 | kernel、agent、clock、檔案收件程式、自訂任務等 | 它們的外殼、逾時與取消延後（[P-008](../protocol/README.md#p-008)）；檔案收件 aos 不管（[B-623](tick/mq.md)） |
 
@@ -64,7 +64,7 @@ tick 裡的東西分四類：
 ### 鎖怎麼取
 
 - **認哪個資料夾**：照 B-620「認哪個資料夾」（`aos-tick [<目標>]`，argv 見 [P-203](protocol/tick.md)）。tick 在那個工作資料夾裡跑，cwd 就是它。
-- **鎖檔**：`.aos/tick.lock`，ignored。不存在就建（`.aos/` 不在也建）；tick 自己不刪它。不放在 git 管理目錄；`aos-clean` 與一般清理都不得移除或替換它，`aos-git` 固定排除它，提交與還原都不碰（[B-622](tick/git.md)）。
+- **鎖檔**：`.aos/tick.lock`，ignored。不存在就建（`.aos/` 不在也建）；tick 自己不刪它。不放在 git 管理目錄；`aos-clean` 與一般清理都不得移除或替換它，`aos-git` 固定排除它，提交與還原都不碰（[B-622](deferred/git.md)）。
 - **取鎖**：認好資料夾之後的第一件事，在看擋板檔之前。對鎖檔取**非阻塞**獨占 flock：
   - 拿不到：stderr 印一行 `busy: …`、回 0（預料之中，[C-08](conventions.md)）。不寫結束碼紀錄、不加 `seq`、不在程式內重試。被占的同時也有擋板檔時，印的是 `busy`（鎖在前）。
   - 拿到：整格持鎖，程序結束時自然放掉。
@@ -80,7 +80,7 @@ tick 裡的東西分四類：
 
 CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管。沒有 git 時，改動就直接留在資料夾裡。
 
-有 git 時，人手改到 aos 範圍（[B-630](tick/git.md)）的東西，aos 也不替它另外做什麼：
+〔暫緩，第十七批 `aos-git` 搬暫緩區〕有 git 時，人手改到 aos 範圍（[B-630](deferred/git.md)）的東西，aos 也不替它另外做什麼：
 
 | 上一格 | 格間手改的下場 |
 |---|---|
@@ -105,7 +105,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 4. 讀表、做極簡檢查（下面「讀表」）；不過就印 `bad_table`、回 1，不開格。
 5. 換一份新的結束碼紀錄（B-633）。做到這一步才算開了一格、佔一個 `seq`。
 6. 照陣列順序跑每一項：每一項之前看 tasks-blocked，在就這一項與後面都不跑；每項結束後寫紀錄。
-7. 紀錄收尾（`ended:true`）；有寫 `hooks.after_all` 就接著跑那一串（[B-635](tick/hooks.md)，不看 tasks-blocked、碼只記下）。
+7. 紀錄收尾（`ended:true`）；有寫 `hooks.after_all` 就接著跑那一串（[B-635](tick/hooks.md)，不看 tasks-blocked、碼只記下）。〔第十七批〕`hooks.before_all` 在第 5 步之後、第一項之前跑；`after_task.<id>`、`after_every_task` 在每一項跑完之後跑。
 8. 刪掉 tasks-blocked（有的話）。
 9. 回結束碼（下面「核心的結束碼」）。
 
@@ -122,7 +122,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 ### 任務表
 
 - **每項任務是 inst 的超集**：一份 [inst](../base/inst.md) 加 aos 的欄位（`id`、`kind`）。
-- **先只定基本欄位**：不認得的鍵照收、核心忽略（任務是 inst 的超集，沿 [P-007](../protocol/README.md)）。第十九批的 `group`、`needs` 不再是欄位，寫了就當陌生鍵：前置原本改用 `aos-tick-check-task`（[B-621](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)，第十六批搬暫緩區），組改由存檔點劃分（[B-630](tick/git.md)）。第十七批的 `methods` 也拿掉了（使用者 2026-10-01），寫了一樣當陌生鍵。
+- **先只定基本欄位**：不認得的鍵照收、核心忽略（任務是 inst 的超集，沿 [P-007](../protocol/README.md)）。第十九批的 `group`、`needs` 不再是欄位，寫了就當陌生鍵：前置原本改用 `aos-tick-check-task`（[B-621](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)，第十六批搬暫緩區），組改由存檔點劃分（[B-630](deferred/git.md)）。第十七批的 `methods` 也拿掉了（使用者 2026-10-01），寫了一樣當陌生鍵。
 - **`id`**：可以不寫。沒寫時，這一項的 id 就是它在 `tasks` 陣列的位置轉成字串（第 1 項是 `"0"`，第 4 項是 `"3"`）；紀錄、`AOS_TASK_ID`、`blocked_before` 都用它。跟別項寫的 id 撞了不管（默認不重複）。
 - **`kind`**：可以不寫；只是標記（B-626），核心不看。
 - **一個 module 一項任務**：產生請求、處理結果都在該項內做；要經佇列送的訊息交給系統級任務 `aos-mq post`（[B-624](tick/mq.md)）。檔案收件與投件是任務表上的普通任務，aos 不管（[B-623](tick/mq.md)、[B-624](tick/mq.md)）。
@@ -181,7 +181,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - 頂層是物件，而且有 `tasks` 陣列（可以是空的）；
 - 每一項（解一層後）是物件；
 - 每一項合併頂層預設後有 `argv`：項自己有，或頂層有。〔使用者 2026-10-01〕
-- 有寫頂層 `hooks` 時：它是物件；有 `after_all` 時是陣列、每項是物件、合併頂層預設後有 `argv`（[B-635](tick/hooks.md)）。
+- 有寫頂層 `hooks` 時：它是物件；`before_all`、`after_every_task`、`after_all` 有寫時是陣列，`after_task` 有寫時是物件、每個值是陣列；每項是物件、合併頂層預設後有 `argv`（[B-635](tick/hooks.md)）。
 
 讀表時那一層指示詞解不開、`modules` 整個展開時失敗，也算不過。
 
@@ -216,7 +216,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - **某項沒跑成**：mkdir、cwd、重導向的檔開不起來，記 `exit:125`（照 inst，跟 `aos-exec` 一致）；找不到程式記 127、沒執行權記 126。這幾種 stderr 另印一行 `exec_failed: <id>: 說明`。
 - 「沒事做」可以不改檔、回 0。在途工作存在任務自己的領域狀態裡，不用特殊結束碼當排程訊號。
 - 任務的 stdin、stdout、stderr 照合併後的 inst 走（都沒寫時預設 `/dev/null`）。
-- 核心在每項的環境多放下面這些變數（格式見 [P-203](protocol/tick.md)，aos 全部的環境變數見 [C-10](conventions.md)）。命名規則：整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（hook 改給 `AOS_HOOK_*`、不給 `AOS_TASK_*`，[B-635](tick/hooks.md)）。
+- 核心在每項的環境多放下面這些變數（格式見 [P-203](protocol/tick.md)，aos 全部的環境變數見 [C-10](conventions.md)）。命名規則：整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（hook 改給 `AOS_HOOK_*`；`before_all`、`after_all` 不給 `AOS_TASK_*`，`after_task`、`after_every_task` 另給剛跑完那一項的 `AOS_TASK_*` 與 `AOS_TASK_EXIT`，[B-635](tick/hooks.md)）。
 
 | 變數 | 內容 |
 |---|---|
@@ -224,7 +224,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | `AOS_TASK_ID` | 這一項的 id（沒寫 id 時是位置字串；id 不是字串時轉成字串） |
 | `AOS_TASK_INDEX` | 這一項在任務表陣列的位置，從 0 起 |
 
-- 其他環境變數（含 `AOS_DIRNAME`）任務照常繼承；繼承來的 `AOS_TASK_*`、`AOS_HOOK_*`（例如這個 tick 本身是別的 tick 的任務）先拿掉再放這一項的，任務拿不到 `AOS_HOOK_*`。這一項的 inst 用 `envs` 清空環境時，上表的變數也不放。
+- 其他環境變數（含 `AOS_DIRNAME`）任務照常繼承；繼承來的 `AOS_TASK_*`（含 `AOS_TASK_EXIT`〔使用者 2026-10-01 第十七批〕）、`AOS_HOOK_*`（例如這個 tick 本身是別的 tick 的任務）先拿掉再放這一項的，任務拿不到 `AOS_HOOK_*`、`AOS_TASK_EXIT`。這一項的 inst 用 `envs` 清空環境時，上表的變數也不放。
 - 沒有 `AOS_TICK_LOCK_FD`（鎖 fd 不傳給任務，B-602）。
 
 ### tasks-blocked 與擋板檔〔暫定〕
@@ -236,7 +236,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | | tasks-blocked `<狀態資料夾>/tick/tasks-blocked` | 擋板檔 `<狀態資料夾>/tick-blocked` |
 |---|---|---|
 | 擋什麼 | **本格**還沒跑的項（含正要跑的那一項） | 擋住**之後各格**，直到有人刪 |
-| 誰建 | 任務、hook，或在格與格之間由人或別的程式放 | 任務（例如發現需要人處理的故障）或人手；`aos-git` 故障時也寫它（[B-622](tick/git.md)） |
+| 誰建 | 任務、hook，或在格與格之間由人或別的程式放 | 任務（例如發現需要人處理的故障）或人手；`aos-git` 故障時也寫它（[B-622](deferred/git.md)） |
 | 內容 | **tick 不管**，只看存不存在（空檔、資料夾、讀不到、壞 symlink 都算在） | **tick 不看**，只看存不存在；要寫原因給人看可以 |
 | 核心什麼時候看 | **每一項跑之前**（含第一項） | 取鎖後、讀表前 |
 | 核心看到時 | 這一項與後面的都不跑；**stderr 不印**（正常機制）；紀錄寫 `ended:true`、`exit:0` 與 `blocked_before`＝被擋下、沒跑的那一項（[P-213](protocol/tick.md)）；`after_all` 照跑（它跟任務無關，[B-635](tick/hooks.md)）；這格回 0 | 直接結束：一項都不跑、hooks 不啟動、不寫結束碼紀錄、不加 `seq`；**stderr 不印**（正常機制結束不印，[C-08](conventions.md)），回 0。所以人手或 cron 直接跑也被擋 |
@@ -245,8 +245,8 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 - **掛了 tick 模組 `modules.tasks_blocked`**（[B-636](tick/tasks-blocked.md)，第十六批）時，看到 tasks-blocked 不直接擋下：先依序跑那一串 inst（拿被擋下那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`、碼不記），跑完再看一次，檔被刪了就放行這一項與後面的，還在才擋下。
 - **開格時不刪**：格與格之間有人放的 tasks-blocked，下一格第一項之前就擋下（`ran:0`、`blocked_before` 是第一項），整格最後再刪。
-- **跟 hooks**：hook 之間不看 tasks-blocked（hook 寫的也不擋下一個 hook），整格最後一樣刪。之後若開了跟某項任務有關的掛點：在那一項之前被擋下時，那一項相關的 hook 都不跑；任務跑完接著跑它的 hook 時不看 tasks-blocked〔使用者 2026-10-01 第十六批；hook 的種類現在先不擴充〕。
-- **有 git 時，tasks-blocked 等於這格作廢**：排在後面的 `aos-git close` 不跑、不提交，下一格 `aos-git open` 把 aos 範圍還原（[B-630](tick/git.md)）。想提早結束又保住結果的任務，別建它，改讓後面的項讀紀錄自己跳過。〔使用者方向 2026-09-30，納入 cgroup 與 git 疑-1〕
+- **跟 hooks**：hook 之間不看 tasks-blocked（hook 寫的也不擋下一個 hook，只擋下一項任務），整格最後一樣刪。被擋下、沒跑的任務不觸發 `after_task`、`after_every_task`；任務跑完接著跑它的 hook 時不看 tasks-blocked〔第十六批〕。`before_all` 在第一項的檢查之前跑，它寫的 tasks-blocked 會擋下第一項〔第十七批〕。
+- 〔暫緩，`aos-git` 第十七批搬暫緩區〕**有 git 時，tasks-blocked 等於這格作廢**：排在後面的 `aos-git close` 不跑、不提交，下一格 `aos-git open` 把 aos 範圍還原（[B-630](deferred/git.md)）。想提早結束又保住結果的任務，別建它，改讓後面的項讀紀錄自己跳過。〔使用者方向 2026-09-30，納入 cgroup 與 git 疑-1〕
 - 要知道這格是不是被擋下，讀紀錄的 `blocked_before`；外層要分出 `busy` 看 stderr。被擋板檔擋下的格什麼都不留（stderr 空、紀錄與 `seq` 不變），要知道就自己看擋板檔在不在。
 - **tick 子篇裡還沒實作的程式**（`aos-git`、`aos-cg`、`aos-mq` 等）寫「建停格檔」的地方，現在讀成「建 tasks-blocked」；它們的設計是照舊停格檔寫的，回來實作時要照上表重看。
 
@@ -286,7 +286,7 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 
 ## B-633：每項結束碼紀錄與格數
 
-核心多開放一件事：**本格跑了幾項、哪幾項結束碼不是 0，寫成一份檔，讓後面的任務讀得到。**〔使用者 2026-10-01 第八批：「tasks如果結果是0，那就不用紀錄了。hooks也是。」〕 本資料夾的**格數**也記在這裡。這份紀錄直接取代第十九批的 git 備援日誌（[B-632](tick/git.md)）：git 與無 git 合成同一種模式。
+核心多開放一件事：**本格跑了幾項、哪幾項結束碼不是 0，寫成一份檔，讓後面的任務讀得到。**〔使用者 2026-10-01 第八批：「tasks如果結果是0，那就不用紀錄了。hooks也是。」〕 本資料夾的**格數**也記在這裡。這份紀錄直接取代第十九批的 git 備援日誌（[B-632](deferred/git.md)）：git 與無 git 合成同一種模式。
 
 依據：第二十批追答 8、疑點裁定 5；修正輪暫定的裁定（格數不倒退改成不保證）；納入 cgroup／git 輪疑點 10：使用者 2026-09-30 同意照暫定；使用者 2026-10-01（默認紀錄是好的、`--firstdo-fsync` 先不做、拿掉 `AOS_TICK_RECORD`）；同日第八批（只記不是 0 的、加 `ran`，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）；同日第九批（紀錄拆檔、用 `$ref` 引用）。以下位置、欄位與寫法都是〔建議預設，未拍板〕。落盤、寫不進、讀不懂的處理在[暫緩區](deferred/tick.md#暫緩b-633-落盤寫不進與讀不懂)。
 
@@ -298,10 +298,10 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 
 | 檔 | 內容 | 什麼時候寫 |
 |---|---|---|
-| `record.json` | `version`、`seq`、`started_at_ms`、`ended`、`exit`、`blocked_before`，加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}` | 開格一次、收尾一次 |
+| `record.json` | `version`、`seq`、`started_at_ms`、`ended`、`exit`、`blocked_before`，加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}`（開格就加，〔第十七批〕） | 開格一次、收尾一次 |
 | `ran.json` | 一個數字＝下表的 `ran` | 開格寫 `0`，每跑完一項重寫 |
 | `task-exits.json` | 下表的 `tasks`（陣列） | 開格寫 `[]`，有項結束碼不是 0 才重寫 |
-| `hook-exits.json` | 下表的 `hooks`（`{"after_all":[...]}`） | 任務表有寫 `hooks.after_all` 時，收尾那次先寫好 `{"after_all":[]}`；之後有 hook 不是 0 才重寫 |
+| `hook-exits.json` | 下表的 `hooks`（各掛點一個陣列） | 任務表有寫 hooks 掛點時，〔第十七批〕**開格**就寫好各掛點的 `[]`；之後有 hook 不是 0 才重寫 |
 
 `$ref` 都是相對路徑（相對 `record.json` 所在資料夾），整個資料夾改名成 `last/` 後仍指得對。讀的一方展開 `record.json` 頂層各鍵的 `$ref`，得到下表的完整紀錄。下表講的都是展開後的欄位。
 
@@ -313,7 +313,7 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 | `ended` | 照表跑完、或被 tasks-blocked 擋下時寫成 true，同時加 `exit`＝這格 tick 的結束碼。有紀錄收尾時 tick 一定回 0，所以 `exit` 只會是 0：busy、blocked、bad_table 根本不寫紀錄；tick 中途出錯時紀錄停在 `ended:false` |
 | `blocked_before` | 〔使用者 2026-10-01 第十六批〕（原 `stopped_after`）被 tasks-blocked 擋下時，被擋下、沒跑的那一項的 id（就是位置 `ran` 那一項；第一項就被擋時 `ran` 是 0）。這時 `exit` 也是 0 |
 | `started_at_ms` | 只給人看，不參與計算 |
-| `hooks` | 任務表有寫 `hooks.after_all` 時才有：收尾之後跑的那一串，`hooks.after_all` 格式跟 `tasks` 相同、一樣只記不是 0 的；hooks 不記 `ran`（[B-635](tick/hooks.md)） |
+| `hooks` | 任務表有寫 hooks 掛點時才有（開格就有）：寫了哪幾個掛點就有哪幾個鍵，每個格式跟 `tasks` 相同、一樣只記不是 0 的；`after_task`、`after_every_task` 每筆另帶 `task_index`〔第十七批〕；hooks 不記 `ran`（[B-635](tick/hooks.md)） |
 
 ### 格數 `seq`
 
@@ -338,7 +338,7 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 
 - `ran` 加 1（重寫 `ran.json`）；結束碼不是 0（含被訊號殺）才在 `tasks` 加一筆（重寫 `task-exits.json`，先於 `ran.json`）。
 - 每個檔都整份重寫：寫同資料夾的暫存檔 → rename。不 fsync。`record.json` 這時不動。
-- 照表跑完、被 tasks-blocked 擋下時重寫 `record.json`：`ended:true`、`exit:0`（擋下的另加 `blocked_before`；有 hooks 的先寫好 `hook-exits.json` 再加 `hooks` 的 `$ref`）。
+- 照表跑完、被 tasks-blocked 擋下時重寫 `record.json`：`ended:true`、`exit:0`（擋下的另加 `blocked_before`；`hooks` 的 `$ref` 開格時已經在）。
 - tick 中途出錯（自然丟錯）或被殺時，紀錄停在最後一次寫成的樣子，`ended:false`。
 
 ### 誰讀
@@ -350,9 +350,9 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 ### 其他
 
 - **被擋板檔擋住的格**不寫紀錄、不加 `seq`（B-620），跟 busy 一樣當成沒開過格。
-- **別刪它**：`.aos/tick/` 不被 `aos-clean` 清；`aos-git` 固定排除它，不靠 `.gitignore`，提交與還原都不碰（[B-622](tick/git.md)）。人手刪掉兩份紀錄，`seq` 從 1 重數，以格數算的保留期會算錯，風險自負。
+- **別刪它**：`.aos/tick/` 不被 `aos-clean` 清；`aos-git` 固定排除它，不靠 `.gitignore`，提交與還原都不碰（[B-622](deferred/git.md)）。人手刪掉兩份紀錄，`seq` 從 1 重數，以格數算的保留期會算錯，風險自負。
 
-**驗收：**有 `.aos/tick-blocked` 時直接跑 `aos-tick` 回 0、stderr 有 `blocked`、沒有任務跑、兩份紀錄與 `seq` 都不變，刪掉擋板後下一格照常；第一項回 7 時第二項讀得到 `ran:1`、`tasks:[{"id":…,"index":0,"exit":7}]`，第一項回 0 時讀到 `ran:1`、`tasks:[]`；第三項被 SIGKILL 時紀錄那筆是 `"index":2,"signal":9`；tick 在第二項中途被殺，下一格的 `last/` 是 `ended:false`；同一資料夾連跑十格，`seq` 從 1 到 10，換成 cron 跑仍接著數；busy 或 bad_table 時兩份紀錄都不變；`current/` 裡有 `record.json`、`ran.json`、`task-exits.json` 三個檔（有 hooks 時多 `hook-exits.json`），`record.json` 的 `ran`、`tasks` 是 `$ref`，換成 `last/` 後展開結果不變。
+**驗收：**有 `.aos/tick-blocked` 時直接跑 `aos-tick` 回 0、stderr 是空的、沒有任務跑、兩份紀錄與 `seq` 都不變，刪掉擋板後下一格照常；第一項回 7 時第二項讀得到 `ran:1`、`tasks:[{"id":…,"index":0,"exit":7}]`，第一項回 0 時讀到 `ran:1`、`tasks:[]`；第三項被 SIGKILL 時紀錄那筆是 `"index":2,"signal":9`；tick 在第二項中途被殺，下一格的 `last/` 是 `ended:false`；同一資料夾連跑十格，`seq` 從 1 到 10，換成 cron 跑仍接著數；busy 或 bad_table 時兩份紀錄都不變；`current/` 裡有 `record.json`、`ran.json`、`task-exits.json` 三個檔（有 hooks 時多 `hook-exits.json`），`record.json` 的 `ran`、`tasks` 是 `$ref`，換成 `last/` 後展開結果不變。
 
 ## B-627：人手或 cron 直接跑一格：風險自負
 
@@ -381,6 +381,6 @@ stderr 的代碼一覽（格式見 [P-203](protocol/tick.md)）：`usage`、`bus
 當機、Q1／Q2、設定的故障驗收，統一見 [V-03](../conformance.md)。
 
 - **本篇（核心）**：各條驗收寫在各條底下。任務表格式以 [P-202](protocol/tick.md) 為準。〔使用者方向 2026-09-30，第二十批〕任務表先只定基本欄位，`group`、`needs` 當陌生鍵（2026-10-01 起 `methods` 也是）；2026-10-01 加了頂層預設與 `modules`。
-- **子篇**：範本、`aos-cg`、`aos-mq`、`aos-git`、恢復與設定的驗收寫在 [tick 子篇](tick/README.md) 各篇，都還沒有程式。git 與 cgroup 是有就用（[B-630、B-622](tick/git.md)、[B-634](tick/cg.md)）。
+- **子篇**：範本、`aos-cg`、`aos-mq`、恢復與設定的驗收寫在 [tick 子篇](tick/README.md) 各篇，都還沒有程式。git 與 cgroup 是有就用（[B-630、B-622](deferred/git.md)、[B-634](tick/cg.md)）。
 - **暫緩**：上下層判定、完整互斥、帳號核對、紀錄落盤與失效處理在 [tick 暫緩區](deferred/tick.md)。
 - **工程預設**：tasks-blocked 的位置、結束碼紀錄的位置與欄位、各系統級任務與普通程式的程式名。這輪先寫成暫定的列在 [README 疑點](README.md#疑點)。

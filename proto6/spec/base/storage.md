@@ -4,7 +4,7 @@
 
 ## B-401：資料夾就是狀態〔使用者方向 2026-09-29〕
 
-node 的狀態就是裡面的檔案；〔納入 cgroup 與 git〕git 有就用：掛了 `aos-git` 三項時，由它們提交與還原 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔，[B-630](../settled/tick/git.md)）；沒有 git 時沒有提交與還原，保留期看結束碼紀錄（[B-632](../settled/tick/git.md)）。
+node 的狀態就是裡面的檔案；〔納入 cgroup 與 git〕git 有就用：掛了 `aos-git` 三項時，由它們提交與還原 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔，[B-630](../settled/deferred/git.md)）；沒有 git 時沒有提交與還原，保留期看結束碼紀錄（[B-632](../settled/deferred/git.md)）。
 
 布局以[協議 node](../settled/protocol/tick.md)為正本：
 
@@ -34,15 +34,15 @@ node 的狀態就是裡面的檔案；〔納入 cgroup 與 git〕git 有就用�
 
 只清自己認得的資料（預設 agent／kernel 任務產生的）；不認得的不碰、不回報，自訂任務自己清。unknown 依 [S-401](../scheduling/operations.md) 放著，到期清理。其他內容須已終局、已消費、超過保留期且無引用；在途工作、未消費收件、未結清副作用與仍有引用的材料保留。node 退役不自動刪資料。kernel 的持久序號檔 `state/kernel/sequence.json` 永遠不清（排隊先後靠它，[S-204](../scheduling/admission.md)）。
 
-〔使用者方向 2026-09-30，第二十批疑點裁定 7〕**保留期以本 node 的格數計**（`retention_ticks`，預設值見 [P-605](../protocol/ops.md)），**起算點也是第幾格**（本 node 的 `seq`，[B-633](../settled/tick.md)），不看牆鐘或 mtime。〔建議預設，未拍板〕起算點：unknown 從 `aos-clean` 第一次看到這筆 unknown 的那一格起算（有沒有 git 都一樣，不改成首次提交的那一格，[B-632](../settled/tick/git.md)）：它把那格的 `seq` 記進自己的清理狀態，跟清理變動一起生效，只會比真正的時間晚、不會提早清；採用 run 的從 run 終局那一格起算，其餘從工作終局那一格起算。〔第十八批〕只記錄、不建立 input 的訊息（帶 `in_reply_to` 的回話、kernel 收的 `agent.say`）從接件確認的那一格起算，套一般保留期，還有引用就保留，不另建 input。本地動作的 `.stdout` 檔（[B-103](work.md)）跟它那份請求副本一起清。每批預設最多 64 件，清不完下次再做；預設封存，也可設定刪除。去重期內的請求證據不能先清；已消費原件仍在，先補清相符原件再清證據，同 ID 衝突就保留。〔第二十批〕第十九批的 `.aos/journal/` 撤，不再有日誌要清。
+〔使用者方向 2026-09-30，第二十批疑點裁定 7〕**保留期以本 node 的格數計**（`retention_ticks`，預設值見 [P-605](../protocol/ops.md)），**起算點也是第幾格**（本 node 的 `seq`，[B-633](../settled/tick.md)），不看牆鐘或 mtime。〔建議預設，未拍板〕起算點：unknown 從 `aos-clean` 第一次看到這筆 unknown 的那一格起算（有沒有 git 都一樣，不改成首次提交的那一格，[B-632](../settled/deferred/git.md)）：它把那格的 `seq` 記進自己的清理狀態，跟清理變動一起生效，只會比真正的時間晚、不會提早清；採用 run 的從 run 終局那一格起算，其餘從工作終局那一格起算。〔第十八批〕只記錄、不建立 input 的訊息（帶 `in_reply_to` 的回話、kernel 收的 `agent.say`）從接件確認的那一格起算，套一般保留期，還有引用就保留，不另建 input。本地動作的 `.stdout` 檔（[B-103](work.md)）跟它那份請求副本一起清。每批預設最多 64 件，清不完下次再做；預設封存，也可設定刪除。去重期內的請求證據不能先清；已消費原件仍在，先補清相符原件再清證據，同 ID 衝突就保留。〔第二十批〕第十九批的 `.aos/journal/` 撤，不再有日誌要清。
 
-〔建議預設，未拍板；第十九批依方案 A 從 [P-605／606](../protocol/ops.md) 搬上〕**鎖與提交**：在 tick 裡跑時，偵測到 tick 傳下的 `AOS_TICK_LOCK_FD` 就按 [B-602](../settled/tick.md) 核對同一把鎖，不另取鎖、不自行 commit；沒有 git 時清理變動即生效；有 git 時由本格 `aos-git close` 提交（範本把清理排在 close 前面、自成一段，[B-629](../settled/tick/template.md)、[B-630](../settled/tick/git.md)）。直接跑時自己取 B-602 那把鎖（有 git 時確認工作區乾淨後自己提交）；不把別人的未提交修改順手 commit 或還原。成功完成本批（含沒有候選）才更新上次清理的格數，跟清理變動一起提交；失敗不更新；未到期不改檔、不 commit。
+〔建議預設，未拍板；第十九批依方案 A 從 [P-605／606](../protocol/ops.md) 搬上〕**鎖與提交**：在 tick 裡跑時，偵測到 tick 傳下的 `AOS_TICK_LOCK_FD` 就按 [B-602](../settled/tick.md) 核對同一把鎖，不另取鎖、不自行 commit；沒有 git 時清理變動即生效；有 git 時由本格 `aos-git close` 提交（範本把清理排在 close 前面、自成一段，[B-629](../settled/tick/template.md)、[B-630](../settled/deferred/git.md)）。直接跑時自己取 B-602 那把鎖（有 git 時確認工作區乾淨後自己提交）；不把別人的未提交修改順手 commit 或還原。成功完成本批（含沒有候選）才更新上次清理的格數，跟清理變動一起提交；失敗不更新；未到期不改檔、不 commit。
 
 **封存與刪除**：封存先把完整副本寫進封存區並核對內容，才移除日常副本；封存區已有相同副本可以補做，不同就記 `archive_failed`、保留日常副本。不追隨 symlink 去清 node 外的內容。刪除模式只省略封存步驟，其餘資格與提交規則相同。追蹤區的移除與引用更新隨本 repo 的提交；封存區不受 git 還原，中斷時可能留下多餘的封存副本，補做先核對，不因已有封存檔就直接刪日常材料。滿碟、I/O 或 commit 失敗時保留舊 commit 及未消費原件，停止後續變動並照本條開頭恢復，不回成功。
 
 〔使用者方向 2026-09-30，第十八批〕**壞掉的收件原件**（[B-623](../settled/tick/mq.md) 報過一次的那種）留在 `requests/`，從那件事項記下的首次回報格數（〔第二十批〕`reported_seq`，[P-601](../protocol/ops.md)）起過了保留期，由 `aos-clean` 刪掉；刪之前不必等人把事項標完成。事項檔不見了就當不認得，不碰。
 
-git 歷史回收延後（[P-008](../protocol/README.md#p-008)）；同 ID 重送要補投的原回應就是從 git 歷史撈（[B-503](transport.md)；沒有 git 時沒有歷史可撈，[B-632](../settled/tick/git.md)），所以回收以前要先顧到這點。
+git 歷史回收延後（[P-008](../protocol/README.md#p-008)）；同 ID 重送要補投的原回應就是從 git 歷史撈（[B-503](transport.md)；沒有 git 時沒有歷史可撈，[B-632](../settled/deferred/git.md)），所以回收以前要先顧到這點。
 
 **驗收**：滿碟不回假成功、不刪收件原件；未到清理間隔（格數）回 0；牆鐘倒退不影響到期。壞收件原件過了保留期被刪，期內留著。到期 unknown 可清，其他未結、有引用及保留期內的內容保留；不認得的資料原樣留下且不回報。中斷可繼續，清理不造成收件重吃。
 

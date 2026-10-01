@@ -58,9 +58,9 @@ aos-clean [--node <node>] --config <設定檔>
 
 候選資格與保留期起算點完全依 [B-404](../base/storage.md)／[B-503](../base/transport.md)，不重述終局、消費、引用與去重規則；〔第十八批〕候選含過了保留期的壞收件原件與本地動作的 `.stdout` 檔。每批最多 batch_limit 項；每次重新核對，通知 done 不免驗資格。〔建議預設，未拍板〕unknown 到期連同內部關聯與待收結果一起清，不等人工結案；估計占用何時釋放依 [S-304](../scheduling/llm.md)，資料保留依本條；其他內容仍依一般保護條件。預設 agent 遍歷沿 [agent P-716](agent-tasks.md)，kernel 沿 [P-814](kernel-tasks.md)。
 
-archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存（〔第二十批〕沒有 git 時 `<清理前_commit>` 換成 `seq-<本格的 seq>`，[B-632](../settled/tick/git.md)），以 P-003 寫副本，保留原目錄關係；歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。封存、刪除、提交與故障恢復的行為以 [B-404](../base/storage.md) 為正本。
+archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存（〔第二十批〕沒有 git 時 `<清理前_commit>` 換成 `seq-<本格的 seq>`，[B-632](../settled/deferred/git.md)），以 P-003 寫副本，保留原目錄關係；歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。封存、刪除、提交與故障恢復的行為以 [B-404](../base/storage.md) 為正本。
 
-回報 `outcome`：`staged`＝本次在 tick 內做完的變動（沒有 git 時變動即生效；有 git 時待本格 `aos-git close` 提交，[B-630](../settled/tick/git.md)）；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用錯誤（開放版 `ErrorOpen`）。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收延後（[P-008](README.md#p-008)）。
+回報 `outcome`：`staged`＝本次在 tick 內做完的變動（沒有 git 時變動即生效；有 git 時待本格 `aos-git close` 提交，[B-630](../settled/deferred/git.md)）；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用錯誤（開放版 `ErrorOpen`）。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收延後（[P-008](README.md#p-008)）。
 
 ## P-607．schema 與最小範例〔建議預設，未拍板〕
 

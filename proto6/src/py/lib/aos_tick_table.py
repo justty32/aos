@@ -46,6 +46,7 @@ from aos_directives import Context, DirectiveError, Document, is_option_object, 
 
 __all__ = ["TABLE_NAME", "DEFAULT_KEYS", "Table", "TableInvalid", "read_table", "check_table", "merge", "load_inst"]
 
+HOOK_POINTS = ("before_all", "after_task", "after_every_task", "after_all")   # 第十七批；紀錄的鍵也照這個順序
 TABLE_NAME = "tasks.json"          # 放在狀態資料夾（預設 `.aos`，見 aos_dirname）裡
 DEFAULT_KEYS = aos_inst.FIELDS     # 頂層能當預設的鍵：inst 的七個欄位
 
@@ -58,12 +59,20 @@ class Table:
     """讀好的任務表：`defaults`（頂層預設，已解一層）、`items`（每項，已解一層的物件）、`ids`（id 串列）、
     `modules`（頂層 `modules` 整個展開後的值，沒寫＝None；核心不用）、
     `after_all`（頂層 `hooks.after_all` 的 [(項, id)]，每項已解一層；沒寫 `hooks` 或沒寫 `after_all`＝None，B-635）、
-    `on_blocked`（`modules.tasks_blocked.insts` 的 [(項, id)]，每項已解一層；沒掛這個模組＝None，B-636）。"""
+    `on_blocked`（`modules.tasks_blocked.insts` 的 [(項, id)]，每項已解一層；沒掛這個模組＝None，B-636）、
+    第十七批的 `before_all`、`after_every_task`（[(項, id)] 或 None）與 `after_task`（{任務 id: [(項, id)]} 或 None）。
+    `hook_points`：寫了的掛點名，照 before_all、after_task、after_every_task、after_all 的順序（紀錄用）。"""
 
-    def __init__(self, defaults, items, ids, modules=None, after_all=None, on_blocked=None):
+    def __init__(self, defaults, items, ids, modules=None, after_all=None, on_blocked=None,
+                 before_all=None, after_task=None, after_every_task=None):
         self.defaults, self.items, self.ids, self.modules = defaults, items, ids, modules
         self.after_all = after_all
         self.on_blocked = on_blocked
+        self.before_all, self.after_task, self.after_every_task = before_all, after_task, after_every_task
+
+    @property
+    def hook_points(self):
+        return tuple(p for p in HOOK_POINTS if getattr(self, p) is not None)
 
 
 def read_table(table, cwd):
@@ -109,17 +118,29 @@ def check_table(doc, cwd, path=None):
     if not isinstance(tasks.value, list):
         raise TableInvalid("任務表頂層要是物件、要有 tasks 陣列")
     items, ids = _items(tasks, "tasks", defaults)
-    after_all = None
+    found = {}
     if "hooks" in root:            # B-635：掛點，寫法與展開時機比照 tasks
         hooks = _one_layer(root["hooks"], top.ctx, top.position + ["hooks"], "hooks")
         if not isinstance(hooks.value, dict):
             raise TableInvalid("hooks 要是物件")
-        if "after_all" in hooks.value:
-            aa = _one_layer(hooks.value["after_all"], hooks.ctx, hooks.position + ["after_all"], "hooks.after_all")
-            if not isinstance(aa.value, list):
-                raise TableInvalid("hooks.after_all 要是陣列")
-            after_all = list(zip(*_items(aa, "hooks.after_all", defaults))) if aa.value else []
-    return Table(defaults, items, ids, modules, after_all, on_blocked)
+        for point in ("before_all", "after_every_task", "after_all"):
+            if point in hooks.value:
+                found[point] = _hook_list(hooks, [point], "hooks." + point, defaults)
+        if "after_task" in hooks.value:     # 第十七批：{任務 id: [inst…]}；不存在的 id＝永遠不跑，不報錯
+            at = _one_layer(hooks.value["after_task"], hooks.ctx, hooks.position + ["after_task"], "hooks.after_task")
+            if not isinstance(at.value, dict):
+                raise TableInvalid("hooks.after_task 要是物件（鍵＝任務 id）")
+            found["after_task"] = {k: _hook_list(at, [k], "hooks.after_task.%s" % k, defaults) for k in at.value}
+    return Table(defaults, items, ids, modules, found.get("after_all"), on_blocked,
+                 found.get("before_all"), found.get("after_task"), found.get("after_every_task"))
+
+
+def _hook_list(parent, path, what, defaults):
+    """掛點的一串（parent.value[path[0]]）：解一層、要是陣列，每一元素照 `_items`。回 [(項, id)]。"""
+    loc = _one_layer(parent.value[path[0]], parent.ctx, parent.position + path, what)
+    if not isinstance(loc.value, list):
+        raise TableInvalid("%s 要是陣列" % what)
+    return list(zip(*_items(loc, what, defaults))) if loc.value else []
 
 
 def _tasks_blocked(mods, defaults):
