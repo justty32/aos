@@ -66,7 +66,7 @@
 
 **叫 `aos-exec <inst 字面值>`，不直接叫 `aos-tick`**（使用者裁定）；子程序的工作目錄是上面說的起點。「這一項怎麼跑」（環境變數、stderr 往哪、要不要包一層）全由那份 inst 決定，daemon 等於把 cron 換掉。
 
-**stderr 交給 inst 自己。** inst 的 stderr 預設接 `/dev/null`，tick 印的 `busy:`、`bad_table:` 會看不到；要看就在 inst 寫 `"stderr": {"$opt": "inherit"}`，讓它直接進 daemon 的終端。daemon 不替 inst 蓋掉 stderr（不帶 `--stderr -`），免得違反「怎麼跑由 inst 決定」。
+（使用者 2026-10-01 後來改了：aos-exec 子程序的 stderr 由設定檔 `exec_err_path` 決定，見 [m3 待問 5](../plan/m3-daemon-core.md#待問)；本段是原本的想法。）**stderr 交給 inst 自己。** inst 的 stderr 預設接 `/dev/null`，tick 印的 `busy:`、`bad_table:` 會看不到；要看就在 inst 寫 `"stderr": {"$opt": "inherit"}`，讓它直接進 daemon 的終端。daemon 不替 inst 蓋掉 stderr（不帶 `--stderr -`），免得違反「怎麼跑由 inst 決定」。
 
 設定檔欄位名使用者說隨意，使用者同日看過後認可並追加裁定（見文末），定在 [m3 步驟 1](../plan/m3-daemon-core.md#步驟-1讀設定檔)。指令是 `aos-daemon --config F`（POC 先用獨立指令，`aos daemon` 子命令以後再接）。
 
