@@ -145,11 +145,11 @@
 這輪落筆時發現、先照下面寫法、要使用者裁定的：
 
 1. **`aos-config-add` 的旗標**：tick 層改名時從 `--node <node_dir>` 改成 `--dir <工作資料夾>`（[P-207](protocol/tick.md)）。程式還沒寫，沒有相容問題；名字請確認。
-2. **`AOS_DIRNAME=""` 時的固定排除**：狀態資料夾就是工作資料夾，`aos-git` 固定排除的 `tick/`、`tick.lock` 等直接落在工作資料夾頂層；使用者自己的檔剛好同名就不提交也不還原。暫時：〔建議預設〕風險自負（[B-622](tick/git.md)）。
-3. **tasks.json 頂層 `_metainfo` 在 schema 是必填**，核心不查；新例子都照 schema 寫上了。要不要改成可省？暫時：維持必填。
-4. **`modules` 內部 tick 不展開，daemon 那邊整份展開**，兩邊不同（[C-11](conventions.md)）。理由：tick 核心不讀它，展開只會讓寫壞的模組設定害整格 `bad_table`。暫時照這樣。
-5. **頂層陌生鍵讀表時不解**：只有七個預設欄位、`tasks`、`modules` 解一層；其他頂層鍵（含 `_metainfo`）不解，寫壞了也不會 `bad_table`（[B-620](tick.md)）。
-6. **整項 `$ref` 引進來的項、或預設值從別的檔引進來時**，合併後裡面的 `$ref:""`／`#…` 指合併後的這一項，不再指原檔。暫時：照這樣，寫在 B-620。
+2. ~~**`AOS_DIRNAME=""` 時的固定排除**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：狀態資料夾就是工作資料夾，`aos-git` 固定排除的 `tick/`、`tick.lock` 等直接落在工作資料夾頂層；使用者自己的檔剛好同名就不提交也不還原，風險自負（[B-622](tick/git.md)）。
+3. ~~**tasks.json 頂層 `_metainfo` 在 schema 是必填**，要不要改成可省？~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：頂層 `_metainfo` 可省，schema 的 `required` 拿掉；每項的 `_metainfo` 照 inst 規則可省（沒寫＝posix 第 1 版），寫了跑到那一項才驗，驗不過＝跑到某項展開失敗（[B-620](tick.md)、[P-202](protocol/tick.md)）。
+4. ~~**`modules` 內部 tick 不展開，daemon 那邊整份展開**，兩邊不同。~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：tasks.json 的 `modules` 讀表時也整個展開，跟 daemon 設定檔一致；展開失敗＝`bad_table`、回 1（[C-11](conventions.md)、[B-620](tick.md)）。
+5. ~~**頂層陌生鍵讀表時不解**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：只有七個預設欄位、`tasks` 解一層、`modules` 整個展開；其他頂層鍵（含 `_metainfo`）不解，寫壞了也不會 `bad_table`（[B-620](tick.md)）。
+6. ~~**整項 `$ref` 引進來的項、或預設值從別的檔引進來時**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：合併後裡面的 `$ref:""`／`#…` 指合併後的這一項，不再指原檔，寫在 B-620。
 
 ### 系統訊息佇列改寫後，區外要跟上的（還沒改）
 

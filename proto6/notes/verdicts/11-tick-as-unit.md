@@ -385,9 +385,22 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **E. `AOS_DIRNAME` 空字串時 git 管整個工作資料夾**：不列清單，使用者自己的檔也會被提交、還原（B-630、C-09）。
 - **F. 拆篇**：`settled/tick.md` 只留核心（B-626、B-602、B-620、B-633、B-627）；其餘搬到 `settled/tick/`：template（B-629）、needs（B-621）、cg（B-634、B-631）、mq（B-623、B-624）、git（B-630、B-622、B-632）、recovery（B-625），每篇開頭標狀態。條號不變。
 - **G. tasks.json 頂層預設**：頂層可放 inst 的七個欄位（`argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`）當每一項的預設，淺層合併、項自己寫了就整個蓋過；`_metainfo`、`id`、`kind` 不是預設。頂層 `cwd` 不改 tick 自己的 cwd，相對路徑從工作資料夾算。讀表時只把頂層七個預設欄位與 `modules`、`tasks`、每一項解一層（頂層其他鍵不解），值的內部跑到那一項、合併完才照 inst 規則展開。極簡檢查多一點：合併後要有 `argv`。
-- **G 追加：tasks.json 頂層 `modules`**：可選，比照 daemon 設定檔一個模組一個鍵；目前 tick 沒有模組，核心照收不理；不是 inst 欄位、不當預設；讀表時只解一層，內部留給模組（tick 核心不讀它，整份展開只會讓壞的模組設定害整格 `bad_table`）。
+- **G 追加：tasks.json 頂層 `modules`**：可選，比照 daemon 設定檔一個模組一個鍵；目前 tick 沒有模組，核心照收不理；不是 inst 欄位、不當預設；讀表時只解一層，內部留給模組（tick 核心不讀它，整份展開只會讓壞的模組設定害整格 `bad_table`）。〔第三批改成讀表時整個展開，見篇末〕
 - **跟 daemon 設定檔的對照**：兩邊頂層 `cwd` 都不影響程式自己；相對路徑起點一個是 daemon 啟動時的 cwd、一個是工作資料夾；指示詞 daemon 整份先展開、tasks.json 只到 `tasks` 這層。對照表放 C-11。
 - **H. flaky 測試**：`test_ctl.py` 的 `test_keep_schedule` 約十次錯一次，改成等第一次真的跑完再叫醒、判準放寬到 1.5 秒。只動測試。
 - **astra「要使用者裁定」**：第 1 點由 E 定；第 2 點見上面「node 模組方向」，檔觸發那句已被控制模組取代。
 
 改到的地方：[整理區 README](../../spec/settled/README.md)（檔案清單、閱讀順序、對外依賴分出「只適用舊 daemon」、疑點）、[名詞](../../spec/settled/terms.md)、[通用慣例](../../spec/settled/conventions.md)（C-09、C-10，新開 C-11）、[tick 核心](../../spec/settled/tick.md)與 [tick/ 子篇](../../spec/settled/tick/README.md)、[tick 協議](../../spec/settled/protocol/tick.md)、[daemon](../../spec/settled/daemon/README.md) 與 [daemon 協議](../../spec/settled/protocol/daemon/README.md)、[暫緩區](../../spec/settled/deferred/README.md)（撤回表、已知設計問題、舊 daemon 各篇）、[inst](../../spec/base/inst.md)、[contracts](../../spec/contracts.md) C-01、[驗收入口](../../spec/conformance.md)（條號表、V-03 場景）；schema 與範例、`validate.py`；程式 `lib/aos_tick.py`、`lib/aos_tick_table.py` 與測試。
+
+<a id="2026-10-01-第三批tasksjson-的-metainfo-與-modules"></a>
+
+## 2026-10-01 第三批：tasks.json 的 `_metainfo` 與 `modules`（已寫入 spec（commit 前由我補號））
+
+〔使用者裁定 2026-10-01〕對[整理區 README 疑點](../../spec/settled/README.md#2026-10-01-第二批astra-審查與使用者裁定落實)「這輪落筆時發現」各條的裁定（`aos-config-add` 旗標那條還沒定）。
+
+- **頂層 `_metainfo` 不是必填**：tick 本來就不查，schema 的 `required` 拿掉、文件改成可省（疑點 3）。
+- **每項的 `_metainfo` 照 inst（aos-exec）的規則**：可省，沒寫＝posix 第 1 版；寫了就照 inst 規則驗，跑到那一項、合併頂層預設後交給 `aos_inst.load_obj` 時才驗，驗不過跟其他「跑到某項展開失敗」一樣（自然丟錯、回 1）。程式本來就是這樣，只補 spec、schema、docstring 與測試。
+- **頂層 `modules` 讀表時整個展開指示詞**，跟 daemon 設定檔一致，不再只解一層（疑點 4 推翻原暫定）。`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點；展開失敗＝`bad_table`、回 1。核心照收不理、不當預設。
+- **照現寫法，使用者說 OK**：頂層陌生鍵讀表時不解（疑點 5）；`AOS_DIRNAME=""` 時跟固定排除同名的使用者檔風險自負（疑點 2）；整項 `$ref` 或從別檔引進的預設值，合併後的 `$ref:""`／`#…` 指合併後的這一項（疑點 6）。
+
+改到的地方：[B-620](../../spec/settled/tick.md)、[P-202](../../spec/settled/protocol/tick.md)、[C-11](../../spec/settled/conventions.md)、[整理區 README 疑點](../../spec/settled/README.md)、`tick-tasks.schema.json` 與新範例 `tasks.no-metainfo.valid.json`；程式 `lib/aos_tick_table.py`（`modules` 整個展開）、測試 `test_tick.py`、[src/py README](../../src/py/README.md)。

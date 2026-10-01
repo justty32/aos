@@ -82,15 +82,17 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、三個 `AOS_*`、分 exit／signal |
 | `tests/test_tick.py` | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes` |
 
-**任務表的頂層預設與展開時機（使用者 2026-10-01，待統一更新 spec）**：頂層可放 inst 的七個欄位 `argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit` 當每一項的預設；頂層 `_metainfo`（整份表的格式標記）、`id`、`kind` 不是預設，其他鍵當陌生鍵忽略。頂層也可選 `modules`（比照 daemon 設定檔，放 tick 模組的設定；目前沒有模組，核心照收不理、不當預設）。
+**任務表的頂層預設與展開時機（使用者 2026-10-01，待統一更新 spec）**：頂層可放 inst 的七個欄位 `argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit` 當每一項的預設；頂層 `_metainfo`（整份表的格式標記，可省）、`id`、`kind` 不是預設，其他鍵當陌生鍵忽略。頂層也可選 `modules`（比照 daemon 設定檔，放 tick 模組的設定；目前沒有模組，核心照收不理、不當預設）。
+
+〔使用者裁定 2026-10-01，[verdicts 11 第三批](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)〕頂層 `_metainfo` 可省；每項 `_metainfo` 照 inst 規則（沒寫＝posix 第 1 版，寫了跑到那一項才由 `aos_inst` 驗，驗不過自然丟錯回 1）。`modules` 讀表時整個展開（跟 daemon 設定檔的 `expand()` 同做法），展開失敗＝`bad_table:`、回 1。
 
 淺層合併：項自己寫了某個鍵就整個蓋過頂層那個（`envs` 也整包換掉，不逐變數合併）。合併後要有 `argv`（項自己有或頂層有），不然 `bad_table:`、回 1。
 
 頂層 `cwd` 不改 tick 自己的 cwd（tick 永遠在工作資料夾跑，鎖、紀錄都在工作資料夾的 `.aos/`），只是任務的預設 cwd，相對以工作資料夾為起點。
 
-讀表時（開格）只解到 `tasks` 這層：整份是指示詞先解；`tasks`、`modules` 與七個預設鍵的值各解一層（跟著 `$ref`／`$fmt`／`$env` 走到不是指示詞為止，`$opt` 選項物件原樣留）；`tasks` 每一元素解一層（整項 `$ref`）。這層的相對檔名以工作資料夾為中心，`$ref:""`／`#…` 指整份 tasks.json；解不開＝`bad_table:`。
+讀表時（開格）只解到 `tasks` 這層：整份是指示詞先解；`modules` 整個展開；`tasks` 與七個預設鍵的值各解一層（跟著 `$ref`／`$fmt`／`$env` 走到不是指示詞為止，`$opt` 選項物件原樣留）；`tasks` 每一元素解一層（整項 `$ref`）。這層的相對檔名以工作資料夾為中心，`$ref:""`／`#…` 指整份 tasks.json；解不開＝`bad_table:`。
 
-值的內部（`envs` 裡的 `$env`、`argv` 元素的 `$fmt`、`cwd` 的 `$opt mkdir`、`modules` 裡面…）讀表時不解。跑到某一項才合併（預設＋這一項），合併結果當一份獨立的記憶體 inst 照 inst 規則展開（`cwd` 先解、以工作資料夾為中心，其他欄位以解出的 cwd 為中心）；這時 `$ref:""`／`#…` 指合併後的這一項，不是整份 tasks.json，也不是預設原本來自的那個檔。沒跑到的項內部壞了不影響這一格；跑到時解不開就自然丟錯回 1。
+值的內部（`envs` 裡的 `$env`、`argv` 元素的 `$fmt`、`cwd` 的 `$opt mkdir`…）讀表時不解（`modules` 例外，整個展開）。跑到某一項才合併（預設＋這一項），合併結果當一份獨立的記憶體 inst 照 inst 規則展開（`cwd` 先解、以工作資料夾為中心，其他欄位以解出的 cwd 為中心）；這時 `$ref:""`／`#…` 指合併後的這一項，不是整份 tasks.json，也不是預設原本來自的那個檔。沒跑到的項內部壞了不影響這一格；跑到時解不開就自然丟錯回 1。
 
 ```json
 {

@@ -27,7 +27,7 @@ POSIX = {"_type": "posix", "_version": 1}
 
 
 def task(tid, argv, **extra):
-    """一項任務，必填的 `_metainfo`、`id`、`argv` 都填好（使用者 2026-10-01：`kind` 不必填）。"""
+    """一項任務，`_metainfo`、`id`、`argv` 都填好（使用者 2026-10-01：`kind` 不必填；裁定 2026-10-01：`_metainfo` 可省）。"""
     return dict({"_metainfo": POSIX, "id": tid, "argv": argv}, **extra)
 
 
@@ -130,6 +130,31 @@ class Step1Target(TickCase):
         self.assertTrue(self.exists("n/from-ref"))
         self.assertFalse(self.exists("wrong.ran"))
         self.assertEqual(self.rec(cwd="n")["tasks"], [{"id": "r", "exit": 0}])
+
+    def test_metainfo_optional(self):
+        # 裁定 2026-10-01：頂層 _metainfo 不是必填；每項 _metainfo 照 inst 規則可省（沒寫＝posix 第 1 版）
+        self.write(".aos/tasks.json", json.dumps({"tasks": [
+            {"id": "a", "argv": ["sh", "-c", "echo a >> ran"]},
+            sh("b", "echo b >> ran")]}))
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("ran"), "a\nb\n")
+        self.assertEqual(self.rec()["tasks"], [{"id": "a", "exit": 0}, {"id": "b", "exit": 0}])
+
+    def test_bad_item_metainfo_only_when_run(self):
+        # 裁定 2026-10-01：每項 _metainfo 跑到那一項才照 inst 規則驗；驗不過＝既有「跑到某項展開失敗」行為
+        # （自然丟錯回 1）。前一項已跑、前面先停格就輪不到它
+        bad = {"_metainfo": {"_type": "posix", "_version": 2}, "id": "x", "argv": ["touch", "x.ran"]}
+        self.tasks(sh("a", "touch a.ran"), bad)
+        r = self.tick()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("Error", r.stderr)
+        self.assertTrue(self.exists("a.ran"))
+        self.assertFalse(self.exists("x.ran"))
+        self.tasks(sh("a", "echo > .aos/tick/stop"), bad)
+        r = self.tick()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.rec()["tasks"], [{"id": "a", "exit": 0}])
 
     def test_bad_item_metainfo_value_is_error(self):
         # 每項沒寫 `_metainfo` 照跑（aos_inst 當 posix 第 1 版）；寫了但值不對，極簡檢查不看，
@@ -283,6 +308,12 @@ class Step4Check(TickCase):
         self.bad({"envs": {"$ref": "nope.json"}, "tasks": [sh("a", "touch ran")]})
         self.bad({"modules": {"$ref": "nope.json"}, "tasks": [sh("a", "touch ran")]})
 
+    def test_modules_interior_broken(self):
+        # 裁定 2026-10-01：modules 讀表時整個展開，內部展開失敗也是 bad_table、回 1、不開格
+        self.bad({"modules": {"m": {"deep": [{"$ref": "nope.json"}]}}, "tasks": [sh("a", "touch ran")]})
+        self.bad({"modules": {"m": {"$env": "AOSTEST_SURELY_NOT_SET"}}, "tasks": [sh("a", "touch ran")]})
+        self.bad({"modules": {"m": {"$ref": "#/nope"}}, "tasks": [sh("a", "touch ran")]})
+
     def test_ref_item_checked_after_expand(self):
         self.write("item.json", json.dumps({"id": "b"}))                   # 展開後缺 argv
         self.bad(table(sh("a", "touch ran"), {"$ref": "item.json"}))
@@ -415,20 +446,32 @@ class Step4Defaults(TickCase):
 
     def test_top_metainfo_id_kind_modules_not_defaults(self):
         self.put({"_metainfo": {"_type": "nope", "_version": 9}, "id": "TOP", "kind": "x",
-                  "modules": {"m": {"deep": {"$ref": "nope.json"}}},
+                  "modules": {"m": {"deep": {"x": 1}}},
                   "tasks": [{"argv": [PY, "-c", "import os; open('id', 'w').write(os.environ['AOS_TASK_ID'])"]}]})
         r = self.tick()
         self.assertEqual((r.returncode, r.stderr), (0, ""))       # 頂層 _metainfo 若被合併，aos_inst 會丟錯
         self.assertEqual(self.read("id"), "0")
 
     def test_modules_not_merged(self):
-        # 使用者 2026-10-01：「tasks.json頂層也應該有modules。」核心照收不理、內部不展開、不當預設合併
+        # 使用者 2026-10-01：「tasks.json頂層也應該有modules。」核心照收不理、不當預設合併；
+        # 裁定 2026-10-01：讀表時整個展開（跟 daemon 設定檔一致），`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點
         import aos_tick_table
+        self.write("mod.json", json.dumps({"deep": [{"$ref": "#/k"}], "k": 7}))
         tbl = aos_tick_table.check_table(
-            {"modules": {"$ref": "#/m"}, "m": {"x": {"$ref": "nope.json"}}, "argv": ["true"],
-             "tasks": [{"id": "a"}]}, self.d)
-        self.assertEqual(tbl.modules, {"x": {"$ref": "nope.json"}})
+            {"modules": {"$ref": "#/m"},
+             "m": {"x": {"$ref": "mod.json"}, "y": {"$ref": "#/v"}, "o": {"$opt": "mkdir", "$val": "d"}},
+             "v": "top", "argv": ["true"], "tasks": [{"id": "a"}]}, self.d)
+        self.assertEqual(tbl.modules, {"x": {"deep": [7], "k": 7}, "y": "top",
+                                       "o": {"$opt": "mkdir", "$val": "d"}})
         self.assertEqual(aos_tick_table.merge(tbl.defaults, tbl.items[0]), {"argv": ["true"], "id": "a"})
+
+    def test_modules_interior_expanded_when_run(self):
+        # modules 內部的 $ref 讀表時就展開；照跑、不影響任務
+        self.write("mod.json", json.dumps({"on": True}))
+        self.put({"modules": {"m": {"cfg": {"$ref": "mod.json"}}}, "tasks": [sh("a", "touch ran")]})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertTrue(self.exists("ran"))
 
 
 class Step5Run(TickCase):
