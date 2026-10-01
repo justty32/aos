@@ -18,11 +18,14 @@ import aos_dirname
 DIR_TARGETS = (os.path.join(".aos", "inst.json"), "inst.json")     # 預設名字時的樣子；實際照 _dir_targets()
 GRACE = 2.0             # 逾時：SIGTERM 之後給整個 process group 這麼久，還在就 SIGKILL
 CHILD, AOS, USAGE = "child", "aos", "usage"      # run_target() 回的那個 kind
+EXIT_USAGE = 1          # proto6 改（使用者 2026-10-01，aos 結束碼慣例）：用法錯＝通用錯誤 1（proto5 是 2）
 
 
 def _dir_targets():
     """proto6 改（使用者 2026-10-01）：`.aos` 照環境變數 `AOS_DIRNAME`（aos_dirname，跟 aos-tick 共用）。
-    名字不合法由呼叫端先用 aos_dirname.error() 擋成用法錯。"""
+    設成空字串＝不用子資料夾，只找 `<目標>/inst.json`。名字不合法由呼叫端先用 aos_dirname.error() 擋成用法錯。"""
+    if not aos_dirname.name():
+        return ("inst.json",)
     return (os.path.join(aos_dirname.name(), "inst.json"), "inst.json")
 
 

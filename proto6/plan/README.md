@@ -8,11 +8,11 @@
 
 **POC 總原則（使用者 2026-10-01）**：**默認一切正常**——檔案寫得進、讀得懂、沒壞、不斷電、沒有別人同時在跑、任務表是對的、帳號是對的。POC 不為這些異常寫處理，出事就讓它自然丟錯（Python traceback，回 1）。使用者原話：「我們都默認所有東西都OK都正常，先不考慮邊緣狀況」「紀錄這邊，我們都默認紀錄是好的」「舊紀錄不管，我們都默認紀錄能讀得懂」「--firstdo-fsync...先不做吧，我們先做單純的」「別人正在跑？默認沒有別人在跑，這個不管，或是直接報錯。然後也不需要判斷上下層。」「表不合法也拿掉，回 0／1 就好」「帳號不對，也不管」。spec 的規定不刪，只標〔使用者方向 2026-10-01：POC 先不做〕。
 
-**結束碼慣例（使用者 2026-10-01）**：aos 自己的程式只回 0（正常結束）、1（錯誤結束）、2（正常中斷）；全文與 `aos-tick` 怎麼對上，見 [verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)（待統一更新 spec）。
+**結束碼慣例（使用者 2026-10-01，同日改版）**：**0＝預料之中**（一切正常都歸 0，含正常中斷；只有 0 是普通結束）；**非 0＝不正常、要額外處理**；**1＝通用錯誤**，沒特別指定碼的錯都回 1；特別指定的碼（例如 inst 的 125／126／127、`aos-exec` 原樣傳出子程式的碼）照各自規定。~~0（正常結束）、1（錯誤結束）、2（正常中斷）~~ 不再有 2。全文與 `aos-tick`、`aos-exec` 怎麼對上，見 [verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)（待統一更新 spec）。
 
 - 程式放 `proto6/src/`，跟探針原型 [proto/](../proto/README.md) 分開。
 - 語言：POC 全部用 **Python 3.9**（只用標準庫），daemon、runner 也是；換 C++11 見[第六段](#第六段c11-改寫)。
-- inst 的解析與指示詞（`$ref` 等）和 `aos-exec` **直接從 proto5 原樣複製**，放 [proto6/src/py/](../src/py/README.md)：`lib/aos_inst.py`（讀驗解 inst）、`lib/aos_directives.py`（指示詞）、`lib/aos_exec*.py`（開程序）、`bin/aos-exec`。改動只剩「資料夾目標」那一處：先找 `.aos/inst.json` 再找 `inst.json`，而且（2026-10-01）這個 `.aos` 照環境變數 `AOS_DIRNAME`；~~認得頂層 `user`（跟目前身分不同就 125）~~ 2026-10-01 撤回，回到 proto5 原樣（`user` 當陌生鍵忽略）（跟 aos-tick 共用 `lib/aos_dirname.py`；細節見 [src/py README](../src/py/README.md)）。各段把它當現成的東西用，不重寫。
+- inst 的解析與指示詞（`$ref` 等）和 `aos-exec` **直接從 proto5 原樣複製**，放 [proto6/src/py/](../src/py/README.md)：`lib/aos_inst.py`（讀驗解 inst）、`lib/aos_directives.py`（指示詞）、`lib/aos_exec*.py`（開程序）、`bin/aos-exec`。改動只剩「資料夾目標」那一處：先找 `.aos/inst.json` 再找 `inst.json`，而且（2026-10-01）這個 `.aos` 照環境變數 `AOS_DIRNAME`（設成空字串時只找 `inst.json`），用法錯由 2 改 1（結束碼慣例）；~~認得頂層 `user`（跟目前身分不同就 125）~~ 2026-10-01 撤回，回到 proto5 原樣（`user` 當陌生鍵忽略）（跟 aos-tick 共用 `lib/aos_dirname.py`；細節見 [src/py README](../src/py/README.md)）。各段把它當現成的東西用，不重寫。
 
 ## 怎麼用這份 plan
 
@@ -28,7 +28,7 @@
 
 ### 第一段：tick 核心
 
-- **目標**：`aos-tick` 直接跑得動一格：照任務表依序跑、每項結束碼紀錄（含 `seq`、停格檔、擋板檔），~~整格回 0／1~~ 照表跑完回 0、擋板 2、tick 自己出錯 1（2026-10-01 結束碼慣例）。B-626 原本的核心四件事裡，同資料夾互斥與上下層判定〔使用者方向 2026-10-01：POC 先不做〕。
+- **目標**：`aos-tick` 直接跑得動一格：照任務表依序跑、每項結束碼紀錄（含 `seq`、停格檔、擋板檔），~~整格回 0／1~~ 照表跑完、擋板、busy 都回 0，tick 自己出錯 1（2026-10-01 結束碼慣例改版）。B-626 原本的核心四件事裡，同資料夾互斥與上下層判定〔使用者方向 2026-10-01：POC 先不做〕。
 - **主要 spec**：[B-626、B-602、B-620、B-633、B-628、B-627](../spec/settled/tick.md)；格式 [P-202、P-203、P-213](../spec/settled/protocol/node.md)。
 - **可單獨跑的樣子**：不要 daemon、git、cgroup、helper。手建一個資料夾、寫 `.aos/tasks.json`，`aos-tick --node /絕對路徑` 或 cron 直接跑，看結束碼與 `.aos/tick/current.json`。
 - **界線**：核心不認得任何系統級任務，也不清任務留下的後代。細部見 [m1-tick-core.md](m1-tick-core.md)。

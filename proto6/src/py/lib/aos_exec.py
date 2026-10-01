@@ -7,7 +7,8 @@
 
     普通檔案（副檔名不是 .json）  直接執行它，stdin/stdout/stderr 繼承 aos-exec 的
     .json 檔                     讀進來當 inst.json 解析、執行（不存在＝125，見下）
-    資料夾                       執行 xxx/.aos/inst.json，沒有再找 xxx/inst.json（proto6 改；`.aos` 照 AOS_DIRNAME）
+    資料夾                       執行 xxx/.aos/inst.json，沒有再找 xxx/inst.json（proto6 改；`.aos` 照 AOS_DIRNAME，
+                                 設成空字串時只找 xxx/inst.json）
 
 inst.json 怎麼讀、怎麼驗在 aos_inst.py；「照一份 inst 跑一次」是什麼意思照
 ../spec/inst-posix/ 第 6 節做：驗完才跑、mkdir／append／inherit／merge、環境清空或疊加、
@@ -24,7 +25,9 @@ stderr／exit／cwd／envs 照 inst，前置檢查、啟動與逾時都跟 `run_
 `run_target()` 回的是 **`(code, kind)`**：`kind` 說這個碼是誰的——`"child"`＝子程式真的
 跑完了一次（它的結束碼／128+N／126／127）、`"aos"`＝aos-exec 自己失敗（inst.json 壞、
 指示詞解不開、前置檢查沒過）、`"usage"`＝用法錯。命令列的退出碼照 kind 換算：
-`usage`→2、`aos`→**125**、`child`→原樣。125 是特意挑的：跟子程式的碼分得開。
+`usage`→1、`aos`→**125**、`child`→原樣。125 是特意挑的：跟子程式的碼分得開。
+（proto6 改，使用者 2026-10-01 aos 結束碼慣例：0＝預料之中、非 0＝要額外處理、1＝通用錯誤；
+用法錯由 proto5 的 2 改 1，argparse 的用法錯也改回 1。125／126／127 與子程式的碼是 inst 特別指定的，照舊。）
 
 `run_target_full()` 是 cpu.md §4.1 的新增入口：保留三種目標的語意，另回真實的
 timed_out／stopped 與耗時；等待期間可輪詢控制訊息，強停只處理工作的 process group。
@@ -40,11 +43,12 @@ import time
 import aos_dirname
 import aos_inst
 from aos_exec_run import (
-    AOS, CHILD, DIR_TARGETS, GRACE, USAGE, _dir_targets, _err, _execute_inst, _find_dir_inst, _no_dir_inst_msg,
+    AOS, CHILD, DIR_TARGETS, EXIT_USAGE, GRACE, USAGE, _dir_targets, _err, _execute_inst, _find_dir_inst, _no_dir_inst_msg,
     _spawn,
 )
 
-__all__ = ["run_target", "run_inst", "InstResult", "main", "DIR_TARGETS", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
+__all__ = ["run_target", "run_inst", "InstResult", "main", "DIR_TARGETS", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS",
+           "EXIT_USAGE"]
 __all__ += ["run_target_full", "TargetResult"]
 
 EXIT_AOS = 125          # kind=="aos" 時命令列的退出碼（不會跟子程式的碼撞號）
@@ -87,7 +91,7 @@ def run_target_full(xxx, timeout_ms=0, on_spawn=None,
         if args is not None:
             code, kind = _inst_args_error()
         elif aos_dirname.error():                   # proto6 改：AOS_DIRNAME 不合法＝用法錯
-            code, kind = _err(2, USAGE, aos_dirname.error())
+            code, kind = _err(EXIT_USAGE, USAGE, aos_dirname.error())
         else:
             found = _find_dir_inst(p)               # proto6 改：.aos/inst.json 再 inst.json
             target = found or os.path.join(p, _dir_targets()[0])
@@ -95,7 +99,7 @@ def run_target_full(xxx, timeout_ms=0, on_spawn=None,
                 target = os.path.realpath(target)
                 on_target(target)
             if found is None:
-                code, kind = _err(2, USAGE, _no_dir_inst_msg(p))
+                code, kind = _err(EXIT_USAGE, USAGE, _no_dir_inst_msg(p))
             else:
                 code, kind = _run_inst(target, p, timeout_ms, on_spawn, stderr, details)
     else:
@@ -108,7 +112,7 @@ def run_target_full(xxx, timeout_ms=0, on_spawn=None,
                 code, kind = _run_inst(p, os.path.dirname(p), timeout_ms, on_spawn,
                                        stderr, details)
         elif not os.path.exists(p):
-            code, kind = _err(2, USAGE, "找不到 %s" % xxx)
+            code, kind = _err(EXIT_USAGE, USAGE, "找不到 %s" % xxx)
         else:
             code, kind = _run_plain(p, timeout_ms, on_spawn, stderr, args, details)
     return TargetResult(code, kind, details["timed_out"],
@@ -127,7 +131,7 @@ def run_target(xxx, timeout_ms=0, on_spawn=None, stderr=None, args=None, on_targ
       ／指示詞解不開／`mkdir` 建不起來／`exit` 檔的父目錄不存在／`cwd` 不是資料夾／重導向的
       檔開不起來。code 是 1（命令列會換成 125），不寫 exit 檔。
     - `"usage"`：用法錯——`xxx` 是不存在的**非** `.json` 路徑、資料夾裡 `.aos/inst.json` 與 `inst.json` 都沒有、
-      inst 目標卻給了 `--`。code 是 2。
+      inst 目標卻給了 `--`、`AOS_DIRNAME` 不合法（資料夾目標時）。code 是 1（proto6 改，原 2）。
 
     所以 `kind == "child"` ⇔「跑完了一次」⇔ exit 檔有被寫，這條線兩邊都對得起來。
 
@@ -146,14 +150,14 @@ def run_target(xxx, timeout_ms=0, on_spawn=None, stderr=None, args=None, on_targ
         if args is not None:
             return _inst_args_error()
         if aos_dirname.error():                     # proto6 改：AOS_DIRNAME 不合法＝用法錯
-            return _err(2, USAGE, aos_dirname.error())
+            return _err(EXIT_USAGE, USAGE, aos_dirname.error())
         found = _find_dir_inst(p)                   # proto6 改：.aos/inst.json 再 inst.json
         target = found or os.path.join(p, _dir_targets()[0])
         if on_target:
             target = os.path.realpath(target)
             on_target(target)
         if found is None:
-            return _err(2, USAGE, _no_dir_inst_msg(p))
+            return _err(EXIT_USAGE, USAGE, _no_dir_inst_msg(p))
         return _run_inst(target, p, timeout_ms, on_spawn, stderr)
     if on_target:
         on_target(p)
@@ -162,7 +166,7 @@ def run_target(xxx, timeout_ms=0, on_spawn=None, stderr=None, args=None, on_targ
             return _inst_args_error()
         return _run_inst(p, os.path.dirname(p), timeout_ms, on_spawn, stderr)
     if not os.path.exists(p):
-        return _err(2, USAGE, "找不到 %s" % xxx)
+        return _err(EXIT_USAGE, USAGE, "找不到 %s" % xxx)
     return _run_plain(p, timeout_ms, on_spawn, stderr, args)
 
 
@@ -183,7 +187,7 @@ def run_inst(inst, stdin_text, timeout_ms=0):
 
 
 def _inst_args_error():
-    return _err(2, USAGE, "inst 目標的參數寫在 inst.json 的 argv 裡")
+    return _err(EXIT_USAGE, USAGE, "inst 目標的參數寫在 inst.json 的 argv 裡")
 
 
 def _run_plain(path, timeout_ms, on_spawn=None, stderr=None, args=None, details=None):
@@ -227,8 +231,16 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None, details=None
 
 
 
+class _Parser(argparse.ArgumentParser):
+    """proto6 改（aos 結束碼慣例）：argparse 的用法錯預設回 2，改回 1。"""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(EXIT_USAGE, "%s: error: %s\n" % (self.prog, message))
+
+
 def main(argv=None):
-    """命令列：解旗標、叫 `run_target()`、把 kind 換算成退出碼（usage→2、aos→125、child→原樣）。"""
+    """命令列：解旗標、叫 `run_target()`、把 kind 換算成退出碼（usage→1、aos→125、child→原樣）。"""
     raw = list(sys.argv[1:] if argv is None else argv)
     try:
         separator = raw.index("--")
@@ -237,7 +249,7 @@ def main(argv=None):
     else:
         child_args = raw[separator + 1:]
         raw = raw[:separator]
-    ap = argparse.ArgumentParser(
+    ap = _Parser(
         prog="aos-exec", description="把一個目標（檔案／.json／資料夾）執行一次")
     ap.add_argument("xxx", nargs="?", default=".",
                     help="要執行的東西：普通檔案、.json 檔，或資料夾；留空＝. （現在所在的資料夾）")
@@ -248,7 +260,7 @@ def main(argv=None):
                     help="蓋掉子程式的 stderr；- ＝印到 aos-exec 自己的 stderr")
     a = ap.parse_args(raw)
     if a.timeout_ms < 0:
-        ap.error("--timeout-ms 不能是負數")      # argparse 的用法錯＝退出碼 2
+        ap.error("--timeout-ms 不能是負數")      # 用法錯＝退出碼 1（_Parser）
     code, kind = run_target(a.xxx, a.timeout_ms, stderr=a.stderr,
                             args=child_args)
     return EXIT_AOS if kind == AOS else code

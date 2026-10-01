@@ -54,14 +54,14 @@ class TestTargets(ExecCase):
     def test_json_target_rejects_separator_args(self):
         target = self.inst({"argv": ["sh", "-c", "printf ran > marker"]}, "one.json")
         r = self.aos(target, "--", "extra")
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)                  # proto6 改：用法錯 1（aos 結束碼慣例）
         self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", r.stderr)
         self.assertFalse(self.exists("marker"))
 
     def test_directory_target_rejects_even_empty_separator_args(self):
         self.inst({"argv": ["sh", "-c", "printf ran > marker"]})
         r = self.aos(self.d, "--")
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
         self.assertFalse(self.exists("marker"))
 
     def test_json_file_is_parsed_as_inst(self):
@@ -114,27 +114,47 @@ class TestTargets(ExecCase):
         self.assertEqual(self.read("out.txt"), "aos\n")
 
     def test_dir_name_from_env(self):
-        """proto6 新增（使用者 2026-10-01）：資料夾目標的 `.aos` 照環境變數 AOS_DIRNAME；沒設或空＝.aos。"""
+        """proto6 新增（使用者 2026-10-01）：資料夾目標的 `.aos` 照環境變數 AOS_DIRNAME；沒設＝.aos。"""
         self.inst({"argv": ["sh", "-c", "echo aos"], "stdout": "out.txt"})
         self.inst({"argv": ["sh", "-c", "echo aos2"], "stdout": "out.txt"}, ".aos2/inst.json")
         env = lambda v: dict(os.environ, AOS_DIRNAME=v)
+        unset = {k: v for k, v in os.environ.items() if k != "AOS_DIRNAME"}
         self.assertEqual(self.aos(self.d, env=env(".aos2")).returncode, 0)
         self.assertEqual(self.read("out.txt"), "aos2\n")
-        self.assertEqual(self.aos(self.d, env=env("")).returncode, 0)
+        self.assertEqual(self.aos(self.d, env=unset).returncode, 0)
         self.assertEqual(self.read("out.txt"), "aos\n")
-        r = self.aos(self.d, env=env(".aos3"))              # 名字底下沒有、頂層也沒有：照舊用法錯 2
-        self.assertEqual(r.returncode, 2)
+        r = self.aos(self.d, env=env(".aos3"))              # 名字底下沒有、頂層也沒有：用法錯 1
+        self.assertEqual(r.returncode, 1)
         self.assertIn(".aos3/inst.json", r.stderr)
         self.inst({"argv": ["sh", "-c", "echo plain"], "stdout": "out.txt"}, "inst.json")
         self.assertEqual(self.aos(self.d, env=env(".aos3")).returncode, 0)   # 退回頂層 inst.json
         self.assertEqual(self.read("out.txt"), "plain\n")
 
+    def test_empty_dir_name_means_target_itself(self):
+        """proto6 新增（使用者 2026-10-01 再改）：AOS_DIRNAME 設成空字串＝不用子資料夾，只找 <目標>/inst.json；
+        跟「沒設」（先 .aos/inst.json 再 inst.json）分得開。"""
+        self.inst({"argv": ["sh", "-c", "echo aos"], "stdout": "out.txt"})
+        empty = dict(os.environ, AOS_DIRNAME="")
+        unset = {k: v for k, v in os.environ.items() if k != "AOS_DIRNAME"}
+        r = self.aos(self.d, env=empty)                     # 只有 .aos/inst.json：空字串不看它，用法錯 1
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("沒有 inst.json", r.stderr)
+        self.assertNotIn(".aos", r.stderr.replace(self.d, ""))
+        self.assertFalse(self.exists("out.txt"))
+        self.inst({"argv": ["sh", "-c", "echo plain"], "stdout": "out.txt"}, "inst.json")
+        self.assertEqual(self.aos(self.d, env=empty).returncode, 0)
+        self.assertEqual(self.read("out.txt"), "plain\n")  # 兩個都有：空字串跑頂層的
+        self.assertEqual(self.aos(self.d, env=unset).returncode, 0)
+        self.assertEqual(self.read("out.txt"), "aos\n")    # 沒設：跑 .aos/ 的
+        self.assertEqual(self.aos(cwd=self.d, env=empty).returncode, 0)   # 留空＝. 也一樣
+        self.assertEqual(self.read("out.txt"), "plain\n")
+
     def test_bad_dir_name_is_usage(self):
-        """proto6 新增：AOS_DIRNAME 含 / 或是 . 、.. 時，資料夾目標算用法錯（aos-exec 的用法錯碼 2，照舊不改）。"""
+        """proto6 新增：AOS_DIRNAME 含 / 或是 . 、.. 時，資料夾目標算用法錯（使用者 2026-10-01：用法錯回 1）。"""
         self.inst({"argv": ["sh", "-c", "touch ran"]})
         for bad in ("a/b", ".", ".."):
             r = self.aos(self.d, env=dict(os.environ, AOS_DIRNAME=bad))
-            self.assertEqual(r.returncode, 2, bad)
+            self.assertEqual(r.returncode, 1, bad)
             self.assertIn("AOS_DIRNAME", r.stderr)
             self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
         self.assertFalse(self.exists("ran"))
@@ -153,42 +173,45 @@ class TestTargets(ExecCase):
     def test_dir_target_flag_is_gone(self):
         """proto6 改：不提供改尋找路徑的旗標，--dir-target 是用法錯。"""
         self.inst({"argv": ["true"]}, "other/place.json")
-        self.assertEqual(self.aos(self.d, "--dir-target", "other/place.json").returncode, 2)
+        self.assertEqual(self.aos(self.d, "--dir-target", "other/place.json").returncode, 1)
 
     def test_dir_named_dot_json_is_still_a_dir(self):
         self.write("weird.json/inside.txt", "")
         r = self.aos(self.d + "/weird.json")
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
         self.assertIn(".aos/inst.json", r.stderr)
 
-    def test_missing_xxx_is_2(self):
+    def test_missing_xxx_is_1(self):
         r = self.aos(os.path.join(self.d, "nope"))
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
         self.assertIn("找不到", r.stderr)
 
-    def test_missing_dir_target_is_2(self):
-        """proto6 改：.aos/inst.json 跟 inst.json 都沒有才是用法錯，訊息兩個都提。"""
+    def test_missing_dir_target_is_1(self):
+        """proto6 改：.aos/inst.json 跟 inst.json 都沒有才是用法錯（1），訊息兩個都提。"""
         r = self.aos(self.d)
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
         self.assertIn(".aos/inst.json", r.stderr)
         self.assertIn("也沒有 inst.json", r.stderr)
 
-    def test_bad_flag_is_2(self):
-        self.assertEqual(self.aos(self.d, "--no-such-flag").returncode, 2)
+    def test_bad_flag_is_1(self):
+        """proto6 改（aos 結束碼慣例）：argparse 的用法錯也回 1，不是它預設的 2。"""
+        self.assertEqual(self.aos(self.d, "--no-such-flag").returncode, 1)
+        self.assertEqual(self.aos(self.d, "--timeout-ms", "abc").returncode, 1)
+        self.assertEqual(self.aos(self.d, "--help").returncode, 0)
 
-    def test_no_args_is_2(self):
-        self.assertEqual(self.aos().returncode, 2)
+    def test_no_args_is_1(self):
+        self.assertEqual(self.aos().returncode, 1)
 
-    def test_negative_timeout_is_2(self):
+    def test_negative_timeout_is_1(self):
         self.inst({"argv": ["true"]})
-        self.assertEqual(self.aos(self.d, "--timeout-ms", "-1").returncode, 2)
+        self.assertEqual(self.aos(self.d, "--timeout-ms", "-1").returncode, 1)
 
     def test_entry_script_is_executable(self):
         self.assertTrue(os.stat(EXEC).st_mode & stat.S_IXUSR)
         with open(EXEC, encoding="utf-8") as f:
             self.assertTrue(f.readline().startswith("#!"))
         r = subprocess.run([EXEC], capture_output=True, text=True)     # 不經 python3 也跑得起來
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
 
 
 # ---------------------------------------------------------------- --stderr ----
@@ -619,8 +642,8 @@ class TestApi(ExecCase):
         self.assertTrue(err.startswith("aos-exec: FieldTypeMismatch: "), err)
 
     def test_kind_says_whose_code_it_is(self):
-        self.assertEqual(self.call(os.path.join(self.d, "沒這個"))[:2], (2, "usage"))
-        self.assertEqual(self.call(self.d, args=[])[:2], (2, "usage"))     # 資料夾目標給了 --
+        self.assertEqual(self.call(os.path.join(self.d, "沒這個"))[:2], (1, "usage"))   # proto6 改：用法錯 1
+        self.assertEqual(self.call(self.d, args=[])[:2], (1, "usage"))     # 資料夾目標給了 --
         self.inst("{ 這不是 JSON")
         self.assertEqual(self.call(self.d)[:2], (1, "aos"))
         self.inst({"argv": ["aos-definitely-no-such-program"]})
@@ -647,13 +670,13 @@ class TestApi(ExecCase):
         self.assertEqual(self.read("seen.err"), "err\n")
 
     def test_main_turns_kinds_into_exit_codes(self):
-        """命令列才換算：usage→2、aos→125、child→原樣。"""
+        """命令列才換算：usage→1（proto6 改）、aos→125、child→原樣。"""
         buf = io.StringIO()
         old, sys.stderr = sys.stderr, buf
         try:
             self.inst("{ 這不是 JSON")
             self.assertEqual(aos_exec.main([self.d]), 125)
-            self.assertEqual(aos_exec.main([os.path.join(self.d, "沒這個")]), 2)
+            self.assertEqual(aos_exec.main([os.path.join(self.d, "沒這個")]), 1)
             self.inst({"argv": ["sh", "-c", "exit 1"]})
             self.assertEqual(aos_exec.main([self.d]), 1)
         finally:
