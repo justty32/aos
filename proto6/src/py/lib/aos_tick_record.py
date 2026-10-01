@@ -53,7 +53,7 @@ class Record:
         self._rewrite()
 
     def finish(self, code, stopped_after=None):
-        """收尾：ended:true、exit＝整格結束碼（0／1），被停格檔停下時加 stopped_after。"""
+        """收尾：ended:true、exit＝整格結束碼（照表跑完就是 0，任務成敗不影響），被停格檔停下時加 stopped_after。"""
         self.data["ended"] = True
         self.data["exit"] = code
         if stopped_after is not None:
