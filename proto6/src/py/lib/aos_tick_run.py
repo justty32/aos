@@ -1,11 +1,10 @@
 """aos-tick 跑任務表的一項：照 inst 開串流、開子程序、等它，回 exit 或 signal（B-620「跑每一項」、P-203）。
 
 照 inst 的規則（mkdir、串流預設 /dev/null、envs 疊加或清空、另開 session）跟從 proto5 複製來的
-`aos_exec_run._execute_inst()` 一樣，只多三件那裡沒有的事，所以這裡自己開程序、不改 lib：
+`aos_exec_run._execute_inst()` 一樣，只多兩件那裡沒有的事，所以這裡自己開程序、不改 lib：
 
-- 鎖 fd 用 `pass_fds` 傳給任務（`_execute_inst` 的 Popen 用預設 close_fds，任務會拿不到鎖）。
-- 五個 `AOS_*` 變數：先拿掉從外面繼承的同名變數（例如 tick 本身是上層 tick 的一項），再放本格的；
-  `envs` 清空時 `AOS_TICK_LOCK_FD` 仍保留；inst 的 `envs` 最後疊上去。
+- 四個 `AOS_*` 變數蓋在繼承的環境上（`envs` 清空時一個都不放）；inst 的 `envs` 最後疊上去。
+  〔使用者方向 2026-10-01〕不取鎖，所以沒有 `AOS_TICK_LOCK_FD`、不傳鎖 fd。
 - 自己 wait，分出 `exit` 與 `signal`（`_execute_inst` 把訊號 N 折成 128+N）。
 
 沒跑成（mkdir、cwd、重導向檔開不起來）照 aos-exec 算 125；找不到程式 127、沒執行權 126。
@@ -17,23 +16,18 @@ import subprocess
 
 import aos_exec_run
 
-__all__ = ["run_item", "TASK_VARS", "EXIT_NOT_RUN"]
+__all__ = ["run_item", "EXIT_NOT_RUN"]
 
-TASK_VARS = ("AOS_NODE_DIR", "AOS_TICK_LOCK_FD", "AOS_TICK_RECORD", "AOS_TASK_ID", "AOS_TASK_INDEX")
 EXIT_NOT_RUN = 125
 
 
-def _env(inst, task_vars, lock_fd):
-    if inst["envs_clear"]:
-        env = {"AOS_TICK_LOCK_FD": str(lock_fd)}
-    else:
-        env = {k: v for k, v in os.environ.items() if k not in TASK_VARS}
-        env.update(task_vars)
+def _env(inst, task_vars):
+    env = {} if inst["envs_clear"] else dict(os.environ, **task_vars)
     env.update(inst["envs"])
     return env
 
 
-def run_item(inst, task_vars, lock_fd):
+def run_item(inst, task_vars):
     """跑一項，回 (kind, value, note)：kind 是 "exit" 或 "signal"；note 是要印在 stderr 的說明或 None。"""
     to_make = [inst["cwd"]] if inst["cwd_mkdir"] else []
     for name in ("stdout", "stderr", "exit"):
@@ -50,7 +44,7 @@ def run_item(inst, task_vars, lock_fd):
     if not os.path.isdir(inst["cwd"]):
         return "exit", EXIT_NOT_RUN, "cwd 不是資料夾：%s" % inst["cwd"]
 
-    env = _env(inst, task_vars, lock_fd)
+    env = _env(inst, task_vars)
     opened = []
     note = None
     try:
@@ -68,7 +62,7 @@ def run_item(inst, task_vars, lock_fd):
             return "exit", EXIT_NOT_RUN, "重導向的檔案開不起來：%s" % e
         try:
             p = subprocess.Popen(inst["argv"], cwd=inst["cwd"], env=env, start_new_session=True,
-                                 stdin=fin, stdout=fout, stderr=ferr, pass_fds=(lock_fd,))
+                                 stdin=fin, stdout=fout, stderr=ferr)
         except ValueError as e:
             return "exit", EXIT_NOT_RUN, "無法啟動子程式：%s" % e
         except PermissionError as e:
@@ -88,9 +82,5 @@ def run_item(inst, task_vars, lock_fd):
 
     if exit_path:
         status = value if kind == "exit" else 128 + value
-        try:
-            aos_exec_run._write_exit(exit_path, status, inst["exit"]["append"])
-        except OSError as e:
-            extra = "exit 檔寫不進去 %s：%s" % (exit_path, e)
-            note = extra if note is None else "%s；%s" % (note, extra)
+        aos_exec_run._write_exit(exit_path, status, inst["exit"]["append"])   # 默認寫得進（使用者方向 2026-10-01）
     return kind, value, note

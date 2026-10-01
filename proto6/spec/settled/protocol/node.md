@@ -91,7 +91,7 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 - 指定時必須是 P-002 的 node id；不往父目錄猜找 repo。
 - tick 本身不找 inst，也不看自己在哪個 cgroup（[B-627](../tick.md)）。
 - 用資料夾當執行目標時，inst 只要 `{"argv":["aos-tick"]}`，預設 cwd 正好是 node 根。直接執行 `.aos/inst.json` 檔時 base 不同，要明寫 `cwd:".."` 或 `--node`。
-- `--firstdo-fsync`：開格那一次 fsync，格數才保證不倒退。環境有 `AOS_TICK_FIRSTDO_FSYNC=1`（daemon 帶了同名旗標時放的）也算帶了（[B-633](../tick.md)）。
+- `--firstdo-fsync`〔使用者方向 2026-10-01：POC 先不做〕：開格那一次 fsync，格數才保證不倒退。環境有 `AOS_TICK_FIRSTDO_FSYNC=1`（daemon 帶了同名旗標時放的）也算帶了（[B-633](../tick.md)）。
 - 第十九批的 `--check`（全掛檢查）撤。
 
 ### tick 自己的介面
@@ -108,10 +108,10 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 
 | 代碼 | 什麼時候 |
 |---|---|
-| `config_invalid` | 任務表不合法 |
-| `user_mismatch` | 某項的 `user` 跟 tick 帳號不同 |
+| `config_invalid` | 任務表不合法〔使用者方向 2026-10-01：POC 先不做〕 |
+| `user_mismatch` | 某項的 `user` 跟 tick 帳號不同〔使用者方向 2026-10-01：POC 先不做〕 |
 | ~~`record_unwritable`~~ | ~~本格結束碼紀錄寫不進、失效~~（作廢，2026-09-30 晚）（[B-633](../tick.md)） |
-| `record_unreadable` | 舊的兩份紀錄都讀不懂 |
+| `record_unreadable` | 舊的兩份紀錄都讀不懂〔使用者方向 2026-10-01：默認讀得懂，POC 先不做〕 |
 | `stopped` | 被停格檔停下；後面附停格檔裡的原因 |
 | `blocked` | 有擋板檔；後面附擋板檔裡的原因 |
 
@@ -119,7 +119,7 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 
 | 介面 | 約定 |
 |---|---|
-| 身分 | 沿用 tick 的有效 UID、群組與資源範圍；帶了別的 `user` 的那一項回 125，要換帳號包 `aos-as`（P-212） |
+| 身分 | 沿用 tick 的有效 UID、群組與資源範圍；帶了別的 `user` 的那一項回 125〔使用者方向 2026-10-01：POC 先不做〕，要換帳號包 `aos-as`（P-212） |
 | cwd／argv | 照本項 inst 展開後執行；cwd 沒給時是 node 根 |
 | stdin | 預設 `/dev/null`；可用本項 inst 的 stdin 重導向 |
 | stdout／stderr | 照 inst 預設 `/dev/null`，可明寫 inherit 或重導向；tick 不把輸出文字當完成證據 |
@@ -130,7 +130,7 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 | 變數 | 值 |
 |---|---|
 | `AOS_NODE_DIR` | node id |
-| `AOS_TICK_LOCK_FD` | 鎖 fd 的號碼（[B-602](../tick.md)） |
+| `AOS_TICK_LOCK_FD` | 鎖 fd 的號碼（[B-602](../tick.md)）〔使用者方向 2026-10-01：POC 先不做〕 |
 | `AOS_TICK_RECORD` | `.aos/tick/current.json` 的絕對路徑；本格紀錄失效後開的項不設（[B-633](../tick.md)；寫不進的失效處理已作廢，2026-09-30 晚） |
 | `AOS_TASK_ID` | 任務表該項的 `id` 字串，原樣 |
 | `AOS_TASK_INDEX` | 這一項在 `tasks` 陣列的位置，十進位，從 0 起 |
@@ -148,8 +148,8 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 |---|---|
 | `0` | 全部任務成功（含沒有工作、沒有變動）；只表示本格完成 |
 | `1` | 至少一項失敗（非零、訊號、回 125 都算）；或某項建了停格檔、後面沒跑；或有擋板檔、一項都沒跑也沒寫紀錄（[B-620](../tick.md)） |
-| `2` | argv 或任務表不合法；還沒開任何任務 |
-| `75` | 鎖被占用；沒開任務、沒寫紀錄，也不在程式內重試 |
+| `2` | argv 或任務表不合法；還沒開任何任務（POC 2026-10-01：只剩 argv 用法錯；任務表不合法〔使用者方向 2026-10-01：POC 先不做〕） |
+| `75` | 鎖被占用；沒開任務、沒寫紀錄，也不在程式內重試〔使用者方向 2026-10-01：POC 先不做〕 |
 
 - **停掉本格靠停格檔 `.aos/tick/stop`，不靠結束碼**；被停下的格為什麼回 1 見 [B-620](../tick.md)。
 - 第十九批「標準配備」的 3（提交故障）與 125（格首看到擋板）撤。

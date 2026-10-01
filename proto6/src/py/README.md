@@ -47,22 +47,24 @@ cat /tmp/n/.aos/tick/current.json                     # {"version":1,"seq":1,...
 | 檔 | 內容 |
 |---|---|
 | `bin/aos-tick` | 命令列薄殼（`.gitignore` 擋 `bin/`，`git add -f` 進來的） |
-| `lib/aos_tick.py` | argv、認資料夾、取鎖、擋板、停格檔、整格順序 `run_tick()`、預設上層 `default_parent()` |
-| `lib/aos_tick_record.py` | 結束碼紀錄 `current.json`／`last.json`：開格換檔、每項重寫、舊紀錄讀不懂、fsync |
-| `lib/aos_tick_table.py` | 讀 `.aos/tasks.json`、只驗四件事、每項的 `id`／`user`／inst |
-| `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、鎖 fd 傳給任務、五個 `AOS_*`、分 exit／signal |
-| `tests/test_tick.py` | plan 步驟 1～9 的驗收，一個類別一步 |
+| `lib/aos_tick.py` | argv、認資料夾、擋板、停格檔、整格順序 `run_tick()` |
+| `lib/aos_tick_record.py` | 結束碼紀錄 `current.json`／`last.json`：開格換檔、每項重寫 |
+| `lib/aos_tick_table.py` | 讀 `.aos/tasks.json`、每項的 `id`、跑到時展開成 inst（拿掉 `user`） |
+| `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、四個 `AOS_*`、分 exit／signal |
+| `tests/test_tick.py` | plan 各步的驗收，一個類別一步 |
+
+**POC 默認一切正常（使用者 2026-10-01，見 [plan 第一段待問 8](../../plan/m1-tick-core.md#待問)）**：不取鎖（不回 75、沒有 `AOS_TICK_LOCK_FD`）、不驗表（不回 2、沒有 `config_invalid`）、不看 `user`（不回 125、沒有 `user_mismatch`）、不判上下層、不做 `--firstdo-fsync`、不處理紀錄讀不懂或寫不進。出事就讓 Python 自然丟錯（traceback、回 1）。整格只回 0／1；argv 用法錯回 2。
 
 ### review 導讀
 
 讀的順序：
 
 1. `lib/aos_tick.py` 的 `run_tick()`：整格照 B-620「一格怎麼走」一行一步，先看它知道全貌。
-2. 同檔 `take_lock()`、`read_reason()`、`remove_stop_file()`、`run_one()`、`node_dir_from_arg()`、`default_parent()`。
+2. 同檔 `read_reason()`、`remove_stop_file()`、`run_one()`、`node_dir_from_arg()`。
 3. `lib/aos_tick_record.py`：`Record.open()`（換檔四步）→ `add_task()`／`finish()` → `_rewrite()`。
-4. `lib/aos_tick_table.py`：`read_table()`（四件事）→ `task_id()`、`check_user()`、`load_inst()`。
+4. `lib/aos_tick_table.py`：`read_table()` → `task_id()`、`load_inst()`。
 5. `lib/aos_tick_run.py`：`run_item()`。
-6. `tests/test_tick.py`：`Step1Lock`…`Step9Whole`，對著 plan 各步的驗收讀。
+6. `tests/test_tick.py`：`Step1Node`…`Step9Whole`，對著 plan 各步的驗收讀。
 
 每個函式開頭一行註明對應的 spec 條號。
 
@@ -70,27 +72,22 @@ plan 步驟對到哪：
 
 | 步驟 | 函式 |
 |---|---|
-| 1 找資料夾、取鎖 | `main()`、`node_dir_from_arg()`、`run_tick()` 開頭、`take_lock()` |
+| 1 找資料夾 | `main()`、`node_dir_from_arg()`、`run_tick()` 開頭 |
 | 2 擋板檔、結束碼 | `run_tick()`、`read_reason()`、`say()` |
 | 3 紀錄與格數 | `Record.open()`、`_read_seq()`、`_rewrite()` |
-| 4 讀表驗四件事 | `aos_tick_table.read_table()` |
+| 4 讀表 | `aos_tick_table.read_table()` |
 | 5 照表跑 | `run_tick()` 迴圈、`run_one()`、`aos_tick_run.run_item()` |
 | 6 停格檔 | `remove_stop_file()`、`run_tick()` 迴圈裡的 `read_reason(STOP)` |
-| 7 fsync（紀錄寫不進的處理依待問 7 拿掉） | `Record._write_tmp()`、`_fsync_dir()`；舊紀錄讀不懂在 `open()` |
-| 8 上下層 | `default_parent()` |
+| 7、8 | 2026-10-01 取消（fsync、上下層） |
 
 我自己做的判斷（spec 沒寫死、照「最小合理」做，都可以改）：
 
-- 沒有 `.aos/`：照 aos-exec 找檔（使用者裁定 09-30 晚）。有 `inst.json` 就用 `aos_exec.run_target` 跑一次（不取鎖、不寫紀錄、退出碼照 aos-exec）；兩個都沒有回 2、印 `config_invalid:`（碼是我選的）。見 `aos_tick.run_bare_inst`。
-- 新增的 stderr 代碼：`usage`（argv 錯）、`lock_unavailable`（鎖檔開不了，回 75）、`exec_failed`（某項沒跑成：mkdir／cwd／重導向失敗、126／127、跑到時重新展開失敗）、`stop_unremovable`。鎖被占時什麼都不印。
-- 紀錄寫不進（唯讀、滿碟）不另處理（待問 7 裁定默認寫得進去）：OSError 照常丟出，tick 印 traceback、回 1。
-- 某項沒跑成（mkdir、cwd、重導向失敗，或跑到時重新展開壞了）記 `exit:125`，跟 aos-exec 命令列一致。
-- `id` 要是非空字串，否則表壞；ID 的字元規則不驗（完整 schema 的事）。
-- `user` 型別錯（負數、布林、指示詞）算表壞；帳號名稱查不到**不算**表壞，跑到時當成「跟 tick 不同」回 125（範例表的 `aos-a0042` 在別台機器本來就可能不存在）。
+- 沒有 `.aos/`：整個交給 `aos_exec.run_target` 跑這個資料夾（不寫紀錄、退出碼照 aos-exec）；連 `inst.json` 也沒有時是 aos-exec 自己的用法錯 2。見 `aos_tick.run_tick` 開頭。
+- 新增的 stderr 代碼：`usage`（argv 錯）、`exec_failed`（某項沒跑成：mkdir／cwd／重導向失敗、126／127）。
+- 某項沒跑成（mkdir、cwd、重導向失敗）記 `exit:125`，跟 aos-exec 命令列一致（inst 的規定，不是帳號判定）。
 - 項目是純記憶體文件（跟 `load_obj` 一樣），所以項目裡的 `$ref:""` 指這一項自己，不是整份 tasks.json。
-- 任務的 id 用開格驗表時讀到的；跑到時只重新展開 inst 部分（待問 6：驗表後假設檔案不變）。
-- 五個 `AOS_*` 先拿掉外面繼承的同名變數再放（tick 本身是上層 tick 的一項時不會漏進舊值）；`envs` 清空時只留 `AOS_TICK_LOCK_FD`。
-- 舊紀錄「在的那幾份全讀不懂」就算 `record_unreadable`（spec 寫兩份都壞；一份壞、一份不在也照辦，免得 seq 從 1 重數）；這時本格沒有紀錄、任務不設 `AOS_TICK_RECORD`。
+- 任務的 id 用開格讀表時拿到的；跑到時只展開 inst 部分。
+- `envs` 清空時一個 `AOS_*` 都不放。
 
 ## 跑測試
 
