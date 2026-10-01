@@ -570,3 +570,18 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 6. 信不設上限；`take` 一次全部取走。daemon 重開信就沒了。
 
 改到的地方（訊息）：程式新 `lib/aos_daemon_mq.py`、`lib/aos_mq.py`、`bin/aos-mq`，改 `lib/aos_daemon.py`、`lib/aos_daemon_ctl.py`、`lib/aos_daemon_reload.py`；測試新 `tests/test_mq.py`（14 條）；spec 新 [daemon/mq.md](../../spec/settled/daemon/mq.md)、[protocol/daemon/mq.md](../../spec/settled/protocol/daemon/mq.md)，改 [daemon README](../../spec/settled/daemon/README.md)、[B-640](../../spec/settled/daemon/core.md)、[B-641](../../spec/settled/daemon/control.md)、[P-120](../../spec/settled/protocol/daemon/core.md)、[P-121](../../spec/settled/protocol/daemon/control.md)、[daemon 協議入口](../../spec/settled/protocol/daemon/README.md)、[慣例 C-10](../../spec/settled/conventions.md)、[名詞](../../spec/settled/terms.md)、[整理區入口](../../spec/settled/README.md)、[驗收入口](../../spec/conformance.md)、[protocol README](../../spec/protocol/README.md)、[tick/mq.md](../../spec/settled/tick/mq.md)（狀態一句）、暫緩區 [總表](../../spec/settled/deferred/README.md)、[daemon/messaging.md](../../spec/settled/deferred/daemon/messaging.md)、[protocol/daemon/channel.md](../../spec/settled/deferred/protocol/daemon/channel.md)（B-614、P-119 標部分取代）；schema 新 `daemon-mq`、改 `daemon-core-config`，範例 `examples/daemon/mq_request.*`、`mq_reply.*`、`core-config.mq*`，`examples/messages/validate.py`；[src/py README](../../src/py/README.md#訊息與-aos-mqm3m-模組四)；[plan m3m](../../plan/m3m-daemon-modules.md)、[plan 入口](../../plan/README.md)。
+
+<a id="2026-10-01-第十三批帳號模組"></a>
+
+## 2026-10-01 第十三批：帳號模組
+
+〔使用者裁定 2026-10-01 晚〕對 [plan m3m 模組五](../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)重寫後的 A1～A5（拆 root 端、主程式降權那一版）。使用者原話：「關於哪些賬號可以用，daemon設定檔中要有白名單和黑名單，然後名單支援prefix，比如agent-*。剩下都按照建議。用sudo　-u包一層這件事不管，這是不在規劃中的做法，風險自己承擔。」
+
+- **A2 改**：`modules.account` 寫 `allow`（白名單）、`deny`（黑名單），字串陣列；結尾 `*` 當前綴（`agent-*`）。判斷順序、省略時的意思、預設帳號不受名單管等細節是 AI 隊定的，見 plan「帳號名單」：黑名單優先、都沒比到不准、`allow` 省略＝空、root 一律不准、`*` 只能在結尾。
+- **A1、A3、A4、A5 照建議**：root 端是另一支小程式 `aos-daemon-root`；預設帳號的項不經 root 端；cgroup 子樹 chown 給預設帳號、root 端只把別的帳號的子程序放進框；root 端死掉就自然丟錯、daemon 回 1。
+- **H2（inst 自己包 `sudo -u`）不管**：不在規劃中，aos 不寫進 spec、不保證，風險使用者自己承擔。
+- 使用者問：`SUDO_USER` 現在用的話會不會是 lorkhan？——是：從 lorkhan 的 shell 打 `sudo aos-daemon …`（或 `sudo -i` 之後再開）就是 `lorkhan`；`su -`、root 直接登入、root 的 systemd unit／cron 開的沒有這個變數，要在 `modules.account.user` 寫明。
+- 使用者問：帳號沒先在 Linux 建好會怎樣？——daemon 不建帳號。AI 隊提了 A6（開起來與重讀時就查、跑的時候才不見的那次 `exit=1`），待裁定。
+
+還沒動工，程式與 spec 都沒改。
+

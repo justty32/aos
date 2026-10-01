@@ -10,7 +10,7 @@
 | 二、收屍／cgroup `cgroup` | **已做**（第十二批：C1～C4 照建議） | [B-644](../spec/settled/daemon/cgroup.md)、[P-124](../spec/settled/protocol/daemon/cgroup.md) |
 | 三、記住狀態 `state` | **已做**（S1～S3 照建議，設定改成 `$ref`） | [B-643](../spec/settled/daemon/state.md)、[P-123](../spec/settled/protocol/daemon/state.md) |
 | 四、訊息 `mq` | **已做**（第十二批：M1～M4 照建議） | [B-645](../spec/settled/daemon/mq.md)、[P-125](../spec/settled/protocol/daemon/mq.md) |
-| 五、帳號 `account`（原草稿叫 helper） | **草稿待看**（第十二批：要做、排最後；草稿已照「拆 root 端、主程式降權」重寫，A1～A5 待裁定） | — |
+| 五、帳號 `account`（原草稿叫 helper） | **草稿待看**（第十二批：要做、排最後；第十三批：A1～A5 照建議、加白名單／黑名單；A6 待裁定） | — |
 
 做了什麼、自己定的細節見篇末[做完了沒](#做完了沒)；裁定見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十一批daemon-模組)、[第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。下面各節保留原本的草稿，裁定處就地標註。
 
@@ -341,7 +341,7 @@ node id 當收件人；`node.send`／`node.take` 的 method 名、封包與通�
 
 ## 模組五：帳號（`modules.account`）
 
-> **草稿（2026-10-01 晚依第十二批重寫，待使用者看過）**。第十二批定的：模組鍵叫 `account`（不叫 helper）；**H1 推翻原建議**，要拆出 root 端、主程式降權；socket 先 chmod 666，之後會有多個 socket、權限另外設計。第十二批之前的舊草稿（daemon 整個留在 root、開子程序時才切帳號）見 git 歷史（commit `0d177aa6` 以前的本檔）。
+> **草稿（2026-10-01 晚依第十二批重寫；同晚第十三批裁定 A1～A5、加帳號名單，A6 待裁定）**。第十二批定的：模組鍵叫 `account`（不叫 helper）；**H1 推翻原建議**，要拆出 root 端、主程式降權；socket 先 chmod 666，之後會有多個 socket、權限另外設計。第十二批之前的舊草稿（daemon 整個留在 root、開子程序時才切帳號）見 git 歷史（commit `0d177aa6` 以前的本檔）。
 
 舊規劃：[暫緩區 B-303 root helper 與 `aos-as`](../spec/settled/deferred/helper.md)、[B-609 佈建與 helper 動作](../spec/settled/deferred/daemon/helper-actions.md)、P-102、P-107、P-108（[暫緩區 daemon 協議](../spec/settled/deferred/protocol/daemon/README.md)）。
 
@@ -358,29 +358,37 @@ sudo aos-daemon --config F
       讀設定、重讀、排程、控制／訊息 socket、狀態檔、輸出檔、cgroup 清框
 ```
 
-1. **開起來**（root）：讀設定檔、算出**預設帳號**與**允許的帳號清單**，開一條 socketpair，fork＋exec 出 root 端，把 socketpair 的一頭交給它。掛了收屍模組時，先照 B-644 建好子樹，再把整棵子樹 chown 給預設帳號（跟 systemd 委派給一般帳號的做法一樣）。
+1. **開起來**（root）：讀設定檔、算出**預設帳號**、讀出**帳號名單**（白名單 `allow`、黑名單 `deny`），開一條 socketpair，fork＋exec 出 root 端，把 socketpair 的一頭與名單交給它。掛了收屍模組時，先照 B-644 建好子樹，再把整棵子樹 chown 給預設帳號（跟 systemd 委派給一般帳號的做法一樣）。
 2. **主程式降權**：`initgroups`＋`setgid`＋`setuid` 成預設帳號，永久、回不去。之後才開 socket、起各項的執行緒。所以 socket、狀態檔、輸出檔都歸預設帳號。
 3. **跑一項**：
    - 那一項的帳號＝預設帳號：主程式自己開 `aos-exec`，跟沒掛模組時一樣。
    - 別的帳號：主程式自己開好 stdout／stderr 的 pipe，經 socketpair 送一行請求（帳號、argv、cwd、環境、cgroup 框）加上 pipe 的 fd（`SCM_RIGHTS`）給 root 端。root 端 fork：子程序先把自己放進框（還是 root，所以搬得進去）、再切帳號（UID、主群組、補充群組照那個帳號；`HOME`、`USER`、`LOGNAME` 換成它的）、exec `aos-exec`。root 端等子程序結束，回一行 `{"id":…,"exit":…}`。主程式等到這行才算 `aos-exec` 結束（`ms=` 算到這裡），接著照舊清框、收齊輸出、印 `exit=`。
-4. **root 端只核對兩件事**：帳號在允許清單上、不是 root（UID 0）。不看 argv、不讀設定檔、不 import aos 的其他模組，程式越小越好。不在清單上就回錯，那一項當成 `exit=1`、stderr 一行。
+4. **root 端只核對兩件事**：帳號照名單是准的、不是 root（UID 0）。不看 argv、不讀設定檔、不 import aos 的其他模組，程式越小越好。不在清單上就回錯，那一項當成 `exit=1`、stderr 一行。
 5. **停**：主程式照舊 Ctrl-C 直接退出、不殺子程序。root 端讀到 socketpair 關了就自己退出，也不殺子程序。
 
 **預設帳號**＝`modules.account.user`；沒寫就用 `SUDO_USER`（叫 sudo 的那個人）。兩個都沒有、或是 root，就是設定錯、回 1。**任何一項都不准用 root 跑。**
 
-**允許的帳號清單**＝開起來時設定檔裡出現的所有帳號（預設帳號＋各項的 `account.user`）。主程式被攻破時，最多拿到「用這些帳號開程序」，拿不到 root。
+**帳號名單**〔使用者 2026-10-01 第十三批：「daemon設定檔中要有白名單和黑名單，然後名單支援prefix，比如agent-*。」〕寫在 `modules.account` 的 `allow`、`deny`，都是字串陣列：
+
+- 一個字串是完整的帳號名，或結尾一個 `*` 當前綴（`agent-*` 比得到 `agent-1`、`agent-web`；單獨 `*` 比所有帳號）。`*` 寫在結尾以外的地方是設定錯。
+- 判斷順序：**黑名單比到就不准 → 白名單比到才准 → 都沒比到不准**。root（UID 0）不管名單怎麼寫一律不准。
+- `allow` 省略＝空（只有預設帳號能用）；`deny` 省略＝空。
+- 預設帳號不受名單管：它就是主程式自己的帳號，它的項由主程式自己開、不經 root 端。
+- 名單開起來時交給 root 端，之後不變。主程式被攻破時，最多拿到「用名單准的帳號開程序」，拿不到 root。
 
 ### 設定
 
 ```json
-"modules": {"account": {"user": "guanyu"}},
+"modules": {"account": {"user": "lorkhan", "allow": ["agent-*", "bob"], "deny": ["agent-admin"]}},
 "insts": {
   "a": {},
-  "/srv/bob-job": {"account": {"user": "bob"}}
+  "/srv/bob-job": {"account": {"user": "bob"}},
+  "/srv/agents/1.json": {"account": {"user": "agent-1"}}
 }
 ```
 
-- `modules.account.user` 可省（省了用 `SUDO_USER`）。
+- `modules.account.user` 可省（省了用 `SUDO_USER`：從 lorkhan 的 shell 打 `sudo aos-daemon …`，或 `sudo -i` 之後再開，都是 `lorkhan`；`su -`、直接 root 登入、root 的 systemd unit 或 cron 開的就沒有，要自己寫 `user`）。
+- `allow`、`deny` 可省（見上面「帳號名單」）。開起來時每一項的帳號都要照名單是准的，不准就是設定錯、回 1。
 - 每項的 `account.user` 可省（省了用預設帳號）。
 - 掛了模組卻不是 root 開的：回 1。
 
@@ -389,12 +397,12 @@ sudo aos-daemon --config F
 - **控制、訊息 socket**：主程式（預設帳號）建的，chmod 666，誰都連得上（第十二批：先 666）。之後會有多個 socket、權限分開設計，這版不做。
 - **輸出檔、狀態檔**：主程式寫的，歸預設帳號。原草稿「檔會歸 root」的問題不見了。
 - **收屍／cgroup**：子樹開起來時 chown 給預設帳號，主程式自己建框、寫上限、`cgroup.kill`、刪框；只有「把別的帳號的子程序搬進框」在 root 端做（降權後的主程式搬不動別的帳號的程序）。
-- **重讀設定**：主程式（預設帳號）要讀得到設定檔。重讀時某項的帳號改成清單上有的：下一次起生效；改成清單上沒有的：見 A2。改 `modules.account` 算 `modules` 改了，照 R3 只警告。
+- **重讀設定**：主程式（預設帳號）要讀得到設定檔。重讀時某項的帳號改成名單准的：下一次起生效；改成名單不准的（或加了用不准帳號的項）：**整份不套用**（照 R4：stderr 一行、舊的照跑）。改 `modules.account`（含名單）算 `modules` 改了，照 R3 只警告、不套用，要改名單就重開。
 - **記住狀態、控制、訊息**：不用改。
 
-### 為什麼不能只靠包一層
+### 為什麼不做成包一層
 
-**包一層做得到**：daemon 用一般帳號開，inst 的 argv 寫 `["sudo", "-n", "-u", "bob", "--", "aos-tick", "/srv/bob-job"]`，sudoers 給一條 `guanyu ALL=(bob) NOPASSWD: /path/to/aos-tick`。缺點：每個帳號、每支程式都要寫 sudoers；sudo 預設會清掉 `AOS_DAEMON_*`；設定散在兩處；收屍模組搬不了 bob 的程序。使用者已定做成模組；`sudo -u` 在 spec 記成「不掛模組時的退路」（H2 照建議）。
+用 `sudo -u` 在 inst 的 argv 裡包一層換帳號，**不在規劃中**〔使用者 2026-10-01 第十三批：「用sudo -u包一層這件事不管，這是不在規劃中的做法，風險自己承擔。」〕：aos 不管、不寫進 spec、不保證它跟各模組配得起來。
 
 ### 舊前提已不在
 
@@ -406,17 +414,18 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 - 佈建（建帳號、群組、chown、quota）：部署的人自己先做好。
 - 多個 socket 各自的權限（第十二批：之後再設計）。
 - root 端被 kill 之後的處理（見 A5）。
-- 檢查帳號存不存在、讀不讀得到 inst：錯了就是那一項回非 0。
+- 建帳號（見 A6：帳號不在時 daemon 只報錯、不建）；檢查帳號讀不讀得到 inst：錯了就是那一項回非 0。
 
 ### 要使用者裁定的點
 
-- **A1．root 端是同一支程式 fork 出來，還是另一支小程式？** **建議：另一支小程式 `aos-daemon-root`**（`lib/aos_daemon_root.py`），主程式 fork 後 exec 它。乾淨的新程序、程式很短、不會帶著主程式讀過的設定與 import 進來的模組，好審。另一種是同一支 fork 出來直接跑（少一個檔，但 root 端記憶體裡有主程式的一切）。
-- **A2．允許的帳號清單怎麼定？** **建議：開起來時設定檔裡出現的帳號，之後不變**；重讀設定加了清單外的帳號＝**整份不套用**（照 R4：stderr 一行、舊的照跑），要用新帳號就重開。另兩種：(b) 另寫 `modules.account.users` 明列；(c) 不設清單，非 root 都行（最簡單，但主程式被攻破就能變成任何一般帳號）。
-- **A3．預設帳號的項也經 root 端開嗎？** **建議：不經**，主程式自己開，root 端做越少越好。
-- **A4．收屍模組怎麼配？** **建議：開起來時把子樹 chown 給預設帳號，root 端只負責把別的帳號的子程序放進框**（見上）。另一種是框的事全交 root 端（主程式不碰 cgroup，但 root 端要多做建框、上限、清框、刪框四件）。
-- **A5．root 端死掉（被 kill）時主程式怎麼辦？** **建議：照 POC 默認一切正常，主程式下一次要找 root 端時自然丟錯、整個 daemon 回 1**。不重開 root 端。
+〔使用者 2026-10-01 第十三批〕A1、A3、A4、A5 照建議；A2 改成白名單＋黑名單、支援前綴（上面「帳號名單」）；H2（`sudo -u`）不管、不在規劃中。
 
-（H1 已定：拆；H2 照建議：做模組、`sudo -u` 記成退路；H3 改成 A4；H4 已定：先 666。）
+- ~~A1~~ 已定：root 端是另一支小程式 `aos-daemon-root`（`lib/aos_daemon_root.py`），主程式 fork 後 exec 它。
+- ~~A2~~ 已定：白名單 `allow`、黑名單 `deny`，結尾 `*` 當前綴，黑名單優先、root 一律不准。
+- ~~A3~~ 已定：預設帳號的項由主程式自己開、不經 root 端。
+- ~~A4~~ 已定：開起來時把 cgroup 子樹 chown 給預設帳號，root 端只把別的帳號的子程序放進框。
+- ~~A5~~ 已定：root 端死掉，主程式下一次找它時自然丟錯、daemon 回 1。
+- **A6．設定裡寫的帳號在 Linux 上不存在怎麼辦？** daemon **不建帳號**（佈建先不做）。**建議：開起來與重讀時，主程式就用 `getpwnam` 查一遍每項的帳號與預設帳號**——開起來時不存在＝設定錯、回 1；重讀時不存在＝整份不套用（stderr 一行、舊的照跑）。開起來之後帳號才被刪掉：root 端到跑的那一刻才查不到，那一次當成 `exit=1`、stderr 一行 `aos-daemon: account: no such user <名字>`，daemon 照跑、下一次照排。另一種是開起來不查，只在跑時才發現（每次都 `exit=1`，比較晚才知道設定寫錯）。
 
 ### 驗收草稿（要 root 與兩個測試帳號，手動跑、不進自動測試）
 
@@ -424,7 +433,9 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 - `ps -o user= -p <主程式 pid>` 是預設帳號；root 端是 root。主程式 `/proc/<pid>/status` 的 Uid 四欄都不是 0。
 - socket、狀態檔、輸出檔都歸預設帳號；socket 是 666。
 - 某項寫 `"user": "root"`、或預設帳號是 root：回 1。不用 sudo 開、掛了模組：回 1。
-- 重讀設定加一項用清單外的帳號：stderr 一行、舊的照跑（看 A2）。
+- 名單：`allow: ["aostest*"]`、`deny: ["aostest1"]`，某項用 `aostest1`：開起來回 1；改成 `aostest2`：照跑；用 `root`、或 `allow: ["*"]` 時用 root：回 1。`allow` 寫 `"a*b"`：回 1。
+- 重讀設定加一項用名單不准的帳號：stderr 一行、舊的照跑；改了名單：stdout `reload: need restart: modules`、不套用。
+- 某項用不存在的帳號：開起來回 1；重讀時加：整份不套用；開起來後才 `userdel`：那一次 `exit=1`、stderr 一行，daemon 照跑（看 A6）。
 - `b` 的任務跑 `aos-ctl status`、`aos-mq take`：連得上、回自己那一項。
 - 掛收屍模組時，`b` 留下的背景程序（歸 `aostest2`）照樣被清掉、`reaped`。
 - kill 掉 root 端：daemon 下一次跑 `b` 時回 1（看 A5）。
@@ -470,14 +481,15 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 | M3 | 訊息 | 取信限不限自己 | 不限，沒給才用自己 |
 | M4 | 訊息 | 名字 | `aos-mq send`／`take`，模組鍵 `mq` |
 | ~~H1~~ | 帳號 | 主程式降權＋獨立 root 端 | **已定（第十二批）：拆** |
-| H2 | 帳號 | 改用 `sudo -u` 包一層就好？ | 照方向做模組，記 `sudo -u` 為退路 |
+| ~~H2~~ | 帳號 | 改用 `sudo -u` 包一層就好？ | **已定（第十三批）：不管，不在規劃中** |
 | ~~H3~~ | 帳號 | root 底下 cgroup 子樹 | 改成 A4 |
 | ~~H4~~ | 帳號 | socket 別的帳號怎麼連 | **已定（第十二批）：先 666** |
-| A1 | 帳號 | root 端同一支 fork 還是另一支小程式 | 另一支 `aos-daemon-root` |
-| A2 | 帳號 | 允許的帳號清單 | 開起來時設定檔裡出現的；重讀加清單外的＝整份不套用 |
-| A3 | 帳號 | 預設帳號的項經不經 root 端 | 不經 |
-| A4 | 帳號 | 收屍模組怎麼配 | 子樹 chown 給預設帳號，root 端只把別的帳號的子程序放進框 |
-| A5 | 帳號 | root 端死掉 | 自然丟錯、daemon 回 1 |
+| ~~A1~~ | 帳號 | root 端同一支 fork 還是另一支小程式 | **已定**：另一支 `aos-daemon-root` |
+| ~~A2~~ | 帳號 | 哪些帳號能用 | **已定（第十三批）**：`allow`／`deny`，結尾 `*` 當前綴，黑名單優先 |
+| ~~A3~~ | 帳號 | 預設帳號的項經不經 root 端 | **已定**：不經 |
+| ~~A4~~ | 帳號 | 收屍模組怎麼配 | **已定**：子樹 chown 給預設帳號，root 端只把別的帳號的子程序放進框 |
+| ~~A5~~ | 帳號 | root 端死掉 | **已定**：自然丟錯、daemon 回 1 |
+| A6 | 帳號 | 帳號在 Linux 上不存在 | 開起來／重讀時就查（回 1／整份不套用）；之後才被刪的，那一次 `exit=1`、照跑 |
 | G1 | 共通 | 模組鍵名 | `reload`、`cgroup`、`state`、`mq`、`helper` |
 | G2 | 共通 | 每項的模組設定放哪 | `insts` 那一項裡、模組名當鍵 |
 | G3 | 共通 | 何時進 spec | 每個做完、看過再寫，編 B-642 起 |
@@ -517,4 +529,4 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 
 模組四 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。
 
-**下一個：模組五帳號 `account`**——草稿已照第十二批重寫（2026-10-01 晚），A1～A5 等使用者裁定後動工。
+**下一個：模組五帳號 `account`**——草稿已照第十二批重寫、第十三批裁定 A1～A5 與名單（2026-10-01 晚），剩 A6（帳號不存在）等使用者一句話就動工。
