@@ -588,5 +588,22 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 - **`aos-as` 暫緩**：使用者原話：「aos-as弄成暫緩。　目前切賬號這件事，都只在daemon config中做」——P-212 整條搬到 [tick 協議暫緩區](../../spec/settled/deferred/protocol/tick.md)；[tick 核心](../../spec/settled/tick.md)「任務的帳號」、[tick 協議](../../spec/settled/protocol/tick.md) P-202／P-203、[範本](../../spec/settled/tick/template.md)、[名詞](../../spec/settled/terms.md)、[aos-cg](../../spec/settled/tick/cg.md)、[git](../../spec/settled/tick/git.md)、[spec 入口](../../spec/README.md)、[plan 入口](../../plan/README.md)第五段改成「tick 不切帳號，要換帳號在 daemon 設定檔拆成另一項」；整理區 README 待問 1 結案。
 
-帳號模組還沒動工；spec 只動了 `aos-as` 搬家那些。
+- **A6、A7 照建議**：使用者原話：「A67都按你建議」。A6：開起來與重讀時就查每項帳號（查不到開起來回 1、重讀整份不套用），開起來之後才被刪的那一次 `exit=1`、照跑；A7：`allow` 有寫時 `deny` 比得到預設帳號一樣算設定錯。
+
+帳號模組已做（10-01 晚），正本 [B-646](../../spec/settled/daemon/account.md)、[P-126](../../spec/settled/protocol/daemon/account.md)。
+
+**AI 隊定的細節**（使用者可改）——帳號：
+
+1. root 端與主程式之間用 `SOCK_SEQPACKET` 的 socketpair（一個封包一則 JSON，fd 用 `SCM_RIGHTS` 跟著請求走，不用自己切行）；root 端另開一個 session，終端機的 Ctrl-C 打不到它，它只看 socketpair 關了沒（也忽略 SIGINT、SIGHUP）。
+2. root 端單執行緒：`select` 等 socket 與 SIGCHLD 的 wakeup pipe，`waitpid(-1, WNOHANG)` 收子程序；子程序在 exec 前出錯就在它的 stderr 寫一行、以 127 結束。
+3. root 端也准預設帳號（主程式本來就是它，不多給什麼）；名單、root、查不到在開跑那一刻再核一次。
+4. 預設帳號的項（包括 `account.user` 寫成預設帳號的）主程式自己開，不經 root 端（A3）。
+5. 主程式降權時 `HOME`、`USER`、`LOGNAME` 也換成預設帳號的（sudo 開時它們常是 root 的），所以預設帳號的項看到的也是自己的。
+6. root 端不見了（EOF）主程式**當場**退出（stderr 一行、刪 socket 檔、回 1），不等下一次要找它（A5 的做法再提早一點）。
+7. 控制、訊息 socket 只有掛了帳號模組時才 chmod 666；沒掛照原本的權限。
+8. 開起來時的帳號錯誤一律印 `aos-daemon: account: <說明>`（不是 `config:`），包括沒用 root 開。
+9. 每項的 `account` 寫壞（不是物件、`user` 不是字串）：掛了模組＝設定錯；沒掛＝照不認得的鍵忽略。`user` 不收 UID 數字。
+10. 名單只核「名字」：比對用帳號名，root 看 UID 0（所以 UID 0 的別名也擋）。
+
+改到的地方（帳號）：程式新 `lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`、`bin/aos-daemon-root`，改 `lib/aos_daemon.py`、`lib/aos_daemon_reload.py`；測試新 `tests/test_account.py`（21 條）；spec 新 [daemon/account.md](../../spec/settled/daemon/account.md)、[protocol/daemon/account.md](../../spec/settled/protocol/daemon/account.md)，改 [daemon README](../../spec/settled/daemon/README.md)、[B-640](../../spec/settled/daemon/core.md)、[P-120](../../spec/settled/protocol/daemon/core.md)、[daemon 協議入口](../../spec/settled/protocol/daemon/README.md)、[慣例](../../spec/settled/conventions.md)（結束碼表）、[名詞](../../spec/settled/terms.md)、[整理區入口](../../spec/settled/README.md)、[驗收入口](../../spec/conformance.md)、[protocol README](../../spec/protocol/README.md)、暫緩區 [總表](../../spec/settled/deferred/README.md)、[daemon 目錄](../../spec/settled/deferred/daemon/README.md)、[helper.md](../../spec/settled/deferred/helper.md)、[helper-actions.md](../../spec/settled/deferred/daemon/helper-actions.md)、[startup-and-ipc.md](../../spec/settled/deferred/protocol/daemon/startup-and-ipc.md)、[provision-and-runner.md](../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)（B-303、B-609、P-102、P-107、P-108 標部分取代）；schema `daemon-core-config`，範例 `examples/daemon/core-config.account*`；[src/py README](../../src/py/README.md#帳號m3m-模組五)；[plan m3m](../../plan/m3m-daemon-modules.md)、[plan 入口](../../plan/README.md)。
 

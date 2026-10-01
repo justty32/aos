@@ -1,0 +1,14 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "account": {
+      "user": "lorkhan",
+      "allow": [
+        "agent-*-x"
+      ]
+    }
+  },
+  "insts": {
+    "a.json": {}
+  }
+}

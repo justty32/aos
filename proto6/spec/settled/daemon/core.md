@@ -79,7 +79,7 @@ daemon 有一個「起點」資料夾，用在三處：
 
 - 設定檔頂層可以有 `modules` 物件，**一個模組一個鍵，有寫就開**，沒寫就是沒掛。
 - 核心只認得 `modules` 這個位置，不解讀裡面的內容；不認得的模組鍵照收、不理。
-- 目前有五個模組：控制模組 `control`（[B-641](control.md)），讓人或任務能叫醒、暫停、恢復、查詢某一項；重讀設定 `reload`（[B-642](reload.md)），SIGHUP 重讀設定檔；記住狀態 `state`（[B-643](state.md)），暫停與已停跨重開；收屍／cgroup `cgroup`（[B-644](cgroup.md)），每項一個 cgroup 框、跑完清掉殘留、可設上限；訊息 `mq`（[B-645](mq.md)），每項一個信箱、`aos-mq` 收發。
+- 目前有六個模組：控制模組 `control`（[B-641](control.md)），讓人或任務能叫醒、暫停、恢復、查詢某一項；重讀設定 `reload`（[B-642](reload.md)），SIGHUP 重讀設定檔；記住狀態 `state`（[B-643](state.md)），暫停與已停跨重開；收屍／cgroup `cgroup`（[B-644](cgroup.md)），每項一個 cgroup 框、跑完清掉殘留、可設上限；訊息 `mq`（[B-645](mq.md)），每項一個信箱、`aos-mq` 收發；帳號 `account`（[B-646](account.md)），用 root 開、主程式降權、別的帳號的項由 root 端開。
 - 跟某一項有關的模組設定寫在 `insts` 那一項裡、用模組名當鍵（例如 `"a": {"cgroup": {"memory.max": "512M"}}`）；模組沒掛時核心照「不認得的鍵」忽略。
 - 沒掛任何模組時，daemon 就是上面寫的樣子：不開 socket、不多傳環境變數、SIGHUP 照 Python 預設（daemon 被殺）、不讀寫狀態檔、不碰 cgroup。
 - 這取代了舊設計的五個開關鍵（[暫緩區 B-615](../deferred/daemon/components.md)）。
