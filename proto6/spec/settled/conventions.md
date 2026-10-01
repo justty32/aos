@@ -57,20 +57,25 @@
 
 ## C-10．aos 環境變數總表
 
-aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進這張表。命名：整格共用的叫 `AOS_TICK_*`，一格裡某一項專屬的叫 `AOS_TASK_*`，daemon 給的叫 `AOS_DAEMON_*`。
+aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進這張表。命名：整格共用的叫 `AOS_TICK_*`，一格裡某一項專屬的叫 `AOS_TASK_*`，hook 專屬的叫 `AOS_HOOK_*`，daemon 給的叫 `AOS_DAEMON_*`。
 
 ### 現行
 
 | 變數 | 誰設 | 誰讀 | 內容 | 正本 |
 |---|---|---|---|---|
 | `AOS_DIRNAME` | 使用者（或外層環境） | `aos-tick`、`aos-exec` | 狀態資料夾的名字；三態見 C-09 | [C-09](#c-09狀態資料夾的名字aos_dirname) |
-| `AOS_TICK_CWD` | `aos-tick` 給每項任務（`hooks.after_all` 的項也給） | 任務 | 這一格 tick 的工作資料夾的絕對路徑（命令列給的目標資料夾）。任務要讀本格結束碼紀錄，就讀 `$AOS_TICK_CWD/<AOS_DIRNAME>/tick/current/`（`record.json` 加上它 `$ref` 的 `ran.json`、`task-exits.json`、`hook-exits.json`，P-213） | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| `AOS_TASK_ID` | `aos-tick` 給每項任務（`hooks.after_all` 的項也給） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串。`after_all` 項是它在 `after_all` 陣列裡的 id／位置 | [B-620](tick.md)、[B-635](tick/hooks.md) |
-| `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起；`after_all` 項是它在 `after_all` 陣列的位置 | [B-620](tick.md)、[B-635](tick/hooks.md) |
+| `AOS_TICK_CWD` | `aos-tick` 給每項任務與每個 hook（`hooks.after_all` 的項） | 任務 | 這一格 tick 的工作資料夾的絕對路徑（命令列給的目標資料夾）。任務要讀本格結束碼紀錄，就讀 `$AOS_TICK_CWD/<AOS_DIRNAME>/tick/current/`（`record.json` 加上它 `$ref` 的 `ran.json`、`task-exits.json`、`hook-exits.json`，P-213） | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_ID` | `aos-tick` 給每項任務（`after_all` 的 hook **不給**） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串 | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起 | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_HOOK_POINT` | `aos-tick` 給每個 hook（任務不給） | hook | 掛點名，目前只有 `after_all` | [B-635](tick/hooks.md)、[P-203](protocol/tick.md) |
+| `AOS_HOOK_INDEX` | 同上 | hook | 這個 hook 在該掛點陣列的位置，從 0 起 | 同上 |
+| `AOS_HOOK_ID` | 同上 | hook | 這個 hook 的 `id`；沒寫時是位置轉字串 | 同上 |
+
+`AOS_TASK_*` 與 `AOS_HOOK_*` 是每一項自己的：`aos-tick` 跑每一項前先把這五個從繼承的環境拿掉，再放這一項該有的，所以外層（例如這個 tick 本身是別的 tick 的任務）的值不會漏下去。之後開掛在某個任務前後的掛點（`before_task`、`after_task` 這類，目前沒開）時，那種 hook 會同時有 `AOS_HOOK_*` 與指向被掛任務的 `AOS_TASK_ID`、`AOS_TASK_INDEX`（[B-635](tick/hooks.md)）。
 | `AOS_DAEMON_SOCKET` | `aos-daemon`（掛了控制模組時）給每次 `aos-exec` | `aos-ctl` | 控制模組 socket 的絕對路徑 | [B-641](daemon/control.md)、[P-121](protocol/daemon/control.md) |
 | `AOS_DAEMON_INST` | 同上 | `aos-ctl`（沒指名時用它） | 這一次跑的是設定檔 `insts` 裡哪一項（inst 字面值） | 同上 |
 
-任務的環境會一路往下傳：daemon 給 `aos-exec` 的，`aos-tick` 與它的任務、再往下一層的 `aos-tick` 的任務都拿得到。所以任何一層跑 `aos-ctl wake`，叫醒的都是 daemon 設定檔裡最上面那一項。
+其他變數會一路往下傳：daemon 給 `aos-exec` 的，`aos-tick` 與它的任務、再往下一層的 `aos-tick` 的任務都拿得到。所以任何一層跑 `aos-ctl wake`，叫醒的都是 daemon 設定檔裡最上面那一項。
 
 ### 暫緩、撤回或已被取代
 
@@ -83,7 +88,7 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 | `AOS_TICK_RECORD` | 撤回 | 本格紀錄的路徑；有 `AOS_TICK_CWD` 就找得到，拿掉（使用者 2026-10-01） |
 | `AOS_DAEMON_ID` | 已被取代 | 控制模組草稿用過的名字，改成 `AOS_DAEMON_INST`（daemon 核心沒有 id） |
 
-依據：使用者 2026-10-01：「AOS_NODE_DIR改成AOS_TICK_CWD，也就是aos-tick在跑的時候，他的cwd的絕對路徑。node這個概念目前還沒到出場的時候，那是後續aos-tick的node模組的事情。AOS_TICK_RECORD應該可以拿掉，反正有AOS_TICK_CWD，就從那邊找就好。」；控制模組裁定（`AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`）。
+依據：使用者 2026-10-01：「AOS_NODE_DIR改成AOS_TICK_CWD，也就是aos-tick在跑的時候，他的cwd的絕對路徑。node這個概念目前還沒到出場的時候，那是後續aos-tick的node模組的事情。AOS_TICK_RECORD應該可以拿掉，反正有AOS_TICK_CWD，就從那邊找就好。」；控制模組裁定（`AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`）；使用者 2026-10-01 第十批（`AOS_HOOK_*`，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十批hook-的環境變數)）。
 
 ## C-11．設定檔頂層 `cwd` 與指示詞展開範圍
 

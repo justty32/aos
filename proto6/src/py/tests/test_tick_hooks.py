@@ -5,6 +5,8 @@
 （照表跑完、含被停格檔停下之後跑），值是一串、寫法比照 tasks、吃頂層預設；不看停格檔；碼照實記進
 本格紀錄的 `hooks.after_all`（第九批拆檔後在 `tick/current/hook-exits.json`，record.json 用 $ref 指過去）、不影響 tick 的結束碼；擋板、busy、表壞時不跑。
 第八批（使用者 2026-10-01）：「hooks也是」——只記不是 0 的，每筆 {"id","index","exit"}；hooks 不記 ran。
+第十批（使用者 2026-10-01）：hook 拿到 AOS_HOOK_POINT／AOS_HOOK_INDEX／AOS_HOOK_ID，不給 AOS_TASK_ID／INDEX；
+任務照舊只有 AOS_TASK_*、拿不到 AOS_HOOK_*（外層環境繼承來的也拿掉）。
 """
 import fcntl
 import json
@@ -12,7 +14,7 @@ import os
 
 from test_tick import TickCase, check_record, sh, task, CAT_REC
 
-LOG = 'echo "$AOS_TASK_ID $AOS_TASK_INDEX ${X-}" >> h.log'
+LOG = 'echo "$AOS_HOOK_ID $AOS_HOOK_INDEX ${X-}" >> h.log'
 
 
 class HooksCase(TickCase):
@@ -65,14 +67,28 @@ class AfterAll(HooksCase):
         check_record(self, rec)
 
     def test_env_and_cwd_like_tasks(self):
-        # 跟任務一樣：AOS_TICK_CWD、AOS_TASK_ID／INDEX（hook 自己的）；頂層 cwd 是預設、相對工作資料夾
+        # cwd 跟任務一樣（頂層 cwd 是預設、相對工作資料夾）；環境：AOS_TICK_CWD、AOS_HOOK_POINT／INDEX／ID（第十批），
+        # 沒有 AOS_TASK_*（連外層環境繼承來的也拿掉）；任務那邊拿不到 AOS_HOOK_*（同上）
         os.makedirs(os.path.join(self.d, "work"))
-        self.hooks([sh("x", "true"), sh("h", "env > hook.env; pwd > hook.pwd")], cwd="work")
-        r = self.tick()
+        self.hooks([sh("x", "true"), sh("h", "env > hook.env; pwd > hook.pwd"), {"argv": ["sh", "-c", "env > nid.env"]}],
+                   tasks=[sh("a", "env > task.env")], cwd="work")
+        outer = {"AOS_TASK_ID": "外層", "AOS_TASK_INDEX": "9", "AOS_HOOK_POINT": "外層", "AOS_HOOK_INDEX": "9",
+                 "AOS_HOOK_ID": "外層"}
+        r = self.tick(env=outer)
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        env = dict(l.split("=", 1) for l in self.read("work/hook.env").splitlines() if "=" in l)
-        self.assertEqual((env["AOS_TICK_CWD"], env["AOS_TASK_ID"], env["AOS_TASK_INDEX"]), (self.d, "h", "1"))
+        read_env = lambda p: dict(l.split("=", 1) for l in self.read(p).splitlines() if "=" in l)
+        env = read_env("work/hook.env")
+        self.assertEqual((env["AOS_TICK_CWD"], env["AOS_HOOK_POINT"], env["AOS_HOOK_INDEX"], env["AOS_HOOK_ID"]),
+                         (self.d, "after_all", "1", "h"))
+        self.assertNotIn("AOS_TASK_ID", env)
+        self.assertNotIn("AOS_TASK_INDEX", env)
         self.assertNotIn("AOS_TICK_LOCK_FD", env)
+        nid = read_env("work/nid.env")                       # 沒寫 id：位置轉字串
+        self.assertEqual((nid["AOS_HOOK_INDEX"], nid["AOS_HOOK_ID"]), ("2", "2"))
+        tenv = read_env("work/task.env")
+        self.assertEqual((tenv["AOS_TICK_CWD"], tenv["AOS_TASK_ID"], tenv["AOS_TASK_INDEX"]), (self.d, "a", "0"))
+        for k in ("AOS_HOOK_POINT", "AOS_HOOK_INDEX", "AOS_HOOK_ID"):
+            self.assertNotIn(k, tenv)
         self.assertEqual(self.read("work/hook.pwd"), os.path.join(self.d, "work") + "\n")
 
     def test_hook_sees_ended_record(self):
@@ -220,7 +236,7 @@ class NotRun(HooksCase):
             self.assertFalse(self.exists(".aos/tick/last"))
 
     def test_top_argv_satisfies_hook(self):
-        self.put({"argv": ["sh", "-c", "touch \"$AOS_TASK_ID.ran\""], "tasks": [{"id": "a"}],
+        self.put({"argv": ["sh", "-c", "touch \"${AOS_TASK_ID-}${AOS_HOOK_ID-}.ran\""], "tasks": [{"id": "a"}],
                   "hooks": {"after_all": [{"id": "h"}]}})
         r = self.tick()
         self.assertEqual((r.returncode, r.stderr), (0, ""))

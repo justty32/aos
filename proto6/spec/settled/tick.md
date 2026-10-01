@@ -216,7 +216,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - **某項沒跑成**：mkdir、cwd、重導向的檔開不起來，記 `exit:125`（照 inst，跟 `aos-exec` 一致）；找不到程式記 127、沒執行權記 126。這幾種 stderr 另印一行 `exec_failed: <id>: 說明`。
 - 「沒事做」可以不改檔、回 0。在途工作存在任務自己的領域狀態裡，不用特殊結束碼當排程訊號。
 - 任務的 stdin、stdout、stderr 照合併後的 inst 走（都沒寫時預設 `/dev/null`）。
-- 核心在每項的環境多放下面這些變數（格式見 [P-203](protocol/tick.md)，aos 全部的環境變數見 [C-10](conventions.md)）。命名規則：整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`。
+- 核心在每項的環境多放下面這些變數（格式見 [P-203](protocol/tick.md)，aos 全部的環境變數見 [C-10](conventions.md)）。命名規則：整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（hook 改給 `AOS_HOOK_*`、不給 `AOS_TASK_*`，[B-635](tick/hooks.md)）。
 
 | 變數 | 內容 |
 |---|---|
@@ -224,7 +224,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | `AOS_TASK_ID` | 這一項的 id（沒寫 id 時是位置字串；id 不是字串時轉成字串） |
 | `AOS_TASK_INDEX` | 這一項在任務表陣列的位置，從 0 起 |
 
-- 其他環境變數（含 `AOS_DIRNAME`）任務照常繼承。這一項的 inst 用 `envs` 清空環境時，上表的變數也不放。
+- 其他環境變數（含 `AOS_DIRNAME`）任務照常繼承；繼承來的 `AOS_TASK_*`、`AOS_HOOK_*`（例如這個 tick 本身是別的 tick 的任務）先拿掉再放這一項的，任務拿不到 `AOS_HOOK_*`。這一項的 inst 用 `envs` 清空環境時，上表的變數也不放。
 - 沒有 `AOS_TICK_LOCK_FD`（鎖 fd 不傳給任務，B-602）。
 
 ### 停格檔與擋板檔〔暫定〕

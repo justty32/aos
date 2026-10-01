@@ -159,9 +159,9 @@
 | cwd／argv | 頂層預設＋本項合併成 inst、展開後執行（P-202）；合併後還是沒有 cwd 時是工作資料夾 |
 | stdin | 預設 `/dev/null`；可用合併後 inst 的 stdin 重導向 |
 | stdout／stderr | 照 inst 預設 `/dev/null`，可明寫 inherit 或重導向；tick 不把輸出文字當完成證據 |
-| 環境 | 繼承 tick 的環境（含 `AOS_DIRNAME`，經 daemon 控制模組跑時還有 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`），加上下表的變數，再照 inst 套用 `envs`；`envs` 清空時下表的也不放。這些變數都不是授權證據 |
+| 環境 | 繼承 tick 的環境（含 `AOS_DIRNAME`，經 daemon 控制模組跑時還有 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`），先拿掉繼承來的 `AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_HOOK_POINT`、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`，加上下表這一項該有的變數，再照 inst 套用 `envs`；`envs` 清空時下表的也不放。這些變數都不是授權證據 |
 
-tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（aos 全部的環境變數見 [C-10](../conventions.md)）：
+tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（hook 是 `AOS_HOOK_*`，見下）（aos 全部的環境變數見 [C-10](../conventions.md)）：
 
 | 變數 | 值 |
 |---|---|
@@ -169,7 +169,15 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 | `AOS_TASK_ID` | 這一項的 id：任務表寫的 `id`；沒寫時是位置字串；不是字串時轉成字串 |
 | `AOS_TASK_INDEX` | 這一項在 `tasks` 陣列的位置，十進位，從 0 起 |
 
-`hooks.after_all` 的項（[B-635](../tick/hooks.md)）跑法與環境都跟任務一樣；`AOS_TASK_ID`、`AOS_TASK_INDEX` 是該項在 `after_all` 陣列裡的 id 與位置。
+`hooks.after_all` 的項（[B-635](../tick/hooks.md)）跑法跟任務一樣，環境變數不同〔使用者 2026-10-01 第十批〕：有 `AOS_TICK_CWD`，**沒有** `AOS_TASK_ID`、`AOS_TASK_INDEX`，改給：
+
+| 變數 | 值 |
+|---|---|
+| `AOS_HOOK_POINT` | 掛點名，例如 `after_all` |
+| `AOS_HOOK_INDEX` | 這個 hook 在該掛點陣列的位置，十進位，從 0 起 |
+| `AOS_HOOK_ID` | 這個 hook 的 id；沒寫時是位置字串；不是字串時轉成字串 |
+
+一般任務沒有 `AOS_HOOK_*`。之後開掛在某個任務前後的掛點（`before_task`、`after_task` 這類，目前沒開）時，那種 hook 除了 `AOS_HOOK_*` 還會有 `AOS_TASK_ID`、`AOS_TASK_INDEX`，指向被掛的那個任務。
 
 其他：
 

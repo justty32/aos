@@ -3,7 +3,10 @@
 照 inst 的規則（mkdir、串流預設 /dev/null、envs 疊加或清空、另開 session）跟從 proto5 複製來的
 `aos_exec_run._execute_inst()` 一樣，只多兩件那裡沒有的事，所以這裡自己開程序、不改 lib：
 
-- 三個 `AOS_*` 變數（`AOS_TICK_CWD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`）蓋在繼承的環境上（`envs` 清空時一個都不放）；inst 的 `envs` 最後疊上去。
+- 這一項的 `AOS_*` 變數蓋在繼承的環境上（`envs` 清空時一個都不放）；inst 的 `envs` 最後疊上去。
+  任務是 `AOS_TICK_CWD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`；hook 是 `AOS_TICK_CWD`、`AOS_HOOK_POINT`、
+  `AOS_HOOK_INDEX`、`AOS_HOOK_ID`（使用者 2026-10-01 第十批）。RUN_VARS 裡這一項沒給到的先從繼承的環境拿掉，
+  免得外層（例如 tick 本身是別的 tick 的任務）的 `AOS_TASK_*`／`AOS_HOOK_*` 漏給 hook／任務。
   〔使用者方向 2026-10-01〕鎖 fd 不傳給任務（`os.open` 預設不可繼承、Popen 預設 close_fds），沒有 `AOS_TICK_LOCK_FD`。
 - 自己 wait，分出 `exit` 與 `signal`（`_execute_inst` 把訊號 N 折成 128+N）。
 
@@ -16,13 +19,20 @@ import subprocess
 
 import aos_exec_run
 
-__all__ = ["run_item", "EXIT_NOT_RUN"]
+__all__ = ["run_item", "EXIT_NOT_RUN", "RUN_VARS"]
 
 EXIT_NOT_RUN = 125
 
+# 每一項自己的 AOS_* 變數（P-203）；跑一項時先把這些從繼承的環境拿掉，再放這一項有的
+RUN_VARS = ("AOS_TASK_ID", "AOS_TASK_INDEX", "AOS_HOOK_POINT", "AOS_HOOK_INDEX", "AOS_HOOK_ID")
+
 
 def _env(inst, task_vars):
-    env = {} if inst["envs_clear"] else dict(os.environ, **task_vars)
+    if inst["envs_clear"]:
+        env = {}
+    else:
+        env = {k: v for k, v in os.environ.items() if k not in RUN_VARS}
+        env.update(task_vars)
     env.update(inst["envs"])
     return env
 

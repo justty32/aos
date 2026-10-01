@@ -331,7 +331,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - 某項建了 `.aos/tick/stop`：本格後面的項不跑，紀錄 `ended:true` 並有 `stopped_after`，tick 回 0（不算中斷，C-08）；下一格照常開、核心開頭刪掉停格檔（B-620、B-633）。
 - 任務回 3、100、125 或任何碼都只是一般的失敗，照實記進紀錄，後面的項照跑，tick 仍回 0（B-620、C-08）。
 - 有 `.aos/tick-blocked`：直接跑 `aos-tick` 回 0、stderr 有 `blocked`、一項都不跑、兩份紀錄與 `seq` 都不變；人手刪掉擋板後下一格照常（B-620、B-633）。〔暫緩〕在 daemon 底下到期與叫醒都不開格、`paused` 不變、只寫一件事項（B-607）。
-- 任務環境有 `AOS_TICK_CWD`（這格的工作資料夾絕對路徑）、`AOS_TASK_ID`（該項 `id`；沒寫時是位置字串）與 `AOS_TASK_INDEX`（陣列位置，從 0 起）；沒有 `AOS_TICK_LOCK_FD`、`AOS_TICK_RECORD`（B-620、P-203、C-10）。
+- 任務環境有 `AOS_TICK_CWD`（這格的工作資料夾絕對路徑）、`AOS_TASK_ID`（該項 `id`；沒寫時是位置字串）與 `AOS_TASK_INDEX`（陣列位置，從 0 起）；沒有 `AOS_TICK_LOCK_FD`、`AOS_TICK_RECORD`、`AOS_HOOK_*`；`hooks.after_all` 的項改有 `AOS_HOOK_POINT`、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`、沒有 `AOS_TASK_*`（外層環境帶進來的也拿掉）（B-620、B-635、P-203、C-10）。
 
 **結束碼紀錄與格數**
 
