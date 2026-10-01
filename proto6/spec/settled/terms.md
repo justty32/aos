@@ -62,7 +62,7 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 包裝 | 先做一件事、再跑原指令、照原指令的結果結束的普通程式，例如 `aos-cg -- 原指令` | [B-634](tick/cg.md)、[B-303](deferred/helper.md) |
 | 有效上層 | （暫緩）有登記覆蓋就是覆蓋指定的那個，否則是資料夾推得的上層；覆蓋只改管理關係 | [B-628](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)、[B-606](deferred/daemon/registration.md) |
 | 通道 | （暫緩）舊 daemon 開的 tick 跟 daemon 之間的 IPC，也是唯一逃生口；不是 daemon 開的 tick 沒有通道 | [B-612](deferred/daemon/channel.md) |
-| 系統訊息佇列 | aos 的系統級 IPC：tick 之間經通道互送請求與回應，daemon 暫存；`aos-mq post` 送、`aos-mq get` 取 | [B-614](deferred/daemon/messaging.md)、[B-623](tick/mq.md)、[B-624](tick/mq.md) |
+| 系統訊息佇列 | aos 的系統級 IPC：tick 之間經通道互送請求與回應，daemon 暫存；`aos-mq post` 送、`aos-mq get` 取（舊設計，待實作；現行收發信是訊息模組的 `aos-mq send`／`take`，[B-645](daemon/mq.md)） | [B-614](deferred/daemon/messaging.md)、[B-623](tick/mq.md)、[B-624](tick/mq.md) |
 | 憑證 | （暫緩）舊 daemon 開 tick 時發的一次性憑證，證明通道上的請求來自哪一格；每格一張 | [B-612](deferred/daemon/channel.md) |
 | 急件 | （暫緩）送進佇列時要叫醒收件 tick 的訊息 | [B-614](deferred/daemon/messaging.md) |
 | 以指定帳號開程序 | （暫緩）任務在 argv 包 `aos-as <帳號> -- 原指令`，由 helper 用那個帳號開；核心不切帳號 | [B-303](deferred/helper.md)、[B-609](deferred/daemon/helper-actions.md) |
@@ -82,6 +82,7 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 控制模組 | 模組 `control`：開一個 Unix socket，收 `wake`、`pause`、`resume`、`status` 四種指令，每個指令只對一項；送指令的小工具是 `aos-ctl` | [B-641](daemon/control.md) |
 | 重讀設定模組 | 模組 `reload`：收到 SIGHUP 重讀同一份設定檔，加減項、改週期免重開；`cwd`、`modules`、`exec_out_path`、`exec_err_path` 改了只印警告 | [B-642](daemon/reload.md) |
 | 記住狀態模組 | 模組 `state`：設定寫成 `{"$ref": "<狀態檔>"}`，把每項的暫停、已停記進那個檔，重開時讀回 | [B-643](daemon/state.md) |
+| 訊息模組 | 模組 `mq`：另開一個 Unix socket，daemon 的每一項一個信箱（記憶體、先進先出）；任務用 `aos-mq send` 寄、`aos-mq take` 取，急件順便叫醒收件那一項 | [B-645](daemon/mq.md) |
 | 收屍／cgroup 模組 | 模組 `cgroup`：以 daemon 自己所在的 cgroup 當子樹根，每項一個框 `i-<h>`；每次 `aos-exec` 結束後把框裡留下的程序殺光、清空才算結束（收屍）；每項的 `cgroup` 鍵寫上限 | [B-644](daemon/cgroup.md) |
 
 - 「daemon 管 node」（自動找 node、上下層、叫醒往上傳）之後另做成 node 模組，還沒排程（[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。

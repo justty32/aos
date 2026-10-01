@@ -2,7 +2,7 @@
 
 ← [通用 tick 核心](../tick.md)｜[tick 子篇入口](README.md)｜格式：[tick 協議](../protocol/tick.md)
 
-**狀態：待實作，依賴暫緩。`aos-mq` 要靠暫緩區的 daemon 通道。發摘要 `aos-publish` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出。
+**狀態：待實作，依賴暫緩。這裡的 `aos-mq get`／`post` 要靠暫緩區的 daemon 通道。〔2026-10-01 第十二批〕現行的收發信是 daemon 訊息模組的 `aos-mq send`／`take`（[B-645](../daemon/mq.md)），任務裡直接叫就能用，跟這裡的系統級任務是兩回事。發摘要 `aos-publish` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出。
 
 ## B-623：系統訊息佇列：取件（mq-get）；檔案收件 aos 不管
 

@@ -53,7 +53,7 @@
 掛了控制模組時，daemon 每次開 `aos-exec` 都在環境裡多放兩個變數（總表見 [C-10](../conventions.md)）：
 
 - `AOS_DAEMON_SOCKET`：控制 socket 的絕對路徑。
-- `AOS_DAEMON_INST`：這一項的 inst 字面值。
+- `AOS_DAEMON_INST`：這一項的 inst 字面值（〔第十二批〕掛了訊息模組也放，[B-645](mq.md)）。
 
 inst 的任務、`aos-tick` 跑的任務、再下層 `aos-tick` 跑的任務都繼承得到。所以**不管在哪一層跑 `aos-ctl wake`，叫醒的都是 daemon 清單上那一項**（最頂層那一項），不是自己這一層。
 

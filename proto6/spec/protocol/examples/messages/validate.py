@@ -43,6 +43,8 @@ def schema_name(path):
             return 'daemon-helper'
         if topic in ('ctl_request', 'ctl_reply'):     # P-121 控制模組：請求與回應分開驗
             return 'daemon-ctl#/$defs/' + ('Request' if topic == 'ctl_request' else 'Reply')
+        if topic in ('mq_request', 'mq_reply'):       # P-125 訊息模組：同上
+            return 'daemon-mq#/$defs/' + ('Request' if topic == 'mq_request' else 'Reply')
         return {'core-config': 'daemon-core-config',     # P-120；config 是暫緩區的 P-101
                 'module-state': 'daemon-module-state',   # P-123；state 是暫緩區的 P-116
                 'config': 'daemon-config', 'state': 'daemon-state',

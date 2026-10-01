@@ -41,7 +41,7 @@
     },
     "modules": {
       "type": "object",
-      "description": "一個模組一個鍵，有寫就開；目前認 control、reload、state、cgroup，其他鍵照收不看",
+      "description": "一個模組一個鍵，有寫就開；目前認 control、reload、state、cgroup、mq，其他鍵照收不看",
       "properties": {
         "control": {
           "type": "object",
@@ -54,6 +54,20 @@
               "type": "string",
               "minLength": 1,
               "description": "控制 socket 的路徑；相對以起點為準"
+            }
+          }
+        },
+        "mq": {
+          "type": "object",
+          "description": "訊息模組（P-125）：另開一個 unix socket 收寄信、取信，每項一個信箱",
+          "required": [
+            "socket"
+          ],
+          "properties": {
+            "socket": {
+              "type": "string",
+              "minLength": 1,
+              "description": "訊息 socket 的路徑；相對以起點為準"
             }
           }
         },

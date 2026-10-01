@@ -73,7 +73,8 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 
 `AOS_TASK_*` 與 `AOS_HOOK_*` 是每一項自己的：`aos-tick` 跑每一項前先把這五個從繼承的環境拿掉，再放這一項該有的，所以外層（例如這個 tick 本身是別的 tick 的任務）的值不會漏下去。之後開掛在某個任務前後的掛點（`before_task`、`after_task` 這類，目前沒開）時，那種 hook 會同時有 `AOS_HOOK_*` 與指向被掛任務的 `AOS_TASK_ID`、`AOS_TASK_INDEX`（[B-635](tick/hooks.md)）。
 | `AOS_DAEMON_SOCKET` | `aos-daemon`（掛了控制模組時）給每次 `aos-exec` | `aos-ctl` | 控制模組 socket 的絕對路徑 | [B-641](daemon/control.md)、[P-121](protocol/daemon/control.md) |
-| `AOS_DAEMON_INST` | 同上 | `aos-ctl`（沒指名時用它） | 這一次跑的是設定檔 `insts` 裡哪一項（inst 字面值） | 同上 |
+| `AOS_DAEMON_INST` | `aos-daemon`（掛了控制或訊息模組任一個時）給每次 `aos-exec` | `aos-ctl`、`aos-mq`（沒指名時用它；`aos-mq send` 拿它填 `from`） | 這一次跑的是設定檔 `insts` 裡哪一項（inst 字面值） | 同上、[B-645](daemon/mq.md) |
+| `AOS_DAEMON_MQ_SOCKET` | `aos-daemon`（掛了訊息模組時）給每次 `aos-exec` | `aos-mq` | 訊息模組 socket 的絕對路徑 | [B-645](daemon/mq.md)、[P-125](protocol/daemon/mq.md) |
 
 其他變數會一路往下傳：daemon 給 `aos-exec` 的，`aos-tick` 與它的任務、再往下一層的 `aos-tick` 的任務都拿得到。所以任何一層跑 `aos-ctl wake`，叫醒的都是 daemon 設定檔裡最上面那一項。
 

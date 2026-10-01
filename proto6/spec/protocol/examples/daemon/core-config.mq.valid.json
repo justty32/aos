@@ -1,0 +1,15 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "control": {
+      "socket": "./aos.sock"
+    },
+    "mq": {
+      "socket": "./aos-mq.sock"
+    }
+  },
+  "insts": {
+    "a.json": {},
+    "b.json": {}
+  }
+}

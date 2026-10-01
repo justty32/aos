@@ -50,7 +50,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | `stop_on_nonzero` | 布林，可省 | 各項的預設；省略＝false |
 | `exec_out_path` | 字串，可省 | `aos-exec` 的 stdout 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 這幾個字換成這一項的位置（規則見 [B-640](../../daemon/core.md)「輸出」）。省略＝丟掉（`/dev/null`）；寫 `/dev/stdout` 接回 daemon 自己的 stdout |
 | `exec_err_path` | 字串，可省 | `aos-exec` 的 stderr 接到哪個檔，規則同 `exec_out_path`。省略＝丟掉（`/dev/null`）；寫 `/dev/stderr` 接回 daemon 自己的 stderr |
-| `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）、`reload`（`{}`，見 [P-122](reload.md)）、`state`（原始檔必須是 `{"$ref": "<狀態檔>"}`，展開後是狀態檔內容，見 [P-123](state.md)）、`cgroup`（`{}`，見 [P-124](cgroup.md)）；其他鍵照收、不看 |
+| `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）、`reload`（`{}`，見 [P-122](reload.md)）、`state`（原始檔必須是 `{"$ref": "<狀態檔>"}`，展開後是狀態檔內容，見 [P-123](state.md)）、`cgroup`（`{}`，見 [P-124](cgroup.md)）、`mq`（`{"socket": <路徑>}`，見 [P-125](mq.md)）；其他鍵照收、不看 |
 
 **`insts` 每一項的值**
 
