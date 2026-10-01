@@ -1,0 +1,359 @@
+"""控制模組驗收（plan m3n-control-module.md 步驟 1～7）。真的開 bin/aos-daemon 與 bin/aos-ctl 子程序。
+
+都用暫存資料夾、短週期、假 inst；不要 root、systemd、網路。socket 放 self.d（/tmp 底下，路徑夠短）。
+會留下來的任務照 test_daemon 的做法把 pid 寫進 `pids`，收尾時殺掉。
+任務自己寫時間（`date +%s.%N`）來量週期；daemon 那一行的時間只到秒。
+"""
+import json
+import os
+import signal
+import socket
+import stat
+import subprocess
+import time
+import unittest
+
+from _util import PY
+from test_daemon import INHERIT, BIN, CLEAN_ENV, TICK, TS, DaemonCase, sh, tasks_json
+
+CTL = os.path.join(BIN, "aos-ctl")
+CONTROL = {"control": {"socket": "./aos.sock"}}
+STAMP = "date +%s.%N >> runs"
+
+
+class CtlCase(DaemonCase):
+
+    @property
+    def sock(self):
+        return os.path.join(self.d, "aos.sock")
+
+    def up(self, insts, interval_ms, **top):
+        """開一個掛了控制模組的 daemon（socket 在 self.d/aos.sock），等 socket 出現。"""
+        cfg = self.config(dict({"interval_ms": interval_ms, "modules": CONTROL, "insts": insts}, **top))
+        p, out, err = self.start(cfg)
+        self.wait_for(lambda: self.exists("aos.sock"))
+        return p, out, err
+
+    def send(self, payload, sock=None):
+        """直接連 socket 送一行（dict 就 dump、bytes 原樣），回解好的回應。"""
+        raw = payload if isinstance(payload, bytes) else (json.dumps(payload) + "\n").encode()
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.connect(sock or self.sock)
+            s.sendall(raw)
+            if not raw.endswith(b"\n"):
+                s.shutdown(socket.SHUT_WR)              # 沒送完一行就關寫的那一邊
+            line = s.makefile("rb").readline()
+        return json.loads(line)
+
+    def ctl(self, *args, **env):
+        """跑 aos-ctl；env 給的變數加在乾淨環境上（給 None＝拿掉）。"""
+        e = dict(CLEAN_ENV, AOS_DAEMON_SOCKET=self.sock)
+        for k, v in env.items():
+            if v is None:
+                e.pop(k, None)
+            else:
+                e[k] = v
+        return subprocess.run([PY, CTL] + list(args), env=e, capture_output=True, text=True, timeout=10)
+
+    def runs(self, rel="runs"):
+        """任務寫的時間（秒，浮點）。"""
+        if not self.exists(rel):
+            return []
+        return [float(x) for x in self.read(rel).split()]
+
+    def is_sock(self, rel="aos.sock"):
+        try:
+            return stat.S_ISSOCK(os.stat(os.path.join(self.d, rel)).st_mode)
+        except FileNotFoundError:
+            return False
+
+    @staticmethod
+    def has(out, text):
+        return any(l.endswith(" " + text) for l in list(out))
+
+
+class Step1Config(CtlCase):
+
+    def test_not_mounted(self):
+        # modules 裡只有別的鍵：不建 socket、不傳兩個變數
+        self.inst(sh('echo "${AOS_DAEMON_SOCKET-none} ${AOS_DAEMON_INST-none}" > env.txt'), "e.json")
+        _, out, _ = self.start(self.config({"interval_ms": 10000, "modules": {"other": {}},
+                                            "insts": {"e.json": {}}}))
+        self.wait_for(lambda: self.results(out, "e.json"))
+        self.assertEqual(self.read("env.txt").split(), ["none", "none"])
+        self.assertEqual(sorted(os.listdir(self.d)), ["config.json", "e.json", "env.txt"])
+
+    def test_socket_relative_to_start(self):
+        self.inst({"argv": ["true"]}, "sub/x.json")
+        self.start(self.config({"cwd": "sub", "interval_ms": 10000,
+                                "modules": {"control": {"socket": "./s", "other": 1}},
+                                "insts": {"x.json": {}}}))
+        self.wait_for(lambda: self.is_sock("sub/s"))
+        self.assertEqual(self.send({"status": "x.json"}, os.path.join(self.d, "sub/s"))["inst"], "x.json")
+
+    def test_no_socket_key(self):
+        r = self.run_cfg(self.config({"interval_ms": 5, "insts": {}, "modules": {"control": {}}}))
+        self.assertEqual(r.returncode, 1)
+
+
+class Step2Loop(CtlCase):
+
+    def test_wake_restarts_period(self):
+        self.inst(sh(STAMP), "r.json")
+        self.up({"r.json": {}}, 1500)
+        self.wait_for(lambda: len(self.runs()) == 1)
+        time.sleep(0.3)
+        self.assertEqual(self.send({"wake": "r.json"}), {"ok": True})
+        self.wait_for(lambda: len(self.runs()) == 2, timeout=1)
+        self.wait_for(lambda: len(self.runs()) == 3, timeout=4)
+        t1, t2, t3 = self.runs()[:3]
+        self.assertGreaterEqual(t3 - t2, 1.45)              # 週期從叫醒那次結束重新算
+
+    def test_keep_schedule(self):
+        self.inst(sh(STAMP), "r.json")
+        self.up({"r.json": {}}, 1500)
+        self.wait_for(lambda: len(self.runs()) == 1)
+        time.sleep(0.3)
+        self.assertEqual(self.send({"wake": "r.json", "keep_schedule": True}), {"ok": True})
+        self.wait_for(lambda: len(self.runs()) == 2, timeout=1)
+        self.wait_for(lambda: len(self.runs()) == 3, timeout=4)
+        t1, t2, t3 = self.runs()[:3]
+        self.assertLess(t3 - t2, 1.4)                       # 原本那次照跑，不是從第二次重算
+        self.assertGreaterEqual(t3 - t1, 1.45)
+
+    def busy(self, wake):
+        self.inst(sh("echo s >> log; sleep 0.5; echo e >> log"), "s.json")
+        _, out, _ = self.up({"s.json": {}}, 10000)
+        self.wait_for(lambda: self.exists("log"))
+        for _ in range(5):
+            self.assertEqual(self.send(wake), {"ok": True})
+        self.assertEqual(self.send({"status": "s.json"})["pending"], not wake.get("skip_while_running"))
+        time.sleep(1.8)
+        return self.read("log").split(), out
+
+    def test_wake_while_running_once(self):
+        log, out = self.busy({"wake": "s.json"})
+        self.assertEqual(log, ["s", "e", "s", "e"])         # 剛好補一次，不疊著跑
+
+    def test_skip_while_running(self):
+        log, out = self.busy({"wake": "s.json", "skip_while_running": True})
+        self.assertEqual(log, ["s", "e"])
+
+    def test_keep_schedule_overrun(self):
+        # 叫醒那次跑太久、蓋過原本的時刻：結束後不馬上又跑，due 從這次結束重算
+        self.inst(sh("date +%s.%N >> starts; sleep 0.8; date +%s.%N >> ends"), "k.json")
+        self.up({"k.json": {}}, 300)
+        self.wait_for(lambda: len(self.runs("ends")) == 1)
+        self.assertEqual(self.send({"wake": "k.json", "keep_schedule": True}), {"ok": True})
+        self.wait_for(lambda: len(self.runs("starts")) == 3, timeout=4)
+        self.assertGreaterEqual(self.runs("starts")[2] - self.runs("ends")[1], 0.29)
+
+    def test_pause_resume(self):
+        self.inst(sh(STAMP), "r.json")
+        _, out, _ = self.up({"r.json": {}}, 100)
+        self.wait_for(lambda: len(self.runs()) >= 2)
+        self.assertEqual(self.send({"pause": "r.json"}), {"ok": True})
+        self.assertEqual(self.send({"pause": "r.json"}), {"ok": True})   # 已暫停再 pause 也成功
+        self.wait_for(lambda: self.has(out, "inst=r.json paused"))
+        time.sleep(0.4)                                     # 正在跑的那次照樣跑完
+        n = len(self.runs())
+        time.sleep(1)
+        self.assertEqual(len(self.runs()), n)
+        st = self.send({"status": "r.json"})
+        self.assertEqual((st["paused"], st["next"], st["last_exit"]), (True, None, 0))
+        self.assertEqual(self.send({"resume": "r.json"}), {"ok": True})
+        self.wait_for(lambda: self.has(out, "inst=r.json resumed"))
+        self.wait_for(lambda: len(self.runs()) >= n + 3, timeout=3)
+
+    def test_wake_while_paused(self):
+        # 待問 1 照建議：暫停中 wake 跑一次，跑完照樣暫停
+        self.inst(sh(STAMP), "r.json")
+        self.up({"r.json": {}}, 100)
+        self.wait_for(lambda: len(self.runs()) >= 1)
+        self.send({"pause": "r.json"})
+        time.sleep(0.4)
+        n = len(self.runs())
+        self.assertEqual(self.send({"wake": "r.json"}), {"ok": True})
+        self.wait_for(lambda: len(self.runs()) == n + 1, timeout=1)
+        time.sleep(0.8)
+        self.assertEqual(len(self.runs()), n + 1)
+        self.assertTrue(self.send({"status": "r.json"})["paused"])
+
+    def test_stopped(self):
+        self.inst(sh(STAMP + "; exit 1"), "f.json")
+        _, out, _ = self.up({"f.json": {"stop_on_nonzero": True}}, 50)
+        self.wait_for(lambda: self.has(out, "inst=f.json stopped"))
+        self.assertEqual(self.send({"wake": "f.json"}),
+                         {"ok": False, "error": "stopped", "detail": "f.json"})
+        st = self.send({"status": "f.json"})
+        self.assertEqual((st["stopped"], st["last_exit"], st["next"]), (True, 1, None))
+        time.sleep(0.4)
+        self.assertEqual(len(self.runs()), 1)
+        self.assertEqual(self.send({"resume": "f.json"}), {"ok": True})   # resume 救回、跑一次、又停
+        self.wait_for(lambda: sum(1 for l in list(out) if l.endswith(" stopped")) == 2)
+        time.sleep(0.4)
+        self.assertEqual(self.results(out, "f.json"), [1, 1])
+
+
+class Step3Protocol(CtlCase):
+
+    def test_wake_direct(self):
+        self.inst(sh(STAMP), "r.json")
+        self.up({"r.json": {}}, 10000)
+        self.wait_for(lambda: len(self.runs()) == 1)
+        self.assertEqual(self.send({"wake": "r.json"}), {"ok": True})
+        self.wait_for(lambda: len(self.runs()) == 2, timeout=1)
+
+    def test_status(self):
+        self.inst(sh("touch began; sleep 0.5"), "s.json")
+        self.up({"s.json": {}}, 10000)
+        self.wait_for(lambda: self.exists("began"))
+        self.assertEqual(self.send({"status": "s.json"}),
+                         {"ok": True, "inst": "s.json", "running": True, "pending": False,
+                          "paused": False, "stopped": False, "last_exit": None,
+                          "last_end": None, "next": None})
+        self.wait_for(lambda: self.send({"status": "s.json"})["last_exit"] == 0)
+        st = self.send({"status": "s.json"})
+        self.assertFalse(st["running"])
+        self.assertRegex(st["last_end"], "^%s$" % TS)
+        self.assertRegex(st["next"], "^%s$" % TS)
+        self.assertGreater(st["next"], st["last_end"])
+
+    def test_errors(self):
+        self.inst({"argv": ["true"]}, "a.json")
+        self.up({"a.json": {}}, 10000)
+        self.assertEqual(self.send({"wake": "b.json"}),
+                         {"ok": False, "error": "unknown_inst", "detail": "b.json"})
+        for bad in ({"kill": "a.json"}, {"wake": "a.json", "pause": "a.json"}, {"status": None},
+                    {"wake": "a.json", "keep_schedule": "yes"}, [1], b"hello\n", b"{\"wake\":\"a.json\"}"):
+            r = self.send(bad)
+            self.assertEqual((r["ok"], r["error"]), (False, "bad_request"), bad)
+        # pause 帶 wake 的選項、多帶別的鍵：忽略
+        self.assertEqual(self.send({"pause": "a.json", "keep_schedule": "x", "who": 1}), {"ok": True})
+        self.assertEqual(self.send({"resume": "a.json"}), {"ok": True})
+
+    def test_silent_client(self):
+        self.inst({"argv": ["true"]}, "a.json")
+        self.up({"a.json": {}}, 10000)
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as quiet:
+            quiet.connect(self.sock)
+            t0 = time.monotonic()
+            self.assertEqual(self.send({"status": "a.json"})["inst"], "a.json")   # 最多晚約 1 秒
+            self.assertLess(time.monotonic() - t0, 1.5)
+            quiet.settimeout(3)
+            self.assertEqual(quiet.recv(10), b"")                              # 被關掉、不回
+            self.assertLess(time.monotonic() - t0, 1.5)
+
+
+class Step4Env(CtlCase):
+
+    def test_env_values(self):
+        self.inst(sh('echo "$AOS_DAEMON_SOCKET" > env.txt; echo "$AOS_DAEMON_INST" >> env.txt'),
+                  "jobs/report.json")
+        self.up({"jobs/report.json": {}}, 10000)
+        self.wait_for(lambda: self.exists("jobs/env.txt") and len(self.read("jobs/env.txt").split()) == 2)
+        self.assertEqual(self.read("jobs/env.txt").split(), [self.sock, "jobs/report.json"])
+
+    def test_through_nodes(self):
+        # 頂層 a 的 inst 跑 aos-tick；a 的任務一項寫檔、一項跑 aos-tick --node b；b 的任務寫檔，
+        # 第一次還順便 aos-ctl wake（不帶 inst）：叫醒的是頂層 a
+        dump = 'echo "$AOS_DAEMON_INST" > "$AOS_NODE_DIR/%s"'
+        self.inst({"argv": [TICK], "stderr": INHERIT}, "a/inst.json")
+        self.write("a/.aos/tasks.json", tasks_json(
+            {"id": "w", "argv": ["sh", "-c", dump % "env.txt"]},
+            {"id": "b", "argv": [TICK, "--node", os.path.join(self.d, "a", "b")]}))
+        self.write("a/b/.aos/tasks.json", tasks_json(
+            {"id": "w", "argv": ["sh", "-c", (dump % "env.txt") + "; " + STAMP +
+                                 "; [ -e woke ] || { touch woke; %s %s wake; }" % (PY, CTL)]}))
+        _, out, _ = self.up({"a": {}}, 10000)
+        self.wait_for(lambda: len(self.results(out, "a")) >= 2)
+        self.assertEqual(self.results(out, "a"), [0, 0])
+        for rel in ("a/env.txt", "a/b/env.txt"):
+            self.assertEqual(self.read(rel).strip(), "a")
+        self.assertEqual(len(self.runs("a/b/runs")), 2)
+
+
+class Step5Ctl(CtlCase):
+
+    def test_wake_self_in_task(self):
+        # 任務裡 aos-ctl wake（不帶 inst）：回 0，自己這一項跑完立刻補一次
+        self.inst(sh(STAMP + "; [ -e woke ] || { touch woke; %s %s wake; echo $? > rc; }" % (PY, CTL)), "r.json")
+        self.up({"r.json": {}}, 10000)
+        self.wait_for(lambda: len(self.runs()) == 2, timeout=3)
+        self.assertEqual(self.read("rc").strip(), "0")
+
+    def test_skip_in_task(self):
+        self.inst(sh(STAMP + "; %s %s wake --skip-while-running; echo $? >> rc" % (PY, CTL)), "r.json")
+        self.up({"r.json": {}}, 10000)
+        self.wait_for(lambda: self.exists("rc"))
+        time.sleep(0.8)
+        self.assertEqual(len(self.runs()), 1)
+        self.assertEqual(self.read("rc").split(), ["0"])
+
+    def test_pause_in_task(self):
+        self.inst(sh(STAMP + "; %s %s pause; echo $? >> rc" % (PY, CTL)), "r.json")
+        self.up({"r.json": {}}, 100)
+        self.wait_for(lambda: self.exists("rc"))
+        time.sleep(0.8)
+        self.assertEqual(len(self.runs()), 1)
+        self.assertEqual(self.read("rc").split(), ["0"])
+
+    def test_status_in_task(self):
+        self.inst(sh("%s %s status > st.json" % (PY, CTL)), "jobs/x.json")
+        self.up({"jobs/x.json": {}}, 10000)
+        self.wait_for(lambda: self.exists("jobs/st.json") and self.read("jobs/st.json"))
+        st = json.loads(self.read("jobs/st.json"))
+        self.assertEqual((st["inst"], st["running"]), ("jobs/x.json", True))
+
+    def test_errors(self):
+        self.inst({"argv": ["true"]}, "a.json")
+        self.up({"a.json": {}}, 10000)
+        r = self.ctl("status", "a.json")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(json.loads(r.stdout)["inst"], "a.json")
+        self.assertEqual(r.stdout.count("\n"), 1)
+        r = self.ctl("wake", AOS_DAEMON_INST="a.json")
+        self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
+        for args, env, code in ((["wake", "b.json"], {}, "unknown_inst"),
+                                (["status", "a.json"], {"AOS_DAEMON_SOCKET": None}, "no_daemon"),
+                                (["status"], {"AOS_DAEMON_INST": None}, "no_inst"),
+                                (["status", "a.json"], {"AOS_DAEMON_SOCKET": os.path.join(self.d, "nope")},
+                                 "connect"),
+                                (["kill", "a.json"], {}, "usage"),
+                                ([], {}, "usage"),
+                                (["status", "a.json", "b"], {}, "usage"),
+                                (["pause", "--keep-schedule", "a.json"], {}, "usage")):
+            r = self.ctl(*args, **env)
+            self.assertEqual(r.returncode, 1, args)
+            self.assertTrue(r.stderr.startswith(code + ": "), (args, r.stderr))
+            self.assertEqual(r.stderr.count("\n"), 1, r.stderr)
+
+
+class Step6SocketFile(CtlCase):
+
+    def check(self, sig):
+        self.inst({"argv": ["true"]}, "a.json")
+        p, _, _ = self.up({"a.json": {}}, 10000)
+        os.kill(p.pid, sig)
+        self.assertEqual(p.wait(timeout=1), 0)
+        self.assertFalse(self.exists("aos.sock"))
+
+    def test_sigint(self):
+        self.check(signal.SIGINT)
+
+    def test_sigterm(self):
+        self.check(signal.SIGTERM)
+
+    def test_stale_file(self):
+        self.write("aos.sock", "上次留下的")
+        self.inst(sh(STAMP), "r.json")
+        cfg = self.config({"interval_ms": 10000, "modules": CONTROL, "insts": {"r.json": {}}})
+        self.start(cfg)
+        self.wait_for(self.is_sock)
+        self.wait_for(lambda: len(self.runs()) == 1)
+        self.assertEqual(self.send({"wake": "r.json"}), {"ok": True})
+        self.wait_for(lambda: len(self.runs()) == 2)
+
+
+if __name__ == "__main__":
+    unittest.main()

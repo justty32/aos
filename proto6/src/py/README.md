@@ -17,6 +17,7 @@ inst 與 `aos-exec` 直接從 proto5 複製（proto5 `470f5a04`，即 `git log -
 | `tests/_util.py` | `proto5/lib/test/_util.py` | 只改 `LIB`、`EXEC` 兩行路徑 |
 | ~~`tests/test_user.py`~~ | ~~新寫~~ | 2026-10-01 跟改動 1 一起刪掉 |
 | `bin/aos-daemon`、`lib/aos_daemon.py`、`tests/test_daemon.py` | 新寫 | 第三段最核心 daemon，見下面 [aos-daemon](#aos-daemon第三段最核心-daemon) |
+| `lib/aos_daemon_ctl.py`、`bin/aos-ctl`、`lib/aos_ctl.py`、`tests/test_ctl.py` | 新寫 | daemon 的控制模組與送指令的小工具，見下面 [控制模組與 aos-ctl](#控制模組與-aos-ctlm3n)。`bin/aos-ctl` 一樣被 `.gitignore` 擋，要 `git add -f` |
 
 現在跟 proto5 不同的只剩改動 2（資料夾目標找 inst 的位置）、改動 3（那個位置的 `.aos` 照 `AOS_DIRNAME`）與改動 4（用法錯回 1）。
 
@@ -167,7 +168,7 @@ proto6/src/py/bin/aos-daemon --config daemon.json     # Ctrl-C／SIGTERM 直接�
 | `interval_ms` | 上一次結束後隔多久再叫（剛開時每項先立刻跑一次）。頂層是預設、每項可蓋過；兩邊都沒有＝設定錯、回 1 |
 | `stop_on_nonzero` | 碼不是 0 時這一項就不再叫、多印一行 `stopped`。頂層是預設、每項可蓋過；都沒有＝`false`。所有項都停了 daemon 照樣開著 |
 | `exec_err_path`（頂層） | aos-exec 的 stderr 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 換成 inst 字面值，inst 是檔時換成它字面上的 dirname（空的用 `.`）。沒寫＝daemon 自己的 stderr |
-| `modules`（頂層） | 可選，要是物件（不是＝設定錯、回 1）。之後一個模組一個鍵（例如 `"modules": {"control": {...}}`）；**目前沒有任何模組**，核心照收、不看裡面 |
+| `modules`（頂層） | 可選，要是物件（不是＝設定錯、回 1）。一個模組一個鍵；目前只有 `control`（[控制模組](#控制模組與-aos-ctlm3n)，有寫就開），其他鍵照收、不看 |
 
 **整份設定檔先經 aos 指示詞展開再讀**（使用者 2026-10-01；跟 inst 同一套 `lib/aos_directives.py`，`$ref`／`$fmt`／`$env`）。順序與兩種起點：
 
@@ -207,6 +208,48 @@ inst 裡任務自己的 stderr 照 inst 規則（預設 `/dev/null`，寫 `"stde
 | `_quit()` | 5 Ctrl-C 與 SIGTERM |
 
 測試 `tests/test_daemon.py`：`Step1Config`～`Step6Tick`，一個類別一步（步驟 1 另有 `Step1Directives`：指示詞與 `modules`），整檔約 6 秒。
+
+## 控制模組與 aos-ctl（m3n）
+
+照 [plan m3n](../../plan/m3n-control-module.md) 寫的，新寫。設定檔多寫一段就掛上；沒寫時 daemon 跟上面一模一樣（不建 socket、不傳環境變數）：
+
+```json
+{"interval_ms": 60000, "modules": {"control": {"socket": "./aos.sock"}}, "insts": {"a": {}, "jobs/report.json": {}}}
+```
+
+- `socket` 必填（沒寫＝設定錯、回 1），相對以起點（`cwd`）為準，算成絕對路徑。開的時候路徑上有舊檔先刪；SIGINT／SIGTERM 退出前刪掉。
+- daemon 開每一次 aos-exec 都在環境加 `AOS_DAEMON_SOCKET=<socket 絕對路徑>`、`AOS_DAEMON_INST=<這一項的 inst 字面值>`。inst 的任務、`aos-tick` 的任務、下層 `aos-tick --node` 的任務都繼承得到，所以**任何一層跑 `aos-ctl wake` 叫醒的都是頂層那一項**。
+- 協議：一連線一請求，一行 JSON 進、一行 JSON 出。指令名當鍵、inst 字面值當值：`{"wake":"a"}`、`{"wake":"a","skip_while_running":true,"keep_schedule":true}`、`{"pause":"a"}`、`{"resume":"a"}`、`{"status":"a"}`。回 `{"ok":true}`（status 多帶狀態）或 `{"ok":false,"error":"unknown_inst|stopped|bad_request","detail":…}`。收到就回，不等那一項跑完。每條連線 1 秒逾時；壞請求只影響那一條。
+
+| 指令 | 做什麼 |
+|---|---|
+| `wake` | 現在跑一次。正在跑：跑完補一次（叫幾次都只補一次）；帶 `skip_while_running` 就作廢。跑完後週期從這次結束重算；帶 `keep_schedule` 就不動原本排程（原本那次已被蓋過去才從這次結束重算）。暫停中：跑一次、跑完照樣暫停。被 `stop_on_nonzero` 停掉：回 `stopped`、不跑 |
+| `pause` | 不再照週期跑；正在跑的不殺，待補的取消。stdout 印 `inst=<inst> paused` |
+| `resume` | 清掉暫停與已停，馬上跑一次。stdout 印 `inst=<inst> resumed` |
+| `status` | `{"ok":true,"inst":…,"running":…,"pending":…,"paused":…,"stopped":…,"last_exit":…,"last_end":…,"next":…}`；還沒跑完過時 `last_exit`／`last_end` 是 `null`，正在跑、暫停、已停時 `next` 是 `null` |
+
+「暫停中 wake 跑一次」「停掉的 wake 回 `stopped`」「resume 一律跑一次」三條是 m3n 待問 1 照建議先做的，使用者可改。暫停只在記憶體，重開 daemon 就沒了。
+
+`aos-ctl`（socket 只從 `AOS_DAEMON_SOCKET` 拿；沒給 `<inst>` 用 `AOS_DAEMON_INST`）：
+
+```sh
+aos-ctl wake [--skip-while-running] [--keep-schedule] [<inst>]
+aos-ctl pause|resume|status [<inst>]
+AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell 手打
+```
+
+成功回 0（status 把回應那一行原樣印到 stdout，其他不印）；其餘回 1、stderr 一行 `代碼: 說明`：`usage`（指令名錯、多給參數、旗標給錯指令）、`no_daemon`（沒 `AOS_DAEMON_SOCKET`）、`no_inst`、`connect`（連不上），或照 daemon 回的 `unknown_inst`／`stopped`／`bad_request`。
+
+| 函式 | plan 步驟 |
+|---|---|
+| `aos_daemon.load_setup()`（`load_config()` 照舊回兩個值） | 1 設定檔 |
+| `aos_daemon.loop()`、`_next_run()`、`Item` 的狀態與 `cond` | 2 叫得醒、停得住的迴圈 |
+| `aos_daemon_ctl.serve()`、`_accept_loop()`、`_one()`、`parse()`、`handle()`、`status()` | 3 socket 與協議（4 指令都在 `handle()`） |
+| `aos_daemon.main()` 設 `item.env`、`run_once()` 帶 `env=` | 4 往下傳環境變數 |
+| `aos_ctl.main()`、`bin/aos-ctl` | 5 aos-ctl |
+| `aos_daemon_ctl.serve()` 先刪舊檔、`aos_daemon._quit()` 刪 socket | 6 socket 檔的開與收 |
+
+測試 `tests/test_ctl.py`：`Step1Config`～`Step6SocketFile`，一個類別一步，整檔約 18 秒。
 
 ## 跑測試
 

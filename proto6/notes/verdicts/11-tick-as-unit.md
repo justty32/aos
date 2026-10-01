@@ -306,12 +306,22 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 使用者原話：「daemon config中，其實可以是{"insts":{"jobs/report.json":{...},"haha.json":{...}}}。然後控制模組這塊，wake的功能改一下，改成可以調設定，比如正在跑的話是否就不跑了(但仍然叫幾次都只補一次)，或是這次跑完，原本後續週期性的那次就不跑了，或是弄成單獨指令也可以。aos-ctl status應該要只能看一個項的狀態，也就是自己所在的這項。1.夠了。2.可以。3.隨便放，就一個。4.算。5.訊息模組不算在此。」追補：「應該說wake/pause/resume/status都是指向某一項inst任務」。細節見 [m3 步驟 1](../../plan/m3-daemon-core.md#步驟-1讀設定檔)、[m3n](../../plan/m3n-control-module.md)。
 
 - **`insts` 是物件**：鍵＝inst 字面值，值＝該項設定物件（`interval_ms`、`stop_on_nonzero`；`{}`＝全用頂層預設）。撤掉陣列寫法與項內 `inst` 鍵，不相容。stderr 標頭的 `index` 照鍵的順序從 0 數。（已改程式）
-- **控制模組**（m3n，只寫了 plan）：設定放 `"modules": {"control": {"socket": "<路徑>"}}`，有寫就是開、沒寫就是沒掛（不要 `enable_control`）；一個 daemon 一個 socket，路徑隨設定；能連 socket 就能做所有事，不另設權限。
+- **控制模組**（m3n，~~只寫了 plan~~ 2026-10-01 已做）：設定放 `"modules": {"control": {"socket": "<路徑>"}}`，有寫就是開、沒寫就是沒掛（不要 `enable_control`）；一個 daemon 一個 socket，路徑隨設定；能連 socket 就能做所有事，不另設權限。
 - **指令只收四個**：`wake`、`pause`、`resume`、`status`（不收 reload、shutdown）；**每個都指向單一一項**（以 inst 字面值指名），沒有「對全部」的形式；叫醒算控制模組的一部分；訊息模組（aos-mq）不走這條 socket。
 - **wake 可帶選項**：正在跑時要不要補一次（叫幾次都只補一次照舊）、跑完後原本週期要不要照舊；細節見 m3n。使用者定名：「正在跑就不補」＝`"skip_while_running": true`（預設 `false`＝跑完補一次）；「不影響原本排程」＝`"keep_schedule": true`（預設 `false`＝叫醒跑完後週期從這次結束重新算，原本那次不另外跑；`true`＝原本那次照常跑）。兩個都留在 wake 上，不拆單獨指令。
 - **`aos-ctl status` 只看一項**：不帶參數就看自己所在那項（`AOS_DAEMON_INST`）。環境變數 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`（取代先前草稿的 `AOS_DAEMON_ID`）。
 
 **待改的 spec 處**（追加）：P-101 的設定檔長相改成 `insts` 物件；B-607 叫醒／暫停照 m3n；[P-117 通道變數](../../spec/settled/protocol/daemon/channel.md) 的 `AOS_DAEMON_SOCKET` 留、加 `AOS_DAEMON_INST`、憑證不做。
+
+**m3n 待問 1 先照建議做（2026-10-01，使用者要直接開工，使用者可改；待統一更新 spec）**
+
+使用者要控制模組直接開工，m3n 唯一的待問（暫停中、已停時叫醒怎麼辦、resume 要不要順便跑）先照 plan 建議寫進程式，標「照建議先做，使用者可改」（[m3n 待問](../../plan/m3n-control-module.md#待問)）：
+
+- **暫停中 wake**：跑一次，跑完照樣暫停（暫停只停週期，不擋人手叫）。
+- **被 `stop_on_nonzero` 停掉的項 wake**：回 `{"ok":false,"error":"stopped"}`、不跑；要救用 resume。
+- **resume**：清掉暫停與已停，一律馬上跑一次（等於一次不帶選項的 wake）。
+
+**待改的 spec 處**（追加）：[B-607 叫醒暫停](../../spec/settled/daemon/registration.md#b-607叫醒暫停故障停格與格次序號) 補上這三條。
 
 ## node 模組方向（2026-10-01，記錄用，未排程）
 
