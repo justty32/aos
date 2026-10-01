@@ -4,7 +4,7 @@
 `aos_exec_run._execute_inst()` 一樣，只多兩件那裡沒有的事，所以這裡自己開程序、不改 lib：
 
 - 四個 `AOS_*` 變數蓋在繼承的環境上（`envs` 清空時一個都不放）；inst 的 `envs` 最後疊上去。
-  〔使用者方向 2026-10-01〕不取鎖，所以沒有 `AOS_TICK_LOCK_FD`、不傳鎖 fd。
+  〔使用者方向 2026-10-01〕鎖 fd 不傳給任務（`os.open` 預設不可繼承、Popen 預設 close_fds），沒有 `AOS_TICK_LOCK_FD`。
 - 自己 wait，分出 `exit` 與 `signal`（`_execute_inst` 把訊號 N 折成 128+N）。
 
 沒跑成（mkdir、cwd、重導向檔開不起來）照 aos-exec 算 125；找不到程式 127、沒執行權 126。

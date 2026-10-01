@@ -113,6 +113,43 @@ class TestTargets(ExecCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.read("out.txt"), "aos\n")
 
+    def test_dir_name_from_env(self):
+        """proto6 新增（使用者 2026-10-01）：資料夾目標的 `.aos` 照環境變數 AOS_DIRNAME；沒設或空＝.aos。"""
+        self.inst({"argv": ["sh", "-c", "echo aos"], "stdout": "out.txt"})
+        self.inst({"argv": ["sh", "-c", "echo aos2"], "stdout": "out.txt"}, ".aos2/inst.json")
+        env = lambda v: dict(os.environ, AOS_DIRNAME=v)
+        self.assertEqual(self.aos(self.d, env=env(".aos2")).returncode, 0)
+        self.assertEqual(self.read("out.txt"), "aos2\n")
+        self.assertEqual(self.aos(self.d, env=env("")).returncode, 0)
+        self.assertEqual(self.read("out.txt"), "aos\n")
+        r = self.aos(self.d, env=env(".aos3"))              # 名字底下沒有、頂層也沒有：照舊用法錯 2
+        self.assertEqual(r.returncode, 2)
+        self.assertIn(".aos3/inst.json", r.stderr)
+        self.inst({"argv": ["sh", "-c", "echo plain"], "stdout": "out.txt"}, "inst.json")
+        self.assertEqual(self.aos(self.d, env=env(".aos3")).returncode, 0)   # 退回頂層 inst.json
+        self.assertEqual(self.read("out.txt"), "plain\n")
+
+    def test_bad_dir_name_is_usage(self):
+        """proto6 新增：AOS_DIRNAME 含 / 或是 . 、.. 時，資料夾目標算用法錯（aos-exec 的用法錯碼 2，照舊不改）。"""
+        self.inst({"argv": ["sh", "-c", "touch ran"]})
+        for bad in ("a/b", ".", ".."):
+            r = self.aos(self.d, env=dict(os.environ, AOS_DIRNAME=bad))
+            self.assertEqual(r.returncode, 2, bad)
+            self.assertIn("AOS_DIRNAME", r.stderr)
+            self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertFalse(self.exists("ran"))
+        # 只影響資料夾目標：直接給 .json 檔照跑
+        r = self.aos(os.path.join(self.d, ".aos", "inst.json"), env=dict(os.environ, AOS_DIRNAME=".."))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.exists(".aos/ran"))                  # .json 目標的 base 是檔所在的資料夾
+
+    def test_top_level_user_is_ignored(self):
+        """proto6（使用者 2026-10-01）：拿掉「認得頂層 user」，回到 proto5——user 當陌生鍵忽略，照目前身分跑。"""
+        self.inst({"user": "root" if os.geteuid() else "nobody", "argv": ["sh", "-c", "touch ran"]})
+        r = self.aos(self.d)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertTrue(self.exists("ran"))
+
     def test_dir_target_flag_is_gone(self):
         """proto6 改：不提供改尋找路徑的旗標，--dir-target 是用法錯。"""
         self.inst({"argv": ["true"]}, "other/place.json")

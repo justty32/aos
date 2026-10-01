@@ -12,7 +12,7 @@
 
 - 程式放 `proto6/src/`，跟探針原型 [proto/](../proto/README.md) 分開。
 - 語言：POC 全部用 **Python 3.9**（只用標準庫），daemon、runner 也是；換 C++11 見[第六段](#第六段c11-改寫)。
-- inst 的解析與指示詞（`$ref` 等）和 `aos-exec` **直接從 proto5 原樣複製**，放 [proto6/src/py/](../src/py/README.md)：`lib/aos_inst.py`（讀驗解 inst）、`lib/aos_directives.py`（指示詞）、`lib/aos_exec*.py`（開程序）、`bin/aos-exec`。唯一改動是認得頂層 `user`（跟目前身分不同就 125，不切身分）。各段把它當現成的東西用，不重寫。
+- inst 的解析與指示詞（`$ref` 等）和 `aos-exec` **直接從 proto5 原樣複製**，放 [proto6/src/py/](../src/py/README.md)：`lib/aos_inst.py`（讀驗解 inst）、`lib/aos_directives.py`（指示詞）、`lib/aos_exec*.py`（開程序）、`bin/aos-exec`。改動只剩「資料夾目標」那一處：先找 `.aos/inst.json` 再找 `inst.json`，而且（2026-10-01）這個 `.aos` 照環境變數 `AOS_DIRNAME`；~~認得頂層 `user`（跟目前身分不同就 125）~~ 2026-10-01 撤回，回到 proto5 原樣（`user` 當陌生鍵忽略）（跟 aos-tick 共用 `lib/aos_dirname.py`；細節見 [src/py README](../src/py/README.md)）。各段把它當現成的東西用，不重寫。
 
 ## 怎麼用這份 plan
 
