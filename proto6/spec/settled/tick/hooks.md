@@ -57,7 +57,7 @@
   - `before_all`、`after_all` 不屬於任何任務，所以 hook **拿不到** `AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`；tick 自己的環境裡剛好有（例如這個 tick 本身是別的 tick 的任務）也先拿掉，不會漏給 hook。反過來，一般任務拿不到 `AOS_HOOK_*`（繼承來的同樣拿掉）。`envs` 清空時一個都不放、inst 的 `envs` 最後疊上去，跟任務一樣。
   - 跑每一項（任務或 hook）前，`AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`、`AOS_HOOK_*` 一律先從繼承的環境拿掉，再放這一項該有的（第十批那條規則，第十七批多一個 `AOS_TASK_EXIT`）。
   - 之後若開 `before_task` 這類「某項之前」的掛點：在那一項之前被 tasks-blocked 擋下時，那一項相關的 hook 都不跑〔第十六批〕；沒開、沒實作。
-- **指示詞展開時機比照 `tasks`**（[B-620](../tick.md)「指示詞什麼時候展開」）：讀表時 `hooks` 本身、每個掛點（`after_task` 再多一層：每個任務 id 的陣列）、每一元素各解一層（所以 `hooks`、整串、整項都可以 `$ref`；這一步 `$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點）；`hooks` 裡其他鍵不解。值的內部（`argv` 元素的 `$fmt`、`envs` 裡的 `$env`…）跑到那一項、合併頂層預設後才照 inst 規則展開，這時 `$ref:""`／`#…` 指合併後的這一項。不用 `modules` 那種整個展開。
+- **指示詞展開時機比照 `tasks`**（[B-620](../tick.md)「指示詞什麼時候展開」）〔使用者 2026-10-01 第二十批：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」〕：開格時 `hooks` 本身、每個掛點（`after_task` 再多一層：每個任務 id 的陣列）、每一元素整項各解一層（所以 `hooks`、整串、整項都可以 `$ref`），再把元素裡的已知鍵（七個 inst 欄位、`id`、`kind`）整個展開；元素裡的 `_metainfo` 與陌生鍵、`hooks` 裡其他鍵不解。`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點、值是開格那一刻的（~~原本內部跑到那一項才展開、`#…` 指合併後的這一項~~）。
 
 ### 極簡檢查（開格前）
 
@@ -84,7 +84,7 @@
 - 紀錄〔使用者 2026-10-01 第十八批〕：**所有 hooks（含 `after_all`）跑完才收尾寫 `ended:true`**——tick 在跑 hook 時被殺，下一格的 `last/` 是 `ended:false`，`before_all` 的當機還原看得到。所以 hook 跑的時候本格紀錄還是 `ended:false`（還沒有 `exit`、`blocked_before`）；hook 讀本格紀錄（`current/`，展開 `$ref` 後）看得到 `ran`、失敗清單 `tasks`、前面 hook 裡結束碼不是 0 的（0 不記，第八批）。要知道這格有沒有被 tasks-blocked 擋下，看檔還在不在（整格最後才刪）或比 `ran` 與任務數。
 - **不看 tasks-blocked**：hook 之間不查它，hook 自己寫了也不擋下一個 hook；after_all 跑完後核心刪掉它（整格最後，[B-620](../tick.md)）。
 - **每項結束碼不是 0 的照實記（0 不記）、接著跑下一項**，跟任務一樣；**不影響 tick 的結束碼**（照舊回 0，[C-08](../conventions.md)）。
-- 某個 hook 跑到時展開失敗（合併後的 inst 不合規則）：跟任務一樣自然丟錯、tick 回 1；紀錄停在已寫的樣子（`ended:false`，hooks 只到前一項）。原本「tick 回 1 而紀錄寫著 `exit:0`」對不上的問題，隨第十八批「hooks 跑完才收尾」不再發生。
+- 某個 hook 跑到時合併後的 inst 不合規則（〔第二十批〕指示詞開格已展開完，剩 `_metainfo`、型別之類）：跟任務一樣自然丟錯、tick 回 1；紀錄停在已寫的樣子（`ended:false`，hooks 只到前一項）。原本「tick 回 1 而紀錄寫著 `exit:0`」對不上的問題，隨第十八批「hooks 跑完才收尾」不再發生。
 
 ### 紀錄
 

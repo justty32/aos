@@ -66,8 +66,8 @@
 - 順序只看 `tasks` 陣列位置；`tasks` 可以是空陣列，維持陣列。
 - 每項是 **inst 的超集**：一份 inst 加下面「每一項」表的欄位，也可以用整份 `$ref`。
 - 頂層可以放每一項的預設與 `modules`（下面「頂層」表）〔使用者 2026-10-01〕。跑到某一項時，頂層預設＋這一項淺層合併（項寫了的鍵整個蓋過，`envs` 也整包換），合併結果當一份獨立的 inst 展開：`cwd` 以工作資料夾為中心，其他欄位以解出的 cwd 為中心。頂層 `cwd` 不改 tick 自己的 cwd。
-- **指示詞展開時機**〔使用者 2026-10-01〕：讀表時只解到每一項那一層（整份、頂層七個預設欄位的值、`tasks`、陣列元素各解一層，頂層 `hooks` 同樣各層解一層（B-635），頂層其他鍵不解；頂層 `modules` 例外，讀表時整個展開〔使用者裁定 2026-10-01〕；`$ref` 以工作資料夾為中心，`$ref:""`／`#…` 指整份表）；值的內部跑到那一項、合併後才展開，這時 `$ref:""`／`#…` 指合併後的這一項。正本見 [B-620](../tick.md)「頂層預設」「指示詞什麼時候展開」；跟 daemon 設定檔的對照見 [C-11](../conventions.md)。
-- **`_metainfo` 可省**〔使用者裁定 2026-10-01〕：外層 `_metainfo` 不是必填，核心不看。每項的 `_metainfo` 照 inst（上面 P-201、[inst](../../base/inst.md)）的規則：可省，沒寫＝posix 第 1 版；寫了就照 inst 規則驗，但跑到那一項、合併頂層預設後才驗，驗不過跟其他「跑到某項展開失敗」一樣（自然丟錯、回 1，[B-620](../tick.md)「誰驗什麼」）。開格只做極簡檢查（有 `tasks` 陣列、每項解一層後是物件、合併頂層預設後有 `argv`、`modules` 展開得了，[B-620](../tick.md)）。
+- **指示詞展開時機**〔使用者 2026-10-01 第二十批：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」〕：開格時整份展開（整份、頂層七個預設欄位、`tasks`／`hooks` 各掛點／`modules["tasks-blocked"].insts` 每一元素裡的已知鍵〔七個 inst 欄位、`id`、`kind`〕、`modules`）；頂層與每項的陌生鍵、`_metainfo` 不解。選項物件的 `$val` 也展開。`$ref` 以工作資料夾為中心，`$ref:""`／`#…` 一律指整份表（整項 `$ref` 引進來的元素裡指被引用的檔），不再指合併後的這一項；值是開格那一刻的。展開失敗＝`bad_table`。跑到某一項時只合併頂層預設、照 inst 規則驗。正本見 [B-620](../tick.md)「指示詞什麼時候展開」；跟 daemon 設定檔的對照見 [C-11](../conventions.md)。
+- **`_metainfo` 可省**〔使用者裁定 2026-10-01〕：外層 `_metainfo` 不是必填，核心不看。每項的 `_metainfo` 照 inst（上面 P-201、[inst](../../base/inst.md)）的規則：可省，沒寫＝posix 第 1 版；寫了就照 inst 規則驗，但跑到那一項、合併頂層預設後才驗，驗不過自然丟錯、回 1（[B-620](../tick.md)「誰驗什麼」）。開格只做極簡檢查（有 `tasks` 陣列、每項整項解一層後是物件、合併頂層預設後有 `argv`、要展開的鍵都展開得了，[B-620](../tick.md)）。
 - 核心只看合併後的 inst 部分與 `id`（`tasks` 與 `hooks` 各掛點的每一項都是）；不看 `kind`、`modules`。順序、類別與讀表檢查以 [B-620](../tick.md) 為正本。
 
 頂層：
@@ -77,7 +77,7 @@
 | `_metainfo` | 可省〔使用者裁定 2026-10-01〕；整份表的格式標記（`aos-tasks` 第 1 版），核心不看；不是預設 |
 | `tasks` | 必填，陣列 |
 | `argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit` | 可省；每一項的預設，格式照 inst。項自己寫了就整個蓋過〔使用者 2026-10-01〕 |
-| `modules` | 可省；tick 模組的設定，一個模組一個鍵，比照 daemon 設定檔的 `modules`（[P-120](daemon/core.md)）。目前認 `tasks_blocked`（P-214，第十六批；它例外：展開時機比照 `hooks.after_all`）；其他鍵核心照收不理、型別不查、不當預設合併〔使用者 2026-10-01〕。讀表時整個展開指示詞（跟 daemon 設定檔一致；`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點），展開失敗＝`bad_table`、回 1〔使用者裁定 2026-10-01〕 |
+| `modules` | 可省；tick 模組的設定，一個模組一個鍵，比照 daemon 設定檔的 `modules`（[P-120](daemon/core.md)）。目前認 `tasks-blocked`（P-214，第十六批；〔第二十批〕由 `tasks_blocked` 改名，不再是展開時機的例外）；其他鍵核心照收不理、型別不查、不當預設合併〔使用者 2026-10-01〕。讀表時整個展開指示詞（跟 daemon 設定檔一致；`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點），展開失敗＝`bad_table`、回 1〔使用者裁定 2026-10-01〕 |
 
 頂層的 `id`、`kind` 不是預設；頂層其他鍵當陌生鍵忽略。
 
@@ -94,7 +94,7 @@
 | 欄位 | 約束 |
 |---|---|
 | `id` | 可省；寫了是共用 `ID`。沒寫時，這一項的 id＝它在 `tasks` 陣列的位置轉字串（`"0"`、`"3"`）。紀錄、`AOS_TASK_ID`、`blocked_before` 都用它。默認不重複，核心不查 |
-| `_metainfo` | 可省，照 inst 規則（沒寫＝posix 第 1 版）；跑到這一項才驗，驗不過＝跑到某項展開失敗〔使用者裁定 2026-10-01〕 |
+| `_metainfo` | 可省，照 inst 規則（沒寫＝posix 第 1 版）；跑到這一項才驗（讀表時不解、不看），驗不過自然丟錯、回 1〔使用者裁定 2026-10-01〕 |
 | `kind` | 可省。`system`、`kernel`、`agent`、`custom`；〔暫定〕或自訂的「類別.名稱」：類別限 `kernel`／`agent`／`custom`，名稱是小寫英數與 `_`、`-`（例如 `agent.review`）。`system` 標記系統級任務（[B-626](../tick.md)），只是標記，不驗順序；`system.x` 不接受（schema 擋，核心不擋） |
 
 **不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號只能在 daemon 設定檔做（帳號模組；`aos-as` P-212 2026-10-01 第十三批搬暫緩區）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-tick-check-task`（P-204、[B-621](../deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)），組改由存檔點劃分（P-205、[B-630](../deferred/git.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
@@ -104,7 +104,7 @@
 範例：
 
 - 正例：[最小](../../protocol/examples/tick/tasks.minimal.valid.json)（登記普通程式）、[沒寫 `id` 與 `kind`](../../protocol/examples/tick/tasks.no-id.valid.json)（id 用位置字串）、[包 `aos-as`](../../protocol/examples/tick/tasks.as.valid.json)（〔暫緩，P-212〕argv 包 `aos-as`；核心只當普通 argv）、[陌生鍵](../../protocol/examples/tick/tasks.unknown-key.valid.json)（帶 `group`、`needs` 照收）、〔暫緩，第十八批：範本 B-629 與裡面的系統級任務全部搬暫緩區；兩份範例照留、照樣過 schema，只當舊範本的紀錄〕[標準任務表範本](../../protocol/examples/tick/tasks.template.valid.json)（照 [B-629](../deferred/template.md) 沒有 git 版）、[有 git 版範本](../../protocol/examples/tick/tasks.template-git.valid.json)（`aos-git` 開格、存檔點、收尾）、[`methods`](../../protocol/examples/tick/tasks.methods.valid.json) 與 [`methods` 裡重複](../../protocol/examples/tick/tasks.methods-duplicate.valid.json)（都當陌生鍵照收）、[自訂種類](../../protocol/examples/tick/tasks.custom-kind.valid.json)（`agent.review`）。
-- 指示詞的正例：[整項 `$ref`](../../protocol/examples/tick/tasks.reference.valid.json)（讀表時解一層）、[`argv` 帶指示詞](../../protocol/examples/tick/tasks.directive.valid.json)（跑到那一項才展開）。
+- 指示詞的正例：[整項 `$ref`](../../protocol/examples/tick/tasks.reference.valid.json)（整項解一層後再展開裡面的已知鍵）、[`argv` 帶指示詞](../../protocol/examples/tick/tasks.directive.valid.json)（跑到那一項才展開）。
 - 頂層 `hooks`〔使用者 2026-10-01 第六批〕：正例 [`after_all` 一串](../../protocol/examples/tick/tasks.hooks.valid.json)（吃頂層 `envs`、一項沒寫 id、一項自己蓋 `envs`）；正例 [四個掛點都寫](../../protocol/examples/tick/tasks.hooks-points.valid.json)（含用 git 的寫法）；反例 [`after_task` 寫成陣列](../../protocol/examples/tick/tasks.hooks-after-task-array.invalid.json)、[`after_all` 某項沒 `argv`、頂層也沒有](../../protocol/examples/tick/tasks.hooks-no-argv.invalid.json)、[`after_all` 不是陣列](../../protocol/examples/tick/tasks.hooks-not-array.invalid.json)。
 - 頂層預設與 `modules` 的正例〔使用者 2026-10-01〕：[頂層預設](../../protocol/examples/tick/tasks.defaults.valid.json)（B-620 的例子：頂層 `cwd`、`envs`、`stdout`，一項自己寫 cwd、一項整項 `$ref`）、[頂層給 `argv`](../../protocol/examples/tick/tasks.defaults-argv.valid.json)（項只寫 `id`）、[頂層 `modules`](../../protocol/examples/tick/tasks.modules.valid.json)（照收不理）、[沒寫 `_metainfo`](../../protocol/examples/tick/tasks.no-metainfo.valid.json)（外層與某項都省）〔使用者裁定 2026-10-01〕。
 - 反例：[自訂 `system.x`](../../protocol/examples/tick/tasks.custom-kind.invalid.json)、[某項沒 `argv`、頂層也沒有](../../protocol/examples/tick/tasks.no-argv.invalid.json)〔使用者 2026-10-01〕。
@@ -146,7 +146,7 @@
 | `no_tasks` | 目標是資料夾，底下沒有 `.aos/tasks.json` | 1 |
 | `busy` | 拿不到 `.aos/tick.lock`：同資料夾上一格還沒跑完（[B-602](../tick.md)） | 0 |
 | `bad_table` | 任務表沒過極簡檢查（[B-620](../tick.md)） | 1 |
-| `exec_failed` | 某項沒跑成：mkdir／cwd／重導向失敗（記 `exit:125`）、沒執行權（126）、找不到程式（127）；附那一項的 id（hook 寫成 `<掛點>/<id>`，`after_task` 是 `after_task/<任務 id>/<id>`；`modules.tasks_blocked` 是 `tasks_blocked/<id>`） | 不影響，照常跑下一項 |
+| `exec_failed` | 某項沒跑成：mkdir／cwd／重導向失敗（記 `exit:125`）、沒執行權（126）、找不到程式（127）；附那一項的 id（hook 寫成 `<掛點>/<id>`，`after_task` 是 `after_task/<任務 id>/<id>`；`modules["tasks-blocked"]` 是 `tasks_blocked/<id>`） | 不影響，照常跑下一項 |
 
 舊碼表的 `config_invalid`、`user_mismatch`、`record_unreadable`、`record_unwritable` 不再有；它們的來由見 [tick 暫緩區](../deferred/tick.md)。
 
@@ -317,25 +317,25 @@ schema 管得到的：`exit` 只收 0、`ran` 必填、`ended` 跟 `exit`／`blo
 
 範例：正例 [跑到一半](../../protocol/examples/tick/tick-record.minimal.valid.json)、[全部成功](../../protocol/examples/tick/tick-record.done.valid.json)、[被 tasks-blocked 擋下](../../protocol/examples/tick/tick-record.blocked-exit-0.valid.json)、[第一項就被擋](../../protocol/examples/tick/tick-record.blocked-first.valid.json)、[有任務失敗照樣回 0](../../protocol/examples/tick/tick-record.exit-0-with-failure.valid.json)、[沒寫 id 的位置字串](../../protocol/examples/tick/tick-record.position-id.valid.json)、[擋下後照跑 hooks](../../protocol/examples/tick/tick-record.hooks.valid.json)（B-635）；反例 [有 hooks 而且四個掛點都記到](../../protocol/examples/tick/tick-record.hooks-points.valid.json)、[跑到一半就有 hooks](../../protocol/examples/tick/tick-record.hooks-running.valid.json)；反例 [跟任務有關的 hook 沒帶 task_index](../../protocol/examples/tick/tick-record.hooks-task-no-index.invalid.json)、 [同一項同時有 exit 與 signal](../../protocol/examples/tick/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](../../protocol/examples/tick/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 blocked_before](../../protocol/examples/tick/tick-record.blocked-not-ended.invalid.json)、[整格回 1](../../protocol/examples/tick/tick-record.blocked-exit-1.invalid.json)、[整格回 2](../../protocol/examples/tick/tick-record.exit-2.invalid.json)、[整格回 3](../../protocol/examples/tick/tick-record.exit-3.invalid.json)；[記了結束碼 0](../../protocol/examples/tick/tick-record.zero-recorded.invalid.json)、[hook 記了結束碼 0](../../protocol/examples/tick/tick-record.hook-zero-recorded.invalid.json)、[沒有 ran](../../protocol/examples/tick/tick-record.no-ran.invalid.json)、[沒有 index](../../protocol/examples/tick/tick-record.no-index.invalid.json)；`record.json` 本體：正例 [開格時](../../protocol/examples/tick/tick-record-file.open.valid.json)、[有 hooks 而且被擋下](../../protocol/examples/tick/tick-record-file.hooks.valid.json)、[跑到一半就有 hooks](../../protocol/examples/tick/tick-record-file.hooks-running.valid.json)，反例 [ran 直接寫數字](../../protocol/examples/tick/tick-record-file.inline-ran.invalid.json)、[$ref 指錯檔](../../protocol/examples/tick/tick-record-file.wrong-ref.invalid.json)；補查反例 [index 不小於 ran](../../protocol/examples/tick/tick-record.index-not-below-ran.invalid.json)、[blocked_before 不是 id](../../protocol/examples/tick/tick-record.blocked-not-id.invalid.json)。
 
-## P-214．`modules.tasks_blocked`〔使用者 2026-10-01 第十六批〕
+## P-214．tick 模組 `tasks-blocked`〔使用者 2026-10-01 第十六批；第二十批改名〕
 
-行為正本：[B-636](../tick/tasks-blocked.md)。本條只定寫法。
+行為正本：[B-636](../tick/tasks-blocked.md)。本條只定寫法。〔使用者 2026-10-01 第二十批：「模組的鍵改成 tasks-blocked」〕原本叫 `tasks_blocked`，改成跟檔名一樣；寫舊名就是陌生的模組鍵，不掛。
 
 ```json
 {"tasks": [...],
- "modules": {"tasks_blocked": {"insts": [
+ "modules": {"tasks-blocked": {"insts": [
    {"id": "notify", "argv": ["sh", "-c", "echo \"$AOS_TASK_ID 被擋下\" >> blocked.log"]},
    {"$ref": "clear-if-ok.json"}]}}}
 ```
 
 | 位置 | 約束 |
 |---|---|
-| `modules.tasks_blocked` | 物件（可以是 `$ref`，讀表時解一層）；有寫就掛上。不是物件＝`bad_table` |
-| `modules.tasks_blocked.insts` | 必填；陣列（可以是 `$ref`，解一層）；可以是空陣列。不是陣列、沒寫＝`bad_table` |
-| `insts` 每一項 | 寫法同 `tasks` 每一項（P-202）：inst 物件或整項 `$ref`，合併頂層預設後要有 `argv`；`id` 可省（沒寫＝它在 `insts` 的位置轉字串，只用在 `exec_failed: tasks_blocked/<id>`）；內部跑到時才展開 |
+| `modules["tasks-blocked"]` | 物件（可以是 `$ref`）；有寫就掛上。不是物件＝`bad_table`。裡面的陌生鍵不解 |
+| `modules["tasks-blocked"].insts` | 必填；陣列（可以是 `$ref`）；可以是空陣列。不是陣列、沒寫＝`bad_table` |
+| `insts` 每一項 | 寫法與展開同 `tasks` 每一項（P-202）：inst 物件或整項 `$ref`，已知的鍵開格就展開、`_metainfo` 與陌生鍵不解；合併頂層預設後要有 `argv`；`id` 可省（沒寫＝它在 `insts` 的位置轉字串，只用在 `exec_failed: tasks-blocked/<id>`） |
 
 - 環境變數照任務（P-203）：`AOS_TASK_ID`、`AOS_TASK_INDEX`＝被擋下的那一項，`AOS_TICK_CWD`；沒有 `AOS_HOOK_*`。
 - 結束碼不記進紀錄（P-213 的 `ran`、`tasks`、`hooks` 都不動）。
-- schema：[tick-tasks](../../protocol/schemas/tick-tasks.schema.json) 的 `modules.tasks_blocked`。範例：正例 [掛了 tasks_blocked](../../protocol/examples/tick/tasks.tasks-blocked.valid.json)；反例 [沒有 insts](../../protocol/examples/tick/tasks.tasks-blocked-no-insts.invalid.json)、[某項缺 argv](../../protocol/examples/tick/tasks.tasks-blocked-no-argv.invalid.json)。
+- schema：[tick-tasks](../../protocol/schemas/tick-tasks.schema.json) 的 `modules["tasks-blocked"]`。範例：正例 [掛了 tasks-blocked](../../protocol/examples/tick/tasks.tasks-blocked.valid.json)；反例 [沒有 insts](../../protocol/examples/tick/tasks.tasks-blocked-no-insts.invalid.json)、[某項缺 argv](../../protocol/examples/tick/tasks.tasks-blocked-no-argv.invalid.json)。
 
-依據：使用者 2026-10-01 第十六批（「1.modules底下 2.對 3.b 4.對，不記錄進記錄，非0沒影響。 5.對」）；寫法與展開時機 AI 隊定（比照 `hooks.after_all`）。
+依據：使用者 2026-10-01 第十六批（「1.modules底下 2.對 3.b 4.對，不記錄進記錄，非0沒影響。 5.對」）；第二十批（改名、整份展開）。

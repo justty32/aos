@@ -158,15 +158,15 @@ class AfterAll(HooksCase):
         self.assertTrue(self.exists("one.ran") and self.exists("two.ran"))
         self.assertEqual([h["id"] for h in self.rec()["hooks"]["after_all"]], ["one", "two"])
 
-    def test_interior_resolved_when_run_against_merged_item(self):
-        # 值的內部跑到時才展開，`#…` 指合併後的這一項（跟 tasks 一樣），不是整份 tasks.json
+    def test_interior_expanded_at_open_against_whole_table(self):
+        # 第二十批：hook 的內部也開格就展開，`#…` 指整份 tasks.json（不是合併後的這一項；hook 裡的陌生鍵 k 不算）
         self.put({"envs": {"X": "top"}, "tasks": [sh("a", "true")], "k": "整份表的",
                   "hooks": {"after_all": [{"argv": ["sh", "-c", {"$fmt": {"$val": "echo ${v} $X > h.out",
                                                                             "v": {"$ref": "#/k"}}}],
                                            "k": "這一項的"}]}})
         r = self.tick()
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertEqual(self.read("h.out"), "這一項的 top\n")
+        self.assertEqual(self.read("h.out"), "整份表的 top\n")
 
     def test_into_last(self):
         self.hooks([sh("h", "exit 2")])

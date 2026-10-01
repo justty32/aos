@@ -128,7 +128,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - **`kind`**：可以不寫；只是標記（B-626），核心不看。
 - **一個 module 一項任務**：產生請求、處理結果都在該項內做；〔暫緩〕要經佇列送的訊息交給系統級任務 `aos-mq post`（[B-624](deferred/mq.md)）。檔案收件與投件是任務表上的普通任務，aos 不管（[B-623](deferred/mq.md)、[B-624](deferred/mq.md)）。
 - 資源 module、`aos-clean`、收信程式都是同一張表上的項目，不分 pre／post 掛勾。有權限者也能直接跑這些程式；在 tick 外跑算外部世界（B-602）。資源 module 的啟用與父層限制見 [scheduling/admission](../scheduling/admission.md)。
-- 開格讀過表之後、到跑到某項展開之前，假設檔案不會變，不為這種情況另做設計。
+- 開格讀過表之後就不再讀：〔第二十批〕指示詞在開格時全部展開完，之後被引用的檔怎麼變都不影響這一格。
 - **`tasks` 維持陣列**；頂層除了 `tasks` 還可以放每一項的預設（下面「頂層預設」）、`modules` 與外掛掛點 `hooks`（[B-635](tick/hooks.md)）。
 
 ### 頂層預設〔使用者 2026-10-01〕
@@ -161,30 +161,39 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 ### 頂層 `modules`〔使用者 2026-10-01〕
 
 - 頂層可選 `modules` 鍵，比照 daemon 設定檔的 `modules`（[B-640](daemon/core.md)、[P-120](protocol/daemon/core.md)）：放 tick 模組的設定，一個模組一個鍵。
-- 目前 tick 沒有任何模組：核心照收不理，型別也不查。外掛掛點 `hooks` 不是模組，是跟 `tasks` 同層的頂層鍵（[B-635](tick/hooks.md)；使用者 2026-10-01 第六批：「就不讓他當模組了，直接讓他變頂層key」），寫在 `modules.hooks` 底下不會跑。
+- 目前 tick 只認一個模組 `tasks-blocked`（[B-636](tick/tasks-blocked.md)；〔第二十批〕由 `tasks_blocked` 改名，跟檔名一樣）；其他鍵照收不理，型別也不查。外掛掛點 `hooks` 不是模組，是跟 `tasks` 同層的頂層鍵（[B-635](tick/hooks.md)；使用者 2026-10-01 第六批：「就不讓他當模組了，直接讓他變頂層key」），寫在 `modules.hooks` 底下不會跑。
 - 它不是 inst 欄位，**不當任務預設值合併**。
-- **讀表時整個展開指示詞**〔使用者裁定 2026-10-01〕：跟 daemon 設定檔一樣一路走進物件與陣列（`$opt` 物件原樣留），不是只解一層。`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點（跟讀表其他部分一致）。展開失敗＝`bad_table`、回 1。~~原本只解一層、內部留給模組~~（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）。
+- **讀表時整個展開指示詞**〔使用者裁定 2026-10-01；第二十批起整份 tasks.json 都這樣，`tasks-blocked` 不再例外〕：跟 daemon 設定檔一樣一路走進物件與陣列，不是只解一層。`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點（跟讀表其他部分一致）。展開失敗＝`bad_table`、回 1。~~原本只解一層、內部留給模組~~（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）。
 
-### 指示詞什麼時候展開〔使用者 2026-10-01〕
+### 指示詞什麼時候展開〔使用者 2026-10-01 第二十批：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」〕
 
-使用者原話：「展開指示詞的時候不整份解好，而是只解到tasks。」
+**開格時整份展開**，跟 daemon 設定檔的展開同一做法（一路走進物件與陣列）；不再「只解到每一項那一層、內部跑到才解」（~~第二批原話：「展開指示詞的時候不整份解好，而是只解到tasks。」~~ 第二十批推翻）。用 `Document(表的路徑, 整份)`、中心路徑＝工作資料夾。
 
-- **讀表時（開格）只解到每一項那一層**：整份文件是指示詞就先解；頂層七個預設欄位的值各解一層（跟著 `$ref`／`$fmt`／`$env` 走到不是指示詞為止，選項物件 `$opt` 原樣留）；`modules` 整個展開（上一節）；頂層其他鍵（陌生鍵、`_metainfo`）不解，免得寫壞的陌生鍵害整格 `bad_table`；`tasks` 解成陣列（例如 `"tasks":{"$ref":"tasks.d/list.json"}`）；陣列每一元素解一層成物件（整項 `$ref`）；頂層 `hooks` 照 `tasks` 的方式：`hooks`、`hooks.after_all`、它的每一元素各解一層（[B-635](tick/hooks.md)）。這一步的 `$ref` 相對檔名以工作資料夾為中心，`$ref:""`／`#…` 指整份 tasks.json。
-- **值的內部讀表時不解**：例如 `envs` 物件裡某個值的 `$env`、`argv` 元素的 `$fmt`、項裡 `cwd` 的 `$opt mkdir`。
-- **跑到某一項時**：先合併（頂層預設＋這一項，項蓋過），合併結果當成一份獨立的記憶體 inst，照 [inst](../base/inst.md) 規則展開：`cwd` 先解、以工作資料夾為中心；其他欄位以解出的 cwd 為中心。
-- 合併後，這一項裡的 `$ref:""`／`#…` 指**合併後的這一項**；不是整份 tasks.json，也不是預設值原本來自的那個檔。
+- **整個展開的**：整份文件本身（是指示詞就先解）；頂層七個預設欄位；`tasks`、`hooks` 各掛點（`before_all`、`after_task.<id>`、`after_every_task`、`after_all`）與 `modules["tasks-blocked"].insts` 的每一元素——元素整項解一層（整項 `$ref`）後，裡面**已知的鍵**（七個 inst 欄位、`id`、`kind`）整個展開；`modules`（含 `tasks-blocked`，不再例外）。
+- **不解、原樣留的**：頂層的陌生鍵與 `_metainfo`；每一項裡的 `_metainfo`（留給 inst 規則驗）與陌生鍵（例如 `group`、`needs`、`methods`）；`hooks` 裡不認得的掛點。所以陌生鍵裡寫壞的指示詞不影響開格。
+- **選項物件**（`$opt`）：`$opt` 原樣留，`$val` 也整個展開；展開完只剩選項物件，沒有取值指示詞。
+- **展開失敗**（任何一個要展開的鍵）＝`bad_table`、回 1、不開格（不換紀錄、不加 `seq`，一項也不跑）。
+- **跑到某一項時**：頂層預設＋這一項淺層合併（項蓋過），交給 inst 規則（[inst](../base/inst.md)）——這時已經沒有指示詞可解，只剩路徑換算（`cwd` 以工作資料夾為中心、其他路徑以解出的 cwd 為中心）、選項物件、`_metainfo` 與型別檢查。
+
+**第二十批改了的語意**：
+
+- `$ref:""`／`#…` 一律指整份 tasks.json（整項 `$ref` 引進來的元素裡則指被引用的那份檔），**不再指「合併後的這一項」**。
+- `$ref` 的相對檔名一律以工作資料夾為準，**不以那一項的 cwd 為準**。
+- `$env`／`$fmt`／`$ref` 讀到的是**開格那一刻**的值：前面的任務改了被引用的檔或環境，後面的項看不到。
+- 讀不到的 `$ref`（例如指向前面任務才會產生的檔）開格就是 `bad_table`。
+- 「跑到某項時才展開失敗」不再發生；跑到時還會出錯的只剩 inst 規則本身（`_metainfo` 不對、型別不對…），照下面「誰驗什麼」自然丟錯。
 
 ### 讀表：極簡檢查
 
-開格時讀一次表（照上面「指示詞什麼時候展開」解到每一項那一層），**只查這幾件**：
+開格時讀一次表（照上面「指示詞什麼時候展開」整份展開），**只查這幾件**：
 
 - 讀得到、是合法 JSON；
 - 頂層是物件，而且有 `tasks` 陣列（可以是空的）；
-- 每一項（解一層後）是物件；
+- 每一項（整項解一層後）是物件；
 - 每一項合併頂層預設後有 `argv`：項自己有，或頂層有。〔使用者 2026-10-01〕
 - 有寫頂層 `hooks` 時：它是物件；`before_all`、`after_every_task`、`after_all` 有寫時是陣列，`after_task` 有寫時是物件、每個值是陣列；每項是物件、合併頂層預設後有 `argv`（[B-635](tick/hooks.md)）。
 
-讀表時那一層指示詞解不開、`modules` 整個展開時失敗，也算不過。
+任何一個要展開的鍵展開失敗，也算不過〔第二十批〕。
 
 **不過**：stderr 印一行 `bad_table: …`、回 1。這不算開過一格：不換紀錄、不加 `seq`，一項也不跑。
 
@@ -244,7 +253,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | 誰刪 | **核心，整格最後**：`after_all` 跑完、回結束碼之前（〔AI 隊定、可改〕被擋下的格與最後才出現的〔例如 hook 寫的〕都刪；開格時不刪；是資料夾就整個刪） | **只有人手**，修好後刪；aos 不自動刪 |
 | daemon | 不看它 | 現行 daemon 核心照常叫，由 `aos-tick` 自己擋；舊設計是有它就不開格（[B-607](deferred/daemon/registration.md)，在暫緩區） |
 
-- **掛了 tick 模組 `modules.tasks_blocked`**（[B-636](tick/tasks-blocked.md)，第十六批）時，看到 tasks-blocked 不直接擋下：先依序跑那一串 inst（拿被擋下那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`、碼不記），跑完再看一次，檔被刪了就放行這一項與後面的，還在才擋下。
+- **掛了 tick 模組 `modules["tasks-blocked"]`**（[B-636](tick/tasks-blocked.md)，第十六批）時，看到 tasks-blocked 不直接擋下：先依序跑那一串 inst（拿被擋下那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`、碼不記），跑完再看一次，檔被刪了就放行這一項與後面的，還在才擋下。
 - **開格時不刪**：格與格之間有人放的 tasks-blocked，下一格第一項之前就擋下（`ran:0`、`blocked_before` 是第一項），整格最後再刪。
 - **跟 hooks**：hook 之間不看 tasks-blocked（hook 寫的也不擋下一個 hook，只擋下一項任務），整格最後一樣刪。被擋下、沒跑的任務不觸發 `after_task`、`after_every_task`；任務跑完接著跑它的 hook 時不看 tasks-blocked〔第十六批〕。`before_all` 在第一項的檢查之前跑，它寫的 tasks-blocked 會擋下第一項〔第十七批〕。
 - 〔暫緩，`aos-git` 第十七批搬暫緩區〕**有 git 時，tasks-blocked 等於這格作廢**：排在後面的 `aos-git close` 不跑、不提交，下一格 `aos-git open` 把 aos 範圍還原（[B-630](deferred/git.md)）。想提早結束又保住結果的任務，別建它，改讓後面的項讀紀錄自己跳過。〔使用者方向 2026-09-30，納入 cgroup 與 git 疑-1〕
@@ -253,7 +262,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 兩個檔都 ignored。檔名、stderr 細節是〔建議預設，未拍板〕；兩種都回 0 照 [C-08](conventions.md)。
 
-使用者 2026-10-01 第十六批：「我們可以弄一個tick的module，用於設定讀取tasks-blocked的時候，要做的事情，類似hook，但是是在發現有tasks-blocked這個檔案之後，要做的insts」——已做成 tick 模組 `modules.tasks_blocked`（[B-636](tick/tasks-blocked.md)）。〔未來方向，記錄用、現在不做〕更早第五批記過的方向（停格檔變成特定 JSON、`aos-tick-check-task-continue` 檢查與改寫它）由 tick 那側來看已被第十八批定案取代（tick 不讀內容）；內容格式要怎麼用是 `tasks_blocked` insts 的事；會建停格檔的普通程式 `aos-tick-check-task`（[B-621](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）第十六批搬暫緩區。
+使用者 2026-10-01 第十六批：「我們可以弄一個tick的module，用於設定讀取tasks-blocked的時候，要做的事情，類似hook，但是是在發現有tasks-blocked這個檔案之後，要做的insts」——已做成 tick 模組 `modules["tasks-blocked"]`（[B-636](tick/tasks-blocked.md)）。〔未來方向，記錄用、現在不做〕更早第五批記過的方向（停格檔變成特定 JSON、`aos-tick-check-task-continue` 檢查與改寫它）由 tick 那側來看已被第十八批定案取代（tick 不讀內容）；內容格式要怎麼用是 `tasks-blocked` insts 的事；會建停格檔的普通程式 `aos-tick-check-task`（[B-621](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）第十六批搬暫緩區。
 
 ### 任務的帳號
 

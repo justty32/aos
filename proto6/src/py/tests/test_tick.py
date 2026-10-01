@@ -400,9 +400,10 @@ class Step4Check(TickCase):
 
 
 class Step4Defaults(TickCase):
-    """使用者 2026-10-01（待統一更新 spec）：tasks.json 頂層可放 inst 的七個欄位當每一項的預設；淺層合併、項蓋過；
-    頂層 cwd 不改 tick 自己的 cwd、相對以工作資料夾為起點；讀表時只解到 tasks 這層，每項內部跑到時才解；
-    合併後的 `$ref:""`／`#…` 指合併後的這一項。頂層 `_metainfo`、`id`、`kind`、`modules` 不當預設。"""
+    """使用者 2026-10-01：tasks.json 頂層可放 inst 的七個欄位當每一項的預設；淺層合併、項蓋過；
+    頂層 cwd 不改 tick 自己的 cwd、相對以工作資料夾為起點。頂層 `_metainfo`、`id`、`kind`、`modules` 不當預設。
+    第二十批：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」——開格時已知的鍵整個展開，`$ref:""`／`#…` 指整份
+    tasks.json、相對檔名以工作資料夾為準、值是開格那一刻的；展開失敗＝bad_table、不開格。"""
 
     def put(self, doc):
         self.write(".aos/tasks.json", json.dumps(doc, ensure_ascii=False))
@@ -459,28 +460,69 @@ class Step4Defaults(TickCase):
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(self.read("ids"), "a\n1\nc\n")
 
-    def test_merged_ref_points_to_merged_item(self):
-        # 合併後 `#/id` 指合併後的這一項：同一個頂層預設，每項解出自己的 id
-        self.put({"envs": {"WHO": {"$ref": "#/id"}}, "tasks": [
+    def test_ref_points_to_whole_table(self):
+        # 第二十批：`#/id` 指整份 tasks.json 的頂層 id，不是合併後的這一項；頂層 id 不當預設
+        self.put({"id": "TOP", "envs": {"WHO": {"$ref": "#/id"}}, "tasks": [
             sh("a", 'echo "$WHO" >> who'), sh("b", 'echo "$WHO" >> who')]})
         r = self.tick()
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertEqual(self.read("who"), "a\nb\n")
+        self.assertEqual(self.read("who"), "TOP\nTOP\n")
 
-    def test_item_interior_resolved_only_when_run(self):
-        # 第二項內部有壞 $env／$ref：讀表時不解，第一項建了停格檔、第二項沒跑到，整格回 0
-        broken = {"id": "x", "argv": ["true"], "envs": {"X": {"$env": "AOSTEST_SURELY_NOT_SET"}},
-                  "stdout": {"$ref": "nope.json"}}
-        self.put({"stderr": {"$ref": "nope.json"}, "tasks": [sh("a", "echo > .aos/tick/tasks-blocked")]})
-        self.assertEqual(self.tick().returncode, 1)              # 對照：頂層預設的值本身讀表時解一層
-        self.put({"tasks": [sh("a", "echo > .aos/tick/tasks-blocked"), broken]})
+    def test_ref_relative_to_work_dir_not_item_cwd(self):
+        # 相對檔名以工作資料夾為準；那一項的 cwd 是 sub/ 也一樣（sub/ 底下同名檔不會被讀）
+        self.write("v.json", json.dumps("from-top"))
+        self.write("sub/v.json", json.dumps("from-sub"))
+        self.put({"tasks": [sh("a", 'echo "$V" > v.out', cwd="sub", envs={"V": {"$ref": "v.json"}})]})
         r = self.tick()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.rec()["ran"], self.rec()["tasks"]), (1, []))
-        self.put({"tasks": [broken]})                             # 對照：跑到時才解，解不開自然丟錯回 1
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("sub/v.out"), "from-top\n")
+
+    def test_item_interior_expanded_at_open(self):
+        # 第二項內部有壞 $env／$ref：開格就展開，bad_table、回 1、不開格（第一項也沒跑）
+        broken = {"id": "x", "argv": ["true"], "envs": {"X": {"$env": "AOSTEST_SURELY_NOT_SET"}}}
+        for b in (broken, dict(broken, envs={}, stdout={"$ref": "nope.json"}),
+                  {"id": "x", "argv": ["sh", "-c", {"$fmt": {"$val": "${v}", "v": {"$ref": "#/nope"}}}]}):
+            self.put({"tasks": [sh("a", "touch a.ran"), b]})
+            r = self.tick()
+            self.assertEqual(r.returncode, 1, b)
+            self.assertIn("bad_table:", r.stderr)
+        self.assertFalse(self.exists("a.ran"))
+        self.assertFalse(self.exists(".aos/tick/current"))
+
+    def test_values_fixed_at_open(self):
+        # 值是開格那一刻的：前面的任務改了被 $ref 的檔，後面的項讀到的還是舊的
+        self.write("v.json", json.dumps("old"))
+        self.put({"tasks": [sh("a", "echo '\"new\"' > v.json"),
+                            sh("b", 'echo "$V" > v.out', envs={"V": {"$ref": "v.json"}})]})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("v.out"), "old\n")
+        # 指向前面任務才會產生的檔：開格就 bad_table
+        self.put({"tasks": [sh("a", "echo 1 > later.json"),
+                            sh("b", "true", envs={"V": {"$ref": "later.json"}})]})
         r = self.tick()
         self.assertEqual(r.returncode, 1)
-        self.assertIn("Error", r.stderr)
+        self.assertIn("bad_table:", r.stderr)
+        self.assertFalse(self.exists("later.json"))
+
+    def test_options_kept_and_val_expanded(self):
+        # 選項物件照用：`$val` 裡的指示詞開格就展開，`$opt` 原樣交給 inst 規則
+        self.put({"dir": "made", "tasks": [sh("a", "pwd > here", cwd={"$opt": "mkdir", "$val": {"$ref": "#/dir"}})]})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("made/here"), os.path.join(self.d, "made") + "\n")
+
+    def test_unknown_keys_and_metainfo_not_expanded(self):
+        # 第二十批「除了陌生鍵和_metainfo」：頂層與每項的陌生鍵、頂層 _metainfo 不解，寫壞的指示詞不影響開格
+        bad = {"$ref": "nope.json"}
+        self.put({"_metainfo": bad, "junk": bad, "hooks": {"before_task": bad},
+                  "tasks": [sh("a", "touch a.ran", group=bad, needs=bad)]})
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertTrue(self.exists("a.ran"))
+        import aos_tick_table
+        tbl = aos_tick_table.check_table({"tasks": [{"argv": ["true"], "x": bad, "_metainfo": bad}]}, self.d)
+        self.assertEqual((tbl.items[0]["x"], tbl.items[0]["_metainfo"]), (bad, bad))
 
     def test_top_metainfo_id_kind_modules_not_defaults(self):
         self.put({"_metainfo": {"_type": "nope", "_version": 9}, "id": "TOP", "kind": "x",
@@ -599,14 +641,14 @@ class Step6TasksBlocked(TickCase):
 
 
 class TasksBlockedModule(TickCase):
-    """B-636 `modules.tasks_blocked.insts`（使用者 2026-10-01 第十六批）：某一項之前發現 tasks-blocked 時先跑那一串，
+    """B-636 `modules["tasks-blocked"].insts`（使用者 2026-10-01 第十六批）：某一項之前發現 tasks-blocked 時先跑那一串，
     跑完再看一次：檔被刪了就放行這一項與後面的，還在就照預設擋下；結束碼不記、非 0 沒影響；沒掛＝預設行為。"""
 
     BLOCK = ".aos/tick/tasks-blocked"
 
     def put(self, tasks, insts):
         doc = table(*tasks)
-        doc["modules"] = {"tasks_blocked": {"insts": insts}}
+        doc["modules"] = {"tasks-blocked": {"insts": insts}}
         self.write(".aos/tasks.json", json.dumps(doc, ensure_ascii=False))
 
     def test_insts_remove_file_releases(self):
@@ -657,30 +699,38 @@ class TasksBlockedModule(TickCase):
         self.put([sh("a", ": > " + self.BLOCK), sh("b", "touch b.ran")], [task("x", ["/nonexistent/prog"])])
         r = self.tick()
         self.assertEqual(r.returncode, 0)
-        self.assertIn("exec_failed: tasks_blocked/x:", r.stderr)                    # 開不起來照任務印一行
+        self.assertIn("exec_failed: tasks-blocked/x:", r.stderr)                    # 開不起來照任務印一行
         self.assertFalse(self.exists("b.ran"))
         self.assertEqual(self.rec()["tasks"], [])
 
     def test_bad_module(self):
         for mod in ([], {"insts": {}}, {}, {"insts": [{"id": "x"}]}, {"insts": ["no"]}):
             doc = table(sh("a", "touch a.ran"))
-            doc["modules"] = {"tasks_blocked": mod}
+            doc["modules"] = {"tasks-blocked": mod}
             self.write(".aos/tasks.json", json.dumps(doc))
             r = self.tick()
             self.assertEqual(r.returncode, 1, mod)
             self.assertIn("bad_table:", r.stderr)
         self.assertFalse(self.exists("a.ran"))
 
-    def test_other_modules_still_expanded(self):
-        # tasks_blocked 每項跑到時才展開；modules 其他鍵照舊整個展開（壞了＝bad_table）
-        doc = table(sh("a", "true"))
-        doc["modules"] = {"tasks_blocked": {"insts": [{"argv": ["true"], "envs": {"X": {"$env": "AOSTEST_SURELY_NOT_SET"}}}]},
-                          "other": {"$ref": "nope.json"}}
+    def test_insts_expanded_at_open(self):
+        # 第二十批：tasks-blocked 的 insts 跟任務一樣開格就展開（不再是例外），內部壞了＝bad_table；
+        # modules 其他鍵照舊整個展開
+        doc = table(sh("a", "touch a.ran"))
+        for mods in ({"tasks-blocked": {"insts": [{"argv": ["true"], "envs": {"X": {"$env": "AOSTEST_SURELY_NOT_SET"}}}]}},
+                     {"tasks-blocked": {"insts": []}, "other": {"$ref": "nope.json"}}):
+            doc["modules"] = mods
+            self.write(".aos/tasks.json", json.dumps(doc))
+            r = self.tick()
+            self.assertEqual(r.returncode, 1, mods)
+            self.assertIn("bad_table:", r.stderr)
+        self.assertFalse(self.exists("a.ran"))
+        # 舊鍵名 tasks_blocked 只是陌生的模組鍵：不掛、檔在就照預設擋
+        doc["modules"] = {"tasks_blocked": {"insts": [{"argv": ["sh", "-c", "rm .aos/tick/tasks-blocked"]}]}}
         self.write(".aos/tasks.json", json.dumps(doc))
-        self.assertEqual(self.tick().returncode, 1)
-        del doc["modules"]["other"]
-        self.write(".aos/tasks.json", json.dumps(doc))
-        self.assertEqual(self.tick().returncode, 0)                                 # 內部的 $env 沒跑到就不解
+        self.write(".aos/tick/tasks-blocked", "")
+        self.assertEqual(self.tick().returncode, 0)
+        self.assertFalse(self.exists("a.ran"))
 
 
 class ExitCodes(TickCase):

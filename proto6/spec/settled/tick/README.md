@@ -8,7 +8,7 @@
 
 | 篇 | 條號 | 狀態 |
 |---|---|---|
-| [tasks-blocked.md](tasks-blocked.md) | B-636 | **已實作**（2026-10-01 第十六批）。tick 模組 `modules.tasks_blocked`：某一項之前發現 tasks-blocked 時先跑一串 inst、跑完再看一次，檔被刪就放行；碼不記。 |
+| [tasks-blocked.md](tasks-blocked.md) | B-636 | **已實作**（2026-10-01 第十六批）。tick 模組 `modules["tasks-blocked"]`：某一項之前發現 tasks-blocked 時先跑一串 inst、跑完再看一次，檔被刪就放行；碼不記。 |
 | [hooks.md](hooks.md) | B-635 | **已實作**（2026-10-01）。外掛掛點：任務表頂層鍵 `hooks`（跟 `tasks` 同層，不是模組），四個掛點 `before_all`、`after_task`、`after_every_task`（第十七批）、`after_all`，碼記進紀錄 `hooks.<掛點>`。 |
 | [暫緩區 template.md](../deferred/template.md) | B-629 | **暫緩**〔使用者 2026-10-01 第十八批〕。範本裡的系統級任務全部搬暫緩區，範本只剩使用者任務、現在沒有系統級任務要放；原檔整篇搬到暫緩區。 |
 | [暫緩區 B-621](../deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task) | B-621 | **暫緩**〔使用者 2026-10-01 第十六批〕。普通程式 `aos-tick-check-task`（2026-10-01 由 `aos-needs` 改寫），從沒寫過程式；原檔 `check-task.md` 整篇搬到 tick 暫緩區。 |

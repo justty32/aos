@@ -14,7 +14,7 @@
     }
   ],
   "modules": {
-    "tasks_blocked": {
+    "tasks-blocked": {
       "insts": [
         {
           "id": "notify",
