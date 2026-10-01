@@ -81,7 +81,7 @@
           },
           "properties": {
             "after_all": {
-              "description": "照表跑完（含被停格檔停下）之後依序跑的一串 inst；寫法比照 tasks；不看停格檔、碼記進紀錄 hooks.after_all、不影響 tick 的結束碼",
+              "description": "照表跑完（含被 tasks-blocked 擋下）之後依序跑的一串 inst；寫法比照 tasks；不看 tasks-blocked、碼記進紀錄 hooks.after_all、不影響 tick 的結束碼",
               "anyOf": [
                 {
                   "type": "array",
@@ -112,7 +112,47 @@
     },
     "modules": {
       "type": "object",
-      "description": "〔使用者 2026-10-01〕一個模組一個鍵，內容不限；不是 inst 欄位、不當任務預設值；核心照收不理；〔使用者裁定 2026-10-01〕讀表時整個展開指示詞（跟 daemon 設定檔一致，$opt 物件原樣留），$ref:\"\"／#… 指整份 tasks.json、相對檔名以工作資料夾為起點；展開失敗＝bad_table、tick 回 1"
+      "description": "〔使用者 2026-10-01〕一個模組一個鍵；不是 inst 欄位、不當任務預設值；〔使用者裁定 2026-10-01〕讀表時整個展開指示詞（跟 daemon 設定檔一致，$opt 物件原樣留），$ref:\"\"／#… 指整份 tasks.json、相對檔名以工作資料夾為起點；展開失敗＝bad_table、tick 回 1。目前認 tasks_blocked（B-636、P-214，它例外：展開時機比照 hooks.after_all），其他鍵照收不理",
+      "properties": {
+        "tasks_blocked": {
+          "description": "〔使用者 2026-10-01 第十六批〕B-636：某一項之前發現 tasks-blocked 時先依序跑 insts、跑完再看一次（檔被刪就放行）；碼不記、非 0 沒影響。tasks_blocked、insts、每一元素讀表時各解一層，內部跑到時才展開",
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "insts"
+              ],
+              "properties": {
+                "insts": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "$ref": "#/$defs/Task"
+                          },
+                          {
+                            "$ref": "#/$defs/Ref"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "$ref": "#/$defs/Ref",
+                      "description": "讀表時解一層成陣列"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$ref": "#/$defs/Ref",
+              "description": "讀表時解一層成物件"
+            }
+          ]
+        }
+      }
     }
   },
   "if": {
@@ -123,7 +163,7 @@
     }
   },
   "then": {
-    "description": "頂層沒給 argv 時，tasks 與 hooks.after_all 的每一項（整項 $ref 的除外，解開後才知道）都要自己有 argv",
+    "description": "頂層沒給 argv 時，tasks、hooks.after_all 與 modules.tasks_blocked.insts 的每一項（整項 $ref 的除外，解開後才知道）都要自己有 argv",
     "properties": {
       "tasks": {
         "items": {
@@ -157,6 +197,30 @@
                   ]
                 }
               ]
+            }
+          }
+        }
+      },
+      "modules": {
+        "properties": {
+          "tasks_blocked": {
+            "properties": {
+              "insts": {
+                "items": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "argv"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "$ref"
+                      ]
+                    }
+                  ]
+                }
+              }
             }
           }
         }

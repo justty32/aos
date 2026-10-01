@@ -167,6 +167,7 @@ plan 步驟對到哪：
 | 4 讀表 | `aos_tick_table.read_table()`、`check_table()` |
 | 5 照表跑 | `run_tick()` 迴圈、`run_one()`、`aos_tick_run.run_item()` |
 | 6 tasks-blocked（原停格檔，第十六批） | `run_tick()` 迴圈裡每項之前的 `tasks_blocked()`、最後的 `clear_tasks_blocked()` |
+| 6b `modules.tasks_blocked`（B-636，第十六批） | 讀表 `aos_tick_table._tasks_blocked()`（`Table.on_blocked`）、跑 `aos_tick.run_on_blocked()` |
 | 7、8 | 2026-10-01 取消（fsync、上下層） |
 
 我自己做的判斷（spec 沒寫死、照「最小合理」做，都可以改）：
@@ -209,6 +210,21 @@ plan 步驟對到哪：
   ```
 
 - 某個 hook 沒跑成時 stderr 是 `exec_failed: after_all/<id>: …`。
+
+## tick 模組 `modules.tasks_blocked`（B-636）
+
+使用者 2026-10-01 第十六批，spec [B-636](../../spec/settled/tick/tasks-blocked.md)、格式 P-214。任務表 `modules` 底下寫：
+
+```json
+"modules": {"tasks_blocked": {"insts": [{"id": "notify", "argv": ["sh", "-c", "echo $AOS_TASK_ID >> blocked.log"]}]}}
+```
+
+- 某一項之前發現 `<狀態資料夾>/tick/tasks-blocked`：先依序跑 `insts`（全部跑完、不看彼此的碼），再看一次——檔被刪了就放行這一項與後面的，還在就照預設擋下（`blocked_before`）。同一項之前只跑一次；放行後又被擋，那一項之前再跑。
+- 碼不記進紀錄、非 0 沒影響。環境照任務：`AOS_TASK_ID`／`AOS_TASK_INDEX`＝被擋下的那一項、`AOS_TICK_CWD`；沒有 `AOS_HOOK_*`。
+- 寫法與展開時機比照 `hooks.after_all`（讀表各解一層、內部跑到才展開）；`modules` 其他鍵照舊整個展開。開不起來印 `exec_failed: tasks_blocked/<id>`。
+- 沒掛＝看到就擋下。整格最後照樣刪 tasks-blocked。
+
+測試 `tests/test_tick.py` 的 `TasksBlockedModule`（7 條）。
 
 ## aos-daemon（第三段最核心 daemon）
 

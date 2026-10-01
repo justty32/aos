@@ -598,6 +598,91 @@ class Step6TasksBlocked(TickCase):
         self.assertFalse(self.exists(self.BLOCK))
 
 
+class TasksBlockedModule(TickCase):
+    """B-636 `modules.tasks_blocked.insts`（使用者 2026-10-01 第十六批）：某一項之前發現 tasks-blocked 時先跑那一串，
+    跑完再看一次：檔被刪了就放行這一項與後面的，還在就照預設擋下；結束碼不記、非 0 沒影響；沒掛＝預設行為。"""
+
+    BLOCK = ".aos/tick/tasks-blocked"
+
+    def put(self, tasks, insts):
+        doc = table(*tasks)
+        doc["modules"] = {"tasks_blocked": {"insts": insts}}
+        self.write(".aos/tasks.json", json.dumps(doc, ensure_ascii=False))
+
+    def test_insts_remove_file_releases(self):
+        self.put([sh("a", ": > " + self.BLOCK), sh("b", "touch b.ran"), sh("c", "touch c.ran")],
+                 [sh("seen", 'echo "$AOS_TASK_ID $AOS_TASK_INDEX ${AOS_HOOK_POINT-none} $AOS_TICK_CWD" >> on.txt'),
+                  sh("rm", "rm " + self.BLOCK + "; exit 7")])
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertTrue(self.exists("b.ran") and self.exists("c.ran"))
+        self.assertEqual(self.read("on.txt").split(), ["b", "1", "none", self.d])   # 被擋下那一項的變數
+        rec = self.rec()
+        self.assertEqual((rec["ran"], rec["tasks"]), (3, []))                      # 非 0（7）不記
+        self.assertNotIn("blocked_before", rec)
+        check_record(self, rec)
+
+    def test_insts_keep_file_blocks(self):
+        self.put([sh("a", ": > " + self.BLOCK), sh("b", "touch b.ran")],
+                 [sh("n", "echo n >> on.txt; exit 3")])
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertFalse(self.exists("b.ran"))
+        self.assertEqual(self.read("on.txt"), "n\n")                              # 同一項之前只跑一次
+        rec = self.rec()
+        self.assertEqual((rec["blocked_before"], rec["ran"], rec["tasks"]), ("b", 1, []))
+        self.assertFalse(self.exists(self.BLOCK))                                   # 整格最後照樣刪
+
+    def test_runs_again_when_blocked_again(self):
+        # 放行之後，後面的任務又寫了：c 之前再跑一次；這次不刪就擋下 c
+        self.put([sh("a", ": > " + self.BLOCK), sh("b", ": > " + self.BLOCK), sh("c", "touch c.ran")],
+                 [sh("once", 'echo "$AOS_TASK_ID" >> on.txt; [ -e released ] || { touch released; rm ' + self.BLOCK + '; }')])
+        self.assertEqual(self.tick().returncode, 0)
+        self.assertEqual(self.read("on.txt").split(), ["b", "c"])
+        self.assertFalse(self.exists("c.ran"))
+        self.assertEqual(self.rec()["blocked_before"], "c")
+
+    def test_placed_before_first_and_empty_insts(self):
+        self.write(self.BLOCK, "")
+        self.put([sh("a", "touch a.ran")], [])                                    # 掛了但一串是空的：檔還在就擋
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertFalse(self.exists("a.ran"))
+        self.assertEqual((self.rec()["blocked_before"], self.rec()["ran"]), ("a", 0))
+
+    def test_not_run_without_file_and_spawn_failure(self):
+        self.put([sh("a", "true")], [task("x", ["/nonexistent/prog"])])
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))                        # 沒有 tasks-blocked 就不跑
+        self.put([sh("a", ": > " + self.BLOCK), sh("b", "touch b.ran")], [task("x", ["/nonexistent/prog"])])
+        r = self.tick()
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("exec_failed: tasks_blocked/x:", r.stderr)                    # 開不起來照任務印一行
+        self.assertFalse(self.exists("b.ran"))
+        self.assertEqual(self.rec()["tasks"], [])
+
+    def test_bad_module(self):
+        for mod in ([], {"insts": {}}, {}, {"insts": [{"id": "x"}]}, {"insts": ["no"]}):
+            doc = table(sh("a", "touch a.ran"))
+            doc["modules"] = {"tasks_blocked": mod}
+            self.write(".aos/tasks.json", json.dumps(doc))
+            r = self.tick()
+            self.assertEqual(r.returncode, 1, mod)
+            self.assertIn("bad_table:", r.stderr)
+        self.assertFalse(self.exists("a.ran"))
+
+    def test_other_modules_still_expanded(self):
+        # tasks_blocked 每項跑到時才展開；modules 其他鍵照舊整個展開（壞了＝bad_table）
+        doc = table(sh("a", "true"))
+        doc["modules"] = {"tasks_blocked": {"insts": [{"argv": ["true"], "envs": {"X": {"$env": "AOSTEST_SURELY_NOT_SET"}}}]},
+                          "other": {"$ref": "nope.json"}}
+        self.write(".aos/tasks.json", json.dumps(doc))
+        self.assertEqual(self.tick().returncode, 1)
+        del doc["modules"]["other"]
+        self.write(".aos/tasks.json", json.dumps(doc))
+        self.assertEqual(self.tick().returncode, 0)                                 # 內部的 $env 沒跑到就不解
+
+
 class ExitCodes(TickCase):
     """aos 結束碼慣例下的 tick 結束碼（使用者 2026-10-01）：任務的碼只記、不影響 tick。"""
 

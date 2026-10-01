@@ -8,6 +8,7 @@
 
 | 篇 | 條號 | 狀態 |
 |---|---|---|
+| [tasks-blocked.md](tasks-blocked.md) | B-636 | **已實作**（2026-10-01 第十六批）。tick 模組 `modules.tasks_blocked`：某一項之前發現 tasks-blocked 時先跑一串 inst、跑完再看一次，檔被刪就放行；碼不記。 |
 | [hooks.md](hooks.md) | B-635 | **已實作**（2026-10-01）。外掛掛點：任務表頂層鍵 `hooks`（跟 `tasks` 同層，不是模組），目前只開 `after_all`（照表跑完、含被 tasks-blocked 擋下之後跑一串 inst，碼記進紀錄 `hooks.after_all`）。 |
 | [template.md](template.md) | B-629 | 待實作。範本裡的系統級任務（`aos-mq`、`aos-git`、`aos-clean`）都還沒有程式（`aos-publish` 2026-10-01 搬暫緩區、從範本拿掉）；`mq-get`／`mq-post` 要靠暫緩區的 daemon 通道。 |
 | [暫緩區 B-621](../deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task) | B-621 | **暫緩**〔使用者 2026-10-01 第十六批〕。普通程式 `aos-tick-check-task`（2026-10-01 由 `aos-needs` 改寫），從沒寫過程式；原檔 `check-task.md` 整篇搬到 tick 暫緩區。 |

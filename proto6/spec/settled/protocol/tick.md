@@ -77,7 +77,7 @@
 | `_metainfo` | 可省〔使用者裁定 2026-10-01〕；整份表的格式標記（`aos-tasks` 第 1 版），核心不看；不是預設 |
 | `tasks` | 必填，陣列 |
 | `argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit` | 可省；每一項的預設，格式照 inst。項自己寫了就整個蓋過〔使用者 2026-10-01〕 |
-| `modules` | 可省；tick 模組的設定，一個模組一個鍵，比照 daemon 設定檔的 `modules`（[P-120](daemon/core.md)）。目前沒有任何模組：核心照收不理、型別不查、不當預設合併〔使用者 2026-10-01〕。讀表時整個展開指示詞（跟 daemon 設定檔一致；`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點），展開失敗＝`bad_table`、回 1〔使用者裁定 2026-10-01〕 |
+| `modules` | 可省；tick 模組的設定，一個模組一個鍵，比照 daemon 設定檔的 `modules`（[P-120](daemon/core.md)）。目前認 `tasks_blocked`（P-214，第十六批；它例外：展開時機比照 `hooks.after_all`）；其他鍵核心照收不理、型別不查、不當預設合併〔使用者 2026-10-01〕。讀表時整個展開指示詞（跟 daemon 設定檔一致；`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點），展開失敗＝`bad_table`、回 1〔使用者裁定 2026-10-01〕 |
 
 頂層的 `id`、`kind` 不是預設；頂層其他鍵當陌生鍵忽略。
 
@@ -389,3 +389,26 @@ schema 管得到的：`exit` 只收 0、`ran` 必填、`ended` 跟 `exit`／`blo
 | `.aos/tick-blocked`（擋板檔，ignored） | 〔使用者 2026-10-01 第十六批〕核心只看存不存在、不讀內容（可以是空檔、資料夾）；要留原因給人看可以寫 | 擋之後各格（不開格、hooks 不跑、stderr 不印、回 0），見 [B-620](../tick.md) |
 
 範例：正例 [跑到一半](../../protocol/examples/tick/tick-record.minimal.valid.json)、[全部成功](../../protocol/examples/tick/tick-record.done.valid.json)、[被 tasks-blocked 擋下](../../protocol/examples/tick/tick-record.blocked-exit-0.valid.json)、[第一項就被擋](../../protocol/examples/tick/tick-record.blocked-first.valid.json)、[有任務失敗照樣回 0](../../protocol/examples/tick/tick-record.exit-0-with-failure.valid.json)、[沒寫 id 的位置字串](../../protocol/examples/tick/tick-record.position-id.valid.json)、[擋下後照跑 hooks](../../protocol/examples/tick/tick-record.hooks.valid.json)（B-635）；反例 [沒收場卻有 hooks](../../protocol/examples/tick/tick-record.hooks-not-ended.invalid.json)、 [同一項同時有 exit 與 signal](../../protocol/examples/tick/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](../../protocol/examples/tick/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 blocked_before](../../protocol/examples/tick/tick-record.blocked-not-ended.invalid.json)、[整格回 1](../../protocol/examples/tick/tick-record.blocked-exit-1.invalid.json)、[整格回 2](../../protocol/examples/tick/tick-record.exit-2.invalid.json)、[整格回 3](../../protocol/examples/tick/tick-record.exit-3.invalid.json)；[記了結束碼 0](../../protocol/examples/tick/tick-record.zero-recorded.invalid.json)、[hook 記了結束碼 0](../../protocol/examples/tick/tick-record.hook-zero-recorded.invalid.json)、[沒有 ran](../../protocol/examples/tick/tick-record.no-ran.invalid.json)、[沒有 index](../../protocol/examples/tick/tick-record.no-index.invalid.json)；`record.json` 本體：正例 [開格時](../../protocol/examples/tick/tick-record-file.open.valid.json)、[有 hooks 而且被停下](../../protocol/examples/tick/tick-record-file.hooks.valid.json)，反例 [ran 直接寫數字](../../protocol/examples/tick/tick-record-file.inline-ran.invalid.json)、[$ref 指錯檔](../../protocol/examples/tick/tick-record-file.wrong-ref.invalid.json)、[沒收場卻有 hooks](../../protocol/examples/tick/tick-record-file.hooks-not-ended.invalid.json)；補查反例 [index 不小於 ran](../../protocol/examples/tick/tick-record.index-not-below-ran.invalid.json)、[blocked_before 不是 id](../../protocol/examples/tick/tick-record.blocked-not-id.invalid.json)。
+
+## P-214．`modules.tasks_blocked`〔使用者 2026-10-01 第十六批〕
+
+行為正本：[B-636](../tick/tasks-blocked.md)。本條只定寫法。
+
+```json
+{"tasks": [...],
+ "modules": {"tasks_blocked": {"insts": [
+   {"id": "notify", "argv": ["sh", "-c", "echo \"$AOS_TASK_ID 被擋下\" >> blocked.log"]},
+   {"$ref": "clear-if-ok.json"}]}}}
+```
+
+| 位置 | 約束 |
+|---|---|
+| `modules.tasks_blocked` | 物件（可以是 `$ref`，讀表時解一層）；有寫就掛上。不是物件＝`bad_table` |
+| `modules.tasks_blocked.insts` | 必填；陣列（可以是 `$ref`，解一層）；可以是空陣列。不是陣列、沒寫＝`bad_table` |
+| `insts` 每一項 | 寫法同 `tasks` 每一項（P-202）：inst 物件或整項 `$ref`，合併頂層預設後要有 `argv`；`id` 可省（沒寫＝它在 `insts` 的位置轉字串，只用在 `exec_failed: tasks_blocked/<id>`）；內部跑到時才展開 |
+
+- 環境變數照任務（P-203）：`AOS_TASK_ID`、`AOS_TASK_INDEX`＝被擋下的那一項，`AOS_TICK_CWD`；沒有 `AOS_HOOK_*`。
+- 結束碼不記進紀錄（P-213 的 `ran`、`tasks`、`hooks` 都不動）。
+- schema：[tick-tasks](../../protocol/schemas/tick-tasks.schema.json) 的 `modules.tasks_blocked`。範例：正例 [掛了 tasks_blocked](../../protocol/examples/tick/tasks.tasks-blocked.valid.json)；反例 [沒有 insts](../../protocol/examples/tick/tasks.tasks-blocked-no-insts.invalid.json)、[某項缺 argv](../../protocol/examples/tick/tasks.tasks-blocked-no-argv.invalid.json)。
+
+依據：使用者 2026-10-01 第十六批（「1.modules底下 2.對 3.b 4.對，不記錄進記錄，非0沒影響。 5.對」）；寫法與展開時機 AI 隊定（比照 `hooks.after_all`）。

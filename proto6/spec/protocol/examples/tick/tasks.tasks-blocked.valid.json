@@ -1,0 +1,36 @@
+{
+  "tasks": [
+    {
+      "id": "fetch",
+      "argv": [
+        "./fetch.sh"
+      ]
+    },
+    {
+      "id": "report",
+      "argv": [
+        "./report.sh"
+      ]
+    }
+  ],
+  "modules": {
+    "tasks_blocked": {
+      "insts": [
+        {
+          "id": "notify",
+          "argv": [
+            "sh",
+            "-c",
+            "echo \"$AOS_TASK_ID 被擋下\" >> blocked.log"
+          ]
+        },
+        {
+          "id": "clear-if-ok",
+          "argv": [
+            "./check-and-clear.sh"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -66,8 +66,8 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 |---|---|---|---|---|
 | `AOS_DIRNAME` | 使用者（或外層環境） | `aos-tick`、`aos-exec` | 狀態資料夾的名字；三態見 C-09 | [C-09](#c-09狀態資料夾的名字aos_dirname) |
 | `AOS_TICK_CWD` | `aos-tick` 給每項任務與每個 hook（`hooks.after_all` 的項） | 任務 | 這一格 tick 的工作資料夾的絕對路徑（命令列給的目標資料夾）。任務要讀本格結束碼紀錄，就讀 `$AOS_TICK_CWD/<AOS_DIRNAME>/tick/current/`（`record.json` 加上它 `$ref` 的 `ran.json`、`task-exits.json`、`hook-exits.json`，P-213） | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| `AOS_TASK_ID` | `aos-tick` 給每項任務（`after_all` 的 hook **不給**） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串 | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起 | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_ID` | `aos-tick` 給每項任務（`after_all` 的 hook **不給**）；`modules.tasks_blocked` 的 insts 也給，值是被擋下的那一項（[B-636](tick/tasks-blocked.md)） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串 | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上，含 `tasks_blocked` 的 insts） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起 | [B-620](tick.md)、[P-203](protocol/tick.md) |
 | `AOS_HOOK_POINT` | `aos-tick` 給每個 hook（任務不給） | hook | 掛點名，目前只有 `after_all` | [B-635](tick/hooks.md)、[P-203](protocol/tick.md) |
 | `AOS_HOOK_INDEX` | 同上 | hook | 這個 hook 在該掛點陣列的位置，從 0 起 | 同上 |
 | `AOS_HOOK_ID` | 同上 | hook | 這個 hook 的 `id`；沒寫時是位置轉字串 | 同上 |
