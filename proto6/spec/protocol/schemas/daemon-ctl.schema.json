@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "aos-daemon 控制模組的一行 JSON（P-121）：請求或回應",
-  "description": "一連線一請求：客戶端送一行請求、daemon 回一行回應。請求與回應分開驗：請求用 #/$defs/Request、回應用 #/$defs/Reply（根只是兩者擇一的總覽，同一個物件可能兩邊都過，例如帶陌生欄位 ok 的請求）。請求不認得的欄位照收不理（P-121、照現行程式，跟舊 daemon IPC 的嚴格不同）。〔astra 2026-10-01 必修 5〕",
+  "description": "一連線一請求：客戶端送一行請求、daemon 回一行回應。請求與回應分開驗：請求用 #/$defs/Request、回應用 #/$defs/Reply（根只是兩者擇一的總覽，同一個物件可能兩邊都過，例如帶陌生欄位 ok 的請求）。請求不認得的欄位照收不理（P-121、照現行程式，跟舊 daemon IPC 的嚴格不同）。〔astra 2026-10-01 必修 5〕 〔第二十一批〕aos-ctl --socket 對別的 daemon 的控制 socket 送的請求格式一樣（--socket 只是客戶端選連哪個 socket）。",
   "anyOf": [
     {
       "$ref": "#/$defs/Request"

@@ -4,9 +4,11 @@
 另開一個 unix socket（不走控制 socket），協議照控制模組——一連線一請求、一行 JSON 來、一行 JSON 回。
 收件人就是 daemon 的一項（`insts` 的鍵，逐字比對）；每一項一個信箱，放記憶體、先進先出，daemon 重開就丟。
 
-- 寄：`{"send":"<收件 inst>","msg":<任何 JSON 值>,"from":"<寄件 inst>"|null,"urgent":false}` → `{"ok":true}`。
-  `from`、`urgent` 可省（null、false）。`from` 原樣存、不核對（M1）。
-- 取：`{"take":"<inst>","from":[<寄件 inst 或 null>,…]}` → `{"ok":true,"messages":[{"from":…,"msg":…},…]}`。
+- 寄：`{"send":"<收件 inst>","msg":<任何 JSON 值>,"from":"<寄件 inst>"|null,"from_socket":"<寄件方訊息 socket>"|null,"urgent":false}`
+  → `{"ok":true}`。`from`、`from_socket`、`urgent` 可省（null、null、false）。`from`、`from_socket` 原樣存、不核對（M1）。
+  跨 daemon（第二十一批）：寄件方直接連收件方 daemon 的 socket；daemon 不轉送、不知道信從哪個 daemon 來，
+  只是多存一個 `from_socket`（`aos-mq send` 自動填寄件方自己的 socket），收件方要回信就照它寄回去。
+- 取：`{"take":"<inst>","from":[<寄件 inst 或 null>,…]}` → `{"ok":true,"messages":[{"from":…,"from_socket":…,"msg":…},…]}`。
   沒給 `from`＝信箱全部取走；給了＝只取寄件人在陣列裡的（`null`＝寄件人是 null 的信），其他照順序留著
   （使用者 2026-10-01 第十四批；第十五批 `from` 改成可以多個）。
 - 看：`{"peek":"<inst>","from":…}`，回應同取，但信不取走（第十五批）。
@@ -60,6 +62,9 @@ def parse(line):
         rest["from"] = req.get("from")
         if rest["from"] is not None and not isinstance(rest["from"], str):
             raise BadRequest("from 要是字串或 null")
+        rest["from_socket"] = req.get("from_socket")
+        if rest["from_socket"] is not None and not isinstance(rest["from_socket"], str):
+            raise BadRequest("from_socket 要是字串或 null")
         rest["urgent"] = req.get("urgent", False)
         if not isinstance(rest["urgent"], bool):
             raise BadRequest("urgent 要是布林")
@@ -79,7 +84,7 @@ def handle(request, items):
             if cmd == "take":
                 item.mailbox = [m for m in item.mailbox if not pick(m)]
             return {"ok": True, "messages": got}
-        item.mailbox.append({"from": rest["from"], "msg": rest["msg"]})
+        item.mailbox.append({"from": rest["from"], "from_socket": rest["from_socket"], "msg": rest["msg"]})
         if rest["urgent"] and not item.stopped:
             _want(item, False)
             item.cond.notify_all()

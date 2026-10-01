@@ -3,12 +3,14 @@
   "messages": [
     {
       "from": "a.json",
+      "from_socket": "/srv/aos/A/aos-mq.sock",
       "msg": {
         "hi": 1
       }
     },
     {
       "from": null,
+      "from_socket": null,
       "msg": -5
     }
   ]

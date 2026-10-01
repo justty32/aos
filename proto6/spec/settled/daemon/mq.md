@@ -12,6 +12,8 @@
 
 **收件人是 daemon 的一項**（`insts` 的鍵，逐字比對），不是 node、不是資料夾；inst 是檔也收得到信。
 
+**跨 daemon**〔使用者 2026-10-01 第二十一批：「跨daemon寄信，本質上就是把訊息傳到其他伺服器，就是收件地址加個前綴，就這樣」「所以前綴應該是socket路徑對吧」「1可以，peers先不做，aos-ctl也加--socket。」〕：收件地址＝對方 daemon 的訊息 socket 路徑（前綴）＋對方 `insts` 裡的一項。`aos-mq send --socket <對方訊息 socket> <對方的 inst>` 直接連對方的 socket 寄；寄件方自己的 socket 路徑跟著信走（`from_socket`），收件方回信就照它寄回去。daemon 不轉送、不知道信從哪個 daemon 來，收到跨 daemon 的信跟本地寄的一樣處理，只是多存一個 `from_socket`。
+
 ### socket
 
 - daemon 另開一個 unix socket，**不走控制 socket**（使用者 m3n 裁定 5）；兩個模組各開各的、互不依賴。
@@ -22,7 +24,7 @@
 ### 信箱
 
 - **每一項一個信箱，放 daemon 記憶體、先進先出。** daemon 重開就丟，不保證送達。
-- 一封信是 `{"from": <寄件 inst 或 null>, "msg": <任何 JSON 值>}`。daemon 不看 `msg` 是什麼；`from` 原樣存、不核對（使用者同意 M1：能連 socket 的人本來就能冒充）。
+- 一封信是 `{"from": <寄件 inst 或 null>, "from_socket": <寄件方的訊息 socket 絕對路徑或 null>, "msg": <任何 JSON 值>}`。daemon 不看 `msg` 是什麼；`from`、`from_socket` 原樣存、不核對（使用者同意 M1：能連 socket 的人本來就能冒充）。`from` 只填寄件方的 inst 名字，不帶 daemon（使用者 2026-10-01 選 a）；要知道是哪個 daemon 寄的、要回信，看 `from_socket`（第二十一批）。
 - **只能取自己的信箱**〔使用者 2026-10-01 第十四批：「取信改成只能取自己的信箱。然後可以選擇要取來自誰的，不選就全部。」〕：`aos-mq take` 只用 `AOS_DAEMON_INST`，不收 `<inst>`。原本 M3「誰都可以取任何一項的信」被第十四批推翻。
 - **可以只取某些寄件人的**：`--from a c d` 只取 `from` 是這幾個的信，其他照原順序留在信箱；`--from` 後面什麼都不接＝取 `from` 是 `null` 的信；不給 `--from` 就全部取走、信箱清空〔使用者 2026-10-01 第十五批：「1.a,2.可以有aos-mq peek，但手打這塊我們不管。 3.--from可以多個，比如--from a c d...。不管shell手打，from是null的，那就是--from後面不接任何東西。 4.跨daemon寄信不管。」〕。
 - **`aos-mq peek`** 跟 `take` 一樣只對自己的信箱、一樣可以帶 `--from`、一樣的輸出，但信不取走（第十五批）。它是給任務用的；人在 shell 手打怎麼看信，aos 不管（使用者：「手打這塊我們不管」）。
@@ -44,14 +46,14 @@
 ### `aos-mq`
 
 ```text
-aos-mq send [--urgent] <收件 inst> <JSON|->
+aos-mq send [--urgent] [--socket <對方訊息 socket>] <收件 inst> <JSON|->
 aos-mq take [--from [<寄件 inst>…]]…
 aos-mq peek [--from [<寄件 inst>…]]…
 ```
 
-- socket 只從 `AOS_DAEMON_MQ_SOCKET` 拿。
-- `send`：`from` 自動填 `AOS_DAEMON_INST`（沒有就 `null`）；`<JSON>` 給 `-` 就從 stdin 讀。
-- `take`、`peek`：只對 `AOS_DAEMON_INST` 那一項的信箱（沒有就回 1、`no_inst`）；`take` 取走、`peek` 不取。`--from` 後面接的參數（到下一個 `--` 開頭的參數為止）都是寄件 inst，一個都不接＝寄件人是 `null`；可以重複寫、疊加。每封一行印到 stdout，沒信什麼都不印。
+- socket 從 `AOS_DAEMON_MQ_SOCKET` 拿。`send` 給了 `--socket` 就改連那個 socket（跨 daemon；相對路徑以呼叫者的 cwd 為準），這時沒有 `AOS_DAEMON_MQ_SOCKET` 也能寄。
+- `send`：`from` 自動填 `AOS_DAEMON_INST`（沒有就 `null`），`from_socket` 自動填自己的 `AOS_DAEMON_MQ_SOCKET`（轉成絕對路徑；沒有就 `null`）；`<JSON>` 給 `-` 就從 stdin 讀。回信：`aos-mq send --socket <from_socket> <from> …`。
+- `take`、`peek`：只對 `AOS_DAEMON_INST` 那一項的信箱（沒有就回 1、`no_inst`），不收 `--socket`（自己的信箱只在自己的 daemon；給了回 `usage`）；`--from` 只比 `from`、不看 `from_socket`（AI 隊定，可改）；`take` 取走、`peek` 不取。`--from` 後面接的參數（到下一個 `--` 開頭的參數為止）都是寄件 inst，一個都不接＝寄件人是 `null`；可以重複寫、疊加。每封一行印到 stdout，沒信什麼都不印。
 - 成功回 0；其他一律回 1（[C-08](../conventions.md)），stderr 一行代碼與說明。
 - 名字照使用者同意 M4：程式叫 `aos-mq`、子命令 `send`／`take`（第十五批加 `peek`）、模組鍵 `mq`。tick 側舊的 `aos-mq get`／`post`（[B-623、B-624](../deferred/mq.md)）是「讀寫 `.aos/mq/` 檔」的系統級任務，意思不一樣，照舊待實作；任務裡要收發信直接叫 `aos-mq send`／`take`，tick 核心不用改。
 
@@ -66,8 +68,8 @@ aos-mq peek [--from [<寄件 inst>…]]…
 
 信箱上限、寄件權限、送達確認／去重／重送、訊息格式檢查、tick 側的 `.aos/mq/` 檔案流程。
 
-**不在規劃中**：跨 daemon 送信〔使用者 2026-10-01 第十五批：「跨daemon寄信不管。」〕——`aos-mq send` 只連自己這個 daemon，收件人不在它的 `insts` 裡就回 `unknown_inst`；手動把 `AOS_DAEMON_MQ_SOCKET` 指到別的 daemon 硬寄過去，aos 不管、不保證，`from` 對方也不認得。舊設計的 node 收件人、`node.send`／`node.take`、通道憑證、寫權授權、急件越過上層節流都在[暫緩區 B-614](../deferred/daemon/messaging.md)。
+~~**不在規劃中**：跨 daemon 送信〔第十五批：「跨daemon寄信不管。」〕~~ 第二十一批改成現行（上面「跨 daemon」）。**peers 模組先不做**：之後可能當「暱稱 → socket 路徑」的對照表（`--peer <名字>` 等於 `--socket <路徑>`），現在任務要寄給別的 daemon 自己知道 socket 路徑就好。舊設計的 node 收件人、`node.send`／`node.take`、通道憑證、寫權授權、急件越過上層節流都在[暫緩區 B-614](../deferred/daemon/messaging.md)。
 
-依據：使用者 2026-10-01 第十二批：訊息要做、排在 cgroup 之後，M1～M4 照建議；第十四批：只能取自己的信箱、`--from`；第十五批：不核對取信的人、`peek`、`--from` 多個與空＝null、跨 daemon 不管。
+依據：使用者 2026-10-01 第十二批：訊息要做、排在 cgroup 之後，M1～M4 照建議；第十四批：只能取自己的信箱、`--from`；第十五批：不核對取信的人、`peek`、`--from` 多個與空＝null、跨 daemon 不管；第二十一批：跨 daemon 用 socket 路徑當前綴（`--socket`、`from_socket`），peers 先不做。
 
-**驗收：**兩項 a、b；a 的任務 `aos-mq send b '{"hi":1}'` 回 0，b 的任務 `aos-mq take` 印出 `{"from":"a","msg":{"hi":1}}`，再取一次什麼都不印；先寄的先取到；`take` 給 `<inst>` 回 1、`usage:`；a、c、d、手打（null）各寄給 b，b `take --from a c` 只拿到 a、c 的、其他照順序留著，`take --from` 只拿到 null 的，`--from --from d` 疊加；`peek` 看得到、再 `take` 照樣取到；`take`／`peek` 帶 `--urgent` 回 1、`usage:`；`--urgent` 寄給週期 1 小時的 b：b 一秒內跑一次，普通信不叫醒；b 正在跑時連寄三封急件：只補跑一次、三封一次取到；急件寄給已停的項不跑、信照收；暫停的項跑一次、照樣暫停；寄給不存在的項：回 1、`unknown_inst:`；沒有 `AOS_DAEMON_MQ_SOCKET`：回 1、`no_daemon:`；壞請求只影響那一條連線；daemon 重開後信箱是空的；重讀設定時還在的項信照留、拿掉的項寄信回 `unknown_inst`、加回來信箱是空的；沒掛模組：原有測試全過。測試見 `proto6/src/py/tests/test_mq.py`。
+**驗收：**兩項 a、b；a 的任務 `aos-mq send b '{"hi":1}'` 回 0，b 的任務 `aos-mq take` 印出 `{"from":"a","from_socket":"<同一個 daemon 的訊息 socket>","msg":{"hi":1}}`，再取一次什麼都不印；先寄的先取到；`take` 給 `<inst>` 回 1、`usage:`；a、c、d、手打（null）各寄給 b，b `take --from a c` 只拿到 a、c 的、其他照順序留著，`take --from` 只拿到 null 的，`--from --from d` 疊加；`peek` 看得到、再 `take` 照樣取到；`take`／`peek` 帶 `--urgent` 回 1、`usage:`；`--urgent` 寄給週期 1 小時的 b：b 一秒內跑一次，普通信不叫醒；b 正在跑時連寄三封急件：只補跑一次、三封一次取到；急件寄給已停的項不跑、信照收；暫停的項跑一次、照樣暫停；寄給不存在的項：回 1、`unknown_inst:`；沒有 `AOS_DAEMON_MQ_SOCKET`：回 1、`no_daemon:`；壞請求只影響那一條連線；daemon 重開後信箱是空的；重讀設定時還在的項信照留、拿掉的項寄信回 `unknown_inst`、加回來信箱是空的；兩個 daemon A、B：A 的任務 `aos-mq send --socket <B 的訊息 socket> b …` 回 0，B 的 b 取到的信 `from_socket` 是 A 的訊息 socket 絕對路徑，照它 `send --socket` 回信，A 那邊取得到；`--socket` 連不上回 1、`connect:`；`take`／`peek` 給 `--socket` 回 1、`usage:`；沒掛模組：原有測試全過。測試見 `proto6/src/py/tests/test_mq.py`。
