@@ -20,6 +20,10 @@ tick 印一行 `bad_table: …`、回 1（算 tick 自己的錯；在換紀錄�
   一個模組一個鍵；目前 tick 沒有任何模組，核心照收不理。不是 inst 欄位，**不當預設合併**。〔使用者裁定 2026-10-01〕
   讀表時**整個展開**指示詞（跟 daemon 設定檔的 `expand()` 同一做法：一路走進物件與陣列，`$opt` 物件原樣留），
   展開失敗＝`bad_table`、回 1；型別不查。`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點（跟讀表其他部分一致）。
+- `modules.tasks_blocked`（使用者 2026-10-01 第十六批，spec B-636）：`{"insts": [<inst 或 $ref>, …]}`，發現 tasks-blocked 時跑的一串。
+  **展開時機比照 `hooks.after_all`，不跟 `modules` 其他部分一起整個展開**：`tasks_blocked`、`insts`、每一元素各解一層，
+  內部跑到時才照 inst 規則展開（AI 隊定：這樣 `$ref:""`／`#…` 指合併後的這一項，跟任務、hook 一致）。極簡檢查：`tasks_blocked`
+  是物件、`insts` 是陣列、每項是物件、合併頂層預設後有 `argv`；不合＝`bad_table`。結果在 `Table.on_blocked`。
 - 頂層可選 `hooks`（掛點；使用者 2026-10-01 第六批：「就不讓他當模組了，直接讓他變頂層key」，spec B-635）：
   目前只認 `after_all`，寫法比照 `tasks`，**展開時機也比照 `tasks`**：`hooks` 本身、`after_all`、它的每一元素各解一層，
   值的內部跑到時才照 inst 規則展開（合併後 `$ref:""`／`#…` 指合併後的這一項）。極簡檢查：`hooks` 是物件、`after_all`
@@ -53,11 +57,13 @@ class TableInvalid(Exception):
 class Table:
     """讀好的任務表：`defaults`（頂層預設，已解一層）、`items`（每項，已解一層的物件）、`ids`（id 串列）、
     `modules`（頂層 `modules` 整個展開後的值，沒寫＝None；核心不用）、
-    `after_all`（頂層 `hooks.after_all` 的 [(項, id)]，每項已解一層；沒寫 `hooks` 或沒寫 `after_all`＝None，B-635）。"""
+    `after_all`（頂層 `hooks.after_all` 的 [(項, id)]，每項已解一層；沒寫 `hooks` 或沒寫 `after_all`＝None，B-635）、
+    `on_blocked`（`modules.tasks_blocked.insts` 的 [(項, id)]，每項已解一層；沒掛這個模組＝None，B-636）。"""
 
-    def __init__(self, defaults, items, ids, modules=None, after_all=None):
+    def __init__(self, defaults, items, ids, modules=None, after_all=None, on_blocked=None):
         self.defaults, self.items, self.ids, self.modules = defaults, items, ids, modules
         self.after_all = after_all
+        self.on_blocked = on_blocked
 
 
 def read_table(table, cwd):
@@ -85,10 +91,16 @@ def check_table(doc, cwd, path=None):
     for key in DEFAULT_KEYS:
         if key in root:
             defaults[key] = _one_layer(root[key], top.ctx, top.position + [key], "頂層 %s" % key).value
-    modules = None
-    if "modules" in root:          # 核心照收不理：整個展開（展開失敗＝bad_table），不看型別、不當預設
+    modules, on_blocked = None, None
+    if "modules" in root:          # 整個展開（展開失敗＝bad_table），不看型別、不當預設；tasks_blocked 例外（B-636）
+        mods = _one_layer(root["modules"], top.ctx, top.position + ["modules"], "頂層 modules")
+        if isinstance(mods.value, dict) and "tasks_blocked" in mods.value:
+            on_blocked = _tasks_blocked(mods, defaults)
+            rest = {k: v for k, v in mods.value.items() if k != "tasks_blocked"}
+        else:
+            rest = mods.value
         try:
-            modules = _expand(root["modules"], top.ctx, top.position + ["modules"])
+            modules = _expand(rest, mods.ctx, mods.position)
         except DirectiveError as e:
             raise TableInvalid("頂層 modules 展開不了：%s" % e)
     if "tasks" not in root:
@@ -107,11 +119,24 @@ def check_table(doc, cwd, path=None):
             if not isinstance(aa.value, list):
                 raise TableInvalid("hooks.after_all 要是陣列")
             after_all = list(zip(*_items(aa, "hooks.after_all", defaults))) if aa.value else []
-    return Table(defaults, items, ids, modules, after_all)
+    return Table(defaults, items, ids, modules, after_all, on_blocked)
+
+
+def _tasks_blocked(mods, defaults):
+    """B-636 `modules.tasks_blocked`：`{"insts": [...]}`，寫法與展開時機比照 `hooks.after_all`。回 [(項, id)]。"""
+    tb = _one_layer(mods.value["tasks_blocked"], mods.ctx, mods.position + ["tasks_blocked"], "modules.tasks_blocked")
+    if not isinstance(tb.value, dict):
+        raise TableInvalid("modules.tasks_blocked 要是物件")
+    if "insts" not in tb.value:
+        raise TableInvalid("modules.tasks_blocked 要有 insts 陣列")
+    insts = _one_layer(tb.value["insts"], tb.ctx, tb.position + ["insts"], "modules.tasks_blocked.insts")
+    if not isinstance(insts.value, list):
+        raise TableInvalid("modules.tasks_blocked.insts 要是陣列")
+    return list(zip(*_items(insts, "modules.tasks_blocked.insts", defaults))) if insts.value else []
 
 
 def _items(loc, what, defaults):
-    """`tasks` 或 `hooks.after_all` 的每一元素：解一層（整項 `$ref` 在這裡展開）、要是物件、合併預設後要有 argv。
+    """`tasks`、`hooks.after_all` 或 `modules.tasks_blocked.insts` 的每一元素：解一層（整項 `$ref` 在這裡展開）、要是物件、合併預設後要有 argv。
     回 (項串列, id 串列)；沒寫 id 的用位置轉字串。"""
     items, ids = [], []
     for i, raw in enumerate(loc.value):

@@ -117,6 +117,7 @@
 | B-632 | settled/tick/git.md | 〔第二十批換主題〕結束碼紀錄取代日誌：沒有 git 時怎麼做 | T3 |
 | B-633 | settled/tick.md | 〔第二十批〕每項結束碼紀錄與格數 | T3 |
 | B-635 | settled/tick/hooks.md | 〔2026-10-01 第六批〕hooks：照表跑完之後跑的一串（頂層鍵 `hooks.after_all`） | 第六批 |
+| B-636 | settled/tick/tasks-blocked.md | 〔2026-10-01 第十六批〕tick 模組 `modules.tasks_blocked`：發現 tasks-blocked 時先跑一串 inst | 第十六批 |
 | S-205 | scheduling/admission.md | 套用、調整與故障 | T5 |
 | S-206 | scheduling/admission.md | 中間層 kernel 卡住 | T5 |
 | S-207 | scheduling/admission.md | 用量收集與去重 | T5 |
@@ -131,6 +132,7 @@
 | P-211 | settled/protocol/tick.md | 〔第二十批〕`aos-cg`：每項一框 | T3 |
 | P-212 | settled/deferred/protocol/tick.md | 〔第二十批〕`aos-as`：切換帳號（〔2026-10-01 第十三批〕暫緩） | T3 |
 | P-213 | settled/protocol/tick.md | 〔第二十批〕每項結束碼紀錄、停格檔與擋板檔（〔2026-10-01 第十六批〕停格檔改名 tasks-blocked） | T3 |
+| P-214 | settled/protocol/tick.md | 〔2026-10-01 第十六批〕`modules.tasks_blocked` 的寫法 | 第十六批 |
 | C-08 | settled/conventions.md | 〔2026-10-01〕aos 結束碼慣例 | 統一更新 |
 | C-09 | settled/conventions.md | 〔2026-10-01〕狀態資料夾的名字 `AOS_DIRNAME` | 統一更新 |
 | C-10 | settled/conventions.md | 〔2026-10-01〕aos 環境變數總表 | 統一更新 |
@@ -155,14 +157,14 @@
 
 | 篇 | 下一號 |
 |---|---|
-| settled/daemon/ | B 647 起（616～619 留給暫緩區的舊 daemon 補號；635～639 留給 tick.md） |
+| settled/daemon/ | B 647 起（616～619 留給暫緩區的舊 daemon 補號；635～639 留給 tick.md，636 已用：tick/tasks-blocked.md） |
 | settled/tick.md、settled/tick/ | B 635 起（兩處共用） |
 | base/work.md、execution.md、identity-resources.md、storage.md、transport.md | B 104、205、306、405、507 起（305 是已刪的舊號，不要再用） |
 | scheduling/runs.md、admission.md、llm.md、operations.md | S 105、208、308、407 起 |
 | agent/configuration.md、input.md、memory.md、tools.md、README.md | A 104、204、305、405、507 起 |
 | cli/ | H 038 起 |
 | terms.md、contracts.md、conformance.md | T 12、C 12、V 06 起（T、C 新條可放在 settled/terms.md、settled/conventions.md） |
-| 協議篇 | 接各檔現有最後一號（daemon 協議 P 127 起、tick 協議 P 214 起；這兩份在 settled/protocol/） |
+| 協議篇 | 接各檔現有最後一號（daemon 協議 P 127 起、tick 協議 P 215 起；這兩份在 settled/protocol/） |
 
 B-605 的共通自檢在 [runtime](settled/deferred/daemon/runtime.md#啟動自檢b-605-的共通部分)，框規則在 [cgroup](settled/deferred/daemon/cgroup.md)；B-601、B-603、B-604、B-609、B-611、B-613 的 cgroup 部分也集中在該檔，沿用原條號。
 
@@ -336,6 +338,8 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 〔第二十批〕T1、T2、T3 交來的驗收句，依主題合併；正本仍在各條，句末標條號。這些句子在沒有 cgroup、沒有 git 的機器上都要成立。
 
 **tick 核心、tasks-blocked 與擋板檔**
+
+- 〔2026-10-01 第十六批〕掛了 `modules.tasks_blocked`：某一項之前發現 tasks-blocked 時先跑那一串（拿被擋下那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`、碼不記、非 0 沒影響），一串刪了檔就放行這一項與後面的、沒刪就擋下；同一項之前只跑一次；沒掛＝看到就擋下（B-636、P-214）。
 
 - 拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`：互斥、照表跑與每項結束碼紀錄都成立；佇列沒人取也沒人送、不發摘要（T-07、B-626）。
 - 〔2026-10-01 第十六批〕某項建了 `.aos/tick/tasks-blocked`（內容不管）：本格後面的項不跑、stderr 空，紀錄 `ended:true` 並有 `blocked_before`（被擋下的那一項），`after_all` 照跑，tick 回 0；整格最後核心刪掉它，下一格照常開。格與格之間放的：第一項之前就擋下（`ran:0`）（B-620、B-633）。

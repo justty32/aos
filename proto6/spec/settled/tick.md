@@ -243,6 +243,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 | 誰刪 | **核心，整格最後**：`after_all` 跑完、回結束碼之前（〔AI 隊定、可改〕被擋下的格與最後才出現的〔例如 hook 寫的〕都刪；開格時不刪；是資料夾就整個刪） | **只有人手**，修好後刪；aos 不自動刪 |
 | daemon | 不看它 | 現行 daemon 核心照常叫，由 `aos-tick` 自己擋；舊設計是有它就不開格（[B-607](deferred/daemon/registration.md)，在暫緩區） |
 
+- **掛了 tick 模組 `modules.tasks_blocked`**（[B-636](tick/tasks-blocked.md)，第十六批）時，看到 tasks-blocked 不直接擋下：先依序跑那一串 inst（拿被擋下那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`、碼不記），跑完再看一次，檔被刪了就放行這一項與後面的，還在才擋下。
 - **開格時不刪**：格與格之間有人放的 tasks-blocked，下一格第一項之前就擋下（`ran:0`、`blocked_before` 是第一項），整格最後再刪。
 - **跟 hooks**：hook 之間不看 tasks-blocked（hook 寫的也不擋下一個 hook），整格最後一樣刪。之後若開了跟某項任務有關的掛點：在那一項之前被擋下時，那一項相關的 hook 都不跑；任務跑完接著跑它的 hook 時不看 tasks-blocked〔使用者 2026-10-01 第十六批；hook 的種類現在先不擴充〕。
 - **有 git 時，tasks-blocked 等於這格作廢**：排在後面的 `aos-git close` 不跑、不提交，下一格 `aos-git open` 把 aos 範圍還原（[B-630](tick/git.md)）。想提早結束又保住結果的任務，別建它，改讓後面的項讀紀錄自己跳過。〔使用者方向 2026-09-30，納入 cgroup 與 git 疑-1〕
@@ -251,7 +252,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 兩個檔都 ignored。檔名、stderr 細節是〔建議預設，未拍板〕；兩種都回 0 照 [C-08](conventions.md)。
 
-〔未來方向，記錄用、現在不做〕使用者 2026-10-01 第十六批：「我們可以弄一個tick的module，用於設定讀取tasks-blocked的時候，要做的事情，類似hook，但是是在發現有tasks-blocked這個檔案之後，要做的insts」——之後可能有一個 tick 模組：發現 tasks-blocked 時跑設定好的一串 inst，類似 hook；格式還沒定。更早第五批記過的方向（停格檔變成特定 JSON、`aos-tick-check-task-continue` 檢查與改寫它）跟「內容 tick 不管」一起看，現在不做；會建停格檔的普通程式 `aos-tick-check-task`（[B-621](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）第十六批搬暫緩區。
+使用者 2026-10-01 第十六批：「我們可以弄一個tick的module，用於設定讀取tasks-blocked的時候，要做的事情，類似hook，但是是在發現有tasks-blocked這個檔案之後，要做的insts」——已做成 tick 模組 `modules.tasks_blocked`（[B-636](tick/tasks-blocked.md)）。〔未來方向，記錄用、現在不做〕更早第五批記過的方向（停格檔變成特定 JSON、`aos-tick-check-task-continue` 檢查與改寫它）跟「內容 tick 不管」一起看，現在不做；會建停格檔的普通程式 `aos-tick-check-task`（[B-621](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）第十六批搬暫緩區。
 
 ### 任務的帳號
 

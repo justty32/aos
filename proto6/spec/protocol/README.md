@@ -131,7 +131,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | 協議檔／條款 | 本篇只留 | 行為正本（主規格） |
 |---|---|---|
 | [daemon](../settled/protocol/daemon/README.md)／P-100～126 | 現行：`aos-daemon` 的 argv、設定檔、輸出與結束碼（P-120），控制 socket 與 `aos-ctl`（P-121），重讀設定（P-122），記住狀態（P-123），收屍／cgroup（P-124），訊息 socket 與 `aos-mq`（P-125），帳號模組（P-126）；暫緩：舊設定欄位、IPC method、tick–daemon 通道（P-117～119）、helper 通道、runner 回報、錯誤碼 | [daemon](../settled/daemon/README.md)（現行 B-640～646；暫緩 B-601～614，通道 B-612～614）；[身分](../base/identity-resources.md)；[inst](../base/inst.md) |
-| [tick 協議](../settled/protocol/tick.md)／P-200～213 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、結束碼紀錄、tasks-blocked 與擋板檔、系統級任務與普通程式的 argv、鬧鐘與待送檔格式 | [tick](../settled/tick.md)（B-602、B-620～633）；[儲存](../base/storage.md)；[投件](../base/transport.md)；[執行器 B-202](../base/execution.md) |
+| [tick 協議](../settled/protocol/tick.md)／P-200～214 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、結束碼紀錄、tasks-blocked 與擋板檔、系統級任務與普通程式的 argv、鬧鐘與待送檔格式 | [tick](../settled/tick.md)（B-602、B-620～633）；[儲存](../base/storage.md)；[投件](../base/transport.md)；[執行器 B-202](../base/execution.md) |
 | [messages](messages.md)／P-300～309 | 請求／回應檔、method 目錄、摘要檔 | [投件](../base/transport.md)；[tick](../settled/tick.md)；[S-201](../scheduling/admission.md) |
 | [work](work.md)／P-400～404、408～411 | 工作 payload、結果 JSON、`work.cancel` 形狀、程式 argv | [工作材料](../base/work.md)；[執行器](../base/execution.md) |
 | [llm-work](llm-work.md)／P-405～407 | 池設定、LLM 請求與結果 | [LLM S-301～307](../scheduling/llm.md) |
@@ -148,7 +148,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 
 ## 條號索引（P-xxx → 檔案）
 
-協議篇各條所在的檔案；別篇多用條號引用，照這張表找。檔案拆分或搬位置時條號不變，只改這張表。〔主編補，第二十批整理區〕tick 協議（原 node 協議，P-200～213；〔使用者 2026-10-01〕改名）與 daemon 協議（P-100～126）已搬進[整理區](../settled/README.md)的 `settled/protocol/`；它們的 schema 與範例仍留在本篇的 `schemas/`、`examples/`。daemon 協議的條號表只留在 [daemon/README.md](../settled/protocol/daemon/README.md) 一份。
+協議篇各條所在的檔案；別篇多用條號引用，照這張表找。檔案拆分或搬位置時條號不變，只改這張表。〔主編補，第二十批整理區〕tick 協議（原 node 協議，P-200～214；〔使用者 2026-10-01〕改名）與 daemon 協議（P-100～126）已搬進[整理區](../settled/README.md)的 `settled/protocol/`；它們的 schema 與範例仍留在本篇的 `schemas/`、`examples/`。daemon 協議的條號表只留在 [daemon/README.md](../settled/protocol/daemon/README.md) 一份。
 
 | 條號 | 標題 | 檔案 |
 |---|---|---|
@@ -177,6 +177,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-211 | aos-cg：每項一框 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-212 | aos-as：切換帳號（暫緩） | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-213 | 每項結束碼紀錄、tasks-blocked 與擋板檔 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-214 | `modules.tasks_blocked`（第十六批） | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-300 | 兩條路各做什麼 | [messages.md](messages.md) |
 | P-301 | 收件區分請求與回應 | [messages.md](messages.md) |
 | P-302 | 完整封包 | [messages.md](messages.md) |

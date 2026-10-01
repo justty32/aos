@@ -156,9 +156,13 @@ def _run_locked(cwd, table):
     blocked_before = None
     for index, (item, task_id) in enumerate(zip(tbl.items, tbl.ids)):
         if tasks_blocked():
-            # 第十六批：這一項與後面的都不跑；正常機制，stderr 不印、回 0；after_all 照跑（跟任務無關）
-            blocked_before = task_id
-            break
+            if tbl.on_blocked is not None:
+                # B-636：掛了 modules.tasks_blocked 就先跑那一串，跑完再看一次；檔被刪了就放行這一項
+                run_on_blocked(cwd, tbl, task_id, index)
+            if tbl.on_blocked is None or tasks_blocked():
+                # 第十六批：這一項與後面的都不跑；正常機制，stderr 不印、回 0；after_all 照跑（跟任務無關）
+                blocked_before = task_id
+                break
         kind, value = run_one(cwd, tbl.defaults, item, task_id, task_vars(task_id, index))
         record.add_task(task_id, index, kind, value)   # 只記不是 0 的（第八批）；不影響 tick 的結束碼
 
@@ -190,6 +194,15 @@ def tasks_blocked():
     每一項跑之前看，**只看存不存在**（資料夾、沒讀權、壞 symlink 都算在），內容 tick 不管。
     在＝這一項與後面都不跑（正常機制：stderr 不印、回 0）；after_all 照跑。整格最後由 tick 刪掉（clear_tasks_blocked）。"""
     return os.path.lexists(state("tick", "tasks-blocked"))
+
+
+def run_on_blocked(cwd, tbl, task_id, index):
+    """B-636 `modules.tasks_blocked.insts`（使用者 2026-10-01 第十六批：「1.modules底下 2.對 3.b 4.對，不記錄進記錄，非0沒影響。 5.對」）：
+    某一項之前發現 tasks-blocked 時，照順序全部跑一次（不看彼此的結束碼、自己不看 tasks-blocked）；
+    結束碼不記進紀錄、非 0 沒影響。環境照任務的規則：`AOS_TASK_ID`／`AOS_TASK_INDEX`＝被擋下的那一項，加 `AOS_TICK_CWD`；
+    沒有 `AOS_HOOK_*`（AI 隊定）。開不起來照任務印 `exec_failed: tasks_blocked/<id>`；展開失敗跟任務、hook 一樣自然丟錯。"""
+    for item, item_id in tbl.on_blocked:
+        run_one(cwd, tbl.defaults, item, item_id, task_vars(task_id, index), label="tasks_blocked/")
 
 
 def clear_tasks_blocked():

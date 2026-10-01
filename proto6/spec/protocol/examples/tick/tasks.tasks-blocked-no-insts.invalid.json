@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    {
+      "id": "a",
+      "argv": [
+        "true"
+      ]
+    }
+  ],
+  "modules": {
+    "tasks_blocked": {}
+  }
+}
