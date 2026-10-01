@@ -10,7 +10,7 @@
 | 二、收屍／cgroup `cgroup` | **已做**（第十二批：C1～C4 照建議） | [B-644](../spec/settled/daemon/cgroup.md)、[P-124](../spec/settled/protocol/daemon/cgroup.md) |
 | 三、記住狀態 `state` | **已做**（S1～S3 照建議，設定改成 `$ref`） | [B-643](../spec/settled/daemon/state.md)、[P-123](../spec/settled/protocol/daemon/state.md) |
 | 四、訊息 `mq` | **已做**（第十二批：M1～M4 照建議） | [B-645](../spec/settled/daemon/mq.md)、[P-125](../spec/settled/protocol/daemon/mq.md) |
-| 五、帳號 `account`（原草稿叫 helper） | **草稿待看**（第十二批：要做、排最後；第十三批：A1～A5 照建議、加白名單／黑名單；A6、A7 待裁定） | — |
+| 五、帳號 `account`（原草稿叫 helper） | **已做**（第十二批：拆 root 端、主程式降權；第十三批：A1～A7 照建議、白名單／黑名單） | [B-646](../spec/settled/daemon/account.md)、[P-126](../spec/settled/protocol/daemon/account.md) |
 
 做了什麼、自己定的細節見篇末[做完了沒](#做完了沒)；裁定見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十一批daemon-模組)、[第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。下面各節保留原本的草稿，裁定處就地標註。
 
@@ -341,7 +341,7 @@ node id 當收件人；`node.send`／`node.take` 的 method 名、封包與通�
 
 ## 模組五：帳號（`modules.account`）
 
-> **草稿（2026-10-01 晚依第十二批重寫；同晚第十三批裁定 A1～A5、加帳號名單，A6 待裁定）**。第十二批定的：模組鍵叫 `account`（不叫 helper）；**H1 推翻原建議**，要拆出 root 端、主程式降權；socket 先 chmod 666，之後會有多個 socket、權限另外設計。第十二批之前的舊草稿（daemon 整個留在 root、開子程序時才切帳號）見 git 歷史（commit `0d177aa6` 以前的本檔）。
+> **已做**（2026-10-01 晚；草稿依第十二批重寫，第十三批裁定 A1～A7、加帳號名單）。下面草稿照原樣留著；做法與 AI 隊定的細節見篇末[做完了沒](#做完了沒)，正本 [B-646](../spec/settled/daemon/account.md)。第十二批定的：模組鍵叫 `account`（不叫 helper）；**H1 推翻原建議**，要拆出 root 端、主程式降權；socket 先 chmod 666，之後會有多個 socket、權限另外設計。第十二批之前的舊草稿（daemon 整個留在 root、開子程序時才切帳號）見 git 歷史（commit `0d177aa6` 以前的本檔）。
 
 舊規劃：[暫緩區 B-303 root helper 與 `aos-as`](../spec/settled/deferred/helper.md)、[B-609 佈建與 helper 動作](../spec/settled/deferred/daemon/helper-actions.md)、P-102、P-107、P-108（[暫緩區 daemon 協議](../spec/settled/deferred/protocol/daemon/README.md)）。
 
@@ -374,7 +374,7 @@ sudo aos-daemon --config F
 - 判斷順序：**黑名單比到就不准 → 白名單比到才准 → 都沒比到不准**。root（UID 0）不管名單怎麼寫一律不准。
 - `allow` 省略＝空（只有預設帳號能用）；`deny` 省略＝空。
 - 預設帳號不受名單管：它就是主程式自己的帳號，它的項由主程式自己開、不經 root 端。
-- **`allow` 省略、而 `deny` 比得到預設帳號（含前綴、單獨 `*`）：設定錯、回 1**〔使用者 2026-10-01 第十三批追加：「如果allow不寫，然後deny裏面又出現預設賬號，那就報錯。」〕。`allow` 有寫時 `deny` 比到預設帳號怎麼辦：待問 A7。
+- **`allow` 省略、而 `deny` 比得到預設帳號（含前綴、單獨 `*`）：設定錯、回 1**〔使用者 2026-10-01 第十三批追加：「如果allow不寫，然後deny裏面又出現預設賬號，那就報錯。」〕。`allow` 有寫時一樣算設定錯（A7 照建議）。
 - 名單開起來時交給 root 端，之後不變。主程式被攻破時，最多拿到「用名單准的帳號開程序」，拿不到 root。
 
 ### 設定
@@ -426,8 +426,8 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 - ~~A3~~ 已定：預設帳號的項由主程式自己開、不經 root 端。
 - ~~A4~~ 已定：開起來時把 cgroup 子樹 chown 給預設帳號，root 端只把別的帳號的子程序放進框。
 - ~~A5~~ 已定：root 端死掉，主程式下一次找它時自然丟錯、daemon 回 1。
-- **A7．`allow` 有寫、`deny` 又比得到預設帳號怎麼辦？** 使用者已定 `allow` 省略時這樣算設定錯。**建議：`allow` 有寫時一樣算設定錯、回 1**（預設帳號是主程式自己，黑名單擋不住它，寫進去只會讓人誤會）；另一種是只在 `allow` 省略時報錯，有寫時照「預設帳號不受名單管」忽略。
-- **A6．設定裡寫的帳號在 Linux 上不存在怎麼辦？** daemon **不建帳號**（佈建先不做）。**建議：開起來與重讀時，主程式就用 `getpwnam` 查一遍每項的帳號與預設帳號**——開起來時不存在＝設定錯、回 1；重讀時不存在＝整份不套用（stderr 一行、舊的照跑）。開起來之後帳號才被刪掉：root 端到跑的那一刻才查不到，那一次當成 `exit=1`、stderr 一行 `aos-daemon: account: no such user <名字>`，daemon 照跑、下一次照排。另一種是開起來不查，只在跑時才發現（每次都 `exit=1`，比較晚才知道設定寫錯）。
+- ~~**A7．`allow` 有寫、`deny` 又比得到預設帳號怎麼辦？**~~ 已定（照建議）： 使用者已定 `allow` 省略時這樣算設定錯。**建議：`allow` 有寫時一樣算設定錯、回 1**（預設帳號是主程式自己，黑名單擋不住它，寫進去只會讓人誤會）；另一種是只在 `allow` 省略時報錯，有寫時照「預設帳號不受名單管」忽略。
+- ~~**A6．設定裡寫的帳號在 Linux 上不存在怎麼辦？**~~ 已定（照建議）： daemon **不建帳號**（佈建先不做）。**建議：開起來與重讀時，主程式就用 `getpwnam` 查一遍每項的帳號與預設帳號**——開起來時不存在＝設定錯、回 1；重讀時不存在＝整份不套用（stderr 一行、舊的照跑）。開起來之後帳號才被刪掉：root 端到跑的那一刻才查不到，那一次當成 `exit=1`、stderr 一行 `aos-daemon: account: no such user <名字>`，daemon 照跑、下一次照排。另一種是開起來不查，只在跑時才發現（每次都 `exit=1`，比較晚才知道設定寫錯）。
 
 ### 驗收草稿（要 root 與兩個測試帳號，手動跑、不進自動測試）
 
@@ -491,8 +491,8 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 | ~~A3~~ | 帳號 | 預設帳號的項經不經 root 端 | **已定**：不經 |
 | ~~A4~~ | 帳號 | 收屍模組怎麼配 | **已定**：子樹 chown 給預設帳號，root 端只把別的帳號的子程序放進框 |
 | ~~A5~~ | 帳號 | root 端死掉 | **已定**：自然丟錯、daemon 回 1 |
-| A7 | 帳號 | `allow` 有寫、`deny` 比得到預設帳號 | 一樣算設定錯、回 1 |
-| A6 | 帳號 | 帳號在 Linux 上不存在 | 開起來／重讀時就查（回 1／整份不套用）；之後才被刪的，那一次 `exit=1`、照跑 |
+| ~~A7~~ | 帳號 | `allow` 有寫、`deny` 比得到預設帳號 | **已定**：一樣算設定錯、回 1 |
+| ~~A6~~ | 帳號 | 帳號在 Linux 上不存在 | **已定**：開起來／重讀時就查（回 1／整份不套用）；之後才被刪的，那一次 `exit=1`、照跑 |
 | G1 | 共通 | 模組鍵名 | `reload`、`cgroup`、`state`、`mq`、`helper` |
 | G2 | 共通 | 每項的模組設定放哪 | `insts` 那一項裡、模組名當鍵 |
 | G3 | 共通 | 何時進 spec | 每個做完、看過再寫，編 B-642 起 |
@@ -532,4 +532,11 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 
 模組四 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。
 
-**下一個：模組五帳號 `account`**——草稿已照第十二批重寫、第十三批裁定 A1～A5 與名單（2026-10-01 晚），剩 A6（帳號不存在）、A7（`allow` 有寫時 `deny` 比到預設帳號）等使用者一句話就動工。
+**模組五做完了**（2026-10-01 晚，AI 隊，在家裡那台）：照重寫後的草稿與第十三批（A1～A7 照建議、白名單／黑名單）做。驗收寫進 `tests/test_account.py`（21 條，連跑 8 次都過）。全部測試 578 條（557＋21）。
+
+- **在 user namespace 裡驗到的**（`unshare --user --map-root-user --map-auto` 當假 root，帳號用 http、daemon、nobody）：各項用對的帳號、補充群組、`HOME`／`USER`／`LOGNAME`；主程式 Uid 四欄是預設帳號、root 端是 root；socket 666 歸預設帳號、別的帳號的任務 `aos-ctl` 連得上；輸出檔歸預設帳號；結束碼與訊號；`SUDO_USER`；各種設定錯回 1；重讀加不准的帳號整份不套用、加准的照跑、改名單只警告；root 端開跑時查不到帳號回錯；殺掉 root 端 daemon 回 1；SIGTERM 時 root 端跟著退；跟收屍模組一起（`systemd-run --user --scope` 包 unshare）別的帳號的殘留照樣被清、框歸預設帳號。
+- **只能等真 root 手動驗**：真的 `sudo` 開（真 root、真 `SUDO_USER`）、`/etc/passwd` 裡真的測試帳號（`aostest1`、`aostest2`）、開起來之後才 `userdel` 的那一次 `exit=1`（namespace 裡刪不了帳號，只直接對 root 端驗了回錯）、主程式被攻破時只拿得到名單內帳號（設計上成立，沒法自動驗）。
+- 程式：新 `lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`、`bin/aos-daemon-root`；`lib/aos_daemon.py`（`Item.user`、`Setup.account`、`run_once()` 帳號分支、`_die()`、`main()` 核帳號→chown 子樹→開 root 端→降權→socket 666）；`lib/aos_daemon_reload.py`（照開起來時的名單核、`_update()` 換帳號）。用法見 [src/py README](../src/py/README.md#帳號m3m-模組五)。
+- spec：[B-646](../spec/settled/daemon/account.md)、[P-126](../spec/settled/protocol/daemon/account.md)；schema `daemon-core-config` 加 `modules.account` 與每項 `account`；範例 `examples/daemon/core-config.account*`；暫緩區 B-303、B-609、P-102、P-107、P-108 標部分取代。
+
+模組五 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十三批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十三批帳號模組)。五個模組都做完了；node 模組不做。

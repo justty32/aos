@@ -1,0 +1,28 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "account": {
+      "user": "lorkhan",
+      "allow": [
+        "agent-*",
+        "bob"
+      ],
+      "deny": [
+        "agent-admin"
+      ]
+    }
+  },
+  "insts": {
+    "a.json": {},
+    "jobs/bob.json": {
+      "account": {
+        "user": "bob"
+      }
+    },
+    "agents/1.json": {
+      "account": {
+        "user": "agent-1"
+      }
+    }
+  }
+}
