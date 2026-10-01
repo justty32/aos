@@ -81,10 +81,10 @@
 | 有擋板檔 | 不跑（tick 直接結束、stderr 不印〔使用者 2026-10-01 第十六批〕） |
 | tick 自己出錯（`bad_table`、用法錯、中途自然丟錯…） | 不跑 |
 
-- 跑的時機：本格紀錄已收尾（`ended:true`、`exit:0`，被擋下的還有 `blocked_before`）之後。所以 hook 讀本格紀錄（`current/`，展開 `$ref` 後）看得到整格的結果（`ran` 與失敗清單 `tasks`），也看得到前面 hook 裡結束碼不是 0 的（0 不記，第八批）。
+- 紀錄〔使用者 2026-10-01 第十八批〕：**所有 hooks（含 `after_all`）跑完才收尾寫 `ended:true`**——tick 在跑 hook 時被殺，下一格的 `last/` 是 `ended:false`，`before_all` 的當機還原看得到。所以 hook 跑的時候本格紀錄還是 `ended:false`（還沒有 `exit`、`blocked_before`）；hook 讀本格紀錄（`current/`，展開 `$ref` 後）看得到 `ran`、失敗清單 `tasks`、前面 hook 裡結束碼不是 0 的（0 不記，第八批）。要知道這格有沒有被 tasks-blocked 擋下，看檔還在不在（整格最後才刪）或比 `ran` 與任務數。
 - **不看 tasks-blocked**：hook 之間不查它，hook 自己寫了也不擋下一個 hook；after_all 跑完後核心刪掉它（整格最後，[B-620](../tick.md)）。
 - **每項結束碼不是 0 的照實記（0 不記）、接著跑下一項**，跟任務一樣；**不影響 tick 的結束碼**（照舊回 0，[C-08](../conventions.md)）。
-- 某個 hook 跑到時展開失敗（合併後的 inst 不合規則）：跟任務一樣自然丟錯、tick 回 1；紀錄停在已寫的樣子（`ended:true`、`exit:0`，`hooks.after_all` 只到前一項）。這時 tick 回 1 而紀錄寫著 `exit:0`，兩邊對不上——**使用者 2026-10-01：先不管**（照 POC 默認一切正常，不另處理）。
+- 某個 hook 跑到時展開失敗（合併後的 inst 不合規則）：跟任務一樣自然丟錯、tick 回 1；紀錄停在已寫的樣子（`ended:false`，hooks 只到前一項）。原本「tick 回 1 而紀錄寫著 `exit:0`」對不上的問題，隨第十八批「hooks 跑完才收尾」不再發生。
 
 ### 紀錄
 

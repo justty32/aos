@@ -4,7 +4,7 @@
 
 LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 [llm-work](llm-work.md)；本篇其餘條號不變。取消工作是 P-411（第十七批新增）。
 
-〔使用者方向 2026-09-30，第十八批〕本篇只留欄位、JSON、schema、範例與程式 argv；行為以主規格為正本：工作識別 [T-03](../terms.md)、固定材料與預設值 [B-101](../base/work.md)、結果 [B-103](../base/work.md)、取消 [B-203](../base/execution.md)、掛行程與砍掉 [B-613](../settled/deferred/daemon/channel.md)、標準配備的 once [B-629](../settled/tick/template.md)、unknown 與從未啟動證據 [S-401](../scheduling/operations.md)。本篇的 schema 照 [P-007](README.md) 的放寬通則：不認得的欄位忽略（[C-07](../contracts.md)）。
+〔使用者方向 2026-09-30，第十八批〕本篇只留欄位、JSON、schema、範例與程式 argv；行為以主規格為正本：工作識別 [T-03](../terms.md)、固定材料與預設值 [B-101](../base/work.md)、結果 [B-103](../base/work.md)、取消 [B-203](../base/execution.md)、掛行程與砍掉 [B-613](../settled/deferred/daemon/channel.md)、標準配備的 once [B-629](../settled/deferred/template.md)、unknown 與從未啟動證據 [S-401](../scheduling/operations.md)。本篇的 schema 照 [P-007](README.md) 的放寬通則：不認得的欄位忽略（[C-07](../contracts.md)）。
 
 ## P-400．兩個入口〔使用者方向 2026-09-29〕
 
@@ -28,7 +28,7 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 
 ## P-402．once 與工作材料〔使用者方向 2026-09-29；第十九批改寫〕
 
-〔使用者方向 2026-09-30，第十九批〕once 是標準配備的一項（[B-629](../settled/tick/template.md)），做法是經 tick–daemon 通道把行程掛到 daemon 上跑（`node.mount`，[B-613](../settled/deferred/daemon/channel.md)），不再是登記的一種。掛載目標依 [inst 的「inst 目標：檔案或資料夾」](../base/inst.md#inst-目標檔案或資料夾)；資源歸屬與核權依 B-613，通道的環境變數與憑證依 [B-612](../settled/deferred/daemon/channel.md)，啟動失敗旁檔（`.err`）格式依 [daemon P-110](../settled/deferred/protocol/daemon/provision-and-runner.md)。
+〔使用者方向 2026-09-30，第十九批〕once 是標準配備的一項（[B-629](../settled/deferred/template.md)），做法是經 tick–daemon 通道把行程掛到 daemon 上跑（`node.mount`，[B-613](../settled/deferred/daemon/channel.md)），不再是登記的一種。掛載目標依 [inst 的「inst 目標：檔案或資料夾」](../base/inst.md#inst-目標檔案或資料夾)；資源歸屬與核權依 B-613，通道的環境變數與憑證依 [B-612](../settled/deferred/daemon/channel.md)，啟動失敗旁檔（`.err`）格式依 [daemon P-110](../settled/deferred/protocol/daemon/provision-and-runner.md)。
 
 〔使用者方向 2026-09-29，第十六批〕**工作目錄名要加前綴**：不同成員都可能用 `attempt-1`，同一個 kernel 裡會撞名。目錄名一律是 `<前綴>-<attempt_id>`，前綴是「**配出這個 attempt_id 的 node**」絕對路徑 UTF-8 bytes 的 sha256 前 16 個小寫 hex。node 路徑不能直接當目錄名，雜湊長度固定、只有 `[0-9a-f]`。全篇及 kernel／agent 篇路徑裡的 `state/work/<attempt_id>/`、`.aos/jobs/<attempt_id>/`，`<attempt_id>` 都指這個目錄名；檔案內容與 RPC 裡的 attempt_id 欄位不加前綴。
 
@@ -68,11 +68,11 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 | agent 自跑工具（`tools.target_node` 為 null） | 省略 | 憑證所屬的 tick，即 agent 自己 |
 | LLM 池的 `aos-llm` 派 `aos-llm-call` | 省略 | 憑證所屬的 tick，即池 node 自己 |
 
-省略 `parent_id` 的兩種只能帶本格 `token` 走通道；agent 或池 node 不在 daemon 底下（cron、人手跑）時沒有通道、掛不了，〔記錄者依追答 11 歸類〕算功能受限、不另設替代路（[B-629](../settled/tick/template.md)）。
+省略 `parent_id` 的兩種只能帶本格 `token` 走通道；agent 或池 node 不在 daemon 底下（cron、人手跑）時沒有通道、掛不了，〔記錄者依追答 11 歸類〕算功能受限、不另設替代路（[B-629](../settled/deferred/template.md)）。
 
-`parent_id` 只給資源歸屬與核權（框放在它的框下、身分核對它的身分額度）；掛載的 W 不是要被 tick 的 node，沒有資料夾上下層的問題，其位置也不決定歸屬。〔使用者方向 2026-09-30，第十九批，撤「與目錄位置無關」的一般說法〕一般 node 的上層不是這樣：預設看資料夾包含，可用登記的 `parent_id` 覆蓋（[B-628](../settled/tick.md)）。何時建目錄、何時掛載（本格只保存材料，提交後下一格才掛）依 [B-624](../settled/tick/mq.md) 與 B-613，kernel 代跑的步驟見 [kernel P-806](kernel-tasks.md)。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
+`parent_id` 只給資源歸屬與核權（框放在它的框下、身分核對它的身分額度）；掛載的 W 不是要被 tick 的 node，沒有資料夾上下層的問題，其位置也不決定歸屬。〔使用者方向 2026-09-30，第十九批，撤「與目錄位置無關」的一般說法〕一般 node 的上層不是這樣：預設看資料夾包含，可用登記的 `parent_id` 覆蓋（[B-628](../settled/tick.md)）。何時建目錄、何時掛載（本格只保存材料，提交後下一格才掛）依 [B-624](../settled/deferred/mq.md) 與 B-613，kernel 代跑的步驟見 [kernel P-806](kernel-tasks.md)。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
 
-`launch-started` 的建立、`.err` 旁檔與 result.json 怎麼當證據、缺證據何時記 unknown，依 [S-401](../scheduling/operations.md)。標準配備的執行器（[B-629](../settled/tick/template.md)）在移除掛載框前保存 [res-usage](schemas/res-usage.schema.json) 到 usage.json，發起者下格收量；量不到（包括 cgroup 走備援時，[B-631](../settled/tick/cg.md)）不寫 usage.json、用量記 null，不採信工具自報。
+`launch-started` 的建立、`.err` 旁檔與 result.json 怎麼當證據、缺證據何時記 unknown，依 [S-401](../scheduling/operations.md)。標準配備的執行器（[B-629](../settled/deferred/template.md)）在移除掛載框前保存 [res-usage](schemas/res-usage.schema.json) 到 usage.json，發起者下格收量；量不到（包括 cgroup 走備援時，[B-631](../settled/tick/cg.md)）不寫 usage.json、用量記 null，不採信工具自報。
 
 ## P-403．結果與串流〔建議預設，未拍板〕
 

@@ -42,7 +42,7 @@
 - **`AOS_DIRNAME`**〔使用者方向 2026-10-01〕：上表的 `.aos` 是環境變數 `AOS_DIRNAME` 沒設時的名字（[C-09](../settled/conventions.md)）。設成別的名字就找 `xxx/<名字>/inst.json`；設成空字串就只找 `xxx/inst.json`。值不合法（含 `/`、或是 `.`、`..`）時，資料夾目標算用法錯、回 1；直接給檔不受影響。除此之外沒有改尋找路徑的選項或旗標。
 - **daemon 核心沒有 id**〔使用者方向 2026-10-01〕：daemon 設定檔 `insts` 的鍵就是 inst 字面值，原樣交給 `aos-exec`，不另算 id、不正規化（[B-640](../settled/daemon/core.md)）。
 - **aos-tick 不再拿 inst 認資料夾**〔使用者方向 2026-10-01〕：`aos-tick [<目標>]` 看的是任務表 `tasks.json`，跟 `inst.json` 分開，也不再把 `.aos/inst.json` 路徑正規化成資料夾（[B-620](../settled/tick.md)）。`aos-tick` 的目標只能是資料夾，給檔算用法錯、回 1（這點跟 `aos-exec` 不同；原「給檔就拿它當任務表」撤回）〔使用者 2026-10-01〕。任務表頂層可放 inst 欄位當每一項的預設，合併後的那一項照本篇規則展開（[B-620](../settled/tick.md)、[C-11](../settled/conventions.md)）。
-- 投件時「目標是不是 node」照這張表的資料夾那列判斷（[B-624](../settled/tick/mq.md)）。`once` 工作通常是單檔。
+- 投件時「目標是不是 node」照這張表的資料夾那列判斷（[B-624](../settled/deferred/mq.md)）。`once` 工作通常是單檔。
 
 ## 路徑、環境與指示詞
 

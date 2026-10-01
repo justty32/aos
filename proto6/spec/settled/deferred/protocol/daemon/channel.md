@@ -10,7 +10,7 @@
 |---|---|
 | 誰有通道；憑證怎麼發放、核對、作廢 | [B-612](../../daemon/channel.md) |
 | 掛行程與砍掉 | [B-613](../../daemon/channel.md) |
-| 系統訊息佇列與急件 | [B-614](../../daemon/messaging.md)；tick 那一側 [B-623、B-624](../../../tick/mq.md) |
+| 系統訊息佇列與急件 | [B-614](../../daemon/messaging.md)；tick 那一側 [B-623、B-624](../../mq.md) |
 
 封包、schema 與通用錯誤同 [P-103](startup-and-ipc.md)、[P-111](provision-and-runner.md)，一律嚴格（[C-07](../../../../contracts.md)）。
 

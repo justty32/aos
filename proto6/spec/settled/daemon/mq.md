@@ -53,7 +53,7 @@ aos-mq peek [--from [<寄件 inst>…]]…
 - `send`：`from` 自動填 `AOS_DAEMON_INST`（沒有就 `null`）；`<JSON>` 給 `-` 就從 stdin 讀。
 - `take`、`peek`：只對 `AOS_DAEMON_INST` 那一項的信箱（沒有就回 1、`no_inst`）；`take` 取走、`peek` 不取。`--from` 後面接的參數（到下一個 `--` 開頭的參數為止）都是寄件 inst，一個都不接＝寄件人是 `null`；可以重複寫、疊加。每封一行印到 stdout，沒信什麼都不印。
 - 成功回 0；其他一律回 1（[C-08](../conventions.md)），stderr 一行代碼與說明。
-- 名字照使用者同意 M4：程式叫 `aos-mq`、子命令 `send`／`take`（第十五批加 `peek`）、模組鍵 `mq`。tick 側舊的 `aos-mq get`／`post`（[B-623、B-624](../tick/mq.md)）是「讀寫 `.aos/mq/` 檔」的系統級任務，意思不一樣，照舊待實作；任務裡要收發信直接叫 `aos-mq send`／`take`，tick 核心不用改。
+- 名字照使用者同意 M4：程式叫 `aos-mq`、子命令 `send`／`take`（第十五批加 `peek`）、模組鍵 `mq`。tick 側舊的 `aos-mq get`／`post`（[B-623、B-624](../deferred/mq.md)）是「讀寫 `.aos/mq/` 檔」的系統級任務，意思不一樣，照舊待實作；任務裡要收發信直接叫 `aos-mq send`／`take`，tick 核心不用改。
 
 ### 跟其他模組
 

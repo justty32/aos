@@ -68,7 +68,7 @@
 
 ## T-08．投件權就是執行權
 
-〔使用者方向 2026-09-30，第十八批〕能投件給某 node，就等於能用它的身分跑任意程式；這件事**會傳遞**：A 能投給 K、K 能投給池，A 就等於也能用池的身分。隔離與 key 保護只對整條投件鏈以外的帳號成立。行為正本見 [B-501](base/transport.md)。〔使用者方向 2026-09-30，第二十批〕由收件這項系統級任務落實（[B-623](settled/tick/mq.md)）；tick–daemon 通道上的訊息同樣適用（[B-614](settled/deferred/daemon/messaging.md)）。
+〔使用者方向 2026-09-30，第十八批〕能投件給某 node，就等於能用它的身分跑任意程式；這件事**會傳遞**：A 能投給 K、K 能投給池，A 就等於也能用池的身分。隔離與 key 保護只對整條投件鏈以外的帳號成立。行為正本見 [B-501](base/transport.md)。〔使用者方向 2026-09-30，第二十批〕由收件這項系統級任務落實（[B-623](settled/deferred/mq.md)）；tick–daemon 通道上的訊息同樣適用（[B-614](settled/deferred/daemon/messaging.md)）。
 
 - T-09．收尾、排空停機、熱重載、逃生口：已搬到[暫緩區](settled/deferred/terms.md#t-09收尾排空停機熱重載逃生口)，條號不變。
 

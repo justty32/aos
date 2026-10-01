@@ -41,7 +41,7 @@
 
 ## S-203．逐層分配與資源 module
 
-〔使用者方向 2026-09-30，第十八批〕**aos 只給框架，資源由各 kernel 定義。** 資源 module 就是任務註冊表裡的普通任務（[B-620](../settled/tick.md)），裝哪些、怎麼記帳、怎麼分，由各 kernel 決定，沒有所有部署必填的一組全域上限。CPU、記憶體、pids、LLM、磁碟記帳與網路這六類是**預設 kernel 範本**的資源（[P-500～507](../protocol/resources.md)）；kernel 可以登記自己的資源名稱，意思由定義它的 kernel 解釋，只有 CPU、記憶體、pids 由標準配備的 cgroup 框寫進 cgroup（[T-06](../terms.md)、[B-629](../settled/tick/template.md)）。
+〔使用者方向 2026-09-30，第十八批〕**aos 只給框架，資源由各 kernel 定義。** 資源 module 就是任務註冊表裡的普通任務（[B-620](../settled/tick.md)），裝哪些、怎麼記帳、怎麼分，由各 kernel 決定，沒有所有部署必填的一組全域上限。CPU、記憶體、pids、LLM、磁碟記帳與網路這六類是**預設 kernel 範本**的資源（[P-500～507](../protocol/resources.md)）；kernel 可以登記自己的資源名稱，意思由定義它的 kernel 解釋，只有 CPU、記憶體、pids 由標準配備的 cgroup 框寫進 cgroup（[T-06](../terms.md)、[B-629](../settled/deferred/template.md)）。
 
 〔使用者方向 2026-09-30，第十八批〕**上下層不必對齊。** 上層只用自己認得的資源與規則管下層，下層不必知道自己被怎麼管；上下層資源定義不同就各管各的，上層不認得下層的自訂資源時不代管、不報錯。**只有 Linux 管的兩樣維持巢狀**：cgroup 上限與身分額度（含佈建授權），子層只能在已分得的範圍內再分（[B-301](../base/identity-resources.md)、[B-605](../settled/deferred/daemon/cgroup.md)）。kernel 自己定義、Linux 管不到的資源與隔離可以比上層寬；預設範本「子層在父層配額內再分」是範本的預設，不是 aos 的要求。
 

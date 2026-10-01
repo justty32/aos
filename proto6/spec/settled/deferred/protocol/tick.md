@@ -2,7 +2,7 @@
 
 ← [暫緩區](../README.md)｜[tick 暫緩區](../tick.md)｜[現行 tick 協議](../../protocol/tick.md)｜[慣例](../../conventions.md)
 
-> **這篇整篇在暫緩區**（2026-10-01）。[tick 協議](../../protocol/tick.md)裡先不做的條（P-207 整條、P-206 的 `aos-publish` 那列、P-212 `aos-as` 整條、P-204 `aos-tick-check-task` 整條、P-205 `aos-git` 整條）搬到這裡，原文照留，條號保留、不重用。行為那側見 [tick 暫緩區](../tick.md)。
+> **這篇整篇在暫緩區**（2026-10-01）。[tick 協議](../../protocol/tick.md)裡先不做的條（P-207 整條、P-206 的 `aos-publish` 那列、P-212 `aos-as` 整條、P-204 `aos-tick-check-task` 整條、P-205 `aos-git` 整條、P-206 `aos-mq` 整條）搬到這裡，原文照留，條號保留、不重用。行為那側見 [tick 暫緩區](../tick.md)。
 
 ## P-207．加入普通設定〔建議預設，未拍板〕
 
@@ -121,3 +121,58 @@
 | `125` | 不在 tick 內（特別指定的碼） |
 
 〔第二十批疑點裁定 5〕第十九批的完成紀錄 `.aos/journal/<seq>.json`、`sent/`、`discarded/` 與 `node-journal` schema 撤，由結束碼紀錄取代（P-213、[B-632](../git.md)）。
+
+## P-206．系統訊息佇列 aos-mq 與發摘要〔使用者方向 2026-09-30，astra 審整理區同日定案〕
+
+> **暫緩**（2026-10-01 第十八批）〔使用者 2026-10-01 第十八批：「1. 都按你建議 2.好 3.對，我就不想了。」〕原文照搬家前的樣子留著（`aos-publish` 那列第五批已另搬，見本篇「暫緩：P-206 aos-publish 那列」）。
+
+本條只定檔案格式與 argv。行為正本：取 [B-623](../mq.md)；送 [B-624](../mq.md)。**發摘要 `aos-publish` 那列 2026-10-01 搬到[暫緩區](tick.md#暫緩p-206-aos-publish-那列發摘要)**〔使用者 2026-10-01 第五批〕，標題的「與發摘要」只是舊名，條號不變。佇列裡的訊息可以是請求或回應物件〔使用者方向 2026-09-30，修正輪暫定的裁定〕。檔案收件區 `requests/`、`responses/` 的格式屬普通程式，不在本條。
+
+### argv 與結束碼〔建議預設〕
+
+| 程式 | 任務 id（範本） | 做什麼 |
+|---|---|---|
+| `aos-mq get` | `mq-get` | 用 `node.take` 取本工作資料夾佇列裡的訊息，取到空為止 |
+| `aos-mq post` | `mq-post` | 把 `.aos/mq/post/` 的訊息一件一件用 `node.send` 送出 |
+
+兩者都是系統級任務，都在工作資料夾（cwd）跑、不收其他參數。在 tick 內靠繼承的鎖；不在 tick 內時自己取同一把鎖，拿不到回 75。「在不在 tick 內」靠暫緩區的「鎖 fd 傳給任務」（[tick 暫緩區](../tick.md#暫緩b-602-完整互斥的其餘細節)）；最簡鎖下，任務在 tick 內去取鎖一定拿不到，這段要等它回來再對。
+
+| 結束碼 | 意思 |
+|---|---|
+| `0` | 成功（含沒事做、本格沒有通道） |
+| `1` | 有件處理失敗（例如 `node.take` 回錯、寫檔 I/O 錯）；或用法錯 |
+| `75` | 不在 tick 內又拿不到鎖（特別指定的碼） |
+
+〔建議預設，未拍板〕daemon 訊息部件關閉：`aos-mq get` 回 0；`aos-mq post` 有待送件回 1，stderr 印 `post_failed: <to> <id> not_available`，失敗檔 `error.code` 為 `not_available`；沒件回 0。行為見 [B-614](../daemon/messaging.md)、[B-624](../mq.md)，RPC 錯誤碼見 [P-119](daemon/channel.md)。
+
+### 要送的訊息
+
+`.aos/mq/post/<id>.req.json`（請求）或 `<id>.resp.json`（回應）（追蹤），`<id>` 是訊息的 ID；請求與回應各用一個後綴，同一個工作資料夾同一格送出同 ID 的請求與回應不會撞檔名〔使用者 2026-09-30 同意照暫定〕。`message` 是請求物件就得用 `.req.json`、是回應物件就得用 `.resp.json`。〔暫定〕形狀是 `node.send` 的 params 去掉 `token`、加 `version`：
+
+```json
+{"version":1,"to":"/目標工作資料夾","message":{...},"urgent"?:true}
+```
+
+| 欄位 | 約束 |
+|---|---|
+| `version` | 必填，1 |
+| `to` | 必填；收件 tick 的工作資料夾絕對路徑（P-200；暫緩區叫 node id） |
+| `message` | 必填；一份請求或回應物件（[P-301](../../../protocol/messages.md)），它的 `id` 要跟檔名去掉後綴的部分相同；序列化後最多 196608 bytes（[P-119](daemon/channel.md)） |
+| `urgent` | 可省，布林，預設 false；true＝急件 |
+
+schema 還沒補：舊的待送封套 [msg-outbox](../../../protocol/schemas/msg-outbox.schema.json) 是檔案投件的格式（`target_node`、`alarm_ticks`、`channel`），已不適用，列在 [README 待放入](../../README.md#待放入)。鬧鐘紀錄 `.aos/alarms/` 隨鬧鐘撤（[B-624](../mq.md)）。
+
+### 送不出去的失敗紀錄
+
+`.aos/mq/failed/<id>.req.json` 或 `<id>.resp.json`（ignore，檔名同原檔）〔使用者 2026-09-30 同意照暫定〕：`mq-post` 把送不了的那份原檔搬過來，內容是原檔的欄位再加一個 `error:{"code":"<代碼>"}`。沒有 schema。下一格 `mq-post` 開始送之前整個清掉（[B-624](../mq.md)）。
+
+### stderr 診斷行
+
+| 行 | 意思 |
+|---|---|
+| `post_failed: <to> <id> <code>` | 送不了、已移除（[B-624](../mq.md)） |
+| `no_channel` | 本格沒有通道，什麼都沒做 |
+
+依據：第十九批（經通道送、急件）；第二十批（系統級任務的 argv）；astra 審整理區同日定案（`aos-mq`；檔案收件、投件、鬧鐘撤出 aos）。
+
+**P-207（加入普通設定，`aos-config-add`）2026-10-01 整條搬到[暫緩區](tick.md)。** 使用者 2026-10-01 裁定：這個指令從沒寫過程式，先不做；要改 `config/` 就自己改。條號保留、不重用。

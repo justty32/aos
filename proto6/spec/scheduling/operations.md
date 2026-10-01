@@ -74,7 +74,7 @@ unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用�
 
 ## S-406．給 kernel 的一般回話
 
-〔使用者方向 2026-09-29，第十七批〕別人投給 kernel 的一般回話（`agent.say`）由任務表中宣告 `agent.say` 的那項任務收（預設 kernel 範本是 schedule，[P-803](../protocol/kernel-tasks.md)）：**只記錄**，不裝 LLM、不建待處理輸入、不再回話；帶 `in_reply_to` 的也只記錄（[P-705](../protocol/agent-tasks.md)）。收下後回一個確認回件，交標準配備投出、清原件（[B-623](../settled/tick/mq.md)、[B-624](../settled/tick/mq.md)）。
+〔使用者方向 2026-09-29，第十七批〕別人投給 kernel 的一般回話（`agent.say`）由任務表中宣告 `agent.say` 的那項任務收（預設 kernel 範本是 schedule，[P-803](../protocol/kernel-tasks.md)）：**只記錄**，不裝 LLM、不建待處理輸入、不再回話；帶 `in_reply_to` 的也只記錄（[P-705](../protocol/agent-tasks.md)）。收下後回一個確認回件，交標準配備投出、清原件（[B-623](../settled/deferred/mq.md)、[B-624](../settled/deferred/mq.md)）。
 
 〔審稿必-4〕記錄照 agent history 的形狀寫進 kernel 自己的 history，序號放 kernel 自己的序號檔，在 node 鎖內遞增、跟 history 同組提交，重啟不倒退。人手 `aos agent listen` 讀的是**同一個 commit 裡任務表宣告 `agent.say` 的那項任務**對應的 history（〔第十九批〕沒有 git 時讀目前的任務表與 history，不保證一致快照，[B-632](../settled/deferred/git.md)）：宣告它的是 agent 任務就讀 agent 的，是 kernel 任務就讀 kernel 的（[P-713](../protocol/agent-tasks.md)）。
 

@@ -17,7 +17,8 @@ $ref 是相對路徑（相對於 record.json 所在資料夾），整個資料�
 - `open()`：開格換紀錄（算 `seq` → 在 `.current.tmp/` 寫好 record.json、ran.json、task-exits.json →
   刪 `last/`、`current/` 整個換成 `last/`（沒有 current 就只刪 last）→ `.current.tmp/` 換成 `current/`）。
 - `add_task()`：每項之後寫 ran.json；不是 exit 0 才重寫 task-exits.json。
-- `finish()`：收尾寫 record.json，所以 record.json 只在開格與收尾各寫一次。
+- `finish()`：收尾寫 record.json，所以 record.json 只在開格與收尾各寫一次。〔使用者 2026-10-01 第十八批〕收尾在所有 hooks（含 after_all）
+  跑完之後：tick 在跑 hook 時被殺，下一格的 `last/record.json` 是 `ended:false`。
 - `add_hook()`：hooks（B-635）跑完一項，不是 exit 0 才重寫 hook-exits.json。第十七批起 hooks 在格中也會跑
   （before_all、after_task、after_every_task），所以任務表有寫 hooks 時 hook-exits.json 開格就建好、record.json 開格就帶 `hooks` 的 $ref；
   after_task／after_every_task 的每筆另帶 `task_index`＝觸發它的那一項任務的位置。

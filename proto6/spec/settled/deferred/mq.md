@@ -1,12 +1,14 @@
 # 系統訊息佇列：取件與派出
 
-← [通用 tick 核心](../tick.md)｜[tick 子篇入口](README.md)｜格式：[tick 協議](../protocol/tick.md)
+← [通用 tick 核心](../tick.md)｜[tick 子篇入口](../tick/README.md)｜格式：[tick 協議](../protocol/tick.md)
 
-**狀態：待實作，依賴暫緩。這裡的 `aos-mq get`／`post` 要靠暫緩區的 daemon 通道。〔2026-10-01 第十二批〕現行的收發信是 daemon 訊息模組的 `aos-mq send`／`take`（[B-645](../daemon/mq.md)），任務裡直接叫就能用，跟這裡的系統級任務是兩回事。發摘要 `aos-publish` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出。
+> **這篇整篇在暫緩區**（2026-10-01 第十八批）〔使用者 2026-10-01 第十八批：「1. 都按你建議 2.好 3.對，我就不想了。」〕系統級任務 `aos-mq get`／`aos-mq post`（B-623、B-624 剩下的部分）要靠暫緩區的 daemon 通道，用途已被 daemon 訊息模組取代（[B-645](../daemon/mq.md)：`aos-mq send`／`take`）。原檔 `tick/mq.md` 整篇搬來，原文照留、條號保留不重用。
+
+**狀態：待實作，依賴暫緩。這裡的 `aos-mq get`／`post` 要靠暫緩區的 daemon 通道。〔2026-10-01 第十二批〕現行的收發信是 daemon 訊息模組的 `aos-mq send`／`take`（[B-645](../daemon/mq.md)），任務裡直接叫就能用，跟這裡的系統級任務是兩回事。發摘要 `aos-publish` 2026-10-01 搬到[暫緩區](tick.md#暫緩b-624-發布摘要aos-publish)。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出。
 
 ## B-623：系統訊息佇列：取件（mq-get）；檔案收件 aos 不管
 
-**aos 只管系統訊息佇列。** 佇列是 aos 的系統級 IPC：同一個 daemon 底下的 tick 經通道互送訊息，daemon 替每個 tick 暫存（[B-614](../deferred/daemon/messaging.md)）。**請求與回應都走佇列**〔使用者方向 2026-09-30，修正輪暫定的裁定〕。本條是取的那一側，送的那一側見 B-624。
+**aos 只管系統訊息佇列。** 佇列是 aos 的系統級 IPC：同一個 daemon 底下的 tick 經通道互送訊息，daemon 替每個 tick 暫存（[B-614](daemon/messaging.md)）。**請求與回應都走佇列**〔使用者方向 2026-09-30，修正輪暫定的裁定〕。本條是取的那一側，送的那一側見 B-624。
 
 | | 系統訊息佇列 | 檔案收件區（`requests/`、`responses/`） |
 |---|---|---|
@@ -16,12 +18,12 @@
 ### aos-mq get：只有它取
 
 - **每個工作資料夾只有 `aos-mq get` 用 `node.take` 取佇列**，其他任務不直接取。範本裡排在最前面：沒有 git 版是第一項；有 git 版排在 `git-open` 後面，是第二項（[B-629](template.md)）。〔astra 報告必修 9；使用者 2026-10-01：node 改稱工作資料夾〕
-- 一格裡把佇列取到空為止（回應說還有就再取，[P-119](../deferred/protocol/daemon/channel.md)）。請求與回應一起取出，不分兩個佇列。
+- 一格裡把佇列取到空為止（回應說還有就再取，[P-119](protocol/daemon/channel.md)）。請求與回應一起取出，不分兩個佇列。
 - **取出後怎麼分派 aos 不管**：放哪、交給哪一項、先後怎麼排，由 `aos-mq get` 的實作決定，不在規範內。
 - daemon 的憑證一格一張，分不出是哪一項在取，所以「只有它取」是同一個工作資料夾裡的約定，不是授權（跟 [B-602](../tick.md#b-602同一資料夾一次一格互斥鎖) 的鎖同一種）。
 - 沒掛 `mq-get` 就沒人取：訊息留在 daemon，滿了寄件方收到 `mailbox_full`，daemon 重啟就丟（B-614）。
 - 不保證送達；沒人取的也不回任何錯誤。
-- 〔建議預設，未拍板〕daemon 訊息部件沒掛時，`node.take` 回空，`mq-get` 回 0；任務表不用改（[B-614](../deferred/daemon/messaging.md)、[B-615](../deferred/daemon/components.md)）。
+- 〔建議預設，未拍板〕daemon 訊息部件沒掛時，`node.take` 回空，`mq-get` 回 0；任務表不用改（[B-614](daemon/messaging.md)、[B-615](daemon/components.md)）。
 - 沒有通道（不是舊 daemon 開的格；現行 daemon 跑的格也沒有〔astra 報告必修 1〕）時什麼都不取，回 0（argv 與結束碼見 [P-206](../protocol/tick.md)）。
 - 有 git 時〔使用者 2026-09-30 同意照暫定〕，這格作廢（停格檔、當機）的話，`mq-get` 這格取出、寫進 aos 範圍的訊息會被下一格 `aos-git open` 還原掉，等於丟了；daemon 那邊已經刪了，不會重取。佇列本來就不保證送達（B-630）。
 
@@ -37,11 +39,11 @@
 
 ## B-624：派出：系統訊息佇列送出（mq-post）與發摘要（Q2）
 
-派出只剩一項系統級任務：`aos-mq post`（任務 id `mq-post`）把本工作資料夾要送的訊息經通道送進對方的佇列。原本的另一項、發布摘要 `aos-publish`，2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)〔使用者 2026-10-01 第五批〕；標題的「與發摘要」只是舊名，條號不變。**檔案投件（寫對方的 `requests/`、`responses/`）是普通程式的事，aos 不管。**
+派出只剩一項系統級任務：`aos-mq post`（任務 id `mq-post`）把本工作資料夾要送的訊息經通道送進對方的佇列。原本的另一項、發布摘要 `aos-publish`，2026-10-01 搬到[暫緩區](tick.md#暫緩b-624-發布摘要aos-publish)〔使用者 2026-10-01 第五批〕；標題的「與發摘要」只是舊名，條號不變。**檔案投件（寫對方的 `requests/`、`responses/`）是普通程式的事，aos 不管。**
 
 ### aos-mq post：只走通道
 
-- 任務把要送的訊息寫進追蹤的 `.aos/mq/post/<id>.req.json`（請求）或 `<id>.resp.json`（回應）（格式見 [P-206](../protocol/tick.md)）。`aos-mq post` 排在使用者任務之後（B-629），用 `node.send` 一件一件送進對方的佇列（[B-614](../deferred/daemon/messaging.md)）。不寫對方的收件區。
+- 任務把要送的訊息寫進追蹤的 `.aos/mq/post/<id>.req.json`（請求）或 `<id>.resp.json`（回應）（格式見 [P-206](../protocol/tick.md)）。`aos-mq post` 排在使用者任務之後（B-629），用 `node.send` 一件一件送進對方的佇列（[B-614](daemon/messaging.md)）。不寫對方的收件區。
 - 訊息是一份請求物件或回應物件（[P-301](../../protocol/messages.md)）：回別人的請求，也是寫一份回應進 `.aos/mq/post/`，由 `mq-post` 送回對方的佇列。〔使用者方向 2026-09-30，修正輪暫定的裁定〕請求與回應分檔名後綴，同一格同 ID 的請求與回應不會撞檔名。
 - `urgent:true` 是急件：送到時 daemon 叫醒收件 tick。
 - 誰能送由 daemon 判（B-614）。
@@ -55,7 +57,7 @@
 |---|---|
 | 送成功 | 移除那個檔；不保證送達 |
 | `forbidden`、`not_registered`、`kind_mismatch`、`message_too_large`、`invalid_params` | 送不了：不保留、不重試、不改走檔案。stderr 印 `post_failed: <to> <id> <code>`，把那個檔搬到 ignored 的失敗紀錄 `.aos/mq/failed/`（檔名不變）並記下代碼（格式見 [P-206](../protocol/tick.md)） |
-| `not_available`〔建議預設，未拍板〕 | daemon 訊息部件關閉；同「送不了」搬到 `.aos/mq/failed/`、記代碼且不自動重試；本次有待送件就回 1，沒件照沒事做回 0（[B-614](../deferred/daemon/messaging.md)）。任務表不用改 |
+| `not_available`〔建議預設，未拍板〕 | daemon 訊息部件關閉；同「送不了」搬到 `.aos/mq/failed/`、記代碼且不自動重試；本次有待送件就回 1，沒件照沒事做回 0（[B-614](daemon/messaging.md)）。任務表不用改 |
 | 其他錯誤（`mailbox_full`、`stopping`、連不上 socket 等） | 留著，下一格再送 |
 | 本格沒有通道（`no_channel`） | 一件都不送、檔都留著；stderr 印一次，回 0 |
 
@@ -65,12 +67,12 @@
 - 送成功、還沒移除時當機：下一格再送同一份，對方可能拿到兩次；取的一方靠訊息 ID 去重。
 - 有 git 時〔使用者 2026-09-30 同意照暫定〕，`mq-post` 移除已送檔這一步要到下一格的 `aos-git close` 才提交；下一格作廢的話，這些檔會被還原、再送一次。同樣靠 ID 去重（B-630）。
 - 可重送同一份訊息：這只是補送，不授權重做不明的工具／LLM 執行。無可信結果、又不能證明未執行的工作記 unknown，不自動再執行（[S-401](../../scheduling/operations.md)）。
-- once 由 module 經通道用 `node.mount` 掛到 daemon（[B-613](../deferred/daemon/channel.md)），不往 `.aos/mq/post/` 塞 IPC。
+- once 由 module 經通道用 `node.mount` 掛到 daemon（[B-613](daemon/channel.md)），不往 `.aos/mq/post/` 塞 IPC。
 - 〔暫定〕**鬧鐘撤**：原本的鬧鐘看對方收件區的原件還在不在；aos 不再寫對方收件區，佇列裡的訊息 daemon 也不說有沒有被取走，所以 `alarm_ticks` 與 `.aos/alarms/` 撤出 aos。要等回覆的任務，自己在領域狀態裡記、自己以格數判逾時。
 
 ### 發布摘要
 
-**2026-10-01 整段搬到[暫緩區](../deferred/tick.md#暫緩b-624-發布摘要aos-publish)。** 使用者 2026-10-01 第五批裁定：`aos-publish` 先不做，「把這一格總結成 JSON」的程式（暫名 `aos-summarize`）也暫時不需要；之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（會跟傳訊混）。
+**2026-10-01 整段搬到[暫緩區](tick.md#暫緩b-624-發布摘要aos-publish)。** 使用者 2026-10-01 第五批裁定：`aos-publish` 先不做，「把這一格總結成 JSON」的程式（暫名 `aos-summarize`）也暫時不需要；之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（會跟傳訊混）。
 
 ### 檔案投件 aos 不管
 

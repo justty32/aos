@@ -1,6 +1,6 @@
 # 第二段：不靠 daemon 的系統級任務與普通程式（草稿，部分已裁定）
 
-← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/tick/template.md)、[aos-tick-check-task B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/deferred/git.md)、[恢復與設定 B-625](../spec/settled/tick/recovery.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
+← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/deferred/template.md)、[aos-tick-check-task B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/deferred/git.md)、[恢復與設定 B-625](../spec/settled/tick/recovery.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
 
 > **〔2026-10-01 第十七批〕`aos-git` 整套搬暫緩區**（使用者：「git這塊先不要進範本。」）：改用 hooks 加普通 git 指令（[B-635 範例](../spec/settled/tick/hooks.md#範例用-hook-加普通-git-指令管版本)），範本只留沒有 git 的那份。**文末待問 1～12 隨之擱置**（大多是 `aos-git` 的題）；`aos-tick-check-task` 第十六批也已暫緩。本檔照留當紀錄。
 >
@@ -138,7 +138,7 @@
 
 ## 步驟 5：兩份第二段版範本
 
-- **要做到**：寫出兩份任務表，證明前面幾步串得起來（[B-629](../spec/settled/tick/template.md) 的縮小版，見待問 11）。
+- **要做到**：寫出兩份任務表，證明前面幾步串得起來（[B-629](../spec/settled/deferred/template.md) 的縮小版，見待問 11）。
 - **做法**：
 
   | 版 | 順序（`id`） |
