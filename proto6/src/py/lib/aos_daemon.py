@@ -246,6 +246,8 @@ def load_full(path, read_state=True):
     sock = None
     if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
         sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
+        import aos_daemon_ctl                       # 第十九批：kill_grace_ms 不合算設定錯
+        aos_daemon_ctl.grace_of(modules["control"])
     mq_sock = None
     if "mq" in modules:                             # m3m 模組四：同上
         mq_sock = os.path.abspath(os.path.join(start, modules["mq"]["socket"]))

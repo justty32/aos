@@ -36,13 +36,17 @@ class BadRequest(Exception):
     pass
 
 
-def set_grace(conf):
-    """`modules.control.kill_grace_ms`：非負數，沒寫＝5000。不合丟 ValueError（開起來時自然丟錯、回 1）。"""
-    global KILL_GRACE
+def grace_of(conf):
+    """`modules.control.kill_grace_ms` 換成秒：非負數，沒寫＝5000。不合丟 ValueError（讀設定時就檢查，算設定錯）。"""
     ms = conf.get("kill_grace_ms", 5000)
     if isinstance(ms, bool) or not isinstance(ms, (int, float)) or ms < 0:
         raise ValueError("modules.control.kill_grace_ms 要是非負數")
-    KILL_GRACE = ms / 1000.0
+    return ms / 1000.0
+
+
+def set_grace(conf):
+    global KILL_GRACE
+    KILL_GRACE = grace_of(conf)
 
 
 def serve(path, items, answer=None):
