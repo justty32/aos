@@ -17,7 +17,7 @@
     },
     "Request": {
       "type": "object",
-      "description": "send 或 take 剛好出現一個；其他欄位照收不理。msg、from、urgent 只在 send 時看",
+      "description": "send 或 take 剛好出現一個；其他欄位照收不理。msg、urgent 只在 send 時看；from 兩邊意思不同：send 是寄件 inst（字串或 null），take 是只取這個寄件人的信（字串，第十四批）",
       "properties": {
         "send": {
           "$ref": "#/$defs/Inst"
@@ -65,7 +65,24 @@
             "description": "放進信箱後叫醒收件那一項（照 wake 不帶選項）"
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "take"
+            ]
+          },
+          "then": {
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "只取 from 等於它的信，其他照順序留著；省略＝全部取走（第十四批）"
+              }
+            }
+          }
+        }
+      ]
     },
     "Message": {
       "type": "object",

@@ -590,3 +590,26 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 帳號模組還沒動工；spec 只動了 `aos-as` 搬家那些。
 
+<a id="2026-10-01-第十四批aos-mq-取信"></a>
+
+## 2026-10-01 第十四批：aos-mq 取信
+
+〔使用者裁定 2026-10-01 晚〕使用者原話：「取信改成只能取自己的信箱。然後可以選擇要取來自誰的，不選就全部。」推翻第十二批 M3（取信不限自己）。
+
+使用者先問了四題，答覆要點：
+
+1. 收件 inst 跟寄件人不在同一個 daemon：`aos-mq send` 只連自己 daemon 的訊息 socket、只在這個 daemon 的 `insts` 找收件人，找不到回 1、`unknown_inst:`；跨 daemon 送信先不做。收件人逐字比對，同一個檔寫法不同（`b.json`／`./b.json`）也算不同的項。
+2. `<JSON>` 是 JSON 文字本身，不是檔案路徑；給 `-` 從 stdin 讀（要寄檔案內容就 `aos-mq send b - < msg.json`）。
+3. 原本 `take [<inst>]` 的 `<inst>` 是「取誰的信箱」，不是篩寄件人——這題引出本批裁定。
+4. 多封信：一封一行的 JSON（JSON Lines）`{"from":…,"msg":…}`，先寄的在前；沒信什麼都不印、回 0。
+
+做法：
+
+- `aos-mq take [--from <寄件 inst>]`：不收 `<inst>`，只取 `AOS_DAEMON_INST` 那一項的信箱（沒有就 `no_inst`）；`--from` 只取 `from` 等於它的信，其他照原順序留在信箱；不給就全部取走。
+- socket 的 `take` 請求多一個可省的 `from`（字串）。
+- **「只能取自己」只在 `aos-mq` 這一側擋**：socket 不驗身分，直接連 socket 送 `{"take":"<別項>"}` 照樣取得到。要不要在 daemon 端驗身分（例如看連線方是不是那一項的子孫程序），待使用者決定。
+
+**AI 隊定的細節**（使用者可改）：`--from` 只收一個；不能篩 `from` 是 `null` 的信（從 shell 手打寄的），要的話不帶 `--from` 全取；人在 shell 沒設 `AOS_DAEMON_INST` 就取不了信（要手動取就自己設這個變數）。
+
+改到的地方：程式 `lib/aos_daemon_mq.py`、`lib/aos_mq.py`；測試 `tests/test_mq.py`（15 條，新 `test_take_own_mailbox_only`、`test_take_from_filter`）；spec [B-645](../../spec/settled/daemon/mq.md)、[P-125](../../spec/settled/protocol/daemon/mq.md)、[驗收入口](../../spec/conformance.md)；schema `daemon-mq`（take 的 `from`）、範例 `mq_request.take-from.valid.json`、`mq_request.take-from-number.invalid.json`；[src/py README](../../src/py/README.md#訊息與-aos-mqm3m-模組四)；[plan m3m](../../plan/m3m-daemon-modules.md) 模組四。
+

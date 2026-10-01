@@ -44,8 +44,9 @@ class MqCase(CtlCase):
         return subprocess.run([PY, MQ] + list(args), env=e, input=stdin, capture_output=True,
                               text=True, timeout=10)
 
-    def take(self, inst):
-        r = self.mq("take", inst)
+    def take(self, inst, *args):
+        """以 inst 的身分（AOS_DAEMON_INST）取自己的信箱。"""
+        r = self.mq("take", *args, AOS_DAEMON_INST=inst)
         self.assertEqual(r.returncode, 0, r.stderr)
         return [json.loads(l) for l in r.stdout.splitlines()]
 
@@ -73,12 +74,26 @@ class Send(MqCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.take("b.json"), [{"from": None, "msg": m} for m in (0, 1, 2, "x", -5)])
 
-    def test_take_defaults_to_own_inst(self):
+    def test_take_own_mailbox_only(self):
         self.inst({"argv": ["true"]}, "b.json")
         self.up_mq({"b.json": {}}, 10000)
         self.mq("send", "b.json", "[1]")
         r = self.mq("take", AOS_DAEMON_INST="b.json")
         self.assertEqual(r.stdout, '{"from":null,"msg":[1]}\n')
+        r = self.mq("take", "b.json", AOS_DAEMON_INST="b.json")     # 不收 <inst>
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("usage: "))
+
+    def test_take_from_filter(self):
+        # a、c 寄給 b、手打寄一封；只取 a 的，其他照順序留著
+        self.inst({"argv": ["true"]}, "b.json")
+        self.up_mq({"b.json": {}}, 10000)
+        for sender, m in (("a.json", 1), ("c.json", 2), (None, 3), ("a.json", 4)):
+            self.mq("send", "b.json", str(m), AOS_DAEMON_INST=sender)
+        self.assertEqual(self.take("b.json", "--from", "a.json"),
+                         [{"from": "a.json", "msg": 1}, {"from": "a.json", "msg": 4}])
+        self.assertEqual(self.take("b.json", "--from", "nobody.json"), [])
+        self.assertEqual(self.take("b.json"), [{"from": "c.json", "msg": 2}, {"from": None, "msg": 3}])
 
     def test_env_given_to_tasks(self):
         self.inst(task('echo "$AOS_DAEMON_MQ_SOCKET ${AOS_DAEMON_INST-none} ${AOS_DAEMON_SOCKET-none}" > env.txt'),
@@ -144,8 +159,8 @@ class Errors(MqCase):
 
     def test_unknown_inst(self):
         self.up_mq({"b.json": {}}, 10000)
-        for args in (("send", "nope", "1"), ("take", "nope")):
-            r = self.mq(*args)
+        for args, env in ((("send", "nope", "1"), {}), (("take",), {"AOS_DAEMON_INST": "nope"})):
+            r = self.mq(*args, **env)
             self.assertEqual(r.returncode, 1)
             self.assertEqual(r.stderr, "unknown_inst: nope\n")
 
@@ -157,7 +172,8 @@ class Errors(MqCase):
             (("send", "b.json", "{bad"), {}, "usage"),
             (("take", "--urgent"), {}, "usage"),
             (("send", "--loud", "b.json", "1"), {}, "usage"),
-            (("take", "a", "b"), {}, "usage"),
+            (("take", "a"), {"AOS_DAEMON_INST": "b.json"}, "usage"),
+            (("take", "--from"), {"AOS_DAEMON_INST": "b.json"}, "usage"),
             (("take",), {}, "no_inst"),
             (("send", "b.json", "1"), {"AOS_DAEMON_MQ_SOCKET": None}, "no_daemon"),
             (("send", "b.json", "1"), {"AOS_DAEMON_MQ_SOCKET": os.path.join(self.d, "none.sock")}, "connect"),
@@ -171,7 +187,7 @@ class Errors(MqCase):
         self.up_mq({"b.json": {}}, 10000)
         for bad in (b"nope\n", b"[]\n", b'{"send":"b.json"}\n', b'{"send":"b.json","take":"b.json"}\n',
                     b'{"send":1,"msg":1}\n', b'{"send":"b.json","msg":1,"urgent":"y"}\n',
-                    b'{"send":"b.json","msg":1,"from":3}\n', b'{"send":"b.json"'):
+                    b'{"send":"b.json","msg":1,"from":3}\n', b'{"take":"b.json","from":3}\n', b'{"send":"b.json"'):
             self.assertEqual(self.send(bad, self.mq_sock)["error"], "bad_request", bad)
         self.assertEqual(self.send({"send": "b.json", "msg": None}, self.mq_sock), {"ok": True})
         self.assertEqual(self.send({"take": "b.json", "msg": 1}, self.mq_sock),

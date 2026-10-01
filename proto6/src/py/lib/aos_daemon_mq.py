@@ -6,7 +6,9 @@
 
 - 寄：`{"send":"<收件 inst>","msg":<任何 JSON 值>,"from":"<寄件 inst>"|null,"urgent":false}` → `{"ok":true}`。
   `from`、`urgent` 可省（null、false）。`from` 原樣存、不核對（M1）。
-- 取：`{"take":"<inst>"}` → `{"ok":true,"messages":[{"from":…,"msg":…},…]}`，一次全部取走（M3：不限只取自己）。
+- 取：`{"take":"<inst>","from":"<寄件 inst>"}` → `{"ok":true,"messages":[{"from":…,"msg":…},…]}`。
+  沒給 `from`＝信箱全部取走；給了＝只取那個寄件人的，其他照順序留著（使用者 2026-10-01 第十四批）。
+  「只能取自己的信箱」是 `aos-mq take` 那一側做的（只用 AOS_DAEMON_INST）；socket 不驗身分，直接連 socket 照樣取得到別項的。
 - 急件：放進信箱後照控制模組 wake（不帶選項）的規則叫醒收件那一項——正在跑就補一次、暫停中跑一次、
   已停不跑（信照樣收下、回 ok）。不用掛控制模組也做得到。
 - 收件人不在清單上回 `unknown_inst`；格式不對回 `bad_request`（只影響那一條連線）。
@@ -40,7 +42,11 @@ def parse(line):
     if not isinstance(inst, str):
         raise BadRequest("%s 的值要是字串（inst 字面值）" % cmd)
     rest = {}
-    if cmd == "send":                   # take 帶別的欄位一律忽略
+    if cmd == "take":                   # take 只看 from（寄件人過濾）；msg、urgent 忽略
+        rest["from"] = req.get("from")
+        if rest["from"] is not None and not isinstance(rest["from"], str):
+            raise BadRequest("from 要是字串")
+    if cmd == "send":
         if "msg" not in req:
             raise BadRequest("send 要有 msg")
         rest["msg"] = req["msg"]
@@ -60,7 +66,9 @@ def handle(request, items):
         return {"ok": False, "error": "unknown_inst", "detail": inst}
     with item.cond:
         if cmd == "take":
-            got, item.mailbox = item.mailbox, []
+            want = rest["from"]
+            got = [m for m in item.mailbox if want is None or m["from"] == want]
+            item.mailbox = [] if want is None else [m for m in item.mailbox if m["from"] != want]
             return {"ok": True, "messages": got}
         item.mailbox.append({"from": rest["from"], "msg": rest["msg"]})
         if rest["urgent"] and not item.stopped:
