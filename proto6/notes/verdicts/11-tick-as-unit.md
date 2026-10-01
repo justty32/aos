@@ -535,3 +535,27 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 **AI 隊定的細節**（使用者可改，全文見 [plan m3m「做完了沒」](../../plan/m3m-daemon-modules.md#做完了沒)）：重讀時狀態以記憶體為準（不重讀狀態檔、新加的項從頭，套用完照記憶體寫一次檔）；狀態檔內容沒變不寫（沒異常就不建檔）；沒掛 `reload` 時 SIGHUP 照 Python 預設殺掉 daemon；`exec_out_path`／`exec_err_path` 改了照套、不警告；重讀壞掉時任何例外都接。
 
 改到的地方：程式 `lib/aos_daemon.py`、新 `lib/aos_daemon_reload.py`、`lib/aos_daemon_state.py`、`lib/aos_daemon_ctl.py`；測試新 `tests/test_daemon_reload.py`、`tests/test_daemon_state.py`；spec 新 [daemon/reload.md](../../spec/settled/daemon/reload.md)、[daemon/state.md](../../spec/settled/daemon/state.md)、[protocol/daemon/reload.md](../../spec/settled/protocol/daemon/reload.md)、[protocol/daemon/state.md](../../spec/settled/protocol/daemon/state.md)，改 [daemon README](../../spec/settled/daemon/README.md)、[B-640](../../spec/settled/daemon/core.md)、[B-641](../../spec/settled/daemon/control.md)、[P-120](../../spec/settled/protocol/daemon/core.md)、[daemon 協議入口](../../spec/settled/protocol/daemon/README.md)、[慣例](../../spec/settled/conventions.md)、[名詞](../../spec/settled/terms.md)、[整理區入口](../../spec/settled/README.md)、[驗收入口](../../spec/conformance.md)、[protocol README](../../spec/protocol/README.md)、暫緩區 [總表](../../spec/settled/deferred/README.md)（B-603、B-608、P-116 標部分取代）與對應各篇；schema `daemon-core-config`（加 `modules.reload`、`modules.state`）、新 `daemon-module-state`、範例 `examples/daemon/module-state.*`、`core-config.modules.valid.json`、`core-config.state-not-expanded.invalid.json`、`validate.py`；[src/py README](../../src/py/README.md)；[plan m3m](../../plan/m3m-daemon-modules.md)、[plan 入口](../../plan/README.md)。
+
+<a id="2026-10-01-第十二批cgroup-與帳號"></a>
+
+## 2026-10-01 第十二批：cgroup 與帳號
+
+〔使用者裁定 2026-10-01〕對 [plan m3m](../../plan/m3m-daemon-modules.md) 模組二、四、五剩下的待問。原話只留下 C1～C4 那句；其餘幾條當天在公司那台講的，這裡照當天寫進 spec 與 [SESSION-LOG](../../../wf/SESSION-LOG.md) 的內容整理，不是逐字。
+
+- **收屍／cgroup（`modules.cgroup`）**：C1～C4 原話「都先按照建議。」——沒委派好的 cgroup v2 就自然丟錯、回 1，不退回（C1）；上限寫在 `insts` 那一項的 `cgroup` 鍵、cgroup 檔名原樣（C2）；直接 `cgroup.kill`，不先 SIGTERM（C3）；框名＝inst 字面值 sha256 前 16 hex，開框時 stdout 印一次對照（C4）。已做，正本 [B-644](../../spec/settled/daemon/cgroup.md)、[P-124](../../spec/settled/protocol/daemon/cgroup.md)。
+- **重讀設定順帶改**：頂層 `exec_out_path`／`exec_err_path` 改了也跟 `cwd`、`modules` 一樣不套用、stdout 警告要重開（第十一批 AI 隊定的細節 5 原本是「照新的算」）。比的是設定裡寫的原字（含 `<inst>`）；新加的項的輸出路徑也照開起來時的設定算。已改 [B-642](../../spec/settled/daemon/reload.md)、[P-122](../../spec/settled/protocol/daemon/reload.md)。
+- **訊息（`aos-mq`）要做**，排在 cgroup 之後：M1～M4 照建議（`aos-mq send`／`take`、信放在 daemon 記憶體、急件叫醒收件方、收件方自己 take）。還沒做。
+- **帳號要做**，排在最後：模組鍵叫 `account`（不叫 helper）；**H1 不照建議**——要拆出 root 端、主程式降權。socket 先 chmod 666（H4 照建議），之後會有多個 socket，權限另外設計。還沒做，plan m3m 模組五的草稿要照這條重寫。
+
+**AI 隊定的細節**（使用者可改）：
+
+1. 子程序進框用 `sh -c 'echo $$ > <框>/cgroup.procs && exec "$@"'` 墊一層，不用 `preexec_fn`（daemon 有很多執行緒，fork 後跑 Python 不安全）。pid 不變、碼原樣。
+2. `exit=` 的 `ms=` 算到 `aos-exec` 結束，不含清框；有清到東西時 `exit=` 之後另印 `inst=<inst> reaped`，沒殘留不印。
+3. 殘留程序還拿著輸出 pipe 時：pipe 另開執行緒讀、清完框才收齊，輸出照樣寫出。
+4. 開起來時根上**所有**程序都搬進 `daemon/`（`systemd-run` 墊的殼之類也一起）；自己已經在 `.../daemon` 裡就取上一層當根（同一個 scope 裡重開）。框已經在就先清空再用。
+5. 重讀設定：新加的項建框、寫上限，`added` 之後印對照；還在的項上限改了只重寫新設定寫的檔，拿掉的鍵**不還原**（要還原寫 `"max"`）；建框、寫上限出錯算重讀出錯（整份不套用），但出錯前已經寫進去的不還原。
+6. 拿掉的項由它自己的執行緒在最後一次跑完、清完之後刪框；那時 inst 已經又被加回來就不刪，新的一項接著用同一個框。
+7. Ctrl-C 照核心「直接退出、不殺子程序」，框留著，下次在同一棵子樹開起來時才清。
+8. 控制模組、記住狀態不用改：清框期間 `status` 的 `running` 仍是 `true`；框不記進狀態檔。
+
+改到的地方：程式新 `lib/aos_daemon_cgroup.py`，改 `lib/aos_daemon.py`（`Item.cgroup`／`frame`、`Setup.out_tmpl`／`err_tmpl`、`run_once()` 回三個值、`_gone()`、`main()` 建樹）、`lib/aos_daemon_reload.py`（`NEED_RESTART`、`_apply()`）；測試新 `tests/test_daemon_cgroup.py`（15 條，拿不到委派的 scope 時跳過），改 `tests/test_daemon_reload.py`；spec 新 [daemon/cgroup.md](../../spec/settled/daemon/cgroup.md)、[protocol/daemon/cgroup.md](../../spec/settled/protocol/daemon/cgroup.md)，改 [daemon README](../../spec/settled/daemon/README.md)、[B-640](../../spec/settled/daemon/core.md)、[B-642](../../spec/settled/daemon/reload.md)、[P-120](../../spec/settled/protocol/daemon/core.md)、[P-122](../../spec/settled/protocol/daemon/reload.md)、[daemon 協議入口](../../spec/settled/protocol/daemon/README.md)、[慣例](../../spec/settled/conventions.md)、[名詞](../../spec/settled/terms.md)、[整理區入口](../../spec/settled/README.md)、[驗收入口](../../spec/conformance.md)、[protocol README](../../spec/protocol/README.md)、暫緩區 [總表](../../spec/settled/deferred/README.md) 與 [daemon/cgroup.md](../../spec/settled/deferred/daemon/cgroup.md)（B-605 標部分取代）；schema `daemon-core-config`（加 `modules.cgroup`、`$defs/Item` 的 `cgroup`）、範例 `examples/daemon/core-config.cgroup.valid.json`、`core-config.cgroup-number.invalid.json`；[src/py README](../../src/py/README.md#收屍cgroupm3m-模組二)；[plan m3m](../../plan/m3m-daemon-modules.md)、[plan 入口](../../plan/README.md)。
