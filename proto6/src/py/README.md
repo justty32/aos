@@ -16,6 +16,7 @@ inst 與 `aos-exec` 直接從 proto5 複製（proto5 `470f5a04`，即 `git log -
 | `tests/test_exec_spawn.py` | `proto5/lib/test/` 同名檔 | 只加改動 3 的一條（標「proto6 新增」） |
 | `tests/_util.py` | `proto5/lib/test/_util.py` | 只改 `LIB`、`EXEC` 兩行路徑 |
 | ~~`tests/test_user.py`~~ | ~~新寫~~ | 2026-10-01 跟改動 1 一起刪掉 |
+| `bin/aos-daemon`、`lib/aos_daemon.py`、`tests/test_daemon.py` | 新寫 | 第三段最核心 daemon，見下面 [aos-daemon](#aos-daemon第三段最核心-daemon) |
 
 現在跟 proto5 不同的只剩改動 2（資料夾目標找 inst 的位置）、改動 3（那個位置的 `.aos` 照 `AOS_DIRNAME`）與改動 4（用法錯回 1）。
 
@@ -135,6 +136,63 @@ plan 步驟對到哪：
 - 沒 `id` 的項（使用者 2026-10-01）：id＝它在 `tasks` 陣列的位置（從 0 起）轉字串，紀錄、`AOS_TASK_ID`、`stopped_after` 都用它；跟別項撞了不管。`id` 不是字串時 `AOS_TASK_ID` 用 `str()`（我自己定的）。
 - `--node` 給的檔在 `.aos/` 裡（例如 `yyy/.aos/tasks.json`）時 node 取 `yyy`，不照字面當 `yyy/.aos`（否則紀錄會寫進 `yyy/.aos/.aos/tick/`）。所以舊用法 `--node yyy/.aos/inst.json` 現在是「拿 inst.json 當任務表」，沒有 `tasks` 陣列、過不了極簡檢查回 1。
 - `--node` 給檔時，任務項目裡的相對檔名照舊以 node 根（檔所在的資料夾，或 `.aos` 的上一層）為中心，不是以那個檔為中心。
+
+## aos-daemon（第三段最核心 daemon）
+
+照 [plan 第三段 m3](../../plan/m3-daemon-core.md) 寫的，新寫。就是「一個叫 `aos-exec` 的 cron」：讀設定檔裡的 inst 清單，每項照自己的週期叫一次同一個 `bin/` 裡的 `aos-exec <inst 字面值>`，等它結束、stdout 印一行。沒有 socket、登記、收屍；daemon 不認得 node（node 就是一份 `argv` 寫 `aos-tick` 的 inst）。
+
+```sh
+proto6/src/py/bin/aos-daemon --config daemon.json     # Ctrl-C／SIGTERM 直接退出、回 0，不殺正在跑的子程序
+```
+
+設定檔：
+
+```json
+{
+  "cwd": "/home/u/nodes",
+  "interval_ms": 60000,
+  "stop_on_nonzero": false,
+  "exec_err_path": "<inst>/err.log",
+  "insts": [
+    {"inst": "a"},
+    {"inst": "jobs/report.json", "interval_ms": 5000, "stop_on_nonzero": true}
+  ]
+}
+```
+
+| 鍵 | 意思 |
+|---|---|
+| `insts[].inst` | 必填，**原樣**當 aos-exec 的參數（資料夾或檔都行），也是這一項的 id |
+| `cwd`（頂層） | 起點：aos-exec 子程序的工作目錄、相對路徑的基準。沒寫＝daemon 啟動時的工作目錄；相對的也以它為準 |
+| `interval_ms` | 上一次結束後隔多久再叫（剛開時每項先立刻跑一次）。頂層是預設、每項可蓋過；兩邊都沒有＝設定錯、回 1 |
+| `stop_on_nonzero` | 碼不是 0 時這一項就不再叫、多印一行 `stopped`。頂層是預設、每項可蓋過；都沒有＝`false`。所有項都停了 daemon 照樣開著 |
+| `exec_err_path`（頂層） | aos-exec 的 stderr 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 換成 inst 字面值，inst 是檔時換成它字面上的 dirname（空的用 `.`）。沒寫＝daemon 自己的 stderr |
+
+stdout 每次一行（時間是印出那刻的本地時間，ISO 8601 帶時區）：
+
+```text
+2026-10-01T15:04:05+08:00 id=a exit=0 ms=812
+2026-10-01T15:04:05+08:00 id=jobs/report.json exit=3 ms=23
+2026-10-01T15:04:05+08:00 id=jobs/report.json stopped
+```
+
+aos-exec 的 stderr 每次收齊（讀到 pipe 底）再一次寫出，有內容才寫，前面一律加一行標頭（第幾項從 0 起、inst 字面值）；stdout 那一行跟它共用一把鎖，多項同時結束也不交錯：
+
+```text
+== 2026-10-01T15:04:05+08:00 index=1 inst=jobs/report.json ==
+boom
+```
+
+inst 裡任務自己的 stderr 照 inst 規則（預設 `/dev/null`，寫 `"stderr": {"$opt": "inherit"}` 才會跟著 aos-exec 進來）。被訊號殺的碼印成 `128+N`。結束碼：用法錯（沒給 `--config`、多給參數）、設定錯、設定檔讀不到都 1；SIGINT／SIGTERM 0。
+
+| 函式（`lib/aos_daemon.py`） | plan 步驟 |
+|---|---|
+| `main()`、`_Parser`、`load_config()`、`err_path_for()` | 1 讀設定檔 |
+| `run_once()`、`write_err()`、`say()`、`now()` | 2 叫一次、印一行 |
+| `loop()` | 3 週期、4 非 0 停不停 |
+| `_quit()` | 5 Ctrl-C 與 SIGTERM |
+
+測試 `tests/test_daemon.py`：`Step1Config`～`Step6Tick`，一個類別一步，整檔約 6 秒。
 
 ## 跑測試
 

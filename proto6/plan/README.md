@@ -16,7 +16,7 @@
 
 ## 怎麼用這份 plan
 
-1. 一次做一段。每段有自己的細部檔（目前只寫了[第一段](m1-tick-core.md)，後面的段開工前再寫）。
+1. 一次做一段。每段有自己的細部檔（目前寫了[第一段](m1-tick-core.md)、[第三段](m3-daemon-core.md)，其他段開工前再寫）。
 2. 每段拆成幾步，每步都寫：要做到什麼、對哪幾條 spec、**要使用者裁定的點**（沒有就寫無）、驗收。
 3. 每段由 AI 隊實作，照驗收那一欄試跑；做完交使用者看。
 4. 使用者看結果、裁定該段的待問；裁定後 AI 隊照改。檔案怎麼切、函式叫什麼 AI 隊自己定，標「建議」的只是參考。
@@ -41,6 +41,8 @@
 - **界線**：全部是「讀寫檔案」就做得完的事，不碰通道。恢復前驗證只寫檢查本身，送 `node.resume` 等第三段。
 
 ### 第三段：daemon 核心
+
+> **範圍已砍到最核心**（使用者 2026-10-01）：這段實際只做「一個叫 `aos-exec` 的 cron」——設定檔一份 inst 清單、照週期叫 `aos-exec`、印一行、非 0 可停，不要 socket。下面原本列的登記、叫醒／暫停、runner 收屍、收尾、通道憑證等全部挪到之後。細部 plan 與完成狀態見 [m3-daemon-core.md](m3-daemon-core.md)。
 
 - **目標**：`aos daemon` 能登記 node、照週期開格、叫醒／暫停、用 `aos-runner` 開每一格並在格後收屍、重啟與停機收尾、發通道憑證、掛行程與砍掉；沒 cgroup、沒 helper 也跑得起來。
 - **主要 spec**：[B-601、B-504](../spec/settled/daemon/runtime.md)、[B-606、B-607](../spec/settled/daemon/registration.md)、[B-603、B-604、B-611](../spec/settled/daemon/lifecycle.md)、[B-610、B-612、B-613](../spec/settled/daemon/channel.md)、[B-608](../spec/settled/daemon/reload.md)；格式 [daemon 協議](../spec/settled/protocol/daemon/README.md)（P-100～119，不含 helper 那幾條）。
