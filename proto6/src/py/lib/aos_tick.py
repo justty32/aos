@@ -3,10 +3,10 @@
 一格的順序（B-620「一格怎麼走」，POC 版）：
 
     認工作資料夾與任務表（目標要是資料夾、底下要有 .aos/tasks.json）→ 取鎖 → 看擋板檔 → 讀表
-    → 換紀錄 → 刪停格檔 → 照表跑（每項後寫紀錄、查停格檔）→ 回結束碼
+    → 換紀錄 → 刪停格檔 → 照表跑（每項後寫紀錄、查停格檔）→ 收尾紀錄 → 跑 hooks 的 after_all（有寫才跑）→ 回結束碼
 
 `run_tick()` 就是照這個順序寫的，從它讀起。紀錄在 aos_tick_record.py、任務表在
-aos_tick_table.py、跑單項在 aos_tick_run.py。
+aos_tick_table.py、跑單項在 aos_tick_run.py、hooks（掛點，目前只有 after_all）的讀表在 aos_tick_table.py、跑在 aos_tick_hooks.py。
 
 結束碼照 aos 體系慣例（使用者 2026-10-01 再改，notes/verdicts/11-tick-as-unit.md 篇末，待統一更新 spec）：
 0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤。aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影響它。
@@ -49,6 +49,7 @@ import os
 import sys
 
 import aos_dirname
+import aos_tick_hooks
 import aos_tick_run
 import aos_tick_table
 from aos_tick_record import Record
@@ -162,6 +163,8 @@ def _run_locked(cwd, table):
             break
 
     record.finish(EXIT_OK, stopped_after)
+    if tbl.after_all is not None:  # B-635：照表跑完或被停格檔停下之後；不看停格檔、碼只記下、不影響 tick 的結束碼
+        aos_tick_hooks.run_after_all(cwd, tbl.defaults, tbl.after_all, record, run_one)
     return EXIT_OK
 
 
@@ -195,14 +198,15 @@ def remove_stop_file():
         os.unlink(stop)
 
 
-def run_one(cwd, defaults, item, task_id, index):
+def run_one(cwd, defaults, item, task_id, index, label=""):
     """B-620「跑每一項」：跑到時才合併頂層預設、展開這一項（plan 待問 3；使用者 2026-10-01 頂層預設）再跑。回 (kind, value)。
     cwd 是工作資料夾（絕對路徑），原樣給任務當 `AOS_TICK_CWD`（使用者 2026-10-01；沒有 `AOS_TICK_RECORD`）；
-    頂層 `cwd` 只是任務的預設 cwd，不改 tick 自己的 cwd。"""
+    頂層 `cwd` 只是任務的預設 cwd，不改 tick 自己的 cwd。hooks 的 after_all 項也走這裡（B-635），
+    `label`＝`after_all/`，只加在 `exec_failed:` 那行的 id 前面。"""
     inst = aos_tick_table.load_inst(defaults, item, cwd)
     # id 型別不查（極簡檢查），環境變數要字串就 str()
     task_vars = {"AOS_TICK_CWD": cwd, "AOS_TASK_ID": str(task_id), "AOS_TASK_INDEX": str(index)}
     kind, value, note = aos_tick_run.run_item(inst, task_vars)
     if note:
-        say("exec_failed", "%s: %s" % (task_id, note))
+        say("exec_failed", "%s%s: %s" % (label, task_id, note))
     return kind, value

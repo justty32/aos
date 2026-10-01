@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "seq": 7,
+  "tasks": [
+    {"id": "build", "exit": 0}
+  ],
+  "ended": false,
+  "hooks": {
+    "after_all": [
+      {"id": "notify", "exit": 0}
+    ]
+  }
+}

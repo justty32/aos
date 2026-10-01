@@ -82,6 +82,8 @@
 
 〔主編補，第十八批；第十九、二十批加列〕第十八～二十批新開的條號如下（先預留；`check_ids --strict` 會核對每一列都有正文）。B-6xx 由 daemon/ 與 tick.md 共用；原 daemon.md 從 606 起、tick.md 從 620 起，tick.md 現有沒編號的各節照下表補號（補號不算重編）。〔主編補，第二十批整理區〕這兩篇連同 node 與 daemon 協議已搬進 `settled/`（[整理區](settled/README.md)），條號不變；T-07、T-09、T-10 搬到 settled/terms.md，B-303 搬到 settled/helper.md。第十九、二十批沿用的舊號只換主題、不重編。〔2026-10-01 統一更新〕舊 daemon 各條、daemon 協議 P-101～119（P-100 除外）、B-303、B-628、T-09 搬到 `settled/deferred/`（[暫緩區](settled/deferred/README.md)），條號保留、不重用；新開 C-08～C-10、T-11、B-640、B-641、P-120、P-121（表末）。
 
+〔2026-10-01 第六批〕新開 B-635（tick 的外掛掛點 `hooks`，`settled/tick/hooks.md`）。
+
 〔2026-10-01 第二批〕新開 C-11（表末）；settled/tick.md 拆成核心與 `settled/tick/` 子篇、`settled/protocol/node.md` 改名 `settled/protocol/tick.md`，條號都不變。
 
 <!-- check_ids:reserved -->
@@ -114,6 +116,7 @@
 | B-631 | settled/tick/cg.md | 〔第二十批撤，留殘根〕cgroup 框的備援 | T3 |
 | B-632 | settled/tick/git.md | 〔第二十批換主題〕結束碼紀錄取代日誌：沒有 git 時怎麼做 | T3 |
 | B-633 | settled/tick.md | 〔第二十批〕每項結束碼紀錄與格數 | T3 |
+| B-635 | settled/tick/hooks.md | 〔2026-10-01 第六批〕hooks：照表跑完之後跑的一串（頂層鍵 `hooks.after_all`） | 第六批 |
 | S-205 | scheduling/admission.md | 套用、調整與故障 | T5 |
 | S-206 | scheduling/admission.md | 中間層 kernel 卡住 | T5 |
 | S-207 | scheduling/admission.md | 用量收集與去重 | T5 |

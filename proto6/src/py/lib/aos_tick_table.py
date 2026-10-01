@@ -3,7 +3,7 @@
 
 〔使用者方向 2026-10-01，待統一更新 spec〕開格只做極簡檢查（`check_table()`），不過就丟 `TableInvalid`，
 tick 印一行 `bad_table: …`、回 1（算 tick 自己的錯；在換紀錄之前，不佔 seq）：讀得到、合法 JSON、頂層是物件、有 `tasks` 陣列；
-每項（解一層後）是物件；合併頂層預設後有 `argv`。讀表時那一層解不開、`modules` 整個展開失敗也算 `bad_table`。其他一概不查（外層與每項的
+每項（解一層後）是物件；合併頂層預設後有 `argv`；有寫 `hooks` 時照 B-635 查 `after_all`（同樣的規則）。讀表時那一層解不開、`modules` 整個展開失敗也算 `bad_table`。其他一概不查（外層與每項的
 `_metainfo`、`id`、`kind` 填不填與它們的值、值的型別、`id` 重複、陌生鍵如 `group`、`needs`、`methods`）。
 
 〔使用者裁定 2026-10-01〕頂層 `_metainfo` 不是必填（可省，寫了也不看）。每項的 `_metainfo` 照 inst（aos-exec）的規則：
@@ -20,6 +20,10 @@ tick 印一行 `bad_table: …`、回 1（算 tick 自己的錯；在換紀錄�
   一個模組一個鍵；目前 tick 沒有任何模組，核心照收不理。不是 inst 欄位，**不當預設合併**。〔使用者裁定 2026-10-01〕
   讀表時**整個展開**指示詞（跟 daemon 設定檔的 `expand()` 同一做法：一路走進物件與陣列，`$opt` 物件原樣留），
   展開失敗＝`bad_table`、回 1；型別不查。`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點（跟讀表其他部分一致）。
+- 頂層可選 `hooks`（掛點；使用者 2026-10-01 第六批：「就不讓他當模組了，直接讓他變頂層key」，spec B-635）：
+  目前只認 `after_all`，寫法比照 `tasks`，**展開時機也比照 `tasks`**：`hooks` 本身、`after_all`、它的每一元素各解一層，
+  值的內部跑到時才照 inst 規則展開（合併後 `$ref:""`／`#…` 指合併後的這一項）。極簡檢查：`hooks` 是物件、`after_all`
+  是陣列、每項是物件、合併預設後有 `argv`。`hooks` 裡其他鍵照收不理（也不解）。不是預設、不是模組。
 - 淺層合併：項自己寫了某個鍵就整個蓋過頂層那個鍵（`envs` 也整包換掉，不逐變數合併）。
 - 頂層 `cwd` 不改 tick 自己的 cwd（tick 永遠在工作資料夾跑），只是任務的預設 cwd；相對路徑以工作資料夾為起點。
 - 讀表時（`read_table`）：整份文件是指示詞就先解；`tasks` 與七個預設鍵的值各解一層（`modules` 整個展開，見上）（`$ref`／`$fmt`／`$env`
@@ -48,10 +52,12 @@ class TableInvalid(Exception):
 
 class Table:
     """讀好的任務表：`defaults`（頂層預設，已解一層）、`items`（每項，已解一層的物件）、`ids`（id 串列）、
-    `modules`（頂層 `modules` 整個展開後的值，沒寫＝None；核心不用）。"""
+    `modules`（頂層 `modules` 整個展開後的值，沒寫＝None；核心不用）、
+    `after_all`（頂層 `hooks.after_all` 的 [(項, id)]，每項已解一層；沒寫 `hooks` 或沒寫 `after_all`＝None，B-635）。"""
 
-    def __init__(self, defaults, items, ids, modules=None):
+    def __init__(self, defaults, items, ids, modules=None, after_all=None):
         self.defaults, self.items, self.ids, self.modules = defaults, items, ids, modules
+        self.after_all = after_all
 
 
 def read_table(table, cwd):
@@ -90,16 +96,33 @@ def check_table(doc, cwd, path=None):
     tasks = _one_layer(root["tasks"], top.ctx, top.position + ["tasks"], "tasks")
     if not isinstance(tasks.value, list):
         raise TableInvalid("任務表頂層要是物件、要有 tasks 陣列")
+    items, ids = _items(tasks, "tasks", defaults)
+    after_all = None
+    if "hooks" in root:            # B-635：掛點，寫法與展開時機比照 tasks
+        hooks = _one_layer(root["hooks"], top.ctx, top.position + ["hooks"], "hooks")
+        if not isinstance(hooks.value, dict):
+            raise TableInvalid("hooks 要是物件")
+        if "after_all" in hooks.value:
+            aa = _one_layer(hooks.value["after_all"], hooks.ctx, hooks.position + ["after_all"], "hooks.after_all")
+            if not isinstance(aa.value, list):
+                raise TableInvalid("hooks.after_all 要是陣列")
+            after_all = list(zip(*_items(aa, "hooks.after_all", defaults))) if aa.value else []
+    return Table(defaults, items, ids, modules, after_all)
+
+
+def _items(loc, what, defaults):
+    """`tasks` 或 `hooks.after_all` 的每一元素：解一層（整項 `$ref` 在這裡展開）、要是物件、合併預設後要有 argv。
+    回 (項串列, id 串列)；沒寫 id 的用位置轉字串。"""
     items, ids = [], []
-    for i, raw in enumerate(tasks.value):
-        item = _one_layer(raw, tasks.ctx, tasks.position + [str(i)], "tasks[%d]" % i).value   # 整項 `$ref` 在這裡展開
+    for i, raw in enumerate(loc.value):
+        item = _one_layer(raw, loc.ctx, loc.position + [str(i)], "%s[%d]" % (what, i)).value
         if not isinstance(item, dict):
-            raise TableInvalid("tasks[%d] 要是物件" % i)
+            raise TableInvalid("%s[%d] 要是物件" % (what, i))
         if "argv" not in item and "argv" not in defaults:
-            raise TableInvalid("tasks[%d] 缺了 argv（項自己沒寫、頂層也沒有）" % i)
+            raise TableInvalid("%s[%d] 缺了 argv（項自己沒寫、頂層也沒有）" % (what, i))
         items.append(item)
         ids.append(item["id"] if "id" in item else str(i))
-    return Table(defaults, items, ids, modules)
+    return items, ids
 
 
 def _one_layer(value, ctx, position, what):

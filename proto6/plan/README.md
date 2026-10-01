@@ -16,7 +16,7 @@
 
 ## 怎麼用這份 plan
 
-1. 一次做一段。每段有自己的細部檔（目前寫了[第一段](m1-tick-core.md)、[第二段（草稿，等使用者裁定）](m2-system-tasks.md)、[第三段](m3-daemon-core.md)與它之後的[控制模組](m3n-control-module.md)，其他段開工前再寫）。
+1. 一次做一段。每段有自己的細部檔（目前寫了[第一段](m1-tick-core.md)與它之後的 [hooks（外掛掛點）](m1h-hooks-module.md)、[第二段（草稿，等使用者裁定）](m2-system-tasks.md)、[第三段](m3-daemon-core.md)與它之後的[控制模組](m3n-control-module.md)，其他段開工前再寫）。
 2. 每段拆成幾步，每步都寫：要做到什麼、對哪幾條 spec、**要使用者裁定的點**（沒有就寫無）、驗收。
 3. 每段由 AI 隊實作，照驗收那一欄試跑；做完交使用者看。
 4. 使用者看結果、裁定該段的待問；裁定後 AI 隊照改。檔案怎麼切、函式叫什麼 AI 隊自己定，標「建議」的只是參考。
@@ -32,6 +32,7 @@
 - **主要 spec**：[B-626、B-602、B-620、B-633、B-627](../spec/settled/tick.md)（B-628 上下層判定已搬[暫緩區](../spec/settled/deferred/tick.md)）；結束碼與 `AOS_DIRNAME` [C-08、C-09](../spec/settled/conventions.md)；格式 [P-202、P-203、P-213](../spec/settled/protocol/tick.md)。
 - **可單獨跑的樣子**：不要 daemon、git、cgroup、helper。手建一個資料夾、寫 `.aos/tasks.json`，`aos-tick <資料夾>`（2026-10-01：原 `--node`，再改 `--target`，再改成位置參數） 或 cron 直接跑，看結束碼與 `.aos/tick/current.json`。
 - **界線**：核心不認得任何系統級任務，也不清任務留下的後代。細部見 [m1-tick-core.md](m1-tick-core.md)。
+- **之後的外掛掛點**：tasks.json 頂層鍵 `hooks`（不是模組；目前只開 `after_all`：照表跑完、含被停格檔停下之後跑一串 inst）見 [m1h-hooks-module.md](m1h-hooks-module.md)〔使用者 2026-10-01 第六批〕。
 
 ### 第二段：不靠 daemon 的系統級任務與普通程式
 
