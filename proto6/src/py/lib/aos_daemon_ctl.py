@@ -28,27 +28,30 @@ class BadRequest(Exception):
     pass
 
 
-def serve(path, items):
-    """開 socket（路徑上有舊檔先刪）、起收連線的執行緒。items＝{inst 字面值: Item}。"""
+def serve(path, items, answer=None):
+    """開 socket（路徑上有舊檔先刪）、起收連線的執行緒。items＝{inst 字面值: Item}。
+    answer(一行 bytes, items) → 回應 dict，格式不對丟 BadRequest；沒給＝控制指令。
+    訊息模組（m3m 模組四，`aos_daemon_mq`）也用這一套開它自己的 socket。"""
+    answer = answer or (lambda line, its: handle(parse(line), its))
     if os.path.lexists(path):
         os.unlink(path)
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.bind(path)
     s.listen()
-    threading.Thread(target=_accept_loop, args=(s, items), daemon=True).start()
+    threading.Thread(target=_accept_loop, args=(s, items, answer), daemon=True).start()
 
 
-def _accept_loop(s, items):
+def _accept_loop(s, items, answer):
     while True:
         conn, _ = s.accept()
         with conn:
             try:
-                _one(conn, items)
+                _one(conn, items, answer)
             except OSError:
                 pass                    # 對面先關、逾時：只丟掉這一條連線
 
 
-def _one(conn, items):
+def _one(conn, items, answer):
     deadline = time.monotonic() + TIMEOUT
     data = b""
     while b"\n" not in data:
@@ -63,7 +66,7 @@ def _one(conn, items):
     try:
         if b"\n" not in data:
             raise BadRequest("沒有讀到一行")
-        reply = handle(parse(data.split(b"\n", 1)[0]), items)
+        reply = answer(data.split(b"\n", 1)[0], items)
     except BadRequest as e:
         reply = {"ok": False, "error": "bad_request", "detail": str(e)}
     conn.sendall((json.dumps(reply, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8"))

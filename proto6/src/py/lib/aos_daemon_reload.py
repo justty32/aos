@@ -85,7 +85,7 @@ def _apply(new, first, added, removed):
             cur = n                     # 新的一項就用重讀出來的 Item；輸出路徑照開起來時的頂層設定與起點算
             cur.err_path = err_path_for(first.err_tmpl, n.inst, first.start)
             cur.out_path = err_path_for(first.out_tmpl, n.inst, first.start)
-            give_env(cur, first.sock)
+            give_env(cur, first)
             added.append(cur)
         else:
             _update(cur, n)

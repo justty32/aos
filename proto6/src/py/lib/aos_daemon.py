@@ -12,7 +12,8 @@
 寫了 `modules.reload` 就收 SIGHUP 重讀同一份設定檔（plan m3m 模組一，`lib/aos_daemon_reload.py`）；
 寫了 `modules.state`（原始值必須是 `{"$ref": "<檔>"}`）就把暫停／已停記進那個檔、重開時讀回
 （plan m3m 模組三，`lib/aos_daemon_state.py`）；寫了 `modules.cgroup` 就每項一個 cgroup 框、
-`aos-exec` 結束後清掉框裡的殘留才算這次結束（plan m3m 模組二，`lib/aos_daemon_cgroup.py`）。
+`aos-exec` 結束後清掉框裡的殘留才算這次結束（plan m3m 模組二，`lib/aos_daemon_cgroup.py`）；
+寫了 `modules.mq` 就另開一個 unix socket 收寄信、取信，每項一個信箱（plan m3m 模組四，`lib/aos_daemon_mq.py`）。
 """
 import argparse
 import datetime
@@ -29,8 +30,8 @@ from aos_directives import Context, DirectiveError, is_option_object, load_docum
 EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin", "aos-exec")
 INST_MARK = "<inst>"
 
-# 控制模組的 socket 絕對路徑；沒掛＝None。退出前要刪（m3n 步驟 6）
-_sock_path = None
+# 控制模組、訊息模組的 socket 絕對路徑；退出前要刪（m3n 步驟 6）
+_sock_paths = []
 
 # 記住狀態模組（aos_daemon_state.StateFile）；沒掛＝None
 _state = None
@@ -90,6 +91,7 @@ class Item:
         self.end_mono = None            # 上一次結束的 monotonic 時刻（重讀設定改週期時用）
         self.due = time.monotonic()     # 下次照週期該跑的時刻（monotonic）；剛開時立刻跑
         self.removed = False            # 重讀設定時被拿掉：跑完這次（若在跑）就結束執行緒
+        self.mailbox = []               # 訊息模組的信箱 [{"from", "msg"}]，先進先出；只在記憶體（m3m 模組四）
 
 
 def err_path_for(template, inst, start):
@@ -139,8 +141,9 @@ class Setup:
     """`load_full()` 的結果。`modules` 是展開後的 `modules`，但 `state` 換成狀態檔的絕對路徑
     （重讀設定比對「模組改了沒」用）；`state_data` 是狀態檔的內容（沒讀或不在＝`{"insts": {}}`）。"""
 
-    def __init__(self, start, items, sock, modules, state_path, state_data, out_tmpl=None, err_tmpl=None):
-        self.start, self.items, self.sock = start, items, sock
+    def __init__(self, start, items, sock, modules, state_path, state_data, out_tmpl=None, err_tmpl=None,
+                 mq_sock=None):
+        self.start, self.items, self.sock, self.mq_sock = start, items, sock, mq_sock
         self.modules, self.state_path, self.state_data = modules, state_path, state_data
         self.out_tmpl, self.err_tmpl = out_tmpl, err_tmpl     # 頂層 exec_out_path／exec_err_path 原字（重讀比對用）
 
@@ -201,13 +204,16 @@ def load_full(path, read_state=True):
     sock = None
     if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
         sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
+    mq_sock = None
+    if "mq" in modules:                             # m3m 模組四：同上
+        mq_sock = os.path.abspath(os.path.join(start, modules["mq"]["socket"]))
     state_data = {"insts": {}}
     if state_path is not None:
         modules = dict(modules, state=state_path)
         if read_state and os.path.exists(state_path):
             state_data = expand(doc.root["modules"]["state"], ctx, ["modules", "state"])
     return Setup(start, items, sock, modules, state_path, state_data,
-                 top.get("exec_out_path"), top.get("exec_err_path"))
+                 top.get("exec_out_path"), top.get("exec_err_path"), mq_sock)
 
 
 def _block(item, stream, data):
@@ -350,10 +356,16 @@ def snapshot():
         return list(_items.values())
 
 
-def give_env(item, sock):
-    """控制模組掛著時，開 aos-exec 的環境多放兩個變數（m3n 步驟 4）。"""
-    if sock is not None:
-        item.env = dict(os.environ, AOS_DAEMON_SOCKET=sock, AOS_DAEMON_INST=item.inst)
+def give_env(item, setup):
+    """控制模組掛著時，開 aos-exec 的環境多放 `AOS_DAEMON_SOCKET`（m3n 步驟 4）；訊息模組掛著時多放
+    `AOS_DAEMON_MQ_SOCKET`；掛了任何一個就放 `AOS_DAEMON_INST`（m3m 待問 M2）。都沒掛＝照 daemon 的環境。"""
+    extra = {}
+    if setup.sock is not None:
+        extra["AOS_DAEMON_SOCKET"] = setup.sock
+    if setup.mq_sock is not None:
+        extra["AOS_DAEMON_MQ_SOCKET"] = setup.mq_sock
+    if extra:
+        item.env = dict(os.environ, AOS_DAEMON_INST=item.inst, **extra)
 
 
 def start_item(item, start):
@@ -362,10 +374,10 @@ def start_item(item, start):
 
 def _quit(signum, frame):
     """m3 步驟 5：SIGINT／SIGTERM 直接退出、回 0，不殺也不等子程序。
-    控制模組掛著時先刪 socket 檔（m3n 步驟 6）。"""
-    if _sock_path is not None:
+    控制模組、訊息模組掛著時先刪 socket 檔（m3n 步驟 6）。"""
+    for path in _sock_paths:
         try:
-            os.unlink(_sock_path)
+            os.unlink(path)
         except FileNotFoundError:       # 訊號來在 bind 之前：還沒建
             pass
     os._exit(0)
@@ -395,7 +407,7 @@ def main(argv=None):
     ap = _Parser(prog="aos-daemon", description="照設定檔的清單，定期叫 aos-exec")
     ap.add_argument("--config", required=True, metavar="F", help="設定檔（JSON）")
     a = ap.parse_args(argv)
-    global _sock_path, _state, _cg
+    global _state, _cg
     try:
         setup = load_full(a.config)
     except (ValueError, DirectiveError) as e:
@@ -416,12 +428,16 @@ def main(argv=None):
         import aos_daemon_state
         _state = aos_daemon_state.StateFile(setup.state_path, setup.state_data)
         aos_daemon_state.restore(items, setup.state_data)
+    for item in items:
+        give_env(item, setup)
     if sock is not None:                # m3n：先開好 socket 再起各項，任務一開始就叫得到
         import aos_daemon_ctl
-        for item in items:
-            give_env(item, sock)
-        _sock_path = sock               # 先記好再 bind：bind 完立刻來的訊號也刪得到
+        _sock_paths.append(sock)        # 先記好再 bind：bind 完立刻來的訊號也刪得到
         aos_daemon_ctl.serve(sock, _items)
+    if setup.mq_sock is not None:       # m3m 模組四：同上
+        import aos_daemon_mq
+        _sock_paths.append(setup.mq_sock)
+        aos_daemon_mq.serve(setup.mq_sock, _items)
     hup = None
     if setup.reload:                    # m3m 模組一：沒掛時 SIGHUP 照 Python 預設（daemon 被殺）
         import aos_daemon_reload
