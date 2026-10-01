@@ -403,7 +403,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - `aos-as` 開的別帳號程序寫進 aos 範圍的 0600 檔：git 讀不到，當故障，擋板＋停格檔（B-630、B-303）。
 - 滿碟或 commit、還原失敗：擋板＋停格檔，不假成功；close 失敗時 `mq-post` 與發摘要不跑（B-622、B-624）。
 - 任務 id 以 `.lock` 結尾的存檔點：`mark_id_invalid`，擋板＋停格檔（B-622）。
-- `aos-config-add` 寫入 `config/` 不產生 commit（B-625）。
+- 〔暫緩（2026-10-01）：`aos-config-add` 搬到[暫緩區](settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)，現在不驗〕`aos-config-add` 寫入 `config/` 不產生 commit（B-625）。
 - 還原不撤銷外部效果；跨 repo／submodule 沒有共同交易（B-622）。把任務表寫壞時 resume 不開閘、不抹手改（B-625、A-102）。
 
 ### cgroup（有就用）

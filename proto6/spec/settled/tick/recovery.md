@@ -2,7 +2,7 @@
 
 ← [通用 tick 核心](../tick.md)｜[tick 子篇入口](README.md)｜格式：[tick 協議](../protocol/tick.md)
 
-**狀態：待實作。`aos-config-add` 與恢復前驗證的工具都還沒有程式。暫停與恢復現行用 `aos-ctl pause`／`status`／`resume`（[B-641](../daemon/control.md)）；原本靠舊 daemon 的 `node.pause`／`node.show`／`node.resume` 與授權流程在暫緩區。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出。
+**狀態：待實作。恢復前驗證的工具還沒有程式（`aos-config-add` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)）。暫停與恢復現行用 `aos-ctl pause`／`status`／`resume`（[B-641](../daemon/control.md)）；原本靠舊 daemon 的 `node.pause`／`node.show`／`node.resume` 與授權流程在暫緩區。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出。
 
 ## B-625：當機恢復、設定與清理
 
@@ -25,12 +25,12 @@
 
 | 改什麼 | 怎麼改 |
 |---|---|
-| 普通設定（`config/` 裡的檔） | 在 tick 外用 `aos-config-add`（argv 見 [P-207](../protocol/tick.md)）：非阻塞取同一把 `.aos/tick.lock`（B-602），拿不到回 75（它自己特別指定的碼，[C-08](../conventions.md)）；有擋板檔就不寫、回 125。寫法：在目標旁寫完整暫存檔 → fsync → rename 替換 → fsync 目錄。沒變動就不寫。不能在同一個工作資料夾的 tick 內呼叫 |
+| 普通設定（`config/` 裡的檔） | 自己改；tick 外的寫入者算外部世界（[B-602](../tick.md#b-602同一資料夾一次一格互斥鎖)）。原本的 `aos-config-add` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)〔使用者 2026-10-01〕 |
 | 重要設定（inst、任務表）與其他手改 | 現行：經 daemon 跑的先 `aos-ctl pause`，等 `aos-ctl status` 看到 `running:false`（[B-641](../daemon/control.md)），持工作資料夾的鎖（`.aos/tick.lock`）修改，照下面「恢復前驗證」驗過再 `aos-ctl resume`。不經 daemon 跑的（cron、人手）自己停住排程。舊 daemon 的 `node.pause`／`node.show`／`node.resume` 那套見 [B-607](../deferred/daemon/registration.md)，在暫緩區〔astra 報告必修 2〕 |
 
 - tick 裡的任務不改 `config/` 是軟性原則，不檢查也不阻擋；同一格新舊設定混用的風險由寫任務的人承擔（[A-102](../../agent/configuration.md)）。
 - **有 git 時**〔暫定〕：
-  - `config/` 不在 aos 範圍（B-630），`aos-config-add` 也不自己提交；要留歷史就自己 `git commit`。
+  - `config/` 不在 aos 範圍（B-630），aos 不提交它；要留歷史就自己 `git commit`。
   - inst 與任務表在 `.aos/` 底下，屬 aos 範圍：格間手改的下場照 [B-602](../tick.md#b-602同一資料夾一次一格互斥鎖)「tick 外的寫入者」，上一格沒正常收尾時會被還原，所以改完自己提交。
 
 ### 恢復前驗證
@@ -46,6 +46,6 @@
 
 驗證只證明設定可採用，不證明外部 endpoint 可達。清理見 [B-404](../../base/storage.md)。
 
-依據：使用者方向 2026-09-29；第二十批改寫、進行順序、疑點裁定（沒有 cgroup 時重啟清不掉舊程序，接受；任務表只定基本欄位）；納入 cgroup 與 git 疑-1、疑-3、aos-git 分工（提交與還原只限 aos 自己的東西）；使用者 2026-10-01（控制模組 `aos-ctl` 取代舊 daemon 的暫停與恢復）。
+依據：使用者方向 2026-09-29；第二十批改寫、進行順序、疑點裁定（沒有 cgroup 時重啟清不掉舊程序，接受；任務表只定基本欄位）；納入 cgroup 與 git 疑-1、疑-3、aos-git 分工（提交與還原只限 aos 自己的東西）；使用者 2026-10-01（控制模組 `aos-ctl` 取代舊 daemon 的暫停與恢復）；使用者 2026-10-01 第四批（`aos-config-add` 搬暫緩區）。
 
-**驗收：**`aos-config-add` 寫入後下一格讀得到新值，寫到一半被殺時目標是舊版或新版、不會半份，有 git 時不產生 commit；有 git 時使用者任務途中當機，下一格 `.aos/` 回到 HEAD、使用者任務自己的檔不動；`aos-git close` 提交後、`mq-post` 途中當機，已提交的不丟，已送的下一格重送；有擋板時回 125、目標不變；任務表帶 `group`、`needs` 的工作資料夾通過恢復前驗證；帶 `system.x` 的不通過，驗的工具不送 `aos-ctl resume`、保持暫停。
+**驗收：**有 git 時使用者任務途中當機，下一格 `.aos/` 回到 HEAD、使用者任務自己的檔不動；`aos-git close` 提交後、`mq-post` 途中當機，已提交的不丟，已送的下一格重送；任務表帶 `group`、`needs` 的工作資料夾通過恢復前驗證；帶 `system.x` 的不通過，驗的工具不送 `aos-ctl resume`、保持暫停。

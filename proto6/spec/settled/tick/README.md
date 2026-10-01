@@ -13,4 +13,4 @@
 | [cg.md](cg.md) | B-631、B-634 | 待實作。普通程式；工作資料夾的框與資源上限（daemon 那側）在暫緩區。 |
 | [mq.md](mq.md) | B-623、B-624 | 待實作，依賴暫緩。`aos-mq` 要靠暫緩區的 daemon 通道；`aos-publish` 待實作。 |
 | [git.md](git.md) | B-630、B-622、B-632 | 待實作。`aos-git` 三項還沒有程式。主體不依賴暫緩區；只有「在不在 tick 內」的核對（要等「鎖 fd 傳給任務」）與巢狀排除的判準（要等上下層判定）在暫緩區。 |
-| [recovery.md](recovery.md) | B-625 | 待實作。`aos-config-add` 與恢復前驗證的工具都還沒有程式；暫停與恢復現行用 `aos-ctl`（[B-641](../daemon/control.md)），舊 daemon 的 `node.pause`／`node.resume` 那套在暫緩區。 |
+| [recovery.md](recovery.md) | B-625 | 待實作。恢復前驗證的工具還沒有程式（`aos-config-add` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)）；暫停與恢復現行用 `aos-ctl`（[B-641](../daemon/control.md)），舊 daemon 的 `node.pause`／`node.resume` 那套在暫緩區。 |

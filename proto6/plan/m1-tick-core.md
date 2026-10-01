@@ -225,7 +225,7 @@
    - tick 自己出錯：argv 用法錯（不再回 2）、`--node` 不是絕對路徑／不是資料夾、`--node` 底下沒有 `.aos/inst.json`；自用檔（`tick-blocked`、`stop`、`current.json`、`last.json`、`tasks.json`）讀不到／寫不進／格式壞就自然丟錯（traceback、回 1），不分時機、不補救。
    - 任務回 0、1、2、其他碼、被訊號殺：都照實記進紀錄、照常跑下一項，不影響 tick 的碼（使用者原話「任務出錯，不算在tick的錯誤內」「任務回2也只記一筆，照常跑下一項」）。
    - 拿掉待問 5、6 的退路：不再「沒有 `.aos/` 就交給 aos-exec 跑 `inst.json`」；任務仍照 `.aos/tasks.json`。
-   - 擋板檔與停格檔的機制使用者之後會詳細設計，目前做法是暫定。
+   - 擋板檔與停格檔的機制使用者之後會詳細設計，目前做法是暫定。2026-10-01 使用者：先照現狀（「tick-blocked, tick/stop就先這樣。」）。
    - 〔2026-10-01 再改，見待問 10〕「`--node` 底下沒有 `.aos/inst.json` 回 1」改成看 `.aos/tasks.json`。
 
 10. **`--node` 怎麼認？已裁定**〔使用者方向 2026-10-01，已寫入 spec（commit 前由我補號）〕：原話與全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick---node-怎麼認待統一更新-spec)（使用者寫 `task.json` 即 `tasks.json`）。
