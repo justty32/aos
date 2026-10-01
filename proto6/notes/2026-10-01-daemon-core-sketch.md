@@ -2,11 +2,11 @@
 
 ← [筆記索引](README.md)｜[第二十批裁定篇末 10-01](verdicts/11-tick-as-unit.md#2026-10-01poc-默認一切正常)｜[daemon 拆分](2026-09-30-daemon-split-and-multi-daemon.md)｜[plan 第三段](../plan/README.md#第三段daemon-核心)｜細部 plan：[m3-daemon-core](../plan/m3-daemon-core.md)
 
-**已裁定（使用者 2026-10-01）。** 原本是提案草稿，使用者當天逐點裁定，正文已照裁定改過；裁定結果見文末。spec 還沒照它改（跟同日其他裁定一起待統一更新 spec）。照這份寫的細部 plan 是 [m3-daemon-core](../plan/m3-daemon-core.md)。前提是現在這個極簡 `aos-tick`（10-01 版：有同資料夾鎖、默認一切正常），照「先做單純的」精神，把 spec 的「開格核心 A 組」砍到最小。
+**已裁定（使用者 2026-10-01）。** 原本是提案草稿，使用者當天逐點裁定，正文已照裁定改過；裁定結果見文末。同日又追加設定檔的裁定（`inst` 原樣交給 aos-exec、id 就是字面值、頂層 `cwd` 與預設），見文末[設定檔追加裁定](#設定檔追加裁定使用者-2026-10-01)，正文也照改。spec 還沒照它改（跟同日其他裁定一起待統一更新 spec）。照這份寫的細部 plan 是 [m3-daemon-core](../plan/m3-daemon-core.md)。前提是現在這個極簡 `aos-tick`（10-01 版：有同資料夾鎖、默認一切正常），照「先做單純的」精神，把 spec 的「開格核心 A 組」砍到最小。
 
 ## 一句話
 
-最核心的 daemon 就是「一個叫 `aos-exec` 的 cron」：讀一份設定檔，清單上每一項是一份 `inst.json` 的路徑，照各自的週期叫一次 `aos-exec <路徑>`，等它結束、印一行結束碼、隔一個週期再叫。沒有 socket、沒有登記、沒有收屍。
+最核心的 daemon 就是「一個叫 `aos-exec` 的 cron」：讀一份設定檔，清單上每一項是一個交給 `aos-exec` 的目標（inst 檔或資料夾），照各自的週期叫一次 `aos-exec <目標>`，等它結束、印一行結束碼、隔一個週期再叫。沒有 socket、沒有登記、沒有收屍。
 
 ## 管 node 變成可掛載的模組
 
@@ -22,13 +22,15 @@
 
 **同一項不自己疊著叫。** daemon 替每一項最多只開一個子程序，還沒結束就不開下一個；不同項各跑各的、同時跑，一個卡住不拖累別人。如果那份 inst 跑的是 `aos-tick`，tick 自己的鎖也保證同資料夾不會兩格一起跑，daemon 這條只是不白開程序。
 
-**看結束碼、印一行。** 每次結束時印一行到 stdout，例如 `id=/n/a exit=0 ms=812`。這是唯一看得到「各項跑得怎樣」的地方。
+**看結束碼、印一行。** 每次結束時印一行到 stdout，例如 `id=/n/a exit=0 ms=812`（id 就是清單上寫的字面值）。這是唯一看得到「各項跑得怎樣」的地方。
 
 ## id 怎麼算
 
-清單上寫的就是 inst 的路徑；相對路徑以設定檔所在的資料夾為準，daemon 開起來時轉成絕對路徑。**id 就是這個絕對路徑；末段是 `/inst.json` 時把這段拿掉。** 例：`/n/a/inst.json` 的 id 是 `/n/a`，`/jobs/b.json` 的 id 是 `/jobs/b.json`。
+**id 就是清單上 `inst` 的字面值，不另外算**（使用者 2026-10-01 追加裁定，撤回原本「轉絕對路徑、末段 `/inst.json` 拿掉」的規則）。例：寫 `/n/a` 的 id 是 `/n/a`，寫 `jobs/b.json` 的 id 是 `jobs/b.json`。同字面值重複默認不會發生。
 
-所以給 node 用的 inst 自然放在 node 資料夾頂層（`/n/a/inst.json`），id 就是 node 的路徑；inst 的工作目錄預設就是它所在的資料夾，`argv` 寫 `["aos-tick"]` 不用帶 `--node`（tick 省略時用 `./`）。
+`inst` 的值**原樣交給 aos-exec**，資料夾或檔都行，只要合 aos-exec 的目標規則；daemon 不檢查、不解析。相對路徑的起點是設定檔頂層的 `cwd`（可省略；沒寫＝daemon 啟動時的工作目錄；`cwd` 本身是相對路徑也以 daemon 啟動時的工作目錄為起點）。做法是 daemon 開 aos-exec 子程序時把工作目錄設成這個起點、`inst` 字面值原樣當參數，跟人站在起點手打 `aos-exec <inst>` 一樣。
+
+所以給 node 用的 inst，清單可以直接寫 node 資料夾（`/n/a`）：aos-exec 先找 `/n/a/.aos/inst.json`、再找 `/n/a/inst.json`，base 都是 `/n/a`，inst 的工作目錄預設就是 node，`argv` 寫 `["aos-tick"]` 不用帶 `--node`（tick 省略時用 `./`）。
 
 ## spec A 組裡哪些先不做
 
@@ -58,15 +60,15 @@
 |---|---|
 | 叫不起 `aos-exec`（找不到、權限不夠） | 自然丟錯 |
 | 兩個 daemon 跑同一份 inst（B-611 的排他鎖） | 不取鎖；是 aos-tick 的話兩邊輪流撞到 tick 的鎖、回 0，只是互相拖慢 |
-| 設定檔讀不到或寫壞、清單上兩項同 id | 自然丟錯、daemon 回 1；同 id 不檢查 |
+| 設定檔讀不到或寫壞、清單上兩項同 id（同字面值） | 自然丟錯、daemon 回 1；同 id 不檢查 |
 
 ## 怎麼叫
 
-**叫 `aos-exec <inst 路徑>`，不直接叫 `aos-tick`**（使用者裁定）。「這一項怎麼跑」（環境變數、stderr 往哪、要不要包一層）全由那份 inst 決定，daemon 等於把 cron 換掉。
+**叫 `aos-exec <inst 字面值>`，不直接叫 `aos-tick`**（使用者裁定）；子程序的工作目錄是上面說的起點。「這一項怎麼跑」（環境變數、stderr 往哪、要不要包一層）全由那份 inst 決定，daemon 等於把 cron 換掉。
 
 **stderr 交給 inst 自己。** inst 的 stderr 預設接 `/dev/null`，tick 印的 `busy:`、`bad_table:` 會看不到；要看就在 inst 寫 `"stderr": {"$opt": "inherit"}`，讓它直接進 daemon 的終端。daemon 不替 inst 蓋掉 stderr（不帶 `--stderr -`），免得違反「怎麼跑由 inst 決定」。
 
-設定檔欄位名使用者說隨意，定在 [m3 步驟 1](../plan/m3-daemon-core.md#步驟-1讀設定檔算-id)。指令是 `aos-daemon --config F`（POC 先用獨立指令，`aos daemon` 子命令以後再接）。
+設定檔欄位名使用者說隨意，使用者同日看過後認可並追加裁定（見文末），定在 [m3 步驟 1](../plan/m3-daemon-core.md#步驟-1讀設定檔)。指令是 `aos-daemon --config F`（POC 先用獨立指令，`aos daemon` 子命令以後再接）。
 
 ## 怎麼看結束碼
 
@@ -86,11 +88,11 @@
 
 **鎖對 daemon 是好事。** tick 拿不到鎖回 0，daemon 當普通結束；兩個 daemon 誤跑同一個 node、或有人手同時跑，都不會壞。不需要改。
 
-`AOS_DIRNAME` 不用另外處理：daemon 不讀 inst 以外的任何檔，環境變數照常傳給 `aos-exec` 和 tick。
+`AOS_DIRNAME` 不用另外處理：daemon 只讀設定檔、不讀 inst，環境變數照常傳給 `aos-exec` 和 tick。
 
 ## 跟 cron + aos-exec 比，多了什麼
 
-老實說幾乎沒有。cron 每項一行 `* * * * * aos-exec /n/a/inst.json` 就能做到同樣的事，tick 的鎖已經擋住重疊。最核心 daemon 多出來的只有：週期可以短於一分鐘、從上一次結束起算而不是對齊時鐘、清單在一個檔裡、所有結果印在同一個地方、卡住時不會每分鐘多開一個馬上回 0 的程序、非 0 時可以自動停那一項。這些都是方便，不是能力。
+老實說幾乎沒有。cron 每項一行 `* * * * * aos-exec /n/a` 就能做到同樣的事，tick 的鎖已經擋住重疊。最核心 daemon 多出來的只有：週期可以短於一分鐘、從上一次結束起算而不是對齊時鐘、清單在一個檔裡、所有結果印在同一個地方、卡住時不會每分鐘多開一個馬上回 0 的程序、非 0 時可以自動停那一項。這些都是方便，不是能力。
 
 **以後第一個值得加的是叫醒**（像按門鈴：別人叫它現在就跑一次，不等週期）。這是 cron 做不到的事，也是 spec 裡上層叫醒下層、kernel 樹能動起來的前提；但要開 socket，這版使用者定了不要，留到之後。第二個是收尾和收屍（tick 被殺時任務跟著走、格後清掉留下的程序），那時才需要動 tick 或做 runner。
 
@@ -98,11 +100,21 @@
 
 原本八個待裁定點，使用者逐點回答：
 
-1. **叫 `aos-exec` 還是 `aos-tick`？** 叫 `aos-exec`。原話：「daemon就是叫aos-exec，所以他存著的清單就是inst.json的路徑，以路徑做id，如果路徑的末段是/inst.json，那就省略這段/inst.json字串。所以daemon管node這件事，會變成可掛載的模組。」清單改存 inst 路徑、id 照上面規則。
+1. **叫 `aos-exec` 還是 `aos-tick`？** 叫 `aos-exec`。原話：「daemon就是叫aos-exec，所以他存著的清單就是inst.json的路徑，以路徑做id，如果路徑的末段是/inst.json，那就省略這段/inst.json字串。所以daemon管node這件事，會變成可掛載的模組。」清單改存 inst 路徑、id 照上面規則。（「省略 `/inst.json`」同日被下面追加裁定撤回，id 改成字面值。）
 2. **tick 非 0 要不要停？** 原話：「在daemon設定檔中設置，選擇在tick結束碼非0時是否停掉。」每一項自己設。
 3. **tick 的正常中斷怎麼辦？** 原話：「只有0才是普通結束，正常中斷也改成0。」忙、擋板都回 0，daemon 照常排下一次。
 4. **週期怎麼算？** 好：從上一次結束起算、不補跑，剛開時每項立刻跑一次。
 5. **Ctrl-C 怎麼辦？** 好：daemon 直接退出、不殺也不等，子程序自成 session。
 6. **第一版要不要 socket？** 不要。
-7. **設定檔長相？** 隨意，由 AI 隊定（見 m3 步驟 1）。
+7. **設定檔長相？** 隨意，由 AI 隊定（見 m3 步驟 1）；使用者看過後認可，另有追加裁定（見下）。
 8. **`aos-exec` 的碼？** 原話：「改成0，還有0以外。1就是通用錯誤，所以沒特別設置結束碼的錯誤都設1。」用法錯改 1；結束碼慣例同日改成「0＝預料之中、非 0＝要額外處理、1＝通用錯誤」。
+
+## 設定檔追加裁定（使用者 2026-10-01）
+
+使用者看過 m3 步驟 1 的設定檔後，原話：「設定檔這塊可以。其中的inst的值，反正後面的路徑是要直接丟給aos-exec的，所以既可以是資料夾也可以是檔案，反正只要符合aos-exec的解析規範就好。inst寫相對路徑時，改成以daemon啟動時所在的cwd為起點，或是設定檔頂層添加一個key："cwd":"./"在insts旁邊。頂層key還可以加上interval_ms, stop_on_nonzero，作為所有insts的默認設定。所謂id也不用特別算了，就直接是inst的值，捨棄我剛剛說的。」
+
+1. **`inst` 原樣交給 aos-exec**：資料夾或檔都行，daemon 不檢查、不解析。
+2. **相對路徑的起點**：頂層可選 `cwd`；沒寫＝daemon 啟動時的工作目錄；`cwd` 本身是相對路徑時也以 daemon 啟動時的工作目錄為起點。取代原本「以設定檔所在資料夾為起點」。實作：開 aos-exec 子程序時工作目錄設成這個起點、`inst` 原樣當參數。
+3. **頂層預設**：頂層可選 `interval_ms`、`stop_on_nonzero` 當所有項的預設，每項自己寫的蓋過頂層。兩邊都沒有 `interval_ms`＝設定錯、回 1；`stop_on_nonzero` 兩邊都沒有＝`false`。
+4. **id 就是 `inst` 字面值**：撤回裁定 1 的「轉絕對路徑、末段 `/inst.json` 拿掉」。同字面值重複默認不會發生。
+5. m3 原待問 1（`.aos/inst.json` 的 id）、待問 2（清單能不能寫資料夾）因此結案。
