@@ -36,7 +36,7 @@ tick 裡的東西分四類：
 | 普通程式 | 任務會用到的工具，要的任務自己在 argv 包；不是系統級任務 | 切換帳號 `aos-as`（[B-303](deferred/helper.md)，在暫緩區）、前置沒成功就不跑 `aos-needs`（B-621）、每項一框 `aos-cg`（B-634） |
 | 其他任務 | kernel、agent、clock、檔案收件程式、自訂任務等 | 它們的外殼、逾時與取消延後（[P-008](../protocol/README.md#p-008)）；檔案收件 aos 不管（B-623） |
 
-**核心**：照表跑時另外只認兩個檔——停格檔與擋板檔（B-620）；**不看任務的 `user`**，一律用 tick 自己的帳號跑。核心只要 Python 3.9 與 flock，不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。上下層判定原本是第四件事，使用者 2026-10-01 說「也不需要判斷上下層」，整條搬到[暫緩區](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)。
+**核心**：照表跑時另外只認兩個檔——停格檔與擋板檔（B-620）；**任務沒有 `user`**（寫了照陌生鍵），一律用 tick 自己的帳號跑。核心只要 Python 3.9 與 flock，不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。上下層判定原本是第四件事，使用者 2026-10-01 說「也不需要判斷上下層」，整條搬到[暫緩區](deferred/tick.md#b-628上下層判定預設看資料夾包含可登記覆蓋)。
 
 **系統級任務**：
 
@@ -51,7 +51,7 @@ tick 裡的東西分四類：
 
 依據：第二十批追答 8、9（推翻第十九批「三層：核心／標準配備／其他掛載」、疑點裁定 1「標準配備跟核心同一支 `aos-tick`、不另做包裝」；`kind:"system"` 取代第十九批「留給以後真正屬於標準配備的任務、範本沒有 system 類」；`aos-clean` 取代第十九批疑點裁定 2「範本裡仍是 custom 類」）；第十九批第 2、5 條（管轄權）；astra 審整理區裁定（收送改成系統訊息佇列 `aos-mq`，檔案收件與投件是普通程式、aos 不管）；使用者 2026-10-01（核心不判上下層、不看 `user`）。
 
-**驗收：**拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`，直接跑 `aos-tick`：互斥、照表跑與結束碼紀錄照常成立，回 0；任務帶 `user` 也照 tick 自己的帳號跑；佇列沒人取也沒人送、不發摘要。
+**驗收：**拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`，直接跑 `aos-tick`：互斥、照表跑與結束碼紀錄照常成立，回 0；任務寫了 `user` 也當陌生鍵、照 tick 自己的帳號跑；佇列沒人取也沒人送、不發摘要。
 
 ## B-602：同一資料夾一次一格：互斥鎖
 
@@ -198,7 +198,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 ### 任務的帳號
 
-- **核心不看任務的 `user`**：寫了照收、不理它，一律用 tick 自己的帳號跑（`aos-exec` 也不認得 inst 頂層的 `user`，[inst](../base/inst.md)）。原本「帶了不同帳號就那一項回 125」在[暫緩區](deferred/tick.md#暫緩b-620-任務的帳號125)。
+- **任務沒有 `user`**〔使用者方向 2026-10-01〕：inst 頂層沒有 `user`（[inst](../base/inst.md)），任務是 inst 的超集，所以也沒有；寫了就是陌生鍵、照收不理，一律用 tick 自己的帳號跑。原本「帶了不同帳號就那一項回 125」的歷史記錄在[暫緩區](deferred/tick.md#暫緩b-620-任務的帳號125)，隨 `user` 一起撤回、不會回來。
 - 要用別的帳號跑，就在 argv 包普通程式 `aos-as <帳號> -- 原指令`（[B-303](deferred/helper.md)，要 helper 與通道，都在暫緩區）；准不准照該 node 的身分額度核（[B-301](../base/identity-resources.md)）。
 - 不另設服務帳號（第九批）；要 root 的固定步驟交給 helper（[B-609](deferred/daemon/helper-actions.md)）；管成員的事由上層 kernel 在自己的 tick 用自己的帳號做。任務類別不授予身分或權限。
 
@@ -213,11 +213,11 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 stderr 的代碼一覽（格式見 [P-203](protocol/node.md)）：`usage`、`busy`、`blocked`、`stopped`、`no_target`、`no_tasks`、`bad_table`、`exec_failed`。
 
-依據：使用者方向 2026-09-29；第十九批、第二十批改寫（核心）；第二十批（任務表先只定基本欄位、環境變數命名、停格檔與擋板檔並用）；第二十批疑點裁定 1（改：停掉本格靠偵測檔案，不靠結束碼）、8（tick 外跑算外部世界）；使用者 2026-10-01（目標改成位置參數、極簡檢查、`id` 與 `kind` 可省、拿掉 `methods`、不看 `user`、結束碼照 C-08、`AOS_TICK_CWD`）。
+依據：使用者方向 2026-09-29；第十九批、第二十批改寫（核心）；第二十批（任務表先只定基本欄位、環境變數命名、停格檔與擋板檔並用）；第二十批疑點裁定 1（改：停掉本格靠偵測檔案，不靠結束碼）、8（tick 外跑算外部世界）；使用者 2026-10-01（目標改成位置參數、極簡檢查、`id` 與 `kind` 可省、拿掉 `methods`、撤回任務與 inst 的 `user`、結束碼照 C-08、`AOS_TICK_CWD`）。
 
 **驗收：**
 
-- 任務帶 `user` 照收，照 tick 自己的帳號跑。
+- 任務寫了 `user` 當陌生鍵照收，照 tick 自己的帳號跑。
 - 任務回 1、2、125 或被訊號殺時照實記進紀錄、後面照跑，整格回 0。
 - 某項建立 `.aos/tick/stop` 後，後面的項不跑，stderr 有 `stopped`，紀錄 `ended:true`、`exit:0` 並記 `stopped_after`，整格回 0；下一格照常跑。
 - 任務表不是合法 JSON、沒有 `tasks` 陣列或某項缺 `argv`：stderr 有 `bad_table`、回 1，兩份紀錄與 `seq` 都不變。表裡 `id` 重複、缺 `kind`、沒有 `_metainfo` 都照跑。
@@ -483,7 +483,7 @@ stderr 的代碼一覽（格式見 [P-203](protocol/node.md)）：`usage`、`bus
 
 resume 之前，持同一把鎖依序檢查：
 
-1. inst：照 [inst 目標](../base/inst.md#inst-目標檔案或資料夾)選 inst，驗原始結構與身分宣告。daemon 在 resume 與開格時仍另驗可信額度，本地檢查不代替授權。
+1. inst：照 [inst 目標](../base/inst.md#inst-目標檔案或資料夾)選 inst，驗原始結構。
 2. 任務表：照完整 schema 驗（[P-202](protocol/node.md)；含 `kind` 的值，B-620「誰驗什麼」）。不認得的鍵照收，`group`、`needs` 也是陌生鍵，不檢查。
 3. **只在裝了對應任務時**：kernel、agent 的領域設定照各自的篇驗（[A-102](../agent/configuration.md)）。自訂任務沒有 aos 的領域設定契約，不因它沒提供驗證就拒收。
 4. 任何一項不過就保持暫停、保留手改，stderr 指出檔案與欄位；都過才送 `node.resume`。

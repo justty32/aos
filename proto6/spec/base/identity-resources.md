@@ -4,11 +4,11 @@
 
 ## B-301：權限與額度歸屬〔使用者方向 2026-09-29〕
 
-通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。〔使用者方向 2026-09-30，第二十批〕UID 隔離由普通程式 `aos-as` 經 helper 落實（B-303）；沒有 helper 只算功能受限。需要隔離時一 node 一 Linux 帳號；kernel node 也一樣用自己 inst 的 `user`，不另設服務帳號（第九批）。工具沿用呼叫 node 的身分、權限及資源範圍。〔第十九批，疑點裁定 4；第二十批疑點裁定 6〕任務表的任務也可以帶自己的 `user`，但核心不切帳號：跟 tick 的帳號不同時那一項回 125；要用別的帳號跑就包 `aos-as`，同樣要在該 node 的額度內（[B-620](../settled/tick.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權而且會傳遞（[B-501](transport.md)、[T-08](../terms.md)），所以 UID 隔離與 key 保護**只對整條投件鏈以外的帳號**成立；key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
+通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。〔使用者方向 2026-09-30，第二十批〕UID 隔離由普通程式 `aos-as` 經 helper 落實（B-303）；沒有 helper 只算功能受限。需要隔離時一 node 一 Linux 帳號；kernel node 也一樣用自己的帳號，不另設服務帳號（第九批）。工具沿用呼叫 node 的身分、權限及資源範圍。〔使用者方向 2026-10-01〕inst 頂層沒有 `user`，任務是 inst 的超集所以也沒有（撤回第十九批疑點裁定 4、第二十批疑點裁定 6 裡任務帶 `user`、不同帳號回 125 的部分）；核心不切帳號，要用別的帳號跑就包 `aos-as`，同樣要在該 node 的額度內（[B-620](../settled/tick.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權而且會傳遞（[B-501](transport.md)、[T-08](../terms.md)），所以 UID 隔離與 key 保護**只對整條投件鏈以外的帳號**成立；key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
 
-身分宣告、繼承與授權失敗的執行結果，以 [inst 的 `user`](inst.md) 為正本；**身分不由 node 資料夾位置決定**（省略時繼承的「上層」怎麼判見 [B-628](../settled/tick.md)）。
+〔使用者方向 2026-10-01〕inst 頂層的 `user` 撤回，inst 不再宣告或繼承身分，照目前身分跑（[inst](inst.md)）；**身分不由 node 資料夾位置決定**。
 
-上層向 daemon 註冊成員時一併給「身分額度」，只能給自己已有的身分（〔使用者方向 2026-09-30，第十八批〕額度可以用前綴或 UID 範圍寫，子額度要被父額度包含，規則見 [B-606](../settled/deferred/daemon/registration.md)）；最頂層額度在 daemon 設定檔，沒 helper 時只含通用 user。額度隨 daemon 登記保存；重啟讀回狀態，缺失時由各 kernel 重新註冊恢復。宣告或繼承所得身分都要在額度內；不能改用 daemon 帳號偷偷執行。
+上層向 daemon 註冊成員時一併給「身分額度」，只能給自己已有的身分（〔使用者方向 2026-09-30，第十八批〕額度可以用前綴或 UID 範圍寫，子額度要被父額度包含，規則見 [B-606](../settled/deferred/daemon/registration.md)）；最頂層額度在 daemon 設定檔，沒 helper 時只含通用 user。額度隨 daemon 登記保存；重啟讀回狀態，缺失時由各 kernel 重新註冊恢復。用 `aos-as` 換的帳號也要在額度內；不能改用 daemon 帳號偷偷執行。
 
 身分額度管「准用誰」，資源 module 管「能用多少」。資源分配以 [S-203](../scheduling/admission.md) 為正本（各 kernel 可自訂資源名，cgroup 與身分額度維持巢狀），cgroup 層級見 [B-605](../settled/deferred/daemon/cgroup.md)；多個工具共用呼叫 node 的合計上限。
 

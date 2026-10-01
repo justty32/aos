@@ -6,7 +6,7 @@
 
 ## P-101．啟動、設定與 socket〔建議預設，未拍板〕
 
-> **已被 [P-120](../../../protocol/daemon/core.md)、[P-121](../../../protocol/daemon/control.md) 取代**（2026-10-01）：`aos-daemon --config <檔>`；設定檔改成 `insts` 物件加頂層 `cwd`／`interval_ms`／`stop_on_nonzero`／`exec_err_path`／`modules`，整份先展開指示詞（[P-120](../../../protocol/daemon/core.md)）；socket 改成控制模組的 `modules.control.socket`（[P-121](../../../protocol/daemon/control.md)）；結束碼照 C-08 只有 0／1。本條的 [daemon-config schema](../../../../protocol/schemas/daemon-config.schema.json) 與 `examples/daemon/config.*` 範例留作紀錄、不刪不改，現行設定檔的 schema 是 [daemon-core-config](../../../../protocol/schemas/daemon-core-config.schema.json)。原文留作紀錄，不再適用。
+> **已被 [P-120](../../../protocol/daemon/core.md)、[P-121](../../../protocol/daemon/control.md) 取代**（2026-10-01）：`aos-daemon --config <檔>`；設定檔改成 `insts` 物件加頂層 `cwd`／`interval_ms`／`stop_on_nonzero`／`exec_out_path`／`exec_err_path`／`modules`，整份先展開指示詞（[P-120](../../../protocol/daemon/core.md)）；socket 改成控制模組的 `modules.control.socket`（[P-121](../../../protocol/daemon/control.md)）；結束碼照 C-08 只有 0／1。本條的 [daemon-config schema](../../../../protocol/schemas/daemon-config.schema.json) 與 `examples/daemon/config.*` 範例留作紀錄、不刪不改，現行設定檔的 schema 是 [daemon-core-config](../../../../protocol/schemas/daemon-core-config.schema.json)。原文留作紀錄，不再適用。
 
 ### 指令與輸入輸出
 

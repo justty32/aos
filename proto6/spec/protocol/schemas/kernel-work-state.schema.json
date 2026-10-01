@@ -19,7 +19,7 @@
       "$ref": "common.schema.json#/$defs/NodeId"
     },
     "owner_exec_uid": {
-      "description": "接件時記下、接件那一項任務實際的有效 UID（任務不帶 user 時就是 node inst 的執行帳號；暫定：任務帶了自己的 user 時記那個帳號）；取消核權的第二種主人（B-203）。掛載行程（once）自己 inst 的 user 不算（B-613）。",
+      "description": "接件時記下、接件那一項任務實際的有效 UID（就是 node inst 的執行帳號；暫定：任務包了 aos-as 換帳號時記換成的那個帳號）；取消核權的第二種主人（B-203）。",
       "type": "integer",
       "minimum": 0
     },

@@ -82,6 +82,6 @@
 
 ## 跨段待問
 
-1. **C++ runner 的 inst 解析怎麼辦？** POC 的 runner 是 Python，直接用 `lib/aos_inst.py`，第三段不受影響。到第六段換 C++ 時：spec 說 runner 要「照 inst 執行一次」，包含解指示詞、驗欄位（[inst](../spec/base/inst.md)「先決定身分，切完才解析」）；C++ runner 要自己重寫一套，還是交給 Python 解完再開程序？第六段開工前要定。
+1. **C++ runner 的 inst 解析怎麼辦？** POC 的 runner 是 Python，直接用 `lib/aos_inst.py`，第三段不受影響。到第六段換 C++ 時：spec 說 runner 要「照 inst 執行一次」，包含解指示詞、驗欄位（[inst](../spec/base/inst.md)「路徑、環境與指示詞」）；C++ runner 要自己重寫一套，還是交給 Python 解完再開程序？第六段開工前要定。
 2. **清理的正本還在整理區外。** `aos-clean` 照 [B-404](../spec/base/storage.md)，但整理區 README 的疑點表把 B-401、B-402、B-404 列為「還寫著舊保證、下一輪要改」。第二段做 `aos-clean` 前，先確認照哪一版。
 3. ~~**daemon 設定的五個開關還沒進 schema。**~~ **結案**（2026-10-01 統一更新）：B-615 的開關已被 [B-640](../spec/settled/daemon/core.md) 的 `modules` 取代；新設定檔的 schema 是 `daemon-core-config`（[P-120](../spec/settled/protocol/daemon/core.md)）。

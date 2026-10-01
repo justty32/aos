@@ -115,10 +115,10 @@
 3. **任務 `id` 重複沒人擋。** 核心只做極簡檢查；但 `aos-git` 的存檔點用 `id` 取名，重複會混。暫時：B-620「誰驗什麼」表寫明這個後果，交給恢復前驗證（B-625）。
 4. **上下層判定（B-628）暫緩後，兩處沒有正式判準**：`aos-git` 排除巢狀子資料夾（B-622）、發摘要核對「直接下層」（B-624）。暫時：寫「B-628 回來前沒有正式判準」。
 5. **「node」這個詞在 tick 層還剩不少。** 使用者 2026-10-01 說 node 留給之後的 node 模組；這輪 tick 核心的行文已改成「目標／工作資料夾」，但檔名 `protocol/node.md`、`node-*` schema 名、P-200 第一句「node 根目錄的絕對路徑就是 node id」、系統級任務各條的 node 字樣沒動。要不要全面改名？
-6. **控制 socket 收到不認得的欄位照收不理**（照程式），跟 [C-07](../contracts.md)「daemon IPC 嚴格拒絕不認得的欄位」打架。暫時：[P-121](protocol/daemon/control.md) 寫明照程式；C-07 沒改。
+6. ~~**控制 socket 收到不認得的欄位照收不理**（照程式），跟 [C-07](../contracts.md)「daemon IPC 嚴格拒絕不認得的欄位」打架。~~ **結案**（使用者 2026-10-01：「socket收到看不懂的欄位就不理他」，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：[C-07](../contracts.md) 的放寬表單列一行「現行控制 socket 忽略」，嚴格只剩舊設計的 daemon IPC；[P-121](protocol/daemon/control.md) 寫明。
 7. **`aos-daemon` 的設定錯誤處理有三處跟 schema 不一致**（照「默認一切正常」）：只有指示詞錯印 `aos-daemon: config: <代號>: …`，自己的檢查印 `aos-daemon: config: <說明>`；缺 `insts`、`control` 沒寫 `socket`、某項的值不是物件時程式直接丟 traceback 回 1；schema 要求 `interval_ms` 是非負整數，程式不查型別。暫時：[P-120](protocol/daemon/core.md) 照程式寫，schema 照嚴格寫。
-8. **`aos-exec` 的 stdout 直接接到 daemon 的 stdout**，不經 daemon 那把鎖，可能跟 daemon 自己的行交錯（stderr 有收齊、不交錯）。暫時：[B-640](daemon/core.md) 照程式寫明。
-9. **inst 第 1 版的頂層 `user` 要不要留？** `aos-exec`、`aos-tick` 都不認得它（當陌生鍵忽略）。暫時：[inst](../base/inst.md) 留著定義，「先決定身分」一節標暫緩，給之後的切帳號機制用。
+8. ~~**`aos-exec` 的 stdout 直接接到 daemon 的 stdout**，不經 daemon 那把鎖，可能跟 daemon 自己的行交錯。~~ **結案**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：頂層新鍵 `exec_out_path` 照 `exec_err_path` 規則收齊再寫；兩個鍵沒寫都丟到 `/dev/null`（[B-640](daemon/core.md)、[P-120](protocol/daemon/core.md)）。
+9. ~~**inst 第 1 版的頂層 `user` 要不要留？**~~ **結案**（使用者 2026-10-01：「inst頂層的user欄位不留」，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：[inst](../base/inst.md) 拿掉 `user` 的定義與「先決定身分」整節（直接刪、不搬暫緩，記在[暫緩區撤回表](deferred/tick.md)）；任務表的 `user` 一併拿掉。
 10. **整理區以外還有「2＝用法錯」**（kernel 工具、ops、CLI 等）。照 [C-08](conventions.md) 字面是改 1，但那幾篇不在這輪範圍，沒動；整理那幾篇時逐條定改 1 或列為特別指定的碼。
 
 ### 系統訊息佇列改寫後，區外要跟上的（還沒改）

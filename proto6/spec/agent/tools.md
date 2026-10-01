@@ -10,7 +10,7 @@
 
 格式修補必須有限：預設連續兩次模型回覆格式無效就停止自動修補，不再派修補請求，並寫[待處理事項](../scheduling/operations.md)；合法回覆把計數歸零。計數只是 node 的普通狀態檔。
 
-〔使用者方向 2026-09-29；第十九批改經通道〕`tools.target_node` 決定路線：填 node id 時，把 `kernel.work.submit` 請求交該 kernel，由它管額度、排程及 once；填 `null` 時，agent **自己經 daemon 通道掛 once**：下一格用本格憑證送 `node.mount`（[B-613](../settled/deferred/daemon/channel.md)、[P-118](../settled/deferred/protocol/daemon/channel.md)），掛的目標是 `.aos/jobs/<attempt_id>/` 裡那份 inst；上層由憑證認出，就是 agent 自己，不帶 `identity_grant`；掛行程立即開跑，不需要另外 wake。工具 inst 的 `user` 落在 agent 的身分額度內（B-613）。once 屬標準配備（[B-629](../settled/tick.md)），通道只有 daemon 開的格才有，人手或 cron 跑的格沒有通道，掛不了。agent 記用量供上層用量收集 module 讀。兩條路線共用工作結果格式，once 用量都歸發起 agent。提交及收結果依[通用 tick](../settled/tick.md)。
+〔使用者方向 2026-09-29；第十九批改經通道〕`tools.target_node` 決定路線：填 node id 時，把 `kernel.work.submit` 請求交該 kernel，由它管額度、排程及 once；填 `null` 時，agent **自己經 daemon 通道掛 once**：下一格用本格憑證送 `node.mount`（[B-613](../settled/deferred/daemon/channel.md)、[P-118](../settled/deferred/protocol/daemon/channel.md)），掛的目標是 `.aos/jobs/<attempt_id>/` 裡那份 inst；上層由憑證認出，就是 agent 自己，不帶 `identity_grant`；掛行程立即開跑，不需要另外 wake。工具跑的帳號落在 agent 的身分額度內（B-613；inst 頂層沒有 `user`，2026-10-01）。once 屬標準配備（[B-629](../settled/tick.md)），通道只有 daemon 開的格才有，人手或 cron 跑的格沒有通道，掛不了。agent 記用量供上層用量收集 module 讀。兩條路線共用工作結果格式，once 用量都歸發起 agent。提交及收結果依[通用 tick](../settled/tick.md)。
 
 〔使用者方向 2026-09-30，第十八批，維持第十七批〕`tools.target_node=null` 時 agent 自己開的 once 做完，**aos 不叫醒 agent**；結果由 agent 自己想辦法收，例如把摘要的 `due_ms` 設成下次查看的時間，讓上層到時叫醒它，醒來再去看 `result.json`／`.err`。查看間隔放在哪（例如 agent 設定的一欄）延後（[P-008](../protocol/README.md#p-008)）。〔第十九批〕自開 once 的取消與收尾：agent 用 `node.kill` 砍掉（[B-613](../settled/deferred/daemon/channel.md)）；核權看掛它的那個 tick 的路徑，不看當時的憑證，所以隔了幾格也砍得掉。
 

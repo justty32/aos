@@ -58,7 +58,7 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
   launch-started     # 首次 node.mount 前落地，恢復不盲重跑
 ```
 
-外層 inst 的 argv 是 `aos-work --work-dir <絕對工作資料夾>`，`user` 明寫工作所屬 node 已授權的有效身分；內層 `request.json` 的 inst 怎麼繼承、能不能改 `user`，依 [B-101](../base/work.md)。
+外層 inst 的 argv 是 `aos-work --work-dir <絕對工作資料夾>`，用工作所屬 node 已授權的有效身分跑；內層 `request.json` 的 inst 用什麼身分，依 [B-101](../base/work.md)（〔使用者方向 2026-10-01〕inst 頂層沒有 `user`）。
 
 **掛載參數**〔使用者方向 2026-09-30，第十九批；參數細節為建議預設，method 與錯誤碼見 [daemon P-118](../settled/deferred/protocol/daemon/channel.md)〕：經通道送 `node.mount`，參數是 `node_id=<W 的絕對路徑>/inst.json`、`token=$AOS_TICK_TOKEN`（socket 位置在 `$AOS_DAEMON_SOCKET`，[P-117](../settled/deferred/protocol/daemon/channel.md)）、必要時 `parent_id`。**不帶 `identity_grant`、不帶週期，也不再另送 `node.wake`**：掛上就開始跑。誰掛、`parent_id` 怎麼填：
 
@@ -70,7 +70,7 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 
 省略 `parent_id` 的兩種只能帶本格 `token` 走通道；agent 或池 node 不在 daemon 底下（cron、人手跑）時沒有通道、掛不了，〔記錄者依追答 11 歸類〕算功能受限、不另設替代路（[B-629](../settled/tick.md)）。
 
-`parent_id` 只給資源歸屬與核權（框放在它的框下、`user` 核對它的身分額度）；掛載的 W 不是要被 tick 的 node，沒有資料夾上下層的問題，其位置也不決定歸屬。〔使用者方向 2026-09-30，第十九批，撤「與目錄位置無關」的一般說法〕一般 node 的上層不是這樣：預設看資料夾包含，可用登記的 `parent_id` 覆蓋（[B-628](../settled/tick.md)）。何時建目錄、何時掛載（本格只保存材料，提交後下一格才掛）依 [B-624](../settled/tick.md) 與 B-613，kernel 代跑的步驟見 [kernel P-806](kernel-tasks.md)。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
+`parent_id` 只給資源歸屬與核權（框放在它的框下、身分核對它的身分額度）；掛載的 W 不是要被 tick 的 node，沒有資料夾上下層的問題，其位置也不決定歸屬。〔使用者方向 2026-09-30，第十九批，撤「與目錄位置無關」的一般說法〕一般 node 的上層不是這樣：預設看資料夾包含，可用登記的 `parent_id` 覆蓋（[B-628](../settled/tick.md)）。何時建目錄、何時掛載（本格只保存材料，提交後下一格才掛）依 [B-624](../settled/tick.md) 與 B-613，kernel 代跑的步驟見 [kernel P-806](kernel-tasks.md)。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
 
 `launch-started` 的建立、`.err` 旁檔與 result.json 怎麼當證據、缺證據何時記 unknown，依 [S-401](../scheduling/operations.md)。標準配備的執行器（[B-629](../settled/tick.md)）在移除掛載框前保存 [res-usage](schemas/res-usage.schema.json) 到 usage.json，發起者下格收量；量不到（包括 cgroup 走備援時，[B-631](../settled/tick.md)）不寫 usage.json、用量記 null，不採信工具自報。
 
@@ -114,7 +114,7 @@ unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown
 | 找不到這個 request_id 的工作，或工作不在宣告 `work.cancel` 的任務手上（例如 LLM 轉交） | -32000，`work_not_found` |
 | 收件 node 沒有任務宣告 `work.cancel`（agent、純池 node） | tick 回 -32601（[B-501](../base/transport.md)） |
 
-**核權要存的欄位**：原請求檔消費後會被刪，B-203 要的兩個 UID 都在接件時記進工作狀態；kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json) 的 `submitter_uid`（原請求檔的擁有 UID）與 `owner_exec_uid`（接件那一項任務實際的有效 UID：任務不帶 `user` 時就是 tick 的有效 UID，即 node inst 的執行帳號；〔暫定〕任務帶了自己的 `user` 時記那個帳號，同 B-203）。
+**核權要存的欄位**：原請求檔消費後會被刪，B-203 要的兩個 UID 都在接件時記進工作狀態；kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json) 的 `submitter_uid`（原請求檔的擁有 UID）與 `owner_exec_uid`（接件那一項任務實際的有效 UID：就是 tick 的有效 UID，即 node inst 的執行帳號；〔暫定〕任務包了 `aos-as` 換帳號時記換成的那個帳號，同 B-203）。
 
 〔使用者方向 2026-09-30，第十八批〕目前只有 kernel 的 work 任務支援取消。LLM 請求與 agent 自己掛的工具行程的取消延後（[P-008](README.md#p-008)）；到時要補的欄位（forward-state 與 agent 請求的 `submitter_uid`、`canceling` 階段）一併列在那裡。
 

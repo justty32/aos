@@ -6,7 +6,7 @@
 
 ## P-500．module 就是任務〔使用者方向 2026-09-29〕
 
-module 是 [node P-202～204](../settled/protocol/node.md) 的普通任務；範本的六類可各自選裝，不另加 module 表或 ABI。argv 由任務設定，cwd／stdin／stdout／stderr／環境／鎖沿 [P-203](../settled/protocol/node.md)，不重取同 node 鎖。〔使用者方向 2026-09-30，第十九批，疑點裁定 4〕帳號照 [B-620](../settled/tick.md)：預設用 node inst 的帳號；任務也可以帶 `user`，由標準配備的切換使用者開。
+module 是 [node P-202～204](../settled/protocol/node.md) 的普通任務；範本的六類可各自選裝，不另加 module 表或 ABI。argv 由任務設定，cwd／stdin／stdout／stderr／環境／鎖沿 [P-203](../settled/protocol/node.md)，不重取同 node 鎖。〔使用者方向 2026-09-30，第十九批，疑點裁定 4〕帳號照 [B-620](../settled/tick.md)：用 node inst 的帳號；任務沒有 `user`（2026-10-01 撤回），要換帳號就包 `aos-as`。
 
 〔建議預設，未拍板〕直接開檔讀配額、已授權量測介面及必要本地證據；寫自己 node 的用量／分配狀態，由標準配備的 group 提交（[B-621](../settled/tick.md)）。退出 0＝本步完成（額度不足而寫好摘要等待也是 0），2＝設定錯，125＝無法開始，1＝已開始但失敗。派工的任務怎麼讀資源狀態、擋什麼，見 [S-205](../scheduling/admission.md)。
 

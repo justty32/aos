@@ -6,7 +6,7 @@
 
 ## P-800．共同契約〔第十二批裁定；工程預設〕
 
-每個 module 一項任務（[B-620](../settled/tick.md)）：check、members、resources、work、LLM forward、LLM pool、usage、schedule，另有 custom 的 aos-clean；它的輸出及到期間隔依 [P-605](ops.md)。各用 node inst 的帳號（範本任務不帶 `user`，[B-620](../settled/tick.md)）、直接開檔讀設定；stdin 不讀、stderr 診斷，除 clean 外的任務 stdout 空。`--node N` 可省，預設 cwd；tick 在 node 根跑任務。在 tick 裡一律繼承並核對 `AOS_TICK_LOCK_FD`（[B-602](../settled/tick.md)），提交交給 tick。〔使用者方向 2026-09-30，第十九批，追答 10〕任務帶別的 `user` 時，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`，沒有 helper 時那一項依 [B-620](../settled/tick.md) 回 125（功能受限）。有 `AOS_TICK_LOCK_FD` 卻核對不過就回 125、不改檔，不改成自己取鎖（開它的 tick 還握著鎖）。
+每個 module 一項任務（[B-620](../settled/tick.md)）：check、members、resources、work、LLM forward、LLM pool、usage、schedule，另有 custom 的 aos-clean；它的輸出及到期間隔依 [P-605](ops.md)。各用 node inst 的帳號（任務沒有 `user`，[B-620](../settled/tick.md)）、直接開檔讀設定；stdin 不讀、stderr 診斷，除 clean 外的任務 stdout 空。`--node N` 可省，預設 cwd；tick 在 node 根跑任務。在 tick 裡一律繼承並核對 `AOS_TICK_LOCK_FD`（[B-602](../settled/tick.md)），提交交給 tick。〔使用者方向 2026-09-30，第十九批，追答 10；2026-10-01 任務的 `user` 撤回〕任務要用別的帳號跑就在 argv 包 `aos-as`，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`（[B-620](../settled/tick.md)）。有 `AOS_TICK_LOCK_FD` 卻核對不過就回 125、不改檔，不改成自己取鎖（開它的 tick 還握著鎖）。
 
 任務把完整請求／回應放追蹤的 `.aos/outbox/{requests,responses}/<id>.json`，把已消費原件逐 byte 複製到 `state/messages/{requests,responses}/<id>.json`。收件與派出的先後（組提交後才投件、才刪原件）屬標準配備，以 [B-623、B-624](../settled/tick.md) 為正本，封套見 [P-206](../settled/protocol/node.md)。〔使用者方向 2026-09-30，第十九批〕要找 daemon 的任務照 P-801 找 socket、走通道；once 由 module 經通道 `node.mount` 掛上、`node.kill` 砍掉（[B-613](../settled/deferred/daemon/channel.md)），當格新材料先提交、下一格才掛（[S-401](../scheduling/operations.md)）。不在任務中等工具／HTTP；取消時同步等 `node.kill` 收尾到全空是唯一例外，上限是 daemon 的 `shutdown_grace_ms`（[B-203](../base/execution.md)）。
 
@@ -38,7 +38,7 @@
 |---|---|
 | `id` | 本 kernel 唯一短名 |
 | `node_id` | 成員資料夾的絕對路徑（登記只收資料夾，[B-606](../settled/deferred/daemon/registration.md)）。〔第十九批〕建議放在本 kernel 資料夾之內，預設上層就是本 kernel；放在外面時以覆蓋登記（[S-202](../scheduling/admission.md)） |
-| `identity_grant` | daemon 身分額度（寫法與包含判定見 [B-606](../settled/deferred/daemon/registration.md)）；成員 inst 的 user 須在其中 |
+| `identity_grant` | daemon 身分額度（寫法與包含判定見 [B-606](../settled/deferred/daemon/registration.md)）；成員跑的帳號須在其中 |
 | `interval_ms`（可省） | 週期；子 kernel 建議 1000，逐次放行的 agent 省略 |
 | `provision`（可省） | 不超父範圍的 daemon 授權 |
 | `quota` | 完整 res-quota，node_id 對本項、seq 隨配額遞增 |
@@ -114,7 +114,7 @@ kernel.json 欄位：
 |---|---|
 | `request_id`、`seq`、`phase`、`boot_id`、`work_dir`、`finished_at_ms` | 原請求 ID、本 kernel 序號、工作進度（不是任務拆分）、接件 boot、工作目錄、完成時間；不重存請求 |
 | `submitter_uid` | 接件時原請求檔的擁有 UID，取消核權用 |
-| `owner_exec_uid`（可省） | 接件時記下、接件那一項任務實際的有效 UID（範本任務不帶 `user`，就是 node inst 的執行帳號；〔暫定〕任務帶了自己的 `user` 時是那個帳號），取消核權的第二種主人（[B-203](../base/execution.md)） |
+| `owner_exec_uid`（可省） | 接件時記下、接件那一項任務實際的有效 UID（就是 node inst 的執行帳號；〔暫定〕任務包了 `aos-as` 換帳號時是換成的那個帳號），取消核權的第二種主人（[B-203](../base/execution.md)） |
 | `attempt_allocator`（可省） | 配出 attempt_id 的 node；省略＝材料的 node_id。讀目錄時核對前綴＝它的雜湊（P-402） |
 | `llm`（可省） | 〔審稿必-9〕LLM 工作才有：pool 任務維護的預留（P-811） |
 
@@ -179,14 +179,14 @@ OS 帳號、chown 與多帳號交接用的群組（建群組、加成員、改�
 ## P-814．完整範本與走查〔B-603、[inst 目標](../base/inst.md#inst-目標檔案或資料夾)；工程預設〕
 
 ```text
-aos node new /srv/aos/top --template kernel --user 1000 --socket /run/user/1000/aos.sock
+aos node new /srv/aos/top --template kernel --socket /run/user/1000/aos.sock
 ```
 
 〔第十九批〕`--socket` 可省，省略時 `config/kernel.json` 不寫 `daemon_socket`（P-801）。
 
 建立普通 git node、初始 commit、requests／responses／work／public／`.aos/jobs/`／`.aos/attention/`，不覆蓋既有目標、不試 HTTP。[完整 JSON](examples/kernel-tasks/kernel-template.minimal.valid.json) 與 [schema](schemas/kernel-template.schema.json) 的 files 是實際產物，不另存 template 容器；包括 `.aos/inst.json`、`.aos/tasks.json`、設定與 gitignore。
 
-任務表共 **9 項**，每項是 inst（含 `_metainfo`）加 id／kind／needs／methods；group 省略、各自一組，needs 全空。外層 `_metainfo` 是 aos-tasks 第 1 版。〔使用者方向 2026-09-30，第十九批，疑點裁定 4〕範本任務不填 `user`，照 node inst 的帳號跑；任務可以帶 `user`，由標準配備的切換使用者開（[B-620](../settled/tick.md)）。〔使用者方向 2026-09-29，第十七批〕`methods` 是該任務處理的檔案請求（[node P-202](../settled/protocol/node.md)）；下表沒列 method 的任務不收請求，別人投來沒人宣告的 method 由標準配備的收件回 -32601（[B-623](../settled/tick.md)）。
+任務表共 **9 項**，每項是 inst（含 `_metainfo`）加 id／kind／needs／methods；group 省略、各自一組，needs 全空。外層 `_metainfo` 是 aos-tasks 第 1 版。〔使用者方向 2026-09-30，第十九批，疑點裁定 4；2026-10-01 任務的 `user` 撤回〕範本任務照 node inst 的帳號跑；任務沒有 `user`，要換帳號就包 `aos-as`（[B-620](../settled/tick.md)）。〔使用者方向 2026-09-29，第十七批〕`methods` 是該任務處理的檔案請求（[node P-202](../settled/protocol/node.md)）；下表沒列 method 的任務不收請求，別人投來沒人宣告的 method 由標準配備的收件回 -32601（[B-623](../settled/tick.md)）。
 
 | id | kind | 程式（cwd 為 node 根） | needs | methods |
 |---|---|---|---|---|
@@ -210,6 +210,6 @@ daemon roots 填頂層 node、身分額度與 interval_ms=1000；啟動、重啟
 
 ## P-815．格式驗收〔P-007〕
 
-[範例](examples/kernel-tasks/) 依同名前綴驗 schema。反例涵蓋成員額度含 root、批次／窗口為零、相對路由、設定狀態錯型、boot 非字串、零序號、applied 非布林、未知工作階段、把缺量當零、unknown 負數、範本缺任務表。〔第十九批〕範本任務帶 `user` 不再是反例（B-620）。〔第十八批〕本篇 schema 都是持久檔或檔案 RPC，一律放寬：多一個不認得的欄位照收（[P-007](README.md)）；成員指到單檔、成環改由 check 驗。
+[範例](examples/kernel-tasks/) 依同名前綴驗 schema。反例涵蓋成員額度含 root、批次／窗口為零、相對路由、設定狀態錯型、boot 非字串、零序號、applied 非布林、未知工作階段、把缺量當零、unknown 負數、範本缺任務表。〔第十八批〕本篇 schema 都是持久檔或檔案 RPC，一律放寬：多一個不認得的欄位照收（[P-007](README.md)）；成員指到單檔、成環改由 check 驗。
 
 正例全過、反例全拒；`bash wf/tools/wf-lint.sh proto6` broken=0。格式不代替授權、跨檔配對、重啟與實際 HTTP 驗收。

@@ -7,7 +7,6 @@
         "_type": "posix",
         "_version": 1
       },
-      "user": 1000,
       "argv": [
         "aos-tick"
       ],

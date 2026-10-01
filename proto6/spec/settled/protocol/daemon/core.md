@@ -28,6 +28,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
   "cwd": "/home/u/nodes",
   "interval_ms": 60000,
   "stop_on_nonzero": false,
+  "exec_out_path": "<inst>/out.log",
   "exec_err_path": "<inst>/err.log",
   "modules": {"control": {"socket": "./aos.sock"}},
   "insts": {
@@ -45,7 +46,8 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | `cwd` | 字串，可省 | 起點。省略＝daemon 啟動時的工作目錄；相對的也以那裡為準 |
 | `interval_ms` | 非負整數毫秒，可省 | 各項的預設週期 |
 | `stop_on_nonzero` | 布林，可省 | 各項的預設；省略＝false |
-| `exec_err_path` | 字串，可省 | `aos-exec` 的 stderr 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 這幾個字換成這一項的位置（規則見 [B-640](../../daemon/core.md)「輸出」）。省略＝daemon 自己的 stderr |
+| `exec_out_path` | 字串，可省 | `aos-exec` 的 stdout 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 這幾個字換成這一項的位置（規則見 [B-640](../../daemon/core.md)「輸出」）。省略＝丟掉（`/dev/null`）；寫 `/dev/stdout` 接回 daemon 自己的 stdout |
+| `exec_err_path` | 字串，可省 | `aos-exec` 的 stderr 接到哪個檔，規則同 `exec_out_path`。省略＝丟掉（`/dev/null`）；寫 `/dev/stderr` 接回 daemon 自己的 stderr |
 | `modules` | 物件，可省 | 一個模組一個鍵，有寫就開。目前只認 `control`（`{"socket": <路徑>}`，見 [P-121](control.md)）；其他鍵照收、不看 |
 
 **`insts` 每一項的值**
@@ -78,18 +80,20 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 2026-10-01T15:04:05+08:00 inst=jobs/report.json stopped
 ```
 
-`aos-exec` 自己的 stdout 不經 daemon 收，直接接在 daemon 的 stdout 上。
+`aos-exec` 自己的 stdout 不在這裡；它照 `exec_out_path` 寫（下一節），沒寫就丟掉。
 
-### aos-exec 的 stderr
+### aos-exec 的 stdout 與 stderr
 
-每次收齊、有內容才寫，前面一行標頭（第幾項從 0 數）；內容最後沒有換行就補一個：
+〔使用者方向 2026-10-01〕各自寫到 `exec_out_path`、`exec_err_path` 指的檔；沒寫就丟掉。每次收齊、有內容才寫，前面一行標頭，時間後面寫 `stdout` 或 `stderr`，第幾項從 0 數；內容最後沒有換行就補一個：
 
 ```text
-== 2026-10-01T15:04:05+08:00 index=1 inst=jobs/report.json ==
+== 2026-10-01T15:04:05+08:00 stdout index=1 inst=jobs/report.json ==
+done 3 rows
+== 2026-10-01T15:04:05+08:00 stderr index=1 inst=jobs/report.json ==
 boom
 ```
 
-寫到 daemon 的 stderr 或 `exec_err_path` 指的檔，格式一樣。
+同一次兩條都有內容時，先寫 stdout 那段再寫 stderr 那段，中間不夾別項的輸出。寫到一般檔或 `/dev/stdout`、`/dev/stderr`，格式都一樣。
 
 ### daemon 自己的 stderr
 
@@ -114,4 +118,4 @@ boom
 
 daemon 正常運作時不會自己結束（所有項都停了也照樣開著），所以 0 只會來自訊號。
 
-依據：使用者方向 2026-10-01（設定檔追加裁定、m3 待問裁定、m3 實作後追加裁定、`insts` 改成物件）；結束碼慣例改版。
+依據：使用者方向 2026-10-01（設定檔追加裁定、m3 待問裁定、m3 實作後追加裁定、`insts` 改成物件、`exec_out_path` 與輸出預設丟掉）；結束碼慣例改版。

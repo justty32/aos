@@ -49,11 +49,10 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 
 - **schema**：[node-inst.schema.json](../../protocol/schemas/node-inst.schema.json) 只驗 [inst 正本](../../base/inst.md) 的原始結構。引用內容、循環、選項值與展開後的型別，仍由 runner 驗。
 - **版本**：`_metainfo` 沿第 1 版，不加 `version`。頂層、metainfo、選項裡不認得的鍵照 inst 忽略，這是 P-002 的例外。
-- **`user`**：只准帳號名稱或非負 UID；省略或空字串＝繼承；不吃指示詞。
-- **`user`**：`aos-exec` 與 `aos-tick` 都不看它（當不認得的鍵忽略，照目前身分跑）；格式規定留給之後要切帳號的程式。
-- **授權與結束碼**：授權、切身分與整份 `$ref` 的身分核對依 [daemon P-108～110](../deferred/protocol/daemon/provision-and-runner.md)（舊 daemon 的設計，在暫緩區）。125／126／127 與 `exit` 的訊號編碼照正本，不改成 RPC 錯誤；它們是 [C-08](../conventions.md) 說的「特別指定的碼」。
+- **沒有 `user`**〔使用者方向 2026-10-01〕：inst 頂層沒有 `user`（撤回，見 [inst](../../base/inst.md)）；寫了就是不認得的鍵，照上一條忽略，照目前身分跑。schema 也不再定義它。
+- **結束碼**：125／126／127 與 `exit` 的訊號編碼照正本，不改成 RPC 錯誤；它們是 [C-08](../conventions.md) 說的「特別指定的碼」。
 
-範例：[正例](../../protocol/examples/node/inst.minimal.valid.json) 跑 aos-tick；[反例](../../protocol/examples/node/inst.user_directive.invalid.json) 的 `user` 用了指示詞，不合法。
+範例：[正例](../../protocol/examples/node/inst.minimal.valid.json) 跑 aos-tick。
 
 ## P-202．任務註冊表〔建議預設，未拍板〕
 
@@ -66,24 +65,23 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 - 順序只看 `tasks` 陣列位置；`tasks` 可以是空陣列。
 - 每項是 **inst 的超集**：一份 inst 加下表的欄位，也可以用整份 `$ref`。指示詞、串流、cwd、envs 照 inst 展開，base 是工作資料夾（[B-620](../tick.md)）。
 - 格式上外層與每項的 `_metainfo` 照寫；核心不擋，開格只做極簡檢查（有 `tasks` 陣列、每項是物件且有 `argv`，[B-620](../tick.md)）。
-- 核心只看 inst 部分與 `id`；不看 `kind`、`user`。順序、類別與讀表檢查以 [B-620](../tick.md) 為正本。
+- 核心只看 inst 部分與 `id`；不看 `kind`。順序、類別與讀表檢查以 [B-620](../tick.md) 為正本。
 
 | 欄位 | 約束 |
 |---|---|
 | `id` | 可省；寫了是共用 `ID`。沒寫時，這一項的 id＝它在 `tasks` 陣列的位置轉字串（`"0"`、`"3"`）。紀錄、`AOS_TASK_ID`、`stopped_after` 都用它。默認不重複，核心不查 |
 | `kind` | 可省。`system`、`kernel`、`agent`、`custom`；〔暫定〕或自訂的「類別.名稱」：類別限 `kernel`／`agent`／`custom`，名稱是小寫英數與 `_`、`-`（例如 `agent.review`）。`system` 標記系統級任務（[B-626](../tick.md)），只是標記，不驗順序；`system.x` 不接受（schema 擋，核心不擋） |
-| `user` | 可省，格式照 [inst](../../base/inst.md) 的 `user`。核心不看，一律照 tick 自己的帳號跑；要切帳號就在 argv 包 `aos-as`（P-212、[B-620](../tick.md)） |
 
-**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-needs`（P-204、[B-621](../tick.md)），組改由存檔點劃分（P-205、[B-630](../tick.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
+**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號就在 argv 包 `aos-as`（P-212）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-needs`（P-204、[B-621](../tick.md)），組改由存檔點劃分（P-205、[B-630](../tick.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
 
 誰驗哪些欄位見 [B-620](../tick.md)「誰驗什麼」：核心只做極簡檢查，其餘 schema 限制由恢復前驗證與工具擋。
 
 範例：
 
-- 正例：[最小](../../protocol/examples/node/tasks.minimal.valid.json)（登記普通程式）、[沒寫 `id` 與 `kind`](../../protocol/examples/node/tasks.no-id.valid.json)（id 用位置字串）、[帶 `user`](../../protocol/examples/node/tasks.user.valid.json)（格式照收；核心不看）、[包 `aos-as`](../../protocol/examples/node/tasks.as.valid.json)（用別的帳號跑）、[陌生鍵](../../protocol/examples/node/tasks.unknown-key.valid.json)（帶 `group`、`needs` 照收）、[標準任務表範本](../../protocol/examples/node/tasks.template.valid.json)（照 [B-629](../tick.md) 沒有 git 版）、[有 git 版範本](../../protocol/examples/node/tasks.template-git.valid.json)（`aos-git` 開格、存檔點、收尾）、[`methods`](../../protocol/examples/node/tasks.methods.valid.json) 與 [`methods` 裡重複](../../protocol/examples/node/tasks.methods-duplicate.valid.json)（都當陌生鍵照收）、[自訂種類](../../protocol/examples/node/tasks.custom-kind.valid.json)（`agent.review`）。
+- 正例：[最小](../../protocol/examples/node/tasks.minimal.valid.json)（登記普通程式）、[沒寫 `id` 與 `kind`](../../protocol/examples/node/tasks.no-id.valid.json)（id 用位置字串）、[包 `aos-as`](../../protocol/examples/node/tasks.as.valid.json)（用別的帳號跑）、[陌生鍵](../../protocol/examples/node/tasks.unknown-key.valid.json)（帶 `group`、`needs` 照收）、[標準任務表範本](../../protocol/examples/node/tasks.template.valid.json)（照 [B-629](../tick.md) 沒有 git 版）、[有 git 版範本](../../protocol/examples/node/tasks.template-git.valid.json)（`aos-git` 開格、存檔點、收尾）、[`methods`](../../protocol/examples/node/tasks.methods.valid.json) 與 [`methods` 裡重複](../../protocol/examples/node/tasks.methods-duplicate.valid.json)（都當陌生鍵照收）、[自訂種類](../../protocol/examples/node/tasks.custom-kind.valid.json)（`agent.review`）。
 - 反例：[自訂 `system.x`](../../protocol/examples/node/tasks.custom-kind.invalid.json)。
 
-依據：〔暫定〕第十八批（自訂種類）、第十九批（撤 `user` 的永遠禁止）、〔使用者方向 2026-09-30〕第二十批（只定基本欄位、疑點裁定 6）；使用者 2026-10-01（`kind` 不填、`id` 可省、拿掉 `methods`、極簡檢查、不看 `user`）。
+依據：〔暫定〕第十八批（自訂種類）、第十九批（撤 `user` 的永遠禁止）、〔使用者方向 2026-09-30〕第二十批（只定基本欄位、疑點裁定 6）；使用者 2026-10-01（`kind` 不填、`id` 可省、拿掉 `methods`、極簡檢查、不看 `user`；同日撤回 inst 與任務的 `user`）。
 
 ## P-203．aos-tick 與任意任務程式〔建議預設，未拍板〕
 
@@ -130,7 +128,7 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 
 | 介面 | 約定 |
 |---|---|
-| 身分 | 沿用 tick 的有效 UID、群組與資源範圍；不看任務的 `user`。要換帳號包 `aos-as`（P-212） |
+| 身分 | 沿用 tick 的有效 UID、群組與資源範圍；任務沒有 `user`（寫了照陌生鍵）。要換帳號包 `aos-as`（P-212） |
 | cwd／argv | 照本項 inst 展開後執行；cwd 沒給時是工作資料夾 |
 | stdin | 預設 `/dev/null`；可用本項 inst 的 stdin 重導向 |
 | stdout／stderr | 照 inst 預設 `/dev/null`，可明寫 inherit 或重導向；tick 不把輸出文字當完成證據 |

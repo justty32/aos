@@ -1,8 +1,0 @@
-{
-  "user": {
-    "$env": "USER"
-  },
-  "argv": [
-    "aos-tick"
-  ]
-}

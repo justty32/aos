@@ -77,7 +77,8 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 |---|---|
 | 持久檔：node 裡的設定、狀態、事項、清理報告、`.err` 旁檔；daemon 的設定檔與 `state.json` | 忽略 |
 | 檔案 RPC：node 之間的請求、回應與其 payload | 忽略 |
-| daemon IPC（socket 上的請求與回應，含 tick–daemon 通道）、helper 私有通道、runner 回報 | 拒絕（維持嚴格） |
+| 現行 daemon 控制 socket 的請求（[P-121](settled/protocol/daemon/control.md)） | 忽略〔使用者方向 2026-10-01〕 |
+| 舊設計的 daemon IPC（socket 上的請求與回應，含 tick–daemon 通道，[暫緩區](settled/deferred/protocol/daemon/README.md)）、helper 私有通道、runner 回報 | 拒絕（維持嚴格） |
 
 〔建議預設，未拍板〕通道上送訊息時，外層的通道請求照 daemon IPC 嚴格；夾帶的訊息本身跟檔案收件同一個格式（〔使用者方向 2026-09-30，第十九批〕），收件任務取走後照檔案 RPC 放寬（[B-614](settled/deferred/daemon/messaging.md)）。
 
@@ -90,6 +91,6 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 | `api_key` | LLM 池設定 | key 只能用 `key_ref` 指到檔案，不寫進設定（[S-301](scheduling/llm.md)） |
 | `argv` | 事項（attention） | 事項只給人或 agent 看的建議，不會被自動執行（[S-405](scheduling/operations.md)） |
 
-這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**：任務是 inst 的超集，可以帶自己的 `user`；省略時照舊用 node inst 的身分。〔使用者方向 2026-09-30，第二十批疑點裁定 6〕核心不切帳號：`user` 跟 tick 的帳號不同時那一項回 125，要切帳號就在 argv 包普通程式 `aos-as`，額度照 inst 核（[B-620](settled/tick.md)、[B-303](settled/deferred/helper.md)）。schema 的寫法見 [P-007](protocol/README.md)。
+這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**。〔使用者方向 2026-10-01〕inst 頂層沒有 `user`（撤回，[inst](base/inst.md)），任務是 inst 的超集所以也沒有：寫了就是不認得的鍵、照收忽略，照 tick 自己的帳號跑；原本「跟 tick 帳號不同時那一項回 125」一併撤回。要切帳號就在 argv 包普通程式 `aos-as`（[B-620](settled/tick.md)、[B-303](settled/deferred/helper.md)）。schema 的寫法見 [P-007](protocol/README.md)。
 
-驗收：持久檔與檔案 RPC 多一個不認得的欄位照樣讀得進來、改寫後欄位還在；daemon IPC 多一個欄位被拒；帶禁止鍵的檔整份拒收，任務表的項目帶 `user` 照收（跟 tick 帳號不同時那一項回 125）；舊版檔經 `aos migrate` 後新程式照讀，比自己新的版本被拒。
+驗收：持久檔與檔案 RPC 多一個不認得的欄位照樣讀得進來、改寫後欄位還在；現行控制 socket 的請求多一個欄位照收、舊設計的 daemon IPC 多一個欄位被拒；帶禁止鍵的檔整份拒收，任務表的項目寫了 `user` 當不認得的鍵照收；舊版檔經 `aos migrate` 後新程式照讀，比自己新的版本被拒。

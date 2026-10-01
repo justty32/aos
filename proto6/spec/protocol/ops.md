@@ -44,7 +44,7 @@ aos-attend done N ID --socket S [--store node|daemon] [--json]
 aos-clean [--node <node>] --config <設定檔>
 ```
 
-〔使用者方向 2026-09-30，第二十批〕`aos-clean` 是系統級任務，在沒有 git 版範本裡排最後，有 git 版排在 `aos-git close` 之前（[B-629](../settled/tick.md)）；清理資格、保留期、鎖與提交以 [B-404](../base/storage.md) 為正本。`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用 tick 的有效帳號（〔第二十批〕任務帶的 `user` 跟 tick 不同時核心不跑這一項，要換帳號包 `aos-as`，[B-620](../settled/tick.md)）。沒有自訂的必填環境；aos-clean 自己不切換身分。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
+〔使用者方向 2026-09-30，第二十批〕`aos-clean` 是系統級任務，在沒有 git 版範本裡排最後，有 git 版排在 `aos-git close` 之前（[B-629](../settled/tick.md)）；清理資格、保留期、鎖與提交以 [B-404](../base/storage.md) 為正本。`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用 tick 的有效帳號（任務沒有 `user`，2026-10-01；要換帳號包 `aos-as`，[B-620](../settled/tick.md)）。沒有自訂的必填環境；aos-clean 自己不切換身分。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
 
 [ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；〔第二十批，時長改格數，算本 node 的格〕`interval_ticks` 預設 1000、`retention_ticks` 預設 100000（〔使用者方向 2026-09-30，第二十批〕直接用格數訂：週期 1 秒時約 17 分鐘與 28 小時，週期 30 秒時約 8 小時與 35 日；取代 `interval_seconds` 86400、`retention_ms` 2592000000）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 requests／responses；無效設定回 2。
 
