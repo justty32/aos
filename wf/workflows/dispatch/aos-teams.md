@@ -29,6 +29,12 @@
 要寫檔到 scratchpad（例如試玩）：`-s read-only` 寫不了、`-s workspace-write` 沒網路連不到 LiteLLM，只能用 `~/.codex/config.toml` 的 `danger-full-access`，`-C` 指 scratchpad、不進 repo。
 要兩份獨立 codex 意見時，第二份只能是 astra 調高推理另開對話，綜合時要打折（兩份同源）。
 
+公司那台（WSL）的 `~/.codex/config.toml` 沒設 `danger-full-access`，預設模型還寫著已不能用的 gpt-sol：所以**一律帶 `-m gpt-6-astra`**，要寫檔／開子進程時改用單次旗標 `--dangerously-bypass-approvals-and-sandbox`（2026-09-22 在那台驗過，codex-cli 0.155）。背景跑用 Bash `run_in_background`，log 導到 scratchpad。
+
+**任務書開頭一定寫「可以開自己的 subagent 平行做事」**，不管派哪種 codex（使用者 2026-09-22：「不管開哪種 codex，都要允許他開自己的 subagent」）。codex 的 `multi_agent` 已開、每個 session 最多 8 條。要限人數就在同一句寫上限，別不寫——[driving-cli-agents](driving-cli-agents.md) 說過不寫它會自己開一堆。
+
+**Claude API 不穩時改派 astra**：2026-09-22 Opus 連續四次被 500／529（伺服器過載）打斷，使用者說「claude api 目前狀況不好，改派 codex astra」。這時的分工是 astra 做調查、我做精簡總結、決策、寫規範——他接受這樣切。
+
 ## 每段做完派人試玩（2026-09-13 起）
 
 使用者：「每次做完一個段落都可以讓他們去玩玩看，給建議，然後我們改進。」設計者自己看不出哪裡難懂，要靠沒讀過設計筆記的人去撞。
