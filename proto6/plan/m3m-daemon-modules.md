@@ -2,17 +2,17 @@
 
 ← [plan 入口](README.md)｜**接在 [m3 核心](m3-daemon-core.md)、[m3n 控制模組](m3n-control-module.md) 之後。**｜spec 正本：[B-640 核心](../spec/settled/daemon/core.md)、[B-641 控制](../spec/settled/daemon/control.md)、格式 [P-120](../spec/settled/protocol/daemon/core.md)、[P-121](../spec/settled/protocol/daemon/control.md)｜舊規劃（暫緩區）：[總表](../spec/settled/deferred/README.md#daemon-與-helper)
 
-**狀態（2026-10-01 第十一批裁定後）**：
+**狀態（2026-10-01 第十二批裁定後）**：
 
 | 模組 | 狀態 | spec |
 |---|---|---|
 | 一、重讀設定 `reload` | **已做**（R1～R4 照建議，R3 改成 stdout 警告） | [B-642](../spec/settled/daemon/reload.md)、[P-122](../spec/settled/protocol/daemon/reload.md) |
-| 二、收屍／cgroup `cgroup` | **待裁定**（C1～C4 還沒定），不做 | — |
+| 二、收屍／cgroup `cgroup` | **已做**（第十二批：C1～C4 照建議） | [B-644](../spec/settled/daemon/cgroup.md)、[P-124](../spec/settled/protocol/daemon/cgroup.md) |
 | 三、記住狀態 `state` | **已做**（S1～S3 照建議，設定改成 `$ref`） | [B-643](../spec/settled/daemon/state.md)、[P-123](../spec/settled/protocol/daemon/state.md) |
-| 四、訊息 `mq` | **暫緩**（使用者：「aos-mq先不做」） | — |
-| 五、helper／跨帳號 `helper` | **暫緩**（使用者：「帳號也先不做」） | — |
+| 四、訊息 `mq` | **排隊**（第十二批：要做、排在 cgroup 之後，M1～M4 照建議） | — |
+| 五、帳號 `account`（原草稿叫 helper） | **排隊**（第十二批：要做、排最後；H1 改成拆 root 端、主程式降權，下面草稿待重寫） | — |
 
-做了什麼、自己定的細節見篇末[做完了沒](#做完了沒)；裁定原話見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十一批daemon-模組)。下面各節保留原本的草稿，裁定處就地標註。
+做了什麼、自己定的細節見篇末[做完了沒](#做完了沒)；裁定見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十一批daemon-模組)、[第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。下面各節保留原本的草稿，裁定處就地標註。
 
 > **使用者方向（2026-10-01，原話）**：「node這塊不要動，我有預感，node相關概念以後會不存在。剩下這些都值得做成模組。」「剩下這些」＝重讀設定、收屍／cgroup、記住狀態、訊息、helper／跨帳號五個。所以：**不做 node 模組**（[verdicts 11「node 模組方向」](../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)照留、不排程），**五個模組一律以「daemon 設定檔 `insts` 裡的一項」為單位**，不認得資料夾、任務表、上下層。
 
@@ -122,7 +122,7 @@ roots、`node_id` 改名、`identity_grant`、`provision`、helper 固定設定�
 
 ## 模組二：收屍與資源上限（`modules.cgroup`）
 
-> **待裁定、這次不做**（2026-10-01 第十一批）：C1～C4 使用者還沒裁定。
+> **已做**（2026-10-01 第十二批）：C1～C4 使用者原話「都先按照建議。」下面草稿照原樣留著；做法與 AI 隊定的細節見篇末[做完了沒](#做完了沒)，正本 [B-644](../spec/settled/daemon/cgroup.md)。
 
 舊規劃：[暫緩區 B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；tick 側 [`aos-cg`（B-634）](../spec/settled/tick/cg.md)。
 
@@ -262,7 +262,7 @@ node 框 `n-<h>` 與它底下的 `tick`、`task-*`、`mount-*`、子 node 框（
 
 ## 模組四：訊息（`modules.mq`）
 
-> **暫緩**（使用者 2026-10-01 第十一批：「aos-mq先不做」）。下面草稿照留。
+> ~~暫緩~~（第十一批：「aos-mq先不做」）→ **要做，排在 cgroup 之後**（2026-10-01 第十二批：M1～M4 照建議）。下面草稿就是要照做的版本，還沒動工。
 
 舊規劃：[暫緩區 B-614 暫存訊息與急件](../spec/settled/deferred/daemon/messaging.md)、格式 [P-119](../spec/settled/deferred/protocol/daemon/channel.md#p-119送訊息取訊息與通道錯誤碼使用者方向-2026-09-30第十九批參數與上限為建議預設)；tick 側 [`aos-mq get`／`post`（B-623、B-624）](../spec/settled/tick/mq.md)。
 
@@ -341,7 +341,7 @@ node id 當收件人；`node.send`／`node.take` 的 method 名、封包與通�
 
 ## 模組五：helper 與跨帳號（`modules.helper`）
 
-> **暫緩**（使用者 2026-10-01 第十一批：「帳號也先不做」）。下面草稿照留。
+> ~~暫緩~~（第十一批：「帳號也先不做」）→ **要做，排最後**（2026-10-01 第十二批）：模組鍵改叫 `account`（不叫 helper）；**H1 不照建議**，要拆出 root 端、主程式降權；socket 先 chmod 666（H4），之後會有多個 socket、權限另外設計。下面草稿是第十二批之前寫的，動工前要照這條重寫。
 
 舊規劃：[暫緩區 B-303 root helper 與 `aos-as`](../spec/settled/deferred/helper.md)、[B-609 佈建與 helper 動作](../spec/settled/deferred/daemon/helper-actions.md)、P-102、P-107、P-108（[暫緩區 daemon 協議](../spec/settled/deferred/protocol/daemon/README.md)）。
 
@@ -455,7 +455,7 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 
 ## 做完了沒
 
-**模組一、三做完了**（2026-10-01，AI 隊）：照上面與第十一批裁定做，驗收寫進 `tests/test_daemon_reload.py`（15 條）、`tests/test_daemon_state.py`（11 條），全過、兩檔單獨連跑 10 次都過；全部測試由 502 條變 528 條。模組二待裁定，四、五暫緩。
+**模組一、三做完了**（2026-10-01，AI 隊）：照上面與第十一批裁定做，驗收寫進 `tests/test_daemon_reload.py`（15 條）、`tests/test_daemon_state.py`（11 條），全過、兩檔單獨連跑 10 次都過；全部測試由 502 條變 528 條。
 
 - 程式：`lib/aos_daemon.py`（`load_full()`／`Setup`、`_state_ref()`、共用的 `_items` 與 `_items_lock`、`Item.removed`／`end_mono`、`state_changed()`、`_catch_hup()`）、新的 `lib/aos_daemon_reload.py`、`lib/aos_daemon_state.py`；`lib/aos_daemon_ctl.py` 的 `handle()` 在 pause／resume 後通知記住狀態。`load_config()`、`load_setup()` 照舊。用法見 [src/py README](../src/py/README.md#重讀設定與記住狀態m3m)。
 - spec：[B-642](../spec/settled/daemon/reload.md)、[B-643](../spec/settled/daemon/state.md)、[P-122](../spec/settled/protocol/daemon/reload.md)、[P-123](../spec/settled/protocol/daemon/state.md)；schema `daemon-core-config` 加 `modules.reload`、`modules.state`，新 schema `daemon-module-state`（舊的 `daemon-state` 是暫緩區 P-116）；暫緩區 B-608、B-603、P-116 標部分取代。
@@ -466,9 +466,18 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 2. **狀態檔內容沒變就不寫**（跟上次寫的、或開起來讀到的比）。所以沒有任何異常時不會建檔；暫停又恢復之後檔留著、內容是 `{"insts":{}}`。
 3. **沒掛 `reload` 時 SIGHUP 照 Python 預設**：daemon 被殺（跟 m3、m3n 一樣，socket 檔不刪）。掛了才接。
 4. **SIGHUP 不會漏**：用 `signal.set_wakeup_fd` 把訊號編號寫進 pipe，主執行緒讀 pipe 再重讀；重讀中連來幾次，讀完再重讀一次。
-5. **`exec_out_path`／`exec_err_path` 改了照套**（plan 表上那列），不算 R3 的「要重開」；R3 只警告 `cwd`、`modules`。`modules` 裡任何改動都算（含換狀態檔、換 socket 路徑、加不認得的模組鍵）。警告每次重讀都印，直到重開或改回。
+5. ~~**`exec_out_path`／`exec_err_path` 改了照套**（plan 表上那列），不算 R3 的「要重開」；R3 只警告 `cwd`、`modules`。~~〔第十二批改〕這兩個也不套用、stdout 警告，比設定裡的原字；新加的項的輸出路徑照開起來時的算。`modules` 裡任何改動都算（含換狀態檔、換 socket 路徑、加不認得的模組鍵）。警告每次重讀都印，直到重開或改回。
 6. **重讀時設定壞了**：所有例外都接（不只 JSON／指示詞錯，型別錯也算），stderr `aos-daemon: reload: <說明>`，stdout 不印 `reloaded`。
 7. **重讀後第幾項照新的鍵順序**（`aos-exec` 輸出標頭的 `index=` 跟著變）；`interval_ms` 改了但那一項還沒跑完過一次（例如開起來就恢復成暫停）照原本的排程。
 8. **`modules.state` 的格式檢查**：原始值必須是只有 `$ref` 一個鍵、非空、不帶 `#`；`modules` 本身也要直接寫在設定檔裡。不合就是設定錯、回 1。狀態檔在但壞掉：照一般 `$ref` 錯回 1（默認一切正常）。
 9. 開起來恢復時印 `inst=<inst> paused`／`stopped`（兩個都有先 paused），在任何 `exit=` 行之前。
 10. 拿掉的項正在跑、還沒結束時又被加回來：新的一項會立刻開跑，可能跟舊的那次短暫疊著（同一個 inst 兩個 `aos-exec`）。照「默認一切正常」不處理。
+
+**模組二做完了**（2026-10-01 第十二批，AI 隊）：照上面草稿與 C1～C4 建議做，驗收寫進 `tests/test_daemon_cgroup.py`（15 條；每條用 `systemd-run --user --scope -p Delegate=yes` 包 daemon，拿不到委派的 scope 時整組跳過）。全部測試 543 條（528＋15）。公司那台寫完；當晚在家裡 Manjaro 實跑 cgroup 那 14 條都過（「模擬沒委派」那條在測試自己的 cgroup 寫得進去時跳過）。
+
+- 程式：新 `lib/aos_daemon_cgroup.py`（`Tree`、`clear()`、`frame_name()`）；`lib/aos_daemon.py`（`Item.cgroup`／`frame`、`run_once()` 回 `(碼, 毫秒, 有沒有收屍)`、`_gone()` 刪框、`main()` 建樹）；`lib/aos_daemon_reload.py`（`_apply()` 先建框寫上限、`NEED_RESTART` 加 `exec_out_path`／`exec_err_path`）。用法見 [src/py README](../src/py/README.md#收屍cgroupm3m-模組二)。
+- spec：[B-644](../spec/settled/daemon/cgroup.md)、[P-124](../spec/settled/protocol/daemon/cgroup.md)；schema `daemon-core-config` 加 `modules.cgroup` 與每項的 `cgroup`；暫緩區 B-605 標部分取代。
+
+模組二 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)，要點：進框用 `sh -c` 墊一層（不用 `preexec_fn`）；`ms=` 不含清框；殘留拿著輸出 pipe 時另開執行緒讀、清完才收齊；重讀時拿掉的上限鍵不還原、出錯前寫進去的不還原；拿掉的項跑完才刪框、又加回來就不刪。
+
+**下一個：模組四訊息**（M1～M4 照建議），再來模組五帳號（草稿要先重寫）。
