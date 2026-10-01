@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "seq": 9,
+  "ran": 2,
+  "tasks": [
+    {
+      "id": "build",
+      "index": 0,
+      "exit": 2
+    }
+  ],
+  "hooks": {
+    "before_all": [],
+    "after_task": [
+      {
+        "id": "notify",
+        "index": 0,
+        "task_index": 0,
+        "exit": 1
+      }
+    ],
+    "after_every_task": [
+      {
+        "id": "log",
+        "index": 0,
+        "task_index": 1,
+        "signal": 9
+      }
+    ],
+    "after_all": []
+  },
+  "ended": true,
+  "exit": 0
+}

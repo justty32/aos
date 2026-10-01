@@ -28,7 +28,7 @@ daemon 不是 tick 存在的前提：tick 怎麼被執行不管，cron、人手�
 | | 有 | 沒有 |
 |---|---|---|
 | cgroup | daemon 替每個 node 開框、寫資源上限；runner 那一套照做，格後收尾與收尾最後再用 `cgroup.kill` 兜底，重啟時也清得到舊程序（B-605、B-601、B-603、B-604） | 每一格、每個掛載行程由它自己的 runner 管名下的程序（B-601），收尾經 runner 做（B-604） |
-| git | 只有任務表上的 `aos-git` 會用（[B-630](../../tick/git.md)）；daemon 不讀 git | 同左 |
+| git | 只有任務表上的 `aos-git` 會用（[B-630](../git.md)）；daemon 不讀 git | 同左 |
 
 - **runner**＝daemon（或 helper）開每一格、每個掛載行程時用的固定程式 `aos-runner`：照 [inst](../../../base/inst.md) 執行一次（就是 proto5 aos-exec 的慣例），並當收屍人管它名下的程序（[T-09](../terms.md)〔astra 報告必修 9〕、B-601）。
 - 兩種情形並存的做法寫在各條裡；沒有 cgroup 的情形就是原本的做法。本組文件的「daemon 有 cgroup」指部件開著且取得可用子樹；個別 node 仍可能建框失敗、退回沒有框。只在機器上有 cgroup 不算。

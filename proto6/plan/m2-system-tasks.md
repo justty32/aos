@@ -1,7 +1,9 @@
 # 第二段：不靠 daemon 的系統級任務與普通程式（草稿，部分已裁定）
 
-← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/tick/template.md)、[aos-tick-check-task B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/tick/git.md)、[恢復與設定 B-625](../spec/settled/tick/recovery.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
+← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/tick/template.md)、[aos-tick-check-task B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/deferred/git.md)、[恢復與設定 B-625](../spec/settled/tick/recovery.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
 
+> **〔2026-10-01 第十七批〕`aos-git` 整套搬暫緩區**（使用者：「git這塊先不要進範本。」）：改用 hooks 加普通 git 指令（[B-635 範例](../spec/settled/tick/hooks.md#範例用-hook-加普通-git-指令管版本)），範本只留沒有 git 的那份。**文末待問 1～12 隨之擱置**（大多是 `aos-git` 的題）；`aos-tick-check-task` 第十六批也已暫緩。本檔照留當紀錄。
+>
 > **狀態：草稿（2026-10-01），還沒開工。** 2026-10-01 使用者已裁定 `aos-publish` 搬暫緩區、`aos-needs` 改寫成 `aos-tick-check-task`（見文末「裁定紀錄」）；其餘文末「待問」裁定後才照做。下面各步寫的是「建議的最單純版本」；舊 spec 跟現在 tick 對不上的地方集中在「舊規定哪裡對不上」一節。
 
 **做完的樣子**（照建議裁定的話）：在沒有 daemon、cgroup、helper 的機器上，直接跑 `aos-tick <資料夾>`：
@@ -75,7 +77,7 @@
 ## 步驟 2：aos-git 的共通部分
 
 - **要做到**：三個子命令共用的東西——找資料夾、判斷 git 能不能用、怎麼呼叫 git、aos 範圍。
-- **依據**：[B-622](../spec/settled/tick/git.md)、P-205。
+- **依據**：[B-622](../spec/settled/deferred/git.md)、P-205。
 - **做法**：
   - **找資料夾**：`AOS_TICK_CWD`，沒有就 cwd（待問 7）。argv 只認 `open`、`mark`、`close`，其他回 1。
   - **能不能用**：`git` 叫得起來，而且在工作資料夾跑 `git rev-parse --absolute-git-dir` 成功，就算能用。不能用（沒裝、不是 repo）：stderr 一行 `no_git: <原因>`、回 0，不寫擋板。不查 git 版本（這台是 2.43）。
@@ -91,7 +93,7 @@
 ## 步驟 3：aos-git open 與 close
 
 - **要做到**：沒有存檔點也能用的最小一對——開頭還原上一格沒收好的、結尾提交。
-- **依據**：[B-630](../spec/settled/tick/git.md)「開格」「收尾」、[B-632](../spec/settled/tick/git.md)。
+- **依據**：[B-630](../spec/settled/deferred/git.md)「開格」「收尾」、[B-632](../spec/settled/deferred/git.md)。
 - **做法**：
   - **open**：
     1. 不能用 → `no_git`、回 0。
@@ -118,7 +120,7 @@
 ## 步驟 4：aos-git mark（存檔點）
 
 - **要做到**：把剛結束那一組的失敗擋下來——組裡有一項出現在紀錄的失敗清單（不是 0），就把這組在 aos 範圍寫的東西還原到上一個存檔點，然後打點。後面的組看不到失敗組寫的東西，close 只要提交。
-- **依據**：[B-630](../spec/settled/tick/git.md)「組與存檔點」。
+- **依據**：[B-630](../spec/settled/deferred/git.md)「組與存檔點」。
 - **做法**：
   - **存檔點名字用位置**（待問 2）：`refs/aos/marks/<AOS_TASK_INDEX>`。open、close 自己也在各自的位置算「點」（close 不留 ref）。
   - **打點**：把「HEAD 的樣子＋此刻 aos 範圍的樣子」做成一個不掛在任何分支上的暫存提交，記在那個 ref。不動 HEAD、分支、正式 index（建議用 `GIT_INDEX_FILE` 指一個暫時 index：`read-tree HEAD` → `add -A -- <範圍>` → `write-tree` → `commit-tree` → `update-ref`）。還沒有任何 commit 時從空樹開始。

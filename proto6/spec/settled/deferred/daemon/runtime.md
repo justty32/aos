@@ -168,7 +168,7 @@ argv 與回報形狀見 [P-109、P-110](../protocol/daemon/provision-and-runner.
 > **暫緩**（2026-10-01）：B-605 的共通自檢；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
 
 - **daemon 自己的最低需求**：Python 3.9；不合就報錯退出（125）。
-- **不查 git**：git 只有任務表上的 `aos-git` 會用（[B-630](../../tick/git.md)），daemon 不查。
+- **不查 git**：git 只有任務表上的 `aos-git` 會用（[B-630](../git.md)），daemon 不查。
 
 ### 有就用的其他功能
 

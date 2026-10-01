@@ -144,7 +144,7 @@ aos-agent-talk context show N --request ID [--json]
 # 人手：aos agent replies N …／aos agent context show N …
 ```
 
-不寫檔、不開 tick。有 git 時只讀同一 commit；〔第十九批，[B-632](../settled/tick/git.md)〕沒有 git 時讀目前檔案與已完成的紀錄（reply、context 檔各自是完整寫入後才 rename，不會讀到半份），**不保證是一致快照**，同一次查詢內 replies 與 context 可能來自相鄰兩格。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
+不寫檔、不開 tick。有 git 時只讀同一 commit；〔第十九批，[B-632](../settled/deferred/git.md)〕沒有 git 時讀目前檔案與已完成的紀錄（reply、context 檔各自是完整寫入後才 rename，不會讀到半份），**不保證是一致快照**，同一次查詢內 replies 與 context 可能來自相鄰兩格。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
 
 ## P-715．new 的完整產物〔[inst 目標](../base/inst.md#inst-目標檔案或資料夾)；工程預設〕
 

@@ -7,6 +7,7 @@
 - 整條搬來的：B-628 上下層判定。
 - 部分搬來的：B-602、B-620、B-633 各有一段（標題寫成「暫緩：B-xxx …」，原條還在 tick.md）；B-625 的 `aos-config-add` 那段（原條還在 [tick/recovery.md](../tick/recovery.md)）；B-624 的發布摘要 `aos-publish` 那段（原條還在 [tick/mq.md](../tick/mq.md)，2026-10-01 第五批）。
 - 整條搬來的（2026-10-01 第十六批）：B-621 `aos-tick-check-task`（原檔 `tick/check-task.md` 已刪）。
+- 第十七批：B-629 的「有 git 版範本」那段（`aos-git` 本身整篇在 [git.md](git.md)）。
 - 協議那側搬來的：P-207 `aos-config-add` 的格式（整條）、P-206 的 `aos-publish` 那列、P-204 `aos-tick-check-task`（整條，第十六批），在 [protocol/tick.md](protocol/tick.md)。
 - 篇末「已撤回／被取代」列的是被新設計換掉的舊做法，不是暫緩，以後也不會回來。
 
@@ -49,7 +50,7 @@
 - **後代也擋下一格**：只要還有任何程序握著這份鎖（例如任務留下的後代），下一格就拿不到鎖、回 75；這一點不需要 cgroup。核心不清後代；daemon 開的格，由 daemon 在格後收尾（[B-604](daemon/lifecycle.md)）。經 `aos-as` 用別的帳號開的程序同樣繼承這份鎖 fd（[B-303](helper.md)）。
 - daemon 不同時開同一 node 的兩格，是 daemon 自己的開格安排（[B-601](daemon/runtime.md)），不是互斥的來源。
 
-依賴這段的正式條文：`aos-git` 的「不在 tick 內」核對（[B-622](../tick/git.md#b-622git-的共同規則)、P-205）、`aos-mq`／`aos-publish` 在 tick 內靠繼承的鎖（P-206）、`aos-as` 交出鎖 fd（P-212、[B-303](helper.md)）。最簡版下這幾條的「在不在 tick 內」還沒有判法，要等這段回來。
+依賴這段的正式條文：`aos-git` 的「不在 tick 內」核對（[B-622](git.md#b-622git-的共同規則)、P-205）、`aos-mq`／`aos-publish` 在 tick 內靠繼承的鎖（P-206）、`aos-as` 交出鎖 fd（P-212、[B-303](helper.md)）。最簡版下這幾條的「在不在 tick 內」還沒有判法，要等這段回來。
 
 **原驗收：**同資料夾同時跑兩個 `aos-tick`，一個回 75、不改檔；前一格留下握著鎖 fd 的後代時，在沒有 cgroup 的機器上下一格也回 75。包了 `aos-as` 而且有 helper、有通道時，任務內用 `AOS_TICK_LOCK_FD` 核對得到獨占鎖，它結束前下一項不開、同資料夾另一格回 75。
 
@@ -117,7 +118,7 @@
 |---|---|
 | 普通設定（`config/` 裡的檔） | 在 tick 外用 `aos-config-add`（argv 見 [P-207](protocol/tick.md)）：非阻塞取同一把 `.aos/tick.lock`（B-602），拿不到回 75（它自己特別指定的碼，[C-08](../conventions.md)）；有擋板檔就不寫、回 125。寫法：在目標旁寫完整暫存檔 → fsync → rename 替換 → fsync 目錄。沒變動就不寫。不能在同一個工作資料夾的 tick 內呼叫 |
 
-- **有 git 時**〔暫定〕：`config/` 不在 aos 範圍（[B-630](../tick/git.md)），`aos-config-add` 也不自己提交；要留歷史就自己 `git commit`。
+- **有 git 時**〔暫定〕：`config/` 不在 aos 範圍（[B-630](git.md)），`aos-config-add` 也不自己提交；要留歷史就自己 `git commit`。
 
 **原驗收：**`aos-config-add` 寫入後下一格讀得到新值，寫到一半被殺時目標是舊版或新版、不會半份，有 git 時不產生 commit；有擋板時回 125、目標不變。
 
@@ -132,7 +133,7 @@
 - 發布失敗：留舊值、stderr 報錯、回 1，下一格再發。過時或缺失不等於 idle。
 - 有 repo 讀權的上層讀 `summary.json`，讀的是目前檔案。兩種讀法都要核對 `node_id` 是自己的直接下層（B-628，在本篇）。
 - 摘要是觀測，不能蓋掉較新的收件事件。上層不為了查詢而叫醒成員 tick，也不因要讀摘要就取得成員 repo 或下層內容的權限。
-- 範本（[B-629](../tick/template.md)）原本的位置：沒有 git 版排在 `mq-post` 之後、`clean` 之前（id `summary`）；有 git 版排在最後（`mq-post` 之後）。沒有 git 時（[B-632](../tick/git.md)）「從目前的 `summary.json` 發布」。
+- 範本（[B-629](../tick/template.md)）原本的位置：沒有 git 版排在 `mq-post` 之後、`clean` 之前（id `summary`）；有 git 版排在最後（`mq-post` 之後）。沒有 git 時（[B-632](git.md)）「從目前的 `summary.json` 發布」。
 
 **原驗收：**（B-624 原驗收沒有發摘要的專條；B-632、B-629 的驗收提到「發布摘要從目前的 `summary.json` 發布」。）
 
@@ -148,7 +149,7 @@
 - **不寫 id＝檢查本格到目前為止跑過的每一項**：`tasks` 失敗清單不是空的就建停格檔，空的就什麼都不做。
 - **結束碼**：不管有沒有建停格檔都回 0（停格是預料之中，[C-08](../conventions.md)）；自己的錯（沒有 `AOS_TICK_CWD`、讀不到紀錄等）回 1。照 POC 總原則默認正常，不另做異常處理。
 - 前置只看本格：不沿用上一格的成功，也不另做跨格任務排程器。
-- **停格檔擋掉整格剩下的全部項**，不只某一項〔使用者 2026-10-01 接受〕。有 git 時停格等於這格作廢：後面的 `aos-git close` 不跑，下一格 `aos-git open` 還原 aos 範圍（[B-630](../tick/git.md)）。
+- **停格檔擋掉整格剩下的全部項**，不只某一項〔使用者 2026-10-01 接受〕。有 git 時停格等於這格作廢：後面的 `aos-git close` 不跑，下一格 `aos-git open` 還原 aos 範圍（[B-630](git.md)）。
 - `aos-tick-check-task` 自己不還原：失敗任務寫到一半的改動，有 git 時 aos 範圍裡的由還原處理（B-630）；使用者任務自己的檔、以及沒有 git 時的一切，都留在資料夾裡。
 - 任務預設以正常退出且碼為 0 表示本步成功，不代表整件產品任務完成。
 
@@ -157,6 +158,26 @@
 依據：使用者方向 2026-09-29（needs 的意思）；第二十批疑點裁定 2（改成普通程式）；使用者 2026-10-01 第五批（改寫成 `aos-tick-check-task`：自己一項、沒跑好就建停格檔、都回 0）；同日第八批（紀錄只記不是 0 的，判斷改成「出現在失敗清單才停格」，[verdicts 11 篇末](../../../notes/verdicts/11-tick-as-unit.md)）。
 
 **驗收：**表 `[a: true, chk: aos-tick-check-task a, b: …]`：`b` 照跑、`chk` 回 0（不記進 `tasks`）、沒有停格檔，紀錄 `ran:3`、`tasks:[]`。`a` 是 `false`：`chk` 回 0、建了停格檔，`b` 沒跑，紀錄 `ran:2`、`tasks` 只有 `{"id":"a","index":0,"exit":1}`、`stopped_after` 是 `chk`。指定一個還沒跑到的 id（排在後面）：不在失敗清單裡，當成功、不停格。不寫 id 時前面任一項不是 0 就停格、全是 0 就不停。不在 tick 裡直接跑（沒有 `AOS_TICK_CWD`）：回 1。`AOS_DIRNAME=st` 時讀 `st/tick/current/`、建 `st/tick/stop`。
+
+## 暫緩：B-629 有 git 版範本
+
+> **暫緩**（2026-10-01 第十七批）〔使用者 2026-10-01 第十七批〕「git這塊先不要進範本。」隨 `aos-git`（[暫緩區 git](git.md)）搬來；範本只留沒有 git 的那份（[B-629](../tick/template.md)）。原文照留。
+
+〔使用者方向 2026-09-30，aos-git 分工；`id` 與第二個存檔點的位置：使用者 2026-09-30 同意照暫定〕
+
+| # | `id` | `kind` | argv | 做什麼 | 正本 |
+|---|---|---|---|---|---|
+| 1 | `git-open` | system | `aos-git open` | 上一格沒正常收尾就還原；打本格第一個存檔點 | B-630 |
+| 2 | `mq-get` | system | `aos-mq get` | 同上 | B-623 |
+| 3 | `mark-get` | system | `aos-git mark` | 存下 `mq-get` 這一段 | B-630 |
+| … | 使用者任務 | kernel／agent／custom | 同上。要自己的存檔點，就在中間加 `aos-git mark` 項，或在程式裡呼叫 | 各自 | B-630 |
+| n-3 | `mark-user` | system | `aos-git mark` | 把使用者任務這一段跟清理隔開 | B-630 |
+| n-2 | `clean` | system | 同上 | 移到 git 收尾前，讓清理的變動當格提交 | [B-404](../../base/storage.md) |
+| n-1 | `git-close` | system | `aos-git close` | 處理最後一段（清理）、提交 | B-630 |
+| n | `mq-post` | system | 同上 | 排在提交之後：送的都是已提交的 | B-624 |
+
+- **存檔點各占一項**，不另設包裝寫法（納入 cgroup 與 git 疑-12）。系統級任務之間的存檔點由範本自帶；其他 kind 的任務範本不替它們插，要就自己加（B-630）。
+- 〔使用者 2026-09-30 同意照暫定〕使用者給的順序是「使用者任務 → 清理 → 存檔點 → git 收尾」。這裡把第二個存檔點移到清理**之前**：git 收尾本來就會處理最後一段，放在清理前才能讓清理自成一段，被認成「系統級任務動到的檔」（B-630），清理失敗也不會連帶還原使用者任務那段寫的訊息。存檔點總數不變。
 
 ## 已撤回／被取代
 

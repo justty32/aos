@@ -14,7 +14,7 @@
 - 同一主題分散兩處的，照下面的正本表：正本那邊寫全，其他地方改成一句加條號。只寫在協議篇的行為，改到時搬到正本，原處留一句加條號。
 - 條號不重編；內容搬走的條留一句殘根加連結。新條號接在該篇現有號碼後面（見文末「新條號」）。
 - 被推翻的舊說法直接改掉，不留刪除線；需要交代來源的在條文後標〔使用者方向 2026-09-30，第十八批〕、〔使用者方向 2026-09-30，第十九批〕或〔使用者方向 2026-09-30，第二十批〕。使用者未答、照計畫預設寫的標〔暫定〕，不寫進使用者方向的段落。
-- 〔使用者方向 2026-09-30，第二十批〕保證跟著「掛了什麼」走（[T-01](terms.md)）：tick 核心四件事（[T-07](settled/terms.md)）要確認不靠任何系統級任務；其餘保證由各條寫明「掛了哪一項系統級任務、包了哪個普通程式時成立」。第十九批的全掛前提與兩級保證已撤。〔使用者方向 2026-09-30，納入 cgroup 與 git〕git 與 cgroup 已納入，是「有就用」：現行規則在兩者都沒有時也要成立，有的時候多出的保證寫在各條（[B-630、B-622、B-634](settled/tick/git.md)、[B-605](settled/deferred/daemon/cgroup.md)）。延後項只寫一句並連到 [P-008](protocol/README.md#p-008)。
+- 〔使用者方向 2026-09-30，第二十批〕保證跟著「掛了什麼」走（[T-01](terms.md)）：tick 核心四件事（[T-07](settled/terms.md)）要確認不靠任何系統級任務；其餘保證由各條寫明「掛了哪一項系統級任務、包了哪個普通程式時成立」。第十九批的全掛前提與兩級保證已撤。〔使用者方向 2026-09-30，納入 cgroup 與 git〕git 與 cgroup 已納入，是「有就用」：現行規則在兩者都沒有時也要成立，有的時候多出的保證寫在各條（[B-630、B-622、B-634](settled/deferred/git.md)、[B-605](settled/deferred/daemon/cgroup.md)）。延後項只寫一句並連到 [P-008](protocol/README.md#p-008)。
 
 ### 概念與正本
 
@@ -24,7 +24,7 @@
 | tick 核心三件事、tick 是衡量基準；投件權就是執行權 | [T-07](settled/terms.md)、[T-08](terms.md) |
 | aos 結束碼慣例、狀態資料夾名 `AOS_DIRNAME`、環境變數總表、設定檔頂層 `cwd` 與指示詞展開範圍 | [C-08、C-09、C-10、C-11](settled/conventions.md) |
 | 最核心 daemon（定期叫 `aos-exec`）、控制模組與 `aos-ctl`、重讀設定、記住狀態、收屍／cgroup、訊息與 `aos-mq`、帳號 | [B-640](settled/daemon/core.md)、[B-641](settled/daemon/control.md)、[B-642](settled/daemon/reload.md)、[B-643](settled/daemon/state.md)、[B-644](settled/daemon/cgroup.md)、[B-645](settled/daemon/mq.md)、[B-646](settled/daemon/account.md)；格式 [P-120](settled/protocol/daemon/core.md)、[P-121](settled/protocol/daemon/control.md)、[P-122](settled/protocol/daemon/reload.md)、[P-123](settled/protocol/daemon/state.md)、[P-124](settled/protocol/daemon/cgroup.md)、[P-125](settled/protocol/daemon/mq.md)、[P-126](settled/protocol/daemon/account.md)；用語 [T-11](settled/terms.md) |
-| 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-633](settled/tick.md)、[B-629](settled/tick/template.md)、[B-632](settled/tick/git.md)；普通程式 [B-303](settled/deferred/helper.md)、[B-621](settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[B-634](settled/tick/cg.md)（`aos-cg`）；git [B-630、B-622](settled/tick/git.md)；node 框 [B-605](settled/deferred/daemon/cgroup.md) |
+| 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-633](settled/tick.md)、[B-629](settled/tick/template.md)、[B-632](settled/deferred/git.md)；普通程式 [B-303](settled/deferred/helper.md)、[B-621](settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[B-634](settled/tick/cg.md)（`aos-cg`）；git [B-630、B-622](settled/deferred/git.md)；node 框 [B-605](settled/deferred/daemon/cgroup.md) |
 | node 與兼任角色、兩張註冊表 | [T-02](terms.md) |
 | 上下層判定（預設看資料夾、登記覆蓋）〔暫緩〕 | [B-628](settled/deferred/tick.md)、[B-606](settled/deferred/daemon/registration.md) |
 | node 登記、喚醒、重啟、逐層重建與核心收尾〔暫緩，部分被 B-640、B-641 取代〕 | [B-601](settled/deferred/daemon/runtime.md)、[B-603、B-604、B-611](settled/deferred/daemon/lifecycle.md)、[B-606、B-607](settled/deferred/daemon/registration.md) |
@@ -103,7 +103,7 @@
 | B-602 | settled/tick.md | 〔第十九批換標題〕同一資料夾一次一格：互斥鎖（原「同一 node 一次一格」） | T3 |
 | B-620 | settled/tick.md | 任務註冊表：照表依序跑（〔第十九批〕換標題） | T3 |
 | B-621 | settled/deferred/tick.md（〔2026-10-01 第十六批〕暫緩，原 settled/tick/check-task.md） | 〔第二十批換主題〕aos-needs：前置沒成功就不跑（原節補號）；〔2026-10-01 第五批〕改寫成 aos-tick-check-task：前面的項沒跑好就停格 | T3 |
-| B-622 | settled/tick/git.md | git 的共同規則（原節補號） | T3 |
+| B-622 | settled/deferred/git.md（〔2026-10-01 第十七批〕暫緩，原 settled/tick/git.md） | git 的共同規則（原節補號） | T3 |
 | B-623 | settled/tick/mq.md | 系統訊息佇列：取件（mq-get）；檔案收件 aos 不管（〔第二十批〕原「收件：分派、-32601，下一格刪原件（Q1）」，astra 審整理區定案改寫） | T3 |
 | B-624 | settled/tick/mq.md | 派出：系統訊息佇列送出（mq-post）與發摘要（Q2）（原節補號；〔第二十批〕原「投件、鬧鐘與發摘要」，astra 審整理區定案改寫：檔案投件與鬧鐘撤出 aos） | T3 |
 | B-625 | settled/tick/recovery.md | 當機恢復、設定與清理（原節補號） | T3 |
@@ -111,12 +111,12 @@
 | B-627 | settled/tick.md | 〔第十九批換主題〕人手或 cron 直接跑一格：風險自負 | T3 |
 | B-628 | settled/deferred/tick.md | 〔第十九批〕上下層判定：預設看資料夾包含、可登記覆蓋 | T3 |
 | B-629 | settled/tick/template.md | 〔第二十批換主題〕標準任務表範本 | T3 |
-| B-630 | settled/tick/git.md | 〔第二十批換主題〕git：開格、存檔點、收尾 | T3 |
+| B-630 | settled/deferred/git.md（〔2026-10-01 第十七批〕暫緩） | 〔第二十批換主題〕git：開格、存檔點、收尾 | T3 |
 | B-634 | settled/tick/cg.md | 〔納入 cgroup 與 git〕aos-cg：每項一框（從 B-202 的草稿搬進整理區） | T3 |
 | B-631 | settled/tick/cg.md | 〔第二十批撤，留殘根〕cgroup 框的備援 | T3 |
-| B-632 | settled/tick/git.md | 〔第二十批換主題〕結束碼紀錄取代日誌：沒有 git 時怎麼做 | T3 |
+| B-632 | settled/deferred/git.md（〔2026-10-01 第十七批〕暫緩） | 〔第二十批換主題〕結束碼紀錄取代日誌：沒有 git 時怎麼做 | T3 |
 | B-633 | settled/tick.md | 〔第二十批〕每項結束碼紀錄與格數 | T3 |
-| B-635 | settled/tick/hooks.md | 〔2026-10-01 第六批〕hooks：照表跑完之後跑的一串（頂層鍵 `hooks.after_all`） | 第六批 |
+| B-635 | settled/tick/hooks.md | 〔2026-10-01 第六批〕hooks：照表跑完之後跑的一串（頂層鍵 `hooks.after_all`）；〔2026-10-01 第十七批〕加 `before_all`、`after_task`、`after_every_task`、`AOS_TASK_EXIT` | 第六批、第十七批 |
 | B-636 | settled/tick/tasks-blocked.md | 〔2026-10-01 第十六批〕tick 模組 `modules.tasks_blocked`：發現 tasks-blocked 時先跑一串 inst | 第十六批 |
 | S-205 | scheduling/admission.md | 套用、調整與故障 | T5 |
 | S-206 | scheduling/admission.md | 中間層 kernel 卡住 | T5 |
@@ -172,7 +172,7 @@ B-605 的共通自檢在 [runtime](settled/deferred/daemon/runtime.md#啟動自�
 
 〔建議預設，未拍板〕先用假工具／mock LLM 驗檔案交接、授權及結果。再在可丟棄的 Linux／WSL 環境，驗無 helper 通用 user、有 helper 兩個真 UID、已裝 module 與程序群組的後代清理；最後測萬級冷 node。〔使用者方向 2026-09-30，納入 cgroup 與 git〕git 與 cgroup 有就用：現行規則要在兩者都沒有的機器上也驗過。〔使用者方向 2026-09-30，第二十批〕保證跟著掛了什麼走（[T-01](terms.md)），所以系統級任務與普通程式分開驗：有沒有掛 `aos-mq get`／`aos-mq post`、發摘要、清理、`aos-git` 三項，任務有沒有包 `aos-needs`、`aos-as`、`aos-cg`，daemon 有沒有 cgroup（[B-629](settled/tick/template.md)、[B-621](settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[B-303](settled/deferred/helper.md)）。
 
-cgroup 子樹依 [B-605](settled/deferred/daemon/cgroup.md) 至少驗三種：首推的 systemd 使用者委派、不用 sudo（〔使用者方向 2026-09-30，第十九批〕）；root 事先準備好的子樹；開 `--create-cgroup` 由 daemon 自己建（〔使用者方向 2026-09-29 晚〕）。WSL 另驗三個坑：shell 在 `/init.scope`、scope 名每次不同、檔案歸自己不等於有委派（B-605）。git 依 [B-630、B-622](settled/tick/git.md) 驗三種：有 git、沒有 git、git 不能用（只印 `no_git` 警告、照 [B-632](settled/tick/git.md)）。
+cgroup 子樹依 [B-605](settled/deferred/daemon/cgroup.md) 至少驗三種：首推的 systemd 使用者委派、不用 sudo（〔使用者方向 2026-09-30，第十九批〕）；root 事先準備好的子樹；開 `--create-cgroup` 由 daemon 自己建（〔使用者方向 2026-09-29 晚〕）。WSL 另驗三個坑：shell 在 `/init.scope`、scope 名每次不同、檔案歸自己不等於有委派（B-605）。git 依 [B-630、B-622](settled/deferred/git.md) 驗三種：有 git、沒有 git、git 不能用（只印 `no_git` 警告、照 [B-632](settled/deferred/git.md)）。
 
 保存版本、配置、環境與結果；mock 不代表 OS 隔離已驗證，磁碟記帳不算硬限制。範圍依[平台邊界](README.md)，須涵蓋同機 node 樹。
 
@@ -344,6 +344,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - 拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`：互斥、照表跑與每項結束碼紀錄都成立；佇列沒人取也沒人送、不發摘要（T-07、B-626）。
 - 〔2026-10-01 第十六批〕某項建了 `.aos/tick/tasks-blocked`（內容不管）：本格後面的項不跑、stderr 空，紀錄 `ended:true` 並有 `blocked_before`（被擋下的那一項），`after_all` 照跑，tick 回 0；整格最後核心刪掉它，下一格照常開。格與格之間放的：第一項之前就擋下（`ran:0`）（B-620、B-633）。
 - 任務回 3、100、125 或任何碼都只是一般的失敗，照實記進紀錄，後面的項照跑，tick 仍回 0（B-620、C-08）。
+- 〔2026-10-01 第十七批〕hooks：`before_all` 在第一項（與 tasks-blocked 的檢查）之前跑一次、擋板／busy／表壞時不跑；`after_task.<id>` 只在那一項跑完後跑、先於 `after_every_task`，不存在的 id 不跑也不報錯；這兩個拿到剛跑完那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`／`AOS_TASK_EXIT`（被訊號 N 殺＝128+N），被 tasks-blocked 擋下的項不觸發；`AOS_TASK_EXIT` 只有這兩個掛點有；不是 0 的記進 `hooks.<掛點>`、跟任務有關的帶 `task_index`；`hook-exits.json` 開格就有（B-635、P-203、P-213）。
 - 有 `.aos/tick-blocked`（空檔、資料夾、沒讀權也算）：直接跑 `aos-tick` 回 0、stderr 是空的、一項都不跑、hooks 不跑、兩份紀錄與 `seq` 都不變〔第十六批〕；人手刪掉擋板後下一格照常（B-620、B-633）。〔暫緩〕在 daemon 底下到期與叫醒都不開格、`paused` 不變、只寫一件事項（B-607）。
 - 任務環境有 `AOS_TICK_CWD`（這格的工作資料夾絕對路徑）、`AOS_TASK_ID`（該項 `id`；沒寫時是位置字串）與 `AOS_TASK_INDEX`（陣列位置，從 0 起）；沒有 `AOS_TICK_LOCK_FD`、`AOS_TICK_RECORD`、`AOS_HOOK_*`；`hooks.after_all` 的項改有 `AOS_HOOK_POINT`、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`、沒有 `AOS_TASK_*`（外層環境帶進來的也拿掉）（B-620、B-635、P-203、C-10）。
 
@@ -412,7 +413,9 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 ### git（有就用）
 
-〔納入 cgroup 與 git〕以下都是掛了 `aos-git` 三項、git 能用時的驗收；正本 [B-630、B-622](settled/tick/git.md)，句末標條號。
+> **暫緩**（2026-10-01 第十七批：「git這塊先不要進範本。」）：`aos-git` 整套搬暫緩區、範本不放 git；這一節的場景跟著暫緩，照留。要用 git 就用 hooks 加普通 git 指令（[B-635 範例](settled/tick/hooks.md#範例用-hook-加普通-git-指令管版本)）。
+
+〔納入 cgroup 與 git〕以下都是掛了 `aos-git` 三項、git 能用時的驗收；正本 [B-630、B-622](settled/deferred/git.md)，句末標條號。
 
 - 有 git 版範本：使用者任務那組有一項失敗，它寫進 `.aos/mq/post/` 的訊息在 `mark-user` 被還原、不送；它改的 `state/` 檔留著、不被提交；清理成功，那格一個 commit `aos-tick <seq>`，含清理的變動（B-630、B-629）。
 - 某項建停格檔：`aos-git close` 沒跑、沒有 commit；下一格 `aos-git open` 把 `.aos/` 還原到 HEAD，這格作廢；`mq-get` 那格取出的訊息一起被還原（B-620、B-630、B-623）。

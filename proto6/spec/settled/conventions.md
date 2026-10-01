@@ -49,7 +49,7 @@
 - **不合法的值**：含 `/`、或剛好是 `.`、`..`。算用法錯，stderr 一行，照 [C-08](#c-08aos-結束碼慣例) 回 1（`aos-exec` 只在資料夾目標時才擋，直接給檔不受影響）。空字串合法。
 - **規格裡寫的 `.aos/…` 都是「沒設時」的樣子。** 各篇不再逐處註明；讀的時候自己把 `.aos` 換成 `AOS_DIRNAME` 的值（空字串時去掉這一層）。
 - 各程式怎麼用：`aos-tick` 的任務表、鎖檔、擋板檔、tasks-blocked、結束碼紀錄全在這個資料夾下（[B-620](tick.md)）；目標只能是資料夾，任務表只有 `<目標>/<名字>/tasks.json` 一個位置（空字串時是 `<目標>/tasks.json`）〔使用者 2026-10-01 撤回給檔〕。`aos-exec` 資料夾目標先找 `<目標>/<名字>/inst.json` 再找 `<目標>/inst.json`；空字串時只找後者（[inst](../base/inst.md)）。
-- **空字串時 git 管整個工作資料夾**〔使用者 2026-10-01：「不用特別弄清單，就全部」〕：這時狀態資料夾就是工作資料夾本身，有 git 時 `aos-git` 提交與還原的範圍是整個工作資料夾，**使用者自己的檔也會被提交、還原**，不另列 aos 自有檔的清單。要保住使用者的檔就別用空字串。正本在 [B-630](tick/git.md)。
+- **空字串時 git 管整個工作資料夾**〔使用者 2026-10-01：「不用特別弄清單，就全部」〕：這時狀態資料夾就是工作資料夾本身，有 git 時 `aos-git` 提交與還原的範圍是整個工作資料夾，**使用者自己的檔也會被提交、還原**，不另列 aos 自有檔的清單。要保住使用者的檔就別用空字串。正本在 [B-630](deferred/git.md)。
 - 任務照常繼承這個變數，aos 不另外處理。
 
 依據：使用者 2026-10-01：「aos-exec那邊，我覺得可以加上這個AOS_DIRNAME」「如果AOS_DIRNAME是空的，那就從找.aos/inst.json改成找inst.json。」
@@ -66,13 +66,14 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 |---|---|---|---|---|
 | `AOS_DIRNAME` | 使用者（或外層環境） | `aos-tick`、`aos-exec` | 狀態資料夾的名字；三態見 C-09 | [C-09](#c-09狀態資料夾的名字aos_dirname) |
 | `AOS_TICK_CWD` | `aos-tick` 給每項任務與每個 hook（`hooks.after_all` 的項） | 任務 | 這一格 tick 的工作資料夾的絕對路徑（命令列給的目標資料夾）。任務要讀本格結束碼紀錄，就讀 `$AOS_TICK_CWD/<AOS_DIRNAME>/tick/current/`（`record.json` 加上它 `$ref` 的 `ran.json`、`task-exits.json`、`hook-exits.json`，P-213） | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| `AOS_TASK_ID` | `aos-tick` 給每項任務（`after_all` 的 hook **不給**）；`modules.tasks_blocked` 的 insts 也給，值是被擋下的那一項（[B-636](tick/tasks-blocked.md)） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串 | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上，含 `tasks_blocked` 的 insts） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起 | [B-620](tick.md)、[P-203](protocol/tick.md) |
-| `AOS_HOOK_POINT` | `aos-tick` 給每個 hook（任務不給） | hook | 掛點名，目前只有 `after_all` | [B-635](tick/hooks.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_ID` | `aos-tick` 給每項任務；`after_task`、`after_every_task` 的 hook 也給，值是剛跑完那一項（`before_all`、`after_all` **不給**）；`modules.tasks_blocked` 的 insts 也給，值是被擋下的那一項（[B-636](tick/tasks-blocked.md)） | 任務 | 這一項在任務表裡的 `id`；沒寫 `id` 時是它在 `tasks` 陣列的位置轉字串 | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_INDEX` | `aos-tick` 給每項任務（同上，含 `tasks_blocked` 的 insts 與那兩個掛點） | 任務 | 這一項在 `tasks` 陣列的位置，從 0 起 | [B-620](tick.md)、[P-203](protocol/tick.md) |
+| `AOS_TASK_EXIT` | 〔使用者 2026-10-01 第十七批〕`aos-tick` 只給 `after_task`、`after_every_task` 的 hook | hook | 剛跑完那一項任務的結束碼；被訊號 N 殺＝128+N | [B-635](tick/hooks.md)、[P-203](protocol/tick.md) |
+| `AOS_HOOK_POINT` | `aos-tick` 給每個 hook（任務不給） | hook | 掛點名：`before_all`、`after_task`、`after_every_task`、`after_all` | [B-635](tick/hooks.md)、[P-203](protocol/tick.md) |
 | `AOS_HOOK_INDEX` | 同上 | hook | 這個 hook 在該掛點陣列的位置，從 0 起 | 同上 |
 | `AOS_HOOK_ID` | 同上 | hook | 這個 hook 的 `id`；沒寫時是位置轉字串 | 同上 |
 
-`AOS_TASK_*` 與 `AOS_HOOK_*` 是每一項自己的：`aos-tick` 跑每一項前先把這五個從繼承的環境拿掉，再放這一項該有的，所以外層（例如這個 tick 本身是別的 tick 的任務）的值不會漏下去。之後開掛在某個任務前後的掛點（`before_task`、`after_task` 這類，目前沒開）時，那種 hook 會同時有 `AOS_HOOK_*` 與指向被掛任務的 `AOS_TASK_ID`、`AOS_TASK_INDEX`（[B-635](tick/hooks.md)）。
+`AOS_TASK_*` 與 `AOS_HOOK_*` 是每一項自己的：`aos-tick` 跑每一項前先把這六個（`AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`、`AOS_HOOK_POINT`、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`）從繼承的環境拿掉，再放這一項該有的，所以外層（例如這個 tick 本身是別的 tick 的任務）的值不會漏下去。〔使用者 2026-10-01 第十七批〕掛在某個任務之後的掛點（`after_task`、`after_every_task`）同時有 `AOS_HOOK_*` 與指向剛跑完那一項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`（[B-635](tick/hooks.md)）。
 | `AOS_DAEMON_SOCKET` | `aos-daemon`（掛了控制模組時）給每次 `aos-exec` | `aos-ctl` | 控制模組 socket 的絕對路徑 | [B-641](daemon/control.md)、[P-121](protocol/daemon/control.md) |
 | `AOS_DAEMON_INST` | `aos-daemon`（掛了控制或訊息模組任一個時）給每次 `aos-exec` | `aos-ctl`、`aos-mq`（沒指名時用它；`aos-mq send` 拿它填 `from`） | 這一次跑的是設定檔 `insts` 裡哪一項（inst 字面值） | 同上、[B-645](daemon/mq.md) |
 | `AOS_DAEMON_MQ_SOCKET` | `aos-daemon`（掛了訊息模組時）給每次 `aos-exec` | `aos-mq` | 訊息模組 socket 的絕對路徑 | [B-645](daemon/mq.md)、[P-125](protocol/daemon/mq.md) |

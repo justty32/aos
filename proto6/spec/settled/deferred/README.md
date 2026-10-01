@@ -18,10 +18,11 @@
 
 | 檔 | 內容 |
 |---|---|
-| [tick.md](tick.md) | B-628 上下層判定（整條）；B-621 `aos-tick-check-task`（整條，第十六批）；B-602、B-620、B-624、B-625、B-633 的暫緩部分；篇末「已撤回／被取代」 |
-| [protocol/tick.md](protocol/tick.md) | tick 協議先不做的條：P-207 `aos-config-add` 的格式；P-206 的 `aos-publish` 那列；P-212 `aos-as`；P-204 `aos-tick-check-task`（第十六批） |
+| [tick.md](tick.md) | B-628 上下層判定（整條）；B-621 `aos-tick-check-task`（整條，第十六批）；B-629 的有 git 版範本（第十七批）；B-602、B-620、B-624、B-625、B-633 的暫緩部分；篇末「已撤回／被取代」 |
+| [protocol/tick.md](protocol/tick.md) | tick 協議先不做的條：P-207 `aos-config-add` 的格式；P-206 的 `aos-publish` 那列；P-212 `aos-as`；P-204 `aos-tick-check-task`（第十六批）；P-205 `aos-git`（第十七批） |
 | [terms.md](terms.md) | T-09 收尾、排空停機、熱重載、逃生口（舊 daemon 用語） |
 | [helper.md](helper.md) | B-303 可選 root helper 與 `aos-as` |
+| [git.md](git.md) | B-630、B-622、B-632 `aos-git` 與 git 規則（整篇，第十七批，原 `tick/git.md`） |
 | [daemon/](daemon/README.md) | 舊 daemon 設計各條（B-504、B-601、B-603～615）與 systemd 範例 |
 | [protocol/daemon/](protocol/daemon/README.md) | 舊 daemon 協議 P-101～119（P-100 除外，改寫後留在正式篇） |
 
@@ -41,6 +42,9 @@
 | P-207 | 加入普通設定（`aos-config-add` 的 argv 與結束碼） | 暫緩 | 同 B-625（部分） | [protocol/tick.md](protocol/tick.md) |
 | B-624（部分） | 發布摘要（`aos-publish`） | 暫緩 | 使用者 2026-10-01 第五批：「aos-publish我覺得要改名，我預期它的作用，就是把這一格的一些狀況總結成json檔案寫好」，討論後「那看來aos-summarize其實是暫時不需要了，拿掉。」之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（會跟傳訊混）。`aos-mq post` 仍在 [tick/mq.md](../tick/mq.md) | [tick.md](tick.md) |
 | P-206（部分） | `aos-publish` 那列 | 暫緩 | 同 B-624（部分） | [protocol/tick.md](protocol/tick.md) |
+| B-630、B-622、B-632 | `aos-git`：開格、存檔點、收尾；git 的共同規則；沒有 git 時的下游做法 | 暫緩 | 使用者 2026-10-01 第十七批：「git這塊先不要進範本。」從沒寫過程式；改用 hooks 加普通 git 指令（B-635 範例） | [git.md](git.md) |
+| P-205 | `aos-git` 的 argv 與結束碼 | 暫緩 | 同上 | [protocol/tick.md](protocol/tick.md) |
+| B-629（部分） | 有 git 版範本 | 暫緩 | 同上（範本只留沒有 git 的那份） | [tick.md](tick.md) |
 | B-621 | 前面的項沒跑好就停格（`aos-tick-check-task`） | 暫緩 | 使用者 2026-10-01 第十六批：「aos-tick-check-task這個先放進暫緩。」從沒寫過程式；它要建的停格檔同批改名 tasks-blocked、改了規則 | [tick.md](tick.md) |
 | P-204 | `aos-tick-check-task` 的 argv 與結束碼 | 暫緩 | 同 B-621 | [protocol/tick.md](protocol/tick.md) |
 | P-212 | `aos-as`：切換帳號 | 暫緩 | 使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」現行切帳號只在 daemon 設定檔做（帳號模組） | [protocol/tick.md](protocol/tick.md) |

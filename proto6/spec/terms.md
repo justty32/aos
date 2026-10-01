@@ -8,9 +8,9 @@
 
 依據是 [09-29 架構](../notes/2026-09-29-kernel-tree.md)及[裁定索引](../notes/verdicts/README.md)（至 09-30 [第二十批](../notes/verdicts/11-tick-as-unit.md)），後續使用者裁定優先、同日後批蓋過前批（第二十批與第十九、十八批衝突時以第二十批為準）。舊協議與改寫計畫不能反過來限制新規格。〔使用者方向 2026-09-30，第十八批〕行為規則以主規格為正本，協議篇只定格式，正本表見 [V-01](conformance.md)。
 
-〔使用者方向 2026-09-30，第二十批〕**保證跟著「掛了什麼」走**：tick 核心的三件事（[T-07](settled/terms.md#t-07tick-核心)）不靠任何系統級任務也成立；其餘保證來自任務表上掛的[系統級任務](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)、任務包的普通程式與 daemon。例如 tick 本身不保證整格原子；掛了 `aos-git` 三項而且 git 能用，也只保證 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔）是原子的（[B-630](settled/tick/git.md)）。第十九批的「保證以標準配備全掛為前提」與「完整級／備援級兩級保證」都撤了。
+〔使用者方向 2026-09-30，第二十批〕**保證跟著「掛了什麼」走**：tick 核心的三件事（[T-07](settled/terms.md#t-07tick-核心)）不靠任何系統級任務也成立；其餘保證來自任務表上掛的[系統級任務](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)、任務包的普通程式與 daemon。例如 tick 本身不保證整格原子；掛了 `aos-git` 三項而且 git 能用，也只保證 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔）是原子的（[B-630](settled/deferred/git.md)）。第十九批的「保證以標準配備全掛為前提」與「完整級／備援級兩級保證」都撤了。
 
-〔使用者方向 2026-09-30，納入 cgroup 與 git〕**git 與 cgroup 是「有就用」**：現行規則在兩者都沒有時也要成立；有的時候多出的保證寫在各條（git：[B-630、B-622](settled/tick/git.md)；cgroup：[B-605](settled/deferred/daemon/cgroup.md)、[B-634](settled/tick/cg.md)）。
+〔使用者方向 2026-09-30，納入 cgroup 與 git〕**git 與 cgroup 是「有就用」**：現行規則在兩者都沒有時也要成立；有的時候多出的保證寫在各條（git：[B-630、B-622](settled/deferred/git.md)；cgroup：[B-605](settled/deferred/daemon/cgroup.md)、[B-634](settled/tick/cg.md)）。
 
 〔建議預設，未拍板〕各條的保證寫成「掛了哪一項系統級任務、包了哪個普通程式、daemon 有沒有 cgroup 時成立什麼」；沒掛的後果不逐條寫。
 
@@ -25,7 +25,7 @@
 
 一個 node 可以同時是兩者，也可以都不是，例如只跑收信任務。頂層 node 不因此成為特殊種類；權限由設定授予。〔使用者方向 2026-09-30，第十九批〕「上層」（含上層 kernel）**預設看資料夾包含**：最近一個包含本資料夾、也有 tick 的資料夾；在 daemon 底下可以另外登記覆蓋，覆蓋要新舊兩個上層都同意（〔第十九批疑點裁定 11〕舊上層沒在 daemon 登記時只要新上層同意），覆蓋只改管理關係，管轄權仍跟著資料夾（[T-10](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)，判定規則以 [B-628](settled/tick.md) 為正本）。樹與摘要邊界見 [scheduling](scheduling/README.md)。
 
-**兩張註冊表不要混用：**[daemon](settled/daemon/README.md)的表在記憶體使用，停機存入 `state.json`，記登記（含覆蓋上層）、pause 與未處理 wake；[tick](settled/tick.md)的表在 node 裡，是 `.aos/tasks.json` 這張照順序跑的任務表，核心只照順序跑；〔使用者方向 2026-09-30，第二十批疑點裁定 2〕needs 改由普通程式 `aos-needs` 表達（[B-621](settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)；2026-10-01 改寫成 `aos-tick-check-task`：自己占一項，沒跑好就停格）；〔暫定〕任務表的 `group`、`needs` 兩欄撤，組改由 `aos-git` 的存檔點劃分（[B-630](settled/tick/git.md)）。資源 module 是後者的普通項目，不另有外掛總表。
+**兩張註冊表不要混用：**[daemon](settled/daemon/README.md)的表在記憶體使用，停機存入 `state.json`，記登記（含覆蓋上層）、pause 與未處理 wake；[tick](settled/tick.md)的表在 node 裡，是 `.aos/tasks.json` 這張照順序跑的任務表，核心只照順序跑；〔使用者方向 2026-09-30，第二十批疑點裁定 2〕needs 改由普通程式 `aos-needs` 表達（[B-621](settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)；2026-10-01 改寫成 `aos-tick-check-task`：自己占一項，沒跑好就停格）；〔暫定〕任務表的 `group`、`needs` 兩欄撤，組改由 `aos-git` 的存檔點劃分（[B-630](settled/deferred/git.md)）。資源 module 是後者的普通項目，不另有外掛總表。
 
 〔使用者方向 2026-09-30，第十九批〕daemon 是定期跑 `aos-tick` 的標準程式，不是 tick 存在的前提（cron、人手跑也行）；它負責程序啟停，不判業務排程；可選 root helper 是 daemon 切出的固定特權步驟，見[身分篇](base/identity-resources.md)。每個 LLM 池就是一個 node，由它的代發任務負責實際請求，見 [LLM](scheduling/llm.md)。身分依 [inst](base/inst.md) 及[額度](base/identity-resources.md)，不由路徑或角色推定。
 

@@ -70,7 +70,7 @@
       "$ref": "inst.schema.json#/$defs/Inst/properties/exit"
     },
     "hooks": {
-      "description": "外掛掛點（B-635，使用者 2026-10-01 第六批；同日改成頂層鍵、不當模組）。不是預設；不認得的鍵（還沒開的掛點）照收不理。整個可以是 $ref（讀表時解一層）",
+      "description": "外掛掛點（B-635，使用者 2026-10-01 第六批；同日改成頂層鍵、不當模組；第十七批加 before_all、after_task、after_every_task）。不是預設；不認得的鍵（還沒開的掛點）照收不理。整個可以是 $ref（讀表時解一層）",
       "anyOf": [
         {
           "type": "object",
@@ -99,6 +99,83 @@
                 {
                   "$ref": "#/$defs/Ref",
                   "description": "讀表時解一層成陣列"
+                }
+              ]
+            },
+            "before_all": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/$defs/Task"
+                      },
+                      {
+                        "$ref": "#/$defs/Ref"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "$ref": "#/$defs/Ref",
+                  "description": "讀表時解一層成陣列"
+                }
+              ],
+              "description": "〔第十七批〕開格後、第一項（含 tasks-blocked 的檢查）之前依序跑的一串 inst；給 AOS_HOOK_*，不給 AOS_TASK_*"
+            },
+            "after_every_task": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/$defs/Task"
+                      },
+                      {
+                        "$ref": "#/$defs/Ref"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "$ref": "#/$defs/Ref",
+                  "description": "讀表時解一層成陣列"
+                }
+              ],
+              "description": "〔第十七批〕每一項任務跑完之後依序跑的一串 inst（同一項也有 after_task 時排在它後面）；另給剛跑完那一項的 AOS_TASK_ID／INDEX／EXIT"
+            },
+            "after_task": {
+              "description": "〔第十七批〕鍵＝任務 id（沒寫 id 的任務 id 是位置字串），值＝那一項跑完之後依序跑的一串 inst（只有一個也寫陣列）；不存在的 id＝永遠不跑、不報錯",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/$defs/Task"
+                            },
+                            {
+                              "$ref": "#/$defs/Ref"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "$ref": "#/$defs/Ref",
+                        "description": "讀表時解一層成陣列"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "$ref": "#/$defs/Ref",
+                  "description": "讀表時解一層成物件"
                 }
               ]
             }
@@ -163,7 +240,7 @@
     }
   },
   "then": {
-    "description": "頂層沒給 argv 時，tasks、hooks.after_all 與 modules.tasks_blocked.insts 的每一項（整項 $ref 的除外，解開後才知道）都要自己有 argv",
+    "description": "頂層沒給 argv 時，tasks、hooks 各掛點與 modules.tasks_blocked.insts 的每一項（整項 $ref 的除外，解開後才知道）都要自己有 argv",
     "properties": {
       "tasks": {
         "items": {
@@ -197,6 +274,56 @@
                   ]
                 }
               ]
+            }
+          },
+          "before_all": {
+            "items": {
+              "anyOf": [
+                {
+                  "required": [
+                    "argv"
+                  ]
+                },
+                {
+                  "required": [
+                    "$ref"
+                  ]
+                }
+              ]
+            }
+          },
+          "after_every_task": {
+            "items": {
+              "anyOf": [
+                {
+                  "required": [
+                    "argv"
+                  ]
+                },
+                {
+                  "required": [
+                    "$ref"
+                  ]
+                }
+              ]
+            }
+          },
+          "after_task": {
+            "additionalProperties": {
+              "items": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "argv"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "$ref"
+                    ]
+                  }
+                ]
+              }
             }
           }
         }

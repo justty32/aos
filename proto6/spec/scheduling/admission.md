@@ -10,7 +10,7 @@
 
 〔使用者方向 2026-09-30，第十八批；審稿新必-2〕**「叫醒後新的一格已做完」看格次序號，不看時間**（daemon 那側見 [B-607](../settled/deferred/daemon/registration.md)）。kernel 叫醒成員時，記下 wake 回應的 `registration_id` 與 `tick_seq`（還沒跑過任何一格是 0）。之後 `node.show` 看到 `registration_id` 相同、`last_tick.tick_seq` 較大且那格不是 `running`，才算新的一格已完成，這時才重新採用成員摘要；`registration_id` 變了（重新登記、換父、daemon 重啟），表示舊的等待已結束，直接重新核對收件與摘要，不再等舊的那格。在那之前舊的 ready 不拿來反覆叫醒。牆鐘可能校正，格的結束時間不拿來判斷新舊。格式見 [P-803](../protocol/kernel-tasks.md)。
 
-〔使用者方向 2026-09-30，第十九批〕**叫醒走通道**：kernel 在自己的格裡用 `node.wake` 帶本格憑證叫醒成員（找 daemon 的規則見 [P-801](../protocol/kernel-tasks.md)，通道見 [B-612](../settled/deferred/daemon/channel.md)）；授權看憑證所屬的 tick 在成員的有效上層鏈上。`registration_id` 與 `tick_seq` 只有在 daemon 登記的成員才有；kernel 找不到 daemon 時不叫醒，也就沒有要等的新格，只看收件與已發布摘要。成員走 git 備援時沒有 commit 可釘（[B-632](../settled/tick/git.md)），讀它目前發布的摘要。
+〔使用者方向 2026-09-30，第十九批〕**叫醒走通道**：kernel 在自己的格裡用 `node.wake` 帶本格憑證叫醒成員（找 daemon 的規則見 [P-801](../protocol/kernel-tasks.md)，通道見 [B-612](../settled/deferred/daemon/channel.md)）；授權看憑證所屬的 tick 在成員的有效上層鏈上。`registration_id` 與 `tick_seq` 只有在 daemon 登記的成員才有；kernel 找不到 daemon 時不叫醒，也就沒有要等的新格，只看收件與已發布摘要。成員走 git 備援時沒有 commit 可釘（[B-632](../settled/deferred/git.md)），讀它目前發布的摘要。
 
 〔建議預設，未拍板；第十九批由 P-803 搬來〕**預設範本什麼算 ready、叫誰**：成員有收件、摘要 `ready`、`due` 到期或還在 bootstrap，才算 ready；缺摘要不當 idle，改看收件與 bootstrap 判斷並記事項。paused 或 stopping 的不叫醒，running 或已有 pending 的不重複叫；同時叫醒不超過 `max_active_members`，先後照 S-204。wake 成功但本格提交失敗時，下一格先查 daemon（`node.show`）合併判斷，不當沒叫過。
 
@@ -113,7 +113,7 @@
 
 〔建議預設，未拍板；第十八批由 P-810、P-502 搬來〕成員自記用量、所屬 kernel 只收集的路線（[S-301](llm.md) 的「kernel 不管」、工具 `tools.target_node=null` 自跑）用這條；檔案與 argv 見 [P-810](../protocol/kernel-tasks.md)。
 
-- **讀什麼**：只讀直接成員**已提交**的逐次用量檔，成員有 git 時固定同一 commit 讀，記下這個 commit；〔第十九批，[B-632](../settled/tick/git.md)〕成員走 git 備援時沒有 commit 可釘，改讀目前的檔案，並記下成員最新一筆完成紀錄的 `seq`（讀不到它的 `.aos/journal/` 就只記讀取時間）。備援時**不保證是一致快照**：同一次收集可能讀到相鄰兩格的檔，也可能讀到失敗組留下、沒被還原的檔（備援不還原）。設定直接開檔讀，不用歷史 commit 當設定來源；跨層只讀下層摘要。資源摘要的並行數不能冒充逐次 provider usage。收集只記觀測，不假裝攔住請求或替遠端池釋放占用。
+- **讀什麼**：只讀直接成員**已提交**的逐次用量檔，成員有 git 時固定同一 commit 讀，記下這個 commit；〔第十九批，[B-632](../settled/deferred/git.md)〕成員走 git 備援時沒有 commit 可釘，改讀目前的檔案，並記下成員最新一筆完成紀錄的 `seq`（讀不到它的 `.aos/journal/` 就只記讀取時間）。備援時**不保證是一致快照**：同一次收集可能讀到相鄰兩格的檔，也可能讀到失敗組留下、沒被還原的檔（備援不還原）。設定直接開檔讀，不用歷史 commit 當設定來源；跨層只讀下層摘要。資源摘要的並行數不能冒充逐次 provider usage。收集只記觀測，不假裝攔住請求或替遠端池釋放占用。
 - **怎麼存**：原格式存進 kernel 自己的 repo，以 node／request／attempt 逐鍵替換，不把累積檔每格再加，所以同一筆重讀幾次都只算一次；這一點不靠 commit，備援時照樣成立。commit（或備援時的完成紀錄 `seq`）只當「有沒有新東西」的游標：跟上次記的相同就不重讀，不同或沒有游標（只記時間）就到補查期重讀、照鍵替換。
 - **缺了不當零**：pending、unknown、null 照實保留；不可讀、過時、壞格式分別記 missing、stale、invalid，不造零。
 - **去重**：同一次嘗試在成員、轉交 kernel、池都可能有紀錄；彙總按原發起 node 加 attempt 去重，同一筆 HTTP 不加三次。同一件工作只選轉交或自記其中一種統計來源。

@@ -24,7 +24,8 @@ __all__ = ["run_item", "EXIT_NOT_RUN", "RUN_VARS"]
 EXIT_NOT_RUN = 125
 
 # 每一項自己的 AOS_* 變數（P-203）；跑一項時先把這些從繼承的環境拿掉，再放這一項有的
-RUN_VARS = ("AOS_TASK_ID", "AOS_TASK_INDEX", "AOS_HOOK_POINT", "AOS_HOOK_INDEX", "AOS_HOOK_ID")
+# 第十七批加 AOS_TASK_EXIT（只有 after_task／after_every_task 的 hook 有）
+RUN_VARS = ("AOS_TASK_ID", "AOS_TASK_INDEX", "AOS_TASK_EXIT", "AOS_HOOK_POINT", "AOS_HOOK_INDEX", "AOS_HOOK_ID")
 
 
 def _env(inst, task_vars):
