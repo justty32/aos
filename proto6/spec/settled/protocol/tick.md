@@ -30,7 +30,7 @@
 | `.aos/mq/get/` | 寄件帳號要能在這裡建檔，是 `node.send` 的授權判準（[B-614](../deferred/daemon/messaging.md)）；`aos-mq get` 要不要拿來放取出的訊息由它自己定 | 追蹤 |
 | `.aos/mq/failed/` | `mq-post` 送不出去的失敗紀錄；下一格 `mq-post` 開始送之前清掉（[B-624](../tick/mq.md)），格式見 P-206 | ignore |
 | `.aos/tick.lock` | 核心的鎖檔：不存在就建、tick 不刪；只有那一格的 tick 握著，不傳給任務（[B-602](../tick.md)） | ignore |
-| `.aos/tick/` | 核心的結束碼紀錄資料夾 `current/`、`last/`（各有 `record.json` 與它 `$ref` 的檔）與停格檔 `stop`（[B-633](../tick.md)、[B-620](../tick.md)、P-213）；不隨還原、不被清理 | ignore |
+| `.aos/tick/` | 核心的結束碼紀錄資料夾 `current/`、`last/`（各有 `record.json` 與它 `$ref` 的檔）與 tasks-blocked（原停格檔 `stop`，〔使用者 2026-10-01 第十六批〕改名；[B-633](../tick.md)、[B-620](../tick.md)、P-213）；不隨還原、不被清理 | ignore |
 | `.aos/tick-blocked` | 擋板檔：有它時核心不開格（[B-620](../tick.md)、P-213）。現行 daemon 照常叫，由 `aos-tick` 自己擋；舊 daemon 是有它就不開格（[B-607](../deferred/daemon/registration.md)，在暫緩區）〔astra 報告必修 1〕 | ignore |
 | `.aos/runner-stderr.log` | 〔暫定〕runner 診斷，daemon 每格覆寫；輪替以後再定（[P-109](../deferred/protocol/daemon/provision-and-runner.md)，舊 daemon 的設計，在暫緩區） | ignore |
 | `public/` | 可供其他工作資料夾存取的共用空間 | 看內容 |
@@ -92,11 +92,11 @@
 
 | 欄位 | 約束 |
 |---|---|
-| `id` | 可省；寫了是共用 `ID`。沒寫時，這一項的 id＝它在 `tasks` 陣列的位置轉字串（`"0"`、`"3"`）。紀錄、`AOS_TASK_ID`、`stopped_after` 都用它。默認不重複，核心不查 |
+| `id` | 可省；寫了是共用 `ID`。沒寫時，這一項的 id＝它在 `tasks` 陣列的位置轉字串（`"0"`、`"3"`）。紀錄、`AOS_TASK_ID`、`blocked_before` 都用它。默認不重複，核心不查 |
 | `_metainfo` | 可省，照 inst 規則（沒寫＝posix 第 1 版）；跑到這一項才驗，驗不過＝跑到某項展開失敗〔使用者裁定 2026-10-01〕 |
 | `kind` | 可省。`system`、`kernel`、`agent`、`custom`；〔暫定〕或自訂的「類別.名稱」：類別限 `kernel`／`agent`／`custom`，名稱是小寫英數與 `_`、`-`（例如 `agent.review`）。`system` 標記系統級任務（[B-626](../tick.md)），只是標記，不驗順序；`system.x` 不接受（schema 擋，核心不擋） |
 
-**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號只能在 daemon 設定檔做（帳號模組；`aos-as` P-212 2026-10-01 第十三批搬暫緩區）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-tick-check-task`（P-204、[B-621](../tick/check-task.md)），組改由存檔點劃分（P-205、[B-630](../tick/git.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
+**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號只能在 daemon 設定檔做（帳號模組；`aos-as` P-212 2026-10-01 第十三批搬暫緩區）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-tick-check-task`（P-204、[B-621](../deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)），組改由存檔點劃分（P-205、[B-630](../tick/git.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
 
 誰驗哪些欄位見 [B-620](../tick.md)「誰驗什麼」：核心只做極簡檢查，其餘 schema 限制由工具或人工在 `aos-ctl resume` 前先驗（恢復前驗證，[B-625](../tick/recovery.md)；daemon 不代驗）〔astra 報告必修 2〕。
 
@@ -133,7 +133,7 @@
 | stdin | 不讀；inst 預設 `/dev/null` |
 | stdout | tick 自己不寫。任務的輸出照各自 inst 走（預設 `/dev/null`，明寫 inherit 才會跟 tick 共用） |
 | stderr | tick 自己只印 `代碼: 說明` 一行（下表），或沒接住的錯的 traceback |
-| 讀寫 | 讀任務表、持鎖、寫 `.aos/tick/` 的紀錄、開格刪殘留的停格檔、每項後查停格檔（P-213）。送收訊息是系統級任務的事（[B-629](../tick/template.md)）；任務自己直接讀寫檔案 |
+| 讀寫 | 讀任務表、持鎖、寫 `.aos/tick/` 的紀錄、每一項前看 tasks-blocked、整格最後刪它（P-213）。送收訊息是系統級任務的事（[B-629](../tick/template.md)）；任務自己直接讀寫檔案 |
 | 身分 | tick 自己不切 UID；直接呼叫也不會替你取得 inst 的身分 |
 
 核心自己的 stderr 代碼：
@@ -145,7 +145,6 @@
 | `no_tasks` | 目標是資料夾，底下沒有 `.aos/tasks.json` | 1 |
 | `busy` | 拿不到 `.aos/tick.lock`：同資料夾上一格還沒跑完（[B-602](../tick.md)） | 0 |
 | `bad_table` | 任務表沒過極簡檢查（[B-620](../tick.md)） | 1 |
-| `stopped` | 被停格檔停下；後面附停格檔裡的原因 | 0（照表跑完的那格） |
 | `exec_failed` | 某項沒跑成：mkdir／cwd／重導向失敗（記 `exit:125`）、沒執行權（126）、找不到程式（127）；附那一項的 id（`hooks.after_all` 的項寫成 `after_all/<id>`，B-635） | 不影響，照常跑下一項 |
 
 舊碼表的 `config_invalid`、`user_mismatch`、`record_unreadable`、`record_unwritable` 不再有；它們的來由見 [tick 暫緩區](../deferred/tick.md)。
@@ -191,31 +190,19 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 
 | tick 結束碼 | 意思 |
 |---|---|
-| `0` | 預料之中：照表跑完（不管任務成敗）、被停格檔停下、`busy`、有擋板檔（stderr 不印〔使用者 2026-10-01 第十六批〕） |
+| `0` | 預料之中：照表跑完（不管任務成敗）、被 tasks-blocked 擋下、`busy`、有擋板檔（後兩種之外的 stderr 都不印〔使用者 2026-10-01 第十六批〕） |
 | `1` | tick 自己出錯：`usage`、`no_target`、`no_tasks`、`bad_table`；tick 自用的檔讀不到、寫不進或格式壞（自然丟錯，traceback 進 stderr） |
 
-- **停掉本格靠停格檔 `.aos/tick/stop`，不靠結束碼**；要知道是不是被停下，讀紀錄的 `stopped_after`。外層要分出 busy，看 stderr；被擋板檔擋下的格 stderr 是空的、紀錄與 `seq` 都不動〔使用者 2026-10-01 第十六批〕。
+- **擋下本格後面的項靠 tasks-blocked `.aos/tick/tasks-blocked`，不靠結束碼**；擋下時 stderr 不印，要知道是不是被擋下，讀紀錄的 `blocked_before`〔使用者 2026-10-01 第十六批〕。外層要分出 busy，看 stderr；被擋板檔擋下的格 stderr 是空的、紀錄與 `seq` 都不動〔使用者 2026-10-01 第十六批〕。
 - 第十九批「標準配備」的 3（提交故障）與 125（格首看到擋板）撤；第二十批的 2（argv 或任務表不合法）、75（鎖被占）也撤（[tick 暫緩區](../deferred/tick.md)「已撤回／被取代」）。
 - 父程序看 wait 狀態辨識 tick 被訊號結束，不把 `128+N` 當訊號證據。inst 的文字 `exit` 編碼仍照 P-201。
 - kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
 
 依據：〔使用者方向 2026-09-30〕第十九批（argv）、第二十批（環境變數命名、撤 `--check`）、第二十批疑點裁定 1（改：停格靠檔案）；使用者 2026-10-01（目標改成位置參數、結束碼照 C-08、`AOS_TICK_CWD` 取代 `AOS_NODE_DIR` 與 `AOS_TICK_RECORD`、`--firstdo-fsync` 暫緩；同日第二批：目標只能是資料夾）。
 
-## P-204．aos-tick-check-task〔使用者方向 2026-09-29；第二十批改寫；使用者 2026-10-01 第五批改寫〕
+## P-204．aos-tick-check-task
 
-任務的成敗怎麼算以 [B-620](../tick.md)「跑每一項」為正本；要停掉本格用停格檔（P-213）。
-
-**`aos-tick-check-task`**〔使用者 2026-10-01〕：普通程式，自己是任務表上的一項，檢查指定的項有沒有跑好，沒跑好就建停格檔。行為以 [B-621](../tick/check-task.md) 為正本。原本的包裝 `aos-needs <前置…> -- <原指令…>`（回 125）2026-10-01 由它取代。
-
-- argv：`aos-tick-check-task [<任務 id…>]`；不寫 id＝檢查本格到目前為止跑過的每一項。不包別的指令。
-- 讀本格紀錄 `$AOS_TICK_CWD/<狀態資料夾>/tick/current/`（P-213；展開 `record.json` 的 `$ref` 後看 `tasks`；狀態資料夾照 `AOS_DIRNAME`，[C-09](../conventions.md)）。紀錄裡的 `id` 跟參數比字串。
-- 〔使用者 2026-10-01 第八批：紀錄只記不是 0 的〕寫了 id：有任一個出現在紀錄的 `tasks`（失敗清單）裡＝建停格檔 `<狀態資料夾>/tick/stop`（P-213），內容一行原因，建議 `check_failed: <id>`；都沒出現＝當成功、什麼都不做（不分辨「還沒跑」，照 POC 默認一切正常，使用者把它排在那些項後面）。不寫 id：`tasks` 不是空的就建停格檔，空的就什麼都不做。
-- stdin 不讀、stdout 不印。
-
-| 結束碼 | 意思 |
-|---|---|
-| `0` | 檢查完：都跑好了（沒動作），或有沒跑好的、已建停格檔——停格是預料之中（[C-08](../conventions.md)） |
-| `1` | 自己的錯：沒有 `AOS_TICK_CWD`、紀錄讀不到等；照 POC 總原則默認正常，出事讓程式自然丟錯 |
+> **暫緩**（2026-10-01 第十六批）〔使用者 2026-10-01 第十六批追答：「6.aos-tick-check-task這個先放進暫緩。」〕整條搬到 [tick 協議暫緩區](../deferred/protocol/tick.md#p-204aos-tick-check-task使用者方向-2026-09-29第二十批改寫使用者-2026-10-01-第五批改寫)，條號保留、不重用。
 
 ## P-205．aos-git：開格、存檔點、收尾〔使用者方向 2026-09-30；格式為建議預設〕
 
@@ -351,9 +338,9 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 
 > **暫緩**（2026-10-01 第十三批）〔使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」〕：整條搬到 [tick 協議暫緩區](../deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)，條號保留、不重用。現行切帳號只在 daemon 設定檔做（帳號模組 `modules.account`，[plan m3m 模組五](../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)）。
 
-## P-213．每項結束碼紀錄、停格檔與擋板檔〔建議預設，未拍板〕
+## P-213．每項結束碼紀錄、tasks-blocked 與擋板檔〔建議預設，未拍板〕
 
-行為正本：紀錄 [B-633](../tick.md)；停格檔與擋板檔 [B-620](../tick.md)（擋板與停格檔的機制使用者之後會詳細設計，目前是〔暫定〕；2026-10-01 使用者：先照現狀；停格檔的未來方向見 B-620「停格檔與擋板檔」，現在不做）。本條只定檔名與內容。
+行為正本：紀錄 [B-633](../tick.md)；tasks-blocked 與擋板檔 [B-620](../tick.md)（機制使用者之後會詳細設計，目前是〔暫定〕；〔使用者 2026-10-01 第十六批〕停格檔改名 tasks-blocked、只看存不存在、整格最後 tick 刪；未來方向見 B-620「tasks-blocked 與擋板檔」）。本條只定檔名與內容。
 
 ### 結束碼紀錄
 
@@ -362,7 +349,7 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 
 | 檔 | 內容 |
 |---|---|
-| `record.json` | `{"version":1,"seq":N,"started_at_ms":毫秒,"ran":{"$ref":"ran.json"},"tasks":{"$ref":"task-exits.json"},"hooks"?:{"$ref":"hook-exits.json"},"ended":bool,"exit"?:0,"stopped_after"?:"<id>"}`；開格寫一次、收尾寫一次 |
+| `record.json` | `{"version":1,"seq":N,"started_at_ms":毫秒,"ran":{"$ref":"ran.json"},"tasks":{"$ref":"task-exits.json"},"hooks"?:{"$ref":"hook-exits.json"},"ended":bool,"exit"?:0,"blocked_before"?:"<id>"}`；開格寫一次、收尾寫一次 |
 | `ran.json` | 一個非負整數（下面的 `ran`） |
 | `task-exits.json` | 下面的 `tasks` 陣列；開格寫 `[]` |
 | `hook-exits.json` | 下面的 `hooks` 物件；只在任務表寫了 `hooks.after_all` 的格有，收尾那次先寫 `{"after_all":[]}`、同時 `record.json` 加 `hooks` 的 `$ref` |
@@ -376,29 +363,29 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 ```json
 {"version":1,"seq":N,"started_at_ms":毫秒,"ran":跑了幾項,
  "tasks":[{"id":…,"index":位置,"exit":非0碼}|{"id":…,"index":位置,"signal":號}],
- "ended":bool,"exit"?:0,"stopped_after"?:"<id>",
+ "ended":bool,"exit"?:0,"blocked_before"?:"<id>",
  "hooks"?:{"after_all":[{"id":…,"index":位置,"exit":非0碼}|{"id":…,"index":位置,"signal":號}]}}
 ```
 
 | 欄位 | 約束 |
 |---|---|
-| `seq` | 本資料夾的格數，共用 `TickSeq`（從 1 起）。沒有紀錄的格（busy、blocked、bad_table）不佔號 |
-| `ran` | 本格到目前為止跑完幾項 tasks（含結束碼不是 0 的；被停格檔擋掉、沒跑到的不算）。開格時 `0`，每跑完一項加 1、重寫 `ran.json`〔使用者 2026-10-01 第八批；第九批拆檔〕 |
+| `seq` | 本資料夾的格數，共用 `TickSeq`（從 1 起）。沒有紀錄的格（busy、擋板檔、bad_table）不佔號 |
+| `ran` | 本格到目前為止跑完幾項 tasks（含結束碼不是 0 的；被 tasks-blocked 擋掉、沒跑到的不算）。開格時 `0`，每跑完一項加 1、重寫 `ran.json`〔使用者 2026-10-01 第八批；第九批拆檔〕 |
 | `tasks` | 已跑完**而且結束碼不是 0** 的項，照順序；**結束碼 0 的不記**〔使用者 2026-10-01 第八批：「tasks如果結果是0，那就不用紀錄了。」〕。每筆 `id`（任務表那一項的 id，沒寫 id 時是位置字串，例如 `"3"`）、`index`（它在 `tasks` 陣列的位置，從 0 起，同 `AOS_TASK_INDEX`），加上 `exit`（1～255）與 `signal`（1～64）二選一，照實記原碼。沒跑到的不列 |
-| `ended` | 照表跑完或被停格檔停下時是 true，這時必須有 `exit`；false 時不得有 `exit`、`stopped_after`。tick 中途出錯或被殺時停在 false |
-| `exit` | 這格 tick 的結束碼。有紀錄收尾時 tick 一定回 0，所以只會是 `0`（busy、blocked、bad_table 不寫紀錄） |
-| `stopped_after` | 被停格檔停下時，是哪一項跑完後停的，記那一項的 id（就是位置 `ran-1` 那一項；它成功時不在 `tasks` 裡）；只在 `ended:true` 時可有，這時 `exit` 也是 `0` |
+| `ended` | 照表跑完或被 tasks-blocked 擋下時是 true，這時必須有 `exit`；false 時不得有 `exit`、`blocked_before`。tick 中途出錯或被殺時停在 false |
+| `exit` | 這格 tick 的結束碼。有紀錄收尾時 tick 一定回 0，所以只會是 `0`（busy、擋板檔、bad_table 不寫紀錄） |
+| `blocked_before` | 〔使用者 2026-10-01 第十六批〕（原 `stopped_after`）被 tasks-blocked 擋下時，被擋下、沒跑的那一項的 id（就是位置 `ran` 那一項；第一項就被擋時 `ran` 是 0）；只在 `ended:true` 時可有，這時 `exit` 也是 `0` |
 | `started_at_ms` | 只給人看，不參與計算 |
 | `hooks` | 外掛掛點的紀錄（[B-635](../tick/hooks.md)）；只在任務表寫了 `hooks.after_all` 的格才有，而且只在 `ended:true` 時可有。收尾時先寫 `{"after_all":[]}`，每跑完一個結束碼不是 0 的 hook 加一筆（都寫在 `hook-exits.json`） |
-| `hooks.after_all` | 已跑完**而且結束碼不是 0** 的 `after_all` 項，照順序；每筆格式同 `tasks`（`id` 是 hook 項的 id，沒寫是它在 `after_all` 的位置字串；`index` 是它在 `after_all` 的位置；`exit` 與 `signal` 二選一）。結束碼 0 的不記〔第八批：「hooks也是」〕；hooks 不記 `ran`（hooks 不看停格檔、會全跑）。沒跑到的不列。`hooks` 裡其他鍵留給之後的掛點 |
+| `hooks.after_all` | 已跑完**而且結束碼不是 0** 的 `after_all` 項，照順序；每筆格式同 `tasks`（`id` 是 hook 項的 id，沒寫是它在 `after_all` 的位置字串；`index` 是它在 `after_all` 的位置；`exit` 與 `signal` 二選一）。結束碼 0 的不記〔第八批：「hooks也是」〕；hooks 不記 `ran`（hooks 不看 tasks-blocked、會全跑）。沒跑到的不列。`hooks` 裡其他鍵留給之後的掛點 |
 
-schema 管得到的：`exit` 只收 0、`ran` 必填、`ended` 跟 `exit`／`stopped_after`／`hooks` 的搭配、每筆（含 `hooks.after_all` 每筆）必有 `index`、`exit`（1～255，不收 0）與 `signal` 二選一。schema 管不到、由 [validate.py](../../protocol/examples/messages/validate.py) 補查的：`tasks`、`hooks.after_all` 的 `index` 嚴格遞增；`tasks` 的 `index` 都小於 `ran`；有 `stopped_after` 時 `ran` 至少 1，而且 `tasks` 最後一筆的 `index` 是 `ran-1` 時它的 `id` 要等於 `stopped_after`（停下的那項失敗了）。
+schema 管得到的：`exit` 只收 0、`ran` 必填、`ended` 跟 `exit`／`blocked_before`／`hooks` 的搭配、每筆（含 `hooks.after_all` 每筆）必有 `index`、`exit`（1～255，不收 0）與 `signal` 二選一。schema 管不到、由 [validate.py](../../protocol/examples/messages/validate.py) 補查的：`tasks`、`hooks.after_all` 的 `index` 嚴格遞增；`tasks` 的 `index` 都小於 `ran`。（`blocked_before` 是位置 `ran` 那一項、沒跑，跟 `tasks` 沒有可驗的關係；第十六批拿掉原本 `stopped_after` 的補查。）
 
-### 停格檔與擋板檔
+### tasks-blocked 與擋板檔
 
 | 檔 | 內容 | 行為 |
 |---|---|---|
-| `.aos/tick/stop`（停格檔，ignored） | 任何內容都算；建議一行 UTF-8 原因，核心印在 stderr 的 `stopped:` 後面 | 只停本格，這格照樣回 0，見 [B-620](../tick.md) |
+| `.aos/tick/tasks-blocked`（ignored） | 〔使用者 2026-10-01 第十六批〕核心只看存不存在、不讀內容（可以是空檔、資料夾） | 每一項前看：在就這一項與後面都不跑、stderr 不印、`after_all` 照跑，紀錄記 `blocked_before`；整格最後核心刪掉。見 [B-620](../tick.md) |
 | `.aos/tick-blocked`（擋板檔，ignored） | 〔使用者 2026-10-01 第十六批〕核心只看存不存在、不讀內容（可以是空檔、資料夾）；要留原因給人看可以寫 | 擋之後各格（不開格、hooks 不跑、stderr 不印、回 0），見 [B-620](../tick.md) |
 
-範例：正例 [跑到一半](../../protocol/examples/tick/tick-record.minimal.valid.json)、[全部成功](../../protocol/examples/tick/tick-record.done.valid.json)、[被停格檔停下](../../protocol/examples/tick/tick-record.stopped-exit-0.valid.json)、[有任務失敗照樣回 0](../../protocol/examples/tick/tick-record.exit-0-with-failure.valid.json)、[沒寫 id 的位置字串](../../protocol/examples/tick/tick-record.position-id.valid.json)、[停下後照跑 hooks](../../protocol/examples/tick/tick-record.hooks.valid.json)（B-635）；反例 [沒收場卻有 hooks](../../protocol/examples/tick/tick-record.hooks-not-ended.invalid.json)、 [同一項同時有 exit 與 signal](../../protocol/examples/tick/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](../../protocol/examples/tick/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 stopped_after](../../protocol/examples/tick/tick-record.stopped-not-ended.invalid.json)、[整格回 1](../../protocol/examples/tick/tick-record.stopped-exit-1.invalid.json)、[整格回 2](../../protocol/examples/tick/tick-record.exit-2.invalid.json)、[整格回 3](../../protocol/examples/tick/tick-record.exit-3.invalid.json)；[記了結束碼 0](../../protocol/examples/tick/tick-record.zero-recorded.invalid.json)、[hook 記了結束碼 0](../../protocol/examples/tick/tick-record.hook-zero-recorded.invalid.json)、[沒有 ran](../../protocol/examples/tick/tick-record.no-ran.invalid.json)、[沒有 index](../../protocol/examples/tick/tick-record.no-index.invalid.json)；`record.json` 本體：正例 [開格時](../../protocol/examples/tick/tick-record-file.open.valid.json)、[有 hooks 而且被停下](../../protocol/examples/tick/tick-record-file.hooks.valid.json)，反例 [ran 直接寫數字](../../protocol/examples/tick/tick-record-file.inline-ran.invalid.json)、[$ref 指錯檔](../../protocol/examples/tick/tick-record-file.wrong-ref.invalid.json)、[沒收場卻有 hooks](../../protocol/examples/tick/tick-record-file.hooks-not-ended.invalid.json)；補查反例 [停在不是最後一項](../../protocol/examples/tick/tick-record.stopped-not-last.invalid.json)、[index 不小於 ran](../../protocol/examples/tick/tick-record.index-not-below-ran.invalid.json)、[停下卻一項都沒跑](../../protocol/examples/tick/tick-record.stopped-ran-0.invalid.json)。
+範例：正例 [跑到一半](../../protocol/examples/tick/tick-record.minimal.valid.json)、[全部成功](../../protocol/examples/tick/tick-record.done.valid.json)、[被 tasks-blocked 擋下](../../protocol/examples/tick/tick-record.blocked-exit-0.valid.json)、[第一項就被擋](../../protocol/examples/tick/tick-record.blocked-first.valid.json)、[有任務失敗照樣回 0](../../protocol/examples/tick/tick-record.exit-0-with-failure.valid.json)、[沒寫 id 的位置字串](../../protocol/examples/tick/tick-record.position-id.valid.json)、[擋下後照跑 hooks](../../protocol/examples/tick/tick-record.hooks.valid.json)（B-635）；反例 [沒收場卻有 hooks](../../protocol/examples/tick/tick-record.hooks-not-ended.invalid.json)、 [同一項同時有 exit 與 signal](../../protocol/examples/tick/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](../../protocol/examples/tick/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 blocked_before](../../protocol/examples/tick/tick-record.blocked-not-ended.invalid.json)、[整格回 1](../../protocol/examples/tick/tick-record.blocked-exit-1.invalid.json)、[整格回 2](../../protocol/examples/tick/tick-record.exit-2.invalid.json)、[整格回 3](../../protocol/examples/tick/tick-record.exit-3.invalid.json)；[記了結束碼 0](../../protocol/examples/tick/tick-record.zero-recorded.invalid.json)、[hook 記了結束碼 0](../../protocol/examples/tick/tick-record.hook-zero-recorded.invalid.json)、[沒有 ran](../../protocol/examples/tick/tick-record.no-ran.invalid.json)、[沒有 index](../../protocol/examples/tick/tick-record.no-index.invalid.json)；`record.json` 本體：正例 [開格時](../../protocol/examples/tick/tick-record-file.open.valid.json)、[有 hooks 而且被停下](../../protocol/examples/tick/tick-record-file.hooks.valid.json)，反例 [ran 直接寫數字](../../protocol/examples/tick/tick-record-file.inline-ran.invalid.json)、[$ref 指錯檔](../../protocol/examples/tick/tick-record-file.wrong-ref.invalid.json)、[沒收場卻有 hooks](../../protocol/examples/tick/tick-record-file.hooks-not-ended.invalid.json)；補查反例 [index 不小於 ran](../../protocol/examples/tick/tick-record.index-not-below-ran.invalid.json)、[blocked_before 不是 id](../../protocol/examples/tick/tick-record.blocked-not-id.invalid.json)。

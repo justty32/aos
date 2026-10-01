@@ -1,6 +1,6 @@
 # 第二段：不靠 daemon 的系統級任務與普通程式（草稿，部分已裁定）
 
-← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/tick/template.md)、[aos-tick-check-task B-621](../spec/settled/tick/check-task.md)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/tick/git.md)、[恢復與設定 B-625](../spec/settled/tick/recovery.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
+← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/tick/template.md)、[aos-tick-check-task B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/tick/git.md)、[恢復與設定 B-625](../spec/settled/tick/recovery.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
 
 > **狀態：草稿（2026-10-01），還沒開工。** 2026-10-01 使用者已裁定 `aos-publish` 搬暫緩區、`aos-needs` 改寫成 `aos-tick-check-task`（見文末「裁定紀錄」）；其餘文末「待問」裁定後才照做。下面各步寫的是「建議的最單純版本」；舊 spec 跟現在 tick 對不上的地方集中在「舊規定哪裡對不上」一節。
 
@@ -56,7 +56,7 @@
 ## 步驟 1：aos-tick-check-task
 
 - **要做到**：`aos-tick-check-task [<任務 id…>]`，自己是任務表上的一項。讀本格紀錄（第八批起 `tasks` 只列結束碼不是 0 的）：指定的 id 有任一個出現在紀錄的 `tasks` 裡 → 建停格檔 `<狀態資料夾>/tick/stop`、回 0；都沒出現 → 當成功、什麼都不做、回 0（不分辨「還沒跑」，照 POC 默認一切正常，使用者把它排在那些項後面）。不寫 id＝`tasks` 非空就建停格檔。
-- **依據**：[B-621](../spec/settled/tick/check-task.md)、[P-204](../spec/settled/protocol/tick.md)（2026-10-01 使用者裁定改寫，見文末「裁定紀錄」）；停格檔照現行 [P-213](../spec/settled/protocol/tick.md)。
+- **依據**：[B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[P-204](../spec/settled/protocol/tick.md)（2026-10-01 使用者裁定改寫，見文末「裁定紀錄」）；停格檔照現行 [P-213](../spec/settled/protocol/tick.md)。
 - **做法**：
   - 紀錄路徑：`$AOS_TICK_CWD/<狀態資料夾>/tick/current/`（狀態資料夾照 `aos_dirname.name()`；第九批拆檔後用 `aos_tick_record.read_record()` 讀，`tasks` 在 `task-exits.json`）；停格檔建在同一個 `tick/` 底下。
   - 沒有 `AOS_TICK_CWD`、紀錄讀不到：自己的錯，回 1（照 POC 總原則讓 Python 自然丟錯即可，不另外處理）。
@@ -203,7 +203,7 @@
 只有下面這幾條算裁定；待問 1～12 照舊。
 
 1. **`aos-publish` 搬暫緩區**（原步驟 2 拿掉，後面步驟往前補號）。使用者原話：「aos-publish我覺得要改名，我預期它的作用，就是把這一格的一些狀況總結成json檔案寫好」；討論後「那看來aos-summarize其實是暫時不需要了，拿掉。」所以「總結這一格成 JSON」的程式（暫名 `aos-summarize`）也不做。之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（publish 會跟傳訊混）。spec：[暫緩區 B-624 部分](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、[P-206 那列](../spec/settled/deferred/protocol/tick.md#暫緩p-206-aos-publish-那列發摘要)。
-2. **`aos-needs` 改寫成 `aos-tick-check-task`**（步驟 1 改寫）。使用者原話：「aos-needs原來是一個程式...，其實可以簡單一些，也就是它會檢查指定的東西是否跑好，沒跑好，就去寫tick stop檔案」「那就aos-tick-check-task」。用法 `aos-tick-check-task [<任務 id…>]`，自己是一項、不包別的指令；指定的都 `exit:0` 就不做事，否則建停格檔；不寫 id＝檢查前面全部；都回 0，自己的錯回 1；停格擋掉整格剩下的全部項，接受。spec：[B-621](../spec/settled/tick/check-task.md)、[P-204](../spec/settled/protocol/tick.md)。
+2. **`aos-needs` 改寫成 `aos-tick-check-task`**（步驟 1 改寫）。使用者原話：「aos-needs原來是一個程式...，其實可以簡單一些，也就是它會檢查指定的東西是否跑好，沒跑好，就去寫tick stop檔案」「那就aos-tick-check-task」。用法 `aos-tick-check-task [<任務 id…>]`，自己是一項、不包別的指令；指定的都 `exit:0` 就不做事，否則建停格檔；不寫 id＝檢查前面全部；都回 0，自己的錯回 1；停格擋掉整格剩下的全部項，接受。spec：[B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[P-204](../spec/settled/protocol/tick.md)。
 3. **停格檔的未來方向（只記錄，不做）**。使用者原話：「我覺得tick-stop這個檔案會變成特定json格式，存放一些資訊，然後可以用aos-tick-check-task-continue來去檢查其中的一些資訊，滿足後修改stop中的資訊。所以aos-tick仍會執行所有任務，但會變成執行前檢查stop，看看是否滿足特定條件，滿足的話就可以執行該任務。」記在 [B-620「停格檔與擋板檔」](../spec/settled/tick.md)；現在停格檔規定不變。
 
 ### 2026-10-01（[第八批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第八批紀錄只記非-0)：紀錄只記非 0）

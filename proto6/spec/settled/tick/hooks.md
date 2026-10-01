@@ -12,8 +12,8 @@
 
 ### 掛點
 
-- **目前只開一個：`after_all`**。照表跑完之後跑——含被停格檔停下、沒跑完整張表的那格。
-- 其他掛點（`before_all`、`before_task`、`after_task`…）先不開；`hooks` 裡不認得的鍵照收不理（寫了也不跑）。
+- **目前只開一個：`after_all`**。照表跑完之後跑——含被 tasks-blocked 擋下、沒跑完整張表的那格。
+- 其他掛點（`before_all`、`before_task`、`after_task`…）先不開〔使用者 2026-10-01 第十六批〕（「hook的種類現在先不要管」）；之後若開了跟某項任務有關的掛點：在那一項之前被 tasks-blocked 擋下時，那一項相關的 hook 都不跑；任務跑完接著跑它的 hook 時不看 tasks-blocked。`hooks` 裡不認得的鍵照收不理（寫了也不跑）。
 - 使用者原話裡的 `after_cell` 就是 `after_all`：「after_cell？我以為是after_all，我們有cell嗎？」
 
 ### `after_all` 的寫法：比照 `tasks`
@@ -64,13 +64,13 @@
 | 這格怎麼了 | `after_all` |
 |---|---|
 | 照表跑完 | 跑 |
-| 被停格檔停下 | **照跑**——這是它存在的理由 |
+| 被 tasks-blocked 擋下 | **照跑**——它跟任務無關〔使用者 2026-10-01 第十六批〕，這也是它存在的理由 |
 | 拿不到鎖（`busy`） | 不跑 |
 | 有擋板檔 | 不跑（tick 直接結束、stderr 不印〔使用者 2026-10-01 第十六批〕） |
 | tick 自己出錯（`bad_table`、用法錯、中途自然丟錯…） | 不跑 |
 
-- 跑的時機：本格紀錄已收尾（`ended:true`、`exit:0`，被停下的還有 `stopped_after`）之後。所以 hook 讀本格紀錄（`current/`，展開 `$ref` 後）看得到整格的結果（`ran` 與失敗清單 `tasks`），也看得到前面 hook 裡結束碼不是 0 的（0 不記，第八批）。
-- **不看停格檔**：hook 之間不查停格檔，hook 自己建了停格檔也不擋下一個 hook；留著的停格檔照舊由下一格開頭刪（[B-620](../tick.md)）。
+- 跑的時機：本格紀錄已收尾（`ended:true`、`exit:0`，被擋下的還有 `blocked_before`）之後。所以 hook 讀本格紀錄（`current/`，展開 `$ref` 後）看得到整格的結果（`ran` 與失敗清單 `tasks`），也看得到前面 hook 裡結束碼不是 0 的（0 不記，第八批）。
+- **不看 tasks-blocked**：hook 之間不查它，hook 自己寫了也不擋下一個 hook；after_all 跑完後核心刪掉它（整格最後，[B-620](../tick.md)）。
 - **每項結束碼不是 0 的照實記（0 不記）、接著跑下一項**，跟任務一樣；**不影響 tick 的結束碼**（照舊回 0，[C-08](../conventions.md)）。
 - 某個 hook 跑到時展開失敗（合併後的 inst 不合規則）：跟任務一樣自然丟錯、tick 回 1；紀錄停在已寫的樣子（`ended:true`、`exit:0`，`hooks.after_all` 只到前一項）。這時 tick 回 1 而紀錄寫著 `exit:0`，兩邊對不上——**使用者 2026-10-01：先不管**（照 POC 默認一切正常，不另處理）。
 
@@ -81,14 +81,14 @@
 ```json
 {"version":1,"seq":7,"started_at_ms":1790000000000,
  "ran":2,"tasks":[],
- "ended":true,"exit":0,"stopped_after":"b",
+ "ended":true,"exit":0,"blocked_before":"c",
  "hooks":{"after_all":[{"id":"1","index":1,"exit":3}]}}
 ```
 
-（任務 `a`、`b` 都回 0、`b` 建了停格檔；hook `notify` 回 0 不記，第 2 個 hook 沒寫 id、回 3。）
+（任務 `a`、`b` 都回 0、`b` 寫了 tasks-blocked，`c` 被擋下；hook `notify` 回 0 不記，第 2 個 hook 沒寫 id、回 3。）
 
 - 有寫 `after_all` 的格，收尾那次先寫好 `hook-exits.json`（`{"after_all":[]}`）、再寫 `record.json`（`ended:true` 加 `hooks` 的 `$ref`），所以 `record.json` 一樣只寫開格、收尾兩次；之後每跑完一個結束碼不是 0 的 hook 加一筆（整份重寫 `hook-exits.json`）；格式跟 `tasks` 每筆相同（`id`、`index`＝它在 `after_all` 的位置，加 `exit` 或 `signal`）。**結束碼 0 的不記**〔使用者 2026-10-01 第八批：「hooks也是」〕。
-- hooks 不記 `ran`：hooks 不看停格檔、一定全跑，先寫好的 `after_all: []` 就表示開始跑了；tick 跑到一半被殺時看不出跑到第幾個，照 POC 默認一切正常不管。
+- hooks 不記 `ran`：hooks 不看 tasks-blocked、一定全跑，先寫好的 `after_all: []` 就表示開始跑了；tick 跑到一半被殺時看不出跑到第幾個，照 POC 默認一切正常不管。
 - 表裡沒寫 `after_all` 的格，紀錄沒有 `hooks` 鍵（`record.json` 沒有 `hooks` 的 `$ref`，也沒有 `hook-exits.json`）；`after_all` 是空陣列時是 `"hooks":{"after_all":[]}`。
 - 換紀錄時整個 `current/` 改名成 `last/`，`hook-exits.json` 跟著過去。
 - `hooks` 只會出現在 `ended:true` 的紀錄裡。

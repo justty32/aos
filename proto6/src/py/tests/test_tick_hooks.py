@@ -112,19 +112,19 @@ class AfterAll(HooksCase):
                           {"id": "n", "index": 2, "exit": 127}])          # z 是 0，不記
         check_record(self, self.rec())
 
-    def test_runs_after_stop_and_ignores_stop_file(self):
-        # 被停格檔停下照跑；hook 自己建停格檔也不擋下一個 hook；下一格照常刪停格檔
-        self.hooks([sh("s", "echo 又停 > .aos/tick/stop"), sh("h", "touch h.ran")],
-                   tasks=[sh("a", "echo 停 > .aos/tick/stop"), sh("b", "touch b.ran")])
+    def test_runs_after_blocked_and_ignores_tasks_blocked(self):
+        # 被 tasks-blocked 擋下照跑（after_all 跟任務無關，第十六批）；hook 不看 tasks-blocked；hook 寫的整格最後一樣刪
+        self.hooks([sh("s", "echo > .aos/tick/tasks-blocked"), sh("h", "touch h.ran")],
+                   tasks=[sh("a", "echo > .aos/tick/tasks-blocked"), sh("b", "touch b.ran")])
         r = self.tick()
-        self.assertEqual(r.returncode, 0)
-        self.assertIn("stopped: 停", r.stderr)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertFalse(self.exists("b.ran"))
         self.assertTrue(self.exists("h.ran"))
         rec = self.rec()
-        self.assertEqual((rec["stopped_after"], rec["ran"], rec["tasks"]), ("a", 1, []))
+        self.assertEqual((rec["blocked_before"], rec["ran"], rec["tasks"]), ("b", 1, []))
         self.assertEqual(rec["hooks"]["after_all"], [])
         check_record(self, rec)
+        self.assertFalse(self.exists(".aos/tick/tasks-blocked"))
 
     def test_empty_after_all_and_unknown_points(self):
         self.put({"tasks": [sh("a", "true")],
