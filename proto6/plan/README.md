@@ -42,7 +42,7 @@
 
 ### 第三段：daemon 核心
 
-> **範圍已砍到最核心**（使用者 2026-10-01）：這段實際只做「一個叫 `aos-exec` 的 cron」——設定檔一份 inst 清單、照週期叫 `aos-exec`、印一行、非 0 可停，不要 socket。下面原本列的登記、叫醒／暫停、runner 收屍、收尾、通道憑證等全部挪到之後。細部 plan 與完成狀態見 [m3-daemon-core.md](m3-daemon-core.md)。
+> **範圍已砍到最核心**（使用者 2026-10-01）：這段實際只做「一個叫 `aos-exec` 的 cron」——設定檔一份 inst 清單、照週期叫 `aos-exec`、印一行、非 0 可停，不要 socket。下面原本列的登記、叫醒／暫停、runner 收屍、收尾、通道憑證等全部挪到之後。細部 plan 與完成狀態見 [m3-daemon-core.md](m3-daemon-core.md)。之後的**控制模組**（設定檔寫 `modules.control` 就多開一個 unix socket，收 wake／pause／resume／status，每個只對一項；小工具 `aos-ctl`）**已做**（2026-10-01），見 [m3n-control-module.md](m3n-control-module.md#做完了沒)。
 
 - **目標**：`aos daemon` 能登記 node、照週期開格、叫醒／暫停、用 `aos-runner` 開每一格並在格後收屍、重啟與停機收尾、發通道憑證、掛行程與砍掉；沒 cgroup、沒 helper 也跑得起來。
 - **主要 spec**：[B-601、B-504](../spec/settled/daemon/runtime.md)、[B-606、B-607](../spec/settled/daemon/registration.md)、[B-603、B-604、B-611](../spec/settled/daemon/lifecycle.md)、[B-610、B-612、B-613](../spec/settled/daemon/channel.md)、[B-608](../spec/settled/daemon/reload.md)；格式 [daemon 協議](../spec/settled/protocol/daemon/README.md)（P-100～119，不含 helper 那幾條）。

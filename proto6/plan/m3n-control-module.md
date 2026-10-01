@@ -219,4 +219,15 @@
 
 ## 待問
 
-1. **暫停中、已停時叫醒怎麼辦？resume 要不要順便跑一次？** 建議：暫停中 wake **會跑一次、跑完照樣暫停**（暫停只停「週期」，不擋人手叫）；被 `stop_on_nonzero` 停掉的項 wake **回 `stopped`、不跑**，要救用 resume；resume **一律立刻跑一次**。另一種是「暫停中 wake 也不跑」，那暫停就等於整個關掉。
+1. **暫停中、已停時叫醒怎麼辦？resume 要不要順便跑一次？** 〔**照建議先做，使用者可改**（2026-10-01：使用者要直接開工，程式照下面建議寫；要改只動 `lib/aos_daemon_ctl.py` 的 `handle()` 與 `tests/test_ctl.py` 的 `test_wake_while_paused`、`test_stopped`）〕建議：暫停中 wake **會跑一次、跑完照樣暫停**（暫停只停「週期」，不擋人手叫）；被 `stop_on_nonzero` 停掉的項 wake **回 `stopped`、不跑**，要救用 resume；resume **一律立刻跑一次**。另一種是「暫停中 wake 也不跑」，那暫停就等於整個關掉。
+
+## 做完了沒
+
+**做完了**（2026-10-01，AI 隊）：步驟 1～7 都照上面做了，驗收寫進 `tests/test_ctl.py`（25 條，約 18 秒）、全過；三項檢查（全部測試、`check_ids.py --strict`、`wf-lint`）都過。待問 1 照建議先做（見上）。等使用者看。
+
+- 程式：`lib/aos_daemon.py`（`load_setup()`、`Item` 的狀態與 `cond`、`loop()`／`_next_run()`、`run_once()` 帶 `env=`、`_quit()` 刪 socket、`main()` 開 socket）、新的 `lib/aos_daemon_ctl.py`（伺服器端）、`lib/aos_ctl.py` 與 `bin/aos-ctl`（`.gitignore` 擋 `bin/`，要 `git add -f`）。用法見 [src/py README](../src/py/README.md#控制模組與-aos-ctlm3n)。
+- `load_config()` 照舊回 `(起點, [Item])`（m3 測試不用改），另加 `load_setup()` 多回 socket 絕對路徑。
+- **改了一條 m3 測試**：`test_daemon.py` 的 `test_modules_ignored` 原本拿 `"control": {"socket": "./aos.sock"}` 當「核心不看的模組」並檢查不建 socket；m3n 起 `control` 有寫就開，所以那條改用不認得的模組名 `later`（意思不變：別的模組鍵照收不理）。其他 m3 測試一字未改。
+- 沒照 plan 原字面做的：步驟 2 第一條「0.2 秒內出現第二行」放寬成 1 秒內（aos-exec 每次有 Python 起動時間）；週期 10 秒的驗收改成 1.5 秒量任務自己寫的時間，免得測試一條跑十幾秒。
+- 收到 SIGINT／SIGTERM 時若 socket 還沒 bind 好（剛開那一瞬間），刪檔找不到就算了、照樣回 0——這是 daemon 自己開檔順序的縫，不是外面的異常。
+- 測試從 444 條變 469 條。

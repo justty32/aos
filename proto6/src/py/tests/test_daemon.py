@@ -178,7 +178,7 @@ class Step1Config(DaemonCase):
 
 class Step1Directives(DaemonCase):
     """整份設定檔先經 aos 指示詞展開再讀（使用者 2026-10-01）：`$ref` 以設定檔所在資料夾為準，
-    展開完才套 `cwd` 規則（daemon 啟動時的工作目錄）；頂層 `modules` 認得、不解讀。"""
+    展開完才套 `cwd` 規則（daemon 啟動時的工作目錄）；頂層 `modules` 認得，只讀 `control`（m3n）。"""
 
     def test_ref_split_insts_and_defaults(self):
         # 設定檔放在 conf/，daemon 從 self.d 開：$ref 照 conf/ 找，inst 照 daemon 的工作目錄找
@@ -211,7 +211,8 @@ class Step1Directives(DaemonCase):
     def test_modules_ignored(self):
         self.inst({"argv": ["true"]}, "x.json")
         cfg = self.config({"interval_ms": 100, "insts": {"x.json": {}},
-                           "modules": {"control": {"socket": "./aos.sock", "whatever": [1, {"$opt": "x"}]},
+                           # m3n 起 control 有寫就掛控制模組（見 test_ctl.py），這裡改用不認得的模組名（m3n 改）
+                           "modules": {"later": {"socket": "./aos.sock", "whatever": [1, {"$opt": "x"}]},
                                        "other": 3}})
         _, out, err = self.start(cfg)
         self.wait_for(lambda: self.results(out, "x.json"))

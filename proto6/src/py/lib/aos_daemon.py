@@ -6,6 +6,9 @@
 整份設定檔先經 aos 指示詞展開再讀（`expand()`）；頂層 `modules` 核心認得、不解讀。
 〔使用者方向 2026-10-01〕POC 默認一切正常：設定檔讀得懂、路徑都對、aos-exec 叫得起來；
 不寫異常處理，出事讓 Python 自然丟錯（traceback、回 1）。
+設定檔寫了 `modules.control` 就掛上控制模組（plan m3n-control-module.md，`lib/aos_daemon_ctl.py`）：
+多開一個 unix socket 收 wake／pause／resume／status，並把 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`
+放進每次 aos-exec 的環境。沒寫時跟 m3 一模一樣（沒人叫醒迴圈、不傳 env=）。
 """
 import argparse
 import datetime
@@ -22,6 +25,9 @@ from aos_directives import Context, DirectiveError, is_option_object, load_docum
 EXEC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin", "aos-exec")
 INST_MARK = "<inst>"
 
+# 控制模組的 socket 絕對路徑；沒掛＝None。退出前要刪（m3n 步驟 6）
+_sock_path = None
+
 # stdout 那一行與 aos-exec 的 stderr 都在這把鎖底下一次寫完，多項同時結束也不交錯（m3 步驟 2）
 _out = threading.Lock()
 
@@ -29,6 +35,12 @@ _out = threading.Lock()
 def now():
     """印出那一刻的本地時間，ISO 8601 帶時區，到秒：2026-10-01T15:04:05+08:00。"""
     return datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def clock(mono):
+    """把 time.monotonic() 的時刻換成跟 now() 同格式的本地時間（status 的 next 用）。"""
+    t = time.time() + (mono - time.monotonic())
+    return datetime.datetime.fromtimestamp(t).astimezone().isoformat(timespec="seconds")
 
 
 def say(text):
@@ -47,6 +59,17 @@ class Item:
         self.interval_ms = interval_ms
         self.stop_on_nonzero = stop_on_nonzero
         self.err_path = err_path        # 絕對路徑；None＝接到 daemon 自己的 stderr
+        self.env = None                 # 開 aos-exec 的環境；None＝照 daemon 的（控制模組沒掛）
+        # m3n 步驟 2：以下狀態都在 cond 的鎖底下改；控制模組沒掛時只有 loop() 自己動它們
+        self.cond = threading.Condition()
+        self.running = False
+        self.pending = False            # 叫醒記下的「跑一次」（叫幾次都只補一次）
+        self.pending_keep = False       # 那次補跑帶不帶 keep_schedule（照最後一次叫醒）
+        self.paused = False
+        self.stopped = False            # 被 stop_on_nonzero 停掉
+        self.last_exit = None
+        self.last_end = None            # now() 格式的字串
+        self.due = time.monotonic()     # 下次照週期該跑的時刻（monotonic）；剛開時立刻跑
 
 
 def err_path_for(template, inst, start):
@@ -82,11 +105,17 @@ def read_config(path):
 
 
 def load_config(path):
-    """m3 步驟 1：讀設定檔（先展開指示詞），回 (起點資料夾, [Item])。
-    兩邊都沒有 interval_ms、`modules` 不是物件丟 ValueError。"""
+    """m3 步驟 1：讀設定檔（先展開指示詞），回 (起點資料夾, [Item])。"""
+    return load_setup(path)[:2]
+
+
+def load_setup(path):
+    """m3 步驟 1 加 m3n 步驟 1：回 (起點資料夾, [Item], 控制模組 socket 絕對路徑或 None)。
+    兩邊都沒有 interval_ms、`modules` 不是物件丟 ValueError；`modules.control` 沒寫 `socket` 自然丟錯。"""
     top = read_config(path)
-    if not isinstance(top.get("modules", {}), dict):
-        raise ValueError("modules 要是物件")       # 核心只認得它、不看裡面（之後一個模組一個鍵）
+    modules = top.get("modules", {})
+    if not isinstance(modules, dict):
+        raise ValueError("modules 要是物件")       # 核心只認得它；目前只讀 control，其他鍵不看
     # 展開完才看 cwd（它也可以是 $ref 引進來的值）；相對的 cwd 以 daemon 啟動時的工作目錄為起點，不是設定檔的資料夾
     start = os.path.abspath(top.get("cwd", "."))
     items = []
@@ -98,7 +127,10 @@ def load_config(path):
         stop = entry.get("stop_on_nonzero", top.get("stop_on_nonzero", False))
         items.append(Item(i, inst, interval, stop,
                           err_path_for(top.get("exec_err_path"), inst, start)))
-    return start, items
+    sock = None
+    if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
+        sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
+    return start, items, sock
 
 
 def write_err(item, data):
@@ -123,7 +155,7 @@ def write_err(item, data):
 def run_once(item, start):
     """m3 步驟 2：叫一次 aos-exec，等它結束，回 (碼, 毫秒)。被訊號殺的碼換成 128+N。"""
     t0 = time.monotonic()
-    p = subprocess.Popen([EXEC, item.inst], cwd=start, start_new_session=True,
+    p = subprocess.Popen([EXEC, item.inst], cwd=start, env=item.env, start_new_session=True,
                          stdin=subprocess.DEVNULL, stderr=subprocess.PIPE)
     err = p.stderr.read()               # 收齊再一次寫出，共用出口才不交錯
     p.stderr.close()
@@ -133,19 +165,55 @@ def run_once(item, start):
     return (128 - code if code < 0 else code), ms
 
 
-def loop(item, start):
-    """m3 步驟 3、4：叫 → 等 → 印 → 睡 interval_ms；非 0 且 stop_on_nonzero 就印 stopped、不再叫。"""
+def _next_run(item):
+    """在 cond 的鎖底下等到該跑：有待補就跑（回它的 keep_schedule）；暫停、已停就一直等；
+    否則等到 due（照週期跑的那次，回 False）。m3n 步驟 2。"""
     while True:
+        if item.pending and not item.stopped:
+            keep = item.pending_keep
+            item.pending = item.pending_keep = False
+            return keep
+        if item.stopped or item.paused:
+            item.cond.wait()
+            continue
+        left = item.due - time.monotonic()
+        if left <= 0:
+            return False
+        item.cond.wait(left)
+
+
+def loop(item, start):
+    """m3 步驟 3、4：叫 → 等 → 印 → 睡 interval_ms；非 0 且 stop_on_nonzero 就印 stopped、不再叫。
+    m3n 步驟 2：睡改成等 cond（叫得醒）；停掉時執行緒不結束、一直等（resume 救得回來）。
+    控制模組沒掛時沒人碰狀態，行為跟 m3 一樣。"""
+    while True:
+        with item.cond:
+            keep = _next_run(item)
+            item.running = True
         code, ms = run_once(item, start)
         say("inst=%s exit=%d ms=%d" % (item.inst, code, ms))
-        if code != 0 and item.stop_on_nonzero:
-            say("inst=%s stopped" % item.inst)
-            return
-        time.sleep(item.interval_ms / 1000.0)
+        with item.cond:
+            t = time.monotonic()
+            item.running = False
+            item.last_exit, item.last_end = code, now()
+            # 照週期跑的、不帶 keep_schedule 的叫醒：週期從這次結束重新算；帶 keep_schedule 的
+            # 不碰 due，除非 due 已經被這次蓋過去（不補跑漏掉的）
+            if not keep or item.due <= t:
+                item.due = t + item.interval_ms / 1000.0
+            if code != 0 and item.stop_on_nonzero:
+                item.stopped = True
+                item.pending = False
+                say("inst=%s stopped" % item.inst)
 
 
 def _quit(signum, frame):
-    """m3 步驟 5：SIGINT／SIGTERM 直接退出、回 0，不殺也不等子程序。"""
+    """m3 步驟 5：SIGINT／SIGTERM 直接退出、回 0，不殺也不等子程序。
+    控制模組掛著時先刪 socket 檔（m3n 步驟 6）。"""
+    if _sock_path is not None:
+        try:
+            os.unlink(_sock_path)
+        except FileNotFoundError:       # 訊號來在 bind 之前：還沒建
+            pass
     os._exit(0)
 
 
@@ -161,13 +229,20 @@ def main(argv=None):
     ap = _Parser(prog="aos-daemon", description="照設定檔的清單，定期叫 aos-exec")
     ap.add_argument("--config", required=True, metavar="F", help="設定檔（JSON）")
     a = ap.parse_args(argv)
+    global _sock_path
     try:
-        start, items = load_config(a.config)
+        start, items, sock = load_setup(a.config)
     except (ValueError, DirectiveError) as e:
         sys.stderr.write("aos-daemon: config: %s\n" % e)
         return 1
     signal.signal(signal.SIGINT, _quit)
     signal.signal(signal.SIGTERM, _quit)
+    if sock is not None:                # m3n：先開好 socket 再起各項，任務一開始就叫得到
+        import aos_daemon_ctl
+        for item in items:
+            item.env = dict(os.environ, AOS_DAEMON_SOCKET=sock, AOS_DAEMON_INST=item.inst)
+        _sock_path = sock               # 先記好再 bind：bind 完立刻來的訊號也刪得到
+        aos_daemon_ctl.serve(sock, {item.inst: item for item in items})
     for item in items:
         threading.Thread(target=loop, args=(item, start), daemon=True).start()
     while True:                         # 所有項都停了也照樣開著（使用者 2026-10-01）
