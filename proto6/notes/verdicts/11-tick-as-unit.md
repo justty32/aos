@@ -263,7 +263,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 **這節是正本，spec 這輪一字未動，待統一更新 spec。**
 
-- **daemon 叫 `aos-exec`，不直接叫 `aos-tick`。** 它存的清單是一份份 `inst.json` 的路徑，**以路徑當 id**；路徑末段是 `/inst.json` 時省略這段當 id（`/n/a/inst.json` 的 id 是 `/n/a`，`/jobs/b.json` 照原樣）。
+- **daemon 叫 `aos-exec`，不直接叫 `aos-tick`。** 它存的清單是一份份 `inst.json` 的路徑，**以路徑當 id**；~~路徑末段是 `/inst.json` 時省略這段當 id（`/n/a/inst.json` 的 id 是 `/n/a`，`/jobs/b.json` 照原樣）~~（同日撤回，id 就是字面值，見下面「設定檔追加裁定」）。
 - 所以 **「daemon 管 node」變成可掛載的模組**：daemon 核心只是定期叫 `aos-exec` 跑清單上的 inst，不認得 node；要定期跑一個 node，就在 node 放一份 `argv` 開頭是 `aos-tick` 的 `inst.json`，把它的路徑加進清單。
 - **設定檔可設**：某項的 `aos-exec` 結束碼非 0 時，要不要停掉該項。
 - **只有 0 是普通結束**（照上面「aos 結束碼慣例」改版）；`aos-exec` 的碼改成 0／非 0（本輪已改程式，見該節「aos-exec 的碼」）。
@@ -275,4 +275,14 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 **待改的 spec 處**
 
 - [daemon 整理區](../../spec/settled/daemon/README.md)（B-601～B-613 等）：開格核心改成「定期叫 `aos-exec` 跑清單上的 inst」；node 登記、socket／IPC、runner、收尾寬限、state 存讀等第一版不做的，標〔使用者方向 2026-10-01：第一版先不做〕。
-- [inst.md](../../spec/base/inst.md)「登記的 id 就是這個目標路徑」與 tick 的正規化：改成上面「末段 `/inst.json` 省略」的 id 規則。
+- [inst.md](../../spec/base/inst.md)「登記的 id 就是這個目標路徑」與 tick 的正規化：~~改成上面「末段 `/inst.json` 省略」的 id 規則~~ 改成「id 就是清單上 `inst` 的字面值」（設定檔追加裁定）。
+- [P-101](../../spec/settled/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板) 的啟動設定：補上下面的設定檔長相（`insts`、頂層 `cwd`／`interval_ms`／`stop_on_nonzero`）。
+
+**設定檔追加裁定（使用者 2026-10-01，待統一更新 spec）**
+
+使用者原話：「設定檔這塊可以。其中的inst的值，反正後面的路徑是要直接丟給aos-exec的，所以既可以是資料夾也可以是檔案，反正只要符合aos-exec的解析規範就好。inst寫相對路徑時，改成以daemon啟動時所在的cwd為起點，或是設定檔頂層添加一個key："cwd":"./"在insts旁邊。頂層key還可以加上interval_ms, stop_on_nonzero，作為所有insts的默認設定。所謂id也不用特別算了，就直接是inst的值，捨棄我剛剛說的。」細節見 [m3 步驟 1](../../plan/m3-daemon-core.md#步驟-1讀設定檔)。
+
+- **`inst` 原樣交給 aos-exec**：資料夾或檔都行，daemon 不檢查、不解析。
+- **相對路徑的起點**：頂層可選 `cwd`；沒寫＝daemon 啟動時的工作目錄；`cwd` 是相對路徑時也以 daemon 啟動時的工作目錄為起點。daemon 開 aos-exec 子程序時把工作目錄設成這個起點、`inst` 原樣當參數。
+- **頂層預設**：頂層可選 `interval_ms`、`stop_on_nonzero`，每項自己寫的蓋過頂層；兩邊都沒有 `interval_ms`＝設定錯、回 1，`stop_on_nonzero` 兩邊都沒有＝`false`。
+- **id 就是 `inst` 字面值**，撤回上面「轉絕對路徑、末段 `/inst.json` 省略」；同字面值重複默認不會發生。
