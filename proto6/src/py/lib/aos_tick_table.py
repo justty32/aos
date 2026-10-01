@@ -1,18 +1,17 @@
 """aos-tick 的任務表（預設 `.aos/tasks.json`；`--node` 給檔時就是那個檔）：開格讀一次拿 `id`，跑到某項時才展開成 inst（B-620、P-202）。
 
 〔使用者方向 2026-10-01，待統一更新 spec〕開格只做極簡檢查（`check_table()`），不過就丟 `TableInvalid`，
-tick 印一行 `bad_table: …`、回 1（算 tick 自己的錯）：讀得到、合法 JSON、頂層是物件、有 `tasks` 陣列；
+tick 印一行 `bad_table: …`、回 1（算 tick 自己的錯；在換紀錄之前，不佔 seq）：讀得到、合法 JSON、頂層是物件、有 `tasks` 陣列；
 每項（整份 `$ref` 先展開）是物件且有 `argv`。其他一概不查（外層與每項的 `_metainfo`、`id`、`kind`
 填不填與它們的值、值的型別、`id` 重複、陌生鍵如 `group`、`needs`、`methods`）。
 沒有 `id` 的項：id＝它在 `tasks` 陣列的位置（從 0 起）轉字串，例如 "3"；跟別項撞了不管（使用者：「默認不重複」）。
 不看 `user`（照 tick 自己的帳號跑，不回 125）。跑到某項才展開成 inst，那時 `load_obj` 丟錯就自然丟錯回 1。
 
-inst 的讀驗解用從 proto5 複製來的 `aos_inst.load_obj`（不改它）。它不回 `id`，也會對
-「跟目前身分不同的 `user`」丟 `UserNotGranted`，所以：
+inst 的讀驗解用從 proto5 複製來的 `aos_inst.load_obj`（不改它；〔使用者方向 2026-10-01〕它跟 proto5 一樣
+不認得頂層 `user`，當陌生鍵忽略，所以 tick 不用先拿掉）。它不回 `id`，所以：
 
 - `id`：先用 `aos_directives.resolve_located` 展開這一項的頂層（整份 `$ref` 在這裡展開），
   再讀展開後的 `id`（沒有就用位置字串）。
-- `user`：交給 `load_obj` 前拿掉這一項字面上的 `user`。
 - 這一項是一份純記憶體文件（跟 `load_obj` 一樣），所以項目裡的 `$ref:""` 指的是這一項自己，
   不是整份 tasks.json；相對檔名以 node 根為中心。
 """
@@ -22,9 +21,9 @@ import os
 import aos_inst
 from aos_directives import Context, DirectiveError, Document, resolve_located
 
-__all__ = ["TABLE", "TableInvalid", "read_table", "load_inst"]
+__all__ = ["TABLE_NAME", "TableInvalid", "read_table", "load_inst"]
 
-TABLE = os.path.join(".aos", "tasks.json")
+TABLE_NAME = "tasks.json"          # 放在 node 狀態資料夾（預設 `.aos`，見 aos_tick.aos_dirname）裡
 
 
 class TableInvalid(Exception):
@@ -65,6 +64,5 @@ def check_table(doc, node_dir):
 
 
 def load_inst(item, node_dir):
-    """把這一項當 inst 讀驗解（拿掉字面 `user`）；回 aos_inst 的 dict。"""
-    item = {k: v for k, v in item.items() if k != "user"}
+    """把這一項當 inst 讀驗解；回 aos_inst 的 dict。"""
     return aos_inst.load_obj(item, node_dir)

@@ -7,7 +7,7 @@
 
     普通檔案（副檔名不是 .json）  直接執行它，stdin/stdout/stderr 繼承 aos-exec 的
     .json 檔                     讀進來當 inst.json 解析、執行（不存在＝125，見下）
-    資料夾                       執行 xxx/.aos/inst.json，沒有再找 xxx/inst.json（proto6 改）
+    資料夾                       執行 xxx/.aos/inst.json，沒有再找 xxx/inst.json（proto6 改；`.aos` 照 AOS_DIRNAME）
 
 inst.json 怎麼讀、怎麼驗在 aos_inst.py；「照一份 inst 跑一次」是什麼意思照
 ../spec/inst-posix/ 第 6 節做：驗完才跑、mkdir／append／inherit／merge、環境清空或疊加、
@@ -37,9 +37,10 @@ import os
 import sys
 import time
 
+import aos_dirname
 import aos_inst
 from aos_exec_run import (
-    AOS, CHILD, DIR_TARGETS, GRACE, USAGE, _err, _execute_inst, _find_dir_inst, _no_dir_inst_msg,
+    AOS, CHILD, DIR_TARGETS, GRACE, USAGE, _dir_targets, _err, _execute_inst, _find_dir_inst, _no_dir_inst_msg,
     _spawn,
 )
 
@@ -85,9 +86,11 @@ def run_target_full(xxx, timeout_ms=0, on_spawn=None,
     if os.path.isdir(p):
         if args is not None:
             code, kind = _inst_args_error()
+        elif aos_dirname.error():                   # proto6 改：AOS_DIRNAME 不合法＝用法錯
+            code, kind = _err(2, USAGE, aos_dirname.error())
         else:
             found = _find_dir_inst(p)               # proto6 改：.aos/inst.json 再 inst.json
-            target = found or os.path.join(p, DIR_TARGETS[0])
+            target = found or os.path.join(p, _dir_targets()[0])
             if on_target:
                 target = os.path.realpath(target)
                 on_target(target)
@@ -142,8 +145,10 @@ def run_target(xxx, timeout_ms=0, on_spawn=None, stderr=None, args=None, on_targ
     if os.path.isdir(p):
         if args is not None:
             return _inst_args_error()
+        if aos_dirname.error():                     # proto6 改：AOS_DIRNAME 不合法＝用法錯
+            return _err(2, USAGE, aos_dirname.error())
         found = _find_dir_inst(p)                   # proto6 改：.aos/inst.json 再 inst.json
-        target = found or os.path.join(p, DIR_TARGETS[0])
+        target = found or os.path.join(p, _dir_targets()[0])
         if on_target:
             target = os.path.realpath(target)
             on_target(target)

@@ -1,12 +1,14 @@
 """aos-tick 第一段驗收（plan m1-tick-core.md）。真的開 bin/aos-tick 子程序。
 
-〔使用者方向 2026-10-01〕POC 默認一切正常：互斥鎖、驗表、`user`、上下層、fsync、異常處理的測試都拿掉了。
+〔使用者方向 2026-10-01〕POC 默認一切正常：驗表、`user`、上下層、fsync、異常處理的測試都拿掉了。
+同資料夾互斥同日加回最簡版（拿不到鎖回 2，見 Step1Lock）；表壞在換紀錄之前，不佔 seq。
 結束碼照 aos 體系慣例（0 正常結束、1 錯誤結束、2 正常中斷；notes/verdicts/11 篇末 2026-10-01）：
 aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影響它。
 """
 import json
 import os
 import subprocess
+import time
 import unittest
 
 from _util import Base, PY
@@ -120,7 +122,7 @@ class Step1Node(TickCase):
             r = self.tick("--node", tbl)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(self.rec(node="n")["seq"], i)
-        self.assertEqual(sorted(os.listdir(os.path.join(self.d, "n", ".aos"))), ["tick"])
+        self.assertEqual(sorted(os.listdir(os.path.join(self.d, "n", ".aos"))), ["tick", "tick.lock"])
 
     def test_file_in_aos_dir_means_parent_node(self):
         # 拿不準的點的決定：檔在 .aos/ 裡時 node 取 .aos 的上一層（跟 --node 資料夾同一個 node）
@@ -168,6 +170,57 @@ class Step1Node(TickCase):
         self.assertFalse(self.exists("nope"))
         self.assertEqual(self.tick("--bogus").returncode, 1)      # aos 結束碼慣例：argv 用法錯算 1
         self.assertEqual(self.tick("--node").returncode, 1)
+
+
+class Step1Lock(TickCase):
+    """使用者 2026-10-01 加回最簡互斥：外層定期跑，上一格沒跑完下一格就來是正常使用。
+    拿不到 `.aos/tick.lock` 就 stderr `busy:`、回 2，不寫紀錄、不加 seq。"""
+
+    def wait_for(self, rel):
+        for _ in range(500):
+            if self.exists(rel):
+                return
+            time.sleep(0.02)
+        self.fail("等不到 %s" % rel)
+
+    def test_second_tick_while_first_running(self):
+        self.tasks(task("t", ["true"]))
+        self.assertEqual(self.tick().returncode, 0)                  # seq 1
+        self.tasks(sh("hold", "touch started; while [ ! -e go ]; do sleep 0.05; done"), sh("z", "touch z.ran"))
+        first = subprocess.Popen([PY, TICK, "--node", self.d], env=CLEAN_ENV,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            self.wait_for("started")
+            cur, last = self.read(".aos/tick/current.json"), self.read(".aos/tick/last.json")
+            self.write(".aos/tick-blocked", "壞了\n")                 # 鎖先：上一格沒跑完時回 busy 不是 blocked
+            r = self.tick()
+            self.assertEqual(r.returncode, 2)
+            self.assertIn("busy:", r.stderr)
+            self.assertNotIn("blocked:", r.stderr)
+            self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+            self.assertEqual(self.read(".aos/tick/current.json"), cur)   # 紀錄與 seq 都不動
+            self.assertEqual(self.read(".aos/tick/last.json"), last)
+            self.assertEqual((self.rec()["seq"], self.rec("last")["seq"]), (2, 1))
+            os.unlink(os.path.join(self.d, ".aos/tick-blocked"))
+        finally:
+            self.write("go", "")
+            out, err = first.communicate(timeout=30)
+        self.assertEqual(first.returncode, 0, err)
+        self.assertTrue(self.exists("z.ran"))
+        self.assertEqual(self.tick().returncode, 0)                  # 放掉之後下一格照常
+        self.assertEqual(self.rec()["seq"], 3)
+
+    def test_lock_fd_not_passed_to_tasks(self):
+        lock = os.path.join(self.d, ".aos", "tick.lock")
+        probe = ("import os\n"
+                 "fds = [os.readlink('/proc/self/fd/' + n) for n in os.listdir('/proc/self/fd')\n"
+                 "       if os.path.exists('/proc/self/fd/' + n)]\n"
+                 "open('held', 'w').write(str(%r in fds))\n" % lock)
+        self.tasks(sh("a", "env > out.env"), task("b", [PY, "-c", probe]))
+        r = self.tick()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("held"), "False")
+        self.assertNotIn("AOS_TICK_LOCK_FD", self.read("out.env"))
 
 
 class Step2Blocked(TickCase):
@@ -232,6 +285,7 @@ class Step4Check(TickCase):
         self.assertIn("bad_table:", r.stderr)
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
         self.assertFalse(self.exists("ran"))
+        self.assertFalse(self.exists(".aos/tick"))                         # 表壞不算開過一格
 
     def test_missing_or_wrong_shape(self):
         ok = sh("a", "touch ran")
@@ -245,6 +299,22 @@ class Step4Check(TickCase):
         self.write("item.json", json.dumps({"id": "b"}))                   # 展開後缺 argv
         self.bad(table(sh("a", "touch ran"), {"$ref": "item.json"}))
         self.bad(table(sh("a", "touch ran"), {"$ref": "nope.json"}))       # 展開不了
+
+    def test_bad_table_keeps_record_and_seq(self):
+        # 使用者 2026-10-01：讀表在換紀錄之前，表壞回 1、current／last 與 seq 都不動
+        self.tasks(task("t", ["true"]))
+        self.assertEqual(self.tick().returncode, 0)
+        self.assertEqual(self.tick().returncode, 0)
+        cur, last = self.read(".aos/tick/current.json"), self.read(".aos/tick/last.json")
+        self.write(".aos/tasks.json", "{壞")
+        r = self.tick()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("bad_table:", r.stderr)
+        self.assertEqual(self.read(".aos/tick/current.json"), cur)
+        self.assertEqual(self.read(".aos/tick/last.json"), last)
+        self.tasks(task("t", ["true"]))
+        self.assertEqual(self.tick().returncode, 0)
+        self.assertEqual((self.rec()["seq"], self.rec("last")["seq"]), (3, 2))
 
     def test_not_checked(self):
         # 外層 _metainfo、每項 _metainfo、kind 不填或亂寫、id 重複、陌生鍵都不查，照跑
@@ -354,6 +424,71 @@ class ExitCodes(TickCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("bad_table:", r.stderr)
         self.assertEqual(len(r.stderr.splitlines()), 1)   # 一行，不是 traceback
+
+
+class DirName(TickCase):
+    """使用者 2026-10-01（待統一更新 spec）：環境變數 `AOS_DIRNAME` 決定 node 狀態資料夾的名字（只換名字、位置不變）。
+    沒設或空＝`.aos`；含 `/`、是 `.`、`..` 算用法錯回 1。"""
+
+    ENV = {"AOS_DIRNAME": ".aos2"}
+
+    def test_all_under_custom_dir(self):
+        self.tasks(sh("wrong", "touch wrong.ran"))                     # .aos/tasks.json 不該被用
+        before = sorted(os.listdir(os.path.join(self.d, ".aos")))
+        self.write(".aos2/tasks.json", json.dumps(table(
+            sh("a", 'echo "$AOS_DIRNAME $AOS_TICK_RECORD" > a.txt'),
+            sh("b", "echo 停 > .aos2/tick/stop"), sh("c", "touch c.ran"))))
+        r = self.tick(env=self.ENV)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("stopped: 停", r.stderr)
+        self.assertFalse(self.exists("c.ran"))
+        self.assertEqual(self.read("a.txt"), ".aos2 %s\n" % os.path.join(self.d, ".aos2/tick/current.json"))
+        rec = json.loads(self.read(".aos2/tick/current.json"))
+        self.assertEqual((rec["seq"], rec["stopped_after"]), (1, "b"))
+        self.assertEqual(sorted(os.listdir(os.path.join(self.d, ".aos2"))), ["tasks.json", "tick", "tick.lock"])
+        self.write(".aos2/tick-blocked", "擋\n")
+        r = self.tick(env=self.ENV)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("blocked: 擋", r.stderr)
+        os.unlink(os.path.join(self.d, ".aos2/tick-blocked"))
+        self.assertTrue(self.exists(".aos2/tick/stop"))
+        self.write(".aos2/tasks.json", json.dumps(table(sh("c", "touch c.ran"))))
+        self.assertEqual(self.tick(env=self.ENV).returncode, 0)
+        self.assertTrue(self.exists("c.ran"))                         # 停格檔在 .aos2/tick/ 被刪
+        self.assertEqual(json.loads(self.read(".aos2/tick/last.json"))["seq"], 1)
+        self.assertFalse(self.exists("wrong.ran"))
+        self.assertEqual(sorted(os.listdir(os.path.join(self.d, ".aos"))), before)   # .aos/ 沒被碰
+
+    def test_dir_needs_custom_tasks_json(self):
+        self.tasks(task("t", ["true"]))                               # 只有 .aos/tasks.json
+        r = self.tick(env=self.ENV)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("no_tasks:", r.stderr)
+        self.assertFalse(self.exists(".aos2"))
+        self.assertEqual(self.tick(env={"AOS_DIRNAME": ""}).returncode, 0)   # 空字串＝.aos
+        self.assertEqual(self.rec()["seq"], 1)
+
+    def test_file_mode_parent_rule_follows_name(self):
+        tbl = self.write(".aos2/tasks.json", json.dumps(table(task("t", ["true"]))))
+        r = self.tick("--node", tbl, env=self.ENV)                    # 檔在 .aos2/ 裡：node 取上一層
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.exists(".aos2/tick/current.json"))
+        tbl = self.write(".aos/t.json", json.dumps(table(task("t", ["true"]))))
+        r = self.tick("--node", tbl, env=self.ENV)                    # 名字不是 .aos2：照字面，node 是 .aos/
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.exists(".aos/.aos2/tick/current.json"))
+        self.assertFalse(self.exists(".aos/tick"))
+
+    def test_bad_values_are_usage_errors(self):
+        self.tasks(sh("t", "touch ran"))
+        for bad in ("a/b", "/tmp", ".", "..", "x/"):
+            r = self.tick(env={"AOS_DIRNAME": bad})
+            self.assertEqual(r.returncode, 1, bad)
+            self.assertIn("usage:", r.stderr)
+            self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertFalse(self.exists("ran"))
+        self.assertEqual(sorted(os.listdir(self.d)), [".aos"])
+        self.assertEqual(os.listdir(os.path.join(self.d, ".aos")), ["tasks.json"])
 
 
 class Step9Whole(TickCase):

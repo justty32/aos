@@ -45,6 +45,19 @@ class SpawnTargetTests(Base):
         self.assertEqual(cm.exception.code, code)
         self.assertTrue(cm.exception.msg)
 
+    def test_dir_name_from_env(self):
+        """proto6 新增（使用者 2026-10-01）：資料夾目標的 `.aos` 照 AOS_DIRNAME；不合法丟 SpawnFailed。"""
+        self.inst({"argv": ["true"]}, ".aos2/inst.json")
+        with mock.patch.dict(os.environ, {"AOS_DIRNAME": ".aos2"}):
+            child = self.spawn(self.d)
+            os.write(child.process.stdin.fileno(), b'{"jsonrpc":"2.0","method":"go"}\n')
+            self.wait(lambda: child.process.poll() is not None)
+            self.assertEqual(child.finish(), (0, "child"))
+        with mock.patch.dict(os.environ, {"AOS_DIRNAME": "a/b"}):
+            self.bad(self.d, "SpawnFailed")
+        with mock.patch.dict(os.environ, {"AOS_DIRNAME": ""}):
+            self.bad(self.d, "SpawnFailed")                       # 空＝.aos，這裡沒有
+
     def test_pipe_waits_for_caller_go(self):
         marker = os.path.join(self.d, "marker")
         target = self.job("import sys,pathlib; line=sys.stdin.readline(); "

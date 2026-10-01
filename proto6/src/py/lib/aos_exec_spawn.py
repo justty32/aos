@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 
+import aos_dirname
 import aos_inst
 from aos_directives import Context, DirectiveError, Document, resolve_located
 from aos_exec_run import _execute_inst, _find_dir_inst, _finish, _no_dir_inst_msg
@@ -50,6 +51,8 @@ def spawn_target(xxx, launcher=None):
     launcher = launcher or _spawn_control
     p = os.path.abspath(xxx)
     if os.path.isdir(p):
+        if aos_dirname.error():                 # proto6 改：AOS_DIRNAME 不合法
+            raise SpawnError("SpawnFailed", aos_dirname.error())
         target, base = _find_dir_inst(p), p     # proto6 改：.aos/inst.json 再 inst.json
         if target is None:
             raise SpawnError("SpawnFailed", _no_dir_inst_msg(p))

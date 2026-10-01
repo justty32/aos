@@ -26,8 +26,8 @@ def _read_seq(path):
 class Record:
     """一格的結束碼紀錄。`current` 就是給任務的 `AOS_TICK_RECORD`。"""
 
-    def __init__(self, node_dir):
-        self.dir = os.path.join(node_dir, ".aos", "tick")
+    def __init__(self, node_dir, dirname=".aos"):
+        self.dir = os.path.join(node_dir, dirname, "tick")      # dirname：node 狀態資料夾名（AOS_DIRNAME）
         self.current = os.path.join(self.dir, "current.json")
         self.last = os.path.join(self.dir, "last.json")
         self.tmp = os.path.join(self.dir, ".current.json.tmp")

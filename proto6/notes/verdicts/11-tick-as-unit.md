@@ -94,7 +94,7 @@
 - **總原則**：默認環境一切正常——檔案寫得進、讀得懂、沒壞、不斷電。不為異常寫處理，出事就讓它自然丟錯（Python traceback，回 1）。
 - **紀錄**：`current.json`／`last.json` 默認是好的；舊紀錄讀不懂（`record_unreadable`）不處理。寫紀錄失敗回 1、跟任務失敗分不出來，照舊。
 - **`--firstdo-fsync`**（含 `AOS_TICK_FIRSTDO_FSYNC`）：POC 先不做。
-- **同資料夾互斥（B-602）**：默認沒有別人在跑，整個拿掉——不取鎖、不回 75、不傳鎖 fd。
+- **同資料夾互斥（B-602）**：~~默認沒有別人在跑，整個拿掉——不取鎖、不回 75、不傳鎖 fd。~~（同日加回最簡版，拿不到鎖回 2，見下面「aos-tick 最簡互斥與讀表時機」）
 - **上下層判定（B-628）**：不需要，拿掉。
 - **任務表不合法**：拿掉驗表與回 2，默認表是對的；整格碼只剩 0／1。
 - **帳號**：tick 不看 `user`、不回 125，照自己的帳號跑。
@@ -163,7 +163,7 @@
 - **`methods` 從規範拿掉**：寫了就當陌生鍵照收、不理（跟 `group`、`needs` 一樣）。理由：第二十批後檔案收件是普通程式、`aos-mq` 不看 `methods`，aos 自己沒有程式用它。
 - 每項沒寫 `_metainfo`：從 proto5 複製的 `aos_inst` 本來就當 posix 第 1 版，照跑；寫了但值不對，跑到那一項展開成 inst 時自然丟錯（traceback）、回 1（前面的項已跑，紀錄停在 `ended:false`），`aos_inst` 不改。
 - 實作自己定的（可改）：
-  - 檢查在「換紀錄」之後（照 B-620 順序），所以表壞的那格仍佔一個 `seq`、紀錄停在 `ended:false`。
+  - ~~檢查在「換紀錄」之後（照 B-620 順序），所以表壞的那格仍佔一個 `seq`、紀錄停在 `ended:false`。~~（同日改：移到換紀錄之前，見下一節）
   - `id` 不是字串時 `AOS_TASK_ID` 用 `str()`（紀錄照原值寫）。
 
 **待改的 spec 處**（統一更新時照這節改）
@@ -171,3 +171,59 @@
 - [P-202](../../spec/settled/protocol/node.md#p-202任務註冊表建議預設未拍板) 的欄位表與 `node-tasks` schema 的 `required`：`kind` 改不必填；`id` 不再是核心必查（schema 是否仍列必填，統一更新時定）；`methods` 與其「同一項不重複」檢查刪掉。
 - [B-620](../../spec/settled/tick.md#b-620任務註冊表照表依序跑)「讀表與誰驗什麼」：核心只做上面的極簡檢查，不過回 1。
 - [B-633](../../spec/settled/tick.md#b-633每項結束碼紀錄與格數)／P-213 與 `node-tick-record` schema：`id` 的說明補「任務表沒寫 `id` 時是位置字串」；上面「任務環境變數命名」那條的 `AOS_TASK_ID` 同。
+
+### aos-tick 最簡互斥與讀表時機（待統一更新 spec）
+
+〔使用者方向 2026-10-01〕理由：外層定期跑 `aos-tick`，上一格沒跑完下一格就來，這是正常使用會碰到的。
+
+**這節是正本，spec 這輪一字未動，待統一更新 spec。** 取代上面「POC 默認一切正常」裡「同資料夾互斥整個拿掉」那條，和上一節「實作自己定的：檢查在換紀錄之後」那條。
+
+- **加回最簡互斥**：開格前對 `<node>/.aos/tick.lock` 取非阻塞 `flock`（不存在就建）。拿不到就 stderr 一行 `busy: …`、回 2（正常中斷），不寫紀錄、不加 `seq`。拿到就整格持鎖、程序結束自然放。
+- **鎖 fd 不傳給任務**（Python `os.open` 預設不可繼承、`Popen` 預設 `close_fds`）；沒有 `AOS_TICK_LOCK_FD`、不回 75。任務留下的後代因此也不會佔住鎖。
+- **讀表移到換紀錄之前**：任務表讀不到或極簡檢查不過 → `bad_table:`、回 1，**不算開過一格**：不換 `current.json`／`last.json`、不加 `seq`。
+- **一格的順序**：認 node 與任務表 → 取鎖 → 看擋板檔 → 讀表（極簡檢查）→ 換紀錄 → 刪停格檔 → 照表跑 → 回結束碼。
+- **不做**：任務逾時、tick 被殺時清它的孩子（留給 daemon 段）。任務輸出預設照 inst 接 `/dev/null`，不動。
+- **照舊**：檔在 `.aos/` 裡時 node 取上一層；只寫 `--node` 不給值算用法錯回 1；`id` 非字串時 `AOS_TASK_ID` 照 `str()`。
+- 實作自己定的（可改）：鎖在擋板之前（照原 B-602「取鎖是定位資料夾之後第一件事」）；同時被佔又有擋板時回 `busy:`（兩者都是 2，只差 stderr）。認資料夾失敗時還沒取鎖、什麼都不建。鎖檔 tick 不刪。
+
+**aos-tick 碼表補一列**（上面「aos 結束碼慣例」碼表統一更新時加上）：同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`）→ 2，不寫紀錄、不加 `seq`。
+
+**待改的 spec 處**
+
+- [B-602](../../spec/settled/tick.md#b-602同一資料夾一次一格互斥鎖)：拿不到鎖的碼 75 → 2；拿掉「鎖 fd 傳給任務」與 `AOS_TICK_LOCK_FD`（P-203 環境變數表同）；「POC 先不做」的標註改成「最簡版已做」。
+- [B-620](../../spec/settled/tick.md#b-620任務註冊表照表依序跑)「一格怎麼走」：讀表移到換紀錄之前；表壞不佔 `seq`。
+- [B-633](../../spec/settled/tick.md#b-633每項結束碼紀錄與格數)：「表壞的格也佔一個 `seq`」一類的話拿掉。
+
+### `AOS_DIRNAME` 狀態資料夾的名字（待統一更新 spec）
+
+〔使用者方向 2026-10-01〕aos-tick 讀環境變數 `AOS_DIRNAME` 決定 node 狀態資料夾的名字；使用者追加原話：「aos-exec那邊，我覺得可以加上這個AOS_DIRNAME」。
+
+**這節是正本，spec 這輪一字未動，待統一更新 spec。之後 aos 所有程式都照這個變數。**
+
+- **只換名字**，位置仍在 node（或 aos-exec 的目標資料夾）裡。沒設或空字串＝`.aos`。
+- **不合法**：值含 `/`、或是 `.`、`..` → 用法錯，stderr 一行。碼照各程式自己的用法錯：`aos-tick` 回 1；`aos-exec` 照它現有的碼回 2（它的碼表這輪不動，見上面「aos 結束碼慣例」待改清單裡 aos-exec 那條）；daemon 用的 `spawn_target` 丟 `SpawnFailed`。
+- **aos-tick**：所有原本寫死 `.aos` 的地方都照它——`tasks.json`、`tick.lock`、`tick-blocked`、`tick/stop`、`tick/current.json`／`last.json`、`--node` 合法判斷（資料夾要有 `<名字>/tasks.json`）、檔案模式「所在資料夾叫這個名字就往上取一層」的特判。環境變數照常傳給任務，不另處理。
+- **aos-exec**：資料夾目標「先 `<目標>/.aos/inst.json`、再 `<目標>/inst.json`」的 `.aos` 照它；不合法只在資料夾目標時擋（直接給檔、`.json` 目標不受影響）。
+- 實作：判斷放 `proto6/src/py/lib/aos_dirname.py` 一處，aos-tick 與 aos-exec 都 import 它。
+
+**待改的 spec 處**
+
+- [inst.md「inst 目標」](../../spec/base/inst.md)：資料夾目標找 `.aos/inst.json` 的 `.aos` 改照 `AOS_DIRNAME`。
+- [P-203](../../spec/settled/protocol/node.md#p-203aos-tick-與任意任務程式建議預設未拍板)、P-202、P-213、B-602、B-620、B-633 等寫死 `.aos/…` 的地方：註明 `.aos` 是 `AOS_DIRNAME` 的預設值；P-203 環境變數表加 `AOS_DIRNAME`（任務照常繼承）。
+- 新增一處通用規定（跟「aos 結束碼慣例」同篇或相鄰）：`AOS_DIRNAME` 的意思、預設、不合法的值，以及「aos 所有程式都照它」。
+
+### aos-exec 不認得頂層 `user`（待統一更新 spec）
+
+〔使用者方向 2026-10-01〕使用者原話：「aos-exec應該也不需要認得頂層user吧。」
+
+**這節是正本，spec 這輪一字未動，待統一更新 spec。**
+
+- 從 proto5 複製的 `aos_inst`／`aos-exec` 撤回 proto6 加的「認得頂層 `user`」（解析帳號、跟目前身分不同就 `UserNotGranted`、型別錯 `UserInvalid`、都回 125）。回到 proto5 原樣：`user` 當不認得的鍵照 inst 規則忽略，照目前身分跑。
+- aos-tick 原本「交給 `load_obj` 前先拿掉 `user`」因此多餘，拿掉；tick 本來就不看 `user`（見上面「POC 默認一切正常」）。
+- 現在 proto6 的 aos-exec 跟 proto5 不同的只剩「資料夾目標」那一處：先找 `<目標>/.aos/inst.json` 再找 `<目標>/inst.json`，`.aos` 照 `AOS_DIRNAME`。
+
+**待改的 spec 處**
+
+- [inst.md](../../spec/base/inst.md) 的頂層 `user`（「形狀與版本」「先決定身分，切完才解析」等處）：aos-exec 不認得它；`user` 是否還留在 inst 第 1 版、留給誰（例如之後的 daemon／runner 切帳號）用，統一更新時定。
+- B-620「任務的帳號」、P-202 欄位表裡 `user` 的說明：核心與 aos-exec 都不看。
+- 寫「`user` 跟目前身分不同就 125」的地方（含 conformance 場景）。
