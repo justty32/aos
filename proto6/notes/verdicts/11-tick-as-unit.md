@@ -404,3 +404,14 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **照現寫法，使用者說 OK**：頂層陌生鍵讀表時不解（疑點 5）；`AOS_DIRNAME=""` 時跟固定排除同名的使用者檔風險自負（疑點 2）；整項 `$ref` 或從別檔引進的預設值，合併後的 `$ref:""`／`#…` 指合併後的這一項（疑點 6）。
 
 改到的地方：[B-620](../../spec/settled/tick.md)、[P-202](../../spec/settled/protocol/tick.md)、[C-11](../../spec/settled/conventions.md)、[整理區 README 疑點](../../spec/settled/README.md)、`tick-tasks.schema.json` 與新範例 `tasks.no-metainfo.valid.json`；程式 `lib/aos_tick_table.py`（`modules` 整個展開）、測試 `test_tick.py`、[src/py README](../../src/py/README.md)。
+
+<a id="2026-10-01-第四批aos-config-add-搬暫緩區擋板檔與停格檔照現狀"></a>
+
+## 2026-10-01 第四批：`aos-config-add` 搬暫緩區、擋板檔與停格檔照現狀（已寫入 spec（commit 前由我補號））
+
+〔使用者裁定 2026-10-01〕對[整理區 README 疑點](../../spec/settled/README.md#2026-10-01-第二批astra-審查與使用者裁定落實)「這輪落筆時發現」第 1 條（`aos-config-add` 的旗標）的裁定，加上擋板檔與停格檔的處理。使用者原話：「tick-blocked, tick/stop就先這樣。」
+
+- **`aos-config-add` 搬暫緩區**：它是 2026-09-29 規劃、從沒寫過程式的「在 tick 外把設定檔裝進 `config/`」指令，整個先不做，旗標名等加回來時再定。B-625「改設定」表的普通設定那列與相關驗收搬到[暫緩區 tick](../../spec/settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)，格式 P-207 整條搬到[暫緩區 tick 協議](../../spec/settled/deferred/protocol/tick.md)；原處留一句指過去。現在要改 `config/` 就自己改（tick 外的寫入者算外部世界）。條號保留、不重用。
+- **擋板檔（`tick-blocked`）與停格檔（`tick/stop`）先照現狀不動**：原本寫的「之後會詳細設計」保留，旁邊補一句「2026-10-01 使用者：先照現狀」。
+
+改到的地方：[暫緩區](../../spec/settled/deferred/README.md)（檔案表、總表、區外暫緩的段落）、[暫緩區 tick](../../spec/settled/deferred/tick.md)、新檔[暫緩區 tick 協議](../../spec/settled/deferred/protocol/tick.md)；[tick/recovery.md](../../spec/settled/tick/recovery.md)、[tick/ 入口](../../spec/settled/tick/README.md)、[tick 協議](../../spec/settled/protocol/tick.md)（P-207 原處、P-213 一句）、[tick 核心](../../spec/settled/tick.md)（B-620 一句）、[整理區 README](../../spec/settled/README.md)（疑點 1 標已裁定）；區外就地標「暫緩（2026-10-01）」：[H-004 第 16 列](../../spec/cli/commands.md)、[A-102](../../spec/agent/configuration.md)、[C-07](../../spec/contracts.md)、[驗收入口](../../spec/conformance.md) V-03 一句、[協議條號表](../../spec/protocol/README.md) P-207；[plan README](../../plan/README.md) 第二段、[m1-tick-core](../../plan/m1-tick-core.md) 一句。

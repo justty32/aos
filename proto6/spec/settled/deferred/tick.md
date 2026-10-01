@@ -5,7 +5,8 @@
 **這篇整篇在暫緩區。** 2026-10-01 使用者定 POC「默認一切正常、先不考慮邊緣狀況」，tick 核心縮成三件事：簡單互斥鎖、照表跑、每項結束碼紀錄（[B-626](../tick.md#b-626核心與系統級任務的界線)）。原本寫在 [tick](../tick.md) 裡、現在先不做的規定搬到這裡，原文照留，條號保留、不重用。現行規定一律看 [tick](../tick.md) 與 [tick 協議](../protocol/tick.md)。
 
 - 整條搬來的：B-628 上下層判定。
-- 部分搬來的：B-602、B-620、B-633 各有一段（標題寫成「暫緩：B-xxx …」，原條還在 tick.md）。
+- 部分搬來的：B-602、B-620、B-633 各有一段（標題寫成「暫緩：B-xxx …」，原條還在 tick.md）；B-625 的 `aos-config-add` 那段（原條還在 [tick/recovery.md](../tick/recovery.md)）。
+- 協議那側整條搬來的：P-207 `aos-config-add` 的格式，在 [protocol/tick.md](protocol/tick.md)。
 - 篇末「已撤回／被取代」列的是被新設計換掉的舊做法，不是暫緩，以後也不會回來。
 
 原文裡的「node」在 tick 這層讀成「工作資料夾」；`.aos` 是 `AOS_DIRNAME` 沒設時的名字（[C-09](../conventions.md)）；原文的結束碼 75、2、125 等是舊碼表，回來時要照 [C-08](../conventions.md) 重定。
@@ -102,6 +103,20 @@
 （`AOS_TICK_RECORD` 已被 `AOS_TICK_CWD` 取代，見篇末；這段回來時要改成從 `$AOS_TICK_CWD` 找紀錄、另想「不知道」怎麼表示。）
 
 **原驗收：**帶 `--firstdo-fsync`（或 daemon 帶了旗標）時，第一項開跑後模擬斷電（丟掉沒 fsync 的寫入），重開後下一格的 `seq` 仍比斷電那格大；沒帶時不要求。
+
+## 暫緩：B-625 加入普通設定（`aos-config-add`）
+
+> **暫緩**（2026-10-01）：使用者 2026-10-01 裁定 `aos-config-add` 搬暫緩區。它是 2026-09-29 規劃、從沒寫過程式的「在 tick 外把設定檔裝進 `config/`」指令。現在要改 `config/` 裡的檔就自己改（tick 外的寫入者算外部世界，[B-602](../tick.md#b-602同一資料夾一次一格互斥鎖)）。原條 B-625 的當機恢復、重要設定手改、恢復前驗證還在 [tick/recovery.md](../tick/recovery.md)。格式 P-207 一起搬來，見 [protocol/tick.md](protocol/tick.md)。條號保留、不重用。
+
+原文（2026-10-01 搬家前的版本，B-625「改設定」表的第一列與「有 git 時」的相關句）：
+
+| 改什麼 | 怎麼改 |
+|---|---|
+| 普通設定（`config/` 裡的檔） | 在 tick 外用 `aos-config-add`（argv 見 [P-207](protocol/tick.md)）：非阻塞取同一把 `.aos/tick.lock`（B-602），拿不到回 75（它自己特別指定的碼，[C-08](../conventions.md)）；有擋板檔就不寫、回 125。寫法：在目標旁寫完整暫存檔 → fsync → rename 替換 → fsync 目錄。沒變動就不寫。不能在同一個工作資料夾的 tick 內呼叫 |
+
+- **有 git 時**〔暫定〕：`config/` 不在 aos 範圍（[B-630](../tick/git.md)），`aos-config-add` 也不自己提交；要留歷史就自己 `git commit`。
+
+**原驗收：**`aos-config-add` 寫入後下一格讀得到新值，寫到一半被殺時目標是舊版或新版、不會半份，有 git 時不產生 commit；有擋板時回 125、目標不變。
 
 ## 已撤回／被取代
 

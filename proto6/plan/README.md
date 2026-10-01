@@ -35,8 +35,8 @@
 
 ### 第二段：不靠 daemon 的系統級任務與普通程式
 
-- **目標**：掛在任務表上的 `aos-git open／mark／close`、`aos-publish`、`aos-clean`，普通程式 `aos-needs`，以及 tick 外的 `aos-config-add`、恢復前驗證；兩版標準任務表範本跑得起來。
-- **主要 spec**：[B-630、B-622、B-632、B-621、B-624（發摘要）、B-625、B-629](../spec/settled/tick/git.md)；[B-404](../spec/base/storage.md)；格式 [P-204、P-205、P-207、P-210](../spec/settled/protocol/tick.md)。
+- **目標**：掛在任務表上的 `aos-git open／mark／close`、`aos-publish`、`aos-clean`，普通程式 `aos-needs`，以及 tick 外的 ~~`aos-config-add`~~（2026-10-01 使用者裁定搬[暫緩區](../spec/settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)）、恢復前驗證；兩版標準任務表範本跑得起來。
+- **主要 spec**：[B-630、B-622、B-632、B-621、B-624（發摘要）、B-625、B-629](../spec/settled/tick/git.md)；[B-404](../spec/base/storage.md)；格式 [P-204、P-205、P-210](../spec/settled/protocol/tick.md)（~~P-207~~ 隨 `aos-config-add` 搬暫緩區）。
 - **可單獨跑的樣子**：一樣直接跑 `aos-tick`。有 git 的機器上每格最多一個 commit；沒 git 時 `aos-git` 只印 `no_git`、回 0。
 - **界線**：全部是「讀寫檔案」就做得完的事，不碰通道。恢復前驗證只寫檢查本身，送 `node.resume` 等第三段。
 

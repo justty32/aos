@@ -96,7 +96,7 @@
 |---|---|---|
 | 誰叫醒成員、補查、登記成員、資源 | [S-201、S-202、S-203](../scheduling/admission.md)、[P-802](../protocol/kernel-tasks.md) | B-504、B-601、B-603、B-604、B-606、B-614 |
 | unknown 判讀、事項處理 | [S-401、S-405](../scheduling/operations.md) | B-601、B-603、B-604、B-607、B-613、B-624 |
-| kernel／agent 的領域設定驗證 | [A-102](../agent/configuration.md) | B-625、P-207、P-210 |
+| kernel／agent 的領域設定驗證 | [A-102](../agent/configuration.md) | B-625、P-210（P-207 2026-10-01 搬[暫緩區](deferred/protocol/tick.md)） |
 | 掛行程的參數怎麼填（agent 自跑工具、LLM 池代發） | [P-402](../protocol/work.md) | B-613 |
 | kernel／agent 範本 | [P-715](../protocol/agent-tasks.md)、[P-814](../protocol/kernel-tasks.md) | B-629、P-210 |
 | LLM 與工具路線的核對、kernel 對成員的觀察權 | [B-506](../base/transport.md) | P-208 |
@@ -144,7 +144,7 @@
 
 這輪落筆時發現、先照下面寫法、要使用者裁定的：
 
-1. **`aos-config-add` 的旗標**：tick 層改名時從 `--node <node_dir>` 改成 `--dir <工作資料夾>`（[P-207](protocol/tick.md)）。程式還沒寫，沒有相容問題；名字請確認。
+1. ~~**`aos-config-add` 的旗標**：tick 層改名時從 `--node <node_dir>` 改成 `--dir <工作資料夾>`（P-207）。程式還沒寫，沒有相容問題；名字請確認。~~ **已裁定：搬暫緩區**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第四批aos-config-add-搬暫緩區擋板檔與停格檔照現狀)）：`aos-config-add` 從沒寫過程式，整個指令（B-625 那段與 P-207）搬到[暫緩區](deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)；旗標名等加回來時再定。
 2. ~~**`AOS_DIRNAME=""` 時的固定排除**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：狀態資料夾就是工作資料夾，`aos-git` 固定排除的 `tick/`、`tick.lock` 等直接落在工作資料夾頂層；使用者自己的檔剛好同名就不提交也不還原，風險自負（[B-622](tick/git.md)）。
 3. ~~**tasks.json 頂層 `_metainfo` 在 schema 是必填**，要不要改成可省？~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：頂層 `_metainfo` 可省，schema 的 `required` 拿掉；每項的 `_metainfo` 照 inst 規則可省（沒寫＝posix 第 1 版），寫了跑到那一項才驗，驗不過＝跑到某項展開失敗（[B-620](tick.md)、[P-202](protocol/tick.md)）。
 4. ~~**`modules` 內部 tick 不展開，daemon 那邊整份展開**，兩邊不同。~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：tasks.json 的 `modules` 讀表時也整個展開，跟 daemon 設定檔一致；展開失敗＝`bad_table`、回 1（[C-11](conventions.md)、[B-620](tick.md)）。
@@ -172,7 +172,7 @@
 
 | 篇 | 條號 | 衝突在哪 |
 |---|---|---|
-| agent | [A-102](../agent/configuration.md)（第 17、21、24 行） | 「由標準配備的 git 提交」「node 是 dirty 就拒絕」；現在 `config/` 不在 aos 範圍、`aos-config-add` 不提交 |
+| agent | [A-102](../agent/configuration.md)（第 17、21、24 行） | 「由標準配備的 git 提交」「node 是 dirty 就拒絕」；現在 `config/` 不在 aos 範圍、`aos-config-add` 不提交（2026-10-01 `aos-config-add` 搬暫緩區，A-102 那段已標暫緩） |
 | agent | [A-403 等](../agent/tools.md) | 「標準配備」「cgroup 讀數；備援」字樣 |
 | base | [B-503](../base/transport.md) | 補投從 git 歷史撈 `.aos/outbox/`（檔案收件已不歸 aos） |
 | base | [storage](../base/storage.md) 第 12、31 行 | 「git 還原不碰」與提交語意是整格原子的舊說法 |
@@ -205,7 +205,7 @@
 2. B-609：`aos-as` 寫的暫存 inst 要讓目標帳號讀得到，才過得了 runner 的來源核對；怎麼給讀權（群組？）還沒定。
 3. B-633：沒有紀錄的格不佔 `seq`（現行）；兩份舊紀錄都讀不懂時每格都沒有紀錄、要人手修（2026-10-01 跟紀錄失效處理一起暫緩，見[暫緩區](deferred/tick.md)）。
 4. B-620「誰驗什麼」：核心看到缺 `kind`、`system.x` 照跑，只有恢復前驗證（B-625）擋。
-5. B-625、P-207：`aos-config-add` 有擋板時回 125。
+5. B-625、P-207：`aos-config-add` 有擋板時回 125。（2026-10-01 隨 `aos-config-add` 搬[暫緩區](deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)。）
 6. B-606：名稱綁 UID 只在本次 daemon 存續期內有效，不存檔。
 7. B-610、B-607（裁-2 落地）：`mount_diag_ttl_ticks` 數上層那筆登記的 `tick_seq`，是「時長一律數 `seq`」的唯一例外。runner 的 `--timeout-ms` 照第二十批疑-11 仍是毫秒。
 8. B-623（裁-1 落地）：只有 `aos-mq get` 取佇列是 node 內的約定，daemon 分不出是哪一項在取。沒有通道時 `aos-mq` 回 0。

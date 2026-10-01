@@ -170,7 +170,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-204 | 成敗與 aos-needs | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-205 | aos-git：開格、存檔點、收尾 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-206 | 收件、派送與發摘要 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
-| P-207 | 加入普通設定與重要設定手改 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-207 | 加入普通設定與重要設定手改〔暫緩，2026-10-01〕 | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-208 | 收件區權限 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-209 | 待決與跨篇 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-210 | 預設範本與恢復前驗證 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
