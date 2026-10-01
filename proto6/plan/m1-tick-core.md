@@ -2,11 +2,13 @@
 
 ← [plan 入口](README.md)｜正本：[通用 tick](../spec/settled/tick.md)｜格式：[node 協議](../spec/settled/protocol/node.md)
 
-**做完的樣子**：沒有 daemon、git、cgroup、helper 的機器上，`aos-tick --node /絕對路徑` 直接跑一格：照 `.aos/tasks.json` 依序跑、每項怎麼結束都寫進 `.aos/tick/current.json`、~~整格回 0／1~~ 照表跑完回 0（任務成敗只記、不影響 tick 的碼；2026-10-01 改，見待問 9）。這是 [B-626](../spec/settled/tick.md#b-626核心與系統級任務的界線) 驗收的 POC 版；~~同資料夾只能一格~~、~~算得出預設上層~~（2026-10-01 作廢，見待問 8）。
+**做完的樣子**：沒有 daemon、git、cgroup、helper 的機器上，`aos-tick --node <資料夾或任務表檔>`（~~/絕對路徑~~，2026-10-01 改，見待問 10）直接跑一格：照 `.aos/tasks.json` 依序跑、每項怎麼結束都寫進 `.aos/tick/current.json`、~~整格回 0／1~~ 照表跑完回 0（任務成敗只記、不影響 tick 的碼；2026-10-01 改，見待問 9）。這是 [B-626](../spec/settled/tick.md#b-626核心與系統級任務的界線) 驗收的 POC 版；~~同資料夾只能一格~~、~~算得出預設上層~~（2026-10-01 作廢，見待問 8）。
 
 > **POC 總原則（2026-10-01，見待問 8）**：默認一切正常——寫得進、讀得懂、不斷電、沒有別人同時在跑、表是對的、帳號是對的。不寫異常處理，出事讓 Python 自然丟錯、回 1。下面各步裡跟這條衝突的句子都劃掉、註明 2026-10-01 作廢。
 >
-> **結束碼（2026-10-01，見待問 9）**：照 aos 體系慣例（0 正常結束、1 錯誤結束、2 正常中斷，全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)，待統一更新 spec）。`aos-tick` 只回：照表跑完或停格檔停下 0、擋板檔 2、tick 自己出錯 1；任務的碼只記進紀錄、完全不影響 tick。`--node` 底下必須有 `.aos/inst.json`，沒有回 1（拿掉交給 aos-exec 的退路）。下面各步跟這條衝突的句子劃掉、註明。
+> **結束碼（2026-10-01，見待問 9）**：照 aos 體系慣例（0 正常結束、1 錯誤結束、2 正常中斷，全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)，待統一更新 spec）。`aos-tick` 只回：照表跑完或停格檔停下 0、擋板檔 2、tick 自己出錯 1；任務的碼只記進紀錄、完全不影響 tick。~~`--node` 底下必須有 `.aos/inst.json`，沒有回 1~~（拿掉交給 aos-exec 的退路；inst.json 那半句同日再改，見下條）。下面各步跟這條衝突的句子劃掉、註明。
+>
+> **`--node`（2026-10-01，見待問 10，待統一更新 spec）**：省略用 `./`、相對路徑轉絕對；資料夾要有 `.aos/tasks.json`（不看 `.aos/inst.json`，tick 跟 inst.json 分開），沒有回 1；給檔就拿它當這一格的任務表、它所在的資料夾當 node（檔在 `.aos/` 裡時取上一層）；不存在回 1。
 
 - 由 AI 隊實作、照各步驟驗收試跑，做完交使用者看；每步的「要使用者裁定的點」集中在文末待問。
 - Python 3.9、只用標準庫。inst 的解析、驗證、開程序用從 proto5 複製來的 [src/py/lib/](../src/py/README.md)：`aos_inst.load(path, base)`／`aos_inst.load_obj(obj, base)` 讀驗解一份 inst（壞就丟 `InstError`，`str(e)` 是「代號: 白話」），`aos_exec` 開程序。lib 沒有、tick 要自己接的東西寫在步驟 4 的「注意」與步驟 5 的「tick 要自己接」。
@@ -19,20 +21,25 @@
 - **要做到**：認出要跑哪個資料夾。~~對 `.aos/tick.lock` 取非阻塞獨占鎖；拿不到就回 75、什麼都不動。拿到就整格持鎖。~~（2026-10-01 作廢）
 - **spec**：[B-602](../spec/settled/tick.md#b-602同一資料夾一次一格互斥鎖)；argv 見 [P-203](../spec/settled/protocol/node.md#p-203aos-tick-與任意任務程式建議預設未拍板)。
 - **做法**：
-  - `--node` 可以是資料夾、`.aos/inst.json` 或 `inst.json`，一律正規化成 node 資料夾；省略時用目前目錄。
+  - ~~`--node` 可以是資料夾、`.aos/inst.json` 或 `inst.json`，一律正規化成 node 資料夾；~~省略時用目前目錄。（2026-10-01 改，待問 10：）
+  - 相對路徑一律轉成絕對再用。是資料夾：要有 `.aos/tasks.json`，沒有就 stderr `no_tasks:`、回 1、什麼都不建。是檔：這個檔就是這一格的任務表（~~不另驗格式，壞了讀表時自然丟錯回 1~~ 照步驟 4 的極簡檢查，不過回 1，待問 11），它所在的資料夾當 node（擋板檔、停格檔、紀錄都在 node 的 `.aos/` 下，`.aos/`、`.aos/tick/` 不在就建，只建資料夾）；那個資料夾若叫 `.aos`，node 取它的上一層。不存在：stderr `no_node:`、回 1。
   - ~~取鎖是「定位資料夾之後第一件事」；拿不到直接回 75，不重試、不寫紀錄。~~（2026-10-01 作廢）
   - ~~鎖 fd 要留給任務繼承（步驟 5 用）。~~（2026-10-01 作廢）
   - argv 解析、用法錯回 ~~2~~ 1（2026-10-01，待問 9）、~~鎖檔不存在就建立~~（2026-10-01 作廢）、`chdir` 到 node 資料夾。
-- **要使用者裁定的點**：已裁定（待問 5、6）：`.aos/` 不存在時照 aos-exec 找檔——有 `inst.json` 就像 aos-exec 跑一次（不取鎖、不寫紀錄、退出碼照 aos-exec）；兩個都沒有才直接報錯、不自建~~，回 2、stderr `config_invalid: …`（照 P-203 碼表「任務表不合法」歸 2）。`.aos/` 在時鎖檔不存在照 B-602 建立。~~（2026-10-01 改：整個交給 aos-exec，兩個都沒有時就是 aos-exec 自己的用法錯 2、stderr `aos-exec: …`；鎖檔不建）~~（2026-10-01 再改，待問 9：退路整個拿掉——`--node` 指的資料夾必須有 `.aos/inst.json`，沒有就 stderr `no_inst: …`、回 1、什麼都不建；只有頂層 `inst.json` 也一樣回 1）
+- **要使用者裁定的點**：已裁定（待問 5、6）：`.aos/` 不存在時照 aos-exec 找檔——有 `inst.json` 就像 aos-exec 跑一次（不取鎖、不寫紀錄、退出碼照 aos-exec）；兩個都沒有才直接報錯、不自建~~，回 2、stderr `config_invalid: …`（照 P-203 碼表「任務表不合法」歸 2）。`.aos/` 在時鎖檔不存在照 B-602 建立。~~ ~~（2026-10-01 改：整個交給 aos-exec，兩個都沒有時就是 aos-exec 自己的用法錯 2、stderr `aos-exec: …`；鎖檔不建）（2026-10-01 再改，待問 9：退路整個拿掉——`--node` 指的資料夾必須有 `.aos/inst.json`，沒有就 stderr `no_inst: …`、回 1、什麼都不建；只有頂層 `inst.json` 也一樣回 1）~~（2026-10-01 三改，待問 10：改看 `.aos/tasks.json`，見上面「做法」）
 - **注意**：
   - ~~Python 開的 fd 預設不會傳給子程序；要傳就得明講（`pass_fds` 或設成可繼承），不然任務拿不到鎖。~~（2026-10-01 作廢）
   - ~~鎖檔放 `.aos/tick.lock`，**不是**探針原型放的 git 管理目錄。~~（2026-10-01 作廢）
-  - `--node` 指定時要是絕對路徑（node id 的定義，P-002）；不往上層目錄找。
+  - ~~`--node` 指定時要是絕對路徑（node id 的定義，P-002）；~~不往上層目錄找。（2026-10-01 改，待問 10：相對路徑轉成絕對，node id 仍是絕對路徑）
 - **驗收**：
   - ~~同資料夾同時跑兩個（第一格的任務 `sleep 5`）：一個回 75、另一個照跑。~~（2026-10-01 作廢）
-  - ~~用資料夾路徑跑一格佔著，同時用 `.aos/inst.json` 路徑跑另一格：回 75（同一把鎖）。~~（2026-10-01 作廢）改成：用資料夾、`.aos/inst.json`、`inst.json` 三種路徑各跑一格，都跑在同一個 node（`seq` 接著數）。
+  - ~~用資料夾路徑跑一格佔著，同時用 `.aos/inst.json` 路徑跑另一格：回 75（同一把鎖）。~~（2026-10-01 作廢）改成：~~用資料夾、`.aos/inst.json`、`inst.json` 三種路徑各跑一格，都跑在同一個 node（`seq` 接著數）。~~（2026-10-01 作廢，待問 10）
   - 資料夾不是 git repo 也跑得動~~拿得到鎖~~。
-  - （2026-10-01，待問 9）沒有 `.aos/inst.json`（不管有沒有頂層 `inst.json`、有沒有 `.aos/`）：回 1、stderr `no_inst:`、沒跑任務、沒建紀錄；argv 錯、`--node` 不是絕對路徑或不是資料夾：回 1。
+  - ~~（2026-10-01，待問 9）沒有 `.aos/inst.json`（不管有沒有頂層 `inst.json`、有沒有 `.aos/`）：回 1、stderr `no_inst:`、沒跑任務、沒建紀錄；argv 錯、`--node` 不是絕對路徑或不是資料夾：回 1。~~（2026-10-01 作廢，待問 10）
+  - （2026-10-01，待問 10）不給 `--node` 用目前目錄、給相對路徑也跑在同一個 node（`AOS_NODE_DIR` 是絕對路徑）。
+  - 資料夾沒有 `.aos/tasks.json`（有沒有 `.aos/`、只有 `.aos/inst.json` 或頂層 `inst.json` 都一樣）：回 1、stderr `no_tasks:`、沒跑任務、沒建紀錄；有 `tasks.json` 沒有 `inst.json` 照跑。
+  - 給檔：照這個檔跑（不看 node 的 `.aos/tasks.json`），紀錄寫在所在資料夾的 `.aos/tick/`；所在資料夾沒有 `.aos/` 也能跑、連跑 `seq` 接著數；給 `yyy/.aos/tasks.json` 跟給 `yyy` 是同一個 node；檔壞回 1。
+  - `--node` 指的東西不存在：回 1、stderr `no_node:`；argv 錯：回 1。
 
 ## 步驟 2：擋板檔與結束碼骨架
 
@@ -60,10 +67,11 @@
 ## 步驟 4：讀任務表~~、只驗四件事~~
 
 - **2026-10-01（待問 8）**：驗表整個拿掉——默認表是對的，不回 2、不印 `config_invalid`、表壞也不佔 `seq`；表壞了就讓 Python 自然丟錯（回 1，紀錄停在 `ended:false`）。本步只剩「開格讀表、拿每項的 `id`」。下面講驗表的句子都作廢。
-- **要做到**：開格讀一次 `.aos/tasks.json`~~，只驗：合法 JSON、`_metainfo` 是 `aos-tasks` 第 1 版、每項（整份 `$ref` 展開後）是合法 inst、`id` 在表內唯一。不合就整表拒絕、回 2~~（2026-10-01 作廢）。
+- **2026-10-01 再改（待問 11）**：開格做極簡檢查——合法 JSON、頂層物件有 `tasks` 陣列、每項（`$ref` 展開後）是物件且有 `argv`；不過就 stderr `bad_table:`、回 1。其他（`_metainfo`、`id`、`kind`、型別、`id` 重複、陌生鍵）都不查；`methods` 從規範拿掉、當陌生鍵。
+- **要做到**：開格讀一次 `.aos/tasks.json`（`--node` 給檔時讀那個檔，2026-10-01 待問 10）~~，只驗：合法 JSON、`_metainfo` 是 `aos-tasks` 第 1 版、每項（整份 `$ref` 展開後）是合法 inst、`id` 在表內唯一。不合就整表拒絕、回 2~~（2026-10-01 作廢）。
 - **spec**：[B-620 讀表與「誰驗什麼」](../spec/settled/tick.md#b-620任務註冊表照表依序跑)；[P-202](../spec/settled/protocol/node.md#p-202任務註冊表建議預設未拍板)；[inst](../spec/base/inst.md)。
 - **做法**：
-  - ~~只驗這四件，~~其餘（缺 `kind`、`system.x`、`methods` 形狀）核心**不驗、照跑**。
+  - ~~只驗這四件，~~其餘（缺 `kind`、`system.x`、~~`methods` 形狀~~）核心**不驗、照跑**。
   - ~~表壞時：stderr 印 `config_invalid: 哪裡錯`，紀錄寫 `ended:true`、`exit:2`、`tasks:[]`，回 2。紀錄在讀表之前就換好了，所以表壞的格也佔一個 `seq`。~~（2026-10-01 作廢）
   - 陌生鍵（包括舊的 `group`、`needs`）照收、忽略。
   - ~~用 `aos_inst.load_obj(項, node 資料夾)` 驗每一項，`str(InstError)` 就是一行說明。~~（2026-10-01 作廢）
@@ -154,6 +162,7 @@
 - 實作時自己做的判斷列在 [src/py README「review 導讀」](../src/py/README.md#review-導讀)，都照「最小合理」做、可改。
 - **10-01 收尾（待問 7）**：拿掉紀錄寫不進的處理（`record_unwritable`、失效開關、失敗注入、鎖檔唯讀退路）與三條測試，寫失敗就照常丟錯；「舊紀錄讀不懂」照 B-633 留著；spec 殘留提及標作廢。
 - **10-01 第二輪（待問 8，POC 默認一切正常）**：拿掉互斥鎖（75、`lock_unavailable`、鎖 fd、`AOS_TICK_LOCK_FD`）、驗表（2、`config_invalid`）、`user` 判定（125、`user_mismatch`）、上下層 `default_parent()`、`--firstdo-fsync`、`record_unreadable`、停格檔刪不掉的 `stop_unremovable`、讀不到表、`exit` 檔寫不進、重新展開壞掉記 125；`aos_tick*.py` 從 552 行減到 339 行，`test_tick.py` 從 22 條減到 12 條。
+- **10-01 第四輪（待問 10，`--node`）**：`node_dir_from_arg()` 換成 `resolve_node()`，回 (node, 任務表)；拿掉「必須絕對路徑」與 `.aos/inst.json`／`inst.json` 正規化；資料夾改看 `.aos/tasks.json`（`no_inst` → `no_tasks`），給檔當任務表，不存在 `no_node`；`read_table()` 改吃表的路徑。同日又加（待問 11）：讀表極簡檢查 `aos_tick_table.check_table()`（`bad_table`）、沒 `id` 的項用位置字串當 id。`test_tick.py` 15 條 → 27 條（`Step1Node` 4 條換成 12 條、新 `Step4Check` 4 條；`TickCase` 不再寫 `.aos/inst.json`，測試的項都帶 `_metainfo`），全部 392 → 404 條全過。
 - **10-01 第三輪（待問 9，結束碼慣例）**：擋板檔回 2；停格檔回 0；任務的碼只記、不影響 tick（照表跑完一律 0）；argv 用法錯改回 1；拿掉「沒有 `.aos/` 交給 aos-exec」的退路，改成沒有 `.aos/inst.json` 就 stderr `no_inst:`、回 1；tick 自用檔出事照舊自然丟錯回 1。`test_tick.py` 12 條 → 15 條（拿掉兩條退路測試，加 `no_inst`、停格檔在錯之後、`ExitCodes` 三條），全部 389 → 392 條全過。
 - **已結案的 spec 疑點**：B-633「第二項後滿碟」驗收句跟失效表對不上；兩者都已作廢。
 
@@ -200,3 +209,18 @@
    - 任務回 0、1、2、其他碼、被訊號殺：都照實記進紀錄、照常跑下一項，不影響 tick 的碼（使用者原話「任務出錯，不算在tick的錯誤內」「任務回2也只記一筆，照常跑下一項」）。
    - 拿掉待問 5、6 的退路：不再「沒有 `.aos/` 就交給 aos-exec 跑 `inst.json`」；任務仍照 `.aos/tasks.json`。
    - 擋板檔與停格檔的機制使用者之後會詳細設計，目前做法是暫定。
+   - 〔2026-10-01 再改，見待問 10〕「`--node` 底下沒有 `.aos/inst.json` 回 1」改成看 `.aos/tasks.json`。
+
+10. **`--node` 怎麼認？已裁定**〔使用者方向 2026-10-01，待統一更新 spec〕：原話與全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick---node-怎麼認待統一更新-spec)（使用者寫 `task.json` 即 `tasks.json`）。
+   - 省略用 `./`；相對路徑一律轉絕對（拿掉「必須絕對路徑」）。
+   - 資料夾：合法＝有 `.aos/tasks.json`，不看 `.aos/inst.json`（tick 跟 inst.json 分開）；沒有回 1。
+   - 檔：當這一格的任務表，所在資料夾 yyy 當 node（擋板、停格、紀錄都在 `yyy/.aos/`，不在就建資料夾）；`yyy/.aos/tasks.json` 在不在都不管。格式照待問 11 的極簡檢查，不過回 1。
+   - 不存在回 1。結束碼照待問 9 不變。
+   - 表裡的相對路徑與指示詞以 node 根為中心（給檔時＝檔所在的資料夾）。
+   - 實作自己定的（可改）：檔所在的資料夾叫 `.aos` 時 node 取上一層（`--node yyy/.aos/tasks.json` ≡ `--node yyy`），不照字面當 `yyy/.aos`；舊的 `--node …/.aos/inst.json` 現在會被當任務表讀、讀壞回 1；stderr 代碼 `no_tasks`、`no_node`。
+
+11. **任務表格式錯怎麼算？已裁定**〔使用者方向 2026-10-01，待統一更新 spec〕：全文在 [verdicts 11 篇末](../notes/verdicts/11-tick-as-unit.md#aos-tick-讀任務表的極簡檢查待統一更新-spec)。
+   - 格式錯算 tick 自己的錯：stderr 一行 `bad_table:`、回 1（給檔時一樣）。取代待問 8「表不驗」。
+   - 只查：合法 JSON、頂層物件有 `tasks` 陣列、每項（`$ref` 展開後）是物件且有 `argv`。外層與每項的 `_metainfo`、`id`、`kind` 都不查（`_metainfo` 格式上照寫）；`kind` 不必填；`methods` 從規範拿掉、當陌生鍵。
+   - 沒 `id` 的項：id＝它在 `tasks` 陣列的位置（從 0 起）轉字串（例如 `"3"`），紀錄與 `AOS_TASK_ID` 都用它；撞了不管（「默認不重複」）。
+   - 實作自己定的（可改）：檢查在換紀錄之後，表壞仍佔 `seq`。

@@ -21,8 +21,16 @@ def table(*tasks):
     return {"_metainfo": {"_type": "aos-tasks", "_version": 1}, "tasks": list(tasks)}
 
 
+POSIX = {"_type": "posix", "_version": 1}
+
+
+def task(tid, argv, **extra):
+    """一項任務，必填的 `_metainfo`、`id`、`argv` 都填好（使用者 2026-10-01：`kind` 不必填）。"""
+    return dict({"_metainfo": POSIX, "id": tid, "argv": argv}, **extra)
+
+
 def sh(tid, script, **extra):
-    return dict({"id": tid, "argv": ["sh", "-c", script]}, **extra)
+    return task(tid, ["sh", "-c", script], **extra)
 
 
 class TickCase(Base):
@@ -30,7 +38,6 @@ class TickCase(Base):
     def setUp(self):
         super().setUp()
         os.makedirs(os.path.join(self.d, ".aos"))
-        self.write(".aos/inst.json", json.dumps({"argv": ["aos-tick", "--node", self.d]}))
 
     def tasks(self, *items):
         self.write(".aos/tasks.json", json.dumps(table(*items), ensure_ascii=False))
@@ -40,48 +47,128 @@ class TickCase(Base):
         args = args or ("--node", self.d)
         return subprocess.run([PY, TICK] + list(args), capture_output=True, text=True, env=e, timeout=30)
 
-    def rec(self, name="current"):
-        return json.loads(self.read(".aos/tick/%s.json" % name))
+    def rec(self, name="current", node=""):
+        return json.loads(self.read(os.path.join(node, ".aos/tick/%s.json" % name)))
 
 
 class Step1Node(TickCase):
+    """使用者 2026-10-01（待統一更新 spec）：--node 省略用 ./、相對轉絕對；資料夾要有 .aos/tasks.json
+    （不看 inst.json）；是檔就拿它當表、所在資料夾當 node；不存在回 1。"""
 
-    def test_inst_paths_normalize_to_node(self):
-        self.tasks({"id": "t", "argv": ["true"]})
-        for i, node in enumerate((self.d, os.path.join(self.d, ".aos", "inst.json"),
-                                  os.path.join(self.d, "inst.json")), 1):
-            r = self.tick("--node", node)
+    def test_cwd_default_and_not_git(self):
+        self.tasks(sh("t", 'echo "$AOS_NODE_DIR" > node.txt'))
+        r = subprocess.run([PY, TICK], cwd=self.d, env=CLEAN_ENV, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("node.txt"), self.d + "\n")
+        self.assertEqual(self.rec()["seq"], 1)
+        self.assertFalse(self.exists(".git"))
+
+    def test_relative_path_made_absolute(self):
+        self.tasks(sh("t", 'echo "$AOS_NODE_DIR" > node.txt'))
+        parent, name = os.path.split(self.d)
+        for i, node in enumerate((name, os.path.join(".", name, "")), 1):
+            r = subprocess.run([PY, TICK, "--node", node], cwd=parent, env=CLEAN_ENV,
+                               capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(self.read("node.txt"), self.d + "\n")
             self.assertEqual(self.rec()["seq"], i)
 
-    def test_no_aos_inst_json_is_error(self):
-        # 2026-10-01：拿掉「交給 aos-exec 跑 inst.json」的退路；沒有 .aos/inst.json 就回 1
-        self.tasks(sh("t", "touch ran"))
-        os.unlink(os.path.join(self.d, ".aos", "inst.json"))
-        self.write("inst.json", json.dumps({"argv": ["sh", "-c", "touch ran"]}))
-        r = self.tick()
+    def test_dir_without_tasks_json_is_error(self):
+        r = self.tick()                                   # 有 .aos/、沒有 tasks.json
         self.assertEqual(r.returncode, 1)
-        self.assertIn("no_inst:", r.stderr)
-        self.assertFalse(self.exists("ran"))
+        self.assertIn("no_tasks:", r.stderr)
         self.assertFalse(self.exists(".aos/tick"))
-        os.unlink(os.path.join(self.d, "inst.json"))
-        os.unlink(os.path.join(self.d, ".aos", "tasks.json"))
-        os.rmdir(os.path.join(self.d, ".aos"))
+        os.rmdir(os.path.join(self.d, ".aos"))            # 連 .aos/ 都沒有
         self.assertEqual(self.tick().returncode, 1)
         self.assertEqual(os.listdir(self.d), [])
 
-    def test_usage_errors(self):
-        # aos 結束碼慣例：argv 用法錯算 1
-        self.assertEqual(self.tick("--node", "relative/path").returncode, 1)
-        self.assertEqual(self.tick("--node", os.path.join(self.d, "nope")).returncode, 1)
-        self.assertEqual(self.tick("--bogus").returncode, 1)
+    def test_inst_json_only_is_error(self):
+        # tick 跟 inst.json 分開：只有 .aos/inst.json（和頂層 inst.json）不算 node
+        self.inst({"argv": ["sh", "-c", "touch ran"]})
+        self.inst({"argv": ["sh", "-c", "touch ran"]}, rel="inst.json")
+        r = self.tick()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("no_tasks:", r.stderr)
+        self.assertFalse(self.exists("ran"))
+        self.assertFalse(self.exists(".aos/tick"))
+
+    def test_tasks_json_present_inst_json_not_needed(self):
+        self.tasks(task("t", ["true"]))
+        self.assertFalse(self.exists(".aos/inst.json"))
+        self.assertEqual(self.tick().returncode, 0)
+
+    def test_file_is_table_dir_is_node(self):
+        # 給檔：這個檔就是表、所在資料夾是 node；node 的 .aos/tasks.json 有也不用
+        self.tasks(sh("t", "touch wrong.ran"))
+        tbl = self.write("sub/my.json", json.dumps(table(
+            sh("a", 'echo "$AOS_NODE_DIR" > node.txt; touch a.ran'))))
+        r = self.tick("--node", tbl)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.exists("sub/a.ran"))          # cwd 是 node（sub）
+        self.assertEqual(self.read("sub/node.txt"), os.path.join(self.d, "sub") + "\n")
+        self.assertFalse(self.exists("wrong.ran"))
+        rec = self.rec(node="sub")
+        self.assertEqual((rec["seq"], rec["tasks"]), (1, [{"id": "a", "exit": 0}]))
+        check_record(self, rec)
+        self.assertFalse(self.exists(".aos/tick"))
+        self.assertFalse(self.exists("sub/.aos/tasks.json"))
+
+    def test_file_mode_creates_aos_dir(self):
+        tbl = self.write("n/t.json", json.dumps(table(task("t", ["true"]))))
+        self.assertFalse(self.exists("n/.aos"))
+        for i in (1, 2):
+            r = self.tick("--node", tbl)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(self.rec(node="n")["seq"], i)
+        self.assertEqual(sorted(os.listdir(os.path.join(self.d, "n", ".aos"))), ["tick"])
+
+    def test_file_in_aos_dir_means_parent_node(self):
+        # 拿不準的點的決定：檔在 .aos/ 裡時 node 取 .aos 的上一層（跟 --node 資料夾同一個 node）
+        self.tasks(task("t", ["true"]))
+        self.assertEqual(self.tick().returncode, 0)
+        r = self.tick("--node", os.path.join(self.d, ".aos", "tasks.json"))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.rec()["seq"], 2)
+        self.assertFalse(self.exists(".aos/.aos"))
+
+    def test_bad_table_file_is_error(self):
+        tbl = self.write("n/t.json", "{壞")
+        r = self.tick("--node", tbl)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("bad_table:", r.stderr)             # 檔案模式也做同一套極簡檢查
+
+    def test_file_mode_base_is_file_dir(self):
+        # 給檔時，表裡的相對路徑與指示詞以檔所在的資料夾（node 根）為中心，不是以啟動時的目錄
+        self.write("n/t.json", json.dumps(table({"$ref": "item.json"})))
+        self.write("n/item.json", json.dumps(sh("r", "touch from-ref")))
+        self.write("item.json", json.dumps(sh("wrong", "touch wrong.ran")))
+        r = subprocess.run([PY, TICK, "--node", os.path.join("n", "t.json")], cwd=self.d,
+                           env=CLEAN_ENV, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.exists("n/from-ref"))
+        self.assertFalse(self.exists("wrong.ran"))
+        self.assertEqual(self.rec(node="n")["tasks"], [{"id": "r", "exit": 0}])
+
+    def test_bad_item_metainfo_value_is_error(self):
+        # 每項沒寫 `_metainfo` 照跑（aos_inst 當 posix 第 1 版）；寫了但值不對，極簡檢查不看，
+        # 跑到這一項展開成 inst 時 aos_inst 自然丟錯（traceback），回 1
+        self.write("n/t.json", json.dumps(table(
+            {"_metainfo": {"_type": "nope", "_version": 1}, "id": "x", "argv": ["true"]})))
+        r = self.tick("--node", os.path.join(self.d, "n", "t.json"))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("Error", r.stderr)
+
+    def test_missing_path_and_usage_errors(self):
+        r = self.tick("--node", os.path.join(self.d, "nope"))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("no_node:", r.stderr)
+        r = subprocess.run([PY, TICK, "--node", "nope"], cwd=self.d, env=CLEAN_ENV,
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1)
+        self.assertFalse(self.exists("nope"))
+        self.assertEqual(self.tick("--bogus").returncode, 1)      # aos 結束碼慣例：argv 用法錯算 1
         self.assertEqual(self.tick("--node").returncode, 1)
 
-    def test_cwd_default_and_not_git(self):
-        self.tasks({"id": "t", "argv": ["true"]})
-        r = subprocess.run([PY, TICK], cwd=self.d, env=CLEAN_ENV, capture_output=True, text=True)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertFalse(self.exists(".git"))
 
 class Step2Blocked(TickCase):
 
@@ -104,7 +191,7 @@ class Step2Blocked(TickCase):
 class Step3Seq(TickCase):
 
     def test_ten_ticks_and_shell(self):
-        self.tasks({"id": "t", "argv": ["true"]})
+        self.tasks(task("t", ["true"]))
         for i in range(1, 11):
             if i == 5:
                 r = subprocess.run(["sh", "-c", 'cd "$1" && "$2" "$3"', "x", self.d, PY, TICK],
@@ -127,11 +214,62 @@ class Step3Seq(TickCase):
 class Step4Table(TickCase):
 
     def test_unknown_keys_and_whole_ref_run(self):
-        self.write("task.json", json.dumps({"id": "from-ref", "argv": ["sh", "-c", "echo $AOS_TASK_ID > id.txt"]}))
-        self.tasks({"id": "a", "argv": ["true"], "group": "g", "needs": ["x"], "kind": "system.x"},
+        self.write("task.json", json.dumps(sh("from-ref", "echo $AOS_TASK_ID > id.txt")))
+        self.tasks(task("a", ["true"], group="g", needs=["x"], kind="system.x", methods="亂寫"),
                    {"$ref": "task.json"})
         self.assertEqual(self.tick().returncode, 0)
         self.assertEqual(self.read("id.txt"), "from-ref\n")
+
+
+class Step4Check(TickCase):
+    """使用者 2026-10-01（待統一更新 spec）：「該填的沒填，然後不符合{"tasks":[]}這樣的格式，其他就不檢查。」
+    「最外層不用檢查_metainfo，每一項也只需要檢查argv」。不過就 stderr 一行 `bad_table:`、回 1。"""
+
+    def bad(self, doc):
+        self.write(".aos/tasks.json", json.dumps(doc))
+        r = self.tick()
+        self.assertEqual(r.returncode, 1, doc)
+        self.assertIn("bad_table:", r.stderr)
+        self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertFalse(self.exists("ran"))
+
+    def test_missing_or_wrong_shape(self):
+        ok = sh("a", "touch ran")
+        self.bad({"_metainfo": table()["_metainfo"]})                      # 缺 tasks
+        self.bad(dict(table(), tasks={"a": ok}))                           # tasks 不是陣列
+        self.bad([ok])                                                     # 頂層不是物件
+        self.bad(table(ok, "x"))                                           # 項不是物件
+        self.bad(table(ok, {"_metainfo": POSIX, "id": "b"}))               # 缺 argv
+
+    def test_ref_item_checked_after_expand(self):
+        self.write("item.json", json.dumps({"id": "b"}))                   # 展開後缺 argv
+        self.bad(table(sh("a", "touch ran"), {"$ref": "item.json"}))
+        self.bad(table(sh("a", "touch ran"), {"$ref": "nope.json"}))       # 展開不了
+
+    def test_not_checked(self):
+        # 外層 _metainfo、每項 _metainfo、kind 不填或亂寫、id 重複、陌生鍵都不查，照跑
+        self.write(".aos/tasks.json", json.dumps({"tasks": [
+            {"id": "a", "argv": ["sh", "-c", "echo a >> ran"]},
+            sh("a", "echo a2 >> ran", kind=123),
+            sh("b", "echo b >> ran", kind="亂寫", methods=[{"x": 1}, {"x": 1}], zzz=1)]}))
+        r = self.tick()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("ran"), "a\na2\nb\n")
+        self.assertEqual([t["id"] for t in self.rec()["tasks"]], ["a", "a", "b"])
+
+    def test_no_id(self):
+        # 使用者 2026-10-01：沒寫 id 就用它在 tasks 陣列的位置（從 0 起）轉字串；撞了不管
+        self.tasks(sh("1", "true"),
+                   {"argv": ["sh", "-c", 'echo "$AOS_TASK_ID" > id.txt; exit 4']},
+                   {"argv": ["sh", "-c", "echo > .aos/tick/stop"]}, sh("d", "touch d.ran"))
+        r = self.tick(env={"AOS_TASK_ID": "外層的"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("id.txt"), "1\n")
+        self.assertFalse(self.exists("d.ran"))
+        rec = self.rec()
+        self.assertEqual(rec["tasks"], [{"id": "1", "exit": 0}, {"id": "1", "exit": 4},
+                                        {"id": "2", "exit": 0}])
+        self.assertEqual(rec["stopped_after"], "2")
 
 
 class Step5Run(TickCase):
@@ -140,8 +278,8 @@ class Step5Run(TickCase):
         self.tasks(sh("a", "env > out.env"),
                    sh("b", 'cat "$AOS_TICK_RECORD" > rec.json'),
                    sh("c", "kill -9 $$"),
-                   {"id": "d", "argv": ["true"], "user": "root" if os.geteuid() else "nobody"},
-                   {"id": "f", "argv": ["sh", "-c", "exit 3"]},
+                   task("d", ["true"], user="root" if os.geteuid() else "nobody"),
+                   task("f", ["sh", "-c", "exit 3"]),
                    sh("g", "touch g.ran"))
         r = self.tick()
         self.assertEqual(r.returncode, 0, r.stderr)       # 任務失敗不影響 tick 的碼
@@ -214,13 +352,14 @@ class ExitCodes(TickCase):
         self.write(".aos/tasks.json", "{壞")
         r = self.tick()
         self.assertEqual(r.returncode, 1)
-        self.assertIn("Error", r.stderr)
+        self.assertIn("bad_table:", r.stderr)
+        self.assertEqual(len(r.stderr.splitlines()), 1)   # 一行，不是 traceback
 
 
 class Step9Whole(TickCase):
 
     def test_b626_only_true_no_daemon(self):
-        self.tasks({"id": "t", "argv": ["true"]})
+        self.tasks(task("t", ["true"]))
         r = self.tick()
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertNotIn("standard:", r.stderr)
