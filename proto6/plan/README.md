@@ -28,13 +28,15 @@
 
 ### 第一段：tick 核心
 
-- **目標**：`aos-tick` 直接跑得動一格：照任務表依序跑、每項結束碼紀錄（含 `seq`、停格檔、擋板檔），~~整格回 0／1~~ 照表跑完、擋板、busy 都回 0，tick 自己出錯 1（2026-10-01 結束碼慣例改版）。B-626 原本的核心四件事裡，同資料夾互斥與上下層判定〔使用者方向 2026-10-01：POC 先不做〕。
+- **目標**：`aos-tick` 直接跑得動一格：照任務表依序跑、每項結束碼紀錄（含 `seq`、停格檔、擋板檔），~~整格回 0／1~~ 照表跑完、擋板、busy 都回 0，tick 自己出錯 1（2026-10-01 結束碼慣例改版）。B-626 原本的核心四件事裡，同資料夾互斥與上下層判定〔使用者方向 2026-10-01：POC 先不做〕。 〔2026-10-01 殘留註記〕停格檔第十六批改名 `tick/tasks-blocked`、擋板檔只看存不存在。
 - **主要 spec**：[B-626、B-602、B-620、B-633、B-627](../spec/settled/tick.md)（B-628 上下層判定已搬[暫緩區](../spec/settled/deferred/tick.md)）；結束碼與 `AOS_DIRNAME` [C-08、C-09](../spec/settled/conventions.md)；格式 [P-202、P-203、P-213](../spec/settled/protocol/tick.md)。
 - **可單獨跑的樣子**：不要 daemon、git、cgroup、helper。手建一個資料夾、寫 `.aos/tasks.json`，`aos-tick <資料夾>`（2026-10-01：原 `--node`，再改 `--target`，再改成位置參數） 或 cron 直接跑，看結束碼與 `.aos/tick/current.json`。
 - **界線**：核心不認得任何系統級任務，也不清任務留下的後代。細部見 [m1-tick-core.md](m1-tick-core.md)。
-- **之後的外掛掛點**：tasks.json 頂層鍵 `hooks`（不是模組；目前只開 `after_all`：照表跑完、含被停格檔停下之後跑一串 inst）見 [m1h-hooks-module.md](m1h-hooks-module.md)〔使用者 2026-10-01 第六批〕。
+- **之後的外掛掛點**：tasks.json 頂層鍵 `hooks`（不是模組；目前只開 `after_all`：照表跑完、含被停格檔停下之後跑一串 inst）見 [m1h-hooks-module.md](m1h-hooks-module.md)〔使用者 2026-10-01 第六批〕。 〔2026-10-01 殘留註記〕現在已有 `before_all`、`after_task`、`after_every_task`、`after_all`（第十七批，[B-635](../spec/settled/tick/hooks.md)）。
 
 ### 第二段：不靠 daemon 的系統級任務與普通程式
+
+> 〔2026-10-01 殘留註記〕這段的東西大多已暫緩：`aos-git`（第十七批，改用 hook 加 git 指令）、`aos-clean` 與範本（第十八批）、`aos-tick-check-task`（第十六批）；現行沒有系統級任務。停格檔第十六批改名 tasks-blocked。下面是原本的規劃，照留。
 
 - **目標**：掛在任務表上的 `aos-git open／mark／close`、~~`aos-publish`~~（2026-10-01 第五批搬[暫緩區](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)）、`aos-clean`，普通程式 `aos-tick-check-task`（2026-10-01 第五批由 `aos-needs` 改寫），以及 tick 外的 ~~`aos-config-add`~~（2026-10-01 使用者裁定搬[暫緩區](../spec/settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)）、恢復前驗證；兩版標準任務表範本跑得起來。細部（草稿）見 [m2-system-tasks.md](m2-system-tasks.md)。
 - **主要 spec**：[B-630、B-622、B-632、B-621、~~B-624（發摘要）~~、B-625、B-629](../spec/settled/deferred/git.md)；[B-404](../spec/base/storage.md)；格式 [P-204、P-205、P-210](../spec/settled/protocol/tick.md)（~~P-207~~ 隨 `aos-config-add` 搬暫緩區）。
@@ -51,6 +53,8 @@
 - **界線**：訊息佇列、cgroup 是第四段的部件，這段先當「開關關著」；B-615 的開關鍵這段就要認得。helper 動作回 `helper_unavailable`。
 
 ### 第四段：daemon 部件——訊息與 cgroup
+
+> 〔2026-10-01 殘留註記〕這段改由 daemon 模組做：訊息是訊息模組（[m3m 模組四](m3m-daemon-modules.md#模組四訊息modulesmq)，`aos-mq send`／`take`／`peek`），cgroup 是收屍／cgroup 模組（[m3m 模組二](m3m-daemon-modules.md#模組二收屍與資源上限modulescgroup)），單位是 daemon 的一項、不是 node；`node.send`／`node.take`、`enable_*` 開關、tick 側 `aos-mq get`／`post` 都暫緩。下面是原本的規劃，照留。
 
 - **目標**：B-615 的兩個可掛部件。訊息：`node.send`／`node.take`、急件叫醒，加上 tick 那側的 `aos-mq get`／`post`。cgroup：node 框與上限、格後與重啟清框，加上普通程式 `aos-cg`。
 - **主要 spec**：[B-615](../spec/settled/deferred/daemon/components.md)、[B-614](../spec/settled/deferred/daemon/messaging.md)、[B-623、B-624（佇列）、B-634](../spec/settled/deferred/mq.md)、[B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；格式 P-119、[P-206、P-211](../spec/settled/protocol/tick.md)。

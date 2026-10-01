@@ -2,6 +2,11 @@
 
 ← [CLI 入口](README.md)｜[指令總表](commands.md)｜[規格入口](../README.md)
 
+> **〔2026-10-01 殘留註記〕本篇是 2026-10-01 之前的設計，下列內容現在不是現行的**；原文照留，以這裡指的正本為準（各批裁定見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）：
+> - 停格檔 `tick/stop`：第十六批改名 `tick/tasks-blocked`（每項任務之前看、整格最後由 tick 刪；紀錄欄位 `stopped_after` 改 `blocked_before`）；擋板檔 `tick-blocked` 只看存不存在、不讀原因、存在就靜靜回 0（[B-620](../settled/tick.md)、[B-636](../settled/tick/tasks-blocked.md)）。
+> - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
+> - 舊 daemon 的通道與憑證（`AOS_TICK_TOKEN`）、登記、runner、`state.json`：整套在暫緩區（[舊 daemon](../settled/deferred/daemon/README.md)）；現行 daemon 只定期叫 `aos-exec` 加各模組（[B-640](../settled/daemon/core.md)）。
+
 ## H-037．除錯指南〔使用者方向 2026-09-30，第十八批；寫法為工程預設〕
 
 本頁只教人「從哪裡查起」，不定新規則；各處寫什麼、何時寫，以連到的條文為準。想一次看完，用 `aos work trace ID`（[H-004](commands.md) 第 55 列），它會照下面的站自動串起來，讀不到的站標「看不到」。〔第十九批〕懷疑「標準配備走的是完整路還是備援」，先跑 `aos node check`（第 58 列）；每格 stderr 的 `standard: cgroup=… git=…` 也印同樣的資訊（[B-630](../settled/deferred/git.md)）。

@@ -2,6 +2,13 @@
 
 ← [共用約定](README.md)｜行為正本：[S-401／S-405](../scheduling/operations.md)、[B-404](../base/storage.md)
 
+> **〔2026-10-01 殘留註記〕本篇是 2026-10-01 之前的設計，下列內容現在不是現行的**；原文照留，以這裡指的正本為準（各批裁定見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）：
+> - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
+> - `aos-git`（開格、存檔點、收尾）與有 git 版範本：第十七批暫緩（[B-630](../settled/deferred/git.md)）；要提交、還原改用 hook 加普通 git 指令（範例在 [B-635](../settled/tick/hooks.md)）。
+> - 標準任務表範本（[B-629](../settled/deferred/template.md)）、`aos-mq get`／`post`（[B-623、B-624](../settled/deferred/mq.md)）、`aos-clean`（[B-404](../base/storage.md) 的系統級任務部分、P-605）：第十八批暫緩，現行沒有系統級任務；kernel／agent 範本裡掛的這些項也跟著不成立。現行收發信是 daemon 訊息模組 `aos-mq send`／`take`／`peek`（[B-645](../settled/daemon/mq.md)）。
+> - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
+> - 舊 daemon 的通道與憑證（`AOS_TICK_TOKEN`）、登記、runner、`state.json`：整套在暫緩區（[舊 daemon](../settled/deferred/daemon/README.md)）；現行 daemon 只定期叫 `aos-exec` 加各模組（[B-640](../settled/daemon/core.md)）。
+
 ## P-600．範圍〔使用者方向 2026-09-29〕
 
 本篇定 attention、aos-attend 與 aos-clean；權限與兩條請求路線只依 [共用約定](README.md)。
@@ -39,6 +46,8 @@ aos-attend done N ID --socket S [--store node|daemon] [--json]
 實際修理由人或 agent 自己下指令。用呼叫者權限，不取得 N 的身分；stdin 不讀，stdout 是查詢內容或完成的來源／ID，stderr 是白話錯誤。0 成功或清單為空；2 用法錯；125 無法開始；1 讀取、移檔或 IPC 失敗。done 不改工作結果，也不提交 git。agent 設定檢查的結束碼要不要跟 kernel 統一，延後（[P-008](README.md#p-008)）。
 
 ## P-605．aos-clean 的 argv 與設定〔建議預設，未拍板〕
+
+> **暫緩**〔2026-10-01 殘留註記〕（2026-10-01 第十八批）：`aos-clean` 這項系統級任務隨 [B-404](../base/storage.md) 的系統級任務部分暫緩（現在沒東西可清、現行沒有系統級任務與範本，[暫緩區總表](../settled/deferred/README.md)）。下面原文照留、條號保留。
 
 ```text
 aos-clean [--node <node>] --config <設定檔>
