@@ -1,0 +1,9 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "mq": {}
+  },
+  "insts": {
+    "a.json": {}
+  }
+}

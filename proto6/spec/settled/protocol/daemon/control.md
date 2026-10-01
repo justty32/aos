@@ -88,7 +88,7 @@ schema：[daemon-ctl](../../../protocol/schemas/daemon-ctl.schema.json)（請求
 | `AOS_DAEMON_SOCKET` | 控制 socket 的絕對路徑 |
 | `AOS_DAEMON_INST` | 這一項的 inst 字面值 |
 
-名字 `AOS_DAEMON_SOCKET` 沿用舊設計 [P-117](../../deferred/protocol/daemon/channel.md)，意思改成控制 socket；通道憑證 `AOS_TICK_TOKEN` 現行控制不使用；舊通道憑證暫緩，未來另定〔astra 報告必修 7〕。沒掛控制模組時兩個都不放。
+名字 `AOS_DAEMON_SOCKET` 沿用舊設計 [P-117](../../deferred/protocol/daemon/channel.md)，意思改成控制 socket；通道憑證 `AOS_TICK_TOKEN` 現行控制不使用；舊通道憑證暫緩，未來另定〔astra 報告必修 7〕。沒掛控制模組時不放 `AOS_DAEMON_SOCKET`；`AOS_DAEMON_INST` 掛了控制或訊息模組任何一個就放（〔第十二批〕M2，[P-125](mq.md)）。
 
 ### socket 檔
 

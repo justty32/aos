@@ -9,7 +9,7 @@
 | 一、重讀設定 `reload` | **已做**（R1～R4 照建議，R3 改成 stdout 警告） | [B-642](../spec/settled/daemon/reload.md)、[P-122](../spec/settled/protocol/daemon/reload.md) |
 | 二、收屍／cgroup `cgroup` | **已做**（第十二批：C1～C4 照建議） | [B-644](../spec/settled/daemon/cgroup.md)、[P-124](../spec/settled/protocol/daemon/cgroup.md) |
 | 三、記住狀態 `state` | **已做**（S1～S3 照建議，設定改成 `$ref`） | [B-643](../spec/settled/daemon/state.md)、[P-123](../spec/settled/protocol/daemon/state.md) |
-| 四、訊息 `mq` | **排隊**（第十二批：要做、排在 cgroup 之後，M1～M4 照建議） | — |
+| 四、訊息 `mq` | **已做**（第十二批：M1～M4 照建議） | [B-645](../spec/settled/daemon/mq.md)、[P-125](../spec/settled/protocol/daemon/mq.md) |
 | 五、帳號 `account`（原草稿叫 helper） | **排隊**（第十二批：要做、排最後；H1 改成拆 root 端、主程式降權，下面草稿待重寫） | — |
 
 做了什麼、自己定的細節見篇末[做完了沒](#做完了沒)；裁定見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十一批daemon-模組)、[第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。下面各節保留原本的草稿，裁定處就地標註。
@@ -262,7 +262,7 @@ node 框 `n-<h>` 與它底下的 `tick`、`task-*`、`mount-*`、子 node 框（
 
 ## 模組四：訊息（`modules.mq`）
 
-> ~~暫緩~~（第十一批：「aos-mq先不做」）→ **要做，排在 cgroup 之後**（2026-10-01 第十二批：M1～M4 照建議）。下面草稿就是要照做的版本，還沒動工。
+> ~~暫緩~~（第十一批：「aos-mq先不做」）→ **已做**（2026-10-01 第十二批：M1～M4 照建議）。下面草稿照原樣留著；做法與 AI 隊定的細節見篇末[做完了沒](#做完了沒)，正本 [B-645](../spec/settled/daemon/mq.md)。
 
 舊規劃：[暫緩區 B-614 暫存訊息與急件](../spec/settled/deferred/daemon/messaging.md)、格式 [P-119](../spec/settled/deferred/protocol/daemon/channel.md#p-119送訊息取訊息與通道錯誤碼使用者方向-2026-09-30第十九批參數與上限為建議預設)；tick 側 [`aos-mq get`／`post`（B-623、B-624）](../spec/settled/tick/mq.md)。
 
@@ -480,4 +480,11 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 
 模組二 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)，要點：進框用 `sh -c` 墊一層（不用 `preexec_fn`）；`ms=` 不含清框；殘留拿著輸出 pipe 時另開執行緒讀、清完才收齊；重讀時拿掉的上限鍵不還原、出錯前寫進去的不還原；拿掉的項跑完才刪框、又加回來就不刪。
 
-**下一個：模組四訊息**（M1～M4 照建議），再來模組五帳號（草稿要先重寫）。
+**模組四做完了**（2026-10-01 晚，AI 隊，在家裡那台）：照上面草稿與 M1～M4 建議做，驗收寫進 `tests/test_mq.py`（14 條，約 4 秒；連跑 10 次都過）。全部測試 557 條（543＋14）。
+
+- 程式：新 `lib/aos_daemon_mq.py`（`serve()`、`parse()`、`handle()`）、`lib/aos_mq.py`、`bin/aos-mq`；`lib/aos_daemon_ctl.py` 的 `serve()` 多收一個 `answer`（訊息模組共用那套收連線、1 秒逾時、壞請求只影響那一條）；`lib/aos_daemon.py`（`Item.mailbox`、`Setup.mq_sock`、`give_env()` 改吃 `Setup`、`_sock_paths` 退出時兩個 socket 都刪）。用法見 [src/py README](../src/py/README.md#訊息與-aos-mqm3m-模組四)。
+- spec：[B-645](../spec/settled/daemon/mq.md)、[P-125](../spec/settled/protocol/daemon/mq.md)；新 schema `daemon-mq`、`daemon-core-config` 加 `modules.mq`；範例 `examples/daemon/mq_request.*`、`mq_reply.*`、`core-config.mq*`；暫緩區 B-614、P-119 標部分取代；[C-10](../spec/settled/conventions.md) 加 `AOS_DAEMON_MQ_SOCKET`、`AOS_DAEMON_INST` 改成掛任一個就放。
+
+模組四 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。
+
+**下一個：模組五帳號 `account`**——上面草稿是第十二批之前寫的（H1 原建議「POC 不拆」已被推翻），動工前要先照第十二批重寫、給使用者看過。

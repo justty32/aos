@@ -1,0 +1,8 @@
+{
+  "send": "b.json",
+  "msg": {
+    "hi": 1
+  },
+  "from": "a.json",
+  "urgent": true
+}

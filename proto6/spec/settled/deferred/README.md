@@ -63,7 +63,7 @@
 | B-608 | 熱重載 | 部分取代、其餘暫緩 | SIGHUP 重讀已被 [B-642](../daemon/reload.md) 取代（重讀設定模組：加減項、改週期免重開，`cwd`／`modules` 改了印警告要重開，設定壞了舊的照跑）；roots、身分、helper、daemon 事項、排空中不重載等暫緩 | [daemon/reload.md](daemon/reload.md) |
 | B-609 | 佈建固定動作與 helper 動作 | 暫緩 | 第一版不做；helper 之後另成模組 | [daemon/helper-actions.md](daemon/helper-actions.md) |
 | B-605 | cgroup：依賴與啟動自檢（含各條的 cgroup 部分） | 部分取代、其餘暫緩 | 「子樹根用 daemon 自己所在的 cgroup、根下開 `daemon` 子框、跑完 `cgroup.kill` 清框、寫上限」已被 [B-644](../daemon/cgroup.md) 取代（收屍／cgroup 模組：框改成一項一個 `i-<h>`、上限寫在那一項的 `cgroup` 鍵、沒委派好的 cgroup 就回 1 不退回）；node 框與交框、`cgroup_root`／`--create-cgroup`、`cgroup=on/off`、委派偵測、逃生口、子樹鎖、`cgroup_root_last`、helper 的框動作暫緩 | [daemon/cgroup.md](daemon/cgroup.md)、[daemon/runtime.md](daemon/runtime.md) |
-| B-614 | 暫存訊息與急件 | 暫緩 | 訊息之後另成模組（`aos-mq`），不走控制 socket | [daemon/messaging.md](daemon/messaging.md) |
+| B-614 | 暫存訊息與急件 | 部分取代、其餘暫緩 | 「daemon 暫存訊息、急件叫醒收件方」已被 [B-645](../daemon/mq.md) 取代（訊息模組：收件人改成 daemon 的一項、信放記憶體、另開 socket 不走控制 socket）；node 收件人、寫權授權、通道憑證、急件越過上層節流暫緩 | [daemon/messaging.md](daemon/messaging.md) |
 | B-303 | 可選 root helper 與解析分界（含 `aos-as`） | 暫緩 | 第一版不做；helper 之後另成模組 | [helper.md](helper.md) |
 | （附錄） | systemd service 範例 | 暫緩 | 寫的是舊設定與舊停機流程 | [daemon/service.md](daemon/service.md) |
 
@@ -84,7 +84,7 @@
 | P-114 | 停機：訊號與設定 | 暫緩 | 第一版不做；停機見 P-120 | [protocol/daemon/shutdown.md](protocol/daemon/shutdown.md) |
 | P-116 | state.json 格式 | 部分取代、其餘暫緩 | 現行狀態檔是 [P-123](../protocol/daemon/state.md)（只記暫停、已停；`modules.state` 用 `$ref` 指檔）；舊 `state.json` 的登記、wake、`clean_shutdown`、`cgroup_root_last` 暫緩 | 同上 |
 | P-117 | 通道變數與憑證 | 部分取代、其餘暫緩 | `AOS_DAEMON_SOCKET` 這個名字沿用到 P-121（意思改成控制 socket），另加 `AOS_DAEMON_INST`；現行控制模組連得上就能用、不使用憑證；舊通道憑證 `AOS_TICK_TOKEN` 跟著通道暫緩，未來另定〔astra 報告必修 7〕；其餘暫緩 | [protocol/daemon/channel.md](protocol/daemon/channel.md) |
-| P-118、P-119 | 掛行程與砍掉；送訊息、取訊息 | 暫緩 | 第一版不做 | 同上 |
+| P-118、P-119 | 掛行程與砍掉；送訊息、取訊息 | P-119 部分取代、其餘暫緩 | 送訊息、取訊息的現行格式是 [P-125](../protocol/daemon/mq.md)（`send`／`take`、一行 JSON）；P-119 的 `node.send`／`node.take`、通道錯誤碼與 P-118 第一版不做 | 同上 |
 
 ### 區外暫緩的段落
 

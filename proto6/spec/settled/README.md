@@ -25,7 +25,7 @@
 1. [通用慣例](conventions.md)（C-08 結束碼、C-09 `AOS_DIRNAME`、C-10 環境變數總表、C-11 設定檔頂層 `cwd` 與指示詞展開範圍）：aos 每支程式都守的規矩，最短，先讀。
 2. [名詞](terms.md)（T-07 tick 核心、T-10 四類程式、T-11 daemon 核心與模組）：先知道「核心、系統級任務、普通程式、停格檔、擋板檔、模組」這些詞。
 3. [通用 tick 核心](tick.md)：核心三件事（B-626、B-602、B-620、B-633）與直接跑（B-627）→ [tick/ 子篇](tick/README.md)：標準任務表範本、`aos-tick-check-task`、`aos-cg`、佇列的取與送、git、當機恢復，每篇開頭標狀態。〔使用者 2026-10-01 拆篇〕
-4. [daemon](daemon/README.md)：[B-640 最核心 daemon](daemon/core.md) → [B-641 控制模組與 `aos-ctl`](daemon/control.md) → [B-642 重讀設定](daemon/reload.md)、[B-643 記住狀態](daemon/state.md)、[B-644 收屍／cgroup](daemon/cgroup.md)。
+4. [daemon](daemon/README.md)：[B-640 最核心 daemon](daemon/core.md) → [B-641 控制模組與 `aos-ctl`](daemon/control.md) → [B-642 重讀設定](daemon/reload.md)、[B-643 記住狀態](daemon/state.md)、[B-644 收屍／cgroup](daemon/cgroup.md)、[B-645 訊息與 `aos-mq`](daemon/mq.md)。
 5. 要看格式時：[tick 協議](protocol/tick.md)（P-200～213：工作資料夾布局、任務表、`aos-tick` 與各系統級任務的 argv 與結束碼；原 `protocol/node.md`，2026-10-01 改名）→ [daemon 協議](protocol/daemon/README.md)（P-120 設定檔與輸出、P-121 控制 socket 與 `aos-ctl`）。
 6. 想知道「以後還會有什麼」：[暫緩區](deferred/README.md)。
 
@@ -39,9 +39,9 @@
 | [tick.md](tick.md) | B-626、B-602、B-620、B-633、B-627 | tick 核心（已實作）。從 `spec/tick.md` 搬來；B-628 與 B-602、B-620、B-633 的部分內容搬到暫緩區；2026-10-01 其餘各條拆到 tick/〔使用者 2026-10-01〕 |
 | [tick/](tick/README.md) | B-629、B-621、B-634、B-631（撤）、B-623、B-624、B-630、B-622、B-632、B-625、B-635 | 2026-10-01 從 tick.md 拆出，條號不變；同日第六批新開 [hooks](tick/hooks.md)（B-635，外掛掛點，已實作）：[template](tick/template.md)（B-629）、[check-task](tick/check-task.md)（B-621）、[cg](tick/cg.md)（B-634、B-631）、[mq](tick/mq.md)（B-623、B-624）、[git](tick/git.md)（B-630、B-622、B-632）、[recovery](tick/recovery.md)（B-625）；狀態見[子篇入口](tick/README.md) |
 | [daemon.md](daemon.md) | — | 舊的 daemon 入口，只指向 daemon 目錄 |
-| [daemon/](daemon/README.md) | B-640～644 | 2026-10-01 重寫：[core](daemon/core.md)（B-640）、[control](daemon/control.md)（B-641）、[reload](daemon/reload.md)（B-642）、[state](daemon/state.md)（B-643）、[cgroup](daemon/cgroup.md)（B-644） |
+| [daemon/](daemon/README.md) | B-640～645 | 2026-10-01 重寫：[core](daemon/core.md)（B-640）、[control](daemon/control.md)（B-641）、[reload](daemon/reload.md)（B-642）、[state](daemon/state.md)（B-643）、[cgroup](daemon/cgroup.md)（B-644）、[mq](daemon/mq.md)（B-645） |
 | [protocol/tick.md](protocol/tick.md) | P-200～213 | tick 協議。從 `spec/protocol/node.md` 搬來；2026-10-01 由 `protocol/node.md` 改名〔使用者 2026-10-01〕 |
-| [protocol/daemon/](protocol/daemon/README.md) | P-100、P-120～124 | 2026-10-01 重寫：[core](protocol/daemon/core.md)（P-120）、[control](protocol/daemon/control.md)（P-121）、[reload](protocol/daemon/reload.md)（P-122）、[state](protocol/daemon/state.md)（P-123）、[cgroup](protocol/daemon/cgroup.md)（P-124） |
+| [protocol/daemon/](protocol/daemon/README.md) | P-100、P-120～125 | 2026-10-01 重寫：[core](protocol/daemon/core.md)（P-120）、[control](protocol/daemon/control.md)（P-121）、[reload](protocol/daemon/reload.md)（P-122）、[state](protocol/daemon/state.md)（P-123）、[cgroup](protocol/daemon/cgroup.md)（P-124）、[mq](protocol/daemon/mq.md)（P-125） |
 | [deferred/](deferred/README.md) | B-628、T-09、B-303、B-504、B-601、B-603～615、P-101～119 | 暫緩區；總表與每條狀態見它的 README |
 
 `spec/protocol/daemon.md` 是更舊的單檔入口，留在原處，只指向這裡的 daemon 協議。

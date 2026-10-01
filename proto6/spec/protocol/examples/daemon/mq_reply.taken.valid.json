@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "from": "a.json",
+      "msg": {
+        "hi": 1
+      }
+    },
+    {
+      "from": null,
+      "msg": -5
+    }
+  ]
+}

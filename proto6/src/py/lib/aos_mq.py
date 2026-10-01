@@ -32,7 +32,7 @@ def main(argv=None, env=None, stdin=None):
     for a in argv[1:]:
         if a == "--urgent" and cmd == "send":
             urgent = True
-        elif a.startswith("-") and a != "-":
+        elif a.startswith("--"):            # 只有 -- 開頭算旗標：`-` 是讀 stdin，`-5` 是 JSON 負數
             return fail("usage", "%s 不認得 %s；%s" % (cmd, a, USAGE))
         else:
             rest.append(a)

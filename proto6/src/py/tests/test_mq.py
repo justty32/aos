@@ -69,7 +69,9 @@ class Send(MqCase):
             self.assertEqual(self.mq("send", "b.json", str(i)).returncode, 0)
         r = self.mq("send", "b.json", "-", stdin='"x"')
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.take("b.json"), [{"from": None, "msg": m} for m in (0, 1, 2, "x")])
+        r = self.mq("send", "b.json", "-5")                        # 負數不是旗標
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.take("b.json"), [{"from": None, "msg": m} for m in (0, 1, 2, "x", -5)])
 
     def test_take_defaults_to_own_inst(self):
         self.inst({"argv": ["true"]}, "b.json")
@@ -154,6 +156,7 @@ class Errors(MqCase):
             (("send", "b.json"), {}, "usage"),
             (("send", "b.json", "{bad"), {}, "usage"),
             (("take", "--urgent"), {}, "usage"),
+            (("send", "--loud", "b.json", "1"), {}, "usage"),
             (("take", "a", "b"), {}, "usage"),
             (("take",), {}, "no_inst"),
             (("send", "b.json", "1"), {"AOS_DAEMON_MQ_SOCKET": None}, "no_daemon"),

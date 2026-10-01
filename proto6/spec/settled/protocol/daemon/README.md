@@ -2,7 +2,7 @@
 
 ← [整理區](../../README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[daemon](../../daemon/README.md)｜[慣例](../../conventions.md)｜[暫緩區的舊協議](../../deferred/protocol/daemon/README.md)
 
-daemon 協議只定格式：`aos-daemon` 的 argv、設定檔欄位、輸出與結束碼，控制模組的 socket 訊息、環境變數與 `aos-ctl`，重讀設定模組的訊號與輸出，記住狀態模組的狀態檔，收屍／cgroup 模組的設定、框名與輸出。行為寫在 [daemon 正本](../../daemon/README.md)。
+daemon 協議只定格式：`aos-daemon` 的 argv、設定檔欄位、輸出與結束碼，控制模組的 socket 訊息、環境變數與 `aos-ctl`，重讀設定模組的訊號與輸出，記住狀態模組的狀態檔，收屍／cgroup 模組的設定、框名與輸出，訊息模組的 socket 訊息、環境變數與 `aos-mq`。行為寫在 [daemon 正本](../../daemon/README.md)。
 
 | 條號 | 標題 | 檔案 |
 |---|---|---|
@@ -12,6 +12,7 @@ daemon 協議只定格式：`aos-daemon` 的 argv、設定檔欄位、輸出與�
 | P-122 | 重讀設定：設定、訊號與輸出 | [reload.md](reload.md) |
 | P-123 | 記住狀態：設定與狀態檔 | [state.md](state.md) |
 | P-124 | 收屍／cgroup：設定、框名與輸出 | [cgroup.md](cgroup.md) |
+| P-125 | 訊息 socket、環境變數與 aos-mq | [mq.md](mq.md) |
 
 2026-10-01 之前的舊協議（P-101～119：舊設定檔、IPC 封包、登記與查詢 method、runner、helper 私有通道、停機與 `state.json`、tick–daemon 通道）第一版都不做，在[暫緩區](../../deferred/protocol/daemon/README.md)，條號保留、不重用。
 
@@ -23,9 +24,10 @@ daemon 協議只定格式：`aos-daemon` 的 argv、設定檔欄位、輸出與�
 - 控制模組：socket 上一行 JSON 的請求與回應、錯誤代碼、往下傳的環境變數、`aos-ctl` 的 argv、輸出與結束碼（P-121）；
 - 重讀設定模組：設定、SIGHUP、stdout／stderr 的行（P-122）；
 - 記住狀態模組：`modules.state` 的 `$ref` 寫法、狀態檔格式（P-123）；
-- 收屍／cgroup 模組：`modules.cgroup` 與每項 `cgroup` 上限的寫法、框名、stdout 的行（P-124）。
+- 收屍／cgroup 模組：`modules.cgroup` 與每項 `cgroup` 上限的寫法、框名、stdout 的行（P-124）；
+- 訊息模組：socket 上一行 JSON 的請求與回應、錯誤代碼、往下傳的環境變數、`aos-mq` 的 argv、輸出與結束碼（P-125）。
 
-行為一律以 [daemon 正本](../../daemon/README.md)（[B-640](../../daemon/core.md)、[B-641](../../daemon/control.md)、[B-642](../../daemon/reload.md)、[B-643](../../daemon/state.md)、[B-644](../../daemon/cgroup.md)）為準；這裡寫到行為時只留一句加條號（[P-001](../../../protocol/README.md)）。結束碼照 [C-08](../../conventions.md)，環境變數總表見 [C-10](../../conventions.md)。
+行為一律以 [daemon 正本](../../daemon/README.md)（[B-640](../../daemon/core.md)、[B-641](../../daemon/control.md)、[B-642](../../daemon/reload.md)、[B-643](../../daemon/state.md)、[B-644](../../daemon/cgroup.md)、[B-645](../../daemon/mq.md)）為準；這裡寫到行為時只留一句加條號（[P-001](../../../protocol/README.md)）。結束碼照 [C-08](../../conventions.md)，環境變數總表見 [C-10](../../conventions.md)。
 
 ### 共用約定哪些不適用 P-120／P-121〔astra 報告必修 3〕
 

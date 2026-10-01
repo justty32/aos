@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "aos-daemon 訊息模組的一行 JSON（P-125）：請求或回應",
+  "description": "一連線一請求：客戶端送一行請求、daemon 回一行回應。請求與回應分開驗：請求用 #/$defs/Request、回應用 #/$defs/Reply（根只是兩者擇一的總覽）。請求不認得的欄位照收不理（照控制模組 P-121）。",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/Request"
+    },
+    {
+      "$ref": "#/$defs/Reply"
+    }
+  ],
+  "$defs": {
+    "Inst": {
+      "type": "string",
+      "description": "inst 字面值，跟設定檔 insts 的鍵逐字比對"
+    },
+    "Request": {
+      "type": "object",
+      "description": "send 或 take 剛好出現一個；其他欄位照收不理。msg、from、urgent 只在 send 時看",
+      "properties": {
+        "send": {
+          "$ref": "#/$defs/Inst"
+        },
+        "take": {
+          "$ref": "#/$defs/Inst"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "send"
+          ]
+        },
+        {
+          "required": [
+            "take"
+          ]
+        }
+      ],
+      "if": {
+        "required": [
+          "send"
+        ]
+      },
+      "then": {
+        "required": [
+          "msg"
+        ],
+        "properties": {
+          "msg": {
+            "description": "信的內容，任何 JSON 值（含 null）；daemon 不看"
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null,
+            "description": "寄件 inst；原樣存、不核對"
+          },
+          "urgent": {
+            "type": "boolean",
+            "default": false,
+            "description": "放進信箱後叫醒收件那一項（照 wake 不帶選項）"
+          }
+        }
+      }
+    },
+    "Message": {
+      "type": "object",
+      "required": [
+        "from",
+        "msg"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "msg": {}
+      }
+    },
+    "Reply": {
+      "type": "object",
+      "required": [
+        "ok"
+      ],
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Ok"
+        },
+        {
+          "$ref": "#/$defs/Taken"
+        },
+        {
+          "$ref": "#/$defs/Error"
+        }
+      ]
+    },
+    "Ok": {
+      "description": "send 成功",
+      "type": "object",
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "ok"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "messages"
+            ]
+          },
+          {
+            "required": [
+              "error"
+            ]
+          }
+        ]
+      }
+    },
+    "Taken": {
+      "description": "take 成功：信箱裡的信照先進先出，一次全部取走；沒信是空陣列",
+      "type": "object",
+      "required": [
+        "ok",
+        "messages"
+      ],
+      "properties": {
+        "ok": {
+          "const": true
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Message"
+          }
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "required": [
+        "ok",
+        "error",
+        "detail"
+      ],
+      "properties": {
+        "ok": {
+          "const": false
+        },
+        "error": {
+          "enum": [
+            "unknown_inst",
+            "bad_request"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "description": "unknown_inst 是那個 inst 字面值；bad_request 是白話說明"
+        }
+      }
+    }
+  }
+}
