@@ -103,6 +103,18 @@ class Remove(ReloadCase):
         self.wait_for(lambda: len(self.runs()) == 2, timeout=5)
         self.assertFalse(self.send({"status": "r.json"})["paused"])
 
+    def test_readd_waits_for_old_run(self):
+        # 拿掉時舊的那次還在跑，馬上加回來：新的一項等舊的那次跑完才開（同一項不疊著開）
+        self.inst(sh("echo start >> log; sleep 1; echo end >> log"), "r.json")
+        p, out, _ = self.boot({"r.json": {}}, 30000)
+        self.wait_for(lambda: self.exists("log"))
+        self.rewrite(p, {}, 30000)
+        self.wait_for(lambda: self.reloads(out) == 1)
+        self.rewrite(p, {"r.json": {}}, 30000)
+        self.wait_for(lambda: self.reloads(out) == 2)
+        self.wait_for(lambda: len(self.results(out, "r.json")) == 2, timeout=6)
+        self.assertEqual(self.read("log").split(), ["start", "end", "start", "end"])
+
 
 class Change(ReloadCase):
 
@@ -239,6 +251,21 @@ class Broken(ReloadCase):
         time.sleep(0.5)
         self.assertIsNone(p.poll())
         self.assertEqual(len(self.results(out, "a.json")), 1)
+
+
+    def test_bad_interval_keeps_old(self):
+        # 週期寫成字串：整份不套用，舊的週期沒被改壞（之後照樣跑、執行緒沒死）
+        self.inst(sh(STAMP), "r.json")
+        p, out, err = self.boot({"r.json": {}}, 30000)
+        self.wait_for(lambda: len(self.runs()) == 1)
+        self.rewrite(p, {"r.json": {}}, "1000")
+        self.wait_for(lambda: any(l.startswith("aos-daemon: reload: ") for l in list(err)))
+        self.assertIn("interval_ms", err[0])
+        for n in (2, 3):
+            self.assertEqual(self.send({"wake": "r.json"}), {"ok": True})
+            self.wait_for(lambda: len(self.runs()) == n)
+        self.wait_for(lambda: self.send({"status": "r.json"})["next"] is not None)
+        self.assertEqual(self.reloads(out), 0)
 
 
 class NotMounted(ReloadCase):

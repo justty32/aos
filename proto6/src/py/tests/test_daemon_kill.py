@@ -1,8 +1,9 @@
 """第十九批驗收（verdicts 11「2026-10-01 第十九批」）：daemon 跑 daemon 用到的三件事。真的開 bin/aos-daemon。
 
 - `OutputCap`：每次、每條最多留 exec_output_max_bytes，丟最早的，標頭 `dropped=`。
-- `ConfigLock`：同一份設定開第二個 daemon，stdout 警告、照樣跑。
+- `ConfigLock`：同一份設定開第二個 daemon，拿不到鎖：stderr 一行、回 1。
 - `Kill`：控制模組的 kill／restart（先 TERM，寬限後 KILL）。
+- `KillSeq`：kill_run() 只對同一次送訊號（舊的請求不殺到下一次）。
 - `KillCgroup`：掛 cgroup 時 KILL 那一步清整個框（拿不到委派的 scope 就跳過）。
 - `KillOtherAccount`：帳號模組底下 kill 別的帳號的項（經 root 端送；拿不到 namespace 假 root 就跳過）。
 """
@@ -13,6 +14,8 @@ import unittest
 
 from _ctl_util import CtlCase
 from _daemon_util import TS, DaemonCase, INHERIT, sh
+
+import aos_daemon
 
 LOUD = {"stdout": INHERIT, "stderr": INHERIT}
 # 印 0000|0001|…0299|（每筆 5 bytes，共 1500 bytes）到 stdout，stderr 印同樣的東西
@@ -264,6 +267,26 @@ if CgCase is not None:
 
 
 from _account_util import NS_OK, NsCase, OTHER  # noqa: E402
+
+
+class KillSeq(unittest.TestCase):
+    """kill_run() 每次送訊號前在 cond 底下核序號：那一次已經結束、下一次已經開了就不送（不殺錯）。"""
+
+    def test_only_same_run(self):
+        import aos_daemon_kill
+        sent = []
+        orig = aos_daemon_kill.signal_run
+        aos_daemon_kill.signal_run = lambda item, final: sent.append(final)
+        self.addCleanup(setattr, aos_daemon_kill, "signal_run", orig)
+        item = aos_daemon.Item(0, "a", 1000, False, None)
+        item.running, item.run_seq = True, 2
+        aos_daemon_kill.kill_run(item, 1, 0)        # 第 1 次已經結束、第 2 次在跑：一個都不送
+        self.assertEqual(sent, [])
+        aos_daemon_kill.kill_run(item, 2, 0)        # 同一次、寬限 0：TERM 再 KILL
+        self.assertEqual(sent, [False, True])
+        item.running = False
+        aos_daemon_kill.kill_run(item, 2, 0)        # 已經沒在跑
+        self.assertEqual(sent, [False, True])
 
 
 class KillOtherAccount(NsCase):

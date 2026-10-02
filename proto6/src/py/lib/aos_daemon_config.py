@@ -10,6 +10,9 @@ import time
 from aos_directives import Context, is_option_object, load_document, resolve_located
 
 INST_MARK = "<inst>"
+# 頂層認得的鍵：只有這些展開指示詞；陌生鍵（含 `_metainfo`）不解、丟掉（conventions C-11）
+TOP_KEYS = ("insts", "cwd", "interval_ms", "stop_on_nonzero", "exec_out_path", "exec_err_path",
+            "exec_output_max_bytes", "lock_path", "modules")
 OUTPUT_MAX = 1 << 20            # exec_output_max_bytes 的預設（第十九批）
 
 
@@ -42,6 +45,8 @@ class Item:
         self.end_mono = None            # 上一次結束的 monotonic 時刻（重讀設定改週期時用）
         self.due = time.monotonic()     # 下次照週期該跑的時刻（monotonic）；剛開時立刻跑
         self.removed = False            # 重讀設定時被拿掉：跑完這次（若在跑）就結束執行緒
+        self.ended = threading.Event()  # 執行緒結束了（被拿掉、跑完最後一次、清完框）
+        self.prev = None                # 拿掉又加回來時，舊的那一項（還沒結束就先等它，同一項不疊著開）
         self.mailbox = []               # 訊息模組的信箱 [信]（信＝寄的 JSON 原樣），先進先出；只在記憶體（m3m 模組四）
         # 第十九批 kill／restart：正在跑的那一次是誰（主程式開的＝程序群組 id；經 root 端開的＝請求 id）
         self.pid = None
@@ -76,10 +81,16 @@ def expand(value, ctx, position):
     return v
 
 
+def expand_top(root, ctx):
+    """設定檔的根：只展開認得的頂層鍵（`TOP_KEYS`），底下照 `expand()` 整份展開；陌生的頂層鍵不解、不留。"""
+    loc = resolve_located(root, ctx, [])
+    return {k: expand(v, loc.ctx, loc.position + [k]) for k, v in loc.value.items() if k in TOP_KEYS}
+
+
 def read_config(path):
-    """讀設定檔、整份展開指示詞，回展開後的 JSON。讀不到、不是 JSON、指示詞錯都是 `DirectiveError`。"""
+    """讀設定檔、展開指示詞（陌生頂層鍵不解），回展開後的 JSON。讀不到、不是 JSON、指示詞錯都是 `DirectiveError`。"""
     doc = load_document(path)
-    return expand(doc.root, Context(doc, base_dir=os.path.dirname(os.path.abspath(path))), [])
+    return expand_top(doc.root, Context(doc, base_dir=os.path.dirname(os.path.abspath(path))))
 
 
 def load_config(path):
@@ -133,7 +144,7 @@ def _state_ref(raw, base_dir):
     return os.path.join(base_dir, ref["$ref"]), rest
 
 
-def load_full(path, read_state=True, doors=None):
+def load_full(path, read_state=True, doors=None, account=None):
     """讀設定檔、展開指示詞，回 `Setup`。兩邊都沒有 interval_ms、`modules` 不是物件丟 ValueError；
     `modules.control` 沒寫 `socket` 自然丟錯。
 
@@ -141,12 +152,14 @@ def load_full(path, read_state=True, doors=None):
     其餘照整份展開；狀態檔在就照一般 `$ref` 展開讀進來，不在＝`{"insts": {}}`。
     `read_state=False`（重讀設定用）不讀狀態檔：重讀時以記憶體為準。
     `doors`（重讀設定用，開起來時掛了訊息模組才給）：每項的 `mq` 照開起來時的門核，不看新的 `modules.mq`
-    （`modules` 改了不套用；第二十五批，AI 隊定）。"""
+    （`modules` 改了不套用；第二十五批，AI 隊定）。
+    `account`（重讀設定用）：開起來時有沒有掛帳號模組；照它決定讀不讀每項的 `account`，不看新的 `modules`
+    （重讀拿掉 `modules.account` 不會讓各項偷換成預設帳號）。"""
     doc = load_document(path)
     base_dir = os.path.dirname(os.path.abspath(path))
     ctx = Context(doc, base_dir=base_dir)
     state_path, raw = _state_ref(doc.root, base_dir)
-    top = expand(raw, ctx, [])
+    top = expand_top(raw, ctx)
     modules = top.get("modules", {})
     if not isinstance(modules, dict):
         raise ValueError("modules 要是物件")       # 核心只認得它；目前讀 control、reload、state
@@ -159,7 +172,9 @@ def load_full(path, read_state=True, doors=None):
     if isinstance(out_max, bool) or not isinstance(out_max, int) or out_max < 0:
         raise ValueError("exec_output_max_bytes 要是非負整數")
     items = []
-    if "account" in modules:                        # m3m 模組五：模組沒掛時 "account" 照不認得的鍵忽略
+    if account is None:
+        account = "account" in modules
+    if account:                                     # m3m 模組五：模組沒掛時 "account" 照不認得的鍵忽略
         import aos_daemon_account
         user_of = aos_daemon_account.item_user
     else:
@@ -185,6 +200,8 @@ def load_full(path, read_state=True, doors=None):
         interval = entry.get("interval_ms", top.get("interval_ms"))
         if interval is None:
             raise ValueError("insts 的 %s 沒有 interval_ms，頂層也沒有" % json.dumps(inst, ensure_ascii=False))
+        if isinstance(interval, bool) or not isinstance(interval, (int, float)) or interval < 0:
+            raise ValueError("insts 的 %s：interval_ms 要是非負數" % json.dumps(inst, ensure_ascii=False))
         stop = entry.get("stop_on_nonzero", top.get("stop_on_nonzero", False))
         items.append(Item(i, inst, interval, stop,
                           err_path_for(top.get("exec_err_path"), inst, start),

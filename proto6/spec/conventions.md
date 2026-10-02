@@ -55,7 +55,7 @@ aos 放自己狀態檔的資料夾預設叫 `.aos`，環境變數 `AOS_DIRNAME` 
 | `AOS_DAEMON_INST` | daemon（控制或訊息模組） | 這次跑的是 `insts` 的哪一項 |
 | `AOS_DAEMON_MQ_<門名>` | daemon 訊息模組 | 該扇門的 socket 路徑 |
 
-原則：tick 跑每一項前，先把繼承來的 `AOS_TASK_*`、`AOS_HOOK_*` 全拿掉再放這一項該有的，外層的值不外漏；其他變數一路往下傳（所以任何一層的 `aos-ctl` 找到的都是最上層那個 daemon）。已撤回、改名的舊名（`AOS_NODE_DIR`、`AOS_TICK_RECORD`、`AOS_DAEMON_SOCKET`、`AOS_DAEMON_MQ_SOCKET`）不再使用；暫緩的 `AOS_TICK_LOCK_FD`、`AOS_TICK_FIRSTDO_FSYNC`、`AOS_TICK_TOKEN` 見[暫緩區](deferred/README.md)。
+原則：tick 跑每一項前，先把繼承來的 `AOS_TASK_*`、`AOS_HOOK_*` 全拿掉再放這一項該有的，外層的值不外漏；其他變數一路往下傳（所以同一個 daemon 底下任何一層的 `aos-ctl` 找到的都是那個 daemon）；daemon 開 `aos-exec` 前先拿掉繼承來的所有 `AOS_DAEMON_*`，再照自己掛的模組重設，所以跨進下一層 daemon 就換成下一層的。已撤回、改名的舊名（`AOS_NODE_DIR`、`AOS_TICK_RECORD`、`AOS_DAEMON_SOCKET`、`AOS_DAEMON_MQ_SOCKET`）不再使用；暫緩的 `AOS_TICK_LOCK_FD`、`AOS_TICK_FIRSTDO_FSYNC`、`AOS_TICK_TOKEN` 見[暫緩區](deferred/README.md)。
 
 ## C-11：設定檔頂層 `cwd` 與指示詞展開
 
