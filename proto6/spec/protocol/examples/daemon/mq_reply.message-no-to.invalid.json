@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "from": "a.json",
+      "from_socket": null,
+      "msg": 1
+    }
+  ]
+}

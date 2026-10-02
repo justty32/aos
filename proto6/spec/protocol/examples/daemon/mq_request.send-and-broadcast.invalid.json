@@ -1,0 +1,5 @@
+{
+  "send": "b.json",
+  "broadcast": true,
+  "msg": 1
+}

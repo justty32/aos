@@ -844,3 +844,25 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 改到的地方：程式 `lib/aos_mq.py`、`lib/aos_daemon_mq.py`、`lib/aos_ctl.py`；測試 `tests/test_mq.py`（既有的信件比對加 `from_socket`；新 `CrossDaemon` 三條：A 寄給 B 並照 from_socket 回信、相對 `--socket` 與沒有自己 daemon 時 from_socket 為 null、`aos-ctl --socket` 對另一個 daemon 的 status／wake 與沒寫 inst 回 usage；`Errors` 加 `--socket` 的用法錯與連不上）；spec [B-645](../../spec/settled/daemon/mq.md)、[P-125](../../spec/settled/protocol/daemon/mq.md)、[B-641](../../spec/settled/daemon/control.md)、[P-121](../../spec/settled/protocol/daemon/control.md)、[名詞](../../spec/settled/terms.md)、[驗收入口](../../spec/conformance.md)；schema `daemon-mq`（`from_socket`）、`daemon-ctl`（說明一句）、範例 `examples/daemon/mq_request.send.valid.json`、`mq_reply.taken.valid.json`、`mq_reply.message-extra.invalid.json` 改寫，新 `mq_reply.message-no-from-socket.invalid.json`、`mq_request.send-from-socket-number.invalid.json`；[src/py README](../../src/py/README.md)；[plan m3m](../../plan/m3m-daemon-modules.md) 模組四。
 
+
+<a id="2026-10-01-第二十二批廣播與頻道"></a>
+
+## 2026-10-01 第二十二批：廣播與頻道
+
+〔使用者裁定 2026-10-01 晚，在家〕第二十一批留下「廣播待使用者想」，AI 隊提了兩種：a＝全體廣播（寄給一個 daemon 的每一項）、b＝頻道（只寄給訂了的項）。使用者原話：「ab都做，派agent做」；送達數要不要印，使用者回「好，如你所建議」（＝只在 `--all`／`--channel` 時印，單寄照舊不印）。程式與測試當晚寫完；本段與 spec 是 10-02 在公司照程式補的（a、b 的對應依當晚 SESSION-LOG 與程式）。
+
+- **全體廣播**：`aos-mq send --all <JSON>`，寄給那個 daemon 的每一項；socket 請求 `{"broadcast":true,"msg":…}`。
+- **頻道**：`aos-mq send --channel <頻道> <JSON>`，只寄給訂了的項；訂閱寫在每項設定 `"mq": {"subscribe": [...]}`；socket 請求 `{"channel":"<頻道>","msg":…}`。
+- **送達數**：寄的回應多 `delivered`；`aos-mq` 只在 `--all`／`--channel` 成功時印一行數字。
+
+**AI 隊定的細節**（使用者可改）：
+
+1. 廣播、頻道都**不寄給寄件人自己**。「自己」＝`from` 等於那一項、而且 `from_socket` 是 null 或就是這個 daemon 的訊息 socket；跨 daemon 來的信（`from_socket` 是別的 daemon）同名的項照收。
+2. `<收件 inst>`、`--all`、`--channel` 三選一；`--channel` 只收一個頻道名。跨 daemon 照第二十一批：`--socket` 配 `--all`／`--channel` 就是對那個 daemon 廣播；一次廣播到多個 daemon 不做。
+3. 頻道不用宣告，名字逐字比對；沒人訂、沒人收也回成功（`delivered:0`，`aos-mq` 印 `0`、回 0）。`broadcast`／`channel` 不會回 `unknown_inst`。
+4. 每封信多一欄 **`to`**：單寄是收件 inst、廣播 `"*"`、頻道 `"#<頻道名>"`。`take`／`peek` 多 `--to` 篩（寫法同 `--from`；`to` 不會是 null，所以 `--to` 不接東西什麼都比不到）；`--from`、`--to` 都給＝兩個都要符合。寄的請求帶了 `to` 忽略。
+5. 每個信箱放一份各自的信（深拷貝）；`--urgent` 照單寄規則，每個收件項各叫醒一次。
+6. `mq.subscribe` 是每項的設定：掛了模組時格式不對＝設定錯（開跑回 1、重讀不套用）；沒掛模組時 `mq` 照不認得的鍵忽略；重讀設定後訂閱照新的。
+7. schema `daemon-mq` 的 `Message` 把 `to` 列為必有、`Ok` 把 `delivered` 列為必有（daemon 現在一定放）。
+
+改到的地方：程式 `lib/aos_daemon_mq.py`（`broadcast`／`channel`、`item_subscribe()`、`to`、`delivered`）、`lib/aos_daemon.py`（`Item.subscribe`、讀 `mq.subscribe`）、`lib/aos_daemon_reload.py`（訂閱照新設定）、`lib/aos_mq.py`（`--all`、`--channel`、`--to`、印送達數）；測試 `tests/test_mq.py`（既有的信件比對加 `to`；新 `Broadcast` 十一條）；spec [B-645](../../spec/settled/daemon/mq.md)、[P-125](../../spec/settled/protocol/daemon/mq.md)、[P-120](../../spec/settled/protocol/daemon/core.md)（每項的 `mq`）、[名詞](../../spec/settled/terms.md)、[驗收入口](../../spec/conformance.md)；schema `daemon-mq`（`broadcast`、`channel`、`to`、`delivered`）、`daemon-core-config`（`Item.mq`）；範例 `examples/daemon/mq_reply.ok.valid.json`、`mq_reply.taken.valid.json`、`mq_reply.message-extra.invalid.json`、`mq_reply.message-no-from-socket.invalid.json` 改寫，新 `mq_request.{broadcast,channel,peek-to}.valid.json`、`mq_request.{broadcast-false,channel-empty,channel-no-msg,send-and-broadcast,take-to-string}.invalid.json`、`mq_reply.broadcast-none.valid.json`、`mq_reply.{message-no-to,ok-no-delivered}.invalid.json`、`core-config.mq-subscribe.valid.json`、`core-config.mq-subscribe-string.invalid.json`；[src/py README](../../src/py/README.md)；[plan m3m](../../plan/m3m-daemon-modules.md) 模組四。

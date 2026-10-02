@@ -84,7 +84,7 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 鎖檔（daemon） | 〔第十九批〕daemon 開起來對 `<設定檔>.lock`（或 `lock_path`）取的獨占鎖；拿不到＝同一份設定已經有 daemon 在跑，回 1。跟 tick 的 `.aos/tick.lock` 不同 | [B-640](daemon/core.md) |
 | 重讀設定模組 | 模組 `reload`：收到 SIGHUP 重讀同一份設定檔，加減項、改週期免重開；`cwd`、`modules`、`exec_out_path`、`exec_err_path` 改了只印警告 | [B-642](daemon/reload.md) |
 | 記住狀態模組 | 模組 `state`：設定寫成 `{"$ref": "<狀態檔>"}`，把每項的暫停、已停記進那個檔，重開時讀回 | [B-643](daemon/state.md) |
-| 訊息模組 | 模組 `mq`：另開一個 Unix socket，daemon 的每一項一個信箱（記憶體、先進先出）；任務用 `aos-mq send` 寄、`aos-mq take` 取，急件順便叫醒收件那一項。〔第二十一批〕跨 daemon：收件地址的前綴是對方 daemon 的訊息 socket 路徑（`aos-mq send --socket`），信裡帶寄件方的 `from_socket` 好回信；`aos-ctl --socket` 同理 | [B-645](daemon/mq.md) |
+| 訊息模組 | 模組 `mq`：另開一個 Unix socket，daemon 的每一項一個信箱（記憶體、先進先出）；任務用 `aos-mq send` 寄、`aos-mq take` 取，急件順便叫醒收件那一項。〔第二十一批〕跨 daemon：收件地址的前綴是對方 daemon 的訊息 socket 路徑（`aos-mq send --socket`），信裡帶寄件方的 `from_socket` 好回信；`aos-ctl --socket` 同理。〔第二十二批〕`--all` 寄給全部、`--channel` 寄給訂了頻道（每項 `mq.subscribe`）的項，都不寄給自己；信帶 `to`（`*`／`#<頻道>`） | [B-645](daemon/mq.md) |
 | 帳號模組 | 模組 `account`：要用 root 開；開出 root 端 `aos-daemon-root` 後主程式永久降成預設帳號，名單（`allow`／`deny`，結尾 `*` 當前綴）准的別的帳號的項由 root 端用那個帳號開 | [B-646](daemon/account.md) |
 | 收屍／cgroup 模組 | 模組 `cgroup`：以 daemon 自己所在的 cgroup 當子樹根，每項一個框 `i-<h>`；每次 `aos-exec` 結束後把框裡留下的程序殺光、清空才算結束（收屍）；每項的 `cgroup` 鍵寫上限 | [B-644](daemon/cgroup.md) |
 

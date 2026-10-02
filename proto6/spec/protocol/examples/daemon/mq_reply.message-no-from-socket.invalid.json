@@ -3,6 +3,7 @@
   "messages": [
     {
       "from": "a.json",
+      "to": "b.json",
       "msg": 1
     }
   ]

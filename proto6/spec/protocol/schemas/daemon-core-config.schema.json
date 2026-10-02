@@ -189,6 +189,20 @@
               "description": "帳號名；省了＝預設帳號"
             }
           }
+        },
+        "mq": {
+          "type": "object",
+          "description": "訊息模組掛著時這一項的設定（P-125，第二十二批）；模組沒掛時忽略",
+          "properties": {
+            "subscribe": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "訂哪些頻道（頻道名）；省了＝不訂。寄到頻道的信只進訂了的項的信箱"
+            }
+          }
         }
       }
     }

@@ -434,17 +434,19 @@ AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell �
 - **急件**（`--urgent`）：信放進信箱後照控制模組 `wake`（不帶選項）叫醒收件那一項：正在跑就補一次、暫停中跑一次、已停不跑（信照收）。不用掛控制模組。
 
 ```text
-aos-mq send [--urgent] [--socket <對方訊息 socket>] <收件 inst> <JSON|->
+aos-mq send [--urgent] [--socket <對方訊息 socket>] (<收件 inst> | --all | --channel <頻道>) <JSON|->
                                                 # from 自動填 AOS_DAEMON_INST、from_socket 自動填自己的 socket（沒有＝null）
-aos-mq take [--from [<寄件 inst>…]]…            # 只取自己（AOS_DAEMON_INST）的信箱；每封一行 {"from":…,"from_socket":…,"msg":…}
-aos-mq peek [--from [<寄件 inst>…]]…            # 同上，但不取走
+aos-mq take [--from [<寄件 inst>…]]… [--to [<收件地址>…]]…
+                                                # 只取自己（AOS_DAEMON_INST）的信箱；每封一行 {"from":…,"from_socket":…,"to":…,"msg":…}
+aos-mq peek [--from [<寄件 inst>…]]… [--to [<收件地址>…]]…   # 同上，但不取走
 ```
 
 結束碼照 `aos-ctl`：成功 0；`usage:`（含 `<JSON>` 不是 JSON）、`no_inst:`、`no_daemon:`、`connect:`、`unknown_inst:`、`bad_request:` 一律 1，stderr 一行。
 
 | 函式 | 做什麼 |
 |---|---|
-| `aos_daemon_mq.serve()`、`parse()`、`handle()` | 收 send／take／peek、放信取信看信、急件叫醒 |
+| `aos_daemon_mq.serve()`、`parse()`、`handle()` | 收 send／broadcast／channel／take／peek、放信取信看信、急件叫醒 |
+| `aos_daemon_mq.item_subscribe()` | 讀一項的 `mq.subscribe`（第二十二批） |
 | `aos_daemon.give_env()` | 放 `AOS_DAEMON_SOCKET`／`AOS_DAEMON_MQ_SOCKET`／`AOS_DAEMON_INST` |
 | `aos_daemon._quit()` | 退出前刪兩個 socket 檔 |
 | `aos_mq.main()`、`bin/aos-mq` | 小工具 |
@@ -454,7 +456,9 @@ aos-mq peek [--from [<寄件 inst>…]]…            # 同上，但不取走
 
 - **跨 daemon**（2026-10-01 第二十一批）：收件地址的前綴是對方 daemon 的訊息 socket 路徑。`send --socket <路徑>` 直接連對方寄（相對路徑以呼叫者 cwd 為準，有 `--socket` 就不需要 `AOS_DAEMON_MQ_SOCKET`）；信裡自動帶 `from_socket`（自己的 `AOS_DAEMON_MQ_SOCKET` 的絕對路徑），收件方回信 `send --socket <from_socket> <from>`。daemon 不轉送、只是多存一欄。`take`／`peek` 不收 `--socket`；`--from` 只比 `from`。`aos-ctl --socket <控制 socket>` 同理，但要明寫 `<inst>`。peers（暱稱→socket 路徑）先不做。
 
-測試 `tests/test_mq.py`（23 條，約 6 秒；`CrossDaemon` 三條開兩個 daemon）。
+- **廣播與頻道**（2026-10-01 第二十二批）：`send --all` 寄給每一項、`send --channel <頻道>` 寄給設定裡 `"mq": {"subscribe": [...]}` 有它的項，都不寄給自己（`from` 是那一項、`from_socket` 是 null 或這個 daemon 的）；成功時 stdout 印一行收到的項數。信多 `to`（收件 inst／`*`／`#<頻道>`），`take`／`peek --to` 篩。socket 請求 `{"broadcast":true,…}`／`{"channel":"x",…}`，寄的回應多 `delivered`。重讀設定時訂閱照新的。
+
+測試 `tests/test_mq.py`（34 條，約 6 秒；`CrossDaemon` 三條開兩個 daemon、`Broadcast` 十一條）。
 
 ## 帳號（m3m 模組五）
 
