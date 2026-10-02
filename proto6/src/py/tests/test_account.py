@@ -3,10 +3,12 @@
 兩組：
 - `Names`、`Policies`、`NotRoot`：一般帳號就能跑（名單比對、設定錯、沒用 root 開回 1）。
 - 其餘：用 `unshare --user --map-root-user --map-auto` 當假 root——namespace 裡自己是 root，
-  UID 1～65536 對到 /etc/subuid 的子 UID，所以 `/etc/passwd` 裡的系統帳號（http、daemon、nobody）
+  UID 1～65536 對到 /etc/subuid 的子 UID，所以 `/etc/passwd` 裡的系統帳號（預設帳號、daemon、nobody）
   切得過去。拿不到（沒有 subuid、沒有那幾個帳號）就整組跳過，要等真 root 手動驗。
   別的 UID 進不了 /home/lorkhan（700），所以整份 src/py 先複製到 /tmp 底下 755 的資料夾再跑；
-  測試資料夾 chmod 777。預設帳號用 http，別的帳號用 daemon（有補充群組 adm、bin）與 nobody。
+  測試資料夾 chmod 777。預設帳號用 http（Arch）；沒有就依序試 www-data（Debian／Ubuntu）、bin、sys。
+  別的帳號用 daemon 與 nobody；補充群組照系統查（Arch 的 daemon 有 adm、bin，Ubuntu 沒有）。
+  `Policies` 也要這三個帳號存在，找不到就跳過。
 """
 import json
 import os
@@ -30,7 +32,21 @@ import aos_daemon_account as acc
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.dirname(HERE)
 NS = ["unshare", "--user", "--map-root-user", "--map-auto"]
-DEFAULT, OTHER, THIRD = "http", "daemon", "nobody"
+
+
+def _have(name):
+    try:
+        pwd.getpwnam(name)
+        return True
+    except KeyError:
+        return False
+
+
+# 預設帳號：Arch 有 http、Debian／Ubuntu 有 www-data；都沒有就退到 bin、sys（三個帳號要不同、都不是 root）
+DEFAULT = next((n for n in ("http", "www-data", "bin", "sys") if _have(n)), "http")
+OTHER, THIRD = "daemon", "nobody"
+USERS_SKIP = (None if all(_have(n) for n in (DEFAULT, OTHER, THIRD))
+              else "系統沒有測試要的帳號（%s、%s、%s）" % (DEFAULT, OTHER, THIRD))
 WHO = 'echo "$(id -un) $(id -G) $HOME $USER $LOGNAME" > who.%s'
 
 
@@ -68,6 +84,7 @@ class Names(unittest.TestCase):
         self.assertFalse(acc.match("bob", "bobby"))
 
 
+@unittest.skipIf(USERS_SKIP is not None, USERS_SKIP or "")
 class Policies(unittest.TestCase):
     """名單與預設帳號（不用 root：只查 /etc/passwd）。"""
 
@@ -105,10 +122,10 @@ class Policies(unittest.TestCase):
             self.bad(dict(conf, user=DEFAULT), text="deny 比得到預設帳號")
 
     def test_allowed(self):
-        p = self.pol({"user": DEFAULT, "allow": ["no*", OTHER], "deny": ["nobody"]})
+        p = self.pol({"user": DEFAULT, "allow": [THIRD[:2] + "*", OTHER], "deny": [THIRD]})
         self.assertTrue(p.allowed(DEFAULT))             # 預設帳號不受名單管
         self.assertTrue(p.allowed(OTHER))
-        self.assertFalse(p.allowed("nobody"))           # 黑名單優先
+        self.assertFalse(p.allowed(THIRD))              # 黑名單優先
         self.assertFalse(p.allowed("root"))             # root 一律不准
         self.assertFalse(self.pol({"user": DEFAULT, "allow": ["*"]}).allowed("root"))
         self.assertFalse(self.pol({"user": DEFAULT}).allowed(OTHER))   # allow 不寫＝空

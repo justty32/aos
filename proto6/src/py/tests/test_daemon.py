@@ -452,11 +452,16 @@ class Step6Tick(DaemonCase):
         self.write("n/a/.aos/tasks.json", tasks_json({"id": "t", "argv": ["true"]}))
 
     def seq(self):
-        p = os.path.join(self.node, ".aos", "tick", "current", "record.json")   # 第九批拆檔：seq 在 record.json
-        if not os.path.exists(p):
-            return 0
-        with open(p, encoding="utf-8") as f:
-            return json.load(f)["seq"]
+        # 第九批拆檔：seq 在 record.json。每格收尾時 tick 把 current 改名成 last、再把新的改名成 current，
+        # 中間有一瞬間沒有 current（daemon 一直在跑時讀得到這個空檔），那時就看 last。
+        for name in ("current", "last"):
+            p = os.path.join(self.node, ".aos", "tick", name, "record.json")
+            try:
+                with open(p, encoding="utf-8") as f:
+                    return json.load(f)["seq"]
+            except FileNotFoundError:
+                continue
+        return 0
 
     def test_inst_path(self):
         inst = os.path.join(self.node, "inst.json")
