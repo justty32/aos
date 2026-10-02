@@ -33,16 +33,16 @@
 
 1. **blocking read 與 kill**。FUSE 可以讓 read 擋住（daemon 不回就擋），但必須 `direct_io`，不然 kernel 看 `st_size=0` 直接回 EOF、根本不問 daemon。呼叫端被一般 signal 打斷時 kernel 送 `FUSE_INTERRUPT`，daemon 要回 `EINTR`；被 SIGKILL 時若請求已送到 daemon，呼叫端會等到 daemon 回才死（中度確定）。tick 的任務若在 `wait` 檔上擋著、被 cgroup.kill 砍，就可能卡住。
 2. **page cache 吃掉 ctl 檔**。同一個 `status` 檔第二次 `cat` 可能讀到舊的；要 `direct_io` 或每次回不同 `st_size`。v9fs 也一樣，要 `cache=none`。
-3. **daemon 死了掛載點會 hang**。`Transport endpoint is not connected`，要 `fusermount3 -u`；daemon 卡住可以 `echo 1 > /sys/fs/fuse/connections/N/abort`。現在 socket 死了只是 `connect` 錯，任務照回 1；FUSE 版任務會卡在 `open()`。
+3. **daemon 死掉與卡住要分開看**。daemon 退出或被殺、FUSE 連線關閉後，對掛載點的操作直接回錯（`ENOTCONN`，`Transport endpoint is not connected`），不會卡；只是掛載點殘留在那裡，要 `fusermount3 -u` 清。daemon **活著但不回**才會一直等，這時要 `echo 1 > /sys/fs/fuse/connections/N/abort`。對照現在：socket 死了是 `connect` 錯、任務回 1；FUSE 版 daemon 死了任務拿 `ENOTCONN`、也回 1，差別只在「daemon 卡住」這種情況多了一類卡死。
 4. **inotify 不靈**。想用 inotify 盯 `inbox/` 等信，FUSE 這邊收不到；只能 blocking read 或 poll（FUSE 支援 `FUSE_POLL`）。
 
 ## 「換掉 9P」的三個故事（重要反證）
 
 - **gVisor**：原本 Sentry 透過 9P 問 gofer 拿檔；9P 太多話（走 N 段路徑至少 N−1 次 RPC），換成自家的 lisafs，gofer 記憶體降 30～60%；後來再加 directfs 直接開 host fd。9P 模式已 deprecated。
-- **QEMU**：virtio-9p 被 virtiofs（FUSE 協議跑 virtio）取代，理由是效能與 POSIX 語意；Kata 跟著換。
-- **WSL**：`/mnt/c` 的 9P 被罵了五年（microsoft/WSL#5103），2026 年還在為 virtiofs 改 DMA pool。
+- **QEMU**：virtio-9p 仍受支援（removed-features 移除的只有 9p 的 `proxy` backend），但共享目錄的主流場景改採 virtiofs（FUSE 協議跑 virtio），理由是效能與 POSIX 語意；Kata 跟著換。
+- **WSL**：`/mnt/c` 的 9P 被罵了五年（microsoft/WSL#5103）；WSL 也在往 virtiofs 走（2026-05 microsoft/WSL#40654 為 virtiofs 加 per-device swiotlb pool，kernel 端在 WSL2-Linux-Kernel 6.18.26.x 的 release patch）。
 
-怎麼讀：**被換掉的全是資料面、大量小檔、要完整 POSIX 的場景**。沒有一個故事說 9P 不適合低頻控制面。所以結論不是「9P 爛」，是「9P 只該放在 ctl 這種地方，而 Linux 上要掛它得 root，所以用 FUSE 直接做比較省事」。
+怎麼讀：**被換掉或繞開的全是資料面、大量小檔、要完整 POSIX 的場景**。沒有一個故事說 9P 不適合低頻控制面。所以結論不是「9P 爛」，是「9P 只該放在 ctl 這種地方；而 Linux 上用 kernel v9fs 掛它得 root，rootless 只剩 `9pfuse` 多一層 FUSE 那條路，所以直接用 FUSE 做樹比較省事——是省事，不是唯一可行」。
 
 ## Linux 自己也在走這條路（可以當佐證）
 
@@ -58,10 +58,10 @@ flowchart LR
   LX[Linux] --> U[unshare -Urm] --> BM[mount --bind] --> O[overlayfs 當 union] --> BW[bwrap 把這串包成一行指令]
 ```
 
-對應關係：`rfork(RFNAMEG)`＝`unshare -m`；`bind`＝`mount --bind`；union dir＝overlayfs（但只有一個可寫層、不能動態加層）；`/lib/namespace`＝bwrap 的參數列或一支 shell 腳本；`RFNOMNT`（鎖死不准再 mount）＝不給 CAP_SYS_ADMIN、或 user ns 裡本來就掛不了真 fs。`/srv` 布告欄沒有對應，最接近的是「一個目錄放 unix socket」——plan9port 在 Unix 上就是這樣模擬的（`/tmp/ns.$USER.$DISPLAY`）。
+對應關係（都是**近似**，不是同義）：`rfork(RFNAMEG)`≈`unshare -m`，但 `unshare -m` 只是**複製整份掛載表**，原本的 `/srv/…` 路徑仍到得了；要「只看到白名單」得另建一個空根、把要給的 bind 進去、再 `pivot_root`／`chroot` 切過去——bwrap 做的正是這整套，單純 unshare 不夠。`bind`≈`mount --bind`；union dir≈overlayfs（只有一個可寫層、掛好不能加層）；`/lib/namespace`≈bwrap 的參數列或一支 shell 腳本。`RFNOMNT`（之後不准 mount、不准開 `#` 裝置）**沒有直接對應**：user ns 裡仍能掛 bind、tmpfs，要鎖死得 drop CAP_SYS_ADMIN 或用 seccomp 擋 `mount(2)`；Plan 9 自己也分「複製 namespace（RFNAMEG）」與「禁止再取得服務（RFNOMNT）」兩件事。`/srv` 布告欄沒有對應，最接近的是「一個目錄放 unix socket」——plan9port 在 Unix 上就是這樣模擬的（`/tmp/ns.$USER.$DISPLAY`）。
 
 本機實測 `unshare -Urm` 裡 tmpfs、overlay、bind 都能掛；`proc` 要配 pid ns；`9p` 被拒。
 
 ## 來源
 
-To FUSE or Not to FUSE（FAST'17）；kernel docs `filesystems/9p`、`fuse-io-uring`；LWN「Inotify support in FUSE and virtiofs」（RFC，未合併）；gVisor lisafs／directfs 公告；qemu-devel virtiofs vs 9p 數據；microsoft/WSL#5103。
+To FUSE or Not to FUSE（FAST'17，各 workload 相對 ext4 的差距）；kernel docs `filesystems/9p`、`filesystems/fuse`、`fuse-io-uring`；man `mount_namespaces(7)`；bubblewrap README 與 NEWS；LWN「Inotify support in FUSE and virtiofs」（RFC，未合併）；gVisor lisafs／directfs 公告（記憶體與 bazel 數字出自此）；qemu-devel 2020-09 virtiofs vs 9p fio 數據、QEMU removed-features 頁；microsoft/WSL#5103。**本文的 µs 與 ops/s 全是量級估計、沒在本機量過**；要當依據得先在這台機器跑一次。

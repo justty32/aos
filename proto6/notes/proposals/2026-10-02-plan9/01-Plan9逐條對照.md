@@ -15,15 +15,15 @@
 | clone 檔開連線 | open `/net/tcp/clone` → read 得號碼 N → 寫 ctl `connect host!port` → 讀寫 `N/data` | 沒有對應；LLM 呼叫目前直接打 HTTP（agent 提案的 `aos-llm`） | 不是 |
 | 每個行程自己的 namespace | `rfork(RFNAMEG)`、`bind`、`mount`、union dir（`-a`／`-b`／`-c`）、`/lib/namespace` 一行一個指令、`RFNOMNT` 鎖死 | 任務的「視野」靠環境變數（`AOS_DAEMON_*`）告訴它 socket 在哪，再靠資料夾權限擋；沒有 namespace | 不是 |
 | 權限＝看不看得到＋伺服器自己查 uname | 沒有 root、沒有 setuid；namespace 裡沒有的就用不了；檔案伺服器看 attach 的 uname 與 mode | T-08「能寫 tasks.json、能連 socket 就是那個身分」——精神一樣，手段是 Unix 的資料夾權限與帳號模組 | 半路 |
-| 9P 是唯一協議 | 核心與所有伺服器只講 9P；fid、qid、Twalk／Tread／Twrite／Tflush | 三種協議並存：JSON-over-socket（ctl、mq）、SEQPACKET 傳 fd（root 端）、檔案（其餘） | 不是 |
+| 9P 統一檔案服務介面 | 核心裝置與所有檔案伺服器都用 9P 當檔案服務介面（本機系統呼叫與應用層協議不算在內）；fid、qid、Twalk／Tread／Twrite／Tflush | 三種協議並存：JSON-over-socket（ctl、mq）、SEQPACKET 傳 fd（root 端）、檔案（其餘） | 不是 |
 | 服務都是檔案伺服器 | rio、factotum、plumber、acme、upas/fs、webfs、cs 全是 user-space 檔案伺服器，`/srv` 布告欄 post 出去讓人 mount | 唯一的常駐程式 daemon 不是檔案伺服器 | 不是 |
-| blocking read 當事件 | `/proc/N/wait`、plumber port、acme `event`、`listen` 的 open 都是 read 擋到有事 | 沒有；叫醒靠 socket 送 `wake`，等結果靠下一格再看 | 不是 |
+| blocking I/O 當事件 | `/proc/N/wait`、plumber port、acme `event` 是 read 擋到有事；`/net/tcp/N/listen` 是 open 擋到有連線 | 沒有；叫醒靠 socket 送 `wake`，等結果靠下一格再看 | 不是 |
 | 一次 write 一則訊息 | pipe 保留 write 邊界；ctl 一次 write 一個指令 | mq 一條連線一封信，效果一樣 | 已經是 |
 | 檔案存在與否就是狀態 | `/srv/name` 在就能 mount；`DMEXCL` 檔當鎖 | `tick-blocked`、`tasks-blocked`、`tick.lock` | 已經是 |
 | 短命程式讀寫長命伺服器 | `cat`、`echo`、`9p read acme/index` | tick、exec、ctl、mq 都短命；daemon 長命 | 已經是 |
 | 文字協議、沒有 JSON | 一切是行與空白分隔；錯誤是 `errstr` 字串 | aos 用 JSON 當通用格式（使用者前提）；錯誤是 `{"ok":false,"error":"stopped"}` | 不是（刻意的） |
 | 沒有 symlink，用 bind | `bind /a /b` 取代連結與 `$ref` 這類「指到別處」 | `$ref` 指示詞做同一件事，但在 JSON 層 | 半路 |
-| 沒有 PATH，`/bin` 是 union | `bind -a /386/bin /bin` | 用 PATH | 不是 |
+| 優先用 union `/bin`、少靠搜尋路徑 | `bind -a /386/bin /bin`；rc 仍有 `$path` 變數，只是預設就只有 `. /bin` | 用 PATH | 不是 |
 
 ## 讀這張表的方法
 
@@ -37,7 +37,7 @@ flowchart LR
 三件事看得出來：
 
 1. **tick 這一層已經很 Plan 9**。第十六批「擋板檔只看存不存在」、第九批「紀錄拆小檔」、「`.aos/` 一個資料夾一個單位」——這些裁定本來就在往「介面是檔案」走，不是巧合，是 Unix 哲學自然長出來的。
-2. **不像的地方全集中在 daemon**：它是唯一常駐的東西，而它跟外界講話的方式（socket、JSON、訊號、環境變數）正好是 Plan 9 全部不要的那幾種。
+2. **不像的地方全集中在 daemon**：它是唯一常駐的東西，而它跟外界講話的方式裡，socket、JSON、訊號三樣是 Plan 9 不要的；環境變數 Plan 9 也有（`/env`，rio 也靠環境變數找自己的服務），差別是 Plan 9 把許多介面統一成檔案操作，環境變數只拿來「找到那個檔」、不拿來當協議。
 3. **namespace 這條整個沒有**。aos 現在用「環境變數告訴你路徑＋資料夾權限擋你」替代；Plan 9 會說「你看不到的路徑就不存在」。兩者的差別在 [05](05-agent與kernel的namespace.md) 細講。
 
 ## 兩個常被忽略的 Plan 9 事實

@@ -36,7 +36,8 @@
       out                        ← 讀：上次 aos-exec 的 stdout（取代 exec_out_path）
       err
       wait                       ← 讀會 block 到下一次結束，回一行結束碼（Plan 9 /proc/n/wait 的作法）
-    jobs/report.json/            ← inst 字面值含斜線就是子目錄，天然成立
+    jobs%2Freport.json/          ← inst 字面值不能直接當目錄名：現行 `a`、`./a`、絕對路徑是三個不同的項，
+                                    當路徑會撞；要完整編碼（例如 URL 式跳脫）或另給一個識別碼
       …
   self -> insts/a                ← 每個任務的 namespace 裡，self 指向自己那一項（bind 做的）
 ```
@@ -78,7 +79,7 @@ cat /aos/me/inbox > work/in.jsonl
 ls /aos/me/mail/
 ```
 
-一次 `write()` 一封，daemon 在 FUSE 的 write handler 裡收下、放進訂戶信箱、叫醒。**信本身留 JSON**：信是結構化資料，不是指令；Plan 9 的 plumber 訊息也是多欄位的（`src`、`dst`、`wdir`、`type`、`attr`、`ndata`、data），只是用自己的文字格式，不是 JSON。這裡沒必要發明新格式，JSON 就是我們的 plumb 格式。
+一封信＝從開檔到看見換行（或 close）為止的內容。**FUSE 不保證一次 `write()` 就是一個請求**：超過 `max_write` 一定拆，低於它也不保證只來一個 FUSE_WRITE（受 `max_pages`、buffer 對齊影響；Linux 6.6 `fs/fuse/file.c`）。所以 daemon 要按「開啟的那個 fd」累積資料，看到換行才算一封、才放進訂戶信箱、叫醒。`/llm/N/request` 同理，要定義「JSON 收完」的判準（換行或 close）——這是普通 I/O 語意，不是 Plan 9 特有的坑。**信本身留 JSON**：信是結構化資料，不是指令；Plan 9 的 plumber 訊息也是多欄位的（`src`、`dst`、`wdir`、`type`、`attr`、`ndata`、data），只是用自己的文字格式，不是 JSON。這裡沒必要發明新格式，JSON 就是我們的 plumb 格式。
 
 `mail/` 目錄版比 `inbox` 檔好的地方：取一封不用取全部、`rm` 就是 ack、`ls` 就是 peek、inotify 可以盯著它（FUSE 上 inotify 的限制見 [02](02-Linux上的工具與代價.md)）。代價：daemon 要給每封信編號、記得哪些被 rm 了。
 
@@ -97,7 +98,7 @@ cat /aos/d/insts/bob/out
 ## 三個明顯的好處
 
 1. **工具消失**：`aos-ctl`、`aos-mq` 兩支程式不用寫了，shell 內建的 `echo`、`cat`、`ls`、`rm` 就是客戶端。C++11 改寫時少兩支。
-2. **環境變數消失**：C-10 那張表裡 `AOS_DAEMON_*` 三組全不用；「daemon 跑 daemon 時環境變數外漏」那個坑（agent 提案找到的）**自然消失**——內層 daemon 掛在自己的 `/aos/d`，外層的樹根本不在內層任務的 namespace 裡。
+2. **環境變數可以不用**：C-10 那張表裡 `AOS_DAEMON_*` 三組都能用 `/aos/me` 與固定路徑取代。但要說清楚：**namespace 不會清環境變數**，子程序照樣繼承整份環境（現行 `give_env()` 就是 `dict(os.environ, …)`）。「daemon 跑 daemon 時環境變數外漏」那個坑的改善是：外漏的路徑在內層的樹上**不存在、連不到**；變數本身還在，要靠 bwrap `--clearenv`／`--unsetenv` 或 inst `envs` 的 `clear` 明確清掉。
 3. **權限變成「看不看得到」**：要讓 team-a 的成員不能 wake team-b 的項，就是 team-b 的 `insts/` 不出現在 team-a 任務的 namespace 裡。這比「socket 放在權限對的資料夾」更直接，而且 `ls` 就能驗證。
 
 ## 三個明顯的壞處

@@ -9,7 +9,7 @@
 | 現行 | 性質 | Plan 9 對應 |
 |---|---|---|
 | `.aos/tick/current/`、`last/`，`record.json` 用 `$ref` 指到 `ran.json`、`task-exits.json` | 狀態就是目錄，常變的欄位拆成小檔 | `/proc/n/{status,fd,ns}`：一個行程一個目錄，一件事一個檔 |
-| `.aos/tick/tasks-blocked`、`.aos/tick-blocked` | **只看存不存在**的檔；放檔＝下指令、刪檔＝解除 | Plan 9 沒有這招（它會用 ctl 寫 `stop`），但這是 Unix 的 lock-file 老傳統 |
+| `.aos/tick-blocked`、`.aos/tick/tasks-blocked` | 前者**只看存不存在**；後者看存在、也看內容（`{"kinds":[…]}` 只擋那幾類，其他形狀全擋）。放檔＝下指令、刪檔＝解除 | Plan 9 沒有這招（它會用 ctl 寫 `stop`），但這是 Unix 的 lock-file 老傳統 |
 | `tick.lock` 用 flock | 鎖是檔 | Plan 9 用 `DMEXCL` 檔（同時只准一個人 open）做鎖 |
 
 第十六批裁的「擋板檔只看存不存在」，就是最純的 Plan 9 精神：**介面是檔案的存在與否，程式只做 `stat`**。所以 tick 核心這邊不用大改。推想中只動兩處：
@@ -19,12 +19,12 @@
 
 ## 任務表：JSON 陣列 vs 目錄
 
-現行 `tasks.json` 是一個陣列，位置就是順序。Plan 9 式會改成一個目錄，一項一個子目錄，**檔名排序就是順序**：
+現行 `tasks.json` 是頂層物件，裡面的 `tasks` 是陣列，位置就是順序。Plan 9 式會改成一個目錄，一項一個子目錄，**檔名排序就是順序**：
 
 ```text
 .aos/tasks/
   10-inbox/
-    argv            ← 一行一個參數（Plan 9 /proc/n/args 的作法）
+    argv            ← 一行一個參數（Plan 9 的 /proc/n/args 是帶引號規則的一行，這裡不照它）
     kind            ← 一行：agent
     cwd
     envs            ← 一行一個 KEY=value
@@ -82,7 +82,7 @@ inst 更不該變目錄。它是「一次 POSIX 執行」的描述，`aos-exec <
     blocked          ← 擋板檔
 ```
 
-但這棵樹跟現在 `.aos/tick/` 的差別只有「它掛在 daemon 的樹裡」。tick 寫的仍是普通檔案；daemon 只是把那個目錄 bind 進來。**所以 tick 這一層幾乎不需要 FUSE**，只需要 bind mount。這是檔位劃分裡最便宜的一刀，見 [檔位](08-檔位與最小實驗.md)。
+但這棵樹跟現在 `.aos/tick/` 的差別只有「它掛在 daemon 的樹裡」。tick 寫的仍是普通檔案；daemon 只是把那個目錄 bind 進來。**所以 tick 這一層幾乎不需要 FUSE**，只需要 bind mount。這是檔位劃分裡最便宜的一刀，見 [檔位](08-檔位.md)。
 
 ## 一張圖：哪些該是檔案伺服器、哪些該是普通檔
 
