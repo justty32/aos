@@ -27,7 +27,7 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | `lib/aos_tick_record.py` | 結束碼紀錄資料夾 `tick/current/`／`last/`：開格換紀錄（整個資料夾 rename）、每項寫 `ran.json`、不是 0 才寫 `task-exits.json`／`hook-exits.json`、收尾寫 `record.json`（使用者 2026-10-01 第八、九批）；`read_record()` 讀展開 `$ref` 後的完整紀錄 |
 | `lib/aos_tick_table.py` | 讀任務表（`.aos/tasks.json`）、開格整份展開（第二十批）、頂層預設、極簡檢查 `check_table()`、每項的 `id`、跑到時合併預設交給 inst 規則 `load_inst()` |
 | `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、這一項的 `AOS_*`（先拿掉繼承來的 `AOS_TASK_*`／`AOS_HOOK_*`）、分 exit／signal |
-| `lib/aos_tick_hooks.py` | hooks（外掛掛點，m1h；第十七批四個掛點）：`run_point()` 跑一個掛點的一串、`run_after_task()` 在每項之後跑 `after_task.<id>` 與 `after_every_task`（讀表與極簡檢查在 `aos_tick_table.check_table()`，結果是 `Table.before_all`／`after_task`／`after_every_task`／`after_all`） |
+| `lib/aos_tick_hooks.py` | hooks（外掛掛點，m1h；第十七批四個掛點，第二十四批加 `before_kind`、`after_kind`）：`run_point()` 跑一個掛點的一串、`run_after_task()` 在每項之後跑 `after_task.<id>` 與 `after_every_task`（讀表與極簡檢查在 `aos_tick_table.check_table()`，結果是 `Table.before_all`／`after_task`／`after_every_task`／`after_all`） |
 | `tests/test_tick_target.py`、`test_tick_table.py`、`test_tick_blocked.py`、`test_tick_run.py`、`test_tick_dirname.py`（原 `test_tick.py`，共用 `_tick_util.py`） | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes`（在 `test_tick_run.py`） |
 | `tests/test_tick_hooks_after_all.py`、`test_tick_hooks_points.py`（原 `test_tick_hooks.py`，共用 `_tick_hooks_util.py`） | hooks 的驗收（m1h） |
 
@@ -69,7 +69,7 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 | 狀況 | 回 |
 |---|---|
 | 照表跑完（不管任務回幾、成敗） | 0 |
-| 被 `.aos/tick/tasks-blocked` 擋下（每一項之前看、只看存不存在、stderr 不印，剩下不跑；整格最後刪，第十六批） | 0 |
+| 被 `.aos/tick/tasks-blocked` 擋下（每一項之前看、只看存不存在、stderr 不印，剩下不跑；整格最後刪，第十六批；第二十四批：內容 `{"kinds":[…]}` 時只跳過那幾類的項、其他照跑） | 0 |
 | 同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，stderr `busy:`），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
 | 有擋板檔 `.aos/tick-blocked`（只看存不存在、stderr 不印、hooks 不跑，第十六批），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
 | argv 用法錯、`AOS_DIRNAME` 不合法、目標給的是檔、目標指的東西不存在、目標資料夾底下沒有 `.aos/tasks.json`、任務表不合極簡檢查（stderr `usage:`／`no_target:`／`no_tasks:`／`bad_table:`；表壞不換紀錄、不加 `seq`） | 1 |
@@ -81,10 +81,10 @@ proto6/src/py/bin/aos-tick /tmp/n/.aos/tasks.json; echo $?   # 1，stderr usage:
 
 | 檔 | 內容 | 什麼時候寫 |
 |---|---|---|
-| `record.json` | `version`、`seq`、`started_at_ms`、`ended`、`exit`、`blocked_before`，加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}` | 開格、收尾各一次 |
+| `record.json` | `version`、`seq`、`started_at_ms`、`ended`、`exit`、`blocked_before`、`skipped`（第二十四批：被 kinds 跳過的 `[{"id","index"}]`，收尾才寫），加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}` | 開格、收尾各一次 |
 | `ran.json` | 一個數字：本格跑完幾項 | 開格 `0`，每跑完一項 |
 | `task-exits.json` | 結束碼不是 0 的任務 `[{"id","index","exit"\|"signal"}…]` | 開格 `[]`，有失敗才重寫 |
-| `hook-exits.json` | `{"before_all":[…],"after_task":[…],"after_every_task":[…],"after_all":[…]}`（寫了哪幾個掛點就有哪幾個），結束碼不是 0 的 hook；跟任務有關的帶 `task_index` | 任務表有 hooks 時**開格**就寫好各掛點的 `[]`（第十七批），有失敗才重寫 |
+| `hook-exits.json` | `{"before_all":[…],"before_kind":[…],"after_task":[…],"after_kind":[…],"after_every_task":[…],"after_all":[…]}`（寫了哪幾個掛點就有哪幾個；`*_kind` 第二十四批），結束碼不是 0 的 hook；跟任務有關的帶 `task_index` | 任務表有 hooks 時**開格**就寫好各掛點的 `[]`（第十七批），有失敗才重寫 |
 
 換紀錄＝刪 `last/`、`current/` 整個 rename 成 `last/`、暫存資料夾 `.current.tmp/` rename 成 `current/`；`$ref` 是相對路徑，改名後仍指得對。`seq` 從 `current/record.json`（沒有就 `last/record.json`）接著數。舊的 `current.json`／`last.json` 不再使用、不遷移。
 
