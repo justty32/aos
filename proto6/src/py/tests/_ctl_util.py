@@ -41,7 +41,7 @@ class CtlCase(DaemonCase):
 
     def ctl(self, *args, **env):
         """跑 aos-ctl；env 給的變數加在乾淨環境上（給 None＝拿掉）。"""
-        e = dict(CLEAN_ENV, AOS_DAEMON_SOCKET=self.sock)
+        e = dict(CLEAN_ENV, AOS_DAEMON_CTL_SOCKET=self.sock)
         for k, v in env.items():
             if v is None:
                 e.pop(k, None)

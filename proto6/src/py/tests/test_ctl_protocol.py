@@ -115,9 +115,9 @@ class Step5Ctl(CtlCase):
         r = self.ctl("wake", AOS_DAEMON_INST="a.json")
         self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
         for args, env, code in ((["wake", "b.json"], {}, "unknown_inst"),
-                                (["status", "a.json"], {"AOS_DAEMON_SOCKET": None}, "no_daemon"),
+                                (["status", "a.json"], {"AOS_DAEMON_CTL_SOCKET": None}, "no_daemon"),
                                 (["status"], {"AOS_DAEMON_INST": None}, "no_inst"),
-                                (["status", "a.json"], {"AOS_DAEMON_SOCKET": os.path.join(self.d, "nope")},
+                                (["status", "a.json"], {"AOS_DAEMON_CTL_SOCKET": os.path.join(self.d, "nope")},
                                  "connect"),
                                 (["nuke", "a.json"], {}, "usage"),
                                 ([], {}, "usage"),

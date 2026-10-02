@@ -7,13 +7,15 @@
 〔使用者方向 2026-10-01〕POC 默認一切正常：設定檔讀得懂、路徑都對、aos-exec 叫得起來；
 不寫異常處理，出事讓 Python 自然丟錯（traceback、回 1）。
 設定檔寫了 `modules.control` 就掛上控制模組（plan m3n-control-module.md，`lib/aos_daemon_ctl.py`）：
-多開一個 unix socket 收 wake／pause／resume／status，並把 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`
+多開一個 unix socket 收 wake／pause／resume／status，並把 `AOS_DAEMON_CTL_SOCKET`、`AOS_DAEMON_INST`
 放進每次 aos-exec 的環境。沒寫時跟 m3 一模一樣（沒人叫醒迴圈、不傳 env=）。
 寫了 `modules.reload` 就收 SIGHUP 重讀同一份設定檔（plan m3m 模組一，`lib/aos_daemon_reload.py`）；
 寫了 `modules.state`（原始值必須是 `{"$ref": "<檔>"}`）就把暫停／已停記進那個檔、重開時讀回
 （plan m3m 模組三，`lib/aos_daemon_state.py`）；寫了 `modules.cgroup` 就每項一個 cgroup 框、
 `aos-exec` 結束後清掉框裡的殘留才算這次結束（plan m3m 模組二，`lib/aos_daemon_cgroup.py`）；
-寫了 `modules.mq` 就另開一個 unix socket 收寄信、取信，每項一個信箱（plan m3m 模組四，`lib/aos_daemon_mq.py`）；
+寫了 `modules.mq` 就每扇門另開一個 unix socket 收寄信、取信，每項一個信箱（plan m3m 模組四，`lib/aos_daemon_mq.py`；
+第二十五批改成多扇門）；
+daemon 建的 socket 檔（控制、訊息）一律 chmod 666，誰能連由 socket 所在資料夾的權限決定（第二十五批）。
 寫了 `modules.account` 就要用 root 開：開出 root 端 `aos-daemon-root` 後主程式永久降成預設帳號，別的帳號的項
 經 root 端開（plan m3m 模組五，`lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`）。
 
@@ -162,14 +164,13 @@ def main(argv=None):
         aos_daemon_ctl.set_grace(setup.modules["control"])
         _sock_paths.append(sock)        # 先記好再 bind：bind 完立刻來的訊號也刪得到
         aos_daemon_ctl.serve(sock, _items)
-        if _acct is not None:           # m3m 模組五：別的帳號的任務也連得上（第十二批：先 666）
-            os.chmod(sock, 0o666)
-    if setup.mq_sock is not None:       # m3m 模組四：同上
+        os.chmod(sock, 0o666)           # 第二十五批：一律 666，誰能連看所在資料夾的權限
+    if setup.mq_doors:                  # m3m 模組四：同上，每扇門一個 socket（第二十五批）
         import aos_daemon_mq
-        _sock_paths.append(setup.mq_sock)
-        aos_daemon_mq.serve(setup.mq_sock, _items)
-        if _acct is not None:
-            os.chmod(setup.mq_sock, 0o666)
+        for name, path in setup.mq_doors.items():
+            _sock_paths.append(path)
+            aos_daemon_mq.serve(name, path, _items)
+            os.chmod(path, 0o666)
     hup = None
     if setup.reload:                    # m3m 模組一：沒掛時 SIGHUP 照 Python 預設（daemon 被殺）
         import aos_daemon_reload

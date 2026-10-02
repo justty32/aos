@@ -27,6 +27,9 @@
 帳號模組掛著時（plan m3m 模組五）：每一項的帳號照**開起來時**的名單核（名單本身改了算 `modules` 改了、只警告），
 名單不准或帳號查不到算重讀出錯（R4、A6）；還在的項帳號改了，下一次開 `aos-exec` 起用新帳號。
 重讀是主程式（已降成預設帳號）做的，設定檔要讀得到。
+
+訊息模組掛著時（第二十五批）：每項的 `mq`（訂哪幾扇門）照新設定，但照**開起來時的門**核——寫了開起來時沒有的門
+算重讀出錯（R4）；`modules.mq` 本身改了算 `modules` 改了、只警告。還在的項信箱照留，拿掉的項信箱一起丟。
 """
 import sys
 
@@ -44,7 +47,7 @@ def reload(path, first):
     以它為準，因為它們從不套用）。"""
     added, removed = [], []
     try:
-        new = load_full(path, read_state=False)
+        new = load_full(path, read_state=False, doors=first.mq_doors if first.mq_doors else None)
         with aos_daemon._items_lock:
             _apply(new, first, added, removed)
     except Exception as e:          # R4：唯一的例外——整份不套用、舊的照跑
@@ -112,7 +115,7 @@ def _update(cur, n):
         cur.out_max = n.out_max         # 第十九批：輸出上限下一次起生效
         cur.cgroup = n.cgroup
         cur.user = n.user
-        cur.subscribe = n.subscribe     # 第二十二批：訂閱是那一項的設定，照新設定
+        cur.doors = n.doors             # 第二十五批：訂哪幾扇門是那一項的設定，照新設定
         if changed and not cur.running and cur.end_mono is not None:
             # R2：上一次結束＋新週期；已經過了就立刻跑（due 在過去，_next_run 馬上回）
             cur.due = cur.end_mono + n.interval_ms / 1000.0

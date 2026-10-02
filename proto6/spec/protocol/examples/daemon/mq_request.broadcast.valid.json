@@ -1,9 +1,0 @@
-{
-  "broadcast": true,
-  "msg": {
-    "hi": 1
-  },
-  "from": "a.json",
-  "from_socket": "/srv/aos/A/aos-mq.sock",
-  "urgent": true
-}

@@ -29,7 +29,7 @@ class Item:
         self.frame = None               # 這一項的 cgroup 框（絕對路徑）；None＝cgroup 模組沒掛
         self.user = user                # 帳號模組：這一項用哪個帳號跑（設定的 "account.user"）；None＝預設帳號
         self.out_max = out_max          # 第十九批：每次、每條串流最多留幾 bytes（超過丟最早的；頂層共用）
-        self.subscribe = []             # 第二十二批：訊息模組的頻道訂閱（設定的 "mq.subscribe"；模組沒掛時不看）
+        self.doors = []                 # 第二十五批：訊息模組訂了哪幾扇門（設定的 "mq"，門名陣列；模組沒掛時不看）
         # m3n 步驟 2：以下狀態都在 cond 的鎖底下改；控制模組沒掛時只有 loop() 自己動它們
         self.cond = threading.Condition()
         self.running = False
@@ -42,7 +42,7 @@ class Item:
         self.end_mono = None            # 上一次結束的 monotonic 時刻（重讀設定改週期時用）
         self.due = time.monotonic()     # 下次照週期該跑的時刻（monotonic）；剛開時立刻跑
         self.removed = False            # 重讀設定時被拿掉：跑完這次（若在跑）就結束執行緒
-        self.mailbox = []               # 訊息模組的信箱 [{"from", "msg"}]，先進先出；只在記憶體（m3m 模組四）
+        self.mailbox = []               # 訊息模組的信箱 [信]（信＝寄的 JSON 原樣），先進先出；只在記憶體（m3m 模組四）
         # 第十九批 kill／restart：正在跑的那一次是誰（主程式開的＝程序群組 id；經 root 端開的＝請求 id）
         self.pid = None
         self.root_rid = None
@@ -98,8 +98,9 @@ class Setup:
     （重讀設定比對「模組改了沒」用）；`state_data` 是狀態檔的內容（沒讀或不在＝`{"insts": {}}`）。"""
 
     def __init__(self, start, items, sock, modules, state_path, state_data, out_tmpl=None, err_tmpl=None,
-                 mq_sock=None, lock_path=None):
-        self.start, self.items, self.sock, self.mq_sock = start, items, sock, mq_sock
+                 mq_doors=None, lock_path=None):
+        self.start, self.items, self.sock = start, items, sock
+        self.mq_doors = mq_doors or {}  # 第二十五批：訊息模組的門 {門名: 絕對路徑}；沒掛＝{}
         self.lock_path = lock_path      # 第十九批：設定檔的鎖檔（絕對路徑）
         self.modules, self.state_path, self.state_data = modules, state_path, state_data
         self.out_tmpl, self.err_tmpl = out_tmpl, err_tmpl     # 頂層 exec_out_path／exec_err_path 原字（重讀比對用）
@@ -132,13 +133,15 @@ def _state_ref(raw, base_dir):
     return os.path.join(base_dir, ref["$ref"]), rest
 
 
-def load_full(path, read_state=True):
+def load_full(path, read_state=True, doors=None):
     """讀設定檔、展開指示詞，回 `Setup`。兩邊都沒有 interval_ms、`modules` 不是物件丟 ValueError；
     `modules.control` 沒寫 `socket` 自然丟錯。
 
     `modules.state` 先從原始檔拿出來（它指的檔第一次要寫時才建，不在時不能算 `$ref` 讀不到），
     其餘照整份展開；狀態檔在就照一般 `$ref` 展開讀進來，不在＝`{"insts": {}}`。
-    `read_state=False`（重讀設定用）不讀狀態檔：重讀時以記憶體為準。"""
+    `read_state=False`（重讀設定用）不讀狀態檔：重讀時以記憶體為準。
+    `doors`（重讀設定用，開起來時掛了訊息模組才給）：每項的 `mq` 照開起來時的門核，不看新的 `modules.mq`
+    （`modules` 改了不套用；第二十五批，AI 隊定）。"""
     doc = load_document(path)
     base_dir = os.path.dirname(os.path.abspath(path))
     ctx = Context(doc, base_dir=base_dir)
@@ -161,11 +164,22 @@ def load_full(path, read_state=True):
         user_of = aos_daemon_account.item_user
     else:
         user_of = lambda entry: None
-    if "mq" in modules:                             # 第二十二批：模組沒掛時 "mq" 照不認得的鍵忽略
+    sock = None
+    if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
+        sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
+        import aos_daemon_ctl                       # 第十九批：kill_grace_ms 不合算設定錯
+        aos_daemon_ctl.grace_of(modules["control"])
+    mq_doors = {}
+    if doors is not None:                           # 重讀：照開起來時的門
         import aos_daemon_mq
-        subs_of = aos_daemon_mq.item_subscribe
-    else:
-        subs_of = lambda entry: []
+        mq_doors = doors
+        doors_of = lambda entry: aos_daemon_mq.item_doors(entry, doors)
+    elif "mq" in modules:                           # 第二十五批：門名 → 路徑；每項的 mq 是訂了哪幾扇門
+        import aos_daemon_mq
+        mq_doors = aos_daemon_mq.doors_of(modules["mq"], start, sock)
+        doors_of = lambda entry: aos_daemon_mq.item_doors(entry, mq_doors)
+    else:                                           # 模組沒掛時 "mq" 照不認得的鍵忽略
+        doors_of = lambda entry: []
     # insts 是物件：鍵＝inst 字面值、值＝該項設定（可為 {}）；位置照鍵的順序（JSON 讀入保序）（使用者 2026-10-01）
     for i, (inst, entry) in enumerate(top["insts"].items()):
         interval = entry.get("interval_ms", top.get("interval_ms"))
@@ -176,15 +190,7 @@ def load_full(path, read_state=True):
                           err_path_for(top.get("exec_err_path"), inst, start),
                           err_path_for(top.get("exec_out_path"), inst, start),
                           entry.get("cgroup"), user_of(entry), out_max))
-        items[-1].subscribe = subs_of(entry)
-    sock = None
-    if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
-        sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
-        import aos_daemon_ctl                       # 第十九批：kill_grace_ms 不合算設定錯
-        aos_daemon_ctl.grace_of(modules["control"])
-    mq_sock = None
-    if "mq" in modules:                             # m3m 模組四：同上
-        mq_sock = os.path.abspath(os.path.join(start, modules["mq"]["socket"]))
+        items[-1].doors = doors_of(entry)
     state_data = {"insts": {}}
     if state_path is not None:
         modules = dict(modules, state=state_path)
@@ -195,5 +201,5 @@ def load_full(path, read_state=True):
         raise ValueError("lock_path 要是非空字串")
     lock_path = os.path.join(base_dir, lock) if lock else os.path.abspath(path) + ".lock"
     return Setup(start, items, sock, modules, state_path, state_data,
-                 top.get("exec_out_path"), top.get("exec_err_path"), mq_sock, lock_path)
+                 top.get("exec_out_path"), top.get("exec_err_path"), mq_doors, lock_path)
 

@@ -3,7 +3,7 @@
     aos-ctl [--socket <控制 socket>] wake [--skip-while-running] [--keep-schedule] [<inst>]
     aos-ctl [--socket <控制 socket>] pause|resume|status|kill|restart [<inst>]
 
-每個指令都只對一項；沒給 <inst> 用 AOS_DAEMON_INST。socket 從 AOS_DAEMON_SOCKET 拿；
+每個指令都只對一項；沒給 <inst> 用 AOS_DAEMON_INST。socket 從 AOS_DAEMON_CTL_SOCKET 拿（第二十五批由 AOS_DAEMON_SOCKET 改名）；
 給了 `--socket` 就改連那個控制 socket（跨 daemon，使用者 2026-10-01 第二十一批；相對路徑以呼叫者的 cwd 為準），
 這時一定要明寫 <inst>——AOS_DAEMON_INST 是自己 daemon 裡的名字，不能拿去別的 daemon 用（AI 隊定）。
 `--socket <路徑>` 可以放在指令名前後任何位置。
@@ -53,9 +53,9 @@ def main(argv=None, env=None):
         return fail("usage", "只能給一個 <inst>；%s" % USAGE)
     if target is not None and not rest:
         return fail("usage", "給了 --socket 就要明寫 <inst>（AOS_DAEMON_INST 是自己 daemon 裡的名字）；%s" % USAGE)
-    path = target or env.get("AOS_DAEMON_SOCKET")
+    path = target or env.get("AOS_DAEMON_CTL_SOCKET")
     if not path:
-        return fail("no_daemon", "沒有 AOS_DAEMON_SOCKET（不在 daemon 底下，或 daemon 沒掛控制模組）")
+        return fail("no_daemon", "沒有 AOS_DAEMON_CTL_SOCKET（不在 daemon 底下，或 daemon 沒掛控制模組）")
     inst = rest[0] if rest else env.get("AOS_DAEMON_INST")
     if not inst:
         return fail("no_inst", "沒給 <inst>，也沒有 AOS_DAEMON_INST")
