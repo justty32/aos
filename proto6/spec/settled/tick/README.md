@@ -15,4 +15,4 @@
 | [暫緩區 cg.md](../deferred/cg.md) | B-631、B-634 | **暫緩**〔使用者 2026-10-02 第二十三批：「aos-cg搬進暫緩區。」〕。普通程式 `aos-cg` 從沒寫過程式，每項一框現在由 daemon 收屍模組做（[B-644](../daemon/cgroup.md)）；原檔整篇搬到暫緩區。 |
 | [暫緩區 mq.md](../deferred/mq.md) | B-623、B-624 | **暫緩**〔使用者 2026-10-01 第十八批〕。系統級任務 `aos-mq get`／`post` 要靠暫緩區的 daemon 通道，用途已被 daemon 訊息模組（[B-645](../daemon/mq.md)，`aos-mq send`／`take`）取代；原檔整篇搬到暫緩區。 |
 | [暫緩區 git.md](../deferred/git.md) | B-630、B-622、B-632 | **暫緩**〔使用者 2026-10-01 第十七批〕。`aos-git` 三項從沒寫過程式；整篇搬到暫緩區，改用 hooks 加普通 git 指令（[B-635 範例](hooks/03-B-635-範例hook加git.md#範例用-hook-加普通-git-指令管版本)）。 |
-| [recovery.md](recovery.md) | B-625 | 待實作。恢復前驗證的工具還沒有程式（`aos-config-add` 2026-10-01 搬到[暫緩區](../deferred/tick/02-B-633落盤與B-625.md#暫緩b-625-加入普通設定aos-config-add)）；暫停與恢復現行用 `aos-ctl`（[B-641](../daemon/control.md)），舊 daemon 的 `node.pause`／`node.resume` 那套在暫緩區。 |
+| [recovery.md](../deferred/tick/05-B-625-當機恢復設定與清理.md) | B-625 | 待實作。恢復前驗證的工具還沒有程式（`aos-config-add` 2026-10-01 搬到[暫緩區](../deferred/tick/02-B-633落盤與B-625.md#暫緩b-625-加入普通設定aos-config-add)）；暫停與恢復現行用 `aos-ctl`（[B-641](../daemon/control.md)），舊 daemon 的 `node.pause`／`node.resume` 那套在暫緩區。 |

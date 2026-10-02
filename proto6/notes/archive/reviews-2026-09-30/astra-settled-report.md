@@ -29,12 +29,12 @@
   **建議改法：**分開定義「格數」與「每項結果」的落盤要求；至少為開格序號及檔名切換補足必要的持久化步驟。不要讓保留期依賴可能倒退的序號，卻仍宣稱單調。
 
 - **必-5｜恢復流程把 git、needs、group 的舊規則帶回來。**  
-  **位置：**[settled/tick.md，B-625](../../../spec/settled/tick/recovery.md)；`settled/daemon.md` B-607；`settled/protocol/tick.md` P-207、P-210；對照 A-102。  
+  **位置：**[settled/tick.md，B-625](../../../spec/settled/deferred/tick/05-B-625-當機恢復設定與清理.md)；`settled/daemon.md` B-607；`settled/protocol/tick.md` P-207、P-210；對照 A-102。  
   **問題：**恢復前必須完成 A-102，但它仍要求檢查 needs、group 連續、kind 順序及提交後 resume。這會拒絕第二十批允許的陌生 key，也使無 git 的基礎流程需要 commit。P-207 自己也同時寫「只做原子替換」及「已提交／commit 故障」。  
   **建議改法：**把通用、無 git 的修改與恢復契約放回整理區；領域驗證只在安裝對應任務時適用。現行碼表描述原子替換結果，git 提交流程移到下一步段落。
 
 - **必-6｜沒有 cgroup 的限制，仍被其他現行段落蓋掉。**  
-  **位置：**[settled/tick.md，B-625](../../../spec/settled/tick/recovery.md)；T-09；P-208；[daemon 協議 P-106](../../../spec/settled/deferred/protocol/daemon/registration.md)。  
+  **位置：**[settled/tick.md，B-625](../../../spec/settled/deferred/tick/05-B-625-當機恢復設定與清理.md)；T-09；P-208；[daemon 協議 P-106](../../../spec/settled/deferred/protocol/daemon/registration.md)。  
   **問題：**B-625 仍說 daemon／VM 重啟先清空舊程序；T-09 也把重啟列入程序群組收尾。這與已接受的「無 cgroup 時 daemon 重啟清不掉」不符。P-208 還把 `cgroup_delegate` 列成當前部署操作；P-106 引用的最小正例則回傳完整 cgroup 配置，與本輪一律 `null` 相反。  
   **建議改法：**重啟描述直接沿 B-603 的已接受限制；交框操作明標下一步；現行查詢正例改成 `cgroup:null`，未來範例另標草稿。
 

@@ -12,7 +12,7 @@
 | B-602（部分） | 完整互斥的其餘細節 | 暫緩 | 最簡鎖已做（拿不到回 0、鎖 fd 不傳給任務）；鎖 fd 交給任務核對、後代握鎖擋下一格、回 75 先不做 | [tick.md](../tick.md) |
 | B-620（部分） | 任務的帳號（125） | 暫緩 | 使用者：「帳號不對，也不管」；核心不看 `user` | [tick.md](../tick.md) |
 | B-633（部分） | 落盤、寫不進與讀不懂 | 暫緩 | 使用者：默認紀錄是好的、`--firstdo-fsync` 先不做 | [tick.md](../tick.md) |
-| B-625（部分） | 加入普通設定（`aos-config-add`） | 暫緩 | 使用者 2026-10-01 第四批裁定搬暫緩區：09-29 規劃、從沒寫過程式；改 `config/` 就自己改。當機恢復、重要設定手改、恢復前驗證仍在 [tick/recovery.md](../../tick/recovery.md) | [tick.md](../tick.md) |
+| B-625（部分） | 加入普通設定（`aos-config-add`） | 暫緩 | 使用者 2026-10-01 第四批裁定搬暫緩區：09-29 規劃、從沒寫過程式；改 `config/` 就自己改。當機恢復、重要設定手改、恢復前驗證仍在 [tick/recovery.md](../tick/05-B-625-當機恢復設定與清理.md) | [tick.md](../tick.md) |
 | P-207 | 加入普通設定（`aos-config-add` 的 argv 與結束碼） | 暫緩 | 同 B-625（部分） | [protocol/tick.md](../protocol/tick.md) |
 | B-624（部分） | 發布摘要（`aos-publish`） | 暫緩 | 使用者 2026-10-01 第五批：「aos-publish我覺得要改名，我預期它的作用，就是把這一格的一些狀況總結成json檔案寫好」，討論後「那看來aos-summarize其實是暫時不需要了，拿掉。」之後若要，方向是「把這一格的狀況總結成 JSON」，名字不用 publish（會跟傳訊混）。`aos-mq post` 仍在 [tick/mq.md](../mq.md) | [tick.md](../tick.md) |
 | P-206（部分） | `aos-publish` 那列 | 暫緩 | 同 B-624（部分） | [protocol/tick.md](../protocol/tick.md) |
