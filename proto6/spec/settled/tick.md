@@ -1,29 +1,39 @@
 # 通用 tick：核心
 
-← [整理區](README.md)｜[名詞](terms.md)｜[慣例](conventions.md)｜[daemon](daemon/README.md)｜格式：[tick 協議](protocol/tick.md)｜系統級任務、範本與普通程式：[tick 子篇](tick/README.md)｜先不做的：[tick 暫緩區](deferred/tick.md)、[helper 與 aos-as](deferred/helper.md)
+← [整理區](README.md)｜[名詞](terms.md)｜[慣例](conventions.md)｜[hooks](tick/hooks.md)｜[tasks-blocked](tick/tasks-blocked.md)｜格式：[tick 協議](protocol/tick.md)｜[暫緩區](deferred/tick.md)
 
-依據：[09-29 新架構](../../notes/2026-09-29-kernel-tree.md)、[使用者裁定](../../notes/2026-09-29-verdicts.md)第三～十二批、[第十八批](../../notes/verdicts/09-special-computing-os.md)、[第十九批](../../notes/verdicts/10-tick-minimal-core.md)、[第二十批](../../notes/verdicts/11-tick-as-unit.md)與它篇末 2026-10-01 各節；現行程式 [proto6/src/py](../../src/py/README.md)。
+`aos-tick [<目標>]` 是一個定期被執行的程式。**程式與測試就是正本**：`proto6/src/py/lib/aos_tick*.py`（`aos_tick.py` 主流程、`aos_tick_table.py` 讀表、`aos_tick_run.py` 跑項、`aos_tick_record.py` 紀錄、`aos_tick_hooks.py` 掛點）；測試 `tests/test_tick_*.py`；說明 [docs/tick.md](../../src/py/docs/tick.md)。這裡只留設計原則。
 
-讀之前先知道四件事：
+**總原則：默認一切正常**。POC 不考慮邊緣狀況：紀錄讀得懂、寫得進去、斷電不倒退都不保證，出錯就讓程式自然丟錯、回 1。
 
-- **本篇只寫已實作的核心**（B-626、B-602、B-620、B-633、B-627），由現行程式 `aos-tick` 實作。tick 模組與 hooks 在 [tick 子篇](tick/README.md)（系統級任務與範本第十八批全部搬暫緩區；`aos-tick-check-task` 第十六批、`aos-git` 第十七批、普通程式 `aos-cg` 第二十三批），一篇一個主題，大多還沒有程式，每篇開頭標了狀態。〔astra 報告建議 1；使用者 2026-10-01〕
-- **工作資料夾**（英文 `tick dir`）＝這一格 `aos-tick` 跑的資料夾（它的 cwd），由命令列給的目標決定（`aos-tick [<目標>]`，B-620）。tick 這層只講工作資料夾；「node」是之後 node 模組才出場的詞，暫緩區講上下層時的「上層 node／下層 node」照舊。〔使用者 2026-10-01〕
-- 「任務表」指工作資料夾裡的任務註冊表 `.aos/tasks.json`，跟舊 daemon 的登記表是兩回事（[T-02](../terms.md)）。
-- 本篇寫的 `.aos/…` 都是環境變數 `AOS_DIRNAME` 沒設時的樣子（[C-09](conventions.md)）；結束碼照 aos 慣例：0＝預料之中、非 0＝要處理、1＝通用錯誤（[C-08](conventions.md)）。
+## B-626：核心與系統級任務的界線
 
-## 分檔目錄
+核心只做三件事：互斥鎖（B-602）、照任務表跑（B-620）、每項結束碼紀錄（B-633）；照表跑時另外只認 tasks-blocked 與擋板檔兩個檔。核心不靠 daemon、git、cgroup、helper，也不靠任何系統級任務；任務沒有 `user`，一律用 tick 自己的帳號（要換帳號只能在 daemon 設定檔做）。**任務能影響之後的項或之後的格，只有 tasks-blocked 與擋板檔這兩個檔，結束碼沒有特別意義。** 管轄權是約定、不是前提：碰不到的東西照各自規則失敗，tick 照樣跑完一格。
 
-> 2026-10-02 整理：原檔約 50 KB 超過 8 KB 門檻，按標題逐字拆進 `tick/core/`；本檔只留前言與目錄（原路徑保留當入口）。
+## B-602：同一資料夾一次一格
 
-<!-- wf-nav -->
-| # | 檔 | 段落 |
-|---|---|---|
-| 1 | [01-先講重點.md](tick/core/01-先講重點.md) | 先講重點 |
-| 2 | [02-B-626-核心與系統級任務界線.md](tick/core/02-B-626-核心與系統級任務界線.md) | B-626：核心與系統級任務的界線 |
-| 3 | [03-B-602-互斥鎖與B-620開頭.md](tick/core/03-B-602-互斥鎖與B-620開頭.md) | B-602：同一資料夾一次一格：互斥鎖；B-620：任務註冊表：照表依序跑 |
-| 4 | [04-B-620-任務表與頂層預設.md](tick/core/04-B-620-任務表與頂層預設.md) | 任務表；頂層預設〔使用者 2026-10-01〕；頂層 `modules`〔使用者 2026-10-01〕；指示詞什麼時候展開〔使用者 2026-10-01 第二十批：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」〕 |
-| 5 | [05-B-620-讀表與跑每一項.md](tick/core/05-B-620-讀表與跑每一項.md) | 讀表：極簡檢查；誰驗什麼〔暫定〕；跑每一項 |
-| 6 | [06-B-620-tasks-blocked與帳號.md](tick/core/06-B-620-tasks-blocked與帳號.md) | tasks-blocked 與擋板檔〔暫定〕；任務的帳號 |
-| 7 | [07-B-620-核心結束碼.md](tick/core/07-B-620-核心結束碼.md) | 核心的結束碼 |
-| 8 | [08-B-633-紀錄與格數.md](tick/core/08-B-633-紀錄與格數.md) | B-633：每項結束碼紀錄與格數 |
-| 9 | [09-B-633收尾與B-627.md](tick/core/09-B-633收尾與B-627.md) | B-627：人手或 cron 直接跑一格：風險自負；驗收與尚未定案 |
+對 `<狀態資料夾>/tick.lock` 取非阻塞獨占 flock，取鎖在看擋板檔之前；拿不到印 `busy`、回 0、不寫紀錄、不加 `seq`。鎖 fd 不傳給任務，所以任務留下的後代不會佔住鎖。核心不清後代、不管逾時。人手要改工作資料夾，先停住排程（`aos-ctl pause`）。
+
+## B-620：照表依序跑
+
+任務表只有一個位置：`<狀態資料夾>/tasks.json`，**陣列位置就是順序**。目標只能是資料夾（給檔是用法錯），不給就用 cwd，不往上層找。一格：認資料夾 → 取鎖 → 看擋板檔 → 讀表並做極簡檢查 → 換新紀錄 → 逐項跑（每項前看 tasks-blocked）→ `after_all` → 刪 tasks-blocked → 回碼。
+
+- **極簡檢查只查**：合法 JSON、有 `tasks` 陣列、每項是物件、合併頂層預設後有 `argv`、要展開的鍵展得開。不過＝`bad_table`、回 1、不開格。其餘（`id` 重複、`kind` 值、陌生鍵）一概不查，由建表的工具或人在 `aos-ctl resume` 前用 schema 驗。
+- **先合併再展開**：頂層預設與該項淺層合併，成為一份 inst 才執行；項寫了的鍵整個蓋過。
+- **任務結束碼完全不影響 tick**：成敗都照記、照跑下一項；沒跑成記 125／126／127（同 inst）。
+- tick 只回 0 或 1（C-08）；stderr 代碼：`usage`、`busy`、`no_target`、`no_tasks`、`bad_table`、`exec_failed`。
+- 環境變數見 C-10。
+
+**tasks-blocked 與擋板檔**：tasks-blocked 擋「本格後面的項」，任務、hook 或人都能建，核心整格最後刪；內容 `{"kinds":[…]}` 時只跳過那些 kind。擋板檔擋「之後各格」，只由人手刪，核心取鎖後看到就直接回 0、一切不做。兩者都只看存不存在（kinds 除外）。daemon 不看它們，由 tick 自己擋。
+
+## B-633：每項結束碼紀錄與格數
+
+核心每格寫一份紀錄，讓後面的任務讀得到：跑了幾項、哪幾項結束碼不是 0（0 不記）。一格一個資料夾 `tick/current/`，上一格 `tick/last/`；常變的欄位拆成各自的小檔，`record.json` 用 `$ref` 指過去。格式看 [protocol/tick.md](protocol/tick.md) 與 schema。
+
+- **格數 `seq`**：本資料夾第幾格，跨重啟、換 daemon、改 cron 都接著數；busy、被擋板擋、`bad_table` 的格沒有紀錄、不佔號。
+- 換紀錄用「寫暫存資料夾再 rename」，不 fsync；`ended:true` 要等所有 hooks 跑完才寫，所以 tick 中途被殺，下一格看到 `last/` 的 `ended:false`。
+- 核心除了算 `seq`，不拿紀錄做任何決定。人手刪紀錄，`seq` 重數，風險自負。
+
+## B-627：直接跑一格：風險自負
+
+`aos-tick` 誰都能直接跑。現行 daemon 只是定期叫 `aos-exec`，經它跑的格跟人手、cron 直接跑沒有差別：同樣互斥（互相碰到印 `busy`）、同樣寫紀錄加 `seq`。想經 daemon 立刻跑一格用 `aos-ctl wake`。
