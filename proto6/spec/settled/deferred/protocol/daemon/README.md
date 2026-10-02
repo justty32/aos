@@ -44,4 +44,4 @@
 
 > **暫緩**（2026-10-01）：隨整份舊協議暫緩；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。原本在 `protocol/daemon/README.md`，2026-10-01 搬來。
 
-見 [README P-008](../../../../protocol/README.md#p-008)。
+見 [README P-008](../../../../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)。

@@ -72,7 +72,7 @@ responses/<id>.json  # RpcResponse
 | `llm.chat`／`aos llm chat` | [llm-work P-406](llm-work.md) LLM 材料；完成後 stdout 為本地 llm-result。 |
 | `work.cancel`／`aos work cancel` | [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) `{request_id}`，指要取消的原請求 RPC id；投給持有那件工作的 node。〔第十七批〕stdout `{"accepted":true}`；核權、排隊中與在跑的怎麼處理見 [B-203](../base/execution.md)，原工作的結果照舊由原請求的回應帶回（[work P-411](work.md)）。 |
 
-全部回應用 [work-result](schemas/work-result.schema.json)。`kernel.work.submit`、`llm.chat` 跨格接續、業務結果回來才完成命令，不先用 ACK 占住 RPC id（[work P-401](work.md)、[llm-work P-406](llm-work.md)）；kernel 收一般回話見 [S-406](../scheduling/operations.md)；agent 之間的問答機制延後（[P-008](README.md#p-008)）。
+全部回應用 [work-result](schemas/work-result.schema.json)。`kernel.work.submit`、`llm.chat` 跨格接續、業務結果回來才完成命令，不先用 ACK 占住 RPC id（[work P-401](work.md)、[llm-work P-406](llm-work.md)）；kernel 收一般回話見 [S-406](../scheduling/operations.md)；agent 之間的問答機制延後（[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：-32601 與 -32000 怎麼分依 [B-501](../base/transport.md)，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict`、`resource_observation_failed`，或 work.cancel 的 `cancel_not_authorized`、`work_not_found`（[work P-411](work.md)）。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址的回不了錯誤回應，照 [B-623](../settled/deferred/mq.md) 只報一次事項。
 
@@ -92,4 +92,4 @@ responses/<id>.json  # RpcResponse
 
 ## P-309．待決與跨篇
 
-見 [README P-008](README.md#p-008)。
+見 [README P-008](readme/03-P-007-P-008-schema與待決.md#p-008)。

@@ -37,7 +37,7 @@
 
 ## B-203：取消與逾時〔建議預設，未拍板〕
 
-〔使用者方向 2026-09-29，第十七批〕有權限者可要求**取消指定工作**，人與 agent 走同一入口：檔案請求 `work.cancel`（格式見 [work P-411](../protocol/work.md)），投到持有那件工作的 node，以原請求的 RPC id 定位；取消涵蓋那件工作的所有 attempt。〔第二十批〕once 是任務自己經通道呼叫的事務（[B-613](../settled/deferred/daemon/channel.md)），不是任務表上的項。〔使用者方向 2026-09-30，第十八批〕本條只適用 **once**（kernel 替成員跑的工具工作）；LLM 請求、agent 自開 once，以及 kernel／agent／custom 類任務的取消延後（[P-008](../protocol/README.md#p-008)）。
+〔使用者方向 2026-09-29，第十七批〕有權限者可要求**取消指定工作**，人與 agent 走同一入口：檔案請求 `work.cancel`（格式見 [work P-411](../protocol/work.md)），投到持有那件工作的 node，以原請求的 RPC id 定位；取消涵蓋那件工作的所有 attempt。〔第二十批〕once 是任務自己經通道呼叫的事務（[B-613](../settled/deferred/daemon/channel.md)），不是任務表上的項。〔使用者方向 2026-09-30，第十八批〕本條只適用 **once**（kernel 替成員跑的工具工作）；LLM 請求、agent 自開 once，以及 kernel／agent／custom 類任務的取消延後（[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 **核權**〔使用者方向 2026-09-30，第十八批〕：取消請求檔的擁有 UID 等於下列任一就收，都不是就回 `cancel_not_authorized` 並丟掉這份取消：
 

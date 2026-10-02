@@ -96,7 +96,7 @@ schedule 按 ready_seq 選成員，補查間隔預設 60 秒、可調（[P-801](
 | 39 | `aos agent tools add N --from F`：合併工具清單 | `config/tools.json` | `aos-agent-tools add --from F`；F 是 agent-tools JSON，改檔；同名同值不變、異值回 2。 |
 | 40 | `aos agent tools rm N NAME`：移除一個工具 | `config/tools.json` | `aos-agent-tools rm NAME`；改檔，不存在回 1。已派工具沿舊定義收結果。 |
 | 41 | `aos agent tools ls N [--json]`：列工具 | 名稱、用途；JSON 完整 agent-tools | `aos-agent-tools ls …`；查詢。 |
-| 42 | `aos agent config check N [--draft F]`：驗目前或候選 agent 設定 | `valid` 或 `invalid 檔案:欄位` | `aos-agent-check [--draft F]`；0 有效、1 無效、2 用法、125 前置。驗引用／權限，不試 HTTP。和 kernel 設定檢查的結束碼不一致，要不要統一延後（[P-008](../protocol/README.md#p-008)）。 |
+| 42 | `aos agent config check N [--draft F]`：驗目前或候選 agent 設定 | `valid` 或 `invalid 檔案:欄位` | `aos-agent-check [--draft F]`；0 有效、1 無效、2 用法、125 前置。驗引用／權限，不試 HTTP。和 kernel 設定檢查的結束碼不一致，要不要統一延後（[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）。 |
 | 43 | `aos agent config recheck N`：修好後驗證設定 | `valid` | `aos-agent-check --recheck`；改檔，仍無效回 1；更新設定狀態，不 resume；事項另用 attend done。 |
 | 44 | `aos agent task run N`：跑 agent module 一步，供任務表使用 | 空 | `aos-agent-step`；必須繼承 tick 鎖；0 本步完成、1 處理失敗、2 用法、125 前置。人手完整一格用 node tick。 |
 
