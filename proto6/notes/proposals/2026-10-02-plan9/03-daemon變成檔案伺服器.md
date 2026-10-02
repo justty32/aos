@@ -106,3 +106,5 @@ cat /aos/d/insts/bob/out
 1. daemon 要內嵌一個 FUSE（或 9P）伺服器：Python 用 pyfuse3 幾百行；C++11 用 libfuse3 也還好，但 daemon 從「一個 while 迴圈的 cron」變成「一個檔案系統」，**跟「daemon 只是笨 cron」的方向打架**。
 2. 掛載點生命週期：daemon 死了掛載點會 hang（`Transport endpoint is not connected`），要 `fusermount3 -u`；現在 socket 死了頂多 `connect` 錯。
 3. 一行文字回不了結構化錯誤；要嘛接受 errno，要嘛另開 `error` 檔，要嘛 ctl 的回應改成「寫完再讀同一個 fd」（Plan 9 factotum 的 `rpc` 檔就是這樣：write 請求、read 回應）。
+
+daemon 跑 daemon 在這套下會變怎樣，見 [10](10-daemon跑daemon.md)。
