@@ -1,6 +1,6 @@
 # 標準任務表範本
 
-← [通用 tick 核心](../tick.md)｜[tick 子篇入口](../tick/README.md)｜格式：[tick 協議](../protocol/tick.md)
+← [通用 tick 核心](../tick.md)｜[tick 子篇入口](../tick.md)｜格式：[tick 協議](../protocol/tick.md)
 
 > **這篇整篇在暫緩區**（2026-10-01 第十八批）〔使用者 2026-10-01 第十八批：「1. 都按你建議 2.好 3.對，我就不想了。」〕範本裡的系統級任務 `aos-mq get`、`aos-mq post`、`aos-clean` 都搬暫緩區（`aos-git` 與有 git 版第十七批已搬），範本只剩使用者任務，**現在沒有系統級任務要放**，B-629 整條暫緩。原檔 `tick/template.md` 整篇搬來，原文照留、條號保留不重用；第十七批搬到 tick 暫緩區的「有 git 版範本」併到本篇末。現行任務表就是使用者自己寫的 `tasks`（[B-620](../tick.md)），要在格的前後做事用 hooks（[B-635](../tick/hooks.md)）。
 
@@ -14,7 +14,7 @@
 |---|---|
 | 沒有 git | `mq-get` → 使用者任務 → `mq-post` → 清理 |
 
-〔使用者 2026-10-01 第十七批〕「git這塊先不要進範本。」原本的「有 git 版」（git 開格 → `mq-get` → 存檔點 → 使用者任務 → 存檔點 → 清理 → git 收尾 → `mq-post`）隨 `aos-git` 搬到[暫緩區](template.md#暫緩b-629-有-git-版範本)；範本只留沒有 git 的這份。要用 git，見 [B-635 的範例](../tick/hooks/03-B-635-範例hook加git.md#範例用-hook-加普通-git-指令管版本)。
+〔使用者 2026-10-01 第十七批〕「git這塊先不要進範本。」原本的「有 git 版」（git 開格 → `mq-get` → 存檔點 → 使用者任務 → 存檔點 → 清理 → git 收尾 → `mq-post`）隨 `aos-git` 搬到[暫緩區](template.md#暫緩b-629-有-git-版範本)；範本只留沒有 git 的這份。要用 git，見 [B-635 的範例](../tick/hooks.md)。
 
 〔使用者 2026-10-01 第五批〕原本兩版都有「發摘要」（id `summary`，`aos-publish`），隨 `aos-publish` 搬到[暫緩區](tick/03-B-624與B-621.md#暫緩b-624-發布摘要aos-publish)拿掉。
 

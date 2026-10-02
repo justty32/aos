@@ -2,7 +2,7 @@
 
 ← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/deferred/template.md)、[aos-tick-check-task B-621](../spec/settled/deferred/tick/03-B-624與B-621.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/deferred/git.md)、[恢復與設定 B-625](../spec/settled/deferred/tick/05-B-625-當機恢復設定與清理.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick/03-B-624與B-621.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
 
-> **〔2026-10-01 第十七批〕`aos-git` 整套搬暫緩區**（使用者：「git這塊先不要進範本。」）：改用 hooks 加普通 git 指令（[B-635 範例](../spec/settled/tick/hooks/03-B-635-範例hook加git.md#範例用-hook-加普通-git-指令管版本)），範本只留沒有 git 的那份。**文末待問 1～12 隨之擱置**（大多是 `aos-git` 的題）；`aos-tick-check-task` 第十六批也已暫緩。本檔照留當紀錄。
+> **〔2026-10-01 第十七批〕`aos-git` 整套搬暫緩區**（使用者：「git這塊先不要進範本。」）：改用 hooks 加普通 git 指令（[B-635 範例](../spec/settled/tick/hooks.md)），範本只留沒有 git 的那份。**文末待問 1～12 隨之擱置**（大多是 `aos-git` 的題）；`aos-tick-check-task` 第十六批也已暫緩。本檔照留當紀錄。
 >
 > **狀態：草稿（2026-10-01），還沒開工。** 2026-10-01 使用者已裁定 `aos-publish` 搬暫緩區、`aos-needs` 改寫成 `aos-tick-check-task`（見文末「裁定紀錄」）；其餘文末「待問」裁定後才照做。下面各步寫的是「建議的最單純版本」；舊 spec 跟現在 tick 對不上的地方集中在「舊規定哪裡對不上」一節。
 

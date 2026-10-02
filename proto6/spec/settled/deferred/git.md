@@ -1,8 +1,8 @@
 # git：開格、存檔點、收尾
 
-← [通用 tick 核心](../tick.md)｜[tick 子篇入口](../tick/README.md)｜格式：[tick 協議](../protocol/tick.md)
+← [通用 tick 核心](../tick.md)｜[tick 子篇入口](../tick.md)｜格式：[tick 協議](../protocol/tick.md)
 
-> **這篇整篇在暫緩區**（2026-10-01 第十七批）〔使用者 2026-10-01 第十七批：「git這塊先不要進範本。」〕`aos-git` 三項（開格、存檔點、收尾）與它的共同規則（B-630、B-622）、沒有 git 時的下游做法（B-632）都暫緩；原檔 `tick/git.md` 整篇搬來，原文照留、條號保留不重用。暫緩理由：用 hooks 加普通 git 指令就做得到——`before_all` 看上一格紀錄 `ended:false` 就還原、`after_task`／`after_every_task` 看 `AOS_TASK_EXIT` 成功就 commit、失敗就還原那一項（寫法見 [B-635 的範例](../tick/hooks/03-B-635-範例hook加git.md#範例用-hook-加普通-git-指令管版本)）。固定排除、`AOS_DIRNAME` 空字串時提交整個資料夾等規則跟著暫緩。下面的「停格檔」現在叫 tasks-blocked（[B-620](../tick.md)）。
+> **這篇整篇在暫緩區**（2026-10-01 第十七批）〔使用者 2026-10-01 第十七批：「git這塊先不要進範本。」〕`aos-git` 三項（開格、存檔點、收尾）與它的共同規則（B-630、B-622）、沒有 git 時的下游做法（B-632）都暫緩；原檔 `tick/git.md` 整篇搬來，原文照留、條號保留不重用。暫緩理由：用 hooks 加普通 git 指令就做得到——`before_all` 看上一格紀錄 `ended:false` 就還原、`after_task`／`after_every_task` 看 `AOS_TASK_EXIT` 成功就 commit、失敗就還原那一項（寫法見 [B-635 的範例](../tick/hooks.md)）。固定排除、`AOS_DIRNAME` 空字串時提交整個資料夾等規則跟著暫緩。下面的「停格檔」現在叫 tasks-blocked（[B-620](../tick.md)）。
 
 **狀態：待實作。`aos-git` 三項還沒有程式。主體不依賴暫緩區；只有「在不在 tick 內」的核對與巢狀排除的判準要等暫緩區（B-622）。**條號不變，2026-10-01 從 [tick.md](../tick.md) 拆出；節的順序改成先講有 git 時怎麼做（B-630）、共同規則（B-622），最後才是沒有 git（B-632）。
 

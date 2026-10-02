@@ -13,6 +13,7 @@
 ## 最新進度
 
 - 10-02（公司，socket 與 kind）：第二十四批 kind（任意字串、hooks `before_kind`／`after_kind`、tasks-blocked 寫 `{"kinds":[…]}` 只擋那幾類）與第二十五批訊息多扇門（`modules.mq` 門名→路徑、每項 `mq` 訂門名陣列、信原樣送、合併叫醒、`aos-mq send/take/peek <路徑>`；控制 socket 變數改 `AOS_DAEMON_CTL_SOCKET`；socket 一律 666、權限靠所在資料夾）都合進 main，全套 643 條綠（skip 13）。裁定見 [第二十四批](../proto6/notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md)、[第二十五批](../proto6/notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md)。任務能不能控制別項已定：可以，全靠權限。
+- 10-02（第二十六批，整理區輕量化）：使用者說程式本身就是 spec，整理區（settled）不該比程式還大。正式篇每主題縮成一小篇（原則＋指向程式與測試），協議篇留 JSON 格式、刪行為敘述；B-625 當機恢復整條搬暫緩區。裁定見 [第二十六批](../proto6/notes/verdicts/11-tick-as-unit/27-1002-第二十六批.md)。
 - 10-02（公司，拆檔＋tidy）：三隊做完並合進 main——proto6/src/py（lib 三支、tests 十支、README 拆 docs/，641 條綠）、proto6 文件（46 份大檔拆、09-30／10-01 審稿封存，>8 KB 85→36，報告 [tidy-report](../proto6/notes/reviews/2026-10-02/tidy-report.md)）、wf（OVERSIZE 40→29，剩 spec／ideas 各章）。還開著：proto6 剩 36 份超標（舊設計 spec 20 份沒動、連貫內容 9 份、筆記 4、proto/ 3）；src/py docs 與本檔指向拆過檔的舊錨點靠入口的 `<a id>` 撐著，可改指新分檔後拿掉。
 - 10-02（公司）：aos-mq 第二十二批（廣播與頻道）spec 與裁定紀錄補完（[第二十二批](../proto6/notes/verdicts/11-tick-as-unit.md#2026-10-01-第二十二批廣播與頻道)）。公司這台（Ubuntu）的 6 條紅已修（帳號測試改成挑存在的系統帳號、Step6Tick 讀紀錄避開 current→last 換名空檔），全套 641 條綠（skip 13）。
 - 10-01（晚，使用者方向）：socket 與 `kind` 已在 10-02 做完（見上條）。peers、node 都先不做。C++11 等 Python POC 玩過後再來。現在一個系統級任務都沒有（全搬暫緩區、改用 hook／daemon 模組），`aos-cg` 10-02 搬暫緩區（第二十三批）。
