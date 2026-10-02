@@ -148,7 +148,7 @@ def _run_locked(cwd, table):
         return EXIT_OK
 
     try:
-        tbl = aos_tick_table.read_table(table, cwd)     # 只解到 tasks 這層；每項內部跑到時才解
+        tbl = aos_tick_table.read_table(table, cwd)     # 開格整份展開（陌生鍵與 _metainfo 不解）；跑到該項才合併頂層預設
     except aos_tick_table.TableInvalid as e:
         say("bad_table", str(e))          # 使用者 2026-10-01：表壞算 tick 自己的錯，不算開過一格（紀錄、seq 都不動）
         return EXIT_ERROR
