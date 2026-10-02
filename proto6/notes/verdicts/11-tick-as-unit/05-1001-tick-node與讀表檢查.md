@@ -36,6 +36,6 @@
 
 **待改的 spec 處**（統一更新時照這節改）
 
-- [P-202](../../../spec/settled/protocol/tick.md#p-202任務註冊表建議預設未拍板) 的欄位表與 `node-tasks` schema 的 `required`：`kind` 改不必填；`id` 不再是核心必查（schema 是否仍列必填，統一更新時定）；`methods` 與其「同一項不重複」檢查刪掉。
+- [P-202](../../../spec/settled/protocol/tick/02-P-202-任務註冊表.md#p-202任務註冊表建議預設未拍板) 的欄位表與 `node-tasks` schema 的 `required`：`kind` 改不必填；`id` 不再是核心必查（schema 是否仍列必填，統一更新時定）；`methods` 與其「同一項不重複」檢查刪掉。
 - [B-620](../../../spec/settled/tick/core/03-B-602-互斥鎖與B-620開頭.md#b-620任務註冊表照表依序跑)「讀表與誰驗什麼」：核心只做上面的極簡檢查，不過回 1。
 - [B-633](../../../spec/settled/tick/core/08-B-633-紀錄與格數.md#b-633每項結束碼紀錄與格數)／P-213 與 `node-tick-record` schema：`id` 的說明補「任務表沒寫 `id` 時是位置字串」；上面「任務環境變數命名」那條的 `AOS_TASK_ID` 同。

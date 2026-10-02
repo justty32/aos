@@ -1,6 +1,6 @@
 # tick 模組 `tasks-blocked`：發現 tasks-blocked 時先跑一串 inst
 
-← [通用 tick 核心](../tick.md)｜[tick 子篇入口](README.md)｜[hooks（B-635）](hooks.md)｜格式：[P-214](../protocol/tick.md#p-214tick-模組-tasks-blocked使用者-2026-10-01-第十六批第二十批改名)
+← [通用 tick 核心](../tick.md)｜[tick 子篇入口](README.md)｜[hooks（B-635）](hooks.md)｜格式：[P-214](../protocol/tick/06-P-213-tasks-blocked與P-214.md#p-214tick-模組-tasks-blocked使用者-2026-10-01-第十六批第二十批改名)
 
 **狀態：已實作**（2026-10-01，`lib/aos_tick.py` 的 `run_on_blocked()`、`lib/aos_tick_table.py` 的 `_tasks_blocked()`）。本篇只有 B-636。
 

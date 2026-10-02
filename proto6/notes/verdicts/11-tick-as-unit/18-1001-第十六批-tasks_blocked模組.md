@@ -12,7 +12,7 @@
 4. insts 拿得到被擋下那一項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`；結束碼不記進紀錄、非 0 沒影響。
 5. 沒掛模組＝現在的預設行為。
 
-已做，正本 [B-636](../../../spec/settled/tick/tasks-blocked.md)、格式 [P-214](../../../spec/settled/protocol/tick.md#p-214tick-模組-tasks-blocked使用者-2026-10-01-第十六批第二十批改名)。
+已做，正本 [B-636](../../../spec/settled/tick/tasks-blocked.md)、格式 [P-214](../../../spec/settled/protocol/tick/06-P-213-tasks-blocked與P-214.md#p-214tick-模組-tasks-blocked使用者-2026-10-01-第十六批第二十批改名)。
 
 **AI 隊定的細節**（使用者可改）：
 
