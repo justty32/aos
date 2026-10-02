@@ -1,6 +1,6 @@
 # 依賴盤點：決定、現況與還用得到的比較
 
-← [筆記索引](README.md)｜裁定：[第十四批](verdicts/05-dependencies.md#第十四批依賴同日晚已落進-spec)｜[規格入口](../spec/README.md)｜[WSL 查證](2026-09-29-wsl-machine-check.md)｜[systemd-run 延遲實測](probes/systemd-run-latency.md)
+← [筆記索引](README.md)｜裁定：[第十四批](verdicts/05-dependencies/01-第十四批-依賴與待釐清.md#第十四批依賴同日晚已落進-spec)｜[規格入口](../spec/README.md)｜[WSL 查證](2026-09-29-wsl-machine-check.md)｜[systemd-run 延遲實測](probes/systemd-run-latency.md)
 
 2026-09-29。使用者的偏好是「外部依賴越少越好、留下的越穩越好」。原本的盤點（逐項依賴表、最脆弱前三名、拍板題）已封存，見 archive/2026-09-29-dependency-review.md（已封存檔 2026-09-29-dependency-review.md，索引見 [archive/README.md](archive/README.md)）。本頁只留決定、現況與以後還用得到的比較。
 
