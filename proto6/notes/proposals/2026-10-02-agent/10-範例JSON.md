@@ -36,16 +36,16 @@
 [{"type": "function",
   "function": {"name": "wc", "description": "算一個檔的字數",
                "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}},
-  "_inst": {"argv": ["tools/wc.sh"], "stdin": "args.json", "stdout": "out", "exit": "exit"}},
+  "_inst": {"argv": ["tools/wc.sh"]}},
  {"type": "function",
   "function": {"name": "note", "description": "寫一句到長期記憶", "parameters": {"type": "object", "properties": {"text": {"type": "string"}}}},
-  "_inst": {"argv": ["tools/note.sh"], "stdin": "args.json", "stdout": "out", "exit": "exit"}},
+  "_inst": {"argv": ["tools/note.sh"]}},
  {"type": "function",
   "function": {"name": "say", "description": "寄信給通訊錄裡的人", "parameters": {"type": "object", "properties": {"to": {"type": "string"}, "text": {"type": "string"}}}},
-  "_inst": {"argv": ["tools/say.sh"], "stdin": "args.json", "stdout": "out", "exit": "exit"}}]
+  "_inst": {"argv": ["tools/say.sh"]}}]
 ```
 
-`act` 把 `_inst` 寫成 `work/tools/<call_id>/inst.json`（補 `_metainfo`、`cwd` 指回 agent 資料夾）再 `aos-exec work/tools/<call_id>`。`say.sh` 裡就是 `aos-mq send $(通訊錄查 to) <信>`。
+`_inst` 只寫 `argv`（可加 `envs`）。`act` 補成完整 inst 寫進 `work/tools/<call_id>/inst.json`：`cwd`＝agent 家的絕對路徑，`stdin`／`stdout`／`exit`＝呼叫目錄裡 `args.json`／`out`／`exit` 的**絕對路徑**（inst 的路徑欄相對 `cwd`，寫相對名會找到 agent 家而不是呼叫目錄），再 `aos-exec work/tools/<call_id>`。完整例子在 [04](04-一格做什麼.md)。`say.sh` 裡就是 `aos-mq send $(通訊錄查 to) <信>`。
 
 ## 信
 
@@ -85,13 +85,24 @@
 
 只是 agent 自己的通訊錄；kernel 的門不用寫，環境變數 `AOS_DAEMON_MQ_KERNEL` 就有。daemon 的 `peers` 模組使用者說先不做。
 
-## kernel 政策檔 `agent-hooks.json`（強制額度時，agent 的 `tasks.json` 用 `$ref` 掛）
+## `state/grant.json`、`state/usage.json`
+
+`inbox` 把最新一封 grant 原樣存成 `state/grant.json`；`remember` 累用量：
 
 ```json
-{"before_kind": {"llm": [{"id": "budget", "argv": ["/srv/kernel/bin/check-budget"]}]},
- "after_kind":  {"llm": [{"id": "meter",  "argv": ["/srv/kernel/bin/meter"]}]},
- "after_all":   [{"id": "git", "argv": ["sh", "-c", "git add -A state public && git commit -qm tick || true"]}]}
+{"window_start_seq": 1200, "window_ticks": 10, "llm_calls": 3, "llm_tokens": 7210}
 ```
+
+`think` 看 `grant.llm.calls` 減 `usage.llm_calls`（同一個 `window_start_seq` 才算）；用完就寫 `tasks-blocked` `{"kinds":["llm"]}`。
+
+## kernel 政策檔（配合式檢查；agent 的 `tasks.json` 只把 `after_task` 這個掛點 `$ref` 過去）
+
+```json
+{"think": [{"id": "budget", "argv": ["/srv/team-a/bin/check-budget"]}],
+ "act":   [{"id": "meter",  "argv": ["/srv/team-a/bin/meter"]}]}
+```
+
+agent 那邊：`"hooks": {"after_task": {"$ref": "/srv/team-a/policy/after-task.json"}, "after_all": [summary, git]}`。掛在 `after_task.think` 才擋得到**這一格**的 `llm`（`before_kind.llm` 寫的擋板只擋下一項）。`after_all` 留在本地，summary 不會被換掉。
 
 ## 第 0 階段回聲 agent 的 `tasks.json`（零新程式、沒有 kernel）
 
@@ -103,4 +114,4 @@
     "while read -r m; do d=$(printf %s \"$m\" | jq -r .reply_door); printf %s \"$m\" | jq '{type:\"result\",version:1,from:env.AOS_DAEMON_INST,text:.text,ref:.ref}' | aos-mq send \"$d\" -; done < work/in.jsonl"]}]}
 ```
 
-daemon 那項 `interval_ms` 設一小時，靠信叫醒；沒信那格只跑 `inbox` 就擋掉。
+daemon 掛狀態模組、狀態檔預置這項 `paused:true`，靠信叫醒（暫停中跑一格、跑完照樣暫停）；沒信那格只跑 `inbox` 就擋掉。

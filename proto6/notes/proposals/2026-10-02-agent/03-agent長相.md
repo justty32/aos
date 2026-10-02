@@ -31,9 +31,9 @@
 | 狀態 | `.aos/tick/last/record.json`（seq、結束碼）＋ `state/`、`public/status.json` | 只定檔案格式 |
 | 收信 | `aos-mq take $AOS_DAEMON_MQ_<自己的門>` | 不用 |
 | 寄信 | `aos-mq send <對方門的路徑> <JSON>` | 不用；信的欄位要約定 |
-| 睡 | 格做完就結束；`interval_ms` 很長，不自醒 | 不用 |
-| 醒 | kernel `aos-ctl wake`；或有人寄信到它訂的門 → daemon 合併叫醒 | 不用 |
-| 連續做幾步 | summary 寫 `ready:true` 讓 kernel 叫；沒 kernel 時 `aos-ctl wake --keep-schedule` 叫自己 | 不用 |
+| 睡 | daemon 狀態模組預置 `paused:true`；格做完照樣暫停 | 不用 |
+| 醒 | 有人寄信到它訂的門（kernel 的 grant 就是信）→ daemon 合併叫醒、暫停中仍跑一格；或 `aos-ctl wake` | 不用 |
+| 連續做幾步 | summary 寫 `ready:true`，kernel 再寄 grant；沒 kernel 時 `aos-ctl wake --keep-schedule` 叫自己 | 不用 |
 | 跟 kernel 講 | `after_all` 寄 summary 到 `$AOS_DAEMON_MQ_KERNEL`；收 grant 看額度（[07](07-kernel介面.md)） | 新造 `aos-agent summary` |
 | 硬停 | 人放 `.aos/tick-blocked` | 不用 |
 | 權限 | 資料夾權限＋帳號（T-08）；門的資料夾決定誰能寄 | 不用 |
@@ -59,15 +59,16 @@
 ```
 
 - `kind` 兩種：`agent`（接線）、`llm`（打模型）。kernel 或 agent 自己要擋 LLM 就寫 `tasks-blocked` `{"kinds":["llm"]}`。
-- 沒事做時 `inbox` 寫 `.aos/tick/tasks-blocked`（全擋），後面全跳過、`after_all` 照跑（summary 照寄）。格結束就是睡。
-- `hooks` 也可以整個 `$ref` 指到 kernel 管的檔（`"hooks": {"$ref": "/srv/kernel/policy/agent-hooks.json"}`），開格時展開：kernel 改政策不用碰每個 agent。
+- 沒事做時 `inbox` 寫 `.aos/tick/tasks-blocked`（全擋），後面全跳過、`after_all` 照跑（summary 看到是空格就不寄，免得跟 kernel 互相叫醒）。格結束就是睡。
+- kernel 的政策可以用 `$ref` 掛進 `hooks` 的**某個掛點**（例如 `"after_task": {"$ref": "/srv/kernel/policy/after-task.json"}`），開格時展開；`after_all` 留在本地，summary 與 git 才不會被整個換掉（`$ref` 是取代、不是合併）。
 
 ## daemon 那側（kernel 的 daemon 管兩個 agent；形狀照 kernel 提案）
 
 ```json
-{"interval_ms": 3600000,
+{"cwd": "/srv/team-a", "interval_ms": 3600000,
  "modules": {
    "control": {"socket": "./ctl.sock"}, "reload": {}, "cgroup": {},
+   "state": {"$ref": "state/daemon-state.json"},
    "mq": {"KERNEL": "./doors/kernel/s", "TEAM": "./doors/team/s",
           "ALICE": "./agents/alice/doors/s", "BOB": "./agents/bob/doors/s"},
    "account": {"user": "aos", "allow": ["agent-*"]}},
@@ -77,4 +78,4 @@
    "agents/bob":   {"mq": ["BOB", "TEAM"],   "account": {"user": "agent-bob"}}}}
 ```
 
-`"."` 是 kernel 自己（它的資料夾就是設定檔所在）。agent 的 `interval_ms` 一小時只是保底，正常靠 kernel `wake` 或信叫醒；閒置的 agent 只佔磁碟。每個 agent 一扇自己的門（grant 與私信寄這裡），`TEAM` 才是廣播。
+頂層 `cwd` 一定寫絕對路徑：省略時相對路徑的起點是 daemon **啟動時的目錄**，不是設定檔所在。`"."` 就是 kernel 自己（`/srv/team-a`）。agent 平常都是暫停的（狀態檔 `state/daemon-state.json` 預置 `paused:true`，所以要掛 `"state": {"$ref": "state/daemon-state.json"}`），`interval_ms` 用不到、隨便寫；靠 grant、私信或 `wake` 叫醒。閒置的 agent 不開程序，但 daemon 裡仍有它一條執行緒與一個信箱，每扇門也各一條執行緒。每個 agent 一扇自己的門（grant 與私信寄這裡），`TEAM` 才是廣播；**門要在 daemon 開起來時就列好**，重讀設定不會開新門。
