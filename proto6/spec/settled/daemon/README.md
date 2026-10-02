@@ -2,54 +2,22 @@
 
 ← [整理區](../README.md)｜[慣例](../conventions.md)｜[名詞](../terms.md)｜[通用 tick](../tick.md)｜[daemon 協議](../protocol/daemon/README.md)｜[暫緩區的舊設計](../deferred/daemon/README.md)
 
+程式是正本：[proto6/src/py](../../../src/py/README.md) 的 `lib/aos_daemon*.py`、`lib/aos_ctl.py`、`lib/aos_mq.py`，測試在 `src/py/tests/`。本資料夾每篇只留程式看不出的原則。
+
 ## daemon 是什麼
 
-**daemon（`aos-daemon`）就是一個定期叫 `aos-exec` 的 cron。** 設定檔列一串 inst，它照每一項自己的週期叫一次 `aos-exec <inst>`，等它結束，印一行結果。
+`aos-daemon` 就是一個定期叫 `aos-exec` 的 cron：設定檔列一串 inst，每一項照自己的週期叫一次 `aos-exec <inst>`，印一行結果。
 
-- 它**不認得 tick 的工作資料夾**（舊稱 node；〔使用者 2026-10-01〕改名）。要定期跑一個 `aos-tick`，就放一份 `argv` 開頭是 `aos-tick` 的 inst（例如 `["aos-tick", "<資料夾>"]`，或只寫 `["aos-tick"]`），把它加進清單。
-- 它**不是 tick 存在的前提**。tick 誰來跑都行：daemon、cron、人手直接跑（[B-627](../tick.md)）。
-- 它**不在任何一格裡**，也不在任何任務表上。
+- 它不認得 tick 的工作資料夾，也不是 tick 存在的前提；要定期跑 `aos-tick`，就放一份 `argv` 開頭是 `aos-tick` 的 inst。tick 誰來跑都行（[B-627](../tick.md)）。
+- 核心之外的功能都是**模組**：設定檔 `modules` 一個模組一個鍵，有寫就開，沒寫就像沒有這個功能。
+- 模組一覽：[B-640 核心](core.md)、[B-641 控制](control.md)、[B-642 重讀設定](reload.md)、[B-643 記住狀態](state.md)、[B-644 收屍／cgroup](cgroup.md)、[B-645 訊息](mq.md)、[B-646 帳號](account.md)。格式（欄位、JSON、argv、結束碼）在 [daemon 協議](../protocol/daemon/README.md)。
+- node 模組不做（使用者：「node這塊不要動，我有預感，node相關概念以後會不存在。」）。
 
-依據：[第二十批篇末「2026-10-01：最核心 daemon」](../../../notes/verdicts/11-tick-as-unit/07-1001-最核心daemon.md#2026-10-01最核心-daemon待統一更新-spec)；現行程式 [proto6/src/py](../../../src/py/README.md)。
+## 共通原則
 
-## 核心與模組
+- **默認一切正常**（使用者 2026-10-01）：設定檔讀得懂、路徑都對、`aos-exec` 叫得起來。不為異常寫處理，出事讓程式自然丟錯、回 1。唯一例外是重讀設定時設定壞了：舊的照跑（B-642）。結束碼照 [C-08](../conventions.md)。
+- **socket 一律 666，權限靠所在資料夾**（第二十五批）：控制的 socket、訊息的每一扇門，daemon 都 chmod 666；誰能連由 socket 所在資料夾的擁有者／群組／權限決定，資料夾由管理者事先建好，daemon 不建不改。daemon 自己不驗身分，能連就能做。
+- **任務能控制別項，全靠這個權限**：任務拿到控制 socket 與各扇門的路徑（環境變數），能不能對別項下指令、取別項的信，不在 daemon 裡判斷，只看它進不進得了那個資料夾。要限制，就把 socket 放在只有該進的人進得去的資料夾。
+- **同一份設定只能開一個**：靠鎖檔（預設設定檔路徑加 `.lock`），不靠 socket 檔，因為 socket 會有很多個、權限各自不同。
 
-- **核心**（[B-640](core.md)）：讀設定檔、照週期叫 `aos-exec`、印結果、非 0 時停不停、Ctrl-C 直接退出。只有這些。
-- **模組**：設定檔頂層 `modules` 物件裡一個模組一個鍵，**有寫就開**。核心只認得這個位置，不解讀內容。
-- 目前有六個模組：
-  - **控制模組**（[B-641](control.md)），開一個 socket，讓人或任務對某一項下 `wake`／`pause`／`resume`／`status`，小工具是 `aos-ctl`。
-  - **重讀設定**（[B-642](reload.md)），送 SIGHUP 就重讀設定檔，加減項、改週期不用重開。
-  - **記住狀態**（[B-643](state.md)），把暫停、已停記進 `$ref` 指的狀態檔，重開時讀回。
-  - **收屍／cgroup**（[B-644](cgroup.md)），每項一個 cgroup 框，跑完把留下的程序清掉；每項可設上限。
-  - **訊息**（[B-645](mq.md)），〔第二十五批〕另開幾扇門（各一個 socket），每項訂幾扇；從門寄進來的信放進訂了的項的信箱並叫醒它們（合併叫醒）；任務用 `aos-mq send`／`take`／`peek <門>` 收發。
-  - **帳號**（[B-646](account.md)），要用 root 開；主程式降成預設帳號，名單准的別的帳號的項由 root 端用那個帳號開。切帳號只在 daemon 設定檔做。
-- node 模組不做（使用者：「node這塊不要動，我有預感，node相關概念以後會不存在。」），方向照留在[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)。
-
-**第一版默認一切正常**〔使用者方向 2026-10-01〕：設定檔讀得懂、路徑都對、`aos-exec` 叫得起來。不為異常寫處理，出事讓程式自然丟錯、回 1。結束碼照 [C-08](../conventions.md)，環境變數總表見 [C-10](../conventions.md)。
-
-## 分檔目錄
-
-| 檔案 | 條號 | 內容 |
-|---|---|---|
-| [core.md](core.md) | B-640 | 最核心 daemon：清單、起點、指示詞展開、週期、非 0 停不停、輸出、停機、`modules` |
-| [control.md](control.md) | B-641 | 控制模組：socket、四個指令、wake 的選項、環境變數、`aos-ctl` |
-| [reload.md](reload.md) | B-642 | 重讀設定模組：SIGHUP、清單比對、要重開的鍵、設定壞了舊的照跑 |
-| [state.md](state.md) | B-643 | 記住狀態模組：`$ref` 指的狀態檔、何時寫、開起來讀回 |
-| [cgroup.md](cgroup.md) | B-644 | 收屍／cgroup 模組：子樹根、每項的框與上限、跑完清框 |
-| [mq.md](mq.md) | B-645 | 訊息模組：門、訂閱、信箱、叫醒、socket 權限、環境變數、`aos-mq` |
-| [account.md](account.md) | B-646 | 帳號模組：root 端與主程式降權、預設帳號、白名單與黑名單 |
-| [協議 core.md](../protocol/daemon/core.md) | P-120 | `aos-daemon` 的 argv、設定檔欄位、輸出格式、結束碼 |
-| [協議 control.md](../protocol/daemon/control.md) | P-121 | 控制 socket 的一行 JSON、錯誤代碼、`aos-ctl` 的 argv 與結束碼 |
-| [協議 reload.md](../protocol/daemon/reload.md) | P-122 | 重讀設定的設定、訊號、stdout／stderr 的行 |
-| [協議 state.md](../protocol/daemon/state.md) | P-123 | `modules.state` 的寫法、狀態檔格式 |
-| [協議 cgroup.md](../protocol/daemon/cgroup.md) | P-124 | `modules.cgroup` 與每項 `cgroup` 的寫法、框名、stdout 的行 |
-| [協議 mq.md](../protocol/daemon/mq.md) | P-125 | 訊息 socket 的一行 JSON、錯誤代碼、`aos-mq` 的 argv 與結束碼 |
-| [協議 account.md](../protocol/daemon/account.md) | P-126 | `modules.account` 與每項 `account` 的寫法、root 端封包、stderr 的行 |
-
-行為寫在這個資料夾，格式（欄位、JSON、argv、結束碼）寫在 [daemon 協議](../protocol/daemon/README.md)。
-
-## 舊設計在暫緩區
-
-2026-10-01 之前寫的完整 daemon（記憶體登記、runner 與收屍、重啟清理與 `state.json`、收尾與排空停機、熱重載、通道與憑證、掛行程、佈建與 helper、cgroup、訊息、五個部件開關、systemd 範例）第一版都不做，整批搬到[暫緩區的 daemon 目錄](../deferred/daemon/README.md)。條號保留、不重用；每條標了是「暫緩」還是「已被 B-640／B-641 取代」。舊設計的時間單位表（哪些用毫秒、哪些用格數）也在那裡。
-
-開機自動啟動：舊的 systemd 範例寫的是舊設定，也在暫緩區（[service](../deferred/daemon/service.md)）。新版要用 systemd 的話，`ExecStart=` 直接寫 `aos-daemon --config <設定檔>` 就行；停服務送 SIGTERM，daemon 立刻回 0 退出、自己不收尾正在跑的 `aos-exec`（systemd 會不會照它的 `KillMode` 一起收掉，看服務檔怎麼寫）。
+開機自動啟動：`ExecStart=aos-daemon --config <設定檔>`；SIGTERM 立刻回 0、不收尾正在跑的 `aos-exec`。舊的完整 daemon 設計（登記、runner、收尾、通道、helper）整批在[暫緩區](../deferred/daemon/README.md)，條號保留。

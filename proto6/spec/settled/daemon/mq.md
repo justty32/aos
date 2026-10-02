@@ -1,17 +1,18 @@
-# daemon 訊息模組與 `aos-mq`：多扇門、每項一個信箱
+# daemon 訊息模組與 aos-mq
 
-← [daemon 目錄](README.md)｜[核心 B-640](core.md)｜[控制 B-641](control.md)｜[重讀設定 B-642](reload.md)｜[記住狀態 B-643](state.md)｜[收屍／cgroup B-644](cgroup.md)｜格式：[P-125](../protocol/daemon/mq.md)｜舊設計：[暫緩區 B-614](../deferred/daemon/messaging.md)
+← [daemon 目錄](README.md)｜[核心 B-640](core.md)｜[控制 B-641](control.md)｜格式：[P-125](../protocol/daemon/mq.md)｜舊設計：[暫緩區 B-614](../deferred/daemon/messaging.md)
 
-本篇只有 B-645，寫訊息模組**做什麼**（2026-10-02 第二十五批改成多扇門：每項訂門、從門寄進來的信原樣放進訂了的項的信箱並叫醒它們；socket 一律 666、權限靠資料夾）。socket 上的請求與回應、`aos-mq` 的用法與錯誤代碼，寫在格式篇 [P-125](../protocol/daemon/mq.md)。
+程式：`lib/aos_daemon_mq.py`、`lib/aos_mq.py`；測試：`tests/test_mq_doors.py`、`test_mq_send.py`。
 
-依據：[verdicts 11 篇末「2026-10-01 第十二批：cgroup 與帳號」](../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[第十四批：aos-mq 取信](../../../notes/verdicts/11-tick-as-unit/16-1001-第十四十五批.md#2026-10-01-第十四批aos-mq-取信)、[第二十二批：廣播與頻道](../../../notes/verdicts/11-tick-as-unit/24-1001-1002-第二十二二十三批.md#2026-10-01-第二十二批廣播與頻道)、[第二十五批：訊息多扇門（取代前面幾批的訊息做法）](../../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門)、[plan m3m 模組四](../../../plan/m3m-daemon-modules/05-模組四-訊息.md#模組四訊息modulesmq)；現行程式 [訊息與 aos-mq](../../../src/py/README.md#訊息與-aos-mqm3m-模組四)（`lib/aos_daemon_mq.py`、`lib/aos_mq.py`，有出入以程式為準）。
+## B-645：訊息模組與 aos-mq
 
-## 分檔目錄
+做什麼：daemon 開幾扇「門」（各一個 unix socket，`modules.mq` 是「門名 → 路徑」），每一項用 `mq` 陣列自己挑訂哪幾扇。從某扇門寄進來的信，原樣放進訂了那扇門的每一項的信箱，並叫醒它們。任務用 `aos-mq send|take|peek <門>` 收發。
 
-> 2026-10-02 整理：原檔約 13 KB 超過 8 KB 門檻，按標題逐字拆進 `mq/`；本檔只留前言與目錄（原路徑保留當入口）。
+原則：
 
-<!-- wf-nav -->
-| # | 檔 | 段落 |
-|---|---|---|
-| 1 | [01-B-645-信箱與socket.md](mq/01-B-645-信箱與socket.md) | B-645：訊息模組與 `aos-mq`（門、訂閱、寄與叫醒、信箱、跨 daemon、socket 權限、環境變數） |
-| 2 | [02-B-645-aos-mq與先不做.md](mq/02-B-645-aos-mq與先不做.md) | `aos-mq`；跟其他模組；先不做；驗收 |
+- **門就是收件地址**：沒有頻道、沒有收件人欄位，訂了誰就給誰。信是寄的 JSON 原樣，daemon 不加任何欄位；要知道誰寄的、怎麼回，寫在信裡自己約定。跨 daemon 就是寄到對方的門。
+- 叫醒會合併（等於不帶選項的 `wake`）：開跑前連來幾封只跑一次，正在跑時來信跑完補一次；所以不需要「急件」。
+- 信箱每項一個、放記憶體、先進先出，重開就丟，不保證送達、不設上限、不去重。
+- **socket 一律 666，誰能連靠所在資料夾**（見 [README](README.md)）；daemon 不驗身分。`aos-mq` 只取自己（`AOS_DAEMON_INST`）的信是 `aos-mq` 這側的禮貌，不是 daemon 的保證；要擋人，就把門放進權限對的資料夾（例：只准 ops 群組的門放在 `root:ops 0750` 的資料夾）。
+- 環境變數：每扇門一個 `AOS_DAEMON_MQ_<門名>`（不管有沒有訂）；`AOS_DAEMON_INST` 控制或訊息任一掛了就放。
+- 設定錯：訂了不存在的門、兩扇門同路徑或跟控制 socket 同路徑。
