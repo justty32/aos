@@ -1,3 +1,5 @@
+> 封存 2026-10-02：09-30 審稿與第十八～二十批（含 cgroup／git）改寫計畫、交接、核對報告，批次已結束；結論已由 proto6/spec（settled/ 與 settled/deferred/）與裁定紀錄 proto6/notes/verdicts/09～11 吸收
+
 你可以開自己的 subagent 平行做事。
 
 你在 /home/guanyu/projs/aos（proto6 設計草案，繁中）。唯讀審稿，不改任何檔。

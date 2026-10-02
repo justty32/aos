@@ -57,7 +57,7 @@
 
 ## 改寫計畫疑點的裁定（同日）
 
-題號對應[第十九批改寫計畫](../reviews/2026-09-30/batch19-plan.md)的疑點。
+題號對應第十九批改寫計畫的疑點。
 
 1. **標準配備怎麼掛**：跟核心同一支 `aos-tick`，只在規格上分層（c）。〔已被第二十批取代，見 [11](11-tick-as-unit.md)〕
 2. **清單邊界全算**：投件與鬧鐘、發布摘要、`aos-clean`、daemon 端的重啟清空與排空、通道上的傳訊任務，都屬標準配備。〔已被第二十批取代，見 [11](11-tick-as-unit.md)〕
@@ -92,4 +92,4 @@
 - 標準配備與備援：清單 [B-629](../../spec/settled/deferred/template.md)；cgroup 準備 [B-605](../../spec/settled/daemon.md)、cgroup 備援與兩級保證表 B-631；git 最低版本與檔案日誌備援 B-630、B-632；人手跑風險自負 B-627。沒 git 時讀取端（replies／context、listen 等）改讀目前檔案，不保證一致快照。〔已被第二十批取代，見 [11](11-tick-as-unit.md)〕
 - tick 與 daemon 通道：B-612～614、[P-117～119](../../spec/settled/deferred/protocol/daemon/channel.md)。
 - 追答第 10 條（跨帳號任務由 tick 握鎖、經 helper 以指定帳號開、任務繼承鎖 fd）：B-620、[P-704](../../spec/protocol/agent-tasks.md)。第 11 條（覆蓋上層時舊上層未登記則只要新上層同意）：B-606／B-628。
-- 完成狀況與各隊核對紀錄見 [第十九批審稿](../reviews/2026-09-30/README.md)。
+- 完成狀況與各隊核對紀錄見 第十九批審稿。

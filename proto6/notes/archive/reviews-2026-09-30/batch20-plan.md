@@ -1,3 +1,5 @@
+> 封存 2026-10-02：09-30 審稿與第十八～二十批（含 cgroup／git）改寫計畫、交接、核對報告，批次已結束；結論已由 proto6/spec（settled/ 與 settled/deferred/）與裁定紀錄 proto6/notes/verdicts/09～11 吸收
+
 # 依第二十批改寫 proto6 spec：計畫（待使用者同意）
 
 ← [審稿紀錄](README.md)｜[第二十批](../../verdicts/11-tick-as-unit.md)｜[第十九批](../../verdicts/10-tick-minimal-core.md)｜[spec 入口](../../../spec/README.md)
