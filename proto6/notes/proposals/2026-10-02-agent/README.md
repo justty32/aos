@@ -2,11 +2,11 @@
 
 ← [筆記索引](../../README.md)｜現行 spec：[proto6/spec](../../../spec/README.md)｜裁定：[verdicts 11](../../verdicts/11-tick-as-unit.md)｜同日的 kernel 提案 `proto6/notes/proposals/2026-10-02-kernel/`（另一個 worktree，合進 main 後再改成連結）
 
-**這是規劃，不是實作。** 不改程式、不改 spec、不下裁定；方向由使用者決定。kernel 另有一份提案，兩份靠 [07-kernel介面](07-kernel介面.md) 接起來（已照它的契約對齊，三處不同意見寫在那份末段）。
+**這是規劃，不是實作。** 不改程式、不改 spec、不下裁定；方向由使用者決定。kernel 另有一份提案，兩份靠 [07-kernel介面](07-kernel介面.md) 接起來。10-02 astra 審了兩份（`notes/reviews/2026-10-02-astra/07-agent-proposal.md`、`09-cross.md`），事實錯誤與接不通處已照審查修正，兩邊契約互改一輪後一致；方向題仍列待決。
 
 ## 一段話結論
 
-**agent 就是一個工作資料夾**：`.aos/tasks.json` 寫成「agent 的一步」——收信、組 context、呼叫一次 LLM、做工具、寫記憶，五項各是一支小程式；由 kernel 擁有的那份 daemon 設定列成一項，定期叫 `aos-tick` 跑。一格＝agent 的一步＝最多一次 LLM 呼叫（對上 T-06「分配的單位是一次計算」）。身分＝資料夾路徑＋daemon 帳號模組給的 Linux 帳號；收信＝`aos-mq take`、寄信＝`aos-mq send`、睡＝格結束什麼都不做、醒＝kernel `aos-ctl wake` 或有人寄信、停＝人放擋板檔。tick 與 daemon 的程式和 spec **不出現「agent」這個詞**，它只是 T-10 的「其他任務」。新造的只有兩支程式：`aos-llm`（一次呼叫）與 `aos-agent`（五個子命令），加三份 schema。
+**agent 就是一個工作資料夾**：`.aos/tasks.json` 寫成「agent 的一步」——收信、組 context、呼叫一次 LLM、做工具、寫記憶，五項各是一支小程式；由 kernel 擁有的那份 daemon 設定列成一項，定期叫 `aos-tick` 跑。一格＝agent 的一步＝最多一次 LLM 呼叫（對上 T-06「分配的單位是一次計算」）。身分＝資料夾路徑＋daemon 帳號模組給的 Linux 帳號；收信＝`aos-mq take`、寄信＝`aos-mq send`、睡＝一直 `paused`（kernel 的狀態檔預置）、醒＝kernel 寄 grant 到它的私門或有人寄信（暫停中跑一格、跑完照樣暫停）、停＝人放擋板檔。tick 與 daemon 的程式和 spec **不出現「agent」這個詞**，它只是 T-10 的「其他任務」。新造的只有兩支程式：`aos-llm`（一次呼叫）與 `aos-agent`（五個子命令），加三份 schema。
 
 ```mermaid
 flowchart LR
@@ -38,7 +38,7 @@ flowchart LR
 | [06-多agent與上下層](06-多agent與上下層.md) | 門與資料夾權限、信的形狀、平的與巢的、daemon 跑 daemon 的兩個坑、一萬個 agent |
 | [07-kernel介面](07-kernel介面.md) | 照 kernel 提案的契約：summary／grant／request、agent 怎麼配合、三處不同意見 |
 | [08-分階段](08-分階段.md) | 0 回聲 → 1 aos-llm → 2 完整一步 → 3 三個 agent → 4 主管＋子 daemon → 5 接 kernel → 6 C++11 |
-| [09-待決問題](09-待決問題.md) | 21 題，每題附建議 |
+| [09-待決問題](09-待決問題.md) | 26 題，每題附建議；沒回答不等於採納 |
 | [10-範例JSON](10-範例JSON.md) | `agent.json`、`tools.json`、信、`status.json`、通訊錄、政策檔、回聲 agent 的表 |
 
 ## 待使用者決定（短版，全文在 09）
@@ -47,7 +47,7 @@ flowchart LR
 |---|---|---|
 | 1 | 一格＝一次 LLM 呼叫？ | 是；要連續就下一格 |
 | 2 | 一步拆五項（A）或一支程式（B）？ | A |
-| 3 | 睡＝不自醒、靠 kernel 或信叫？ | 是 |
+| 3 | 睡＝一直 `paused`，信、grant、`wake` 來了跑一格？ | 是 |
 | 4 | 工具＝inst 交給 `aos-exec`？ | 是 |
 | 5 | 信的欄位照 kernel 提案（`type`、`version`、`from`）？ | 是，六個 `type` 一份 schema |
 | 6 | LLM 直連、kernel 只排格？ | 是 |
@@ -56,16 +56,21 @@ flowchart LR
 | 9 | 一 agent 一 Linux 帳號，第三階段起？ | 是 |
 | 10 | tick／daemon 完全不提 agent？ | 是 |
 | 11 | 信箱在記憶體、重開丟信先不管？ | 不管 |
-| 12 | SIGHUP 子 daemon 靠 `AOS_DAEMON_PID`？ | 是（同 kernel 提案） |
+| 12 | SIGHUP 子 daemon：pid 由啟動它的 inst 寫檔？ | 是（`AOS_DAEMON_PID` 給的是上層） |
 | 13 | 子 daemon 不切帳號？ | 先不切 |
 | 14 | 人也是 daemon 的一項、少造 CLI？ | 是 |
-| 15 | 保底週期多久？ | 一小時（kernel 提案）；沒 kernel 時五分 |
+| 15 | 沒 kernel 時要不要保底週期？ | 要，五分；有 kernel 用不到 |
 | 16 | push summary 而不是 kernel 讀檔？ | push |
 | 17 | 工具平行？ | 先依序 |
 | 18 | 程式名 `aos-agent <子命令>`＋`aos-llm`？ | 是 |
-| 19 | grant 寄成員自己的門，不走共用門？ | 是（跟 kernel 提案不同，要對方同意） |
-| 20 | 連續做由 kernel 叫；沒 kernel 才 `self_wake`？ | 是 |
-| 21 | 額度強制用 hooks `$ref` 政策檔，不用池代發？ | 先自律；強制留 hooks 版 |
+| 19 | grant 寄成員自己的門，不走共用門？ | 是（kernel 提案已採） |
+| 20 | 連續做由 kernel 寄 grant 叫；沒 kernel 才 `self_wake`？ | 是 |
+| 21 | 額度要硬強制（kernel 當 LLM 代理）嗎？ | 先自律；方向題待拍 |
+| 22 | grant 只在要叫它時寄、agent 空格不寄 summary？ | 是（斷互叫循環） |
+| 23 | 有 kernel 但沒收到 grant：等，還是預設額度？ | 等 |
+| 24 | daemon 要不要先清掉繼承的 `AOS_DAEMON_*`？ | POC 用 inst `envs` 處理，之後再改一行 |
+| 25 | 普通回答由 `act` 寄回、一格一封對話信？ | 是 |
+| 26 | 多層同帳號？ | 接受 |
 
 ## 來源
 
