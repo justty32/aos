@@ -24,7 +24,7 @@
 - `proto6/spec/protocol/node.md`：P-200、P-202、P-203、P-204、P-205（P-206 以後不做）
 - `proto6/spec/tick.md`：B-602、group 與 needs、git 提交與還原
 - `proto6/spec/cli/README.md`、`proto6/spec/cli/commands.md` 的 daemon／node 表、`proto6/spec/cli/mapping-and-alias.md`
-- schema：`proto6/spec/protocol/schemas/daemon-config.schema.json`、`daemon-rpc.schema.json`、`daemon-registration.schema.json`、`daemon-runner-report.schema.json`、`inst.schema.json`、`tick-tasks.schema.json`、`common.schema.json`；範例在 `proto6/spec/protocol/examples/daemon/`、`examples/tick/`
+- schema：（已封存於 `proto6/notes/archive/spec-2026-10-02/protocol/schemas/`）`daemon-config.schema.json`、`daemon-rpc.schema.json`、`daemon-registration.schema.json`、`daemon-runner-report.schema.json`、`inst.schema.json`、`tick-tasks.schema.json`、`common.schema.json`；範例在 `proto6/spec/protocol/examples/daemon/`、`examples/tick/`
 
 ## 範圍（要做的）
 

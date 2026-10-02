@@ -33,7 +33,7 @@
 
 > **部分已被 [P-123](../../../protocol/daemon/state.md) 取代，其餘暫緩**（2026-10-01；第十一批改）：現行記住狀態模組的狀態檔見 P-123（只記暫停、已停，schema `daemon-module-state`）；本條的 `state.json`（登記、wake、`clean_shutdown`、`cgroup_root_last`）暫緩。條號保留、不重用。
 
-`state_dir/state.json` 用 [daemon-state schema](../../../protocol/schemas/daemon-state.schema.json)。持久檔，不認得的欄位忽略（[C-07](../../../../notes/archive/spec-2026-10-02/contracts.md)）。
+`state_dir/state.json` 用 [daemon-state schema](../../../../notes/archive/spec-2026-10-02/protocol/schemas/daemon-state.schema.json)。持久檔，不認得的欄位忽略（[C-07](../../../../notes/archive/spec-2026-10-02/contracts.md)）。
 
 形狀：`{version:1, clean_shutdown, cgroup_root_last?, registrations:[...]}`。
 
@@ -56,4 +56,4 @@
 
 daemon 自身 attention 依 [P-601](../../../../notes/archive/spec-2026-10-02/protocol/ops.md)。
 
-範例：[最小](../../../protocol/examples/daemon/state.minimal.valid.json)、[記了上次的子樹根](../../../protocol/examples/daemon/state.cgroup.valid.json)、[反例：pending 不是布林](../../../protocol/examples/daemon/state.pending.invalid.json)。
+範例：[最小](../../../../notes/archive/spec-2026-10-02/protocol/examples/daemon/state.minimal.valid.json)、[記了上次的子樹根](../../../../notes/archive/spec-2026-10-02/protocol/examples/daemon/state.cgroup.valid.json)、[反例：pending 不是布林](../../../../notes/archive/spec-2026-10-02/protocol/examples/daemon/state.pending.invalid.json)。

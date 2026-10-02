@@ -4,7 +4,7 @@
 
 ## 訊息與 aos-mq（m3m 模組四）
 
-照 [plan m3m](../../../plan/m3m-daemon-modules.md) 模組四寫的，2026-10-02 第二十五批改成**多扇門**（[verdicts 11 第二十五批](../../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門)）。`lib/aos_daemon_mq.py`、`lib/aos_mq.py`、`bin/aos-mq`。設定檔寫 `modules.mq` 才掛，沒寫時 daemon 跟上面一模一樣。
+照 [plan m3m](../../../plan/m3m-daemon-modules.md) 模組四寫的，2026-10-02 第二十五批改成**多扇門**（[verdicts 11 第二十五批](../../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門控制-socket-改名)）。`lib/aos_daemon_mq.py`、`lib/aos_mq.py`、`bin/aos-mq`。設定檔寫 `modules.mq` 才掛，沒寫時 daemon 跟上面一模一樣。
 
 ```json
 {"interval_ms": 60000,

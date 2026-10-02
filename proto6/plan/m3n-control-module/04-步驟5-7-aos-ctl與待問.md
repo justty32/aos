@@ -1,7 +1,7 @@
 ← [第三段之二：控制模組](../m3n-control-module.md)（分檔 4/5）｜[上一份](03-步驟3-4-socket與環境變數.md)｜[下一份](05-做完了沒.md)
 
 
-> 〔第二十五批 2026-10-02〕本篇的環境變數已改成新名 `AOS_DAEMON_CTL_SOCKET`（原 `AOS_DAEMON_SOCKET`，舊名不留）；`--socket` 照留（第二十一批加的）。見 [verdicts 11 第二十五批](../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門)。
+> 〔第二十五批 2026-10-02〕本篇的環境變數已改成新名 `AOS_DAEMON_CTL_SOCKET`（原 `AOS_DAEMON_SOCKET`，舊名不留）；`--socket` 照留（第二十一批加的）。見 [verdicts 11 第二十五批](../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門控制-socket-改名)。
 ## 步驟 5：`aos-ctl` 小工具
 
 - **要做到**：一支普通程式送四個指令，**每個都只對一項**；不另做 `aos-wake`。
