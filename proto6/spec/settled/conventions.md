@@ -91,7 +91,7 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 | `AOS_TICK_RECORD` | 撤回 | 本格紀錄的路徑；有 `AOS_TICK_CWD` 就找得到，拿掉（使用者 2026-10-01） |
 | `AOS_DAEMON_ID` | 已被取代 | 控制模組草稿用過的名字，改成 `AOS_DAEMON_INST`（daemon 核心沒有 id） |
 
-依據：使用者 2026-10-01：「AOS_NODE_DIR改成AOS_TICK_CWD，也就是aos-tick在跑的時候，他的cwd的絕對路徑。node這個概念目前還沒到出場的時候，那是後續aos-tick的node模組的事情。AOS_TICK_RECORD應該可以拿掉，反正有AOS_TICK_CWD，就從那邊找就好。」；控制模組裁定（`AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`）；使用者 2026-10-01 第十批（`AOS_HOOK_*`，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十批hook-的環境變數)）。
+依據：使用者 2026-10-01：「AOS_NODE_DIR改成AOS_TICK_CWD，也就是aos-tick在跑的時候，他的cwd的絕對路徑。node這個概念目前還沒到出場的時候，那是後續aos-tick的node模組的事情。AOS_TICK_RECORD應該可以拿掉，反正有AOS_TICK_CWD，就從那邊找就好。」；控制模組裁定（`AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`）；使用者 2026-10-01 第十批（`AOS_HOOK_*`，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit/13-1001-第十十一批.md#2026-10-01-第十批hook-的環境變數)）。
 
 ## C-11．設定檔頂層 `cwd` 與指示詞展開範圍
 
@@ -109,6 +109,6 @@ aos 自己設或讀的環境變數，全部列在這裡。新加變數要補進�
 - ~~`modules` 在 tasks.json 只解一層的理由：tick 核心不讀它，整份展開只會讓寫壞的模組設定害整格 `bad_table`。~~ 〔使用者裁定 2026-10-01〕改成讀表時整個展開，跟 daemon 設定檔一致；`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點，展開失敗＝`bad_table`、回 1。
 - tasks.json 頂層 `_metainfo` 可省；每項 `_metainfo` 照 inst 規則（可省＝posix 第 1 版，跑到那一項才驗）〔使用者裁定 2026-10-01〕。
 
-依據：使用者 2026-10-01 原話：「好，就這個。tick執行時後他自己有自己的cwd，這個頂層key cwd不會影響tick自己的cwd，但是其相對路徑由tick的cwd開始算。」「展開指示詞的時候不整份解好，而是只解到tasks。」（第二十批推翻：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」）「daemon config file也是，最頂層cwd不影響daemon自身，相對路徑也是基於daemon的cwd。但是指示詞這塊，daemon config file是全部產開」「tasks.json頂層也應該有modules。」出處：[第二十批裁定篇末「2026-10-01 第二批」](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)；`modules` 整個展開與 `_metainfo` 可省見 [第二十批裁定篇末「2026-10-01 第三批」](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)。
+依據：使用者 2026-10-01 原話：「好，就這個。tick執行時後他自己有自己的cwd，這個頂層key cwd不會影響tick自己的cwd，但是其相對路徑由tick的cwd開始算。」「展開指示詞的時候不整份解好，而是只解到tasks。」（第二十批推翻：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」）「daemon config file也是，最頂層cwd不影響daemon自身，相對路徑也是基於daemon的cwd。但是指示詞這塊，daemon config file是全部產開」「tasks.json頂層也應該有modules。」出處：[第二十批裁定篇末「2026-10-01 第二批」](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)；`modules` 整個展開與 `_metainfo` 可省見 [第二十批裁定篇末「2026-10-01 第三批」](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)。
 
 **驗收：**daemon 設定檔頂層 `"cwd":"w"` 時 daemon 自己的工作目錄不變、`aos-exec` 在 `w` 跑；tasks.json 頂層 `"cwd":"work"`、某項沒寫 `cwd` 時那項在 `<工作資料夾>/work` 跑，`aos-tick` 自己仍在工作資料夾；tasks.json 頂層 `modules` 裡的 `$ref` 讀表時就展開，展開不了＝`bad_table`、回 1；展開得了時照表跑都一樣。

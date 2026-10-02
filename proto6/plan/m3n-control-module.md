@@ -1,6 +1,6 @@
 # 第三段之二：控制模組
 
-← [plan 入口](README.md)｜**接在 [m3-daemon-core](m3-daemon-core.md) 之後。**｜依據：[verdicts 11 篇末「`insts` 改成物件＋控制模組裁定」](../notes/verdicts/11-tick-as-unit.md#2026-10-01最核心-daemon待統一更新-spec)｜結束碼：[aos 結束碼慣例](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)｜spec 正本：[B-641](../spec/settled/daemon/control.md)、格式 [P-121](../spec/settled/protocol/daemon/control.md)｜舊 spec 參考（暫緩區）：[B-612 通道](../spec/settled/deferred/daemon/channel.md#b-612tickdaemon-通道)、[P-117 通道變數](../spec/settled/deferred/protocol/daemon/channel.md)、[B-607 叫醒暫停](../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)
+← [plan 入口](README.md)｜**接在 [m3-daemon-core](m3-daemon-core.md) 之後。**｜依據：[verdicts 11 篇末「`insts` 改成物件＋控制模組裁定」](../notes/verdicts/11-tick-as-unit/07-1001-最核心daemon.md#2026-10-01最核心-daemon待統一更新-spec)｜結束碼：[aos 結束碼慣例](../notes/verdicts/11-tick-as-unit/04-1001-結束碼慣例.md#aos-結束碼慣例待統一更新-spec)｜spec 正本：[B-641](../spec/settled/daemon/control.md)、格式 [P-121](../spec/settled/protocol/daemon/control.md)｜舊 spec 參考（暫緩區）：[B-612 通道](../spec/settled/deferred/daemon/channel.md#b-612tickdaemon-通道)、[P-117 通道變數](../spec/settled/deferred/protocol/daemon/channel.md)、[B-607 叫醒暫停](../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)
 
 **做完的樣子**：m3 的 `aos-daemon` 設定檔寫了 `"modules": {"control": {"socket": "./aos.sock"}}`，daemon 開起來就多開一個 unix socket，收四個指令，**每個都只對一項**（用 inst 字面值指名）：**叫醒**（現在跑一次，可帶兩個選項）、**暫停**、**恢復**、**看狀態**。小工具 `aos-ctl` 送指令。daemon 開 `aos-exec` 時把 socket 位置與該項 inst 放進環境變數，一路傳到 tick 的任務、再傳到下層 `aos-tick 下層` 的任務，所以**任何一層的任務跑 `aos-ctl wake` 就叫醒自己所在的頂層那一項**。沒寫 `modules.control` 時 daemon 就是 m3 原樣。
 
@@ -223,7 +223,7 @@
 
 ## 做完了沒
 
-> 〔2026-10-01 第十九批〕之後加了 `kill`、`restart` 兩個指令與 `modules.control.kill_grace_ms`（先 TERM、寬限後 KILL），見 [verdicts 11 第十九批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十九批daemon-上下層用到的三件事)、spec [B-641](../spec/settled/daemon/control.md)「kill 與 restart」、測試 `tests/test_daemon_kill.py`。
+> 〔2026-10-01 第十九批〕之後加了 `kill`、`restart` 兩個指令與 `modules.control.kill_grace_ms`（先 TERM、寬限後 KILL），見 [verdicts 11 第十九批](../notes/verdicts/11-tick-as-unit/21-1001-第十九批.md#2026-10-01-第十九批daemon-上下層用到的三件事)、spec [B-641](../spec/settled/daemon/control.md)「kill 與 restart」、測試 `tests/test_daemon_kill.py`。
 
 **做完了**（2026-10-01，AI 隊）：步驟 1～7 都照上面做了，驗收寫進 `tests/test_ctl.py`（25 條，約 18 秒）、全過；三項檢查（全部測試、`check_ids.py --strict`、`wf-lint`）都過。待問 1 照建議先做（見上）。等使用者看。
 

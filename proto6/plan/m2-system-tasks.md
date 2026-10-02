@@ -200,7 +200,7 @@
 
 ## 裁定紀錄
 
-### 2026-10-01（[第五批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第五批aos-publish-搬暫緩區aos-needs-改寫成-aos-tick-check-task)）
+### 2026-10-01（[第五批](../notes/verdicts/11-tick-as-unit/10-1001-第四五批.md#2026-10-01-第五批aos-publish-搬暫緩區aos-needs-改寫成-aos-tick-check-task)）
 
 只有下面這幾條算裁定；待問 1～12 照舊。
 
@@ -208,7 +208,7 @@
 2. **`aos-needs` 改寫成 `aos-tick-check-task`**（步驟 1 改寫）。使用者原話：「aos-needs原來是一個程式...，其實可以簡單一些，也就是它會檢查指定的東西是否跑好，沒跑好，就去寫tick stop檔案」「那就aos-tick-check-task」。用法 `aos-tick-check-task [<任務 id…>]`，自己是一項、不包別的指令；指定的都 `exit:0` 就不做事，否則建停格檔；不寫 id＝檢查前面全部；都回 0，自己的錯回 1；停格擋掉整格剩下的全部項，接受。spec：[B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[P-204](../spec/settled/protocol/tick.md)。
 3. **停格檔的未來方向（只記錄，不做）**。使用者原話：「我覺得tick-stop這個檔案會變成特定json格式，存放一些資訊，然後可以用aos-tick-check-task-continue來去檢查其中的一些資訊，滿足後修改stop中的資訊。所以aos-tick仍會執行所有任務，但會變成執行前檢查stop，看看是否滿足特定條件，滿足的話就可以執行該任務。」記在 [B-620「停格檔與擋板檔」](../spec/settled/tick.md)；現在停格檔規定不變。
 
-### 2026-10-01（[第八批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第八批紀錄只記非-0)：紀錄只記非 0）
+### 2026-10-01（[第八批](../notes/verdicts/11-tick-as-unit/12-1001-第八九批.md#2026-10-01-第八批紀錄只記非-0)：紀錄只記非 0）
 
 4. **紀錄只記結束碼不是 0 的項**（B-633、P-213；`aos-tick` 已改）。使用者原話：「記錄這一塊，tasks如果結果是0，那就不用紀錄了。hooks也是。」`tasks`、`hooks.after_all` 每筆 `{"id","index","exit"}`（訊號殺的是 `signal`），另加 `ran`＝本格到目前跑完幾項。跟著改：
    - **`aos-tick-check-task` 的判斷**（步驟 1）：寫了 id＝有出現在失敗清單才停格，沒出現當成功（不分辨「還沒跑」，照 POC 默認一切正常）；不寫 id＝失敗清單非空就停。

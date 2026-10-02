@@ -10,7 +10,7 @@
 - 它**不是 tick 存在的前提**。tick 誰來跑都行：daemon、cron、人手直接跑（[B-627](../tick.md)）。
 - 它**不在任何一格裡**，也不在任何任務表上。
 
-依據：[第二十批篇末「2026-10-01：最核心 daemon」](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01最核心-daemon待統一更新-spec)；現行程式 [proto6/src/py](../../../src/py/README.md)。
+依據：[第二十批篇末「2026-10-01：最核心 daemon」](../../../notes/verdicts/11-tick-as-unit/07-1001-最核心daemon.md#2026-10-01最核心-daemon待統一更新-spec)；現行程式 [proto6/src/py](../../../src/py/README.md)。
 
 ## 核心與模組
 
@@ -23,7 +23,7 @@
   - **收屍／cgroup**（[B-644](cgroup.md)），每項一個 cgroup 框，跑完把留下的程序清掉；每項可設上限。
   - **訊息**（[B-645](mq.md)），另開一個 socket，每項一個信箱；任務用 `aos-mq send`／`take` 收發，急件順便叫醒收件那一項。
   - **帳號**（[B-646](account.md)），要用 root 開；主程式降成預設帳號，名單准的別的帳號的項由 root 端用那個帳號開。切帳號只在 daemon 設定檔做。
-- node 模組不做（使用者：「node這塊不要動，我有預感，node相關概念以後會不存在。」），方向照留在[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)。
+- node 模組不做（使用者：「node這塊不要動，我有預感，node相關概念以後會不存在。」），方向照留在[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)。
 
 **第一版默認一切正常**〔使用者方向 2026-10-01〕：設定檔讀得懂、路徑都對、`aos-exec` 叫得起來。不為異常寫處理，出事讓程式自然丟錯、回 1。結束碼照 [C-08](../conventions.md)，環境變數總表見 [C-10](../conventions.md)。
 

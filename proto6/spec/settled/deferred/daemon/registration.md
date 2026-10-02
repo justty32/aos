@@ -113,7 +113,7 @@ once 不再是登記的一種，是任務自己經通道呼叫的事務。daemon
 
 ## B-607：叫醒、暫停、故障停格與格次序號
 
-> **部分已被取代、其餘暫緩**（2026-10-01）：「定期與叫醒」「暫停與恢復」被 [B-640](../../daemon/core.md)（週期從上一次結束起算、不補跑）與 [B-641](../../daemon/control.md)（`wake`／`pause`／`resume`／`status`，暫停只在記憶體）取代，「查詢」部分被 [B-641](../../daemon/control.md) 的 `status` 取代；故障停格（看擋板檔）、最近一格與格次序號暫緩：daemon 核心不認得 node（使用者 2026-10-01），之後做 node 模組時再說（[第二十批「node 模組方向」](../../../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。條號保留、不重用。
+> **部分已被取代、其餘暫緩**（2026-10-01）：「定期與叫醒」「暫停與恢復」被 [B-640](../../daemon/core.md)（週期從上一次結束起算、不補跑）與 [B-641](../../daemon/control.md)（`wake`／`pause`／`resume`／`status`，暫停只在記憶體）取代，「查詢」部分被 [B-641](../../daemon/control.md) 的 `status` 取代；故障停格（看擋板檔）、最近一格與格次序號暫緩：daemon 核心不認得 node（使用者 2026-10-01），之後做 node 模組時再說（[第二十批「node 模組方向」](../../../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)）。條號保留、不重用。
 
 method 形狀見 [P-105～106](../protocol/daemon/registration.md)。
 

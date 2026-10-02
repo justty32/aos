@@ -1,6 +1,6 @@
 # 2026-10-01：最核心的 aos-daemon（已裁定）
 
-← [筆記索引](README.md)｜[第二十批裁定篇末 10-01](verdicts/11-tick-as-unit.md#2026-10-01poc-默認一切正常)｜[daemon 拆分](2026-09-30-daemon-split-and-multi-daemon.md)｜[plan 第三段](../plan/README.md#第三段daemon-核心)｜細部 plan：[m3-daemon-core](../plan/m3-daemon-core.md)
+← [筆記索引](README.md)｜[第二十批裁定篇末 10-01](verdicts/11-tick-as-unit/03-1001-POC默認一切正常.md#2026-10-01poc-默認一切正常)｜[daemon 拆分](2026-09-30-daemon-split-and-multi-daemon.md)｜[plan 第三段](../plan/README.md#第三段daemon-核心)｜細部 plan：[m3-daemon-core](../plan/m3-daemon-core.md)
 
 **已裁定（使用者 2026-10-01）。** 原本是提案草稿，使用者當天逐點裁定，正文已照裁定改過；裁定結果見文末。同日又追加設定檔的裁定（`inst` 原樣交給 aos-exec、id 就是字面值、頂層 `cwd` 與預設），見文末[設定檔追加裁定](#設定檔追加裁定使用者-2026-10-01)，正文也照改。spec 還沒照它改（跟同日其他裁定一起待統一更新 spec）。照這份寫的細部 plan 是 [m3-daemon-core](../plan/m3-daemon-core.md)。前提是現在這個極簡 `aos-tick`（10-01 版：有同資料夾鎖、默認一切正常），照「先做單純的」精神，把 spec 的「開格核心 A 組」砍到最小。
 

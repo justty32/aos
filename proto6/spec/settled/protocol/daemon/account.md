@@ -4,7 +4,7 @@
 
 本篇只有 P-126，只寫格式。預設帳號怎麼定、名單怎麼判、誰開哪一項，以 [B-646](../../daemon/account.md) 為正本。
 
-依據：[verdicts 11 篇末「2026-10-01 第十三批：帳號模組」](../../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十三批帳號模組)、[plan m3m 模組五](../../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)；現行程式 [帳號](../../../../src/py/README.md#帳號m3m-模組五)（有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十三批：帳號模組」](../../../../notes/verdicts/11-tick-as-unit/15-1001-第十三批.md#2026-10-01-第十三批帳號模組)、[plan m3m 模組五](../../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)；現行程式 [帳號](../../../../src/py/README.md#帳號m3m-模組五)（有出入以程式為準）。
 
 ## P-126．帳號模組：設定、root 端封包與輸出〔使用者 2026-10-01 第十二、十三批；格式照現行程式〕
 
