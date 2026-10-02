@@ -53,3 +53,4 @@
 ## 交接
 
 - 完成後 → 若整理揭露了要裁示的事，[WAIT_USER](../../WAIT_USER.md) 一行；為什麼這樣分類 → [decisions](../decisions.md)。
+- 每輪整理的報告（含 `moves.tsv`、驗證輸出）→ [`reports/`](reports/2026-10-02-wf-tidy.md)，一輪一份、檔名用日期。
