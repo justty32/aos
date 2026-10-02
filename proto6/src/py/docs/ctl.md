@@ -12,13 +12,14 @@
 
 - `socket` 必填（沒寫＝設定錯、回 1），相對以起點（`cwd`）為準，算成絕對路徑。開的時候路徑上有舊檔先刪；SIGINT／SIGTERM 退出前刪掉。〔第二十五批〕bind 之後一律 chmod 666（不管有沒有掛帳號模組），誰能連由 socket 所在資料夾的權限決定。
 - daemon 開每一次 aos-exec 都在環境加 `AOS_DAEMON_CTL_SOCKET=<socket 絕對路徑>`、`AOS_DAEMON_INST=<這一項的 inst 字面值>`。（〔第二十五批〕環境變數原名 `AOS_DAEMON_SOCKET`，改名、舊名不給。）inst 的任務、`aos-tick` 的任務、下層 `aos-tick <下層>` 的任務都繼承得到，所以**任何一層跑 `aos-ctl wake` 叫醒的都是頂層那一項**。
-- 協議：一連線一請求，一行 JSON 進、一行 JSON 出。指令名當鍵、inst 字面值當值：`{"wake":"a"}`、`{"wake":"a","skip_while_running":true,"keep_schedule":true}`、`{"pause":"a"}`、`{"resume":"a"}`、`{"status":"a"}`。回 `{"ok":true}`（status 多帶狀態）或 `{"ok":false,"error":"unknown_inst|stopped|bad_request","detail":…}`。收到就回，不等那一項跑完。每條連線 1 秒逾時；壞請求只影響那一條。
+- 協議：一連線一請求，一行 JSON 進、一行 JSON 出。指令名當鍵、inst 字面值當值：`{"wake":"a"}`、`{"wake":"a","skip_while_running":true,"keep_schedule":true}`、`{"pause":"a"}`、`{"resume":"a"}`、`{"status":"a"}`、`{"kill":"a"}`、`{"restart":"a"}`。回 `{"ok":true}`（status 多帶狀態）或 `{"ok":false,"error":"unknown_inst|stopped|bad_request","detail":…}`。收到就回，不等那一項跑完。每條連線 1 秒逾時；壞請求只影響那一條。
 
 | 指令 | 做什麼 |
 |---|---|
 | `wake` | 現在跑一次。正在跑：跑完補一次（叫幾次都只補一次）；帶 `skip_while_running` 就作廢。跑完後週期從這次結束重算；帶 `keep_schedule` 就不動原本排程（原本那次已被蓋過去才從這次結束重算）。暫停中：跑一次、跑完照樣暫停。被 `stop_on_nonzero` 停掉：回 `stopped`、不跑 |
 | `pause` | 不再照週期跑；正在跑的不殺，待補的取消。stdout 印 `inst=<inst> paused` |
 | `resume` | 清掉暫停與已停，馬上跑一次。stdout 印 `inst=<inst> resumed` |
+| `kill`、`restart` | 殺掉正在跑的那一次（先 TERM、寬限後 KILL；沒在跑就什麼都不做）。`restart` 另記一次待補（像 wake），被殺那次非 0 不算 `stop_on_nonzero`；已停的回 `stopped`。見 [kill／restart](daemon-run.md#daemon-跑-daemon輸出上限鎖檔killrestart第十九批) |
 | `status` | `{"ok":true,"inst":…,"running":…,"pending":…,"paused":…,"stopped":…,"last_exit":…,"last_end":…,"next":…}`；還沒跑完過時 `last_exit`／`last_end` 是 `null`，正在跑、暫停、已停時 `next` 是 `null` |
 
 「暫停中 wake 跑一次」「停掉的 wake 回 `stopped`」「resume 一律跑一次」三條是 m3n 待問 1 照建議先做的，使用者可改。暫停只在記憶體，重開 daemon 就沒了（掛了[記住狀態](reload-state.md#重讀設定與記住狀態m3m)時例外）。
@@ -27,7 +28,7 @@
 
 ```sh
 aos-ctl wake [--skip-while-running] [--keep-schedule] [<inst>]
-aos-ctl pause|resume|status [<inst>]
+aos-ctl pause|resume|status|kill|restart [<inst>]
 AOS_DAEMON_CTL_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell 手打
 ```
 
