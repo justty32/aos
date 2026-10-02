@@ -1,4 +1,4 @@
-← [2026-09-30 使用者方向（十一）：tick 是 aos 的衡量基準](../11-tick-as-unit.md)（分檔 18/26）｜所在段落：2026-10-01 第十六批：擋板檔只看存不存在｜[上一份](17-1001-第十六批.md)｜[下一份](19-1001-第十七批.md)
+← [2026-09-30 使用者方向（十一）：tick 是 aos 的衡量基準](../11-tick-as-unit.md)（分檔 18/27）｜所在段落：2026-10-01 第十六批：擋板檔只看存不存在｜[上一份](17-1001-第十六批.md)｜[下一份](19-1001-第十七批.md)
 
 ### 第十六批（續）：tick 模組 `modules.tasks_blocked`
 
@@ -12,7 +12,7 @@
 4. insts 拿得到被擋下那一項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`；結束碼不記進紀錄、非 0 沒影響。
 5. 沒掛模組＝現在的預設行為。
 
-已做，正本 [B-636](../../../spec/settled/tick/tasks-blocked.md)、格式 [P-214](../../../spec/settled/protocol/tick/06-P-213-tasks-blocked與P-214.md#p-214tick-模組-tasks-blocked使用者-2026-10-01-第十六批第二十批改名)。
+已做，正本 [B-636](../../../spec/settled/tick/tasks-blocked.md)、格式 [P-214](../../../spec/settled/protocol/tick.md)。
 
 **AI 隊定的細節**（使用者可改）：
 
@@ -24,4 +24,4 @@
 6. 開不起來照任務：stderr `exec_failed: tasks_blocked/<id>: …`、接著跑下一個；展開失敗照任務與 hook：自然丟錯、tick 回 1（hook 那條使用者說過「先不管」）。
 7. 整格最後照樣刪 tasks-blocked。條號：B-636（tick 子篇新一篇 `tick/tasks-blocked.md`）、P-214。
 
-改到的地方：程式 `lib/aos_tick_table.py`（`_tasks_blocked()`、`Table.on_blocked`；`modules` 先解一層、`tasks_blocked` 以外的照舊整個展開）、`lib/aos_tick.py`（`run_on_blocked()`、迴圈）；測試 `tests/test_tick.py` 新 `TasksBlockedModule` 7 條；spec 新 [tick/tasks-blocked.md](../../../spec/settled/tick/tasks-blocked.md)（B-636），改 [tick 核心](../../../spec/settled/tick.md) B-620、[tick 協議](../../../spec/settled/protocol/tick.md) P-202 `modules` 那列、新 P-214、[tick 子篇入口](../../../spec/settled/tick/README.md)、[整理區入口](../../../spec/settled/README.md)、[名詞](../../../spec/settled/terms.md)、[慣例 C-10](../../../spec/settled/conventions.md)、[驗收入口](../../../spec/conformance.md)、[protocol README](../../../spec/protocol/README.md)；schema `tick-tasks`（`modules.tasks_blocked`）、範例 `tasks.tasks-blocked.valid.json`、`tasks.tasks-blocked-no-insts.invalid.json`、`tasks.tasks-blocked-no-argv.invalid.json`；[src/py README](../../../src/py/README.md)。
+改到的地方：程式 `lib/aos_tick_table.py`（`_tasks_blocked()`、`Table.on_blocked`；`modules` 先解一層、`tasks_blocked` 以外的照舊整個展開）、`lib/aos_tick.py`（`run_on_blocked()`、迴圈）；測試 `tests/test_tick.py` 新 `TasksBlockedModule` 7 條；spec 新 [tick/tasks-blocked.md](../../../spec/settled/tick/tasks-blocked.md)（B-636），改 [tick 核心](../../../spec/settled/tick.md) B-620、[tick 協議](../../../spec/settled/protocol/tick.md) P-202 `modules` 那列、新 P-214、[tick 子篇入口](../../../spec/settled/tick.md)、[整理區入口](../../../spec/settled/README.md)、[名詞](../../../spec/settled/terms.md)、[慣例 C-10](../../../spec/settled/conventions.md)、[驗收入口](../../../spec/conformance.md)、[protocol README](../../../spec/protocol/README.md)；schema `tick-tasks`（`modules.tasks_blocked`）、範例 `tasks.tasks-blocked.valid.json`、`tasks.tasks-blocked-no-insts.invalid.json`、`tasks.tasks-blocked-no-argv.invalid.json`；[src/py README](../../../src/py/README.md)。

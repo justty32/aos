@@ -26,7 +26,7 @@
 6. [共用契約](contracts.md)與[驗收入口](conformance.md)：跨篇最少定義及整合故障場景。
 7. [人手操作 CLI](cli.md)：用途分層的指令、底層對應、待補接口與完整操作走查。
 
-**整理區是什麼**：`settled/` 放已定案、整理好的 tick 與 daemon 基礎（git 與 cgroup 有就用），要能自己讀懂；它對區外的依賴列在[整理區 README](settled/readme/01-收錄判準對外依賴與待放入.md#對外依賴)。其他篇（kernel、LLM、agent、CLI、基底其餘各篇、協議篇其餘各檔等）還沒跟上新基礎，**之後整理好才一起放進整理區**；在那之前，它們可能還留著舊說法，碰到不一致照 [T-01](terms.md) 的裁定優先序判斷，並記成疑點。
+**整理區是什麼**：`settled/` 放已定案、整理好的 tick 與 daemon 基礎（git 與 cgroup 有就用），要能自己讀懂；它對區外的依賴列在[整理區 README](settled/README.md)。其他篇（kernel、LLM、agent、CLI、基底其餘各篇、協議篇其餘各檔等）還沒跟上新基礎，**之後整理好才一起放進整理區**；在那之前，它們可能還留著舊說法，碰到不一致照 [T-01](terms.md) 的裁定優先序判斷，並記成疑點。
 
 [協議篇](protocol/README.md)只定新 node 架構的欄位、JSON、schema、範例、argv 與結束碼；行為一律以主規格為正本。目錄名 `agent/`、`scheduling/` 依領域保留，不代表兩種 node。
 

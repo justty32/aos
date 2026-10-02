@@ -1,6 +1,6 @@
 # 2026-10-01：aos-tick 的系統級任務總整理（給 hooks 慢慢想用）
 
-← [筆記索引](README.md)｜[tick 子篇入口](../spec/settled/tick/README.md)｜[hooks B-635](../spec/settled/tick/hooks.md)｜[第二段 plan 草稿](../plan/m2-system-tasks.md)｜[第六、七批裁定](verdicts/11-tick-as-unit/11-1001-第六七批.md#2026-10-01-第七批tick-模組的取捨node逾時歷史紀錄)
+← [筆記索引](README.md)｜[tick 子篇入口](../spec/settled/tick.md)｜[hooks B-635](../spec/settled/tick/hooks.md)｜[第二段 plan 草稿](../plan/m2-system-tasks.md)｜[第六、七批裁定](verdicts/11-tick-as-unit/11-1001-第六七批.md#2026-10-01-第七批tick-模組的取捨node逾時歷史紀錄)
 
 > **現況（2026-10-01 晚，第十三～十八批之後）**：下面列的**系統級任務全部暫緩**，現行沒有系統級任務、也沒有標準任務表範本——`aos-as`（第十三批）、`aos-tick-check-task`（第十六批）、`aos-git` 三項與有 git 版範本（第十七批）、`aos-mq get`／`post`、`aos-clean`、範本 B-629（第十八批），都在[暫緩區](../spec/settled/deferred/README.md)。tick 這邊的外掛改成：
 > - **hooks**（[B-635](../spec/settled/tick/hooks.md)）：`before_all`、`after_task.<id>`、`after_every_task`、`after_all`；跟任務有關的兩個掛點拿得到 `AOS_TASK_EXIT`。B-635 有「hook 加普通 git 指令」取代 `aos-git` 的範例。所有 hooks 跑完才寫 `ended:true`，所以下面說的「hook 跑到一半被殺、紀錄仍是 `ended:true`」那個洞已解決（第十八批）。

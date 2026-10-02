@@ -33,7 +33,7 @@
 - 格式錯（`hooks` 不是物件、陣列的掛點不是陣列、`after_task`／`before_kind`／`after_kind` 不是物件或某個值不是陣列、某項不是物件、合併後沒 `argv`）＝`bad_table:`、回 1，開格前就擋。`hooks` 裡其他鍵照收不理。寫在 `modules.hooks` 底下的不會跑。
 - 紀錄：任務表寫了哪幾個掛點，**開格**時就把 `hook-exits.json`（各掛點 `[]`）寫好、`record.json` 帶 `hooks` 的 `$ref`；每跑完一個**結束碼不是 0** 的 hook 加一筆，格式同 `tasks`（`id`、`index`、`exit` 或 `signal`），`before_kind`、`after_task`、`after_kind`、`after_every_task` 另帶 `task_index`；0 的不記，hooks 不記 `ran`；下一格跟著進 `last/`。
 - 某個 hook 沒跑成時 stderr 是 `exec_failed: <掛點>/<id>: …`（`after_task` 是 `after_task/<任務 id>/<id>`，`*_kind` 是 `before_kind/<kind>/<id>`、`after_kind/<kind>/<id>`）。
-- 用 hooks 加普通 git 指令取代 `aos-git`（第十七批暫緩）的寫法見 [B-635 範例](../../../spec/settled/tick/hooks.md#範例用-hook-加普通-git-指令管版本)。
+- 用 hooks 加普通 git 指令取代 `aos-git`（第十七批暫緩）的寫法見 [B-635 範例](../../../spec/settled/tick/hooks.md)。
 
 ## tick 模組 `modules["tasks-blocked"]`（B-636）
 

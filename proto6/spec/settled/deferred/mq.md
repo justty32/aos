@@ -1,6 +1,6 @@
 # 系統訊息佇列：取件與派出
 
-← [通用 tick 核心](../tick.md)｜[tick 子篇入口](../tick/README.md)｜格式：[tick 協議](../protocol/tick.md)
+← [通用 tick 核心](../tick.md)｜[tick 子篇入口](../tick.md)｜格式：[tick 協議](../protocol/tick.md)
 
 > **這篇整篇在暫緩區**（2026-10-01 第十八批）〔使用者 2026-10-01 第十八批：「1. 都按你建議 2.好 3.對，我就不想了。」〕系統級任務 `aos-mq get`／`aos-mq post`（B-623、B-624 剩下的部分）要靠暫緩區的 daemon 通道，用途已被 daemon 訊息模組取代（[B-645](../daemon/mq.md)：`aos-mq send`／`take`）。原檔 `tick/mq.md` 整篇搬來，原文照留、條號保留不重用。
 
