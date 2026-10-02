@@ -20,4 +20,4 @@
 - **任務能控制別項，全靠這個權限**：任務拿到控制 socket 與各扇門的路徑（環境變數），能不能對別項下指令、取別項的信，不在 daemon 裡判斷，只看它進不進得了那個資料夾。要限制，就把 socket 放在只有該進的人進得去的資料夾。
 - **同一份設定只能開一個**：靠鎖檔（預設設定檔路徑加 `.lock`），不靠 socket 檔，因為 socket 會有很多個、權限各自不同。
 
-開機自動啟動：`ExecStart=aos-daemon --config <設定檔>`；SIGTERM 立刻回 0、不收尾正在跑的 `aos-exec`。舊的完整 daemon 設計（登記、runner、收尾、通道、helper）整批在[暫緩區](../deferred/daemon/README.md)，條號保留。
+SIGTERM 立刻回 0、不收尾正在跑的 `aos-exec`。舊的完整 daemon 設計（登記、runner、收尾、通道、helper）整批在[暫緩區](../deferred/daemon/README.md)，條號保留。

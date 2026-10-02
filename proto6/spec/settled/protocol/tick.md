@@ -102,17 +102,13 @@ stderr 一行 `代碼: 說明`：`usage`、`no_target`、`no_tasks`、`bad_table
 
 暫緩，在 [暫緩區](../deferred/protocol/tick/03-P-206-mq與P-211-cg.md)。現行收發信是 daemon 訊息模組的 `aos-mq`（P-125，[daemon 協議](daemon/README.md)）。
 
-## P-208．收件區權限
+## P-208～P-210．已撤
 
-已無現行內容（收件區與舊 daemon 的權限落點在暫緩區）。
+沒有現行內容，條號不重用：
 
-## P-209．待決與跨篇
-
-見 [README P-008](../../protocol/readme/03-P-007-P-008-schema與待決.md)。
-
-## P-210．預設範本與恢復前驗證
-
-已無現行內容；恢復前驗證在暫緩區 [B-625](../deferred/tick/05-B-625-當機恢復設定與清理.md)。
+- P-208：收件區權限（舊內容在暫緩區）
+- P-209：待決與跨篇（見 [README P-008](../../protocol/readme/03-P-007-P-008-schema與待決.md)）
+- P-210：預設範本與恢復前驗證（見暫緩區 [B-625](../deferred/tick/05-B-625-當機恢復設定與清理.md)）
 
 ## P-211．aos-cg
 
