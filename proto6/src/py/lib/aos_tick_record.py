@@ -3,12 +3,13 @@
 〔使用者 2026-10-01 第九批〕「current.json這邊，也要引入指示詞，把容易被改動的弄成$ref指向其他檔案，
 不容易被改動的留在current.json」：一格的紀錄是一個資料夾，裡面四個檔（各一個檔、原位）：
 
-    record.json      開格寫一次、收尾寫一次：version、seq、started_at_ms、ended、exit、blocked_before，
+    record.json      開格寫一次、收尾寫一次：version、seq、started_at_ms、ended、exit、blocked_before、skipped（第二十四批），
                      加上 `"ran":{"$ref":"ran.json"}`、`"tasks":{"$ref":"task-exits.json"}`，
                      有 hooks 時再加 `"hooks":{"$ref":"hook-exits.json"}`
     ran.json         一個數字＝本格到目前跑了幾項 tasks（含失敗的，被停格擋掉的不算），每跑完一項重寫
     task-exits.json  結束碼不是 0 的任務 [{"id","index","exit"|"signal"}...]；開格寫 `[]`，有失敗才重寫
-    hook-exits.json  {"before_all":[...],"after_task":[...],"after_every_task":[...],"after_all":[...]}，結束碼不是 0 的 hook；
+    hook-exits.json  {"before_all":[...],"before_kind":[...],"after_task":[...],"after_kind":[...],"after_every_task":[...],"after_all":[...]}，
+                     結束碼不是 0 的 hook（before_kind／after_kind 第二十四批）；
                      任務表寫了哪幾個掛點就有哪幾個鍵（第十七批：開格就建，先寫 `[]`）
 
 $ref 是相對路徑（相對於 record.json 所在資料夾），整個資料夾改名後仍指得對。
@@ -92,6 +93,7 @@ class Record:
         self.ran = 0
         self.tasks = []
         self.hooks = {}
+        self.skipped = []            # 第二十四批：被 tasks-blocked 的 kinds 擋掉的 [{"id","index"}]，收尾才寫進 record.json
 
     def open(self, hook_points=()):
         """開格換紀錄（B-633「開格：換紀錄」）。hook_points：任務表寫了的掛點（第十七批）；有的話 hook-exits.json
@@ -129,13 +131,20 @@ class Record:
 
     def finish(self, code, blocked_before=None):
         """收尾：ended:true、exit＝整格結束碼（照表跑完就是 0，任務成敗不影響），被 tasks-blocked 擋下時加
-        blocked_before＝被擋下（沒跑）的那一項 id（第十六批；原 stopped_after）。"""
+        blocked_before＝被擋下（沒跑）的那一項 id（第十六批；原 stopped_after）；被 kinds 擋過時加 skipped（第二十四批）。"""
         self.meta.pop("ended")                                  # 重新放到後面：鍵的順序 ran、tasks、hooks、ended、exit…
         self.meta["ended"] = True
         self.meta["exit"] = code
         if blocked_before is not None:
             self.meta["blocked_before"] = blocked_before
+        if self.skipped:
+            self.meta["skipped"] = self.skipped
         _write(os.path.join(self.current, RECORD), self.meta)
+
+    def add_skipped(self, task_id, index):
+        """第二十四批（AI 隊定）：這一項被 tasks-blocked 的 `kinds` 擋掉、沒跑——不算 ran、不進 tasks，
+        只記在記憶體，收尾時寫進 record.json 的 `skipped`（照順序；一項都沒擋就沒有這個鍵）。"""
+        self.skipped.append({"id": task_id, "index": index})
 
     def add_hook(self, point, hook_id, index, kind, value, task_index=None):
         """跑完一個 hook 項：跟 add_task 一樣只記不是 exit 0 的（index 是它在自己那個陣列的位置；after_task 每個任務 id

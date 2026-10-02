@@ -15,6 +15,10 @@
   `AOS_HOOK_ID`（hook 的 id，沒寫＝位置轉字串），不給 `AOS_TASK_ID`／`AOS_TASK_INDEX`（after_all 不屬於任何任務；
   連 tick 自己環境裡繼承來的也拿掉，見 aos_tick_run._env）。之後開 before_task／after_task 這類掛點時，
   才會再加 `AOS_TASK_ID`／`AOS_TASK_INDEX` 指向被掛的那個任務（只寫進 spec，沒做）。
+- 〔使用者 2026-10-02 第二十四批：「hooks 按 kind 掛」〕再開兩個：`before_kind`、`after_kind`（{kind: [inst…]}，寫法比照
+  after_task），掛在那一類**每一個**任務前後。一項任務的順序（AI 隊定，由專到泛）：tasks-blocked 檢查 → before_kind.<kind>
+  → 任務 → after_task.<id> → after_kind.<kind> → after_every_task。before_kind 給 `AOS_TASK_ID`／`AOS_TASK_INDEX`
+  （還沒跑，不給 `AOS_TASK_EXIT`）、after_kind 比照 after_task 給 `AOS_TASK_EXIT`；沒有 kind（或不是字串）的任務不觸發。
 - 不看 tasks-blocked、每項的碼照實記、接著跑下一項，不影響 tick 的結束碼。
 - 紀錄：本格紀錄的 `hooks.<掛點>`（格式同 `tasks` 每項；跟任務有關的另帶 `task_index`；在 `tick/current/hook-exits.json`，
   record.json 用 `"hooks":{"$ref":"hook-exits.json"}` 指過去）。第十七批起開格（Record.open）就寫好各掛點的 `[]`，
@@ -25,7 +29,7 @@
 POC 總原則：默認一切正常，不寫邊緣處理。
 """
 
-__all__ = ["run_point", "run_after_task", "hook_vars", "task_exit"]
+__all__ = ["run_point", "run_before_task", "run_after_task", "hook_vars", "task_exit"]
 
 
 def hook_vars(point, hook_id, index):
@@ -39,27 +43,42 @@ def task_exit(kind, value):
 
 
 def run_point(cwd, defaults, point, items, record, run_one, task=None):
-    """照順序跑一個掛點的一串（[(項, id)]）；每項跑完記進紀錄。`task`＝(任務 id, index, kind, value)：
-    跟任務有關的掛點（after_task、after_every_task）才給，多放 `AOS_TASK_ID`／`AOS_TASK_INDEX`／`AOS_TASK_EXIT`、紀錄帶 task_index。"""
+    """照順序跑一個掛點的一串（[(項, id)]）；每項跑完記進紀錄。`task`＝(任務 id, index, kind, value, 掛點的鍵)：
+    跟任務有關的掛點（before_kind、after_task、after_kind、after_every_task）才給，多放 `AOS_TASK_ID`／`AOS_TASK_INDEX`、
+    紀錄帶 task_index；任務跑過了（kind 不是 None）再放 `AOS_TASK_EXIT`。掛點的鍵（任務 id 或 kind）只用在 exec_failed 那行。"""
     for index, (item, hook_id) in enumerate(items):
         env = hook_vars(point, hook_id, index)
         label = point + "/"
         task_index = None
         if task is not None:
-            task_id, task_index, kind, value = task
-            env.update(AOS_TASK_ID=str(task_id), AOS_TASK_INDEX=str(task_index),
-                       AOS_TASK_EXIT=str(task_exit(kind, value)))
-            if point == "after_task":
-                label = "after_task/%s/" % task_id
+            task_id, task_index, kind, value, key = task
+            env.update(AOS_TASK_ID=str(task_id), AOS_TASK_INDEX=str(task_index))
+            if kind is not None:
+                env["AOS_TASK_EXIT"] = str(task_exit(kind, value))
+            if key is not None:
+                label = "%s/%s/" % (point, key)
         k, v = run_one(cwd, defaults, item, hook_id, env, label=label)
         record.add_hook(point, hook_id, index, k, v, task_index)
 
 
-def run_after_task(cwd, tbl, task_id, index, kind, value, record, run_one):
+def run_before_task(cwd, tbl, task_id, index, task_kind, record, run_one):
+    """第二十四批：一項任務跑之前（tasks-blocked 檢查之後）——`before_kind.<這一項的 kind>`。
+    `task_kind` 是 aos_tick_table.task_kind() 的結果；None（沒寫或不是字串）不觸發。"""
+    if task_kind is not None and tbl.before_kind is not None and task_kind in tbl.before_kind:
+        run_point(cwd, tbl.defaults, "before_kind", tbl.before_kind[task_kind], record, run_one,
+                  (task_id, index, None, None, task_kind))
+
+
+def run_after_task(cwd, tbl, task_id, index, kind, value, record, run_one, task_kind=None):
     """第十七批：一項任務跑完之後——先 `after_task.<這一項的 id>`（鍵比字串；沒寫 id 的任務 id 是位置字串），
-    再 `after_every_task`。被 tasks-blocked 擋下、沒跑的任務不會走到這裡。"""
-    task = (task_id, index, kind, value)
+    〔第二十四批，AI 隊定：由專到泛〕再 `after_kind.<這一項的 kind>`（task_kind 是 None 不觸發），最後 `after_every_task`。
+    被 tasks-blocked 擋下、沒跑的任務不會走到這裡。"""
     if tbl.after_task is not None and str(task_id) in tbl.after_task:
-        run_point(cwd, tbl.defaults, "after_task", tbl.after_task[str(task_id)], record, run_one, task)
+        run_point(cwd, tbl.defaults, "after_task", tbl.after_task[str(task_id)], record, run_one,
+                  (task_id, index, kind, value, task_id))
+    if task_kind is not None and tbl.after_kind is not None and task_kind in tbl.after_kind:
+        run_point(cwd, tbl.defaults, "after_kind", tbl.after_kind[task_kind], record, run_one,
+                  (task_id, index, kind, value, task_kind))
     if tbl.after_every_task is not None:
-        run_point(cwd, tbl.defaults, "after_every_task", tbl.after_every_task, record, run_one, task)
+        run_point(cwd, tbl.defaults, "after_every_task", tbl.after_every_task, record, run_one,
+                  (task_id, index, kind, value, None))

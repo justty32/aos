@@ -73,18 +73,28 @@ def extra_errors(path, value):
         # B-633、P-213（第八批：tasks 只記不是 0 的，每筆帶 index；ran＝跑了幾項）。exit 只收 0 由 schema 管。
         tasks = value.get('tasks') or []
         ran = value.get('ran')
+        # 第二十四批：被 tasks-blocked 的 kinds 擋掉的記在 skipped、不算 ran；看得到的位置是 ran＋skipped 筆數
+        skipped = value.get('skipped') or []
+        sidx = [t.get('index') for t in skipped if isinstance(t, dict)]
+        if any(not isinstance(i, int) for i in sidx) or sidx != sorted(set(sidx)):
+            errors.append('skipped index not strictly increasing')
+        if isinstance(ran, int):
+            ran += len(skipped)
         idx = [t.get('index') for t in tasks if isinstance(t, dict)]
         if any(not isinstance(i, int) for i in idx) or idx != sorted(set(idx)):
             errors.append('task index not strictly increasing')
         elif isinstance(ran, int) and idx and idx[-1] >= ran:
             errors.append('task index not below ran')
+        elif set(idx) & set(sidx):
+            errors.append('task both ran and skipped')
         hooks = value.get('hooks') or {}
         for point in ('before_all', 'after_all'):
             hidx = [h.get('index') for h in (hooks.get(point) or []) if isinstance(h, dict)]
             if any(not isinstance(i, int) for i in hidx) or hidx != sorted(set(hidx)):
                 errors.append('hook index not strictly increasing')
         # 第十七批：after_task／after_every_task 的 task_index 照任務跑的順序（不遞減）、都小於 ran
-        for point in ('after_task', 'after_every_task'):
+        # （第二十四批：加 before_kind／after_kind；ran 已加上 skipped 筆數）
+        for point in ('before_kind', 'after_task', 'after_kind', 'after_every_task'):
             tidx = [h.get('task_index') for h in (hooks.get(point) or []) if isinstance(h, dict)]
             if any(not isinstance(i, int) for i in tidx) or tidx != sorted(tidx):
                 errors.append('hook task_index decreasing')

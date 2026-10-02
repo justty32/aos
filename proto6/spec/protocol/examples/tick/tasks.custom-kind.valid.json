@@ -15,6 +15,25 @@
       ],
       "id": "review",
       "kind": "agent.review"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "printf",
+        "x\\n"
+      ],
+      "id": "x",
+      "kind": "system.x"
+    },
+    {
+      "argv": [
+        "true"
+      ],
+      "id": "slow",
+      "kind": "慢的 批次"
     }
   ]
 }

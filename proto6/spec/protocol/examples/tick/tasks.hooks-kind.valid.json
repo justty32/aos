@@ -1,0 +1,57 @@
+{
+  "tasks": [
+    {
+      "id": "build",
+      "kind": "build",
+      "argv": [
+        "make"
+      ]
+    },
+    {
+      "id": "test",
+      "kind": "build",
+      "argv": [
+        "make",
+        "test"
+      ]
+    },
+    {
+      "id": "note",
+      "argv": [
+        "./note.sh"
+      ]
+    }
+  ],
+  "hooks": {
+    "before_kind": {
+      "build": [
+        {
+          "id": "mark",
+          "argv": [
+            "sh",
+            "-c",
+            "echo \"$AOS_TASK_ID 開始\" >> logs/build.log"
+          ]
+        }
+      ]
+    },
+    "after_kind": {
+      "build": [
+        {
+          "argv": [
+            "sh",
+            "-c",
+            "echo \"$AOS_TASK_ID 回 $AOS_TASK_EXIT\" >> logs/build.log"
+          ]
+        }
+      ],
+      "沒有任務用的類別": [
+        {
+          "argv": [
+            "true"
+          ]
+        }
+      ]
+    }
+  }
+}

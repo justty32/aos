@@ -74,9 +74,15 @@ def check_record(case, rec, raw=False):
             case.assertNotIn(rec["blocked_before"], [t["id"] for t in rec["tasks"] if t["index"] == rec["ran"]])
     else:
         case.assertNotIn("exit", rec)
-    idx = [t["index"] for t in rec["tasks"]]           # 第八批：只記不是 0 的，index 遞增、都 < ran
+        case.assertNotIn("skipped", rec)               # 第二十四批：skipped 跟 blocked_before 一樣收尾才寫
+    skipped = rec.get("skipped", [])                   # 第二十四批：被 kinds 擋掉的不算 ran
+    sidx = [t["index"] for t in skipped]
+    case.assertEqual(sidx, sorted(set(sidx)))
+    seen = rec["ran"] + len(skipped)
+    idx = [t["index"] for t in rec["tasks"]]           # 第八批：只記不是 0 的，index 遞增、都 < ran（加上 skipped 筆數）
     case.assertEqual(idx, sorted(set(idx)))
-    case.assertTrue(all(0 <= i < rec["ran"] for i in idx))
+    case.assertTrue(all(0 <= i < seen for i in idx))
+    case.assertFalse(set(idx) & set(sidx))
     case.assertNotIn({"exit": 0}, [{k: v for k, v in t.items() if k == "exit"} for t in rec["tasks"]])
     _check_schema(rec)
 

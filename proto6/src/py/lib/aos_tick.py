@@ -3,7 +3,8 @@
 一格的順序（B-620「一格怎麼走」，POC 版）：
 
     認工作資料夾與任務表（目標要是資料夾、底下要有 .aos/tasks.json）→ 取鎖 → 看擋板檔 → 讀表
-    → 換紀錄 → before_all → 照表跑（每項前看 tasks-blocked、每項後寫紀錄〔ran 加 1、不是 0 才記〕、跑 after_task／after_every_task）
+    → 換紀錄 → before_all → 照表跑（每項前看 tasks-blocked〔第二十四批：內容有 kinds 就只擋那幾類〕、跑 before_kind、
+    每項後寫紀錄〔ran 加 1、不是 0 才記〕、跑 after_task／after_kind／after_every_task）
     → 跑 hooks 的 after_all（有寫才跑）→ 收尾紀錄（第十八批：hooks 全跑完才寫 ended:true）→ 刪 tasks-blocked → 回結束碼
 
 `run_tick()` 就是照這個順序寫的，從它讀起。紀錄在 aos_tick_record.py、任務表在
@@ -12,7 +13,7 @@ aos_tick_table.py、跑單項在 aos_tick_run.py、hooks（掛點，目前只有
 結束碼照 aos 體系慣例（使用者 2026-10-01 再改，notes/verdicts/11-tick-as-unit.md 篇末，待統一更新 spec）：
 0＝預料之中（含正常中斷）、非 0＝要額外處理、1＝通用錯誤。aos-tick 的碼只講 tick 自己，任務怎麼結束只記進紀錄、不影響它。
 
-- 0：照表跑完（不管任務成敗、回幾）；被 tasks-blocked 擋下、剩下不跑（第十六批）；同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，
+- 0：照表跑完（不管任務成敗、回幾）；被 tasks-blocked 擋下、剩下不跑（第十六批；第二十四批 kinds 只跳過那幾類）；同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，
   stderr `busy:`）；有擋板檔（只看存不存在、stderr 不印、hooks 不跑，第十六批）。後兩種不開格（不寫紀錄、不加 seq）。
 - 1：tick 自己出錯——argv 用法錯（含目標給的是檔）、目標指的東西不存在、資料夾底下沒有 .aos/tasks.json、
   任務表不合極簡檢查（aos_tick_table.check_table，stderr `bad_table:`；在換紀錄之前，不算開過一格）；tick 自用的檔讀不到／寫不進／
@@ -47,6 +48,7 @@ stderr `no_node:` 改 `no_target:`。同日三改：`--target` 旗標拿掉（�
 跟 aos-exec 一樣；語意不變、`no_target:` 保留。
 """
 import fcntl
+import json
 import os
 import shutil
 import sys
@@ -157,18 +159,26 @@ def _run_locked(cwd, table):
         aos_tick_hooks.run_point(cwd, tbl.defaults, "before_all", tbl.before_all, record, run_one)
     blocked_before = None
     for index, (item, task_id) in enumerate(zip(tbl.items, tbl.ids)):
-        if tasks_blocked():
-            if tbl.on_blocked is not None:
-                # B-636：掛了 modules["tasks-blocked"] 就先跑那一串，跑完再看一次；檔被刪了就放行這一項
-                run_on_blocked(cwd, tbl, task_id, index)
-            if tbl.on_blocked is None or tasks_blocked():
-                # 第十六批：這一項與後面的都不跑；正常機制，stderr 不印、回 0；after_all 照跑（跟任務無關）
-                blocked_before = task_id
-                break
+        task_kind = aos_tick_table.task_kind(item)      # 第二十四批：比對 *_kind 掛點與 tasks-blocked 的 kinds
+        blocked = tasks_blocked(task_kind)
+        if blocked and tbl.on_blocked is not None:
+            # B-636：掛了 modules["tasks-blocked"] 就先跑那一串，跑完再看一次；不再擋這一項就放行
+            run_on_blocked(cwd, tbl, task_id, index)
+            blocked = tasks_blocked(task_kind)
+        if blocked == BLOCK_ALL:
+            # 第十六批：這一項與後面的都不跑；正常機制，stderr 不印、回 0；after_all 照跑（跟任務無關）
+            blocked_before = task_id
+            break
+        if blocked == BLOCK_KIND:
+            # 第二十四批：kinds 只擋這一項（不算 ran、相關 hooks 不跑），後面照常；收尾記進 skipped
+            record.add_skipped(task_id, index)
+            continue
+        # 第二十四批：檢查之後才跑 before_kind，所以被擋的任務不觸發；它寫的 tasks-blocked 擋下一項
+        aos_tick_hooks.run_before_task(cwd, tbl, task_id, index, task_kind, record, run_one)
         kind, value = run_one(cwd, tbl.defaults, item, task_id, task_vars(task_id, index))
         record.add_task(task_id, index, kind, value)   # 只記不是 0 的（第八批）；不影響 tick 的結束碼
-        # 第十七批：先 after_task.<id>、再 after_every_task；不看 tasks-blocked
-        aos_tick_hooks.run_after_task(cwd, tbl, task_id, index, kind, value, record, run_one)
+        # 第十七批：先 after_task.<id>、（第二十四批）再 after_kind.<kind>、最後 after_every_task；不看 tasks-blocked
+        aos_tick_hooks.run_after_task(cwd, tbl, task_id, index, kind, value, record, run_one, task_kind)
 
     if tbl.after_all is not None:  # B-635：照表跑完或被 tasks-blocked 擋下之後；不看 tasks-blocked、碼只記下、不影響 tick 的結束碼
         aos_tick_hooks.run_point(cwd, tbl.defaults, "after_all", tbl.after_all, record, run_one)
@@ -193,11 +203,38 @@ def take_lock():
     return fd
 
 
-def tasks_blocked():
+BLOCK_ALL, BLOCK_KIND = "all", "kind"     # tasks_blocked() 的結果：全部擋／只擋這一項（第二十四批）
+
+
+def tasks_blocked(task_kind=None):
     """B-620、P-213 `<狀態資料夾>/tick/tasks-blocked`（使用者 2026-10-01 第十六批，原停格檔 tick/stop）：
-    每一項跑之前看，**只看存不存在**（資料夾、沒讀權、壞 symlink 都算在），內容 tick 不管。
-    在＝這一項與後面都不跑（正常機制：stderr 不印、回 0）；after_all 照跑。整格最後由 tick 刪掉（clear_tasks_blocked）。"""
-    return os.path.lexists(state("tick", "tasks-blocked"))
+    每一項跑之前看。不在＝None（照跑）。在的話：
+    - 〔使用者 2026-10-02 第二十四批：「停格按 kind 擋」〕內容是 JSON 物件、有 `"kinds": [字串…]` ＝只擋 kind 在清單內的任務：
+      這一項的 kind（task_kind，aos_tick_table.task_kind() 的結果）在清單裡回 BLOCK_KIND（只跳過這一項），否則 None
+      （沒有 kind 的不擋；`"kinds": []` 照字面一個都不擋）。tick 只讀 `kinds` 這一個鍵，其他內容照舊留給模組 insts。
+    - 不是這種形狀（空檔、資料夾、讀不到、壞 symlink、不是 JSON、沒 kinds、kinds 不是字串陣列）＝BLOCK_ALL：
+      照第十六批，這一項與後面都不跑（正常機制：stderr 不印、回 0）；after_all 照跑。讀不到不丟錯（AI 隊定）。
+    每次呼叫都重讀（格中內容可能被改）。整格最後由 tick 刪掉（clear_tasks_blocked）。"""
+    path = state("tick", "tasks-blocked")
+    if not os.path.lexists(path):
+        return None
+    kinds = _blocked_kinds(path)
+    if kinds is None:
+        return BLOCK_ALL
+    return BLOCK_KIND if task_kind is not None and task_kind in kinds else None
+
+
+def _blocked_kinds(path):
+    """第二十四批：tasks-blocked 是 `{"kinds": [字串…], …}` 時回那個清單，其他形狀一律回 None（＝全部擋）。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError):       # 資料夾、讀不到、壞 symlink、空檔、不是 JSON（含解不了 UTF-8）
+        return None
+    kinds = doc.get("kinds") if isinstance(doc, dict) else None
+    if isinstance(kinds, list) and all(isinstance(k, str) for k in kinds):
+        return kinds
+    return None
 
 
 def run_on_blocked(cwd, tbl, task_id, index):
