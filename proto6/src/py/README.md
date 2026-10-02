@@ -90,7 +90,7 @@ m3m 模組一（重讀設定）、三（記住狀態），各自有寫才掛。�
 
 ## 訊息與 aos-mq（m3m 模組四）
 
-`lib/aos_daemon_mq.py`、`lib/aos_mq.py`、`bin/aos-mq`，設定檔寫 `modules.mq` 才掛。全文見 [docs/mq.md](docs/mq.md#訊息與-aos-mqm3m-模組四)。
+`lib/aos_daemon_mq.py`、`lib/aos_mq.py`、`bin/aos-mq`，設定檔寫 `modules.mq` 才掛。2026-10-02 第二十五批改成多扇門：`modules.mq` 是「門名 → socket 路徑」、每項 `"mq": [門名…]` 訂閱、環境變數每扇門一個 `AOS_DAEMON_MQ_<門名>`、`aos-mq send|take|peek <socket 路徑>`。全文見 [docs/mq.md](docs/mq.md#訊息與-aos-mqm3m-模組四)。
 
 ## 帳號（m3m 模組五）
 

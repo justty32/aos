@@ -6,7 +6,9 @@
 
 > **使用者裁定（2026-10-01，原話）**：「daemon config中，其實可以是{"insts":{"jobs/report.json":{...},"haha.json":{...}}}。然後控制模組這塊，wake的功能改一下，改成可以調設定，比如正在跑的話是否就不跑了(但仍然叫幾次都只補一次)，或是這次跑完，原本後續週期性的那次就不跑了，或是弄成單獨指令也可以。aos-ctl status應該要只能看一個項的狀態，也就是自己所在的這項。1.夠了。2.可以。3.隨便放，就一個。4.算。5.訊息模組不算在此。」追補：「應該說wake/pause/resume/status都是指向某一項inst任務」。
 >
-> 1～5 的意思：只收 wake／pause／resume／status 四個（不收 reload、shutdown）；能連 socket 就能做所有事、不另設權限；一個 daemon 一個 socket、路徑寫在設定裡；叫醒算控制模組的一部分；訊息模組（aos-mq）不走這條 socket。更早已定：模組設定放 `modules` 底下、有寫就開（不要 `enable_control`）；核心沒有 id，項目以 inst 字面值指名；變數 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`；整份設定先展開指示詞再讀；「不要用檔案，必須用 socket」「不要管上下層」「daemon 只需要管理最頂層」。
+> 1～5 的意思：只收 wake／pause／resume／status 四個（不收 reload、shutdown）；能連 socket 就能做所有事、不另設權限；一個 daemon 一個 socket、路徑寫在設定裡；叫醒算控制模組的一部分；訊息模組（aos-mq）不走這條 socket。更早已定：模組設定放 `modules` 底下、有寫就開（不要 `enable_control`）；核心沒有 id，項目以 inst 字面值指名；變數 `AOS_DAEMON_CTL_SOCKET`、`AOS_DAEMON_INST`；整份設定先展開指示詞再讀；「不要用檔案，必須用 socket」「不要管上下層」「daemon 只需要管理最頂層」。
+
+> **第二十五批（2026-10-02）**：環境變數 `AOS_DAEMON_SOCKET` 改名 `AOS_DAEMON_CTL_SOCKET`（舊名不留；本篇已照新名改寫），控制 socket 檔一律 chmod 666、誰能連由所在資料夾的權限決定。見 [verdicts 11 第二十五批](../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門)。
 
 > **POC 總原則**：默認一切正常——socket 建得起來、路徑不超長、沒有兩個 daemon 用同一個 socket、客戶端照規矩送一行。不為這些寫處理，出事自然丟錯、回 1。唯一例外見步驟 3：客戶端送壞了不能讓整個 daemon 掛掉。
 

@@ -18,7 +18,7 @@
 2. 掛了 cgroup 模組：照常建子樹、建框，然後 `chown_tree()` 整棵交給預設帳號。
 3. `Account()`：開一條 `SOCK_SEQPACKET` socketpair，fork＋exec `aos-daemon-root <fd>`（另一個 session），第一個封包送名單。
 4. `Account.drop()`：`initgroups`／`setgid`／`setuid` 永久降成預設帳號，`HOME`／`USER`／`LOGNAME` 換掉，起收回應的執行緒。
-5. 之後才 `give_env()`、開控制／訊息 socket（掛了帳號模組時 chmod 666）、起各項。
+5. 之後才 `give_env()`、開控制／訊息 socket（〔第二十五批〕一律 chmod 666，不管有沒有掛帳號模組；誰能連由所在資料夾決定）、起各項。
 
 跑一項：帳號是預設帳號（或沒寫）的，照舊自己開；別的帳號的走 `run_via_root()`——主程式開好 stdout／stderr 的 pipe（沒設路徑就交 `/dev/null`），連同請求 `{"id","user","argv","cwd","env","frame"}` 交給 root 端；root 端再核一次名單與 `getpwnam`，fork：`setsid`、有框先寫 `cgroup.procs`、切帳號、chdir、exec `aos-exec`，結束回 `{"id","exit"}`。查不到帳號回 `{"id","error"}`，主程式 stderr `aos-daemon: account: no such user <名字>`、那一次 `exit=1`。root 端不見了（EOF）：stderr 一行、刪 socket 檔、回 1。
 
