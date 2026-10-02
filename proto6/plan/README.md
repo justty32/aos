@@ -1,30 +1,31 @@
 # proto6 實作規劃
 
-← [proto6](../README.md)｜[spec 入口](../spec/README.md)｜[規格](../spec/README.md)
+← [proto6](../README.md)｜[spec 入口](../spec/README.md)｜[現行程式](../src/py/README.md)
 
-2026-09-30 起。spec 打磨夠了，開始實作。這份 plan 排順序、講清楚每段要做到什麼、怎麼算做完。
+2026-09-30 起的實作順序表。**現行行為與格式以 [spec](../spec/README.md) 加 [程式與測試](../src/py/README.md) 為準**（第二十七批，2026-10-02）。這裡只記哪段做完、哪段暫緩、哪段還沒做；各段細部檔是當時的施工紀錄，**屬於歷史**，裡面的旗標、檔名、結束碼很多後來改過，不再當驗收正本。
 
-**分工（09-30 晚改）**：先用 Python 把整條 POC 做通，**POC 由 AI 隊寫**，使用者看結果、做裁定；daemon、runner 在 POC 也用 Python。C++11 改寫放到最後一段，那時才由使用者親手寫。
+**分工（09-30 晚定）**：先用 Python 3.9（只用標準庫）把整條 POC 做通，POC 由 AI 隊寫，使用者看結果、做裁定；C++11 改寫放最後，由使用者親手寫。POC 總原則「默認一切正常」與結束碼慣例，現行寫法見 [spec tick](../spec/tick.md) 與 [慣例 C-08](../spec/conventions.md)。
 
-**POC 總原則（使用者 2026-10-01）**：**默認一切正常**——檔案寫得進、讀得懂、沒壞、不斷電、沒有別人同時在跑、任務表是對的、帳號是對的。POC 不為這些異常寫處理，出事就讓它自然丟錯（Python traceback，回 1）。使用者原話：「我們都默認所有東西都OK都正常，先不考慮邊緣狀況」「紀錄這邊，我們都默認紀錄是好的」「舊紀錄不管，我們都默認紀錄能讀得懂」「--firstdo-fsync...先不做吧，我們先做單純的」「別人正在跑？默認沒有別人在跑，這個不管，或是直接報錯。然後也不需要判斷上下層。」「表不合法也拿掉，回 0／1 就好」「帳號不對，也不管」。先不做的 spec 規定不刪，2026-10-01 統一更新時搬到[暫緩區](../spec/deferred/README.md)。
+## 各段狀態
 
-**結束碼慣例（使用者 2026-10-01，同日改版）**：**0＝預料之中**（一切正常都歸 0，含正常中斷；只有 0 是普通結束）；**非 0＝不正常、要額外處理**；**1＝通用錯誤**，沒特別指定碼的錯都回 1；特別指定的碼（例如 inst 的 125／126／127、`aos-exec` 原樣傳出子程式的碼）照各自規定。~~0（正常結束）、1（錯誤結束）、2（正常中斷）~~ 不再有 2。全文與 `aos-tick`、`aos-exec` 怎麼對上，見 [verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit/04-1001-結束碼慣例.md#aos-結束碼慣例已寫入-speccommit-前由我補號)（已寫入 spec（commit 前由我補號））。
+| 段 | 狀態 | 現行正本 | 當時的細部檔（歷史） |
+|---|---|---|---|
+| 一、tick 核心 | **已完成** | [tick](../spec/tick.md) | [m1](m1-tick-core.md) |
+| 一之二、hooks | **已完成**（後來從 `after_all` 擴成四個掛點） | [hooks B-635](../spec/tick/hooks.md) | [m1h](m1h-hooks-module.md) |
+| 一之三、tasks-blocked 模組、`kind` | **已完成**（沒有獨立 plan 檔） | [tasks-blocked B-636](../spec/tick/tasks-blocked.md)、[tick](../spec/tick.md) | — |
+| 二、系統級任務與普通程式 | **暫緩**：`aos-git`、`aos-clean`、範本、`aos-tick-check-task`、`aos-publish`、`aos-config-add` 全搬暫緩區，現行沒有系統級任務 | [暫緩區](../spec/deferred/README.md) | [m2（草稿，沒開工）](m2-system-tasks.md) |
+| 三、daemon 核心 | **已完成**（砍到最核心：定期叫 `aos-exec`） | [daemon](../spec/daemon/README.md) | [m3](m3-daemon-core.md) |
+| 三之二、控制模組 | **已完成** | [控制 B-641](../spec/daemon/control.md) | [m3n](m3n-control-module.md) |
+| 三之三、五個 daemon 模組 | **已完成**（重讀設定、記住狀態、收屍／cgroup、訊息、帳號） | [daemon](../spec/daemon/README.md) | [m3m](m3m-daemon-modules.md) |
+| 四、訊息與 cgroup | **已由三之三的模組取代**；舊的 `node.send`／`take`、`aos-mq get`／`post`、`aos-cg` 暫緩 | [訊息 B-645](../spec/daemon/mq.md)、[收屍 B-644](../spec/daemon/cgroup.md) | [原規劃](readme/02-四至六段順序與待問.md#第四段daemon-部件訊息與-cgroup) |
+| 五、helper 與跨帳號 | **已由帳號模組取代**；`aos-as` 暫緩。真 root 驗收等使用者（見 [WAIT_USER](../../wf/WAIT_USER.md)） | [帳號 B-646](../spec/daemon/account.md) | [原規劃](readme/02-四至六段順序與待問.md#第五段helper-與跨帳號) |
+| 六、C++11 改寫 | **未開始**：等 Python POC 玩過再說 | — | [原規劃](readme/02-四至六段順序與待問.md#第六段c11-改寫) |
 
-- 程式放 `proto6/src/`，跟探針原型 [proto/](../proto/README.md) 分開。
-- 語言：POC 全部用 **Python 3.9**（只用標準庫），daemon、runner 也是；換 C++11 見[第六段](readme/02-四至六段順序與待問.md#第六段c11-改寫)。
-- inst 的解析與指示詞（`$ref` 等）和 `aos-exec` **直接從 proto5 原樣複製**，放 [proto6/src/py/](../src/py/README.md)：`lib/aos_inst.py`（讀驗解 inst）、`lib/aos_directives.py`（指示詞）、`lib/aos_exec*.py`（開程序）、`bin/aos-exec`。改動只剩「資料夾目標」那一處：先找 `.aos/inst.json` 再找 `inst.json`，而且（2026-10-01）這個 `.aos` 照環境變數 `AOS_DIRNAME`（設成空字串時只找 `inst.json`），用法錯由 2 改 1（結束碼慣例）；~~認得頂層 `user`（跟目前身分不同就 125）~~ 2026-10-01 撤回，回到 proto5 原樣（`user` 當陌生鍵忽略）（跟 aos-tick 共用 `lib/aos_dirname.py`；細節見 [src/py README](../src/py/README.md)）。各段把它當現成的東西用，不重寫。
+還沒排進哪一段、使用者說先不做或還在想的：node 模組（使用者預感 node 概念會消失）、`peers`、系統級任務怎麼改用 hooks（[整理清單](../notes/2026-10-01-tick-system-tasks.md)）。裁定都在 [verdicts 11](../notes/verdicts/11-tick-as-unit.md)。
 
-## 怎麼用這份 plan
+## 原本的六段總覽（歷史）
 
-1. 一次做一段。每段有自己的細部檔（目前寫了[第一段](m1-tick-core.md)與它之後的 [hooks（外掛掛點）](m1h-hooks-module.md)、[第二段（草稿，等使用者裁定）](m2-system-tasks.md)、[第三段](m3-daemon-core.md)與它之後的[控制模組](m3n-control-module.md)、[五個模組](m3m-daemon-modules.md)，其他段開工前再寫）。
-2. 每段拆成幾步，每步都寫：要做到什麼、對哪幾條 spec、**要使用者裁定的點**（沒有就寫無）、驗收。
-3. 每段由 AI 隊實作，照驗收那一欄試跑；做完交使用者看。
-4. 使用者看結果、裁定該段的待問；裁定後 AI 隊照改。檔案怎麼切、函式叫什麼 AI 隊自己定，標「建議」的只是參考。
-5. 碰到 spec 講不清或互相打架的，看該段的「待問」；不在清單上的，記下來問，AI 隊不自己裁。
-
-## 分檔目錄
-
-> 2026-10-02 整理：原檔約 15 KB 超過 8 KB 門檻，按標題逐字拆進 `readme/`；本檔只留前言與目錄（原路徑保留當入口）。
+> 2026-10-02 整理：原檔約 15 KB 超過 8 KB 門檻，按標題逐字拆進 `readme/`。內容是 09-30～10-01 的規劃原文，**歷史，現行以 spec 為準**。
 
 <!-- wf-nav -->
 | # | 檔 | 段落 |
