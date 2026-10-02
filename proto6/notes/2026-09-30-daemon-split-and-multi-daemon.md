@@ -1,6 +1,6 @@
 # 2026-09-30 待議：daemon 職責太雜與多 daemon
 
-← [筆記索引](README.md)｜[第二十批裁定](verdicts/11-tick-as-unit.md)｜[整理區](../spec/README.md)
+← [筆記索引](README.md)｜[第二十批裁定](verdicts/11-tick-as-unit.md)｜[規格](../spec/README.md)
 
 **這是討論紀錄，不是裁定。** 多 daemon 範圍與 daemon 拆分都已裁定（見下）；第 4 點部件沒掛時的行為仍是建議預設。
 
