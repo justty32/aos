@@ -28,7 +28,7 @@
 | `Policy.check_items()` | 開起來與重讀時核每一項（重讀照開起來時的名單） |
 | `chown_tree()` | cgroup 子樹交給預設帳號 |
 | `Account`、`Account.drop()`、`Account.run()`、`_replies()` | 開 root 端、降權、送請求、照 id 收回應 |
-| `run_via_root()`、`aos_daemon.run_once()` | 別的帳號的那一項：pipe、等碼、清框、收齊輸出 |
+| `run_via_root()`、`aos_daemon.run_once()` | 別的帳號的那一項：pipe、等碼、清框、讀輸出到結束（只留上限內的尾段，見[輸出上限](daemon-run.md#daemon-跑-daemon輸出上限鎖檔killrestart第十九批)） |
 | `aos_daemon._die()` | 刪 socket 檔、直接退出（SIGINT／SIGTERM 回 0，root 端不見了回 1） |
 | `aos_daemon_root.main()`、`check()`、`child()` | root 端：單執行緒 select＋SIGCHLD、核帳號、fork 切帳號 exec |
 

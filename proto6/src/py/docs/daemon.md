@@ -34,7 +34,7 @@ proto6/src/py/bin/aos-daemon --config daemon.json     # Ctrl-C／SIGTERM 直接�
 | `stop_on_nonzero` | 碼不是 0 時這一項就不再叫、多印一行 `stopped`。頂層是預設、每項可蓋過；都沒有＝`false`。所有項都停了 daemon 照樣開著 |
 | `exec_out_path`（頂層） | aos-exec 的 stdout 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 換成 inst 字面值，inst 是檔時換成它字面上的 dirname（空的用 `.`）。~~沒寫＝daemon 自己的 stdout~~ 沒寫＝丟掉（`/dev/null`，使用者 2026-10-01）；寫 `/dev/stdout` 接回 daemon 的 stdout |
 | `exec_err_path`（頂層） | aos-exec 的 stderr 接到哪個檔，規則同 `exec_out_path`。~~沒寫＝daemon 自己的 stderr~~ 沒寫＝丟掉（`/dev/null`，使用者 2026-10-01）；寫 `/dev/stderr` 接回 daemon 的 stderr |
-| `modules`（頂層） | 可選，要是物件（不是＝設定錯、回 1）。一個模組一個鍵；目前只有 `control`（[控制模組](ctl.md#控制模組與-aos-ctlm3n)，有寫就開），其他鍵照收、不看 |
+| `modules`（頂層） | 可選，要是物件（不是＝設定錯、回 1）。一個模組一個鍵，有寫才掛，不認得的鍵照收、不看。現有的模組：`control`（[控制模組](ctl.md)）、`reload`、`state`（[重讀設定與記住狀態](reload-state.md)）、`cgroup`（[收屍](cgroup.md)）、`mq`（[訊息](mq.md)）、`account`（[帳號](account.md)）；清單見 spec [daemon](../../../spec/daemon/README.md) |
 
 **整份設定檔先經 aos 指示詞展開再讀**（使用者 2026-10-01；跟 inst 同一套 `lib/aos_directives.py`，`$ref`／`$fmt`／`$env`）。順序與兩種起點：
 
@@ -57,7 +57,7 @@ stdout 每次一行（時間是印出那刻的本地時間，ISO 8601 帶時區�
 2026-10-01T15:04:05+08:00 inst=jobs/report.json stopped
 ```
 
-aos-exec 的 stdout、stderr（使用者 2026-10-01：兩條都由頂層鍵決定、沒寫就丟到 `/dev/null`，不再接到 daemon 自己的 stdout／stderr；沒寫的那條直接開成 `DEVNULL`、不經 pipe）：有寫路徑的那條每次收齊（`communicate()`，讀到 pipe 底）再一次寫出，有內容才寫，前面一律加一行標頭（時間、`stdout`／`stderr`、第幾項＝`insts` 鍵的順序從 0 起、inst 字面值；寫到 `<inst>` 個別檔也加，使用者 2026-10-01 同意）；同一次兩條都有就先 stdout 段再 stderr 段，跟 daemon 自己那一行共用一把鎖，多項同時結束也不交錯：
+aos-exec 的 stdout、stderr（使用者 2026-10-01：兩條都由頂層鍵決定、沒寫就丟到 `/dev/null`，不再接到 daemon 自己的 stdout／stderr；沒寫的那條直接開成 `DEVNULL`、不經 pipe）：有寫路徑的那條由執行緒跑 `drain()` 讀到 pipe 底，只保留上限內的尾段（見[輸出上限](daemon-run.md#daemon-跑-daemon輸出上限鎖檔killrestart第十九批)），跑完再一次寫出，有內容才寫，前面一律加一行標頭（時間、`stdout`／`stderr`、第幾項＝`insts` 鍵的順序從 0 起、inst 字面值；寫到 `<inst>` 個別檔也加，使用者 2026-10-01 同意）；同一次兩條都有就先 stdout 段再 stderr 段，跟 daemon 自己那一行共用一把鎖，多項同時結束也不交錯：
 
 ```text
 == 2026-10-01T15:04:05+08:00 stdout index=1 inst=jobs/report.json ==

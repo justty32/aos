@@ -78,7 +78,7 @@ aos-exec 的用法錯由 proto5 的 2 改 1，附 aos-exec 現在的結束碼表
 
 ## 控制模組與 aos-ctl（m3n）
 
-設定檔寫 `modules.control` 就掛上的控制模組（一行 JSON 進出的 socket：`wake`／`pause`／`resume`／`status`）與送指令的小工具 `aos-ctl`。全文見 [docs/ctl.md](docs/ctl.md#控制模組與-aos-ctlm3n)。
+設定檔寫 `modules.control` 就掛上的控制模組（一行 JSON 進出的 socket：`wake`／`pause`／`resume`／`status`／`kill`／`restart`）與送指令的小工具 `aos-ctl`。全文見 [docs/ctl.md](docs/ctl.md#控制模組與-aos-ctlm3n)。
 
 ## 重讀設定與記住狀態（m3m）
 
