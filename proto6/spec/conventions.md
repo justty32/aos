@@ -14,8 +14,8 @@
 ## C-07：版本與陌生欄位
 
 - **小改不升版**：加可選欄位、放寬值域、在寫明「開放」的列舉加值。讀的一方遇到不認得的欄位**直接忽略**（inst、`tasks.json`、daemon 設定檔、控制 socket 的請求都是）。
-- **不相容的大改才升版**：刪欄位、改意思、改必填、收窄值域。inst 與 tasks 升 `_metainfo._version`（只認 `posix`／`1`，不合就拒絕）；自己的持久 JSON 檔帶 `"version": 1`。新程式讀目前版與前一版、寫目前版，遇到比自己新的拒絕。
-- 程式改寫整份持久檔時，原樣保留不認得的欄位。
+- **不相容的大改才升版**：刪欄位、改意思、改必填、收窄值域。inst 與任務表的每一項升 `_metainfo._version`（照 inst 規則只認 `posix`／`1`，不合就拒絕；任務表頂層的 `_metainfo` 不看）；自己的持久 JSON 檔帶 `"version": 1`。新程式讀目前版與前一版、寫目前版，遇到比自己新的拒絕。
+- 程式改寫整份持久檔時，原樣保留不認得的欄位。例外：daemon 的 state 檔沒有 `version`、每次重建，陌生欄位下次寫檔就不見（[P-123](protocol/daemon/state.md)）。
 - 任務表與 inst 都**沒有 `user`**：寫了當陌生鍵忽略，照 tick 自己的帳號跑；要換帳號只能在 daemon 設定檔的帳號模組做（B-646）。
 - 沒有 `aos migrate`；舊檔轉版目前沒有程式。
 
@@ -23,7 +23,7 @@
 
 ## C-08：結束碼
 
-- **0＝預料之中，非 0＝要處理。** 正常的中斷（被擋、busy、有擋板）也是 0；正常機制結束 stderr 不印。
+- **0＝預料之中，非 0＝要處理。** 正常的中斷（被擋、busy、有擋板）也是 0；正常機制結束 stderr 不印，唯一例外是 `busy` 印一行 `busy:`，讓人知道這格沒跑。
 - **1＝通用錯誤**：沒有特別指定碼的錯一律 1，含用法錯（不用 2）。
 - 特別指定的碼（`aos-exec` 的 125／126／127、子程式碼原樣傳出）寫在各程式自己那條。
 - 讀別人的結束碼只分 0 與非 0；要記就照實記原碼。
@@ -48,8 +48,8 @@ aos 放自己狀態檔的資料夾預設叫 `.aos`，環境變數 `AOS_DIRNAME` 
 |---|---|---|
 | `AOS_DIRNAME` | 使用者 | 見 C-09 |
 | `AOS_TICK_CWD` | tick | 工作資料夾絕對路徑；本格紀錄在其下 `<狀態資料夾>/tick/current/` |
-| `AOS_TASK_ID`／`AOS_TASK_INDEX` | tick | 這一項的 id 與陣列位置 |
-| `AOS_TASK_EXIT` | tick，只給「任務跑完後」的 hook | 剛跑完那項的結束碼（被訊號 N 殺＝128+N） |
+| `AOS_TASK_ID`／`AOS_TASK_INDEX` | tick，給任務與跟任務有關的 hook（`before_kind`、`after_task`、`after_kind`、`after_every_task`） | 這一項的 id 與陣列位置 |
+| `AOS_TASK_EXIT` | tick，只給任務跑完後的 hook（`after_task`、`after_kind`、`after_every_task`） | 剛跑完那項的結束碼（被訊號 N 殺＝128+N） |
 | `AOS_HOOK_POINT`／`_INDEX`／`_ID` | tick，只給 hook | 掛點名、在該掛點的位置、hook id |
 | `AOS_DAEMON_CTL_SOCKET` | daemon 控制模組 | 控制 socket 路徑 |
 | `AOS_DAEMON_INST` | daemon（控制或訊息模組） | 這次跑的是 `insts` 的哪一項 |
@@ -62,7 +62,9 @@ aos 放自己狀態檔的資料夾預設叫 `.aos`，環境變數 `AOS_DIRNAME` 
 daemon 設定檔與任務表 `tasks.json` 都是「頂層放預設、底下一項一項」。共同原則：
 
 - 頂層 `cwd` **不改程式自己的工作目錄**，只是底下各項的起點；相對路徑起點，daemon 是啟動時的 cwd、tick 是工作資料夾。
-- 指示詞（`$ref`、`$fmt`、`$env`、`$opt`）都在開頭整份展開，唯一例外是頂層陌生鍵與 `_metainfo` 不解；`modules` 隨整份展開，展開失敗就整份不採用。
+- 指示詞（`$ref`、`$fmt`、`$env`、`$opt`）都在讀檔時一次展開，展開失敗就整份不採用：
+  - daemon 設定檔：認得的頂層欄位整個展開，`modules` 裡面全部展開；頂層陌生鍵與 `_metainfo` 不解。
+  - 任務表：開格時展開已知的鍵（頂層預設、`modules`、`hooks`、每一項的 inst 欄位與 `id`、`kind`）；頂層與每一項的陌生鍵、`_metainfo` 不解。不認得的模組照樣展開，只是沒人執行。跑到某一項時只合併、不再展開。
 - 任務表頂層能當預設的只有 inst 的七個欄位，淺層合併、項自己寫了就整個蓋過。
 
 程式：`lib/aos_directives*.py`、`lib/aos_tick_table.py`、`lib/aos_daemon_config.py`；測試：`tests/test_tick_table.py`、`tests/test_daemon_config.py`、`tests/test_directives_*.py`。

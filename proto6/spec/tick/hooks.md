@@ -13,7 +13,7 @@
 - hooks 是**外掛**，不是任務：碼只記進紀錄的 `hooks.<掛點>`（0 不記）、**不影響 tick 結束碼**、不算 `ran`、hook 之間不看 tasks-blocked。
 - `after_all` 在被 tasks-blocked 擋下時**照跑**（它跟任務無關，這正是它存在的理由）；busy、擋板檔、`bad_table` 時全部掛點都不跑。被擋下沒跑到的任務不觸發它的 hook。
 - 所有 hooks 跑完才寫 `ended:true`，所以 hook 跑到一半被殺，下一格的 `last/` 是 `ended:false`；`before_all` 可據此做當機還原。
-- hook 拿 `AOS_HOOK_*`、不拿一般任務的 `AOS_TASK_*`；只有 `after_task`／`after_every_task`／`after_kind` 另拿剛跑完那項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`（見 C-10）。
+- hook 拿 `AOS_HOOK_*`；跟任務有關的四個掛點另拿那一項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`，任務跑完後的三個（`after_*` 除了 `after_all`）再加 `AOS_TASK_EXIT`。對照表見 [協議 P-203](../protocol/tick.md) 與 C-10。
 - 版本管理不內建：用 hooks 加普通 git 指令即可（`before_all` 看 `last/` 是否 `ended:false` 就還原，`after_every_task` 依 `AOS_TASK_EXIT` 提交或還原；`.aos/` 自己排除）。
 
 程式：`lib/aos_tick_hooks.py`、`lib/aos_tick_table.py`；測試：`tests/test_tick_hooks_after_all.py`、`tests/test_tick_hooks_points.py`、`tests/test_tick_kind.py`。範例：`protocol/examples/tick/tasks.hooks*.json`。

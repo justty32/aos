@@ -11,7 +11,7 @@
 原則：
 
 - 核心沒有 id、不認得工作資料夾、不讀任務表。一項就是它的 inst 字面值。
-- 整份設定檔先展開指示詞再讀（跟 tasks.json 只展到 `tasks` 那層不同，對照見 [C-11](../conventions.md)）；`$ref` 以設定檔所在資料夾為準。
+- 設定檔先展開指示詞再讀，範圍見 [C-11](../conventions.md)；`$ref` 以設定檔所在資料夾為準。
 - 頂層 `cwd` 只是 `aos-exec` 子程序的工作目錄與相對路徑的起點，daemon 自己不 chdir。
 - `aos-exec` 的 stdout／stderr 沒寫 `exec_out_path`／`exec_err_path` 就丟掉；收的時候有共用上限 `exec_output_max_bytes`，超過丟最早的（為了 daemon 跑 daemon：下層永遠不結束）。
 - 停機：SIGINT／SIGTERM 直接退出、回 0，不殺也不等正在跑的 `aos-exec`。
