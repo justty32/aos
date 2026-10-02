@@ -26,7 +26,7 @@
 - ~~**2026-10-01（待問 8）**：取鎖整個拿掉——不建 `.aos/tick.lock`、不回 75、不傳鎖 fd、沒有 `AOS_TICK_LOCK_FD`。本步只剩「認資料夾」。~~（同日加回最簡版，見下條）
 - **2026-10-01 再改（待問 12）**：加回最簡互斥——外層定期跑 `aos-tick`，上一格沒跑完下一格就來是正常使用。認完資料夾後對 `.aos/tick.lock` 取非阻塞 `flock`（不存在就建，`.aos/` 不在就建）；拿不到就 stderr 一行 `busy:`、回 ~~2（正常中斷）~~ 0（待問 15），不寫紀錄、不加 `seq`、不看擋板。拿到就整格持鎖。不回 75、鎖 fd 不傳給任務、沒有 `AOS_TICK_LOCK_FD`。
 - **要做到**：認出要跑哪個資料夾，取鎖。~~對 `.aos/tick.lock` 取非阻塞獨占鎖；拿不到就回 75、什麼都不動。拿到就整格持鎖。~~（2026-10-01 改成上一條）
-- **spec**：[B-602](../spec/settled/tick/core/03-B-602-互斥鎖與B-620開頭.md#b-602同一資料夾一次一格互斥鎖)；argv 見 [P-203](../spec/settled/protocol/tick.md#p-203aos-tick-與任意任務程式建議預設未拍板)。
+- **spec**：[B-602](../spec/settled/tick/core/03-B-602-互斥鎖與B-620開頭.md#b-602同一資料夾一次一格互斥鎖)；argv 見 [P-203](../spec/settled/protocol/tick/03-P-203-aos-tick與任務程式.md#p-203aos-tick-與任意任務程式建議預設未拍板)。
 - **做法**：
   - ~~`--node` 可以是資料夾、`.aos/inst.json` 或 `inst.json`，一律正規化成 node 資料夾；~~省略時用目前目錄。（2026-10-01 改，待問 10：）
   - 相對路徑一律轉成絕對再用。是資料夾：要有 `.aos/tasks.json`，沒有就 stderr `no_tasks:`、回 1、什麼都不建。~~是檔：這個檔就是這一格的任務表（照步驟 4 的極簡檢查），它所在的資料夾當 node（擋板檔、停格檔、紀錄都在 node 的 `.aos/` 下，`.aos/`、`.aos/tick/` 不在就建，只建資料夾）；那個資料夾若叫 `.aos`，node 取它的上一層。~~（2026-10-01 撤回，待問 18）是檔：stderr `usage:`（說明目標要是資料夾）、回 1、什麼都不建。不存在：stderr `no_node:`、回 1。
@@ -51,7 +51,7 @@
 ## 步驟 2：擋板檔與結束碼骨架
 
 - **要做到**：取鎖後（2026-10-01 加回，待問 12）先看 `.aos/tick-blocked`；有就一項都不跑、不寫紀錄、回 ~~1~~ ~~2~~ 0（正常中斷也是 0；2026-10-01，待問 9、15）。順便把整格的結束碼（~~0／1／2／75~~；2026-10-01 待問 9、15：0 照表跑完、擋板、busy，1 tick 自己出錯（含 argv 用法錯））和 stderr 代碼的出口定好。
-- **spec**：[B-620 停格檔與擋板檔](../spec/settled/tick/core/03-B-602-互斥鎖與B-620開頭.md#b-620任務註冊表照表依序跑)；檔名與內容 [P-213](../spec/settled/protocol/tick.md#p-213每項結束碼紀錄tasks-blocked-與擋板檔建議預設未拍板)；碼表 P-203。
+- **spec**：[B-620 停格檔與擋板檔](../spec/settled/tick/core/03-B-602-互斥鎖與B-620開頭.md#b-620任務註冊表照表依序跑)；檔名與內容 [P-213](../spec/settled/protocol/tick/05-P-213-結束碼紀錄.md#p-213每項結束碼紀錄tasks-blocked-與擋板檔建議預設未拍板)；碼表 P-203。
 - **做法**：擋板檢查放在取鎖之後、讀表與換紀錄之前；擋住時不加 `seq`、不刪停格檔。stderr 統一印 `代碼: 說明`；讀擋板檔的一行原因。
 - **要使用者裁定的點**：無。
 - **驗收**：先跑一格建出紀錄，再 `echo 壞了 > .aos/tick-blocked`，跑 `aos-tick`：回 ~~1~~ ~~2~~ 0（待問 15）、stderr 有 `blocked: 壞了`、任務沒跑、`current.json` 與 `last.json` 內容不變；刪掉擋板後下一格照常。
@@ -80,7 +80,7 @@
 - **2026-10-01 四改（待問 18，頂層預設）**：讀表只解到 `tasks` 這層——整份是指示詞先解；`tasks`、`modules` 與七個預設鍵（`argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`）的值各解一層（`$opt` 原樣留）；`tasks` 每一元素解一層（整項 `$ref`）。這層以工作資料夾為中心，`$ref:""`／`#…` 指整份 tasks.json；解不開算 `bad_table`。極簡檢查改成「每項解一層後是物件、合併頂層預設後有 `argv`」。跑到某項時才淺層合併（項蓋過頂層，`envs` 整包換），合併結果當獨立的記憶體 inst 交給 `aos_inst.load_obj`，這時 `$ref:""`／`#…` 指合併後的這一項。頂層 `_metainfo`、`id`、`kind`、`modules` 不當預設；頂層 `cwd` 不改 tick 自己的 cwd。
 - **2026-10-01 再改（待問 11）**：開格做極簡檢查——合法 JSON、頂層物件有 `tasks` 陣列、每項（`$ref` 展開後）是物件且有 `argv`；不過就 stderr `bad_table:`、回 1。其他（`_metainfo`、`id`、`kind`、型別、`id` 重複、陌生鍵）都不查；`methods` 從規範拿掉、當陌生鍵。
 - **要做到**：開格讀一次 `.aos/tasks.json`（目標給檔時讀那個檔——2026-10-01 待問 10，同日撤回，待問 18，只讀 `.aos/tasks.json`）~~，只驗：合法 JSON、`_metainfo` 是 `aos-tasks` 第 1 版、每項（整份 `$ref` 展開後）是合法 inst、`id` 在表內唯一。不合就整表拒絕、回 2~~（2026-10-01 作廢）。
-- **spec**：[B-620 讀表與「誰驗什麼」](../spec/settled/tick/core/03-B-602-互斥鎖與B-620開頭.md#b-620任務註冊表照表依序跑)；[P-202](../spec/settled/protocol/tick.md#p-202任務註冊表建議預設未拍板)；[inst](../spec/base/inst.md)。
+- **spec**：[B-620 讀表與「誰驗什麼」](../spec/settled/tick/core/03-B-602-互斥鎖與B-620開頭.md#b-620任務註冊表照表依序跑)；[P-202](../spec/settled/protocol/tick/02-P-202-任務註冊表.md#p-202任務註冊表建議預設未拍板)；[inst](../spec/base/inst.md)。
 - **做法**：
   - ~~只驗這四件，~~其餘（缺 `kind`、`system.x`、~~`methods` 形狀~~）核心**不驗、照跑**。
   - ~~表壞時：stderr 印 `config_invalid: 哪裡錯`，紀錄寫 `ended:true`、`exit:2`、`tasks:[]`，回 2。紀錄在讀表之前就換好了，所以表壞的格也佔一個 `seq`。~~（2026-10-01 作廢）
