@@ -1,6 +1,6 @@
 # 2026-10-01：最核心的 aos-daemon（已裁定）
 
-← [筆記索引](README.md)｜[第二十批裁定篇末 10-01](verdicts/11-tick-as-unit/03-1001-POC默認一切正常.md#2026-10-01poc-默認一切正常)｜[daemon 拆分](2026-09-30-daemon-split-and-multi-daemon.md)｜[plan 第三段](../plan/README.md#第三段daemon-核心)｜細部 plan：[m3-daemon-core](../plan/m3-daemon-core.md)
+← [筆記索引](README.md)｜[第二十批裁定篇末 10-01](verdicts/11-tick-as-unit/03-1001-POC默認一切正常.md#2026-10-01poc-默認一切正常)｜[daemon 拆分](2026-09-30-daemon-split-and-multi-daemon.md)｜[plan 第三段](../plan/readme/01-六段總覽-一至三段.md#第三段daemon-核心)｜細部 plan：[m3-daemon-core](../plan/m3-daemon-core.md)
 
 **已裁定（使用者 2026-10-01）。** 原本是提案草稿，使用者當天逐點裁定，正文已照裁定改過；裁定結果見文末。同日又追加設定檔的裁定（`inst` 原樣交給 aos-exec、id 就是字面值、頂層 `cwd` 與預設），見文末[設定檔追加裁定](#設定檔追加裁定使用者-2026-10-01)，正文也照改。spec 還沒照它改（跟同日其他裁定一起待統一更新 spec）。照這份寫的細部 plan 是 [m3-daemon-core](../plan/m3-daemon-core.md)。前提是現在這個極簡 `aos-tick`（10-01 版：有同資料夾鎖、默認一切正常），照「先做單純的」精神，把 spec 的「開格核心 A 組」砍到最小。
 
@@ -66,9 +66,9 @@
 
 **叫 `aos-exec <inst 字面值>`，不直接叫 `aos-tick`**（使用者裁定）；子程序的工作目錄是上面說的起點。「這一項怎麼跑」（環境變數、stderr 往哪、要不要包一層）全由那份 inst 決定，daemon 等於把 cron 換掉。
 
-（使用者 2026-10-01 後來改了：aos-exec 子程序的 stderr 由設定檔 `exec_err_path` 決定，見 [m3 待問 5](../plan/m3-daemon-core.md#待問)；本段是原本的想法。）**stderr 交給 inst 自己。** inst 的 stderr 預設接 `/dev/null`，tick 印的 `busy:`、`bad_table:` 會看不到；要看就在 inst 寫 `"stderr": {"$opt": "inherit"}`，讓它直接進 daemon 的終端。daemon 不替 inst 蓋掉 stderr（不帶 `--stderr -`），免得違反「怎麼跑由 inst 決定」。
+（使用者 2026-10-01 後來改了：aos-exec 子程序的 stderr 由設定檔 `exec_err_path` 決定，見 [m3 待問 5](../plan/m3-daemon-core/03-步驟5-7與待問做完了沒.md#待問)；本段是原本的想法。）**stderr 交給 inst 自己。** inst 的 stderr 預設接 `/dev/null`，tick 印的 `busy:`、`bad_table:` 會看不到；要看就在 inst 寫 `"stderr": {"$opt": "inherit"}`，讓它直接進 daemon 的終端。daemon 不替 inst 蓋掉 stderr（不帶 `--stderr -`），免得違反「怎麼跑由 inst 決定」。
 
-設定檔欄位名使用者說隨意，使用者同日看過後認可並追加裁定（見文末），定在 [m3 步驟 1](../plan/m3-daemon-core.md#步驟-1讀設定檔)。指令是 `aos-daemon --config F`（POC 先用獨立指令，`aos daemon` 子命令以後再接）。
+設定檔欄位名使用者說隨意，使用者同日看過後認可並追加裁定（見文末），定在 [m3 步驟 1](../plan/m3-daemon-core/01-步驟1-讀設定檔.md#步驟-1讀設定檔)。指令是 `aos-daemon --config F`（POC 先用獨立指令，`aos daemon` 子命令以後再接）。
 
 ## 怎麼看結束碼
 

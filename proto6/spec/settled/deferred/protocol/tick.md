@@ -42,7 +42,7 @@
 
 ## P-212．aos-as：切換帳號〔建議預設，未拍板〕
 
-> **暫緩**（2026-10-01 第十三批）〔使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」〕：原文照 2026-10-01 搬家前的樣子留著，條號保留、不重用。它靠 helper（[B-303](../helper.md)）、daemon 通道與「鎖 fd 傳給任務」（[tick 暫緩區](../tick.md#暫緩b-602-完整互斥的其餘細節)），三樣都在暫緩區。現行切帳號只在 daemon 設定檔做（帳號模組 `modules.account`，[plan m3m 模組五](../../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)），單位是 daemon 的一項，不在一格裡面中途換。
+> **暫緩**（2026-10-01 第十三批）〔使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」〕：原文照 2026-10-01 搬家前的樣子留著，條號保留、不重用。它靠 helper（[B-303](../helper.md)）、daemon 通道與「鎖 fd 傳給任務」（[tick 暫緩區](../tick.md#暫緩b-602-完整互斥的其餘細節)），三樣都在暫緩區。現行切帳號只在 daemon 設定檔做（帳號模組 `modules.account`，[plan m3m 模組五](../../../../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)），單位是 daemon 的一項，不在一格裡面中途換。
 
 普通程式，不是系統級任務。行為正本：[B-303](../helper.md)；`spawn_as` 的參數與限制見 [B-609](../daemon/helper-actions.md)、[P-107](../protocol/daemon/provision-and-runner.md)；runner 回報見 [P-110](../protocol/daemon/provision-and-runner.md)。
 

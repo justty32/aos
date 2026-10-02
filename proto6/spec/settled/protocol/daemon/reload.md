@@ -4,7 +4,7 @@
 
 本篇只有 P-122，只寫格式。重讀做什麼、怎麼比對清單，以 [B-642](../../daemon/reload.md) 為正本。
 
-依據：[verdicts 11 篇末「2026-10-01 第十一批：daemon 模組」](../../../../notes/verdicts/11-tick-as-unit/13-1001-第十十一批.md#2026-10-01-第十一批daemon-模組)、[plan m3m 模組一](../../../../plan/m3m-daemon-modules.md#模組一重讀設定modulesreload)；現行程式 [重讀設定](../../../../src/py/README.md#重讀設定與記住狀態m3m)（有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十一批：daemon 模組」](../../../../notes/verdicts/11-tick-as-unit/13-1001-第十十一批.md#2026-10-01-第十一批daemon-模組)、[plan m3m 模組一](../../../../plan/m3m-daemon-modules/02-模組一-重讀設定.md#模組一重讀設定modulesreload)；現行程式 [重讀設定](../../../../src/py/README.md#重讀設定與記住狀態m3m)（有出入以程式為準）。
 
 ## P-122．重讀設定：設定、訊號與輸出〔使用者 2026-10-01 第十一批；格式照現行程式〕
 
