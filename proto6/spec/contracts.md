@@ -69,7 +69,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 
 1. **小改不升版**：加可選欄位、放寬值域，以及在寫明「開放」的列舉加值（例如 kernel 自訂的任務種類與資源名稱，見 [T-06](terms.md)）。讀的一方遇到不認得的欄位直接忽略。
 2. **不相容的大改才升版**：刪欄位、改意思、改成必填、收窄值域、在沒寫明開放的列舉加值，都要升 `version`（inst 與 tasks 升 `_metainfo._version`）。新程式讀目前版與前一版、寫目前版；遇到比自己新的版本仍拒絕，不猜讀。
-3. **批次轉檔指令 `aos migrate`**：把舊版檔一次轉成目前版，範圍含 node 裡的持久檔，以及 daemon 的 `state.json` 與設定檔。指令形狀見 [H-004](cli/commands.md)。〔建議預設，未拍板〕node 裡的檔在 node 鎖內轉（不自己提交，同 `aos-config-add`〔暫緩（2026-10-01），見[暫緩區](settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)〕；`.aos/` 底下的改動由下一格的 `aos-git close` 跟著提交，[B-602](settled/tick.md)）；daemon 的 `state.json` 只在 daemon 停著時轉。〔使用者方向 2026-09-30，第二十批疑點裁定 8〕這類在 tick 之外取鎖改檔的指令當成外部世界，aos 不管。
+3. **批次轉檔指令 `aos migrate`**：把舊版檔一次轉成目前版，範圍含 node 裡的持久檔，以及 daemon 的 `state.json` 與設定檔。指令形狀見 [H-004](cli/commands.md)。〔建議預設，未拍板〕node 裡的檔在 node 鎖內轉（不自己提交，同 `aos-config-add`〔暫緩（2026-10-01），見[暫緩區](settled/deferred/tick/02-B-633落盤與B-625.md#暫緩b-625-加入普通設定aos-config-add)〕；`.aos/` 底下的改動由下一格的 `aos-git close` 跟著提交，[B-602](settled/tick.md)）；daemon 的 `state.json` 只在 daemon 停著時轉。〔使用者方向 2026-09-30，第二十批疑點裁定 8〕這類在 tick 之外取鎖改檔的指令當成外部世界，aos 不管。
 
 〔使用者方向 2026-09-30，第十八批〕**哪裡放寬**：
 
@@ -91,6 +91,6 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 | `api_key` | LLM 池設定 | key 只能用 `key_ref` 指到檔案，不寫進設定（[S-301](scheduling/llm.md)） |
 | `argv` | 事項（attention） | 事項只給人或 agent 看的建議，不會被自動執行（[S-405](scheduling/operations.md)） |
 
-這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**。〔使用者方向 2026-10-01〕inst 頂層沒有 `user`（撤回，[inst](base/inst.md)），任務是 inst 的超集所以也沒有：寫了就是不認得的鍵、照收忽略，照 tick 自己的帳號跑；原本「跟 tick 帳號不同時那一項回 125」一併撤回。要切帳號就在 argv 包普通程式 `aos-as`（[B-620](settled/tick.md)、[B-303](settled/deferred/helper.md)）。schema 的寫法見 [P-007](protocol/README.md)。 〔2026-10-01 殘留註記〕`aos-as` 第十三批暫緩（[P-212](settled/deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](settled/daemon/account.md)）。
+這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**。〔使用者方向 2026-10-01〕inst 頂層沒有 `user`（撤回，[inst](base/inst.md)），任務是 inst 的超集所以也沒有：寫了就是不認得的鍵、照收忽略，照 tick 自己的帳號跑；原本「跟 tick 帳號不同時那一項回 125」一併撤回。要切帳號就在 argv 包普通程式 `aos-as`（[B-620](settled/tick.md)、[B-303](settled/deferred/helper.md)）。schema 的寫法見 [P-007](protocol/README.md)。 〔2026-10-01 殘留註記〕`aos-as` 第十三批暫緩（[P-212](settled/deferred/protocol/tick/01-P-207加入設定與P-212切換帳號.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](settled/daemon/account.md)）。
 
 驗收：持久檔與檔案 RPC 多一個不認得的欄位照樣讀得進來、改寫後欄位還在；現行控制 socket 的請求多一個欄位照收、舊設計的 daemon IPC 多一個欄位被拒；帶禁止鍵的檔整份拒收，任務表的項目寫了 `user` 當不認得的鍵照收；舊版檔經 `aos migrate` 後新程式照讀，比自己新的版本被拒。

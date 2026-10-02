@@ -1,6 +1,6 @@
 # 第三段之三：daemon 的五個模組
 
-← [plan 入口](README.md)｜**接在 [m3 核心](m3-daemon-core.md)、[m3n 控制模組](m3n-control-module.md) 之後。**｜spec 正本：[B-640 核心](../spec/settled/daemon/core.md)、[B-641 控制](../spec/settled/daemon/control.md)、格式 [P-120](../spec/settled/protocol/daemon/core.md)、[P-121](../spec/settled/protocol/daemon/control.md)｜舊規劃（暫緩區）：[總表](../spec/settled/deferred/README.md#daemon-與-helper)
+← [plan 入口](README.md)｜**接在 [m3 核心](m3-daemon-core.md)、[m3n 控制模組](m3n-control-module.md) 之後。**｜spec 正本：[B-640 核心](../spec/settled/daemon/core.md)、[B-641 控制](../spec/settled/daemon/control.md)、格式 [P-120](../spec/settled/protocol/daemon/core.md)、[P-121](../spec/settled/protocol/daemon/control.md)｜舊規劃（暫緩區）：[總表](../spec/settled/deferred/readme/02-總表-daemon與helper.md#daemon-與-helper)
 
 **狀態（2026-10-01 第十二批裁定後）**：
 

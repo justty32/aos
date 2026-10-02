@@ -1,8 +1,8 @@
 # 第二段：不靠 daemon 的系統級任務與普通程式（草稿，部分已裁定）
 
-← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/deferred/template.md)、[aos-tick-check-task B-621](../spec/settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/deferred/git.md)、[恢復與設定 B-625](../spec/settled/tick/recovery.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
+← [plan 入口](README.md)｜正本（除 B-621 外都是 tick 大幅簡化**之前**寫的）：[範本 B-629](../spec/settled/deferred/template.md)、[aos-tick-check-task B-621](../spec/settled/deferred/tick/03-B-624與B-621.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（2026-10-01 改寫）、[git B-630／B-622／B-632](../spec/settled/deferred/git.md)、[恢復與設定 B-625](../spec/settled/tick/recovery.md)、[清理 B-404](../spec/base/storage.md)｜格式：[tick 協議](../spec/settled/protocol/tick.md) P-204、P-205、P-210、P-213（停格檔）；[P-605](../spec/protocol/ops.md)（`aos-clean`）｜已搬暫緩區：[發摘要 `aos-publish`（B-624 部分、P-206 那列）](../spec/settled/deferred/tick/03-B-624與B-621.md#暫緩b-624-發布摘要aos-publish)、`aos-config-add`（B-625 部分、P-207）｜現在的 tick：[核心](../spec/settled/tick.md)、[慣例 C-08～C-11](../spec/settled/conventions.md)
 
-> **〔2026-10-01 第十七批〕`aos-git` 整套搬暫緩區**（使用者：「git這塊先不要進範本。」）：改用 hooks 加普通 git 指令（[B-635 範例](../spec/settled/tick/hooks.md#範例用-hook-加普通-git-指令管版本)），範本只留沒有 git 的那份。**文末待問 1～12 隨之擱置**（大多是 `aos-git` 的題）；`aos-tick-check-task` 第十六批也已暫緩。本檔照留當紀錄。
+> **〔2026-10-01 第十七批〕`aos-git` 整套搬暫緩區**（使用者：「git這塊先不要進範本。」）：改用 hooks 加普通 git 指令（[B-635 範例](../spec/settled/tick/hooks/03-B-635-範例hook加git.md#範例用-hook-加普通-git-指令管版本)），範本只留沒有 git 的那份。**文末待問 1～12 隨之擱置**（大多是 `aos-git` 的題）；`aos-tick-check-task` 第十六批也已暫緩。本檔照留當紀錄。
 >
 > **狀態：草稿（2026-10-01），還沒開工。** 2026-10-01 使用者已裁定 `aos-publish` 搬暫緩區、`aos-needs` 改寫成 `aos-tick-check-task`（見文末「裁定紀錄」）；其餘文末「待問」裁定後才照做。下面各步寫的是「建議的最單純版本」；舊 spec 跟現在 tick 對不上的地方集中在「舊規定哪裡對不上」一節。
 
@@ -19,7 +19,7 @@
 - 由 AI 隊實作、照各步驟驗收試跑，做完交使用者看；每步的「要使用者裁定的點」集中在文末待問。
 - Python 3.9、只用標準庫。放 [src/py](../src/py/README.md)：入口 `bin/aos-tick-check-task`、`bin/aos-git`（薄殼，`.gitignore` 擋 `bin/`，要 `git add -f`）；程式 `lib/aos_tick_check_task.py`、`lib/aos_git.py`（檔案怎麼切 AI 隊自己定）；測試 `tests/test_check_task.py`、`test_git.py`、`test_template.py`，用 `unittest`。狀態資料夾名一律用現成的 `lib/aos_dirname.py`。
 - 任務表寫 `aos-git` 這種裸名字時要靠 PATH 找到 `src/py/bin/`；測試裡把 `bin/` 加到 PATH 最前面，不寫絕對路徑（這樣範本才能原樣用）。
-- **`aos-publish`（發摘要）不在這段**：使用者 2026-10-01 裁定搬暫緩區（[B-624 部分、P-206 那列](../spec/settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)）；「把這一格總結成 JSON」的 `aos-summarize` 也暫時不做。
+- **`aos-publish`（發摘要）不在這段**：使用者 2026-10-01 裁定搬暫緩區（[B-624 部分、P-206 那列](../spec/settled/deferred/tick/03-B-624與B-621.md#暫緩b-624-發布摘要aos-publish)）；「把這一格總結成 JSON」的 `aos-summarize` 也暫時不做。
 - **`aos-config-add` 不在這段**：已決定搬去暫緩區（[P-207](../spec/settled/protocol/tick.md)、[B-625](../spec/settled/tick/recovery.md)「改設定」）。**`aos-clean`、恢復前驗證**做不做見待問 9、10；下面的步驟先照「建議不做」排，沒有它們的步驟。
 - **`aos-mq get`／`post` 不在這段**（第四段，要 daemon 通道）。
 

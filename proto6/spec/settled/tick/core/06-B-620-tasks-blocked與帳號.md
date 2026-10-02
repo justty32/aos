@@ -25,10 +25,10 @@
 
 兩個檔都 ignored。檔名、stderr 細節是〔建議預設，未拍板〕；兩種都回 0 照 [C-08](../../conventions.md)。
 
-使用者 2026-10-01 第十六批：「我們可以弄一個tick的module，用於設定讀取tasks-blocked的時候，要做的事情，類似hook，但是是在發現有tasks-blocked這個檔案之後，要做的insts」——已做成 tick 模組 `modules["tasks-blocked"]`（[B-636](../tasks-blocked.md)）。〔未來方向，記錄用、現在不做〕更早第五批記過的方向（停格檔變成特定 JSON、`aos-tick-check-task-continue` 檢查與改寫它）由 tick 那側來看已被第十八批定案取代（tick 不讀內容）；內容格式要怎麼用是 `tasks-blocked` insts 的事；會建停格檔的普通程式 `aos-tick-check-task`（[B-621](../../deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）第十六批搬暫緩區。
+使用者 2026-10-01 第十六批：「我們可以弄一個tick的module，用於設定讀取tasks-blocked的時候，要做的事情，類似hook，但是是在發現有tasks-blocked這個檔案之後，要做的insts」——已做成 tick 模組 `modules["tasks-blocked"]`（[B-636](../tasks-blocked.md)）。〔未來方向，記錄用、現在不做〕更早第五批記過的方向（停格檔變成特定 JSON、`aos-tick-check-task-continue` 檢查與改寫它）由 tick 那側來看已被第十八批定案取代（tick 不讀內容）；內容格式要怎麼用是 `tasks-blocked` insts 的事；會建停格檔的普通程式 `aos-tick-check-task`（[B-621](../../deferred/tick/03-B-624與B-621.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）第十六批搬暫緩區。
 
 ### 任務的帳號
 
-- **任務沒有 `user`**〔使用者方向 2026-10-01〕：inst 頂層沒有 `user`（[inst](../../../base/inst.md)），任務是 inst 的超集，所以也沒有；寫了就是陌生鍵、照收不理，一律用 tick 自己的帳號跑。原本「帶了不同帳號就那一項回 125」的歷史記錄在[暫緩區](../../deferred/tick.md#暫緩b-620-任務的帳號125)，隨 `user` 一起撤回、不會回來。
-- **tick 不切帳號**。要用別的帳號跑，就在 daemon 設定檔把它拆成另一項、指定帳號（帳號模組 `modules.account`，[plan m3m 模組五](../../../../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)，還沒做）；單位是 daemon 的一項，不在一格裡面中途換。在 argv 包 `aos-as <帳號> --` 的做法〔使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」〕搬到暫緩區（[B-303](../../deferred/helper.md)、[P-212](../../deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）。
+- **任務沒有 `user`**〔使用者方向 2026-10-01〕：inst 頂層沒有 `user`（[inst](../../../base/inst.md)），任務是 inst 的超集，所以也沒有；寫了就是陌生鍵、照收不理，一律用 tick 自己的帳號跑。原本「帶了不同帳號就那一項回 125」的歷史記錄在[暫緩區](../../deferred/tick/01-B-628上下層與B-602-B-620細節.md#暫緩b-620-任務的帳號125)，隨 `user` 一起撤回、不會回來。
+- **tick 不切帳號**。要用別的帳號跑，就在 daemon 設定檔把它拆成另一項、指定帳號（帳號模組 `modules.account`，[plan m3m 模組五](../../../../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)，還沒做）；單位是 daemon 的一項，不在一格裡面中途換。在 argv 包 `aos-as <帳號> --` 的做法〔使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」〕搬到暫緩區（[B-303](../../deferred/helper.md)、[P-212](../../deferred/protocol/tick/01-P-207加入設定與P-212切換帳號.md#p-212aos-as切換帳號建議預設未拍板)）。
 - 不另設服務帳號（第九批）；要 root 的固定步驟交給 helper（[B-609](../../deferred/daemon/helper-actions.md)）；管成員的事由上層 kernel 在自己的 tick 用自己的帳號做。任務類別不授予身分或權限。

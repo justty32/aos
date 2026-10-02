@@ -3,9 +3,9 @@
 ← [共用約定](README.md)｜[資源正本](../scheduling/admission.md)｜[身分與資源](../base/identity-resources.md)｜[LLM](../scheduling/llm.md)
 
 > **〔2026-10-01 殘留註記〕本篇是 2026-10-01 之前的設計，下列內容現在不是現行的**；原文照留，以這裡指的正本為準（各批裁定見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）：
-> - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
+> - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick/01-P-207加入設定與P-212切換帳號.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
 > - 標準任務表範本（[B-629](../settled/deferred/template.md)）、`aos-mq get`／`post`（[B-623、B-624](../settled/deferred/mq.md)）、`aos-clean`（[B-404](../base/storage.md) 的系統級任務部分、P-605）：第十八批暫緩，現行沒有系統級任務；kernel／agent 範本裡掛的這些項也跟著不成立。現行收發信是 daemon 訊息模組 `aos-mq send`／`take`／`peek`（[B-645](../settled/daemon/mq.md)）。
-> - `aos-tick-check-task`（原 `aos-needs`）：第十六批暫緩（[暫緩區 B-621](../settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）。
+> - `aos-tick-check-task`（原 `aos-needs`）：第十六批暫緩（[暫緩區 B-621](../settled/deferred/tick/03-B-624與B-621.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）。
 > - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
 > - 舊 daemon 的通道與憑證（`AOS_TICK_TOKEN`）、登記、runner、`state.json`：整套在暫緩區（[舊 daemon](../settled/deferred/daemon/README.md)）；現行 daemon 只定期叫 `aos-exec` 加各模組（[B-640](../settled/daemon/core.md)）。
 
@@ -15,7 +15,7 @@
 
 module 是 [node P-202～204](../settled/protocol/tick.md) 的普通任務；範本的六類可各自選裝，不另加 module 表或 ABI。argv 由任務設定，cwd／stdin／stdout／stderr／環境／鎖沿 [P-203](../settled/protocol/tick.md)，不重取同 node 鎖。〔使用者方向 2026-09-30，第十九批，疑點裁定 4〕帳號照 [B-620](../settled/tick.md)：用 node inst 的帳號；任務沒有 `user`（2026-10-01 撤回），要換帳號就包 `aos-as`。
 
-〔建議預設，未拍板〕直接開檔讀配額、已授權量測介面及必要本地證據；寫自己 node 的用量／分配狀態，由標準配備的 group 提交（[B-621](../settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）。退出 0＝本步完成（額度不足而寫好摘要等待也是 0），2＝設定錯，125＝無法開始，1＝已開始但失敗。派工的任務怎麼讀資源狀態、擋什麼，見 [S-205](../scheduling/admission.md)。
+〔建議預設，未拍板〕直接開檔讀配額、已授權量測介面及必要本地證據；寫自己 node 的用量／分配狀態，由標準配備的 group 提交（[B-621](../settled/deferred/tick/03-B-624與B-621.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）。退出 0＝本步完成（額度不足而寫好摘要等待也是 0），2＝設定錯，125＝無法開始，1＝已開始但失敗。派工的任務怎麼讀資源狀態、擋什麼，見 [S-205](../scheduling/admission.md)。
 
 ## P-501．配額檔〔建議預設，未拍板〕
 

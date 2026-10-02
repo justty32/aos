@@ -37,7 +37,7 @@
 | [conventions.md](conventions.md) | C-08、C-09、C-10、C-11 | 2026-10-01 新開；C-11 是第二批新開 |
 | [terms.md](terms.md) | T-07、T-10、T-11 | 從 [名詞與責任](../terms.md) 拆出；T-11 是 2026-10-01 新開；T-09 搬到暫緩區 |
 | [tick.md](tick.md) | B-626、B-602、B-620、B-633、B-627 | tick 核心（已實作）。從 `spec/tick.md` 搬來；B-628 與 B-602、B-620、B-633 的部分內容搬到暫緩區；2026-10-01 其餘各條拆到 tick/〔使用者 2026-10-01〕 |
-| [tick/](tick/README.md) | B-636、B-625、B-635 | 2026-10-01 從 tick.md 拆出，條號不變；同日第六批新開 [hooks](tick/hooks.md)（B-635，外掛掛點，已實作）：[template](deferred/template.md)（B-629）、[check-task](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（B-621）、[cg](deferred/cg.md)（B-634、B-631；第二十三批搬暫緩區）、[mq](deferred/mq.md)（B-623、B-624）、[git](deferred/git.md)（B-630、B-622、B-632）、[recovery](tick/recovery.md)（B-625）；狀態見[子篇入口](tick/README.md) |
+| [tick/](tick/README.md) | B-636、B-625、B-635 | 2026-10-01 從 tick.md 拆出，條號不變；同日第六批新開 [hooks](tick/hooks.md)（B-635，外掛掛點，已實作）：[template](deferred/template.md)（B-629）、[check-task](deferred/tick/03-B-624與B-621.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（B-621）、[cg](deferred/cg.md)（B-634、B-631；第二十三批搬暫緩區）、[mq](deferred/mq.md)（B-623、B-624）、[git](deferred/git.md)（B-630、B-622、B-632）、[recovery](tick/recovery.md)（B-625）；狀態見[子篇入口](tick/README.md) |
 | [daemon.md](daemon.md) | — | 舊的 daemon 入口，只指向 daemon 目錄 |
 | [daemon/](daemon/README.md) | B-640～646 | 2026-10-01 重寫：[core](daemon/core.md)（B-640）、[control](daemon/control.md)（B-641）、[reload](daemon/reload.md)（B-642）、[state](daemon/state.md)（B-643）、[cgroup](daemon/cgroup.md)（B-644）、[mq](daemon/mq.md)（B-645）、[account](daemon/account.md)（B-646） |
 | [protocol/tick.md](protocol/tick.md) | P-200～214 | tick 協議。從 `spec/protocol/node.md` 搬來；2026-10-01 由 `protocol/node.md` 改名〔使用者 2026-10-01〕 |
