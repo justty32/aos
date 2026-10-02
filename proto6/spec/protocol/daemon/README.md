@@ -1,6 +1,6 @@
 # daemon 協議
 
-← [整理區](../../README.md)｜[共用約定](../../../protocol/README.md)｜行為：[daemon](../../daemon/README.md)｜[慣例](../../conventions.md)｜[暫緩區的舊協議](../../deferred/protocol/daemon/README.md)
+← [規格](../../../README.md)｜[共用約定](../../README.md)｜行為：[daemon](../../daemon/README.md)｜[慣例](../../conventions.md)｜[暫緩區的舊協議](../../deferred/protocol/daemon/README.md)
 
 只定格式：設定檔欄位、socket 上的 JSON、環境變數、輸出行。行為看 [daemon 篇](../../daemon/README.md)與程式（`proto6/src/py/lib/aos_daemon*.py`、`aos_ctl.py`、`aos_mq.py`）；argv 與結束碼看各程式的 `--help` 或原始碼，本區只列簡表。schema 與範例是格式正本：`proto6/spec/protocol/schemas/`、`proto6/spec/protocol/examples/daemon/`。
 
@@ -23,13 +23,3 @@
 - 各 socket 一律一條連線一問一答、一行 JSON（UTF-8、LF）、1 秒內送完、不驗身分；請求陌生欄位照收不理；回應 `{"ok":true,…}` 或 `{"ok":false,"error":"<代碼>","detail":"<字串>"}`。
 - socket 檔開好後一律 chmod 666；誰能連由所在資料夾的擁有者／群組／權限決定（管理者先建好，daemon 不建、不改）。
 - 請求與回應分開驗 schema。
-
-[共用約定](../../../protocol/README.md)（P-001～007）是照舊 daemon 寫的，下列幾處本區不適用，以本區為準：
-
-| 共用約定 | 本區實際 |
-|---|---|
-| JSON-RPC 2.0、`id`、256 KiB 上限、tick–daemon 通道 | 沒有；請求是 `{"<指令>":…}` |
-| 持久檔帶 `version`；ID 格式；IPC 拒絕陌生欄位 | 設定檔不帶 `version`；`insts` 鍵是任意字串；陌生欄位照收 |
-| `SO_PEERCRED` 核對身分 | 不驗身分 |
-| JSON-RPC `error`、-32000 | `{"ok":false,"error":…}` |
-| 結束碼 2、125；`AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN` | 只有 0／1；改用 `AOS_DAEMON_CTL_SOCKET`、`AOS_DAEMON_MQ_<門名>`、`AOS_DAEMON_INST` |

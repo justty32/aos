@@ -15,7 +15,7 @@
 - [09-30 待議：daemon 職責與多 daemon](2026-09-30-daemon-split-and-multi-daemon.md)：多 daemon 範圍已答（a 多帳號、c 巢狀、e 備援，互不轉送，備援交外部重開）；已裁定：daemon 拆成開格核心＋可掛部件（同程式設定開關），spec 改寫中。
 - [10-01：最核心的 aos-daemon](2026-10-01-daemon-core-sketch.md)（**已裁定 10-01**）：daemon 砍到只剩「讀 inst 路徑清單、照週期叫 `aos-exec <inst>`、印一行結束碼、非 0 停不停照設定」；管 node 變成掛上去的用法（inst 的 argv 寫 `aos-tick`）。列出 A 組留／砍／默認不會發生、跟 tick 對不上的地方與裁定結果；細部 plan 見 [m3](../plan/m3-daemon-core.md)。
 - [kernel 樹與註冊式 tick](2026-09-29-kernel-tree.md)：09-29 架構方向改回 kernel 樹＋註冊式 tick；spec 已依此重寫，原先「單一控制寫入者、總帳本」的寫法已拿掉。
-- LLM 排程：09-29 晚使用者裁定 LiteLLM 不進標準、只當可選 endpoint；aos 自己的排程分三檔（直連／交給 endpoint／自己排，預設自己排；直連原叫「不管」），見裁定第十三、十五批與 [spec S-301](../spec/scheduling/llm.md)。
+- LLM 排程：09-29 晚使用者裁定 LiteLLM 不進標準、只當可選 endpoint；aos 自己的排程分三檔（直連／交給 endpoint／自己排，預設自己排；直連原叫「不管」），見裁定第十三、十五批與 [spec S-301](archive/spec-2026-10-02/scheduling/llm.md)。
 - systemd：第十四批裁定**初版不用 systemd**；cgroup v2 是完整資源保證的條件（第十九批起屬標準配備，不屬 tick 核心；沒有 cgroup 時標準配備內建備援、仍算全掛，見[第十九批](verdicts/10-tick-minimal-core.md)第 8 條），quota 可選。第十五批：cgroup 一律要事先準備好，另有開關讓 daemon 自建。
 
 軟性設計原則：[兩次 tick 之間的環境穩定性](between-ticks-configuration.md)。由原先硬保證改為設計指導，不屬於 spec，也不設強制驗收。

@@ -31,12 +31,12 @@
 
 ## 二、在 WSL 上不成立或要改的假設
 
-1. **外牆與 UID 隔離破洞**（linux-and-storage（已封存檔 linux-and-storage.md，索引見 [archive/README.md](archive/README.md)）〈要引入的能力〉、[B-302](../spec/base/identity-resources.md)）：`/mnt/c` 無 metadata，全部顯示 UID 1000、777；實測讀得到 ext4.vhdx 檔頭，推論其他 UID 也讀得到＝繞過 Linux 權限讀別的 agent 資料（未用第二個 UID 驗證，需 root）。interop socket 為 `srwxrwxrwx`，任何 UID 都能以 Windows 使用者身分跑 `cmd.exe`／`powershell.exe`。→ WSL 部署必須在 wsl.conf 關 interop、關或收緊 automount（`umask=077,metadata`），B-302 啟動 probe 加這三項檢查。Landlock ABI 3 擋不了 socket。
+1. **外牆與 UID 隔離破洞**（linux-and-storage（已封存檔 linux-and-storage.md，索引見 [archive/README.md](archive/README.md)）〈要引入的能力〉、[B-302](archive/spec-2026-10-02/base/identity-resources.md)）：`/mnt/c` 無 metadata，全部顯示 UID 1000、777；實測讀得到 ext4.vhdx 檔頭，推論其他 UID 也讀得到＝繞過 Linux 權限讀別的 agent 資料（未用第二個 UID 驗證，需 root）。interop socket 為 `srwxrwxrwx`，任何 UID 都能以 Windows 使用者身分跑 `cmd.exe`／`powershell.exe`。→ WSL 部署必須在 wsl.conf 關 interop、關或收緊 automount（`umask=077,metadata`），B-302 啟動 probe 加這三項檢查。Landlock ABI 3 擋不了 socket。
 2. **/tmp 不是 tmpfs**（linux-and-storage 本機觀測段；B-304）：WSL 的 /tmp 和控制區同一顆根磁碟，吃的是磁碟。
 3. **磁碟水位**（linux-and-storage 全局容量政策）：Linux 以為還有 940 GB，Windows C: 實際剩 734 GiB，vhdx 會長大。Windows 先滿時 vhdx 寫不進去，`errors=remount-ro` 可能讓整個 distro 變唯讀、控制端跟著停。水位要看 Windows 那顆磁碟。
 4. **daemon 由誰啟動**：WSL 上只能用 systemd unit；Windows 排程只負責叫醒 WSL，不要用 `wsl.exe -e aos` 直接起。
-5. **重啟語意**（[B-603、B-604](../spec/settled/daemon.md)）：WSL 整台重開是常態（三週 25 次開機，最短活 32 秒）；官方預設 distro 閒置 15 秒、VM 閒置 60 秒關機，2.6 起有回報 systemd 服務在跑也照關（#13416）；`wsl -t` 約 10 秒結束（#41596），B-604 的 30000 ms 等不到。「boot ID 相同＝舊程序還活著」不能當規則。
-6. **時間**（[contracts](../spec/contracts.md)、[S-204](../spec/scheduling/admission.md)、B-602 lease）：monotonic 比 Windows 牆鐘慢約 4%（45.27 對 47.14 秒）；timesyncd 每 32 秒把牆鐘推 +1.4 秒（本次開機 96 次）；Windows 睡眠時 VM 暫停，醒來牆鐘大跳而 monotonic 不算睡掉的時間。「逾時用經過時間」方向對，但「最老先派」要加序號當次鍵；睡醒大批同時到期要靠准入名額攤開。
+5. **重啟語意**（[B-603、B-604](../spec/daemon/README.md)）：WSL 整台重開是常態（三週 25 次開機，最短活 32 秒）；官方預設 distro 閒置 15 秒、VM 閒置 60 秒關機，2.6 起有回報 systemd 服務在跑也照關（#13416）；`wsl -t` 約 10 秒結束（#41596），B-604 的 30000 ms 等不到。「boot ID 相同＝舊程序還活著」不能當規則。
+6. **時間**（[contracts](archive/spec-2026-10-02/contracts.md)、[S-204](archive/spec-2026-10-02/scheduling/admission.md)、B-602 lease）：monotonic 比 Windows 牆鐘慢約 4%（45.27 對 47.14 秒）；timesyncd 每 32 秒把牆鐘推 +1.4 秒（本次開機 96 次）；Windows 睡眠時 VM 暫停，醒來牆鐘大跳而 monotonic 不算睡掉的時間。「逾時用經過時間」方向對，但「最老先派」要加序號當次鍵；睡醒大批同時到期要靠准入名額攤開。
 7. **儲存 backend**（linux-and-storage〈Project quota 的部署門檻〉、B-302 `quota_backend`）：WSL 根 ext4 不能當 backend，要另做專用卷。
 8. **外部 workspace**（linux-and-storage 外部 workspace 段；待裁定 10）：放 /mnt/c 就沒有 UID 隔離、沒有 quota、沒有 inotify（#4739）；9p 上 stat 每檔約 0.35 ms（ext4 近 0），Defender 即時掃描開著。
 9. **Landlock 當外牆候選**（隔離實測（已封存檔 2026-09-28-linux-isolation-probes.md，索引見 [archive/README.md](archive/README.md)））：WSL 只有 ABI 3，ABI 4 以上的網路、ioctl、scope 規則用不了；profile 要記最低 ABI，不夠就拒絕啟動。

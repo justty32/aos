@@ -23,7 +23,7 @@ helper PID 另照 P-101 印在 stdout。helper 的設定副本、父死監看與
 
 - Unix stream；UTF-8 JSON，每行一筆、LF 結尾；含 LF 最多 262144 bytes。
 - 不用 batch，也不用 notification。
-- 請求與回應沿 [common](../../../../../protocol/schemas/common.schema.json) 的 `RpcRequest`／`RpcResponse`；`params` 必填 object。
+- 請求與回應沿 [common](../../../../protocol/schemas/common.schema.json) 的 `RpcRequest`／`RpcResponse`；`params` 必填 object。
 - 每條連線逐筆處理，回應沿用請求 ID。
 - **附 fd**：只有 `node.provision` 的 `spawn_as` 在請求那一行附 SCM_RIGHTS fd（[P-107](../provision-and-runner.md)，第十九批）；其他請求附了 fd，就關掉 fd 並回 `invalid_params`。
 

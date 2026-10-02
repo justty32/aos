@@ -6,7 +6,7 @@
 
 〔使用者方向 2026-09-30 晚〕同一台機器可有多個 daemon 實例，各管自己的 node 樹，也可巢狀。備援由外部工具重開；取不到既有排他鎖仍回 125，不加等鎖待命模式。
 
-依據：[09-30 晚裁定](../../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](../components.md)。
+依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](../components.md)。
 
 **daemon 啟動時，在任何讀回、清殺、寫狀態之前，先對實際使用的 `state_dir` 取一把排他鎖；取不到就拒絕啟動**（回 125，stderr 說明）。
 

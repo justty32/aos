@@ -4,7 +4,7 @@
 
 ## 收屍／cgroup（m3m 模組二）
 
-照 [plan m3m](../../../plan/m3m-daemon-modules.md) 模組二寫的（2026-10-01 第十二批，C1～C4 照建議），`lib/aos_daemon_cgroup.py`，spec [B-644](../../../spec/settled/daemon/cgroup.md)、格式 [P-124](../../../spec/settled/protocol/daemon/cgroup.md)。設定檔寫 `modules.cgroup` 才掛，沒寫時 daemon 跟上面一模一樣。
+照 [plan m3m](../../../plan/m3m-daemon-modules.md) 模組二寫的（2026-10-01 第十二批，C1～C4 照建議），`lib/aos_daemon_cgroup.py`，spec [B-644](../../../spec/daemon/cgroup.md)、格式 [P-124](../../../spec/protocol/daemon/cgroup.md)。設定檔寫 `modules.cgroup` 才掛，沒寫時 daemon 跟上面一模一樣。
 
 ```json
 {"interval_ms": 60000,

@@ -6,21 +6,21 @@
 
 ## A．spec 審稿剩下的（已落進 spec）
 
-1. **取消工作**：新增檔案請求 `work.cancel`，投到持有那件工作的 node；排隊中的直接拿掉，在跑的由 node 請 daemon 殺掉；取消請求檔的擁有 UID 要等於原請求檔的擁有 UID 或該 node 的擁有者，否則回沒權限並丟掉。改：[work P-411](../../spec/protocol/work.md)（正本）、[messages P-306](../../spec/protocol/messages.md) method 表、[execution B-203](../../spec/base/execution.md)、[kernel P-806](../../spec/protocol/kernel-tasks.md)、[protocol README](../../spec/protocol/README.md)；schema：msg-methods、新增 msg-cancel-payload、kernel-work-state 加 `submitter_uid` 與 `canceling`；範例：messages 下 work-cancel 正反例六份。
-2. **每個任務一層 cgroup**：tick 在 node 框的 `tick` 葉，每個任務開與 `tick` 並列的 `task-<序號>`，結束有剩就 `cgroup.kill`、等空再 rmdir；成本每任務多約 0.1 毫秒（[實測](../probes/per-task-cgroup-cost.md)）。改：[node P-203](../../spec/settled/protocol/tick.md)、[execution B-202](../../spec/base/execution.md)、[P-107](../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)、[B-605](../../spec/settled/daemon.md) 命名。原型未改，記 G-15。
-3. **agent 自己開的 once 做完，aos 不主動叫醒**，由 agent 自己看結果。改：[agent-tasks P-707](../../spec/protocol/agent-tasks.md)。
-4. **給 kernel 的一般回話（agent.say）交給 kernel 現有的收件任務**：寫 history、回確認。改：[kernel P-803、P-814](../../spec/protocol/kernel-tasks.md)、[messages P-306](../../spec/protocol/messages.md)。
-5. **node 接受哪些請求由任務表決定**：各任務用 `methods` 宣告，沒人宣告的由 tick 回 -32601。改：[node P-202](../../spec/settled/protocol/tick.md)、[messages P-306](../../spec/protocol/messages.md)、[kernel P-814](../../spec/protocol/kernel-tasks.md) 任務表；schema：node-tasks 加 `methods`；範例：node 兩份新正反例、kernel／agent 範本與 agent 任務表補 methods。
+1. **取消工作**：新增檔案請求 `work.cancel`，投到持有那件工作的 node；排隊中的直接拿掉，在跑的由 node 請 daemon 殺掉；取消請求檔的擁有 UID 要等於原請求檔的擁有 UID 或該 node 的擁有者，否則回沒權限並丟掉。改：[work P-411](../archive/spec-2026-10-02/protocol/work.md)（正本）、[messages P-306](../archive/spec-2026-10-02/protocol/messages.md) method 表、[execution B-203](../archive/spec-2026-10-02/base/execution.md)、[kernel P-806](../archive/spec-2026-10-02/protocol/kernel-tasks.md)、[protocol README](../../spec/protocol/README.md)；schema：msg-methods、新增 msg-cancel-payload、kernel-work-state 加 `submitter_uid` 與 `canceling`；範例：messages 下 work-cancel 正反例六份。
+2. **每個任務一層 cgroup**：tick 在 node 框的 `tick` 葉，每個任務開與 `tick` 並列的 `task-<序號>`，結束有剩就 `cgroup.kill`、等空再 rmdir；成本每任務多約 0.1 毫秒（[實測](../probes/per-task-cgroup-cost.md)）。改：[node P-203](../../spec/protocol/tick.md)、[execution B-202](../archive/spec-2026-10-02/base/execution.md)、[P-107](../../spec/deferred/protocol/daemon/provision-and-runner.md)、[B-605](../../spec/daemon/README.md) 命名。原型未改，記 G-15。
+3. **agent 自己開的 once 做完，aos 不主動叫醒**，由 agent 自己看結果。改：[agent-tasks P-707](../archive/spec-2026-10-02/protocol/agent-tasks.md)。
+4. **給 kernel 的一般回話（agent.say）交給 kernel 現有的收件任務**：寫 history、回確認。改：[kernel P-803、P-814](../archive/spec-2026-10-02/protocol/kernel-tasks.md)、[messages P-306](../archive/spec-2026-10-02/protocol/messages.md)。
+5. **node 接受哪些請求由任務表決定**：各任務用 `methods` 宣告，沒人宣告的由 tick 回 -32601。改：[node P-202](../../spec/protocol/tick.md)、[messages P-306](../archive/spec-2026-10-02/protocol/messages.md)、[kernel P-814](../archive/spec-2026-10-02/protocol/kernel-tasks.md) 任務表；schema：node-tasks 加 `methods`；範例：node 兩份新正反例、kernel／agent 範本與 agent 任務表補 methods。
 
 ## B．原型缺口（spec-gaps 逐條標狀態）
 
-- 已定：G-1（缺 cgroup_root 回 2，[P-101](../../spec/settled/deferred/protocol/daemon/startup-and-ipc.md)、[B-605](../../spec/settled/daemon.md)）、G-8（新增 SourceChanged，[inst](../../spec/base/inst.md)、[P-110／P-111](../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)、daemon-rpc schema，原型改碼改測）、G-12（假 cgroup 只求可重現，[原型 README](../../proto/README.md)）、G-14（分頁中重開回 1，[cli/commands](../../spec/cli/commands.md) 第 7 列）、G-4 位置（`.aos/runner-stderr.log`，[P-109](../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)、[node P-200](../../spec/settled/protocol/tick.md)，輪替延後）。
+- 已定：G-1（缺 cgroup_root 回 2，[P-101](../../spec/deferred/protocol/daemon/startup-and-ipc.md)、[B-605](../../spec/daemon/README.md)）、G-8（新增 SourceChanged，[inst](../../spec/inst.md)、[P-110／P-111](../../spec/deferred/protocol/daemon/provision-and-runner.md)、daemon-rpc schema，原型改碼改測）、G-12（假 cgroup 只求可重現，[原型 README](../../proto/README.md)）、G-14（分頁中重開回 1，[cli/commands](../archive/spec-2026-10-02/cli/commands.md) 第 7 列）、G-4 位置（`.aos/runner-stderr.log`，[P-109](../../spec/deferred/protocol/daemon/provision-and-runner.md)、[node P-200](../../spec/protocol/tick.md)，輪替延後）。
 - 下一輪：G-5、G-9、G-10。延後：G-6、G-7、G-13。見[規格缺口](../../proto/notes/spec-gaps.md)。
 
 ## C．第十六批發現的
 
-1. **設定檢查跑完、寫好問題紀錄就回 0**，只有檢查自己跑不起來才非 0。改：[kernel P-805](../../spec/protocol/kernel-tasks.md)、[cli/commands](../../spec/cli/commands.md) 第 31 列。
-2. **有寫 cgroup_root 但那層有程序，比照省略**：搬進 `daemon` 葉，搬不動報錯。改：[B-605](../../spec/settled/daemon.md)、[P-101](../../spec/settled/deferred/protocol/daemon/startup-and-ipc.md)；原型一律搬並加測。
+1. **設定檢查跑完、寫好問題紀錄就回 0**，只有檢查自己跑不起來才非 0。改：[kernel P-805](../archive/spec-2026-10-02/protocol/kernel-tasks.md)、[cli/commands](../archive/spec-2026-10-02/cli/commands.md) 第 31 列。
+2. **有寫 cgroup_root 但那層有程序，比照省略**：搬進 `daemon` 葉，搬不動報錯。改：[B-605](../../spec/daemon/README.md)、[P-101](../../spec/deferred/protocol/daemon/startup-and-ipc.md)；原型一律搬並加測。
 3. **daemon 範例的工作目錄示意改成 P-402 前綴格式**：`jobs/job-1`、`try-1` 改成 `<前綴>-attempt-1`。改：examples/daemon 六份。
 
 ## 落 spec 時的取名與補充

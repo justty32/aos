@@ -1,6 +1,6 @@
 # 暫緩區：舊 daemon 協議
 
-← [暫緩區](../../README.md)｜[舊 daemon 行為](../../daemon/README.md)｜[現行 daemon 協議](../../../protocol/daemon/README.md)｜[共用約定](../../../../protocol/README.md)
+← [暫緩區](../../README.md)｜[舊 daemon 行為](../../daemon/README.md)｜[現行 daemon 協議](../../../protocol/daemon/README.md)｜[共用約定](../../../protocol/README.md)
 
 > **這個資料夾整個在暫緩區**（2026-10-01）。這裡是 2026-10-01 之前設計的完整 daemon 協議：舊設定檔、IPC 封包與 method、runner、helper 私有通道、停機與 `state.json`、tick–daemon 通道。daemon 改成只叫 `aos-exec`、不認得 node，最核心 daemon 第一版不做這些（使用者 2026-10-01）。現行的格式見 [P-120](../../../protocol/daemon/core.md)（`aos-daemon`）與 [P-121](../../../protocol/daemon/control.md)（控制模組）。條號保留、不重用；每條標題下有一行狀態。
 
@@ -38,10 +38,10 @@
 | P-118 | 掛行程與砍掉 | [channel.md](channel.md) | 暫緩 |
 | P-119 | 送訊息、取訊息與通道錯誤碼 | [channel.md](channel.md) | 暫緩 |
 
-舊協議的 schema 與範例留在原處、不刪不改：`daemon-config`、`daemon-rpc`、`daemon-registration`、`daemon-state`、`daemon-runner-report`、`daemon-provision`、`daemon-helper`、`daemon-launch-error`（[schemas](../../../../protocol/schemas/)），範例在 [examples/daemon](../../../../protocol/examples/daemon/) 裡 `core-config.*`、`ctl_*` 以外的檔。
+舊協議的 schema 與範例留在原處、不刪不改：`daemon-config`、`daemon-rpc`、`daemon-registration`、`daemon-state`、`daemon-runner-report`、`daemon-provision`、`daemon-helper`、`daemon-launch-error`（[schemas](../../../../notes/archive/spec-2026-10-02/protocol/schemas/)），範例在 [examples/daemon](../../../protocol/examples/daemon/) 裡 `core-config.*`、`ctl_*` 以外的檔。
 
 ## P-113．待決與跨篇
 
 > **暫緩**（2026-10-01）：隨整份舊協議暫緩；最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。原本在 `protocol/daemon/README.md`，2026-10-01 搬來。
 
-見 [README P-008](../../../../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)。
+見 [README P-008](../../../../notes/archive/spec-2026-10-02/protocol/readme/03-P-007-P-008-schema與待決.md#p-008)。

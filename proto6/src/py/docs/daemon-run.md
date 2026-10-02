@@ -4,7 +4,7 @@
 
 ## daemon 跑 daemon：輸出上限、鎖檔、kill／restart（第十九批）
 
-〔使用者 2026-10-01 第十九批〕上層 daemon 把下層 daemon 當一項跑（inst 的 argv 是 `aos-daemon --config …`）時要的三件事。spec：[B-640](../../../spec/settled/daemon/core.md)「輸出」「鎖檔」、[B-641](../../../spec/settled/daemon/control.md)「kill 與 restart」，格式 [P-120](../../../spec/settled/protocol/daemon/core.md)、[P-121](../../../spec/settled/protocol/daemon/control.md)、[P-126](../../../spec/settled/protocol/daemon/account.md)（root 端送訊號）。
+〔使用者 2026-10-01 第十九批〕上層 daemon 把下層 daemon 當一項跑（inst 的 argv 是 `aos-daemon --config …`）時要的三件事。spec：[B-640](../../../spec/daemon/core.md)「輸出」「鎖檔」、[B-641](../../../spec/daemon/control.md)「kill 與 restart」，格式 [P-120](../../../spec/protocol/daemon/core.md)、[P-121](../../../spec/protocol/daemon/control.md)、[P-126](../../../spec/protocol/daemon/account.md)（root 端送訊號）。
 
 ```json
 {"interval_ms": 5000, "exec_out_path": "<inst>/daemon.log", "exec_output_max_bytes": 65536,

@@ -1,12 +1,12 @@
 # daemon 核心：重啟、收尾與停機
 
-← [舊 daemon 目錄（暫緩區）](README.md)｜[整理區](../../README.md)
+← [舊 daemon 目錄（暫緩區）](README.md)｜[規格](../../README.md)
 
 > **這篇整篇在暫緩區**（2026-10-01）：舊 daemon 的重啟清空、收尾與停機、排他鎖。現行 daemon 收到 Ctrl-C／SIGTERM 直接退出（[B-640](../../daemon/core.md)）。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 ## 分檔目錄
 
-> 2026-10-02 整理：原檔約 15 KB 超過 8 KB 門檻，按標題逐字拆進 `lifecycle/`；本檔只留前言與目錄（原路徑保留當入口）。
+> 本檔只留前言與目錄，內容按標題拆在 `lifecycle/`。
 
 <!-- wf-nav -->
 | # | 檔 | 段落 |

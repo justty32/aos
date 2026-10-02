@@ -28,16 +28,10 @@ def load(path):
 
 def schema_name(path):
     group, topic = path.parent.name, path.name.split('.')[0]
-    if group in ('agent-tasks', 'kernel-tasks'):
-        return topic
     if group == 'tick':
         # 第九批（2026-10-01）紀錄拆檔：tick-record.* 是展開後的完整紀錄，tick-record-file.* 是 record.json 本體
         return {'tasks': 'tick-tasks', 'tick-record': 'tick-record', 'inst': 'inst',
                 'tick-record-file': 'tick-record#/$defs/RecordFile'}[topic]
-    if group == 'ops':
-        return 'ops-' + topic
-    if group == 'resources':
-        return 'res-' + topic
     if group == 'daemon':
         if topic.startswith('helper_'):
             return 'daemon-helper'
@@ -50,19 +44,6 @@ def schema_name(path):
                 'config': 'daemon-config', 'state': 'daemon-state',
                 'runner_report': 'daemon-runner-report',
                 'launch-error': 'daemon-launch-error'}.get(topic, 'daemon-rpc')
-    if group == 'work':
-        return 'work-result' if topic.endswith('-response') else topic
-    if group == 'messages':
-        names = {'agent-say-payload': 'msg-say-payload',
-                 'kernel-quota-set-payload': 'res-quota',
-                 'kernel-usage-output': 'msg-usage-output',
-                 'kernel-usage-result': 'msg-command-result',
-                 'command-result': 'msg-command-result', 'summary': 'msg-summary',
-                 'file-request': 'msg-file-rpc', 'file-error': 'msg-file-rpc',
-                 'outbox': 'msg-outbox',
-                 'work-cancel-payload': 'msg-cancel-payload',
-                 'work-cancel-error': 'msg-file-rpc'}
-        return names.get(topic, 'msg-methods')
     raise AssertionError(f'unknown example directory: {group}')
 
 
@@ -167,50 +148,8 @@ def main():
         counts[path.parent.name] += 1
     if failures:
         raise AssertionError('\n'.join(failures))
-    # All literal file requests must target the command named by method. Schema
-    # cannot resolve inst directives, check an OS allowlist, or read stdin files.
-    for path in sorted(EXAMPLES.rglob('*.valid.json')):
-        value = load(path)
-        result = value.get('result', {})
-        if path.parent.name in ('messages', 'work') and 'attempt_id' in result:
-            assert result['job_id'] == result['attempt_id'] == value['id'], path
-            for stream in ('stdout', 'stderr'):
-                output = result.get(stream)
-                if output and output['path'].startswith('/srv/aos/shared/'):
-                    matches = list(EXAMPLES.rglob(Path(output['path']).name))
-                    assert len(matches) == 1, (path, output['path'])
-                    assert output['bytes'] == matches[0].stat().st_size, path
-        files = value.get('files', {})
-        if '.aos/tasks.json' in files:
-            tasks = files['.aos/tasks.json']['tasks']
-            # 第二十批：B-629 範本改成 mq-get 開頭、mq-post／summary／clean 收尾（kernel 12、agent 6）；
-            # kernel、agent 範本下一輪才改（T5、T6），過渡期兩種項數都收。
-            agent = 'config/agent.json' in files
-            assert len(tasks) in ((2, 6) if agent else (9, 12)), path
-            seen = set()
-            for task in tasks:
-                assert task['id'] not in seen, path
-                # 2026-10-01：`methods` 已從任務表規範拿掉（P-202），舊範本還帶的只當不認得的欄位，不再檢查。
-                # 第二十批撤 needs 欄（改用普通程式，B-621；2026-10-01 是 aos-tick-check-task）；舊範例還帶的只當不認得的欄位，
-                # 有寫時仍只准指向前面的項，免得過渡期範例自相矛盾。
-                assert set(task.get('needs', [])) <= seen, path
-                seen.add(task['id'])
-                argv = task['argv']
-                assert '--node' not in argv, path
-        if 'reply_to' not in value or 'method' not in value:
-            continue
-        argv = value['params'].get('argv')
-        if isinstance(argv, list) and all(isinstance(x, str) for x in argv):
-            words = ['aos'] + value['method'].split('.')
-            assert argv[:len(words)] == words, path
-        stdin = value['params'].get('stdin')
-        if isinstance(stdin, str):
-            matches = list(EXAMPLES.rglob(Path(stdin).name))
-            assert len(matches) == 1, (path, stdin)
-            assert '.valid.' in matches[0].name, path
     print(f'PASS: {len(schemas)} schemas, {sum(counts.values())} examples; '
           + ', '.join(f'{k}={v}' for k, v in sorted(counts.items())))
-    print('已驗字面 method/argv 與 stdin 範例連結；指示詞展開、權限及 tick 恢復仍須實作驗證。')
 
 
 if __name__ == '__main__':

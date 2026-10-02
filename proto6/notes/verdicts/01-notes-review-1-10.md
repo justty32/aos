@@ -20,27 +20,27 @@
 | 6 quota 逃脫 | **額度只記帳** | project quota 不是硬上限；後續帳本會分散式或改用別的記帳方式 |
 | 7 重啟語意 | **全殺掉** | 控制端重啟／WSL 關機時在途工作全部變 unknown，屬已知行為 |
 | 8 儲存 backend | **隨意；磁碟額度是可選項** | 檔案系統支援就啟用，不支援就不用；不綁 XFS |
-| 9 共享 LLM 保證 | **② 中央代發（延續 proto5 現況）**；當場先選 ①，經 Claude 說明 ① 會改掉現況後改回 ② | agent／工具只把請求投進收件處，key 只在控制側代發服務手上（專用服務 UID），agent 與工具讀不到 key（已被取代：第九批改用池 kernel node 帳號，第八批起直連 key 須 agent 讀得到，見 [llm.md](../../spec/scheduling/llm.md)） |
+| 9 共享 LLM 保證 | **② 中央代發（延續 proto5 現況）**；當場先選 ①，經 Claude 說明 ① 會改掉現況後改回 ② | agent／工具只把請求投進收件處，key 只在控制側代發服務手上（專用服務 UID），agent 與工具讀不到 key（已被取代：第九批改用池 kernel node 帳號，第八批起直連 key 須 agent 讀得到，見 [llm.md](../archive/spec-2026-10-02/scheduling/llm.md)） |
 | 10 共寫外部 workspace | **① 工具自行協調** | 不保證跨 agent 寫入一致 |
 | 附 429 重試 | **寬容一些，由 Claude 決定** | 見 spec S-303 |
 | 附 WSL | **原生 Linux 與 WSL 都要能跑；Windows 造成的權限、資源管理問題不管** | interop、/mnt/c 權限、Windows 磁碟水位等是使用 WSL 必須接受的；時鐘與 VM 關機仍照一般恢復規則處理 |
-| 附 排隊先後 | **用序號排** | job 先後以控制帳本配發的持久遞增序號判定，牆鐘只供顯示（S-204、C-03 Job 加 `seq`／`ready_seq`）（已被取代：控制帳本已拿掉，現見 [admission.md](../../spec/scheduling/admission.md)；contracts 無 `ready_seq`） |
+| 附 排隊先後 | **用序號排** | job 先後以控制帳本配發的持久遞增序號判定，牆鐘只供顯示（S-204、C-03 Job 加 `seq`／`ready_seq`）（已被取代：控制帳本已拿掉，現見 [admission.md](../archive/spec-2026-10-02/scheduling/admission.md)；contracts 無 `ready_seq`） |
 
 ## 第二批（同日，spec 精簡後）
 
 | 題 | 裁定 | 落實 |
 |---|---|---|
-| 改了設定何時生效 | **下一次 tick 開始時生效**，不等整輪結束 | [A-102](../../spec/agent/configuration.md)：tick 中途不換、已派出工作沿用舊版、run 留換版紀錄 |
-| 什麼情況要等人處理 | **先保持現狀**；另外**指定一個資料夾，把所有需要使用者處理的事寫成檔案** | [S-405](../../spec/scheduling/operations.md) 待處理資料夾（通知副本，處置仍走 RPC） |
-| 結果保留 30 天 | **跟著 tick 一起清**：偵測無關緊要且超過 30 天的東西，刪掉或封存 | [B-404](../../spec/base/storage.md)：預設封存、每次有數量上限、被引用或未結的不動 |
+| 改了設定何時生效 | **下一次 tick 開始時生效**，不等整輪結束 | [A-102](../archive/spec-2026-10-02/agent/configuration.md)：tick 中途不換、已派出工作沿用舊版、run 留換版紀錄 |
+| 什麼情況要等人處理 | **先保持現狀**；另外**指定一個資料夾，把所有需要使用者處理的事寫成檔案** | [S-405](../archive/spec-2026-10-02/scheduling/operations.md) 待處理資料夾（通知副本，處置仍走 RPC） |
+| 結果保留 30 天 | **跟著 tick 一起清**：偵測無關緊要且超過 30 天的東西，刪掉或封存 | [B-404](../archive/spec-2026-10-02/base/storage.md)：預設封存、每次有數量上限、被引用或未結的不動 |
 | 外牆方案 | 先不管 | — |
 | 人怎麼操作 | 之後再弄 | — |
 | 下一步 | 更進一步的 spec：規定指令形狀與 JSON 協議格式 | 進行中 |
 
 補充（同日）：
-- 清理做成專門小程式 `aos-clean`，可掛在 tick 上跑，也可人直接跑；由此形成「往 tick 註冊程式、在每次 tick 前後執行」的掛勾機制 → [A-506（已刪）](../../spec/agent/README.md)、[B-404](../../spec/base/storage.md)；現見 [tick.md](../../spec/settled/tick.md)。
-- 待處理資料夾配一支小工具 `aos-attend` 自動處理，危險動作前問 y/n → [S-405](../../spec/scheduling/operations.md)。
+- 清理做成專門小程式 `aos-clean`，可掛在 tick 上跑，也可人直接跑；由此形成「往 tick 註冊程式、在每次 tick 前後執行」的掛勾機制 → [A-506（已刪）](../archive/spec-2026-10-02/agent/README.md)、[B-404](../archive/spec-2026-10-02/base/storage.md)；現見 [tick.md](../../spec/tick.md)。
+- 待處理資料夾配一支小工具 `aos-attend` 自動處理，危險動作前問 y/n → [S-405](../archive/spec-2026-10-02/scheduling/operations.md)。
 - 手打的操作指令也在這次協議篇範圍內，排在後面做。
-- 改 agent 設定＝管理者手打指令或直接改檔案；agent 要改就開放它對設定檔的寫權限，不另做更新機制，後續頂多包成工具 → 協議篇第 011 條（此條號不存在；現見 [A-102](../../spec/agent/configuration.md)、[P-008](../../spec/protocol/README.md)）暫定 2。
-- **通則：能下指令、能管檔案的事，開放權限後 agent 就能做，不另做機制，頂多包工具** → [spec 入口原則](../../spec/readme/01-來源原則平台與交付.md#原則能下指令能管檔案就能交給-agent)。
-- **工具就是工具**：不區分工具與 agent、不管工具做什麼，風險由使用工具的人承擔；只為分開兩者而存在的規則都可精簡掉 → [spec 入口原則](../../spec/readme/01-來源原則平台與交付.md#原則能下指令能管檔案就能交給-agent)。
+- 改 agent 設定＝管理者手打指令或直接改檔案；agent 要改就開放它對設定檔的寫權限，不另做更新機制，後續頂多包成工具 → 協議篇第 011 條（此條號不存在；現見 [A-102](../archive/spec-2026-10-02/agent/configuration.md)、[P-008](../../spec/protocol/README.md)）暫定 2。
+- **通則：能下指令、能管檔案的事，開放權限後 agent 就能做，不另做機制，頂多包工具** → [spec 入口原則](../archive/spec-2026-10-02/readme/01-來源原則平台與交付.md#原則能下指令能管檔案就能交給-agent)。
+- **工具就是工具**：不區分工具與 agent、不管工具做什麼，風險由使用工具的人承擔；只為分開兩者而存在的規則都可精簡掉 → [spec 入口原則](../archive/spec-2026-10-02/readme/01-來源原則平台與交付.md#原則能下指令能管檔案就能交給-agent)。

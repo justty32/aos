@@ -1,4 +1,4 @@
-"""aos_inst.load()：讀、驗、解——照 spec/inst-posix/。全部在這個進程裡跑，不開子進程。
+"""aos_inst.load()：讀、驗、解——照 spec/inst.md。全部在這個進程裡跑，不開子進程。
 
 本檔：$fmt、$env、指示詞優先序（TestFmt、TestEnvDirective、TestDirectivePrecedence）。
 

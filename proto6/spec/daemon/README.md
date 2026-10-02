@@ -1,8 +1,8 @@
 # daemon：定期叫 aos-exec
 
-← [整理區](../README.md)｜[慣例](../conventions.md)｜[名詞](../terms.md)｜[通用 tick](../tick.md)｜[daemon 協議](../protocol/daemon/README.md)｜[暫緩區的舊設計](../deferred/daemon/README.md)
+← [規格](../README.md)｜[慣例](../conventions.md)｜[名詞](../terms.md)｜[通用 tick](../tick.md)｜[daemon 協議](../protocol/daemon/README.md)｜[暫緩區的舊設計](../deferred/daemon/README.md)
 
-程式是正本：[proto6/src/py](../../../src/py/README.md) 的 `lib/aos_daemon*.py`、`lib/aos_ctl.py`、`lib/aos_mq.py`，測試在 `src/py/tests/`。本資料夾每篇只留程式看不出的原則。
+程式是正本：[proto6/src/py](../../src/py/README.md) 的 `lib/aos_daemon*.py`、`lib/aos_ctl.py`、`lib/aos_mq.py`，測試在 `src/py/tests/`。本資料夾每篇只留程式看不出的原則。
 
 ## daemon 是什麼
 

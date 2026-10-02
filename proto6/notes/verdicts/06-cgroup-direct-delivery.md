@@ -38,7 +38,7 @@
 - 「是一個 node」照找 inst 的規則：目標是資料夾，且有 `.aos/inst.json` 或 `inst.json`。不是就在 stderr 印 `target_not_node`，這封待送檔移除、不重投。
 - 鬧鐘寫在待送封套的 `alarm_ms`（投出後幾毫秒）；投出後發件 node 在自己的 `.aos/alarms/`（ignore）記一筆。「被處理」以對方收件區的原件已被取走為準。到期後發件 node 的下一格去看，原件還在就在 stderr 印 `request_not_handled`；不寫待辦、不重投。aos 不為鬧鐘另外叫醒 node。
 - 用詞「報錯」一律照第十三批的態度：在 stderr 印一行，不寫待辦。
-- 落點：cgroup 在 [B-605](../../spec/settled/daemon.md) 與 [P-101](../../spec/settled/deferred/protocol/daemon/startup-and-ipc.md)；直連、只轉發、token 預算在 [S-301～S-305](../../spec/scheduling/llm.md)、[P-405～P-406](../../spec/protocol/llm-work.md)；投遞與鬧鐘在 [P-206](../../spec/settled/protocol/tick.md)。
+- 落點：cgroup 在 [B-605](../../spec/daemon/README.md) 與 [P-101](../../spec/deferred/protocol/daemon/startup-and-ipc.md)；直連、只轉發、token 預算在 [S-301～S-305](../archive/spec-2026-10-02/scheduling/llm.md)、[P-405～P-406](../archive/spec-2026-10-02/protocol/llm-work.md)；投遞與鬧鐘在 [P-206](../../spec/protocol/tick.md)。
 
 ### 追加（同日晚）
 
@@ -51,7 +51,7 @@
 
 第3點：**鬧鐘**〔使用者方向 2026-09-29 晚〕：確認。晚響可以；「被處理」＝原件被對方取走。
 
-第4點：**沒有寫入權限**〔使用者方向 2026-09-29 晚，改〕：投件時沒有寫入權限，跟「目標不是 node」一樣處理：報一次錯（stderr 一行 `target_not_writable`），把待送檔丟掉，不每格重試。已落 [P-206](../../spec/settled/protocol/tick.md)、[S-301](../../spec/scheduling/llm.md)、conformance。
+第4點：**沒有寫入權限**〔使用者方向 2026-09-29 晚，改〕：投件時沒有寫入權限，跟「目標不是 node」一樣處理：報一次錯（stderr 一行 `target_not_writable`），把待送檔丟掉，不每格重試。已落 [P-206](../../spec/protocol/tick.md)、[S-301](../archive/spec-2026-10-02/scheduling/llm.md)、conformance。
 
 第5點：**目標不是 node**〔使用者方向 2026-09-29 晚〕：確認，丟掉待送檔。
 

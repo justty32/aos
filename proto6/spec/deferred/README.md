@@ -1,6 +1,6 @@
 # 暫緩區：之後再加的規定
 
-← [整理區](../README.md)｜[慣例](../conventions.md)｜[通用 tick](../tick.md)｜[daemon](../daemon/README.md)
+← [規格](../README.md)｜[慣例](../conventions.md)｜[通用 tick](../tick.md)｜[daemon](../daemon/README.md)
 
 ## 這是什麼
 
@@ -31,7 +31,7 @@
 
 ## 分檔目錄
 
-> 2026-10-02 整理：原檔約 17 KB 超過 8 KB 門檻，按標題逐字拆進 `readme/`；本檔只留前言與目錄（原路徑保留當入口）。
+> 本檔只留前言與目錄，內容按標題拆在 `readme/`。
 
 <!-- wf-nav -->
 | # | 檔 | 段落 |

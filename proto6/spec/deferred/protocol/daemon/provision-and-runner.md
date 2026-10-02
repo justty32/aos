@@ -1,12 +1,12 @@
 # daemon 協議：佈建、私有通道與 runner
 
-← [舊 daemon 協議（暫緩區）](README.md)｜[共用約定](../../../../protocol/README.md)｜行為正本：[舊 daemon](../../daemon/README.md)、[helper](../../helper.md)、[身分](../../../../base/identity-resources.md)、[inst](../../../../base/inst.md)｜[裁定](../../../../../notes/2026-09-29-verdicts.md)
+← [舊 daemon 協議（暫緩區）](README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[舊 daemon](../../daemon/README.md)、[helper](../../helper.md)、[身分](../../../../notes/archive/spec-2026-10-02/base/identity-resources.md)、[inst](../../../inst.md)｜[裁定](../../../../notes/2026-09-29-verdicts.md)
 
 > **這篇整篇在暫緩區**（2026-10-01）：舊協議的佈建、helper 私有通道與 runner。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 ## 分檔目錄
 
-> 2026-10-02 整理：原檔約 17 KB 超過 8 KB 門檻，按標題逐字拆進 `provision-and-runner/`；本檔只留前言與目錄（原路徑保留當入口）。
+> 本檔只留前言與目錄，內容按標題拆在 `provision-and-runner/`。
 
 <!-- wf-nav -->
 | # | 檔 | 段落 |

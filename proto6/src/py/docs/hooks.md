@@ -4,7 +4,7 @@
 
 ## hooks：外掛掛點（m1h）
 
-照 [plan m1h](../../../plan/m1h-hooks-module.md) 寫的，spec 正本 [B-635](../../../spec/settled/tick/hooks.md)。在任務表頂層寫 `hooks`（跟 `tasks` 同層；不當模組）。2026-10-01 第十七批起四個掛點；2026-10-02 [第二十四批](../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind)再加按 `kind` 掛的 `before_kind`、`after_kind`，共六個：
+照 [plan m1h](../../../plan/m1h-hooks-module.md) 寫的，spec 正本 [B-635](../../../spec/tick/hooks.md)。在任務表頂層寫 `hooks`（跟 `tasks` 同層；不當模組）。2026-10-01 第十七批起四個掛點；2026-10-02 [第二十四批](../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind)再加按 `kind` 掛的 `before_kind`、`after_kind`，共六個：
 
 ```json
 {
@@ -33,11 +33,11 @@
 - 格式錯（`hooks` 不是物件、陣列的掛點不是陣列、`after_task`／`before_kind`／`after_kind` 不是物件或某個值不是陣列、某項不是物件、合併後沒 `argv`）＝`bad_table:`、回 1，開格前就擋。`hooks` 裡其他鍵照收不理。寫在 `modules.hooks` 底下的不會跑。
 - 紀錄：任務表寫了哪幾個掛點，**開格**時就把 `hook-exits.json`（各掛點 `[]`）寫好、`record.json` 帶 `hooks` 的 `$ref`；每跑完一個**結束碼不是 0** 的 hook 加一筆，格式同 `tasks`（`id`、`index`、`exit` 或 `signal`），`before_kind`、`after_task`、`after_kind`、`after_every_task` 另帶 `task_index`；0 的不記，hooks 不記 `ran`；下一格跟著進 `last/`。
 - 某個 hook 沒跑成時 stderr 是 `exec_failed: <掛點>/<id>: …`（`after_task` 是 `after_task/<任務 id>/<id>`，`*_kind` 是 `before_kind/<kind>/<id>`、`after_kind/<kind>/<id>`）。
-- 用 hooks 加普通 git 指令取代 `aos-git`（第十七批暫緩）的寫法見 [B-635 範例](../../../spec/settled/tick/hooks.md)。
+- 用 hooks 加普通 git 指令取代 `aos-git`（第十七批暫緩）的寫法見 [B-635 範例](../../../spec/tick/hooks.md)。
 
 ## tick 模組 `modules["tasks-blocked"]`（B-636）
 
-使用者 2026-10-01 第十六批，spec [B-636](../../../spec/settled/tick/tasks-blocked.md)、格式 P-214。任務表 `modules` 底下寫：
+使用者 2026-10-01 第十六批，spec [B-636](../../../spec/tick/tasks-blocked.md)、格式 P-214。任務表 `modules` 底下寫：
 
 ```json
 "modules": {"tasks-blocked": {"insts": [{"id": "notify", "argv": ["sh", "-c", "echo $AOS_TASK_ID >> blocked.log"]}]}}

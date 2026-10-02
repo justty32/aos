@@ -22,4 +22,4 @@
 
 依據：astra 審整理區必-2、設-3（環境不寫憑證、呼叫方不在了）；納入 cgroup 與 git 改寫計畫（`frame`、跨帳號寫進 aos 範圍的檔要讓 tick 帳號讀得到）；使用者方向 2026-09-29（helper、啟動模式、kill helper）；2026-09-29 晚（systemd 沙盒）；第十八批（佈建動作以 B-609 為正本）；第十九批第 9 條（通道例外）、疑點裁定 10（核准的 fd）；第二十批追答 8、疑點裁定 6（`aos-as`）。
 
-**驗收：**授權及切身分後開檔見 [V-03](../../../conformance.md)；另測切帳號失敗回 125、無 `exit`，kill helper 後不得偷改用通用 user。任務帶跟 tick 不同的 `user` 時那一項回 125；包了 `aos-as` 而且有 helper、有通道時以指定帳號跑，任務內用 `AOS_TICK_LOCK_FD` 核對得到獨占鎖、輸出照任務表寫的走；直接跑的格裡 `aos-as` 回 125（`no_channel`）。
+**驗收：**授權及切身分後開檔見 [V-03](../../../notes/archive/spec-2026-10-02/conformance.md)；另測切帳號失敗回 125、無 `exit`，kill helper 後不得偷改用通用 user。任務帶跟 tick 不同的 `user` 時那一項回 125；包了 `aos-as` 而且有 helper、有通道時以指定帳號跑，任務內用 `AOS_TICK_LOCK_FD` 核對得到獨占鎖、輸出照任務表寫的走；直接跑的格裡 `aos-as` 回 125（`no_channel`）。

@@ -28,7 +28,7 @@
 
 - helper 只查可信註冊、切目標帳號、exec 固定 [runner](../terms.md#t-09收尾排空停機熱重載逃生口)（有 cgroup 時另外把它放進該放的框，並替 daemon 建框、交框、刪殘留框），外加固定清單上的佈建動作（清單、參數與各動作做什麼以 [B-609](../daemon/helper-actions.md) 為正本）。每次只做清單上的一件，不接任意程式當 root 跑。
 - 牽涉 helper 的設定（其他帳號的額度、佈建權）改了，要重開 daemon（[B-608](../daemon/reload.md)）。
-- 先授權、切身分，之後才解析與開檔；順序以 [inst](../../../base/inst.md) 為正本。失敗不能借高權限補救。
+- 先授權、切身分，之後才解析與開檔；順序以 [inst](../../inst.md) 為正本。失敗不能借高權限補救。
 - helper 的請求綁定 daemon 已授權的註冊項與本次目標 UID，不能拿呼叫者自填的 UID 或路徑當授權。
 - 切換帳號前，清掉繼承的憑證、沒核准的 fd 與多餘特權。以指定帳號開程序時，`aos-as` 交來的鎖 fd、回報 pipe 與 stdio 是核准的 fd（[B-609](../daemon/helper-actions.md)）。不把 LLM key 傳給 runner。
 - 管理 socket 只有一個明示例外：daemon 開 tick 時，以環境變數給通道的 socket 位置與本格憑證（[B-612](../daemon/channel.md)），通道上以憑證認 tick。人手與 CLI 的管理操作仍只看 socket 對面的帳號。

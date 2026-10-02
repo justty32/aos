@@ -19,7 +19,7 @@
 | B-623、B-624 | 系統訊息佇列 `aos-mq get`／`aos-mq post` | 暫緩 | 使用者 2026-10-01 第十八批：「1. 都按你建議」——要靠暫緩區的 daemon 通道，用途已被 daemon 訊息模組（[B-645](../../daemon/mq.md)）取代 | [mq.md](../mq.md) |
 | P-206 | `aos-mq` 的 argv 與檔案格式 | 暫緩 | 同上 | [protocol/tick.md](../protocol/tick.md) |
 | B-629 | 標準任務表範本（整條） | 暫緩 | 同上：系統級任務全部暫緩，範本只剩使用者任務、現在沒有系統級任務要放 | [template.md](../template.md) |
-| B-404（部分） | 清理 `aos-clean` 這項系統級任務 | 暫緩 | 同上：現在沒東西可清；B-404 原條就地標暫緩 | [base/storage.md](../../../base/storage.md) |
+| B-404（部分） | 清理 `aos-clean` 這項系統級任務 | 暫緩 | 同上：現在沒東西可清；B-404 原條就地標暫緩 | [base/storage.md](../../../notes/archive/spec-2026-10-02/base/storage.md) |
 | B-630、B-622、B-632 | `aos-git`：開格、存檔點、收尾；git 的共同規則；沒有 git 時的下游做法 | 暫緩 | 使用者 2026-10-01 第十七批：「git這塊先不要進範本。」從沒寫過程式；改用 hooks 加普通 git 指令（B-635 範例） | [git.md](../git.md) |
 | P-205 | `aos-git` 的 argv 與結束碼 | 暫緩 | 同上 | [protocol/tick.md](../protocol/tick.md) |
 | B-621 | 前面的項沒跑好就停格（`aos-tick-check-task`） | 暫緩 | 使用者 2026-10-01 第十六批：「aos-tick-check-task這個先放進暫緩。」從沒寫過程式；它要建的停格檔同批改名 tasks-blocked、改了規則 | [tick.md](../tick.md) |

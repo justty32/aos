@@ -8,7 +8,7 @@
 
 這不是強制不變式，不要求設定只能在 tick 內或新 run 生效，也不指定唯一的更新通道。具體設計可以按實際需求取捨，不設硬性驗收或額外待辦。JSON-RPC 交給 tick 處理只是曾討論的可能做法，尚未採納為要求。
 
-2026-09-29 使用者[裁定](2026-09-29-verdicts.md) 2 選擇與本原則一起放寬：設定版本不再是硬保證，只是軟性原則，見 spec [A-102](../spec/agent/configuration.md)；[B-302](../spec/base/identity-resources.md)「登記改版先排空」同樣改為建議預設。實作可選擇在 tick／attempt 邊界換版並留下紀錄。這與本篇一致：盡量不在 tick 之間無預告改變環境，但不當硬規定。
+2026-09-29 使用者[裁定](2026-09-29-verdicts.md) 2 選擇與本原則一起放寬：設定版本不再是硬保證，只是軟性原則，見 spec [A-102](archive/spec-2026-10-02/agent/configuration.md)；[B-302](archive/spec-2026-10-02/base/identity-resources.md)「登記改版先排空」同樣改為建議預設。實作可選擇在 tick／attempt 邊界換版並留下紀錄。這與本篇一致：盡量不在 tick 之間無預告改變環境，但不當硬規定。
 
 第十九批（09-30）改寫了「物理上一致性」那一半，見[第十九批方向](verdicts/10-tick-minimal-core.md)：任務可以有自己的 user（任務表的 `user` 鍵不再永遠禁止，由切換使用者落實），所以「同一 tick 執行中途不換 UID」不再成立，改為同一任務執行中途不換 UID；cgroup 框屬標準配備（aos 出廠附、必須全掛），不是 tick 核心，同一任務或 attempt 執行中途不換 cgroup 仍照標準配備的規則。
 

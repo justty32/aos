@@ -1,8 +1,8 @@
 # 通用 tick：核心
 
-← [整理區](README.md)｜[名詞](terms.md)｜[慣例](conventions.md)｜[hooks](tick/hooks.md)｜[tasks-blocked](tick/tasks-blocked.md)｜格式：[tick 協議](protocol/tick.md)｜[暫緩區](deferred/tick.md)
+← [規格](README.md)｜[名詞](terms.md)｜[慣例](conventions.md)｜[hooks](tick/hooks.md)｜[tasks-blocked](tick/tasks-blocked.md)｜格式：[tick 協議](protocol/tick.md)｜[暫緩區](deferred/tick.md)
 
-`aos-tick [<目標>]` 是一個定期被執行的程式。**程式與測試就是正本**：`proto6/src/py/lib/aos_tick*.py`（`aos_tick.py` 主流程、`aos_tick_table.py` 讀表、`aos_tick_run.py` 跑項、`aos_tick_record.py` 紀錄、`aos_tick_hooks.py` 掛點）；測試 `tests/test_tick_*.py`；說明 [docs/tick.md](../../src/py/docs/tick.md)。這裡只留設計原則。
+`aos-tick [<目標>]` 是一個定期被執行的程式。**程式與測試就是正本**：`proto6/src/py/lib/aos_tick*.py`（`aos_tick.py` 主流程、`aos_tick_table.py` 讀表、`aos_tick_run.py` 跑項、`aos_tick_record.py` 紀錄、`aos_tick_hooks.py` 掛點）；測試 `tests/test_tick_*.py`；說明 [docs/tick.md](../src/py/docs/tick.md)。這裡只留設計原則。
 
 **總原則：默認一切正常**。POC 不考慮邊緣狀況：紀錄讀得懂、寫得進去、斷電不倒退都不保證，出錯就讓程式自然丟錯、回 1。
 
