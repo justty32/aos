@@ -17,7 +17,7 @@
 
 拆的檔：verdicts 11（24 份）、03、04、05、09、10；`spec/conformance.md`、`spec/README.md`；`settled/` 的 `tick.md`、`README.md`、`terms.md`、`conventions.md`、`tick/hooks.md`、`daemon/{core,control,mq,account}.md`、`protocol/tick.md`、`protocol/daemon/{core,control,mq}.md`，以及 `deferred/` 的 `README`、`tick`、`git`、`mq`、`helper`、`daemon/{cgroup,registration,runtime,lifecycle,channel,helper-actions}`、`protocol/tick`、`protocol/daemon/{provision-and-runner,startup-and-ipc,registration,channel}`；`spec/protocol/README.md`；`plan/` 的 `README`、`m1`、`m1h`、`m2`、`m3`、`m3m`、`m3n`；`notes/2026-10-01-tick-system-tasks.md`。
 
-**錨點：採 (b)。** 範圍內的連結指到舊檔 `#錨點`，或檔內的 `#錨點`，都改指新分檔與新錨點（重複標題的 `-1`、`-2` 編號按分檔重算；標題前的顯式 `<a id>` 跟著標題走）。範圍外改不到的，就在入口目錄表那一列留同名的 `<a id="…"></a>`，舊錨點仍然有落點，現在不會壞。
+**錨點：採 (b)。** 範圍內的連結指到舊檔 `#錨點`，或檔內的 `#錨點`，都改指新分檔與新錨點（重複標題的 `-1`、`-2` 編號按分檔重算；標題前的顯式 `<a id>` 跟著標題走）。範圍外改不到的，就在入口目錄表那一列留同名的 ``，舊錨點仍然有落點，現在不會壞。
 
 ## 三、範圍外的連結（給調度者，可選擇改指新分檔）
 

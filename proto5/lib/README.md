@@ -15,14 +15,14 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 
 | 家族 | 一句話 | 支數 | 說明 |
 |---|---|---|---|
-| 指示詞與 inst<a id="aos_directives--指示詞機制的純函式庫"></a><a id="aos_inst--instjson-的讀驗解"></a> | 指示詞（`$env`／`$fmt`／`$ref`／`$opt`）解析、`aos-directives` 人格分節編輯與 resolve／check、inst.json 讀驗、`aos-json` 人用改檔 | 6 | [docs/directives.md](docs/directives.md) |
-| 執行與共用底層<a id="aos_exec--執行者三支aos_execaos_exec_runaos_exec_spawn"></a><a id="aos_home--共用家與信封"></a><a id="aos_client--交件者"></a><a id="aos_exec_cpu--exec-cpu-的主人"></a><a id="aos_llm_call--問模型一次"></a> | 跑一次（`aos_exec`）、共用家與信封、交件者、長命 exec cpu、`aos up／down`、`aos-jail`、量每一跳、問模型一次 | 11 | [docs/exec.md](docs/exec.md) |
-| daemon<a id="aos_daemon--池的主人五支aos_daemonpoolslooprpccli"></a> | 池的主人：按池宣告的孩子、一圈的狀態機、收的單、替 kernel 開 tick、命令列 | 6 | [docs/daemon.md](docs/daemon.md) |
-| kernel<a id="aos_kernel--池表sqlite-帳本與-tick十三支aos_kernelinfoledgerstoreenginepoolsbootcpurowshealthlscheckcli"></a> | 池表、sqlite 帳本與一格接一格的 tick：增減 cpu、boot／status、cpu 與 ls、健康、啟動前檢查、命令列 | 13 | [docs/kernel.md](docs/kernel.md) |
-| agent<a id="aos_agent_home--agent-家共用內容讀驗"></a><a id="aos_agent_info--設定與進度讀驗"></a><a id="aos_agent--走格與-kernel-排程"></a> | agent 的 tick 三格、家與設定讀驗、批次與恢復、日常 CLI（init／say／listen／talk／status…）、工具（裝、造、wrap）、權限牆、記憶壓縮 | 44 | [docs/agent.md](docs/agent.md) |
+| 指示詞與 inst | 指示詞（`$env`／`$fmt`／`$ref`／`$opt`）解析、`aos-directives` 人格分節編輯與 resolve／check、inst.json 讀驗、`aos-json` 人用改檔 | 6 | [docs/directives.md](docs/directives.md) |
+| 執行與共用底層 | 跑一次（`aos_exec`）、共用家與信封、交件者、長命 exec cpu、`aos up／down`、`aos-jail`、量每一跳、問模型一次 | 11 | [docs/exec.md](docs/exec.md) |
+| daemon | 池的主人：按池宣告的孩子、一圈的狀態機、收的單、替 kernel 開 tick、命令列 | 6 | [docs/daemon.md](docs/daemon.md) |
+| kernel | 池表、sqlite 帳本與一格接一格的 tick：增減 cpu、boot／status、cpu 與 ls、健康、啟動前檢查、命令列 | 13 | [docs/kernel.md](docs/kernel.md) |
+| agent | agent 的 tick 三格、家與設定讀驗、批次與恢復、日常 CLI（init／say／listen／talk／status…）、工具（裝、造、wrap）、權限牆、記憶壓縮 | 44 | [docs/agent.md](docs/agent.md) |
 | team | 團隊：共用格式、申請與任務單、郵差兼書記、驗收員、心跳、門房、固化建議、score、財務、HR、commons、lock／spawn／toolsmith | 54 | [docs/team.md](docs/team.md) |
 | 公司與市場 | 公司（`company.json`、生一家、機械總機、人頭與 cpu、開關機）與市場層（排名、撥額度、倒閉、合併） | 12 | [docs/company.md](docs/company.md) |
-| 測試<a id="測試"></a> | 102 個測試檔、2881 條；每檔驗什麼、共用測試工具 | — | [docs/tests.md](docs/tests.md) |
+| 測試 | 102 個測試檔、2881 條；每檔驗什麼、共用測試工具 | — | [docs/tests.md](docs/tests.md) |
 
 命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、
 `aos`→`aos_up.main`、`aos-daemon`→`aos_daemon.main`、`aos-kernel`→`aos_kernel.main`、`aos-agent`→`aos_agent.main`、

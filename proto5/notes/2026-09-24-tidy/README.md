@@ -9,7 +9,7 @@
 
 **wf/**
 
-- [SESSION-LOG](../../../wf/SESSION-LOG.md)：4095 → 約 2.6 KB。09-24 那條整段原文搬到 [session_logs/2026-09.md 的 2026-09-24 節](../../../wf/session_logs/2026-09.md#2026-09-24)（放最上面，連結多一層 `../`，尾巴註明 fix-r4 已合）。SESSION-LOG 只留一行 open：fix-r5、cpu 動態增減六點、spec 拆檔、C-7／C-8、WAIT_USER A.14～A.18、`tools`／`init --template`、打遊戲不碰 GPU 走 LiteLLM、每 commit 推。fix-r4 已合，從 open 拿掉；09-22 那行的「backlog 八件」已在 09-24 清光，改成註記。
+- [SESSION-LOG](../../../wf/SESSION-LOG.md)：4095 → 約 2.6 KB。09-24 那條整段原文搬到 [session_logs/2026-09.md 的 2026-09-24 節](../../../wf/session_logs/2026-09/2026-09-24.md#2026-09-24)（放最上面，連結多一層 `../`，尾巴註明 fix-r4 已合）。SESSION-LOG 只留一行 open：fix-r5、cpu 動態增減六點、spec 拆檔、C-7／C-8、WAIT_USER A.14～A.18、`tools`／`init --template`、打遊戲不碰 GPU 走 LiteLLM、每 commit 推。fix-r4 已合，從 open 拿掉；09-22 那行的「backlog 八件」已在 09-24 清光，改成註記。
 - [session_logs/README](../../../wf/session_logs/README.md)：補 09-24、09-23 兩列（09-23 那節早就在封存檔裡，只是索引沒列）。
 - [WAIT_USER](../../../wf/WAIT_USER.md)：A 段開頭註明「編號固定、拍掉的不回收，所以跳號」（別處用「WAIT_USER 第 N 條」引用，不能重編）；A.14(e) `pause` 標成 fix-r4 已做掉（暫停中連回音也不收），(d) fail 狀態等其餘七題照舊待拍；A.9（T-01～T-77「都 OK」、只是可翻案）不是等人拍的事，移到 C 段；A.13 補連結；C 段尾巴那條「08-24 已整條解掉」的完成紀錄刪掉，只留「細節記在 roadmap」那句指路。
 - [INDEX](../../../wf/INDEX.md)：開頭「第一個小專案是 core/inst」與 `core/` 列「目前只有 inst/」都過時（實際是 exec／wire／loop／llm／agent／tick＋tool），改成指 core/README；`proto*/` 列換成 proto5 現況（spec／lib／cli、notes 索引），補 proto5.1、proto4-7；補漏列的頂層 `reference/`。
@@ -25,7 +25,7 @@
 
 ## 搬檔
 
-**沒搬。** notes 根目錄的十幾份散檔維持原位，理由寫在 [notes 索引](../README.md#為什麼散檔沒收進子資料夾2026-09-24-tidy-判斷)：09-22 那批帶約 700 條指向 `spec/`／`lib/` 的連結，搬一層就得全改，正好跟拆 spec 那隊改同一批連結、一定撞；notes-brief 與 proto5.1 也連進來。spec 拆完後可以再考慮。
+**沒搬。** notes 根目錄的十幾份散檔維持原位，理由寫在 [notes 索引](../README.md)：09-22 那批帶約 700 條指向 `spec/`／`lib/` 的連結，搬一層就得全改，正好跟拆 spec 那隊改同一批連結、一定撞；notes-brief 與 proto5.1 也連進來。spec 拆完後可以再考慮。
 
 ## 壞連結
 

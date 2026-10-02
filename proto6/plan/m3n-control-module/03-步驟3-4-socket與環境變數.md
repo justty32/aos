@@ -40,7 +40,7 @@
 ## 步驟 4：往下傳環境變數
 
 - **要做到**：模組掛著時，daemon 開每一次 `aos-exec` 都在環境裡加 `AOS_DAEMON_CTL_SOCKET=<socket 絕對路徑>`、`AOS_DAEMON_INST=<這一項的 inst 字面值>`（蓋過 daemon 自己環境裡同名的）。
-- **依據**：使用者定的兩個名字（〔第二十五批〕控制 socket 那個從 `AOS_DAEMON_SOCKET` 改名 `AOS_DAEMON_CTL_SOCKET`，見 [verdicts 11 第二十五批](../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門)）；原名 `AOS_DAEMON_SOCKET` 沿用舊 spec [P-117](../../spec/deferred/protocol/daemon/channel.md)，`AOS_TICK_TOKEN`（憑證）不做。
+- **依據**：使用者定的兩個名字（〔第二十五批〕控制 socket 那個從 `AOS_DAEMON_SOCKET` 改名 `AOS_DAEMON_CTL_SOCKET`，見 [verdicts 11 第二十五批](../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門控制-socket-改名)）；原名 `AOS_DAEMON_SOCKET` 沿用舊 spec [P-117](../../spec/deferred/protocol/daemon/channel.md)，`AOS_TICK_TOKEN`（憑證）不做。
 - **一路傳下去不用寫新程式**：`aos-exec` 照 inst 的 `envs` 規則用繼承的環境；`aos-tick` 開任務時也是繼承的環境加 `AOS_*`；下層 `aos-tick 下層` 本身就是上層的一個任務，它的任務又繼承下去。所以**每一層的任務看到的都是頂層那一項的 inst**，指到的永遠是頂層（使用者「不要管上下層」「daemon 只需要管理最頂層」）。inst 或任務寫了 `envs` 清空時，那一支往下就沒有這兩個變數，是 inst 自己的選擇。
 - **inst 字面值是相對路徑也沒關係**：傳下去的只是一個名字，`aos-ctl` 原樣送回，daemon 跟 `insts` 的鍵逐字比對，不在任務的工作目錄解析。
 - **模組沒掛時不動環境**：daemon 自己的環境若已有這兩個變數（例如它本身是別的 daemon 底下某個任務開的），照樣傳下去、不清。照默認一切正常，不為這種套疊另寫規則。

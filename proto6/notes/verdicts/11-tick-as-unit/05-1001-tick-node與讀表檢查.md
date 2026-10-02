@@ -1,7 +1,5 @@
 ← [2026-09-30 使用者方向（十一）：tick 是 aos 的衡量基準](../11-tick-as-unit.md)（分檔 5/28）｜所在段落：2026-10-01：POC 默認一切正常｜[上一份](04-1001-結束碼慣例.md)｜[下一份](06-1001-互斥-狀態資料夾-user.md)
 
-<a id="aos-tick---node-怎麼認待統一更新-spec"></a>
-
 ### aos-tick `--node` 怎麼認（已寫入 spec（commit 前由我補號））
 
 〔使用者方向 2026-10-01〕使用者原話：「如果--node xxx，xxx沒指定，那就是默認./。然後這邊我要加個機制：如果xxx是檔案，那該檔案必須符合task.json格式，而該檔案所在的資料夾yyy，將其作為--node yyy，後續正常執行。aos-tick --node xxx，判斷是否合法，應該是要判斷是否有.aos/task.json，和inst.json分開。」（`task.json` 即現有的 `tasks.json`。）
@@ -15,8 +13,6 @@
 - 結束碼照上一節碼表（0／1／2），不變。
 - **表裡的相對路徑與指示詞**（同日追加）：以 node 根為中心——給檔時就是該檔所在的資料夾（叫 `.aos` 時是它的上一層，見下）。
 - 實作時自己定的（使用者沒講，可改）：給的檔所在資料夾叫 `.aos` 時（例如 `yyy/.aos/tasks.json`），node 取 `.aos` 的上一層 `yyy`，不照字面當 `yyy/.aos`；舊的 `--node yyy/.aos/inst.json` 因此變成「拿 inst.json 當任務表」，沒有 `tasks` 陣列、過不了極簡檢查回 1。stderr 代碼 `no_tasks`（資料夾沒有 `.aos/tasks.json`）、`no_node`（不存在）。
-
-<a id="aos-tick-讀任務表的極簡檢查待統一更新-spec"></a>
 
 ### aos-tick 讀任務表的極簡檢查（已寫入 spec（commit 前由我補號））
 

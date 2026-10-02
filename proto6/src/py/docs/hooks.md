@@ -4,7 +4,7 @@
 
 ## hooks：外掛掛點（m1h）
 
-照 [plan m1h](../../../plan/m1h-hooks-module.md) 寫的，spec 正本 [B-635](../../../spec/tick/hooks.md)。在任務表頂層寫 `hooks`（跟 `tasks` 同層；不當模組）。2026-10-01 第十七批起四個掛點；2026-10-02 [第二十四批](../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind)再加按 `kind` 掛的 `before_kind`、`after_kind`，共六個：
+照 [plan m1h](../../../plan/m1h-hooks-module.md) 寫的，spec 正本 [B-635](../../../spec/tick/hooks.md)。在任務表頂層寫 `hooks`（跟 `tasks` 同層；不當模組）。2026-10-01 第十七批起四個掛點；2026-10-02 [第二十四批](../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind-拿來掛-hooks擋停格值隨便寫)再加按 `kind` 掛的 `before_kind`、`after_kind`，共六個：
 
 ```json
 {
@@ -47,6 +47,6 @@
 - 碼不記進紀錄、非 0 沒影響。環境照任務：`AOS_TASK_ID`／`AOS_TASK_INDEX`＝被擋下的那一項、`AOS_TICK_CWD`；沒有 `AOS_HOOK_*`。
 - 寫法與展開比照 `tasks`（開格整份展開；〔第二十批〕模組鍵由 `tasks_blocked` 改名 `tasks-blocked`，跟檔名一樣）。開不起來印 `exec_failed: tasks-blocked/<id>`。
 - 沒掛＝看到就擋下。整格最後照樣刪 tasks-blocked。
-- 〔[第二十四批](../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind)〕tasks-blocked 內容是 `{"kinds":[字串…]}`（讀得到、合法 JSON、全字串陣列）＝按 kind 擋：只跳過 kind 在清單內的項、後面照跑（沒 kind 的不擋，`[]` 一個都不擋），收尾紀錄記 `skipped:[{"id","index"}]`；其他形狀＝照舊全部擋。每一項之前重讀檔。掛了模組時每個「本來要被擋」的項之前都跑一次 `insts`，跑完仍擋就只跳過那一項。tick 只讀 `kinds`，其他內容照舊給 `insts` 自己讀。
+- 〔[第二十四批](../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind-拿來掛-hooks擋停格值隨便寫)〕tasks-blocked 內容是 `{"kinds":[字串…]}`（讀得到、合法 JSON、全字串陣列）＝按 kind 擋：只跳過 kind 在清單內的項、後面照跑（沒 kind 的不擋，`[]` 一個都不擋），收尾紀錄記 `skipped:[{"id","index"}]`；其他形狀＝照舊全部擋。每一項之前重讀檔。掛了模組時每個「本來要被擋」的項之前都跑一次 `insts`，跑完仍擋就只跳過那一項。tick 只讀 `kinds`，其他內容照舊給 `insts` 自己讀。
 
 測試 `tests/test_tick_blocked.py` 的 `TasksBlockedModule`（7 條）。

@@ -38,7 +38,7 @@
 | P-118 | 掛行程與砍掉 | [channel.md](channel.md) | 暫緩 |
 | P-119 | 送訊息、取訊息與通道錯誤碼 | [channel.md](channel.md) | 暫緩 |
 
-舊協議的 schema 與範例留在原處、不刪不改：`daemon-config`、`daemon-rpc`、`daemon-registration`、`daemon-state`、`daemon-runner-report`、`daemon-provision`、`daemon-helper`、`daemon-launch-error`（[schemas](../../../../notes/archive/spec-2026-10-02/protocol/schemas/)），範例在 [examples/daemon](../../../protocol/examples/daemon/) 裡 `core-config.*`、`ctl_*` 以外的檔。
+舊協議的 schema 與範例已封存（2026-10-02，使用者裁定）、不刪不改：`daemon-config`、`daemon-rpc`、`daemon-registration`、`daemon-state`、`daemon-runner-report`、`daemon-provision`、`daemon-helper`、`daemon-launch-error`（[schemas](../../../../notes/archive/spec-2026-10-02/protocol/schemas/)），範例在 [examples/daemon](../../../../notes/archive/spec-2026-10-02/protocol/examples/daemon) 裡的檔。
 
 ## P-113．待決與跨篇
 
