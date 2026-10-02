@@ -1,6 +1,6 @@
 # agent 與 kernel 的介面（已對齊 kernel 提案，含審查後的修正）
 
-← [提案入口](README.md)｜上一份：[多 agent 與上下層](06-多agent與上下層.md)｜下一份：[分階段](08-分階段.md)｜對方的契約：kernel 提案 `proto6/notes/proposals/2026-10-02-kernel/04-agent介面.md`（另一個 worktree，合進 main 後再改成連結）
+← [提案入口](README.md)｜上一份：[多 agent 與上下層](06-多agent與上下層.md)｜下一份：[分階段](08-分階段.md)｜對方的契約：kernel 提案 [04-agent介面](../2026-10-02-kernel/04-agent介面.md)
 
 kernel 提案的結論：kernel 是角色＝一個工作資料夾＋它擁有的一份 daemon 設定；agent＝那份設定清單上的一項 inst；成員寄 **summary**，kernel 寄 **grant**，成員要東西寄 **request**。10-02 兩邊照 astra 審查互相改過一輪，下面是改完的契約；agent 內部怎麼做不在此。
 

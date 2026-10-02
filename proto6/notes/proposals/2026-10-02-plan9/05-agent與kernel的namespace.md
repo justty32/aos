@@ -2,7 +2,7 @@
 
 ← [提案入口](README.md)｜上一份：[tick 與 inst 變成目錄](04-tick與inst變成目錄.md)｜下一份：[JSON 放哪](06-JSON放哪與文字格式.md)
 
-全篇是推想。對照同日的 agent 提案與 kernel 提案（兩份都還在別的 worktree）：它們把 agent 定成「一個工作資料夾＋五項任務」、kernel 定成「一個資料夾＋一份 daemon 設定」。Plan 9 路線不推翻這兩個定義，只改一件事——**agent 能碰到什麼，不只靠環境變數與資料夾權限，還靠它開跑時被組好的那棵樹**。
+全篇是推想。對照同日的 agent 提案與 kernel 提案（[agent](../2026-10-02-agent/README.md)、[kernel](../2026-10-02-kernel/README.md)）：它們把 agent 定成「一個工作資料夾＋五項任務」、kernel 定成「一個資料夾＋一份 daemon 設定」。Plan 9 路線不推翻這兩個定義，只改一件事——**agent 能碰到什麼，不只靠環境變數與資料夾權限，還靠它開跑時被組好的那棵樹**。
 
 ## agent 一格看到的世界
 
