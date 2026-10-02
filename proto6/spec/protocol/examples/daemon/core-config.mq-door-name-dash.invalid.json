@@ -1,0 +1,11 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "mq": {
+      "team-a": "./team-a.sock"
+    }
+  },
+  "insts": {
+    "a.json": {}
+  }
+}

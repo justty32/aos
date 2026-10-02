@@ -1,0 +1,16 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "mq": {
+      "SOCKET_1": "./mq-1.sock"
+    }
+  },
+  "insts": {
+    "a.json": {
+      "mq": [
+        "SOCKET_1",
+        "ALERTS"
+      ]
+    }
+  }
+}

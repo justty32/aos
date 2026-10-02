@@ -2,14 +2,12 @@
   "interval_ms": 60000,
   "modules": {
     "mq": {
-      "socket": "./aos-mq.sock"
+      "SOCKET_1": "./mq-1.sock"
     }
   },
   "insts": {
     "b.json": {
-      "mq": {
-        "subscribe": "deploy"
-      }
+      "mq": "SOCKET_1"
     }
   }
 }

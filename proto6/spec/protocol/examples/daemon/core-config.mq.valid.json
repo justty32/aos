@@ -5,11 +5,17 @@
       "socket": "./aos.sock"
     },
     "mq": {
-      "socket": "./aos-mq.sock"
+      "SOCKET_1": "./mq-1.sock",
+      "ALERTS": "/srv/aos/doors/alerts/s"
     }
   },
   "insts": {
-    "a.json": {},
-    "b.json": {}
+    "inst-1": {
+      "mq": [
+        "SOCKET_1",
+        "ALERTS"
+      ]
+    },
+    "inst-2": {}
   }
 }

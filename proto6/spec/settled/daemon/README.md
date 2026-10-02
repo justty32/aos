@@ -21,7 +21,7 @@
   - **重讀設定**（[B-642](reload.md)），送 SIGHUP 就重讀設定檔，加減項、改週期不用重開。
   - **記住狀態**（[B-643](state.md)），把暫停、已停記進 `$ref` 指的狀態檔，重開時讀回。
   - **收屍／cgroup**（[B-644](cgroup.md)），每項一個 cgroup 框，跑完把留下的程序清掉；每項可設上限。
-  - **訊息**（[B-645](mq.md)），另開一個 socket，每項一個信箱；任務用 `aos-mq send`／`take` 收發，急件順便叫醒收件那一項。
+  - **訊息**（[B-645](mq.md)），〔第二十五批〕另開幾扇門（各一個 socket），每項訂幾扇；從門寄進來的信放進訂了的項的信箱並叫醒它們（合併叫醒）；任務用 `aos-mq send`／`take`／`peek <門>` 收發。
   - **帳號**（[B-646](account.md)），要用 root 開；主程式降成預設帳號，名單准的別的帳號的項由 root 端用那個帳號開。切帳號只在 daemon 設定檔做。
 - node 模組不做（使用者：「node這塊不要動，我有預感，node相關概念以後會不存在。」），方向照留在[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)。
 
@@ -36,7 +36,7 @@
 | [reload.md](reload.md) | B-642 | 重讀設定模組：SIGHUP、清單比對、要重開的鍵、設定壞了舊的照跑 |
 | [state.md](state.md) | B-643 | 記住狀態模組：`$ref` 指的狀態檔、何時寫、開起來讀回 |
 | [cgroup.md](cgroup.md) | B-644 | 收屍／cgroup 模組：子樹根、每項的框與上限、跑完清框 |
-| [mq.md](mq.md) | B-645 | 訊息模組：信箱、急件、環境變數、`aos-mq` |
+| [mq.md](mq.md) | B-645 | 訊息模組：門、訂閱、信箱、叫醒、socket 權限、環境變數、`aos-mq` |
 | [account.md](account.md) | B-646 | 帳號模組：root 端與主程式降權、預設帳號、白名單與黑名單 |
 | [協議 core.md](../protocol/daemon/core.md) | P-120 | `aos-daemon` 的 argv、設定檔欄位、輸出格式、結束碼 |
 | [協議 control.md](../protocol/daemon/control.md) | P-121 | 控制 socket 的一行 JSON、錯誤代碼、`aos-ctl` 的 argv 與結束碼 |

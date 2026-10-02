@@ -59,6 +59,6 @@ schema 見 [daemon-core-config](../../../protocol/schemas/daemon-core-config.sch
 | root 端回 `error`（例如開起來之後帳號被刪） | `aos-daemon: account: <error 的內容>` | 那一次 `exit=1`，照跑 |
 | root 端不見了 | `aos-daemon: account: root 端不見了` | 刪 socket 檔、回 1 |
 
-stdout 不多印任何行；控制、訊息 socket 檔權限 666。
+stdout 不多印任何行；控制、訊息 socket 檔權限 666（〔第二十五批〕不管掛不掛帳號模組都一樣，見 [P-121](control.md)、[P-125](mq.md)）。
 
 依據：使用者 2026-10-01 第十二、十三批；plan m3m 模組五。

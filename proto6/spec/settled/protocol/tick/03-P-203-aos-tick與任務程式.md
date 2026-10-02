@@ -47,7 +47,7 @@
 | cwd／argv | 頂層預設＋本項合併成 inst、展開後執行（P-202）；合併後還是沒有 cwd 時是工作資料夾 |
 | stdin | 預設 `/dev/null`；可用合併後 inst 的 stdin 重導向 |
 | stdout／stderr | 照 inst 預設 `/dev/null`，可明寫 inherit 或重導向；tick 不把輸出文字當完成證據 |
-| 環境 | 繼承 tick 的環境（含 `AOS_DIRNAME`，經 daemon 控制模組跑時還有 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_INST`），先拿掉繼承來的 `AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`、`AOS_HOOK_POINT`、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`，加上下表這一項該有的變數，再照 inst 套用 `envs`；`envs` 清空時下表的也不放。這些變數都不是授權證據 |
+| 環境 | 繼承 tick 的環境（含 `AOS_DIRNAME`，經 daemon 控制模組跑時還有 `AOS_DAEMON_CTL_SOCKET`（第二十五批改名）、`AOS_DAEMON_INST`，掛了訊息模組還有 `AOS_DAEMON_MQ_<門名>`），先拿掉繼承來的 `AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`、`AOS_HOOK_POINT`、`AOS_HOOK_INDEX`、`AOS_HOOK_ID`，加上下表這一項該有的變數，再照 inst 套用 `envs`；`envs` 清空時下表的也不放。這些變數都不是授權證據 |
 
 tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（hook 是 `AOS_HOOK_*`，見下）（aos 全部的環境變數見 [C-10](../../conventions.md)）：
 

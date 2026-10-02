@@ -81,11 +81,13 @@ schema：[daemon-ctl](../../../../protocol/schemas/daemon-ctl.schema.json)（請
 
 | 變數 | 值 |
 |---|---|
-| `AOS_DAEMON_SOCKET` | 控制 socket 的絕對路徑 |
+| `AOS_DAEMON_CTL_SOCKET` | 控制 socket 的絕對路徑（〔第二十五批〕原名 `AOS_DAEMON_SOCKET`，舊名不再給） |
 | `AOS_DAEMON_INST` | 這一項的 inst 字面值 |
 
-名字 `AOS_DAEMON_SOCKET` 沿用舊設計 [P-117](../../../deferred/protocol/daemon/channel.md)，意思改成控制 socket；通道憑證 `AOS_TICK_TOKEN` 現行控制不使用；舊通道憑證暫緩，未來另定〔astra 報告必修 7〕。沒掛控制模組時不放 `AOS_DAEMON_SOCKET`；`AOS_DAEMON_INST` 掛了控制或訊息模組任何一個就放（〔第十二批〕M2，[P-125](../mq.md)）。
+〔[第二十五批](../../../../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門)〕名字改成 `AOS_DAEMON_CTL_SOCKET`，跟訊息模組的 `AOS_DAEMON_MQ_<門名>` 對齊；原本的 `AOS_DAEMON_SOCKET` 是沿用舊設計 [P-117](../../../deferred/protocol/daemon/channel.md) 的名字（暫緩區照舊）。通道憑證 `AOS_TICK_TOKEN` 現行控制不使用；舊通道憑證暫緩，未來另定〔astra 報告必修 7〕。沒掛控制模組時不放 `AOS_DAEMON_CTL_SOCKET`；`AOS_DAEMON_INST` 掛了控制或訊息模組任何一個就放（〔第十二批〕M2，[P-125](../mq.md)）。
 
 ### socket 檔
 
 daemon 開的時候，路徑上已有檔（含舊的 socket）先刪掉；收到 SIGINT／SIGTERM 退出前刪掉。父資料夾要先在（默認一切正常，daemon 不建）。
+
+〔第二十五批〕socket 檔開好後一律 **chmod 666**（不管有沒有掛帳號模組）；誰能連由 socket 所在資料夾的擁有者／群組／權限決定（管理者事先建好，daemon 不建、不改）。訊息模組的每扇門照同一個原則，例子見 [B-645「socket 與檔案權限」](../../../daemon/mq/01-B-645-信箱與socket.md#socket-權限)。
