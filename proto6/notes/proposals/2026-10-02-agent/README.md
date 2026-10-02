@@ -1,6 +1,6 @@
 # agent 架構提案（2026-10-02）
 
-← [筆記索引](../../README.md)｜現行 spec：[proto6/spec](../../../spec/README.md)｜裁定：[verdicts 11](../../verdicts/11-tick-as-unit.md)｜同日的 kernel 提案 `proto6/notes/proposals/2026-10-02-kernel/`（另一個 worktree，合進 main 後再改成連結）
+← [筆記索引](../../README.md)｜現行 spec：[proto6/spec](../../../spec/README.md)｜裁定：[verdicts 11](../../verdicts/11-tick-as-unit.md)｜同日的 [kernel 提案](../2026-10-02-kernel/README.md)
 
 **這是規劃，不是實作。** 不改程式、不改 spec、不下裁定；方向由使用者決定。kernel 另有一份提案，兩份靠 [07-kernel介面](07-kernel介面.md) 接起來。10-02 astra 審了兩份（`notes/reviews/2026-10-02-astra/07-agent-proposal.md`、`09-cross.md`），事實錯誤與接不通處已照審查修正，兩邊契約互改一輪後一致；方向題仍列待決。
 

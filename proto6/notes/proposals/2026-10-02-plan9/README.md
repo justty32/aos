@@ -1,6 +1,6 @@
 # 思想實驗：aos 全走 Plan 9 路線會長什麼樣（2026-10-02）
 
-← [筆記索引](../../README.md)｜現行 spec：[proto6/spec](../../../spec/README.md)｜同日提案：kernel、agent（各在自己的 worktree，合進 main 後補連結）
+← [筆記索引](../../README.md)｜現行 spec：[proto6/spec](../../../spec/README.md)｜同日提案：[kernel](../2026-10-02-kernel/README.md)、[agent](../2026-10-02-agent/README.md)
 
 **這是思想實驗，不是規劃。** 不改程式、不改 spec、不下裁定。前提照使用者給的：仍在 Linux 上、JSON 仍可當通用格式。問的是：我們能多接近 Unix 哲學的極限。文中分清「Plan 9 真的這樣做」（憑記憶，細節請對第四版 manual／9front）與「我的推想」。
 

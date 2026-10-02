@@ -1,6 +1,6 @@
 # 四、kernel 與 agent 的介面（給 agent 規劃者對齊用）
 
-← [提案入口](README.md)｜上一份：[推薦方案](03-推薦方案.md)｜下一份：[分階段落地](05-分階段落地.md)｜對方：agent 提案 `proto6/notes/proposals/2026-10-02-agent/07-kernel介面.md`
+← [提案入口](README.md)｜上一份：[推薦方案](03-推薦方案.md)｜下一份：[分階段落地](05-分階段落地.md)｜對方：agent 提案 [07-kernel介面](../2026-10-02-agent/07-kernel介面.md)
 
 這份是**契約草案**：kernel 只要求這幾件事，agent 內部怎麼做不管。〔2026-10-02 照 astra 審查與 agent 提案改：grant 走私門、不每格寄；`due_seq` 改 `after_ticks`；grant 是窗口總額；take 一次再分流；schema 合一份。〕
 

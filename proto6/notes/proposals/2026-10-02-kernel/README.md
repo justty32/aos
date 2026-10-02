@@ -70,7 +70,7 @@ flowchart TB
 
 ## 跟 agent 規劃者的對齊狀況
 
-已跟 agent 規劃者互傳訊息對齊（10-02 審查後）：grant 走私門、不每格寄、`after_ticks`、窗口總額、take 一次再分流、信 schema 合一份、pause 語意、子 daemon 環境變數別名化——兩邊一致。契約在 [04](04-agent介面.md)，對方那份在 `proto6/notes/proposals/2026-10-02-agent/07-kernel介面.md`。剩下的分歧只有方向題，列在 06。
+已跟 agent 規劃者互傳訊息對齊（10-02 審查後）：grant 走私門、不每格寄、`after_ticks`、窗口總額、take 一次再分流、信 schema 合一份、pause 語意、子 daemon 環境變數別名化——兩邊一致。契約在 [04](04-agent介面.md)，對方那份在 [07-kernel介面](../2026-10-02-agent/07-kernel介面.md)。剩下的分歧只有方向題，列在 06。
 
 ## 來源
 
