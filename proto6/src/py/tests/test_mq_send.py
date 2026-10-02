@@ -141,6 +141,25 @@ class Wake(MqCase):
         self.wait_for(lambda: self.read("got") == "7\n")
 
 
+class WakeMerge(unittest.TestCase):
+    """開跑前連來多封只叫一次：直接叫伺服器端的 handle()，那一項的執行緒不開，「開跑前」的窗口就一直開著。"""
+
+    def test_many_before_start_runs_once(self):
+        import aos_daemon
+        import aos_daemon_mq
+        item = aos_daemon.Item(0, "b.json", 3600000, False, None)
+        item.doors = ["S1"]
+        item.due = time.monotonic() + 3600                       # 照週期還早
+        items = {"b.json": item}
+        for i in range(3):
+            self.assertEqual(aos_daemon_mq.handle(("send", i), items, "S1"), {"ok": True})
+        self.assertEqual(item.mailbox, [0, 1, 2])
+        with item.cond:
+            self.assertIs(aos_daemon._next_run(item), False)        # 跑一次（不帶 keep_schedule）
+            self.assertFalse(item.pending)                          # 三封只記了一次，跑掉就沒了
+            self.assertGreater(item.due, time.monotonic())          # 下一次要等週期，不會再補跑
+
+
 class Errors(MqCase):
 
     def setUp(self):
