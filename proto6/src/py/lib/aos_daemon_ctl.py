@@ -5,8 +5,8 @@
 四個指令 wake／pause／resume／status，每個都只對一項（`insts` 的鍵，逐字比對）。
 指令只改那一項的狀態、喚醒它的執行緒，不自己開程序（同一項不疊著開照 m3）。
 
-〔使用者方向 2026-10-01〕POC 默認一切正常；唯一的例外是單一連線出的錯（壞 JSON、對面先關、逾時）
-只影響那一條連線，收連線的執行緒繼續跑。
+〔使用者方向 2026-10-01〕POC 默認一切正常；唯一的例外是單一連線出的錯（壞 JSON、對面先關、逾時、
+過深的 JSON）只影響那一條連線，收連線的執行緒繼續跑。回應一律 ASCII 跳脫（非 ASCII 寫成反斜線 u 加四個 hex）。
 
 待問 1 照建議先做（使用者可改）：暫停中 wake 跑一次、跑完照樣暫停；被 stop_on_nonzero 停掉的項
 wake 回 `stopped`、不跑；resume 一律馬上跑一次。
@@ -68,8 +68,8 @@ def _accept_loop(s, items, answer):
         with conn:
             try:
                 _one(conn, items, answer)
-            except OSError:
-                pass                    # 對面先關、逾時：只丟掉這一條連線
+            except Exception:
+                pass                    # 對面先關、逾時、怪輸入（過深的 JSON……）：只丟掉這一條連線
 
 
 def _one(conn, items, answer):
@@ -90,14 +90,15 @@ def _one(conn, items, answer):
         reply = answer(data.split(b"\n", 1)[0], items)
     except BadRequest as e:
         reply = {"ok": False, "error": "bad_request", "detail": str(e)}
-    conn.sendall((json.dumps(reply, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8"))
+    # ASCII 跳脫：字串裡的落單代理字元（\ud800）照樣送得出去，不會在 encode 時丟錯
+    conn.sendall((json.dumps(reply, separators=(",", ":")) + "\n").encode("ascii"))
 
 
 def parse(line):
     """一行 → (指令名, inst, wake 選項 dict)。格式不對丟 BadRequest。"""
     try:
         req = json.loads(line.decode("utf-8"))
-    except ValueError:                  # UnicodeDecodeError 也是 ValueError
+    except (ValueError, RecursionError):    # UnicodeDecodeError 也是 ValueError；RecursionError＝太深
         raise BadRequest("不是 JSON")
     if not isinstance(req, dict):
         raise BadRequest("不是 JSON 物件")

@@ -5,7 +5,8 @@
 
 - 新出現的鍵：開一條新執行緒，照「開起來先跑一次」立刻跑；stdout `inst=<inst> added`。
 - 不見的鍵：不再排下一次；正在跑的那次不殺、讓它跑完印完；之後控制指令對它回 `unknown_inst`；
-  stdout `inst=<inst> removed`。之後又加回來＝新的一項（狀態從頭）。
+  stdout `inst=<inst> removed`。之後又加回來＝新的一項（狀態從頭）；舊的那次還沒跑完（掛了 cgroup 還沒清完框）
+  就等它結束才開第一次（同一項不疊著開、不共用框）。
 - 鍵還在：`interval_ms`、`stop_on_nonzero`、第幾項（掛了 cgroup 模組還有那一項的 `cgroup` 上限）
   原地換；暫停、已停、待補照留。`interval_ms` 改了：下一次＝上一次結束＋新週期（已經過了就立刻跑；
   還沒跑完過一次的照原本的排程）。
@@ -24,7 +25,8 @@
 還在的項上限改了就重寫新設定裡的那幾個檔（拿掉的鍵不還原）；拿掉的項由它自己的執行緒在最後一次跑完、
 清完之後刪框。建框、寫上限出錯算重讀出錯（R4），但出錯前已經寫進去的不還原。
 
-帳號模組掛著時（plan m3m 模組五）：每一項的帳號照**開起來時**的名單核（名單本身改了算 `modules` 改了、只警告），
+帳號模組掛著時（plan m3m 模組五）：每一項的帳號照**開起來時**的名單核（名單本身改了算 `modules` 改了、只警告；
+整個 `modules.account` 拿掉也一樣只警告，各項照樣讀 `account.user`，不會偷換成預設帳號），
 名單不准或帳號查不到算重讀出錯（R4、A6）；還在的項帳號改了，下一次開 `aos-exec` 起用新帳號。
 重讀是主程式（已降成預設帳號）做的，設定檔要讀得到。
 
@@ -47,7 +49,8 @@ def reload(path, first):
     以它為準，因為它們從不套用）。"""
     added, removed = [], []
     try:
-        new = load_full(path, read_state=False, doors=first.mq_doors if first.mq_doors else None)
+        new = load_full(path, read_state=False, doors=first.mq_doors if first.mq_doors else None,
+                        account=first.account)
         with aos_daemon._items_lock:
             _apply(new, first, added, removed)
     except Exception as e:          # R4：唯一的例外——整份不套用、舊的照跑
@@ -84,6 +87,7 @@ def _apply(new, first, added, removed):
     fresh = {i.inst: i for i in new.items}
     for inst in [k for k in items if k not in fresh]:
         old = items.pop(inst)
+        aos_daemon._leaving[inst] = old
         with old.cond:
             old.removed = True
             old.pending = False
@@ -93,6 +97,7 @@ def _apply(new, first, added, removed):
         cur = items.get(n.inst)
         if cur is None:
             cur = n                     # 新的一項就用重讀出來的 Item；輸出路徑照開起來時的頂層設定與起點算
+            cur.prev = aos_daemon._leaving.get(n.inst)     # 拿掉的舊項還沒結束：新項先等它（不疊著跑、不共用框）
             cur.err_path = err_path_for(first.err_tmpl, n.inst, first.start)
             cur.out_path = err_path_for(first.out_tmpl, n.inst, first.start)
             give_env(cur, first)

@@ -46,9 +46,9 @@ class DaemonCase(Base):
     def config(self, obj, rel="config.json"):
         return self.write(rel, json.dumps(obj, ensure_ascii=False))
 
-    def start(self, cfg, cwd=None):
-        """開一個 daemon；stdout／stderr 各一條執行緒收成行。回 (Popen, out 行串列, err 行串列)。"""
-        p = subprocess.Popen([PY, DAEMON, "--config", cfg], cwd=cwd or self.d, env=CLEAN_ENV,
+    def start(self, cfg, cwd=None, env=None):
+        """開一個 daemon；stdout／stderr 各一條執行緒收成行。回 (Popen, out 行串列, err 行串列)。env 沒給＝CLEAN_ENV。"""
+        p = subprocess.Popen([PY, DAEMON, "--config", cfg], cwd=cwd or self.d, env=env or CLEAN_ENV,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                              start_new_session=True)
         out, err = [], []

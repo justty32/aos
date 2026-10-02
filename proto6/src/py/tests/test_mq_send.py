@@ -200,6 +200,16 @@ class Errors(MqCase):
             self.assertTrue(r.stderr.startswith(code + ": "), (args, r.stderr))
         self.assertEqual(self.take("b.json"), [])                  # 上面沒有一封寄成功
 
+    def test_lone_surrogate_letter(self):
+        # 信裡有落單的代理字元：照收、取得回來；過深的 JSON 回 bad_request；門照樣能用
+        self.inst({"argv": ["true"]}, "b.json")
+        self.up_mq({"b.json": SUB}, 3600000)
+        self.assertEqual(self.send(b'{"send":"\\ud800"}\n', self.mq_sock), {"ok": True})
+        self.assertEqual(self.send({"take": "b.json"}, self.mq_sock), {"ok": True, "messages": ["\ud800"]})
+        r = self.send(b'{"send":' + b"[" * 100000 + b"\n", self.mq_sock)
+        self.assertEqual((r["ok"], r["error"]), (False, "bad_request"))
+        self.assertEqual(self.send({"peek": "b.json"}, self.mq_sock), {"ok": True, "messages": []})
+
     def test_bad_request_only_that_connection(self):
         self.up_mq({"b.json": SUB}, 10000)
         for bad in (b"nope\n", b"[]\n", b"{}\n", b'{"msg":1}\n', b'{"send":1,"take":"b.json"}\n',

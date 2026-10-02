@@ -15,21 +15,26 @@
   後代的群組加它自己）；規則同 `aos_daemon.kill_targets()`，這裡另寫一份（不 import aos 其他模組）。
   已經結束或不認得的 n 就不做事；不回應。
 
-開之前再核一次：帳號照名單是准的、`getpwnam` 查得到、不是 root（UID 0）。子程序：開新 session、有框就先把
-自己寫進框的 `cgroup.procs`（還是 root，別的帳號的程序才搬得進去）、`initgroups`／`setgid`／`setuid`、
-`HOME`／`USER`／`LOGNAME` 換成那個帳號的、chdir、exec。
+開之前再核一次：帳號照名單是准的、`getpwnam` 查得到、不是 root（UID 0）；框只認 root 端自己那棵 cgroup
+子樹底下的 `i-<16 hex>`（子樹根＝開起來時自己所在 cgroup 的上一層，見 `cgroot()`），別的一律回
+`bad frame`——主程式被攻破也不能叫 root 端去寫別的檔。子程序：開新 session、有框就先把
+自己寫進框的 `cgroup.procs`（還是 root，別的帳號的程序才搬得進去；不建檔、不截斷）、`initgroups`／`setgid`／
+`setuid`、`HOME`／`USER`／`LOGNAME` 換成那個帳號的、chdir、訊號處置恢復預設、只留 0／1／2 三個 fd、exec。
+跟主程式講話的 socket 不傳給子程序。
 
 主程式那頭關了（讀到 EOF）就退出，不殺還在跑的子程序。
 """
 import json
 import os
 import pwd
+import re
 import select
 import signal
 import socket
 import sys
 
 MAX = 1 << 20
+FRAME = re.compile(r"i-[0-9a-f]{16}")     # aos_daemon_cgroup.frame_name() 的樣子
 
 
 def match(pattern, name):
@@ -49,6 +54,23 @@ def check(policy, name):
     if any(match(p, name) for p in policy["deny"]) or not any(match(p, name) for p in policy["allow"]):
         return "not allowed: %s" % name
     return pw
+
+
+def cgroot():
+    """cgroup 子樹根：root 端由主程式開，開起來時跟主程式一起在 `<根>/daemon` 裡（cgroup 模組沒掛就回 None）。"""
+    with open("/proc/self/cgroup") as f:
+        rel = [l[3:].rstrip("\n") for l in f if l.startswith("0::")]
+    if not rel or os.path.basename(rel[0]) != "daemon":
+        return None
+    return "/sys/fs/cgroup" + os.path.dirname(rel[0])
+
+
+def frame_ok(root, frame):
+    """請求的框是不是 root 底下的 `i-<16 hex>`（None＝沒框，一律可以）。"""
+    if frame is None:
+        return True
+    return (root is not None and isinstance(frame, str) and os.path.dirname(frame) == root
+            and FRAME.fullmatch(os.path.basename(frame)) is not None)
 
 
 def targets(pid, final):
@@ -78,16 +100,14 @@ def child(req, pw, out_fd, err_fd):
     try:
         os.setsid()
         if req.get("frame"):
-            with open(os.path.join(req["frame"], "cgroup.procs"), "w") as f:
-                f.write(str(os.getpid()))
+            fd = os.open(os.path.join(req["frame"], "cgroup.procs"), os.O_WRONLY | os.O_NOFOLLOW)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
         os.initgroups(pw.pw_name, pw.pw_gid)
         os.setgid(pw.pw_gid)
         os.setuid(pw.pw_uid)
         os.chdir(req["cwd"])
-        null = os.open(os.devnull, os.O_RDONLY)
-        os.dup2(null, 0)
-        os.dup2(out_fd, 1)
-        os.dup2(err_fd, 2)
+        stdio(out_fd, err_fd)
         env = dict(req["env"], HOME=pw.pw_dir, USER=pw.pw_name, LOGNAME=pw.pw_name)
         os.execve(req["argv"][0], req["argv"], env)
     except BaseException as e:
@@ -97,9 +117,24 @@ def child(req, pw, out_fd, err_fd):
             os._exit(127)
 
 
+def stdio(out_fd, err_fd):
+    """exec 前：0＝/dev/null、1／2＝收到的 fd，多的 fd 關掉；root 端自己設的訊號處置恢復預設
+    （SIG_IGN 會跨 exec 留著；SIGPIPE 是 Python 自己設的 SIG_IGN）。"""
+    null = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(null, 0)
+    os.dup2(out_fd, 1)
+    os.dup2(err_fd, 2)
+    for fd in {null, out_fd, err_fd} - {0, 1, 2}:
+        os.close(fd)
+    for sig in (signal.SIGINT, signal.SIGHUP, signal.SIGPIPE):
+        signal.signal(sig, signal.SIG_DFL)
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     sock = socket.socket(fileno=int(argv[0]))
+    sock.set_inheritable(False)                     # 交進來時是可繼承的；別漏給子程序
+    root = cgroot()
     r, w = os.pipe()
     os.set_blocking(w, False)
     signal.set_wakeup_fd(w)
@@ -145,6 +180,8 @@ def main(argv=None):
                                 pass
                 continue
             pw = check(policy, req["user"])
+            if not isinstance(pw, str) and not frame_ok(root, req.get("frame")):
+                pw = "bad frame %s" % req.get("frame")
             if isinstance(pw, str):
                 for fd in fds:
                     os.close(fd)

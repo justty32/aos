@@ -70,6 +70,9 @@ _lock_fd = None
 _items = {}
 _items_lock = threading.Lock()
 
+# 重讀設定拿掉、執行緒還沒結束的項 {inst: Item}（也在 _items_lock 底下）；同一個 inst 又加回來時新項先等它
+_leaving = {}
+
 
 def _quit(signum, frame):
     """m3 步驟 5：SIGINT／SIGTERM 直接退出、回 0，不殺也不等子程序。

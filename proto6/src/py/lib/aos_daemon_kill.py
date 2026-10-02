@@ -56,23 +56,25 @@ def signal_run(item, final):
 
 def kill_run(item, seq, grace_s):
     """第十九批 `kill`：先 SIGTERM；等 grace_s 秒那一次（序號 seq）還沒結束就 SIGKILL，掛了 cgroup 再把整個框
-    `cgroup.kill`。在自己的執行緒裡跑（控制指令送完訊號就回）。"""
-    signal_run(item, False)
-    deadline = time.monotonic() + grace_s
+    `cgroup.kill`。在自己的執行緒裡跑（控制指令送完訊號就回）。
+    每次送訊號都在 item.cond 底下先核「還是第 seq 次、還在跑」：那一次已經結束（補跑的下一次已經開了）就不送，
+    不會殺到下一次（`run_once()` 收屍前先在 cond 底下清掉 `item.pid`，所以拿到的 pid 一定是這一次的）。"""
     with item.cond:
+        if not (item.running and item.run_seq == seq):
+            return
+        signal_run(item, False)
+        deadline = time.monotonic() + grace_s
         while item.running and item.run_seq == seq:
             left = deadline - time.monotonic()
             if left <= 0:
                 break
             item.cond.wait(left)
-        still = item.running and item.run_seq == seq
-    if not still:
-        return
-    signal_run(item, True)
-    if item.frame is not None:
-        try:
-            with open(os.path.join(item.frame, "cgroup.kill"), "w") as f:
-                f.write("1")
-        except FileNotFoundError:
-            pass
-
+        if not (item.running and item.run_seq == seq):
+            return
+        signal_run(item, True)
+        if item.frame is not None:
+            try:
+                with open(os.path.join(item.frame, "cgroup.kill"), "w") as f:
+                    f.write("1")
+            except FileNotFoundError:
+                pass

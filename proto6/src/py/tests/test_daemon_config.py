@@ -86,6 +86,12 @@ class Step1Config(DaemonCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn('insts 的 "b"', r.stderr)
 
+    def test_bad_interval(self):
+        for bad in ("1000", True, -1, [5]):
+            r = self.run_cfg(self.config({"interval_ms": bad, "insts": {"a": {}}}))
+            self.assertEqual(r.returncode, 1, bad)
+            self.assertIn("interval_ms 要是非負數", r.stderr)
+
     def test_usage(self):
         self.assertEqual(self.run_cfg([]).returncode, 1)
         cfg = self.config({"interval_ms": 5, "insts": {}})
@@ -142,6 +148,18 @@ class Step1Directives(DaemonCase):
         r = self.run_cfg(self.config({"interval_ms": 5, "insts": {}, "modules": []}, "bad.json"))
         self.assertEqual(r.returncode, 1)
         self.assertIn("modules", r.stderr)
+
+    def test_unknown_top_keys_not_expanded(self):
+        # 頂層陌生鍵與 _metainfo 不解（C-11）：裡面的 $ref 指到不存在的檔也不出錯
+        self.inst({"argv": ["true"]}, "x.json")
+        cfg = self.config({"interval_ms": 100, "insts": {"x.json": {}},
+                           "_metainfo": {"$ref": "nope.json"}, "later": {"a": {"$ref": "nope.json"}}})
+        start, items = aos_daemon.load_config(cfg)
+        self.assertEqual([i.inst for i in items], ["x.json"])
+        self.assertNotIn("later", aos_daemon.read_config(cfg))
+        _, out, err = self.start(cfg)
+        self.wait_for(lambda: self.results(out, "x.json"))
+        self.assertEqual(err, [])
 
     def test_directive_error(self):
         r = self.run_cfg(self.config({"interval_ms": {"$ref": "nope.json"}, "insts": {}}))

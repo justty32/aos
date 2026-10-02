@@ -13,7 +13,7 @@ import time
 import unittest
 
 from _util import PY
-from _daemon_util import INHERIT, TICK, sh, tasks_json
+from _daemon_util import CLEAN_ENV, INHERIT, TICK, sh, tasks_json
 from _ctl_util import CTL, CtlCase, STAMP, UPTIME
 
 
@@ -153,6 +153,24 @@ class Step4Env(CtlCase):
         self.up({"jobs/report.json": {}}, 10000)
         self.wait_for(lambda: self.exists("jobs/env.txt") and len(self.read("jobs/env.txt").split()) == 2)
         self.assertEqual(self.read("jobs/env.txt").split(), [self.sock, "jobs/report.json"])
+
+    def test_nested_daemon_resets_env(self):
+        # 上一層 daemon 放的 AOS_DAEMON_* 不漏進下一層：先全拿掉，再照這層掛的模組成組重設
+        show = 'echo "${AOS_DAEMON_CTL_SOCKET-none} ${AOS_DAEMON_INST-none} ${AOS_DAEMON_MQ_UP-none} ' \
+               '${AOS_DAEMON_MQ_S1-none}" > %s'
+        self.inst(sh(show % "mq.txt"), "m.json")
+        self.inst(sh(show % "bare.txt"), "b.json")
+        outer = dict(CLEAN_ENV, AOS_DAEMON_CTL_SOCKET="/up/ctl.sock", AOS_DAEMON_INST="up.json",
+                     AOS_DAEMON_MQ_UP="/up/mq.sock")
+        # 這層只掛 mq：上層的控制 socket 與門不見，inst 換成這層的
+        _, out, _ = self.start(self.config({"interval_ms": 100000, "modules": {"mq": {"S1": "./mq.sock"}},
+                                            "insts": {"m.json": {}}}, "m-config.json"), env=outer)
+        # 這層什麼都沒掛：上層的全拿掉
+        _, out2, _ = self.start(self.config({"interval_ms": 100000, "insts": {"b.json": {}}}, "b-config.json"),
+                                env=outer)
+        self.wait_for(lambda: self.results(out, "m.json") and self.results(out2, "b.json"))
+        self.assertEqual(self.read("mq.txt").split(), ["none", "m.json", "none", os.path.join(self.d, "mq.sock")])
+        self.assertEqual(self.read("bare.txt").split(), ["none"] * 4)
 
     def test_through_nodes(self):
         # 頂層 a 的 inst 跑 aos-tick；a 的任務一項寫檔、一項跑 aos-tick b；b 的任務寫檔，

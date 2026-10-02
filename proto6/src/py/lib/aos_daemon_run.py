@@ -43,6 +43,11 @@ def run_once(item, start):
             f.close()
             t.start()
             readers.append(t)
+    # 先等它結束但不收屍（pid 還不會被別的程序拿去用），在 cond 底下清掉 item.pid 再收屍：
+    # kill_run() 在 cond 底下拿到的 pid 一定還是這一次的
+    os.waitid(os.P_PID, p.pid, os.WEXITED | os.WNOWAIT)
+    with item.cond:
+        item.pid = None
     p.wait()
     reaped = False
     if item.frame is None:
@@ -55,7 +60,6 @@ def run_once(item, start):
         reaped = aos_daemon_cgroup.clear(item.frame)
         for t in readers:
             t.join()
-    item.pid = None
     code = p.returncode
     write_outputs(item, got["out"], got["err"])
     return (128 - code if code < 0 else code), ms, reaped
@@ -86,7 +90,11 @@ def loop(item, start):
     m3n 步驟 2：睡改成等 cond（叫得醒）；停掉時執行緒不結束、一直等（resume 救得回來）。
     控制模組沒掛時沒人碰狀態，行為跟 m3 一樣。
     m3m：被重讀設定拿掉的項，正在跑的那次照樣跑完印完，之後執行緒結束（掛了 cgroup 就刪框）。
-    掛了 cgroup：「這次結束」＝aos-exec 結束而且框清空；有清到東西時 `exit=` 之後多印一行 `reaped`。"""
+    掛了 cgroup：「這次結束」＝aos-exec 結束而且框清空；有清到東西時 `exit=` 之後多印一行 `reaped`。
+    拿掉又加回來的項（`item.prev`）：舊的那一項還在跑最後一次就先等它結束、清完框，才開第一次。"""
+    if item.prev is not None:
+        item.prev.ended.wait()
+        item.prev = None
     while True:
         with item.cond:
             keep = _next_run(item)
@@ -126,15 +134,16 @@ def loop(item, start):
 
 
 def _gone(item):
-    """被重讀設定拿掉的項，執行緒結束前：掛了 cgroup 就刪它的框（m3m 模組二）。
+    """被重讀設定拿掉的項，執行緒結束前：掛了 cgroup 就刪它的框（m3m 模組二），標記 `ended`（加回來的新項在等它）。
     同一個 inst 已經又被加回來（新的一項用同一個框）就不刪。在 _items_lock 底下做，跟重讀設定建框排開。
     呼叫時不能拿著 item.cond（鎖的順序是 _items_lock → item.cond）。"""
-    if item.frame is None:
-        return
     import aos_daemon
     with aos_daemon._items_lock:
-        if item.inst not in aos_daemon._items:
+        if aos_daemon._leaving.get(item.inst) is item:
+            del aos_daemon._leaving[item.inst]
+        if item.frame is not None and item.inst not in aos_daemon._items:
             aos_daemon._cg.remove(item.frame)
+    item.ended.set()
 
 
 def state_changed():
@@ -154,14 +163,19 @@ def snapshot():
 def give_env(item, setup):
     """控制模組掛著時，開 aos-exec 的環境多放 `AOS_DAEMON_CTL_SOCKET`（m3n 步驟 4；第二十五批由 AOS_DAEMON_SOCKET 改名）；
     訊息模組掛著時每扇門多放一個 `AOS_DAEMON_MQ_<門名>`（第二十五批，每項都拿到每一扇門）；
-    掛了任何一個就放 `AOS_DAEMON_INST`（m3m 待問 M2）。都沒掛＝照 daemon 的環境。"""
+    掛了任何一個就放 `AOS_DAEMON_INST`（m3m 待問 M2）。
+    繼承來的 `AOS_DAEMON_*`（上一層 daemon 放的）一律先拿掉再照自己掛的模組成組重設：跨進下一層 daemon 時
+    不會混成「上層的 socket＋這層的 inst」；同一個 daemon 底下的 exec／tick 照常一路繼承。
+    都沒掛、環境裡也沒有 `AOS_DAEMON_*`＝照 daemon 的環境（不傳 env=）。"""
     extra = {}
     if setup.sock is not None:
         extra["AOS_DAEMON_CTL_SOCKET"] = setup.sock
     for name, path in setup.mq_doors.items():
         extra["AOS_DAEMON_MQ_" + name] = path
     if extra:
-        item.env = dict(os.environ, AOS_DAEMON_INST=item.inst, **extra)
+        extra["AOS_DAEMON_INST"] = item.inst
+    if extra or any(k.startswith("AOS_DAEMON_") for k in os.environ):
+        item.env = dict({k: v for k, v in os.environ.items() if not k.startswith("AOS_DAEMON_")}, **extra)
 
 
 def start_item(item, start):

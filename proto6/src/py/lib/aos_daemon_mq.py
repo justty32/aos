@@ -73,7 +73,7 @@ def parse(line):
     """一行 → (指令名, 值)。格式不對丟 BadRequest。"""
     try:
         req = json.loads(line.decode("utf-8"))
-    except ValueError:
+    except (ValueError, RecursionError):     # RecursionError＝巢得太深
         raise BadRequest("不是 JSON")
     if not isinstance(req, dict):
         raise BadRequest("不是 JSON 物件")

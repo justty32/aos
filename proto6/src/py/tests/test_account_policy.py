@@ -1,6 +1,6 @@
 """帳號模組驗收（plan m3m-daemon-modules.md 模組五）。
 
-本檔：一般帳號就能跑的名單比對、設定錯、沒用 root（Names、Policies、NotRoot）。
+本檔：一般帳號就能跑的名單比對、設定錯、沒用 root、重讀不換帳號、root 端的框檢查與 exec 前整理（Names、Policies、NotRoot、ReloadKeepsAccount、RootSide）。
 
 兩組：
 - `Names`、`Policies`、`NotRoot`：一般帳號就能跑（名單比對、設定錯、沒用 root 開回 1）。
@@ -120,6 +120,65 @@ class NotRoot(DaemonCase):
         self.inst({"argv": ["true"]}, "a.json")
         _, out, _ = self.start(self.config({"interval_ms": 10000, "insts": {"a.json": {"account": "x"}}}))
         self.wait_for(lambda: self.results(out, "a.json") == [0])
+
+
+class ReloadKeepsAccount(DaemonCase):
+    """重讀設定照開起來時有沒有掛帳號模組決定讀不讀每項的 account（拿掉 modules.account 不偷換帳號）。"""
+
+    def test_account_flag(self):
+        import aos_daemon
+        cfg = self.config({"interval_ms": 1000, "insts": {"a": {"account": {"user": "bob"}}, "b": {}}})
+        self.assertEqual([i.user for i in aos_daemon.load_full(cfg).items], [None, None])
+        self.assertEqual([i.user for i in aos_daemon.load_full(cfg, account=True).items], ["bob", None])
+        cfg = self.config({"interval_ms": 1000, "modules": {"account": {}},
+                           "insts": {"a": {"account": {"user": "bob"}}}})
+        self.assertEqual([i.user for i in aos_daemon.load_full(cfg, account=False).items], [None])
+
+
+class RootSide(DaemonCase):
+    """root 端不用 root 就能驗的部分：框只認自己子樹底下的 i-<h>；exec 前訊號恢復預設、多的 fd 關掉。"""
+
+    def test_frame_ok(self):
+        import aos_daemon_root as r
+        root = "/sys/fs/cgroup/user.slice/x.scope"
+        good = root + "/i-0123456789abcdef"
+        self.assertTrue(r.frame_ok(root, None))
+        self.assertTrue(r.frame_ok(root, good))
+        for bad in ("/etc", root + "/i-0123456789abcdef/..", root + "/../i-0123456789abcdef",
+                    root + "/daemon", root + "/i-0123456789ABCDEF", root + "/x/i-0123456789abcdef",
+                    "i-0123456789abcdef", 5):
+            self.assertFalse(r.frame_ok(root, bad), bad)
+        self.assertFalse(r.frame_ok(None, good))                     # cgroup 模組沒掛：有框一律不收
+
+    def test_stdio_signals_and_fds(self):
+        # 子程序裡先把 SIGINT／SIGHUP 設成忽略（像 root 端那樣），stdio() 之後 exec sh：
+        # 三個訊號都不再被忽略、收到的兩個 fd 只剩 1／2
+        code = r"""
+import os, signal, sys
+sys.path.insert(0, %r)
+import aos_daemon_root
+signal.signal(signal.SIGINT, signal.SIG_IGN)
+signal.signal(signal.SIGHUP, signal.SIG_IGN)
+r, w = os.pipe()
+a, b = os.dup(w), os.dup(w)
+os.set_inheritable(a, True); os.set_inheritable(b, True)
+pid = os.fork()
+if pid == 0:
+    aos_daemon_root.stdio(a, b)
+    os.execv("/bin/sh", ["sh", "-c",
+        'grep SigIgn /proc/$$/status; for f in %%d %%d; do [ -e /proc/$$/fd/$f ] && echo open$f; done' %% (a, b)])
+os.close(w); os.close(a); os.close(b)
+print(os.read(r, 4096).decode(), end="")
+os.waitpid(pid, 0)
+""" % os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib")
+        import subprocess
+        from _util import PY
+        out = subprocess.run([PY, "-c", code], capture_output=True, text=True, timeout=10).stdout
+        lines = out.splitlines()
+        self.assertEqual(len(lines), 1, out)                          # 沒有 open<fd>
+        mask = int(lines[0].split()[1], 16)
+        for sig in (1, 2, 13):                                         # HUP、INT、PIPE
+            self.assertFalse(mask & (1 << (sig - 1)), out)
 
 
 if __name__ == "__main__":

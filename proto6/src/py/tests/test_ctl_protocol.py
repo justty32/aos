@@ -1,6 +1,6 @@
 """控制模組驗收（plan m3n-control-module.md 步驟 1～7）。真的開 bin/aos-daemon 與 bin/aos-ctl 子程序。
 
-本檔：協議、aos-ctl 命令列、socket 檔（Step3Protocol、Step5Ctl、Step6SocketFile）。
+本檔：協議、怪輸入、aos-ctl 命令列、socket 檔（Step3Protocol、OddInput、Step5Ctl、Step6SocketFile）。
 
 都用暫存資料夾、短週期、假 inst；不要 root、systemd、網路。socket 放 self.d（/tmp 底下，路徑夠短）。
 會留下來的任務照 test_daemon 的做法把 pid 寫進 `pids`，收尾時殺掉。
@@ -71,6 +71,20 @@ class Step3Protocol(CtlCase):
             quiet.settimeout(3)
             self.assertEqual(quiet.recv(10), b"")                              # 被關掉、不回
             self.assertLess(time.monotonic() - t0, 1.5)
+
+
+class OddInput(CtlCase):
+    """怪輸入只影響那一條連線：落單的代理字元照樣回得出去（回應 ASCII 跳脫）、過深的 JSON 回 bad_request。"""
+
+    def test_lone_surrogate_and_deep_json(self):
+        self.inst({"argv": ["true"]}, "a.json")
+        self.up({"a.json": {}}, 10000)
+        self.assertEqual(self.send(b'{"status":"\\ud800"}\n'),
+                         {"ok": False, "error": "unknown_inst", "detail": "\ud800"})
+        r = self.send(b"[" * 100000 + b"\n")
+        self.assertEqual((r["ok"], r["error"]), (False, "bad_request"))
+        self.assertEqual(self.send({"wake": "甲"})["detail"], "甲")
+        self.assertEqual(self.send({"status": "a.json"})["inst"], "a.json")     # 收連線的執行緒還活著
 
 
 class Step5Ctl(CtlCase):
