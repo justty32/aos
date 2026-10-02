@@ -1,5 +1,7 @@
 """帳號模組驗收（plan m3m-daemon-modules.md 模組五）。
 
+本檔：假 root namespace 裡真的切帳號（Runs、Errors、WithReload、WithCgroup、RootProtocol）。
+
 兩組：
 - `Names`、`Policies`、`NotRoot`：一般帳號就能跑（名單比對、設定錯、沒用 root 開回 1）。
 - 其餘：用 `unshare --user --map-root-user --map-auto` 當假 root——namespace 裡自己是 root，
@@ -13,216 +15,19 @@
 import json
 import os
 import pwd
-import shutil
 import signal
-import socket
 import stat
 import subprocess
-import tempfile
 import threading
-import time
 import unittest
 
 from _util import PY
-from test_daemon import CLEAN_ENV, DaemonCase, sh
-from test_daemon_cgroup import SCOPE, SKIP as CG_SKIP, alive
-
-import aos_daemon_account as acc
-
-HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.dirname(HERE)
-NS = ["unshare", "--user", "--map-root-user", "--map-auto"]
+from _daemon_util import CLEAN_ENV, sh
+from _cgroup_util import SCOPE, SKIP as CG_SKIP, alive
+from _account_util import DEFAULT, NS, NsCase, OTHER, THIRD
 
 
-def _have(name):
-    try:
-        pwd.getpwnam(name)
-        return True
-    except KeyError:
-        return False
-
-
-# 預設帳號：Arch 有 http、Debian／Ubuntu 有 www-data；都沒有就退到 bin、sys（三個帳號要不同、都不是 root）
-DEFAULT = next((n for n in ("http", "www-data", "bin", "sys") if _have(n)), "http")
-OTHER, THIRD = "daemon", "nobody"
-USERS_SKIP = (None if all(_have(n) for n in (DEFAULT, OTHER, THIRD))
-              else "系統沒有測試要的帳號（%s、%s、%s）" % (DEFAULT, OTHER, THIRD))
 WHO = 'echo "$(id -un) $(id -G) $HOME $USER $LOGNAME" > who.%s'
-
-
-class Item:
-    def __init__(self, inst, user=None):
-        self.inst, self.user = inst, user
-
-
-def _ns_ok():
-    """namespace 裡是 root，而且切得到三個帳號（各 fork 一次試 setuid）。"""
-    code = ("import os,pwd\n"
-            "assert os.geteuid()==0\n"
-            "for n in %r:\n"
-            "    p=pwd.getpwnam(n); pid=os.fork()\n"
-            "    if pid==0:\n"
-            "        os.initgroups(n,p.pw_gid); os.setgid(p.pw_gid); os.setuid(p.pw_uid); os._exit(0)\n"
-            "    assert os.waitstatus_to_exitcode(os.waitpid(pid,0)[1])==0\n" % ((DEFAULT, OTHER, THIRD),))
-    try:
-        return subprocess.run(NS + [PY, "-c", code], capture_output=True, timeout=10).returncode == 0
-    except (OSError, subprocess.SubprocessError):
-        return False
-
-
-NS_OK = _ns_ok()
-
-
-class Names(unittest.TestCase):
-
-    def test_match(self):
-        self.assertTrue(acc.match("agent-*", "agent-1"))
-        self.assertTrue(acc.match("agent-*", "agent-"))
-        self.assertFalse(acc.match("agent-*", "agen"))
-        self.assertTrue(acc.match("*", "anyone"))
-        self.assertTrue(acc.match("bob", "bob"))
-        self.assertFalse(acc.match("bob", "bobby"))
-
-
-@unittest.skipIf(USERS_SKIP is not None, USERS_SKIP or "")
-class Policies(unittest.TestCase):
-    """名單與預設帳號（不用 root：只查 /etc/passwd）。"""
-
-    def pol(self, conf, env=None):
-        return acc.Policy(conf, env or {})
-
-    def bad(self, conf, env=None, text=None):
-        with self.assertRaises(acc.AccountError) as cm:
-            self.pol(conf, env)
-        if text:
-            self.assertIn(text, str(cm.exception))
-
-    def test_default_user(self):
-        self.assertEqual(self.pol({"user": DEFAULT}).default, DEFAULT)
-        self.assertEqual(self.pol({}, {"SUDO_USER": DEFAULT}).default, DEFAULT)
-        self.assertEqual(self.pol({"user": DEFAULT}, {"SUDO_USER": OTHER}).default, DEFAULT)
-        self.bad({}, text="沒有預設帳號")
-        self.bad({}, {"SUDO_USER": ""}, text="沒有預設帳號")
-        self.bad({"user": "root"}, text="root")
-        self.bad({"user": "aos-no-such-user"}, text="no such user")
-        self.bad({"user": 3})
-        self.bad([])
-
-    def test_patterns(self):
-        self.bad({"user": DEFAULT, "allow": "x"})
-        self.bad({"user": DEFAULT, "allow": [""]})
-        self.bad({"user": DEFAULT, "allow": ["a*b"]}, text="結尾")
-        self.bad({"user": DEFAULT, "deny": ["**"]}, text="結尾")
-        self.pol({"user": DEFAULT, "allow": ["*", "agent-*"]})
-
-    def test_deny_default(self):
-        # allow 不寫（第十三批）與有寫（A7）都算設定錯；前綴、單獨 * 也算比到
-        for conf in ({"deny": [DEFAULT]}, {"deny": [DEFAULT[:2] + "*"]}, {"deny": ["*"]},
-                     {"allow": ["*"], "deny": [DEFAULT]}):
-            self.bad(dict(conf, user=DEFAULT), text="deny 比得到預設帳號")
-
-    def test_allowed(self):
-        p = self.pol({"user": DEFAULT, "allow": [THIRD[:2] + "*", OTHER], "deny": [THIRD]})
-        self.assertTrue(p.allowed(DEFAULT))             # 預設帳號不受名單管
-        self.assertTrue(p.allowed(OTHER))
-        self.assertFalse(p.allowed(THIRD))              # 黑名單優先
-        self.assertFalse(p.allowed("root"))             # root 一律不准
-        self.assertFalse(self.pol({"user": DEFAULT, "allow": ["*"]}).allowed("root"))
-        self.assertFalse(self.pol({"user": DEFAULT}).allowed(OTHER))   # allow 不寫＝空
-        with self.assertRaises(acc.AccountError):
-            p.allowed("aos-no-such-user")
-
-    def test_check_items(self):
-        p = self.pol({"user": DEFAULT, "allow": [OTHER]})
-        p.check_items([Item("a"), Item("b", OTHER), Item("c", DEFAULT)])
-        for user in (THIRD, "root", "aos-no-such-user"):
-            with self.assertRaises(acc.AccountError):
-                p.check_items([Item("a"), Item("x", user)])
-
-    def test_item_user(self):
-        self.assertIsNone(acc.item_user({}))
-        self.assertEqual(acc.item_user({"account": {"user": "bob"}}), "bob")
-        self.assertIsNone(acc.item_user({"account": {}}))
-        with self.assertRaises(acc.AccountError):
-            acc.item_user({"account": "bob"})
-
-
-class NotRoot(DaemonCase):
-
-    def test_not_root_exits_1(self):
-        if os.geteuid() == 0:
-            self.skipTest("測試本身是 root")
-        self.inst({"argv": ["true"]}, "a.json")
-        r = self.run_cfg(self.config({"interval_ms": 1000, "modules": {"account": {"user": DEFAULT}},
-                                      "insts": {"a.json": {}}}))
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("aos-daemon: account: 掛了 modules.account 要用 root 開", r.stderr)
-
-    def test_unmounted_ignores_account_key(self):
-        # 模組沒掛：每項的 account 照不認得的鍵忽略（寫壞了也不管）
-        self.inst({"argv": ["true"]}, "a.json")
-        _, out, _ = self.start(self.config({"interval_ms": 10000, "insts": {"a.json": {"account": "x"}}}))
-        self.wait_for(lambda: self.results(out, "a.json") == [0])
-
-
-@unittest.skipUnless(NS_OK, "拿不到 unshare --map-auto 的假 root 或測試帳號；要等真 root 手動驗")
-class NsCase(DaemonCase):
-    """在 user namespace 裡開 daemon；src/py 複製到 /tmp。"""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.copy = tempfile.mkdtemp(prefix="aos-acct-src-")
-        os.chmod(cls.copy, 0o755)
-        shutil.copytree(SRC, os.path.join(cls.copy, "py"), ignore=shutil.ignore_patterns("__pycache__"))
-        cls.daemon = os.path.join(cls.copy, "py", "bin", "aos-daemon")
-
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.copy, ignore_errors=True)
-
-    def setUp(self):
-        super().setUp()
-        os.chmod(self.d, 0o777)
-        # 別的帳號建的檔、資料夾外面刪不掉：先在 namespace 裡（root）清掉
-        self.addCleanup(subprocess.run, NS + ["rm", "-rf", self.d], capture_output=True)
-
-    def write(self, rel, body, executable=False):
-        p = super().write(rel, body, executable)
-        os.chmod(p, 0o755 if executable else 0o644)
-        return p
-
-    def start_ns(self, cfg, env=None):
-        p = subprocess.Popen(NS + [PY, self.daemon, "--config", cfg], cwd=self.d, env=env or CLEAN_ENV,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
-        out, err = [], []
-        for stream, sink in ((p.stdout, out), (p.stderr, err)):
-            threading.Thread(target=lambda s=stream, k=sink: [k.append(x.rstrip("\n")) for x in s],
-                             daemon=True).start()
-        self.addCleanup(self._stop, p)
-        return p, out, err
-
-    def run_ns(self, cfg, env=None):
-        return subprocess.run(NS + [PY, self.daemon, "--config", cfg], cwd=self.d, env=env or CLEAN_ENV,
-                              capture_output=True, text=True, timeout=10)
-
-    def cfg(self, insts, account=None, interval_ms=100000, **mods):
-        modules = dict({"account": {"user": DEFAULT, "allow": [OTHER, THIRD]} if account is None else account},
-                       **mods)
-        return self.config({"interval_ms": interval_ms, "modules": modules, "insts": insts})
-
-    def who(self, name):
-        """任務寫的 `id -un`、`id -G`、HOME、USER、LOGNAME。"""
-        words = self.read("who." + name).split()
-        return {"user": words[0], "groups": set(words[1:-3]), "home": words[-3], "USER": words[-2],
-                "LOGNAME": words[-1]}
-
-    def uid_line(self, pid):
-        with open("/proc/%d/status" % pid) as f:
-            return [l.split()[1:] for l in f if l.startswith("Uid:")][0]
-
-    def children(self, pid):
-        with open("/proc/%d/task/%d/children" % (pid, pid)) as f:
-            return [int(x) for x in f.read().split()]
 
 
 class Runs(NsCase):

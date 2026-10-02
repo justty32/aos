@@ -1,5 +1,7 @@
 """收屍／cgroup 模組驗收（plan m3m-daemon-modules.md 模組二）。真的開 bin/aos-daemon。
 
+本檔：子樹、收屍、開機（Tree、Reap、Startup）。
+
 要有委派的 cgroup v2：daemon 一律用 `systemd-run --user --scope -p Delegate=yes` 包起來開（scope 就是它的子樹根）。
 這台拿不到（沒有 systemd-run、使用者層 systemd 沒在跑、沒有 cgroup.kill……）整組跳過，不算失敗。
 「沒委派好時回 1」那條直接開 daemon，只在測試自己所在的 cgroup 寫不進去時才跑（WSL 的 /init.scope 就是）。
@@ -8,104 +10,18 @@
 收尾時對 scope 的根寫 cgroup.kill，連 daemon 帶殘留一起清掉。
 """
 import os
-import shutil
-import subprocess
-import threading
-import time
 import unittest
 
 import aos_daemon_cgroup
 from _util import PY
-from test_daemon import CLEAN_ENV, DAEMON, INHERIT, sh
-from test_daemon_reload import ReloadCase
+from _daemon_util import DAEMON, INHERIT, sh
+from _cgroup_util import CG, CgCase, alive, cat, procs
 
-CG = {"cgroup": {}}
-SCOPE = ["systemd-run", "--user", "--scope", "-p", "Delegate=yes", "--quiet", "--"]
+
 # 留一個背景程序、記下它的 pid 就結束
 LEAVE = "sleep 1000 & echo $! >> bg; exit 0"
 # 用 setsid 跳出 session 再 double fork 的殘留
 LEAVE_SETSID = "(setsid sh -c 'sleep 1000 & echo $! >> bg' &); sleep 0.2; exit 0"
-
-
-def _probe():
-    """拿得到可委派、有 cgroup.kill 的 scope 就回 None，不然回跳過的理由。"""
-    if shutil.which("systemd-run") is None:
-        return "沒有 systemd-run"
-    check = 'p=/sys/fs/cgroup$(sed -n "s/^0:://p" /proc/self/cgroup); test -e "$p/cgroup.kill" && test -w "$p/cgroup.procs"'
-    try:
-        r = subprocess.run(SCOPE + ["sh", "-c", check], env=CLEAN_ENV, capture_output=True, timeout=30)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        return "systemd-run 不能用：%s" % e
-    return None if r.returncode == 0 else "拿不到委派的 cgroup v2 scope：%s" % r.stderr.decode(errors="replace").strip()
-
-
-SKIP = _probe()
-
-
-def alive(pid):
-    """pid 還在而且不是殭屍。"""
-    try:
-        with open("/proc/%d/stat" % pid) as f:
-            return f.read().rsplit(")", 1)[1].split()[0] != "Z"
-    except FileNotFoundError:
-        return False
-
-
-def procs(frame):
-    with open(os.path.join(frame, "cgroup.procs")) as f:
-        return [int(x) for x in f.read().split()]
-
-
-def cat(path):
-    with open(path) as f:
-        return f.read().strip()
-
-
-@unittest.skipIf(SKIP is not None, SKIP or "")
-class CgCase(ReloadCase):
-
-    def start(self, cfg, cwd=None, argv=None):
-        """跟 DaemonCase.start 一樣，但包在 systemd-run 的委派 scope 裡；等 daemon 搬進 `<根>/daemon`，記下根。"""
-        args = SCOPE + (argv or [PY, DAEMON, "--config", cfg])
-        p = subprocess.Popen(args, cwd=cwd or self.d, env=CLEAN_ENV, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, text=True, start_new_session=True)
-        out, err = [], []
-        for stream, sink in ((p.stdout, out), (p.stderr, err)):
-            threading.Thread(target=lambda s=stream, k=sink: [k.append(x.rstrip("\n")) for x in s],
-                             daemon=True).start()
-        self.addCleanup(self._stop, p)
-        self.root = None
-        self.wait_for(lambda: self._find_root(p), timeout=15)
-        self.addCleanup(self._kill_scope, self.root)
-        return p, out, err
-
-    def _find_root(self, p):
-        try:
-            with open("/proc/%d/cgroup" % p.pid) as f:
-                rel = [l[3:].strip() for l in f if l.startswith("0::")][0]
-        except FileNotFoundError:
-            return False
-        if os.path.basename(rel) != "daemon":
-            return False
-        self.root = "/sys/fs/cgroup" + os.path.dirname(rel)
-        return True
-
-    @staticmethod
-    def _kill_scope(root):
-        try:
-            with open(os.path.join(root, "cgroup.kill"), "w") as f:
-                f.write("1")
-        except FileNotFoundError:           # scope 已經沒了
-            pass
-
-    def frame(self, inst):
-        return os.path.join(self.root, aos_daemon_cgroup.frame_name(inst))
-
-    def bg(self):
-        return [int(x) for x in self.read("bg").split()] if self.exists("bg") else []
-
-    def texts(self, out):
-        return [l.split(" ", 1)[1] for l in list(out)]
 
 
 class Tree(CgCase):
@@ -222,87 +138,6 @@ class Startup(CgCase):
         self.assertEqual(procs(self.frame("a.json")), [])
         self.assertEqual(sorted(os.listdir(self.root)).count("daemon"), 1)
         self.assertFalse(os.path.exists(os.path.join(self.root, "daemon", "daemon")))
-
-
-class WithReload(CgCase):
-
-    def test_add_remove_and_limits(self):
-        self.inst({"argv": ["true"]}, "a.json")
-        self.inst({"argv": ["true"]}, "b.json")
-        mods = dict(CG, reload={})
-        p, out, _ = self.boot({"a.json": {"cgroup": {"pids.max": "50"}}}, 30000, modules=mods)
-        self.wait_for(lambda: self.results(out, "a.json"), timeout=10)
-        # 加 b、改 a 的上限
-        self.rewrite(p, {"a.json": {"cgroup": {"pids.max": "40"}}, "b.json": {}}, 30000, modules=mods)
-        self.wait_for(lambda: self.results(out, "b.json"), timeout=10)
-        t = self.texts(out)
-        self.assertLess(t.index("inst=b.json added"), t.index("inst=b.json cgroup=%s" % aos_daemon_cgroup.frame_name("b.json")))
-        self.assertTrue(os.path.isdir(self.frame("b.json")))
-        self.assertEqual(cat(os.path.join(self.frame("a.json"), "pids.max")), "40")
-        self.assertEqual(sum(1 for x in t if x.startswith("inst=a.json cgroup=")), 1)   # 還在的項不再印
-        # 拿掉 b：框刪掉
-        self.rewrite(p, {"a.json": {"cgroup": {"pids.max": "40"}}}, 30000, modules=mods)
-        self.wait_for(lambda: not os.path.exists(self.frame("b.json")), timeout=10)
-        self.assertTrue(os.path.isdir(self.frame("a.json")))
-
-    def test_remove_running_cleans_after(self):
-        # 拿掉正在跑的項：那次照樣跑完、清完殘留，之後框刪掉
-        self.inst(sh("sleep 1000 & echo $! >> bg; sleep 1"), "r.json")
-        mods = dict(CG, reload={})
-        p, out, _ = self.boot({"r.json": {}}, 30000, modules=mods)
-        self.wait_for(lambda: self.bg(), timeout=10)
-        self.rewrite(p, {}, 30000, modules=mods)
-        self.wait_for(lambda: self.has(out, "inst=r.json removed"))
-        self.wait_for(lambda: self.has(out, "inst=r.json reaped"), timeout=10)
-        self.wait_for(lambda: not os.path.exists(self.frame("r.json")), timeout=10)
-        (pid,) = self.bg()
-        self.assertFalse(alive(pid))
-
-    def test_bad_limit_on_reload(self):
-        # 重讀時上限寫不進去（不存在的 cgroup 檔）：算重讀出錯，stderr 一行，舊的照跑
-        self.inst({"argv": ["true"]}, "a.json")
-        mods = dict(CG, reload={})
-        p, out, err = self.boot({"a.json": {}}, 30000, modules=mods)
-        self.wait_for(lambda: self.results(out, "a.json"), timeout=10)
-        self.rewrite(p, {"a.json": {"cgroup": {"no.such.file": "1"}}}, 30000, modules=mods)
-        self.wait_for(lambda: any(l.startswith("aos-daemon: reload: ") for l in list(err)), timeout=10)
-        self.assertEqual(self.reloads(out), 0)
-        self.assertIsNone(p.poll())
-
-
-class Errors(CgCase):
-
-    def test_bad_limit_at_start(self):
-        # 開起來時上限寫不進去：自然丟錯、回 1
-        self.inst({"argv": ["true"]}, "a.json")
-        cfg = self.config({"interval_ms": 30000, "modules": CG,
-                           "insts": {"a.json": {"cgroup": {"no.such.file": "1"}}}})
-        r = subprocess.run(SCOPE + [PY, DAEMON, "--config", cfg], cwd=self.d, env=CLEAN_ENV,
-                           capture_output=True, text=True, timeout=30)
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("Traceback", r.stderr)
-        self.assertFalse(self.results(r.stdout.splitlines(), "a.json"))
-
-
-def _own_writable():
-    try:
-        return os.access(aos_daemon_cgroup.own_cgroup(), os.W_OK)
-    except (OSError, IndexError):
-        return True
-
-
-class NotDelegated(ReloadCase):         # 不包 systemd-run、不看 SKIP
-
-    @unittest.skipIf(_own_writable(), "測試自己所在的 cgroup 寫得進去，模擬不了沒委派")
-    def test_no_delegation_exits_1(self):
-        # C1：掛了模組卻沒有委派好的 cgroup：自然丟錯、回 1，一次都沒跑
-        self.inst({"argv": ["true"]}, "a.json")
-        cfg = self.config({"interval_ms": 30000, "modules": CG, "insts": {"a.json": {}}})
-        r = self.run_cfg(cfg)
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("Traceback", r.stderr)
-        self.assertIn("PermissionError", r.stderr)
-        self.assertFalse(self.results(r.stdout.splitlines(), "a.json"))
 
 
 if __name__ == "__main__":
