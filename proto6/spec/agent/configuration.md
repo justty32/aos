@@ -19,11 +19,11 @@
 
 〔第二十批，astra 審整理區必-5〕沒有 git 時改設定與恢復前驗證的通用正本是 [B-625](../settled/tick/recovery.md)；本條的「持鎖寫入後自己提交」改照 B-625：`config/` 不在 aos 範圍、工具不自己提交（[B-630](../settled/deferred/git.md)）；needs／group 連續與 kind 順序檢查屬已撤的舊任務表，不適用；只有 kernel／agent 的領域驗證仍照本條。
 
-改設定在 tick 外用 `aos-config-add`〔暫緩（2026-10-01），見[暫緩區](../settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)〕、`aos agent tools add` 等指令，持與 tick 相同的 node 鎖寫入並由標準配備的 git 提交；`--from` 可指定任意可讀路徑。重要設定仍先 pause、等正在跑的 tick 與後代清空再手改，確認提交後才 resume；暫停 run 不等於暫停 tick。
+改設定在 tick 外用 `aos-config-add`〔暫緩（2026-10-01），見[暫緩區](../settled/deferred/tick/02-B-633落盤與B-625.md#暫緩b-625-加入普通設定aos-config-add)〕、`aos agent tools add` 等指令，持與 tick 相同的 node 鎖寫入並由標準配備的 git 提交；`--from` 可指定任意可讀路徑。重要設定仍先 pause、等正在跑的 tick 與後代清空再手改，確認提交後才 resume；暫停 run 不等於暫停 tick。
 
 任務直接開檔讀設定。**tick 裡的任務不改 `config/` 是軟性原則，不檢查也不阻擋；同一格新舊設定混用的風險由寫任務的人承擔。** 正常在 tick 外提交的修改，下次 tick 就可讀到；已派工作沿用派出時固定的材料。
 
-〔暫緩（2026-10-01）：`aos-config-add` 連同 P-207 搬到[暫緩區](../settled/deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)，本段照留作紀錄〕〔使用者方向 2026-09-30，第十九批；P-207 從協議篇搬上〕**`aos-config-add` 的鎖與提交流程**（argv 與結束碼見 [P-207](../settled/deferred/protocol/tick.md)）：它在 tick 外自己持鎖，取 tick 的同一把非阻塞鎖（[B-602](../settled/tick.md)），node 是 dirty 或有擋板就拒絕；不能在同 node 的 tick 內呼叫，任務直接讀目前設定。JSON 草稿先驗基本格式，領域設定留到下一格依本條驗。寫法是在目標旁完整寫暫存檔 → fsync → rename 替換 → fsync 目錄，再只 stage 目標、提交，訊息 `aos-config-add <target>`，沒變動不提交；提交由標準配備的 git 做（[B-622](../settled/deferred/git.md)），失敗還原、commit 或還原故障依 B-622 擋新格。**沒有 git 時只做原子替換、不提交**（[B-632](../settled/deferred/git.md)）。重要設定（inst 的身分、任務表）不用這個工具：依下段，暫停、等程序全空、持鎖修改並驗證、提交後才 resume，保留已派工作所需的舊內容。
+〔暫緩（2026-10-01）：`aos-config-add` 連同 P-207 搬到[暫緩區](../settled/deferred/tick/02-B-633落盤與B-625.md#暫緩b-625-加入普通設定aos-config-add)，本段照留作紀錄〕〔使用者方向 2026-09-30，第十九批；P-207 從協議篇搬上〕**`aos-config-add` 的鎖與提交流程**（argv 與結束碼見 [P-207](../settled/deferred/protocol/tick.md)）：它在 tick 外自己持鎖，取 tick 的同一把非阻塞鎖（[B-602](../settled/tick.md)），node 是 dirty 或有擋板就拒絕；不能在同 node 的 tick 內呼叫，任務直接讀目前設定。JSON 草稿先驗基本格式，領域設定留到下一格依本條驗。寫法是在目標旁完整寫暫存檔 → fsync → rename 替換 → fsync 目錄，再只 stage 目標、提交，訊息 `aos-config-add <target>`，沒變動不提交；提交由標準配備的 git 做（[B-622](../settled/deferred/git.md)），失敗還原、commit 或還原故障依 B-622 擋新格。**沒有 git 時只做原子替換、不提交**（[B-632](../settled/deferred/git.md)）。重要設定（inst 的身分、任務表）不用這個工具：依下段，暫停、等程序全空、持鎖修改並驗證、提交後才 resume，保留已派工作所需的舊內容。
 
 〔第十九批；P-210 從協議篇搬上，建立步驟也見 [H-036](../cli/walkthrough.md)〕**建立與恢復前驗證**：
 - **建立**（`aos node new`）：範本只安裝普通任務，不寫角色旗標；先驗產物有效、有初始 commit（沒有 git 時略過，[B-632](../settled/deferred/git.md)），才報建好。建立本身不授身分、不登記、不叫醒；頂層額度仍要放進 daemon 設定的 roots，成員保存與同步沿 kernel 篇。kernel 與 agent 的範本內容見[協議篇](../protocol/kernel-tasks.md)。

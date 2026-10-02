@@ -14,9 +14,9 @@
 |---|---|
 | 沒有 git | `mq-get` → 使用者任務 → `mq-post` → 清理 |
 
-〔使用者 2026-10-01 第十七批〕「git這塊先不要進範本。」原本的「有 git 版」（git 開格 → `mq-get` → 存檔點 → 使用者任務 → 存檔點 → 清理 → git 收尾 → `mq-post`）隨 `aos-git` 搬到[暫緩區](template.md#暫緩b-629-有-git-版範本)；範本只留沒有 git 的這份。要用 git，見 [B-635 的範例](../tick/hooks.md#範例用-hook-加普通-git-指令管版本)。
+〔使用者 2026-10-01 第十七批〕「git這塊先不要進範本。」原本的「有 git 版」（git 開格 → `mq-get` → 存檔點 → 使用者任務 → 存檔點 → 清理 → git 收尾 → `mq-post`）隨 `aos-git` 搬到[暫緩區](template.md#暫緩b-629-有-git-版範本)；範本只留沒有 git 的這份。要用 git，見 [B-635 的範例](../tick/hooks/03-B-635-範例hook加git.md#範例用-hook-加普通-git-指令管版本)。
 
-〔使用者 2026-10-01 第五批〕原本兩版都有「發摘要」（id `summary`，`aos-publish`），隨 `aos-publish` 搬到[暫緩區](tick.md#暫緩b-624-發布摘要aos-publish)拿掉。
+〔使用者 2026-10-01 第五批〕原本兩版都有「發摘要」（id `summary`，`aos-publish`），隨 `aos-publish` 搬到[暫緩區](tick/03-B-624與B-621.md#暫緩b-624-發布摘要aos-publish)拿掉。
 
 ### 沒有 git 版
 

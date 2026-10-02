@@ -3,7 +3,7 @@
 ← [基底](README.md)｜[kernel 樹](../scheduling/README.md)｜[架構與裁定](../../notes/2026-09-29-kernel-tree.md)
 
 > **〔2026-10-01 殘留註記〕本篇是 2026-10-01 之前的設計，下列內容現在不是現行的**；原文照留，以這裡指的正本為準（各批裁定見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）：
-> - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
+> - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick/01-P-207加入設定與P-212切換帳號.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
 > - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
 > - 舊 daemon 的通道與憑證（`AOS_TICK_TOKEN`）、登記、runner、`state.json`：整套在暫緩區（[舊 daemon](../settled/deferred/daemon/README.md)）；現行 daemon 只定期叫 `aos-exec` 加各模組（[B-640](../settled/daemon/core.md)）。
 
@@ -33,7 +33,7 @@
 
 **驗收：**偽造 payload 帳號不能註冊別人的資料夾；未啟用磁碟 module 不必驗 quota。重啟註冊遇一個壞成員，其餘仍長回來。
 
-- B-303．可選 root helper 與 aos-as：已搬到[整理區](../settled/deferred/helper.md#b-303可選-root-helper-與解析分界使用者方向-2026-09-29)，條號不變。
+- B-303．可選 root helper 與 aos-as：已搬到[整理區](../settled/deferred/helper/01-B-303-helper模式與固定動作.md#b-303可選-root-helper-與解析分界使用者方向-2026-09-29)，條號不變。
 
 ## B-304：磁碟與可寫位置〔使用者方向 2026-09-29〕
 

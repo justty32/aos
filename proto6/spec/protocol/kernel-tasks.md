@@ -3,7 +3,7 @@
 ← [協議入口](README.md)｜[node](../settled/protocol/tick.md)｜[daemon](../settled/protocol/daemon/README.md)｜[資源](resources.md)｜[走查](../cli.md)｜[裁定](../../notes/2026-09-29-verdicts.md)
 
 > **〔2026-10-01 殘留註記〕本篇是 2026-10-01 之前的設計，下列內容現在不是現行的**；原文照留，以這裡指的正本為準（各批裁定見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md)）：
-> - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
+> - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick/01-P-207加入設定與P-212切換帳號.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
 > - 標準任務表範本（[B-629](../settled/deferred/template.md)）、`aos-mq get`／`post`（[B-623、B-624](../settled/deferred/mq.md)）、`aos-clean`（[B-404](../base/storage.md) 的系統級任務部分、P-605）：第十八批暫緩，現行沒有系統級任務；kernel／agent 範本裡掛的這些項也跟著不成立。現行收發信是 daemon 訊息模組 `aos-mq send`／`take`／`peek`（[B-645](../settled/daemon/mq.md)）。
 > - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
 > - 舊 daemon 的通道與憑證（`AOS_TICK_TOKEN`）、登記、runner、`state.json`：整套在暫緩區（[舊 daemon](../settled/deferred/daemon/README.md)）；現行 daemon 只定期叫 `aos-exec` 加各模組（[B-640](../settled/daemon/core.md)）。
@@ -74,7 +74,7 @@ sync.json 欄位：`boot_id`、`members_revision` 是上次成功同步時的 da
 
 schedule.json 欄位：`next_seq` 是下一個要配的 `ready_seq`；`scan_after`、`next_scan_ms` 是補查游標（上次掃到的成員短名）與下次補查時間；`members[]` 每項記 `ready_seq`（不 ready 為 null）、`due_ms`、讀摘要時釘的 `summary_commit`（成員走 git 備援時沒有 commit，記 null）與 `wake_mark`。〔審稿新必-2〕`wake_mark` 是 wake 回應的 `registration_id` 與 `tick_seq` 連同叫醒時間；沒叫醒過為 null。
 
-同組寫 `.aos/summary/summary.json`；ready 表示本地可推進，due_ms 取最近重試／掃描／冷卻，只有等待結果則 false。標準配備在提交後發布 `.aos/summary/published.json`（[B-624](../settled/deferred/mq.md)、[P-307](messages.md)），上層只開摘要權時讀此檔；沒有另列發布任務。〔暫緩（2026-10-01）〕發布摘要 `aos-publish` 已搬到[暫緩區](../settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)，現在沒有人發布 `published.json`。
+同組寫 `.aos/summary/summary.json`；ready 表示本地可推進，due_ms 取最近重試／掃描／冷卻，只有等待結果則 false。標準配備在提交後發布 `.aos/summary/published.json`（[B-624](../settled/deferred/mq.md)、[P-307](messages.md)），上層只開摘要權時讀此檔；沒有另列發布任務。〔暫緩（2026-10-01）〕發布摘要 `aos-publish` 已搬到[暫緩區](../settled/deferred/tick/03-B-624與B-621.md#暫緩b-624-發布摘要aos-publish)，現在沒有人發布 `published.json`。
 
 ## P-804．分配與量測〔P-500～507、S-203／204；工程預設〕
 
@@ -178,7 +178,7 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者、明授的投�
 
 兩條份額路線（kernel 全管、kernel 不管）與直連檔以 [S-301](../scheduling/llm.md) 為正本，各欄位填法也在那張表；範本另要照下面配權限。
 
-兩種工作可分別選路線。父須能列成員收件與讀摘要；僅開摘要權時讀 `.aos/summary/published.json`（〔暫緩（2026-10-01）〕發布它的 `aos-publish` 在[暫緩區](../settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)），用量另授讀權。轉交要開相應 requests／responses 權限，下一站明授 origin/via。〔第十九批〕自跑工具經通道 `node.mount` 掛（[P-402](work.md)），要 jobs 路徑權限；資源歸掛的那個 tick 或它指定的下層（[B-613](../settled/deferred/daemon/channel.md)），工具不自選。
+兩種工作可分別選路線。父須能列成員收件與讀摘要；僅開摘要權時讀 `.aos/summary/published.json`（〔暫緩（2026-10-01）〕發布它的 `aos-publish` 在[暫緩區](../settled/deferred/tick/03-B-624與B-621.md#暫緩b-624-發布摘要aos-publish)），用量另授讀權。轉交要開相應 requests／responses 權限，下一站明授 origin/via。〔第十九批〕自跑工具經通道 `node.mount` 掛（[P-402](work.md)），要 jobs 路徑權限；資源歸掛的那個 tick 或它指定的下層（[B-613](../settled/deferred/daemon/channel.md)），工具不自選。
 
 OS 帳號、chown 與多帳號交接用的群組（建群組、加成員、改檔案群組）走 daemon 佈建的固定動作（[B-609](../settled/deferred/daemon/helper-actions.md)），首版不用 ACL。父配額只讓該子讀，不給子寫。
 
