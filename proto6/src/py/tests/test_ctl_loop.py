@@ -21,7 +21,7 @@ class Step1Config(CtlCase):
 
     def test_not_mounted(self):
         # modules 裡只有別的鍵：不建 socket、不傳兩個變數
-        self.inst(sh('echo "${AOS_DAEMON_SOCKET-none} ${AOS_DAEMON_INST-none}" > env.txt'), "e.json")
+        self.inst(sh('echo "${AOS_DAEMON_CTL_SOCKET-none} ${AOS_DAEMON_INST-none}" > env.txt'), "e.json")
         _, out, _ = self.start(self.config({"interval_ms": 10000, "modules": {"other": {}},
                                             "insts": {"e.json": {}}}))
         self.wait_for(lambda: self.results(out, "e.json"))
@@ -148,7 +148,7 @@ class Step2Loop(CtlCase):
 class Step4Env(CtlCase):
 
     def test_env_values(self):
-        self.inst(sh('echo "$AOS_DAEMON_SOCKET" > env.txt; echo "$AOS_DAEMON_INST" >> env.txt'),
+        self.inst(sh('echo "$AOS_DAEMON_CTL_SOCKET" > env.txt; echo "$AOS_DAEMON_INST" >> env.txt'),
                   "jobs/report.json")
         self.up({"jobs/report.json": {}}, 10000)
         self.wait_for(lambda: self.exists("jobs/env.txt") and len(self.read("jobs/env.txt").split()) == 2)

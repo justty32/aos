@@ -152,13 +152,14 @@ def snapshot():
 
 
 def give_env(item, setup):
-    """控制模組掛著時，開 aos-exec 的環境多放 `AOS_DAEMON_SOCKET`（m3n 步驟 4）；訊息模組掛著時多放
-    `AOS_DAEMON_MQ_SOCKET`；掛了任何一個就放 `AOS_DAEMON_INST`（m3m 待問 M2）。都沒掛＝照 daemon 的環境。"""
+    """控制模組掛著時，開 aos-exec 的環境多放 `AOS_DAEMON_CTL_SOCKET`（m3n 步驟 4；第二十五批由 AOS_DAEMON_SOCKET 改名）；
+    訊息模組掛著時每扇門多放一個 `AOS_DAEMON_MQ_<門名>`（第二十五批，每項都拿到每一扇門）；
+    掛了任何一個就放 `AOS_DAEMON_INST`（m3m 待問 M2）。都沒掛＝照 daemon 的環境。"""
     extra = {}
     if setup.sock is not None:
-        extra["AOS_DAEMON_SOCKET"] = setup.sock
-    if setup.mq_sock is not None:
-        extra["AOS_DAEMON_MQ_SOCKET"] = setup.mq_sock
+        extra["AOS_DAEMON_CTL_SOCKET"] = setup.sock
+    for name, path in setup.mq_doors.items():
+        extra["AOS_DAEMON_MQ_" + name] = path
     if extra:
         item.env = dict(os.environ, AOS_DAEMON_INST=item.inst, **extra)
 
