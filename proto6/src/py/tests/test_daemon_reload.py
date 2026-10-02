@@ -8,8 +8,8 @@ import signal
 import time
 import unittest
 
-from test_ctl import CONTROL, STAMP, UPTIME, CtlCase
-from test_daemon import INHERIT, sh
+from _ctl_util import CONTROL, STAMP, UPTIME, CtlCase
+from _daemon_util import INHERIT, sh
 
 RELOAD = {"reload": {}}
 BOTH = dict(CONTROL, **RELOAD)

@@ -10,8 +10,8 @@ import time
 import unittest
 
 import aos_daemon
-from test_ctl import CONTROL, STAMP, CtlCase
-from test_daemon import sh
+from _ctl_util import CONTROL, STAMP, CtlCase
+from _daemon_util import sh
 
 STATE = {"state": {"$ref": "aos-state.json"}}
 BOTH = dict(CONTROL, **STATE)

@@ -11,8 +11,8 @@ import re
 import time
 import unittest
 
-from test_ctl import CtlCase
-from test_daemon import TS, DaemonCase, INHERIT, sh
+from _ctl_util import CtlCase
+from _daemon_util import TS, DaemonCase, INHERIT, sh
 
 LOUD = {"stdout": INHERIT, "stderr": INHERIT}
 # 印 0000|0001|…0299|（每筆 5 bytes，共 1500 bytes）到 stdout，stderr 印同樣的東西
@@ -233,7 +233,7 @@ class Kill(CtlCase):
 
 
 try:
-    from test_daemon_cgroup import CgCase, procs
+    from _cgroup_util import CgCase, procs
 except ImportError:                  # pragma: no cover
     CgCase = None
 
@@ -263,7 +263,7 @@ if CgCase is not None:
                 return json.loads(s.makefile("rb").readline())
 
 
-from test_account import NS_OK, NsCase, OTHER  # noqa: E402
+from _account_util import NS_OK, NsCase, OTHER  # noqa: E402
 
 
 class KillOtherAccount(NsCase):
