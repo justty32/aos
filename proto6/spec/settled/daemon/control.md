@@ -1,17 +1,18 @@
-# daemon 控制模組：叫醒、暫停、恢復、查詢
+# daemon 控制模組
 
-← [daemon 目錄](README.md)｜[核心 B-640](core.md)｜[慣例](../conventions.md)｜格式：[P-121](../protocol/daemon/control.md)
+← [daemon 目錄](README.md)｜[核心 B-640](core.md)｜格式：[P-121](../protocol/daemon/control.md)
 
-本篇只有 B-641，寫控制模組與 `aos-ctl` **做什麼**。socket 上一行 JSON 的確切欄位、錯誤代碼、`aos-ctl` 的 argv 與結束碼，寫在格式篇 [P-121](../protocol/daemon/control.md)。
+程式：`lib/aos_daemon_ctl.py`、`lib/aos_ctl.py`；測試：`tests/test_ctl_protocol.py`、`test_ctl_loop.py`、`test_daemon_kill.py`。
 
-依據：[第二十批篇末「`insts` 改成物件＋控制模組裁定」與「m3n 待問 1 先照建議做」](../../../notes/verdicts/11-tick-as-unit/07-1001-最核心daemon.md#2026-10-01最核心-daemon待統一更新-spec)、[第二十五批（環境變數改名 `AOS_DAEMON_CTL_SOCKET`、socket 一律 666）](../../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門)、[plan m3n](../../../plan/m3n-control-module.md)；現行程式 [控制模組與 aos-ctl](../../../src/py/README.md#控制模組與-aos-ctlm3n)（`lib/aos_daemon_ctl.py`、`lib/aos_ctl.py`，有出入以程式為準）。
+## B-641：控制模組與 aos-ctl
 
-## 分檔目錄
+做什麼：設定檔寫了 `modules.control.socket` 才開一個 socket，讓人或任務對清單上的**某一項**下 `wake`、`pause`、`resume`、`status`、`kill`、`restart`（`aos-ctl` 是送指令的小工具）。沒有「對全部」，也不收 reload、shutdown。
 
-> 2026-10-02 整理：原檔約 10 KB 超過 8 KB 門檻，按標題逐字拆進 `control/`；本檔只留前言與目錄（原路徑保留當入口）。
+原則：
 
-<!-- wf-nav -->
-| # | 檔 | 段落 |
-|---|---|---|
-| 1 | [01-B-641-指令與細節.md](control/01-B-641-指令與細節.md) | B-641：控制模組與 aos-ctl〔使用者方向 2026-10-01〕 |
-| 2 | [02-B-641-aos-ctl與連線出錯.md](control/02-B-641-aos-ctl與連線出錯.md) | `aos-ctl`：送一個指令的小工具；一條連線出錯只影響那一條 |
+- **能連就能做，不驗身分**；socket 666、誰能連靠所在資料夾權限（見 [README](README.md)）。
+- 每次開 `aos-exec` 放環境變數 `AOS_DAEMON_CTL_SOCKET`、`AOS_DAEMON_INST`；它們一路被各層任務繼承，所以任何一層跑 `aos-ctl wake` 叫醒的都是 daemon 清單上最頂層那一項。
+- 暫停中 `wake` 跑一次、跑完照樣暫停；被 `stop_on_nonzero` 停掉的項 `wake` 回 `stopped`，要 `resume`；`resume` 一律馬上跑一次。`wake` 連叫只補一次。
+- `kill`／`restart` 是為了 daemon 跑 daemon（下層永遠不結束）：先 SIGTERM，等 `kill_grace_ms` 還沒結束才 SIGKILL（掛了收屍模組就整框殺）。
+- 暫停、已停只放記憶體；要跨重開掛記住狀態模組（B-643）。
+- 一條連線出錯只影響那一條。
