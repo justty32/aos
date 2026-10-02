@@ -32,10 +32,10 @@ schema：`daemon-core-config.schema.json` 的 `modules.account` 與 `$defs/Item.
 | 方向 | 內容 |
 |---|---|
 | 主→root，第一則 | `{"default":"<預設帳號>","allow":[…],"deny":[…]}` |
-| 主→root，請求 | `{"id":<整數>,"user":"<帳號>","argv":[…],"cwd":"<絕對路徑>","env":{…},"frame":"<框的絕對路徑>"或null}`，附兩個 fd（`SCM_RIGHTS`）：子程序的 stdout、stderr；stdin 是 `/dev/null` |
+| 主→root，請求 | `{"id":<整數>,"user":"<帳號>","argv":[…],"cwd":"<絕對路徑>","env":{…},"frame":"<框的絕對路徑>"或null}`（框必須是 root 端自己那棵 cgroup 子樹底下的 `i-<h>`，見 [cgroup](cgroup.md)），附兩個 fd（`SCM_RIGHTS`）：子程序的 stdout、stderr；stdin 是 `/dev/null` |
 | 主→root，送訊號 | `{"signal":<請求 id>,"final":false\|true}`（`false`＝SIGTERM、`true`＝SIGKILL；不認得的 id 不做事；不回應） |
 | root→主，結束 | `{"id":<同一個>,"exit":<碼>}`（訊號 N＝128+N） |
-| root→主，開不了 | `{"id":<同一個>,"error":"no such user <帳號>"}`，或 `"not allowed: <帳號>"`、`"not allowed: <帳號> is root"` |
+| root→主，開不了 | `{"id":<同一個>,"error":"no such user <帳號>"}`，或 `"not allowed: <帳號>"`、`"not allowed: <帳號> is root"`、`"bad frame <框>"` |
 
 子程序 exec 前出錯：它的 stderr 寫 `aos-daemon-root: <說明>`、以 127 結束。主程式那頭關了，root 端回 0 退出、不殺還在跑的子程序。
 

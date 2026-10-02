@@ -20,6 +20,6 @@
 ## P-100：範圍
 
 - 結束碼照 [C-08](../../conventions.md)（只有 0 與 1，用法錯也是 1），環境變數總表 [C-10](../../conventions.md)。
-- 各 socket 一律一條連線一問一答、一行 JSON（UTF-8、LF）、1 秒內送完、不驗身分；請求陌生欄位照收不理；回應 `{"ok":true,…}` 或 `{"ok":false,"error":"<代碼>","detail":"<字串>"}`。
+- 各 socket 一律一條連線一問一答、一行 JSON（UTF-8、LF；回應的非 ASCII 字元一律 `\uXXXX` 跳脫）、1 秒內送完、不驗身分；請求陌生欄位照收不理；回應 `{"ok":true,…}` 或 `{"ok":false,"error":"<代碼>","detail":"<字串>"}`。
 - socket 檔開好後一律 chmod 666；誰能連由所在資料夾的擁有者／群組／權限決定（管理者先建好，daemon 不建、不改）。
 - 請求與回應分開驗 schema。
