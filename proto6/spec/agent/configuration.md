@@ -17,7 +17,7 @@
 
 ## A-102 改設定與下一 tick 生效〔使用者方向 2026-09-29〕
 
-〔第二十批，astra 審整理區必-5〕沒有 git 時改設定與恢復前驗證的通用正本是 [B-625](../settled/tick/recovery.md)；本條的「持鎖寫入後自己提交」改照 B-625：`config/` 不在 aos 範圍、工具不自己提交（[B-630](../settled/deferred/git.md)）；needs／group 連續與 kind 順序檢查屬已撤的舊任務表，不適用；只有 kernel／agent 的領域驗證仍照本條。
+〔第二十批，astra 審整理區必-5〕沒有 git 時改設定與恢復前驗證的通用正本是 [B-625](../settled/deferred/tick/05-B-625-當機恢復設定與清理.md)；本條的「持鎖寫入後自己提交」改照 B-625：`config/` 不在 aos 範圍、工具不自己提交（[B-630](../settled/deferred/git.md)）；needs／group 連續與 kind 順序檢查屬已撤的舊任務表，不適用；只有 kernel／agent 的領域驗證仍照本條。
 
 改設定在 tick 外用 `aos-config-add`〔暫緩（2026-10-01），見[暫緩區](../settled/deferred/tick/02-B-633落盤與B-625.md#暫緩b-625-加入普通設定aos-config-add)〕、`aos agent tools add` 等指令，持與 tick 相同的 node 鎖寫入並由標準配備的 git 提交；`--from` 可指定任意可讀路徑。重要設定仍先 pause、等正在跑的 tick 與後代清空再手改，確認提交後才 resume；暫停 run 不等於暫停 tick。
 
