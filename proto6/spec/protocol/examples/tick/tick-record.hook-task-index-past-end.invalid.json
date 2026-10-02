@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "seq": 7,
+  "ran": 1,
+  "tasks": [],
+  "hooks": {
+    "after_task": [
+      {
+        "id": "0",
+        "index": 0,
+        "task_index": 1,
+        "exit": 1
+      }
+    ]
+  },
+  "ended": true,
+  "exit": 0
+}

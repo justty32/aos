@@ -1,4 +1,5 @@
 """aos-tick 系列測試共用：表與任務的縮寫、CAT_REC、TickCase 基底與 check_record()。"""
+import importlib.util
 import json
 import os
 import shlex
@@ -10,6 +11,7 @@ from aos_tick_record import read_record
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TICK = os.path.join(os.path.dirname(HERE), "bin", "aos-tick")
+SPEC = os.path.join(HERE, "..", "..", "..", "spec", "protocol")
 
 CLEAN_ENV = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
 
@@ -65,26 +67,25 @@ class TickCase(Base):
 
 
 def check_record(case, rec, raw=False):
-    """P-213 的跨欄位規則＋（有 jsonschema 時）tick-record schema。raw＝傳進來的是 record.json 本體，只驗 schema 的 RecordFile。"""
+    """跨欄位規則（跟 spec 的 validate.py 共用 record_rules.py）＋（有 jsonschema 時）tick-record schema。
+    raw＝傳進來的是 record.json 本體，只驗 schema 的 RecordFile。"""
     if raw:
         return _check_schema(rec, raw=True)
     if rec.get("ended"):
         case.assertEqual(rec["exit"], 0)                  # 寫得到收尾就是 0，任務成敗不影響
-        if "blocked_before" in rec:                    # 第十六批：被擋下的那一項（位置 ran）沒跑，不會在 tasks 裡
-            case.assertNotIn(rec["blocked_before"], [t["id"] for t in rec["tasks"] if t["index"] == rec["ran"]])
     else:
         case.assertNotIn("exit", rec)
-        case.assertNotIn("skipped", rec)               # 第二十四批：skipped 跟 blocked_before 一樣收尾才寫
-    skipped = rec.get("skipped", [])                   # 第二十四批：被 kinds 擋掉的不算 ran
-    sidx = [t["index"] for t in skipped]
-    case.assertEqual(sidx, sorted(set(sidx)))
-    seen = rec["ran"] + len(skipped)
-    idx = [t["index"] for t in rec["tasks"]]           # 第八批：只記不是 0 的，index 遞增、都 < ran（加上 skipped 筆數）
-    case.assertEqual(idx, sorted(set(idx)))
-    case.assertTrue(all(0 <= i < seen for i in idx))
-    case.assertFalse(set(idx) & set(sidx))
+        case.assertNotIn("skipped", rec)               # skipped 跟 blocked_before 一樣收尾才寫
     case.assertNotIn({"exit": 0}, [{k: v for k, v in t.items() if k == "exit"} for t in rec["tasks"]])
+    case.assertEqual(_record_rules().record_errors(rec), [])
     _check_schema(rec)
+
+
+def _record_rules():
+    spec = importlib.util.spec_from_file_location("record_rules", os.path.join(SPEC, "examples", "messages", "record_rules.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _check_schema(rec, raw=False):
@@ -93,7 +94,7 @@ def _check_schema(rec, raw=False):
         from referencing import Registry, Resource
     except ImportError:
         return
-    sd = os.path.join(HERE, "..", "..", "..", "spec", "protocol", "schemas")
+    sd = os.path.join(SPEC, "schemas")
     res = {}
     for n in ("common.schema.json", "tick-record.schema.json"):
         with open(os.path.join(sd, n), encoding="utf-8") as f:

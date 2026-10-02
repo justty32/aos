@@ -1,14 +1,13 @@
 {
   "version": 1,
-  "seq": 3,
+  "seq": 5,
   "ran": 1,
   "tasks": [
     {
-      "id": "a",
+      "id": "b",
       "index": 1,
-      "exit": 1
+      "exit": 2
     }
   ],
-  "ended": true,
-  "exit": 0
+  "ended": false
 }
