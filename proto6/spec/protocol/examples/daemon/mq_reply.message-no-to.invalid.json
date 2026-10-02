@@ -3,7 +3,7 @@
   "messages": [
     {
       "from": "a.json",
-      "to": "b.json",
+      "from_socket": null,
       "msg": 1
     }
   ]

@@ -4,6 +4,7 @@
     {
       "from": null,
       "from_socket": null,
+      "to": "b.json",
       "msg": 1,
       "urgent": true
     }

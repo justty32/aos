@@ -4,6 +4,7 @@
     {
       "from": "a.json",
       "from_socket": "/srv/aos/A/aos-mq.sock",
+      "to": "b.json",
       "msg": {
         "hi": 1
       }
@@ -11,7 +12,14 @@
     {
       "from": null,
       "from_socket": null,
+      "to": "#deploy",
       "msg": -5
+    },
+    {
+      "from": "c.json",
+      "from_socket": "/srv/aos/A/aos-mq.sock",
+      "to": "*",
+      "msg": "v2"
     }
   ]
 }

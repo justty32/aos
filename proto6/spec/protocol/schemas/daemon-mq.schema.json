@@ -17,7 +17,7 @@
     },
     "Request": {
       "type": "object",
-      "description": "send、take、peek 剛好出現一個；其他欄位照收不理。msg、from_socket、urgent 只在 send 時看；from 在 send 是寄件 inst（字串或 null），在 take／peek 是寄件人篩選（非空陣列，元素字串或 null）",
+      "description": "send、broadcast、channel、take、peek 剛好出現一個；其他欄位照收不理。msg、from_socket、urgent 只在寄（send／broadcast／channel）時看；from 在寄的時候是寄件 inst（字串或 null），在 take／peek 是寄件人篩選（非空陣列，元素字串或 null）；to 只在 take／peek 看（第二十二批）",
       "properties": {
         "send": {
           "$ref": "#/$defs/Inst"
@@ -27,12 +27,31 @@
         },
         "peek": {
           "$ref": "#/$defs/Inst"
+        },
+        "broadcast": {
+          "const": true,
+          "description": "〔第二十二批〕寄給這個 daemon 的每一項（寄件人自己除外）；值只能是 true"
+        },
+        "channel": {
+          "type": "string",
+          "minLength": 1,
+          "description": "〔第二十二批〕頻道名：寄給設定裡 mq.subscribe 有這個名字的項（寄件人自己除外）"
         }
       },
       "oneOf": [
         {
           "required": [
             "send"
+          ]
+        },
+        {
+          "required": [
+            "broadcast"
+          ]
+        },
+        {
+          "required": [
+            "channel"
           ]
         },
         {
@@ -49,8 +68,22 @@
       "allOf": [
         {
           "if": {
-            "required": [
-              "send"
+            "anyOf": [
+              {
+                "required": [
+                  "send"
+                ]
+              },
+              {
+                "required": [
+                  "broadcast"
+                ]
+              },
+              {
+                "required": [
+                  "channel"
+                ]
+              }
             ]
           },
           "then": {
@@ -112,6 +145,17 @@
                   ]
                 },
                 "description": "只要寄件人在陣列裡的信（null＝寄件人是 null 的信）；省略＝全部（第十五批）"
+              },
+              "to": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": "〔第二十二批〕只要 to 在陣列裡的信（收件 inst、\"*\"、\"#<頻道>\"）；省略＝全部。信的 to 不會是 null，所以 null 什麼都比不到"
               }
             }
           }
@@ -123,6 +167,7 @@
       "required": [
         "from",
         "from_socket",
+        "to",
         "msg"
       ],
       "additionalProperties": false,
@@ -139,6 +184,10 @@
             "null"
           ],
           "description": "寄件方的訊息 socket；寄的時候沒帶就是 null（第二十一批）"
+        },
+        "to": {
+          "type": "string",
+          "description": "〔第二十二批〕寄的時候用的地址：單寄是收件 inst、廣播是 \"*\"、頻道是 \"#<頻道名>\""
         },
         "msg": {}
       }
@@ -161,15 +210,20 @@
       ]
     },
     "Ok": {
-      "description": "send 成功",
+      "description": "寄（send／broadcast／channel）成功；delivered＝信放進了幾個信箱（第二十二批；send 一定是 1，沒人收是 0）",
       "type": "object",
       "properties": {
         "ok": {
           "const": true
+        },
+        "delivered": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "required": [
-        "ok"
+        "ok",
+        "delivered"
       ],
       "not": {
         "anyOf": [

@@ -538,6 +538,8 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 
 〔2026-10-01 [第二十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二十一批跨-daemon-用-socket-路徑當前綴)〕跨 daemon：`aos-mq send --socket <對方訊息 socket>`、信自動帶 `from_socket`（自己的訊息 socket 絕對路徑）、收件方照它回信；`take`／`peek` 不收 `--socket`；`aos-ctl --socket <對方控制 socket>` 要明寫 `<inst>`。daemon 不轉送。peers（暱稱→socket 路徑）先不做。`tests/test_mq.py` 23 條（加 `CrossDaemon` 三條）。
 
+〔2026-10-01 [第二十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二十二批廣播與頻道)〕廣播與頻道：`aos-mq send --all`、`--channel <頻道>`（每項 `mq.subscribe`），都不寄給自己；信多 `to`、`take`／`peek --to`；寄的回應多 `delivered`，`--all`／`--channel` 印送達數。`tests/test_mq.py` 34 條（加 `Broadcast` 十一條）。
+
 **模組五做完了**（2026-10-01 晚，AI 隊，在家裡那台）：照重寫後的草稿與第十三批（A1～A7 照建議、白名單／黑名單）做。驗收寫進 `tests/test_account.py`（21 條，連跑 8 次都過）。全部測試 578 條（557＋21）。
 
 - **在 user namespace 裡驗到的**（`unshare --user --map-root-user --map-auto` 當假 root，帳號用 http、daemon、nobody）：各項用對的帳號、補充群組、`HOME`／`USER`／`LOGNAME`；主程式 Uid 四欄是預設帳號、root 端是 root；socket 666 歸預設帳號、別的帳號的任務 `aos-ctl` 連得上；輸出檔歸預設帳號；結束碼與訊號；`SUDO_USER`；各種設定錯回 1；重讀加不准的帳號整份不套用、加准的照跑、改名單只警告；root 端開跑時查不到帳號回錯；殺掉 root 端 daemon 回 1；SIGTERM 時 root 端跟著退；跟收屍模組一起（`systemd-run --user --scope` 包 unshare）別的帳號的殘留照樣被清、框歸預設帳號。

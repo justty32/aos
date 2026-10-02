@@ -1,0 +1,15 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "mq": {
+      "socket": "./aos-mq.sock"
+    }
+  },
+  "insts": {
+    "b.json": {
+      "mq": {
+        "subscribe": "deploy"
+      }
+    }
+  }
+}

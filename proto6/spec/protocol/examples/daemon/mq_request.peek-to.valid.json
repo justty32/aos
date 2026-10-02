@@ -1,0 +1,10 @@
+{
+  "peek": "b.json",
+  "to": [
+    "*",
+    "#deploy"
+  ],
+  "from": [
+    "a.json"
+  ]
+}
