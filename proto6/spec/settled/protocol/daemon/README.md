@@ -26,7 +26,7 @@ daemon 協議只定格式：`aos-daemon` 的 argv、設定檔欄位、輸出與�
 - 重讀設定模組：設定、SIGHUP、stdout／stderr 的行（P-122）；
 - 記住狀態模組：`modules.state` 的 `$ref` 寫法、狀態檔格式（P-123）；
 - 收屍／cgroup 模組：`modules.cgroup` 與每項 `cgroup` 上限的寫法、框名、stdout 的行（P-124）；
-- 訊息模組：socket 上一行 JSON 的請求與回應、錯誤代碼、往下傳的環境變數、`aos-mq` 的 argv、輸出與結束碼（P-125）；
+- 訊息模組：`modules.mq` 的門與每項 `mq` 的寫法、每扇門上一行 JSON 的請求與回應、錯誤代碼、往下傳的環境變數、`aos-mq` 的 argv、輸出與結束碼（P-125）；
 - 帳號模組：`modules.account` 與每項 `account` 的寫法、root 端的封包、stderr 的行（P-126）。
 
 行為一律以 [daemon 正本](../../daemon/README.md)（[B-640](../../daemon/core.md)、[B-641](../../daemon/control.md)、[B-642](../../daemon/reload.md)、[B-643](../../daemon/state.md)、[B-644](../../daemon/cgroup.md)、[B-645](../../daemon/mq.md)、[B-646](../../daemon/account.md)）為準；這裡寫到行為時只留一句加條號（[P-001](../../../protocol/README.md)）。結束碼照 [C-08](../../conventions.md)，環境變數總表見 [C-10](../../conventions.md)。
@@ -42,7 +42,7 @@ daemon 協議只定格式：`aos-daemon` 的 argv、設定檔欄位、輸出與�
 | P-002、[C-07](../../../contracts.md)「daemon IPC 拒絕陌生欄位」 | daemon IPC 嚴格 | 設定檔、控制請求都照收不理（P-120、P-121） |
 | P-004「核對身分」 | 看 `SO_PEERCRED`，通道上看憑證 | 不驗身分，連得上就能用；憑證現行控制不使用（舊通道憑證暫緩） |
 | P-005 錯誤 | JSON-RPC `error`、-32000 加 `data.code`、`retryable` | `{"ok":false,"error":"<代碼>","detail":"<字串>"}`，代碼只有 P-121 那三個 |
-| P-006 結束碼、程式名、通道變數 | `2`＝用法錯、`125`＝無法開始；程式叫 `aos daemon`；`AOS_DAEMON_SOCKET`＋`AOS_TICK_TOKEN` 是通道變數 | 照 [C-08](../../conventions.md)：只有 0 與 1，用法錯回 1；程式叫 `aos-daemon`、`aos-ctl`；`AOS_DAEMON_SOCKET` 是控制 socket，另配 `AOS_DAEMON_INST` |
+| P-006 結束碼、程式名、通道變數 | `2`＝用法錯、`125`＝無法開始；程式叫 `aos daemon`；`AOS_DAEMON_SOCKET`＋`AOS_TICK_TOKEN` 是通道變數 | 照 [C-08](../../conventions.md)：只有 0 與 1，用法錯回 1；程式叫 `aos-daemon`、`aos-ctl`；〔第二十五批〕控制 socket 是 `AOS_DAEMON_CTL_SOCKET`、訊息門是 `AOS_DAEMON_MQ_<門名>`，另配 `AOS_DAEMON_INST`（舊的 `AOS_DAEMON_SOCKET` 只剩暫緩區的通道在用） |
 | P-007 放寬表 | 列的是舊 schema（`daemon-rpc` 嚴格、`daemon-config` 放寬） | `daemon-core-config`、`daemon-ctl` 的請求都放寬；請求與回應分開驗（P-121） |
 
 依據：使用者方向 2026-10-01（最核心 daemon、控制模組）；原本的範圍（設定、IPC method、通道、helper 私有通道、runner）定於使用者方向 2026-09-29、第十八批、第十九批，隨舊協議搬到暫緩區。

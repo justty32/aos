@@ -76,16 +76,15 @@
         },
         "mq": {
           "type": "object",
-          "description": "訊息模組（P-125）：另開一個 unix socket 收寄信、取信，每項一個信箱",
-          "required": [
-            "socket"
-          ],
-          "properties": {
-            "socket": {
-              "type": "string",
-              "minLength": 1,
-              "description": "訊息 socket 的路徑；相對以起點為準"
-            }
+          "description": "訊息模組（P-125，第二十五批）：門名 → socket 路徑，每扇門一個 unix socket，每項一個信箱。門名限英數與底線（任務拿到 AOS_DAEMON_MQ_<門名>，大小寫照原樣）；至少一扇。兩扇門算成同一個絕對路徑、或跟控制 socket 同路徑算設定錯（schema 驗不到，程式查）",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_]+$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "description": "這扇門的 socket 路徑；相對以起點為準"
           }
         },
         "reload": {
@@ -191,18 +190,12 @@
           }
         },
         "mq": {
-          "type": "object",
-          "description": "訊息模組掛著時這一項的設定（P-125，第二十二批）；模組沒掛時忽略",
-          "properties": {
-            "subscribe": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "description": "訂哪些頻道（頻道名）；省了＝不訂。寄到頻道的信只進訂了的項的信箱"
-            }
-          }
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]+$"
+          },
+          "description": "〔第二十五批〕訊息模組掛著時這一項訂哪幾扇門（modules.mq 的門名）；省了或空陣列＝不訂。寫了 modules.mq 沒有的門名算設定錯（schema 驗不到，validate.py 與程式另查）；同一門名寫兩次照一次算。模組沒掛時忽略"
         }
       }
     }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "aos-daemon 訊息模組的一行 JSON（P-125）：請求或回應",
-  "description": "一連線一請求：客戶端送一行請求、daemon 回一行回應。請求與回應分開驗：請求用 #/$defs/Request、回應用 #/$defs/Reply（根只是兩者擇一的總覽）。請求不認得的欄位照收不理（照控制模組 P-121）。",
+  "description": "每扇門（modules.mq 的每個 socket）都一樣：一連線一請求，客戶端送一行請求、daemon 回一行回應。請求與回應分開驗：請求用 #/$defs/Request、回應用 #/$defs/Reply（根只是兩者擇一的總覽）。請求不認得的欄位照收不理（照控制模組 P-121）。〔第二十五批〕信＝send 的值原樣，daemon 不加任何欄位；舊的 msg、from、from_socket、urgent、broadcast、channel、to 篩選、delivered 都拿掉了（請求帶了照不認得的欄位忽略）。",
   "anyOf": [
     {
       "$ref": "#/$defs/Request"
@@ -17,41 +17,24 @@
     },
     "Request": {
       "type": "object",
-      "description": "send、broadcast、channel、take、peek 剛好出現一個；其他欄位照收不理。msg、from_socket、urgent 只在寄（send／broadcast／channel）時看；from 在寄的時候是寄件 inst（字串或 null），在 take／peek 是寄件人篩選（非空陣列，元素字串或 null）；to 只在 take／peek 看（第二十二批）",
+      "description": "send、take、peek 剛好出現一個；其他欄位照收不理",
       "properties": {
         "send": {
-          "$ref": "#/$defs/Inst"
+          "description": "〔第二十五批〕信本身：任何 JSON 值（含 null）。放進訂了這扇門的每一項的信箱、叫醒它們"
         },
         "take": {
-          "$ref": "#/$defs/Inst"
+          "$ref": "#/$defs/Inst",
+          "description": "取走這一項全部的信；daemon 不核對是誰來取"
         },
         "peek": {
-          "$ref": "#/$defs/Inst"
-        },
-        "broadcast": {
-          "const": true,
-          "description": "〔第二十二批〕寄給這個 daemon 的每一項（寄件人自己除外）；值只能是 true"
-        },
-        "channel": {
-          "type": "string",
-          "minLength": 1,
-          "description": "〔第二十二批〕頻道名：寄給設定裡 mq.subscribe 有這個名字的項（寄件人自己除外）"
+          "$ref": "#/$defs/Inst",
+          "description": "看這一項全部的信，不取走"
         }
       },
       "oneOf": [
         {
           "required": [
             "send"
-          ]
-        },
-        {
-          "required": [
-            "broadcast"
-          ]
-        },
-        {
-          "required": [
-            "channel"
           ]
         },
         {
@@ -64,133 +47,7 @@
             "peek"
           ]
         }
-      ],
-      "allOf": [
-        {
-          "if": {
-            "anyOf": [
-              {
-                "required": [
-                  "send"
-                ]
-              },
-              {
-                "required": [
-                  "broadcast"
-                ]
-              },
-              {
-                "required": [
-                  "channel"
-                ]
-              }
-            ]
-          },
-          "then": {
-            "required": [
-              "msg"
-            ],
-            "properties": {
-              "msg": {
-                "description": "信的內容，任何 JSON 值（含 null）；daemon 不看"
-              },
-              "from": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "default": null,
-                "description": "寄件 inst；原樣存、不核對"
-              },
-              "from_socket": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "default": null,
-                "description": "〔第二十一批〕寄件方 daemon 的訊息 socket 路徑（aos-mq send 填絕對路徑）；原樣存、不核對，收件方回信用（跨 daemon＝前綴是對方 socket 路徑）"
-              },
-              "urgent": {
-                "type": "boolean",
-                "default": false,
-                "description": "放進信箱後叫醒收件那一項（照 wake 不帶選項）"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "anyOf": [
-              {
-                "required": [
-                  "take"
-                ]
-              },
-              {
-                "required": [
-                  "peek"
-                ]
-              }
-            ]
-          },
-          "then": {
-            "properties": {
-              "from": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "description": "只要寄件人在陣列裡的信（null＝寄件人是 null 的信）；省略＝全部（第十五批）"
-              },
-              "to": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "description": "〔第二十二批〕只要 to 在陣列裡的信（收件 inst、\"*\"、\"#<頻道>\"）；省略＝全部。信的 to 不會是 null，所以 null 什麼都比不到"
-              }
-            }
-          }
-        }
       ]
-    },
-    "Message": {
-      "type": "object",
-      "required": [
-        "from",
-        "from_socket",
-        "to",
-        "msg"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "from": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "from_socket": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "寄件方的訊息 socket；寄的時候沒帶就是 null（第二十一批）"
-        },
-        "to": {
-          "type": "string",
-          "description": "〔第二十二批〕寄的時候用的地址：單寄是收件 inst、廣播是 \"*\"、頻道是 \"#<頻道名>\""
-        },
-        "msg": {}
-      }
     },
     "Reply": {
       "type": "object",
@@ -210,20 +67,15 @@
       ]
     },
     "Ok": {
-      "description": "寄（send／broadcast／channel）成功；delivered＝信放進了幾個信箱（第二十二批；send 一定是 1，沒人收是 0）",
+      "description": "寄成功（含沒人訂這扇門：信丟掉、照樣成功）；第二十五批起不帶 delivered",
       "type": "object",
       "properties": {
         "ok": {
           "const": true
-        },
-        "delivered": {
-          "type": "integer",
-          "minimum": 0
         }
       },
       "required": [
-        "ok",
-        "delivered"
+        "ok"
       ],
       "not": {
         "anyOf": [
@@ -236,12 +88,17 @@
             "required": [
               "error"
             ]
+          },
+          {
+            "required": [
+              "delivered"
+            ]
           }
         ]
       }
     },
     "Taken": {
-      "description": "take／peek 成功：信照先進先出；take 取走、peek 不取；沒信是空陣列",
+      "description": "take／peek 成功：每個元素就是當初寄的 JSON 原樣，先寄的在前；take 取走、peek 不取；沒信是空陣列",
       "type": "object",
       "required": [
         "ok",
@@ -254,7 +111,7 @@
         "messages": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Message"
+            "description": "一封信：任何 JSON 值"
           }
         }
       }

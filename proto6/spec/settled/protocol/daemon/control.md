@@ -4,7 +4,7 @@
 
 本篇只有 P-121，只寫格式。各指令做什麼（補跑、暫停、恢復的規則）以 [B-641](../../daemon/control.md) 為正本。
 
-依據：[第二十批篇末「`insts` 改成物件＋控制模組裁定」](../../../../notes/verdicts/11-tick-as-unit/07-1001-最核心daemon.md#2026-10-01最核心-daemon待統一更新-spec)、[plan m3n](../../../../plan/m3n-control-module.md)；現行程式 [控制模組與 aos-ctl](../../../../src/py/README.md#控制模組與-aos-ctlm3n)（有出入以程式為準）。
+依據：[第二十批篇末「`insts` 改成物件＋控制模組裁定」](../../../../notes/verdicts/11-tick-as-unit/07-1001-最核心daemon.md#2026-10-01最核心-daemon待統一更新-spec)、[第二十五批（環境變數改名 `AOS_DAEMON_CTL_SOCKET`、socket 一律 666）](../../../../notes/verdicts/11-tick-as-unit/26-1002-第二十五批.md#2026-10-02-第二十五批訊息多扇門)、[plan m3n](../../../../plan/m3n-control-module.md)；現行程式 [控制模組與 aos-ctl](../../../../src/py/README.md#控制模組與-aos-ctlm3n)（有出入以程式為準）。
 
 ## 分檔目錄
 

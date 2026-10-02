@@ -2,12 +2,12 @@
   "interval_ms": 60000,
   "modules": {
     "mq": {
-      "SOCKET_1": "./mq-1.sock"
+      "SOCKET_1": {
+        "socket": "./mq-1.sock"
+      }
     }
   },
   "insts": {
-    "b.json": {
-      "mq": "SOCKET_1"
-    }
+    "a.json": {}
   }
 }

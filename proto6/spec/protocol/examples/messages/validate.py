@@ -102,7 +102,26 @@ def extra_errors(path, value):
                 errors.append('hook task_index not below ran')
         # 第十六批：blocked_before 是位置 ran 那一項（沒跑），跟 tasks 沒有可驗的關係（id 可能重複），不另查
     # P-120「頂層沒有 interval_ms 時每一項必填」已由 daemon-core-config 的 if／then 表達，不再另查。
+    if path.parent.name == 'daemon' and path.name.startswith('core-config.') and isinstance(value, dict):
+        # 第二十五批（P-125）：每項的 mq 只能寫 modules.mq 有的門名（掛了訊息模組時）
+        doors = (value.get('modules') or {}).get('mq')
+        if isinstance(doors, dict):
+            for entry in (value.get('insts') or {}).values():
+                subs = entry.get('mq') if isinstance(entry, dict) else None
+                if isinstance(subs, list) and any(isinstance(d, str) and d not in doors for d in subs):
+                    errors.append('item mq names a door not in modules.mq')
     return errors
+
+
+# 第二十五批（2026-10-02）取代的訊息模組舊範例：舊裁定紀錄（notes/verdicts）還連著，檔留著、不再驗，
+# 也不再是現行範例（現行看 P-125）。
+SUPERSEDED = {
+    'mq_reply.broadcast-none.valid.json', 'mq_reply.message-extra.invalid.json',
+    'mq_reply.message-no-from-socket.invalid.json', 'mq_request.peek-from-string.invalid.json',
+    'mq_request.peek-from.valid.json', 'mq_request.send-from-socket-number.invalid.json',
+    'mq_request.take-from-empty.invalid.json', 'mq_request.take-from-number.invalid.json',
+    'mq_request.take-from.valid.json',
+}
 
 
 def main():
@@ -131,6 +150,8 @@ def main():
             resolver.lookup(ref)
     counts, failures = Counter(), []
     for path in sorted(EXAMPLES.rglob('*.json')):
+        if path.parent.name == 'daemon' and path.name in SUPERSEDED:
+            continue
         name = schema_name(path)
         if name not in validators:     # 「schema#/指標」：只驗那份 schema 裡的某個 $defs
             validators[name] = Draft202012Validator(

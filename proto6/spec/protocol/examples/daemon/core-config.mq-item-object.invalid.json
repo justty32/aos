@@ -7,7 +7,11 @@
   },
   "insts": {
     "b.json": {
-      "mq": "SOCKET_1"
+      "mq": {
+        "subscribe": [
+          "deploy"
+        ]
+      }
     }
   }
 }

@@ -2,25 +2,26 @@
   "interval_ms": 60000,
   "modules": {
     "mq": {
-      "socket": "./aos-mq.sock"
+      "team": "/srv/aos/doors/team-a/s",
+      "alerts": "/srv/aos/doors/alerts/s"
     }
   },
   "insts": {
     "a.json": {
-      "mq": {
-        "subscribe": [
-          "deploy"
-        ]
-      }
+      "mq": [
+        "team"
+      ]
     },
     "b.json": {
-      "mq": {
-        "subscribe": [
-          "deploy",
-          "alerts"
-        ]
-      }
+      "mq": [
+        "team",
+        "alerts",
+        "team"
+      ]
     },
-    "c.json": {}
+    "c.json": {
+      "mq": []
+    },
+    "d.json": {}
   }
 }

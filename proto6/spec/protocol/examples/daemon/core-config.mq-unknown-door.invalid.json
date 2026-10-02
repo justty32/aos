@@ -6,8 +6,11 @@
     }
   },
   "insts": {
-    "b.json": {
-      "mq": "SOCKET_1"
+    "a.json": {
+      "mq": [
+        "SOCKET_1",
+        "ALERTS"
+      ]
     }
   }
 }

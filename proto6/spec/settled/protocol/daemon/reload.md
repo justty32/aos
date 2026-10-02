@@ -55,7 +55,7 @@ SIGINT／SIGTERM 照 [P-120](core.md)。
 
 ### stderr
 
-重讀時設定壞了（讀不到、不是 JSON、指示詞錯、缺 `interval_ms`、型別錯；掛了 cgroup 模組時建框、寫上限失敗……），整份不套用，印一行：
+重讀時設定壞了（讀不到、不是 JSON、指示詞錯、缺 `interval_ms`、型別錯；掛了 cgroup 模組時建框、寫上限失敗；〔第二十五批〕掛了訊息模組時某項的 `mq` 寫了開起來時沒有的門（[P-125](mq.md)）……），整份不套用，印一行：
 
 ```text
 aos-daemon: reload: <說明>

@@ -2,12 +2,10 @@
   "interval_ms": 60000,
   "modules": {
     "mq": {
-      "SOCKET_1": "./mq-1.sock"
+      "team-a": "./team-a.sock"
     }
   },
   "insts": {
-    "b.json": {
-      "mq": "SOCKET_1"
-    }
+    "a.json": {}
   }
 }
