@@ -4,7 +4,7 @@
 
 本篇只有 B-646，寫帳號模組**做什麼**。設定怎麼寫、root 端的封包、stderr 的行，寫在格式篇 [P-126](../protocol/daemon/account.md)。
 
-依據：[verdicts 11 篇末「2026-10-01 第十三批：帳號模組」](../../../notes/verdicts/11-tick-as-unit/15-1001-第十三批.md#2026-10-01-第十三批帳號模組)、[第十二批](../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[plan m3m 模組五](../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)；現行程式 [帳號](../../../src/py/README.md#帳號m3m-模組五)（`lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`，有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十三批：帳號模組」](../../../notes/verdicts/11-tick-as-unit/15-1001-第十三批.md#2026-10-01-第十三批帳號模組)、[第十二批](../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[plan m3m 模組五](../../../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)；現行程式 [帳號](../../../src/py/README.md#帳號m3m-模組五)（`lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`，有出入以程式為準）。
 
 ## B-646：帳號模組〔使用者 2026-10-01 第十二、十三批〕
 
@@ -50,4 +50,4 @@ sudo aos-daemon --config F
 
 依據：使用者 2026-10-01 第十二批（模組鍵 `account`、H1 拆 root 端與主程式降權、socket 先 666）；第十三批（A1～A5 照建議、白名單與黑名單支援前綴、`allow` 不寫而 `deny` 有預設帳號就報錯、`aos-as` 暫緩、`sudo -u` 不在規劃中；A6、A7 照建議）。
 
-**驗收：**`sudo` 開，`a` 不寫帳號、`b` 寫名單准的別的帳號：`a` 的任務 `id -un` 是預設帳號、`b` 是那個帳號，`id -G` 有那個帳號的補充群組，`HOME`／`USER`／`LOGNAME` 是它的；主程式的 Uid 四欄都是預設帳號、root 端是 root；控制 socket 是 666、歸預設帳號，`b` 的任務 `aos-ctl status` 連得上；輸出檔歸預設帳號；結束碼與被訊號殺（128+N）照實；用 `SUDO_USER` 當預設帳號；用名單不准的帳號、root、查不到的帳號、預設帳號是 root 或沒有、`deny` 比到預設帳號（`allow` 寫不寫都算）、`*` 在中間：回 1；沒用 root 開：回 1；重讀加名單不准的帳號：stderr 一行、舊的照跑；加准的帳號：用它跑；改名單：`reload: need restart: modules`；root 端開跑時帳號查不到：回錯、那一次 `exit=1`；殺掉 root 端：daemon 回 1；SIGTERM：daemon 回 0、root 端跟著退；跟收屍模組一起：別的帳號留下的背景程序被清掉、框歸預設帳號。測試見 `proto6/src/py/tests/test_account.py`（假 root 用 `unshare --user --map-root-user --map-auto`，拿不到就跳過；真 root 下的整套要手動驗，見 [plan m3m 模組五](../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)）。
+**驗收：**`sudo` 開，`a` 不寫帳號、`b` 寫名單准的別的帳號：`a` 的任務 `id -un` 是預設帳號、`b` 是那個帳號，`id -G` 有那個帳號的補充群組，`HOME`／`USER`／`LOGNAME` 是它的；主程式的 Uid 四欄都是預設帳號、root 端是 root；控制 socket 是 666、歸預設帳號，`b` 的任務 `aos-ctl status` 連得上；輸出檔歸預設帳號；結束碼與被訊號殺（128+N）照實；用 `SUDO_USER` 當預設帳號；用名單不准的帳號、root、查不到的帳號、預設帳號是 root 或沒有、`deny` 比到預設帳號（`allow` 寫不寫都算）、`*` 在中間：回 1；沒用 root 開：回 1；重讀加名單不准的帳號：stderr 一行、舊的照跑；加准的帳號：用它跑；改名單：`reload: need restart: modules`；root 端開跑時帳號查不到：回錯、那一次 `exit=1`；殺掉 root 端：daemon 回 1；SIGTERM：daemon 回 0、root 端跟著退；跟收屍模組一起：別的帳號留下的背景程序被清掉、框歸預設帳號。測試見 `proto6/src/py/tests/test_account.py`（假 root 用 `unshare --user --map-root-user --map-auto`，拿不到就跳過；真 root 下的整套要手動驗，見 [plan m3m 模組五](../../../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)）。

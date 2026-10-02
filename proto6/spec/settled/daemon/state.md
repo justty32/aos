@@ -4,7 +4,7 @@
 
 本篇只有 B-643，寫記住狀態模組**做什麼**。設定的寫法、狀態檔的格式，寫在格式篇 [P-123](../protocol/daemon/state.md)。
 
-依據：[verdicts 11 篇末「2026-10-01 第十一批：daemon 模組」](../../../notes/verdicts/11-tick-as-unit/13-1001-第十十一批.md#2026-10-01-第十一批daemon-模組)、[plan m3m 模組三](../../../plan/m3m-daemon-modules.md#模組三記住狀態modulesstate)；現行程式 [記住狀態](../../../src/py/README.md#重讀設定與記住狀態m3m)（`lib/aos_daemon_state.py`，有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十一批：daemon 模組」](../../../notes/verdicts/11-tick-as-unit/13-1001-第十十一批.md#2026-10-01-第十一批daemon-模組)、[plan m3m 模組三](../../../plan/m3m-daemon-modules/04-模組三-記住狀態.md#模組三記住狀態modulesstate)；現行程式 [記住狀態](../../../src/py/README.md#重讀設定與記住狀態m3m)（`lib/aos_daemon_state.py`，有出入以程式為準）。
 
 ## B-643：記住狀態模組〔使用者 2026-10-01 第十一批〕
 

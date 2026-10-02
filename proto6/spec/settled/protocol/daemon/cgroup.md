@@ -4,7 +4,7 @@
 
 本篇只有 P-124，只寫格式。框怎麼建、何時清，以 [B-644](../../daemon/cgroup.md) 為正本。
 
-依據：[verdicts 11 篇末「2026-10-01 第十二批：cgroup 與帳號」](../../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[plan m3m 模組二](../../../../plan/m3m-daemon-modules.md#模組二收屍與資源上限modulescgroup)；現行程式 [收屍／cgroup](../../../../src/py/README.md#收屍cgroupm3m-模組二)（有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十二批：cgroup 與帳號」](../../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[plan m3m 模組二](../../../../plan/m3m-daemon-modules/03-模組二-收屍與資源上限.md#模組二收屍與資源上限modulescgroup)；現行程式 [收屍／cgroup](../../../../src/py/README.md#收屍cgroupm3m-模組二)（有出入以程式為準）。
 
 ## P-124．收屍／cgroup：設定、框名與輸出〔使用者 2026-10-01 第十二批；格式照現行程式〕
 

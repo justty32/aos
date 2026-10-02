@@ -30,5 +30,5 @@
 ### 任務的帳號
 
 - **任務沒有 `user`**〔使用者方向 2026-10-01〕：inst 頂層沒有 `user`（[inst](../../../base/inst.md)），任務是 inst 的超集，所以也沒有；寫了就是陌生鍵、照收不理，一律用 tick 自己的帳號跑。原本「帶了不同帳號就那一項回 125」的歷史記錄在[暫緩區](../../deferred/tick.md#暫緩b-620-任務的帳號125)，隨 `user` 一起撤回、不會回來。
-- **tick 不切帳號**。要用別的帳號跑，就在 daemon 設定檔把它拆成另一項、指定帳號（帳號模組 `modules.account`，[plan m3m 模組五](../../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)，還沒做）；單位是 daemon 的一項，不在一格裡面中途換。在 argv 包 `aos-as <帳號> --` 的做法〔使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」〕搬到暫緩區（[B-303](../../deferred/helper.md)、[P-212](../../deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）。
+- **tick 不切帳號**。要用別的帳號跑，就在 daemon 設定檔把它拆成另一項、指定帳號（帳號模組 `modules.account`，[plan m3m 模組五](../../../../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)，還沒做）；單位是 daemon 的一項，不在一格裡面中途換。在 argv 包 `aos-as <帳號> --` 的做法〔使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」〕搬到暫緩區（[B-303](../../deferred/helper.md)、[P-212](../../deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）。
 - 不另設服務帳號（第九批）；要 root 的固定步驟交給 helper（[B-609](../../deferred/daemon/helper-actions.md)）；管成員的事由上層 kernel 在自己的 tick 用自己的帳號做。任務類別不授予身分或權限。

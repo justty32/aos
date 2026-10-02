@@ -4,7 +4,7 @@
 
 本篇只有 B-644，寫收屍／cgroup 模組**做什麼**。設定怎麼寫、stdout 的行、框的名字，寫在格式篇 [P-124](../protocol/daemon/cgroup.md)。
 
-依據：[verdicts 11 篇末「2026-10-01 第十二批：cgroup 與帳號」](../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[plan m3m 模組二](../../../plan/m3m-daemon-modules.md#模組二收屍與資源上限modulescgroup)；現行程式 [收屍／cgroup](../../../src/py/README.md#收屍cgroupm3m-模組二)（`lib/aos_daemon_cgroup.py`，有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十二批：cgroup 與帳號」](../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[plan m3m 模組二](../../../plan/m3m-daemon-modules/03-模組二-收屍與資源上限.md#模組二收屍與資源上限modulescgroup)；現行程式 [收屍／cgroup](../../../src/py/README.md#收屍cgroupm3m-模組二)（`lib/aos_daemon_cgroup.py`，有出入以程式為準）。
 
 ## B-644：收屍／cgroup 模組〔使用者 2026-10-01 第十二批〕
 
