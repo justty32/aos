@@ -4,7 +4,7 @@
 
 **狀態：已實作**（2026-10-01，`lib/aos_tick.py` 的 `run_on_blocked()`、`lib/aos_tick_table.py` 的 `_tasks_blocked()`）。本篇只有 B-636。
 
-依據：[verdicts 11 篇末「2026-10-01 第十六批」](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十六批擋板檔只看存不存在)；現行程式 [src/py README](../../../src/py/README.md)（有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十六批」](../../../notes/verdicts/11-tick-as-unit/17-1001-第十六批.md#2026-10-01-第十六批擋板檔只看存不存在)；現行程式 [src/py README](../../../src/py/README.md)（有出入以程式為準）。
 
 ## B-636：tick 模組 `tasks-blocked`〔使用者 2026-10-01 第十六批；第二十批改名〕
 

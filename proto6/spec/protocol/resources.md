@@ -6,7 +6,7 @@
 > - `aos-as`（任務自己換帳號）：第十三批暫緩（[P-212](../settled/deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)）；現行切帳號只在 daemon 設定檔做（帳號模組 [B-646](../settled/daemon/account.md)）。
 > - 標準任務表範本（[B-629](../settled/deferred/template.md)）、`aos-mq get`／`post`（[B-623、B-624](../settled/deferred/mq.md)）、`aos-clean`（[B-404](../base/storage.md) 的系統級任務部分、P-605）：第十八批暫緩，現行沒有系統級任務；kernel／agent 範本裡掛的這些項也跟著不成立。現行收發信是 daemon 訊息模組 `aos-mq send`／`take`／`peek`（[B-645](../settled/daemon/mq.md)）。
 > - `aos-tick-check-task`（原 `aos-needs`）：第十六批暫緩（[暫緩區 B-621](../settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）。
-> - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
+> - node：tick 層改稱「工作資料夾」，daemon 只認設定檔 `insts` 的一項；node 模組不做（[名詞](../settled/terms.md)、[node 模組方向](../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)）。本篇講的 node、上下層、kernel／agent 角色都是舊設計。
 > - 舊 daemon 的通道與憑證（`AOS_TICK_TOKEN`）、登記、runner、`state.json`：整套在暫緩區（[舊 daemon](../settled/deferred/daemon/README.md)）；現行 daemon 只定期叫 `aos-exec` 加各模組（[B-640](../settled/daemon/core.md)）。
 
 本篇只定**預設 kernel 範本**的資源 module 的檔案格式、欄位與 cgroup 檔對照；行為以 [S-203](../scheduling/admission.md)（框架、巢狀範圍、cgroup 兩級）、[S-205](../scheduling/admission.md)（選版、套用、調整、備援與故障）與 [S-207](../scheduling/admission.md)（用量收集）為正本。〔使用者方向 2026-09-30，第十八批〕資源由各 kernel 定義；六類（CPU、memory、pids、LLM、disk、network）是範本的資源，kernel 可以在同一份配額與用量檔裡放自己的資源名稱（[T-06](../terms.md)）。

@@ -88,7 +88,7 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 帳號模組 | 模組 `account`：要用 root 開；開出 root 端 `aos-daemon-root` 後主程式永久降成預設帳號，名單（`allow`／`deny`，結尾 `*` 當前綴）准的別的帳號的項由 root 端用那個帳號開 | [B-646](daemon/account.md) |
 | 收屍／cgroup 模組 | 模組 `cgroup`：以 daemon 自己所在的 cgroup 當子樹根，每項一個框 `i-<h>`；每次 `aos-exec` 結束後把框裡留下的程序殺光、清空才算結束（收屍）；每項的 `cgroup` 鍵寫上限 | [B-644](daemon/cgroup.md) |
 
-- 「daemon 管 node」（自動找 node、上下層、叫醒往上傳）之後另做成 node 模組，還沒排程（[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。
+- 「daemon 管 node」（自動找 node、上下層、叫醒往上傳）之後另做成 node 模組，還沒排程（[node 模組方向](../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)）。
 - 舊 daemon 的登記、通道、收尾等用語在暫緩區（[T-09](deferred/terms.md)、[舊 daemon](deferred/daemon/README.md)）。
 
 依據：第二十批篇末「2026-10-01：最核心 daemon」（daemon 只叫 `aos-exec`、核心沒有 id、`modules`、`insts` 物件、控制模組）。

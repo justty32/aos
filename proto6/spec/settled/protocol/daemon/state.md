@@ -4,7 +4,7 @@
 
 本篇只有 P-123，只寫格式。什麼時候寫、怎麼讀回，以 [B-643](../../daemon/state.md) 為正本。
 
-依據：[verdicts 11 篇末「2026-10-01 第十一批：daemon 模組」](../../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十一批daemon-模組)、[plan m3m 模組三](../../../../plan/m3m-daemon-modules.md#模組三記住狀態modulesstate)；現行程式 [記住狀態](../../../../src/py/README.md#重讀設定與記住狀態m3m)（有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十一批：daemon 模組」](../../../../notes/verdicts/11-tick-as-unit/13-1001-第十十一批.md#2026-10-01-第十一批daemon-模組)、[plan m3m 模組三](../../../../plan/m3m-daemon-modules.md#模組三記住狀態modulesstate)；現行程式 [記住狀態](../../../../src/py/README.md#重讀設定與記住狀態m3m)（有出入以程式為準）。
 
 ## P-123．記住狀態：設定與狀態檔〔使用者 2026-10-01 第十一批；格式照現行程式〕
 

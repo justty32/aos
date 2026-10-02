@@ -12,9 +12,9 @@
 | 四、訊息 `mq` | **已做**（第十二批：M1～M4 照建議） | [B-645](../spec/settled/daemon/mq.md)、[P-125](../spec/settled/protocol/daemon/mq.md) |
 | 五、帳號 `account`（原草稿叫 helper） | **已做**（第十二批：拆 root 端、主程式降權；第十三批：A1～A7 照建議、白名單／黑名單） | [B-646](../spec/settled/daemon/account.md)、[P-126](../spec/settled/protocol/daemon/account.md) |
 
-做了什麼、自己定的細節見篇末[做完了沒](#做完了沒)；裁定見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十一批daemon-模組)、[第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。下面各節保留原本的草稿，裁定處就地標註。
+做了什麼、自己定的細節見篇末[做完了沒](#做完了沒)；裁定見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit/13-1001-第十十一批.md#2026-10-01-第十一批daemon-模組)、[第十二批](../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)。下面各節保留原本的草稿，裁定處就地標註。
 
-> **使用者方向（2026-10-01，原話）**：「node這塊不要動，我有預感，node相關概念以後會不存在。剩下這些都值得做成模組。」「剩下這些」＝重讀設定、收屍／cgroup、記住狀態、訊息、helper／跨帳號五個。所以：**不做 node 模組**（[verdicts 11「node 模組方向」](../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)照留、不排程），**五個模組一律以「daemon 設定檔 `insts` 裡的一項」為單位**，不認得資料夾、任務表、上下層。
+> **使用者方向（2026-10-01，原話）**：「node這塊不要動，我有預感，node相關概念以後會不存在。剩下這些都值得做成模組。」「剩下這些」＝重讀設定、收屍／cgroup、記住狀態、訊息、helper／跨帳號五個。所以：**不做 node 模組**（[verdicts 11「node 模組方向」](../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)照留、不排程），**五個模組一律以「daemon 設定檔 `insts` 裡的一項」為單位**，不認得資料夾、任務表、上下層。
 
 > **POC 總原則**（[plan 入口](README.md)）：默認一切正常，不為異常寫處理，出事自然丟錯、回 1。結束碼 0＝預料之中、非 0＝要額外處理、1＝通用錯誤。
 
@@ -316,14 +316,14 @@ node id 當收件人；`node.send`／`node.take` 的 method 名、封包與通�
 - 寄件權限：能連 socket 就能寄給任何一項、也能取任何一項的信（跟控制模組「能連就能做」一樣）。
 - 送達確認、去重、重送。
 - tick 側的 `aos-mq get`／`post` 系統級任務與 `.aos/mq/` 檔案流程（等真的有任務要「先提交再送」再說）。
-- ~~跨 daemon 送信。〔第十五批：不在規劃中，「跨daemon寄信不管。」〕~~ 〔[第二十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二十一批跨-daemon-用-socket-路徑當前綴)改成現行：收件地址前綴是對方 daemon 的訊息 socket 路徑，`aos-mq send --socket`、信帶 `from_socket`；`aos-ctl --socket` 同理；peers 先不做〕
+- ~~跨 daemon 送信。〔第十五批：不在規劃中，「跨daemon寄信不管。」〕~~ 〔[第二十一批](../notes/verdicts/11-tick-as-unit/23-1001-第二十一批.md#2026-10-01-第二十一批跨-daemon-用-socket-路徑當前綴)改成現行：收件地址前綴是對方 daemon 的訊息 socket 路徑，`aos-mq send --socket`、信帶 `from_socket`；`aos-ctl --socket` 同理；peers 先不做〕
 - 訊息格式檢查（舊規劃要求是 P-301 請求或回應物件；這版什麼 JSON 都收）。
 
 ### 要使用者裁定的點
 
 - **M1．`from` 誰填？** **建議：`aos-mq send` 自動填 `AOS_DAEMON_INST`，daemon 原樣存、不核對。** 能連 socket 的人本來就能冒充，POC 不管；不要的話就拿掉 `from`，寄件人寫在信的內容裡。
 - **M2．`AOS_DAEMON_INST` 誰放？** 現在只有掛了控制模組才放。**建議：掛了控制或訊息任何一個就放**（同一個值）；另一種是乾脆改成核心一律放（改 B-640），比較單純，但會讓「沒掛模組時跟 m3 一模一樣」不再成立。
-- **M3．取信要不要限「只取自己」？** **建議：不限**，`aos-mq take <inst>` 可以取別項的（跟 `aos-ctl` 能對任何一項下指令一樣），沒給才用自己。〔**第十四批推翻**：只能取自己的信箱，可用 `--from` 只取某個寄件人的，[裁定](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十四批aos-mq-取信)〕
+- **M3．取信要不要限「只取自己」？** **建議：不限**，`aos-mq take <inst>` 可以取別項的（跟 `aos-ctl` 能對任何一項下指令一樣），沒給才用自己。〔**第十四批推翻**：只能取自己的信箱，可用 `--from` 只取某個寄件人的，[裁定](../notes/verdicts/11-tick-as-unit/16-1001-第十四十五批.md#2026-10-01-第十四批aos-mq-取信)〕
 - **M4．名字：沿用 `aos-mq`、子命令改 `send`／`take`？** 舊名 `aos-mq get`／`post` 是「讀寫 `.aos/mq/` 檔」的系統級任務，意思不一樣。**建議：程式叫 `aos-mq`，子命令用 `send`／`take`**（跟 socket 上的請求名一致），舊的 `get`／`post` 留在 spec 當暫緩；模組鍵叫 `mq`。
 
 ### 驗收草稿
@@ -523,22 +523,22 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 - 程式：新 `lib/aos_daemon_cgroup.py`（`Tree`、`clear()`、`frame_name()`）；`lib/aos_daemon.py`（`Item.cgroup`／`frame`、`run_once()` 回 `(碼, 毫秒, 有沒有收屍)`、`_gone()` 刪框、`main()` 建樹）；`lib/aos_daemon_reload.py`（`_apply()` 先建框寫上限、`NEED_RESTART` 加 `exec_out_path`／`exec_err_path`）。用法見 [src/py README](../src/py/README.md#收屍cgroupm3m-模組二)。
 - spec：[B-644](../spec/settled/daemon/cgroup.md)、[P-124](../spec/settled/protocol/daemon/cgroup.md)；schema `daemon-core-config` 加 `modules.cgroup` 與每項的 `cgroup`；暫緩區 B-605 標部分取代。
 
-模組二 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)，要點：進框用 `sh -c` 墊一層（不用 `preexec_fn`）；`ms=` 不含清框；殘留拿著輸出 pipe 時另開執行緒讀、清完才收齊；重讀時拿掉的上限鍵不還原、出錯前寫進去的不還原；拿掉的項跑完才刪框、又加回來就不刪。
+模組二 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)，要點：進框用 `sh -c` 墊一層（不用 `preexec_fn`）；`ms=` 不含清框；殘留拿著輸出 pipe 時另開執行緒讀、清完才收齊；重讀時拿掉的上限鍵不還原、出錯前寫進去的不還原；拿掉的項跑完才刪框、又加回來就不刪。
 
 **模組四做完了**（2026-10-01 晚，AI 隊，在家裡那台）：照上面草稿與 M1～M4 建議做，驗收寫進 `tests/test_mq.py`（14 條，約 4 秒；連跑 10 次都過）。全部測試 557 條（543＋14）。
 
 - 程式：新 `lib/aos_daemon_mq.py`（`serve()`、`parse()`、`handle()`）、`lib/aos_mq.py`、`bin/aos-mq`；`lib/aos_daemon_ctl.py` 的 `serve()` 多收一個 `answer`（訊息模組共用那套收連線、1 秒逾時、壞請求只影響那一條）；`lib/aos_daemon.py`（`Item.mailbox`、`Setup.mq_sock`、`give_env()` 改吃 `Setup`、`_sock_paths` 退出時兩個 socket 都刪）。用法見 [src/py README](../src/py/README.md#訊息與-aos-mqm3m-模組四)。
 - spec：[B-645](../spec/settled/daemon/mq.md)、[P-125](../spec/settled/protocol/daemon/mq.md)；新 schema `daemon-mq`、`daemon-core-config` 加 `modules.mq`；範例 `examples/daemon/mq_request.*`、`mq_reply.*`、`core-config.mq*`；暫緩區 B-614、P-119 標部分取代；[C-10](../spec/settled/conventions.md) 加 `AOS_DAEMON_MQ_SOCKET`、`AOS_DAEMON_INST` 改成掛任一個就放。
 
-模組四 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。
+模組四 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)。
 
-〔2026-10-01 第十四批，[裁定](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十四批aos-mq-取信)〕取信改成只能取自己的信箱（`aos-mq take` 不收 `<inst>`、只用 `AOS_DAEMON_INST`），`--from <寄件 inst>` 只取那個寄件人的、其他照順序留著；socket 的 `take` 多一個可省的 `from`。socket 不驗身分，「只取自己」只在 `aos-mq` 這一側擋。`tests/test_mq.py` 15 條，全部 558 條。
+〔2026-10-01 第十四批，[裁定](../notes/verdicts/11-tick-as-unit/16-1001-第十四十五批.md#2026-10-01-第十四批aos-mq-取信)〕取信改成只能取自己的信箱（`aos-mq take` 不收 `<inst>`、只用 `AOS_DAEMON_INST`），`--from <寄件 inst>` 只取那個寄件人的、其他照順序留著；socket 的 `take` 多一個可省的 `from`。socket 不驗身分，「只取自己」只在 `aos-mq` 這一側擋。`tests/test_mq.py` 15 條，全部 558 條。
 
-〔2026-10-01 第十五批，[裁定](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十五批aos-mq-peek-與多個寄件人)〕daemon 不核對取信的人（能連就能做）；加 `aos-mq peek`（只看不取）；`--from a c d` 收多個、不接＝寄件人是 null 的信、可重複疊加，socket 的 `from` 改成陣列；跨 daemon 寄信不在規劃中。`tests/test_mq.py` 20 條，全部 584 條。
+〔2026-10-01 第十五批，[裁定](../notes/verdicts/11-tick-as-unit/16-1001-第十四十五批.md#2026-10-01-第十五批aos-mq-peek-與多個寄件人)〕daemon 不核對取信的人（能連就能做）；加 `aos-mq peek`（只看不取）；`--from a c d` 收多個、不接＝寄件人是 null 的信、可重複疊加，socket 的 `from` 改成陣列；跨 daemon 寄信不在規劃中。`tests/test_mq.py` 20 條，全部 584 條。
 
-〔2026-10-01 [第二十一批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二十一批跨-daemon-用-socket-路徑當前綴)〕跨 daemon：`aos-mq send --socket <對方訊息 socket>`、信自動帶 `from_socket`（自己的訊息 socket 絕對路徑）、收件方照它回信；`take`／`peek` 不收 `--socket`；`aos-ctl --socket <對方控制 socket>` 要明寫 `<inst>`。daemon 不轉送。peers（暱稱→socket 路徑）先不做。`tests/test_mq.py` 23 條（加 `CrossDaemon` 三條）。
+〔2026-10-01 [第二十一批](../notes/verdicts/11-tick-as-unit/23-1001-第二十一批.md#2026-10-01-第二十一批跨-daemon-用-socket-路徑當前綴)〕跨 daemon：`aos-mq send --socket <對方訊息 socket>`、信自動帶 `from_socket`（自己的訊息 socket 絕對路徑）、收件方照它回信；`take`／`peek` 不收 `--socket`；`aos-ctl --socket <對方控制 socket>` 要明寫 `<inst>`。daemon 不轉送。peers（暱稱→socket 路徑）先不做。`tests/test_mq.py` 23 條（加 `CrossDaemon` 三條）。
 
-〔2026-10-01 [第二十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二十二批廣播與頻道)〕廣播與頻道：`aos-mq send --all`、`--channel <頻道>`（每項 `mq.subscribe`），都不寄給自己；信多 `to`、`take`／`peek --to`；寄的回應多 `delivered`，`--all`／`--channel` 印送達數。`tests/test_mq.py` 34 條（加 `Broadcast` 十一條）。
+〔2026-10-01 [第二十二批](../notes/verdicts/11-tick-as-unit/24-1001-1002-第二十二二十三批.md#2026-10-01-第二十二批廣播與頻道)〕廣播與頻道：`aos-mq send --all`、`--channel <頻道>`（每項 `mq.subscribe`），都不寄給自己；信多 `to`、`take`／`peek --to`；寄的回應多 `delivered`，`--all`／`--channel` 印送達數。`tests/test_mq.py` 34 條（加 `Broadcast` 十一條）。
 
 **模組五做完了**（2026-10-01 晚，AI 隊，在家裡那台）：照重寫後的草稿與第十三批（A1～A7 照建議、白名單／黑名單）做。驗收寫進 `tests/test_account.py`（21 條，連跑 8 次都過）。全部測試 578 條（557＋21）。
 
@@ -547,6 +547,6 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 - 程式：新 `lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`、`bin/aos-daemon-root`；`lib/aos_daemon.py`（`Item.user`、`Setup.account`、`run_once()` 帳號分支、`_die()`、`main()` 核帳號→chown 子樹→開 root 端→降權→socket 666）；`lib/aos_daemon_reload.py`（照開起來時的名單核、`_update()` 換帳號）。用法見 [src/py README](../src/py/README.md#帳號m3m-模組五)。
 - spec：[B-646](../spec/settled/daemon/account.md)、[P-126](../spec/settled/protocol/daemon/account.md)；schema `daemon-core-config` 加 `modules.account` 與每項 `account`；範例 `examples/daemon/core-config.account*`；暫緩區 B-303、B-609、P-102、P-107、P-108 標部分取代。
 
-模組五 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十三批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十三批帳號模組)。五個模組都做完了；node 模組不做。
+模組五 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十三批](../notes/verdicts/11-tick-as-unit/15-1001-第十三批.md#2026-10-01-第十三批帳號模組)。五個模組都做完了；node 模組不做。
 
-**第十九批（2026-10-01 晚，AI 隊）：daemon 跑 daemon 用到的三件事**——不是新模組，改核心與控制模組：頂層 `exec_output_max_bytes`（輸出上限，邊讀邊丟最早的）、設定檔鎖檔（拿不到回 1）、控制模組 `kill`／`restart`。上層 daemon 把下層 daemon 當一項跑時，監督（掛了重開）與權限分層（root 上層＋帳號模組開各帳號的下層）原本就有；這三件補上「輸出不堆爆記憶體」「同一份設定不重複開」「上層停得掉、重開得了下層」。「下層的任務跟上層講話」（`AOS_PARENT_*`）使用者還在想要不要跟 tick 那套分開，這次不做。見 [verdicts 11 第十九批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十九批daemon-上下層用到的三件事)；測試 `tests/test_daemon_kill.py`（20 條）。
+**第十九批（2026-10-01 晚，AI 隊）：daemon 跑 daemon 用到的三件事**——不是新模組，改核心與控制模組：頂層 `exec_output_max_bytes`（輸出上限，邊讀邊丟最早的）、設定檔鎖檔（拿不到回 1）、控制模組 `kill`／`restart`。上層 daemon 把下層 daemon 當一項跑時，監督（掛了重開）與權限分層（root 上層＋帳號模組開各帳號的下層）原本就有；這三件補上「輸出不堆爆記憶體」「同一份設定不重複開」「上層停得掉、重開得了下層」。「下層的任務跟上層講話」（`AOS_PARENT_*`）使用者還在想要不要跟 tick 那套分開，這次不做。見 [verdicts 11 第十九批](../notes/verdicts/11-tick-as-unit/21-1001-第十九批.md#2026-10-01-第十九批daemon-上下層用到的三件事)；測試 `tests/test_daemon_kill.py`（20 條）。

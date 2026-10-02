@@ -4,7 +4,7 @@
 
 本篇只有 B-645，寫訊息模組**做什麼**。socket 上的請求與回應、`aos-mq` 的用法與錯誤代碼，寫在格式篇 [P-125](../protocol/daemon/mq.md)。
 
-依據：[verdicts 11 篇末「2026-10-01 第十二批：cgroup 與帳號」](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)、[第十四批：aos-mq 取信](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十四批aos-mq-取信)、[第二十二批：廣播與頻道](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二十二批廣播與頻道)、[plan m3m 模組四](../../../plan/m3m-daemon-modules.md#模組四訊息modulesmq)；現行程式 [訊息與 aos-mq](../../../src/py/README.md#訊息與-aos-mqm3m-模組四)（`lib/aos_daemon_mq.py`、`lib/aos_mq.py`，有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十二批：cgroup 與帳號」](../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[第十四批：aos-mq 取信](../../../notes/verdicts/11-tick-as-unit/16-1001-第十四十五批.md#2026-10-01-第十四批aos-mq-取信)、[第二十二批：廣播與頻道](../../../notes/verdicts/11-tick-as-unit/24-1001-1002-第二十二二十三批.md#2026-10-01-第二十二批廣播與頻道)、[plan m3m 模組四](../../../plan/m3m-daemon-modules.md#模組四訊息modulesmq)；現行程式 [訊息與 aos-mq](../../../src/py/README.md#訊息與-aos-mqm3m-模組四)（`lib/aos_daemon_mq.py`、`lib/aos_mq.py`，有出入以程式為準）。
 
 ## B-645：訊息模組與 `aos-mq`〔使用者 2026-10-01 第十二批〕
 

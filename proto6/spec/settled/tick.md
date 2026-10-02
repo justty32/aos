@@ -163,7 +163,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - 頂層可選 `modules` 鍵，比照 daemon 設定檔的 `modules`（[B-640](daemon/core.md)、[P-120](protocol/daemon/core.md)）：放 tick 模組的設定，一個模組一個鍵。
 - 目前 tick 只認一個模組 `tasks-blocked`（[B-636](tick/tasks-blocked.md)；〔第二十批〕由 `tasks_blocked` 改名，跟檔名一樣）；其他鍵照收不理，型別也不查。外掛掛點 `hooks` 不是模組，是跟 `tasks` 同層的頂層鍵（[B-635](tick/hooks.md)；使用者 2026-10-01 第六批：「就不讓他當模組了，直接讓他變頂層key」），寫在 `modules.hooks` 底下不會跑。
 - 它不是 inst 欄位，**不當任務預設值合併**。
-- **讀表時整個展開指示詞**〔使用者裁定 2026-10-01；第二十批起整份 tasks.json 都這樣，`tasks-blocked` 不再例外〕：跟 daemon 設定檔一樣一路走進物件與陣列，不是只解一層。`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點（跟讀表其他部分一致）。展開失敗＝`bad_table`、回 1。~~原本只解一層、內部留給模組~~（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）。
+- **讀表時整個展開指示詞**〔使用者裁定 2026-10-01；第二十批起整份 tasks.json 都這樣，`tasks-blocked` 不再例外〕：跟 daemon 設定檔一樣一路走進物件與陣列，不是只解一層。`$ref:""`／`#…` 指整份 tasks.json、相對檔名以工作資料夾為起點（跟讀表其他部分一致）。展開失敗＝`bad_table`、回 1。~~原本只解一層、內部留給模組~~（[裁定](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）。
 
 ### 指示詞什麼時候展開〔使用者 2026-10-01 第二十批：「tasks.json改成全部解完」「除了陌生鍵和_metainfo」〕
 

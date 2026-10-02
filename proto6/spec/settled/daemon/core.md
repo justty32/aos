@@ -4,7 +4,7 @@
 
 本篇只有 B-640，寫 `aos-daemon` 核心**做什麼**。argv、設定檔每個欄位的型別、輸出行的確切樣子、結束碼，寫在格式篇 [P-120](../protocol/daemon/core.md)。
 
-依據：[第二十批篇末「2026-10-01：最核心 daemon」整節](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01最核心-daemon待統一更新-spec)、[daemon 核心草稿](../../../notes/2026-10-01-daemon-core-sketch.md)、[plan 第三段 m3](../../../plan/m3-daemon-core.md)；現行程式 [aos-daemon](../../../src/py/README.md#aos-daemon第三段最核心-daemon)（`lib/aos_daemon.py`，有出入以程式為準）。
+依據：[第二十批篇末「2026-10-01：最核心 daemon」整節](../../../notes/verdicts/11-tick-as-unit/07-1001-最核心daemon.md#2026-10-01最核心-daemon待統一更新-spec)、[daemon 核心草稿](../../../notes/2026-10-01-daemon-core-sketch.md)、[plan 第三段 m3](../../../plan/m3-daemon-core.md)；現行程式 [aos-daemon](../../../src/py/README.md#aos-daemon第三段最核心-daemon)（`lib/aos_daemon.py`，有出入以程式為準）。
 
 ## B-640：最核心 daemon：定期叫 aos-exec〔使用者方向 2026-10-01〕
 
@@ -12,7 +12,7 @@
 
 - daemon **不認得 tick 的工作資料夾**（舊稱 node；〔使用者 2026-10-01〕改名），也不讀任務表、不碰鎖、不看擋板檔。那些全是 `aos-tick` 自己的事（[通用 tick](../tick.md)）。
 - 要定期跑一個 `aos-tick`，就放一份 `argv` 開頭是 `aos-tick` 的 inst（例如 `["aos-tick", "<資料夾>"]`，或只寫 `["aos-tick"]`），再把這份 inst 加進 daemon 的清單。對 daemon 來說它跟別的 inst 沒有兩樣。
-- 「daemon 管 node」之後另做成可掛的模組，不在核心裡（[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。
+- 「daemon 管 node」之後另做成可掛的模組，不在核心裡（[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#node-模組方向2026-10-01記錄用未排程)）。
 - 舊設計的登記、socket／IPC、runner、收屍、重啟清理、`state.json`、通道與憑證，第一版都不做，搬到[暫緩區](../deferred/daemon/README.md)。
 
 ### 清單：一項就是一個 inst 字面值
@@ -99,6 +99,6 @@ daemon 有一個「起點」資料夾，用在三處：
 
 〔使用者方向 2026-10-01〕POC 默認環境一切正常：設定檔讀得懂、路徑都對、`aos-exec` 叫得起來。daemon 自己查的只有幾件事（缺 `interval_ms`、`modules` 不是物件、指示詞錯），其他出事就讓程式自然丟錯、回 1。哪些算設定錯、怎麼報，見 [P-120](../protocol/daemon/core.md)。
 
-依據：使用者方向 2026-10-01（daemon 叫 `aos-exec`、管 node 變成模組、週期與停機、設定檔追加裁定、m3 待問裁定、m3 實作後追加裁定、`insts` 改成物件、`exec_out_path` 與輸出預設丟掉）；[第十九批](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十九批daemon-上下層用到的三件事)（輸出上限、鎖檔）。
+依據：使用者方向 2026-10-01（daemon 叫 `aos-exec`、管 node 變成模組、週期與停機、設定檔追加裁定、m3 待問裁定、m3 實作後追加裁定、`insts` 改成物件、`exec_out_path` 與輸出預設丟掉）；[第十九批](../../../notes/verdicts/11-tick-as-unit/21-1001-第十九批.md#2026-10-01-第十九批daemon-上下層用到的三件事)（輸出上限、鎖檔）。
 
 **驗收：**兩項各自照自己的週期跑、互不等待；剛開時每項立刻跑一次；某項回非 0 且 `stop_on_nonzero` 時印 `stopped`、之後不再叫，其他項照跑，全部停掉 daemon 仍開著；相對的 inst、`cwd`、`exec_out_path`、`exec_err_path` 照起點算，`$ref` 照設定檔資料夾算；沒寫 `exec_out_path`／`exec_err_path` 時 `aos-exec` 的輸出不出現在 daemon 的 stdout／stderr；兩項同時結束時寫出不交錯；Ctrl-C 後 daemon 回 0、正在跑的 `aos-exec` 沒被殺；〔第十九批〕任務印超過 `exec_output_max_bytes` 時檔裡只留最後那麼多、標頭有 `dropped=`，一直印 20 MB 的任務記憶體不跟著漲；同一份設定再開一個 daemon：回 1、stderr 一行、第一個的 socket 沒被搶、照跑。測試見 `proto6/src/py/tests/test_daemon.py`、`test_daemon_kill.py`。

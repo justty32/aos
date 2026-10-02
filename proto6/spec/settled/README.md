@@ -120,18 +120,18 @@
 
 1. ~~**`aos-as`（P-212）留在正式篇還是搬暫緩區？**~~ **結案**（使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」）：P-212 整條搬到 [tick 協議暫緩區](deferred/protocol/tick.md)；現行切帳號只在 daemon 設定檔做（帳號模組）。
 2. **最簡鎖不傳給任務後，系統級任務沒辦法判斷「我在不在 tick 裡」。** `aos-git` 的 `not_in_tick`、`aos-mq`（以及 2026-10-01 搬暫緩區的 `aos-publish`）原本都靠繼承的鎖核對。暫時：各條寫「要等暫緩區的『鎖 fd 傳給任務』回來才有判法」。
-3. ~~**任務 `id` 重複沒人擋。**~~ **照既有裁定，不用再問**（[極簡檢查](../../notes/verdicts/11-tick-as-unit.md#aos-tick-讀任務表的極簡檢查已寫入-speccommit-前由我補號)：「默認不重複」）：核心不檢查；`aos-git` 存檔點用 `id` 取名、重複會混，這個後果寫在 B-620「誰驗什麼」表。〔astra 報告建議 2〕
+3. ~~**任務 `id` 重複沒人擋。**~~ **照既有裁定，不用再問**（[極簡檢查](../../notes/verdicts/11-tick-as-unit/05-1001-tick-node與讀表檢查.md#aos-tick-讀任務表的極簡檢查已寫入-speccommit-前由我補號)：「默認不重複」）：核心不檢查；`aos-git` 存檔點用 `id` 取名、重複會混，這個後果寫在 B-620「誰驗什麼」表。〔astra 報告建議 2〕
 4. **上下層判定（B-628）暫緩後，兩處沒有正式判準**：`aos-git` 排除巢狀子資料夾（B-622）、發摘要核對「直接下層」（B-624；發摘要 2026-10-01 整段搬暫緩區，這處跟著暫緩）。暫時：寫「B-628 回來前沒有正式判準」。
-5. ~~**「node」這個詞在 tick 層還剩不少。**~~ **結案**（使用者 2026-10-01 定：tick 層一律叫「工作資料夾」，英文 `tick dir`）：`protocol/node.md` 改名 [protocol/tick.md](protocol/tick.md)（tick 協議）；schema `node-inst`→`inst`、`node-tasks`→`tick-tasks`、`node-tick-record`→`tick-record`；範例 `examples/node/`→`examples/tick/`；P-200 與系統級任務各條的 node 改成工作資料夾。暫緩區講上下層的「上層 node／下層 node」與 kernel、agent 各篇的 node 不動（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)）。
-6. ~~**控制 socket 收到不認得的欄位照收不理**（照程式），跟 [C-07](../contracts.md)「daemon IPC 嚴格拒絕不認得的欄位」打架。~~ **結案**（使用者 2026-10-01：「socket收到看不懂的欄位就不理他」，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：[C-07](../contracts.md) 的放寬表單列一行「現行控制 socket 忽略」，嚴格只剩舊設計的 daemon IPC；[P-121](protocol/daemon/control.md) 寫明。
-7. **照既有裁定，不用再問**（[POC 默認一切正常](../../notes/verdicts/11-tick-as-unit.md#2026-10-01poc-默認一切正常)）〔astra 報告建議 2〕：**`aos-daemon` 的設定錯誤處理有三處跟 schema 不一致**（照「默認一切正常」）：只有指示詞錯印 `aos-daemon: config: <代號>: …`，自己的檢查印 `aos-daemon: config: <說明>`；缺 `insts`、`control` 沒寫 `socket`、某項的值不是物件時程式直接丟 traceback 回 1；schema 要求 `interval_ms` 是非負整數，程式不查型別。暫時：[P-120](protocol/daemon/core.md) 照程式寫，schema 照嚴格寫。
-8. ~~**`aos-exec` 的 stdout 直接接到 daemon 的 stdout**，不經 daemon 那把鎖，可能跟 daemon 自己的行交錯。~~ **結案**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：頂層新鍵 `exec_out_path` 照 `exec_err_path` 規則收齊再寫；兩個鍵沒寫都丟到 `/dev/null`（[B-640](daemon/core.md)、[P-120](protocol/daemon/core.md)）。
-9. ~~**inst 第 1 版的頂層 `user` 要不要留？**~~ **結案**（使用者 2026-10-01：「inst頂層的user欄位不留」，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：[inst](../base/inst.md) 拿掉 `user` 的定義與「先決定身分」整節（直接刪、不搬暫緩，記在[暫緩區撤回表](deferred/tick.md)）；任務表的 `user` 一併拿掉。
+5. ~~**「node」這個詞在 tick 層還剩不少。**~~ **結案**（使用者 2026-10-01 定：tick 層一律叫「工作資料夾」，英文 `tick dir`）：`protocol/node.md` 改名 [protocol/tick.md](protocol/tick.md)（tick 協議）；schema `node-inst`→`inst`、`node-tasks`→`tick-tasks`、`node-tick-record`→`tick-record`；範例 `examples/node/`→`examples/tick/`；P-200 與系統級任務各條的 node 改成工作資料夾。暫緩區講上下層的「上層 node／下層 node」與 kernel、agent 各篇的 node 不動（[裁定](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)）。
+6. ~~**控制 socket 收到不認得的欄位照收不理**（照程式），跟 [C-07](../contracts.md)「daemon IPC 嚴格拒絕不認得的欄位」打架。~~ **結案**（使用者 2026-10-01：「socket收到看不懂的欄位就不理他」，[裁定](../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#2026-10-01daemon-輸出socket-欄位inst-user)）：[C-07](../contracts.md) 的放寬表單列一行「現行控制 socket 忽略」，嚴格只剩舊設計的 daemon IPC；[P-121](protocol/daemon/control.md) 寫明。
+7. **照既有裁定，不用再問**（[POC 默認一切正常](../../notes/verdicts/11-tick-as-unit/03-1001-POC默認一切正常.md#2026-10-01poc-默認一切正常)）〔astra 報告建議 2〕：**`aos-daemon` 的設定錯誤處理有三處跟 schema 不一致**（照「默認一切正常」）：只有指示詞錯印 `aos-daemon: config: <代號>: …`，自己的檢查印 `aos-daemon: config: <說明>`；缺 `insts`、`control` 沒寫 `socket`、某項的值不是物件時程式直接丟 traceback 回 1；schema 要求 `interval_ms` 是非負整數，程式不查型別。暫時：[P-120](protocol/daemon/core.md) 照程式寫，schema 照嚴格寫。
+8. ~~**`aos-exec` 的 stdout 直接接到 daemon 的 stdout**，不經 daemon 那把鎖，可能跟 daemon 自己的行交錯。~~ **結案**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#2026-10-01daemon-輸出socket-欄位inst-user)）：頂層新鍵 `exec_out_path` 照 `exec_err_path` 規則收齊再寫；兩個鍵沒寫都丟到 `/dev/null`（[B-640](daemon/core.md)、[P-120](protocol/daemon/core.md)）。
+9. ~~**inst 第 1 版的頂層 `user` 要不要留？**~~ **結案**（使用者 2026-10-01：「inst頂層的user欄位不留」，[裁定](../../notes/verdicts/11-tick-as-unit/08-1001-node模組與統一更新.md#2026-10-01daemon-輸出socket-欄位inst-user)）：[inst](../base/inst.md) 拿掉 `user` 的定義與「先決定身分」整節（直接刪、不搬暫緩，記在[暫緩區撤回表](deferred/tick.md)）；任務表的 `user` 一併拿掉。
 10. **編輯事項，不是待裁定**〔astra 報告建議 2〕：**整理區以外還有「2＝用法錯」**（kernel 工具、ops、CLI 等）。照 [C-08](conventions.md) 字面是改 1，但那幾篇不在這輪範圍，沒動；整理那幾篇時逐條定改 1 或列為特別指定的碼。
 
 ### 2026-10-01 第二批：astra 審查與使用者裁定落實
 
-〔使用者 2026-10-01〕對 astra 審查 的處理（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)）：
+〔使用者 2026-10-01〕對 astra 審查 的處理（[裁定](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)）：
 
 - **必修 1～9 已修。** 例如擋板改成「daemon 照常叫，由 tick 自己擋」、舊 daemon 才用的依賴移到上面「只適用舊 daemon」、`AOS_TICK_TOKEN` 改標「現行控制不使用；舊通道憑證暫緩」（[C-10](conventions.md)）、H-036 改連 walkthrough。
 - **設計 1（`aos-cg` 收尾會殺到自己）**：記在暫緩區，這輪不改（daemon 那側本來就暫緩）。
@@ -144,12 +144,12 @@
 
 這輪落筆時發現、先照下面寫法、要使用者裁定的：
 
-1. ~~**`aos-config-add` 的旗標**：tick 層改名時從 `--node <node_dir>` 改成 `--dir <工作資料夾>`（P-207）。程式還沒寫，沒有相容問題；名字請確認。~~ **已裁定：搬暫緩區**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第四批aos-config-add-搬暫緩區擋板檔與停格檔照現狀)）：`aos-config-add` 從沒寫過程式，整個指令（B-625 那段與 P-207）搬到[暫緩區](deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)；旗標名等加回來時再定。
-2. ~~**`AOS_DIRNAME=""` 時的固定排除**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：狀態資料夾就是工作資料夾，`aos-git` 固定排除的 `tick/`、`tick.lock` 等直接落在工作資料夾頂層；使用者自己的檔剛好同名就不提交也不還原，風險自負（[B-622](deferred/git.md)）。
-3. ~~**tasks.json 頂層 `_metainfo` 在 schema 是必填**，要不要改成可省？~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：頂層 `_metainfo` 可省，schema 的 `required` 拿掉；每項的 `_metainfo` 照 inst 規則可省（沒寫＝posix 第 1 版），寫了跑到那一項才驗，驗不過＝跑到某項展開失敗（[B-620](tick.md)、[P-202](protocol/tick.md)）。
-4. ~~**`modules` 內部 tick 不展開，daemon 那邊整份展開**，兩邊不同。~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：tasks.json 的 `modules` 讀表時也整個展開，跟 daemon 設定檔一致；展開失敗＝`bad_table`、回 1（[C-11](conventions.md)、[B-620](tick.md)）。
-5. ~~**頂層陌生鍵讀表時不解**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：只有七個預設欄位、`tasks` 解一層、`modules` 整個展開；其他頂層鍵（含 `_metainfo`）不解，寫壞了也不會 `bad_table`（[B-620](tick.md)）。
-6. ~~**整項 `$ref` 引進來的項、或預設值從別的檔引進來時**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：合併後裡面的 `$ref:""`／`#…` 指合併後的這一項，不再指原檔，寫在 B-620。
+1. ~~**`aos-config-add` 的旗標**：tick 層改名時從 `--node <node_dir>` 改成 `--dir <工作資料夾>`（P-207）。程式還沒寫，沒有相容問題；名字請確認。~~ **已裁定：搬暫緩區**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit/10-1001-第四五批.md#2026-10-01-第四批aos-config-add-搬暫緩區擋板檔與停格檔照現狀)）：`aos-config-add` 從沒寫過程式，整個指令（B-625 那段與 P-207）搬到[暫緩區](deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)；旗標名等加回來時再定。
+2. ~~**`AOS_DIRNAME=""` 時的固定排除**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：狀態資料夾就是工作資料夾，`aos-git` 固定排除的 `tick/`、`tick.lock` 等直接落在工作資料夾頂層；使用者自己的檔剛好同名就不提交也不還原，風險自負（[B-622](deferred/git.md)）。
+3. ~~**tasks.json 頂層 `_metainfo` 在 schema 是必填**，要不要改成可省？~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：頂層 `_metainfo` 可省，schema 的 `required` 拿掉；每項的 `_metainfo` 照 inst 規則可省（沒寫＝posix 第 1 版），寫了跑到那一項才驗，驗不過＝跑到某項展開失敗（[B-620](tick.md)、[P-202](protocol/tick.md)）。
+4. ~~**`modules` 內部 tick 不展開，daemon 那邊整份展開**，兩邊不同。~~ **已裁定**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：tasks.json 的 `modules` 讀表時也整個展開，跟 daemon 設定檔一致；展開失敗＝`bad_table`、回 1（[C-11](conventions.md)、[B-620](tick.md)）。
+5. ~~**頂層陌生鍵讀表時不解**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：只有七個預設欄位、`tasks` 解一層、`modules` 整個展開；其他頂層鍵（含 `_metainfo`）不解，寫壞了也不會 `bad_table`（[B-620](tick.md)）。
+6. ~~**整項 `$ref` 引進來的項、或預設值從別的檔引進來時**~~ **已裁定**（使用者 2026-10-01：照現寫法，[裁定](../../notes/verdicts/11-tick-as-unit/09-1001-第二三批.md#2026-10-01-第三批tasksjson-的-metainfo-與-modules)）：合併後裡面的 `$ref:""`／`#…` 指合併後的這一項，不再指原檔，寫在 B-620。
 
 ### 系統訊息佇列改寫後，區外要跟上的（還沒改）
 

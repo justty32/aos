@@ -4,7 +4,7 @@
 
 本篇只有 B-646，寫帳號模組**做什麼**。設定怎麼寫、root 端的封包、stderr 的行，寫在格式篇 [P-126](../protocol/daemon/account.md)。
 
-依據：[verdicts 11 篇末「2026-10-01 第十三批：帳號模組」](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十三批帳號模組)、[第十二批](../../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)、[plan m3m 模組五](../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)；現行程式 [帳號](../../../src/py/README.md#帳號m3m-模組五)（`lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`，有出入以程式為準）。
+依據：[verdicts 11 篇末「2026-10-01 第十三批：帳號模組」](../../../notes/verdicts/11-tick-as-unit/15-1001-第十三批.md#2026-10-01-第十三批帳號模組)、[第十二批](../../../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)、[plan m3m 模組五](../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)；現行程式 [帳號](../../../src/py/README.md#帳號m3m-模組五)（`lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`，有出入以程式為準）。
 
 ## B-646：帳號模組〔使用者 2026-10-01 第十二、十三批〕
 
