@@ -17,7 +17,7 @@
 | 主程序結束後 | 框裡還有程序就直接寫 `cgroup.kill`（不先 TERM），看 `cgroup.events` 的 populated 變 0，再 rmdir | 對那個程序群組送 SIGKILL，再反覆收掛回自己的孤兒、逐一 SIGKILL 並 wait，到沒有為止 |
 | 清不到的 | 經外部服務（`systemd-run --user`、`at`、cron）開的程序，會跑出 `n-<h>` | 同左，加上換成別的帳號的；也沒有上限、量測與 OOM 證據 |
 
-- **清不空**：框一直不空時，stderr 印 `frame_not_empty`，建停格檔（[B-620](../tick.md#b-620任務註冊表照表依序跑)）、回 1，不讓後面的項在還有人寫檔時開跑。
+- **清不空**：框一直不空時，stderr 印 `frame_not_empty`，建停格檔（[B-620](../tick/core/03-B-602-互斥鎖與B-620開頭.md#b-620任務註冊表照表依序跑)）、回 1，不讓後面的項在還有人寫檔時開跑。
 - **結束碼**照原指令；原指令被訊號結束時，`aos-cg` 用同一個訊號結束自己。
 - **不放在 `tick` 底下**：cgroup v2 規定開了 controller 的那層不能同時放程序和子層。每項多約 0.1 毫秒（[實測](../../../notes/probes/per-task-cgroup-cost.md)）。
 - **〔暫緩〕跟 `aos-as` 一起用**（`aos-as` 2026-10-01 第十三批搬暫緩區）：寫成 `aos-cg -- aos-as <帳號> -- 原指令`；`aos-as` 把自己所在的 `task-*` 框帶給 helper，別的帳號的程序也放進同一框（[B-303](helper.md)、[B-609](daemon/helper-actions.md)）。反過來寫開不了框，因為框不歸那個帳號。

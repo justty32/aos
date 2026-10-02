@@ -25,13 +25,13 @@
 
 | 改什麼 | 怎麼改 |
 |---|---|
-| 普通設定（`config/` 裡的檔） | 自己改；tick 外的寫入者算外部世界（[B-602](../tick.md#b-602同一資料夾一次一格互斥鎖)）。原本的 `aos-config-add` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)〔使用者 2026-10-01〕 |
+| 普通設定（`config/` 裡的檔） | 自己改；tick 外的寫入者算外部世界（[B-602](core/03-B-602-互斥鎖與B-620開頭.md#b-602同一資料夾一次一格互斥鎖)）。原本的 `aos-config-add` 2026-10-01 搬到[暫緩區](../deferred/tick.md#暫緩b-625-加入普通設定aos-config-add)〔使用者 2026-10-01〕 |
 | 重要設定（inst、任務表）與其他手改 | 現行：經 daemon 跑的先 `aos-ctl pause`，等 `aos-ctl status` 看到 `running:false`（[B-641](../daemon/control.md)），持工作資料夾的鎖（`.aos/tick.lock`）修改，照下面「恢復前驗證」驗過再 `aos-ctl resume`。不經 daemon 跑的（cron、人手）自己停住排程。舊 daemon 的 `node.pause`／`node.show`／`node.resume` 那套見 [B-607](../deferred/daemon/registration.md)，在暫緩區〔astra 報告必修 2〕 |
 
 - tick 裡的任務不改 `config/` 是軟性原則，不檢查也不阻擋；同一格新舊設定混用的風險由寫任務的人承擔（[A-102](../../agent/configuration.md)）。
 - **有 git 時**〔暫定〕：
   - `config/` 不在 aos 範圍（B-630），aos 不提交它；要留歷史就自己 `git commit`。
-  - inst 與任務表在 `.aos/` 底下，屬 aos 範圍：格間手改的下場照 [B-602](../tick.md#b-602同一資料夾一次一格互斥鎖)「tick 外的寫入者」，上一格沒正常收尾時會被還原，所以改完自己提交。
+  - inst 與任務表在 `.aos/` 底下，屬 aos 範圍：格間手改的下場照 [B-602](core/03-B-602-互斥鎖與B-620開頭.md#b-602同一資料夾一次一格互斥鎖)「tick 外的寫入者」，上一格沒正常收尾時會被還原，所以改完自己提交。
 
 ### 恢復前驗證
 
