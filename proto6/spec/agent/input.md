@@ -18,7 +18,7 @@
 - 「投件權就是執行權」同樣適用：能經通道送進來的，是寄件帳號對本 node `requests/` 有寫權的人（B-614）。
 - **接件**：`agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON。接件後保存回址、原文與附件引用，建 queued input 及 user history；附件只存引用，要內容就用普通讀檔工具。指令結果沿 work-result，收件確認放指令 stdout。帶 `in_reply_to` 的回話依上面的規則只記進 history。收工具／LLM 結果見 [A-403](tools.md)。序號在鎖內遞增、同組提交，首次從 0 開始；不靠牆鐘排輸入，清理不倒退序號；`input_id` 就是原 `agent.say` 的 RPC id。
 
-〔使用者方向 2026-09-30，第十八批〕agent 之間的問答機制、agent 的請求被對方拒收、卡在 unknown 的使用者輸入怎麼收，都延後（[P-008](../protocol/README.md#p-008)）；現行照上面的規則。
+〔使用者方向 2026-09-30，第十八批〕agent 之間的問答機制、agent 的請求被對方拒收、卡在 unknown 的使用者輸入怎麼收，都延後（[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）；現行照上面的規則。
 
 驗收：收件中斷場景見 [V-03](../conformance.md)。
 
@@ -34,7 +34,7 @@
 
 - 同一組提交保存本地 reply、更新 input，並建一份新 ID 的 `agent.say` 請求（`{text, in_reply_to:原 input_id}`），目標是原 input 的回址；本地的 progress／final 不另變成線上欄位。tick 提交後由標準配備投件（[B-624](../settled/deferred/mq.md)）。
 - 自己回自己也是下格才收，收到時因為帶 `in_reply_to` 只記錄；原 `agent.say` 的回應不改。
-- 有終局回話才把 input 記 done 並填完成時間。回話被對方拒收時怎麼辦，延後（[P-008](../protocol/README.md#p-008)）。
+- 有終局回話才把 input 記 done 並填完成時間。回話被對方拒收時怎麼辦，延後（[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）。
 - 模型原話不重存 history；程式產生的進度／失敗另建 assistant 事件、指回 reply。`pending_requests` 只記 LLM／工具結果，回話交付另記；本地已提交的 final 可查，不表示對方已接納。
 
 暫停、取消及恢復用[共通操作](../scheduling/operations.md)，不另設 agent 控制入口。操作已受理不等於工作已停止，也不等於任務已完成。

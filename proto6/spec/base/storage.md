@@ -49,7 +49,7 @@ node 的狀態就是裡面的檔案；〔納入 cgroup 與 git〕git 有就用�
 
 〔使用者方向 2026-09-30，第十八批〕**壞掉的收件原件**（[B-623](../settled/deferred/mq.md) 報過一次的那種）留在 `requests/`，從那件事項記下的首次回報格數（〔第二十批〕`reported_seq`，[P-601](../protocol/ops.md)）起過了保留期，由 `aos-clean` 刪掉；刪之前不必等人把事項標完成。事項檔不見了就當不認得，不碰。
 
-git 歷史回收延後（[P-008](../protocol/README.md#p-008)）；同 ID 重送要補投的原回應就是從 git 歷史撈（[B-503](transport.md)；沒有 git 時沒有歷史可撈，[B-632](../settled/deferred/git.md)），所以回收以前要先顧到這點。
+git 歷史回收延後（[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）；同 ID 重送要補投的原回應就是從 git 歷史撈（[B-503](transport.md)；沒有 git 時沒有歷史可撈，[B-632](../settled/deferred/git.md)），所以回收以前要先顧到這點。
 
 **驗收**：滿碟不回假成功、不刪收件原件；未到清理間隔（格數）回 0；牆鐘倒退不影響到期。壞收件原件過了保留期被刪，期內留著。到期 unknown 可清，其他未結、有引用及保留期內的內容保留；不認得的資料原樣留下且不回報。中斷可繼續，清理不造成收件重吃。
 

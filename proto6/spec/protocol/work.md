@@ -102,7 +102,7 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 
 unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown 結果時缺失欄位填 null；已發布 RPC 回應不覆寫。
 
-拒收沿 P-005：參數錯 -32602；業務錯 -32000，data.code 可為 work_not_authorized、input_unreadable、capacity_unavailable、pool_not_found、model_not_found、key_unavailable。只在能確認尚未接納的暫時容量／讀取問題才可 retryable:true；接納後的失敗回結果。配對錯或衝突留原件及事項，不夾 key／認證標頭。agent 的請求被拒收後 agent 怎麼收尾，延後（[P-008](README.md#p-008)）。
+拒收沿 P-005：參數錯 -32602；業務錯 -32000，data.code 可為 work_not_authorized、input_unreadable、capacity_unavailable、pool_not_found、model_not_found、key_unavailable。只在能確認尚未接納的暫時容量／讀取問題才可 retryable:true；接納後的失敗回結果。配對錯或衝突留原件及事項，不夾 key／認證標頭。agent 的請求被拒收後 agent 怎麼收尾，延後（[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 ## P-411．取消工作〔使用者方向 2026-09-29，第十七批〕
 
@@ -122,7 +122,7 @@ unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown
 
 **核權要存的欄位**：原請求檔消費後會被刪，B-203 要的兩個 UID 都在接件時記進工作狀態；kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json) 的 `submitter_uid`（原請求檔的擁有 UID）與 `owner_exec_uid`（接件那一項任務實際的有效 UID：就是 tick 的有效 UID，即 node inst 的執行帳號；〔暫定〕任務包了 `aos-as` 換帳號時記換成的那個帳號，同 B-203）。
 
-〔使用者方向 2026-09-30，第十八批〕目前只有 kernel 的 work 任務支援取消。LLM 請求與 agent 自己掛的工具行程的取消延後（[P-008](README.md#p-008)）；到時要補的欄位（forward-state 與 agent 請求的 `submitter_uid`、`canceling` 階段）一併列在那裡。
+〔使用者方向 2026-09-30，第十八批〕目前只有 kernel 的 work 任務支援取消。LLM 請求與 agent 自己掛的工具行程的取消延後（[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)）；到時要補的欄位（forward-state 與 agent 請求的 `submitter_uid`、`canceling` 階段）一併列在那裡。
 
 ## P-408．程式契約〔建議預設，未拍板〕
 
@@ -151,4 +151,4 @@ unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown
 
 ## P-410．待決與跨篇
 
-見 [README P-008](README.md#p-008)。
+見 [README P-008](readme/03-P-007-P-008-schema與待決.md#p-008)。

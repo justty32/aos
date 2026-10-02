@@ -49,7 +49,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 
 ## C-04．錯誤與接件
 
-跨篇需要錯誤資料時，最少有穩定 `code` 與人看得懂的 `message`；需要時附 `retryable` 或有界 `details`。不在本篇定 RPC 數字碼、method 全集或通用封套；各處的錯誤碼與結束碼在哪裡定，見[集中碼表](protocol/README.md#集中碼表)，inst 的錯誤碼另見[正本](base/inst.md)。
+跨篇需要錯誤資料時，最少有穩定 `code` 與人看得懂的 `message`；需要時附 `retryable` 或有界 `details`。不在本篇定 RPC 數字碼、method 全集或通用封套；各處的錯誤碼與結束碼在哪裡定，見[集中碼表](protocol/readme/02-P-005-P-006-錯誤與程式介面.md#集中碼表)，inst 的錯誤碼另見[正本](base/inst.md)。
 
 `retryable` 只提示可再試的條件，不授權重做 unknown，也不能越過取消或重試上限。確定的 LLM 限流例外只依 [S-303](scheduling/llm.md)。收件、完成、已消費是三種不同確認，正本見 [B-503](base/transport.md)；收到請求不表示工作成功。
 

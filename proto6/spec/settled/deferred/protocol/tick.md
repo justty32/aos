@@ -160,7 +160,7 @@
 | `message` | 必填；一份請求或回應物件（[P-301](../../../protocol/messages.md)），它的 `id` 要跟檔名去掉後綴的部分相同；序列化後最多 196608 bytes（[P-119](daemon/channel.md)） |
 | `urgent` | 可省，布林，預設 false；true＝急件 |
 
-schema 還沒補：舊的待送封套 [msg-outbox](../../../protocol/schemas/msg-outbox.schema.json) 是檔案投件的格式（`target_node`、`alarm_ticks`、`channel`），已不適用，列在 [README 待放入](../../README.md#待放入)。鬧鐘紀錄 `.aos/alarms/` 隨鬧鐘撤（[B-624](../mq.md)）。
+schema 還沒補：舊的待送封套 [msg-outbox](../../../protocol/schemas/msg-outbox.schema.json) 是檔案投件的格式（`target_node`、`alarm_ticks`、`channel`），已不適用，列在 [README 待放入](../../readme/01-收錄判準對外依賴與待放入.md#待放入)。鬧鐘紀錄 `.aos/alarms/` 隨鬧鐘撤（[B-624](../mq.md)）。
 
 ### 送不出去的失敗紀錄
 

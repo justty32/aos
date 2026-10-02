@@ -14,7 +14,7 @@
 - 〔使用者方向 2026-09-30，第二十批〕**tick 是衡量基準**：排程以格計（「這個任務要花十個 tick」，算安排它的上層的格），排程本身也是掛在任務表上、每格跑一次的程式；反應最快是下一格。除了 tick–daemon 通道，其他所有事都要在某一格裡做，不准有常駐服務繞過 tick（[T-07](settled/terms.md)）。
 - 〔使用者方向 2026-09-30，第二十批〕**tick 核心只做四件事**：同資料夾互斥、照任務表依序跑、上下層判定、每項結束碼紀錄（[T-07](settled/terms.md)）。系統訊息佇列 `aos-mq get`／`post`、發摘要、清理、git 開格／存檔點／收尾 `aos-git` 都是掛在任務表上、`kind:"system"` 標記的**系統級任務**，標準任務表範本就是預設的一組；`aos-as`、`aos-needs`、`aos-cg` 這類包裝是**普通程式**〔2026-10-01：`aos-needs` 改寫成自己占一項的 `aos-tick-check-task`（[B-621](settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)）；發摘要 `aos-publish` 搬[暫緩區](settled/deferred/tick.md#暫緩b-624-發布摘要aos-publish)〕；任務要停掉本格剩下的項就建停格檔，要擋住之後的格就建擋板檔；其餘是 kernel、agent、clock、自訂任務（[T-10](settled/terms.md)）。**投件權就是執行權，而且會傳遞**（[T-08](terms.md)）。 〔2026-10-01 殘留註記〕現況：tick 核心是簡單互斥鎖、照表跑、每項結束碼紀錄（上下層判定暫緩）；**現行沒有系統級任務**——`aos-mq get`／`post`、清理 `aos-clean`、標準範本（第十八批）、`aos-git`（第十七批）、`aos-tick-check-task`／`aos-needs`（第十六批）、`aos-as`（第十三批）都在[暫緩區](settled/deferred/README.md)；外掛改用 hooks（`before_all`、`after_task`、`after_every_task`、`after_all`，[B-635](settled/tick/hooks.md)）與 tasks-blocked（[B-636](settled/tick/tasks-blocked.md)）。
 - **管轄區就是 tick 的 cwd**：上層預設看資料夾包含，在 daemon 底下可登記覆蓋（[T-10](settled/terms.md)）。
-- 管理目標之一是降低隨機性，怎麼量延後（[P-008](protocol/README.md#p-008)）。
+- 管理目標之一是降低隨機性，怎麼量延後（[P-008](protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 ## 閱讀順序
 
@@ -26,7 +26,7 @@
 6. [共用契約](contracts.md)與[驗收入口](conformance.md)：跨篇最少定義及整合故障場景。
 7. [人手操作 CLI](cli.md)：用途分層的指令、底層對應、待補接口與完整操作走查。
 
-**整理區是什麼**：`settled/` 放已定案、整理好的 tick 與 daemon 基礎（git 與 cgroup 有就用），要能自己讀懂；它對區外的依賴列在[整理區 README](settled/README.md#對外依賴)。其他篇（kernel、LLM、agent、CLI、基底其餘各篇、協議篇其餘各檔等）還沒跟上新基礎，**之後整理好才一起放進整理區**；在那之前，它們可能還留著舊說法，碰到不一致照 [T-01](terms.md) 的裁定優先序判斷，並記成疑點。
+**整理區是什麼**：`settled/` 放已定案、整理好的 tick 與 daemon 基礎（git 與 cgroup 有就用），要能自己讀懂；它對區外的依賴列在[整理區 README](settled/readme/01-收錄判準對外依賴與待放入.md#對外依賴)。其他篇（kernel、LLM、agent、CLI、基底其餘各篇、協議篇其餘各檔等）還沒跟上新基礎，**之後整理好才一起放進整理區**；在那之前，它們可能還留著舊說法，碰到不一致照 [T-01](terms.md) 的裁定優先序判斷，並記成疑點。
 
 [協議篇](protocol/README.md)只定新 node 架構的欄位、JSON、schema、範例、argv 與結束碼；行為一律以主規格為正本。目錄名 `agent/`、`scheduling/` 依領域保留，不代表兩種 node。
 
@@ -38,7 +38,7 @@
 
 名詞放 terms，跨篇共用資料放 contracts，各領域規則放所屬篇，其餘只引用。**inst 欄位與解析以 [base/inst](base/inst.md) 為正本**；run 的軟性分組見 [runs](scheduling/runs.md)。
 
-〔使用者方向 2026-09-30，第十八批〕**主規格是正本**：行為規則只寫在主規格；協議篇只留欄位、JSON、schema、範例，寫到行為時只留一句加主規格條號。同一主題分散兩處的，照 [V-01 的正本表](conformance.md)定哪邊寫全。格式版本怎麼演進、哪些鍵永遠禁止見 [C-07](contracts.md)；延後項集中在 [P-008](protocol/README.md#p-008)。
+〔使用者方向 2026-09-30，第十八批〕**主規格是正本**：行為規則只寫在主規格；協議篇只留欄位、JSON、schema、範例，寫到行為時只留一句加主規格條號。同一主題分散兩處的，照 [V-01 的正本表](conformance.md)定哪邊寫全。格式版本怎麼演進、哪些鍵永遠禁止見 [C-07](contracts.md)；延後項集中在 [P-008](protocol/readme/03-P-007-P-008-schema與待決.md#p-008)。
 
 ## 原則：能下指令、能管檔案，就能交給 agent
 

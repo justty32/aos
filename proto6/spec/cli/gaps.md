@@ -13,9 +13,9 @@
 | D5 池狀態 | P-808～812 定路由、共享窗口及 pool-status，pool usage 有實際落點。 |
 | D6 停機／JSON | Ctrl-C、存檔重開見 [B-603](../settled/deferred/daemon/lifecycle.md)、[B-604](../settled/deferred/daemon/lifecycle.md)；〔第十八批〕排空或立即停由 daemon 設定 `stop_mode` 決定，仍沒有 stop IPC 或子命令。JSON 沿原 schema。 |
 
-unknown 處置與自訂清理接口已裁定不做；git 歷史回收延後（第十八批 14，[P-008](../protocol/README.md#p-008)）。
+unknown 處置與自訂清理接口已裁定不做；git 歷史回收延後（第十八批 14，[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 | 剩餘缺口 | 為什麼現在不補 |
 |---|---|
 | 執行期驗收 | 實作後依 [驗收入口](../conformance.md)測權限、中斷、真實 provider。 |
-| agent 內部機制（請求被拒收、卡在 unknown 的輸入、agent 之間問答、設定檢查結束碼） | 第十八批延後，見 [P-008](../protocol/README.md#p-008)。 |
+| agent 內部機制（請求被拒收、卡在 unknown 的輸入、agent 之間問答、設定檢查結束碼） | 第十八批延後，見 [P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)。 |

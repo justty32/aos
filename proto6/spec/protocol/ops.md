@@ -43,7 +43,7 @@ aos-attend done N ID --socket S [--store node|daemon] [--json]
 
 人手入口把 `aos-attend` 換成 `aos attend`；N 是來源 node，ID 是事項 ID，store 預設 node。三個動作做什麼以 [S-405](../scheduling/operations.md) 為正本。ls 列出來源、ID、位置與 message；show 顯示 message 與有填才顯示的「建議處理」；show／done 查 daemon 時走相應 IPC；已在 done 再標一次不變。ls 可用 --source 篩來源；--json 時 ls／show 每筆輸出事項加 status，done 輸出 `{source_node,issue_id}`，沿 IPC done 的 result。
 
-實際修理由人或 agent 自己下指令。用呼叫者權限，不取得 N 的身分；stdin 不讀，stdout 是查詢內容或完成的來源／ID，stderr 是白話錯誤。0 成功或清單為空；2 用法錯；125 無法開始；1 讀取、移檔或 IPC 失敗。done 不改工作結果，也不提交 git。agent 設定檢查的結束碼要不要跟 kernel 統一，延後（[P-008](README.md#p-008)）。
+實際修理由人或 agent 自己下指令。用呼叫者權限，不取得 N 的身分；stdin 不讀，stdout 是查詢內容或完成的來源／ID，stderr 是白話錯誤。0 成功或清單為空；2 用法錯；125 無法開始；1 讀取、移檔或 IPC 失敗。done 不改工作結果，也不提交 git。agent 設定檢查的結束碼要不要跟 kernel 統一，延後（[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 ## P-605．aos-clean 的 argv 與設定〔建議預設，未拍板〕
 
@@ -69,7 +69,7 @@ aos-clean [--node <node>] --config <設定檔>
 
 archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存（〔第二十批〕沒有 git 時 `<清理前_commit>` 換成 `seq-<本格的 seq>`，[B-632](../settled/deferred/git.md)），以 P-003 寫副本，保留原目錄關係；歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。封存、刪除、提交與故障恢復的行為以 [B-404](../base/storage.md) 為正本。
 
-回報 `outcome`：`staged`＝本次在 tick 內做完的變動（沒有 git 時變動即生效；有 git 時待本格 `aos-git close` 提交，[B-630](../settled/deferred/git.md)）；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用錯誤（開放版 `ErrorOpen`）。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收延後（[P-008](README.md#p-008)）。
+回報 `outcome`：`staged`＝本次在 tick 內做完的變動（沒有 git 時變動即生效；有 git 時待本格 `aos-git close` 提交，[B-630](../settled/deferred/git.md)）；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用錯誤（開放版 `ErrorOpen`）。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收延後（[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 ## P-607．schema 與最小範例〔建議預設，未拍板〕
 
@@ -83,14 +83,14 @@ Schema 與解析沿 [共用約定](README.md)，三份都放寬、不認得的�
 
 ## P-608．待決與跨篇
 
-見 [README P-008](README.md#p-008)。
+見 [README P-008](readme/03-P-007-P-008-schema與待決.md#p-008)。
 
 ## P-609．最小設定錯誤與修好後重驗〔主編補；依 A-102、CLI H-036 第 5、6 步〕
 
 〔第十九批依方案 A 縮短〕誰檢查、錯了停什麼、事項誰寫與沿用同一 `issue_id`，以 [S-405](../scheduling/operations.md) 為正本；重驗持鎖、不送 LLM／不派 once／不 resume、修好後標完成，以 [A-102](../agent/configuration.md) 為正本。本條只留格式。
 
 - **事項**：沿 P-601 寫在來源 node 的 `.aos/attention/`，`reason:"config_invalid"`；message 說檔案、欄位與原因，不夾設定全文或 key；suggestion 可寫建議的檢查指令。
-- **檢查指令**：kernel 用 [P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [P-712](agent-tasks.md) 的 `aos-agent-check`（兩者結束碼要不要統一延後，[P-008](README.md#p-008)）：
+- **檢查指令**：kernel 用 [P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [P-712](agent-tasks.md) 的 `aos-agent-check`（兩者結束碼要不要統一延後，[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)）：
 
 ```text
 aos-kernel-check --node /srv/aos/top

@@ -82,11 +82,11 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 ## P-705．收話與收結果〔A-201、A-403、P-303～305；工程預設〕
 
-行為以 [A-201](../agent/input.md)（含通道收件，收件任務用 `node.take`）與 [A-403](../agent/tools.md) 為準。格式：`agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON；指令結果沿 work-result，收件確認放指令 stdout。工作結果在指令 stdout 裡的格式見 [work](work.md)／[llm-work](llm-work.md)；已消費的回應存 P-703 的 `state/messages/responses/<id>.json`，配對記在 `state/messages/meta/<id>.json` 與 input 的 `pending_requests`。agent 之間的問答、請求被拒收，延後（[P-008](README.md#p-008)）。
+行為以 [A-201](../agent/input.md)（含通道收件，收件任務用 `node.take`）與 [A-403](../agent/tools.md) 為準。格式：`agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON；指令結果沿 work-result，收件確認放指令 stdout。工作結果在指令 stdout 裡的格式見 [work](work.md)／[llm-work](llm-work.md)；已消費的回應存 P-703 的 `state/messages/responses/<id>.json`，配對記在 `state/messages/meta/<id>.json` 與 input 的 `pending_requests`。agent 之間的問答、請求被拒收，延後（[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 ## P-706．組 context 與發 LLM〔A-302～303、P-406；工程預設〕
 
-行為（選 input、context 順序、估算與 `context_over_budget`、串流、鬧鐘）以 [A-302](../agent/memory.md) 為準。格式：固定的請求 ID、context、meta、usage 存放見 P-703；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；要串流就在業務 JSON 帶 `stream_path`（[llm-work P-406](llm-work.md)）。範本預設在封套設鬧鐘 `alarm_ms`（格式見 [node P-206](../settled/protocol/tick.md)，預設值延後，[P-008](README.md#p-008)），所以 [agent-config](schemas/agent-config.schema.json) 這輪不加欄。
+行為（選 input、context 順序、估算與 `context_over_budget`、串流、鬧鐘）以 [A-302](../agent/memory.md) 為準。格式：固定的請求 ID、context、meta、usage 存放見 P-703；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；要串流就在業務 JSON 帶 `stream_path`（[llm-work P-406](llm-work.md)）。範本預設在封套設鬧鐘 `alarm_ms`（格式見 [node P-206](../settled/protocol/tick.md)，預設值延後，[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)），所以 [agent-config](schemas/agent-config.schema.json) 這輪不加欄。
 
 ## P-707．模型決定與兩種工具路線〔A-401～403、A-503、P-407；工程預設〕
 
@@ -125,7 +125,7 @@ aos-agent-check [--node N] --recheck
 # 人手：aos agent config check N [--draft F]／recheck N
 ```
 
-直接開檔驗 inst／tasks／agent／tools、引用與權限（對 LLM 池的投件權除外，見 P-701），不試 provider。draft 是任意可讀替代 agent.json；validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫。0 有效、1 無效、2 用法錯、125 讀取／前置失敗；stdout 印 valid 或 invalid 與檔案欄位，stderr 診斷。跟 kernel 設定檢查（P-805，無效也回 0）不一致，要不要統一延後（[P-008](README.md#p-008)）。
+直接開檔驗 inst／tasks／agent／tools、引用與權限（對 LLM 池的投件權除外，見 P-701），不試 provider。draft 是任意可讀替代 agent.json；validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫。0 有效、1 無效、2 用法錯、125 讀取／前置失敗；stdout 印 valid 或 invalid 與檔案欄位，stderr 診斷。跟 kernel 設定檢查（P-805，無效也回 0）不一致，要不要統一延後（[P-008](readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 recheck 的行為（取鎖、驗目前值、記設定狀態、不派工、事項另用 `aos attend done N ID` 標完成）見 [A-102](../agent/configuration.md)。鎖忙 75、保存失敗 1、提交／還原故障 3。
 

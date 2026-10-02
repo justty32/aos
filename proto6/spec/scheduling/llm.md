@@ -4,7 +4,7 @@
 
 ## S-301．三檔、池 node 與 quota scope
 
-〔使用者方向 2026-09-30，第十八批〕**LLM 池是預設 kernel 範本的一種資源**，不是 aos 寫死的特例：本篇的三檔、兩條路線、份額、窗口、重試與 unknown 占用，都是預設範本的規則；kernel 可以不裝，也可以登記自己的任務種類與資源名稱另管（[T-06](../terms.md)）。LLM 池是「外部計算」（Linux 管不到的計算）的第一個實例；其他外部計算由各 kernel 以資源任務自訂，通用的外部資源池介面延後（[P-008](../protocol/README.md#p-008)）。
+〔使用者方向 2026-09-30，第十八批〕**LLM 池是預設 kernel 範本的一種資源**，不是 aos 寫死的特例：本篇的三檔、兩條路線、份額、窗口、重試與 unknown 占用，都是預設範本的規則；kernel 可以不裝，也可以登記自己的任務種類與資源名稱另管（[T-06](../terms.md)）。LLM 池是「外部計算」（Linux 管不到的計算）的第一個實例；其他外部計算由各 kernel 以資源任務自訂，通用的外部資源池介面延後（[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 〔使用者方向 2026-09-29 晚〕LLM 呼叫分三檔，用兩個欄位切換：agent 設定的 `llm.target_node`，加上池設定裡每個池的 `schedule`。
 
@@ -84,7 +84,7 @@ HTTP 無結果又不能證明未送出，就標 unknown，不自動再呼叫或�
 
 ## S-304．取消與不確定性
 
-〔使用者方向 2026-09-29〕once 的取消規則以 [B-203](../base/execution.md) 為正本（在跑的經通道砍掉，[B-613](../settled/deferred/daemon/channel.md)）；〔使用者方向 2026-09-30，第十八批〕LLM 請求的取消延後（[P-008](../protocol/README.md#p-008)），目前範本只有 kernel 的 work 任務收 `work.cancel`。已送出後關掉本機連線，不代表遠端停算。重啟的程序收尾依 [daemon](../settled/daemon/README.md)，不明結果依 [S-401](operations.md) 放著、不自動重做。完整結果才可成功，部分輸出不是完成證據；串流寫出的片段也只是過程（S-305）。〔建議預設，未拍板；第十九批依方案 A 由 llm-work P-407 搬來〕**結果怎麼判**（欄位見 [P-407](../protocol/llm-work.md)）：收到完整但格式不合或驗不過的回應（含非空 refusal）記 `response_invalid`，保留無 key 的證據，不自動再問、也不當空白成功；傳輸中斷或遠端結果不明記 `unknown`；串流中途斷掉不算完整回應。`finish_reason` 是 `length` 表示模型輸出達上限，不能當產品任務完成（[A-503](../agent/README.md)）。
+〔使用者方向 2026-09-29〕once 的取消規則以 [B-203](../base/execution.md) 為正本（在跑的經通道砍掉，[B-613](../settled/deferred/daemon/channel.md)）；〔使用者方向 2026-09-30，第十八批〕LLM 請求的取消延後（[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)），目前範本只有 kernel 的 work 任務收 `work.cancel`。已送出後關掉本機連線，不代表遠端停算。重啟的程序收尾依 [daemon](../settled/daemon/README.md)，不明結果依 [S-401](operations.md) 放著、不自動重做。完整結果才可成功，部分輸出不是完成證據；串流寫出的片段也只是過程（S-305）。〔建議預設，未拍板；第十九批依方案 A 由 llm-work P-407 搬來〕**結果怎麼判**（欄位見 [P-407](../protocol/llm-work.md)）：收到完整但格式不合或驗不過的回應（含非空 refusal）記 `response_invalid`，保留無 key 的證據，不自動再問、也不當空白成功；傳輸中斷或遠端結果不明記 `unknown`；串流中途斷掉不算完整回應。`finish_reason` 是 `length` 表示模型輸出達上限，不能當產品任務完成（[A-503](../agent/README.md)）。
 
 〔第十八批補，建議預設，未拍板〕**兩個計數分開算**：
 

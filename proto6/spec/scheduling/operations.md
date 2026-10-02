@@ -83,6 +83,6 @@ unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用�
 
 〔審稿必-4〕記錄照 agent history 的形狀寫進 kernel 自己的 history，序號放 kernel 自己的序號檔，在 node 鎖內遞增、跟 history 同組提交，重啟不倒退。人手 `aos agent listen` 讀的是**同一個 commit 裡任務表宣告 `agent.say` 的那項任務**對應的 history（〔第十九批〕沒有 git 時讀目前的任務表與 history，不保證一致快照，[B-632](../settled/deferred/git.md)）：宣告它的是 agent 任務就讀 agent 的，是 kernel 任務就讀 kernel 的（[P-713](../protocol/agent-tasks.md)）。
 
-只記錄的訊息沒有待處理輸入可以結案，清理以接件確認提交的時間起算、套一般保留期，還被引用就留（[B-404](../base/storage.md)、[P-716](../protocol/agent-tasks.md)）；序號檔不清，清理不能讓序號倒退。agent 之間的問答機制延後（[P-008](../protocol/README.md#p-008)）。
+只記錄的訊息沒有待處理輸入可以結案，清理以接件確認提交的時間起算、套一般保留期，還被引用就留（[B-404](../base/storage.md)、[P-716](../protocol/agent-tasks.md)）；序號檔不清，清理不能讓序號倒退。agent 之間的問答機制延後（[P-008](../protocol/readme/03-P-007-P-008-schema與待決.md#p-008)）。
 
 驗收：投給 kernel 的 `agent.say` 留在 kernel 的 history、序號遞增，`aos agent listen` 對這個 kernel 讀得到；kernel 不回第二則話。

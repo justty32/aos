@@ -88,4 +88,4 @@ agent 只按設定的一個 node 位址投 `llm.chat`，請求與結果始終用
 
 ## P-508．待決與跨篇
 
-見 [README P-008](README.md#p-008)。
+見 [README P-008](readme/03-P-007-P-008-schema與待決.md#p-008)。
