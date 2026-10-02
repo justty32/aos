@@ -6,14 +6,14 @@
 
 ## 一段話結論
 
-kernel 不是新程式，是一個**角色**：一個工作資料夾（`tasks.json` 放「收、判、套、報」四項政策任務，由 `aos-tick` 跑）＋它擁有的一份 daemon 設定（`insts` 列成員）。它用現有零件做事——`aos-ctl` 叫醒／暫停成員、daemon 設定裡的 `cgroup` 與 `account` 分資源與身分、`aos-mq` 收成員摘要與發 LLM 額度。多層＝上層 daemon 把下層 daemon 當一項跑，上層只收它的摘要。新東西只有三樣：四支小程式（kernel 任務）、三種信（summary、grant、request）、daemon 一個小補（讓 kernel 能 SIGHUP 自己的 daemon，第 4 階段才要）。
+kernel 不是新程式，是一個**角色**：一個工作資料夾（`tasks.json` 放一項政策任務「收、判、套、報」，由 `aos-tick` 跑）＋它擁有的一份 daemon 設定（`insts` 列成員）。它用現有零件做事——成員用 state 模組預置暫停，kernel 寄 grant 到成員的私門就是叫醒；daemon 設定裡的 `cgroup` 分資源；`aos-mq` 收成員摘要。多層＝上層 daemon 把下層 daemon 當一項跑，上層只收它的摘要。新東西：一支小程式 `aos-kernel step`、三種信（summary、grant、request，跟 agent 的信共一份 schema）、daemon 一個小補（`AOS_DAEMON_PID`，第 4 階段才要）。**現有零件做不到的**也要先講：下層 daemon 不能再分帳號（多層 POC 同帳號）、重讀加不了新門（加成員要重開或預留門）、kernel 攔不住「收信就開格」（它只管主動叫醒數與 LLM 額度）。〔2026-10-02 照 astra 審查修正，見各檔開頭。〕
 
 ```mermaid
 flowchart TB
   subgraph K[一個 kernel]
-    T[kernel 格：aos-tick<br/>收→判→套→報] -->|aos-ctl wake/pause| D[kernel 的 daemon]
-    T -->|aos-mq send grant| D
-    D -->|aos-mq take summary| T
+    T[kernel 格：aos-tick<br/>收→判→套→報] -->|aos-mq send grant 到成員私門＝叫醒| D[kernel 的 daemon]
+    T -->|aos-ctl status／改 daemon.json＋SIGHUP| D
+    D -->|aos-mq take summary／request| T
     D -->|inst| A1[agent bob]
     D -->|inst| A2[agent amy]
     D -->|inst: aos-daemon --config| K2[下層 kernel]
@@ -36,31 +36,41 @@ flowchart TB
 | [03-推薦方案](03-推薦方案.md) | kernel 的資料夾、daemon 設定範例、一格做什麼、管哪些事、多層怎麼接、壞了怎樣 |
 | [04-agent介面](04-agent介面.md) | 給 agent 規劃者的契約：怎麼被看見、啟動、限制、溝通；三種信的 JSON |
 | [05-分階段落地](05-分階段落地.md) | 0 手搭 → 1 單層 → 2 兩層 → 3 LLM 額度 → 4 動態名單 → 5 C++11；每階段最小可驗 |
-| [06-待決問題](06-待決問題.md) | 15 題，每題附建議 |
+| [06-待決問題](06-待決問題.md) | 18 題，每題附建議；沒回答不等於採納 |
 
 ## 待使用者決定（短版，全文在 06）
+
+方向題（1～7、10、15～18）沒答就不動工；例行細節（8、9、12、13）沒答照建議、標「暫定」。
 
 | # | 題 | 建議 |
 |---|---|---|
 | 1 | kernel 是角色不是程式？ | 是 |
-| 2 | 一個 kernel 一份 daemon 設定？ | 是；多層＝daemon 跑 daemon |
+| 2 | 一個 kernel 一份 daemon 設定？ | 是；多層＝daemon 跑 daemon（同帳號） |
 | 3 | 成員狀況 push 還是 pull？ | push（成員 `after_all` 寄 summary） |
 | 4 | kernel 怎麼 SIGHUP 自己的 daemon？ | 加 `AOS_DAEMON_PID`；第 4 階段才要 |
-| 5 | LLM 額度強制嗎？ | POC 自律，強制留給池代發 |
-| 6 | grant 用信還是檔？ | 信，每格重寄 |
-| 7 | 下層怎麼知道上層的門？ | 寫死在 policy 先 |
-| 8 | 額度窗口用誰的格？ | kernel 的格 |
+| 5 | LLM 額度強制嗎？ | POC 自律 |
+| 6 | grant 用信（私門）還是檔？ | 私門，只在叫醒／換窗口時寄 |
+| 7 | 下層怎麼知道上層的門？ | 啟動下層的 inst.json 用 `$env` 存別名 |
+| 8 | 額度窗口用誰的格？ | kernel 的格，數字是窗口總額 |
 | 9 | `kind:"kernel"`？ | 要，只是標籤 |
 | 10 | 還叫 kernel？ | 保留 kernel，不用 node |
+
+例行細節與新題：
+
+| # | 題 | 建議 |
+|---|---|---|
 | 11 | kernel 格壞了救不救？ | 不救 |
 | 12 | 成員要放 kernel 資料夾底下？ | 不要求 |
 | 13 | kernel 轉成員之間的信？ | 不轉 |
 | 14 | 隨機性當排程依據？ | 先不做，預留欄位 |
-| 15 | 第 0 階段做完要不要停在「成員自律」？ | 不停，但看實測再拍 |
+| 15 | 要不要停在「成員自律」？ | 不停；第 0 階段另搭一版沒 kernel 的對照 |
+| 16 | 多層要不要逐層切帳號？ | POC 同帳號；是新能力，POC 後拍 |
+| 17 | kernel 限「開格數」還是「計算數」？ | 接受收信開格；管主動叫醒數與 LLM 額度 |
+| 18 | 「壓住下層」要哪種？ | 停派新工作（grant `awake:0`）；立即終止用 pause＋kill |
 
 ## 跟 agent 規劃者的對齊狀況
 
-這個環境找不到對方的名字（沒有 ListAgents，盲送不到），所以沒等對方。契約草案全寫在 [04](04-agent介面.md)：agent 就是 daemon 清單上的一項 inst；三種信的格式；哪些是 agent 規劃者自己定的。對方讀了有不同意見，改那一檔就好。
+已跟 agent 規劃者互傳訊息對齊（10-02 審查後）：grant 走私門、不每格寄、`after_ticks`、窗口總額、take 一次再分流、信 schema 合一份、pause 語意、子 daemon 環境變數別名化——兩邊一致。契約在 [04](04-agent介面.md)，對方那份在 `proto6/notes/proposals/2026-10-02-agent/07-kernel介面.md`。剩下的分歧只有方向題，列在 06。
 
 ## 來源
 
