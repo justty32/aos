@@ -10,29 +10,29 @@
 
 1. **實驗 A 的範例目前跑不起來。**  
    [08:33](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/08-檔位與最小實驗.md:33) 使用不存在的 `--unshare-mount`。overlay 選項要 bwrap 0.11，本機套件候選版是 0.9；空根目錄也沒放 Python、aos 與函式庫。[官方用法](https://github.com/containers/bubblewrap/blob/main/README.md)、[版本紀錄](https://raw.githubusercontent.com/containers/bubblewrap/main/NEWS.md)。  
-   [08:72](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/08-檔位與最小實驗.md:72) 也不能直接把 daemon 的 inst 改成 argv 陣列；[現行程式](/home/guanyu/projs/aos/proto6/src/py/lib/aos_daemon_run.py:27) 把 inst 當路徑交給 `aos-exec`。**改法：先拿掉 overlay、補執行環境，將 bwrap 命令寫進 inst 檔的 `argv`。**
+   [08:72](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/08-檔位與最小實驗.md:72) 也不能直接把 daemon 的 inst 改成 argv 陣列；[現行程式](../../../../proto6/src/py/lib/aos_daemon_run.py) 把 inst 當路徑交給 `aos-exec`。**改法：先拿掉 overlay、補執行環境，將 bwrap 命令寫進 inst 檔的 `argv`。**
 
 2. **`unshare＋bind` 不等於「只看得到白名單」。**  
    [05:51](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/05-agent與kernel的namespace.md:51) 漏了另建根、切換根、移除舊根。單純 unshare 會保留原掛載表，原本的 `/srv/...` 仍可到達。[mount_namespaces 手冊](https://man7.org/linux/man-pages/man7/mount_namespaces.7.html)。  
    [02:61](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/02-Linux上的工具與代價.md:61) 的「掛不了 ext4／9p＝RFNOMNT」也不成立；它仍可掛 bind、tmpfs 等。Plan 9 同樣要區分複製 namespace 與禁止重新取得服務。[fork(2)](https://9p.io/magic/man2html/2/fork)。**改法：最小實驗明定用 bwrap 的空根組樹，刪掉兩者直接等價的說法。**
 
 3. **固定 socket 路徑，不能消掉身分，也不會縮成單項權限。**  
-   [08:30](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/08-檔位與最小實驗.md:30) 把共用控制 socket 掛成自己的名字，服務仍然接受其他 inst 名稱。`take／peek` 也仍需要 [AOS_DAEMON_INST](/home/guanyu/projs/aos/proto6/src/py/lib/aos_mq.py:50)。  
+   [08:30](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/08-檔位與最小實驗.md:30) 把共用控制 socket 掛成自己的名字，服務仍然接受其他 inst 名稱。`take／peek` 也仍需要 [AOS_DAEMON_INST](../../../../proto6/src/py/lib/aos_mq.py)。  
    **改法：檔位 1 只承諾路徑固定，保留身分變數，明確覆寫 socket 路徑。** namespace 不會自動清掉環境變數；bwrap 的清除／設定選項必須實際使用。[bwrap 原始碼](https://raw.githubusercontent.com/containers/bubblewrap/main/bubblewrap.c)。
 
 4. **inst 原字串不能直接變成目錄路徑。**  
-   [03:39](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/03-daemon變成檔案伺服器.md:39) 說含斜線「天然成立」。但[現行測試](/home/guanyu/projs/aos/proto6/src/py/tests/test_daemon_config.py:25) 把 `a`、`./a`、絕對路徑當不同項；檔案路徑會把前兩者合併。**改法：完整編碼 inst 字串，或另用識別碼作目錄名。**
+   [03:39](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/03-daemon變成檔案伺服器.md:39) 說含斜線「天然成立」。但[現行測試](../../../../proto6/src/py/tests/test_daemon_config.py) 把 `a`、`./a`、絕對路徑當不同項；檔案路徑會把前兩者合併。**改法：完整編碼 inst 字串，或另用識別碼作目錄名。**
 
 5. **tick 現況有舊說法殘留。**  
-   [04:12](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/04-tick與inst變成目錄.md:12) 說 `tasks-blocked` 只看存在；[現行程式](/home/guanyu/projs/aos/proto6/src/py/lib/aos_tick.py:209) 已讀 `kinds`，只跳過指定類別。**改成：`tick-blocked` 只看存在，`tasks-blocked` 還看內容。**  
-   同篇第 22 行也應改成「頂層物件中的 `tasks` 是陣列」，與 [schema](/home/guanyu/projs/aos/proto6/spec/protocol/schemas/tick-tasks.schema.json:6) 一致。
+   [04:12](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/04-tick與inst變成目錄.md:12) 說 `tasks-blocked` 只看存在；[現行程式](../../../../proto6/src/py/lib/aos_tick.py) 已讀 `kinds`，只跳過指定類別。**改成：`tick-blocked` 只看存在，`tasks-blocked` 還看內容。**  
+   同篇第 22 行也應改成「頂層物件中的 `tasks` 是陣列」，與 [schema](../../../../proto6/spec/protocol/schemas/tick-tasks.schema.json) 一致。
 
 6. **實驗 C 會改掉廣播語意。**  
-   [08:76](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/08-檔位與最小實驗.md:76) 把信放在門下，取信就刪。現行是[每位訂戶各有一份](/home/guanyu/projs/aos/proto6/src/py/lib/aos_daemon_mq.py:104)；共用一份會被第一位收件人刪掉。**改成每項自己的 mail 目錄，保留各自取信的狀態。**  
+   [08:76](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/08-檔位與最小實驗.md:76) 把信放在門下，取信就刪。現行是[每位訂戶各有一份](../../../../proto6/src/py/lib/aos_daemon_mq.py)；共用一份會被第一位收件人刪掉。**改成每項自己的 mail 目錄，保留各自取信的狀態。**  
    第 26 行也不能把「peek 不取走」列為新收益，現在已經有。
 
 7. **namespace 化不會自動讓 root 端消失。**  
-   [07:21](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/07-推到極限與代價.md:21) 說 root 開啟、setuid 後只開 namespace 即可。但[現行主程式永久降權](/home/guanyu/projs/aos/proto6/src/py/lib/aos_daemon_account.py:138)後，要啟動其他宿主帳號，仍交給 root 端。**改法：保留 helper；若要移除，明列替代方法或放棄哪項能力。**
+   [07:21](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/07-推到極限與代價.md:21) 說 root 開啟、setuid 後只開 namespace 即可。但[現行主程式永久降權](../../../../proto6/src/py/lib/aos_daemon_account.py)後，要啟動其他宿主帳號，仍交給 root 端。**改法：保留 helper；若要移除，明列替代方法或放棄哪項能力。**
 
 8. **FUSE 的一次 write handler，不保證就是一封信。**  
    [03:80](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/03-daemon變成檔案伺服器.md:80) 直接在 handler 收完整訊息。但 Linux 即使用 direct I/O，也可能依 `max_write` 拆成多次請求。[Linux 6.6 實作](https://raw.githubusercontent.com/torvalds/linux/v6.6/fs/fuse/file.c)。  
@@ -71,7 +71,7 @@
 
 - **把一兩天改成探索時間盒。** [08:74](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/08-檔位與最小實驗.md:74) 同時要求動態目錄、假回應、阻塞讀取、Ctrl-C、卸載及 agent 整合。建議先驗「兩個視野、一個假回應、shell 能呼叫」。150 行與一天都不要當完成保證。
 
-- **行為格式仍以程式與測試為正本。** [07:73](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/07-推到極限與代價.md:73) 要求把 ctl/status 格式寫進 spec，應改成連到 parser、測試與格式定義，符合[現行 spec 原則](/home/guanyu/projs/aos/proto6/spec/README.md:7)。
+- **行為格式仍以程式與測試為正本。** [07:73](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/07-推到極限與代價.md:73) 要求把 ctl/status 格式寫進 spec，應改成連到 parser、測試與格式定義，符合[現行 spec 原則](../../../../proto6/spec/README.md)。
 
 - **來源要能對到具體主張。** [02:67](/home/guanyu/projs/aos/.claude/worktrees/agent-a6aeb0c7833a5d35d/proto6/notes/proposals/2026-10-02-plan9/02-Linux上的工具與代價.md:67) 目前只是來源名稱。效能數字應附測量條件；WSL「2026 改 DMA pool」應補直接 PR。union／overlayfs 則宜寫「近似替代」，避免誤認語意完全相同。
 
