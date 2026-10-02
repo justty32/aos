@@ -14,7 +14,7 @@ flowchart LR
     A1[aos-ctl / aos-mq<br/>socket + JSON] --> D1[daemon 笨 cron]
     E1[AOS_DAEMON_* 環境變數] --> T1[任務]
   end
-  subgraph Plan 9 路線
+  subgraph P9["Plan 9 路線"]
     T2[任務] -->|echo wake > /aos/me/ctl| D2[daemon = FUSE 樹]
     T2 -->|cat /llm/clone| L2[/llm 服務/]
     K2[kernel] -->|寫 ns 檔：bind 什麼給誰| D2

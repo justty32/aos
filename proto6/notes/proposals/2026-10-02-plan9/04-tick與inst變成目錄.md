@@ -88,16 +88,16 @@ inst 更不該變目錄。它是「一次 POSIX 執行」的描述，`aos-exec <
 
 ```mermaid
 flowchart LR
-  subgraph 常駐，值得做成檔案伺服器
+  subgraph S1["常駐，值得做成檔案伺服器"]
     D[daemon 樹<br/>ctl / status / inbox / wait]
     L[LLM 服務<br/>clone / N/ctl / N/data]
   end
-  subgraph 短命，只讀寫普通檔
+  subgraph S2["短命，只讀寫普通檔"]
     T[aos-tick]
     X[aos-exec]
     A[agent 五支小程式]
   end
-  subgraph 普通檔（不用伺服器）
+  subgraph S3["普通檔（不用伺服器）"]
     R[tick 紀錄目錄]
     K[tasks.json / inst.json]
     B[擋板檔 / tasks-blocked]
