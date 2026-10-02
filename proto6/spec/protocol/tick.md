@@ -53,18 +53,18 @@ schema 是 [inst.schema.json](schemas/inst.schema.json)，只驗原始結構；�
 | `tasks` | 必填，陣列（可空）；順序就是跑的順序 |
 | `argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit` | 可省；每一項的預設，格式照 inst |
 | `hooks` | 可省；物件。掛點 `before_all`、`after_every_task`、`after_all` 是 inst 陣列；`after_task` 的鍵是任務 id、`before_kind`／`after_kind` 的鍵是 kind，值都是 inst 陣列。不合＝`bad_table`。行為見 [hooks](../tick/hooks.md) |
-| `modules` | 可省；目前只認 `tasks-blocked`（P-214），其他鍵忽略 |
+| `modules` | 可省；目前只認 `tasks-blocked`（P-214）；其他鍵照樣展開、但沒人執行 |
 
 每一項：
 
 | 欄位 | 約束 |
 |---|---|
-| `id` | 可省，字串；沒寫＝它在陣列的位置轉字串（`"0"`、`"3"`）。紀錄與 `AOS_TASK_ID` 都用它 |
+| `id` | 可省，字串（可用指示詞，開格展開）；沒寫＝它在陣列的位置轉字串（`"0"`、`"3"`）。紀錄與 `AOS_TASK_ID` 都用它 |
 | `_metainfo` | 可省，照 inst；跑到那一項才驗 |
-| `kind` | 可省，任意非空字串（自己取名）；只拿來比對 `hooks.before_kind`／`after_kind` 與 tasks-blocked 的 `kinds`，核心不驗值 |
+| `kind` | 可省，任意非空字串（自己取名，可用指示詞，開格展開）；只拿來比對 `hooks.before_kind`／`after_kind` 與 tasks-blocked 的 `kinds`，核心不驗值 |
 | 其餘 | inst 的欄位（`argv` 合併預設後必須有）；不認得的鍵照收、忽略。任務沒有 `user` |
 
-範例檔（都在 `proto6/spec/protocol/examples/tick/`）：正例 `tasks.minimal`、`tasks.no-id`、`tasks.no-metainfo`、`tasks.defaults`、`tasks.defaults-argv`、`tasks.reference`（整項 `$ref`）、`tasks.directive`、`tasks.modules`、`tasks.unknown-key`、`tasks.custom-kind`、`tasks.hooks`、`tasks.hooks-points`、`tasks.hooks-kind`；反例 `tasks.no-argv`、`tasks.hooks-no-argv`、`tasks.hooks-not-array`、`tasks.hooks-after-task-array`、`tasks.hooks-kind-array`（檔名後接 `.valid.json`／`.invalid.json`）。`tasks.template*`、`tasks.as`、`tasks.methods*` 是暫緩區舊範本的紀錄。
+範例檔：`examples/tick/tasks.*.valid.json`／`.invalid.json`，檔名說明情境。`tasks.template*`、`tasks.as`、`tasks.methods*` 是暫緩區舊範本的紀錄。
 
 ## P-203．aos-tick 與任務程式
 
@@ -167,9 +167,9 @@ stderr 一行 `代碼: 說明`：`usage`、`no_target`、`no_tasks`、`bad_table
 | `hooks.<掛點>` | 該掛點已跑完而且結束碼非 0 的 hook，格式同 `tasks`；`index` 是在自己那個陣列的位置；`after_task`、`after_every_task`、`before_kind`、`after_kind` 每筆另有 `task_index`（觸發它的任務位置）。hooks 不記 `ran` |
 | `started_at_ms` | 只給人看 |
 
-schema 管不到、由 [validate.py](examples/messages/validate.py) 補查：`tasks`、`before_all`、`after_all`、`skipped` 的 `index` 嚴格遞增；`tasks` 的 `index` 小於 `ran`＋`skipped` 筆數；帶 `task_index` 的各掛點 `task_index` 不遞減且小於該數。
+schema 管不到的跨欄位關係（`index` 遞增、收尾時位置小於 `ran`＋`skipped` 筆數…）寫在 [record_rules.py](examples/messages/record_rules.py)，範例驗證器與測試共用。格中的位置可以超過 `ran`：`before_kind` 先於任務跑，`skipped` 收尾才寫。
 
-範例檔（`examples/tick/`）：正例 `tick-record.minimal`（跑到一半）、`done`、`blocked-exit-0`、`blocked-first`、`exit-0-with-failure`、`position-id`、`hooks`、`hooks-points`、`hooks-running`、`hooks-kind`、`skipped`、`tick-record-file.open`、`tick-record-file.hooks`、`tick-record-file.hooks-running`；反例見同資料夾 `tick-record*.invalid.json`（exit 與 signal 並存、ended 沒 exit、記了結束碼 0、缺 `ran`／`index`／`task_index`、整格回 1／2／3、`ran` 直接寫數字等）。
+範例檔：`examples/tick/tick-record*.json`（展開後）、`tick-record-file*.json`（record.json 本體），檔名說明情境。
 
 ### tasks-blocked 與擋板檔
 

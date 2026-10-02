@@ -12,14 +12,15 @@ inst（`inst.json`，posix 第 1 版）只描述**一次** POSIX 執行：程式
 
 ## 找目標：檔案或資料夾
 
-凡是「給一個目標去跑 inst」（`aos-exec` 命令列、daemon 設定檔 `insts` 的一項、人手直接跑）都照同一張表：
+凡是「給一個目標交給 `aos-exec`」（命令列、daemon 設定檔 `insts` 的一項、人手直接跑）都照同一張表：
 
 | 目標是 | 用哪份 inst | base（相對路徑起點） |
 |---|---|---|
-| 檔案 | 就是它，當 inst JSON 讀 | 檔案所在的資料夾 |
+| `.json` 結尾的檔 | 就是它，當 inst JSON 讀 | 檔案所在的資料夾 |
+| 其他檔案 | 不是 inst：直接當執行檔跑，`--` 之後的參數原樣給它 | — |
 | 資料夾 | 先 `<目標>/.aos/inst.json`，沒有再 `<目標>/inst.json` | 目標資料夾自己（不是 `.aos/`） |
 
-- `.aos` 是 `AOS_DIRNAME` 沒設時的名字（C-09）；設成空字串就只找 `<目標>/inst.json`。資料夾裡兩處都沒有＝用法錯，回 1。
+- `.aos` 是 `AOS_DIRNAME` 沒設時的名字（C-09）；設成空字串就只找 `<目標>/inst.json`。資料夾裡兩處都沒有＝用法錯，回 1。細節（不存在的 `.json`、名字叫 `x.json` 的資料夾…）以 `lib/aos_exec.py` 的 `run_target()` 與 `tests/test_exec_targets.py` 為準。
 - daemon 核心沒有 id：`insts` 的鍵就是 inst 字面值，原樣交給 `aos-exec`（B-640）。
 - `aos-tick` 的目標只能是**資料夾**，看的是 `tasks.json` 不是 `inst.json`；給檔是用法錯（這點跟 `aos-exec` 不同，B-620）。任務表頂層可放 inst 欄位當每一項的預設（C-11）。
 

@@ -1,0 +1,32 @@
+{
+  "tasks": [
+    {
+      "id": {
+        "$env": "TASK_ID"
+      },
+      "kind": {
+        "$env": "TASK_KIND"
+      },
+      "argv": [
+        "make"
+      ]
+    },
+    {
+      "id": {
+        "$fmt": {
+          "$val": "report-{h}",
+          "h": {
+            "$env": "HOST"
+          }
+        }
+      },
+      "kind": {
+        "$ref": "kinds.json",
+        "$at": "/report"
+      },
+      "argv": [
+        "./report.sh"
+      ]
+    }
+  ]
+}
