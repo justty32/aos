@@ -10,8 +10,8 @@
 {"interval_ms": 60000, "modules": {"control": {"socket": "./aos.sock"}}, "insts": {"a": {}, "jobs/report.json": {}}}
 ```
 
-- `socket` 必填（沒寫＝設定錯、回 1），相對以起點（`cwd`）為準，算成絕對路徑。開的時候路徑上有舊檔先刪；SIGINT／SIGTERM 退出前刪掉。
-- daemon 開每一次 aos-exec 都在環境加 `AOS_DAEMON_SOCKET=<socket 絕對路徑>`、`AOS_DAEMON_INST=<這一項的 inst 字面值>`。inst 的任務、`aos-tick` 的任務、下層 `aos-tick <下層>` 的任務都繼承得到，所以**任何一層跑 `aos-ctl wake` 叫醒的都是頂層那一項**。
+- `socket` 必填（沒寫＝設定錯、回 1），相對以起點（`cwd`）為準，算成絕對路徑。開的時候路徑上有舊檔先刪；SIGINT／SIGTERM 退出前刪掉。〔第二十五批〕bind 之後一律 chmod 666（不管有沒有掛帳號模組），誰能連由 socket 所在資料夾的權限決定。
+- daemon 開每一次 aos-exec 都在環境加 `AOS_DAEMON_CTL_SOCKET=<socket 絕對路徑>`、`AOS_DAEMON_INST=<這一項的 inst 字面值>`。（〔第二十五批〕環境變數原名 `AOS_DAEMON_SOCKET`，改名、舊名不給。）inst 的任務、`aos-tick` 的任務、下層 `aos-tick <下層>` 的任務都繼承得到，所以**任何一層跑 `aos-ctl wake` 叫醒的都是頂層那一項**。
 - 協議：一連線一請求，一行 JSON 進、一行 JSON 出。指令名當鍵、inst 字面值當值：`{"wake":"a"}`、`{"wake":"a","skip_while_running":true,"keep_schedule":true}`、`{"pause":"a"}`、`{"resume":"a"}`、`{"status":"a"}`。回 `{"ok":true}`（status 多帶狀態）或 `{"ok":false,"error":"unknown_inst|stopped|bad_request","detail":…}`。收到就回，不等那一項跑完。每條連線 1 秒逾時；壞請求只影響那一條。
 
 | 指令 | 做什麼 |
@@ -23,15 +23,15 @@
 
 「暫停中 wake 跑一次」「停掉的 wake 回 `stopped`」「resume 一律跑一次」三條是 m3n 待問 1 照建議先做的，使用者可改。暫停只在記憶體，重開 daemon 就沒了（掛了[記住狀態](reload-state.md#重讀設定與記住狀態m3m)時例外）。
 
-`aos-ctl`（socket 從 `AOS_DAEMON_SOCKET` 拿，`--socket <路徑>` 改連別的 daemon〔第二十一批，這時要明寫 `<inst>`〕；沒給 `<inst>` 用 `AOS_DAEMON_INST`）：
+`aos-ctl`（socket 從 `AOS_DAEMON_CTL_SOCKET` 拿，`--socket <路徑>` 改連別的 daemon〔第二十一批，這時要明寫 `<inst>`〕；沒給 `<inst>` 用 `AOS_DAEMON_INST`）：
 
 ```sh
 aos-ctl wake [--skip-while-running] [--keep-schedule] [<inst>]
 aos-ctl pause|resume|status [<inst>]
-AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell 手打
+AOS_DAEMON_CTL_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell 手打
 ```
 
-成功回 0（status 把回應那一行原樣印到 stdout，其他不印）；其餘回 1、stderr 一行 `代碼: 說明`：`usage`（指令名錯、多給參數、旗標給錯指令）、`no_daemon`（沒 `AOS_DAEMON_SOCKET`）、`no_inst`、`connect`（連不上），或照 daemon 回的 `unknown_inst`／`stopped`／`bad_request`。
+成功回 0（status 把回應那一行原樣印到 stdout，其他不印）；其餘回 1、stderr 一行 `代碼: 說明`：`usage`（指令名錯、多給參數、旗標給錯指令）、`no_daemon`（沒 `AOS_DAEMON_CTL_SOCKET`）、`no_inst`、`connect`（連不上），或照 daemon 回的 `unknown_inst`／`stopped`／`bad_request`。
 
 | 函式 | plan 步驟 |
 |---|---|
