@@ -16,3 +16,4 @@
 | [2026-09-29-dependency-review.md](2026-09-29-dependency-review.md) | 2026-09-29 | 由 [縮短版](../2026-09-29-dependency-review.md) 取代 |
 | [reviews-2026-09-30/](reviews-2026-09-30/README.md) | 2026-10-02 | 09-30 審稿（Fable／astra 報告、items 87 列）與第十八、十九、二十批及納入 cgroup／git 的改寫計畫、落點表、交接、核對報告；批次已結束，結論已被 spec（settled/、settled/deferred/）與裁定 09～11 吸收 |
 | [reviews-2026-10-01/astra-spec-sync-report.md](reviews-2026-10-01/astra-spec-sync-report.md) | 2026-10-02 | 10-01 spec 統一更新的 astra 審查；裁定 11 的 10-01 第二批已全部處理 |
+| [spec-2026-10-02/](spec-2026-10-02/README.md) | 2026-10-02 | 第二十七批：2026-10-02 之前不屬整理區的舊設計 spec（node／kernel／agent、LLM 排程、舊協議與 schema、CLI、驗收場景）原樣搬來；整理區改名成現行 [spec](../../spec/README.md)，行為正本是程式 |

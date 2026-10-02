@@ -6,9 +6,9 @@
 這階段要先裁哪些問題、動手前讀哪些文件。**階段推進／新裁決落地就更新本檔**，並把裁決
 記回對應的 ideas 檔與 verdicts。
 
-## 現況（2026-09-30）：主線是 proto6
+## 現況（2026-10-02）：主線是 proto6
 
-程式在 `proto6/src/`、plan 在 `proto6/plan/`。**分工（09-30 晚使用者定）**：先用 **Python 把整條 POC 做通，POC 由 AI 團隊寫**，使用者看結果、做裁定；**C++11 改寫放到最後**，他想親手寫的部分留到那時。這取代 09-29「程式由他親手寫、我們只規劃」的分工（更早 09-05「spec 出一部分就做原型、不寫 plan」也不再適用：proto6 有 plan）。plan 還沒依新分工改，是下一件事。
+規格在 [proto6/spec](../../proto6/spec/README.md)（唯一事實，行為正本是程式與測試）、程式在 [proto6/src/py](../../proto6/src/py/README.md)、各段做完／暫緩／未做的狀態在 [proto6/plan](../../proto6/plan/README.md#各段狀態)。**分工（09-30 晚使用者定）**：先用 **Python 把整條 POC 做通，POC 由 AI 團隊寫**，使用者看結果、做裁定；**C++11 改寫放到最後**，等 POC 玩過再開，他想親手寫的部分留到那時。這取代 09-29「程式由他親手寫、我們只規劃」的分工（更早 09-05「spec 出一部分就做原型、不寫 plan」也不再適用）。
 **成熟元件直接複製**：inst.json、aos-exec、`$ref` 從 proto5 原樣複製進 `proto6/src/py`，不重寫；它們的既有規則不列待問（見 [dispatch/lessons](dispatch/lessons.md) 第 8 條）。
 **review**〔使用者方向 2026-09-30 晚〕：aos-exec／inst.json 成熟、他不 review；**從 tick 起他要 review**，之後程式**以好讀為先**，附導讀（從哪讀起、每檔一句、plan 步驟對應函式、AI 自做的判斷）。
 
