@@ -61,12 +61,12 @@ hooks 的項（[B-635](../../tick/hooks.md)）跑法跟任務一樣，環境變�
 
 | 變數 | 值 |
 |---|---|
-| `AOS_HOOK_POINT` | 掛點名：`before_all`、`after_task`、`after_every_task`、`after_all` |
-| `AOS_HOOK_INDEX` | 這個 hook 在它自己那個陣列的位置，十進位，從 0 起（`after_task` 每個任務 id 各自從 0 數） |
+| `AOS_HOOK_POINT` | 掛點名：`before_all`、`before_kind`、`after_task`、`after_kind`、`after_every_task`、`after_all`（`*_kind` 是第二十四批加的） |
+| `AOS_HOOK_INDEX` | 這個 hook 在它自己那個陣列的位置，十進位，從 0 起（`after_task` 每個任務 id、`*_kind` 每個 kind 各自從 0 數） |
 | `AOS_HOOK_ID` | 這個 hook 的 id；沒寫時是位置字串；不是字串時轉成字串 |
 
 - `before_all`、`after_all`：**沒有** `AOS_TASK_ID`、`AOS_TASK_INDEX`、`AOS_TASK_EXIT`。
-- `after_task`、`after_every_task`〔使用者 2026-10-01 第十七批〕：另有剛跑完那一項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`，加上 **`AOS_TASK_EXIT`**＝它的結束碼（十進位；被訊號 N 殺＝128+N）。`AOS_TASK_EXIT` 只有這兩個掛點有。
+- `after_task`、`after_every_task`〔使用者 2026-10-01 第十七批〕：另有剛跑完那一項的 `AOS_TASK_ID`、`AOS_TASK_INDEX`，加上 **`AOS_TASK_EXIT`**＝它的結束碼（十進位；被訊號 N 殺＝128+N）。〔[第二十四批](../../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind)〕`after_kind` 同樣有這三個；`before_kind` 有那一項（還沒跑）的 `AOS_TASK_ID`、`AOS_TASK_INDEX`，沒有 `AOS_TASK_EXIT`（AI 隊定）。`AOS_TASK_EXIT` 只有 `after_task`、`after_kind`、`after_every_task` 有。
 
 一般任務沒有 `AOS_HOOK_*`、也沒有 `AOS_TASK_EXIT`。
 

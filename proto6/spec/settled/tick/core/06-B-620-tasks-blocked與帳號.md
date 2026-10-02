@@ -2,21 +2,22 @@
 
 ### tasks-blocked 與擋板檔〔暫定〕
 
-使用者 2026-10-01：擋板檔與 tasks-blocked 的機制之後會詳細設計，下面是目前的做法。**tasks-blocked 的內容已定案**〔使用者 2026-10-01 第十八批：「3.對，我就不想了。」〕：tick 只看存不存在、永遠不讀內容；內容要寫什麼、怎麼用，交給 `modules.tasks_blocked` 的 insts 自己讀（[B-636](../tasks-blocked.md)）。〔使用者 2026-10-01 第十六批〕原停格檔 `tick/stop` 改名 `tick/tasks-blocked`：「然後是stop，我要稍微改個名字：.aos/tick/tasks-blocked。」改成每一項之前看、內容 tick 不管、整格最後 tick 自己刪：「task_blocked要改成tick在最後會自動刪掉。然後tasks-blocked中的內容，tick不管。」擋板檔改成只看存不存在、直接結束、stderr 不印：「正常機制結束的話stderr不應該印東西。hook也根本不會啓動。」
+使用者 2026-10-01：擋板檔與 tasks-blocked 的機制之後會詳細設計，下面是目前的做法。**tasks-blocked 的內容**〔使用者 2026-10-01 第十八批：「3.對，我就不想了。」；[2026-10-02 第二十四批](../../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind)改〕：tick ~~永遠不讀內容~~ 只讀 `kinds` 一個鍵（見下面「按 kind 擋」）；其他內容交給 `modules["tasks-blocked"]` 的 insts 自己讀（[B-636](../tasks-blocked.md)）。〔使用者 2026-10-01 第十六批〕原停格檔 `tick/stop` 改名 `tick/tasks-blocked`：「然後是stop，我要稍微改個名字：.aos/tick/tasks-blocked。」改成每一項之前看、內容 tick 不管、整格最後 tick 自己刪：「task_blocked要改成tick在最後會自動刪掉。然後tasks-blocked中的內容，tick不管。」擋板檔改成只看存不存在、直接結束、stderr 不印：「正常機制結束的話stderr不應該印東西。hook也根本不會啓動。」
 
 任務能影響之後的項或之後的格，只有這兩個檔；**結束碼沒有特別意義**，任務回 3、100 都只是一般的非 0，照記、照跑。
 
 | | tasks-blocked `<狀態資料夾>/tick/tasks-blocked` | 擋板檔 `<狀態資料夾>/tick-blocked` |
 |---|---|---|
-| 擋什麼 | **本格**還沒跑的項（含正要跑的那一項） | 擋住**之後各格**，直到有人刪 |
+| 擋什麼 | **本格**還沒跑的項（含正要跑的那一項）；按 kind 擋時只擋清單內 kind 的項 | 擋住**之後各格**，直到有人刪 |
 | 誰建 | 任務、hook，或在格與格之間由人或別的程式放 | 任務（例如發現需要人處理的故障）或人手；`aos-git` 故障時也寫它（[B-622](../../deferred/git.md)） |
-| 內容 | **tick 不管**，只看存不存在（空檔、資料夾、讀不到、壞 symlink 都算在） | **tick 不看**，只看存不存在；要寫原因給人看可以 |
+| 內容 | 只看存不存在（空檔、資料夾、讀不到、壞 symlink 都算在），只讀 `kinds`〔第二十四批〕 | **tick 不看**，只看存不存在；要寫原因給人看可以 |
 | 核心什麼時候看 | **每一項跑之前**（含第一項） | 取鎖後、讀表前 |
 | 核心看到時 | 這一項與後面的都不跑；**stderr 不印**（正常機制）；紀錄寫 `ended:true`、`exit:0` 與 `blocked_before`＝被擋下、沒跑的那一項（[P-213](../../protocol/tick.md)）；`after_all` 照跑（它跟任務無關，[B-635](../hooks.md)）；這格回 0 | 直接結束：一項都不跑、hooks 不啟動、不寫結束碼紀錄、不加 `seq`；**stderr 不印**（正常機制結束不印，[C-08](../../conventions.md)），回 0。所以人手或 cron 直接跑也被擋 |
 | 誰刪 | **核心，整格最後**：`after_all` 跑完、回結束碼之前（〔AI 隊定、可改〕被擋下的格與最後才出現的〔例如 hook 寫的〕都刪；開格時不刪；是資料夾就整個刪） | **只有人手**，修好後刪；aos 不自動刪 |
 | daemon | 不看它 | 現行 daemon 核心照常叫，由 `aos-tick` 自己擋；舊設計是有它就不開格（[B-607](../../deferred/daemon/registration.md)，在暫緩區） |
 
 - **掛了 tick 模組 `modules["tasks-blocked"]`**（[B-636](../tasks-blocked.md)，第十六批）時，看到 tasks-blocked 不直接擋下：先依序跑那一串 inst（拿被擋下那一項的 `AOS_TASK_ID`／`AOS_TASK_INDEX`、碼不記），跑完再看一次，檔被刪了就放行這一項與後面的，還在才擋下。
+- **按 kind 擋**〔[使用者 2026-10-02 第二十四批](../../../../notes/verdicts/11-tick-as-unit/25-1002-第二十四批.md#2026-10-02-第二十四批kind)；細節 AI 隊定〕：每一項之前重讀檔。內容是讀得到的一般檔、合法 JSON、頂層物件、有 `kinds` 而且是全字串陣列＝只跳過 `kind`（任務自己的、展開後、是字串）在清單內的這一項，後面照看；沒 kind 的不擋，`"kinds":[]` 一個都不擋。被跳過的不算 `ran`、不觸發它的 hooks，收尾記進紀錄 `skipped`（P-213）。不是這種形狀＝照上表全部擋；格中檔變成全部擋的形狀，就從那一項起全擋（`blocked_before`）。整格最後照樣刪。
 - **開格時不刪**：格與格之間有人放的 tasks-blocked，下一格第一項之前就擋下（`ran:0`、`blocked_before` 是第一項），整格最後再刪。
 - **跟 hooks**：hook 之間不看 tasks-blocked（hook 寫的也不擋下一個 hook，只擋下一項任務），整格最後一樣刪。被擋下、沒跑的任務不觸發 `after_task`、`after_every_task`；任務跑完接著跑它的 hook 時不看 tasks-blocked〔第十六批〕。`before_all` 在第一項的檢查之前跑，它寫的 tasks-blocked 會擋下第一項〔第十七批〕。
 - 〔暫緩，`aos-git` 第十七批搬暫緩區〕**有 git 時，tasks-blocked 等於這格作廢**：排在後面的 `aos-git close` 不跑、不提交，下一格 `aos-git open` 把 aos 範圍還原（[B-630](../../deferred/git.md)）。想提早結束又保住結果的任務，別建它，改讓後面的項讀紀錄自己跳過。〔使用者方向 2026-09-30，納入 cgroup 與 git 疑-1〕

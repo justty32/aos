@@ -66,11 +66,11 @@ aos-exec 的用法錯由 proto5 的 2 改 1，附 aos-exec 現在的結束碼表
 
 ## hooks：外掛掛點（m1h）
 
-任務表頂層的 `hooks`（`before_all`、`after_task.<id>`、`after_every_task`、`after_all` 四個掛點），spec 正本 B-635。全文見 [docs/hooks.md](docs/hooks.md#hooks外掛掛點m1h)。
+任務表頂層的 `hooks`（`before_all`、`before_kind.<kind>`、`after_task.<id>`、`after_kind.<kind>`、`after_every_task`、`after_all` 六個掛點；`*_kind` 第二十四批），spec 正本 B-635。全文見 [docs/hooks.md](docs/hooks.md#hooks外掛掛點m1h)。
 
 ## tick 模組 `modules["tasks-blocked"]`（B-636）
 
-任務表 `modules["tasks-blocked"]`：某一項之前看到 `tick/tasks-blocked` 時先依序跑的 `insts`，跑完再看一次決定放行或擋下。全文見 [docs/hooks.md](docs/hooks.md#tick-模組-modulestasks-blockedb-636)。
+任務表 `modules["tasks-blocked"]`：某一項之前看到 `tick/tasks-blocked` 時先依序跑的 `insts`，跑完再看一次決定放行或擋下（第二十四批：內容 `{"kinds":[…]}` 時只擋那幾類、紀錄 `skipped`）。全文見 [docs/hooks.md](docs/hooks.md#tick-模組-modulestasks-blockedb-636)。
 
 ## aos-daemon（第三段最核心 daemon）
 

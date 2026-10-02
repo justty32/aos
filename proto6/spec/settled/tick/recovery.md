@@ -38,7 +38,7 @@
 〔astra 報告必修 2〕**現行：工具或人工先驗，再用 `aos-ctl resume`（[B-641](../daemon/control.md)）；daemon 不代驗。** 控制模組不驗身分、也不看設定對不對，送 `resume` 它就恢復。所以下面這幾步是改設定的工具或人自己做的，驗不過就別送 `resume`。持同一把鎖依序檢查：
 
 1. inst：照 [inst 目標](../../base/inst.md#inst-目標檔案或資料夾)選 inst，驗原始結構。
-2. 任務表：照完整 schema 驗（[P-202](../protocol/tick.md)；含 `kind` 的值，B-620「誰驗什麼」）。不認得的鍵照收，`group`、`needs` 也是陌生鍵，不檢查。
+2. 任務表：照完整 schema 驗（[P-202](../protocol/tick.md)；含 `kind` 要是非空字串〔第二十四批起沒有固定清單〕，B-620「誰驗什麼」）。不認得的鍵照收，`group`、`needs` 也是陌生鍵，不檢查。
 3. **只在裝了對應任務時**：kernel、agent 的領域設定照各自的篇驗（[A-102](../../agent/configuration.md)）。自訂任務沒有 aos 的領域設定契約，不因它沒提供驗證就拒收。
 4. 任何一項不過就保持暫停、保留手改，指出檔案與欄位；都過才 `aos-ctl resume`。
 

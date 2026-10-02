@@ -6,7 +6,7 @@
 
 | 詞 | 一句話 | 正本 |
 |---|---|---|
-| tick 核心 | 只做三件事：簡單互斥鎖、照表跑、每項結束碼紀錄；照表跑時另外只認 tasks-blocked 與擋板檔（只看存不存在）；任務沒有 `user`（寫了照陌生鍵）。不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。上下層判定已搬暫緩區（[B-628](../deferred/tick/01-B-628上下層與B-602-B-620細節.md#b-628上下層判定預設看資料夾包含可登記覆蓋)） | [B-626](../tick.md)、[B-620](../tick.md) |
+| tick 核心 | 只做三件事：簡單互斥鎖、照表跑、每項結束碼紀錄；照表跑時另外只認 tasks-blocked 與擋板檔（只看存不存在；tasks-blocked 另讀 `kinds` 一個鍵，第二十四批）；任務沒有 `user`（寫了照陌生鍵）。不靠 daemon、git、cgroup、helper，也不靠任何系統級任務。上下層判定已搬暫緩區（[B-628](../deferred/tick/01-B-628上下層與B-602-B-620細節.md#b-628上下層判定預設看資料夾包含可登記覆蓋)） | [B-626](../tick.md)、[B-620](../tick.md) |
 | 工作資料夾 | 這一格 `aos-tick` 跑的資料夾（它的 cwd），由命令列的目標決定（`aos-tick [<目標>]`）；任務拿到的 `AOS_TICK_CWD` 就是它的絕對路徑。tick 這層只講工作資料夾（英文 `tick dir`〔使用者 2026-10-01〕）；node 是之後 node 模組才出場的詞 | [B-620](../tick.md)、[P-203](../protocol/tick.md) |
 | 拆出去的 | 原本算在 tick 裡的其餘事，成了系統級任務或普通程式（T-10）；舊設計裡一格結束後殺殘留歸 daemon，那套在暫緩區、現行 daemon 不做〔astra 報告必修 1〕 | [B-626](../tick.md)、[B-601](../deferred/daemon/runtime.md) |
 | 衡量基準 | 整個 aos 以格計：「花十格」算安排它的上層的格；排程本身也是任務表上每格跑一次的程式；反應速度就是一格，只有通道急件例外 | [C-01](../../contracts.md)、[B-614](../deferred/daemon/messaging.md) |
