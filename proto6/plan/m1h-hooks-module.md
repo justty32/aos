@@ -1,8 +1,8 @@
 # 第一段之二：hooks（外掛掛點）
 
-> **補註（2026-10-01 第十七批）**：掛點加到四個——`before_all`、`after_task`（{任務 id: [inst…]}）、`after_every_task`、`after_all`；跟任務有關的兩個另給 `AOS_TASK_ID`／`INDEX`／`EXIT`；`hook-exits.json` 改成開格就建、跟任務有關的筆帶 `task_index`。下面是只有 `after_all` 時的原計畫，照留；現行規定見 [B-635](../spec/settled/tick/hooks.md)。
+> **補註（2026-10-01 第十七批）**：掛點加到四個——`before_all`、`after_task`（{任務 id: [inst…]}）、`after_every_task`、`after_all`；跟任務有關的兩個另給 `AOS_TASK_ID`／`INDEX`／`EXIT`；`hook-exits.json` 改成開格就建、跟任務有關的筆帶 `task_index`。下面是只有 `after_all` 時的原計畫，照留；現行規定見 [B-635](../spec/tick/hooks.md)。
 
-← [plan 入口](README.md)｜**接在 [m1-tick-core](m1-tick-core.md) 之後。**｜依據：[verdicts 11 篇末「第六批：tick 的 hooks（外掛掛點）」](../notes/verdicts/11-tick-as-unit/11-1001-第六七批.md#2026-10-01-第六批tick-的-hooks外掛掛點)｜結束碼：[C-08](../spec/settled/conventions.md)｜spec 正本：[B-635](../spec/settled/tick/hooks.md)、格式 [P-202、P-203、P-213](../spec/settled/protocol/tick.md)
+← [plan 入口](README.md)｜**接在 [m1-tick-core](m1-tick-core.md) 之後。**｜依據：[verdicts 11 篇末「第六批：tick 的 hooks（外掛掛點）」](../notes/verdicts/11-tick-as-unit/11-1001-第六七批.md#2026-10-01-第六批tick-的-hooks外掛掛點)｜結束碼：[C-08](../spec/conventions.md)｜spec 正本：[B-635](../spec/tick/hooks.md)、格式 [P-202、P-203、P-213](../spec/protocol/tick.md)
 
 **做完的樣子**：任務表 `.aos/tasks.json` 頂層多一個可選鍵 `hooks`（跟 `tasks` 同層）。寫了 `"hooks": {"after_all": [...]}`，`aos-tick` 照表跑完（含被停格檔停下）之後就照順序跑那一串，每項的碼記進本格紀錄的 `hooks.after_all`。沒寫 `hooks` 時 `aos-tick` 就是 m1 原樣。
 

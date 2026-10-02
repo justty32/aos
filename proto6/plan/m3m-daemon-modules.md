@@ -1,16 +1,16 @@
 # 第三段之三：daemon 的五個模組
 
-← [plan 入口](README.md)｜**接在 [m3 核心](m3-daemon-core.md)、[m3n 控制模組](m3n-control-module.md) 之後。**｜spec 正本：[B-640 核心](../spec/settled/daemon/core.md)、[B-641 控制](../spec/settled/daemon/control.md)、格式 [P-120](../spec/settled/protocol/daemon/core.md)、[P-121](../spec/settled/protocol/daemon/control.md)｜舊規劃（暫緩區）：[總表](../spec/settled/deferred/readme/02-總表-daemon與helper.md#daemon-與-helper)
+← [plan 入口](README.md)｜**接在 [m3 核心](m3-daemon-core.md)、[m3n 控制模組](m3n-control-module.md) 之後。**｜spec 正本：[B-640 核心](../spec/daemon/core.md)、[B-641 控制](../spec/daemon/control.md)、格式 [P-120](../spec/protocol/daemon/core.md)、[P-121](../spec/protocol/daemon/control.md)｜舊規劃（暫緩區）：[總表](../spec/deferred/readme/02-總表-daemon與helper.md#daemon-與-helper)
 
 **狀態（2026-10-01 第十二批裁定後）**：
 
 | 模組 | 狀態 | spec |
 |---|---|---|
-| 一、重讀設定 `reload` | **已做**（R1～R4 照建議，R3 改成 stdout 警告） | [B-642](../spec/settled/daemon/reload.md)、[P-122](../spec/settled/protocol/daemon/reload.md) |
-| 二、收屍／cgroup `cgroup` | **已做**（第十二批：C1～C4 照建議） | [B-644](../spec/settled/daemon/cgroup.md)、[P-124](../spec/settled/protocol/daemon/cgroup.md) |
-| 三、記住狀態 `state` | **已做**（S1～S3 照建議，設定改成 `$ref`） | [B-643](../spec/settled/daemon/state.md)、[P-123](../spec/settled/protocol/daemon/state.md) |
-| 四、訊息 `mq` | **已做**（第十二批：M1～M4 照建議） | [B-645](../spec/settled/daemon/mq.md)、[P-125](../spec/settled/protocol/daemon/mq.md) |
-| 五、帳號 `account`（原草稿叫 helper） | **已做**（第十二批：拆 root 端、主程式降權；第十三批：A1～A7 照建議、白名單／黑名單） | [B-646](../spec/settled/daemon/account.md)、[P-126](../spec/settled/protocol/daemon/account.md) |
+| 一、重讀設定 `reload` | **已做**（R1～R4 照建議，R3 改成 stdout 警告） | [B-642](../spec/daemon/reload.md)、[P-122](../spec/protocol/daemon/reload.md) |
+| 二、收屍／cgroup `cgroup` | **已做**（第十二批：C1～C4 照建議） | [B-644](../spec/daemon/cgroup.md)、[P-124](../spec/protocol/daemon/cgroup.md) |
+| 三、記住狀態 `state` | **已做**（S1～S3 照建議，設定改成 `$ref`） | [B-643](../spec/daemon/state.md)、[P-123](../spec/protocol/daemon/state.md) |
+| 四、訊息 `mq` | **已做**（第十二批：M1～M4 照建議） | [B-645](../spec/daemon/mq.md)、[P-125](../spec/protocol/daemon/mq.md) |
+| 五、帳號 `account`（原草稿叫 helper） | **已做**（第十二批：拆 root 端、主程式降權；第十三批：A1～A7 照建議、白名單／黑名單） | [B-646](../spec/daemon/account.md)、[P-126](../spec/protocol/daemon/account.md) |
 
 做了什麼、自己定的細節見篇末[做完了沒](m3m-daemon-modules/09-做完了沒.md#做完了沒)；裁定見 [verdicts 11 第十一批](../notes/verdicts/11-tick-as-unit/13-1001-第十十一批.md#2026-10-01-第十一批daemon-模組)、[第十二批](../notes/verdicts/11-tick-as-unit/14-1001-第十二批.md#2026-10-01-第十二批cgroup-與帳號)。下面各節保留原本的草稿，裁定處就地標註。
 
