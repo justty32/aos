@@ -6,13 +6,13 @@
 
 〔使用者方向 2026-09-30 晚〕登記與開格、runner 清自己名下程序（含收屍）屬核心，不受訊息或 cgroup 部件開關影響。
 
-依據：[09-30 晚裁定](../../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](../components.md)。
+依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](../components.md)。
 
 daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登記的 node 按登記間隔或叫醒開格。
 
 - **怎麼辨識一個 tick**：看資料夾路徑或 inst.json 路徑。登記時給的是 `<資料夾>/.aos/inst.json` 或 `<資料夾>/inst.json`，一律正規化成所在資料夾。掛載行程（B-613）照給的路徑，可以是單檔。
 - **daemon 不做的事**：不讀工作狀態或任務註冊表，不排業務工作、不分資源。只用登記與喚醒資料；讀 inst 只為 `user` 授權。訊息在通道上只**暫存與轉交**，不解析正文（B-614）。
-- **不叫排程**：aos 的「排程」是任務表上每格跑一次的程式（[T-07](../../../terms.md)、[scheduling](../../../../scheduling/README.md)）；daemon 這邊只做「定期開格」與「叫醒開格」。
+- **不叫排程**：aos 的「排程」是任務表上每格跑一次的程式（[T-07](../../../terms.md)、[scheduling](../../../../notes/archive/spec-2026-10-02/scheduling/README.md)）；daemon 這邊只做「定期開格」與「叫醒開格」。
 - **一格一格來**：同一資料夾同時只跑一格，由 tick 核心的鎖保證（[B-602](../../../tick.md)）。daemon 另外自己避免同時開同一 node 的兩格，但這不是互斥的來源。
 - 〔使用例，不是 daemon 的規則〕agent 通常不設定期，由 kernel 決定何時叫醒及同時執行數；kernel 本格結束就退出，不等成員，LLM／工具由後續 tick 收結果。
 
@@ -37,7 +37,7 @@ daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登�
 - **唯一例外是通道**：請求帶本格憑證時，呼叫者是憑證所屬的那個 tick（B-612）。下表的「X 的 owner 或祖先 owner」，帶憑證時讀成「憑證所屬的 tick 就是 X，或在 X 的有效上層鏈上」。
 - **上層**指有效上層鏈（預設看資料夾包含，登記可覆蓋，B-606），不是 OS 父目錄本身。
 - **owner** 是登記保存的 `owner_uid`，何時更新見 B-606。
-- 身分額度與通用 user 以 [B-301](../../../../base/identity-resources.md) 為正本；額度的寫法與包含判定見 B-606。獲准叫醒不代表獲准擴大額度。
+- 身分額度與通用 user 以 [B-301](../../../../notes/archive/spec-2026-10-02/base/identity-resources.md) 為正本；額度的寫法與包含判定見 B-606。獲准叫醒不代表獲准擴大額度。
 
 **誰可呼叫**〔建議預設；astra 審整理區必-8 從 P-103 搬上〕：
 
@@ -55,7 +55,7 @@ daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登�
 | `daemon.info` | 有 socket 連接權；只回本次啟動 ID，不暴露登記 |
 | `mount.clear` | 有 socket 連接權；只清 peer 是 owner／祖先 owner 的已結束掛載行程紀錄（B-610） |
 | `node.provision` | 目標 owner 或祖先 owner，且目標登記有相符的 `provision` 授權；需 helper 的動作再由 helper 核對。`spawn_as` 例外：必帶憑證、憑證所屬的 tick 就是目標，帳號看身分額度，不看 `provision` 授權（B-609） |
-| `daemon.attention.ls`、`daemon.attention.show` | 只回 peer 是來源 owner／祖先 owner 的事項（[P-601](../../../../protocol/ops.md)） |
+| `daemon.attention.ls`、`daemon.attention.show` | 只回 peer 是來源 owner／祖先 owner 的事項（[P-601](../../../../notes/archive/spec-2026-10-02/protocol/ops.md)） |
 | `daemon.attention.done` | 來源 owner 或祖先 owner；只把 daemon 自身事項標成完成 |
 
 〔建議預設；第十九批從 P-103 搬上，astra 審整理區必-8 從 P-111 搬上〕授權與處理細節：

@@ -1,6 +1,6 @@
 # LLM 排程器：決定、現況與自製 vs LiteLLM 的比較
 
-← [筆記索引](README.md)｜裁定：[第十三批](verdicts/04-late-day-directions/01-下班前方向與第十三批.md#第十三批llm-排程器同日晚已落進-spec)｜spec：[S-301～S-305](../spec/scheduling/llm.md)（S-306 已刪）
+← [筆記索引](README.md)｜裁定：[第十三批](verdicts/04-late-day-directions/01-下班前方向與第十三批.md#第十三批llm-排程器同日晚已落進-spec)｜spec：[S-301～S-305](archive/spec-2026-10-02/scheduling/llm.md)（S-306 已刪）
 
 2026-09-29 晚，使用者改口：LiteLLM 不進標準，只當可選的 endpoint；aos 自己的 LLM 排程器也做成可選。原本的比較筆記（逐項清單、估時、拍板題）已封存，見 archive/2026-09-29-llm-scheduler-options.md（已封存檔 2026-09-29-llm-scheduler-options.md，索引見 [archive/README.md](archive/README.md)）。本頁只留決定、現況與以後還用得到的比較。
 
@@ -11,12 +11,12 @@
 | 檔 | 誰打 HTTP | key 在誰手上 | 限流／預算／排隊 |
 |---|---|---|---|
 | 不管（現名直連） | agent 自己登記一件 once 直接打 | agent 帳號讀得到（藏不住，已接受、文件寫清楚） | aos 不管，只記自己的用量 |
-| 交給 endpoint | 池 node 代發 | 只有池 node 帳號讀得到 | aos 只藏 key、記用量、照 429 等；限流與預算交給 endpoint（已被第十五批取代：只轉發、不重試，見 [llm.md](../spec/scheduling/llm.md)） |
+| 交給 endpoint | 池 node 代發 | 只有池 node 帳號讀得到 | aos 只藏 key、記用量、照 429 等；限流與預算交給 endpoint（已被第十五批取代：只轉發、不重試，見 [llm.md](archive/spec-2026-10-02/scheduling/llm.md)） |
 | 自己排 | 池 node 代發 | 只有池 node 帳號讀得到 | aos 全做：份額、窗口、冷卻、預算、排隊 |
 
 - **預設「自己排」**（不照原建議的「不管」，現名「直連」）。沒有池 node 時，丟請求那一步直接報錯。
 - **切換用兩個欄位**：agent 的 `llm.target_node`（`null`＝不管檔）、每池的 `schedule`。
-- **預算首版只算 token**；算錢的價格表留成可選檔案、人手維護。（已被取代：token 預算先不做，見 [llm.md](../spec/scheduling/llm.md)。）
+- **預算首版只算 token**；算錢的價格表留成可選檔案、人手維護。（已被取代：token 預算先不做，見 [llm.md](archive/spec-2026-10-02/scheduling/llm.md)。）
 - **多 endpoint 自動切換首版不做**，要的人拿 LiteLLM 當 endpoint。
 - **串流要做**（推翻原本「只收完整結果」）：不另做機制，LLM 呼叫這件任務邊跑邊寫指定檔案（S-305）。
 - **先做地基原型**：排程器最小可用版排在地基能跑完整 agent 循環之後。
@@ -24,8 +24,8 @@
 ## 現況
 
 - proto6 還沒有程式；daemon、tick、once、git commit 流程都要先有，排程器才有地方跑。
-- spec 已涵蓋：藏 key、並行份額、次數／token 窗口、`quota_scope` 共同冷卻、429 重試、逾時與結果不明、用量記帳、轉交、狀態查詢（細節見 [spec LLM 排程](../spec/scheduling/llm.md)）。
-- 三檔共用同一支 `aos-llm-call`（讀請求、打一次 HTTP、寫回結果與 usage）；「不管」（現名直連）檔由 agent 開它（已被第十五批取代：直連 aos 完全不管，見 [llm.md](../spec/scheduling/llm.md)），另兩檔由池 node 開它。
+- spec 已涵蓋：藏 key、並行份額、次數／token 窗口、`quota_scope` 共同冷卻、429 重試、逾時與結果不明、用量記帳、轉交、狀態查詢（細節見 [spec LLM 排程](archive/spec-2026-10-02/scheduling/llm.md)）。
+- 三檔共用同一支 `aos-llm-call`（讀請求、打一次 HTTP、寫回結果與 usage）；「不管」（現名直連）檔由 agent 開它（已被第十五批取代：直連 aos 完全不管，見 [llm.md](archive/spec-2026-10-02/scheduling/llm.md)），另兩檔由池 node 開它。
 - endpoint 可以是任何講 OpenAI Chat Completions 格式的 HTTP 服務（LiteLLM、原廠 API、LM Studio／llama.cpp／vLLM）；別種格式要多寫轉換器。
 
 ## 還有價值的比較

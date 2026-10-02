@@ -1,6 +1,6 @@
 # hooks：外掛掛點
 
-← [通用 tick](../tick.md)｜[整理區](../README.md)｜格式：[tick 協議](../protocol/tick.md)
+← [通用 tick](../tick.md)｜[規格](../README.md)｜格式：[tick 協議](../protocol/tick.md)
 
 ## B-635：hooks
 

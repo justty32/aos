@@ -1,6 +1,6 @@
 # 帳號模組：真 root 手動驗收手冊
 
-← [筆記索引](README.md)｜[plan m3m 模組五](../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)｜正本 [B-646](../spec/settled/daemon/account.md)、[P-126](../spec/settled/protocol/daemon/account.md)｜[WAIT_USER](../../wf/WAIT_USER.md)
+← [筆記索引](README.md)｜[plan m3m 模組五](../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)｜正本 [B-646](../spec/daemon/account.md)、[P-126](../spec/protocol/daemon/account.md)｜[WAIT_USER](../../wf/WAIT_USER.md)
 
 照 commit `6583f565`（帳號模組併進 main）的程式寫的。自動測試已經用 `unshare --map-auto` 假 root 驗過大部分（`proto6/src/py/tests/test_account.py`），這份只補**只有真 root 才驗得到的**部分，順便把主要行為在真環境再走一遍。
 

@@ -1,8 +1,25 @@
-# 通用慣例：結束碼、狀態資料夾、環境變數、設定檔頂層
+# 通用慣例：時間、版本、結束碼、狀態資料夾、環境變數、設定檔頂層
 
-← [整理區](README.md)｜[tick](tick.md)｜[daemon](daemon/README.md)
+← [規格](README.md)｜[tick](tick.md)｜[daemon](daemon/README.md)
 
-細節以程式與測試為準：[proto6/src/py](../../src/py/README.md)。這裡只留原則。
+細節以程式與測試為準：[proto6/src/py](../src/py/README.md)。這裡只留原則。
+
+## C-01：時間以 tick 為基準
+
+- **aos 內部自己決定的時長算格數**（保留期、重試間隔、預算…）；**外部世界規定的才用毫秒**（逾時、daemon 叫醒 tick 的週期 `interval_ms`）。算誰的格：算安排它的那一層的格，上下層週期不同造成的落差不管。
+- 起算點記「第幾格」，不另留毫秒版；格數就是 `seq`（紀錄裡，跨重啟接著數，見 [B-633](tick.md)），所以牆鐘倒退不影響。
+- 欄位命名：時長 `*_ticks`、第幾格 `*_seq`、毫秒時長 `*_ms`、毫秒時間點 `*_at_ms`。型別在 [common.schema.json](protocol/schemas/common.schema.json)。
+- 用作檔名的 ID 用 `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`；逾時用經過時間，不靠牆鐘。
+
+## C-07：版本與陌生欄位
+
+- **小改不升版**：加可選欄位、放寬值域、在寫明「開放」的列舉加值。讀的一方遇到不認得的欄位**直接忽略**（inst、`tasks.json`、daemon 設定檔、控制 socket 的請求都是）。
+- **不相容的大改才升版**：刪欄位、改意思、改必填、收窄值域。inst 與 tasks 升 `_metainfo._version`（只認 `posix`／`1`，不合就拒絕）；自己的持久 JSON 檔帶 `"version": 1`。新程式讀目前版與前一版、寫目前版，遇到比自己新的拒絕。
+- 程式改寫整份持久檔時，原樣保留不認得的欄位。
+- 任務表與 inst 都**沒有 `user`**：寫了當陌生鍵忽略，照 tick 自己的帳號跑；要換帳號只能在 daemon 設定檔的帳號模組做（B-646）。
+- 沒有 `aos migrate`；舊檔轉版目前沒有程式。
+
+程式：`lib/aos_inst.py`（`_metainfo`）、`lib/aos_tick_table.py`、`lib/aos_daemon_config.py`；測試：`tests/test_inst_reject.py`、`tests/test_tick_table.py`。
 
 ## C-08：結束碼
 

@@ -1,6 +1,6 @@
 # daemon 維運：熱重載
 
-← [舊 daemon 目錄（暫緩區）](README.md)｜[整理區](../../README.md)
+← [舊 daemon 目錄（暫緩區）](README.md)｜[規格](../../README.md)
 
 > **這篇整篇在暫緩區**（2026-10-01）：舊 daemon 的熱重載。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
@@ -10,7 +10,7 @@
 
 〔使用者方向 2026-09-30 晚〕熱重載留核心，可單獨關掉。〔建議預設，未拍板〕`enable_reload:false` 時，SIGHUP 只印一行警告、不重讀設定、不套用任何欄位，也不因此退出；更改設定須重開。
 
-依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
 
 **改設定、改樹不必重開 daemon**：除了重大或危險的操作要重開，其餘都盡量免重開（第十八批）。原本叫「即時改」，第二十批改叫「免重開」，免得跟「反應速度就是一格」（[T-07](../../terms.md)）的「立刻處理」混；行為不變。
 
@@ -28,7 +28,7 @@ daemon 只在收到 **SIGHUP** 時重讀啟動時的同一份設定檔。能送�
 |---|---|
 | 新設定讀不進來或不合 schema | 整份不套用，舊設定繼續用；stderr 說明並寫 daemon 事項（`config_invalid`） |
 | 有「要重開」的欄位改了 | 免重開的照套，這些欄位不套用；stdout 列出並寫 daemon 事項（`restart_required`），直到重開或改回為止 |
-| 不認得的欄位 | 照 [C-07](../../../contracts.md) 忽略並印出名字 |
+| 不認得的欄位 | 照 [C-07](../../../notes/archive/spec-2026-10-02/contracts.md) 忽略並印出名字 |
 | 停機或排空中收到 SIGHUP | 不重載，印一行警告 |
 
 每次重載在 stdout 印一行，列出已套用與要重開的欄位。
@@ -79,7 +79,7 @@ daemon 只在收到 **SIGHUP** 時重讀啟動時的同一份設定檔。能送�
 | `node.show`、`node.ls` | 免重開 | 最近一格含格次序號 |
 | `mount.clear` | 免重開 | B-610 |
 | `node.provision`（含 helper 新動作、改 cgroup 上限） | 免重開 | B-609 |
-| `daemon.attention.*` | 免重開 | [P-601](../../../protocol/ops.md) |
+| `daemon.attention.*` | 免重開 | [P-601](../../../notes/archive/spec-2026-10-02/protocol/ops.md) |
 | helper 被 kill 之後恢復特權操作 | **要重開** | 需要 root 才拉得起來（[B-303](../helper.md)） |
 
 要重開的共同原因：一改就等於換了 daemon 的身分、恢復資料、整棵資源樹，或 helper 的授權依據，而且大多要 root 才做得到。其餘最多只要求被動到的那一棵先停下，不影響別的樹。

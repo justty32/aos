@@ -1,6 +1,6 @@
 # daemon 附錄：systemd service
 
-← [舊 daemon 目錄（暫緩區）](README.md)｜[整理區](../../README.md)
+← [舊 daemon 目錄（暫緩區）](README.md)｜[規格](../../README.md)
 
 > **這篇整篇在暫緩區**（2026-10-01）：舊 daemon 的 systemd 範例，寫的是舊設定檔與舊停機流程。現行怎麼用 systemd 見 [daemon 目錄](../../daemon/README.md)最後一段。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 

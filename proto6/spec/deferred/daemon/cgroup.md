@@ -1,12 +1,12 @@
 # daemon cgroup：框、上限與啟動自檢
 
-← [舊 daemon 目錄（暫緩區）](README.md)｜[整理區](../../README.md)
+← [舊 daemon 目錄（暫緩區）](README.md)｜[規格](../../README.md)
 
 > **這篇整篇在暫緩區**（2026-10-01）：舊 daemon 的 cgroup 部件；cgroup 之後另做成模組。〔2026-10-01 第十二批〕**部分已被 [B-644](../../daemon/cgroup.md) 取代**：收屍／cgroup 模組照這裡「子樹根用自己所在的 cgroup、根下開 `daemon` 子層、`cgroup.kill` 清框、sha256 前 16 hex 命名、寫上限」的做法，但框改成以 daemon 的一項為單位（`i-<h>`），沒委派好就回 1、不退回。原因：daemon 改成只叫 aos-exec、不認得 node；管 node 之後另做成模組（使用者 2026-10-01），最核心 daemon 第一版不做。每條標題下有一行狀態。
 
 ## 分檔目錄
 
-> 2026-10-02 整理：原檔約 22 KB 超過 8 KB 門檻，按標題逐字拆進 `cgroup/`；本檔只留前言與目錄（原路徑保留當入口）。
+> 本檔只留前言與目錄，內容按標題拆在 `cgroup/`。
 
 <!-- wf-nav -->
 | # | 檔 | 段落 |

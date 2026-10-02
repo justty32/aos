@@ -4,12 +4,12 @@
 
 | 舊東西 | 變成什麼 | 出處 |
 |---|---|---|
-| `aos-needs`（包裝、回 125） | `aos-tick-check-task` | [暫緩區篇末](../../spec/settled/deferred/tick/04-已撤回與被取代.md#已撤回被取代) |
+| `aos-needs`（包裝、回 125） | `aos-tick-check-task` | [暫緩區篇末](../../spec/deferred/tick/04-已撤回與被取代.md#已撤回被取代) |
 | 收件 aos-inbox → aos-intake → `aos-sysinbox`；投件 aos-outbox | `aos-mq get`／`post` | verdicts 11「astra 審整理區」 |
-| 檔案收件、檔案投件（`requests/`、`responses/`） | 普通程式，aos 不管 | [B-623、B-624](../../spec/settled/deferred/mq.md) |
+| 檔案收件、檔案投件（`requests/`、`responses/`） | 普通程式，aos 不管 | [B-623、B-624](../../spec/deferred/mq.md) |
 | 鬧鐘 `alarm_ticks`、`.aos/alarms/` | 撤，任務自己記 | B-624 |
-| `.aos/journal/`、`aos-tick adopt` | 結束碼紀錄取代 | [B-632](../../spec/settled/deferred/git.md) |
-| tick 側 cgroup 備援 | 撤，改 `aos-cg` | [B-631](../../spec/settled/deferred/cg.md) |
+| `.aos/journal/`、`aos-tick adopt` | 結束碼紀錄取代 | [B-632](../../spec/deferred/git.md) |
+| tick 側 cgroup 備援 | 撤，改 `aos-cg` | [B-631](../../spec/deferred/cg.md) |
 | 第十九批「標準配備」（同一支 aos-tick、必須全掛） | 標準任務表範本 | verdicts 11 追答 8、9 |
 
 ## 十、daemon 那側、本來就不在任務表上的

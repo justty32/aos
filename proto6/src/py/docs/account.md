@@ -4,7 +4,7 @@
 
 ## 帳號（m3m 模組五）
 
-照 [plan m3m](../../../plan/m3m-daemon-modules.md) 模組五寫的（2026-10-01 第十二、十三批），`lib/aos_daemon_account.py`（主程式那側）、`lib/aos_daemon_root.py`＋`bin/aos-daemon-root`（root 端），spec [B-646](../../../spec/settled/daemon/account.md)、格式 [P-126](../../../spec/settled/protocol/daemon/account.md)。設定檔寫 `modules.account` 才掛，沒寫時 daemon 跟上面一模一樣（每項的 `account` 照不認得的鍵忽略）。
+照 [plan m3m](../../../plan/m3m-daemon-modules.md) 模組五寫的（2026-10-01 第十二、十三批），`lib/aos_daemon_account.py`（主程式那側）、`lib/aos_daemon_root.py`＋`bin/aos-daemon-root`（root 端），spec [B-646](../../../spec/daemon/account.md)、格式 [P-126](../../../spec/protocol/daemon/account.md)。設定檔寫 `modules.account` 才掛，沒寫時 daemon 跟上面一模一樣（每項的 `account` 照不認得的鍵忽略）。
 
 ```json
 {"interval_ms": 60000,

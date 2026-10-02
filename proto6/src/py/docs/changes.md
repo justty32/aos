@@ -10,7 +10,7 @@
 
 ## 改動 2：資料夾目標怎麼找 inst
 
-照 [inst.md「inst 目標」](../../../spec/base/inst.md)：
+照 [inst.md「找目標」](../../../spec/inst.md)：
 
 - 目標是資料夾：先找 `xxx/.aos/inst.json`，沒有再找 `xxx/inst.json`；兩個都有跑前者；都沒有＝用法錯（~~2~~ 1，見改動 4）。base 是 `xxx` 自己。
 - 拿掉 proto5 的 `--dir-target` 旗標、`run_target`／`run_target_full`／`spawn_target` 的 `dir_target` 參數與 `DEFAULT_DIR_TARGET` 常數（改成 `DIR_TARGETS` 兩個位置）。給 `--dir-target` 現在是用法錯。

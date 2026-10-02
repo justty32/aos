@@ -21,7 +21,7 @@
 
 ### 區外暫緩的段落
 
-整理區以外也有跟著暫緩的段落，就地標了「暫緩」，沒有搬家：[驗收入口 V-03](../../../conformance.md) 裡跟上表各條有關的場景；`aos-config-add`（B-625 部分、P-207）的 [H-004 第 16 列](../../../cli/commands.md)、[A-102](../../../agent/configuration.md) 的鎖與提交流程、[C-07](../../../contracts.md) 裡「同 `aos-config-add`」一句（2026-10-01 第四批）；發摘要 `aos-publish`（B-624 部分、P-206 那列）的 [P-307](../../../protocol/messages.md) 發布檔與讀法、[kernel P-803、P-813](../../../protocol/kernel-tasks.md)與 [agent P-703](../../../protocol/agent-tasks.md)講「提交後發布 `published.json`」的句子、[驗收入口](../../../conformance.md)的相關場景（2026-10-01 第五批）。原本也在這裡的 [inst](../../../base/inst.md)「先決定身分，切完才解析」與頂層整份指示詞裡講 `user` 的部分，2026-10-01 隨 inst 頂層 `user` 撤回、直接刪掉（不搬暫緩，見 [tick.md 篇末](../tick/04-已撤回與被取代.md#已撤回被取代)）。
+整理區以外也有跟著暫緩的段落，就地標了「暫緩」，沒有搬家：[驗收入口 V-03](../../../notes/archive/spec-2026-10-02/conformance.md) 裡跟上表各條有關的場景；`aos-config-add`（B-625 部分、P-207）的 [H-004 第 16 列](../../../notes/archive/spec-2026-10-02/cli/commands.md)、[A-102](../../../notes/archive/spec-2026-10-02/agent/configuration.md) 的鎖與提交流程、[C-07](../../../notes/archive/spec-2026-10-02/contracts.md) 裡「同 `aos-config-add`」一句（2026-10-01 第四批）；發摘要 `aos-publish`（B-624 部分、P-206 那列）的 [P-307](../../../notes/archive/spec-2026-10-02/protocol/messages.md) 發布檔與讀法、[kernel P-803、P-813](../../../notes/archive/spec-2026-10-02/protocol/kernel-tasks.md)與 [agent P-703](../../../notes/archive/spec-2026-10-02/protocol/agent-tasks.md)講「提交後發布 `published.json`」的句子、[驗收入口](../../../notes/archive/spec-2026-10-02/conformance.md)的相關場景（2026-10-01 第五批）。原本也在這裡的 [inst](../../inst.md)「先決定身分，切完才解析」與頂層整份指示詞裡講 `user` 的部分，2026-10-01 隨 inst 頂層 `user` 撤回、直接刪掉（不搬暫緩，見 [tick.md 篇末](../tick/04-已撤回與被取代.md#已撤回被取代)）。
 
 ### 已知的設計問題（記錄，這輪不改）
 

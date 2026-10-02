@@ -1,4 +1,4 @@
-← [2026-09-30 使用者方向（十一）：tick 是 aos 的衡量基準](../11-tick-as-unit.md)（分檔 5/27）｜所在段落：2026-10-01：POC 默認一切正常｜[上一份](04-1001-結束碼慣例.md)｜[下一份](06-1001-互斥-狀態資料夾-user.md)
+← [2026-09-30 使用者方向（十一）：tick 是 aos 的衡量基準](../11-tick-as-unit.md)（分檔 5/28）｜所在段落：2026-10-01：POC 默認一切正常｜[上一份](04-1001-結束碼慣例.md)｜[下一份](06-1001-互斥-狀態資料夾-user.md)
 
 <a id="aos-tick---node-怎麼認待統一更新-spec"></a>
 
@@ -36,6 +36,6 @@
 
 **待改的 spec 處**（統一更新時照這節改）
 
-- [P-202](../../../spec/settled/protocol/tick.md) 的欄位表與 `node-tasks` schema 的 `required`：`kind` 改不必填；`id` 不再是核心必查（schema 是否仍列必填，統一更新時定）；`methods` 與其「同一項不重複」檢查刪掉。
-- [B-620](../../../spec/settled/tick.md)「讀表與誰驗什麼」：核心只做上面的極簡檢查，不過回 1。
-- [B-633](../../../spec/settled/tick.md)／P-213 與 `node-tick-record` schema：`id` 的說明補「任務表沒寫 `id` 時是位置字串」；上面「任務環境變數命名」那條的 `AOS_TASK_ID` 同。
+- [P-202](../../../spec/protocol/tick.md) 的欄位表與 `node-tasks` schema 的 `required`：`kind` 改不必填；`id` 不再是核心必查（schema 是否仍列必填，統一更新時定）；`methods` 與其「同一項不重複」檢查刪掉。
+- [B-620](../../../spec/tick.md)「讀表與誰驗什麼」：核心只做上面的極簡檢查，不過回 1。
+- [B-633](../../../spec/tick.md)／P-213 與 `node-tick-record` schema：`id` 的說明補「任務表沒寫 `id` 時是位置字串」；上面「任務環境變數命名」那條的 `AOS_TASK_ID` 同。

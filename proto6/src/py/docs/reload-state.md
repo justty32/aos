@@ -12,7 +12,7 @@
  "insts": {"a": {}, "jobs/report.json": {}}}
 ```
 
-**重讀設定**（`modules.reload`，`lib/aos_daemon_reload.py`，spec [B-642](../../../spec/settled/daemon/reload.md)）：改了設定檔就 `kill -HUP <pid>`，daemon 重讀同一份（照樣整份展開指示詞）：
+**重讀設定**（`modules.reload`，`lib/aos_daemon_reload.py`，spec [B-642](../../../spec/daemon/reload.md)）：改了設定檔就 `kill -HUP <pid>`，daemon 重讀同一份（照樣整份展開指示詞）：
 
 - 新的鍵：立刻跑一次，stdout `inst=<inst> added`；不見的鍵：不再排，正在跑的那次跑完照樣印 `exit=`，之後控制指令回 `unknown_inst`，stdout `inst=<inst> removed`；還在的鍵：換新設定，暫停、已停、待補照留，`interval_ms` 改了下一次＝上次結束＋新週期（過了就立刻跑）。最後一行 `reloaded`。
 - 頂層 `cwd`、`modules`、`exec_out_path`、`exec_err_path` 改了不套用，stdout `reload: need restart: <鍵名>`（後兩個 2026-10-01 第十二批從「照新的」改成警告；新加的項的輸出路徑也照開起來時的設定算）。
@@ -26,7 +26,7 @@
 2026-10-01T16:45:49+08:00 reloaded
 ```
 
-**記住狀態**（`modules.state`，`lib/aos_daemon_state.py`，spec [B-643](../../../spec/settled/daemon/state.md)）：原始設定檔的 `modules.state` 必須寫成 `{"$ref": "<檔>"}`（以設定檔所在資料夾為準、不帶 `#`），那個檔就是狀態檔：`{"insts": {"a": {"paused": true}, "jobs/report.json": {"stopped": true}}}`，只列不正常的項。
+**記住狀態**（`modules.state`，`lib/aos_daemon_state.py`，spec [B-643](../../../spec/daemon/state.md)）：原始設定檔的 `modules.state` 必須寫成 `{"$ref": "<檔>"}`（以設定檔所在資料夾為準、不帶 `#`），那個檔就是狀態檔：`{"insts": {"a": {"paused": true}, "jobs/report.json": {"stopped": true}}}`，只列不正常的項。
 
 - pause、resume、`stop_on_nonzero` 停掉、重讀拿掉項時當場寫整份（暫檔 → rename），內容沒變不寫；檔不在＝全部正常，沒異常就不建。
 - 開起來時照檔恢復：暫停、已停的項不先跑那一次，stdout 先印 `inst=<inst> paused`／`stopped`；檔裡有、設定沒有的鍵丟掉。

@@ -2,7 +2,7 @@
 
 ## 現在 hooks 能做什麼、限制在哪
 
-正本：[B-635](../../spec/settled/tick/hooks.md)。
+正本：[B-635](../../spec/tick/hooks.md)。
 
 **能做的：**
 
@@ -18,11 +18,11 @@
 - **碼不影響 tick**：hook 回幾都只記進 `hooks.after_all`（0 不記），tick 照舊回 0。
 - **擋板檔、拿不到鎖（busy）、表壞時一個都不跑**。
 - ~~**紀錄在 hook 跑之前就寫成 `ended:true`**：hook 跑到一半 tick 被殺，下一格的 `last/` 看起來仍是「正常收尾」，看不出 hook 沒跑完；hooks 也不記 `ran`。~~ **已解決**（2026-10-01 第十八批：所有 hooks〔含 after_all〕跑完才寫 `ended:true`，跑 hook 時被殺，下一格的 `last/` 是 `ended:false`）。
-- **hook 的 `AOS_TASK_INDEX` 從 0 數起，跟 `tasks` 的位置各算各的**：拿 index 當名字的東西（例如 `aos-git` 存檔點，plan 待問 2 的建議）會跟任務撞號。**已解決**（使用者 2026-10-01 第十批）：hook 改拿 `AOS_HOOK_POINT`／`AOS_HOOK_INDEX`／`AOS_HOOK_ID`，不再有 `AOS_TASK_INDEX`（[B-635](../../spec/settled/tick/hooks.md)）；要用 index 當名字時，hook 跟任務的變數名本來就不同，自己加前綴（例如掛點名）即可。
+- **hook 的 `AOS_TASK_INDEX` 從 0 數起，跟 `tasks` 的位置各算各的**：拿 index 當名字的東西（例如 `aos-git` 存檔點，plan 待問 2 的建議）會跟任務撞號。**已解決**（使用者 2026-10-01 第十批）：hook 改拿 `AOS_HOOK_POINT`／`AOS_HOOK_INDEX`／`AOS_HOOK_ID`，不再有 `AOS_TASK_INDEX`（[B-635](../../spec/tick/hooks.md)）；要用 index 當名字時，hook 跟任務的變數名本來就不同，自己加前綴（例如掛點名）即可。
 
 ## 怎麼讀每一項
 
-每項固定五欄：**做什麼**／**原本的位置與機制**／**狀態與正本**／**現在已經不在的前提**／**放到 hooks 的想法（待使用者想）**。「範本位置」指 [B-629](../../spec/settled/deferred/template.md) 的兩版範本。
+每項固定五欄：**做什麼**／**原本的位置與機制**／**狀態與正本**／**現在已經不在的前提**／**放到 hooks 的想法（待使用者想）**。「範本位置」指 [B-629](../../spec/deferred/template.md) 的兩版範本。
 
 ## 一、標準任務表範本（B-629）
 
@@ -32,6 +32,6 @@
   - 有 git：`git-open` → `mq-get` → `mark-get` → 使用者任務 → `mark-user` → `clean` → `git-close` → `mq-post`。
   - 更早（第二十批原話）還有收件、投件、發摘要；發摘要 `summary` 10-01 拿掉。
 - **機制**：全靠**陣列順序**給保證，例如「先提交再送」靠 `git-close` 排在 `mq-post` 前面，close 失敗建停格檔就擋住 `mq-post`。系統級任務標 `kind:"system"`，核心不看。
-- **狀態**：待實作（[B-629](../../spec/settled/deferred/template.md)）；plan 待問 11、12 還沒裁定，建議第二段版只剩 `git-open` → 使用者任務 → `mark-user` → `git-close`。
+- **狀態**：待實作（[B-629](../../spec/deferred/template.md)）；plan 待問 11、12 還沒裁定，建議第二段版只剩 `git-open` → 使用者任務 → `mark-user` → `git-close`。
 - **前提不在了**：`aos-mq` 要的通道在暫緩區；`clean` 沒東西可清；`kind` 沒人讀。
 - **hooks 想法（待使用者想）**：範本可能拆成「`tasks` 放使用者任務＋必須被停格擋住的項」、「`hooks.after_all` 放停格後也要做的收尾」兩半。關鍵是每一項要不要被停格檔擋——**現在範本的保證大多靠「停格就不跑後面」，搬進 `after_all` 就失去這個擋法**，那一項得自己讀紀錄的 `stopped_after` 判斷。

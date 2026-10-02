@@ -1,6 +1,6 @@
 # tick 協議：資料夾、任務表、紀錄（P-200～P-214）
 
-← [整理區](../README.md)｜[tick 核心](../tick.md)｜[hooks](../tick/hooks.md)｜[tasks-blocked](../tick/tasks-blocked.md)｜[慣例](../conventions.md)｜[daemon 協議](daemon/README.md)
+← [規格](../README.md)｜[tick 核心](../tick.md)｜[hooks](../tick/hooks.md)｜[tasks-blocked](../tick/tasks-blocked.md)｜[慣例](../conventions.md)｜[daemon 協議](daemon/README.md)
 
 本篇只留「檔案長什麼樣」。正本是 `proto6/spec/protocol/schemas/`（`inst`、`tick-tasks`、`tick-record` 三份 schema）與 `proto6/spec/protocol/examples/tick/` 的正反例（`messages/validate.py` 會驗），行為正本是 `proto6/src/py/lib/aos_tick*.py` 與測試。下面的 JSON 是給人快速看的長相，有出入以 schema 為準。`.aos` 是 `AOS_DIRNAME` 沒設時的名字，空字串就直接放在資料夾本身（C-09）。
 
@@ -22,7 +22,7 @@
 
 ## P-201．inst 的格式
 
-schema 是 [inst.schema.json](../../protocol/schemas/inst.schema.json)，只驗原始結構；引用、循環、選項值由 runner 驗。沒有 `version`、沒有 `user`（寫了當陌生鍵忽略）。125／126／127 與 `exit` 的訊號編碼照 [inst 正本](../../base/inst.md)。最小例（[inst.minimal.valid.json](../../protocol/examples/tick/inst.minimal.valid.json)）：
+schema 是 [inst.schema.json](schemas/inst.schema.json)，只驗原始結構；引用、循環、選項值由 runner 驗。沒有 `version`、沒有 `user`（寫了當陌生鍵忽略）。125／126／127 與 `exit` 的訊號編碼照 [inst 正本](../inst.md)。最小例（[inst.minimal.valid.json](examples/tick/inst.minimal.valid.json)）：
 
 ```json
 {"argv": ["aos-tick"]}
@@ -30,7 +30,7 @@ schema 是 [inst.schema.json](../../protocol/schemas/inst.schema.json)，只驗�
 
 ## P-202．任務註冊表
 
-檔案 `.aos/tasks.json`，schema [tick-tasks.schema.json](../../protocol/schemas/tick-tasks.schema.json)。每一項是 inst 的超集；頂層可放每一項的預設（項自己寫了就整個蓋過）與 `modules`、`hooks`。指示詞（`$ref`、`$opt`…）開格時整份展開（頂層與每項的陌生鍵、`_metainfo` 除外）。
+檔案 `.aos/tasks.json`，schema [tick-tasks.schema.json](schemas/tick-tasks.schema.json)。每一項是 inst 的超集；頂層可放每一項的預設（項自己寫了就整個蓋過）與 `modules`、`hooks`。指示詞（`$ref`、`$opt`…）開格時整份展開（頂層與每項的陌生鍵、`_metainfo` 除外）。
 
 ```json
 {"_metainfo": {"_type": "aos-tasks", "_version": 1},
@@ -107,7 +107,7 @@ stderr 一行 `代碼: 說明`：`usage`、`no_target`、`no_tasks`、`bad_table
 沒有現行內容，條號不重用：
 
 - P-208：收件區權限（舊內容在暫緩區）
-- P-209：待決與跨篇（見 [README P-008](../../protocol/readme/03-P-007-P-008-schema與待決.md)）
+- P-209：待決與跨篇（見 [README P-008](../../notes/archive/spec-2026-10-02/protocol/readme/03-P-007-P-008-schema與待決.md)）
 - P-210：預設範本與恢復前驗證（見暫緩區 [B-625](../deferred/tick/05-B-625-當機恢復設定與清理.md)）
 
 ## P-211．aos-cg
@@ -131,7 +131,7 @@ stderr 一行 `代碼: 說明`：`usage`、`no_target`、`no_tasks`、`bad_table
 | `task-exits.json` | 下面 `tasks` 陣列；開格寫 `[]` |
 | `hook-exits.json` | 下面 `hooks` 物件；只有任務表寫了 hooks 的格才有 |
 
-`record.json` 本體（[tick-record-file.open](../../protocol/examples/tick/tick-record-file.open.valid.json)）：
+`record.json` 本體（[tick-record-file.open](examples/tick/tick-record-file.open.valid.json)）：
 
 ```json
 {"version": 1, "seq": 1237, "started_at_ms": 1790000120000,
@@ -140,7 +140,7 @@ stderr 一行 `代碼: 說明`：`usage`、`no_target`、`no_tasks`、`bad_table
  "ended": false}
 ```
 
-展開後的完整紀錄（schema [tick-record](../../protocol/schemas/tick-record.schema.json) 的根；`?` 表示可省）：
+展開後的完整紀錄（schema [tick-record](schemas/tick-record.schema.json) 的根；`?` 表示可省）：
 
 ```json
 {"version": 1, "seq": N, "started_at_ms": 毫秒, "ran": 跑了幾項,
@@ -167,7 +167,7 @@ stderr 一行 `代碼: 說明`：`usage`、`no_target`、`no_tasks`、`bad_table
 | `hooks.<掛點>` | 該掛點已跑完而且結束碼非 0 的 hook，格式同 `tasks`；`index` 是在自己那個陣列的位置；`after_task`、`after_every_task`、`before_kind`、`after_kind` 每筆另有 `task_index`（觸發它的任務位置）。hooks 不記 `ran` |
 | `started_at_ms` | 只給人看 |
 
-schema 管不到、由 [validate.py](../../protocol/examples/messages/validate.py) 補查：`tasks`、`before_all`、`after_all`、`skipped` 的 `index` 嚴格遞增；`tasks` 的 `index` 小於 `ran`＋`skipped` 筆數；帶 `task_index` 的各掛點 `task_index` 不遞減且小於該數。
+schema 管不到、由 [validate.py](examples/messages/validate.py) 補查：`tasks`、`before_all`、`after_all`、`skipped` 的 `index` 嚴格遞增；`tasks` 的 `index` 小於 `ran`＋`skipped` 筆數；帶 `task_index` 的各掛點 `task_index` 不遞減且小於該數。
 
 範例檔（`examples/tick/`）：正例 `tick-record.minimal`（跑到一半）、`done`、`blocked-exit-0`、`blocked-first`、`exit-0-with-failure`、`position-id`、`hooks`、`hooks-points`、`hooks-running`、`hooks-kind`、`skipped`、`tick-record-file.open`、`tick-record-file.hooks`、`tick-record-file.hooks-running`；反例見同資料夾 `tick-record*.invalid.json`（exit 與 signal 並存、ended 沒 exit、記了結束碼 0、缺 `ran`／`index`／`task_index`、整格回 1／2／3、`ran` 直接寫數字等）。
 

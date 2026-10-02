@@ -1,6 +1,6 @@
 # daemon 核心
 
-← [daemon 目錄](README.md)｜[整理區](../README.md)｜格式：[P-120](../protocol/daemon/core.md)
+← [daemon 目錄](README.md)｜[規格](../README.md)｜格式：[P-120](../protocol/daemon/core.md)
 
 程式：`lib/aos_daemon.py`、`aos_daemon_config.py`、`aos_daemon_run.py`、`aos_daemon_output.py`；測試：`tests/test_daemon_config.py`、`test_daemon_run.py`、`test_daemon_kill.py`。
 

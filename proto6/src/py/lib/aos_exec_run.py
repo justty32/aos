@@ -2,7 +2,7 @@
 
 上層三種目標的解讀在 aos_exec.py（run_target／run_target_full／run_inst），daemon 的非同步
 入口在 aos_exec_spawn.py；兩邊都經 `_execute_inst()` 做同一套前置檢查與串流設定。
-照 ../spec/inst-posix/ 第 6 節：mkdir／append／inherit／merge、環境清空或疊加、新 process group、
+照 proto6/spec/inst.md「怎麼跑」：mkdir／append／inherit／merge、環境清空或疊加、新 process group、
 逾時 SIGTERM → GRACE 秒 → SIGKILL、exit 檔十進位＋換行並 fsync 檔與父目錄。
 等與砍（`terminate()`、cpu 專用的 `_wait_full()`、送訊號給 process group）拆在 aos_exec_wait.py，這裡 re-export。
 """
@@ -15,7 +15,7 @@ import time
 import aos_dirname
 from aos_exec_wait import GRACE, _group_exists, _nap, _pidfd, _signal_groups, _wait_full, _wait_loop, terminate  # noqa: F401  （對外照舊 re-export）
 
-# proto6 改：資料夾目標依序找這兩個位置（proto6 spec/base/inst.md「inst 目標」），不再有 --dir-target
+# proto6 改：資料夾目標依序找這兩個位置（proto6 spec/inst.md「找目標」），不再有 --dir-target
 DIR_TARGETS = (os.path.join(".aos", "inst.json"), "inst.json")     # 預設名字時的樣子；實際照 _dir_targets()
 CHILD, AOS, USAGE = "child", "aos", "usage"      # run_target() 回的那個 kind
 EXIT_USAGE = 1          # proto6 改（使用者 2026-10-01，aos 結束碼慣例）：用法錯＝通用錯誤 1（proto5 是 2）

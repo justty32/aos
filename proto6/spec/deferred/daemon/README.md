@@ -1,6 +1,6 @@
 # 暫緩區：舊 daemon 設計（登記、喚醒與程序生死）
 
-← [暫緩區](../README.md)｜[現行 daemon](../../daemon/README.md)｜[舊 daemon 協議](../protocol/daemon/README.md)｜[整理區](../../README.md)｜[kernel 樹](../../../scheduling/README.md)｜[通用 tick](../../tick.md)
+← [暫緩區](../README.md)｜[現行 daemon](../../daemon/README.md)｜[舊 daemon 協議](../protocol/daemon/README.md)｜[規格](../../README.md)｜[kernel 樹](../../../notes/archive/spec-2026-10-02/scheduling/README.md)｜[通用 tick](../../tick.md)
 
 > **這個資料夾整個在暫緩區**（2026-10-01）。這裡是 2026-10-01 之前設計的完整 daemon：記憶體登記、runner 與收屍、重啟清理、收尾與排空停機、熱重載、通道與憑證、掛行程、佈建與 helper、cgroup、訊息、部件開關。使用者 2026-10-01 把 daemon 改成只定期叫 `aos-exec`、不認得 node，管 node 之後另做成模組；最核心 daemon 第一版不做這些。現行規定見 [daemon 目錄](../../daemon/README.md)：[B-640](../../daemon/core.md)（核心）、[B-641](../../daemon/control.md)（控制模組）；之後的模組（[B-642～646](../../daemon/README.md)）各自取代了這裡的一部分，見下表。
 >
@@ -10,11 +10,11 @@
 
 daemon 不是 tick 存在的前提：tick 怎麼被執行不管，cron、人手直接跑也行，只是沒有通道。
 
-依據：[09-29 新架構](../../../../notes/2026-09-29-kernel-tree.md)、[使用者裁定](../../../../notes/2026-09-29-verdicts.md)、[第十八批](../../../../notes/verdicts/09-special-computing-os.md)、[第十九批](../../../../notes/verdicts/10-tick-minimal-core.md)、[第二十批](../../../../notes/verdicts/11-tick-as-unit.md)。
+依據：[09-29 新架構](../../../notes/2026-09-29-kernel-tree.md)、[使用者裁定](../../../notes/2026-09-29-verdicts.md)、[第十八批](../../../notes/verdicts/09-special-computing-os.md)、[第十九批](../../../notes/verdicts/10-tick-minimal-core.md)、[第二十批](../../../notes/verdicts/11-tick-as-unit.md)。
 
 ### 核心與可掛部件
 
-- **本篇是 daemon 行為的正本**（[V-01](../../../conformance.md)）。[daemon 協議](../protocol/daemon/README.md)（P-100～119）只留設定欄位、method 的 params／result、helper 通道、[runner](../terms.md#t-09收尾排空停機熱重載逃生口) 回報與錯誤碼。
+- **本篇是 daemon 行為的正本**（[V-01](../../../notes/archive/spec-2026-10-02/conformance.md)）。[daemon 協議](../protocol/daemon/README.md)（P-100～119）只留設定欄位、method 的 params／result、helper 通道、[runner](../terms.md#t-09收尾排空停機熱重載逃生口) 回報與錯誤碼。
 - **daemon 不在任務表上，不是系統級任務。** 開格、格後收尾、重啟清空、排空與立即停機、熱重載、helper 與切換帳號的那一側，都是 daemon 自己的職責（[T-10](../../terms.md)）。本篇只寫 daemon 那一側，tick 那一側見 [tick](../../tick.md)。
 - 〔使用者方向 2026-09-30 晚〕訊息與 cgroup 拆成可掛部件；熱重載、排空停機、helper 動作留核心，各自可關。同一支程式、設定檔開關；界線、名稱與未拍板預設見 [B-615](components.md)。
 - **daemon 跟 tick 之間只有通道這一條路**，通道是唯一逃生口（[T-07](../../terms.md)、B-612）。
@@ -30,7 +30,7 @@ daemon 不是 tick 存在的前提：tick 怎麼被執行不管，cron、人手�
 | cgroup | daemon 替每個 node 開框、寫資源上限；runner 那一套照做，格後收尾與收尾最後再用 `cgroup.kill` 兜底，重啟時也清得到舊程序（B-605、B-601、B-603、B-604） | 每一格、每個掛載行程由它自己的 runner 管名下的程序（B-601），收尾經 runner 做（B-604） |
 | git | 只有任務表上的 `aos-git` 會用（[B-630](../git.md)）；daemon 不讀 git | 同左 |
 
-- **runner**＝daemon（或 helper）開每一格、每個掛載行程時用的固定程式 `aos-runner`：照 [inst](../../../base/inst.md) 執行一次（就是 proto5 aos-exec 的慣例），並當收屍人管它名下的程序（[T-09](../terms.md)〔astra 報告必修 9〕、B-601）。
+- **runner**＝daemon（或 helper）開每一格、每個掛載行程時用的固定程式 `aos-runner`：照 [inst](../../inst.md) 執行一次（就是 proto5 aos-exec 的慣例），並當收屍人管它名下的程序（[T-09](../terms.md)〔astra 報告必修 9〕、B-601）。
 - 兩種情形並存的做法寫在各條裡；沒有 cgroup 的情形就是原本的做法。本組文件的「daemon 有 cgroup」指部件開著且取得可用子樹；個別 node 仍可能建框失敗、退回沒有框。只在機器上有 cgroup 不算。
 
 依據：第二十批進行順序（先不含 cgroup 與 git，下一步納入）；納入 cgroup 與 git 的疑點裁定（有就用、沒有就退回）。
@@ -41,7 +41,7 @@ daemon 不是 tick 存在的前提：tick 怎麼被執行不管，cron、人手�
 
 | 計時 | 單位 | 為什麼 |
 |---|---|---|
-| 叫醒週期 `interval_ms` | 毫秒 | 外部規定；也是那個 tick「一格」的標準長度（[C-01](../../../contracts.md)） |
+| 叫醒週期 `interval_ms` | 毫秒 | 外部規定；也是那個 tick「一格」的標準長度（[C-01](../../../notes/archive/spec-2026-10-02/contracts.md)） |
 | 收尾寬限 `shutdown_grace_ms`、排空上限 `drain_timeout_ms` | 毫秒 | 作業系統層的停程序；要跟 systemd 的停機逾時對得上（[service 範例](service.md)） |
 | 掛載診斷保留期 `mount_diag_ttl_ticks` | 掛它的上層的格數 | 政策性保留期（B-610） |
 | pause 存檔間隔 `pause_save_interval_ms`、事項批次寫出（1000 ms） | 毫秒 | daemon 自己的寫檔批次，只決定當機時最多丟多少；daemon 不在任何一格裡，沒有「所屬上層的格」可數 |
