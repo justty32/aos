@@ -18,8 +18,8 @@ tick 印一行 `bad_table: …`、回 1（算 tick 自己的錯；在換紀錄�
 
 - 整份文件本身是指示詞就先解一層；頂層的陌生鍵與 `_metainfo` 不解、原樣留。
 - 頂層七個預設鍵（`DEFAULT_KEYS`：`argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`）：整個展開。
-- `tasks`、`hooks` 的各掛點（`before_all`、`after_task.<id>`、`after_every_task`、`after_all`）、`modules["tasks-blocked"].insts`：
-  陣列（與 `hooks`、`after_task` 物件）本身解一層，每一元素整項解一層（整項 `$ref`），再把元素裡**已知的鍵**
+- `tasks`、`hooks` 的各掛點（`before_all`、`before_kind.<kind>`、`after_task.<id>`、`after_kind.<kind>`、`after_every_task`、`after_all`）、`modules["tasks-blocked"].insts`：
+  陣列（與 `hooks`、`after_task`、`before_kind`、`after_kind` 物件）本身解一層，每一元素整項解一層（整項 `$ref`），再把元素裡**已知的鍵**
   （七個 inst 欄位、`id`、`kind`）整個展開；元素裡的 `_metainfo` 與陌生鍵不解（`_metainfo` 留給 `load_obj` 照 inst 規則驗）。
   `hooks` 裡不認得的鍵照收不理、不解。
 - `modules`：整個展開（不看型別、不當預設）；`tasks-blocked` 只是 insts 照上一條的規則，物件裡的陌生鍵不解。
@@ -35,15 +35,19 @@ tick 印一行 `bad_table: …`、回 1（算 tick 自己的錯；在換紀錄�
   目前 tick 只認 `tasks-blocked`（B-636，第二十批由 `tasks_blocked` 改名跟檔名一樣：`{"insts": [...]}`，發現 tasks-blocked 時跑的一串，
   結果在 `Table.on_blocked`），其他照收不理。
 - 頂層可選 `hooks`（掛點；使用者 2026-10-01 第六批：「就不讓他當模組了，直接讓他變頂層key」，spec B-635）。
+- 每項的 `kind`〔使用者 2026-10-02 第二十四批：「值改成隨便寫」〕：任意字串、核心不驗；展開後拿來比對
+  `hooks.before_kind`／`after_kind` 的鍵與 tasks-blocked 的 `kinds`（見 `task_kind()`；不是字串＝當沒有類別）。
 """
 import json
 
 import aos_inst
 from aos_directives import Context, DirectiveError, Document, is_option_object, resolve_located
 
-__all__ = ["TABLE_NAME", "DEFAULT_KEYS", "Table", "TableInvalid", "read_table", "check_table", "merge", "load_inst"]
+__all__ = ["TABLE_NAME", "DEFAULT_KEYS", "Table", "TableInvalid", "read_table", "check_table", "merge", "load_inst",
+           "task_kind"]
 
-HOOK_POINTS = ("before_all", "after_task", "after_every_task", "after_all")   # 第十七批；紀錄的鍵也照這個順序
+HOOK_POINTS = ("before_all", "before_kind", "after_task", "after_kind", "after_every_task", "after_all")   # 第十七批、第二十四批；紀錄的鍵也照這個順序
+KEYED_POINTS = ("before_kind", "after_task", "after_kind")   # 值是物件（鍵＝kind 或任務 id，值＝inst 陣列）的掛點
 TABLE_NAME = "tasks.json"          # 放在狀態資料夾（預設 `.aos`，見 aos_dirname）裡
 DEFAULT_KEYS = aos_inst.FIELDS     # 頂層能當預設的鍵：inst 的七個欄位
 ITEM_KEYS = tuple(DEFAULT_KEYS) + ("id", "kind")   # 每一項開格時整個展開的鍵；`_metainfo` 與陌生鍵不解（第二十批）
@@ -59,15 +63,17 @@ class Table:
     `modules`（頂層 `modules` 整個展開後的值，沒寫＝None；核心不用）、
     `after_all`（頂層 `hooks.after_all` 的 [(項, id)]；沒寫 `hooks` 或沒寫 `after_all`＝None，B-635）、
     `on_blocked`（`modules["tasks-blocked"].insts` 的 [(項, id)]；沒掛這個模組＝None，B-636）、
-    第十七批的 `before_all`、`after_every_task`（[(項, id)] 或 None）與 `after_task`（{任務 id: [(項, id)]} 或 None）。
-    `hook_points`：寫了的掛點名，照 before_all、after_task、after_every_task、after_all 的順序（紀錄用）。"""
+    第十七批的 `before_all`、`after_every_task`（[(項, id)] 或 None）與 `after_task`（{任務 id: [(項, id)]} 或 None）、
+    第二十四批的 `before_kind`、`after_kind`（{kind: [(項, id)]} 或 None）。
+    `hook_points`：寫了的掛點名，照 HOOK_POINTS 的順序（紀錄用）。"""
 
     def __init__(self, defaults, items, ids, modules=None, after_all=None, on_blocked=None,
-                 before_all=None, after_task=None, after_every_task=None):
+                 before_all=None, after_task=None, after_every_task=None, before_kind=None, after_kind=None):
         self.defaults, self.items, self.ids, self.modules = defaults, items, ids, modules
         self.after_all = after_all
         self.on_blocked = on_blocked
         self.before_all, self.after_task, self.after_every_task = before_all, after_task, after_every_task
+        self.before_kind, self.after_kind = before_kind, after_kind
 
     @property
     def hook_points(self):
@@ -126,13 +132,18 @@ def check_table(doc, cwd, path=None):
         for point in ("before_all", "after_every_task", "after_all"):
             if point in hooks.value:
                 found[point] = _hook_list(hooks, [point], "hooks." + point, defaults)
-        if "after_task" in hooks.value:     # 第十七批：{任務 id: [inst…]}；不存在的 id＝永遠不跑，不報錯
-            at = _one_layer(hooks.value["after_task"], hooks.ctx, hooks.position + ["after_task"], "hooks.after_task")
-            if not isinstance(at.value, dict):
-                raise TableInvalid("hooks.after_task 要是物件（鍵＝任務 id）")
-            found["after_task"] = {k: _hook_list(at, [k], "hooks.after_task.%s" % k, defaults) for k in at.value}
+        for point in KEYED_POINTS:
+            # 第十七批 after_task：{任務 id: [inst…]}；第二十四批 before_kind／after_kind：{kind: [inst…]}。
+            # 不存在的 id／沒有任務用的 kind＝永遠不跑，不報錯
+            if point in hooks.value:
+                what = "hooks." + point
+                at = _one_layer(hooks.value[point], hooks.ctx, hooks.position + [point], what)
+                if not isinstance(at.value, dict):
+                    raise TableInvalid("%s 要是物件（鍵＝%s）" % (what, "任務 id" if point == "after_task" else "kind"))
+                found[point] = {k: _hook_list(at, [k], "%s.%s" % (what, k), defaults) for k in at.value}
     return Table(defaults, items, ids, modules, found.get("after_all"), on_blocked,
-                 found.get("before_all"), found.get("after_task"), found.get("after_every_task"))
+                 found.get("before_all"), found.get("after_task"), found.get("after_every_task"),
+                 found.get("before_kind"), found.get("after_kind"))
 
 
 def _hook_list(parent, path, what, defaults):
@@ -208,6 +219,13 @@ def _expand(value, ctx, position):
     if isinstance(v, list):
         return [_expand(x, loc.ctx, loc.position + [str(i)]) for i, x in enumerate(v)]
     return v
+
+
+def task_kind(item):
+    """第二十四批：一項任務的類別＝它自己的 `kind`（開格時已展開；頂層的 kind 不是預設）。
+    不是字串（沒寫、數字、物件…）回 None＝沒有類別：不觸發 *_kind 掛點、不會被 tasks-blocked 的 kinds 擋（AI 隊定）。"""
+    kind = item.get("kind")
+    return kind if isinstance(kind, str) else None
 
 
 def merge(defaults, item):

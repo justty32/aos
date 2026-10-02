@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "tick-record.schema.json",
   "title": "每項結束碼紀錄",
-  "description": "展開後的完整紀錄：.aos/tick/current/（本格）與 last/（上一格）裡的 record.json，把頂層 ran、tasks、hooks 的 $ref 展開之後的樣子〔使用者 2026-10-01 第九批：紀錄拆檔，record.json 本體的形狀見 $defs/RecordFile〕。核心每格寫，記本格跑了幾項（ran）、哪些項結束碼不是 0、本工作資料夾的格數與是否被 tasks-blocked 擋下（B-633、P-213；第十六批原停格檔改名）。〔使用者 2026-10-01 第八批〕tasks 與 hooks.after_all 只記結束碼不是 0 的項，結束碼 0 的不記。取代第十九批的 node-journal。任務表寫了 hooks.after_all 時另記 hooks.after_all（B-635）。不認得的欄位忽略（P-007）。跨欄位關係（index 遞增且小於 ran）schema 表達不了，由 validate.py 的補充檢查驗。",
+  "description": "展開後的完整紀錄：.aos/tick/current/（本格）與 last/（上一格）裡的 record.json，把頂層 ran、tasks、hooks 的 $ref 展開之後的樣子〔使用者 2026-10-01 第九批：紀錄拆檔，record.json 本體的形狀見 $defs/RecordFile〕。核心每格寫，記本格跑了幾項（ran）、哪些項結束碼不是 0、本工作資料夾的格數與是否被 tasks-blocked 擋下（B-633、P-213；第十六批原停格檔改名）。〔使用者 2026-10-01 第八批〕tasks 與 hooks.after_all 只記結束碼不是 0 的項，結束碼 0 的不記。取代第十九批的 node-journal。任務表寫了 hooks.after_all 時另記 hooks.after_all（B-635）。不認得的欄位忽略（P-007）。〔第二十四批〕被 tasks-blocked 的 kinds 擋掉的任務記在 skipped（收尾才寫）。跨欄位關係（index 遞增且小於 ran＋skipped 筆數）schema 表達不了，由 validate.py 的補充檢查驗。",
   "type": "object",
   "required": [
     "version",
@@ -47,9 +47,29 @@
       "$ref": "common.schema.json#/$defs/ID",
       "description": "〔使用者 2026-10-01 第十六批，原 stopped_after〕被 <狀態資料夾>/tick/tasks-blocked 擋下時，被擋下、沒跑的那一項（任務表那一項的 id，沒寫 id 時是位置字串；它就是位置 ran 那一項，第一項就被擋時 ran 是 0）；只在 ended 為 true 時有，這時 exit 也是 0（B-620、P-213）"
     },
+    "skipped": {
+      "type": "array",
+      "description": "〔第二十四批，AI 隊定〕被 tasks-blocked 的 kinds 擋掉、沒跑的任務，照順序；每筆 id（任務表那一項的 id，沒寫 id 時是位置字串）與 index（在 tasks 陣列的位置）。不算 ran、不進 tasks、相關 hooks 不跑；只有被 kinds 擋過才有，跟 blocked_before 一樣只在 ended 為 true 時有（收尾才寫進 record.json）",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "index"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
     "hooks": {
       "type": "object",
-      "description": "外掛掛點的紀錄（B-635）：任務表寫了哪些掛點就有哪些鍵（before_all、after_task、after_every_task、after_all）；〔使用者 2026-10-01 第十七批〕hooks 在格中也會跑，所以開格就有（ended:false 時也可能有）。拆檔後存在 hook-exits.json（這個物件），開格時先寫好各掛點的 []",
+      "description": "外掛掛點的紀錄（B-635）：任務表寫了哪些掛點就有哪些鍵（before_all、before_kind、after_task、after_kind、after_every_task、after_all；before_kind／after_kind 第二十四批）；〔使用者 2026-10-01 第十七批〕hooks 在格中也會跑，所以開格就有（ended:false 時也可能有）。拆檔後存在 hook-exits.json（這個物件），開格時先寫好各掛點的 []",
       "properties": {
         "after_all": {
           "type": "array",
@@ -65,9 +85,55 @@
             "$ref": "#/$defs/TaskEnd"
           }
         },
+        "before_kind": {
+          "type": "array",
+          "description": "〔第二十四批〕已跑完而且結束碼不是 0 的 before_kind 項：所有 kind 的混在一起照跑的順序；每筆另帶 task_index；index 是它在那個 kind 的陣列裡的位置",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/TaskEnd"
+              },
+              {
+                "required": [
+                  "task_index"
+                ],
+                "properties": {
+                  "task_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "觸發它的那一項任務在 tasks 陣列的位置"
+                  }
+                }
+              }
+            ]
+          }
+        },
         "after_task": {
           "type": "array",
           "description": "已跑完而且結束碼不是 0 的 after_task 項（第十七批）：所有任務 id 的混在一起照跑的順序；每筆另帶 task_index；index 是它在那個任務 id 的陣列裡的位置",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/TaskEnd"
+              },
+              {
+                "required": [
+                  "task_index"
+                ],
+                "properties": {
+                  "task_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "觸發它的那一項任務在 tasks 陣列的位置"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "after_kind": {
+          "type": "array",
+          "description": "〔第二十四批〕已跑完而且結束碼不是 0 的 after_kind 項，格式同 before_kind",
           "items": {
             "allOf": [
               {
@@ -139,6 +205,13 @@
         "not": {
           "required": [
             "blocked_before"
+          ]
+        }
+      },
+      {
+        "not": {
+          "required": [
+            "skipped"
           ]
         }
       }
@@ -240,6 +313,9 @@
         "blocked_before": {
           "$ref": "common.schema.json#/$defs/ID"
         },
+        "skipped": {
+          "$ref": "#/properties/skipped"
+        },
         "hooks": {
           "type": "object",
           "required": [
@@ -278,6 +354,13 @@
             "not": {
               "required": [
                 "blocked_before"
+              ]
+            }
+          },
+          {
+            "not": {
+              "required": [
+                "skipped"
               ]
             }
           }

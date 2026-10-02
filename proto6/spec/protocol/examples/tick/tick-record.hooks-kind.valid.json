@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "seq": 11,
+  "ran": 2,
+  "tasks": [],
+  "hooks": {
+    "before_kind": [
+      {
+        "id": "mark",
+        "index": 0,
+        "task_index": 1,
+        "exit": 3
+      }
+    ],
+    "after_task": [],
+    "after_kind": [
+      {
+        "id": "0",
+        "index": 0,
+        "task_index": 0,
+        "exit": 1
+      }
+    ],
+    "after_every_task": []
+  },
+  "ended": true,
+  "exit": 0
+}
