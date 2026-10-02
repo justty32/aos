@@ -1,3 +1,5 @@
+> 封存 2026-10-02：09-30 審稿與第十八～二十批（含 cgroup／git）改寫計畫、交接、核對報告，批次已結束；結論已由 proto6/spec（settled/ 與 settled/deferred/）與裁定紀錄 proto6/notes/verdicts/09～11 吸收
+
 ← [審稿索引](README.md)
 
 本輪先分工獨立審閱 `proto6/notes/`（排除 archive）與 `proto6/spec/`，按後批優先核對裁定、文字、schema 與範例；完成獨立發現後才讀 Fable 報告，再逐條回查原文、去重。第一段驗證 **79 條**；第二段列 **8 條新發現：必修 4、設計問題 1、建議 1、要使用者裁定 2**。我認為最嚴重的三條是：**Fable 裁-1 的借權執行與 key 隔離承諾衝突、新必-1 的資源故障連取消與收結果都擋住、新必-3 的兩個 daemon 可能互相清殺工作**。全程未修改 repo、未 commit。

@@ -1,3 +1,5 @@
+> 封存 2026-10-02：10-01 spec 統一更新的 astra 審查，已由裁定紀錄 proto6/notes/verdicts/11-tick-as-unit.md 的 2026-10-01 第二批全部處理
+
 # astra 審查：10-01 spec 統一更新
 
 ← [notes](../../README.md)

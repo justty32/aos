@@ -131,7 +131,7 @@
 
 ### 2026-10-01 第二批：astra 審查與使用者裁定落實
 
-〔使用者 2026-10-01〕對 [astra 審查](../../notes/reviews/2026-10-01/astra-spec-sync-report.md) 的處理（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)）：
+〔使用者 2026-10-01〕對 astra 審查 的處理（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)）：
 
 - **必修 1～9 已修。** 例如擋板改成「daemon 照常叫，由 tick 自己擋」、舊 daemon 才用的依賴移到上面「只適用舊 daemon」、`AOS_TICK_TOKEN` 改標「現行控制不使用；舊通道憑證暫緩」（[C-10](conventions.md)）、H-036 改連 walkthrough。
 - **設計 1（`aos-cg` 收尾會殺到自己）**：記在暫緩區，這輪不改（daemon 那側本來就暫緩）。

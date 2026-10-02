@@ -1,3 +1,5 @@
+> 封存 2026-10-02：09-30 審稿與第十八～二十批（含 cgroup／git）改寫計畫、交接、核對報告，批次已結束；結論已由 proto6/spec（settled/ 與 settled/deferred/）與裁定紀錄 proto6/notes/verdicts/09～11 吸收
+
 ← [審稿索引](README.md)
 
 # proto6 notes 與 spec 審稿報告（第十七批之後）

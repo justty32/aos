@@ -1,3 +1,5 @@
+> 封存 2026-10-02：09-30 審稿與第十八～二十批（含 cgroup／git）改寫計畫、交接、核對報告，批次已結束；結論已由 proto6/spec（settled/ 與 settled/deferred/）與裁定紀錄 proto6/notes/verdicts/09～11 吸收
+
 # 把 cgroup 與 git 納入 tick／daemon 基礎：改寫計畫（待使用者裁定）
 
 ← [審稿索引](README.md)｜依據：[第二十批](../../verdicts/11-tick-as-unit.md)（追答 8、9，疑點裁定 1～8，進行順序）、[第十九批](../../verdicts/10-tick-minimal-core.md)（疑點裁定 8、9：cgroup 常沒 sudo、git 常不能用，採 a＋b）、[第十八批](../../verdicts/09-special-computing-os.md)（第 3、8、17 條，Q19～Q21、Q31）｜上一輪計畫：[batch20-plan](batch20-plan.md)｜落點表：[batch20-cg-git-map.json](batch20-cg-git-map.json)

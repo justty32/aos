@@ -14,3 +14,5 @@
 | [2026-09-29-systemd-split.md](2026-09-29-systemd-split.md) | 2026-09-29 | 被裁定第十四批「初版不用 systemd」推翻 |
 | [2026-09-29-llm-scheduler-options.md](2026-09-29-llm-scheduler-options.md) | 2026-09-29 | 由 [縮短版](../2026-09-29-llm-scheduler-options.md) 取代 |
 | [2026-09-29-dependency-review.md](2026-09-29-dependency-review.md) | 2026-09-29 | 由 [縮短版](../2026-09-29-dependency-review.md) 取代 |
+| [reviews-2026-09-30/](reviews-2026-09-30/README.md) | 2026-10-02 | 09-30 審稿（Fable／astra 報告、items 87 列）與第十八、十九、二十批及納入 cgroup／git 的改寫計畫、落點表、交接、核對報告；批次已結束，結論已被 spec（settled/、settled/deferred/）與裁定 09～11 吸收 |
+| [reviews-2026-10-01/astra-spec-sync-report.md](reviews-2026-10-01/astra-spec-sync-report.md) | 2026-10-02 | 10-01 spec 統一更新的 astra 審查；裁定 11 的 10-01 第二批已全部處理 |
