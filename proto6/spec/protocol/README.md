@@ -2,7 +2,7 @@
 
 ← [規格入口](../README.md)｜[名詞](../terms.md)｜[daemon](../settled/daemon/README.md)｜[通用 tick](../settled/tick.md)｜[inst](../base/inst.md)｜[使用者裁定](../../notes/2026-09-29-verdicts.md)｜[條號索引](readme/05-條號索引.md#p-index)
 
-2026-09-29 依 node 架構整合，2026-09-30 依第十八批改成純格式篇，依第二十批改時間單位與 tick 核心的格式。本篇把主規格落成**程式之間**的欄位、JSON、schema、範例、argv 與結束碼。人手操作見 [CLI](../cli.md)；本篇定機器用的形狀，同一批程式人也能直接跑（[通則](../README.md#原則能下指令能管檔案就能交給-agent)）。
+2026-09-29 依 node 架構整合，2026-09-30 依第十八批改成純格式篇，依第二十批改時間單位與 tick 核心的格式。本篇把主規格落成**程式之間**的欄位、JSON、schema、範例、argv 與結束碼。人手操作見 [CLI](../cli.md)；本篇定機器用的形狀，同一批程式人也能直接跑（[通則](../readme/01-來源原則平台與交付.md#原則能下指令能管檔案就能交給-agent)）。
 
 ## 分檔目錄
 

@@ -1,6 +1,6 @@
 # LLM 排程器：決定、現況與自製 vs LiteLLM 的比較
 
-← [筆記索引](README.md)｜裁定：[第十三批](verdicts/04-late-day-directions.md#第十三批llm-排程器同日晚已落進-spec)｜spec：[S-301～S-305](../spec/scheduling/llm.md)（S-306 已刪）
+← [筆記索引](README.md)｜裁定：[第十三批](verdicts/04-late-day-directions/01-下班前方向與第十三批.md#第十三批llm-排程器同日晚已落進-spec)｜spec：[S-301～S-305](../spec/scheduling/llm.md)（S-306 已刪）
 
 2026-09-29 晚，使用者改口：LiteLLM 不進標準，只當可選的 endpoint；aos 自己的 LLM 排程器也做成可選。原本的比較筆記（逐項清單、估時、拍板題）已封存，見 archive/2026-09-29-llm-scheduler-options.md（已封存檔 2026-09-29-llm-scheduler-options.md，索引見 [archive/README.md](archive/README.md)）。本頁只留決定、現況與以後還用得到的比較。
 
