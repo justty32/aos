@@ -19,21 +19,21 @@
 
 ## B-202：後代清空才算結束〔建議預設，未拍板〕
 
-〔使用者方向 2026-09-30，第二十批追答 8；取代第十九批「本條是標準配備的 cgroup 框」〕cgroup 拆成兩塊：node 框、資源上限與一格結束後的收尾歸 daemon（[B-601](../settled/deferred/daemon/runtime.md)、[B-604](../settled/deferred/daemon/lifecycle.md)、[B-605](../settled/deferred/daemon/cgroup.md)）；每項任務一框是普通程式 `aos-cg`，要的任務才在 argv 包，行為正本在 [B-634](../settled/tick/cg.md)。**放棄「沒包裝的任務一結束就清殘留」。**後代怎麼收以 daemon 那側的 B-601（runner 管名下整棵樹，有 cgroup 時框兜底）、B-604（收尾）為完整正本；本條其餘只補串流收完與結果發布。
+〔使用者方向 2026-09-30，第二十批追答 8；取代第十九批「本條是標準配備的 cgroup 框」〕cgroup 拆成兩塊：node 框、資源上限與一格結束後的收尾歸 daemon（[B-601](../settled/deferred/daemon/runtime.md)、[B-604](../settled/deferred/daemon/lifecycle.md)、[B-605](../settled/deferred/daemon/cgroup.md)）；每項任務一框是普通程式 `aos-cg`，要的任務才在 argv 包，行為正本在 [B-634](../settled/deferred/cg.md)。**放棄「沒包裝的任務一結束就清殘留」。**後代怎麼收以 daemon 那側的 B-601（runner 管名下整棵樹，有 cgroup 時框兜底）、B-604（收尾）為完整正本；本條其餘只補串流收完與結果發布。
 
 執行器保存安全程序識別（例如 pidfd；跨重啟再核對 boot ID、PID、starttime），不拿可能重用的裸 PID 殺程序。cgroup 放在所屬 node 子樹；限制與計量只用已裝 module。
 
 主程序退出後仍須清空後代、排空捕獲串流、完整發布結果，才能宣告正常完成。後代另開 session 也不能漏掉；有 cgroup 的受管範圍（daemon 的框、`aos-cg` 的框）用 cgroup 驗證全空（例如 `cgroup.events` 的 populated），強制清理用 `cgroup.kill`；不能只查主 PID 或 process group。兩種清法各有適用範圍：
 
 - **一般 attempt、once 與整格 tick**（daemon 那側）：先 TERM、等寬限、再 KILL。寬限分兩種，不混用：runner 處理 inst 自己的逾時，照 [inst](inst.md) 的 2 秒；daemon 收尾（停機、解除登記、砍掉在跑的 once）用 `shutdown_grace_ms`，流程是 [B-604](../settled/deferred/daemon/lifecycle.md) 的「收尾」；一格正常結束後的殘留由 runner 直接清，本輪 daemon 重開清不掉舊程序（[B-601](../settled/deferred/daemon/runtime.md)、[B-603](../settled/deferred/daemon/lifecycle.md)）。
-- **`aos-cg` 的 `task-*` 框**：行為正本在 [B-634](../settled/tick/cg.md)（argv 見 [P-211](../settled/protocol/tick.md)）。
+- **`aos-cg` 的 `task-*` 框**：行為正本在 [B-634](../settled/deferred/cg.md)（argv 見 [P-211](../settled/protocol/tick.md)）。
 - **沒包 `aos-cg` 的任務留下的後代**：核心不清，留下的程序一直留到這格結束；daemon 開的格由 daemon 在格後收尾（[B-601](../settled/deferred/daemon/runtime.md)）；人手或 cron 跑的沒人收，還握著鎖 fd 的會讓下一格回 75（[B-602](../settled/tick.md)）。
 
 〔使用者方向 2026-09-30，第十八批〕「tick 與後代清空」只看 `tick` 與所有 `task-*`；node 在自己框下另開的子框怎麼處理，以 [B-605](../settled/deferred/daemon/cgroup.md) 為正本。
 
 強制清理後代時記失敗，不以主程序 exit 0 冒稱成功。未確認清空就交待處理、不還名額；已裝 module 在移除空框前取必要計量。
 
-**驗收：**工具 fork＋setsid 後主程序退出，後代仍被清掉；確認全空才釋放名額。清理權限不足時不能回報已完成。沒包 `aos-cg` 的任務留下的後代在 daemon 格後收尾時被清，人手跑的握著鎖 fd 時下一格回 75；包了 `aos-cg` 的驗收見 [B-634](../settled/tick/cg.md)。
+**驗收：**工具 fork＋setsid 後主程序退出，後代仍被清掉；確認全空才釋放名額。清理權限不足時不能回報已完成。沒包 `aos-cg` 的任務留下的後代在 daemon 格後收尾時被清，人手跑的握著鎖 fd 時下一格回 75；包了 `aos-cg` 的驗收見 [B-634](../settled/deferred/cg.md)。
 
 ## B-203：取消與逾時〔建議預設，未拍板〕
 

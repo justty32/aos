@@ -54,7 +54,7 @@
 
 〔使用者方向 2026-09-29〕**沒裝 module，就不在該層另記／另限；已生效的父層限制照舊。** CPU、記憶體與 pids 由已啟用 module 配合標準配備的 cgroup 框落實，cgroup 子樹對上 node 的資源分配層級；磁碟額度可選且只記帳，見 [身分與 OS 資源](../base/identity-resources.md)。LLM module 的份額與池端限制見 [LLM](llm.md)。同一資料夾的 tick 互斥屬 tick 核心（[B-602](../settled/tick.md)），不是可關掉的資源 module。
 
-〔使用者方向 2026-09-30，第十九批，疑點裁定 8〕**cgroup 相關的保證分兩級**。標準配備的 cgroup 框走完整路（cgroup v2 委派子樹，[B-605](../settled/deferred/daemon/cgroup.md)）時，上面的 CPU、記憶體、pids 上限是 node 框的**總量**上限，照父子框巢狀。走備援（[B-631](../settled/tick/cg.md)）仍算全掛，但只剩：
+〔使用者方向 2026-09-30，第十九批，疑點裁定 8〕**cgroup 相關的保證分兩級**。標準配備的 cgroup 框走完整路（cgroup v2 委派子樹，[B-605](../settled/deferred/daemon/cgroup.md)）時，上面的 CPU、記憶體、pids 上限是 node 框的**總量**上限，照父子框巢狀。走備援（[B-631](../settled/deferred/cg.md)）仍算全掛，但只剩：
 
 - 每個程序各自的上限（記憶體、CPU 時間），不是總量，也不照父子巢狀：子層多開幾個程序就能超過分到的額度；
 - 沒有 pids 上限；
@@ -100,7 +100,7 @@
 
 〔使用者方向 2026-09-29〕沒裝 module＝該層不另記／另限，不等於父層限制消失；tick 互斥與程序清空不是可關閉的 module。已安裝但 controller／權限不可用是失敗，不能降成「沒裝」後繼續派工；走 cgroup 備援不算這種失敗，見下。
 
-〔使用者方向 2026-09-30，第十九批，疑點裁定 8；範本落法暫定〕**走 cgroup 備援時**（daemon 的 `cgroup_*` 佈建動作回 `unsupported`、`node.show` 的 `cgroup` 是 null，[B-605](../settled/deferred/daemon/cgroup.md)）：預設範本把它當成備援級，不當套用失敗。CPU、記憶體、pids 配額照算、照記帳，照額度決定放不放新派工；資源狀態檔該成員記 `fallback:true`、`applied:true`（[P-804](../protocol/kernel-tasks.md)），不寫事項。硬限制只剩 [B-631](../settled/tick/cg.md) 的每程序上限（S-203）。總用量量不到，CPU、記憶體、pids 的用量照缺項處理，不當成零，也不記 `over_limit`。
+〔使用者方向 2026-09-30，第十九批，疑點裁定 8；範本落法暫定〕**走 cgroup 備援時**（daemon 的 `cgroup_*` 佈建動作回 `unsupported`、`node.show` 的 `cgroup` 是 null，[B-605](../settled/deferred/daemon/cgroup.md)）：預設範本把它當成備援級，不當套用失敗。CPU、記憶體、pids 配額照算、照記帳，照額度決定放不放新派工；資源狀態檔該成員記 `fallback:true`、`applied:true`（[P-804](../protocol/kernel-tasks.md)），不寫事項。硬限制只剩 [B-631](../settled/deferred/cg.md) 的每程序上限（S-203）。總用量量不到，CPU、記憶體、pids 的用量照缺項處理，不當成零，也不記 `over_limit`。
 
 驗收：工作在途時弄壞父配額或讓資源任務失敗，仍能收結果、接受取消，但不開新工作。有程序在跑時調低記憶體上限，aos 直接寫入、不等全空，資源狀態檔留下一筆超用紀錄。頂層額度檔改小到低於已分出的合計，不自動收回，只記超分、寫事項、停新派工。daemon 走 cgroup 備援時，資源任務不報套用失敗，成員記 `fallback:true`，新派工照額度記帳放行。
 

@@ -56,7 +56,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | （暫緩）舊 daemon IPC 與 helper 私有通道的 `data.code` | [P-111](../settled/deferred/protocol/daemon/provision-and-runner.md) |
 | runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](../settled/deferred/protocol/daemon/provision-and-runner.md) |
 | inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
-| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：擋下本格後面的項靠 tasks-blocked）；系統級任務 `aos-git`、普通程式 `aos-cg` 的結束碼（`aos-tick-check-task`、`aos-as` 暫緩） 〔2026-10-01 殘留註記〕`aos-git`（P-205）第十七批暫緩。 | [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)、P-212、[P-205](../settled/protocol/tick.md)、P-211（[tick 協議](../settled/protocol/tick.md)） |
+| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：擋下本格後面的項靠 tasks-blocked）；系統級任務 `aos-git`、普通程式 `aos-cg` 的結束碼（`aos-tick-check-task`、`aos-as` 暫緩） 〔2026-10-01 殘留註記〕`aos-git`（P-205）第十七批暫緩。〔2026-10-02〕`aos-cg`（P-211）第二十三批暫緩。 | [P-203](../settled/protocol/tick.md)、[P-204](../settled/protocol/tick.md)、P-212、[P-205](../settled/protocol/tick.md)、P-211（[tick 協議](../settled/protocol/tick.md)） |
 | tick–daemon 通道的 `data.code`（含部件關閉的 `not_available`）；客戶端的 `no_channel` | [P-119](../settled/deferred/protocol/daemon/channel.md) |
 | （暫緩，第十八批）`aos-mq get`／`post` 結束碼及 `not_available` 診斷 | [P-206](../settled/deferred/protocol/tick.md) |
 | 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
@@ -174,7 +174,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-208 | 收件區權限 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-209 | 待決與跨篇 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-210 | 預設範本與恢復前驗證 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
-| P-211 | aos-cg：每項一框 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
+| P-211 | aos-cg：每項一框〔2026-10-02 第二十三批暫緩〕 | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-212 | aos-as：切換帳號（暫緩） | [settled/deferred/protocol/tick.md](../settled/deferred/protocol/tick.md) |
 | P-213 | 每項結束碼紀錄、tasks-blocked 與擋板檔 | [settled/protocol/tick.md](../settled/protocol/tick.md) |
 | P-214 | `modules["tasks-blocked"]`（第十六批） | [settled/protocol/tick.md](../settled/protocol/tick.md) |

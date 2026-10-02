@@ -586,7 +586,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **追加**：使用者原話：「名單這塊OK，但如果allow不寫，然後deny裏面又出現預設賬號，那就報錯。」——`allow` 省略、`deny` 比得到預設帳號（含前綴、單獨 `*`，「出現」照比得到算，AI 隊解讀）＝設定錯、回 1。`allow` 有寫時同樣情況怎麼辦，AI 隊提了 A7（建議一樣報錯），待裁定。
 - 使用者問：帳號這功能目前用在哪、是不是只出現在 daemon 設定？——現行程式沒有任何地方切帳號（全部用開的人的帳號跑）；inst 與任務的 `user` 已撤回（寫了當陌生鍵）。spec 裡另外還提到帳號的，都是暫緩或舊設計：tick 任務包 `aos-as` 換帳號（B-303，暫緩）、身分額度（B-301）、工作接件記 UID（base/execution.md）。帳號模組做出來後，它是唯一現行的切帳號方式，只出現在 daemon 設定檔（`modules.account` 與每項的 `account`）。
 
-- **`aos-as` 暫緩**：使用者原話：「aos-as弄成暫緩。　目前切賬號這件事，都只在daemon config中做」——P-212 整條搬到 [tick 協議暫緩區](../../spec/settled/deferred/protocol/tick.md)；[tick 核心](../../spec/settled/tick.md)「任務的帳號」、[tick 協議](../../spec/settled/protocol/tick.md) P-202／P-203、[範本](../../spec/settled/deferred/template.md)、[名詞](../../spec/settled/terms.md)、[aos-cg](../../spec/settled/tick/cg.md)、[git](../../spec/settled/deferred/git.md)、[spec 入口](../../spec/README.md)、[plan 入口](../../plan/README.md)第五段改成「tick 不切帳號，要換帳號在 daemon 設定檔拆成另一項」；整理區 README 待問 1 結案。
+- **`aos-as` 暫緩**：使用者原話：「aos-as弄成暫緩。　目前切賬號這件事，都只在daemon config中做」——P-212 整條搬到 [tick 協議暫緩區](../../spec/settled/deferred/protocol/tick.md)；[tick 核心](../../spec/settled/tick.md)「任務的帳號」、[tick 協議](../../spec/settled/protocol/tick.md) P-202／P-203、[範本](../../spec/settled/deferred/template.md)、[名詞](../../spec/settled/terms.md)、[aos-cg](../../spec/settled/deferred/cg.md)、[git](../../spec/settled/deferred/git.md)、[spec 入口](../../spec/README.md)、[plan 入口](../../plan/README.md)第五段改成「tick 不切帳號，要換帳號在 daemon 設定檔拆成另一項」；整理區 README 待問 1 結案。
 
 - **A6、A7 照建議**：使用者原話：「A67都按你建議」。A6：開起來與重讀時就查每項帳號（查不到開起來回 1、重讀整份不套用），開起來之後才被刪的那一次 `exit=1`、照跑；A7：`allow` 有寫時 `deny` 比得到預設帳號一樣算設定錯。
 
@@ -866,3 +866,15 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 7. schema `daemon-mq` 的 `Message` 把 `to` 列為必有、`Ok` 把 `delivered` 列為必有（daemon 現在一定放）。
 
 改到的地方：程式 `lib/aos_daemon_mq.py`（`broadcast`／`channel`、`item_subscribe()`、`to`、`delivered`）、`lib/aos_daemon.py`（`Item.subscribe`、讀 `mq.subscribe`）、`lib/aos_daemon_reload.py`（訂閱照新設定）、`lib/aos_mq.py`（`--all`、`--channel`、`--to`、印送達數）；測試 `tests/test_mq.py`（既有的信件比對加 `to`；新 `Broadcast` 十一條）；spec [B-645](../../spec/settled/daemon/mq.md)、[P-125](../../spec/settled/protocol/daemon/mq.md)、[P-120](../../spec/settled/protocol/daemon/core.md)（每項的 `mq`）、[名詞](../../spec/settled/terms.md)、[驗收入口](../../spec/conformance.md)；schema `daemon-mq`（`broadcast`、`channel`、`to`、`delivered`）、`daemon-core-config`（`Item.mq`）；範例 `examples/daemon/mq_reply.ok.valid.json`、`mq_reply.taken.valid.json`、`mq_reply.message-extra.invalid.json`、`mq_reply.message-no-from-socket.invalid.json` 改寫，新 `mq_request.{broadcast,channel,peek-to}.valid.json`、`mq_request.{broadcast-false,channel-empty,channel-no-msg,send-and-broadcast,take-to-string}.invalid.json`、`mq_reply.broadcast-none.valid.json`、`mq_reply.{message-no-to,ok-no-delivered}.invalid.json`、`core-config.mq-subscribe.valid.json`、`core-config.mq-subscribe-string.invalid.json`；[src/py README](../../src/py/README.md)；[plan m3m](../../plan/m3m-daemon-modules.md) 模組四。
+
+<a id="2026-10-02-第二十三批aos-cg-搬暫緩區"></a>
+
+## 2026-10-02 第二十三批：aos-cg 搬暫緩區
+
+〔使用者裁定 2026-10-02，公司〕10-01 晚使用者說 `aos-cg` 不需要留了（daemon 收屍模組已經一項一框）；今天原話：「aos-cg搬進暫緩區。」
+
+- 普通程式 `aos-cg`（B-634，連同撤回的 B-631）整篇從 `spec/settled/deferred/cg.md` 搬到 [暫緩區 cg.md](../../spec/settled/deferred/cg.md)；格式 P-211 搬到 [tick 協議暫緩區](../../spec/settled/deferred/protocol/tick.md)，現行協議篇留一行指過去。條號保留、不重用，原文照留。
+- 理由：每項一框、跑完收殘留現在由 daemon 收屍模組做（[B-644](../../spec/settled/daemon/cgroup.md)）；`aos-cg` 要的工作資料夾框是舊 daemon 的（暫緩區 B-605），從沒寫過程式。
+- 現行沒有普通程式了（`aos-as`、`aos-tick-check-task`、`aos-cg` 都在暫緩區）。
+
+改到的地方：spec [暫緩區 cg.md](../../spec/settled/deferred/cg.md)（原 `tick/cg.md`，加暫緩說明、改相對連結）、[暫緩區入口](../../spec/settled/deferred/README.md)、[tick 協議暫緩區](../../spec/settled/deferred/protocol/tick.md)（P-211）、[tick 協議](../../spec/settled/protocol/tick.md)、[通用 tick](../../spec/settled/tick.md)、[tick 子篇入口](../../spec/settled/tick/README.md)、[整理區入口](../../spec/settled/README.md)、[名詞](../../spec/settled/terms.md)、[驗收入口](../../spec/conformance.md)、[protocol README](../../spec/protocol/README.md)；指向 `tick/cg.md` 的連結全部改指新位置；[系統級任務清單](../2026-10-01-tick-system-tasks.md)、[plan README](../../plan/README.md)。

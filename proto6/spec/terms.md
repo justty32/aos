@@ -10,7 +10,7 @@
 
 〔使用者方向 2026-09-30，第二十批〕**保證跟著「掛了什麼」走**：tick 核心的三件事（[T-07](settled/terms.md#t-07tick-核心)）不靠任何系統級任務也成立；其餘保證來自任務表上掛的[系統級任務](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)、任務包的普通程式與 daemon。例如 tick 本身不保證整格原子；掛了 `aos-git` 三項而且 git 能用，也只保證 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔）是原子的（[B-630](settled/deferred/git.md)）。第十九批的「保證以標準配備全掛為前提」與「完整級／備援級兩級保證」都撤了。 〔2026-10-01 殘留註記〕現行沒有系統級任務（第十八批）；`aos-git` 第十七批暫緩（[B-630](settled/deferred/git.md)），提交與還原改用 hook 加 git 指令（[B-635](settled/tick/hooks.md)）。
 
-〔使用者方向 2026-09-30，納入 cgroup 與 git〕**git 與 cgroup 是「有就用」**：現行規則在兩者都沒有時也要成立；有的時候多出的保證寫在各條（git：[B-630、B-622](settled/deferred/git.md)；cgroup：[B-605](settled/deferred/daemon/cgroup.md)、[B-634](settled/tick/cg.md)）。
+〔使用者方向 2026-09-30，納入 cgroup 與 git〕**git 與 cgroup 是「有就用」**：現行規則在兩者都沒有時也要成立；有的時候多出的保證寫在各條（git：[B-630、B-622](settled/deferred/git.md)；cgroup：[B-605](settled/deferred/daemon/cgroup.md)、[B-634](settled/deferred/cg.md)）。
 
 〔建議預設，未拍板〕各條的保證寫成「掛了哪一項系統級任務、包了哪個普通程式、daemon 有沒有 cgroup 時成立什麼」；沒掛的後果不逐條寫。
 

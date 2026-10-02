@@ -33,7 +33,7 @@
 | tick 核心三件事、tick 是衡量基準；投件權就是執行權 | [T-07](settled/terms.md)、[T-08](terms.md) |
 | aos 結束碼慣例、狀態資料夾名 `AOS_DIRNAME`、環境變數總表、設定檔頂層 `cwd` 與指示詞展開範圍 | [C-08、C-09、C-10、C-11](settled/conventions.md) |
 | 最核心 daemon（定期叫 `aos-exec`）、控制模組與 `aos-ctl`、重讀設定、記住狀態、收屍／cgroup、訊息與 `aos-mq`、帳號 | [B-640](settled/daemon/core.md)、[B-641](settled/daemon/control.md)、[B-642](settled/daemon/reload.md)、[B-643](settled/daemon/state.md)、[B-644](settled/daemon/cgroup.md)、[B-645](settled/daemon/mq.md)、[B-646](settled/daemon/account.md)；格式 [P-120](settled/protocol/daemon/core.md)、[P-121](settled/protocol/daemon/control.md)、[P-122](settled/protocol/daemon/reload.md)、[P-123](settled/protocol/daemon/state.md)、[P-124](settled/protocol/daemon/cgroup.md)、[P-125](settled/protocol/daemon/mq.md)、[P-126](settled/protocol/daemon/account.md)；用語 [T-11](settled/terms.md) |
-| 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-633](settled/tick.md)、[B-629](settled/deferred/template.md)、[B-632](settled/deferred/git.md)；普通程式 [B-303](settled/deferred/helper.md)、[B-621](settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[B-634](settled/tick/cg.md)（`aos-cg`）；git [B-630、B-622](settled/deferred/git.md)；node 框 [B-605](settled/deferred/daemon/cgroup.md) |
+| 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-633](settled/tick.md)、[B-629](settled/deferred/template.md)、[B-632](settled/deferred/git.md)；普通程式 [B-303](settled/deferred/helper.md)、[B-621](settled/deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)、[B-634](settled/deferred/cg.md)（`aos-cg`）；git [B-630、B-622](settled/deferred/git.md)；node 框 [B-605](settled/deferred/daemon/cgroup.md) |
 | node 與兼任角色、兩張註冊表 | [T-02](terms.md) |
 | 上下層判定（預設看資料夾、登記覆蓋）〔暫緩〕 | [B-628](settled/deferred/tick.md)、[B-606](settled/deferred/daemon/registration.md) |
 | node 登記、喚醒、重啟、逐層重建與核心收尾〔暫緩，部分被 B-640、B-641 取代〕 | [B-601](settled/deferred/daemon/runtime.md)、[B-603、B-604、B-611](settled/deferred/daemon/lifecycle.md)、[B-606、B-607](settled/deferred/daemon/registration.md) |
@@ -121,8 +121,8 @@
 | B-628 | settled/deferred/tick.md | 〔第十九批〕上下層判定：預設看資料夾包含、可登記覆蓋 | T3 |
 | B-629 | settled/deferred/template.md（〔2026-10-01 第十八批〕暫緩，原 settled/tick/template.md） | 〔第二十批換主題〕標準任務表範本 | T3 |
 | B-630 | settled/deferred/git.md（〔2026-10-01 第十七批〕暫緩） | 〔第二十批換主題〕git：開格、存檔點、收尾 | T3 |
-| B-634 | settled/tick/cg.md | 〔納入 cgroup 與 git〕aos-cg：每項一框（從 B-202 的草稿搬進整理區） | T3 |
-| B-631 | settled/tick/cg.md | 〔第二十批撤，留殘根〕cgroup 框的備援 | T3 |
+| B-634 | settled/deferred/cg.md | 〔納入 cgroup 與 git〕aos-cg：每項一框（從 B-202 的草稿搬進整理區）〔2026-10-02 第二十三批搬暫緩區〕 | T3 |
+| B-631 | settled/deferred/cg.md | 〔第二十批撤，留殘根〕cgroup 框的備援 | T3 |
 | B-632 | settled/deferred/git.md（〔2026-10-01 第十七批〕暫緩） | 〔第二十批換主題〕結束碼紀錄取代日誌：沒有 git 時怎麼做 | T3 |
 | B-633 | settled/tick.md | 〔第二十批〕每項結束碼紀錄與格數 | T3 |
 | B-635 | settled/tick/hooks.md | 〔2026-10-01 第六批〕hooks：照表跑完之後跑的一串（頂層鍵 `hooks.after_all`）；〔2026-10-01 第十七批〕加 `before_all`、`after_task`、`after_every_task`、`AOS_TASK_EXIT` | 第六批、第十七批 |
@@ -138,7 +138,7 @@
 | P-117 | settled/deferred/protocol/daemon/channel.md | 〔第十九批〕通道變數與憑證 | T2 |
 | P-118 | settled/deferred/protocol/daemon/channel.md | 〔第十九批〕掛行程與砍掉 | T2 |
 | P-119 | settled/deferred/protocol/daemon/channel.md | 〔第十九批〕送訊息、取訊息與通道錯誤碼 | T2 |
-| P-211 | settled/protocol/tick.md | 〔第二十批〕`aos-cg`：每項一框 | T3 |
+| P-211 | settled/deferred/protocol/tick.md | 〔第二十批〕`aos-cg`：每項一框〔2026-10-02 第二十三批搬暫緩區〕 | T3 |
 | P-212 | settled/deferred/protocol/tick.md | 〔第二十批〕`aos-as`：切換帳號（〔2026-10-01 第十三批〕暫緩） | T3 |
 | P-213 | settled/protocol/tick.md | 〔第二十批〕每項結束碼紀錄、停格檔與擋板檔（〔2026-10-01 第十六批〕停格檔改名 tasks-blocked） | T3 |
 | P-214 | settled/protocol/tick.md | 〔2026-10-01 第十六批〕`modules["tasks-blocked"]` 的寫法 | 第十六批 |
@@ -445,9 +445,9 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 ### cgroup（有就用）
 
-> **大部分暫緩**（2026-10-01）：daemon 那側（B-605、B-601、B-603、B-604、B-606、B-609、B-611、B-613 的 cgroup 部分）已搬到[暫緩區](settled/deferred/README.md)；只有 `aos-cg`（B-634）那一句仍是現行條文的驗收。
+> **大部分暫緩**（2026-10-01）：daemon 那側（B-605、B-601、B-603、B-604、B-606、B-609、B-611、B-613 的 cgroup 部分）已搬到[暫緩區](settled/deferred/README.md)；〔2026-10-02 第二十三批〕`aos-cg`（B-634）也搬暫緩區，這節整節暫緩。現行的收屍驗收見 B-644 那句（daemon 模組那節）。
 
-〔納入 cgroup 與 git〕正本 [B-605](settled/deferred/daemon/cgroup.md)、[B-634](settled/tick/cg.md)，句末標條號。
+〔納入 cgroup 與 git〕正本 [B-605](settled/deferred/daemon/cgroup.md)、[B-634](settled/deferred/cg.md)，句末標條號。
 
 - WSL 的 shell 直接跑（在 `/init.scope`）與用沒加 `Delegate=yes` 的 scope 開：印 `cgroup=off`；用 `systemd-run --user --scope -p Delegate=yes` 開：印 `cgroup=on`；cgroup v1、混合模式自動偵測一律 `off`（B-605）。
 - 任務用 `setsid` 加 double fork 留下的殘留，格後被 `cgroup.kill`（B-601）。

@@ -50,7 +50,7 @@
    - `argv`、目前 cwd；
    - 環境：用 `envs` 的 `clear` 寫下目前的環境，但**拿掉 `AOS_TICK_TOKEN`、`AOS_DAEMON_SOCKET`、`AOS_TICK_LOCK_FD`**〔暫定，astra 審整理區必-2〕。憑證只放記憶體、不寫檔（[B-612](daemon/channel.md)）；fd 經 helper 傳過去號碼可能變。這三個由 runner 最後補上正確的值（[B-609](daemon/helper-actions.md)）；
    - stdin／stdout／stderr 寫成繼承，因為 runner 已拿交來的三個 fd 當自己的 stdio。
-2. 帶本格憑證經通道送 `node.provision` 的 `spawn_as`（[B-609](daemon/helper-actions.md)；參數與限制不變：誰能叫、帳號要在身分額度內、放在哪）。同一包交出繼承到的鎖 fd（`AOS_TICK_LOCK_FD`）、一條回報 pipe 的寫端，另交自己的 stdin、stdout、stderr，讓那一項照任務表寫的 stdio 走。自己在 `aos-cg` 的 `task-*` 框裡時（`aos-cg -- aos-as …`），一併帶那個框當 `frame`（[B-634](../tick/cg.md)、[B-609](daemon/helper-actions.md)）。〔astra 報告設計 1〕這時框裡已有 `aos-cg` 自己與 `aos-as`，跟 helper 要求空框衝突，記在[暫緩區已知問題](README.md#已知的設計問題記錄這輪不改)，這輪不改。
+2. 帶本格憑證經通道送 `node.provision` 的 `spawn_as`（[B-609](daemon/helper-actions.md)；參數與限制不變：誰能叫、帳號要在身分額度內、放在哪）。同一包交出繼承到的鎖 fd（`AOS_TICK_LOCK_FD`）、一條回報 pipe 的寫端，另交自己的 stdin、stdout、stderr，讓那一項照任務表寫的 stdio 走。自己在 `aos-cg` 的 `task-*` 框裡時（`aos-cg -- aos-as …`），一併帶那個框當 `frame`（[B-634](../deferred/cg.md)、[B-609](daemon/helper-actions.md)）。〔astra 報告設計 1〕這時框裡已有 `aos-cg` 自己與 `aos-as`，跟 helper 要求空框衝突，記在[暫緩區已知問題](README.md#已知的設計問題記錄這輪不改)，這輪不改。
 3. 讀 pipe 到 EOF，拿到 runner 的回報（[P-110](protocol/daemon/provision-and-runner.md)），照它結束：正常結束回同一碼，被訊號結束就用同一個訊號結束自己；刪掉那份 inst。runner 先清空它名下的程序才寫回報（B-601），所以 `aos-as` 結束時原指令與它的後代都已結束。
 
 - **鎖**：別的帳號的程序繼承同一份鎖 fd，照 [B-602](../tick.md) 核對得到。

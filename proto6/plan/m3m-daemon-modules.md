@@ -124,7 +124,7 @@ roots、`node_id` 改名、`identity_grant`、`provision`、helper 固定設定�
 
 > **已做**（2026-10-01 第十二批）：C1～C4 使用者原話「都先按照建議。」下面草稿照原樣留著；做法與 AI 隊定的細節見篇末[做完了沒](#做完了沒)，正本 [B-644](../spec/settled/daemon/cgroup.md)。
 
-舊規劃：[暫緩區 B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；tick 側 [`aos-cg`（B-634）](../spec/settled/tick/cg.md)。
+舊規劃：[暫緩區 B-605 與各條 cgroup 部分](../spec/settled/deferred/daemon/cgroup.md)；tick 側 [`aos-cg`（B-634）](../spec/settled/deferred/cg.md)。
 
 ### 要做到什麼（最單純的版本）
 
