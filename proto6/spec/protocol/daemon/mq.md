@@ -20,7 +20,9 @@
 | `modules.mq` | 物件，至少一鍵 | 鍵＝門名，只能 `[A-Za-z0-9_]+`；值＝socket 路徑，非空字串，相對以起點為準 |
 | 每項的 `mq` | 字串陣列，可省 | 訂哪幾扇門；省或 `[]`＝不訂；重複門名算一次 |
 
-設定錯（開起來回 1、`aos-daemon: config: <說明>`；重讀時整份不套用）：`modules.mq` 不是物件或空、門名不合、值不是非空字串、兩扇門同路徑、跟控制 socket 同路徑、某項 `mq` 不是字串陣列或寫了沒有的門。重讀時每項的 `mq` 照開起來時的門核。沒掛模組時每項 `mq` 忽略。
+開起來時設定錯（回 1、`aos-daemon: config: <說明>`）：`modules.mq` 不是物件或空、門名不合、值不是非空字串、兩扇門同路徑、跟控制 socket 同路徑、某項 `mq` 不是字串陣列或寫了沒有的門。
+
+重讀時不看新的 `modules.mq`（改了只警告要重開，門定義寫壞也一樣），照開起來時的門核每項的 `mq`：不是字串陣列或寫了沒有的門才算重讀出錯、整份不套用。沒掛模組時每項 `mq` 忽略。
 
 ### 請求（每扇門一樣）
 
@@ -74,6 +76,6 @@ aos-mq take "$AOS_DAEMON_MQ_SOCKET_1"
 aos-mq send /srv/aos/B/doors/team-a/s -  < reply.json
 ```
 
-`send` 的 `<JSON>` 給 `-` 就從 stdin 讀；`take`／`peek` 不收 inst 參數，一律用 `AOS_DAEMON_INST`；`--` 開頭的旗標一律不收；參數個數要剛好。成功時 `send` 不印，`take`／`peek` 每封信一行 JSON 印到 stdout。詳見 `aos-mq --help` 或 `aos_mq.py`。
+`send` 的 `<JSON>` 給 `-` 就從 stdin 讀；`take`／`peek` 不收 inst 參數，一律用 `AOS_DAEMON_INST`；`--` 開頭的旗標一律不收；參數個數要剛好。成功時 `send` 不印，`take`／`peek` 每封信一行 JSON 印到 stdout。詳見 `lib/aos_mq.py`（`aos-mq` 不收 `--help`，當用法錯回 1）。
 
 結束碼：0＝daemon 回 `ok:true`；1＝其他，stderr 一行 `<代碼>: <說明>`，代碼為 `usage`（含 JSON 不合法）、`no_inst`、`connect`，或 daemon 回的 `unknown_inst`／`bad_request`。

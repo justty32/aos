@@ -135,6 +135,106 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "modules"
+        ],
+        "properties": {
+          "modules": {
+            "required": [
+              "cgroup"
+            ]
+          }
+        }
+      },
+      "then": {
+        "description": "掛了 cgroup 模組：每一項的 cgroup 照這裡限制",
+        "properties": {
+          "insts": {
+            "additionalProperties": {
+              "properties": {
+                "cgroup": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "modules"
+        ],
+        "properties": {
+          "modules": {
+            "required": [
+              "account"
+            ]
+          }
+        }
+      },
+      "then": {
+        "description": "掛了 account 模組：每一項的 account 照這裡限制",
+        "properties": {
+          "insts": {
+            "additionalProperties": {
+              "properties": {
+                "account": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "帳號名；省了＝預設帳號"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "modules"
+        ],
+        "properties": {
+          "modules": {
+            "required": [
+              "mq"
+            ]
+          }
+        }
+      },
+      "then": {
+        "description": "掛了 mq 模組：每一項的 mq 照這裡限制",
+        "properties": {
+          "insts": {
+            "additionalProperties": {
+              "properties": {
+                "mq": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_]+$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "if": {
     "not": {
       "required": [
@@ -172,30 +272,13 @@
           "type": "boolean"
         },
         "cgroup": {
-          "type": "object",
-          "description": "收屍／cgroup 模組掛著時這一項的上限（P-124）：鍵＝cgroup 檔名（memory.max、cpu.max、pids.max…），值＝字串，原樣寫進框；模組沒掛時忽略",
-          "additionalProperties": {
-            "type": "string"
-          }
+          "description": "收屍／cgroup 模組掛著時這一項的上限（P-124）：鍵＝cgroup 檔名（memory.max、cpu.max、pids.max…），值＝字串，原樣寫進框；模組沒掛時忽略。型別限制在根的 allOf：頂層 modules 掛了 cgroup 才限制（沒掛時寫什麼都照收，程式也忽略）"
         },
         "account": {
-          "type": "object",
-          "description": "帳號模組掛著時這一項用哪個帳號（P-126）；模組沒掛時忽略",
-          "properties": {
-            "user": {
-              "type": "string",
-              "minLength": 1,
-              "description": "帳號名；省了＝預設帳號"
-            }
-          }
+          "description": "帳號模組掛著時這一項用哪個帳號（P-126）；模組沒掛時忽略。型別限制在根的 allOf：頂層 modules 掛了 account 才限制（沒掛時寫什麼都照收，程式也忽略）"
         },
         "mq": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_]+$"
-          },
-          "description": "〔第二十五批〕訊息模組掛著時這一項訂哪幾扇門（modules.mq 的門名）；省了或空陣列＝不訂。寫了 modules.mq 沒有的門名算設定錯（schema 驗不到，validate.py 與程式另查）；同一門名寫兩次照一次算。模組沒掛時忽略"
+          "description": "〔第二十五批〕訊息模組掛著時這一項訂哪幾扇門（modules.mq 的門名）；省了或空陣列＝不訂。寫了 modules.mq 沒有的門名算設定錯（schema 驗不到，validate.py 與程式另查）；同一門名寫兩次照一次算。模組沒掛時忽略。型別限制在根的 allOf：頂層 modules 掛了 mq 才限制（沒掛時寫什麼都照收，程式也忽略）"
         }
       }
     }

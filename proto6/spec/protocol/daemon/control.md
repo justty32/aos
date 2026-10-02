@@ -40,7 +40,7 @@ schema：`proto6/spec/protocol/schemas/daemon-ctl.schema.json`（`$defs/Request`
 
 | 情況 | 回應 |
 |---|---|
-| 成功 | `{"ok":true}`（`kill`／`restart` 送出 SIGTERM 就回） |
+| 成功 | `{"ok":true}`（`kill`／`restart` 只代表請求已接受：在跑就開背景執行緒去殺，不等結果） |
 | `status` 成功 | `{"ok":true,"inst":…,"running":…,"pending":…,"paused":…,"stopped":…,"last_exit":…,"last_end":…,"next":…}` |
 | 失敗 | `{"ok":false,"error":"<代碼>","detail":"<字串>"}` |
 
@@ -76,6 +76,6 @@ aos-ctl [--socket <路徑>] wake [--skip-while-running] [--keep-schedule] [<inst
 aos-ctl [--socket <路徑>] pause|resume|status|kill|restart [<inst>]
 ```
 
-socket 取 `--socket`，沒給取 `AOS_DAEMON_CTL_SOCKET`；給了 `--socket` 就一定要寫 `<inst>`，否則 `<inst>` 省略時取 `AOS_DAEMON_INST`。`status` 把回應原樣印到 stdout，其他不印。詳見 `aos-ctl --help` 或 `aos_ctl.py`。
+socket 取 `--socket`，沒給取 `AOS_DAEMON_CTL_SOCKET`；給了 `--socket` 就一定要寫 `<inst>`，否則 `<inst>` 省略時取 `AOS_DAEMON_INST`。`status` 把回應原樣印到 stdout，其他不印。詳見 `lib/aos_ctl.py`（`aos-ctl` 不收 `--help`，當用法錯回 1）。
 
 結束碼：0＝daemon 回 `ok:true`；1＝其他，stderr 一行 `<代碼>: <說明>`，代碼為 `usage`、`no_daemon`、`no_inst`、`connect`，或 daemon 回的 `unknown_inst`／`stopped`／`bad_request`。

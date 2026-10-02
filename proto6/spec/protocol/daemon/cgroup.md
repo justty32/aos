@@ -20,7 +20,7 @@ schema：`daemon-core-config.schema.json` 的 `modules.cgroup` 與 `$defs/Item.c
 | 位置 | 型別 | 意思 |
 |---|---|---|
 | `modules.cgroup` | 物件 | 有寫就開，沒有鍵；子樹根就是 daemon 自己所在的 cgroup |
-| `insts.<inst>.cgroup` | 物件，可省 | 鍵＝cgroup 檔名（`memory.max`、`cpu.max`、`pids.max`…），值＝字串，原樣寫進該項的框；省＝不設限；模組沒掛時忽略 |
+| `insts.<inst>.cgroup` | 物件，可省 | 鍵＝cgroup 檔名（`memory.max`、`cpu.max`、`pids.max`…），值＝字串，原樣寫進該項的框；省或沒列的鍵＝不寫，既有的框（重讀時還在的項、重開沿用的框）保留舊值；模組沒掛時忽略 |
 
 **框**：根 `<根>`＝daemon 開起來時所在的 cgroup（框名叫 `daemon` 時取上一層）。`<根>/daemon` 是 daemon 自己；`<根>/i-<h>` 一項一個葉框，`<h>`＝inst 字面值 UTF-8 的 sha256 前 16 個小寫 hex。根的 `cgroup.subtree_control` 開 `cpu`、`memory`、`pids` 中根的 `cgroup.controllers` 有的。
 

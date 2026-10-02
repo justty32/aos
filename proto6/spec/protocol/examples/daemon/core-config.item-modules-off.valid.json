@@ -1,0 +1,10 @@
+{
+  "interval_ms": 60000,
+  "insts": {
+    "b.json": {
+      "cgroup": 5,
+      "account": "x",
+      "mq": 5
+    }
+  }
+}
