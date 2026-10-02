@@ -8,6 +8,8 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
+from record_rules import record_errors
+
 EXAMPLES = Path(__file__).resolve().parent.parent
 SCHEMAS = EXAMPLES.parent / 'schemas'
 
@@ -45,38 +47,8 @@ def schema_name(path):
 def extra_errors(path, value):
     """schema 表達不了的跨欄位關係；invalid 範例只要 schema 或這裡任一處報錯就算擋下。"""
     errors = []
-    if path.parent.name == 'tick' and path.name.startswith('tick-record.') and isinstance(value, dict):
-        # B-633、P-213（第八批：tasks 只記不是 0 的，每筆帶 index；ran＝跑了幾項）。exit 只收 0 由 schema 管。
-        tasks = value.get('tasks') or []
-        ran = value.get('ran')
-        # 第二十四批：被 tasks-blocked 的 kinds 擋掉的記在 skipped、不算 ran；看得到的位置是 ran＋skipped 筆數
-        skipped = value.get('skipped') or []
-        sidx = [t.get('index') for t in skipped if isinstance(t, dict)]
-        if any(not isinstance(i, int) for i in sidx) or sidx != sorted(set(sidx)):
-            errors.append('skipped index not strictly increasing')
-        if isinstance(ran, int):
-            ran += len(skipped)
-        idx = [t.get('index') for t in tasks if isinstance(t, dict)]
-        if any(not isinstance(i, int) for i in idx) or idx != sorted(set(idx)):
-            errors.append('task index not strictly increasing')
-        elif isinstance(ran, int) and idx and idx[-1] >= ran:
-            errors.append('task index not below ran')
-        elif set(idx) & set(sidx):
-            errors.append('task both ran and skipped')
-        hooks = value.get('hooks') or {}
-        for point in ('before_all', 'after_all'):
-            hidx = [h.get('index') for h in (hooks.get(point) or []) if isinstance(h, dict)]
-            if any(not isinstance(i, int) for i in hidx) or hidx != sorted(set(hidx)):
-                errors.append('hook index not strictly increasing')
-        # 第十七批：after_task／after_every_task 的 task_index 照任務跑的順序（不遞減）、都小於 ran
-        # （第二十四批：加 before_kind／after_kind；ran 已加上 skipped 筆數）
-        for point in ('before_kind', 'after_task', 'after_kind', 'after_every_task'):
-            tidx = [h.get('task_index') for h in (hooks.get(point) or []) if isinstance(h, dict)]
-            if any(not isinstance(i, int) for i in tidx) or tidx != sorted(tidx):
-                errors.append('hook task_index decreasing')
-            elif isinstance(ran, int) and tidx and tidx[-1] >= ran:
-                errors.append('hook task_index not below ran')
-        # 第十六批：blocked_before 是位置 ran 那一項（沒跑），跟 tasks 沒有可驗的關係（id 可能重複），不另查
+    if path.parent.name == 'tick' and path.name.startswith('tick-record.'):
+        errors += record_errors(value)     # 跟 tests/_tick_util.py 共用（record_rules.py）
     # P-120「頂層沒有 interval_ms 時每一項必填」已由 daemon-core-config 的 if／then 表達，不再另查。
     if path.parent.name == 'daemon' and path.name.startswith('core-config.') and isinstance(value, dict):
         # 第二十五批（P-125）：每項的 mq 只能寫 modules.mq 有的門名（掛了訊息模組時）

@@ -9,5 +9,6 @@
       "exit": 1
     }
   ],
-  "ended": false
+  "ended": true,
+  "exit": 0
 }

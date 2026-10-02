@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "seq": 6,
+  "ran": 0,
+  "tasks": [],
+  "ended": true,
+  "exit": 0,
+  "skipped": [
+    {
+      "id": "a",
+      "index": 99
+    }
+  ]
+}
