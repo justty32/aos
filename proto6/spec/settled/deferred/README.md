@@ -19,9 +19,10 @@
 | 檔 | 內容 |
 |---|---|
 | [tick.md](tick.md) | B-628 上下層判定（整條）；B-621 `aos-tick-check-task`（整條，第十六批）；B-602、B-620、B-624、B-625、B-633 的暫緩部分；篇末「已撤回／被取代」 |
-| [protocol/tick.md](protocol/tick.md) | tick 協議先不做的條：P-207 `aos-config-add` 的格式；P-206 的 `aos-publish` 那列；P-212 `aos-as`；P-204 `aos-tick-check-task`（第十六批）；P-205 `aos-git`（第十七批）；P-206 `aos-mq`（第十八批） |
+| [protocol/tick.md](protocol/tick.md) | tick 協議先不做的條：P-207 `aos-config-add` 的格式；P-206 的 `aos-publish` 那列；P-212 `aos-as`；P-204 `aos-tick-check-task`（第十六批）；P-205 `aos-git`（第十七批）；P-206 `aos-mq`（第十八批）；P-211 `aos-cg`（第二十三批） |
 | [terms.md](terms.md) | T-09 收尾、排空停機、熱重載、逃生口（舊 daemon 用語） |
 | [helper.md](helper.md) | B-303 可選 root helper 與 `aos-as` |
+| [cg.md](cg.md) | B-634 `aos-cg` 每項一框、B-631（撤）cgroup 框的備援（整篇，第二十三批，原 `tick/cg.md`） |
 | [git.md](git.md) | B-630、B-622、B-632 `aos-git` 與 git 規則（整篇，第十七批，原 `tick/git.md`） |
 | [mq.md](mq.md) | B-623、B-624 系統訊息佇列（整篇，第十八批，原 `tick/mq.md`） |
 | [template.md](template.md) | B-629 標準任務表範本（整篇，第十八批，原 `tick/template.md`；含第十七批的有 git 版） |
@@ -53,6 +54,8 @@
 | B-621 | 前面的項沒跑好就停格（`aos-tick-check-task`） | 暫緩 | 使用者 2026-10-01 第十六批：「aos-tick-check-task這個先放進暫緩。」從沒寫過程式；它要建的停格檔同批改名 tasks-blocked、改了規則 | [tick.md](tick.md) |
 | P-204 | `aos-tick-check-task` 的 argv 與結束碼 | 暫緩 | 同 B-621 | [protocol/tick.md](protocol/tick.md) |
 | P-212 | `aos-as`：切換帳號 | 暫緩 | 使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」現行切帳號只在 daemon 設定檔做（帳號模組） | [protocol/tick.md](protocol/tick.md) |
+| B-634 | `aos-cg`：每項一框（連同撤回的 B-631） | 暫緩 | 使用者 2026-10-02 第二十三批：「aos-cg搬進暫緩區。」從沒寫過程式；每項一框、跑完收殘留現在由 daemon 收屍模組做（[B-644](../daemon/cgroup.md)） | [cg.md](cg.md) |
+| P-211 | `aos-cg` 的 argv 與結束碼 | 暫緩 | 同 B-634 | [protocol/tick.md](protocol/tick.md) |
 | T-09 | 收尾、排空停機、熱重載、逃生口 | 暫緩 | 全是舊 daemon 用語，最核心 daemon 第一版不做 | [terms.md](terms.md) |
 
 撤回、不會回來的 tick 舊做法（沒有 `.aos/` 時交給 aos-exec 的退路、inst.json 路徑正規化、`--node` 旗標、讀表驗四件事與表壞回 2、`methods` 欄、整格回 1／2／75 的碼表、`AOS_NODE_DIR`、`AOS_TICK_RECORD`、`aos-tick` 目標給檔就拿它當任務表，以及 2026-10-01 撤回的 inst 頂層與任務表的 `user`、inst「先決定身分，切完才解析」整節）列在 [tick.md 篇末](tick.md#已撤回被取代)。
@@ -104,4 +107,4 @@
 
 ### 已知的設計問題（記錄，這輪不改）
 
-- 〔astra 報告設計 1〕`aos-cg` 照舊 daemon 的規定收尾會連自己一起殺掉：監督程式先把自己搬進任務框，再要求殺空、等待、刪框；另外 [B-303](helper.md) 推薦的 `aos-cg -- aos-as …` 已讓框內有人，[B-609](daemon/helper-actions.md) 卻要求空框。astra 建議監督程式留框外、只讓子程序進框，helper 核對框的歸屬與允許的現有程序。daemon 那側本來就暫緩，等 cgroup 加回來時一起定（[B-605](daemon/cgroup.md)、[B-634](../tick/cg.md)）。
+- 〔astra 報告設計 1〕`aos-cg` 照舊 daemon 的規定收尾會連自己一起殺掉：監督程式先把自己搬進任務框，再要求殺空、等待、刪框；另外 [B-303](helper.md) 推薦的 `aos-cg -- aos-as …` 已讓框內有人，[B-609](daemon/helper-actions.md) 卻要求空框。astra 建議監督程式留框外、只讓子程序進框，helper 核對框的歸屬與允許的現有程序。daemon 那側本來就暫緩，等 cgroup 加回來時一起定（[B-605](daemon/cgroup.md)、[B-634](../deferred/cg.md)）。

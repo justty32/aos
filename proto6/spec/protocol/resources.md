@@ -46,7 +46,7 @@ module 是 [node P-202～204](../settled/protocol/tick.md) 的普通任務；範
 
 ## P-503．CPU、記憶體與 pids〔使用者方向 2026-09-29〕
 
-〔使用者方向 2026-09-30，第十九批〕已裝 OS module 時，由標準配備的 cgroup 框寫進 cgroup v2（[B-629](../settled/deferred/template.md)）；cgroup 子樹、框命名與佈建以 [B-605](../settled/deferred/daemon/cgroup.md) 為正本，佈建參數見 [daemon P-107](../settled/deferred/protocol/daemon/provision-and-runner.md)；上限隨時可改，見 [S-205](../scheduling/admission.md)。下表只在 cgroup 走完整路時適用；走備援時 `cgroup_*` 回 `unsupported`，只剩每程序上限、沒有 pids 上限（[S-203](../scheduling/admission.md)、[B-631](../settled/tick/cg.md)）。
+〔使用者方向 2026-09-30，第十九批〕已裝 OS module 時，由標準配備的 cgroup 框寫進 cgroup v2（[B-629](../settled/deferred/template.md)）；cgroup 子樹、框命名與佈建以 [B-605](../settled/deferred/daemon/cgroup.md) 為正本，佈建參數見 [daemon P-107](../settled/deferred/protocol/daemon/provision-and-runner.md)；上限隨時可改，見 [S-205](../scheduling/admission.md)。下表只在 cgroup 走完整路時適用；走備援時 `cgroup_*` 回 `unsupported`，只剩每程序上限、沒有 pids 上限（[S-203](../scheduling/admission.md)、[B-631](../settled/deferred/cg.md)）。
 
 | resources 欄位 | 配額 | 用量摘要 | cgroup 對應 |
 |---|---|---|---|

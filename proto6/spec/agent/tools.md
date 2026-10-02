@@ -26,7 +26,7 @@
 - 合法的工具照 calls 順序建材料，走上面兩條路線之一：`target_node` 是 node id 用 `kernel.work.submit`（params.argv 對應 `aos kernel work submit`，業務 JSON 經 stdin，投到該 kernel）；`target_node=null` 則先提交工作材料，下一格經通道掛 once（上面）。兩路都沿 [P-402](../protocol/work.md)，結果下格收，不讓工具自選資源歸屬。
 - 模型文字可作 progress，沒有文字就寫正在用哪些工具。工具全回後按 calls 順序寫結果、預覽及引用，再問 LLM；確定失敗可交模型判斷，unknown 停新副作用並記事項，不因改設定重跑（[S-401](../scheduling/operations.md)）。卡在 unknown 的輸入之後怎麼收，延後（P-008）。
 
-〔第十八批，P-710 從協議篇搬上〕**agent 自記用量**：每筆用量帶 `kind:llm|tool`。LLM 請求建立時記 pending，結果改 completed、rejected 或 unknown；每次 HTTP attempt 保留 provider usage，null 不補零。自跑工具由標準配備在 leaf 收尾前保存可信量測到 `.aos/jobs/<attempt_id>/usage.json`（cgroup 讀數；備援下只有已 wait 的子程序的粗略量測，[B-631](../settled/tick/cg.md)），agent 下格收；量不到記 null，不信工具自報。工具的 `target_node` 填 agent 自己。轉交路線也可留核對資料，但彙總只選轉交或自記一份，不重加。kernel 讀 agent 已提交的用量，以 node／request／attempt 去重、逐筆替換觀測，不把累積數每格再加一次；部署要明授用量讀權，摘要可讀不等於能讀用量。工具自用 LLM 仍走同一地址與協議，不信 stdout 自報。
+〔第十八批，P-710 從協議篇搬上〕**agent 自記用量**：每筆用量帶 `kind:llm|tool`。LLM 請求建立時記 pending，結果改 completed、rejected 或 unknown；每次 HTTP attempt 保留 provider usage，null 不補零。自跑工具由標準配備在 leaf 收尾前保存可信量測到 `.aos/jobs/<attempt_id>/usage.json`（cgroup 讀數；備援下只有已 wait 的子程序的粗略量測，[B-631](../settled/deferred/cg.md)），agent 下格收；量不到記 null，不信工具自報。工具的 `target_node` 填 agent 自己。轉交路線也可留核對資料，但彙總只選轉交或自記一份，不重加。kernel 讀 agent 已提交的用量，以 node／request／attempt 去重、逐筆替換觀測，不把累積數每格再加一次；部署要明授用量讀權，摘要可讀不等於能讀用量。工具自用 LLM 仍走同一地址與協議，不信 stdout 自報。
 
 驗收：schema 要求整數而模型傳字串時，不開工具程序，可查到參數路徑與格式錯誤。
 

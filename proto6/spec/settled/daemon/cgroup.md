@@ -43,7 +43,7 @@
 
 ### 先不做
 
-逃生口（任務自己開子框留常駐程序）、逾時砍、`kill` 指令、量測寫進 status、`aos-cg` 每任務一框（[B-634](../tick/cg.md)）跟項的框接起來、多個 daemon 用同一棵子樹的偵測、沒 cgroup 時退回程序群組。舊設計的 node 框、交框、`cgroup_root`、`--create-cgroup`、`cgroup=on/off`、子樹鎖都在[暫緩區 B-605](../deferred/daemon/cgroup.md)。
+逃生口（任務自己開子框留常駐程序）、逾時砍、`kill` 指令、量測寫進 status、`aos-cg` 每任務一框（[B-634](../deferred/cg.md)）跟項的框接起來、多個 daemon 用同一棵子樹的偵測、沒 cgroup 時退回程序群組。舊設計的 node 框、交框、`cgroup_root`、`--create-cgroup`、`cgroup=on/off`、子樹鎖都在[暫緩區 B-605](../deferred/daemon/cgroup.md)。
 
 依據：使用者 2026-10-01 第十二批：C1～C4「都先按照建議。」
 

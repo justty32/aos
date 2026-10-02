@@ -80,7 +80,7 @@
 
 ## 跟已落 spec 的衝突（歷史；已依本份改寫，見「落點」）
 
-- **cgroup v2 必要**（第十四、十五批，[B-605](../../spec/settled/daemon.md)）與**每任務一層 cgroup**（第十七批，[B-202](../../spec/base/execution.md)）：照第 4 條，cgroup 不屬 tick 核心；照第 12 條它是標準配備的一部分，跑標準配備的環境仍需要 cgroup v2。〔取代註：第 8 條追加後不再成立——cgroup v2 只是完整保證的條件，沒有時走內建備援仍算全掛，見 [B-631](../../spec/settled/tick/cg.md)。〕
+- **cgroup v2 必要**（第十四、十五批，[B-605](../../spec/settled/daemon.md)）與**每任務一層 cgroup**（第十七批，[B-202](../../spec/base/execution.md)）：照第 4 條，cgroup 不屬 tick 核心；照第 12 條它是標準配備的一部分，跑標準配備的環境仍需要 cgroup v2。〔取代註：第 8 條追加後不再成立——cgroup v2 只是完整保證的條件，沒有時走內建備援仍算全掛，見 [B-631](../../spec/settled/deferred/cg.md)。〕
 - **人手跑 tick 不在框就拒跑**（第十八批審稿裁定 16，[B-627](../../spec/settled/tick.md)）：跟第 1 條「怎麼被執行不管」相衝。
 - **從屬關係**：spec 現在的上下層由 daemon 登記的 `parent_id` 決定，而且明寫「與目錄位置無關」（[P-402](../../spec/protocol/work.md)）；第 2、8 條改成預設看資料夾包含、可另外登記覆蓋；`parent_id` 登記保留為覆蓋手段。「與目錄位置無關」的說法要改，第十八批審稿裁定 6 與 Q10 的換父要改寫成「搬資料夾或改登記」兩條路。
 - **任務表禁止 `user`**（第十八批 C-07 永遠禁止的鍵，[contracts](../../spec/contracts.md)、[B-620](../../spec/settled/tick.md)）：跟第 8 條「任務是 inst 超集、以後可能每個任務有自己的使用者」相衝。

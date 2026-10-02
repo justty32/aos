@@ -15,8 +15,8 @@
 
 - **條號不變、不重用。** 搬家只換檔案位置；新規定開新號。
 - **主規格是行為正本，協議篇只留格式**（方案 A，[V-01](../conformance.md)）：`tick.md`、`daemon/` 寫行為；`protocol/` 底下只寫欄位、JSON、argv、結束碼。
-- **git 與 cgroup 是「有就用」，不是前提**（git：[B-630、B-622](deferred/git.md)；cgroup：`aos-cg` [B-634](tick/cg.md)，daemon 那側在暫緩區）。提交與還原只限 aos 自己的東西，使用者任務改的檔 aos 不管。
-- **普通程式、hooks 與 tick 模組**（`aos-cg`、[hooks](tick/hooks.md)、[tasks-blocked](tick/tasks-blocked.md)）放在正式篇的 [tick/ 子篇](tick/README.md)；系統級任務**全部在暫緩區**（`aos-publish` 2026-10-01、`aos-tick-check-task` 第十六批、`aos-git` 第十七批、`aos-mq get`／`post`、`aos-clean` 與範本第十八批）：它們是之後幾段要做的獨立程式，規定沒被推翻；每篇開頭一行標狀態（已實作／待實作／依賴暫緩），用到暫緩區東西的地方各條有註明。〔使用者 2026-10-01；astra 報告建議 1〕
+- **git 與 cgroup 是「有就用」，不是前提**（git：[B-630、B-622](deferred/git.md)；cgroup：現行是 daemon 收屍模組 [B-644](daemon/cgroup.md)；`aos-cg` [B-634](deferred/cg.md) 第二十三批搬暫緩區，舊 daemon 那側也在暫緩區）。提交與還原只限 aos 自己的東西，使用者任務改的檔 aos 不管。
+- **hooks 與 tick 模組**（[hooks](tick/hooks.md)、[tasks-blocked](tick/tasks-blocked.md)）放在正式篇的 [tick/ 子篇](tick/README.md)；系統級任務**全部在暫緩區**（`aos-publish` 2026-10-01、`aos-tick-check-task` 第十六批、`aos-git` 第十七批、`aos-mq get`／`post`、`aos-clean` 與範本第十八批；普通程式 `aos-cg` 第二十三批）：它們是之後幾段要做的獨立程式，規定沒被推翻；每篇開頭一行標狀態（已實作／待實作／依賴暫緩），用到暫緩區東西的地方各條有註明。〔使用者 2026-10-01；astra 報告建議 1〕
 - **要能自己讀懂**：區內各篇互相連結；對區外的依賴列在下面「對外依賴」。
 - **其他篇之後才放進來**：kernel、LLM、agent、CLI、基底其餘各篇，等它們跟上新基礎再放入。
 
@@ -24,7 +24,7 @@
 
 1. [通用慣例](conventions.md)（C-08 結束碼、C-09 `AOS_DIRNAME`、C-10 環境變數總表、C-11 設定檔頂層 `cwd` 與指示詞展開範圍）：aos 每支程式都守的規矩，最短，先讀。
 2. [名詞](terms.md)（T-07 tick 核心、T-10 四類程式、T-11 daemon 核心與模組）：先知道「核心、系統級任務、普通程式、tasks-blocked（原停格檔）、擋板檔、模組」這些詞。
-3. [通用 tick 核心](tick.md)：核心三件事（B-626、B-602、B-620、B-633）與直接跑（B-627）→ [tick/ 子篇](tick/README.md)：hooks、tick 模組 `tasks-blocked`、`aos-cg`、當機恢復，每篇開頭標狀態（範本、佇列的取與送、git 都在暫緩區）。〔使用者 2026-10-01 拆篇〕
+3. [通用 tick 核心](tick.md)：核心三件事（B-626、B-602、B-620、B-633）與直接跑（B-627）→ [tick/ 子篇](tick/README.md)：hooks、tick 模組 `tasks-blocked`、當機恢復，每篇開頭標狀態（範本、佇列的取與送、git、`aos-cg` 都在暫緩區）。〔使用者 2026-10-01 拆篇〕
 4. [daemon](daemon/README.md)：[B-640 最核心 daemon](daemon/core.md) → [B-641 控制模組與 `aos-ctl`](daemon/control.md) → [B-642 重讀設定](daemon/reload.md)、[B-643 記住狀態](daemon/state.md)、[B-644 收屍／cgroup](daemon/cgroup.md)、[B-645 訊息與 `aos-mq`](daemon/mq.md)、[B-646 帳號](daemon/account.md)。
 5. 要看格式時：[tick 協議](protocol/tick.md)（P-200～214：工作資料夾布局、任務表、`aos-tick` 與各系統級任務的 argv 與結束碼；原 `protocol/node.md`，2026-10-01 改名）→ [daemon 協議](protocol/daemon/README.md)（P-120 設定檔與輸出、P-121 控制 socket 與 `aos-ctl`）。
 6. 想知道「以後還會有什麼」：[暫緩區](deferred/README.md)。
@@ -37,7 +37,7 @@
 | [conventions.md](conventions.md) | C-08、C-09、C-10、C-11 | 2026-10-01 新開；C-11 是第二批新開 |
 | [terms.md](terms.md) | T-07、T-10、T-11 | 從 [名詞與責任](../terms.md) 拆出；T-11 是 2026-10-01 新開；T-09 搬到暫緩區 |
 | [tick.md](tick.md) | B-626、B-602、B-620、B-633、B-627 | tick 核心（已實作）。從 `spec/tick.md` 搬來；B-628 與 B-602、B-620、B-633 的部分內容搬到暫緩區；2026-10-01 其餘各條拆到 tick/〔使用者 2026-10-01〕 |
-| [tick/](tick/README.md) | B-636、B-634、B-631（撤）、B-625、B-635 | 2026-10-01 從 tick.md 拆出，條號不變；同日第六批新開 [hooks](tick/hooks.md)（B-635，外掛掛點，已實作）：[template](deferred/template.md)（B-629）、[check-task](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（B-621）、[cg](tick/cg.md)（B-634、B-631）、[mq](deferred/mq.md)（B-623、B-624）、[git](deferred/git.md)（B-630、B-622、B-632）、[recovery](tick/recovery.md)（B-625）；狀態見[子篇入口](tick/README.md) |
+| [tick/](tick/README.md) | B-636、B-625、B-635 | 2026-10-01 從 tick.md 拆出，條號不變；同日第六批新開 [hooks](tick/hooks.md)（B-635，外掛掛點，已實作）：[template](deferred/template.md)（B-629）、[check-task](deferred/tick.md#暫緩b-621-前面的項沒跑好就停格aos-tick-check-task)（B-621）、[cg](deferred/cg.md)（B-634、B-631；第二十三批搬暫緩區）、[mq](deferred/mq.md)（B-623、B-624）、[git](deferred/git.md)（B-630、B-622、B-632）、[recovery](tick/recovery.md)（B-625）；狀態見[子篇入口](tick/README.md) |
 | [daemon.md](daemon.md) | — | 舊的 daemon 入口，只指向 daemon 目錄 |
 | [daemon/](daemon/README.md) | B-640～646 | 2026-10-01 重寫：[core](daemon/core.md)（B-640）、[control](daemon/control.md)（B-641）、[reload](daemon/reload.md)（B-642）、[state](daemon/state.md)（B-643）、[cgroup](daemon/cgroup.md)（B-644）、[mq](daemon/mq.md)（B-645）、[account](daemon/account.md)（B-646） |
 | [protocol/tick.md](protocol/tick.md) | P-200～214 | tick 協議。從 `spec/protocol/node.md` 搬來；2026-10-01 由 `protocol/node.md` 改名〔使用者 2026-10-01〕 |

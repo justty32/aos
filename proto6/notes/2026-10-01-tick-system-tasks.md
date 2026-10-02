@@ -137,7 +137,7 @@
 - **做什麼**：包裝 `aos-cg -- 原指令`：每項一框，主程序結束後清掉框裡（或程序群組裡）剩下的程序。
 - **原本位置**：不占位置，要的任務自己包。
 - **機制**：有 cgroup 時開 `task-*` 框（框樹要舊 daemon 開）；沒 cgroup 時 subreaper＋程序群組。框清不空就建停格檔。
-- **狀態**：待實作（[B-634](../spec/settled/tick/cg.md)、P-211）；daemon 那側（B-605）暫緩，現行只會走「沒 cgroup」那欄。
+- **狀態**：〔2026-10-02 第二十三批〕**暫緩**（[B-634](../spec/settled/deferred/cg.md)、P-211 搬暫緩區）；每項一框、收殘留由 daemon 收屍模組做（B-644）。
 - **前提不在了**：舊 daemon 的工作資料夾框；格後收屍（B-601）。
 - **hooks 想法（待使用者想）**：本質是每項包一層，不是掛點。`after_task`（沒開）可以想成「沒包的任務也清殘留」，但 tick 核心不是 subreaper，孤兒會掛到 init 或 daemon，hook 找不到它們，除非有 cgroup。大概留著當包裝最自然。
 
@@ -213,7 +213,7 @@
 | 檔案收件、檔案投件（`requests/`、`responses/`） | 普通程式，aos 不管 | [B-623、B-624](../spec/settled/deferred/mq.md) |
 | 鬧鐘 `alarm_ticks`、`.aos/alarms/` | 撤，任務自己記 | B-624 |
 | `.aos/journal/`、`aos-tick adopt` | 結束碼紀錄取代 | [B-632](../spec/settled/deferred/git.md) |
-| tick 側 cgroup 備援 | 撤，改 `aos-cg` | [B-631](../spec/settled/tick/cg.md) |
+| tick 側 cgroup 備援 | 撤，改 `aos-cg` | [B-631](../spec/settled/deferred/cg.md) |
 | 第十九批「標準配備」（同一支 aos-tick、必須全掛） | 標準任務表範本 | verdicts 11 追答 8、9 |
 
 ## 十、daemon 那側、本來就不在任務表上的
@@ -234,7 +234,7 @@ proto5 沒有同名的東西：它的 daemon 直接開 `aos-kernel tick`（`lib/
 | `aos-mq post` | 待實作、依賴暫緩 | `tasks` 尾／`after_all` | `after_all` 要自己判停格 |
 | `aos-clean` | 待實作（plan 建議先不做） | `after_all`／`tasks` | 有 git 時要排 close 前 |
 | `aos-tick-check-task` | 待實作（已裁定） | 留 `tasks`；將來 `before_task` | `after_all` 無意義 |
-| `aos-cg` | 待實作 | 留包裝 | 無 cgroup 時 hook 收不到孤兒 |
+| `aos-cg` | 暫緩（第二十三批） | 不用了，daemon 收屍模組（B-644）做 | 無 cgroup 時 hook 收不到孤兒 |
 | `aos-as` | 暫緩 | 留包裝 | 要 helper |
 | 恢復前驗證（aos-check） | 待實作（plan 建議先不做） | 不需要 | 格外工具 |
 | `aos-config-add` | 暫緩 | 不需要 | 格外工具 |

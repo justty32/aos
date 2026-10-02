@@ -186,7 +186,7 @@ hooks 的項（[B-635](../tick/hooks.md)）跑法跟任務一樣，環境變數�
 - 沒有設定需求的程式不必讀任何環境變數，也不必寫回應封套；`true`、腳本與既有程式都能直接當任務。
 - 任務直接開檔讀設定；改設定的時機與「tick 裡不改 `config/`」的軟性原則見 [A-102](../../agent/configuration.md)。
 - key 不由 tick 放進 argv 或任務環境；inst 的 `envs` 照正本。
-- 鎖 fd 不傳給任務，沒有 `AOS_TICK_LOCK_FD`（[B-602](../tick.md)）；每項一框（`aos-cg`）見 P-211、[B-634](../tick/cg.md)。
+- 鎖 fd 不傳給任務，沒有 `AOS_TICK_LOCK_FD`（[B-602](../tick.md)）；每項一框現在是 daemon 收屍模組（[B-644](../daemon/cgroup.md)）；`aos-cg`（P-211、[B-634](../deferred/cg.md)）第二十三批暫緩。
 
 ### 結束碼
 
@@ -244,20 +244,9 @@ hooks 的項（[B-635](../tick/hooks.md)）跑法跟任務一樣，環境變數�
 
 依據：第十九批依方案 A 縮短。
 
-## P-211．aos-cg：每項一框〔使用者方向 2026-09-30，第二十批追答 8；格式為建議預設〕
+## P-211．aos-cg：每項一框
 
-普通程式，不是系統級任務。行為正本：[B-634](../tick/cg.md)；框的樹與命名見 [B-605](../deferred/daemon/cgroup.md)。
-
-- **argv**：`aos-cg [--] <原指令…>`。不收上限參數（上限歸舊 daemon 設在工作資料夾的框，暫緩區 [B-605](../deferred/daemon/cgroup.md) 叫 node 框）。
-- **框名**：本工作資料夾的框 `n-<h>` 下的 `task-<seq>-<pid>`，`seq` 取結束碼紀錄（`$AOS_TICK_CWD/.aos/tick/current/record.json`）的格數（沒有紀錄時用 `0`），`pid` 是 aos-cg 自己的 PID；跟 `tick` 葉並列。
-- **stdin、stdout、stderr**：原樣交給原指令；aos-cg 自己只在 stderr 印 `code: 說明`，代碼有 `cgroup_unavailable`（照 B-634 沒 cgroup 時的做法跑）、`frame_not_empty`。
-- **環境**：原樣交給原指令，不另加變數。
-
-| 結束碼 | 意思 |
-|---|---|
-| 原指令的碼 | 原指令正常結束；被訊號結束時 aos-cg 用同一個訊號結束自己，讓上一層 wait 看到的是訊號 |
-| `1` | 用法錯（沒有原指令）；或框清不空（`frame_not_empty`）：另建停格檔（P-213），不讓後面的項在還有人寫檔時開跑 |
-| `125` | 原指令沒開起來（exec 前失敗），照 inst（特別指定的碼） |
+> **暫緩**（2026-10-02 第二十三批）〔使用者 2026-10-02 第二十三批：「aos-cg搬進暫緩區。」〕：整條搬到 [tick 協議暫緩區](../deferred/protocol/tick.md#p-211aos-cg每項一框使用者方向-2026-09-30第二十批追答-8格式為建議預設)，條號保留、不重用。收殘留現在由 daemon 收屍模組做（[B-644](../daemon/cgroup.md)，每項一框）。
 
 ## P-212．aos-as：切換帳號
 

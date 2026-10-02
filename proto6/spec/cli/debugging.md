@@ -40,4 +40,4 @@
 | node 不再開格 | 4 的擋板；1 的 paused | 2 的事項；`aos node log` 最後一筆 |
 | 設定改了沒生效 | 2 的 `config_invalid` 事項；`aos agent config check` | 3 的提交有沒有進去；daemon 設定要看 [B-608](../settled/deferred/daemon/reload.md) 是否要重開 |
 | 想經通道送訊息、掛行程，卻報 `no_channel` 或被拒 | 那一格的環境有沒有 `AOS_DAEMON_SOCKET` 與 `AOS_TICK_TOKEN`：只有 daemon 開的格才有，人手、cron 跑的沒有；任務的 `envs` 用了 `clear` 也會被清掉（[B-612](../settled/deferred/daemon/channel.md)） | `token_invalid`：拿了上一格的憑證、或 daemon 重啟過；`forbidden`：寄件帳號對收件 `requests/` 沒寫權，或覆蓋上層只有一方同意；`mailbox_full`：收件方一直沒取，改走檔案收件（[B-614](../settled/deferred/daemon/messaging.md)） |
-| 標準配備是不是在走備援 | `aos node check`；tick stderr 的 `standard: cgroup=… git=…` | cgroup 備援下沒有總量上限與 OOM 判定、後代收不乾淨；git 備援下沒有還原與歷史（[B-631](../settled/tick/cg.md)、[B-632](../settled/deferred/git.md)）；想走完整路，cgroup 首推 `systemd-run --user --scope -p Delegate=yes`（[B-605](../settled/deferred/daemon/cgroup.md)） |
+| 標準配備是不是在走備援 | `aos node check`；tick stderr 的 `standard: cgroup=… git=…` | cgroup 備援下沒有總量上限與 OOM 判定、後代收不乾淨；git 備援下沒有還原與歷史（[B-631](../settled/deferred/cg.md)、[B-632](../settled/deferred/git.md)）；想走完整路，cgroup 首推 `systemd-run --user --scope -p Delegate=yes`（[B-605](../settled/deferred/daemon/cgroup.md)） |

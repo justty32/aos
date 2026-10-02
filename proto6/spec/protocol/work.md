@@ -78,7 +78,7 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 
 `parent_id` 只給資源歸屬與核權（框放在它的框下、身分核對它的身分額度）；掛載的 W 不是要被 tick 的 node，沒有資料夾上下層的問題，其位置也不決定歸屬。〔使用者方向 2026-09-30，第十九批，撤「與目錄位置無關」的一般說法〕一般 node 的上層不是這樣：預設看資料夾包含，可用登記的 `parent_id` 覆蓋（[B-628](../settled/tick.md)）。何時建目錄、何時掛載（本格只保存材料，提交後下一格才掛）依 [B-624](../settled/deferred/mq.md) 與 B-613，kernel 代跑的步驟見 [kernel P-806](kernel-tasks.md)。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
 
-`launch-started` 的建立、`.err` 旁檔與 result.json 怎麼當證據、缺證據何時記 unknown，依 [S-401](../scheduling/operations.md)。標準配備的執行器（[B-629](../settled/deferred/template.md)）在移除掛載框前保存 [res-usage](schemas/res-usage.schema.json) 到 usage.json，發起者下格收量；量不到（包括 cgroup 走備援時，[B-631](../settled/tick/cg.md)）不寫 usage.json、用量記 null，不採信工具自報。
+`launch-started` 的建立、`.err` 旁檔與 result.json 怎麼當證據、缺證據何時記 unknown，依 [S-401](../scheduling/operations.md)。標準配備的執行器（[B-629](../settled/deferred/template.md)）在移除掛載框前保存 [res-usage](schemas/res-usage.schema.json) 到 usage.json，發起者下格收量；量不到（包括 cgroup 走備援時，[B-631](../settled/deferred/cg.md)）不寫 usage.json、用量記 null，不採信工具自報。
 
 ## P-403．結果與串流〔建議預設，未拍板〕
 
