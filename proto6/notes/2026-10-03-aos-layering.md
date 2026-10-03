@@ -4,6 +4,10 @@
 
 **這是使用者口述的想法，照原意整理，不是裁定。** 當天的脈絡是在討論 daemon 減法、改成 FUSE，以及 tick 要不要改成 thread 和 lib，見 [thread 與程序評估](proposals/2026-10-03-thread-vs-process/README.md)。
 
+## 最重要的原則：LLM 可讀（使用者稱為這套體系的絕殺）
+
+**相關的操作和協議，都盡量用 JSON 或文字，也就是 LLM 讀得懂、好使用的形式。**
+
 ## 四層，由下往上
 
 1. **daemon 是運行層。** 它是 aos 體系和 Linux 系統之間的介面。在 daemon 之上，可以完全脫離 Linux，做 aos 自己的抽象世界。
