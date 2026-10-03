@@ -1,0 +1,123 @@
+[
+  {
+    "mono": 23068.280621978,
+    "daemon_cpu_s": 0.01,
+    "daemon_waited_children_cpu_s": 0.0,
+    "daemon_rss_kib": 13172.0,
+    "daemon_fd": 5,
+    "processes_live": 1,
+    "processes_zombie": 0,
+    "system_processes_live": 707,
+    "load1": 40.693359375
+  },
+  {
+    "mono": 23068.898509499,
+    "daemon_cpu_s": 0.06,
+    "daemon_waited_children_cpu_s": 1.65,
+    "daemon_rss_kib": 22136.0,
+    "daemon_fd": 95,
+    "processes_live": 14,
+    "processes_zombie": 2,
+    "system_processes_live": 718,
+    "load1": 40.693359375
+  },
+  {
+    "mono": 23069.804189246,
+    "daemon_cpu_s": 0.15,
+    "daemon_waited_children_cpu_s": 5.01,
+    "daemon_rss_kib": 25592.0,
+    "daemon_fd": 225,
+    "processes_live": 55,
+    "processes_zombie": 1,
+    "system_processes_live": 816,
+    "load1": 60.41748046875
+  },
+  {
+    "mono": 23071.420997748,
+    "daemon_cpu_s": 0.26,
+    "daemon_waited_children_cpu_s": 10.5,
+    "daemon_rss_kib": 29432.0,
+    "daemon_fd": 269,
+    "processes_live": 79,
+    "processes_zombie": 1,
+    "system_processes_live": 889,
+    "load1": 60.41748046875
+  },
+  {
+    "mono": 23073.318388745,
+    "daemon_cpu_s": 0.52,
+    "daemon_waited_children_cpu_s": 22.75,
+    "daemon_rss_kib": 35448.0,
+    "daemon_fd": 361,
+    "processes_live": 123,
+    "processes_zombie": 2,
+    "system_processes_live": 932,
+    "load1": 60.41748046875
+  },
+  {
+    "mono": 23075.395273587,
+    "daemon_cpu_s": 0.8,
+    "daemon_waited_children_cpu_s": 33.31,
+    "daemon_rss_kib": 37624.0,
+    "daemon_fd": 303,
+    "processes_live": 147,
+    "processes_zombie": 2,
+    "system_processes_live": 989,
+    "load1": 88.73193359375
+  },
+  {
+    "mono": 23077.726462972,
+    "daemon_cpu_s": 1.18,
+    "daemon_waited_children_cpu_s": 48.42,
+    "daemon_rss_kib": 39416.0,
+    "daemon_fd": 369,
+    "processes_live": 96,
+    "processes_zombie": 4,
+    "system_processes_live": 921,
+    "load1": 88.73193359375
+  },
+  {
+    "mono": 23079.498282438,
+    "daemon_cpu_s": 1.54,
+    "daemon_waited_children_cpu_s": 61.08,
+    "daemon_rss_kib": 40568.0,
+    "daemon_fd": 372,
+    "processes_live": 177,
+    "processes_zombie": 0,
+    "system_processes_live": 1043,
+    "load1": 88.73193359375
+  },
+  {
+    "mono": 23081.09974215,
+    "daemon_cpu_s": 1.92,
+    "daemon_waited_children_cpu_s": 75.28,
+    "daemon_rss_kib": 41976.0,
+    "daemon_fd": 373,
+    "processes_live": 137,
+    "processes_zombie": 0,
+    "system_processes_live": 955,
+    "load1": 111.97607421875
+  },
+  {
+    "mono": 23082.721921585,
+    "daemon_cpu_s": 2.24,
+    "daemon_waited_children_cpu_s": 87.97,
+    "daemon_rss_kib": 42488.0,
+    "daemon_fd": 170,
+    "processes_live": 86,
+    "processes_zombie": 0,
+    "system_processes_live": 884,
+    "load1": 111.97607421875
+  },
+  {
+    "mono": 23083.235558328,
+    "daemon_cpu_s": 2.52,
+    "daemon_waited_children_cpu_s": 101.52,
+    "daemon_rss_kib": 43256.0,
+    "daemon_fd": 76,
+    "processes_live": 19,
+    "processes_zombie": 0,
+    "system_processes_live": 708,
+    "load1": 111.97607421875
+  }
+]

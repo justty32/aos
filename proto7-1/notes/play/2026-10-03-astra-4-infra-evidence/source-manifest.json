@@ -1,0 +1,102 @@
+{
+  "proto7/spec/core.md": {
+    "bytes": 5981,
+    "sha256": "3fa152328021ab66fe6ed1ec6c8175b26c75cf496c445acf6db157e0ade0dcdf"
+  },
+  "proto7-1/README.md": {
+    "bytes": 4143,
+    "sha256": "f9a3227290314b15ee415d26eed95ddfd4c6ab2c92bb7bf48aa5180d99c44bf9"
+  },
+  "proto7-1/spec.md": {
+    "bytes": 23951,
+    "sha256": "1ee0419fab64c193e5b9a29690e274b58f97a8261c0d7fbab5573af7cb1cd02e"
+  },
+  "proto7-1/lib/aos7_agent.py": {
+    "bytes": 9509,
+    "sha256": "e3b7030eddc6c7480aa76f35dd54697bac730d101d66157effea68ec5cb5841e"
+  },
+  "proto7-1/lib/aos7_agent_tools.py": {
+    "bytes": 9015,
+    "sha256": "af23d3bb12ace6098fe8fc0668cd411f8ad48fc7aa28de598517694c2cc5320b"
+  },
+  "proto7-1/lib/aos7_audit.py": {
+    "bytes": 916,
+    "sha256": "6c4238788a51f3dd4401e6240b60d0b63465fa05f04aa2f2ab9bdeb774f37f7d"
+  },
+  "proto7-1/lib/aos7_ctl.py": {
+    "bytes": 2976,
+    "sha256": "57f3596bec407f988e5e552793a2e6e3007096d591d94a744dd4c4eabe49a018"
+  },
+  "proto7-1/lib/aos7_daemon.py": {
+    "bytes": 6090,
+    "sha256": "582049abab4cc517c76782aa181c0efb8f848f5d7cb3c3415d8e89af470419d9"
+  },
+  "proto7-1/lib/aos7_daemon_timeline.py": {
+    "bytes": 5169,
+    "sha256": "f3e08102fc601da7e98a79c02bda3b2011c2482b3f5d8042475175ee046850a0"
+  },
+  "proto7-1/lib/aos7_fs.py": {
+    "bytes": 4182,
+    "sha256": "7925c2b35edf807f14e2981b777116a93554569689cf8d2d24492477954a64b4"
+  },
+  "proto7-1/lib/aos7_kernel.py": {
+    "bytes": 7653,
+    "sha256": "3c0ae52aff1f2c4a775dd049bdf43f3100f63b756f3a62793a8b72ff978ec3e3"
+  },
+  "proto7-1/lib/aos7_kernel_rules.py": {
+    "bytes": 10429,
+    "sha256": "4d9e30ef9e50796d8905210b53b844d2a16ce72c5b2aa8f655f5de42603f426a"
+  },
+  "proto7-1/lib/aos7_llm.py": {
+    "bytes": 7005,
+    "sha256": "9793c4cb9ca56a53eeb680144369de1512da47c6a5aa82e1824cc517dfbbaf34"
+  },
+  "proto7-1/lib/aos7_mount.py": {
+    "bytes": 9025,
+    "sha256": "0631d9eaebee88cb41394edda2614e5977474b71da5db1c781a95da27b686290"
+  },
+  "proto7-1/lib/aos7_run.py": {
+    "bytes": 2483,
+    "sha256": "670b09e06ffb3bfcc4c0c53f747612944ac25246d305d10f34d6af3b9487610e"
+  },
+  "proto7-1/lib/aos7_task.py": {
+    "bytes": 9133,
+    "sha256": "abebd20b522ad874ebdc5c469302713c9128365b23c8dac687df027d2908ab6c"
+  },
+  "proto7-1/lib/aos7_tick.py": {
+    "bytes": 2969,
+    "sha256": "18fd0077183881573221c739f3a506170268abb0ea2b45ac56bc1539ad638cf9"
+  },
+  "proto7-1/lib/aos7_tock.py": {
+    "bytes": 2220,
+    "sha256": "591268cfec2e459398bd043fd376ebe239902faab5662845e5e6b2965e92ac77"
+  },
+  "proto7-1/bin/aos7-agent": {
+    "bytes": 311,
+    "sha256": "381dfd00c701b020b0254c7b37676d898e2448c15a691e55e5d687e94d3cf100"
+  },
+  "proto7-1/bin/aos7-ctl": {
+    "bytes": 303,
+    "sha256": "f8fd61c3b4cfd66147f96b412a4701127692b4421244ba67202be2dd57391544"
+  },
+  "proto7-1/bin/aos7-daemon": {
+    "bytes": 315,
+    "sha256": "3771a272d7e59a91423eda1408081ce77ff56a5f5c2b801fad94eb42fd554aba"
+  },
+  "proto7-1/bin/aos7-kernel": {
+    "bytes": 315,
+    "sha256": "22ba26ce0888b9609aa610d857cd786255e8c4aadb23dd0e1a7aa3d175cbe486"
+  },
+  "proto7-1/bin/aos7-run": {
+    "bytes": 303,
+    "sha256": "2a582dba8e374580ac68589e099e8493c54a7684cbb2dc514a3fdc5224608eea"
+  },
+  "proto7-1/bin/aos7-tick": {
+    "bytes": 307,
+    "sha256": "776b2551cc0c75858d7f4239e67de8448467189830b66d047e7cf7f965f2e9c7"
+  },
+  "proto7-1/bin/aos7-tock": {
+    "bytes": 307,
+    "sha256": "cf52517f063671162080a737a03d973b07d329857dc8decc145780b317b8b6f2"
+  }
+}

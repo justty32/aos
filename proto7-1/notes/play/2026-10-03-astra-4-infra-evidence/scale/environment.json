@@ -1,0 +1,32 @@
+{
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "cpu_count": 16,
+  "cgroup": "0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-ghostty-surface-transient-2362.scope\n",
+  "loadavg": "3.77 3.20 3.58 3/2670 1116815\n",
+  "limits": "Limit                     Soft Limit           Hard Limit           Units     \nMax cpu time              unlimited            unlimited            seconds   \nMax file size             unlimited            unlimited            bytes     \nMax data size             unlimited            unlimited            bytes     \nMax stack size            16777216             unlimited            bytes     \nMax core file size        unlimited            unlimited            bytes     \nMax resident set          unlimited            unlimited            bytes     \nMax processes             246988               246988               processes \nMax open files            524288               524288               files     \nMax locked memory         8388608              8388608              bytes     \nMax address space         unlimited            unlimited            bytes     \nMax file locks            unlimited            unlimited            locks     \nMax pending signals       246988               246988               signals   \nMax msgqueue size         819200               819200               bytes     \nMax nice priority         0                    0                    \nMax realtime priority     0                    0                    \nMax realtime timeout      unlimited            unlimited            us        \n",
+  "cpu_model_lines": [
+    "model name\t: AMD Ryzen 7 9800X3D 8-Core Processor",
+    "cpu MHz\t\t: 5237.004",
+    "model name\t: AMD Ryzen 7 9800X3D 8-Core Processor",
+    "cpu MHz\t\t: 5231.389"
+  ],
+  "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-ghostty-surface-transient-2362.scope/pids.max": "74096\n",
+  "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-ghostty-surface-transient-2362.scope/memory.max": "max\n"
+}

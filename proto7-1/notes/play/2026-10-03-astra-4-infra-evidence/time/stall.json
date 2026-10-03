@@ -1,0 +1,146 @@
+{
+ "stop_injection": {
+  "pid": 1111640,
+  "at": 22788.366884382
+ },
+ "resume_mono": 22788.717759378,
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22788.366558753,
+   "end": 22788.733667004,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22788.733759978,
+   "end": 22788.749294896,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22788.74938767,
+   "end": 22788.76545246,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22788.765544081,
+   "end": 22788.781522369,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22788.849471328,
+   "end": 22788.866000566,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22788.866097117,
+   "end": 22788.881686648,
+   "round": 3,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T14:49:40.155",
+   "ev": "start",
+   "pid": 1111632
+  },
+  {
+   "at": "2026-10-03T14:49:40.155",
+   "ev": "node+",
+   "node": "n",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:40.522",
+   "ev": "tick",
+   "node": "n",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:40.538",
+   "ev": "tock",
+   "node": "n",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T14:49:40.554",
+   "ev": "tick",
+   "node": "n",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:40.570",
+   "ev": "tock",
+   "node": "n",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:40.655",
+   "ev": "tick",
+   "node": "n",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:40.670",
+   "ev": "tock",
+   "node": "n",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:40.681",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T14:49:40.682",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 1111632,
+  "root": "/tmp/astra4-time-stall-trsr8zgg",
+  "at": "2026-10-03T14:49:40.682",
+  "stopping": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "n": {
+    "round": 3,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

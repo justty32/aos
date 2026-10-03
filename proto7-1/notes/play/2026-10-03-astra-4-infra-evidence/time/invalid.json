@@ -1,0 +1,430 @@
+{
+ "before_repair": {
+  "pid": 1110745,
+  "root": "/tmp/astra4-time-invalid-mo098e74",
+  "at": "2026-10-03T14:49:38.122",
+  "stopping": false,
+  "kill_on_stop": false,
+  "nodes": {
+   "good": {
+    "round": 3,
+    "phase": "tock",
+    "paused": false,
+    "live": []
+   },
+   "inf": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "nan": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "null": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "overflow": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "text": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "after_repair_rescan": {
+  "pid": 1110745,
+  "root": "/tmp/astra4-time-invalid-mo098e74",
+  "at": "2026-10-03T14:49:38.426",
+  "stopping": false,
+  "kill_on_stop": false,
+  "nodes": {
+   "good": {
+    "round": 6,
+    "phase": "tock",
+    "paused": false,
+    "live": []
+   },
+   "inf": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "nan": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "null": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "overflow": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "text": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 22786.108725985,
+   "end": 22786.124581434,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 22786.124661424,
+   "end": 22786.1405745,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 22786.208769348,
+   "end": 22786.224880014,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 22786.224964382,
+   "end": 22786.24113529,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 22786.308835334,
+   "end": 22786.326033373,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 22786.326108162,
+   "end": 22786.342782823,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 22786.408884868,
+   "end": 22786.424534271,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 22786.424609922,
+   "end": 22786.44029896,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 22786.508952165,
+   "end": 22786.525496332,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 22786.525568276,
+   "end": 22786.542147909,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 22786.609005817,
+   "end": 22786.625336044,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 22786.625407587,
+   "end": 22786.641032044,
+   "round": 6,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T14:49:37.897",
+   "ev": "start",
+   "pid": 1110745
+  },
+  {
+   "at": "2026-10-03T14:49:37.897",
+   "ev": "node+",
+   "node": "good",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "node+",
+   "node": "inf",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "error",
+   "node": "inf",
+   "msg": "OverflowError('cannot convert float infinity to integer')"
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "node+",
+   "node": "nan",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "error",
+   "node": "null",
+   "msg": "TypeError(\"int() argument must be a string, a bytes-like object or a real number, not 'NoneType'\")"
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "node+",
+   "node": "null",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "error",
+   "node": "nan",
+   "msg": "ValueError('cannot convert float NaN to integer')"
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "node+",
+   "node": "overflow",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "error",
+   "node": "overflow",
+   "msg": "OverflowError('int too large to convert to float')"
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "node+",
+   "node": "text",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.898",
+   "ev": "error",
+   "node": "text",
+   "msg": "ValueError(\"invalid literal for int() with base 10: 'bad'\")"
+  },
+  {
+   "at": "2026-10-03T14:49:37.913",
+   "ev": "tick",
+   "node": "good",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.929",
+   "ev": "tock",
+   "node": "good",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.013",
+   "ev": "tick",
+   "node": "good",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:38.030",
+   "ev": "tock",
+   "node": "good",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.115",
+   "ev": "tick",
+   "node": "good",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:38.131",
+   "ev": "tock",
+   "node": "good",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.142",
+   "ev": "ctl",
+   "file": "rescan.json",
+   "op": "rescan",
+   "node": null,
+   "by": null,
+   "ok": true,
+   "msg": "rescanned"
+  },
+  {
+   "at": "2026-10-03T14:49:38.213",
+   "ev": "tick",
+   "node": "good",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:38.229",
+   "ev": "tock",
+   "node": "good",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.314",
+   "ev": "tick",
+   "node": "good",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:38.331",
+   "ev": "tock",
+   "node": "good",
+   "round": 5,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.414",
+   "ev": "tick",
+   "node": "good",
+   "round": 6,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:38.430",
+   "ev": "tock",
+   "node": "good",
+   "round": 6,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.446",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.446",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 1110745,
+  "root": "/tmp/astra4-time-invalid-mo098e74",
+  "at": "2026-10-03T14:49:38.446",
+  "stopping": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "good": {
+    "round": 6,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "inf": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "nan": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "null": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "overflow": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "text": {
+    "round": 0,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

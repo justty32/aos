@@ -1,0 +1,231 @@
+{
+ ".aosd/log.jsonl": [
+  {
+   "at": "2026-10-03T14:49:37.562",
+   "ev": "start",
+   "pid": 1110666
+  },
+  {
+   "at": "2026-10-03T14:49:37.562",
+   "ev": "node+",
+   "node": "n",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.578",
+   "ev": "tick",
+   "node": "n",
+   "round": 1,
+   "started": [
+    "fork-r1"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.715",
+   "ev": "tock",
+   "node": "n",
+   "round": 1,
+   "rc": 0,
+   "ended": [
+    {
+     "tid": "fork-r1",
+     "code": 0
+    }
+   ],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:37.778",
+   "ev": "tick",
+   "node": "n",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.796",
+   "ev": "tock",
+   "node": "n",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:37.978",
+   "ev": "tick",
+   "node": "n",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:37.994",
+   "ev": "tock",
+   "node": "n",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.179",
+   "ev": "tick",
+   "node": "n",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:38.194",
+   "ev": "tock",
+   "node": "n",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:38.379",
+   "ev": "tick",
+   "node": "n",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  }
+ ],
+ ".aosd/status.json": {
+  "pid": 1110666,
+  "root": "/tmp/astra4-tasks-fork-gt54qph6",
+  "at": "2026-10-03T14:49:38.371",
+  "stopping": false,
+  "kill_on_stop": false,
+  "nodes": {
+   "n": {
+    "round": 4,
+    "phase": "tick",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "n/.aos/round.json": {
+  "round": 5,
+  "open": true,
+  "tick_at": "2026-10-03T14:49:38.376",
+  "tock_at": null,
+  "started": [],
+  "ctl": [
+   {
+    "tid": "fork-r1",
+    "op": "kill",
+    "ok": true
+   }
+  ],
+  "mounts": []
+ },
+ "n/.aos/rounds.jsonl": [
+  {
+   "round": 1,
+   "tick_at": "2026-10-03T14:49:37.575",
+   "tock_at": "2026-10-03T14:49:37.712",
+   "started": [
+    "fork-r1"
+   ],
+   "alive": [],
+   "ended": [
+    {
+     "tid": "fork-r1",
+     "code": 0
+    }
+   ],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 2,
+   "tick_at": "2026-10-03T14:49:37.775",
+   "tock_at": "2026-10-03T14:49:37.792",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 3,
+   "tick_at": "2026-10-03T14:49:37.975",
+   "tock_at": "2026-10-03T14:49:37.991",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 4,
+   "tick_at": "2026-10-03T14:49:38.176",
+   "tock_at": "2026-10-03T14:49:38.192",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  }
+ ],
+ "n/.aos/tasks/fork-r1/birth.json": {
+  "tid": "fork-r1",
+  "name": "fork",
+  "node": "n",
+  "round": 1,
+  "mounts": {},
+  "at": "2026-10-03T14:49:37.575",
+  "restart_of": null,
+  "argv": [
+   "/usr/bin/python3",
+   "payload.py",
+   "fork"
+  ]
+ },
+ "n/.aos/tasks/fork-r1/ctl-done.json": {
+  "op": "kill",
+  "by": "probe",
+  "result": {
+   "ok": true,
+   "msg": "already ended",
+   "at": "2026-10-03T14:49:38.376"
+  }
+ },
+ "n/.aos/tasks/fork-r1/ended.json": {
+  "round": 1
+ },
+ "n/.aos/tasks/fork-r1/exit.json": {
+  "code": 0,
+  "at": "2026-10-03T14:49:37.685",
+  "round": 1
+ },
+ "n/.aos/tasks/fork-r1/out.log": {
+  "bytes": 0
+ },
+ "n/.aos/tasks/fork-r1/pid.json": {
+  "pid": 1110677,
+  "pgid": 1110677,
+  "runner_pid": 1110672,
+  "at": "2026-10-03T14:49:37.587"
+ },
+ "n/.aos/tasks.json": {
+  "tasks": []
+ },
+ "n/.aos/timeline.json": {
+  "interval_ms": 200
+ },
+ "n/grandchild.json": {
+  "pid": 1110682,
+  "pgid": 1110677
+ },
+ "n/ready.json": {
+  "pid": 1110677,
+  "kind": "fork"
+ }
+}

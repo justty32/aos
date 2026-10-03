@@ -1,0 +1,176 @@
+{
+  ".aosd/log.jsonl": [
+    {
+      "at": "2026-10-03T14:50:25.412",
+      "ev": "start",
+      "pid": 1116009
+    },
+    {
+      "at": "2026-10-03T14:50:25.413",
+      "ev": "node+",
+      "node": "n",
+      "round": 0
+    },
+    {
+      "at": "2026-10-03T14:50:25.430",
+      "ev": "tick",
+      "node": "n",
+      "round": 1,
+      "started": [
+        "deletekeep-r1"
+      ],
+      "rc": 0
+    },
+    {
+      "at": "2026-10-03T14:50:25.650",
+      "ev": "tock",
+      "node": "n",
+      "round": 1,
+      "rc": 0,
+      "ended": [],
+      "early": false
+    },
+    {
+      "at": "2026-10-03T14:50:25.674",
+      "ev": "tick",
+      "node": "n",
+      "round": 2,
+      "started": [
+        "deletekeep-r2"
+      ],
+      "rc": 0
+    },
+    {
+      "at": "2026-10-03T14:50:25.875",
+      "ev": "tock",
+      "node": "n",
+      "round": 2,
+      "rc": 0,
+      "ended": [],
+      "early": false
+    },
+    {
+      "at": "2026-10-03T14:50:25.893",
+      "ev": "tick",
+      "node": "n",
+      "round": 3,
+      "started": [
+        "deletekeep-r3"
+      ],
+      "rc": 0
+    },
+    {
+      "at": "2026-10-03T14:50:26.111",
+      "ev": "tock",
+      "node": "n",
+      "round": 3,
+      "rc": 0,
+      "ended": [],
+      "early": false
+    },
+    {
+      "at": "2026-10-03T14:50:26.123",
+      "ev": "stopping",
+      "kill": true
+    },
+    {
+      "at": "2026-10-03T14:50:26.128",
+      "ev": "tick",
+      "node": "n",
+      "round": 4,
+      "started": [],
+      "rc": 0
+    },
+    {
+      "at": "2026-10-03T14:50:26.145",
+      "ev": "tock",
+      "node": "n",
+      "round": 4,
+      "rc": 0,
+      "ended": [],
+      "early": true
+    },
+    {
+      "at": "2026-10-03T14:50:26.164",
+      "ev": "stop"
+    }
+  ],
+  ".aosd/status.json": {
+    "pid": 1116009,
+    "root": "/tmp/astra4-tasks-deletekeep-ovabslz8",
+    "at": "2026-10-03T14:50:26.164",
+    "stopping": true,
+    "kill_on_stop": true,
+    "nodes": {
+      "n": {
+        "round": 4,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      }
+    }
+  },
+  "n/.aos/round.json": {
+    "round": 4,
+    "open": false,
+    "tick_at": "2026-10-03T14:50:26.125",
+    "tock_at": "2026-10-03T14:50:26.143",
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "n/.aos/rounds.jsonl": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T14:50:25.427",
+      "tock_at": "2026-10-03T14:50:25.646",
+      "started": [
+        "deletekeep-r1"
+      ],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": []
+    },
+    {
+      "round": 2,
+      "tick_at": "2026-10-03T14:50:25.669",
+      "tock_at": "2026-10-03T14:50:25.872",
+      "started": [
+        "deletekeep-r2"
+      ],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": []
+    },
+    {
+      "round": 3,
+      "tick_at": "2026-10-03T14:50:25.889",
+      "tock_at": "2026-10-03T14:50:26.108",
+      "started": [
+        "deletekeep-r3"
+      ],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": []
+    },
+    {
+      "round": 4,
+      "tick_at": "2026-10-03T14:50:26.125",
+      "tock_at": "2026-10-03T14:50:26.143",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": []
+    }
+  ],
+  "n/.aos/tasks.json": {
+    "tasks": []
+  },
+  "n/.aos/timeline.json": {
+    "interval_ms": 200
+  }
+}
