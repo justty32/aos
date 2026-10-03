@@ -11,7 +11,7 @@ import threading
 import time
 
 import aos7_task
-from aos7_fs import BIN, env_with_bin, node_path, now, read_json, reap_stale_owner
+from aos7_fs import BIN, env_with_bin, holder_unverified, node_path, now, read_json, reap_stale_owner
 
 POLL = 0.02
 DEFAULT_INTERVAL_MS = 1000
@@ -74,6 +74,7 @@ class Timeline(threading.Thread):
         self.wake = threading.Event()
         self.kick = False            # daemon ctl `wake`：不等滿 interval，馬上開下一回合（probes/event N1）
         self.check_unclosed = True   # 第一次開回合前，看有沒有上一段留下沒 tock 的回合
+        self.unverified = None       # 上次記過的「認不出持鎖者」原因（同一個只記一次；astra-6 G-10）
 
     def disk_round(self):
         """回合數以 round.json 為準（tick 寫了新回合卻沒印 stdout 時，記憶體裡的會落後）。"""
@@ -154,8 +155,6 @@ class Timeline(threading.Thread):
             rc, out, err = run_prog("aos7-tick", self.d.root, self.node_id, gen=getattr(self.d, "gen", None),
                                     timeout=tmo, abort=self.stop_overdue)
             tick_cut = rc == TIMEOUT_RC and out is None
-            if tick_cut:
-                self.reap_holder()
             if (out or {}).get("stale"):
                 self.d.log(ev="stale", node=self.node_id, prog="tick")   # 換了世代（不該發生在自己身上）：停這條線
                 return
@@ -165,6 +164,8 @@ class Timeline(threading.Thread):
             started = (out or {}).get("started", [])
             self.round = (out or {}).get("round") or self.disk_round()
             self.note_error("tick", rc, err)
+            if tick_cut:
+                self.reap_holder()   # 在 note_error 之後：認不出持鎖者的說明留在 last_error（astra-6 G-10）
             self.d.log(ev="tick", node=self.node_id, round=self.round, started=started, rc=rc,
                        **({"err": err[-500:]} if rc else {}), **({"incomplete": True} if tick_cut else {}))
             self.phase = "running"
@@ -215,9 +216,23 @@ class Timeline(threading.Thread):
     def reap_holder(self):
         """動作等 action.lock 逾時：持有者若是舊世代、仍是同一個程序（pid＋啟動時間），SIGKILL 它，
         下一個動作就拿得到鎖（daemon 重開後接管舊動作；astra-5 F-04）。不 unlink 鎖檔。"""
-        pid = reap_stale_owner(self.node, getattr(self.d, "gen", None))
+        gen = getattr(self.d, "gen", None)
+        pid = reap_stale_owner(self.node, gen)
         if pid:
             self.d.log(ev="stale-holder-kill", node=self.node_id, pid=pid)
+            self.unverified = None
+            return
+        # 沒殺：鎖真的有人拿著卻認不出身分（缺欄位、讀不到 starttime、對不上）。照樣不殺（防誤殺），
+        # 但 status 的 last_error 與 log 說清楚原因與人工恢復方法（astra-6 G-10）
+        info = holder_unverified(self.node, gen)
+        if not info:
+            return
+        self.last_error = {"prog": "action-lock", "rc": None, "round": self.round, "at": now(),
+                           "err": "stale-holder-unverified：%s。%s" % (info["why"], info["hint"])}
+        if info["why"] != self.unverified:   # 同一個原因只記一次 log
+            self.unverified = info["why"]
+            self.d.log(ev="stale-holder-unverified", node=self.node_id, pid=info["pid"], why=info["why"],
+                       hint=info["hint"])
 
     def replay_tock(self):
         """tock 被逾時收掉、round.json 還開著：馬上補一次 tock（AOS7_INCOMPLETE=tock）。總結已經寫過的話 tock 只關回合、

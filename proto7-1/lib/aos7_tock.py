@@ -42,6 +42,21 @@ def logged_summary(node, rnd, k=5):
     return None
 
 
+def torn_tail(path):
+    """rounds.jsonl 檔尾沒有換行結尾時，回那段半行的位元組數；正常回 0。"""
+    try:
+        with open(path, "rb") as f:
+            end = f.seek(0, os.SEEK_END)
+            if not end:
+                return 0
+            back = min(end, 1 << 20)
+            f.seek(end - back)
+            tail = f.read(back)
+    except OSError:
+        return 0
+    return 0 if tail.endswith(b"\n") else len(tail) - (tail.rfind(b"\n") + 1)
+
+
 def _tock(node, early):
     rpath = os.path.join(node, ".aos", "round.json")
     state = read_json(rpath, {})
@@ -117,7 +132,16 @@ def _tock(node, early):
         summary["errors"] = errors
     if archived:
         summary["archived"] = archived
-    append_jsonl(os.path.join(node, ".aos", "rounds.jsonl"), summary)  # 一回合一行，不再一回合一檔（P-12、R-10）
+    rpath_l = os.path.join(node, ".aos", "rounds.jsonl")
+    torn = torn_tail(rpath_l)
+    if torn:
+        # 上次 append 中途被殺留下的半行：append_jsonl 先補換行（半行留著當證據，讀的人跳過），總結記一筆（astra-6 G-08）
+        summary["errors"] = list(summary.get("errors") or []) + [
+            {"tid": None, "phase": "rounds.jsonl", "err": "檔尾有沒寫完的一行（%d bytes），已補換行、保留原樣" % torn}]
+    append_jsonl(rpath_l, summary)  # 一回合一行，不再一回合一檔（P-12、R-10）
+    if logged_summary(node, rnd) is None:
+        # 總結沒有完整提交（讀不回這回合的一行）：不寫 ended.json、不關回合，下次 tock 重來（astra-6 G-08）
+        raise OSError("rounds.jsonl 讀不回第 %d 回合的總結，沒寫 ended.json、回合沒關" % rnd)
     # 先寫總結，再在任務資料夾寫 ended.json：中途被殺時下次 tock 會再報一次（重複），不會永久漏掉（astra-4 I-03）
     for tdir in marks:
         try:

@@ -54,25 +54,30 @@ def validate(item):
         raise ValueError("allow_stop 要是 true 或 false，拿到 %r" % (item["allow_stop"],))
 
 
-def should_start(item, rnd, live):
-    """這一項本回合要不要起；欄位型別不對丟 ValueError（只跳過這一項）。"""
+def check_item(item):
+    """第 4 節的完整檢查：validate 的定義欄位，加上排程欄位 from_round／mode／max_live 的型別。不對丟 ValueError。
+    restart reload 也先過這一關再剝排程欄位（astra-6 G-05）。"""
     validate(item)
     fr = item.get("from_round", 1)
     if isinstance(fr, bool) or not isinstance(fr, int):
         raise ValueError("from_round 要是整數，拿到 %r" % (fr,))
-    if rnd < fr:
+    if item.get("mode", "each") not in ("each", "keep"):
+        raise ValueError("mode 要是 each 或 keep，拿到 %r" % (item.get("mode"),))
+    ml = item.get("max_live")
+    if ml is not None and (isinstance(ml, bool) or not isinstance(ml, int)):
+        raise ValueError("max_live 要是整數，拿到 %r" % (ml,))
+
+
+def should_start(item, rnd, live):
+    """這一項本回合要不要起；欄位型別不對丟 ValueError（只跳過這一項）。"""
+    check_item(item)
+    if rnd < item.get("from_round", 1):
         return False
-    mode = item.get("mode", "each")
-    if mode not in ("each", "keep"):
-        raise ValueError("mode 要是 each 或 keep，拿到 %r" % (mode,))
-    if mode == "keep" and item_name(item) in live:
+    if item.get("mode", "each") == "keep" and item_name(item) in live:
         return False
     ml = item.get("max_live")
-    if ml is not None:
-        if isinstance(ml, bool) or not isinstance(ml, int):
-            raise ValueError("max_live 要是整數，拿到 %r" % (ml,))
-        if live.get(item_name(item), 0) >= ml:   # 同名活任務已到上限：這回合不起（probes/longrun N-3）
-            return False
+    if ml is not None and live.get(item_name(item), 0) >= ml:   # 同名活任務已到上限：這回合不起（probes/longrun N-3）
+        return False
     return True
 
 
