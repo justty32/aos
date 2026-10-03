@@ -66,17 +66,20 @@ class Timeline(threading.Thread):
         self.node_id = node_id
         self.node = node_path(daemon.root, node_id)
         self.phase = "idle"
-        self.round = read_json(os.path.join(self.node, ".aos", "round.json"), {}).get("round", 0)
+        self.round = 0
+        self.round = self.disk_round()   # round.json 壞掉（`[]`、字串）當 0，不讓 daemon 退出（probes/chaos B1）
         self.interval_ms = None      # 最近一回合實際用的 interval
         self.last_error = None       # 最近一次 tick／tock 失敗（rc≠0）
         self.gone = False            # node 消失：不再 tock（tock 會把資料夾建回來）
         self.wake = threading.Event()
         self.kick = False            # daemon ctl `wake`：不等滿 interval，馬上開下一回合（probes/event N1）
+        self.check_unclosed = True   # 第一次開回合前，看有沒有上一段留下沒 tock 的回合
 
     def disk_round(self):
         """回合數以 round.json 為準（tick 寫了新回合卻沒印 stdout 時，記憶體裡的會落後）。"""
         r = read_json(os.path.join(self.node, ".aos", "round.json"), {})
-        return r.get("round", self.round) if isinstance(r, dict) else self.round
+        v = r.get("round") if isinstance(r, dict) else None
+        return v if isinstance(v, int) and not isinstance(v, bool) else self.round
 
     def note_error(self, prog, rc, err):
         """tick／tock 失敗時記下 last_error（status.json 會帶出來）；成功不清，留著給人看最後一次出錯。"""
@@ -88,7 +91,8 @@ class Timeline(threading.Thread):
         """timeline.json 的 interval_ms；值不對用預設並記 last_error，時間線不死（probes/selfmod bug 3）。"""
         t = read_json(os.path.join(self.node, ".aos", "timeline.json"), {})
         ms = t.get("interval_ms", DEFAULT_INTERVAL_MS) if isinstance(t, dict) else DEFAULT_INTERVAL_MS
-        if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not math.isfinite(ms) or ms > 86400000 * 365:
+        if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not math.isfinite(ms) or ms < 0 \
+                or ms > 86400000 * 365:   # 負數也算壞值；0＝不等（實際 1 ms；probes/chaos B9）
             self.last_error = {"prog": "timeline", "rc": None, "round": self.round, "at": now(),
                                "err": "interval_ms 要是數字，拿到 %r；先用 %d" % (ms, DEFAULT_INTERVAL_MS)}
             ms = DEFAULT_INTERVAL_MS
@@ -138,6 +142,9 @@ class Timeline(threading.Thread):
                 self.phase = "paused"
                 self.wake.wait(POLL)
                 continue
+            if self.check_unclosed:
+                self.check_unclosed = False
+                self.close_unclosed()
             t0 = time.monotonic()
             t_end = t0 + self.interval()
             self.kick = False
@@ -183,6 +190,20 @@ class Timeline(threading.Thread):
             self.sleep_until(t_end)
         if not self.gone:
             self.kill_if_stopping()
+
+    def close_unclosed(self):
+        """round.json 還是 open: true（node 回合中消失又出現、daemon 回合中死掉重開）：先 tock 一次把它關掉，
+        rounds.jsonl 不缺號，總結標 `incomplete: "unclosed"`（probes/chaos B8）。"""
+        r = read_json(os.path.join(self.node, ".aos", "round.json"), {})
+        if not (isinstance(r, dict) and r.get("open") is True):
+            return
+        self.phase = "tock"
+        rc, out, err = run_prog("aos7-tock", self.d.root, self.node_id, {"AOS7_EARLY": "0", "AOS7_INCOMPLETE": "unclosed"},
+                                gen=getattr(self.d, "gen", None), timeout=self.action_timeout(), abort=self.stop_overdue)
+        self.note_error("tock", rc, err)
+        self.d.log(ev="tock", node=self.node_id, round=self.round, rc=rc, ended=(out or {}).get("ended"),
+                   incomplete="unclosed")
+        self.phase = "idle"
 
     def kill_if_stopping(self):
         """daemon stop 帶 kill：收掉本 node 所有活任務。"""

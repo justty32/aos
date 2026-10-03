@@ -11,7 +11,7 @@ import sys
 import time
 
 import aos7_mount
-from aos7_fs import BIN, env_with_bin, node_path, now, read_json, write_json
+from aos7_fs import BIN, env_with_bin, node_path, now, read_json, tail_jsonl, write_json
 
 
 KILL_GRACE = 1.0   # spec 第 6 節：SIGTERM 後等至多 1 秒，還在就 SIGKILL
@@ -40,6 +40,14 @@ def find_task_dir(node, tid):
         if os.path.isdir(d):
             return d
     return None
+
+
+def last_logged_round(node):
+    """rounds.jsonl 最後幾行裡最大的整數 round（round.json 壞掉時接著數用；probes/chaos B6）；沒有回 None。"""
+    rows = tail_jsonl(os.path.join(node, ".aos", "rounds.jsonl"), 20)
+    rs = [x.get("round") for x in rows if isinstance(x, dict)]
+    rs = [r for r in rs if isinstance(r, int) and not isinstance(r, bool)]
+    return max(rs) if rs else None
 
 
 def list_tasks(node):
@@ -134,6 +142,26 @@ def _is_runner(pid):
             return any(a.endswith(b"aos7-run") for a in f.read().split(b"\0"))
     except OSError:
         return False
+
+
+def _env_has(pid, want):
+    try:
+        with open("/proc/%d/environ" % pid, "rb") as f:
+            return want <= set(f.read().split(b"\0"))
+    except OSError:
+        return False
+
+
+def group_is_task(pgid, tid, node):
+    """pid.json 的 pgid 真的是這個任務的嗎：群組沒有活成員（沒東西可打），或有成員（或成員的父程序＝aos7-run）
+    的環境變數 AOS7_TID＋AOS7_NODE 是這個任務。pid.json 在任務自己寫得到的 taskdir，改了 pgid 的不能讓 kill 打到別人（probes/chaos B7）。"""
+    if not isinstance(pgid, int) or pgid <= 1:
+        return False
+    want = {b"AOS7_NODE=" + node.encode(), b"AOS7_TID=" + tid.encode()}
+    members = [(p, st) for p, st in ((p, _stat(p)) for p in _all_pids()) if st and st[2] == pgid and st[0] != "Z"]
+    if not members:
+        return True
+    return any(_env_has(p, want) or _env_has(st[1], want) for p, st in members)
 
 
 def _escaped(tid, node, skip):
@@ -236,7 +264,17 @@ def kill_task(tdir):
     if not pid:
         return False, "no pid.json"
     node = os.path.dirname(os.path.dirname(os.path.dirname(tdir)))
-    also = _escaped(os.path.basename(tdir), node, {os.getpid(), pid.get("runner_pid")})
+    tid = os.path.basename(tdir)
+    also = _escaped(tid, node, {os.getpid(), pid.get("runner_pid")})
+    if not group_is_task(pid.get("pgid"), tid, node):
+        # pid.json 被改過（或 pgid 壞掉）：不打那個群組，只收環境變數相符的
+        if also:
+            st = _stat(also[0])
+            clean = kill_group(st[2] if st else also[0], also=also)
+        else:
+            clean = True
+        return False, "pid.json 的 pgid %r 不是這個任務的群組，沒動它；環境變數相符的 %d 個程序%s" % (
+            pid.get("pgid"), len(also), "收掉了" if clean else "沒收乾淨")
     clean = kill_group(pid.get("pgid"), also=also)
     return clean, "killed" if clean else "still alive after SIGKILL"
 
@@ -345,11 +383,14 @@ def start_task(root, node_id, item, rnd):
         # 這個任務要在 sub 開子 daemon（路一）：先建 `<sub>/.aosd/`，父 daemon 掃描就跳過它，
         # 不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）
         good, bad = aos7_mount.check({"subroot": sub})
-        if good and aos7_mount.in_root(root, good["subroot"]):
-            os.makedirs(os.path.join(node_path(root, good["subroot"]), ".aosd"), exist_ok=True)
+        sp = node_path(root, good["subroot"]) if good else None
+        if good and aos7_mount.in_root(root, good["subroot"]) and os.path.realpath(sp).startswith(
+                os.path.realpath(node) + os.sep):
+            os.makedirs(os.path.join(sp, ".aosd"), exist_ok=True)
             birth["subroot"] = good["subroot"]
         else:
-            birth["subroot_error"] = (bad or ["%s 跑出空間根" % sub])[0]
+            # 子根要在任務自己的 node 底下、不能是 node 本身（S-10；probes/llmteam 誤解 2：寫成 "sub" 就在空間根建了 .aosd）
+            birth["subroot_error"] = (bad or ["subroot %s 要在自己的 node（%s）底下" % (sub, node_id)])[0]
     if "inst" in item:
         birth["inst"] = item["inst"]
     else:
@@ -358,6 +399,10 @@ def start_task(root, node_id, item, rnd):
     env = env_with_bin()
     env.update({"AOS7_ROOT": root, "AOS7_NODE": node, "AOS7_NODE_ID": node_id,
                 "AOS7_TASK": tdir, "AOS7_TID": tid})
+    env.pop("AOS7_SUBROOT", None)   # 子 daemon 起的任務不要繼承父任務的
+    if birth.get("subroot"):
+        # 子根的絕對路徑：argv 寫 ["aos7-daemon", "$AOS7_SUBROOT"]，不必管 cwd 是 node（probes/llmteam 誤解 1）
+        env["AOS7_SUBROOT"] = node_path(root, birth["subroot"])
     # 寫入紀錄（spec 第 5 節）：aos7-run 起任務時才把 audit_site/ 放進任務的 PYTHONPATH，
     # 不給 aos7-run 自己（它寫的 pid.json、exit.json 不算任務的寫入；probes/polyglot N7）
     subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir], cwd=node, env=env,

@@ -29,6 +29,10 @@
 | N-40 | 歷史任務資料夾的成本要有界 | **已做**（Q3 (a)：tock 搬到 tasks-old/） |
 | N-45 | 跨 daemon 的控制端點要能照文件配置 | 部分 |
 | N-47 | 路一子根要有標記，父才不會搶 | 已做（本輪） |
+| N-56 | 讀 JSON 遇到 FIFO 等非一般檔不能卡住 | 已做（第二波） |
+| N-58 | 一個 node 的壞檔不能讓整個 daemon 退出 | 已做（第二波） |
+| N-59 | 壞項目的檢查涵蓋 name／argv 型別，spawn 也適用，毒丸不留 | 已做（第二波） |
+| N-63 | kill 不能被任務改過的 pid.json 導去打別人 | 已做（第二波） |
 
 ## A. 回合與時間
 
@@ -52,7 +56,7 @@
 | N-11 | daemon 是死是活，看檔案就判斷得出來 | multid N5 | kill -9 後 status.json 一字不變；看 `at` 停更要 0.5 秒，而且分不出死了還是卡住 | 應該 | S-01、S-06 | **部分**（本輪）：status 加 `poll_s`、`stopped`、`gen`；被強殺仍只能靠 `at` 停更 | 技術選型 |
 | N-12 | 狀態檔要有世代、snapshot 序號、觀察範圍，並能表達 unknown | astra R18 | 只看檔案時，fork 留下的孫程序、自己刪掉 taskdir 的任務都答不出來 | 必要 | S-01 | **部分**（本輪加 `gen`）；沒有 snapshot 序號，也沒有 unknown／orphan 狀態 | — |
 | N-13 | 錯誤要有一致的入口：哪個元件、哪個 node、哪個任務、哪個階段 | selfmod 6；astra R5、R18 | tasks.json 壞掉時 tick rc 0、毫無紀錄；`from_round` 寫成字串時整回合 rc 1 | 必要（併入 N-21） | S-01、S-06 | **已做**（本輪）：`tasks_error`；總結的 `errors`；`last_error.prog="timeline"`；log 的 `io-error` | 技術選型 |
-| N-14 | 上層看得到下層 daemon 的狀態 | nest3 N8 | D0 的 status 對下層只有 `live:["d1-r1"]` | 可以 | S-20、S-21（daemon 核心不知道從屬） | **沒做**；建議交給工具（例如 `aos7-ctl tree`） | — |
+| N-14 | 上層看得到下層 daemon 的狀態 | nest3 N8；llmteam（父看不到子 daemon 的 status，LLM 只能直接讀子根的 status.json） | D0 的 status 對下層只有 `live:["d1-r1"]` | 可以 | S-20、S-21（daemon 核心不知道從屬） | **沒做**；建議交給工具（例如 `aos7-ctl tree`） | — |
 | N-15 | node 一出生就停著 | sched N3 | 沒預先停的話，沒輪到的 4 條各多跑 2 回合 | 應該 | 之後再說（node 怎麼出生） | **部分**：可以先 pause 一個還不存在的 node（本輪 msg 有註明）；node+ 的 log 帶 `paused` | 技術選型 |
 | N-16 | ctl-done／ 不要只增不減 | sched N7 | 2.6 秒累積 64 個檔 | 可以 | 沒有 | **沒做** | — |
 | N-17 | 負載重時控制面仍然可用 | fleet N2；astra I-11、R8 | 150 條時間線時，啟動 12 秒沒寫 status、不處理 stop；200 條空 node 時第一份 status 晚 4～10 秒 | 必要 | S-06、S-18 | **部分**（本輪）：一圈最多起 20 條新時間線；容量與過載沒管（見 N-41） | 技術選型 |
@@ -77,10 +81,10 @@
 | N-25 | 任務的資源歸屬不依賴任務自己能刪的 taskdir 和主 PID；主程序結束、fork、setsid、taskdir 被刪之後都還盤點得到 | astra I-04、I-05、R4；polyglot N5 | 主程序結束後，孫程序 kill 回「already ended」、stop 後還活著；`setsid sleep` 收不到；任務刪掉自己的 taskdir，status 看不到它，keep 又起三份 | 必要 | S-03、S-06、S-10、S-17 | **已答**：kill 另外用 `/proc/*/environ` 找 `AOS7_TID`＋`AOS7_NODE` 相符的程序；已結束的任務被 kill 時也收殘留；spec 寫明只保證到這裡，故意脫離的任務自己負責 | 〔使用者 10-03〕選 (a) |
 | N-26 | node 消失或搬家時，上面的活任務要有人收，或至少被看見 | subtimeline 2；rename N8 | rm -rf 後 sleeper 還活著，status 不列它，stop --kill 也收不到；搬家後任務的 `AOS7_TASK` 指舊路徑，從此收不到 tock | 應該 | 之後再說（node 怎麼消失） | **已做**：node 消失（含只刪 timeline.json、搬家）就 kill 上面的活任務；daemon 在記憶體記各 node 活任務的 pgid，另找 `AOS7_NODE` 相符的程序；結束碼經 fd 寫到新位置；新位置由 keep 重起（rename、subtimeline 探針已改驗這些） | 〔使用者 10-03〕選 (a) |
 | N-27 | 多層停機要有總期限，不能每層各自 1 秒互相搶 | nest3 N2；astra R15 | 三層加上不理 SIGTERM 的任務：D1 一定被 -9，一半機率留下 2 個孤兒 | 應該 | S-06、S-21 | **沒做** | 技術選型（先不做；P-04） |
-| N-28 | keep 任務要有正規的「別再起我」 | lifecycle N-5；swarm N6 | 29 回合裡，rc0、標記檔、自己 kill 各留 29 個資料夾；只有改 tasks.json 有效 | 應該 | 之後再說（任務表誰能改） | **沒做**；本輪提供 `aos7_fs.edit_json`，讓改 tasks.json 不會互相蓋掉 | 已答 D-3 |
-| N-29 | crash loop 要有退避，或至少看得到連續失敗幾次 | lifecycle N-6 | 52 回合起 52 次、52 個資料夾；50 ms interval 下約每分鐘 19 MiB；寫壞的任務默默死了 31 回合都沒人發現 | 應該 | 沒有 | **部分**：ended 有 name、code、by_ctl，kernel 可以自己算；tick 沒有退避 | — |
+| N-28 | keep 任務要有正規的「別再起我」 | lifecycle N-5；swarm N6；llmkernel（LLM kernel 寫成 keep，結束後又起一份、再燒一次 LLM，只好改 spawn） | 29 回合裡，rc0、標記檔、自己 kill 各留 29 個資料夾；只有改 tasks.json 有效 | 應該 | 之後再說（任務表誰能改） | **沒做**；本輪提供 `aos7_fs.edit_json`，讓改 tasks.json 不會互相蓋掉 | 已答 D-3 |
+| N-29 | crash loop 要有退避，或至少看得到連續失敗幾次 | lifecycle N-6；llmteam（子 daemon 的 argv 寫錯，keep 每 300 ms 重起，兩場各約 68 個任務資料夾，LLM 10～20 秒後才去看 out.log） | 52 回合起 52 次、52 個資料夾；50 ms interval 下約每分鐘 19 MiB；寫壞的任務默默死了 31 回合都沒人發現 | 應該 | 沒有 | **部分**：ended 有 name、code、by_ctl，kernel 可以自己算；tick 沒有退避 | — |
 | N-30 | ended 要說清是哪個任務、為什麼結束 | lifecycle N-4 | 只有 tid＋code；被 restart 收掉的 code 是 0，跟自己正常結束分不出來 | 應該 | 之後再說（失敗與結束碼） | **已做**（本輪）：ended 加 `name`、`by_ctl` | 技術選型 |
-| N-31 | 能「照新的定義重起」 | selfmod 9 | 改了 argv 再 restart，新實例仍跑舊的 v1（restart 抄 birth.json） | 應該 | S-17 | **沒做** | — |
+| N-31 | 能「照新的定義重起」 | selfmod 9；llmops（**真模型 4 次有 3 次先下 restart**，事後讀 birth.json 才改 kill；換新卡後 luna 看出要重起卻停在「等它重啟」）→ **Q6** | 改了 argv 再 restart，新實例仍跑舊的 v1（restart 抄 birth.json） | 應該 | S-17 | **沒做** | **Q6** |
 | N-32 | pause 時能搶佔正在跑的任務 | sched N5 | 低優先 pause 生效的那一刻，12 次裡 12 次都還有任務在跑 | 應該 | S-17、S-18 | **沒做** | 已答 D-4 |
 
 ## E. 任務表與 spawn
@@ -89,7 +93,7 @@
 |---|---|---|---|---|---|---|---|
 | N-33 | tasks.json 要能安全地多人改 | selfmod 8；lifecycle N-5 | 兩個任務各改 100 次，沒鎖只剩 100 項；3 次有 2 次 lost update | 應該 | 之後再說 | **已做**（本輪）：約定 flock `<檔>.lock`，`aos7_fs.edit_json` | 技術選型（選 selfmod 的選項 a） |
 | N-34 | 一批 spawn 要能一次交出去 | swarm N3 | 每寫一個 spawn 停 3 ms，3 批全被拆成兩回合 | 應該 | 沒有 | **已做**（本輪）：`{"batch": [...]}` | 技術選型 |
-| N-35 | 條件起（有檔才起）、只起一次 | swarm N6 | each 沒事件時每回合也起一個 Python | 可以 | 沒有 | **沒做** | — |
+| N-35 | 條件起（有檔才起）、只起一次 | swarm N6；selfprog（「每個檔只算一次」3 個模型全失敗：都寫進 tasks.json 的 keep／each）→ 見 N-65 | each 沒事件時每回合也起一個 Python | 可以 | 沒有 | **沒做** | — |
 | N-36 | each 任務要能設並行上限 | longrun N-3 | 跑 1 秒的 each 任務在 100 ms 回合下堆到 7～8 個 | 應該 | 沒有 | **已做**（本輪）：`max_live` | 技術選型 |
 | N-37 | 新 node 要有「準備好了」的規則 | subtimeline 4 | 先寫 timeline.json 再寫 tasks.json，有 1～8 個空回合 | 可以 | 之後再說 | **已做**（spec 寫明順序：tasks.json 先、timeline.json 最後） | 技術選型 |
 | N-38 | daemon 要記得 node 的歷史（同名重建時分得開） | subtimeline 12 | rm -rf 後同名重建，回合從 1 重數，log 裡分不出是兩段 | 可以 | S-14 | **沒做** | — |
@@ -112,16 +116,56 @@
 | N-45 | 跨 daemon 的控制端點要能照文件配置（匯入或 re-export），仍然走掛載 | astra I-09、R10；multid N7 | 空間外的 daemon：宣告與加掛都被拒，只能用絕對路徑硬寫，寫入紀錄看不見；反向掛父的 `.aosd` 被拒，要把實體目錄 re-export 進去才成 | 必要 | S-07、S-21、S-23 | **部分**：空間內的符號連結掛得上，拒絕會說明理由；沒有照做的流程 | — |
 | N-46 | 路二要能把 daemon 起回來；daemon 的身分不跟著路徑變 | multid N6 | 只能走路一起；起回來後 `status.root` 變成掛載點路徑 | 應該 | S-21 | **沒做** | — |
 | N-47 | 路一的子根要有標記，父 daemon 才不會先把它當 node 搶走 | nest3 N3 | 沒先建 `.aosd/` 時，三層悄悄塌成兩層，D2 起在錯的位置 | 必要 | S-15、S-21 | **已做**（本輪）：tasks.json 項目加 `subroot`，tick 先建 `<subroot>/.aosd/` | 技術選型 |
-| N-48 | 掛載目標消失後重掛，不能默默建出鬼資料夾 | rename N10 | restart 後照舊宣告重掛 `a/inbox`，信「寄成功」但進了沒人看的資料夾 | 應該 | S-23 | **沒做** | — |
+| N-48 | 掛載目標消失後重掛，不能默默建出鬼資料夾 | rename N10；llmops（restart 陷阱那 3 次都讓 tick 建出鬼資料夾 `n5/inbox`，沒有一次被發現） | restart 後照舊宣告重掛 `a/inbox`，信「寄成功」但進了沒人看的資料夾 | 應該 | S-23 | **沒做** | — |
 | N-49 | 寫入紀錄要分得出 `.aos/` 裡哪些是基礎設施的檔；看得到空間外的寫入；不混進 aos7-run 自己的寫入 | selfmod 5；multid N7；polyglot N7 | 任務把 round.json 撥到 1000、偽造別人的 exit.json，全記 ok；每個任務混進約 9 筆 aos7-run 的寫入 | 應該 | S-10 | **部分**（本輪）：aos7-run 不再載入 audit；前兩項沒做 | — |
-| N-50 | 父要管自己 node 裡的子時間線 | subtimeline 11 | 父直接寫子的 tasks.json：記 ok:false 但照樣生效；判不判違規看寫的順序 | 可以 | S-15 | **沒做**（照 M-5） | — |
+| N-50 | 父要管自己 node 裡的子時間線 | subtimeline 11；selfprog（3 個模型都直接改自己開的子 node，全被記 ok:false；沒有一個想到先加掛）。技術選型：照 M-5，卡寫明「要改子 node 先加掛」 | 父直接寫子的 tasks.json：記 ok:false 但照樣生效；判不判違規看寫的順序 | 可以 | S-15 | **沒做**（照 M-5） | — |
 | N-51 | 非 Python 任務要能等 tock、讀欄位 | polyglot N6 | sh 每 20 ms 輪詢，花 7～9% 一核；靠 sed 抓排版讀 JSON | 應該 | S-01、S-11 | **已做**（本輪）：`aos7-wait-tock` | 技術選型 |
 | N-52 | 原子寫的暫存檔不能被別人當成正式檔讀到 | polyglot N11 | 讀到 `x.json.tmp.1383587` | 可以 | S-01 | **已做**（本輪）：暫存名以 `.` 開頭 | 技術選型 |
 | N-53 | inst 任務的輸出預設不要丟掉 | polyglot N12 | inst 任務的 out.log 是 0 bytes | 可以 | S-12 | **沒做** | — |
 
+
+## H. 第二波探針：LLM 當操作者（10-03）
+
+來源是 `probes/llmkernel`、`llmops`、`selfprog`、`llmteam`（LLM 只有 read_file／write_file 兩個工具加一張操作卡 [probes/llm_card.md](../probes/llm_card.md)）與 `probes/chaos`（不用 LLM，高頻亂寫控制面加 10 個單一壞輸入 B1～B10）。N-55 留給 astra-5 報告建議的那條（[play/2026-10-03-astra-5-infra.md](play/2026-10-03-astra-5-infra.md)），這裡從 N-56 起。測試在 `tests/test_wave2.py`。
+
+| 編號 | 需求 | 來源 | 證據 | 優先 | 核心 | 現況 | 決定 |
+|---|---|---|---|---|---|---|---|
+| N-56 | 讀 JSON 遇到 FIFO、資料夾等非一般檔不能卡住 | chaos B10；llmops | `.aosd/ctl/f.json` 是 FIFO：daemon 主迴圈卡在 open()，status 停更、stop 也不收（只能 SIGKILL）；任務 ctl.json 是 FIFO 卡住 tock，spawn 是 FIFO 卡住 tick；tasks.json 是 FIFO 讓 tick 每回合跑滿逾時 | 必要 | S-06 | **已做**：`read_json` 用 O_NONBLOCK 開、不是一般檔當不存在；tasks.json 不是一般檔記 `tasks_error` | 技術選型 |
+| N-57 | 控制檔名字不合格（不是 .json、是資料夾）要有回條 | chaos B5；llmkernel | `ctl/` 裡的 `x.txt` 默默略過、寫的人等不到回條；`d.json` 是資料夾時每圈「處理」一次，log 每秒約 50 行 | 應該 | S-01、S-18 | **已做**：原物搬到 `ctl-done/<名>.bad`、回條 ok:false | 技術選型 |
+| N-58 | 一個 node 的壞檔不能讓整個 daemon 退出 | chaos B1 | 新出現的 node 的 round.json 是 `[]`：daemon rc 1，其他 node 的任務變孤兒（`guard` 只接 OSError） | 必要 | S-05、S-06 | **已做**：時間線讀壞 round 當 0；主迴圈任何例外都記 `ev: "error"` 再試 | 技術選型 |
+| N-59 | 壞項目的欄位檢查要涵蓋 name／argv 型別；spawn 也一樣；壞的 spawn 不能變毒丸 | chaos B2～B4；astra-5 F-06 一部分 | `name: 5` 讓整個 tick 例外、好項目永遠起不來；spawn 檔 name 是陣列＝毒丸（檔不刪、每回合死）；`argv: ["sleep", 5]` 讓 aos7-run 當場例外、任務永遠算剛起（一次冒出約 200 個，stop --kill 超過 15 秒） | 必要（併入 N-21） | S-06 | **已做**：tick 的 `validate` 給 tasks.json 與 spawn 共用；spawn 每項各自 try、檔照刪；aos7-run 對型別錯也寫 exit.json 127 | 技術選型 |
+| N-60 | round.json 被寫壞不能讓回合重數、重號 | chaos B6 | round 改成字串：下個 tick 從 1 重數，rounds.jsonl 重號 | 應該 | S-08 | **已做**：從 rounds.jsonl 最後一行接著數，記 `tasks_error` | 技術選型 |
+| N-61 | 回合中消失又出現的 node、回合中死掉重開的 daemon，那一回合要補 tock | chaos B8 | rounds.jsonl 每次亂寫缺 6～14 個回合號 | 應該 | S-08、S-11 | **已做**：時間線第一次開回合前先 tock 掉沒關的回合（`incomplete: "unclosed"`）；chaos A 段缺號 0 | 技術選型 |
+| N-62 | 負數 interval 算壞值 | chaos B9 | -5 默默當 1 ms 全速跑，不記錯 | 可以 | S-08 | **已做**：負數用預設並記 last_error；0 合法（＝不等，實際 1 ms） | 技術選型 |
+| N-63 | kill 不能被任務自己寫的 pid.json 導去打別人 | chaos B7 | 任務把 pid.json 的 pgid 改成別的群組，kill 就送 SIGTERM 過去（被害的 sleep 退出碼 -15）；改成 daemon 的 pgid 就打到 daemon | 必要 | S-17；權限屬之後再說 | **已做**：kill 前確認群組裡有程序（或它的父程序 aos7-run）的 `AOS7_TID`＋`AOS7_NODE` 是這個任務，不是就不打、回 ok:false；node 消失時用 daemon 記著的 pgid 那條路還沒加這個檢查 | 技術選型（chaos 選項 (b)；不搬 pid.json，不碰 Q1） |
+| N-64 | spawn 要看 keep／max_live | llmops | luna 改好 tasks.json 又寫 spawn 補起，n1 和 hub 都變兩份，之後 kill 多的再 spawn，每次又多一份，直到呼叫用完 | 應該 | S-10 | **已做**：spawn 項目也過 `should_start`，被擋記 `tasks_error`、檔照刪；restart 的 spawn 沒有 mode，不受影響 | 技術選型 |
+| N-65 | 「做一次就好」要有讓 LLM 想得到的正規寫法 | selfprog；llmkernel | 「每檔只算一次」3 個模型全失敗：deepseek 用 keep（做完又起，每檔 10～14 次）、haiku 用 each（每檔 63～69 次）、luna 先用 spawn 後又退回 each（約 200 次） | 應該 | 之後再說（任務表誰能改） | **部分**：卡寫明「做一次的用 spawn，不要寫進 tasks.json」；tasks.json 的 `mode: "once"`（成功結束過就不再起）沒做 | 技術選型（先只寫文件） |
+| N-66 | 路一的子根：範圍、路徑、寫入紀錄要說得清 | llmteam | 兩個 A 都寫 `argv: ["aos7-daemon", "lab/sub"]`（cwd 是 node，實際指到 `lab/lab/sub`）→ crash loop；`subroot: "sub"` 照收、在空間根建了 `.aosd`；子 daemon 繼承任務的 audit 環境，寫自己的根全記 ok:false | 必要 | S-10、S-21 | **已做**：subroot 限在自己 node 底下；`AOS7_SUBROOT` 環境變數（argv 寫 `$AOS7_SUBROOT`）；寫入紀錄把子根算任務的；卡與 spec 寫明「等子根 status.json 出現再建子 node」 | 技術選型 |
+| N-67 | `stop` 帶 node 要拒絕 | llmteam | A 寫 `{"op":"stop","node":"w1"}` 想停一個 node，回條 ok、整個子 daemon 停了 | 應該 | S-18 | **已做**：回 ok:false 並指向 pause | 技術選型 |
+| N-68 | 從沒開過回合的 node、還沒 pause 過的 daemon，讀的人要看得出「正常、還沒有」 | llmkernel | 一出生就 pause 的 node 沒有 round.json／rounds.jsonl／tasks/；luna 讀錯 8 次、花 5 輪猜；paused.json 第一次 pause 前不存在 | 應該 | S-01 | **部分**：daemon 一起來就寫 paused.json；卡寫明「round 0＝還沒開過，沒有那些檔是正常的」；status 沒加 `started` 欄 | 技術選型 |
+| N-69 | `last_error` 要分得出新舊 | llmops | 4 次都要翻 rounds.jsonl 才確定 n3 的錯是舊的；luna 第一次因為看到逾時的 last_error 一直調大 `action_timeout_s` | 應該 | S-01 | **部分**：卡寫明「拿 last_error.round 跟 round 比」；沒有 `last_ok_round` 之類的欄位 | — |
+| N-70 | tick／tock 逾時要說得出卡在哪 | llmops | `err` 只有 `aos7-tick killed (timeout after 2.0s)`，4 次有 3 次去改逾時而不是換掉 FIFO | 應該 | S-01、S-06 | **部分**：最常見的原因（FIFO）改成 `tasks_error` 直接說；逾時時附 `/proc/<pid>/wchan` 沒做 | — |
+| N-71 | 任務一直失敗要在 status 看得見 | selfprog；llmteam | sub 上的任務寫錯 cwd 一直 crash，LLM 要自己翻 tasks/、tasks-old/ 的 exit.json；crash loop 10～20 秒後才被注意 | 應該 | 之後再說（失敗與結束碼） | **沒做**（建議 status 每 node 加 `last_task_fail: {"tid","name","code","round"}`，併 N-29） | — |
+| N-72 | 結束的任務不要在一輪 LLM 思考之內就被搬走 | selfprog | 200 ms 一回合、keep_ended_rounds 20：4 秒就搬到 tasks-old/，比模型想一輪還短；luna 先讀到「不存在」才去猜 tasks-old | 可以 | 沒有 | **部分**：卡寫明「不在 tasks/ 就去 tasks-old/」；沒加時間下限 | — |
+| N-73 | 寫給停著的 daemon 的控制檔怎麼處理 | llmteam | B 寫的 rescan、wake 一直沒回條，花約 20 輪才確定 daemon 死了；留著的 stop 會在下次起來瞬間又停 | 可以 | 之後再說 | **照現在**：下次起來才執行，spec 與卡寫明（llmteam 的選項 a） | 技術選型 |
+| N-74 | daemon 自己的檔被別人寫，要不要報錯 | llmops | haiku 把 `.aosd/paused.json` 寫成空清單想 resume，沒效果也沒錯誤 | 可以 | S-01 | **部分**：卡寫明「status、paused.json、log 是 daemon 的，寫了沒用」 | — |
+| N-75 | 路二的 stop 會被路一的 keep 抵銷 | llmteam D1 | 外部 LLM 只用子 daemon 的控制檔：stop 回條 ok、子 daemon 也退出了，0.16～0.3 秒後父的 keep 以新 gen 把它起回來；外部擋不住，只有改父 node 的 tasks.json 才行 | 應該 | S-21 | **沒做**；卡寫明 | **Q5** |
+| N-76 | 只會整份讀檔的 LLM 要看得到 jsonl 的尾端 | llmteam；llmops | 第一版 read_file 只回前 6000 字：3 個模型都說要看 rounds.jsonl／log 的結尾，B 因此驗不了「剛好 3 回合」 | 可以 | S-01 | **探針工具已改**（`llmop.clip` 回開頭＋結尾）；基礎設施沒有「最新一回合總結」的固定小檔 | — |
+
+**LLM 只靠檔案操作 daemon 的成績**（第一版卡；細節在各探針 README）
+
+| 探針 | 成功 | 真模型呼叫 |
+|---|---|---|
+| llmkernel：三條時間線輪流、超預算的停掉 | 1/3（deepseek 成；luna 輪次記錯；haiku 沒用 `rounds`，每輪多跑約 10 回合）；換新卡後 haiku 重跑成功 | 79＋22 |
+| llmops：修五個壞法 | 整張工單 3/4、逐項 17/20；換新卡後 luna 由 2/5 變 4/5 | 127＋18 |
+| selfprog：自己開子任務、子時間線、改 interval、wake | 9 個目標平均 6.7/9；result.json 3/3 正確、「每檔只算一次」0/3 | 82 |
+| llmteam：路一開子 daemon＋路二外部管 | A 就緒 2/2（都先 crash loop）；B 控制檔 3/3（daemon 活著時）；「停了保持停住」0/2 | 115 |
+
+格式（控制檔、回條、status 的 phase／pause_pending／steps_left）幾乎沒人讀錯；錯的都是**時間與生命週期**：restart 用舊定義、一次性工作寫進 tasks.json、比回合慢卻自己看到再 pause、cwd／子根的路徑基準、把舊 last_error 當現況。
+
 ## 要使用者決定
 
-原本留了四條（Q1～Q4），使用者 10-03 全部答了；下面保留題目與答覆。其餘照使用者 10-03 說的「普通的直接做」，取最簡單的做法，記成技術選型。
+原本留了四條（Q1～Q4），使用者 10-03 全部答了；下面保留題目與答覆。第二波探針新增 **Q5、Q6** 兩條待決定。其餘照使用者 10-03 說的「普通的直接做」，取最簡單的做法，記成技術選型。
 
 ### Q1 daemon 要不要擁有任務的所有子孫程序？（N-25，astra R4）〔使用者 10-03〕選 (a)
 
@@ -183,6 +227,31 @@
   - (b) 不殺，只在 log 記 `orphan`（列 pid），讓人或 kernel 處理。
   - (c) 規定「node 搬家或刪除前要先 pause 或停 daemon」，不支援熱搬，出事是使用者的。
 
+### Q5 路二的 stop 和路一的 keep，誰說了算？（N-75）〔要使用者決定〕
+
+- **發生了什麼**（probes/llmteam）
+  - A（node `lab` 裡的任務）用路一在 `lab/sub` 開子 daemon，tasks.json 那項是 `keep`。
+  - B 從外面只寫子 daemon 的控制檔（路二）。stop 的回條 ok，子 daemon 也正常退出了。
+  - 0.16～0.3 秒後，父 node 的下一個 tick 看到沒有同名活任務，用 keep 把子 daemon 起回來（gen 1→2）。B 看得出原因，但它只能寫子 daemon 的控制檔，擋不住；只有改父 node 的 tasks.json 才擋得住。離線照稿每次都重現。
+  - 被 stop 收掉的子 daemon 結束碼是 0，跟「自己做完」分不出來。
+- **為什麼要問你**：S-21 說兩條路都要，但沒說兩條路對同一個子 daemon 意見不同時誰贏。這是 daemon 的核心語意。
+- **選項**：（不代替你選）
+  - (a) 照現在：路二的 stop＝「重開一次」；要它一直停，得由路一那邊（父 node 的 tasks.json）拿掉。spec 寫明。
+  - (b) stop 在子根留一個標記 `.aosd/stopped.json`（by、at）。有標記時 aos7-daemon 起不來（印說明、退出碼非 0）；父的 tick 看到 `subroot` 有標記就不起那個 keep 項目、記 `tasks_error`。刪掉標記＝路二把它起回來（順便給 N-46「路二要能把 daemon 起回來」一條路）。
+  - (c) 同 (b)，但只有 stop 帶 `"sticky": true` 才留標記；平常的 stop 照 (a)。
+
+### Q6 restart 照誰的定義？（N-31）〔要使用者決定〕
+
+- **發生了什麼**（probes/llmops、selfmod 9）
+  - 工單：n5 搬到 n5b，hub 的 relay 任務掛載還指舊路徑。正解是改 hub 的 tasks.json，再 **kill**（keep 照新定義重起）。
+  - 操作卡寫明「restart 照 birth.json 原本的定義」，真模型 4 次仍有 3 次先下 restart；新實例照舊掛 `n5/inbox`，tick 還建出沒人看的鬼資料夾（N-48），3 次都沒發現，事後讀 birth.json 才改用 kill。
+  - 換了強調「改定義要 kill」的新卡，luna 這次看出 relay 要重起，卻停在「需等該任務重啟後才能確認」，沒有動手。
+- **為什麼要問你**：核心把「kill、restart 這些控制塊怎麼做」列為之後再說；改 restart 的語意會改 kernel（卡住就 restart）的行為。
+- **選項**：（不代替你選）
+  - (a) 照現在：restart＝同一份 birth.json 再起；改定義要 kill，文件加警告。
+  - (b) restart 先找現在 tasks.json 裡同名的項目，照它重起；找不到（spawn 起的、已經從表上拿掉的）才用 birth.json。kernel 的 restart 也跟著吃到新定義。
+  - (c) 不改 restart，另加 op `reload`：kill 後照現在 tasks.json 同名項目重起。
+
 ## 答完 Q1、Q3、Q4 之後冒出來的（技術選型，先這樣）
 
 - **kernel 算用量總和也要掃 tasks-old/**，因為總額上限 `cap_tokens` 要算進已結束的任務。所以 kernel 的成本仍會隨歷史長大，只是轉到 kernel 自己身上。之後若有需要，可以讓 kernel 自己累計，或由 tock 在搬走時把用量加總進一份檔。
@@ -229,3 +298,13 @@
   - 修了：I-01、I-02、I-03、I-05、I-06、I-07。
   - 順手做了最簡單版：I-04（kill 已結束的任務時收殘留）、I-08（status 的 `interval_ms`、`wake`）、I-11（一圈最多起 20 條）。
   - 只記錄：I-09，見 N-45。
+
+- **第二波探針之後**（10-03，`tests/test_wave2.py`）
+  - `read_json` 不讀非一般檔（N-56）；`ctl/` 的怪名字、資料夾、FIFO 給 ok:false 回條（N-57）。
+  - daemon 主迴圈接任何例外；時間線讀壞的 round.json 當 0（N-58）；tick 從 rounds.jsonl 接著數（N-60）；沒關的回合先補 tock（N-61）；負數 interval 算錯（N-62）。
+  - tick 的 `validate` 給 tasks.json 與 spawn 共用；spawn 每項各自 try、檔照刪、照 keep／max_live（N-59、N-64）；aos7-run 對型別錯寫 exit 127。
+  - kill 前驗證 pgid 屬於這個任務（N-63）。
+  - `stop` 帶 node 拒絕（N-67）；daemon 一起來就寫 paused.json（N-68）。
+  - subroot 限在自己 node 底下、`AOS7_SUBROOT`、寫入紀錄算子根（N-66）。
+  - 測試鉤子 `AOS7_TEST_TICK_HANG` 取代 FIFO 的 tasks.json（那招不會卡了）。
+  - 操作卡 [probes/llm_card.md](../probes/llm_card.md) 依 LLM 的誤解補了十幾句。

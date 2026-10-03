@@ -39,6 +39,11 @@ def _tock(node, early):
     if not isinstance(state, dict):
         state = {}
     rnd = state.get("round", 0)
+    bad_round = None
+    if not isinstance(rnd, int) or isinstance(rnd, bool):
+        # round.json 被寫壞（tick 之後才壞的）：從 rounds.jsonl 接著數，總結不寫非整數的 round（probes/chaos B6）
+        bad_round, rnd = rnd, (aos7_task.last_logged_round(node) or 0) + 1
+        state["round"] = rnd
     if state.get("open") is False:
         # 這回合已經 tock 過（tick 被打斷沒開新回合、daemon 收尾又 tock 一次）：不再寫第二行總結（probes/nest3 N1）
         return {"round": rnd, "skipped": "round already closed"}
@@ -85,8 +90,11 @@ def _tock(node, early):
                "mounts": state.get("mounts", []), "early": early}
     if state.get("tasks_error"):
         summary["tasks_error"] = state["tasks_error"]
+    if bad_round is not None:
+        summary["tasks_error"] = list(summary.get("tasks_error") or []) + [
+            "round.json 的 round 壞了（%r），從 rounds.jsonl 接成 %d" % (bad_round, rnd)]
     if os.environ.get("AOS7_INCOMPLETE"):
-        summary["incomplete"] = os.environ["AOS7_INCOMPLETE"]   # 這回合的 tick 被逾時收掉（daemon 給）
+        summary["incomplete"] = os.environ["AOS7_INCOMPLETE"]   # daemon 給：tick 被逾時收掉＝"tick"；上一段沒關的回合＝"unclosed"
     # tock.json 寫失敗只記錯，其他任務照收（astra-4 I-05 tockdirpeer）
     for tid in alive:
         try:

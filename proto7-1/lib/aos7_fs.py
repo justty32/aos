@@ -3,6 +3,7 @@ import contextlib
 import datetime
 import json
 import os
+import stat
 import time
 
 BIN = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin")
@@ -14,12 +15,29 @@ def now():
 
 
 def read_json(path, default=None):
-    """讀 JSON 檔；不存在或壞掉回 default。"""
+    """讀 JSON 檔；不存在、壞掉或不是一般檔（FIFO、資料夾…）回 default。
+
+    用 O_NONBLOCK 開：控制檔、tasks.json、spawn 被換成 FIFO 時不會卡死 daemon 主迴圈或 tick（probes/chaos B10、llmops）。"""
     try:
-        with open(path, encoding="utf-8") as f:
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    except OSError:
+        return default
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            os.close(fd)
+            return default
+        with os.fdopen(fd, encoding="utf-8") as f:
             return json.load(f)
     except (OSError, ValueError):
         return default
+
+
+def is_regular(path):
+    """path 是一般檔（不跟符號連結以外的特殊檔：FIFO、資料夾、裝置都回 False）。"""
+    try:
+        return stat.S_ISREG(os.stat(path).st_mode)
+    except OSError:
+        return False
 
 
 def write_json(path, obj):

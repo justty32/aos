@@ -13,9 +13,10 @@ from aos7_fs import read_jsonl, read_json, write_json
 
 
 class DaemonCase(CoreCase):
-    def start_daemon(self, root=None):
+    def start_daemon(self, root=None, env=None):
         p = subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-daemon"), root or self.root],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, start_new_session=True)
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, start_new_session=True,
+                             env=dict(os.environ, **(env or {})))
         self.procs.append(p)
         return p
 
