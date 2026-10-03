@@ -1,0 +1,34 @@
+{
+  "case": "duplicate-owner",
+  "original_owner": {
+    "node": "n",
+    "tid": "child-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T19:17:38.936"
+  },
+  "replacement_owner": {
+    "node": "n",
+    "tid": "other-r2",
+    "allow_stop": true,
+    "at": "2026-10-03T19:17:39.064"
+  },
+  "running_pid_before": 2806089,
+  "running_pid_after_failed_second_start": 2806089,
+  "second_exit": {
+    "code": 1,
+    "at": "2026-10-03T19:17:39.103",
+    "round": 2
+  },
+  "receipt": {
+    "ok": true,
+    "msg": "stopping with kill；已寫 .aosd/stopped.json，n 不會再起它（刪掉才會）",
+    "at": "2026-10-03T19:17:39.114",
+    "queued_at": "2026-10-03T19:17:39.107"
+  },
+  "seconds": 0.295,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-duplicate-owner-6k1w0azy",
+    "root_exists": false
+  }
+}

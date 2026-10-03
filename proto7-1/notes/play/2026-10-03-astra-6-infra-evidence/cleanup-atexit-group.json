@@ -1,0 +1,21 @@
+{
+  "case": "cleanup-atexit-group",
+  "helper_rc": 0,
+  "registered": {
+    "group": true,
+    "grace": 0.1
+  },
+  "atexit_elapsed_s": 3.071,
+  "pids": {
+    "parent": 2823573,
+    "child": 2823574
+  },
+  "parent_alive": false,
+  "child_alive_before_harness_cleanup": true,
+  "seconds": 3.134,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-cleanup-atexit-group-fgi17zf8",
+    "root_exists": false
+  }
+}

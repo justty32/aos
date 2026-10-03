@@ -1,0 +1,31 @@
+{
+  "case": "fd-tock-symlink",
+  "hook": {
+    "pid": 2806530,
+    "path": "/proc/self/fd/3/.aos/rounds.jsonl",
+    "args": [
+      "/proc/self/fd/3/.aos/rounds.jsonl",
+      "{'round': 1, 'tick_at': None, 'tock_at': '2026-10-03T19:19:21.493', 'started': [], 'alive': [], 'ended': [], 'ctl': [], 'mounts': [], 'early': None}"
+    ]
+  },
+  "rc": 0,
+  "moved_round": {
+    "round": 1,
+    "open": false,
+    "started": [],
+    "ctl": [],
+    "tock_at": "2026-10-03T19:19:21.493"
+  },
+  "old_path_exists": true,
+  "old_path_symlink": true,
+  "target_round": null,
+  "target_sentinel": {
+    "unchanged": true
+  },
+  "seconds": 0.196,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-fd-tock-symlink-we0yf3yb",
+    "root_exists": false
+  }
+}

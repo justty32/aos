@@ -1,0 +1,38 @@
+{
+  "case": "ctl-poison",
+  "alive": true,
+  "status": {
+    "pid": 2805144,
+    "root": "/tmp/astra6-ctl-poison-yvisdyub",
+    "at": "2026-10-03T19:14:37.327",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 34,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "n": {
+        "round": 0,
+        "phase": "paused",
+        "paused": true,
+        "interval_ms": null,
+        "pause_pending": false,
+        "live": []
+      }
+    }
+  },
+  "stop_receipt": null,
+  "pending": [
+    "000.json",
+    "001.json"
+  ],
+  "after_repair_stop_ms": 63.4,
+  "rc": 0,
+  "seconds": 0.775,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-ctl-poison-yvisdyub",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "case": "owner-starttime-missing-lock",
+  "holder_alive_before_repair": true,
+  "round_before_repair": null,
+  "timeouts": [
+    {
+      "at": "2026-10-03T19:24:50.803",
+      "ev": "tick",
+      "node": "n",
+      "round": 0,
+      "started": [],
+      "rc": -9,
+      "err": ": aos7-tick killed (timeout after 0.2s)",
+      "incomplete": true
+    },
+    {
+      "at": "2026-10-03T19:24:51.005",
+      "ev": "tock",
+      "node": "n",
+      "round": 0,
+      "rc": -9,
+      "ended": null,
+      "early": false,
+      "err": ": aos7-tock killed (timeout after 0.2s)",
+      "incomplete": true
+    },
+    {
+      "at": "2026-10-03T19:24:51.207",
+      "ev": "tick",
+      "node": "n",
+      "round": 0,
+      "started": [],
+      "rc": -9,
+      "err": ": aos7-tick killed (timeout after 0.2s)",
+      "incomplete": true
+    },
+    {
+      "at": "2026-10-03T19:24:51.408",
+      "ev": "tock",
+      "node": "n",
+      "round": 0,
+      "rc": -9,
+      "ended": null,
+      "early": false,
+      "err": ": aos7-tock killed (timeout after 0.2s)",
+      "incomplete": true
+    },
+    {
+      "at": "2026-10-03T19:24:51.610",
+      "ev": "tick",
+      "node": "n",
+      "round": 0,
+      "started": [],
+      "rc": -9,
+      "err": ": aos7-tick killed (timeout after 0.2s)",
+      "incomplete": true
+    }
+  ],
+  "after_repair": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T19:24:51.936",
+    "tock_at": null,
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "holder_alive_after_repair": false,
+  "note": "starttime null simulates unavailable identity at owner write; separate stale-unreadable.json tests live /proc lookup returning None",
+  "seconds": 1.46,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-owner-starttime-missing-lock-4wmgz3vc",
+    "root_exists": false
+  }
+}

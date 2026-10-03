@@ -1,0 +1,13 @@
+{
+  "case": "fd-count",
+  "tick_tock_pairs": 300,
+  "before": 4,
+  "after": 4,
+  "round": 300,
+  "seconds": 0.092,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-fd-count-0nde1y4w",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "case": "ctl-flood",
+  "wake_count": 10000,
+  "stop_ms": 10.2,
+  "pending_after_stop": 9601,
+  "rc": 0,
+  "note": "stop sorts before backlog; sent only after first wake receipt",
+  "seconds": 0.278,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-ctl-flood-tf05fvje",
+    "root_exists": false
+  }
+}

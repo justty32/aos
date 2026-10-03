@@ -1,0 +1,219 @@
+{
+  "case": "reload-matrix",
+  "reloads": [
+    {
+      "action": {
+        "round": 2,
+        "started": [
+          "x-r2"
+        ]
+      },
+      "receipt": {
+        "op": "restart",
+        "reload": true,
+        "result": {
+          "ok": true,
+          "msg": "killed; spawn written（reload：照 tasks.json 的 x；argv [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"v1\"] → [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"v2\"]）",
+          "at": "2026-10-03T19:14:35.735",
+          "diff": {
+            "argv": {
+              "old": [
+                "/usr/bin/python3",
+                "-c",
+                "import time;time.sleep(60)",
+                "v1"
+              ],
+              "new": [
+                "/usr/bin/python3",
+                "-c",
+                "import time;time.sleep(60)",
+                "v2"
+              ]
+            }
+          }
+        }
+      },
+      "birth": {
+        "tid": "x-r2",
+        "name": "x",
+        "node": "n",
+        "round": 2,
+        "mounts": {},
+        "at": "2026-10-03T19:14:35.735",
+        "restart_of": "x-r1",
+        "spawn": "restart-x-r1.json",
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import time;time.sleep(60)",
+          "v2"
+        ]
+      },
+      "live": [
+        "x-r2"
+      ]
+    },
+    {
+      "action": {
+        "round": 3,
+        "started": [
+          "x-r3"
+        ]
+      },
+      "receipt": {
+        "op": "restart",
+        "reload": true,
+        "result": {
+          "ok": true,
+          "msg": "killed; spawn written（reload：照 tasks.json 的 x；argv [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"v2\"] → [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"v3\"]）",
+          "at": "2026-10-03T19:14:35.829",
+          "diff": {
+            "argv": {
+              "old": [
+                "/usr/bin/python3",
+                "-c",
+                "import time;time.sleep(60)",
+                "v2"
+              ],
+              "new": [
+                "/usr/bin/python3",
+                "-c",
+                "import time;time.sleep(60)",
+                "v3"
+              ]
+            }
+          }
+        }
+      },
+      "birth": {
+        "tid": "x-r3",
+        "name": "x",
+        "node": "n",
+        "round": 3,
+        "mounts": {},
+        "at": "2026-10-03T19:14:35.829",
+        "restart_of": "x-r2",
+        "spawn": "restart-x-r2.json",
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import time;time.sleep(60)",
+          "v3"
+        ]
+      },
+      "live": [
+        "x-r3"
+      ]
+    },
+    {
+      "action": {
+        "round": 4,
+        "started": [
+          "x-r4"
+        ]
+      },
+      "receipt": {
+        "op": "restart",
+        "reload": true,
+        "result": {
+          "ok": true,
+          "msg": "killed; spawn written（reload：照 tasks.json 的 x；argv [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"v3\"] → [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"v4\"]）",
+          "at": "2026-10-03T19:14:35.915",
+          "diff": {
+            "argv": {
+              "old": [
+                "/usr/bin/python3",
+                "-c",
+                "import time;time.sleep(60)",
+                "v3"
+              ],
+              "new": [
+                "/usr/bin/python3",
+                "-c",
+                "import time;time.sleep(60)",
+                "v4"
+              ]
+            }
+          }
+        }
+      },
+      "birth": {
+        "tid": "x-r4",
+        "name": "x",
+        "node": "n",
+        "round": 4,
+        "mounts": {},
+        "at": "2026-10-03T19:14:35.915",
+        "restart_of": "x-r3",
+        "spawn": "restart-x-r3.json",
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import time;time.sleep(60)",
+          "v4"
+        ]
+      },
+      "live": [
+        "x-r4"
+      ]
+    },
+    {
+      "action": {
+        "round": 5,
+        "started": [
+          "x-r5"
+        ]
+      },
+      "receipt": {
+        "op": "restart",
+        "reload": true,
+        "result": {
+          "ok": true,
+          "msg": "killed; spawn written（reload：照 tasks.json 的 x；argv [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"v4\"] → [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"first\"]）",
+          "at": "2026-10-03T19:14:35.992",
+          "diff": {
+            "argv": {
+              "old": [
+                "/usr/bin/python3",
+                "-c",
+                "import time;time.sleep(60)",
+                "v4"
+              ],
+              "new": [
+                "/usr/bin/python3",
+                "-c",
+                "import time;time.sleep(60)",
+                "first"
+              ]
+            }
+          }
+        }
+      },
+      "birth": {
+        "tid": "x-r5",
+        "name": "x",
+        "node": "n",
+        "round": 5,
+        "mounts": {},
+        "at": "2026-10-03T19:14:35.992",
+        "restart_of": "x-r4",
+        "spawn": "restart-x-r4.json",
+        "argv": [
+          "/usr/bin/python3",
+          "-c",
+          "import time;time.sleep(60)",
+          "first"
+        ]
+      },
+      "live": [
+        "x-r5"
+      ]
+    }
+  ],
+  "seconds": 0.424,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-reload-matrix-6p1_441v",
+    "root_exists": false
+  }
+}

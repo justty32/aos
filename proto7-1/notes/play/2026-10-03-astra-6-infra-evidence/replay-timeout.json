@@ -1,0 +1,91 @@
+{
+  "case": "replay-timeout",
+  "summaries": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T19:16:24.285",
+      "tock_at": "2026-10-03T19:16:24.329",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 2,
+      "tick_at": "2026-10-03T19:16:24.663",
+      "tock_at": "2026-10-03T19:16:24.687",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 3,
+      "tick_at": "2026-10-03T19:16:24.763",
+      "tock_at": "2026-10-03T19:16:24.787",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 4,
+      "tick_at": "2026-10-03T19:16:24.862",
+      "tock_at": "2026-10-03T19:16:24.886",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    }
+  ],
+  "round": {
+    "round": 4,
+    "open": false,
+    "tick_at": "2026-10-03T19:16:24.862",
+    "tock_at": "2026-10-03T19:16:24.886",
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "replay_logs": [
+    {
+      "at": "2026-10-03T19:16:24.640",
+      "ev": "tock",
+      "node": ".",
+      "round": 1,
+      "rc": 0,
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "incomplete": "tock",
+      "replay": true,
+      "replayed": true
+    }
+  ],
+  "seconds": 0.668,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-replay-timeout-g18_fwc9",
+    "root_exists": false
+  }
+}

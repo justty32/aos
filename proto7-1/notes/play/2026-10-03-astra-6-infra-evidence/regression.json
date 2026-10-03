@@ -1,0 +1,420 @@
+{
+  "tests": [
+    {
+      "test": "test_astra5.F01StopSweep.test_fork_same_group",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.145
+    },
+    {
+      "test": "test_astra5.F01StopSweep.test_fork_setsid",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.145
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_agent_state",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.031
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_kernel_state",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.027
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_usage_total",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.025
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_vanished_is_unknown_not_zero",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_eio_timeline_stat",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.322
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_estale_scandir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.322
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_really_gone_still_killed",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.041
+    },
+    {
+      "test": "test_astra5.F04StaleHolder.test_new_daemon_reaps_old_holder",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.554
+    },
+    {
+      "test": "test_astra5.F04StaleHolder.test_not_same_process_not_killed",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.002
+    },
+    {
+      "test": "test_astra5.F05SummaryOnce.test_same_round_replay",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.161
+    },
+    {
+      "test": "test_astra5.F05SummaryOnce.test_timeout_after_summary",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.663
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_ctl_receipt_dir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.113
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_interval_huge_int",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_numeric_name_first",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.137
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_poison_batch",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.023
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_wait_tock_non_object",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.521
+    },
+    {
+      "test": "test_astra5.F07MountReceipt.test_receipt_dir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra5.F08SubrootFirstScan.test_three_cold_starts",
+      "ok": true,
+      "errors": [],
+      "seconds": 1.325
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tick_delete",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.023
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tick_rename",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.023
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tock_delete",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.043
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tock_rename",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.043
+    },
+    {
+      "test": "test_astra5.F10CtlFlood.test_budget_per_loop",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.016
+    },
+    {
+      "test": "test_astra5.F10CtlFlood.test_status_moves_during_flood",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.364
+    },
+    {
+      "test": "test_astra5.F11ProcHelper.test_cleanup_order",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra5.F11ProcHelper.test_reap_stubborn",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.307
+    },
+    {
+      "test": "test_owner_reload.TestOwnerDaemon.test_stop_needs_owner_permission",
+      "ok": true,
+      "errors": [],
+      "seconds": 1.439
+    },
+    {
+      "test": "test_owner_reload.TestOwnerDaemon.test_top_level_stop_and_manual_start_clears_mark",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.095
+    },
+    {
+      "test": "test_owner_reload.TestOwnerTick.test_allow_stop_type_and_restart_carries_it",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.124
+    },
+    {
+      "test": "test_owner_reload.TestOwnerTick.test_owner_json_and_stopped_blocks_keep_and_spawn",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.148
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_ctl_reload_only_for_restart",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.023
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_plain_restart_still_uses_birth",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.123
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_carries_dynamic_mounts",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.274
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_refused_without_kill",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.224
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_takes_new_definition",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.127
+    }
+  ],
+  "count": 37,
+  "ok": true,
+  "pre_harness_cleanup_children": {
+    "2804471": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852230"
+    },
+    "2804473": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852232"
+    },
+    "2804478": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852244"
+    },
+    "2804480": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852247"
+    },
+    "2804487": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852264"
+    },
+    "2804490": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852296"
+    },
+    "2804513": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852389"
+    },
+    "2804518": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852399"
+    },
+    "2804524": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852407"
+    },
+    "2804535": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852471"
+    },
+    "2804539": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852477"
+    },
+    "2804543": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852482"
+    },
+    "2804547": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852487"
+    },
+    "2804551": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852491"
+    },
+    "2804555": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852496"
+    },
+    "2804556": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852496"
+    },
+    "2804557": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852496"
+    },
+    "2804570": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852554"
+    },
+    "2804580": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852596"
+    },
+    "2804590": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852638"
+    },
+    "2804613": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852767"
+    },
+    "2804639": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852890"
+    },
+    "2804649": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852918"
+    },
+    "2804654": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852928"
+    },
+    "2804656": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852931"
+    },
+    "2804663": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852943"
+    },
+    "2804666": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852948"
+    },
+    "2804671": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852958"
+    },
+    "2804673": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852960"
+    },
+    "2804680": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852975"
+    },
+    "2804692": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852985"
+    },
+    "2804694": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852987"
+    },
+    "2804695": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852989"
+    },
+    "2804700": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3852999"
+    },
+    "2804702": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3853000"
+    },
+    "2804707": {
+      "state": "Z",
+      "ppid": 2804462,
+      "start": "3853010"
+    },
+    "2804712": {
+      "state": "R",
+      "ppid": 2804462,
+      "start": "3853020"
+    }
+  },
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-suite-u5_ege6p",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "case": "reload-bad-from_round",
+  "action": {
+    "round": 2,
+    "started": [
+      "x-r2"
+    ]
+  },
+  "receipt": {
+    "op": "restart",
+    "reload": true,
+    "result": {
+      "ok": true,
+      "msg": "killed; spawn written（reload：照 tasks.json 的 x；argv [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\"] → [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"new\"]）",
+      "at": "2026-10-03T19:14:37.837",
+      "diff": {
+        "argv": {
+          "old": [
+            "/usr/bin/python3",
+            "-c",
+            "import time;time.sleep(60)"
+          ],
+          "new": [
+            "/usr/bin/python3",
+            "-c",
+            "import time;time.sleep(60)",
+            "new"
+          ]
+        }
+      }
+    }
+  },
+  "old_alive": false,
+  "round": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T19:14:37.825",
+    "tock_at": null,
+    "started": [
+      "x-r2"
+    ],
+    "ctl": [
+      {
+        "tid": "x-r1",
+        "op": "restart",
+        "ok": true
+      }
+    ],
+    "mounts": [],
+    "tasks_error": [
+      "x：from_round 要是整數，拿到 'bad'"
+    ]
+  },
+  "seconds": 0.126,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-reload-bad-from_round-jy6ytl6d",
+    "root_exists": false
+  }
+}

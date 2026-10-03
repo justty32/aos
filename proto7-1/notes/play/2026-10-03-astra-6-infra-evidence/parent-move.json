@@ -1,0 +1,60 @@
+{
+  "case": "parent-move",
+  "old_child_pid": 2806099,
+  "old_child_alive": false,
+  "old_path_recreated": true,
+  "old_path_files": [
+    "sub/.aosd/status.json",
+    "sub/.aosd/log.jsonl"
+  ],
+  "new_owner": {
+    "node": "m",
+    "tid": "child-r2",
+    "allow_stop": true,
+    "at": "2026-10-03T19:17:39.316"
+  },
+  "new_status": {
+    "pid": 2806105,
+    "root": "/tmp/astra6-parent-move-pgthvtup/m/sub",
+    "at": "2026-10-03T19:17:39.495",
+    "poll_s": 0.02,
+    "gen": 2,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {}
+  },
+  "parent_events": [
+    {
+      "at": "2026-10-03T19:17:39.212",
+      "ev": "node+",
+      "node": "n",
+      "round": 0
+    },
+    {
+      "at": "2026-10-03T19:17:39.273",
+      "ev": "node+",
+      "node": "m",
+      "round": 1
+    },
+    {
+      "at": "2026-10-03T19:17:39.273",
+      "ev": "node-",
+      "node": "n"
+    },
+    {
+      "at": "2026-10-03T19:17:39.303",
+      "ev": "node-gone-kill",
+      "node": "n",
+      "groups": 1,
+      "ok": true
+    }
+  ],
+  "seconds": 0.395,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-parent-move-pgthvtup",
+    "root_exists": false
+  }
+}

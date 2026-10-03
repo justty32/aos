@@ -1,0 +1,14 @@
+{
+  "case": "stale-unreadable",
+  "pid": 2805157,
+  "real_starttime": 3868572,
+  "reaped": null,
+  "alive": true,
+  "method": "simulate proc stat unavailable",
+  "seconds": 0.012,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-stale-unreadable-yzhj89sb",
+    "root_exists": false
+  }
+}

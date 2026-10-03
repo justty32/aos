@@ -1,0 +1,12 @@
+{
+  "case": "legacy-demo-eio",
+  "daemon_rc": 0,
+  "returned_left": [],
+  "live_descendants_before_delete": {},
+  "seconds": 10.789,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-legacy-demo-eio-liixvyhd",
+    "root_exists": false
+  }
+}

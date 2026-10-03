@@ -1,0 +1,22 @@
+{
+  "case": "sweep-nested",
+  "rc": 0,
+  "child_pid": 2806541,
+  "child_alive": false,
+  "leaf_pid": 2806558,
+  "leaf_alive": false,
+  "sweep_logs": [
+    {
+      "at": "2026-10-03T19:19:22.035",
+      "ev": "stop-sweep",
+      "groups": 1,
+      "ok": true
+    }
+  ],
+  "seconds": 0.386,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-sweep-nested-m70xirpe",
+    "root_exists": false
+  }
+}

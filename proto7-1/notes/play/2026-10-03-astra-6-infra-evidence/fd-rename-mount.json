@@ -1,0 +1,53 @@
+{
+  "case": "fd-rename-mount",
+  "hook": {
+    "pid": 2806527,
+    "path": "/proc/self/fd/3/.aos/round.json",
+    "args": [
+      "/proc/self/fd/3/.aos/.round.json.tmp.2806527",
+      "/proc/self/fd/3/.aos/round.json"
+    ]
+  },
+  "rc": 0,
+  "moved_round": {
+    "round": 1,
+    "open": true,
+    "tick_at": "2026-10-03T19:19:21.262",
+    "tock_at": null,
+    "started": [
+      "x-r1"
+    ],
+    "ctl": [],
+    "mounts": []
+  },
+  "old_path_exists": true,
+  "old_path_symlink": false,
+  "target_round": null,
+  "target_sentinel": {
+    "unchanged": true
+  },
+  "task_files": [
+    "birth.json",
+    "mnt"
+  ],
+  "task_state": "born",
+  "next_tick": {
+    "rc": 0,
+    "out": {
+      "round": 2,
+      "started": []
+    },
+    "err": ""
+  },
+  "after_state": "born",
+  "exit": null,
+  "ghost_files": [
+    "inbox"
+  ],
+  "seconds": 0.23,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-fd-rename-mount-lcxx4vs6",
+    "root_exists": false
+  }
+}

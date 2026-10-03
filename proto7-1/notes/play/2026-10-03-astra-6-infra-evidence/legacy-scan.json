@@ -1,0 +1,124 @@
+{
+  "case": "legacy-scan",
+  "cases": [
+    {
+      "case": "estale_walk",
+      "root": "/tmp/astra6-legacy-scan-7_g28bvx/astra5-node-estale_walk-tkldodi2",
+      "pid": {
+        "pid": 2805493,
+        "pgid": 2805493,
+        "runner_pid": 2805492,
+        "at": "2026-10-03T19:16:06.026"
+      },
+      "known_before": {
+        "sleep-r1": [
+          2805493,
+          2805492
+        ]
+      },
+      "task_alive_after": true,
+      "node_still_exists": true,
+      "node_in_daemon": true,
+      "io_errors_delta": 1,
+      "log": [
+        {
+          "at": "2026-10-03T19:16:06.006",
+          "ev": "node+",
+          "node": "n",
+          "round": 0,
+          "paused": true
+        },
+        {
+          "at": "2026-10-03T19:16:06.027",
+          "ev": "scan-error",
+          "errors": {
+            "n": "OSError(116, 'simulated remote mount stale handle')"
+          }
+        }
+      ]
+    },
+    {
+      "case": "timeline_eio",
+      "root": "/tmp/astra6-legacy-scan-7_g28bvx/astra5-node-timeline_eio-7ayeey7o",
+      "pid": {
+        "pid": 2805496,
+        "pgid": 2805496,
+        "runner_pid": 2805495,
+        "at": "2026-10-03T19:16:06.307"
+      },
+      "known_before": {
+        "sleep-r1": [
+          2805496,
+          2805495
+        ]
+      },
+      "task_alive_after": true,
+      "node_still_exists": true,
+      "node_in_daemon": true,
+      "io_errors_delta": 1,
+      "log": [
+        {
+          "at": "2026-10-03T19:16:06.289",
+          "ev": "node+",
+          "node": "n",
+          "round": 0,
+          "paused": true
+        },
+        {
+          "at": "2026-10-03T19:16:06.310",
+          "ev": "scan-error",
+          "errors": {
+            "n": "OSError(5, 'simulated remote stat I/O error')"
+          }
+        }
+      ]
+    },
+    {
+      "case": "rename_gap",
+      "root": "/tmp/astra6-legacy-scan-7_g28bvx/astra5-node-rename_gap-8hp0ymnn",
+      "pid": {
+        "pid": 2805501,
+        "pgid": 2805501,
+        "runner_pid": 2805500,
+        "at": "2026-10-03T19:16:06.591"
+      },
+      "known_before": {
+        "sleep-r1": [
+          2805501,
+          2805500
+        ]
+      },
+      "task_alive_after": false,
+      "node_still_exists": true,
+      "node_in_daemon": false,
+      "io_errors_delta": 0,
+      "log": [
+        {
+          "at": "2026-10-03T19:16:06.571",
+          "ev": "node+",
+          "node": "n",
+          "round": 0,
+          "paused": true
+        },
+        {
+          "at": "2026-10-03T19:16:06.592",
+          "ev": "node-",
+          "node": "n"
+        },
+        {
+          "at": "2026-10-03T19:16:06.602",
+          "ev": "node-gone-kill",
+          "node": "n",
+          "groups": 1,
+          "ok": true
+        }
+      ]
+    }
+  ],
+  "seconds": 0.876,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-legacy-scan-7_g28bvx",
+    "root_exists": false
+  }
+}
