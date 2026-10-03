@@ -38,7 +38,7 @@ class TestDaemon(DaemonCase):
         self.start_daemon()
         tock = self.wait_for(lambda: [x for x in self.log() if x.get("ev") == "tock"], msg="沒有 tock")[0]
         self.assertTrue(tock["early"])
-        self.assertEqual(tock["ended"], [{"tid": "q-r1", "code": 0}])
+        self.assertEqual(tock["ended"], [{"tid": "q-r1", "name": "q", "code": 0}])
         self.ctl("stop")
 
     def test_pause_resume_stop_kill(self):
@@ -157,9 +157,12 @@ class TestTickFailure(CoreCase):
             def log(self, **kw):
                 self.logs.append(kw)
 
+            def round_done(self, nid):
+                pass
+
         d = FakeDaemon()
 
-        def fake_run(name, root, nid):
+        def fake_run(name, root, nid, extra_env=None, gen=None):
             if name == "aos7-tick":
                 write_json(os.path.join(node, ".aos", "round.json"), {"round": 3, "open": True})
                 return 1, None, "Traceback: boom"

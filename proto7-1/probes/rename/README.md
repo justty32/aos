@@ -17,3 +17,5 @@ sitter 同時用 `$AOS7_TASK`（絕對）與「相對 cwd 的 `.aos/tasks/<tid>/
 - 掛載是相對符號連結：同一層改名，sitter 的 `mnt/b_in` 還通；搬到深兩層就斷。b 掛 `a/inbox` 的連結一改名就斷（ENOENT）。
 - kill 搬過的 sitter：aos7-run 把真的 `exit.json`（code -15）寫回**舊路徑**（又建一次鬼資料夾）；新位置的 tock 看不到，記成 `lost`。keep 再起的新 sitter 環境正確、掛載正常。
 - **restart peer**：照舊宣告重掛 `a/inbox`，tick 把不存在的目標建成資料夾（M-2），信寄「成功」但進了沒人看的鬼資料夾 `a/inbox`，寄件方看不出錯。
+
+> **基礎設施修補之後（10-03）**：aos7-run 改成經任務資料夾的 fd 寫 exit.json，kill 搬過的任務時結束碼寫到新位置、舊路徑不再被建回來（探針的第 3 步已改成檢查這件事）。其他發現照舊，見 [infra-needs.md](../../notes/infra-needs.md)。

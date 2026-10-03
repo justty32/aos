@@ -13,7 +13,6 @@ import time
 import aos7_mount
 from aos7_fs import BIN, env_with_bin, node_path, now, read_json, write_json
 
-AUDIT_SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_site")
 
 KILL_GRACE = 1.0   # spec 第 6 節：SIGTERM 後等至多 1 秒，還在就 SIGKILL
 LIVE_STATES = ("born", "live")
@@ -37,6 +36,20 @@ def list_tasks(node):
                       if os.path.isfile(os.path.join(tasks_dir(node), d, "birth.json")))
     except OSError:
         return []
+
+
+def birth_of(tdir):
+    """讀 birth.json；壞掉或不是物件回 {}（任務自己改壞也不拖垮 tick／tock；astra-4 I-05）。"""
+    b = read_json(os.path.join(tdir, "birth.json"))
+    return b if isinstance(b, dict) else {}
+
+
+def name_of(tdir):
+    """任務的 name：birth.json 的，讀不到就從 tid 推（`<name>-r<回合>[-k]`），免得 keep 以為沒有活實例又起一份。"""
+    n = birth_of(tdir).get("name")
+    if isinstance(n, str) and n:
+        return n
+    return re.sub(r"-r\d+(-\d+)?$", "", os.path.basename(tdir))
 
 
 # ---------- 程序 ----------
@@ -101,9 +114,30 @@ def _groups_with_descendants(pgid):
     return {pgid} | {table[p][2] for p in seen if p in table}
 
 
-def kill_group(pgid, grace=KILL_GRACE):
-    """對 pgid（連同後代的群組）送 SIGTERM，等至多 grace 秒，還在就 SIGKILL。回 True＝收乾淨。"""
+def _escaped(tid, node, skip):
+    """環境變數 AOS7_TID、AOS7_NODE 都是這個任務、但已經不是後代的程序（雙 fork、setsid 後被 init 收養；probes/polyglot N5）。"""
+    want = {b"AOS7_TID=" + tid.encode(), b"AOS7_NODE=" + node.encode()}
+    out = []
+    for pid in _all_pids():
+        if pid in skip:
+            continue
+        try:
+            with open("/proc/%d/environ" % pid, "rb") as f:
+                env = set(f.read().split(b"\0"))
+        except OSError:
+            continue
+        if want <= env:
+            out.append(pid)
+    return out
+
+
+def kill_group(pgid, grace=KILL_GRACE, also=()):
+    """對 pgid（連同後代的群組）與 also（另外找到的程序所在的群組）送 SIGTERM，等至多 grace 秒，還在就 SIGKILL。回 True＝收乾淨。"""
     groups = _groups_with_descendants(pgid)
+    for pid in also:
+        st = _stat(pid)
+        if st:
+            groups |= _groups_with_descendants(st[2])
     for g in groups:
         try:
             os.killpg(g, signal.SIGTERM)
@@ -136,7 +170,7 @@ def task_state(tdir):
     if os.path.exists(os.path.join(tdir, "exit.json")):
         return "ended"
     pid = read_json(os.path.join(tdir, "pid.json"))
-    if not pid:
+    if not isinstance(pid, dict) or not pid:
         return "born"
     if pid_alive(pid.get("pid")) or pid_alive(pid.get("runner_pid")):
         return "live"
@@ -160,15 +194,25 @@ def live_tasks(node):
 def kill_task(tdir):
     """kill 一個任務，回 (ok, msg)。已結束當成功。"""
     if os.path.exists(os.path.join(tdir, "exit.json")):
-        return True, "already ended"
+        # 主程序結束了，但它開的子孫可能還在（astra-4 I-04）：照樣找環境變數是這個任務的程序收掉
+        tid = os.path.basename(tdir)
+        node = os.path.dirname(os.path.dirname(os.path.dirname(tdir)))
+        left = _escaped(tid, node, {os.getpid()})
+        if not left:
+            return True, "already ended"
+        st = _stat(left[0])
+        clean = kill_group(st[2] if st else left[0], also=left)
+        return clean, "already ended; %d leftover process(es) %s" % (len(left), "killed" if clean else "still alive")
     end = time.monotonic() + KILL_GRACE
     pid = read_json(os.path.join(tdir, "pid.json"))
-    while not pid and time.monotonic() < end:   # 剛起、aos7-run 還沒寫 pid.json
+    while not isinstance(pid, dict) and time.monotonic() < end:   # 剛起、aos7-run 還沒寫 pid.json
         time.sleep(0.02)
         pid = read_json(os.path.join(tdir, "pid.json"))
     if not pid:
         return False, "no pid.json"
-    clean = kill_group(pid.get("pgid"))
+    node = os.path.dirname(os.path.dirname(os.path.dirname(tdir)))
+    also = _escaped(os.path.basename(tdir), node, {os.getpid(), pid.get("runner_pid")})
+    clean = kill_group(pid.get("pgid"), also=also)
     return clean, "killed" if clean else "still alive after SIGKILL"
 
 
@@ -195,8 +239,8 @@ def run_ctl(node, tid):
         ok, msg = kill_task(tdir)
     elif op == "restart":
         ok, msg = kill_task(tdir)
-        birth = read_json(os.path.join(tdir, "birth.json"), {})
-        item = {k: birth[k] for k in ("name", "argv", "inst") if k in birth}
+        birth = birth_of(tdir)
+        item = {k: birth[k] for k in ("name", "argv", "inst", "subroot") if k in birth}
         item["mounts"] = aos7_mount.decl_of(birth)   # 新任務照原本的宣告重新掛
         item["restart_of"] = tid
         write_spawn(node, "restart-" + tid, item)
@@ -242,9 +286,21 @@ def start_task(root, node_id, item, rnd):
     tid = new_tid(node, item.get("name"), rnd)
     tdir = task_dir(node, tid)
     os.makedirs(tdir, exist_ok=True)   # 先佔住 tid，掛載點建在裡面
-    birth = {"tid": tid, "name": item.get("name", "task"), "node": node_id, "round": rnd,
+    birth = {"tid": tid, "name": item.get("name") or "task", "node": node_id, "round": rnd,
              "mounts": aos7_mount.make(root, tdir, item.get("mounts") or {}),
              "at": now(), "restart_of": item.get("restart_of")}
+    if item.get("spawn"):
+        birth["spawn"] = item["spawn"]   # 從哪個 spawn 檔起的（追得到請求的去向；astra-4 I-02）
+    sub = item.get("subroot")
+    if isinstance(sub, str):
+        # 這個任務要在 sub 開子 daemon（路一）：先建 `<sub>/.aosd/`，父 daemon 掃描就跳過它，
+        # 不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）
+        good, bad = aos7_mount.check({"subroot": sub})
+        if good and aos7_mount.in_root(root, good["subroot"]):
+            os.makedirs(os.path.join(node_path(root, good["subroot"]), ".aosd"), exist_ok=True)
+            birth["subroot"] = good["subroot"]
+        else:
+            birth["subroot_error"] = (bad or ["%s 跑出空間根" % sub])[0]
     if "inst" in item:
         birth["inst"] = item["inst"]
     else:
@@ -253,9 +309,8 @@ def start_task(root, node_id, item, rnd):
     env = env_with_bin()
     env.update({"AOS7_ROOT": root, "AOS7_NODE": node, "AOS7_NODE_ID": node_id,
                 "AOS7_TASK": tdir, "AOS7_TID": tid})
-    if env.get("AOS7_AUDIT") and AUDIT_SITE not in env.get("PYTHONPATH", "").split(os.pathsep):
-        # 寫入紀錄（spec 第 5 節）：Python 任務啟動時載入 audit_site/sitecustomize.py
-        env["PYTHONPATH"] = os.pathsep.join(x for x in (AUDIT_SITE, env.get("PYTHONPATH")) if x)
+    # 寫入紀錄（spec 第 5 節）：aos7-run 起任務時才把 audit_site/ 放進任務的 PYTHONPATH，
+    # 不給 aos7-run 自己（它寫的 pid.json、exit.json 不算任務的寫入；probes/polyglot N7）
     subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir], cwd=node, env=env,
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)

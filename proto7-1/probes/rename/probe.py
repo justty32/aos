@@ -122,10 +122,12 @@ def main():
         sp.wait_for(lambda: sp.task_file("deep/x/a3", sit, "exit.json"), timeout=5, msg="kill 後 a3 沒有 exit.json")
         ex = sp.task_file("deep/x/a3", sit, "exit.json")
         r.check("kill 收得到搬過的任務（pid.json 的 pgid 不看路徑）", not aos7_task.pid_alive(sit_pid))
-        r.measure("新位置的 exit.json（aos7-run 寫不到這裡，tock 當 lost）", ex)
+        r.measure("新位置的 exit.json", ex)
         ghost = os.path.join(old_node, ".aos", "tasks", sit, "exit.json")
-        sp.wait_for(lambda: os.path.exists(ghost), timeout=3, msg="舊路徑沒出現 exit.json")
-        r.measure("aos7-run 把真的 exit.json 寫回舊路徑（建回 a/.aos/tasks/<tid>/）", pl.fs.read_json(ghost))
+        time.sleep(0.3)
+        # 修補後（aos7-run 經任務資料夾的 fd 寫 exit.json）：真的結束碼寫到新位置，舊路徑不再被建回來
+        r.check("修補後：kill 的結束碼寫到搬去的新位置（不是 lost）", ex.get("code") == -15 and not ex.get("lost"), ex)
+        r.check("修補後：舊路徑沒被建回 exit.json", not os.path.exists(ghost))
         r.check("舊路徑被建回來的不是 node（沒 timeline.json，daemon 不當它是 a）",
                 not os.path.exists(os.path.join(old_node, ".aos", "timeline.json"))
                 and "a" not in sp.status().get("nodes", {}))
@@ -152,8 +154,8 @@ def main():
         r.finding("搬過的活任務：程序還活著、pid.json 跟著搬，所以 keep 不會起第二份、kill 收得到；"
                   "但 AOS7_TASK／AOS7_NODE 是出生時的絕對路徑，用環境變數等 tock 的任務（含 aos7_fs.wait_tock）從此收不到 tock、永遠卡住；"
                   "用相對 cwd 的路徑反而照常（cwd 跟著資料夾走）")
-        r.finding("aos7-run 寫 exit.json 用的是出生時的絕對路徑：真的結束碼被寫到舊路徑（makedirs 把舊資料夾建回來），"
-                  "新位置只拿到 tock 補的 lost")
+        r.finding("〔已修〕原本 aos7-run 寫 exit.json 用出生時的絕對路徑：真的結束碼被寫到舊路徑（makedirs 把舊資料夾建回來），"
+                  "新位置只拿到 tock 補的 lost。現在 aos7-run 先抓住任務資料夾的 fd，結束碼跟著資料夾走")
         r.finding("掛載是相對符號連結：同一層改名，自己的掛載還通；搬到不同深度就斷。別人掛它 inbox 的連結一律斷，"
                   "而且掛載只增不減（M-9），連結不會自己修")
         r.finding("更糟的是 restart（或新起）的任務照舊宣告重掛舊路徑時，tick 會把不存在的目標建成資料夾（M-2），"
