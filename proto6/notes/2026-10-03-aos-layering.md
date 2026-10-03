@@ -74,6 +74,8 @@ flowchart BT
 
 - **daemon 與 tick-tock、tick-tock 與任務之間有同像性。** 時間線像一個大號的任務。
 - **但因為 aos 體系的關係，daemon 和 tick-tock 的位置必須特殊。** 所以同像性能提供的好處，只有實作上可以共用一些東西。
+- **同像性上實作可以共用的都可以。**
+- **還在想：再進一步。** kernel 類任務可以控制其他 tick-tock，那是否也有一些 tick-tock 可以控制其他 daemon？
 - agent 先不管。
 
 ## 跟同日討論的關係
