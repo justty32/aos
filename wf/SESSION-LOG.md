@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- 10-03（proto7 開場）：使用者決定跑程序不用 thread，開 [proto7](../proto7/README.md)，核心概念寫成[核心 spec](../proto7/spec/core.md) S-01～S-22；下一步待使用者看核心 spec，再往下長細部 spec。
+- 10-03（proto7-1 試做）：照[核心 spec](../proto7/spec/core.md) 做到 kernel／agent，示範與 34 項測試全綠；[問題清單](../proto7-1/notes/problems.md)有 D-1～D-4 待使用者決定；astra 試玩中（報告將寫進 proto7-1/notes/play/）。
 - 10-03（proto6，分層討論：四條評估線都收齊）：使用者想法的正本在 [aos 分層筆記](../proto6/notes/2026-10-03-aos-layering.md)（最重要原則：操作與協議用 JSON／文字、LLM 可讀；使用者說核心理論已 OK，daemon 與 tick-tock 剩技術選型）。收齊的四份：thread 與程序評估（[thread-vs-process](../proto6/notes/proposals/2026-10-03-thread-vs-process/README.md)，artifact：https://claude.ai/artifact/FCr539iF7dxE9L3nV6hq74 ，它的五題待使用者答）；時空四層推演（[spacetime](../proto6/notes/proposals/2026-10-03-spacetime/README.md)，Fable 起草途中卡死，01～05 由新線改到最新筆記、06／07／README 由 Claude 改寫；結論是沒有方向題，唯一硬衝突是 tick 跑完所有任務才結束）；[astra-spacetime](../proto6/notes/reviews/2026-10-03-astra-spacetime.md)（照最新筆記與 LLM 可讀原則，也沒有新方向題）；[astra-layering](../proto6/notes/reviews/2026-10-03-astra-layering.md)（評的是較早版本，開頭加了註）。使用者已說 kill／restart、訊息交流、權限、agent 細節、管轄範圍與十條技術問題之後再談。
 - 10-03（proto6，待使用者挑）：astra 六條線對三份提案另想完了，收斂點、方向題與建議實驗順序見 [astra-alt 總覽](../proto6/notes/reviews/2026-10-03-astra-alt/README.md)；等使用者選先做哪個實驗。
 - 10-02（proto6，擱置待使用者想）：停格檔只記未來方向；node（使用者預感 node 概念會消失，tick 與 daemon 都不做 node 模組）；`peers` 先不做；系統級任務怎麼改用 hooks（[清單](../proto6/notes/2026-10-01-tick-system-tasks.md)）；C++11 等 Python POC 玩過再開。各段狀態見 [plan](../proto6/plan/README.md#各段狀態)。
