@@ -25,11 +25,16 @@ def _install():
         目標取宣告的空間路徑 `to`（接空間根再 realpath），不看掛載點連結現在指去哪：任務自己改指連結不算數（astra-2 二-4）。"""
         try:
             with open(os.path.join(task, "birth.json"), encoding="utf-8") as f:
-                mounts = json.load(f).get("mounts") or {}
-        except (OSError, ValueError):
-            mounts = {}
-        return [rp(os.path.join(root_r, v["to"])) for v in mounts.values()
-                if isinstance(v, dict) and "at" in v and isinstance(v.get("to"), str)]
+                birth = json.load(f)
+            mounts = birth.get("mounts") or {}
+        except (OSError, ValueError, AttributeError):
+            birth, mounts = {}, {}
+        out = [rp(os.path.join(root_r, v["to"])) for v in mounts.values()
+               if isinstance(v, dict) and "at" in v and isinstance(v.get("to"), str)]
+        if isinstance(birth.get("subroot"), str):
+            # 路一的子根整棵算這個任務的（子 daemon 與它的 tick／tock 繼承了這個任務的環境；probes/llmteam）
+            out.append(rp(os.path.join(root_r, birth["subroot"])))
+        return out
     targets = load_targets()
     log = os.path.join(task, "writes.jsonl")
     busy = []

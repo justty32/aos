@@ -14,7 +14,7 @@ import time
 
 import aos7_task
 from aos7_daemon_timeline import POLL, Timeline
-from aos7_fs import append_jsonl, node_path, now, read_json, write_json
+from aos7_fs import append_jsonl, is_regular, node_path, now, read_json, write_json
 
 SCAN_BATCH = 20      # 一圈最多起幾條新時間線；多的下一圈再起，主迴圈不停擺（probes/fleet N2）
 LIVE_EVERY = 0.25    # status.json 的 live 多久重算一次（秒）；任務資料夾多時每圈全掃太貴（probes/fleet N3、swarm N4）
@@ -44,7 +44,9 @@ class Daemon:
         self.stopping = False
         self.kill_on_stop = False
         self._log_lock = threading.Lock()
-        self.paused = set(read_json(os.path.join(self.aosd, "paused.json"), {}).get("paused", []))
+        pj = read_json(os.path.join(self.aosd, "paused.json"), {})
+        pl = pj.get("paused") if isinstance(pj, dict) else None
+        self.paused = set(x for x in pl if isinstance(x, str)) if isinstance(pl, list) else set()
         self.steps = {}              # resume 帶 rounds：{node: 還剩幾回合}，到 0 自動 pause（probes/sched N2）
         self._live = {}              # {node: (monotonic 時間, live 清單)}
         self._pids = {}              # {node: {tid: (pgid, runner_pid)}}：活任務，node 消失時收（Q4）
@@ -117,6 +119,8 @@ class Daemon:
                 self._save_paused()
             return True, "%s %s%s%s" % (op, node, " rounds=%d" % rounds if op == "resume" and rounds else "", note)
         if op == "stop":
+            if ctl.get("node") is not None:   # stop 是整個 daemon；帶 node 多半是想停一個 node（probes/llmteam 誤解 4）
+                return False, "stop 是整個 daemon，不收 node；要停一個 node 用 pause"
             self.stop(bool(ctl.get("kill")))
             return True, "stopping" + (" with kill" if self.kill_on_stop else "")
         if op == "rescan":
@@ -127,11 +131,19 @@ class Daemon:
     def handle_ctl(self):
         cdir = os.path.join(self.aosd, "ctl")
         try:
-            names = sorted(n for n in os.listdir(cdir) if n.endswith(".json"))
+            names = sorted(n for n in os.listdir(cdir) if not n.startswith("."))
         except OSError:
             return
         for n in names:
             path = os.path.join(cdir, n)
+            bad = None
+            if not n.endswith(".json"):
+                bad = "檔名要以 .json 結尾"          # 以前默默略過，寫的人等不到回條（probes/llmkernel）
+            elif not is_regular(path):
+                bad = "不是一般檔（FIFO、資料夾…）"   # 以前 FIFO 卡死主迴圈、資料夾每圈重處理（probes/chaos B5、B10）
+            if bad:
+                self.reject_ctl(n, path, bad)
+                continue
             ctl = read_json(path)
             if isinstance(ctl, dict):
                 ok, msg = self.apply(ctl)
@@ -148,6 +160,22 @@ class Daemon:
             except OSError:
                 pass
             self.log(ev="ctl", file=n, op=ctl.get("op"), node=ctl.get("node"), by=ctl.get("by"), ok=ok, msg=msg)
+
+    def reject_ctl(self, n, path, msg):
+        """不是 `<名>.json` 一般檔的控制檔：原物搬到 ctl-done/<名>.bad，另寫 ctl-done/<名>.json 回條 ok: false。"""
+        done = os.path.join(self.aosd, "ctl-done")
+        os.makedirs(done, exist_ok=True)
+        base = n if n.endswith(".json") else n + ".json"
+        dst = os.path.join(done, n + ".bad")
+        if os.path.lexists(dst):
+            dst = os.path.join(done, "%s.%d.bad" % (n, time.time_ns()))
+        try:
+            os.rename(path, dst)
+        except OSError:
+            pass
+        write_json(os.path.join(done, base), {"raw": "not read", "result": {"ok": False, "msg": msg, "at": now(),
+                                                                          "queued_at": None}})
+        self.log(ev="ctl", file=n, op=None, ok=False, msg=msg)
 
     def stop(self, kill):
         if not self.stopping:
@@ -234,6 +262,7 @@ class Daemon:
         for s in (signal.SIGTERM, signal.SIGINT):
             signal.signal(s, lambda *_: self.stop(True))
         # 換世代：之後這個 daemon 起的 tick／tock 帶 AOS7_GEN，舊 daemon 留下的動作拿到 action.lock 時看到世代不同就不寫（astra-4 I-01）
+        self._save_paused()   # 一起來就有 paused.json（空清單也寫），讀的人不會碰到「不存在」（probes/llmkernel 誤解 3）
         old = read_json(os.path.join(self.aosd, "gen.json"), {}) or {}
         self.gen = (old.get("gen", 0) if isinstance(old, dict) and isinstance(old.get("gen"), int) else 0) + 1
         write_json(os.path.join(self.aosd, "gen.json"), {"gen": self.gen, "pid": os.getpid(), "at": now()})
@@ -254,14 +283,15 @@ class Daemon:
         return 0
 
     def guard(self, step):
-        """主迴圈的一步丟 OSError（磁碟滿、唯讀…）不讓 daemon 直接退出：記到 stderr 與 log（寫得進去的話），下一圈再試（astra-4 I-07）。"""
+        """主迴圈的一步丟例外（OSError：磁碟滿、唯讀…；其他：壞檔）不讓 daemon 直接退出：記到 stderr 與 log（寫得進去的話），下一圈再試（astra-4 I-07）。"""
         try:
             step()
-        except OSError as e:
+        except Exception as e:   # 不只 OSError：某個 node 的壞檔丟出的任何例外都不讓 daemon 退出（probes/chaos B1）
             self.io_errors += 1
             print("aos7-daemon: %s 失敗：%r" % (getattr(step, "__name__", "step"), e), file=sys.stderr, flush=True)
             try:
-                self.log(ev="io-error", step=getattr(step, "__name__", "step"), msg=repr(e))
+                self.log(ev="io-error" if isinstance(e, OSError) else "error", step=getattr(step, "__name__", "step"),
+                         msg=repr(e))
             except OSError:
                 pass
 

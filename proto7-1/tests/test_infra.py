@@ -181,18 +181,18 @@ class TestNodeGone(DaemonCase):
 
 
 class TestActionTimeout(DaemonCase):
-    """tick 卡在 I/O（tasks.json 是個沒人寫的 FIFO）：逾時收掉、回合標 incomplete、下一回合照常；停機不被卡住（eval/2026-10-03-batch-tick）。"""
+    """tick 卡在 I/O（測試鉤子 AOS7_TEST_TICK_HANG；以前用 FIFO 的 tasks.json，現在 read_json 不卡了）：逾時收掉、回合標 incomplete、
+    下一回合照常；停機不被卡住（eval/2026-10-03-batch-tick）。"""
+    HANG = {"AOS7_TEST_TICK_HANG": "a"}
 
     def stuck_node(self, timeout_s):
         node = self.mknode("a", interval_ms=50)
         write_json(os.path.join(node, ".aos", "timeline.json"), {"interval_ms": 50, "action_timeout_s": timeout_s})
-        os.remove(os.path.join(node, ".aos", "tasks.json"))
-        os.mkfifo(os.path.join(node, ".aos", "tasks.json"))
         return node
 
     def test_stuck_tick_is_cut_and_round_marked(self):
         node = self.stuck_node(0.5)
-        self.start_daemon()
+        self.start_daemon(env=self.HANG)
         rows = self.wait_for(lambda: [x for x in read_jsonl(os.path.join(node, ".aos", "rounds.jsonl"))
                                       if x.get("incomplete") == "tick"][1:], timeout=10, msg="沒有 incomplete 的回合")
         self.assertGreater(rows[0]["round"], 1)
@@ -202,7 +202,7 @@ class TestActionTimeout(DaemonCase):
 
     def test_stop_not_blocked_by_stuck_tick(self):
         self.stuck_node(1000)
-        p = self.start_daemon()
+        p = self.start_daemon(env=self.HANG)
         self.wait_for(lambda: self.status().get("nodes", {}).get("a", {}).get("phase") == "tick")
         time.sleep(0.2)
         t0 = time.monotonic()
