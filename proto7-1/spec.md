@@ -84,7 +84,7 @@ daemon 給 tick／tock 的環境：`PATH` 前面加上 proto7-1 的 `bin/`。
 
 tick 把 round +1、`open: true`，並記下本回合的 `started`、`ctl`、`mounts`（加掛審核結果 `[{"tid","name","path","ok","msg"}]`；給 tock 寫總結用）；tock 設 `open: false` 與 `tock_at`。第一次 tick 的回合是 1。daemon 重開後接著數（讀這個檔）。
 
-`<node>/.aos/rounds/<N>.json`（tock 寫，第 N 回合的總結）：
+`<node>/.aos/rounds.jsonl`（tock 寫，一回合加一行總結；`tail -1` 是最近一回合，`grep '"round": 3,'` 找第 3 回合）：
 
 ```json
 {"round": 3, "tick_at": "...", "tock_at": "...",
@@ -93,6 +93,8 @@ tick 把 round +1、`open: true`，並記下本回合的 `started`、`ctl`、`mo
 ```
 
 `ended`＝上次 tock 之後才看到結束的任務；`ctl`＝本回合 tick 與 tock 執行的任務控制。
+
+原本一回合一個 `rounds/<N>.json`；長跑時小檔佔掉的磁碟是內容的 9 倍（astra-3 長跑、R-10），改成同一個檔一行一回合（P-12）。
 
 ## 4. 任務表與 tick（S-09、S-10、S-12）
 
@@ -173,7 +175,7 @@ tick 用 `aos7-run <taskdir>` 起任務（新 session，tick 不等它）。aos7
 1. 執行任務控制（第 6 節）。
 2. 掃所有任務：lost 的補 exit.json；新結束的寫 ended.json。
 3. 對每個活任務寫 `tock.json`。
-4. 寫 `rounds/<N>.json`、`round.json`（open: false）。
+4. 在 `rounds.jsonl` 加一行總結、寫 `round.json`（open: false）。
 5. stdout 印一行 JSON 總結，結束。
 
 ## 8. 小工具（S-01）
@@ -203,12 +205,12 @@ kernel 要看的東西都經過掛載點（S-23）：daemon 的 `.aosd`（讀 st
 每收到一次 tock（自己 node 的回合）跑一輪規則，判斷結果寫成控制檔：
 
 - **卡住**：成員 node 的活任務，若有 `progress.json`，它的內容連續 `stuck_rounds` 個**成員 node 的回合**（看成員的 `round.json` 有沒有前進）沒變 → 寫該任務 ctl.json `restart`。沒有 progress.json 的任務不管；成員 node 被 pause 時不數。progress 有 `llm_since`（agent 正在等 LLM）時改用 `llm_stuck_rounds`，沒寫就不管（problems-real.md R-3）。
-- **預算**：成員 node 各任務（含已結束的）的 `usage.json`（`{"tokens": int, "calls": int}`）加總，比上一輪多出的量累計超過 `budget_tokens` → 寫 daemon ctl `pause` 該 node；pause 後 `cool_rounds` 個 **kernel 自己 node 的回合** → `resume`，累計歸零。第一次看到某 node 時現有用量當基準、不算舊帳。成員是 kernel 自己的 node 時不管（pause 自己就收不到 tock、無法 resume）。**kernel 自己 pause 的，自己負責到期 resume，不管對方還在不在 members**（astra-2 二-7）。
-- **總額**：成員 node 的用量總和（不扣基準）超過 `cap_tokens` → `pause`（rule `cap`），冷卻不 resume；人把 `cap_tokens` 調高到總和以上或拿掉後，下一輪 `resume`。被移出 members 的成員若是總額 pause 的，一直停著（R-4）。
-- **名冊**：每輪把 `{"by": 自己 node id, "members": [{"node", "inbox": "<node>/inbox", "role": roles 裡那句或空字串}]}` 經過 `<成員>/.aos` 掛載點寫到每個成員的 `.aos/roster.json`；內容沒變不寫（R-2、M-15）。
+- **預算**：成員 node 各任務（含已結束的）的 `usage.json`（`{"tokens": int, "calls": int}`）加總，比上一輪多出的量累計超過 `budget_tokens` → 寫 daemon ctl `pause` 該 node；pause 後 `cool_rounds` 個 **kernel 自己 node 的回合** → `resume`，累計歸零（被移出 members 後到期的 resume 也歸零，astra-3 三-1）。第一次看到某 node 時現有用量當基準、不算舊帳。成員是 kernel 自己的 node 時不管（pause 自己就收不到 tock、無法 resume）。**kernel 自己 pause 的，自己負責到期 resume，不管對方還在不在 members**（astra-2 二-7）。
+- **總額**：成員 node 的用量總和（不扣基準）超過 `cap_tokens` → `pause`（rule `cap`），冷卻不 resume；人把 `cap_tokens` 調高到總和以上或拿掉後，下一輪 `resume`（理由寫實際的用量與上限）。被移出 members 的成員若是總額 pause 的，一直停著（R-4）。
+- **名冊**：每輪把 `{"by": 自己 node id, "members": [{"node", "inbox": "<node>/inbox", "role": roles 裡那句或空字串}]}` 經過 `<成員>/.aos` 掛載點寫到每個成員的 `.aos/roster.json`；內容沒變不寫（R-2、M-15）。寫不進去（成員搬走、掛載斷了）不丟例外：decisions.jsonl 記一行 `{"rule": "roster", "op": "write", "target": 成員, "skipped": 原因}`，跳過那個成員，其他照做（astra-3 三-2、M-16）。
 - **壽命**：自己 node 名為 `max_age` 鍵的活任務，活超過（自己 node 回合數 − birth round）那麼多回合 → ctl.json `kill`。
 - 對同一任務的指令只下一次；目標已有 ctl.json（別人先下了）就不蓋、不下。
-- 每個決定寫一行到 `$AOS7_TASK/decisions.jsonl`：`{"round","rule","target","op","why","at"}`。`target`：任務是 `<node id>:<tid>`，node 是 `<node id>`。
+- 每個決定寫一行到 `$AOS7_TASK/decisions.jsonl`：`{"round","rule","target","op","why","at"}`；沒寫出去的多 `skipped`（沒掛載，或寫控制檔丟了 OSError——同樣只記不死）。`target`：任務是 `<node id>:<tid>`，node 是 `<node id>`。
 - 每輪重讀 kernel.json（改檔即生效）。規則狀態存 `$AOS7_TASK/kernel-state.json`（含 `round`＝已處理到第幾回合）；新任務資料夾裡沒有時，接 birth.json 的 `restart_of`，否則接同名任務裡 birth round 最大的那份。
 - 啟動時跳過 ≤ 狀態 `round` 的 tock；`--rounds N` 收到 N 次 tock 後結束；SIGTERM／SIGINT 乾淨結束。
 
@@ -241,6 +243,7 @@ kernel 要看的東西都經過掛載點（S-23）：daemon 的 `.aosd`（讀 st
 |---|---|---|
 | `send` | `to`（node id）、`body` | 經過掛載點寫一封信到 `<to>/inbox/<時間>-<自己>.json`：`{"from","to","round","body"}`。對方的 inbox 沒掛：寫加掛請求，信先放 `<node>/outbox/`；之後每個 tock 一開始先清 outbox（掛上了就寄，加掛被拒就搬到 `outbox/failed/`）。被拒過的對象直接失敗。已掛但收件夾不在（被刪、被搬走）或寫不進去：這封失敗，信放 `outbox/failed/`，信裡加 `failed: {"why","at"}`（M-14） |
 | `write` | `path`（相對自己 node）、`text` | 寫檔 |
+| `save` | `letter`（收到的信的檔名）、`path`（相對自己 node）、可選 `code` | **不經 LLM**，把 `inbox/` 或 `inbox/done/` 裡那封信原樣寫成檔：`code: true` 時只取 body 第一段 ``` 程式碼（沒有圍欄取整段），否則整段 body（R-15 (b)）。找不到信、檔名含 `/` 就那步失敗 |
 | `none` | — | 什麼都不做 |
 
 每次 LLM 呼叫把用量累加到 `$AOS7_TASK/usage.json`（`{"tokens","calls"}`，每個任務自己從 0 起算，不接前任）。**每處理完一個 tock** 覆寫 `$AOS7_TASK/progress.json`＝`{"round","state","steps"}`（給 kernel 判斷卡住：idle 等信也會更新，只有卡在 LLM 呼叫、收不到 tock 時才連續不變）。
@@ -249,12 +252,12 @@ kernel 要看的東西都經過掛載點（S-23）：daemon 的 `.aosd`（讀 st
 
 - fake：`goal.json` 的 `{"say_first": {"to", "body"}}` 讓它先開口；收到 body 為 `ping N` 的信回 `ping N+1` 給寄件者，N ≥ `max_ping` 改成 `write work/done.txt`、不再回。tokens＝prompt 字元數 // 4。
 - 任何工具丟例外都當成那一步失敗（state.last 記「工具失敗：…」），agent 不退出。
-- OpenAI 相容：system＝規則＋persona，user＝`{"roster"（有名冊才有）,"goal","letters"}` 的 JSON；要模型只回 JSON 陣列。解不出就當 `[{"tool":"none"}]`，原因寫進 state.last。tokens＝回應的 `usage.total_tokens`。
-- `send` 的 `to` 必須是空間裡的路徑（不能絕對、不能跑出根）；`write` 的 `path` 不能跑出自己的 node。不合就跳過該步並記在 last。
+- OpenAI 相容：system＝規則（四個工具）＋persona，user＝`{"roster"（有名冊才有）,"goal","letters"}` 的 JSON，每封信帶 `file`（信檔名，給 save 用）；要模型只回 JSON 陣列。解不出就當 `[{"tool":"none"}]`，原因寫進 state.last。tokens＝回應的 `usage.total_tokens`。
+- `send` 的 `to` 必須是空間裡的路徑（不能絕對、不能跑出根）；`write`、`save` 的 `path` 不能跑出自己的 node。不合就跳過該步並記在 last。
 
 **真模型用的補充**（`demo/real.py` 用到；不設就跟上面一樣）：
 
-- `agent.json` 的 `"memory": N`：think 的 user JSON 多一個 `memory`＝`{"recent_letters": 最近 N 封往來的信（收：inbox/done/；寄：<node>/sent.jsonl，依 at 排；視窗外的每個往來對象再補它最近一封，R-13）, "my_files": 自己 work/ 底下的檔（每檔截 4000 字）}`。`send` 一律把信多記一行到 `<node>/sent.jsonl`。
+- `agent.json` 的 `"memory": N`：think 的 user JSON 多一個 `memory`＝`{"recent_letters": 最近 N 封往來的信（收：inbox/done/，帶 `file`；寄：<node>/sent.jsonl，依 at 排；視窗外的每個往來對象再補它最近一封，R-13）, "my_files": 自己 work/ 底下的檔（每檔截 4000 字）}`。`send` 一律把信多記一行到 `<node>/sent.jsonl`。**只讀尾端**（astra-3 三-3）：inbox/done/ 依檔名（時間開頭）取最後 max(N, 200) 封、sent.jsonl 從檔尾往回讀最後 max(N, 200) 行，不隨歷史變慢；「每個對象補一封」也只在這範圍內找。
 - `agent.json` 的 `"wake": {"rounds": N, "unless": "相對 node 的路徑"}`：idle 且沒信沒 goal、離上次開始 think 已 N 個回合、`unless` 的檔又不在 → 自己 think 一次，goal＝`{"wake": "…"}`（不改名 goal.json）。
 - `llm` 物件的 `retry`（預設 1）：plan 解析不出時，把原回應接一句更正再問，最多 retry 次；每次都算進 usage 的 `calls`。
 - 每次真模型 think 在 `$AOS7_TASK/llm.jsonl` 記一行：`{"at","round","round_before","round_after"（node 的回合，呼叫前後）,"ms","calls","tokens","note","letters","raw"（原文前 4000 字）}`。

@@ -117,6 +117,7 @@
   - 這輪加了三份：任務資料夾的 `llm.jsonl`（每次 think：花多久、前後回合、tokens、原文前 4000 字）、`trace.jsonl`（每個處理過的 tock 在什麼狀態），以及 node 的 `sent.jsonl`（寄件備份，memory 也用它）。有了這些，real.py 才拼得出時間線；停擺、迴圈、誤判也都是從這些檔看出來的。
   - 量：第 4 輪 15 分鐘，空間 77 MB。大頭是 `rounds/<N>.json`：五條時間線約 1.4 萬個小檔，佔 55 MB。寫入紀錄 88k 筆（AOS7_AUDIT）。trace.jsonl 每個 tock 一行。
 - 先這樣：都留著、只增不減（同 P-12）。跑久了要清或壓。
+- **已減（astra-3 後）**：大頭 `rounds/<N>.json` 改成每個 node 一個 `.aos/rounds.jsonl`、一回合一行（spec 第 3 節，P-12）。這輪 55 MB 的小檔大約會變成幾 MB 的一個檔（沒重跑真模型，未實測）。其他三份本來就是 jsonl。
 
 ## R-11 新成員插在別人長 think 的中間〔默認正常〕
 
@@ -135,6 +136,7 @@
 - 層：agent 的 memory；R-2 的延伸。
 - 發生了什麼：real-1 第 4 輪，coder 跟 ci 互丟幾十封，「最近 12 封」全是 ci，rita 的信全被擠出去。名冊（R-2 (b)）讓人知道「有 rita 這個人」，但看不到「rita 說過什麼」。
 - **已改（real-2 前）**：`tools.memory` 先取最近 N 封，再替視窗外的每個往來對象補它最近一封（依時間排回去）。所以視窗最多是 N＋往來人數。測試 `test_memory_keeps_each_peer`。
+- **讀取有上限（astra-3 三-3）**：原本先讀完 inbox/done/ 與 sent.jsonl 全部、排序再切，16k 封時讀一次 100 ms、峰值 100 MB。改成只讀尾端：done 依檔名（時間開頭）取最後 max(N, 200) 封，sent.jsonl 從檔尾往回讀最後 max(N, 200) 行。代價：「每個對象補一封」只在這 200＋200 封裡找，更早以前聯絡過、之後都沒往來的對象會掉出去（有名冊 R-2 時仍知道他存在）。測試 `test_memory_reads_only_tail`。
 - 效果：三次都沒人忘了 rita。但「每人留一封」只留最新的那封：第 2 次 lead 要 dur.py 的程式碼時，ci 留下的是最新的 ranges PASS，dur 的 PASS 信還是不見了（R-15）。
 
 ## R-14 ci 機器人：不測不回非程式碼、重複的程式碼；PASS 直接寄負責人〔技術選型，先這樣〕
@@ -149,9 +151,11 @@
 - 效果：三次都沒有迴圈，ci 只測了 8／6／5 次（real-1 第 4 輪 40 次）。**但「不是程式碼」「重複」兩條規則一次都沒觸發**：擋住迴圈的是 coder persona 的「ci 不回重複的、不要重寄」和「PASS 由 ci 直接寄 lead」。去重是保險。
 - 代價：「不回」對 agent 來說跟「還沒回」分不出來（沒有回條，R-7）。persona 寫明了才不會一直等。
 
-## R-15 交付的檔是 LLM 重打的，不是測過的那份〔要使用者決定〕
+## R-15 交付的檔是 LLM 重打的，不是測過的那份〔要使用者決定，10-03 已答〕
 
-- 層：agent 的工具 × 協作；spec 第 10 節（工具只有 send／write／none）、S-16。
+> **〔10-03〕使用者說 agent 隨意，頂層採 (b)**
+
+- 層：agent 的工具 × 協作；spec 第 10 節（原本工具只有 send／write／none）、S-16。
 - 發生了什麼：
   - real-2 第 2 次（lead＝deepseek）：流程全對，dur.py 在 ci 第 2 次就 PASS 36/36、rita 也說 OK。結案時 lead 用 `write` 把「最終程式碼」寫到 `work/dur.py`，但那時 dur 的 PASS 信已經不在它的記憶裡（R-13 只留 ci 最新一封＝ranges 的 PASS）。lead 就照自己一開始交代的需求**重寫了一份**：沒有 `d` 單位、接受 `01h`，隱藏測試 29/36。real.py 照 DONE.md 停，宣告完成。ranges.py 也是重打的（等價、但拿掉了註解）。
   - 原因很直接：agent 要把東西存成檔，唯一的路是 LLM 在 plan 裡把整份內容再打一次（`write` 的 `text`）。信裡的程式碼不能「原樣存下來」；記憶裡看不到原文時，模型會照它以為的樣子補。
@@ -162,6 +166,8 @@
   - （a）照現在：agent 只有 send／write／none，內容都由 LLM 打出來；靠 persona 和事後比對把關。最簡單，但交付物和測過的東西可能不一樣，而且沒人知道。
   - （b）agent 多一個不經 LLM 的工具：把某封信（或信裡的一段）原樣存成檔，例如 `{"tool": "save", "letter": "<信檔名>", "path": "work/dur.py"}`；prompt 裡的信要帶檔名。工具集從三個變四個（spec 第 10 節）。
   - （c）成果由驗收者保管：ci（或任何驗收的 node）把通過的版本存在自己那邊，「完成」＝負責人指名「ci 第幾次」；外面的人去驗收者那裡取檔。agent 不必搬運成果，但完成的定義綁在某個 bot 上。
+- **怎麼做的（10-03，照 (b)）**：`aos7_agent_tools` 多一個工具 `{"tool": "save", "letter": "<信檔名>", "path": "<相對自己 node>", "code": true}`：在 `inbox/` 或 `inbox/done/` 找那封收到的信，`code: true` 時取信裡第一段 ``` 程式碼（沒有圍欄就整段），否則存整段 body，**不經 LLM** 原樣寫檔；路徑規則同 write，找不到信或檔名帶 `/` 就那步失敗。prompt 裡的信（letters 與 memory 的「收」）多帶 `file`＝信檔名，system 規則多一行 save。ci 的 PASS 副本把程式碼包進 ```python 圍欄（ci 與 save 共用 `extract_code`）。real 場景 lead 的 persona 改成「收到 PASS 就 save 那封信到 `work/<模組>.py`、不要用 write 重打」。沒重跑 real.py。測試 `test_save_letter_verbatim`、`test_skip_not_code_and_duplicates_cc_pass`（附的程式碼取得回原文）。
+- 剩下的：模型還是可能選 write 不選 save，或存錯信；real.py 的事後比對留著。
 
 ## R-16 審稿者擴大範圍，多出好幾輪修改〔默認正常〕
 

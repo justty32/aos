@@ -16,6 +16,7 @@ SYSTEM_RULES = """你是一個住在資料夾裡的 agent，只能用工具動�
 你只回一個 JSON 陣列（plan），不要回別的文字、不要 markdown。每一項是下列其中一種：
   {"tool": "send", "to": "<對方 node id>", "body": "<信的內容>"}
   {"tool": "write", "path": "<相對你自己資料夾的路徑>", "text": "<檔案內容>"}
+  {"tool": "save", "letter": "<收到的信的 file>", "path": "<相對你自己資料夾的路徑>", "code": true}  （把那封信原樣存成檔，不用你重打；code 為 true 時只存信裡第一段 ``` 程式碼）
   {"tool": "none"}
 信件的 from 就是對方的 node id，回信就 send 給它。"""
 
@@ -25,7 +26,7 @@ def build_prompt(cfg, goal, letters, me, memory=None, roster=None):
 
     roster＝kernel 寫給這個 node 的成員名冊（`.aos/roster.json`，R-2），有就固定帶上。"""
     system = SYSTEM_RULES + "\n\n你的 node id：%s\n你的人設：%s" % (me, cfg.get("persona", ""))
-    user = {"goal": goal, "letters": [{"from": l.get("from"), "round": l.get("round"), "body": l.get("body")}
+    user = {"goal": goal, "letters": [{"file": l.get("file"), "from": l.get("from"), "round": l.get("round"), "body": l.get("body")}
                                       for l in letters]}
     if memory is not None:
         user = {"memory": memory, **user}

@@ -108,7 +108,10 @@ class TestDaemon(DaemonCase):
         self.wait_for(lambda: self.node_round("b") >= 1)
         self.ctl("stop")
         p.wait(10)
-        self.assertGreaterEqual(read_json(os.path.join(node, ".aos", "rounds", "42.json"))["round"], 42)
+        rounds = [r["round"] for r in read_jsonl(os.path.join(node, ".aos", "rounds.jsonl"))]
+        self.assertEqual(rounds[0], 42)
+        self.assertEqual(rounds, list(range(42, 42 + len(rounds))))
+        self.assertFalse(os.path.exists(os.path.join(node, ".aos", "rounds")))
 
 
 class TestRouteOne(DaemonCase):

@@ -88,12 +88,12 @@ def run(root, seconds, quiet):
 
 
 def nodes_with_rounds(root):
-    """所有有 rounds/ 的 node 路徑（含子 daemon 底下的），排序。"""
+    """所有有 rounds.jsonl 的 node 路徑（含子 daemon 底下的），排序。"""
     out = []
-    for dirpath, dirnames, _ in os.walk(root):
-        if os.path.basename(dirpath) == ".aos" and "rounds" in dirnames:
+    for dirpath, dirnames, filenames in os.walk(root):
+        if os.path.basename(dirpath) == ".aos" and "rounds.jsonl" in filenames:
             out.append(os.path.dirname(dirpath))
-        dirnames[:] = [x for x in dirnames if x not in ("tasks", "rounds")]
+        dirnames[:] = [x for x in dirnames if x != "tasks"]
     return sorted(out)
 
 
@@ -104,7 +104,6 @@ def short(x):
 def report_rounds(root):
     for node in nodes_with_rounds(root):
         print("\n== 時間線 %s ==" % os.path.relpath(node, root))
-        files = glob.glob(os.path.join(node, ".aos", "rounds", "*.json"))
         run = []  # 連續「同一種平淡」的回合併成一行：(種類, 回合)
 
         def flush():
@@ -115,8 +114,7 @@ def report_rounds(root):
                 text = "沒有任務起落" if not kind else "只有短任務 %s 當回合起落（結束碼 0）" % kind
                 print("  第 %s 回合  （%s）" % (span, text))
                 run.clear()
-        for path in sorted(files, key=lambda p: int(os.path.basename(p)[:-5])):
-            r = fs.read_json(path, {})
+        for r in fs.read_jsonl(os.path.join(node, ".aos", "rounds.jsonl")):
             started, ends = r.get("started") or [], r.get("ended") or []
             ended = ["%s(%s)" % (e.get("tid"), e.get("code")) for e in ends]
             ctl = ["%s %s" % (c.get("op"), c.get("tid")) for c in r.get("ctl", [])]
@@ -205,7 +203,7 @@ def checks(root, left):
         ("restart 後 bob 有新的 worker 任務", len(glob.glob(os.path.join(root, "team/agents/bob/.aos/tasks/worker-*"))) >= 2),
         ("kernel 因預算 pause 某條時間線", ("budget", "pause") in ops),
         ("kernel 之後 resume 它", ("budget", "resume") in ops),
-        ("路一：子 daemon subd 有跑出 w 的回合", any_file("team/sub/w/.aos/rounds/1.json")),
+        ("路一：子 daemon subd 有跑出 w 的回合", any_file("team/sub/w/.aos/rounds.jsonl")),
         ("路一：kernel 依壽命 kill subd", ("age", "kill") in ops),
         ("路二：poke 寫子 daemon 控制檔 pause/resume w", {"pause", "resume"} <= {c.get("op") for c in done_ctl}),
         ("加掛：carol 臨時寄給沒掛的 bob，請求加掛後寄到",

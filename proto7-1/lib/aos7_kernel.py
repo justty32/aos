@@ -101,8 +101,10 @@ def roster_of(env, cfg):
     return {"by": env["node_id"], "members": out}
 
 
-def write_rosters(env, cfg, resolve):
-    """把名冊寫進每個成員自己的 `.aos/roster.json`（經過 kernel 已有的 `.aos` 掛載點）；內容沒變就不寫。"""
+def write_rosters(env, cfg, resolve, rnd=None):
+    """把名冊寫進每個成員自己的 `.aos/roster.json`（經過 kernel 已有的 `.aos` 掛載點）；內容沒變就不寫。
+
+    寫不進去（成員搬走、掛載斷了）只在 decisions.jsonl 記一行、跳過那個成員，kernel 不死（astra-3 三-2）。"""
     ros = roster_of(env, cfg)
     for m in ros["members"]:
         aos = fs.aos_dir(env["node"]) if m["node"] == env["node_id"] else resolve(m["node"] + "/.aos")
@@ -110,7 +112,12 @@ def write_rosters(env, cfg, resolve):
             continue
         path = os.path.join(aos, ROSTER)
         if fs.read_json(path) != ros:
-            fs.write_json(path, ros)
+            try:
+                fs.write_json(path, ros)
+            except OSError as e:
+                fs.append_jsonl(os.path.join(env["task"], "decisions.jsonl"),
+                                {"round": rnd, "rule": "roster", "target": m["node"], "op": "write",
+                                 "why": "寫名冊", "at": fs.now(), "skipped": "寫不進去：%s" % e})
 
 
 def one_round(env, rnd):
@@ -119,11 +126,14 @@ def one_round(env, rnd):
     state = load_state(env)
     ask_mounts(env, cfg)
     resolve = aos7_mount.resolver(env["task"])
-    write_rosters(env, cfg, resolve)
+    write_rosters(env, cfg, resolve, rnd)
     snap = snapshot(env["root"], env["node_id"], env["tid"], cfg, rnd, resolve)
     decisions, new = run_rules(cfg, state, snap)
     for i, d in enumerate(decisions):
-        why_not = apply_decision(env, d, i, resolve)
+        try:
+            why_not = apply_decision(env, d, i, resolve)
+        except OSError as e:  # 寫成員或 daemon 的控制檔失敗（掛載斷了等）：記下來，不拖垮 kernel
+            why_not = "寫不進去：%s" % e
         rec = dict(d, at=fs.now())
         if why_not:
             rec["skipped"] = why_not

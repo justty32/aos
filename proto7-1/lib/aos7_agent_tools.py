@@ -1,9 +1,11 @@
-"""agent 的手腳：讀信箱、搬信、goal、outbox、三個工具（send／write／none）——spec.md 第 10 節。"""
+"""agent 的手腳：讀信箱、搬信、goal、outbox、四個工具（send／write／save／none）——spec.md 第 10 節。"""
+import json
 import os
+import re
 import time
 
 import aos7_mount
-from aos7_fs import append_jsonl, now, read_json, read_jsonl, write_json
+from aos7_fs import append_jsonl, now, read_json, tail_jsonl, write_json
 
 
 def inbox_dir(node):
@@ -24,8 +26,29 @@ def read_letters(node, names):
     out = []
     for n in names:
         l = read_json(os.path.join(inbox_dir(node), n))
-        out.append(l if isinstance(l, dict) else {"from": None, "body": None, "bad": n})
+        out.append(dict(l, file=n) if isinstance(l, dict) else {"from": None, "body": None, "bad": n, "file": n})
     return out
+
+
+FENCE = re.compile(r"```(?:python|py)?\s*\n(.*?)```", re.S)
+
+
+def extract_code(body):
+    """信裡的程式碼：有 ``` 圍欄取第一段，否則整段（ci 也用這個）。"""
+    body = body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)
+    m = FENCE.search(body)
+    return m.group(1) if m else body
+
+
+def find_letter(node, name):
+    """收到的信（inbox/ 或 inbox/done/）的內容；name 只能是檔名。找不到回 None。"""
+    if not isinstance(name, str) or not name or "/" in name or name.startswith("."):
+        return None
+    for d in (inbox_dir(node), os.path.join(inbox_dir(node), "done")):
+        l = read_json(os.path.join(d, name))
+        if isinstance(l, dict):
+            return l
+    return None
 
 
 def move_done(node, names):
@@ -158,25 +181,49 @@ def do_tool(ctx, step, rnd):
         with open(dest, "w", encoding="utf-8") as f:
             f.write(str(text))
         return "write %s（%d 字）" % (rel, len(str(text)))
+    if tool == "save":
+        # 不經 LLM：把收到的某封信（code: true 時取信裡第一段 ``` 程式碼）原樣存成檔（R-15 (b)）
+        rel, name = step.get("path"), step.get("letter")
+        if not isinstance(rel, str) or not rel or os.path.isabs(rel):
+            return "save 失敗：path 要是相對路徑"
+        dest = os.path.join(ctx["node"], rel)
+        if not inside(ctx["node"], dest):
+            return "save 失敗：%s 跑出自己的 node" % rel
+        l = find_letter(ctx["node"], name)
+        if l is None:
+            return "save 失敗：找不到信 %r" % (name,)
+        body = l.get("body")
+        text = extract_code(body) if step.get("code") else (body if isinstance(body, str) else json.dumps(body, ensure_ascii=False))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "w", encoding="utf-8") as f:
+            f.write(text)
+        return "save %s ← 信 %s（%d 字）" % (rel, name, len(text))
     if tool == "none":
         return "none"
     return "看不懂的工具：%r" % (tool,)
 
 
+LOOKBACK = 200  # memory 往回最多看幾封（收、寄各算）
+
+
 def memory(node, n, skip=(), file_chars=4000):
     """給真模型的記憶（agent.json 的 "memory": n）：最近 n 封往來的信（收的在 inbox/done/、寄的在 sent.jsonl，
-    依 at 排；視窗外的往來對象各再補它最近一封）＋自己 work/ 底下的檔（每檔截 file_chars 字）。skip＝這輪正要處理的信檔名（已經在 letters 裡）。"""
+    依 at 排；視窗外的往來對象各再補它最近一封）＋自己 work/ 底下的檔（每檔截 file_chars 字）。skip＝這輪正要處理的信檔名（已經在 letters 裡）。
+
+    只讀尾端（astra-3 三-3）：inbox/done/ 依檔名（時間開頭）取最後 max(n, LOOKBACK) 封、sent.jsonl 取最後那麼多行，
+    不隨歷史長度變慢；「每個對象補一封」也只在這範圍裡找。"""
     hist = []
+    k = max(n, LOOKBACK)
     done = os.path.join(inbox_dir(node), "done")
     try:
-        names = [x for x in os.listdir(done) if x.endswith(".json") and x not in skip]
+        names = sorted(x for x in os.listdir(done) if x.endswith(".json") and x not in skip)[-k:]
     except OSError:
         names = []
     for x in names:
         l = read_json(os.path.join(done, x))
         if isinstance(l, dict):
-            hist.append({"dir": "收", "from": l.get("from"), "at": l.get("at", ""), "body": l.get("body")})
-    for l in read_jsonl(os.path.join(node, "sent.jsonl")):
+            hist.append({"dir": "收", "file": x, "from": l.get("from"), "at": l.get("at", ""), "body": l.get("body")})
+    for l in tail_jsonl(os.path.join(node, "sent.jsonl"), k):
         hist.append({"dir": "寄", "to": l.get("to"), "at": l.get("at", ""), "body": l.get("body")})
     hist.sort(key=lambda h: str(h.get("at")))
     keep = hist[-n:] if n > 0 else []

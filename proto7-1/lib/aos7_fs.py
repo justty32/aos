@@ -57,6 +57,33 @@ def read_jsonl(path):
     return out
 
 
+def tail_jsonl(path, k, block=65536):
+    """流水帳最後 k 行（壞行跳過）：從檔尾往回一塊一塊讀，不讀整個檔（astra-3 三-3）。"""
+    if k <= 0:
+        return []
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            pos, buf = f.tell(), b""
+            while pos > 0 and buf.count(b"\n") <= k:
+                step = min(block, pos)
+                pos -= step
+                f.seek(pos)
+                buf = f.read(step) + buf
+    except OSError:
+        return []
+    lines = buf.split(b"\n")
+    if pos > 0:
+        lines = lines[1:]  # 第一段可能是半行
+    out = []
+    for line in lines[-(k + 1):]:
+        try:
+            out.append(json.loads(line))
+        except ValueError:
+            pass
+    return out[-k:]
+
+
 def node_path(root, node_id):
     """node id → 絕對路徑（根是 "."）。"""
     root = os.path.abspath(root)

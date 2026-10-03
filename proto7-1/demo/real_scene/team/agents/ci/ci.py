@@ -20,14 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(_BIN), "lib"))
 import aos7_agent_tools as tools  # noqa: E402
 from aos7_fs import append_jsonl, now, read_json, task_env, wait_tock, write_json  # noqa: E402
 
-FENCE = re.compile(r"```(?:python|py)?\s*\n(.*?)```", re.S)
-
-
-def extract(body):
-    """信裡的程式碼：有 ``` 圍欄取第一段，否則整段。"""
-    body = body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)
-    m = FENCE.search(body)
-    return m.group(1) if m else body
+extract = tools.extract_code  # 信裡的程式碼：有 ``` 圍欄取第一段，否則整段
 
 
 def module_of(code):
@@ -90,7 +83,7 @@ def handle(ctx, st, l, rnd, cc=()):
     out = tools.do_tool(ctx, {"tool": "send", "to": sender, "body": body}, rnd) if sender else "沒有寄件者，不回"
     for to in cc if ok else ():
         if to != sender:
-            out += "｜" + tools.do_tool(ctx, {"tool": "send", "to": to, "body": "%s，寄件者 %s。通過的完整原始碼：\n%s"
+            out += "｜" + tools.do_tool(ctx, {"tool": "send", "to": to, "body": "%s，寄件者 %s。通過的完整原始碼：\n```python\n%s\n```\n"
                                               % (head, sender, code)}, rnd)
     return dict(rec, n=st["n"], module=res["module"], passed=res["passed"], total=res["total"], reply=out)
 

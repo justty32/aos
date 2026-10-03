@@ -7,11 +7,11 @@ import os
 import sys
 
 import aos7_task
-from aos7_fs import node_path, now, read_json, write_json
+from aos7_fs import append_jsonl, node_path, now, read_json, write_json
 
 
 def tock(root, node_id):
-    """做一次 tock，回本回合總結（即 rounds/<N>.json 的內容）。"""
+    """做一次 tock，回本回合總結（即 rounds.jsonl 加的那一行）。"""
     node = node_path(root, node_id)
     rpath = os.path.join(node, ".aos", "round.json")
     state = read_json(rpath, {})
@@ -42,7 +42,7 @@ def tock(root, node_id):
     summary = {"round": rnd, "tick_at": state.get("tick_at"), "tock_at": at,
                "started": state.get("started", []), "alive": alive, "ended": ended, "ctl": ctl,
                "mounts": state.get("mounts", [])}
-    write_json(os.path.join(node, ".aos", "rounds", "%d.json" % rnd), summary)
+    append_jsonl(os.path.join(node, ".aos", "rounds.jsonl"), summary)  # 一回合一行，不再一回合一檔（P-12、R-10）
     state.update({"open": False, "tock_at": at})
     write_json(rpath, state)
     return summary
