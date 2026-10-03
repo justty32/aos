@@ -82,14 +82,14 @@ daemon 給 tick／tock 的環境：`PATH` 前面加上 proto7-1 的 `bin/`。
 {"round": 3, "open": true, "tick_at": "...", "tock_at": null}
 ```
 
-tick 把 round +1、`open: true`，並記下本回合的 `started`、`ctl`（給 tock 寫總結用）；tock 設 `open: false` 與 `tock_at`。第一次 tick 的回合是 1。daemon 重開後接著數（讀這個檔）。
+tick 把 round +1、`open: true`，並記下本回合的 `started`、`ctl`、`mounts`（加掛審核結果 `[{"tid","name","path","ok","msg"}]`；給 tock 寫總結用）；tock 設 `open: false` 與 `tock_at`。第一次 tick 的回合是 1。daemon 重開後接著數（讀這個檔）。
 
 `<node>/.aos/rounds/<N>.json`（tock 寫，第 N 回合的總結）：
 
 ```json
 {"round": 3, "tick_at": "...", "tock_at": "...",
  "started": ["agent-r1"], "alive": ["kernel-r1"],
- "ended": [{"tid": "stuck-r2", "code": -15}], "ctl": [{"tid": "x", "op": "kill", "ok": true}]}
+ "ended": [{"tid": "stuck-r2", "code": -15}], "ctl": [{"tid": "x", "op": "kill", "ok": true}], "mounts": []}
 ```
 
 `ended`＝上次 tock 之後才看到結束的任務；`ctl`＝本回合 tick 與 tock 執行的任務控制。
@@ -111,12 +111,16 @@ tick 把 round +1、`open: true`，並記下本回合的 `started`、`ctl`（給
 - `from_round`：從第幾回合起才生效（預設 1）。
 - `mounts`：**掛載**（S-23）。`{"名字": "空間裡的路徑"}`，路徑相對空間根、跟 node id 同一套（根的 daemon 資料夾是 `.aosd`）。tick 起任務時在任務資料夾建 `mnt/<名字>`，是指向目標的相對符號連結；目標不存在先建成資料夾。名字不能含 `/`、不能以 `.` 開頭；路徑不能是絕對、不能跑出空間根，不合的不掛、在 birth.json 記 `error`。任務要碰別的 node 或 daemon 的資料夾，一律經過掛載點（第 5 節「只碰給的資料夾」）。**不強制**（沒有 FUSE），靠寫入紀錄檢查。
 
+- `mount_allow`（tasks.json 頂層，可選）：執行中加掛請求的允許清單，空間路徑前綴（`["team/agents/", ".aosd"]`；`"."`＝全部）。沒寫＝全給。只管執行中的請求，不管 `mounts` 宣告。
+
+**執行中加掛**（S-23，M-6 使用者選 (b)）：任務寫 `$AOS7_TASK/mount-req/<名字>.json`＝`{"name", "path"（空間路徑）, "why"}`（`name` 可省，由路徑推，例如 `team/agents/bob/inbox` → `team_agents_bob_inbox`）。下一個 tick 審核：路徑不合、不在 `mount_allow`、名字已掛了別的 → 拒絕；否則建 `mnt/<名字>`、加進 birth.json 的 `mounts`。請求檔刪掉，回條寫 `$AOS7_TASK/mount-done/<同名>.json`＝請求內容加 `{"result": {"ok", "msg", "at"}}`。被拒的回條留著，`aos7_mount.request` 看到就不再重請（要重請就刪回條）。restart 把加掛的一起帶到新任務。卸掛不做。
+
 `<node>/.aos/spawn/<任意名>.json`：別人請求「下個 tick 起一個任務」，格式同 tasks.json 的一項（多一個可選 `restart_of`）。tick 起完就刪掉。restart 靠它。
 
 `aos7-tick <root> <node-id>`，依序：
 
 1. round +1，寫 `round.json`。
-2. 執行任務控制（第 6 節）。
+2. 執行任務控制（第 6 節），再審核活任務的加掛請求（上面）。
 3. 起任務：先 `spawn/*.json`（檔名排序），再 tasks.json 各項（`keep` 的檢查會算進剛起的）。
 4. stdout 印一行 JSON `{"round": N, "started": [tid...]}`，結束。**不等任務。**
 
@@ -129,6 +133,8 @@ tid＝`<name>-r<回合>`，同回合撞名加 `-2`、`-3`。任務資料夾 `<no
 | `birth.json` | tick | `{"tid","name","node","round","argv"或"inst","mounts","at","restart_of"}`；`mounts`＝`{名字: {"to": 空間路徑, "at": 掛載點絕對路徑}}`（壞的宣告是 `{"error"}`） |
 | `mnt/<名字>` | tick | 掛載點（符號連結） |
 | `writes.jsonl` | 任務（audit hook） | 開了寫入紀錄才有，見下 |
+| `mount-req/<名字>.json` | 任務 | 執行中加掛的請求（第 4 節） |
+| `mount-done/<名字>.json` | tick | 加掛回條 |
 | `pid.json` | aos7-run | `{"pid","pgid","runner_pid","at"}` |
 | `out.log` | 任務 | stdout＋stderr |
 | `exit.json` | aos7-run | `{"code","at","round"}`；code 負數＝被訊號殺（-15）；`round` 是結束時 node 的回合數 |
@@ -147,7 +153,7 @@ tick 用 `aos7-run <taskdir>` 起任務（新 session，tick 不等它）。aos7
 
 **只碰給的資料夾**（S-10、S-23）：任務能寫的是自己的 node（**扣掉裡面巢狀的別的 node 與 daemon 根**）加上掛載點的目標。程式碰別的 node 一律用 `lib/aos7_mount.py` 的 `resolver(taskdir)`：把空間裡的路徑換成掛載點下的路徑，沒掛到回 None（不寫）。
 
-**寫入紀錄**（檢查用，只記不擋）：起 daemon 的環境有 `AOS7_AUDIT`（任何非空值）時，tick 把 `lib/audit_site/` 放進任務的 `PYTHONPATH`，Python 任務啟動時載入 audit hook，把空間根底下每個寫入動作（開檔寫、rename／replace、remove、mkdir、rmdir、symlink）記一行到 `$AOS7_TASK/writes.jsonl`：`{"op", "path"（實際位置）, "ok", "pid", "via"（經過連結時寫的路徑）}`。`ok`＝實際位置在上面說的範圍內。`lib/aos7_audit.py` 的 `scan(root)` 把整個空間的紀錄拼起來挑出 `ok: false` 的。只看得到 Python 程序（problems.md M-3）。
+**寫入紀錄**（檢查用，只記不擋）：起 daemon 的環境有 `AOS7_AUDIT`（任何非空值）時，tick 把 `lib/audit_site/` 放進任務的 `PYTHONPATH`，Python 任務啟動時載入 audit hook，把空間根底下每個寫入動作（開檔寫、rename／replace、remove、mkdir、rmdir、symlink）記一行到 `$AOS7_TASK/writes.jsonl`：`{"op", "path"（實際位置）, "ok", "pid", "via"（經過連結時寫的路徑）}`。`ok`＝實際位置在上面說的範圍內（判不過時重讀 birth.json，算進執行中加掛的）。`lib/aos7_audit.py` 的 `scan(root)` 把整個空間的紀錄拼起來挑出 `ok: false` 的。只看得到 Python 程序（problems.md M-3）。
 
 ## 6. 任務控制（S-17）
 
@@ -188,7 +194,7 @@ tick 用 `aos7-run <taskdir>` 起任務（新 session，tick 不等它）。aos7
  "max_age": {"subd": 8}}
 ```
 
-tasks.json 要把要看的東西掛給它（S-23）：daemon 的 `.aosd`（讀 status.json、寫 ctl）、每個成員的 `.aos`（讀 round.json、任務；寫任務 ctl.json）。例：`"mounts": {"daemon": ".aosd", "amy": "team/agents/amy/.aos"}`。沒掛的成員當作不存在（快照 `mounted: false`，不下決定）；沒掛 `.aosd` 時 pause／resume 寫不出去，decisions.jsonl 記 `skipped`。kernel 自己 node 的任務直接寫。
+kernel 要看的東西都經過掛載點（S-23）：daemon 的 `.aosd`（讀 status.json、寫 ctl）、每個成員的 `.aos`（讀 round.json、任務；寫任務 ctl.json）。**每輪先對沒掛到的寫加掛請求**（第 4 節），所以 tasks.json 不必寫 mounts，加成員只改 kernel.json；下一個 tick 掛上之前，那個成員當作不存在（快照 `mounted: false`，不下決定），`.aosd` 還沒掛時 pause／resume 寫不出去，decisions.jsonl 記 `skipped`。kernel 自己 node 的任務直接寫。
 
 每收到一次 tock（自己 node 的回合）跑一輪規則，判斷結果寫成控制檔：
 
@@ -227,7 +233,7 @@ tasks.json 要把要看的東西掛給它（S-23）：daemon 的 `.aosd`（讀 s
 
 | tool | 參數 | 做什麼 |
 |---|---|---|
-| `send` | `to`（node id）、`body` | 經過掛載點寫一封信到 `<to>/inbox/<時間>-<自己>.json`：`{"from","to","round","body"}`。對方的 inbox 要掛給自己（tasks.json `"mounts": {"bob": "team/agents/bob/inbox"}`），沒掛就失敗 |
+| `send` | `to`（node id）、`body` | 經過掛載點寫一封信到 `<to>/inbox/<時間>-<自己>.json`：`{"from","to","round","body"}`。對方的 inbox 沒掛：寫加掛請求，信先放 `<node>/outbox/`；之後每個 tock 一開始先清 outbox（掛上了就寄，加掛被拒就搬到 `outbox/failed/`）。被拒過的對象直接失敗 |
 | `write` | `path`（相對自己 node）、`text` | 寫檔 |
 | `none` | — | 什麼都不做 |
 
@@ -237,6 +243,6 @@ tasks.json 要把要看的東西掛給它（S-23）：daemon 的 `.aosd`（讀 s
 
 - fake：`goal.json` 的 `{"say_first": {"to", "body"}}` 讓它先開口；收到 body 為 `ping N` 的信回 `ping N+1` 給寄件者，N ≥ `max_ping` 改成 `write work/done.txt`、不再回。tokens＝prompt 字元數 // 4。
 - OpenAI 相容：system＝規則＋persona，user＝`{"goal","letters"}` 的 JSON；要模型只回 JSON 陣列。解不出就當 `[{"tool":"none"}]`，原因寫進 state.last。tokens＝回應的 `usage.total_tokens`。
-- `send` 的 `to` 的 inbox 必須有掛給自己；`write` 的 `path` 不能跑出自己的 node。不合就跳過該步並記在 last。
+- `send` 的 `to` 必須是空間裡的路徑（不能絕對、不能跑出根）；`write` 的 `path` 不能跑出自己的 node。不合就跳過該步並記在 last。
 
 agent 的進出流水印在 stdout（一行一個 JSON，aos7-run 收進 out.log）。`aos7-agent --rounds N`：處理 N 次 tock 後自行結束；SIGTERM／SIGINT 乾淨結束（code 0）。

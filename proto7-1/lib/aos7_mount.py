@@ -4,8 +4,9 @@
 目標寫成空間裡的路徑（相對空間根，跟 node id 同一套，例如 `team/agents/bob/inbox`、`.aosd/ctl`）。
 """
 import os
+import re
 
-from aos7_fs import node_path, read_json
+from aos7_fs import node_path, now, read_json, write_json
 
 MNT = "mnt"
 
@@ -76,3 +77,87 @@ def resolver(taskdir):
                 return os.path.join(at, rest) if rest and rest != "." else at
         return None
     return resolve
+
+
+# ---------- 執行中加掛（M-6，使用者選 (b)）：任務寫請求，下一個 tick 審核 ----------
+
+REQ = "mount-req"     # 任務寫：<taskdir>/mount-req/<名字>.json＝{"name", "path", "why"}
+DONE = "mount-done"   # tick 寫：同名回條，請求內容加 {"result": {"ok", "msg", "at"}}
+
+
+def req_name(path):
+    """由空間路徑推一個掛載名字（`team/agents/bob/inbox` → `team_agents_bob_inbox`）。"""
+    return re.sub(r"[^A-Za-z0-9_-]", "_", _norm(path)).strip("_") or "root"
+
+
+def request(taskdir, path, why="", name=None):
+    """任務這邊用：要 path 能經過掛載點碰到。回 "mounted"／"pending"／"refused: 原因"；需要時寫請求檔（已有就不重寫）。
+
+    被拒的回條留著，同一個名字不再自動重請；要再請就刪掉 mount-done 裡那份。"""
+    if resolver(taskdir)(path) is not None:
+        return "mounted"
+    n = name or req_name(path)
+    done = read_json(os.path.join(taskdir, DONE, n + ".json"))
+    if isinstance(done, dict) and not (done.get("result") or {}).get("ok", True):
+        return "refused: %s" % done["result"].get("msg")
+    req = os.path.join(taskdir, REQ, n + ".json")
+    if not os.path.exists(req):
+        write_json(req, {"name": n, "path": path, "why": why})
+    return "pending"
+
+
+def allowed(path, allow):
+    """tasks.json 的 `mount_allow`（空間路徑前綴清單）；沒寫＝全給。"""
+    if allow is None:
+        return True
+    p = _norm(path)
+    for a in allow if isinstance(allow, list) else []:
+        a = _norm(a) if isinstance(a, str) else None
+        if a is not None and (a == "." or p == a or p.startswith(a + "/")):
+            return True
+    return False
+
+
+def serve(root, taskdir, allow):
+    """tick 這邊用：處理一個任務的所有加掛請求，給了就補連結、更新 birth.json。回 [{"name", "path", "ok", "msg"}]。"""
+    rdir = os.path.join(taskdir, REQ)
+    try:
+        names = sorted(n for n in os.listdir(rdir) if n.endswith(".json"))
+    except OSError:
+        return []
+    out = []
+    for fn in names:
+        item = read_json(os.path.join(rdir, fn))
+        try:
+            os.remove(os.path.join(rdir, fn))
+        except OSError:
+            pass
+        ok, msg, name, path = False, "", None, None
+        if not isinstance(item, dict):
+            item, msg = {"raw": item}, "not a JSON object"
+        else:
+            path = item.get("path")
+            name = item.get("name") or (req_name(path) if isinstance(path, str) else None)
+            good, bad = check({name: path}) if name else ({}, ["沒有 name 也沒有 path"])
+            bpath = os.path.join(taskdir, "birth.json")
+            birth = read_json(bpath, {}) or {}
+            mounts = birth.get("mounts") or {}
+            if bad:
+                msg = bad[0]
+            elif not allowed(path, allow):
+                msg = "%s 不在這個 node 的 mount_allow 裡" % _norm(path)
+            elif name in mounts:
+                ok = mounts[name].get("to") == good[name]
+                msg = "已經掛了" if ok else "名字 %s 已經掛了別的（%s）" % (name, mounts[name].get("to"))
+            else:
+                m = make(root, taskdir, good)[name]
+                ok = "at" in m
+                msg = "掛上 mnt/%s → %s" % (name, good[name]) if ok else m.get("error", "?")
+                if ok:
+                    mounts[name] = m
+                    birth["mounts"] = mounts
+                    write_json(bpath, birth)
+        item["result"] = {"ok": ok, "msg": msg, "at": now()}
+        write_json(os.path.join(taskdir, DONE, fn), item)
+        out.append({"name": name, "path": path, "ok": ok, "msg": msg})
+    return out

@@ -236,6 +236,21 @@ class IntegrationTest(unittest.TestCase):
         self.p.send_signal(signal.SIGTERM)
         self.assertEqual(self.p.wait(timeout=5), 0)
 
+    def test_kernel_asks_mounts_for_new_member(self):
+        """M-6：kernel.json 加成員，kernel 自己寫加掛請求；tick 給了之後就看得到。"""
+        self.w.node("team/agents/carol")
+        d = self.w.task("team/agents/carol", "agent-r1")
+        fs.write_json(os.path.join(d, "progress.json"), {"steps": 1})
+        cfg = fs.read_json(os.path.join(self.node, "kernel.json"))
+        cfg["members"].append("agents/carol")
+        fs.write_json(os.path.join(self.node, "kernel.json"), cfg)
+        self.tock(1)
+        self.assertTrue(os.path.exists(os.path.join(self.kdir, "mount-req", "team_agents_carol__aos.json")))
+        res = aos7_mount.serve(self.w.root, self.kdir, None)
+        self.assertEqual([(r["path"], r["ok"]) for r in res], [("team/agents/carol/.aos", True)])
+        snap = snapshot(self.w.root, "team", "kernel-r1", cfg, 2, aos7_mount.resolver(self.kdir))
+        self.assertEqual(snap["members"]["team/agents/carol"]["tasks"][0]["tid"], "agent-r1")
+
     def test_restart_inherits_state_and_rounds_flag(self):
         self.tock(1)
         self.p.send_signal(signal.SIGTERM)

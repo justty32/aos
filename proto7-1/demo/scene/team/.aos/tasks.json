@@ -1,6 +1,6 @@
-{"tasks": [
- {"name": "kernel", "mode": "keep", "argv": ["aos7-kernel"],
-  "mounts": {"daemon": ".aosd", "amy": "team/agents/amy/.aos", "bob": "team/agents/bob/.aos"}},
+{"mount_allow": [".aosd", "team/agents/"],
+ "tasks": [
+ {"name": "kernel", "mode": "keep", "argv": ["aos7-kernel"]},
  {"name": "poke", "mode": "each", "argv": ["python3", "poke.py"], "from_round": 2,
   "mounts": {"subctl": "team/sub/.aosd/ctl"}}
 ]}
