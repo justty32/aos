@@ -181,7 +181,7 @@
 
 ## J. astra 調查報告二的實驗探針（10-03）
 
-來源是 [astra 調查報告二](research/2026-10-03-other-os-borrow.md) §14 的實驗一、二，做成兩個全離線的探針 [probes/namespace](../probes/namespace/README.md)、[probes/ledger](../probes/ledger/README.md)，daemon／tick 沒改。報告 §13 預測「三個實驗都能不改 daemon／tick 先做」，結果成立：服務卡、epoch、去重、委派帳、未知在途都在任務層做得到。逼出的只有下面兩條，「對應」欄是報告的 E- 編號。
+來源是 [astra 調查報告二](research/2026-10-03-other-os-borrow.md) §14 的實驗一、二，做成兩個全離線的探針 [probes/namespace](../probes/namespace/README.md)、[probes/ledger](../probes/ledger/README.md)，daemon／tick 沒改。實驗三做成 [probes/hsched](../probes/hsched/README.md)（離線協議驗證＋真模型比較），**沒有逼出新需求**：別條時間線的回合當時鐘、kernel 重起接狀態、經掛載寫別的 node 的 spawn 擴編都做得到；「控制 node 不在策略的 pause 範圍」靠不給 agent 掛 `.aosd`，是合作式邊界，同 N-77 屬權限之後再說。報告 §13 預測「三個實驗都能不改 daemon／tick 先做」，結果成立：服務卡、epoch、去重、委派帳、未知在途都在任務層做得到。逼出的只有下面兩條，「對應」欄是報告的 E- 編號。
 
 | 編號 | 需求 | 來源 | 證據 | 優先 | 核心 | 現況 | 決定 |
 |---|---|---|---|---|---|---|---|

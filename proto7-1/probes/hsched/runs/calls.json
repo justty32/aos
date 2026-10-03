@@ -1,0 +1,93 @@
+{
+ "used": 223,
+ "tokens": 186071,
+ "log": [
+  {
+   "tag": "smoke",
+   "group": "llm() 直呼",
+   "model": "deepseek-chat",
+   "calls": 2,
+   "tokens": 1802
+  },
+  {
+   "tag": "",
+   "rep": 1,
+   "group": "D",
+   "model": "deepseek-chat",
+   "calls": 8,
+   "tokens": 9336
+  },
+  {
+   "tag": "",
+   "rep": 1,
+   "group": "C",
+   "model": "deepseek-chat",
+   "calls": 45,
+   "tokens": 29817
+  },
+  {
+   "tag": "",
+   "rep": 1,
+   "group": "D",
+   "model": "claude-haiku-4.5",
+   "calls": 7,
+   "tokens": 10226
+  },
+  {
+   "tag": "",
+   "rep": 2,
+   "group": "D",
+   "model": "deepseek-chat",
+   "calls": 8,
+   "tokens": 9370
+  },
+  {
+   "tag": "",
+   "rep": 2,
+   "group": "C",
+   "model": "deepseek-chat",
+   "calls": 45,
+   "tokens": 31136
+  },
+  {
+   "tag": "",
+   "rep": 2,
+   "group": "D",
+   "model": "claude-haiku-4.5",
+   "calls": 7,
+   "tokens": 10217
+  },
+  {
+   "tag": "",
+   "rep": 3,
+   "group": "D",
+   "model": "deepseek-chat",
+   "calls": 8,
+   "tokens": 9306
+  },
+  {
+   "tag": "",
+   "rep": 3,
+   "group": "C",
+   "model": "deepseek-chat",
+   "calls": 48,
+   "tokens": 31991
+  },
+  {
+   "tag": "",
+   "rep": 3,
+   "group": "D",
+   "model": "claude-haiku-4.5",
+   "calls": 7,
+   "tokens": 10154
+  },
+  {
+   "tag": "h-",
+   "rep": 1,
+   "group": "C",
+   "model": "claude-haiku-4.5",
+   "calls": 38,
+   "tokens": 32716
+  }
+ ]
+}
