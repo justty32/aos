@@ -254,7 +254,7 @@ kernel 要看的東西都經過掛載點（S-23）：daemon 的 `.aosd`（讀 st
 
 **真模型用的補充**（`demo/real.py` 用到；不設就跟上面一樣）：
 
-- `agent.json` 的 `"memory": N`：think 的 user JSON 多一個 `memory`＝`{"recent_letters": 最近 N 封往來的信（收：inbox/done/；寄：<node>/sent.jsonl，依 at 排）, "my_files": 自己 work/ 底下的檔（每檔截 4000 字）}`。`send` 一律把信多記一行到 `<node>/sent.jsonl`。
+- `agent.json` 的 `"memory": N`：think 的 user JSON 多一個 `memory`＝`{"recent_letters": 最近 N 封往來的信（收：inbox/done/；寄：<node>/sent.jsonl，依 at 排；視窗外的每個往來對象再補它最近一封，R-13）, "my_files": 自己 work/ 底下的檔（每檔截 4000 字）}`。`send` 一律把信多記一行到 `<node>/sent.jsonl`。
 - `agent.json` 的 `"wake": {"rounds": N, "unless": "相對 node 的路徑"}`：idle 且沒信沒 goal、離上次開始 think 已 N 個回合、`unless` 的檔又不在 → 自己 think 一次，goal＝`{"wake": "…"}`（不改名 goal.json）。
 - `llm` 物件的 `retry`（預設 1）：plan 解析不出時，把原回應接一句更正再問，最多 retry 次；每次都算進 usage 的 `calls`。
 - 每次真模型 think 在 `$AOS7_TASK/llm.jsonl` 記一行：`{"at","round","round_before","round_after"（node 的回合，呼叫前後）,"ms","calls","tokens","note","letters","raw"（原文前 4000 字）}`。

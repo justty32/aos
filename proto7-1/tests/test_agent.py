@@ -155,6 +155,18 @@ class StepByStep(unittest.TestCase):
         self.assertEqual(m["recent_letters"][-1]["body"], "hi")
         self.assertEqual(m["my_files"], {"work/a.py": "x = 1"})
 
+    def test_memory_keeps_each_peer(self):
+        """R-13：跟 ci 互丟很多封時，視窗外的 rita 仍留最近一封（不被擠掉）。"""
+        from aos7_agent_tools import memory
+        node = self.w["amy"]["node"]
+        write_json(os.path.join(node, "inbox", "done", "1.json"), {"from": "t/rita", "at": "2026-01-01T00:00:01", "body": "我是 rita"})
+        write_json(os.path.join(node, "inbox", "done", "2.json"), {"from": "t/rita", "at": "2026-01-01T00:00:02", "body": "OK"})
+        for i in range(10):
+            write_json(os.path.join(node, "inbox", "done", "c%02d.json" % i),
+                       {"from": "t/ci", "at": "2026-01-01T00:01:%02d" % i, "body": "PASS %d" % i})
+        m = memory(node, 3)["recent_letters"]
+        self.assertEqual([h["body"] for h in m], ["OK", "PASS 7", "PASS 8", "PASS 9"])
+
     def test_write_cannot_escape_node(self):
         from aos7_agent_tools import do_tool
         r = do_tool(self.w["amy"], {"tool": "write", "path": "../bob/x.txt", "text": "x"}, 1)
