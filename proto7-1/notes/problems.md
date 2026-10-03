@@ -2,7 +2,7 @@
 
 ← [proto7-1](../README.md)｜[spec.md](../spec.md)｜核心 spec：[core.md](../../proto7/spec/core.md)（條號 S-）
 
-proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py`）全部跑通。下面是做的過程中碰到的問題。各組的細節在三份分檔：[核心 P-](problems-core.md)（daemon、tick、tock、任務）、[kernel K-](problems-kernel.md)、[agent A-](problems-agent.md)。整合時隊長自己碰到的記在本檔 I-。用真模型跑多 agent 協作（`demo/real.py`）碰到的記在 [真模型 R-](problems-real.md)，跑的紀錄在 [runs/](runs/2026-10-03-real-1.md)。
+proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py`）全部跑通。下面是做的過程中碰到的問題。各組的細節在三份分檔：[核心 P-](problems-core.md)（daemon、tick、tock、任務）、[kernel K-](problems-kernel.md)、[agent A-](problems-agent.md)。整合時隊長自己碰到的記在本檔 I-。用真模型跑多 agent 協作（`demo/real.py`）碰到的記在 [真模型 R-](problems-real.md)，跑的紀錄在 runs/（[real-1](runs/2026-10-03-real-1.md)、[real-2](runs/2026-10-03-real-2.md)）。
 
 分級：**〔要使用者決定〕**＝方向問題，或核心 spec 說不清、互相衝突；〔技術選型，先這樣〕；〔默認正常〕。各組原本列了 8 條要使用者決定，隊長合併、降級後剩下面 4 條（D-1～D-4）。
 
@@ -147,7 +147,24 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （c）每個 agent 有一份「自己維護的記憶檔」，每次 think 都要回寫（plan 多一個欄位），框架負責放進 prompt。
 - **怎麼做的（10-03，照 (b)，最簡單版）**：kernel 每輪依 kernel.json 的 `members` 組名冊 `{"by", "members": [{"node", "inbox", "role"}]}`（`role` 取 kernel.json 新加的可選欄 `roles`：`{成員相對路徑: "一句"}`），經過它本來就有的 `<成員>/.aos` 掛載點寫到每個成員的 `.aos/roster.json`（內容沒變不重寫）。agent 每次 think 讀自己 node 的 `.aos/roster.json`，有就放進 user JSON 的 `roster`。不用另外掛載：名冊就在成員自己的 node 裡。新問題見 M-15。測試 `test_roster_written_to_members`、`test_roster_goes_into_prompt`。
 
-## 其餘問題一覽（技術選型 38 條、默認正常 20 條）
+## 真模型 real-2 要使用者決定的（1 條，R-15）
+
+細節在 [problems-real.md](problems-real.md)；跑的紀錄在 [runs/2026-10-03-real-2.md](runs/2026-10-03-real-2.md)。real-2 兩模組跑三次，三次都寫出 DONE.md，其中第 2 次交出去的 dur.py 不合格。
+
+### R-15 交付的檔是 LLM 重打的，不是測過的那份〔要使用者決定〕
+
+- 層：agent 的工具 × 協作；spec 第 10 節（工具只有 send／write／none）、S-16。
+- 發生了什麼：
+  - real-2 第 2 次（lead＝deepseek）：dur.py 在 ci 第 2 次就 PASS 36/36、rita 也說 OK。結案時 lead 用 `write` 寫 `work/dur.py`，但 dur 的 PASS 信已經不在它的記憶裡，它就照自己最早交代的需求**重寫了一份**（沒有 `d` 單位、接受 `01h`），隱藏測試 29/36，照樣宣告完成。ranges.py 也是重打的（等價、拿掉了註解）。
+  - 原因：agent 要把東西存成檔，唯一的路是 LLM 在 plan 裡把整份內容再打一次（`write` 的 `text`）。信裡的程式碼不能原樣存下來；看不到原文時，模型會照它以為的樣子補。
+  - 第 3 次 lead 的 persona 加「收到 ci 的 PASS 就把附的程式碼一字不改存到 `work/<模組>.py`，結案時不要重打」，交付的檔＝ci 測過的那兩份。real.py 現在會報交付的檔是 ci 第幾次測的。
+- 先這樣：靠 persona（看到就存、之後不重打）＋ real.py 事後比對。只降低機率。
+- 要決定的：在只有信件的世界裡，「成果」要不要經過 LLM 轉手？（不代替你選）
+  - （a）照現在：內容都由 LLM 打出來，靠 persona 與事後比對把關。交付物和測過的東西可能不一樣，而且沒人知道。
+  - （b）agent 多一個不經 LLM 的工具：把某封信（或信裡一段）原樣存成檔，例如 `{"tool": "save", "letter": "<信檔名>", "path": "work/dur.py"}`。工具集從三個變四個（spec 第 10 節）。
+  - （c）成果由驗收者保管：ci（或任何驗收的 node）存通過的版本，「完成」＝負責人指名「ci 第幾次」，外面的人去驗收者那裡取檔。agent 不必搬運成果，但完成的定義綁在某個 bot 上。
+
+## 其餘問題一覽（技術選型 40 條、默認正常 23 條）
 
 細節點進分檔看。
 
@@ -186,11 +203,13 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [M-15](#m-15-成員名冊寫在成員的-aos-裡技術選型先這樣) 成員名冊寫在成員的 `.aos/` 裡。
 - [R-3](problems-real.md) kernel 的「卡住」在真模型下全是誤判（都在等 LLM）。**已修**：think 時 progress 寫 `llm_since`，kernel 不當卡住（另設 `llm_stuck_rounds` 才管）。
 - [R-4](problems-real.md) 預算規則是「限速」不是「上限」。**已補**總額：`cap_tokens`，超過就 pause、不自動 resume，人改 kernel.json 才恢復。
-- [R-5](problems-real.md) luna 有 25% 的回應解析不出來（`"."`、`[]`、殘渣）；加了「重問一次」。
+- [R-5](problems-real.md) luna 有 25%～50% 的回應解析不出來（`"."`、`[]`、殘渣、亂碼、空字串）；加了「重問一次」。
 - [R-6](problems-real.md) 信沒有種類：寄錯就被當成程式碼；必回的 bot 對上收到就做事的 agent，會互相觸發成迴圈。
 - [R-7](problems-real.md) 「完成」由 LLM 判斷，驗收只能信轉述；coder 謊報過 PASS。
 - [R-9](problems-real.md) prompt＝persona＋最近 N 封信＋work/ 的檔，tokens 隨記憶長大（1.3k→7k）。
 - [R-10](problems-real.md) 事後要看懂得多記 llm.jsonl、trace.jsonl、sent.jsonl；15 分鐘 77 MB。
+- [R-13](problems-real.md) 記憶視窗會被一個往來對象（ci）洗掉。**已改**：視窗外的每個往來對象再補它最近一封。
+- [R-14](problems-real.md) ci 不測不回非程式碼與重複的程式碼、看不出模組就明說 FAIL、PASS 直接寄 lead 附程式碼。real-2 三次都沒迴圈，但去重規則沒觸發過，擋住迴圈的是 persona。
 
 **默認正常**
 
@@ -214,6 +233,9 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [R-8](problems-real.md) 一次 LLM 呼叫跨 5～75 回合；處理過的 tock 有 81～100% 是 idle（D-2 的實際數字）。
 - [R-11](problems-real.md) 新成員的信常插在別人長 think 的中間，要等下一輪才看得到。
 - [R-12](problems-real.md) real.py 被 kill 時 daemon 還留著跑。
+- [R-16](problems-real.md) 審稿者擴大範圍（加上限、非 ASCII 數字），多出 1～2 輪修改；都收斂了。
+- [R-17](problems-real.md) 審稿 OK 回給 coder，lead 看不到，要自己再送審一次。
+- [R-18](problems-real.md) 預算限速 15000 小於一兩次 think，每一兩次就 pause 3 秒，沒擋到也沒害到。
 
 ## 整合時碰到的（I-）
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """真模型場景：lead／coder（＋中途加入的 rita）用真的 LLM 合寫 dur.py 與 ranges.py，靠 ci 機器人的隱藏測試驗收。
 
-    python3 proto7-1/demo/real.py [--root DIR] [--max-calls 400] [--max-seconds 900] [--join-after 60]
+    python3 proto7-1/demo/real.py [--root DIR] [--max-calls 400] [--max-seconds 900] [--join-after 60] [--model lead=deepseek-chat ...]
 
 只打 LiteLLM 代理 http://127.0.0.1:4000/v1（模型寫在 demo/real_scene 與 demo/real_later 的 agent.json）。
 不放進 unittest。跑到 lead 寫出 work/DONE.md、或 LLM 呼叫數到上限、或超過時間就停，最後印時間線摘要與統計。
@@ -59,11 +59,23 @@ def live_state(root, who):
     return "%s@r%s" % (st.get("state", "?"), st.get("round", "?"))
 
 
-def join_rita(root):
+def set_models(node_root, models):
+    """--model who=模型：改空間裡那個 agent 的 agent.json（場景檔本身不動）。"""
+    for who, model in models.items():
+        p = os.path.join(node_root, who, "agent.json")
+        if os.path.exists(p):
+            cfg = fs.read_json(p, {})
+            cfg["llm"]["model"] = model
+            fs.write_json(p, cfg)
+
+
+def join_rita(root, models=None):
     shutil.copytree(os.path.join(HERE, "real_later", "rita"), os.path.join(root, "team", "agents", "rita"))
+    set_models(os.path.join(root, "team", "agents"), {k: v for k, v in (models or {}).items() if k == "rita"})
     kpath = os.path.join(root, "team", "kernel.json")
     cfg = fs.read_json(kpath, {})
     cfg["members"] = cfg.get("members", []) + ["agents/rita"]
+    cfg.setdefault("roles", {})["agents/rita"] = "審稿者（中途加入）：審 ci 通過的程式碼，說「<模組> 審稿 OK」"
     fs.write_json(kpath, cfg)
 
 
@@ -110,7 +122,7 @@ def watch(root, a, log, d, t0, samples):
         t = time.monotonic() - t0
         calls, tokens = llm_calls(root)
         if not joined and (t > a.join_after or glob.glob(os.path.join(root, "team/agents/ci/sent.jsonl"))):
-            join_rita(root)
+            join_rita(root, a.models)
             joined = True
             log("  [%5.1fs] 加入新成員 rita（node 放進空間＋kernel.json 加成員）" % t)
         states = {w: live_state(root, w) for w in AGENTS}
@@ -155,6 +167,18 @@ def runs_of(trace):
         else:
             out.append((t["state"], t["round"], t["round"], 1))
     return out
+
+
+def ci_version_of(root, path):
+    """lead 交出的檔是 ci 測過的哪一版（比去掉前後空白的全文）：回 (第幾次, 那次的結果 dict) 或 None（R-15）。"""
+    with open(path, encoding="utf-8") as f:
+        mine = f.read().strip()
+    for d in sorted(glob.glob(os.path.join(root, "team/agents/ci/work/runs/*")), key=lambda x: int(os.path.basename(x))):
+        for py in glob.glob(os.path.join(d, "*.py")):
+            with open(py, encoding="utf-8") as f:
+                if f.read().strip() == mine:
+                    return int(os.path.basename(d)), fs.read_json(os.path.join(d, "result.json"), {}) or {}
+    return None
 
 
 def report(root, log, secs, samples):
@@ -217,7 +241,10 @@ def report(root, log, secs, samples):
 
     log("\n== ci 的測試紀錄 ==")
     for c in fs.read_jsonl(os.path.join(root, "team/agents/ci/work/ci-log.jsonl")):
-        log("  %s 第 %s 次  來自 %s  %s/%s" % (c["at"][11:19], c["n"], c["from"], c["passed"], c["total"]))
+        if c.get("kind", "test") == "test":
+            log("  %s 第 %s 次  來自 %s  %s %s/%s" % (c["at"][11:19], c["n"], c["from"], c.get("module"), c["passed"], c["total"]))
+        else:
+            log("  %s %-8s 來自 %s  %s" % (c["at"][11:19], c["kind"], c["from"], c.get("reply")))
 
     log("\n== kernel 的決定 ==")
     for p in sorted(glob.glob(os.path.join(root, "team", ".aos", "tasks", "*", "decisions.jsonl"))):
@@ -259,8 +286,12 @@ def report(root, log, secs, samples):
         except (ValueError, IndexError):
             r = {"passed": 0, "total": None, "fails": [p.stdout[-300:] + p.stderr[-300:]]}
         shutil.rmtree(tmpd, ignore_errors=True)
+        v = ci_version_of(root, final)
+        r["ci_version"] = v[0] if v else None
         res[mod] = r
         log("  lead/work/%s.py 跑隱藏測試：%s/%s %s" % (mod, r["passed"], r["total"], "; ".join(r["fails"][:5])))
+        log("    " + ("＝ci 第 %d 次測的那份（當時 %s/%s）" % (v[0], v[1].get("passed"), v[1].get("total")) if v
+                      else "跟 ci 測過的任何一版都不同（lead 自己重打過）"))
         with open(final, encoding="utf-8") as f:
             log("  --- %s.py ---\n" % mod + "".join("  | " + x for x in f.readlines()[:70]))
     dm = os.path.join(root, "team/agents/lead/work/DONE.md")
@@ -279,11 +310,18 @@ def main():
     ap.add_argument("--grace", type=float, default=8, help="DONE.md 出現後再跑幾秒")
     ap.add_argument("--idle-stop", type=float, default=150, help="沒有新呼叫、沒有新信超過幾秒就停")
     ap.add_argument("--log", help="摘要另存到這個檔")
+    ap.add_argument("--model", action="append", default=[], metavar="WHO=MODEL",
+                    help="換某個 agent 的模型（lead／coder／rita），可給多次")
     a = ap.parse_args()
+    a.models = dict(x.split("=", 1) for x in a.model)
+    bad = [m for m in a.models.values() if m.startswith(("lm-", "ollama", "claude-fable"))]
+    if bad:
+        ap.error("這個場景只用雲端模型：%s" % bad)
     root = os.path.abspath(a.root) if a.root else tempfile.mkdtemp(prefix="aos7-real-")
     if a.root and os.path.exists(root):
         shutil.rmtree(root)
     shutil.copytree(os.path.join(HERE, "real_scene"), root, dirs_exist_ok=True)
+    set_models(os.path.join(root, "team", "agents"), a.models)
     lines = []
 
     def log(s):

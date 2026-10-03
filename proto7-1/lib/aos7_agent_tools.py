@@ -165,7 +165,7 @@ def do_tool(ctx, step, rnd):
 
 def memory(node, n, skip=(), file_chars=4000):
     """給真模型的記憶（agent.json 的 "memory": n）：最近 n 封往來的信（收的在 inbox/done/、寄的在 sent.jsonl，
-    依 at 排）＋自己 work/ 底下的檔（每檔截 file_chars 字）。skip＝這輪正要處理的信檔名（已經在 letters 裡）。"""
+    依 at 排；視窗外的往來對象各再補它最近一封）＋自己 work/ 底下的檔（每檔截 file_chars 字）。skip＝這輪正要處理的信檔名（已經在 letters 裡）。"""
     hist = []
     done = os.path.join(inbox_dir(node), "done")
     try:
@@ -179,6 +179,15 @@ def memory(node, n, skip=(), file_chars=4000):
     for l in read_jsonl(os.path.join(node, "sent.jsonl")):
         hist.append({"dir": "寄", "to": l.get("to"), "at": l.get("at", ""), "body": l.get("body")})
     hist.sort(key=lambda h: str(h.get("at")))
+    keep = hist[-n:] if n > 0 else []
+    # 每個往來對象至少留最近一封：不讓頻繁的往來（例如跟 ci 互丟）把別人擠出視窗（R-13）
+    seen = {h.get("from") or h.get("to") for h in keep}
+    for h in reversed(hist[:-n] if n > 0 else hist):
+        peer = h.get("from") or h.get("to")
+        if peer not in seen:
+            seen.add(peer)
+            keep.append(h)
+    keep.sort(key=lambda h: str(h.get("at")))
     files = {}
     wdir = os.path.join(node, "work")
     for dp, _, fns in os.walk(wdir):
@@ -189,4 +198,4 @@ def memory(node, n, skip=(), file_chars=4000):
                     files[os.path.relpath(fp, node)] = f.read(file_chars)
             except OSError:
                 pass
-    return {"recent_letters": hist[-n:], "my_files": files}
+    return {"recent_letters": keep, "my_files": files}

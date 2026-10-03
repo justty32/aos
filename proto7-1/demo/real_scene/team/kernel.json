@@ -6,5 +6,10 @@
  ],
  "stuck_rounds": 20,
  "budget_tokens": 15000,
- "cool_rounds": 6
+ "cool_rounds": 6,
+ "roles": {
+  "agents/lead": "負責人：分派工作、收 ci 的 PASS 與審稿 OK、結案",
+  "agents/coder": "寫程式：寫好寄給 ci 測，PASS 後交給 lead 與審稿者",
+  "agents/ci": "測試機器人（不是人）：信的 body 只能是純 Python 原始碼；PASS 會同時寄給 lead"
+ }
 }
