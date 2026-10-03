@@ -43,6 +43,8 @@
 - **S-18 kernel 管時間線靠 daemon ctl。** 能下 ctl 讓某條 tick-tock 時間線停止或繼續就夠了（第 69 行）。
 - **S-19 agent 是狀態機任務。** 在 idle、think、act 之間變換，依託 tick-tock 換狀態（第 74～75 行）。
 
+- **S-23 跨 node 通訊靠掛載。** 任務想跟別的 node 通訊時，把對方相關的收訊資料夾掛到自己看得到的地方；這樣仍合 S-10「任務只碰 tick 給的資料夾」（使用者 10-03 答 proto7-1 的 D-1）。
+
 ## 同像性
 
 - **S-20 時間線像一個大號的任務。** daemon 與 tick-tock、tick-tock 與任務之間有同像性；daemon 和 tick-tock 的位置仍然特殊，好處只在實作上共用，能共用的都可以（第 79～81 行）。
