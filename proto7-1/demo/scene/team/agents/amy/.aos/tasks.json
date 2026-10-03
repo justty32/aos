@@ -1,0 +1,3 @@
+{"tasks": [
+ {"name": "agent", "mode": "keep", "argv": ["aos7-agent"], "dirs": ["../bob/inbox"]}
+]}

@@ -1,0 +1,3 @@
+{"members": ["agents/amy", "agents/bob"],
+ "stuck_rounds": 3, "budget_tokens": 250, "cool_rounds": 4,
+ "max_age": {"subd": 12}}
