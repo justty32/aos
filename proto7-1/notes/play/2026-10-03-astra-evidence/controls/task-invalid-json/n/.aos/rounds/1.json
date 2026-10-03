@@ -1,0 +1,19 @@
+{
+ "round": 1,
+ "tick_at": "2026-10-03T12:37:51.314",
+ "tock_at": "2026-10-03T12:37:51.452",
+ "started": [
+  "sleeper-r1"
+ ],
+ "alive": [
+  "sleeper-r1"
+ ],
+ "ended": [],
+ "ctl": [
+  {
+   "tid": "sleeper-r1",
+   "op": null,
+   "ok": false
+  }
+ ]
+}

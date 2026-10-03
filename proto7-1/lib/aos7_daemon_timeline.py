@@ -10,7 +10,7 @@ import threading
 import time
 
 import aos7_task
-from aos7_fs import BIN, env_with_bin, node_path, read_json
+from aos7_fs import BIN, env_with_bin, node_path, now, read_json
 
 POLL = 0.02
 DEFAULT_INTERVAL_MS = 1000
@@ -40,8 +40,20 @@ class Timeline(threading.Thread):
         self.node = node_path(daemon.root, node_id)
         self.phase = "idle"
         self.round = read_json(os.path.join(self.node, ".aos", "round.json"), {}).get("round", 0)
+        self.last_error = None       # 最近一次 tick／tock 失敗（rc≠0）
         self.gone = False            # node 消失：不再 tock（tock 會把資料夾建回來）
         self.wake = threading.Event()
+
+    def disk_round(self):
+        """回合數以 round.json 為準（tick 寫了新回合卻沒印 stdout 時，記憶體裡的會落後）。"""
+        r = read_json(os.path.join(self.node, ".aos", "round.json"), {})
+        return r.get("round", self.round) if isinstance(r, dict) else self.round
+
+    def note_error(self, prog, rc, err):
+        """tick／tock 失敗時記下 last_error（status.json 會帶出來）；成功不清，留著給人看最後一次出錯。"""
+        if rc:
+            self.last_error = {"prog": prog, "rc": rc, "round": self.round, "at": now(),
+                               "err": (err or "")[-300:]}
 
     def interval(self):
         t = read_json(os.path.join(self.node, ".aos", "timeline.json"), {})
@@ -74,7 +86,8 @@ class Timeline(threading.Thread):
             self.phase = "tick"
             rc, out, err = run_prog("aos7-tick", self.d.root, self.node_id)
             started = (out or {}).get("started", [])
-            self.round = (out or {}).get("round", self.round)
+            self.round = (out or {}).get("round") or self.disk_round()
+            self.note_error("tick", rc, err)
             self.d.log(ev="tick", node=self.node_id, round=self.round, started=started, rc=rc,
                        **({"err": err[-500:]} if rc else {}))
             self.phase = "running"
@@ -88,6 +101,7 @@ class Timeline(threading.Thread):
             self.kill_if_stopping()
             self.phase = "tock"
             rc, out, err = run_prog("aos7-tock", self.d.root, self.node_id)
+            self.note_error("tock", rc, err)
             self.d.log(ev="tock", node=self.node_id, round=self.round, rc=rc,
                        ended=(out or {}).get("ended"), early=time.monotonic() < t_end,
                        **({"err": err[-500:]} if rc else {}))

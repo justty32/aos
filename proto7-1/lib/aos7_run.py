@@ -5,6 +5,7 @@
 tick 用新 session 起它、不等；它自己活到任務結束。環境變數（AOS7_*）由 tick 給好，這裡原樣傳下去。
 """
 import os
+import re
 import subprocess
 import sys
 
@@ -16,7 +17,13 @@ def build_argv(birth, node):
     if birth.get("inst"):
         inst = os.path.normpath(os.path.join(node, birth["inst"]))
         return [sys.executable, os.path.join(BIN, "aos-exec"), inst]
-    return list(birth.get("argv") or [])
+    return [expand(a) for a in birth.get("argv") or []]
+
+
+def expand(arg):
+    """argv 裡的 `$AOS7_TASK`、`${AOS7_NODE}` 這類 AOS7_* 變數展開（讓 argv 指得到掛載點）；其他 `$` 原樣。"""
+    return re.sub(r"\$\{?(AOS7_[A-Z_]+)\}?", lambda m: os.environ.get(m.group(1), m.group(0)), arg) \
+        if isinstance(arg, str) else arg
 
 
 def node_round(node):
@@ -34,7 +41,7 @@ def main(argv=None):
     if not birth:
         print("aos7-run: 讀不到 birth.json", file=sys.stderr)
         return 1
-    node = birth["dirs"][0] if birth.get("dirs") else os.getcwd()
+    node = os.environ.get("AOS7_NODE") or os.getcwd()
     cmd = build_argv(birth, node)
     out = open(os.path.join(tdir, "out.log"), "ab")
     try:

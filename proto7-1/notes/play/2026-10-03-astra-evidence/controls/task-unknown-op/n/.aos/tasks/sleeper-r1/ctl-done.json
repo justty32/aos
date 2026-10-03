@@ -1,0 +1,8 @@
+{
+ "op": "typo",
+ "result": {
+  "ok": false,
+  "msg": "unknown op 'typo'",
+  "at": "2026-10-03T12:37:53.596"
+ }
+}

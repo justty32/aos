@@ -1,0 +1,9 @@
+{
+ "op": "pause",
+ "node": "n",
+ "result": {
+  "ok": true,
+  "msg": "pause n",
+  "at": "2026-10-03T12:39:42.470"
+ }
+}

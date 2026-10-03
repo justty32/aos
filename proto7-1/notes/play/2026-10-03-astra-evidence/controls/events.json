@@ -1,0 +1,424 @@
+[
+  {
+    "case": "daemon-invalid-json",
+    "returncode": null,
+    "receipt": {
+      "raw": "unreadable",
+      "result": {
+        "ok": false,
+        "msg": "not a JSON object",
+        "at": "2026-10-03T12:37:49.714"
+      }
+    },
+    "control_pending": false,
+    "round": {
+      "round": 2,
+      "open": false,
+      "tick_at": "2026-10-03T12:37:49.808",
+      "tock_at": "2026-10-03T12:37:49.827",
+      "started": [],
+      "ctl": []
+    },
+    "stderr": ""
+  },
+  {
+    "case": "daemon-null",
+    "returncode": null,
+    "receipt": {
+      "raw": "unreadable",
+      "result": {
+        "ok": false,
+        "msg": "not a JSON object",
+        "at": "2026-10-03T12:37:50.040"
+      }
+    },
+    "control_pending": false,
+    "round": {
+      "round": 2,
+      "open": false,
+      "tick_at": "2026-10-03T12:37:50.134",
+      "tock_at": "2026-10-03T12:37:50.151",
+      "started": [],
+      "ctl": []
+    },
+    "stderr": ""
+  },
+  {
+    "case": "daemon-array",
+    "returncode": null,
+    "receipt": {
+      "raw": "unreadable",
+      "result": {
+        "ok": false,
+        "msg": "not a JSON object",
+        "at": "2026-10-03T12:37:50.365"
+      }
+    },
+    "control_pending": false,
+    "round": {
+      "round": 2,
+      "open": false,
+      "tick_at": "2026-10-03T12:37:50.460",
+      "tock_at": "2026-10-03T12:37:50.478",
+      "started": [],
+      "ctl": []
+    },
+    "stderr": ""
+  },
+  {
+    "case": "daemon-unknown-op",
+    "returncode": null,
+    "receipt": {
+      "op": "typo",
+      "result": {
+        "ok": false,
+        "msg": "unknown op 'typo'",
+        "at": "2026-10-03T12:37:50.691"
+      }
+    },
+    "control_pending": false,
+    "round": {
+      "round": 2,
+      "open": false,
+      "tick_at": "2026-10-03T12:37:50.784",
+      "tock_at": "2026-10-03T12:37:50.802",
+      "started": [],
+      "ctl": []
+    },
+    "stderr": ""
+  },
+  {
+    "case": "daemon-pause-object-node",
+    "returncode": null,
+    "receipt": {
+      "op": "pause",
+      "node": {},
+      "result": {
+        "ok": false,
+        "msg": "pause 要給 node",
+        "at": "2026-10-03T12:37:51.015"
+      }
+    },
+    "control_pending": false,
+    "round": {
+      "round": 2,
+      "open": false,
+      "tick_at": "2026-10-03T12:37:51.109",
+      "tock_at": "2026-10-03T12:37:51.126",
+      "started": [],
+      "ctl": []
+    },
+    "stderr": ""
+  },
+  {
+    "case": "task-invalid-json",
+    "returncode": null,
+    "receipt": {
+      "raw": "unreadable",
+      "result": {
+        "ok": false,
+        "msg": "unknown op None",
+        "at": "2026-10-03T12:37:51.452"
+      }
+    },
+    "control_pending": false,
+    "round": {
+      "round": 5,
+      "open": false,
+      "tick_at": "2026-10-03T12:37:51.831",
+      "tock_at": "2026-10-03T12:37:51.848",
+      "started": [],
+      "ctl": []
+    },
+    "status": {
+      "pid": 749775,
+      "root": "/tmp/astra-controls-4neh4qpj/task-invalid-json",
+      "at": "2026-10-03T12:37:51.927",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 5,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "sleeper-r1"
+          ]
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "case": "task-null",
+    "returncode": null,
+    "receipt": {
+      "raw": "unreadable",
+      "result": {
+        "ok": false,
+        "msg": "unknown op None",
+        "at": "2026-10-03T12:37:52.179"
+      }
+    },
+    "control_pending": false,
+    "round": {
+      "round": 5,
+      "open": false,
+      "tick_at": "2026-10-03T12:37:52.558",
+      "tock_at": "2026-10-03T12:37:52.576",
+      "started": [],
+      "ctl": []
+    },
+    "status": {
+      "pid": 749795,
+      "root": "/tmp/astra-controls-4neh4qpj/task-null",
+      "at": "2026-10-03T12:37:52.653",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 5,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "sleeper-r1"
+          ]
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "case": "task-array",
+    "returncode": null,
+    "receipt": null,
+    "control_pending": true,
+    "round": {
+      "round": 5,
+      "open": true,
+      "tick_at": "2026-10-03T12:37:53.294",
+      "tock_at": null,
+      "started": [],
+      "ctl": []
+    },
+    "status": {
+      "pid": 749816,
+      "root": "/tmp/astra-controls-4neh4qpj/task-array",
+      "at": "2026-10-03T12:37:53.380",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 1,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "sleeper-r1"
+          ]
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "case": "task-unknown-op",
+    "returncode": null,
+    "receipt": {
+      "op": "typo",
+      "result": {
+        "ok": false,
+        "msg": "unknown op 'typo'",
+        "at": "2026-10-03T12:37:53.596"
+      }
+    },
+    "control_pending": false,
+    "round": {
+      "round": 5,
+      "open": false,
+      "tick_at": "2026-10-03T12:37:53.975",
+      "tock_at": "2026-10-03T12:37:53.993",
+      "started": [],
+      "ctl": []
+    },
+    "status": {
+      "pid": 749830,
+      "root": "/tmp/astra-controls-4neh4qpj/task-unknown-op",
+      "at": "2026-10-03T12:37:54.072",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 5,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "sleeper-r1"
+          ]
+        }
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "case": "crash-and-ignore",
+    "round": {
+      "round": 12,
+      "open": true,
+      "tick_at": "2026-10-03T12:37:55.540",
+      "tock_at": null,
+      "started": [
+        "crash-r12"
+      ],
+      "ctl": []
+    },
+    "tasks": [
+      {
+        "tid": "crash-r1",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:54.222",
+          "round": 1
+        },
+        "tock": null,
+        "ended": {
+          "round": 1
+        }
+      },
+      {
+        "tid": "crash-r10",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:55.329",
+          "round": 10
+        },
+        "tock": null,
+        "ended": {
+          "round": 10
+        }
+      },
+      {
+        "tid": "crash-r11",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:55.451",
+          "round": 11
+        },
+        "tock": null,
+        "ended": {
+          "round": 11
+        }
+      },
+      {
+        "tid": "crash-r12",
+        "exit": null,
+        "tock": null,
+        "ended": null
+      },
+      {
+        "tid": "crash-r2",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:54.380",
+          "round": 2
+        },
+        "tock": null,
+        "ended": {
+          "round": 2
+        }
+      },
+      {
+        "tid": "crash-r3",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:54.500",
+          "round": 3
+        },
+        "tock": null,
+        "ended": {
+          "round": 3
+        }
+      },
+      {
+        "tid": "crash-r4",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:54.614",
+          "round": 4
+        },
+        "tock": null,
+        "ended": {
+          "round": 4
+        }
+      },
+      {
+        "tid": "crash-r5",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:54.736",
+          "round": 5
+        },
+        "tock": null,
+        "ended": {
+          "round": 5
+        }
+      },
+      {
+        "tid": "crash-r6",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:54.852",
+          "round": 6
+        },
+        "tock": null,
+        "ended": {
+          "round": 6
+        }
+      },
+      {
+        "tid": "crash-r7",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:54.973",
+          "round": 7
+        },
+        "tock": null,
+        "ended": {
+          "round": 7
+        }
+      },
+      {
+        "tid": "crash-r8",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:55.092",
+          "round": 8
+        },
+        "tock": null,
+        "ended": {
+          "round": 8
+        }
+      },
+      {
+        "tid": "crash-r9",
+        "exit": {
+          "code": 1,
+          "at": "2026-10-03T12:37:55.210",
+          "round": 9
+        },
+        "tock": null,
+        "ended": {
+          "round": 9
+        }
+      },
+      {
+        "tid": "ignore-r1",
+        "exit": null,
+        "tock": {
+          "round": 11,
+          "at": "2026-10-03T12:37:55.477"
+        },
+        "ended": null
+      }
+    ]
+  }
+]

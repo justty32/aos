@@ -1,0 +1,15 @@
+{
+ "pid": 749775,
+ "root": "/tmp/astra-controls-4neh4qpj/task-invalid-json",
+ "at": "2026-10-03T12:37:51.988",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 6,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

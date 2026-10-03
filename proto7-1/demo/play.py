@@ -21,6 +21,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 P71 = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(P71, "lib"))
+import aos7_audit  # noqa: E402
 import aos7_fs as fs  # noqa: E402
 
 DAEMON = os.path.join(P71, "bin", "aos7-daemon")
@@ -45,8 +46,10 @@ def our_procs(root):
 def run(root, seconds, quiet):
     """起 daemon、跑 seconds 秒、寫 stop 控制檔、等它結束；回殘留程序清單。"""
     out = open(os.path.join(root, "daemon.out"), "w")
+    env = fs.env_with_bin()
+    env["AOS7_AUDIT"] = "1"   # 任務的寫入記到各自的 writes.jsonl，最後檢查有沒有寫出自己的 node 與掛載點
     d = subprocess.Popen([sys.executable, DAEMON, root], stdout=out, stderr=subprocess.STDOUT,
-                         env=fs.env_with_bin(), start_new_session=True)
+                         env=env, start_new_session=True)
     end = time.monotonic() + seconds
     while time.monotonic() < end and d.poll() is None:
         time.sleep(0.2)
@@ -135,6 +138,19 @@ def report_files(root):
             res = c.get("result", {})
             print("  %-22s %-7s %-18s by=%s ok=%s %s" % (os.path.basename(path), c.get("op"), c.get("node", ""),
                   c.get("by", ""), res.get("ok"), res.get("msg", "")))
+    print("\n== 掛載（S-23：tick 在任務資料夾 mnt/ 下建的連結 → 空間裡的路徑）==")
+    seen = set()
+    for path in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks", "*", "birth.json"), recursive=True)):
+        b = fs.read_json(path, {})
+        key = (b.get("node"), b.get("name"))
+        if b.get("mounts") and key not in seen:
+            seen.add(key)
+            print("  %s:%s  %s" % (b.get("node"), b.get("tid"),
+                  "  ".join("mnt/%s → %s" % (n, m.get("to", m.get("error"))) for n, m in sorted(b["mounts"].items()))))
+    au = aos7_audit.scan(root)
+    print("\n== 寫入紀錄（%d 個任務、%d 筆寫入，寫出範圍 %d 筆）==" % (au["tasks"], au["writes"], len(au["bad"])))
+    for d, r in au["bad"][:20]:
+        print("  [越界] %s  %s %s" % (os.path.relpath(d, root), r.get("op"), r.get("path")))
     print("\n== 信件（amy、bob 處理過的）==")
     letters = []
     for who in ("amy", "bob"):
@@ -155,6 +171,7 @@ def checks(root, left):
     ops = {(d.get("rule"), d.get("op")) for d in decisions}
     done_ctl = [fs.read_json(p, {}) for p in glob.glob(os.path.join(root, "team", "sub", ".aosd", "ctl-done", "*.json"))]
     letters = glob.glob(os.path.join(root, "team", "agents", "*", "inbox", "done", "*.json"))
+    au = aos7_audit.scan(root)
     return [
         ("amy 與 bob 互傳信（>= 4 封）", len(letters) >= 4),
         ("對話到上限，寫出 work/done.txt", any_file("team/agents/*/work/done.txt")),
@@ -165,6 +182,8 @@ def checks(root, left):
         ("路一：子 daemon subd 有跑出 w 的回合", any_file("team/sub/w/.aos/rounds/1.json")),
         ("路一：kernel 依壽命 kill subd", ("age", "kill") in ops),
         ("路二：poke 寫子 daemon 控制檔 pause/resume w", {"pause", "resume"} <= {c.get("op") for c in done_ctl}),
+        ("寄信、寫 ctl、路二都經過掛載點：所有寫入在自己的 node 或掛載點下（%d 筆）" % au["writes"],
+         au["writes"] > 0 and not au["bad"]),
         ("停下後沒有殘留程序", not left),
     ]
 

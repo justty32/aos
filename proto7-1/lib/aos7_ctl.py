@@ -1,6 +1,6 @@
 """aos7-ctl：替你寫控制檔的小工具——LLM 直接寫同樣的 JSON 檔也做得到（spec.md 第 8 節，S-01）。
 
-    aos7-ctl daemon <root> <pause|resume|stop|rescan> [node] [--kill] [--by WHO]
+    aos7-ctl daemon <root|掛載點> <pause|resume|stop|rescan> [node] [--kill] [--by WHO]
     aos7-ctl task <taskdir> <kill|restart> [why] [--by WHO]
 """
 import argparse
@@ -23,15 +23,25 @@ def default_by():
     return "cli"
 
 
+def ctl_dir(where):
+    """`where` 可以是 daemon 根、掛進來的 `.aosd`、或掛進來的 `.aosd/ctl` 本身（S-23）。"""
+    where = os.path.abspath(where)
+    if os.path.isdir(os.path.join(where, ".aosd")):
+        return os.path.join(where, ".aosd", "ctl")
+    if os.path.basename(os.path.realpath(where)) == ".aosd":
+        return os.path.join(where, "ctl")
+    return where
+
+
 def daemon_ctl(root, op, node=None, kill=False, by=None):
-    """寫 `<root>/.aosd/ctl/<時間>-<pid>.json`，回檔案路徑。"""
+    """寫 `<ctl 資料夾>/<時間>-<pid>.json`（見 ctl_dir），回檔案路徑。"""
     obj = {"op": op, "by": by or default_by()}
     if node is not None:
         obj["node"] = node
     if kill:
         obj["kill"] = True
     name = "%d-%d.json" % (time.time_ns(), os.getpid())
-    path = os.path.join(os.path.abspath(root), ".aosd", "ctl", name)
+    path = os.path.join(ctl_dir(root), name)
     write_json(path, obj)
     return path
 
@@ -47,7 +57,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="aos7-ctl", description="寫 aos7 控制檔")
     sub = ap.add_subparsers(dest="what", required=True)
     d = sub.add_parser("daemon")
-    d.add_argument("root")
+    d.add_argument("root", help="daemon 根，或掛進來的 .aosd／.aosd/ctl")
     d.add_argument("op", choices=DAEMON_OPS)
     d.add_argument("node", nargs="?")
     d.add_argument("--kill", action="store_true", help="stop 時先 kill 所有活任務")

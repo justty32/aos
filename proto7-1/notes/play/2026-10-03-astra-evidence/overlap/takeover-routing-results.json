@@ -1,0 +1,76 @@
+{
+  "root": "/tmp/astra-route-54xyymab",
+  "round_when_pause_ack": {
+    "round": 8,
+    "open": false,
+    "tick_at": "2026-10-03T12:39:41.495",
+    "tock_at": "2026-10-03T12:39:41.512",
+    "started": [],
+    "ctl": []
+  },
+  "round_after": {
+    "round": 13,
+    "open": true,
+    "tick_at": "2026-10-03T12:39:42.096",
+    "tock_at": null,
+    "started": [],
+    "ctl": []
+  },
+  "parent_status": {
+    "pid": 751030,
+    "root": "/tmp/astra-route-54xyymab",
+    "at": "2026-10-03T12:39:42.088",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {}
+  },
+  "child_status": {
+    "pid": 751040,
+    "root": "/tmp/astra-route-54xyymab/child",
+    "at": "2026-10-03T12:39:42.100",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "work": {
+        "round": 13,
+        "phase": "tock",
+        "paused": false,
+        "live": [
+          "self-control-r1"
+        ]
+      }
+    }
+  },
+  "control_done": {
+    "op": "pause",
+    "node": "child/work",
+    "by": "self-control-r1",
+    "result": {
+      "ok": true,
+      "msg": "pause child/work",
+      "at": "2026-10-03T12:39:41.521"
+    }
+  },
+  "environment": {
+    "AOS7_ROOT": "/tmp/astra-route-54xyymab",
+    "AOS7_NODE": "/tmp/astra-route-54xyymab/child/work",
+    "AOS7_NODE_ID": "child/work",
+    "AOS7_TASK": "/tmp/astra-route-54xyymab/child/work/.aos/tasks/self-control-r1",
+    "AOS7_TID": "self-control-r1"
+  },
+  "birth": {
+    "tid": "self-control-r1",
+    "name": "self-control",
+    "node": "child/work",
+    "round": 1,
+    "dirs": [
+      "/tmp/astra-route-54xyymab/child/work"
+    ],
+    "at": "2026-10-03T12:39:40.684",
+    "restart_of": null,
+    "argv": [
+      "python3",
+      "worker.py"
+    ]
+  }
+}

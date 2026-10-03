@@ -1,0 +1,18 @@
+{"at": "2026-10-03T12:38:27.144", "ev": "start", "pid": 750629}
+{"at": "2026-10-03T12:38:27.144", "ev": "node+", "node": "team", "round": 0}
+{"at": "2026-10-03T12:38:27.158", "ev": "tick", "node": "team", "round": 1, "started": ["subd-r1"], "rc": 0}
+{"at": "2026-10-03T12:38:27.312", "ev": "tock", "node": "team", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T12:38:27.326", "ev": "tick", "node": "team", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:27.340", "ev": "tock", "node": "team", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:27.477", "ev": "tick", "node": "team", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:27.490", "ev": "tock", "node": "team", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:27.627", "ev": "tick", "node": "team", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:27.641", "ev": "tock", "node": "team", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:27.776", "ev": "tick", "node": "team", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:27.790", "ev": "tock", "node": "team", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:27.926", "ev": "tick", "node": "team", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:27.940", "ev": "tock", "node": "team", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:28.055", "ev": "ctl", "file": "stop-test.json", "op": "stop", "node": null, "by": "overlap-test", "ok": true, "msg": "stopping with kill"}
+{"at": "2026-10-03T12:38:28.075", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T12:38:28.084", "ev": "kill", "node": "team", "tid": "subd-r1", "ok": true, "msg": "killed"}
+{"at": "2026-10-03T12:38:28.095", "ev": "stop"}

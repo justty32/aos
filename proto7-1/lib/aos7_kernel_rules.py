@@ -30,9 +30,9 @@ def task_state(taskdir):
     return "live" if pid_alive(pid.get("pid")) else "lost"
 
 
-def list_tasks(node):
-    """列 node 下所有任務資料夾（有 birth.json 的），依 tid 排序。"""
-    base = os.path.join(fs.aos_dir(node), "tasks")
+def list_tasks(aos):
+    """列 `<aos>/tasks/` 下所有任務資料夾（有 birth.json 的），依 tid 排序。aos＝某 node 的 .aos（可能是掛載點）。"""
+    base = os.path.join(aos, "tasks")
     try:
         names = sorted(os.listdir(base))
     except OSError:
@@ -52,11 +52,15 @@ def _tokens(usage):
     return 0
 
 
-def snapshot_node(node):
-    """一個 node 的快照：回合、各任務（活不活、progress、用量、有沒有待執行的 ctl）、用量總和。"""
-    rnd = fs.read_json(os.path.join(fs.aos_dir(node), "round.json")) or {}
+def snapshot_node(aos):
+    """一個 node 的快照：回合、各任務（活不活、progress、用量、有沒有待執行的 ctl）、用量總和。
+
+    aos＝那個 node 的 `.aos`（自己的直接給；成員的經過掛載點；沒掛載＝None，當作不存在）。"""
+    if aos is None:
+        return {"exists": False, "mounted": False, "round": None, "tasks": [], "usage_total": 0}
+    rnd = fs.read_json(os.path.join(aos, "round.json")) or {}
     tasks, total = [], 0
-    for tid, d, birth in list_tasks(node):
+    for tid, d, birth in list_tasks(aos):
         usage = fs.read_json(os.path.join(d, "usage.json"))
         total += _tokens(usage)
         tasks.append({
@@ -65,19 +69,23 @@ def snapshot_node(node):
             "progress": fs.read_json(os.path.join(d, "progress.json")),
             "has_ctl": os.path.exists(os.path.join(d, "ctl.json")),
         })
-    return {"exists": os.path.isdir(fs.aos_dir(node)), "round": rnd.get("round"),
+    return {"exists": os.path.isdir(aos), "mounted": True, "round": rnd.get("round"),
             "tasks": tasks, "usage_total": total}
 
 
-def snapshot(root, node_id, self_tid, cfg, rnd):
-    """整輪要看的東西一次讀好；之後 run_rules 不再碰檔案。"""
-    status = fs.read_json(os.path.join(root, ".aosd", "status.json")) or {}
+def snapshot(root, node_id, self_tid, cfg, rnd, resolve):
+    """整輪要看的東西一次讀好；之後 run_rules 不再碰檔案。
+
+    自己的 node 直接讀；別的 node 與 daemon 的 status.json 一律經過 resolve（掛載點，S-23），沒掛載就看不到。"""
+    sp = resolve(".aosd/status.json")
+    status = (fs.read_json(sp) if sp else None) or {}
     snodes = status.get("nodes") or {}
-    me = snapshot_node(fs.node_path(root, node_id))
+    me = snapshot_node(fs.aos_dir(fs.node_path(root, node_id)))
     members = {}
     for rel in cfg.get("members") or []:
         mid = fs.join_id(node_id, rel)
-        m = snapshot_node(fs.node_path(root, mid))
+        m = me if mid == node_id else snapshot_node(resolve(mid + "/.aos"))
+        m = dict(m)
         m["paused_by_daemon"] = bool((snodes.get(mid) or {}).get("paused"))
         members[mid] = m
     return {"round": rnd, "node_id": node_id, "self_tid": self_tid,

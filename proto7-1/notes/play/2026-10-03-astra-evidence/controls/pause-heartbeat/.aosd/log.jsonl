@@ -1,0 +1,11 @@
+{"at": "2026-10-03T12:39:42.408", "ev": "start", "pid": 751074}
+{"at": "2026-10-03T12:39:42.409", "ev": "node+", "node": "n", "round": 0}
+{"at": "2026-10-03T12:39:42.427", "ev": "tick", "node": "n", "round": 1, "started": ["busy-r1"], "rc": 0}
+{"at": "2026-10-03T12:39:42.471", "ev": "ctl", "file": "pause.json", "op": "pause", "node": "n", "by": null, "ok": true, "msg": "pause n"}
+{"at": "2026-10-03T12:39:42.566", "ev": "tock", "node": "n", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T12:39:43.082", "ev": "ctl", "file": "resume.json", "op": "resume", "node": "n", "by": null, "ok": true, "msg": "resume n"}
+{"at": "2026-10-03T12:39:43.115", "ev": "tick", "node": "n", "round": 2, "started": ["busy-r2"], "rc": 0}
+{"at": "2026-10-03T12:39:43.123", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T12:39:43.144", "ev": "kill", "node": "n", "tid": "busy-r2", "ok": true, "msg": "killed"}
+{"at": "2026-10-03T12:39:43.162", "ev": "tock", "node": "n", "round": 2, "rc": 0, "ended": [{"tid": "busy-r1", "code": -15}, {"tid": "busy-r2", "code": -15}], "early": true}
+{"at": "2026-10-03T12:39:43.163", "ev": "stop"}

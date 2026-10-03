@@ -1,0 +1,15 @@
+{
+ "pid": 749816,
+ "root": "/tmp/astra-controls-4neh4qpj/task-array",
+ "at": "2026-10-03T12:37:53.421",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 1,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

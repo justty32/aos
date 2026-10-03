@@ -1,0 +1,3547 @@
+{
+  "root": "/tmp/astra-overlap-lv8ph6xy",
+  "same_root": {
+    "code": 1,
+    "stdout": "",
+    "stderr": "aos7-daemon: /tmp/astra-overlap-lv8ph6xy/shared 已經有 daemon 在跑\n"
+  },
+  "shared": {
+    "state": {
+      ".aosd/status.json": {
+        "pid": 750044,
+        "root": "/tmp/astra-overlap-lv8ph6xy/shared",
+        "at": "2026-10-03T12:38:24.697",
+        "stopping": true,
+        "kill_on_stop": true,
+        "nodes": {
+          "alpha": {
+            "round": 25,
+            "phase": "stopped",
+            "paused": false,
+            "live": []
+          },
+          "beta": {
+            "round": 25,
+            "phase": "stopped",
+            "paused": false,
+            "live": []
+          }
+        }
+      },
+      "alpha/.aos/round.json": {
+        "round": 25,
+        "open": false,
+        "tick_at": "2026-10-03T12:38:24.603",
+        "tock_at": "2026-10-03T12:38:24.684",
+        "started": [
+          "writer-r25"
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/tasks.json": {
+        "tasks": [
+          {
+            "name": "writer",
+            "mode": "each",
+            "argv": [
+              "python3",
+              "worker.py"
+            ],
+            "dirs": [
+              "../mail"
+            ]
+          }
+        ]
+      },
+      "alpha/.aos/timeline.json": {
+        "interval_ms": 100
+      },
+      "alpha/.aos/rounds/25.json": {
+        "round": 25,
+        "tick_at": "2026-10-03T12:38:24.603",
+        "tock_at": "2026-10-03T12:38:24.684",
+        "started": [
+          "writer-r25"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r25",
+            "code": -15
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/24.json": {
+        "round": 24,
+        "tick_at": "2026-10-03T12:38:24.475",
+        "tock_at": "2026-10-03T12:38:24.589",
+        "started": [
+          "writer-r24"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r24",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/23.json": {
+        "round": 23,
+        "tick_at": "2026-10-03T12:38:24.347",
+        "tock_at": "2026-10-03T12:38:24.461",
+        "started": [
+          "writer-r23"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r23",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/22.json": {
+        "round": 22,
+        "tick_at": "2026-10-03T12:38:24.219",
+        "tock_at": "2026-10-03T12:38:24.333",
+        "started": [
+          "writer-r22"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r22",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/21.json": {
+        "round": 21,
+        "tick_at": "2026-10-03T12:38:24.090",
+        "tock_at": "2026-10-03T12:38:24.204",
+        "started": [
+          "writer-r21"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r21",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/20.json": {
+        "round": 20,
+        "tick_at": "2026-10-03T12:38:23.961",
+        "tock_at": "2026-10-03T12:38:24.076",
+        "started": [
+          "writer-r20"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r20",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/19.json": {
+        "round": 19,
+        "tick_at": "2026-10-03T12:38:23.833",
+        "tock_at": "2026-10-03T12:38:23.948",
+        "started": [
+          "writer-r19"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r19",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/18.json": {
+        "round": 18,
+        "tick_at": "2026-10-03T12:38:23.704",
+        "tock_at": "2026-10-03T12:38:23.819",
+        "started": [
+          "writer-r18"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r18",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/17.json": {
+        "round": 17,
+        "tick_at": "2026-10-03T12:38:23.575",
+        "tock_at": "2026-10-03T12:38:23.690",
+        "started": [
+          "writer-r17"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r17",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/16.json": {
+        "round": 16,
+        "tick_at": "2026-10-03T12:38:23.446",
+        "tock_at": "2026-10-03T12:38:23.561",
+        "started": [
+          "writer-r16"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r16",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/15.json": {
+        "round": 15,
+        "tick_at": "2026-10-03T12:38:23.318",
+        "tock_at": "2026-10-03T12:38:23.433",
+        "started": [
+          "writer-r15"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r15",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/14.json": {
+        "round": 14,
+        "tick_at": "2026-10-03T12:38:23.188",
+        "tock_at": "2026-10-03T12:38:23.303",
+        "started": [
+          "writer-r14"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r14",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/13.json": {
+        "round": 13,
+        "tick_at": "2026-10-03T12:38:23.060",
+        "tock_at": "2026-10-03T12:38:23.174",
+        "started": [
+          "writer-r13"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r13",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/12.json": {
+        "round": 12,
+        "tick_at": "2026-10-03T12:38:22.932",
+        "tock_at": "2026-10-03T12:38:23.046",
+        "started": [
+          "writer-r12"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r12",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/11.json": {
+        "round": 11,
+        "tick_at": "2026-10-03T12:38:22.804",
+        "tock_at": "2026-10-03T12:38:22.918",
+        "started": [
+          "writer-r11"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r11",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/10.json": {
+        "round": 10,
+        "tick_at": "2026-10-03T12:38:22.675",
+        "tock_at": "2026-10-03T12:38:22.789",
+        "started": [
+          "writer-r10"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r10",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/9.json": {
+        "round": 9,
+        "tick_at": "2026-10-03T12:38:22.547",
+        "tock_at": "2026-10-03T12:38:22.661",
+        "started": [
+          "writer-r9"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r9",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/8.json": {
+        "round": 8,
+        "tick_at": "2026-10-03T12:38:22.418",
+        "tock_at": "2026-10-03T12:38:22.533",
+        "started": [
+          "writer-r8"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r8",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/7.json": {
+        "round": 7,
+        "tick_at": "2026-10-03T12:38:22.289",
+        "tock_at": "2026-10-03T12:38:22.405",
+        "started": [
+          "writer-r7"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r7",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/6.json": {
+        "round": 6,
+        "tick_at": "2026-10-03T12:38:22.160",
+        "tock_at": "2026-10-03T12:38:22.275",
+        "started": [
+          "writer-r6"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r6",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/5.json": {
+        "round": 5,
+        "tick_at": "2026-10-03T12:38:22.031",
+        "tock_at": "2026-10-03T12:38:22.146",
+        "started": [
+          "writer-r5"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r5",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/4.json": {
+        "round": 4,
+        "tick_at": "2026-10-03T12:38:21.903",
+        "tock_at": "2026-10-03T12:38:22.017",
+        "started": [
+          "writer-r4"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r4",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/3.json": {
+        "round": 3,
+        "tick_at": "2026-10-03T12:38:21.774",
+        "tock_at": "2026-10-03T12:38:21.889",
+        "started": [
+          "writer-r3"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r3",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/2.json": {
+        "round": 2,
+        "tick_at": "2026-10-03T12:38:21.646",
+        "tock_at": "2026-10-03T12:38:21.761",
+        "started": [
+          "writer-r2"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r2",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/rounds/1.json": {
+        "round": 1,
+        "tick_at": "2026-10-03T12:38:21.517",
+        "tock_at": "2026-10-03T12:38:21.632",
+        "started": [
+          "writer-r1"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r1",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "alpha/.aos/tasks/writer-r25/ended.json": {
+        "round": 25
+      },
+      "alpha/.aos/tasks/writer-r25/exit.json": {
+        "code": -15,
+        "at": "2026-10-03T12:38:24.666",
+        "round": 25
+      },
+      "alpha/.aos/tasks/writer-r25/pid.json": {
+        "pid": 750422,
+        "pgid": 750422,
+        "runner_pid": 750420,
+        "at": "2026-10-03T12:38:24.615"
+      },
+      "alpha/.aos/tasks/writer-r25/birth.json": {
+        "tid": "writer-r25",
+        "name": "writer",
+        "node": "alpha",
+        "round": 25,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.604",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r24/ended.json": {
+        "round": 24
+      },
+      "alpha/.aos/tasks/writer-r24/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.558",
+        "round": 24
+      },
+      "alpha/.aos/tasks/writer-r24/pid.json": {
+        "pid": 750407,
+        "pgid": 750407,
+        "runner_pid": 750404,
+        "at": "2026-10-03T12:38:24.486"
+      },
+      "alpha/.aos/tasks/writer-r24/birth.json": {
+        "tid": "writer-r24",
+        "name": "writer",
+        "node": "alpha",
+        "round": 24,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.475",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r23/ended.json": {
+        "round": 23
+      },
+      "alpha/.aos/tasks/writer-r23/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.430",
+        "round": 23
+      },
+      "alpha/.aos/tasks/writer-r23/pid.json": {
+        "pid": 750391,
+        "pgid": 750391,
+        "runner_pid": 750388,
+        "at": "2026-10-03T12:38:24.358"
+      },
+      "alpha/.aos/tasks/writer-r23/birth.json": {
+        "tid": "writer-r23",
+        "name": "writer",
+        "node": "alpha",
+        "round": 23,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.347",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r22/ended.json": {
+        "round": 22
+      },
+      "alpha/.aos/tasks/writer-r22/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.302",
+        "round": 22
+      },
+      "alpha/.aos/tasks/writer-r22/pid.json": {
+        "pid": 750375,
+        "pgid": 750375,
+        "runner_pid": 750372,
+        "at": "2026-10-03T12:38:24.230"
+      },
+      "alpha/.aos/tasks/writer-r22/birth.json": {
+        "tid": "writer-r22",
+        "name": "writer",
+        "node": "alpha",
+        "round": 22,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.219",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r21/ended.json": {
+        "round": 21
+      },
+      "alpha/.aos/tasks/writer-r21/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.174",
+        "round": 21
+      },
+      "alpha/.aos/tasks/writer-r21/pid.json": {
+        "pid": 750359,
+        "pgid": 750359,
+        "runner_pid": 750356,
+        "at": "2026-10-03T12:38:24.101"
+      },
+      "alpha/.aos/tasks/writer-r21/birth.json": {
+        "tid": "writer-r21",
+        "name": "writer",
+        "node": "alpha",
+        "round": 21,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.090",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r20/ended.json": {
+        "round": 20
+      },
+      "alpha/.aos/tasks/writer-r20/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.046",
+        "round": 20
+      },
+      "alpha/.aos/tasks/writer-r20/pid.json": {
+        "pid": 750342,
+        "pgid": 750342,
+        "runner_pid": 750340,
+        "at": "2026-10-03T12:38:23.974"
+      },
+      "alpha/.aos/tasks/writer-r20/birth.json": {
+        "tid": "writer-r20",
+        "name": "writer",
+        "node": "alpha",
+        "round": 20,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.962",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r19/ended.json": {
+        "round": 19
+      },
+      "alpha/.aos/tasks/writer-r19/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.917",
+        "round": 19
+      },
+      "alpha/.aos/tasks/writer-r19/pid.json": {
+        "pid": 750325,
+        "pgid": 750325,
+        "runner_pid": 750322,
+        "at": "2026-10-03T12:38:23.845"
+      },
+      "alpha/.aos/tasks/writer-r19/birth.json": {
+        "tid": "writer-r19",
+        "name": "writer",
+        "node": "alpha",
+        "round": 19,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.833",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r18/ended.json": {
+        "round": 18
+      },
+      "alpha/.aos/tasks/writer-r18/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.788",
+        "round": 18
+      },
+      "alpha/.aos/tasks/writer-r18/pid.json": {
+        "pid": 750308,
+        "pgid": 750308,
+        "runner_pid": 750306,
+        "at": "2026-10-03T12:38:23.716"
+      },
+      "alpha/.aos/tasks/writer-r18/birth.json": {
+        "tid": "writer-r18",
+        "name": "writer",
+        "node": "alpha",
+        "round": 18,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.704",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r17/ended.json": {
+        "round": 17
+      },
+      "alpha/.aos/tasks/writer-r17/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.659",
+        "round": 17
+      },
+      "alpha/.aos/tasks/writer-r17/pid.json": {
+        "pid": 750292,
+        "pgid": 750292,
+        "runner_pid": 750290,
+        "at": "2026-10-03T12:38:23.587"
+      },
+      "alpha/.aos/tasks/writer-r17/birth.json": {
+        "tid": "writer-r17",
+        "name": "writer",
+        "node": "alpha",
+        "round": 17,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.575",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r16/ended.json": {
+        "round": 16
+      },
+      "alpha/.aos/tasks/writer-r16/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.531",
+        "round": 16
+      },
+      "alpha/.aos/tasks/writer-r16/pid.json": {
+        "pid": 750277,
+        "pgid": 750277,
+        "runner_pid": 750274,
+        "at": "2026-10-03T12:38:23.459"
+      },
+      "alpha/.aos/tasks/writer-r16/birth.json": {
+        "tid": "writer-r16",
+        "name": "writer",
+        "node": "alpha",
+        "round": 16,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.447",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r15/ended.json": {
+        "round": 15
+      },
+      "alpha/.aos/tasks/writer-r15/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.402",
+        "round": 15
+      },
+      "alpha/.aos/tasks/writer-r15/pid.json": {
+        "pid": 750262,
+        "pgid": 750262,
+        "runner_pid": 750260,
+        "at": "2026-10-03T12:38:23.329"
+      },
+      "alpha/.aos/tasks/writer-r15/birth.json": {
+        "tid": "writer-r15",
+        "name": "writer",
+        "node": "alpha",
+        "round": 15,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.318",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r14/ended.json": {
+        "round": 14
+      },
+      "alpha/.aos/tasks/writer-r14/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.273",
+        "round": 14
+      },
+      "alpha/.aos/tasks/writer-r14/pid.json": {
+        "pid": 750250,
+        "pgid": 750250,
+        "runner_pid": 750246,
+        "at": "2026-10-03T12:38:23.200"
+      },
+      "alpha/.aos/tasks/writer-r14/birth.json": {
+        "tid": "writer-r14",
+        "name": "writer",
+        "node": "alpha",
+        "round": 14,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.189",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r13/ended.json": {
+        "round": 13
+      },
+      "alpha/.aos/tasks/writer-r13/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.143",
+        "round": 13
+      },
+      "alpha/.aos/tasks/writer-r13/pid.json": {
+        "pid": 750236,
+        "pgid": 750236,
+        "runner_pid": 750234,
+        "at": "2026-10-03T12:38:23.071"
+      },
+      "alpha/.aos/tasks/writer-r13/birth.json": {
+        "tid": "writer-r13",
+        "name": "writer",
+        "node": "alpha",
+        "round": 13,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.060",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r12/ended.json": {
+        "round": 12
+      },
+      "alpha/.aos/tasks/writer-r12/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.016",
+        "round": 12
+      },
+      "alpha/.aos/tasks/writer-r12/pid.json": {
+        "pid": 750220,
+        "pgid": 750220,
+        "runner_pid": 750218,
+        "at": "2026-10-03T12:38:22.943"
+      },
+      "alpha/.aos/tasks/writer-r12/birth.json": {
+        "tid": "writer-r12",
+        "name": "writer",
+        "node": "alpha",
+        "round": 12,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.932",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r11/ended.json": {
+        "round": 11
+      },
+      "alpha/.aos/tasks/writer-r11/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.888",
+        "round": 11
+      },
+      "alpha/.aos/tasks/writer-r11/pid.json": {
+        "pid": 750202,
+        "pgid": 750202,
+        "runner_pid": 750200,
+        "at": "2026-10-03T12:38:22.815"
+      },
+      "alpha/.aos/tasks/writer-r11/birth.json": {
+        "tid": "writer-r11",
+        "name": "writer",
+        "node": "alpha",
+        "round": 11,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.804",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r10/ended.json": {
+        "round": 10
+      },
+      "alpha/.aos/tasks/writer-r10/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.759",
+        "round": 10
+      },
+      "alpha/.aos/tasks/writer-r10/pid.json": {
+        "pid": 750188,
+        "pgid": 750188,
+        "runner_pid": 750186,
+        "at": "2026-10-03T12:38:22.686"
+      },
+      "alpha/.aos/tasks/writer-r10/birth.json": {
+        "tid": "writer-r10",
+        "name": "writer",
+        "node": "alpha",
+        "round": 10,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.675",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r9/ended.json": {
+        "round": 9
+      },
+      "alpha/.aos/tasks/writer-r9/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.631",
+        "round": 9
+      },
+      "alpha/.aos/tasks/writer-r9/pid.json": {
+        "pid": 750173,
+        "pgid": 750173,
+        "runner_pid": 750171,
+        "at": "2026-10-03T12:38:22.559"
+      },
+      "alpha/.aos/tasks/writer-r9/birth.json": {
+        "tid": "writer-r9",
+        "name": "writer",
+        "node": "alpha",
+        "round": 9,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.547",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r8/ended.json": {
+        "round": 8
+      },
+      "alpha/.aos/tasks/writer-r8/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.503",
+        "round": 8
+      },
+      "alpha/.aos/tasks/writer-r8/pid.json": {
+        "pid": 750161,
+        "pgid": 750161,
+        "runner_pid": 750159,
+        "at": "2026-10-03T12:38:22.430"
+      },
+      "alpha/.aos/tasks/writer-r8/birth.json": {
+        "tid": "writer-r8",
+        "name": "writer",
+        "node": "alpha",
+        "round": 8,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.419",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r7/ended.json": {
+        "round": 7
+      },
+      "alpha/.aos/tasks/writer-r7/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.373",
+        "round": 7
+      },
+      "alpha/.aos/tasks/writer-r7/pid.json": {
+        "pid": 750151,
+        "pgid": 750151,
+        "runner_pid": 750149,
+        "at": "2026-10-03T12:38:22.301"
+      },
+      "alpha/.aos/tasks/writer-r7/birth.json": {
+        "tid": "writer-r7",
+        "name": "writer",
+        "node": "alpha",
+        "round": 7,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.290",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r6/ended.json": {
+        "round": 6
+      },
+      "alpha/.aos/tasks/writer-r6/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.244",
+        "round": 6
+      },
+      "alpha/.aos/tasks/writer-r6/pid.json": {
+        "pid": 750136,
+        "pgid": 750136,
+        "runner_pid": 750134,
+        "at": "2026-10-03T12:38:22.171"
+      },
+      "alpha/.aos/tasks/writer-r6/birth.json": {
+        "tid": "writer-r6",
+        "name": "writer",
+        "node": "alpha",
+        "round": 6,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.160",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r5/ended.json": {
+        "round": 5
+      },
+      "alpha/.aos/tasks/writer-r5/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.115",
+        "round": 5
+      },
+      "alpha/.aos/tasks/writer-r5/pid.json": {
+        "pid": 750122,
+        "pgid": 750122,
+        "runner_pid": 750120,
+        "at": "2026-10-03T12:38:22.043"
+      },
+      "alpha/.aos/tasks/writer-r5/birth.json": {
+        "tid": "writer-r5",
+        "name": "writer",
+        "node": "alpha",
+        "round": 5,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.031",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r4/ended.json": {
+        "round": 4
+      },
+      "alpha/.aos/tasks/writer-r4/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:21.987",
+        "round": 4
+      },
+      "alpha/.aos/tasks/writer-r4/pid.json": {
+        "pid": 750104,
+        "pgid": 750104,
+        "runner_pid": 750102,
+        "at": "2026-10-03T12:38:21.914"
+      },
+      "alpha/.aos/tasks/writer-r4/birth.json": {
+        "tid": "writer-r4",
+        "name": "writer",
+        "node": "alpha",
+        "round": 4,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:21.903",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r3/ended.json": {
+        "round": 3
+      },
+      "alpha/.aos/tasks/writer-r3/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:21.858",
+        "round": 3
+      },
+      "alpha/.aos/tasks/writer-r3/pid.json": {
+        "pid": 750090,
+        "pgid": 750090,
+        "runner_pid": 750086,
+        "at": "2026-10-03T12:38:21.786"
+      },
+      "alpha/.aos/tasks/writer-r3/birth.json": {
+        "tid": "writer-r3",
+        "name": "writer",
+        "node": "alpha",
+        "round": 3,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:21.774",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r2/ended.json": {
+        "round": 2
+      },
+      "alpha/.aos/tasks/writer-r2/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:21.730",
+        "round": 2
+      },
+      "alpha/.aos/tasks/writer-r2/pid.json": {
+        "pid": 750071,
+        "pgid": 750071,
+        "runner_pid": 750068,
+        "at": "2026-10-03T12:38:21.657"
+      },
+      "alpha/.aos/tasks/writer-r2/birth.json": {
+        "tid": "writer-r2",
+        "name": "writer",
+        "node": "alpha",
+        "round": 2,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:21.646",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "alpha/.aos/tasks/writer-r1/ended.json": {
+        "round": 1
+      },
+      "alpha/.aos/tasks/writer-r1/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:21.601",
+        "round": 1
+      },
+      "alpha/.aos/tasks/writer-r1/pid.json": {
+        "pid": 750054,
+        "pgid": 750054,
+        "runner_pid": 750051,
+        "at": "2026-10-03T12:38:21.529"
+      },
+      "alpha/.aos/tasks/writer-r1/birth.json": {
+        "tid": "writer-r1",
+        "name": "writer",
+        "node": "alpha",
+        "round": 1,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/alpha",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:21.518",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/round.json": {
+        "round": 25,
+        "open": false,
+        "tick_at": "2026-10-03T12:38:24.606",
+        "tock_at": "2026-10-03T12:38:24.684",
+        "started": [
+          "writer-r25"
+        ],
+        "ctl": []
+      },
+      "beta/.aos/tasks.json": {
+        "tasks": [
+          {
+            "name": "writer",
+            "mode": "each",
+            "argv": [
+              "python3",
+              "worker.py"
+            ],
+            "dirs": [
+              "../mail"
+            ]
+          }
+        ]
+      },
+      "beta/.aos/timeline.json": {
+        "interval_ms": 100
+      },
+      "beta/.aos/rounds/25.json": {
+        "round": 25,
+        "tick_at": "2026-10-03T12:38:24.606",
+        "tock_at": "2026-10-03T12:38:24.684",
+        "started": [
+          "writer-r25"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r25",
+            "code": -15
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/24.json": {
+        "round": 24,
+        "tick_at": "2026-10-03T12:38:24.477",
+        "tock_at": "2026-10-03T12:38:24.592",
+        "started": [
+          "writer-r24"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r24",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/23.json": {
+        "round": 23,
+        "tick_at": "2026-10-03T12:38:24.347",
+        "tock_at": "2026-10-03T12:38:24.463",
+        "started": [
+          "writer-r23"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r23",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/22.json": {
+        "round": 22,
+        "tick_at": "2026-10-03T12:38:24.219",
+        "tock_at": "2026-10-03T12:38:24.333",
+        "started": [
+          "writer-r22"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r22",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/21.json": {
+        "round": 21,
+        "tick_at": "2026-10-03T12:38:24.090",
+        "tock_at": "2026-10-03T12:38:24.205",
+        "started": [
+          "writer-r21"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r21",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/20.json": {
+        "round": 20,
+        "tick_at": "2026-10-03T12:38:23.961",
+        "tock_at": "2026-10-03T12:38:24.075",
+        "started": [
+          "writer-r20"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r20",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/19.json": {
+        "round": 19,
+        "tick_at": "2026-10-03T12:38:23.832",
+        "tock_at": "2026-10-03T12:38:23.947",
+        "started": [
+          "writer-r19"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r19",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/18.json": {
+        "round": 18,
+        "tick_at": "2026-10-03T12:38:23.703",
+        "tock_at": "2026-10-03T12:38:23.818",
+        "started": [
+          "writer-r18"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r18",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/17.json": {
+        "round": 17,
+        "tick_at": "2026-10-03T12:38:23.574",
+        "tock_at": "2026-10-03T12:38:23.689",
+        "started": [
+          "writer-r17"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r17",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/16.json": {
+        "round": 16,
+        "tick_at": "2026-10-03T12:38:23.446",
+        "tock_at": "2026-10-03T12:38:23.560",
+        "started": [
+          "writer-r16"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r16",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/15.json": {
+        "round": 15,
+        "tick_at": "2026-10-03T12:38:23.317",
+        "tock_at": "2026-10-03T12:38:23.432",
+        "started": [
+          "writer-r15"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r15",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/14.json": {
+        "round": 14,
+        "tick_at": "2026-10-03T12:38:23.188",
+        "tock_at": "2026-10-03T12:38:23.303",
+        "started": [
+          "writer-r14"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r14",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/13.json": {
+        "round": 13,
+        "tick_at": "2026-10-03T12:38:23.059",
+        "tock_at": "2026-10-03T12:38:23.174",
+        "started": [
+          "writer-r13"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r13",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/12.json": {
+        "round": 12,
+        "tick_at": "2026-10-03T12:38:22.931",
+        "tock_at": "2026-10-03T12:38:23.045",
+        "started": [
+          "writer-r12"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r12",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/11.json": {
+        "round": 11,
+        "tick_at": "2026-10-03T12:38:22.803",
+        "tock_at": "2026-10-03T12:38:22.917",
+        "started": [
+          "writer-r11"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r11",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/10.json": {
+        "round": 10,
+        "tick_at": "2026-10-03T12:38:22.675",
+        "tock_at": "2026-10-03T12:38:22.789",
+        "started": [
+          "writer-r10"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r10",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/9.json": {
+        "round": 9,
+        "tick_at": "2026-10-03T12:38:22.546",
+        "tock_at": "2026-10-03T12:38:22.661",
+        "started": [
+          "writer-r9"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r9",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/8.json": {
+        "round": 8,
+        "tick_at": "2026-10-03T12:38:22.417",
+        "tock_at": "2026-10-03T12:38:22.532",
+        "started": [
+          "writer-r8"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r8",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/7.json": {
+        "round": 7,
+        "tick_at": "2026-10-03T12:38:22.289",
+        "tock_at": "2026-10-03T12:38:22.403",
+        "started": [
+          "writer-r7"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r7",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/6.json": {
+        "round": 6,
+        "tick_at": "2026-10-03T12:38:22.160",
+        "tock_at": "2026-10-03T12:38:22.275",
+        "started": [
+          "writer-r6"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r6",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/5.json": {
+        "round": 5,
+        "tick_at": "2026-10-03T12:38:22.032",
+        "tock_at": "2026-10-03T12:38:22.147",
+        "started": [
+          "writer-r5"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r5",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/4.json": {
+        "round": 4,
+        "tick_at": "2026-10-03T12:38:21.904",
+        "tock_at": "2026-10-03T12:38:22.018",
+        "started": [
+          "writer-r4"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r4",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/3.json": {
+        "round": 3,
+        "tick_at": "2026-10-03T12:38:21.775",
+        "tock_at": "2026-10-03T12:38:21.890",
+        "started": [
+          "writer-r3"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r3",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/2.json": {
+        "round": 2,
+        "tick_at": "2026-10-03T12:38:21.647",
+        "tock_at": "2026-10-03T12:38:21.761",
+        "started": [
+          "writer-r2"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r2",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/rounds/1.json": {
+        "round": 1,
+        "tick_at": "2026-10-03T12:38:21.519",
+        "tock_at": "2026-10-03T12:38:21.633",
+        "started": [
+          "writer-r1"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "writer-r1",
+            "code": 0
+          }
+        ],
+        "ctl": []
+      },
+      "beta/.aos/tasks/writer-r25/ended.json": {
+        "round": 25
+      },
+      "beta/.aos/tasks/writer-r25/exit.json": {
+        "code": -15,
+        "at": "2026-10-03T12:38:24.666",
+        "round": 25
+      },
+      "beta/.aos/tasks/writer-r25/pid.json": {
+        "pid": 750424,
+        "pgid": 750424,
+        "runner_pid": 750421,
+        "at": "2026-10-03T12:38:24.618"
+      },
+      "beta/.aos/tasks/writer-r25/birth.json": {
+        "tid": "writer-r25",
+        "name": "writer",
+        "node": "beta",
+        "round": 25,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.607",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r24/ended.json": {
+        "round": 24
+      },
+      "beta/.aos/tasks/writer-r24/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.561",
+        "round": 24
+      },
+      "beta/.aos/tasks/writer-r24/pid.json": {
+        "pid": 750408,
+        "pgid": 750408,
+        "runner_pid": 750405,
+        "at": "2026-10-03T12:38:24.488"
+      },
+      "beta/.aos/tasks/writer-r24/birth.json": {
+        "tid": "writer-r24",
+        "name": "writer",
+        "node": "beta",
+        "round": 24,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.477",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r23/ended.json": {
+        "round": 23
+      },
+      "beta/.aos/tasks/writer-r23/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.431",
+        "round": 23
+      },
+      "beta/.aos/tasks/writer-r23/pid.json": {
+        "pid": 750392,
+        "pgid": 750392,
+        "runner_pid": 750389,
+        "at": "2026-10-03T12:38:24.359"
+      },
+      "beta/.aos/tasks/writer-r23/birth.json": {
+        "tid": "writer-r23",
+        "name": "writer",
+        "node": "beta",
+        "round": 23,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.348",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r22/ended.json": {
+        "round": 22
+      },
+      "beta/.aos/tasks/writer-r22/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.303",
+        "round": 22
+      },
+      "beta/.aos/tasks/writer-r22/pid.json": {
+        "pid": 750376,
+        "pgid": 750376,
+        "runner_pid": 750373,
+        "at": "2026-10-03T12:38:24.231"
+      },
+      "beta/.aos/tasks/writer-r22/birth.json": {
+        "tid": "writer-r22",
+        "name": "writer",
+        "node": "beta",
+        "round": 22,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.219",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r21/ended.json": {
+        "round": 21
+      },
+      "beta/.aos/tasks/writer-r21/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.173",
+        "round": 21
+      },
+      "beta/.aos/tasks/writer-r21/pid.json": {
+        "pid": 750358,
+        "pgid": 750358,
+        "runner_pid": 750355,
+        "at": "2026-10-03T12:38:24.101"
+      },
+      "beta/.aos/tasks/writer-r21/birth.json": {
+        "tid": "writer-r21",
+        "name": "writer",
+        "node": "beta",
+        "round": 21,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:24.090",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r20/ended.json": {
+        "round": 20
+      },
+      "beta/.aos/tasks/writer-r20/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:24.045",
+        "round": 20
+      },
+      "beta/.aos/tasks/writer-r20/pid.json": {
+        "pid": 750341,
+        "pgid": 750341,
+        "runner_pid": 750339,
+        "at": "2026-10-03T12:38:23.972"
+      },
+      "beta/.aos/tasks/writer-r20/birth.json": {
+        "tid": "writer-r20",
+        "name": "writer",
+        "node": "beta",
+        "round": 20,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.961",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r19/ended.json": {
+        "round": 19
+      },
+      "beta/.aos/tasks/writer-r19/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.916",
+        "round": 19
+      },
+      "beta/.aos/tasks/writer-r19/pid.json": {
+        "pid": 750324,
+        "pgid": 750324,
+        "runner_pid": 750321,
+        "at": "2026-10-03T12:38:23.844"
+      },
+      "beta/.aos/tasks/writer-r19/birth.json": {
+        "tid": "writer-r19",
+        "name": "writer",
+        "node": "beta",
+        "round": 19,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.832",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r18/ended.json": {
+        "round": 18
+      },
+      "beta/.aos/tasks/writer-r18/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.788",
+        "round": 18
+      },
+      "beta/.aos/tasks/writer-r18/pid.json": {
+        "pid": 750307,
+        "pgid": 750307,
+        "runner_pid": 750305,
+        "at": "2026-10-03T12:38:23.715"
+      },
+      "beta/.aos/tasks/writer-r18/birth.json": {
+        "tid": "writer-r18",
+        "name": "writer",
+        "node": "beta",
+        "round": 18,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.703",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r17/ended.json": {
+        "round": 17
+      },
+      "beta/.aos/tasks/writer-r17/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.658",
+        "round": 17
+      },
+      "beta/.aos/tasks/writer-r17/pid.json": {
+        "pid": 750291,
+        "pgid": 750291,
+        "runner_pid": 750289,
+        "at": "2026-10-03T12:38:23.586"
+      },
+      "beta/.aos/tasks/writer-r17/birth.json": {
+        "tid": "writer-r17",
+        "name": "writer",
+        "node": "beta",
+        "round": 17,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.575",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r16/ended.json": {
+        "round": 16
+      },
+      "beta/.aos/tasks/writer-r16/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.530",
+        "round": 16
+      },
+      "beta/.aos/tasks/writer-r16/pid.json": {
+        "pid": 750276,
+        "pgid": 750276,
+        "runner_pid": 750273,
+        "at": "2026-10-03T12:38:23.457"
+      },
+      "beta/.aos/tasks/writer-r16/birth.json": {
+        "tid": "writer-r16",
+        "name": "writer",
+        "node": "beta",
+        "round": 16,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.446",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r15/ended.json": {
+        "round": 15
+      },
+      "beta/.aos/tasks/writer-r15/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.402",
+        "round": 15
+      },
+      "beta/.aos/tasks/writer-r15/pid.json": {
+        "pid": 750263,
+        "pgid": 750263,
+        "runner_pid": 750259,
+        "at": "2026-10-03T12:38:23.330"
+      },
+      "beta/.aos/tasks/writer-r15/birth.json": {
+        "tid": "writer-r15",
+        "name": "writer",
+        "node": "beta",
+        "round": 15,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.318",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r14/ended.json": {
+        "round": 14
+      },
+      "beta/.aos/tasks/writer-r14/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.272",
+        "round": 14
+      },
+      "beta/.aos/tasks/writer-r14/pid.json": {
+        "pid": 750249,
+        "pgid": 750249,
+        "runner_pid": 750245,
+        "at": "2026-10-03T12:38:23.200"
+      },
+      "beta/.aos/tasks/writer-r14/birth.json": {
+        "tid": "writer-r14",
+        "name": "writer",
+        "node": "beta",
+        "round": 14,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.188",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r13/ended.json": {
+        "round": 13
+      },
+      "beta/.aos/tasks/writer-r13/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.144",
+        "round": 13
+      },
+      "beta/.aos/tasks/writer-r13/pid.json": {
+        "pid": 750235,
+        "pgid": 750235,
+        "runner_pid": 750233,
+        "at": "2026-10-03T12:38:23.071"
+      },
+      "beta/.aos/tasks/writer-r13/birth.json": {
+        "tid": "writer-r13",
+        "name": "writer",
+        "node": "beta",
+        "round": 13,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:23.059",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r12/ended.json": {
+        "round": 12
+      },
+      "beta/.aos/tasks/writer-r12/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:23.016",
+        "round": 12
+      },
+      "beta/.aos/tasks/writer-r12/pid.json": {
+        "pid": 750219,
+        "pgid": 750219,
+        "runner_pid": 750217,
+        "at": "2026-10-03T12:38:22.943"
+      },
+      "beta/.aos/tasks/writer-r12/birth.json": {
+        "tid": "writer-r12",
+        "name": "writer",
+        "node": "beta",
+        "round": 12,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.931",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r11/ended.json": {
+        "round": 11
+      },
+      "beta/.aos/tasks/writer-r11/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.887",
+        "round": 11
+      },
+      "beta/.aos/tasks/writer-r11/pid.json": {
+        "pid": 750201,
+        "pgid": 750201,
+        "runner_pid": 750199,
+        "at": "2026-10-03T12:38:22.815"
+      },
+      "beta/.aos/tasks/writer-r11/birth.json": {
+        "tid": "writer-r11",
+        "name": "writer",
+        "node": "beta",
+        "round": 11,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.803",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r10/ended.json": {
+        "round": 10
+      },
+      "beta/.aos/tasks/writer-r10/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.759",
+        "round": 10
+      },
+      "beta/.aos/tasks/writer-r10/pid.json": {
+        "pid": 750187,
+        "pgid": 750187,
+        "runner_pid": 750185,
+        "at": "2026-10-03T12:38:22.686"
+      },
+      "beta/.aos/tasks/writer-r10/birth.json": {
+        "tid": "writer-r10",
+        "name": "writer",
+        "node": "beta",
+        "round": 10,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.675",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r9/ended.json": {
+        "round": 9
+      },
+      "beta/.aos/tasks/writer-r9/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.630",
+        "round": 9
+      },
+      "beta/.aos/tasks/writer-r9/pid.json": {
+        "pid": 750172,
+        "pgid": 750172,
+        "runner_pid": 750170,
+        "at": "2026-10-03T12:38:22.558"
+      },
+      "beta/.aos/tasks/writer-r9/birth.json": {
+        "tid": "writer-r9",
+        "name": "writer",
+        "node": "beta",
+        "round": 9,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.547",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r8/ended.json": {
+        "round": 8
+      },
+      "beta/.aos/tasks/writer-r8/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.501",
+        "round": 8
+      },
+      "beta/.aos/tasks/writer-r8/pid.json": {
+        "pid": 750160,
+        "pgid": 750160,
+        "runner_pid": 750158,
+        "at": "2026-10-03T12:38:22.429"
+      },
+      "beta/.aos/tasks/writer-r8/birth.json": {
+        "tid": "writer-r8",
+        "name": "writer",
+        "node": "beta",
+        "round": 8,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.417",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r7/ended.json": {
+        "round": 7
+      },
+      "beta/.aos/tasks/writer-r7/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.372",
+        "round": 7
+      },
+      "beta/.aos/tasks/writer-r7/pid.json": {
+        "pid": 750150,
+        "pgid": 750150,
+        "runner_pid": 750147,
+        "at": "2026-10-03T12:38:22.300"
+      },
+      "beta/.aos/tasks/writer-r7/birth.json": {
+        "tid": "writer-r7",
+        "name": "writer",
+        "node": "beta",
+        "round": 7,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.289",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r6/ended.json": {
+        "round": 6
+      },
+      "beta/.aos/tasks/writer-r6/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.245",
+        "round": 6
+      },
+      "beta/.aos/tasks/writer-r6/pid.json": {
+        "pid": 750137,
+        "pgid": 750137,
+        "runner_pid": 750135,
+        "at": "2026-10-03T12:38:22.172"
+      },
+      "beta/.aos/tasks/writer-r6/birth.json": {
+        "tid": "writer-r6",
+        "name": "writer",
+        "node": "beta",
+        "round": 6,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.160",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r5/ended.json": {
+        "round": 5
+      },
+      "beta/.aos/tasks/writer-r5/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:22.116",
+        "round": 5
+      },
+      "beta/.aos/tasks/writer-r5/pid.json": {
+        "pid": 750123,
+        "pgid": 750123,
+        "runner_pid": 750121,
+        "at": "2026-10-03T12:38:22.044"
+      },
+      "beta/.aos/tasks/writer-r5/birth.json": {
+        "tid": "writer-r5",
+        "name": "writer",
+        "node": "beta",
+        "round": 5,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:22.032",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r4/ended.json": {
+        "round": 4
+      },
+      "beta/.aos/tasks/writer-r4/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:21.989",
+        "round": 4
+      },
+      "beta/.aos/tasks/writer-r4/pid.json": {
+        "pid": 750107,
+        "pgid": 750107,
+        "runner_pid": 750103,
+        "at": "2026-10-03T12:38:21.915"
+      },
+      "beta/.aos/tasks/writer-r4/birth.json": {
+        "tid": "writer-r4",
+        "name": "writer",
+        "node": "beta",
+        "round": 4,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:21.904",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r3/ended.json": {
+        "round": 3
+      },
+      "beta/.aos/tasks/writer-r3/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:21.859",
+        "round": 3
+      },
+      "beta/.aos/tasks/writer-r3/pid.json": {
+        "pid": 750091,
+        "pgid": 750091,
+        "runner_pid": 750087,
+        "at": "2026-10-03T12:38:21.786"
+      },
+      "beta/.aos/tasks/writer-r3/birth.json": {
+        "tid": "writer-r3",
+        "name": "writer",
+        "node": "beta",
+        "round": 3,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:21.775",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r2/ended.json": {
+        "round": 2
+      },
+      "beta/.aos/tasks/writer-r2/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:21.731",
+        "round": 2
+      },
+      "beta/.aos/tasks/writer-r2/pid.json": {
+        "pid": 750072,
+        "pgid": 750072,
+        "runner_pid": 750069,
+        "at": "2026-10-03T12:38:21.658"
+      },
+      "beta/.aos/tasks/writer-r2/birth.json": {
+        "tid": "writer-r2",
+        "name": "writer",
+        "node": "beta",
+        "round": 2,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:21.647",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      },
+      "beta/.aos/tasks/writer-r1/ended.json": {
+        "round": 1
+      },
+      "beta/.aos/tasks/writer-r1/exit.json": {
+        "code": 0,
+        "at": "2026-10-03T12:38:21.602",
+        "round": 1
+      },
+      "beta/.aos/tasks/writer-r1/pid.json": {
+        "pid": 750055,
+        "pgid": 750055,
+        "runner_pid": 750052,
+        "at": "2026-10-03T12:38:21.530"
+      },
+      "beta/.aos/tasks/writer-r1/birth.json": {
+        "tid": "writer-r1",
+        "name": "writer",
+        "node": "beta",
+        "round": 1,
+        "dirs": [
+          "/tmp/astra-overlap-lv8ph6xy/shared/beta",
+          "/tmp/astra-overlap-lv8ph6xy/shared/mail"
+        ],
+        "at": "2026-10-03T12:38:21.519",
+        "restart_of": null,
+        "argv": [
+          "python3",
+          "worker.py"
+        ]
+      }
+    },
+    "events": "{\"node\": \"alpha\", \"tid\": \"writer-r1\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r1\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r1\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r1\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r1\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r1\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r1\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r1\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r2\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r2\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r2\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r2\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r2\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r2\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r2\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r2\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r3\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r3\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r3\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r3\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r3\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r3\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r3\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r3\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r4\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r4\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r4\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r4\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r4\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r4\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r4\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r4\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r5\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r5\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r5\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r5\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r5\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r5\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r5\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r5\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r6\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r6\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r6\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r6\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r6\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r6\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r6\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r6\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r7\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r7\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r7\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r7\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r7\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r7\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r7\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r7\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r8\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r8\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r8\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r8\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r8\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r8\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r8\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r8\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r9\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r9\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r9\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r9\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r9\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r9\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r9\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r9\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r10\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r10\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r10\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r10\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r10\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r10\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r10\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r10\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r11\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r11\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r11\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r11\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r11\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r11\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r11\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r11\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r12\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r12\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r12\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r12\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r12\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r12\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r12\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r12\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r13\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r13\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r13\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r13\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r13\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r13\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r13\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r13\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r14\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r14\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r14\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r14\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r14\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r14\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r14\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r14\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r15\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r15\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r15\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r15\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r15\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r15\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r15\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r15\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r16\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r16\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r16\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r16\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r16\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r16\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r16\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r16\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r17\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r17\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r17\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r17\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r17\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r17\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r17\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r17\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r18\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r18\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r18\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r18\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r18\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r18\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r18\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r18\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r19\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r19\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r19\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r19\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r19\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r19\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r19\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r19\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r20\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r20\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r20\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r20\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r20\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r20\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r20\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r20\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r21\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r21\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r21\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r21\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r21\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r21\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r21\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r21\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r22\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r22\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r22\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r22\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r22\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r22\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r22\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r22\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r23\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r23\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r23\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r23\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r23\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r23\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r23\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r23\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r24\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r24\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r24\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r24\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r24\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r24\", \"i\": 2}\n{\"node\": \"alpha\", \"tid\": \"writer-r24\", \"i\": 3}\n{\"node\": \"beta\", \"tid\": \"writer-r24\", \"i\": 3}\n{\"node\": \"alpha\", \"tid\": \"writer-r25\", \"i\": 0}\n{\"node\": \"beta\", \"tid\": \"writer-r25\", \"i\": 0}\n{\"node\": \"alpha\", \"tid\": \"writer-r25\", \"i\": 1}\n{\"node\": \"beta\", \"tid\": \"writer-r25\", \"i\": 1}\n{\"node\": \"alpha\", \"tid\": \"writer-r25\", \"i\": 2}\n{\"node\": \"beta\", \"tid\": \"writer-r25\", \"i\": 2}\n"
+  },
+  "takeover_before": {
+    ".aosd/status.json": {
+      "pid": 750434,
+      "root": "/tmp/astra-overlap-lv8ph6xy/takeover",
+      "at": "2026-10-03T12:38:25.122",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "child/work": {
+          "round": 3,
+          "phase": "tock",
+          "paused": false,
+          "live": [
+            "sleeper-r1"
+          ]
+        }
+      }
+    },
+    "child/work/.aos/round.json": {
+      "round": 3,
+      "open": true,
+      "tick_at": "2026-10-03T12:38:25.118",
+      "tock_at": null,
+      "started": [],
+      "ctl": []
+    },
+    "child/work/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "sleeper",
+          "mode": "keep",
+          "argv": [
+            "python3",
+            "worker.py"
+          ]
+        }
+      ]
+    },
+    "child/work/.aos/timeline.json": {
+      "interval_ms": 180
+    },
+    "child/work/.aos/rounds/2.json": {
+      "round": 2,
+      "tick_at": "2026-10-03T12:38:24.938",
+      "tock_at": "2026-10-03T12:38:24.952",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/1.json": {
+      "round": 1,
+      "tick_at": "2026-10-03T12:38:24.729",
+      "tock_at": "2026-10-03T12:38:24.924",
+      "started": [
+        "sleeper-r1"
+      ],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/tasks/sleeper-r1/tock.json": {
+      "round": 2,
+      "at": "2026-10-03T12:38:24.952"
+    },
+    "child/work/.aos/tasks/sleeper-r1/pid.json": {
+      "pid": 750441,
+      "pgid": 750441,
+      "runner_pid": 750439,
+      "at": "2026-10-03T12:38:24.740"
+    },
+    "child/work/.aos/tasks/sleeper-r1/birth.json": {
+      "tid": "sleeper-r1",
+      "name": "sleeper",
+      "node": "child/work",
+      "round": 1,
+      "dirs": [
+        "/tmp/astra-overlap-lv8ph6xy/takeover/child/work"
+      ],
+      "at": "2026-10-03T12:38:24.729",
+      "restart_of": null,
+      "argv": [
+        "python3",
+        "worker.py"
+      ]
+    }
+  },
+  "takeover_during": {
+    ".aosd/status.json": {
+      "pid": 750434,
+      "root": "/tmp/astra-overlap-lv8ph6xy/takeover",
+      "at": "2026-10-03T12:38:26.595",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {}
+    },
+    "child/.aosd/status.json": {
+      "pid": 750478,
+      "root": "/tmp/astra-overlap-lv8ph6xy/takeover/child",
+      "at": "2026-10-03T12:38:26.597",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "work": {
+          "round": 12,
+          "phase": "tock",
+          "paused": false,
+          "live": [
+            "sleeper-r1"
+          ]
+        }
+      }
+    },
+    "child/work/.aos/round.json": {
+      "round": 12,
+      "open": true,
+      "tick_at": "2026-10-03T12:38:26.592",
+      "tock_at": null,
+      "started": [],
+      "ctl": []
+    },
+    "child/work/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "sleeper",
+          "mode": "keep",
+          "argv": [
+            "python3",
+            "worker.py"
+          ]
+        }
+      ]
+    },
+    "child/work/.aos/timeline.json": {
+      "interval_ms": 180
+    },
+    "child/work/.aos/rounds/11.json": {
+      "round": 11,
+      "tick_at": "2026-10-03T12:38:26.412",
+      "tock_at": "2026-10-03T12:38:26.426",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/10.json": {
+      "round": 10,
+      "tick_at": "2026-10-03T12:38:26.232",
+      "tock_at": "2026-10-03T12:38:26.246",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/9.json": {
+      "round": 9,
+      "tick_at": "2026-10-03T12:38:26.051",
+      "tock_at": "2026-10-03T12:38:26.065",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/8.json": {
+      "round": 8,
+      "tick_at": "2026-10-03T12:38:25.872",
+      "tock_at": "2026-10-03T12:38:25.886",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/7.json": {
+      "round": 7,
+      "tick_at": "2026-10-03T12:38:25.692",
+      "tock_at": "2026-10-03T12:38:25.706",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/6.json": {
+      "round": 6,
+      "tick_at": "2026-10-03T12:38:25.512",
+      "tock_at": "2026-10-03T12:38:25.525",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/5.json": {
+      "round": 5,
+      "tick_at": "2026-10-03T12:38:25.331",
+      "tock_at": "2026-10-03T12:38:25.345",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/4.json": {
+      "round": 4,
+      "tick_at": "2026-10-03T12:38:25.151",
+      "tock_at": "2026-10-03T12:38:25.165",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/3.json": {
+      "round": 3,
+      "tick_at": "2026-10-03T12:38:25.118",
+      "tock_at": "2026-10-03T12:38:25.132",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/2.json": {
+      "round": 2,
+      "tick_at": "2026-10-03T12:38:24.938",
+      "tock_at": "2026-10-03T12:38:24.952",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/1.json": {
+      "round": 1,
+      "tick_at": "2026-10-03T12:38:24.729",
+      "tock_at": "2026-10-03T12:38:24.924",
+      "started": [
+        "sleeper-r1"
+      ],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/tasks/sleeper-r1/tock.json": {
+      "round": 11,
+      "at": "2026-10-03T12:38:26.426"
+    },
+    "child/work/.aos/tasks/sleeper-r1/pid.json": {
+      "pid": 750441,
+      "pgid": 750441,
+      "runner_pid": 750439,
+      "at": "2026-10-03T12:38:24.740"
+    },
+    "child/work/.aos/tasks/sleeper-r1/birth.json": {
+      "tid": "sleeper-r1",
+      "name": "sleeper",
+      "node": "child/work",
+      "round": 1,
+      "dirs": [
+        "/tmp/astra-overlap-lv8ph6xy/takeover/child/work"
+      ],
+      "at": "2026-10-03T12:38:24.729",
+      "restart_of": null,
+      "argv": [
+        "python3",
+        "worker.py"
+      ]
+    }
+  },
+  "takeover_after_child_stop": {
+    ".aosd/status.json": {
+      "pid": 750434,
+      "root": "/tmp/astra-overlap-lv8ph6xy/takeover",
+      "at": "2026-10-03T12:38:27.059",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {}
+    },
+    "child/.aosd/status.json": {
+      "pid": 750478,
+      "root": "/tmp/astra-overlap-lv8ph6xy/takeover/child",
+      "at": "2026-10-03T12:38:26.637",
+      "stopping": true,
+      "kill_on_stop": true,
+      "nodes": {
+        "work": {
+          "round": 12,
+          "phase": "stopped",
+          "paused": false,
+          "live": []
+        }
+      }
+    },
+    "child/work/.aos/round.json": {
+      "round": 12,
+      "open": false,
+      "tick_at": "2026-10-03T12:38:26.592",
+      "tock_at": "2026-10-03T12:38:26.606",
+      "started": [],
+      "ctl": []
+    },
+    "child/work/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "sleeper",
+          "mode": "keep",
+          "argv": [
+            "python3",
+            "worker.py"
+          ]
+        }
+      ]
+    },
+    "child/work/.aos/timeline.json": {
+      "interval_ms": 180
+    },
+    "child/work/.aos/rounds/12.json": {
+      "round": 12,
+      "tick_at": "2026-10-03T12:38:26.592",
+      "tock_at": "2026-10-03T12:38:26.606",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/11.json": {
+      "round": 11,
+      "tick_at": "2026-10-03T12:38:26.412",
+      "tock_at": "2026-10-03T12:38:26.426",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/10.json": {
+      "round": 10,
+      "tick_at": "2026-10-03T12:38:26.232",
+      "tock_at": "2026-10-03T12:38:26.246",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/9.json": {
+      "round": 9,
+      "tick_at": "2026-10-03T12:38:26.051",
+      "tock_at": "2026-10-03T12:38:26.065",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/8.json": {
+      "round": 8,
+      "tick_at": "2026-10-03T12:38:25.872",
+      "tock_at": "2026-10-03T12:38:25.886",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/7.json": {
+      "round": 7,
+      "tick_at": "2026-10-03T12:38:25.692",
+      "tock_at": "2026-10-03T12:38:25.706",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/6.json": {
+      "round": 6,
+      "tick_at": "2026-10-03T12:38:25.512",
+      "tock_at": "2026-10-03T12:38:25.525",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/5.json": {
+      "round": 5,
+      "tick_at": "2026-10-03T12:38:25.331",
+      "tock_at": "2026-10-03T12:38:25.345",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/4.json": {
+      "round": 4,
+      "tick_at": "2026-10-03T12:38:25.151",
+      "tock_at": "2026-10-03T12:38:25.165",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/3.json": {
+      "round": 3,
+      "tick_at": "2026-10-03T12:38:25.118",
+      "tock_at": "2026-10-03T12:38:25.132",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/2.json": {
+      "round": 2,
+      "tick_at": "2026-10-03T12:38:24.938",
+      "tock_at": "2026-10-03T12:38:24.952",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/rounds/1.json": {
+      "round": 1,
+      "tick_at": "2026-10-03T12:38:24.729",
+      "tock_at": "2026-10-03T12:38:24.924",
+      "started": [
+        "sleeper-r1"
+      ],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "child/work/.aos/tasks/sleeper-r1/exit.json": {
+      "code": -15,
+      "at": "2026-10-03T12:38:26.621",
+      "round": 12
+    },
+    "child/work/.aos/tasks/sleeper-r1/tock.json": {
+      "round": 12,
+      "at": "2026-10-03T12:38:26.606"
+    },
+    "child/work/.aos/tasks/sleeper-r1/pid.json": {
+      "pid": 750441,
+      "pgid": 750441,
+      "runner_pid": 750439,
+      "at": "2026-10-03T12:38:24.740"
+    },
+    "child/work/.aos/tasks/sleeper-r1/birth.json": {
+      "tid": "sleeper-r1",
+      "name": "sleeper",
+      "node": "child/work",
+      "round": 1,
+      "dirs": [
+        "/tmp/astra-overlap-lv8ph6xy/takeover/child/work"
+      ],
+      "at": "2026-10-03T12:38:24.729",
+      "restart_of": null,
+      "argv": [
+        "python3",
+        "worker.py"
+      ]
+    }
+  },
+  "nested_before_stop": {
+    ".aosd/status.json": {
+      "pid": 750629,
+      "root": "/tmp/astra-overlap-lv8ph6xy/nested",
+      "at": "2026-10-03T12:38:28.034",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "team": {
+          "round": 6,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "subd-r1"
+          ]
+        }
+      }
+    },
+    "team/.aos/round.json": {
+      "round": 6,
+      "open": false,
+      "tick_at": "2026-10-03T12:38:27.924",
+      "tock_at": "2026-10-03T12:38:27.937",
+      "started": [],
+      "ctl": []
+    },
+    "team/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "subd",
+          "mode": "keep",
+          "argv": [
+            "python3",
+            "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra/proto7-1/bin/aos7-daemon",
+            "sub"
+          ]
+        }
+      ]
+    },
+    "team/.aos/timeline.json": {
+      "interval_ms": 150
+    },
+    "team/.aos/rounds/6.json": {
+      "round": 6,
+      "tick_at": "2026-10-03T12:38:27.924",
+      "tock_at": "2026-10-03T12:38:27.937",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/5.json": {
+      "round": 5,
+      "tick_at": "2026-10-03T12:38:27.774",
+      "tock_at": "2026-10-03T12:38:27.788",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/4.json": {
+      "round": 4,
+      "tick_at": "2026-10-03T12:38:27.625",
+      "tock_at": "2026-10-03T12:38:27.639",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/3.json": {
+      "round": 3,
+      "tick_at": "2026-10-03T12:38:27.474",
+      "tock_at": "2026-10-03T12:38:27.488",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/2.json": {
+      "round": 2,
+      "tick_at": "2026-10-03T12:38:27.324",
+      "tock_at": "2026-10-03T12:38:27.337",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/1.json": {
+      "round": 1,
+      "tick_at": "2026-10-03T12:38:27.155",
+      "tock_at": "2026-10-03T12:38:27.310",
+      "started": [
+        "subd-r1"
+      ],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/tasks/subd-r1/tock.json": {
+      "round": 6,
+      "at": "2026-10-03T12:38:27.937"
+    },
+    "team/.aos/tasks/subd-r1/pid.json": {
+      "pid": 750635,
+      "pgid": 750635,
+      "runner_pid": 750634,
+      "at": "2026-10-03T12:38:27.167"
+    },
+    "team/.aos/tasks/subd-r1/birth.json": {
+      "tid": "subd-r1",
+      "name": "subd",
+      "node": "team",
+      "round": 1,
+      "dirs": [
+        "/tmp/astra-overlap-lv8ph6xy/nested/team"
+      ],
+      "at": "2026-10-03T12:38:27.155",
+      "restart_of": null,
+      "argv": [
+        "python3",
+        "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra/proto7-1/bin/aos7-daemon",
+        "sub"
+      ]
+    },
+    "team/sub/.aosd/status.json": {
+      "pid": 750635,
+      "root": "/tmp/astra-overlap-lv8ph6xy/nested/team/sub",
+      "at": "2026-10-03T12:38:28.029",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "unit": {
+          "round": 10,
+          "phase": "tock",
+          "paused": false,
+          "live": [
+            "sleeper-r1"
+          ]
+        }
+      }
+    },
+    "team/sub/unit/.aos/round.json": {
+      "round": 10,
+      "open": false,
+      "tick_at": "2026-10-03T12:38:28.018",
+      "tock_at": "2026-10-03T12:38:28.031",
+      "started": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "sleeper",
+          "mode": "keep",
+          "argv": [
+            "python3",
+            "worker.py"
+          ]
+        }
+      ]
+    },
+    "team/sub/unit/.aos/timeline.json": {
+      "interval_ms": 90
+    },
+    "team/sub/unit/.aos/rounds/10.json": {
+      "round": 10,
+      "tick_at": "2026-10-03T12:38:28.018",
+      "tock_at": "2026-10-03T12:38:28.031",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/9.json": {
+      "round": 9,
+      "tick_at": "2026-10-03T12:38:27.928",
+      "tock_at": "2026-10-03T12:38:27.943",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/8.json": {
+      "round": 8,
+      "tick_at": "2026-10-03T12:38:27.839",
+      "tock_at": "2026-10-03T12:38:27.852",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/7.json": {
+      "round": 7,
+      "tick_at": "2026-10-03T12:38:27.748",
+      "tock_at": "2026-10-03T12:38:27.761",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/6.json": {
+      "round": 6,
+      "tick_at": "2026-10-03T12:38:27.658",
+      "tock_at": "2026-10-03T12:38:27.673",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/5.json": {
+      "round": 5,
+      "tick_at": "2026-10-03T12:38:27.568",
+      "tock_at": "2026-10-03T12:38:27.581",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/4.json": {
+      "round": 4,
+      "tick_at": "2026-10-03T12:38:27.478",
+      "tock_at": "2026-10-03T12:38:27.493",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/3.json": {
+      "round": 3,
+      "tick_at": "2026-10-03T12:38:27.388",
+      "tock_at": "2026-10-03T12:38:27.401",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/2.json": {
+      "round": 2,
+      "tick_at": "2026-10-03T12:38:27.298",
+      "tock_at": "2026-10-03T12:38:27.312",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/1.json": {
+      "round": 1,
+      "tick_at": "2026-10-03T12:38:27.189",
+      "tock_at": "2026-10-03T12:38:27.284",
+      "started": [
+        "sleeper-r1"
+      ],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/tasks/sleeper-r1/tock.json": {
+      "round": 10,
+      "at": "2026-10-03T12:38:28.031"
+    },
+    "team/sub/unit/.aos/tasks/sleeper-r1/pid.json": {
+      "pid": 750640,
+      "pgid": 750640,
+      "runner_pid": 750638,
+      "at": "2026-10-03T12:38:27.201"
+    },
+    "team/sub/unit/.aos/tasks/sleeper-r1/birth.json": {
+      "tid": "sleeper-r1",
+      "name": "sleeper",
+      "node": "unit",
+      "round": 1,
+      "dirs": [
+        "/tmp/astra-overlap-lv8ph6xy/nested/team/sub/unit"
+      ],
+      "at": "2026-10-03T12:38:27.190",
+      "restart_of": null,
+      "argv": [
+        "python3",
+        "worker.py"
+      ]
+    }
+  },
+  "nested_after_stop": {
+    ".aosd/status.json": {
+      "pid": 750629,
+      "root": "/tmp/astra-overlap-lv8ph6xy/nested",
+      "at": "2026-10-03T12:38:28.095",
+      "stopping": true,
+      "kill_on_stop": true,
+      "nodes": {
+        "team": {
+          "round": 6,
+          "phase": "stopped",
+          "paused": false,
+          "live": []
+        }
+      }
+    },
+    "team/.aos/round.json": {
+      "round": 6,
+      "open": false,
+      "tick_at": "2026-10-03T12:38:27.924",
+      "tock_at": "2026-10-03T12:38:27.937",
+      "started": [],
+      "ctl": []
+    },
+    "team/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "subd",
+          "mode": "keep",
+          "argv": [
+            "python3",
+            "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra/proto7-1/bin/aos7-daemon",
+            "sub"
+          ]
+        }
+      ]
+    },
+    "team/.aos/timeline.json": {
+      "interval_ms": 150
+    },
+    "team/.aos/rounds/6.json": {
+      "round": 6,
+      "tick_at": "2026-10-03T12:38:27.924",
+      "tock_at": "2026-10-03T12:38:27.937",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/5.json": {
+      "round": 5,
+      "tick_at": "2026-10-03T12:38:27.774",
+      "tock_at": "2026-10-03T12:38:27.788",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/4.json": {
+      "round": 4,
+      "tick_at": "2026-10-03T12:38:27.625",
+      "tock_at": "2026-10-03T12:38:27.639",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/3.json": {
+      "round": 3,
+      "tick_at": "2026-10-03T12:38:27.474",
+      "tock_at": "2026-10-03T12:38:27.488",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/2.json": {
+      "round": 2,
+      "tick_at": "2026-10-03T12:38:27.324",
+      "tock_at": "2026-10-03T12:38:27.337",
+      "started": [],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/rounds/1.json": {
+      "round": 1,
+      "tick_at": "2026-10-03T12:38:27.155",
+      "tock_at": "2026-10-03T12:38:27.310",
+      "started": [
+        "subd-r1"
+      ],
+      "alive": [
+        "subd-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/.aos/tasks/subd-r1/exit.json": {
+      "code": 0,
+      "at": "2026-10-03T12:38:28.073",
+      "round": 6
+    },
+    "team/.aos/tasks/subd-r1/tock.json": {
+      "round": 6,
+      "at": "2026-10-03T12:38:27.937"
+    },
+    "team/.aos/tasks/subd-r1/pid.json": {
+      "pid": 750635,
+      "pgid": 750635,
+      "runner_pid": 750634,
+      "at": "2026-10-03T12:38:27.167"
+    },
+    "team/.aos/tasks/subd-r1/birth.json": {
+      "tid": "subd-r1",
+      "name": "subd",
+      "node": "team",
+      "round": 1,
+      "dirs": [
+        "/tmp/astra-overlap-lv8ph6xy/nested/team"
+      ],
+      "at": "2026-10-03T12:38:27.155",
+      "restart_of": null,
+      "argv": [
+        "python3",
+        "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra/proto7-1/bin/aos7-daemon",
+        "sub"
+      ]
+    },
+    "team/sub/.aosd/status.json": {
+      "pid": 750635,
+      "root": "/tmp/astra-overlap-lv8ph6xy/nested/team/sub",
+      "at": "2026-10-03T12:38:28.069",
+      "stopping": true,
+      "kill_on_stop": true,
+      "nodes": {
+        "unit": {
+          "round": 10,
+          "phase": "stopped",
+          "paused": false,
+          "live": []
+        }
+      }
+    },
+    "team/sub/unit/.aos/round.json": {
+      "round": 10,
+      "open": false,
+      "tick_at": "2026-10-03T12:38:28.018",
+      "tock_at": "2026-10-03T12:38:28.031",
+      "started": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "sleeper",
+          "mode": "keep",
+          "argv": [
+            "python3",
+            "worker.py"
+          ]
+        }
+      ]
+    },
+    "team/sub/unit/.aos/timeline.json": {
+      "interval_ms": 90
+    },
+    "team/sub/unit/.aos/rounds/10.json": {
+      "round": 10,
+      "tick_at": "2026-10-03T12:38:28.018",
+      "tock_at": "2026-10-03T12:38:28.031",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/9.json": {
+      "round": 9,
+      "tick_at": "2026-10-03T12:38:27.928",
+      "tock_at": "2026-10-03T12:38:27.943",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/8.json": {
+      "round": 8,
+      "tick_at": "2026-10-03T12:38:27.839",
+      "tock_at": "2026-10-03T12:38:27.852",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/7.json": {
+      "round": 7,
+      "tick_at": "2026-10-03T12:38:27.748",
+      "tock_at": "2026-10-03T12:38:27.761",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/6.json": {
+      "round": 6,
+      "tick_at": "2026-10-03T12:38:27.658",
+      "tock_at": "2026-10-03T12:38:27.673",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/5.json": {
+      "round": 5,
+      "tick_at": "2026-10-03T12:38:27.568",
+      "tock_at": "2026-10-03T12:38:27.581",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/4.json": {
+      "round": 4,
+      "tick_at": "2026-10-03T12:38:27.478",
+      "tock_at": "2026-10-03T12:38:27.493",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/3.json": {
+      "round": 3,
+      "tick_at": "2026-10-03T12:38:27.388",
+      "tock_at": "2026-10-03T12:38:27.401",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/2.json": {
+      "round": 2,
+      "tick_at": "2026-10-03T12:38:27.298",
+      "tock_at": "2026-10-03T12:38:27.312",
+      "started": [],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/rounds/1.json": {
+      "round": 1,
+      "tick_at": "2026-10-03T12:38:27.189",
+      "tock_at": "2026-10-03T12:38:27.284",
+      "started": [
+        "sleeper-r1"
+      ],
+      "alive": [
+        "sleeper-r1"
+      ],
+      "ended": [],
+      "ctl": []
+    },
+    "team/sub/unit/.aos/tasks/sleeper-r1/exit.json": {
+      "code": -15,
+      "at": "2026-10-03T12:38:28.061",
+      "round": 10
+    },
+    "team/sub/unit/.aos/tasks/sleeper-r1/tock.json": {
+      "round": 10,
+      "at": "2026-10-03T12:38:28.031"
+    },
+    "team/sub/unit/.aos/tasks/sleeper-r1/pid.json": {
+      "pid": 750640,
+      "pgid": 750640,
+      "runner_pid": 750638,
+      "at": "2026-10-03T12:38:27.201"
+    },
+    "team/sub/unit/.aos/tasks/sleeper-r1/birth.json": {
+      "tid": "sleeper-r1",
+      "name": "sleeper",
+      "node": "unit",
+      "round": 1,
+      "dirs": [
+        "/tmp/astra-overlap-lv8ph6xy/nested/team/sub/unit"
+      ],
+      "at": "2026-10-03T12:38:27.190",
+      "restart_of": null,
+      "argv": [
+        "python3",
+        "worker.py"
+      ]
+    }
+  },
+  "processes": [
+    {
+      "pid": 750044,
+      "returncode": 0,
+      "root": "/tmp/astra-overlap-lv8ph6xy/shared"
+    },
+    {
+      "pid": 750434,
+      "returncode": 0,
+      "root": "/tmp/astra-overlap-lv8ph6xy/takeover"
+    },
+    {
+      "pid": 750478,
+      "returncode": 0,
+      "root": "/tmp/astra-overlap-lv8ph6xy/takeover/child"
+    },
+    {
+      "pid": 750629,
+      "returncode": 0,
+      "root": "/tmp/astra-overlap-lv8ph6xy/nested"
+    }
+  ]
+}

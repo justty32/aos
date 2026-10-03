@@ -1,0 +1,13 @@
+{"at": "2026-10-03T12:39:40.668", "ev": "start", "pid": 751030}
+{"at": "2026-10-03T12:39:40.669", "ev": "node+", "node": "child/work", "round": 0}
+{"at": "2026-10-03T12:39:40.687", "ev": "tick", "node": "child/work", "round": 1, "started": ["self-control-r1"], "rc": 0}
+{"at": "2026-10-03T12:39:40.827", "ev": "tock", "node": "child/work", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T12:39:40.845", "ev": "tick", "node": "child/work", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T12:39:40.862", "ev": "tock", "node": "child/work", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:39:40.965", "ev": "tick", "node": "child/work", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T12:39:40.983", "ev": "tock", "node": "child/work", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:39:41.015", "ev": "node-", "node": "child/work"}
+{"at": "2026-10-03T12:39:41.521", "ev": "ctl", "file": "self-pause.json", "op": "pause", "node": "child/work", "by": "self-control-r1", "ok": true, "msg": "pause child/work"}
+{"at": "2026-10-03T12:39:42.168", "ev": "ctl", "file": "stop.json", "op": "stop", "node": null, "by": null, "ok": true, "msg": "stopping with kill"}
+{"at": "2026-10-03T12:39:42.189", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T12:39:42.189", "ev": "stop"}

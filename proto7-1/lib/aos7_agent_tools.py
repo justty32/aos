@@ -2,7 +2,8 @@
 import os
 import time
 
-from aos7_fs import node_path, now, read_json, write_json
+import aos7_mount
+from aos7_fs import now, read_json, write_json
 
 
 def inbox_dir(node):
@@ -53,7 +54,7 @@ def consume_goal(node):
 
 
 def inside(base, path):
-    """path 是否在 base 底下（防 write 寫出自己 node、防 send 寫出 root）。"""
+    """path 是否在 base 底下（防 write 寫出自己 node）。"""
     base, path = os.path.realpath(base), os.path.realpath(path)
     return path == base or path.startswith(base + os.sep)
 
@@ -65,12 +66,12 @@ def do_tool(ctx, step, rnd):
         to, body = step.get("to"), step.get("body")
         if not isinstance(to, str) or not to:
             return "send 失敗：沒有 to"
-        dest = node_path(ctx["root"], to)
-        if not inside(ctx["root"], dest) or not os.path.isdir(dest):
-            return "send 失敗：%s 不是空間裡的資料夾" % to
+        box = aos7_mount.resolver(ctx["task"])(to.rstrip("/") + "/inbox")
+        if box is None:
+            return "send 失敗：%s 的 inbox 沒掛載給我" % to
         me = ctx["node_id"]
         name = "%d-%s.json" % (time.time_ns(), me.replace("/", "_"))
-        write_json(os.path.join(inbox_dir(dest), name),
+        write_json(os.path.join(box, name),
                    {"from": me, "to": to, "round": rnd, "body": body, "at": now()})
         return "send → %s：%s" % (to, body)
     if tool == "write":

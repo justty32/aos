@@ -1,0 +1,16 @@
+{
+ "tid": "crash-r7",
+ "name": "crash",
+ "node": "n",
+ "round": 7,
+ "dirs": [
+  "/tmp/astra-controls-4neh4qpj/crash-and-ignore/n"
+ ],
+ "at": "2026-10-03T12:37:54.941",
+ "restart_of": null,
+ "argv": [
+  "/usr/bin/python3",
+  "-c",
+  "raise RuntimeError(\"intentional crash\")"
+ ]
+}

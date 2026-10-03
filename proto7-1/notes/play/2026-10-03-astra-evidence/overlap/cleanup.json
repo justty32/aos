@@ -1,0 +1,653 @@
+{
+  "live_processes": [],
+  "process_states": [
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r25/pid.json",
+      "kind": "pid",
+      "pid": 750422,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r25/pid.json",
+      "kind": "runner_pid",
+      "pid": 750420,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r24/pid.json",
+      "kind": "pid",
+      "pid": 750407,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r24/pid.json",
+      "kind": "runner_pid",
+      "pid": 750404,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r23/pid.json",
+      "kind": "pid",
+      "pid": 750391,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r23/pid.json",
+      "kind": "runner_pid",
+      "pid": 750388,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r22/pid.json",
+      "kind": "pid",
+      "pid": 750375,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r22/pid.json",
+      "kind": "runner_pid",
+      "pid": 750372,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r21/pid.json",
+      "kind": "pid",
+      "pid": 750359,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r21/pid.json",
+      "kind": "runner_pid",
+      "pid": 750356,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r20/pid.json",
+      "kind": "pid",
+      "pid": 750342,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r20/pid.json",
+      "kind": "runner_pid",
+      "pid": 750340,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r19/pid.json",
+      "kind": "pid",
+      "pid": 750325,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r19/pid.json",
+      "kind": "runner_pid",
+      "pid": 750322,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r18/pid.json",
+      "kind": "pid",
+      "pid": 750308,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r18/pid.json",
+      "kind": "runner_pid",
+      "pid": 750306,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r17/pid.json",
+      "kind": "pid",
+      "pid": 750292,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r17/pid.json",
+      "kind": "runner_pid",
+      "pid": 750290,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r16/pid.json",
+      "kind": "pid",
+      "pid": 750277,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r16/pid.json",
+      "kind": "runner_pid",
+      "pid": 750274,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r15/pid.json",
+      "kind": "pid",
+      "pid": 750262,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r15/pid.json",
+      "kind": "runner_pid",
+      "pid": 750260,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r14/pid.json",
+      "kind": "pid",
+      "pid": 750250,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r14/pid.json",
+      "kind": "runner_pid",
+      "pid": 750246,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r13/pid.json",
+      "kind": "pid",
+      "pid": 750236,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r13/pid.json",
+      "kind": "runner_pid",
+      "pid": 750234,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r12/pid.json",
+      "kind": "pid",
+      "pid": 750220,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r12/pid.json",
+      "kind": "runner_pid",
+      "pid": 750218,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r11/pid.json",
+      "kind": "pid",
+      "pid": 750202,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r11/pid.json",
+      "kind": "runner_pid",
+      "pid": 750200,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r10/pid.json",
+      "kind": "pid",
+      "pid": 750188,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r10/pid.json",
+      "kind": "runner_pid",
+      "pid": 750186,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r9/pid.json",
+      "kind": "pid",
+      "pid": 750173,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r9/pid.json",
+      "kind": "runner_pid",
+      "pid": 750171,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r8/pid.json",
+      "kind": "pid",
+      "pid": 750161,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r8/pid.json",
+      "kind": "runner_pid",
+      "pid": 750159,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r7/pid.json",
+      "kind": "pid",
+      "pid": 750151,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r7/pid.json",
+      "kind": "runner_pid",
+      "pid": 750149,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r6/pid.json",
+      "kind": "pid",
+      "pid": 750136,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r6/pid.json",
+      "kind": "runner_pid",
+      "pid": 750134,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r5/pid.json",
+      "kind": "pid",
+      "pid": 750122,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r5/pid.json",
+      "kind": "runner_pid",
+      "pid": 750120,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r4/pid.json",
+      "kind": "pid",
+      "pid": 750104,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r4/pid.json",
+      "kind": "runner_pid",
+      "pid": 750102,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r3/pid.json",
+      "kind": "pid",
+      "pid": 750090,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r3/pid.json",
+      "kind": "runner_pid",
+      "pid": 750086,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r2/pid.json",
+      "kind": "pid",
+      "pid": 750071,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r2/pid.json",
+      "kind": "runner_pid",
+      "pid": 750068,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r1/pid.json",
+      "kind": "pid",
+      "pid": 750054,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/alpha/.aos/tasks/writer-r1/pid.json",
+      "kind": "runner_pid",
+      "pid": 750051,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r25/pid.json",
+      "kind": "pid",
+      "pid": 750424,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r25/pid.json",
+      "kind": "runner_pid",
+      "pid": 750421,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r24/pid.json",
+      "kind": "pid",
+      "pid": 750408,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r24/pid.json",
+      "kind": "runner_pid",
+      "pid": 750405,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r23/pid.json",
+      "kind": "pid",
+      "pid": 750392,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r23/pid.json",
+      "kind": "runner_pid",
+      "pid": 750389,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r22/pid.json",
+      "kind": "pid",
+      "pid": 750376,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r22/pid.json",
+      "kind": "runner_pid",
+      "pid": 750373,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r21/pid.json",
+      "kind": "pid",
+      "pid": 750358,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r21/pid.json",
+      "kind": "runner_pid",
+      "pid": 750355,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r20/pid.json",
+      "kind": "pid",
+      "pid": 750341,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r20/pid.json",
+      "kind": "runner_pid",
+      "pid": 750339,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r19/pid.json",
+      "kind": "pid",
+      "pid": 750324,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r19/pid.json",
+      "kind": "runner_pid",
+      "pid": 750321,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r18/pid.json",
+      "kind": "pid",
+      "pid": 750307,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r18/pid.json",
+      "kind": "runner_pid",
+      "pid": 750305,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r17/pid.json",
+      "kind": "pid",
+      "pid": 750291,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r17/pid.json",
+      "kind": "runner_pid",
+      "pid": 750289,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r16/pid.json",
+      "kind": "pid",
+      "pid": 750276,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r16/pid.json",
+      "kind": "runner_pid",
+      "pid": 750273,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r15/pid.json",
+      "kind": "pid",
+      "pid": 750263,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r15/pid.json",
+      "kind": "runner_pid",
+      "pid": 750259,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r14/pid.json",
+      "kind": "pid",
+      "pid": 750249,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r14/pid.json",
+      "kind": "runner_pid",
+      "pid": 750245,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r13/pid.json",
+      "kind": "pid",
+      "pid": 750235,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r13/pid.json",
+      "kind": "runner_pid",
+      "pid": 750233,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r12/pid.json",
+      "kind": "pid",
+      "pid": 750219,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r12/pid.json",
+      "kind": "runner_pid",
+      "pid": 750217,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r11/pid.json",
+      "kind": "pid",
+      "pid": 750201,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r11/pid.json",
+      "kind": "runner_pid",
+      "pid": 750199,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r10/pid.json",
+      "kind": "pid",
+      "pid": 750187,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r10/pid.json",
+      "kind": "runner_pid",
+      "pid": 750185,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r9/pid.json",
+      "kind": "pid",
+      "pid": 750172,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r9/pid.json",
+      "kind": "runner_pid",
+      "pid": 750170,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r8/pid.json",
+      "kind": "pid",
+      "pid": 750160,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r8/pid.json",
+      "kind": "runner_pid",
+      "pid": 750158,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r7/pid.json",
+      "kind": "pid",
+      "pid": 750150,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r7/pid.json",
+      "kind": "runner_pid",
+      "pid": 750147,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r6/pid.json",
+      "kind": "pid",
+      "pid": 750137,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r6/pid.json",
+      "kind": "runner_pid",
+      "pid": 750135,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r5/pid.json",
+      "kind": "pid",
+      "pid": 750123,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r5/pid.json",
+      "kind": "runner_pid",
+      "pid": 750121,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r4/pid.json",
+      "kind": "pid",
+      "pid": 750107,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r4/pid.json",
+      "kind": "runner_pid",
+      "pid": 750103,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r3/pid.json",
+      "kind": "pid",
+      "pid": 750091,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r3/pid.json",
+      "kind": "runner_pid",
+      "pid": 750087,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r2/pid.json",
+      "kind": "pid",
+      "pid": 750072,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r2/pid.json",
+      "kind": "runner_pid",
+      "pid": 750069,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r1/pid.json",
+      "kind": "pid",
+      "pid": 750055,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/shared/beta/.aos/tasks/writer-r1/pid.json",
+      "kind": "runner_pid",
+      "pid": 750052,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/takeover/child/work/.aos/tasks/sleeper-r1/pid.json",
+      "kind": "pid",
+      "pid": 750441,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/takeover/child/work/.aos/tasks/sleeper-r1/pid.json",
+      "kind": "runner_pid",
+      "pid": 750439,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/nested/team/.aos/tasks/subd-r1/pid.json",
+      "kind": "pid",
+      "pid": 750635,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/nested/team/.aos/tasks/subd-r1/pid.json",
+      "kind": "runner_pid",
+      "pid": 750634,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/nested/team/sub/unit/.aos/tasks/sleeper-r1/pid.json",
+      "kind": "pid",
+      "pid": 750640,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-overlap-lv8ph6xy/nested/team/sub/unit/.aos/tasks/sleeper-r1/pid.json",
+      "kind": "runner_pid",
+      "pid": 750638,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-route-54xyymab/child/work/.aos/tasks/self-control-r1/pid.json",
+      "kind": "pid",
+      "pid": 751034,
+      "state": "absent"
+    },
+    {
+      "file": "/tmp/astra-route-54xyymab/child/work/.aos/tasks/self-control-r1/pid.json",
+      "kind": "runner_pid",
+      "pid": 751033,
+      "state": "absent"
+    }
+  ]
+}

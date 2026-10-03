@@ -1,0 +1,16 @@
+{
+ "tid": "sleeper-r7",
+ "name": "sleeper",
+ "node": "n",
+ "round": 7,
+ "dirs": [
+  "/tmp/astra-controls-5xm1b5i4/task-array-recovery/n"
+ ],
+ "at": "2026-10-03T12:38:59.137",
+ "restart_of": null,
+ "argv": [
+  "/usr/bin/python3",
+  "-c",
+  "import time; time.sleep(60)"
+ ]
+}

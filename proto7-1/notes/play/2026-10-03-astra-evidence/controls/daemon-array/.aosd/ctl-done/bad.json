@@ -1,0 +1,8 @@
+{
+ "raw": "unreadable",
+ "result": {
+  "ok": false,
+  "msg": "not a JSON object",
+  "at": "2026-10-03T12:37:50.365"
+ }
+}

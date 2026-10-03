@@ -120,6 +120,8 @@ class Daemon:
             phase = "paused" if self.is_paused(nid) and tl.phase == "idle" else tl.phase
             nodes[nid] = {"round": tl.round, "phase": phase, "paused": self.is_paused(nid),
                           "live": aos7_task.live_tasks(tl.node)}
+            if tl.last_error:
+                nodes[nid]["last_error"] = tl.last_error
         write_json(os.path.join(self.aosd, "status.json"),
                    {"pid": os.getpid(), "root": self.root, "at": now(), "stopping": self.stopping,
                     "kill_on_stop": self.kill_on_stop, "nodes": nodes})

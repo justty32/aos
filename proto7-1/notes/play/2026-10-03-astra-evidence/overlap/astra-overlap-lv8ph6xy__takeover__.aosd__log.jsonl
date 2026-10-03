@@ -1,0 +1,12 @@
+{"at": "2026-10-03T12:38:24.717", "ev": "start", "pid": 750434}
+{"at": "2026-10-03T12:38:24.717", "ev": "node+", "node": "child/work", "round": 0}
+{"at": "2026-10-03T12:38:24.731", "ev": "tick", "node": "child/work", "round": 1, "started": ["sleeper-r1"], "rc": 0}
+{"at": "2026-10-03T12:38:24.926", "ev": "tock", "node": "child/work", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T12:38:24.941", "ev": "tick", "node": "child/work", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:24.955", "ev": "tock", "node": "child/work", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:25.120", "ev": "tick", "node": "child/work", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:25.134", "ev": "tock", "node": "child/work", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:25.143", "ev": "node-", "node": "child/work"}
+{"at": "2026-10-03T12:38:27.079", "ev": "ctl", "file": "stop-test.json", "op": "stop", "node": null, "by": "overlap-test", "ok": true, "msg": "stopping with kill"}
+{"at": "2026-10-03T12:38:27.099", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T12:38:27.099", "ev": "stop"}

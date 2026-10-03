@@ -111,7 +111,7 @@ class TestTickTock(CoreCase):
         self.assertLess(time.monotonic() - t0, 5)      # 任務睡 60 秒，tick 早就回來
         self.assertEqual(r, {"round": 1, "started": ["s-r1"]})
         birth = read_json(os.path.join(self.tdir(node, "s-r1"), "birth.json"))
-        self.assertEqual(birth["dirs"][0], node)
+        self.assertEqual(birth["mounts"], {})
         self.wait_for(lambda: os.path.exists(os.path.join(self.tdir(node, "s-r1"), "pid.json")))
         self.assertEqual(self.state(node, "s-r1"), "live")
         self.assertTrue(read_json(os.path.join(node, ".aos", "round.json"))["open"])
@@ -163,6 +163,24 @@ class TestTickTock(CoreCase):
         self.wait_for(lambda: self.state(node, "s-r2") == "ended")
         self.assertFalse(os.listdir(os.path.join(node, ".aos", "spawn")))
 
+    def test_ctl_not_object_gets_failed_receipt(self):
+        """ctl.json 是合法 JSON 但不是物件（`[]`）：寫失敗回條、搬走，tick 照常印結果（astra 試玩二-1）。"""
+        node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEPER}])
+        self.tick()
+        self.wait_for(lambda: self.state(node, "s-r1") == "live")
+        write_json(os.path.join(self.tdir(node, "s-r1"), "ctl.json"), [])
+        r = self.tock()
+        self.assertEqual(r["ctl"], [{"tid": "s-r1", "op": None, "ok": False}])
+        done = read_json(os.path.join(self.tdir(node, "s-r1"), "ctl-done.json"))
+        self.assertEqual((done["raw"], done["result"]["msg"]), ([], "not a JSON object"))
+        self.assertFalse(os.path.exists(os.path.join(self.tdir(node, "s-r1"), "ctl.json")))
+        self.assertEqual(self.state(node, "s-r1"), "live")
+        with open(os.path.join(self.tdir(node, "s-r1"), "ctl.json"), "w") as f:
+            f.write("{oops")
+        self.assertEqual(self.tick()["round"], 2)
+        done = read_json(os.path.join(self.tdir(node, "s-r1"), "ctl-done.json"))
+        self.assertEqual(done["result"]["msg"], "unreadable JSON")
+
     def test_lost_task(self):
         node = self.mknode("a", [{"name": "s", "argv": SLEEPER}])
         self.tick()
@@ -176,7 +194,7 @@ class TestTickTock(CoreCase):
         self.assertTrue(read_json(os.path.join(self.tdir(node, "s-r1"), "exit.json"))["lost"])
 
     def test_inst_task(self):
-        node = self.mknode("a", [{"name": "i", "inst": "job.inst.json", "dirs": ["../mail"]}])
+        node = self.mknode("a", [{"name": "i", "inst": "job.inst.json"}])
         write_json(os.path.join(node, "job.inst.json"),
                    {"argv": ["sh", "-c", "echo $AOS7_TID > inst-out.txt; echo hi"],
                     "stdout": {"$opt": "inherit"}})
@@ -186,7 +204,6 @@ class TestTickTock(CoreCase):
         self.assertEqual(read_json(os.path.join(td, "exit.json"))["code"], 0)
         self.assertEqual(text(os.path.join(node, "inst-out.txt")).strip(), "i-r1")
         self.assertEqual(text(os.path.join(td, "out.log")).strip(), "hi")
-        self.assertEqual(read_json(os.path.join(td, "birth.json"))["dirs"][1], os.path.join(self.root, "mail"))
 
     def test_inst_task_kill_reaches_grandchild(self):
         """aos-exec 把子程式開在另一個 session；kill 要連它一起收（P-05）。"""

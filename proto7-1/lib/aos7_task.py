@@ -10,7 +10,10 @@ import subprocess
 import sys
 import time
 
+import aos7_mount
 from aos7_fs import BIN, env_with_bin, node_path, now, read_json, write_json
+
+AUDIT_SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_site")
 
 KILL_GRACE = 1.0   # spec 第 6 節：SIGTERM 後等至多 1 秒，還在就 SIGKILL
 LIVE_STATES = ("born", "live")
@@ -179,19 +182,22 @@ def run_ctl(node, tid):
     tdir = task_dir(node, tid)
     path = os.path.join(tdir, "ctl.json")
     ctl = read_json(path)
-    if ctl is None:
-        if os.path.exists(path):          # 壞檔：也搬走，免得每回合重讀
-            ctl = {"raw": "unreadable"}
-        else:
-            return None
+    if ctl is None and not os.path.exists(path):
+        return None
+    bad = None
+    if not isinstance(ctl, dict):         # 讀不懂或不是物件（例如 `[]`）：寫失敗回條、搬走，不拖垮 tick（同 daemon ctl）
+        bad = "unreadable JSON" if ctl is None else "not a JSON object"
+        ctl = {"raw": "unreadable" if ctl is None else ctl}
     op = ctl.get("op")
-    if op == "kill":
+    if bad:
+        ok, msg = False, bad
+    elif op == "kill":
         ok, msg = kill_task(tdir)
     elif op == "restart":
         ok, msg = kill_task(tdir)
         birth = read_json(os.path.join(tdir, "birth.json"), {})
-        item = {k: birth[k] for k in ("name", "argv", "inst", "dirs") if k in birth}
-        item["dirs"] = birth.get("dirs", [])[1:]   # 第一個是 node 本身，tick 會再加
+        item = {k: birth[k] for k in ("name", "argv", "inst") if k in birth}
+        item["mounts"] = aos7_mount.decl_of(birth)   # 新任務照原本的宣告重新掛
         item["restart_of"] = tid
         write_spawn(node, "restart-" + tid, item)
         msg += "; spawn written"
@@ -230,14 +236,15 @@ def new_tid(node, name, rnd):
 
 
 def start_task(root, node_id, item, rnd):
-    """寫 birth.json，用 aos7-run 起任務（新 session，不等）。回 tid。"""
+    """建掛載點、寫 birth.json，用 aos7-run 起任務（新 session，不等）。回 tid。"""
     root = os.path.abspath(root)
     node = node_path(root, node_id)
     tid = new_tid(node, item.get("name"), rnd)
     tdir = task_dir(node, tid)
-    dirs = [node] + [os.path.normpath(os.path.join(node, d)) for d in item.get("dirs", [])]
+    os.makedirs(tdir, exist_ok=True)   # 先佔住 tid，掛載點建在裡面
     birth = {"tid": tid, "name": item.get("name", "task"), "node": node_id, "round": rnd,
-             "dirs": dirs, "at": now(), "restart_of": item.get("restart_of")}
+             "mounts": aos7_mount.make(root, tdir, item.get("mounts") or {}),
+             "at": now(), "restart_of": item.get("restart_of")}
     if "inst" in item:
         birth["inst"] = item["inst"]
     else:
@@ -246,6 +253,9 @@ def start_task(root, node_id, item, rnd):
     env = env_with_bin()
     env.update({"AOS7_ROOT": root, "AOS7_NODE": node, "AOS7_NODE_ID": node_id,
                 "AOS7_TASK": tdir, "AOS7_TID": tid})
+    if env.get("AOS7_AUDIT") and AUDIT_SITE not in env.get("PYTHONPATH", "").split(os.pathsep):
+        # 寫入紀錄（spec 第 5 節）：Python 任務啟動時載入 audit_site/sitecustomize.py
+        env["PYTHONPATH"] = os.pathsep.join(x for x in (AUDIT_SITE, env.get("PYTHONPATH")) if x)
     subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir], cwd=node, env=env,
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)

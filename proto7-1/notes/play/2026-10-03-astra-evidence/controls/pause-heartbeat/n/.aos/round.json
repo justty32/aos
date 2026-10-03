@@ -1,0 +1,16 @@
+{
+ "round": 2,
+ "open": false,
+ "tick_at": "2026-10-03T12:39:43.104",
+ "tock_at": "2026-10-03T12:39:43.158",
+ "started": [
+  "busy-r2"
+ ],
+ "ctl": [
+  {
+   "tid": "busy-r1",
+   "op": "kill",
+   "ok": true
+  }
+ ]
+}

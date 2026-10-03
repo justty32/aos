@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.join(BASE, "lib"))
 
 import aos7_agent  # noqa: E402
 import aos7_llm  # noqa: E402
+import aos7_mount  # noqa: E402
 from aos7_fs import read_json, write_json  # noqa: E402
 
 AGENT = os.path.join(BASE, "bin", "aos7-agent")
@@ -27,13 +28,16 @@ def make_world(tmp, max_ping=6):
     for name in ("amy", "bob"):
         nid = "team/agents/" + name
         node = os.path.join(tmp, nid)
-        os.makedirs(os.path.join(node, "inbox"))
+        os.makedirs(os.path.join(node, "inbox"), exist_ok=True)
         write_json(os.path.join(node, ".aos", "timeline.json"), {"interval_ms": 100})
         write_json(os.path.join(node, "agent.json"),
                    {"name": name, "persona": "測試用 %s" % name, "llm": "fake", "max_ping": max_ping})
         tid = "agent-r1"
         task = os.path.join(node, ".aos", "tasks", tid)
-        write_json(os.path.join(task, "birth.json"), {"tid": tid, "name": "agent", "node": nid, "round": 1})
+        other = "bob" if name == "amy" else "amy"
+        write_json(os.path.join(task, "birth.json"),
+                   {"tid": tid, "name": "agent", "node": nid, "round": 1,
+                    "mounts": aos7_mount.make(tmp, task, {other: "team/agents/%s/inbox" % other})})
         ctxs[name] = {"root": tmp, "node": node, "node_id": nid, "task": task, "tid": tid}
     write_json(os.path.join(ctxs["amy"]["node"], "goal.json"),
                {"say_first": {"to": "team/agents/bob", "body": "ping 1"}})
@@ -111,7 +115,9 @@ class StepByStep(unittest.TestCase):
         st["plan"] = None  # 假裝 LLM 呼叫到一半被 kill
         aos7_agent.save(amy, st)
         new = dict(amy, tid="agent-r5", task=os.path.join(os.path.dirname(amy["task"]), "agent-r5"))
-        write_json(os.path.join(new["task"], "birth.json"), {"tid": "agent-r5", "name": "agent", "restart_of": "agent-r1"})
+        write_json(os.path.join(new["task"], "birth.json"),
+                   {"tid": "agent-r5", "name": "agent", "restart_of": "agent-r1",
+                    "mounts": aos7_mount.make(self.tmp, new["task"], {"bob": "team/agents/bob/inbox"})})
         st2 = aos7_agent.recover(new, aos7_agent.load_state(new))
         self.assertEqual(st2["from"], "agent-r1")
         self.assertEqual(st2["plan"][0]["tool"], "send")
@@ -125,6 +131,17 @@ class StepByStep(unittest.TestCase):
         self.assertIn("失敗", r)
         r = do_tool(self.w["amy"], {"tool": "send", "to": "../../etc", "body": "x"}, 1)
         self.assertIn("失敗", r)
+
+    def test_send_only_through_mount(self):
+        """S-23：沒掛給我的收信資料夾寄不到（amy 只掛了 bob 的 inbox）。"""
+        from aos7_agent_tools import do_tool
+        os.makedirs(os.path.join(self.tmp, "team", "agents", "carol", "inbox"))
+        r = do_tool(self.w["amy"], {"tool": "send", "to": "team/agents/carol", "body": "x"}, 1)
+        self.assertIn("沒掛載", r)
+        self.assertEqual(os.listdir(os.path.join(self.tmp, "team", "agents", "carol", "inbox")), [])
+        r = do_tool(self.w["amy"], {"tool": "send", "to": "team/agents/bob", "body": "x"}, 1)
+        self.assertIn("send →", r)
+        self.assertEqual(len(os.listdir(os.path.join(self.w["bob"]["node"], "inbox"))), 1)
 
 
 class TwoProcesses(unittest.TestCase):

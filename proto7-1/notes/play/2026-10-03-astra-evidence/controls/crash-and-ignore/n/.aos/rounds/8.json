@@ -1,0 +1,18 @@
+{
+ "round": 8,
+ "tick_at": "2026-10-03T12:37:55.060",
+ "tock_at": "2026-10-03T12:37:55.115",
+ "started": [
+  "crash-r8"
+ ],
+ "alive": [
+  "ignore-r1"
+ ],
+ "ended": [
+  {
+   "tid": "crash-r8",
+   "code": 1
+  }
+ ],
+ "ctl": []
+}

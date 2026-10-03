@@ -1,0 +1,24 @@
+{"at": "2026-10-03T12:38:25.140", "ev": "start", "pid": 750478}
+{"at": "2026-10-03T12:38:25.140", "ev": "node+", "node": "work", "round": 3}
+{"at": "2026-10-03T12:38:25.154", "ev": "tick", "node": "work", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:25.167", "ev": "tock", "node": "work", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:25.334", "ev": "tick", "node": "work", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:25.347", "ev": "tock", "node": "work", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:25.514", "ev": "tick", "node": "work", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:25.527", "ev": "tock", "node": "work", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:25.694", "ev": "tick", "node": "work", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:25.708", "ev": "tock", "node": "work", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:25.874", "ev": "tick", "node": "work", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:25.888", "ev": "tock", "node": "work", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:26.053", "ev": "tick", "node": "work", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:26.067", "ev": "tock", "node": "work", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:26.234", "ev": "tick", "node": "work", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:26.248", "ev": "tock", "node": "work", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:26.415", "ev": "tick", "node": "work", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:26.429", "ev": "tock", "node": "work", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:26.594", "ev": "tick", "node": "work", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T12:38:26.608", "ev": "tock", "node": "work", "round": 12, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:38:26.617", "ev": "ctl", "file": "stop-test.json", "op": "stop", "node": null, "by": "overlap-test", "ok": true, "msg": "stopping with kill"}
+{"at": "2026-10-03T12:38:26.623", "ev": "kill", "node": "work", "tid": "sleeper-r1", "ok": true, "msg": "killed"}
+{"at": "2026-10-03T12:38:26.637", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T12:38:26.637", "ev": "stop"}

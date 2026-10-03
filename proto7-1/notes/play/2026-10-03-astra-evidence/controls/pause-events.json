@@ -1,0 +1,84 @@
+[
+  {
+    "case": "daemon-array-op",
+    "returncode": null,
+    "receipt": {
+      "op": [],
+      "result": {
+        "ok": false,
+        "msg": "unknown op []",
+        "at": "2026-10-03T12:39:42.358"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "case": "paused",
+    "before_round": {
+      "round": 1,
+      "open": false,
+      "tick_at": "2026-10-03T12:39:42.424",
+      "tock_at": "2026-10-03T12:39:42.563",
+      "started": [
+        "busy-r1"
+      ],
+      "ctl": []
+    },
+    "after_round": {
+      "round": 1,
+      "open": false,
+      "tick_at": "2026-10-03T12:39:42.424",
+      "tock_at": "2026-10-03T12:39:42.563",
+      "started": [
+        "busy-r1"
+      ],
+      "ctl": []
+    },
+    "heartbeat_before": "4",
+    "heartbeat_after": "16",
+    "tock_before": {
+      "round": 1,
+      "at": "2026-10-03T12:39:42.563"
+    },
+    "tock_after": {
+      "round": 1,
+      "at": "2026-10-03T12:39:42.563"
+    },
+    "pending": true,
+    "receipt": null,
+    "exit": null
+  },
+  {
+    "case": "resumed",
+    "round": {
+      "round": 2,
+      "open": true,
+      "tick_at": "2026-10-03T12:39:43.104",
+      "tock_at": null,
+      "started": [
+        "busy-r2"
+      ],
+      "ctl": [
+        {
+          "tid": "busy-r1",
+          "op": "kill",
+          "ok": true
+        }
+      ]
+    },
+    "receipt": {
+      "op": "kill",
+      "why": "while paused",
+      "result": {
+        "ok": true,
+        "msg": "killed",
+        "at": "2026-10-03T12:39:43.112"
+      }
+    },
+    "exit": {
+      "code": -15,
+      "at": "2026-10-03T12:39:43.109",
+      "round": 2
+    }
+  }
+]

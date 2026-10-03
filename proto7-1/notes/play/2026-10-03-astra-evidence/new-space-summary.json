@@ -1,0 +1,515 @@
+{
+  "root": "/tmp/astra-new-space-ma6hepv7",
+  "daemon_exit": 0,
+  "events": [
+    {
+      "action": "pause ledger",
+      "round": 10,
+      "at": 14910.195085375
+    },
+    {
+      "action": "observe paused ledger",
+      "round": 10,
+      "status": {
+        "round": 10,
+        "phase": "paused",
+        "paused": true,
+        "live": []
+      }
+    },
+    {
+      "action": "restart ada",
+      "ledger_round": 25
+    }
+  ],
+  "nodes": {
+    "lab": {
+      "round": {
+        "round": 45,
+        "open": false,
+        "tick_at": "2026-10-03T12:38:28.589",
+        "tock_at": "2026-10-03T12:38:28.603",
+        "started": [],
+        "ctl": []
+      },
+      "task_count": 1,
+      "work_done": null,
+      "states": {},
+      "exits": {
+        "kernel-r1": {
+          "code": 0,
+          "at": "2026-10-03T12:38:28.808",
+          "round": 45
+        }
+      },
+      "kernel_decisions": [
+        {
+          "round": 10,
+          "rule": "budget",
+          "target": "lab/agents/ben",
+          "op": "pause",
+          "why": "用量累計 392 > 300",
+          "at": "2026-10-03T12:38:22.302"
+        },
+        {
+          "round": 13,
+          "rule": "budget",
+          "target": "lab/agents/ben",
+          "op": "resume",
+          "why": "pause 後已過 3 回合",
+          "at": "2026-10-03T12:38:22.845"
+        },
+        {
+          "round": 14,
+          "rule": "budget",
+          "target": "lab/agents/ada",
+          "op": "pause",
+          "why": "用量累計 392 > 300",
+          "at": "2026-10-03T12:38:23.026"
+        },
+        {
+          "round": 17,
+          "rule": "budget",
+          "target": "lab/agents/ada",
+          "op": "resume",
+          "why": "pause 後已過 3 回合",
+          "at": "2026-10-03T12:38:23.569"
+        }
+      ]
+    },
+    "lab/agents/ada": {
+      "round": {
+        "round": 53,
+        "open": false,
+        "tick_at": "2026-10-03T12:38:28.528",
+        "tock_at": "2026-10-03T12:38:28.542",
+        "started": [],
+        "ctl": []
+      },
+      "task_count": 2,
+      "work_done": "收到 ping 12（來自 lab/agents/ben），到上限 12，停。\n",
+      "states": {
+        "agent-r27": {
+          "state": "idle",
+          "round": 53,
+          "steps": 21,
+          "tocks": 53,
+          "plan": null,
+          "pc": 0,
+          "letters": [],
+          "goal": null,
+          "last": "接續前任 agent-r1（它停在 idle）",
+          "from": "agent-r1"
+        },
+        "agent-r1": {
+          "state": "idle",
+          "round": 26,
+          "steps": 21,
+          "tocks": 26,
+          "plan": null,
+          "pc": 0,
+          "letters": [],
+          "goal": null,
+          "last": "回到 idle",
+          "from": null
+        }
+      },
+      "exits": {
+        "agent-r27": {
+          "code": 0,
+          "at": "2026-10-03T12:38:28.611",
+          "round": 53
+        },
+        "agent-r1": {
+          "code": 0,
+          "at": "2026-10-03T12:38:24.879",
+          "round": 27
+        }
+      },
+      "kernel_decisions": []
+    },
+    "lab/agents/ben": {
+      "round": {
+        "round": 47,
+        "open": false,
+        "tick_at": "2026-10-03T12:38:28.492",
+        "tock_at": "2026-10-03T12:38:28.507",
+        "started": [],
+        "ctl": []
+      },
+      "task_count": 1,
+      "work_done": null,
+      "states": {
+        "agent-r1": {
+          "state": "idle",
+          "round": 47,
+          "steps": 18,
+          "tocks": 47,
+          "plan": null,
+          "pc": 0,
+          "letters": [],
+          "goal": null,
+          "last": "回到 idle",
+          "from": null
+        }
+      },
+      "exits": {
+        "agent-r1": {
+          "code": 0,
+          "at": "2026-10-03T12:38:28.611",
+          "round": 47
+        }
+      },
+      "kernel_decisions": []
+    },
+    "ledger": {
+      "round": {
+        "round": 50,
+        "open": false,
+        "tick_at": "2026-10-03T12:38:28.565",
+        "tock_at": "2026-10-03T12:38:28.608",
+        "started": [
+          "census-r50"
+        ],
+        "ctl": []
+      },
+      "task_count": 50,
+      "work_done": null,
+      "states": {},
+      "exits": {
+        "census-r50": {
+          "code": 0,
+          "at": "2026-10-03T12:38:28.589",
+          "round": 50
+        },
+        "census-r49": {
+          "code": 0,
+          "at": "2026-10-03T12:38:28.440",
+          "round": 49
+        },
+        "census-r48": {
+          "code": 0,
+          "at": "2026-10-03T12:38:28.288",
+          "round": 48
+        },
+        "census-r47": {
+          "code": 0,
+          "at": "2026-10-03T12:38:28.138",
+          "round": 47
+        },
+        "census-r46": {
+          "code": 0,
+          "at": "2026-10-03T12:38:27.989",
+          "round": 46
+        },
+        "census-r45": {
+          "code": 0,
+          "at": "2026-10-03T12:38:27.839",
+          "round": 45
+        },
+        "census-r44": {
+          "code": 0,
+          "at": "2026-10-03T12:38:27.689",
+          "round": 44
+        },
+        "census-r43": {
+          "code": 0,
+          "at": "2026-10-03T12:38:27.539",
+          "round": 43
+        },
+        "census-r42": {
+          "code": 0,
+          "at": "2026-10-03T12:38:27.389",
+          "round": 42
+        },
+        "census-r41": {
+          "code": 0,
+          "at": "2026-10-03T12:38:27.238",
+          "round": 41
+        },
+        "census-r40": {
+          "code": 0,
+          "at": "2026-10-03T12:38:27.088",
+          "round": 40
+        },
+        "census-r39": {
+          "code": 0,
+          "at": "2026-10-03T12:38:26.939",
+          "round": 39
+        },
+        "census-r38": {
+          "code": 0,
+          "at": "2026-10-03T12:38:26.788",
+          "round": 38
+        },
+        "census-r37": {
+          "code": 0,
+          "at": "2026-10-03T12:38:26.638",
+          "round": 37
+        },
+        "census-r36": {
+          "code": 0,
+          "at": "2026-10-03T12:38:26.487",
+          "round": 36
+        },
+        "census-r35": {
+          "code": 0,
+          "at": "2026-10-03T12:38:26.338",
+          "round": 35
+        },
+        "census-r34": {
+          "code": 0,
+          "at": "2026-10-03T12:38:26.188",
+          "round": 34
+        },
+        "census-r33": {
+          "code": 0,
+          "at": "2026-10-03T12:38:26.038",
+          "round": 33
+        },
+        "census-r32": {
+          "code": 0,
+          "at": "2026-10-03T12:38:25.888",
+          "round": 32
+        },
+        "census-r31": {
+          "code": 0,
+          "at": "2026-10-03T12:38:25.737",
+          "round": 31
+        },
+        "census-r30": {
+          "code": 0,
+          "at": "2026-10-03T12:38:25.588",
+          "round": 30
+        },
+        "census-r29": {
+          "code": 0,
+          "at": "2026-10-03T12:38:25.438",
+          "round": 29
+        },
+        "census-r28": {
+          "code": 0,
+          "at": "2026-10-03T12:38:25.289",
+          "round": 28
+        },
+        "census-r27": {
+          "code": 0,
+          "at": "2026-10-03T12:38:25.138",
+          "round": 27
+        },
+        "census-r26": {
+          "code": 0,
+          "at": "2026-10-03T12:38:24.988",
+          "round": 26
+        },
+        "census-r25": {
+          "code": 0,
+          "at": "2026-10-03T12:38:24.838",
+          "round": 25
+        },
+        "census-r24": {
+          "code": 0,
+          "at": "2026-10-03T12:38:24.687",
+          "round": 24
+        },
+        "census-r23": {
+          "code": 0,
+          "at": "2026-10-03T12:38:24.538",
+          "round": 23
+        },
+        "census-r22": {
+          "code": 0,
+          "at": "2026-10-03T12:38:24.386",
+          "round": 22
+        },
+        "census-r21": {
+          "code": 0,
+          "at": "2026-10-03T12:38:24.237",
+          "round": 21
+        },
+        "census-r20": {
+          "code": 0,
+          "at": "2026-10-03T12:38:24.087",
+          "round": 20
+        },
+        "census-r19": {
+          "code": 0,
+          "at": "2026-10-03T12:38:23.938",
+          "round": 19
+        },
+        "census-r18": {
+          "code": 0,
+          "at": "2026-10-03T12:38:23.787",
+          "round": 18
+        },
+        "census-r17": {
+          "code": 0,
+          "at": "2026-10-03T12:38:23.637",
+          "round": 17
+        },
+        "census-r16": {
+          "code": 0,
+          "at": "2026-10-03T12:38:23.486",
+          "round": 16
+        },
+        "census-r15": {
+          "code": 0,
+          "at": "2026-10-03T12:38:23.337",
+          "round": 15
+        },
+        "census-r14": {
+          "code": 0,
+          "at": "2026-10-03T12:38:23.186",
+          "round": 14
+        },
+        "census-r13": {
+          "code": 0,
+          "at": "2026-10-03T12:38:23.036",
+          "round": 13
+        },
+        "census-r12": {
+          "code": 0,
+          "at": "2026-10-03T12:38:22.887",
+          "round": 12
+        },
+        "census-r11": {
+          "code": 0,
+          "at": "2026-10-03T12:38:22.737",
+          "round": 11
+        },
+        "census-r10": {
+          "code": 0,
+          "at": "2026-10-03T12:38:22.005",
+          "round": 10
+        },
+        "census-r9": {
+          "code": 0,
+          "at": "2026-10-03T12:38:21.855",
+          "round": 9
+        },
+        "census-r8": {
+          "code": 0,
+          "at": "2026-10-03T12:38:21.705",
+          "round": 8
+        },
+        "census-r7": {
+          "code": 0,
+          "at": "2026-10-03T12:38:21.555",
+          "round": 7
+        },
+        "census-r6": {
+          "code": 0,
+          "at": "2026-10-03T12:38:21.406",
+          "round": 6
+        },
+        "census-r5": {
+          "code": 0,
+          "at": "2026-10-03T12:38:21.261",
+          "round": 5
+        },
+        "census-r4": {
+          "code": 0,
+          "at": "2026-10-03T12:38:21.115",
+          "round": 4
+        },
+        "census-r3": {
+          "code": 0,
+          "at": "2026-10-03T12:38:20.964",
+          "round": 3
+        },
+        "census-r2": {
+          "code": 0,
+          "at": "2026-10-03T12:38:20.814",
+          "round": 2
+        },
+        "census-r1": {
+          "code": 0,
+          "at": "2026-10-03T12:38:20.664",
+          "round": 1
+        }
+      },
+      "kernel_decisions": []
+    }
+  },
+  "census": {
+    "round": 50,
+    "letters_done": 12,
+    "finished_agents": 1
+  },
+  "daemon_controls": {
+    "zz-stop.json": {
+      "op": "stop",
+      "kill": true,
+      "by": "reader",
+      "result": {
+        "ok": true,
+        "msg": "stopping with kill",
+        "at": "2026-10-03T12:38:28.596"
+      }
+    },
+    "kernel-kernel-r1-r17-0-resume-lab_agents_ada.json": {
+      "op": "resume",
+      "node": "lab/agents/ada",
+      "by": "lab:kernel-r1",
+      "why": "pause 後已過 3 回合",
+      "result": {
+        "ok": true,
+        "msg": "resume lab/agents/ada",
+        "at": "2026-10-03T12:38:23.578"
+      }
+    },
+    "kernel-kernel-r1-r14-0-pause-lab_agents_ada.json": {
+      "op": "pause",
+      "node": "lab/agents/ada",
+      "by": "lab:kernel-r1",
+      "why": "用量累計 392 > 300",
+      "result": {
+        "ok": true,
+        "msg": "pause lab/agents/ada",
+        "at": "2026-10-03T12:38:23.027"
+      }
+    },
+    "kernel-kernel-r1-r13-0-resume-lab_agents_ben.json": {
+      "op": "resume",
+      "node": "lab/agents/ben",
+      "by": "lab:kernel-r1",
+      "why": "pause 後已過 3 回合",
+      "result": {
+        "ok": true,
+        "msg": "resume lab/agents/ben",
+        "at": "2026-10-03T12:38:22.864"
+      }
+    },
+    "manual-resume.json": {
+      "op": "resume",
+      "node": "ledger",
+      "by": "reader",
+      "result": {
+        "ok": true,
+        "msg": "resume ledger",
+        "at": "2026-10-03T12:38:22.701"
+      }
+    },
+    "kernel-kernel-r1-r10-0-pause-lab_agents_ben.json": {
+      "op": "pause",
+      "node": "lab/agents/ben",
+      "by": "lab:kernel-r1",
+      "why": "用量累計 392 > 300",
+      "result": {
+        "ok": true,
+        "msg": "pause lab/agents/ben",
+        "at": "2026-10-03T12:38:22.313"
+      }
+    },
+    "manual-pause.json": {
+      "op": "pause",
+      "node": "ledger",
+      "by": "reader",
+      "result": {
+        "ok": true,
+        "msg": "pause ledger",
+        "at": "2026-10-03T12:38:21.986"
+      }
+    }
+  }
+}

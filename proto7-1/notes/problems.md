@@ -23,6 +23,12 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （a）tick 宣告式地多給資料夾，也就是現在的 `dirs`，daemon ctl 目錄算每個任務都有。
   - （b）任務只寫自己的 outbox 或控制檔，由時空層（tick、tock 或 daemon）遞送。郵差歸時空層，等於把核心 spec「之後再說」的訊息交流提前。
   - （c）共用資料夾，當作兩條時間線重疊的部分（S-15）。
+- **怎麼做的（10-03，照使用者答的「掛載」，核心 S-23）**：
+  - tasks.json 每項的 `dirs` 換成 `mounts`：`{"名字": "空間裡的路徑"}`，路徑相對空間根、跟 node id 同一套（例如 `"bob": "team/agents/bob/inbox"`、`"daemon": ".aosd"`）。
+  - tick 起任務時，在任務資料夾建 `mnt/<名字>`，是指向目標的**相對符號連結**；目標不存在就先建資料夾。結果寫進 birth.json 的 `mounts`（`{"to", "at"}`）。restart 照原宣告重新掛。
+  - 寄信、kernel 寫成員的 ctl.json、kernel 與路二寫 daemon ctl，都改成只經過掛載點寫：`aos7_mount.resolver` 把「空間裡的路徑」換成掛載點下的路徑，沒掛到就不寫（agent 記「沒掛載」，kernel 的決定記 `skipped`）。kernel 讀成員的回合、任務、daemon 的 status.json 也走掛載點。路一的子 daemon 把 `team/sub` 掛進來，跑在 `$AOS7_TASK/mnt/sub` 上（argv 展開 `$AOS7_*`）。`aos7-ctl daemon` 也吃掛進來的 `.aosd` 或 `.aosd/ctl`。
+  - 檢查：環境有 `AOS7_AUDIT` 時，tick 讓 Python 任務載入一個 audit hook，把每個寫入記到 `$AOS7_TASK/writes.jsonl`，標出有沒有落在「自己的 node（不含裡面巢狀的 node）或掛載點目標」底下。`demo/play.py` 開著它跑，檢查項目多一條「所有寫入都在範圍內」；`tests/test_mount.py` 驗得到越界寫入。**只記不擋**。
+  - 做的過程遇到的問題記在下面 M-1～M-6，其中 M-6 要使用者決定。
 
 ### D-2 回合對「跨回合的常駐任務」幾乎沒有意義；agent「一個 tock 換一格」跟 LLM 的時間對不上
 
@@ -66,7 +72,22 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - 先這樣：照字面，pause＝凍結一切，控制也一起凍結。
 - 要決定的：「在 tick-tock 時」是指控制**只能**落在回合邊界上，還是只是 kernel 判斷的節奏？如果是後者，daemon 在 pause 時也可以照樣執行 ctl.json。
 
-## 其餘問題一覽（技術選型 19 條、默認正常 16 條）
+## 掛載之後要使用者決定的（1 條）
+
+### M-6 掛載在任務出生時就定了，agent 想寄給沒掛的對象就寄不出去〔要使用者決定〕
+
+- 層：掛載 × agent、kernel；S-23、S-10、S-19。
+- 發生了什麼：
+  - 掛什麼寫在 tasks.json，tick 起任務時一次掛好，之後不變。
+  - agent 的收件人是 LLM 在 plan 裡寫的 `to`。對方的 inbox 沒有事先掛給它，send 就失敗（記「沒掛載」）。所以 agent 只能跟 tasks.json 預先列好的對象說話。
+  - kernel 的成員在 kernel.json，每輪重讀、改檔就生效；但成員的 `.aos` 要另外寫在 tasks.json 的 mounts，而且要 restart kernel 才會掛上。兩處要人手對齊，漏了 kernel 就看不到那個成員（不報錯，只是沒有決定）。
+- 先這樣：掛載出生時固定。要加對象就改 tasks.json，再 restart 那個任務。
+- 要決定的：任務執行中能不能要求加掛（或卸掛）？可能的方向（不代替你選）：
+  - （a）不行，只能改 tasks.json＋restart（現在的做法）。誰能改任務表仍是核心「之後再說」的事。
+  - （b）任務寫一個「請求加掛」的檔，下個 tick 由 tick 決定給不給、給了就把連結補進任務資料夾。這等於讓 tick 多一個「審核」的角色。
+  - （c）把共同的上層資料夾整個掛進來（例如掛 `team/agents`），之後誰都寄得到。簡單，但「只碰給的資料夾」就變得很寬。
+
+## 其餘問題一覽（技術選型 24 條、默認正常 16 條）
 
 細節點進分檔看。
 
@@ -91,6 +112,11 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [A-6](problems-agent.md) goal.json 用一次就沒了，失敗也一樣。實測 thinking 模型失敗後，世界就安靜了，沒有人發現。
 - [A-8](problems-agent.md) 真 LLM 回的東西不一定是 plan。gemma-4-e4b 四次全部成功；qwen3.5-9b 一次 119 秒，回應是空的。
 - [I-2](#i-2-回合紀錄看不到常駐任務做了什麼技術選型先這樣) 回合紀錄看不到常駐任務做了什麼。
+- [M-1](#m-1-掛載用符號連結只宣告不強制技術選型先這樣) 掛載用符號連結，只宣告不強制。
+- [M-2](#m-2-掛載目標不存在時-tick-先建資料夾技術選型先這樣) 掛載目標不存在時，tick 先建資料夾。
+- [M-3](#m-3-寫入紀錄只看得到-python-程序只記寫不記讀技術選型先這樣) 寫入紀錄只看得到 Python 程序，只記寫、不記讀。
+- [M-4](#m-4-argv-展開-aos7_子-daemon-跑在掛載點路徑上技術選型先這樣) argv 展開 `$AOS7_*`；子 daemon 跑在掛載點路徑上。
+- [M-5](#m-5-自己的-node不含裡面巢狀的-node技術選型先這樣) 「自己的 node」不含裡面巢狀的 node。
 
 **默認正常**
 
@@ -142,3 +168,40 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - 回合由 interval 推動（100～150 ms），6 秒大約跑 40～54 回合。
   - kernel 的壽命規則要 team 跑到第 14 回合，預算規則要兩邊對話燒到 250 tokens，所以檢查項目能不能全部成立，取決於機器快慢。
   - 測試給了 6 秒，在本機有很大的餘裕。機器太慢時，`test_demo` 可能少掉壽命 kill 那一項。
+
+## 做掛載（D-1）時碰到的（M-）
+
+### M-1 掛載用符號連結，只宣告不強制〔技術選型，先這樣〕
+
+- 層：掛載；S-23、S-10。
+- 發生了什麼：任務資料夾的 `mnt/<名字>` 是符號連結，任務照樣能用絕對路徑寫空間裡任何地方。真正擋住要 mount namespace、bind mount（要 root）或 FUSE，都不做。
+- 先這樣：程式（agent、kernel、poke、aos7-ctl）只經過掛載點寫；有沒有越界靠寫入紀錄事後看（M-3）。連結用相對路徑，整個空間搬家不會壞。
+
+### M-2 掛載目標不存在時 tick 先建資料夾〔技術選型，先這樣〕
+
+- 層：掛載 × tick；S-23。
+- 發生了什麼：收信資料夾常常還沒人建過（bob 還沒收過信就沒有 `inbox/`）。指向不存在的連結，寫入時建不出資料夾。
+- 先這樣：tick 掛之前先 `mkdir -p` 目標。代價是路徑打錯字時，會在別的 node 建出一個空資料夾。路徑跑出空間根、名字含 `/` 或以 `.` 開頭的宣告不掛，birth.json 記 `error`。
+
+### M-3 寫入紀錄只看得到 Python 程序，只記寫、不記讀〔技術選型，先這樣〕
+
+- 層：檢查工具；S-10、S-01。
+- 發生了什麼：紀錄靠 Python 的 audit hook（tick 把 `lib/audit_site/` 放進任務的 `PYTHONPATH`，Python 啟動時載入 `sitecustomize.py`）。
+  - sh、C 程式、`python3 -I`／`-S` 起的程序看不到；任務自己改 `PYTHONPATH` 也能躲開。
+  - 只記寫入（開檔寫、rename、刪、建資料夾、連結），不記讀。kernel 讀成員、agent 讀信的路徑有沒有越界，紀錄看不出來（程式本身是走掛載點讀的）。
+  - 只記空間根底下的寫入；`__pycache__`、`/dev/null` 這類空間外的不管。
+  - 示範跑 6 秒約 2700～3300 筆，寫進各任務的 `writes.jsonl`；預設不開（要設 `AOS7_AUDIT`）。
+- 先這樣：夠用來「看得出來」。要更全得用 strace／seccomp 或 FUSE。
+
+### M-4 argv 展開 `$AOS7_*`；子 daemon 跑在掛載點路徑上〔技術選型，先這樣〕
+
+- 層：任務啟動 × 路一；S-23、S-21。
+- 發生了什麼：路一的子 daemon 要在 tick 給的資料夾上跑，但 argv 寫的時候還不知道 tid，指不到 `<taskdir>/mnt/sub`。
+- 先這樣：aos7-run 把 argv 裡的 `$AOS7_TASK`、`${AOS7_NODE}` 等 `AOS7_*` 變數展開（其他 `$` 原樣）。子 daemon 的根就成了 `team/.aos/tasks/subd-r1/mnt/sub`：它的 status.json 的 `root`、它的任務的 `AOS7_ROOT` 都是這條長路徑，subd 換 tid 後也跟著變。flock 鎖的是同一個檔，兩個 daemon 不會同時跑。
+
+### M-5 「自己的 node」不含裡面巢狀的 node〔技術選型，先這樣〕
+
+- 層：掛載 × 檢查；S-10、S-13、S-15。
+- 發生了什麼：team 這個資料夾裡面就有 `agents/amy`、`agents/bob`、`sub`。如果「tick 給的資料夾」是整個 team 資料夾，kernel 不用掛載也碰得到成員，掛載就沒意義了。
+- 先這樣：寫入紀錄判斷時，自己的 node 扣掉裡面巢狀的 node（有 `.aos/timeline.json`）與 daemon 根（有 `.aosd/`）。要碰它們就得掛。kernel 對自己 node 的任務（例如壽命 kill subd）直接寫。
+

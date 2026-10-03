@@ -5,6 +5,7 @@ import signal
 import sys
 
 import aos7_fs as fs
+import aos7_mount
 from aos7_kernel_rules import empty_state, run_rules, snapshot
 
 STATE = "kernel-state.json"
@@ -45,34 +46,46 @@ def load_state(env):
     return empty_state()
 
 
-def apply_decision(env, d, seq):
-    """把一個決定寫成控制檔：kill/restart → 任務 ctl.json；pause/resume → daemon ctl。"""
+def apply_decision(env, d, seq, resolve):
+    """把一個決定寫成控制檔：kill/restart → 任務 ctl.json；pause/resume → daemon ctl。
+
+    別的 node 與 daemon 的控制檔一律經過掛載點寫（S-23）；自己 node 的任務直接寫。回 None＝寫了，否則回沒寫的原因。"""
     by = "%s:%s" % (env["node_id"], env["tid"])
     if d["op"] in ("pause", "resume"):
         safe = "".join(c if c.isalnum() else "_" for c in d["target"])
         name = "kernel-%s-r%d-%d-%s-%s.json" % (env["tid"], d["round"], seq, d["op"], safe)
-        fs.write_json(os.path.join(env["root"], ".aosd", "ctl", name),
-                      {"op": d["op"], "node": d["target"], "by": by, "why": d["why"]})
-        return True
+        ctl = resolve(".aosd/ctl")
+        if ctl is None:
+            return "daemon 的 .aosd/ctl 沒掛載"
+        fs.write_json(os.path.join(ctl, name), {"op": d["op"], "node": d["target"], "by": by, "why": d["why"]})
+        return None
     node_id, tid = d["target"].rsplit(":", 1)
-    path = os.path.join(fs.aos_dir(fs.node_path(env["root"], node_id)), "tasks", tid, "ctl.json")
+    rel = os.path.join("tasks", tid, "ctl.json")
+    if node_id == env["node_id"]:
+        path = os.path.join(fs.aos_dir(env["node"]), rel)
+    else:
+        aos = resolve(node_id + "/.aos")
+        if aos is None:
+            return "%s/.aos 沒掛載" % node_id
+        path = os.path.join(aos, rel)
     if os.path.exists(path):
-        return False  # 別人先下了，不蓋掉
+        return "ctl.json 已存在"  # 別人先下了，不蓋掉
     fs.write_json(path, {"op": d["op"], "by": by, "why": d["why"]})
-    return True
+    return None
 
 
 def one_round(env, rnd):
     """收到第 rnd 回合的 tock：快照 → 規則 → 寫控制檔、decisions.jsonl、kernel-state.json。"""
     cfg = load_config(env["node"])
     state = load_state(env)
-    snap = snapshot(env["root"], env["node_id"], env["tid"], cfg, rnd)
+    resolve = aos7_mount.resolver(env["task"])
+    snap = snapshot(env["root"], env["node_id"], env["tid"], cfg, rnd, resolve)
     decisions, new = run_rules(cfg, state, snap)
     for i, d in enumerate(decisions):
-        ok = apply_decision(env, d, i)
+        why_not = apply_decision(env, d, i, resolve)
         rec = dict(d, at=fs.now())
-        if not ok:
-            rec["skipped"] = "ctl.json 已存在"
+        if why_not:
+            rec["skipped"] = why_not
         fs.append_jsonl(os.path.join(env["task"], "decisions.jsonl"), rec)
     new["round"] = rnd
     new.pop("inherited_from", None)

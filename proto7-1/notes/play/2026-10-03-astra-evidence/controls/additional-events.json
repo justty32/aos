@@ -1,0 +1,123 @@
+[
+  {
+    "case": "daemon-pause-list-node",
+    "returncode": null,
+    "receipt": {
+      "op": "pause",
+      "node": [
+        "n"
+      ],
+      "result": {
+        "ok": false,
+        "msg": "pause 要給 node",
+        "at": "2026-10-03T12:38:57.734"
+      }
+    },
+    "pending": false,
+    "stderr": ""
+  },
+  {
+    "case": "daemon-pause-missing-node",
+    "returncode": null,
+    "receipt": {
+      "op": "pause",
+      "node": "ghost",
+      "result": {
+        "ok": true,
+        "msg": "pause ghost",
+        "at": "2026-10-03T12:38:58.060"
+      }
+    },
+    "pending": false,
+    "stderr": ""
+  },
+  {
+    "case": "before-repair",
+    "round": {
+      "round": 6,
+      "open": true,
+      "tick_at": "2026-10-03T12:38:59.010",
+      "tock_at": null,
+      "started": [],
+      "ctl": []
+    },
+    "status": {
+      "pid": 750834,
+      "root": "/tmp/astra-controls-5xm1b5i4/task-array-recovery",
+      "at": "2026-10-03T12:38:59.077",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 1,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "sleeper-r1"
+          ]
+        },
+        "healthy": {
+          "round": 6,
+          "phase": "idle",
+          "paused": false,
+          "live": []
+        }
+      }
+    },
+    "tock": null,
+    "summaries": []
+  },
+  {
+    "case": "after-repair",
+    "round": {
+      "round": 9,
+      "open": false,
+      "tick_at": "2026-10-03T12:38:59.391",
+      "tock_at": "2026-10-03T12:38:59.406",
+      "started": [],
+      "ctl": []
+    },
+    "status": {
+      "pid": 750834,
+      "root": "/tmp/astra-controls-5xm1b5i4/task-array-recovery",
+      "at": "2026-10-03T12:38:59.442",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 9,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "sleeper-r7"
+          ]
+        },
+        "healthy": {
+          "round": 9,
+          "phase": "idle",
+          "paused": false,
+          "live": []
+        }
+      }
+    },
+    "receipt": {
+      "op": "kill",
+      "why": "repair malformed control",
+      "result": {
+        "ok": true,
+        "msg": "killed",
+        "at": "2026-10-03T12:38:59.137"
+      }
+    },
+    "exit": {
+      "code": -15,
+      "at": "2026-10-03T12:38:59.134",
+      "round": 7
+    },
+    "summaries": [
+      "7.json",
+      "8.json",
+      "9.json"
+    ]
+  }
+]
