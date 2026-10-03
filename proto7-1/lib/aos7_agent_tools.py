@@ -3,7 +3,7 @@ import os
 import time
 
 import aos7_mount
-from aos7_fs import now, read_json, write_json
+from aos7_fs import append_jsonl, now, read_json, read_jsonl, write_json
 
 
 def inbox_dir(node):
@@ -110,6 +110,7 @@ def do_tool(ctx, step, rnd):
         me = ctx["node_id"]
         letter = {"from": me, "to": to, "round": rnd, "body": body, "at": now()}
         name = "%d-%s.json" % (time.time_ns(), me.replace("/", "_"))
+        append_jsonl(os.path.join(ctx["node"], "sent.jsonl"), dict(letter, file=name))  # 寄件備份（memory 用）
         box = aos7_mount.resolver(ctx["task"])(inbox_path(to))
         if box is not None:
             write_json(os.path.join(box, name), letter)
@@ -133,3 +134,32 @@ def do_tool(ctx, step, rnd):
     if tool == "none":
         return "none"
     return "看不懂的工具：%r" % (tool,)
+
+
+def memory(node, n, skip=(), file_chars=4000):
+    """給真模型的記憶（agent.json 的 "memory": n）：最近 n 封往來的信（收的在 inbox/done/、寄的在 sent.jsonl，
+    依 at 排）＋自己 work/ 底下的檔（每檔截 file_chars 字）。skip＝這輪正要處理的信檔名（已經在 letters 裡）。"""
+    hist = []
+    done = os.path.join(inbox_dir(node), "done")
+    try:
+        names = [x for x in os.listdir(done) if x.endswith(".json") and x not in skip]
+    except OSError:
+        names = []
+    for x in names:
+        l = read_json(os.path.join(done, x))
+        if isinstance(l, dict):
+            hist.append({"dir": "收", "from": l.get("from"), "at": l.get("at", ""), "body": l.get("body")})
+    for l in read_jsonl(os.path.join(node, "sent.jsonl")):
+        hist.append({"dir": "寄", "to": l.get("to"), "at": l.get("at", ""), "body": l.get("body")})
+    hist.sort(key=lambda h: str(h.get("at")))
+    files = {}
+    wdir = os.path.join(node, "work")
+    for dp, _, fns in os.walk(wdir):
+        for fn in sorted(fns):
+            fp = os.path.join(dp, fn)
+            try:
+                with open(fp, encoding="utf-8", errors="replace") as f:
+                    files[os.path.relpath(fp, node)] = f.read(file_chars)
+            except OSError:
+                pass
+    return {"recent_letters": hist[-n:], "my_files": files}

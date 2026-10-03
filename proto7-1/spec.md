@@ -245,4 +245,12 @@ kernel 要看的東西都經過掛載點（S-23）：daemon 的 `.aosd`（讀 st
 - OpenAI 相容：system＝規則＋persona，user＝`{"goal","letters"}` 的 JSON；要模型只回 JSON 陣列。解不出就當 `[{"tool":"none"}]`，原因寫進 state.last。tokens＝回應的 `usage.total_tokens`。
 - `send` 的 `to` 必須是空間裡的路徑（不能絕對、不能跑出根）；`write` 的 `path` 不能跑出自己的 node。不合就跳過該步並記在 last。
 
+**真模型用的補充**（`demo/real.py` 用到；不設就跟上面一樣）：
+
+- `agent.json` 的 `"memory": N`：think 的 user JSON 多一個 `memory`＝`{"recent_letters": 最近 N 封往來的信（收：inbox/done/；寄：<node>/sent.jsonl，依 at 排）, "my_files": 自己 work/ 底下的檔（每檔截 4000 字）}`。`send` 一律把信多記一行到 `<node>/sent.jsonl`。
+- `agent.json` 的 `"wake": {"rounds": N, "unless": "相對 node 的路徑"}`：idle 且沒信沒 goal、離上次開始 think 已 N 個回合、`unless` 的檔又不在 → 自己 think 一次，goal＝`{"wake": "…"}`（不改名 goal.json）。
+- `llm` 物件的 `retry`（預設 1）：plan 解析不出時，把原回應接一句更正再問，最多 retry 次；每次都算進 usage 的 `calls`。
+- 每次真模型 think 在 `$AOS7_TASK/llm.jsonl` 記一行：`{"at","round","round_before","round_after"（node 的回合，呼叫前後）,"ms","calls","tokens","note","letters","raw"（原文前 4000 字）}`。
+- 每處理一個 tock，在 `$AOS7_TASK/trace.jsonl` 記一行 `{"round","state","steps","at"}`（跟 progress.json 同時寫）。
+
 agent 的進出流水印在 stdout（一行一個 JSON，aos7-run 收進 out.log）。`aos7-agent --rounds N`：處理 N 次 tock 後自行結束；SIGTERM／SIGINT 乾淨結束（code 0）。

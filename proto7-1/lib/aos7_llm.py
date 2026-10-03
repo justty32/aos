@@ -1,10 +1,12 @@
 """agent 的 LLM 後端：fake（決定性、離線，演「兩個 agent 互傳 ping」）與 OpenAI 相容（urllib POST /chat/completions）。
 
-對外只有 think(cfg, goal, letters, me) → {"plan": [...], "tokens": int, "note": str}。
+對外只有 think(cfg, goal, letters, me, memory=None) → {"plan": [...], "tokens": int, "note": str}（真模型另有 "raw"、"ms"）。
+memory（agent.json 設 "memory": N 才有）＝最近往來的信＋自己 work/ 底下的檔，給真模型「記得前面發生什麼」。
 plan 是工具動作清單（spec.md 第 10 節）：[{"tool": "send"|"write"|"none", ...}]。
 """
 import json
 import re
+import time
 import urllib.error
 import urllib.request
 
@@ -18,17 +20,19 @@ SYSTEM_RULES = """你是一個住在資料夾裡的 agent，只能用工具動�
 信件的 from 就是對方的 node id，回信就 send 給它。"""
 
 
-def build_prompt(cfg, goal, letters, me):
-    """組 system＋user 兩段文字（fake 也用它算 tokens，兩種後端看到的是同一份輸入）。"""
+def build_prompt(cfg, goal, letters, me, memory=None):
+    """組 system＋user 兩段文字（fake 也用它算 tokens，兩種後端看到的是同一份輸入）。memory 有給才放進 user。"""
     system = SYSTEM_RULES + "\n\n你的 node id：%s\n你的人設：%s" % (me, cfg.get("persona", ""))
     user = {"goal": goal, "letters": [{"from": l.get("from"), "round": l.get("round"), "body": l.get("body")}
                                       for l in letters]}
+    if memory is not None:
+        user = {"memory": memory, **user}
     return system, json.dumps(user, ensure_ascii=False)
 
 
-def think(cfg, goal, letters, me):
+def think(cfg, goal, letters, me, memory=None):
     """依 agent.json 的 llm 欄位選後端。回 {"plan", "tokens", "note"}；後端出錯也不丟例外，plan 退成 none。"""
-    system, user = build_prompt(cfg, goal, letters, me)
+    system, user = build_prompt(cfg, goal, letters, me, memory)
     llm = cfg.get("llm", "fake")
     if llm == "fake":
         return {"plan": fake_plan(cfg, goal, letters), "tokens": (len(system) + len(user)) // 4, "note": "fake"}
@@ -75,11 +79,35 @@ def parse_plan(text):
     return None
 
 
+RETRY = "你剛才回的不是 JSON 陣列。只回一個 JSON 陣列（plan），不要別的文字。"
+
+
 def openai_think(llm, system, user):
-    """OpenAI 相容端點問一次；連不上、回應壞、plan 解不出都退成 none 並在 note 說明。"""
+    """OpenAI 相容端點問；plan 解不出就把原回應與一句更正接上去再問一次（retry 預設 1）。
+    連不上、回應壞、重問後還是解不出都退成 none 並在 note 說明。calls＝實際打了幾次。"""
+    msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    out = {"tokens": 0, "ms": 0, "calls": 0, "raw": None}
+    for attempt in range(1 + int(llm.get("retry", 1))):
+        r = _ask(llm, msgs)
+        out["tokens"] += r["tokens"]
+        out["ms"] += r["ms"]
+        out["calls"] += 1
+        if r.get("error"):
+            return dict(out, plan=[{"tool": "none"}], note=r["error"])
+        content = r["content"]
+        out["raw"] = content if attempt == 0 else "%s\n--- 重問後 ---\n%s" % (out["raw"], content)
+        plan = parse_plan(content)
+        if plan is not None:
+            return dict(out, plan=plan, note="ok" if attempt == 0 else "ok（重問 %d 次）" % attempt)
+        msgs = msgs + [{"role": "assistant", "content": content}, {"role": "user", "content": RETRY}]
+    return dict(out, plan=[{"tool": "none"}],
+                note="plan 解析失敗，原文前 200 字：%s" % " ".join(content.split())[:200])
+
+
+def _ask(llm, messages):
+    """POST 一次 /chat/completions。回 {"content", "tokens", "ms"}，出錯回 {"error", "tokens", "ms"}。"""
     url = llm["url"].rstrip("/") + "/chat/completions"
-    body = {"model": llm["model"], "temperature": llm.get("temperature", 0),
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+    body = {"model": llm["model"], "temperature": llm.get("temperature", 0), "messages": messages}
     if llm.get("max_tokens"):
         body["max_tokens"] = llm["max_tokens"]
     headers = {"Content-Type": "application/json"}
@@ -87,19 +115,17 @@ def openai_think(llm, system, user):
         headers["Authorization"] = "Bearer " + llm["api_key"]
     req = urllib.request.Request(url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
                                  headers=headers, method="POST")
+    t0 = time.monotonic()
     try:
         with urllib.request.urlopen(req, timeout=llm.get("timeout_s", 120)) as resp:
             obj = json.loads(resp.read())
     except (urllib.error.URLError, OSError, ValueError) as e:
-        return {"plan": [{"tool": "none"}], "tokens": 0, "note": "呼叫失敗：%s" % e}
+        return {"error": "呼叫失敗：%s" % e, "tokens": 0, "ms": int((time.monotonic() - t0) * 1000)}
+    ms = int((time.monotonic() - t0) * 1000)
     usage = obj.get("usage") if isinstance(obj, dict) else None
     tokens = usage.get("total_tokens", 0) if isinstance(usage, dict) else 0
     try:
         content = obj["choices"][0]["message"].get("content") or ""
     except (KeyError, IndexError, TypeError, AttributeError):
-        return {"plan": [{"tool": "none"}], "tokens": tokens, "note": "回應缺 choices[0].message"}
-    plan = parse_plan(content)
-    if plan is None:
-        return {"plan": [{"tool": "none"}], "tokens": tokens,
-                "note": "plan 解析失敗，原文前 200 字：%s" % " ".join(content.split())[:200]}
-    return {"plan": plan, "tokens": tokens, "note": "ok"}
+        return {"error": "回應缺 choices[0].message", "tokens": tokens, "ms": ms}
+    return {"content": content, "tokens": tokens, "ms": ms}

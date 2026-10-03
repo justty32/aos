@@ -1,0 +1,4 @@
+{"mount_allow": [".aosd", "team/agents/"],
+ "tasks": [
+ {"name": "kernel", "mode": "keep", "argv": ["aos7-kernel"]}
+]}
