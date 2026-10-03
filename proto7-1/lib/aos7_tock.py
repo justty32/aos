@@ -22,6 +22,36 @@ def keep_ended_rounds(node):
     return k if isinstance(k, int) and not isinstance(k, bool) and k >= 0 else DEFAULT_KEEP_ENDED
 
 
+def keep_old_rounds(node):
+    """timeline.json 的 `keep_old_rounds`（非負整數，可選；astra-7 H-08）：tasks-old 裡結束超過這麼多回合的任務資料夾刪掉。
+    沒寫或不對回 None＝永久保留（預設，Q3 只搬不刪）。"""
+    t = read_json(os.path.join(node, ".aos", "timeline.json"), {})
+    k = t.get("keep_old_rounds") if isinstance(t, dict) else None
+    return k if isinstance(k, int) and not isinstance(k, bool) and k >= 0 else None
+
+
+def purge_old(node, rnd, keep):
+    """刪掉 tasks-old 裡 `本回合 − ended 的回合 > keep` 的任務資料夾（只在設了 keep_old_rounds 時呼叫）。回 (刪掉的 tid, 錯誤)。"""
+    import shutil
+    base = aos7_task.old_dir(node)
+    try:
+        names = sorted(n for n in os.listdir(base) if not n.startswith("."))
+    except OSError:
+        return [], []
+    purged, errors = [], []
+    for tid in names:
+        d = os.path.join(base, tid)
+        er = read_json(os.path.join(d, "ended.json"))
+        if not (isinstance(er, dict) and isinstance(er.get("round"), int) and rnd - er["round"] > keep):
+            continue
+        try:
+            shutil.rmtree(d)
+            purged.append(tid)
+        except OSError as e:
+            errors.append({"tid": tid, "phase": "purge", "err": repr(e)[:200]})
+    return purged, errors
+
+
 def tock(root, node_id, early=None):
     """做一次 tock，回本回合總結（即 rounds.jsonl 加的那一行）。early＝這次是不是提前進場（daemon 給；不知道是 None）。
 
@@ -112,6 +142,12 @@ def _tock(node, early):
             # 一個任務的資料夾壞掉，不拖垮同一條線的其他任務（astra-4 I-05）
             errors.append({"tid": tid, "phase": "scan", "err": repr(e)[:200]})
 
+    kold = keep_old_rounds(node)
+    purged = []
+    if kold is not None:
+        purged, perr = purge_old(node, rnd, kold)
+        errors += perr
+
     summary = {"round": rnd, "tick_at": state.get("tick_at"), "tock_at": at,
                "started": state.get("started", []), "alive": alive, "ended": ended, "ctl": ctl,
                "mounts": state.get("mounts", []), "early": early}
@@ -132,6 +168,8 @@ def _tock(node, early):
         summary["errors"] = errors
     if archived:
         summary["archived"] = archived
+    if purged:
+        summary["purged"] = purged   # keep_old_rounds 刪掉的 tasks-old 任務（astra-7 H-08）
     rpath_l = os.path.join(node, ".aos", "rounds.jsonl")
     torn = torn_tail(rpath_l)
     if torn:

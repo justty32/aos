@@ -14,6 +14,13 @@ V1 = SLEEPER + ["v1"]
 V2 = SLEEPER + ["v2"]
 
 
+def owner_env(pid):
+    with open("/proc/%d/environ" % pid, "rb") as f:
+        env = dict(x.decode().split("=", 1) for x in f.read().split(b"\0") if b"=" in x)
+    return {"node": env.get("AOS7_OWNER_NODE"), "tid": env.get("AOS7_OWNER_TID"),
+            "allow_stop": env.get("AOS7_ALLOW_STOP") == "1"}
+
+
 def done(tdir):
     return read_json(os.path.join(tdir, "ctl-done.json"))
 
@@ -21,14 +28,17 @@ def done(tdir):
 class TestOwnerTick(DaemonCase):
     """tick 這邊：寫 owner.json、看到 stopped.json 不起、allow_stop 型別、restart 帶 allow_stop。"""
 
-    def owner(self, node):
-        return read_json(os.path.join(node, "sub", ".aosd", "owner.json"))
+    def owner(self, node, tid):
+        """tick 交給任務的擁有者（astra-7 H-02：owner.json 由子 daemon 拿到鎖後才寫，tick 只經環境變數交棒）。"""
+        pid = self.wait_for(lambda: read_json(os.path.join(self.tdir(node, tid), "pid.json")))["pid"]
+        return owner_env(pid)
 
     def test_owner_json_and_stopped_blocks_keep_and_spawn(self):
         node = self.mknode("lab", [{"name": "d", "mode": "keep", "argv": SLEEPER, "subroot": "lab/sub"}])
         self.assertEqual(self.tick("lab")["started"], ["d-r1"])
-        ow = self.owner(node)
+        ow = self.owner(node, "d-r1")
         self.assertEqual((ow["node"], ow["tid"], ow["allow_stop"]), ("lab", "d-r1", False))
+        self.assertFalse(os.path.exists(os.path.join(node, "sub", ".aosd", "owner.json")))   # tick 不寫，子 daemon 才寫
         # 子 daemon 被路二 stop（allow_stop 允許時它自己寫標記）；這裡直接寫標記、收掉任務
         write_json(os.path.join(node, "sub", ".aosd", "stopped.json"), {"by": "B", "why": "測", "at": "t0", "kill": True})
         self.prog("aos7-ctl", "task", self.tdir(node, "d-r1"), "kill")
@@ -43,7 +53,7 @@ class TestOwnerTick(DaemonCase):
         self.tock("lab")
         os.remove(os.path.join(node, "sub", ".aosd", "stopped.json"))
         self.assertEqual(self.tick("lab")["started"], ["d-r3"])
-        self.assertEqual(self.owner(node)["tid"], "d-r3")
+        self.assertEqual(self.owner(node, "d-r3")["tid"], "d-r3")
 
     def test_allow_stop_type_and_restart_carries_it(self):
         node = self.mknode("lab", [{"name": "bad", "argv": SLEEPER, "subroot": "lab/s2", "allow_stop": "yes"},
@@ -52,14 +62,14 @@ class TestOwnerTick(DaemonCase):
         self.assertEqual(self.tick("lab")["started"], ["d-r1"])
         errs = read_json(os.path.join(node, ".aos", "round.json"))["tasks_error"]
         self.assertTrue(any("allow_stop" in e for e in errs), errs)
-        self.assertTrue(self.owner(node)["allow_stop"])
+        self.assertTrue(self.owner(node, "d-r1")["allow_stop"])
         self.wait_for(lambda: self.state(node, "d-r1") == "live")
         self.tock("lab")
         self.prog("aos7-ctl", "task", self.tdir(node, "d-r1"), "restart")
         self.assertEqual(self.tick("lab")["started"], ["d-r2"])
         b = read_json(os.path.join(self.tdir(node, "d-r2"), "birth.json"))
         self.assertEqual((b["allow_stop"], b["subroot"], b["restart_of"]), (True, "lab/sub", "d-r1"))
-        self.assertEqual((self.owner(node)["tid"], self.owner(node)["allow_stop"]), ("d-r2", True))
+        self.assertEqual((self.owner(node, "d-r2")["tid"], self.owner(node, "d-r2")["allow_stop"]), ("d-r2", True))
 
 
 class TestOwnerDaemon(DaemonCase):

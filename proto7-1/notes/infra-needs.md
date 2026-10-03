@@ -17,16 +17,16 @@
 | 編號 | 需求 | 現況 |
 |---|---|---|
 | N-18 | 舊動作不能倒寫新 daemon 的回合 | 已做（本輪；astra-5 補重開後接管舊持鎖者，限 owner 身分可驗證；astra-6 補認不出時的說明） |
-| N-19 | 請求不能無痕消失 | 部分（spawn、加掛已修；沒有統一的請求 id） |
-| N-20 | 回合關閉可恢復、不重複 | 已做（本輪；astra-5 補同回合去重、逾時補 tock；astra-6 補半行總結） |
-| N-21 | 一個任務或設定壞掉，不連坐、修好能恢復 | 已做（本輪；astra-5 補起任務／ctl 回條／加掛的單項隔離；astra-6 補 daemon 控制檔、reload 驗證） |
-| N-22 | 一般 I/O 失敗走受控路徑 | 部分（不退出、有記錄；掃描看不到不當消失；沒有降級策略） |
+| N-19 | 請求不能無痕消失 | 部分（spawn、加掛已修；astra-7 補 ctl-failed 不覆蓋；沒有統一的請求 id） |
+| N-20 | 回合關閉可恢復、不重複 | 已做（本輪；astra-5 補同回合去重、逾時補 tock；astra-6 補半行總結；astra-7 補 tock 非逾時失敗後先恢復再開回合） |
+| N-21 | 一個任務或設定壞掉，不連坐、修好能恢復 | 已做（本輪；astra-5 補起任務／ctl 回條／加掛的單項隔離；astra-6 補 daemon 控制檔、reload 驗證；astra-7 補 runner 起程序前的 I/O 失敗、UTF-8 半字元壞行） |
+| N-22 | 一般 I/O 失敗走受控路徑 | 部分（不退出、有記錄；掃描看不到不當消失；沒有降級策略；astra-7：回合恢復失敗停在 error 退避重試） |
 | N-09 | 回條與停機說清涵蓋範圍 | 部分 |
 | N-12 | 狀態檔有世代、版本、能表達 unknown | 部分（有 gen；掃描錯誤、用量讀不齊有 unknown；沒有 snapshot 序號） |
 | N-54 | tick／tock 要有逾時，卡住不拖住停機 | 已做 |
-| N-17 | 負載下控制面仍可用 | 部分（冷啟動、控制檔洪水、壞回條擋 stop 已修；容量沒管） |
+| N-17 | 負載下控制面仍可用 | 部分（冷啟動、控制檔洪水、壞回條擋 stop 已修；容量沒管；astra-7：status 有 disk 粗估、可選保留政策） |
 | N-25 | 任務資源歸屬不靠任務能刪的目錄與主 PID | **已答 Q1 (a)**：照現在，spec 寫明 kill 只保證收到哪些 |
-| N-40 | 歷史任務資料夾的成本要有界 | **已做**（Q3 (a)：tock 搬到 tasks-old/；搬移中的讀取 astra-5 已補） |
+| N-40 | 歷史任務資料夾的成本要有界 | **已做**（Q3 (a)：tock 搬到 tasks-old/；搬移中的讀取 astra-5 已補；astra-7：可選 `keep_old_rounds`／`retention.json`，status 的 `disk`，預設仍只搬不刪） |
 | N-45 | 跨 daemon 的控制端點要能照文件配置 | 部分 |
 | N-47 | 路一子根要有標記，父才不會搶 | 已做（本輪；astra-5 補第一次掃描） |
 | N-56 | 讀 JSON 遇到 FIFO 等非一般檔不能卡住 | 已做（第二波） |
@@ -61,20 +61,20 @@
 | N-14 | 上層看得到下層 daemon 的狀態 | nest3 N8；llmteam（父看不到子 daemon 的 status，LLM 只能直接讀子根的 status.json） | D0 的 status 對下層只有 `live:["d1-r1"]` | 可以 | S-20、S-21（daemon 核心不知道從屬） | **沒做**；建議交給工具（例如 `aos7-ctl tree`） | — |
 | N-15 | node 一出生就停著 | sched N3 | 沒預先停的話，沒輪到的 4 條各多跑 2 回合 | 應該 | 之後再說（node 怎麼出生） | **部分**：可以先 pause 一個還不存在的 node（本輪 msg 有註明）；node+ 的 log 帶 `paused` | 技術選型 |
 | N-16 | ctl-done／ 不要只增不減 | sched N7 | 2.6 秒累積 64 個檔 | 可以 | 沒有 | **沒做**（astra-5 F-10 只做了每圈處理預算；一萬個 wake 仍留一萬個回條） | — |
-| N-17 | 負載重時控制面仍然可用 | fleet N2；astra I-11、R8 | 150 條時間線時，啟動 12 秒沒寫 status、不處理 stop；200 條空 node 時第一份 status 晚 4～10 秒 | 必要 | S-06、S-18 | **部分**（本輪）：一圈最多起 20 條新時間線；容量與過載沒管（見 N-41）；astra-5 F-10：控制檔每圈最多 200 件／50 ms，其餘下一圈照檔名接著做，status 照常寫。I-11「首份 status 之後的公平性」沒動：新 node 已照檔名每圈起 20 條，200 空線首測 15 秒只 167 線完成過 tick 是負載問題，使用者已接受慢（N-41）；astra-6 G-01：daemon 控制檔逐件錯誤邊界，一件回條寫不進去搬到 `ctl-failed/`、不再擋住同圈的 stop（`test_astra6.G01`）。200 空線 stop 回條 8.4 秒的容量面沒動（N-41） | 技術選型 |
+| N-17 | 負載重時控制面仍然可用 | fleet N2；astra I-11、R8 | 150 條時間線時，啟動 12 秒沒寫 status、不處理 stop；200 條空 node 時第一份 status 晚 4～10 秒 | 必要 | S-06、S-18 | **部分**（本輪）：一圈最多起 20 條新時間線；容量與過載沒管（見 N-41）；astra-5 F-10：控制檔每圈最多 200 件／50 ms，其餘下一圈照檔名接著做，status 照常寫。I-11「首份 status 之後的公平性」沒動：新 node 已照檔名每圈起 20 條，200 空線首測 15 秒只 167 線完成過 tick 是負載問題，使用者已接受慢（N-41）；astra-6 G-01：daemon 控制檔逐件錯誤邊界，一件回條寫不進去搬到 `ctl-failed/`、不再擋住同圈的 stop（`test_astra6.G01`）。200 空線 stop 回條 8.4 秒的容量面沒動（N-41）；astra-7 H-08：status.json 多 `disk`（各 node tasks／tasks-old 數、`.aosd` bytes，每 30 秒）、`.aosd/retention.json` 可選上限；容量本身仍不限制 | 技術選型 |
 
 ## C. 中斷、重啟與恢復
 
 | 編號 | 需求 | 來源 | 證據 | 優先 | 核心 | 現況 | 決定 |
 |---|---|---|---|---|---|---|---|
 | N-18 | 換了 daemon 之後，舊的 tick／tock 不能倒寫新的回合 | astra I-01、R1 | 舊 tick／tock 停在 rename 前，新 daemon 跑到 r2 後放行，round.json 從 2 退回 1 | 必要 | S-03、S-06、S-08 | **已做**（本輪）：`.aosd/gen.json` 世代＋`AOS7_GEN`；tick／tock 整段拿 `.aos/action.lock`，拿到後比對世代，舊世代什麼都不寫；astra-5 F-04：拿鎖後寫 `.aos/action.owner.json`（pid、gen、starttime），新 daemon 的動作等鎖逾時就 SIGKILL 舊世代且確定同一程序的持有者（不 unlink 鎖檔）；astra-6 G-10：有界接管**只限 owner 身分可驗證**；缺欄位、讀不到 starttime、對不上時照樣不殺，status `last_error`（`prog: "action-lock"`）與 log `stale-holder-unverified` 記原因與人工恢復方法 | 技術選型 |
-| N-19 | 請求不能無痕消失：spawn、ctl、加掛都追得到去向 | astra I-02、R2；swarm N3 | tick 刪了 spawn 檔、還沒起任務就被 kill -9，工作沒了，零紀錄 | 必要 | S-01、S-06、S-10 | **部分**（本輪）：spawn 起完才刪（至少一次），birth.json 記 `spawn`；沒有統一的請求 id 與狀態；astra-5：加掛先寫回條再刪請求、回條寫不進去留請求、重做冪等（F-07）；spawn batch 壞項只跳過那項（F-06）；astra-6 G-01：daemon 控制檔回條寫不進去時原檔搬到 `.aosd/ctl-failed/`、log `ctl-error`、status `last_ctl_error`，追得到去向；仍沒有統一的請求 id | 技術選型（選「至少一次」，不選「恰好一次」） |
-| N-20 | 回合關閉中途被打斷，不能永久漏事件，也不能重複寫總結 | astra I-03、R3；nest3 N1 | 寫了 ended.json 但總結沒寫，該結束事件永遠不報；kill 子 daemon 時一半機率總結跳號或重複 | 必要 | S-08、S-11 | **已做**（本輪）：先寫總結再寫 ended.json；tick／tock 不理 SIGTERM（SIGKILL 保底）；回合已關就不再 tock；astra-5 F-05：同回合已有總結就不寫第二行（只收尾、補 ended.json 限總結裡報過的、round.json 標 `replayed`／`incomplete`）；tock 逾時被殺時 daemon 立刻補一次；astra-6 G-08：append 中途只留半行時，`append_jsonl` 先補換行（半行留著），tock 寫完讀回確認本回合總結已提交才寫 ended／關回合，總結 `errors` 記 `phase: "rounds.jsonl"`（`test_astra6.G08`）。斷電、fsync 語意沒測 | 技術選型 |
-| N-21 | 一個任務壞掉不連坐同一條線；設定寫壞修好後能自己恢復 | astra I-05、I-06、R5；selfmod 6、7、bug 1～3 | birth 改成 `[1]` → 每次 tick rc 1；tock.json 被改成資料夾 → 整條線的 tock 全失敗；interval 寫 `"fast"`／null／1e309 → 時間線永久停，修檔＋rescan 也不恢復；keep 沒寫 name → 每回合起一份 | 必要 | S-05、S-06、S-11 | **已做**（本輪）：birth 讀不到時從 tid 推 name；tock 每個任務各自 try；interval 壞了用預設並記錯；時間線出例外後等 0.5 秒接著跑；壞的一項只跳過那項；astra-5 F-06：起任務前整項驗完、start_task／run_all_ctl／serve_mounts 每項各自 try、batch 壞項只跳那項、`interval_ms` 先檢查範圍再 isfinite（10**309）、wait-tock 讀到非物件當沒有；astra-6：daemon 控制檔也逐件隔離（G-01）；reload 先過第 4 節完整檢查（G-05）。控制入口（任務 ctl、daemon ctl、加掛、spawn、reload）都已單項隔離 | 技術選型 |
-| N-22 | 一般 I/O 失敗走受控路徑 | astra I-07、R6 | `.aosd` 唯讀，或寫 status 時 ENOSPC，daemon 直接 exit 1，不收任務、不留紀錄 | 必要 | S-03、S-06 | **部分**（本輪）：主迴圈每一步出 OSError 都不退出，印 stderr、log 記 `io-error`、status 的 `io_errors` +1；沒有「停止接新工作／降級」的策略；astra-5 F-03：掃描分「確定不存在（ENOENT／ENOTDIR）／看不到（其他 OSError）」，看不到不 kill、記 `scan-error`、`io_errors` +1、下一圈重掃；整體降級策略仍沒有；astra-6：daemon 控制檔逐件錯誤邊界（G-01）、半行總結修復（G-08）、daemon 綁 root fd，root 寫不進去／換掉就照 stop 收尾（G-03）；仍沒有降級策略 | 技術選型 |
-| N-23 | 啟動時有恢復清單：沒關的回合、失聯的 runner、留下的 tmp | astra R16 | runner 寫完 exit 的 tmp、還沒 rename 就被殺，tmp 裡有 23 但被判成 lost | 應該 | S-01、S-06 | **沒做**（astra-5 補了兩項：重開後仍持鎖的舊 tick／tock 由等鎖逾時回收（F-04）；已 append 未 closed 的回合由 tock 去重收尾（F-05）。runner 寫了 tmp 沒 rename 的 exit 仍判 lost）；astra-6 補兩項診斷：半行 rounds.jsonl 由 tock 補換行後繼續（G-08）；認不出身分的舊持鎖者記 `stale-holder-unverified` 與恢復提示（G-10）。runner 的 tmp exit 仍判 lost | — |
+| N-19 | 請求不能無痕消失：spawn、ctl、加掛都追得到去向 | astra I-02、R2；swarm N3 | tick 刪了 spawn 檔、還沒起任務就被 kill -9，工作沒了，零紀錄 | 必要 | S-01、S-06、S-10 | **部分**（本輪）：spawn 起完才刪（至少一次），birth.json 記 `spawn`；沒有統一的請求 id 與狀態；astra-5：加掛先寫回條再刪請求、回條寫不進去留請求、重做冪等（F-07）；spawn batch 壞項只跳過那項（F-06）；astra-6 G-01：daemon 控制檔回條寫不進去時原檔搬到 `.aosd/ctl-failed/`、log `ctl-error`、status `last_ctl_error`，追得到去向；仍沒有統一的請求 id；astra-7 H-07：ctl-failed／ctl-done `.bad` 隔離改成排他建立（`os.link`，撞名再換名），保證不覆蓋舊的隔離檔（`test_astra7.H07`）；仍沒有統一的請求 id，移到 ctl-failed 也不等於可靠保存或已執行 | 技術選型（選「至少一次」，不選「恰好一次」） |
+| N-20 | 回合關閉中途被打斷，不能永久漏事件，也不能重複寫總結 | astra I-03、R3；nest3 N1 | 寫了 ended.json 但總結沒寫，該結束事件永遠不報；kill 子 daemon 時一半機率總結跳號或重複 | 必要 | S-08、S-11 | **已做**（本輪）：先寫總結再寫 ended.json；tick／tock 不理 SIGTERM（SIGKILL 保底）；回合已關就不再 tock；astra-5 F-05：同回合已有總結就不寫第二行（只收尾、補 ended.json 限總結裡報過的、round.json 標 `replayed`／`incomplete`）；tock 逾時被殺時 daemon 立刻補一次；astra-6 G-08：append 中途只留半行時，`append_jsonl` 先補換行（半行留著），tock 寫完讀回確認本回合總結已提交才寫 ended／關回合，總結 `errors` 記 `phase: "rounds.jsonl"`（`test_astra6.G08`）。斷電、fsync 語意沒測；astra-7 H-01：daemon 每次 tock 後看 round.json，還開著（非零退出、讀回確認失敗、不只逾時）就補 tock，補不起來就在下一次 tick 前走「沒關的回合」恢復，恢復成功前不開新回合、phase=error 退避重試、`round_done` 等真的關上才算（`test_astra7.H01`：讀回失敗不重報 ended、短寫不缺號、持續寫不進去停在 r1） | 技術選型 |
+| N-21 | 一個任務壞掉不連坐同一條線；設定寫壞修好後能自己恢復 | astra I-05、I-06、R5；selfmod 6、7、bug 1～3 | birth 改成 `[1]` → 每次 tick rc 1；tock.json 被改成資料夾 → 整條線的 tock 全失敗；interval 寫 `"fast"`／null／1e309 → 時間線永久停，修檔＋rescan 也不恢復；keep 沒寫 name → 每回合起一份 | 必要 | S-05、S-06、S-11 | **已做**（本輪）：birth 讀不到時從 tid 推 name；tock 每個任務各自 try；interval 壞了用預設並記錯；時間線出例外後等 0.5 秒接著跑；壞的一項只跳過那項；astra-5 F-06：起任務前整項驗完、start_task／run_all_ctl／serve_mounts 每項各自 try、batch 壞項只跳那項、`interval_ms` 先檢查範圍再 isfinite（10**309）、wait-tock 讀到非物件當沒有；astra-6：daemon 控制檔也逐件隔離（G-01）；reload 先過第 4 節完整檢查（G-05）。控制入口（任務 ctl、daemon ctl、加掛、spawn、reload）都已單項隔離；astra-7：aos7-run 起程序前的 I/O 失敗（out.log 是資料夾…）寫 exit 127，寫不成時 tock 照 tick 記的 `runner.json` 判 lost（H-06）；JSONL 以 bytes 逐行讀，半個 UTF-8 字元只壞那行（H-04）（`test_astra7.H04`、`H06`） | 技術選型 |
+| N-22 | 一般 I/O 失敗走受控路徑 | astra I-07、R6 | `.aosd` 唯讀，或寫 status 時 ENOSPC，daemon 直接 exit 1，不收任務、不留紀錄 | 必要 | S-03、S-06 | **部分**（本輪）：主迴圈每一步出 OSError 都不退出，印 stderr、log 記 `io-error`、status 的 `io_errors` +1；沒有「停止接新工作／降級」的策略；astra-5 F-03：掃描分「確定不存在（ENOENT／ENOTDIR）／看不到（其他 OSError）」，看不到不 kill、記 `scan-error`、`io_errors` +1、下一圈重掃；整體降級策略仍沒有；astra-6：daemon 控制檔逐件錯誤邊界（G-01）、半行總結修復（G-08）、daemon 綁 root fd，root 寫不進去／換掉就照 stop 收尾（G-03）；仍沒有降級策略；astra-7：回合恢復失敗時保持 error 狀態、記 last_error、退避重試，不以增加 round 遮掉沒提交的總結（H-01）；仍沒有降級策略 | 技術選型 |
+| N-23 | 啟動時有恢復清單：沒關的回合、失聯的 runner、留下的 tmp | astra R16 | runner 寫完 exit 的 tmp、還沒 rename 就被殺，tmp 裡有 23 但被判成 lost | 應該 | S-01、S-06 | **部分**（astra-5 補了兩項：重開後仍持鎖的舊 tick／tock 由等鎖逾時回收（F-04）；已 append 未 closed 的回合由 tock 去重收尾（F-05）。runner 寫了 tmp 沒 rename 的 exit 仍判 lost）；astra-6 補兩項診斷：半行 rounds.jsonl 由 tock 補換行後繼續（G-08）；認不出身分的舊持鎖者記 `stale-holder-unverified` 與恢復提示（G-10）。runner 的 tmp exit 仍判 lost；astra-7：失聯的 runner 補上一項——tick 記 `runner.json`（pid＋starttime），runner 在寫 pid.json 前就死了也判 lost（H-06）；tock 失敗後的開著回合由 daemon 先恢復（H-01）。runner 的 tmp exit 仍判 lost，exit.json 是資料夾仍讀不到 code | — |
 | N-54 | tick／tock 要有逾時；一條線卡住不能拖住停機 | 批次評估隊（[eval/2026-10-03-batch-tick.md](eval/2026-10-03-batch-tick.md)）順帶發現 | `run_prog` 沒有逾時：tick 卡在 I/O 時，那條線的 thread 永遠不回來，daemon 收到 SIGTERM 後 5 秒仍在，最後被 SIGKILL（rc −9） | 必要 | S-06 | **已做**：tick／tock 超過 `action_timeout_s`（預設 30 秒）就 SIGKILL，記錯並標 `incomplete`，下一回合照常；停機時正在跑的動作最多再等 3 秒。測試用「tasks.json 是沒人寫的 FIFO」重現；重開後遺留的持鎖者見 N-18（astra-5 F-04），逾時後補 tock 見 N-20 | 技術選型 |
-| N-24 | 刪掉或搬走的 node 不能被建回來 | subtimeline 1；rename N9 | rm -rf 8 次有 6～8 次被 tock 或 aos7-run 建回 `.aos/round.json`；搬家落在 tick／tock 中途時，總結寫進鬼資料夾 | 應該 | S-06 | **已做**（本輪）：tick／tock 先看 timeline.json；aos7-run 經 fd 寫 exit.json；astra-5 F-09：tick／tock 抓 node 目錄 fd（`/proc/self/fd/N`）做整個動作，鎖內被刪→寫不進去、印 gone，被搬→寫到新位置，不建鬼目錄；astra-6 G-02：起任務前比 node 字串路徑與抓著的 fd，已搬走／換掉就受控失敗（exit 127，不建掛載、不起 runner）；node 底下的掛載目標經 fd 建；aos7-run 拿任務資料夾 fd 與 node cwd。G-03：daemon 的 `.aosd` 經 root fd 寫，不建回舊根（`test_astra6.G02`、`G03`） | 技術選型 |
+| N-24 | 刪掉或搬走的 node 不能被建回來 | subtimeline 1；rename N9 | rm -rf 8 次有 6～8 次被 tock 或 aos7-run 建回 `.aos/round.json`；搬家落在 tick／tock 中途時，總結寫進鬼資料夾 | 應該 | S-06 | **已做**（本輪）：tick／tock 先看 timeline.json；aos7-run 經 fd 寫 exit.json；astra-5 F-09：tick／tock 抓 node 目錄 fd（`/proc/self/fd/N`）做整個動作，鎖內被刪→寫不進去、印 gone，被搬→寫到新位置，不建鬼目錄；astra-6 G-02：起任務前比 node 字串路徑與抓著的 fd，已搬走／換掉就受控失敗（exit 127，不建掛載、不起 runner）；node 底下的掛載目標經 fd 建；aos7-run 拿任務資料夾 fd 與 node cwd。G-03：daemon 的 `.aosd` 經 root fd 寫，不建回舊根（`test_astra6.G02`、`G03`）；astra-7 H-05：最後交接也一致——Popen 前 tick 再比一次，aos7-run 起任務前比 `AOS7_TASK`／`AOS7_NODE`（也是 argv 展開、掛載 `at` 用的同一字串）跟抓著的 fd／cwd 是同一資料夾，不是就 exit 127、不起（`test_astra7.H05`）；長命任務起來之後才搬家的不追隨（照 Q4 收） | 技術選型 |
 
 ## D. 任務歸屬、kill 與收尾
 
@@ -105,7 +105,7 @@
 
 | 編號 | 需求 | 來源 | 證據 | 優先 | 核心 | 現況 | 決定 |
 |---|---|---|---|---|---|---|---|
-| N-40 | 歷史任務資料夾不能讓 tick／tock／status 越跑越慢 | swarm N4；fleet N3；astra R12；lifecycle N-6 | 4000 個舊資料夾：tick 4→56 ms，tock 3→46 ms，daemon CPU 10%→52%；一個短命任務約 16 KB | 必要 | 沒有（P-12 原列默認正常） | **已做**：status 的 live 每 0.25 秒才重算；tock 把結束超過 `keep_ended_rounds`（預設 20）回合的搬到 `.aos/tasks-old/`。swarm：4000 個舊資料夾時 tick 53～70→4～5 ms、tock 63～86→3 ms、回合週期 164～206→100 ms；搬的那一次 tock 85～110 ms；astra-5 F-02：搬移中的讀取用 `aos7_fs.task_read`（讀完原路徑不在就重定位、整份重讀；讀不齊回 unknown），`task_dirs_of` 同 tid 只回一次。磁碟上的歷史總量仍無界 | 〔使用者 10-03〕選 (a) |
+| N-40 | 歷史任務資料夾不能讓 tick／tock／status 越跑越慢 | swarm N4；fleet N3；astra R12；lifecycle N-6 | 4000 個舊資料夾：tick 4→56 ms，tock 3→46 ms，daemon CPU 10%→52%；一個短命任務約 16 KB | 必要 | 沒有（P-12 原列默認正常） | **已做**：status 的 live 每 0.25 秒才重算；tock 把結束超過 `keep_ended_rounds`（預設 20）回合的搬到 `.aos/tasks-old/`。swarm：4000 個舊資料夾時 tick 53～70→4～5 ms、tock 63～86→3 ms、回合週期 164～206→100 ms；搬的那一次 tock 85～110 ms；astra-5 F-02：搬移中的讀取用 `aos7_fs.task_read`（讀完原路徑不在就重定位、整份重讀；讀不齊回 unknown），`task_dirs_of` 同 tid 只回一次。磁碟上的歷史總量仍無界。astra-7 H-08：磁碟總量與掃描成本分開——預設仍只搬不刪（Q3）；可選 timeline.json `keep_old_rounds`（tasks-old 結束超過 N 回合的刪掉，總結 `purged`）、`.aosd/retention.json`（`ctl_done_max`／`ctl_failed_max`／`log_max_bytes`，log 輪替一份 `log.1.jsonl`）；status 的 `disk` 看得到量（`test_astra7.H08`） | 〔使用者 10-03〕選 (a) |
 | N-41 | 每回合兩個 Python 程序的成本要有對策 | fleet N1；astra R11、R17 | 150 條時間線約吃 12 核，回合只跑到該有的 45%；astra 10→200 條，每條完成的回合數 123→11（中位） | 應該 | S-04、S-12 | **已答**：接受，容量寫清楚（約每秒 100～150 回合，見文末） | 已答（10-03） |
 | N-42 | 每個任務的 aos7-run 包裝太重 | fleet N4 | 一個 14 MB；75 個 keep 任務約 1 GB | 可以 | 沒有 | **沒做** | — |
 | N-43 | tick 起大量任務很慢，吃掉 interval | swarm N5 | 起 52 個任務 133 ms | 可以 | S-09 | **沒做** | — |
@@ -151,7 +151,7 @@
 | N-72 | 結束的任務不要在一輪 LLM 思考之內就被搬走 | selfprog | 200 ms 一回合、keep_ended_rounds 20：4 秒就搬到 tasks-old/，比模型想一輪還短；luna 先讀到「不存在」才去猜 tasks-old | 可以 | 沒有 | **部分**：卡寫明「不在 tasks/ 就去 tasks-old/」；沒加時間下限 | — |
 | N-73 | 寫給停著的 daemon 的控制檔怎麼處理 | llmteam | B 寫的 rescan、wake 一直沒回條，花約 20 輪才確定 daemon 死了；留著的 stop 會在下次起來瞬間又停 | 可以 | 之後再說 | **照現在**：下次起來才執行，spec 與卡寫明（llmteam 的選項 a） | 技術選型 |
 | N-74 | daemon 自己的檔被別人寫，要不要報錯 | llmops | haiku 把 `.aosd/paused.json` 寫成空清單想 resume，沒效果也沒錯誤 | 可以 | S-01 | **部分**：卡寫明「status、paused.json、log 是 daemon 的，寫了沒用」 | — |
-| N-75 | 路二的 stop 會被路一的 keep 抵銷 | llmteam D1 | 外部 LLM 只用子 daemon 的控制檔：stop 回條 ok、子 daemon 也退出了，0.16～0.3 秒後父的 keep 以新 gen 把它起回來；外部擋不住，只有改父 node 的 tasks.json 才行 | 應該 | S-21 | **已做**：tick 寫 `<subroot>/.aosd/owner.json`；擁有者沒設 `allow_stop` 時路二的 stop 回 ok:false；允許時 stop 留 `stopped.json`，擁有者的 tick 看到就不起、刪掉才再起；llmteam 探針改驗新行為（`tests/test_owner_reload.py`）；astra-6 G-04：tick 寫 owner.json 前試子根的 daemon.lock，已有 daemon 在跑就不起、不改 owner、記 `tasks_error`，失敗的第二個啟動者改不掉現役 owner（`test_astra6.G04`；剩兩個 tick 在子 daemon 拿鎖前同時認領的窗口）。G-09：spec 寫明 owner.json／stopped.json 是**合作式檔案協定**，任務改得動、分不出是誰改的 | 〔使用者 10-03〕Q5 子 daemon 歸擁有者 |
+| N-75 | 路二的 stop 會被路一的 keep 抵銷 | llmteam D1 | 外部 LLM 只用子 daemon 的控制檔：stop 回條 ok、子 daemon 也退出了，0.16～0.3 秒後父的 keep 以新 gen 把它起回來；外部擋不住，只有改父 node 的 tasks.json 才行 | 應該 | S-21 | **已做**：tick 寫 `<subroot>/.aosd/owner.json`；擁有者沒設 `allow_stop` 時路二的 stop 回 ok:false；允許時 stop 留 `stopped.json`，擁有者的 tick 看到就不起、刪掉才再起；llmteam 探針改驗新行為（`tests/test_owner_reload.py`）；astra-6 G-04：tick 寫 owner.json 前試子根的 daemon.lock，已有 daemon 在跑就不起、不改 owner、記 `tasks_error`，失敗的第二個啟動者改不掉現役 owner（`test_astra6.G04`；剩兩個 tick 在子 daemon 拿鎖前同時認領的窗口）。G-09：spec 寫明 owner.json／stopped.json 是**合作式檔案協定**，任務改得動、分不出是誰改的；astra-7 H-02：認領窗口關掉——tick 不再寫 owner.json，只經環境變數 `AOS7_OWNER_NODE`／`AOS7_OWNER_TID`／`AOS7_ALLOW_STOP` 交給任務，子 daemon 拿到 daemon.lock 後才寫；搶輸鎖的什麼都不寫；同 tick 第二項宣告同一子根不起（`test_astra7.H02`：同 tick 雙宣告、固定競態） | 〔使用者 10-03〕Q5 子 daemon 歸擁有者 |
 | N-76 | 只會整份讀檔的 LLM 要看得到 jsonl 的尾端 | llmteam；llmops | 第一版 read_file 只回前 6000 字：3 個模型都說要看 rounds.jsonl／log 的結尾，B 因此驗不了「剛好 3 回合」 | 可以 | S-01 | **探針工具已改**（`llmop.clip` 回開頭＋結尾）；基礎設施沒有「最新一回合總結」的固定小檔 | — |
 
 **LLM 只靠檔案操作 daemon 的成績**（第一版卡；細節在各探針 README）
@@ -178,6 +178,10 @@
 來源是 [astra-6 報告](play/2026-10-03-astra-6-infra.md)（第二節 G-01～G-10，第三節 N- 建議）。報告建議把 N-20、N-24、N-31、N-75、N-55 從已做改部分、N-21 改部分；G-01～G-10 這輪都修了（G-09、G-10 是技術選型：G-09 只改文件，G-10 不殺、只說明），所以照實維持已做，各列補「astra-6」字樣。沒有新增 N- 號。測試在 `tests/test_astra6.py`（重現情境照報告的 evidence）。仍照實留著的：N-17 容量面、N-19／N-22 部分、N-23 沒做、N-75 兩個 tick 在子 daemon 拿鎖前同時認領的窗口、N-27／N-41 維持原狀。
 
 `--rounds N` 只是「處理 N 次通知就走」，不是資源清理機制；收程序靠擁有者（測試、demo、daemon）的 finally 與 PID，不用廣泛的 `pkill -f`。
+
+## I3. astra-7（10-03）
+
+來源是 [astra-7 報告](play/2026-10-03-astra-7-infra.md)（第四節 H-01～H-09，第五節 N- 建議）。H-01～H-09 這輪都修了（H-08、H-09 是技術選型：H-08 只加**可選**保留設定與容量可見性、預設行為不變；H-09 只改文件與錯誤訊息），所以報告建議改部分的 N-20、N-75、N-24、N-21 照實維持已做，各列補「astra-7」字樣；N-23 補了失聯 runner 一項，從沒做改**部分**。沒有新增 N- 號。測試在 `tests/test_astra7.py`（重現情境照報告的 evidence）。仍照實留著的：N-19 沒有統一請求 id、N-22 沒有降級策略、N-23 runner 的 tmp exit 與 exit.json 是資料夾、N-17 容量不限制、N-40 預設磁碟仍無界（使用者 Q3 選只搬不刪）、N-77／N-78 原界線。
 
 ## J. astra 調查報告二的實驗探針（10-03）
 
@@ -358,3 +362,8 @@
   - G-01 daemon 控制檔逐件錯誤邊界、失敗件搬 `ctl-failed/`（N-17、N-19、N-21）；G-02 起任務跟抓著的 node fd 一致、搬走受控失敗、aos7-run 拿任務資料夾 fd（N-24、N-26）；G-03 daemon 的 `.aosd` 綁 root fd、root 消失照 stop 收尾（N-24、N-26）。
   - G-04 子根已有 daemon 在跑就不認領（N-75、N-47）；G-05 reload 完整驗證（N-31、N-59）；G-06 被宣告接管的掛載改標宣告來源（N-31）。
   - G-07 `_proc` atexit 沿用 grace／group（N-55）；G-08 半行總結補換行、確認提交才寫 ended（N-20、N-23）；G-09 spec 寫明合作式檔案協定、stop-sweep 不比 ROOT（N-75、N-25）；G-10 認不出身分的持鎖者不殺但說明（N-18、N-70、N-09）。
+
+- **astra-7 之後**（10-03，`tests/test_astra7.py`；報告 [H-01～H-09](play/2026-10-03-astra-7-infra.md)）
+  - H-01 tock 沒關上回合（不只逾時）先補、再在下一次 tick 前恢復，失敗就 error 退避（N-20、N-22、N-23）；H-02 owner.json 改由拿到鎖的子 daemon 寫、同 tick 雙宣告不起（N-75、N-47）；H-03 audit hook 寫 writes.jsonl 也補半行換行（N-22、N-23）。
+  - H-04 JSONL 以 bytes 逐行讀、UTF-8 半字元只壞那行（N-21、N-22）；H-05 起任務最後交接比對 AOS7_* 與 fd／cwd（N-24、N-26）；H-06 runner 起程序前 I/O 失敗寫 exit 127、tick 記 runner.json 讓 tock 判 lost（N-21、N-23、N-59）。
+  - H-07 ctl-failed 排他建立不覆蓋（N-19）；H-08 可選 `keep_old_rounds`／`retention.json`、status `disk`（N-40、N-17）；H-09 aos7-run 第二參數的內部交接契約寫進文件與錯誤訊息，fd 無效 rc 2、不回退寫字串路徑（N-13、N-21）。

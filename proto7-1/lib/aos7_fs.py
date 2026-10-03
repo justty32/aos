@@ -202,19 +202,23 @@ def append_jsonl(path, obj):
     return torn
 
 
-def read_jsonl(path):
-    """讀流水帳，壞行跳過。"""
-    out = []
+def read_jsonl(path, with_bad=False):
+    """讀流水帳，壞行跳過。以 bytes 逐行讀、每行各自 UTF-8 解碼＋json.loads：半個 UTF-8 字元（append 被殺在多 byte 字元中間）
+    也只壞那一行，後面的合法行照讀，不會整檔丟例外或回空清單（astra-7 H-04）。with_bad=True 時回 (紀錄, 壞行數)；
+    空行不算壞行。"""
+    out, bad = [], 0
     try:
-        with open(path, encoding="utf-8") as f:
+        with open(path, "rb") as f:
             for line in f:
+                if not line.strip():
+                    continue
                 try:
-                    out.append(json.loads(line))
-                except ValueError:
-                    pass
+                    out.append(json.loads(line.decode("utf-8")))
+                except ValueError:   # UnicodeDecodeError 也是 ValueError
+                    bad += 1
     except OSError:
         pass
-    return out
+    return (out, bad) if with_bad else out
 
 
 def tail_jsonl(path, k, block=65536):

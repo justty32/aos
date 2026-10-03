@@ -12,7 +12,8 @@ import sys
 import time
 
 import aos7_mount
-from aos7_fs import BIN, FD_PREFIX, env_with_bin, node_path, now, read_json, real_path, tail_jsonl, write_json
+from aos7_fs import (BIN, FD_PREFIX, env_with_bin, node_path, now, proc_starttime, read_json, real_path, tail_jsonl,
+                     write_json)
 
 
 KILL_GRACE = 1.0   # spec 第 6 節：SIGTERM 後等至多 1 秒，還在就 SIGKILL
@@ -258,6 +259,9 @@ def task_state(tdir):
         return "ended"
     pid = read_json(os.path.join(tdir, "pid.json"))
     if not isinstance(pid, dict) or not pid:
+        if runner_dead(tdir) and not os.path.exists(os.path.join(tdir, "exit.json")) \
+                and not isinstance(read_json(os.path.join(tdir, "pid.json")), dict):
+            return "lost"   # runner 在寫 pid.json 前就死了、也沒寫成 exit.json（astra-7 H-06）
         return "born"
     if pid_alive(pid.get("pid")) or pid_alive(pid.get("runner_pid")):
         return "live"
@@ -265,6 +269,17 @@ def task_state(tdir):
     if os.path.exists(os.path.join(tdir, "exit.json")):
         return "ended"
     return "lost"
+
+
+def runner_dead(tdir):
+    """tick 記的 runner（`runner.json` 的 pid＋starttime）確定已經不在了嗎。沒有 runner.json（舊任務、人手起的）、
+    讀不懂、starttime 沒記到都回 False（不猜）；pid 不在、是殭屍、或 starttime 不同（pid 被重用）回 True。"""
+    r = read_json(os.path.join(tdir, "runner.json"))
+    if not isinstance(r, dict) or not isinstance(r.get("pid"), int) or r.get("starttime") is None:
+        return False
+    if not pid_alive(r["pid"]):
+        return True
+    return proc_starttime(r["pid"]) != r["starttime"]
 
 
 def is_live(state):
@@ -517,12 +532,16 @@ def same_dir(node, fnode):
         return False
 
 
-def start_task(root, node_id, item, rnd, fnode=None):
+OWNER_ENV = ("AOS7_OWNER_NODE", "AOS7_OWNER_TID", "AOS7_ALLOW_STOP")   # 子 daemon 拿到鎖後才用來寫 owner.json（astra-7 H-02）
+
+
+def start_task(root, node_id, item, rnd, fnode=None, claimed=None):
     """建掛載點、寫 birth.json，用 aos7-run 起任務（新 session，不等）。回 tid。
 
     帶 `subroot` 而子根有 stopped.json（路二 stop 過；Q5）時不起，丟 ValueError（tick 記進 tasks_error）。
     fnode＝寫檔用的 node 路徑（tick 給 node 目錄 fd 的 `/proc/self/fd/N`：node 中途被刪就寫不進去、不建鬼目錄；
-    astra-5 F-09）；任務的環境、cwd、掛載點記錄用實際路徑。"""
+    astra-5 F-09）；任務的環境、cwd、掛載點記錄用實際路徑。claimed＝同一個 tick 已經認領的子根（set，起了就加進去）：
+    同一 tick 第二項宣告同一個子根丟 ValueError、不起（astra-7 H-02）。"""
     root = os.path.abspath(root)
     node = node_path(root, node_id)
     fnode = fnode or node
@@ -533,6 +552,8 @@ def start_task(root, node_id, item, rnd, fnode=None):
         if note:
             raise ValueError(note)
     sp = None
+    if sub_ok and claimed is not None and sub_ok in claimed:
+        raise ValueError("子根 %s 這個 tick 已經有別的任務認領，沒起" % sub_ok)
     if sub_ok:
         sp = os.path.join(fnode, os.path.relpath(node_path(root, sub_ok), node))   # 子根在 node 底下：經 fnode 看
         if subroot_running(sp):
@@ -569,10 +590,11 @@ def start_task(root, node_id, item, rnd, fnode=None):
         # 這個任務要在 sub 開子 daemon（路一）：先建 `<sub>/.aosd/`，父 daemon 掃描就跳過它，
         # 不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）
         os.makedirs(os.path.join(sp, ".aosd"), exist_ok=True)
-        # 子 daemon 歸屬起它的 node（使用者 10-03 Q5）：路二的 stop 要 allow_stop 才有效；擁有者可直接改這個檔
-        write_json(os.path.join(sp, ".aosd", "owner.json"),
-                   {"node": node_id, "tid": tid, "allow_stop": item.get("allow_stop") is True, "at": now()})
+        # 子 daemon 歸屬起它的 node（使用者 10-03 Q5）：owner.json 由子 daemon 拿到 daemon.lock 之後才寫（環境變數交給它），
+        # 搶輸鎖的啟動者什麼都不寫，owner 不會指到沒在跑的那個（astra-7 H-02）
         birth["subroot"] = sub_ok
+        if claimed is not None:
+            claimed.add(sub_ok)
     elif sub_err:
         birth["subroot_error"] = sub_err
     if "inst" in item:
@@ -583,10 +605,13 @@ def start_task(root, node_id, item, rnd, fnode=None):
     env = env_with_bin()
     env.update({"AOS7_ROOT": root, "AOS7_NODE": node, "AOS7_NODE_ID": node_id,
                 "AOS7_TASK": tdir, "AOS7_TID": tid})
-    env.pop("AOS7_SUBROOT", None)   # 子 daemon 起的任務不要繼承父任務的
+    for k in ("AOS7_SUBROOT",) + OWNER_ENV:
+        env.pop(k, None)   # 子 daemon 起的任務不要繼承父任務的
     if birth.get("subroot"):
         # 子根的絕對路徑：argv 寫 ["aos7-daemon", "$AOS7_SUBROOT"]，不必管 cwd 是 node（probes/llmteam 誤解 1）
         env["AOS7_SUBROOT"] = node_path(root, birth["subroot"])
+        env.update({"AOS7_OWNER_NODE": node_id, "AOS7_OWNER_TID": tid,
+                    "AOS7_ALLOW_STOP": "1" if item.get("allow_stop") is True else "0"})
     # 寫入紀錄（spec 第 5 節）：aos7-run 起任務時才把 audit_site/ 放進任務的 PYTHONPATH，
     # 不給 aos7-run 自己（它寫的 pid.json、exit.json 不算任務的寫入；probes/polyglot N7）
     # aos7-run 拿任務資料夾的 fd（第二個參數）讀 birth、寫 pid／exit，cwd 也是 tick 抓著的 node：之後 node 被搬走，
@@ -597,12 +622,22 @@ def start_task(root, node_id, item, rnd, fnode=None):
         write_json(os.path.join(ftdir, "exit.json"), {"code": 127, "at": now(), "round": rnd, "error": str(e)})
         return tid
     try:
-        subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir, str(tfd)], cwd=fnode, env=env,
-                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         start_new_session=True, pass_fds=(tfd,))
+        if not same_dir(node, fnode):
+            # 最後交接前再比一次（astra-7 H-05）：環境、argv 展開、掛載記錄都用字串路徑 node，已經不是抓著的那個就不起
+            raise OSError("node %s 在起任務前被搬走或換掉（現在在 %s），沒起" % (node_id, real_path(fnode)))
+        p = subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir, str(tfd)], cwd=fnode, env=env,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True, pass_fds=(tfd,))
     except OSError as e:
         # 連 aos7-run 都起不來（node 中途被刪、cwd 不在…）：照樣寫 exit.json，不留「永遠剛起」的任務
         write_json(os.path.join(ftdir, "exit.json"), {"code": 127, "at": now(), "round": rnd, "error": str(e)})
+    else:
+        # runner 是誰：它在寫 pid.json 之前就死了（out.log 開不了、連 exit.json 都寫不進去）時，tock 靠這個判 lost，
+        # 不會永遠 born（astra-7 H-06）。runner 自己 Popen 後跟 node 再比一次（H-05），不一致就寫 exit 127、不起任務
+        try:
+            write_json(os.path.join(ftdir, "runner.json"), {"pid": p.pid, "starttime": proc_starttime(p.pid), "at": now()})
+        except OSError:
+            pass
     finally:
         os.close(tfd)
     return tid
