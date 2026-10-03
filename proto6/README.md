@@ -2,6 +2,8 @@
 
 proto6 承接 2026-09-28 的 Linux 身分、資源管理與萬 agent 討論。**目前有 [規格](spec/README.md)、可跑的 Python POC [src/py](src/py/README.md)、[notes](notes/README.md)、可重跑隔離探針，以及早期原型 [proto/](proto/README.md)，還不是完整的 agent 產品。**
 
+> **10-03 起新架構在 [proto7](../proto7/README.md)**（[核心 spec](../proto7/spec/core.md)）。本資料夾的 spec 與程式是到 10-03 為止的現況。
+
 ## 現行入口
 
 - **[spec 入口](spec/README.md)**：唯一事實（第二十七批，2026-10-02）。行為與格式的正本是程式（`src/py/lib`）加測試（`src/py/tests`）加 schema 與範例，spec 只留程式看不出的原則。
