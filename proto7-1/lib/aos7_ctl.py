@@ -1,7 +1,7 @@
 """aos7-ctl：替你寫控制檔的小工具——LLM 直接寫同樣的 JSON 檔也做得到（spec.md 第 8 節，S-01）。
 
     aos7-ctl daemon <root|掛載點> <pause|resume|stop|rescan|wake> [node] [--kill] [--rounds N] [--by WHO]
-    aos7-ctl task <taskdir> <kill|restart> [why] [--by WHO]
+    aos7-ctl task <taskdir> <kill|restart> [why] [--reload] [--by WHO]
 """
 import argparse
 import json
@@ -48,10 +48,13 @@ def daemon_ctl(root, op, node=None, kill=False, by=None, rounds=None):
     return path
 
 
-def task_ctl(tdir, op, why="", by=None):
-    """寫 `<taskdir>/ctl.json`（已有就覆寫：只留最後一個），回檔案路徑。"""
+def task_ctl(tdir, op, why="", by=None, reload=False):
+    """寫 `<taskdir>/ctl.json`（已有就覆寫：只留最後一個），回檔案路徑。reload：restart 照 tasks.json 現在的同名項目（Q6）。"""
     path = os.path.join(os.path.abspath(tdir), "ctl.json")
-    write_json(path, {"op": op, "by": by or default_by(), "why": why})
+    obj = {"op": op, "by": by or default_by(), "why": why}
+    if reload:
+        obj["reload"] = True
+    write_json(path, obj)
     return path
 
 
@@ -69,6 +72,7 @@ def main(argv=None):
     t.add_argument("taskdir")
     t.add_argument("op", choices=TASK_OPS)
     t.add_argument("why", nargs="?", default="")
+    t.add_argument("--reload", action="store_true", help="restart 照 node 現在 tasks.json 的同名項目（不是出生時的定義）")
     t.add_argument("--by")
     try:
         a = ap.parse_args(sys.argv[1:] if argv is None else argv)
@@ -80,6 +84,9 @@ def main(argv=None):
             return 1
         path = daemon_ctl(a.root, a.op, a.node, a.kill, a.by, a.rounds)
     else:
-        path = task_ctl(a.taskdir, a.op, a.why, a.by)
+        if a.reload and a.op != "restart":
+            print("aos7-ctl: --reload 只給 restart", file=sys.stderr)
+            return 1
+        path = task_ctl(a.taskdir, a.op, a.why, a.by, a.reload)
     print(json.dumps({"wrote": path}, ensure_ascii=False))
     return 0

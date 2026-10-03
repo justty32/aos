@@ -28,9 +28,9 @@ kernel／agent 在這裡**只是探針**：刻意寫得彼此不同，用來逼�
 | smoke | probelib 本身 | — |
 | **第二波** | | |
 | [llmkernel](llmkernel/README.md) | LLM 當 kernel：三條時間線輪流跑、超預算的停掉（kernel 是 tick 起的任務） | 1/3 成功；格式沒人讀錯，錯在「比回合慢卻自己看到再 pause」（要用 `resume rounds`）、讀從沒開過回合的 node 的檔、paused.json 不存在。新卡後 haiku 重跑成功。真模型 79＋22 次 |
-| [llmops](llmops/README.md) | LLM 維運員修五個預先弄壞的 node（壞 JSON、忘了 resume、FIFO 的 tasks.json、孤兒、node 搬家） | 整張工單 3/4、逐項 17/20；restart 陷阱 3/4 踩到（N-31→Q6）；逾時訊息帶歪；spawn 讓 keep 變兩份（已修）；**另測出讀 JSON 遇 FIFO 卡死 daemon**（已修）。新卡後 luna 2/5→4/5。真模型 127＋18 次 |
+| [llmops](llmops/README.md) | LLM 維運員修五個預先弄壞的 node（壞 JSON、忘了 resume、FIFO 的 tasks.json、孤兒、node 搬家） | 整張工單 3/4、逐項 17/20；restart 陷阱 3/4 踩到（N-31→Q6，已做 `reload`）；逾時訊息帶歪；spawn 讓 keep 變兩份（已修）；**另測出讀 JSON 遇 FIFO 卡死 daemon**（已修）。新卡後 luna 2/5→4/5。真模型 127＋18 次 |
 | [selfprog](selfprog/README.md) | agent 執行中改自己的 tasks.json、開子時間線、改 interval、wake | result 3/3 對、「每檔只算一次」0/3（一次性工作寫進 tasks.json）；子 node 的 cwd、掛載點位置、tasks-old 搬太快。edit_json 用不上也沒出事。真模型 82 次 |
-| [llmteam](llmteam/README.md) | 路一（任務開子 daemon）＋路二（外部 LLM 寫子 daemon 控制檔） | 子 daemon 路徑基準兩個模型都寫錯→crash loop（已補 `$AOS7_SUBROOT`）；subroot 跑出 node（已擋）；路二 stop 被路一 keep 0.2 秒內起回來（Q5）。真模型 115 次 |
+| [llmteam](llmteam/README.md) | 路一（任務開子 daemon）＋路二（外部 LLM 寫子 daemon 控制檔） | 子 daemon 路徑基準兩個模型都寫錯→crash loop（已補 `$AOS7_SUBROOT`）；subroot 跑出 node（已擋）；路二 stop 被路一 keep 0.2 秒內起回來（Q5，已做：stop 要擁有者 `allow_stop`，允許時留 stopped.json 擋住 keep）。真模型 115 次 |
 | [chaos](chaos/README.md) | 不用 LLM：高頻亂寫控制面＋10 個單一壞輸入 | 不變式全守住；B1～B10 全重現後全修（daemon 被一個壞 round.json 弄退出、FIFO 卡死主迴圈、毒丸 spawn、kill 被偽造的 pid.json 導去打別人…），現在 B 段是 check |
 
 寫新探針：照 [probelib.py](probelib.py) 開頭的範例。

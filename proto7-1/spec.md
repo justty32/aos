@@ -69,7 +69,7 @@ stop：回合中途的時間線不等 interval，（`kill` 時先 kill 本 node 
 |---|---|
 | `pause` | 該 node 不再開新回合（跑著的任務不動、收不到 tock） |
 | `resume` | 恢復 |
-| `stop` | 整個 daemon 結束；`"kill": true` 時先 kill 所有活著的任務。帶 `node` 回 `ok: false`（多半是想停一個 node，該用 pause；probes/llmteam） |
+| `stop` | 整個 daemon 結束；`"kill": true` 時先 kill 所有活著的任務。帶 `node` 回 `ok: false`（多半是想停一個 node，該用 pause；probes/llmteam）。子 daemon 要擁有者允許（下面「子 daemon 的所有權」） |
 | `rescan` | 立刻重掃 node |
 | `wake` | 該 node 正在等下一回合（idle）就不等滿 interval，馬上開下一回合；回合中的照舊等任務或 interval。改了 interval 想馬上生效也用它（probes/event N1、astra-4 I-08） |
 
@@ -82,6 +82,14 @@ stop：回合中途的時間線不等 interval，（`kill` 時先 kill 本 node 
 daemon 讀到後執行，把檔案搬到 `<root>/.aosd/ctl-done/<同名>.json`，內容加上 `"result": {"ok": true, "msg": "...", "at": "...", "queued_at": 控制檔的 mtime}`。回條的 ok 只表示 daemon 接受並改了狀態；pause 真的停住要看 status 的 `phase`／`pause_pending`。讀不懂的也搬過去，`ok: false`。
 
 daemon 收到 SIGTERM／SIGINT＝`stop` 加 `kill: true`（路一：子 daemon 被父時間線 kill 時，帶走自己的任務）。
+
+**子 daemon 的所有權**（使用者 10-03 答 Q5：「子daemon歸屬於哪個node，那他的所有權就歸屬於那個node，如果那個node允許，那stop就有用。」）：
+
+- tick 起帶 `subroot` 的任務時寫 `<subroot>/.aosd/owner.json`＝`{"node": 擁有者 node id, "tid", "allow_stop": bool, "at"}`（`allow_stop` 取任務項目的，預設 false；第 4 節）。擁有者想即時改權限，直接改這個檔（它在擁有者自己的 node 底下）；任務重起（keep、restart）時照項目重寫。
+- 控制檔 `stop`：daemon 讀自己根的 `.aosd/owner.json`。有這個檔、而 `allow_stop` 不是 `true`（檔壞掉也算）→ 不停，回條 `ok: false`，msg 說它屬於哪個 node（任務 tid）、要停請那個 node 設 `allow_stop` 或 kill 這個任務。`allow_stop: true` → 照常 stop，並先寫 `<根>/.aosd/stopped.json`＝`{"by", "why", "at", "kill"}`（取控制檔的 `by`、`why`、`kill`）。沒有 owner.json（頂層 daemon）照舊，不寫 stopped.json。只管 `stop`；pause／resume／wake／rescan 不看所有權。
+- SIGTERM／SIGINT（路一：擁有者 kill 任務）照舊，不看 allow_stop、不寫 stopped.json。
+- 擁有者 node 的 tick 起帶 `subroot` 的任務（tasks.json 的 keep／each、spawn、restart 寫的 spawn 全部）時，`<subroot>/.aosd/stopped.json` 在 → 不起（不佔 tid），記 `tasks_error`（「子 daemon 已被誰在何時 stop；刪掉 stopped.json 就會再起」），spawn 檔照刪。刪掉 stopped.json，下一回合 keep 照常起。
+- daemon 起來時 stopped.json 還在（tick 會擋，所以多半是人手跑 aos7-daemon）：算人決定的，刪掉標記、log 記 `ev: "stopped-cleared"`（`was`＝原內容）。
 
 **狀態** `<root>/.aosd/status.json`（daemon 寫，每圈覆寫）：
 
@@ -139,15 +147,16 @@ tick 把 round +1、`open: true`，並記下本回合的 `started`、`ctl`、`mo
 - `from_round`：從第幾回合起才生效（預設 1）。
 - `name`：沒寫當 `"task"`（birth.json 與 keep 判斷都用它）。
 - `max_live`（可選）：同名活任務已有這麼多個，本回合不起（`keep`＝`each` 加 `max_live: 1`；probes/longrun N-3）。
-- `subroot`（可選，空間路徑）：這個任務要在那裡開子 daemon（路一）。**要在任務自己的 node 底下、不能是 node 本身**（S-10；不合的不建、birth.json 記 `subroot_error`；probes/llmteam 寫成 `"sub"` 就在空間根建了 `.aosd`）。tick 起它之前先建 `<subroot>/.aosd/`，父 daemon 掃描就跳過那棵，不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）。任務多一個環境變數 `AOS7_SUBROOT`＝子根的絕對路徑，argv 寫 `["aos7-daemon", "$AOS7_SUBROOT"]`（cwd 是 node，寫空間路徑會跑錯地方；llmteam 兩個模型都犯）。寫入紀錄把子根整棵算這個任務的（子 daemon 與它的 tick／tock 繼承這個任務的環境）。子 node 要等 `<subroot>/.aosd/status.json` 出現才建，否則父可能先撿走（astra-5 F-08）。restart 會帶上。
-- 某一項欄位型別不對（`name` 不是非空字串、`argv` 不是非空字串陣列、沒 argv 時 `inst` 不是字串、`mounts` 不是物件、`subroot` 不是字串、`from_round` 不是整數、`mode` 不認得）：**只跳過那一項**（tasks.json 與 spawn 同一套檢查；probes/chaos B2～B4），其他照起；tasks.json 整份讀不懂當空表。兩種都記在 round.json 與回合總結的 `tasks_error`（probes/selfmod）。
+- `subroot`（可選，空間路徑）：這個任務要在那裡開子 daemon（路一）。**要在任務自己的 node 底下、不能是 node 本身**（S-10；不合的不建、birth.json 記 `subroot_error`；probes/llmteam 寫成 `"sub"` 就在空間根建了 `.aosd`）。tick 起它之前先建 `<subroot>/.aosd/`，父 daemon 掃描就跳過那棵，不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）。任務多一個環境變數 `AOS7_SUBROOT`＝子根的絕對路徑，argv 寫 `["aos7-daemon", "$AOS7_SUBROOT"]`（cwd 是 node，寫空間路徑會跑錯地方；llmteam 兩個模型都犯）。寫入紀錄把子根整棵算這個任務的（子 daemon 與它的 tick／tock 繼承這個任務的環境）。子 node 要等 `<subroot>/.aosd/status.json` 出現才建，否則父可能先撿走（astra-5 F-08）。restart 會帶上。tick 同時寫 `<subroot>/.aosd/owner.json`；子根有 `.aosd/stopped.json` 時不起（第 2 節「子 daemon 的所有權」）。
+- `allow_stop`（可選，bool，預設 false；只對帶 `subroot` 的有意義）：允許別人用路二的控制檔 `stop` 這個子 daemon（Q5，第 2 節）。restart 會帶上。
+- 某一項欄位型別不對（`name` 不是非空字串、`argv` 不是非空字串陣列、沒 argv 時 `inst` 不是字串、`mounts` 不是物件、`subroot` 不是字串、`allow_stop` 不是 bool、`from_round` 不是整數、`mode` 不認得）：**只跳過那一項**（tasks.json 與 spawn 同一套檢查；probes/chaos B2～B4），其他照起；tasks.json 整份讀不懂當空表。兩種都記在 round.json 與回合總結的 `tasks_error`（probes/selfmod）。
 - `mounts`：**掛載**（S-23）。`{"名字": "空間裡的路徑"}`，路徑相對空間根、跟 node id 同一套（根的 daemon 資料夾是 `.aosd`）。tick 起任務時在任務資料夾建 `mnt/<名字>`，是指向目標的相對符號連結；目標不存在先建成資料夾。名字不能含 `/`、不能以 `.` 開頭；路徑不能是絕對、不能跑出空間根（沿符號連結走到的實際位置也算，realpath 後要在空間根內），不合的不掛、在 birth.json 記 `error`。任務要碰別的 node 或 daemon 的資料夾，一律經過掛載點（第 5 節「只碰給的資料夾」）。**不強制**（沒有 FUSE），靠寫入紀錄檢查。
 
 - `mount_allow`（tasks.json 頂層，可選）：執行中加掛請求的允許清單，空間路徑前綴（`["team/agents/", ".aosd"]`；`"."`＝全部）。比對時請求路徑與每一項都接空間根再 realpath，比**實際位置**（problems.md M-13）；跑出空間根的一律不給。沒寫＝全給（仍要在空間根內）。只管執行中的請求，不管 `mounts` 宣告。
 
 **執行中加掛**（S-23，M-6 使用者選 (b)）：任務寫 `$AOS7_TASK/mount-req/<名字>.json`＝`{"name", "path"（空間路徑）, "why"}`（`name` 可省，由路徑推：路徑只有英數、`-`、`/` 時把 `/` 換成 `_`，例如 `team/agents/bob/inbox` → `team_agents_bob_inbox`；其他（含 `_`、`.`）再接 `-` 與路徑 sha1 前 8 碼，所以不同路徑一定推出不同名字）。下一個 tick 審核：路徑不合、不在 `mount_allow`、名字已掛了別的 → 拒絕；否則建 `mnt/<名字>`、加進 birth.json 的 `mounts`。`name`／`path` 不是字串、請求不是物件、或處理時出任何例外，都寫失敗回條，不影響同一輪其他請求與 tick 的其他工作。請求檔刪掉，回條寫 `$AOS7_TASK/mount-done/<同名>.json`＝請求內容加 `{"result": {"ok", "msg", "at"}}`。被拒的回條留著，`aos7_mount.request` 看到就不再重請（要重請就刪回條）。restart 把加掛的一起帶到新任務。卸掛不做。
 
-`<node>/.aos/spawn/<任意名>.json`：別人請求「下個 tick 起一個任務」，格式同 tasks.json 的一項（多一個可選 `restart_of`；`from_round` 不看），或 `{"batch": [項目, ...]}`（一個檔一次 rename，整批同一回合起；probes/swarm N3）。spawn 一樣看 `mode`／`max_live`：`keep` 而同名已有活的就不起、記 `tasks_error`、檔照刪（probes/llmops：改好 tasks.json 又補 spawn，keep 變兩份）；restart 寫的 spawn 沒有 mode（＝each），不受影響。壞的一項（或整檔讀不懂、不是一般檔）記 `tasks_error`、檔照刪，不會變成每回合的毒丸（chaos B3）。tick **起完才刪**（中途被殺，下次會再起一次，不會無痕丟掉；astra-4 I-02），birth.json 記 `spawn`＝檔名。restart 靠它。
+`<node>/.aos/spawn/<任意名>.json`：別人請求「下個 tick 起一個任務」，格式同 tasks.json 的一項（多一個可選 `restart_of`，restart 寫的還可能有 `mounts_dyn`＝執行中加掛的名字清單，新任務照樣標 `dyn`；`from_round` 不看），或 `{"batch": [項目, ...]}`（一個檔一次 rename，整批同一回合起；probes/swarm N3）。spawn 一樣看 `mode`／`max_live`：`keep` 而同名已有活的就不起、記 `tasks_error`、檔照刪（probes/llmops：改好 tasks.json 又補 spawn，keep 變兩份）；restart 寫的 spawn 沒有 mode（＝each），不受影響。壞的一項（或整檔讀不懂、不是一般檔）記 `tasks_error`、檔照刪，不會變成每回合的毒丸（chaos B3）。tick **起完才刪**（中途被殺，下次會再起一次，不會無痕丟掉；astra-4 I-02），birth.json 記 `spawn`＝檔名。restart 靠它。
 
 測試鉤子：環境變數 `AOS7_TEST_TICK_HANG=<node id>` 時，那個 node 的 tick 寫完 round.json 後就睡著（只給 tests 模擬「tick 卡在 I/O」；以前用 FIFO 的 tasks.json，現在不會卡了）。
 
@@ -166,7 +175,7 @@ tid＝`<name>-r<回合>`，同回合撞名加 `-2`、`-3`（name 裡不是英數
 
 | 檔 | 誰寫 | 內容 |
 |---|---|---|
-| `birth.json` | tick | `{"tid","name","node","round","argv"或"inst","mounts","at","restart_of"}`；`mounts`＝`{名字: {"to": 空間路徑, "at": 掛載點絕對路徑}}`（壞的宣告是 `{"error"}`） |
+| `birth.json` | tick | `{"tid","name","node","round","argv"或"inst","mounts","at","restart_of"}`（有的話加 `subroot`／`subroot_error`、`allow_stop`、`spawn`）；`mounts`＝`{名字: {"to": 空間路徑, "at": 掛載點絕對路徑}}`（壞的宣告是 `{"error"}`；執行中加掛的多 `"dyn": true`） |
 | `mnt/<名字>` | tick | 掛載點（符號連結） |
 | `writes.jsonl` | 任務（audit hook） | 開了寫入紀錄才有，見下 |
 | `mount-req/<名字>.json` | 任務 | 執行中加掛的請求（第 4 節） |
@@ -175,7 +184,7 @@ tid＝`<name>-r<回合>`，同回合撞名加 `-2`、`-3`（name 裡不是英數
 | `out.log` | 任務 | stdout＋stderr |
 | `exit.json` | aos7-run | `{"code","at","round"}`；code 負數＝被訊號殺（-15）；`round` 是結束時 node 的回合數。aos7-run 一開始就抓住任務資料夾的 fd，out.log、pid.json、exit.json 都經過它寫：node 搬家就寫到新位置，被刪就不寫回舊路徑（probes/rename N8；第二波：pid.json 以前用 makedirs 寫，任務資料夾剛被刪時會建回來、測試留下 /tmp 殘留）。一開始資料夾就不在，aos7-run 什麼都不做就退出 |
 | `tock.json` | tock | `{"round": N, "at", "early"}`：第 N 回合剛結束（覆寫，只留最新；漏掉的回合看 node 的 `rounds.jsonl`） |
-| `ctl.json` | 任何人 | `{"op": "kill"或"restart", "by", "why"}` |
+| `ctl.json` | 任何人 | `{"op": "kill"或"restart", "by", "why"}`；restart 可加 `"reload": true`（第 6 節） |
 | `ctl-done.json` | tick／tock | ctl.json 搬過來加 `result` |
 | `ended.json` | tock | `{"round": N}`：tock 在第 N 回合記下它結束 |
 
@@ -198,7 +207,8 @@ tick 用 `aos7-run <taskdir>` 起任務（新 session，tick 不等它）。aos7
 - **kill 只保證收到這些**（使用者 10-03 Q1 選 (a)）：任務的程序群組、群組成員活著的後代所在的群組、環境變數 `AOS7_TID`＋`AOS7_NODE` 都是這個任務的程序。任務故意脫離（setsid 又改環境變數、雙 fork 後清掉環境、刪掉自己的 taskdir）由任務自己負責；daemon 不用 subreaper／cgroup。
 - pid.json 在任務自己寫得到的 taskdir：kill 前先確認那個 pgid 群組裡有程序（或它的父程序＝aos7-run）的環境變數 `AOS7_TID`＋`AOS7_NODE` 是這個任務；不是就不打那個群組（回 `ok: false`），只收環境變數相符的（probes/chaos B7：改了 pgid 的任務能讓 kill 打到別人，包括 daemon）。群組已沒有活成員照常算。
 - `kill`：對 pid.json 的 pgid **以及該群組成員所有後代所在的群組**送 SIGTERM，等至多 1 秒，還在就 SIGKILL（後代：aos-exec 把 inst 的子程式開在另一個 session）。另外掃 `/proc/*/environ`，環境變數 `AOS7_TID` 與 `AOS7_NODE` 都是這個任務、但已被 init 收養的程序（雙 fork、setsid）也一起收（不含 aos7-run；probes/polyglot N5）。
-- `restart`：kill，再把 birth.json 的定義寫成 `spawn/restart-<tid>.json`（帶 `restart_of`），下回合 tick 起新的（維持「任務一律由 tick 啟動」）。
+- `restart`：kill，再把 birth.json 的定義（`name`、`argv`／`inst`、`subroot`、`allow_stop`、`mounts` 宣告）寫成 `spawn/restart-<tid>.json`（帶 `restart_of`），下回合 tick 起新的（維持「任務一律由 tick 啟動」）。**restart 照出生時的定義；改了 tasks.json 想照新的起，用 `reload: true`。**
+- `restart` 加 `"reload": true`（使用者 10-03 答 Q6：「加上flag reload」）：新任務的定義取**自己 node 現在的 `.aos/tasks.json` 裡同名（birth.json 的 `name`）的第一個項目**，去掉 `mode`、`from_round`、`max_live`（跟一般 restart 的 spawn 一樣當 each 起），帶 `restart_of`；掛載＝項目的 `mounts` 加上執行中加掛的（birth.json 標 `dyn` 的；同名以項目為準）。找不到同名項目、tasks.json 讀不懂、或該項目不合格（第 4 節的檢查）→ **整個 ctl 不執行（不 kill）**，回條 `ok: false`，msg 說原因（「不加 reload 會照出生時的定義重起」）。找到就照常 kill、寫 spawn，回條 `result.diff`＝`{欄: {"old", "new"}}`（`argv`、`inst`、`mounts` 宣告、`subroot`、`allow_stop` 有變的），msg 也列 `欄 舊 → 新`；沒變寫「定義沒變」。`reload` 不是 bool → `ok: false`、不執行。沒有 `reload`（或 false）行為不變。
 - 已結束的任務：kill 當成功，但照上面的環境變數比對收掉它留下還活著的子孫（msg 寫 `already ended; N leftover process(es) killed`；astra-4 I-04）；restart 照樣寫 spawn（帶原本的 `mounts` 宣告，新任務照樣掛）。
 - ctl.json 讀不懂或不是 JSON 物件（例如 `[]`）：不執行，照樣搬成 ctl-done.json，內容 `{"raw": 原內容或 "unreadable", "result": {"ok": false, "msg": "not a JSON object"／"unreadable JSON"}}`（同 daemon ctl；不拖垮 tick／tock）。
 
@@ -224,7 +234,7 @@ tick 用 `aos7-run <taskdir>` 起任務（新 session，tick 不等它）。aos7
 `aos7-ctl` 只是「替你寫控制檔」，LLM 用寫檔一樣做得到：
 
 - `aos7-ctl daemon <root> <op> [node] [--kill] [--rounds N]`：寫 `<root>/.aosd/ctl/<時間>-<pid>.json`（`--kill` 給 stop 用，`--rounds` 給 resume 用；op 多一個 `wake`）。`<root>` 也可以是掛進來的 `.aosd` 或 `.aosd/ctl`（任務裡用掛載點）。
-- `aos7-ctl task <taskdir> <kill|restart> [why]`：寫 ctl.json。
+- `aos7-ctl task <taskdir> <kill|restart> [why] [--reload]`：寫 ctl.json（`--reload` 只給 restart，寫 `"reload": true`；給 kill 退出碼 1）。
 - 兩者都可加 `--by WHO`（預設：在任務裡是 `<node-id>:<tid>`，否則 `cli`）；stdout 印一行 `{"wrote": 路徑}`。
 
 ## 9. kernel（S-16～S-18）

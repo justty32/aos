@@ -80,4 +80,4 @@
   - F5：卡與 spec 寫明順序。
   - 細節在 infra-needs N-66、N-67。
 - 離線照稿版的 A 仍寫 `lab/sub` 這種舊寫法，照樣通過（subroot 在自己 node 底下）。
-- D1 列成 infra-needs **Q5**，等使用者決定。D2 取 (a)：照現在，寫明。
+- D1 列成 infra-needs **Q5**；使用者 10-03 答「子 daemon 歸起它的 node，那個 node 允許 stop 才有用」，已做（`allow_stop`、owner.json、stopped.json）。離線照稿改驗新行為：A 設 `allow_stop` 那場 stop 後保持停住；naive 那場 B 的 stop 被拒。D2 取 (a)：照現在，寫明。

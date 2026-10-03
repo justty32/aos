@@ -18,9 +18,9 @@
   - 你比回合慢（一次思考好幾秒，回合幾百 ms）時，要精準只跑 N 回合請用 `resume` 帶 `rounds`，不要自己看到再 pause——等你看到已經多跑十幾回合。
   - daemon 處理後把檔搬到 `.aosd/ctl-done/<同名>.json` 並加 `"result": {"ok", "msg"}`。**ok 只表示接受**，真的停住要看 status。
   - pause 的清單存在 `.aosd/paused.json`，daemon 重開照樣有效。
-- **任務表** `<node>/.aos/tasks.json`＝`{"tasks": [項目...]}`，每次 tick 讀。項目：`{"name", "mode": "keep"|"each", "argv": [...]}`（`keep`＝沒有同名活任務才起；`each`＝每回合起一個），可選 `from_round`、`max_live`、`mounts`（`{"名字": "空間路徑"}`，在任務資料夾建 `mnt/<名字>` 連結）、`subroot`（要在那裡開子 daemon 的空間路徑）。argv 相對路徑以 node 為 cwd。壞掉的一項只跳過那項（記在 `tasks_error`），整份讀不懂當空表。
+- **任務表** `<node>/.aos/tasks.json`＝`{"tasks": [項目...]}`，每次 tick 讀。項目：`{"name", "mode": "keep"|"each", "argv": [...]}`（`keep`＝沒有同名活任務才起；`each`＝每回合起一個），可選 `from_round`、`max_live`、`mounts`（`{"名字": "空間路徑"}`，在任務資料夾建 `mnt/<名字>` 連結）、`subroot`（要在那裡開子 daemon 的空間路徑）、`allow_stop`（true＝允許別人用路二 stop 這個子 daemon，預設 false）。argv 相對路徑以 node 為 cwd。壞掉的一項只跳過那項（記在 `tasks_error`），整份讀不懂當空表。
 - **只起一次的任務**：寫 `<node>/.aos/spawn/<任意名>.json`＝一個項目（或 `{"batch": [項目...]}`），下個 tick 起它、然後刪掉這個檔。**做一次就好的工作用 spawn，不要寫進 tasks.json**（tasks.json 的 `each` 每回合起一份，`keep` 結束了又起）。spawn 一樣看 `mode`／`max_live`：寫 `keep` 而同名已有活的就不起（回合總結的 `tasks_error` 會說）。常駐的任務只改 tasks.json，不要再補 spawn。
-- **任務控制**：寫 `<node>/.aos/tasks/<tid>/ctl.json`＝`{"op": "kill"|"restart", "by", "why"}`。**下一個 tick 或 tock 才執行**，回條在同資料夾 `ctl-done.json`。restart＝照 **birth.json 原本的定義**再起一份（不是照現在的 tasks.json）。**改了 tasks.json 的定義（argv、mounts）想讓它生效，要 kill 不要 restart**：keep 任務被 kill 後，下個 tick 會照現在的 tasks.json 再起。
+- **任務控制**：寫 `<node>/.aos/tasks/<tid>/ctl.json`＝`{"op": "kill"|"restart", "by", "why"}`。**下一個 tick 或 tock 才執行**，回條在同資料夾 `ctl-done.json`。restart＝照 **birth.json 原本的定義**再起一份（不是照現在的 tasks.json）。**改了 tasks.json 的定義（argv、mounts）想照新的重起，寫 `{"op": "restart", "reload": true}`**：照 node 現在 tasks.json 的同名項目起，回條 `result.diff` 列出舊→新（找不到同名項目就整個不執行、也不 kill，回條 `ok: false` 說原因）。keep 任務直接 kill，下個 tick 也會照現在的 tasks.json 再起。
 - **時間線設定** `<node>/.aos/timeline.json`＝`{"interval_ms": 300}`（可選 `keep_ended_rounds`、`action_timeout_s`）。改了下一回合生效（想馬上生效再寫 `wake`）。tick／tock 超過 `action_timeout_s` 會被收掉、記在 `last_error`：先找它卡在哪（tasks.json、spawn、ctl.json 是不是正常的檔），**不要只把逾時調大**。
 - **新 node**：先寫 `<新node>/.aos/tasks.json`，最後寫 `<新node>/.aos/timeline.json`；daemon 1～2 ms 內就會開始。拿掉 timeline.json＝node 消失，上面的活任務會被 kill（要暫停請用 pause）。
 
@@ -30,4 +30,4 @@
 - 任務只該碰自己的 node 與掛載點；自己開的子 node（裡面有 `.aos/timeline.json`）也算別的 node，要改它先把它加掛進來。
 - 任務靠輪詢 `$AOS7_TASK/tock.json` 知道回合結束；任務可以跨回合活著。
 - 子 daemon（路一）：在 tasks.json 加一個任務 `{"name": "subd", "mode": "keep", "argv": ["aos7-daemon", "$AOS7_SUBROOT"], "subroot": "<自己 node 底下的空間路徑，例如 lab/sub>"}`。`subroot` 要在自己的 node 底下；`$AOS7_SUBROOT` 會展開成子根的絕對路徑。**等 `<子根>/.aosd/status.json` 出現之後再建子 node**，不然父 daemon 會先把它們當自己的。子根底下的 node 歸子 daemon 管，父 daemon 看不到。
-- 管別的 daemon（路二）＝寫它的 `<子根>/.aosd/ctl/*.json`。注意：路一的 `keep` 會在子 daemon stop 後馬上把它起回來；要它停著，得改父 node 的 tasks.json。寫給已經停掉的 daemon 的控制檔沒人處理，會留到它下次起來才執行。
+- 管別的 daemon（路二）＝寫它的 `<子根>/.aosd/ctl/*.json`。**子 daemon 歸起它的 node**（看 `<子根>/.aosd/owner.json`）：那個 node 沒設 `allow_stop: true`，路二的 `stop` 會被拒（回條 `ok: false` 說它屬於誰）；pause／resume／wake 不受影響。允許時 stop 會留 `<子根>/.aosd/stopped.json`，父 node 的 keep 就不再起它，**刪掉 stopped.json 才會再起**。擁有者要停自己的子 daemon：kill 那個任務（keep 的先從 tasks.json 拿掉，不然下個 tick 又起）。寫給已經停掉的 daemon 的控制檔沒人處理，會留到它下次起來才執行。

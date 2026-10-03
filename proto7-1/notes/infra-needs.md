@@ -84,7 +84,7 @@
 | N-28 | keep 任務要有正規的「別再起我」 | lifecycle N-5；swarm N6；llmkernel（LLM kernel 寫成 keep，結束後又起一份、再燒一次 LLM，只好改 spawn） | 29 回合裡，rc0、標記檔、自己 kill 各留 29 個資料夾；只有改 tasks.json 有效 | 應該 | 之後再說（任務表誰能改） | **沒做**；本輪提供 `aos7_fs.edit_json`，讓改 tasks.json 不會互相蓋掉 | 已答 D-3 |
 | N-29 | crash loop 要有退避，或至少看得到連續失敗幾次 | lifecycle N-6；llmteam（子 daemon 的 argv 寫錯，keep 每 300 ms 重起，兩場各約 68 個任務資料夾，LLM 10～20 秒後才去看 out.log） | 52 回合起 52 次、52 個資料夾；50 ms interval 下約每分鐘 19 MiB；寫壞的任務默默死了 31 回合都沒人發現 | 應該 | 沒有 | **部分**：ended 有 name、code、by_ctl，kernel 可以自己算；tick 沒有退避 | — |
 | N-30 | ended 要說清是哪個任務、為什麼結束 | lifecycle N-4 | 只有 tid＋code；被 restart 收掉的 code 是 0，跟自己正常結束分不出來 | 應該 | 之後再說（失敗與結束碼） | **已做**（本輪）：ended 加 `name`、`by_ctl` | 技術選型 |
-| N-31 | 能「照新的定義重起」 | selfmod 9；llmops（**真模型 4 次有 3 次先下 restart**，事後讀 birth.json 才改 kill；換新卡後 luna 看出要重起卻停在「等它重啟」）→ **Q6** | 改了 argv 再 restart，新實例仍跑舊的 v1（restart 抄 birth.json） | 應該 | S-17 | **沒做** | **Q6** |
+| N-31 | 能「照新的定義重起」 | selfmod 9；llmops（**真模型 4 次有 3 次先下 restart**，事後讀 birth.json 才改 kill；換新卡後 luna 看出要重起卻停在「等它重啟」）→ **Q6** | 改了 argv 再 restart，新實例仍跑舊的 v1（restart 抄 birth.json） | 應該 | S-17 | **已做**：ctl.json 的 restart 加 `"reload": true`＝照 node 現在 tasks.json 的同名項目重起，回條 `result.diff` 列舊→新；找不到就整個不執行（不 kill）；`aos7-ctl task … restart --reload`。沒有 reload 的 restart 不變（`tests/test_owner_reload.py`） | 〔使用者 10-03〕Q6 加 flag reload |
 | N-32 | pause 時能搶佔正在跑的任務 | sched N5 | 低優先 pause 生效的那一刻，12 次裡 12 次都還有任務在跑 | 應該 | S-17、S-18 | **沒做** | 已答 D-4 |
 
 ## E. 任務表與 spawn
@@ -149,7 +149,7 @@
 | N-72 | 結束的任務不要在一輪 LLM 思考之內就被搬走 | selfprog | 200 ms 一回合、keep_ended_rounds 20：4 秒就搬到 tasks-old/，比模型想一輪還短；luna 先讀到「不存在」才去猜 tasks-old | 可以 | 沒有 | **部分**：卡寫明「不在 tasks/ 就去 tasks-old/」；沒加時間下限 | — |
 | N-73 | 寫給停著的 daemon 的控制檔怎麼處理 | llmteam | B 寫的 rescan、wake 一直沒回條，花約 20 輪才確定 daemon 死了；留著的 stop 會在下次起來瞬間又停 | 可以 | 之後再說 | **照現在**：下次起來才執行，spec 與卡寫明（llmteam 的選項 a） | 技術選型 |
 | N-74 | daemon 自己的檔被別人寫，要不要報錯 | llmops | haiku 把 `.aosd/paused.json` 寫成空清單想 resume，沒效果也沒錯誤 | 可以 | S-01 | **部分**：卡寫明「status、paused.json、log 是 daemon 的，寫了沒用」 | — |
-| N-75 | 路二的 stop 會被路一的 keep 抵銷 | llmteam D1 | 外部 LLM 只用子 daemon 的控制檔：stop 回條 ok、子 daemon 也退出了，0.16～0.3 秒後父的 keep 以新 gen 把它起回來；外部擋不住，只有改父 node 的 tasks.json 才行 | 應該 | S-21 | **沒做**；卡寫明 | **Q5** |
+| N-75 | 路二的 stop 會被路一的 keep 抵銷 | llmteam D1 | 外部 LLM 只用子 daemon 的控制檔：stop 回條 ok、子 daemon 也退出了，0.16～0.3 秒後父的 keep 以新 gen 把它起回來；外部擋不住，只有改父 node 的 tasks.json 才行 | 應該 | S-21 | **已做**：tick 寫 `<subroot>/.aosd/owner.json`；擁有者沒設 `allow_stop` 時路二的 stop 回 ok:false；允許時 stop 留 `stopped.json`，擁有者的 tick 看到就不起、刪掉才再起；llmteam 探針改驗新行為（`tests/test_owner_reload.py`） | 〔使用者 10-03〕Q5 子 daemon 歸擁有者 |
 | N-76 | 只會整份讀檔的 LLM 要看得到 jsonl 的尾端 | llmteam；llmops | 第一版 read_file 只回前 6000 字：3 個模型都說要看 rounds.jsonl／log 的結尾，B 因此驗不了「剛好 3 回合」 | 可以 | S-01 | **探針工具已改**（`llmop.clip` 回開頭＋結尾）；基礎設施沒有「最新一回合總結」的固定小檔 | — |
 
 **LLM 只靠檔案操作 daemon 的成績**（第一版卡；細節在各探針 README）
@@ -165,7 +165,7 @@
 
 ## 要使用者決定
 
-原本留了四條（Q1～Q4），使用者 10-03 全部答了；下面保留題目與答覆。第二波探針新增 **Q5、Q6** 兩條待決定。其餘照使用者 10-03 說的「普通的直接做」，取最簡單的做法，記成技術選型。
+原本留了四條（Q1～Q4），使用者 10-03 全部答了；下面保留題目與答覆。第二波探針新增的 **Q5、Q6**，使用者 10-03 也答了。其餘照使用者 10-03 說的「普通的直接做」，取最簡單的做法，記成技術選型。
 
 ### Q1 daemon 要不要擁有任務的所有子孫程序？（N-25，astra R4）〔使用者 10-03〕選 (a)
 
@@ -227,7 +227,14 @@
   - (b) 不殺，只在 log 記 `orphan`（列 pid），讓人或 kernel 處理。
   - (c) 規定「node 搬家或刪除前要先 pause 或停 daemon」，不支援熱搬，出事是使用者的。
 
-### Q5 路二的 stop 和路一的 keep，誰說了算？（N-75）〔要使用者決定〕
+### Q5 路二的 stop 和路一的 keep，誰說了算？（N-75）〔使用者 10-03 答〕子 daemon 歸起它的 node
+
+> 「子daemon歸屬於哪個node，那他的所有權就歸屬於那個node，如果那個node允許，那stop就有用。」
+>
+> 做法（細節見 [spec.md](../spec.md) 第 2 節「子 daemon 的所有權」）：tasks.json／spawn 項目多可選 `allow_stop`（bool，預設 false，restart 帶上）。tick 起帶 `subroot` 的任務時寫 `<subroot>/.aosd/owner.json`＝`{"node", "tid", "allow_stop", "at"}`，擁有者可直接改它即時調權限。子 daemon 收到控制檔 stop：有 owner.json 而 `allow_stop` 不是 true → 回 ok:false、說它屬於誰；允許 → 照停並寫 `.aosd/stopped.json`＝`{"by", "why", "at", "kill"}`；頂層 daemon（沒有 owner.json）照舊。SIGTERM（擁有者 kill 任務，路一）照舊。擁有者的 tick 看到子根有 stopped.json 就不起（keep／each／spawn／restart 全部），記 `tasks_error`；刪掉才再起。人手直接跑 aos7-daemon 起來時清掉 stopped.json、log 記 `stopped-cleared`。核心 S-21 加了一句。
+>
+> 自己補的細節：owner.json 壞掉當「不允許」；只管 `stop`，pause／resume／wake 不看所有權；被擋時不佔 tid；`allow_stop` 型別錯照現有規則只跳過那一項。
+
 
 - **發生了什麼**（probes/llmteam）
   - A（node `lab` 裡的任務）用路一在 `lab/sub` 開子 daemon，tasks.json 那項是 `keep`。
@@ -240,7 +247,14 @@
   - (b) stop 在子根留一個標記 `.aosd/stopped.json`（by、at）。有標記時 aos7-daemon 起不來（印說明、退出碼非 0）；父的 tick 看到 `subroot` 有標記就不起那個 keep 項目、記 `tasks_error`。刪掉標記＝路二把它起回來（順便給 N-46「路二要能把 daemon 起回來」一條路）。
   - (c) 同 (b)，但只有 stop 帶 `"sticky": true` 才留標記；平常的 stop 照 (a)。
 
-### Q6 restart 照誰的定義？（N-31）〔要使用者決定〕
+### Q6 restart 照誰的定義？（N-31）〔使用者 10-03 答〕加 reload 旗標
+
+> 「加上flag reload」
+>
+> 做法（細節見 [spec.md](../spec.md) 第 6 節）：任務 ctl.json 寫 `{"op": "restart", "reload": true}` 時，新任務照 node 現在 `.aos/tasks.json` 裡同名（birth.json 的 name）項目起，去掉 `mode`／`from_round`／`max_live`，帶 `restart_of`，執行中加掛的照樣帶過去。找不到同名、tasks.json 讀不懂、項目不合格、或 `reload` 不是 bool → 整個 ctl 不執行（不 kill），回條 ok:false 說原因。成功時回條 `result.diff` 與 msg 列舊→新。沒有 reload 的 restart 不變，spec 加警告。`aos7-ctl task <taskdir> restart --reload`。
+>
+> 自己補的細節：同名有好幾項取第一個；執行中加掛的在 birth.json 標 `"dyn": true`，restart 寫的 spawn 帶 `mounts_dyn` 讓新任務照樣標（下次 reload 還分得出來）；掛載同名以 tasks.json 項目為準；diff 比 `argv`、`inst`、`mounts` 宣告、`subroot`、`allow_stop`。
+
 
 - **發生了什麼**（probes/llmops、selfmod 9）
   - 工單：n5 搬到 n5b，hub 的 relay 任務掛載還指舊路徑。正解是改 hub 的 tasks.json，再 **kill**（keep 照新定義重起）。
