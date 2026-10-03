@@ -50,6 +50,8 @@ def validate(item):
             raise ValueError("%s 要是物件" % k)
     if "subroot" in item and not isinstance(item["subroot"], str):
         raise ValueError("subroot 要是字串")
+    if "allow_stop" in item and not isinstance(item["allow_stop"], bool):
+        raise ValueError("allow_stop 要是 true 或 false，拿到 %r" % (item["allow_stop"],))
 
 
 def should_start(item, rnd, live):

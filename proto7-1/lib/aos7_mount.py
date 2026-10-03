@@ -195,6 +195,7 @@ def _serve_one(root, taskdir, allow, item):
         ok = "at" in m
         msg = "掛上 mnt/%s → %s" % (name, good[name]) if ok else m.get("error", "?")
         if ok:
+            m["dyn"] = True   # 執行中加掛的：restart reload 照新定義重起時要另外帶過去（Q6）
             mounts[name] = m
             birth["mounts"] = mounts
             write_json(bpath, birth)

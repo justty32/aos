@@ -85,6 +85,14 @@ class Daemon:
                 return sub
         return None
 
+    def owner(self):
+        """`.aosd/owner.json`（tick 起子 daemon 時寫；Q5）：沒有回 None（頂層 daemon）；壞掉當 {}（不允許）。"""
+        path = os.path.join(self.aosd, "owner.json")
+        if not os.path.lexists(path):
+            return None
+        ow = read_json(path)
+        return ow if isinstance(ow, dict) else {}
+
     def log(self, **kw):
         with self._log_lock:
             append_jsonl(os.path.join(self.aosd, "log.jsonl"), dict(at=now(), **kw))
@@ -121,8 +129,20 @@ class Daemon:
         if op == "stop":
             if ctl.get("node") is not None:   # stop 是整個 daemon；帶 node 多半是想停一個 node（probes/llmteam 誤解 4）
                 return False, "stop 是整個 daemon，不收 node；要停一個 node 用 pause"
+            ow = self.owner()
+            if ow is not None and ow.get("allow_stop") is not True:
+                # 子 daemon 歸屬起它的 node（使用者 10-03 Q5）：那個 node 沒允許，路二的 stop 不算數
+                return False, ("這個 daemon 屬於 node %s（任務 %s），%s 不允許外部 stop；要停請 %s 在 tasks.json 那項設 "
+                               "allow_stop: true（或直接改 .aosd/owner.json），或由 %s kill 這個任務" % (
+                                   ow.get("node", "?"), ow.get("tid", "?"), ow.get("node", "?"), ow.get("node", "?"),
+                                   ow.get("node", "?")))
+            if ow is not None:
+                # 留標記：擁有者 node 的 tick 看到就不再起這個子 daemon（刪掉標記才會再起）
+                write_json(os.path.join(self.aosd, "stopped.json"),
+                           {"by": ctl.get("by"), "why": ctl.get("why"), "at": now(), "kill": bool(ctl.get("kill"))})
             self.stop(bool(ctl.get("kill")))
-            return True, "stopping" + (" with kill" if self.kill_on_stop else "")
+            return True, "stopping" + (" with kill" if self.kill_on_stop else "") + (
+                "；已寫 .aosd/stopped.json，%s 不會再起它（刪掉才會）" % ow.get("node", "?") if ow is not None else "")
         if op == "rescan":
             self.scan()
             return True, "rescanned"
@@ -267,6 +287,14 @@ class Daemon:
         self.gen = (old.get("gen", 0) if isinstance(old, dict) and isinstance(old.get("gen"), int) else 0) + 1
         write_json(os.path.join(self.aosd, "gen.json"), {"gen": self.gen, "pid": os.getpid(), "at": now()})
         self.log(ev="start", pid=os.getpid(), gen=self.gen)
+        sp = os.path.join(self.aosd, "stopped.json")
+        if os.path.lexists(sp):
+            # 被路二 stop 過還是起來了（tick 會擋，所以多半是人手跑的）：算人決定的，標記清掉、記 log（Q5）
+            self.log(ev="stopped-cleared", was=read_json(sp))
+            try:
+                os.remove(sp)
+            except OSError:
+                pass
         while not self.stopping:
             for step in (self.handle_ctl, self.scan, self.write_status):
                 self.guard(step)

@@ -68,6 +68,9 @@ def b_script():
     def wait_stopped(t):
         st = _j(t.base, ST) or {}
         gen0.setdefault("g", st.get("gen"))
+        rc = (_j(t.base, "lab/sub/.aosd/ctl-done/b-3-stop.json") or {}).get("result") or {}
+        if rc.get("ok") is False:
+            return None   # Q5：擁有者 lab 沒允許，stop 被拒
         return None if st.get("stopped") or st.get("gen") != gen0["g"] else "wait"   # 被 keep 起回來就換 gen
 
     def report(t):
@@ -184,7 +187,8 @@ def scene(r, a_model, b_model, caps, tag):
                          (c.get("result") or {}).get("msg")) for c in ctl_done]
         res["B_ctl_misplaced"] = sorted(os.path.relpath(p, sp.root) for p in
                                         glob.glob(os.path.join(sub, ".aosd", "*.json"))
-                                        if os.path.basename(p) not in ("status.json", "paused.json", "gen.json"))
+                                        if os.path.basename(p) not in ("status.json", "paused.json", "gen.json", "owner.json",
+                                                                         "stopped.json"))
         res["ctl_pending"] = sorted(os.listdir(os.path.join(sub, ".aosd", "ctl"))) if os.path.isdir(
             os.path.join(sub, ".aosd", "ctl")) else []
         res["paused_final"] = (read_json(os.path.join(sub, ".aosd", "paused.json"), {}) or {}).get("paused")
@@ -275,8 +279,10 @@ def offline(r):
     r.check("w2 在 resume rounds=3 之後剛好又收 3 回合（含當時進行中的那回合）", res.get("w2_rounds_after_resume") == 3,
             res.get("w2_after_resume_rounds"))
     r.check("B 的 stop 讓子 daemon 退出（log 有 stop）", res["sub_stops"] >= 1)
-    r.check("最後沒有活著的子 daemon（A 拿掉 subd、收掉被 keep 起回來的那份）", not res["sub_daemon_alive_end"],
+    r.check("最後沒有活著的子 daemon（A 設了 allow_stop，stop 留下 stopped.json）", not res["sub_daemon_alive_end"],
             res["sub_daemon_alive_end"])
+    r.check("B stop 之後父的 keep 沒把子 daemon 起回來（Q5：stopped.json 擋住）", not res.get("restarted_after_stop"),
+            res.get("restarted_after_stop"))
     r.check("lab 照常前進", res["lab_advancing"])
     r.check("父 daemon 正常退出、沒有殘留", res["parent_rc"] == 0 and not res["leftover_after_parent_stop"],
             (res["parent_rc"], res["leftover_after_parent_stop"]))
@@ -286,29 +292,24 @@ def offline(r):
     r.measure("subd 任務結束碼", res["subd_exit_codes"])
     r.measure("paused.json 最後內容（子 daemon 重起會照讀）", res["paused_final"])
     r.measure("A 寫進子 daemon 根被寫入紀錄判越界的（前幾項）", res["audit_bad"][:4])
-    if res.get("restarted_after_stop"):
-        r.finding("路二 stop 子 daemon 後，父時間線的 keep 下一個 tick 就把它起回來（新 gen，照讀 paused.json）；"
-                  "只有路一那邊改 tasks.json 才擋得住，控制檔這條路擋不住")
     if res["audit_bad"]:
         r.finding("A 在 lab/sub 底下建 w1／w2 的 node 檔，寫入紀錄判成越界（lab/sub 已是別的 daemon 的根）：誰能替子 daemon 播種 node 沒有說法")
     r.measure("寫入紀錄 ok:false（依任務）", res["audit_bad_by_task"])
 
     # ---- 第二場：A 寫完 READY 就收工（不擋 keep）----
     nv = scene(r, "script-naive", "script", (99, 99), "naive")
-    r.check("naive：B 的 stop 被接受、子 daemon 有退出", nv["sub_stops"] >= 1 and any(c[0] == "stop" and c[3] for c in nv["B_ctl"]),
-            nv["B_ctl"])
-    r.check("naive：父的 keep 在 B stop 之後把子 daemon 起回來（路一路二打架，現況）",
-            (nv.get("restarted_after_stop") or 0) >= 1 and nv["sub_daemon_alive_end"], 
-            (nv.get("restarted_after_stop"), nv["sub_daemon_alive_end"]))
-    r.check("naive：起回來的子 daemon 照讀 paused.json，w1、w2 都停著", nv["paused_final"] == ["w1", "w2"], nv["paused_final"])
+    stop_c = [c for c in nv["B_ctl"] if c[0] == "stop"]
+    r.check("naive：A 沒設 allow_stop，B 的 stop 被拒、回條說子 daemon 屬於 lab（Q5）",
+            stop_c and stop_c[0][3] is False and "屬於 node lab" in (stop_c[0][4] or ""), nv["B_ctl"])
+    r.check("naive：子 daemon 沒停、也沒重起（同一份一直活著）",
+            nv["sub_stops"] == 0 and nv["sub_starts"] == 1 and nv["sub_daemon_alive_end"],
+            (nv["sub_starts"], nv["sub_stops"], nv["sub_daemon_alive_end"]))
+    r.check("naive：子 daemon 一直在，w1、w2 都停著", nv["paused_final"] == ["w1", "w2"], nv["paused_final"])
     r.measure("naive：B 的 report", nv["B_report"])
     r.measure("naive：子 daemon 起／停次數", [nv["sub_starts"], nv["sub_stops"]])
     r.measure("naive：subd 任務結束碼", nv["subd_exit_codes"])
-    r.check("naive：父 daemon 正常退出、連起回來的子 daemon 一起收乾淨", nv["parent_rc"] == 0 and not nv["leftover_after_parent_stop"],
+    r.check("naive：父 daemon 正常退出、連子 daemon 一起收乾淨", nv["parent_rc"] == 0 and not nv["leftover_after_parent_stop"],
             (nv["parent_rc"], nv["leftover_after_parent_stop"]))
-    if nv.get("restarted_after_stop"):
-        r.finding("B（路二）stop 子 daemon，父（路一）的 keep 下一個 tick 就以新 gen 把它起回來；B 只能寫子 daemon 的控制檔，"
-                  "擋不住。subd 結束碼 0，跟「自己做完」分不出來")
     return res
 
 

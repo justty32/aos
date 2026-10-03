@@ -3,6 +3,7 @@
 tick、tock、daemon 共用；kernel 也可以 import `list_tasks`／`task_state`／`is_live` 來看任務。
 所有函式只讀寫檔案與送訊號，不留任何記憶體狀態。
 """
+import json
 import os
 import re
 import signal
@@ -308,6 +309,50 @@ def write_spawn(node, fname, item):
     write_json(os.path.join(node, ".aos", "spawn", fname + ".json"), item)
 
 
+RESTART_KEYS = ("name", "argv", "inst", "subroot", "allow_stop")   # restart 從 birth.json 抄的定義欄位
+DIFF_KEYS = ("argv", "inst", "mounts", "subroot", "allow_stop")
+
+
+def dyn_mounts(birth):
+    """birth.json 裡執行中加掛的（標了 dyn）→ {名字: 空間路徑}。"""
+    m = (birth or {}).get("mounts") or {}
+    return {n: v["to"] for n, v in m.items() if isinstance(v, dict) and v.get("dyn") and "to" in v and "at" in v}
+
+
+def reload_item(node, birth):
+    """restart reload 的新定義：node 現在的 tasks.json 裡跟 birth.json 同名的項目（第一個），去掉 mode／from_round／max_live，
+    掛載＝項目的宣告加上執行中加掛的（同名以項目為準）。回 (項目, None) 或 (None, 說明)；說明時整個 ctl 不執行。"""
+    import aos7_tick   # tick import 這個模組，放在這裡免得互相 import
+    name = birth.get("name") if isinstance(birth.get("name"), str) and birth.get("name") else "task"
+    items, errs = aos7_tick.load_items(node)
+    found = [i for i in items if aos7_tick.item_name(i) == name]
+    if not found:
+        why = "；".join(errs) if errs and not items else "tasks.json 沒有名為 %s 的項目" % name
+        return None, "%s；沒執行（沒 kill）。不加 reload 會照出生時的定義重起" % why
+    try:
+        aos7_tick.validate(found[0])
+    except ValueError as e:
+        return None, "tasks.json 的 %s 不合格：%s；沒執行（沒 kill）" % (name, e)
+    item = {k: v for k, v in found[0].items() if k not in ("mode", "from_round", "max_live", "restart_of", "spawn",
+                                                             "mounts_dyn")}
+    item["name"] = name
+    item["mounts"] = dict(dyn_mounts(birth), **(item.get("mounts") or {}))
+    return item, None
+
+
+def def_diff(birth, item):
+    """舊（birth.json）→ 新（reload 的項目）定義有變的欄位：{欄: {"old", "new"}}。掛載比宣告（名字→空間路徑）。"""
+    out = {}
+    for k in DIFF_KEYS:
+        old = aos7_mount.decl_of(birth) if k == "mounts" else birth.get(k)
+        new = item.get(k)
+        if k == "mounts":
+            new = new or {}
+        if old != new:
+            out[k] = {"old": old, "new": new}
+    return out
+
+
 def run_ctl(node, tid):
     """執行 `<taskdir>/ctl.json`（若有），搬成 ctl-done.json。回紀錄 dict 或 None。"""
     tdir = task_dir(node, tid)
@@ -320,21 +365,41 @@ def run_ctl(node, tid):
         bad = "unreadable JSON" if ctl is None else "not a JSON object"
         ctl = {"raw": "unreadable" if ctl is None else ctl}
     op = ctl.get("op")
+    diff = None
     if bad:
         ok, msg = False, bad
     elif op == "kill":
         ok, msg = kill_task(tdir)
     elif op == "restart":
-        ok, msg = kill_task(tdir)
         birth = birth_of(tdir)
-        item = {k: birth[k] for k in ("name", "argv", "inst", "subroot") if k in birth}
-        item["mounts"] = aos7_mount.decl_of(birth)   # 新任務照原本的宣告重新掛
-        item["restart_of"] = tid
-        write_spawn(node, "restart-" + tid, item)
-        msg += "; spawn written"
+        reload = ctl.get("reload", False)
+        item, diff = None, None
+        if not isinstance(reload, bool):
+            ok, msg = False, "reload 要是 true 或 false，拿到 %r；沒執行（沒 kill）" % (reload,)
+        elif reload:
+            item, msg = reload_item(node, birth)   # 照現在 tasks.json 的同名項目（使用者 10-03 Q6）
+            ok = item is not None
+        else:
+            item = {k: birth[k] for k in RESTART_KEYS if k in birth}
+            item["mounts"] = aos7_mount.decl_of(birth)   # 新任務照原本的宣告重新掛
+        if item is not None:
+            dyn = dyn_mounts(birth)
+            if dyn:
+                item["mounts_dyn"] = sorted(dyn)   # 新任務照樣標 dyn（下次 reload 還分得出來）
+            if reload:
+                diff = def_diff(birth, item)
+            ok, msg = kill_task(tdir)
+            item["restart_of"] = tid
+            write_spawn(node, "restart-" + tid, item)
+            msg += "; spawn written" + ("（reload：照 tasks.json 的 %s；%s）" % (
+                item.get("name") or "task", "；".join("%s %s → %s" % (k, json.dumps(v["old"], ensure_ascii=False),
+                                                              json.dumps(v["new"], ensure_ascii=False))
+                                                     for k, v in diff.items()) or "定義沒變") if reload else "")
     else:
         ok, msg = False, "unknown op %r" % op
     ctl["result"] = {"ok": ok, "msg": msg, "at": now()}
+    if diff is not None:
+        ctl["result"]["diff"] = diff   # reload：舊 → 新定義有變的欄位，讀回條就知道生效的是哪版
     write_json(os.path.join(tdir, "ctl-done.json"), ctl)
     try:
         os.remove(path)
@@ -366,31 +431,65 @@ def new_tid(node, name, rnd):
     return tid
 
 
+def subroot_of(root, node_id, sub):
+    """檢查任務的 `subroot`：回 (空間路徑, None) 或 (None, 錯誤)。要在任務自己的 node 底下、不能是 node 本身
+    （S-10；probes/llmteam 誤解 2：寫成 "sub" 就在空間根建了 .aosd）。"""
+    good, bad = aos7_mount.check({"subroot": sub})
+    sp = node_path(root, good["subroot"]) if good else None
+    if good and aos7_mount.in_root(root, good["subroot"]) and os.path.realpath(sp).startswith(
+            os.path.realpath(node_path(root, node_id)) + os.sep):
+        return good["subroot"], None
+    return None, (bad or ["subroot %s 要在自己的 node（%s）底下" % (sub, node_id)])[0]
+
+
+def stopped_note(root, sub):
+    """子根有 `.aosd/stopped.json`（子 daemon 被路二 stop 過，Q5）就回說明字串，否則 None。"""
+    path = os.path.join(node_path(root, sub), ".aosd", "stopped.json")
+    if not os.path.lexists(path):
+        return None
+    st = read_json(path)
+    st = st if isinstance(st, dict) else {}
+    return "子 daemon（%s）已被 %s 在 %s stop%s；刪掉 %s/.aosd/stopped.json 就會再起" % (
+        sub, st.get("by") or "?", st.get("at") or "?", "（%s）" % st["why"] if st.get("why") else "", sub)
+
+
 def start_task(root, node_id, item, rnd):
-    """建掛載點、寫 birth.json，用 aos7-run 起任務（新 session，不等）。回 tid。"""
+    """建掛載點、寫 birth.json，用 aos7-run 起任務（新 session，不等）。回 tid。
+
+    帶 `subroot` 而子根有 stopped.json（路二 stop 過；Q5）時不起，丟 ValueError（tick 記進 tasks_error）。"""
     root = os.path.abspath(root)
     node = node_path(root, node_id)
+    sub = item.get("subroot")
+    sub_ok, sub_err = subroot_of(root, node_id, sub) if isinstance(sub, str) else (None, None)
+    if sub_ok:
+        note = stopped_note(root, sub_ok)
+        if note:
+            raise ValueError(note)
     tid = new_tid(node, item.get("name"), rnd)
     tdir = task_dir(node, tid)
     os.makedirs(tdir, exist_ok=True)   # 先佔住 tid，掛載點建在裡面
     birth = {"tid": tid, "name": item.get("name") or "task", "node": node_id, "round": rnd,
              "mounts": aos7_mount.make(root, tdir, item.get("mounts") or {}),
              "at": now(), "restart_of": item.get("restart_of")}
+    for n in item.get("mounts_dyn") or ():
+        # restart 帶過來的執行中加掛：照樣標 dyn，之後 reload 才分得出哪些不是 tasks.json 宣告的（Q6）
+        if isinstance(birth["mounts"].get(n), dict):
+            birth["mounts"][n]["dyn"] = True
     if item.get("spawn"):
         birth["spawn"] = item["spawn"]   # 從哪個 spawn 檔起的（追得到請求的去向；astra-4 I-02）
-    sub = item.get("subroot")
-    if isinstance(sub, str):
+    if "allow_stop" in item:
+        birth["allow_stop"] = item["allow_stop"]
+    if sub_ok:
         # 這個任務要在 sub 開子 daemon（路一）：先建 `<sub>/.aosd/`，父 daemon 掃描就跳過它，
         # 不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）
-        good, bad = aos7_mount.check({"subroot": sub})
-        sp = node_path(root, good["subroot"]) if good else None
-        if good and aos7_mount.in_root(root, good["subroot"]) and os.path.realpath(sp).startswith(
-                os.path.realpath(node) + os.sep):
-            os.makedirs(os.path.join(sp, ".aosd"), exist_ok=True)
-            birth["subroot"] = good["subroot"]
-        else:
-            # 子根要在任務自己的 node 底下、不能是 node 本身（S-10；probes/llmteam 誤解 2：寫成 "sub" 就在空間根建了 .aosd）
-            birth["subroot_error"] = (bad or ["subroot %s 要在自己的 node（%s）底下" % (sub, node_id)])[0]
+        sp = node_path(root, sub_ok)
+        os.makedirs(os.path.join(sp, ".aosd"), exist_ok=True)
+        # 子 daemon 歸屬起它的 node（使用者 10-03 Q5）：路二的 stop 要 allow_stop 才有效；擁有者可直接改這個檔
+        write_json(os.path.join(sp, ".aosd", "owner.json"),
+                   {"node": node_id, "tid": tid, "allow_stop": item.get("allow_stop") is True, "at": now()})
+        birth["subroot"] = sub_ok
+    elif sub_err:
+        birth["subroot_error"] = sub_err
     if "inst" in item:
         birth["inst"] = item["inst"]
     else:

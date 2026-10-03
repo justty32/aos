@@ -78,7 +78,8 @@ def script(naive=False):
     return [
         ("read_file", {"path": "lab/.aos/tasks.json"}),
         ("write_file", {"path": "lab/.aos/tasks.json", "content": json.dumps(
-            {"tasks": [{"name": "subd", "mode": "keep", "argv": ["aos7-daemon", "sub"], "subroot": "lab/sub"}]})}),
+            {"tasks": [dict({"name": "subd", "mode": "keep", "argv": ["aos7-daemon", "sub"], "subroot": "lab/sub"},
+                            **({} if naive else {"allow_stop": True}))]})}),   # Q5：允許外面 stop（naive 不設）
         wait_sub_up,                                    # tick 先建 lab/sub/.aosd/，子 daemon 起來寫 status
         ("write_file", {"path": "lab/sub/w1/.aos/tasks.json", "content": wt}),
         ("write_file", {"path": "lab/sub/w1/.aos/timeline.json", "content": tl}),

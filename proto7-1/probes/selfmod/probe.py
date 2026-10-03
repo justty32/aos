@@ -101,7 +101,7 @@ def main():
         r.measure("改了 argv 之後 kill（keep 起回來）：新實例跑的版本", v_kill)
         if v_restart == "v1" and v_kill == "v2":
             r.finding("改任務表的 argv 不會影響跑著的任務；restart 抄 birth.json 的舊 argv（永遠是舊版），"
-                      "反而 kill 讓 keep 照 tasks.json 起回來才換到新版。要「照新定義重起」沒有直接的 op。")
+                      "反而 kill 讓 keep 照 tasks.json 起回來才換到新版。要「照新定義重起」用 restart 加 reload: true（使用者 10-03 Q6）。")
 
         # ---- C. 偽造別的任務的 exit.json ----
         pj = sp.task_file("s", sl2[0], "pid.json")
