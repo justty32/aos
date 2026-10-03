@@ -1,0 +1,11 @@
+{"at": "2026-10-03T14:26:19.982", "ev": "start", "pid": 990804}
+{"at": "2026-10-03T14:26:19.982", "ev": "node+", "node": "n", "round": 0}
+{"at": "2026-10-03T14:26:20.005", "ev": "tick", "node": "n", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T14:26:20.023", "ev": "ctl", "file": "bad.json", "op": null, "node": null, "by": null, "ok": false, "msg": "not a JSON object"}
+{"at": "2026-10-03T14:26:20.029", "ev": "tock", "node": "n", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T14:26:20.117", "ev": "tick", "node": "n", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T14:26:20.133", "ev": "tock", "node": "n", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T14:26:20.239", "ev": "tick", "node": "n", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T14:26:20.246", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T14:26:20.254", "ev": "tock", "node": "n", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T14:26:20.266", "ev": "stop"}

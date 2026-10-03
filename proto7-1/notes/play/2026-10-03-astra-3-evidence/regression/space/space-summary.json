@@ -1,0 +1,37 @@
+{
+  "root": "/tmp/astra3-reg-space-bdhxlbq7",
+  "daemon_rc": 0,
+  "left_before_cleanup": [],
+  "nodes": {
+    "lab": {
+      "round": 64,
+      "received_done": 0,
+      "outbox": 0,
+      "failed": 0
+    },
+    "lab/agents/ada": {
+      "round": 61,
+      "received_done": 24,
+      "outbox": 0,
+      "failed": 0
+    },
+    "lab/agents/ben": {
+      "round": 55,
+      "received_done": 24,
+      "outbox": 0,
+      "failed": 0
+    },
+    "lab/agents/cy": {
+      "round": 49,
+      "received_done": 23,
+      "outbox": 0,
+      "failed": 0
+    }
+  },
+  "audit": {
+    "writes": 4381,
+    "bad": []
+  },
+  "root_removed": true,
+  "left_after_cleanup": []
+}

@@ -1,0 +1,15 @@
+{
+ "pid": 990804,
+ "root": "/tmp/astra3-reg-controls-0trbz1jy/daemon-invalid-json",
+ "at": "2026-10-03T14:26:20.266",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 3,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

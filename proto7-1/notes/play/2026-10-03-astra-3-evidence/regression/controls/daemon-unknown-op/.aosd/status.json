@@ -1,0 +1,15 @@
+{
+ "pid": 991049,
+ "root": "/tmp/astra3-reg-controls-0trbz1jy/daemon-unknown-op",
+ "at": "2026-10-03T14:26:21.243",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 3,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

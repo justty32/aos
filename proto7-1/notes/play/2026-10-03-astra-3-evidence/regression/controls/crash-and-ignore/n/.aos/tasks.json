@@ -1,0 +1,1 @@
+{"tasks": [{"name": "crash", "mode": "keep", "argv": ["/usr/bin/python3", "-c", "raise RuntimeError(\"intentional crash\")"]}, {"name": "ignore", "mode": "keep", "argv": ["/usr/bin/python3", "-c", "import time; time.sleep(60)"]}]}

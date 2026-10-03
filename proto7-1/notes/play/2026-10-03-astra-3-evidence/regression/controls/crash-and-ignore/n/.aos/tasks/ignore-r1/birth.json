@@ -1,0 +1,14 @@
+{
+ "tid": "ignore-r1",
+ "name": "ignore",
+ "node": "n",
+ "round": 1,
+ "mounts": {},
+ "at": "2026-10-03T14:26:24.388",
+ "restart_of": null,
+ "argv": [
+  "/usr/bin/python3",
+  "-c",
+  "import time; time.sleep(60)"
+ ]
+}

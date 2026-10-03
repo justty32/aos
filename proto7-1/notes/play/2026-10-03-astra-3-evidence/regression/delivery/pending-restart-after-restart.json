@@ -1,0 +1,186 @@
+{
+  "case": "pending-restart",
+  "label": "after-restart",
+  "round": 8,
+  "files": {
+    "receiver/inbox/1791008783714780164-sender.json": {
+      "from": "sender",
+      "to": "receiver",
+      "round": 2,
+      "body": "preserve me",
+      "at": "2026-10-03T14:26:23.714"
+    },
+    "sender/.aos/round.json": {
+      "round": 8,
+      "open": false,
+      "tick_at": "2026-10-03T14:26:24.089",
+      "tock_at": "2026-10-03T14:26:24.106",
+      "started": [],
+      "ctl": [],
+      "mounts": []
+    },
+    "sender/.aos/tasks/agent-r1/birth.json": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "sender",
+      "round": 1,
+      "mounts": {},
+      "at": "2026-10-03T14:26:23.582",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "sender/.aos/tasks/agent-r1/ctl-done.json": {
+      "op": "restart",
+      "result": {
+        "ok": true,
+        "msg": "killed; spawn written",
+        "at": "2026-10-03T14:26:23.776"
+      }
+    },
+    "sender/.aos/tasks/agent-r1/ended.json": {
+      "round": 3
+    },
+    "sender/.aos/tasks/agent-r1/exit.json": {
+      "code": 0,
+      "at": "2026-10-03T14:26:23.754",
+      "round": 3
+    },
+    "sender/.aos/tasks/agent-r1/mount-req/receiver_inbox.json": {
+      "name": "receiver_inbox",
+      "path": "receiver/inbox",
+      "why": "寄信給 receiver"
+    },
+    "sender/.aos/tasks/agent-r1/out.log": "{\"at\": \"2026-10-03T14:26:23.632\", \"round\": 0, \"state\": \"idle\", \"msg\": \"啟動：剛出生\"}\n{\"at\": \"2026-10-03T14:26:23.673\", \"round\": 1, \"state\": \"think\", \"msg\": \"think（fake）：1 個動作\"}\n{\"at\": \"2026-10-03T14:26:23.715\", \"round\": 2, \"state\": \"act\", \"msg\": \"send → receiver 先放 outbox（inbox 沒掛，已請求加掛）：preserve me\"}\n{\"at\": \"2026-10-03T14:26:23.747\", \"msg\": \"收到 SIGTERM，結束\"}\n",
+    "sender/.aos/tasks/agent-r1/pid.json": {
+      "pid": 991496,
+      "pgid": 991496,
+      "runner_pid": 991493,
+      "at": "2026-10-03T14:26:23.595"
+    },
+    "sender/.aos/tasks/agent-r1/progress.json": {
+      "round": 2,
+      "state": "act",
+      "steps": 2
+    },
+    "sender/.aos/tasks/agent-r1/state.json": {
+      "state": "act",
+      "round": 2,
+      "steps": 2,
+      "tocks": 2,
+      "plan": [
+        {
+          "tool": "send",
+          "to": "receiver",
+          "body": "preserve me"
+        }
+      ],
+      "pc": 1,
+      "letters": [],
+      "goal": {
+        "say_first": {
+          "to": "receiver",
+          "body": "preserve me"
+        }
+      },
+      "last": "send → receiver 先放 outbox（inbox 沒掛，已請求加掛）：preserve me",
+      "from": null,
+      "active_round": 1
+    },
+    "sender/.aos/tasks/agent-r1/tock.json": {
+      "round": 2,
+      "at": "2026-10-03T14:26:23.709"
+    },
+    "sender/.aos/tasks/agent-r1/usage.json": {
+      "tokens": 90,
+      "calls": 1
+    },
+    "sender/.aos/tasks/agent-r3/birth.json": {
+      "tid": "agent-r3",
+      "name": "agent",
+      "node": "sender",
+      "round": 3,
+      "mounts": {
+        "receiver_inbox": {
+          "to": "receiver/inbox",
+          "at": "/tmp/astra3-reg-delivery-pending-restart-h7uh5cz7/sender/.aos/tasks/agent-r3/mnt/receiver_inbox"
+        }
+      },
+      "at": "2026-10-03T14:26:23.776",
+      "restart_of": "agent-r1",
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "sender/.aos/tasks/agent-r3/mnt/receiver_inbox": {
+      "symlink": "../../../../../receiver/inbox",
+      "exists": true
+    },
+    "sender/.aos/tasks/agent-r3/mount-done/receiver_inbox.json": {
+      "name": "receiver_inbox",
+      "path": "receiver/inbox",
+      "why": "寄信給 receiver",
+      "result": {
+        "ok": true,
+        "msg": "掛上 mnt/receiver_inbox → receiver/inbox",
+        "at": "2026-10-03T14:26:23.888"
+      }
+    },
+    "sender/.aos/tasks/agent-r3/out.log": "{\"at\": \"2026-10-03T14:26:23.828\", \"round\": 2, \"state\": \"act\", \"msg\": \"啟動：接續前任 agent-r1（它停在 act）\"}\n{\"at\": \"2026-10-03T14:26:23.828\", \"round\": 2, \"state\": \"act\", \"msg\": \"recover：act 從第 1 步接著做\"}\n{\"at\": \"2026-10-03T14:26:23.911\", \"round\": 4, \"state\": \"idle\", \"msg\": \"outbox → receiver：preserve me\"}\n",
+    "sender/.aos/tasks/agent-r3/pid.json": {
+      "pid": 991518,
+      "pgid": 991518,
+      "runner_pid": 991516,
+      "at": "2026-10-03T14:26:23.791"
+    },
+    "sender/.aos/tasks/agent-r3/progress.json": {
+      "round": 8,
+      "state": "idle",
+      "steps": 3
+    },
+    "sender/.aos/tasks/agent-r3/state.json": {
+      "state": "idle",
+      "round": 8,
+      "steps": 3,
+      "tocks": 8,
+      "plan": null,
+      "pc": 0,
+      "letters": [],
+      "goal": null,
+      "last": "回到 idle",
+      "from": "agent-r1",
+      "active_round": 1
+    },
+    "sender/.aos/tasks/agent-r3/tock.json": {
+      "round": 8,
+      "at": "2026-10-03T14:26:24.106"
+    },
+    "sender/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "agent",
+          "mode": "keep",
+          "argv": [
+            "aos7-agent"
+          ],
+          "mounts": {}
+        }
+      ]
+    },
+    "sender/.aos/timeline.json": {
+      "interval_ms": 100
+    },
+    "sender/agent.json": {
+      "name": "sender",
+      "llm": "fake",
+      "max_ping": 2
+    },
+    "sender/goal.done.json": {
+      "say_first": {
+        "to": "receiver",
+        "body": "preserve me"
+      }
+    }
+  }
+}

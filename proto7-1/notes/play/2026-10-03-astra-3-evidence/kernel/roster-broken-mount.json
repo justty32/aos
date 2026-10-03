@@ -1,0 +1,198 @@
+{
+ "events": [
+  {
+   "label": "a paused by cap; roster mounted normally",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 120,
+      "acc": 120
+     },
+     "team/b": {
+      "last": 0,
+      "acc": 0
+     }
+    },
+    "paused": {
+     "team/a": {
+      "at": 3,
+      "cap": true
+     }
+    },
+    "issued": {},
+    "round": 3
+   },
+   "paused": true,
+   "status": {
+    "pid": 1019700,
+    "root": "/tmp/astra3-kernel-roster-broken-mount-om253gl_",
+    "at": "2026-10-03T14:30:02.044",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 3,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 3,
+      "phase": "paused",
+      "paused": true,
+      "live": []
+     },
+     "team/b": {
+      "round": 3,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "cap",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量總和 120 > cap_tokens 100；不會自動恢復，要人改 kernel.json",
+     "at": "2026-10-03T14:30:02.028"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     },
+     {
+      "node": "team/b",
+      "inbox": "team/b/inbox",
+      "role": ""
+     }
+    ]
+   }
+  },
+  {
+   "label": "moved member makes roster write crash whole kernel; restart creates old path",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 0,
+      "acc": 0
+     },
+     "team/b": {
+      "last": 0,
+      "acc": 0
+     }
+    },
+    "paused": {},
+    "issued": {},
+    "round": 6
+   },
+   "paused": false,
+   "status": {
+    "pid": 1019700,
+    "root": "/tmp/astra3-kernel-roster-broken-mount-om253gl_",
+    "at": "2026-10-03T14:30:02.595",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 6,
+      "phase": "tock",
+      "paused": false,
+      "live": [
+       "kernel-r5"
+      ]
+     },
+     "team/b": {
+      "round": 6,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     },
+     "team/moved-a": {
+      "round": 6,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "cap",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量總和 120 > cap_tokens 100；不會自動恢復，要人改 kernel.json",
+     "at": "2026-10-03T14:30:02.028"
+    },
+    {
+     "round": 5,
+     "rule": "cap",
+     "target": "team/a",
+     "op": "resume",
+     "why": "總額上限改了（用量 0，上限 100）",
+     "at": "2026-10-03T14:30:02.585"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     },
+     {
+      "node": "team/b",
+      "inbox": "team/b/inbox",
+      "role": ""
+     }
+    ]
+   },
+   "original_kernel_exit": {
+    "code": 1,
+    "at": "2026-10-03T14:30:02.217",
+    "round": 4
+   },
+   "new_old_path_exists": true,
+   "moved_a_usage": {
+    "tokens": 120,
+    "calls": 1
+   }
+  }
+ ],
+ "kernel_logs": {
+  "team/.aos/tasks/kernel-r1": "aos7-kernel: kernel-r1 啟動，等 tock（> 0）\naos7-kernel: 回合 1，0 個決定\naos7-kernel: 回合 2，0 個決定\naos7-kernel: 回合 3，1 個決定\nTraceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra3/proto7-1/bin/aos7-kernel\", line 8, in <module>\n    sys.exit(aos7_kernel.main())\n             ~~~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra3/proto7-1/lib/aos7_kernel.py\", line 159, in main\n    ds = one_round(env, r)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra3/proto7-1/lib/aos7_kernel.py\", line 122, in one_round\n    write_rosters(env, cfg, resolve)\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra3/proto7-1/lib/aos7_kernel.py\", line 113, in write_rosters\n    fs.write_json(path, ros)\n    ~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra3/proto7-1/lib/aos7_fs.py\", line 28, in write_json\n    os.makedirs(d, exist_ok=True)\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"<frozen os>\", line 236, in makedirs\nFileExistsError: [Errno 17] File exists: '/tmp/astra3-kernel-roster-broken-mount-om253gl_/team/.aos/tasks/kernel-r1/mnt/a'\n",
+  "team/.aos/tasks/kernel-r5": "aos7-kernel: kernel-r5 啟動，等 tock（> 3）\naos7-kernel: 回合 5，1 個決定\naos7-kernel: 回合 6，0 個決定\n"
+ },
+ "kernel_exits": {
+  "team/.aos/tasks/kernel-r1": {
+   "code": 1,
+   "at": "2026-10-03T14:30:02.217",
+   "round": 4
+  },
+  "team/.aos/tasks/kernel-r5": {
+   "code": 0,
+   "at": "2026-10-03T14:30:02.812",
+   "round": 6
+  }
+ },
+ "daemon_exit": 0,
+ "cleanup_groups": [
+  1019791,
+  1019713
+ ],
+ "temporary_root": "/tmp/astra3-kernel-roster-broken-mount-om253gl_",
+ "cleaned": true
+}

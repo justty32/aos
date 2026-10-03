@@ -1,0 +1,15 @@
+{
+ "pid": 991504,
+ "root": "/tmp/astra3-reg-controls-0trbz1jy/task-unknown-op",
+ "at": "2026-10-03T14:26:24.351",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 6,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

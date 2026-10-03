@@ -1,0 +1,198 @@
+[
+ {
+  "round": 1,
+  "total": 0,
+  "member_present": true,
+  "decisions": [],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 0,
+     "acc": 0
+    }
+   },
+   "paused": {},
+   "issued": {}
+  }
+ },
+ {
+  "round": 2,
+  "total": 20,
+  "member_present": true,
+  "decisions": [
+   {
+    "round": 2,
+    "rule": "budget",
+    "target": "team/a",
+    "op": "pause",
+    "why": "用量累計 20 > 10"
+   }
+  ],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 20,
+     "acc": 20
+    }
+   },
+   "paused": {
+    "team/a": {
+     "at": 2
+    }
+   },
+   "issued": {}
+  }
+ },
+ {
+  "round": 3,
+  "total": 20,
+  "member_present": false,
+  "decisions": [],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 20,
+     "acc": 20
+    }
+   },
+   "paused": {
+    "team/a": {
+     "at": 2
+    }
+   },
+   "issued": {}
+  }
+ },
+ {
+  "round": 4,
+  "total": 20,
+  "member_present": false,
+  "decisions": [
+   {
+    "round": 4,
+    "rule": "budget",
+    "target": "team/a",
+    "op": "resume",
+    "why": "pause 後已過 2 回合（已不在 members，自己下的 pause 自己收）"
+   }
+  ],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 20,
+     "acc": 20
+    }
+   },
+   "paused": {},
+   "issued": {}
+  }
+ },
+ {
+  "round": 5,
+  "total": 20,
+  "member_present": true,
+  "decisions": [
+   {
+    "round": 5,
+    "rule": "budget",
+    "target": "team/a",
+    "op": "pause",
+    "why": "用量累計 20 > 10"
+   }
+  ],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 20,
+     "acc": 20
+    }
+   },
+   "paused": {
+    "team/a": {
+     "at": 5
+    }
+   },
+   "issued": {}
+  }
+ },
+ {
+  "round": 6,
+  "total": 20,
+  "member_present": false,
+  "decisions": [],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 20,
+     "acc": 20
+    }
+   },
+   "paused": {
+    "team/a": {
+     "at": 5
+    }
+   },
+   "issued": {}
+  }
+ },
+ {
+  "round": 7,
+  "total": 20,
+  "member_present": false,
+  "decisions": [
+   {
+    "round": 7,
+    "rule": "budget",
+    "target": "team/a",
+    "op": "resume",
+    "why": "pause 後已過 2 回合（已不在 members，自己下的 pause 自己收）"
+   }
+  ],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 20,
+     "acc": 20
+    }
+   },
+   "paused": {},
+   "issued": {}
+  }
+ },
+ {
+  "round": 8,
+  "total": 20,
+  "member_present": true,
+  "decisions": [
+   {
+    "round": 8,
+    "rule": "budget",
+    "target": "team/a",
+    "op": "pause",
+    "why": "用量累計 20 > 10"
+   }
+  ],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 20,
+     "acc": 20
+    }
+   },
+   "paused": {
+    "team/a": {
+     "at": 8
+    }
+   },
+   "issued": {}
+  }
+ }
+]

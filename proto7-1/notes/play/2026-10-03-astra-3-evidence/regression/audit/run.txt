@@ -1,0 +1,1 @@
+{"evidence": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra3/proto7-1/notes/play/2026-10-03-astra-3-evidence/regression/audit", "temporary_root_removed": true}

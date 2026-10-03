@@ -1,0 +1,114 @@
+{
+  "case": "deleted",
+  "label": "broken-link",
+  "round": 5,
+  "files": {
+    ".aosd/paused.json": {
+      "paused": [
+        "receiver"
+      ]
+    },
+    "receiver/.aos/timeline.json": {
+      "interval_ms": 100
+    },
+    "sender/.aos/round.json": {
+      "round": 5,
+      "open": false,
+      "tick_at": "2026-10-03T14:26:22.340",
+      "tock_at": "2026-10-03T14:26:22.355",
+      "started": [],
+      "ctl": [],
+      "mounts": []
+    },
+    "sender/.aos/tasks/agent-r1/birth.json": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "sender",
+      "round": 1,
+      "mounts": {
+        "receiver_inbox": {
+          "to": "receiver/inbox",
+          "at": "/tmp/astra3-reg-delivery-deleted-ivhd_d0z/sender/.aos/tasks/agent-r1/mnt/receiver_inbox"
+        }
+      },
+      "at": "2026-10-03T14:26:22.101",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "sender/.aos/tasks/agent-r1/mnt/receiver_inbox": {
+      "symlink": "../../../../../receiver/inbox",
+      "exists": false
+    },
+    "sender/.aos/tasks/agent-r1/mount-done/receiver_inbox.json": {
+      "name": "receiver_inbox",
+      "path": "receiver/inbox",
+      "why": "寄信給 receiver",
+      "result": {
+        "ok": true,
+        "msg": "掛上 mnt/receiver_inbox → receiver/inbox",
+        "at": "2026-10-03T14:26:22.246"
+      }
+    },
+    "sender/.aos/tasks/agent-r1/out.log": "{\"at\": \"2026-10-03T14:26:22.147\", \"round\": 0, \"state\": \"idle\", \"msg\": \"啟動：剛出生\"}\n{\"at\": \"2026-10-03T14:26:22.168\", \"round\": 1, \"state\": \"think\", \"msg\": \"think（fake）：1 個動作\"}\n{\"at\": \"2026-10-03T14:26:22.230\", \"round\": 2, \"state\": \"act\", \"msg\": \"send → receiver 先放 outbox（inbox 沒掛，已請求加掛）：initial letter\"}\n{\"at\": \"2026-10-03T14:26:22.271\", \"round\": 3, \"state\": \"act\", \"msg\": \"outbox → receiver：initial letter\"}\n",
+    "sender/.aos/tasks/agent-r1/pid.json": {
+      "pid": 991219,
+      "pgid": 991219,
+      "runner_pid": 991216,
+      "at": "2026-10-03T14:26:22.114"
+    },
+    "sender/.aos/tasks/agent-r1/progress.json": {
+      "round": 5,
+      "state": "idle",
+      "steps": 3
+    },
+    "sender/.aos/tasks/agent-r1/state.json": {
+      "state": "idle",
+      "round": 5,
+      "steps": 3,
+      "tocks": 5,
+      "plan": null,
+      "pc": 0,
+      "letters": [],
+      "goal": null,
+      "last": "回到 idle",
+      "from": null,
+      "active_round": 1
+    },
+    "sender/.aos/tasks/agent-r1/tock.json": {
+      "round": 5,
+      "at": "2026-10-03T14:26:22.355"
+    },
+    "sender/.aos/tasks/agent-r1/usage.json": {
+      "tokens": 91,
+      "calls": 1
+    },
+    "sender/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "agent",
+          "mode": "keep",
+          "argv": [
+            "aos7-agent"
+          ],
+          "mounts": {}
+        }
+      ]
+    },
+    "sender/.aos/timeline.json": {
+      "interval_ms": 100
+    },
+    "sender/agent.json": {
+      "name": "sender",
+      "llm": "fake",
+      "max_ping": 2
+    },
+    "sender/goal.done.json": {
+      "say_first": {
+        "to": "receiver",
+        "body": "initial letter"
+      }
+    }
+  }
+}

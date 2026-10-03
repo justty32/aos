@@ -1,0 +1,82 @@
+test_parse_plan (test_agent.FakeLLM.test_parse_plan) ... ok
+test_say_first_and_ping (test_agent.FakeLLM.test_say_first_and_ping) ... ok
+test_unreachable_endpoint_falls_back (test_agent.FakeLLM.test_unreachable_endpoint_falls_back) ... ok
+test_rounds_n_exits (test_agent.RoundsFlag.test_rounds_n_exits) ... ok
+test_memory_has_history_and_files (test_agent.StepByStep.test_memory_has_history_and_files) ... ok
+test_progress_says_waiting_llm (test_agent.StepByStep.test_progress_says_waiting_llm)
+R-3：think 一開始就在 progress.json 寫 llm_since；想完後的 progress 沒有它。 ... ok
+test_refused_mount_moves_letter_to_failed (test_agent.StepByStep.test_refused_mount_moves_letter_to_failed) ... ok
+test_restart_mid_think_and_mid_act (test_agent.StepByStep.test_restart_mid_think_and_mid_act) ... ok
+test_roster_goes_into_prompt (test_agent.StepByStep.test_roster_goes_into_prompt)
+R-2 (b)：node 的 .aos/roster.json（kernel 寫的成員名冊）每次 think 都放進 prompt。 ... ok
+test_send_to_deleted_inbox_fails_softly (test_agent.StepByStep.test_send_to_deleted_inbox_fails_softly)
+astra-2 二-5：已掛的收件夾被刪掉或搬走，send 失敗、信放 outbox/failed/ 記原因，agent 不死。 ... ok
+test_send_unmounted_goes_to_outbox_then_mount (test_agent.StepByStep.test_send_unmounted_goes_to_outbox_then_mount)
+S-23、M-6：沒掛的對象，信先放 outbox、寫加掛請求；tick 給了之後，下個 tock 寄出。 ... ok
+test_three_tocks_per_letter (test_agent.StepByStep.test_three_tocks_per_letter) ... ok
+test_tool_exception_does_not_kill_agent (test_agent.StepByStep.test_tool_exception_does_not_kill_agent) ... ok
+test_wake_after_idle_rounds_unless_done (test_agent.StepByStep.test_wake_after_idle_rounds_unless_done)
+agent.json 的 wake：閒了 N 回合沒信就自己想一次；unless 的檔在就不醒；goal.json 不被當成用掉。 ... ok
+test_write_cannot_escape_node (test_agent.StepByStep.test_write_cannot_escape_node) ... ok
+test_ping_pong_to_limit (test_agent.TwoProcesses.test_ping_pong_to_limit) ... ok
+test_nested_daemon_root_is_skipped (test_core.TestScan.test_nested_daemon_root_is_skipped) ... ok
+test_ctl_kill_and_restart (test_core.TestTickTock.test_ctl_kill_and_restart) ... ok
+test_ctl_not_object_gets_failed_receipt (test_core.TestTickTock.test_ctl_not_object_gets_failed_receipt)
+ctl.json 是合法 JSON 但不是物件（`[]`）：寫失敗回條、搬走，tick 照常印結果（astra 試玩二-1）。 ... ok
+test_from_round_and_each (test_core.TestTickTock.test_from_round_and_each) ... ok
+test_inst_task (test_core.TestTickTock.test_inst_task) ... ok
+test_inst_task_kill_reaches_grandchild (test_core.TestTickTock.test_inst_task_kill_reaches_grandchild)
+aos-exec 把子程式開在另一個 session；kill 要連它一起收（P-05）。 ... ok
+test_lost_task (test_core.TestTickTock.test_lost_task) ... ok
+test_task_spans_rounds_and_gets_tock (test_core.TestTickTock.test_task_spans_rounds_and_gets_tock) ... ok
+test_tick_starts_and_does_not_wait (test_core.TestTickTock.test_tick_starts_and_does_not_wait) ... ok
+test_bad_ctl_moved_with_error (test_core_daemon.TestDaemon.test_bad_ctl_moved_with_error) ... ok
+test_early_tock (test_core_daemon.TestDaemon.test_early_tock) ... ok
+test_node_appears_and_round_continues (test_core_daemon.TestDaemon.test_node_appears_and_round_continues) ... ok
+test_pause_resume_stop_kill (test_core_daemon.TestDaemon.test_pause_resume_stop_kill) ... ok
+test_second_daemon_refused (test_core_daemon.TestDaemon.test_second_daemon_refused) ... ok
+test_sigterm_is_stop_kill (test_core_daemon.TestDaemon.test_sigterm_is_stop_kill) ... ok
+test_stop_without_kill_leaves_tasks (test_core_daemon.TestDaemon.test_stop_without_kill_leaves_tasks) ... ok
+test_child_daemon_as_task (test_core_daemon.TestRouteOne.test_child_daemon_as_task) ... ok
+test_round_from_disk_and_last_error (test_core_daemon.TestTickFailure.test_round_from_disk_and_last_error) ... ok
+test_play (test_demo.TestDemo.test_play) ... ok
+test_kernel_asks_mounts_for_new_member (test_kernel.IntegrationTest.test_kernel_asks_mounts_for_new_member)
+M-6：kernel.json 加成員，kernel 自己寫加掛請求；tick 給了之後就看得到。 ... ok
+test_kernel_process (test_kernel.IntegrationTest.test_kernel_process) ... ok
+test_restart_inherits_state_and_rounds_flag (test_kernel.IntegrationTest.test_restart_inherits_state_and_rounds_flag) ... ok
+test_age_kill (test_kernel.RuleTest.test_age_kill) ... ok
+test_budget_pause_then_resume (test_kernel.RuleTest.test_budget_pause_then_resume) ... ok
+test_budget_skips_own_node (test_kernel.RuleTest.test_budget_skips_own_node) ... ok
+test_cap_pause_waits_for_config_change (test_kernel.RuleTest.test_cap_pause_waits_for_config_change)
+R-4：用量總和超過 cap_tokens → pause，冷卻不會 resume；人調高 cap_tokens 後才 resume。 ... ok
+test_existing_ctl_not_overridden (test_kernel.RuleTest.test_existing_ctl_not_overridden) ... ok
+test_llm_wait_is_not_stuck (test_kernel.RuleTest.test_llm_wait_is_not_stuck)
+R-3：progress 寫著 llm_since（在等 LLM）不算卡住；另設 llm_stuck_rounds 才管。 ... ok
+test_removed_member_still_resumed (test_kernel.RuleTest.test_removed_member_still_resumed)
+astra-2 二-7：kernel 自己 pause 的，對方被移出 members 也照樣到期 resume。 ... ok
+test_roster_written_to_members (test_kernel.RuleTest.test_roster_written_to_members)
+R-2 (b)：kernel 把成員名冊寫進每個成員的 .aos/roster.json（經過掛載點），沒變就不重寫。 ... ok
+test_stuck_resets_on_change_and_ignores_no_progress (test_kernel.RuleTest.test_stuck_resets_on_change_and_ignores_no_progress) ... ok
+test_stuck_restart_counts_member_rounds (test_kernel.RuleTest.test_stuck_restart_counts_member_rounds) ... ok
+test_task_state (test_kernel.RuleTest.test_task_state) ... ok
+test_unmounted_member_is_invisible (test_kernel.RuleTest.test_unmounted_member_is_invisible)
+S-23：成員的 .aos 沒掛給 kernel，就看不到它、也不會對它下決定。 ... ok
+test_audit_flags_writes_outside (test_mount.TestAudit.test_audit_flags_writes_outside) ... ok
+test_audit_uses_dir_fd_and_declared_target (test_mount.TestAudit.test_audit_uses_dir_fd_and_declared_target)
+二-4：dir_fd 的相對路徑記成實際位置；任務自己把掛載點改指別處，寫入不算 ok。 ... ok
+test_ctl_accepts_mounted_dirs (test_mount.TestMount.test_ctl_accepts_mounted_dirs) ... ok
+test_resolver (test_mount.TestMount.test_resolver) ... ok
+test_restart_keeps_mounts (test_mount.TestMount.test_restart_keeps_mounts) ... ok
+test_tick_makes_mounts (test_mount.TestMount.test_tick_makes_mounts) ... ok
+test_tick_serves_requests (test_mount.TestMountRequest.test_tick_serves_requests) ... ok
+test_allow_and_make_follow_symlinks (test_mount.TestMountRequestEdges.test_allow_and_make_follow_symlinks)
+二-3：mount_allow 比 realpath；沿連結跑出空間根的不給、也不在外面建資料夾。 ... ok
+test_auto_names_do_not_collide (test_mount.TestMountRequestEdges.test_auto_names_do_not_collide)
+二-2：`a/b` 與 `a_b` 推出不同名字，兩個都掛得上。 ... ok
+test_bad_name_gets_receipt_and_rest_served (test_mount.TestMountRequestEdges.test_bad_name_gets_receipt_and_rest_served)
+二-1：name 是非空陣列也寫失敗回條；同一輪後面的請求照樣處理，tick 不出錯。 ... ok
+
+----------------------------------------------------------------------
+Ran 60 tests in 10.888s
+
+OK

@@ -1,0 +1,17 @@
+{"at": "2026-10-03T14:26:22.954", "ev": "start", "pid": 991372}
+{"at": "2026-10-03T14:26:22.955", "ev": "node+", "node": "n", "round": 0}
+{"at": "2026-10-03T14:26:22.973", "ev": "tick", "node": "n", "round": 1, "started": ["sleeper-r1"], "rc": 0}
+{"at": "2026-10-03T14:26:23.110", "ev": "tock", "node": "n", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T14:26:23.126", "ev": "tick", "node": "n", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T14:26:23.141", "ev": "tock", "node": "n", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T14:26:23.247", "ev": "tick", "node": "n", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T14:26:23.263", "ev": "tock", "node": "n", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T14:26:23.368", "ev": "tick", "node": "n", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T14:26:23.386", "ev": "tock", "node": "n", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T14:26:23.487", "ev": "tick", "node": "n", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T14:26:23.505", "ev": "tock", "node": "n", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T14:26:23.604", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T14:26:23.608", "ev": "tick", "node": "n", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T14:26:23.618", "ev": "kill", "node": "n", "tid": "sleeper-r1", "ok": true, "msg": "killed"}
+{"at": "2026-10-03T14:26:23.635", "ev": "tock", "node": "n", "round": 6, "rc": 0, "ended": [{"tid": "sleeper-r1", "code": -15}], "early": true}
+{"at": "2026-10-03T14:26:23.644", "ev": "stop"}

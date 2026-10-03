@@ -1,0 +1,99 @@
+[
+  {
+    "case": "missing",
+    "label": "after-12",
+    "round": 12,
+    "evidence": "missing-after-12.json"
+  },
+  {
+    "case": "missing",
+    "cleanup_survivors": [],
+    "removed_root": "/tmp/astra3-reg-delivery-missing-fp8ezs0s"
+  },
+  {
+    "case": "denied",
+    "label": "failed",
+    "round": 8,
+    "evidence": "denied-failed.json"
+  },
+  {
+    "case": "denied",
+    "label": "allow-and-delete-receipt",
+    "round": 16,
+    "evidence": "denied-allow-and-delete-receipt.json"
+  },
+  {
+    "case": "denied",
+    "label": "restart",
+    "round": 24,
+    "evidence": "denied-restart.json"
+  },
+  {
+    "case": "denied",
+    "cleanup_survivors": [],
+    "removed_root": "/tmp/astra3-reg-delivery-denied-w3wu8spu"
+  },
+  {
+    "case": "deleted",
+    "label": "initial",
+    "round": 5,
+    "evidence": "deleted-initial.json"
+  },
+  {
+    "case": "deleted",
+    "label": "broken-link",
+    "round": 5,
+    "evidence": "deleted-broken-link.json"
+  },
+  {
+    "case": "deleted",
+    "label": "after-change",
+    "round": 13,
+    "evidence": "deleted-after-change.json"
+  },
+  {
+    "case": "deleted",
+    "cleanup_survivors": [],
+    "removed_root": "/tmp/astra3-reg-delivery-deleted-ivhd_d0z"
+  },
+  {
+    "case": "moved",
+    "label": "initial",
+    "round": 5,
+    "evidence": "moved-initial.json"
+  },
+  {
+    "case": "moved",
+    "label": "broken-link",
+    "round": 5,
+    "evidence": "moved-broken-link.json"
+  },
+  {
+    "case": "moved",
+    "label": "after-change",
+    "round": 13,
+    "evidence": "moved-after-change.json"
+  },
+  {
+    "case": "moved",
+    "cleanup_survivors": [],
+    "removed_root": "/tmp/astra3-reg-delivery-moved-4brm166z"
+  },
+  {
+    "case": "pending-restart",
+    "label": "queued",
+    "round": 2,
+    "evidence": "pending-restart-queued.json"
+  },
+  {
+    "case": "pending-restart",
+    "label": "after-restart",
+    "round": 8,
+    "evidence": "pending-restart-after-restart.json"
+  },
+  {
+    "case": "pending-restart",
+    "cleanup_survivors": [],
+    "removed_root": "/tmp/astra3-reg-delivery-pending-restart-h7uh5cz7"
+  }
+]

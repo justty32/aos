@@ -1,0 +1,326 @@
+{
+ "events": [
+  {
+   "label": "budget paused",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 20,
+      "acc": 20
+     }
+    },
+    "paused": {
+     "team/a": {
+      "at": 3
+     }
+    },
+    "issued": {},
+    "round": 3
+   },
+   "paused": true,
+   "status": {
+    "pid": 1019412,
+    "root": "/tmp/astra3-kernel-cap-budget-mvguyqm_",
+    "at": "2026-10-03T14:29:59.156",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 3,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 3,
+      "phase": "paused",
+      "paused": true,
+      "live": []
+     },
+     "team/b": {
+      "round": 3,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:59.142"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  },
+  {
+   "label": "cap takes over rate pause",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 120,
+      "acc": 120
+     }
+    },
+    "paused": {
+     "team/a": {
+      "at": 4,
+      "cap": true
+     }
+    },
+    "issued": {},
+    "round": 4
+   },
+   "paused": true,
+   "status": {
+    "pid": 1019412,
+    "root": "/tmp/astra3-kernel-cap-budget-mvguyqm_",
+    "at": "2026-10-03T14:29:59.319",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 4,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 3,
+      "phase": "paused",
+      "paused": true,
+      "live": []
+     },
+     "team/b": {
+      "round": 4,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:59.142"
+    },
+    {
+     "round": 4,
+     "rule": "cap",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量總和 120 > cap_tokens 100；不會自動恢復，要人改 kernel.json",
+     "at": "2026-10-03T14:29:59.324"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  },
+  {
+   "label": "still cap paused beyond original cooldown",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 120,
+      "acc": 120
+     }
+    },
+    "paused": {
+     "team/a": {
+      "at": 4,
+      "cap": true
+     }
+    },
+    "issued": {},
+    "round": 14
+   },
+   "paused": true,
+   "status": {
+    "pid": 1019412,
+    "root": "/tmp/astra3-kernel-cap-budget-mvguyqm_",
+    "at": "2026-10-03T14:30:01.129",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 14,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 3,
+      "phase": "paused",
+      "paused": true,
+      "live": []
+     },
+     "team/b": {
+      "round": 14,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:59.142"
+    },
+    {
+     "round": 4,
+     "rule": "cap",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量總和 120 > cap_tokens 100；不會自動恢復，要人改 kernel.json",
+     "at": "2026-10-03T14:29:59.324"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  },
+  {
+   "label": "raising cap resumes; usage accumulation reset",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 120,
+      "acc": 0
+     }
+    },
+    "paused": {},
+    "issued": {},
+    "round": 15
+   },
+   "paused": false,
+   "status": {
+    "pid": 1019412,
+    "root": "/tmp/astra3-kernel-cap-budget-mvguyqm_",
+    "at": "2026-10-03T14:30:01.312",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 15,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 3,
+      "phase": "paused",
+      "paused": false,
+      "live": []
+     },
+     "team/b": {
+      "round": 15,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:59.142"
+    },
+    {
+     "round": 4,
+     "rule": "cap",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量總和 120 > cap_tokens 100；不會自動恢復，要人改 kernel.json",
+     "at": "2026-10-03T14:29:59.324"
+    },
+    {
+     "round": 15,
+     "rule": "cap",
+     "target": "team/a",
+     "op": "resume",
+     "why": "總額上限改了（用量 120，上限 200）",
+     "at": "2026-10-03T14:30:01.299"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  }
+ ],
+ "kernel_logs": {
+  "team/.aos/tasks/kernel-r1": "aos7-kernel: kernel-r1 啟動，等 tock（> 0）\naos7-kernel: 回合 1，0 個決定\naos7-kernel: 回合 2，0 個決定\naos7-kernel: 回合 3，1 個決定\naos7-kernel: 回合 4，1 個決定\naos7-kernel: 回合 5，0 個決定\naos7-kernel: 回合 6，0 個決定\naos7-kernel: 回合 7，0 個決定\naos7-kernel: 回合 8，0 個決定\naos7-kernel: 回合 9，0 個決定\naos7-kernel: 回合 10，0 個決定\naos7-kernel: 回合 11，0 個決定\naos7-kernel: 回合 12，0 個決定\naos7-kernel: 回合 13，0 個決定\naos7-kernel: 回合 14，0 個決定\naos7-kernel: 回合 15，1 個決定\n"
+ },
+ "kernel_exits": {
+  "team/.aos/tasks/kernel-r1": {
+   "code": 0,
+   "at": "2026-10-03T14:30:01.506",
+   "round": 15
+  }
+ },
+ "daemon_exit": 0,
+ "cleanup_groups": [
+  1019422
+ ],
+ "temporary_root": "/tmp/astra3-kernel-cap-budget-mvguyqm_",
+ "cleaned": true
+}
