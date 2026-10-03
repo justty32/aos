@@ -1,0 +1,37 @@
+{
+  "root": "/tmp/astra2-space-vec3ccyp",
+  "daemon_rc": 0,
+  "left_before_cleanup": [],
+  "nodes": {
+    "lab": {
+      "round": 64,
+      "received_done": 0,
+      "outbox": 0,
+      "failed": 0
+    },
+    "lab/agents/ada": {
+      "round": 61,
+      "received_done": 23,
+      "outbox": 0,
+      "failed": 0
+    },
+    "lab/agents/ben": {
+      "round": 41,
+      "received_done": 17,
+      "outbox": 0,
+      "failed": 0
+    },
+    "lab/agents/cy": {
+      "round": 49,
+      "received_done": 19,
+      "outbox": 0,
+      "failed": 0
+    }
+  },
+  "audit": {
+    "writes": 3294,
+    "bad": []
+  },
+  "root_removed": true,
+  "left_after_cleanup": []
+}

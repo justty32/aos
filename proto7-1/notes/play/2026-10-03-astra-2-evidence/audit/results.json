@@ -1,0 +1,99 @@
+{
+  "base": "/tmp/astra2-audit-rti26uux",
+  "ticks": [
+    {
+      "code": 0,
+      "stdout": "{\"round\": 1, \"started\": [\"baseline-r1\", \"dirfd-r1\", \"retarget-r1\", \"request-r1\", \"shell-r1\"]}\n",
+      "stderr": ""
+    },
+    {
+      "code": 0,
+      "stdout": "{\"round\": 2, \"started\": []}\n",
+      "stderr": ""
+    }
+  ],
+  "audit": {
+    "tasks": 5,
+    "writes": 62,
+    "bad": [
+      [
+        "/tmp/astra2-audit-rti26uux/space/a/.aos/tasks/baseline-r1",
+        {
+          "op": "open",
+          "path": "/tmp/astra2-audit-rti26uux/space/b/absolute.txt",
+          "ok": false,
+          "pid": 774380
+        }
+      ],
+      [
+        "/tmp/astra2-audit-rti26uux/space/a/.aos/tasks/baseline-r1",
+        {
+          "op": "open",
+          "path": "/tmp/astra2-audit-rti26uux/space/b/dotdot.txt",
+          "ok": false,
+          "pid": 774380
+        }
+      ],
+      [
+        "/tmp/astra2-audit-rti26uux/space/a/.aos/tasks/baseline-r1",
+        {
+          "op": "open",
+          "path": "/tmp/astra2-audit-rti26uux/space/b/symlink.txt",
+          "ok": false,
+          "pid": 774380,
+          "via": "/tmp/astra2-audit-rti26uux/space/a/escape/symlink.txt"
+        }
+      ]
+    ]
+  },
+  "symlinks": {
+    "space/allowed/outside": "/tmp/astra2-audit-rti26uux/outside",
+    "space/allowed/inside": "/tmp/astra2-audit-rti26uux/space/c",
+    "space/a/escape": "/tmp/astra2-audit-rti26uux/space/b",
+    "space/a/.aos/tasks/retarget-r1/mnt/box": "/tmp/astra2-audit-rti26uux/space/c",
+    "space/a/.aos/tasks/request-r1/mnt/outside": "../../../../../allowed/outside/new-created-by-tick",
+    "space/a/.aos/tasks/request-r1/mnt/inside": "../../../../../allowed/inside"
+  },
+  "task_exits": {
+    "shell-r1": {
+      "code": 0,
+      "at": "2026-10-03T13:18:58.809",
+      "round": 1
+    },
+    "request-r1": {
+      "code": 0,
+      "at": "2026-10-03T13:18:58.862",
+      "round": 2
+    },
+    "retarget-r1": {
+      "code": 0,
+      "at": "2026-10-03T13:18:58.821",
+      "round": 1
+    },
+    "dirfd-r1": {
+      "code": 0,
+      "at": "2026-10-03T13:18:58.821",
+      "round": 1
+    },
+    "baseline-r1": {
+      "code": 0,
+      "at": "2026-10-03T13:18:58.820",
+      "round": 1
+    }
+  },
+  "actual_files": {
+    "space/b/absolute.txt": "absolute",
+    "space/b/dotdot.txt": "dotdot",
+    "space/b/symlink.txt": "symlink",
+    "space/b/shell.txt": "shell",
+    "space/b/dirfd.txt": "dirfd actual b",
+    "space/b/rename-dst.txt": "src",
+    "space/c/retarget.txt": "unapproved c",
+    "space/c/via-approved-link.txt": "inside",
+    "outside/outside-python.txt": "outside",
+    "outside/new-created-by-tick/via-approved-link.txt": "outside"
+  },
+  "dirfd_mkdir_actual": true,
+  "dirfd_remove_actual": true,
+  "all_started_pids_gone_or_zombie": true
+}

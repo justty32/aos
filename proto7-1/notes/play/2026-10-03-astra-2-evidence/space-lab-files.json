@@ -1,0 +1,120 @@
+{
+  ".aos/tasks/kernel-r1/birth.json": {
+    "tid": "kernel-r1",
+    "name": "kernel",
+    "node": "lab",
+    "round": 1,
+    "mounts": {
+      "aosd": {
+        "to": ".aosd",
+        "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/aosd"
+      },
+      "lab_agents_ada__aos": {
+        "to": "lab/agents/ada/.aos",
+        "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos"
+      },
+      "lab_agents_ben__aos": {
+        "to": "lab/agents/ben/.aos",
+        "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos"
+      },
+      "lab_agents_cy__aos": {
+        "to": "lab/agents/cy/.aos",
+        "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_cy__aos"
+      }
+    },
+    "at": "2026-10-03T13:18:56.420",
+    "restart_of": null,
+    "argv": [
+      "aos7-kernel"
+    ]
+  },
+  ".aos/tasks/kernel-r1/mount-done/lab_agents_cy__aos.json": {
+    "name": "lab_agents_cy__aos",
+    "path": "lab/agents/cy/.aos",
+    "why": "kernel 要看／控制 lab/agents/cy/.aos",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_cy__aos → lab/agents/cy/.aos",
+      "at": "2026-10-03T13:18:58.481"
+    }
+  },
+  ".aos/tasks/kernel-r1/mount-done/lab_agents_ben__aos.json": {
+    "name": "lab_agents_ben__aos",
+    "path": "lab/agents/ben/.aos",
+    "why": "kernel 要看／控制 lab/agents/ben/.aos",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_ben__aos → lab/agents/ben/.aos",
+      "at": "2026-10-03T13:18:56.781"
+    }
+  },
+  ".aos/tasks/kernel-r1/mount-done/lab_agents_ada__aos.json": {
+    "name": "lab_agents_ada__aos",
+    "path": "lab/agents/ada/.aos",
+    "why": "kernel 要看／控制 lab/agents/ada/.aos",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_ada__aos → lab/agents/ada/.aos",
+      "at": "2026-10-03T13:18:56.781"
+    }
+  },
+  ".aos/tasks/kernel-r1/mount-done/aosd.json": {
+    "name": "aosd",
+    "path": ".aosd",
+    "why": "kernel 要看／控制 .aosd",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/aosd → .aosd",
+      "at": "2026-10-03T13:18:56.780"
+    }
+  },
+  ".aos/tasks/kernel-r1/kernel-state.json": {
+    "progress": {
+      "lab/agents/ada:agent-r1": {
+        "last": {
+          "round": 61,
+          "state": "act",
+          "steps": 56
+        },
+        "same": 0,
+        "member_round": 61
+      },
+      "lab/agents/cy:agent-r1": {
+        "last": {
+          "round": 49,
+          "state": "think",
+          "steps": 49
+        },
+        "same": 0,
+        "member_round": 49
+      },
+      "lab/agents/ben:agent-r1": {
+        "last": {
+          "round": 41,
+          "state": "act",
+          "steps": 41
+        },
+        "same": 0,
+        "member_round": 41
+      }
+    },
+    "usage": {
+      "lab/agents/ada": {
+        "last": 1854,
+        "acc": 876
+      },
+      "lab/agents/ben": {
+        "last": 1368,
+        "acc": 500
+      },
+      "lab/agents/cy": {
+        "last": 1664,
+        "acc": 876
+      }
+    },
+    "paused": {},
+    "issued": {},
+    "round": 64
+  },
+  ".aos/tasks/kernel-r1/decisions.jsonl": "{\"round\": 26, \"rule\": \"budget\", \"target\": \"lab/agents/ada\", \"op\": \"pause\", \"why\": \"用量累計 885 > 0\", \"at\": \"2026-10-03T13:19:00.709\"}\n{\"round\": 26, \"rule\": \"budget\", \"target\": \"lab/agents/cy\", \"op\": \"pause\", \"why\": \"用量累計 402 > 0\", \"at\": \"2026-10-03T13:19:00.709\"}\n{\"round\": 26, \"rule\": \"budget\", \"target\": \"lab/agents/ben\", \"op\": \"pause\", \"why\": \"用量累計 776 > 0\", \"at\": \"2026-10-03T13:19:00.710\"}\n{\"round\": 38, \"rule\": \"budget\", \"target\": \"lab/agents/ada\", \"op\": \"resume\", \"why\": \"pause 後已過 12 回合\", \"at\": \"2026-10-03T13:19:02.767\"}\n{\"round\": 38, \"rule\": \"budget\", \"target\": \"lab/agents/cy\", \"op\": \"resume\", \"why\": \"pause 後已過 12 回合\", \"at\": \"2026-10-03T13:19:02.767\"}\n{\"round\": 51, \"rule\": \"budget\", \"target\": \"lab/agents/ben\", \"op\": \"resume\", \"why\": \"pause 後已過 25 回合\", \"at\": \"2026-10-03T13:19:04.966\"}\n"
+}

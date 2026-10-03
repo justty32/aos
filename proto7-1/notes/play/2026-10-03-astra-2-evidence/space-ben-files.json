@@ -1,0 +1,182 @@
+{
+  ".aos/tasks/agent-r1/birth.json": {
+    "tid": "agent-r1",
+    "name": "agent",
+    "node": "lab/agents/ben",
+    "round": 1,
+    "mounts": {
+      "lab_agents_cy_inbox": {
+        "to": "lab/agents/cy/inbox",
+        "at": "/tmp/astra2-space-vec3ccyp/lab/agents/ben/.aos/tasks/agent-r1/mnt/lab_agents_cy_inbox"
+      },
+      "lab_agents_ada_inbox": {
+        "to": "lab/agents/ada/inbox",
+        "at": "/tmp/astra2-space-vec3ccyp/lab/agents/ben/.aos/tasks/agent-r1/mnt/lab_agents_ada_inbox"
+      }
+    },
+    "at": "2026-10-03T13:18:56.421",
+    "restart_of": null,
+    "argv": [
+      "aos7-agent"
+    ]
+  },
+  ".aos/tasks/agent-r1/mount-done/lab_agents_ada_inbox.json": {
+    "name": "lab_agents_ada_inbox",
+    "path": "lab/agents/ada/inbox",
+    "why": "寄信給 lab/agents/ada",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_ada_inbox → lab/agents/ada/inbox",
+      "at": "2026-10-03T13:18:57.252"
+    }
+  },
+  ".aos/tasks/agent-r1/mount-done/lab_agents_cy_inbox.json": {
+    "name": "lab_agents_cy_inbox",
+    "path": "lab/agents/cy/inbox",
+    "why": "寄信給 lab/agents/cy",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_cy_inbox → lab/agents/cy/inbox",
+      "at": "2026-10-03T13:18:56.771"
+    }
+  },
+  ".aos/tasks/agent-r1/state.json": {
+    "state": "act",
+    "round": 41,
+    "steps": 41,
+    "tocks": 41,
+    "plan": [
+      {
+        "tool": "send",
+        "to": "lab/agents/cy",
+        "body": "ping 15"
+      }
+    ],
+    "pc": 1,
+    "letters": [
+      "1791004746782112294-lab_agents_cy.json"
+    ],
+    "goal": null,
+    "last": "send → lab/agents/cy：ping 15",
+    "from": null
+  },
+  "inbox/done/1791004746782112294-lab_agents_cy.json": {
+    "from": "lab/agents/cy",
+    "to": "lab/agents/ben",
+    "round": 47,
+    "body": "ping 14",
+    "at": "2026-10-03T13:19:06.782"
+  },
+  "inbox/done/1791004746301386724-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 55,
+    "body": "ping 19",
+    "at": "2026-10-03T13:19:06.301"
+  },
+  "inbox/done/1791004745876441231-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 52,
+    "body": "ping 17",
+    "at": "2026-10-03T13:19:05.876"
+  },
+  "inbox/done/1791004745710810924-lab_agents_cy.json": {
+    "from": "lab/agents/cy",
+    "to": "lab/agents/ben",
+    "round": 41,
+    "body": "ping 12",
+    "at": "2026-10-03T13:19:05.710"
+  },
+  "inbox/done/1791004745431715343-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 49,
+    "body": "ping 15",
+    "at": "2026-10-03T13:19:05.431"
+  },
+  "inbox/done/1791004740672869645-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 30,
+    "body": "ping 13",
+    "at": "2026-10-03T13:19:00.672"
+  },
+  "inbox/done/1791004740428127339-lab_agents_cy.json": {
+    "from": "lab/agents/cy",
+    "to": "lab/agents/ben",
+    "round": 23,
+    "body": "ping 10",
+    "at": "2026-10-03T13:19:00.428"
+  },
+  "inbox/done/1791004740086476829-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 26,
+    "body": "ping 11",
+    "at": "2026-10-03T13:19:00.086"
+  },
+  "inbox/done/1791004739358202995-lab_agents_cy.json": {
+    "from": "lab/agents/cy",
+    "to": "lab/agents/ben",
+    "round": 17,
+    "body": "ping 8",
+    "at": "2026-10-03T13:18:59.358"
+  },
+  "inbox/done/1791004739217351802-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 20,
+    "body": "ping 9",
+    "at": "2026-10-03T13:18:59.217"
+  },
+  "inbox/done/1791004738812067827-lab_agents_cy.json": {
+    "from": "lab/agents/cy",
+    "to": "lab/agents/ben",
+    "round": 14,
+    "body": "ping 6",
+    "at": "2026-10-03T13:18:58.812"
+  },
+  "inbox/done/1791004738792722095-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 17,
+    "body": "ping 7",
+    "at": "2026-10-03T13:18:58.792"
+  },
+  "inbox/done/1791004738347794688-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 14,
+    "body": "ping 5",
+    "at": "2026-10-03T13:18:58.347"
+  },
+  "inbox/done/1791004738266341053-lab_agents_cy.json": {
+    "from": "lab/agents/cy",
+    "to": "lab/agents/ben",
+    "round": 11,
+    "body": "ping 4",
+    "at": "2026-10-03T13:18:58.266"
+  },
+  "inbox/done/1791004737478126304-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 8,
+    "body": "ping 3",
+    "at": "2026-10-03T13:18:57.478"
+  },
+  "inbox/done/1791004737195780977-lab_agents_cy.json": {
+    "from": "lab/agents/cy",
+    "to": "lab/agents/ben",
+    "round": 5,
+    "body": "ping 2",
+    "at": "2026-10-03T13:18:57.195"
+  },
+  "inbox/done/1791004736608186212-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/ben",
+    "round": 2,
+    "body": "ping 1",
+    "at": "2026-10-03T13:18:56.608"
+  }
+}

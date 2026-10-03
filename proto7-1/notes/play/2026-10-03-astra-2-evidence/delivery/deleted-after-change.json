@@ -1,0 +1,198 @@
+{
+  "case": "deleted",
+  "label": "after-change",
+  "round": 13,
+  "files": {
+    ".aosd/paused.json": {
+      "paused": [
+        "receiver"
+      ]
+    },
+    "receiver/.aos/timeline.json": {
+      "interval_ms": 100
+    },
+    "receiver/inbox/1791004874952607788-sender.json": {
+      "from": "sender",
+      "to": "receiver",
+      "round": 7,
+      "body": "letter after deleted",
+      "at": "2026-10-03T13:21:14.952"
+    },
+    "sender/.aos/round.json": {
+      "round": 13,
+      "open": false,
+      "tick_at": "2026-10-03T13:21:15.161",
+      "tock_at": "2026-10-03T13:21:15.176",
+      "started": [],
+      "ctl": [],
+      "mounts": []
+    },
+    "sender/.aos/tasks/agent-r1/birth.json": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "sender",
+      "round": 1,
+      "mounts": {
+        "receiver_inbox": {
+          "to": "receiver/inbox",
+          "at": "/tmp/astra2-delivery-deleted-nqsf2_1w/sender/.aos/tasks/agent-r1/mnt/receiver_inbox"
+        }
+      },
+      "at": "2026-10-03T13:21:14.550",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "sender/.aos/tasks/agent-r1/ended.json": {
+      "round": 8
+    },
+    "sender/.aos/tasks/agent-r1/exit.json": {
+      "code": 1,
+      "at": "2026-10-03T13:21:14.891",
+      "round": 7
+    },
+    "sender/.aos/tasks/agent-r1/mnt/receiver_inbox": {
+      "symlink": "../../../../../receiver/inbox",
+      "exists": true
+    },
+    "sender/.aos/tasks/agent-r1/mount-done/receiver_inbox.json": {
+      "name": "receiver_inbox",
+      "path": "receiver/inbox",
+      "why": "寄信給 receiver",
+      "result": {
+        "ok": true,
+        "msg": "掛上 mnt/receiver_inbox → receiver/inbox",
+        "at": "2026-10-03T13:21:14.685"
+      }
+    },
+    "sender/.aos/tasks/agent-r1/out.log": "{\"at\": \"2026-10-03T13:21:14.596\", \"round\": 0, \"state\": \"idle\", \"msg\": \"啟動：剛出生\"}\n{\"at\": \"2026-10-03T13:21:14.617\", \"round\": 1, \"state\": \"think\", \"msg\": \"think（fake）：1 個動作\"}\n{\"at\": \"2026-10-03T13:21:14.658\", \"round\": 2, \"state\": \"act\", \"msg\": \"send → receiver 先放 outbox（inbox 沒掛，已請求加掛）：initial letter\"}\n{\"at\": \"2026-10-03T13:21:14.719\", \"round\": 3, \"state\": \"act\", \"msg\": \"outbox → receiver：initial letter\"}\n{\"at\": \"2026-10-03T13:21:14.841\", \"round\": 6, \"state\": \"think\", \"msg\": \"think（fake）：1 個動作\"}\nTraceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra2/proto7-1/bin/aos7-agent\", line 8, in <module>\n    sys.exit(aos7_agent.main())\n             ~~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra2/proto7-1/lib/aos7_agent.py\", line 180, in main\n    run(ctx, args.rounds)\n    ~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra2/proto7-1/lib/aos7_agent.py\", line 162, in run\n    st = on_tock(ctx, st, r)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra2/proto7-1/lib/aos7_agent.py\", line 127, in on_tock\n    do_act(ctx, st)\n    ~~~~~~^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra2/proto7-1/lib/aos7_agent.py\", line 95, in do_act\n    r = tools.do_tool(ctx, plan[st[\"pc\"]], st[\"round\"])\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra2/proto7-1/lib/aos7_agent_tools.py\", line 115, in do_tool\n    write_json(os.path.join(box, name), letter)\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra2/proto7-1/lib/aos7_fs.py\", line 28, in write_json\n    os.makedirs(d, exist_ok=True)\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"<frozen os>\", line 236, in makedirs\nFileExistsError: [Errno 17] File exists: '/tmp/astra2-delivery-deleted-nqsf2_1w/sender/.aos/tasks/agent-r1/mnt/receiver_inbox'\n",
+    "sender/.aos/tasks/agent-r1/pid.json": {
+      "pid": 775612,
+      "pgid": 775612,
+      "runner_pid": 775611,
+      "at": "2026-10-03T13:21:14.563"
+    },
+    "sender/.aos/tasks/agent-r1/progress.json": {
+      "round": 6,
+      "state": "think",
+      "steps": 4
+    },
+    "sender/.aos/tasks/agent-r1/state.json": {
+      "state": "act",
+      "round": 7,
+      "steps": 5,
+      "tocks": 7,
+      "plan": [
+        {
+          "tool": "send",
+          "to": "receiver",
+          "body": "letter after deleted"
+        }
+      ],
+      "pc": 0,
+      "letters": [],
+      "goal": {
+        "say_first": {
+          "to": "receiver",
+          "body": "letter after deleted"
+        }
+      },
+      "last": "think（fake）：1 個動作",
+      "from": null
+    },
+    "sender/.aos/tasks/agent-r1/tock.json": {
+      "round": 7,
+      "at": "2026-10-03T13:21:14.877"
+    },
+    "sender/.aos/tasks/agent-r1/usage.json": {
+      "tokens": 184,
+      "calls": 2
+    },
+    "sender/.aos/tasks/agent-r8/birth.json": {
+      "tid": "agent-r8",
+      "name": "agent",
+      "node": "sender",
+      "round": 8,
+      "mounts": {
+        "receiver_inbox": {
+          "to": "receiver/inbox",
+          "at": "/tmp/astra2-delivery-deleted-nqsf2_1w/sender/.aos/tasks/agent-r8/mnt/receiver_inbox"
+        }
+      },
+      "at": "2026-10-03T13:21:14.907",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "sender/.aos/tasks/agent-r8/mnt/receiver_inbox": {
+      "symlink": "../../../../../receiver/inbox",
+      "exists": true
+    },
+    "sender/.aos/tasks/agent-r8/mount-done/receiver_inbox.json": {
+      "name": "receiver_inbox",
+      "path": "receiver/inbox",
+      "why": "寄信給 receiver",
+      "result": {
+        "ok": true,
+        "msg": "掛上 mnt/receiver_inbox → receiver/inbox",
+        "at": "2026-10-03T13:21:14.997"
+      }
+    },
+    "sender/.aos/tasks/agent-r8/out.log": "{\"at\": \"2026-10-03T13:21:14.952\", \"round\": 7, \"state\": \"act\", \"msg\": \"啟動：接續前任 agent-r1（它停在 act）\"}\n{\"at\": \"2026-10-03T13:21:14.952\", \"round\": 7, \"state\": \"act\", \"msg\": \"recover：act 從第 0 步接著做\"}\n{\"at\": \"2026-10-03T13:21:14.953\", \"round\": 7, \"state\": \"act\", \"msg\": \"send → receiver 先放 outbox（inbox 沒掛，已請求加掛）：letter after deleted\"}\n{\"at\": \"2026-10-03T13:21:15.014\", \"round\": 9, \"state\": \"idle\", \"msg\": \"outbox → receiver：letter after deleted\"}\n",
+    "sender/.aos/tasks/agent-r8/pid.json": {
+      "pid": 775628,
+      "pgid": 775628,
+      "runner_pid": 775627,
+      "at": "2026-10-03T13:21:14.919"
+    },
+    "sender/.aos/tasks/agent-r8/progress.json": {
+      "round": 13,
+      "state": "idle",
+      "steps": 6
+    },
+    "sender/.aos/tasks/agent-r8/state.json": {
+      "state": "idle",
+      "round": 13,
+      "steps": 6,
+      "tocks": 13,
+      "plan": null,
+      "pc": 0,
+      "letters": [],
+      "goal": null,
+      "last": "回到 idle",
+      "from": "agent-r1"
+    },
+    "sender/.aos/tasks/agent-r8/tock.json": {
+      "round": 13,
+      "at": "2026-10-03T13:21:15.176"
+    },
+    "sender/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "agent",
+          "mode": "keep",
+          "argv": [
+            "aos7-agent"
+          ],
+          "mounts": {}
+        }
+      ]
+    },
+    "sender/.aos/timeline.json": {
+      "interval_ms": 100
+    },
+    "sender/agent.json": {
+      "name": "sender",
+      "llm": "fake",
+      "max_ping": 2
+    },
+    "sender/goal.done.json": {
+      "say_first": {
+        "to": "receiver",
+        "body": "letter after deleted"
+      }
+    }
+  }
+}

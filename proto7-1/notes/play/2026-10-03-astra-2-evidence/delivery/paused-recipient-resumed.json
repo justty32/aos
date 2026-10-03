@@ -1,0 +1,229 @@
+{
+  "case": "paused-recipient",
+  "label": "resumed",
+  "round": 31,
+  "files": {
+    ".aosd/ctl-done/resume.json": {
+      "op": "resume",
+      "node": "receiver",
+      "result": {
+        "ok": true,
+        "msg": "resume receiver",
+        "at": "2026-10-03T13:20:01.839"
+      }
+    },
+    ".aosd/paused.json": {
+      "paused": []
+    },
+    ".aosd/status.json": {
+      "pid": 775041,
+      "root": "/tmp/astra2-delivery-paused-recipient-j0u_ku91",
+      "at": "2026-10-03T13:20:02.001",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "receiver": {
+          "round": 2,
+          "phase": "tock",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "sender": {
+          "round": 31,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "receiver/.aos/round.json": {
+      "round": 2,
+      "open": false,
+      "tick_at": "2026-10-03T13:20:01.985",
+      "tock_at": "2026-10-03T13:20:01.999",
+      "started": [],
+      "ctl": [],
+      "mounts": []
+    },
+    "receiver/.aos/tasks/agent-r1/birth.json": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "receiver",
+      "round": 1,
+      "mounts": {},
+      "at": "2026-10-03T13:20:01.856",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "receiver/.aos/tasks/agent-r1/out.log": "{\"at\": \"2026-10-03T13:20:01.902\", \"round\": 0, \"state\": \"idle\", \"msg\": \"啟動：剛出生\"}\n{\"at\": \"2026-10-03T13:20:01.983\", \"round\": 1, \"state\": \"think\", \"msg\": \"think（fake）：1 個動作\"}\n{\"at\": \"2026-10-03T13:20:02.004\", \"round\": 2, \"state\": \"act\", \"msg\": \"write work/done.txt（30 字）\"}\n",
+    "receiver/.aos/tasks/agent-r1/pid.json": {
+      "pid": 775132,
+      "pgid": 775132,
+      "runner_pid": 775131,
+      "at": "2026-10-03T13:20:01.869"
+    },
+    "receiver/.aos/tasks/agent-r1/progress.json": {
+      "round": 2,
+      "state": "act",
+      "steps": 2
+    },
+    "receiver/.aos/tasks/agent-r1/state.json": {
+      "state": "act",
+      "round": 2,
+      "steps": 2,
+      "tocks": 2,
+      "plan": [
+        {
+          "tool": "write",
+          "path": "work/done.txt",
+          "text": "收到 ping 2（來自 sender），到上限 2，停。\n"
+        }
+      ],
+      "pc": 1,
+      "letters": [
+        "1791004799038476475-sender.json"
+      ],
+      "goal": null,
+      "last": "write work/done.txt（30 字）",
+      "from": null
+    },
+    "receiver/.aos/tasks/agent-r1/tock.json": {
+      "round": 2,
+      "at": "2026-10-03T13:20:01.999"
+    },
+    "receiver/.aos/tasks/agent-r1/usage.json": {
+      "tokens": 90,
+      "calls": 1
+    },
+    "receiver/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "agent",
+          "mode": "keep",
+          "argv": [
+            "aos7-agent"
+          ]
+        }
+      ]
+    },
+    "receiver/.aos/timeline.json": {
+      "interval_ms": 100
+    },
+    "receiver/agent.json": {
+      "name": "receiver",
+      "llm": "fake",
+      "max_ping": 2
+    },
+    "receiver/inbox/done/1791004799038476475-sender.json": {
+      "from": "sender",
+      "to": "receiver",
+      "round": 2,
+      "body": "ping 2",
+      "at": "2026-10-03T13:19:59.038"
+    },
+    "sender/.aos/round.json": {
+      "round": 31,
+      "open": false,
+      "tick_at": "2026-10-03T13:20:01.922",
+      "tock_at": "2026-10-03T13:20:01.936",
+      "started": [],
+      "ctl": [],
+      "mounts": []
+    },
+    "sender/.aos/tasks/agent-r1/birth.json": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "sender",
+      "round": 1,
+      "mounts": {
+        "receiver_inbox": {
+          "to": "receiver/inbox",
+          "at": "/tmp/astra2-delivery-paused-recipient-j0u_ku91/sender/.aos/tasks/agent-r1/mnt/receiver_inbox"
+        }
+      },
+      "at": "2026-10-03T13:19:58.888",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "sender/.aos/tasks/agent-r1/mnt/receiver_inbox": {
+      "symlink": "../../../../../receiver/inbox",
+      "exists": true
+    },
+    "sender/.aos/tasks/agent-r1/mount-done/receiver_inbox.json": {
+      "name": "receiver_inbox",
+      "path": "receiver/inbox",
+      "why": "寄信給 receiver",
+      "result": {
+        "ok": true,
+        "msg": "掛上 mnt/receiver_inbox → receiver/inbox",
+        "at": "2026-10-03T13:19:59.121"
+      }
+    },
+    "sender/.aos/tasks/agent-r1/out.log": "{\"at\": \"2026-10-03T13:19:58.936\", \"round\": 0, \"state\": \"idle\", \"msg\": \"啟動：剛出生\"}\n{\"at\": \"2026-10-03T13:19:59.017\", \"round\": 1, \"state\": \"think\", \"msg\": \"think（fake）：1 個動作\"}\n{\"at\": \"2026-10-03T13:19:59.038\", \"round\": 2, \"state\": \"act\", \"msg\": \"send → receiver 先放 outbox（inbox 沒掛，已請求加掛）：ping 2\"}\n{\"at\": \"2026-10-03T13:19:59.140\", \"round\": 3, \"state\": \"act\", \"msg\": \"outbox → receiver：ping 2\"}\n",
+    "sender/.aos/tasks/agent-r1/pid.json": {
+      "pid": 775046,
+      "pgid": 775046,
+      "runner_pid": 775045,
+      "at": "2026-10-03T13:19:58.901"
+    },
+    "sender/.aos/tasks/agent-r1/progress.json": {
+      "round": 31,
+      "state": "idle",
+      "steps": 3
+    },
+    "sender/.aos/tasks/agent-r1/state.json": {
+      "state": "idle",
+      "round": 31,
+      "steps": 3,
+      "tocks": 31,
+      "plan": null,
+      "pc": 0,
+      "letters": [],
+      "goal": null,
+      "last": "回到 idle",
+      "from": null
+    },
+    "sender/.aos/tasks/agent-r1/tock.json": {
+      "round": 31,
+      "at": "2026-10-03T13:20:01.936"
+    },
+    "sender/.aos/tasks/agent-r1/usage.json": {
+      "tokens": 89,
+      "calls": 1
+    },
+    "sender/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "agent",
+          "mode": "keep",
+          "argv": [
+            "aos7-agent"
+          ],
+          "mounts": {}
+        }
+      ]
+    },
+    "sender/.aos/timeline.json": {
+      "interval_ms": 100
+    },
+    "sender/agent.json": {
+      "name": "sender",
+      "llm": "fake",
+      "max_ping": 2
+    },
+    "sender/goal.done.json": {
+      "say_first": {
+        "to": "receiver",
+        "body": "ping 2"
+      }
+    }
+  }
+}
