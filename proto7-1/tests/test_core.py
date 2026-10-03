@@ -139,7 +139,7 @@ class TestTickTock(CoreCase):
         self.tock()
         self.wait_for(lambda: self.state(node, "w-r1") == "ended")
         s3 = (self.tick(), self.tock())[1]
-        self.assertEqual(s3["ended"], [{"tid": "w-r1", "code": 0}])
+        self.assertEqual(s3["ended"], [{"tid": "w-r1", "name": "w", "code": 0}])
         seen = [json.loads(x)["round"] for x in text(os.path.join(self.tdir(node, "w-r1"), "seen.jsonl")).splitlines()]
         self.assertEqual(seen, [1, 2])
         self.assertEqual(read_json(os.path.join(self.tdir(node, "w-r1"), "ended.json")), {"round": 3})
@@ -202,7 +202,7 @@ class TestTickTock(CoreCase):
         os.killpg(pid["pgid"], signal.SIGKILL)
         self.wait_for(lambda: self.state(node, "s-r1") == "lost")
         s = self.tock()
-        self.assertEqual(s["ended"], [{"tid": "s-r1", "code": None, "lost": True}])
+        self.assertEqual(s["ended"], [{"tid": "s-r1", "name": "s", "code": None, "lost": True}])
         self.assertTrue(read_json(os.path.join(self.tdir(node, "s-r1"), "exit.json"))["lost"])
 
     def test_inst_task(self):

@@ -1,4 +1,5 @@
 """proto7-1 共用的小工具：JSON 檔讀寫（原子）、時間字串、路徑、任務環境（spec.md 第 0、5 節）。"""
+import contextlib
 import datetime
 import json
 import os
@@ -26,11 +27,43 @@ def write_json(path, obj):
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
-    tmp = "%s.tmp.%d" % (path, os.getpid())
+    # 暫存檔以 `.` 開頭：別人列資料夾（`*.json`、sh 的 `ls`）時不會讀到寫一半的檔（probes/polyglot N11）
+    tmp = os.path.join(d, ".%s.tmp.%d" % (os.path.basename(path), os.getpid()))
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=1)
         f.write("\n")
     os.replace(tmp, path)
+
+
+def edit_json(path, fn, default=None):
+    """讀—改—寫一個 JSON 檔，期間對 `<path>.lock` 拿 flock（多個寫的人約定都用它，就不會互相蓋掉；probes/selfmod、lifecycle）。
+
+    fn(舊內容) 回新內容；回 None＝不寫。回寫進去的內容。tick 只讀不拿鎖（寫是原子的，讀到的一定是完整的一版）。"""
+    import fcntl
+    d = os.path.dirname(path)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    with open(path + ".lock", "a") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        new = fn(read_json(path, default))
+        if new is not None:
+            write_json(path, new)
+        return new
+
+
+@contextlib.contextmanager
+def action_lock(root, node):
+    """tick／tock 整個動作期間對 `<node>/.aos/action.lock` 拿 flock，拿到後比對 daemon 世代（astra-4 I-01）。
+
+    yield True＝可以寫；False＝自己是舊 daemon 起的動作（環境 AOS7_GEN 跟 `<root>/.aosd/gen.json` 不同），什麼都不要寫。
+    新 daemon 先換世代才起時間線；舊動作要嘛在新動作之前做完（拿著鎖時新的進不來），要嘛拿到鎖時看到世代變了。
+    沒有 AOS7_GEN（人手跑、測試）不比對。"""
+    import fcntl
+    with open(os.path.join(node, ".aos", "action.lock"), "a") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        mine = os.environ.get("AOS7_GEN")
+        cur = read_json(os.path.join(root, ".aosd", "gen.json"), {}) or {}
+        yield mine is None or not isinstance(cur, dict) or str(cur.get("gen")) == mine
 
 
 def append_jsonl(path, obj):

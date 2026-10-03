@@ -4,6 +4,7 @@
 
 tick 用新 session 起它、不等；它自己活到任務結束。環境變數（AOS7_*）由 tick 給好，這裡原樣傳下去。
 """
+import json
 import os
 import re
 import subprocess
@@ -28,7 +29,7 @@ def expand(arg):
 
 def node_round(node):
     r = read_json(os.path.join(node, ".aos", "round.json"), {})
-    return r.get("round")
+    return r.get("round") if isinstance(r, dict) else None
 
 
 def main(argv=None):
@@ -43,11 +44,16 @@ def main(argv=None):
         return 1
     node = os.environ.get("AOS7_NODE") or os.getcwd()
     cmd = build_argv(birth, node)
+    env = dict(os.environ)
+    site = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_site")
+    if env.get("AOS7_AUDIT") and site not in env.get("PYTHONPATH", "").split(os.pathsep):
+        # 寫入紀錄（spec 第 5 節）：只給任務，不給 aos7-run 自己（probes/polyglot N7）
+        env["PYTHONPATH"] = os.pathsep.join(x for x in (site, env.get("PYTHONPATH")) if x)
     out = open(os.path.join(tdir, "out.log"), "ab")
     try:
         if not cmd:
             raise FileNotFoundError("argv 是空的")
-        proc = subprocess.Popen(cmd, cwd=node, stdin=subprocess.DEVNULL, stdout=out,
+        proc = subprocess.Popen(cmd, cwd=node, env=env, stdin=subprocess.DEVNULL, stdout=out,
                                 stderr=subprocess.STDOUT, process_group=0)
     except OSError as e:
         out.write(("aos7-run: 起不來: %s\n" % e).encode())
@@ -57,7 +63,33 @@ def main(argv=None):
         return 0
     write_json(os.path.join(tdir, "pid.json"),
                {"pid": proc.pid, "pgid": proc.pid, "runner_pid": os.getpid(), "at": now()})
+    dfd = os.open(tdir, os.O_RDONLY | os.O_DIRECTORY)   # 先抓住任務資料夾本身：node 搬家後照樣寫到它現在的位置
     code = proc.wait()
     out.close()
-    write_json(os.path.join(tdir, "exit.json"), {"code": code, "at": now(), "round": node_round(node)})
+    write_exit_at(dfd, {"code": code, "at": now(), "round": round_at(dfd)})
     return 0
+
+
+def round_at(dfd):
+    """經過任務資料夾的 fd 讀 `../../round.json`（node 搬走也讀得到）。"""
+    try:
+        fd = os.open("../../round.json", os.O_RDONLY, dir_fd=dfd)
+        with os.fdopen(fd, encoding="utf-8") as f:
+            r = json.load(f)
+        return r.get("round") if isinstance(r, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def write_exit_at(dfd, obj):
+    """經過 fd 原子寫 exit.json：node 被搬走就寫到新位置；被刪掉就寫進已刪的資料夾（等於丟掉），
+    不會在舊路徑把資料夾建回來（probes/rename N8、N9，subtimeline 1）。"""
+    tmp = ".exit.json.tmp.%d" % os.getpid()
+    try:
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644, dir_fd=dfd)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(obj, f, ensure_ascii=False, indent=1)
+            f.write("\n")
+        os.replace(tmp, "exit.json", src_dir_fd=dfd, dst_dir_fd=dfd)
+    except OSError:
+        pass
