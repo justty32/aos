@@ -89,7 +89,7 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （b）任務寫一個「請求加掛」的檔，下個 tick 由 tick 決定給不給、給了就把連結補進任務資料夾。這等於讓 tick 多一個「審核」的角色。
   - （c）把共同的上層資料夾整個掛進來（例如掛 `team/agents`），之後誰都寄得到。簡單，但「只碰給的資料夾」就變得很寬。
 - **怎麼做的（10-03，照 (b)）**：
-  - 任務寫 `$AOS7_TASK/mount-req/<名字>.json`＝`{"name", "path", "why"}`。下一個 tick 在執行完 ctl 後審核活任務的請求：路徑不合、不在 tasks.json 的 `mount_allow`（空間路徑前綴清單；沒寫＝全給）、名字撞了 → 拒絕；否則補 `mnt/<名字>` 連結、加進 birth.json。回條寫 `mount-done/<同名>.json`（`result.ok`／`msg`），本回合的審核結果也記進 round.json 與 `rounds/<N>.json` 的 `mounts`。restart 會帶上加掛的。卸掛不做。
+  - 任務寫 `$AOS7_TASK/mount-req/<名字>.json`＝`{"name", "path", "why"}`。下一個 tick 在執行完 ctl 後審核活任務的請求：路徑不合、不在 tasks.json 的 `mount_allow`（空間路徑前綴清單；沒寫＝全給）、名字撞了 → 拒絕；否則補 `mnt/<名字>` 連結、加進 birth.json。回條寫 `mount-done/<同名>.json`（`result.ok`／`msg`），本回合的審核結果也記進 round.json 與回合總結（現在是 `rounds.jsonl` 的一行）的 `mounts`。restart 會帶上加掛的。卸掛不做。
   - agent：寄給沒掛的對象時寫加掛請求，信先放 `<node>/outbox/`；之後每個 tock 一開始清 outbox，掛上了就寄，被拒就搬到 `outbox/failed/`。
   - kernel：每輪對 kernel.json 的成員 `.aos` 和 daemon 的 `.aosd` 檢查，沒掛的就自己請求。示範的 kernel 在 tasks.json 已經不寫 mounts。
   - 示範：新加的 carol 原本什麼都沒掛，臨時寄給 bob，加掛後寄到；bob 回信給 carol 也一樣。跑到 30% 時 play.py 改 kernel.json 加成員 carol，kernel 自己加掛。檢查項目多三條。
@@ -147,13 +147,15 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （c）每個 agent 有一份「自己維護的記憶檔」，每次 think 都要回寫（plan 多一個欄位），框架負責放進 prompt。
 - **怎麼做的（10-03，照 (b)，最簡單版）**：kernel 每輪依 kernel.json 的 `members` 組名冊 `{"by", "members": [{"node", "inbox", "role"}]}`（`role` 取 kernel.json 新加的可選欄 `roles`：`{成員相對路徑: "一句"}`），經過它本來就有的 `<成員>/.aos` 掛載點寫到每個成員的 `.aos/roster.json`（內容沒變不重寫）。agent 每次 think 讀自己 node 的 `.aos/roster.json`，有就放進 user JSON 的 `roster`。不用另外掛載：名冊就在成員自己的 node 裡。新問題見 M-15。測試 `test_roster_written_to_members`、`test_roster_goes_into_prompt`。
 
-## 真模型 real-2 要使用者決定的（1 條，R-15）
+## 真模型 real-2 要使用者決定的（1 條，R-15，10-03 已答）
 
 細節在 [problems-real.md](problems-real.md)；跑的紀錄在 [runs/2026-10-03-real-2.md](runs/2026-10-03-real-2.md)。real-2 兩模組跑三次，三次都寫出 DONE.md，其中第 2 次交出去的 dur.py 不合格。
 
-### R-15 交付的檔是 LLM 重打的，不是測過的那份〔要使用者決定〕
+### R-15 交付的檔是 LLM 重打的，不是測過的那份〔要使用者決定，10-03 已答〕
 
-- 層：agent 的工具 × 協作；spec 第 10 節（工具只有 send／write／none）、S-16。
+> **〔10-03〕使用者說 agent 隨意，頂層採 (b)**
+
+- 層：agent 的工具 × 協作；spec 第 10 節（原本工具只有 send／write／none）、S-16。
 - 發生了什麼：
   - real-2 第 2 次（lead＝deepseek）：dur.py 在 ci 第 2 次就 PASS 36/36、rita 也說 OK。結案時 lead 用 `write` 寫 `work/dur.py`，但 dur 的 PASS 信已經不在它的記憶裡，它就照自己最早交代的需求**重寫了一份**（沒有 `d` 單位、接受 `01h`），隱藏測試 29/36，照樣宣告完成。ranges.py 也是重打的（等價、拿掉了註解）。
   - 原因：agent 要把東西存成檔，唯一的路是 LLM 在 plan 裡把整份內容再打一次（`write` 的 `text`）。信裡的程式碼不能原樣存下來；看不到原文時，模型會照它以為的樣子補。
@@ -163,8 +165,10 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （a）照現在：內容都由 LLM 打出來，靠 persona 與事後比對把關。交付物和測過的東西可能不一樣，而且沒人知道。
   - （b）agent 多一個不經 LLM 的工具：把某封信（或信裡一段）原樣存成檔，例如 `{"tool": "save", "letter": "<信檔名>", "path": "work/dur.py"}`。工具集從三個變四個（spec 第 10 節）。
   - （c）成果由驗收者保管：ci（或任何驗收的 node）存通過的版本，「完成」＝負責人指名「ci 第幾次」，外面的人去驗收者那裡取檔。agent 不必搬運成果，但完成的定義綁在某個 bot 上。
+- **怎麼做的（10-03，照 (b)）**：`aos7_agent_tools` 多一個工具 `{"tool": "save", "letter": "<信檔名>", "path": "<相對自己 node>", "code": true}`：在 `inbox/` 或 `inbox/done/` 找那封收到的信，`code: true` 時取信裡第一段 ``` 程式碼（沒有圍欄就整段），否則存整段 body，**不經 LLM** 原樣寫檔；路徑規則同 write，找不到信或檔名帶 `/` 就那步失敗。prompt 裡的信（letters 與 memory 的「收」）多帶 `file`＝信檔名，system 規則多一行 save。ci 的 PASS 副本把程式碼包進 ```python 圍欄（ci 與 save 共用 `extract_code`）。real 場景 lead 的 persona 改成「收到 PASS 就 save 那封信到 `work/<模組>.py`、不要用 write 重打」。沒重跑 real.py。測試 `test_save_letter_verbatim`、`test_skip_not_code_and_duplicates_cc_pass`（附的程式碼取得回原文）。
+- 剩下的：模型還是可能選 write 不選 save，或存錯信；real.py 的事後比對留著。
 
-## 其餘問題一覽（技術選型 40 條、默認正常 23 條）
+## 其餘問題一覽（技術選型 41 條、默認正常 23 條）
 
 細節點進分檔看。
 
@@ -200,22 +204,23 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [M-12](#m-12-寫入紀錄看不到-open-的-dir_fd技術選型先這樣) 寫入紀錄看不到 open 的 dir_fd。
 - [M-13](#m-13-mount_allow-比的是實際位置連結指到清單外就不給技術選型先這樣) mount_allow 比實際位置：清單裡的連結指到清單外就不給。
 - [M-14](#m-14-收件夾被刪或搬走後寄給它的信一律進-failed不會自己重掛技術選型先這樣) 收件夾被刪或搬走後，寄給它的信一律進 failed，不會自己重掛。
-- [M-15](#m-15-成員名冊寫在成員的-aos-裡技術選型先這樣) 成員名冊寫在成員的 `.aos/` 裡。
+- [M-15](#m-15-成員名冊寫在成員的-aos-裡技術選型先這樣) 成員名冊寫在成員的 `.aos/` 裡。寫不進去（成員搬走）**已修**成只記 skipped、kernel 不死。
+- [M-16](#m-16-成員搬走後kernel-對它只記-skipped不會自己修技術選型先這樣) 成員搬走後，kernel 對它只記 skipped，不會自己修；空殼讓總額 pause 被放開。
 - [R-3](problems-real.md) kernel 的「卡住」在真模型下全是誤判（都在等 LLM）。**已修**：think 時 progress 寫 `llm_since`，kernel 不當卡住（另設 `llm_stuck_rounds` 才管）。
 - [R-4](problems-real.md) 預算規則是「限速」不是「上限」。**已補**總額：`cap_tokens`，超過就 pause、不自動 resume，人改 kernel.json 才恢復。
 - [R-5](problems-real.md) luna 有 25%～50% 的回應解析不出來（`"."`、`[]`、殘渣、亂碼、空字串）；加了「重問一次」。
 - [R-6](problems-real.md) 信沒有種類：寄錯就被當成程式碼；必回的 bot 對上收到就做事的 agent，會互相觸發成迴圈。
 - [R-7](problems-real.md) 「完成」由 LLM 判斷，驗收只能信轉述；coder 謊報過 PASS。
 - [R-9](problems-real.md) prompt＝persona＋最近 N 封信＋work/ 的檔，tokens 隨記憶長大（1.3k→7k）。
-- [R-10](problems-real.md) 事後要看懂得多記 llm.jsonl、trace.jsonl、sent.jsonl；15 分鐘 77 MB。
-- [R-13](problems-real.md) 記憶視窗會被一個往來對象（ci）洗掉。**已改**：視窗外的每個往來對象再補它最近一封。
+- [R-10](problems-real.md) 事後要看懂得多記 llm.jsonl、trace.jsonl、sent.jsonl；15 分鐘 77 MB。 **已減**：`rounds/<N>.json` 改成一個 `rounds.jsonl`。
+- [R-13](problems-real.md) 記憶視窗會被一個往來對象（ci）洗掉。**已改**：視窗外的每個往來對象再補它最近一封。讀取只看尾端 200 封（astra-3 三-3）。
 - [R-14](problems-real.md) ci 不測不回非程式碼與重複的程式碼、看不出模組就明說 FAIL、PASS 直接寄 lead 附程式碼。real-2 三次都沒迴圈，但去重規則沒觸發過，擋住迴圈的是 persona。
 
 **默認正常**
 
 - [P-03](problems-core.md) 任務被 reparent 給 init，daemon 只能每 20 ms 輪詢檔案和 `/proc`。
 - [P-07](problems-core.md) 判斷 lost 有競態（已用 runner_pid 補洞）。pid 會被重用。
-- [P-12](problems-core.md) 任務資料夾只增不減，而且每 20 ms 全掃一次。
+- [P-12](problems-core.md) 任務資料夾只增不減，而且每 20 ms 全掃一次。 回合總結已改成一個 jsonl，每回合每 node 少一個小檔。
 - [P-15](problems-core.md) node 消失時，那個回合不 tock。搬家改名等於舊 id 消失、新 id 出現。
 - [P-17](problems-core.md) kill 很慢，會拖慢 tick（違反「tick 很快結束」）。
 - [P-18](problems-core.md) ctl.json 只有一個檔，後寫的蓋掉先寫的。
@@ -251,7 +256,7 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 
 - 層：aos 時空；S-01、S-08。
 - 發生了什麼：
-  - `rounds/<N>.json` 只記任務的起落和控制。kernel 的決定、agent 的狀態變化與寄信，都在各自任務資料夾或 node 的檔案裡（decisions.jsonl、state.json、inbox/done/）。
+  - 回合總結（`rounds.jsonl`，原本是 `rounds/<N>.json`）只記任務的起落和控制。kernel 的決定、agent 的狀態變化與寄信，都在各自任務資料夾或 node 的檔案裡（decisions.jsonl、state.json、inbox/done/）。
   - 想回答「第 N 回合發生了什麼」，要拼好幾個地方的檔，play.py 就是這樣拼的。
   - 再加上各時間線的回合數不同步，跨時間線只能用牆鐘的 `at` 對照。
 - 先這樣：不加統一的事件流水帳。之後若要給 LLM 看「這回合發生了什麼」，可能要一個回合層級的事件檔，由任務回報。這跟 D-2 的訊息交流是同一件事。
@@ -259,7 +264,7 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 ### I-3 pause 的回合在時間線紀錄裡不留痕跡〔默認正常〕
 
 - 層：daemon；S-08、S-18。
-- 發生了什麼：pause 期間不開回合，`rounds/` 的編號照樣連續，看不出中間停過。要知道停過，得看 daemon 的 `log.jsonl` 或 `ctl-done/`。這合「時間＝回合」的意思（停了就沒有時間），只是讀紀錄的人要知道這一點。
+- 發生了什麼：pause 期間不開回合，`rounds.jsonl` 的回合數照樣連續，看不出中間停過。要知道停過，得看 daemon 的 `log.jsonl` 或 `ctl-done/`。這合「時間＝回合」的意思（停了就沒有時間），只是讀紀錄的人要知道這一點。
 
 ### I-4 示範的結果依賴牆鐘〔默認正常〕
 
@@ -351,4 +356,11 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - 層：kernel × agent；S-16、S-23；R-2 (b) 的最簡單做法。
 - 發生了什麼：名冊要「掛給每個 agent」。最省事的是借 kernel 本來就有的 `<成員>/.aos` 掛載點，把 `roster.json` 寫進成員自己 node 的 `.aos/`，agent 不必再掛任何東西。代價是時空層的資料夾裡多了一份應用層的檔；不在 kernel members 裡的 agent（沒有 kernel 管）就沒有名冊；名冊只有 kernel.json 寫得出的東西（node id、收件路徑、`roles` 一句），不會自動抄 agent.json 的 persona。成員被移出 members 後，它手上的舊名冊不會被收回（同 M-9）。
 - 先這樣：名冊＝kernel.json 的投影；要更多欄位改 kernel.json。
+- **寫不進去不再殺掉 kernel（astra-3 三-2，已修）**：成員搬走、`mnt/<成員>` 變成斷鏈時，寫名冊在 `makedirs` 丟 `FileExistsError`，整個 kernel exit 1，其他成員的管理也停了。現在寫名冊與寫控制檔（成員 ctl.json、daemon ctl）丟 OSError 都只在 decisions.jsonl 記 `skipped`、跳過那一個，這輪照樣做完。後續行為見 M-16。測試 `test_broken_member_mount_does_not_kill_kernel`。
+
+### M-16 成員搬走後，kernel 對它只記 skipped，不會自己修〔技術選型，先這樣〕
+
+- 層：kernel × 掛載；S-17、S-18、S-23。astra-3 三-2 的修法帶出的行為。
+- 發生了什麼：三-2 修好後，搬走的成員每輪在 decisions.jsonl 多一行 roster `skipped`（讀不到舊名冊，每輪都會再試）。kernel 的掛載點還指著舊路徑；restart 時 tick 照 M-2 在舊路徑建回空殼，kernel 在空殼讀到用量 0。之前因總額 pause 的成員，這時會被 cap resume（理由原本寫「總額上限改了」，誤導；**已改**成寫實際的「用量 X ≤ cap_tokens Y」）。真實用量在新位置，kernel 看不到。
+- 先這樣：搬家＝舊 id 消失、新 id 出現（P-15），要人把 kernel.json 的 members 改成新路徑。不偵測搬家、不自動卸掛（M-9）。
 

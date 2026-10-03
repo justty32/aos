@@ -67,6 +67,8 @@ class RealCi(unittest.TestCase):
         self.assertEqual((r["kind"], r["module"], r["passed"], r["total"]), ("test", "dur", 36, 36))
         self.assertEqual([to for to, _ in self.sent], ["t/coder", "t/lead"])   # PASS 也寄給負責人，附程式碼
         self.assertIn("def parse_duration", self.sent[1][1])
+        import aos7_agent_tools   # 附的程式碼包在 ``` 裡，lead 的 save code: true 取得到原文（R-15 (b)）
+        self.assertEqual(aos7_agent_tools.extract_code(self.sent[1][1]).strip(), GOOD_DUR.strip())
         r = self.ci.handle(self.ctx, st, {"from": "t/coder", "body": GOOD_DUR}, 3, ["t/lead"])
         self.assertEqual((r["kind"], r["n"], len(self.sent)), ("dup", 1, 2))   # 一樣的程式碼：不測、不回
         self.assertEqual(st["n"], 1)

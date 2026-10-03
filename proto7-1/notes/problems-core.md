@@ -113,6 +113,7 @@
 
 - 層：daemon、tock。
 - 發生什麼：daemon 主迴圈每 20 ms 重走整棵樹找 node，status.json 每圈都對每個 node 算一次活任務（讀每個任務資料夾＋/proc）；tock 每回合也掃該 node 全部歷史任務。interval 50 ms、跑 3 秒就有上百個任務資料夾（smoke test 時 `q-r1`～`q-r15`，each 任務一回合一個）。沒有回收、沒有歸檔；成本隨歷史線性長。tid 用字典序排序（`q-r10` 在 `q-r2` 前），只影響顯示。
+- **減量（astra-3 長跑後）**：astra-3 跑 7 條時間線 360 回合，平均每回合（七 node 合計）多 9 個檔、4.4 KB 內容卻配置 39.7 KB（小檔一檔至少一個 4 KB 區塊）；其中 7 個是 `rounds/<N>.json`（一 node 一個）。改成 tock 在 `.aos/rounds.jsonl` 加一行，每回合每 node 少一個檔；用 `tail`／`grep` 照樣看得懂（S-01）。剩下的大多是信件（一封一檔）與 each／restart 的任務資料夾，照舊只增不減；全掃也照舊。測試 `test_node_appears_and_round_continues`。
 
 ### P-15 node 消失時該回合不 tock〔默認正常〕
 

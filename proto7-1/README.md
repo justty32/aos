@@ -12,7 +12,7 @@
 - [notes/play/](notes/play/README.md)：試玩紀錄（一輪一列）。
 - 示範：`python3 proto7-1/demo/play.py`（一鍵跑完約 8 秒，自己開的暫存根全 OK 就刪掉、有失敗留著並印路徑，印出每條時間線每回合發生什麼、kernel 的決定、控制檔、掛載、加掛回條、寫入紀錄、信件，最後逐項檢查；寫入紀錄預設開著）。LLM 預設用離線的假後端；`agent.json` 的 `llm` 改成 `{"url": "http://localhost:1234/v1", "model": "..."}` 就接 OpenAI 相容端點（LM Studio 的 gemma-4-e4b 實測可用）。
 - **真模型場景**：`python3 proto7-1/demo/real.py`。lead（luna）、coder（deepseek）、中途加入的 rita（haiku）只靠信件合寫兩個小模組，由不用 LLM 的 ci 機器人跑隱藏測試驗收；kernel 管卡住和預算，並給每個成員寫名冊（`.aos/roster.json`）；總額上限 `cap_tokens` 這個場景沒設。ci 不測不回非程式碼與重複的程式碼，PASS 直接寄 lead（附程式碼）。`--model lead=deepseek-chat` 之類可換模型組合；跑完會報 lead 交的檔是 ci 第幾次測的那份。只打 LiteLLM 代理 `127.0.0.1:4000`，每輪 ≤ 400 次呼叫、≤ 900 秒，不放進 unittest。紀錄與發現：[real-1](notes/runs/2026-10-03-real-1.md)、[real-2](notes/runs/2026-10-03-real-2.md)（兩模組三次都寫出 DONE.md，一次交付的檔不合格）、[notes/problems-real.md](notes/problems-real.md)。
-- 測試：在 repo 根跑 `python3 -m unittest discover -s proto7-1/tests`（離線、純標準庫，64 項約 11 秒，含示範場景的整合測）。
+- 測試：在 repo 根跑 `python3 -m unittest discover -s proto7-1/tests`（離線、純標準庫，68 項約 11 秒，含示範場景的整合測）。
 
 ## 結構
 

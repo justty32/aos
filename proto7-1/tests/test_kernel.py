@@ -151,6 +151,65 @@ class RuleTest(unittest.TestCase):
         self.assertEqual([(x["target"], x["op"]) for x in ds], [("team/agents/bob", "resume")])
         self.assertEqual(st["paused"], {})
 
+    def test_removed_member_resume_clears_acc(self):
+        """astra-3 三-1：移出成員到期 resume 後累計也歸零；用量不變時加回，不會被同一筆用量再 pause。"""
+        d = self.w.task("team/agents/bob", "agent-r1")
+        fs.write_json(os.path.join(d, "usage.json"), {"tokens": 0})
+        ds, st = self.step({}, 1)
+        fs.write_json(os.path.join(d, "usage.json"), {"tokens": 500})
+        rnd = 2
+        for _ in range(2):  # 移出、到期、加回，做兩次
+            ds, st = self.step(st, rnd)
+            self.assertEqual([(x["target"], x["op"]) for x in ds], [("team/agents/bob", "pause")])
+            self.cfg["members"] = ["agents/amy"]
+            ds, st = self.step(st, rnd + 1)
+            ds, st = self.step(st, rnd + 2)
+            self.assertEqual([(x["target"], x["op"]) for x in ds], [("team/agents/bob", "resume")])
+            self.assertEqual(st["usage"]["team/agents/bob"]["acc"], 0)
+            self.cfg["members"] = ["agents/amy", "agents/bob"]
+            ds, st = self.step(st, rnd + 3)
+            self.assertEqual(ds, [])
+            fs.write_json(os.path.join(d, "usage.json"), {"tokens": 500 + 200 * (rnd // 4 + 1)})
+            rnd += 4
+
+    def test_broken_member_mount_does_not_kill_kernel(self):
+        """astra-3 三-2：成員搬走、掛載斷了，寫名冊／寫成員 ctl 失敗只記一行、跳過那個成員，kernel 這輪照樣做完。"""
+        import aos7_kernel
+        node = fs.node_path(self.w.root, "team")
+        env = {"node_id": "team", "node": node, "tid": "kernel-r1", "task": self.kdir, "root": self.w.root}
+        fs.write_json(os.path.join(node, "kernel.json"), self.cfg)
+        bob = self.w.task("team/agents/bob", "agent-r1")
+        fs.write_json(os.path.join(bob, "progress.json"), {"steps": 1})
+        aos7_kernel.one_round(env, 1)
+        os.rename(os.path.join(self.w.root, "team/agents/amy"), os.path.join(self.w.root, "team/agents/moved-amy"))
+        os.remove(os.path.join(self.w.root, "team/agents/bob/.aos/roster.json"))
+        self.cfg["roles"] = {"agents/amy": "改了"}  # 名冊變了，要重寫
+        fs.write_json(os.path.join(node, "kernel.json"), self.cfg)
+        for r in range(2, 6):
+            self.w.set_round("team/agents/bob", r)
+            aos7_kernel.one_round(env, r)  # 不丟例外
+        recs = fs.read_jsonl(os.path.join(self.kdir, "decisions.jsonl"))
+        bad = [x for x in recs if x["rule"] == "roster"]
+        self.assertTrue(bad and all(x["target"] == "team/agents/amy" and "skipped" in x for x in bad))
+        self.assertEqual(fs.read_json(os.path.join(self.w.root, "team/agents/bob/.aos/roster.json"))["members"][0]["role"], "改了")
+        self.assertIn(("stuck", "team/agents/bob:agent-r1"), [(x["rule"], x["target"]) for x in recs])
+        self.assertEqual(fs.read_json(os.path.join(self.kdir, "kernel-state.json"))["round"], 5)
+        # 寫成員 ctl 失敗也一樣：記 skipped，不丟例外
+        from unittest import mock
+        real = fs.write_json
+        def flaky(path, obj):
+            if path.endswith("ctl.json"):
+                raise FileExistsError(17, "File exists", path)
+            return real(path, obj)
+        bob2 = self.w.task("team/agents/bob", "agent-r6")
+        fs.write_json(os.path.join(bob2, "progress.json"), {"steps": 1})
+        with mock.patch.object(fs, "write_json", flaky):
+            for r in range(6, 10):
+                self.w.set_round("team/agents/bob", r)
+                aos7_kernel.one_round(env, r)
+        recs = fs.read_jsonl(os.path.join(self.kdir, "decisions.jsonl"))
+        self.assertTrue(any(x["target"] == "team/agents/bob:agent-r6" and "寫不進去" in x.get("skipped", "") for x in recs))
+
     def test_llm_wait_is_not_stuck(self):
         """R-3：progress 寫著 llm_since（在等 LLM）不算卡住；另設 llm_stuck_rounds 才管。"""
         d = self.w.task("team/agents/amy", "agent-r1")

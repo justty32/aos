@@ -167,7 +167,7 @@ def rule_budget(cfg, st, snap, out):
         p = st["paused"].get(mid)
         if p is not None and p.get("cap"):
             if not has_cap or total <= cap:
-                out.append(_decision(rnd, "cap", mid, "resume", "總額上限改了（用量 %s，上限 %s）" % (total, cap)))
+                out.append(_decision(rnd, "cap", mid, "resume", ("用量 %s ≤ cap_tokens %s" % (total, cap) if has_cap else "kernel.json 拿掉了 cap_tokens（用量 %s）" % total)))
                 del st["paused"][mid]
                 u["acc"] = 0
         elif has_cap and total > cap:
@@ -192,6 +192,8 @@ def rule_budget(cfg, st, snap, out):
             out.append(_decision(rnd, "budget", mid, "resume",
                                  "pause 後已過 %d 回合（已不在 members，自己下的 pause 自己收）" % (rnd - p["at"])))
             del st["paused"][mid]
+            if mid in st["usage"]:
+                st["usage"][mid]["acc"] = 0  # 同在冊的分支：resume 後累計歸零（astra-3 三-1）
 
 
 def rule_age(cfg, st, snap, out):

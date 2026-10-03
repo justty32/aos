@@ -167,6 +167,54 @@ class StepByStep(unittest.TestCase):
         m = memory(node, 3)["recent_letters"]
         self.assertEqual([h["body"] for h in m], ["OK", "PASS 7", "PASS 8", "PASS 9"])
 
+    def test_memory_reads_only_tail(self):
+        """astra-3 三-3：memory 只讀尾端（sent.jsonl 從檔尾往回讀、inbox/done 依檔名取最後幾封），不讀全歷史。"""
+        import aos7_agent_tools
+        from aos7_fs import tail_jsonl
+        node = self.w["amy"]["node"]
+        path = os.path.join(node, "sent.jsonl")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("{壞行\n")
+            for i in range(3000):
+                f.write(json.dumps({"to": "t/bob", "at": "2026-01-01T%05d" % i, "body": "x" * (i % 50)}) + "\n")
+        self.assertEqual([x["at"][-5:] for x in tail_jsonl(path, 3, block=64)], ["02997", "02998", "02999"])
+        self.assertEqual(len(tail_jsonl(path, 5000, block=64)), 3000)
+        self.assertEqual(tail_jsonl(path, 0), [])
+        for i in range(300):
+            write_json(os.path.join(node, "inbox", "done", "%019d-t_ci.json" % i),
+                       {"from": "t/ci", "at": "2026-01-01T%05d" % (i * 10 + 5), "body": "r%d" % i})
+        reads = []
+        real_read = aos7_agent_tools.read_json
+        with mock.patch.object(aos7_agent_tools, "read_json", lambda p, *a: reads.append(p) or real_read(p, *a)):
+            m = aos7_agent_tools.memory(node, 2)["recent_letters"]
+        self.assertEqual([h["at"][-5:] for h in m], ["02995", "02998", "02999"])  # 最近 2 封＋ci 補一封
+        self.assertEqual(len(reads), aos7_agent_tools.LOOKBACK)  # 300 封只讀最後 LOOKBACK 封
+
+    def test_save_letter_verbatim(self):
+        """R-15 (b)：save 不經 LLM，把收到的信（code: true 取第一段 ``` 程式碼）原樣存成檔；信帶 file 給 prompt。"""
+        from aos7_agent_tools import do_tool, read_letters
+        amy = self.w["amy"]
+        code = "def f(x):\n    return x  # 原樣\n"
+        body = "dur.py PASS 36/36（第 2 次測試），寄件者 t/coder。通過的完整原始碼：\n```python\n%s\n```\n" % code
+        write_json(os.path.join(amy["node"], "inbox", "123-t_ci.json"), {"from": "t/ci", "body": body})
+        self.assertEqual(read_letters(amy["node"], ["123-t_ci.json"])[0]["file"], "123-t_ci.json")
+        sys_, user = aos7_llm.build_prompt({}, None, read_letters(amy["node"], ["123-t_ci.json"]), "x")
+        self.assertIn('"save"', sys_)
+        self.assertEqual(json.loads(user)["letters"][0]["file"], "123-t_ci.json")
+        r = do_tool(amy, {"tool": "save", "letter": "123-t_ci.json", "path": "work/dur.py", "code": True}, 1)
+        self.assertTrue(r.startswith("save"), r)
+        with open(os.path.join(amy["node"], "work", "dur.py"), encoding="utf-8") as f:
+            self.assertEqual(f.read().strip(), code.strip())
+        # 搬到 done/ 之後照樣找得到；不帶 code 存整封
+        from aos7_agent_tools import move_done
+        move_done(amy["node"], ["123-t_ci.json"])
+        do_tool(amy, {"tool": "save", "letter": "123-t_ci.json", "path": "work/all.txt"}, 1)
+        with open(os.path.join(amy["node"], "work", "all.txt"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), body)
+        for bad in ({"letter": "../x.json", "path": "a"}, {"letter": "nope.json", "path": "a"},
+                    {"letter": "123-t_ci.json", "path": "../../x"}, {"letter": "123-t_ci.json"}):
+            self.assertIn("失敗", do_tool(amy, dict(bad, tool="save"), 1))
+
     def test_write_cannot_escape_node(self):
         from aos7_agent_tools import do_tool
         r = do_tool(self.w["amy"], {"tool": "write", "path": "../bob/x.txt", "text": "x"}, 1)
