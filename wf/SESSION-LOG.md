@@ -12,6 +12,7 @@
 
 ## 最新進度
 
+- 10-03（proto6，待使用者挑）：astra 六條線對三份提案另想完了，收斂點、方向題與建議實驗順序見 [astra-alt 總覽](../proto6/notes/reviews/2026-10-03-astra-alt/README.md)；等使用者選先做哪個實驗。
 - 10-02（proto6，擱置待使用者想）：停格檔只記未來方向；node（使用者預感 node 概念會消失，tick 與 daemon 都不做 node 模組）；`peers` 先不做；系統級任務怎麼改用 hooks（[清單](../proto6/notes/2026-10-01-tick-system-tasks.md)）；C++11 等 Python POC 玩過再開。各段狀態見 [plan](../proto6/plan/README.md#各段狀態)。
 - 10-02（proto6，超標檔）：排除封存後 proto6 還有 15 份、wf 44 份 Markdown 超過 8 KiB；先刪過時內容再考慮拆，見 [astra 結構審查「建議」](../proto6/notes/reviews/2026-10-02-astra/10-structure.md#建議)。
 - 09-25（proto5 整理鏈收尾後還開著）：待董事評分 [brief/2026-09-25.md](../brief/2026-09-25.md)、WAIT_USER 40～73；下一輪：`lessons.md`／`catalog.md` 先改 lib 再拆、`agent_access`／`agent_talk`／`kernel_check`／`kernel_ledger` 沒拆、09-24 notes 三份一組的收攏。[→](session_logs/2026-09/2026-09-25.md#2026-09-25)
