@@ -1,0 +1,26 @@
+{
+  "case": "already-open-fd",
+  "tock": {
+    "round": 3,
+    "tick_at": null,
+    "tock_at": "2026-10-03T16:03:57.608",
+    "started": [],
+    "alive": [
+      "worker-r3"
+    ],
+    "ended": [],
+    "ctl": [],
+    "mounts": [],
+    "early": null,
+    "archived": [
+      "worker-r1"
+    ]
+  },
+  "state_from_fd": {
+    "state": "act",
+    "round": 2,
+    "steps": 9,
+    "pc": 4
+  },
+  "old_path_exists": false
+}

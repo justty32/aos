@@ -1,0 +1,1373 @@
+[
+  {
+    "case": "term",
+    "root": "/tmp/astra5-nested-term-hk9elru8",
+    "before": {
+      "status": [
+        {
+          "pid": 2340112,
+          "root": "/tmp/astra5-nested-term-hk9elru8",
+          "at": "2026-10-03T16:01:34.389",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "child-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340116,
+          "root": "/tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1/mnt/sub",
+          "at": "2026-10-03T16:01:34.392",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "grand-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340120,
+          "root": "/tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub",
+          "at": "2026-10-03T16:01:34.391",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "leaf0-r1"
+              ]
+            }
+          }
+        }
+      ],
+      "processes": [
+        {
+          "pid": 2340112,
+          "ppid": 2340110,
+          "pgid": 2340112,
+          "state": "S",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-term-hk9elru8 "
+        },
+        {
+          "pid": 2340115,
+          "ppid": 2340110,
+          "pgid": 2340115,
+          "state": "S",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1 "
+        },
+        {
+          "pid": 2340116,
+          "ppid": 2340115,
+          "pgid": 2340116,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1/mnt/sub "
+        },
+        {
+          "pid": 2340119,
+          "ppid": 2340110,
+          "pgid": 2340119,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1 "
+        },
+        {
+          "pid": 2340120,
+          "ppid": 2340119,
+          "pgid": 2340120,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub "
+        },
+        {
+          "pid": 2340123,
+          "ppid": 2340110,
+          "pgid": 2340123,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf0-r1 "
+        },
+        {
+          "pid": 2340124,
+          "ppid": 2340123,
+          "pgid": 2340124,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; time.sleep(90) "
+        }
+      ]
+    },
+    "parent_exit_seconds": 0.16351876300177537,
+    "after": {
+      "status": [
+        {
+          "pid": 2340112,
+          "root": "/tmp/astra5-nested-term-hk9elru8",
+          "at": "2026-10-03T16:01:34.531",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": true,
+          "stopped": true,
+          "kill_on_stop": true,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "stopped",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": []
+            }
+          }
+        },
+        {
+          "pid": 2340116,
+          "root": "/tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1/mnt/sub",
+          "at": "2026-10-03T16:01:34.493",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": true,
+          "stopped": true,
+          "kill_on_stop": true,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "stopped",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": []
+            }
+          }
+        },
+        {
+          "pid": 2340120,
+          "root": "/tmp/astra5-nested-term-hk9elru8/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub",
+          "at": "2026-10-03T16:01:34.452",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": true,
+          "stopped": true,
+          "kill_on_stop": true,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "stopped",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": []
+            }
+          }
+        }
+      ],
+      "processes": [],
+      "tasks": {
+        "n/child/n/grand/n/.aos/tasks/leaf0-r1": {
+          "pid": {
+            "pid": 2340124,
+            "pgid": 2340124,
+            "runner_pid": 2340123,
+            "at": "2026-10-03T16:01:34.053"
+          },
+          "exit": {
+            "code": -15,
+            "at": "2026-10-03T16:01:34.437",
+            "round": 3
+          },
+          "ended": null
+        },
+        "n/child/n/.aos/tasks/grand-r1": {
+          "pid": {
+            "pid": 2340120,
+            "pgid": 2340120,
+            "runner_pid": 2340119,
+            "at": "2026-10-03T16:01:34.013"
+          },
+          "exit": {
+            "code": 0,
+            "at": "2026-10-03T16:01:34.455",
+            "round": 3
+          },
+          "ended": null
+        },
+        "n/.aos/tasks/child-r1": {
+          "pid": {
+            "pid": 2340116,
+            "pgid": 2340116,
+            "runner_pid": 2340115,
+            "at": "2026-10-03T16:01:33.973"
+          },
+          "exit": {
+            "code": 0,
+            "at": "2026-10-03T16:01:34.496",
+            "round": 3
+          },
+          "ended": null
+        }
+      }
+    },
+    "cleanup": {
+      "active_processes": 0,
+      "root_removed": true
+    }
+  },
+  {
+    "case": "term-stubborn",
+    "root": "/tmp/astra5-nested-term-stubborn-4grtu13e",
+    "before": {
+      "status": [
+        {
+          "pid": 2340166,
+          "root": "/tmp/astra5-nested-term-stubborn-4grtu13e",
+          "at": "2026-10-03T16:01:36.484",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "child-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340170,
+          "root": "/tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub",
+          "at": "2026-10-03T16:01:36.494",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "grand-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340175,
+          "root": "/tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub",
+          "at": "2026-10-03T16:01:36.483",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "leaf0-r1",
+                "leaf1-r1",
+                "leaf2-r1",
+                "leaf3-r1"
+              ]
+            }
+          }
+        }
+      ],
+      "processes": [
+        {
+          "pid": 2340166,
+          "ppid": 2340110,
+          "pgid": 2340166,
+          "state": "S",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-term-stubborn-4grtu13e "
+        },
+        {
+          "pid": 2340169,
+          "ppid": 2340110,
+          "pgid": 2340169,
+          "state": "S",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1 "
+        },
+        {
+          "pid": 2340170,
+          "ppid": 2340169,
+          "pgid": 2340170,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub "
+        },
+        {
+          "pid": 2340173,
+          "ppid": 2340110,
+          "pgid": 2340173,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1 "
+        },
+        {
+          "pid": 2340175,
+          "ppid": 2340173,
+          "pgid": 2340175,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub "
+        },
+        {
+          "pid": 2340179,
+          "ppid": 2340110,
+          "pgid": 2340179,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf0-r1 "
+        },
+        {
+          "pid": 2340180,
+          "ppid": 2340110,
+          "pgid": 2340180,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf1-r1 "
+        },
+        {
+          "pid": 2340181,
+          "ppid": 2340110,
+          "pgid": 2340181,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf2-r1 "
+        },
+        {
+          "pid": 2340182,
+          "ppid": 2340110,
+          "pgid": 2340182,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf3-r1 "
+        },
+        {
+          "pid": 2340183,
+          "ppid": 2340179,
+          "pgid": 2340183,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(90) "
+        },
+        {
+          "pid": 2340184,
+          "ppid": 2340180,
+          "pgid": 2340184,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(90) "
+        },
+        {
+          "pid": 2340185,
+          "ppid": 2340181,
+          "pgid": 2340185,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(90) "
+        },
+        {
+          "pid": 2340186,
+          "ppid": 2340182,
+          "pgid": 2340186,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(90) "
+        },
+        {
+          "pid": 2340205,
+          "ppid": 2340166,
+          "pgid": 2340166,
+          "state": "R",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick /tmp/astra5-nested-term-stubborn-4grtu13e n "
+        }
+      ]
+    },
+    "parent_exit_seconds": 1.1145316590009315,
+    "after": {
+      "status": [
+        {
+          "pid": 2340166,
+          "root": "/tmp/astra5-nested-term-stubborn-4grtu13e",
+          "at": "2026-10-03T16:01:37.614",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": true,
+          "stopped": true,
+          "kill_on_stop": true,
+          "nodes": {
+            "n": {
+              "round": 4,
+              "phase": "stopped",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": []
+            }
+          }
+        },
+        {
+          "pid": 2340170,
+          "root": "/tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub",
+          "at": "2026-10-03T16:01:37.524",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": true,
+          "stopped": false,
+          "kill_on_stop": true,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "grand-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340175,
+          "root": "/tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub",
+          "at": "2026-10-03T16:01:39.008",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": true,
+          "stopped": false,
+          "kill_on_stop": true,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "leaf2-r1",
+                "leaf3-r1"
+              ]
+            }
+          }
+        }
+      ],
+      "processes": [
+        {
+          "pid": 2340173,
+          "ppid": 2340110,
+          "pgid": 2340173,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1 "
+        },
+        {
+          "pid": 2340175,
+          "ppid": 2340173,
+          "pgid": 2340175,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub "
+        },
+        {
+          "pid": 2340181,
+          "ppid": 2340110,
+          "pgid": 2340181,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf2-r1 "
+        },
+        {
+          "pid": 2340182,
+          "ppid": 2340110,
+          "pgid": 2340182,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-term-stubborn-4grtu13e/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf3-r1 "
+        },
+        {
+          "pid": 2340185,
+          "ppid": 2340181,
+          "pgid": 2340185,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(90) "
+        },
+        {
+          "pid": 2340186,
+          "ppid": 2340182,
+          "pgid": 2340186,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(90) "
+        }
+      ],
+      "tasks": {
+        "n/child/n/grand/n/.aos/tasks/leaf3-r1": {
+          "pid": {
+            "pid": 2340186,
+            "pgid": 2340186,
+            "runner_pid": 2340182,
+            "at": "2026-10-03T16:01:36.151"
+          },
+          "exit": null,
+          "ended": null
+        },
+        "n/child/n/grand/n/.aos/tasks/leaf2-r1": {
+          "pid": {
+            "pid": 2340185,
+            "pgid": 2340185,
+            "runner_pid": 2340181,
+            "at": "2026-10-03T16:01:36.150"
+          },
+          "exit": null,
+          "ended": null
+        },
+        "n/child/n/grand/n/.aos/tasks/leaf1-r1": {
+          "pid": {
+            "pid": 2340184,
+            "pgid": 2340184,
+            "runner_pid": 2340180,
+            "at": "2026-10-03T16:01:36.150"
+          },
+          "exit": {
+            "code": -9,
+            "at": "2026-10-03T16:01:38.625",
+            "round": 3
+          },
+          "ended": null
+        },
+        "n/child/n/grand/n/.aos/tasks/leaf0-r1": {
+          "pid": {
+            "pid": 2340183,
+            "pgid": 2340183,
+            "runner_pid": 2340179,
+            "at": "2026-10-03T16:01:36.150"
+          },
+          "exit": {
+            "code": -9,
+            "at": "2026-10-03T16:01:37.547",
+            "round": 3
+          },
+          "ended": null
+        },
+        "n/child/n/.aos/tasks/grand-r1": {
+          "pid": {
+            "pid": 2340175,
+            "pgid": 2340175,
+            "runner_pid": 2340173,
+            "at": "2026-10-03T16:01:36.101"
+          },
+          "exit": null,
+          "ended": null
+        },
+        "n/.aos/tasks/child-r1": {
+          "pid": {
+            "pid": 2340170,
+            "pgid": 2340170,
+            "runner_pid": 2340169,
+            "at": "2026-10-03T16:01:36.051"
+          },
+          "exit": {
+            "code": -9,
+            "at": "2026-10-03T16:01:37.526",
+            "round": 4
+          },
+          "ended": {
+            "round": 4
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "active_processes": 0,
+      "root_removed": true
+    }
+  },
+  {
+    "case": "kill",
+    "root": "/tmp/astra5-nested-kill-elly0a1z",
+    "before": {
+      "status": [
+        {
+          "pid": 2340217,
+          "root": "/tmp/astra5-nested-kill-elly0a1z",
+          "at": "2026-10-03T16:01:39.563",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "child-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340221,
+          "root": "/tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub",
+          "at": "2026-10-03T16:01:39.573",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "grand-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340225,
+          "root": "/tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub",
+          "at": "2026-10-03T16:01:39.580",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "leaf0-r1"
+              ]
+            }
+          }
+        }
+      ],
+      "processes": [
+        {
+          "pid": 2340217,
+          "ppid": 2340110,
+          "pgid": 2340217,
+          "state": "S",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-kill-elly0a1z "
+        },
+        {
+          "pid": 2340220,
+          "ppid": 2340110,
+          "pgid": 2340220,
+          "state": "S",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1 "
+        },
+        {
+          "pid": 2340221,
+          "ppid": 2340220,
+          "pgid": 2340221,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub "
+        },
+        {
+          "pid": 2340224,
+          "ppid": 2340110,
+          "pgid": 2340224,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1 "
+        },
+        {
+          "pid": 2340225,
+          "ppid": 2340224,
+          "pgid": 2340225,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub "
+        },
+        {
+          "pid": 2340228,
+          "ppid": 2340110,
+          "pgid": 2340228,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf0-r1 "
+        },
+        {
+          "pid": 2340229,
+          "ppid": 2340228,
+          "pgid": 2340229,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; time.sleep(90) "
+        },
+        {
+          "pid": 2340245,
+          "ppid": 2340217,
+          "pgid": 2340217,
+          "state": "R",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick /tmp/astra5-nested-kill-elly0a1z n "
+        }
+      ]
+    },
+    "parent_exit_seconds": 0.0010734870011219755,
+    "after": {
+      "status": [
+        {
+          "pid": 2340217,
+          "root": "/tmp/astra5-nested-kill-elly0a1z",
+          "at": "2026-10-03T16:01:39.583",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 3,
+              "phase": "tick",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "child-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340221,
+          "root": "/tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub",
+          "at": "2026-10-03T16:01:40.970",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 12,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "grand-r1"
+              ]
+            }
+          }
+        },
+        {
+          "pid": 2340225,
+          "root": "/tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub",
+          "at": "2026-10-03T16:01:40.974",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": false,
+          "stopped": false,
+          "kill_on_stop": false,
+          "nodes": {
+            "n": {
+              "round": 12,
+              "phase": "idle",
+              "paused": false,
+              "interval_ms": 150,
+              "pause_pending": false,
+              "live": [
+                "leaf0-r1"
+              ]
+            }
+          }
+        }
+      ],
+      "processes": [
+        {
+          "pid": 2340220,
+          "ppid": 2340110,
+          "pgid": 2340220,
+          "state": "S",
+          "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1 "
+        },
+        {
+          "pid": 2340221,
+          "ppid": 2340220,
+          "pgid": 2340221,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub "
+        },
+        {
+          "pid": 2340224,
+          "ppid": 2340110,
+          "pgid": 2340224,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1 "
+        },
+        {
+          "pid": 2340225,
+          "ppid": 2340224,
+          "pgid": 2340225,
+          "state": "S",
+          "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub "
+        },
+        {
+          "pid": 2340228,
+          "ppid": 2340110,
+          "pgid": 2340228,
+          "state": "S",
+          "cmd": "/usr/bin/python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-kill-elly0a1z/n/.aos/tasks/child-r1/mnt/sub/n/.aos/tasks/grand-r1/mnt/sub/n/.aos/tasks/leaf0-r1 "
+        },
+        {
+          "pid": 2340229,
+          "ppid": 2340228,
+          "pgid": 2340229,
+          "state": "S",
+          "cmd": "/usr/bin/python -c import signal,time; time.sleep(90) "
+        }
+      ],
+      "tasks": {
+        "n/child/n/grand/n/.aos/tasks/leaf0-r1": {
+          "pid": {
+            "pid": 2340229,
+            "pgid": 2340229,
+            "runner_pid": 2340228,
+            "at": "2026-10-03T16:01:39.223"
+          },
+          "exit": null,
+          "ended": null
+        },
+        "n/child/n/.aos/tasks/grand-r1": {
+          "pid": {
+            "pid": 2340225,
+            "pgid": 2340225,
+            "runner_pid": 2340224,
+            "at": "2026-10-03T16:01:39.180"
+          },
+          "exit": null,
+          "ended": null
+        },
+        "n/.aos/tasks/child-r1": {
+          "pid": {
+            "pid": 2340221,
+            "pgid": 2340221,
+            "runner_pid": 2340220,
+            "at": "2026-10-03T16:01:39.132"
+          },
+          "exit": null,
+          "ended": null
+        }
+      }
+    },
+    "cleanup": {
+      "active_processes": 0,
+      "root_removed": true
+    }
+  },
+  {
+    "case": "cycle-native",
+    "root": "/tmp/astra5-nested-cycle-brj89255",
+    "status": [
+      {
+        "pid": 2340305,
+        "root": "/tmp/astra5-nested-cycle-brj89255",
+        "at": "2026-10-03T16:01:41.600",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 4,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "writer-r1"
+            ]
+          }
+        }
+      },
+      {
+        "pid": 2340306,
+        "root": "/tmp/astra5-nested-cycle-brj89255/child",
+        "at": "2026-10-03T16:01:41.601",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 1,
+            "phase": "paused",
+            "paused": true,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "writer-r1"
+            ]
+          }
+        }
+      }
+    ],
+    "births": {
+      "child/n/.aos/tasks/writer-r1/birth.json": {
+        "tid": "writer-r1",
+        "name": "writer",
+        "node": "n",
+        "round": 1,
+        "mounts": {
+          "peer": {
+            "to": "parent-link",
+            "error": "parent-link 沿符號連結跑出空間根"
+          },
+          "?0": {
+            "error": "direct-parent：目標要是空間裡的相對路徑，拿到 '../.aosd'"
+          }
+        },
+        "at": "2026-10-03T16:01:41.067",
+        "restart_of": null,
+        "argv": [
+          "/usr/bin/python",
+          "-c",
+          "import os,pathlib,json,time\np=pathlib.Path(os.environ['AOS7_TASK']); n=pathlib.Path(os.environ['AOS7_NODE'])\nwhile not (n/'go').exists():time.sleep(.02)\npeer=p/'mnt/peer'\ntry:\n q=peer/'ctl'/('from-'+os.environ['AOS7_NODE_ID'].replace('/','_')+'.json');q.parent.mkdir(exist_ok=True)\n q.write_text(json.dumps(dict(op='pause',node='n',by=os.environ['AOS7_TID'])))\n (p/'sent.json').write_text(json.dumps({'path':str(q),'ok':True}))\nexcept OSError as e:(p/'sent.json').write_text(json.dumps({'ok':False,'error':str(e)}))\ntime.sleep(90)\n"
+        ]
+      },
+      "n/.aos/tasks/writer-r1/birth.json": {
+        "tid": "writer-r1",
+        "name": "writer",
+        "node": "n",
+        "round": 1,
+        "mounts": {
+          "peer": {
+            "to": "child/.aosd",
+            "at": "/tmp/astra5-nested-cycle-brj89255/n/.aos/tasks/writer-r1/mnt/peer"
+          }
+        },
+        "at": "2026-10-03T16:01:41.067",
+        "restart_of": null,
+        "argv": [
+          "/usr/bin/python",
+          "-c",
+          "import os,pathlib,json,time\np=pathlib.Path(os.environ['AOS7_TASK']); n=pathlib.Path(os.environ['AOS7_NODE'])\nwhile not (n/'go').exists():time.sleep(.02)\npeer=p/'mnt/peer'\ntry:\n q=peer/'ctl'/('from-'+os.environ['AOS7_NODE_ID'].replace('/','_')+'.json');q.parent.mkdir(exist_ok=True)\n q.write_text(json.dumps(dict(op='pause',node='n',by=os.environ['AOS7_TID'])))\n (p/'sent.json').write_text(json.dumps({'path':str(q),'ok':True}))\nexcept OSError as e:(p/'sent.json').write_text(json.dumps({'ok':False,'error':str(e)}))\ntime.sleep(90)\n"
+        ]
+      }
+    },
+    "sent": {
+      "child/n/.aos/tasks/writer-r1/sent.json": {
+        "ok": false,
+        "error": "[Errno 2] No such file or directory: '/tmp/astra5-nested-cycle-brj89255/child/n/.aos/tasks/writer-r1/mnt/peer/ctl'"
+      },
+      "n/.aos/tasks/writer-r1/sent.json": {
+        "path": "/tmp/astra5-nested-cycle-brj89255/n/.aos/tasks/writer-r1/mnt/peer/ctl/from-n.json",
+        "ok": true
+      }
+    },
+    "receipts": {
+      "child/.aosd/ctl-done/from-n.json": {
+        "op": "pause",
+        "node": "n",
+        "by": "writer-r1",
+        "result": {
+          "ok": true,
+          "msg": "pause n",
+          "at": "2026-10-03T16:01:41.114",
+          "queued_at": "2026-10-03T16:01:41.110"
+        }
+      }
+    },
+    "paused_files": [
+      null,
+      {
+        "paused": [
+          "n"
+        ]
+      }
+    ],
+    "rounds_before": [
+      {
+        "round": 4,
+        "open": false,
+        "tick_at": "2026-10-03T16:01:41.543",
+        "tock_at": "2026-10-03T16:01:41.562",
+        "started": [],
+        "ctl": [],
+        "mounts": []
+      },
+      {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-03T16:01:41.066",
+        "tock_at": "2026-10-03T16:01:41.224",
+        "started": [
+          "writer-r1"
+        ],
+        "ctl": [],
+        "mounts": []
+      }
+    ],
+    "rounds_after": [
+      {
+        "round": 7,
+        "open": false,
+        "tick_at": "2026-10-03T16:01:41.993",
+        "tock_at": "2026-10-03T16:01:42.012",
+        "started": [],
+        "ctl": [],
+        "mounts": []
+      },
+      {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-03T16:01:41.066",
+        "tock_at": "2026-10-03T16:01:41.224",
+        "started": [
+          "writer-r1"
+        ],
+        "ctl": [],
+        "mounts": []
+      }
+    ],
+    "after_resume": [
+      {
+        "pid": 2340305,
+        "root": "/tmp/astra5-nested-cycle-brj89255",
+        "at": "2026-10-03T16:01:42.330",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 9,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "writer-r1"
+            ]
+          }
+        }
+      },
+      {
+        "pid": 2340306,
+        "root": "/tmp/astra5-nested-cycle-brj89255/child",
+        "at": "2026-10-03T16:01:42.331",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 3,
+            "phase": "tick",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "writer-r1"
+            ]
+          }
+        }
+      }
+    ],
+    "cleanup": {
+      "active_processes": 0,
+      "root_removed": true
+    }
+  },
+  {
+    "case": "cycle-reexport",
+    "root": "/tmp/astra5-nested-cycle-vuu1g1d0",
+    "status": [
+      {
+        "pid": 2340339,
+        "root": "/tmp/astra5-nested-cycle-vuu1g1d0",
+        "at": "2026-10-03T16:01:42.956",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 1,
+            "phase": "paused",
+            "paused": true,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "writer-r1"
+            ]
+          }
+        }
+      },
+      {
+        "pid": 2340340,
+        "root": "/tmp/astra5-nested-cycle-vuu1g1d0/child",
+        "at": "2026-10-03T16:01:42.956",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 1,
+            "phase": "paused",
+            "paused": true,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "writer-r1"
+            ]
+          }
+        }
+      }
+    ],
+    "births": {
+      "child/n/.aos/tasks/writer-r1/birth.json": {
+        "tid": "writer-r1",
+        "name": "writer",
+        "node": "n",
+        "round": 1,
+        "mounts": {
+          "peer": {
+            "to": ".parent-aosd",
+            "at": "/tmp/astra5-nested-cycle-vuu1g1d0/child/n/.aos/tasks/writer-r1/mnt/peer"
+          }
+        },
+        "at": "2026-10-03T16:01:42.425",
+        "restart_of": null,
+        "argv": [
+          "/usr/bin/python",
+          "-c",
+          "import os,pathlib,json,time\np=pathlib.Path(os.environ['AOS7_TASK']); n=pathlib.Path(os.environ['AOS7_NODE'])\nwhile not (n/'go').exists():time.sleep(.02)\npeer=p/'mnt/peer'\ntry:\n q=peer/'ctl'/('from-'+os.environ['AOS7_NODE_ID'].replace('/','_')+'.json');q.parent.mkdir(exist_ok=True)\n q.write_text(json.dumps(dict(op='pause',node='n',by=os.environ['AOS7_TID'])))\n (p/'sent.json').write_text(json.dumps({'path':str(q),'ok':True}))\nexcept OSError as e:(p/'sent.json').write_text(json.dumps({'ok':False,'error':str(e)}))\ntime.sleep(90)\n"
+        ]
+      },
+      "n/.aos/tasks/writer-r1/birth.json": {
+        "tid": "writer-r1",
+        "name": "writer",
+        "node": "n",
+        "round": 1,
+        "mounts": {
+          "peer": {
+            "to": "child/.aosd",
+            "at": "/tmp/astra5-nested-cycle-vuu1g1d0/n/.aos/tasks/writer-r1/mnt/peer"
+          }
+        },
+        "at": "2026-10-03T16:01:42.424",
+        "restart_of": null,
+        "argv": [
+          "/usr/bin/python",
+          "-c",
+          "import os,pathlib,json,time\np=pathlib.Path(os.environ['AOS7_TASK']); n=pathlib.Path(os.environ['AOS7_NODE'])\nwhile not (n/'go').exists():time.sleep(.02)\npeer=p/'mnt/peer'\ntry:\n q=peer/'ctl'/('from-'+os.environ['AOS7_NODE_ID'].replace('/','_')+'.json');q.parent.mkdir(exist_ok=True)\n q.write_text(json.dumps(dict(op='pause',node='n',by=os.environ['AOS7_TID'])))\n (p/'sent.json').write_text(json.dumps({'path':str(q),'ok':True}))\nexcept OSError as e:(p/'sent.json').write_text(json.dumps({'ok':False,'error':str(e)}))\ntime.sleep(90)\n"
+        ]
+      }
+    },
+    "sent": {
+      "child/n/.aos/tasks/writer-r1/sent.json": {
+        "path": "/tmp/astra5-nested-cycle-vuu1g1d0/child/n/.aos/tasks/writer-r1/mnt/peer/ctl/from-n.json",
+        "ok": true
+      },
+      "n/.aos/tasks/writer-r1/sent.json": {
+        "path": "/tmp/astra5-nested-cycle-vuu1g1d0/n/.aos/tasks/writer-r1/mnt/peer/ctl/from-n.json",
+        "ok": true
+      }
+    },
+    "receipts": {
+      "child/.parent-aosd/ctl-done/from-n.json": {
+        "op": "pause",
+        "node": "n",
+        "by": "writer-r1",
+        "result": {
+          "ok": true,
+          "msg": "pause n",
+          "at": "2026-10-03T16:01:42.469",
+          "queued_at": "2026-10-03T16:01:42.450"
+        }
+      },
+      "child/.aosd/ctl-done/from-n.json": {
+        "op": "pause",
+        "node": "n",
+        "by": "writer-r1",
+        "result": {
+          "ok": true,
+          "msg": "pause n",
+          "at": "2026-10-03T16:01:42.470",
+          "queued_at": "2026-10-03T16:01:42.450"
+        }
+      }
+    },
+    "paused_files": [
+      {
+        "paused": [
+          "n"
+        ]
+      },
+      {
+        "paused": [
+          "n"
+        ]
+      }
+    ],
+    "rounds_before": [
+      {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-03T16:01:42.423",
+        "tock_at": "2026-10-03T16:01:42.585",
+        "started": [
+          "writer-r1"
+        ],
+        "ctl": [],
+        "mounts": []
+      },
+      {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-03T16:01:42.424",
+        "tock_at": "2026-10-03T16:01:42.585",
+        "started": [
+          "writer-r1"
+        ],
+        "ctl": [],
+        "mounts": []
+      }
+    ],
+    "rounds_after": [
+      {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-03T16:01:42.423",
+        "tock_at": "2026-10-03T16:01:42.585",
+        "started": [
+          "writer-r1"
+        ],
+        "ctl": [],
+        "mounts": []
+      },
+      {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-03T16:01:42.424",
+        "tock_at": "2026-10-03T16:01:42.585",
+        "started": [
+          "writer-r1"
+        ],
+        "ctl": [],
+        "mounts": []
+      }
+    ],
+    "after_resume": [
+      {
+        "pid": 2340339,
+        "root": "/tmp/astra5-nested-cycle-vuu1g1d0",
+        "at": "2026-10-03T16:01:43.686",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 3,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "writer-r1"
+            ]
+          }
+        }
+      },
+      {
+        "pid": 2340340,
+        "root": "/tmp/astra5-nested-cycle-vuu1g1d0/child",
+        "at": "2026-10-03T16:01:43.686",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 3,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "writer-r1"
+            ]
+          }
+        }
+      }
+    ],
+    "cleanup": {
+      "active_processes": 0,
+      "root_removed": true
+    }
+  }
+]

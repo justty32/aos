@@ -1,0 +1,70 @@
+{
+  "clock": {
+    "n": {
+      "ticks": 11,
+      "start_gap_median_ms": 100.0576690021262,
+      "min_ms": 99.96079800112057,
+      "max_ms": 100.12416300014593
+    }
+  },
+  "interval": {
+    "day": {
+      "ticks": 1,
+      "start_gap_median_ms": null,
+      "min_ms": null,
+      "max_ms": null
+    },
+    "hundred": {
+      "ticks": 11,
+      "start_gap_median_ms": 100.06429199893319,
+      "min_ms": 99.98716699919896,
+      "max_ms": 100.09003999948618
+    },
+    "negative": {
+      "ticks": 34,
+      "start_gap_median_ms": 30.386514001293108,
+      "min_ms": 29.486121002264554,
+      "max_ms": 39.13908899994567
+    },
+    "one": {
+      "ticks": 33,
+      "start_gap_median_ms": 30.3481324990571,
+      "min_ms": 29.449792997183977,
+      "max_ms": 39.446443999622716
+    },
+    "zero": {
+      "ticks": 34,
+      "start_gap_median_ms": 30.251632000727113,
+      "min_ms": 29.49403499951586,
+      "max_ms": 38.802350001788
+    }
+  },
+  "early": {
+    "empty": {
+      "ticks": 3,
+      "start_gap_median_ms": 499.81521500012605,
+      "min_ms": 499.49897899932694,
+      "max_ms": 500.13145100092515
+    },
+    "keep": {
+      "ticks": 3,
+      "start_gap_median_ms": 510.8221600003162,
+      "min_ms": 500.1070949983841,
+      "max_ms": 521.5372250022483
+    },
+    "short": {
+      "ticks": 3,
+      "start_gap_median_ms": 500.0336584998877,
+      "min_ms": 500.0309130009555,
+      "max_ms": 500.0364039988199
+    }
+  },
+  "stall": {
+    "n": {
+      "ticks": 3,
+      "start_gap_median_ms": 244.9470655010373,
+      "min_ms": 100.07338799914578,
+      "max_ms": 389.8207430029288
+    }
+  }
+}

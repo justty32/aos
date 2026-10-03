@@ -1,0 +1,21 @@
+{
+  "case": "runner-exit",
+  "root": "/tmp/astra5-crash-runner-exit-qxwkip4z",
+  "fault_injection": "sitecustomize patches selected os call only; SIGSTOP then controller SIGKILL",
+  "probe_error": "TimeoutError('probe wait expired')",
+  "final_files": {
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:01:11.715\",\n \"tock_at\": null,\n \"started\": [\n  \"done-r1\"\n ],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/tasks/done-r1/birth.json": "{\n \"tid\": \"done-r1\",\n \"name\": \"done\",\n \"node\": \".\",\n \"round\": 1,\n \"mounts\": {},\n \"at\": \"2026-10-03T16:01:11.715\",\n \"restart_of\": null,\n \"argv\": [\n  \"/usr/bin/python\",\n  \"-c\",\n  \"raise SystemExit(23)\"\n ]\n}\n",
+    ".aos/tasks/done-r1/exit.json": "{\n \"code\": 23,\n \"at\": \"2026-10-03T16:01:11.744\",\n \"round\": 1\n}\n",
+    ".aos/tasks/done-r1/out.log": "",
+    ".aos/tasks/done-r1/pid.json": "{\n \"pid\": 2339573,\n \"pgid\": 2339573,\n \"runner_pid\": 2339572,\n \"at\": \"2026-10-03T16:01:11.731\"\n}\n",
+    ".aos/tasks.json": "{\"tasks\": [{\"name\": \"done\", \"argv\": [\"/usr/bin/python\", \"-c\", \"raise SystemExit(23)\"]}]}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    "aos7-tick-0.stderr": "{\"round\": 1, \"started\": [\"done-r1\"]}\n"
+  },
+  "cleanup": {
+    "remaining_children": [],
+    "root_exists": false
+  }
+}

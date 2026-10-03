@@ -1,0 +1,408 @@
+{
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "keep",
+   "start": 27101.029528163,
+   "end": 27101.047692265,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "empty",
+   "start": 27101.02988977,
+   "end": 27101.047836365,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "short",
+   "start": 27101.03014151,
+   "end": 27101.04818696,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "empty",
+   "start": 27101.047938886,
+   "end": 27101.064244753,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "short",
+   "start": 27101.088491107,
+   "end": 27101.105153802,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "empty",
+   "start": 27101.529388749,
+   "end": 27101.548828555,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "short",
+   "start": 27101.530177914,
+   "end": 27101.550073132,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "keep",
+   "start": 27101.531784678,
+   "end": 27101.550998803,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "empty",
+   "start": 27101.548915768,
+   "end": 27101.567749141,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "keep",
+   "start": 27101.551065388,
+   "end": 27101.570054992,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "keep",
+   "start": 27101.570140673,
+   "end": 27101.590466396,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "short",
+   "start": 27101.590573025,
+   "end": 27101.609653911,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "empty",
+   "start": 27102.0295202,
+   "end": 27102.049666037,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "short",
+   "start": 27102.030208827,
+   "end": 27102.050725678,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "empty",
+   "start": 27102.049757398,
+   "end": 27102.069024431,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "keep",
+   "start": 27102.051172483,
+   "end": 27102.070113538,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "keep",
+   "start": 27102.070197034,
+   "end": 27102.08883435,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "short",
+   "start": 27102.091003676,
+   "end": 27102.109842469,
+   "round": 3,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T16:01:32.818",
+   "ev": "start",
+   "pid": 2340066,
+   "gen": 1
+  },
+  {
+   "at": "2026-10-03T16:01:32.818",
+   "ev": "node+",
+   "node": "empty",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.818",
+   "ev": "node+",
+   "node": "keep",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.819",
+   "ev": "node+",
+   "node": "short",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.836",
+   "ev": "tick",
+   "node": "keep",
+   "round": 1,
+   "started": [
+    "keep-r1"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.836",
+   "ev": "tick",
+   "node": "empty",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.837",
+   "ev": "tick",
+   "node": "short",
+   "round": 1,
+   "started": [
+    "short-r1"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.853",
+   "ev": "tock",
+   "node": "empty",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:32.894",
+   "ev": "tock",
+   "node": "short",
+   "round": 1,
+   "rc": 0,
+   "ended": [
+    {
+     "tid": "short-r1",
+     "name": "short",
+     "code": 0
+    }
+   ],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:33.337",
+   "ev": "tick",
+   "node": "empty",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:33.339",
+   "ev": "tick",
+   "node": "short",
+   "round": 2,
+   "started": [
+    "short-r2"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:33.340",
+   "ev": "tock",
+   "node": "keep",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:33.356",
+   "ev": "tock",
+   "node": "empty",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:33.359",
+   "ev": "tick",
+   "node": "keep",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:33.379",
+   "ev": "tock",
+   "node": "keep",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:33.398",
+   "ev": "tock",
+   "node": "short",
+   "round": 2,
+   "rc": 0,
+   "ended": [
+    {
+     "tid": "short-r2",
+     "name": "short",
+     "code": 0
+    }
+   ],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:33.838",
+   "ev": "tick",
+   "node": "empty",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:33.839",
+   "ev": "tick",
+   "node": "short",
+   "round": 3,
+   "started": [
+    "short-r3"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:33.858",
+   "ev": "tock",
+   "node": "empty",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:33.859",
+   "ev": "tick",
+   "node": "keep",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:33.877",
+   "ev": "tock",
+   "node": "keep",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:33.898",
+   "ev": "tock",
+   "node": "short",
+   "round": 3,
+   "rc": 0,
+   "ended": [
+    {
+     "tid": "short-r3",
+     "name": "short",
+     "code": 0
+    }
+   ],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:34.015",
+   "ev": "kill",
+   "node": "keep",
+   "tid": "keep-r1",
+   "ok": true,
+   "msg": "killed"
+  },
+  {
+   "at": "2026-10-03T16:01:34.016",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T16:01:34.017",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 2340066,
+  "root": "/tmp/astra5-time-early-8f3g5i4p",
+  "at": "2026-10-03T16:01:34.016",
+  "poll_s": 0.02,
+  "gen": 1,
+  "io_errors": 0,
+  "stopping": true,
+  "stopped": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "empty": {
+    "round": 3,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 500,
+    "pause_pending": false,
+    "live": []
+   },
+   "keep": {
+    "round": 3,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 500,
+    "pause_pending": false,
+    "live": []
+   },
+   "short": {
+    "round": 3,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 500,
+    "pause_pending": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

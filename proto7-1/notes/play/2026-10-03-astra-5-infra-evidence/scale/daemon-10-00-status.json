@@ -1,0 +1,93 @@
+{
+ "pid": 2361950,
+ "root": "/tmp/astra5-scale-10-5gurk5rz",
+ "at": "2026-10-03T16:09:38.816",
+ "poll_s": 0.02,
+ "gen": 1,
+ "io_errors": 0,
+ "stopping": true,
+ "stopped": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n000": {
+   "round": 131,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n001": {
+   "round": 132,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n002": {
+   "round": 131,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n003": {
+   "round": 132,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n004": {
+   "round": 133,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n005": {
+   "round": 133,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n006": {
+   "round": 131,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n007": {
+   "round": 131,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n008": {
+   "round": 132,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  },
+  "n009": {
+   "round": 131,
+   "phase": "stopped",
+   "paused": false,
+   "interval_ms": 100,
+   "pause_pending": false,
+   "live": []
+  }
+ }
+}

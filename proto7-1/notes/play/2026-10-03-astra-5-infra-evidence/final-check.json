@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-10-03T08:23:02.759781+00:00",
+  "remaining_tmp_paths": [],
+  "remaining_matching_processes": [],
+  "process_check": "Readable /proc cmdline tokens and AOS7_ROOT/AOS7_TASK environment; agent cleanup evidence additionally verifies owned children were reaped.",
+  "evidence_file_count_before_this_write": 159,
+  "max_evidence_file_bytes": 179997,
+  "oversized_files_ge_200000_bytes": [],
+  "invalid_json_or_jsonl": [],
+  "broken_links_main_report_and_evidence_readme": [],
+  "unfilled_report_markers": [],
+  "changed_product_files": [],
+  "passed": true
+}

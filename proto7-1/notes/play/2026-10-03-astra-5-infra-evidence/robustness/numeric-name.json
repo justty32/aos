@@ -1,0 +1,73 @@
+{
+  "case": "numeric-name",
+  "root": "/tmp/astra5-robustness-ndk3ml3v",
+  "initial": {
+    "n/.aos/tasks.json": "{\"tasks\": [{\"name\": 123, \"argv\": [\"/bin/true\"]}, {\"name\": \"good\", \"argv\": [\"/bin/true\"]}]}",
+    "n/.aos/timeline.json": "{\"interval_ms\": 100}"
+  },
+  "rounds": [
+    {
+      "tick": {
+        "prog": "aos7-tick",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick\", line 8, in <module>\n    sys.exit(aos7_tick.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 141, in main\n    r = tick(argv[0], argv[1])\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 93, in tick\n    return _tick(root, node_id, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 125, in _tick\n    started.append(aos7_task.start_task(root, node_id, item, rnd))\n                   ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 335, in start_task\n    tid = new_tid(node, item.get(\"name\"), rnd)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 322, in new_tid\n    safe = re.sub(r\"[^A-Za-z0-9_.-]\", \"_\", name or \"task\")\n  File \"/usr/lib/python3.14/re/__init__.py\", line 208, in sub\n    return _compile(pattern, flags).sub(repl, string, count)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\nTypeError: expected string or bytes-like object, got 'int'\n"
+      },
+      "tock": {
+        "prog": "aos7-tock",
+        "rc": 0,
+        "stdout": "{\"round\": 1, \"tick_at\": \"2026-10-03T16:02:21.254\", \"tock_at\": \"2026-10-03T16:02:21.335\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+        "stderr": ""
+      },
+      "files": {
+        "n/.aos/round.json": "{\n \"round\": 1,\n \"open\": false,\n \"tick_at\": \"2026-10-03T16:02:21.254\",\n \"tock_at\": \"2026-10-03T16:02:21.335\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+        "n/.aos/tasks.json": "{\"tasks\": [{\"name\": 123, \"argv\": [\"/bin/true\"]}, {\"name\": \"good\", \"argv\": [\"/bin/true\"]}]}",
+        "n/.aos/timeline.json": "{\"interval_ms\": 100}"
+      }
+    },
+    {
+      "tick": {
+        "prog": "aos7-tick",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick\", line 8, in <module>\n    sys.exit(aos7_tick.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 141, in main\n    r = tick(argv[0], argv[1])\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 93, in tick\n    return _tick(root, node_id, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 125, in _tick\n    started.append(aos7_task.start_task(root, node_id, item, rnd))\n                   ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 335, in start_task\n    tid = new_tid(node, item.get(\"name\"), rnd)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 322, in new_tid\n    safe = re.sub(r\"[^A-Za-z0-9_.-]\", \"_\", name or \"task\")\n  File \"/usr/lib/python3.14/re/__init__.py\", line 208, in sub\n    return _compile(pattern, flags).sub(repl, string, count)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\nTypeError: expected string or bytes-like object, got 'int'\n"
+      },
+      "tock": {
+        "prog": "aos7-tock",
+        "rc": 0,
+        "stdout": "{\"round\": 2, \"tick_at\": \"2026-10-03T16:02:21.354\", \"tock_at\": \"2026-10-03T16:02:21.435\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+        "stderr": ""
+      },
+      "files": {
+        "n/.aos/round.json": "{\n \"round\": 2,\n \"open\": false,\n \"tick_at\": \"2026-10-03T16:02:21.354\",\n \"tock_at\": \"2026-10-03T16:02:21.435\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+        "n/.aos/tasks.json": "{\"tasks\": [{\"name\": 123, \"argv\": [\"/bin/true\"]}, {\"name\": \"good\", \"argv\": [\"/bin/true\"]}]}",
+        "n/.aos/timeline.json": "{\"interval_ms\": 100}"
+      }
+    },
+    {
+      "tick": {
+        "prog": "aos7-tick",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick\", line 8, in <module>\n    sys.exit(aos7_tick.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 141, in main\n    r = tick(argv[0], argv[1])\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 93, in tick\n    return _tick(root, node_id, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 125, in _tick\n    started.append(aos7_task.start_task(root, node_id, item, rnd))\n                   ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 335, in start_task\n    tid = new_tid(node, item.get(\"name\"), rnd)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 322, in new_tid\n    safe = re.sub(r\"[^A-Za-z0-9_.-]\", \"_\", name or \"task\")\n  File \"/usr/lib/python3.14/re/__init__.py\", line 208, in sub\n    return _compile(pattern, flags).sub(repl, string, count)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\nTypeError: expected string or bytes-like object, got 'int'\n"
+      },
+      "tock": {
+        "prog": "aos7-tock",
+        "rc": 0,
+        "stdout": "{\"round\": 3, \"tick_at\": \"2026-10-03T16:02:21.455\", \"tock_at\": \"2026-10-03T16:02:21.537\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+        "stderr": ""
+      },
+      "files": {
+        "n/.aos/round.json": "{\n \"round\": 3,\n \"open\": false,\n \"tick_at\": \"2026-10-03T16:02:21.455\",\n \"tock_at\": \"2026-10-03T16:02:21.537\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+        "n/.aos/tasks.json": "{\"tasks\": [{\"name\": 123, \"argv\": [\"/bin/true\"]}, {\"name\": \"good\", \"argv\": [\"/bin/true\"]}]}",
+        "n/.aos/timeline.json": "{\"interval_ms\": 100}"
+      }
+    }
+  ],
+  "mount_request_exists": false,
+  "mount_receipt_is_file": false,
+  "cleanup": {
+    "killed": [],
+    "space_removed": true
+  }
+}

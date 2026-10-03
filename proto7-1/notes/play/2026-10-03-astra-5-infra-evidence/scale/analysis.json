@@ -1,0 +1,308 @@
+[
+  {
+    "count": 10,
+    "tag": "",
+    "first_status_s": 0.017191348000778817,
+    "time_origin": "exact Popen-before monotonic",
+    "nodes_with_completed_tick": 10,
+    "completion_interval_ms": {
+      "n": 1304,
+      "p50": 107.71976450087095,
+      "p95": 155.6699930006289,
+      "max": 204.86754400189966
+    },
+    "completed_ticks_per_node": {
+      "n": 10,
+      "min": 130,
+      "p50": 131.0,
+      "p95": 133,
+      "max": 133
+    },
+    "ctl_receipt_ms": {
+      "n": 7,
+      "min": 1.395,
+      "p50": 5.678,
+      "p95": 23.268,
+      "max": 23.268
+    },
+    "status_gap_ms": {
+      "n": 682,
+      "min": 20.315,
+      "p50": 20.919,
+      "p95": 26.662,
+      "max": 45.863
+    },
+    "sample_wall_s": 15.031,
+    "action_nonzero_rc": 0,
+    "daemon_rc": 0,
+    "tick_ms": {
+      "n": 1314,
+      "min": 18.496,
+      "p50": 34.252,
+      "p95": 60.188,
+      "max": 91.347
+    },
+    "tock_ms": {
+      "n": 1307,
+      "min": 15.396,
+      "p50": 28.231,
+      "p95": 52.97,
+      "max": 96.186
+    }
+  },
+  {
+    "count": 50,
+    "tag": "",
+    "first_status_s": 0.03309274499770254,
+    "time_origin": "exact Popen-before monotonic",
+    "nodes_with_completed_tick": 50,
+    "completion_interval_ms": {
+      "n": 1449,
+      "p50": 501.7074520001188,
+      "p95": 748.3310619973054,
+      "max": 1129.275859999325
+    },
+    "completed_ticks_per_node": {
+      "n": 50,
+      "min": 27,
+      "p50": 30.0,
+      "p95": 32,
+      "max": 34
+    },
+    "ctl_receipt_ms": {
+      "n": 6,
+      "min": 12.337,
+      "p50": 38.733,
+      "p95": 68.841,
+      "max": 68.841
+    },
+    "status_gap_ms": {
+      "n": 279,
+      "min": 21.204,
+      "p50": 37.478,
+      "p95": 167.184,
+      "max": 342.186
+    },
+    "sample_wall_s": 15.427,
+    "action_nonzero_rc": 0,
+    "daemon_rc": 0,
+    "tick_ms": {
+      "n": 1499,
+      "min": 34.891,
+      "p50": 244.765,
+      "p95": 429.251,
+      "max": 777.272
+    },
+    "tock_ms": {
+      "n": 1470,
+      "min": 28.261,
+      "p50": 235.705,
+      "p95": 414.748,
+      "max": 785.158
+    }
+  },
+  {
+    "count": 100,
+    "tag": "",
+    "first_status_s": 0.04540821699993103,
+    "time_origin": "exact Popen-before monotonic",
+    "nodes_with_completed_tick": 100,
+    "completion_interval_ms": {
+      "n": 1456,
+      "p50": 875.0246919989877,
+      "p95": 1725.5093399980979,
+      "max": 2675.4414759998326
+    },
+    "completed_ticks_per_node": {
+      "n": 100,
+      "min": 12,
+      "p50": 15.0,
+      "p95": 19,
+      "max": 20
+    },
+    "ctl_receipt_ms": {
+      "n": 5,
+      "min": 9.976,
+      "p50": 179.477,
+      "p95": 633.713,
+      "max": 633.713
+    },
+    "status_gap_ms": {
+      "n": 113,
+      "min": 23.556,
+      "p50": 75.53,
+      "p95": 400.902,
+      "max": 775.157
+    },
+    "sample_wall_s": 15.737,
+    "action_nonzero_rc": 0,
+    "daemon_rc": 0,
+    "tick_ms": {
+      "n": 1556,
+      "min": 29.104,
+      "p50": 380.753,
+      "p95": 1034.953,
+      "max": 2296.456
+    },
+    "tock_ms": {
+      "n": 1506,
+      "min": 26.384,
+      "p50": 354.573,
+      "p95": 997.985,
+      "max": 2107.61
+    }
+  },
+  {
+    "count": 200,
+    "tag": "",
+    "first_status_s": 0.07709375999911572,
+    "time_origin": "exact Popen-before monotonic",
+    "nodes_with_completed_tick": 200,
+    "completion_interval_ms": {
+      "n": 1506,
+      "p50": 1218.0660320009338,
+      "p95": 3488.215466000838,
+      "max": 5901.404691001517
+    },
+    "completed_ticks_per_node": {
+      "n": 200,
+      "min": 3,
+      "p50": 8.0,
+      "p95": 13,
+      "max": 15
+    },
+    "ctl_receipt_ms": {
+      "n": 5,
+      "min": 45.115,
+      "p50": 385.653,
+      "p95": 1318.128,
+      "max": 1318.128
+    },
+    "status_gap_ms": {
+      "n": 26,
+      "min": 85.719,
+      "p50": 497.546,
+      "p95": 1428.358,
+      "max": 1908.141
+    },
+    "sample_wall_s": 15.859,
+    "action_nonzero_rc": 0,
+    "daemon_rc": 0,
+    "tick_ms": {
+      "n": 1706,
+      "min": 36.462,
+      "p50": 491.961,
+      "p95": 2086.268,
+      "max": 5082.882
+    },
+    "tock_ms": {
+      "n": 1597,
+      "min": 24.816,
+      "p50": 464.012,
+      "p95": 2127.708,
+      "max": 5189.223
+    }
+  },
+  {
+    "count": 200,
+    "tag": "-empty",
+    "first_status_s": 0.04931889900035458,
+    "time_origin": "first OS sample, first-status latency lower bound; cutoff approximate",
+    "nodes_with_completed_tick": 167,
+    "completion_interval_ms": {
+      "n": 3737,
+      "p50": 459.5103690007818,
+      "p95": 687.7670799985935,
+      "max": 758.19440000123
+    },
+    "completed_ticks_per_node": {
+      "n": 200,
+      "min": 0,
+      "p50": 20.5,
+      "p95": 37,
+      "max": 38
+    },
+    "ctl_receipt_ms": {
+      "n": 3,
+      "min": 3201.516,
+      "p50": 6502.643,
+      "p95": 8316.92,
+      "max": 8316.92
+    },
+    "status_gap_ms": {
+      "n": 4,
+      "min": 179.109,
+      "p50": 1144.902,
+      "p95": 4317.855,
+      "max": 4317.855
+    },
+    "sample_wall_s": 15.029,
+    "action_nonzero_rc": 0,
+    "daemon_rc": 0,
+    "tick_ms": {
+      "n": 3903,
+      "min": 21.343,
+      "p50": 39.085,
+      "p95": 65.841,
+      "max": 138.928
+    },
+    "tock_ms": {
+      "n": 3852,
+      "min": 21.201,
+      "p50": 38.878,
+      "p95": 66.035,
+      "max": 139.011
+    }
+  },
+  {
+    "count": 200,
+    "tag": "-empty-repeat",
+    "first_status_s": 0.08576762200027588,
+    "time_origin": "exact Popen-before monotonic",
+    "nodes_with_completed_tick": 152,
+    "completion_interval_ms": {
+      "n": 2685,
+      "p50": 576.0874869993131,
+      "p95": 839.9449050011754,
+      "max": 1027.6087199999893
+    },
+    "completed_ticks_per_node": {
+      "n": 200,
+      "min": 0,
+      "p50": 14.5,
+      "p95": 29,
+      "max": 30
+    },
+    "ctl_receipt_ms": {
+      "n": 3,
+      "min": 1928.232,
+      "p50": 5205.957,
+      "p95": 6850.281,
+      "max": 6850.281
+    },
+    "status_gap_ms": {
+      "n": 3,
+      "min": 419.817,
+      "p50": 741.258,
+      "p95": 4249.702,
+      "max": 4249.702
+    },
+    "sample_wall_s": 15.116,
+    "action_nonzero_rc": 0,
+    "daemon_rc": 0,
+    "tick_ms": {
+      "n": 2837,
+      "min": 23.659,
+      "p50": 72.208,
+      "p95": 137.095,
+      "max": 253.891
+    },
+    "tock_ms": {
+      "n": 2791,
+      "min": 22.241,
+      "p50": 72.081,
+      "p95": 135.999,
+      "max": 276.68
+    }
+  }
+]

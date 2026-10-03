@@ -1,0 +1,106 @@
+[
+  {
+    "action": "tick",
+    "change": "delete",
+    "root": "/tmp/astra5-nested-midaction-0_80blxm",
+    "marker": {
+      "pid": 2358804,
+      "target": "/tmp/astra5-nested-midaction-0_80blxm/n/.aos/round.json",
+      "operation": "write_json"
+    },
+    "old_path_exists_before_resume": false,
+    "rc": 0,
+    "stdout": "{\"round\": 2, \"started\": []}\n",
+    "stderr": "",
+    "old_path_exists_after": true,
+    "old_files": {
+      ".aos/round.json": "{\n \"round\": 2,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:08:56.529\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n"
+    },
+    "moved_files": {},
+    "cleanup": {
+      "root_removed": true,
+      "child_returncode": 0
+    }
+  },
+  {
+    "action": "tick",
+    "change": "rename",
+    "root": "/tmp/astra5-nested-midaction-8zoo0hv7",
+    "marker": {
+      "pid": 2358806,
+      "target": "/tmp/astra5-nested-midaction-8zoo0hv7/n/.aos/round.json",
+      "operation": "write_json"
+    },
+    "old_path_exists_before_resume": false,
+    "rc": 0,
+    "stdout": "{\"round\": 2, \"started\": []}\n",
+    "stderr": "",
+    "old_path_exists_after": true,
+    "old_files": {
+      ".aos/round.json": "{\n \"round\": 2,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:08:56.548\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n"
+    },
+    "moved_files": {
+      ".aos/action.lock": "",
+      ".aos/round.json": "{\"round\": 1, \"open\": true, \"started\": [], \"ctl\": [], \"mounts\": []}",
+      ".aos/tasks.json": "{\"tasks\": []}",
+      ".aos/timeline.json": "{\"interval_ms\": 100}"
+    },
+    "cleanup": {
+      "root_removed": true,
+      "child_returncode": 0
+    }
+  },
+  {
+    "action": "tock",
+    "change": "delete",
+    "root": "/tmp/astra5-nested-midaction-dm3dl1bg",
+    "marker": {
+      "pid": 2358810,
+      "target": "/tmp/astra5-nested-midaction-dm3dl1bg/n/.aos/rounds.jsonl",
+      "operation": "append_jsonl"
+    },
+    "old_path_exists_before_resume": false,
+    "rc": 0,
+    "stdout": "{\"round\": 1, \"tick_at\": null, \"tock_at\": \"2026-10-03T16:08:56.567\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+    "stderr": "",
+    "old_path_exists_after": true,
+    "old_files": {
+      ".aos/round.json": "{\n \"round\": 1,\n \"open\": false,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": [],\n \"tock_at\": \"2026-10-03T16:08:56.567\"\n}\n",
+      ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": null, \"tock_at\": \"2026-10-03T16:08:56.567\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": null}\n"
+    },
+    "moved_files": {},
+    "cleanup": {
+      "root_removed": true,
+      "child_returncode": 0
+    }
+  },
+  {
+    "action": "tock",
+    "change": "rename",
+    "root": "/tmp/astra5-nested-midaction-y8p_bv2d",
+    "marker": {
+      "pid": 2358812,
+      "target": "/tmp/astra5-nested-midaction-y8p_bv2d/n/.aos/rounds.jsonl",
+      "operation": "append_jsonl"
+    },
+    "old_path_exists_before_resume": false,
+    "rc": 0,
+    "stdout": "{\"round\": 1, \"tick_at\": null, \"tock_at\": \"2026-10-03T16:08:56.585\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+    "stderr": "",
+    "old_path_exists_after": true,
+    "old_files": {
+      ".aos/round.json": "{\n \"round\": 1,\n \"open\": false,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": [],\n \"tock_at\": \"2026-10-03T16:08:56.585\"\n}\n",
+      ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": null, \"tock_at\": \"2026-10-03T16:08:56.585\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": null}\n"
+    },
+    "moved_files": {
+      ".aos/action.lock": "",
+      ".aos/round.json": "{\"round\": 1, \"open\": true, \"started\": [], \"ctl\": [], \"mounts\": []}",
+      ".aos/tasks.json": "{\"tasks\": []}",
+      ".aos/timeline.json": "{\"interval_ms\": 100}"
+    },
+    "cleanup": {
+      "root_removed": true,
+      "child_returncode": 0
+    }
+  }
+]

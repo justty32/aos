@@ -1,0 +1,48 @@
+{
+  "case": "archive-collision",
+  "normal_new_tid": "worker-r1-2",
+  "first_tock": {
+    "round": 3,
+    "tick_at": null,
+    "tock_at": "2026-10-03T16:03:57.569",
+    "started": [],
+    "alive": [
+      "worker-r3"
+    ],
+    "ended": [],
+    "ctl": [],
+    "mounts": [],
+    "early": null,
+    "archived": [
+      "worker-r1"
+    ]
+  },
+  "conflict_tock": {
+    "round": 4,
+    "tick_at": null,
+    "tock_at": "2026-10-03T16:03:57.588",
+    "started": [],
+    "alive": [
+      "worker-r3"
+    ],
+    "ended": [],
+    "ctl": [],
+    "mounts": [],
+    "early": null,
+    "errors": [
+      {
+        "tid": "worker-r1",
+        "phase": "scan",
+        "err": "OSError(39, 'Directory not empty')"
+      }
+    ]
+  },
+  "active_usage": {
+    "tokens": 5678
+  },
+  "archive_usage": {
+    "tokens": 1234
+  },
+  "active_still_present": true,
+  "next_new_tid": "worker-r1-2"
+}

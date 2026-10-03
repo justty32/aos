@@ -1,0 +1,725 @@
+{
+ "before_repair": {
+  "pid": 2339947,
+  "root": "/tmp/astra5-time-invalid-yi12z7ir",
+  "at": "2026-10-03T16:01:29.100",
+  "poll_s": 0.02,
+  "gen": 1,
+  "io_errors": 0,
+  "stopping": false,
+  "stopped": false,
+  "kill_on_stop": false,
+  "nodes": {
+   "good": {
+    "round": 3,
+    "phase": "tock",
+    "paused": false,
+    "interval_ms": 100,
+    "pause_pending": false,
+    "live": []
+   },
+   "inf": {
+    "round": 1,
+    "phase": "idle",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.875",
+     "err": "interval_ms 要是數字，拿到 inf；先用 1000"
+    }
+   },
+   "nan": {
+    "round": 1,
+    "phase": "idle",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "interval_ms 要是數字，拿到 nan；先用 1000"
+    }
+   },
+   "null": {
+    "round": 1,
+    "phase": "idle",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "interval_ms 要是數字，拿到 None；先用 1000"
+    }
+   },
+   "overflow": {
+    "round": 0,
+    "phase": "error",
+    "paused": false,
+    "interval_ms": null,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "OverflowError('int too large to convert to float')"
+    }
+   },
+   "text": {
+    "round": 1,
+    "phase": "idle",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.877",
+     "err": "interval_ms 要是數字，拿到 'bad'；先用 1000"
+    }
+   }
+  }
+ },
+ "after_repair_rescan": {
+  "pid": 2339947,
+  "root": "/tmp/astra5-time-invalid-yi12z7ir",
+  "at": "2026-10-03T16:01:29.405",
+  "poll_s": 0.02,
+  "gen": 1,
+  "io_errors": 0,
+  "stopping": false,
+  "stopped": false,
+  "kill_on_stop": false,
+  "nodes": {
+   "good": {
+    "round": 6,
+    "phase": "tock",
+    "paused": false,
+    "interval_ms": 100,
+    "pause_pending": false,
+    "live": []
+   },
+   "inf": {
+    "round": 1,
+    "phase": "idle",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.875",
+     "err": "interval_ms 要是數字，拿到 inf；先用 1000"
+    }
+   },
+   "nan": {
+    "round": 1,
+    "phase": "idle",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "interval_ms 要是數字，拿到 nan；先用 1000"
+    }
+   },
+   "null": {
+    "round": 1,
+    "phase": "idle",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "interval_ms 要是數字，拿到 None；先用 1000"
+    }
+   },
+   "overflow": {
+    "round": 1,
+    "phase": "tock",
+    "paused": false,
+    "interval_ms": 100,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "OverflowError('int too large to convert to float')"
+    }
+   },
+   "text": {
+    "round": 1,
+    "phase": "idle",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.877",
+     "err": "interval_ms 要是數字，拿到 'bad'；先用 1000"
+    }
+   }
+  }
+ },
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 27097.086214256,
+   "end": 27097.103098375,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "inf",
+   "start": 27097.08669239,
+   "end": 27097.103896277,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "nan",
+   "start": 27097.087033268,
+   "end": 27097.104739183,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "null",
+   "start": 27097.087658627,
+   "end": 27097.105326801,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "text",
+   "start": 27097.088058304,
+   "end": 27097.105603378,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 27097.10318144,
+   "end": 27097.118706167,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "inf",
+   "start": 27097.103981215,
+   "end": 27097.119428648,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "nan",
+   "start": 27097.104813682,
+   "end": 27097.120364357,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "null",
+   "start": 27097.105396331,
+   "end": 27097.120495613,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "text",
+   "start": 27097.105672187,
+   "end": 27097.120817184,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 27097.186202466,
+   "end": 27097.201544261,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 27097.201612779,
+   "end": 27097.217792931,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 27097.286264293,
+   "end": 27097.301359917,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 27097.301430539,
+   "end": 27097.316290032,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 27097.386322944,
+   "end": 27097.401578948,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 27097.401646775,
+   "end": 27097.417741428,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 27097.48638405,
+   "end": 27097.501879091,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 27097.501947489,
+   "end": 27097.517038765,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "good",
+   "start": 27097.586445396,
+   "end": 27097.601868342,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "overflow",
+   "start": 27097.588267182,
+   "end": 27097.603088273,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "good",
+   "start": 27097.601997915,
+   "end": 27097.616806132,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "overflow",
+   "start": 27097.60315577,
+   "end": 27097.618237398,
+   "round": 1,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T16:01:28.874",
+   "ev": "start",
+   "pid": 2339947,
+   "gen": 1
+  },
+  {
+   "at": "2026-10-03T16:01:28.875",
+   "ev": "node+",
+   "node": "good",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.875",
+   "ev": "node+",
+   "node": "inf",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.875",
+   "ev": "node+",
+   "node": "nan",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.876",
+   "ev": "node+",
+   "node": "null",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.876",
+   "ev": "node+",
+   "node": "overflow",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.876",
+   "ev": "error",
+   "node": "overflow",
+   "msg": "OverflowError('int too large to convert to float')"
+  },
+  {
+   "at": "2026-10-03T16:01:28.877",
+   "ev": "node+",
+   "node": "text",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.892",
+   "ev": "tick",
+   "node": "good",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.892",
+   "ev": "tick",
+   "node": "inf",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.893",
+   "ev": "tick",
+   "node": "nan",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.894",
+   "ev": "tick",
+   "node": "null",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.894",
+   "ev": "tick",
+   "node": "text",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.907",
+   "ev": "tock",
+   "node": "good",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.908",
+   "ev": "tock",
+   "node": "inf",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.909",
+   "ev": "tock",
+   "node": "nan",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.909",
+   "ev": "tock",
+   "node": "null",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.909",
+   "ev": "tock",
+   "node": "text",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.990",
+   "ev": "tick",
+   "node": "good",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:29.006",
+   "ev": "tock",
+   "node": "good",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:29.090",
+   "ev": "tick",
+   "node": "good",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:29.105",
+   "ev": "tock",
+   "node": "good",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:29.120",
+   "ev": "ctl",
+   "file": "rescan.json",
+   "op": "rescan",
+   "node": null,
+   "by": null,
+   "ok": true,
+   "msg": "rescanned"
+  },
+  {
+   "at": "2026-10-03T16:01:29.190",
+   "ev": "tick",
+   "node": "good",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:29.206",
+   "ev": "tock",
+   "node": "good",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:29.290",
+   "ev": "tick",
+   "node": "good",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:29.306",
+   "ev": "tock",
+   "node": "good",
+   "round": 5,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:29.390",
+   "ev": "tick",
+   "node": "good",
+   "round": 6,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:29.392",
+   "ev": "tick",
+   "node": "overflow",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:29.405",
+   "ev": "tock",
+   "node": "good",
+   "round": 6,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:29.407",
+   "ev": "tock",
+   "node": "overflow",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:29.425",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T16:01:29.425",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 2339947,
+  "root": "/tmp/astra5-time-invalid-yi12z7ir",
+  "at": "2026-10-03T16:01:29.425",
+  "poll_s": 0.02,
+  "gen": 1,
+  "io_errors": 0,
+  "stopping": true,
+  "stopped": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "good": {
+    "round": 6,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 100,
+    "pause_pending": false,
+    "live": []
+   },
+   "inf": {
+    "round": 1,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.875",
+     "err": "interval_ms 要是數字，拿到 inf；先用 1000"
+    }
+   },
+   "nan": {
+    "round": 1,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "interval_ms 要是數字，拿到 nan；先用 1000"
+    }
+   },
+   "null": {
+    "round": 1,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "interval_ms 要是數字，拿到 None；先用 1000"
+    }
+   },
+   "overflow": {
+    "round": 1,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 100,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.876",
+     "err": "OverflowError('int too large to convert to float')"
+    }
+   },
+   "text": {
+    "round": 1,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 1000,
+    "pause_pending": false,
+    "live": [],
+    "last_error": {
+     "prog": "timeline",
+     "rc": null,
+     "round": 0,
+     "at": "2026-10-03T16:01:28.877",
+     "err": "interval_ms 要是數字，拿到 'bad'；先用 1000"
+    }
+   }
+  }
+ },
+ "stderr": ""
+}

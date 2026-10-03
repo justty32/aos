@@ -1,0 +1,1469 @@
+{"node": "n006", "prog": "aos7-tick", "start": 27579.711872731, "end": 27579.755212852, "rc": 0, "round": 75}
+{"node": "n002", "prog": "aos7-tick", "start": 27579.707486221, "end": 27579.759115558, "rc": 0, "round": 75}
+{"prog": "status", "end": 27579.769666062}
+{"node": "n005", "prog": "aos7-tock", "start": 27579.732101578, "end": 27579.771512213, "rc": 0, "round": 75}
+{"node": "n008", "prog": "aos7-tick", "start": 27579.734082872, "end": 27579.775157547, "rc": 0, "round": 76}
+{"node": "n004", "prog": "aos7-tock", "start": 27579.738033948, "end": 27579.778763799, "rc": 0, "round": 76}
+{"node": "n007", "prog": "aos7-tock", "start": 27579.757250572, "end": 27579.786893757, "rc": 0, "round": 74}
+{"prog": "status", "end": 27579.79206251}
+{"node": "n001", "prog": "aos7-tock", "start": 27579.763517397, "end": 27579.793773018, "rc": 0, "round": 75}
+{"node": "n000", "prog": "aos7-tock", "start": 27579.767189071, "end": 27579.803068204, "rc": 0, "round": 75}
+{"node": "n005", "prog": "aos7-tick", "start": 27579.771626166, "end": 27579.807287833, "rc": 0, "round": 76}
+{"prog": "status", "end": 27579.814396402}
+{"node": "n004", "prog": "aos7-tick", "start": 27579.778880537, "end": 27579.81797438, "rc": 0, "round": 77}
+{"node": "n003", "prog": "aos7-tock", "start": 27579.79512777, "end": 27579.820950023, "rc": 0, "round": 76}
+{"node": "n006", "prog": "aos7-tock", "start": 27579.795551923, "end": 27579.821920117, "rc": 0, "round": 75}
+{"node": "n007", "prog": "aos7-tick", "start": 27579.787074876, "end": 27579.826988441, "rc": 0, "round": 75}
+{"node": "n002", "prog": "aos7-tock", "start": 27579.799391922, "end": 27579.830545902, "rc": 0, "round": 75}
+{"node": "n001", "prog": "aos7-tick", "start": 27579.793888644, "end": 27579.833105697, "rc": 0, "round": 76}
+{"prog": "status", "end": 27579.834818159}
+{"node": "n008", "prog": "aos7-tock", "start": 27579.815546051, "end": 27579.842411033, "rc": 0, "round": 76}
+{"node": "n003", "prog": "aos7-tick", "start": 27579.821073774, "end": 27579.849129913, "rc": 0, "round": 77}
+{"node": "n009", "prog": "aos7-tock", "start": 27579.809112484, "end": 27579.849308277, "rc": 0, "round": 76}
+{"node": "n000", "prog": "aos7-tick", "start": 27579.80320506, "end": 27579.851061735, "rc": 0, "round": 76}
+{"prog": "status", "end": 27579.85647257}
+{"node": "n006", "prog": "aos7-tick", "start": 27579.822079595, "end": 27579.858833073, "rc": 0, "round": 76}
+{"node": "n002", "prog": "aos7-tick", "start": 27579.830656128, "end": 27579.870137505, "rc": 0, "round": 76}
+{"node": "n008", "prog": "aos7-tick", "start": 27579.842541787, "end": 27579.875813817, "rc": 0, "round": 77}
+{"node": "n005", "prog": "aos7-tock", "start": 27579.847665235, "end": 27579.876107155, "rc": 0, "round": 76}
+{"prog": "status", "end": 27579.876896851}
+{"node": "n009", "prog": "aos7-tick", "start": 27579.849418272, "end": 27579.889290591, "rc": 0, "round": 77}
+{"node": "n004", "prog": "aos7-tock", "start": 27579.859956433, "end": 27579.891613303, "rc": 0, "round": 77}
+{"node": "n007", "prog": "aos7-tock", "start": 27579.868216755, "end": 27579.896653194, "rc": 0, "round": 75}
+{"prog": "status", "end": 27579.897380985}
+{"node": "n000", "prog": "aos7-tock", "start": 27579.871300229, "end": 27579.902281436, "rc": 0, "round": 76}
+{"node": "n001", "prog": "aos7-tock", "start": 27579.87344058, "end": 27579.902571839, "rc": 0, "round": 76}
+{"node": "n005", "prog": "aos7-tick", "start": 27579.876217371, "end": 27579.904133649, "rc": 0, "round": 77}
+{"prog": "status", "end": 27579.917818281}
+{"node": "n003", "prog": "aos7-tock", "start": 27579.889491626, "end": 27579.918011813, "rc": 0, "round": 77}
+{"node": "n004", "prog": "aos7-tick", "start": 27579.891760608, "end": 27579.919842014, "rc": 0, "round": 78}
+{"node": "n006", "prog": "aos7-tock", "start": 27579.900059633, "end": 27579.928423627, "rc": 0, "round": 76}
+{"node": "n007", "prog": "aos7-tick", "start": 27579.896764903, "end": 27579.931196751, "rc": 0, "round": 76}
+{"node": "n001", "prog": "aos7-tick", "start": 27579.902686383, "end": 27579.934681105, "rc": 0, "round": 77}
+{"prog": "status", "end": 27579.938279933}
+{"node": "n000", "prog": "aos7-tick", "start": 27579.905076742, "end": 27579.944163732, "rc": 0, "round": 77}
+{"node": "n008", "prog": "aos7-tock", "start": 27579.916400901, "end": 27579.945987701, "rc": 0, "round": 77}
+{"node": "n002", "prog": "aos7-tock", "start": 27579.910514567, "end": 27579.947079723, "rc": 0, "round": 76}
+{"node": "n009", "prog": "aos7-tock", "start": 27579.929676799, "end": 27579.958199771, "rc": 0, "round": 77}
+{"node": "n006", "prog": "aos7-tick", "start": 27579.928543431, "end": 27579.959186836, "rc": 0, "round": 77}
+{"node": "n003", "prog": "aos7-tick", "start": 27579.922071312, "end": 27579.964647665, "rc": 0, "round": 78}
+{"prog": "status", "end": 27579.966234642}
+{"node": "n008", "prog": "aos7-tick", "start": 27579.946105472, "end": 27579.976506033, "rc": 0, "round": 78}
+{"prog": "status", "end": 27579.988120586}
+{"node": "n009", "prog": "aos7-tick", "start": 27579.958330936, "end": 27579.991134951, "rc": 0, "round": 78}
+{"node": "n005", "prog": "aos7-tock", "start": 27579.944656262, "end": 27579.991351215, "rc": 0, "round": 77}
+{"node": "n004", "prog": "aos7-tock", "start": 27579.961156599, "end": 27579.994075268, "rc": 0, "round": 78}
+{"node": "n002", "prog": "aos7-tick", "start": 27579.947189097, "end": 27579.994190994, "rc": 0, "round": 77}
+{"node": "n001", "prog": "aos7-tock", "start": 27579.977858291, "end": 27580.004253255, "rc": 0, "round": 77}
+{"node": "n007", "prog": "aos7-tock", "start": 27579.971549357, "end": 27580.00836992, "rc": 0, "round": 76}
+{"prog": "status", "end": 27580.010005688}
+{"node": "n006", "prog": "aos7-tock", "start": 27579.984652132, "end": 27580.013012619, "rc": 0, "round": 77}
+{"node": "n000", "prog": "aos7-tock", "start": 27579.984811991, "end": 27580.01336055, "rc": 0, "round": 77}
+{"node": "n005", "prog": "aos7-tick", "start": 27579.991437136, "end": 27580.019311986, "rc": 0, "round": 78}
+{"node": "n004", "prog": "aos7-tick", "start": 27579.994337207, "end": 27580.023926222, "rc": 0, "round": 79}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.00742285, "end": 27580.030608103, "rc": 0, "round": 78}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.004401973, "end": 27580.038263224, "rc": 0, "round": 78}
+{"prog": "status", "end": 27580.040452216}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.008530691, "end": 27580.04054015, "rc": 0, "round": 77}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.013457401, "end": 27580.050663425, "rc": 0, "round": 78}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.0168054, "end": 27580.052932076, "rc": 0, "round": 78}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.03072418, "end": 27580.056359183, "rc": 0, "round": 79}
+{"prog": "status", "end": 27580.063336166}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.029068625, "end": 27580.063418359, "rc": 0, "round": 78}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.034109068, "end": 27580.068028397, "rc": 0, "round": 78}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.038413956, "end": 27580.071603831, "rc": 0, "round": 77}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.053066066, "end": 27580.081824899, "rc": 0, "round": 79}
+{"prog": "status", "end": 27580.083849333}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.059645636, "end": 27580.087070535, "rc": 0, "round": 78}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.065631847, "end": 27580.090265117, "rc": 0, "round": 79}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.068146969, "end": 27580.09545004, "rc": 0, "round": 79}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.071717925, "end": 27580.098330174, "rc": 0, "round": 78}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.079231992, "end": 27580.102866374, "rc": 0, "round": 78}
+{"prog": "status", "end": 27580.104392748}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.082787238, "end": 27580.108403005, "rc": 0, "round": 77}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.090995152, "end": 27580.115404263, "rc": 0, "round": 78}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.091520705, "end": 27580.117661633, "rc": 0, "round": 79}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.09669116, "end": 27580.120806692, "rc": 0, "round": 79}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.099067022, "end": 27580.125741047, "rc": 0, "round": 80}
+{"prog": "status", "end": 27580.126344345}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.103740729, "end": 27580.13436023, "rc": 0, "round": 78}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.108586428, "end": 27580.134833725, "rc": 0, "round": 78}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.106096623, "end": 27580.140265058, "rc": 0, "round": 79}
+{"prog": "status", "end": 27580.14677058}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.115501214, "end": 27580.147964662, "rc": 0, "round": 79}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.123302799, "end": 27580.148757655, "rc": 0, "round": 79}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.130832014, "end": 27580.159030469, "rc": 0, "round": 80}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.134518105, "end": 27580.160105539, "rc": 0, "round": 79}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.13588474, "end": 27580.163605151, "rc": 0, "round": 79}
+{"prog": "status", "end": 27580.167200422}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.145041337, "end": 27580.168101727, "rc": 0, "round": 78}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.153145527, "end": 27580.177714998, "rc": 0, "round": 80}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.160605383, "end": 27580.183358598, "rc": 0, "round": 79}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.160295073, "end": 27580.184327379, "rc": 0, "round": 79}
+{"prog": "status", "end": 27580.187951975}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.166048909, "end": 27580.188365238, "rc": 0, "round": 80}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.168450028, "end": 27580.192749965, "rc": 0, "round": 80}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.171796033, "end": 27580.19473192, "rc": 0, "round": 79}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.175168498, "end": 27580.200202958, "rc": 0, "round": 78}
+{"prog": "status", "end": 27580.208365407}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.188864822, "end": 27580.21305286, "rc": 0, "round": 79}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.19206281, "end": 27580.215345816, "rc": 0, "round": 80}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.200460529, "end": 27580.225538971, "rc": 0, "round": 79}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.199370832, "end": 27580.228840684, "rc": 0, "round": 80}
+{"prog": "status", "end": 27580.229375453}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.199698505, "end": 27580.230624358, "rc": 0, "round": 81}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.206169131, "end": 27580.236001801, "rc": 0, "round": 80}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.208662031, "end": 27580.241165354, "rc": 0, "round": 79}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.220048868, "end": 27580.249968731, "rc": 0, "round": 80}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.21557796, "end": 27580.252012552, "rc": 0, "round": 80}
+{"prog": "status", "end": 27580.253908216}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.235535539, "end": 27580.263189356, "rc": 0, "round": 79}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.237069918, "end": 27580.271850127, "rc": 0, "round": 80}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.230899232, "end": 27580.272053366, "rc": 0, "round": 81}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.234098262, "end": 27580.272161729, "rc": 0, "round": 80}
+{"prog": "status", "end": 27580.275540305}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.253950935, "end": 27580.283278431, "rc": 0, "round": 81}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.261417263, "end": 27580.29578983, "rc": 0, "round": 80}
+{"prog": "status", "end": 27580.298787815}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.272301781, "end": 27580.29887086, "rc": 0, "round": 80}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.270909729, "end": 27580.299033404, "rc": 0, "round": 81}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.281831977, "end": 27580.30907736, "rc": 0, "round": 79}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.276332726, "end": 27580.309780444, "rc": 0, "round": 80}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.272978656, "end": 27580.310863629, "rc": 0, "round": 81}
+{"prog": "status", "end": 27580.321329074}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.295919342, "end": 27580.322337299, "rc": 0, "round": 81}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.293022236, "end": 27580.325086608, "rc": 0, "round": 80}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.299761134, "end": 27580.327796043, "rc": 0, "round": 82}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.309898766, "end": 27580.339598627, "rc": 0, "round": 81}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.312590357, "end": 27580.339964882, "rc": 0, "round": 80}
+{"prog": "status", "end": 27580.341888678}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.309215669, "end": 27580.342227532, "rc": 0, "round": 80}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.312321214, "end": 27580.344175363, "rc": 0, "round": 81}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.323620477, "end": 27580.351659134, "rc": 0, "round": 81}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.325206362, "end": 27580.354153987, "rc": 0, "round": 81}
+{"prog": "status", "end": 27580.36233449}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.341261877, "end": 27580.371324506, "rc": 0, "round": 80}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.34428592, "end": 27580.375294799, "rc": 0, "round": 82}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.353045525, "end": 27580.377507064, "rc": 0, "round": 81}
+{"prog": "status", "end": 27580.383376457}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.340086159, "end": 27580.38361348, "rc": 0, "round": 81}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.353401942, "end": 27580.38718689, "rc": 0, "round": 82}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.363036052, "end": 27580.389575625, "rc": 0, "round": 81}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.368182362, "end": 27580.395636275, "rc": 0, "round": 82}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.371995922, "end": 27580.401927296, "rc": 0, "round": 81}
+{"prog": "status", "end": 27580.403754772}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.382549781, "end": 27580.409968649, "rc": 0, "round": 80}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.377621408, "end": 27580.41211997, "rc": 0, "round": 82}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.380795141, "end": 27580.41466051, "rc": 0, "round": 81}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.394492076, "end": 27580.421065744, "rc": 0, "round": 81}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.396001718, "end": 27580.422701702, "rc": 0, "round": 82}
+{"prog": "status", "end": 27580.424171189}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.40021261, "end": 27580.431904296, "rc": 0, "round": 83}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.415659146, "end": 27580.442117939, "rc": 0, "round": 82}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.414773551, "end": 27580.442267339, "rc": 0, "round": 82}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.410201835, "end": 27580.443089095, "rc": 0, "round": 81}
+{"prog": "status", "end": 27580.44469115}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.424221173, "end": 27580.447054247, "rc": 0, "round": 81}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.427529708, "end": 27580.455528379, "rc": 0, "round": 82}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.42908247, "end": 27580.456423943, "rc": 0, "round": 82}
+{"prog": "status", "end": 27580.465376549}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.442379649, "end": 27580.466087689, "rc": 0, "round": 81}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.445062895, "end": 27580.470432281, "rc": 0, "round": 83}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.447165746, "end": 27580.47352388, "rc": 0, "round": 82}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.452492353, "end": 27580.477344382, "rc": 0, "round": 83}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.453123854, "end": 27580.479062725, "rc": 0, "round": 82}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.4556411, "end": 27580.479487499, "rc": 0, "round": 83}
+{"prog": "status", "end": 27580.486350459}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.463031696, "end": 27580.486767238, "rc": 0, "round": 82}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.472069762, "end": 27580.497155317, "rc": 0, "round": 82}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.482957636, "end": 27580.506170831, "rc": 0, "round": 82}
+{"prog": "status", "end": 27580.507177894}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.485036612, "end": 27580.510377626, "rc": 0, "round": 81}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.479173542, "end": 27580.511269052, "rc": 0, "round": 83}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.497290811, "end": 27580.524971869, "rc": 0, "round": 82}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.500277875, "end": 27580.531630857, "rc": 0, "round": 84}
+{"prog": "status", "end": 27580.532376511}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.496073535, "end": 27580.535159814, "rc": 0, "round": 83}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.518083842, "end": 27580.548239946, "rc": 0, "round": 82}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.514860536, "end": 27580.548453986, "rc": 0, "round": 83}
+{"prog": "status", "end": 27580.553226148}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.511115565, "end": 27580.5559608, "rc": 0, "round": 83}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.519815098, "end": 27580.562080069, "rc": 0, "round": 83}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.529158665, "end": 27580.56411838, "rc": 0, "round": 83}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.51049205, "end": 27580.56668052, "rc": 0, "round": 82}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.539195448, "end": 27580.572584496, "rc": 0, "round": 82}
+{"prog": "status", "end": 27580.576811549}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.548899459, "end": 27580.580860288, "rc": 0, "round": 83}
+{"prog": "status", "end": 27580.597391251}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.556075454, "end": 27580.598224028, "rc": 0, "round": 84}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.56220861, "end": 27580.598659392, "rc": 0, "round": 84}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.572695885, "end": 27580.604129367, "rc": 0, "round": 83}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.574063371, "end": 27580.607461036, "rc": 0, "round": 83}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.571997459, "end": 27580.60895606, "rc": 0, "round": 84}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.575541845, "end": 27580.609513122, "rc": 0, "round": 83}
+{"prog": "status", "end": 27580.617834087}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.605064275, "end": 27580.628347651, "rc": 0, "round": 83}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.607572023, "end": 27580.62902102, "rc": 0, "round": 84}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.607024349, "end": 27580.631060213, "rc": 0, "round": 82}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.609378961, "end": 27580.635035915, "rc": 0, "round": 83}
+{"prog": "status", "end": 27580.639417917}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.609789027, "end": 27580.643728114, "rc": 0, "round": 84}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.618418089, "end": 27580.643920474, "rc": 0, "round": 84}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.621244593, "end": 27580.644830495, "rc": 0, "round": 83}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.609070554, "end": 27580.645966559, "rc": 0, "round": 85}
+{"prog": "status", "end": 27580.660492975}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.644908771, "end": 27580.669713592, "rc": 0, "round": 83}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.645177694, "end": 27580.669876497, "rc": 0, "round": 84}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.631175789, "end": 27580.669971675, "rc": 0, "round": 83}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.629203752, "end": 27580.677088078, "rc": 0, "round": 84}
+{"prog": "status", "end": 27580.682215574}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.635144548, "end": 27580.687897395, "rc": 0, "round": 84}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.651101929, "end": 27580.69567253, "rc": 0, "round": 84}
+{"prog": "status", "end": 27580.703128208}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.670194782, "end": 27580.706448896, "rc": 0, "round": 85}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.658120339, "end": 27580.70911489, "rc": 0, "round": 85}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.671288065, "end": 27580.710106463, "rc": 0, "round": 84}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.672796145, "end": 27580.711642144, "rc": 0, "round": 84}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.684335547, "end": 27580.714154481, "rc": 0, "round": 84}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.689048327, "end": 27580.723315527, "rc": 0, "round": 85}
+{"prog": "status", "end": 27580.723983766}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.710220507, "end": 27580.736466602, "rc": 0, "round": 85}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.714296947, "end": 27580.737028522, "rc": 0, "round": 83}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.714508062, "end": 27580.743041092, "rc": 0, "round": 85}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.717730636, "end": 27580.744279217, "rc": 0, "round": 84}
+{"prog": "status", "end": 27580.746285187}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.723440691, "end": 27580.748449964, "rc": 0, "round": 86}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.728196772, "end": 27580.750827969, "rc": 0, "round": 84}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.736021389, "end": 27580.759247779, "rc": 0, "round": 84}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.737159768, "end": 27580.763039397, "rc": 0, "round": 84}
+{"prog": "status", "end": 27580.767085992}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.748038895, "end": 27580.76930451, "rc": 0, "round": 85}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.749508472, "end": 27580.773379407, "rc": 0, "round": 85}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.744388822, "end": 27580.774230328, "rc": 0, "round": 85}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.751964825, "end": 27580.77865523, "rc": 0, "round": 84}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.750932605, "end": 27580.784203903, "rc": 0, "round": 85}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.759380878, "end": 27580.784993008, "rc": 0, "round": 85}
+{"prog": "status", "end": 27580.794517473}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.770264434, "end": 27580.797509627, "rc": 0, "round": 86}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.773489974, "end": 27580.806109454, "rc": 0, "round": 86}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.778766648, "end": 27580.813594496, "rc": 0, "round": 85}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.78428241, "end": 27580.81698779, "rc": 0, "round": 85}
+{"prog": "status", "end": 27580.817967912}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.776808738, "end": 27580.822229389, "rc": 0, "round": 85}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.788782062, "end": 27580.82908766, "rc": 0, "round": 86}
+{"prog": "status", "end": 27580.841000861}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.81664003, "end": 27580.841092071, "rc": 0, "round": 85}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.80656726, "end": 27580.843124591, "rc": 0, "round": 84}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.817203583, "end": 27580.848569389, "rc": 0, "round": 86}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.826536781, "end": 27580.850574698, "rc": 0, "round": 85}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.822338793, "end": 27580.851310784, "rc": 0, "round": 86}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.827742786, "end": 27580.851386415, "rc": 0, "round": 85}
+{"prog": "status", "end": 27580.861441533}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.829204428, "end": 27580.866698751, "rc": 0, "round": 87}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.843239936, "end": 27580.874200224, "rc": 0, "round": 85}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.845170115, "end": 27580.874408023, "rc": 0, "round": 86}
+{"prog": "status", "end": 27580.881844575}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.859115364, "end": 27580.88359644, "rc": 0, "round": 86}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.851006545, "end": 27580.884132281, "rc": 0, "round": 86}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.859470799, "end": 27580.89219287, "rc": 0, "round": 86}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.847084333, "end": 27580.894848845, "rc": 0, "round": 86}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.85415954, "end": 27580.899418999, "rc": 0, "round": 85}
+{"prog": "status", "end": 27580.903365997}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.883720862, "end": 27580.913527504, "rc": 0, "round": 87}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.888917347, "end": 27580.917495111, "rc": 0, "round": 86}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.892245889, "end": 27580.921771876, "rc": 0, "round": 86}
+{"prog": "status", "end": 27580.923779649}
+{"node": "n003", "prog": "aos7-tick", "start": 27580.894958771, "end": 27580.929777161, "rc": 0, "round": 87}
+{"node": "n004", "prog": "aos7-tock", "start": 27580.907013686, "end": 27580.930143706, "rc": 0, "round": 87}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.899530417, "end": 27580.931331978, "rc": 0, "round": 86}
+{"node": "n007", "prog": "aos7-tock", "start": 27580.914581163, "end": 27580.939140485, "rc": 0, "round": 85}
+{"node": "n000", "prog": "aos7-tock", "start": 27580.917191323, "end": 27580.944331329, "rc": 0, "round": 86}
+{"prog": "status", "end": 27580.944697193}
+{"node": "n005", "prog": "aos7-tick", "start": 27580.917599736, "end": 27580.945504061, "rc": 0, "round": 87}
+{"node": "n009", "prog": "aos7-tick", "start": 27580.922415298, "end": 27580.953057151, "rc": 0, "round": 87}
+{"node": "n001", "prog": "aos7-tock", "start": 27580.924476892, "end": 27580.955238259, "rc": 0, "round": 86}
+{"node": "n006", "prog": "aos7-tock", "start": 27580.932851057, "end": 27580.962341387, "rc": 0, "round": 86}
+{"node": "n004", "prog": "aos7-tick", "start": 27580.930249204, "end": 27580.964786068, "rc": 0, "round": 88}
+{"prog": "status", "end": 27580.965337328}
+{"node": "n007", "prog": "aos7-tick", "start": 27580.943386963, "end": 27580.968470856, "rc": 0, "round": 86}
+{"node": "n000", "prog": "aos7-tick", "start": 27580.945235209, "end": 27580.982993786, "rc": 0, "round": 87}
+{"prog": "status", "end": 27580.985765086}
+{"node": "n008", "prog": "aos7-tock", "start": 27580.958210405, "end": 27580.989578355, "rc": 0, "round": 87}
+{"node": "n001", "prog": "aos7-tick", "start": 27580.955360277, "end": 27580.992477214, "rc": 0, "round": 87}
+{"node": "n002", "prog": "aos7-tock", "start": 27580.976232846, "end": 27580.99949324, "rc": 0, "round": 86}
+{"node": "n006", "prog": "aos7-tick", "start": 27580.962439561, "end": 27581.002394584, "rc": 0, "round": 87}
+{"node": "n003", "prog": "aos7-tock", "start": 27580.970755357, "end": 27581.007102715, "rc": 0, "round": 87}
+{"prog": "status", "end": 27581.008372589}
+{"node": "n005", "prog": "aos7-tock", "start": 27580.985815921, "end": 27581.014935779, "rc": 0, "round": 87}
+{"node": "n008", "prog": "aos7-tick", "start": 27580.989698038, "end": 27581.018663187, "rc": 0, "round": 88}
+{"node": "n009", "prog": "aos7-tock", "start": 27580.996291033, "end": 27581.022425821, "rc": 0, "round": 87}
+{"prog": "status", "end": 27581.029134732}
+{"node": "n004", "prog": "aos7-tock", "start": 27581.006128985, "end": 27581.031721779, "rc": 0, "round": 88}
+{"node": "n000", "prog": "aos7-tock", "start": 27581.004093289, "end": 27581.034564373, "rc": 0, "round": 87}
+{"node": "n003", "prog": "aos7-tick", "start": 27581.007223231, "end": 27581.035032798, "rc": 0, "round": 88}
+{"node": "n002", "prog": "aos7-tick", "start": 27580.999596122, "end": 27581.042070866, "rc": 0, "round": 87}
+{"node": "n007", "prog": "aos7-tock", "start": 27581.010037451, "end": 27581.042579466, "rc": 0, "round": 86}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.017725564, "end": 27581.055362443, "rc": 0, "round": 88}
+{"prog": "status", "end": 27581.056222972}
+{"node": "n009", "prog": "aos7-tick", "start": 27581.022532871, "end": 27581.058573075, "rc": 0, "round": 88}
+{"node": "n001", "prog": "aos7-tock", "start": 27581.034715185, "end": 27581.058731601, "rc": 0, "round": 87}
+{"node": "n004", "prog": "aos7-tick", "start": 27581.03184035, "end": 27581.063752948, "rc": 0, "round": 89}
+{"node": "n006", "prog": "aos7-tock", "start": 27581.043053553, "end": 27581.072133225, "rc": 0, "round": 87}
+{"node": "n007", "prog": "aos7-tick", "start": 27581.044771003, "end": 27581.074732704, "rc": 0, "round": 87}
+{"prog": "status", "end": 27581.077059073}
+{"node": "n000", "prog": "aos7-tick", "start": 27581.050135622, "end": 27581.081719375, "rc": 0, "round": 88}
+{"node": "n008", "prog": "aos7-tock", "start": 27581.059189127, "end": 27581.085097781, "rc": 0, "round": 88}
+{"node": "n001", "prog": "aos7-tick", "start": 27581.059569488, "end": 27581.093200248, "rc": 0, "round": 88}
+{"node": "n005", "prog": "aos7-tock", "start": 27581.075549221, "end": 27581.100480037, "rc": 0, "round": 88}
+{"prog": "status", "end": 27581.102078525}
+{"node": "n003", "prog": "aos7-tock", "start": 27581.078197301, "end": 27581.107635544, "rc": 0, "round": 88}
+{"node": "n006", "prog": "aos7-tick", "start": 27581.072239283, "end": 27581.115064181, "rc": 0, "round": 88}
+{"node": "n002", "prog": "aos7-tock", "start": 27581.08241203, "end": 27581.115220283, "rc": 0, "round": 87}
+{"node": "n008", "prog": "aos7-tick", "start": 27581.089783651, "end": 27581.117379309, "rc": 0, "round": 89}
+{"prog": "status", "end": 27581.122500703}
+{"node": "n009", "prog": "aos7-tock", "start": 27581.10005393, "end": 27581.123114881, "rc": 0, "round": 88}
+{"node": "n004", "prog": "aos7-tock", "start": 27581.10618949, "end": 27581.130170431, "rc": 0, "round": 89}
+{"prog": "status", "end": 27581.14338778}
+{"node": "n003", "prog": "aos7-tick", "start": 27581.107747764, "end": 27581.144510238, "rc": 0, "round": 89}
+{"node": "n007", "prog": "aos7-tock", "start": 27581.117085259, "end": 27581.145257355, "rc": 0, "round": 87}
+{"node": "n002", "prog": "aos7-tick", "start": 27581.11529922, "end": 27581.147256121, "rc": 0, "round": 88}
+{"node": "n000", "prog": "aos7-tock", "start": 27581.12540903, "end": 27581.14999954, "rc": 0, "round": 88}
+{"node": "n009", "prog": "aos7-tick", "start": 27581.123222743, "end": 27581.161168409, "rc": 0, "round": 89}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.117798933, "end": 27581.161262565, "rc": 0, "round": 89}
+{"node": "n001", "prog": "aos7-tock", "start": 27581.133561079, "end": 27581.161356551, "rc": 0, "round": 88}
+{"node": "n004", "prog": "aos7-tick", "start": 27581.131919511, "end": 27581.165604292, "rc": 0, "round": 90}
+{"prog": "status", "end": 27581.166060986}
+{"node": "n007", "prog": "aos7-tick", "start": 27581.145364074, "end": 27581.181510217, "rc": 0, "round": 88}
+{"prog": "status", "end": 27581.190422788}
+{"node": "n000", "prog": "aos7-tick", "start": 27581.150117641, "end": 27581.190499051, "rc": 0, "round": 89}
+{"node": "n008", "prog": "aos7-tock", "start": 27581.16144668, "end": 27581.196681538, "rc": 0, "round": 89}
+{"node": "n006", "prog": "aos7-tock", "start": 27581.156244204, "end": 27581.204394808, "rc": 0, "round": 88}
+{"node": "n001", "prog": "aos7-tick", "start": 27581.164230013, "end": 27581.210362254, "rc": 0, "round": 89}
+{"prog": "status", "end": 27581.211086558}
+{"node": "n009", "prog": "aos7-tock", "start": 27581.181933358, "end": 27581.211637307, "rc": 0, "round": 89}
+{"node": "n003", "prog": "aos7-tock", "start": 27581.187593379, "end": 27581.212621427, "rc": 0, "round": 89}
+{"node": "n002", "prog": "aos7-tock", "start": 27581.187890173, "end": 27581.215207962, "rc": 0, "round": 88}
+{"node": "n004", "prog": "aos7-tock", "start": 27581.18714988, "end": 27581.217909452, "rc": 0, "round": 90}
+{"node": "n008", "prog": "aos7-tick", "start": 27581.196803366, "end": 27581.225334673, "rc": 0, "round": 90}
+{"prog": "status", "end": 27581.231509226}
+{"node": "n005", "prog": "aos7-tock", "start": 27581.210178169, "end": 27581.240165358, "rc": 0, "round": 89}
+{"node": "n006", "prog": "aos7-tick", "start": 27581.20451933, "end": 27581.243180164, "rc": 0, "round": 89}
+{"node": "n003", "prog": "aos7-tick", "start": 27581.212723357, "end": 27581.248102065, "rc": 0, "round": 90}
+{"node": "n007", "prog": "aos7-tock", "start": 27581.221908198, "end": 27581.248273125, "rc": 0, "round": 88}
+{"prog": "status", "end": 27581.254029496}
+{"node": "n002", "prog": "aos7-tick", "start": 27581.215315954, "end": 27581.255847915, "rc": 0, "round": 89}
+{"node": "n009", "prog": "aos7-tick", "start": 27581.223973599, "end": 27581.273105587, "rc": 0, "round": 90}
+{"prog": "status", "end": 27581.274457154}
+{"node": "n000", "prog": "aos7-tock", "start": 27581.236153719, "end": 27581.275750822, "rc": 0, "round": 89}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.240307884, "end": 27581.279373945, "rc": 0, "round": 90}
+{"node": "n004", "prog": "aos7-tick", "start": 27581.232445697, "end": 27581.295360261, "rc": 0, "round": 91}
+{"prog": "status", "end": 27581.296233463}
+{"node": "n007", "prog": "aos7-tick", "start": 27581.248357964, "end": 27581.300797826, "rc": 0, "round": 89}
+{"node": "n008", "prog": "aos7-tock", "start": 27581.266414248, "end": 27581.304095551, "rc": 0, "round": 90}
+{"node": "n001", "prog": "aos7-tock", "start": 27581.253043713, "end": 27581.312546669, "rc": 0, "round": 89}
+{"node": "n000", "prog": "aos7-tick", "start": 27581.275869975, "end": 27581.316020634, "rc": 0, "round": 90}
+{"node": "n003", "prog": "aos7-tock", "start": 27581.288585496, "end": 27581.318300836, "rc": 0, "round": 90}
+{"prog": "status", "end": 27581.319478548}
+{"node": "n006", "prog": "aos7-tock", "start": 27581.284733645, "end": 27581.325595453, "rc": 0, "round": 89}
+{"node": "n008", "prog": "aos7-tick", "start": 27581.304209604, "end": 27581.337112493, "rc": 0, "round": 91}
+{"prog": "status", "end": 27581.342953102}
+{"node": "n009", "prog": "aos7-tock", "start": 27581.315571965, "end": 27581.34559999, "rc": 0, "round": 90}
+{"node": "n002", "prog": "aos7-tock", "start": 27581.322178746, "end": 27581.346345153, "rc": 0, "round": 89}
+{"node": "n001", "prog": "aos7-tick", "start": 27581.312693544, "end": 27581.347684226, "rc": 0, "round": 90}
+{"node": "n005", "prog": "aos7-tock", "start": 27581.319696085, "end": 27581.353733174, "rc": 0, "round": 90}
+{"node": "n003", "prog": "aos7-tick", "start": 27581.318464022, "end": 27581.365829157, "rc": 0, "round": 91}
+{"node": "n006", "prog": "aos7-tick", "start": 27581.325714085, "end": 27581.366498829, "rc": 0, "round": 90}
+{"prog": "status", "end": 27581.369549632}
+{"node": "n009", "prog": "aos7-tick", "start": 27581.345751022, "end": 27581.376265527, "rc": 0, "round": 91}
+{"node": "n007", "prog": "aos7-tock", "start": 27581.342982837, "end": 27581.376466503, "rc": 0, "round": 89}
+{"node": "n004", "prog": "aos7-tock", "start": 27581.338670566, "end": 27581.386303212, "rc": 0, "round": 91}
+{"prog": "status", "end": 27581.392744834}
+{"node": "n002", "prog": "aos7-tick", "start": 27581.346451772, "end": 27581.392840302, "rc": 0, "round": 90}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.353851656, "end": 27581.393060233, "rc": 0, "round": 91}
+{"node": "n000", "prog": "aos7-tock", "start": 27581.367025593, "end": 27581.400664789, "rc": 0, "round": 90}
+{"node": "n008", "prog": "aos7-tock", "start": 27581.35856131, "end": 27581.405394151, "rc": 0, "round": 91}
+{"prog": "status", "end": 27581.413434321}
+{"node": "n000", "prog": "aos7-tick", "start": 27581.40081467, "end": 27581.427406501, "rc": 0, "round": 91}
+{"node": "n007", "prog": "aos7-tick", "start": 27581.376579885, "end": 27581.427614199, "rc": 0, "round": 90}
+{"node": "n008", "prog": "aos7-tick", "start": 27581.405518623, "end": 27581.434554644, "rc": 0, "round": 92}
+{"prog": "status", "end": 27581.434994817}
+{"node": "n003", "prog": "aos7-tock", "start": 27581.40623899, "end": 27581.444600634, "rc": 0, "round": 91}
+{"node": "n001", "prog": "aos7-tock", "start": 27581.393229109, "end": 27581.445125846, "rc": 0, "round": 90}
+{"node": "n006", "prog": "aos7-tock", "start": 27581.415133538, "end": 27581.450863763, "rc": 0, "round": 90}
+{"node": "n009", "prog": "aos7-tock", "start": 27581.41663284, "end": 27581.452372864, "rc": 0, "round": 91}
+{"node": "n004", "prog": "aos7-tick", "start": 27581.38643602, "end": 27581.452545496, "rc": 0, "round": 92}
+{"prog": "status", "end": 27581.455464934}
+{"node": "n005", "prog": "aos7-tock", "start": 27581.434231309, "end": 27581.461324909, "rc": 0, "round": 91}
+{"node": "n002", "prog": "aos7-tock", "start": 27581.433246699, "end": 27581.465274022, "rc": 0, "round": 90}
+{"prog": "status", "end": 27581.476405331}
+{"node": "n001", "prog": "aos7-tick", "start": 27581.445230031, "end": 27581.483805505, "rc": 0, "round": 91}
+{"node": "n006", "prog": "aos7-tick", "start": 27581.451013673, "end": 27581.486740321, "rc": 0, "round": 91}
+{"node": "n003", "prog": "aos7-tick", "start": 27581.444748771, "end": 27581.492295686, "rc": 0, "round": 92}
+{"node": "n000", "prog": "aos7-tock", "start": 27581.467734411, "end": 27581.500219249, "rc": 0, "round": 91}
+{"node": "n007", "prog": "aos7-tock", "start": 27581.46818871, "end": 27581.500466992, "rc": 0, "round": 90}
+{"prog": "status", "end": 27581.503339742}
+{"node": "n009", "prog": "aos7-tick", "start": 27581.452719111, "end": 27581.508922679, "rc": 0, "round": 92}
+{"node": "n002", "prog": "aos7-tick", "start": 27581.465418642, "end": 27581.511090762, "rc": 0, "round": 91}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.46145404, "end": 27581.521406547, "rc": 0, "round": 92}
+{"prog": "status", "end": 27581.524380496}
+{"node": "n008", "prog": "aos7-tock", "start": 27581.495043343, "end": 27581.531906376, "rc": 0, "round": 92}
+{"node": "n004", "prog": "aos7-tock", "start": 27581.492899435, "end": 27581.542112826, "rc": 0, "round": 92}
+{"prog": "status", "end": 27581.544830406}
+{"node": "n007", "prog": "aos7-tick", "start": 27581.500611693, "end": 27581.553361785, "rc": 0, "round": 91}
+{"node": "n000", "prog": "aos7-tick", "start": 27581.503429801, "end": 27581.561581852, "rc": 0, "round": 92}
+{"prog": "status", "end": 27581.566890165}
+{"node": "n004", "prog": "aos7-tick", "start": 27581.542251375, "end": 27581.569684329, "rc": 0, "round": 93}
+{"node": "n001", "prog": "aos7-tock", "start": 27581.52730836, "end": 27581.588090728, "rc": 0, "round": 91}
+{"node": "n006", "prog": "aos7-tock", "start": 27581.551083356, "end": 27581.590179693, "rc": 0, "round": 91}
+{"node": "n008", "prog": "aos7-tick", "start": 27581.53204761, "end": 27581.591382722, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.592405153}
+{"node": "n005", "prog": "aos7-tock", "start": 27581.561775313, "end": 27581.592501884, "rc": 0, "round": 92}
+{"node": "n009", "prog": "aos7-tock", "start": 27581.549418593, "end": 27581.597102304, "rc": 0, "round": 92}
+{"node": "n003", "prog": "aos7-tock", "start": 27581.555815362, "end": 27581.601058831, "rc": 0, "round": 92}
+{"node": "n002", "prog": "aos7-tock", "start": 27581.572141222, "end": 27581.617216196, "rc": 0, "round": 91}
+{"node": "n001", "prog": "aos7-tick", "start": 27581.58829514, "end": 27581.630612098, "rc": 0, "round": 92}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.592578337, "end": 27581.630855223, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.63826779}
+{"node": "n006", "prog": "aos7-tick", "start": 27581.59041881, "end": 27581.639536101, "rc": 0, "round": 92}
+{"node": "n009", "prog": "aos7-tick", "start": 27581.597209725, "end": 27581.642166779, "rc": 0, "round": 93}
+{"node": "n007", "prog": "aos7-tock", "start": 27581.594183909, "end": 27581.647342945, "rc": 0, "round": 91}
+{"node": "n003", "prog": "aos7-tick", "start": 27581.601172583, "end": 27581.656340305, "rc": 0, "round": 93}
+{"node": "n008", "prog": "aos7-tock", "start": 27581.623196886, "end": 27581.657333111, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.659029903}
+{"node": "n002", "prog": "aos7-tick", "start": 27581.617388798, "end": 27581.665377129, "rc": 0, "round": 92}
+{"node": "n000", "prog": "aos7-tock", "start": 27581.603164778, "end": 27581.667137931, "rc": 0, "round": 92}
+{"node": "n004", "prog": "aos7-tock", "start": 27581.61044095, "end": 27581.672539508, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.68038211}
+{"node": "n007", "prog": "aos7-tick", "start": 27581.647486414, "end": 27581.694388373, "rc": 0, "round": 92}
+{"prog": "ctl", "start": 27581.699752611, "end": 27581.70168813, "ok": true}
+{"prog": "status", "end": 27581.702039667}
+{"node": "n004", "prog": "aos7-tick", "start": 27581.672662278, "end": 27581.703605043, "rc": 0, "round": 94}
+{"node": "n005", "prog": "aos7-tock", "start": 27581.672924057, "end": 27581.706075962, "rc": 0, "round": 93}
+{"node": "n008", "prog": "aos7-tick", "start": 27581.657449399, "end": 27581.706185437, "rc": 0, "round": 94}
+{"node": "n000", "prog": "aos7-tick", "start": 27581.66724987, "end": 27581.711096408, "rc": 0, "round": 93}
+{"node": "n006", "prog": "aos7-tock", "start": 27581.680704472, "end": 27581.712065399, "rc": 0, "round": 92}
+{"prog": "status", "end": 27581.728011048}
+{"node": "n001", "prog": "aos7-tock", "start": 27581.674055312, "end": 27581.728130241, "rc": 0, "round": 92}
+{"node": "n009", "prog": "aos7-tock", "start": 27581.682519736, "end": 27581.73681667, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.748554312}
+{"node": "n006", "prog": "aos7-tick", "start": 27581.712181396, "end": 27581.753878325, "rc": 0, "round": 93}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.706271768, "end": 27581.754595576, "rc": 0, "round": 94}
+{"node": "n003", "prog": "aos7-tock", "start": 27581.717512041, "end": 27581.761093423, "rc": 0, "round": 93}
+{"node": "n002", "prog": "aos7-tock", "start": 27581.725934656, "end": 27581.76375575, "rc": 0, "round": 92}
+{"prog": "status", "end": 27581.768978063}
+{"node": "n008", "prog": "aos7-tock", "start": 27581.748607412, "end": 27581.781279309, "rc": 0, "round": 94}
+{"node": "n000", "prog": "aos7-tock", "start": 27581.751444626, "end": 27581.786120439, "rc": 0, "round": 93}
+{"node": "n001", "prog": "aos7-tick", "start": 27581.728217093, "end": 27581.790092996, "rc": 0, "round": 93}
+{"node": "n009", "prog": "aos7-tick", "start": 27581.736955118, "end": 27581.791917316, "rc": 0, "round": 94}
+{"prog": "status", "end": 27581.79235252}
+{"node": "n007", "prog": "aos7-tock", "start": 27581.754904624, "end": 27581.798357806, "rc": 0, "round": 92}
+{"node": "n004", "prog": "aos7-tock", "start": 27581.767096776, "end": 27581.79881457, "rc": 0, "round": 94}
+{"node": "n003", "prog": "aos7-tick", "start": 27581.761231922, "end": 27581.802143453, "rc": 0, "round": 94}
+{"node": "n002", "prog": "aos7-tick", "start": 27581.763879612, "end": 27581.806257093, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.814402931}
+{"node": "n000", "prog": "aos7-tick", "start": 27581.786255372, "end": 27581.832114582, "rc": 0, "round": 94}
+{"node": "n008", "prog": "aos7-tick", "start": 27581.781429821, "end": 27581.834910789, "rc": 0, "round": 95}
+{"node": "n006", "prog": "aos7-tock", "start": 27581.794437537, "end": 27581.835883227, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.837257757}
+{"node": "n004", "prog": "aos7-tick", "start": 27581.798888759, "end": 27581.837305556, "rc": 0, "round": 95}
+{"node": "n007", "prog": "aos7-tick", "start": 27581.798481307, "end": 27581.852147191, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.861263483}
+{"node": "n005", "prog": "aos7-tock", "start": 27581.798159926, "end": 27581.862440424, "rc": 0, "round": 94}
+{"node": "n006", "prog": "aos7-tick", "start": 27581.836048356, "end": 27581.879495196, "rc": 0, "round": 94}
+{"node": "n001", "prog": "aos7-tock", "start": 27581.83076039, "end": 27581.881081131, "rc": 0, "round": 93}
+{"prog": "status", "end": 27581.882907275}
+{"node": "n009", "prog": "aos7-tock", "start": 27581.834738387, "end": 27581.882974711, "rc": 0, "round": 94}
+{"node": "n002", "prog": "aos7-tock", "start": 27581.849087982, "end": 27581.888534955, "rc": 0, "round": 93}
+{"node": "n003", "prog": "aos7-tock", "start": 27581.865600231, "end": 27581.903875483, "rc": 0, "round": 94}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.862565407, "end": 27581.908816891, "rc": 0, "round": 95}
+{"node": "n000", "prog": "aos7-tock", "start": 27581.872514166, "end": 27581.908933509, "rc": 0, "round": 94}
+{"prog": "status", "end": 27581.911307948}
+{"node": "n001", "prog": "aos7-tick", "start": 27581.881184925, "end": 27581.916485367, "rc": 0, "round": 94}
+{"node": "n008", "prog": "aos7-tock", "start": 27581.895361998, "end": 27581.923746631, "rc": 0, "round": 95}
+{"node": "n004", "prog": "aos7-tock", "start": 27581.878413324, "end": 27581.926151777, "rc": 0, "round": 95}
+{"node": "n007", "prog": "aos7-tock", "start": 27581.892590747, "end": 27581.92708936, "rc": 0, "round": 93}
+{"node": "n009", "prog": "aos7-tick", "start": 27581.883068496, "end": 27581.927661239, "rc": 0, "round": 95}
+{"prog": "status", "end": 27581.933403975}
+{"node": "n002", "prog": "aos7-tick", "start": 27581.888658887, "end": 27581.937608715, "rc": 0, "round": 94}
+{"node": "n006", "prog": "aos7-tock", "start": 27581.919901112, "end": 27581.94625031, "rc": 0, "round": 94}
+{"node": "n003", "prog": "aos7-tick", "start": 27581.904013501, "end": 27581.947997686, "rc": 0, "round": 95}
+{"prog": "status", "end": 27581.953831783}
+{"node": "n004", "prog": "aos7-tick", "start": 27581.92627096, "end": 27581.967116748, "rc": 0, "round": 96}
+{"node": "n000", "prog": "aos7-tick", "start": 27581.909128584, "end": 27581.968148096, "rc": 0, "round": 95}
+{"node": "n007", "prog": "aos7-tick", "start": 27581.92719646, "end": 27581.969186748, "rc": 0, "round": 94}
+{"node": "n008", "prog": "aos7-tick", "start": 27581.92388511, "end": 27581.973123287, "rc": 0, "round": 96}
+{"prog": "status", "end": 27581.974256726}
+{"node": "n005", "prog": "aos7-tock", "start": 27581.94929944, "end": 27581.976480633, "rc": 0, "round": 95}
+{"prog": "status", "end": 27581.994684363}
+{"node": "n001", "prog": "aos7-tock", "start": 27581.959060648, "end": 27581.995995615, "rc": 0, "round": 94}
+{"node": "n006", "prog": "aos7-tick", "start": 27581.946393758, "end": 27581.999178425, "rc": 0, "round": 95}
+{"node": "n002", "prog": "aos7-tock", "start": 27581.981992076, "end": 27582.007383834, "rc": 0, "round": 94}
+{"node": "n005", "prog": "aos7-tick", "start": 27581.976573056, "end": 27582.012037434, "rc": 0, "round": 96}
+{"prog": "status", "end": 27582.015117091}
+{"node": "n003", "prog": "aos7-tock", "start": 27581.990776889, "end": 27582.018212908, "rc": 0, "round": 95}
+{"node": "n009", "prog": "aos7-tock", "start": 27581.970061733, "end": 27582.019196808, "rc": 0, "round": 95}
+{"prog": "status", "end": 27582.036450983}
+{"node": "n001", "prog": "aos7-tick", "start": 27581.996111902, "end": 27582.039019615, "rc": 0, "round": 95}
+{"node": "n000", "prog": "aos7-tock", "start": 27582.009122705, "end": 27582.039185986, "rc": 0, "round": 95}
+{"node": "n004", "prog": "aos7-tock", "start": 27582.00752595, "end": 27582.041164625, "rc": 0, "round": 96}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.010252176, "end": 27582.0491804, "rc": 0, "round": 94}
+{"node": "n008", "prog": "aos7-tock", "start": 27582.013461035, "end": 27582.054259505, "rc": 0, "round": 96}
+{"node": "n002", "prog": "aos7-tick", "start": 27582.012127853, "end": 27582.055167242, "rc": 0, "round": 95}
+{"prog": "status", "end": 27582.05842939}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.018330548, "end": 27582.075061733, "rc": 0, "round": 96}
+{"node": "n006", "prog": "aos7-tock", "start": 27582.043207384, "end": 27582.079490492, "rc": 0, "round": 95}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.019302836, "end": 27582.080160945, "rc": 0, "round": 96}
+{"prog": "status", "end": 27582.082392537}
+{"node": "n004", "prog": "aos7-tick", "start": 27582.041272927, "end": 27582.087726368, "rc": 0, "round": 97}
+{"node": "n000", "prog": "aos7-tick", "start": 27582.039304147, "end": 27582.08800533, "rc": 0, "round": 96}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.055462934, "end": 27582.098384703, "rc": 0, "round": 96}
+{"node": "n008", "prog": "aos7-tick", "start": 27582.05440136, "end": 27582.099739586, "rc": 0, "round": 97}
+{"node": "n007", "prog": "aos7-tick", "start": 27582.049309291, "end": 27582.101361017, "rc": 0, "round": 95}
+{"prog": "status", "end": 27582.103227446}
+{"node": "n006", "prog": "aos7-tick", "start": 27582.079779342, "end": 27582.124462003, "rc": 0, "round": 96}
+{"prog": "status", "end": 27582.127174895}
+{"node": "n005", "prog": "aos7-tick", "start": 27582.098512061, "end": 27582.149185482, "rc": 0, "round": 97}
+{"node": "n001", "prog": "aos7-tock", "start": 27582.107033311, "end": 27582.14937745, "rc": 0, "round": 95}
+{"node": "n009", "prog": "aos7-tock", "start": 27582.121121919, "end": 27582.152250401, "rc": 0, "round": 96}
+{"prog": "status", "end": 27582.153837288}
+{"node": "n002", "prog": "aos7-tock", "start": 27582.099908903, "end": 27582.154221486, "rc": 0, "round": 95}
+{"node": "n003", "prog": "aos7-tock", "start": 27582.120392245, "end": 27582.159922524, "rc": 0, "round": 96}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.14484093, "end": 27582.17121833, "rc": 0, "round": 95}
+{"node": "n008", "prog": "aos7-tock", "start": 27582.145887286, "end": 27582.174672668, "rc": 0, "round": 97}
+{"node": "n004", "prog": "aos7-tock", "start": 27582.149534033, "end": 27582.175103333, "rc": 0, "round": 97}
+{"prog": "status", "end": 27582.176544267}
+{"node": "n000", "prog": "aos7-tock", "start": 27582.153906687, "end": 27582.181190142, "rc": 0, "round": 96}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.154331361, "end": 27582.185329891, "rc": 0, "round": 97}
+{"node": "n001", "prog": "aos7-tick", "start": 27582.156535261, "end": 27582.190493243, "rc": 0, "round": 96}
+{"node": "n002", "prog": "aos7-tick", "start": 27582.156195105, "end": 27582.194125263, "rc": 0, "round": 96}
+{"prog": "status", "end": 27582.197557539}
+{"node": "n006", "prog": "aos7-tock", "start": 27582.164899708, "end": 27582.203228691, "rc": 0, "round": 96}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.160063167, "end": 27582.206091613, "rc": 0, "round": 97}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.173943915, "end": 27582.206845392, "rc": 0, "round": 97}
+{"node": "n007", "prog": "aos7-tick", "start": 27582.171358031, "end": 27582.218940373, "rc": 0, "round": 96}
+{"prog": "status", "end": 27582.221459893}
+{"node": "n008", "prog": "aos7-tick", "start": 27582.174788424, "end": 27582.22269909, "rc": 0, "round": 98}
+{"node": "n004", "prog": "aos7-tick", "start": 27582.176632652, "end": 27582.237905507, "rc": 0, "round": 98}
+{"node": "n000", "prog": "aos7-tick", "start": 27582.181298945, "end": 27582.243675323, "rc": 0, "round": 97}
+{"prog": "status", "end": 27582.244399457}
+{"node": "n006", "prog": "aos7-tick", "start": 27582.203363353, "end": 27582.249170947, "rc": 0, "round": 97}
+{"node": "n005", "prog": "aos7-tick", "start": 27582.206958704, "end": 27582.253179881, "rc": 0, "round": 98}
+{"prog": "status", "end": 27582.264967657}
+{"node": "n001", "prog": "aos7-tock", "start": 27582.251019683, "end": 27582.281385179, "rc": 0, "round": 96}
+{"node": "n009", "prog": "aos7-tock", "start": 27582.245798672, "end": 27582.28214529, "rc": 0, "round": 97}
+{"node": "n003", "prog": "aos7-tock", "start": 27582.247547682, "end": 27582.284095676, "rc": 0, "round": 97}
+{"prog": "status", "end": 27582.285362965}
+{"node": "n002", "prog": "aos7-tock", "start": 27582.258285957, "end": 27582.287448915, "rc": 0, "round": 96}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.279569615, "end": 27582.303064396, "rc": 0, "round": 96}
+{"node": "n004", "prog": "aos7-tock", "start": 27582.278277669, "end": 27582.305203425, "rc": 0, "round": 98}
+{"node": "n000", "prog": "aos7-tock", "start": 27582.284755529, "end": 27582.310122551, "rc": 0, "round": 97}
+{"prog": "status", "end": 27582.3144819}
+{"node": "n008", "prog": "aos7-tock", "start": 27582.28552611, "end": 27582.320111985, "rc": 0, "round": 98}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.282250556, "end": 27582.320915968, "rc": 0, "round": 98}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.284202826, "end": 27582.323107305, "rc": 0, "round": 98}
+{"node": "n001", "prog": "aos7-tick", "start": 27582.281518839, "end": 27582.323377771, "rc": 0, "round": 97}
+{"node": "n006", "prog": "aos7-tock", "start": 27582.290080153, "end": 27582.325157488, "rc": 0, "round": 97}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.293516968, "end": 27582.328922566, "rc": 0, "round": 98}
+{"prog": "status", "end": 27582.337455358}
+{"node": "n004", "prog": "aos7-tick", "start": 27582.305333799, "end": 27582.344184648, "rc": 0, "round": 99}
+{"node": "n002", "prog": "aos7-tick", "start": 27582.287546347, "end": 27582.349986724, "rc": 0, "round": 97}
+{"node": "n007", "prog": "aos7-tick", "start": 27582.30322129, "end": 27582.354971032, "rc": 0, "round": 97}
+{"prog": "status", "end": 27582.358782327}
+{"node": "n005", "prog": "aos7-tick", "start": 27582.329038733, "end": 27582.378167285, "rc": 0, "round": 99}
+{"prog": "status", "end": 27582.381167945}
+{"node": "n008", "prog": "aos7-tick", "start": 27582.320252408, "end": 27582.38123992, "rc": 0, "round": 99}
+{"node": "n006", "prog": "aos7-tick", "start": 27582.325264237, "end": 27582.385451793, "rc": 0, "round": 98}
+{"node": "n000", "prog": "aos7-tick", "start": 27582.310242405, "end": 27582.389517454, "rc": 0, "round": 98}
+{"node": "n003", "prog": "aos7-tock", "start": 27582.363409236, "end": 27582.397044255, "rc": 0, "round": 98}
+{"prog": "status", "end": 27582.401776601}
+{"node": "n009", "prog": "aos7-tock", "start": 27582.368181327, "end": 27582.404026587, "rc": 0, "round": 98}
+{"node": "n004", "prog": "aos7-tock", "start": 27582.392266332, "end": 27582.418916814, "rc": 0, "round": 99}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.395858738, "end": 27582.421206514, "rc": 0, "round": 97}
+{"prog": "status", "end": 27582.428376578}
+{"node": "n001", "prog": "aos7-tock", "start": 27582.371148394, "end": 27582.430288502, "rc": 0, "round": 97}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.39721808, "end": 27582.432216045, "rc": 0, "round": 99}
+{"node": "n002", "prog": "aos7-tock", "start": 27582.394139274, "end": 27582.432384921, "rc": 0, "round": 97}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.404153695, "end": 27582.447133763, "rc": 0, "round": 99}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.418475869, "end": 27582.447343104, "rc": 0, "round": 99}
+{"prog": "status", "end": 27582.449684451}
+{"node": "n004", "prog": "aos7-tick", "start": 27582.419051666, "end": 27582.456367685, "rc": 0, "round": 100}
+{"node": "n008", "prog": "aos7-tock", "start": 27582.424048857, "end": 27582.466766725, "rc": 0, "round": 99}
+{"node": "n007", "prog": "aos7-tick", "start": 27582.421325236, "end": 27582.469169487, "rc": 0, "round": 98}
+{"prog": "status", "end": 27582.471375722}
+{"node": "n006", "prog": "aos7-tock", "start": 27582.425816552, "end": 27582.471489965, "rc": 0, "round": 98}
+{"node": "n000", "prog": "aos7-tock", "start": 27582.429837759, "end": 27582.478327768, "rc": 0, "round": 98}
+{"node": "n002", "prog": "aos7-tick", "start": 27582.432490669, "end": 27582.479149774, "rc": 0, "round": 98}
+{"node": "n001", "prog": "aos7-tick", "start": 27582.430406853, "end": 27582.481083469, "rc": 0, "round": 98}
+{"prog": "status", "end": 27582.49184113}
+{"node": "n005", "prog": "aos7-tick", "start": 27582.447457869, "end": 27582.503095479, "rc": 0, "round": 100}
+{"node": "n000", "prog": "aos7-tick", "start": 27582.478466257, "end": 27582.512771929, "rc": 0, "round": 99}
+{"node": "n003", "prog": "aos7-tock", "start": 27582.475301771, "end": 27582.512939121, "rc": 0, "round": 99}
+{"prog": "status", "end": 27582.513656813}
+{"node": "n006", "prog": "aos7-tick", "start": 27582.471595001, "end": 27582.520772675, "rc": 0, "round": 99}
+{"node": "n008", "prog": "aos7-tick", "start": 27582.466932235, "end": 27582.529160285, "rc": 0, "round": 100}
+{"node": "n004", "prog": "aos7-tock", "start": 27582.50142693, "end": 27582.530791515, "rc": 0, "round": 100}
+{"node": "n009", "prog": "aos7-tock", "start": 27582.509534236, "end": 27582.533252455, "rc": 0, "round": 99}
+{"prog": "status", "end": 27582.534770193}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.509918484, "end": 27582.544268559, "rc": 0, "round": 98}
+{"node": "n002", "prog": "aos7-tock", "start": 27582.519530593, "end": 27582.544544004, "rc": 0, "round": 98}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.513036303, "end": 27582.551063151, "rc": 0, "round": 100}
+{"node": "n001", "prog": "aos7-tock", "start": 27582.521482602, "end": 27582.55126593, "rc": 0, "round": 98}
+{"prog": "status", "end": 27582.555310391}
+{"node": "n004", "prog": "aos7-tick", "start": 27582.530908453, "end": 27582.557596444, "rc": 0, "round": 101}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.533328558, "end": 27582.561508748, "rc": 0, "round": 100}
+{"node": "n006", "prog": "aos7-tock", "start": 27582.540972778, "end": 27582.56623301, "rc": 0, "round": 99}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.544073024, "end": 27582.569257494, "rc": 0, "round": 100}
+{"node": "n002", "prog": "aos7-tick", "start": 27582.544958619, "end": 27582.575127457, "rc": 0, "round": 99}
+{"prog": "status", "end": 27582.576371353}
+{"node": "n007", "prog": "aos7-tick", "start": 27582.544640124, "end": 27582.583357062, "rc": 0, "round": 99}
+{"node": "n001", "prog": "aos7-tick", "start": 27582.551366979, "end": 27582.585758792, "rc": 0, "round": 99}
+{"node": "n000", "prog": "aos7-tock", "start": 27582.554203552, "end": 27582.587762367, "rc": 0, "round": 99}
+{"prog": "status", "end": 27582.596850437}
+{"node": "n008", "prog": "aos7-tock", "start": 27582.569664515, "end": 27582.597751271, "rc": 0, "round": 100}
+{"node": "n005", "prog": "aos7-tick", "start": 27582.569374553, "end": 27582.60690353, "rc": 0, "round": 101}
+{"node": "n006", "prog": "aos7-tick", "start": 27582.573075341, "end": 27582.613597985, "rc": 0, "round": 100}
+{"node": "n000", "prog": "aos7-tick", "start": 27582.587907869, "end": 27582.620680936, "rc": 0, "round": 100}
+{"prog": "status", "end": 27582.621139754}
+{"node": "n003", "prog": "aos7-tock", "start": 27582.592531262, "end": 27582.62956268, "rc": 0, "round": 100}
+{"node": "n009", "prog": "aos7-tock", "start": 27582.605043343, "end": 27582.634991518, "rc": 0, "round": 100}
+{"node": "n008", "prog": "aos7-tick", "start": 27582.597862789, "end": 27582.639112122, "rc": 0, "round": 101}
+{"prog": "status", "end": 27582.644188191}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.624289232, "end": 27582.651260131, "rc": 0, "round": 99}
+{"node": "n004", "prog": "aos7-tock", "start": 27582.603114928, "end": 27582.65478444, "rc": 0, "round": 101}
+{"node": "n002", "prog": "aos7-tock", "start": 27582.615465015, "end": 27582.655220706, "rc": 0, "round": 99}
+{"node": "n001", "prog": "aos7-tock", "start": 27582.626096911, "end": 27582.663178402, "rc": 0, "round": 99}
+{"prog": "status", "end": 27582.667382661}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.629687764, "end": 27582.667716485, "rc": 0, "round": 101}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.635127603, "end": 27582.670129095, "rc": 0, "round": 101}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.64803908, "end": 27582.682160387, "rc": 0, "round": 101}
+{"node": "n001", "prog": "aos7-tick", "start": 27582.663303796, "end": 27582.691740827, "rc": 0, "round": 100}
+{"prog": "status", "end": 27582.694653172}
+{"node": "n004", "prog": "aos7-tick", "start": 27582.654897401, "end": 27582.698838095, "rc": 0, "round": 102}
+{"node": "n000", "prog": "aos7-tock", "start": 27582.66204335, "end": 27582.700159245, "rc": 0, "round": 100}
+{"node": "n007", "prog": "aos7-tick", "start": 27582.651386448, "end": 27582.703665239, "rc": 0, "round": 100}
+{"node": "n002", "prog": "aos7-tick", "start": 27582.655327495, "end": 27582.712153948, "rc": 0, "round": 100}
+{"prog": "status", "end": 27582.718407839}
+{"node": "n005", "prog": "aos7-tick", "start": 27582.682337588, "end": 27582.721893084, "rc": 0, "round": 102}
+{"node": "n008", "prog": "aos7-tock", "start": 27582.679457625, "end": 27582.72793516, "rc": 0, "round": 101}
+{"node": "n006", "prog": "aos7-tock", "start": 27582.674568455, "end": 27582.728075402, "rc": 0, "round": 100}
+{"prog": "status", "end": 27582.738880271}
+{"node": "n000", "prog": "aos7-tick", "start": 27582.700283667, "end": 27582.748975864, "rc": 0, "round": 101}
+{"node": "n003", "prog": "aos7-tock", "start": 27582.709511638, "end": 27582.749807088, "rc": 0, "round": 101}
+{"node": "n009", "prog": "aos7-tock", "start": 27582.711311503, "end": 27582.756576803, "rc": 0, "round": 101}
+{"prog": "status", "end": 27582.759326213}
+{"node": "n001", "prog": "aos7-tock", "start": 27582.733276254, "end": 27582.768623894, "rc": 0, "round": 100}
+{"node": "n006", "prog": "aos7-tick", "start": 27582.730478164, "end": 27582.770259782, "rc": 0, "round": 101}
+{"node": "n008", "prog": "aos7-tick", "start": 27582.728939517, "end": 27582.771107777, "rc": 0, "round": 102}
+{"node": "n002", "prog": "aos7-tock", "start": 27582.752502406, "end": 27582.77880138, "rc": 0, "round": 100}
+{"prog": "status", "end": 27582.77975349}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.743973352, "end": 27582.784441464, "rc": 0, "round": 100}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.756707277, "end": 27582.793060907, "rc": 0, "round": 102}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.749924727, "end": 27582.795559378, "rc": 0, "round": 102}
+{"node": "n004", "prog": "aos7-tock", "start": 27582.759459812, "end": 27582.797231484, "rc": 0, "round": 102}
+{"prog": "status", "end": 27582.80019285}
+{"node": "n001", "prog": "aos7-tick", "start": 27582.768768364, "end": 27582.804790054, "rc": 0, "round": 101}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.7631069, "end": 27582.805715905, "rc": 0, "round": 102}
+{"node": "n002", "prog": "aos7-tick", "start": 27582.778934489, "end": 27582.814867593, "rc": 0, "round": 101}
+{"prog": "status", "end": 27582.824828554}
+{"node": "n007", "prog": "aos7-tick", "start": 27582.784561067, "end": 27582.826095342, "rc": 0, "round": 101}
+{"node": "n004", "prog": "aos7-tick", "start": 27582.797348011, "end": 27582.833901455, "rc": 0, "round": 103}
+{"node": "n000", "prog": "aos7-tock", "start": 27582.789370128, "end": 27582.838969019, "rc": 0, "round": 101}
+{"node": "n008", "prog": "aos7-tock", "start": 27582.811439685, "end": 27582.83981486, "rc": 0, "round": 102}
+{"prog": "status", "end": 27582.845305895}
+{"node": "n006", "prog": "aos7-tock", "start": 27582.810611056, "end": 27582.845476003, "rc": 0, "round": 101}
+{"node": "n005", "prog": "aos7-tick", "start": 27582.805822875, "end": 27582.845844452, "rc": 0, "round": 103}
+{"node": "n009", "prog": "aos7-tock", "start": 27582.83345976, "end": 27582.859074595, "rc": 0, "round": 102}
+{"prog": "status", "end": 27582.86576423}
+{"node": "n003", "prog": "aos7-tock", "start": 27582.835912865, "end": 27582.866371686, "rc": 0, "round": 102}
+{"node": "n008", "prog": "aos7-tick", "start": 27582.840139447, "end": 27582.871157162, "rc": 0, "round": 103}
+{"node": "n000", "prog": "aos7-tick", "start": 27582.839098311, "end": 27582.871358979, "rc": 0, "round": 102}
+{"node": "n001", "prog": "aos7-tock", "start": 27582.845339318, "end": 27582.872087, "rc": 0, "round": 101}
+{"node": "n006", "prog": "aos7-tick", "start": 27582.845561834, "end": 27582.873792488, "rc": 0, "round": 102}
+{"node": "n002", "prog": "aos7-tock", "start": 27582.855288176, "end": 27582.881957653, "rc": 0, "round": 101}
+{"prog": "status", "end": 27582.888738789}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.859175343, "end": 27582.895326705, "rc": 0, "round": 103}
+{"node": "n004", "prog": "aos7-tock", "start": 27582.878042183, "end": 27582.905618134, "rc": 0, "round": 103}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.866979021, "end": 27582.908218485, "rc": 0, "round": 103}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.86644886, "end": 27582.908391288, "rc": 0, "round": 101}
+{"prog": "status", "end": 27582.909917802}
+{"node": "n001", "prog": "aos7-tick", "start": 27582.87219409, "end": 27582.914059254, "rc": 0, "round": 102}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.886198751, "end": 27582.9187109, "rc": 0, "round": 103}
+{"node": "n002", "prog": "aos7-tick", "start": 27582.882121058, "end": 27582.931097957, "rc": 0, "round": 102}
+{"prog": "status", "end": 27582.93539535}
+{"node": "n000", "prog": "aos7-tock", "start": 27582.912130028, "end": 27582.944772099, "rc": 0, "round": 102}
+{"node": "n008", "prog": "aos7-tock", "start": 27582.91169283, "end": 27582.946065357, "rc": 0, "round": 103}
+{"node": "n006", "prog": "aos7-tock", "start": 27582.914264678, "end": 27582.94712625, "rc": 0, "round": 102}
+{"node": "n007", "prog": "aos7-tick", "start": 27582.908476548, "end": 27582.955161542, "rc": 0, "round": 102}
+{"node": "n005", "prog": "aos7-tick", "start": 27582.918825054, "end": 27582.955322813, "rc": 0, "round": 104}
+{"node": "n004", "prog": "aos7-tick", "start": 27582.905775037, "end": 27582.9592155, "rc": 0, "round": 104}
+{"prog": "status", "end": 27582.960165947}
+{"prog": "status", "end": 27582.980736873}
+{"node": "n009", "prog": "aos7-tock", "start": 27582.935683259, "end": 27582.986011203, "rc": 0, "round": 103}
+{"node": "n008", "prog": "aos7-tick", "start": 27582.946174641, "end": 27582.989184315, "rc": 0, "round": 104}
+{"node": "n001", "prog": "aos7-tock", "start": 27582.957734973, "end": 27582.991093484, "rc": 0, "round": 102}
+{"node": "n003", "prog": "aos7-tock", "start": 27582.951409377, "end": 27582.99327916, "rc": 0, "round": 103}
+{"node": "n000", "prog": "aos7-tick", "start": 27582.944925376, "end": 27582.996087189, "rc": 0, "round": 103}
+{"node": "n006", "prog": "aos7-tick", "start": 27582.947229473, "end": 27583.003202801, "rc": 0, "round": 103}
+{"prog": "status", "end": 27583.003651791}
+{"node": "n002", "prog": "aos7-tock", "start": 27582.97514548, "end": 27583.01582096, "rc": 0, "round": 102}
+{"prog": "status", "end": 27583.024087043}
+{"node": "n005", "prog": "aos7-tock", "start": 27582.996556727, "end": 27583.025115435, "rc": 0, "round": 104}
+{"node": "n007", "prog": "aos7-tock", "start": 27582.996429739, "end": 27583.027195895, "rc": 0, "round": 102}
+{"node": "n009", "prog": "aos7-tick", "start": 27582.986159981, "end": 27583.033820178, "rc": 0, "round": 104}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.000438333, "end": 27583.034111432, "rc": 0, "round": 104}
+{"node": "n003", "prog": "aos7-tick", "start": 27582.993390708, "end": 27583.040106079, "rc": 0, "round": 104}
+{"node": "n001", "prog": "aos7-tick", "start": 27582.991220662, "end": 27583.041152305, "rc": 0, "round": 103}
+{"prog": "status", "end": 27583.045706669}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.025231242, "end": 27583.055744784, "rc": 0, "round": 105}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.015957215, "end": 27583.063110143, "rc": 0, "round": 103}
+{"prog": "status", "end": 27583.066455828}
+{"node": "n004", "prog": "aos7-tick", "start": 27583.034220707, "end": 27583.069609634, "rc": 0, "round": 105}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.043592787, "end": 27583.069798346, "rc": 0, "round": 103}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.033618471, "end": 27583.071950059, "rc": 0, "round": 104}
+{"node": "n000", "prog": "aos7-tock", "start": 27583.04023508, "end": 27583.073472224, "rc": 0, "round": 103}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.027306632, "end": 27583.075884855, "rc": 0, "round": 103}
+{"prog": "status", "end": 27583.090391053}
+{"node": "n006", "prog": "aos7-tick", "start": 27583.06990188, "end": 27583.097061343, "rc": 0, "round": 104}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.080473383, "end": 27583.106591208, "rc": 0, "round": 104}
+{"node": "n008", "prog": "aos7-tick", "start": 27583.072072117, "end": 27583.107670365, "rc": 0, "round": 105}
+{"node": "n000", "prog": "aos7-tick", "start": 27583.073581719, "end": 27583.109085721, "rc": 0, "round": 104}
+{"prog": "status", "end": 27583.11139062}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.081532813, "end": 27583.112154067, "rc": 0, "round": 103}
+{"node": "n009", "prog": "aos7-tock", "start": 27583.074292057, "end": 27583.116683445, "rc": 0, "round": 104}
+{"node": "n005", "prog": "aos7-tock", "start": 27583.097207736, "end": 27583.122631223, "rc": 0, "round": 105}
+{"node": "n003", "prog": "aos7-tick", "start": 27583.106730158, "end": 27583.130153977, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.131816174}
+{"node": "n002", "prog": "aos7-tock", "start": 27583.105140646, "end": 27583.131914328, "rc": 0, "round": 103}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.109990042, "end": 27583.133199761, "rc": 0, "round": 105}
+{"node": "n001", "prog": "aos7-tick", "start": 27583.112249606, "end": 27583.138705132, "rc": 0, "round": 104}
+{"node": "n007", "prog": "aos7-tock", "start": 27583.116196775, "end": 27583.140270759, "rc": 0, "round": 103}
+{"node": "n009", "prog": "aos7-tick", "start": 27583.116798089, "end": 27583.147937321, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.152646545}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.125316513, "end": 27583.157073801, "rc": 0, "round": 106}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.137554171, "end": 27583.164974701, "rc": 0, "round": 104}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.132031036, "end": 27583.167114201, "rc": 0, "round": 104}
+{"node": "n004", "prog": "aos7-tick", "start": 27583.134300749, "end": 27583.169460207, "rc": 0, "round": 106}
+{"prog": "status", "end": 27583.17517482}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.140385053, "end": 27583.175255491, "rc": 0, "round": 104}
+{"node": "n000", "prog": "aos7-tock", "start": 27583.149410876, "end": 27583.182178633, "rc": 0, "round": 104}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.148661265, "end": 27583.186212163, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.196386533}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.170499049, "end": 27583.197008616, "rc": 0, "round": 105}
+{"node": "n006", "prog": "aos7-tick", "start": 27583.169982894, "end": 27583.20913726, "rc": 0, "round": 105}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.179129903, "end": 27583.210233409, "rc": 0, "round": 104}
+{"node": "n000", "prog": "aos7-tick", "start": 27583.182301352, "end": 27583.220136983, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.226039427}
+{"node": "n005", "prog": "aos7-tock", "start": 27583.197416839, "end": 27583.228238929, "rc": 0, "round": 106}
+{"node": "n008", "prog": "aos7-tick", "start": 27583.186336676, "end": 27583.229415999, "rc": 0, "round": 106}
+{"node": "n009", "prog": "aos7-tock", "start": 27583.18869235, "end": 27583.234848405, "rc": 0, "round": 105}
+{"node": "n002", "prog": "aos7-tock", "start": 27583.209362822, "end": 27583.235647148, "rc": 0, "round": 104}
+{"node": "n001", "prog": "aos7-tick", "start": 27583.212340288, "end": 27583.246195117, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.246629328}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.210441208, "end": 27583.253405847, "rc": 0, "round": 106}
+{"node": "n003", "prog": "aos7-tick", "start": 27583.207090754, "end": 27583.264719657, "rc": 0, "round": 106}
+{"node": "n007", "prog": "aos7-tock", "start": 27583.218056003, "end": 27583.266452426, "rc": 0, "round": 104}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.235754138, "end": 27583.266606504, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.267170739}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.228354525, "end": 27583.273975259, "rc": 0, "round": 107}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.249754571, "end": 27583.279254619, "rc": 0, "round": 105}
+{"node": "n009", "prog": "aos7-tick", "start": 27583.234967437, "end": 27583.28710248, "rc": 0, "round": 106}
+{"node": "n000", "prog": "aos7-tock", "start": 27583.260503074, "end": 27583.287208388, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.291048827}
+{"node": "n004", "prog": "aos7-tick", "start": 27583.253535319, "end": 27583.302851962, "rc": 0, "round": 107}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.267204392, "end": 27583.309179641, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.311474311}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.287289449, "end": 27583.312136278, "rc": 0, "round": 105}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.29007164, "end": 27583.316136396, "rc": 0, "round": 106}
+{"node": "n006", "prog": "aos7-tick", "start": 27583.279381796, "end": 27583.326473811, "rc": 0, "round": 106}
+{"node": "n000", "prog": "aos7-tick", "start": 27583.291128426, "end": 27583.331698509, "rc": 0, "round": 106}
+{"prog": "status", "end": 27583.332078068}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.305343219, "end": 27583.338947851, "rc": 0, "round": 106}
+{"node": "n005", "prog": "aos7-tock", "start": 27583.314331222, "end": 27583.341633401, "rc": 0, "round": 107}
+{"node": "n001", "prog": "aos7-tick", "start": 27583.312400693, "end": 27583.342268969, "rc": 0, "round": 106}
+{"node": "n002", "prog": "aos7-tock", "start": 27583.307117005, "end": 27583.351189375, "rc": 0, "round": 105}
+{"prog": "status", "end": 27583.352541994}
+{"node": "n008", "prog": "aos7-tick", "start": 27583.316251762, "end": 27583.359935425, "rc": 0, "round": 107}
+{"node": "n009", "prog": "aos7-tock", "start": 27583.330041321, "end": 27583.365829594, "rc": 0, "round": 106}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.343218845, "end": 27583.369494135, "rc": 0, "round": 107}
+{"prog": "status", "end": 27583.373012502}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.341751312, "end": 27583.376776999, "rc": 0, "round": 108}
+{"node": "n003", "prog": "aos7-tick", "start": 27583.339089736, "end": 27583.380446028, "rc": 0, "round": 107}
+{"node": "n007", "prog": "aos7-tock", "start": 27583.349479459, "end": 27583.382794839, "rc": 0, "round": 105}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.351315942, "end": 27583.393758355, "rc": 0, "round": 106}
+{"prog": "status", "end": 27583.394005637}
+{"node": "n009", "prog": "aos7-tick", "start": 27583.365961881, "end": 27583.398840826, "rc": 0, "round": 107}
+{"node": "n004", "prog": "aos7-tick", "start": 27583.369615321, "end": 27583.407036126, "rc": 0, "round": 108}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.366851524, "end": 27583.411967806, "rc": 0, "round": 106}
+{"prog": "status", "end": 27583.414800692}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.38290754, "end": 27583.419125607, "rc": 0, "round": 106}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.38259711, "end": 27583.42052883, "rc": 0, "round": 106}
+{"node": "n000", "prog": "aos7-tock", "start": 27583.373057426, "end": 27583.421397013, "rc": 0, "round": 106}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.400712826, "end": 27583.43418009, "rc": 0, "round": 107}
+{"prog": "status", "end": 27583.438485509}
+{"node": "n005", "prog": "aos7-tock", "start": 27583.417131078, "end": 27583.441728221, "rc": 0, "round": 108}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.421046027, "end": 27583.442118741, "rc": 0, "round": 107}
+{"node": "n006", "prog": "aos7-tick", "start": 27583.41210941, "end": 27583.442524199, "rc": 0, "round": 107}
+{"node": "n000", "prog": "aos7-tick", "start": 27583.421495768, "end": 27583.453234491, "rc": 0, "round": 107}
+{"node": "n001", "prog": "aos7-tick", "start": 27583.420643404, "end": 27583.454984332, "rc": 0, "round": 107}
+{"node": "n002", "prog": "aos7-tock", "start": 27583.434258517, "end": 27583.458573051, "rc": 0, "round": 106}
+{"prog": "status", "end": 27583.459428139}
+{"node": "n009", "prog": "aos7-tock", "start": 27583.439560438, "end": 27583.465363054, "rc": 0, "round": 107}
+{"node": "n008", "prog": "aos7-tick", "start": 27583.438068399, "end": 27583.467181904, "rc": 0, "round": 108}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.44736047, "end": 27583.471652231, "rc": 0, "round": 108}
+{"node": "n003", "prog": "aos7-tick", "start": 27583.442210943, "end": 27583.480139407, "rc": 0, "round": 108}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.441847874, "end": 27583.480355061, "rc": 0, "round": 109}
+{"prog": "status", "end": 27583.488186391}
+{"node": "n007", "prog": "aos7-tock", "start": 27583.459477431, "end": 27583.48842135, "rc": 0, "round": 106}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.458715878, "end": 27583.492081202, "rc": 0, "round": 107}
+{"node": "n009", "prog": "aos7-tick", "start": 27583.466043266, "end": 27583.496179393, "rc": 0, "round": 108}
+{"prog": "status", "end": 27583.508706712}
+{"node": "n000", "prog": "aos7-tock", "start": 27583.476624977, "end": 27583.512994748, "rc": 0, "round": 107}
+{"node": "n004", "prog": "aos7-tick", "start": 27583.471766134, "end": 27583.514637419, "rc": 0, "round": 109}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.488526426, "end": 27583.520831197, "rc": 0, "round": 107}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.482915457, "end": 27583.521088278, "rc": 0, "round": 107}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.502194788, "end": 27583.527835652, "rc": 0, "round": 107}
+{"prog": "status", "end": 27583.529441434}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.512026067, "end": 27583.535907952, "rc": 0, "round": 108}
+{"prog": "status", "end": 27583.550273828}
+{"node": "n005", "prog": "aos7-tock", "start": 27583.520628148, "end": 27583.553717215, "rc": 0, "round": 109}
+{"node": "n002", "prog": "aos7-tock", "start": 27583.533049409, "end": 27583.559372808, "rc": 0, "round": 107}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.522205196, "end": 27583.566466429, "rc": 0, "round": 108}
+{"node": "n001", "prog": "aos7-tick", "start": 27583.527959964, "end": 27583.567145459, "rc": 0, "round": 108}
+{"node": "n000", "prog": "aos7-tick", "start": 27583.524773107, "end": 27583.567315006, "rc": 0, "round": 108}
+{"node": "n006", "prog": "aos7-tick", "start": 27583.521204565, "end": 27583.567800223, "rc": 0, "round": 108}
+{"prog": "status", "end": 27583.570797937}
+{"node": "n009", "prog": "aos7-tock", "start": 27583.536512873, "end": 27583.57411083, "rc": 0, "round": 108}
+{"node": "n008", "prog": "aos7-tick", "start": 27583.536020222, "end": 27583.577167524, "rc": 0, "round": 109}
+{"prog": "status", "end": 27583.591269897}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.555077007, "end": 27583.59419227, "rc": 0, "round": 109}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.553855424, "end": 27583.597122137, "rc": 0, "round": 110}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.559500236, "end": 27583.600268319, "rc": 0, "round": 108}
+{"node": "n007", "prog": "aos7-tock", "start": 27583.563052217, "end": 27583.602138856, "rc": 0, "round": 107}
+{"node": "n003", "prog": "aos7-tick", "start": 27583.566602554, "end": 27583.617245466, "rc": 0, "round": 109}
+{"prog": "status", "end": 27583.617896754}
+{"node": "n009", "prog": "aos7-tick", "start": 27583.574227518, "end": 27583.627167585, "rc": 0, "round": 109}
+{"prog": "status", "end": 27583.638535016}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.602365259, "end": 27583.641113336, "rc": 0, "round": 108}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.610800007, "end": 27583.645369212, "rc": 0, "round": 108}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.607519635, "end": 27583.646088677, "rc": 0, "round": 108}
+{"node": "n004", "prog": "aos7-tick", "start": 27583.59432048, "end": 27583.653427867, "rc": 0, "round": 110}
+{"prog": "status", "end": 27583.659028467}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.637853652, "end": 27583.663828991, "rc": 0, "round": 109}
+{"node": "n000", "prog": "aos7-tock", "start": 27583.630840802, "end": 27583.678764572, "rc": 0, "round": 108}
+{"prog": "status", "end": 27583.680206568}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.659075885, "end": 27583.684474416, "rc": 0, "round": 109}
+{"node": "n001", "prog": "aos7-tick", "start": 27583.646196779, "end": 27583.685416778, "rc": 0, "round": 109}
+{"node": "n002", "prog": "aos7-tock", "start": 27583.642639559, "end": 27583.687080027, "rc": 0, "round": 108}
+{"node": "n005", "prog": "aos7-tock", "start": 27583.657595498, "end": 27583.695556233, "rc": 0, "round": 110}
+{"node": "n006", "prog": "aos7-tick", "start": 27583.645494516, "end": 27583.697181912, "rc": 0, "round": 109}
+{"prog": "status", "end": 27583.70155131}
+{"node": "n000", "prog": "aos7-tick", "start": 27583.678926996, "end": 27583.707147812, "rc": 0, "round": 109}
+{"node": "n007", "prog": "aos7-tock", "start": 27583.681461413, "end": 27583.709245714, "rc": 0, "round": 108}
+{"node": "n003", "prog": "aos7-tick", "start": 27583.684639254, "end": 27583.71462514, "rc": 0, "round": 110}
+{"node": "n009", "prog": "aos7-tock", "start": 27583.669486387, "end": 27583.717588019, "rc": 0, "round": 109}
+{"node": "n008", "prog": "aos7-tick", "start": 27583.663957431, "end": 27583.717890445, "rc": 0, "round": 110}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.693872595, "end": 27583.7213381, "rc": 0, "round": 110}
+{"prog": "status", "end": 27583.727705162}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.6871939, "end": 27583.729372008, "rc": 0, "round": 109}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.695673311, "end": 27583.744194368, "rc": 0, "round": 111}
+{"node": "n009", "prog": "aos7-tick", "start": 27583.717733732, "end": 27583.744390975, "rc": 0, "round": 110}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.709354728, "end": 27583.749467686, "rc": 0, "round": 109}
+{"prog": "ctl", "start": 27583.728568687, "end": 27583.751837075, "ok": true}
+{"prog": "status", "end": 27583.755897496}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.72712085, "end": 27583.757785135, "rc": 0, "round": 109}
+{"node": "n004", "prog": "aos7-tick", "start": 27583.721454487, "end": 27583.767692105, "rc": 0, "round": 111}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.739346144, "end": 27583.775214788, "rc": 0, "round": 109}
+{"prog": "status", "end": 27583.77633908}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.755025816, "end": 27583.779502353, "rc": 0, "round": 110}
+{"node": "n000", "prog": "aos7-tock", "start": 27583.750047089, "end": 27583.779655009, "rc": 0, "round": 109}
+{"node": "n001", "prog": "aos7-tick", "start": 27583.757897505, "end": 27583.782664194, "rc": 0, "round": 110}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.758184371, "end": 27583.786764028, "rc": 0, "round": 110}
+{"node": "n002", "prog": "aos7-tock", "start": 27583.769703615, "end": 27583.797363644, "rc": 0, "round": 109}
+{"prog": "status", "end": 27583.799407705}
+{"node": "n006", "prog": "aos7-tick", "start": 27583.775345202, "end": 27583.801753921, "rc": 0, "round": 110}
+{"node": "n000", "prog": "aos7-tick", "start": 27583.779750988, "end": 27583.814184188, "rc": 0, "round": 110}
+{"node": "n005", "prog": "aos7-tock", "start": 27583.784576208, "end": 27583.814379223, "rc": 0, "round": 111}
+{"node": "n003", "prog": "aos7-tick", "start": 27583.784972449, "end": 27583.815940592, "rc": 0, "round": 111}
+{"prog": "status", "end": 27583.819842276}
+{"node": "n008", "prog": "aos7-tick", "start": 27583.78686674, "end": 27583.821457836, "rc": 0, "round": 111}
+{"node": "n007", "prog": "aos7-tock", "start": 27583.792203076, "end": 27583.826037497, "rc": 0, "round": 109}
+{"node": "n009", "prog": "aos7-tock", "start": 27583.784864177, "end": 27583.826847271, "rc": 0, "round": 110}
+{"prog": "status", "end": 27583.840290863}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.7975006, "end": 27583.85007291, "rc": 0, "round": 110}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.810066901, "end": 27583.850307037, "rc": 0, "round": 111}
+{"prog": "status", "end": 27583.860764857}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.814462378, "end": 27583.863872787, "rc": 0, "round": 112}
+{"node": "n009", "prog": "aos7-tick", "start": 27583.826961735, "end": 27583.866802134, "rc": 0, "round": 111}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.830052122, "end": 27583.876543955, "rc": 0, "round": 110}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.826154856, "end": 27583.878694605, "rc": 0, "round": 110}
+{"prog": "status", "end": 27583.882289185}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.842100025, "end": 27583.885983041, "rc": 0, "round": 110}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.856314898, "end": 27583.89372842, "rc": 0, "round": 111}
+{"prog": "status", "end": 27583.903027023}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.864212543, "end": 27583.903200838, "rc": 0, "round": 111}
+{"node": "n000", "prog": "aos7-tock", "start": 27583.854914951, "end": 27583.909834229, "rc": 0, "round": 110}
+{"node": "n004", "prog": "aos7-tick", "start": 27583.850413546, "end": 27583.916046662, "rc": 0, "round": 112}
+{"node": "n001", "prog": "aos7-tick", "start": 27583.876697332, "end": 27583.92688838, "rc": 0, "round": 111}
+{"prog": "status", "end": 27583.927653961}
+{"node": "n002", "prog": "aos7-tock", "start": 27583.890483013, "end": 27583.931065839, "rc": 0, "round": 110}
+{"node": "n006", "prog": "aos7-tick", "start": 27583.886117302, "end": 27583.932793489, "rc": 0, "round": 111}
+{"node": "n009", "prog": "aos7-tock", "start": 27583.908776291, "end": 27583.946425553, "rc": 0, "round": 111}
+{"prog": "status", "end": 27583.948462662}
+{"node": "n007", "prog": "aos7-tock", "start": 27583.919825306, "end": 27583.950038688, "rc": 0, "round": 110}
+{"node": "n003", "prog": "aos7-tick", "start": 27583.893860086, "end": 27583.95311033, "rc": 0, "round": 112}
+{"node": "n008", "prog": "aos7-tick", "start": 27583.90331946, "end": 27583.953261803, "rc": 0, "round": 112}
+{"node": "n000", "prog": "aos7-tick", "start": 27583.90996332, "end": 27583.962687163, "rc": 0, "round": 111}
+{"node": "n005", "prog": "aos7-tock", "start": 27583.924344004, "end": 27583.968508235, "rc": 0, "round": 112}
+{"prog": "status", "end": 27583.974374111}
+{"node": "n002", "prog": "aos7-tick", "start": 27583.931186525, "end": 27583.978781591, "rc": 0, "round": 111}
+{"node": "n009", "prog": "aos7-tick", "start": 27583.946584531, "end": 27583.989798816, "rc": 0, "round": 112}
+{"prog": "status", "end": 27583.994801889}
+{"node": "n005", "prog": "aos7-tick", "start": 27583.968643758, "end": 27583.996830081, "rc": 0, "round": 113}
+{"node": "n006", "prog": "aos7-tock", "start": 27583.975132038, "end": 27584.00249454, "rc": 0, "round": 111}
+{"node": "n001", "prog": "aos7-tock", "start": 27583.971045969, "end": 27584.007704049, "rc": 0, "round": 111}
+{"node": "n007", "prog": "aos7-tick", "start": 27583.950155065, "end": 27584.008121188, "rc": 0, "round": 111}
+{"node": "n004", "prog": "aos7-tock", "start": 27583.956348784, "end": 27584.008267843, "rc": 0, "round": 112}
+{"prog": "status", "end": 27584.021760847}
+{"node": "n008", "prog": "aos7-tock", "start": 27583.994041928, "end": 27584.028254366, "rc": 0, "round": 112}
+{"node": "n003", "prog": "aos7-tock", "start": 27583.993466322, "end": 27584.0333703, "rc": 0, "round": 112}
+{"node": "n000", "prog": "aos7-tock", "start": 27584.0030563, "end": 27584.041092175, "rc": 0, "round": 111}
+{"prog": "status", "end": 27584.042383209}
+{"node": "n004", "prog": "aos7-tick", "start": 27584.008342101, "end": 27584.043058631, "rc": 0, "round": 113}
+{"node": "n001", "prog": "aos7-tick", "start": 27584.00783866, "end": 27584.048093453, "rc": 0, "round": 112}
+{"node": "n006", "prog": "aos7-tick", "start": 27584.002630825, "end": 27584.05470323, "rc": 0, "round": 112}
+{"node": "n008", "prog": "aos7-tick", "start": 27584.028435184, "end": 27584.058427953, "rc": 0, "round": 113}
+{"node": "n002", "prog": "aos7-tock", "start": 27584.019207063, "end": 27584.063116809, "rc": 0, "round": 111}
+{"node": "n003", "prog": "aos7-tick", "start": 27584.033493049, "end": 27584.064954193, "rc": 0, "round": 113}
+{"prog": "status", "end": 27584.067291623}
+{"node": "n005", "prog": "aos7-tock", "start": 27584.037123977, "end": 27584.070887605, "rc": 0, "round": 113}
+{"node": "n007", "prog": "aos7-tock", "start": 27584.048472943, "end": 27584.084009636, "rc": 0, "round": 111}
+{"node": "n009", "prog": "aos7-tock", "start": 27584.050901633, "end": 27584.087254893, "rc": 0, "round": 112}
+{"prog": "status", "end": 27584.095554098}
+{"node": "n000", "prog": "aos7-tick", "start": 27584.041210727, "end": 27584.095811278, "rc": 0, "round": 112}
+{"node": "n002", "prog": "aos7-tick", "start": 27584.06324586, "end": 27584.098161762, "rc": 0, "round": 112}
+{"node": "n005", "prog": "aos7-tick", "start": 27584.071003622, "end": 27584.106170724, "rc": 0, "round": 114}
+{"prog": "status", "end": 27584.11622476}
+{"node": "n007", "prog": "aos7-tick", "start": 27584.084160578, "end": 27584.133170799, "rc": 0, "round": 112}
+{"node": "n001", "prog": "aos7-tock", "start": 27584.095632885, "end": 27584.133851051, "rc": 0, "round": 112}
+{"node": "n006", "prog": "aos7-tock", "start": 27584.096287629, "end": 27584.135721277, "rc": 0, "round": 112}
+{"node": "n008", "prog": "aos7-tock", "start": 27584.101721758, "end": 27584.143075595, "rc": 0, "round": 113}
+{"prog": "status", "end": 27584.143449494}
+{"node": "n009", "prog": "aos7-tick", "start": 27584.087379476, "end": 27584.144108476, "rc": 0, "round": 113}
+{"node": "n004", "prog": "aos7-tock", "start": 27584.085218977, "end": 27584.14551187, "rc": 0, "round": 113}
+{"node": "n003", "prog": "aos7-tock", "start": 27584.116355003, "end": 27584.151318575, "rc": 0, "round": 113}
+{"prog": "status", "end": 27584.163944388}
+{"node": "n006", "prog": "aos7-tick", "start": 27584.135834929, "end": 27584.164033474, "rc": 0, "round": 113}
+{"node": "n002", "prog": "aos7-tock", "start": 27584.141131872, "end": 27584.172342668, "rc": 0, "round": 112}
+{"node": "n008", "prog": "aos7-tick", "start": 27584.143563718, "end": 27584.180890417, "rc": 0, "round": 114}
+{"node": "n001", "prog": "aos7-tick", "start": 27584.133973249, "end": 27584.181092785, "rc": 0, "round": 113}
+{"prog": "status", "end": 27584.18441711}
+{"node": "n000", "prog": "aos7-tock", "start": 27584.138480575, "end": 27584.186119272, "rc": 0, "round": 112}
+{"node": "n003", "prog": "aos7-tick", "start": 27584.151430975, "end": 27584.1902423, "rc": 0, "round": 114}
+{"node": "n005", "prog": "aos7-tock", "start": 27584.150037761, "end": 27584.196521779, "rc": 0, "round": 114}
+{"node": "n004", "prog": "aos7-tick", "start": 27584.145622567, "end": 27584.199155572, "rc": 0, "round": 114}
+{"prog": "status", "end": 27584.205277818}
+{"node": "n007", "prog": "aos7-tock", "start": 27584.174578167, "end": 27584.208917842, "rc": 0, "round": 112}
+{"node": "n002", "prog": "aos7-tick", "start": 27584.172476869, "end": 27584.216476673, "rc": 0, "round": 113}
+{"node": "n009", "prog": "aos7-tock", "start": 27584.185103934, "end": 27584.221190776, "rc": 0, "round": 113}
+{"prog": "status", "end": 27584.22932388}
+{"node": "n000", "prog": "aos7-tick", "start": 27584.186232674, "end": 27584.233574356, "rc": 0, "round": 113}
+{"node": "n007", "prog": "aos7-tick", "start": 27584.209047916, "end": 27584.244295588, "rc": 0, "round": 113}
+{"prog": "status", "end": 27584.249776364}
+{"node": "n005", "prog": "aos7-tick", "start": 27584.196659075, "end": 27584.25057128, "rc": 0, "round": 115}
+{"node": "n009", "prog": "aos7-tick", "start": 27584.221776671, "end": 27584.25707605, "rc": 0, "round": 114}
+{"node": "n006", "prog": "aos7-tock", "start": 27584.212121962, "end": 27584.26875335, "rc": 0, "round": 113}
+{"node": "n001", "prog": "aos7-tock", "start": 27584.244081178, "end": 27584.271214441, "rc": 0, "round": 113}
+{"node": "n008", "prog": "aos7-tock", "start": 27584.221297525, "end": 27584.275422858, "rc": 0, "round": 114}
+{"prog": "status", "end": 27584.278406696}
+{"node": "n004", "prog": "aos7-tock", "start": 27584.239708413, "end": 27584.278479923, "rc": 0, "round": 114}
+{"node": "n003", "prog": "aos7-tock", "start": 27584.232602269, "end": 27584.281282082, "rc": 0, "round": 114}
+{"prog": "status", "end": 27584.298893284}
+{"node": "n002", "prog": "aos7-tock", "start": 27584.258642088, "end": 27584.306710939, "rc": 0, "round": 113}
+{"node": "n008", "prog": "aos7-tick", "start": 27584.275531361, "end": 27584.318265058, "rc": 0, "round": 115}
+{"node": "n006", "prog": "aos7-tick", "start": 27584.268905775, "end": 27584.318948907, "rc": 0, "round": 114}
+{"node": "n004", "prog": "aos7-tick", "start": 27584.278573658, "end": 27584.321848397, "rc": 0, "round": 115}
+{"prog": "status", "end": 27584.323380361}
+{"node": "n000", "prog": "aos7-tock", "start": 27584.278256095, "end": 27584.329439849, "rc": 0, "round": 113}
+{"node": "n003", "prog": "aos7-tick", "start": 27584.281389042, "end": 27584.332682771, "rc": 0, "round": 115}
+{"node": "n005", "prog": "aos7-tock", "start": 27584.291252521, "end": 27584.337892961, "rc": 0, "round": 115}
+{"node": "n001", "prog": "aos7-tick", "start": 27584.271330859, "end": 27584.338563365, "rc": 0, "round": 114}
+{"prog": "status", "end": 27584.343802759}
+{"prog": "status", "end": 27584.364281463}
+{"node": "n002", "prog": "aos7-tick", "start": 27584.306859827, "end": 27584.371174779, "rc": 0, "round": 114}
+{"node": "n007", "prog": "aos7-tock", "start": 27584.30469466, "end": 27584.374901376, "rc": 0, "round": 113}
+{"node": "n005", "prog": "aos7-tick", "start": 27584.338026621, "end": 27584.379708392, "rc": 0, "round": 116}
+{"prog": "status", "end": 27584.384864331}
+{"node": "n009", "prog": "aos7-tock", "start": 27584.302271099, "end": 27584.398457362, "rc": 0, "round": 114}
+{"node": "n000", "prog": "aos7-tick", "start": 27584.329584439, "end": 27584.400580821, "rc": 0, "round": 114}
+{"prog": "status", "end": 27584.407785951}
+{"node": "n001", "prog": "aos7-tock", "start": 27584.378817176, "end": 27584.408996915, "rc": 0, "round": 114}
+{"node": "n006", "prog": "aos7-tock", "start": 27584.359231252, "end": 27584.416381409, "rc": 0, "round": 114}
+{"node": "n008", "prog": "aos7-tock", "start": 27584.380706799, "end": 27584.419283695, "rc": 0, "round": 115}
+{"node": "n004", "prog": "aos7-tock", "start": 27584.384745779, "end": 27584.428706801, "rc": 0, "round": 115}
+{"prog": "status", "end": 27584.429440262}
+{"node": "n003", "prog": "aos7-tock", "start": 27584.396025335, "end": 27584.43107061, "rc": 0, "round": 115}
+{"node": "n007", "prog": "aos7-tick", "start": 27584.375153878, "end": 27584.439989453, "rc": 0, "round": 114}
+{"node": "n009", "prog": "aos7-tick", "start": 27584.398609546, "end": 27584.440650078, "rc": 0, "round": 115}
+{"prog": "status", "end": 27584.449893437}
+{"node": "n001", "prog": "aos7-tick", "start": 27584.409126246, "end": 27584.453123436, "rc": 0, "round": 115}
+{"node": "n006", "prog": "aos7-tick", "start": 27584.416507305, "end": 27584.454756128, "rc": 0, "round": 115}
+{"node": "n008", "prog": "aos7-tick", "start": 27584.419406545, "end": 27584.465692022, "rc": 0, "round": 116}
+{"prog": "status", "end": 27584.471007829}
+{"node": "n004", "prog": "aos7-tick", "start": 27584.428828518, "end": 27584.475830485, "rc": 0, "round": 116}
+{"node": "n000", "prog": "aos7-tock", "start": 27584.445017061, "end": 27584.476349245, "rc": 0, "round": 114}
+{"node": "n002", "prog": "aos7-tock", "start": 27584.41221493, "end": 27584.480099706, "rc": 0, "round": 114}
+{"node": "n003", "prog": "aos7-tick", "start": 27584.431185084, "end": 27584.482648511, "rc": 0, "round": 116}
+{"node": "n005", "prog": "aos7-tock", "start": 27584.442204944, "end": 27584.485446922, "rc": 0, "round": 116}
+{"prog": "status", "end": 27584.492264056}
+{"prog": "status", "end": 27584.512728353}
+{"node": "n000", "prog": "aos7-tick", "start": 27584.47646958, "end": 27584.513965475, "rc": 0, "round": 115}
+{"node": "n009", "prog": "aos7-tock", "start": 27584.482777161, "end": 27584.525082317, "rc": 0, "round": 115}
+{"node": "n005", "prog": "aos7-tick", "start": 27584.485561306, "end": 27584.525577202, "rc": 0, "round": 117}
+{"node": "n002", "prog": "aos7-tick", "start": 27584.480303487, "end": 27584.526080423, "rc": 0, "round": 115}
+{"node": "n007", "prog": "aos7-tock", "start": 27584.480591675, "end": 27584.529753239, "rc": 0, "round": 114}
+{"prog": "status", "end": 27584.538432184}
+{"node": "n001", "prog": "aos7-tock", "start": 27584.49349131, "end": 27584.543074392, "rc": 0, "round": 115}
+{"node": "n006", "prog": "aos7-tock", "start": 27584.515590283, "end": 27584.54915007, "rc": 0, "round": 115}
+{"node": "n004", "prog": "aos7-tock", "start": 27584.516217275, "end": 27584.554645684, "rc": 0, "round": 116}
+{"node": "n003", "prog": "aos7-tock", "start": 27584.523057883, "end": 27584.557207533, "rc": 0, "round": 116}
+{"prog": "status", "end": 27584.559122853}
+{"node": "n008", "prog": "aos7-tock", "start": 27584.526163929, "end": 27584.565535341, "rc": 0, "round": 116}
+{"node": "n009", "prog": "aos7-tick", "start": 27584.525211178, "end": 27584.566949715, "rc": 0, "round": 116}
+{"node": "n007", "prog": "aos7-tick", "start": 27584.529868294, "end": 27584.577140847, "rc": 0, "round": 115}
+{"prog": "status", "end": 27584.582389629}
+{"node": "n001", "prog": "aos7-tick", "start": 27584.543205176, "end": 27584.585825782, "rc": 0, "round": 116}
+{"node": "n006", "prog": "aos7-tick", "start": 27584.549273681, "end": 27584.589716225, "rc": 0, "round": 116}
+{"prog": "status", "end": 27584.602869865}
+{"node": "n004", "prog": "aos7-tick", "start": 27584.554774915, "end": 27584.611669696, "rc": 0, "round": 117}
+{"node": "n000", "prog": "aos7-tock", "start": 27584.555049529, "end": 27584.623104612, "rc": 0, "round": 115}
+{"node": "n002", "prog": "aos7-tock", "start": 27584.548198661, "end": 27584.623255444, "rc": 0, "round": 115}
+{"node": "n003", "prog": "aos7-tick", "start": 27584.557323981, "end": 27584.624086558, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.627454113}
+{"node": "n008", "prog": "aos7-tick", "start": 27584.56566336, "end": 27584.629807112, "rc": 0, "round": 117}
+{"node": "n005", "prog": "aos7-tock", "start": 27584.586098873, "end": 27584.642347866, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.647906277}
+{"node": "n007", "prog": "aos7-tock", "start": 27584.617554948, "end": 27584.657213967, "rc": 0, "round": 115}
+{"prog": "status", "end": 27584.674403702}
+{"node": "n002", "prog": "aos7-tick", "start": 27584.625211852, "end": 27584.674507486, "rc": 0, "round": 116}
+{"node": "n005", "prog": "aos7-tick", "start": 27584.642507945, "end": 27584.678507654, "rc": 0, "round": 118}
+{"node": "n000", "prog": "aos7-tick", "start": 27584.623340483, "end": 27584.687041177, "rc": 0, "round": 116}
+{"node": "n009", "prog": "aos7-tock", "start": 27584.629928309, "end": 27584.687314257, "rc": 0, "round": 116}
+{"node": "n001", "prog": "aos7-tock", "start": 27584.655986292, "end": 27584.693534265, "rc": 0, "round": 116}
+{"node": "n004", "prog": "aos7-tock", "start": 27584.6538884, "end": 27584.699347112, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.701149601}
+{"node": "n006", "prog": "aos7-tock", "start": 27584.650899753, "end": 27584.704157695, "rc": 0, "round": 116}
+{"node": "n007", "prog": "aos7-tick", "start": 27584.657345763, "end": 27584.709181526, "rc": 0, "round": 116}
+{"node": "n008", "prog": "aos7-tock", "start": 27584.67154603, "end": 27584.710135249, "rc": 0, "round": 117}
+{"node": "n003", "prog": "aos7-tock", "start": 27584.666260208, "end": 27584.720161332, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.725607003}
+{"node": "n004", "prog": "aos7-tick", "start": 27584.699656961, "end": 27584.736233167, "rc": 0, "round": 118}
+{"node": "n001", "prog": "aos7-tick", "start": 27584.693662274, "end": 27584.741664962, "rc": 0, "round": 117}
+{"node": "n009", "prog": "aos7-tick", "start": 27584.687424784, "end": 27584.743448145, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.746864762}
+{"node": "n006", "prog": "aos7-tick", "start": 27584.704268652, "end": 27584.761753676, "rc": 0, "round": 117}
+{"node": "n008", "prog": "aos7-tick", "start": 27584.710243031, "end": 27584.764207614, "rc": 0, "round": 118}
+{"node": "n003", "prog": "aos7-tick", "start": 27584.720306974, "end": 27584.765058434, "rc": 0, "round": 118}
+{"prog": "status", "end": 27584.767421622}
+{"node": "n002", "prog": "aos7-tock", "start": 27584.722646378, "end": 27584.768027374, "rc": 0, "round": 116}
+{"node": "n007", "prog": "aos7-tock", "start": 27584.749463731, "end": 27584.785489969, "rc": 0, "round": 116}
+{"node": "n005", "prog": "aos7-tock", "start": 27584.720610061, "end": 27584.788113744, "rc": 0, "round": 118}
+{"node": "n000", "prog": "aos7-tock", "start": 27584.730620695, "end": 27584.792232013, "rc": 0, "round": 116}
+{"prog": "status", "end": 27584.796760619}
+{"node": "n004", "prog": "aos7-tock", "start": 27584.776654993, "end": 27584.811174835, "rc": 0, "round": 118}
+{"prog": "status", "end": 27584.817209446}
+{"node": "n002", "prog": "aos7-tick", "start": 27584.768144533, "end": 27584.818120419, "rc": 0, "round": 117}
+{"node": "n005", "prog": "aos7-tick", "start": 27584.788231093, "end": 27584.835227019, "rc": 0, "round": 119}
+{"node": "n000", "prog": "aos7-tick", "start": 27584.792354462, "end": 27584.836111121, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.837637595}
+{"node": "n007", "prog": "aos7-tick", "start": 27584.785616616, "end": 27584.844029194, "rc": 0, "round": 117}
+{"node": "n009", "prog": "aos7-tock", "start": 27584.804937375, "end": 27584.845024124, "rc": 0, "round": 117}
+{"node": "n001", "prog": "aos7-tock", "start": 27584.804818172, "end": 27584.852442822, "rc": 0, "round": 117}
+{"node": "n006", "prog": "aos7-tock", "start": 27584.802169941, "end": 27584.858051467, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.860360915}
+{"node": "n003", "prog": "aos7-tock", "start": 27584.808034464, "end": 27584.865119921, "rc": 0, "round": 118}
+{"node": "n008", "prog": "aos7-tock", "start": 27584.809109153, "end": 27584.867905839, "rc": 0, "round": 118}
+{"node": "n004", "prog": "aos7-tick", "start": 27584.811312482, "end": 27584.881235298, "rc": 0, "round": 119}
+{"prog": "status", "end": 27584.882366072}
+{"node": "n009", "prog": "aos7-tick", "start": 27584.845140571, "end": 27584.892965977, "rc": 0, "round": 118}
+{"prog": "status", "end": 27584.902846799}
+{"node": "n003", "prog": "aos7-tick", "start": 27584.865257649, "end": 27584.921132573, "rc": 0, "round": 119}
+{"node": "n001", "prog": "aos7-tick", "start": 27584.852570571, "end": 27584.921327697, "rc": 0, "round": 118}
+{"node": "n002", "prog": "aos7-tock", "start": 27584.879671274, "end": 27584.921466948, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.925514564}
+{"node": "n008", "prog": "aos7-tick", "start": 27584.868024231, "end": 27584.928279102, "rc": 0, "round": 119}
+{"node": "n005", "prog": "aos7-tock", "start": 27584.876289702, "end": 27584.931879663, "rc": 0, "round": 119}
+{"node": "n006", "prog": "aos7-tick", "start": 27584.858173996, "end": 27584.933448937, "rc": 0, "round": 118}
+{"node": "n000", "prog": "aos7-tock", "start": 27584.881033811, "end": 27584.933588167, "rc": 0, "round": 117}
+{"node": "n007", "prog": "aos7-tock", "start": 27584.885036995, "end": 27584.936992141, "rc": 0, "round": 117}
+{"prog": "status", "end": 27584.945984702}
+{"node": "n004", "prog": "aos7-tock", "start": 27584.923114207, "end": 27584.962782404, "rc": 0, "round": 119}
+{"prog": "status", "end": 27584.966429642}
+{"node": "n005", "prog": "aos7-tick", "start": 27584.931996301, "end": 27584.983007032, "rc": 0, "round": 120}
+{"node": "n000", "prog": "aos7-tick", "start": 27584.933666934, "end": 27584.983151091, "rc": 0, "round": 118}
+{"node": "n002", "prog": "aos7-tick", "start": 27584.921545905, "end": 27584.985155378, "rc": 0, "round": 118}
+{"prog": "status", "end": 27584.98734983}
+{"node": "n007", "prog": "aos7-tick", "start": 27584.937105332, "end": 27584.989851307, "rc": 0, "round": 118}
+{"node": "n008", "prog": "aos7-tock", "start": 27584.968570895, "end": 27584.995551964, "rc": 0, "round": 119}
+{"node": "n009", "prog": "aos7-tock", "start": 27584.956469011, "end": 27585.000335947, "rc": 0, "round": 118}
+{"node": "n001", "prog": "aos7-tock", "start": 27584.961514563, "end": 27585.001487179, "rc": 0, "round": 118}
+{"prog": "status", "end": 27585.010199937}
+{"prog": "status", "end": 27585.031627564}
+{"node": "n006", "prog": "aos7-tock", "start": 27584.973785793, "end": 27585.040904427, "rc": 0, "round": 118}
+{"node": "n004", "prog": "aos7-tick", "start": 27584.962912707, "end": 27585.044250852, "rc": 0, "round": 120}
+{"node": "n008", "prog": "aos7-tick", "start": 27584.995680133, "end": 27585.048827859, "rc": 0, "round": 120}
+{"node": "n003", "prog": "aos7-tock", "start": 27584.983900612, "end": 27585.049175599, "rc": 0, "round": 119}
+{"prog": "status", "end": 27585.062428033}
+{"node": "n009", "prog": "aos7-tick", "start": 27585.000458967, "end": 27585.068660594, "rc": 0, "round": 119}
+{"node": "n001", "prog": "aos7-tick", "start": 27585.001593688, "end": 27585.068843817, "rc": 0, "round": 119}
+{"node": "n000", "prog": "aos7-tock", "start": 27585.023538673, "end": 27585.071351916, "rc": 0, "round": 118}
+{"node": "n007", "prog": "aos7-tock", "start": 27585.031670314, "end": 27585.082556221, "rc": 0, "round": 118}
+{"prog": "status", "end": 27585.085428551}
+{"node": "n002", "prog": "aos7-tock", "start": 27585.025478269, "end": 27585.089966955, "rc": 0, "round": 118}
+{"node": "n003", "prog": "aos7-tick", "start": 27585.049292367, "end": 27585.092215268, "rc": 0, "round": 120}
+{"node": "n004", "prog": "aos7-tock", "start": 27585.064435206, "end": 27585.099231094, "rc": 0, "round": 120}
+{"prog": "status", "end": 27585.108435981}
+{"node": "n005", "prog": "aos7-tock", "start": 27585.051396992, "end": 27585.116082126, "rc": 0, "round": 120}
+{"node": "n006", "prog": "aos7-tick", "start": 27585.041067552, "end": 27585.119883151, "rc": 0, "round": 119}
+{"prog": "status", "end": 27585.128949811}
+{"node": "n004", "prog": "aos7-tick", "start": 27585.099377978, "end": 27585.136832968, "rc": 0, "round": 121}
+{"node": "n002", "prog": "aos7-tick", "start": 27585.090096958, "end": 27585.141546379, "rc": 0, "round": 119}
+{"prog": "status", "end": 27585.149426911}
+{"node": "n000", "prog": "aos7-tick", "start": 27585.071470347, "end": 27585.150614391, "rc": 0, "round": 119}
+{"node": "n007", "prog": "aos7-tick", "start": 27585.082793645, "end": 27585.151747529, "rc": 0, "round": 119}
+{"node": "n001", "prog": "aos7-tock", "start": 27585.109102808, "end": 27585.157183441, "rc": 0, "round": 119}
+{"prog": "status", "end": 27585.169909742}
+{"node": "n008", "prog": "aos7-tock", "start": 27585.111235074, "end": 27585.170201187, "rc": 0, "round": 120}
+{"node": "n009", "prog": "aos7-tock", "start": 27585.112340331, "end": 27585.178074355, "rc": 0, "round": 119}
+{"node": "n003", "prog": "aos7-tock", "start": 27585.136933265, "end": 27585.182339338, "rc": 0, "round": 120}
+{"node": "n006", "prog": "aos7-tock", "start": 27585.142018301, "end": 27585.184197482, "rc": 0, "round": 119}
+{"node": "n005", "prog": "aos7-tick", "start": 27585.116216076, "end": 27585.187874576, "rc": 0, "round": 121}
+{"prog": "status", "end": 27585.191472642}
+{"prog": "status", "end": 27585.214039108}
+{"node": "n000", "prog": "aos7-tock", "start": 27585.175020937, "end": 27585.21713729, "rc": 0, "round": 119}
+{"node": "n001", "prog": "aos7-tick", "start": 27585.157331147, "end": 27585.217632336, "rc": 0, "round": 120}
+{"node": "n004", "prog": "aos7-tock", "start": 27585.200205167, "end": 27585.228622762, "rc": 0, "round": 121}
+{"node": "n009", "prog": "aos7-tick", "start": 27585.178211832, "end": 27585.233220166, "rc": 0, "round": 120}
+{"node": "n008", "prog": "aos7-tick", "start": 27585.170321021, "end": 27585.233440518, "rc": 0, "round": 121}
+{"prog": "status", "end": 27585.234469682}
+{"node": "n002", "prog": "aos7-tock", "start": 27585.202020611, "end": 27585.234967222, "rc": 0, "round": 119}
+{"node": "n007", "prog": "aos7-tock", "start": 27585.192210011, "end": 27585.244379798, "rc": 0, "round": 119}
+{"node": "n003", "prog": "aos7-tick", "start": 27585.182443543, "end": 27585.251071217, "rc": 0, "round": 121}
+{"node": "n006", "prog": "aos7-tick", "start": 27585.184312176, "end": 27585.252222379, "rc": 0, "round": 120}
+{"prog": "status", "end": 27585.256968131}
+{"node": "n004", "prog": "aos7-tick", "start": 27585.228776399, "end": 27585.276876117, "rc": 0, "round": 122}
+{"prog": "status", "end": 27585.278526162}
+{"node": "n000", "prog": "aos7-tick", "start": 27585.217279957, "end": 27585.287102024, "rc": 0, "round": 120}
+{"node": "n005", "prog": "aos7-tock", "start": 27585.235029027, "end": 27585.289196169, "rc": 0, "round": 121}
+{"node": "n002", "prog": "aos7-tick", "start": 27585.237095571, "end": 27585.290525814, "rc": 0, "round": 120}
+{"prog": "status", "end": 27585.30140373}
+{"node": "n007", "prog": "aos7-tick", "start": 27585.244523146, "end": 27585.307188624, "rc": 0, "round": 120}
+{"node": "n001", "prog": "aos7-tock", "start": 27585.259234117, "end": 27585.318416384, "rc": 0, "round": 120}
+{"node": "n008", "prog": "aos7-tock", "start": 27585.274640157, "end": 27585.32299321, "rc": 0, "round": 121}
+{"prog": "status", "end": 27585.325965927}
+{"prog": "status", "end": 27585.349210751}
+{"node": "n006", "prog": "aos7-tock", "start": 27585.295018243, "end": 27585.350833645, "rc": 0, "round": 120}
+{"node": "n009", "prog": "aos7-tock", "start": 27585.302016856, "end": 27585.354207733, "rc": 0, "round": 120}
+{"node": "n005", "prog": "aos7-tick", "start": 27585.28932541, "end": 27585.363913126, "rc": 0, "round": 122}
+{"node": "n003", "prog": "aos7-tock", "start": 27585.291468306, "end": 27585.367387321, "rc": 0, "round": 121}
+{"node": "n001", "prog": "aos7-tick", "start": 27585.318560573, "end": 27585.368090095, "rc": 0, "round": 121}
+{"prog": "status", "end": 27585.374136117}
+{"node": "n004", "prog": "aos7-tock", "start": 27585.322782916, "end": 27585.379974722, "rc": 0, "round": 122}
+{"node": "n002", "prog": "aos7-tock", "start": 27585.338144424, "end": 27585.388475995, "rc": 0, "round": 120}
+{"node": "n007", "prog": "aos7-tock", "start": 27585.347952189, "end": 27585.390771937, "rc": 0, "round": 120}
+{"prog": "status", "end": 27585.394983881}
+{"node": "n009", "prog": "aos7-tick", "start": 27585.354358785, "end": 27585.407242056, "rc": 0, "round": 121}
+{"node": "n006", "prog": "aos7-tick", "start": 27585.350977103, "end": 27585.408120719, "rc": 0, "round": 121}
+{"node": "n008", "prog": "aos7-tick", "start": 27585.32353908, "end": 27585.412092514, "rc": 0, "round": 122}
+{"prog": "status", "end": 27585.415366134}
+{"node": "n000", "prog": "aos7-tock", "start": 27585.333030734, "end": 27585.417077493, "rc": 0, "round": 120}
+{"prog": "status", "end": 27585.439495181}
+{"node": "n003", "prog": "aos7-tick", "start": 27585.367523486, "end": 27585.439934432, "rc": 0, "round": 122}
+{"node": "n007", "prog": "aos7-tick", "start": 27585.391023066, "end": 27585.442933589, "rc": 0, "round": 121}
+{"node": "n004", "prog": "aos7-tick", "start": 27585.380122989, "end": 27585.44716557, "rc": 0, "round": 123}
+{"node": "n005", "prog": "aos7-tock", "start": 27585.404337186, "end": 27585.455203987, "rc": 0, "round": 122}
+{"prog": "status", "end": 27585.459941464}
+{"node": "n000", "prog": "aos7-tick", "start": 27585.417196145, "end": 27585.47615855, "rc": 0, "round": 121}
+{"node": "n002", "prog": "aos7-tick", "start": 27585.388629131, "end": 27585.479976347, "rc": 0, "round": 121}
+{"prog": "status", "end": 27585.480413685}
+{"node": "n008", "prog": "aos7-tock", "start": 27585.432265165, "end": 27585.482142817, "rc": 0, "round": 122}
+{"node": "n001", "prog": "aos7-tock", "start": 27585.428636341, "end": 27585.489566716, "rc": 0, "round": 121}
+{"node": "n009", "prog": "aos7-tock", "start": 27585.44767369, "end": 27585.495624971, "rc": 0, "round": 121}
+{"prog": "status", "end": 27585.500860539}
+{"node": "n006", "prog": "aos7-tock", "start": 27585.453094544, "end": 27585.511535445, "rc": 0, "round": 121}
+{"node": "n007", "prog": "aos7-tock", "start": 27585.484139119, "end": 27585.518668229, "rc": 0, "round": 121}
+{"prog": "status", "end": 27585.521791277}
+{"node": "n001", "prog": "aos7-tick", "start": 27585.489699544, "end": 27585.528096043, "rc": 0, "round": 122}
+{"node": "n005", "prog": "aos7-tick", "start": 27585.455333109, "end": 27585.531092645, "rc": 0, "round": 123}
+{"node": "n008", "prog": "aos7-tick", "start": 27585.482260407, "end": 27585.533792923, "rc": 0, "round": 123}
+{"node": "n003", "prog": "aos7-tock", "start": 27585.481018015, "end": 27585.539495614, "rc": 0, "round": 122}
+{"prog": "status", "end": 27585.543019041}
+{"node": "n004", "prog": "aos7-tock", "start": 27585.487492969, "end": 27585.547175741, "rc": 0, "round": 123}
+{"node": "n009", "prog": "aos7-tick", "start": 27585.495762789, "end": 27585.553973219, "rc": 0, "round": 122}
+{"node": "n006", "prog": "aos7-tick", "start": 27585.511676909, "end": 27585.562198766, "rc": 0, "round": 122}
+{"node": "n002", "prog": "aos7-tock", "start": 27585.500890294, "end": 27585.562562135, "rc": 0, "round": 121}
+{"prog": "status", "end": 27585.563440577}
+{"node": "n000", "prog": "aos7-tock", "start": 27585.537292135, "end": 27585.57369644, "rc": 0, "round": 121}
+{"node": "n007", "prog": "aos7-tick", "start": 27585.518800857, "end": 27585.593206102, "rc": 0, "round": 122}
+{"node": "n004", "prog": "aos7-tick", "start": 27585.547302589, "end": 27585.593696568, "rc": 0, "round": 124}
+{"prog": "status", "end": 27585.594069205}
+{"node": "n002", "prog": "aos7-tick", "start": 27585.562684845, "end": 27585.610033479, "rc": 0, "round": 122}
+{"node": "n005", "prog": "aos7-tock", "start": 27585.571419153, "end": 27585.610352896, "rc": 0, "round": 123}
+{"prog": "status", "end": 27585.618404929}
+{"node": "n003", "prog": "aos7-tick", "start": 27585.540583788, "end": 27585.619740946, "rc": 0, "round": 123}
+{"node": "n008", "prog": "aos7-tock", "start": 27585.594402769, "end": 27585.634367199, "rc": 0, "round": 123}
+{"prog": "status", "end": 27585.63936928}
+{"node": "n000", "prog": "aos7-tick", "start": 27585.573841361, "end": 27585.642012, "rc": 0, "round": 122}
+{"node": "n001", "prog": "aos7-tock", "start": 27585.59336064, "end": 27585.646423057, "rc": 0, "round": 122}
+{"node": "n005", "prog": "aos7-tick", "start": 27585.610464565, "end": 27585.657422038, "rc": 0, "round": 124}
+{"prog": "status", "end": 27585.659810613}
+{"node": "n009", "prog": "aos7-tock", "start": 27585.615170863, "end": 27585.666121511, "rc": 0, "round": 122}
+{"node": "n007", "prog": "aos7-tock", "start": 27585.636564857, "end": 27585.671813933, "rc": 0, "round": 122}
+{"node": "n006", "prog": "aos7-tock", "start": 27585.622705168, "end": 27585.673913037, "rc": 0, "round": 122}
+{"prog": "status", "end": 27585.680259962}
+{"node": "n001", "prog": "aos7-tick", "start": 27585.646526169, "end": 27585.685270078, "rc": 0, "round": 123}
+{"node": "n008", "prog": "aos7-tick", "start": 27585.634504165, "end": 27585.685897491, "rc": 0, "round": 124}
+{"node": "n003", "prog": "aos7-tock", "start": 27585.659997883, "end": 27585.694948671, "rc": 0, "round": 123}
+{"prog": "status", "end": 27585.704445685}
+{"node": "n002", "prog": "aos7-tock", "start": 27585.653276178, "end": 27585.704553637, "rc": 0, "round": 122}
+{"node": "n004", "prog": "aos7-tock", "start": 27585.656166932, "end": 27585.705263735, "rc": 0, "round": 124}
+{"node": "n009", "prog": "aos7-tick", "start": 27585.666247256, "end": 27585.722444453, "rc": 0, "round": 123}
+{"node": "n006", "prog": "aos7-tick", "start": 27585.674049562, "end": 27585.72317061, "rc": 0, "round": 123}
+{"node": "n007", "prog": "aos7-tick", "start": 27585.671951039, "end": 27585.726338602, "rc": 0, "round": 123}
+{"prog": "status", "end": 27585.727390669}
+{"node": "n005", "prog": "aos7-tock", "start": 27585.699806633, "end": 27585.735186022, "rc": 0, "round": 124}
+{"node": "n000", "prog": "aos7-tock", "start": 27585.682337796, "end": 27585.741057088, "rc": 0, "round": 122}
+{"prog": "status", "end": 27585.747829638}
+{"node": "n003", "prog": "aos7-tick", "start": 27585.695119811, "end": 27585.752937627, "rc": 0, "round": 124}
+{"node": "n004", "prog": "aos7-tick", "start": 27585.705377056, "end": 27585.759107311, "rc": 0, "round": 125}
+{"prog": "status", "end": 27585.771655108}
+{"node": "n002", "prog": "aos7-tick", "start": 27585.704647953, "end": 27585.782105094, "rc": 0, "round": 123}
+{"node": "n005", "prog": "aos7-tick", "start": 27585.735320393, "end": 27585.792148359, "rc": 0, "round": 125}
+{"node": "n008", "prog": "aos7-tock", "start": 27585.731945764, "end": 27585.792560749, "rc": 0, "round": 124}
+{"node": "n001", "prog": "aos7-tock", "start": 27585.746364169, "end": 27585.797822015, "rc": 0, "round": 123}
+{"prog": "status", "end": 27585.799495894}
+{"node": "n007", "prog": "aos7-tock", "start": 27585.767147411, "end": 27585.804305806, "rc": 0, "round": 123}
+{"node": "n000", "prog": "aos7-tick", "start": 27585.74118139, "end": 27585.807323918, "rc": 0, "round": 123}
+{"node": "n006", "prog": "aos7-tock", "start": 27585.784812475, "end": 27585.813068447, "rc": 0, "round": 123}
+{"prog": "status", "end": 27585.820364567}
+{"node": "n009", "prog": "aos7-tock", "start": 27585.787124647, "end": 27585.823213402, "rc": 0, "round": 123}
+{"node": "n002", "prog": "aos7-tock", "start": 27585.804101855, "end": 27585.832066052, "rc": 0, "round": 123}
+{"node": "n008", "prog": "aos7-tick", "start": 27585.792661388, "end": 27585.833742726, "rc": 0, "round": 125}
+{"prog": "status", "end": 27585.842947694}
+{"node": "n004", "prog": "aos7-tock", "start": 27585.800109371, "end": 27585.847814292, "rc": 0, "round": 125}
+{"node": "n003", "prog": "aos7-tock", "start": 27585.815147423, "end": 27585.85104424, "rc": 0, "round": 124}
+{"node": "n007", "prog": "aos7-tick", "start": 27585.80442588, "end": 27585.852784964, "rc": 0, "round": 124}
+{"node": "n001", "prog": "aos7-tick", "start": 27585.79795841, "end": 27585.85797722, "rc": 0, "round": 124}
+{"prog": "status", "end": 27585.86469015}
+{"node": "n006", "prog": "aos7-tick", "start": 27585.813218297, "end": 27585.865105757, "rc": 0, "round": 124}
+{"node": "n005", "prog": "aos7-tock", "start": 27585.835197996, "end": 27585.867497979, "rc": 0, "round": 125}
+{"node": "n009", "prog": "aos7-tick", "start": 27585.823342714, "end": 27585.886129379, "rc": 0, "round": 124}
+{"node": "n002", "prog": "aos7-tick", "start": 27585.83221515, "end": 27585.886316078, "rc": 0, "round": 124}
+{"prog": "status", "end": 27585.888368635}
+{"node": "n003", "prog": "aos7-tick", "start": 27585.851158053, "end": 27585.888600498, "rc": 0, "round": 125}
+{"node": "n000", "prog": "aos7-tock", "start": 27585.847585624, "end": 27585.901340154, "rc": 0, "round": 123}
+{"node": "n004", "prog": "aos7-tick", "start": 27585.847948092, "end": 27585.910366708, "rc": 0, "round": 126}
+{"prog": "status", "end": 27585.911037973}
+{"node": "n008", "prog": "aos7-tock", "start": 27585.87608964, "end": 27585.916047348, "rc": 0, "round": 125}
+{"node": "n005", "prog": "aos7-tick", "start": 27585.867607684, "end": 27585.930191299, "rc": 0, "round": 126}
+{"prog": "ctl", "start": 27585.927150625, "end": 27585.933811346, "ok": true}
+{"prog": "status", "end": 27585.93412886}
+{"node": "n001", "prog": "aos7-tock", "start": 27585.900038451, "end": 27585.937066391, "rc": 0, "round": 124}
+{"node": "n007", "prog": "aos7-tock", "start": 27585.913201859, "end": 27585.944116571, "rc": 0, "round": 124}
+{"node": "n006", "prog": "aos7-tock", "start": 27585.905461739, "end": 27585.947941482, "rc": 0, "round": 124}
+{"node": "n000", "prog": "aos7-tick", "start": 27585.90148215, "end": 27585.953091649, "rc": 0, "round": 124}
+{"prog": "status", "end": 27585.954543514}
+{"node": "n008", "prog": "aos7-tick", "start": 27585.916169196, "end": 27585.964661929, "rc": 0, "round": 126}
+{"prog": "status", "end": 27585.974999194}
+{"node": "n009", "prog": "aos7-tock", "start": 27585.933136004, "end": 27585.980306125, "rc": 0, "round": 124}
+{"node": "n001", "prog": "aos7-tick", "start": 27585.937186256, "end": 27585.983100779, "rc": 0, "round": 125}
+{"node": "n003", "prog": "aos7-tock", "start": 27585.953606712, "end": 27585.984945197, "rc": 0, "round": 125}
+{"node": "n002", "prog": "aos7-tock", "start": 27585.930362048, "end": 27585.988274631, "rc": 0, "round": 124}
+{"node": "n006", "prog": "aos7-tick", "start": 27585.948106059, "end": 27585.997171072, "rc": 0, "round": 125}
+{"prog": "status", "end": 27586.0004169}
+{"node": "n007", "prog": "aos7-tick", "start": 27585.944246685, "end": 27586.01207274, "rc": 0, "round": 125}
+{"node": "n005", "prog": "aos7-tock", "start": 27585.971271325, "end": 27586.015067989, "rc": 0, "round": 126}
+{"node": "n004", "prog": "aos7-tock", "start": 27585.954567899, "end": 27586.018791751, "rc": 0, "round": 126}
+{"prog": "status", "end": 27586.020846161}
+{"node": "n002", "prog": "aos7-tick", "start": 27585.988380129, "end": 27586.029793377, "rc": 0, "round": 125}
+{"node": "n009", "prog": "aos7-tick", "start": 27585.980448581, "end": 27586.035863595, "rc": 0, "round": 125}
+{"prog": "status", "end": 27586.041669168}
+{"node": "n008", "prog": "aos7-tock", "start": 27586.005965303, "end": 27586.042839857, "rc": 0, "round": 126}
+{"node": "n000", "prog": "aos7-tock", "start": 27585.993896681, "end": 27586.046212011, "rc": 0, "round": 124}
+{"node": "n003", "prog": "aos7-tick", "start": 27585.985059761, "end": 27586.052113253, "rc": 0, "round": 126}
+{"prog": "status", "end": 27586.066300144}
+{"node": "n005", "prog": "aos7-tick", "start": 27586.015197071, "end": 27586.06891901, "rc": 0, "round": 127}
+{"node": "n004", "prog": "aos7-tick", "start": 27586.018906325, "end": 27586.069123732, "rc": 0, "round": 127}
+{"node": "n000", "prog": "aos7-tick", "start": 27586.046327947, "end": 27586.086232907, "rc": 0, "round": 125}
+{"node": "n001", "prog": "aos7-tock", "start": 27586.023466911, "end": 27586.086426348, "rc": 0, "round": 125}
+{"prog": "status", "end": 27586.089583931}
+{"node": "n008", "prog": "aos7-tick", "start": 27586.042961805, "end": 27586.105157905, "rc": 0, "round": 127}
+{"node": "n002", "prog": "aos7-tock", "start": 27586.070176581, "end": 27586.111497988, "rc": 0, "round": 125}
+{"prog": "status", "end": 27586.114353075}
+{"node": "n006", "prog": "aos7-tock", "start": 27586.057688185, "end": 27586.11573575, "rc": 0, "round": 125}
+{"node": "n009", "prog": "aos7-tock", "start": 27586.081364716, "end": 27586.120088567, "rc": 0, "round": 125}
+{"node": "n007", "prog": "aos7-tock", "start": 27586.054139851, "end": 27586.121580697, "rc": 0, "round": 125}
+{"node": "n001", "prog": "aos7-tick", "start": 27586.086511808, "end": 27586.124178573, "rc": 0, "round": 126}
+{"node": "n003", "prog": "aos7-tock", "start": 27586.092419592, "end": 27586.131274298, "rc": 0, "round": 126}
+{"node": "n004", "prog": "aos7-tock", "start": 27586.109516363, "end": 27586.137594954, "rc": 0, "round": 127}
+{"prog": "status", "end": 27586.139337041}
+{"node": "n006", "prog": "aos7-tick", "start": 27586.115849793, "end": 27586.151539091, "rc": 0, "round": 126}
+{"node": "n002", "prog": "aos7-tick", "start": 27586.111620497, "end": 27586.154071035, "rc": 0, "round": 126}
+{"node": "n007", "prog": "aos7-tick", "start": 27586.121690021, "end": 27586.155770722, "rc": 0, "round": 126}
+{"node": "n000", "prog": "aos7-tock", "start": 27586.126621921, "end": 27586.159707111, "rc": 0, "round": 125}
+{"prog": "status", "end": 27586.160573541}
+{"node": "n009", "prog": "aos7-tick", "start": 27586.120214723, "end": 27586.165957175, "rc": 0, "round": 126}
+{"node": "n005", "prog": "aos7-tock", "start": 27586.114391707, "end": 27586.166123526, "rc": 0, "round": 127}
+{"node": "n008", "prog": "aos7-tock", "start": 27586.145915599, "end": 27586.177397171, "rc": 0, "round": 127}
+{"prog": "status", "end": 27586.181033279}
+{"node": "n003", "prog": "aos7-tick", "start": 27586.131402658, "end": 27586.181094764, "rc": 0, "round": 127}
+{"node": "n004", "prog": "aos7-tick", "start": 27586.137731339, "end": 27586.191517338, "rc": 0, "round": 128}
+{"node": "n001", "prog": "aos7-tock", "start": 27586.165606069, "end": 27586.197259252, "rc": 0, "round": 126}
+{"node": "n000", "prog": "aos7-tick", "start": 27586.159812528, "end": 27586.20072458, "rc": 0, "round": 126}
+{"prog": "status", "end": 27586.202495501}
+{"node": "n005", "prog": "aos7-tick", "start": 27586.166233902, "end": 27586.207264576, "rc": 0, "round": 128}
+{"node": "n006", "prog": "aos7-tock", "start": 27586.192050033, "end": 27586.219485682, "rc": 0, "round": 126}
+{"node": "n008", "prog": "aos7-tick", "start": 27586.177537153, "end": 27586.225877672, "rc": 0, "round": 128}
+{"node": "n002", "prog": "aos7-tock", "start": 27586.197089695, "end": 27586.227104044, "rc": 0, "round": 126}
+{"prog": "status", "end": 27586.226968531}
+{"node": "n007", "prog": "aos7-tock", "start": 27586.197409543, "end": 27586.232230888, "rc": 0, "round": 126}
+{"node": "n001", "prog": "aos7-tick", "start": 27586.199132644, "end": 27586.233166307, "rc": 0, "round": 127}
+{"node": "n009", "prog": "aos7-tock", "start": 27586.209203681, "end": 27586.238172877, "rc": 0, "round": 126}
+{"node": "n000", "prog": "aos7-tock", "start": 27586.221337144, "end": 27586.246736025, "rc": 0, "round": 126}
+{"node": "n006", "prog": "aos7-tick", "start": 27586.219626426, "end": 27586.246970343, "rc": 0, "round": 127}
+{"prog": "status", "end": 27586.248719623}
+{"node": "n003", "prog": "aos7-tock", "start": 27586.222618128, "end": 27586.248807898, "rc": 0, "round": 127}
+{"node": "n002", "prog": "aos7-tick", "start": 27586.22719273, "end": 27586.252561294, "rc": 0, "round": 127}
+{"node": "n004", "prog": "aos7-tock", "start": 27586.231872248, "end": 27586.262841763, "rc": 0, "round": 128}
+{"prog": "status", "end": 27586.269115}
+{"node": "n007", "prog": "aos7-tick", "start": 27586.232335213, "end": 27586.270144285, "rc": 0, "round": 127}
+{"node": "n009", "prog": "aos7-tick", "start": 27586.238295436, "end": 27586.275107583, "rc": 0, "round": 127}
+{"node": "n005", "prog": "aos7-tock", "start": 27586.247960484, "end": 27586.275255219, "rc": 0, "round": 128}
+{"node": "n003", "prog": "aos7-tick", "start": 27586.2488948, "end": 27586.285077371, "rc": 0, "round": 128}
+{"node": "n000", "prog": "aos7-tick", "start": 27586.259910874, "end": 27586.295331169, "rc": 0, "round": 127}
+{"prog": "status", "end": 27586.295587028}
+{"node": "n008", "prog": "aos7-tock", "start": 27586.267310517, "end": 27586.303367513, "rc": 0, "round": 128}
+{"node": "n005", "prog": "aos7-tick", "start": 27586.275339547, "end": 27586.306201611, "rc": 0, "round": 129}
+{"node": "n001", "prog": "aos7-tock", "start": 27586.273677379, "end": 27586.309090872, "rc": 0, "round": 127}
+{"node": "n004", "prog": "aos7-tick", "start": 27586.262981023, "end": 27586.312857714, "rc": 0, "round": 129}
+{"node": "n006", "prog": "aos7-tock", "start": 27586.287309764, "end": 27586.317576836, "rc": 0, "round": 127}
+{"prog": "status", "end": 27586.322970048}
+{"node": "n002", "prog": "aos7-tock", "start": 27586.293738402, "end": 27586.324541266, "rc": 0, "round": 127}
+{"node": "n008", "prog": "aos7-tick", "start": 27586.303508987, "end": 27586.334205011, "rc": 0, "round": 129}
+{"node": "n001", "prog": "aos7-tick", "start": 27586.309214253, "end": 27586.341283434, "rc": 0, "round": 128}
+{"prog": "status", "end": 27586.343955559}
+{"node": "n009", "prog": "aos7-tock", "start": 27586.315674169, "end": 27586.349116727, "rc": 0, "round": 127}
+{"node": "n006", "prog": "aos7-tick", "start": 27586.3221633, "end": 27586.350581405, "rc": 0, "round": 128}
+{"node": "n003", "prog": "aos7-tock", "start": 27586.325448201, "end": 27586.362863165, "rc": 0, "round": 128}
+{"node": "n002", "prog": "aos7-tick", "start": 27586.327284624, "end": 27586.365602717, "rc": 0, "round": 128}
+{"prog": "status", "end": 27586.370273508}
+{"node": "n007", "prog": "aos7-tock", "start": 27586.33116603, "end": 27586.370362725, "rc": 0, "round": 127}
+{"node": "n005", "prog": "aos7-tock", "start": 27586.346540952, "end": 27586.374230716, "rc": 0, "round": 129}
+{"node": "n009", "prog": "aos7-tick", "start": 27586.349241481, "end": 27586.380120056, "rc": 0, "round": 128}
+{"node": "n000", "prog": "aos7-tock", "start": 27586.338039349, "end": 27586.380278221, "rc": 0, "round": 127}
+{"prog": "status", "end": 27586.393445166}
+{"node": "n003", "prog": "aos7-tick", "start": 27586.362997717, "end": 27586.39710097, "rc": 0, "round": 129}
+{"node": "n008", "prog": "aos7-tock", "start": 27586.374459363, "end": 27586.402074468, "rc": 0, "round": 129}
+{"node": "n004", "prog": "aos7-tock", "start": 27586.357057652, "end": 27586.40394241, "rc": 0, "round": 129}
+{"node": "n001", "prog": "aos7-tock", "start": 27586.381594222, "end": 27586.407249121, "rc": 0, "round": 128}
+{"node": "n007", "prog": "aos7-tick", "start": 27586.370453415, "end": 27586.40809876, "rc": 0, "round": 128}
+{"prog": "status", "end": 27586.414495808}
+{"node": "n000", "prog": "aos7-tick", "start": 27586.380363421, "end": 27586.41615513, "rc": 0, "round": 128}
+{"node": "n005", "prog": "aos7-tick", "start": 27586.375422714, "end": 27586.428002288, "rc": 0, "round": 130}
+{"node": "n006", "prog": "aos7-tock", "start": 27586.390884679, "end": 27586.431088998, "rc": 0, "round": 128}
+{"prog": "status", "end": 27586.436010078}
+{"node": "n004", "prog": "aos7-tick", "start": 27586.404053948, "end": 27586.437798391, "rc": 0, "round": 130}
+{"node": "n001", "prog": "aos7-tick", "start": 27586.40928636, "end": 27586.442160125, "rc": 0, "round": 129}
+{"node": "n002", "prog": "aos7-tock", "start": 27586.406016567, "end": 27586.442313682, "rc": 0, "round": 128}
+{"node": "n008", "prog": "aos7-tick", "start": 27586.403589079, "end": 27586.442728888, "rc": 0, "round": 130}
+{"node": "n009", "prog": "aos7-tock", "start": 27586.420464797, "end": 27586.450076343, "rc": 0, "round": 128}
+{"node": "n006", "prog": "aos7-tick", "start": 27586.431217999, "end": 27586.456337348, "rc": 0, "round": 129}
+{"prog": "status", "end": 27586.457426965}
+{"node": "n003", "prog": "aos7-tock", "start": 27586.4374823, "end": 27586.464173557, "rc": 0, "round": 129}
+{"node": "n002", "prog": "aos7-tick", "start": 27586.442397619, "end": 27586.469693526, "rc": 0, "round": 129}
+{"node": "n007", "prog": "aos7-tock", "start": 27586.448514784, "end": 27586.470261548, "rc": 0, "round": 128}
+{"node": "n005", "prog": "aos7-tock", "start": 27586.448210345, "end": 27586.471483362, "rc": 0, "round": 130}
+{"prog": "status", "end": 27586.477843412}
+{"node": "n009", "prog": "aos7-tick", "start": 27586.450178975, "end": 27586.478193045, "rc": 0, "round": 129}
+{"node": "n000", "prog": "aos7-tock", "start": 27586.456507786, "end": 27586.479755907, "rc": 0, "round": 128}
+{"node": "n004", "prog": "aos7-tock", "start": 27586.457977704, "end": 27586.486204312, "rc": 0, "round": 130}
+{"node": "n003", "prog": "aos7-tick", "start": 27586.464280026, "end": 27586.488980171, "rc": 0, "round": 130}
+{"node": "n007", "prog": "aos7-tick", "start": 27586.470539167, "end": 27586.499063752, "rc": 0, "round": 129}
+{"prog": "status", "end": 27586.500350818}
+{"node": "n005", "prog": "aos7-tick", "start": 27586.475488509, "end": 27586.5120779, "rc": 0, "round": 131}
+{"node": "n001", "prog": "aos7-tock", "start": 27586.48435784, "end": 27586.518975224, "rc": 0, "round": 129}
+{"prog": "status", "end": 27586.520773597}
+{"node": "n000", "prog": "aos7-tick", "start": 27586.482963864, "end": 27586.522105226, "rc": 0, "round": 129}
+{"node": "n006", "prog": "aos7-tock", "start": 27586.497049165, "end": 27586.525048558, "rc": 0, "round": 129}
+{"node": "n008", "prog": "aos7-tock", "start": 27586.484068068, "end": 27586.527621107, "rc": 0, "round": 130}
+{"prog": "status", "end": 27586.541219448}
+{"node": "n002", "prog": "aos7-tock", "start": 27586.510032777, "end": 27586.542695929, "rc": 0, "round": 129}
+{"node": "n004", "prog": "aos7-tick", "start": 27586.508094624, "end": 27586.548132552, "rc": 0, "round": 131}
+{"node": "n001", "prog": "aos7-tick", "start": 27586.519111539, "end": 27586.560612462, "rc": 0, "round": 130}
+{"prog": "status", "end": 27586.56164358}
+{"node": "n009", "prog": "aos7-tock", "start": 27586.518543988, "end": 27586.563129768, "rc": 0, "round": 129}
+{"node": "n006", "prog": "aos7-tick", "start": 27586.531298903, "end": 27586.563647566, "rc": 0, "round": 130}
+{"node": "n008", "prog": "aos7-tick", "start": 27586.527737595, "end": 27586.564103699, "rc": 0, "round": 131}
+{"node": "n007", "prog": "aos7-tock", "start": 27586.539514711, "end": 27586.566066207, "rc": 0, "round": 129}
+{"node": "n003", "prog": "aos7-tock", "start": 27586.549541225, "end": 27586.575889952, "rc": 0, "round": 130}
+{"node": "n002", "prog": "aos7-tick", "start": 27586.542813809, "end": 27586.583483678, "rc": 0, "round": 130}
+{"node": "n005", "prog": "aos7-tock", "start": 27586.552411561, "end": 27586.584257936, "rc": 0, "round": 131}
+{"prog": "status", "end": 27586.585610063}
+{"node": "n000", "prog": "aos7-tock", "start": 27586.562442634, "end": 27586.591652439, "rc": 0, "round": 129}
+{"node": "n007", "prog": "aos7-tick", "start": 27586.570613438, "end": 27586.6014477, "rc": 0, "round": 130}
+{"node": "n009", "prog": "aos7-tick", "start": 27586.563245064, "end": 27586.602085623, "rc": 0, "round": 130}
+{"node": "n004", "prog": "aos7-tock", "start": 27586.572040295, "end": 27586.602195819, "rc": 0, "round": 131}
+{"prog": "status", "end": 27586.606432319}
+{"node": "n003", "prog": "aos7-tick", "start": 27586.575991642, "end": 27586.606490377, "rc": 0, "round": 131}
+{"node": "n005", "prog": "aos7-tick", "start": 27586.585770974, "end": 27586.623103524, "rc": 0, "round": 132}
+{"node": "n006", "prog": "aos7-tock", "start": 27586.603971308, "end": 27586.62843986, "rc": 0, "round": 130}
+{"prog": "status", "end": 27586.63071865}
+{"node": "n001", "prog": "aos7-tock", "start": 27586.603128432, "end": 27586.630797578, "rc": 0, "round": 130}
+{"node": "n000", "prog": "aos7-tick", "start": 27586.591783233, "end": 27586.633312148, "rc": 0, "round": 130}
+{"node": "n008", "prog": "aos7-tock", "start": 27586.605792873, "end": 27586.633451759, "rc": 0, "round": 131}
+{"node": "n004", "prog": "aos7-tick", "start": 27586.608142656, "end": 27586.642463276, "rc": 0, "round": 132}
+{"node": "n002", "prog": "aos7-tock", "start": 27586.62383383, "end": 27586.649914345, "rc": 0, "round": 130}
+{"prog": "status", "end": 27586.655727823}
+{"node": "n006", "prog": "aos7-tick", "start": 27586.633158391, "end": 27586.666736944, "rc": 0, "round": 131}
+{"node": "n009", "prog": "aos7-tock", "start": 27586.642510765, "end": 27586.667869431, "rc": 0, "round": 130}
+{"node": "n001", "prog": "aos7-tick", "start": 27586.630885602, "end": 27586.669155825, "rc": 0, "round": 131}
+{"node": "n007", "prog": "aos7-tock", "start": 27586.641849358, "end": 27586.67295639, "rc": 0, "round": 130}
+{"node": "n008", "prog": "aos7-tick", "start": 27586.633528773, "end": 27586.673094118, "rc": 0, "round": 132}
+{"node": "n003", "prog": "aos7-tock", "start": 27586.646925768, "end": 27586.673299411, "rc": 0, "round": 131}
+{"prog": "status", "end": 27586.676161923}
+{"node": "n005", "prog": "aos7-tock", "start": 27586.665067062, "end": 27586.69369516, "rc": 0, "round": 132}
+{"prog": "status", "end": 27586.696610329}
+{"node": "n002", "prog": "aos7-tick", "start": 27586.650053295, "end": 27586.705484619, "rc": 0, "round": 131}
+{"node": "n003", "prog": "aos7-tick", "start": 27586.676547734, "end": 27586.710127479, "rc": 0, "round": 132}
+{"node": "n000", "prog": "aos7-tock", "start": 27586.6751173, "end": 27586.710266088, "rc": 0, "round": 130}
+{"node": "n007", "prog": "aos7-tick", "start": 27586.673415979, "end": 27586.716869793, "rc": 0, "round": 131}
+{"prog": "status", "end": 27586.717223043}
+{"node": "n009", "prog": "aos7-tick", "start": 27586.667982973, "end": 27586.717836089, "rc": 0, "round": 131}
+{"node": "n004", "prog": "aos7-tock", "start": 27586.684079123, "end": 27586.717974037, "rc": 0, "round": 132}
+{"node": "n005", "prog": "aos7-tick", "start": 27586.69383974, "end": 27586.732789704, "rc": 0, "round": 133}
+{"node": "n001", "prog": "aos7-tock", "start": 27586.709490097, "end": 27586.735743907, "rc": 0, "round": 131}
+{"prog": "status", "end": 27586.737664537}
+{"node": "n006", "prog": "aos7-tock", "start": 27586.708156384, "end": 27586.746754079, "rc": 0, "round": 131}
+{"prog": "status", "end": 27586.758027304}
+{"node": "n004", "prog": "aos7-tick", "start": 27586.718101395, "end": 27586.758600044, "rc": 0, "round": 133}
+{"node": "n000", "prog": "aos7-tick", "start": 27586.710341819, "end": 27586.760366226, "rc": 0, "round": 131}
+{"node": "n001", "prog": "aos7-tick", "start": 27586.735864382, "end": 27586.764820082, "rc": 0, "round": 132}
+{"node": "n008", "prog": "aos7-tock", "start": 27586.715115984, "end": 27586.765071342, "rc": 0, "round": 132}
+{"node": "n002", "prog": "aos7-tock", "start": 27586.743299842, "end": 27586.771812584, "rc": 0, "round": 131}
+{"prog": "status", "end": 27586.778360024}
+{"prog": "status", "end": 27586.798903028}
+{"prog": "status", "end": 27586.819350242}
+{"prog": "status", "end": 27586.852459337}
+{"prog": "status", "end": 27586.872891463}
+{"prog": "status", "end": 27586.923546449}
+{"prog": "status", "end": 27586.943930335}
+{"node": "n009", "prog": "aos7-tock", "start": 27586.925583497, "end": 27586.944750478, "rc": 0, "round": 131}
+{"node": "n003", "prog": "aos7-tock", "start": 27586.934750694, "end": 27586.952240771, "rc": 0, "round": 132}
+{"prog": "status", "end": 27586.964480842}
+{"node": "n007", "prog": "aos7-tock", "start": 27586.96098642, "end": 27586.979854342, "rc": 0, "round": 131}
+{"prog": "status", "end": 27586.984803283}
+{"node": "n005", "prog": "aos7-tock", "start": 27586.984319118, "end": 27587.002763529, "rc": 0, "round": 133}
+{"prog": "status", "end": 27587.005124232}
+{"node": "n004", "prog": "aos7-tock", "start": 27586.989851, "end": 27587.008370811, "rc": 0, "round": 133}
+{"node": "n000", "prog": "aos7-tock", "start": 27586.991255265, "end": 27587.008827315, "rc": 0, "round": 131}
+{"node": "n001", "prog": "aos7-tock", "start": 27586.990782381, "end": 27587.01069696, "rc": 0, "round": 132}
+{"prog": "status", "end": 27587.02762748}
