@@ -1,0 +1,57 @@
+{
+  "case": "G02-symlink",
+  "hook": {
+    "pid": 2938169,
+    "path": "/proc/self/fd/3/.aos/round.json",
+    "args": [
+      "/proc/self/fd/3/.aos/.round.json.tmp.2938169",
+      "/proc/self/fd/3/.aos/round.json"
+    ]
+  },
+  "rc": 0,
+  "moved_round": {
+    "round": 1,
+    "open": true,
+    "tick_at": "2026-10-03T19:59:14.106",
+    "tock_at": null,
+    "started": [
+      "x-r1"
+    ],
+    "ctl": [],
+    "mounts": []
+  },
+  "old_path_exists": true,
+  "old_path_symlink": true,
+  "target_round": null,
+  "target_sentinel": {
+    "unchanged": true
+  },
+  "task_files": [
+    "birth.json",
+    "exit.json"
+  ],
+  "task_state": "ended",
+  "next_tick": {
+    "rc": 0,
+    "out": {
+      "round": 2,
+      "started": [
+        "x-r2"
+      ]
+    },
+    "err": ""
+  },
+  "after_state": "ended",
+  "exit": {
+    "code": 127,
+    "at": "2026-10-03T19:59:14.112",
+    "round": 1,
+    "error": "node n 在 tick 中途被搬走或換掉（現在在 /tmp/astra7-G02-symlink-a1jaxgdx/moved），沒起"
+  },
+  "seconds": 0.26,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G02-symlink-a1jaxgdx",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "case": "G05-max_live",
+  "action": {
+    "round": 2,
+    "started": []
+  },
+  "receipt": {
+    "op": "restart",
+    "reload": true,
+    "result": {
+      "ok": false,
+      "msg": "tasks.json 的 x 不合格：max_live 要是整數，拿到 'bad'；沒執行（沒 kill）",
+      "at": "2026-10-03T19:59:32.708"
+    }
+  },
+  "old_alive": true,
+  "round": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T19:59:32.708",
+    "tock_at": null,
+    "started": [],
+    "ctl": [
+      {
+        "tid": "x-r1",
+        "op": "restart",
+        "ok": false
+      }
+    ],
+    "mounts": [],
+    "tasks_error": [
+      "x：max_live 要是整數，拿到 'bad'"
+    ]
+  },
+  "seconds": 0.128,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G05-max_live-l8341bcf",
+    "root_exists": false
+  }
+}

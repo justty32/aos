@@ -1,0 +1,21 @@
+{
+  "python": "3.14.7",
+  "kernel": "6.18.49-1-MANJARO",
+  "protected_files_before": 1348,
+  "protected_files_after": 1348,
+  "tree_sha256_before": "1995e99acb14769891b887af04e760be13717f4cbbba834db0b2194ad21988ec",
+  "tree_sha256_after": "1995e99acb14769891b887af04e760be13717f4cbbba834db0b2194ad21988ec",
+  "source_unchanged": true,
+  "changed": [],
+  "added_outside_deliverables": [],
+  "missing": [],
+  "case_cleanup_count": 47,
+  "bad_case_cleanup": [],
+  "harness_errors": [],
+  "owned_temp_roots_count": 47,
+  "owned_temp_roots_remaining": [],
+  "astra7_prefix_dirs_remaining": [],
+  "owned_product_processes_remaining": [],
+  "longrun_invariant_failures": [],
+  "clean": true
+}

@@ -1,0 +1,13 @@
+{
+  "case": "root-bind",
+  "rc": 0,
+  "stdout": "{\"mount_rc\": 0, \"mount_error\": \"\", \"same_inode_root_ok\": true, \"umount_rc\": 0}\n",
+  "stderr": "",
+  "actual_bind_test": true,
+  "seconds": 0.059,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-root-bind-2mr1puq7",
+    "root_exists": false
+  }
+}

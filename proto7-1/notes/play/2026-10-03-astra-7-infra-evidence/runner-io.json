@@ -1,0 +1,53 @@
+{
+  "case": "runner-io",
+  "cases": [
+    {
+      "kind": "out-dir",
+      "rc": 1,
+      "stderr": "",
+      "state": "born",
+      "exit": null,
+      "files": [
+        "birth.json",
+        "out.log"
+      ]
+    },
+    {
+      "kind": "exit-dir",
+      "rc": 0,
+      "stderr": "",
+      "state": "ended",
+      "exit": null,
+      "files": [
+        ".exit.json.tmp.2946324",
+        "birth.json",
+        "exit.json",
+        "out.log",
+        "pid.json"
+      ]
+    },
+    {
+      "kind": "birth-invalid",
+      "rc": 0,
+      "stderr": "",
+      "state": "ended",
+      "exit": {
+        "code": 127,
+        "at": "2026-10-03T20:03:45.443",
+        "round": null,
+        "error": "argv 是空的"
+      },
+      "files": [
+        "birth.json",
+        "exit.json",
+        "out.log"
+      ]
+    }
+  ],
+  "seconds": 0.091,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-runner-io-91k740v7",
+    "root_exists": false
+  }
+}

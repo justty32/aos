@@ -1,0 +1,291 @@
+{
+  "case": "claim-natural-batch",
+  "unmodified_product": true,
+  "no_fault_hook": true,
+  "runs": [
+    {
+      "case": 0,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n0",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.049"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.088",
+          "round": 1
+        }
+      }
+    },
+    {
+      "case": 1,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n1",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.144"
+      },
+      "actual_tid": "second-r1",
+      "owner_mismatch": false,
+      "exits": {
+        "first-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.204",
+          "round": 1
+        },
+        "second-r1": null
+      }
+    },
+    {
+      "case": 2,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n2",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.240"
+      },
+      "actual_tid": "second-r1",
+      "owner_mismatch": false,
+      "exits": {
+        "first-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.278",
+          "round": 1
+        },
+        "second-r1": null
+      }
+    },
+    {
+      "case": 3,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n3",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.323"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.362",
+          "round": 1
+        }
+      }
+    },
+    {
+      "case": 4,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n4",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.407"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.446",
+          "round": 1
+        }
+      }
+    },
+    {
+      "case": 5,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n5",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.490"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.529",
+          "round": 1
+        }
+      }
+    },
+    {
+      "case": 6,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n6",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.574"
+      },
+      "actual_tid": "second-r1",
+      "owner_mismatch": false,
+      "exits": {
+        "first-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.613",
+          "round": 1
+        },
+        "second-r1": null
+      }
+    },
+    {
+      "case": 7,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n7",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.657"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.697",
+          "round": 1
+        }
+      }
+    },
+    {
+      "case": 8,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n8",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.741"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.781",
+          "round": 1
+        }
+      }
+    },
+    {
+      "case": 9,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n9",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.825"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.864",
+          "round": 1
+        }
+      }
+    },
+    {
+      "case": 10,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n10",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.909"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:35.948",
+          "round": 1
+        }
+      }
+    },
+    {
+      "case": 11,
+      "started": [
+        "first-r1",
+        "second-r1"
+      ],
+      "owner": {
+        "node": "n11",
+        "tid": "second-r1",
+        "allow_stop": true,
+        "at": "2026-10-03T20:08:35.993"
+      },
+      "actual_tid": "first-r1",
+      "owner_mismatch": true,
+      "exits": {
+        "first-r1": null,
+        "second-r1": {
+          "code": 1,
+          "at": "2026-10-03T20:08:36.032",
+          "round": 1
+        }
+      }
+    }
+  ],
+  "mismatches": 9,
+  "iterations": 12,
+  "seconds": 1.039,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-claim-natural-batch-sh0y9n00",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "case": "root-initial-symlink",
+  "kind": "initial-symlink",
+  "before_round": 1,
+  "after_round": 5,
+  "daemon_alive": true,
+  "task_alive": true,
+  "status": {
+    "pid": 2942272,
+    "root": "/tmp/astra7-root-initial-symlink-8darkux9/alias",
+    "at": "2026-10-03T20:01:26.550",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "n": {
+        "round": 4,
+        "phase": "tick",
+        "paused": false,
+        "interval_ms": 150,
+        "pause_pending": false,
+        "live": [
+          "s-r1"
+        ]
+      }
+    }
+  },
+  "events": [],
+  "other_files": [],
+  "seconds": 0.814,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-root-initial-symlink-8darkux9",
+    "root_exists": false
+  }
+}

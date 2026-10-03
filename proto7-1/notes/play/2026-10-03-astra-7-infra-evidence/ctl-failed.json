@@ -1,0 +1,34 @@
+{
+  "case": "ctl-failed",
+  "normal_failures": 100,
+  "unique_sequences": 100,
+  "suffix_collision_after": {
+    "op": "wake",
+    "node": "n",
+    "sequence": 100
+  },
+  "stop": {
+    "op": "stop",
+    "kill": true,
+    "result": {
+      "ok": true,
+      "msg": "stopping with kill",
+      "at": "2026-10-03T20:01:30.274",
+      "queued_at": "2026-10-03T20:01:30.274"
+    }
+  },
+  "failed_count_after": 101,
+  "last_error": {
+    "file": "x.json",
+    "at": "2026-10-03T20:01:30.274",
+    "err": "RuntimeError(\"已執行（ok=True：wake n（目前沒有這個 node，出現時才生效）），但回條寫不進去：IsADirectoryError(21, 'Is a directory')\")",
+    "moved_to": "ctl-failed/x.json.42"
+  },
+  "injection": "fixed time_ns=42 with preexisting x.json.42",
+  "seconds": 0.028,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-ctl-failed-ta621g0i",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "case": "late-node-move",
+  "barrier": "immediately before runner Popen, after same_dir check",
+  "tick": {
+    "round": 1,
+    "started": [
+      "x-r1"
+    ],
+    "ctl": []
+  },
+  "moved_exit": {
+    "code": 0,
+    "at": "2026-10-03T20:03:45.501",
+    "round": 1
+  },
+  "ghost_progress": {
+    "cwd": "/tmp/astra7-late-node-move-8261tml_/moved",
+    "node": "/tmp/astra7-late-node-move-8261tml_/n",
+    "task": "/tmp/astra7-late-node-move-8261tml_/n/.aos/tasks/x-r1"
+  },
+  "old_node_recreated": true,
+  "moved_progress": null,
+  "seconds": 0.057,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-late-node-move-8261tml_",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "case": "G06-dyn",
+  "before": {
+    "n_dyn": {
+      "to": "n/dyn",
+      "at": "/tmp/astra7-G06-dyn-l0cm8cbv/n/.aos/tasks/x-r1/mnt/n_dyn",
+      "dyn": true
+    }
+  },
+  "promoted_to_static": {
+    "n_dyn": {
+      "to": "n/static",
+      "at": "/tmp/astra7-G06-dyn-l0cm8cbv/n/.aos/tasks/x-r3/mnt/n_dyn"
+    }
+  },
+  "removed_static_on_next_reload": {},
+  "reload1": {
+    "action": {
+      "round": 3,
+      "started": [
+        "x-r3"
+      ]
+    },
+    "receipt": {
+      "op": "restart",
+      "reload": true,
+      "result": {
+        "ok": true,
+        "msg": "killed; spawn written（reload：照 tasks.json 的 x；mounts {\"n_dyn\": \"n/dyn\"} → {\"n_dyn\": \"n/static\"}）",
+        "at": "2026-10-03T19:59:15.762",
+        "diff": {
+          "mounts": {
+            "old": {
+              "n_dyn": "n/dyn"
+            },
+            "new": {
+              "n_dyn": "n/static"
+            }
+          }
+        }
+      }
+    }
+  },
+  "reload2": {
+    "action": {
+      "round": 4,
+      "started": [
+        "x-r4"
+      ]
+    },
+    "receipt": {
+      "op": "restart",
+      "reload": true,
+      "result": {
+        "ok": true,
+        "msg": "killed; spawn written（reload：照 tasks.json 的 x；mounts {\"n_dyn\": \"n/static\"} → {}）",
+        "at": "2026-10-03T19:59:15.847",
+        "diff": {
+          "mounts": {
+            "old": {
+              "n_dyn": "n/static"
+            },
+            "new": {}
+          }
+        }
+      }
+    }
+  },
+  "seconds": 0.277,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G06-dyn-l0cm8cbv",
+    "root_exists": false
+  }
+}

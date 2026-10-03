@@ -1,0 +1,48 @@
+{
+  "case": "claim-race",
+  "barrier_saw_locked": "False",
+  "first_tick": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": [
+        "first-r1"
+      ]
+    },
+    "err": ""
+  },
+  "before_owner": {
+    "node": "n",
+    "tid": "first-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T20:01:30.344"
+  },
+  "after_owner": {
+    "node": "n/inner",
+    "tid": "second-r1",
+    "allow_stop": true,
+    "at": "2026-10-03T20:01:30.388"
+  },
+  "same_daemon_pid": true,
+  "loser_exit": {
+    "code": 1,
+    "at": "2026-10-03T20:01:30.438",
+    "round": 1
+  },
+  "stop_receipt": {
+    "op": "stop",
+    "kill": true,
+    "result": {
+      "ok": true,
+      "msg": "stopping with kill；已寫 .aosd/stopped.json，n/inner 不會再起它（刪掉才會）",
+      "at": "2026-10-03T20:01:30.463",
+      "queued_at": "2026-10-03T20:01:30.446"
+    }
+  },
+  "seconds": 0.225,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-claim-race-7j8rgjya",
+    "root_exists": false
+  }
+}

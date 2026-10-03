@@ -1,0 +1,123 @@
+{
+  "case": "G08-partial",
+  "injection": "persist first 24 JSON characters, SIGSTOP, controller SIGKILL; models partial regular-file append, not atomic full append",
+  "prefix": "{\"round\": 1, \"tick_at\": ",
+  "retry": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T19:59:16.104",
+      "tock_at": "2026-10-03T19:59:16.179",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null,
+      "errors": [
+        {
+          "tid": null,
+          "phase": "rounds.jsonl",
+          "err": "檔尾有沒寫完的一行（24 bytes），已補換行、保留原樣"
+        }
+      ]
+    },
+    "err": ""
+  },
+  "raw_after_retry": "{\"round\": 1, \"tick_at\": \n{\"round\": 1, \"tick_at\": \"2026-10-03T19:59:16.104\", \"tock_at\": \"2026-10-03T19:59:16.179\", \"started\": [\"one-r1\"], \"alive\": [], \"ended\": [{\"tid\": \"one-r1\", \"name\": \"one\", \"code\": 0}], \"ctl\": [], \"mounts\": [], \"early\": null, \"errors\": [{\"tid\": null, \"phase\": \"rounds.jsonl\", \"err\": \"檔尾有沒寫完的一行（24 bytes），已補換行、保留原樣\"}]}\n",
+  "valid_rows_after_retry": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T19:59:16.104",
+      "tock_at": "2026-10-03T19:59:16.179",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null,
+      "errors": [
+        {
+          "tid": null,
+          "phase": "rounds.jsonl",
+          "err": "檔尾有沒寫完的一行（24 bytes），已補換行、保留原樣"
+        }
+      ]
+    }
+  ],
+  "round_after_retry": {
+    "round": 1,
+    "open": false,
+    "tick_at": "2026-10-03T19:59:16.104",
+    "tock_at": "2026-10-03T19:59:16.179",
+    "started": [
+      "one-r1"
+    ],
+    "ctl": [],
+    "mounts": []
+  },
+  "ended_mark": {
+    "round": 1
+  },
+  "later_valid_rows": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T19:59:16.104",
+      "tock_at": "2026-10-03T19:59:16.179",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null,
+      "errors": [
+        {
+          "tid": null,
+          "phase": "rounds.jsonl",
+          "err": "檔尾有沒寫完的一行（24 bytes），已補換行、保留原樣"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "tick_at": "2026-10-03T19:59:16.202",
+      "tock_at": "2026-10-03T19:59:16.225",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    }
+  ],
+  "seconds": 0.157,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G08-partial-4s2a820f",
+    "root_exists": false
+  }
+}

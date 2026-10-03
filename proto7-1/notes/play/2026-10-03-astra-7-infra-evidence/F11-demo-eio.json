@@ -1,0 +1,12 @@
+{
+  "case": "F11-demo-eio",
+  "daemon_rc": 0,
+  "returned_left": [],
+  "live_descendants_before_delete": {},
+  "seconds": 10.796,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-F11-demo-eio-n4j1a439",
+    "root_exists": false
+  }
+}

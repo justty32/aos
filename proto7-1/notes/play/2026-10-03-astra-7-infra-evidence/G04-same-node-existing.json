@@ -1,0 +1,25 @@
+{
+  "case": "G04-same-node-existing",
+  "before": {
+    "node": "n",
+    "tid": "first-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T20:08:36.110"
+  },
+  "after": {
+    "node": "n",
+    "tid": "first-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T20:08:36.110"
+  },
+  "same_pid": true,
+  "errors": [
+    "spawn second.json：子根 n/sub 已經有 daemon 在跑（owner：node n 任務 first-r1），沒起、沒改 owner.json"
+  ],
+  "seconds": 0.395,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G04-same-node-existing-_1edftvt",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "case": "jsonl-writers",
+  "ascii-log": {
+    "bytes": 64,
+    "prefix_hex": "7b2262726f6b656e223a0a7b226174223a2022323032362d31302d30335432303a30333a34352e33",
+    "physical_lines": 2,
+    "read": [
+      {
+        "at": "2026-10-03T20:03:45.317",
+        "ev": "recovered"
+      }
+    ],
+    "tail": [
+      {
+        "at": "2026-10-03T20:03:45.317",
+        "ev": "recovered"
+      }
+    ]
+  },
+  "ascii-sent": {
+    "bytes": 141,
+    "prefix_hex": "7b2262726f6b656e223a0a7b2266726f6d223a20226e222c2022746f223a20226e222c2022726f75",
+    "physical_lines": 2,
+    "read": [
+      {
+        "from": "n",
+        "to": "n",
+        "round": 1,
+        "body": "local test",
+        "at": "2026-10-03T20:03:45.317",
+        "file": "1791029025317869640-n.json"
+      }
+    ],
+    "tail": [
+      {
+        "from": "n",
+        "to": "n",
+        "round": 1,
+        "body": "local test",
+        "at": "2026-10-03T20:03:45.317",
+        "file": "1791029025317869640-n.json"
+      }
+    ],
+    "tool_result": "send → n 先放 outbox（inbox 沒掛，已請求加掛）：local test"
+  },
+  "ascii-decisions": {
+    "bytes": 164,
+    "prefix_hex": "7b2262726f6b656e223a0a7b22726f756e64223a20312c202272756c65223a202274657374222c20",
+    "physical_lines": 2,
+    "read": [
+      {
+        "round": 1,
+        "rule": "test",
+        "target": "n",
+        "op": "pause",
+        "why": "probe",
+        "at": "2026-10-03T20:03:45.318",
+        "skipped": "daemon 的 .aosd/ctl 沒掛載"
+      }
+    ],
+    "tail": [
+      {
+        "round": 1,
+        "rule": "test",
+        "target": "n",
+        "op": "pause",
+        "why": "probe",
+        "at": "2026-10-03T20:03:45.318",
+        "skipped": "daemon 的 .aosd/ctl 沒掛載"
+      }
+    ]
+  },
+  "ascii-writes": {
+    "bytes": 213,
+    "prefix_hex": "7b2262726f6b656e223a7b226f70223a20226f70656e222c202270617468223a20222f746d702f61",
+    "physical_lines": 2,
+    "read": [
+      {
+        "op": "open",
+        "path": "/tmp/astra7-jsonl-writers-r3d75gw0/n/second.txt",
+        "ok": true,
+        "pid": 2946321
+      }
+    ],
+    "tail": [
+      {
+        "op": "open",
+        "path": "/tmp/astra7-jsonl-writers-r3d75gw0/n/second.txt",
+        "ok": true,
+        "pid": 2946321
+      }
+    ],
+    "worker_rc": 0,
+    "stderr": ""
+  },
+  "ascii-audit-scan": {
+    "tasks": 1,
+    "writes": 1,
+    "bad": []
+  },
+  "utf8-log": {
+    "bytes": 65,
+    "prefix_hex": "7b2274657874223a22e4b80a7b226174223a2022323032362d31302d30335432303a30333a34352e",
+    "physical_lines": 2,
+    "read_error": "UnicodeDecodeError('utf-8', b'{\"text\":\"\\xe4\\xb8\\n{\"at\": \"2026-10-03T20:03:45.334\", \"ev\": \"recovered\"}\\n', 9, 11, 'invalid continuation byte')",
+    "tail": [
+      {
+        "at": "2026-10-03T20:03:45.334",
+        "ev": "recovered"
+      }
+    ]
+  },
+  "utf8-sent": {
+    "bytes": 142,
+    "prefix_hex": "7b2274657874223a22e4b80a7b2266726f6d223a20226e222c2022746f223a20226e222c2022726f",
+    "physical_lines": 2,
+    "read_error": "UnicodeDecodeError('utf-8', b'{\"text\":\"\\xe4\\xb8\\n{\"from\": \"n\", \"to\": \"n\", \"round\": 1, \"body\": \"local test\", \"at\": \"2026-10-03T20:03:45.334\", \"file\": \"1791029025334416133-n.json\"}\\n', 9, 11, 'invalid continuation byte')",
+    "tail": [
+      {
+        "from": "n",
+        "to": "n",
+        "round": 1,
+        "body": "local test",
+        "at": "2026-10-03T20:03:45.334",
+        "file": "1791029025334416133-n.json"
+      }
+    ],
+    "tool_result": "send → n 先放 outbox（inbox 沒掛，已請求加掛）：local test"
+  },
+  "utf8-decisions": {
+    "bytes": 165,
+    "prefix_hex": "7b2274657874223a22e4b80a7b22726f756e64223a20312c202272756c65223a202274657374222c",
+    "physical_lines": 2,
+    "read_error": "UnicodeDecodeError('utf-8', b'{\"text\":\"\\xe4\\xb8\\n{\"round\": 1, \"rule\": \"test\", \"target\": \"n\", \"op\": \"pause\", \"why\": \"probe\", \"at\": \"2026-10-03T20:03:45.334\", \"skipped\": \"daemon \\xe7\\x9a\\x84 .aosd/ctl \\xe6\\xb2\\x92\\xe6\\x8e\\x9b\\xe8\\xbc\\x89\"}\\n', 9, 11, 'invalid continuation byte')",
+    "tail": [
+      {
+        "round": 1,
+        "rule": "test",
+        "target": "n",
+        "op": "pause",
+        "why": "probe",
+        "at": "2026-10-03T20:03:45.334",
+        "skipped": "daemon 的 .aosd/ctl 沒掛載"
+      }
+    ]
+  },
+  "utf8-writes": {
+    "bytes": 214,
+    "prefix_hex": "7b2274657874223a22e4b87b226f70223a20226f70656e222c202270617468223a20222f746d702f",
+    "physical_lines": 2,
+    "read_error": "UnicodeDecodeError('utf-8', b'{\"text\":\"\\xe4\\xb8{\"op\": \"open\", \"path\": \"/tmp/astra7-jsonl-writers-r3d75gw0/n/first.txt\", \"ok\": true, \"pid\": 2946322}\\n{\"op\": \"open\", \"path\": \"/tmp/astra7-jsonl-writers-r3d75gw0/n/second.txt\", \"ok\": true, \"pid\": 2946322}\\n', 9, 11, 'invalid continuation byte')",
+    "tail": [
+      {
+        "op": "open",
+        "path": "/tmp/astra7-jsonl-writers-r3d75gw0/n/second.txt",
+        "ok": true,
+        "pid": 2946322
+      }
+    ],
+    "worker_rc": 0,
+    "stderr": ""
+  },
+  "utf8-audit-scan": {
+    "error": "UnicodeDecodeError('utf-8', b'{\"text\":\"\\xe4\\xb8{\"op\": \"open\", \"path\": \"/tmp/astra7-jsonl-writers-r3d75gw0/n/first.txt\", \"ok\": true, \"pid\": 2946322}\\n{\"op\": \"open\", \"path\": \"/tmp/astra7-jsonl-writers-r3d75gw0/n/second.txt\", \"ok\": true, \"pid\": 2946322}\\n', 9, 11, 'invalid continuation byte')"
+  },
+  "seconds": 0.066,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-jsonl-writers-r3d75gw0",
+    "root_exists": false
+  }
+}

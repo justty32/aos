@@ -1,0 +1,21 @@
+{
+  "case": "F11-agent-delayed",
+  "cases": [
+    {
+      "case": "original_rounds_test_delayed_start",
+      "success": true,
+      "test_output": ".\n----------------------------------------------------------------------\nRan 1 test in 0.566s\n\nOK\n",
+      "root": "/tmp/astra7-F11-agent-delayed-am1oaxzz/astra5-node-agent-test-631t59ir",
+      "root_exists_after_cleanup": false,
+      "agent_pid": 2938499,
+      "agent_alive_after_cleanup": false,
+      "proc_environment_still_refers_to_deleted_root": false
+    }
+  ],
+  "seconds": 1.416,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-F11-agent-delayed-am1oaxzz",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "case": "root-symlink-other",
+  "kind": "symlink-other",
+  "before_round": 1,
+  "after_round": 1,
+  "daemon_alive": false,
+  "task_alive": false,
+  "status": {
+    "pid": 2942440,
+    "root": "/tmp/astra7-root-symlink-other-l9e_7z0u/real",
+    "at": "2026-10-03T20:01:29.489",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": true,
+    "stopped": true,
+    "kill_on_stop": true,
+    "nodes": {
+      "n": {
+        "round": 1,
+        "phase": "stopped",
+        "paused": false,
+        "interval_ms": 150,
+        "pause_pending": false,
+        "live": []
+      }
+    },
+    "root_gone": true
+  },
+  "events": [
+    {
+      "at": "2026-10-03T20:01:29.433",
+      "ev": "root-gone",
+      "root": "/tmp/astra7-root-symlink-other-l9e_7z0u/real"
+    }
+  ],
+  "other_files": [
+    "sentinel.json"
+  ],
+  "seconds": 0.685,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-root-symlink-other-l9e_7z0u",
+    "root_exists": false
+  }
+}
