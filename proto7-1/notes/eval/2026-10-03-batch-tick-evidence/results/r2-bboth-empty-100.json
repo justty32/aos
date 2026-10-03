@@ -1,0 +1,71 @@
+{
+ "mode": "bboth",
+ "k": 0,
+ "par": 1,
+ "work": "empty",
+ "count": 100,
+ "window_s": 15.02,
+ "rounds_total": 14927,
+ "rounds_per_s": 993.6,
+ "ticks_per_node": {
+  "min": 148,
+  "p50": 149.0,
+  "max": 150
+ },
+ "interval_ms": {
+  "n": 14827,
+  "p50": 106.0,
+  "p95": 115.0,
+  "max": 162.0
+ },
+ "daemon_ctl_ms": {
+  "n": 14,
+  "p50": 13.9,
+  "p95": 22.5,
+  "max": 22.5
+ },
+ "task_ctl_ms": {
+  "n": 14,
+  "p50": 40.7,
+  "p95": 86.3,
+  "max": 86.3
+ },
+ "task_ctl_unanswered": 0,
+ "cpu_cores_rusage": 2.15,
+ "cpu_cores_system": 5.14,
+ "action_rc_nonzero": 0,
+ "daemon_rc": 0,
+ "load1_end": 52.02001953125,
+ "batch": {
+  "aos7-tick": {
+   "n": 535,
+   "size": {
+    "n": 535,
+    "p50": 25,
+    "p95": 43,
+    "max": 58
+   },
+   "ms": {
+    "n": 535,
+    "p50": 27.4,
+    "p95": 32.8,
+    "max": 47.2
+   }
+  },
+  "aos7-tock": {
+   "n": 552,
+   "size": {
+    "n": 552,
+    "p50": 24.0,
+    "p95": 43,
+    "max": 58
+   },
+   "ms": {
+    "n": 552,
+    "p50": 26.7,
+    "p95": 30.8,
+    "max": 44.1
+   }
+  }
+ }
+}

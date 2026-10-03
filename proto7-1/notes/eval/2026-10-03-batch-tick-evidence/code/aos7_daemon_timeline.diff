@@ -1,0 +1,18 @@
+--- /home/lorkhan/repo/simple_tools/aos/proto7-1/lib/aos7_daemon_timeline.py	2026-10-03 15:11:59.743215766 +0800
++++ p71/lib/aos7_daemon_timeline.py	2026-10-03 15:28:45.674001297 +0800
+@@ -20,11 +20,14 @@
+ 
+ def run_prog(name, root, node_id, extra_env=None, gen=None):
+     """跑 `bin/<name> <root> <node-id>`，回 (returncode, 最後一行 JSON 或 None, stderr)。"""
++    import aos7_batch
++    if aos7_batch.wants_batch(name):
++        return aos7_batch.batcher(name).call(root, node_id, extra_env, gen)
+     env = env_with_bin()
+     env.update(extra_env or {})
+     if gen is not None:
+         env["AOS7_GEN"] = str(gen)   # tick／tock 拿到 action.lock 後比對，舊 daemon 的動作不寫（astra-4 I-01）
+-    p = subprocess.run([sys.executable, os.path.join(BIN, name), root, node_id],
++    p = subprocess.run(aos7_batch.argv_for(name, root, node_id),
+                        capture_output=True, text=True, env=env)
+     out = None
+     lines = p.stdout.strip().splitlines()

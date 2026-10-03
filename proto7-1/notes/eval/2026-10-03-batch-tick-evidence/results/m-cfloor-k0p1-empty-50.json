@@ -1,0 +1,37 @@
+{
+ "mode": "cfloor",
+ "k": 0,
+ "par": 1,
+ "work": "empty",
+ "count": 50,
+ "window_s": 15.02,
+ "rounds_total": 7500,
+ "rounds_per_s": 499.4,
+ "ticks_per_node": {
+  "min": 150,
+  "p50": 150.0,
+  "max": 150
+ },
+ "interval_ms": {
+  "n": 7450,
+  "p50": 100.0,
+  "p95": 101.0,
+  "max": 103.0
+ },
+ "daemon_ctl_ms": {
+  "n": 14,
+  "p50": 12.6,
+  "p95": 23.5,
+  "max": 23.5
+ },
+ "task_ctl_ms": {
+  "n": 0
+ },
+ "task_ctl_unanswered": 0,
+ "cpu_cores_rusage": 0.44,
+ "cpu_cores_system": 1.96,
+ "action_rc_nonzero": 0,
+ "daemon_rc": 0,
+ "load1_end": 38.779296875,
+ "batch": {}
+}

@@ -1,0 +1,15 @@
+| 程序 | 中位 ms | P90 ms |
+|---|---:|---:|
+| C noop (fork+exec 下限) | 0.13 | 0.20 |
+| /bin/true | 0.13 | 0.15 |
+| sh -c : | 0.50 | 0.58 |
+| python3 -c pass | 5.74 | 6.25 |
+| python3 -S -I -c pass | 4.00 | 4.50 |
+| aos7-tick 空 node（原樣） | 15.10 | 15.92 |
+| aos7-tick 空 node（-S -I） | 14.52 | 15.05 |
+| aos7-tock 空 node（原樣） | 14.96 | 15.38 |
+| aos7-tock 空 node（-S -I） | 14.22 | 14.73 |
+| 極小 C tick 空 node | 0.17 | 0.23 |
+| python3 -S -I 只 import os,json,fcntl（精簡 Python tick 的大概下限） | 10.03 | 10.99 |
+| python3 -S -I import aos7_tick 全部依賴 | 15.38 | 16.77 |
+| python3 -c pass（再量一次，看宿主負載） | 5.87 | 6.88 |

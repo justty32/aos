@@ -1,0 +1,40 @@
+{
+ "mode": "base",
+ "k": 0,
+ "par": 1,
+ "work": "each3",
+ "count": 100,
+ "window_s": 15.02,
+ "rounds_total": 1676,
+ "rounds_per_s": 111.6,
+ "ticks_per_node": {
+  "min": 10,
+  "p50": 17.0,
+  "max": 22
+ },
+ "interval_ms": {
+  "n": 1576,
+  "p50": 767.5,
+  "p95": 1559.0,
+  "max": 2508.0
+ },
+ "daemon_ctl_ms": {
+  "n": 14,
+  "p50": 91.5,
+  "p95": 1081.3,
+  "max": 1081.3
+ },
+ "task_ctl_ms": {
+  "n": 14,
+  "p50": 1245.8,
+  "p95": 1600.2,
+  "max": 1600.2
+ },
+ "task_ctl_unanswered": 0,
+ "cpu_cores_rusage": 13.68,
+ "cpu_cores_system": 15.97,
+ "action_rc_nonzero": 0,
+ "daemon_rc": 0,
+ "load1_end": 63.755859375,
+ "batch": {}
+}

@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/batch-eval/bench.py", line 139, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/batch-eval/bench.py", line 119, in main
+    d = json.load(open(f)); tctl.append((ts(d["result"]["at"]) - d["sent"]) * 1000)
+                                                                 ~^^^^^^^^
+KeyError: 'sent'
