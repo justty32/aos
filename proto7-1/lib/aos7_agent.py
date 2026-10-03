@@ -12,7 +12,7 @@ import sys
 
 import aos7_agent_tools as tools
 import aos7_llm
-from aos7_fs import now, read_json, task_env, wait_tock, write_json
+from aos7_fs import append_jsonl, now, read_json, task_env, wait_tock, write_json
 
 
 class Stop(Exception):
@@ -64,10 +64,10 @@ def log(ctx, st, msg):
           flush=True)
 
 
-def add_usage(ctx, tokens):
+def add_usage(ctx, tokens, calls=1):
     p = os.path.join(ctx["task"], "usage.json")
     u = read_json(p, {}) or {}
-    write_json(p, {"tokens": int(u.get("tokens", 0)) + int(tokens or 0), "calls": int(u.get("calls", 0)) + 1})
+    write_json(p, {"tokens": int(u.get("tokens", 0)) + int(tokens or 0), "calls": int(u.get("calls", 0)) + calls})
 
 
 def load_cfg(ctx):
@@ -79,8 +79,17 @@ def load_cfg(ctx):
 def do_think(ctx, st):
     """問 LLM 拿 plan。輸入＝persona＋這次抓到的信＋（要先開口時）goal。"""
     letters = tools.read_letters(ctx["node"], st["letters"])
-    res = aos7_llm.think(load_cfg(ctx), st["goal"], letters, ctx["node_id"])
-    add_usage(ctx, res["tokens"])
+    cfg = load_cfg(ctx)
+    mem = tools.memory(ctx["node"], cfg["memory"], skip=st["letters"]) if cfg.get("memory") else None
+    rnd_before = (read_json(os.path.join(ctx["node"], ".aos", "round.json"), {}) or {}).get("round")
+    res = aos7_llm.think(cfg, st["goal"], letters, ctx["node_id"], mem)
+    add_usage(ctx, res["tokens"], res.get("calls", 1))
+    if "ms" in res:  # 真模型：每次呼叫記一行（花多久、跨了幾個回合、原文），事後看得懂它想了什麼
+        rnd_now = (read_json(os.path.join(ctx["node"], ".aos", "round.json"), {}) or {}).get("round")
+        append_jsonl(os.path.join(ctx["task"], "llm.jsonl"),
+                     {"at": now(), "round": st["round"], "round_before": rnd_before, "round_after": rnd_now, "ms": res["ms"], "calls": res.get("calls", 1),
+                      "tokens": res["tokens"], "note": res["note"], "letters": st["letters"],
+                      "raw": (res.get("raw") or "")[:4000]})
     st["plan"] = res["plan"] if isinstance(res["plan"], list) and res["plan"] else [{"tool": "none"}]
     st["pc"] = 0
     st["last"] = "think（%s）：%d 個動作" % (res["note"], len(st["plan"]))
@@ -98,15 +107,31 @@ def do_act(ctx, st):
         save(ctx, st)
         log(ctx, st, r)
     tools.move_done(ctx["node"], st["letters"])
-    if st["goal"]:
+    if st["goal"] and not st["goal"].get("wake"):
         tools.consume_goal(ctx["node"])
     save(ctx, st)
 
 
 def write_progress(ctx, st):
-    """給 kernel 判斷卡住：每處理一個 tock 就寫（含 round），處理不了 tock 的才會連續不變。"""
-    write_json(os.path.join(ctx["task"], "progress.json"),
-               {"round": st["round"], "state": st["state"], "steps": st["steps"]})
+    """給 kernel 判斷卡住：每處理一個 tock 就寫（含 round），處理不了 tock 的才會連續不變。
+    另記一行 trace.jsonl（每個處理過的 tock 在什麼狀態），事後算閒置比例、被併掉的回合。"""
+    p = {"round": st["round"], "state": st["state"], "steps": st["steps"]}
+    write_json(os.path.join(ctx["task"], "progress.json"), p)
+    append_jsonl(os.path.join(ctx["task"], "trace.jsonl"), dict(p, at=now()))
+
+
+def wake_goal(ctx, st, rnd):
+    """agent.json 的 "wake": {"rounds": N, "unless": "work/DONE.md"}：閒了 N 個自己的回合沒有新信、unless 的檔又還不在，
+    就自己醒來想一次（goal＝{"wake": ...}）。沒設就永遠等信（預設）。"""
+    w = load_cfg(ctx).get("wake")
+    if not isinstance(w, dict) or not isinstance(w.get("rounds"), int):
+        return None
+    if w.get("unless") and os.path.exists(os.path.join(ctx["node"], w["unless"])):
+        return None
+    idle = rnd - st.get("active_round", 0)
+    if idle < w["rounds"]:
+        return None
+    return {"wake": "已經 %d 回合沒有新信。看一下 memory 裡的往來：是不是有人在等你、或有事被漏掉了？需要就寄信推進，不需要就回 none。" % idle}
 
 
 def on_tock(ctx, st, rnd):
@@ -117,8 +142,11 @@ def on_tock(ctx, st, rnd):
     s = st["state"]
     if s == "idle":
         names, goal = tools.list_inbox(ctx["node"]), tools.pending_goal(ctx["node"])
+        if not names and not goal:
+            goal = wake_goal(ctx, st, rnd)
         if names or goal:
-            st.update(state="think", letters=names, goal=goal, plan=None, pc=0, steps=st["steps"] + 1)
+            st.update(state="think", letters=names, goal=goal, plan=None, pc=0, steps=st["steps"] + 1,
+                      active_round=rnd)
             save(ctx, st)
             do_think(ctx, st)
     elif s == "think":

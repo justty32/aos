@@ -2,7 +2,7 @@
 
 ← [proto7-1](../README.md)｜[spec.md](../spec.md)｜核心 spec：[core.md](../../proto7/spec/core.md)（條號 S-）
 
-proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py`）全部跑通。下面是做的過程中碰到的問題。各組的細節在三份分檔：[核心 P-](problems-core.md)（daemon、tick、tock、任務）、[kernel K-](problems-kernel.md)、[agent A-](problems-agent.md)。整合時隊長自己碰到的記在本檔 I-。
+proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py`）全部跑通。下面是做的過程中碰到的問題。各組的細節在三份分檔：[核心 P-](problems-core.md)（daemon、tick、tock、任務）、[kernel K-](problems-kernel.md)、[agent A-](problems-agent.md)。整合時隊長自己碰到的記在本檔 I-。用真模型跑多 agent 協作（`demo/real.py`）碰到的記在 [真模型 R-](problems-real.md)，跑的紀錄在 [runs/](runs/2026-10-03-real-1.md)。
 
 分級：**〔要使用者決定〕**＝方向問題，或核心 spec 說不清、互相衝突；〔技術選型，先這樣〕；〔默認正常〕。各組原本列了 8 條要使用者決定，隊長合併、降級後剩下面 4 條（D-1～D-4）。
 
@@ -110,7 +110,39 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （b）預設全拒，沒寫允許清單就不能加掛。比較安全，但新 node 一開始什麼都做不了。
   - （c）被掛的那一方也要同意（例如目標 node 放一份「誰可以掛我」的清單），兩邊都允許才掛。比較像「把收訊資料夾借給對方」，但要多一份設定。
 
-## 其餘問題一覽（技術選型 27 條、默認正常 17 條）
+## 真模型場景要使用者決定的（2 條，R-，10-03 待答）
+
+細節與其餘 R- 條目在 [problems-real.md](problems-real.md)；跑的紀錄在 [runs/2026-10-03-real-1.md](runs/2026-10-03-real-1.md)。
+
+### R-1 信件驅動的 agent 沒信就不動，對話停擺時沒有人發現〔要使用者決定〕
+
+- 層：agent × kernel；S-16、S-19（「依託 tick-tock 換狀態」），A-6 的延伸。
+- 發生了什麼：
+  - agent 只在「有新信」或「有 goal.json」時才離開 idle。只要鏈上有一個人回了 none，整個團隊就沒有人會再動。
+  - 第 1 輪：luna 第一次回應是 `"."`，解析失敗就退成 none，goal 也用掉了。全場安靜。
+  - 第 3 輪：ranges.py 已經 PASS，coder 也轉給了 lead；lead 這次回 `[]`（空 plan，合法但什麼都不做）。之後 13 分鐘，所有 agent 都 idle、沒有任何信，一直到 900 秒時間上限。kernel 看到的是「大家都有進度（每個 tock 都更新 progress.json）、用量不動」，**一切正常**。
+- 先這樣（這輪補的最簡單做法）：`agent.json` 可設 `"wake": {"rounds": N, "unless": "work/DONE.md"}`，閒了 N 個自己的回合沒信、`unless` 指的檔又還不在，就自己想一次（goal＝`{"wake": "…"}`，不算用掉 goal.json）。第 4 輪只給 lead 設 100 回合（約 30 秒）。
+  - 效果：lead 會回頭催 coder，停擺解開了。代價是一共醒了 25 次，後半段幾乎都回 none，每次都是一次 LLM 呼叫，而且會一直催。real.py 的「全員閒置 150 秒就停」也因此從沒觸發。
+  - 這等於在「tock 驅動」之外，多了一種「時間到了自己醒」。
+- 要決定的：團隊停擺時由誰發現、由誰推一把？（不代替你選）
+  - （a）agent 自己定時醒（現在的 `wake`）。誰該醒、多久醒一次寫在各自的 agent.json；沒設的就永遠等信。
+  - （b）kernel 偵測「成員都 idle、沒有信在路上、目標還沒完成」，寫一封信給負責人（或喚醒它）。kernel 得知道「目標完成」長什麼樣子，例如一個檔。
+  - （c）不自動處理：停擺就停擺，交給外面的人（或上層時間線）看到再處理。
+
+### R-2 新成員怎麼讓大家知道、agent 記得什麼，現在都只靠「最近 12 封信」〔要使用者決定〕
+
+- 層：agent 的 prompt 與記憶 × 加掛；S-01、S-16、S-23。
+- 發生了什麼：
+  - 原本的 agent 每次 think 只看到「這輪抓到的信」，什麼都記不得。為了讓真模型協作，這輪補了 `"memory": N`：prompt 帶上最近 N 封往來的信（收的在 `inbox/done/`，寄的在新加的 `sent.jsonl`），加上自己 `work/` 底下的檔。
+  - 第 4 輪：coder 跟 ci 互丟了 38 次測試，信箱被洗掉。到了 14:01，**lead 說「尚未收到任何審稿者自我介紹」**，coder 說「我沒有 Rita 的 node id」。其實 rita 在 13:54 就自我介紹了，13:55 還對 lead 說過「dur.py 審稿 OK」。兩人的記憶視窗（12 封）裡都已經沒有她。結果卡在「等審稿者加入」，直到時間上限。
+  - 新成員是 real.py（外面的人）放進空間、kernel.json 加成員；kernel 自己加掛了她。但 **agent 這邊沒有「成員名冊」**：知道有誰、對方的 node id，全靠信。誰的信被擠出視窗，誰就從世界上消失了。
+- 先這樣：記憶＝最近 N 封信＋work/ 的檔（每檔截 4000 字）。agent 可以自己 `write` 筆記到 work/，下次就看得到，但這輪沒有一個模型這樣做。
+- 要決定的：agent「長期知道的事」放在哪裡？（不代替你選）
+  - （a）照現在：滑動視窗。要記住什麼，靠 persona 叫它自己寫筆記到 work/。
+  - （b）空間提供成員名冊：例如 kernel.json 的成員（或一份 roster 檔）掛進每個成員，prompt 固定帶上。加入、離開由 kernel 那邊維護。
+  - （c）每個 agent 有一份「自己維護的記憶檔」，每次 think 都要回寫（plan 多一個欄位），框架負責放進 prompt。
+
+## 其餘問題一覽（技術選型 34 條、默認正常 20 條）
 
 細節點進分檔看。
 
@@ -143,6 +175,13 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [M-7](#m-7-加掛要等下一個-tick寄信多-12-回合技術選型先這樣) 加掛要等下一個 tick，寄信多 1～2 回合。
 - [M-8](#m-8-被拒的回條會一直擋住同一個請求技術選型先這樣) 被拒的回條會一直擋住同一個請求。
 - [M-9](#m-9-卸掛不做掛載只增不減技術選型先這樣) 卸掛不做，掛載只增不減。
+- [R-3](problems-real.md) kernel 的「卡住」在真模型下全是誤判（都在等 LLM）。restart 殺掉在飛的呼叫，那次用量沒被記到，新任務又重問一次。
+- [R-4](problems-real.md) 預算規則是「限速」不是「上限」：pause 30 次、每次 3 秒，整場照樣用了 609k tokens，擋不住迴圈。
+- [R-5](problems-real.md) luna 有 25% 的回應解析不出來（`"."`、`[]`、殘渣）；加了「重問一次」。
+- [R-6](problems-real.md) 信沒有種類：寄錯就被當成程式碼；必回的 bot 對上收到就做事的 agent，會互相觸發成迴圈。
+- [R-7](problems-real.md) 「完成」由 LLM 判斷，驗收只能信轉述；coder 謊報過 PASS。
+- [R-9](problems-real.md) prompt＝persona＋最近 N 封信＋work/ 的檔，tokens 隨記憶長大（1.3k→7k）。
+- [R-10](problems-real.md) 事後要看懂得多記 llm.jsonl、trace.jsonl、sent.jsonl；15 分鐘 77 MB。
 
 **默認正常**
 
@@ -163,6 +202,9 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [I-3](#i-3-pause-的回合在時間線紀錄裡不留痕跡默認正常) pause 的期間在時間線紀錄裡不留痕跡。
 - [I-4](#i-4-示範的結果依賴牆鐘默認正常) 示範的結果依賴牆鐘。
 - [M-11](#m-11-kernel-看到新成員要晚一兩回合默認正常) kernel 看到新成員要晚一兩回合。
+- [R-8](problems-real.md) 一次 LLM 呼叫跨 5～75 回合；處理過的 tock 有 81～100% 是 idle（D-2 的實際數字）。
+- [R-11](problems-real.md) 新成員的信常插在別人長 think 的中間，要等下一輪才看得到。
+- [R-12](problems-real.md) real.py 被 kill 時 daemon 還留著跑。
 
 ## 整合時碰到的（I-）
 

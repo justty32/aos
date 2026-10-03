@@ -125,6 +125,36 @@ class StepByStep(unittest.TestCase):
         aos7_agent.recover(new, st2)  # act 補做一次
         self.assertEqual(len(os.listdir(os.path.join(self.w["bob"]["node"], "inbox"))), 1)
 
+    def test_wake_after_idle_rounds_unless_done(self):
+        """agent.json 的 wake：閒了 N 回合沒信就自己想一次；unless 的檔在就不醒；goal.json 不被當成用掉。"""
+        bob = self.w["bob"]
+        cfg = read_json(os.path.join(bob["node"], "agent.json"))
+        cfg["wake"] = {"rounds": 3, "unless": "work/DONE.md"}
+        write_json(os.path.join(bob["node"], "agent.json"), cfg)
+        st = aos7_agent.load_state(bob)
+        for r in (1, 2):
+            st = aos7_agent.on_tock(bob, st, r)
+            self.assertEqual(st["state"], "idle")
+        st = aos7_agent.on_tock(bob, st, 3)
+        self.assertEqual(st["state"], "think")
+        self.assertIn("wake", st["goal"])
+        st = aos7_agent.on_tock(bob, aos7_agent.on_tock(bob, st, 4), 5)
+        self.assertEqual(st["state"], "idle")
+        os.makedirs(os.path.join(bob["node"], "work"), exist_ok=True)
+        write_json(os.path.join(bob["node"], "work", "DONE.md"), {})
+        for r in range(6, 12):
+            st = aos7_agent.on_tock(bob, st, r)
+            self.assertEqual(st["state"], "idle")
+
+    def test_memory_has_history_and_files(self):
+        from aos7_agent_tools import do_tool, memory
+        amy = self.w["amy"]
+        do_tool(amy, {"tool": "send", "to": "team/agents/bob", "body": "hi"}, 1)
+        do_tool(amy, {"tool": "write", "path": "work/a.py", "text": "x = 1"}, 1)
+        m = memory(amy["node"], 5)
+        self.assertEqual(m["recent_letters"][-1]["body"], "hi")
+        self.assertEqual(m["my_files"], {"work/a.py": "x = 1"})
+
     def test_write_cannot_escape_node(self):
         from aos7_agent_tools import do_tool
         r = do_tool(self.w["amy"], {"tool": "write", "path": "../bob/x.txt", "text": "x"}, 1)

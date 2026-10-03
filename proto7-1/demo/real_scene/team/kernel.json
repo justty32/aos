@@ -1,0 +1,10 @@
+{
+ "members": [
+  "agents/lead",
+  "agents/coder",
+  "agents/ci"
+ ],
+ "stuck_rounds": 20,
+ "budget_tokens": 15000,
+ "cool_rounds": 6
+}
