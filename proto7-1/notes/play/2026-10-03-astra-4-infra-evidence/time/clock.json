@@ -1,0 +1,531 @@
+{
+ "injected_wall_offsets": [
+  {
+   "offset_s": 3600,
+   "mono": 22789.048991723
+  },
+  {
+   "offset_s": -3600,
+   "mono": 22789.35910072
+  },
+  {
+   "offset_s": 0,
+   "mono": 22789.669253138
+  }
+ ],
+ "rounds": [
+  {
+   "round": 1,
+   "tick_at": "2026-10-03T14:49:40.717",
+   "tock_at": "2026-10-03T14:49:40.733",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 2,
+   "tick_at": "2026-10-03T14:49:40.817",
+   "tock_at": "2026-10-03T14:49:40.833",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 3,
+   "tick_at": "2026-10-03T15:49:40.917",
+   "tock_at": "2026-10-03T15:49:40.933",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 4,
+   "tick_at": "2026-10-03T15:49:41.017",
+   "tock_at": "2026-10-03T15:49:41.034",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 5,
+   "tick_at": "2026-10-03T15:49:41.117",
+   "tock_at": "2026-10-03T15:49:41.134",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 6,
+   "tick_at": "2026-10-03T13:49:41.218",
+   "tock_at": "2026-10-03T13:49:41.234",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 7,
+   "tick_at": "2026-10-03T13:49:41.318",
+   "tock_at": "2026-10-03T13:49:41.334",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 8,
+   "tick_at": "2026-10-03T13:49:41.417",
+   "tock_at": "2026-10-03T13:49:41.434",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 9,
+   "tick_at": "2026-10-03T14:49:41.517",
+   "tock_at": "2026-10-03T14:49:41.535",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 10,
+   "tick_at": "2026-10-03T14:49:41.619",
+   "tock_at": "2026-10-03T14:49:41.636",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  },
+  {
+   "round": 11,
+   "tick_at": "2026-10-03T14:49:41.718",
+   "tock_at": "2026-10-03T14:49:41.734",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": []
+  }
+ ],
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22788.914936512,
+   "end": 22788.930960836,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22788.931069139,
+   "end": 22788.947374548,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.014940982,
+   "end": 22789.030981536,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.031089889,
+   "end": 22789.046446564,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.115016875,
+   "end": 22789.131205306,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.131320591,
+   "end": 22789.147165871,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.215061189,
+   "end": 22789.231490861,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.231594836,
+   "end": 22789.24762483,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.315102167,
+   "end": 22789.331129847,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.331229844,
+   "end": 22789.347441498,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.415165977,
+   "end": 22789.431973205,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.43207709,
+   "end": 22789.448491914,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.515231531,
+   "end": 22789.531625346,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.531727066,
+   "end": 22789.548031113,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.615291615,
+   "end": 22789.631371192,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.631475457,
+   "end": 22789.647723429,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.715321572,
+   "end": 22789.731495175,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.731611202,
+   "end": 22789.748540448,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.815386484,
+   "end": 22789.833254055,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.833351567,
+   "end": 22789.850149969,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22789.915470713,
+   "end": 22789.931663492,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22789.931778086,
+   "end": 22789.948045805,
+   "round": 11,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T14:49:40.703",
+   "ev": "start",
+   "pid": 1111852
+  },
+  {
+   "at": "2026-10-03T14:49:40.703",
+   "ev": "node+",
+   "node": "n",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:40.720",
+   "ev": "tick",
+   "node": "n",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:40.736",
+   "ev": "tock",
+   "node": "n",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:40.820",
+   "ev": "tick",
+   "node": "n",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:40.835",
+   "ev": "tock",
+   "node": "n",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T15:49:40.920",
+   "ev": "tick",
+   "node": "n",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T15:49:40.936",
+   "ev": "tock",
+   "node": "n",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T15:49:41.020",
+   "ev": "tick",
+   "node": "n",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T15:49:41.036",
+   "ev": "tock",
+   "node": "n",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T15:49:41.120",
+   "ev": "tick",
+   "node": "n",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T15:49:41.136",
+   "ev": "tock",
+   "node": "n",
+   "round": 5,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T13:49:41.221",
+   "ev": "tick",
+   "node": "n",
+   "round": 6,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T13:49:41.237",
+   "ev": "tock",
+   "node": "n",
+   "round": 6,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T13:49:41.320",
+   "ev": "tick",
+   "node": "n",
+   "round": 7,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T13:49:41.337",
+   "ev": "tock",
+   "node": "n",
+   "round": 7,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T13:49:41.420",
+   "ev": "tick",
+   "node": "n",
+   "round": 8,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T13:49:41.436",
+   "ev": "tock",
+   "node": "n",
+   "round": 8,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:41.520",
+   "ev": "tick",
+   "node": "n",
+   "round": 9,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.537",
+   "ev": "tock",
+   "node": "n",
+   "round": 9,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:41.622",
+   "ev": "tick",
+   "node": "n",
+   "round": 10,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.639",
+   "ev": "tock",
+   "node": "n",
+   "round": 10,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:41.720",
+   "ev": "tick",
+   "node": "n",
+   "round": 11,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.737",
+   "ev": "tock",
+   "node": "n",
+   "round": 11,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:41.777",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T14:49:41.777",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 1111852,
+  "root": "/tmp/astra4-time-clock-r37sumew",
+  "at": "2026-10-03T14:49:41.777",
+  "stopping": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "n": {
+    "round": 11,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

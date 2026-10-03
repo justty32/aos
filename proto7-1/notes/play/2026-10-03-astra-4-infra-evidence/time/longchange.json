@@ -1,0 +1,97 @@
+{
+ "changed_mono": 22788.019978688,
+ "observed_ms": 300,
+ "round_after_change": {
+  "round": 1,
+  "open": false,
+  "tick_at": "2026-10-03T14:49:39.789",
+  "tock_at": "2026-10-03T14:49:39.804",
+  "started": [],
+  "ctl": [],
+  "mounts": []
+ },
+ "stop_ms": 31.328460998338414,
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22787.987439853,
+   "end": 22788.002847995,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22788.002927935,
+   "end": 22788.018426646,
+   "round": 1,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T14:49:39.776",
+   "ev": "start",
+   "pid": 1111431
+  },
+  {
+   "at": "2026-10-03T14:49:39.776",
+   "ev": "node+",
+   "node": "n",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:39.791",
+   "ev": "tick",
+   "node": "n",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:39.807",
+   "ev": "tock",
+   "node": "n",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:39.817",
+   "ev": "ctl",
+   "file": "rescan.json",
+   "op": "rescan",
+   "node": null,
+   "by": null,
+   "ok": true,
+   "msg": "rescanned"
+  },
+  {
+   "at": "2026-10-03T14:49:40.121",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T14:49:40.121",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 1111431,
+  "root": "/tmp/astra4-time-longchange-7n7zow88",
+  "at": "2026-10-03T14:49:40.121",
+  "stopping": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "n": {
+    "round": 1,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

@@ -1,0 +1,177 @@
+{
+ "changed_mono": 22786.723514309,
+ "old_ms": 1000,
+ "new_ms": 100,
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22786.691715107,
+   "end": 22786.707455661,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22786.70753553,
+   "end": 22786.723137785,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22787.691775386,
+   "end": 22787.707559581,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22787.707638128,
+   "end": 22787.722877464,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22787.791834848,
+   "end": 22787.808401787,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22787.808475936,
+   "end": 22787.824349939,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 22787.89190441,
+   "end": 22787.908658749,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 22787.90873422,
+   "end": 22787.924754537,
+   "round": 4,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T14:49:38.480",
+   "ev": "start",
+   "pid": 1110790
+  },
+  {
+   "at": "2026-10-03T14:49:38.480",
+   "ev": "node+",
+   "node": "n",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:38.496",
+   "ev": "tick",
+   "node": "n",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:38.512",
+   "ev": "tock",
+   "node": "n",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:39.496",
+   "ev": "tick",
+   "node": "n",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:39.511",
+   "ev": "tock",
+   "node": "n",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:39.597",
+   "ev": "tick",
+   "node": "n",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:39.613",
+   "ev": "tock",
+   "node": "n",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:39.697",
+   "ev": "tick",
+   "node": "n",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:39.713",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T14:49:39.713",
+   "ev": "tock",
+   "node": "n",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:39.733",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 1110790,
+  "root": "/tmp/astra4-time-change-ups_74wg",
+  "at": "2026-10-03T14:49:39.733",
+  "stopping": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "n": {
+    "round": 4,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

@@ -1,0 +1,86 @@
+[
+  {
+    "case": "tockdirpeer",
+    "root": "/tmp/astra4-tasks-tockdirpeer-6mis_71c",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "deletekeep",
+    "root": "/tmp/astra4-tasks-deletekeep-ovabslz8",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "tockdir",
+    "root": "/tmp/astra4-tasks-tockdir-bpz8aa94",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "tocksyntax",
+    "root": "/tmp/astra4-tasks-tocksyntax-wjtq7qy2",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "birthsyntax",
+    "root": "/tmp/astra4-tasks-birthsyntax-1yyugjgz",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "birtharray",
+    "root": "/tmp/astra4-tasks-birtharray-zke7k881",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "delete",
+    "root": "/tmp/astra4-tasks-delete-1z4xjgo6",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "chdir",
+    "root": "/tmp/astra4-tasks-chdir-80b6b9eg",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "output",
+    "root": "/tmp/astra4-tasks-output-g__vaph3",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "cpu",
+    "root": "/tmp/astra4-tasks-cpu-0ju5in09",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "forksetsid",
+    "root": "/tmp/astra4-tasks-forksetsid-heskiaf_",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "fork",
+    "root": "/tmp/astra4-tasks-fork-gt54qph6",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "ignore",
+    "root": "/tmp/astra4-tasks-ignore-3tojciz0",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  },
+  {
+    "case": "short",
+    "root": "/tmp/astra4-tasks-short-dq_rx5x4",
+    "root_exists": false,
+    "matching_original_pids_still_present": []
+  }
+]

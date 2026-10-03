@@ -1,0 +1,352 @@
+[
+  {
+    "key": "10",
+    "start_epoch_approx_from_monotonic": 1791010274.0876532,
+    "tick_end_interval_ms": {
+      "n": 1473,
+      "p50": 101.951,
+      "p95": 111.868,
+      "max": 127.276
+    },
+    "initial_tick_end_delay_ms": {
+      "n": 10,
+      "p50": 43.593,
+      "p95": 58.438,
+      "max": 58.438
+    },
+    "nodes_with_completed_tick": 10,
+    "first_status_after_start_ms": 8.36,
+    "file_count_without_3_probe_files": 22340,
+    "aggregate_cpu_equivalent_cores_including_shutdown_analysis": 11.36,
+    "phase": {
+      "first5s": {
+        "tick_ms": {
+          "n": 497,
+          "p50": 28.604,
+          "p95": 40.874,
+          "max": 52.9
+        },
+        "tock_ms": {
+          "n": 490,
+          "p50": 23.431,
+          "p95": 33.779,
+          "max": 46.418
+        }
+      },
+      "last5s": {
+        "tick_ms": {
+          "n": 480,
+          "p50": 32.735,
+          "p95": 41.939,
+          "max": 52.097
+        },
+        "tock_ms": {
+          "n": 479,
+          "p50": 28.644,
+          "p95": 34.677,
+          "max": 45.773
+        }
+      }
+    }
+  },
+  {
+    "key": "10-repeat",
+    "start_epoch_approx_from_monotonic": 1791010367.991728,
+    "tick_end_interval_ms": {
+      "n": 1223,
+      "p50": 121.261,
+      "p95": 144.51,
+      "max": 177.569
+    },
+    "initial_tick_end_delay_ms": {
+      "n": 10,
+      "p50": 48.931,
+      "p95": 58.589,
+      "max": 58.589
+    },
+    "nodes_with_completed_tick": 10,
+    "first_status_after_start_ms": 10.551,
+    "file_count_without_3_probe_files": 18650,
+    "aggregate_cpu_equivalent_cores_including_shutdown_analysis": 9.68,
+    "phase": {
+      "first5s": {
+        "tick_ms": {
+          "n": 436,
+          "p50": 38.803,
+          "p95": 52.26,
+          "max": 65.991
+        },
+        "tock_ms": {
+          "n": 428,
+          "p50": 30.302,
+          "p95": 47.357,
+          "max": 56.522
+        }
+      },
+      "last5s": {
+        "tick_ms": {
+          "n": 389,
+          "p50": 45.624,
+          "p95": 60.632,
+          "max": 75.668
+        },
+        "tock_ms": {
+          "n": 393,
+          "p50": 37.518,
+          "p95": 54.588,
+          "max": 67.459
+        }
+      }
+    }
+  },
+  {
+    "key": "50",
+    "start_epoch_approx_from_monotonic": 1791010289.8066604,
+    "tick_end_interval_ms": {
+      "n": 1616,
+      "p50": 444.83,
+      "p95": 605.027,
+      "max": 864.816
+    },
+    "initial_tick_end_delay_ms": {
+      "n": 50,
+      "p50": 197.838,
+      "p95": 495.651,
+      "max": 596.126
+    },
+    "nodes_with_completed_tick": 50,
+    "first_status_after_start_ms": 322.491,
+    "file_count_without_3_probe_files": 26125,
+    "aggregate_cpu_equivalent_cores_including_shutdown_analysis": 14.23,
+    "phase": {
+      "first5s": {
+        "tick_ms": {
+          "n": 569,
+          "p50": 207.977,
+          "p95": 316.197,
+          "max": 701.139
+        },
+        "tock_ms": {
+          "n": 551,
+          "p50": 199.599,
+          "p95": 325.127,
+          "max": 475.216
+        }
+      },
+      "last5s": {
+        "tick_ms": {
+          "n": 537,
+          "p50": 216.873,
+          "p95": 315.571,
+          "max": 463.349
+        },
+        "tock_ms": {
+          "n": 537,
+          "p50": 204.016,
+          "p95": 318.207,
+          "max": 445.569
+        }
+      }
+    }
+  },
+  {
+    "key": "100",
+    "start_epoch_approx_from_monotonic": 1791010306.0204475,
+    "tick_end_interval_ms": {
+      "n": 1667,
+      "p50": 788.248,
+      "p95": 1512.145,
+      "max": 2560.852
+    },
+    "initial_tick_end_delay_ms": {
+      "n": 100,
+      "p50": 762.351,
+      "p95": 2072.227,
+      "max": 2189.695
+    },
+    "nodes_with_completed_tick": 100,
+    "first_status_after_start_ms": 1646.614,
+    "file_count_without_3_probe_files": 28491,
+    "aggregate_cpu_equivalent_cores_including_shutdown_analysis": 14.0,
+    "phase": {
+      "first5s": {
+        "tick_ms": {
+          "n": 568,
+          "p50": 311.651,
+          "p95": 773.941,
+          "max": 1536.109
+        },
+        "tock_ms": {
+          "n": 512,
+          "p50": 317.878,
+          "p95": 830.062,
+          "max": 1374.725
+        }
+      },
+      "last5s": {
+        "tick_ms": {
+          "n": 551,
+          "p50": 344.5,
+          "p95": 868.579,
+          "max": 1549.787
+        },
+        "tock_ms": {
+          "n": 550,
+          "p50": 326.866,
+          "p95": 895.667,
+          "max": 2078.15
+        }
+      }
+    }
+  },
+  {
+    "key": "200",
+    "start_epoch_approx_from_monotonic": 1791010323.8246098,
+    "tick_end_interval_ms": {
+      "n": 1919,
+      "p50": 1226.618,
+      "p95": 3707.099,
+      "max": 7083.957
+    },
+    "initial_tick_end_delay_ms": {
+      "n": 200,
+      "p50": 1994.824,
+      "p95": 5569.775,
+      "max": 7181.482
+    },
+    "nodes_with_completed_tick": 200,
+    "first_status_after_start_ms": 4671.133,
+    "file_count_without_3_probe_files": 35457,
+    "aggregate_cpu_equivalent_cores_including_shutdown_analysis": 13.54,
+    "phase": {
+      "first5s": {
+        "tick_ms": {
+          "n": 554,
+          "p50": 333.869,
+          "p95": 1211.695,
+          "max": 2285.149
+        },
+        "tock_ms": {
+          "n": 461,
+          "p50": 331.512,
+          "p95": 1447.934,
+          "max": 2690.879
+        }
+      },
+      "last5s": {
+        "tick_ms": {
+          "n": 551,
+          "p50": 539.381,
+          "p95": 2523.396,
+          "max": 4401.375
+        },
+        "tock_ms": {
+          "n": 560,
+          "p50": 510.871,
+          "p95": 2359.955,
+          "max": 3648.427
+        }
+      }
+    }
+  },
+  {
+    "key": "200-empty",
+    "start_epoch_approx_from_monotonic": 1791010390.5148666,
+    "tick_end_interval_ms": {
+      "n": 2395,
+      "p50": 377.42,
+      "p95": 482.991,
+      "max": 579.028
+    },
+    "initial_tick_end_delay_ms": {
+      "n": 121,
+      "p50": 1546.459,
+      "p95": 8810.118,
+      "max": 9960.252
+    },
+    "nodes_with_completed_tick": 121,
+    "first_status_after_start_ms": 10225.048,
+    "file_count_without_3_probe_files": 650,
+    "aggregate_cpu_equivalent_cores_including_shutdown_analysis": 11.23,
+    "phase": {
+      "first5s": {
+        "tick_ms": {
+          "n": 1240,
+          "p50": 46.214,
+          "p95": 73.106,
+          "max": 94.052
+        },
+        "tock_ms": {
+          "n": 1197,
+          "p50": 47.039,
+          "p95": 72.311,
+          "max": 98.733
+        }
+      },
+      "last5s": {
+        "tick_ms": {
+          "n": 1243,
+          "p50": 46.34,
+          "p95": 71.147,
+          "max": 100.228
+        },
+        "tock_ms": {
+          "n": 1235,
+          "p50": 46.798,
+          "p95": 71.462,
+          "max": 90.348
+        }
+      }
+    }
+  },
+  {
+    "key": "200-empty-confirm",
+    "start_epoch_approx_from_monotonic": 1791010460.0696635,
+    "tick_end_interval_ms": {
+      "n": 1778,
+      "p50": 1322.091,
+      "p95": 2611.632,
+      "max": 4398.936
+    },
+    "initial_tick_end_delay_ms": {
+      "n": 200,
+      "p50": 2050.688,
+      "p95": 4237.767,
+      "max": 5060.554
+    },
+    "nodes_with_completed_tick": 200,
+    "first_status_after_start_ms": 4354.342,
+    "file_count_without_3_probe_files": 808,
+    "aggregate_cpu_equivalent_cores_including_shutdown_analysis": 6.91,
+    "phase": {
+      "first5s": {
+        "tick_ms": {
+          "n": 565,
+          "p50": 418.58,
+          "p95": 1262.915,
+          "max": 2040.674
+        },
+        "tock_ms": {
+          "n": 468,
+          "p50": 434.055,
+          "p95": 1222.259,
+          "max": 2087.134
+        }
+      },
+      "last5s": {
+        "tick_ms": {
+          "n": 728,
+          "p50": 424.529,
+          "p95": 1455.812,
+          "max": 2399.291
+        },
+        "tock_ms": {
+          "n": 721,
+          "p50": 430.556,
+          "p95": 1314.952,
+          "max": 2954.191
+        }
+      }
+    }
+  }
+]

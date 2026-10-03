@@ -1,0 +1,64 @@
+{
+  "case": "stale-tock",
+  "root": "/tmp/astra4-crash-stale-tock-kycdr3fi",
+  "fault_injection": "sitecustomize patches selected os call only; SIGSTOP then controller SIGKILL",
+  "at_fault": {
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T14:50:32.225\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/round.json.tmp.1116207": "{\n \"round\": 1,\n \"open\": false,\n \"tick_at\": \"2026-10-03T14:50:32.225\",\n \"tock_at\": \"2026-10-03T14:50:32.241\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T14:50:32.225\", \"tock_at\": \"2026-10-03T14:50:32.241\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": []}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    ".aosd/daemon.lock": "",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T14:50:32.212\", \"ev\": \"start\", \"pid\": 1116204}\n{\"at\": \"2026-10-03T14:50:32.212\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T14:50:32.228\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": 0}\n",
+    ".aosd/status.json": "{\n \"pid\": 1116204,\n \"root\": \"/tmp/astra4-crash-stale-tock-kycdr3fi\",\n \"at\": \"2026-10-03T14:50:32.233\",\n \"stopping\": false,\n \"kill_on_stop\": false,\n \"nodes\": {\n  \".\": {\n   \"round\": 1,\n   \"phase\": \"tock\",\n   \"paused\": false,\n   \"live\": []\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "fault-marker.json": "{\"pid\": 1116207, \"path\": \"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json\", \"args\": [\"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json.tmp.1116207\", \"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json\"]}"
+  },
+  "before_old_tock_resume": {
+    ".aos/round.json": "{\n \"round\": 2,\n \"open\": false,\n \"tick_at\": \"2026-10-03T14:50:32.275\",\n \"tock_at\": \"2026-10-03T14:50:32.290\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/round.json.tmp.1116207": "{\n \"round\": 1,\n \"open\": false,\n \"tick_at\": \"2026-10-03T14:50:32.225\",\n \"tock_at\": \"2026-10-03T14:50:32.241\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T14:50:32.225\", \"tock_at\": \"2026-10-03T14:50:32.241\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": []}\n{\"round\": 2, \"tick_at\": \"2026-10-03T14:50:32.275\", \"tock_at\": \"2026-10-03T14:50:32.290\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": []}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    ".aosd/ctl-done/pause.json": "{\n \"op\": \"pause\",\n \"node\": \".\",\n \"result\": {\n  \"ok\": true,\n  \"msg\": \"pause .\",\n  \"at\": \"2026-10-03T14:50:32.283\"\n }\n}\n",
+    ".aosd/daemon.lock": "",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T14:50:32.212\", \"ev\": \"start\", \"pid\": 1116204}\n{\"at\": \"2026-10-03T14:50:32.212\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T14:50:32.228\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T14:50:32.262\", \"ev\": \"start\", \"pid\": 1116208}\n{\"at\": \"2026-10-03T14:50:32.262\", \"ev\": \"node+\", \"node\": \".\", \"round\": 1}\n{\"at\": \"2026-10-03T14:50:32.278\", \"ev\": \"tick\", \"node\": \".\", \"round\": 2, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T14:50:32.283\", \"ev\": \"ctl\", \"file\": \"pause.json\", \"op\": \"pause\", \"node\": \".\", \"by\": null, \"ok\": true, \"msg\": \"pause .\"}\n{\"at\": \"2026-10-03T14:50:32.293\", \"ev\": \"tock\", \"node\": \".\", \"round\": 2, \"rc\": 0, \"ended\": [], \"early\": true}\n",
+    ".aosd/paused.json": "{\n \"paused\": [\n  \".\"\n ]\n}\n",
+    ".aosd/status.json": "{\n \"pid\": 1116208,\n \"root\": \"/tmp/astra4-crash-stale-tock-kycdr3fi\",\n \"at\": \"2026-10-03T14:50:32.303\",\n \"stopping\": false,\n \"kill_on_stop\": false,\n \"nodes\": {\n  \".\": {\n   \"round\": 2,\n   \"phase\": \"paused\",\n   \"paused\": true,\n   \"live\": []\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "aos7-daemon-1.stderr": "",
+    "fault-marker.json": "{\"pid\": 1116207, \"path\": \"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json\", \"args\": [\"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json.tmp.1116207\", \"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json\"]}"
+  },
+  "after_old_tock_resume": {
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": false,\n \"tick_at\": \"2026-10-03T14:50:32.225\",\n \"tock_at\": \"2026-10-03T14:50:32.241\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T14:50:32.225\", \"tock_at\": \"2026-10-03T14:50:32.241\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": []}\n{\"round\": 2, \"tick_at\": \"2026-10-03T14:50:32.275\", \"tock_at\": \"2026-10-03T14:50:32.290\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": []}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    ".aosd/ctl-done/pause.json": "{\n \"op\": \"pause\",\n \"node\": \".\",\n \"result\": {\n  \"ok\": true,\n  \"msg\": \"pause .\",\n  \"at\": \"2026-10-03T14:50:32.283\"\n }\n}\n",
+    ".aosd/daemon.lock": "",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T14:50:32.212\", \"ev\": \"start\", \"pid\": 1116204}\n{\"at\": \"2026-10-03T14:50:32.212\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T14:50:32.228\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T14:50:32.262\", \"ev\": \"start\", \"pid\": 1116208}\n{\"at\": \"2026-10-03T14:50:32.262\", \"ev\": \"node+\", \"node\": \".\", \"round\": 1}\n{\"at\": \"2026-10-03T14:50:32.278\", \"ev\": \"tick\", \"node\": \".\", \"round\": 2, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T14:50:32.283\", \"ev\": \"ctl\", \"file\": \"pause.json\", \"op\": \"pause\", \"node\": \".\", \"by\": null, \"ok\": true, \"msg\": \"pause .\"}\n{\"at\": \"2026-10-03T14:50:32.293\", \"ev\": \"tock\", \"node\": \".\", \"round\": 2, \"rc\": 0, \"ended\": [], \"early\": true}\n",
+    ".aosd/paused.json": "{\n \"paused\": [\n  \".\"\n ]\n}\n",
+    ".aosd/status.json": "{\n \"pid\": 1116208,\n \"root\": \"/tmp/astra4-crash-stale-tock-kycdr3fi\",\n \"at\": \"2026-10-03T14:50:32.364\",\n \"stopping\": false,\n \"kill_on_stop\": false,\n \"nodes\": {\n  \".\": {\n   \"round\": 2,\n   \"phase\": \"paused\",\n   \"paused\": true,\n   \"live\": []\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "aos7-daemon-1.stderr": "",
+    "fault-marker.json": "{\"pid\": 1116207, \"path\": \"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json\", \"args\": [\"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json.tmp.1116207\", \"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json\"]}"
+  },
+  "final_files": {
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": false,\n \"tick_at\": \"2026-10-03T14:50:32.225\",\n \"tock_at\": \"2026-10-03T14:50:32.241\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T14:50:32.225\", \"tock_at\": \"2026-10-03T14:50:32.241\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": []}\n{\"round\": 2, \"tick_at\": \"2026-10-03T14:50:32.275\", \"tock_at\": \"2026-10-03T14:50:32.290\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": []}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    ".aosd/ctl-done/pause.json": "{\n \"op\": \"pause\",\n \"node\": \".\",\n \"result\": {\n  \"ok\": true,\n  \"msg\": \"pause .\",\n  \"at\": \"2026-10-03T14:50:32.283\"\n }\n}\n",
+    ".aosd/daemon.lock": "",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T14:50:32.212\", \"ev\": \"start\", \"pid\": 1116204}\n{\"at\": \"2026-10-03T14:50:32.212\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T14:50:32.228\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T14:50:32.262\", \"ev\": \"start\", \"pid\": 1116208}\n{\"at\": \"2026-10-03T14:50:32.262\", \"ev\": \"node+\", \"node\": \".\", \"round\": 1}\n{\"at\": \"2026-10-03T14:50:32.278\", \"ev\": \"tick\", \"node\": \".\", \"round\": 2, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T14:50:32.283\", \"ev\": \"ctl\", \"file\": \"pause.json\", \"op\": \"pause\", \"node\": \".\", \"by\": null, \"ok\": true, \"msg\": \"pause .\"}\n{\"at\": \"2026-10-03T14:50:32.293\", \"ev\": \"tock\", \"node\": \".\", \"round\": 2, \"rc\": 0, \"ended\": [], \"early\": true}\n{\"at\": \"2026-10-03T14:50:32.384\", \"ev\": \"stopping\", \"kill\": true}\n{\"at\": \"2026-10-03T14:50:32.384\", \"ev\": \"stop\"}\n",
+    ".aosd/paused.json": "{\n \"paused\": [\n  \".\"\n ]\n}\n",
+    ".aosd/status.json": "{\n \"pid\": 1116208,\n \"root\": \"/tmp/astra4-crash-stale-tock-kycdr3fi\",\n \"at\": \"2026-10-03T14:50:32.384\",\n \"stopping\": true,\n \"kill_on_stop\": true,\n \"nodes\": {\n  \".\": {\n   \"round\": 2,\n   \"phase\": \"stopped\",\n   \"paused\": true,\n   \"live\": []\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "aos7-daemon-1.stderr": "",
+    "fault-marker.json": "{\"pid\": 1116207, \"path\": \"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json\", \"args\": [\"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json.tmp.1116207\", \"/tmp/astra4-crash-stale-tock-kycdr3fi/.aos/round.json\"]}"
+  },
+  "cleanup": {
+    "remaining_children": [],
+    "root_exists": false
+  }
+}

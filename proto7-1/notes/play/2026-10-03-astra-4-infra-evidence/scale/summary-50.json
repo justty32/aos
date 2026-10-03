@@ -1,0 +1,66 @@
+{
+  "aggregate_cpu_s_including_shutdown": 227.025,
+  "daemon_waited_tick_tock_cpu_s": 91.41,
+  "status_update_gap_ms": {
+    "n": 118,
+    "min": 25.8,
+    "p50": 103.069,
+    "p95": 266.13,
+    "max": 331.953
+  },
+  "ctl_receipt_ms": {
+    "n": 7,
+    "min": 13.45,
+    "p50": 82.939,
+    "p95": 164.667,
+    "max": 164.667
+  },
+  "timelines": 50,
+  "sample_wall_s": 15.032,
+  "daemon_rc": 0,
+  "tick_ms": {
+    "n": 1666,
+    "min": 26.938,
+    "p50": 212.183,
+    "p95": 321.981,
+    "max": 701.139
+  },
+  "tock_ms": {
+    "n": 1641,
+    "min": 37.214,
+    "p50": 202.24,
+    "p95": 322.125,
+    "max": 475.216
+  },
+  "actual_interval_ms": {
+    "n": 1616,
+    "min": 177.48,
+    "p50": 442.144,
+    "p95": 598.277,
+    "max": 881.325
+  },
+  "tock_start_minus_planned_deadline_ms": {
+    "n": 1641,
+    "min": 0.96,
+    "p50": 121.561,
+    "p95": 240.791,
+    "max": 601.223
+  },
+  "completed_ticks_per_timeline": {
+    "n": 50,
+    "min": 31,
+    "p50": 33.0,
+    "p95": 35,
+    "max": 36
+  },
+  "daemon_cpu_pct_one_core": 21.97,
+  "daemon_rss_peak_kib": 26992.0,
+  "daemon_fd_peak": 107,
+  "live_processes_sample_peak": 92,
+  "file_count_final": 26128,
+  "file_bytes_final": 3258280,
+  "task_dirs_final": 5073,
+  "nonzero_action_rc": 0,
+  "exceptions": [],
+  "shutdown_and_analysis_wall_s": 0.921
+}

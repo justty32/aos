@@ -1,0 +1,394 @@
+{
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "short",
+   "start": 22790.010744527,
+   "end": 22790.026562585,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "empty",
+   "start": 22790.009937277,
+   "end": 22790.02672552,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "keep",
+   "start": 22790.010302189,
+   "end": 22790.02721762,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "empty",
+   "start": 22790.026825897,
+   "end": 22790.042711682,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "short",
+   "start": 22790.066961698,
+   "end": 22790.082837514,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "keep",
+   "start": 22790.510227605,
+   "end": 22790.52694761,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "empty",
+   "start": 22790.509943734,
+   "end": 22790.527069568,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "short",
+   "start": 22790.5107917,
+   "end": 22790.527689868,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "keep",
+   "start": 22790.527135992,
+   "end": 22790.542978557,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "empty",
+   "start": 22790.527381702,
+   "end": 22790.543328781,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "keep",
+   "start": 22790.543082511,
+   "end": 22790.559373794,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "short",
+   "start": 22790.567993572,
+   "end": 22790.584169841,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "empty",
+   "start": 22791.010007919,
+   "end": 22791.026633598,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "short",
+   "start": 22791.010850365,
+   "end": 22791.027535424,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "keep",
+   "start": 22791.027189477,
+   "end": 22791.042831086,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "empty",
+   "start": 22791.02672566,
+   "end": 22791.04302609,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "keep",
+   "start": 22791.042923949,
+   "end": 22791.058674742,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "short",
+   "start": 22791.067792301,
+   "end": 22791.084493681,
+   "round": 3,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T14:49:41.798",
+   "ev": "start",
+   "pid": 1112307
+  },
+  {
+   "at": "2026-10-03T14:49:41.798",
+   "ev": "node+",
+   "node": "empty",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.799",
+   "ev": "node+",
+   "node": "keep",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.799",
+   "ev": "node+",
+   "node": "short",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.815",
+   "ev": "tick",
+   "node": "short",
+   "round": 1,
+   "started": [
+    "short-r1"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.815",
+   "ev": "tick",
+   "node": "empty",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.816",
+   "ev": "tick",
+   "node": "keep",
+   "round": 1,
+   "started": [
+    "keep-r1"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:41.831",
+   "ev": "tock",
+   "node": "empty",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:41.871",
+   "ev": "tock",
+   "node": "short",
+   "round": 1,
+   "rc": 0,
+   "ended": [
+    {
+     "tid": "short-r1",
+     "code": 0
+    }
+   ],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:42.316",
+   "ev": "tock",
+   "node": "keep",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T14:49:42.316",
+   "ev": "tick",
+   "node": "empty",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:42.316",
+   "ev": "tick",
+   "node": "short",
+   "round": 2,
+   "started": [
+    "short-r2"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:42.332",
+   "ev": "tick",
+   "node": "keep",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:42.332",
+   "ev": "tock",
+   "node": "empty",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:42.348",
+   "ev": "tock",
+   "node": "keep",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:42.373",
+   "ev": "tock",
+   "node": "short",
+   "round": 2,
+   "rc": 0,
+   "ended": [
+    {
+     "tid": "short-r2",
+     "code": 0
+    }
+   ],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:42.815",
+   "ev": "tick",
+   "node": "empty",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:42.816",
+   "ev": "tick",
+   "node": "short",
+   "round": 3,
+   "started": [
+    "short-r3"
+   ],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:42.831",
+   "ev": "tick",
+   "node": "keep",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T14:49:42.832",
+   "ev": "tock",
+   "node": "empty",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:42.847",
+   "ev": "tock",
+   "node": "keep",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:42.873",
+   "ev": "tock",
+   "node": "short",
+   "round": 3,
+   "rc": 0,
+   "ended": [
+    {
+     "tid": "short-r3",
+     "code": 0
+    }
+   ],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T14:49:42.992",
+   "ev": "kill",
+   "node": "keep",
+   "tid": "keep-r1",
+   "ok": true,
+   "msg": "killed"
+  },
+  {
+   "at": "2026-10-03T14:49:42.996",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T14:49:42.997",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 1112307,
+  "root": "/tmp/astra4-time-early-qul20ciy",
+  "at": "2026-10-03T14:49:42.996",
+  "stopping": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "empty": {
+    "round": 3,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "keep": {
+    "round": 3,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   },
+   "short": {
+    "round": 3,
+    "phase": "stopped",
+    "paused": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

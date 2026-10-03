@@ -1,0 +1,437 @@
+{
+  "birtharray": {
+    "recorded_tick_count": 4,
+    "completed_round_count": 4,
+    "tick_completion_intervals_ms": [
+      243.99995803833008,
+      201.00021362304688,
+      198.99988174438477
+    ],
+    "median_interval_ms": 201.00021362304688,
+    "status": {
+      "round": 4,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+        "birtharray-r1"
+      ],
+      "last_error": {
+        "prog": "tick",
+        "rc": 1,
+        "round": 4,
+        "at": "2026-10-03T14:49:45.408",
+        "err": "   names = live_names(node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra4/proto7-1/lib/aos7_tick.py\", line 26, in live_names\n    names.add(b.get(\"name\"))\n              ^^^^^\nAttributeError: 'list' object has no attribute 'get'"
+      }
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null
+  },
+  "birthsyntax": {
+    "recorded_tick_count": 3,
+    "completed_round_count": 2,
+    "tick_completion_intervals_ms": [
+      234.9998950958252,
+      233.99996757507324
+    ],
+    "median_interval_ms": 234.49993133544922,
+    "status": {
+      "round": 3,
+      "phase": "tock",
+      "paused": false,
+      "live": [
+        "birthsyntax-r1",
+        "birthsyntax-r2",
+        "birthsyntax-r3"
+      ]
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null
+  },
+  "chdir": {
+    "recorded_tick_count": 4,
+    "completed_round_count": 4,
+    "tick_completion_intervals_ms": [
+      233.99996757507324,
+      200.00004768371582,
+      200.00004768371582
+    ],
+    "median_interval_ms": 200.00004768371582,
+    "status": {
+      "round": 4,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null
+  },
+  "cpu": {
+    "recorded_tick_count": 7,
+    "completed_round_count": 7,
+    "tick_completion_intervals_ms": [
+      234.9998950958252,
+      200.00004768371582,
+      200.00004768371582,
+      199.99980926513672,
+      200.00004768371582,
+      200.99997520446777
+    ],
+    "median_interval_ms": 200.00004768371582,
+    "status": {
+      "round": 7,
+      "phase": "tick",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null
+  },
+  "delete": {
+    "recorded_tick_count": 4,
+    "completed_round_count": 4,
+    "tick_completion_intervals_ms": [
+      236.00006103515625,
+      200.99997520446777,
+      198.99988174438477
+    ],
+    "median_interval_ms": 200.99997520446777,
+    "status": {
+      "round": 4,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [
+      1112395,
+      1112396
+    ],
+    "kill_control_latency_ms": null
+  },
+  "deletekeep": {
+    "recorded_tick_count": 3,
+    "completed_round_count": 3,
+    "tick_completion_intervals_ms": [
+      243.99995803833008,
+      218.99986267089844
+    ],
+    "median_interval_ms": 231.49991035461426,
+    "status": {
+      "round": 3,
+      "phase": "tock",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [
+      1116012,
+      1116013,
+      1116016,
+      1116017,
+      1116025,
+      1116030
+    ],
+    "kill_control_latency_ms": null
+  },
+  "fork": {
+    "recorded_tick_count": 5,
+    "completed_round_count": 4,
+    "tick_completion_intervals_ms": [
+      200.00004768371582,
+      199.99980926513672,
+      200.99997520446777,
+      200.00004768371582
+    ],
+    "median_interval_ms": 200.00004768371582,
+    "status": {
+      "round": 4,
+      "phase": "tick",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [
+      1110682
+    ],
+    "kill_control_latency_ms": 121.08744400029536
+  },
+  "forksetsid": {
+    "recorded_tick_count": 5,
+    "completed_round_count": 4,
+    "tick_completion_intervals_ms": [
+      200.00004768371582,
+      200.99997520446777,
+      200.00004768371582,
+      198.99988174438477
+    ],
+    "median_interval_ms": 200.00004768371582,
+    "status": {
+      "round": 4,
+      "phase": "tick",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [
+      1110799
+    ],
+    "kill_control_latency_ms": 121.06132400003844
+  },
+  "ignore": {
+    "recorded_tick_count": 4,
+    "completed_round_count": 4,
+    "tick_completion_intervals_ms": [
+      233.99996757507324,
+      202.00014114379883,
+      200.00004768371582
+    ],
+    "median_interval_ms": 202.00014114379883,
+    "status": {
+      "round": 4,
+      "phase": "tick",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": 1230.140735002351
+  },
+  "output": {
+    "recorded_tick_count": 8,
+    "completed_round_count": 8,
+    "tick_completion_intervals_ms": [
+      200.99997520446777,
+      200.00004768371582,
+      198.99988174438477,
+      200.99997520446777,
+      199.00012016296387,
+      200.99997520446777,
+      200.00004768371582
+    ],
+    "median_interval_ms": 200.00004768371582,
+    "status": {
+      "round": 8,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null
+  },
+  "short": {
+    "recorded_tick_count": 10,
+    "completed_round_count": 9,
+    "tick_completion_intervals_ms": [
+      103.00016403198242,
+      103.99985313415527,
+      95.00002861022949,
+      104.00009155273438,
+      77.99983024597168,
+      98.9999771118164,
+      100.00014305114746,
+      99.99990463256836,
+      100.00014305114746
+    ],
+    "median_interval_ms": 100.00014305114746,
+    "status": {
+      "round": 9,
+      "phase": "tick",
+      "paused": false,
+      "live": []
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null,
+    "work_round_tick_start_intervals_ms": [
+      98.9999771118164,
+      101.00007057189941,
+      101.99999809265137,
+      100.99983215332031
+    ],
+    "tick_body_to_result_ms": [
+      23.999929428100586,
+      28.0001163482666,
+      30.99989891052246,
+      23.999929428100586,
+      27.00018882751465
+    ],
+    "tick_body_to_tock_body_ms": [
+      79.99992370605469,
+      82.0000171661377,
+      85.00003814697266,
+      78.99999618530273,
+      82.0000171661377
+    ],
+    "ended_codes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "tockdir": {
+    "recorded_tick_count": 4,
+    "completed_round_count": 0,
+    "tick_completion_intervals_ms": [
+      243.99995803833008,
+      200.00004768371582,
+      200.00004768371582
+    ],
+    "median_interval_ms": 200.00004768371582,
+    "status": {
+      "round": 4,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+        "tockdir-r1"
+      ],
+      "last_error": {
+        "prog": "tock",
+        "rc": 1,
+        "round": 4,
+        "at": "2026-10-03T14:49:48.149",
+        "err": "to7-1/lib/aos7_fs.py\", line 33, in write_json\n    os.replace(tmp, path)\n    ~~~~~~~~~~^^^^^^^^^^^\nIsADirectoryError: [Errno 21] Is a directory: '/tmp/astra4-tasks-tockdir-bpz8aa94/n/.aos/tasks/tockdir-r1/tock.json.tmp.1113835' -> '/tmp/astra4-tasks-tockdir-bpz8aa94/n/.aos/tasks/tockdir-r1/tock.json'"
+      }
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null
+  },
+  "tockdirpeer": {
+    "recorded_tick_count": 4,
+    "completed_round_count": 0,
+    "tick_completion_intervals_ms": [
+      243.99995803833008,
+      200.00004768371582,
+      203.00006866455078
+    ],
+    "median_interval_ms": 203.00006866455078,
+    "status": {
+      "round": 4,
+      "phase": "tock",
+      "paused": false,
+      "live": [
+        "tockdirpeer-r1",
+        "zzhealthy-r1"
+      ],
+      "last_error": {
+        "prog": "tock",
+        "rc": 1,
+        "round": 3,
+        "at": "2026-10-03T14:51:13.694",
+        "err": "s.py\", line 33, in write_json\n    os.replace(tmp, path)\n    ~~~~~~~~~~^^^^^^^^^^^\nIsADirectoryError: [Errno 21] Is a directory: '/tmp/astra4-tasks-tockdirpeer-6mis_71c/n/.aos/tasks/tockdirpeer-r1/tock.json.tmp.1117000' -> '/tmp/astra4-tasks-tockdirpeer-6mis_71c/n/.aos/tasks/tockdirpeer-r1/tock.json'"
+      }
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null
+  },
+  "tocksyntax": {
+    "recorded_tick_count": 4,
+    "completed_round_count": 4,
+    "tick_completion_intervals_ms": [
+      234.9998950958252,
+      200.00004768371582,
+      200.00004768371582
+    ],
+    "median_interval_ms": 200.00004768371582,
+    "status": {
+      "round": 4,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+        "tocksyntax-r1"
+      ]
+    },
+    "survivors_after_stop": [],
+    "kill_control_latency_ms": null
+  }
+}

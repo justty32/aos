@@ -1,0 +1,6 @@
+{
+ "A": "tasks/fork.json before_stop",
+ "B": "tasks/delete.json before_stop",
+ "C": "tasks/birtharray.json before_stop",
+ "method": "Exact JSON snapshot extraction; no /proc liveness fields from harness included. Snapshot gathering is sequential, not an atomic multi-file snapshot."
+}
