@@ -1,0 +1,21 @@
+{
+ "pid": 750834,
+ "root": "/tmp/astra-controls-5xm1b5i4/task-array-recovery",
+ "at": "2026-10-03T12:38:59.462",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 9,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  },
+  "healthy": {
+   "round": 9,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

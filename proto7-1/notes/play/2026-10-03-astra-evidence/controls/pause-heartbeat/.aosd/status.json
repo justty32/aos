@@ -1,0 +1,15 @@
+{
+ "pid": 751074,
+ "root": "/tmp/astra-controls-utg2qd39/pause-heartbeat",
+ "at": "2026-10-03T12:39:43.163",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 2,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

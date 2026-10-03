@@ -1,0 +1,89 @@
+{
+  ".aosd/status.json": {
+    "pid": 749971,
+    "root": "/tmp/astra-new-space-ma6hepv7",
+    "at": "2026-10-03T12:38:28.843",
+    "stopping": true,
+    "kill_on_stop": true,
+    "nodes": {
+      "lab": {
+        "round": 45,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "lab/agents/ada": {
+        "round": 53,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "lab/agents/ben": {
+        "round": 47,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "ledger": {
+        "round": 50,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      }
+    }
+  },
+  "lab/.aos/tasks/kernel-r1/birth.json": {
+    "tid": "kernel-r1",
+    "name": "kernel",
+    "node": "lab",
+    "round": 1,
+    "dirs": [
+      "/tmp/astra-new-space-ma6hepv7/lab"
+    ],
+    "at": "2026-10-03T12:38:20.633",
+    "restart_of": null,
+    "argv": [
+      "aos7-kernel"
+    ]
+  },
+  "lab/agents/ada/.aos/tasks/agent-r1/ctl-done.json": {
+    "op": "restart",
+    "by": "reader",
+    "why": "test file-only control",
+    "result": {
+      "ok": true,
+      "msg": "killed; spawn written",
+      "at": "2026-10-03T12:38:24.898"
+    }
+  },
+  "lab/agents/ada/.aos/tasks/agent-r27/birth.json": {
+    "tid": "agent-r27",
+    "name": "agent",
+    "node": "lab/agents/ada",
+    "round": 27,
+    "dirs": [
+      "/tmp/astra-new-space-ma6hepv7/lab/agents/ada"
+    ],
+    "at": "2026-10-03T12:38:24.898",
+    "restart_of": "agent-r1",
+    "argv": [
+      "aos7-agent"
+    ]
+  },
+  "ledger/.aos/tasks/census-r50/birth.json": {
+    "tid": "census-r50",
+    "name": "census",
+    "node": "ledger",
+    "round": 50,
+    "dirs": [
+      "/tmp/astra-new-space-ma6hepv7/ledger",
+      "/tmp/astra-new-space-ma6hepv7/lab/agents"
+    ],
+    "at": "2026-10-03T12:38:28.565",
+    "restart_of": null,
+    "argv": [
+      "python3",
+      "census.py"
+    ]
+  }
+}

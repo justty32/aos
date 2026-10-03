@@ -1,0 +1,108 @@
+{"at": "2026-10-03T12:38:21.505", "ev": "start", "pid": 750044}
+{"at": "2026-10-03T12:38:21.506", "ev": "node+", "node": "alpha", "round": 0}
+{"at": "2026-10-03T12:38:21.506", "ev": "node+", "node": "beta", "round": 0}
+{"at": "2026-10-03T12:38:21.520", "ev": "tick", "node": "alpha", "round": 1, "started": ["writer-r1"], "rc": 0}
+{"at": "2026-10-03T12:38:21.521", "ev": "tick", "node": "beta", "round": 1, "started": ["writer-r1"], "rc": 0}
+{"at": "2026-10-03T12:38:21.634", "ev": "tock", "node": "alpha", "round": 1, "rc": 0, "ended": [{"tid": "writer-r1", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:21.635", "ev": "tock", "node": "beta", "round": 1, "rc": 0, "ended": [{"tid": "writer-r1", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:21.648", "ev": "tick", "node": "alpha", "round": 2, "started": ["writer-r2"], "rc": 0}
+{"at": "2026-10-03T12:38:21.649", "ev": "tick", "node": "beta", "round": 2, "started": ["writer-r2"], "rc": 0}
+{"at": "2026-10-03T12:38:21.763", "ev": "tock", "node": "alpha", "round": 2, "rc": 0, "ended": [{"tid": "writer-r2", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:21.763", "ev": "tock", "node": "beta", "round": 2, "rc": 0, "ended": [{"tid": "writer-r2", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:21.777", "ev": "tick", "node": "alpha", "round": 3, "started": ["writer-r3"], "rc": 0}
+{"at": "2026-10-03T12:38:21.777", "ev": "tick", "node": "beta", "round": 3, "started": ["writer-r3"], "rc": 0}
+{"at": "2026-10-03T12:38:21.891", "ev": "tock", "node": "alpha", "round": 3, "rc": 0, "ended": [{"tid": "writer-r3", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:21.892", "ev": "tock", "node": "beta", "round": 3, "rc": 0, "ended": [{"tid": "writer-r3", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:21.905", "ev": "tick", "node": "alpha", "round": 4, "started": ["writer-r4"], "rc": 0}
+{"at": "2026-10-03T12:38:21.907", "ev": "tick", "node": "beta", "round": 4, "started": ["writer-r4"], "rc": 0}
+{"at": "2026-10-03T12:38:22.020", "ev": "tock", "node": "alpha", "round": 4, "rc": 0, "ended": [{"tid": "writer-r4", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.021", "ev": "tock", "node": "beta", "round": 4, "rc": 0, "ended": [{"tid": "writer-r4", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.034", "ev": "tick", "node": "alpha", "round": 5, "started": ["writer-r5"], "rc": 0}
+{"at": "2026-10-03T12:38:22.035", "ev": "tick", "node": "beta", "round": 5, "started": ["writer-r5"], "rc": 0}
+{"at": "2026-10-03T12:38:22.148", "ev": "tock", "node": "alpha", "round": 5, "rc": 0, "ended": [{"tid": "writer-r5", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.149", "ev": "tock", "node": "beta", "round": 5, "rc": 0, "ended": [{"tid": "writer-r5", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.163", "ev": "tick", "node": "alpha", "round": 6, "started": ["writer-r6"], "rc": 0}
+{"at": "2026-10-03T12:38:22.163", "ev": "tick", "node": "beta", "round": 6, "started": ["writer-r6"], "rc": 0}
+{"at": "2026-10-03T12:38:22.277", "ev": "tock", "node": "beta", "round": 6, "rc": 0, "ended": [{"tid": "writer-r6", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.278", "ev": "tock", "node": "alpha", "round": 6, "rc": 0, "ended": [{"tid": "writer-r6", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.291", "ev": "tick", "node": "beta", "round": 7, "started": ["writer-r7"], "rc": 0}
+{"at": "2026-10-03T12:38:22.292", "ev": "tick", "node": "alpha", "round": 7, "started": ["writer-r7"], "rc": 0}
+{"at": "2026-10-03T12:38:22.406", "ev": "tock", "node": "beta", "round": 7, "rc": 0, "ended": [{"tid": "writer-r7", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.407", "ev": "tock", "node": "alpha", "round": 7, "rc": 0, "ended": [{"tid": "writer-r7", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.420", "ev": "tick", "node": "beta", "round": 8, "started": ["writer-r8"], "rc": 0}
+{"at": "2026-10-03T12:38:22.421", "ev": "tick", "node": "alpha", "round": 8, "started": ["writer-r8"], "rc": 0}
+{"at": "2026-10-03T12:38:22.535", "ev": "tock", "node": "beta", "round": 8, "rc": 0, "ended": [{"tid": "writer-r8", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.535", "ev": "tock", "node": "alpha", "round": 8, "rc": 0, "ended": [{"tid": "writer-r8", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.549", "ev": "tick", "node": "beta", "round": 9, "started": ["writer-r9"], "rc": 0}
+{"at": "2026-10-03T12:38:22.549", "ev": "tick", "node": "alpha", "round": 9, "started": ["writer-r9"], "rc": 0}
+{"at": "2026-10-03T12:38:22.663", "ev": "tock", "node": "beta", "round": 9, "rc": 0, "ended": [{"tid": "writer-r9", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.664", "ev": "tock", "node": "alpha", "round": 9, "rc": 0, "ended": [{"tid": "writer-r9", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.677", "ev": "tick", "node": "beta", "round": 10, "started": ["writer-r10"], "rc": 0}
+{"at": "2026-10-03T12:38:22.677", "ev": "tick", "node": "alpha", "round": 10, "started": ["writer-r10"], "rc": 0}
+{"at": "2026-10-03T12:38:22.792", "ev": "tock", "node": "beta", "round": 10, "rc": 0, "ended": [{"tid": "writer-r10", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.792", "ev": "tock", "node": "alpha", "round": 10, "rc": 0, "ended": [{"tid": "writer-r10", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.805", "ev": "tick", "node": "beta", "round": 11, "started": ["writer-r11"], "rc": 0}
+{"at": "2026-10-03T12:38:22.806", "ev": "tick", "node": "alpha", "round": 11, "started": ["writer-r11"], "rc": 0}
+{"at": "2026-10-03T12:38:22.920", "ev": "tock", "node": "beta", "round": 11, "rc": 0, "ended": [{"tid": "writer-r11", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.920", "ev": "tock", "node": "alpha", "round": 11, "rc": 0, "ended": [{"tid": "writer-r11", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:22.934", "ev": "tick", "node": "beta", "round": 12, "started": ["writer-r12"], "rc": 0}
+{"at": "2026-10-03T12:38:22.934", "ev": "tick", "node": "alpha", "round": 12, "started": ["writer-r12"], "rc": 0}
+{"at": "2026-10-03T12:38:23.048", "ev": "tock", "node": "beta", "round": 12, "rc": 0, "ended": [{"tid": "writer-r12", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.048", "ev": "tock", "node": "alpha", "round": 12, "rc": 0, "ended": [{"tid": "writer-r12", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.062", "ev": "tick", "node": "beta", "round": 13, "started": ["writer-r13"], "rc": 0}
+{"at": "2026-10-03T12:38:23.062", "ev": "tick", "node": "alpha", "round": 13, "started": ["writer-r13"], "rc": 0}
+{"at": "2026-10-03T12:38:23.176", "ev": "tock", "node": "beta", "round": 13, "rc": 0, "ended": [{"tid": "writer-r13", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.177", "ev": "tock", "node": "alpha", "round": 13, "rc": 0, "ended": [{"tid": "writer-r13", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.191", "ev": "tick", "node": "beta", "round": 14, "started": ["writer-r14"], "rc": 0}
+{"at": "2026-10-03T12:38:23.191", "ev": "tick", "node": "alpha", "round": 14, "started": ["writer-r14"], "rc": 0}
+{"at": "2026-10-03T12:38:23.305", "ev": "tock", "node": "beta", "round": 14, "rc": 0, "ended": [{"tid": "writer-r14", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.306", "ev": "tock", "node": "alpha", "round": 14, "rc": 0, "ended": [{"tid": "writer-r14", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.320", "ev": "tick", "node": "beta", "round": 15, "started": ["writer-r15"], "rc": 0}
+{"at": "2026-10-03T12:38:23.320", "ev": "tick", "node": "alpha", "round": 15, "started": ["writer-r15"], "rc": 0}
+{"at": "2026-10-03T12:38:23.434", "ev": "tock", "node": "beta", "round": 15, "rc": 0, "ended": [{"tid": "writer-r15", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.435", "ev": "tock", "node": "alpha", "round": 15, "rc": 0, "ended": [{"tid": "writer-r15", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.448", "ev": "tick", "node": "beta", "round": 16, "started": ["writer-r16"], "rc": 0}
+{"at": "2026-10-03T12:38:23.449", "ev": "tick", "node": "alpha", "round": 16, "started": ["writer-r16"], "rc": 0}
+{"at": "2026-10-03T12:38:23.563", "ev": "tock", "node": "beta", "round": 16, "rc": 0, "ended": [{"tid": "writer-r16", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.564", "ev": "tock", "node": "alpha", "round": 16, "rc": 0, "ended": [{"tid": "writer-r16", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.577", "ev": "tick", "node": "beta", "round": 17, "started": ["writer-r17"], "rc": 0}
+{"at": "2026-10-03T12:38:23.578", "ev": "tick", "node": "alpha", "round": 17, "started": ["writer-r17"], "rc": 0}
+{"at": "2026-10-03T12:38:23.692", "ev": "tock", "node": "beta", "round": 17, "rc": 0, "ended": [{"tid": "writer-r17", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.692", "ev": "tock", "node": "alpha", "round": 17, "rc": 0, "ended": [{"tid": "writer-r17", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.706", "ev": "tick", "node": "beta", "round": 18, "started": ["writer-r18"], "rc": 0}
+{"at": "2026-10-03T12:38:23.706", "ev": "tick", "node": "alpha", "round": 18, "started": ["writer-r18"], "rc": 0}
+{"at": "2026-10-03T12:38:23.821", "ev": "tock", "node": "beta", "round": 18, "rc": 0, "ended": [{"tid": "writer-r18", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.821", "ev": "tock", "node": "alpha", "round": 18, "rc": 0, "ended": [{"tid": "writer-r18", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.835", "ev": "tick", "node": "beta", "round": 19, "started": ["writer-r19"], "rc": 0}
+{"at": "2026-10-03T12:38:23.836", "ev": "tick", "node": "alpha", "round": 19, "started": ["writer-r19"], "rc": 0}
+{"at": "2026-10-03T12:38:23.949", "ev": "tock", "node": "beta", "round": 19, "rc": 0, "ended": [{"tid": "writer-r19", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.950", "ev": "tock", "node": "alpha", "round": 19, "rc": 0, "ended": [{"tid": "writer-r19", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:23.963", "ev": "tick", "node": "beta", "round": 20, "started": ["writer-r20"], "rc": 0}
+{"at": "2026-10-03T12:38:23.964", "ev": "tick", "node": "alpha", "round": 20, "started": ["writer-r20"], "rc": 0}
+{"at": "2026-10-03T12:38:24.078", "ev": "tock", "node": "beta", "round": 20, "rc": 0, "ended": [{"tid": "writer-r20", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.078", "ev": "tock", "node": "alpha", "round": 20, "rc": 0, "ended": [{"tid": "writer-r20", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.092", "ev": "tick", "node": "beta", "round": 21, "started": ["writer-r21"], "rc": 0}
+{"at": "2026-10-03T12:38:24.092", "ev": "tick", "node": "alpha", "round": 21, "started": ["writer-r21"], "rc": 0}
+{"at": "2026-10-03T12:38:24.207", "ev": "tock", "node": "alpha", "round": 21, "rc": 0, "ended": [{"tid": "writer-r21", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.207", "ev": "tock", "node": "beta", "round": 21, "rc": 0, "ended": [{"tid": "writer-r21", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.221", "ev": "tick", "node": "alpha", "round": 22, "started": ["writer-r22"], "rc": 0}
+{"at": "2026-10-03T12:38:24.221", "ev": "tick", "node": "beta", "round": 22, "started": ["writer-r22"], "rc": 0}
+{"at": "2026-10-03T12:38:24.336", "ev": "tock", "node": "alpha", "round": 22, "rc": 0, "ended": [{"tid": "writer-r22", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.336", "ev": "tock", "node": "beta", "round": 22, "rc": 0, "ended": [{"tid": "writer-r22", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.349", "ev": "tick", "node": "alpha", "round": 23, "started": ["writer-r23"], "rc": 0}
+{"at": "2026-10-03T12:38:24.350", "ev": "tick", "node": "beta", "round": 23, "started": ["writer-r23"], "rc": 0}
+{"at": "2026-10-03T12:38:24.463", "ev": "tock", "node": "alpha", "round": 23, "rc": 0, "ended": [{"tid": "writer-r23", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.465", "ev": "tock", "node": "beta", "round": 23, "rc": 0, "ended": [{"tid": "writer-r23", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.477", "ev": "tick", "node": "alpha", "round": 24, "started": ["writer-r24"], "rc": 0}
+{"at": "2026-10-03T12:38:24.480", "ev": "tick", "node": "beta", "round": 24, "started": ["writer-r24"], "rc": 0}
+{"at": "2026-10-03T12:38:24.592", "ev": "tock", "node": "alpha", "round": 24, "rc": 0, "ended": [{"tid": "writer-r24", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.595", "ev": "tock", "node": "beta", "round": 24, "rc": 0, "ended": [{"tid": "writer-r24", "code": 0}], "early": false}
+{"at": "2026-10-03T12:38:24.606", "ev": "tick", "node": "alpha", "round": 25, "started": ["writer-r25"], "rc": 0}
+{"at": "2026-10-03T12:38:24.609", "ev": "tick", "node": "beta", "round": 25, "started": ["writer-r25"], "rc": 0}
+{"at": "2026-10-03T12:38:24.656", "ev": "ctl", "file": "stop-test.json", "op": "stop", "node": null, "by": "overlap-test", "ok": true, "msg": "stopping with kill"}
+{"at": "2026-10-03T12:38:24.672", "ev": "kill", "node": "alpha", "tid": "writer-r25", "ok": true, "msg": "killed"}
+{"at": "2026-10-03T12:38:24.673", "ev": "kill", "node": "beta", "tid": "writer-r25", "ok": true, "msg": "killed"}
+{"at": "2026-10-03T12:38:24.677", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T12:38:24.686", "ev": "tock", "node": "alpha", "round": 25, "rc": 0, "ended": [{"tid": "writer-r25", "code": -15}], "early": true}
+{"at": "2026-10-03T12:38:24.687", "ev": "tock", "node": "beta", "round": 25, "rc": 0, "ended": [{"tid": "writer-r25", "code": -15}], "early": true}
+{"at": "2026-10-03T12:38:24.698", "ev": "stop"}

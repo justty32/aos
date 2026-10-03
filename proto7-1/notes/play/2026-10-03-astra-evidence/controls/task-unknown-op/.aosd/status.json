@@ -1,0 +1,15 @@
+{
+ "pid": 749830,
+ "root": "/tmp/astra-controls-4neh4qpj/task-unknown-op",
+ "at": "2026-10-03T12:37:54.133",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 6,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

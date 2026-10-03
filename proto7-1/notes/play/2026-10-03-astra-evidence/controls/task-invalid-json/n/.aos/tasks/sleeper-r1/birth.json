@@ -1,0 +1,16 @@
+{
+ "tid": "sleeper-r1",
+ "name": "sleeper",
+ "node": "n",
+ "round": 1,
+ "dirs": [
+  "/tmp/astra-controls-4neh4qpj/task-invalid-json/n"
+ ],
+ "at": "2026-10-03T12:37:51.314",
+ "restart_of": null,
+ "argv": [
+  "/usr/bin/python3",
+  "-c",
+  "import time; time.sleep(60)"
+ ]
+}

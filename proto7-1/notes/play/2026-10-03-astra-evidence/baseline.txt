@@ -1,0 +1,6 @@
+執行位置：使用者指定 workspace 根
+README 指令：python3 proto7-1/demo/play.py
+結果：exit 0；末尾 10 項檢查全部 [OK]；team 54、amy 74、bob 57 回合；停下後沒有殘留程序。
+README 指令：python3 -m unittest discover -s proto7-1/tests
+結果：Ran 34 tests in 9.862s / OK，exit 0。
+此檔是工具執行結果摘要，非逐字完整 stdout。

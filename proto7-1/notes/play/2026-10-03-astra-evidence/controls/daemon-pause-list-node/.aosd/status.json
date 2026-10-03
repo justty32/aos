@@ -1,0 +1,15 @@
+{
+ "pid": 750817,
+ "root": "/tmp/astra-controls-5xm1b5i4/daemon-pause-list-node",
+ "at": "2026-10-03T12:38:57.977",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 3,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

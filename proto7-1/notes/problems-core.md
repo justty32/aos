@@ -50,6 +50,7 @@
   - 實驗：對子 daemon `kill -9`，它的任務照活（`/proc/<pid>` 還在）。父那邊的「後代群組」走訪也找不到它們。
   - SIGTERM 路徑能用（`test_child_daemon_as_task` 通過），但子 daemon 要在**父的 1 秒寬限內**收完自己所有任務並 tock；任務多、或任務不理 SIGTERM（每個也等 1 秒，而且是一個一個收），父就會 SIGKILL 子 daemon → 剩下的變孤兒。
 - 先這樣：SIGTERM＝stop+kill；SIGKILL 的孤兒默認正常（S-06 出事歸 daemon）。之後要根治可選 cgroup（整棵一起殺）或讓 daemon 當 subreaper（`PR_SET_CHILD_SUBREAPER`，任務仍是它的後代），都會碰到 S-03 的 Linux 細節。
+- 新證據（astra 試玩 2026-10-03 二-2，[報告](play/2026-10-03-astra.md)）：daemon 本身被 SIGKILL 後，`status.json` 一字不變（舊 pid、`stopping: false`、phase tick），檔案介面沒有獨立的存活證明，只看這一份會以為還在跑。
 
 ### P-05 搬來的 aos-exec 把 inst 子程式開在另一個 session，kill 收不到〔技術選型，先這樣〕
 
@@ -65,6 +66,7 @@
   - pause 原本只在 daemon 記憶體，重開就沒了——kernel 剛 pause 的 node 會被偷偷放行。改成存 `.aosd/paused.json`（已寫進 spec.md 第 2 節）。
   - `stop`（不帶 kill）後任務照跑，但 daemon 不在就沒有 tock，它們會一直等；daemon 重開後接上（aos7-run 還在，所以不會被誤判 lost）。
   - stop 帶 kill 時，處在 idle／paused 的時間線收完任務就退出、不 tock，所以這些任務的 `ended` 要到下次 daemon 起來第一次 tock 才記。
+- 新證據（astra 試玩 二-2）：SIGKILL daemon 時第 4 回合 `open: true`，重開直接從第 5 回合起，回合總結編號 `1,2,3,5,…`，任務的 tock 也從 3 跳到 5；被打斷的回合沒有 tock、沒有總結、也沒有 aborted 紀錄。任務照常續接（同一個 pid、沒重起）。後果：crash 之後「收到 N 次 tock」不等於「round 增加 N」。仍是技術選型（核心沒定 crash 後補不補回合）。
 
 ### P-10 兩個 daemon 搶同一個空間〔技術選型，先這樣〕
 
@@ -73,12 +75,14 @@
   - 同一個 root 起兩個 daemon：會兩邊都 tick 同一個 node。加 `.aosd/daemon.lock`（flock），第二個退出碼 1（`test_second_daemon_refused`，已寫進 spec.md）。
   - 不同 root 重疊（daemon A 管 `p`，有人在 `p/team` 起 daemon B）：沒鎖，只靠「含 `.aosd/` 的子資料夾跳過」。實驗：A 做完 team 的第 2 回合，B 一建 `.aosd/`，A 記 `node-` 放手，B 從第 3 回合接著數——碰巧乾淨。但：同一個資料夾的 node id 從 `team` 變成 `.`（S-14 的 id 跟著 daemon 根走）；A 起的舊任務 `AOS7_ROOT` 仍是 `p`，它們寫的 daemon ctl 會送到已經不管這個 node 的 A；若 A 放手時剛好在回合中，那個回合就不 tock、round.json 留 `open: true`（見 P-15）。
 - 先這樣：S-15 只管最基本的，默認正常。
+- 新證據（astra 試玩 二-3）：子 daemon 接管 `child/work` 後，舊任務照出生時的環境寫 `{"op":"pause","node":"child/work"}` 給父 daemon，父回 `ok: true`（父本來就接受「還沒出現的 node」的預先 pause），但子那邊的時間線照跑（第 8 → 13 回合、`paused: false`）。錯位的控制拿到**成功回條**，用回條當「已停」的人或 kernel 會誤判。仍是技術選型。
 
 ### P-11 巢狀根靠 `.aosd/` 存在判定，子 daemon 第一次起來前會被父當 node〔技術選型，先這樣〕
 
 - 層：daemon 掃描；S-15、S-21 路一。
 - 發生什麼：路一的子 daemon 是父的任務，要等它真的跑起來才建 `sub/.aosd/`。在那之前父每 20 ms 重掃，看到 `sub/.aos/timeline.json` 就會替 sub 起一條時間線——兩個 daemon 同時 tick 同一個資料夾。
 - 先這樣：測試先建 `sub/.aosd/`。真的用時，要嘛「打算給子 daemon 的資料夾先建 `.aosd/`」成為慣例，要嘛 tasks.json 的 `dirs`／某個標記讓父知道「這棵是要交出去的」。
+- 新證據（astra 試玩 二-3）：沒先建 `.aosd/` 時，父先替 `child/work` 起了任務，子 daemon 再接管；之後的錯位控制見 P-10。另：D-1 改成掛載後，路一的子 daemon 是把 `sub` 掛進來（`mounts: {"sub": "team/sub"}`），這份宣告可以當「這棵要交出去」的標記，但父的掃描目前還不看它。
 
 ### P-14 stop 時回合中途怎麼辦，spec 沒寫〔技術選型，先這樣〕
 

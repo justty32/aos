@@ -1,0 +1,15 @@
+{
+ "pid": 749728,
+ "root": "/tmp/astra-controls-4neh4qpj/daemon-array",
+ "at": "2026-10-03T12:37:50.608",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 3,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "pid": 749754,
+ "root": "/tmp/astra-controls-4neh4qpj/daemon-pause-object-node",
+ "at": "2026-10-03T12:37:51.258",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 3,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

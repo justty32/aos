@@ -7,6 +7,7 @@ import time
 import unittest
 
 from test_core import BIN, SLEEPER, CoreCase
+import aos7_daemon_timeline
 import aos7_task
 from aos7_fs import read_jsonl, read_json, write_json
 
@@ -117,7 +118,8 @@ class TestRouteOne(DaemonCase):
         sub = os.path.join(self.root, "sub")
         os.makedirs(os.path.join(sub, ".aosd"))      # 先建好，免得父 daemon 把 sub 當自己的 node（P-11）
         child = self.mknode(".", [{"name": "s", "mode": "keep", "argv": SLEEPER}], interval_ms=50, root=sub)
-        parent = self.mknode(".", [{"name": "subd", "mode": "keep", "argv": ["aos7-daemon", "sub"]}],
+        parent = self.mknode(".", [{"name": "subd", "mode": "keep", "argv": ["aos7-daemon", "$AOS7_TASK/mnt/sub"],
+                                         "mounts": {"sub": "sub"}}],
                              interval_ms=50)
         p = self.start_daemon()
         self.wait_for(lambda: aos7_task.live_tasks(child), msg="子 daemon 沒起任務")
@@ -133,6 +135,43 @@ class TestRouteOne(DaemonCase):
         self.assertEqual(p.wait(10), 0)
         self.assertEqual(aos7_task.live_tasks(parent), [])
         self.assertEqual(aos7_task.live_tasks(child), [])
+
+
+
+class TestTickFailure(CoreCase):
+    """tick 寫了新回合卻失敗（rc≠0、沒印 stdout）：回合數以 round.json 為準，status 帶 last_error（astra 試玩二-1）。"""
+
+    def test_round_from_disk_and_last_error(self):
+        node = self.mknode("a")
+
+        class FakeDaemon:
+            root, stopping, kill_on_stop = self.root, False, False
+            logs = []
+
+            def is_paused(self, nid):
+                return False
+
+            def log(self, **kw):
+                self.logs.append(kw)
+
+        d = FakeDaemon()
+
+        def fake_run(name, root, nid):
+            if name == "aos7-tick":
+                write_json(os.path.join(node, ".aos", "round.json"), {"round": 3, "open": True})
+                return 1, None, "Traceback: boom"
+            d.stopping = True
+            return 0, {}, ""
+        tl = aos7_daemon_timeline.Timeline(d, "a")
+        orig = aos7_daemon_timeline.run_prog
+        aos7_daemon_timeline.run_prog = fake_run
+        try:
+            tl._loop()
+        finally:
+            aos7_daemon_timeline.run_prog = orig
+        self.assertEqual(tl.round, 3)
+        self.assertEqual((tl.last_error["prog"], tl.last_error["rc"], tl.last_error["round"]), ("tick", 1, 3))
+        self.assertIn("boom", tl.last_error["err"])
 
 
 if __name__ == "__main__":

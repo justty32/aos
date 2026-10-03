@@ -1,0 +1,16 @@
+{
+ "tid": "busy-r2",
+ "name": "busy",
+ "node": "n",
+ "round": 2,
+ "dirs": [
+  "/tmp/astra-controls-utg2qd39/pause-heartbeat/n"
+ ],
+ "at": "2026-10-03T12:39:43.112",
+ "restart_of": null,
+ "argv": [
+  "/usr/bin/python3",
+  "-c",
+  "import pathlib,time; p=pathlib.Path('heartbeat.txt'); i=0\nwhile True:\n i+=1; p.write_text(str(i)); time.sleep(.04)"
+ ]
+}

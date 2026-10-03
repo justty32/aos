@@ -13,6 +13,7 @@ BASE = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(BASE, "lib"))
 
 import aos7_fs as fs  # noqa: E402
+import aos7_mount  # noqa: E402
 from aos7_kernel_rules import run_rules, snapshot, task_state  # noqa: E402
 
 
@@ -52,6 +53,15 @@ class World:
             fs.write_json(os.path.join(d, "exit.json"), {"code": 0})
         return d
 
+    def mount(self, tdir, decl):
+        """照 tick 的做法替任務資料夾建掛載點、寫回 birth.json（S-23）。"""
+        b = fs.read_json(os.path.join(tdir, "birth.json"))
+        b["mounts"] = aos7_mount.make(self.root, tdir, decl)
+        fs.write_json(os.path.join(tdir, "birth.json"), b)
+
+
+KERNEL_MOUNTS = {"daemon": ".aosd", "amy": "team/agents/amy/.aos", "bob": "team/agents/bob/.aos"}
+
 
 class RuleTest(unittest.TestCase):
     def setUp(self):
@@ -61,12 +71,14 @@ class RuleTest(unittest.TestCase):
         self.w.node("team/agents/bob")
         self.cfg = {"members": ["agents/amy", "agents/bob"], "stuck_rounds": 2,
                     "budget_tokens": 100, "cool_rounds": 2, "max_age": {"subd": 3}}
+        self.kdir = self.w.task("team", "kernel-r1", state="born")
+        self.w.mount(self.kdir, KERNEL_MOUNTS)
 
     def tearDown(self):
         self.w.close()
 
     def step(self, state, rnd):
-        snap = snapshot(self.w.root, "team", "kernel-r1", self.cfg, rnd)
+        snap = snapshot(self.w.root, "team", "kernel-r1", self.cfg, rnd, aos7_mount.resolver(self.kdir))
         return run_rules(self.cfg, state, snap)
 
     def test_task_state(self):
@@ -145,6 +157,20 @@ class RuleTest(unittest.TestCase):
         ds, st = self.step(st, 7)
         self.assertEqual(ds, [])
 
+    def test_unmounted_member_is_invisible(self):
+        """S-23：成員的 .aos 沒掛給 kernel，就看不到它、也不會對它下決定。"""
+        self.w.mount(self.kdir, {})
+        d = self.w.task("team/agents/amy", "agent-r1")
+        fs.write_json(os.path.join(d, "progress.json"), {"steps": 5})
+        snap = snapshot(self.w.root, "team", "kernel-r1", self.cfg, 1, aos7_mount.resolver(self.kdir))
+        self.assertEqual((snap["members"]["team/agents/amy"]["exists"],
+                          snap["members"]["team/agents/amy"]["mounted"]), (False, False))
+        st = {}
+        for r in range(1, 6):
+            self.w.set_round("team/agents/amy", r)
+            ds, st = self.step(st, r)
+            self.assertEqual(ds, [])
+
     def test_existing_ctl_not_overridden(self):
         d = self.w.task("team", "subd-r1", rnd=1)
         fs.write_json(os.path.join(d, "ctl.json"), {"op": "restart", "by": "human"})
@@ -163,6 +189,7 @@ class IntegrationTest(unittest.TestCase):
                       {"members": ["agents/amy"], "stuck_rounds": 1, "budget_tokens": 10,
                        "cool_rounds": 1, "max_age": {"subd": 1}})
         self.kdir = self.w.task("team", "kernel-r1", state="born")
+        self.w.mount(self.kdir, KERNEL_MOUNTS)
         self.agent = self.w.task("team/agents/amy", "agent-r1")
         self.subd = self.w.task("team", "subd-r1", rnd=1)
         fs.write_json(os.path.join(self.agent, "progress.json"), {"steps": 1})
@@ -218,6 +245,7 @@ class IntegrationTest(unittest.TestCase):
         fs.write_json(os.path.join(k2, "birth.json"),
                       {"tid": "kernel-r2", "name": "kernel", "node": "team", "round": 2,
                        "restart_of": "kernel-r1"})
+        self.w.mount(k2, KERNEL_MOUNTS)   # restart 的新任務照原宣告重新掛
         fs.write_json(os.path.join(k2, "tock.json"), {"round": 2})
         env = fs.env_with_bin()
         env.update(AOS7_ROOT=self.w.root, AOS7_NODE=self.node, AOS7_NODE_ID="team",

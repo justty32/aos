@@ -1,0 +1,11 @@
+{"at": "2026-10-03T12:37:50.974", "ev": "start", "pid": 749754}
+{"at": "2026-10-03T12:37:50.974", "ev": "node+", "node": "n", "round": 0}
+{"at": "2026-10-03T12:37:50.992", "ev": "tick", "node": "n", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T12:37:51.009", "ev": "tock", "node": "n", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:37:51.015", "ev": "ctl", "file": "bad.json", "op": "pause", "node": {}, "by": null, "ok": false, "msg": "pause 要給 node"}
+{"at": "2026-10-03T12:37:51.112", "ev": "tick", "node": "n", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T12:37:51.129", "ev": "tock", "node": "n", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:37:51.231", "ev": "tick", "node": "n", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T12:37:51.238", "ev": "stopping", "kill": true}
+{"at": "2026-10-03T12:37:51.249", "ev": "tock", "node": "n", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T12:37:51.258", "ev": "stop"}

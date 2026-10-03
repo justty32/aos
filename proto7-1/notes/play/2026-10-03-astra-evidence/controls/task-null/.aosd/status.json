@@ -1,0 +1,15 @@
+{
+ "pid": 749795,
+ "root": "/tmp/astra-controls-4neh4qpj/task-null",
+ "at": "2026-10-03T12:37:52.714",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 6,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

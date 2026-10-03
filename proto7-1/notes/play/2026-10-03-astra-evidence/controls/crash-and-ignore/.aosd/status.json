@@ -1,0 +1,15 @@
+{
+ "pid": 749853,
+ "root": "/tmp/astra-controls-4neh4qpj/crash-and-ignore",
+ "at": "2026-10-03T12:37:55.609",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 12,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}
