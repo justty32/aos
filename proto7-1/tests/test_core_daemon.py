@@ -162,7 +162,7 @@ class TestTickFailure(CoreCase):
 
         d = FakeDaemon()
 
-        def fake_run(name, root, nid, extra_env=None, gen=None):
+        def fake_run(name, root, nid, extra_env=None, gen=None, timeout=None, abort=None):
             if name == "aos7-tick":
                 write_json(os.path.join(node, ".aos", "round.json"), {"round": 3, "open": True})
                 return 1, None, "Traceback: boom"

@@ -5,6 +5,7 @@
 - B `disp`：一個常駐的調度任務（用一次性 spawn 起）每批寫 40 個 spawn/*.json，自己判斷上一批收齊。
 - N `names`：tid 撞名（同名多份、名字裡帶 -r1、會被換成 _ 的字元）。
 - C `bloat`／`clean`：bloat 先塞 4000 個已結束的任務資料夾，比 tick／tock／status 的時間。
+- D `arch`：同樣塞 4000 個，但 `keep_ended_rounds: 0`，第一次 tock 就搬到 tasks-old/（Q3 (a) 之後），比較搬走後的數字。
 """
 import datetime
 import json
@@ -265,6 +266,37 @@ def phase_c(sp, r):
     r.check("C 塞了 %d 個資料夾的 node 照樣在走" % BLOAT, len(sp.rounds("bloat")) >= 15)
 
 
+def phase_d(sp, r):
+    """D：同樣塞 BLOAT 個已結束的資料夾，但 keep_ended_rounds=0（使用者 10-03 Q3 選 (a)）：第一次 tock 就搬到 tasks-old/。"""
+    sp.ctl("pause", "bloat")
+    name = sp.ctl("pause", "arch")
+    sp.wait_for(lambda: os.path.exists(os.path.join(sp.root, ".aosd", "ctl-done", name)), 5, msg="pause 沒生效")
+    n = sp.node("arch", [{"name": "q", "argv": ["true"]}], interval_ms=100, keep_ended_rounds=0)
+    td = os.path.join(n, ".aos", "tasks")
+    for k in range(BLOAT):
+        d = os.path.join(td, "old-r%d" % k)
+        os.makedirs(d)
+        for fn, obj in (("birth.json", {"tid": "old-r%d" % k, "name": "old", "round": 0}),
+                        ("exit.json", {"code": 0}), ("ended.json", {"round": 0})):
+            with open(os.path.join(d, fn), "w") as f:
+                json.dump(obj, f)
+    pid = sp.procs[0][1].pid
+    sp.ctl("resume", "arch")
+    sp.wait_for(lambda: sp.rounds("arch"), 25, msg="arch 沒 tock")
+    first = timing(sp, "arch")[:1]
+    r.measure("D 第一次 tock（搬 %d 個到 tasks-old/）工作 ms" % BLOAT, [x["tock_ms"] for x in first])
+    r.check("D 舊資料夾都搬到 tasks-old/", len(os.listdir(os.path.join(n, ".aos", "tasks-old"))) >= BLOAT)
+    sp.wait_for(lambda: len(sp.rounds("arch")) >= 4, 10, msg="arch 沒跑")
+    c0, w0 = cpu_s(pid), time.monotonic()
+    sp.wait_for(lambda: len(sp.rounds("arch")) >= 19, 25, msg="arch 沒跑 15 回合")
+    c1, w1 = cpu_s(pid), time.monotonic()
+    r.measure("D daemon 自己的 CPU 佔比（搬走之後）", round((c1 - c0) / (w1 - w0), 3))
+    rows = timing(sp, "arch")[-12:]
+    r.measure("D arch：tick 工作 ms／tock 工作 ms／回合週期 ms（interval 100，搬走之後）",
+              [stats([x["tick_ms"] for x in rows]), stats([x["tock_ms"] for x in rows]),
+               stats([x["period_ms"] for x in rows])])
+
+
 def main():
     r = pl.Result("swarm")
     with pl.Space("swarm") as sp:
@@ -272,6 +304,7 @@ def main():
         phase_a(sp, r)
         phase_b(sp, r)
         phase_c(sp, r)
+        phase_d(sp, r)
         r.finding("「這批任務都結束了」沒有訊號：提前 tock 只發 tock.json 給活任務，each 的 reduce 只能自己輪詢每個 exit.json；"
                   "tock.json 也不說這次是提前還是到時（early 只在 daemon 的 log.jsonl）")
         r.finding("一批任務沒有批次 id：reduce 要靠 round.json 的 started（等它出現自己的 tid＝清單完整）或 rounds.jsonl 上一回合那行；"

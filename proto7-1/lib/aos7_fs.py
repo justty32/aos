@@ -140,6 +140,22 @@ def aos_dir(node):
     return os.path.join(node, ".aos")
 
 
+TASK_DIRS = ("tasks", "tasks-old")   # 任務資料夾在 `.aos/tasks/`；tock 把結束很久的搬到 `.aos/tasks-old/`（Q3）
+
+
+def task_dirs_of(aos):
+    """`<aos>/tasks/` 與 `<aos>/tasks-old/` 底下所有任務資料夾：[(tid, 路徑)]，依 tid 排序（tasks 的在前）。"""
+    out = []
+    for sub in TASK_DIRS:
+        base = os.path.join(aos, sub)
+        try:
+            names = sorted(os.listdir(base))
+        except OSError:
+            continue
+        out += [(t, os.path.join(base, t)) for t in names if not t.startswith(".")]
+    return out
+
+
 def task_env():
     """任務從環境變數讀自己是誰（spec 第 5 節）。缺了丟 KeyError。"""
     e = os.environ

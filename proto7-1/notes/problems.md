@@ -4,7 +4,7 @@
 
 proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py`）全部跑通。下面是做的過程中碰到的問題。各組的細節在三份分檔：[核心 P-](problems-core.md)（daemon、tick、tock、任務）、[kernel K-](problems-kernel.md)、[agent A-](problems-agent.md)。整合時隊長自己碰到的記在本檔 I-。用真模型跑多 agent 協作（`demo/real.py`）碰到的記在 [真模型 R-](problems-real.md)，跑的紀錄在 runs/（[real-1](runs/2026-10-03-real-1.md)、[real-2](runs/2026-10-03-real-2.md)）。
 
-**daemon／tick 為了撐住各種 kernel／agent 還缺什麼**，另整理在 [infra-needs.md](infra-needs.md)（12 個發散探針＋astra-4 的 R1～R18，含 3 條要使用者決定的 Q1、Q3、Q4）。
+**daemon／tick 為了撐住各種 kernel／agent 還缺什麼**，另整理在 [infra-needs.md](infra-needs.md)（12 個發散探針＋astra-4 的 R1～R18，含 4 條要使用者決定的 Q1～Q4，10-03 都已答）。
 
 分級：**〔要使用者決定〕**＝方向問題，或核心 spec 說不清、互相衝突；〔技術選型，先這樣〕；〔默認正常〕。各組原本列了 8 條要使用者決定，隊長合併、降級後剩下面 4 條（D-1～D-4）。
 

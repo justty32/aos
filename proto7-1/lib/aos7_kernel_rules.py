@@ -31,15 +31,10 @@ def task_state(taskdir):
 
 
 def list_tasks(aos):
-    """列 `<aos>/tasks/` 下所有任務資料夾（有 birth.json 的），依 tid 排序。aos＝某 node 的 .aos（可能是掛載點）。"""
-    base = os.path.join(aos, "tasks")
-    try:
-        names = sorted(os.listdir(base))
-    except OSError:
-        return []
+    """列 `<aos>/tasks/` 與 `<aos>/tasks-old/`（tock 搬走的舊任務，Q3；用量總和要算進去）下所有任務資料夾（有 birth.json 的）。
+    aos＝某 node 的 .aos（可能是掛載點）。"""
     out = []
-    for tid in names:
-        d = os.path.join(base, tid)
+    for tid, d in fs.task_dirs_of(aos):
         birth = fs.read_json(os.path.join(d, "birth.json"))
         if isinstance(birth, dict):
             out.append((tid, d, birth))

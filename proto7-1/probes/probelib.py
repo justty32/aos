@@ -36,6 +36,7 @@ import aos7_fs as fs  # noqa: E402
 import aos7_task  # noqa: E402
 
 PREFIX = "aos7probe-"
+KEEP_ALL = 10 ** 9   # timeline.json 的 keep_ended_rounds：探針預設不搬舊任務
 PY = sys.executable
 
 
@@ -111,10 +112,15 @@ class Space:
     def path(self, nid, *rest, root=None):
         return os.path.join(fs.node_path(root or self.root, nid), *rest)
 
-    def node(self, nid, tasks=None, interval_ms=100, files=None, root=None, **tasks_extra):
-        """建 node：`.aos/timeline.json`、`.aos/tasks.json`（tasks＋頂層其他鍵，如 mount_allow），files＝{相對 node 的路徑: 內容}。"""
+    def node(self, nid, tasks=None, interval_ms=100, files=None, root=None, keep_ended_rounds=KEEP_ALL, **tasks_extra):
+        """建 node：`.aos/timeline.json`、`.aos/tasks.json`（tasks＋頂層其他鍵，如 mount_allow），files＝{相對 node 的路徑: 內容}。
+
+        keep_ended_rounds 預設很大（探針多半要直接翻 `.aos/tasks/`，不想被 tock 搬到 tasks-old/）；給 None＝用 tock 的預設（20）。"""
         n = fs.node_path(root or self.root, nid)
-        fs.write_json(os.path.join(n, ".aos", "timeline.json"), {"interval_ms": interval_ms})
+        tl = {"interval_ms": interval_ms}
+        if keep_ended_rounds is not None:
+            tl["keep_ended_rounds"] = keep_ended_rounds
+        fs.write_json(os.path.join(n, ".aos", "timeline.json"), tl)
         t = dict(tasks_extra)
         t["tasks"] = tasks or []
         fs.write_json(os.path.join(n, ".aos", "tasks.json"), t)

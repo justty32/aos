@@ -26,3 +26,13 @@ tick 起很多任務要多久、提前 tock 什麼時候到、reduce 怎麼知�
 - **tid**：同名 50 份是 `map-r1`、`map-r1-2`…`map-r1-50`，不撞。`a/b` 和 `a_b` 變成 `a_b-r1`、`a_b-r1-2`，看起來像同一個任務的兩份，要讀 birth.json 才分得出。
 - **只增不減**：14 回合就有 728 個資料夾、3640 檔、11.8 MB（一個短命任務約 16 KB 磁碟）。rounds.jsonl 每回合 2.5 KB。
 - **掃描變慢（C，4000 個資料夾）**：tick 4→56 ms、tock 3→46 ms，interval 100 的回合週期變成 150 ms；daemon 自己 CPU 從 ~10% 變 ~52%（每 20 ms 寫 status.json 都全掃 `live_tasks`，4000 個一次 12 ms）。照 A 的速度（52 個／300 ms）約 25 秒就到 4000 個。
+
+> **使用者 10-03 Q3 選 (a) 之後**（tock 把結束超過 `keep_ended_rounds` 回合的任務資料夾搬到 `.aos/tasks-old/`；探針加了 D 段 `arch`，跟 C 段 `bloat` 一樣塞 4000 個已結束的資料夾，但 `keep_ended_rounds: 0`）。同一次跑、兩次的範圍：
+>
+> | | tick 工作 ms p50 | tock 工作 ms p50 | 回合週期 ms p50（interval 100） |
+> |---|---|---|---|
+> | 沒有舊資料夾（clean） | 4～7 | 3～4 | 100～101 |
+> | 4000 個留在 tasks/（bloat，搬之前的行為） | 53～70 | 63～86 | 164～206 |
+> | 4000 個搬到 tasks-old/ 之後（arch） | 4～5 | 3 | 100 |
+>
+> 搬的那一次 tock 要 85～110 ms（只發生一次）。daemon 自己的 CPU：修補前塞 4000 個時是 52%。status 的 live 改成每 0.25 秒重算之後，同一情境降到 12～13%，D 段量到 15～17%。D 段時整個 daemon 上還有其他段留下的 node 在跑，所以這個數不能拿來跟 C 段直接比。

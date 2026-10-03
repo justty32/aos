@@ -16,24 +16,45 @@ from aos7_fs import BIN, env_with_bin, node_path, now, read_json
 POLL = 0.02
 DEFAULT_INTERVAL_MS = 1000
 ERROR_BACKOFF = 0.5    # 時間線迴圈丟例外後，等多久再接著跑
+ACTION_TIMEOUT = 30.0  # tick／tock 一次最多跑幾秒（timeline.json 的 `action_timeout_s` 可改）
+STOP_GRACE = 3.0       # daemon 停機時，正在跑的 tick／tock 最多再等幾秒
+TIMEOUT_RC = -9
 
 
-def run_prog(name, root, node_id, extra_env=None, gen=None):
-    """跑 `bin/<name> <root> <node-id>`，回 (returncode, 最後一行 JSON 或 None, stderr)。"""
+def run_prog(name, root, node_id, extra_env=None, gen=None, timeout=None, abort=None):
+    """跑 `bin/<name> <root> <node-id>`，回 (returncode, 最後一行 JSON 或 None, stderr)。
+
+    timeout 秒內沒結束、或 abort() 回真（daemon 停機等太久），SIGKILL 這個動作，rc＝TIMEOUT_RC、stderr 說明
+    （一條線的 tick 卡在 I/O 不能拖住整個 daemon；eval/2026-10-03-batch-tick）。"""
     env = env_with_bin()
     env.update(extra_env or {})
     if gen is not None:
         env["AOS7_GEN"] = str(gen)   # tick／tock 拿到 action.lock 後比對，舊 daemon 的動作不寫（astra-4 I-01）
-    p = subprocess.run([sys.executable, os.path.join(BIN, name), root, node_id],
-                       capture_output=True, text=True, env=env)
+    p = subprocess.Popen([sys.executable, os.path.join(BIN, name), root, node_id],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+    t0 = time.monotonic()
+    why = None
+    while True:
+        try:
+            stdout, stderr = p.communicate(timeout=0.1)
+            break
+        except subprocess.TimeoutExpired:
+            if timeout is not None and time.monotonic() - t0 > timeout:
+                why = "timeout after %.1fs" % timeout
+            elif abort is not None and abort():
+                why = "aborted: daemon stopping"
+            if why:
+                p.kill()
+                stdout, stderr = p.communicate()
+                return TIMEOUT_RC, None, ("%s: %s killed (%s)" % (stderr or "", name, why)).strip()
     out = None
-    lines = p.stdout.strip().splitlines()
+    lines = stdout.strip().splitlines()
     if lines:
         try:
             out = json.loads(lines[-1])
         except ValueError:
             pass
-    return p.returncode, out, p.stderr.strip()
+    return p.returncode, out, stderr.strip()
 
 
 class Timeline(threading.Thread):
@@ -74,6 +95,16 @@ class Timeline(threading.Thread):
         self.interval_ms = max(int(ms), 1)   # 這回合實際用的（status.json 帶出來；astra-4 I-08）
         return self.interval_ms / 1000.0
 
+    def action_timeout(self):
+        t = read_json(os.path.join(self.node, ".aos", "timeline.json"), {})
+        v = t.get("action_timeout_s") if isinstance(t, dict) else None
+        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and 0 < v < 1e6 else ACTION_TIMEOUT
+
+    def stop_overdue(self):
+        """daemon 停機已經超過 STOP_GRACE 秒：正在跑的動作別再等了。"""
+        since = getattr(self.d, "stopping_since", None)
+        return since is not None and time.monotonic() - since > STOP_GRACE
+
     def done(self):
         return self.d.stopping or self.gone
 
@@ -111,7 +142,10 @@ class Timeline(threading.Thread):
             t_end = t0 + self.interval()
             self.kick = False
             self.phase = "tick"
-            rc, out, err = run_prog("aos7-tick", self.d.root, self.node_id, gen=getattr(self.d, "gen", None))
+            tmo = self.action_timeout()
+            rc, out, err = run_prog("aos7-tick", self.d.root, self.node_id, gen=getattr(self.d, "gen", None),
+                                    timeout=tmo, abort=self.stop_overdue)
+            tick_cut = rc == TIMEOUT_RC and out is None
             if (out or {}).get("stale"):
                 self.d.log(ev="stale", node=self.node_id, prog="tick")   # 換了世代（不該發生在自己身上）：停這條線
                 return
@@ -122,7 +156,7 @@ class Timeline(threading.Thread):
             self.round = (out or {}).get("round") or self.disk_round()
             self.note_error("tick", rc, err)
             self.d.log(ev="tick", node=self.node_id, round=self.round, started=started, rc=rc,
-                       **({"err": err[-500:]} if rc else {}))
+                       **({"err": err[-500:]} if rc else {}), **({"incomplete": True} if tick_cut else {}))
             self.phase = "running"
             while not self.done() and time.monotonic() < t_end:
                 if not any(aos7_task.is_live(aos7_task.task_state(aos7_task.task_dir(self.node, t)))
@@ -134,12 +168,16 @@ class Timeline(threading.Thread):
             self.kill_if_stopping()
             self.phase = "tock"
             early = time.monotonic() < t_end
-            rc, out, err = run_prog("aos7-tock", self.d.root, self.node_id,
-                                    {"AOS7_EARLY": "1" if early else "0"}, gen=getattr(self.d, "gen", None))
+            env = {"AOS7_EARLY": "1" if early else "0"}
+            if tick_cut:
+                env["AOS7_INCOMPLETE"] = "tick"   # 這回合的 tick 被逾時收掉：總結標 incomplete
+            rc, out, err = run_prog("aos7-tock", self.d.root, self.node_id, env, gen=getattr(self.d, "gen", None),
+                                    timeout=tmo, abort=self.stop_overdue)
             self.note_error("tock", rc, err)
             self.d.log(ev="tock", node=self.node_id, round=self.round, rc=rc,
                        ended=(out or {}).get("ended"), early=early,
-                       **({"err": err[-500:]} if rc else {}))
+                       **({"err": err[-500:]} if rc else {}),
+                       **({"incomplete": True} if rc == TIMEOUT_RC and out is None else {}))
             self.d.round_done(self.node_id)   # resume 帶 rounds 的倒數（probes/sched N2）
             self.phase = "idle"
             self.sleep_until(t_end)

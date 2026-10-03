@@ -18,4 +18,4 @@ sitter 同時用 `$AOS7_TASK`（絕對）與「相對 cwd 的 `.aos/tasks/<tid>/
 - kill 搬過的 sitter：aos7-run 把真的 `exit.json`（code -15）寫回**舊路徑**（又建一次鬼資料夾）；新位置的 tock 看不到，記成 `lost`。keep 再起的新 sitter 環境正確、掛載正常。
 - **restart peer**：照舊宣告重掛 `a/inbox`，tick 把不存在的目標建成資料夾（M-2），信寄「成功」但進了沒人看的鬼資料夾 `a/inbox`，寄件方看不出錯。
 
-> **基礎設施修補之後（10-03）**：aos7-run 改成經任務資料夾的 fd 寫 exit.json，kill 搬過的任務時結束碼寫到新位置、舊路徑不再被建回來（探針的第 3 步已改成檢查這件事）。其他發現照舊，見 [infra-needs.md](../../notes/infra-needs.md)。
+> **使用者 10-03 Q4 選 (a) 之後（探針已改成驗新行為）**：node 消失（含搬家）時 daemon kill 上面的活任務；aos7-run 經任務資料夾的 fd 寫 exit.json，所以舊 sitter 的結束碼（-15）寫到新位置，不是 lost；新位置由 keep 重起，環境變數、`$AOS7_TASK` 等 tock、掛載都照新路徑；舊路徑不再被 tick／tock／aos7-run 建回來。仍在的：搬家落在回合中途那回合沒 tock（P-15）；別人掛它 inbox 的連結斷、restart 後重掛會建出鬼資料夾（infra-needs N-48）。

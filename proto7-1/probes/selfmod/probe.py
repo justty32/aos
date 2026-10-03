@@ -245,8 +245,11 @@ def main():
             r.finding("timeline.json 的 interval_ms 不是數字（\"fast\"、null）會讓那條時間線的 thread 丟例外死掉，"
                       "status 停在 phase stopped，改回正確也不會復活；只能讓 node 消失再出現（或重開 daemon）。"
                       "agent 還活著但再也收不到 tock。")
-        run.order("bounce_timeline", timeline={"interval_ms": 100}, gap_ms=150)
-        r.check("拿掉 timeline.json 再寫回：時間線復活", sp.wait_for(lambda: sp.round_of("s") > rr, timeout=5))
+        # 修補後（10-03）：interval 寫壞用預設、記 last_error，改回來就照新的跑；不必再「拿掉 timeline.json 再寫回」
+        # （那樣現在等於 node 消失，daemon 會 kill 上面的任務，連這個 agent 一起；使用者 10-03 Q4 選 (a)）
+        r.check("修補後：interval 寫壞時間線不死，改回正常後回合前進", sp.wait_for(lambda: sp.round_of("s") > rr, timeout=5))
+        r.check("修補後：status 的 last_error 記了 timeline 的錯",
+                any((e.get("last_error") or {}).get("prog") == "timeline" for e in [sp.status().get("nodes", {}).get("s", {})]))
 
         # ---- 寫入紀錄：任務改自己 .aos 的東西都算 ok ----
         ag = run.named("agent")

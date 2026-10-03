@@ -29,3 +29,5 @@
 - 刪掉的 node 會被建回成空殼：活任務的 makedirs、aos7-run 寫 exit.json、還沒發現 gone 的 tock（`gone` 要等下一圈掃描，最多 20 ms）都會建。
 - pause 綁 node id、node 消失不清，同名重建就繼承 pause；status 有 `paused: true`，log 沒說原因。
 - 同名重用回合從 1 重數，daemon 沒記 node 的歷史，log 裡分不出前後兩段。
+
+> **使用者 10-03 Q4 選 (a) 之後（探針已改成驗新行為）**：rm -rf 子 node、或只刪 timeline.json，daemon 都會 kill 上面的活任務（log `node-gone-kill`），不留孤兒；被刪的資料夾不再被 tick／tock／aos7-run 建回來。只刪 timeline.json 不再是「暫停但保留任務」：寫回後 keep 重起、回合接著數。想暫停用 pause。
