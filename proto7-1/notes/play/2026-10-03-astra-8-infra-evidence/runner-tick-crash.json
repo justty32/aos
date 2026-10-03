@@ -1,0 +1,39 @@
+{
+  "case": "runner-tick-crash",
+  "killed_tick": 3240929,
+  "killed_runner": 3240933,
+  "runner_json": null,
+  "pid_json": null,
+  "state": "born",
+  "tock": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T20:53:14.347",
+      "tock_at": "2026-10-03T20:53:14.379",
+      "started": [],
+      "alive": [
+        "x-r1"
+      ],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    },
+    "err": ""
+  },
+  "next_tick": {
+    "rc": 0,
+    "out": {
+      "round": 2,
+      "started": []
+    },
+    "err": ""
+  },
+  "seconds": 0.087,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-runner-tick-crash-bunne9iw",
+    "root_exists": false
+  }
+}

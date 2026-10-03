@@ -1,0 +1,44 @@
+{
+  "case": "runner-record-eio",
+  "injection": "runner SIGKILL + wait before Popen returns to tick and runner.json EIO",
+  "runner": null,
+  "pid": null,
+  "exit": null,
+  "state": "born",
+  "first": {
+    "round": 1,
+    "started": [
+      "x-r1"
+    ],
+    "ctl": []
+  },
+  "tock": {
+    "round": 1,
+    "tick_at": "2026-10-03T20:49:53.924",
+    "tock_at": "2026-10-03T20:49:53.925",
+    "started": [
+      "x-r1"
+    ],
+    "alive": [
+      "x-r1"
+    ],
+    "ended": [],
+    "ctl": [],
+    "mounts": [],
+    "early": null
+  },
+  "next_tick": {
+    "round": 2,
+    "started": [],
+    "ctl": []
+  },
+  "dead_pids": [
+    3235047
+  ],
+  "seconds": 0.011,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-runner-record-eio-hoyjcn31",
+    "root_exists": false
+  }
+}

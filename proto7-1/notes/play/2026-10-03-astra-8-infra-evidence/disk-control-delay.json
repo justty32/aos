@@ -1,0 +1,43 @@
+{
+  "case": "disk-control-delay",
+  "fault": "lstat on own ctl-done files delayed 10ms x 200; no external filesystem modified",
+  "stop": {
+    "receipt": {
+      "op": "stop",
+      "kill": true,
+      "result": {
+        "ok": true,
+        "msg": "stopping with kill",
+        "at": "2026-10-03T20:53:16.759",
+        "queued_at": "2026-10-03T20:53:14.733"
+      }
+    },
+    "latency_s": 2.033167877998494
+  },
+  "total_stop_s": 2.0644852969999192,
+  "rc": 0,
+  "final": {
+    "pid": 3240989,
+    "root": "/tmp/astra8-disk-control-delay-1qf6lakf",
+    "at": "2026-10-03T20:53:16.779",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": true,
+    "stopped": true,
+    "kill_on_stop": true,
+    "nodes": {},
+    "disk": {
+      "at": "2026-10-03T20:53:16.738",
+      "every_s": 30.0,
+      "aosd_bytes": 2848,
+      "nodes": {}
+    }
+  },
+  "seconds": 2.109,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-disk-control-delay-1qf6lakf",
+    "root_exists": false
+  }
+}

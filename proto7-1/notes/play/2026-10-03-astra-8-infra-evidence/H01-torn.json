@@ -1,0 +1,85 @@
+{
+  "case": "H01-torn",
+  "injection": "append writes only 24 bytes and returns; readback genuinely finds no committed summary",
+  "summaries": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T20:46:11.552",
+      "tock_at": "2026-10-03T20:46:11.630",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": false,
+      "incomplete": "tock",
+      "errors": [
+        {
+          "tid": null,
+          "phase": "rounds.jsonl",
+          "err": "檔尾有沒寫完的一行（24 bytes），已補換行、保留原樣"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "tick_at": "2026-10-03T20:46:11.652",
+      "tock_at": "2026-10-03T20:46:11.678",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 3,
+      "tick_at": "2026-10-03T20:46:11.753",
+      "tock_at": "2026-10-03T20:46:11.777",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    }
+  ],
+  "round": {
+    "round": 3,
+    "open": false,
+    "tick_at": "2026-10-03T20:46:11.753",
+    "tock_at": "2026-10-03T20:46:11.777",
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "ended": {
+    "round": 1
+  },
+  "log_errors": [
+    {
+      "at": "2026-10-03T20:46:11.608",
+      "ev": "tock",
+      "node": "n",
+      "round": 1,
+      "rc": 1,
+      "ended": null,
+      "early": true,
+      "err": "urn fn(fnode, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra8/proto7-1/lib/aos7_tock.py\", line 63, in act\n    return _tock(fnode, early)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra8/proto7-1/lib/aos7_tock.py\", line 182, in _tock\n    raise OSError(\"rounds.jsonl 讀不回第 %d 回合的總結，沒寫 ended.json、回合沒關\" % rnd)\nOSError: rounds.jsonl 讀不回第 1 回合的總結，沒寫 ended.json、回合沒關"
+    }
+  ],
+  "seconds": 0.326,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H01-torn-l_r_8j_r",
+    "root_exists": false
+  }
+}

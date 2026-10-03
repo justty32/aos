@@ -1,0 +1,82 @@
+{
+  "case": "runner-before-pid",
+  "point": "before-pid",
+  "tick": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": [
+        "x-r1"
+      ]
+    },
+    "err": ""
+  },
+  "before": {
+    "state": "born",
+    "runner": {
+      "pid": 3235088,
+      "starttime": 4440349,
+      "at": "2026-10-03T20:49:55.280"
+    },
+    "pid": null
+  },
+  "after_kill": "lost",
+  "tock": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T20:49:55.279",
+      "tock_at": "2026-10-03T20:49:55.334",
+      "started": [
+        "x-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "x-r1",
+          "name": "x",
+          "code": null,
+          "lost": true
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    },
+    "err": ""
+  },
+  "next_tick": {
+    "rc": 0,
+    "out": {
+      "round": 2,
+      "started": [
+        "x-r2"
+      ]
+    },
+    "err": ""
+  },
+  "old_exit": {
+    "code": null,
+    "lost": true,
+    "at": "2026-10-03T20:49:55.334",
+    "round": 1
+  },
+  "old_task_processes": {
+    "3235089": {
+      "state": "S",
+      "ppid": 3234979,
+      "start": "4440350"
+    },
+    "3235092": {
+      "state": "R",
+      "ppid": 3234979,
+      "start": "4440356"
+    }
+  },
+  "seconds": 0.131,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-runner-before-pid-dmnp4kaw",
+    "root_exists": false
+  }
+}

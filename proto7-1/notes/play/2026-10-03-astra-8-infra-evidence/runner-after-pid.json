@@ -1,0 +1,70 @@
+{
+  "case": "runner-after-pid",
+  "point": "after-pid",
+  "tick": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": [
+        "x-r1"
+      ]
+    },
+    "err": ""
+  },
+  "before": {
+    "state": "live",
+    "runner": {
+      "pid": 3235094,
+      "starttime": 4440362,
+      "at": "2026-10-03T20:49:55.411"
+    },
+    "pid": {
+      "pid": 3235095,
+      "pgid": 3235095,
+      "runner_pid": 3235094,
+      "at": "2026-10-03T20:49:55.427"
+    }
+  },
+  "after_kill": "live",
+  "tock": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T20:49:55.410",
+      "tock_at": "2026-10-03T20:49:55.465",
+      "started": [
+        "x-r1"
+      ],
+      "alive": [
+        "x-r1"
+      ],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    },
+    "err": ""
+  },
+  "next_tick": {
+    "rc": 0,
+    "out": {
+      "round": 2,
+      "started": []
+    },
+    "err": ""
+  },
+  "old_exit": null,
+  "old_task_processes": {
+    "3235095": {
+      "state": "S",
+      "ppid": 3234979,
+      "start": "4440363"
+    }
+  },
+  "seconds": 0.132,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-runner-after-pid-1u8m_ank",
+    "root_exists": false
+  }
+}

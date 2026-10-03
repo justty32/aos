@@ -1,0 +1,65 @@
+{
+  "case": "owner-restart-manual",
+  "first": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": [
+        "child-r1"
+      ]
+    },
+    "err": ""
+  },
+  "second": {
+    "rc": 0,
+    "out": {
+      "round": 2,
+      "started": [
+        "child-r2"
+      ]
+    },
+    "err": ""
+  },
+  "owner_first": {
+    "node": "n",
+    "tid": "child-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T20:49:54.019",
+    "daemon_pid": 3235051
+  },
+  "owner_restarted": {
+    "node": "n",
+    "tid": "child-r2",
+    "allow_stop": false,
+    "at": "2026-10-03T20:49:54.142",
+    "daemon_pid": 3235055
+  },
+  "manual_pid": 3235056,
+  "manual_owner": {
+    "node": "n",
+    "tid": "child-r2",
+    "allow_stop": false,
+    "at": "2026-10-03T20:49:54.142",
+    "daemon_pid": 3235055
+  },
+  "stopped_cleared": true,
+  "manual_stop": {
+    "receipt": {
+      "op": "stop",
+      "kill": true,
+      "result": {
+        "ok": false,
+        "msg": "這個 daemon 屬於 node n（任務 child-r2），n 不允許外部 stop；要停請 n 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 n kill 這個任務",
+        "at": "2026-10-03T20:49:54.210",
+        "queued_at": "2026-10-03T20:49:54.196"
+      }
+    },
+    "latency_s": 0.020303269004216418
+  },
+  "seconds": 0.31,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-owner-restart-manual-pc_4wiwe",
+    "root_exists": false
+  }
+}

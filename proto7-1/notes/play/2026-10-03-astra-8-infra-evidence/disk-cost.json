@@ -1,0 +1,72 @@
+{
+  "case": "disk-cost",
+  "samples": [
+    {
+      "files": 1000,
+      "old_dirs": 1000,
+      "seconds": [
+        0.0015308980000554584,
+        0.0014105129957897589,
+        0.001399403001414612
+      ],
+      "disk": {
+        "at": "2026-10-03T20:53:13.557",
+        "every_s": 30.0,
+        "aosd_bytes": 2000,
+        "nodes": {
+          "n": {
+            "tasks": 0,
+            "tasks_old": 1000
+          }
+        }
+      }
+    },
+    {
+      "files": 10000,
+      "old_dirs": 10000,
+      "seconds": [
+        0.018316220004635397,
+        0.01429264900070848,
+        0.014096293001784943
+      ],
+      "disk": {
+        "at": "2026-10-03T20:53:13.696",
+        "every_s": 30.0,
+        "aosd_bytes": 20000,
+        "nodes": {
+          "n": {
+            "tasks": 0,
+            "tasks_old": 10000
+          }
+        }
+      }
+    },
+    {
+      "files": 30000,
+      "old_dirs": 30000,
+      "seconds": [
+        0.05946692499855999,
+        0.05562413100415142,
+        0.04779385500296485
+      ],
+      "disk": {
+        "at": "2026-10-03T20:53:14.072",
+        "every_s": 30.0,
+        "aosd_bytes": 60000,
+        "nodes": {
+          "n": {
+            "tasks": 0,
+            "tasks_old": 30000
+          }
+        }
+      }
+    }
+  ],
+  "note": "warm-cache local filesystem; synchronous main-loop scan, not an SLA",
+  "seconds": 0.774,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-disk-cost-4s2r0cj6",
+    "root_exists": false
+  }
+}

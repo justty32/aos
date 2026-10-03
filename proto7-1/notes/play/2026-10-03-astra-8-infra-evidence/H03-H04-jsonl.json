@@ -1,0 +1,231 @@
+{
+  "case": "H03-H04-jsonl",
+  "ascii-log": {
+    "bytes": 64,
+    "prefix_hex": "7b2262726f6b656e223a0a7b226174223a2022323032362d31302d30335432303a34363a31332e30",
+    "physical_lines": 2,
+    "read": [
+      {
+        "at": "2026-10-03T20:46:13.016",
+        "ev": "recovered"
+      }
+    ],
+    "tail": [
+      {
+        "at": "2026-10-03T20:46:13.016",
+        "ev": "recovered"
+      }
+    ]
+  },
+  "ascii-sent": {
+    "bytes": 141,
+    "prefix_hex": "7b2262726f6b656e223a0a7b2266726f6d223a20226e222c2022746f223a20226e222c2022726f75",
+    "physical_lines": 2,
+    "read": [
+      {
+        "from": "n",
+        "to": "n",
+        "round": 1,
+        "body": "local test",
+        "at": "2026-10-03T20:46:13.016",
+        "file": "1791031573016165513-n.json"
+      }
+    ],
+    "tail": [
+      {
+        "from": "n",
+        "to": "n",
+        "round": 1,
+        "body": "local test",
+        "at": "2026-10-03T20:46:13.016",
+        "file": "1791031573016165513-n.json"
+      }
+    ],
+    "tool_result": "send → n 先放 outbox（inbox 沒掛，已請求加掛）：local test"
+  },
+  "ascii-decisions": {
+    "bytes": 164,
+    "prefix_hex": "7b2262726f6b656e223a0a7b22726f756e64223a20312c202272756c65223a202274657374222c20",
+    "physical_lines": 2,
+    "read": [
+      {
+        "round": 1,
+        "rule": "test",
+        "target": "n",
+        "op": "pause",
+        "why": "probe",
+        "at": "2026-10-03T20:46:13.016",
+        "skipped": "daemon 的 .aosd/ctl 沒掛載"
+      }
+    ],
+    "tail": [
+      {
+        "round": 1,
+        "rule": "test",
+        "target": "n",
+        "op": "pause",
+        "why": "probe",
+        "at": "2026-10-03T20:46:13.016",
+        "skipped": "daemon 的 .aosd/ctl 沒掛載"
+      }
+    ]
+  },
+  "ascii-writes": {
+    "bytes": 214,
+    "prefix_hex": "7b2262726f6b656e223a0a7b226f70223a20226f70656e222c202270617468223a20222f746d702f",
+    "physical_lines": 3,
+    "read": [
+      {
+        "op": "open",
+        "path": "/tmp/astra8-H03-H04-jsonl-fhkytanc/n/first.txt",
+        "ok": true,
+        "pid": 3234533
+      },
+      {
+        "op": "open",
+        "path": "/tmp/astra8-H03-H04-jsonl-fhkytanc/n/second.txt",
+        "ok": true,
+        "pid": 3234533
+      }
+    ],
+    "tail": [
+      {
+        "op": "open",
+        "path": "/tmp/astra8-H03-H04-jsonl-fhkytanc/n/first.txt",
+        "ok": true,
+        "pid": 3234533
+      },
+      {
+        "op": "open",
+        "path": "/tmp/astra8-H03-H04-jsonl-fhkytanc/n/second.txt",
+        "ok": true,
+        "pid": 3234533
+      }
+    ],
+    "worker_rc": 0,
+    "stderr": ""
+  },
+  "ascii-audit-scan": {
+    "tasks": 1,
+    "writes": 2,
+    "bad": [],
+    "bad_lines": 1
+  },
+  "utf8-log": {
+    "bytes": 65,
+    "prefix_hex": "7b2274657874223a22e4b80a7b226174223a2022323032362d31302d30335432303a34363a31332e",
+    "physical_lines": 2,
+    "read": [
+      {
+        "at": "2026-10-03T20:46:13.029",
+        "ev": "recovered"
+      }
+    ],
+    "tail": [
+      {
+        "at": "2026-10-03T20:46:13.029",
+        "ev": "recovered"
+      }
+    ]
+  },
+  "utf8-sent": {
+    "bytes": 142,
+    "prefix_hex": "7b2274657874223a22e4b80a7b2266726f6d223a20226e222c2022746f223a20226e222c2022726f",
+    "physical_lines": 2,
+    "read": [
+      {
+        "from": "n",
+        "to": "n",
+        "round": 1,
+        "body": "local test",
+        "at": "2026-10-03T20:46:13.029",
+        "file": "1791031573029853243-n.json"
+      }
+    ],
+    "tail": [
+      {
+        "from": "n",
+        "to": "n",
+        "round": 1,
+        "body": "local test",
+        "at": "2026-10-03T20:46:13.029",
+        "file": "1791031573029853243-n.json"
+      }
+    ],
+    "tool_result": "send → n 先放 outbox（inbox 沒掛，已請求加掛）：local test"
+  },
+  "utf8-decisions": {
+    "bytes": 165,
+    "prefix_hex": "7b2274657874223a22e4b80a7b22726f756e64223a20312c202272756c65223a202274657374222c",
+    "physical_lines": 2,
+    "read": [
+      {
+        "round": 1,
+        "rule": "test",
+        "target": "n",
+        "op": "pause",
+        "why": "probe",
+        "at": "2026-10-03T20:46:13.030",
+        "skipped": "daemon 的 .aosd/ctl 沒掛載"
+      }
+    ],
+    "tail": [
+      {
+        "round": 1,
+        "rule": "test",
+        "target": "n",
+        "op": "pause",
+        "why": "probe",
+        "at": "2026-10-03T20:46:13.030",
+        "skipped": "daemon 的 .aosd/ctl 沒掛載"
+      }
+    ]
+  },
+  "utf8-writes": {
+    "bytes": 215,
+    "prefix_hex": "7b2274657874223a22e4b80a7b226f70223a20226f70656e222c202270617468223a20222f746d70",
+    "physical_lines": 3,
+    "read": [
+      {
+        "op": "open",
+        "path": "/tmp/astra8-H03-H04-jsonl-fhkytanc/n/first.txt",
+        "ok": true,
+        "pid": 3234534
+      },
+      {
+        "op": "open",
+        "path": "/tmp/astra8-H03-H04-jsonl-fhkytanc/n/second.txt",
+        "ok": true,
+        "pid": 3234534
+      }
+    ],
+    "tail": [
+      {
+        "op": "open",
+        "path": "/tmp/astra8-H03-H04-jsonl-fhkytanc/n/first.txt",
+        "ok": true,
+        "pid": 3234534
+      },
+      {
+        "op": "open",
+        "path": "/tmp/astra8-H03-H04-jsonl-fhkytanc/n/second.txt",
+        "ok": true,
+        "pid": 3234534
+      }
+    ],
+    "worker_rc": 0,
+    "stderr": ""
+  },
+  "utf8-audit-scan": {
+    "tasks": 1,
+    "writes": 2,
+    "bad": [],
+    "bad_lines": 1
+  },
+  "seconds": 0.035,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H03-H04-jsonl-fhkytanc",
+    "root_exists": false
+  }
+}

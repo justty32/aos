@@ -1,0 +1,148 @@
+{
+  "case": "docs-task-table",
+  "D07_spawn_each_isolation": [
+    {
+      "tick": {
+        "rc": 0,
+        "out": {
+          "round": 1,
+          "started": [
+            "once-r1",
+            "each-r1",
+            "stay-r1"
+          ]
+        },
+        "err": ""
+      },
+      "tock": {
+        "rc": 0,
+        "out": {
+          "round": 1,
+          "tick_at": "2026-10-03T20:51:11.557",
+          "tock_at": "2026-10-03T20:51:11.602",
+          "started": [
+            "once-r1",
+            "each-r1",
+            "stay-r1"
+          ],
+          "alive": [
+            "stay-r1"
+          ],
+          "ended": [
+            {
+              "tid": "each-r1",
+              "name": "each",
+              "code": 0
+            },
+            {
+              "tid": "once-r1",
+              "name": "once",
+              "code": 0
+            }
+          ],
+          "ctl": [],
+          "mounts": [],
+          "early": null,
+          "tasks_error": [
+            "broken：argv 要是非空的字串陣列，拿到 123"
+          ]
+        },
+        "err": ""
+      }
+    },
+    {
+      "tick": {
+        "rc": 0,
+        "out": {
+          "round": 2,
+          "started": [
+            "each-r2"
+          ]
+        },
+        "err": ""
+      },
+      "tock": {
+        "rc": 0,
+        "out": {
+          "round": 2,
+          "tick_at": "2026-10-03T20:51:11.624",
+          "tock_at": "2026-10-03T20:51:11.669",
+          "started": [
+            "each-r2"
+          ],
+          "alive": [
+            "stay-r1"
+          ],
+          "ended": [
+            {
+              "tid": "each-r2",
+              "name": "each",
+              "code": 0
+            }
+          ],
+          "ctl": [],
+          "mounts": [],
+          "early": null,
+          "tasks_error": [
+            "broken：argv 要是非空的字串陣列，拿到 123"
+          ]
+        },
+        "err": ""
+      }
+    },
+    {
+      "tick": {
+        "rc": 0,
+        "out": {
+          "round": 3,
+          "started": [
+            "each-r3"
+          ]
+        },
+        "err": ""
+      },
+      "tock": {
+        "rc": 0,
+        "out": {
+          "round": 3,
+          "tick_at": "2026-10-03T20:51:11.691",
+          "tock_at": "2026-10-03T20:51:11.736",
+          "started": [
+            "each-r3"
+          ],
+          "alive": [
+            "stay-r1"
+          ],
+          "ended": [
+            {
+              "tid": "each-r3",
+              "name": "each",
+              "code": 0
+            }
+          ],
+          "ctl": [],
+          "mounts": [],
+          "early": null,
+          "tasks_error": [
+            "broken：argv 要是非空的字串陣列，拿到 123"
+          ]
+        },
+        "err": ""
+      }
+    }
+  ],
+  "spawn_consumed": true,
+  "task_names": [
+    "each-r1",
+    "each-r2",
+    "each-r3",
+    "once-r1",
+    "stay-r1"
+  ],
+  "seconds": 0.231,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-docs-task-table-p0w2rcsk",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "case": "H02-batch",
+  "runs": [
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n0",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.056",
+        "daemon_pid": 3234495
+      },
+      "actual_pid": 3234495,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n0/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n1",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.141",
+        "daemon_pid": 3234502
+      },
+      "actual_pid": 3234502,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n1/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n2",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.225",
+        "daemon_pid": 3234505
+      },
+      "actual_pid": 3234505,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n2/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n3",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.308",
+        "daemon_pid": 3234508
+      },
+      "actual_pid": 3234508,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n3/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n4",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.391",
+        "daemon_pid": 3234511
+      },
+      "actual_pid": 3234511,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n4/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n5",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.476",
+        "daemon_pid": 3234514
+      },
+      "actual_pid": 3234514,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n5/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n6",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.560",
+        "daemon_pid": 3234517
+      },
+      "actual_pid": 3234517,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n6/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n7",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.644",
+        "daemon_pid": 3234520
+      },
+      "actual_pid": 3234520,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n7/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n8",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.729",
+        "daemon_pid": 3234523
+      },
+      "actual_pid": 3234523,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n8/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n9",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.811",
+        "daemon_pid": 3234526
+      },
+      "actual_pid": 3234526,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n9/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n10",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.895",
+        "daemon_pid": 3234529
+      },
+      "actual_pid": 3234529,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n10/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    },
+    {
+      "started": [
+        "first-r1"
+      ],
+      "owner": {
+        "node": "n11",
+        "tid": "first-r1",
+        "allow_stop": false,
+        "at": "2026-10-03T20:46:12.978",
+        "daemon_pid": 3234532
+      },
+      "actual_pid": 3234532,
+      "matches": true,
+      "tasks_error": [
+        "second：子根 n11/sub 這個 tick 已經有別的任務認領，沒起"
+      ]
+    }
+  ],
+  "matches": 12,
+  "seconds": 1.018,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H02-batch-o0_88uol",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "case": "H09-fd",
+  "cases": [
+    {
+      "kind": "legacy",
+      "rc": 0,
+      "stderr": "",
+      "a_state": "ended",
+      "a_exit": {
+        "code": 0,
+        "at": "2026-10-03T20:46:13.179",
+        "round": null
+      },
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "valid",
+      "rc": 0,
+      "stderr": "",
+      "a_state": "ended",
+      "a_exit": {
+        "code": 0,
+        "at": "2026-10-03T20:46:13.202",
+        "round": null
+      },
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "invalid",
+      "rc": 2,
+      "stderr": "aos7-run: 第二個參數 '999999' 不是繼承來的任務資料夾 fd（[Errno 9] Bad file descriptor）；不照 /tmp/astra8-H09-fd-m0u0mpmr/invalid/a 字串路徑寫任何東西。這個參數只給 aos7-tick 用，人手跑請只給 <taskdir>\n",
+      "a_state": "born",
+      "a_exit": null,
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "nonnumeric",
+      "rc": 2,
+      "stderr": "aos7-run: 第二個參數 'bad' 不是繼承來的任務資料夾 fd（invalid literal for int() with base 10: 'bad'）；不照 /tmp/astra8-H09-fd-m0u0mpmr/nonnumeric/a 字串路徑寫任何東西。這個參數只給 aos7-tick 用，人手跑請只給 <taskdir>\n",
+      "a_state": "born",
+      "a_exit": null,
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "file",
+      "rc": 2,
+      "stderr": "aos7-run: 第二個參數 '3' 不是繼承來的任務資料夾 fd（不是資料夾）；不照 /tmp/astra8-H09-fd-m0u0mpmr/file/a 字串路徑寫任何東西。這個參數只給 aos7-tick 用，人手跑請只給 <taskdir>\n",
+      "a_state": "born",
+      "a_exit": null,
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "elsewhere",
+      "rc": 0,
+      "stderr": "",
+      "a_state": "born",
+      "a_exit": null,
+      "b_exit": {
+        "code": 0,
+        "at": "2026-10-03T20:46:13.274",
+        "round": null
+      },
+      "b_output": "b\n"
+    }
+  ],
+  "seconds": 0.126,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H09-fd-m0u0mpmr",
+    "root_exists": false
+  }
+}

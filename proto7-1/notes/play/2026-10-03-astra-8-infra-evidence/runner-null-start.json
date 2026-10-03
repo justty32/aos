@@ -1,0 +1,48 @@
+{
+  "case": "runner-null-start",
+  "injection": "runner SIGKILL + wait before Popen returns to tick",
+  "runner": {
+    "pid": 3235046,
+    "starttime": null,
+    "at": "2026-10-03T20:49:53.913"
+  },
+  "pid": null,
+  "exit": null,
+  "state": "born",
+  "first": {
+    "round": 1,
+    "started": [
+      "x-r1"
+    ],
+    "ctl": []
+  },
+  "tock": {
+    "round": 1,
+    "tick_at": "2026-10-03T20:49:53.912",
+    "tock_at": "2026-10-03T20:49:53.913",
+    "started": [
+      "x-r1"
+    ],
+    "alive": [
+      "x-r1"
+    ],
+    "ended": [],
+    "ctl": [],
+    "mounts": [],
+    "early": null
+  },
+  "next_tick": {
+    "round": 2,
+    "started": [],
+    "ctl": []
+  },
+  "dead_pids": [
+    3235046
+  ],
+  "seconds": 0.012,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-runner-null-start-1j750miu",
+    "root_exists": false
+  }
+}

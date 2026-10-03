@@ -1,0 +1,18 @@
+{
+  "protected_files_unchanged": true,
+  "changed_protected_files": [],
+  "protected_count": 1449,
+  "current_sha256": "a060aa0cbd5086809a587deeb75a27be50cdd97db67fc74fdbc33a33ead0415b",
+  "python": "3.14.7 (main, Aug 10 2026, 07:46:56) [GCC 16.1.1 20260728]",
+  "platform": "Linux-6.18.49-1-MANJARO-x86_64-with-glibc2.44",
+  "git_present": false,
+  "wf_present": false,
+  "cmake_present": false,
+  "cases_with_cleanup": 46,
+  "cleanup_failures": [],
+  "harness_errors": [],
+  "remaining_tmp_roots": [],
+  "remaining_product_processes": [],
+  "evidence_files": 57,
+  "evidence_bytes": 125614
+}

@@ -1,0 +1,15 @@
+{
+  "case": "runner-identity",
+  "matching": "born",
+  "reused": "lost",
+  "missing": "born",
+  "proc_unreadable": "lost",
+  "reused_with_pid_json": "live",
+  "unrelated_still_alive": true,
+  "seconds": 0.012,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-runner-identity-mzhqxi81",
+    "root_exists": false
+  }
+}
