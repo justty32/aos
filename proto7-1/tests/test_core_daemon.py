@@ -6,6 +6,7 @@ import sys
 import time
 import unittest
 
+import _proc
 from test_core import BIN, SLEEPER, CoreCase
 import aos7_daemon_timeline
 import aos7_task
@@ -18,6 +19,7 @@ class DaemonCase(CoreCase):
                              stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, start_new_session=True,
                              env=dict(os.environ, **(env or {})))
         self.procs.append(p)
+        _proc.track(self, p, grace=5, group=True)   # 先 SIGTERM（daemon 收自己的任務），逾時才 SIGKILL 整個群組（N-55）
         return p
 
     def status(self, root=None):

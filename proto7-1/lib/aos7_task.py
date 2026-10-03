@@ -12,7 +12,7 @@ import sys
 import time
 
 import aos7_mount
-from aos7_fs import BIN, env_with_bin, node_path, now, read_json, tail_jsonl, write_json
+from aos7_fs import BIN, env_with_bin, node_path, now, read_json, real_path, tail_jsonl, write_json
 
 
 KILL_GRACE = 1.0   # spec 第 6 節：SIGTERM 後等至多 1 秒，還在就 SIGKILL
@@ -168,9 +168,13 @@ def group_is_task(pgid, tid, node):
 def _escaped(tid, node, skip):
     """環境變數 AOS7_TID、AOS7_NODE 都是這個任務、但已經不是後代的程序（雙 fork、setsid 後被 init 收養；probes/polyglot N5）。
     tid 給 None＝這個 node 的任何任務（有 AOS7_TID 就算；node 消失時用，Q4）。"""
-    want = {b"AOS7_NODE=" + node.encode()}
-    if tid is not None:
-        want.add(b"AOS7_TID=" + tid.encode())
+    return _env_procs({node}, tid, skip)
+
+
+def _env_procs(nodes, tid, skip):
+    """一次掃 `/proc/*/environ`：AOS7_NODE 在 nodes 裡（tid 給了還要 AOS7_TID 相符；沒給要有 AOS7_TID）的程序，不含 aos7-run。"""
+    want_nodes = {b"AOS7_NODE=" + n.encode() for n in nodes}
+    want_tid = None if tid is None else b"AOS7_TID=" + tid.encode()
     out = []
     for pid in _all_pids():
         if pid in skip:
@@ -180,9 +184,38 @@ def _escaped(tid, node, skip):
                 env = set(f.read().split(b"\0"))
         except OSError:
             continue
-        if want <= env and (tid is not None or any(x.startswith(b"AOS7_TID=") for x in env)) and not _is_runner(pid):
-            out.append(pid)
+        if not (env & want_nodes):
+            continue
+        if (want_tid in env) if want_tid is not None else any(x.startswith(b"AOS7_TID=") for x in env):
+            if not _is_runner(pid):
+                out.append(pid)
     return out
+
+
+def _me_and_ancestors():
+    me = {os.getpid()}
+    p = os.getppid()
+    while p > 1 and p not in me:      # 不殺自己與祖先（子 daemon 本身也是某個 node 的任務）
+        me.add(p)
+        st = _stat(p)
+        p = st[1] if st else 1
+    return me
+
+
+def sweep_nodes(nodes):
+    """daemon stop（帶 kill）的最後收尾（astra-5 F-01）：環境變數 AOS7_NODE 是 nodes 之一、有 AOS7_TID 的程序
+    （已結束任務留下的子孫、tasks-old 裡的也算；Q1 範圍：群組＋活後代＋環境相符），連同它們的群組與後代收掉。
+    一次掃 /proc，不逐任務掃。aos7-run 不殺（它等任務死了自己寫 exit.json）。回 (收到的群組數, 乾不乾淨)。"""
+    me = _me_and_ancestors()
+    groups = set()
+    for pid in _env_procs(set(nodes), None, me):
+        st = _stat(pid)
+        if st and st[2] not in me and st[2] > 1:
+            groups.add(st[2])
+    clean = True
+    for g in sorted(groups):
+        clean = kill_group(g) and clean
+    return len(groups), clean
 
 
 def kill_group(pgid, grace=KILL_GRACE, also=()):
@@ -250,7 +283,7 @@ def kill_task(tdir):
     if os.path.exists(os.path.join(tdir, "exit.json")):
         # 主程序結束了，但它開的子孫可能還在（astra-4 I-04）：照樣找環境變數是這個任務的程序收掉
         tid = os.path.basename(tdir)
-        node = os.path.dirname(os.path.dirname(os.path.dirname(tdir)))
+        node = real_path(os.path.dirname(os.path.dirname(os.path.dirname(tdir))))   # tick／tock 給的是 /proc/self/fd/N
         left = _escaped(tid, node, {os.getpid()})
         if not left:
             return True, "already ended"
@@ -264,7 +297,7 @@ def kill_task(tdir):
         pid = read_json(os.path.join(tdir, "pid.json"))
     if not pid:
         return False, "no pid.json"
-    node = os.path.dirname(os.path.dirname(os.path.dirname(tdir)))
+    node = real_path(os.path.dirname(os.path.dirname(os.path.dirname(tdir))))
     tid = os.path.basename(tdir)
     also = _escaped(tid, node, {os.getpid(), pid.get("runner_pid")})
     if not group_is_task(pid.get("pgid"), tid, node):
@@ -283,12 +316,7 @@ def kill_task(tdir):
 def kill_node_procs(node, known=(), skip=()):
     """node 消失時收掉它上面的任務（Q4）：known＝daemon 平常記著的 [(pgid, runner_pid)]（只用 pgid），
     再加上環境變數 AOS7_NODE 是這個 node 的程序（pid.json 跟著資料夾被刪了也找得到）。回收到的群組數與乾不乾淨。"""
-    me = {os.getpid()}
-    p = os.getppid()
-    while p > 1 and p not in me:      # 不殺自己與祖先（子 daemon 本身也是某個 node 的任務）
-        me.add(p)
-        st = _stat(p)
-        p = st[1] if st else 1
+    me = _me_and_ancestors()
     groups = set()
     for pgid, _runner in known:
         if isinstance(pgid, int) and pgid > 1 and pgid not in me:
@@ -409,10 +437,14 @@ def run_ctl(node, tid):
 
 
 def run_all_ctl(node):
-    """對 node 每個任務執行 ctl.json，回紀錄清單。"""
+    """對 node 每個任務執行 ctl.json，回紀錄清單。一個任務的 ctl 處理失敗（ctl-done.json 變成資料夾、寫不進去…）
+    只在它那筆記 `ok: false`＋`err`，其他任務照做，不拖垮 tick／tock（astra-5 F-06）。"""
     out = []
     for tid in list_tasks(node):
-        r = run_ctl(node, tid)
+        try:
+            r = run_ctl(node, tid)
+        except Exception as e:   # noqa: BLE001
+            r = {"tid": tid, "op": None, "ok": False, "err": repr(e)[:200]}
         if r:
             out.append(r)
     return out
@@ -453,23 +485,27 @@ def stopped_note(root, sub):
         sub, st.get("by") or "?", st.get("at") or "?", "（%s）" % st["why"] if st.get("why") else "", sub)
 
 
-def start_task(root, node_id, item, rnd):
+def start_task(root, node_id, item, rnd, fnode=None):
     """建掛載點、寫 birth.json，用 aos7-run 起任務（新 session，不等）。回 tid。
 
-    帶 `subroot` 而子根有 stopped.json（路二 stop 過；Q5）時不起，丟 ValueError（tick 記進 tasks_error）。"""
+    帶 `subroot` 而子根有 stopped.json（路二 stop 過；Q5）時不起，丟 ValueError（tick 記進 tasks_error）。
+    fnode＝寫檔用的 node 路徑（tick 給 node 目錄 fd 的 `/proc/self/fd/N`：node 中途被刪就寫不進去、不建鬼目錄；
+    astra-5 F-09）；任務的環境、cwd、掛載點記錄用實際路徑。"""
     root = os.path.abspath(root)
     node = node_path(root, node_id)
+    fnode = fnode or node
     sub = item.get("subroot")
     sub_ok, sub_err = subroot_of(root, node_id, sub) if isinstance(sub, str) else (None, None)
     if sub_ok:
         note = stopped_note(root, sub_ok)
         if note:
             raise ValueError(note)
-    tid = new_tid(node, item.get("name"), rnd)
+    tid = new_tid(fnode, item.get("name"), rnd)
     tdir = task_dir(node, tid)
-    os.makedirs(tdir, exist_ok=True)   # 先佔住 tid，掛載點建在裡面
+    ftdir = task_dir(fnode, tid)
+    os.makedirs(ftdir, exist_ok=True)   # 先佔住 tid，掛載點建在裡面
     birth = {"tid": tid, "name": item.get("name") or "task", "node": node_id, "round": rnd,
-             "mounts": aos7_mount.make(root, tdir, item.get("mounts") or {}),
+             "mounts": aos7_mount.make(root, tdir, item.get("mounts") or {}, fs_taskdir=ftdir),
              "at": now(), "restart_of": item.get("restart_of")}
     for n in item.get("mounts_dyn") or ():
         # restart 帶過來的執行中加掛：照樣標 dyn，之後 reload 才分得出哪些不是 tasks.json 宣告的（Q6）
@@ -482,7 +518,7 @@ def start_task(root, node_id, item, rnd):
     if sub_ok:
         # 這個任務要在 sub 開子 daemon（路一）：先建 `<sub>/.aosd/`，父 daemon 掃描就跳過它，
         # 不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）
-        sp = node_path(root, sub_ok)
+        sp = os.path.join(fnode, os.path.relpath(node_path(root, sub_ok), node))   # 子根在 node 底下：經 fnode 建
         os.makedirs(os.path.join(sp, ".aosd"), exist_ok=True)
         # 子 daemon 歸屬起它的 node（使用者 10-03 Q5）：路二的 stop 要 allow_stop 才有效；擁有者可直接改這個檔
         write_json(os.path.join(sp, ".aosd", "owner.json"),
@@ -494,7 +530,7 @@ def start_task(root, node_id, item, rnd):
         birth["inst"] = item["inst"]
     else:
         birth["argv"] = item.get("argv", [])
-    write_json(os.path.join(tdir, "birth.json"), birth)
+    write_json(os.path.join(ftdir, "birth.json"), birth)
     env = env_with_bin()
     env.update({"AOS7_ROOT": root, "AOS7_NODE": node, "AOS7_NODE_ID": node_id,
                 "AOS7_TASK": tdir, "AOS7_TID": tid})
@@ -504,7 +540,11 @@ def start_task(root, node_id, item, rnd):
         env["AOS7_SUBROOT"] = node_path(root, birth["subroot"])
     # 寫入紀錄（spec 第 5 節）：aos7-run 起任務時才把 audit_site/ 放進任務的 PYTHONPATH，
     # 不給 aos7-run 自己（它寫的 pid.json、exit.json 不算任務的寫入；probes/polyglot N7）
-    subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir], cwd=node, env=env,
-                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True)
+    try:
+        subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir], cwd=node, env=env,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    except OSError as e:
+        # 連 aos7-run 都起不來（node 中途被搬走、cwd 不在…）：照樣寫 exit.json，不留「永遠剛起」的任務
+        write_json(os.path.join(ftdir, "exit.json"), {"code": 127, "at": now(), "round": rnd, "error": str(e)})
     return tid

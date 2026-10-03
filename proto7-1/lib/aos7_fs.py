@@ -69,19 +69,79 @@ def edit_json(path, fn, default=None):
         return new
 
 
+def proc_starttime(pid):
+    """程序的啟動時間（`/proc/<pid>/stat` 第 22 欄，開機後的 clock tick）；程序不在回 None。
+
+    跟 pid 一起記，才認得出「還是同一個程序」（pid 會被重用；astra-5 F-04）。"""
+    try:
+        with open("/proc/%d/stat" % pid) as f:
+            return int(f.read().rsplit(")", 1)[1].split()[19])
+    except (OSError, IndexError, ValueError):
+        return None
+
+
+OWNER = "action.owner.json"   # `<node>/.aos/action.owner.json`：現在（或最後）拿著 action.lock 的動作是誰
+
+
 @contextlib.contextmanager
 def action_lock(root, node):
     """tick／tock 整個動作期間對 `<node>/.aos/action.lock` 拿 flock，拿到後比對 daemon 世代（astra-4 I-01）。
 
     yield True＝可以寫；False＝自己是舊 daemon 起的動作（環境 AOS7_GEN 跟 `<root>/.aosd/gen.json` 不同），什麼都不要寫。
     新 daemon 先換世代才起時間線；舊動作要嘛在新動作之前做完（拿著鎖時新的進不來），要嘛拿到鎖時看到世代變了。
-    沒有 AOS7_GEN（人手跑、測試）不比對。"""
+    沒有 AOS7_GEN（人手跑、測試）不比對。
+
+    拿到鎖後寫 `.aos/action.owner.json`＝`{"pid","gen","starttime"}`：新 daemon 的動作等鎖逾時時，靠它認出
+    「舊世代、還是同一個程序」的持有者並 SIGKILL（astra-5 F-04；不 unlink 鎖檔）。node 是動作拿著的路徑
+    （tick／tock 給的是 `/proc/self/fd/N`，node 被刪時開不了鎖檔 → FileNotFoundError，由呼叫的人當 gone）。"""
     import fcntl
     with open(os.path.join(node, ".aos", "action.lock"), "a") as lk:
         fcntl.flock(lk, fcntl.LOCK_EX)
         mine = os.environ.get("AOS7_GEN")
+        try:
+            write_json(os.path.join(node, ".aos", OWNER),
+                       {"pid": os.getpid(), "gen": int(mine) if mine and mine.isdigit() else None,
+                        "starttime": proc_starttime(os.getpid()), "at": now()})
+        except OSError:
+            pass
         cur = read_json(os.path.join(root, ".aosd", "gen.json"), {}) or {}
         yield mine is None or not isinstance(cur, dict) or str(cur.get("gen")) == mine
+
+
+def reap_stale_owner(node, gen):
+    """新 daemon（世代 gen）的動作等 action.lock 逾時後呼叫：持有者是舊世代、而且 pid 的啟動時間跟它記的一樣
+    （確定是同一個程序）就 SIGKILL 它，鎖跟著放掉，下一圈重試（astra-5 F-04）。回被殺的 pid 或 None。"""
+    import signal
+    ow = read_json(os.path.join(node, ".aos", OWNER))
+    if not isinstance(ow, dict):
+        return None
+    pid, og, st = ow.get("pid"), ow.get("gen"), ow.get("starttime")
+    if not (isinstance(pid, int) and pid > 1 and pid != os.getpid() and isinstance(og, int) and isinstance(gen, int)
+            and og < gen and st is not None and proc_starttime(pid) == st):
+        return None
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError:
+        return None
+    return pid
+
+
+FD_PREFIX = "/proc/self/fd/"
+
+
+def real_path(p):
+    """`/proc/self/fd/N/...`（tick／tock 抓著 node 的 fd 寫檔；astra-5 F-09）→ 現在的實際路徑；其他原樣。"""
+    if not p.startswith(FD_PREFIX):
+        return p
+    rest = p[len(FD_PREFIX):]
+    fd, _, tail = rest.partition("/")
+    try:
+        base = os.readlink(FD_PREFIX + fd)
+    except OSError:
+        return p
+    if base.endswith(" (deleted)"):
+        base = base[:-len(" (deleted)")]
+    return os.path.join(base, tail) if tail else base
 
 
 def append_jsonl(path, obj):
@@ -162,16 +222,50 @@ TASK_DIRS = ("tasks", "tasks-old")   # 任務資料夾在 `.aos/tasks/`；tock �
 
 
 def task_dirs_of(aos):
-    """`<aos>/tasks/` 與 `<aos>/tasks-old/` 底下所有任務資料夾：[(tid, 路徑)]，依 tid 排序（tasks 的在前）。"""
-    out = []
+    """`<aos>/tasks/` 與 `<aos>/tasks-old/` 底下所有任務資料夾：[(tid, 路徑)]，依 tid 排序（tasks 的在前）。
+
+    同一個 tid 只回一次（列完 tasks/、列 tasks-old/ 之前剛好被 tock 搬過去的，不重複算；astra-5 F-02）。"""
+    out, seen = [], set()
     for sub in TASK_DIRS:
         base = os.path.join(aos, sub)
         try:
             names = sorted(os.listdir(base))
         except OSError:
             continue
-        out += [(t, os.path.join(base, t)) for t in names if not t.startswith(".")]
+        for t in names:
+            if not t.startswith(".") and t not in seen:
+                seen.add(t)
+                out.append((t, os.path.join(base, t)))
     return out
+
+
+def locate_task(aos, tid):
+    """tid 現在的資料夾（先 tasks/ 再 tasks-old/）；都沒有回 None。"""
+    for sub in TASK_DIRS:
+        d = os.path.join(aos, sub, tid)
+        if os.path.isdir(d):
+            return d
+    return None
+
+
+def task_read(aos, tid, d, fn, tries=3):
+    """穩定地讀一個任務資料夾（astra-5 F-02）：fn(d) 讀需要的檔、回結果；讀完時 d 已經不在
+    （讀到一半被 tock 搬到 tasks-old/），就重新定位、整份重讀。回 (資料夾, 結果)；
+    任務哪裡都找不到、或一直在搬，回 (None, None)＝讀不齊（unknown），呼叫的人不能把它當「沒有」或 0。"""
+    for _ in range(tries):
+        try:
+            v = fn(d)
+        except (FileNotFoundError, NotADirectoryError):
+            v = None
+            ok = False
+        else:
+            ok = True
+        if ok and os.path.isdir(d):
+            return d, v
+        d = locate_task(aos, tid)
+        if d is None:
+            return None, None
+    return None, None
 
 
 def task_env():
@@ -187,7 +281,8 @@ def wait_tock(task_dir, last_round, poll=0.02, timeout=None):
     end = None if timeout is None else time.monotonic() + timeout
     while True:
         t = read_json(path)
-        if t and isinstance(t.get("round"), int) and t["round"] > last_round:
+        # 不是物件（`[1]`、`2`）當沒有、繼續等（astra-5 F-06）
+        if isinstance(t, dict) and isinstance(t.get("round"), int) and t["round"] > last_round:
             return t["round"]
         if end is not None and time.monotonic() >= end:
             return None

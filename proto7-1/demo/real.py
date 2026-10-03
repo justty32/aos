@@ -92,16 +92,29 @@ def run(root, a, log):
     signal.signal(signal.SIGTERM, _term)
     t0, samples = time.monotonic(), []
     try:
-        why = watch(root, a, log, d, t0, samples)
-    except KeyboardInterrupt:
-        why = "被中斷（SIGINT／SIGTERM）"
-    secs = time.monotonic() - t0
-    fs.write_json(os.path.join(root, ".aosd", "ctl", "zz-real-stop.json"), {"op": "stop", "kill": True, "by": "real.py"})
-    try:
-        d.wait(timeout=15)
-    except subprocess.TimeoutExpired:
-        d.terminate()
-        d.wait(timeout=5)
+        try:
+            why = watch(root, a, log, d, t0, samples)
+        except KeyboardInterrupt:
+            why = "被中斷（SIGINT／SIGTERM）"
+    finally:   # 其他例外（I/O 錯…）也先收 daemon 再往上丟（N-55）
+        secs = time.monotonic() - t0
+        try:
+            fs.write_json(os.path.join(root, ".aosd", "ctl", "zz-real-stop.json"),
+                          {"op": "stop", "kill": True, "by": "real.py"})
+        except OSError:
+            pass
+        try:
+            d.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            d.terminate()
+            try:
+                d.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(d.pid, signal.SIGKILL)
+                except OSError:
+                    pass
+                d.wait()
     time.sleep(0.5)
     left = our_procs(root)
     for p in left:

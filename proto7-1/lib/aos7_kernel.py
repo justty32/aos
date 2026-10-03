@@ -22,8 +22,9 @@ def load_state(env):
     own = fs.read_json(os.path.join(env["task"], STATE))
     if isinstance(own, dict):
         return own
-    # 前任可能已被 tock 搬到 tasks-old/（Q3）：兩處都找
-    where = dict(reversed(fs.task_dirs_of(os.path.dirname(os.path.dirname(env["task"])))))
+    # 前任可能已被 tock 搬到 tasks-old/（Q3）：兩處都找；讀到一半被搬走的到新位置重讀（astra-5 F-02）
+    aos = os.path.dirname(os.path.dirname(env["task"]))
+    where = dict(reversed(fs.task_dirs_of(aos)))
     birth = fs.read_json(os.path.join(env["task"], "birth.json")) or {}
     cands = []
     if birth.get("restart_of"):
@@ -31,14 +32,15 @@ def load_state(env):
     name = birth.get("name")
     sibs = []
     for tid, d in where.items():
-        b = fs.read_json(os.path.join(d, "birth.json")) or {}
+        _, b = fs.task_read(aos, tid, d, lambda x: fs.read_json(os.path.join(x, "birth.json")))
+        b = b or {}
         if tid != env["tid"] and name and isinstance(b, dict) and b.get("name") == name:
             sibs.append((b.get("round") or 0, tid))
     cands += [tid for _, tid in sorted(sibs, reverse=True)]
     for tid in cands:
         if tid not in where:
             continue
-        st = fs.read_json(os.path.join(where[tid], STATE))
+        _, st = fs.task_read(aos, tid, where[tid], lambda x: fs.read_json(os.path.join(x, STATE)))
         if isinstance(st, dict):
             st = dict(st)
             st["inherited_from"] = tid

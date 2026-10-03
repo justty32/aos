@@ -11,7 +11,9 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(BASE, "lib"))
+sys.path.insert(0, HERE)
 
+import _proc  # noqa: E402
 import aos7_fs as fs  # noqa: E402
 import aos7_mount  # noqa: E402
 from aos7_kernel_rules import run_rules, snapshot, task_state  # noqa: E402
@@ -26,9 +28,9 @@ class World:
         self.procs = []
 
     def close(self):
+        """先收程序、再刪空間（N-55）。"""
         for p in self.procs:
-            p.kill()
-            p.wait()
+            _proc.reap(p)
         shutil.rmtree(self.root, ignore_errors=True)
 
     def node(self, nid, rnd=1):
@@ -46,7 +48,7 @@ class World:
         fs.write_json(os.path.join(d, "birth.json"),
                       {"tid": tid, "name": name or tid.split("-r")[0], "node": nid, "round": rnd})
         if state == "live":
-            p = subprocess.Popen(["sleep", "60"])
+            p = _proc.track(None, subprocess.Popen(["sleep", "60"]))
             self.procs.append(p)
             fs.write_json(os.path.join(d, "pid.json"), {"pid": p.pid, "pgid": p.pid})
         elif state == "ended":
@@ -66,6 +68,7 @@ KERNEL_MOUNTS = {"daemon": ".aosd", "amy": "team/agents/amy/.aos", "bob": "team/
 class RuleTest(unittest.TestCase):
     def setUp(self):
         self.w = World()
+        self.addCleanup(self.w.close)
         self.w.node("team")
         self.w.node("team/agents/amy")
         self.w.node("team/agents/bob")
@@ -73,9 +76,6 @@ class RuleTest(unittest.TestCase):
                     "budget_tokens": 100, "cool_rounds": 2, "max_age": {"subd": 3}}
         self.kdir = self.w.task("team", "kernel-r1", state="born")
         self.w.mount(self.kdir, KERNEL_MOUNTS)
-
-    def tearDown(self):
-        self.w.close()
 
     def step(self, state, rnd):
         snap = snapshot(self.w.root, "team", "kernel-r1", self.cfg, rnd, aos7_mount.resolver(self.kdir))
@@ -311,6 +311,7 @@ class IntegrationTest(unittest.TestCase):
 
     def setUp(self):
         self.w = World()
+        self.addCleanup(self.w.close)   # 最後跑：下面 track 的 kernel 程序先收（N-55）
         self.node = self.w.node("team")
         self.w.node("team/agents/amy")
         fs.write_json(os.path.join(self.node, "kernel.json"),
@@ -325,15 +326,8 @@ class IntegrationTest(unittest.TestCase):
         env = fs.env_with_bin()
         env.update(AOS7_ROOT=self.w.root, AOS7_NODE=self.node, AOS7_NODE_ID="team",
                    AOS7_TASK=self.kdir, AOS7_TID="kernel-r1")
-        self.p = subprocess.Popen([os.path.join(BASE, "bin", "aos7-kernel")], env=env, cwd=self.node,
-                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-
-    def tearDown(self):
-        if self.p.poll() is None:
-            self.p.kill()
-        self.p.wait()
-        self.p.stdout.close()
-        self.w.close()
+        self.p = _proc.track(self, subprocess.Popen([os.path.join(BASE, "bin", "aos7-kernel")], env=env, cwd=self.node,
+                                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True))
 
     def tock(self, rnd):
         """寫 tock.json，等 kernel 把這回合寫進 kernel-state.json。"""
@@ -393,8 +387,8 @@ class IntegrationTest(unittest.TestCase):
         env = fs.env_with_bin()
         env.update(AOS7_ROOT=self.w.root, AOS7_NODE=self.node, AOS7_NODE_ID="team",
                    AOS7_TASK=k2, AOS7_TID="kernel-r2")
-        p = subprocess.Popen([os.path.join(BASE, "bin", "aos7-kernel"), "--rounds", "1"], env=env,
-                             cwd=self.node, stdout=subprocess.PIPE, text=True)
+        p = _proc.track(self, subprocess.Popen([os.path.join(BASE, "bin", "aos7-kernel"), "--rounds", "1"], env=env,
+                                               cwd=self.node, stdout=subprocess.PIPE, text=True))
         self.assertIn("> 1", p.stdout.readline())   # 接前一任：第 1 回合已處理過
         self.assertEqual(p.wait(timeout=5), 0)       # 啟動前就到的第 2 回合 tock 照樣處理，然後 --rounds 1 結束
         p.stdout.close()

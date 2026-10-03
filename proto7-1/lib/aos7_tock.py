@@ -8,7 +8,8 @@ import signal
 import sys
 
 import aos7_task
-from aos7_fs import action_lock, append_jsonl, node_path, now, read_json, write_json
+from aos7_fs import action_lock, append_jsonl, now, read_json, tail_jsonl, write_json
+from aos7_tick import held_node
 
 
 DEFAULT_KEEP_ENDED = 20
@@ -22,15 +23,23 @@ def keep_ended_rounds(node):
 
 
 def tock(root, node_id, early=None):
-    """做一次 tock，回本回合總結（即 rounds.jsonl 加的那一行）。early＝這次是不是提前進場（daemon 給；不知道是 None）。"""
-    node = node_path(root, node_id)
-    if not os.path.isfile(os.path.join(node, ".aos", "timeline.json")):
-        # node 已經不在：什麼都不寫，免得把資料夾建回來（probes/subtimeline 1、rename N9）
-        return {"round": None, "gone": True}
-    with action_lock(root, node) as ok:
-        if not ok:
-            return {"round": None, "stale": True}   # 舊 daemon 的動作：不倒寫新 daemon 的回合（astra-4 I-01）
-        return _tock(node, early)
+    """做一次 tock，回本回合總結（即 rounds.jsonl 加的那一行）。early＝這次是不是提前進場（daemon 給；不知道是 None）。
+
+    整個動作抓著 node 目錄的 fd 寫（astra-5 F-09）：中途被搬走寫到新位置，被刪掉就收手印 gone。"""
+    def act(fnode, node):
+        with action_lock(root, fnode) as ok:
+            if not ok:
+                return {"round": None, "stale": True}   # 舊 daemon 的動作：不倒寫新 daemon 的回合（astra-4 I-01）
+            return _tock(fnode, early)
+    return held_node(act, root, node_id, {"round": None, "gone": True})
+
+
+def logged_summary(node, rnd, k=5):
+    """rounds.jsonl 最後幾行裡第 rnd 回合的總結（同回合重做的 tock 用來去重；astra-5 F-05）；沒有回 None。"""
+    for row in reversed(tail_jsonl(os.path.join(node, ".aos", "rounds.jsonl"), k)):
+        if isinstance(row, dict) and row.get("round") == rnd and not isinstance(row.get("round"), bool):
+            return row
+    return None
 
 
 def _tock(node, early):
@@ -47,6 +56,9 @@ def _tock(node, early):
     if state.get("open") is False:
         # 這回合已經 tock 過（tick 被打斷沒開新回合、daemon 收尾又 tock 一次）：不再寫第二行總結（probes/nest3 N1）
         return {"round": rnd, "skipped": "round already closed"}
+    prior = logged_summary(node, rnd)
+    if prior is not None:
+        return _replayed(node, rpath, state, rnd, prior)
     at = now()
 
     ctl = list(state.get("ctl", [])) + aos7_task.run_all_ctl(node)
@@ -115,6 +127,37 @@ def _tock(node, early):
     state.update({"open": False, "tock_at": at})
     write_json(rpath, state)
     return summary
+
+
+def _replayed(node, rpath, state, rnd, prior):
+    """這回合的總結已經在 rounds.jsonl（上一次 tock 寫完總結後被殺：逾時、kill -9）：不寫第二行，只把沒做完的收尾做完——
+    總結裡報過 ended 的任務補 ended.json（沒報過的留給下一回合報，不會漏）、總結裡 alive 的補這回合的 tock.json、round.json 關上並標
+    `incomplete`（daemon 給的原因，沒給是 "tock"）與 `replayed: true`（astra-5 F-05）。回 prior 加 `replayed: true`。"""
+    for rec in prior.get("ended") or []:
+        tid = rec.get("tid") if isinstance(rec, dict) else None
+        if not isinstance(tid, str) or "/" in tid or tid.startswith("."):
+            continue
+        tdir = aos7_task.task_dir(node, tid)
+        try:
+            if os.path.isdir(tdir) and not os.path.exists(os.path.join(tdir, "ended.json")):
+                write_json(os.path.join(tdir, "ended.json"), {"round": rnd})
+        except OSError:
+            pass
+    for tid in prior.get("alive") or []:
+        # 被殺前可能還沒寫到它：補這回合的 tock.json（已經是這回合的就不動）
+        if not isinstance(tid, str) or "/" in tid or tid.startswith("."):
+            continue
+        tp = os.path.join(aos7_task.task_dir(node, tid), "tock.json")
+        old = read_json(tp)
+        if os.path.isdir(os.path.dirname(tp)) and not (isinstance(old, dict) and old.get("round") == rnd):
+            try:
+                write_json(tp, {"round": rnd, "at": prior.get("tock_at") or now(), "early": prior.get("early")})
+            except OSError:
+                pass
+    state.update({"open": False, "tock_at": prior.get("tock_at") or now(), "replayed": True,
+                  "incomplete": os.environ.get("AOS7_INCOMPLETE") or "tock"})
+    write_json(rpath, state)
+    return dict(prior, replayed=True)
 
 
 def main(argv=None):
