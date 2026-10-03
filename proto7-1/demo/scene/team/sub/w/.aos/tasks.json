@@ -1,0 +1,3 @@
+{"tasks": [
+ {"name": "note", "mode": "each", "argv": ["python3", "-c", "import json,os;r=json.load(open('.aos/round.json'))['round'];open('notes.txt','a').write('w 第 %d 回合\\n'%r)"]}
+]}
