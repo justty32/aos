@@ -1,0 +1,21 @@
+{
+  "at": "2026-10-03T14:36:39.683574",
+  "report": "proto7-1/notes/play/2026-10-03-astra-3.md",
+  "tmp_roots_remaining": [],
+  "experimental_processes": [],
+  "evidence_files_before_this_check": 350,
+  "max_evidence_file_bytes": 149975,
+  "oversized_files_200000_byte_limit": [],
+  "broken_report_links": [],
+  "product_code_modified": false,
+  "demo_real_executed": false,
+  "real_llm_called": false,
+  "backend_note": "Built-in fake; localhost-only fixed-response HTTP fixture; no external model calls.",
+  "cleanup_sources": [
+    "agent/cleanup.json",
+    "agent/live-cleanup.json",
+    "kernel/cleanup.json",
+    "longrun/cleanup.json",
+    "regression/cleanup.json"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+ "pid": 994625,
+ "root": "/tmp/astra3-reg-controls-extra-iybf_z13/task-array-recovery",
+ "at": "2026-10-03T14:26:51.756",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 9,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  },
+  "healthy": {
+   "round": 9,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

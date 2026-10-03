@@ -1,0 +1,15 @@
+{
+ "pid": 990988,
+ "root": "/tmp/astra3-reg-controls-0trbz1jy/daemon-array",
+ "at": "2026-10-03T14:26:20.918",
+ "stopping": true,
+ "kill_on_stop": true,
+ "nodes": {
+  "n": {
+   "round": 3,
+   "phase": "stopped",
+   "paused": false,
+   "live": []
+  }
+ }
+}

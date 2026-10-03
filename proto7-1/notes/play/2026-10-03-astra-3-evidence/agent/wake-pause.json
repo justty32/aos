@@ -1,0 +1,96 @@
+{
+ "before_pause_wait": {
+  "state.json": {
+   "state": "idle",
+   "round": 12,
+   "steps": 3,
+   "tocks": 12,
+   "plan": null,
+   "pc": 0,
+   "letters": [],
+   "goal": null,
+   "last": "回到 idle",
+   "from": null,
+   "active_round": 10
+  },
+  "progress.json": {
+   "round": 12,
+   "state": "idle",
+   "steps": 3
+  },
+  "usage.json": {
+   "tokens": 134,
+   "calls": 1
+  },
+  "tock.json": {
+   "round": 12,
+   "at": "2026-10-03T14:30:26.005"
+  }
+ },
+ "after_pause_wait": {
+  "state.json": {
+   "state": "idle",
+   "round": 12,
+   "steps": 3,
+   "tocks": 12,
+   "plan": null,
+   "pc": 0,
+   "letters": [],
+   "goal": null,
+   "last": "回到 idle",
+   "from": null,
+   "active_round": 10
+  },
+  "progress.json": {
+   "round": 12,
+   "state": "idle",
+   "steps": 3
+  },
+  "usage.json": {
+   "tokens": 134,
+   "calls": 1
+  },
+  "tock.json": {
+   "round": 12,
+   "at": "2026-10-03T14:30:26.005"
+  }
+ },
+ "unchanged": true,
+ "resumed": {
+  "state.json": {
+   "state": "think",
+   "round": 20,
+   "steps": 4,
+   "tocks": 20,
+   "plan": [
+    {
+     "tool": "none"
+    }
+   ],
+   "pc": 0,
+   "letters": [],
+   "goal": {
+    "wake": "已經 10 回合沒有新信。看一下 memory 裡的往來：是不是有人在等你、或有事被漏掉了？需要就寄信推進，不需要就回 none。"
+   },
+   "last": "think（fake）：1 個動作",
+   "from": null,
+   "active_round": 20
+  },
+  "progress.json": {
+   "round": 20,
+   "state": "think",
+   "steps": 4
+  },
+  "usage.json": {
+   "tokens": 268,
+   "calls": 2
+  },
+  "tock.json": {
+   "round": 20,
+   "at": "2026-10-03T14:30:28.588"
+  }
+ },
+ "calls_after_unless": 2,
+ "calls_later": 2,
+ "paused_round": 12
+}

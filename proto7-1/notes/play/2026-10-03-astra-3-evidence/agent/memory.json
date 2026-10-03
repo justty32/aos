@@ -1,0 +1,105 @@
+{
+ "history": [
+  {
+   "old_letters": 0,
+   "history_bytes": 49,
+   "runs": [
+    {
+     "ms": 0.060843998653581366,
+     "peak_rss_kib": 28796,
+     "baseline_peak_kib": 28796,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    },
+    {
+     "ms": 0.07758499850751832,
+     "peak_rss_kib": 28796,
+     "baseline_peak_kib": 28796,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    },
+    {
+     "ms": 0.061194001318654045,
+     "peak_rss_kib": 28796,
+     "baseline_peak_kib": 28796,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    }
+   ]
+  },
+  {
+   "old_letters": 1024,
+   "history_bytes": 4240433,
+   "runs": [
+    {
+     "ms": 10.699262998969061,
+     "peak_rss_kib": 30000,
+     "baseline_peak_kib": 28924,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    },
+    {
+     "ms": 6.4546809990133625,
+     "peak_rss_kib": 30192,
+     "baseline_peak_kib": 28924,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    },
+    {
+     "ms": 10.342466001020512,
+     "peak_rss_kib": 29472,
+     "baseline_peak_kib": 28924,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    }
+   ]
+  },
+  {
+   "old_letters": 16384,
+   "history_bytes": 67846193,
+   "runs": [
+    {
+     "ms": 100.71572800006834,
+     "peak_rss_kib": 102752,
+     "baseline_peak_kib": 28924,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    },
+    {
+     "ms": 86.8575829990732,
+     "peak_rss_kib": 102548,
+     "baseline_peak_kib": 28924,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    },
+    {
+     "ms": 108.25981500238413,
+     "peak_rss_kib": 102620,
+     "baseline_peak_kib": 28924,
+     "returned_bytes": 103,
+     "recent_count": 1,
+     "file_chars": {}
+    }
+   ]
+  }
+ ],
+ "large_work_file_bytes": 33554432,
+ "large_work_result": {
+  "ms": 0.11001600068993866,
+  "peak_rss_kib": 30996,
+  "baseline_peak_kib": 30996,
+  "returned_bytes": 4058,
+  "recent_count": 0,
+  "file_chars": {
+   "work/large.txt": 4000
+  }
+ }
+}

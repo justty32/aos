@@ -1,0 +1,231 @@
+{
+  ".aos/tasks/agent-r1/birth.json": {
+    "tid": "agent-r1",
+    "name": "agent",
+    "node": "lab/agents/cy",
+    "round": 1,
+    "mounts": {
+      "lab_agents_ada_inbox": {
+        "to": "lab/agents/ada/inbox",
+        "at": "/tmp/astra3-reg-space-bdhxlbq7/lab/agents/cy/.aos/tasks/agent-r1/mnt/lab_agents_ada_inbox"
+      },
+      "lab_agents_ben_inbox": {
+        "to": "lab/agents/ben/inbox",
+        "at": "/tmp/astra3-reg-space-bdhxlbq7/lab/agents/cy/.aos/tasks/agent-r1/mnt/lab_agents_ben_inbox"
+      }
+    },
+    "at": "2026-10-03T14:26:20.014",
+    "restart_of": null,
+    "argv": [
+      "aos7-agent"
+    ]
+  },
+  ".aos/tasks/agent-r1/mount-done/lab_agents_ben_inbox.json": {
+    "name": "lab_agents_ben_inbox",
+    "path": "lab/agents/ben/inbox",
+    "why": "寄信給 lab/agents/ben",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_ben_inbox → lab/agents/ben/inbox",
+      "at": "2026-10-03T14:26:20.937"
+    }
+  },
+  ".aos/tasks/agent-r1/mount-done/lab_agents_ada_inbox.json": {
+    "name": "lab_agents_ada_inbox",
+    "path": "lab/agents/ada/inbox",
+    "why": "寄信給 lab/agents/ada",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_ada_inbox → lab/agents/ada/inbox",
+      "at": "2026-10-03T14:26:20.396"
+    }
+  },
+  ".aos/tasks/agent-r1/state.json": {
+    "state": "think",
+    "round": 49,
+    "steps": 49,
+    "tocks": 49,
+    "plan": [
+      {
+        "tool": "send",
+        "to": "lab/agents/ada",
+        "body": "ping 25"
+      },
+      {
+        "tool": "send",
+        "to": "lab/agents/ben",
+        "body": "ping 26"
+      }
+    ],
+    "pc": 0,
+    "letters": [
+      "1791008790626479559-lab_agents_ada.json",
+      "1791008790745949367-lab_agents_ben.json"
+    ],
+    "goal": null,
+    "last": "think（fake）：2 個動作",
+    "from": null,
+    "active_round": 49
+  },
+  "inbox/done/1791008790197947357-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 57,
+    "body": "ping 22",
+    "at": "2026-10-03T14:26:30.197"
+  },
+  "inbox/done/1791008789790877348-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 49,
+    "body": "ping 23",
+    "at": "2026-10-03T14:26:29.790"
+  },
+  "inbox/done/1791008789342817888-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 51,
+    "body": "ping 20",
+    "at": "2026-10-03T14:26:29.342"
+  },
+  "inbox/done/1791008788830012946-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 43,
+    "body": "ping 21",
+    "at": "2026-10-03T14:26:28.830"
+  },
+  "inbox/done/1791008788448136273-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 45,
+    "body": "ping 18",
+    "at": "2026-10-03T14:26:28.448"
+  },
+  "inbox/done/1791008788021600531-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 42,
+    "body": "ping 16",
+    "at": "2026-10-03T14:26:28.021"
+  },
+  "inbox/done/1791008787877242929-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 37,
+    "body": "ping 19",
+    "at": "2026-10-03T14:26:27.877"
+  },
+  "inbox/done/1791008787390486712-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 34,
+    "body": "ping 17",
+    "at": "2026-10-03T14:26:27.390"
+  },
+  "inbox/done/1791008787145747399-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 36,
+    "body": "ping 14",
+    "at": "2026-10-03T14:26:27.145"
+  },
+  "inbox/done/1791008786903538445-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 31,
+    "body": "ping 15",
+    "at": "2026-10-03T14:26:26.903"
+  },
+  "inbox/done/1791008784259105703-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 30,
+    "body": "ping 12",
+    "at": "2026-10-03T14:26:24.259"
+  },
+  "inbox/done/1791008784222203128-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 27,
+    "body": "ping 13",
+    "at": "2026-10-03T14:26:24.222"
+  },
+  "inbox/done/1791008783733825952-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 24,
+    "body": "ping 11",
+    "at": "2026-10-03T14:26:23.733"
+  },
+  "inbox/done/1791008783670784245-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 26,
+    "body": "ping 10",
+    "at": "2026-10-03T14:26:23.670"
+  },
+  "inbox/done/1791008783244262590-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 23,
+    "body": "ping 8",
+    "at": "2026-10-03T14:26:23.244"
+  },
+  "inbox/done/1791008783105351696-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 20,
+    "body": "ping 9",
+    "at": "2026-10-03T14:26:23.105"
+  },
+  "inbox/done/1791008782617704495-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 17,
+    "body": "ping 7",
+    "at": "2026-10-03T14:26:22.617"
+  },
+  "inbox/done/1791008782371299340-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 17,
+    "body": "ping 6",
+    "at": "2026-10-03T14:26:22.371"
+  },
+  "inbox/done/1791008782130211281-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 14,
+    "body": "ping 5",
+    "at": "2026-10-03T14:26:22.130"
+  },
+  "inbox/done/1791008781498804426-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 11,
+    "body": "ping 4",
+    "at": "2026-10-03T14:26:21.498"
+  },
+  "inbox/done/1791008781178065324-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 8,
+    "body": "ping 3",
+    "at": "2026-10-03T14:26:21.178"
+  },
+  "inbox/done/1791008780625154774-lab_agents_ada.json": {
+    "from": "lab/agents/ada",
+    "to": "lab/agents/cy",
+    "round": 5,
+    "body": "ping 2",
+    "at": "2026-10-03T14:26:20.625"
+  },
+  "inbox/done/1791008780217037911-lab_agents_ben.json": {
+    "from": "lab/agents/ben",
+    "to": "lab/agents/cy",
+    "round": 2,
+    "body": "ping 1",
+    "at": "2026-10-03T14:26:20.217"
+  }
+}

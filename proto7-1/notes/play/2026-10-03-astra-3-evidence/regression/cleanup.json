@@ -1,0 +1,10 @@
+{
+  "live_processes_before_cleanup": [],
+  "removed_roots": [
+    "/tmp/astra3-reg-demo",
+    "/tmp/astra3-reg-tests"
+  ],
+  "remaining_tmp_roots": [],
+  "max_evidence_file_bytes": 64689,
+  "evidence_files": 321
+}

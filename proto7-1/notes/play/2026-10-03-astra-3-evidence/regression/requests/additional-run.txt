@@ -1,0 +1,335 @@
+[
+  {
+    "case": "daemon-bad-name",
+    "before_round": 1,
+    "status": {
+      "pid": 990805,
+      "root": "/tmp/astra3-reg-requests-daemon-4icp3ljk",
+      "at": "2026-10-03T14:26:20.518",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "healthy": {
+          "round": 4,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "worker-r1"
+          ]
+        },
+        "n": {
+          "round": 4,
+          "phase": "running",
+          "paused": false,
+          "live": [
+            "pulse-r4",
+            "worker-r1"
+          ]
+        }
+      }
+    },
+    "birth": {
+      "tid": "worker-r1",
+      "name": "worker",
+      "node": "n",
+      "round": 1,
+      "mounts": {
+        "ok": {
+          "to": "recipient/inbox",
+          "at": "/tmp/astra3-reg-requests-daemon-4icp3ljk/n/.aos/tasks/worker-r1/mnt/ok"
+        },
+        "later": {
+          "to": "recipient/other",
+          "at": "/tmp/astra3-reg-requests-daemon-4icp3ljk/n/.aos/tasks/worker-r1/mnt/later"
+        }
+      },
+      "at": "2026-10-03T14:26:20.011",
+      "restart_of": null,
+      "argv": [
+        "python3",
+        "-c",
+        "import time;time.sleep(120)"
+      ]
+    },
+    "receipts": {
+      "03-later.json": {
+        "name": "later",
+        "path": "recipient/other",
+        "result": {
+          "ok": true,
+          "msg": "掛上 mnt/later → recipient/other",
+          "at": "2026-10-03T14:26:20.213"
+        }
+      },
+      "02-bad.json": {
+        "name": [
+          "bad"
+        ],
+        "path": "recipient/inbox",
+        "result": {
+          "ok": false,
+          "msg": "name 與 path 要是字串（name 可省）",
+          "at": "2026-10-03T14:26:20.213"
+        }
+      },
+      "01-good.json": {
+        "name": "ok",
+        "path": "recipient/inbox",
+        "result": {
+          "ok": true,
+          "msg": "掛上 mnt/ok → recipient/inbox",
+          "at": "2026-10-03T14:26:20.213"
+        }
+      }
+    },
+    "bad_request_exists": false,
+    "bad_receipt_exists": true,
+    "rounds": {
+      "3.json": {
+        "round": 3,
+        "tick_at": "2026-10-03T14:26:20.361",
+        "tock_at": "2026-10-03T14:26:20.400",
+        "started": [
+          "pulse-r3"
+        ],
+        "alive": [
+          "worker-r1"
+        ],
+        "ended": [
+          {
+            "tid": "pulse-r3",
+            "code": 0
+          }
+        ],
+        "ctl": [],
+        "mounts": []
+      },
+      "2.json": {
+        "round": 2,
+        "tick_at": "2026-10-03T14:26:20.213",
+        "tock_at": "2026-10-03T14:26:20.251",
+        "started": [
+          "pulse-r2"
+        ],
+        "alive": [
+          "worker-r1"
+        ],
+        "ended": [
+          {
+            "tid": "pulse-r2",
+            "code": 0
+          }
+        ],
+        "ctl": [],
+        "mounts": [
+          {
+            "name": "ok",
+            "path": "recipient/inbox",
+            "ok": true,
+            "msg": "掛上 mnt/ok → recipient/inbox",
+            "tid": "worker-r1"
+          },
+          {
+            "name": null,
+            "path": "recipient/inbox",
+            "ok": false,
+            "msg": "name 與 path 要是字串（name 可省）",
+            "tid": "worker-r1"
+          },
+          {
+            "name": "later",
+            "path": "recipient/other",
+            "ok": true,
+            "msg": "掛上 mnt/later → recipient/other",
+            "tid": "worker-r1"
+          }
+        ]
+      },
+      "1.json": {
+        "round": 1,
+        "tick_at": "2026-10-03T14:26:20.011",
+        "tock_at": "2026-10-03T14:26:20.154",
+        "started": [
+          "worker-r1",
+          "pulse-r1"
+        ],
+        "alive": [
+          "worker-r1"
+        ],
+        "ended": [
+          {
+            "tid": "pulse-r1",
+            "code": 0
+          }
+        ],
+        "ctl": [],
+        "mounts": []
+      }
+    },
+    "task_ids": [
+      "pulse-r1",
+      "pulse-r2",
+      "pulse-r3",
+      "pulse-r4",
+      "worker-r1"
+    ],
+    "log": "{\"at\": \"2026-10-03T14:26:19.983\", \"ev\": \"start\", \"pid\": 990805}\n{\"at\": \"2026-10-03T14:26:19.984\", \"ev\": \"node+\", \"node\": \"healthy\", \"round\": 0}\n{\"at\": \"2026-10-03T14:26:19.984\", \"ev\": \"node+\", \"node\": \"n\", \"round\": 0}\n{\"at\": \"2026-10-03T14:26:20.015\", \"ev\": \"tick\", \"node\": \"healthy\", \"round\": 1, \"started\": [\"worker-r1\", \"pulse-r1\"], \"rc\": 0}\n{\"at\": \"2026-10-03T14:26:20.020\", \"ev\": \"tick\", \"node\": \"n\", \"round\": 1, \"started\": [\"worker-r1\", \"pulse-r1\"], \"rc\": 0}\n{\"at\": \"2026-10-03T14:26:20.049\", \"ev\": \"ctl\", \"file\": \"pause.json\", \"op\": \"pause\", \"node\": \"n\", \"by\": null, \"ok\": true, \"msg\": \"pause n\"}\n{\"at\": \"2026-10-03T14:26:20.151\", \"ev\": \"tock\", \"node\": \"healthy\", \"round\": 1, \"rc\": 0, \"ended\": [{\"tid\": \"pulse-r1\", \"code\": 0}], \"early\": false}\n{\"at\": \"2026-10-03T14:26:20.157\", \"ev\": \"tock\", \"node\": \"n\", \"round\": 1, \"rc\": 0, \"ended\": [{\"tid\": \"pulse-r1\", \"code\": 0}], \"early\": false}\n{\"at\": \"2026-10-03T14:26:20.168\", \"ev\": \"tick\", \"node\": \"healthy\", \"round\": 2, \"started\": [\"pulse-r2\"], \"rc\": 0}\n{\"at\": \"2026-10-03T14:26:20.192\", \"ev\": \"ctl\", \"file\": \"resume.json\", \"op\": \"resume\", \"node\": \"n\", \"by\": null, \"ok\": true, \"msg\": \"resume n\"}\n{\"at\": \"2026-10-03T14:26:20.205\", \"ev\": \"tock\", \"node\": \"healthy\", \"round\": 2, \"rc\": 0, \"ended\": [{\"tid\": \"pulse-r2\", \"code\": 0}], \"early\": true}\n{\"at\": \"2026-10-03T14:26:20.216\", \"ev\": \"tick\", \"node\": \"n\", \"round\": 2, \"started\": [\"pulse-r2\"], \"rc\": 0}\n{\"at\": \"2026-10-03T14:26:20.254\", \"ev\": \"tock\", \"node\": \"n\", \"round\": 2, \"rc\": 0, \"ended\": [{\"tid\": \"pulse-r2\", \"code\": 0}], \"early\": true}\n{\"at\": \"2026-10-03T14:26:20.318\", \"ev\": \"tick\", \"node\": \"healthy\", \"round\": 3, \"started\": [\"pulse-r3\"], \"rc\": 0}\n{\"at\": \"2026-10-03T14:26:20.354\", \"ev\": \"tock\", \"node\": \"healthy\", \"round\": 3, \"rc\": 0, \"ended\": [{\"tid\": \"pulse-r3\", \"code\": 0}], \"early\": true}\n{\"at\": \"2026-10-03T14:26:20.365\", \"ev\": \"tick\", \"node\": \"n\", \"round\": 3, \"started\": [\"pulse-r3\"], \"rc\": 0}\n{\"at\": \"2026-10-03T14:26:20.404\", \"ev\": \"tock\", \"node\": \"n\", \"round\": 3, \"rc\": 0, \"ended\": [{\"tid\": \"pulse-r3\", \"code\": 0}], \"early\": true}\n{\"at\": \"2026-10-03T14:26:20.470\", \"ev\": \"tick\", \"node\": \"healthy\", \"round\": 4, \"started\": [\"pulse-r4\"], \"rc\": 0}\n{\"at\": \"2026-10-03T14:26:20.506\", \"ev\": \"tock\", \"node\": \"healthy\", \"round\": 4, \"rc\": 0, \"ended\": [{\"tid\": \"pulse-r4\", \"code\": 0}], \"early\": true}\n{\"at\": \"2026-10-03T14:26:20.515\", \"ev\": \"tick\", \"node\": \"n\", \"round\": 4, \"started\": [\"pulse-r4\"], \"rc\": 0}\n"
+  },
+  {
+    "case": "daemon-cleanup",
+    "pids": [
+      990966,
+      990963,
+      990934,
+      990931,
+      990899,
+      990895,
+      990851,
+      990842,
+      990852,
+      990840,
+      990955,
+      990953,
+      990921,
+      990918,
+      990883,
+      990878,
+      990850,
+      990838,
+      990847,
+      990833
+    ],
+    "alive": [],
+    "root_removed": true,
+    "daemon_exit": 0
+  },
+  {
+    "case": "first-auto-name",
+    "birth": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "sender",
+      "round": 1,
+      "mounts": {
+        "a_b_inbox": {
+          "to": "a/b/inbox",
+          "at": "/tmp/astra3-reg-requests-collision-z0uo_7u9/sender/.aos/tasks/agent-r1/mnt/a_b_inbox"
+        }
+      },
+      "at": "2026-10-03T14:26:20.798",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "state": {
+      "state": "idle",
+      "round": 8,
+      "steps": 3,
+      "tocks": 8,
+      "plan": null,
+      "pc": 0,
+      "letters": [],
+      "goal": null,
+      "last": "回到 idle",
+      "from": null,
+      "active_round": 1
+    },
+    "first_inbox": {
+      "1791008780989889124-sender.json": {
+        "from": "sender",
+        "to": "a/b",
+        "round": 2,
+        "body": "hello first",
+        "at": "2026-10-03T14:26:20.989"
+      }
+    }
+  },
+  {
+    "case": "second-auto-name",
+    "birth": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "sender",
+      "round": 1,
+      "mounts": {
+        "a_b_inbox": {
+          "to": "a/b/inbox",
+          "at": "/tmp/astra3-reg-requests-collision-z0uo_7u9/sender/.aos/tasks/agent-r1/mnt/a_b_inbox"
+        },
+        "a_b_inbox-a21f9e84": {
+          "to": "a_b/inbox",
+          "at": "/tmp/astra3-reg-requests-collision-z0uo_7u9/sender/.aos/tasks/agent-r1/mnt/a_b_inbox-a21f9e84"
+        }
+      },
+      "at": "2026-10-03T14:26:20.798",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "state": {
+      "state": "idle",
+      "round": 16,
+      "steps": 6,
+      "tocks": 16,
+      "plan": null,
+      "pc": 0,
+      "letters": [],
+      "goal": null,
+      "last": "回到 idle",
+      "from": null,
+      "active_round": 9
+    },
+    "receipts": {
+      "a_b_inbox-a21f9e84.json": {
+        "name": "a_b_inbox-a21f9e84",
+        "path": "a_b/inbox",
+        "why": "寄信給 a_b",
+        "result": {
+          "ok": true,
+          "msg": "掛上 mnt/a_b_inbox-a21f9e84 → a_b/inbox",
+          "at": "2026-10-03T14:26:22.069"
+        }
+      },
+      "a_b_inbox.json": {
+        "name": "a_b_inbox",
+        "path": "a/b/inbox",
+        "why": "寄信給 a/b",
+        "result": {
+          "ok": true,
+          "msg": "掛上 mnt/a_b_inbox → a/b/inbox",
+          "at": "2026-10-03T14:26:21.054"
+        }
+      }
+    },
+    "outbox": {},
+    "first_inbox": {
+      "1791008780989889124-sender.json": {
+        "from": "sender",
+        "to": "a/b",
+        "round": 2,
+        "body": "hello first",
+        "at": "2026-10-03T14:26:20.989"
+      }
+    },
+    "second_inbox": {
+      "1791008781997388463-sender.json": {
+        "from": "sender",
+        "to": "a_b",
+        "round": 10,
+        "body": "hello second",
+        "at": "2026-10-03T14:26:21.997"
+      }
+    }
+  },
+  {
+    "case": "collision-cleanup",
+    "pids": [
+      991021,
+      991019
+    ],
+    "alive": [],
+    "root_removed": true
+  }
+]

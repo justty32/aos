@@ -1,0 +1,101 @@
+[
+ {
+  "round": 1,
+  "cap": 100,
+  "member_present": true,
+  "decisions": [
+   {
+    "round": 1,
+    "rule": "cap",
+    "target": "team/a",
+    "op": "pause",
+    "why": "用量總和 120 > cap_tokens 100；不會自動恢復，要人改 kernel.json"
+   }
+  ],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 120,
+     "acc": 0
+    }
+   },
+   "paused": {
+    "team/a": {
+     "at": 1,
+     "cap": true
+    }
+   },
+   "issued": {}
+  }
+ },
+ {
+  "round": 2,
+  "cap": 100,
+  "member_present": false,
+  "decisions": [],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 120,
+     "acc": 0
+    }
+   },
+   "paused": {
+    "team/a": {
+     "at": 1,
+     "cap": true
+    }
+   },
+   "issued": {}
+  }
+ },
+ {
+  "round": 3,
+  "cap": 200,
+  "member_present": false,
+  "decisions": [],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 120,
+     "acc": 0
+    }
+   },
+   "paused": {
+    "team/a": {
+     "at": 1,
+     "cap": true
+    }
+   },
+   "issued": {}
+  }
+ },
+ {
+  "round": 4,
+  "cap": 200,
+  "member_present": true,
+  "decisions": [
+   {
+    "round": 4,
+    "rule": "cap",
+    "target": "team/a",
+    "op": "resume",
+    "why": "總額上限改了（用量 120，上限 200）"
+   }
+  ],
+  "state": {
+   "progress": {},
+   "usage": {
+    "team/a": {
+     "last": 120,
+     "acc": 0
+    }
+   },
+   "paused": {},
+   "issued": {}
+  }
+ }
+]

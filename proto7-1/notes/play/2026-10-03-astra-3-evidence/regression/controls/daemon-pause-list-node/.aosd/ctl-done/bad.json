@@ -1,0 +1,11 @@
+{
+ "op": "pause",
+ "node": [
+  "n"
+ ],
+ "result": {
+  "ok": false,
+  "msg": "pause 要給 node",
+  "at": "2026-10-03T14:26:50.067"
+ }
+}

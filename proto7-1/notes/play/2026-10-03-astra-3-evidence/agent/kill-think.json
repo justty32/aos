@@ -1,0 +1,101 @@
+{
+ "before_kill": {
+  "state.json": {
+   "state": "think",
+   "round": 1,
+   "steps": 1,
+   "tocks": 1,
+   "plan": null,
+   "pc": 0,
+   "letters": [],
+   "goal": {
+    "say_first": {
+     "to": "team/w",
+     "body": "test"
+    }
+   },
+   "last": "剛出生",
+   "from": null,
+   "active_round": 1
+  },
+  "progress.json": {
+   "round": 1,
+   "state": "think",
+   "steps": 1,
+   "llm_since": "2026-10-03T14:30:24.380"
+  },
+  "pid.json": {
+   "pid": 1020978,
+   "pgid": 1020978,
+   "runner_pid": 1020976,
+   "at": "2026-10-03T14:30:24.205"
+  },
+  "tock.json": {
+   "round": 10,
+   "at": "2026-10-03T14:30:25.684"
+  },
+  "task_count": 1
+ },
+ "after_recovery": {
+  "old": {
+   "state.json": {
+    "state": "think",
+    "round": 1,
+    "steps": 1,
+    "tocks": 1,
+    "plan": null,
+    "pc": 0,
+    "letters": [],
+    "goal": {
+     "say_first": {
+      "to": "team/w",
+      "body": "test"
+     }
+    },
+    "last": "剛出生",
+    "from": null,
+    "active_round": 1
+   },
+   "progress.json": {
+    "round": 1,
+    "state": "think",
+    "steps": 1,
+    "llm_since": "2026-10-03T14:30:24.380"
+   },
+   "exit.json": {
+    "code": -9,
+    "at": "2026-10-03T14:30:25.696",
+    "round": 10
+   },
+   "ended.json": {
+    "round": 11
+   }
+  },
+  "new": {
+   "state.json": {
+    "state": "idle",
+    "round": 12,
+    "steps": 3,
+    "tocks": 3,
+    "plan": null,
+    "pc": 0,
+    "letters": [],
+    "goal": null,
+    "last": "回到 idle",
+    "from": "main-r1",
+    "active_round": 1
+   },
+   "progress.json": {
+    "round": 12,
+    "state": "idle",
+    "steps": 3
+   },
+   "usage.json": {
+    "tokens": 17,
+    "calls": 1
+   }
+  },
+  "http_calls": 2
+ },
+ "kernel_decisions": []
+}

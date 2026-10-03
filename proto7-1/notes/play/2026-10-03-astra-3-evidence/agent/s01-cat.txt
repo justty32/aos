@@ -1,0 +1,48 @@
+$ cat team/w/.aos/tasks/main-r1/state.json
+{
+ "state": "idle",
+ "round": 12,
+ "steps": 3,
+ "tocks": 12,
+ "plan": null,
+ "pc": 0,
+ "letters": [],
+ "goal": null,
+ "last": "回到 idle",
+ "from": null,
+ "active_round": 10
+}
+
+$ cat team/w/.aos/tasks/main-r1/progress.json
+{
+ "round": 12,
+ "state": "idle",
+ "steps": 3
+}
+
+$ cat team/w/.aos/tasks/main-r1/tock.json
+{
+ "round": 12,
+ "at": "2026-10-03T14:30:26.005"
+}
+
+$ cat .aosd/paused.json
+{
+ "paused": [
+  "team/w"
+ ]
+}
+
+$ cat .aosd/ctl-done/probe-1791009026077885155.json
+{
+ "op": "pause",
+ "node": "team/w",
+ "by": "astra3-file-only",
+ "why": "offline probe",
+ "result": {
+  "ok": true,
+  "msg": "pause team/w",
+  "at": "2026-10-03T14:30:26.095"
+ }
+}
+

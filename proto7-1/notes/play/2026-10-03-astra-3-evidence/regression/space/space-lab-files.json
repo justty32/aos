@@ -1,0 +1,102 @@
+{
+  ".aos/tasks/kernel-r1/birth.json": {
+    "tid": "kernel-r1",
+    "name": "kernel",
+    "node": "lab",
+    "round": 1,
+    "mounts": {
+      "aosd-e5b25c8c": {
+        "to": ".aosd",
+        "at": "/tmp/astra3-reg-space-bdhxlbq7/lab/.aos/tasks/kernel-r1/mnt/aosd-e5b25c8c"
+      },
+      "lab_agents_ada__aos-cc76b705": {
+        "to": "lab/agents/ada/.aos",
+        "at": "/tmp/astra3-reg-space-bdhxlbq7/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos-cc76b705"
+      },
+      "lab_agents_ben__aos-4905a5d8": {
+        "to": "lab/agents/ben/.aos",
+        "at": "/tmp/astra3-reg-space-bdhxlbq7/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos-4905a5d8"
+      },
+      "lab_agents_cy__aos-fcba139b": {
+        "to": "lab/agents/cy/.aos",
+        "at": "/tmp/astra3-reg-space-bdhxlbq7/lab/.aos/tasks/kernel-r1/mnt/lab_agents_cy__aos-fcba139b"
+      }
+    },
+    "at": "2026-10-03T14:26:20.020",
+    "restart_of": null,
+    "argv": [
+      "aos7-kernel"
+    ]
+  },
+  ".aos/tasks/kernel-r1/mount-done/lab_agents_cy__aos-fcba139b.json": {
+    "name": "lab_agents_cy__aos-fcba139b",
+    "path": "lab/agents/cy/.aos",
+    "why": "kernel 要看／控制 lab/agents/cy/.aos",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_cy__aos-fcba139b → lab/agents/cy/.aos",
+      "at": "2026-10-03T14:26:22.073"
+    }
+  },
+  ".aos/tasks/kernel-r1/mount-done/lab_agents_ben__aos-4905a5d8.json": {
+    "name": "lab_agents_ben__aos-4905a5d8",
+    "path": "lab/agents/ben/.aos",
+    "why": "kernel 要看／控制 lab/agents/ben/.aos",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_ben__aos-4905a5d8 → lab/agents/ben/.aos",
+      "at": "2026-10-03T14:26:20.204"
+    }
+  },
+  ".aos/tasks/kernel-r1/mount-done/lab_agents_ada__aos-cc76b705.json": {
+    "name": "lab_agents_ada__aos-cc76b705",
+    "path": "lab/agents/ada/.aos",
+    "why": "kernel 要看／控制 lab/agents/ada/.aos",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/lab_agents_ada__aos-cc76b705 → lab/agents/ada/.aos",
+      "at": "2026-10-03T14:26:20.204"
+    }
+  },
+  ".aos/tasks/kernel-r1/mount-done/aosd-e5b25c8c.json": {
+    "name": "aosd-e5b25c8c",
+    "path": ".aosd",
+    "why": "kernel 要看／控制 .aosd",
+    "result": {
+      "ok": true,
+      "msg": "掛上 mnt/aosd-e5b25c8c → .aosd",
+      "at": "2026-10-03T14:26:20.203"
+    }
+  },
+  ".aos/tasks/kernel-r1/kernel-state.json": {
+    "progress": {
+      "lab/agents/ben:agent-r1": {
+        "last": {
+          "round": 55,
+          "state": "act",
+          "steps": 53
+        },
+        "same": 0,
+        "member_round": 55
+      }
+    },
+    "usage": {
+      "lab/agents/ada": {
+        "last": 2956,
+        "acc": 1527
+      },
+      "lab/agents/ben": {
+        "last": 2815,
+        "acc": 2723
+      },
+      "lab/agents/cy": {
+        "last": 2439,
+        "acc": 1416
+      }
+    },
+    "paused": {},
+    "issued": {},
+    "round": 64
+  },
+  ".aos/tasks/kernel-r1/decisions.jsonl": "{\"round\": 26, \"rule\": \"budget\", \"target\": \"lab/agents/ada\", \"op\": \"pause\", \"why\": \"用量累計 1336 > 0\", \"at\": \"2026-10-03T14:26:24.318\"}\n{\"round\": 26, \"rule\": \"budget\", \"target\": \"lab/agents/cy\", \"op\": \"pause\", \"why\": \"用量累計 637 > 0\", \"at\": \"2026-10-03T14:26:24.318\"}\n{\"round\": 26, \"rule\": \"budget\", \"target\": \"lab/agents/ben\", \"op\": \"pause\", \"why\": \"用量累計 1262 > 0\", \"at\": \"2026-10-03T14:26:24.319\"}\n{\"round\": 38, \"rule\": \"budget\", \"target\": \"lab/agents/ada\", \"op\": \"resume\", \"why\": \"pause 後已過 12 回合\", \"at\": \"2026-10-03T14:26:26.361\"}\n{\"round\": 38, \"rule\": \"budget\", \"target\": \"lab/agents/cy\", \"op\": \"resume\", \"why\": \"pause 後已過 12 回合\", \"at\": \"2026-10-03T14:26:26.361\"}\n{\"round\": 38, \"rule\": \"budget\", \"target\": \"lab/agents/ben\", \"op\": \"resume\", \"why\": \"pause 後已過 12 回合（已不在 members，自己下的 pause 自己收）\", \"at\": \"2026-10-03T14:26:26.361\"}\n"
+}

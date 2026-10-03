@@ -1,0 +1,14 @@
+{
+ "tid": "crash-r11",
+ "name": "crash",
+ "node": "n",
+ "round": 11,
+ "mounts": {},
+ "at": "2026-10-03T14:26:25.625",
+ "restart_of": null,
+ "argv": [
+  "/usr/bin/python3",
+  "-c",
+  "raise RuntimeError(\"intentional crash\")"
+ ]
+}

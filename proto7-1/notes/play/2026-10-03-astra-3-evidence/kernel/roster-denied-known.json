@@ -1,0 +1,114 @@
+{
+ "events": [
+  {
+   "label": "known M-15: roster is config projection, b remains listed despite denied mount",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 0,
+      "acc": 0
+     }
+    },
+    "paused": {},
+    "issued": {},
+    "round": 5
+   },
+   "paused": false,
+   "status": {
+    "pid": 1019842,
+    "root": "/tmp/astra3-kernel-roster-denied-known-o6k_v2yb",
+    "at": "2026-10-03T14:30:03.686",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 5,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 5,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     },
+     "team/b": {
+      "round": 5,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     },
+     {
+      "node": "team/b",
+      "inbox": "team/b/inbox",
+      "role": ""
+     }
+    ]
+   },
+   "kernel_birth": {
+    "tid": "kernel-r1",
+    "name": "kernel",
+    "node": "team",
+    "round": 1,
+    "mounts": {
+     "a": {
+      "to": "team/a/.aos",
+      "at": "/tmp/astra3-kernel-roster-denied-known-o6k_v2yb/team/.aos/tasks/kernel-r1/mnt/a"
+     },
+     "daemon": {
+      "to": ".aosd",
+      "at": "/tmp/astra3-kernel-roster-denied-known-o6k_v2yb/team/.aos/tasks/kernel-r1/mnt/daemon"
+     }
+    },
+    "at": "2026-10-03T14:30:02.905",
+    "restart_of": null,
+    "argv": [
+     "aos7-kernel"
+    ]
+   },
+   "mount_receipts": [
+    {
+     "name": "team_b__aos-92cc0c02",
+     "path": "team/b/.aos",
+     "why": "kernel 要看／控制 team/b/.aos",
+     "result": {
+      "ok": false,
+      "msg": "team/b/.aos 不在這個 node 的 mount_allow 裡（或沿連結跑出空間根）",
+      "at": "2026-10-03T14:30:03.302"
+     }
+    }
+   ]
+  }
+ ],
+ "kernel_logs": {
+  "team/.aos/tasks/kernel-r1": "aos7-kernel: kernel-r1 啟動，等 tock（> 0）\naos7-kernel: 加掛 team/b/.aos：pending\naos7-kernel: 回合 1，0 個決定\naos7-kernel: 加掛 team/b/.aos：pending\naos7-kernel: 回合 2，0 個決定\naos7-kernel: 加掛 team/b/.aos：refused: team/b/.aos 不在這個 node 的 mount_allow 裡（或沿連結跑出空間根）\naos7-kernel: 回合 3，0 個決定\naos7-kernel: 加掛 team/b/.aos：refused: team/b/.aos 不在這個 node 的 mount_allow 裡（或沿連結跑出空間根）\naos7-kernel: 回合 4，0 個決定\naos7-kernel: 加掛 team/b/.aos：refused: team/b/.aos 不在這個 node 的 mount_allow 裡（或沿連結跑出空間根）\naos7-kernel: 回合 5，0 個決定\n"
+ },
+ "kernel_exits": {
+  "team/.aos/tasks/kernel-r1": {
+   "code": 0,
+   "at": "2026-10-03T14:30:03.893",
+   "round": 5
+  }
+ },
+ "daemon_exit": 0,
+ "cleanup_groups": [
+  1019853
+ ],
+ "temporary_root": "/tmp/astra3-kernel-roster-denied-known-o6k_v2yb",
+ "cleaned": true
+}

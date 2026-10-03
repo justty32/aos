@@ -1,0 +1,943 @@
+{
+  "config": {
+    "agents": 6,
+    "kernel": 1,
+    "target_rounds": 360,
+    "interval_ms": 180,
+    "memory": 12,
+    "backend": "fake",
+    "audit": false,
+    "workload": "3 pairs uninterrupted ping",
+    "python": "3.14.7 (main, Aug 10 2026, 07:46:56) [GCC 16.1.1 20260728]",
+    "platform": "Linux-6.18.49-1-MANJARO-x86_64-with-glibc2.44",
+    "cpu_count": 16
+  },
+  "samples": [
+    {
+      "threshold": 10,
+      "seconds": 1.766,
+      "rounds": {
+        "team": 10,
+        "team/agents/a0": 10,
+        "team/agents/a1": 10,
+        "team/agents/a2": 10,
+        "team/agents/a3": 10,
+        "team/agents/a4": 10,
+        "team/agents/a5": 10
+      },
+      "rss_kib": {
+        "VmRSS": 20524,
+        "VmHWM": 20524
+      },
+      "disk": {
+        "files": 197,
+        "directories": 90,
+        "logical_bytes": 64907,
+        "allocated_file_bytes": 819200,
+        "top_bytes": [
+          [
+            "log.jsonl",
+            16865
+          ],
+          [
+            "rounds",
+            15182
+          ],
+          [
+            "out.log",
+            5587
+          ],
+          [
+            "trace.jsonl",
+            4958
+          ],
+          [
+            "birth.json",
+            3462
+          ],
+          [
+            "roster.json",
+            3378
+          ],
+          [
+            "sent.jsonl",
+            2476
+          ],
+          [
+            "state.json",
+            1482
+          ]
+        ]
+      }
+    },
+    {
+      "threshold": 60,
+      "seconds": 10.761,
+      "rounds": {
+        "team": 60,
+        "team/agents/a0": 60,
+        "team/agents/a1": 60,
+        "team/agents/a2": 60,
+        "team/agents/a3": 60,
+        "team/agents/a4": 60,
+        "team/agents/a5": 60
+      },
+      "rss_kib": {
+        "VmRSS": 20628,
+        "VmHWM": 20628
+      },
+      "disk": {
+        "files": 638,
+        "directories": 90,
+        "logical_bytes": 280429,
+        "allocated_file_bytes": 2732032,
+        "top_bytes": [
+          [
+            "log.jsonl",
+            98115
+          ],
+          [
+            "rounds",
+            78582
+          ],
+          [
+            "trace.jsonl",
+            28048
+          ],
+          [
+            "out.log",
+            26819
+          ],
+          [
+            "sent.jsonl",
+            17658
+          ],
+          [
+            "birth.json",
+            3462
+          ],
+          [
+            "roster.json",
+            3378
+          ],
+          [
+            "state.json",
+            1636
+          ]
+        ]
+      }
+    },
+    {
+      "threshold": 120,
+      "seconds": 21.689,
+      "rounds": {
+        "team": 120,
+        "team/agents/a0": 120,
+        "team/agents/a1": 120,
+        "team/agents/a2": 120,
+        "team/agents/a3": 120,
+        "team/agents/a4": 120,
+        "team/agents/a5": 120
+      },
+      "rss_kib": {
+        "VmRSS": 20644,
+        "VmHWM": 20692
+      },
+      "disk": {
+        "files": 1172,
+        "directories": 90,
+        "logical_bytes": 541829,
+        "allocated_file_bytes": 5099520,
+        "top_bytes": [
+          [
+            "log.jsonl",
+            195917
+          ],
+          [
+            "rounds",
+            154809
+          ],
+          [
+            "trace.jsonl",
+            55965
+          ],
+          [
+            "out.log",
+            53202
+          ],
+          [
+            "sent.jsonl",
+            36735
+          ],
+          [
+            "birth.json",
+            3462
+          ],
+          [
+            "roster.json",
+            3378
+          ],
+          [
+            "state.json",
+            1520
+          ]
+        ]
+      }
+    },
+    {
+      "threshold": 180,
+      "seconds": 32.623,
+      "rounds": {
+        "team": 180,
+        "team/agents/a0": 180,
+        "team/agents/a1": 180,
+        "team/agents/a2": 181,
+        "team/agents/a3": 181,
+        "team/agents/a4": 181,
+        "team/agents/a5": 181
+      },
+      "rss_kib": {
+        "VmRSS": 20644,
+        "VmHWM": 20820
+      },
+      "disk": {
+        "files": 1718,
+        "directories": 90,
+        "logical_bytes": 810812,
+        "allocated_file_bytes": 7512064,
+        "top_bytes": [
+          [
+            "log.jsonl",
+            295174
+          ],
+          [
+            "rounds",
+            232402
+          ],
+          [
+            "trace.jsonl",
+            84564
+          ],
+          [
+            "out.log",
+            81308
+          ],
+          [
+            "sent.jsonl",
+            56935
+          ],
+          [
+            "birth.json",
+            3462
+          ],
+          [
+            "roster.json",
+            3378
+          ],
+          [
+            "state.json",
+            1809
+          ]
+        ]
+      }
+    },
+    {
+      "threshold": 240,
+      "seconds": 43.406,
+      "rounds": {
+        "team": 240,
+        "team/agents/a0": 240,
+        "team/agents/a1": 240,
+        "team/agents/a2": 241,
+        "team/agents/a3": 240,
+        "team/agents/a4": 241,
+        "team/agents/a5": 241
+      },
+      "rss_kib": {
+        "VmRSS": 20652,
+        "VmHWM": 20820
+      },
+      "disk": {
+        "files": 2255,
+        "directories": 90,
+        "logical_bytes": 1076647,
+        "allocated_file_bytes": 9904128,
+        "top_bytes": [
+          [
+            "log.jsonl",
+            393300
+          ],
+          [
+            "rounds",
+            308355
+          ],
+          [
+            "trace.jsonl",
+            113004
+          ],
+          [
+            "out.log",
+            109388
+          ],
+          [
+            "sent.jsonl",
+            77215
+          ],
+          [
+            "birth.json",
+            3462
+          ],
+          [
+            "roster.json",
+            3378
+          ],
+          [
+            "state.json",
+            1809
+          ]
+        ]
+      }
+    },
+    {
+      "threshold": 300,
+      "seconds": 54.268,
+      "rounds": {
+        "team": 300,
+        "team/agents/a0": 300,
+        "team/agents/a1": 300,
+        "team/agents/a2": 301,
+        "team/agents/a3": 300,
+        "team/agents/a4": 301,
+        "team/agents/a5": 301
+      },
+      "rss_kib": {
+        "VmRSS": 20660,
+        "VmHWM": 20820
+      },
+      "disk": {
+        "files": 2798,
+        "directories": 90,
+        "logical_bytes": 1344436,
+        "allocated_file_bytes": 12283904,
+        "top_bytes": [
+          [
+            "log.jsonl",
+            491854
+          ],
+          [
+            "rounds",
+            385220
+          ],
+          [
+            "trace.jsonl",
+            141443
+          ],
+          [
+            "out.log",
+            137577
+          ],
+          [
+            "sent.jsonl",
+            97664
+          ],
+          [
+            "birth.json",
+            3462
+          ],
+          [
+            "roster.json",
+            3378
+          ],
+          [
+            "state.json",
+            1956
+          ]
+        ]
+      }
+    },
+    {
+      "threshold": 360,
+      "seconds": 64.973,
+      "rounds": {
+        "team": 360,
+        "team/agents/a0": 360,
+        "team/agents/a1": 360,
+        "team/agents/a2": 361,
+        "team/agents/a3": 360,
+        "team/agents/a4": 360,
+        "team/agents/a5": 360
+      },
+      "rss_kib": {
+        "VmRSS": 20688,
+        "VmHWM": 20948
+      },
+      "disk": {
+        "files": 3332,
+        "directories": 90,
+        "logical_bytes": 1608584,
+        "allocated_file_bytes": 14635008,
+        "top_bytes": [
+          [
+            "log.jsonl",
+            589394
+          ],
+          [
+            "rounds",
+            460991
+          ],
+          [
+            "trace.jsonl",
+            169805
+          ],
+          [
+            "out.log",
+            165333
+          ],
+          [
+            "sent.jsonl",
+            117606
+          ],
+          [
+            "birth.json",
+            3462
+          ],
+          [
+            "roster.json",
+            3378
+          ],
+          [
+            "state.json",
+            1953
+          ]
+        ]
+      }
+    }
+  ],
+  "periodic_rss": [
+    {
+      "seconds": 0.001,
+      "min_round": 0,
+      "VmRSS": 232,
+      "VmHWM": 232
+    },
+    {
+      "seconds": 2.009,
+      "min_round": 11,
+      "VmRSS": 20524,
+      "VmHWM": 20524
+    },
+    {
+      "seconds": 4.023,
+      "min_round": 22,
+      "VmRSS": 20596,
+      "VmHWM": 20596
+    },
+    {
+      "seconds": 6.03,
+      "min_round": 33,
+      "VmRSS": 20596,
+      "VmHWM": 20596
+    },
+    {
+      "seconds": 8.034,
+      "min_round": 45,
+      "VmRSS": 20612,
+      "VmHWM": 20612
+    },
+    {
+      "seconds": 10.039,
+      "min_round": 56,
+      "VmRSS": 20616,
+      "VmHWM": 20616
+    },
+    {
+      "seconds": 12.048,
+      "min_round": 67,
+      "VmRSS": 20636,
+      "VmHWM": 20636
+    },
+    {
+      "seconds": 14.056,
+      "min_round": 78,
+      "VmRSS": 20640,
+      "VmHWM": 20640
+    },
+    {
+      "seconds": 16.063,
+      "min_round": 89,
+      "VmRSS": 20640,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 18.068,
+      "min_round": 100,
+      "VmRSS": 20640,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 20.073,
+      "min_round": 111,
+      "VmRSS": 20644,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 22.1,
+      "min_round": 122,
+      "VmRSS": 20644,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 24.112,
+      "min_round": 133,
+      "VmRSS": 20644,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 26.117,
+      "min_round": 144,
+      "VmRSS": 20644,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 28.123,
+      "min_round": 155,
+      "VmRSS": 20644,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 30.134,
+      "min_round": 166,
+      "VmRSS": 20644,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 32.139,
+      "min_round": 177,
+      "VmRSS": 20644,
+      "VmHWM": 20692
+    },
+    {
+      "seconds": 34.177,
+      "min_round": 189,
+      "VmRSS": 20644,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 36.183,
+      "min_round": 200,
+      "VmRSS": 20644,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 38.193,
+      "min_round": 211,
+      "VmRSS": 20644,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 40.198,
+      "min_round": 222,
+      "VmRSS": 20644,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 42.203,
+      "min_round": 233,
+      "VmRSS": 20644,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 44.222,
+      "min_round": 244,
+      "VmRSS": 20652,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 46.226,
+      "min_round": 256,
+      "VmRSS": 20652,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 48.232,
+      "min_round": 267,
+      "VmRSS": 20652,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 50.246,
+      "min_round": 278,
+      "VmRSS": 20652,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 52.251,
+      "min_round": 289,
+      "VmRSS": 20660,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 54.268,
+      "min_round": 300,
+      "VmRSS": 20660,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 56.303,
+      "min_round": 312,
+      "VmRSS": 20668,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 58.308,
+      "min_round": 323,
+      "VmRSS": 20668,
+      "VmHWM": 20820
+    },
+    {
+      "seconds": 60.315,
+      "min_round": 334,
+      "VmRSS": 20688,
+      "VmHWM": 20948
+    },
+    {
+      "seconds": 62.321,
+      "min_round": 345,
+      "VmRSS": 20688,
+      "VmHWM": 20948
+    },
+    {
+      "seconds": 64.331,
+      "min_round": 356,
+      "VmRSS": 20688,
+      "VmHWM": 20948
+    }
+  ],
+  "seconds": 65.485,
+  "daemon_rc": 0,
+  "final_status": {
+    "pid": 998509,
+    "root": "/tmp/astra3-long-ukaf2whx/space",
+    "at": "2026-10-03T14:28:43.051",
+    "stopping": true,
+    "kill_on_stop": true,
+    "nodes": {
+      "team": {
+        "round": 362,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "team/agents/a0": {
+        "round": 362,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "team/agents/a1": {
+        "round": 362,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "team/agents/a2": {
+        "round": 363,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "team/agents/a3": {
+        "round": 362,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "team/agents/a4": {
+        "round": 362,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      },
+      "team/agents/a5": {
+        "round": 362,
+        "phase": "stopped",
+        "paused": false,
+        "live": []
+      }
+    }
+  },
+  "final_disk": {
+    "files": 3357,
+    "directories": 91,
+    "logical_bytes": 1618676,
+    "allocated_file_bytes": 14741504,
+    "top_bytes": [
+      [
+        "log.jsonl",
+        593919
+      ],
+      [
+        "rounds",
+        463541
+      ],
+      [
+        "trace.jsonl",
+        170753
+      ],
+      [
+        "out.log",
+        166462
+      ],
+      [
+        "sent.jsonl",
+        118113
+      ],
+      [
+        "birth.json",
+        3462
+      ],
+      [
+        "roster.json",
+        3378
+      ],
+      [
+        "state.json",
+        1521
+      ]
+    ]
+  },
+  "agents": {
+    "team/agents/a0": {
+      "tasks": 1,
+      "state": {
+        "state": "idle",
+        "round": 362,
+        "steps": 351,
+        "tocks": 362,
+        "plan": null,
+        "pc": 0,
+        "letters": [],
+        "goal": null,
+        "last": "回到 idle",
+        "from": null,
+        "active_round": 360
+      },
+      "usage": {
+        "tokens": 57289,
+        "calls": 117
+      },
+      "exit": {
+        "code": 0,
+        "at": "2026-10-03T14:28:42.982",
+        "round": 362
+      },
+      "received": 116,
+      "sent": 117
+    },
+    "team/agents/a1": {
+      "tasks": 1,
+      "state": {
+        "state": "think",
+        "round": 362,
+        "steps": 349,
+        "tocks": 362,
+        "plan": [
+          {
+            "tool": "send",
+            "to": "team/agents/a0",
+            "body": "ping 233"
+          }
+        ],
+        "pc": 0,
+        "letters": [
+          "1791008922708712727-team_agents_a0.json"
+        ],
+        "goal": null,
+        "last": "think（fake）：1 個動作",
+        "from": null,
+        "active_round": 362
+      },
+      "usage": {
+        "tokens": 57553,
+        "calls": 117
+      },
+      "exit": {
+        "code": 0,
+        "at": "2026-10-03T14:28:42.981",
+        "round": 362
+      },
+      "received": 116,
+      "sent": 116
+    },
+    "team/agents/a2": {
+      "tasks": 1,
+      "state": {
+        "state": "idle",
+        "round": 363,
+        "steps": 357,
+        "tocks": 363,
+        "plan": null,
+        "pc": 0,
+        "letters": [],
+        "goal": null,
+        "last": "回到 idle",
+        "from": null,
+        "active_round": 361
+      },
+      "usage": {
+        "tokens": 58293,
+        "calls": 119
+      },
+      "exit": {
+        "code": 0,
+        "at": "2026-10-03T14:28:42.982",
+        "round": 363
+      },
+      "received": 118,
+      "sent": 119
+    },
+    "team/agents/a3": {
+      "tasks": 1,
+      "state": {
+        "state": "think",
+        "round": 362,
+        "steps": 355,
+        "tocks": 362,
+        "plan": [
+          {
+            "tool": "send",
+            "to": "team/agents/a2",
+            "body": "ping 237"
+          }
+        ],
+        "pc": 0,
+        "letters": [
+          "1791008922747902257-team_agents_a2.json"
+        ],
+        "goal": null,
+        "last": "think（fake）：1 個動作",
+        "from": null,
+        "active_round": 362
+      },
+      "usage": {
+        "tokens": 58557,
+        "calls": 119
+      },
+      "exit": {
+        "code": 0,
+        "at": "2026-10-03T14:28:42.982",
+        "round": 362
+      },
+      "received": 118,
+      "sent": 118
+    },
+    "team/agents/a4": {
+      "tasks": 1,
+      "state": {
+        "state": "think",
+        "round": 362,
+        "steps": 349,
+        "tocks": 362,
+        "plan": [
+          {
+            "tool": "send",
+            "to": "team/agents/a5",
+            "body": "ping 232"
+          }
+        ],
+        "pc": 0,
+        "letters": [
+          "1791008922609696483-team_agents_a5.json"
+        ],
+        "goal": null,
+        "last": "think（fake）：1 個動作",
+        "from": null,
+        "active_round": 362
+      },
+      "usage": {
+        "tokens": 57289,
+        "calls": 117
+      },
+      "exit": {
+        "code": 0,
+        "at": "2026-10-03T14:28:42.982",
+        "round": 362
+      },
+      "received": 115,
+      "sent": 116
+    },
+    "team/agents/a5": {
+      "tasks": 1,
+      "state": {
+        "state": "idle",
+        "round": 362,
+        "steps": 348,
+        "tocks": 362,
+        "plan": null,
+        "pc": 0,
+        "letters": [],
+        "goal": null,
+        "last": "回到 idle",
+        "from": null,
+        "active_round": 360
+      },
+      "usage": {
+        "tokens": 57051,
+        "calls": 116
+      },
+      "exit": {
+        "code": 0,
+        "at": "2026-10-03T14:28:42.983",
+        "round": 362
+      },
+      "received": 116,
+      "sent": 116
+    }
+  },
+  "timing_windows": {
+    "early": {
+      "aos7-tick": {
+        "n": 350,
+        "median_ms": 19.688,
+        "p95_ms": 31.393,
+        "mean_ms": 20.965
+      },
+      "aos7-tock": {
+        "n": 350,
+        "median_ms": 19.042,
+        "p95_ms": 27.109,
+        "mean_ms": 19.981
+      }
+    },
+    "middle": {
+      "aos7-tick": {
+        "n": 350,
+        "median_ms": 20.758,
+        "p95_ms": 32.299,
+        "mean_ms": 22.227
+      },
+      "aos7-tock": {
+        "n": 350,
+        "median_ms": 19.406,
+        "p95_ms": 29.647,
+        "mean_ms": 21.202
+      }
+    },
+    "late": {
+      "aos7-tick": {
+        "n": 350,
+        "median_ms": 19.052,
+        "p95_ms": 34.131,
+        "mean_ms": 21.362
+      },
+      "aos7-tock": {
+        "n": 350,
+        "median_ms": 18.815,
+        "p95_ms": 31.027,
+        "mean_ms": 20.525
+      }
+    }
+  },
+  "timing_failures": [],
+  "timing_calls": 5070
+}

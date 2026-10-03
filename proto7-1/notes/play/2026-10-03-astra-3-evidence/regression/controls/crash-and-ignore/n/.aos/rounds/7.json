@@ -1,0 +1,19 @@
+{
+ "round": 7,
+ "tick_at": "2026-10-03T14:26:25.147",
+ "tock_at": "2026-10-03T14:26:25.207",
+ "started": [
+  "crash-r7"
+ ],
+ "alive": [
+  "ignore-r1"
+ ],
+ "ended": [
+  {
+   "tid": "crash-r7",
+   "code": 1
+  }
+ ],
+ "ctl": [],
+ "mounts": []
+}

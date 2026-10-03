@@ -1,0 +1,22 @@
+{
+  "cases": 27,
+  "failures": [],
+  "cleanup": {
+    "case": "cleanup",
+    "root": "/tmp/astra3-reg-requests-f62851h6",
+    "tock": {
+      "rc": 0,
+      "stdout": "{\"round\": 28, \"tick_at\": \"2026-10-03T14:26:20.942\", \"tock_at\": \"2026-10-03T14:26:20.973\", \"started\": [], \"alive\": [], \"ended\": [{\"tid\": \"worker-r24\", \"code\": -15}], \"ctl\": [{\"tid\": \"worker-r24\", \"op\": \"kill\", \"ok\": true}], \"mounts\": []}\n",
+      "stderr": ""
+    },
+    "pids": [
+      991020,
+      991018,
+      990831,
+      990812
+    ],
+    "live_before_emergency_kill": [],
+    "live_after": [],
+    "root_removed": true
+  }
+}

@@ -1,0 +1,15 @@
+{
+ "round": 6,
+ "tick_at": "2026-10-03T14:26:23.605",
+ "tock_at": "2026-10-03T14:26:23.632",
+ "started": [],
+ "alive": [],
+ "ended": [
+  {
+   "tid": "sleeper-r1",
+   "code": -15
+  }
+ ],
+ "ctl": [],
+ "mounts": []
+}

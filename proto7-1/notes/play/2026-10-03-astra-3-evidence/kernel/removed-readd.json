@@ -1,0 +1,437 @@
+{
+ "events": [
+  {
+   "label": "budget pause 20 tokens",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 20,
+      "acc": 20
+     }
+    },
+    "paused": {
+     "team/a": {
+      "at": 3
+     }
+    },
+    "issued": {},
+    "round": 3
+   },
+   "paused": true,
+   "status": {
+    "pid": 1019157,
+    "root": "/tmp/astra3-kernel-removed-readd-cq06y23z",
+    "at": "2026-10-03T14:29:56.269",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 3,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 3,
+      "phase": "paused",
+      "paused": true,
+      "live": []
+     },
+     "team/b": {
+      "round": 3,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:56.254"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  },
+  {
+   "label": "removed member resumed, acc remains 20",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 20,
+      "acc": 20
+     }
+    },
+    "paused": {},
+    "issued": {},
+    "round": 8
+   },
+   "paused": false,
+   "status": {
+    "pid": 1019157,
+    "root": "/tmp/astra3-kernel-removed-readd-cq06y23z",
+    "at": "2026-10-03T14:29:57.164",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 8,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 3,
+      "phase": "paused",
+      "paused": false,
+      "live": []
+     },
+     "team/b": {
+      "round": 8,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:56.254"
+    },
+    {
+     "round": 8,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "resume",
+     "why": "pause 後已過 5 回合（已不在 members，自己下的 pause 自己收）",
+     "at": "2026-10-03T14:29:57.161"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  },
+  {
+   "label": "readded unchanged usage, incorrectly paused again",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 20,
+      "acc": 20
+     }
+    },
+    "paused": {
+     "team/a": {
+      "at": 9
+     }
+    },
+    "issued": {},
+    "round": 9
+   },
+   "paused": true,
+   "status": {
+    "pid": 1019157,
+    "root": "/tmp/astra3-kernel-removed-readd-cq06y23z",
+    "at": "2026-10-03T14:29:57.347",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 9,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 4,
+      "phase": "paused",
+      "paused": true,
+      "live": []
+     },
+     "team/b": {
+      "round": 9,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:56.254"
+    },
+    {
+     "round": 8,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "resume",
+     "why": "pause 後已過 5 回合（已不在 members，自己下的 pause 自己收）",
+     "at": "2026-10-03T14:29:57.161"
+    },
+    {
+     "round": 9,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:57.343"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  },
+  {
+   "label": "second removal resumes, same acc still retained",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 20,
+      "acc": 20
+     }
+    },
+    "paused": {},
+    "issued": {},
+    "round": 14
+   },
+   "paused": false,
+   "status": {
+    "pid": 1019157,
+    "root": "/tmp/astra3-kernel-removed-readd-cq06y23z",
+    "at": "2026-10-03T14:29:58.261",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 14,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 4,
+      "phase": "paused",
+      "paused": false,
+      "live": []
+     },
+     "team/b": {
+      "round": 14,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:56.254"
+    },
+    {
+     "round": 8,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "resume",
+     "why": "pause 後已過 5 回合（已不在 members，自己下的 pause 自己收）",
+     "at": "2026-10-03T14:29:57.161"
+    },
+    {
+     "round": 9,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:57.343"
+    },
+    {
+     "round": 14,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "resume",
+     "why": "pause 後已過 5 回合（已不在 members，自己下的 pause 自己收）",
+     "at": "2026-10-03T14:29:58.249"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  },
+  {
+   "label": "second readd: third pause with the same 20 tokens",
+   "state": {
+    "progress": {},
+    "usage": {
+     "team/a": {
+      "last": 20,
+      "acc": 20
+     }
+    },
+    "paused": {
+     "team/a": {
+      "at": 15
+     }
+    },
+    "issued": {},
+    "round": 15
+   },
+   "paused": true,
+   "status": {
+    "pid": 1019157,
+    "root": "/tmp/astra3-kernel-removed-readd-cq06y23z",
+    "at": "2026-10-03T14:29:58.425",
+    "stopping": false,
+    "kill_on_stop": false,
+    "nodes": {
+     "team": {
+      "round": 15,
+      "phase": "idle",
+      "paused": false,
+      "live": [
+       "kernel-r1"
+      ]
+     },
+     "team/a": {
+      "round": 5,
+      "phase": "paused",
+      "paused": true,
+      "live": []
+     },
+     "team/b": {
+      "round": 15,
+      "phase": "idle",
+      "paused": false,
+      "live": []
+     }
+    }
+   },
+   "decisions": [
+    {
+     "round": 3,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:56.254"
+    },
+    {
+     "round": 8,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "resume",
+     "why": "pause 後已過 5 回合（已不在 members，自己下的 pause 自己收）",
+     "at": "2026-10-03T14:29:57.161"
+    },
+    {
+     "round": 9,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:57.343"
+    },
+    {
+     "round": 14,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "resume",
+     "why": "pause 後已過 5 回合（已不在 members，自己下的 pause 自己收）",
+     "at": "2026-10-03T14:29:58.249"
+    },
+    {
+     "round": 15,
+     "rule": "budget",
+     "target": "team/a",
+     "op": "pause",
+     "why": "用量累計 20 > 10",
+     "at": "2026-10-03T14:29:58.410"
+    }
+   ],
+   "roster_a": {
+    "by": "team",
+    "members": [
+     {
+      "node": "team/a",
+      "inbox": "team/a/inbox",
+      "role": ""
+     }
+    ]
+   }
+  }
+ ],
+ "kernel_logs": {
+  "team/.aos/tasks/kernel-r1": "aos7-kernel: kernel-r1 啟動，等 tock（> 0）\naos7-kernel: 回合 1，0 個決定\naos7-kernel: 回合 2，0 個決定\naos7-kernel: 回合 3，1 個決定\naos7-kernel: 回合 4，0 個決定\naos7-kernel: 回合 5，0 個決定\naos7-kernel: 回合 6，0 個決定\naos7-kernel: 回合 7，0 個決定\naos7-kernel: 回合 8，1 個決定\naos7-kernel: 回合 9，1 個決定\naos7-kernel: 回合 10，0 個決定\naos7-kernel: 回合 11，0 個決定\naos7-kernel: 回合 12，0 個決定\naos7-kernel: 回合 13，0 個決定\naos7-kernel: 回合 14，1 個決定\naos7-kernel: 回合 15，1 個決定\n"
+ },
+ "kernel_exits": {
+  "team/.aos/tasks/kernel-r1": {
+   "code": 0,
+   "at": "2026-10-03T14:29:58.616",
+   "round": 15
+  }
+ },
+ "daemon_exit": 0,
+ "cleanup_groups": [
+  1019169
+ ],
+ "temporary_root": "/tmp/astra3-kernel-removed-readd-cq06y23z",
+ "cleaned": true
+}

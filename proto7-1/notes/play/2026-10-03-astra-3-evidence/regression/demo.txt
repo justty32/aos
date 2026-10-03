@@ -1,0 +1,101 @@
+空間根：/tmp/astra3-reg-demo（跑 8.0 秒）
+  跑著… team:1 team/agents/amy:2 team/agents/bob:1 team/agents/carol:2            跑著… team:3 team/agents/amy:4 team/agents/bob:3 team/agents/carol:3            跑著… team:4 team/agents/amy:6 team/agents/bob:5 team/agents/carol:5            跑著… team:5 team/agents/amy:8 team/agents/bob:6 team/agents/carol:7            跑著… team:7 team/agents/amy:8 team/agents/bob:7 team/agents/carol:9            跑著… team:8 team/agents/amy:8 team/agents/bob:7 team/agents/carol:11            跑著… team:9 team/agents/amy:9 team/agents/bob:7 team/agents/carol:13            跑著… team:11 team/agents/amy:11 team/agents/bob:8 team/agents/carol:14            跑著… team:12 team/agents/amy:13 team/agents/bob:9 team/agents/carol:16            跑著… team:13 team/agents/amy:15 team/agents/bob:11 team/agents/carol:18            跑著… team:14 team/agents/amy:17 team/agents/bob:12 team/agents/carol:20            （2.4 秒：kernel.json 加成員 agents/carol）
+  跑著… team:16 team/agents/amy:19 team/agents/bob:14 team/agents/carol:22            跑著… team:17 team/agents/amy:19 team/agents/bob:14 team/agents/carol:24            跑著… team:18 team/agents/amy:19 team/agents/bob:14 team/agents/carol:25            跑著… team:20 team/agents/amy:19 team/agents/bob:15 team/agents/carol:27            跑著… team:21 team/agents/amy:21 team/agents/bob:17 team/agents/carol:29            跑著… team:22 team/agents/amy:23 team/agents/bob:18 team/agents/carol:31            跑著… team:24 team/agents/amy:25 team/agents/bob:20 team/agents/carol:33            跑著… team:25 team/agents/amy:27 team/agents/bob:21 team/agents/carol:34            跑著… team:26 team/agents/amy:29 team/agents/bob:23 team/agents/carol:36            跑著… team:28 team/agents/amy:31 team/agents/bob:25 team/agents/carol:38            跑著… team:29 team/agents/amy:33 team/agents/bob:26 team/agents/carol:40            跑著… team:31 team/agents/amy:35 team/agents/bob:28 team/agents/carol:42            跑著… team:32 team/agents/amy:37 team/agents/bob:29 team/agents/carol:43            跑著… team:33 team/agents/amy:39 team/agents/bob:31 team/agents/carol:45            跑著… team:34 team/agents/amy:41 team/agents/bob:32 team/agents/carol:47            跑著… team:36 team/agents/amy:43 team/agents/bob:34 team/agents/carol:49            跑著… team:37 team/agents/amy:45 team/agents/bob:35 team/agents/carol:51            跑著… team:39 team/agents/amy:47 team/agents/bob:37 team/agents/carol:53            跑著… team:40 team/agents/amy:49 team/agents/bob:38 team/agents/carol:54            跑著… team:41 team/agents/amy:51 team/agents/bob:40 team/agents/carol:56            跑著… team:42 team/agents/amy:53 team/agents/bob:41 team/agents/carol:58            跑著… team:44 team/agents/amy:55 team/agents/bob:43 team/agents/carol:60            跑著… team:45 team/agents/amy:57 team/agents/bob:45 team/agents/carol:62            跑著… team:46 team/agents/amy:59 team/agents/bob:46 team/agents/carol:63            跑著… team:48 team/agents/amy:61 team/agents/bob:48 team/agents/carol:65            跑著… team:49 team/agents/amy:63 team/agents/bob:49 team/agents/carol:67            跑著… team:50 team/agents/amy:65 team/agents/bob:51 team/agents/carol:69            跑著… team:52 team/agents/amy:67 team/agents/bob:52 team/agents/carol:71            跑著… team:53 team/agents/amy:69 team/agents/bob:54 team/agents/carol:73          
+
+== 時間線 team ==
+  第  1 回合  起:subd-r1,kernel-r1  結束:-
+  第 2～14 回合  （只有短任務 poke 當回合起落（結束碼 0））
+  第 15 回合  起:poke-r15  結束:poke-r15(0),subd-r1(0)  控制:kill subd-r1
+  第 16～53 回合  （只有短任務 poke 當回合起落（結束碼 0））
+
+== 時間線 team/agents/amy ==
+  第  1 回合  起:agent-r1  結束:-
+  第 2～69 回合  （沒有任務起落）
+
+== 時間線 team/agents/bob ==
+  第  1 回合  起:agent-r1,worker-r1  結束:-
+  第 2～7 回合  （沒有任務起落）
+  第  8 回合  起:worker-r8  結束:worker-r1(-15)  控制:restart worker-r1
+  第 9～54 回合  （沒有任務起落）
+
+== 時間線 team/agents/carol ==
+  第  1 回合  起:agent-r1  結束:-
+  第 2～73 回合  （沒有任務起落）
+
+== 時間線 team/sub/w ==
+  第 1～13 回合  （只有短任務 note 當回合起落（結束碼 0））
+
+== kernel 的決定 ==
+  [kernel-r1] team 第5 回合 budget pause team/agents/amy  (用量累計 302 > 250)
+  [kernel-r1] team 第6 回合 stuck  restart team/agents/bob:worker-r1  (progress 連續 3 回合沒變)
+  [kernel-r1] team 第6 回合 budget pause team/agents/bob  (用量累計 317 > 250)
+  [kernel-r1] team 第9 回合 budget resume team/agents/amy  (pause 後已過 4 回合)
+  [kernel-r1] team 第10 回合 budget resume team/agents/bob  (pause 後已過 4 回合)
+  [kernel-r1] team 第14 回合 age    kill team:subd-r1  (活了 13 回合 > 12)
+  [kernel-r1] team 第15 回合 budget pause team/agents/bob  (用量累計 302 > 250)
+  [kernel-r1] team 第16 回合 budget pause team/agents/amy  (用量累計 302 > 250)
+  [kernel-r1] team 第19 回合 budget resume team/agents/bob  (pause 後已過 4 回合)
+  [kernel-r1] team 第20 回合 budget resume team/agents/amy  (pause 後已過 4 回合)
+
+== daemon 執行過的控制檔 ==
+  kernel-kernel-r1-r10-0-resume-team_agents_bob.json resume  team/agents/bob    by=team:kernel-r1 ok=True resume team/agents/bob
+  kernel-kernel-r1-r15-0-pause-team_agents_bob.json pause   team/agents/bob    by=team:kernel-r1 ok=True pause team/agents/bob
+  kernel-kernel-r1-r16-0-pause-team_agents_amy.json pause   team/agents/amy    by=team:kernel-r1 ok=True pause team/agents/amy
+  kernel-kernel-r1-r19-0-resume-team_agents_bob.json resume  team/agents/bob    by=team:kernel-r1 ok=True resume team/agents/bob
+  kernel-kernel-r1-r20-0-resume-team_agents_amy.json resume  team/agents/amy    by=team:kernel-r1 ok=True resume team/agents/amy
+  kernel-kernel-r1-r5-0-pause-team_agents_amy.json pause   team/agents/amy    by=team:kernel-r1 ok=True pause team/agents/amy
+  kernel-kernel-r1-r6-1-pause-team_agents_bob.json pause   team/agents/bob    by=team:kernel-r1 ok=True pause team/agents/bob
+  kernel-kernel-r1-r9-0-resume-team_agents_amy.json resume  team/agents/amy    by=team:kernel-r1 ok=True resume team/agents/amy
+  zz-play-stop.json      stop                       by=play.py ok=True stopping with kill
+
+== 子 daemon team/sub 執行過的控制檔 ==
+  poke-r4.json           pause   w                  by=team:poke-r4 ok=True pause w
+  poke-r8.json           resume  w                  by=team:poke-r8 ok=True resume w
+
+== 掛載（S-23：tick 在任務資料夾 mnt/ 下建的連結 → 空間裡的路徑）==
+  team:kernel-r1  mnt/aosd-e5b25c8c → .aosd  mnt/team_agents_amy__aos-cd091c49 → team/agents/amy/.aos  mnt/team_agents_bob__aos-34f14e6e → team/agents/bob/.aos  mnt/team_agents_carol__aos-f5bd3c4b → team/agents/carol/.aos
+  team:poke-r10  mnt/subctl → team/sub/.aosd/ctl
+  team:subd-r1  mnt/sub → team/sub
+  team/agents/amy:agent-r1  mnt/bob → team/agents/bob/inbox
+  team/agents/bob:agent-r1  mnt/amy → team/agents/amy/inbox  mnt/team_agents_carol_inbox → team/agents/carol/inbox
+  team/agents/carol:agent-r1  mnt/team_agents_bob_inbox → team/agents/bob/inbox
+
+== 執行中加掛的回條（mount-done，M-6）==
+  team:kernel-r1  .aosd  ok=True 掛上 mnt/aosd-e5b25c8c → .aosd
+  team:kernel-r1  team/agents/amy/.aos  ok=True 掛上 mnt/team_agents_amy__aos-cd091c49 → team/agents/amy/.aos
+  team:kernel-r1  team/agents/bob/.aos  ok=True 掛上 mnt/team_agents_bob__aos-34f14e6e → team/agents/bob/.aos
+  team:kernel-r1  team/agents/carol/.aos  ok=True 掛上 mnt/team_agents_carol__aos-f5bd3c4b → team/agents/carol/.aos
+  team/agents/bob:agent-r1  team/agents/carol/inbox  ok=True 掛上 mnt/team_agents_carol_inbox → team/agents/carol/inbox
+  team/agents/carol:agent-r1  team/agents/bob/inbox  ok=True 掛上 mnt/team_agents_bob_inbox → team/agents/bob/inbox
+
+== 寫入紀錄（72 個任務、4456 筆寫入，寫出範圍 0 筆）==
+
+== 信件（amy、bob、carol 處理過的）==
+  team/agents/amy → team/agents/bob（寄件者第 2 回合）：ping 1
+  team/agents/carol → team/agents/bob（寄件者第 2 回合）：ping 1
+  team/agents/bob → team/agents/amy（寄件者第 2 回合）：ping 2
+  team/agents/amy → team/agents/bob（寄件者第 5 回合）：ping 3
+  team/agents/bob → team/agents/carol（寄件者第 5 回合）：ping 2
+  team/agents/bob → team/agents/amy（寄件者第 5 回合）：ping 4
+  team/agents/amy → team/agents/bob（寄件者第 8 回合）：ping 5
+  team/agents/carol → team/agents/bob（寄件者第 9 回合）：ping 3
+  team/agents/bob → team/agents/amy（寄件者第 8 回合）：ping 6
+  team/agents/amy → team/agents/bob（寄件者第 14 回合）：ping 7
+  team/agents/bob → team/agents/carol（寄件者第 11 回合）：ping 4
+  team/agents/bob → team/agents/amy（寄件者第 14 回合）：ping 8
+
+== 檢查 ==
+  [OK] amy 與 bob 互傳信（>= 4 封）
+  [OK] 對話到上限，寫出 work/done.txt
+  [OK] kernel 把卡住的 worker restart
+  [OK] restart 後 bob 有新的 worker 任務
+  [OK] kernel 因預算 pause 某條時間線
+  [OK] kernel 之後 resume 它
+  [OK] 路一：子 daemon subd 有跑出 w 的回合
+  [OK] 路一：kernel 依壽命 kill subd
+  [OK] 路二：poke 寫子 daemon 控制檔 pause/resume w
+  [OK] 加掛：carol 臨時寄給沒掛的 bob，請求加掛後寄到
+  [OK] 加掛：bob 回信給 carol 也是先加掛再寄
+  [OK] 加掛：kernel.json 中途加成員 carol，kernel 自己加掛它的 .aos
+  [OK] 寄信、寫 ctl、路二都經過掛載點：所有寫入在自己的 node 或掛載點下（4456 筆）
+  [OK] 停下後沒有殘留程序
