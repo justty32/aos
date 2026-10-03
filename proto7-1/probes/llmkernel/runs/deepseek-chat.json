@@ -1,0 +1,115 @@
+{
+ "model": "deepseek-chat",
+ "verdict": {
+  "輪流（≥2 條同時沒 pause 的時間 <0.3 秒）": true,
+  "a、b 各輪到 ≥2 次": true,
+  "超預算的沒再輪到": true,
+  "結束時 a、b、c 都 pause": true
+ },
+ "ok": true,
+ "calls": 19,
+ "tokens": 106234,
+ "stop": "done",
+ "final": "All conditions met: a and b each had 2 turns, and a, b, c are all paused. Done.\n\n我完成了排程工作，過程如下：\n\n**初始狀態**：a、b、c 三條都 pause 著，round 都是 0，各自有一個 keep 任務 worker。\n\n**輪流執行（每輪 3 回合，用 `resume` 帶 `rounds: 3` 讓它跑完自動 pause）**：\n\n- **第 1 輪**\n  - 輪到 **a**：先看用量（15 tokens ≤ 50，通過）→ resume 3 回合，a 從 round 0 前進到 3，自動 pause。\n  - 輪到 **b**：用量 15 ≤ 50，通過 → resume 3 回合，b 從 0 到 3，自動 pause。\n  - 輪到 **c**：resume 3 回合，c 從 0 到 3，自動 pause。\n- **第 2 輪**\n  - 輪到 **a**：重看用量仍 15 ≤ 50，通過 → resume 3 回合，a 從 3 到 6，自動 pause。\n  - 輪到 **b**：重看用量仍 15 ≤ 50，通過 → resume 3 回合，b 從 3 到 6，自動 pause。\n  - 輪到 **c**：重看用量發現 **90 tokens > 50**，依規則 2 將它永",
+ "seq": [
+  [
+   "a",
+   2
+  ],
+  [
+   "b",
+   3
+  ],
+  [
+   "c",
+   3
+  ],
+  [
+   "a",
+   3
+  ],
+  [
+   "b",
+   3
+  ]
+ ],
+ "turns": {
+  "a": 2,
+  "b": 2,
+  "c": 1
+ },
+ "overlap_s": 0.0,
+ "active_s": 18.7,
+ "usage": {
+  "a": 30,
+  "b": 30,
+  "c": 90
+ },
+ "over_at_rel": {
+  "a": null,
+  "b": null,
+  "c": 5.6
+ },
+ "turns_after_over": {
+  "a": 0,
+  "b": 0,
+  "c": 0
+ },
+ "paused_end": {
+  "a": true,
+  "b": true,
+  "c": true
+ },
+ "bad_ctl": [],
+ "left_in_ctl": [],
+ "n_reads": 33,
+ "n_writes": 5,
+ "read_err": [
+  {
+   "path": "a/.aos/tasks",
+   "err": "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmkernel-ib75up9e/root/a/.aos/tasks'"
+  },
+  {
+   "path": "b/.aos/tasks",
+   "err": "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmkernel-ib75up9e/root/b/.aos/tasks'"
+  },
+  {
+   "path": "c/.aos/tasks",
+   "err": "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmkernel-ib75up9e/root/c/.aos/tasks'"
+  }
+ ],
+ "writes": [
+  {
+   "path": ".aosd/ctl/k-resume-a-1.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"a\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/k-resume-b-1.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"b\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/k-resume-c-1.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"c\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/k-resume-a-2.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"a\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/k-resume-b-2.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"b\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  }
+ ],
+ "wrong_place": [],
+ "bad_json": [],
+ "kernel_exit": {
+  "code": 0,
+  "at": "2026-10-03T16:11:42.619",
+  "round": 24
+ }
+}
