@@ -35,6 +35,7 @@
 | N-55 | 起程序的測試／示範／探針先收程序、再刪空間 | 已做（astra-5；astra-6 補 atexit 的 group／grace） |
 | N-63 | kill 不能被任務改過的 pid.json 導去打別人 | 已做（第二波） |
 | N-77 | 服務驗得出請求是誰送的（可信執行身分，E-01；只在宣稱付費硬限制時必要） | 頂層定：合作式，不做強制（使用者 10-03 授權「之後再說」也由頂層取最簡） |
+| N-81 | 多個控制者的 pause 各解各的（D-12；只在多控制者時必要） | 沒做（第三波 holds：合作式 hold 檔＋arbiter 做得到） |
 
 ## A. 回合與時間
 
@@ -191,6 +192,21 @@
 |---|---|---|---|---|---|---|---|
 | N-77 | 服務要驗得出請求是誰送的（可信執行身分；對應 E-01） | ledger 第 6 步 | Q 的任務拿洩漏的 P grant、在 claim 裡自稱 `p:w-real-r99`：帳本 claim 成、provider 照做、記給 P。請求檔的寄件者都是自報的；mounts 的宣告不受 `mount_allow` 管；寫入紀錄只看得到 Python、是事後的。tick 知道 birth 的 node／tid／mounts，卻沒有交給服務驗的管道 | 必要（只在要宣稱「付費硬限制」時；合作式不需要） | 權限屬之後再說 | **頂層定：合作式** | 使用者 10-03 說「之後再說這塊，你也可以先自行決定，同樣，盡量簡單」。取最簡：請求檔約定填 `from`＝`$AOS7_NODE_ID:$AOS7_TID`（環境變數本來就有）；服務要核對時，經掛載讀寄件者的 `.aos/tasks/<tid>/birth.json`，確認它活著且 `mounts` 確實掛了本服務。任務照樣能偽造（同掛載、寫入紀錄的界線），不宣稱付費硬限制；要硬保證得等 FUSE／分帳號，屆時再開 |
 | N-78 | 活任務換服務時，舊目標上的在途請求要有路收尾（對應 E-03） | namespace 第 3、4 步 | reload 換掉整份 mounts，舊服務上還沒回的 a-job5 新任務就看不到了（任務只能報 unknown、不重送）；要 kernel 自己約定多掛 `model-prev`，拿掉它又得再 reload（kill）一次，因為卸掛不做。兩次 reload，4 個控制步 | 可以 | S-23 | **沒做**（現有基底做得到，只是彆扭） | — |
+
+## K. 第三波探針（10-03）
+
+來源是第三波的五個探針，題目照兩份調查報告的 D-／E- 需求表挑：[supervisor](../probes/supervisor/README.md)（D-18）、[holds](../probes/holds/README.md)（D-12、D-13）、[tickless](../probes/tickless/README.md)（D-16）、[gang](../probes/gang/README.md)（E-04）、[blindread](../probes/blindread/README.md)（S-01 盲讀）。daemon／tick 都沒改。四個不用 LLM 的都用現有基底湊出了合作式做法，再量「湊」的代價。blindread **沒有逼出 daemon／tick 需求**：五題只靠讀檔都答得出來，錯的是任務層的語意（見它的 README）。
+
+| 編號 | 需求 | 來源 | 證據 | 優先 | 核心 | 現況 | 決定 |
+|---|---|---|---|---|---|---|---|
+| N-79 | 起任務的准入要有單一來源：keep 項要能帶 `not_before`、`enabled`、`restart`（always／on-failure／never）（對應 D-18；把 N-28、N-29 從 supervisor 的角度合起來） | supervisor | 子工作是 keep 項時，crash 後 27～67 ms 就被 keep 起回來（子工作收到 tock 才動，tock 後緊接下一個 tick）。每 tock 看一次的 supervisor 每次 2～4 次違反退避／停用；20 ms 輪詢的還有 1～3 次；temporary 的 job 做完又被起。全改 spawn 才是 0 次，但 supervisor 自己死掉時子工作沒人起 | 應該 | 之後再說（kill／restart 控制塊、任務表誰能改） | **沒做** | — |
+| N-80 | tasks.json 改了要看得出 tick 用的是哪一版（revision 或套用回條；對應 D-18） | supervisor | tick 讀 tasks.json 不拿鎖：supervisor 用 `edit_json` 拿掉項目之後，在途的 tick 照舊版起（birth round 4 早於 not_before 6），升級後還起過一次 w1。rounds.jsonl 只記起了什麼，不記讀的是哪一版 | 可以 | 之後再說（任務表誰能改） | **沒做** | — |
+| N-81 | pause 要能帶 owner，各解各的（對應 D-12） | holds | 單一 paused 位元：預算 kernel、人、凍結 kernel、維運 CLI 直接寫 pause／resume，誰的 resume 都放掉別人的 pause，被放掉 14～17 回合。合作式 hold 檔＋常駐 arbiter 降到 1 回合（只剩不走協定的 resume），但 arbiter 認「這個 pause 是誰下的」只能翻 log.jsonl 尾端（4 條線時 400 行約 6 秒），log 輪替或量大就判錯 | 應該（多控制者時必要） | S-18；權限屬之後再說 | **沒做**（建議 paused.json 改 `{node: [owner…]}`，resume 只拿掉自己的） | — |
+| N-82 | pause 中要能做任務控制，不放開整條線（維護回合；對應 D-13） | holds | 凍結中對 line 的工作下 task kill，要等所有 hold 放開（下一個 tick／tock）才執行，約 0.45 秒（4 個 ctrl 回合）；`resume rounds 1` 那一回合會照樣起 spawn／keep、發 tock | 可以 | S-17 | **沒做** | — |
+| N-83 | 事件式喚醒：node 要能宣告看哪個資料夾、哪些任務可以跳過回合（idle_safe），status 記 wake reason（對應 D-16） | tickless | 100 條 1 秒的線，95 條閒置：kernel pause 閒線、有信才 `resume rounds 1`，tick／tock 程序每秒 200 → 20，CPU 4.1～4.4 → 0.5 秒／秒，信延遲中位 480～620 → 70 ms。代價：要一個常駐 kernel 每 20 ms 掃 100 個 inbox，idle_safe 是 kernel 跟 agent 自己約的檔；全停時 daemon 本身仍約 0.12 CPU 秒／秒（每 20 ms 寫一份 101 node 的 status） | 可以 | 之後再說（外部事件怎麼進來） | **沒做**（現有基底已省下 90%） | — |
+| N-84 | resume 要一起打斷「等上一回合 interval 滿」的睡眠 | tickless | resume 不設 kick：node 停了不到一個 interval 就來信，resume 後要等滿 interval 才開回合，只 resume 最慢 790 ms；resume 後補一個 `wake` 最慢 100 ms | 可以 | S-18 | **沒做**（小改：resume 時順便設 kick；或卡與 spec 寫明 resume 後再 wake） | — |
+| N-85 | spawn batch 要有全有全無的選項（對應 E-04；宣稱成組原子准入時必要） | gang | 壞項（argv 型別）或被 keep／max_live 擋下的項只跳過那一項，其餘照起；成員不知道少了誰（原因只在 node 的 `tasks_error`）。naive 兩情境各 36 步全是不完整成組的工作；合作式 prepare／commit（O_EXCL 認領＋協調者 commit／abort）五個情境都是 0 | 可以 | 之後再說 | **沒做**（合作式做得到） | — |
+| N-86 | spawn 項目要能去重：tick 起到一半被殺，下一個 tick 不重起已起的（對應 D-02；N-19 的一部分） | gang | 20 個成員的 batch，tick 起到第 8 個時被 SIGKILL：spawn 檔起完才刪（I-02 至少一次），下一個 tick 整批再起，7/20 個角色變兩份、140～154 步重複的付費工作。成員自己用 O_EXCL 認領才擋得住 | 應該 | S-10 | **沒做**（建議 birth.json 記 spawn 檔＋項次，重做時跳過已起的） | — |
 
 ## 要使用者決定
 

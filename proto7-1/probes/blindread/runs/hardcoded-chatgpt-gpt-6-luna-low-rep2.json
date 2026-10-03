@@ -1,0 +1,73 @@
+{
+ "model": "chatgpt-gpt-6-luna-low",
+ "variant": "hardcoded",
+ "score": 5,
+ "grade": {
+  "q1": true,
+  "q2": true,
+  "q3": true,
+  "q4": true,
+  "q5": true
+ },
+ "answer": {
+  "q1": "services/model-a2/clients/reviewer/requests",
+  "q2": "cc-proj-a",
+  "q3": {
+   "a-job5-call-1": "pending",
+   "a-job6-call-1": "settled"
+  },
+  "q4": "no",
+  "q5": {
+   "active": "model-a2",
+   "prev": "model-a"
+  },
+  "evidence": [
+   "proj-a/reviewer.cfg.json",
+   "proj-a/context/reviewer-status.json",
+   "proj-a/context/checkpoint.json",
+   "proj-a/context/reviewer.jsonl",
+   "services/model-a2/clients/reviewer/receipts/a-job6-call-1.json",
+   "services/model-a/clients/reviewer/requests/a-job5-call-1.json",
+   "services/model-a2/clients/reviewer/requests/a-job6-call-1.json",
+   "services/model-a2/service.cfg.json"
+  ]
+ },
+ "calls": 9,
+ "tokens": 40621,
+ "reads": 31,
+ "read_errors": 0,
+ "stop": "done",
+ "paths": [
+  "proj-a/.aos/tasks/reviewer-r7",
+  "proj-a/.aos/tasks/reviewer-r7/birth.json",
+  "proj-a/.aos/tasks/reviewer-r7/out.log",
+  "proj-a/.aos/tasks/reviewer-r7/pid.json",
+  "proj-a/.aos/tasks/reviewer-r7/runner.json",
+  "proj-a/.aos/tasks/reviewer-r7/tock.json",
+  "proj-a",
+  "proj-a/reviewer.cfg.json",
+  "proj-a/.aos",
+  "proj-a/context",
+  "proj-a/inbox",
+  "proj-a/context/reviewer-status.json",
+  "proj-a/context/checkpoint.json",
+  "proj-a/context/reviewer.jsonl",
+  "proj-a/inbox/job5.json",
+  "proj-a/inbox/done",
+  "proj-a/.aos/tasks.json",
+  "services/model-a2/clients/reviewer/receipts",
+  "services/model-a/clients/reviewer/receipts",
+  "services/model-a2/clients/reviewer/requests",
+  "services/model-a/clients/reviewer/requests",
+  "services/model-a2/clients/reviewer/receipts/a-job6-call-1.json",
+  "services/model-a/clients/reviewer/requests/a-job5-call-1.json",
+  "services/model-a2/clients/reviewer/requests/a-job6-call-1.json",
+  "services/model-a2",
+  "proj-a/.aos/tasks/reviewer-r7",
+  "proj-a/context/results",
+  "services/model-a2/service.cfg.json",
+  "services/model-a2/epoch.json",
+  "services/model-a",
+  "proj-a/context/results/job6.json"
+ ]
+}

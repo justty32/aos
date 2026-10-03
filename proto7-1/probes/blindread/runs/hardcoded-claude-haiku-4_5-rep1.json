@@ -1,0 +1,58 @@
+{
+ "model": "claude-haiku-4.5",
+ "variant": "hardcoded",
+ "score": 4,
+ "grade": {
+  "q1": true,
+  "q2": true,
+  "q3": true,
+  "q4": false,
+  "q5": true
+ },
+ "answer": {
+  "q1": "services/model-a2/clients/reviewer/requests",
+  "q2": "cc-proj-a",
+  "q3": {
+   "a-job5-call-1": "pending",
+   "a-job6-call-1": "settled"
+  },
+  "q4": "yes",
+  "q5": {
+   "active": "model-a2",
+   "prev": "model-a"
+  },
+  "evidence": [
+   "proj-a/reviewer.cfg.json",
+   "services/model-a2/clients/reviewer/requests/a-job6-call-1.json",
+   "services/model-a2/clients/reviewer/receipts/a-job6-call-1.json",
+   "proj-a/context/reviewer-status.json",
+   "proj-a/context/reviewer.jsonl"
+  ]
+ },
+ "calls": 9,
+ "tokens": 30563,
+ "reads": 19,
+ "read_errors": 3,
+ "stop": "done",
+ "paths": [
+  "proj-a/.aos/tasks/reviewer-r7",
+  "proj-a/.aos/tasks/reviewer-r7/birth.json",
+  "proj-a/.aos/tasks/reviewer-r7/pid.json",
+  "proj-a/.aos/tasks/reviewer-r7/runner.json",
+  "proj-a/.aos/tasks/reviewer-r7/tock.json",
+  "proj-a",
+  "proj-a/reviewer.cfg.json",
+  "services/model-a2/clients/reviewer/requests",
+  "services/model-a2/clients/reviewer/receipts",
+  "services/model-a/clients/reviewer/receipts",
+  "proj-a/context",
+  "services/model-a2/clients/reviewer/requests/a-job6-call-1.json",
+  "services/model-a2/clients/reviewer/receipts/a-job6-call-1.json",
+  "services/model-a/clients/reviewer/receipts/a-job1-call-1.json",
+  "proj-a/context/reviewer-status.json",
+  "services/model-a2/clients/reviewer/requests/a-job5-call-1.json",
+  "services/model-a2/clients/reviewer/receipts/a-job5-call-1.json",
+  "services/model-a/clients/reviewer/receipts/a-job5-call-1.json",
+  "proj-a/context/reviewer.jsonl"
+ ]
+}

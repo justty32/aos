@@ -1,0 +1,12 @@
+{
+  "schema": "aos.blindread-questions.v1",
+  "role": "你是空間裡 proj-a 這個 node 上的 reviewer 任務（審稿工作者），你的任務資料夾是 {taskdir}。",
+  "questions": [
+    {"id": "q1", "short": "在哪送件", "q": "你現在要送一件新的審稿請求給模型服務，請求檔要寫進哪個資料夾？寫空間路徑（相對空間根）。"},
+    {"id": "q2", "short": "誰付錢", "q": "請求 a-job6-call-1 的費用算在哪個 charge context 上？"},
+    {"id": "q3", "short": "完成了沒", "q": "請求 a-job5-call-1、a-job6-call-1 各自完成了沒？每個回答 settled（已完成）、pending（送出了、還沒回條）或 rejected（被拒、沒執行）。"},
+    {"id": "q4", "short": "能不能重送", "q": "a-job5-call-1 該不該改送到你現在的主要模型服務、讓它重做一次？回答 yes 或 no。"},
+    {"id": "q5", "short": "哪份工具生效", "q": "你現在接的主要模型服務是哪一個（service_id）？另外有沒有一個只用來收舊請求的尾、不送新件的舊服務？是哪一個（沒有寫 null）？"}
+  ],
+  "answer_format": "最後一則訊息只放一個 JSON 物件：{\"q1\": \"空間路徑\", \"q2\": \"charge context\", \"q3\": {\"a-job5-call-1\": \"...\", \"a-job6-call-1\": \"...\"}, \"q4\": \"yes 或 no\", \"q5\": {\"active\": \"service_id\", \"prev\": \"service_id 或 null\"}, \"evidence\": [\"讀過、用來回答的檔\"]}"
+}
