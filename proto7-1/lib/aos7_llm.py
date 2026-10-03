@@ -1,6 +1,6 @@
 """agent 的 LLM 後端：fake（決定性、離線，演「兩個 agent 互傳 ping」）與 OpenAI 相容（urllib POST /chat/completions）。
 
-對外只有 think(cfg, goal, letters, me, memory=None) → {"plan": [...], "tokens": int, "note": str}（真模型另有 "raw"、"ms"）。
+對外只有 think(cfg, goal, letters, me, memory=None, roster=None) → {"plan": [...], "tokens": int, "note": str}（真模型另有 "raw"、"ms"）。
 memory（agent.json 設 "memory": N 才有）＝最近往來的信＋自己 work/ 底下的檔，給真模型「記得前面發生什麼」。
 plan 是工具動作清單（spec.md 第 10 節）：[{"tool": "send"|"write"|"none", ...}]。
 """
@@ -20,19 +20,23 @@ SYSTEM_RULES = """你是一個住在資料夾裡的 agent，只能用工具動�
 信件的 from 就是對方的 node id，回信就 send 給它。"""
 
 
-def build_prompt(cfg, goal, letters, me, memory=None):
-    """組 system＋user 兩段文字（fake 也用它算 tokens，兩種後端看到的是同一份輸入）。memory 有給才放進 user。"""
+def build_prompt(cfg, goal, letters, me, memory=None, roster=None):
+    """組 system＋user 兩段文字（fake 也用它算 tokens，兩種後端看到的是同一份輸入）。memory、roster 有給才放進 user。
+
+    roster＝kernel 寫給這個 node 的成員名冊（`.aos/roster.json`，R-2），有就固定帶上。"""
     system = SYSTEM_RULES + "\n\n你的 node id：%s\n你的人設：%s" % (me, cfg.get("persona", ""))
     user = {"goal": goal, "letters": [{"from": l.get("from"), "round": l.get("round"), "body": l.get("body")}
                                       for l in letters]}
     if memory is not None:
         user = {"memory": memory, **user}
+    if roster is not None:
+        user = {"roster": roster, **user}
     return system, json.dumps(user, ensure_ascii=False)
 
 
-def think(cfg, goal, letters, me, memory=None):
+def think(cfg, goal, letters, me, memory=None, roster=None):
     """依 agent.json 的 llm 欄位選後端。回 {"plan", "tokens", "note"}；後端出錯也不丟例外，plan 退成 none。"""
-    system, user = build_prompt(cfg, goal, letters, me, memory)
+    system, user = build_prompt(cfg, goal, letters, me, memory, roster)
     llm = cfg.get("llm", "fake")
     if llm == "fake":
         return {"plan": fake_plan(cfg, goal, letters), "tokens": (len(system) + len(user)) // 4, "note": "fake"}

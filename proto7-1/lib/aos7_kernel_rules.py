@@ -103,9 +103,11 @@ def _decision(rnd, rule, target, op, why):
 
 
 def rule_stuck(cfg, st, snap, out):
-    """卡住：progress 連續 stuck_rounds 個「成員回合」沒變 → restart。"""
-    n = cfg.get("stuck_rounds")
-    if not isinstance(n, int) or n <= 0:
+    """卡住：progress 連續 stuck_rounds 個「成員回合」沒變 → restart。
+
+    progress 寫著 `llm_since`（agent 正在等 LLM）的不算卡住；要管就另設 `llm_stuck_rounds`（problems-real.md R-3）。"""
+    n0, nl = cfg.get("stuck_rounds"), cfg.get("llm_stuck_rounds")
+    if not (isinstance(n0, int) and n0 > 0) and not (isinstance(nl, int) and nl > 0):
         return
     seen = set()
     for mid, m in snap["members"].items():
@@ -126,9 +128,13 @@ def rule_stuck(cfg, st, snap, out):
             if advanced and not paused:
                 rec["same"] += 1
                 rec["member_round"] = m["round"]
+            llm = isinstance(t["progress"], dict) and t["progress"].get("llm_since")
+            n = nl if llm else n0
+            if not isinstance(n, int) or n <= 0:
+                continue
             if rec["same"] >= n and key not in st["issued"] and not t["has_ctl"]:
                 out.append(_decision(snap["round"], "stuck", key, "restart",
-                                     "progress 連續 %d 回合沒變" % rec["same"]))
+                                     "progress 連續 %d 回合沒變%s" % (rec["same"], "（在等 LLM，從 %s 起）" % llm if llm else "")))
                 st["issued"][key] = "restart"
     for key in list(st["progress"]):
         if key not in seen:
@@ -136,10 +142,14 @@ def rule_stuck(cfg, st, snap, out):
 
 
 def rule_budget(cfg, st, snap, out):
-    """預算：成員 node 用量增量累計超過 budget_tokens → pause；cool_rounds 個 kernel 回合後 resume。"""
-    budget = cfg.get("budget_tokens")
-    if not isinstance(budget, (int, float)):
-        return
+    """預算：成員 node 用量增量累計超過 budget_tokens → pause；cool_rounds 個 kernel 回合後 resume（限速）。
+
+    總額：成員 node 用量總和（含已結束的任務）超過 cap_tokens → pause，不自動 resume；人改 kernel.json
+    （調高或拿掉 cap_tokens）後才 resume（problems-real.md R-4）。
+    kernel 自己 pause 的，自己負責到期 resume，不管對方還在不在 members（astra-2 二-7）。"""
+    budget, cap = cfg.get("budget_tokens"), cfg.get("cap_tokens")
+    has_budget = isinstance(budget, (int, float))
+    has_cap = isinstance(cap, (int, float))
     cool = cfg.get("cool_rounds", 3)
     rnd = snap["round"]
     for mid, m in snap["members"].items():
@@ -155,16 +165,33 @@ def rule_budget(cfg, st, snap, out):
             u["acc"] += max(0, total - u["last"])
             u["last"] = total
         p = st["paused"].get(mid)
-        if p is not None:
+        if p is not None and p.get("cap"):
+            if not has_cap or total <= cap:
+                out.append(_decision(rnd, "cap", mid, "resume", "總額上限改了（用量 %s，上限 %s）" % (total, cap)))
+                del st["paused"][mid]
+                u["acc"] = 0
+        elif has_cap and total > cap:
+            out.append(_decision(rnd, "cap", mid, "pause",
+                                 "用量總和 %s > cap_tokens %s；不會自動恢復，要人改 kernel.json" % (total, cap)))
+            st["paused"][mid] = {"at": rnd, "cap": True}
+        elif p is not None:
             if rnd - p["at"] >= cool:
                 out.append(_decision(rnd, "budget", mid, "resume",
                                      "pause 後已過 %d 回合" % (rnd - p["at"])))
                 del st["paused"][mid]
                 u["acc"] = 0
-        elif u["acc"] > budget:
+        elif has_budget and u["acc"] > budget:
             out.append(_decision(rnd, "budget", mid, "pause",
                                  "用量累計 %s > %s" % (u["acc"], budget)))
             st["paused"][mid] = {"at": rnd}
+    # 已不在 members 的：限速的 pause 照樣到期 resume；總額的 pause 沒有到期，留著
+    for mid, p in list(st["paused"].items()):
+        if mid in snap["members"] or p.get("cap"):
+            continue
+        if rnd - p["at"] >= cool:
+            out.append(_decision(rnd, "budget", mid, "resume",
+                                 "pause 後已過 %d 回合（已不在 members，自己下的 pause 自己收）" % (rnd - p["at"])))
+            del st["paused"][mid]
 
 
 def rule_age(cfg, st, snap, out):

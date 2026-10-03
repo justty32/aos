@@ -20,13 +20,16 @@ def _install():
     root_r, node_r = rp(root), rp(node)
 
     def load_targets():
-        """birth.json 的掛載點目標；執行中加掛（M-6）後 tick 會改 birth.json，所以判不過時重讀一次。"""
+        """birth.json 的掛載點目標；執行中加掛（M-6）後 tick 會改 birth.json，所以判不過時重讀一次。
+
+        目標取宣告的空間路徑 `to`（接空間根再 realpath），不看掛載點連結現在指去哪：任務自己改指連結不算數（astra-2 二-4）。"""
         try:
             with open(os.path.join(task, "birth.json"), encoding="utf-8") as f:
                 mounts = json.load(f).get("mounts") or {}
         except (OSError, ValueError):
             mounts = {}
-        return [rp(v["at"]) for v in mounts.values() if isinstance(v, dict) and "at" in v]
+        return [rp(os.path.join(root_r, v["to"])) for v in mounts.values()
+                if isinstance(v, dict) and "at" in v and isinstance(v.get("to"), str)]
     targets = load_targets()
     log = os.path.join(task, "writes.jsonl")
     busy = []
@@ -44,10 +47,19 @@ def _install():
             d = os.path.dirname(d)
         return False
 
-    def record(op, path):
+    def base_of(dir_fd):
+        """相對路徑的起點：有 dir_fd 就是那個 fd 指的資料夾（/proc/self/fd），不然是 cwd（astra-2 二-4）。"""
+        if isinstance(dir_fd, int) and dir_fd >= 0:
+            try:
+                return os.readlink("/proc/self/fd/%d" % dir_fd)
+            except OSError:
+                pass
+        return os.getcwd()
+
+    def record(op, path, dir_fd=None):
         if not isinstance(path, (str, bytes)):
             return
-        real = rp(os.path.join(os.getcwd(), os.fsdecode(path)))
+        real = rp(os.path.join(base_of(dir_fd), os.fsdecode(path)))
         if not under(real, root_r) or real == rp(log):
             return
         ok = any(under(real, t) for t in targets) or (under(real, node_r) and not nested(real))
@@ -55,7 +67,7 @@ def _install():
             targets[:] = load_targets()
             ok = any(under(real, t) for t in targets)
         rec = {"op": op, "path": real, "ok": ok, "pid": os.getpid()}
-        given = os.path.abspath(os.fsdecode(path))
+        given = os.path.normpath(os.path.join(base_of(dir_fd), os.fsdecode(path)))
         if given != real:
             rec["via"] = given   # 經過掛載點（或別的連結）寫的：寫的時候用的路徑
         line = json.dumps(rec, ensure_ascii=False) + "\n"
@@ -75,13 +87,19 @@ def _install():
                 w = (isinstance(flags, int) and flags & wflags) or (isinstance(mode, str) and any(c in mode for c in "wax+"))
                 if w:
                     record("open", path)
-            elif event in ("os.rename", "os.replace"):
+            elif event in ("os.rename", "os.replace"):   # (src, dst, src_dir_fd, dst_dir_fd)
+                record(event, args[0], args[2] if len(args) > 2 else None)
+                record(event, args[1], args[3] if len(args) > 3 else None)
+            elif event in ("os.remove", "os.rmdir"):     # (path, dir_fd)
+                record(event, args[0], args[1] if len(args) > 1 else None)
+            elif event == "os.mkdir":                    # (path, mode, dir_fd)
+                record(event, args[0], args[2] if len(args) > 2 else None)
+            elif event in ("os.truncate", "shutil.rmtree"):
                 record(event, args[0])
-                record(event, args[1])
-            elif event in ("os.remove", "os.rmdir", "os.mkdir", "os.truncate", "shutil.rmtree"):
-                record(event, args[0])
-            elif event in ("os.symlink", "os.link"):
-                record(event, args[1])
+            elif event == "os.symlink":                  # (src, dst, dir_fd)
+                record(event, args[1], args[2] if len(args) > 2 else None)
+            elif event == "os.link":                     # (src, dst, src_dir_fd, dst_dir_fd)
+                record(event, args[1], args[3] if len(args) > 3 else None)
         except Exception:
             pass
         finally:

@@ -1,6 +1,7 @@
 """核心（tick、tock、任務、ctl、inst、掃描）的測試；daemon 的在 test_core_daemon.py。共用小工具 CoreCase 也在這裡。"""
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -53,6 +54,17 @@ class CoreCase(unittest.TestCase):
             if p.stderr:
                 p.stderr.close()
         self.sweep(self.root)
+        # daemon 被殺時它起的 tick 可能還在寫（會在刪掉後重建 a/.aos/round.json）：殺整個程序群組，再多刪幾次
+        for p in self.procs:
+            try:
+                os.killpg(p.pid, signal.SIGKILL)
+            except OSError:
+                pass
+        for _ in range(5):
+            shutil.rmtree(self.root, ignore_errors=True)
+            if not os.path.exists(self.root):
+                break
+            time.sleep(0.1)
         self._tmp.cleanup()
 
     @staticmethod

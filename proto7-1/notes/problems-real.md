@@ -4,7 +4,9 @@
 
 場景：lead（luna-low）、coder（deepseek-chat）、中途加入的 rita（claude-haiku-4.5），加上一個不用 LLM 的 ci 機器人。四人只靠信件，合寫 `dur.py`、`ranges.py`，用隱藏測試驗收；kernel 管卡住和預算。跑了四輪：第 2 輪完成，第 3 輪停擺，第 4 輪跑到時間上限沒完成。分級同總表。R-1、R-2 的全文也抄在總表。
 
-## R-1 信件驅動的 agent 沒信就不動，對話停擺時沒有人發現〔要使用者決定〕
+## R-1 信件驅動的 agent 沒信就不動，對話停擺時沒有人發現〔要使用者決定，10-03 已答〕
+
+> **〔使用者 10-03〕採 (a)**：維持 agent 自己定時醒（wake）。
 
 - 層：agent × kernel；S-16、S-19（「依託 tick-tock 換狀態」），A-6 的延伸。
 - 發生了什麼：
@@ -19,7 +21,9 @@
   - （b）kernel 偵測「成員都 idle、沒有信在路上、目標還沒完成」，寫一封信給負責人（或喚醒它）。kernel 得知道「目標完成」長什麼樣子，例如一個檔。
   - （c）不自動處理：停擺就停擺，交給外面的人（或上層時間線）看到再處理。
 
-## R-2 新成員怎麼讓大家知道、agent 記得什麼，現在都只靠「最近 12 封信」〔要使用者決定〕
+## R-2 新成員怎麼讓大家知道、agent 記得什麼，現在都只靠「最近 12 封信」〔要使用者決定，10-03 已答〕
+
+> **〔使用者 10-03〕採 (b)**：空間提供成員名冊，掛給每個 agent，固定放進 prompt。
 
 - 層：agent 的 prompt 與記憶 × 加掛；S-01、S-16、S-23。
 - 發生了什麼：
@@ -31,6 +35,7 @@
   - （a）照現在：滑動視窗。要記住什麼，靠 persona 叫它自己寫筆記到 work/。
   - （b）空間提供成員名冊：例如 kernel.json 的成員（或一份 roster 檔）掛進每個成員，prompt 固定帶上。加入、離開由 kernel 那邊維護。
   - （c）每個 agent 有一份「自己維護的記憶檔」，每次 think 都要回寫（plan 多一個欄位），框架負責放進 prompt。
+- **怎麼做的**：kernel 依 kernel.json 的 members（加可選的 `roles`）寫每個成員的 `.aos/roster.json`，agent 每次 think 帶上（user JSON 的 `roster`）。詳見總表 R-2、M-15。real.py 還沒用真模型重跑過。
 
 ## R-3 kernel 的「卡住」在真模型下全是誤判：都是在等 LLM〔技術選型，先這樣〕
 
@@ -39,7 +44,8 @@
   - `stuck_rounds: 20`。實際數法是「kernel 每一輪看到成員回合有前進，就加一」，所以約等於 20 個 kernel 回合（team 500 ms 一回合，約 10 秒），不是成員的 20 個回合（6 秒）。
   - agent 在 think 時單執行緒等 LLM，收不到 tock，progress.json 就不更新。luna 一次 10～22 秒很常見，於是被 restart：第 2 輪 2 次，第 4 輪 5 次，**全部發生在等 LLM 的時候**。真的卡死一次也沒出現。
   - restart 時，正在跑的那次呼叫被殺掉，它的 tokens **沒記進 usage.json**（用量看不到）；新任務 recover 再問一次同樣的問題，所以同一份工作付了兩次錢。
-- 先這樣：照字面。要分得出「在等 LLM」和「當掉」，最簡單的做法是 think 期間另開一條執行緒繼續寫 progress（心跳），或在 progress.json 記「think 開始於」，kernel 對 think 另給一個時限。都還沒做。
+- 先這樣：照字面。要分得出「在等 LLM」和「當掉」，最簡單的做法是 think 期間另開一條執行緒繼續寫 progress（心跳），或在 progress.json 記「think 開始於」，kernel 對 think 另給一個時限。
+- **已修（10-03）**：agent 進 think、呼叫 LLM 之前先寫 progress.json＝`{"round","state":"think","steps","llm_since": 時間}`。kernel 看到 `llm_since` 就不用 `stuck_rounds`，改用 kernel.json 的 `llm_stuck_rounds`（沒寫＝不管在等 LLM 的）；理由寫「在等 LLM，從 … 起」。想完後的 progress 沒有 `llm_since`，計數重來。restart 時那次呼叫的用量沒記到、會重問，這兩點沒改（真的卡在 LLM 時還是會發生）。測試 `test_llm_wait_is_not_stuck`、`test_progress_says_waiting_llm`。real.py 還沒重跑。
 
 ## R-4 預算規則是「限速」不是「上限」，擋不住迴圈〔技術選型，先這樣〕
 
@@ -49,6 +55,7 @@
   - coder 跟 ci 的迴圈照樣跑。pause 只是讓信在信箱裡多堆 3 秒，resume 後一次處理。
   - pause 不會中止正在飛的 LLM 呼叫（D-4）。lead 常在 think 裡被 pause，等它回來時 pause 早就解除了。
 - 先這樣：預算＝限速。真正的總額上限在場景外面：real.py 數 usage.json 的總和，到了就停整個 daemon。kernel 只看 tokens，不看呼叫次數，也不看「同一件事做了幾遍」。
+- **已補總額（10-03）**：kernel.json 可設 `cap_tokens`。成員 node 的用量總和（含已結束的任務、不扣基準）超過它 → pause，理由寫「不會自動恢復，要人改 kernel.json」，冷卻不 resume；人調高或拿掉 `cap_tokens` 後下一輪 resume。上限是**每個成員各算**，不是全隊加總。被移出 members 的成員若是被總額 pause 的，就一直停著（限速的 pause 照樣到期 resume，astra-2 二-7）。pause 仍不中止在飛的呼叫（D-4）。測試 `test_cap_pause_waits_for_config_change`。
 
 ## R-5 模型回壞格式：luna 最常出事；加了「重問一次」〔技術選型，先這樣〕
 

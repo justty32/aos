@@ -10,9 +10,9 @@
 - [spec.md](spec.md)：proto7-1 自己定的檔案格式與行為，每節標 S- 條號。
 - **跨 node 靠掛載**（S-23，D-1 的做法）：tasks.json 的 `mounts` 宣告要把哪個資料夾掛進來，tick 在任務資料夾建 `mnt/<名字>` 符號連結；寄信、寫別人的 ctl、寫 daemon 控制檔都只經過它。執行中也能寫 `mount-req/` 請求加掛，下一個 tick 審核（agent 寄給沒掛的對象、kernel 新成員都靠它）。設 `AOS7_AUDIT=1` 時任務的寫入記到 `writes.jsonl`，看得出有沒有寫出範圍（只記不擋）。
 - [notes/play/](notes/play/README.md)：試玩紀錄（一輪一列）。
-- 示範：`python3 proto7-1/demo/play.py`（一鍵跑完約 8 秒，印出每條時間線每回合發生什麼、kernel 的決定、控制檔、掛載、加掛回條、寫入紀錄、信件，最後逐項檢查；寫入紀錄預設開著）。LLM 預設用離線的假後端；`agent.json` 的 `llm` 改成 `{"url": "http://localhost:1234/v1", "model": "..."}` 就接 OpenAI 相容端點（LM Studio 的 gemma-4-e4b 實測可用）。
-- **真模型場景**：`python3 proto7-1/demo/real.py`。lead（luna）、coder（deepseek）、中途加入的 rita（haiku）只靠信件合寫兩個小模組，由不用 LLM 的 ci 機器人跑隱藏測試驗收；kernel 管卡住和預算。只打 LiteLLM 代理 `127.0.0.1:4000`，每輪 ≤ 400 次呼叫、≤ 900 秒，不放進 unittest。紀錄與發現：[notes/runs/2026-10-03-real-1.md](notes/runs/2026-10-03-real-1.md)、[notes/problems-real.md](notes/problems-real.md)。
-- 測試：在 repo 根跑 `python3 -m unittest discover -s proto7-1/tests`（離線、純標準庫，48 項約 10 秒，含示範場景的整合測）。
+- 示範：`python3 proto7-1/demo/play.py`（一鍵跑完約 8 秒，自己開的暫存根全 OK 就刪掉、有失敗留著並印路徑，印出每條時間線每回合發生什麼、kernel 的決定、控制檔、掛載、加掛回條、寫入紀錄、信件，最後逐項檢查；寫入紀錄預設開著）。LLM 預設用離線的假後端；`agent.json` 的 `llm` 改成 `{"url": "http://localhost:1234/v1", "model": "..."}` 就接 OpenAI 相容端點（LM Studio 的 gemma-4-e4b 實測可用）。
+- **真模型場景**：`python3 proto7-1/demo/real.py`。lead（luna）、coder（deepseek）、中途加入的 rita（haiku）只靠信件合寫兩個小模組，由不用 LLM 的 ci 機器人跑隱藏測試驗收；kernel 管卡住和預算，並給每個成員寫名冊（`.aos/roster.json`）；總額上限 `cap_tokens` 這個場景沒設。只打 LiteLLM 代理 `127.0.0.1:4000`，每輪 ≤ 400 次呼叫、≤ 900 秒，不放進 unittest。紀錄與發現：[notes/runs/2026-10-03-real-1.md](notes/runs/2026-10-03-real-1.md)、[notes/problems-real.md](notes/problems-real.md)。
+- 測試：在 repo 根跑 `python3 -m unittest discover -s proto7-1/tests`（離線、純標準庫，60 項約 11 秒，含示範場景的整合測）。
 
 ## 結構
 

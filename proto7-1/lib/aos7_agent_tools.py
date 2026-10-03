@@ -63,6 +63,24 @@ def outbox_dir(node):
     return os.path.join(node, "outbox")
 
 
+def deliver(box, name, letter):
+    """經過掛載點把信寫進對方 inbox；成功回 None，失敗回原因（收件夾被刪、被搬走、連結斷掉…；astra-2 二-5）。"""
+    try:
+        if not os.path.isdir(box):
+            return "收件夾 %s 不在了（被刪或搬走？）" % box
+        write_json(os.path.join(box, name), letter)
+        return None
+    except OSError as e:
+        return "寫不進收件夾：%s" % e
+
+
+def to_failed(node, name, letter, why):
+    """寄不出去的信放 outbox/failed/，信裡記原因（`failed`）。"""
+    l = dict(letter) if isinstance(letter, dict) else {"raw": letter}
+    l["failed"] = {"why": why, "at": now()}
+    write_json(os.path.join(outbox_dir(node), "failed", name), l)
+
+
 def flush_outbox(ctx):
     """把 outbox 的信寄出：對方 inbox 已掛上就寄；加掛被拒就搬到 outbox/failed/；還在等就留著（S-23、M-6）。回結果字串清單。"""
     out, odir = [], outbox_dir(ctx["node"])
@@ -80,14 +98,20 @@ def flush_outbox(ctx):
         else:
             box = resolve(inbox_path(to))
             if box is not None:
-                write_json(os.path.join(box, n), letter)
-                os.remove(src)
-                out.append("outbox → %s：%s" % (to, letter.get("body")))
-                continue
-            st = aos7_mount.request(ctx["task"], inbox_path(to), why="寄信給 %s" % to)
+                err = deliver(box, n, letter)
+                if err is None:
+                    os.remove(src)
+                    out.append("outbox → %s：%s" % (to, letter.get("body")))
+                    continue
+                st = "refused: " + err
+            else:
+                st = aos7_mount.request(ctx["task"], inbox_path(to), why="寄信給 %s" % to)
         if st.startswith("refused"):
-            os.makedirs(os.path.join(odir, "failed"), exist_ok=True)
-            os.replace(src, os.path.join(odir, "failed", n))
+            to_failed(ctx["node"], n, letter, st[len("refused: "):] if st.startswith("refused: ") else st)
+            try:
+                os.remove(src)
+            except OSError:
+                pass
             out.append("outbox 的信寄不出去（%s），搬到 outbox/failed/" % st)
     return out
 
@@ -113,8 +137,11 @@ def do_tool(ctx, step, rnd):
         append_jsonl(os.path.join(ctx["node"], "sent.jsonl"), dict(letter, file=name))  # 寄件備份（memory 用）
         box = aos7_mount.resolver(ctx["task"])(inbox_path(to))
         if box is not None:
-            write_json(os.path.join(box, name), letter)
-            return "send → %s：%s" % (to, body)
+            err = deliver(box, name, letter)
+            if err is None:
+                return "send → %s：%s" % (to, body)
+            to_failed(ctx["node"], name, letter, err)
+            return "send 失敗：%s（信放 outbox/failed/）" % err
         st = aos7_mount.request(ctx["task"], inbox_path(to), why="寄信給 %s" % to)
         if st.startswith("refused"):
             return "send 失敗：%s 的 inbox 加掛被拒（%s）" % (to, st[len("refused: "):])

@@ -110,11 +110,13 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （b）預設全拒，沒寫允許清單就不能加掛。比較安全，但新 node 一開始什麼都做不了。
   - （c）被掛的那一方也要同意（例如目標 node 放一份「誰可以掛我」的清單），兩邊都允許才掛。比較像「把收訊資料夾借給對方」，但要多一份設定。
 
-## 真模型場景要使用者決定的（2 條，R-，10-03 待答）
+## 真模型場景要使用者決定的（2 條，R-，10-03 已答）
 
 細節與其餘 R- 條目在 [problems-real.md](problems-real.md)；跑的紀錄在 [runs/2026-10-03-real-1.md](runs/2026-10-03-real-1.md)。
 
-### R-1 信件驅動的 agent 沒信就不動，對話停擺時沒有人發現〔要使用者決定〕
+### R-1 信件驅動的 agent 沒信就不動，對話停擺時沒有人發現〔要使用者決定，10-03 已答〕
+
+> **〔使用者 10-03〕採 (a)**：維持 agent 自己定時醒（wake）。
 
 - 層：agent × kernel；S-16、S-19（「依託 tick-tock 換狀態」），A-6 的延伸。
 - 發生了什麼：
@@ -129,7 +131,9 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （b）kernel 偵測「成員都 idle、沒有信在路上、目標還沒完成」，寫一封信給負責人（或喚醒它）。kernel 得知道「目標完成」長什麼樣子，例如一個檔。
   - （c）不自動處理：停擺就停擺，交給外面的人（或上層時間線）看到再處理。
 
-### R-2 新成員怎麼讓大家知道、agent 記得什麼，現在都只靠「最近 12 封信」〔要使用者決定〕
+### R-2 新成員怎麼讓大家知道、agent 記得什麼，現在都只靠「最近 12 封信」〔要使用者決定，10-03 已答〕
+
+> **〔使用者 10-03〕採 (b)**：空間提供成員名冊，掛給每個 agent，固定放進 prompt。
 
 - 層：agent 的 prompt 與記憶 × 加掛；S-01、S-16、S-23。
 - 發生了什麼：
@@ -141,8 +145,9 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （a）照現在：滑動視窗。要記住什麼，靠 persona 叫它自己寫筆記到 work/。
   - （b）空間提供成員名冊：例如 kernel.json 的成員（或一份 roster 檔）掛進每個成員，prompt 固定帶上。加入、離開由 kernel 那邊維護。
   - （c）每個 agent 有一份「自己維護的記憶檔」，每次 think 都要回寫（plan 多一個欄位），框架負責放進 prompt。
+- **怎麼做的（10-03，照 (b)，最簡單版）**：kernel 每輪依 kernel.json 的 `members` 組名冊 `{"by", "members": [{"node", "inbox", "role"}]}`（`role` 取 kernel.json 新加的可選欄 `roles`：`{成員相對路徑: "一句"}`），經過它本來就有的 `<成員>/.aos` 掛載點寫到每個成員的 `.aos/roster.json`（內容沒變不重寫）。agent 每次 think 讀自己 node 的 `.aos/roster.json`，有就放進 user JSON 的 `roster`。不用另外掛載：名冊就在成員自己的 node 裡。新問題見 M-15。測試 `test_roster_written_to_members`、`test_roster_goes_into_prompt`。
 
-## 其餘問題一覽（技術選型 34 條、默認正常 20 條）
+## 其餘問題一覽（技術選型 38 條、默認正常 20 條）
 
 細節點進分檔看。
 
@@ -175,8 +180,12 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [M-7](#m-7-加掛要等下一個-tick寄信多-12-回合技術選型先這樣) 加掛要等下一個 tick，寄信多 1～2 回合。
 - [M-8](#m-8-被拒的回條會一直擋住同一個請求技術選型先這樣) 被拒的回條會一直擋住同一個請求。
 - [M-9](#m-9-卸掛不做掛載只增不減技術選型先這樣) 卸掛不做，掛載只增不減。
-- [R-3](problems-real.md) kernel 的「卡住」在真模型下全是誤判（都在等 LLM）。restart 殺掉在飛的呼叫，那次用量沒被記到，新任務又重問一次。
-- [R-4](problems-real.md) 預算規則是「限速」不是「上限」：pause 30 次、每次 3 秒，整場照樣用了 609k tokens，擋不住迴圈。
+- [M-12](#m-12-寫入紀錄看不到-open-的-dir_fd技術選型先這樣) 寫入紀錄看不到 open 的 dir_fd。
+- [M-13](#m-13-mount_allow-比的是實際位置連結指到清單外就不給技術選型先這樣) mount_allow 比實際位置：清單裡的連結指到清單外就不給。
+- [M-14](#m-14-收件夾被刪或搬走後寄給它的信一律進-failed不會自己重掛技術選型先這樣) 收件夾被刪或搬走後，寄給它的信一律進 failed，不會自己重掛。
+- [M-15](#m-15-成員名冊寫在成員的-aos-裡技術選型先這樣) 成員名冊寫在成員的 `.aos/` 裡。
+- [R-3](problems-real.md) kernel 的「卡住」在真模型下全是誤判（都在等 LLM）。**已修**：think 時 progress 寫 `llm_since`，kernel 不當卡住（另設 `llm_stuck_rounds` 才管）。
+- [R-4](problems-real.md) 預算規則是「限速」不是「上限」。**已補**總額：`cap_tokens`，超過就 pause、不自動 resume，人改 kernel.json 才恢復。
 - [R-5](problems-real.md) luna 有 25% 的回應解析不出來（`"."`、`[]`、殘渣）；加了「重問一次」。
 - [R-6](problems-real.md) 信沒有種類：寄錯就被當成程式碼；必回的 bot 對上收到就做事的 agent，會互相觸發成迴圈。
 - [R-7](problems-real.md) 「完成」由 LLM 判斷，驗收只能信轉述；coder 謊報過 PASS。
@@ -296,4 +305,28 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 
 - 層：掛載 × kernel；S-23、S-16。
 - 發生了什麼：kernel 讀到新成員才請求加掛，下一個 tick 才掛上，再下一輪才看得到。這期間新成員當作不存在，預算規則第一次看到它時才當基準（K-8），之前的用量不算。kernel 剛起來時連 `.aosd` 都還沒掛，第一輪下的 pause 會被記成 skipped。
+
+### M-12 寫入紀錄看不到 open 的 dir_fd〔技術選型，先這樣〕
+
+- 層：檢查工具；S-01、S-10。astra-2 二-4 的修補留下的洞。
+- 發生了什麼：二-4 修了：mkdir、rmdir、remove、rename、replace、symlink、link 的 dir_fd 會換成那個 fd 指的資料夾（`/proc/self/fd`），記成實際位置；掛載目標改用 birth.json 宣告的 `to`（接空間根再 realpath），任務自己改指連結後經過它寫，記成 `ok: false`。但 Python 的 `open` audit 事件只給 `(path, mode, flags)`，**不帶 dir_fd**：`os.open("x", ..., dir_fd=fd)` 仍會被記成 cwd 底下的 x。
+- 先這樣：跟 M-3 同一類「hook 看不到」。要補得改用 strace／seccomp 之類。
+
+### M-13 mount_allow 比的是實際位置：連結指到清單外就不給〔技術選型，先這樣〕
+
+- 層：掛載；S-23。astra-2 二-3 的修法帶出的行為。
+- 發生了什麼：二-3 修了：審核先把請求路徑與 `mount_allow` 的每一項都接空間根再 realpath，比實際位置；沿連結跑出空間根的一律不給（tasks.json 的 `mounts` 宣告也一樣，birth.json 記 `error`），tick 不再在空間外建資料夾。結果是 `allowed/inside → c` 這種「清單裡的連結指到空間內、清單外」的也被拒；反過來，清單外的連結指進清單內的會被准。
+- 先這樣：允許清單管的是「最後落在哪」，不是字面。
+
+### M-14 收件夾被刪或搬走後，寄給它的信一律進 failed，不會自己重掛〔技術選型，先這樣〕
+
+- 層：agent × 掛載；S-19、S-23。astra-2 二-5 的修法帶出的行為。
+- 發生了什麼：二-5 修了：send 與清 outbox 寫信時，收件夾不在（連結斷了）或寫不進去，都算這封失敗：信放 `outbox/failed/`，信裡加 `failed: {why, at}`，agent 不退出（do_act 另外把任何工具例外都當成那一步失敗）。但 birth.json 還記著那個掛載，之後寄同一對象的信照樣一封封進 failed，不會自己重請加掛。
+- 先這樣：對方回來（收件夾重建在原地）就恢復；不然 restart 讓 tick 重掛（M-2 會在原址建空殼，見 astra-2 二-6）。failed 的信不自動重寄（同 M-8）。
+
+### M-15 成員名冊寫在成員的 `.aos/` 裡〔技術選型，先這樣〕
+
+- 層：kernel × agent；S-16、S-23；R-2 (b) 的最簡單做法。
+- 發生了什麼：名冊要「掛給每個 agent」。最省事的是借 kernel 本來就有的 `<成員>/.aos` 掛載點，把 `roster.json` 寫進成員自己 node 的 `.aos/`，agent 不必再掛任何東西。代價是時空層的資料夾裡多了一份應用層的檔；不在 kernel members 裡的 agent（沒有 kernel 管）就沒有名冊；名冊只有 kernel.json 寫得出的東西（node id、收件路徑、`roles` 一句），不會自動抄 agent.json 的 persona。成員被移出 members 後，它手上的舊名冊不會被收回（同 M-9）。
+- 先這樣：名冊＝kernel.json 的投影；要更多欄位改 kernel.json。
 

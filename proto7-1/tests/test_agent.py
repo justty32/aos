@@ -185,6 +185,61 @@ class StepByStep(unittest.TestCase):
         self.assertIn("send →", r)
         self.assertEqual(len(os.listdir(carol_in)), 2)
 
+    def test_send_to_deleted_inbox_fails_softly(self):
+        """astra-2 二-5：已掛的收件夾被刪掉或搬走，send 失敗、信放 outbox/failed/ 記原因，agent 不死。"""
+        from aos7_agent_tools import do_tool
+        amy = self.w["amy"]
+        shutil.rmtree(os.path.join(self.w["bob"]["node"], "inbox"))
+        r = do_tool(amy, {"tool": "send", "to": "team/agents/bob", "body": "x"}, 1)
+        self.assertIn("失敗", r)
+        failed = os.path.join(amy["node"], "outbox", "failed")
+        self.assertIn("不在了", read_json(os.path.join(failed, os.listdir(failed)[0]))["failed"]["why"])
+        # 整條路（goal 先開口 → think → act）也不丟例外
+        os.rename(self.w["bob"]["node"], os.path.join(self.tmp, "moved"))
+        st = aos7_agent.on_tock(amy, aos7_agent.load_state(amy), 1)
+        st = aos7_agent.on_tock(amy, st, 2)
+        self.assertEqual(st["state"], "act")
+        self.assertIn("失敗", st["last"])
+        self.assertEqual(len(os.listdir(failed)), 2)
+
+    def test_tool_exception_does_not_kill_agent(self):
+        amy = self.w["amy"]
+        st = aos7_agent.on_tock(amy, aos7_agent.load_state(amy), 1)
+        with mock.patch("aos7_agent_tools.do_tool", side_effect=RuntimeError("boom")):
+            st = aos7_agent.on_tock(amy, st, 2)
+        self.assertIn("工具失敗", st["last"])
+
+    def test_progress_says_waiting_llm(self):
+        """R-3：think 一開始就在 progress.json 寫 llm_since；想完後的 progress 沒有它。"""
+        amy = self.w["amy"]
+        seen = {}
+        real = aos7_llm.think
+
+        def spy(*a, **k):
+            seen.update(read_json(os.path.join(amy["task"], "progress.json")))
+            return real(*a, **k)
+        with mock.patch("aos7_llm.think", side_effect=spy):
+            aos7_agent.on_tock(amy, aos7_agent.load_state(amy), 1)
+        self.assertEqual(seen["state"], "think")
+        self.assertTrue(seen["llm_since"])
+        self.assertNotIn("llm_since", read_json(os.path.join(amy["task"], "progress.json")))
+
+    def test_roster_goes_into_prompt(self):
+        """R-2 (b)：node 的 .aos/roster.json（kernel 寫的成員名冊）每次 think 都放進 prompt。"""
+        amy = self.w["amy"]
+        ros = {"by": "team", "members": [{"node": "team/agents/bob", "inbox": "team/agents/bob/inbox", "role": "審稿"}]}
+        write_json(os.path.join(amy["node"], ".aos", "roster.json"), ros)
+        got = {}
+        real = aos7_llm.build_prompt
+
+        def spy(*a, **k):
+            s, u = real(*a, **k)
+            got["user"] = json.loads(u)
+            return s, u
+        with mock.patch("aos7_llm.build_prompt", side_effect=spy):
+            aos7_agent.on_tock(amy, aos7_agent.load_state(amy), 1)
+        self.assertEqual(got["user"]["roster"], ros)
+
     def test_refused_mount_moves_letter_to_failed(self):
         from aos7_agent_tools import do_tool
         amy = self.w["amy"]
