@@ -1,0 +1,96 @@
+{
+  "case": "denied",
+  "label": "allow-and-delete-receipt",
+  "round": 16,
+  "files": {
+    "sender/.aos/round.json": {
+      "round": 16,
+      "open": false,
+      "tick_at": "2026-10-03T13:21:14.042",
+      "tock_at": "2026-10-03T13:21:14.056",
+      "started": [],
+      "ctl": [],
+      "mounts": []
+    },
+    "sender/.aos/tasks/agent-r1/birth.json": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "sender",
+      "round": 1,
+      "mounts": {},
+      "at": "2026-10-03T13:21:13.301",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "sender/.aos/tasks/agent-r1/out.log": "{\"at\": \"2026-10-03T13:21:13.349\", \"round\": 0, \"state\": \"idle\", \"msg\": \"啟動：剛出生\"}\n{\"at\": \"2026-10-03T13:21:13.369\", \"round\": 1, \"state\": \"think\", \"msg\": \"think（fake）：1 個動作\"}\n{\"at\": \"2026-10-03T13:21:13.411\", \"round\": 2, \"state\": \"act\", \"msg\": \"send → blocked 先放 outbox（inbox 沒掛，已請求加掛）：denied letter\"}\n{\"at\": \"2026-10-03T13:21:13.451\", \"round\": 3, \"state\": \"act\", \"msg\": \"outbox 的信寄不出去（refused: blocked/inbox 不在這個 node 的 mount_allow 裡），搬到 outbox/failed/\"}\n",
+    "sender/.aos/tasks/agent-r1/pid.json": {
+      "pid": 775552,
+      "pgid": 775552,
+      "runner_pid": 775551,
+      "at": "2026-10-03T13:21:13.314"
+    },
+    "sender/.aos/tasks/agent-r1/progress.json": {
+      "round": 16,
+      "state": "idle",
+      "steps": 3
+    },
+    "sender/.aos/tasks/agent-r1/state.json": {
+      "state": "idle",
+      "round": 16,
+      "steps": 3,
+      "tocks": 16,
+      "plan": null,
+      "pc": 0,
+      "letters": [],
+      "goal": null,
+      "last": "回到 idle",
+      "from": null
+    },
+    "sender/.aos/tasks/agent-r1/tock.json": {
+      "round": 16,
+      "at": "2026-10-03T13:21:14.056"
+    },
+    "sender/.aos/tasks/agent-r1/usage.json": {
+      "tokens": 91,
+      "calls": 1
+    },
+    "sender/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "agent",
+          "mode": "keep",
+          "argv": [
+            "aos7-agent"
+          ],
+          "mounts": {}
+        }
+      ],
+      "mount_allow": [
+        "."
+      ]
+    },
+    "sender/.aos/timeline.json": {
+      "interval_ms": 100
+    },
+    "sender/agent.json": {
+      "name": "sender",
+      "llm": "fake",
+      "max_ping": 2
+    },
+    "sender/goal.done.json": {
+      "say_first": {
+        "to": "blocked",
+        "body": "denied letter"
+      }
+    },
+    "sender/outbox/failed/1791004873410653977-sender.json": {
+      "from": "sender",
+      "to": "blocked",
+      "round": 2,
+      "body": "denied letter",
+      "at": "2026-10-03T13:21:13.410"
+    }
+  }
+}

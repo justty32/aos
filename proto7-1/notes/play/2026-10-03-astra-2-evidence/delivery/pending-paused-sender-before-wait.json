@@ -1,0 +1,140 @@
+{
+  "case": "pending-paused-sender",
+  "label": "before-wait",
+  "round": 2,
+  "files": {
+    ".aosd/ctl-done/pause.json": {
+      "op": "pause",
+      "node": "sender",
+      "result": {
+        "ok": true,
+        "msg": "pause sender",
+        "at": "2026-10-03T13:21:00.538"
+      }
+    },
+    ".aosd/paused.json": {
+      "paused": [
+        "sender"
+      ]
+    },
+    ".aosd/status.json": {
+      "pid": 775478,
+      "root": "/tmp/astra2-delivery-pending-paused-sender-ctsvauyh",
+      "at": "2026-10-03T13:21:00.538",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "sender": {
+          "round": 2,
+          "phase": "paused",
+          "paused": true,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "sender/.aos/round.json": {
+      "round": 2,
+      "open": false,
+      "tick_at": "2026-10-03T13:21:00.475",
+      "tock_at": "2026-10-03T13:21:00.490",
+      "started": [],
+      "ctl": [],
+      "mounts": []
+    },
+    "sender/.aos/tasks/agent-r1/birth.json": {
+      "tid": "agent-r1",
+      "name": "agent",
+      "node": "sender",
+      "round": 1,
+      "mounts": {},
+      "at": "2026-10-03T13:20:59.458",
+      "restart_of": null,
+      "argv": [
+        "aos7-agent"
+      ]
+    },
+    "sender/.aos/tasks/agent-r1/mount-req/receiver_inbox.json": {
+      "name": "receiver_inbox",
+      "path": "receiver/inbox",
+      "why": "寄信給 receiver"
+    },
+    "sender/.aos/tasks/agent-r1/out.log": "{\"at\": \"2026-10-03T13:20:59.504\", \"round\": 0, \"state\": \"idle\", \"msg\": \"啟動：剛出生\"}\n{\"at\": \"2026-10-03T13:21:00.469\", \"round\": 1, \"state\": \"think\", \"msg\": \"think（fake）：1 個動作\"}\n{\"at\": \"2026-10-03T13:21:00.510\", \"round\": 2, \"state\": \"act\", \"msg\": \"send → receiver 先放 outbox（inbox 沒掛，已請求加掛）：waiting for my next tick\"}\n",
+    "sender/.aos/tasks/agent-r1/pid.json": {
+      "pid": 775483,
+      "pgid": 775483,
+      "runner_pid": 775482,
+      "at": "2026-10-03T13:20:59.471"
+    },
+    "sender/.aos/tasks/agent-r1/progress.json": {
+      "round": 2,
+      "state": "act",
+      "steps": 2
+    },
+    "sender/.aos/tasks/agent-r1/state.json": {
+      "state": "act",
+      "round": 2,
+      "steps": 2,
+      "tocks": 2,
+      "plan": [
+        {
+          "tool": "send",
+          "to": "receiver",
+          "body": "waiting for my next tick"
+        }
+      ],
+      "pc": 1,
+      "letters": [],
+      "goal": {
+        "say_first": {
+          "to": "receiver",
+          "body": "waiting for my next tick"
+        }
+      },
+      "last": "send → receiver 先放 outbox（inbox 沒掛，已請求加掛）：waiting for my next tick",
+      "from": null
+    },
+    "sender/.aos/tasks/agent-r1/tock.json": {
+      "round": 2,
+      "at": "2026-10-03T13:21:00.490"
+    },
+    "sender/.aos/tasks/agent-r1/usage.json": {
+      "tokens": 94,
+      "calls": 1
+    },
+    "sender/.aos/tasks.json": {
+      "tasks": [
+        {
+          "name": "agent",
+          "mode": "keep",
+          "argv": [
+            "aos7-agent"
+          ],
+          "mounts": {}
+        }
+      ]
+    },
+    "sender/.aos/timeline.json": {
+      "interval_ms": 1000
+    },
+    "sender/agent.json": {
+      "name": "sender",
+      "llm": "fake",
+      "max_ping": 2
+    },
+    "sender/goal.done.json": {
+      "say_first": {
+        "to": "receiver",
+        "body": "waiting for my next tick"
+      }
+    },
+    "sender/outbox/1791004860510078681-sender.json": {
+      "from": "sender",
+      "to": "receiver",
+      "round": 2,
+      "body": "waiting for my next tick",
+      "at": "2026-10-03T13:21:00.510"
+    }
+  }
+}

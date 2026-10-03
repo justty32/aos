@@ -1,0 +1,937 @@
+[
+  {
+    "label": "initial-two-members",
+    "rounds": {
+      "lab": 12,
+      "lab/agents/ada": 13,
+      "lab/agents/ben": 12,
+      "lab/agents/cy": 11
+    },
+    "config": {
+      "members": [
+        "agents/ada",
+        "agents/ben"
+      ],
+      "budget_tokens": 100000,
+      "cool_rounds": 12,
+      "stuck_rounds": 100
+    },
+    "kernel_state": {
+      "progress": {
+        "lab/agents/ada:agent-r1": {
+          "last": {
+            "round": 12,
+            "state": "idle",
+            "steps": 12
+          },
+          "same": 0,
+          "member_round": 12
+        },
+        "lab/agents/ben:agent-r1": {
+          "last": {
+            "round": 11,
+            "state": "act",
+            "steps": 11
+          },
+          "same": 0,
+          "member_round": 11
+        }
+      },
+      "usage": {
+        "lab/agents/ada": {
+          "last": 372,
+          "acc": 279
+        },
+        "lab/agents/ben": {
+          "last": 371,
+          "acc": 279
+        }
+      },
+      "paused": {},
+      "issued": {},
+      "round": 11
+    },
+    "status": {
+      "pid": 774234,
+      "root": "/tmp/astra2-space-vec3ccyp",
+      "at": "2026-10-03T13:18:58.305",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "lab": {
+          "round": 11,
+          "phase": "tick",
+          "paused": false,
+          "live": [
+            "kernel-r1"
+          ]
+        },
+        "lab/agents/ada": {
+          "round": 13,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/ben": {
+          "round": 12,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/cy": {
+          "round": 11,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "kernel_birth": {
+      "tid": "kernel-r1",
+      "name": "kernel",
+      "node": "lab",
+      "round": 1,
+      "mounts": {
+        "aosd": {
+          "to": ".aosd",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/aosd"
+        },
+        "lab_agents_ada__aos": {
+          "to": "lab/agents/ada/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos"
+        },
+        "lab_agents_ben__aos": {
+          "to": "lab/agents/ben/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos"
+        }
+      },
+      "at": "2026-10-03T13:18:56.420",
+      "restart_of": null,
+      "argv": [
+        "aos7-kernel"
+      ]
+    }
+  },
+  {
+    "label": "added-cy-and-mounted",
+    "rounds": {
+      "lab": 20,
+      "lab/agents/ada": 23,
+      "lab/agents/ben": 21,
+      "lab/agents/cy": 18
+    },
+    "config": {
+      "members": [
+        "agents/ada",
+        "agents/ben",
+        "agents/cy"
+      ],
+      "budget_tokens": 100000,
+      "cool_rounds": 12,
+      "stuck_rounds": 100
+    },
+    "kernel_state": {
+      "progress": {
+        "lab/agents/ada:agent-r1": {
+          "last": {
+            "round": 21,
+            "state": "idle",
+            "steps": 21
+          },
+          "same": 0,
+          "member_round": 22
+        },
+        "lab/agents/ben:agent-r1": {
+          "last": {
+            "round": 19,
+            "state": "think",
+            "steps": 19
+          },
+          "same": 0,
+          "member_round": 20
+        },
+        "lab/agents/cy:agent-r1": {
+          "last": {
+            "round": 17,
+            "state": "act",
+            "steps": 17
+          },
+          "same": 0,
+          "member_round": 18
+        }
+      },
+      "usage": {
+        "lab/agents/ada": {
+          "last": 668,
+          "acc": 575
+        },
+        "lab/agents/ben": {
+          "last": 681,
+          "acc": 589
+        },
+        "lab/agents/cy": {
+          "last": 587,
+          "acc": 201
+        }
+      },
+      "paused": {},
+      "issued": {},
+      "round": 19
+    },
+    "status": {
+      "pid": 774234,
+      "root": "/tmp/astra2-space-vec3ccyp",
+      "at": "2026-10-03T13:18:59.672",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "lab": {
+          "round": 19,
+          "phase": "tick",
+          "paused": false,
+          "live": [
+            "kernel-r1"
+          ]
+        },
+        "lab/agents/ada": {
+          "round": 23,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/ben": {
+          "round": 21,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/cy": {
+          "round": 18,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "kernel_birth": {
+      "tid": "kernel-r1",
+      "name": "kernel",
+      "node": "lab",
+      "round": 1,
+      "mounts": {
+        "aosd": {
+          "to": ".aosd",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/aosd"
+        },
+        "lab_agents_ada__aos": {
+          "to": "lab/agents/ada/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos"
+        },
+        "lab_agents_ben__aos": {
+          "to": "lab/agents/ben/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos"
+        },
+        "lab_agents_cy__aos": {
+          "to": "lab/agents/cy/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_cy__aos"
+        }
+      },
+      "at": "2026-10-03T13:18:56.420",
+      "restart_of": null,
+      "argv": [
+        "aos7-kernel"
+      ]
+    }
+  },
+  {
+    "label": "removed-ben-normal",
+    "rounds": {
+      "lab": 26,
+      "lab/agents/ada": 30,
+      "lab/agents/ben": 27,
+      "lab/agents/cy": 24
+    },
+    "config": {
+      "members": [
+        "agents/ada",
+        "agents/cy"
+      ],
+      "budget_tokens": 100000,
+      "cool_rounds": 12,
+      "stuck_rounds": 100
+    },
+    "kernel_state": {
+      "progress": {
+        "lab/agents/ada:agent-r1": {
+          "last": {
+            "round": 29,
+            "state": "think",
+            "steps": 28
+          },
+          "same": 0,
+          "member_round": 29
+        },
+        "lab/agents/cy:agent-r1": {
+          "last": {
+            "round": 23,
+            "state": "act",
+            "steps": 23
+          },
+          "same": 0,
+          "member_round": 23
+        }
+      },
+      "usage": {
+        "lab/agents/ada": {
+          "last": 978,
+          "acc": 885
+        },
+        "lab/agents/ben": {
+          "last": 681,
+          "acc": 589
+        },
+        "lab/agents/cy": {
+          "last": 788,
+          "acc": 402
+        }
+      },
+      "paused": {},
+      "issued": {},
+      "round": 25
+    },
+    "status": {
+      "pid": 774234,
+      "root": "/tmp/astra2-space-vec3ccyp",
+      "at": "2026-10-03T13:19:00.694",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "lab": {
+          "round": 25,
+          "phase": "tick",
+          "paused": false,
+          "live": [
+            "kernel-r1"
+          ]
+        },
+        "lab/agents/ada": {
+          "round": 30,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/ben": {
+          "round": 27,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/cy": {
+          "round": 24,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "kernel_birth": {
+      "tid": "kernel-r1",
+      "name": "kernel",
+      "node": "lab",
+      "round": 1,
+      "mounts": {
+        "aosd": {
+          "to": ".aosd",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/aosd"
+        },
+        "lab_agents_ada__aos": {
+          "to": "lab/agents/ada/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos"
+        },
+        "lab_agents_ben__aos": {
+          "to": "lab/agents/ben/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos"
+        },
+        "lab_agents_cy__aos": {
+          "to": "lab/agents/cy/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_cy__aos"
+        }
+      },
+      "at": "2026-10-03T13:18:56.420",
+      "restart_of": null,
+      "argv": [
+        "aos7-kernel"
+      ]
+    }
+  },
+  {
+    "label": "ben-paused-by-kernel",
+    "rounds": {
+      "lab": 26,
+      "lab/agents/ada": 30,
+      "lab/agents/ben": 27,
+      "lab/agents/cy": 24
+    },
+    "config": {
+      "members": [
+        "agents/ada",
+        "agents/cy",
+        "agents/ben"
+      ],
+      "budget_tokens": 0,
+      "cool_rounds": 12,
+      "stuck_rounds": 100
+    },
+    "kernel_state": {
+      "progress": {
+        "lab/agents/ada:agent-r1": {
+          "last": {
+            "round": 30,
+            "state": "act",
+            "steps": 29
+          },
+          "same": 0,
+          "member_round": 30
+        },
+        "lab/agents/cy:agent-r1": {
+          "last": {
+            "round": 24,
+            "state": "idle",
+            "steps": 24
+          },
+          "same": 0,
+          "member_round": 24
+        },
+        "lab/agents/ben:agent-r1": {
+          "last": {
+            "round": 27,
+            "state": "idle",
+            "steps": 27
+          },
+          "same": 0,
+          "member_round": 27
+        }
+      },
+      "usage": {
+        "lab/agents/ada": {
+          "last": 978,
+          "acc": 885
+        },
+        "lab/agents/ben": {
+          "last": 868,
+          "acc": 776
+        },
+        "lab/agents/cy": {
+          "last": 788,
+          "acc": 402
+        }
+      },
+      "paused": {
+        "lab/agents/ada": {
+          "at": 26
+        },
+        "lab/agents/cy": {
+          "at": 26
+        },
+        "lab/agents/ben": {
+          "at": 26
+        }
+      },
+      "issued": {},
+      "round": 26
+    },
+    "status": {
+      "pid": 774234,
+      "root": "/tmp/astra2-space-vec3ccyp",
+      "at": "2026-10-03T13:19:00.715",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "lab": {
+          "round": 26,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "kernel-r1"
+          ]
+        },
+        "lab/agents/ada": {
+          "round": 30,
+          "phase": "paused",
+          "paused": true,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/ben": {
+          "round": 27,
+          "phase": "paused",
+          "paused": true,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/cy": {
+          "round": 24,
+          "phase": "paused",
+          "paused": true,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "kernel_birth": {
+      "tid": "kernel-r1",
+      "name": "kernel",
+      "node": "lab",
+      "round": 1,
+      "mounts": {
+        "aosd": {
+          "to": ".aosd",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/aosd"
+        },
+        "lab_agents_ada__aos": {
+          "to": "lab/agents/ada/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos"
+        },
+        "lab_agents_ben__aos": {
+          "to": "lab/agents/ben/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos"
+        },
+        "lab_agents_cy__aos": {
+          "to": "lab/agents/cy/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_cy__aos"
+        }
+      },
+      "at": "2026-10-03T13:18:56.420",
+      "restart_of": null,
+      "argv": [
+        "aos7-kernel"
+      ]
+    }
+  },
+  {
+    "label": "removed-paused-ben-after-25-kernel-rounds",
+    "rounds": {
+      "lab": 51,
+      "lab/agents/ada": 45,
+      "lab/agents/ben": 27,
+      "lab/agents/cy": 37
+    },
+    "config": {
+      "members": [
+        "agents/ada",
+        "agents/cy"
+      ],
+      "budget_tokens": 100000,
+      "cool_rounds": 12,
+      "stuck_rounds": 100
+    },
+    "kernel_state": {
+      "progress": {
+        "lab/agents/ada:agent-r1": {
+          "last": {
+            "round": 44,
+            "state": "think",
+            "steps": 40
+          },
+          "same": 0,
+          "member_round": 44
+        },
+        "lab/agents/cy:agent-r1": {
+          "last": {
+            "round": 36,
+            "state": "idle",
+            "steps": 36
+          },
+          "same": 0,
+          "member_round": 36
+        }
+      },
+      "usage": {
+        "lab/agents/ada": {
+          "last": 1354,
+          "acc": 376
+        },
+        "lab/agents/ben": {
+          "last": 868,
+          "acc": 776
+        },
+        "lab/agents/cy": {
+          "last": 1164,
+          "acc": 376
+        }
+      },
+      "paused": {
+        "lab/agents/ben": {
+          "at": 26
+        }
+      },
+      "issued": {},
+      "round": 50
+    },
+    "status": {
+      "pid": 774234,
+      "root": "/tmp/astra2-space-vec3ccyp",
+      "at": "2026-10-03T13:19:04.962",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "lab": {
+          "round": 51,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "kernel-r1"
+          ]
+        },
+        "lab/agents/ada": {
+          "round": 45,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/ben": {
+          "round": 27,
+          "phase": "paused",
+          "paused": true,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/cy": {
+          "round": 37,
+          "phase": "tock",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "kernel_birth": {
+      "tid": "kernel-r1",
+      "name": "kernel",
+      "node": "lab",
+      "round": 1,
+      "mounts": {
+        "aosd": {
+          "to": ".aosd",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/aosd"
+        },
+        "lab_agents_ada__aos": {
+          "to": "lab/agents/ada/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos"
+        },
+        "lab_agents_ben__aos": {
+          "to": "lab/agents/ben/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos"
+        },
+        "lab_agents_cy__aos": {
+          "to": "lab/agents/cy/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_cy__aos"
+        }
+      },
+      "at": "2026-10-03T13:18:56.420",
+      "restart_of": null,
+      "argv": [
+        "aos7-kernel"
+      ]
+    }
+  },
+  {
+    "label": "readd-ben-resumed",
+    "rounds": {
+      "lab": 51,
+      "lab/agents/ada": 46,
+      "lab/agents/ben": 27,
+      "lab/agents/cy": 37
+    },
+    "config": {
+      "members": [
+        "agents/ada",
+        "agents/cy",
+        "agents/ben"
+      ],
+      "budget_tokens": 100000,
+      "cool_rounds": 12,
+      "stuck_rounds": 100
+    },
+    "kernel_state": {
+      "progress": {
+        "lab/agents/ada:agent-r1": {
+          "last": {
+            "round": 45,
+            "state": "act",
+            "steps": 41
+          },
+          "same": 0,
+          "member_round": 45
+        },
+        "lab/agents/cy:agent-r1": {
+          "last": {
+            "round": 36,
+            "state": "idle",
+            "steps": 36
+          },
+          "same": 1,
+          "member_round": 37
+        },
+        "lab/agents/ben:agent-r1": {
+          "last": {
+            "round": 27,
+            "state": "idle",
+            "steps": 27
+          },
+          "same": 0,
+          "member_round": 27
+        }
+      },
+      "usage": {
+        "lab/agents/ada": {
+          "last": 1354,
+          "acc": 376
+        },
+        "lab/agents/ben": {
+          "last": 868,
+          "acc": 0
+        },
+        "lab/agents/cy": {
+          "last": 1164,
+          "acc": 376
+        }
+      },
+      "paused": {},
+      "issued": {},
+      "round": 51
+    },
+    "status": {
+      "pid": 774234,
+      "root": "/tmp/astra2-space-vec3ccyp",
+      "at": "2026-10-03T13:19:04.982",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "lab": {
+          "round": 51,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "kernel-r1"
+          ]
+        },
+        "lab/agents/ada": {
+          "round": 46,
+          "phase": "tock",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/ben": {
+          "round": 27,
+          "phase": "paused",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/cy": {
+          "round": 37,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "kernel_birth": {
+      "tid": "kernel-r1",
+      "name": "kernel",
+      "node": "lab",
+      "round": 1,
+      "mounts": {
+        "aosd": {
+          "to": ".aosd",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/aosd"
+        },
+        "lab_agents_ada__aos": {
+          "to": "lab/agents/ada/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos"
+        },
+        "lab_agents_ben__aos": {
+          "to": "lab/agents/ben/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos"
+        },
+        "lab_agents_cy__aos": {
+          "to": "lab/agents/cy/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_cy__aos"
+        }
+      },
+      "at": "2026-10-03T13:18:56.420",
+      "restart_of": null,
+      "argv": [
+        "aos7-kernel"
+      ]
+    }
+  },
+  {
+    "label": "final-running",
+    "rounds": {
+      "lab": 64,
+      "lab/agents/ada": 61,
+      "lab/agents/ben": 41,
+      "lab/agents/cy": 49
+    },
+    "config": {
+      "members": [
+        "agents/ada",
+        "agents/cy",
+        "agents/ben"
+      ],
+      "budget_tokens": 100000,
+      "cool_rounds": 12,
+      "stuck_rounds": 100
+    },
+    "kernel_state": {
+      "progress": {
+        "lab/agents/ada:agent-r1": {
+          "last": {
+            "round": 59,
+            "state": "idle",
+            "steps": 54
+          },
+          "same": 0,
+          "member_round": 59
+        },
+        "lab/agents/cy:agent-r1": {
+          "last": {
+            "round": 48,
+            "state": "idle",
+            "steps": 48
+          },
+          "same": 0,
+          "member_round": 48
+        },
+        "lab/agents/ben:agent-r1": {
+          "last": {
+            "round": 40,
+            "state": "think",
+            "steps": 40
+          },
+          "same": 0,
+          "member_round": 40
+        }
+      },
+      "usage": {
+        "lab/agents/ada": {
+          "last": 1760,
+          "acc": 782
+        },
+        "lab/agents/ben": {
+          "last": 1368,
+          "acc": 500
+        },
+        "lab/agents/cy": {
+          "last": 1555,
+          "acc": 767
+        }
+      },
+      "paused": {},
+      "issued": {},
+      "round": 63
+    },
+    "status": {
+      "pid": 774234,
+      "root": "/tmp/astra2-space-vec3ccyp",
+      "at": "2026-10-03T13:19:07.167",
+      "stopping": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "lab": {
+          "round": 64,
+          "phase": "tock",
+          "paused": false,
+          "live": [
+            "kernel-r1"
+          ]
+        },
+        "lab/agents/ada": {
+          "round": 61,
+          "phase": "tock",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/ben": {
+          "round": 41,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        },
+        "lab/agents/cy": {
+          "round": 49,
+          "phase": "idle",
+          "paused": false,
+          "live": [
+            "agent-r1"
+          ]
+        }
+      }
+    },
+    "kernel_birth": {
+      "tid": "kernel-r1",
+      "name": "kernel",
+      "node": "lab",
+      "round": 1,
+      "mounts": {
+        "aosd": {
+          "to": ".aosd",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/aosd"
+        },
+        "lab_agents_ada__aos": {
+          "to": "lab/agents/ada/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ada__aos"
+        },
+        "lab_agents_ben__aos": {
+          "to": "lab/agents/ben/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_ben__aos"
+        },
+        "lab_agents_cy__aos": {
+          "to": "lab/agents/cy/.aos",
+          "at": "/tmp/astra2-space-vec3ccyp/lab/.aos/tasks/kernel-r1/mnt/lab_agents_cy__aos"
+        }
+      },
+      "at": "2026-10-03T13:18:56.420",
+      "restart_of": null,
+      "argv": [
+        "aos7-kernel"
+      ]
+    }
+  }
+]

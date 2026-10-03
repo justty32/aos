@@ -1,0 +1,25 @@
+[
+  {
+    "case": "pending-paused-sender",
+    "label": "before-wait",
+    "round": 2,
+    "evidence": "pending-paused-sender-before-wait.json"
+  },
+  {
+    "case": "pending-paused-sender",
+    "label": "after-wait",
+    "round": 2,
+    "evidence": "pending-paused-sender-after-wait.json"
+  },
+  {
+    "case": "pending-paused-sender",
+    "label": "resumed",
+    "round": 3,
+    "evidence": "pending-paused-sender-resumed.json"
+  },
+  {
+    "cleanup_survivors": [],
+    "daemon_rc": 0,
+    "removed_root": "/tmp/astra2-delivery-pending-paused-sender-ctsvauyh"
+  }
+]
