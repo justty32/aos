@@ -11,6 +11,7 @@
 - [10-01：最核心的 aos-daemon](2026-10-01-daemon-core-sketch.md)（已裁定）：現行 daemon「定期叫 `aos-exec`、其餘做成模組」的由來；細部 plan 見 [m3](../plan/m3-daemon-core.md)。
 - [10-01：tick 系統級任務總整理](2026-10-01-tick-system-tasks.md)：系統級任務全暫緩後，留給使用者慢慢想怎麼改用 hooks 的清單（不是裁定）。
 - [10-03：aos 的分層](2026-10-03-aos-layering.md)（使用者想法，不是裁定）：daemon 是運行層；檔案系統是空間、tick 是時間；kernel 在這個時空上；最後才是 agent。tick 是程式還是 lib 都可以。
+  - 照這份筆記的推演：[時空四層推演](proposals/2026-10-03-spacetime/README.md)、[astra 時空評估](reviews/2026-10-03-astra-spacetime.md)、[astra 對早期筆記的意見](reviews/2026-10-03-astra-layering.md)。
 - 10-02 三份提案（[kernel](proposals/2026-10-02-kernel/README.md)、[agent](proposals/2026-10-02-agent/README.md)、[Plan 9](proposals/2026-10-02-plan9/README.md)）是規劃、方向未定；10-03 astra 六條線另想的替代與收斂見 [2026-10-03-astra-alt](reviews/2026-10-03-astra-alt/README.md)。
 - [帳號模組真 root 操作手冊](2026-10-01-account-manual.md)：等使用者在可丟棄的機器上手動驗。
 
