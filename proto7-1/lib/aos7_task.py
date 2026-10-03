@@ -29,6 +29,19 @@ def task_dir(node, tid):
     return os.path.join(tasks_dir(node), tid)
 
 
+def old_dir(node):
+    """`<node>/.aos/tasks-old/`：tock 把結束超過 keep_ended_rounds 回合的任務資料夾搬來這裡（Q3）。"""
+    return os.path.join(node, ".aos", "tasks-old")
+
+
+def find_task_dir(node, tid):
+    """tid 的資料夾：先找 tasks/，再找 tasks-old/；都沒有回 None。"""
+    for d in (task_dir(node, tid), os.path.join(old_dir(node), tid)):
+        if os.path.isdir(d):
+            return d
+    return None
+
+
 def list_tasks(node):
     """回這個 node 所有任務的 tid（排序過）。node 是絕對路徑。"""
     try:
@@ -114,9 +127,21 @@ def _groups_with_descendants(pgid):
     return {pgid} | {table[p][2] for p in seen if p in table}
 
 
+def _is_runner(pid):
+    """是 aos7-run（任務的包裝）嗎：它等任務死了自己寫 exit.json，不能先殺它。"""
+    try:
+        with open("/proc/%d/cmdline" % pid, "rb") as f:
+            return any(a.endswith(b"aos7-run") for a in f.read().split(b"\0"))
+    except OSError:
+        return False
+
+
 def _escaped(tid, node, skip):
-    """環境變數 AOS7_TID、AOS7_NODE 都是這個任務、但已經不是後代的程序（雙 fork、setsid 後被 init 收養；probes/polyglot N5）。"""
-    want = {b"AOS7_TID=" + tid.encode(), b"AOS7_NODE=" + node.encode()}
+    """環境變數 AOS7_TID、AOS7_NODE 都是這個任務、但已經不是後代的程序（雙 fork、setsid 後被 init 收養；probes/polyglot N5）。
+    tid 給 None＝這個 node 的任何任務（有 AOS7_TID 就算；node 消失時用，Q4）。"""
+    want = {b"AOS7_NODE=" + node.encode()}
+    if tid is not None:
+        want.add(b"AOS7_TID=" + tid.encode())
     out = []
     for pid in _all_pids():
         if pid in skip:
@@ -126,7 +151,7 @@ def _escaped(tid, node, skip):
                 env = set(f.read().split(b"\0"))
         except OSError:
             continue
-        if want <= env:
+        if want <= env and (tid is not None or any(x.startswith(b"AOS7_TID=") for x in env)) and not _is_runner(pid):
             out.append(pid)
     return out
 
@@ -216,6 +241,30 @@ def kill_task(tdir):
     return clean, "killed" if clean else "still alive after SIGKILL"
 
 
+def kill_node_procs(node, known=(), skip=()):
+    """node 消失時收掉它上面的任務（Q4）：known＝daemon 平常記著的 [(pgid, runner_pid)]（只用 pgid），
+    再加上環境變數 AOS7_NODE 是這個 node 的程序（pid.json 跟著資料夾被刪了也找得到）。回收到的群組數與乾不乾淨。"""
+    me = {os.getpid()}
+    p = os.getppid()
+    while p > 1 and p not in me:      # 不殺自己與祖先（子 daemon 本身也是某個 node 的任務）
+        me.add(p)
+        st = _stat(p)
+        p = st[1] if st else 1
+    groups = set()
+    for pgid, _runner in known:
+        if isinstance(pgid, int) and pgid > 1 and pgid not in me:
+            groups.add(pgid)
+    left = _escaped(None, node, me)
+    for pid in left:
+        st = _stat(pid)
+        if st and st[2] not in me:
+            groups.add(st[2])
+    clean = True
+    for g in sorted(groups):
+        clean = kill_group(g) and clean
+    return len(groups), clean   # aos7-run 不殺：任務死了它自己經 fd 寫 exit.json（搬家時寫到新位置）
+
+
 def write_spawn(node, fname, item):
     """寫 `<node>/.aos/spawn/<fname>.json`：請下個 tick 起一個任務。"""
     write_json(os.path.join(node, ".aos", "spawn", fname + ".json"), item)
@@ -273,7 +322,7 @@ def new_tid(node, name, rnd):
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", name or "task")
     base = "%s-r%d" % (safe, rnd)
     tid, n = base, 1
-    while os.path.exists(task_dir(node, tid)):
+    while os.path.exists(task_dir(node, tid)) or os.path.exists(os.path.join(old_dir(node), tid)):
         n += 1
         tid = "%s-%d" % (base, n)
     return tid

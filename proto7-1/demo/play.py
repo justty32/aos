@@ -93,7 +93,7 @@ def nodes_with_rounds(root):
     for dirpath, dirnames, filenames in os.walk(root):
         if os.path.basename(dirpath) == ".aos" and "rounds.jsonl" in filenames:
             out.append(os.path.dirname(dirpath))
-        dirnames[:] = [x for x in dirnames if x != "tasks"]
+        dirnames[:] = [x for x in dirnames if x not in ("tasks", "tasks-old")]
     return sorted(out)
 
 
@@ -136,7 +136,7 @@ def report_rounds(root):
 
 def report_files(root):
     print("\n== kernel 的決定 ==")
-    for path in sorted(glob.glob(os.path.join(root, "team", ".aos", "tasks", "*", "decisions.jsonl"))):
+    for path in sorted(glob.glob(os.path.join(root, "team", ".aos", "tasks*", "*", "decisions.jsonl"))):
         for d in fs.read_jsonl(path):
             print("  [%s] team 第%s 回合 %-6s %s %s  (%s)" % (os.path.basename(os.path.dirname(path)), d.get("round"),
                   d.get("rule"), d.get("op"), d.get("target"), d.get("why")))
@@ -149,7 +149,7 @@ def report_files(root):
                   c.get("by", ""), res.get("ok"), res.get("msg", "")))
     print("\n== 掛載（S-23：tick 在任務資料夾 mnt/ 下建的連結 → 空間裡的路徑）==")
     seen = set()
-    for path in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks", "*", "birth.json"), recursive=True)):
+    for path in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks*", "*", "birth.json"), recursive=True)):
         b = fs.read_json(path, {})
         key = (b.get("node"), b.get("name"))
         if b.get("mounts") and key not in seen:
@@ -157,11 +157,11 @@ def report_files(root):
             print("  %s:%s  %s" % (b.get("node"), b.get("tid"),
                   "  ".join("mnt/%s → %s" % (n, m.get("to", m.get("error"))) for n, m in sorted(b["mounts"].items()))))
     print("\n== 執行中加掛的回條（mount-done，M-6）==")
-    for path in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks", "*", "mount-done", "*.json"), recursive=True)):
+    for path in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks*", "*", "mount-done", "*.json"), recursive=True)):
         c = fs.read_json(path, {})
         tdir = os.path.dirname(os.path.dirname(path))
         res = c.get("result", {})
-        print("  %s  %s  ok=%s %s" % (os.path.relpath(tdir, root).replace("/.aos/tasks/", ":"), c.get("path"),
+        print("  %s  %s  ok=%s %s" % (os.path.relpath(tdir, root).replace("/.aos/tasks-old/", ":").replace("/.aos/tasks/", ":"), c.get("path"),
               res.get("ok"), res.get("msg")))
     au = aos7_audit.scan(root)
     print("\n== 寫入紀錄（%d 個任務、%d 筆寫入，寫出範圍 %d 筆）==" % (au["tasks"], au["writes"], len(au["bad"])))
@@ -182,7 +182,7 @@ def checks(root, left):
     def any_file(pattern):
         return bool(glob.glob(os.path.join(root, pattern)))
     decisions = []
-    for path in glob.glob(os.path.join(root, "team", ".aos", "tasks", "*", "decisions.jsonl")):
+    for path in glob.glob(os.path.join(root, "team", ".aos", "tasks*", "*", "decisions.jsonl")):
         decisions += fs.read_jsonl(path)
     ops = {(d.get("rule"), d.get("op")) for d in decisions}
     done_ctl = [fs.read_json(p, {}) for p in glob.glob(os.path.join(root, "team", "sub", ".aosd", "ctl-done", "*.json"))]
@@ -200,18 +200,18 @@ def checks(root, left):
         ("amy 與 bob 互傳信（>= 4 封）", len(letters) >= 4),
         ("對話到上限，寫出 work/done.txt", any_file("team/agents/*/work/done.txt")),
         ("kernel 把卡住的 worker restart", ("stuck", "restart") in ops),
-        ("restart 後 bob 有新的 worker 任務", len(glob.glob(os.path.join(root, "team/agents/bob/.aos/tasks/worker-*"))) >= 2),
+        ("restart 後 bob 有新的 worker 任務", len(glob.glob(os.path.join(root, "team/agents/bob/.aos/tasks*/worker-*"))) >= 2),
         ("kernel 因預算 pause 某條時間線", ("budget", "pause") in ops),
         ("kernel 之後 resume 它", ("budget", "resume") in ops),
         ("路一：子 daemon subd 有跑出 w 的回合", any_file("team/sub/w/.aos/rounds.jsonl")),
         ("路一：kernel 依壽命 kill subd", ("age", "kill") in ops),
         ("路二：poke 寫子 daemon 控制檔 pause/resume w", {"pause", "resume"} <= {c.get("op") for c in done_ctl}),
         ("加掛：carol 臨時寄給沒掛的 bob，請求加掛後寄到",
-         granted("team/agents/carol/.aos/tasks/*", "team/agents/bob/inbox") and bool(letters_from("team/agents/bob", "team/agents/carol"))),
+         granted("team/agents/carol/.aos/tasks*/*", "team/agents/bob/inbox") and bool(letters_from("team/agents/bob", "team/agents/carol"))),
         ("加掛：bob 回信給 carol 也是先加掛再寄",
-         granted("team/agents/bob/.aos/tasks/*", "team/agents/carol/inbox") and bool(letters_from("team/agents/carol", "team/agents/bob"))),
+         granted("team/agents/bob/.aos/tasks*/*", "team/agents/carol/inbox") and bool(letters_from("team/agents/carol", "team/agents/bob"))),
         ("加掛：kernel.json 中途加成員 carol，kernel 自己加掛它的 .aos",
-         granted("team/.aos/tasks/kernel-*", "team/agents/carol/.aos")),
+         granted("team/.aos/tasks*/kernel-*", "team/agents/carol/.aos")),
         ("寄信、寫 ctl、路二都經過掛載點：所有寫入在自己的 node 或掛載點下（%d 筆）" % au["writes"],
          au["writes"] > 0 and not au["bad"]),
         ("停下後沒有殘留程序", not left),

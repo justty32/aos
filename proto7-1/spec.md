@@ -25,7 +25,7 @@
 {"interval_ms": 100}
 ```
 
-沒寫 `interval_ms` 當 1000。
+沒寫 `interval_ms` 當 1000。可選 `keep_ended_rounds`（非負整數，預設 20）：結束超過這麼多回合的任務資料夾，由 tock 搬到 `.aos/tasks-old/`（第 7 節）。
 
 生一個新 node：**先寫 tasks.json（與其他檔），最後寫 timeline.json**。timeline.json 一出現 daemon 就開回合（1～2 ms 內撿到，不必寫 rescan）；順序反過來會有空回合（probes/subtimeline）。
 
@@ -43,11 +43,15 @@
 
 `interval_ms` 不是有限數字（字串、null、NaN、過大）時用預設 1000，並在 status 的 `last_error` 記 `prog: "timeline"`；修好檔下一回合就用新的。時間線迴圈丟任何例外，記 `last_error` 與 log 的 `ev: "error"`，等 0.5 秒接著跑，不會永久停掉（astra-4 I-06）。
 
+**動作逾時**（eval/2026-10-03-batch-tick 順帶發現）：tick、tock 一次最多跑 `action_timeout_s` 秒（timeline.json 可設，預設 30）。超過就 SIGKILL 這個動作、記 `last_error` 與 log 的 `incomplete: true`，該回合照常往下走。tick 被收掉的回合，tock 收到環境變數 `AOS7_INCOMPLETE=tick`，總結多 `incomplete: "tick"`。daemon 停機時，正在跑的 tick／tock 最多再等 3 秒就收掉，一條線卡在 I/O 不會讓整個 daemon 停不下來。
+
 daemon 跑 tock 時給環境變數 `AOS7_EARLY`（`1`＝本回合起的任務都結束、提前進場；`0`＝等滿 interval）。tick 印 `gone`（node 已不在）時這圈不開回合，等掃描收掉這條。
 
 **世代**（astra-4 I-01）：daemon 拿到 `daemon.lock` 後把 `.aosd/gen.json` 的 `gen` +1，起 tick／tock 時給環境變數 `AOS7_GEN`。tick、tock 整個動作期間對 `<node>/.aos/action.lock` 拿 `flock`，拿到後比對 `AOS7_GEN` 與 gen.json；不同（舊 daemon 留下的動作）就什麼都不寫、印 `{"stale": true}`。沒有 `AOS7_GEN`（人手跑）不比對。
 
 pause 在回合中途下：本回合照常 tock 完才停。pause 的 node 清單存在 `<root>/.aosd/paused.json`（`{"paused": [...]}`），daemon 重開照樣有效。
+
+**node 消失**（資料夾不見、或 `.aos/timeline.json` 不見；搬家改名＝舊 id 消失、新 id 出現）：daemon kill 那個 node 上的活任務（使用者 10-03 Q4 選 (a)）。因為 rm -rf 後 pid.json 跟著沒了，daemon 平常記著各 node 活任務的 pgid（記憶體裡，跟 status 的 live 一起每 0.25 秒更新），再加上找環境變數 `AOS7_NODE` 是那個 node 的程序（aos7-run 不殺，讓它照常寫 exit.json；搬家時經 fd 寫到新位置）。在背景做、不擋主迴圈；log 記 `ev: "node-gone-kill"`。新位置由 keep 重起。想「暫停但保留任務」用 pause，不要拿掉 timeline.json。
 
 stop：回合中途的時間線不等 interval，（`kill` 時先 kill 本 node 所有活任務）立刻 tock 收回合再結束；daemon 等所有時間線結束才退出。
 
@@ -185,6 +189,7 @@ tick 用 `aos7-run <taskdir>` 起任務（新 session，tick 不等它）。aos7
 
 任何人寫 `<taskdir>/ctl.json`。**tick 與 tock 時刻**才執行（S-17「在 tick-tock 時」）：
 
+- **kill 只保證收到這些**（使用者 10-03 Q1 選 (a)）：任務的程序群組、群組成員活著的後代所在的群組、環境變數 `AOS7_TID`＋`AOS7_NODE` 都是這個任務的程序。任務故意脫離（setsid 又改環境變數、雙 fork 後清掉環境、刪掉自己的 taskdir）由任務自己負責；daemon 不用 subreaper／cgroup。
 - `kill`：對 pid.json 的 pgid **以及該群組成員所有後代所在的群組**送 SIGTERM，等至多 1 秒，還在就 SIGKILL（後代：aos-exec 把 inst 的子程式開在另一個 session）。另外掃 `/proc/*/environ`，環境變數 `AOS7_TID` 與 `AOS7_NODE` 都是這個任務、但已被 init 收養的程序（雙 fork、setsid）也一起收（不含 aos7-run；probes/polyglot N5）。
 - `restart`：kill，再把 birth.json 的定義寫成 `spawn/restart-<tid>.json`（帶 `restart_of`），下回合 tick 起新的（維持「任務一律由 tick 啟動」）。
 - 已結束的任務：kill 當成功，但照上面的環境變數比對收掉它留下還活著的子孫（msg 寫 `already ended; N leftover process(es) killed`；astra-4 I-04）；restart 照樣寫 spawn（帶原本的 `mounts` 宣告，新任務照樣掛）。
@@ -199,6 +204,7 @@ tick 用 `aos7-run <taskdir>` 起任務（新 session，tick 不等它）。aos7
 1. 執行任務控制（第 6 節）。
 2. 掃所有任務：lost 的補 exit.json；記下新結束的。
 3. 對每個活任務寫 `tock.json`。
+- 掃之前先把「已寫 ended.json、而且 `本回合 − ended 的回合 > keep_ended_rounds`」的任務資料夾整個搬到 `<node>/.aos/tasks-old/<tid>/`（使用者 10-03 Q3 選 (a)），總結多 `archived: [tid...]`。之後 tick、tock、status 只掃 `.aos/tasks/`，舊任務多也不變慢（probes/swarm D 段）。tid 不跟 tasks-old 裡的撞。要看歷史（kernel 接前任狀態 `restart_of`、agent 接前任 state.json、kernel 算用量總和）的地方兩處都找：`aos7_fs.task_dirs_of(aos)`、`aos7_task.find_task_dir(node, tid)`。
 4. 在 `rounds.jsonl` 加一行總結；**之後**才對新結束的寫 ended.json（中途被殺時下次 tock 會再報一次，不會永久漏掉；astra-4 I-03）；寫 `round.json`（open: false）。
 5. stdout 印一行 JSON 總結，結束。
 

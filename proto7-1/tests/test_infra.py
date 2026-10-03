@@ -120,6 +120,97 @@ class TestTickRobust(DaemonCase):
         self.assertFalse(any(aos7_task.pid_alive(p) for p in left))
 
 
+class TestArchive(DaemonCase):
+    """使用者 10-03 Q3 選 (a)：結束超過 keep_ended_rounds 回合的任務資料夾搬到 tasks-old/。"""
+
+    def test_tock_archives_old_ended(self):
+        node = self.mknode("a", [{"name": "q", "argv": ["true"]}])
+        write_json(os.path.join(node, ".aos", "timeline.json"), {"interval_ms": 100, "keep_ended_rounds": 1})
+        for _ in range(4):
+            self.tick()
+            self.wait_for(lambda: all(self.state(node, t) == "ended" for t in aos7_task.list_tasks(node)))
+            s = self.tock()
+        self.assertEqual(s["archived"], ["q-r2"])
+        self.assertEqual(sorted(os.listdir(aos7_task.old_dir(node))), ["q-r1", "q-r2"])
+        self.assertEqual(aos7_task.list_tasks(node), ["q-r3", "q-r4"])
+        self.assertEqual(aos7_task.find_task_dir(node, "q-r1"), os.path.join(aos7_task.old_dir(node), "q-r1"))
+
+    def test_new_tid_skips_archived(self):
+        node = self.mknode("a")
+        os.makedirs(os.path.join(aos7_task.old_dir(node), "x-r1"))
+        self.assertEqual(aos7_task.new_tid(node, "x", 1), "x-r1-2")
+
+    def test_kernel_inherits_from_archived(self):
+        import aos7_kernel
+        node = self.mknode("a")
+        old = os.path.join(aos7_task.old_dir(node), "kernel-r1")
+        write_json(os.path.join(old, "birth.json"), {"tid": "kernel-r1", "name": "kernel", "round": 1})
+        write_json(os.path.join(old, "kernel-state.json"), {"round": 7})
+        me = aos7_task.task_dir(node, "kernel-r9")
+        write_json(os.path.join(me, "birth.json"), {"tid": "kernel-r9", "name": "kernel", "round": 9,
+                                                     "restart_of": "kernel-r1"})
+        st = aos7_kernel.load_state({"task": me, "tid": "kernel-r9"})
+        self.assertEqual((st["round"], st["inherited_from"]), (7, "kernel-r1"))
+
+
+class TestNodeGone(DaemonCase):
+    """使用者 10-03 Q4 選 (a)：node 消失就 kill 它上面的活任務。"""
+
+    def test_rm_rf_kills_tasks(self):
+        node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEPER}], interval_ms=50)
+        self.start_daemon()
+        pid = self.wait_for(lambda: read_json(os.path.join(self.tdir(node, "s-r1"), "pid.json")))
+        time.sleep(0.4)        # 讓 daemon 記下 pid（status 每 0.25 秒重算 live）
+        import shutil
+        shutil.rmtree(node)
+        self.wait_for(lambda: not aos7_task.group_alive(pid["pgid"]), msg="node 刪掉後任務還活著")
+        self.wait_for(lambda: [x for x in self.log() if x.get("ev") == "node-gone-kill"])
+        self.ctl("stop")
+
+    def test_move_kills_old_and_keep_restarts(self):
+        node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEPER}], interval_ms=50)
+        self.start_daemon()
+        pid = self.wait_for(lambda: read_json(os.path.join(self.tdir(node, "s-r1"), "pid.json")))
+        os.rename(node, os.path.join(self.root, "b"))
+        self.wait_for(lambda: not aos7_task.group_alive(pid["pgid"]), msg="搬家後舊任務還活著")
+        newnode = os.path.join(self.root, "b")
+        self.wait_for(lambda: [t for t in aos7_task.live_tasks(newnode) if t != "s-r1"], msg="新位置沒起新的")
+        ex = self.wait_for(lambda: read_json(os.path.join(self.tdir(newnode, "s-r1"), "exit.json")))
+        self.assertEqual(ex["code"], -15)
+        self.ctl("stop", "--kill")
+
+
+class TestActionTimeout(DaemonCase):
+    """tick 卡在 I/O（tasks.json 是個沒人寫的 FIFO）：逾時收掉、回合標 incomplete、下一回合照常；停機不被卡住（eval/2026-10-03-batch-tick）。"""
+
+    def stuck_node(self, timeout_s):
+        node = self.mknode("a", interval_ms=50)
+        write_json(os.path.join(node, ".aos", "timeline.json"), {"interval_ms": 50, "action_timeout_s": timeout_s})
+        os.remove(os.path.join(node, ".aos", "tasks.json"))
+        os.mkfifo(os.path.join(node, ".aos", "tasks.json"))
+        return node
+
+    def test_stuck_tick_is_cut_and_round_marked(self):
+        node = self.stuck_node(0.5)
+        self.start_daemon()
+        rows = self.wait_for(lambda: [x for x in read_jsonl(os.path.join(node, ".aos", "rounds.jsonl"))
+                                      if x.get("incomplete") == "tick"][1:], timeout=10, msg="沒有 incomplete 的回合")
+        self.assertGreater(rows[0]["round"], 1)
+        self.assertTrue([x for x in self.log() if x.get("ev") == "tick" and x.get("incomplete")])
+        self.assertEqual(self.status()["nodes"]["a"]["last_error"]["prog"], "tick")
+        self.ctl("stop")
+
+    def test_stop_not_blocked_by_stuck_tick(self):
+        self.stuck_node(1000)
+        p = self.start_daemon()
+        self.wait_for(lambda: self.status().get("nodes", {}).get("a", {}).get("phase") == "tick")
+        time.sleep(0.2)
+        t0 = time.monotonic()
+        p.terminate()
+        self.assertEqual(p.wait(15), 0)
+        self.assertLess(time.monotonic() - t0, 10)
+
+
 class TestDaemonOps(DaemonCase):
     def test_wake_starts_next_round_early(self):
         self.mknode("a", interval_ms=3000)

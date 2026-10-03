@@ -23,9 +23,10 @@
 | N-22 | 一般 I/O 失敗走受控路徑 | 部分（不退出、有記錄；沒有降級策略） |
 | N-09 | 回條與停機說清涵蓋範圍 | 部分 |
 | N-12 | 狀態檔有世代、版本、能表達 unknown | 部分（有 gen；沒有 snapshot 序號、沒有 unknown） |
+| N-54 | tick／tock 要有逾時，卡住不拖住停機 | 已做 |
 | N-17 | 負載下控制面仍可用 | 部分（冷啟動已修；容量沒管） |
-| N-25 | 任務資源歸屬不靠任務能刪的目錄與主 PID | 部分 → **Q1** |
-| N-40 | 歷史任務資料夾的成本要有界 | 部分 → **Q3** |
+| N-25 | 任務資源歸屬不靠任務能刪的目錄與主 PID | **已答 Q1 (a)**：照現在，spec 寫明 kill 只保證收到哪些 |
+| N-40 | 歷史任務資料夾的成本要有界 | **已做**（Q3 (a)：tock 搬到 tasks-old/） |
 | N-45 | 跨 daemon 的控制端點要能照文件配置 | 部分 |
 | N-47 | 路一子根要有標記，父才不會搶 | 已做（本輪） |
 
@@ -66,14 +67,15 @@
 | N-21 | 一個任務壞掉不連坐同一條線；設定寫壞修好後能自己恢復 | astra I-05、I-06、R5；selfmod 6、7、bug 1～3 | birth 改成 `[1]` → 每次 tick rc 1；tock.json 被改成資料夾 → 整條線的 tock 全失敗；interval 寫 `"fast"`／null／1e309 → 時間線永久停，修檔＋rescan 也不恢復；keep 沒寫 name → 每回合起一份 | 必要 | S-05、S-06、S-11 | **已做**（本輪）：birth 讀不到時從 tid 推 name；tock 每個任務各自 try；interval 壞了用預設並記錯；時間線出例外後等 0.5 秒接著跑；壞的一項只跳過那項 | 技術選型 |
 | N-22 | 一般 I/O 失敗走受控路徑 | astra I-07、R6 | `.aosd` 唯讀，或寫 status 時 ENOSPC，daemon 直接 exit 1，不收任務、不留紀錄 | 必要 | S-03、S-06 | **部分**（本輪）：主迴圈每一步出 OSError 都不退出，印 stderr、log 記 `io-error`、status 的 `io_errors` +1；沒有「停止接新工作／降級」的策略 | 技術選型 |
 | N-23 | 啟動時有恢復清單：沒關的回合、失聯的 runner、留下的 tmp | astra R16 | runner 寫完 exit 的 tmp、還沒 rename 就被殺，tmp 裡有 23 但被判成 lost | 應該 | S-01、S-06 | **沒做** | — |
+| N-54 | tick／tock 要有逾時；一條線卡住不能拖住停機 | 批次評估隊（[eval/2026-10-03-batch-tick.md](eval/2026-10-03-batch-tick.md)）順帶發現 | `run_prog` 沒有逾時：tick 卡在 I/O 時，那條線的 thread 永遠不回來，daemon 收到 SIGTERM 後 5 秒仍在，最後被 SIGKILL（rc −9） | 必要 | S-06 | **已做**：tick／tock 超過 `action_timeout_s`（預設 30 秒）就 SIGKILL，記錯並標 `incomplete`，下一回合照常；停機時正在跑的動作最多再等 3 秒。測試用「tasks.json 是沒人寫的 FIFO」重現 | 技術選型 |
 | N-24 | 刪掉或搬走的 node 不能被建回來 | subtimeline 1；rename N9 | rm -rf 8 次有 6～8 次被 tock 或 aos7-run 建回 `.aos/round.json`；搬家落在 tick／tock 中途時，總結寫進鬼資料夾 | 應該 | S-06 | **已做**（本輪）：tick／tock 先看 timeline.json；aos7-run 經 fd 寫 exit.json | 技術選型 |
 
 ## D. 任務歸屬、kill 與收尾
 
 | 編號 | 需求 | 來源 | 證據 | 優先 | 核心 | 現況 | 決定 |
 |---|---|---|---|---|---|---|---|
-| N-25 | 任務的資源歸屬不依賴任務自己能刪的 taskdir 和主 PID；主程序結束、fork、setsid、taskdir 被刪之後都還盤點得到 | astra I-04、I-05、R4；polyglot N5 | 主程序結束後，孫程序 kill 回「already ended」、stop 後還活著；`setsid sleep` 收不到；任務刪掉自己的 taskdir，status 看不到它，keep 又起三份 | 必要 | S-03、S-06、S-10、S-17 | **部分**（本輪）：kill 另外用 `/proc/*/environ` 找 `AOS7_TID`＋`AOS7_NODE` 相符的程序；已結束的任務被 kill 時也收殘留；改了環境變數或刪了 taskdir 仍然漏 | **Q1** |
-| N-26 | node 消失或搬家時，上面的活任務要有人收，或至少被看見 | subtimeline 2；rename N8 | rm -rf 後 sleeper 還活著，status 不列它，stop --kill 也收不到；搬家後任務的 `AOS7_TASK` 指舊路徑，從此收不到 tock | 應該 | 之後再說（node 怎麼消失） | **部分**（本輪）：結束碼跟著資料夾走（不再寫回舊路徑） | **Q4** |
+| N-25 | 任務的資源歸屬不依賴任務自己能刪的 taskdir 和主 PID；主程序結束、fork、setsid、taskdir 被刪之後都還盤點得到 | astra I-04、I-05、R4；polyglot N5 | 主程序結束後，孫程序 kill 回「already ended」、stop 後還活著；`setsid sleep` 收不到；任務刪掉自己的 taskdir，status 看不到它，keep 又起三份 | 必要 | S-03、S-06、S-10、S-17 | **已答**：kill 另外用 `/proc/*/environ` 找 `AOS7_TID`＋`AOS7_NODE` 相符的程序；已結束的任務被 kill 時也收殘留；spec 寫明只保證到這裡，故意脫離的任務自己負責 | 〔使用者 10-03〕選 (a) |
+| N-26 | node 消失或搬家時，上面的活任務要有人收，或至少被看見 | subtimeline 2；rename N8 | rm -rf 後 sleeper 還活著，status 不列它，stop --kill 也收不到；搬家後任務的 `AOS7_TASK` 指舊路徑，從此收不到 tock | 應該 | 之後再說（node 怎麼消失） | **已做**：node 消失（含只刪 timeline.json、搬家）就 kill 上面的活任務；daemon 在記憶體記各 node 活任務的 pgid，另找 `AOS7_NODE` 相符的程序；結束碼經 fd 寫到新位置；新位置由 keep 重起（rename、subtimeline 探針已改驗這些） | 〔使用者 10-03〕選 (a) |
 | N-27 | 多層停機要有總期限，不能每層各自 1 秒互相搶 | nest3 N2；astra R15 | 三層加上不理 SIGTERM 的任務：D1 一定被 -9，一半機率留下 2 個孤兒 | 應該 | S-06、S-21 | **沒做** | 技術選型（先不做；P-04） |
 | N-28 | keep 任務要有正規的「別再起我」 | lifecycle N-5；swarm N6 | 29 回合裡，rc0、標記檔、自己 kill 各留 29 個資料夾；只有改 tasks.json 有效 | 應該 | 之後再說（任務表誰能改） | **沒做**；本輪提供 `aos7_fs.edit_json`，讓改 tasks.json 不會互相蓋掉 | 已答 D-3 |
 | N-29 | crash loop 要有退避，或至少看得到連續失敗幾次 | lifecycle N-6 | 52 回合起 52 次、52 個資料夾；50 ms interval 下約每分鐘 19 MiB；寫壞的任務默默死了 31 回合都沒人發現 | 應該 | 沒有 | **部分**：ended 有 name、code、by_ctl，kernel 可以自己算；tick 沒有退避 | — |
@@ -97,7 +99,7 @@
 
 | 編號 | 需求 | 來源 | 證據 | 優先 | 核心 | 現況 | 決定 |
 |---|---|---|---|---|---|---|---|
-| N-40 | 歷史任務資料夾不能讓 tick／tock／status 越跑越慢 | swarm N4；fleet N3；astra R12；lifecycle N-6 | 4000 個舊資料夾：tick 4→56 ms，tock 3→46 ms，daemon CPU 10%→52%；一個短命任務約 16 KB | 必要 | 沒有（P-12 原列默認正常） | **部分**（本輪）：status 的 live 每 0.25 秒才重算；tick／tock 仍全掃 | **Q3** |
+| N-40 | 歷史任務資料夾不能讓 tick／tock／status 越跑越慢 | swarm N4；fleet N3；astra R12；lifecycle N-6 | 4000 個舊資料夾：tick 4→56 ms，tock 3→46 ms，daemon CPU 10%→52%；一個短命任務約 16 KB | 必要 | 沒有（P-12 原列默認正常） | **已做**：status 的 live 每 0.25 秒才重算；tock 把結束超過 `keep_ended_rounds`（預設 20）回合的搬到 `.aos/tasks-old/`。swarm：4000 個舊資料夾時 tick 53～70→4～5 ms、tock 63～86→3 ms、回合週期 164～206→100 ms；搬的那一次 tock 85～110 ms | 〔使用者 10-03〕選 (a) |
 | N-41 | 每回合兩個 Python 程序的成本要有對策 | fleet N1；astra R11、R17 | 150 條時間線約吃 12 核，回合只跑到該有的 45%；astra 10→200 條，每條完成的回合數 123→11（中位） | 應該 | S-04、S-12 | **已答**：接受，容量寫清楚（約每秒 100～150 回合，見文末） | 已答（10-03） |
 | N-42 | 每個任務的 aos7-run 包裝太重 | fleet N4 | 一個 14 MB；75 個 keep 任務約 1 GB | 可以 | 沒有 | **沒做** | — |
 | N-43 | tick 起大量任務很慢，吃掉 interval | swarm N5 | 起 52 個任務 133 ms | 可以 | S-09 | **沒做** | — |
@@ -119,9 +121,11 @@
 
 ## 要使用者決定
 
-只留「會改 daemon／tick 的核心語意，或核心 spec 說不清」的三條（Q1、Q3、Q4；原本的 Q2 使用者已答）。其餘照使用者 10-03 說的「普通的直接做」，取最簡單的做法，記成技術選型。
+原本留了四條（Q1～Q4），使用者 10-03 全部答了；下面保留題目與答覆。其餘照使用者 10-03 說的「普通的直接做」，取最簡單的做法，記成技術選型。
 
-### Q1 daemon 要不要擁有任務的所有子孫程序？（N-25，astra R4）
+### Q1 daemon 要不要擁有任務的所有子孫程序？（N-25，astra R4）〔使用者 10-03〕選 (a)
+
+> 照現在，不做 subreaper／cgroup。spec.md 第 6 節寫明 kill／stop 只保證收到：程序群組、活著的後代、環境變數 `AOS7_TID`＋`AOS7_NODE` 相符的。故意脫離（setsid、雙 fork、改環境變數、刪 taskdir）的由任務自己負責。
 
 - **發生了什麼**
   - 任務的主程序結束了，它 fork 出來的孫程序還活著。kill 回「already ended」，daemon stop 之後孫程序照樣活（astra I-04；同一個程序群組也一樣）。
@@ -149,7 +153,9 @@
 - 遲到時每條線一起變慢，不會丟回合（S-08 不準時無妨）。
 - 要更多就分到多個 daemon。
 
-### Q3 歷史任務資料夾要不要由基礎設施清掉？（N-40，astra R12）
+### Q3 歷史任務資料夾要不要由基礎設施清掉？（N-40，astra R12）〔使用者 10-03〕選 (a)
+
+> tock 把 ended.json 寫了超過 `keep_ended_rounds` 回合（timeline.json 可設，預設 20）的資料夾搬到 `.aos/tasks-old/`，tick、tock、status 只掃 `.aos/tasks/`。kernel 接前任狀態、kernel 算用量總和、agent 接前任 state.json 都改成兩處都找。swarm 前後的數字見 N-40。
 
 - **發生了什麼**
   - 任務資料夾只增不減。tick、tock、status 每次都全掃。
@@ -162,7 +168,9 @@
   - (b) 加一個控制（例如 `ctl.json {"op": "archive"}`，或 daemon ctl `gc`），由 kernel 或人決定清哪些；基礎設施自己不清。
   - (c) 不清，只加一份活任務索引（`.aos/live.json`，tick／tock 維護），tick／tock／status 只看它。磁碟仍然一直長。
 
-### Q4 node 消失或搬家時，上面還活著的任務怎麼辦？（N-26）
+### Q4 node 消失或搬家時，上面還活著的任務怎麼辦？（N-26）〔使用者 10-03〕選 (a)
+
+> daemon 看到 node 消失（資料夾或 timeline.json 不見）就 kill 上面的活任務。搬家等於舊任務全死，新位置由 keep 重起。daemon 在記憶體記著各 node 活任務的 pgid（跟 status 的 live 一起每 0.25 秒更新），再加上找環境變數 `AOS7_NODE` 相符的程序，所以 rm -rf 之後也收得到。
 
 - **發生了什麼**
   - 子時間線被 rm -rf 之後，活任務繼續跑。status 不列它，daemon stop --kill 也收不到（subtimeline）。
@@ -174,6 +182,13 @@
   - (a) daemon 發現 node 消失（`node-`）時，kill 那個 node 上的活任務。搬家＝舊任務全死，新 id 由 keep 重起。rm -rf 時 pid.json 已經沒了，要 daemon 平常就記著 pid。
   - (b) 不殺，只在 log 記 `orphan`（列 pid），讓人或 kernel 處理。
   - (c) 規定「node 搬家或刪除前要先 pause 或停 daemon」，不支援熱搬，出事是使用者的。
+
+## 答完 Q1、Q3、Q4 之後冒出來的（技術選型，先這樣）
+
+- **kernel 算用量總和也要掃 tasks-old/**，因為總額上限 `cap_tokens` 要算進已結束的任務。所以 kernel 的成本仍會隨歷史長大，只是轉到 kernel 自己身上。之後若有需要，可以讓 kernel 自己累計，或由 tock 在搬走時把用量加總進一份檔。
+- **「暫停但保留任務」只剩 pause 一條路**：只刪 timeline.json 現在等於 node 消失，上面的任務會被 kill。event 探針的「把 timeline.json 改名讓 node 消失再出現」催回合 hack，現在會連任務一起殺掉；改用 `wake`。
+- **node 被判消失的依據是一次掃描沒看到 timeline.json**：網路檔案系統或掛載斷一下，任務就會被 kill。本機資料夾不會碰到，先不處理。
+- **node 消失時的 kill 在背景做**：daemon stop 時最多等這些背景工作 5 秒。
 
 ## 這輪改了什麼（摘要）
 
@@ -204,6 +219,12 @@
   - 新的 `bin/aos7-wait-tock`。
   - `aos7_fs.edit_json`（flock）。
   - 暫存檔名以 `.` 開頭。
+- **答完 Q1／Q3／Q4 之後**（使用者 10-03 都選 (a)）：
+  - spec 寫明 kill 只保證收到哪些。
+  - tock 把結束超過 `keep_ended_rounds` 回合的搬到 `tasks-old/`；kernel 接前任、算用量和 agent 接前任都兩處都找；tid 不撞號。
+  - daemon 看到 node 消失就 kill 上面的活任務（`node-gone-kill`）。
+  - rename、subtimeline、selfmod、swarm 探針改成驗新行為；probelib 預設不搬（`keep_ended_rounds` 很大），swarm 的 D 段量搬之後的數字。
+- **動作逾時**（N-54，批次評估隊發現）：tick／tock 超過 `action_timeout_s` 就 SIGKILL，回合標 `incomplete`；停機時最多再等 3 秒。
 - **astra-4 的 I-**
   - 修了：I-01、I-02、I-03、I-05、I-06、I-07。
   - 順手做了最簡單版：I-04（kill 已結束的任務時收殘留）、I-08（status 的 `interval_ms`、`wake`）、I-11（一圈最多起 20 條）。

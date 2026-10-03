@@ -12,7 +12,7 @@ import sys
 
 import aos7_agent_tools as tools
 import aos7_llm
-from aos7_fs import append_jsonl, now, read_json, task_env, wait_tock, write_json
+from aos7_fs import append_jsonl, now, read_json, task_dirs_of, task_env, wait_tock, write_json
 
 
 class Stop(Exception):
@@ -30,14 +30,9 @@ def load_state(ctx):
     if isinstance(st, dict) and st.get("state") in ("idle", "think", "act"):
         return st
     me = read_json(os.path.join(ctx["task"], "birth.json"), {}) or {}
-    tasks_dir = os.path.dirname(ctx["task"])
     best = None
-    try:
-        tids = os.listdir(tasks_dir)
-    except OSError:
-        tids = []
-    for tid in tids:
-        d = os.path.join(tasks_dir, tid)
+    # 前任可能已被 tock 搬到 tasks-old/（Q3）
+    for tid, d in task_dirs_of(os.path.dirname(os.path.dirname(ctx["task"]))):
         if d == ctx["task"]:
             continue
         b = read_json(os.path.join(d, "birth.json"), {}) or {}

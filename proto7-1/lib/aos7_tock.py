@@ -11,6 +11,16 @@ import aos7_task
 from aos7_fs import action_lock, append_jsonl, node_path, now, read_json, write_json
 
 
+DEFAULT_KEEP_ENDED = 20
+
+
+def keep_ended_rounds(node):
+    """timeline.json 的 `keep_ended_rounds`（非負整數）；沒寫或不對用 20。"""
+    t = read_json(os.path.join(node, ".aos", "timeline.json"), {})
+    k = t.get("keep_ended_rounds") if isinstance(t, dict) else None
+    return k if isinstance(k, int) and not isinstance(k, bool) and k >= 0 else DEFAULT_KEEP_ENDED
+
+
 def tock(root, node_id, early=None):
     """做一次 tock，回本回合總結（即 rounds.jsonl 加的那一行）。early＝這次是不是提前進場（daemon 給；不知道是 None）。"""
     node = node_path(root, node_id)
@@ -36,10 +46,18 @@ def _tock(node, early):
 
     ctl = list(state.get("ctl", [])) + aos7_task.run_all_ctl(node)
 
-    alive, ended, errors, marks = [], [], [], []
+    keep = keep_ended_rounds(node)
+    alive, ended, errors, marks, archived = [], [], [], [], []
     for tid in aos7_task.list_tasks(node):
         tdir = aos7_task.task_dir(node, tid)
         try:
+            er = read_json(os.path.join(tdir, "ended.json"))
+            if isinstance(er, dict) and isinstance(er.get("round"), int) and rnd - er["round"] > keep:
+                # 結束超過 keep 回合：搬到 tasks-old/，之後 tick／tock／status 不再掃它（Q3）
+                os.makedirs(aos7_task.old_dir(node), exist_ok=True)
+                os.rename(tdir, os.path.join(aos7_task.old_dir(node), tid))
+                archived.append(tid)
+                continue
             st = aos7_task.task_state(tdir)
             if st == "lost":
                 write_json(os.path.join(tdir, "exit.json"), {"code": None, "lost": True, "at": at, "round": rnd})
@@ -67,6 +85,8 @@ def _tock(node, early):
                "mounts": state.get("mounts", []), "early": early}
     if state.get("tasks_error"):
         summary["tasks_error"] = state["tasks_error"]
+    if os.environ.get("AOS7_INCOMPLETE"):
+        summary["incomplete"] = os.environ["AOS7_INCOMPLETE"]   # 這回合的 tick 被逾時收掉（daemon 給）
     # tock.json 寫失敗只記錯，其他任務照收（astra-4 I-05 tockdirpeer）
     for tid in alive:
         try:
@@ -75,6 +95,8 @@ def _tock(node, early):
             errors.append({"tid": tid, "phase": "tock.json", "err": repr(e)[:200]})
     if errors:
         summary["errors"] = errors
+    if archived:
+        summary["archived"] = archived
     append_jsonl(os.path.join(node, ".aos", "rounds.jsonl"), summary)  # 一回合一行，不再一回合一檔（P-12、R-10）
     # 先寫總結，再在任務資料夾寫 ended.json：中途被殺時下次 tock 會再報一次（重複），不會永久漏掉（astra-4 I-03）
     for tdir in marks:

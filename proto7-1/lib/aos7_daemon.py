@@ -47,6 +47,9 @@ class Daemon:
         self.paused = set(read_json(os.path.join(self.aosd, "paused.json"), {}).get("paused", []))
         self.steps = {}              # resume 帶 rounds：{node: 還剩幾回合}，到 0 自動 pause（probes/sched N2）
         self._live = {}              # {node: (monotonic 時間, live 清單)}
+        self._pids = {}              # {node: {tid: (pgid, runner_pid)}}：活任務，node 消失時收（Q4）
+        self.reapers = []
+        self.stopping_since = None
         self.gen = None              # 世代（run 時換）
         self.io_errors = 0
 
@@ -147,6 +150,8 @@ class Daemon:
             self.log(ev="ctl", file=n, op=ctl.get("op"), node=ctl.get("node"), by=ctl.get("by"), ok=ok, msg=msg)
 
     def stop(self, kill):
+        if not self.stopping:
+            self.stopping_since = time.monotonic()   # 正在跑的 tick／tock 最多再等 STOP_GRACE 秒
         self.stopping = True
         self.kill_on_stop = self.kill_on_stop or kill
         for tl in self.timelines.values():
@@ -170,13 +175,33 @@ class Daemon:
             self.steps.pop(nid, None)
             self._live.pop(nid, None)
             self.log(ev="node-", node=nid)
+            self.reap_gone(nid, tl.node)
 
     def live_of(self, nid, tl):
         t, live = self._live.get(nid, (None, None))
         if t is None or time.monotonic() - t >= LIVE_EVERY:
             live = aos7_task.live_tasks(tl.node)
             self._live[nid] = (time.monotonic(), live)
+            # 記著活任務的 pgid／runner：node 被 rm -rf（pid.json 跟著沒了）也收得到（Q4）
+            pids = {}
+            for tid in live:
+                p = read_json(os.path.join(aos7_task.task_dir(tl.node, tid), "pid.json"))
+                if isinstance(p, dict):
+                    pids[tid] = (p.get("pgid"), p.get("runner_pid"))
+            self._pids[nid] = pids
         return live
+
+    def reap_gone(self, nid, node):
+        """node 消失：kill 它上面的活任務（使用者 10-03 Q4 選 (a)；搬家＝舊任務全死，新位置由 keep 重起）。在背景做，不擋主迴圈。"""
+        known = list(self._pids.pop(nid, {}).values())
+
+        def work():
+            n, clean = aos7_task.kill_node_procs(node, known)
+            if n:
+                self.log(ev="node-gone-kill", node=nid, groups=n, ok=clean)
+        th = threading.Thread(target=work, name="reap:" + nid, daemon=True)
+        th.start()
+        self.reapers.append(th)
 
     def write_status(self, stopped=False):
         nodes = {}
@@ -221,6 +246,8 @@ class Daemon:
         while any(tl.is_alive() for tl in self.timelines.values()):
             self.guard(self.write_status)
             time.sleep(POLL)
+        for th in self.reapers:
+            th.join(5)
         self._live.clear()
         self.guard(lambda: self.write_status(stopped=True))
         self.guard(lambda: self.log(ev="stop"))

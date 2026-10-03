@@ -35,14 +35,14 @@ AGENTS = ("lead", "coder", "rita")
 
 
 def tasks_of(root, who, name=None):
-    out = sorted(glob.glob(os.path.join(root, "team", "agents", who, ".aos", "tasks", "*")))
+    out = sorted(glob.glob(os.path.join(root, "team", "agents", who, ".aos", "tasks*", "*")))
     return [d for d in out if name is None or os.path.basename(d).startswith(name + "-r")]
 
 
 def llm_calls(root):
     """全部 agent 任務的 usage.json 加總（含已結束、被 restart 掉的）。"""
     calls = tokens = 0
-    for p in glob.glob(os.path.join(root, "team", "agents", "*", ".aos", "tasks", "*", "usage.json")):
+    for p in glob.glob(os.path.join(root, "team", "agents", "*", ".aos", "tasks*", "*", "usage.json")):
         u = fs.read_json(p, {}) or {}
         calls += int(u.get("calls", 0))
         tokens += int(u.get("tokens", 0))
@@ -247,7 +247,7 @@ def report(root, log, secs, samples):
             log("  %s %-8s 來自 %s  %s" % (c["at"][11:19], c["kind"], c["from"], c.get("reply")))
 
     log("\n== kernel 的決定 ==")
-    for p in sorted(glob.glob(os.path.join(root, "team", ".aos", "tasks", "*", "decisions.jsonl"))):
+    for p in sorted(glob.glob(os.path.join(root, "team", ".aos", "tasks*", "*", "decisions.jsonl"))):
         for d in fs.read_jsonl(p):
             log("  %s team 第%s 回合 %-6s %-8s %s (%s)" % (d.get("at", "")[11:19], d.get("round"), d.get("rule"),
                 d.get("op"), d.get("target"), d.get("why")))
@@ -256,11 +256,11 @@ def report(root, log, secs, samples):
         c = fs.read_json(p, {}) or {}
         log("  %-60s ok=%s" % (os.path.basename(p), (c.get("result") or {}).get("ok")))
     log("\n== 任務控制（ctl-done）與加掛回條 ==")
-    for p in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks", "*", "ctl-done.json"), recursive=True)):
+    for p in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks*", "*", "ctl-done.json"), recursive=True)):
         c = fs.read_json(p, {}) or {}
         log("  %s  %s by=%s why=%s ok=%s" % (os.path.relpath(os.path.dirname(p), root), c.get("op"), c.get("by"),
             c.get("why"), (c.get("result") or {}).get("ok")))
-    for p in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks", "*", "mount-done", "*.json"), recursive=True)):
+    for p in sorted(glob.glob(os.path.join(root, "**", ".aos", "tasks*", "*", "mount-done", "*.json"), recursive=True)):
         c = fs.read_json(p, {}) or {}
         log("  加掛 %s ← %s ok=%s" % (os.path.relpath(os.path.dirname(os.path.dirname(p)), root), c.get("path"),
             (c.get("result") or {}).get("ok")))

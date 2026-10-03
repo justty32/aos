@@ -161,18 +161,17 @@ def main():
         time.sleep(0.4)
         st = sp.status()
         r.check("rm -rf 後 status 不再列出 p/sub/a", "p/sub/a" not in st.get("nodes", {}))
-        orphan = pid_alive(pidj["pid"])
-        r.measure("rm -rf 後 0.4 秒：子上的 sleeper 還活著（孤兒）", orphan)
-        ghost = sorted(os.listdir(sa)) if os.path.isdir(sa) else []
-        r.measure("rm -rf 後 0.4 秒：資料夾被建回來的內容", ghost)
-        if orphan:
-            r.finding("rm -rf 子 node 時，上面的活任務沒人收：daemon 只記 node-，status 不再列它，"
-                      "daemon stop --kill 也不會殺它（不屬於任何時間線），只能靠 pid 自己找。")
-        os.killpg(pidj["pgid"], signal.SIGTERM)
-        sp.wait_for(lambda: not pid_alive(pidj["pid"]), msg="sleeper 收不掉")
+        # 使用者 10-03 Q4 選 (a)：node 消失，daemon 就 kill 它上面的活任務（pid.json 跟著被刪也收得到）
+        r.check("修補後：rm -rf 後子上的 sleeper 被 daemon 收掉（不留孤兒）",
+                sp.wait_for(lambda: not pid_alive(pidj["pid"]), timeout=5, msg="sleeper 沒被收"))
+        r.check("修補後：log 有 node-gone-kill", bool(run.ev("node-gone-kill", "p/sub/a")))
         time.sleep(0.3)
+        ghost = []
+        for d, _, files in os.walk(sa):
+            ghost += [os.path.relpath(os.path.join(d, f), sa) for f in files]
+        r.measure("rm -rf 後被建回來的檔（tick／tock／aos7-run 不再建；剩下的是任務被收掉前自己 makedirs 寫的）", sorted(ghost)[:6])
         ex = os.path.join(sa, ".aos", "tasks", sl[0], "exit.json")
-        r.measure("孤兒結束後 aos7-run 把 .aos/tasks/<tid>/exit.json 建回已刪的 node", os.path.exists(ex))
+        r.check("修補後：aos7-run 沒把 exit.json 建回已刪的 node", not os.path.exists(ex))
         if ghost or os.path.exists(ex):
             r.finding("刪掉的 node 會被「建回來」成空殼（不是 node，沒 timeline.json）：活任務照常 makedirs 寫心跳，"
                       "aos7-run 結束時 write_json 也會 makedirs 寫 exit.json（P-15 只防了 tock）。")
@@ -221,22 +220,23 @@ def main():
         run.wait_ev("node-", "p/sub/g")
         time.sleep(0.3)
         rg = sp.round_of("p/sub/g")
-        slg = [t for t in sp.live("p/sub/g") if t.startswith("sleeper")]
-        r.check("只刪 timeline.json：sleeper 還活著（沒人收、也收不到 tock）", len(slg) == 1, slg)
-        tk0 = (sp.task_file("p/sub/g", slg[0], "tock.json") or {}).get("round") if slg else None
-        time.sleep(0.4)
-        tk1 = (sp.task_file("p/sub/g", slg[0], "tock.json") or {}).get("round") if slg else None
-        r.check("timeline.json 不在的期間 tock.json 不動", tk0 == tk1, [tk0, tk1])
+        old_sl = [t for t in sp.tasks("p/sub/g") if t.startswith("sleeper")]
+        r.check("修補後：只刪 timeline.json 也算 node 消失，sleeper 被收掉（Q4）",
+                sp.wait_for(lambda: not [t for t in sp.live("p/sub/g") if t.startswith("sleeper")], timeout=5,
+                            msg="sleeper 沒被收"))
+        ex_g = sp.task_file("p/sub/g", old_sl[0], "exit.json") if old_sl else None
+        r.check("……資料夾還在，所以 aos7-run 照常寫 exit.json（被訊號收掉）", ex_g and ex_g.get("code") == -15, ex_g)
         run.order("write_timeline", target={"via": "own", "path": "sub/g"}, interval_ms=50)
         run.wait_ev("node+", "p/sub/g", count=2)
         sp.wait_for(lambda: sp.round_of("p/sub/g") > rg)
         plus2 = run.ev("node+", "p/sub/g")[-1]
         r.check("寫回 timeline.json：回合數接著數", plus2.get("round") == rg, [rg, plus2.get("round")])
-        sp.wait_for(lambda: ((sp.task_file("p/sub/g", slg[0], "tock.json") or {}).get("round") or 0) > rg)
-        r.check("原本那個 sleeper 又收到 tock、沒有多起一個",
-                [t for t in sp.live("p/sub/g") if t.startswith("sleeper")] == slg)
-        r.finding("只刪 timeline.json＝暫停但不經 pause：活任務留著、收不到 tock，status 不列它；寫回就接著數。"
-                  "跟 pause 的差別只在 status 看不到它。")
+        sp.wait_for(lambda: [t for t in sp.live("p/sub/g") if t.startswith("sleeper") and t not in old_sl],
+                    msg="寫回後沒起新 sleeper")
+        r.check("寫回後 keep 起新的 sleeper（舊的已死）",
+                len([t for t in sp.live("p/sub/g") if t.startswith("sleeper")]) == 1)
+        r.finding("〔10-03 Q4 (a) 之後〕只刪 timeline.json＝node 消失：上面的活任務被 kill，寫回後 keep 重起、回合接著數。"
+                  "想「暫停但保留任務」要用 pause。")
 
         # ---- 9. P-15：快時間線（5 ms）被 rm -rf，資料夾會不會被 tick／tock 建回來 ----
         ghosts, contents = 0, []
