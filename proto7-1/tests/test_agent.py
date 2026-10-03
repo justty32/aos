@@ -13,7 +13,9 @@ from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(BASE, "lib"))
+sys.path.insert(0, HERE)
 
+import _proc  # noqa: E402
 import aos7_agent  # noqa: E402
 import aos7_llm  # noqa: E402
 import aos7_mount  # noqa: E402
@@ -318,8 +320,10 @@ class TwoProcesses(unittest.TestCase):
         tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, tmp, True)
         w = make_world(tmp, max_ping=6)
-        procs = {n: subprocess.Popen([sys.executable, AGENT], env=env_of(c), stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT) for n, c in w.items()}
+        procs = {}
+        for n, c in w.items():
+            procs[n] = _proc.track(self, subprocess.Popen([sys.executable, AGENT], env=env_of(c), stdout=subprocess.PIPE,
+                                                          stderr=subprocess.STDOUT))   # 先收程序再刪空間（N-55）
         try:
             for r in range(1, 31):
                 for c in w.values():
@@ -354,13 +358,20 @@ class TwoProcesses(unittest.TestCase):
 
 class RoundsFlag(unittest.TestCase):
     def test_rounds_n_exits(self):
+        """`--rounds 2`：處理 2 次 tock 就結束。每送一次 tock 都等 agent 確實處理完（state.json 的 round）再送下一次——
+        固定 sleep 時 agent 起得慢會只看到最後一次，`--rounds` 永遠等不滿、程序留著指向已刪的空間（astra-5 F-11）。"""
         tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, tmp, True)
         c = make_world(tmp)["bob"]
-        p = subprocess.Popen([sys.executable, AGENT, "--rounds", "2"], env=env_of(c), stdout=subprocess.PIPE)
+        p = _proc.track(self, subprocess.Popen([sys.executable, AGENT, "--rounds", "2"], env=env_of(c),
+                                               stdout=subprocess.PIPE))
         for r in (1, 2):
             write_json(os.path.join(c["task"], "tock.json"), {"round": r})
-            time.sleep(0.15)
+            end = time.monotonic() + 10
+            while (read_json(os.path.join(c["task"], "state.json"), {}) or {}).get("round") != r:
+                self.assertLess(time.monotonic(), end, "agent 沒處理第 %d 次 tock" % r)
+                self.assertIsNone(p.poll(), "agent 提早結束")
+                time.sleep(0.01)
         out, _ = p.communicate(timeout=5)
         self.assertEqual(p.returncode, 0)
         self.assertIn("處理完 2 次", out.decode("utf-8"))

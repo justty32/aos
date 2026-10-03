@@ -10,7 +10,7 @@ import time
 
 import aos7_mount
 import aos7_task
-from aos7_fs import action_lock, is_regular, node_path, now, read_json, write_json
+from aos7_fs import FD_PREFIX, action_lock, is_regular, node_path, now, read_json, write_json
 
 
 def load_items(node):
@@ -92,36 +92,76 @@ def spawn_items(obj):
     return [obj] if isinstance(obj, dict) else []
 
 
-def serve_mounts(root, node):
-    """審核活任務的加掛請求（S-23、M-6）：tasks.json 的 `mount_allow` 前綴清單，沒寫＝全給。"""
-    t = read_json(os.path.join(node, ".aos", "tasks.json"), {})
+def serve_mounts(root, fnode, node=None):
+    """審核活任務的加掛請求（S-23、M-6）：tasks.json 的 `mount_allow` 前綴清單，沒寫＝全給。
+
+    fnode＝讀寫用的 node 路徑（tick 給 `/proc/self/fd/N`），node＝實際路徑（掛載點記在 birth.json 的 `at`）。
+    一個任務處理失敗只記在它那筆，其他照做（astra-5 F-06）。"""
+    node = node or fnode
+    t = read_json(os.path.join(fnode, ".aos", "tasks.json"), {})
     allow = t.get("mount_allow") if isinstance(t, dict) else None
     out = []
-    for tid in aos7_task.live_tasks(node):
-        for r in aos7_mount.serve(root, aos7_task.task_dir(node, tid), allow):
-            out.append(dict(r, tid=tid))
+    for tid in aos7_task.live_tasks(fnode):
+        try:
+            for r in aos7_mount.serve(root, aos7_task.task_dir(fnode, tid), allow,
+                                      real_taskdir=aos7_task.task_dir(node, tid)):
+                out.append(dict(r, tid=tid))
+        except Exception as e:   # noqa: BLE001
+            out.append({"tid": tid, "name": None, "path": None, "ok": False, "msg": "加掛處理失敗：%r" % (e,)})
     return out
+
+
+def node_still_there(fnode):
+    """node 中途被刪（timeline.json 不見了）就丟 FileNotFoundError，讓 held_node 收成 gone；還在就沒事。"""
+    if not os.path.isfile(os.path.join(fnode, ".aos", "timeline.json")):
+        raise FileNotFoundError(fnode)
+
+
+GONE = {"round": None, "started": [], "ctl": [], "gone": True}
+
+
+def held_node(fn, root, node_id, gone):
+    """抓住 node 目錄的 fd，把 `/proc/self/fd/N`（fnode）交給 fn(fnode, node) 做整個動作（astra-5 F-09）：
+    node 被搬走時寫到新位置；被刪掉時寫入失敗（不會在舊路徑建出鬼目錄）→ 回 gone。"""
+    node = node_path(root, node_id)
+    try:
+        nfd = os.open(node, os.O_RDONLY | os.O_DIRECTORY)
+    except OSError:
+        return dict(gone)
+    fnode = FD_PREFIX + str(nfd)
+    try:
+        if not os.path.isfile(os.path.join(fnode, ".aos", "timeline.json")):
+            # node 已經不在（刪掉、搬走）：什麼都不寫，免得把資料夾建回來（probes/subtimeline 1、rename N9）
+            return dict(gone)
+        try:
+            return fn(fnode, node)
+        except (FileNotFoundError, NotADirectoryError):
+            if not os.path.isfile(os.path.join(fnode, ".aos", "timeline.json")):
+                return dict(gone)   # 動作中途 node 被刪：寫不進去就收手
+            raise
+    finally:
+        os.close(nfd)
 
 
 def tick(root, node_id):
     """做一次 tick，回 {"round", "started", "ctl"}（node 不在多 `gone`，舊 daemon 的動作多 `stale`，都什麼都不寫）。"""
-    node = node_path(root, node_id)
-    if not os.path.isfile(os.path.join(node, ".aos", "timeline.json")):
-        # node 已經不在（刪掉、搬走）：什麼都不寫，免得把資料夾建回來（probes/subtimeline 1、rename N9）
-        return {"round": None, "started": [], "ctl": [], "gone": True}
-    with action_lock(root, node) as ok:
-        if not ok:
-            return {"round": None, "started": [], "ctl": [], "stale": True}
-        return _tick(root, node_id, node)
+    def act(fnode, node):
+        with action_lock(root, fnode) as ok:
+            if not ok:
+                return {"round": None, "started": [], "ctl": [], "stale": True}
+            return _tick(root, node_id, node, fnode)
+    return held_node(act, root, node_id, GONE)
 
 
-def _tick(root, node_id, node):
-    rpath = os.path.join(node, ".aos", "round.json")
+def _tick(root, node_id, node, fnode=None):
+    """node＝實際路徑（任務的環境、cwd、掛載點）；fnode＝讀寫用的（tick 給 node 目錄 fd 的 `/proc/self/fd/N`）。"""
+    fnode = fnode or node
+    rpath = os.path.join(fnode, ".aos", "round.json")
     old = read_json(rpath, {})
     prev = old.get("round") if isinstance(old, dict) else None
     errs = []
     if not isinstance(prev, int) or isinstance(prev, bool):
-        lr = aos7_task.last_logged_round(node)
+        lr = aos7_task.last_logged_round(fnode)
         if lr is not None:
             # round.json 壞了：從 rounds.jsonl 最後一行接著數，不從 1 重數、不重號（probes/chaos B6）
             errs.append("round.json 壞了（round=%r），從 rounds.jsonl 的 %d 接著數" % (prev, lr))
@@ -134,12 +174,12 @@ def _tick(root, node_id, node):
     if os.environ.get("AOS7_TEST_TICK_HANG") == node_id:
         time.sleep(10 ** 6)   # 只給測試：模擬 tick 卡在 I/O（以前用 FIFO 的 tasks.json，現在 read_json 不會卡了）
 
-    state["ctl"] = aos7_task.run_all_ctl(node)
-    state["mounts"] = serve_mounts(root, node)
+    state["ctl"] = aos7_task.run_all_ctl(fnode)
+    state["mounts"] = serve_mounts(root, fnode, node)
 
     started = []
-    sdir = os.path.join(node, ".aos", "spawn")
-    live = live_names(node)
+    sdir = os.path.join(fnode, ".aos", "spawn")
+    live = live_names(fnode)
     for fn in sorted(os.listdir(sdir)) if os.path.isdir(sdir) else []:
         if not fn.endswith(".json") or fn.startswith("."):
             continue
@@ -148,39 +188,44 @@ def _tick(root, node_id, node):
         items = spawn_items(obj)
         if not items:
             errs.append("spawn %s：讀不懂或不是項目" % fn)
+        elif isinstance(obj, dict) and isinstance(obj.get("batch"), list) and len(items) < len(obj["batch"]):
+            errs.append("spawn %s：batch 裡 %d 項不是物件，沒起" % (fn, len(obj["batch"]) - len(items)))
         for item in items:
             try:
                 # spawn 也照 mode／max_live（keep 已有同名活的就不起；probes/llmops：補起一份變兩份）；restart 寫的沒有 mode＝each
                 if not should_start(dict(item, from_round=1), rnd, live):
                     errs.append("spawn %s：%s 已有活的（keep／max_live），沒起" % (fn, item_name(item)))
                     continue
-                tid = aos7_task.start_task(root, node_id, dict(item, spawn=fn), rnd)
-            except (ValueError, TypeError) as e:   # 壞的一項只跳過那項，檔照刪，不變成每回合的毒丸（probes/chaos B3）
+                tid = aos7_task.start_task(root, node_id, dict(item, spawn=fn), rnd, fnode=fnode)
+            except Exception as e:   # noqa: BLE001  壞的一項只跳過那項，檔照刪，不變成每回合的毒丸（probes/chaos B3、astra-5 F-06）
+                node_still_there(fnode)
                 errs.append("spawn %s：%s" % (fn, e))
                 continue
             started.append(tid)
             live[item_name(item)] = live.get(item_name(item), 0) + 1
         try:
             if os.path.isdir(path) and not os.path.islink(path):
-                os.rename(path, os.path.join(node, ".aos", ".spawn-bad-%s-%d" % (fn, rnd)))
+                os.rename(path, os.path.join(fnode, ".aos", ".spawn-bad-%s-%d" % (fn, rnd)))
             else:
                 os.remove(path)   # 起完才刪（spec 第 4 節）：中途被殺，下次 tick 會再起一次，不會無痕丟掉（astra-4 I-02）
         except OSError as e:
             errs.append("spawn %s 刪不掉：%s" % (fn, e))
 
-    items, errs2 = load_items(node)
+    items, errs2 = load_items(fnode)
     errs += errs2
     for k, item in enumerate(items):
+        label = item.get("name") if isinstance(item.get("name"), str) and item.get("name") else "tasks[%d]" % k
         try:
             if not should_start(item, rnd, live):
                 continue
-        except ValueError as e:   # 壞的一項跳過、記下來，其他項照起（probes/selfmod 6、bug 2）
-            errs.append("%s：%s" % (item.get("name") if isinstance(item.get("name"), str) else "tasks[%d]" % k, e))
+        except (ValueError, TypeError) as e:   # 壞的一項跳過、記下來，其他項照起（probes/selfmod 6、bug 2）
+            errs.append("%s：%s" % (label, e))
             continue
         try:
-            started.append(aos7_task.start_task(root, node_id, item, rnd))
-        except (ValueError, TypeError) as e:
-            errs.append("%s：%s" % (item_name(item), e))
+            started.append(aos7_task.start_task(root, node_id, item, rnd, fnode=fnode))
+        except Exception as e:   # noqa: BLE001  起不來的一項只記它，其他項照起（astra-5 F-06）
+            node_still_there(fnode)
+            errs.append("%s：%s" % (label, e))
             continue
         live[item_name(item)] = live.get(item_name(item), 0) + 1
 

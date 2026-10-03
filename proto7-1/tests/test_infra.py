@@ -8,6 +8,7 @@ import time
 import unittest
 from contextlib import redirect_stderr
 
+import _proc
 from test_core import BIN, SLEEPER
 from test_core_daemon import DaemonCase
 import aos7_daemon
@@ -283,7 +284,7 @@ class TestHelpers(DaemonCase):
         code = ("import sys; sys.path.insert(0, %r)\nimport aos7_fs\nfor i in range(50):\n"
                 "    aos7_fs.edit_json(%r, lambda t: dict(t, n=t.get('n', 0) + 1), {})\n"
                 % (os.path.join(os.path.dirname(BIN), "lib"), path))
-        ps = [subprocess.Popen([sys.executable, "-c", code]) for _ in range(2)]
+        ps = [_proc.track(self, subprocess.Popen([sys.executable, "-c", code])) for _ in range(2)]
         for p in ps:
             p.wait(20)
         self.assertEqual(read_json(path)["n"], 100)

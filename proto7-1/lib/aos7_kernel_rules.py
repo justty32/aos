@@ -32,11 +32,11 @@ def task_state(taskdir):
 
 def list_tasks(aos):
     """列 `<aos>/tasks/` 與 `<aos>/tasks-old/`（tock 搬走的舊任務，Q3；用量總和要算進去）下所有任務資料夾（有 birth.json 的）。
-    aos＝某 node 的 .aos（可能是掛載點）。"""
+    aos＝某 node 的 .aos（可能是掛載點）。讀到一半被搬走的到新位置重讀（astra-5 F-02）。"""
     out = []
     for tid, d in fs.task_dirs_of(aos):
-        birth = fs.read_json(os.path.join(d, "birth.json"))
-        if isinstance(birth, dict):
+        d, birth = fs.task_read(aos, tid, d, lambda x: fs.read_json(os.path.join(x, "birth.json")))
+        if d is not None and isinstance(birth, dict):
             out.append((tid, d, birth))
     return out
 
@@ -47,25 +47,44 @@ def _tokens(usage):
     return 0
 
 
+def _task_snap(d):
+    """一個任務資料夾要看的檔一次讀完（給 fs.task_read：讀到一半被搬走就整份重讀）。"""
+    return {"birth": fs.read_json(os.path.join(d, "birth.json")),
+            "usage": fs.read_json(os.path.join(d, "usage.json")),
+            "state": task_state(d),
+            "progress": fs.read_json(os.path.join(d, "progress.json")),
+            "has_ctl": os.path.exists(os.path.join(d, "ctl.json"))}
+
+
 def snapshot_node(aos):
     """一個 node 的快照：回合、各任務（活不活、progress、用量、有沒有待執行的 ctl）、用量總和。
 
-    aos＝那個 node 的 `.aos`（自己的直接給；成員的經過掛載點；沒掛載＝None，當作不存在）。"""
+    aos＝那個 node 的 `.aos`（自己的直接給；成員的經過掛載點；沒掛載＝None，當作不存在）。
+    任務資料夾讀到一半被 tock 搬到 tasks-old/：到新位置整份重讀；還是讀不齊（列到了卻哪裡都找不到）
+    `usage_total` 是 None（unknown，不是 0），`unknown` 列那些 tid（astra-5 F-02）。"""
     if aos is None:
         return {"exists": False, "mounted": False, "round": None, "tasks": [], "usage_total": 0}
     rnd = fs.read_json(os.path.join(aos, "round.json")) or {}
-    tasks, total = [], 0
-    for tid, d, birth in list_tasks(aos):
-        usage = fs.read_json(os.path.join(d, "usage.json"))
-        total += _tokens(usage)
+    rnd = rnd if isinstance(rnd, dict) else {}
+    tasks, total, unknown = [], 0, []
+    for tid, d in fs.task_dirs_of(aos):
+        d, t = fs.task_read(aos, tid, d, _task_snap)
+        if d is None:
+            unknown.append(tid)
+            continue
+        birth = t["birth"]
+        if not isinstance(birth, dict):
+            continue
+        total += _tokens(t["usage"])
         tasks.append({
             "tid": tid, "name": birth.get("name"), "birth_round": birth.get("round"),
-            "alive": task_state(d) == "live",
-            "progress": fs.read_json(os.path.join(d, "progress.json")),
-            "has_ctl": os.path.exists(os.path.join(d, "ctl.json")),
+            "alive": t["state"] == "live", "progress": t["progress"], "has_ctl": t["has_ctl"],
         })
-    return {"exists": os.path.isdir(aos), "mounted": True, "round": rnd.get("round"),
-            "tasks": tasks, "usage_total": total}
+    out = {"exists": os.path.isdir(aos), "mounted": True, "round": rnd.get("round"),
+           "tasks": tasks, "usage_total": None if unknown else total}
+    if unknown:
+        out["unknown"] = unknown
+    return out
 
 
 def snapshot(root, node_id, self_tid, cfg, rnd, resolve):
@@ -106,6 +125,7 @@ def rule_stuck(cfg, st, snap, out):
         return
     seen = set()
     for mid, m in snap["members"].items():
+        seen |= {"%s:%s" % (mid, t) for t in m.get("unknown", ())}   # 這輪讀不齊的任務：記錄留著，不當它消失
         paused = m.get("paused_by_daemon") or mid in st["paused"]
         for t in m["tasks"]:
             if not t["alive"] or t["progress"] is None:
@@ -153,6 +173,8 @@ def rule_budget(cfg, st, snap, out):
         if mid == snap["node_id"]:
             continue  # pause 自己的 node 就再也收不到 tock、無法 resume，跳過
         total = m["usage_total"]
+        if total is None:
+            continue   # 這輪用量讀不齊（任務資料夾搬到一半；astra-5 F-02）：不更新基準、不 pause、不歸零，下一輪再算
         u = st["usage"].get(mid)
         if u is None:
             u = st["usage"][mid] = {"last": total, "acc": 0}  # 第一次看到：當基準，不算舊帳
@@ -217,5 +239,6 @@ def run_rules(cfg, state, snap):
     # 已下過指令的任務若已不活，就從 issued 移掉（之後同名新任務會是新 tid）
     alive = {"%s:%s" % (mid, t["tid"]) for mid, m in snap["members"].items() for t in m["tasks"] if t["alive"]}
     alive |= {"%s:%s" % (snap["node_id"], t["tid"]) for t in snap["self_tasks"] if t["alive"]}
+    alive |= {"%s:%s" % (mid, t) for mid, m in snap["members"].items() for t in m.get("unknown", ())}
     st["issued"] = {k: v for k, v in st["issued"].items() if k in alive}
     return out, st

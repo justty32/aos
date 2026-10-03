@@ -11,7 +11,7 @@ import threading
 import time
 
 import aos7_task
-from aos7_fs import BIN, env_with_bin, node_path, now, read_json
+from aos7_fs import BIN, env_with_bin, node_path, now, read_json, reap_stale_owner
 
 POLL = 0.02
 DEFAULT_INTERVAL_MS = 1000
@@ -91,8 +91,9 @@ class Timeline(threading.Thread):
         """timeline.json 的 interval_ms；值不對用預設並記 last_error，時間線不死（probes/selfmod bug 3）。"""
         t = read_json(os.path.join(self.node, ".aos", "timeline.json"), {})
         ms = t.get("interval_ms", DEFAULT_INTERVAL_MS) if isinstance(t, dict) else DEFAULT_INTERVAL_MS
-        if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not math.isfinite(ms) or ms < 0 \
-                or ms > 86400000 * 365:   # 負數也算壞值；0＝不等（實際 1 ms；probes/chaos B9）
+        # 先看型別與範圍、最後才 isfinite：10**309 這種大整數丟進 isfinite 會 OverflowError（astra-5 F-06）
+        if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not (0 <= ms <= 86400000 * 365) \
+                or not math.isfinite(ms):   # 負數也算壞值；0＝不等（實際 1 ms；probes/chaos B9）；NaN 比較一律 False
             self.last_error = {"prog": "timeline", "rc": None, "round": self.round, "at": now(),
                                "err": "interval_ms 要是數字，拿到 %r；先用 %d" % (ms, DEFAULT_INTERVAL_MS)}
             ms = DEFAULT_INTERVAL_MS
@@ -153,6 +154,8 @@ class Timeline(threading.Thread):
             rc, out, err = run_prog("aos7-tick", self.d.root, self.node_id, gen=getattr(self.d, "gen", None),
                                     timeout=tmo, abort=self.stop_overdue)
             tick_cut = rc == TIMEOUT_RC and out is None
+            if tick_cut:
+                self.reap_holder()
             if (out or {}).get("stale"):
                 self.d.log(ev="stale", node=self.node_id, prog="tick")   # 換了世代（不該發生在自己身上）：停這條線
                 return
@@ -181,10 +184,14 @@ class Timeline(threading.Thread):
             rc, out, err = run_prog("aos7-tock", self.d.root, self.node_id, env, gen=getattr(self.d, "gen", None),
                                     timeout=tmo, abort=self.stop_overdue)
             self.note_error("tock", rc, err)
+            tock_cut = rc == TIMEOUT_RC and out is None
             self.d.log(ev="tock", node=self.node_id, round=self.round, rc=rc,
                        ended=(out or {}).get("ended"), early=early,
                        **({"err": err[-500:]} if rc else {}),
-                       **({"incomplete": True} if rc == TIMEOUT_RC and out is None else {}))
+                       **({"incomplete": True} if tock_cut else {}))
+            if tock_cut:
+                self.reap_holder()
+                self.replay_tock()
             self.d.round_done(self.node_id)   # resume 帶 rounds 的倒數（probes/sched N2）
             self.phase = "idle"
             self.sleep_until(t_end)
@@ -204,6 +211,28 @@ class Timeline(threading.Thread):
         self.d.log(ev="tock", node=self.node_id, round=self.round, rc=rc, ended=(out or {}).get("ended"),
                    incomplete="unclosed")
         self.phase = "idle"
+
+    def reap_holder(self):
+        """動作等 action.lock 逾時：持有者若是舊世代、仍是同一個程序（pid＋啟動時間），SIGKILL 它，
+        下一個動作就拿得到鎖（daemon 重開後接管舊動作；astra-5 F-04）。不 unlink 鎖檔。"""
+        pid = reap_stale_owner(self.node, getattr(self.d, "gen", None))
+        if pid:
+            self.d.log(ev="stale-holder-kill", node=self.node_id, pid=pid)
+
+    def replay_tock(self):
+        """tock 被逾時收掉、round.json 還開著：馬上補一次 tock（AOS7_INCOMPLETE=tock）。總結已經寫過的話 tock 只關回合、
+        不寫第二行，round.json 標 `incomplete`／`replayed`；沒寫過就寫一行標 `incomplete: "tock"` 的總結（astra-5 F-05）。
+        停機已超時、node 消失時不補，留給下一次「沒關的回合」流程。"""
+        if self.gone or self.stop_overdue():
+            return
+        r = read_json(os.path.join(self.node, ".aos", "round.json"), {})
+        if not (isinstance(r, dict) and r.get("open") is True):
+            return
+        rc, out, err = run_prog("aos7-tock", self.d.root, self.node_id, {"AOS7_EARLY": "0", "AOS7_INCOMPLETE": "tock"},
+                                gen=getattr(self.d, "gen", None), timeout=self.action_timeout(), abort=self.stop_overdue)
+        self.note_error("tock", rc, err)
+        self.d.log(ev="tock", node=self.node_id, round=self.round, rc=rc, ended=(out or {}).get("ended"),
+                   incomplete="tock", replay=True, **({"replayed": True} if (out or {}).get("replayed") else {}))
 
     def kill_if_stopping(self):
         """daemon stop 帶 kill：收掉本 node 所有活任務。"""

@@ -15,6 +15,7 @@ LIB = os.path.join(TOP, "lib")
 BIN = os.path.join(TOP, "bin")
 sys.path.insert(0, LIB)
 
+import _proc  # noqa: E402
 import aos7_daemon  # noqa: E402
 import aos7_task  # noqa: E402
 from aos7_fs import read_json, write_json  # noqa: E402
@@ -38,28 +39,32 @@ def text(path):
 SLEEPER = ["python3", "-c", "import time; time.sleep(60)"]
 
 
+def _leads_group(p):
+    """p 是自己程序群組的頭（start_new_session 起的）：收的時候整個群組一起收。"""
+    try:
+        return os.getpgid(p.pid) == p.pid
+    except OSError:
+        return False
+
+
 class CoreCase(unittest.TestCase):
-    """建暫存空間根、node；結束時把 daemon 與所有任務程序收乾淨。"""
+    """建暫存空間根、node；結束時**先**把 daemon 與所有任務程序收乾淨，**再**刪空間（N-55）。
+
+    cleanup 後進先出：setUp 先登記刪空間、再登記收程序；之後每個 Popen 用 `_proc.track` 登記的 reap 最先跑。"""
 
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory(prefix="aos7-core-")
         self.root = os.path.realpath(self._tmp.name)
         self.procs = []
+        self.addCleanup(self._remove_space)
+        self.addCleanup(self._reap_all)
 
-    def tearDown(self):
-        for p in self.procs:
-            if p.poll() is None:
-                p.kill()
-            p.wait()
-            if p.stderr:
-                p.stderr.close()
+    def _reap_all(self):
+        for p in self.procs:   # 測試自己 append 進來的（daemon 已由 track 收過，再收一次無害）
+            _proc.reap(p, group=_leads_group(p))
         self.sweep(self.root)
-        # daemon 被殺時它起的 tick 可能還在寫（會在刪掉後重建 a/.aos/round.json）：殺整個程序群組，再多刪幾次
-        for p in self.procs:
-            try:
-                os.killpg(p.pid, signal.SIGKILL)
-            except OSError:
-                pass
+
+    def _remove_space(self):
         for _ in range(5):
             shutil.rmtree(self.root, ignore_errors=True)
             if not os.path.exists(self.root):

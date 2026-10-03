@@ -20,11 +20,23 @@ def main(argv):
     results = []
     for n in names:
         t0 = time.monotonic()
-        p = subprocess.run([sys.executable, os.path.join(HERE, n, "probe.py")], capture_output=True, text=True,
-                           timeout=600)
-        sys.stdout.write(p.stdout)
+        p = subprocess.Popen([sys.executable, os.path.join(HERE, n, "probe.py")], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True)
+        try:
+            out, err = p.communicate(timeout=600)
+        except BaseException as e:
+            # 逾時或 Ctrl-C：先 SIGTERM（探針的 Space 會收自己的 daemon 與任務），等不到才 SIGKILL（N-55）
+            p.terminate()
+            try:
+                out, err = p.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                out, err = p.communicate()
+            if not isinstance(e, subprocess.TimeoutExpired):
+                raise
+        sys.stdout.write(out)
         if p.returncode:
-            sys.stdout.write(p.stderr[-2000:])
+            sys.stdout.write(err[-2000:])
         results.append((n, p.returncode, time.monotonic() - t0))
     prefix = os.path.join(os.path.realpath(tempfile.gettempdir()), probelib.PREFIX)
     left_procs = probelib.our_procs(prefix) + probelib.daemon_procs(prefix)

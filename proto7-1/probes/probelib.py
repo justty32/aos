@@ -267,7 +267,12 @@ class Result:
 
 
 def run_main(main):
-    """探針入口：例外也要收乾淨（Space 的 with 已處理），退出碼照 main 回的。"""
+    """探針入口：例外也要收乾淨（Space 的 with 已處理），退出碼照 main 回的。
+
+    SIGTERM（run_all 逾時收探針）轉成 KeyboardInterrupt，Space 的 with 照樣先收程序再刪空間（N-55）。"""
+    def _term(*_):
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGTERM, _term)
     try:
         sys.exit(main())
     except ProbeTimeout as e:

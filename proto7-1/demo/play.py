@@ -43,47 +43,68 @@ def our_procs(root):
     return [p for p in found if p != os.getpid()]
 
 
+def stop_daemon(d, root):
+    """收掉自己起的 daemon：先寫 stop＋kill 控制檔（寫不進去就算了），等不到就 SIGTERM（＝stop＋kill），再等不到 SIGKILL 整個群組。"""
+    if d.poll() is None:
+        try:
+            fs.write_json(os.path.join(root, ".aosd", "ctl", "zz-play-stop.json"),
+                          {"op": "stop", "kill": True, "by": "play.py"})
+        except OSError:
+            pass
+        try:
+            d.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            d.terminate()
+            try:
+                d.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(d.pid, signal.SIGKILL)
+                except OSError:
+                    pass
+                d.wait()
+
+
 def run(root, seconds, quiet):
-    """起 daemon、跑 seconds 秒、寫 stop 控制檔、等它結束；回殘留程序清單。"""
+    """起 daemon、跑 seconds 秒、寫 stop 控制檔、等它結束；回殘留程序清單。
+
+    中途出任何事（I/O 錯、Ctrl-C、SIGTERM）都走 finally：先收 daemon 與它的任務，才輪到呼叫的人刪空間（astra-5 F-11、N-55）。"""
     out = open(os.path.join(root, "daemon.out"), "w")
     env = fs.env_with_bin()
     env["AOS7_AUDIT"] = "1"   # 任務的寫入記到各自的 writes.jsonl，最後檢查有沒有寫出自己的 node 與掛載點
     d = subprocess.Popen([sys.executable, DAEMON, root], stdout=out, stderr=subprocess.STDOUT,
                          env=env, start_new_session=True)
-    t0 = time.monotonic()
-    end = t0 + seconds
-    added = False
-    while time.monotonic() < end and d.poll() is None:
-        time.sleep(0.2)
-        if not added and time.monotonic() - t0 > seconds * 0.3:
-            # 中途改 kernel.json 加成員 carol：kernel 自己寫加掛請求，不用改 tasks.json（M-6）
-            kpath = os.path.join(root, "team", "kernel.json")
-            cfg = fs.read_json(kpath, {})
-            cfg["members"] = cfg.get("members", []) + ["agents/carol"]
-            fs.write_json(kpath, cfg)
-            added = True
-            if not quiet:
-                print("\r  （%.1f 秒：kernel.json 加成員 agents/carol）" % (time.monotonic() - t0))
-        if not quiet:
-            st = fs.read_json(os.path.join(root, ".aosd", "status.json"), {})
-            rs = " ".join("%s:%s" % (k, v.get("round")) for k, v in sorted(st.get("nodes", {}).items()))
-            print("\r  跑著… " + rs + " " * 10, end="", flush=True)
-    if not quiet:
-        print()
-    fs.write_json(os.path.join(root, ".aosd", "ctl", "zz-play-stop.json"),
-                  {"op": "stop", "kill": True, "by": "play.py"})
+    out.close()
     try:
-        d.wait(timeout=10)
-    except subprocess.TimeoutExpired:
-        d.terminate()
-        d.wait(timeout=5)
-    time.sleep(0.3)
-    left = our_procs(root)
-    for p in left:  # 收尾：不留孤兒（留下來的照樣報出來）
-        try:
-            os.kill(p, signal.SIGKILL)
-        except OSError:
-            pass
+        t0 = time.monotonic()
+        end = t0 + seconds
+        added = False
+        while time.monotonic() < end and d.poll() is None:
+            time.sleep(0.2)
+            if not added and time.monotonic() - t0 > seconds * 0.3:
+                # 中途改 kernel.json 加成員 carol：kernel 自己寫加掛請求，不用改 tasks.json（M-6）
+                kpath = os.path.join(root, "team", "kernel.json")
+                cfg = fs.read_json(kpath, {})
+                cfg["members"] = cfg.get("members", []) + ["agents/carol"]
+                fs.write_json(kpath, cfg)
+                added = True
+                if not quiet:
+                    print("\r  （%.1f 秒：kernel.json 加成員 agents/carol）" % (time.monotonic() - t0))
+            if not quiet:
+                st = fs.read_json(os.path.join(root, ".aosd", "status.json"), {})
+                rs = " ".join("%s:%s" % (k, v.get("round")) for k, v in sorted(st.get("nodes", {}).items()))
+                print("\r  跑著… " + rs + " " * 10, end="", flush=True)
+        if not quiet:
+            print()
+    finally:
+        stop_daemon(d, root)
+        time.sleep(0.3)
+        left = our_procs(root)
+        for p in left:  # 收尾：不留孤兒（留下來的照樣報出來）
+            try:
+                os.kill(p, signal.SIGKILL)
+            except OSError:
+                pass
     return left
 
 
@@ -218,18 +239,29 @@ def checks(root, left):
     ]
 
 
+def _interrupt(*_):
+    raise KeyboardInterrupt
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", help="空間根（預設開一個暫存資料夾，全 OK 就刪掉）；會先清空，跑完留著")
     ap.add_argument("--seconds", type=float, default=8.0)
     ap.add_argument("--quiet", action="store_true", help="只印檢查結果")
     a = ap.parse_args()
+    # SIGTERM（測試逾時收它）也走 finally：先收 daemon 再結束（N-55）
+    signal.signal(signal.SIGTERM, _interrupt)
     root = os.path.abspath(a.root) if a.root else tempfile.mkdtemp(prefix="aos7-play-")
     if a.root and os.path.exists(root):
         shutil.rmtree(root)
     shutil.copytree(os.path.join(HERE, "scene"), root, dirs_exist_ok=True)
     print("空間根：%s（跑 %.1f 秒）" % (root, a.seconds))
-    left = run(root, a.seconds, a.quiet)
+    try:
+        left = run(root, a.seconds, a.quiet)
+    except BaseException:
+        if not a.root:
+            shutil.rmtree(root, ignore_errors=True)   # run 的 finally 已經先收了程序
+        raise
     if not a.quiet:
         report_rounds(root)
         report_files(root)

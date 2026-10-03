@@ -12,7 +12,7 @@ import sys
 
 import aos7_agent_tools as tools
 import aos7_llm
-from aos7_fs import append_jsonl, now, read_json, task_dirs_of, task_env, wait_tock, write_json
+from aos7_fs import append_jsonl, now, read_json, task_dirs_of, task_env, task_read, wait_tock, write_json
 
 
 class Stop(Exception):
@@ -31,12 +31,17 @@ def load_state(ctx):
         return st
     me = read_json(os.path.join(ctx["task"], "birth.json"), {}) or {}
     best = None
-    # 前任可能已被 tock 搬到 tasks-old/（Q3）
-    for tid, d in task_dirs_of(os.path.dirname(os.path.dirname(ctx["task"]))):
+    aos = os.path.dirname(os.path.dirname(ctx["task"]))
+    # 前任可能已被 tock 搬到 tasks-old/（Q3）；讀到一半被搬走的，到新位置整份重讀（astra-5 F-02）
+    for tid, d in task_dirs_of(aos):
         if d == ctx["task"]:
             continue
-        b = read_json(os.path.join(d, "birth.json"), {}) or {}
-        old = read_json(os.path.join(d, "state.json"))
+        d, got = task_read(aos, tid, d, lambda x: (read_json(os.path.join(x, "birth.json"), {}) or {},
+                                                    read_json(os.path.join(x, "state.json"))))
+        if d is None:
+            continue   # 哪裡都找不到（真的被刪了）
+        b, old = got
+        b = b if isinstance(b, dict) else {}
         if b.get("name") != me.get("name") or not isinstance(old, dict) or old.get("state") not in ("idle", "think", "act"):
             continue
         if best is None or old.get("round", 0) > best[1].get("round", 0):

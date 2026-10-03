@@ -38,23 +38,25 @@ def in_root(root, to):
     return t == r or t.startswith(r + os.sep)
 
 
-def make(root, taskdir, decl):
+def make(root, taskdir, decl, fs_taskdir=None):
     """建掛載點，回寫進 birth.json 的 `mounts`：{名字: {"to", "at"}}，壞的宣告記成 {"error"}。
 
-    目標不存在就先建成資料夾（收訊資料夾常常還沒人建過；problems.md M-2）。沿連結會跑出空間根的目標不掛。"""
+    目標不存在就先建成資料夾（收訊資料夾常常還沒人建過；problems.md M-2）。沿連結會跑出空間根的目標不掛。
+    fs_taskdir＝實際建連結的位置（tick 經 node 的 fd 寫，astra-5 F-09）；`at` 與連結內容照 taskdir（實際路徑）算。"""
     good, bad = check(decl)
     out = {}
     for name, to in sorted(good.items()):
         real = node_path(root, to)
         at = os.path.join(taskdir, MNT, name)
+        fat = os.path.join(fs_taskdir or taskdir, MNT, name)
         if not in_root(root, to):
             out[name] = {"to": to, "error": "%s 沿符號連結跑出空間根" % to}
             continue
         try:
             if not os.path.exists(real):
                 os.makedirs(real, exist_ok=True)
-            os.makedirs(os.path.dirname(at), exist_ok=True)
-            os.symlink(os.path.relpath(real, os.path.dirname(at)), at)
+            os.makedirs(os.path.dirname(fat), exist_ok=True)
+            os.symlink(os.path.relpath(real, os.path.dirname(at)), fat)
             out[name] = {"to": to, "at": at}
         except OSError as e:
             out[name] = {"to": to, "error": str(e)}
@@ -142,8 +144,12 @@ def allowed(root, path, allow):
     return False
 
 
-def serve(root, taskdir, allow):
-    """tick 這邊用：處理一個任務的所有加掛請求，給了就補連結、更新 birth.json。回 [{"name", "path", "ok", "msg"}]。"""
+def serve(root, taskdir, allow, real_taskdir=None):
+    """tick 這邊用：處理一個任務的所有加掛請求，給了就補連結、更新 birth.json。回 [{"name", "path", "ok", "msg"}]。
+
+    taskdir＝讀寫用的路徑，real_taskdir＝實際路徑（掛載點的 `at`；tick 經 node 的 fd 寫時兩者不同）。
+    **先寫回條、成功才刪請求**（astra-5 F-07）：回條寫不進去就留著請求、這筆記錯，同一輪其他請求照做；
+    下次重處理同一請求是冪等的（已經掛了同名同目標就直接補回條）。"""
     rdir = os.path.join(taskdir, REQ)
     try:
         names = sorted(n for n in os.listdir(rdir) if n.endswith(".json"))
@@ -153,21 +159,27 @@ def serve(root, taskdir, allow):
     for fn in names:
         item = read_json(os.path.join(rdir, fn))
         try:
-            os.remove(os.path.join(rdir, fn))
-        except OSError:
-            pass
-        try:
-            item, r = _serve_one(root, taskdir, allow, item)
+            item, r = _serve_one(root, taskdir, allow, item, real_taskdir)
         except Exception as e:  # 任何壞請求都要有回條，不拖垮整個 tick（astra-2 二-1）
             item = item if isinstance(item, dict) else {"raw": item}
             r = {"name": None, "path": None, "ok": False, "msg": "請求處理失敗：%s: %s" % (type(e).__name__, e)}
         item["result"] = {"ok": r["ok"], "msg": r["msg"], "at": now()}
-        write_json(os.path.join(taskdir, DONE, fn), item)
+        try:
+            write_json(os.path.join(taskdir, DONE, fn), item)
+        except OSError as e:
+            # 回條寫不進去（mount-done/x.json 是資料夾…）：請求留著，下個 tick 再試；這筆標出來
+            r = dict(r, receipt_error=repr(e)[:200], msg="%s；回條寫不進去，請求留著：%s" % (r["msg"], e))
+            out.append(r)
+            continue
+        try:
+            os.remove(os.path.join(rdir, fn))
+        except OSError:
+            pass
         out.append(r)
     return out
 
 
-def _serve_one(root, taskdir, allow, item):
+def _serve_one(root, taskdir, allow, item, real_taskdir=None):
     """審一個請求，回 (要寫回條的請求內容, {"name", "path", "ok", "msg"})。"""
     if not isinstance(item, dict):
         return {"raw": item}, {"name": None, "path": None, "ok": False, "msg": "not a JSON object"}
@@ -191,7 +203,7 @@ def _serve_one(root, taskdir, allow, item):
         ok = mounts[name].get("to") == good[name]
         msg = "已經掛了" if ok else "名字 %s 已經掛了別的（%s）" % (name, mounts[name].get("to"))
     else:
-        m = make(root, taskdir, good)[name]
+        m = make(root, real_taskdir or taskdir, good, fs_taskdir=taskdir)[name]
         ok = "at" in m
         msg = "掛上 mnt/%s → %s" % (name, good[name]) if ok else m.get("error", "?")
         if ok:

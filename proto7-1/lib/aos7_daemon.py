@@ -5,9 +5,11 @@
 SIGTERM／SIGINT＝stop 加 kill（S-21 路一：子 daemon 被父時間線 kill 時帶走自己的任務）。
 """
 import datetime
+import errno
 import fcntl
 import os
 import signal
+import stat
 import sys
 import threading
 import time
@@ -17,23 +19,89 @@ from aos7_daemon_timeline import POLL, Timeline
 from aos7_fs import append_jsonl, is_regular, node_path, now, read_json, write_json
 
 SCAN_BATCH = 20      # 一圈最多起幾條新時間線；多的下一圈再起，主迴圈不停擺（probes/fleet N2）
+CTL_BATCH = 200      # 一圈最多處理幾個控制檔；多的下一圈接著做（照檔名順序），status 照常寫（astra-5 F-10）
+CTL_BUDGET_S = 0.05  # 一圈處理控制檔最多花幾秒（跟 CTL_BATCH 取先到的）
 LIVE_EVERY = 0.25    # status.json 的 live 多久重算一次（秒）；任務資料夾多時每圈全掃太貴（probes/fleet N3、swarm N4）
 
 
-def scan_nodes(root):
+GONE_ERRNO = (errno.ENOENT, errno.ENOTDIR)   # 這兩種才算「確定不存在」；其他（ESTALE、EIO、EACCES…）是「看不到」
+
+
+def _probe(path):
+    """path 是一般檔／資料夾嗎：回 "file"、"dir"、"other"、None（確定不存在），看不到（I/O 錯）丟 OSError。"""
+    try:
+        st = os.stat(path)
+    except OSError as e:
+        if e.errno in GONE_ERRNO:
+            return None
+        raise
+    return "file" if stat.S_ISREG(st.st_mode) else "dir" if stat.S_ISDIR(st.st_mode) else "other"
+
+
+def scan_nodes(root, errors=None):
     """回 root 底下所有 node id（含 `.aos/timeline.json` 的資料夾）。
 
-    跳過 `.` 開頭的資料夾；含 `.aosd/` 的子資料夾是別的 daemon 的根，整棵不進去（S-15）。"""
+    跳過 `.` 開頭的資料夾；含 `.aosd/` 的子資料夾是別的 daemon 的根，整棵不進去（S-15）。
+    errors 給一個 dict 時，**看不到**的地方（scandir／stat 丟 ENOENT、ENOTDIR 以外的 OSError：ESTALE、EIO、EACCES…）
+    記成 {id: 錯誤}，那個 id（以及它底下）這一圈沒有結論——呼叫的人不能當它消失（astra-5 F-03）。"""
     found = []
-    for d, subdirs, _ in os.walk(root):
-        if d != root and os.path.isdir(os.path.join(d, ".aosd")):
-            subdirs[:] = []
+    errors = {} if errors is None else errors
+
+    def rel_id(d):
+        rel = os.path.relpath(d, root)
+        return "." if rel == "." else rel.replace(os.sep, "/")
+
+    todo = [root]
+    while todo:
+        d = todo.pop()
+        try:
+            if d != root and _probe(os.path.join(d, ".aosd")) == "dir":
+                continue
+            if _probe(os.path.join(d, ".aos", "timeline.json")) == "file":
+                found.append(rel_id(d))
+        except OSError as e:
+            errors[rel_id(d)] = repr(e)[:200]
             continue
-        subdirs[:] = sorted(s for s in subdirs if not s.startswith("."))
-        if os.path.isfile(os.path.join(d, ".aos", "timeline.json")):
-            rel = os.path.relpath(d, root)
-            found.append("." if rel == "." else rel.replace(os.sep, "/"))
-    return found
+        try:
+            with os.scandir(d) as it:
+                subs = [x.path for x in it if not x.name.startswith(".") and x.is_dir(follow_symlinks=False)]
+        except OSError as e:
+            if e.errno not in GONE_ERRNO:
+                errors[rel_id(d)] = repr(e)[:200]
+            continue
+        todo.extend(sorted(subs, reverse=True))
+    return sorted(found)
+
+
+def under(nid, prefix):
+    """node id nid 在 prefix（node id）底下或就是它。"""
+    return prefix == "." or nid == prefix or nid.startswith(prefix + "/")
+
+
+def declared_subroots(root, node_id):
+    """node 的 tasks.json 各項與 spawn 檔宣告的合格 `subroot`（空間路徑）：那裡要開子 daemon，父 daemon 不收裡面的 node
+    （astra-5 F-08：tick 建 `.aosd/` 之前的第一次掃描也不搶）。"""
+    node = node_path(root, node_id)
+    items = []
+    t = read_json(os.path.join(node, ".aos", "tasks.json"))
+    if isinstance(t, dict) and isinstance(t.get("tasks"), list):
+        items += t["tasks"]
+    sdir = os.path.join(node, ".aos", "spawn")
+    try:
+        names = sorted(n for n in os.listdir(sdir) if n.endswith(".json") and not n.startswith("."))
+    except OSError:
+        names = []
+    for n in names:
+        o = read_json(os.path.join(sdir, n))
+        items += o["batch"] if isinstance(o, dict) and isinstance(o.get("batch"), list) else [o]
+    out = []
+    for it in items:
+        sub = it.get("subroot") if isinstance(it, dict) else None
+        if isinstance(sub, str):
+            good, _ = aos7_task.subroot_of(root, node_id, sub)
+            if good:
+                out.append(good)
+    return out
 
 
 class Daemon:
@@ -54,6 +122,8 @@ class Daemon:
         self.stopping_since = None
         self.gen = None              # 世代（run 時換）
         self.io_errors = 0
+        self.scan_errors = {}        # 上一圈掃描看不到的地方（astra-5 F-03）
+        self.ctl_backlog = False     # 上一圈控制檔沒處理完（astra-5 F-10）
 
     # ---------- 給 Timeline 用 ----------
 
@@ -154,7 +224,13 @@ class Daemon:
             names = sorted(n for n in os.listdir(cdir) if not n.startswith("."))
         except OSError:
             return
-        for n in names:
+        self.ctl_backlog = False
+        t_end = time.monotonic() + CTL_BUDGET_S
+        for k, n in enumerate(names):
+            if k >= CTL_BATCH or time.monotonic() >= t_end:
+                # 控制檔洪水（一萬個 wake）不能佔住主迴圈：剩下的下一圈接著做，順序照檔名不變（astra-5 F-10）
+                self.ctl_backlog = True
+                break
             path = os.path.join(cdir, n)
             bad = None
             if not n.endswith(".json"):
@@ -210,8 +286,25 @@ class Daemon:
     def scan(self):
         if self.stopping:
             return
-        now_ids = set(scan_nodes(self.root))
-        for nid in sorted(now_ids - set(self.timelines))[:SCAN_BATCH]:
+        errors = {}
+        now_ids = set(scan_nodes(self.root, errors))
+        if errors:
+            # 看不到（ESTALE、EIO、EACCES…）不等於消失：那底下既有的 node 與 pgid 都留著、不 kill，下一圈重掃（astra-5 F-03）
+            self.io_errors += 1
+            if errors != self.scan_errors:
+                self.log(ev="scan-error", errors=errors)
+            now_ids |= {nid for nid in self.timelines if any(under(nid, e) for e in errors)}
+        elif self.scan_errors:
+            self.log(ev="scan-ok")
+        self.scan_errors = errors
+        new = sorted(now_ids - set(self.timelines))
+        if new:
+            subs = []
+            for nid in now_ids:
+                if any(under(x, nid) and x != nid for x in new):   # 只看新 node 的祖先 node
+                    subs += declared_subroots(self.root, nid)
+            new = [x for x in new if not any(under(x, sr) for sr in subs)]   # 子 daemon 的地盤，不收（astra-5 F-08）
+        for nid in new[:SCAN_BATCH]:
             tl = Timeline(self, nid)
             self.timelines[nid] = tl
             tl.start()
@@ -250,6 +343,15 @@ class Daemon:
         th = threading.Thread(target=work, name="reap:" + nid, daemon=True)
         th.start()
         self.reapers.append(th)
+
+    def sweep_leftovers(self):
+        """stop 帶 kill（含 SIGTERM）的最後一步：各時間線收完活任務後，再一次掃 /proc，把環境變數 AOS7_NODE 是本 daemon
+        各 node 的程序（已結束任務留下的子孫、tasks-old 裡任務的也算）連群組收掉（astra-5 F-01）。log `ev: "stop-sweep"`。"""
+        nodes = [tl.node for tl in self.timelines.values()]
+        if not nodes:
+            return
+        n, clean = aos7_task.sweep_nodes(nodes)
+        self.log(ev="stop-sweep", groups=n, ok=clean)
 
     def write_status(self, stopped=False):
         nodes = {}
@@ -298,11 +400,14 @@ class Daemon:
         while not self.stopping:
             for step in (self.handle_ctl, self.scan, self.write_status):
                 self.guard(step)
-            time.sleep(POLL)
+            if not self.ctl_backlog:
+                time.sleep(POLL)
         self.guard(lambda: self.log(ev="stopping", kill=self.kill_on_stop))
         while any(tl.is_alive() for tl in self.timelines.values()):
             self.guard(self.write_status)
             time.sleep(POLL)
+        if self.kill_on_stop:
+            self.guard(self.sweep_leftovers)
         for th in self.reapers:
             th.join(5)
         self._live.clear()
