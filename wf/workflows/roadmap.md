@@ -8,7 +8,7 @@
 
 ## 現況（2026-10-03）：開 proto7
 
-**10-03 使用者定**：架構照分層想法重來，開 [proto7](../../proto7/README.md)，先立[核心 spec](../../proto7/spec/core.md)（S-01～S-22）；daemon 與 tick 用程序、不用 thread。proto7 文件不連回 proto6，需要的搬過去。下面 proto6 一段是到 10-03 為止的現況，程式仍可參考。
+**10-03 使用者定**：架構照分層想法重來，開 [proto7](../../proto7/README.md)，先立[核心 spec](../../proto7/spec/core.md)（S-01～S-23）；daemon 與 tick 用程序、不用 thread。proto7 文件不連回 proto6，需要的搬過去。下面 proto6 一段是到 10-03 為止的現況，程式仍可參考。
 
 ### proto6（到 10-03）
 
