@@ -1,0 +1,66 @@
+{
+ "model": "chatgpt-gpt-6-luna-low",
+ "variant": "card",
+ "score": 5,
+ "grade": {
+  "q1": true,
+  "q2": true,
+  "q3": true,
+  "q4": true,
+  "q5": true
+ },
+ "answer": {
+  "q1": "proj-a/.aos/tasks/reviewer-r7/mnt/model/requests",
+  "q2": "cc-proj-a",
+  "q3": {
+   "a-job5-call-1": "pending",
+   "a-job6-call-1": "settled"
+  },
+  "q4": "no",
+  "q5": {
+   "active": "model-a2",
+   "prev": "model-a"
+  },
+  "evidence": [
+   "proj-a/.aos/tasks/reviewer-r7/birth.json",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/model/service.json",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/service.json",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer-status.json",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/context/checkpoint.json",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer.jsonl",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/model/requests/a-job6-call-1.json",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/model/receipts/a-job6-call-1.json",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/requests/a-job5-call-1.json",
+   "proj-a/.aos/tasks/reviewer-r7/mnt/mail/job5.json"
+  ]
+ },
+ "calls": 11,
+ "tokens": 53193,
+ "reads": 22,
+ "read_errors": 0,
+ "stop": "done",
+ "paths": [
+  "proj-a/.aos/tasks/reviewer-r7",
+  "proj-a/.aos/tasks/reviewer-r7/birth.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/context",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/mail",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model/service.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/service.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer-status.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/context/checkpoint.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer.jsonl",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/mail/job5.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model/requests",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model/receipts",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/receipts",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/mail/done",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/mail",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model/requests/a-job6-call-1.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model/receipts/a-job6-call-1.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/mail/job5.json",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/requests",
+  "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/requests/a-job5-call-1.json"
+ ]
+}

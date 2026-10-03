@@ -1,0 +1,33 @@
+{
+  "schema": "aos.blindread-answers.v1",
+  "note": "兩個版本（card＝服務卡＋掛載點；hardcoded＝拿掉服務卡與掛載點、路徑寫死在 proj-a/reviewer.cfg.json）是同一個世界，標準答案相同；差在答案從哪裡讀得到。",
+  "answers": {
+    "q1": "services/model-a2/clients/reviewer/requests",
+    "q2": "cc-proj-a",
+    "q3": {"a-job5-call-1": "pending", "a-job6-call-1": "settled"},
+    "q4": "no",
+    "q5": {"active": "model-a2", "prev": "model-a"}
+  },
+  "where": {
+    "card": {
+      "q1": "任務資料夾 mnt/model/service.json 的 submit（mnt/model → services/model-a2/clients/reviewer）",
+      "q2": "服務卡 charging: caller_context＋請求檔 requests/a-job6-call-1.json 的 charge_context",
+      "q3": "mnt/model/receipts/a-job6-call-1.json 的 state；a-job5 在 mnt/model-prev/requests/ 有請求、receipts/ 沒回條（mnt/context/checkpoint.json 的 pending）",
+      "q4": "服務卡的 dedup 只在同一個服務內去重；a-job5 已送到 model-a（checkpoint 的 service_id），改送 model-a2 會做兩次；mnt/model-prev 就是為了收它的尾",
+      "q5": "birth.json 的 mounts（model、model-prev）或兩張服務卡的 service_id；reload 的 ctl-done.json result.diff"
+    },
+    "hardcoded": {
+      "q1": "proj-a/reviewer.cfg.json 的 requests",
+      "q2": "請求檔的 charge_context（沒有服務卡說「照 caller context 計費」）",
+      "q3": "receipts 的 state；a-job5 的請求在 model-a、沒回條",
+      "q4": "沒有服務卡的 dedup；只能從 checkpoint 推「已送到 model-a」",
+      "q5": "proj-a/reviewer.cfg.json 的 requests 與 old_receipts"
+    }
+  },
+  "accept": {
+    "pending": ["pending", "in-flight", "in_flight", "inflight", "submitted", "waiting", "在途", "未完成"],
+    "settled": ["settled", "done", "completed", "complete", "完成", "已完成"],
+    "no": ["no", "否", "不", "不該", "false"],
+    "null": [null, "null", "none", "", "無", "沒有"]
+  }
+}

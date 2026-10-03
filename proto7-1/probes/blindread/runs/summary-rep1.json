@@ -1,0 +1,256 @@
+{
+ "at": "2026-10-03T21:06:19.220",
+ "calls": 61,
+ "cap": 150,
+ "rows": [
+  {
+   "model": "deepseek-chat",
+   "variant": "card",
+   "score": 5,
+   "grade": {
+    "q1": true,
+    "q2": true,
+    "q3": true,
+    "q4": true,
+    "q5": true
+   },
+   "answer": {
+    "q1": "services/model-a2/clients/reviewer/requests",
+    "q2": "cc-proj-a",
+    "q3": {
+     "a-job5-call-1": "pending",
+     "a-job6-call-1": "settled"
+    },
+    "q4": "no",
+    "q5": {
+     "active": "model-a2",
+     "prev": "model-a"
+    },
+    "evidence": [
+     "proj-a/.aos/tasks/reviewer-r7/birth.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/context/checkpoint.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer-status.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer.jsonl",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/service.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/requests/a-job6-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/receipts/a-job6-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/service.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/requests/a-job5-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/receipts/a-job4-call-1.json"
+    ]
+   },
+   "calls": 9,
+   "tokens": 37224,
+   "reads": 33,
+   "read_errors": 1,
+   "stop": "done"
+  },
+  {
+   "model": "deepseek-chat",
+   "variant": "hardcoded",
+   "score": 5,
+   "grade": {
+    "q1": true,
+    "q2": true,
+    "q3": true,
+    "q4": true,
+    "q5": true
+   },
+   "answer": {
+    "q1": "services/model-a2/clients/reviewer/requests",
+    "q2": "cc-proj-a",
+    "q3": {
+     "a-job5-call-1": "pending",
+     "a-job6-call-1": "settled"
+    },
+    "q4": "no",
+    "q5": {
+     "active": "model-a2",
+     "prev": "model-a"
+    },
+    "evidence": [
+     "proj-a/reviewer.cfg.json",
+     "proj-a/context/checkpoint.json",
+     "proj-a/context/reviewer-status.json",
+     "proj-a/context/reviewer.jsonl",
+     "proj-a/inbox/job5.json",
+     "services/model-a/service.cfg.json",
+     "services/model-a2/service.cfg.json",
+     "services/model-a/fault.json",
+     "services/model-a/epoch.json",
+     "services/model-a2/epoch.json",
+     "services/model-a/executed.jsonl",
+     "services/model-a2/executed.jsonl",
+     "services/model-a/clients/reviewer/requests/a-job5-call-1.json",
+     "services/model-a/clients/reviewer/receipts",
+     "services/model-a2/clients/reviewer/requests/a-job6-call-1.json",
+     "services/model-a2/clients/reviewer/receipts/a-job6-call-1.json"
+    ]
+   },
+   "calls": 14,
+   "tokens": 67887,
+   "reads": 54,
+   "read_errors": 0,
+   "stop": "done"
+  },
+  {
+   "model": "claude-haiku-4.5",
+   "variant": "card",
+   "score": 4,
+   "grade": {
+    "q1": true,
+    "q2": true,
+    "q3": true,
+    "q4": false,
+    "q5": true
+   },
+   "answer": {
+    "q1": "services/model-a2/clients/reviewer/requests",
+    "q2": "cc-proj-a",
+    "q3": {
+     "a-job5-call-1": "pending",
+     "a-job6-call-1": "settled"
+    },
+    "q4": "yes",
+    "q5": {
+     "active": "model-a2",
+     "prev": "model-a"
+    },
+    "evidence": [
+     "proj-a/.aos/tasks/reviewer-r7/birth.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/service.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/service.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/requests/a-job6-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/receipts/a-job6-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/requests/a-job5-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer-status.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer.jsonl"
+    ]
+   },
+   "calls": 8,
+   "tokens": 33850,
+   "reads": 24,
+   "read_errors": 1,
+   "stop": "done"
+  },
+  {
+   "model": "claude-haiku-4.5",
+   "variant": "hardcoded",
+   "score": 4,
+   "grade": {
+    "q1": true,
+    "q2": true,
+    "q3": true,
+    "q4": false,
+    "q5": true
+   },
+   "answer": {
+    "q1": "services/model-a2/clients/reviewer/requests",
+    "q2": "cc-proj-a",
+    "q3": {
+     "a-job5-call-1": "pending",
+     "a-job6-call-1": "settled"
+    },
+    "q4": "yes",
+    "q5": {
+     "active": "model-a2",
+     "prev": "model-a"
+    },
+    "evidence": [
+     "proj-a/reviewer.cfg.json",
+     "services/model-a2/clients/reviewer/requests/a-job6-call-1.json",
+     "services/model-a2/clients/reviewer/receipts/a-job6-call-1.json",
+     "proj-a/context/reviewer-status.json",
+     "proj-a/context/reviewer.jsonl"
+    ]
+   },
+   "calls": 9,
+   "tokens": 30563,
+   "reads": 19,
+   "read_errors": 3,
+   "stop": "done"
+  },
+  {
+   "model": "chatgpt-gpt-6-luna-low",
+   "variant": "card",
+   "score": 5,
+   "grade": {
+    "q1": true,
+    "q2": true,
+    "q3": true,
+    "q4": true,
+    "q5": true
+   },
+   "answer": {
+    "q1": "proj-a/.aos/tasks/reviewer-r7/mnt/model/requests",
+    "q2": "cc-proj-a",
+    "q3": {
+     "a-job5-call-1": "pending",
+     "a-job6-call-1": "settled"
+    },
+    "q4": "no",
+    "q5": {
+     "active": "model-a2",
+     "prev": "model-a"
+    },
+    "evidence": [
+     "proj-a/.aos/tasks/reviewer-r7/birth.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/service.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/service.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer-status.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/context/checkpoint.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/context/reviewer.jsonl",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/requests/a-job6-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model/receipts/a-job6-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/model-prev/requests/a-job5-call-1.json",
+     "proj-a/.aos/tasks/reviewer-r7/mnt/mail/job5.json"
+    ]
+   },
+   "calls": 11,
+   "tokens": 53193,
+   "reads": 22,
+   "read_errors": 0,
+   "stop": "done"
+  },
+  {
+   "model": "chatgpt-gpt-6-luna-low",
+   "variant": "hardcoded",
+   "score": 5,
+   "grade": {
+    "q1": true,
+    "q2": true,
+    "q3": true,
+    "q4": true,
+    "q5": true
+   },
+   "answer": {
+    "q1": "services/model-a2/clients/reviewer/requests",
+    "q2": "cc-proj-a",
+    "q3": {
+     "a-job5-call-1": "pending",
+     "a-job6-call-1": "settled"
+    },
+    "q4": "no",
+    "q5": {
+     "active": "model-a2",
+     "prev": "model-a"
+    },
+    "evidence": [
+     "proj-a/reviewer.cfg.json",
+     "proj-a/context/checkpoint.json",
+     "proj-a/context/reviewer-status.json",
+     "proj-a/context/reviewer.jsonl",
+     "services/model-a2/clients/reviewer/requests/a-job6-call-1.json",
+     "services/model-a2/clients/reviewer/receipts/a-job6-call-1.json",
+     "services/model-a/epoch.json",
+     "services/model-a2/epoch.json"
+    ]
+   },
+   "calls": 10,
+   "tokens": 43824,
+   "reads": 34,
+   "read_errors": 2,
+   "stop": "done"
+  }
+ ]
+}

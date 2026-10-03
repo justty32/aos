@@ -7,7 +7,9 @@ kernel／agent 在這裡**只是探針**：刻意寫得彼此不同，用來逼�
 - **第一波**（12 個）：寫死規則的程式，不打 LLM。
 - **第二波**（5 個，下表後半）：讓 **LLM 當操作者**，只給它 `read_file`／`write_file` 兩個工具和一張操作卡 [llm_card.md](llm_card.md)，直接檢驗 S-01「LLM 只靠讀寫檔就能操作這一層」；另加一個不用 LLM 的 chaos。共用的 harness 是 [llmop.py](llmop.py)（`FileTools`、`RealBrain`、離線的 `ScriptBrain`、`run_agent`）。run_all 跑的是**離線照稿版**（證明只靠檔案做得到，也守住基礎設施行為）；真模型另跑：`python3 proto7-1/probes/<名字>/probe.py --real <模型,...>`，只打 LiteLLM `127.0.0.1:4000` 的雲端模型（`llmop.check_model` 擋掉 `lm-*`、`ollama*`、`claude-fable-*`），每個探針自己設呼叫上限。第二波真模型共打了 451 次（上限 600）。
 
-跑：`python3 proto7-1/probes/run_all.py [名字 ...]`（全部約 100 秒；fleet 會吃滿多核約 20 秒）。每個探針自己開 `/tmp/aos7probe-*` 暫存根、跑完收乾淨；總結最後兩行檢查沒有殘留程序與暫存。check 只放基礎設施現在做得到的事（全綠＝現況），做不到的記成「量」與「發現」。probelib 建的 node 預設 `keep_ended_rounds` 很大（不把舊任務搬到 tasks-old/，探針好翻）；要量搬的行為就傳 `keep_ended_rounds=`。
+- **第三波**（5 個，下表最後）：照兩份調查報告的 D-／E- 需求表各挑一題，逼 daemon／tick 的缺口。四個不用 LLM：supervisor 樹（D-18）、多控制者 holds（D-12／D-13）、tickless 閒置 node（D-16）、成組准入 gang（E-04）。另一個 blindread 是 S-01 盲讀，離線只驗題目、標準答案與造出來的世界，`--real` 才打模型。逼出的需求在 infra-needs.md 第 K 節（N-79～）。
+
+跑：`python3 proto7-1/probes/run_all.py [名字 ...]`（全部約 3 分鐘；fleet 會吃滿多核約 20 秒，tickless 約 15 秒）。每個探針自己開 `/tmp/aos7probe-*` 暫存根、跑完收乾淨；總結最後兩行檢查沒有殘留程序與暫存。check 只放基礎設施現在做得到的事（全綠＝現況），做不到的記成「量」與「發現」。probelib 建的 node 預設 `keep_ended_rounds` 很大（不把舊任務搬到 tasks-old/，探針好翻）；要量搬的行為就傳 `keep_ended_rounds=`。
 
 > 各 README 的數字與發現是**修補之前**量的（10-03）；哪些後來修了，看 infra-needs.md 每條的「現況」欄（第二波是 N-56～N-76 與 Q5、Q6）。第二波的真模型跑的是第一版操作卡；卡後來依誤解補過，llmkernel（haiku）與 llmops（luna）用新卡各重跑一次，結果記在它們的 README。
 
@@ -36,5 +38,11 @@ kernel／agent 在這裡**只是探針**：刻意寫得彼此不同，用來逼�
 | [namespace](namespace/README.md) | 實驗一：同一份 reviewer 只認 `mnt/mail`／`model`／`context`，兩個專案掛不同服務；服務 kill 換 epoch、reload 換服務、介面不合 | 現有基底足夠；在途請求不重送、可讀拒絕都做得到。換服務時舊服務的在途請求要 kernel 多掛 `model-prev`、再 reload 兩次（N-78，E-03） |
 | [ledger](ledger/README.md) | 實驗二：帳本是 keep 任務、唯一寫入者；split 委派、搶最後額度、同一 grant 給兩個 worker、三個切點 kill、未知在途 | §11.2 守恆式每步由獨立重算器驗過，全成立；帳本、provider 都分不出請求是誰寫的：洩漏的 grant 被 Q 的任務冒名花掉（N-77，E-01，要使用者決定） |
 | [hsched](hsched/README.md) | 實驗三：控制 node（確定性 kernel＋驗證器）、共用閘門、兩專案各 3 個 mock worker；同一 trace 比 A stride／B 固定窗口／C LLM 直接挑／D LLM 提政策＋kernel 執行 | 離線：預錄的晚三回合、壞 JSON、超父額、舊 epoch、pause 自己全被拒，保底下一次決策接手，越權生效 0，P 擴到 10 個 worker 在途仍 ≤3。真模型（223 次呼叫）：D 未達採用門檻（p95 只 1/6 次降 ≥20%，同成本合格反少 6～9%），手調一次的確定性規則全面勝出；C 最差。保留 A；現有基底足夠 |
+| **第三波**（兩份調查報告的 D-／E- 表；四個離線，blindread 另有真模型） | | |
+| [supervisor](supervisor/README.md) | Erlang 式 supervisor（one_for_one／rest_for_one、重啟上限、退避、升級），比 keep 項、keep 項加 20 ms 輪詢、全用 spawn | keep 在 crash 後 27～67 ms 就把子工作起回來：每個 tock 看一次的有 2～4 次、20 ms 輪詢的有 1～3 次違反退避／停用；tick 不拿鎖讀 tasks.json，改完還被舊版起；全用 spawn 是 0 次，但失去 keep 的保底（N-79、N-80） |
+| [holds](holds/README.md) | 預算 kernel、凍結 kernel、人、舊腳本、維運 CLI 都 pause 同一條線 | 單一 paused 位元：各自直接寫，被放掉 14～17 回合；hold 檔＋常駐 arbiter 降到 1 回合，但認「誰下的 pause」只能翻 log 尾端；pause 中的 task kill 要等所有 hold 放開（N-81、N-82） |
+| [tickless](tickless/README.md) | 100 條 1 秒的線，95 條閒置：kernel 沒信就 pause、有信 `resume rounds 1` | tick／tock 程序每秒 200 → 20、CPU 4.1～4.4 → 0.5 秒／秒，信延遲中位 480～620 → 70 ms；要常駐 kernel 每 20 ms 輪詢；只 resume 不打斷 interval 等待（最慢 790 ms），補 wake 才 ≤ 100 ms（N-83、N-84） |
+| [gang](gang/README.md) | 三個合作任務一起起、一起取消：壞項、keep 擋下、tick 起到一半被殺、成員 crash、跨 node | spawn batch 只跳過壞項，起到一半被殺後整批再起，7/20 角色變兩份；合作式 prepare／commit（O_EXCL 認領）五個情境不完整的工作都是 0（N-85、N-86） |
+| [blindread](blindread/README.md) | S-01 盲讀：只給 read_file，答 namespace 世界的五題；對照拿掉服務卡與掛載點的寫死路徑版 | 真模型 125 次：12 次裡 10 次 ≥ 4/5，兩版分數一樣；card 版讀得少（deepseek 31 對 53 次）。錯的都是 q4（haiku 3 次：把上一代的舊流水當現況，或卡沒寫 dedup 範圍）。沒逼出 daemon／tick 需求 |
 
 寫新探針：照 [probelib.py](probelib.py) 開頭的範例。
