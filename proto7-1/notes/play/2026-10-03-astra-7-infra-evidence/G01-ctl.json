@@ -1,0 +1,41 @@
+{
+  "case": "G01-ctl",
+  "alive": false,
+  "status": {
+    "pid": 2938161,
+    "root": "/tmp/astra7-G01-ctl-0h98jyiv",
+    "at": "2026-10-03T19:59:13.150",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 1,
+    "stopping": true,
+    "stopped": true,
+    "kill_on_stop": true,
+    "nodes": {},
+    "last_ctl_error": {
+      "file": "000.json",
+      "at": "2026-10-03T19:59:13.130",
+      "err": "RuntimeError(\"已執行（ok=True：wake n（目前沒有這個 node，出現時才生效）），但回條寫不進去：IsADirectoryError(21, 'Is a directory')\")",
+      "moved_to": "ctl-failed/000.json"
+    }
+  },
+  "stop_receipt": {
+    "op": "stop",
+    "kill": true,
+    "result": {
+      "ok": true,
+      "msg": "stopping with kill",
+      "at": "2026-10-03T19:59:13.130",
+      "queued_at": "2026-10-03T19:59:13.101"
+    }
+  },
+  "pending": [],
+  "after_repair_stop_ms": 0.0,
+  "rc": 0,
+  "seconds": 0.719,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G01-ctl-0h98jyiv",
+    "root_exists": false
+  }
+}

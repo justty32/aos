@@ -1,0 +1,68 @@
+{
+  "case": "F05-replay",
+  "summaries": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T19:59:19.145",
+      "tock_at": "2026-10-03T19:59:19.189",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    }
+  ],
+  "round": {
+    "round": 1,
+    "open": false,
+    "tick_at": "2026-10-03T19:59:19.145",
+    "tock_at": "2026-10-03T19:59:19.189",
+    "started": [
+      "one-r1"
+    ],
+    "ctl": [],
+    "mounts": [],
+    "replayed": true,
+    "incomplete": "tock"
+  },
+  "replay_logs": [],
+  "again": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T19:59:19.145",
+      "tock_at": "2026-10-03T19:59:19.189",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null,
+      "replayed": true
+    },
+    "err": ""
+  },
+  "seconds": 0.112,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-F05-replay-zjccha4u",
+    "root_exists": false
+  }
+}

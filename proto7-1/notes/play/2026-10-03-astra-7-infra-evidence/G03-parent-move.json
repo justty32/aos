@@ -1,0 +1,57 @@
+{
+  "case": "G03-parent-move",
+  "old_child_pid": 2938222,
+  "old_child_alive": false,
+  "old_path_recreated": false,
+  "old_path_files": [],
+  "new_owner": {
+    "node": "m",
+    "tid": "child-r2",
+    "allow_stop": true,
+    "at": "2026-10-03T19:59:14.523"
+  },
+  "new_status": {
+    "pid": 2938238,
+    "root": "/tmp/astra7-G03-parent-move-r8s3wzwc/m/sub",
+    "at": "2026-10-03T19:59:14.701",
+    "poll_s": 0.02,
+    "gen": 2,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {}
+  },
+  "parent_events": [
+    {
+      "at": "2026-10-03T19:59:14.376",
+      "ev": "node+",
+      "node": "n",
+      "round": 0
+    },
+    {
+      "at": "2026-10-03T19:59:14.480",
+      "ev": "node+",
+      "node": "m",
+      "round": 1
+    },
+    {
+      "at": "2026-10-03T19:59:14.480",
+      "ev": "node-",
+      "node": "n"
+    },
+    {
+      "at": "2026-10-03T19:59:14.517",
+      "ev": "node-gone-kill",
+      "node": "n",
+      "groups": 1,
+      "ok": true
+    }
+  ],
+  "seconds": 0.451,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G03-parent-move-r8s3wzwc",
+    "root_exists": false
+  }
+}

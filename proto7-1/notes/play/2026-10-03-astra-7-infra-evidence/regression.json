@@ -1,0 +1,648 @@
+{
+  "count": 55,
+  "ok": true,
+  "tests": [
+    {
+      "test": "test_astra5.F01StopSweep.test_fork_same_group",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.144
+    },
+    {
+      "test": "test_astra5.F01StopSweep.test_fork_setsid",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.144
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_agent_state",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.024
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_kernel_state",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.023
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_usage_total",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.025
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_vanished_is_unknown_not_zero",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_eio_timeline_stat",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.322
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_estale_scandir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.322
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_really_gone_still_killed",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.042
+    },
+    {
+      "test": "test_astra5.F04StaleHolder.test_new_daemon_reaps_old_holder",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.554
+    },
+    {
+      "test": "test_astra5.F04StaleHolder.test_not_same_process_not_killed",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.002
+    },
+    {
+      "test": "test_astra5.F05SummaryOnce.test_same_round_replay",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.163
+    },
+    {
+      "test": "test_astra5.F05SummaryOnce.test_timeout_after_summary",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.679
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_ctl_receipt_dir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.094
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_interval_huge_int",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_numeric_name_first",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.138
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_poison_batch",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.024
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_wait_tock_non_object",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.511
+    },
+    {
+      "test": "test_astra5.F07MountReceipt.test_receipt_dir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra5.F08SubrootFirstScan.test_three_cold_starts",
+      "ok": true,
+      "errors": [],
+      "seconds": 1.324
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tick_delete",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.023
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tick_rename",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.023
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tock_delete",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.044
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tock_rename",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.043
+    },
+    {
+      "test": "test_astra5.F10CtlFlood.test_budget_per_loop",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.018
+    },
+    {
+      "test": "test_astra5.F10CtlFlood.test_status_moves_during_flood",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.405
+    },
+    {
+      "test": "test_astra5.F11ProcHelper.test_cleanup_order",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra5.F11ProcHelper.test_reap_stubborn",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.307
+    },
+    {
+      "test": "test_astra6.G01CtlReceiptPoison.test_poisoned_receipt_does_not_block_stop",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.064
+    },
+    {
+      "test": "test_astra6.G01CtlReceiptPoison.test_unmovable_failure_goes_last",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra6.G02MovedDuringStart.test_rename_with_mount",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.086
+    },
+    {
+      "test": "test_astra6.G02MovedDuringStart.test_runner_follows_held_taskdir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.063
+    },
+    {
+      "test": "test_astra6.G02MovedDuringStart.test_symlink_swap",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.088
+    },
+    {
+      "test": "test_astra6.G03DaemonRootMoved.test_root_rename",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.145
+    },
+    {
+      "test": "test_astra6.G04OwnerClaim.test_real_second_daemon",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.275
+    },
+    {
+      "test": "test_astra6.G04OwnerClaim.test_running_subroot_keeps_owner",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.117
+    },
+    {
+      "test": "test_astra6.G05ReloadValidates.test_from_round",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.089
+    },
+    {
+      "test": "test_astra6.G05ReloadValidates.test_max_live",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.09
+    },
+    {
+      "test": "test_astra6.G05ReloadValidates.test_mode",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.09
+    },
+    {
+      "test": "test_astra6.G06ReloadDynMount.test_promote_then_remove",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.244
+    },
+    {
+      "test": "test_astra6.G06ReloadDynMount.test_undeclared_dyn_still_carried",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.155
+    },
+    {
+      "test": "test_astra6.G07AtexitKeepsOptions.test_interpreter_exit",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.164
+    },
+    {
+      "test": "test_astra6.G08TornSummary.test_read_jsonl_skips_bad_line",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra6.G08TornSummary.test_torn_tail_then_tock",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.114
+    },
+    {
+      "test": "test_astra6.G09SweepIdentity.test_node_tid_not_root",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.123
+    },
+    {
+      "test": "test_astra6.G10UnverifiedHolder.test_unverified_then_repaired",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.519
+    },
+    {
+      "test": "test_owner_reload.TestOwnerDaemon.test_stop_needs_owner_permission",
+      "ok": true,
+      "errors": [],
+      "seconds": 1.458
+    },
+    {
+      "test": "test_owner_reload.TestOwnerDaemon.test_top_level_stop_and_manual_start_clears_mark",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.097
+    },
+    {
+      "test": "test_owner_reload.TestOwnerTick.test_allow_stop_type_and_restart_carries_it",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.133
+    },
+    {
+      "test": "test_owner_reload.TestOwnerTick.test_owner_json_and_stopped_blocks_keep_and_spawn",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.154
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_ctl_reload_only_for_restart",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.024
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_plain_restart_still_uses_birth",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.162
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_carries_dynamic_mounts",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.287
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_refused_without_kill",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.227
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_takes_new_definition",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.134
+    }
+  ],
+  "pre_harness_cleanup_children": {
+    "2937147": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133685"
+    },
+    "2937149": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133687"
+    },
+    "2937154": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133700"
+    },
+    "2937157": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133702"
+    },
+    "2937164": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133719"
+    },
+    "2937167": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133751"
+    },
+    "2937190": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133844"
+    },
+    "2937196": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133854"
+    },
+    "2937242": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133864"
+    },
+    "2937262": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133928"
+    },
+    "2937266": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133932"
+    },
+    "2937270": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133937"
+    },
+    "2937274": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133942"
+    },
+    "2937278": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133946"
+    },
+    "2937282": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133951"
+    },
+    "2937283": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133951"
+    },
+    "2937284": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4133951"
+    },
+    "2937290": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134008"
+    },
+    "2937300": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134049"
+    },
+    "2937362": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134092"
+    },
+    "2937387": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134234"
+    },
+    "2937388": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134235"
+    },
+    "2937394": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134249"
+    },
+    "2937395": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134250"
+    },
+    "2937406": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134255"
+    },
+    "2937456": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134270"
+    },
+    "2937466": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134295"
+    },
+    "2937468": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134297"
+    },
+    "2937472": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134305"
+    },
+    "2937474": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134307"
+    },
+    "2937475": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134308"
+    },
+    "2937479": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134316"
+    },
+    "2937480": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134317"
+    },
+    "2937484": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134325"
+    },
+    "2937485": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134326"
+    },
+    "2937489": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134334"
+    },
+    "2937495": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134347"
+    },
+    "2937499": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134354"
+    },
+    "2937501": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134355"
+    },
+    "2937503": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134358"
+    },
+    "2937509": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134372"
+    },
+    "2937512": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134374"
+    },
+    "2937514": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134390"
+    },
+    "2937518": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134397"
+    },
+    "2937585": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134468"
+    },
+    "2937615": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134591"
+    },
+    "2937625": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134621"
+    },
+    "2937630": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134632"
+    },
+    "2937632": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134635"
+    },
+    "2937639": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134648"
+    },
+    "2937642": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134652"
+    },
+    "2937696": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134666"
+    },
+    "2937700": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134669"
+    },
+    "2937708": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134684"
+    },
+    "2937713": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134695"
+    },
+    "2937715": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134697"
+    },
+    "2937716": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134699"
+    },
+    "2937721": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134708"
+    },
+    "2937723": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134710"
+    },
+    "2937728": {
+      "state": "Z",
+      "ppid": 2937140,
+      "start": "4134720"
+    },
+    "2937733": {
+      "state": "R",
+      "ppid": 2937140,
+      "start": "4134731"
+    }
+  },
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-suite-wp72hzq8",
+    "root_exists": false
+  }
+}

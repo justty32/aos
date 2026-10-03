@@ -1,0 +1,41 @@
+{
+  "case": "G05-mode",
+  "action": {
+    "round": 2,
+    "started": []
+  },
+  "receipt": {
+    "op": "restart",
+    "reload": true,
+    "result": {
+      "ok": false,
+      "msg": "tasks.json 的 x 不合格：mode 要是 each 或 keep，拿到 'nonsense'；沒執行（沒 kill）",
+      "at": "2026-10-03T19:59:32.434"
+    }
+  },
+  "old_alive": true,
+  "round": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T19:59:32.434",
+    "tock_at": null,
+    "started": [],
+    "ctl": [
+      {
+        "tid": "x-r1",
+        "op": "restart",
+        "ok": false
+      }
+    ],
+    "mounts": [],
+    "tasks_error": [
+      "x：mode 要是 each 或 keep，拿到 'nonsense'"
+    ]
+  },
+  "seconds": 0.167,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G05-mode-6uvdja95",
+    "root_exists": false
+  }
+}

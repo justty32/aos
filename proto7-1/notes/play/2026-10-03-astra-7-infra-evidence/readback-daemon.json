@@ -1,0 +1,106 @@
+{
+  "case": "readback-daemon",
+  "injected": {
+    "round": 1,
+    "summary": {
+      "round": 1,
+      "tick_at": "2026-10-03T20:01:30.678",
+      "tock_at": "2026-10-03T20:01:30.722",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    }
+  },
+  "summaries": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T20:01:30.678",
+      "tock_at": "2026-10-03T20:01:30.722",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 2,
+      "tick_at": "2026-10-03T20:01:30.777",
+      "tock_at": "2026-10-03T20:01:30.801",
+      "started": [],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 3,
+      "tick_at": "2026-10-03T20:01:30.879",
+      "tock_at": "2026-10-03T20:01:30.903",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 4,
+      "tick_at": "2026-10-03T20:01:30.978",
+      "tock_at": "2026-10-03T20:01:31.003",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    }
+  ],
+  "ended": {
+    "round": 2
+  },
+  "tock_errors": [
+    {
+      "at": "2026-10-03T20:01:30.733",
+      "ev": "tock",
+      "node": "n",
+      "round": 1,
+      "rc": 1,
+      "ended": null,
+      "early": true,
+      "err": "urn fn(fnode, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra7/proto7-1/lib/aos7_tock.py\", line 33, in act\n    return _tock(fnode, early)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra7/proto7-1/lib/aos7_tock.py\", line 144, in _tock\n    raise OSError(\"rounds.jsonl 讀不回第 %d 回合的總結，沒寫 ended.json、回合沒關\" % rnd)\nOSError: rounds.jsonl 讀不回第 1 回合的總結，沒寫 ended.json、回合沒關"
+    }
+  ],
+  "seconds": 0.427,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-readback-daemon-koqmaqim",
+    "root_exists": false
+  }
+}

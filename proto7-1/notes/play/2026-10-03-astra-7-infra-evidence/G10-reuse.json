@@ -1,0 +1,14 @@
+{
+  "case": "G10-reuse",
+  "pid": 2938477,
+  "real_starttime": 4136730,
+  "reaped": null,
+  "alive": true,
+  "method": "mismatched starttime simulates reused PID; no host PID manipulated",
+  "seconds": 0.015,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G10-reuse-p4y5bshw",
+    "root_exists": false
+  }
+}

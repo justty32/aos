@@ -1,0 +1,61 @@
+{
+  "case": "readback-direct",
+  "failed_attempt": {
+    "rc": 1,
+    "out": null,
+    "err": " recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra7/proto7-1/bin/aos7-tock\", line 8, in <module>\n    sys.exit(aos7_tock.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra7/proto7-1/lib/aos7_tock.py\", line 194, in main\n    print(json.dumps(tock(argv[0], argv[1], early=None if e is None else e == \"1\"), ensure_ascii=False))\n                     ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra7/proto7-1/lib/aos7_tock.py\", line 34, in tock\n    return held_node(act, root, node_id, {\"round\": None, \"gone\": True})\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra7/proto7-1/lib/aos7_tick.py\", line 142, in held_node\n    return fn(fnode, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra7/proto7-1/lib/aos7_tock.py\", line 33, in act\n    return _tock(fnode, early)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/astra7/proto7-1/lib/aos7_tock.py\", line 144, in _tock\n    raise OSError(\"rounds.jsonl 讀不回第 %d 回合的總結，沒寫 ended.json、回合沒關\" % rnd)\nOSError: rounds.jsonl 讀不回第 1 回合的總結，沒寫 ended.json、回合沒關\n"
+  },
+  "open_after_failure": true,
+  "ended_after_failure": null,
+  "retry": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T20:01:30.538",
+      "tock_at": "2026-10-03T20:01:30.582",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null,
+      "replayed": true
+    },
+    "err": ""
+  },
+  "summaries": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T20:01:30.538",
+      "tock_at": "2026-10-03T20:01:30.582",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    }
+  ],
+  "seconds": 0.117,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-readback-direct-sqal1xi0",
+    "root_exists": false
+  }
+}

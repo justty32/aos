@@ -1,0 +1,39 @@
+{
+  "case": "G09-syntax",
+  "corrupt_receipt": {
+    "ok": false,
+    "msg": "這個 daemon 屬於 node ?（任務 ?），? 不允許外部 stop；要停請 ? 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 ? kill 這個任務",
+    "at": "2026-10-03T19:59:17.115",
+    "queued_at": "2026-10-03T19:59:17.095"
+  },
+  "missing_receipt": {
+    "ok": true,
+    "msg": "stopping with kill",
+    "at": "2026-10-03T19:59:17.135",
+    "queued_at": "2026-10-03T19:59:17.115"
+  },
+  "stopped_marker_exists": false,
+  "later_gen": {
+    "gen": 2,
+    "pid": 2938397,
+    "at": "2026-10-03T19:59:17.222"
+  },
+  "later_status": {
+    "pid": 2938397,
+    "root": "/tmp/astra7-G09-syntax-7tuy2btn/n/sub",
+    "at": "2026-10-03T19:59:17.544",
+    "poll_s": 0.02,
+    "gen": 2,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {}
+  },
+  "seconds": 0.619,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G09-syntax-7tuy2btn",
+    "root_exists": false
+  }
+}

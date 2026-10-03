@@ -1,0 +1,91 @@
+{
+  "case": "F05-timeout",
+  "summaries": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T19:59:19.280",
+      "tock_at": "2026-10-03T19:59:19.325",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 2,
+      "tick_at": "2026-10-03T19:59:19.658",
+      "tock_at": "2026-10-03T19:59:19.682",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 3,
+      "tick_at": "2026-10-03T19:59:19.757",
+      "tock_at": "2026-10-03T19:59:19.782",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    },
+    {
+      "round": 4,
+      "tick_at": "2026-10-03T19:59:19.857",
+      "tock_at": "2026-10-03T19:59:19.881",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    }
+  ],
+  "round": {
+    "round": 4,
+    "open": false,
+    "tick_at": "2026-10-03T19:59:19.857",
+    "tock_at": "2026-10-03T19:59:19.881",
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "replay_logs": [
+    {
+      "at": "2026-10-03T19:59:19.636",
+      "ev": "tock",
+      "node": ".",
+      "round": 1,
+      "rc": 0,
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "incomplete": "tock",
+      "replay": true,
+      "replayed": true
+    }
+  ],
+  "seconds": 0.671,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-F05-timeout-npyfur5d",
+    "root_exists": false
+  }
+}

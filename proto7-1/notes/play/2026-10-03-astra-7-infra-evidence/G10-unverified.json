@@ -1,0 +1,76 @@
+{
+  "case": "G10-unverified",
+  "holder_alive_before_repair": true,
+  "round_before_repair": null,
+  "timeouts": [
+    {
+      "at": "2026-10-03T19:59:17.879",
+      "ev": "tick",
+      "node": "n",
+      "round": 0,
+      "started": [],
+      "rc": -9,
+      "err": ": aos7-tick killed (timeout after 0.2s)",
+      "incomplete": true
+    },
+    {
+      "at": "2026-10-03T19:59:18.081",
+      "ev": "tock",
+      "node": "n",
+      "round": 0,
+      "rc": -9,
+      "ended": null,
+      "early": false,
+      "err": ": aos7-tock killed (timeout after 0.2s)",
+      "incomplete": true
+    },
+    {
+      "at": "2026-10-03T19:59:18.284",
+      "ev": "tick",
+      "node": "n",
+      "round": 0,
+      "started": [],
+      "rc": -9,
+      "err": ": aos7-tick killed (timeout after 0.2s)",
+      "incomplete": true
+    },
+    {
+      "at": "2026-10-03T19:59:18.485",
+      "ev": "tock",
+      "node": "n",
+      "round": 0,
+      "rc": -9,
+      "ended": null,
+      "early": false,
+      "err": ": aos7-tock killed (timeout after 0.2s)",
+      "incomplete": true
+    },
+    {
+      "at": "2026-10-03T19:59:18.687",
+      "ev": "tick",
+      "node": "n",
+      "round": 0,
+      "started": [],
+      "rc": -9,
+      "err": ": aos7-tick killed (timeout after 0.2s)",
+      "incomplete": true
+    }
+  ],
+  "after_repair": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T19:59:19.014",
+    "tock_at": null,
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "holder_alive_after_repair": false,
+  "note": "starttime null simulates unavailable identity at owner write; separate stale-unreadable.json tests live /proc lookup returning None",
+  "seconds": 1.463,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G10-unverified-t_uma0u1",
+    "root_exists": false
+  }
+}

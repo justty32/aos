@@ -1,0 +1,77 @@
+{
+  "case": "runner-fd",
+  "cases": [
+    {
+      "kind": "legacy",
+      "rc": 0,
+      "stderr": "",
+      "a_state": "ended",
+      "a_exit": {
+        "code": 0,
+        "at": "2026-10-03T20:01:30.139",
+        "round": null
+      },
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "valid",
+      "rc": 0,
+      "stderr": "",
+      "a_state": "ended",
+      "a_exit": {
+        "code": 0,
+        "at": "2026-10-03T20:01:30.167",
+        "round": null
+      },
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "invalid",
+      "rc": 1,
+      "stderr": "",
+      "a_state": "born",
+      "a_exit": null,
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "nonnumeric",
+      "rc": 1,
+      "stderr": "",
+      "a_state": "born",
+      "a_exit": null,
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "file",
+      "rc": 1,
+      "stderr": "",
+      "a_state": "born",
+      "a_exit": null,
+      "b_exit": null,
+      "b_output": null
+    },
+    {
+      "kind": "elsewhere",
+      "rc": 0,
+      "stderr": "",
+      "a_state": "born",
+      "a_exit": null,
+      "b_exit": {
+        "code": 0,
+        "at": "2026-10-03T20:01:30.243",
+        "round": null
+      },
+      "b_output": "b\n"
+    }
+  ],
+  "seconds": 0.152,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-runner-fd-rx9xf76s",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "case": "G05-from_round",
+  "action": {
+    "round": 2,
+    "started": []
+  },
+  "receipt": {
+    "op": "restart",
+    "reload": true,
+    "result": {
+      "ok": false,
+      "msg": "tasks.json 的 x 不合格：from_round 要是整數，拿到 'bad'；沒執行（沒 kill）",
+      "at": "2026-10-03T19:59:32.576"
+    }
+  },
+  "old_alive": true,
+  "round": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T19:59:32.576",
+    "tock_at": null,
+    "started": [],
+    "ctl": [
+      {
+        "tid": "x-r1",
+        "op": "restart",
+        "ok": false
+      }
+    ],
+    "mounts": [],
+    "tasks_error": [
+      "x：from_round 要是整數，拿到 'bad'"
+    ]
+  },
+  "seconds": 0.133,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G05-from_round-y1v085lj",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "case": "root-return-observed",
+  "rc": 0,
+  "task_alive": false,
+  "status": {
+    "pid": 2951286,
+    "root": "/tmp/astra7-root-return-observed-isre6v_9/real",
+    "at": "2026-10-03T20:06:17.570",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": true,
+    "stopped": true,
+    "kill_on_stop": true,
+    "nodes": {
+      "n": {
+        "round": 1,
+        "phase": "stopped",
+        "paused": false,
+        "interval_ms": 100,
+        "pause_pending": false,
+        "live": []
+      }
+    },
+    "root_gone": true
+  },
+  "events": [
+    {
+      "at": "2026-10-03T20:06:17.485",
+      "ev": "root-gone",
+      "root": "/tmp/astra7-root-return-observed-isre6v_9/real"
+    },
+    {
+      "at": "2026-10-03T20:06:17.570",
+      "ev": "stop"
+    }
+  ],
+  "seconds": 0.234,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-root-return-observed-isre6v_9",
+    "root_exists": false
+  }
+}

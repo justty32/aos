@@ -1,0 +1,14 @@
+{
+  "controller_pid": 2935053,
+  "daemon_pid": 2935055,
+  "last_sample_seconds": 480.06,
+  "adopted_zombies": 1362,
+  "sample_pids": [
+    2935098,
+    2935099,
+    2935101,
+    2935102,
+    2935104
+  ],
+  "explanation": "Harness enables PR_SET_CHILD_SUBREAPER; exited orphan runners are adopted here and waitpid-reaped by Space cleanup, not owned by daemon."
+}

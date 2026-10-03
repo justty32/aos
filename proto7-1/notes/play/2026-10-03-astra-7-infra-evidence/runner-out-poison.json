@@ -1,0 +1,33 @@
+{
+  "case": "runner-out-poison",
+  "first": {
+    "round": 1,
+    "started": [
+      "x-r1"
+    ],
+    "ctl": []
+  },
+  "runner_rc": 1,
+  "next_tick": {
+    "round": 2,
+    "started": [],
+    "ctl": []
+  },
+  "state": "born",
+  "exit": null,
+  "round": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T20:06:17.352",
+    "tock_at": null,
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "seconds": 0.075,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-runner-out-poison-dkz52rsz",
+    "root_exists": false
+  }
+}

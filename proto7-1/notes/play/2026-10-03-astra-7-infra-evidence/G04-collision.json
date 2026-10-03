@@ -1,0 +1,44 @@
+{
+  "case": "G04-collision",
+  "before": {
+    "node": "n",
+    "tid": "first-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T19:59:14.835"
+  },
+  "after": {
+    "node": "n",
+    "tid": "first-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T19:59:14.835"
+  },
+  "same_daemon_pid": true,
+  "round": {
+    "round": 6,
+    "open": false,
+    "tick_at": "2026-10-03T19:59:15.396",
+    "tock_at": "2026-10-03T19:59:15.419",
+    "started": [],
+    "ctl": [],
+    "mounts": [],
+    "tasks_error": [
+      "second：子根 n/inner/sub 已經有 daemon 在跑（owner：node n 任務 first-r1），沒起、沒改 owner.json"
+    ]
+  },
+  "receipt": {
+    "op": "stop",
+    "kill": true,
+    "result": {
+      "ok": false,
+      "msg": "這個 daemon 屬於 node n（任務 first-r1），n 不允許外部 stop；要停請 n 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 n kill 這個任務",
+      "at": "2026-10-03T19:59:15.476",
+      "queued_at": "2026-10-03T19:59:15.473"
+    }
+  },
+  "seconds": 0.819,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G04-collision-a6tymbz4",
+    "root_exists": false
+  }
+}

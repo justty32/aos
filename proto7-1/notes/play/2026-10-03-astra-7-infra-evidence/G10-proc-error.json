@@ -1,0 +1,14 @@
+{
+  "case": "G10-proc-error",
+  "pid": 2938478,
+  "real_starttime": 4136732,
+  "reaped": null,
+  "alive": true,
+  "method": "simulate proc stat unavailable",
+  "seconds": 0.015,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G10-proc-error-yryo0v4a",
+    "root_exists": false
+  }
+}

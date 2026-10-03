@@ -1,0 +1,41 @@
+{
+  "case": "G09-owner-edit",
+  "parent_definition": {
+    "tasks": [
+      {
+        "name": "child",
+        "mode": "keep",
+        "argv": [
+          "aos7-daemon",
+          "$AOS7_SUBROOT"
+        ],
+        "subroot": "n/sub",
+        "allow_stop": false
+      }
+    ]
+  },
+  "effective_owner": {
+    "node": "n",
+    "tid": "child-r1",
+    "allow_stop": true,
+    "at": "2026-10-03T19:59:16.284"
+  },
+  "receipt": {
+    "ok": true,
+    "msg": "stopping with kill；已寫 .aosd/stopped.json，n 不會再起它（刪掉才會）",
+    "at": "2026-10-03T19:59:16.424",
+    "queued_at": "2026-10-03T19:59:16.407"
+  },
+  "stopped": {
+    "by": null,
+    "why": null,
+    "at": "2026-10-03T19:59:16.424",
+    "kill": true
+  },
+  "seconds": 0.283,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G09-owner-edit-zb2gu0a6",
+    "root_exists": false
+  }
+}

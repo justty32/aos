@@ -1,0 +1,208 @@
+{
+  "sample_seconds": 600.05,
+  "scope": "live read near end; no atomic whole-tree snapshot",
+  "nodes": [
+    {
+      "node": "n00",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n01",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n02",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n03",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n04",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n05",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n06",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n07",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n08",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n09",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n10",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n11",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n12",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n13",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n14",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n15",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n16",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n17",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n18",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    },
+    {
+      "node": "n19",
+      "closed_count": 0,
+      "first": 0,
+      "last": 0,
+      "duplicate_rounds": 0,
+      "missing_rounds": [],
+      "duplicate_ended": {},
+      "summary_errors": []
+    }
+  ],
+  "action_errors": [],
+  "io_error_count": 0
+}

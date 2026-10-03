@@ -1,0 +1,21 @@
+{
+  "case": "G07-atexit",
+  "helper_rc": 0,
+  "registered": {
+    "group": true,
+    "grace": 0.1
+  },
+  "atexit_elapsed_s": 0.163,
+  "pids": {
+    "parent": 2938290,
+    "child": 2938291
+  },
+  "parent_alive": false,
+  "child_alive_before_harness_cleanup": false,
+  "seconds": 0.197,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra7-G07-atexit-xniz1lc0",
+    "root_exists": false
+  }
+}
