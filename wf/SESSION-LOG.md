@@ -12,6 +12,7 @@
 
 ## 最新進度
 
+- 10-03（proto6，分層討論進行中）：使用者想法的正本在 [aos 分層筆記](../proto6/notes/2026-10-03-aos-layering.md)（最重要原則：操作與協議用 JSON／文字、LLM 可讀）。在跑或待收：Fable 評估 thread 與程序（[2026-10-03-thread-vs-process](../proto6/notes/proposals/2026-10-03-thread-vs-process/README.md)，收到後要做成 artifact）；Fable 時空四層推演（寫進 `proto6/notes/proposals/2026-10-03-spacetime/`，已補送筆記更新與 LLM 可讀原則）；astra 時空推演（[astra-spacetime](../proto6/notes/reviews/2026-10-03-astra-spacetime.md)，codex 接續改寫中，舊版備份在 scratchpad）。已完成待整理：[astra 體系意見](../proto6/notes/reviews/2026-10-03-astra-layering.md)（看的是較早版本）。收齊後對照最新筆記整理差異、報告與 commit；使用者已說 kill／restart、訊息交流、權限、agent 細節、管轄範圍與十條技術問題之後再談。
 - 10-03（proto6，待使用者挑）：astra 六條線對三份提案另想完了，收斂點、方向題與建議實驗順序見 [astra-alt 總覽](../proto6/notes/reviews/2026-10-03-astra-alt/README.md)；等使用者選先做哪個實驗。
 - 10-02（proto6，擱置待使用者想）：停格檔只記未來方向；node（使用者預感 node 概念會消失，tick 與 daemon 都不做 node 模組）；`peers` 先不做；系統級任務怎麼改用 hooks（[清單](../proto6/notes/2026-10-01-tick-system-tasks.md)）；C++11 等 Python POC 玩過再開。各段狀態見 [plan](../proto6/plan/README.md#各段狀態)。
 - 10-02（proto6，超標檔）：排除封存後 proto6 還有 15 份、wf 44 份 Markdown 超過 8 KiB；先刪過時內容再考慮拆，見 [astra 結構審查「建議」](../proto6/notes/reviews/2026-10-02-astra/10-structure.md#建議)。
