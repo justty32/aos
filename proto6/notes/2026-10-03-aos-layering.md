@@ -29,6 +29,8 @@ flowchart BT
 - **空間邊界＝daemon 能訪問的資料夾。** 因為 aos 運行在 daemon 上，daemon 提供、我們能訪問的資料夾就是空間的邊界。
 - **「脫離 Linux」是口號。** 實際上是提供一個脫離 Linux 的接口，硬要接回 Linux 也可以。所謂脫離，就是像現在這樣：所有動作都基於 inst，inst 由 tick 和 daemon 安排。
 - **kernel 的資源可以無限定義。**
+- **tick-tock 的邊緣狀況默認都正常。** 出事了交給 daemon 處理，那是 daemon 的問題，不是 aos 時空的問題。
+- **FUSE 和 tick 能碰到的資料夾要整合在一起，以 tick 能碰到的資料夾為正統。**
 
 ## 跟同日討論的關係
 
