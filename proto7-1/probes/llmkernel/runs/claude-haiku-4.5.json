@@ -1,0 +1,171 @@
+{
+ "model": "claude-haiku-4.5",
+ "verdict": {
+  "輪流（≥2 條同時沒 pause 的時間 <0.3 秒）": true,
+  "a、b 各輪到 ≥2 次": true,
+  "超預算的沒再輪到": true,
+  "結束時 a、b、c 都 pause": true
+ },
+ "ok": true,
+ "calls": 22,
+ "tokens": 186230,
+ "stop": "done",
+ "final": "完美！所有三個成員 node 都已經 pause 住了。\n\n## 執行總結\n\n我作為 node k 上的 kernel，成功完成了輪流排程管理：\n\n**第一輪（各跑 3 回合）：**\n- **a**：round 0 → 3，用量 15 tokens（✓ 在限制內）\n- **b**：round 0 → 3，用量 15 tokens（✓ 在限制內）\n- **c**：round 0 → 3，用量 90 tokens（✗ 超過 50 限制，永久 pause）\n\n**第二輪（a、b 各跑 3 回合，c 被跳過）：**\n- **a**：round 3 → 6，累計用量 30 tokens（✓ 在限制內）\n- **b**：round 3 → 6，累計用量 30 tokens（✓ 在限制內）\n\n**最終狀態：**\n- a、b、c 全部 pause 住\n- a 和 b 都已輪到 2 次以上\n- c 因預算超限被永久 pause，不再參與輪流",
+ "seq": [
+  [
+   "a",
+   2
+  ],
+  [
+   "b",
+   3
+  ],
+  [
+   "c",
+   3
+  ],
+  [
+   "a",
+   3
+  ],
+  [
+   "b",
+   3
+  ]
+ ],
+ "turns": {
+  "a": 2,
+  "b": 2,
+  "c": 1
+ },
+ "overlap_s": 0.0,
+ "active_s": 29.3,
+ "usage": {
+  "a": 30,
+  "b": 30,
+  "c": 90
+ },
+ "over_at_rel": {
+  "a": null,
+  "b": null,
+  "c": 10.7
+ },
+ "turns_after_over": {
+  "a": 0,
+  "b": 0,
+  "c": 0
+ },
+ "paused_end": {
+  "a": true,
+  "b": true,
+  "c": true
+ },
+ "bad_ctl": [],
+ "left_in_ctl": [],
+ "n_reads": 19,
+ "n_writes": 13,
+ "read_err": [
+  {
+   "path": "a/.aos/round.json",
+   "err": "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmkernel-eos1hfbq/root/a/.aos/round.json'"
+  },
+  {
+   "path": "b/.aos/round.json",
+   "err": "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmkernel-eos1hfbq/root/b/.aos/round.json'"
+  },
+  {
+   "path": "c/.aos/round.json",
+   "err": "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmkernel-eos1hfbq/root/c/.aos/round.json'"
+  }
+ ],
+ "writes": [
+  {
+   "path": "a/.aos/timeline.json",
+   "ok": true,
+   "content": "{\"interval_ms\": 300}"
+  },
+  {
+   "path": "b/.aos/timeline.json",
+   "ok": true,
+   "content": "{\"interval_ms\": 300}"
+  },
+  {
+   "path": "c/.aos/timeline.json",
+   "ok": true,
+   "content": "{\"interval_ms\": 300}"
+  },
+  {
+   "path": ".aosd/ctl/001_resume_a.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"a\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/002_pause_a.json",
+   "ok": true,
+   "content": "{\"op\": \"pause\", \"node\": \"a\", \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/003_resume_b.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"b\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/004_pause_b.json",
+   "ok": true,
+   "content": "{\"op\": \"pause\", \"node\": \"b\", \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/005_resume_c.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"c\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/006_pause_c.json",
+   "ok": true,
+   "content": "{\"op\": \"pause\", \"node\": \"c\", \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/007_resume_a_round2.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"a\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/008_pause_a_round2.json",
+   "ok": true,
+   "content": "{\"op\": \"pause\", \"node\": \"a\", \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/009_resume_b_round2.json",
+   "ok": true,
+   "content": "{\"op\": \"resume\", \"node\": \"b\", \"rounds\": 3, \"by\": \"k:kernel\"}"
+  },
+  {
+   "path": ".aosd/ctl/010_pause_b_final.json",
+   "ok": true,
+   "content": "{\"op\": \"pause\", \"node\": \"b\", \"by\": \"k:kernel\"}"
+  }
+ ],
+ "wrong_place": [
+  {
+   "path": "a/.aos/timeline.json",
+   "ok": true,
+   "content": "{\"interval_ms\": 300}"
+  },
+  {
+   "path": "b/.aos/timeline.json",
+   "ok": true,
+   "content": "{\"interval_ms\": 300}"
+  },
+  {
+   "path": "c/.aos/timeline.json",
+   "ok": true,
+   "content": "{\"interval_ms\": 300}"
+  }
+ ],
+ "bad_json": [],
+ "kernel_exit": {
+  "code": 0,
+  "at": "2026-10-03T16:46:07.806",
+  "round": 37
+ }
+}

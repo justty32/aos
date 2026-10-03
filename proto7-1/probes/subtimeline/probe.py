@@ -164,7 +164,9 @@ def main():
         # 使用者 10-03 Q4 選 (a)：node 消失，daemon 就 kill 它上面的活任務（pid.json 跟著被刪也收得到）
         r.check("修補後：rm -rf 後子上的 sleeper 被 daemon 收掉（不留孤兒）",
                 sp.wait_for(lambda: not pid_alive(pidj["pid"]), timeout=5, msg="sleeper 沒被收"))
-        r.check("修補後：log 有 node-gone-kill", bool(run.ev("node-gone-kill", "p/sub/a")))
+        # reaper 收乾淨之後才寫 log：剛看到 pid 死時可能還沒寫，等一下
+        r.check("修補後：log 有 node-gone-kill", bool(sp.wait_for(lambda: run.ev("node-gone-kill", "p/sub/a"), timeout=3,
+                                                                   msg="沒有 node-gone-kill")))
         time.sleep(0.3)
         ghost = []
         for d, _, files in os.walk(sa):

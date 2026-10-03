@@ -1,0 +1,863 @@
+{
+ "tag": "160804-deepseek-chat-claude-haiku-4.5",
+ "A": {
+  "calls": 30,
+  "tokens": 352804,
+  "turns": 30,
+  "stop": "max_calls"
+ },
+ "B": {
+  "calls": 30,
+  "tokens": 243532,
+  "turns": 30,
+  "stop": "max_calls"
+ },
+ "t_ready": 36.4,
+ "ready": true,
+ "sub_nodes_at_ready": [
+  "w1",
+  "w2"
+ ],
+ "parent_nodes_at_ready": [
+  "lab"
+ ],
+ "B_final": "",
+ "A_final": "",
+ "B_ctl": [
+  [
+   "stop",
+   "w1",
+   null,
+   true,
+   "stopping"
+  ]
+ ],
+ "B_ctl_misplaced": [],
+ "ctl_pending": [
+  "rescan.json",
+  "wake.json"
+ ],
+ "paused_final": null,
+ "sub_starts": 1,
+ "sub_stops": 1,
+ "w2_round_final": 82,
+ "B_report": null,
+ "restarted_after_stop": 0,
+ "sub_daemon_pids_seen": 19,
+ "sub_daemon_alive_end": [],
+ "lab_tasks_json_final": {
+  "tasks": []
+ },
+ "lab_tasks": [
+  "llm-a-r1",
+  "subd-r100",
+  "subd-r101",
+  "subd-r102",
+  "subd-r33",
+  "subd-r34",
+  "subd-r35",
+  "subd-r36",
+  "subd-r37",
+  "subd-r38",
+  "subd-r39",
+  "subd-r40",
+  "subd-r41",
+  "subd-r42",
+  "subd-r43",
+  "subd-r44",
+  "subd-r45",
+  "subd-r46",
+  "subd-r47",
+  "subd-r48",
+  "subd-r49",
+  "subd-r50",
+  "subd-r51",
+  "subd-r52",
+  "subd-r53",
+  "subd-r54",
+  "subd-r55",
+  "subd-r56",
+  "subd-r57",
+  "subd-r58",
+  "subd-r59",
+  "subd-r60",
+  "subd-r61",
+  "subd-r62",
+  "subd-r63",
+  "subd-r64",
+  "subd-r65",
+  "subd-r66",
+  "subd-r67",
+  "subd-r68",
+  "subd-r69",
+  "subd-r70",
+  "subd-r71",
+  "subd-r72",
+  "subd-r73",
+  "subd-r74",
+  "subd-r75",
+  "subd-r76",
+  "subd-r77",
+  "subd-r78",
+  "subd-r79",
+  "subd-r80",
+  "subd-r81",
+  "subd-r82",
+  "subd-r83",
+  "subd-r84",
+  "subd-r85",
+  "subd-r86",
+  "subd-r87",
+  "subd-r88",
+  "subd-r89",
+  "subd-r90",
+  "subd-r91",
+  "subd-r92",
+  "subd-r93",
+  "subd-r94",
+  "subd-r95",
+  "subd-r96",
+  "subd-r97",
+  "subd-r98",
+  "subd-r99"
+ ],
+ "subd_births": {
+  "subd-r102": {
+   "argv": [
+    "aos7-daemon",
+    "sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r101": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r100": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r99": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r98": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r97": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r96": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r95": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r94": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r93": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r92": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r91": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r90": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r89": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r88": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r87": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r86": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r85": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r84": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r83": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r82": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r81": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r80": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r79": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r78": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r77": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r76": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r75": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r74": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r73": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r72": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r71": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r70": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r69": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r68": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r67": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r66": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r65": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r64": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r63": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r62": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r61": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r60": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r59": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r58": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r57": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r56": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r55": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r54": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r53": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r52": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r51": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r50": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r49": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r48": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r47": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r46": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r45": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r44": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r43": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r42": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r41": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r40": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r39": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r38": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r37": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r36": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r35": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r34": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  },
+  "subd-r33": {
+   "argv": [
+    "aos7-daemon",
+    "lab/sub"
+   ],
+   "subroot": "lab/sub",
+   "subroot_error": null
+  }
+ },
+ "subd_exit_codes": {
+  "subd-r102": 0,
+  "subd-r101": 1,
+  "subd-r100": 1,
+  "subd-r99": 1,
+  "subd-r98": 1,
+  "subd-r97": 1,
+  "subd-r96": 1,
+  "subd-r95": 1,
+  "subd-r94": 1,
+  "subd-r93": 1,
+  "subd-r92": 1,
+  "subd-r91": 1,
+  "subd-r90": 1,
+  "subd-r89": 1,
+  "subd-r88": 1,
+  "subd-r87": 1,
+  "subd-r86": 1,
+  "subd-r85": 1,
+  "subd-r84": 1,
+  "subd-r83": 1,
+  "subd-r82": 1,
+  "subd-r81": 1,
+  "subd-r80": 1,
+  "subd-r79": 1,
+  "subd-r78": 1,
+  "subd-r77": 1,
+  "subd-r76": 1,
+  "subd-r75": 1,
+  "subd-r74": 1,
+  "subd-r73": 1,
+  "subd-r72": 1,
+  "subd-r71": 1,
+  "subd-r70": 1,
+  "subd-r69": 1,
+  "subd-r68": 1,
+  "subd-r67": 1,
+  "subd-r66": 1,
+  "subd-r65": 1,
+  "subd-r64": 1,
+  "subd-r63": 1,
+  "subd-r62": 1,
+  "subd-r61": 1,
+  "subd-r60": 1,
+  "subd-r59": 1,
+  "subd-r58": 1,
+  "subd-r57": 1,
+  "subd-r56": 1,
+  "subd-r55": 1,
+  "subd-r54": 1,
+  "subd-r53": 1,
+  "subd-r52": 1,
+  "subd-r51": 1,
+  "subd-r50": 1,
+  "subd-r49": 1,
+  "subd-r48": 1,
+  "subd-r47": 1,
+  "subd-r46": 1,
+  "subd-r45": 1,
+  "subd-r44": 1,
+  "subd-r43": 1,
+  "subd-r42": 1,
+  "subd-r41": 1,
+  "subd-r40": 1,
+  "subd-r39": 1,
+  "subd-r38": 1,
+  "subd-r37": 1,
+  "subd-r36": 1,
+  "subd-r35": 1,
+  "subd-r34": 1,
+  "subd-r33": 1
+ },
+ "lab_advancing": true,
+ "parent_nodes_end": [
+  "lab"
+ ],
+ "parent_live_end": [],
+ "audit_bad": [
+  "lab/sub/.aosd",
+  "lab/sub/.aosd/.gen.json.tmp.2348504",
+  "lab/sub/.aosd/.status.json.tmp.2348504",
+  "lab/sub/.aosd/ctl",
+  "lab/sub/.aosd/ctl-done",
+  "lab/sub/.aosd/ctl-done/.stop-test.json.tmp.2348504",
+  "lab/sub/.aosd/ctl-done/stop-test.json",
+  "lab/sub/.aosd/ctl/.stop-test.json.tmp.2347265",
+  "lab/sub/.aosd/ctl/stop-test.json",
+  "lab/sub/.aosd/daemon.lock",
+  "lab/sub/.aosd/gen.json",
+  "lab/sub/.aosd/log.jsonl",
+  "lab/sub/.aosd/status.json",
+  "lab/sub/w1/.aos",
+  "lab/sub/w1/.aos/.round.json.tmp.2348516",
+  "lab/sub/w1/.aos/.round.json.tmp.2348569",
+  "lab/sub/w1/.aos/.round.json.tmp.2348632",
+  "lab/sub/w1/.aos/.round.json.tmp.2348679",
+  "lab/sub/w1/.aos/.round.json.tmp.2348732",
+  "lab/sub/w1/.aos/.round.json.tmp.2348778"
+ ],
+ "audit_bad_by_task": {
+  "lab/.aos/tasks/subd-r102": [
+   "lab/sub",
+   "lab/sub/w1",
+   "lab/sub/w2"
+  ],
+  "lab/.aos/tasks/llm-a-r1": [
+   "lab/sub"
+  ]
+ },
+ "A_tool_errors": [
+  [
+   "read_file",
+   "lab/sub/.aosd/status.json",
+   "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmteam-pqcno1zn/root/lab/sub/.aosd/status.json'"
+  ],
+  [
+   "read_file",
+   "lab/sub/.aosd/log.jsonl",
+   "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmteam-pqcno1zn/root/lab/sub/.aosd/log.jsonl'"
+  ],
+  [
+   "read_file",
+   ".aosd/ctl-done",
+   "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmteam-pqcno1zn/root/.aosd/ctl-done'"
+  ]
+ ],
+ "B_tool_errors": [
+  [
+   "read_file",
+   "lab/.aosd/status.json",
+   "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmteam-pqcno1zn/root/lab/.aosd/status.json'"
+  ],
+  [
+   "read_file",
+   "lab/sub/.aos/timeline.json",
+   "錯誤：[Errno 2] No such file or directory: '/tmp/aos7probe-llmteam-pqcno1zn/root/lab/sub/.aos/timeline.json'"
+  ],
+  [
+   "write_file",
+   "lab/sub/.aos/timeline.json",
+   "錯誤：你只准寫 lab/sub/.aosd/ 與 ops/ 底下：lab/sub/.aos/timeline.json"
+  ],
+  [
+   "write_file",
+   "lab/.aos/tasks.json",
+   "錯誤：你只准寫 lab/sub/.aosd/ 與 ops/ 底下：lab/.aos/tasks.json"
+  ],
+  [
+   "write_file",
+   "lab/.aos/spawn/restart-subd.json",
+   "錯誤：你只准寫 lab/sub/.aosd/ 與 ops/ 底下：lab/.aos/spawn/restart-subd.json"
+  ]
+ ],
+ "A_writes": [
+  "lab/sub/w1/.aos/tasks.json",
+  "lab/sub/w2/.aos/tasks.json",
+  "lab/sub/w1/.aos/timeline.json",
+  "lab/sub/w2/.aos/timeline.json",
+  "lab/.aos/tasks.json",
+  "lab/.aos/tasks.json",
+  "lab/READY.json",
+  "lab/.aos/tasks.json",
+  "lab/sub/.aosd/ctl/stop-test.json"
+ ],
+ "B_writes": [
+  "lab/sub/.aos/timeline.json",
+  "lab/.aos/tasks.json",
+  "lab/sub/.aosd/ctl/rescan.json",
+  "lab/.aos/spawn/restart-subd.json",
+  "lab/sub/.aosd/ctl/wake.json"
+ ],
+ "parent_grabbed": [
+  "lab/sub/w1",
+  "lab/sub/w2"
+ ],
+ "parent_rc": 0,
+ "leftover_after_parent_stop": []
+}
