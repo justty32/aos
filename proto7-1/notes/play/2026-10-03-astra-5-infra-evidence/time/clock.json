@@ -1,0 +1,549 @@
+{
+ "injected_wall_offsets": [
+  {
+   "offset_s": 3600,
+   "mono": 27100.065848169
+  },
+  {
+   "offset_s": -3600,
+   "mono": 27100.375988162
+  },
+  {
+   "offset_s": 0,
+   "mono": 27100.686182766
+  }
+ ],
+ "rounds": [
+  {
+   "round": 1,
+   "tick_at": "2026-10-03T16:01:31.732",
+   "tock_at": "2026-10-03T16:01:31.752",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 2,
+   "tick_at": "2026-10-03T16:01:31.831",
+   "tock_at": "2026-10-03T16:01:31.850",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 3,
+   "tick_at": "2026-10-03T17:01:31.931",
+   "tock_at": "2026-10-03T17:01:31.951",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 4,
+   "tick_at": "2026-10-03T17:01:32.031",
+   "tock_at": "2026-10-03T17:01:32.050",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 5,
+   "tick_at": "2026-10-03T17:01:32.129",
+   "tock_at": "2026-10-03T17:01:32.145",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 6,
+   "tick_at": "2026-10-03T15:01:32.231",
+   "tock_at": "2026-10-03T15:01:32.249",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 7,
+   "tick_at": "2026-10-03T15:01:32.330",
+   "tock_at": "2026-10-03T15:01:32.347",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 8,
+   "tick_at": "2026-10-03T15:01:32.432",
+   "tock_at": "2026-10-03T15:01:32.451",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 9,
+   "tick_at": "2026-10-03T16:01:32.531",
+   "tock_at": "2026-10-03T16:01:32.549",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 10,
+   "tick_at": "2026-10-03T16:01:32.633",
+   "tock_at": "2026-10-03T16:01:32.651",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  },
+  {
+   "round": 11,
+   "tick_at": "2026-10-03T16:01:32.731",
+   "tock_at": "2026-10-03T16:01:32.748",
+   "started": [],
+   "alive": [],
+   "ended": [],
+   "ctl": [],
+   "mounts": [],
+   "early": true
+  }
+ ],
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27099.925984955,
+   "end": 27099.946769025,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27099.946892426,
+   "end": 27099.966506188,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.025945753,
+   "end": 27100.045314457,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.045531062,
+   "end": 27100.06417473,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.126004164,
+   "end": 27100.145732249,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.14583928,
+   "end": 27100.164940774,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.22605516,
+   "end": 27100.245664945,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.245772937,
+   "end": 27100.264720964,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.326108191,
+   "end": 27100.342845134,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.343022736,
+   "end": 27100.35882419,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.426232354,
+   "end": 27100.445042454,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.445143643,
+   "end": 27100.462710878,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.526239418,
+   "end": 27100.544545886,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.54463869,
+   "end": 27100.560724646,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.626305664,
+   "end": 27100.646226961,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.64633889,
+   "end": 27100.665121668,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.726362591,
+   "end": 27100.745357266,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.745457854,
+   "end": 27100.762801622,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.826433906,
+   "end": 27100.84723624,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.847342459,
+   "end": 27100.865234121,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27100.926493819,
+   "end": 27100.945167994,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27100.945268131,
+   "end": 27100.96212543,
+   "round": 11,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T16:01:31.714",
+   "ev": "start",
+   "pid": 2340029,
+   "gen": 1
+  },
+  {
+   "at": "2026-10-03T16:01:31.714",
+   "ev": "node+",
+   "node": "n",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:31.735",
+   "ev": "tick",
+   "node": "n",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:31.755",
+   "ev": "tock",
+   "node": "n",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:31.834",
+   "ev": "tick",
+   "node": "n",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:31.853",
+   "ev": "tock",
+   "node": "n",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T17:01:31.934",
+   "ev": "tick",
+   "node": "n",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T17:01:31.954",
+   "ev": "tock",
+   "node": "n",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T17:01:32.034",
+   "ev": "tick",
+   "node": "n",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T17:01:32.053",
+   "ev": "tock",
+   "node": "n",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T17:01:32.131",
+   "ev": "tick",
+   "node": "n",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T17:01:32.147",
+   "ev": "tock",
+   "node": "n",
+   "round": 5,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T15:01:32.234",
+   "ev": "tick",
+   "node": "n",
+   "round": 6,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T15:01:32.251",
+   "ev": "tock",
+   "node": "n",
+   "round": 6,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T15:01:32.333",
+   "ev": "tick",
+   "node": "n",
+   "round": 7,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T15:01:32.349",
+   "ev": "tock",
+   "node": "n",
+   "round": 7,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T15:01:32.435",
+   "ev": "tick",
+   "node": "n",
+   "round": 8,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T15:01:32.454",
+   "ev": "tock",
+   "node": "n",
+   "round": 8,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:32.534",
+   "ev": "tick",
+   "node": "n",
+   "round": 9,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.551",
+   "ev": "tock",
+   "node": "n",
+   "round": 9,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:32.636",
+   "ev": "tick",
+   "node": "n",
+   "round": 10,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.654",
+   "ev": "tock",
+   "node": "n",
+   "round": 10,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:32.734",
+   "ev": "tick",
+   "node": "n",
+   "round": 11,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:32.751",
+   "ev": "tock",
+   "node": "n",
+   "round": 11,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:32.790",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T16:01:32.790",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 2340029,
+  "root": "/tmp/astra5-time-clock-45rf17hs",
+  "at": "2026-10-03T16:01:32.790",
+  "poll_s": 0.02,
+  "gen": 1,
+  "io_errors": 0,
+  "stopping": true,
+  "stopped": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "n": {
+    "round": 11,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 100,
+    "pause_pending": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

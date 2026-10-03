@@ -1,0 +1,94 @@
+{
+  "case": "usage",
+  "root": "/tmp/astra5-tasks-archive-v5_fgli4",
+  "method": "pause read just before opening selected old pathname; run actual aos7-tock process; resume read",
+  "before": {
+    "exists": true,
+    "mounted": true,
+    "round": 3,
+    "tasks": [
+      {
+        "tid": "worker-r1",
+        "name": "worker",
+        "birth_round": 1,
+        "alive": false,
+        "progress": null,
+        "has_ctl": false
+      },
+      {
+        "tid": "worker-r3",
+        "name": "worker",
+        "birth_round": 3,
+        "alive": true,
+        "progress": null,
+        "has_ctl": false
+      }
+    ],
+    "usage_total": 1234
+  },
+  "tock": {
+    "round": 3,
+    "tick_at": null,
+    "tock_at": "2026-10-03T16:03:57.550",
+    "started": [],
+    "alive": [
+      "worker-r3"
+    ],
+    "ended": [],
+    "ctl": [],
+    "mounts": [],
+    "early": null,
+    "archived": [
+      "worker-r1"
+    ]
+  },
+  "during": {
+    "exists": true,
+    "mounted": true,
+    "round": 3,
+    "tasks": [
+      {
+        "tid": "worker-r1",
+        "name": "worker",
+        "birth_round": 1,
+        "alive": true,
+        "progress": null,
+        "has_ctl": false
+      },
+      {
+        "tid": "worker-r3",
+        "name": "worker",
+        "birth_round": 3,
+        "alive": true,
+        "progress": null,
+        "has_ctl": false
+      }
+    ],
+    "usage_total": 0
+  },
+  "after": {
+    "exists": true,
+    "mounted": true,
+    "round": 3,
+    "tasks": [
+      {
+        "tid": "worker-r3",
+        "name": "worker",
+        "birth_round": 3,
+        "alive": true,
+        "progress": null,
+        "has_ctl": false
+      },
+      {
+        "tid": "worker-r1",
+        "name": "worker",
+        "birth_round": 1,
+        "alive": false,
+        "progress": null,
+        "has_ctl": false
+      }
+    ],
+    "usage_total": 1234
+  },
+  "barrier_hit": true
+}

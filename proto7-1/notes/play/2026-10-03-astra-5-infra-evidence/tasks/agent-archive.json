@@ -1,0 +1,58 @@
+{
+  "case": "agent",
+  "root": "/tmp/astra5-tasks-archive-bjdf0wp8",
+  "method": "pause read just before opening selected old pathname; run actual aos7-tock process; resume read",
+  "before": {
+    "state": "act",
+    "round": 2,
+    "steps": 9,
+    "tocks": 0,
+    "plan": null,
+    "pc": 4,
+    "letters": [],
+    "goal": null,
+    "last": "接續前任 worker-r1（它停在 act）",
+    "from": "worker-r1"
+  },
+  "tock": {
+    "round": 3,
+    "tick_at": null,
+    "tock_at": "2026-10-03T16:03:57.510",
+    "started": [],
+    "alive": [
+      "worker-r3"
+    ],
+    "ended": [],
+    "ctl": [],
+    "mounts": [],
+    "early": null,
+    "archived": [
+      "worker-r1"
+    ]
+  },
+  "during": {
+    "state": "idle",
+    "round": 0,
+    "steps": 0,
+    "tocks": 0,
+    "plan": null,
+    "pc": 0,
+    "letters": [],
+    "goal": null,
+    "last": "剛出生",
+    "from": null
+  },
+  "after": {
+    "state": "act",
+    "round": 2,
+    "steps": 9,
+    "tocks": 0,
+    "plan": null,
+    "pc": 4,
+    "letters": [],
+    "goal": null,
+    "last": "接續前任 worker-r1（它停在 act）",
+    "from": "worker-r1"
+  },
+  "barrier_hit": true
+}

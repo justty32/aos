@@ -1,0 +1,44 @@
+{
+  "case": "kernel",
+  "root": "/tmp/astra5-tasks-archive-ltjx9q7w",
+  "method": "pause read just before opening selected old pathname; run actual aos7-tock process; resume read",
+  "before": {
+    "progress": {},
+    "usage": {},
+    "paused": {},
+    "issued": {},
+    "sentinel": "inherited-state",
+    "inherited_from": "worker-r1"
+  },
+  "tock": {
+    "round": 3,
+    "tick_at": null,
+    "tock_at": "2026-10-03T16:03:57.530",
+    "started": [],
+    "alive": [
+      "worker-r3"
+    ],
+    "ended": [],
+    "ctl": [],
+    "mounts": [],
+    "early": null,
+    "archived": [
+      "worker-r1"
+    ]
+  },
+  "during": {
+    "progress": {},
+    "usage": {},
+    "paused": {},
+    "issued": {}
+  },
+  "after": {
+    "progress": {},
+    "usage": {},
+    "paused": {},
+    "issued": {},
+    "sentinel": "inherited-state",
+    "inherited_from": "worker-r1"
+  },
+  "barrier_hit": true
+}

@@ -1,0 +1,958 @@
+{"at": "2026-10-03T16:09:44.361", "ev": "tock", "node": "n041", "round": 9, "rc": 0, "ended": [{"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.366", "ev": "tock", "node": "n042", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.368", "ev": "tock", "node": "n023", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.372", "ev": "tock", "node": "n026", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.373", "ev": "tock", "node": "n021", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.385", "ev": "tick", "node": "n009", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.388", "ev": "tock", "node": "n031", "round": 9, "rc": 0, "ended": [{"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.392", "ev": "tock", "node": "n012", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.392", "ev": "tick", "node": "n045", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.409", "ev": "tock", "node": "n039", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.409", "ev": "tock", "node": "n038", "round": 9, "rc": 0, "ended": [{"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.409", "ev": "tock", "node": "n013", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.417", "ev": "tock", "node": "n037", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.419", "ev": "tick", "node": "n007", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.426", "ev": "tock", "node": "n027", "round": 11, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.427", "ev": "tick", "node": "n024", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.429", "ev": "tick", "node": "n049", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.432", "ev": "tick", "node": "n017", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.438", "ev": "tick", "node": "n000", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.442", "ev": "tick", "node": "n034", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.449", "ev": "tick", "node": "n035", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.453", "ev": "tock", "node": "n025", "round": 9, "rc": 0, "ended": [{"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.465", "ev": "tick", "node": "n015", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.466", "ev": "tock", "node": "n030", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.475", "ev": "tick", "node": "n043", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.475", "ev": "tick", "node": "n036", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.480", "ev": "tick", "node": "n006", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.495", "ev": "tock", "node": "n033", "round": 9, "rc": 0, "ended": [{"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.501", "ev": "tock", "node": "n020", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.501", "ev": "tick", "node": "n046", "round": 9, "started": ["p0-r9", "p1-r9", "p2-r9"], "rc": 0}
+{"at": "2026-10-03T16:09:44.505", "ev": "tock", "node": "n016", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.512", "ev": "tock", "node": "n002", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.526", "ev": "tock", "node": "n019", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.527", "ev": "tock", "node": "n001", "round": 11, "rc": 0, "ended": [{"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.530", "ev": "tock", "node": "n036", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:44.534", "ev": "tock", "node": "n040", "round": 9, "rc": 0, "ended": [{"tid": "p0-r8", "name": "p0", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r8", "name": "p2", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.536", "ev": "tick", "node": "n037", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.538", "ev": "tick", "node": "n044", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.545", "ev": "tock", "node": "n029", "round": 9, "rc": 0, "ended": [{"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.546", "ev": "tock", "node": "n003", "round": 12, "rc": 0, "ended": [{"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.549", "ev": "tick", "node": "n022", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.550", "ev": "tick", "node": "n048", "round": 9, "started": ["p0-r9", "p1-r9", "p2-r9"], "rc": 0}
+{"at": "2026-10-03T16:09:44.565", "ev": "tick", "node": "n010", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:44.569", "ev": "tock", "node": "n028", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.573", "ev": "tick", "node": "n005", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.574", "ev": "tock", "node": "n008", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.602", "ev": "tick", "node": "n042", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.602", "ev": "tick", "node": "n039", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.606", "ev": "tick", "node": "n047", "round": 9, "started": ["p0-r9", "p1-r9", "p2-r9"], "rc": 0}
+{"at": "2026-10-03T16:09:44.612", "ev": "tick", "node": "n032", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.613", "ev": "tick", "node": "n018", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.614", "ev": "tick", "node": "n013", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.622", "ev": "tick", "node": "n004", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.640", "ev": "tick", "node": "n023", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.650", "ev": "tock", "node": "n043", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:44.653", "ev": "tick", "node": "n016", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.661", "ev": "tock", "node": "n000", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.666", "ev": "tick", "node": "n038", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.674", "ev": "tock", "node": "n035", "round": 10, "rc": 0, "ended": [{"tid": "p1-r10", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.674", "ev": "tick", "node": "n011", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.675", "ev": "tock", "node": "n007", "round": 11, "rc": 0, "ended": [{"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.678", "ev": "tick", "node": "n031", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.682", "ev": "tick", "node": "n021", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.698", "ev": "tock", "node": "n049", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.704", "ev": "tock", "node": "n045", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.704", "ev": "tock", "node": "n048", "round": 9, "rc": 0, "ended": [{"tid": "p0-r9", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.704", "ev": "tock", "node": "n009", "round": 11, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.704", "ev": "tock", "node": "n024", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.706", "ev": "tick", "node": "n027", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.716", "ev": "tick", "node": "n012", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.728", "ev": "tock", "node": "n034", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.728", "ev": "tock", "node": "n017", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.728", "ev": "tock", "node": "n014", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.728", "ev": "tick", "node": "n041", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.731", "ev": "tock", "node": "n022", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.731", "ev": "tick", "node": "n033", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.735", "ev": "tock", "node": "n006", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.755", "ev": "tock", "node": "n015", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.755", "ev": "tick", "node": "n030", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.759", "ev": "tick", "node": "n025", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.764", "ev": "tick", "node": "n002", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.769", "ev": "tock", "node": "n046", "round": 9, "rc": 0, "ended": [{"tid": "p0-r9", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.772", "ev": "tick", "node": "n026", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.775", "ev": "tick", "node": "n020", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.783", "ev": "tock", "node": "n039", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.789", "ev": "tock", "node": "n047", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:44.797", "ev": "tick", "node": "n043", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:44.799", "ev": "tick", "node": "n024", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:44.799", "ev": "tock", "node": "n042", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:44.802", "ev": "tick", "node": "n019", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:44.843", "ev": "tock", "node": "n005", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.843", "ev": "tock", "node": "n010", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.846", "ev": "tick", "node": "n008", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.852", "ev": "tock", "node": "n044", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.862", "ev": "tick", "node": "n036", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.872", "ev": "tock", "node": "n018", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.875", "ev": "tock", "node": "n004", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.875", "ev": "tock", "node": "n038", "round": 10, "rc": 0, "ended": [{"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.886", "ev": "tock", "node": "n037", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.891", "ev": "tick", "node": "n029", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.897", "ev": "tock", "node": "n023", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.897", "ev": "tock", "node": "n013", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.905", "ev": "tick", "node": "n039", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.932", "ev": "tock", "node": "n032", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.934", "ev": "tick", "node": "n040", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:44.939", "ev": "tick", "node": "n028", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:44.939", "ev": "tock", "node": "n027", "round": 12, "rc": 0, "ended": [{"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.940", "ev": "tock", "node": "n031", "round": 10, "rc": 0, "ended": [{"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:44.966", "ev": "tick", "node": "n000", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.020", "ev": "tock", "node": "n002", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.026", "ev": "tock", "node": "n021", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.036", "ev": "tick", "node": "n037", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.037", "ev": "tock", "node": "n028", "round": 12, "rc": 0, "ended": [{"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.056", "ev": "tick", "node": "n001", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.063", "ev": "tick", "node": "n007", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.069", "ev": "tick", "node": "n045", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.077", "ev": "tick", "node": "n002", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.077", "ev": "tick", "node": "n006", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.086", "ev": "tick", "node": "n031", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.094", "ev": "tick", "node": "n015", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.098", "ev": "tick", "node": "n032", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.099", "ev": "tick", "node": "n023", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.103", "ev": "tock", "node": "n024", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.104", "ev": "tick", "node": "n003", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.104", "ev": "tock", "node": "n041", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.108", "ev": "tock", "node": "n012", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.108", "ev": "tock", "node": "n019", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.113", "ev": "tick", "node": "n027", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.114", "ev": "tock", "node": "n033", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.117", "ev": "tick", "node": "n028", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.118", "ev": "tock", "node": "n011", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.128", "ev": "tick", "node": "n035", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.129", "ev": "tock", "node": "n043", "round": 11, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.135", "ev": "tick", "node": "n048", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:45.137", "ev": "tick", "node": "n047", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:45.137", "ev": "tock", "node": "n037", "round": 13, "rc": 0, "ended": [{"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.141", "ev": "tick", "node": "n021", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.156", "ev": "tock", "node": "n007", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.162", "ev": "tock", "node": "n035", "round": 11, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.162", "ev": "tock", "node": "n045", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.166", "ev": "tock", "node": "n025", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.170", "ev": "tock", "node": "n001", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.175", "ev": "tock", "node": "n006", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.181", "ev": "tick", "node": "n046", "round": 10, "started": ["p0-r10", "p1-r10", "p2-r10"], "rc": 0}
+{"at": "2026-10-03T16:09:45.199", "ev": "tock", "node": "n031", "round": 11, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.207", "ev": "tock", "node": "n015", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.211", "ev": "tick", "node": "n011", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.211", "ev": "tick", "node": "n034", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.219", "ev": "tick", "node": "n024", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.219", "ev": "tock", "node": "n032", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.225", "ev": "tock", "node": "n003", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.225", "ev": "tick", "node": "n042", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.227", "ev": "tick", "node": "n049", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.240", "ev": "tick", "node": "n009", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.245", "ev": "tock", "node": "n002", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.250", "ev": "tick", "node": "n043", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.259", "ev": "tick", "node": "n044", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.263", "ev": "tick", "node": "n004", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.273", "ev": "tock", "node": "n027", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.275", "ev": "tock", "node": "n008", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.275", "ev": "tick", "node": "n019", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.277", "ev": "tock", "node": "n023", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.277", "ev": "tick", "node": "n012", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.281", "ev": "tick", "node": "n033", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.287", "ev": "tock", "node": "n048", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.289", "ev": "tick", "node": "n041", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.294", "ev": "tick", "node": "n010", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.296", "ev": "tock", "node": "n020", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.304", "ev": "tick", "node": "n014", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.304", "ev": "tick", "node": "n017", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.315", "ev": "tock", "node": "n030", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.315", "ev": "tock", "node": "n021", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.321", "ev": "tock", "node": "n016", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.324", "ev": "tick", "node": "n045", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.327", "ev": "tick", "node": "n007", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.335", "ev": "tock", "node": "n049", "round": 12, "rc": 0, "ended": [{"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.335", "ev": "tick", "node": "n001", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.336", "ev": "tick", "node": "n005", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.339", "ev": "tick", "node": "n018", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.342", "ev": "tick", "node": "n022", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.343", "ev": "tock", "node": "n044", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:45.346", "ev": "tock", "node": "n046", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.346", "ev": "tick", "node": "n025", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.346", "ev": "tock", "node": "n028", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.373", "ev": "tick", "node": "n035", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.388", "ev": "tock", "node": "n034", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.393", "ev": "tock", "node": "n029", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.397", "ev": "tock", "node": "n014", "round": 12, "rc": 0, "ended": [{"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.397", "ev": "tock", "node": "n026", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.400", "ev": "tock", "node": "n011", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.403", "ev": "tock", "node": "n043", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.410", "ev": "tock", "node": "n009", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.415", "ev": "tick", "node": "n008", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.419", "ev": "tock", "node": "n001", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:45.422", "ev": "tick", "node": "n003", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.431", "ev": "tick", "node": "n038", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.434", "ev": "tock", "node": "n022", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.440", "ev": "tick", "node": "n020", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.444", "ev": "tock", "node": "n010", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.446", "ev": "tock", "node": "n045", "round": 12, "rc": 0, "ended": [{"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.448", "ev": "tick", "node": "n023", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.453", "ev": "tock", "node": "n047", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p1-r9", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r9", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.457", "ev": "tick", "node": "n049", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.474", "ev": "tick", "node": "n037", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.476", "ev": "tock", "node": "n007", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.483", "ev": "tock", "node": "n000", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.483", "ev": "tick", "node": "n021", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.498", "ev": "tick", "node": "n028", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.498", "ev": "tick", "node": "n027", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.499", "ev": "tock", "node": "n018", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.507", "ev": "tock", "node": "n005", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:45.509", "ev": "tick", "node": "n029", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.514", "ev": "tick", "node": "n016", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.519", "ev": "tick", "node": "n022", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.537", "ev": "tick", "node": "n034", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.542", "ev": "tick", "node": "n045", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.542", "ev": "tick", "node": "n014", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.546", "ev": "tick", "node": "n046", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.548", "ev": "tick", "node": "n006", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.550", "ev": "tock", "node": "n035", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.553", "ev": "tick", "node": "n026", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.558", "ev": "tick", "node": "n044", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.561", "ev": "tock", "node": "n036", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.567", "ev": "tick", "node": "n031", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.578", "ev": "tick", "node": "n043", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.583", "ev": "tock", "node": "n039", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.605", "ev": "tock", "node": "n049", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.612", "ev": "tock", "node": "n023", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.618", "ev": "tick", "node": "n032", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.618", "ev": "tick", "node": "n011", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.624", "ev": "tock", "node": "n038", "round": 11, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.627", "ev": "tick", "node": "n010", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:45.631", "ev": "tock", "node": "n017", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.635", "ev": "tock", "node": "n040", "round": 10, "rc": 0, "ended": [{"tid": "p0-r10", "name": "p0", "code": 0}, {"tid": "p0-r9", "name": "p0", "code": 0}, {"tid": "p1-r10", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.650", "ev": "tock", "node": "n006", "round": 14, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:45.656", "ev": "tock", "node": "n020", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.666", "ev": "tock", "node": "n021", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.672", "ev": "tick", "node": "n009", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.672", "ev": "tick", "node": "n001", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.673", "ev": "tock", "node": "n008", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.674", "ev": "tick", "node": "n013", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.681", "ev": "tick", "node": "n035", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.684", "ev": "tick", "node": "n018", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.686", "ev": "tock", "node": "n029", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:45.688", "ev": "tick", "node": "n002", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.696", "ev": "tock", "node": "n044", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.696", "ev": "tock", "node": "n016", "round": 12, "rc": 0, "ended": [{"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.700", "ev": "tock", "node": "n014", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.704", "ev": "tock", "node": "n024", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.707", "ev": "tock", "node": "n027", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.709", "ev": "tick", "node": "n047", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.713", "ev": "tock", "node": "n010", "round": 15, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:45.714", "ev": "tick", "node": "n005", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.731", "ev": "tick", "node": "n000", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.737", "ev": "tock", "node": "n032", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.737", "ev": "tock", "node": "n025", "round": 11, "rc": 0, "ended": [{"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.740", "ev": "tock", "node": "n011", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.743", "ev": "tock", "node": "n022", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.745", "ev": "tock", "node": "n031", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.747", "ev": "tick", "node": "n049", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.750", "ev": "tock", "node": "n019", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.755", "ev": "tock", "node": "n045", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.760", "ev": "tick", "node": "n015", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.761", "ev": "tock", "node": "n037", "round": 14, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.761", "ev": "tick", "node": "n036", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.766", "ev": "tick", "node": "n039", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.768", "ev": "tick", "node": "n014", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.771", "ev": "tock", "node": "n043", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.777", "ev": "tock", "node": "n046", "round": 11, "rc": 0, "ended": [{"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.781", "ev": "tock", "node": "n042", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.791", "ev": "tick", "node": "n017", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.795", "ev": "tock", "node": "n004", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.800", "ev": "tock", "node": "n002", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.810", "ev": "tick", "node": "n029", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.819", "ev": "tick", "node": "n038", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.821", "ev": "tock", "node": "n039", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:45.833", "ev": "tick", "node": "n021", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.847", "ev": "tock", "node": "n028", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.848", "ev": "tock", "node": "n009", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.853", "ev": "tock", "node": "n013", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.855", "ev": "tock", "node": "n001", "round": 14, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.855", "ev": "tock", "node": "n026", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.861", "ev": "tick", "node": "n030", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.864", "ev": "tick", "node": "n048", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.866", "ev": "tick", "node": "n020", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.870", "ev": "tick", "node": "n006", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:45.873", "ev": "tock", "node": "n035", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.876", "ev": "tock", "node": "n018", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.880", "ev": "tick", "node": "n016", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.881", "ev": "tick", "node": "n044", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.884", "ev": "tick", "node": "n025", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:45.885", "ev": "tock", "node": "n033", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.889", "ev": "tock", "node": "n003", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.910", "ev": "tock", "node": "n012", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.911", "ev": "tick", "node": "n027", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:45.912", "ev": "tock", "node": "n041", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.915", "ev": "tick", "node": "n010", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:45.921", "ev": "tick", "node": "n024", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:45.927", "ev": "tick", "node": "n031", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:45.930", "ev": "tock", "node": "n036", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.937", "ev": "tick", "node": "n007", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.944", "ev": "tick", "node": "n040", "round": 11, "started": ["p0-r11", "p1-r11", "p2-r11"], "rc": 0}
+{"at": "2026-10-03T16:09:45.955", "ev": "tock", "node": "n015", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.956", "ev": "tick", "node": "n011", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:45.961", "ev": "tock", "node": "n038", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.961", "ev": "tock", "node": "n005", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.961", "ev": "tick", "node": "n008", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:45.967", "ev": "tock", "node": "n049", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.967", "ev": "tick", "node": "n032", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:45.990", "ev": "tock", "node": "n047", "round": 11, "rc": 0, "ended": [{"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.990", "ev": "tick", "node": "n037", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:45.992", "ev": "tock", "node": "n034", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.992", "ev": "tock", "node": "n029", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:45.993", "ev": "tick", "node": "n045", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.003", "ev": "tock", "node": "n000", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.025", "ev": "tock", "node": "n014", "round": 14, "rc": 0, "ended": [{"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.028", "ev": "tick", "node": "n023", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.034", "ev": "tock", "node": "n017", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.036", "ev": "ctl", "file": "probe-2.json", "op": "rescan", "node": null, "by": "scale-probe", "ok": true, "msg": "rescanned"}
+{"at": "2026-10-03T16:09:46.037", "ev": "tick", "node": "n043", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.039", "ev": "tick", "node": "n046", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:46.042", "ev": "tock", "node": "n025", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.062", "ev": "tick", "node": "n019", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.062", "ev": "tick", "node": "n002", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.068", "ev": "tick", "node": "n022", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.070", "ev": "tick", "node": "n039", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.073", "ev": "tick", "node": "n042", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.082", "ev": "tick", "node": "n028", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.085", "ev": "tock", "node": "n010", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.089", "ev": "tick", "node": "n035", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.091", "ev": "tock", "node": "n030", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.098", "ev": "tick", "node": "n013", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.102", "ev": "tock", "node": "n048", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r10", "name": "p2", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.110", "ev": "tick", "node": "n001", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.113", "ev": "tock", "node": "n006", "round": 15, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.114", "ev": "tick", "node": "n009", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.118", "ev": "tock", "node": "n021", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.122", "ev": "tick", "node": "n033", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:46.126", "ev": "tick", "node": "n026", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.126", "ev": "tock", "node": "n031", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.162", "ev": "tock", "node": "n042", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.166", "ev": "tock", "node": "n024", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.168", "ev": "tock", "node": "n007", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.170", "ev": "tock", "node": "n032", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.172", "ev": "tock", "node": "n016", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.183", "ev": "tock", "node": "n008", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.184", "ev": "tick", "node": "n041", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:46.186", "ev": "tock", "node": "n027", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.189", "ev": "tick", "node": "n015", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.203", "ev": "tick", "node": "n018", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.205", "ev": "tick", "node": "n047", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:46.206", "ev": "tick", "node": "n038", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.208", "ev": "tick", "node": "n004", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.213", "ev": "tick", "node": "n031", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.213", "ev": "tock", "node": "n023", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.214", "ev": "tock", "node": "n028", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.223", "ev": "tock", "node": "n044", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.246", "ev": "tick", "node": "n029", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.255", "ev": "tock", "node": "n037", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.255", "ev": "tick", "node": "n034", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.257", "ev": "tock", "node": "n002", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.276", "ev": "tick", "node": "n032", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.282", "ev": "tock", "node": "n040", "round": 11, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p1-r11", "name": "p1", "code": 0}, {"tid": "p2-r11", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.287", "ev": "tock", "node": "n022", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.291", "ev": "tock", "node": "n039", "round": 14, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.293", "ev": "tick", "node": "n003", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.297", "ev": "tock", "node": "n011", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.297", "ev": "tick", "node": "n036", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.299", "ev": "tock", "node": "n020", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.301", "ev": "tock", "node": "n013", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.301", "ev": "tock", "node": "n019", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.302", "ev": "tock", "node": "n043", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.308", "ev": "tock", "node": "n046", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.311", "ev": "tock", "node": "n009", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.316", "ev": "tick", "node": "n012", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.318", "ev": "tick", "node": "n005", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.326", "ev": "tick", "node": "n010", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:46.332", "ev": "tick", "node": "n000", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.335", "ev": "tick", "node": "n021", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.336", "ev": "tick", "node": "n030", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.339", "ev": "tock", "node": "n001", "round": 15, "rc": 0, "ended": [{"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.341", "ev": "tick", "node": "n049", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.345", "ev": "tick", "node": "n048", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:46.346", "ev": "tick", "node": "n025", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.348", "ev": "tock", "node": "n035", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.349", "ev": "tick", "node": "n006", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.349", "ev": "tock", "node": "n033", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.356", "ev": "tick", "node": "n037", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.356", "ev": "tock", "node": "n045", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.357", "ev": "tock", "node": "n026", "round": 13, "rc": 0, "ended": [{"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.382", "ev": "tick", "node": "n007", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.393", "ev": "tick", "node": "n042", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.396", "ev": "tock", "node": "n041", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.402", "ev": "tick", "node": "n014", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.407", "ev": "tock", "node": "n038", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.408", "ev": "tock", "node": "n032", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.409", "ev": "tock", "node": "n004", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.415", "ev": "tock", "node": "n015", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.424", "ev": "tick", "node": "n024", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.429", "ev": "tick", "node": "n016", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.436", "ev": "tock", "node": "n031", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.437", "ev": "tock", "node": "n048", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:46.443", "ev": "tock", "node": "n047", "round": 12, "rc": 0, "ended": [{"tid": "p0-r11", "name": "p0", "code": 0}, {"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.449", "ev": "tick", "node": "n023", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.460", "ev": "tock", "node": "n018", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.466", "ev": "tick", "node": "n028", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.474", "ev": "tick", "node": "n017", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.475", "ev": "tick", "node": "n035", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.483", "ev": "tick", "node": "n027", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.483", "ev": "tick", "node": "n044", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.484", "ev": "tick", "node": "n008", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.489", "ev": "tick", "node": "n040", "round": 12, "started": ["p0-r12", "p1-r12", "p2-r12"], "rc": 0}
+{"at": "2026-10-03T16:09:46.494", "ev": "tock", "node": "n034", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.504", "ev": "tick", "node": "n002", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.511", "ev": "tock", "node": "n029", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.519", "ev": "tick", "node": "n032", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:46.528", "ev": "tick", "node": "n039", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.529", "ev": "tock", "node": "n003", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.530", "ev": "tick", "node": "n022", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.538", "ev": "tick", "node": "n011", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.545", "ev": "tick", "node": "n020", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.576", "ev": "tick", "node": "n013", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.579", "ev": "tock", "node": "n021", "round": 15, "rc": 0, "ended": [{"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.579", "ev": "tock", "node": "n049", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.579", "ev": "tick", "node": "n043", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.580", "ev": "tick", "node": "n046", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.580", "ev": "tick", "node": "n009", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.580", "ev": "tock", "node": "n036", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.590", "ev": "tock", "node": "n005", "round": 14, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.591", "ev": "tick", "node": "n048", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.599", "ev": "tock", "node": "n000", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.599", "ev": "tock", "node": "n023", "round": 15, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:46.601", "ev": "tock", "node": "n030", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.603", "ev": "tick", "node": "n018", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.608", "ev": "tock", "node": "n012", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.608", "ev": "tock", "node": "n010", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.608", "ev": "tock", "node": "n006", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.619", "ev": "tock", "node": "n025", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.625", "ev": "tock", "node": "n037", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.626", "ev": "tick", "node": "n026", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.633", "ev": "tick", "node": "n033", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.644", "ev": "tock", "node": "n042", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.667", "ev": "tock", "node": "n007", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.668", "ev": "tock", "node": "n035", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.668", "ev": "tick", "node": "n045", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.682", "ev": "tick", "node": "n001", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.682", "ev": "tick", "node": "n041", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.683", "ev": "tock", "node": "n002", "round": 15, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:46.683", "ev": "tick", "node": "n019", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.685", "ev": "tock", "node": "n014", "round": 15, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.692", "ev": "tick", "node": "n038", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.703", "ev": "tock", "node": "n016", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.704", "ev": "tick", "node": "n004", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.706", "ev": "tock", "node": "n009", "round": 15, "rc": 0, "ended": [{"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.724", "ev": "tock", "node": "n024", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.748", "ev": "tock", "node": "n044", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.750", "ev": "tick", "node": "n025", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.755", "ev": "tock", "node": "n013", "round": 14, "rc": 0, "ended": [{"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.762", "ev": "tock", "node": "n028", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.763", "ev": "tick", "node": "n015", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.765", "ev": "tick", "node": "n012", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.774", "ev": "tock", "node": "n027", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.781", "ev": "tock", "node": "n032", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.783", "ev": "tick", "node": "n034", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.791", "ev": "tock", "node": "n008", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.806", "ev": "tock", "node": "n040", "round": 12, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.832", "ev": "tick", "node": "n031", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.832", "ev": "tock", "node": "n018", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.835", "ev": "tock", "node": "n046", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.838", "ev": "tick", "node": "n005", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.838", "ev": "tick", "node": "n003", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.847", "ev": "tock", "node": "n039", "round": 15, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.847", "ev": "tick", "node": "n047", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:46.850", "ev": "tick", "node": "n030", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.853", "ev": "tock", "node": "n048", "round": 13, "rc": 0, "ended": [{"tid": "p0-r12", "name": "p0", "code": 0}, {"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r12", "name": "p2", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.858", "ev": "tock", "node": "n011", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.861", "ev": "tock", "node": "n017", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.861", "ev": "tick", "node": "n029", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:46.863", "ev": "tock", "node": "n022", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.867", "ev": "tick", "node": "n036", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.872", "ev": "tock", "node": "n043", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.886", "ev": "tick", "node": "n023", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.889", "ev": "tick", "node": "n042", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.896", "ev": "tick", "node": "n021", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.905", "ev": "tick", "node": "n016", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.915", "ev": "tick", "node": "n037", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:46.917", "ev": "tick", "node": "n010", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:46.926", "ev": "tock", "node": "n001", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.926", "ev": "tock", "node": "n038", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.926", "ev": "tock", "node": "n020", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.926", "ev": "tock", "node": "n026", "round": 14, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.926", "ev": "tick", "node": "n014", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.930", "ev": "tock", "node": "n045", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.930", "ev": "tick", "node": "n006", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:46.936", "ev": "tock", "node": "n025", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.936", "ev": "tick", "node": "n009", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.940", "ev": "tock", "node": "n041", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.942", "ev": "tick", "node": "n024", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:46.952", "ev": "tock", "node": "n033", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r12", "name": "p1", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.954", "ev": "tock", "node": "n019", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.954", "ev": "tick", "node": "n044", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.960", "ev": "tock", "node": "n004", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.968", "ev": "tick", "node": "n049", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.971", "ev": "tick", "node": "n013", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:46.979", "ev": "tick", "node": "n028", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:46.980", "ev": "tock", "node": "n034", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.984", "ev": "tock", "node": "n029", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.985", "ev": "tick", "node": "n035", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.990", "ev": "tock", "node": "n005", "round": 15, "rc": 0, "ended": [{"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:46.991", "ev": "tick", "node": "n007", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:46.996", "ev": "tick", "node": "n032", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.007", "ev": "tick", "node": "n027", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.013", "ev": "tick", "node": "n000", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.015", "ev": "tick", "node": "n002", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.017", "ev": "tick", "node": "n040", "round": 13, "started": ["p0-r13", "p1-r13", "p2-r13"], "rc": 0}
+{"at": "2026-10-03T16:09:47.019", "ev": "tock", "node": "n012", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.019", "ev": "tock", "node": "n015", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.027", "ev": "tock", "node": "n047", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.063", "ev": "tick", "node": "n008", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.082", "ev": "tick", "node": "n018", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.088", "ev": "tock", "node": "n027", "round": 17, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:47.090", "ev": "tick", "node": "n046", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:47.097", "ev": "tick", "node": "n022", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.099", "ev": "tick", "node": "n017", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.101", "ev": "tock", "node": "n031", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.102", "ev": "tock", "node": "n030", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.107", "ev": "tock", "node": "n036", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.110", "ev": "tick", "node": "n039", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.115", "ev": "tick", "node": "n041", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:47.144", "ev": "tick", "node": "n025", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.147", "ev": "tock", "node": "n042", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.151", "ev": "tock", "node": "n010", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.165", "ev": "tock", "node": "n017", "round": 15, "rc": 0, "ended": [{"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.178", "ev": "tick", "node": "n011", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.186", "ev": "tick", "node": "n020", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.188", "ev": "tock", "node": "n037", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.192", "ev": "tock", "node": "n035", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.194", "ev": "tick", "node": "n045", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.201", "ev": "tick", "node": "n026", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.204", "ev": "tock", "node": "n014", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.204", "ev": "tock", "node": "n003", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.218", "ev": "tock", "node": "n007", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.221", "ev": "tick", "node": "n001", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.226", "ev": "tick", "node": "n029", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.228", "ev": "tick", "node": "n033", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:47.238", "ev": "tock", "node": "n049", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.238", "ev": "tick", "node": "n038", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.239", "ev": "tock", "node": "n013", "round": 15, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.239", "ev": "tock", "node": "n016", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.247", "ev": "tick", "node": "n005", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.253", "ev": "tock", "node": "n032", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.260", "ev": "tock", "node": "n023", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.263", "ev": "tick", "node": "n019", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.272", "ev": "tock", "node": "n021", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.276", "ev": "tock", "node": "n006", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.276", "ev": "tick", "node": "n043", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.278", "ev": "tock", "node": "n040", "round": 13, "rc": 0, "ended": [{"tid": "p0-r13", "name": "p0", "code": 0}, {"tid": "p1-r13", "name": "p1", "code": 0}, {"tid": "p2-r13", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.278", "ev": "tock", "node": "n002", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.282", "ev": "tick", "node": "n012", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.288", "ev": "tock", "node": "n024", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.291", "ev": "tock", "node": "n045", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.293", "ev": "tock", "node": "n008", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.298", "ev": "tick", "node": "n017", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.307", "ev": "tick", "node": "n047", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:47.309", "ev": "tick", "node": "n048", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:47.313", "ev": "tick", "node": "n004", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.319", "ev": "tock", "node": "n022", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.323", "ev": "tock", "node": "n044", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.326", "ev": "tock", "node": "n000", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.327", "ev": "tock", "node": "n018", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.330", "ev": "tock", "node": "n009", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.330", "ev": "tick", "node": "n015", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.331", "ev": "tock", "node": "n046", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.331", "ev": "tick", "node": "n036", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.343", "ev": "tick", "node": "n030", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.344", "ev": "tock", "node": "n039", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.349", "ev": "tick", "node": "n027", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.350", "ev": "tick", "node": "n010", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:47.353", "ev": "tick", "node": "n031", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.354", "ev": "tock", "node": "n012", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.367", "ev": "tock", "node": "n028", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.372", "ev": "tock", "node": "n020", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.376", "ev": "tick", "node": "n034", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.382", "ev": "tock", "node": "n025", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.389", "ev": "tock", "node": "n041", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.395", "ev": "tick", "node": "n037", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.399", "ev": "tock", "node": "n026", "round": 15, "rc": 0, "ended": [{"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.401", "ev": "tick", "node": "n013", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.403", "ev": "tock", "node": "n011", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.408", "ev": "tick", "node": "n042", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.423", "ev": "tick", "node": "n035", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.439", "ev": "tick", "node": "n000", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.440", "ev": "tick", "node": "n014", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.445", "ev": "tock", "node": "n029", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.449", "ev": "tock", "node": "n038", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.452", "ev": "tock", "node": "n015", "round": 16, "rc": 0, "ended": [{"tid": "p1-r16", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.457", "ev": "tick", "node": "n007", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.465", "ev": "tock", "node": "n005", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.467", "ev": "tick", "node": "n003", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.469", "ev": "tock", "node": "n001", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.476", "ev": "tock", "node": "n036", "round": 16, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:47.485", "ev": "tick", "node": "n016", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.491", "ev": "tock", "node": "n033", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.494", "ev": "tock", "node": "n019", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.496", "ev": "tock", "node": "n043", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.497", "ev": "tick", "node": "n006", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.502", "ev": "tock", "node": "n013", "round": 16, "rc": 0, "ended": [{"tid": "p1-r16", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.522", "ev": "tick", "node": "n040", "round": 14, "started": ["p0-r14", "p1-r14", "p2-r14"], "rc": 0}
+{"at": "2026-10-03T16:09:47.525", "ev": "tick", "node": "n045", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.530", "ev": "tick", "node": "n002", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.535", "ev": "tick", "node": "n023", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.539", "ev": "tock", "node": "n048", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.543", "ev": "tick", "node": "n024", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.545", "ev": "tock", "node": "n017", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.547", "ev": "tick", "node": "n008", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.556", "ev": "tick", "node": "n022", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.558", "ev": "tick", "node": "n039", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.581", "ev": "tick", "node": "n036", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.587", "ev": "tock", "node": "n004", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.588", "ev": "tock", "node": "n042", "round": 16, "rc": 0, "ended": [{"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.597", "ev": "tock", "node": "n030", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.599", "ev": "tick", "node": "n049", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.602", "ev": "tock", "node": "n047", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.610", "ev": "tock", "node": "n027", "round": 18, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.614", "ev": "tick", "node": "n046", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.616", "ev": "tick", "node": "n028", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.618", "ev": "tick", "node": "n012", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.624", "ev": "tock", "node": "n016", "round": 16, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:47.627", "ev": "tick", "node": "n044", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.628", "ev": "tick", "node": "n018", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.630", "ev": "tick", "node": "n025", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.633", "ev": "tick", "node": "n026", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.636", "ev": "tick", "node": "n020", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.638", "ev": "tick", "node": "n004", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.638", "ev": "tock", "node": "n034", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.647", "ev": "tick", "node": "n009", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.655", "ev": "tick", "node": "n011", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.665", "ev": "tick", "node": "n032", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:47.669", "ev": "tick", "node": "n021", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.683", "ev": "tock", "node": "n035", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.686", "ev": "tock", "node": "n010", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.690", "ev": "tock", "node": "n037", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.734", "ev": "tock", "node": "n031", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.735", "ev": "tick", "node": "n005", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.742", "ev": "tock", "node": "n000", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.744", "ev": "tick", "node": "n033", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.751", "ev": "tock", "node": "n006", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.754", "ev": "tock", "node": "n003", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.757", "ev": "tick", "node": "n013", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.761", "ev": "tock", "node": "n002", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.766", "ev": "tick", "node": "n043", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.766", "ev": "tick", "node": "n029", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.771", "ev": "tock", "node": "n022", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.771", "ev": "tock", "node": "n032", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.771", "ev": "tick", "node": "n034", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.773", "ev": "tick", "node": "n001", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.790", "ev": "tick", "node": "n038", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.802", "ev": "tick", "node": "n030", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:47.812", "ev": "tock", "node": "n007", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.812", "ev": "tock", "node": "n024", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.812", "ev": "tock", "node": "n039", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.812", "ev": "tick", "node": "n019", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.813", "ev": "tock", "node": "n040", "round": 14, "rc": 0, "ended": [{"tid": "p0-r14", "name": "p0", "code": 0}, {"tid": "p1-r14", "name": "p1", "code": 0}, {"tid": "p2-r14", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.813", "ev": "tock", "node": "n008", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.813", "ev": "tick", "node": "n048", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.814", "ev": "tock", "node": "n033", "round": 15, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:47.814", "ev": "tock", "node": "n045", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.827", "ev": "tock", "node": "n036", "round": 17, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.831", "ev": "tick", "node": "n015", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.845", "ev": "tick", "node": "n006", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:47.851", "ev": "tock", "node": "n023", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.851", "ev": "tick", "node": "n016", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.855", "ev": "tick", "node": "n017", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.858", "ev": "tock", "node": "n020", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.858", "ev": "tock", "node": "n028", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.858", "ev": "tock", "node": "n012", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.858", "ev": "tock", "node": "n049", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.862", "ev": "tick", "node": "n047", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.874", "ev": "tick", "node": "n041", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:47.875", "ev": "tick", "node": "n042", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.878", "ev": "tock", "node": "n025", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.886", "ev": "tock", "node": "n014", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.886", "ev": "tock", "node": "n018", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.890", "ev": "tick", "node": "n031", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:47.896", "ev": "tick", "node": "n003", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.906", "ev": "tock", "node": "n011", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.911", "ev": "tock", "node": "n009", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.916", "ev": "tick", "node": "n035", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:47.916", "ev": "tock", "node": "n046", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.916", "ev": "tock", "node": "n026", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.916", "ev": "tock", "node": "n044", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.920", "ev": "tock", "node": "n021", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.930", "ev": "tick", "node": "n010", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:47.954", "ev": "tock", "node": "n004", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.972", "ev": "tock", "node": "n038", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.972", "ev": "tock", "node": "n043", "round": 17, "rc": 0, "ended": [{"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.994", "ev": "tock", "node": "n029", "round": 16, "rc": 0, "ended": [{"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.995", "ev": "tock", "node": "n034", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:47.998", "ev": "tick", "node": "n027", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.009", "ev": "tick", "node": "n037", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.016", "ev": "tick", "node": "n023", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.018", "ev": "tock", "node": "n013", "round": 17, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.022", "ev": "tick", "node": "n022", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.036", "ev": "tick", "node": "n000", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.041", "ev": "tick", "node": "n007", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.041", "ev": "tock", "node": "n005", "round": 17, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:48.051", "ev": "tock", "node": "n035", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.052", "ev": "tock", "node": "n030", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.063", "ev": "tock", "node": "n001", "round": 18, "rc": 0, "ended": [{"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.065", "ev": "tock", "node": "n019", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.073", "ev": "tick", "node": "n018", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.081", "ev": "tick", "node": "n040", "round": 15, "started": ["p0-r15", "p1-r15", "p2-r15"], "rc": 0}
+{"at": "2026-10-03T16:09:48.083", "ev": "tock", "node": "n041", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.085", "ev": "tick", "node": "n045", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.090", "ev": "tock", "node": "n006", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.098", "ev": "tick", "node": "n008", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.102", "ev": "tick", "node": "n033", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:48.107", "ev": "tock", "node": "n010", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.111", "ev": "tick", "node": "n024", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.112", "ev": "tock", "node": "n031", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.114", "ev": "tick", "node": "n014", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.114", "ev": "tick", "node": "n039", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.119", "ev": "tick", "node": "n032", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.121", "ev": "tick", "node": "n002", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.127", "ev": "tock", "node": "n042", "round": 17, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.130", "ev": "tick", "node": "n049", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.131", "ev": "tock", "node": "n040", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.133", "ev": "tick", "node": "n046", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:48.142", "ev": "tick", "node": "n012", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.154", "ev": "tick", "node": "n028", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.158", "ev": "tock", "node": "n048", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.158", "ev": "tick", "node": "n026", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.160", "ev": "tock", "node": "n017", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.164", "ev": "tock", "node": "n015", "round": 17, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.168", "ev": "tick", "node": "n009", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.173", "ev": "tick", "node": "n021", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.175", "ev": "tock", "node": "n016", "round": 17, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.176", "ev": "tock", "node": "n047", "round": 15, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.191", "ev": "tock", "node": "n003", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.207", "ev": "tick", "node": "n011", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.214", "ev": "tick", "node": "n020", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.217", "ev": "tock", "node": "n027", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.217", "ev": "tick", "node": "n004", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.220", "ev": "tock", "node": "n023", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.220", "ev": "tock", "node": "n028", "round": 19, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:48.220", "ev": "tick", "node": "n036", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.229", "ev": "tick", "node": "n029", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.235", "ev": "tock", "node": "n046", "round": 16, "rc": 0, "ended": [{"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.242", "ev": "tick", "node": "n040", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:48.267", "ev": "tock", "node": "n037", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.287", "ev": "tick", "node": "n043", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.288", "ev": "tick", "node": "n038", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.290", "ev": "tick", "node": "n005", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.300", "ev": "tick", "node": "n048", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:48.300", "ev": "tick", "node": "n013", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.303", "ev": "tick", "node": "n001", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.306", "ev": "tock", "node": "n000", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.312", "ev": "tick", "node": "n019", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.320", "ev": "tick", "node": "n044", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.322", "ev": "tock", "node": "n024", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.326", "ev": "tick", "node": "n006", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.341", "ev": "tock", "node": "n018", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.342", "ev": "tock", "node": "n014", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.353", "ev": "tock", "node": "n026", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.355", "ev": "tock", "node": "n039", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.358", "ev": "tock", "node": "n002", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.362", "ev": "tock", "node": "n049", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.366", "ev": "tick", "node": "n031", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.372", "ev": "tick", "node": "n034", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.381", "ev": "tick", "node": "n015", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.387", "ev": "tock", "node": "n005", "round": 18, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.393", "ev": "tick", "node": "n042", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.398", "ev": "tock", "node": "n033", "round": 16, "rc": 0, "ended": [{"tid": "p0-r15", "name": "p0", "code": 0}, {"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.400", "ev": "tock", "node": "n001", "round": 19, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.401", "ev": "tock", "node": "n008", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.401", "ev": "tock", "node": "n011", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.412", "ev": "tock", "node": "n020", "round": 17, "rc": 0, "ended": [{"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.412", "ev": "tock", "node": "n009", "round": 18, "rc": 0, "ended": [{"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.412", "ev": "tock", "node": "n012", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.414", "ev": "tick", "node": "n016", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.423", "ev": "tick", "node": "n010", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:48.428", "ev": "tock", "node": "n021", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.429", "ev": "tick", "node": "n047", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:48.430", "ev": "tick", "node": "n035", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.437", "ev": "tock", "node": "n004", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.437", "ev": "tick", "node": "n017", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.438", "ev": "tick", "node": "n003", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.443", "ev": "tick", "node": "n025", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.447", "ev": "tock", "node": "n040", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r15", "name": "p1", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r15", "name": "p2", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.462", "ev": "tick", "node": "n018", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.466", "ev": "tock", "node": "n045", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.473", "ev": "tick", "node": "n023", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.483", "ev": "tock", "node": "n022", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.496", "ev": "tock", "node": "n007", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.508", "ev": "tick", "node": "n000", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.510", "ev": "tick", "node": "n027", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.518", "ev": "tick", "node": "n041", "round": 16, "started": ["p0-r16", "p1-r16", "p2-r16"], "rc": 0}
+{"at": "2026-10-03T16:09:48.519", "ev": "tick", "node": "n046", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.522", "ev": "tick", "node": "n030", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.526", "ev": "tock", "node": "n017", "round": 18, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:48.528", "ev": "tock", "node": "n013", "round": 18, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.529", "ev": "tock", "node": "n032", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.532", "ev": "tock", "node": "n019", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.533", "ev": "tock", "node": "n036", "round": 18, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.539", "ev": "tock", "node": "n048", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.541", "ev": "tick", "node": "n028", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.542", "ev": "tick", "node": "n049", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.544", "ev": "tick", "node": "n024", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.548", "ev": "tock", "node": "n006", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.549", "ev": "tock", "node": "n029", "round": 17, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.551", "ev": "tick", "node": "n001", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.556", "ev": "tock", "node": "n043", "round": 18, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.572", "ev": "tock", "node": "n038", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.576", "ev": "tick", "node": "n037", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.578", "ev": "tick", "node": "n022", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.587", "ev": "tick", "node": "n039", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.598", "ev": "tick", "node": "n002", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.604", "ev": "tock", "node": "n015", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.607", "ev": "tick", "node": "n026", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.612", "ev": "ctl", "file": "probe-3.json", "op": "rescan", "node": null, "by": "scale-probe", "ok": true, "msg": "rescanned"}
+{"at": "2026-10-03T16:09:48.625", "ev": "tick", "node": "n033", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.628", "ev": "tock", "node": "n044", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.629", "ev": "tick", "node": "n011", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.633", "ev": "tock", "node": "n016", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.633", "ev": "tock", "node": "n010", "round": 21, "rc": 0, "ended": [{"tid": "p0-r21", "name": "p0", "code": 0}, {"tid": "p1-r21", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.635", "ev": "tick", "node": "n012", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.637", "ev": "tock", "node": "n025", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.652", "ev": "tick", "node": "n014", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.661", "ev": "tick", "node": "n005", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.668", "ev": "tock", "node": "n042", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.671", "ev": "tock", "node": "n031", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.673", "ev": "tick", "node": "n009", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.684", "ev": "tock", "node": "n047", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.688", "ev": "tock", "node": "n034", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.693", "ev": "tock", "node": "n018", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.701", "ev": "tick", "node": "n045", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.706", "ev": "tock", "node": "n023", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.708", "ev": "tock", "node": "n003", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.713", "ev": "tock", "node": "n037", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.725", "ev": "tock", "node": "n041", "round": 16, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p1-r16", "name": "p1", "code": 0}, {"tid": "p2-r16", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.733", "ev": "tick", "node": "n007", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.736", "ev": "tick", "node": "n029", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.751", "ev": "tock", "node": "n028", "round": 20, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.752", "ev": "tick", "node": "n019", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.754", "ev": "tick", "node": "n004", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.756", "ev": "tock", "node": "n030", "round": 17, "rc": 0, "ended": [{"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.764", "ev": "tick", "node": "n032", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:48.767", "ev": "tick", "node": "n008", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.772", "ev": "tock", "node": "n046", "round": 17, "rc": 0, "ended": [{"tid": "p0-r16", "name": "p0", "code": 0}, {"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.773", "ev": "tock", "node": "n049", "round": 19, "rc": 0, "ended": [{"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.802", "ev": "tick", "node": "n043", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.809", "ev": "tick", "node": "n038", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.825", "ev": "tock", "node": "n001", "round": 20, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.825", "ev": "tick", "node": "n006", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:48.832", "ev": "tick", "node": "n021", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.835", "ev": "tock", "node": "n024", "round": 20, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:09:48.835", "ev": "tick", "node": "n013", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.844", "ev": "tock", "node": "n014", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.848", "ev": "tick", "node": "n017", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.853", "ev": "tock", "node": "n027", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.854", "ev": "tock", "node": "n039", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.854", "ev": "tock", "node": "n033", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.857", "ev": "tock", "node": "n035", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.857", "ev": "tock", "node": "n002", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.857", "ev": "tick", "node": "n010", "round": 22, "started": ["p0-r22", "p1-r22", "p2-r22"], "rc": 0}
+{"at": "2026-10-03T16:09:48.858", "ev": "tock", "node": "n012", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.858", "ev": "tock", "node": "n011", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.867", "ev": "tick", "node": "n025", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.872", "ev": "tock", "node": "n022", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.872", "ev": "tock", "node": "n026", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.872", "ev": "tick", "node": "n020", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.885", "ev": "tick", "node": "n016", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.895", "ev": "tick", "node": "n015", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.900", "ev": "tick", "node": "n034", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.902", "ev": "tock", "node": "n000", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.902", "ev": "tock", "node": "n005", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.903", "ev": "tick", "node": "n044", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.907", "ev": "tock", "node": "n009", "round": 19, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.914", "ev": "tick", "node": "n023", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.916", "ev": "tick", "node": "n031", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.920", "ev": "tick", "node": "n042", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.933", "ev": "tick", "node": "n047", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.936", "ev": "tick", "node": "n041", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.939", "ev": "tock", "node": "n045", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.941", "ev": "tick", "node": "n001", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:48.943", "ev": "tick", "node": "n018", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.946", "ev": "tick", "node": "n037", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:48.950", "ev": "tick", "node": "n036", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:48.953", "ev": "tick", "node": "n033", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:48.968", "ev": "tick", "node": "n040", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.969", "ev": "tick", "node": "n048", "round": 17, "started": ["p0-r17", "p1-r17", "p2-r17"], "rc": 0}
+{"at": "2026-10-03T16:09:48.981", "ev": "tock", "node": "n007", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:48.988", "ev": "tick", "node": "n003", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:48.996", "ev": "tick", "node": "n030", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:49.018", "ev": "tock", "node": "n017", "round": 19, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.021", "ev": "tock", "node": "n008", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.023", "ev": "tock", "node": "n020", "round": 18, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.028", "ev": "tock", "node": "n038", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.060", "ev": "tock", "node": "n029", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.064", "ev": "tock", "node": "n013", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.064", "ev": "tock", "node": "n036", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.064", "ev": "tock", "node": "n023", "round": 20, "rc": 0, "ended": [{"tid": "p1-r20", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.073", "ev": "tick", "node": "n039", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.088", "ev": "tock", "node": "n006", "round": 21, "rc": 0, "ended": [{"tid": "p0-r21", "name": "p0", "code": 0}, {"tid": "p1-r21", "name": "p1", "code": 0}, {"tid": "p2-r21", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.097", "ev": "tick", "node": "n014", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.105", "ev": "tick", "node": "n027", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:49.105", "ev": "tick", "node": "n026", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:49.107", "ev": "tick", "node": "n022", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.115", "ev": "tock", "node": "n043", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.117", "ev": "tick", "node": "n000", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.123", "ev": "tock", "node": "n015", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.127", "ev": "tick", "node": "n024", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:49.127", "ev": "tock", "node": "n025", "round": 18, "rc": 0, "ended": [{"tid": "p1-r18", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.129", "ev": "tick", "node": "n012", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:49.132", "ev": "tock", "node": "n016", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.142", "ev": "tick", "node": "n035", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.148", "ev": "tock", "node": "n031", "round": 19, "rc": 0, "ended": [{"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.154", "ev": "tick", "node": "n002", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.157", "ev": "tick", "node": "n011", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:49.161", "ev": "tock", "node": "n004", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.163", "ev": "tock", "node": "n018", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.163", "ev": "tock", "node": "n034", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.163", "ev": "tock", "node": "n044", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.163", "ev": "tock", "node": "n019", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.163", "ev": "tock", "node": "n042", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.163", "ev": "tick", "node": "n009", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.163", "ev": "tock", "node": "n048", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.164", "ev": "tock", "node": "n037", "round": 21, "rc": 0, "ended": [{"tid": "p0-r21", "name": "p0", "code": 0}, {"tid": "p1-r21", "name": "p1", "code": 0}, {"tid": "p2-r21", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.164", "ev": "tock", "node": "n021", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.164", "ev": "tock", "node": "n001", "round": 21, "rc": 0, "ended": [{"tid": "p0-r21", "name": "p0", "code": 0}, {"tid": "p1-r21", "name": "p1", "code": 0}, {"tid": "p2-r21", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.164", "ev": "tick", "node": "n046", "round": 18, "started": ["p0-r18", "p1-r18", "p2-r18"], "rc": 0}
+{"at": "2026-10-03T16:09:49.168", "ev": "tock", "node": "n032", "round": 21, "rc": 0, "ended": [{"tid": "p0-r21", "name": "p0", "code": 0}, {"tid": "p1-r21", "name": "p1", "code": 0}, {"tid": "p2-r21", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.170", "ev": "tick", "node": "n005", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.177", "ev": "tick", "node": "n045", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.215", "ev": "tock", "node": "n030", "round": 18, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.217", "ev": "tock", "node": "n047", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.220", "ev": "tock", "node": "n003", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.220", "ev": "tick", "node": "n028", "round": 21, "started": ["p0-r21", "p1-r21", "p2-r21"], "rc": 0}
+{"at": "2026-10-03T16:09:49.224", "ev": "tick", "node": "n049", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.225", "ev": "tock", "node": "n033", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.243", "ev": "tock", "node": "n002", "round": 20, "rc": 0, "ended": [{"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.248", "ev": "tick", "node": "n017", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.250", "ev": "tock", "node": "n010", "round": 22, "rc": 0, "ended": [{"tid": "p0-r22", "name": "p0", "code": 0}, {"tid": "p1-r22", "name": "p1", "code": 0}, {"tid": "p2-r21", "name": "p2", "code": 0}, {"tid": "p2-r22", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.256", "ev": "tick", "node": "n020", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:49.258", "ev": "tick", "node": "n008", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.261", "ev": "tock", "node": "n040", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.267", "ev": "tock", "node": "n035", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.270", "ev": "tock", "node": "n014", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.272", "ev": "tock", "node": "n026", "round": 19, "rc": 0, "ended": [{"tid": "p0-r19", "name": "p0", "code": 0}, {"tid": "p1-r19", "name": "p1", "code": 0}, {"tid": "p2-r19", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.274", "ev": "tock", "node": "n011", "round": 21, "rc": 0, "ended": [{"tid": "p0-r21", "name": "p0", "code": 0}, {"tid": "p1-r21", "name": "p1", "code": 0}, {"tid": "p2-r20", "name": "p2", "code": 0}, {"tid": "p2-r21", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.274", "ev": "tock", "node": "n041", "round": 17, "rc": 0, "ended": [{"tid": "p0-r17", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p2-r17", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.277", "ev": "tick", "node": "n036", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.280", "ev": "tick", "node": "n007", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.285", "ev": "tick", "node": "n038", "round": 19, "started": ["p0-r19", "p1-r19", "p2-r19"], "rc": 0}
+{"at": "2026-10-03T16:09:49.291", "ev": "tick", "node": "n015", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.292", "ev": "tock", "node": "n046", "round": 18, "rc": 0, "ended": [{"tid": "p0-r18", "name": "p0", "code": 0}, {"tid": "p1-r17", "name": "p1", "code": 0}, {"tid": "p1-r18", "name": "p1", "code": 0}, {"tid": "p2-r18", "name": "p2", "code": 0}], "early": false}
+{"at": "2026-10-03T16:09:49.294", "ev": "tick", "node": "n013", "round": 20, "started": ["p0-r20", "p1-r20", "p2-r20"], "rc": 0}
+{"at": "2026-10-03T16:09:49.297", "ev": "tock", "node": "n022", "round": 20, "rc": 0, "ended": [{"tid": "p0-r20", "name": "p0", "code": 0}, {"tid": "p1-r20", "name": "p1", "code": 0}], "early": false}

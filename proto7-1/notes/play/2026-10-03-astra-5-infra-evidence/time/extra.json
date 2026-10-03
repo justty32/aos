@@ -1,0 +1,266 @@
+{
+  "overflow": {
+    "root": "/tmp/astra5-time-extra-overflow-7flu6unw",
+    "before": {
+      "pid": 2340603,
+      "root": "/tmp/astra5-time-extra-overflow-7flu6unw",
+      "at": "2026-10-03T16:02:42.171",
+      "poll_s": 0.02,
+      "gen": 1,
+      "io_errors": 0,
+      "stopping": false,
+      "stopped": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 0,
+          "phase": "error",
+          "paused": false,
+          "interval_ms": null,
+          "pause_pending": false,
+          "live": [],
+          "last_error": {
+            "prog": "timeline",
+            "rc": null,
+            "round": 0,
+            "at": "2026-10-03T16:02:41.936",
+            "err": "OverflowError('int too large to convert to float')"
+          }
+        }
+      }
+    },
+    "after": {
+      "pid": 2340603,
+      "root": "/tmp/astra5-time-extra-overflow-7flu6unw",
+      "at": "2026-10-03T16:02:42.657",
+      "poll_s": 0.02,
+      "gen": 1,
+      "io_errors": 0,
+      "stopping": false,
+      "stopped": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 3,
+          "phase": "tock",
+          "paused": false,
+          "interval_ms": 100,
+          "pause_pending": false,
+          "live": [],
+          "last_error": {
+            "prog": "timeline",
+            "rc": null,
+            "round": 0,
+            "at": "2026-10-03T16:02:41.936",
+            "err": "OverflowError('int too large to convert to float')"
+          }
+        }
+      }
+    },
+    "repair_to_round3_ms": 477.32376899875817,
+    "log": [
+      {
+        "at": "2026-10-03T16:02:40.935",
+        "ev": "start",
+        "pid": 2340603,
+        "gen": 1
+      },
+      {
+        "at": "2026-10-03T16:02:40.935",
+        "ev": "node+",
+        "node": "n",
+        "round": 0
+      },
+      {
+        "at": "2026-10-03T16:02:40.935",
+        "ev": "error",
+        "node": "n",
+        "msg": "OverflowError('int too large to convert to float')"
+      },
+      {
+        "at": "2026-10-03T16:02:41.436",
+        "ev": "error",
+        "node": "n",
+        "msg": "OverflowError('int too large to convert to float')"
+      },
+      {
+        "at": "2026-10-03T16:02:41.936",
+        "ev": "error",
+        "node": "n",
+        "msg": "OverflowError('int too large to convert to float')"
+      },
+      {
+        "at": "2026-10-03T16:02:42.192",
+        "ev": "ctl",
+        "file": "repair.json",
+        "op": "rescan",
+        "node": "n",
+        "by": null,
+        "ok": true,
+        "msg": "rescanned"
+      },
+      {
+        "at": "2026-10-03T16:02:42.457",
+        "ev": "tick",
+        "node": "n",
+        "round": 1,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:02:42.476",
+        "ev": "tock",
+        "node": "n",
+        "round": 1,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:02:42.557",
+        "ev": "tick",
+        "node": "n",
+        "round": 2,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:02:42.577",
+        "ev": "tock",
+        "node": "n",
+        "round": 2,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:02:42.656",
+        "ev": "tick",
+        "node": "n",
+        "round": 3,
+        "started": [],
+        "rc": 0
+      }
+    ],
+    "cleanup": {
+      "daemon_returncode": 0,
+      "root_removed": true
+    }
+  },
+  "wake": {
+    "root": "/tmp/astra5-time-extra-wake-p1m8xphx",
+    "before": {
+      "pid": 2340625,
+      "root": "/tmp/astra5-time-extra-wake-p1m8xphx",
+      "at": "2026-10-03T16:02:42.856",
+      "poll_s": 0.02,
+      "gen": 1,
+      "io_errors": 0,
+      "stopping": false,
+      "stopped": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 1,
+          "phase": "idle",
+          "paused": false,
+          "interval_ms": 86400000,
+          "pause_pending": false,
+          "live": []
+        }
+      }
+    },
+    "after": {
+      "pid": 2340625,
+      "root": "/tmp/astra5-time-extra-wake-p1m8xphx",
+      "at": "2026-10-03T16:02:43.018",
+      "poll_s": 0.02,
+      "gen": 1,
+      "io_errors": 0,
+      "stopping": false,
+      "stopped": false,
+      "kill_on_stop": false,
+      "nodes": {
+        "n": {
+          "round": 3,
+          "phase": "tock",
+          "paused": false,
+          "interval_ms": 100,
+          "pause_pending": false,
+          "live": []
+        }
+      }
+    },
+    "repair_to_round3_ms": 151.6973709985905,
+    "log": [
+      {
+        "at": "2026-10-03T16:02:42.713",
+        "ev": "start",
+        "pid": 2340625,
+        "gen": 1
+      },
+      {
+        "at": "2026-10-03T16:02:42.714",
+        "ev": "node+",
+        "node": "n",
+        "round": 0
+      },
+      {
+        "at": "2026-10-03T16:02:42.733",
+        "ev": "tick",
+        "node": "n",
+        "round": 1,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:02:42.752",
+        "ev": "tock",
+        "node": "n",
+        "round": 1,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:02:42.876",
+        "ev": "ctl",
+        "file": "repair.json",
+        "op": "wake",
+        "node": "n",
+        "by": null,
+        "ok": true,
+        "msg": "wake n"
+      },
+      {
+        "at": "2026-10-03T16:02:42.913",
+        "ev": "tick",
+        "node": "n",
+        "round": 2,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:02:42.933",
+        "ev": "tock",
+        "node": "n",
+        "round": 2,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:02:43.012",
+        "ev": "tick",
+        "node": "n",
+        "round": 3,
+        "started": [],
+        "rc": 0
+      }
+    ],
+    "cleanup": {
+      "daemon_returncode": 0,
+      "root_removed": true
+    }
+  }
+}

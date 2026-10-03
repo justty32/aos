@@ -1,0 +1,153 @@
+{
+ "stop_injection": {
+  "pid": 2340017,
+  "at": 27099.344978009
+ },
+ "resume_mono": 27099.696118772,
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27099.344608358,
+   "end": 27099.715478939,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27099.71567185,
+   "end": 27099.734270103,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27099.734429101,
+   "end": 27099.754427843,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27099.754513944,
+   "end": 27099.774660803,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "n",
+   "start": 27099.834502489,
+   "end": 27099.854157148,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "n",
+   "start": 27099.854239051,
+   "end": 27099.87389392,
+   "round": 3,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T16:01:31.133",
+   "ev": "start",
+   "pid": 2340015,
+   "gen": 1
+  },
+  {
+   "at": "2026-10-03T16:01:31.133",
+   "ev": "node+",
+   "node": "n",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:31.504",
+   "ev": "tick",
+   "node": "n",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:31.523",
+   "ev": "tock",
+   "node": "n",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:31.543",
+   "ev": "tick",
+   "node": "n",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:31.563",
+   "ev": "tock",
+   "node": "n",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:31.643",
+   "ev": "tick",
+   "node": "n",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:31.662",
+   "ev": "tock",
+   "node": "n",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:31.680",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T16:01:31.680",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 2340015,
+  "root": "/tmp/astra5-time-stall-iiguvbv4",
+  "at": "2026-10-03T16:01:31.680",
+  "poll_s": 0.02,
+  "gen": 1,
+  "io_errors": 0,
+  "stopping": true,
+  "stopped": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "n": {
+    "round": 3,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 100,
+    "pause_pending": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

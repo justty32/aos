@@ -1,0 +1,66 @@
+{
+  "case": "handoff-tick-held",
+  "root": "/tmp/astra5-crash-handoff-tick-held-nvgw_n50",
+  "fault_injection": "sitecustomize patches selected os call only; SIGSTOP then controller SIGKILL",
+  "at_fault": {
+    ".aos/.round.json.tmp.2345128": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:06:34.739\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:06:34.739\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 100, \"action_timeout_s\": 0.25}",
+    ".aosd/daemon.lock": "",
+    ".aosd/gen.json": "{\n \"gen\": 1,\n \"pid\": 2345126,\n \"at\": \"2026-10-03T16:06:34.723\"\n}\n",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T16:06:34.723\", \"ev\": \"start\", \"pid\": 2345126, \"gen\": 1}\n{\"at\": \"2026-10-03T16:06:34.724\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n",
+    ".aosd/status.json": "{\n \"pid\": 2345126,\n \"root\": \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50\",\n \"at\": \"2026-10-03T16:06:34.724\",\n \"poll_s\": 0.02,\n \"gen\": 1,\n \"io_errors\": 0,\n \"stopping\": false,\n \"stopped\": false,\n \"kill_on_stop\": false,\n \"nodes\": {\n  \".\": {\n   \"round\": 0,\n   \"phase\": \"tick\",\n   \"paused\": false,\n   \"interval_ms\": 100,\n   \"pause_pending\": false,\n   \"live\": []\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "fault-marker.json": "{\"pid\": 2345128, \"path\": \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/round.json\", \"args\": [\"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/.round.json.tmp.2345128\", \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/round.json\"]}"
+  },
+  "new_daemon_alive_while_old_stopped": true,
+  "before_old_resume": {
+    ".aos/.round.json.tmp.2345128": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:06:34.739\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:06:34.739\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 100, \"action_timeout_s\": 0.25}",
+    ".aosd/daemon.lock": "",
+    ".aosd/gen.json": "{\n \"gen\": 2,\n \"pid\": 2345129,\n \"at\": \"2026-10-03T16:06:34.754\"\n}\n",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T16:06:34.723\", \"ev\": \"start\", \"pid\": 2345126, \"gen\": 1}\n{\"at\": \"2026-10-03T16:06:34.724\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T16:06:34.754\", \"ev\": \"start\", \"pid\": 2345129, \"gen\": 2}\n{\"at\": \"2026-10-03T16:06:34.754\", \"ev\": \"node+\", \"node\": \".\", \"round\": 1}\n{\"at\": \"2026-10-03T16:06:35.055\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": -9, \"err\": \": aos7-tick killed (timeout after 0.2s)\", \"incomplete\": true}\n{\"at\": \"2026-10-03T16:06:35.357\", \"ev\": \"tock\", \"node\": \".\", \"round\": 1, \"rc\": -9, \"ended\": null, \"early\": false, \"err\": \": aos7-tock killed (timeout after 0.2s)\", \"incomplete\": true}\n{\"at\": \"2026-10-03T16:06:35.658\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": -9, \"err\": \": aos7-tick killed (timeout after 0.2s)\", \"incomplete\": true}\n",
+    ".aosd/status.json": "{\n \"pid\": 2345129,\n \"root\": \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50\",\n \"at\": \"2026-10-03T16:06:35.885\",\n \"poll_s\": 0.02,\n \"gen\": 2,\n \"io_errors\": 0,\n \"stopping\": false,\n \"stopped\": false,\n \"kill_on_stop\": false,\n \"nodes\": {\n  \".\": {\n   \"round\": 1,\n   \"phase\": \"tock\",\n   \"paused\": false,\n   \"interval_ms\": 100,\n   \"pause_pending\": false,\n   \"live\": [],\n   \"last_error\": {\n    \"prog\": \"tick\",\n    \"rc\": -9,\n    \"round\": 1,\n    \"at\": \"2026-10-03T16:06:35.658\",\n    \"err\": \": aos7-tick killed (timeout after 0.2s)\"\n   }\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "aos7-daemon-1.stderr": "",
+    "fault-marker.json": "{\"pid\": 2345128, \"path\": \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/round.json\", \"args\": [\"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/.round.json.tmp.2345128\", \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/round.json\"]}"
+  },
+  "old_action_state_after_resume": "Z",
+  "after_old_resume": {
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 4,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:06:36.109\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T16:06:34.739\", \"tock_at\": \"2026-10-03T16:06:35.891\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": false, \"incomplete\": \"tick\"}\n{\"round\": 2, \"tick_at\": \"2026-10-03T16:06:35.909\", \"tock_at\": \"2026-10-03T16:06:35.926\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": true}\n{\"round\": 3, \"tick_at\": \"2026-10-03T16:06:36.010\", \"tock_at\": \"2026-10-03T16:06:36.027\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": true}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 100, \"action_timeout_s\": 0.25}",
+    ".aosd/daemon.lock": "",
+    ".aosd/gen.json": "{\n \"gen\": 2,\n \"pid\": 2345129,\n \"at\": \"2026-10-03T16:06:34.754\"\n}\n",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T16:06:34.723\", \"ev\": \"start\", \"pid\": 2345126, \"gen\": 1}\n{\"at\": \"2026-10-03T16:06:34.724\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T16:06:34.754\", \"ev\": \"start\", \"pid\": 2345129, \"gen\": 2}\n{\"at\": \"2026-10-03T16:06:34.754\", \"ev\": \"node+\", \"node\": \".\", \"round\": 1}\n{\"at\": \"2026-10-03T16:06:35.055\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": -9, \"err\": \": aos7-tick killed (timeout after 0.2s)\", \"incomplete\": true}\n{\"at\": \"2026-10-03T16:06:35.357\", \"ev\": \"tock\", \"node\": \".\", \"round\": 1, \"rc\": -9, \"ended\": null, \"early\": false, \"err\": \": aos7-tock killed (timeout after 0.2s)\", \"incomplete\": true}\n{\"at\": \"2026-10-03T16:06:35.658\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": -9, \"err\": \": aos7-tick killed (timeout after 0.2s)\", \"incomplete\": true}\n{\"at\": \"2026-10-03T16:06:35.895\", \"ev\": \"tock\", \"node\": \".\", \"round\": 1, \"rc\": 0, \"ended\": [], \"early\": false}\n{\"at\": \"2026-10-03T16:06:35.912\", \"ev\": \"tick\", \"node\": \".\", \"round\": 2, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T16:06:35.929\", \"ev\": \"tock\", \"node\": \".\", \"round\": 2, \"rc\": 0, \"ended\": [], \"early\": true}\n{\"at\": \"2026-10-03T16:06:36.013\", \"ev\": \"tick\", \"node\": \".\", \"round\": 3, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T16:06:36.029\", \"ev\": \"tock\", \"node\": \".\", \"round\": 3, \"rc\": 0, \"ended\": [], \"early\": true}\n",
+    ".aosd/status.json": "{\n \"pid\": 2345129,\n \"root\": \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50\",\n \"at\": \"2026-10-03T16:06:36.107\",\n \"poll_s\": 0.02,\n \"gen\": 2,\n \"io_errors\": 0,\n \"stopping\": false,\n \"stopped\": false,\n \"kill_on_stop\": false,\n \"nodes\": {\n  \".\": {\n   \"round\": 3,\n   \"phase\": \"tick\",\n   \"paused\": false,\n   \"interval_ms\": 100,\n   \"pause_pending\": false,\n   \"live\": [],\n   \"last_error\": {\n    \"prog\": \"tick\",\n    \"rc\": -9,\n    \"round\": 1,\n    \"at\": \"2026-10-03T16:06:35.658\",\n    \"err\": \": aos7-tick killed (timeout after 0.2s)\"\n   }\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "aos7-daemon-1.stderr": "",
+    "fault-marker.json": "{\"pid\": 2345128, \"path\": \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/round.json\", \"args\": [\"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/.round.json.tmp.2345128\", \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/round.json\"]}"
+  },
+  "final_files": {
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 4,\n \"open\": false,\n \"tick_at\": \"2026-10-03T16:06:36.109\",\n \"tock_at\": \"2026-10-03T16:06:36.125\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T16:06:34.739\", \"tock_at\": \"2026-10-03T16:06:35.891\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": false, \"incomplete\": \"tick\"}\n{\"round\": 2, \"tick_at\": \"2026-10-03T16:06:35.909\", \"tock_at\": \"2026-10-03T16:06:35.926\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": true}\n{\"round\": 3, \"tick_at\": \"2026-10-03T16:06:36.010\", \"tock_at\": \"2026-10-03T16:06:36.027\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": true}\n{\"round\": 4, \"tick_at\": \"2026-10-03T16:06:36.109\", \"tock_at\": \"2026-10-03T16:06:36.125\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": true}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 100, \"action_timeout_s\": 0.25}",
+    ".aosd/daemon.lock": "",
+    ".aosd/gen.json": "{\n \"gen\": 2,\n \"pid\": 2345129,\n \"at\": \"2026-10-03T16:06:34.754\"\n}\n",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T16:06:34.723\", \"ev\": \"start\", \"pid\": 2345126, \"gen\": 1}\n{\"at\": \"2026-10-03T16:06:34.724\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T16:06:34.754\", \"ev\": \"start\", \"pid\": 2345129, \"gen\": 2}\n{\"at\": \"2026-10-03T16:06:34.754\", \"ev\": \"node+\", \"node\": \".\", \"round\": 1}\n{\"at\": \"2026-10-03T16:06:35.055\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": -9, \"err\": \": aos7-tick killed (timeout after 0.2s)\", \"incomplete\": true}\n{\"at\": \"2026-10-03T16:06:35.357\", \"ev\": \"tock\", \"node\": \".\", \"round\": 1, \"rc\": -9, \"ended\": null, \"early\": false, \"err\": \": aos7-tock killed (timeout after 0.2s)\", \"incomplete\": true}\n{\"at\": \"2026-10-03T16:06:35.658\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": -9, \"err\": \": aos7-tick killed (timeout after 0.2s)\", \"incomplete\": true}\n{\"at\": \"2026-10-03T16:06:35.895\", \"ev\": \"tock\", \"node\": \".\", \"round\": 1, \"rc\": 0, \"ended\": [], \"early\": false}\n{\"at\": \"2026-10-03T16:06:35.912\", \"ev\": \"tick\", \"node\": \".\", \"round\": 2, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T16:06:35.929\", \"ev\": \"tock\", \"node\": \".\", \"round\": 2, \"rc\": 0, \"ended\": [], \"early\": true}\n{\"at\": \"2026-10-03T16:06:36.013\", \"ev\": \"tick\", \"node\": \".\", \"round\": 3, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T16:06:36.029\", \"ev\": \"tock\", \"node\": \".\", \"round\": 3, \"rc\": 0, \"ended\": [], \"early\": true}\n{\"at\": \"2026-10-03T16:06:36.112\", \"ev\": \"tick\", \"node\": \".\", \"round\": 4, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T16:06:36.127\", \"ev\": \"stopping\", \"kill\": true}\n{\"at\": \"2026-10-03T16:06:36.128\", \"ev\": \"tock\", \"node\": \".\", \"round\": 4, \"rc\": 0, \"ended\": [], \"early\": true}\n{\"at\": \"2026-10-03T16:06:36.148\", \"ev\": \"stop\"}\n",
+    ".aosd/status.json": "{\n \"pid\": 2345129,\n \"root\": \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50\",\n \"at\": \"2026-10-03T16:06:36.147\",\n \"poll_s\": 0.02,\n \"gen\": 2,\n \"io_errors\": 0,\n \"stopping\": true,\n \"stopped\": true,\n \"kill_on_stop\": true,\n \"nodes\": {\n  \".\": {\n   \"round\": 4,\n   \"phase\": \"stopped\",\n   \"paused\": false,\n   \"interval_ms\": 100,\n   \"pause_pending\": false,\n   \"live\": [],\n   \"last_error\": {\n    \"prog\": \"tick\",\n    \"rc\": -9,\n    \"round\": 1,\n    \"at\": \"2026-10-03T16:06:35.658\",\n    \"err\": \": aos7-tick killed (timeout after 0.2s)\"\n   }\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "aos7-daemon-1.stderr": "",
+    "fault-marker.json": "{\"pid\": 2345128, \"path\": \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/round.json\", \"args\": [\"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/.round.json.tmp.2345128\", \"/tmp/astra5-crash-handoff-tick-held-nvgw_n50/.aos/round.json\"]}"
+  },
+  "cleanup": {
+    "remaining_children": [],
+    "root_exists": false
+  }
+}

@@ -1,0 +1,283 @@
+[
+  {
+    "case": "rename_gap",
+    "root": "/tmp/astra5-node-rename_gap-wqqkvmzs",
+    "pid": {
+      "pid": 2344380,
+      "pgid": 2344380,
+      "runner_pid": 2344379,
+      "at": "2026-10-03T16:06:15.743"
+    },
+    "known_before": {
+      "sleep-r1": [
+        2344380,
+        2344379
+      ]
+    },
+    "task_alive_after": false,
+    "node_still_exists": true,
+    "node_in_daemon": false,
+    "io_errors_delta": 0,
+    "log": [
+      {
+        "at": "2026-10-03T16:06:15.728",
+        "ev": "node+",
+        "node": "n",
+        "round": 0,
+        "paused": true
+      },
+      {
+        "at": "2026-10-03T16:06:15.748",
+        "ev": "node-",
+        "node": "n"
+      },
+      {
+        "at": "2026-10-03T16:06:15.760",
+        "ev": "node-gone-kill",
+        "node": "n",
+        "groups": 1,
+        "ok": true
+      }
+    ]
+  },
+  {
+    "case": "estale_walk",
+    "root": "/tmp/astra5-node-estale_walk-7i9sksps",
+    "pid": {
+      "pid": 2344386,
+      "pgid": 2344386,
+      "runner_pid": 2344385,
+      "at": "2026-10-03T16:06:16.038"
+    },
+    "known_before": {
+      "sleep-r1": [
+        2344386,
+        2344385
+      ]
+    },
+    "task_alive_after": false,
+    "node_still_exists": true,
+    "node_in_daemon": false,
+    "io_errors_delta": 0,
+    "log": [
+      {
+        "at": "2026-10-03T16:06:16.022",
+        "ev": "node+",
+        "node": "n",
+        "round": 0,
+        "paused": true
+      },
+      {
+        "at": "2026-10-03T16:06:16.043",
+        "ev": "node-",
+        "node": "n"
+      },
+      {
+        "at": "2026-10-03T16:06:16.053",
+        "ev": "node-gone-kill",
+        "node": "n",
+        "groups": 1,
+        "ok": true
+      }
+    ]
+  },
+  {
+    "case": "timeline_eio",
+    "root": "/tmp/astra5-node-timeline_eio-0k7kt7ri",
+    "pid": {
+      "pid": 2344390,
+      "pgid": 2344390,
+      "runner_pid": 2344389,
+      "at": "2026-10-03T16:06:16.329"
+    },
+    "known_before": {
+      "sleep-r1": [
+        2344390,
+        2344389
+      ]
+    },
+    "task_alive_after": false,
+    "node_still_exists": true,
+    "node_in_daemon": false,
+    "io_errors_delta": 0,
+    "log": [
+      {
+        "at": "2026-10-03T16:06:16.314",
+        "ev": "node+",
+        "node": "n",
+        "round": 0,
+        "paused": true
+      },
+      {
+        "at": "2026-10-03T16:06:16.335",
+        "ev": "node-",
+        "node": "n"
+      },
+      {
+        "at": "2026-10-03T16:06:16.344",
+        "ev": "node-gone-kill",
+        "node": "n",
+        "groups": 1,
+        "ok": true
+      }
+    ]
+  },
+  {
+    "case": "atomic_replace",
+    "root": "/tmp/astra5-node-atomic_replace-gfa0iaa1",
+    "pid": {
+      "pid": 2344398,
+      "pgid": 2344398,
+      "runner_pid": 2344397,
+      "at": "2026-10-03T16:06:16.620"
+    },
+    "known_before": {
+      "sleep-r1": [
+        2344398,
+        2344397
+      ]
+    },
+    "task_alive_after": true,
+    "node_still_exists": true,
+    "node_in_daemon": true,
+    "io_errors_delta": 0,
+    "log": [
+      {
+        "at": "2026-10-03T16:06:16.605",
+        "ev": "node+",
+        "node": "n",
+        "round": 0,
+        "paused": true
+      }
+    ]
+  },
+  {
+    "case": "env_scrub_sampled",
+    "root": "/tmp/astra5-node-env_scrub_sampled-_v9iaacg",
+    "pid": {
+      "pid": 2344411,
+      "pgid": 2344411,
+      "runner_pid": 2344410,
+      "at": "2026-10-03T16:06:16.930"
+    },
+    "known_before": {
+      "sleep-r1": [
+        2344411,
+        2344410
+      ]
+    },
+    "task_alive_after": false,
+    "node_still_exists": false,
+    "node_in_daemon": false,
+    "io_errors_delta": 0,
+    "log": [
+      {
+        "at": "2026-10-03T16:06:16.915",
+        "ev": "node+",
+        "node": "n",
+        "round": 0,
+        "paused": true
+      },
+      {
+        "at": "2026-10-03T16:06:16.935",
+        "ev": "node-",
+        "node": "n"
+      },
+      {
+        "at": "2026-10-03T16:06:16.946",
+        "ev": "node-gone-kill",
+        "node": "n",
+        "groups": 1,
+        "ok": true
+      }
+    ]
+  },
+  {
+    "case": "env_scrub_unsampled",
+    "root": "/tmp/astra5-node-env_scrub_unsampled-848uq82h",
+    "pid": {
+      "pid": 2344415,
+      "pgid": 2344415,
+      "runner_pid": 2344414,
+      "at": "2026-10-03T16:06:17.225"
+    },
+    "known_before": {},
+    "task_alive_after": true,
+    "node_still_exists": false,
+    "node_in_daemon": false,
+    "io_errors_delta": 0,
+    "log": [
+      {
+        "at": "2026-10-03T16:06:17.208",
+        "ev": "node+",
+        "node": "n",
+        "round": 0,
+        "paused": true
+      },
+      {
+        "at": "2026-10-03T16:06:17.228",
+        "ev": "node-",
+        "node": "n"
+      }
+    ]
+  },
+  {
+    "case": "normal_unsampled",
+    "root": "/tmp/astra5-node-normal_unsampled-2e5fjih2",
+    "pid": {
+      "pid": 2344423,
+      "pgid": 2344423,
+      "runner_pid": 2344422,
+      "at": "2026-10-03T16:06:17.507"
+    },
+    "known_before": {},
+    "task_alive_after": false,
+    "node_still_exists": false,
+    "node_in_daemon": false,
+    "io_errors_delta": 0,
+    "log": [
+      {
+        "at": "2026-10-03T16:06:17.492",
+        "ev": "node+",
+        "node": "n",
+        "round": 0,
+        "paused": true
+      },
+      {
+        "at": "2026-10-03T16:06:17.513",
+        "ev": "node-",
+        "node": "n"
+      },
+      {
+        "at": "2026-10-03T16:06:17.524",
+        "ev": "node-gone-kill",
+        "node": "n",
+        "groups": 1,
+        "ok": true
+      }
+    ]
+  },
+  {
+    "case": "original_rounds_test_delayed_start",
+    "success": false,
+    "test_output": "E\n======================================================================\nERROR: test_rounds_n_exits (test_agent.RoundsFlag.test_rounds_n_exits)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/tests/test_agent.py\", line 364, in test_rounds_n_exits\n    out, _ = p.communicate(timeout=5)\n             ~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/usr/lib/python3.14/subprocess.py\", line 1221, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.14/subprocess.py\", line 2154, in _communicate\n    self._check_timeout(endtime, orig_timeout, stdout, stderr)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.14/subprocess.py\", line 1268, in _check_timeout\n    raise TimeoutExpired(\n    ...<2 lines>...\n            stderr=b''.join(stderr_seq) if stderr_seq else None)\nsubprocess.TimeoutExpired: Command '['/usr/bin/python', '-c', 'import os,sys,time;time.sleep(.5);os.execv(sys.argv[1],sys.argv[1:])', '/usr/bin/python', '/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-agent', '--rounds', '2']' timed out after 5 seconds\n\n----------------------------------------------------------------------\nRan 1 test in 5.308s\n\nFAILED (errors=1)\n",
+    "root": "/tmp/astra5-node-agent-test-q4_wtkio",
+    "root_exists_after_cleanup": false,
+    "agent_pid": 2344429,
+    "agent_alive_after_cleanup": true,
+    "proc_environment_still_refers_to_deleted_root": true
+  },
+  {
+    "case": "demo_stop_write_error",
+    "root": "/tmp/astra5-node-demo-error-sjckayq0",
+    "error": "OSError(5, 'simulated failure writing demo stop')",
+    "daemon_alive_after_exception": true,
+    "task_processes_before_root_delete": [
+      2344637,
+      2344638
+    ],
+    "daemon_alive_after_root_delete": true,
+    "root_recreated_after_delete": true,
+    "tasks_after_delete": []
+  }
+]

@@ -1,0 +1,39 @@
+{
+  "case": "stale-tock",
+  "root": "/tmp/astra5-crash-stale-tock-i_lbc2qu",
+  "fault_injection": "sitecustomize patches selected os call only; SIGSTOP then controller SIGKILL",
+  "at_fault": {
+    ".aos/.round.json.tmp.2339648": "{\n \"round\": 1,\n \"open\": false,\n \"tick_at\": \"2026-10-03T16:01:21.894\",\n \"tock_at\": \"2026-10-03T16:01:21.913\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:01:21.894\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T16:01:21.894\", \"tock_at\": \"2026-10-03T16:01:21.913\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": true}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    ".aosd/daemon.lock": "",
+    ".aosd/gen.json": "{\n \"gen\": 1,\n \"pid\": 2339642,\n \"at\": \"2026-10-03T16:01:21.876\"\n}\n",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T16:01:21.876\", \"ev\": \"start\", \"pid\": 2339642, \"gen\": 1}\n{\"at\": \"2026-10-03T16:01:21.876\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T16:01:21.896\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": 0}\n",
+    ".aosd/status.json": "{\n \"pid\": 2339642,\n \"root\": \"/tmp/astra5-crash-stale-tock-i_lbc2qu\",\n \"at\": \"2026-10-03T16:01:21.917\",\n \"poll_s\": 0.02,\n \"gen\": 1,\n \"io_errors\": 0,\n \"stopping\": false,\n \"stopped\": false,\n \"kill_on_stop\": false,\n \"nodes\": {\n  \".\": {\n   \"round\": 1,\n   \"phase\": \"tock\",\n   \"paused\": false,\n   \"interval_ms\": 200,\n   \"pause_pending\": false,\n   \"live\": []\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "fault-marker.json": "{\"pid\": 2339648, \"path\": \"/tmp/astra5-crash-stale-tock-i_lbc2qu/.aos/round.json\", \"args\": [\"/tmp/astra5-crash-stale-tock-i_lbc2qu/.aos/.round.json.tmp.2339648\", \"/tmp/astra5-crash-stale-tock-i_lbc2qu/.aos/round.json\"]}"
+  },
+  "probe_error": "TimeoutError('probe wait expired')",
+  "final_files": {
+    ".aos/.round.json.tmp.2339648": "{\n \"round\": 1,\n \"open\": false,\n \"tick_at\": \"2026-10-03T16:01:21.894\",\n \"tock_at\": \"2026-10-03T16:01:21.913\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:01:21.894\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T16:01:21.894\", \"tock_at\": \"2026-10-03T16:01:21.913\", \"started\": [], \"alive\": [], \"ended\": [], \"ctl\": [], \"mounts\": [], \"early\": true}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    ".aosd/daemon.lock": "",
+    ".aosd/gen.json": "{\n \"gen\": 2,\n \"pid\": 2339649,\n \"at\": \"2026-10-03T16:01:21.937\"\n}\n",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T16:01:21.876\", \"ev\": \"start\", \"pid\": 2339642, \"gen\": 1}\n{\"at\": \"2026-10-03T16:01:21.876\", \"ev\": \"node+\", \"node\": \".\", \"round\": 0}\n{\"at\": \"2026-10-03T16:01:21.896\", \"ev\": \"tick\", \"node\": \".\", \"round\": 1, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T16:01:21.937\", \"ev\": \"start\", \"pid\": 2339649, \"gen\": 2}\n{\"at\": \"2026-10-03T16:01:21.937\", \"ev\": \"node+\", \"node\": \".\", \"round\": 1}\n",
+    ".aosd/status.json": "{\n \"pid\": 2339649,\n \"root\": \"/tmp/astra5-crash-stale-tock-i_lbc2qu\",\n \"at\": \"2026-10-03T16:01:26.919\",\n \"poll_s\": 0.02,\n \"gen\": 2,\n \"io_errors\": 0,\n \"stopping\": false,\n \"stopped\": false,\n \"kill_on_stop\": false,\n \"nodes\": {\n  \".\": {\n   \"round\": 1,\n   \"phase\": \"tick\",\n   \"paused\": false,\n   \"interval_ms\": 200,\n   \"pause_pending\": false,\n   \"live\": []\n  }\n }\n}\n",
+    "aos7-daemon-0.stderr": "",
+    "aos7-daemon-1.stderr": "",
+    "fault-marker.json": "{\"pid\": 2339648, \"path\": \"/tmp/astra5-crash-stale-tock-i_lbc2qu/.aos/round.json\", \"args\": [\"/tmp/astra5-crash-stale-tock-i_lbc2qu/.aos/.round.json.tmp.2339648\", \"/tmp/astra5-crash-stale-tock-i_lbc2qu/.aos/round.json\"]}"
+  },
+  "cleanup": {
+    "remaining_children": [],
+    "root_exists": false
+  }
+}

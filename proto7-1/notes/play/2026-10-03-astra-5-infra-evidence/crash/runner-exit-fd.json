@@ -1,0 +1,41 @@
+{
+  "case": "runner-exit-fd",
+  "root": "/tmp/astra5-crash-runner-exit-fd-mu8uodm9",
+  "fault_injection": "sitecustomize patches selected os call only; SIGSTOP then controller SIGKILL",
+  "at_fault": {
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:06:40.619\",\n \"tock_at\": null,\n \"started\": [\n  \"done-r1\"\n ],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/tasks/done-r1/.exit.json.tmp.2345538": "{\n \"code\": 23,\n \"at\": \"2026-10-03T16:06:40.632\",\n \"round\": 1\n}\n",
+    ".aos/tasks/done-r1/birth.json": "{\n \"tid\": \"done-r1\",\n \"name\": \"done\",\n \"node\": \".\",\n \"round\": 1,\n \"mounts\": {},\n \"at\": \"2026-10-03T16:06:40.619\",\n \"restart_of\": null,\n \"argv\": [\n  \"/bin/sh\",\n  \"-c\",\n  \"exit 23\"\n ]\n}\n",
+    ".aos/tasks/done-r1/out.log": "",
+    ".aos/tasks/done-r1/pid.json": "{\n \"pid\": 2345539,\n \"pgid\": 2345539,\n \"runner_pid\": 2345538,\n \"at\": \"2026-10-03T16:06:40.631\"\n}\n",
+    ".aos/tasks.json": "{\"tasks\": [{\"name\": \"done\", \"argv\": [\"/bin/sh\", \"-c\", \"exit 23\"]}]}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    "aos7-tick-0.stderr": "{\"round\": 1, \"started\": [\"done-r1\"]}\n",
+    "fault-marker.json": "{\"pid\": 2345538, \"path\": \"exit.json\", \"args\": [\".exit.json.tmp.2345538\", \"exit.json\"]}"
+  },
+  "final_files": {
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 2,\n \"open\": false,\n \"tick_at\": \"2026-10-03T16:06:40.714\",\n \"tock_at\": \"2026-10-03T16:06:40.730\",\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 2, \"tick_at\": \"2026-10-03T16:06:40.714\", \"tock_at\": \"2026-10-03T16:06:40.730\", \"started\": [], \"alive\": [], \"ended\": [{\"tid\": \"done-r1\", \"name\": \"done\", \"code\": null, \"lost\": true}], \"ctl\": [], \"mounts\": [], \"early\": true}\n",
+    ".aos/tasks/done-r1/.exit.json.tmp.2345538": "{\n \"code\": 23,\n \"at\": \"2026-10-03T16:06:40.632\",\n \"round\": 1\n}\n",
+    ".aos/tasks/done-r1/birth.json": "{\n \"tid\": \"done-r1\",\n \"name\": \"done\",\n \"node\": \".\",\n \"round\": 1,\n \"mounts\": {},\n \"at\": \"2026-10-03T16:06:40.619\",\n \"restart_of\": null,\n \"argv\": [\n  \"/bin/sh\",\n  \"-c\",\n  \"exit 23\"\n ]\n}\n",
+    ".aos/tasks/done-r1/ended.json": "{\n \"round\": 2\n}\n",
+    ".aos/tasks/done-r1/exit.json": "{\n \"code\": null,\n \"lost\": true,\n \"at\": \"2026-10-03T16:06:40.730\",\n \"round\": 2\n}\n",
+    ".aos/tasks/done-r1/out.log": "",
+    ".aos/tasks/done-r1/pid.json": "{\n \"pid\": 2345539,\n \"pgid\": 2345539,\n \"runner_pid\": 2345538,\n \"at\": \"2026-10-03T16:06:40.631\"\n}\n",
+    ".aos/tasks.json": "{\"tasks\": []}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    ".aosd/daemon.lock": "",
+    ".aosd/gen.json": "{\n \"gen\": 1,\n \"pid\": 2345540,\n \"at\": \"2026-10-03T16:06:40.701\"\n}\n",
+    ".aosd/log.jsonl": "{\"at\": \"2026-10-03T16:06:40.701\", \"ev\": \"start\", \"pid\": 2345540, \"gen\": 1}\n{\"at\": \"2026-10-03T16:06:40.701\", \"ev\": \"node+\", \"node\": \".\", \"round\": 1}\n{\"at\": \"2026-10-03T16:06:40.717\", \"ev\": \"tick\", \"node\": \".\", \"round\": 2, \"started\": [], \"rc\": 0}\n{\"at\": \"2026-10-03T16:06:40.732\", \"ev\": \"tock\", \"node\": \".\", \"round\": 2, \"rc\": 0, \"ended\": [{\"tid\": \"done-r1\", \"name\": \"done\", \"code\": null, \"lost\": true}], \"early\": true}\n{\"at\": \"2026-10-03T16:06:40.742\", \"ev\": \"stopping\", \"kill\": true}\n{\"at\": \"2026-10-03T16:06:40.742\", \"ev\": \"stop\"}\n",
+    ".aosd/status.json": "{\n \"pid\": 2345540,\n \"root\": \"/tmp/astra5-crash-runner-exit-fd-mu8uodm9\",\n \"at\": \"2026-10-03T16:06:40.742\",\n \"poll_s\": 0.02,\n \"gen\": 1,\n \"io_errors\": 0,\n \"stopping\": true,\n \"stopped\": true,\n \"kill_on_stop\": true,\n \"nodes\": {\n  \".\": {\n   \"round\": 2,\n   \"phase\": \"stopped\",\n   \"paused\": false,\n   \"interval_ms\": 200,\n   \"pause_pending\": false,\n   \"live\": []\n  }\n }\n}\n",
+    "aos7-daemon-1.stderr": "",
+    "aos7-tick-0.stderr": "{\"round\": 1, \"started\": [\"done-r1\"]}\n",
+    "fault-marker.json": "{\"pid\": 2345538, \"path\": \"exit.json\", \"args\": [\".exit.json.tmp.2345538\", \"exit.json\"]}"
+  },
+  "cleanup": {
+    "remaining_children": [],
+    "root_exists": false
+  }
+}

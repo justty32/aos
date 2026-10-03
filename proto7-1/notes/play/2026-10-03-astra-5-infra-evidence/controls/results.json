@@ -1,0 +1,197 @@
+[
+  {
+    "case": "resume_pause_resume",
+    "pending": {
+      "round": 1,
+      "phase": "running",
+      "paused": true,
+      "interval_ms": 350,
+      "pause_pending": true,
+      "live": []
+    },
+    "settled": {
+      "round": 1,
+      "phase": "paused",
+      "paused": true,
+      "interval_ms": 350,
+      "pause_pending": false,
+      "live": [
+        "sleep-r1"
+      ]
+    },
+    "final": {
+      "round": 3,
+      "phase": "paused",
+      "paused": true,
+      "interval_ms": 350,
+      "pause_pending": false,
+      "live": [
+        "sleep-r1",
+        "sleep-r2"
+      ]
+    },
+    "exact_two": true
+  },
+  {
+    "case": "pending_pause_then_resume_one",
+    "active_round": 7,
+    "final": {
+      "round": 7,
+      "phase": "paused",
+      "paused": true,
+      "interval_ms": 350,
+      "pause_pending": false,
+      "live": [
+        "sleep-r7"
+      ]
+    }
+  },
+  {
+    "case": "wake_flood",
+    "files": 10000,
+    "stop_receipt_delay_s": 0.401,
+    "total_drain_s": 0.411,
+    "observations": [
+      {
+        "seconds": 0.01,
+        "status_unchanged": true
+      },
+      {
+        "seconds": 0.11,
+        "status_unchanged": true
+      },
+      {
+        "seconds": 0.21,
+        "status_unchanged": true
+      },
+      {
+        "seconds": 0.311,
+        "status_unchanged": true
+      }
+    ],
+    "receipt": {
+      "op": "stop",
+      "node": ".",
+      "kill": true,
+      "result": {
+        "ok": true,
+        "msg": "stopping with kill",
+        "at": "2026-10-03T16:03:03.308",
+        "queued_at": "2026-10-03T16:03:02.922"
+      }
+    }
+  },
+  {
+    "case": "wake_unknown",
+    "accepted": [
+      true,
+      "wake future（目前沒有這個 node，出現時才生效）"
+    ],
+    "new_timeline_kick": false,
+    "daemon_fields": [
+      "_live",
+      "_log_lock",
+      "_pids",
+      "aosd",
+      "gen",
+      "io_errors",
+      "kill_on_stop",
+      "paused",
+      "reapers",
+      "root",
+      "steps",
+      "stopping",
+      "stopping_since",
+      "timelines"
+    ]
+  },
+  {
+    "case": "edit_json_kill_owner",
+    "killed_rc": -9,
+    "after": {
+      "n": 1
+    },
+    "acquire_ms": 0.098,
+    "lock_exists": true
+  },
+  {
+    "case": "wait_tock_timeout",
+    "returncode": 1,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "case": "wait_tock_new",
+    "returncode": 0,
+    "stdout": "3\n",
+    "stderr": ""
+  },
+  {
+    "case": "wait_tock_array",
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-wait-tock\", line 23, in <module>\n    r = wait_tock(a.task, a.after, timeout=a.timeout)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_fs.py\", line 172, in wait_tock\n    if t and isinstance(t.get(\"round\"), int) and t[\"round\"] > last_round:\n                        ^^^^^\nAttributeError: 'list' object has no attribute 'get'\n"
+  },
+  {
+    "case": "wait_tock_scalar",
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-wait-tock\", line 23, in <module>\n    r = wait_tock(a.task, a.after, timeout=a.timeout)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_fs.py\", line 172, in wait_tock\n    if t and isinstance(t.get(\"round\"), int) and t[\"round\"] > last_round:\n                        ^^^^^\nAttributeError: 'int' object has no attribute 'get'\n"
+  },
+  {
+    "case": "wait_tock_bad_round",
+    "returncode": 1,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "case": "max_live_and_batch",
+    "live_after_four": [
+      "s-r1",
+      "s-r2"
+    ],
+    "batch_stdout": "{\"round\": 5, \"started\": [\"b0-r5\", \"b1-r5\", \"b2-r5\"]}\n",
+    "batch_rc": 0,
+    "birth_rounds": [
+      5,
+      5,
+      5
+    ]
+  },
+  {
+    "case": "poison_spawn_batch",
+    "attempts": [
+      {
+        "rc": 1,
+        "stderr": "7-1/lib/aos7_tick.py\", line 93, in tick\n    return _tick(root, node_id, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 113, in _tick\n    started.append(aos7_task.start_task(root, node_id, dict(item, spawn=fn), rnd))\n                   ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 335, in start_task\n    tid = new_tid(node, item.get(\"name\"), rnd)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 322, in new_tid\n    safe = re.sub(r\"[^A-Za-z0-9_.-]\", \"_\", name or \"task\")\n  File \"/usr/lib/python3.14/re/__init__.py\", line 208, in sub\n    return _compile(pattern, flags).sub(repl, string, count)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\nTypeError: expected string or bytes-like object, got 'int'\n",
+        "round": {
+          "round": 1,
+          "open": true,
+          "tick_at": "2026-10-03T16:03:03.980",
+          "tock_at": null,
+          "started": [],
+          "ctl": [],
+          "mounts": []
+        }
+      },
+      {
+        "rc": 1,
+        "stderr": "7-1/lib/aos7_tick.py\", line 93, in tick\n    return _tick(root, node_id, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 113, in _tick\n    started.append(aos7_task.start_task(root, node_id, dict(item, spawn=fn), rnd))\n                   ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 335, in start_task\n    tid = new_tid(node, item.get(\"name\"), rnd)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 322, in new_tid\n    safe = re.sub(r\"[^A-Za-z0-9_.-]\", \"_\", name or \"task\")\n  File \"/usr/lib/python3.14/re/__init__.py\", line 208, in sub\n    return _compile(pattern, flags).sub(repl, string, count)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\nTypeError: expected string or bytes-like object, got 'int'\n",
+        "round": {
+          "round": 2,
+          "open": true,
+          "tick_at": "2026-10-03T16:03:04.085",
+          "tock_at": null,
+          "started": [],
+          "ctl": [],
+          "mounts": []
+        }
+      }
+    ],
+    "tasks": [
+      "prefix-r1",
+      "prefix-r2"
+    ],
+    "spawn_remains": true
+  }
+]

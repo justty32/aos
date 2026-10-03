@@ -1,0 +1,3835 @@
+{
+ "stop_ms": 63.376666003023274,
+ "events": [
+  {
+   "prog": "aos7-tick",
+   "node": "day",
+   "start": 27095.975147717,
+   "end": 27095.994775155,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27095.97571038,
+   "end": 27095.995194339,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27095.976122781,
+   "end": 27095.995610347,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27095.97687674,
+   "end": 27095.996194629,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27095.97672144,
+   "end": 27095.996862027,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "day",
+   "start": 27095.994876845,
+   "end": 27096.014247683,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27095.995292963,
+   "end": 27096.015025077,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27095.995703521,
+   "end": 27096.015057878,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27095.996302281,
+   "end": 27096.015566048,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27095.996963637,
+   "end": 27096.016029244,
+   "round": 1,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.01526187,
+   "end": 27096.034867276,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.016167884,
+   "end": 27096.035265421,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.01567909,
+   "end": 27096.035293082,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.034953517,
+   "end": 27096.053740454,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.035696226,
+   "end": 27096.054259143,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.035418958,
+   "end": 27096.054670623,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.053842324,
+   "end": 27096.072204316,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.054368518,
+   "end": 27096.073354927,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.054756373,
+   "end": 27096.07389659,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.072285718,
+   "end": 27096.090569443,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.073437161,
+   "end": 27096.092074307,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.073958836,
+   "end": 27096.092612233,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.075697547,
+   "end": 27096.094810303,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.09067476,
+   "end": 27096.108574919,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.092694787,
+   "end": 27096.110487685,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.09220449,
+   "end": 27096.110785552,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.094913876,
+   "end": 27096.112816649,
+   "round": 2,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.108647154,
+   "end": 27096.125219509,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.110561323,
+   "end": 27096.127403282,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.110841807,
+   "end": 27096.127696721,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.125313034,
+   "end": 27096.141234713,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.127492439,
+   "end": 27096.143940442,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.127766762,
+   "end": 27096.144028306,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.141299374,
+   "end": 27096.156659623,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.144113435,
+   "end": 27096.159055423,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.144258146,
+   "end": 27096.159448698,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.156739813,
+   "end": 27096.172026184,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.159142806,
+   "end": 27096.174291239,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.159595663,
+   "end": 27096.174555554,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.172102186,
+   "end": 27096.186995503,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.174375387,
+   "end": 27096.189146875,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.174616598,
+   "end": 27096.189842305,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.175761889,
+   "end": 27096.191286566,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.187083638,
+   "end": 27096.201806014,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.189230361,
+   "end": 27096.204248792,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.189924459,
+   "end": 27096.205167139,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.191355825,
+   "end": 27096.206287063,
+   "round": 3,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.201873601,
+   "end": 27096.217168407,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.204311439,
+   "end": 27096.219108525,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.20521586,
+   "end": 27096.219883895,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.217275157,
+   "end": 27096.232254975,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.219190899,
+   "end": 27096.234057856,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.21996663,
+   "end": 27096.235163934,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.232319987,
+   "end": 27096.247167277,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.234126945,
+   "end": 27096.248765325,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.235227533,
+   "end": 27096.250563737,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.247253598,
+   "end": 27096.2619571,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.24884833,
+   "end": 27096.263675743,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.250651642,
+   "end": 27096.26558894,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.262024225,
+   "end": 27096.27686882,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.263741276,
+   "end": 27096.278374245,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.265654403,
+   "end": 27096.280455507,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.275826101,
+   "end": 27096.290932856,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.276953819,
+   "end": 27096.291993319,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.278458723,
+   "end": 27096.293330058,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.280544072,
+   "end": 27096.295746777,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.291023886,
+   "end": 27096.305833256,
+   "round": 4,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.292061577,
+   "end": 27096.306712149,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.293394248,
+   "end": 27096.308394515,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.295812339,
+   "end": 27096.310892104,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.30678244,
+   "end": 27096.321391044,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.308474574,
+   "end": 27096.323183946,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.310977644,
+   "end": 27096.326211768,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.321470142,
+   "end": 27096.336323253,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.323250651,
+   "end": 27096.337837845,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.326278062,
+   "end": 27096.340958871,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.336411258,
+   "end": 27096.351107986,
+   "round": 12,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.337924367,
+   "end": 27096.353016575,
+   "round": 12,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.341050111,
+   "end": 27096.355885519,
+   "round": 12,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.351172317,
+   "end": 27096.365798554,
+   "round": 12,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.353084873,
+   "end": 27096.368269955,
+   "round": 12,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.35595007,
+   "end": 27096.370677296,
+   "round": 12,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.365897379,
+   "end": 27096.380677713,
+   "round": 13,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.368357739,
+   "end": 27096.383178649,
+   "round": 13,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.370766162,
+   "end": 27096.385567907,
+   "round": 13,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.375865216,
+   "end": 27096.391173277,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.380743617,
+   "end": 27096.396263855,
+   "round": 13,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.383243881,
+   "end": 27096.397951651,
+   "round": 13,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.385632958,
+   "end": 27096.400817058,
+   "round": 13,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.391240012,
+   "end": 27096.406550168,
+   "round": 5,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.396352711,
+   "end": 27096.411351545,
+   "round": 14,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.398040367,
+   "end": 27096.413457963,
+   "round": 14,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.400925631,
+   "end": 27096.415958388,
+   "round": 14,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.411416877,
+   "end": 27096.426635291,
+   "round": 14,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.413522905,
+   "end": 27096.428596087,
+   "round": 14,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.416027538,
+   "end": 27096.43104712,
+   "round": 14,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.426739225,
+   "end": 27096.441990721,
+   "round": 15,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.428685304,
+   "end": 27096.443863864,
+   "round": 15,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.431133221,
+   "end": 27096.446459136,
+   "round": 15,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.442060402,
+   "end": 27096.457747512,
+   "round": 15,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.443928575,
+   "end": 27096.458657644,
+   "round": 15,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.446524108,
+   "end": 27096.461167897,
+   "round": 15,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.457831269,
+   "end": 27096.472989631,
+   "round": 16,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.458742863,
+   "end": 27096.473725717,
+   "round": 16,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.461253808,
+   "end": 27096.476328714,
+   "round": 16,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.473057708,
+   "end": 27096.487581163,
+   "round": 16,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.473790278,
+   "end": 27096.488582214,
+   "round": 16,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.475953262,
+   "end": 27096.490801253,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.476393264,
+   "end": 27096.491486214,
+   "round": 16,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.487666171,
+   "end": 27096.502280136,
+   "round": 17,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.488684425,
+   "end": 27096.503541454,
+   "round": 17,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.490870112,
+   "end": 27096.505807731,
+   "round": 6,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.491571914,
+   "end": 27096.506425887,
+   "round": 17,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.502346139,
+   "end": 27096.517260955,
+   "round": 17,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.503622255,
+   "end": 27096.51830642,
+   "round": 17,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.506508481,
+   "end": 27096.521221891,
+   "round": 17,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.517344361,
+   "end": 27096.532257284,
+   "round": 18,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.518389014,
+   "end": 27096.533053583,
+   "round": 18,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.521311459,
+   "end": 27096.536347832,
+   "round": 18,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.532320432,
+   "end": 27096.547036948,
+   "round": 18,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.533120047,
+   "end": 27096.54795277,
+   "round": 18,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.536413415,
+   "end": 27096.551229427,
+   "round": 18,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.547121957,
+   "end": 27096.562040571,
+   "round": 19,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.548044351,
+   "end": 27096.562809648,
+   "round": 19,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.551315508,
+   "end": 27096.565935623,
+   "round": 19,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.562103438,
+   "end": 27096.577056676,
+   "round": 19,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.562875782,
+   "end": 27096.577745614,
+   "round": 19,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.565985236,
+   "end": 27096.580725847,
+   "round": 19,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.576028113,
+   "end": 27096.591142002,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.577139411,
+   "end": 27096.592170244,
+   "round": 20,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.577829862,
+   "end": 27096.593629733,
+   "round": 20,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.580809543,
+   "end": 27096.596331354,
+   "round": 20,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.591223865,
+   "end": 27096.607420037,
+   "round": 7,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.592237099,
+   "end": 27096.609880748,
+   "round": 20,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.593704944,
+   "end": 27096.610431037,
+   "round": 20,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.596401966,
+   "end": 27096.612515965,
+   "round": 20,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.610517178,
+   "end": 27096.626101636,
+   "round": 21,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.609971047,
+   "end": 27096.62641929,
+   "round": 21,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.612608147,
+   "end": 27096.628217463,
+   "round": 21,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.62648874,
+   "end": 27096.6418334,
+   "round": 21,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.626181516,
+   "end": 27096.642166694,
+   "round": 21,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.628270041,
+   "end": 27096.643636772,
+   "round": 21,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.642255109,
+   "end": 27096.6570923,
+   "round": 22,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.6419294,
+   "end": 27096.657393534,
+   "round": 22,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.643726279,
+   "end": 27096.658875464,
+   "round": 22,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.657459397,
+   "end": 27096.672060366,
+   "round": 22,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.657155589,
+   "end": 27096.672408597,
+   "round": 22,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.65894282,
+   "end": 27096.673450966,
+   "round": 22,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.672146988,
+   "end": 27096.687464888,
+   "round": 23,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.67249568,
+   "end": 27096.687748188,
+   "round": 23,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.673536877,
+   "end": 27096.688453897,
+   "round": 23,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.676033555,
+   "end": 27096.690842143,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.687812558,
+   "end": 27096.702707397,
+   "round": 23,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.687547553,
+   "end": 27096.702801724,
+   "round": 23,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.688536792,
+   "end": 27096.70338802,
+   "round": 23,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.690922172,
+   "end": 27096.705443944,
+   "round": 8,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.702891592,
+   "end": 27096.718050695,
+   "round": 24,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.703122574,
+   "end": 27096.718339194,
+   "round": 24,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.703493177,
+   "end": 27096.718691363,
+   "round": 24,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.71811741,
+   "end": 27096.732919976,
+   "round": 24,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.71840656,
+   "end": 27096.733591552,
+   "round": 24,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.718770531,
+   "end": 27096.733895741,
+   "round": 24,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.733016326,
+   "end": 27096.748317696,
+   "round": 25,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.733680899,
+   "end": 27096.748643385,
+   "round": 25,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.733990508,
+   "end": 27096.748975836,
+   "round": 25,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.748397595,
+   "end": 27096.76366431,
+   "round": 25,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.748708246,
+   "end": 27096.763969981,
+   "round": 25,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.749031941,
+   "end": 27096.764044961,
+   "round": 25,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.763752214,
+   "end": 27096.779070585,
+   "round": 26,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.764155759,
+   "end": 27096.779181262,
+   "round": 26,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.764377403,
+   "end": 27096.779670607,
+   "round": 26,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.776123595,
+   "end": 27096.791291645,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.779187744,
+   "end": 27096.793975383,
+   "round": 26,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.779448542,
+   "end": 27096.794348721,
+   "round": 26,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.779733063,
+   "end": 27096.79464787,
+   "round": 26,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.791360894,
+   "end": 27096.806368444,
+   "round": 9,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.794052567,
+   "end": 27096.80908336,
+   "round": 27,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.794437246,
+   "end": 27096.809292732,
+   "round": 27,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.794723281,
+   "end": 27096.809892383,
+   "round": 27,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.809510679,
+   "end": 27096.824370513,
+   "round": 27,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.809164893,
+   "end": 27096.824662809,
+   "round": 27,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.809954008,
+   "end": 27096.82505865,
+   "round": 27,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.825146654,
+   "end": 27096.839887956,
+   "round": 28,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.824751315,
+   "end": 27096.840192676,
+   "round": 28,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.824457906,
+   "end": 27096.840308252,
+   "round": 28,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.839956334,
+   "end": 27096.855253115,
+   "round": 28,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.840564361,
+   "end": 27096.855548046,
+   "round": 28,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.840327658,
+   "end": 27096.855848888,
+   "round": 28,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.855344115,
+   "end": 27096.870409372,
+   "round": 29,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.8556516,
+   "end": 27096.87096976,
+   "round": 29,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.855941341,
+   "end": 27096.871411657,
+   "round": 29,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.870464706,
+   "end": 27096.885480411,
+   "round": 29,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.871040593,
+   "end": 27096.886151756,
+   "round": 29,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.871464095,
+   "end": 27096.886647874,
+   "round": 29,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.87619501,
+   "end": 27096.891781673,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.885568796,
+   "end": 27096.900446123,
+   "round": 30,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.886237126,
+   "end": 27096.90138608,
+   "round": 30,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.886729466,
+   "end": 27096.902057676,
+   "round": 30,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.891864558,
+   "end": 27096.906870524,
+   "round": 10,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.900513338,
+   "end": 27096.915733075,
+   "round": 30,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.901451643,
+   "end": 27096.916296087,
+   "round": 30,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.902125723,
+   "end": 27096.916751719,
+   "round": 30,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.915820428,
+   "end": 27096.930714586,
+   "round": 31,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.916387348,
+   "end": 27096.931826555,
+   "round": 31,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.916870942,
+   "end": 27096.932098153,
+   "round": 31,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.93078095,
+   "end": 27096.945606059,
+   "round": 31,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.931890034,
+   "end": 27096.9469757,
+   "round": 31,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.932162854,
+   "end": 27096.947271833,
+   "round": 31,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.945694103,
+   "end": 27096.960647452,
+   "round": 32,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.947062973,
+   "end": 27096.962421269,
+   "round": 32,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.947356381,
+   "end": 27096.962681555,
+   "round": 32,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.960713245,
+   "end": 27096.975722398,
+   "round": 32,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.962483284,
+   "end": 27096.977635294,
+   "round": 32,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.962747358,
+   "end": 27096.97792151,
+   "round": 32,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27096.975810803,
+   "end": 27096.99103611,
+   "round": 33,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "hundred",
+   "start": 27096.976259252,
+   "end": 27096.991441939,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27096.977716316,
+   "end": 27096.993208091,
+   "round": 33,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "one",
+   "start": 27096.978015596,
+   "end": 27096.993608079,
+   "round": 33,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27096.991116621,
+   "end": 27097.006137165,
+   "round": 33,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "hundred",
+   "start": 27096.991513082,
+   "end": 27097.006681563,
+   "round": 11,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27096.993252745,
+   "end": 27097.007868211,
+   "round": 33,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "one",
+   "start": 27096.993671948,
+   "end": 27097.008478903,
+   "round": 33,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "zero",
+   "start": 27097.00622575,
+   "end": 27097.021343647,
+   "round": 34,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tick",
+   "node": "negative",
+   "start": 27097.007927783,
+   "end": 27097.022855363,
+   "round": 34,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "zero",
+   "start": 27097.021415872,
+   "end": 27097.036291906,
+   "round": 34,
+   "rc": 0
+  },
+  {
+   "prog": "aos7-tock",
+   "node": "negative",
+   "start": 27097.022903673,
+   "end": 27097.037734894,
+   "round": 34,
+   "rc": 0
+  }
+ ],
+ "daemon_log": [
+  {
+   "at": "2026-10-03T16:01:27.763",
+   "ev": "start",
+   "pid": 2339696,
+   "gen": 1
+  },
+  {
+   "at": "2026-10-03T16:01:27.764",
+   "ev": "node+",
+   "node": "day",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.764",
+   "ev": "node+",
+   "node": "hundred",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.765",
+   "ev": "node+",
+   "node": "negative",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.765",
+   "ev": "node+",
+   "node": "one",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.765",
+   "ev": "node+",
+   "node": "zero",
+   "round": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.783",
+   "ev": "tick",
+   "node": "day",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.784",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.784",
+   "ev": "tick",
+   "node": "negative",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.785",
+   "ev": "tick",
+   "node": "zero",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.785",
+   "ev": "tick",
+   "node": "one",
+   "round": 1,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.803",
+   "ev": "tock",
+   "node": "day",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:27.804",
+   "ev": "tock",
+   "node": "negative",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.804",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:27.804",
+   "ev": "tock",
+   "node": "zero",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.805",
+   "ev": "tock",
+   "node": "one",
+   "round": 1,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.823",
+   "ev": "tick",
+   "node": "negative",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.824",
+   "ev": "tick",
+   "node": "one",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.824",
+   "ev": "tick",
+   "node": "zero",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.842",
+   "ev": "tock",
+   "node": "negative",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.843",
+   "ev": "tock",
+   "node": "zero",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.843",
+   "ev": "tock",
+   "node": "one",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.861",
+   "ev": "tick",
+   "node": "negative",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.862",
+   "ev": "tick",
+   "node": "zero",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.862",
+   "ev": "tick",
+   "node": "one",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.879",
+   "ev": "tock",
+   "node": "negative",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.881",
+   "ev": "tock",
+   "node": "zero",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.881",
+   "ev": "tock",
+   "node": "one",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.883",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 2,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.897",
+   "ev": "tick",
+   "node": "negative",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.899",
+   "ev": "tick",
+   "node": "one",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.899",
+   "ev": "tick",
+   "node": "zero",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.901",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 2,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:27.914",
+   "ev": "tock",
+   "node": "negative",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.916",
+   "ev": "tock",
+   "node": "one",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.916",
+   "ev": "tock",
+   "node": "zero",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.930",
+   "ev": "tick",
+   "node": "negative",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.933",
+   "ev": "tick",
+   "node": "one",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.933",
+   "ev": "tick",
+   "node": "zero",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.945",
+   "ev": "tock",
+   "node": "negative",
+   "round": 5,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.948",
+   "ev": "tock",
+   "node": "one",
+   "round": 5,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.948",
+   "ev": "tock",
+   "node": "zero",
+   "round": 5,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.961",
+   "ev": "tick",
+   "node": "negative",
+   "round": 6,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.963",
+   "ev": "tick",
+   "node": "one",
+   "round": 6,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.963",
+   "ev": "tick",
+   "node": "zero",
+   "round": 6,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.976",
+   "ev": "tock",
+   "node": "negative",
+   "round": 6,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.978",
+   "ev": "tock",
+   "node": "one",
+   "round": 6,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.978",
+   "ev": "tock",
+   "node": "zero",
+   "round": 6,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:27.980",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 3,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.990",
+   "ev": "tick",
+   "node": "negative",
+   "round": 7,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.993",
+   "ev": "tick",
+   "node": "one",
+   "round": 7,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.994",
+   "ev": "tick",
+   "node": "zero",
+   "round": 7,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:27.995",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 3,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.006",
+   "ev": "tock",
+   "node": "negative",
+   "round": 7,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.008",
+   "ev": "tock",
+   "node": "one",
+   "round": 7,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.008",
+   "ev": "tock",
+   "node": "zero",
+   "round": 7,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.021",
+   "ev": "tick",
+   "node": "negative",
+   "round": 8,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.023",
+   "ev": "tick",
+   "node": "one",
+   "round": 8,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.024",
+   "ev": "tick",
+   "node": "zero",
+   "round": 8,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.036",
+   "ev": "tock",
+   "node": "negative",
+   "round": 8,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.037",
+   "ev": "tock",
+   "node": "one",
+   "round": 8,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.039",
+   "ev": "tock",
+   "node": "zero",
+   "round": 8,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.051",
+   "ev": "tick",
+   "node": "negative",
+   "round": 9,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.052",
+   "ev": "tick",
+   "node": "one",
+   "round": 9,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.054",
+   "ev": "tick",
+   "node": "zero",
+   "round": 9,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.065",
+   "ev": "tock",
+   "node": "negative",
+   "round": 9,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.067",
+   "ev": "tock",
+   "node": "one",
+   "round": 9,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.069",
+   "ev": "tock",
+   "node": "zero",
+   "round": 9,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.080",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 4,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.081",
+   "ev": "tick",
+   "node": "negative",
+   "round": 10,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.082",
+   "ev": "tick",
+   "node": "one",
+   "round": 10,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.084",
+   "ev": "tick",
+   "node": "zero",
+   "round": 10,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.094",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 4,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.095",
+   "ev": "tock",
+   "node": "negative",
+   "round": 10,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.097",
+   "ev": "tock",
+   "node": "one",
+   "round": 10,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.099",
+   "ev": "tock",
+   "node": "zero",
+   "round": 10,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.110",
+   "ev": "tick",
+   "node": "negative",
+   "round": 11,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.112",
+   "ev": "tick",
+   "node": "one",
+   "round": 11,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.115",
+   "ev": "tick",
+   "node": "zero",
+   "round": 11,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.125",
+   "ev": "tock",
+   "node": "negative",
+   "round": 11,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.126",
+   "ev": "tock",
+   "node": "one",
+   "round": 11,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.130",
+   "ev": "tock",
+   "node": "zero",
+   "round": 11,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.140",
+   "ev": "tick",
+   "node": "negative",
+   "round": 12,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.142",
+   "ev": "tick",
+   "node": "one",
+   "round": 12,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.144",
+   "ev": "tick",
+   "node": "zero",
+   "round": 12,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.154",
+   "ev": "tock",
+   "node": "negative",
+   "round": 12,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.157",
+   "ev": "tock",
+   "node": "one",
+   "round": 12,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.159",
+   "ev": "tock",
+   "node": "zero",
+   "round": 12,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.169",
+   "ev": "tick",
+   "node": "negative",
+   "round": 13,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.172",
+   "ev": "tick",
+   "node": "one",
+   "round": 13,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.174",
+   "ev": "tick",
+   "node": "zero",
+   "round": 13,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.180",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 5,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.185",
+   "ev": "tock",
+   "node": "negative",
+   "round": 13,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.187",
+   "ev": "tock",
+   "node": "one",
+   "round": 13,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.189",
+   "ev": "tock",
+   "node": "zero",
+   "round": 13,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.195",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 5,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.200",
+   "ev": "tick",
+   "node": "negative",
+   "round": 14,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.202",
+   "ev": "tick",
+   "node": "one",
+   "round": 14,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.205",
+   "ev": "tick",
+   "node": "zero",
+   "round": 14,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.215",
+   "ev": "tock",
+   "node": "negative",
+   "round": 14,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.217",
+   "ev": "tock",
+   "node": "one",
+   "round": 14,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.220",
+   "ev": "tock",
+   "node": "zero",
+   "round": 14,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.231",
+   "ev": "tick",
+   "node": "negative",
+   "round": 15,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.232",
+   "ev": "tick",
+   "node": "one",
+   "round": 15,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.235",
+   "ev": "tick",
+   "node": "zero",
+   "round": 15,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.246",
+   "ev": "tock",
+   "node": "negative",
+   "round": 15,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.247",
+   "ev": "tock",
+   "node": "one",
+   "round": 15,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.250",
+   "ev": "tock",
+   "node": "zero",
+   "round": 15,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.262",
+   "ev": "tick",
+   "node": "negative",
+   "round": 16,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.262",
+   "ev": "tick",
+   "node": "one",
+   "round": 16,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.265",
+   "ev": "tick",
+   "node": "zero",
+   "round": 16,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.276",
+   "ev": "tock",
+   "node": "negative",
+   "round": 16,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.277",
+   "ev": "tock",
+   "node": "one",
+   "round": 16,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.279",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 6,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.280",
+   "ev": "tock",
+   "node": "zero",
+   "round": 16,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.291",
+   "ev": "tick",
+   "node": "negative",
+   "round": 17,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.292",
+   "ev": "tick",
+   "node": "one",
+   "round": 17,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.294",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 6,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.295",
+   "ev": "tick",
+   "node": "zero",
+   "round": 17,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.306",
+   "ev": "tock",
+   "node": "negative",
+   "round": 17,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.307",
+   "ev": "tock",
+   "node": "one",
+   "round": 17,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.310",
+   "ev": "tock",
+   "node": "zero",
+   "round": 17,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.321",
+   "ev": "tick",
+   "node": "negative",
+   "round": 18,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.322",
+   "ev": "tick",
+   "node": "one",
+   "round": 18,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.325",
+   "ev": "tick",
+   "node": "zero",
+   "round": 18,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.336",
+   "ev": "tock",
+   "node": "negative",
+   "round": 18,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.337",
+   "ev": "tock",
+   "node": "one",
+   "round": 18,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.340",
+   "ev": "tock",
+   "node": "zero",
+   "round": 18,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.351",
+   "ev": "tick",
+   "node": "negative",
+   "round": 19,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.351",
+   "ev": "tick",
+   "node": "one",
+   "round": 19,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.355",
+   "ev": "tick",
+   "node": "zero",
+   "round": 19,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.366",
+   "ev": "tock",
+   "node": "negative",
+   "round": 19,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.366",
+   "ev": "tock",
+   "node": "one",
+   "round": 19,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.369",
+   "ev": "tock",
+   "node": "zero",
+   "round": 19,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.380",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 7,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.381",
+   "ev": "tick",
+   "node": "negative",
+   "round": 20,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.382",
+   "ev": "tick",
+   "node": "one",
+   "round": 20,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.385",
+   "ev": "tick",
+   "node": "zero",
+   "round": 20,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.396",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 7,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.398",
+   "ev": "tock",
+   "node": "negative",
+   "round": 20,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.399",
+   "ev": "tock",
+   "node": "one",
+   "round": 20,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.401",
+   "ev": "tock",
+   "node": "zero",
+   "round": 20,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.415",
+   "ev": "tick",
+   "node": "one",
+   "round": 21,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.415",
+   "ev": "tick",
+   "node": "negative",
+   "round": 21,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.417",
+   "ev": "tick",
+   "node": "zero",
+   "round": 21,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.430",
+   "ev": "tock",
+   "node": "negative",
+   "round": 21,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.431",
+   "ev": "tock",
+   "node": "one",
+   "round": 21,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.432",
+   "ev": "tock",
+   "node": "zero",
+   "round": 21,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.446",
+   "ev": "tick",
+   "node": "one",
+   "round": 22,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.446",
+   "ev": "tick",
+   "node": "negative",
+   "round": 22,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.447",
+   "ev": "tick",
+   "node": "zero",
+   "round": 22,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.461",
+   "ev": "tock",
+   "node": "negative",
+   "round": 22,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.461",
+   "ev": "tock",
+   "node": "one",
+   "round": 22,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.462",
+   "ev": "tock",
+   "node": "zero",
+   "round": 22,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.476",
+   "ev": "tick",
+   "node": "negative",
+   "round": 23,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.476",
+   "ev": "tick",
+   "node": "one",
+   "round": 23,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.477",
+   "ev": "tick",
+   "node": "zero",
+   "round": 23,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.479",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 8,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.491",
+   "ev": "tock",
+   "node": "one",
+   "round": 23,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.491",
+   "ev": "tock",
+   "node": "negative",
+   "round": 23,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.492",
+   "ev": "tock",
+   "node": "zero",
+   "round": 23,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.494",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 8,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.507",
+   "ev": "tick",
+   "node": "one",
+   "round": 24,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.507",
+   "ev": "tick",
+   "node": "negative",
+   "round": 24,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.507",
+   "ev": "tick",
+   "node": "zero",
+   "round": 24,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.521",
+   "ev": "tock",
+   "node": "one",
+   "round": 24,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.522",
+   "ev": "tock",
+   "node": "negative",
+   "round": 24,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.522",
+   "ev": "tock",
+   "node": "zero",
+   "round": 24,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.537",
+   "ev": "tick",
+   "node": "one",
+   "round": 25,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.537",
+   "ev": "tick",
+   "node": "negative",
+   "round": 25,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.538",
+   "ev": "tick",
+   "node": "zero",
+   "round": 25,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.552",
+   "ev": "tock",
+   "node": "one",
+   "round": 25,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.553",
+   "ev": "tock",
+   "node": "negative",
+   "round": 25,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.553",
+   "ev": "tock",
+   "node": "zero",
+   "round": 25,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.568",
+   "ev": "tick",
+   "node": "one",
+   "round": 26,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.568",
+   "ev": "tick",
+   "node": "negative",
+   "round": 26,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.568",
+   "ev": "tick",
+   "node": "zero",
+   "round": 26,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.580",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 9,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.583",
+   "ev": "tock",
+   "node": "one",
+   "round": 26,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.583",
+   "ev": "tock",
+   "node": "negative",
+   "round": 26,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.583",
+   "ev": "tock",
+   "node": "zero",
+   "round": 26,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.595",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 9,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.598",
+   "ev": "tick",
+   "node": "one",
+   "round": 27,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.598",
+   "ev": "tick",
+   "node": "negative",
+   "round": 27,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.598",
+   "ev": "tick",
+   "node": "zero",
+   "round": 27,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.613",
+   "ev": "tock",
+   "node": "negative",
+   "round": 27,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.613",
+   "ev": "tock",
+   "node": "one",
+   "round": 27,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.614",
+   "ev": "tock",
+   "node": "zero",
+   "round": 27,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.628",
+   "ev": "tick",
+   "node": "zero",
+   "round": 28,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.629",
+   "ev": "tick",
+   "node": "one",
+   "round": 28,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.629",
+   "ev": "tick",
+   "node": "negative",
+   "round": 28,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.644",
+   "ev": "tock",
+   "node": "zero",
+   "round": 28,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.644",
+   "ev": "tock",
+   "node": "negative",
+   "round": 28,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.644",
+   "ev": "tock",
+   "node": "one",
+   "round": 28,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.659",
+   "ev": "tick",
+   "node": "zero",
+   "round": 29,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.660",
+   "ev": "tick",
+   "node": "negative",
+   "round": 29,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.660",
+   "ev": "tick",
+   "node": "one",
+   "round": 29,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.674",
+   "ev": "tock",
+   "node": "zero",
+   "round": 29,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.675",
+   "ev": "tock",
+   "node": "negative",
+   "round": 29,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.675",
+   "ev": "tock",
+   "node": "one",
+   "round": 29,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.680",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 10,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.689",
+   "ev": "tick",
+   "node": "zero",
+   "round": 30,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.690",
+   "ev": "tick",
+   "node": "negative",
+   "round": 30,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.691",
+   "ev": "tick",
+   "node": "one",
+   "round": 30,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.695",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 10,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.704",
+   "ev": "tock",
+   "node": "zero",
+   "round": 30,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.705",
+   "ev": "tock",
+   "node": "negative",
+   "round": 30,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.705",
+   "ev": "tock",
+   "node": "one",
+   "round": 30,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.719",
+   "ev": "tick",
+   "node": "zero",
+   "round": 31,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.720",
+   "ev": "tick",
+   "node": "negative",
+   "round": 31,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.721",
+   "ev": "tick",
+   "node": "one",
+   "round": 31,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.734",
+   "ev": "tock",
+   "node": "zero",
+   "round": 31,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.736",
+   "ev": "tock",
+   "node": "negative",
+   "round": 31,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.736",
+   "ev": "tock",
+   "node": "one",
+   "round": 31,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.749",
+   "ev": "tick",
+   "node": "zero",
+   "round": 32,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.751",
+   "ev": "tick",
+   "node": "negative",
+   "round": 32,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.751",
+   "ev": "tick",
+   "node": "one",
+   "round": 32,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.764",
+   "ev": "tock",
+   "node": "zero",
+   "round": 32,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.766",
+   "ev": "tock",
+   "node": "negative",
+   "round": 32,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.766",
+   "ev": "tock",
+   "node": "one",
+   "round": 32,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.780",
+   "ev": "tick",
+   "node": "zero",
+   "round": 33,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.780",
+   "ev": "tick",
+   "node": "hundred",
+   "round": 11,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.782",
+   "ev": "tick",
+   "node": "negative",
+   "round": 33,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.782",
+   "ev": "tick",
+   "node": "one",
+   "round": 33,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.795",
+   "ev": "tock",
+   "node": "zero",
+   "round": 33,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.795",
+   "ev": "tock",
+   "node": "hundred",
+   "round": 11,
+   "rc": 0,
+   "ended": [],
+   "early": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.796",
+   "ev": "tock",
+   "node": "negative",
+   "round": 33,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.797",
+   "ev": "tock",
+   "node": "one",
+   "round": 33,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.799",
+   "ev": "stopping",
+   "kill": true
+  },
+  {
+   "at": "2026-10-03T16:01:28.810",
+   "ev": "tick",
+   "node": "zero",
+   "round": 34,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.811",
+   "ev": "tick",
+   "node": "negative",
+   "round": 34,
+   "started": [],
+   "rc": 0
+  },
+  {
+   "at": "2026-10-03T16:01:28.825",
+   "ev": "tock",
+   "node": "zero",
+   "round": 34,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.826",
+   "ev": "tock",
+   "node": "negative",
+   "round": 34,
+   "rc": 0,
+   "ended": [],
+   "early": false
+  },
+  {
+   "at": "2026-10-03T16:01:28.840",
+   "ev": "stop"
+  }
+ ],
+ "status": {
+  "pid": 2339696,
+  "root": "/tmp/astra5-time-interval-fvxt07kr",
+  "at": "2026-10-03T16:01:28.839",
+  "poll_s": 0.02,
+  "gen": 1,
+  "io_errors": 0,
+  "stopping": true,
+  "stopped": true,
+  "kill_on_stop": true,
+  "nodes": {
+   "day": {
+    "round": 1,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 86400000,
+    "pause_pending": false,
+    "live": []
+   },
+   "hundred": {
+    "round": 11,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 100,
+    "pause_pending": false,
+    "live": []
+   },
+   "negative": {
+    "round": 34,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 1,
+    "pause_pending": false,
+    "live": []
+   },
+   "one": {
+    "round": 33,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 1,
+    "pause_pending": false,
+    "live": []
+   },
+   "zero": {
+    "round": 34,
+    "phase": "stopped",
+    "paused": false,
+    "interval_ms": 1,
+    "pause_pending": false,
+    "live": []
+   }
+  }
+ },
+ "stderr": ""
+}

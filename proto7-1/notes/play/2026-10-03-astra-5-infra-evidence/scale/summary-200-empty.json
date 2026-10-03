@@ -1,0 +1,69 @@
+{
+  "start_epoch_s": 1791014914.4420793,
+  "end_epoch_s": 1791014930.3513894,
+  "aggregate_cpu_s_including_shutdown": 181.379,
+  "daemon_waited_tick_tock_cpu_s": 172.37,
+  "status_update_gap_ms": {
+    "n": 4,
+    "min": 179.109,
+    "p50": 1144.902,
+    "p95": 4317.855,
+    "max": 4317.855
+  },
+  "ctl_receipt_ms": {
+    "n": 3,
+    "min": 3201.516,
+    "p50": 6502.643,
+    "p95": 8316.92,
+    "max": 8316.92
+  },
+  "timelines": 200,
+  "sample_wall_s": 15.029,
+  "shutdown_wait_s": 0.167,
+  "shutdown_and_analysis_wall_s": 0.88,
+  "daemon_rc": 0,
+  "tick_ms": {
+    "n": 3903,
+    "min": 21.343,
+    "p50": 39.085,
+    "p95": 65.841,
+    "max": 138.928
+  },
+  "tock_ms": {
+    "n": 3852,
+    "min": 21.201,
+    "p50": 38.878,
+    "p95": 66.035,
+    "max": 139.011
+  },
+  "actual_interval_ms": {
+    "n": 3736,
+    "min": 101.008,
+    "p50": 459.324,
+    "p95": 682.957,
+    "max": 748.041
+  },
+  "tock_start_minus_planned_deadline_ms": {
+    "n": 3852,
+    "min": -77.306,
+    "p50": 65.969,
+    "p95": 159.079,
+    "max": 251.184
+  },
+  "completed_ticks_per_timeline": {
+    "n": 200,
+    "min": 0,
+    "p50": 20.5,
+    "p95": 37,
+    "max": 38
+  },
+  "daemon_cpu_pct_one_core": 27.3,
+  "daemon_rss_peak_kib": 33628.0,
+  "daemon_fd_peak": 97,
+  "live_processes_sample_peak": 19,
+  "file_count_final": 915,
+  "file_bytes_final": 2446549,
+  "task_dirs_final": 0,
+  "nonzero_action_rc": 0,
+  "exceptions": []
+}

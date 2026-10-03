@@ -1,0 +1,1260 @@
+[
+  {
+    "root": "/tmp/astra5-nested-subroot-1sbsk5jy",
+    "parent_log": [
+      {
+        "at": "2026-10-03T16:04:07.670",
+        "ev": "start",
+        "pid": 2341395,
+        "gen": 1
+      },
+      {
+        "at": "2026-10-03T16:04:07.670",
+        "ev": "node+",
+        "node": "n",
+        "round": 0
+      },
+      {
+        "at": "2026-10-03T16:04:07.670",
+        "ev": "node+",
+        "node": "n/child/n",
+        "round": 0
+      },
+      {
+        "at": "2026-10-03T16:04:07.691",
+        "ev": "tick",
+        "node": "n",
+        "round": 1,
+        "started": [
+          "child-r1"
+        ],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:07.691",
+        "ev": "tick",
+        "node": "n/child/n",
+        "round": 1,
+        "started": [
+          "leaf-r1"
+        ],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:07.691",
+        "ev": "node-",
+        "node": "n/child/n"
+      },
+      {
+        "at": "2026-10-03T16:04:07.851",
+        "ev": "tock",
+        "node": "n",
+        "round": 1,
+        "rc": 0,
+        "ended": [],
+        "early": false
+      },
+      {
+        "at": "2026-10-03T16:04:07.872",
+        "ev": "tick",
+        "node": "n",
+        "round": 2,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:07.891",
+        "ev": "tock",
+        "node": "n",
+        "round": 2,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.022",
+        "ev": "tick",
+        "node": "n",
+        "round": 3,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.042",
+        "ev": "tock",
+        "node": "n",
+        "round": 3,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.172",
+        "ev": "tick",
+        "node": "n",
+        "round": 4,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.191",
+        "ev": "tock",
+        "node": "n",
+        "round": 4,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.322",
+        "ev": "tick",
+        "node": "n",
+        "round": 5,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.342",
+        "ev": "tock",
+        "node": "n",
+        "round": 5,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.472",
+        "ev": "tick",
+        "node": "n",
+        "round": 6,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.491",
+        "ev": "tock",
+        "node": "n",
+        "round": 6,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.622",
+        "ev": "tick",
+        "node": "n",
+        "round": 7,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.641",
+        "ev": "tock",
+        "node": "n",
+        "round": 7,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      }
+    ],
+    "child_log": [
+      {
+        "at": "2026-10-03T16:04:07.719",
+        "ev": "start",
+        "pid": 2341403,
+        "gen": 1
+      },
+      {
+        "at": "2026-10-03T16:04:07.719",
+        "ev": "node+",
+        "node": "n",
+        "round": 1
+      },
+      {
+        "at": "2026-10-03T16:04:07.739",
+        "ev": "tick",
+        "node": "n",
+        "round": 2,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:07.758",
+        "ev": "tock",
+        "node": "n",
+        "round": 2,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:07.888",
+        "ev": "tick",
+        "node": "n",
+        "round": 3,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:07.907",
+        "ev": "tock",
+        "node": "n",
+        "round": 3,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.038",
+        "ev": "tick",
+        "node": "n",
+        "round": 4,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.058",
+        "ev": "tock",
+        "node": "n",
+        "round": 4,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.189",
+        "ev": "tick",
+        "node": "n",
+        "round": 5,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.208",
+        "ev": "tock",
+        "node": "n",
+        "round": 5,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.339",
+        "ev": "tick",
+        "node": "n",
+        "round": 6,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.359",
+        "ev": "tock",
+        "node": "n",
+        "round": 6,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.489",
+        "ev": "tick",
+        "node": "n",
+        "round": 7,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.508",
+        "ev": "tock",
+        "node": "n",
+        "round": 7,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:08.639",
+        "ev": "tick",
+        "node": "n",
+        "round": 8,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.658",
+        "ev": "tock",
+        "node": "n",
+        "round": 8,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      }
+    ],
+    "status": [
+      {
+        "pid": 2341395,
+        "root": "/tmp/astra5-nested-subroot-1sbsk5jy",
+        "at": "2026-10-03T16:04:08.745",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 7,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "child-r1"
+            ]
+          }
+        }
+      },
+      {
+        "pid": 2341403,
+        "root": "/tmp/astra5-nested-subroot-1sbsk5jy/n/.aos/tasks/child-r1/mnt/sub",
+        "at": "2026-10-03T16:04:08.752",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 8,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "leaf-r1"
+            ]
+          }
+        }
+      }
+    ],
+    "births": {
+      "n/child/n/.aos/tasks/leaf-r1/birth.json": {
+        "tid": "leaf-r1",
+        "name": "leaf",
+        "node": "n/child/n",
+        "round": 1,
+        "mounts": {},
+        "at": "2026-10-03T16:04:07.688",
+        "restart_of": null,
+        "argv": [
+          "/usr/bin/python",
+          "-c",
+          "import time;time.sleep(90)"
+        ]
+      },
+      "n/.aos/tasks/child-r1/birth.json": {
+        "tid": "child-r1",
+        "name": "child",
+        "node": "n",
+        "round": 1,
+        "mounts": {
+          "sub": {
+            "to": "n/child",
+            "at": "/tmp/astra5-nested-subroot-1sbsk5jy/n/.aos/tasks/child-r1/mnt/sub"
+          }
+        },
+        "at": "2026-10-03T16:04:07.687",
+        "restart_of": null,
+        "subroot": "n/child",
+        "argv": [
+          "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon",
+          "$AOS7_TASK/mnt/sub"
+        ]
+      }
+    },
+    "exits": {},
+    "processes": [
+      {
+        "pid": 2341395,
+        "ppid": 2341393,
+        "pgid": 2341395,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-subroot-1sbsk5jy "
+      },
+      {
+        "pid": 2341400,
+        "ppid": 2341393,
+        "pgid": 2341400,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-subroot-1sbsk5jy/n/.aos/tasks/child-r1 "
+      },
+      {
+        "pid": 2341401,
+        "ppid": 2341393,
+        "pgid": 2341401,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-subroot-1sbsk5jy/n/child/n/.aos/tasks/leaf-r1 "
+      },
+      {
+        "pid": 2341403,
+        "ppid": 2341400,
+        "pgid": 2341403,
+        "state": "S",
+        "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-subroot-1sbsk5jy/n/.aos/tasks/child-r1/mnt/sub "
+      },
+      {
+        "pid": 2341404,
+        "ppid": 2341401,
+        "pgid": 2341404,
+        "state": "S",
+        "cmd": "/usr/bin/python -c import time;time.sleep(90) "
+      },
+      {
+        "pid": 2341440,
+        "ppid": 2341395,
+        "pgid": 2341395,
+        "state": "R",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick /tmp/astra5-nested-subroot-1sbsk5jy n "
+      }
+    ],
+    "cleanup": {
+      "active_processes": 0,
+      "root_removed": true
+    }
+  },
+  {
+    "root": "/tmp/astra5-nested-subroot-4q0m6tgi",
+    "parent_log": [
+      {
+        "at": "2026-10-03T16:04:08.799",
+        "ev": "start",
+        "pid": 2341441,
+        "gen": 1
+      },
+      {
+        "at": "2026-10-03T16:04:08.799",
+        "ev": "node+",
+        "node": "n",
+        "round": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.800",
+        "ev": "node+",
+        "node": "n/child/n",
+        "round": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.817",
+        "ev": "tick",
+        "node": "n/child/n",
+        "round": 1,
+        "started": [
+          "leaf-r1"
+        ],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.817",
+        "ev": "tick",
+        "node": "n",
+        "round": 1,
+        "started": [
+          "child-r1"
+        ],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.820",
+        "ev": "node-",
+        "node": "n/child/n"
+      },
+      {
+        "at": "2026-10-03T16:04:08.974",
+        "ev": "tock",
+        "node": "n",
+        "round": 1,
+        "rc": 0,
+        "ended": [],
+        "early": false
+      },
+      {
+        "at": "2026-10-03T16:04:08.989",
+        "ev": "tick",
+        "node": "n",
+        "round": 2,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.004",
+        "ev": "tock",
+        "node": "n",
+        "round": 2,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.139",
+        "ev": "tick",
+        "node": "n",
+        "round": 3,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.155",
+        "ev": "tock",
+        "node": "n",
+        "round": 3,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.291",
+        "ev": "tick",
+        "node": "n",
+        "round": 4,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.307",
+        "ev": "tock",
+        "node": "n",
+        "round": 4,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.442",
+        "ev": "tick",
+        "node": "n",
+        "round": 5,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.460",
+        "ev": "tock",
+        "node": "n",
+        "round": 5,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.594",
+        "ev": "tick",
+        "node": "n",
+        "round": 6,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.611",
+        "ev": "tock",
+        "node": "n",
+        "round": 6,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.744",
+        "ev": "tick",
+        "node": "n",
+        "round": 7,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.764",
+        "ev": "tock",
+        "node": "n",
+        "round": 7,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      }
+    ],
+    "child_log": [
+      {
+        "at": "2026-10-03T16:04:08.839",
+        "ev": "start",
+        "pid": 2341450,
+        "gen": 1
+      },
+      {
+        "at": "2026-10-03T16:04:08.840",
+        "ev": "node+",
+        "node": "n",
+        "round": 1
+      },
+      {
+        "at": "2026-10-03T16:04:08.855",
+        "ev": "tick",
+        "node": "n",
+        "round": 2,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:08.870",
+        "ev": "tock",
+        "node": "n",
+        "round": 2,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.006",
+        "ev": "tick",
+        "node": "n",
+        "round": 3,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.023",
+        "ev": "tock",
+        "node": "n",
+        "round": 3,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.155",
+        "ev": "tick",
+        "node": "n",
+        "round": 4,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.170",
+        "ev": "tock",
+        "node": "n",
+        "round": 4,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.306",
+        "ev": "tick",
+        "node": "n",
+        "round": 5,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.321",
+        "ev": "tock",
+        "node": "n",
+        "round": 5,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.457",
+        "ev": "tick",
+        "node": "n",
+        "round": 6,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.474",
+        "ev": "tock",
+        "node": "n",
+        "round": 6,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.609",
+        "ev": "tick",
+        "node": "n",
+        "round": 7,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.626",
+        "ev": "tock",
+        "node": "n",
+        "round": 7,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:09.759",
+        "ev": "tick",
+        "node": "n",
+        "round": 8,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.777",
+        "ev": "tock",
+        "node": "n",
+        "round": 8,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      }
+    ],
+    "status": [
+      {
+        "pid": 2341441,
+        "root": "/tmp/astra5-nested-subroot-4q0m6tgi",
+        "at": "2026-10-03T16:04:09.873",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 7,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "child-r1"
+            ]
+          }
+        }
+      },
+      {
+        "pid": 2341450,
+        "root": "/tmp/astra5-nested-subroot-4q0m6tgi/n/.aos/tasks/child-r1/mnt/sub",
+        "at": "2026-10-03T16:04:09.872",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 8,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "leaf-r1"
+            ]
+          }
+        }
+      }
+    ],
+    "births": {
+      "n/child/n/.aos/tasks/leaf-r1/birth.json": {
+        "tid": "leaf-r1",
+        "name": "leaf",
+        "node": "n/child/n",
+        "round": 1,
+        "mounts": {},
+        "at": "2026-10-03T16:04:08.814",
+        "restart_of": null,
+        "argv": [
+          "/usr/bin/python",
+          "-c",
+          "import time;time.sleep(90)"
+        ]
+      },
+      "n/.aos/tasks/child-r1/birth.json": {
+        "tid": "child-r1",
+        "name": "child",
+        "node": "n",
+        "round": 1,
+        "mounts": {
+          "sub": {
+            "to": "n/child",
+            "at": "/tmp/astra5-nested-subroot-4q0m6tgi/n/.aos/tasks/child-r1/mnt/sub"
+          }
+        },
+        "at": "2026-10-03T16:04:08.814",
+        "restart_of": null,
+        "subroot": "n/child",
+        "argv": [
+          "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon",
+          "$AOS7_TASK/mnt/sub"
+        ]
+      }
+    },
+    "exits": {},
+    "processes": [
+      {
+        "pid": 2341441,
+        "ppid": 2341393,
+        "pgid": 2341441,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-subroot-4q0m6tgi "
+      },
+      {
+        "pid": 2341446,
+        "ppid": 2341393,
+        "pgid": 2341446,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-subroot-4q0m6tgi/n/child/n/.aos/tasks/leaf-r1 "
+      },
+      {
+        "pid": 2341447,
+        "ppid": 2341393,
+        "pgid": 2341447,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-subroot-4q0m6tgi/n/.aos/tasks/child-r1 "
+      },
+      {
+        "pid": 2341449,
+        "ppid": 2341446,
+        "pgid": 2341449,
+        "state": "S",
+        "cmd": "/usr/bin/python -c import time;time.sleep(90) "
+      },
+      {
+        "pid": 2341450,
+        "ppid": 2341447,
+        "pgid": 2341450,
+        "state": "S",
+        "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-subroot-4q0m6tgi/n/.aos/tasks/child-r1/mnt/sub "
+      }
+    ],
+    "cleanup": {
+      "active_processes": 0,
+      "root_removed": true
+    }
+  },
+  {
+    "root": "/tmp/astra5-nested-subroot-yn291iat",
+    "parent_log": [
+      {
+        "at": "2026-10-03T16:04:09.927",
+        "ev": "start",
+        "pid": 2341487,
+        "gen": 1
+      },
+      {
+        "at": "2026-10-03T16:04:09.928",
+        "ev": "node+",
+        "node": "n",
+        "round": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.928",
+        "ev": "node+",
+        "node": "n/child/n",
+        "round": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.944",
+        "ev": "tick",
+        "node": "n/child/n",
+        "round": 1,
+        "started": [
+          "leaf-r1"
+        ],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.944",
+        "ev": "tick",
+        "node": "n",
+        "round": 1,
+        "started": [
+          "child-r1"
+        ],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.949",
+        "ev": "node-",
+        "node": "n/child/n"
+      },
+      {
+        "at": "2026-10-03T16:04:10.101",
+        "ev": "tock",
+        "node": "n",
+        "round": 1,
+        "rc": 0,
+        "ended": [],
+        "early": false
+      },
+      {
+        "at": "2026-10-03T16:04:10.116",
+        "ev": "tick",
+        "node": "n",
+        "round": 2,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.131",
+        "ev": "tock",
+        "node": "n",
+        "round": 2,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.267",
+        "ev": "tick",
+        "node": "n",
+        "round": 3,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.282",
+        "ev": "tock",
+        "node": "n",
+        "round": 3,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.418",
+        "ev": "tick",
+        "node": "n",
+        "round": 4,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.434",
+        "ev": "tock",
+        "node": "n",
+        "round": 4,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.568",
+        "ev": "tick",
+        "node": "n",
+        "round": 5,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.583",
+        "ev": "tock",
+        "node": "n",
+        "round": 5,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.721",
+        "ev": "tick",
+        "node": "n",
+        "round": 6,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.739",
+        "ev": "tock",
+        "node": "n",
+        "round": 6,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.872",
+        "ev": "tick",
+        "node": "n",
+        "round": 7,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.891",
+        "ev": "tock",
+        "node": "n",
+        "round": 7,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      }
+    ],
+    "child_log": [
+      {
+        "at": "2026-10-03T16:04:09.966",
+        "ev": "start",
+        "pid": 2341496,
+        "gen": 1
+      },
+      {
+        "at": "2026-10-03T16:04:09.967",
+        "ev": "node+",
+        "node": "n",
+        "round": 1
+      },
+      {
+        "at": "2026-10-03T16:04:09.983",
+        "ev": "tick",
+        "node": "n",
+        "round": 2,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:09.998",
+        "ev": "tock",
+        "node": "n",
+        "round": 2,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.132",
+        "ev": "tick",
+        "node": "n",
+        "round": 3,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.148",
+        "ev": "tock",
+        "node": "n",
+        "round": 3,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.283",
+        "ev": "tick",
+        "node": "n",
+        "round": 4,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.298",
+        "ev": "tock",
+        "node": "n",
+        "round": 4,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.433",
+        "ev": "tick",
+        "node": "n",
+        "round": 5,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.448",
+        "ev": "tock",
+        "node": "n",
+        "round": 5,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.583",
+        "ev": "tick",
+        "node": "n",
+        "round": 6,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.598",
+        "ev": "tock",
+        "node": "n",
+        "round": 6,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.735",
+        "ev": "tick",
+        "node": "n",
+        "round": 7,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.752",
+        "ev": "tock",
+        "node": "n",
+        "round": 7,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      },
+      {
+        "at": "2026-10-03T16:04:10.886",
+        "ev": "tick",
+        "node": "n",
+        "round": 8,
+        "started": [],
+        "rc": 0
+      },
+      {
+        "at": "2026-10-03T16:04:10.904",
+        "ev": "tock",
+        "node": "n",
+        "round": 8,
+        "rc": 0,
+        "ended": [],
+        "early": true
+      }
+    ],
+    "status": [
+      {
+        "pid": 2341487,
+        "root": "/tmp/astra5-nested-subroot-yn291iat",
+        "at": "2026-10-03T16:04:10.999",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 7,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "child-r1"
+            ]
+          }
+        }
+      },
+      {
+        "pid": 2341496,
+        "root": "/tmp/astra5-nested-subroot-yn291iat/n/.aos/tasks/child-r1/mnt/sub",
+        "at": "2026-10-03T16:04:10.999",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "kill_on_stop": false,
+        "nodes": {
+          "n": {
+            "round": 8,
+            "phase": "idle",
+            "paused": false,
+            "interval_ms": 150,
+            "pause_pending": false,
+            "live": [
+              "leaf-r1"
+            ]
+          }
+        }
+      }
+    ],
+    "births": {
+      "n/child/n/.aos/tasks/leaf-r1/birth.json": {
+        "tid": "leaf-r1",
+        "name": "leaf",
+        "node": "n/child/n",
+        "round": 1,
+        "mounts": {},
+        "at": "2026-10-03T16:04:09.941",
+        "restart_of": null,
+        "argv": [
+          "/usr/bin/python",
+          "-c",
+          "import time;time.sleep(90)"
+        ]
+      },
+      "n/.aos/tasks/child-r1/birth.json": {
+        "tid": "child-r1",
+        "name": "child",
+        "node": "n",
+        "round": 1,
+        "mounts": {
+          "sub": {
+            "to": "n/child",
+            "at": "/tmp/astra5-nested-subroot-yn291iat/n/.aos/tasks/child-r1/mnt/sub"
+          }
+        },
+        "at": "2026-10-03T16:04:09.941",
+        "restart_of": null,
+        "subroot": "n/child",
+        "argv": [
+          "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon",
+          "$AOS7_TASK/mnt/sub"
+        ]
+      }
+    },
+    "exits": {},
+    "processes": [
+      {
+        "pid": 2341487,
+        "ppid": 2341393,
+        "pgid": 2341487,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-subroot-yn291iat "
+      },
+      {
+        "pid": 2341492,
+        "ppid": 2341393,
+        "pgid": 2341492,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-subroot-yn291iat/n/child/n/.aos/tasks/leaf-r1 "
+      },
+      {
+        "pid": 2341493,
+        "ppid": 2341393,
+        "pgid": 2341493,
+        "state": "S",
+        "cmd": "/usr/bin/python /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-run /tmp/astra5-nested-subroot-yn291iat/n/.aos/tasks/child-r1 "
+      },
+      {
+        "pid": 2341495,
+        "ppid": 2341492,
+        "pgid": 2341495,
+        "state": "S",
+        "cmd": "/usr/bin/python -c import time;time.sleep(90) "
+      },
+      {
+        "pid": 2341496,
+        "ppid": 2341493,
+        "pgid": 2341496,
+        "state": "S",
+        "cmd": "python3 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-daemon /tmp/astra5-nested-subroot-yn291iat/n/.aos/tasks/child-r1/mnt/sub "
+      }
+    ],
+    "cleanup": {
+      "active_processes": 0,
+      "root_removed": true
+    }
+  }
+]

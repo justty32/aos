@@ -1,0 +1,39 @@
+{
+  "case": "same-round-replay",
+  "root": "/tmp/astra5-crash-same-round-replay-wthxp31c",
+  "fault_injection": "sitecustomize patches selected os call only; SIGSTOP then controller SIGKILL",
+  "at_fault": {
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:06:40.794\",\n \"tock_at\": null,\n \"started\": [\n  \"done-r1\"\n ],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T16:06:40.794\", \"tock_at\": \"2026-10-03T16:06:40.825\", \"started\": [\"done-r1\"], \"alive\": [], \"ended\": [{\"tid\": \"done-r1\", \"name\": \"done\", \"code\": 0}], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+    ".aos/tasks/done-r1/birth.json": "{\n \"tid\": \"done-r1\",\n \"name\": \"done\",\n \"node\": \".\",\n \"round\": 1,\n \"mounts\": {},\n \"at\": \"2026-10-03T16:06:40.794\",\n \"restart_of\": null,\n \"argv\": [\n  \"/bin/true\"\n ]\n}\n",
+    ".aos/tasks/done-r1/exit.json": "{\n \"code\": 0,\n \"at\": \"2026-10-03T16:06:40.807\",\n \"round\": 1\n}\n",
+    ".aos/tasks/done-r1/out.log": "",
+    ".aos/tasks/done-r1/pid.json": "{\n \"pid\": 2345546,\n \"pgid\": 2345546,\n \"runner_pid\": 2345545,\n \"at\": \"2026-10-03T16:06:40.807\"\n}\n",
+    ".aos/tasks.json": "{\"tasks\": [{\"name\": \"done\", \"argv\": [\"/bin/true\"]}]}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    "aos7-tick-0.stderr": "{\"round\": 1, \"started\": [\"done-r1\"]}\n",
+    "aos7-tock-1.stderr": "",
+    "fault-marker.json": "{\"pid\": 2345547, \"path\": \"/tmp/astra5-crash-same-round-replay-wthxp31c/.aos/rounds.jsonl\", \"args\": [\"/tmp/astra5-crash-same-round-replay-wthxp31c/.aos/rounds.jsonl\", \"{'round': 1, 'tick_at': '2026-10-03T16:06:40.794', 'tock_at': '2026-10-03T16:06:40.825', 'started': ['done-r1'], 'alive': [], 'ended': [{'tid': 'done-r1', 'name': 'done', 'code': 0}], 'ctl': [], 'mounts': [], 'early': None}\"]}"
+  },
+  "final_files": {
+    ".aos/action.lock": "",
+    ".aos/round.json": "{\n \"round\": 1,\n \"open\": false,\n \"tick_at\": \"2026-10-03T16:06:40.794\",\n \"tock_at\": \"2026-10-03T16:06:40.846\",\n \"started\": [\n  \"done-r1\"\n ],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+    ".aos/rounds.jsonl": "{\"round\": 1, \"tick_at\": \"2026-10-03T16:06:40.794\", \"tock_at\": \"2026-10-03T16:06:40.825\", \"started\": [\"done-r1\"], \"alive\": [], \"ended\": [{\"tid\": \"done-r1\", \"name\": \"done\", \"code\": 0}], \"ctl\": [], \"mounts\": [], \"early\": null}\n{\"round\": 1, \"tick_at\": \"2026-10-03T16:06:40.794\", \"tock_at\": \"2026-10-03T16:06:40.846\", \"started\": [\"done-r1\"], \"alive\": [], \"ended\": [{\"tid\": \"done-r1\", \"name\": \"done\", \"code\": 0}], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+    ".aos/tasks/done-r1/birth.json": "{\n \"tid\": \"done-r1\",\n \"name\": \"done\",\n \"node\": \".\",\n \"round\": 1,\n \"mounts\": {},\n \"at\": \"2026-10-03T16:06:40.794\",\n \"restart_of\": null,\n \"argv\": [\n  \"/bin/true\"\n ]\n}\n",
+    ".aos/tasks/done-r1/ended.json": "{\n \"round\": 1\n}\n",
+    ".aos/tasks/done-r1/exit.json": "{\n \"code\": 0,\n \"at\": \"2026-10-03T16:06:40.807\",\n \"round\": 1\n}\n",
+    ".aos/tasks/done-r1/out.log": "",
+    ".aos/tasks/done-r1/pid.json": "{\n \"pid\": 2345546,\n \"pgid\": 2345546,\n \"runner_pid\": 2345545,\n \"at\": \"2026-10-03T16:06:40.807\"\n}\n",
+    ".aos/tasks.json": "{\"tasks\": [{\"name\": \"done\", \"argv\": [\"/bin/true\"]}]}",
+    ".aos/timeline.json": "{\"interval_ms\": 200}",
+    "aos7-tick-0.stderr": "{\"round\": 1, \"started\": [\"done-r1\"]}\n",
+    "aos7-tock-1.stderr": "",
+    "aos7-tock-2.stderr": "{\"round\": 1, \"tick_at\": \"2026-10-03T16:06:40.794\", \"tock_at\": \"2026-10-03T16:06:40.846\", \"started\": [\"done-r1\"], \"alive\": [], \"ended\": [{\"tid\": \"done-r1\", \"name\": \"done\", \"code\": 0}], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+    "fault-marker.json": "{\"pid\": 2345547, \"path\": \"/tmp/astra5-crash-same-round-replay-wthxp31c/.aos/rounds.jsonl\", \"args\": [\"/tmp/astra5-crash-same-round-replay-wthxp31c/.aos/rounds.jsonl\", \"{'round': 1, 'tick_at': '2026-10-03T16:06:40.794', 'tock_at': '2026-10-03T16:06:40.825', 'started': ['done-r1'], 'alive': [], 'ended': [{'tid': 'done-r1', 'name': 'done', 'code': 0}], 'ctl': [], 'mounts': [], 'early': None}\"]}"
+  },
+  "cleanup": {
+    "remaining_children": [],
+    "root_exists": false
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "case": "ctl-receipt-dir",
+  "root": "/tmp/astra5-robustness-tq4_0nvz",
+  "initial": {
+    "n/.aos/tasks.json": "{\"tasks\": [{\"name\": \"good\", \"argv\": [\"/bin/true\"]}]}",
+    "n/.aos/timeline.json": "{\"interval_ms\": 100}",
+    "n/.aos/tasks/a-r0/ctl.json": "{\"op\": \"not-an-op\"}",
+    "n/.aos/tasks/a-r0/exit.json": "{\"code\": 0}",
+    "n/.aos/tasks/a-r0/birth.json": "{\"name\": \"a\", \"tid\": \"a-r0\", \"round\": 0}"
+  },
+  "rounds": [
+    {
+      "tick": {
+        "prog": "aos7-tick",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick\", line 8, in <module>\n    sys.exit(aos7_tick.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 141, in main\n    r = tick(argv[0], argv[1])\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 93, in tick\n    return _tick(root, node_id, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 103, in _tick\n    state[\"ctl\"] = aos7_task.run_all_ctl(node)\n                   ~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 312, in run_all_ctl\n    r = run_ctl(node, tid)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 300, in run_ctl\n    write_json(os.path.join(tdir, \"ctl-done.json\"), ctl)\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_fs.py\", line 35, in write_json\n    os.replace(tmp, path)\n    ~~~~~~~~~~^^^^^^^^^^^\nIsADirectoryError: [Errno 21] Is a directory: '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/.ctl-done.json.tmp.2340500' -> '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/ctl-done.json'\n"
+      },
+      "tock": {
+        "prog": "aos7-tock",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tock\", line 8, in <module>\n    sys.exit(aos7_tock.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 119, in main\n    print(json.dumps(tock(argv[0], argv[1], early=None if e is None else e == \"1\"), ensure_ascii=False))\n                     ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 33, in tock\n    return _tock(node, early)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 47, in _tock\n    ctl = list(state.get(\"ctl\", [])) + aos7_task.run_all_ctl(node)\n                                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 312, in run_all_ctl\n    r = run_ctl(node, tid)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 300, in run_ctl\n    write_json(os.path.join(tdir, \"ctl-done.json\"), ctl)\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_fs.py\", line 35, in write_json\n    os.replace(tmp, path)\n    ~~~~~~~~~~^^^^^^^^^^^\nIsADirectoryError: [Errno 21] Is a directory: '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/.ctl-done.json.tmp.2340501' -> '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/ctl-done.json'\n"
+      },
+      "files": {
+        "n/.aos/round.json": "{\n \"round\": 1,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:02:21.565\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+        "n/.aos/tasks.json": "{\"tasks\": [{\"name\": \"good\", \"argv\": [\"/bin/true\"]}]}",
+        "n/.aos/timeline.json": "{\"interval_ms\": 100}",
+        "n/.aos/tasks/a-r0/ctl.json": "{\"op\": \"not-an-op\"}",
+        "n/.aos/tasks/a-r0/exit.json": "{\"code\": 0}",
+        "n/.aos/tasks/a-r0/birth.json": "{\"name\": \"a\", \"tid\": \"a-r0\", \"round\": 0}"
+      }
+    },
+    {
+      "tick": {
+        "prog": "aos7-tick",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick\", line 8, in <module>\n    sys.exit(aos7_tick.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 141, in main\n    r = tick(argv[0], argv[1])\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 93, in tick\n    return _tick(root, node_id, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 103, in _tick\n    state[\"ctl\"] = aos7_task.run_all_ctl(node)\n                   ~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 312, in run_all_ctl\n    r = run_ctl(node, tid)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 300, in run_ctl\n    write_json(os.path.join(tdir, \"ctl-done.json\"), ctl)\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_fs.py\", line 35, in write_json\n    os.replace(tmp, path)\n    ~~~~~~~~~~^^^^^^^^^^^\nIsADirectoryError: [Errno 21] Is a directory: '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/.ctl-done.json.tmp.2340502' -> '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/ctl-done.json'\n"
+      },
+      "tock": {
+        "prog": "aos7-tock",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tock\", line 8, in <module>\n    sys.exit(aos7_tock.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 119, in main\n    print(json.dumps(tock(argv[0], argv[1], early=None if e is None else e == \"1\"), ensure_ascii=False))\n                     ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 33, in tock\n    return _tock(node, early)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 47, in _tock\n    ctl = list(state.get(\"ctl\", [])) + aos7_task.run_all_ctl(node)\n                                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 312, in run_all_ctl\n    r = run_ctl(node, tid)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 300, in run_ctl\n    write_json(os.path.join(tdir, \"ctl-done.json\"), ctl)\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_fs.py\", line 35, in write_json\n    os.replace(tmp, path)\n    ~~~~~~~~~~^^^^^^^^^^^\nIsADirectoryError: [Errno 21] Is a directory: '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/.ctl-done.json.tmp.2340503' -> '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/ctl-done.json'\n"
+      },
+      "files": {
+        "n/.aos/round.json": "{\n \"round\": 2,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:02:21.676\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+        "n/.aos/tasks.json": "{\"tasks\": [{\"name\": \"good\", \"argv\": [\"/bin/true\"]}]}",
+        "n/.aos/timeline.json": "{\"interval_ms\": 100}",
+        "n/.aos/tasks/a-r0/ctl.json": "{\"op\": \"not-an-op\"}",
+        "n/.aos/tasks/a-r0/exit.json": "{\"code\": 0}",
+        "n/.aos/tasks/a-r0/birth.json": "{\"name\": \"a\", \"tid\": \"a-r0\", \"round\": 0}"
+      }
+    },
+    {
+      "tick": {
+        "prog": "aos7-tick",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tick\", line 8, in <module>\n    sys.exit(aos7_tick.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 141, in main\n    r = tick(argv[0], argv[1])\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 93, in tick\n    return _tick(root, node_id, node)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tick.py\", line 103, in _tick\n    state[\"ctl\"] = aos7_task.run_all_ctl(node)\n                   ~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 312, in run_all_ctl\n    r = run_ctl(node, tid)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 300, in run_ctl\n    write_json(os.path.join(tdir, \"ctl-done.json\"), ctl)\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_fs.py\", line 35, in write_json\n    os.replace(tmp, path)\n    ~~~~~~~~~~^^^^^^^^^^^\nIsADirectoryError: [Errno 21] Is a directory: '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/.ctl-done.json.tmp.2340504' -> '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/ctl-done.json'\n"
+      },
+      "tock": {
+        "prog": "aos7-tock",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/bin/aos7-tock\", line 8, in <module>\n    sys.exit(aos7_tock.main())\n             ~~~~~~~~~~~~~~^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 119, in main\n    print(json.dumps(tock(argv[0], argv[1], early=None if e is None else e == \"1\"), ensure_ascii=False))\n                     ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 33, in tock\n    return _tock(node, early)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_tock.py\", line 47, in _tock\n    ctl = list(state.get(\"ctl\", [])) + aos7_task.run_all_ctl(node)\n                                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 312, in run_all_ctl\n    r = run_ctl(node, tid)\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_task.py\", line 300, in run_ctl\n    write_json(os.path.join(tdir, \"ctl-done.json\"), ctl)\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p71/astra5/proto7-1/lib/aos7_fs.py\", line 35, in write_json\n    os.replace(tmp, path)\n    ~~~~~~~~~~^^^^^^^^^^^\nIsADirectoryError: [Errno 21] Is a directory: '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/.ctl-done.json.tmp.2340505' -> '/tmp/astra5-robustness-tq4_0nvz/n/.aos/tasks/a-r0/ctl-done.json'\n"
+      },
+      "files": {
+        "n/.aos/round.json": "{\n \"round\": 3,\n \"open\": true,\n \"tick_at\": \"2026-10-03T16:02:21.787\",\n \"tock_at\": null,\n \"started\": [],\n \"ctl\": [],\n \"mounts\": []\n}\n",
+        "n/.aos/tasks.json": "{\"tasks\": [{\"name\": \"good\", \"argv\": [\"/bin/true\"]}]}",
+        "n/.aos/timeline.json": "{\"interval_ms\": 100}",
+        "n/.aos/tasks/a-r0/ctl.json": "{\"op\": \"not-an-op\"}",
+        "n/.aos/tasks/a-r0/exit.json": "{\"code\": 0}",
+        "n/.aos/tasks/a-r0/birth.json": "{\"name\": \"a\", \"tid\": \"a-r0\", \"round\": 0}"
+      }
+    }
+  ],
+  "mount_request_exists": false,
+  "mount_receipt_is_file": false,
+  "cleanup": {
+    "killed": [],
+    "space_removed": true
+  }
+}

@@ -1,0 +1,1710 @@
+{"at": "2026-10-03T16:08:34.455", "ev": "start", "pid": 2348449, "gen": 1}
+{"at": "2026-10-03T16:08:34.457", "ev": "node+", "node": "n000", "round": 0}
+{"at": "2026-10-03T16:08:34.457", "ev": "node+", "node": "n001", "round": 0}
+{"at": "2026-10-03T16:08:34.458", "ev": "node+", "node": "n002", "round": 0}
+{"at": "2026-10-03T16:08:34.458", "ev": "node+", "node": "n003", "round": 0}
+{"at": "2026-10-03T16:08:34.458", "ev": "node+", "node": "n004", "round": 0}
+{"at": "2026-10-03T16:08:34.459", "ev": "node+", "node": "n005", "round": 0}
+{"at": "2026-10-03T16:08:34.459", "ev": "node+", "node": "n006", "round": 0}
+{"at": "2026-10-03T16:08:34.459", "ev": "node+", "node": "n007", "round": 0}
+{"at": "2026-10-03T16:08:34.460", "ev": "node+", "node": "n008", "round": 0}
+{"at": "2026-10-03T16:08:34.460", "ev": "node+", "node": "n009", "round": 0}
+{"at": "2026-10-03T16:08:34.461", "ev": "node+", "node": "n010", "round": 0}
+{"at": "2026-10-03T16:08:34.461", "ev": "node+", "node": "n011", "round": 0}
+{"at": "2026-10-03T16:08:34.462", "ev": "node+", "node": "n012", "round": 0}
+{"at": "2026-10-03T16:08:34.462", "ev": "node+", "node": "n013", "round": 0}
+{"at": "2026-10-03T16:08:34.468", "ev": "node+", "node": "n014", "round": 0}
+{"at": "2026-10-03T16:08:34.475", "ev": "node+", "node": "n015", "round": 0}
+{"at": "2026-10-03T16:08:34.477", "ev": "node+", "node": "n016", "round": 0}
+{"at": "2026-10-03T16:08:34.480", "ev": "tick", "node": "n001", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.483", "ev": "node+", "node": "n017", "round": 0}
+{"at": "2026-10-03T16:08:34.483", "ev": "tick", "node": "n003", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.486", "ev": "tick", "node": "n004", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.486", "ev": "tick", "node": "n009", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.486", "ev": "tick", "node": "n005", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.487", "ev": "node+", "node": "n018", "round": 0}
+{"at": "2026-10-03T16:08:34.487", "ev": "tick", "node": "n011", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.491", "ev": "tick", "node": "n012", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.494", "ev": "tick", "node": "n013", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.495", "ev": "tick", "node": "n008", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.498", "ev": "tick", "node": "n007", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.498", "ev": "node+", "node": "n019", "round": 0}
+{"at": "2026-10-03T16:08:34.498", "ev": "tick", "node": "n006", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.499", "ev": "tick", "node": "n002", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.502", "ev": "tick", "node": "n010", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.507", "ev": "tick", "node": "n000", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.507", "ev": "tick", "node": "n014", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.508", "ev": "tock", "node": "n001", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.508", "ev": "tock", "node": "n003", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.508", "ev": "tock", "node": "n005", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.508", "ev": "tock", "node": "n009", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.510", "ev": "tock", "node": "n004", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.510", "ev": "tick", "node": "n017", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.513", "ev": "tick", "node": "n018", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.515", "ev": "tick", "node": "n015", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.517", "ev": "tick", "node": "n016", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.517", "ev": "tock", "node": "n012", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.521", "ev": "tock", "node": "n007", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.521", "ev": "tick", "node": "n019", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.521", "ev": "tock", "node": "n013", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.522", "ev": "tock", "node": "n011", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.522", "ev": "tock", "node": "n006", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.524", "ev": "tock", "node": "n010", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.524", "ev": "node+", "node": "n020", "round": 0}
+{"at": "2026-10-03T16:08:34.525", "ev": "node+", "node": "n021", "round": 0}
+{"at": "2026-10-03T16:08:34.527", "ev": "node+", "node": "n022", "round": 0}
+{"at": "2026-10-03T16:08:34.529", "ev": "tock", "node": "n008", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.530", "ev": "tock", "node": "n000", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.530", "ev": "node+", "node": "n023", "round": 0}
+{"at": "2026-10-03T16:08:34.530", "ev": "tock", "node": "n002", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.530", "ev": "tock", "node": "n014", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.532", "ev": "node+", "node": "n024", "round": 0}
+{"at": "2026-10-03T16:08:34.532", "ev": "node+", "node": "n025", "round": 0}
+{"at": "2026-10-03T16:08:34.532", "ev": "node+", "node": "n026", "round": 0}
+{"at": "2026-10-03T16:08:34.533", "ev": "node+", "node": "n027", "round": 0}
+{"at": "2026-10-03T16:08:34.537", "ev": "node+", "node": "n028", "round": 0}
+{"at": "2026-10-03T16:08:34.538", "ev": "tock", "node": "n018", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.539", "ev": "tock", "node": "n017", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.541", "ev": "node+", "node": "n029", "round": 0}
+{"at": "2026-10-03T16:08:34.541", "ev": "tock", "node": "n015", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.541", "ev": "node+", "node": "n030", "round": 0}
+{"at": "2026-10-03T16:08:34.541", "ev": "node+", "node": "n031", "round": 0}
+{"at": "2026-10-03T16:08:34.542", "ev": "node+", "node": "n032", "round": 0}
+{"at": "2026-10-03T16:08:34.546", "ev": "tock", "node": "n016", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.547", "ev": "tock", "node": "n019", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.547", "ev": "tick", "node": "n020", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.548", "ev": "node+", "node": "n033", "round": 0}
+{"at": "2026-10-03T16:08:34.548", "ev": "node+", "node": "n034", "round": 0}
+{"at": "2026-10-03T16:08:34.548", "ev": "tick", "node": "n021", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.549", "ev": "node+", "node": "n035", "round": 0}
+{"at": "2026-10-03T16:08:34.557", "ev": "tick", "node": "n024", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.558", "ev": "node+", "node": "n036", "round": 0}
+{"at": "2026-10-03T16:08:34.559", "ev": "tick", "node": "n026", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.565", "ev": "tick", "node": "n025", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.571", "ev": "tick", "node": "n022", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.575", "ev": "tick", "node": "n023", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.592", "ev": "tick", "node": "n028", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.602", "ev": "node+", "node": "n037", "round": 0}
+{"at": "2026-10-03T16:08:34.609", "ev": "tick", "node": "n030", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.609", "ev": "tick", "node": "n029", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.612", "ev": "tick", "node": "n027", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.619", "ev": "tick", "node": "n033", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.619", "ev": "tick", "node": "n032", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.621", "ev": "tock", "node": "n021", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.621", "ev": "tock", "node": "n020", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.621", "ev": "tock", "node": "n026", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.621", "ev": "tick", "node": "n034", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.621", "ev": "tick", "node": "n000", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.623", "ev": "tock", "node": "n024", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.623", "ev": "tick", "node": "n036", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.624", "ev": "tick", "node": "n031", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.627", "ev": "tick", "node": "n035", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.627", "ev": "tick", "node": "n001", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.629", "ev": "tick", "node": "n006", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.631", "ev": "tick", "node": "n013", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.632", "ev": "tick", "node": "n037", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.632", "ev": "node+", "node": "n038", "round": 0}
+{"at": "2026-10-03T16:08:34.632", "ev": "tock", "node": "n022", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.632", "ev": "tick", "node": "n010", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.634", "ev": "tock", "node": "n025", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.635", "ev": "tick", "node": "n012", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.635", "ev": "tick", "node": "n009", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.635", "ev": "tick", "node": "n011", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.637", "ev": "tock", "node": "n023", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.638", "ev": "tick", "node": "n016", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.641", "ev": "tick", "node": "n002", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.646", "ev": "tick", "node": "n005", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.646", "ev": "tick", "node": "n003", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.647", "ev": "tick", "node": "n015", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.655", "ev": "tick", "node": "n008", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.655", "ev": "tick", "node": "n007", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.655", "ev": "tick", "node": "n004", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.670", "ev": "node+", "node": "n039", "round": 0}
+{"at": "2026-10-03T16:08:34.670", "ev": "tick", "node": "n014", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.672", "ev": "tick", "node": "n038", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.677", "ev": "tick", "node": "n018", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.681", "ev": "tock", "node": "n028", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.681", "ev": "tick", "node": "n017", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.681", "ev": "tock", "node": "n029", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.682", "ev": "tock", "node": "n000", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.682", "ev": "tick", "node": "n019", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n030", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n001", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n027", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n036", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n033", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n013", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n037", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n031", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n006", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n010", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.684", "ev": "tock", "node": "n016", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.687", "ev": "tock", "node": "n032", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.687", "ev": "tick", "node": "n024", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.687", "ev": "tock", "node": "n034", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.687", "ev": "tock", "node": "n035", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.687", "ev": "tock", "node": "n009", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.687", "ev": "tick", "node": "n039", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.690", "ev": "tock", "node": "n012", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.690", "ev": "tock", "node": "n011", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.690", "ev": "tock", "node": "n003", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.691", "ev": "tock", "node": "n002", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.691", "ev": "tick", "node": "n020", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.693", "ev": "tick", "node": "n021", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.705", "ev": "tick", "node": "n026", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.711", "ev": "tock", "node": "n015", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.719", "ev": "tock", "node": "n008", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.721", "ev": "tock", "node": "n004", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.721", "ev": "tick", "node": "n025", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.722", "ev": "tick", "node": "n022", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.728", "ev": "tock", "node": "n005", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.728", "ev": "tick", "node": "n023", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.735", "ev": "tock", "node": "n038", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.735", "ev": "tock", "node": "n007", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.739", "ev": "tock", "node": "n019", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.739", "ev": "tock", "node": "n018", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.740", "ev": "tock", "node": "n014", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.740", "ev": "tock", "node": "n024", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.740", "ev": "tock", "node": "n017", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.740", "ev": "tock", "node": "n020", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.743", "ev": "tock", "node": "n039", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.743", "ev": "tick", "node": "n029", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.743", "ev": "tock", "node": "n021", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.748", "ev": "tick", "node": "n030", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.752", "ev": "tick", "node": "n000", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.753", "ev": "tick", "node": "n013", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.753", "ev": "tick", "node": "n001", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.756", "ev": "tick", "node": "n028", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.756", "ev": "tick", "node": "n037", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.759", "ev": "tick", "node": "n035", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.760", "ev": "tick", "node": "n010", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.769", "ev": "node+", "node": "n040", "round": 0}
+{"at": "2026-10-03T16:08:34.771", "ev": "tick", "node": "n033", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.771", "ev": "tick", "node": "n016", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.772", "ev": "tick", "node": "n006", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.776", "ev": "tick", "node": "n032", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.782", "ev": "tock", "node": "n026", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.782", "ev": "tick", "node": "n027", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.784", "ev": "tick", "node": "n011", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.787", "ev": "tick", "node": "n009", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.790", "ev": "tick", "node": "n002", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.790", "ev": "tick", "node": "n031", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.790", "ev": "tick", "node": "n036", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.793", "ev": "tick", "node": "n034", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.795", "ev": "tick", "node": "n012", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.795", "ev": "tock", "node": "n022", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.796", "ev": "tick", "node": "n003", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.798", "ev": "tock", "node": "n025", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.800", "ev": "tock", "node": "n023", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.800", "ev": "tick", "node": "n040", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.801", "ev": "node+", "node": "n041", "round": 0}
+{"at": "2026-10-03T16:08:34.806", "ev": "tick", "node": "n015", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.806", "ev": "tock", "node": "n029", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.807", "ev": "tick", "node": "n005", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.808", "ev": "tock", "node": "n028", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.808", "ev": "tock", "node": "n030", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.808", "ev": "tock", "node": "n000", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.808", "ev": "tick", "node": "n008", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.808", "ev": "tock", "node": "n035", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.814", "ev": "tock", "node": "n001", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.814", "ev": "tick", "node": "n007", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.815", "ev": "tick", "node": "n004", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.816", "ev": "tick", "node": "n038", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.816", "ev": "tick", "node": "n020", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.818", "ev": "tick", "node": "n024", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.820", "ev": "tick", "node": "n017", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.823", "ev": "tock", "node": "n037", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.824", "ev": "node+", "node": "n042", "round": 0}
+{"at": "2026-10-03T16:08:34.824", "ev": "tick", "node": "n039", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.826", "ev": "tock", "node": "n013", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.828", "ev": "tick", "node": "n019", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.830", "ev": "tick", "node": "n018", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.834", "ev": "tock", "node": "n010", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.842", "ev": "tock", "node": "n006", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.846", "ev": "tock", "node": "n027", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.847", "ev": "tick", "node": "n014", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.850", "ev": "tock", "node": "n009", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.850", "ev": "tock", "node": "n016", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.850", "ev": "tick", "node": "n021", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.850", "ev": "tick", "node": "n041", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.852", "ev": "tock", "node": "n002", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.852", "ev": "tock", "node": "n033", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.852", "ev": "node+", "node": "n043", "round": 0}
+{"at": "2026-10-03T16:08:34.858", "ev": "tick", "node": "n042", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.859", "ev": "tock", "node": "n036", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.859", "ev": "tock", "node": "n005", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.860", "ev": "tock", "node": "n034", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.860", "ev": "tick", "node": "n026", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.860", "ev": "tock", "node": "n031", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.861", "ev": "tock", "node": "n011", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.861", "ev": "tock", "node": "n032", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.861", "ev": "tock", "node": "n008", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.861", "ev": "tock", "node": "n015", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.870", "ev": "tock", "node": "n012", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.870", "ev": "tock", "node": "n003", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.870", "ev": "tock", "node": "n038", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.870", "ev": "tick", "node": "n022", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.871", "ev": "tick", "node": "n023", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.877", "ev": "tock", "node": "n004", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.886", "ev": "tock", "node": "n007", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.887", "ev": "node+", "node": "n044", "round": 0}
+{"at": "2026-10-03T16:08:34.891", "ev": "tock", "node": "n017", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.894", "ev": "tock", "node": "n040", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.898", "ev": "tock", "node": "n024", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.904", "ev": "tick", "node": "n043", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.908", "ev": "tick", "node": "n029", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.908", "ev": "tock", "node": "n039", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.911", "ev": "tick", "node": "n000", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.914", "ev": "tock", "node": "n021", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.917", "ev": "tick", "node": "n028", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.918", "ev": "tock", "node": "n020", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.918", "ev": "tick", "node": "n025", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.922", "ev": "tock", "node": "n018", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.922", "ev": "tick", "node": "n030", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.924", "ev": "tock", "node": "n019", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.926", "ev": "tick", "node": "n001", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.929", "ev": "tick", "node": "n035", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.929", "ev": "tock", "node": "n014", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.929", "ev": "node+", "node": "n045", "round": 0}
+{"at": "2026-10-03T16:08:34.934", "ev": "tock", "node": "n026", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.939", "ev": "tick", "node": "n013", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.941", "ev": "tick", "node": "n044", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.941", "ev": "tock", "node": "n041", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.941", "ev": "tick", "node": "n010", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.941", "ev": "tick", "node": "n037", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.947", "ev": "tock", "node": "n042", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.948", "ev": "tock", "node": "n023", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.948", "ev": "tick", "node": "n009", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.949", "ev": "tick", "node": "n006", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.950", "ev": "tock", "node": "n022", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.954", "ev": "tick", "node": "n027", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.956", "ev": "tick", "node": "n016", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.958", "ev": "tick", "node": "n005", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.966", "ev": "tick", "node": "n012", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.966", "ev": "tick", "node": "n002", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.967", "ev": "tick", "node": "n036", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.969", "ev": "node+", "node": "n046", "round": 0}
+{"at": "2026-10-03T16:08:34.969", "ev": "tick", "node": "n033", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.970", "ev": "tick", "node": "n045", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.972", "ev": "tick", "node": "n032", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.974", "ev": "tick", "node": "n008", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.978", "ev": "tick", "node": "n011", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.978", "ev": "tick", "node": "n015", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.979", "ev": "tick", "node": "n034", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.986", "ev": "tick", "node": "n031", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.991", "ev": "tick", "node": "n038", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.993", "ev": "tick", "node": "n007", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.994", "ev": "tick", "node": "n003", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:34.995", "ev": "tock", "node": "n043", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:34.995", "ev": "tock", "node": "n001", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.002", "ev": "tock", "node": "n029", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.002", "ev": "tock", "node": "n028", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.002", "ev": "tock", "node": "n000", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.002", "ev": "tock", "node": "n013", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.002", "ev": "tock", "node": "n030", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.002", "ev": "tock", "node": "n025", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.005", "ev": "tick", "node": "n046", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.008", "ev": "tock", "node": "n035", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.010", "ev": "tock", "node": "n044", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.010", "ev": "tick", "node": "n004", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.010", "ev": "tick", "node": "n040", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.014", "ev": "tick", "node": "n024", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.014", "ev": "tick", "node": "n017", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.015", "ev": "node+", "node": "n047", "round": 0}
+{"at": "2026-10-03T16:08:35.015", "ev": "tock", "node": "n037", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.017", "ev": "tock", "node": "n009", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.017", "ev": "tock", "node": "n006", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.017", "ev": "tock", "node": "n010", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.017", "ev": "tick", "node": "n021", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.018", "ev": "tock", "node": "n005", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.023", "ev": "tock", "node": "n036", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.024", "ev": "tock", "node": "n045", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.024", "ev": "tick", "node": "n039", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.024", "ev": "tick", "node": "n026", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.030", "ev": "tock", "node": "n027", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.030", "ev": "tick", "node": "n019", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.033", "ev": "tock", "node": "n016", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.038", "ev": "tick", "node": "n020", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.038", "ev": "tick", "node": "n018", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.039", "ev": "tick", "node": "n014", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.041", "ev": "tock", "node": "n012", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.042", "ev": "tock", "node": "n002", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.042", "ev": "node+", "node": "n048", "round": 0}
+{"at": "2026-10-03T16:08:35.045", "ev": "tick", "node": "n047", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.046", "ev": "tock", "node": "n008", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.047", "ev": "tock", "node": "n032", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.048", "ev": "tock", "node": "n033", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.054", "ev": "tick", "node": "n041", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.057", "ev": "tick", "node": "n023", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.057", "ev": "tock", "node": "n034", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.057", "ev": "tock", "node": "n038", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.058", "ev": "tock", "node": "n015", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.071", "ev": "tock", "node": "n007", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.071", "ev": "tick", "node": "n042", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.071", "ev": "tock", "node": "n031", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.071", "ev": "tock", "node": "n046", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.076", "ev": "tock", "node": "n011", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.076", "ev": "tick", "node": "n022", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.079", "ev": "tock", "node": "n040", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.081", "ev": "tock", "node": "n021", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.083", "ev": "tock", "node": "n003", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.083", "ev": "tock", "node": "n024", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.084", "ev": "tick", "node": "n043", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.086", "ev": "node+", "node": "n049", "round": 0}
+{"at": "2026-10-03T16:08:35.086", "ev": "tock", "node": "n017", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.088", "ev": "tick", "node": "n000", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.088", "ev": "tick", "node": "n048", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.090", "ev": "tick", "node": "n001", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.094", "ev": "tock", "node": "n014", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.096", "ev": "tock", "node": "n019", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.096", "ev": "tick", "node": "n044", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.098", "ev": "tock", "node": "n004", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.098", "ev": "tock", "node": "n047", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.104", "ev": "tick", "node": "n013", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.106", "ev": "tock", "node": "n026", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.106", "ev": "tock", "node": "n039", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.107", "ev": "tick", "node": "n028", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.107", "ev": "tock", "node": "n018", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.110", "ev": "tick", "node": "n029", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.113", "ev": "tick", "node": "n010", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.116", "ev": "tick", "node": "n030", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.118", "ev": "tick", "node": "n037", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.120", "ev": "tick", "node": "n036", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.120", "ev": "tock", "node": "n023", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.124", "ev": "tick", "node": "n005", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.124", "ev": "tock", "node": "n020", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.126", "ev": "tick", "node": "n025", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.129", "ev": "tick", "node": "n009", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.129", "ev": "tick", "node": "n035", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.134", "ev": "node+", "node": "n050", "round": 0}
+{"at": "2026-10-03T16:08:35.134", "ev": "tock", "node": "n041", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.136", "ev": "tock", "node": "n042", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.140", "ev": "tick", "node": "n045", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.141", "ev": "tock", "node": "n022", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.154", "ev": "tick", "node": "n049", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.154", "ev": "tick", "node": "n008", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.158", "ev": "tick", "node": "n006", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.158", "ev": "tick", "node": "n012", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.158", "ev": "tick", "node": "n002", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.162", "ev": "tick", "node": "n033", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.162", "ev": "tick", "node": "n027", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.166", "ev": "tick", "node": "n032", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.170", "ev": "tick", "node": "n016", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.170", "ev": "tock", "node": "n000", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.170", "ev": "tick", "node": "n034", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.170", "ev": "tock", "node": "n048", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.171", "ev": "tock", "node": "n043", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.171", "ev": "tick", "node": "n050", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.171", "ev": "tock", "node": "n044", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.171", "ev": "tick", "node": "n038", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.173", "ev": "tock", "node": "n028", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.173", "ev": "tick", "node": "n031", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.175", "ev": "tock", "node": "n001", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.175", "ev": "tick", "node": "n015", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.176", "ev": "tick", "node": "n046", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.180", "ev": "tock", "node": "n013", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.180", "ev": "tick", "node": "n007", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.181", "ev": "node+", "node": "n051", "round": 0}
+{"at": "2026-10-03T16:08:35.186", "ev": "tock", "node": "n010", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.188", "ev": "tock", "node": "n029", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.188", "ev": "tock", "node": "n030", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.188", "ev": "tick", "node": "n003", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.190", "ev": "tock", "node": "n037", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.191", "ev": "tick", "node": "n024", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.196", "ev": "tick", "node": "n040", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.201", "ev": "tick", "node": "n011", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.207", "ev": "tick", "node": "n021", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.213", "ev": "tock", "node": "n009", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.213", "ev": "tock", "node": "n036", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.213", "ev": "tick", "node": "n014", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.215", "ev": "tick", "node": "n017", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.217", "ev": "tock", "node": "n025", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.217", "ev": "tick", "node": "n047", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.221", "ev": "tock", "node": "n035", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.230", "ev": "tick", "node": "n026", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.230", "ev": "tick", "node": "n019", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.230", "ev": "tock", "node": "n049", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.230", "ev": "tick", "node": "n004", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.236", "ev": "tock", "node": "n005", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.236", "ev": "tick", "node": "n051", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.236", "ev": "node+", "node": "n052", "round": 0}
+{"at": "2026-10-03T16:08:35.239", "ev": "tock", "node": "n016", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.240", "ev": "tock", "node": "n012", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.242", "ev": "tock", "node": "n033", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.244", "ev": "tock", "node": "n034", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.245", "ev": "tock", "node": "n031", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.247", "ev": "tock", "node": "n008", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.247", "ev": "tock", "node": "n027", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.247", "ev": "tock", "node": "n045", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.247", "ev": "tick", "node": "n018", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.247", "ev": "tock", "node": "n006", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.249", "ev": "tick", "node": "n039", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.252", "ev": "tock", "node": "n050", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.253", "ev": "tick", "node": "n020", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.255", "ev": "tick", "node": "n052", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.255", "ev": "tock", "node": "n007", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.260", "ev": "tock", "node": "n032", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.260", "ev": "tick", "node": "n023", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.263", "ev": "tick", "node": "n022", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.263", "ev": "tock", "node": "n003", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.264", "ev": "tick", "node": "n041", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.265", "ev": "tock", "node": "n046", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.267", "ev": "tock", "node": "n002", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.269", "ev": "tick", "node": "n042", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.270", "ev": "tock", "node": "n038", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.271", "ev": "tock", "node": "n015", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.272", "ev": "tock", "node": "n011", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.272", "ev": "node+", "node": "n053", "round": 0}
+{"at": "2026-10-03T16:08:35.272", "ev": "tock", "node": "n021", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.277", "ev": "tock", "node": "n040", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.281", "ev": "tock", "node": "n024", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.283", "ev": "tick", "node": "n000", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.287", "ev": "tock", "node": "n047", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.289", "ev": "tick", "node": "n043", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.289", "ev": "tock", "node": "n017", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.289", "ev": "tock", "node": "n014", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.292", "ev": "tick", "node": "n013", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.299", "ev": "tick", "node": "n048", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.299", "ev": "tock", "node": "n019", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.299", "ev": "tock", "node": "n004", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.300", "ev": "tock", "node": "n026", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.306", "ev": "tick", "node": "n044", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.311", "ev": "tick", "node": "n010", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.312", "ev": "tick", "node": "n053", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.314", "ev": "tick", "node": "n029", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.322", "ev": "tick", "node": "n037", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.323", "ev": "tock", "node": "n018", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.323", "ev": "tock", "node": "n051", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.325", "ev": "tick", "node": "n028", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.328", "ev": "node+", "node": "n054", "round": 0}
+{"at": "2026-10-03T16:08:35.329", "ev": "tick", "node": "n001", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.329", "ev": "tick", "node": "n025", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.332", "ev": "tock", "node": "n020", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.332", "ev": "tick", "node": "n030", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.335", "ev": "tock", "node": "n039", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.336", "ev": "tick", "node": "n035", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.336", "ev": "tock", "node": "n023", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.338", "ev": "tock", "node": "n022", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.342", "ev": "tick", "node": "n036", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.343", "ev": "tock", "node": "n052", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.343", "ev": "tock", "node": "n041", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.343", "ev": "tick", "node": "n005", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.346", "ev": "tick", "node": "n033", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.348", "ev": "tock", "node": "n042", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.354", "ev": "tick", "node": "n016", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.354", "ev": "tick", "node": "n034", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.357", "ev": "tick", "node": "n009", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.360", "ev": "tick", "node": "n012", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.360", "ev": "tick", "node": "n031", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.362", "ev": "tick", "node": "n008", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.365", "ev": "tick", "node": "n049", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.365", "ev": "tick", "node": "n045", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.371", "ev": "tick", "node": "n027", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.371", "ev": "tock", "node": "n000", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.371", "ev": "tick", "node": "n054", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.371", "ev": "tock", "node": "n048", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.374", "ev": "tick", "node": "n006", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.377", "ev": "tick", "node": "n050", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.377", "ev": "tick", "node": "n003", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.379", "ev": "tock", "node": "n013", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.379", "ev": "node+", "node": "n055", "round": 0}
+{"at": "2026-10-03T16:08:35.384", "ev": "tick", "node": "n007", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.386", "ev": "tick", "node": "n032", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.389", "ev": "tock", "node": "n043", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.389", "ev": "tock", "node": "n010", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.392", "ev": "tock", "node": "n044", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.394", "ev": "tick", "node": "n046", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.396", "ev": "tick", "node": "n002", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.401", "ev": "tock", "node": "n053", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.401", "ev": "tick", "node": "n038", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.402", "ev": "tock", "node": "n029", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.403", "ev": "tock", "node": "n037", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.403", "ev": "tick", "node": "n015", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.403", "ev": "tock", "node": "n028", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.403", "ev": "tock", "node": "n030", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.404", "ev": "tock", "node": "n001", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.404", "ev": "tick", "node": "n011", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.404", "ev": "tick", "node": "n055", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.404", "ev": "tick", "node": "n024", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.407", "ev": "tick", "node": "n021", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.407", "ev": "tock", "node": "n036", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.410", "ev": "tick", "node": "n017", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.410", "ev": "tock", "node": "n025", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.413", "ev": "tick", "node": "n040", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.420", "ev": "tick", "node": "n047", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.421", "ev": "tock", "node": "n035", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.421", "ev": "tick", "node": "n014", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.422", "ev": "tock", "node": "n016", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.422", "ev": "tick", "node": "n004", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.423", "ev": "node+", "node": "n056", "round": 0}
+{"at": "2026-10-03T16:08:35.423", "ev": "tock", "node": "n005", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.428", "ev": "tock", "node": "n009", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.428", "ev": "tick", "node": "n019", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.429", "ev": "tock", "node": "n049", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.429", "ev": "tock", "node": "n034", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.429", "ev": "tock", "node": "n045", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.431", "ev": "tock", "node": "n033", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.432", "ev": "tock", "node": "n054", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.432", "ev": "tick", "node": "n026", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.433", "ev": "tock", "node": "n008", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.433", "ev": "tock", "node": "n006", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.433", "ev": "tock", "node": "n027", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.433", "ev": "tick", "node": "n051", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.433", "ev": "tock", "node": "n003", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.438", "ev": "tick", "node": "n018", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.441", "ev": "tock", "node": "n050", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.442", "ev": "tock", "node": "n031", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.442", "ev": "tick", "node": "n056", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.442", "ev": "tock", "node": "n012", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.442", "ev": "tock", "node": "n032", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.443", "ev": "tick", "node": "n023", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.451", "ev": "tick", "node": "n020", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.459", "ev": "tick", "node": "n022", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.460", "ev": "tock", "node": "n002", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.460", "ev": "tock", "node": "n007", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.463", "ev": "tock", "node": "n046", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.463", "ev": "node+", "node": "n057", "round": 0}
+{"at": "2026-10-03T16:08:35.467", "ev": "tick", "node": "n052", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.468", "ev": "tick", "node": "n039", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.472", "ev": "tock", "node": "n055", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.472", "ev": "tock", "node": "n011", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.472", "ev": "tock", "node": "n038", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.472", "ev": "tock", "node": "n024", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.480", "ev": "tock", "node": "n015", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.484", "ev": "tock", "node": "n021", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.485", "ev": "tick", "node": "n042", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.485", "ev": "tick", "node": "n041", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.501", "ev": "tock", "node": "n017", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.501", "ev": "tock", "node": "n047", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.502", "ev": "tick", "node": "n057", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.502", "ev": "tock", "node": "n004", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.502", "ev": "tick", "node": "n013", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.502", "ev": "tick", "node": "n000", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.503", "ev": "tick", "node": "n010", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.509", "ev": "tock", "node": "n014", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.509", "ev": "tock", "node": "n040", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.510", "ev": "tick", "node": "n048", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.515", "ev": "tock", "node": "n019", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.515", "ev": "node+", "node": "n058", "round": 0}
+{"at": "2026-10-03T16:08:35.521", "ev": "tock", "node": "n051", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.523", "ev": "tick", "node": "n043", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.532", "ev": "tick", "node": "n044", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.534", "ev": "tick", "node": "n037", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.538", "ev": "tick", "node": "n028", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.540", "ev": "tock", "node": "n026", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.540", "ev": "tock", "node": "n018", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.543", "ev": "tick", "node": "n030", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.543", "ev": "tick", "node": "n035", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.545", "ev": "tock", "node": "n023", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.545", "ev": "tick", "node": "n029", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.546", "ev": "tock", "node": "n056", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.547", "ev": "tock", "node": "n020", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.547", "ev": "tick", "node": "n025", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.547", "ev": "tick", "node": "n001", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.547", "ev": "tick", "node": "n053", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.555", "ev": "tock", "node": "n052", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.558", "ev": "tick", "node": "n036", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.561", "ev": "tock", "node": "n022", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.564", "ev": "tick", "node": "n016", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.564", "ev": "tock", "node": "n039", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.566", "ev": "tick", "node": "n009", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.570", "ev": "node+", "node": "n059", "round": 0}
+{"at": "2026-10-03T16:08:35.576", "ev": "tick", "node": "n058", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.576", "ev": "tick", "node": "n033", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.578", "ev": "tick", "node": "n012", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.580", "ev": "tick", "node": "n008", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.583", "ev": "tick", "node": "n034", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.583", "ev": "tick", "node": "n049", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.584", "ev": "tick", "node": "n045", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.585", "ev": "tick", "node": "n005", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.585", "ev": "tock", "node": "n042", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.588", "ev": "tick", "node": "n054", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.588", "ev": "tick", "node": "n027", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.589", "ev": "tick", "node": "n006", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.594", "ev": "tock", "node": "n000", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.594", "ev": "tock", "node": "n041", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.596", "ev": "tock", "node": "n010", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.596", "ev": "tick", "node": "n050", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.597", "ev": "tick", "node": "n032", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.598", "ev": "tick", "node": "n003", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.605", "ev": "tick", "node": "n031", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.608", "ev": "tick", "node": "n059", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.611", "ev": "tock", "node": "n057", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.613", "ev": "tick", "node": "n007", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.613", "ev": "tock", "node": "n048", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.621", "ev": "tock", "node": "n013", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.621", "ev": "tick", "node": "n046", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.624", "ev": "tick", "node": "n011", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.625", "ev": "tock", "node": "n044", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.628", "ev": "tick", "node": "n055", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.632", "ev": "tick", "node": "n002", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.632", "ev": "tock", "node": "n037", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.637", "ev": "tock", "node": "n043", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.637", "ev": "tock", "node": "n030", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.637", "ev": "tock", "node": "n001", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.637", "ev": "tick", "node": "n015", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.639", "ev": "tick", "node": "n038", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.640", "ev": "tick", "node": "n024", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.641", "ev": "tock", "node": "n028", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.641", "ev": "tock", "node": "n025", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.641", "ev": "tock", "node": "n029", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.641", "ev": "tock", "node": "n035", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.641", "ev": "tock", "node": "n036", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.643", "ev": "tock", "node": "n053", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.649", "ev": "tock", "node": "n016", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.649", "ev": "tick", "node": "n021", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.654", "ev": "tock", "node": "n009", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.654", "ev": "tick", "node": "n017", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.654", "ev": "tick", "node": "n040", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.655", "ev": "tick", "node": "n004", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.656", "ev": "tock", "node": "n012", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.656", "ev": "tock", "node": "n049", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.656", "ev": "tick", "node": "n051", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.656", "ev": "tick", "node": "n047", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.656", "ev": "tick", "node": "n014", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.669", "ev": "tock", "node": "n034", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.671", "ev": "tock", "node": "n058", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.671", "ev": "tock", "node": "n033", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.671", "ev": "tick", "node": "n019", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.674", "ev": "node+", "node": "n060", "round": 0}
+{"at": "2026-10-03T16:08:35.676", "ev": "tock", "node": "n008", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.677", "ev": "tick", "node": "n026", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.677", "ev": "tock", "node": "n027", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.677", "ev": "tock", "node": "n032", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.680", "ev": "tock", "node": "n006", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.680", "ev": "tock", "node": "n005", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.683", "ev": "tock", "node": "n045", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.683", "ev": "tick", "node": "n018", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.683", "ev": "tick", "node": "n056", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.685", "ev": "tock", "node": "n050", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.685", "ev": "tock", "node": "n054", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.692", "ev": "tock", "node": "n059", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.695", "ev": "tick", "node": "n052", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.697", "ev": "tick", "node": "n023", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.698", "ev": "tick", "node": "n020", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.701", "ev": "tock", "node": "n003", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.701", "ev": "tock", "node": "n031", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.702", "ev": "tock", "node": "n046", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.702", "ev": "tick", "node": "n060", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.703", "ev": "tick", "node": "n039", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.704", "ev": "tock", "node": "n007", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.704", "ev": "tock", "node": "n011", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.704", "ev": "tock", "node": "n015", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.707", "ev": "tock", "node": "n038", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.709", "ev": "tock", "node": "n024", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.713", "ev": "tick", "node": "n000", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.715", "ev": "tick", "node": "n022", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.717", "ev": "tock", "node": "n002", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.719", "ev": "tick", "node": "n010", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.719", "ev": "node+", "node": "n061", "round": 0}
+{"at": "2026-10-03T16:08:35.725", "ev": "tock", "node": "n055", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.725", "ev": "tick", "node": "n042", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.730", "ev": "tock", "node": "n021", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.730", "ev": "tock", "node": "n004", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.730", "ev": "tock", "node": "n040", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.730", "ev": "tick", "node": "n041", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.740", "ev": "tock", "node": "n017", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.742", "ev": "tock", "node": "n051", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.743", "ev": "tick", "node": "n013", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.745", "ev": "tick", "node": "n057", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.745", "ev": "tock", "node": "n014", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.745", "ev": "tick", "node": "n048", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.753", "ev": "tock", "node": "n047", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.754", "ev": "tick", "node": "n044", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.757", "ev": "tock", "node": "n019", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.757", "ev": "tick", "node": "n061", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.760", "ev": "tick", "node": "n030", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.765", "ev": "tick", "node": "n043", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.765", "ev": "tick", "node": "n037", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.770", "ev": "tock", "node": "n026", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.770", "ev": "tock", "node": "n056", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.770", "ev": "tick", "node": "n001", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.775", "ev": "tick", "node": "n029", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.777", "ev": "tock", "node": "n018", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.780", "ev": "tick", "node": "n028", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.784", "ev": "tick", "node": "n025", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.785", "ev": "tick", "node": "n036", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.785", "ev": "node+", "node": "n062", "round": 0}
+{"at": "2026-10-03T16:08:35.785", "ev": "tick", "node": "n035", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.789", "ev": "tick", "node": "n053", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.789", "ev": "tick", "node": "n009", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.796", "ev": "tick", "node": "n034", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.797", "ev": "tock", "node": "n023", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.797", "ev": "tock", "node": "n052", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.801", "ev": "tock", "node": "n020", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.808", "ev": "tick", "node": "n016", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.811", "ev": "tock", "node": "n060", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.811", "ev": "tick", "node": "n012", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.814", "ev": "tock", "node": "n022", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.815", "ev": "tick", "node": "n049", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.817", "ev": "tock", "node": "n039", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.817", "ev": "tock", "node": "n010", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.820", "ev": "tick", "node": "n033", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.820", "ev": "tick", "node": "n062", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.820", "ev": "tick", "node": "n058", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.823", "ev": "tock", "node": "n000", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.823", "ev": "tick", "node": "n027", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.824", "ev": "tock", "node": "n042", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.824", "ev": "tick", "node": "n008", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.828", "ev": "tick", "node": "n032", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.837", "ev": "tick", "node": "n050", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.840", "ev": "tock", "node": "n057", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.840", "ev": "tick", "node": "n054", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.840", "ev": "tick", "node": "n015", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.850", "ev": "tock", "node": "n013", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.850", "ev": "tick", "node": "n005", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.852", "ev": "tick", "node": "n006", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.852", "ev": "tick", "node": "n045", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.852", "ev": "tock", "node": "n041", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.853", "ev": "tock", "node": "n048", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.853", "ev": "tick", "node": "n046", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.853", "ev": "node+", "node": "n063", "round": 0}
+{"at": "2026-10-03T16:08:35.855", "ev": "tick", "node": "n031", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.855", "ev": "tick", "node": "n003", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.859", "ev": "tick", "node": "n011", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.859", "ev": "tock", "node": "n061", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.862", "ev": "tick", "node": "n038", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.862", "ev": "tick", "node": "n059", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.864", "ev": "tick", "node": "n002", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.864", "ev": "tick", "node": "n007", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.867", "ev": "tock", "node": "n044", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.872", "ev": "tock", "node": "n001", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.872", "ev": "tock", "node": "n037", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.872", "ev": "tick", "node": "n024", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.873", "ev": "tock", "node": "n043", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.873", "ev": "tock", "node": "n028", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.873", "ev": "tock", "node": "n053", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.873", "ev": "tock", "node": "n030", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.878", "ev": "tock", "node": "n036", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.879", "ev": "tock", "node": "n025", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.881", "ev": "tock", "node": "n035", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.881", "ev": "tock", "node": "n029", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.881", "ev": "tick", "node": "n004", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.881", "ev": "tock", "node": "n009", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.885", "ev": "tick", "node": "n021", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.889", "ev": "tock", "node": "n034", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.892", "ev": "tick", "node": "n040", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.894", "ev": "tick", "node": "n063", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.894", "ev": "tick", "node": "n055", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.899", "ev": "tock", "node": "n049", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.903", "ev": "tock", "node": "n012", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.903", "ev": "tick", "node": "n051", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.904", "ev": "tock", "node": "n016", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.904", "ev": "tock", "node": "n027", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.904", "ev": "tick", "node": "n017", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.904", "ev": "tock", "node": "n033", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.909", "ev": "tick", "node": "n047", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.909", "ev": "node+", "node": "n064", "round": 0}
+{"at": "2026-10-03T16:08:35.913", "ev": "tock", "node": "n058", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.913", "ev": "tock", "node": "n062", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.914", "ev": "tick", "node": "n014", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.914", "ev": "tock", "node": "n008", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.916", "ev": "tick", "node": "n019", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.918", "ev": "tock", "node": "n050", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.918", "ev": "tock", "node": "n032", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.918", "ev": "tock", "node": "n054", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.918", "ev": "tick", "node": "n026", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.918", "ev": "tick", "node": "n056", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.919", "ev": "tick", "node": "n018", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.927", "ev": "tock", "node": "n005", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.938", "ev": "tick", "node": "n064", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.938", "ev": "tock", "node": "n046", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.938", "ev": "tock", "node": "n003", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.941", "ev": "tock", "node": "n045", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.941", "ev": "tock", "node": "n031", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.941", "ev": "tock", "node": "n011", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.944", "ev": "tock", "node": "n006", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.944", "ev": "tock", "node": "n015", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.944", "ev": "tick", "node": "n052", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.944", "ev": "tock", "node": "n038", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.947", "ev": "tick", "node": "n023", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.949", "ev": "tock", "node": "n007", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.949", "ev": "tick", "node": "n039", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.950", "ev": "tick", "node": "n042", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.954", "ev": "tock", "node": "n024", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.955", "ev": "tock", "node": "n059", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.962", "ev": "tick", "node": "n000", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.964", "ev": "tock", "node": "n002", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.964", "ev": "tick", "node": "n022", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.965", "ev": "tick", "node": "n020", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.965", "ev": "tick", "node": "n010", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.966", "ev": "tock", "node": "n004", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.967", "ev": "node+", "node": "n065", "round": 0}
+{"at": "2026-10-03T16:08:35.972", "ev": "tick", "node": "n060", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.976", "ev": "tick", "node": "n057", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.977", "ev": "tock", "node": "n040", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.982", "ev": "tock", "node": "n055", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.982", "ev": "tock", "node": "n021", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.984", "ev": "tock", "node": "n063", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:35.984", "ev": "tock", "node": "n051", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.984", "ev": "tock", "node": "n017", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.984", "ev": "tick", "node": "n013", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.985", "ev": "tock", "node": "n014", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.987", "ev": "tock", "node": "n047", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:35.988", "ev": "tick", "node": "n065", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.990", "ev": "tick", "node": "n041", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.993", "ev": "tick", "node": "n001", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:35.993", "ev": "tick", "node": "n048", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.003", "ev": "tick", "node": "n061", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.008", "ev": "tock", "node": "n026", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.011", "ev": "tock", "node": "n019", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.014", "ev": "tock", "node": "n018", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.014", "ev": "tock", "node": "n056", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.016", "ev": "tick", "node": "n053", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.017", "ev": "tick", "node": "n043", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.020", "ev": "tock", "node": "n064", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.020", "ev": "tick", "node": "n030", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.020", "ev": "tick", "node": "n028", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.028", "ev": "tick", "node": "n035", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.031", "ev": "tick", "node": "n025", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.033", "ev": "node+", "node": "n066", "round": 0}
+{"at": "2026-10-03T16:08:36.033", "ev": "tick", "node": "n034", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.033", "ev": "tick", "node": "n036", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.035", "ev": "tick", "node": "n037", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.035", "ev": "tick", "node": "n044", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.040", "ev": "tick", "node": "n029", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.044", "ev": "tock", "node": "n042", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.053", "ev": "tick", "node": "n012", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.056", "ev": "tick", "node": "n016", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.057", "ev": "tock", "node": "n039", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.061", "ev": "tick", "node": "n027", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.069", "ev": "tick", "node": "n009", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.070", "ev": "tock", "node": "n010", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.073", "ev": "tock", "node": "n022", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.077", "ev": "tock", "node": "n023", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.077", "ev": "tick", "node": "n049", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.078", "ev": "tock", "node": "n052", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.078", "ev": "tock", "node": "n000", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.078", "ev": "tock", "node": "n020", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.078", "ev": "tick", "node": "n058", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.079", "ev": "tick", "node": "n066", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.080", "ev": "tick", "node": "n062", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.082", "ev": "tock", "node": "n060", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.082", "ev": "tick", "node": "n033", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.084", "ev": "tick", "node": "n032", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.085", "ev": "tick", "node": "n008", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.092", "ev": "tick", "node": "n046", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.103", "ev": "tick", "node": "n005", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.105", "ev": "tock", "node": "n057", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.108", "ev": "tick", "node": "n054", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.108", "ev": "tick", "node": "n050", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.111", "ev": "tock", "node": "n041", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.111", "ev": "tock", "node": "n065", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.113", "ev": "tick", "node": "n045", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.113", "ev": "tick", "node": "n003", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.118", "ev": "node+", "node": "n067", "round": 0}
+{"at": "2026-10-03T16:08:36.118", "ev": "tick", "node": "n011", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.123", "ev": "tock", "node": "n048", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.123", "ev": "tock", "node": "n013", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.123", "ev": "tock", "node": "n001", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.123", "ev": "tock", "node": "n061", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.123", "ev": "tick", "node": "n031", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.124", "ev": "tick", "node": "n038", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.124", "ev": "tock", "node": "n043", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.125", "ev": "tick", "node": "n059", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.127", "ev": "tick", "node": "n024", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.127", "ev": "tick", "node": "n006", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.132", "ev": "tick", "node": "n015", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.132", "ev": "tick", "node": "n007", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.135", "ev": "tock", "node": "n028", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.135", "ev": "tick", "node": "n004", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.135", "ev": "tock", "node": "n025", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.138", "ev": "tock", "node": "n030", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.138", "ev": "tock", "node": "n053", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.138", "ev": "tock", "node": "n035", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.141", "ev": "tock", "node": "n034", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.141", "ev": "tick", "node": "n002", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.141", "ev": "tock", "node": "n036", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.150", "ev": "tock", "node": "n029", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.150", "ev": "tick", "node": "n067", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.150", "ev": "tock", "node": "n037", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.155", "ev": "tick", "node": "n021", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.155", "ev": "tock", "node": "n044", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.155", "ev": "tick", "node": "n040", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.158", "ev": "tick", "node": "n063", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.161", "ev": "tock", "node": "n016", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.163", "ev": "tick", "node": "n055", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.165", "ev": "tock", "node": "n012", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.165", "ev": "tick", "node": "n047", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.166", "ev": "tock", "node": "n009", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.167", "ev": "tick", "node": "n017", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.169", "ev": "tock", "node": "n027", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.169", "ev": "tock", "node": "n049", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.169", "ev": "tick", "node": "n051", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.171", "ev": "tick", "node": "n014", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.173", "ev": "tock", "node": "n046", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.175", "ev": "tock", "node": "n062", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.175", "ev": "tock", "node": "n008", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.175", "ev": "node+", "node": "n068", "round": 0}
+{"at": "2026-10-03T16:08:36.176", "ev": "tock", "node": "n033", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.176", "ev": "tock", "node": "n058", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.179", "ev": "tick", "node": "n019", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.186", "ev": "tock", "node": "n032", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.188", "ev": "tock", "node": "n005", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.188", "ev": "tock", "node": "n066", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.188", "ev": "tick", "node": "n056", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.190", "ev": "tick", "node": "n026", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.190", "ev": "tick", "node": "n018", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.193", "ev": "tock", "node": "n003", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.196", "ev": "tock", "node": "n045", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.196", "ev": "tock", "node": "n050", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.196", "ev": "tick", "node": "n064", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.197", "ev": "tock", "node": "n054", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.199", "ev": "tock", "node": "n031", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.199", "ev": "tock", "node": "n038", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.202", "ev": "tock", "node": "n011", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.202", "ev": "tock", "node": "n059", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.202", "ev": "tick", "node": "n042", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.202", "ev": "tick", "node": "n068", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.208", "ev": "tock", "node": "n006", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.211", "ev": "tock", "node": "n004", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.211", "ev": "tock", "node": "n015", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.214", "ev": "tock", "node": "n007", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.216", "ev": "tock", "node": "n024", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.216", "ev": "tick", "node": "n039", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.219", "ev": "tock", "node": "n002", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.221", "ev": "tick", "node": "n010", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.224", "ev": "tick", "node": "n022", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.228", "ev": "tick", "node": "n000", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.228", "ev": "tock", "node": "n067", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.228", "ev": "tick", "node": "n052", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.234", "ev": "tick", "node": "n020", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.241", "ev": "tick", "node": "n023", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.246", "ev": "tick", "node": "n060", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.248", "ev": "node+", "node": "n069", "round": 0}
+{"at": "2026-10-03T16:08:36.251", "ev": "tock", "node": "n021", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.251", "ev": "tock", "node": "n040", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.251", "ev": "tock", "node": "n063", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.254", "ev": "tock", "node": "n055", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.254", "ev": "tick", "node": "n057", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.254", "ev": "tock", "node": "n017", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.255", "ev": "tock", "node": "n047", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.255", "ev": "tock", "node": "n051", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.259", "ev": "tick", "node": "n065", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.270", "ev": "tock", "node": "n014", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.271", "ev": "tick", "node": "n069", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.273", "ev": "tick", "node": "n013", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.275", "ev": "tick", "node": "n048", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.275", "ev": "tock", "node": "n019", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.276", "ev": "tick", "node": "n041", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.284", "ev": "tick", "node": "n025", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.285", "ev": "tick", "node": "n043", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.288", "ev": "tick", "node": "n001", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.289", "ev": "tock", "node": "n056", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.290", "ev": "tock", "node": "n018", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.290", "ev": "tock", "node": "n042", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.290", "ev": "tick", "node": "n053", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.292", "ev": "tick", "node": "n061", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.293", "ev": "tick", "node": "n035", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.293", "ev": "tick", "node": "n028", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.296", "ev": "tick", "node": "n036", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.297", "ev": "tock", "node": "n026", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.297", "ev": "tick", "node": "n016", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.298", "ev": "tick", "node": "n029", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.299", "ev": "tick", "node": "n030", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.299", "ev": "tick", "node": "n034", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.303", "ev": "tick", "node": "n012", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.304", "ev": "tock", "node": "n064", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.306", "ev": "tock", "node": "n068", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.306", "ev": "tock", "node": "n010", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.306", "ev": "node+", "node": "n070", "round": 0}
+{"at": "2026-10-03T16:08:36.306", "ev": "tock", "node": "n039", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.306", "ev": "tick", "node": "n044", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.306", "ev": "tick", "node": "n027", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.309", "ev": "tick", "node": "n009", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.309", "ev": "tick", "node": "n037", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.316", "ev": "tock", "node": "n000", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.323", "ev": "tock", "node": "n022", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.324", "ev": "tock", "node": "n052", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.324", "ev": "tock", "node": "n023", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.331", "ev": "tick", "node": "n049", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.332", "ev": "tock", "node": "n020", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.332", "ev": "tick", "node": "n046", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.332", "ev": "tick", "node": "n062", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.335", "ev": "tick", "node": "n070", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.335", "ev": "tick", "node": "n058", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.336", "ev": "tick", "node": "n033", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.341", "ev": "tick", "node": "n032", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.343", "ev": "tick", "node": "n008", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.343", "ev": "tock", "node": "n057", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.346", "ev": "tick", "node": "n050", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.346", "ev": "tock", "node": "n065", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.350", "ev": "tock", "node": "n060", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.350", "ev": "tick", "node": "n045", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.364", "ev": "tick", "node": "n066", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.364", "ev": "tick", "node": "n003", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.365", "ev": "tick", "node": "n005", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.366", "ev": "tick", "node": "n038", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.368", "ev": "tick", "node": "n031", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.372", "ev": "tick", "node": "n011", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.372", "ev": "tock", "node": "n069", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.375", "ev": "tick", "node": "n059", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.379", "ev": "tock", "node": "n048", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.379", "ev": "tock", "node": "n013", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.379", "ev": "tick", "node": "n054", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.381", "ev": "tick", "node": "n006", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.385", "ev": "tick", "node": "n004", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.389", "ev": "node+", "node": "n071", "round": 0}
+{"at": "2026-10-03T16:08:36.391", "ev": "tock", "node": "n041", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.391", "ev": "tock", "node": "n043", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.392", "ev": "tick", "node": "n007", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.395", "ev": "tock", "node": "n001", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.400", "ev": "tick", "node": "n002", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.403", "ev": "tock", "node": "n061", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.403", "ev": "tock", "node": "n053", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.407", "ev": "tock", "node": "n016", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.411", "ev": "tick", "node": "n067", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.411", "ev": "tick", "node": "n015", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.414", "ev": "tick", "node": "n024", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.417", "ev": "tock", "node": "n028", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.417", "ev": "tock", "node": "n025", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.419", "ev": "tock", "node": "n035", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.419", "ev": "tock", "node": "n044", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.419", "ev": "tock", "node": "n034", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.419", "ev": "tock", "node": "n036", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.419", "ev": "tock", "node": "n012", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.419", "ev": "tock", "node": "n029", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.419", "ev": "tock", "node": "n037", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.419", "ev": "tock", "node": "n030", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.420", "ev": "tick", "node": "n071", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.423", "ev": "tock", "node": "n027", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.423", "ev": "tick", "node": "n055", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.425", "ev": "tick", "node": "n014", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.427", "ev": "tick", "node": "n017", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.427", "ev": "tock", "node": "n009", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.427", "ev": "tick", "node": "n047", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.427", "ev": "tick", "node": "n063", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.430", "ev": "tock", "node": "n049", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.432", "ev": "tick", "node": "n051", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.432", "ev": "tick", "node": "n040", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.437", "ev": "tick", "node": "n021", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.437", "ev": "tock", "node": "n046", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.440", "ev": "tock", "node": "n050", "round": 6, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.440", "ev": "tock", "node": "n058", "round": 4, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.441", "ev": "tock", "node": "n045", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.445", "ev": "tock", "node": "n033", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.445", "ev": "tick", "node": "n018", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.445", "ev": "tock", "node": "n062", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.445", "ev": "tick", "node": "n019", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.446", "ev": "tock", "node": "n032", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.449", "ev": "tick", "node": "n056", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.454", "ev": "node+", "node": "n072", "round": 0}
+{"at": "2026-10-03T16:08:36.455", "ev": "tock", "node": "n008", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.455", "ev": "tock", "node": "n070", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.455", "ev": "tick", "node": "n042", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.455", "ev": "tock", "node": "n038", "round": 9, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.456", "ev": "tock", "node": "n054", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.456", "ev": "tock", "node": "n005", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.456", "ev": "tock", "node": "n031", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.456", "ev": "tock", "node": "n066", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.459", "ev": "tock", "node": "n011", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.466", "ev": "tick", "node": "n010", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.467", "ev": "tick", "node": "n068", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.467", "ev": "tock", "node": "n003", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.467", "ev": "tock", "node": "n004", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.478", "ev": "tock", "node": "n059", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.490", "ev": "tick", "node": "n064", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.490", "ev": "tick", "node": "n026", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.493", "ev": "tock", "node": "n002", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.495", "ev": "tick", "node": "n000", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.497", "ev": "tock", "node": "n006", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.497", "ev": "tick", "node": "n039", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.499", "ev": "tick", "node": "n072", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.499", "ev": "tick", "node": "n022", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.499", "ev": "tock", "node": "n015", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.500", "ev": "tock", "node": "n007", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.505", "ev": "tock", "node": "n024", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.505", "ev": "tock", "node": "n067", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.507", "ev": "tick", "node": "n065", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.514", "ev": "tick", "node": "n052", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.522", "ev": "tick", "node": "n057", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.522", "ev": "tock", "node": "n014", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.524", "ev": "tick", "node": "n020", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.524", "ev": "tick", "node": "n023", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.526", "ev": "tock", "node": "n071", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.526", "ev": "tock", "node": "n017", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.527", "ev": "node+", "node": "n073", "round": 0}
+{"at": "2026-10-03T16:08:36.527", "ev": "tock", "node": "n021", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.530", "ev": "tock", "node": "n063", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.533", "ev": "tick", "node": "n060", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.534", "ev": "tock", "node": "n055", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.534", "ev": "tock", "node": "n047", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.535", "ev": "tock", "node": "n051", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.535", "ev": "tick", "node": "n013", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.535", "ev": "tock", "node": "n040", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.537", "ev": "tick", "node": "n041", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.538", "ev": "tock", "node": "n019", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.543", "ev": "tock", "node": "n018", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.543", "ev": "tick", "node": "n048", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.543", "ev": "tick", "node": "n028", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.544", "ev": "tick", "node": "n073", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.550", "ev": "tock", "node": "n042", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.551", "ev": "tick", "node": "n069", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.556", "ev": "tock", "node": "n056", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.556", "ev": "tick", "node": "n053", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.557", "ev": "tick", "node": "n001", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.559", "ev": "tick", "node": "n043", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.559", "ev": "tick", "node": "n061", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.559", "ev": "tick", "node": "n016", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.562", "ev": "tock", "node": "n010", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.564", "ev": "tick", "node": "n025", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.565", "ev": "tick", "node": "n036", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.568", "ev": "tock", "node": "n068", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.570", "ev": "tick", "node": "n029", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.570", "ev": "tick", "node": "n044", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.572", "ev": "tick", "node": "n012", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.574", "ev": "tick", "node": "n034", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.575", "ev": "tick", "node": "n035", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.576", "ev": "tick", "node": "n030", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.576", "ev": "tock", "node": "n000", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.578", "ev": "tick", "node": "n027", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.578", "ev": "tock", "node": "n039", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.582", "ev": "tock", "node": "n026", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.583", "ev": "tock", "node": "n022", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.583", "ev": "tock", "node": "n064", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.583", "ev": "tick", "node": "n037", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.591", "ev": "tick", "node": "n049", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.592", "ev": "tick", "node": "n046", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.596", "ev": "tock", "node": "n072", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.596", "ev": "node+", "node": "n074", "round": 0}
+{"at": "2026-10-03T16:08:36.602", "ev": "tick", "node": "n058", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.608", "ev": "tick", "node": "n009", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.613", "ev": "tick", "node": "n050", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.616", "ev": "tock", "node": "n052", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.616", "ev": "tick", "node": "n062", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.618", "ev": "tick", "node": "n045", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.618", "ev": "tock", "node": "n065", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.618", "ev": "tock", "node": "n057", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.622", "ev": "tock", "node": "n020", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.622", "ev": "tick", "node": "n033", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.625", "ev": "tock", "node": "n023", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.625", "ev": "tick", "node": "n032", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.630", "ev": "tick", "node": "n066", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.632", "ev": "tick", "node": "n070", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.632", "ev": "tick", "node": "n074", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.637", "ev": "tick", "node": "n003", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.639", "ev": "tick", "node": "n005", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.639", "ev": "tick", "node": "n054", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.639", "ev": "tick", "node": "n008", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.639", "ev": "tick", "node": "n031", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.641", "ev": "tick", "node": "n038", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.647", "ev": "tock", "node": "n028", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.647", "ev": "tick", "node": "n011", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.652", "ev": "tock", "node": "n073", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.652", "ev": "tock", "node": "n041", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.655", "ev": "tick", "node": "n004", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.659", "ev": "tock", "node": "n069", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.660", "ev": "tock", "node": "n013", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.661", "ev": "tock", "node": "n016", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.661", "ev": "tock", "node": "n048", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.661", "ev": "tock", "node": "n001", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.661", "ev": "tock", "node": "n060", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.661", "ev": "tick", "node": "n059", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.663", "ev": "tick", "node": "n015", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.666", "ev": "tock", "node": "n043", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.666", "ev": "tick", "node": "n067", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.668", "ev": "tock", "node": "n012", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.670", "ev": "tock", "node": "n025", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.670", "ev": "tick", "node": "n006", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.673", "ev": "node+", "node": "n075", "round": 0}
+{"at": "2026-10-03T16:08:36.673", "ev": "tock", "node": "n053", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.673", "ev": "tock", "node": "n061", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.674", "ev": "tick", "node": "n007", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.676", "ev": "tock", "node": "n036", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.677", "ev": "tick", "node": "n002", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.680", "ev": "tock", "node": "n029", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.681", "ev": "tock", "node": "n030", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.681", "ev": "tock", "node": "n035", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.681", "ev": "tick", "node": "n014", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.682", "ev": "tock", "node": "n044", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.682", "ev": "tock", "node": "n027", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.682", "ev": "tick", "node": "n024", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.686", "ev": "tick", "node": "n071", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.689", "ev": "tock", "node": "n037", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.689", "ev": "tick", "node": "n017", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.691", "ev": "tock", "node": "n034", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.693", "ev": "tock", "node": "n049", "round": 7, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.695", "ev": "tock", "node": "n046", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.695", "ev": "tick", "node": "n075", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.701", "ev": "tick", "node": "n063", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.701", "ev": "tick", "node": "n055", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.701", "ev": "tick", "node": "n021", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.703", "ev": "tick", "node": "n047", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.711", "ev": "tock", "node": "n058", "round": 5, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.711", "ev": "tick", "node": "n051", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.715", "ev": "tick", "node": "n019", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.716", "ev": "tick", "node": "n018", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.717", "ev": "tock", "node": "n009", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.717", "ev": "tock", "node": "n045", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.717", "ev": "tock", "node": "n033", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.717", "ev": "tick", "node": "n040", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.718", "ev": "tock", "node": "n050", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.718", "ev": "tock", "node": "n062", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.725", "ev": "tick", "node": "n056", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.725", "ev": "tock", "node": "n066", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.730", "ev": "tock", "node": "n074", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.730", "ev": "tock", "node": "n070", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.736", "ev": "tock", "node": "n032", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.736", "ev": "tick", "node": "n042", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.742", "ev": "tock", "node": "n008", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.744", "ev": "tock", "node": "n005", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.745", "ev": "tock", "node": "n031", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.747", "ev": "node+", "node": "n076", "round": 0}
+{"at": "2026-10-03T16:08:36.747", "ev": "tock", "node": "n003", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.749", "ev": "tock", "node": "n054", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.752", "ev": "tick", "node": "n000", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.757", "ev": "tick", "node": "n068", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.761", "ev": "tock", "node": "n011", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.761", "ev": "tick", "node": "n039", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.762", "ev": "tick", "node": "n026", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.764", "ev": "tock", "node": "n015", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.772", "ev": "tock", "node": "n067", "round": 3, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.773", "ev": "tock", "node": "n059", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.773", "ev": "tock", "node": "n038", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.773", "ev": "tick", "node": "n010", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.775", "ev": "tick", "node": "n064", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.777", "ev": "tock", "node": "n004", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.777", "ev": "tick", "node": "n072", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.777", "ev": "tick", "node": "n076", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.780", "ev": "tock", "node": "n014", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.789", "ev": "tock", "node": "n024", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.789", "ev": "tick", "node": "n052", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.791", "ev": "tock", "node": "n007", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.800", "ev": "tock", "node": "n002", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.800", "ev": "tick", "node": "n022", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.800", "ev": "tick", "node": "n065", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.802", "ev": "tock", "node": "n006", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.803", "ev": "tick", "node": "n057", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.807", "ev": "tock", "node": "n017", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.816", "ev": "tock", "node": "n071", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.816", "ev": "tick", "node": "n020", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.816", "ev": "tock", "node": "n047", "round": 8, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.818", "ev": "tock", "node": "n063", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.818", "ev": "tock", "node": "n021", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.818", "ev": "tock", "node": "n075", "round": 1, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.821", "ev": "tock", "node": "n019", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.822", "ev": "tick", "node": "n023", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.822", "ev": "tock", "node": "n055", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.828", "ev": "node+", "node": "n077", "round": 0}
+{"at": "2026-10-03T16:08:36.829", "ev": "tock", "node": "n040", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.829", "ev": "tock", "node": "n056", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.829", "ev": "tock", "node": "n051", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.829", "ev": "tock", "node": "n018", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:36.829", "ev": "tick", "node": "n073", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.831", "ev": "tick", "node": "n048", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.834", "ev": "tick", "node": "n001", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.837", "ev": "tick", "node": "n016", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.837", "ev": "tick", "node": "n013", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.838", "ev": "tick", "node": "n028", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.843", "ev": "tick", "node": "n041", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.845", "ev": "tick", "node": "n025", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.846", "ev": "tick", "node": "n077", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.850", "ev": "tick", "node": "n069", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.852", "ev": "tick", "node": "n060", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.853", "ev": "tick", "node": "n012", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.857", "ev": "tock", "node": "n042", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.859", "ev": "tick", "node": "n029", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.859", "ev": "tick", "node": "n053", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.862", "ev": "tick", "node": "n043", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.864", "ev": "tick", "node": "n030", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.868", "ev": "tock", "node": "n068", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.869", "ev": "tick", "node": "n061", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.869", "ev": "tick", "node": "n034", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.872", "ev": "tick", "node": "n036", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.872", "ev": "tock", "node": "n000", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.872", "ev": "tick", "node": "n027", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.875", "ev": "tock", "node": "n064", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.875", "ev": "tock", "node": "n039", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.875", "ev": "tock", "node": "n026", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.875", "ev": "tick", "node": "n035", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.877", "ev": "tick", "node": "n037", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.879", "ev": "tock", "node": "n010", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.879", "ev": "tick", "node": "n049", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.881", "ev": "tock", "node": "n072", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.881", "ev": "tock", "node": "n076", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.881", "ev": "tick", "node": "n033", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.882", "ev": "tick", "node": "n058", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.886", "ev": "tick", "node": "n044", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.888", "ev": "tick", "node": "n062", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.892", "ev": "tock", "node": "n052", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.899", "ev": "tick", "node": "n046", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.900", "ev": "node+", "node": "n078", "round": 0}
+{"at": "2026-10-03T16:08:36.900", "ev": "tock", "node": "n022", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.900", "ev": "tick", "node": "n045", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.903", "ev": "tick", "node": "n050", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.904", "ev": "tick", "node": "n009", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.907", "ev": "tock", "node": "n065", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.919", "ev": "tick", "node": "n074", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.925", "ev": "tick", "node": "n066", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.926", "ev": "tock", "node": "n057", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.926", "ev": "tick", "node": "n032", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.928", "ev": "tick", "node": "n070", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.929", "ev": "tick", "node": "n031", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.929", "ev": "tock", "node": "n023", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.929", "ev": "tock", "node": "n020", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.931", "ev": "tick", "node": "n008", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.934", "ev": "tick", "node": "n005", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.934", "ev": "tick", "node": "n003", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.937", "ev": "tock", "node": "n073", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.937", "ev": "tick", "node": "n054", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.938", "ev": "tock", "node": "n048", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.938", "ev": "tock", "node": "n001", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.938", "ev": "tick", "node": "n078", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.940", "ev": "tick", "node": "n015", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.942", "ev": "tock", "node": "n013", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.942", "ev": "tock", "node": "n028", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.942", "ev": "tock", "node": "n041", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.942", "ev": "tick", "node": "n067", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.945", "ev": "tick", "node": "n011", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.945", "ev": "tick", "node": "n038", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.952", "ev": "tock", "node": "n016", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.953", "ev": "tock", "node": "n012", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.953", "ev": "tock", "node": "n060", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.955", "ev": "tick", "node": "n059", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.960", "ev": "tock", "node": "n077", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.960", "ev": "tock", "node": "n069", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.960", "ev": "tock", "node": "n025", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.960", "ev": "tock", "node": "n053", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.963", "ev": "tock", "node": "n030", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.963", "ev": "tick", "node": "n014", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.964", "ev": "tick", "node": "n024", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.965", "ev": "tick", "node": "n004", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.967", "ev": "tock", "node": "n043", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.967", "ev": "node+", "node": "n079", "round": 0}
+{"at": "2026-10-03T16:08:36.968", "ev": "tock", "node": "n029", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.970", "ev": "tock", "node": "n061", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.970", "ev": "tock", "node": "n027", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.970", "ev": "tick", "node": "n017", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.970", "ev": "tick", "node": "n007", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.974", "ev": "tock", "node": "n036", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.974", "ev": "tick", "node": "n006", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.975", "ev": "tock", "node": "n034", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.975", "ev": "tick", "node": "n019", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.977", "ev": "tock", "node": "n049", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.977", "ev": "tock", "node": "n062", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.977", "ev": "tick", "node": "n002", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.980", "ev": "tock", "node": "n037", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.980", "ev": "tock", "node": "n044", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.980", "ev": "tick", "node": "n021", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:36.987", "ev": "tock", "node": "n058", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.995", "ev": "tock", "node": "n033", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:36.999", "ev": "tick", "node": "n071", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.001", "ev": "tick", "node": "n063", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.005", "ev": "tick", "node": "n079", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.005", "ev": "tock", "node": "n035", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.006", "ev": "tick", "node": "n047", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.007", "ev": "tick", "node": "n075", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.008", "ev": "tock", "node": "n046", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.018", "ev": "tock", "node": "n045", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.020", "ev": "tick", "node": "n055", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.026", "ev": "tock", "node": "n009", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.026", "ev": "tock", "node": "n050", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.026", "ev": "tock", "node": "n074", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.029", "ev": "tick", "node": "n051", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.030", "ev": "tick", "node": "n056", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.033", "ev": "tick", "node": "n040", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.035", "ev": "tick", "node": "n018", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.037", "ev": "tock", "node": "n066", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.038", "ev": "tock", "node": "n070", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.038", "ev": "tock", "node": "n008", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.040", "ev": "tock", "node": "n032", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.040", "ev": "tock", "node": "n078", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.047", "ev": "tock", "node": "n003", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.052", "ev": "tock", "node": "n067", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.053", "ev": "tock", "node": "n011", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.053", "ev": "tick", "node": "n039", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.053", "ev": "tock", "node": "n005", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.061", "ev": "tock", "node": "n015", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.061", "ev": "tock", "node": "n054", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.066", "ev": "tock", "node": "n004", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.066", "ev": "tick", "node": "n076", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.066", "ev": "tock", "node": "n038", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.067", "ev": "tick", "node": "n026", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.071", "ev": "tick", "node": "n065", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.074", "ev": "tick", "node": "n000", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.078", "ev": "tock", "node": "n031", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.078", "ev": "tick", "node": "n068", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.081", "ev": "tick", "node": "n064", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.083", "ev": "tock", "node": "n059", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.083", "ev": "tock", "node": "n007", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.083", "ev": "node+", "node": "n080", "round": 0}
+{"at": "2026-10-03T16:08:37.083", "ev": "tick", "node": "n072", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.086", "ev": "tick", "node": "n010", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.086", "ev": "tick", "node": "n052", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.092", "ev": "tick", "node": "n042", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.098", "ev": "tock", "node": "n019", "round": 12, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:37.098", "ev": "tock", "node": "n017", "round": 12, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:37.098", "ev": "tick", "node": "n057", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.099", "ev": "tock", "node": "n014", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.103", "ev": "tock", "node": "n024", "round": 12, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:37.107", "ev": "tock", "node": "n021", "round": 12, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:37.107", "ev": "tick", "node": "n023", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.113", "ev": "tock", "node": "n002", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.117", "ev": "tock", "node": "n079", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.117", "ev": "tock", "node": "n047", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.117", "ev": "tock", "node": "n006", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.117", "ev": "tock", "node": "n063", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.117", "ev": "tick", "node": "n022", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.118", "ev": "tick", "node": "n073", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.127", "ev": "tock", "node": "n071", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.130", "ev": "tick", "node": "n020", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.130", "ev": "tock", "node": "n075", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.134", "ev": "tock", "node": "n055", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.134", "ev": "tick", "node": "n048", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.138", "ev": "tock", "node": "n040", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.138", "ev": "tock", "node": "n051", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.138", "ev": "tick", "node": "n080", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.139", "ev": "tick", "node": "n013", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.141", "ev": "tick", "node": "n016", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.141", "ev": "tock", "node": "n018", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.144", "ev": "tick", "node": "n041", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.146", "ev": "tick", "node": "n001", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.147", "ev": "tick", "node": "n028", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.152", "ev": "tick", "node": "n025", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.157", "ev": "tick", "node": "n060", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.157", "ev": "tick", "node": "n027", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.163", "ev": "node+", "node": "n081", "round": 0}
+{"at": "2026-10-03T16:08:37.170", "ev": "tick", "node": "n077", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.171", "ev": "tick", "node": "n029", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.171", "ev": "tock", "node": "n056", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.175", "ev": "tick", "node": "n012", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.175", "ev": "tick", "node": "n030", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.181", "ev": "tick", "node": "n061", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.181", "ev": "tick", "node": "n058", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.182", "ev": "tick", "node": "n053", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.183", "ev": "tick", "node": "n069", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.187", "ev": "tick", "node": "n036", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.191", "ev": "tock", "node": "n076", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.192", "ev": "tock", "node": "n000", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.194", "ev": "tick", "node": "n037", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.195", "ev": "tock", "node": "n039", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.199", "ev": "tick", "node": "n044", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.199", "ev": "tick", "node": "n043", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.200", "ev": "tock", "node": "n065", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.200", "ev": "tick", "node": "n049", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.200", "ev": "tick", "node": "n062", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.208", "ev": "tock", "node": "n026", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.208", "ev": "tick", "node": "n034", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.210", "ev": "tock", "node": "n010", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.220", "ev": "tock", "node": "n064", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.220", "ev": "tock", "node": "n057", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.220", "ev": "tick", "node": "n081", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.220", "ev": "tock", "node": "n072", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.220", "ev": "tick", "node": "n033", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.221", "ev": "tock", "node": "n042", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.221", "ev": "tick", "node": "n035", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.221", "ev": "tick", "node": "n046", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.222", "ev": "tock", "node": "n052", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.226", "ev": "tock", "node": "n068", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.226", "ev": "tock", "node": "n023", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.226", "ev": "tick", "node": "n050", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.226", "ev": "tick", "node": "n032", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.234", "ev": "tick", "node": "n009", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.234", "ev": "tick", "node": "n067", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.240", "ev": "tick", "node": "n078", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.240", "ev": "tick", "node": "n066", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.244", "ev": "tick", "node": "n074", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.244", "ev": "node+", "node": "n082", "round": 0}
+{"at": "2026-10-03T16:08:37.244", "ev": "tock", "node": "n022", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.244", "ev": "tick", "node": "n008", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.245", "ev": "tick", "node": "n045", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.248", "ev": "tock", "node": "n020", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.248", "ev": "tock", "node": "n013", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.248", "ev": "tock", "node": "n041", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.248", "ev": "tick", "node": "n015", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.252", "ev": "tick", "node": "n011", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.255", "ev": "tock", "node": "n048", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.255", "ev": "tick", "node": "n003", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.256", "ev": "tick", "node": "n005", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.260", "ev": "tock", "node": "n073", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.260", "ev": "tick", "node": "n004", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.260", "ev": "tick", "node": "n031", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.264", "ev": "tock", "node": "n016", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.268", "ev": "tick", "node": "n038", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.270", "ev": "tick", "node": "n054", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.271", "ev": "tick", "node": "n070", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.271", "ev": "tock", "node": "n001", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.271", "ev": "tick", "node": "n059", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.277", "ev": "tock", "node": "n080", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.277", "ev": "tock", "node": "n077", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.277", "ev": "tick", "node": "n007", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.281", "ev": "tock", "node": "n028", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.281", "ev": "tock", "node": "n027", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.281", "ev": "tick", "node": "n082", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.282", "ev": "tock", "node": "n025", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.284", "ev": "tock", "node": "n030", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.284", "ev": "tock", "node": "n060", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.291", "ev": "tock", "node": "n061", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.291", "ev": "tock", "node": "n029", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.298", "ev": "tick", "node": "n019", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.298", "ev": "tick", "node": "n017", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.300", "ev": "tock", "node": "n012", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.300", "ev": "tock", "node": "n058", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.302", "ev": "tock", "node": "n036", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.302", "ev": "tock", "node": "n053", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.304", "ev": "tock", "node": "n069", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.306", "ev": "tick", "node": "n014", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.309", "ev": "tick", "node": "n002", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.310", "ev": "tock", "node": "n062", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.313", "ev": "tock", "node": "n037", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.313", "ev": "tick", "node": "n021", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.314", "ev": "tick", "node": "n024", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.315", "ev": "tock", "node": "n049", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.318", "ev": "tock", "node": "n034", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.319", "ev": "tock", "node": "n044", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.319", "ev": "tick", "node": "n079", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.319", "ev": "tick", "node": "n047", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.323", "ev": "tock", "node": "n043", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.323", "ev": "tick", "node": "n063", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.326", "ev": "tock", "node": "n033", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.326", "ev": "node+", "node": "n083", "round": 0}
+{"at": "2026-10-03T16:08:37.326", "ev": "tock", "node": "n046", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.326", "ev": "tock", "node": "n081", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.329", "ev": "tick", "node": "n071", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.333", "ev": "tick", "node": "n006", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.340", "ev": "tick", "node": "n051", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.340", "ev": "tick", "node": "n055", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.340", "ev": "tick", "node": "n040", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.343", "ev": "tock", "node": "n009", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.343", "ev": "tick", "node": "n018", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.344", "ev": "tock", "node": "n008", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.344", "ev": "tock", "node": "n032", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.347", "ev": "tock", "node": "n035", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.348", "ev": "tock", "node": "n050", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.348", "ev": "tock", "node": "n066", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.348", "ev": "tick", "node": "n083", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.356", "ev": "tick", "node": "n056", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.357", "ev": "tock", "node": "n078", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.363", "ev": "tock", "node": "n067", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.363", "ev": "tock", "node": "n045", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.363", "ev": "tick", "node": "n075", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.366", "ev": "tock", "node": "n074", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.370", "ev": "tock", "node": "n059", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.370", "ev": "tock", "node": "n005", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.370", "ev": "tick", "node": "n076", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.376", "ev": "tock", "node": "n004", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.379", "ev": "tock", "node": "n015", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.379", "ev": "tick", "node": "n039", "round": 12, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.381", "ev": "tock", "node": "n003", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.382", "ev": "tock", "node": "n011", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.382", "ev": "tick", "node": "n065", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.382", "ev": "tock", "node": "n031", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.382", "ev": "tock", "node": "n054", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.382", "ev": "tock", "node": "n082", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.383", "ev": "tock", "node": "n038", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.383", "ev": "tick", "node": "n000", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.388", "ev": "tock", "node": "n070", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.397", "ev": "tick", "node": "n010", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.399", "ev": "tock", "node": "n007", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.404", "ev": "tick", "node": "n026", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.406", "ev": "node+", "node": "n084", "round": 0}
+{"at": "2026-10-03T16:08:37.406", "ev": "tick", "node": "n064", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.406", "ev": "tock", "node": "n014", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.406", "ev": "tick", "node": "n057", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.407", "ev": "tock", "node": "n002", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.407", "ev": "tick", "node": "n042", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.409", "ev": "tock", "node": "n019", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.409", "ev": "tock", "node": "n017", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.413", "ev": "tick", "node": "n023", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.416", "ev": "tick", "node": "n072", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.416", "ev": "tick", "node": "n068", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.421", "ev": "tock", "node": "n047", "round": 10, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.421", "ev": "tock", "node": "n021", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.425", "ev": "tock", "node": "n063", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.425", "ev": "tick", "node": "n052", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.427", "ev": "tock", "node": "n024", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.427", "ev": "tick", "node": "n020", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.428", "ev": "tock", "node": "n006", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.432", "ev": "tick", "node": "n013", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.432", "ev": "tock", "node": "n079", "round": 2, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.432", "ev": "tock", "node": "n040", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.432", "ev": "tick", "node": "n048", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.436", "ev": "tock", "node": "n018", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.440", "ev": "tick", "node": "n084", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.443", "ev": "tick", "node": "n080", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.443", "ev": "tick", "node": "n022", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.444", "ev": "tock", "node": "n051", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.448", "ev": "tock", "node": "n083", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.449", "ev": "tock", "node": "n071", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.449", "ev": "tick", "node": "n041", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.450", "ev": "tick", "node": "n073", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.450", "ev": "tock", "node": "n055", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.450", "ev": "tick", "node": "n001", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.452", "ev": "tick", "node": "n016", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.463", "ev": "tick", "node": "n077", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.470", "ev": "tick", "node": "n028", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.473", "ev": "tick", "node": "n060", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.476", "ev": "tick", "node": "n027", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.477", "ev": "tick", "node": "n025", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.477", "ev": "tick", "node": "n036", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.480", "ev": "tick", "node": "n061", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.488", "ev": "node+", "node": "n085", "round": 0}
+{"at": "2026-10-03T16:08:37.488", "ev": "tick", "node": "n062", "round": 7, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.491", "ev": "tick", "node": "n012", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.491", "ev": "tock", "node": "n056", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.501", "ev": "tick", "node": "n030", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.503", "ev": "tock", "node": "n075", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.503", "ev": "tick", "node": "n058", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.505", "ev": "tick", "node": "n029", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.509", "ev": "tock", "node": "n076", "round": 3, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.509", "ev": "tick", "node": "n053", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.512", "ev": "tick", "node": "n037", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.512", "ev": "tock", "node": "n039", "round": 12, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.513", "ev": "tick", "node": "n049", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.514", "ev": "tock", "node": "n000", "round": 14, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.514", "ev": "tick", "node": "n069", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.517", "ev": "tick", "node": "n044", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.527", "ev": "tick", "node": "n033", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.529", "ev": "tick", "node": "n043", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.534", "ev": "tock", "node": "n023", "round": 13, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:37.534", "ev": "tock", "node": "n026", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.548", "ev": "tock", "node": "n010", "round": 14, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.549", "ev": "tock", "node": "n065", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.549", "ev": "tick", "node": "n085", "round": 1, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.551", "ev": "tick", "node": "n046", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.551", "ev": "tick", "node": "n034", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.552", "ev": "tock", "node": "n064", "round": 6, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.552", "ev": "tock", "node": "n042", "round": 11, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:37.552", "ev": "tock", "node": "n068", "round": 5, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.552", "ev": "tick", "node": "n081", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.553", "ev": "tock", "node": "n052", "round": 9, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.554", "ev": "tick", "node": "n009", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.556", "ev": "tock", "node": "n072", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.559", "ev": "tick", "node": "n066", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.559", "ev": "tick", "node": "n008", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.560", "ev": "tock", "node": "n057", "round": 8, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.560", "ev": "tock", "node": "n020", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.560", "ev": "tick", "node": "n067", "round": 6, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.562", "ev": "tock", "node": "n013", "round": 14, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.562", "ev": "tock", "node": "n080", "round": 2, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:37.562", "ev": "tick", "node": "n035", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.563", "ev": "tick", "node": "n005", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.564", "ev": "tick", "node": "n050", "round": 10, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.564", "ev": "tick", "node": "n032", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.569", "ev": "node+", "node": "n086", "round": 0}
+{"at": "2026-10-03T16:08:37.571", "ev": "tock", "node": "n048", "round": 10, "rc": 0, "ended": [], "early": true}
+{"at": "2026-10-03T16:08:37.571", "ev": "tock", "node": "n084", "round": 1, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.571", "ev": "tick", "node": "n059", "round": 8, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.573", "ev": "tick", "node": "n045", "round": 11, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.583", "ev": "tock", "node": "n073", "round": 4, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.583", "ev": "tick", "node": "n011", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.583", "ev": "tick", "node": "n078", "round": 3, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.586", "ev": "tick", "node": "n015", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.588", "ev": "tock", "node": "n001", "round": 14, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.588", "ev": "tick", "node": "n074", "round": 4, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.588", "ev": "tock", "node": "n041", "round": 11, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.588", "ev": "tock", "node": "n022", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.590", "ev": "tick", "node": "n004", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.593", "ev": "tock", "node": "n016", "round": 14, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.597", "ev": "tock", "node": "n060", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.597", "ev": "tock", "node": "n027", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.597", "ev": "tick", "node": "n031", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.602", "ev": "tick", "node": "n082", "round": 2, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.602", "ev": "tick", "node": "n003", "round": 14, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.602", "ev": "tock", "node": "n062", "round": 7, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.602", "ev": "tick", "node": "n054", "round": 9, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.603", "ev": "tick", "node": "n038", "round": 13, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.605", "ev": "tock", "node": "n025", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.606", "ev": "tick", "node": "n070", "round": 5, "started": [], "rc": 0}
+{"at": "2026-10-03T16:08:37.609", "ev": "tock", "node": "n028", "round": 13, "rc": 0, "ended": [], "early": false}
+{"at": "2026-10-03T16:08:37.609", "ev": "tick", "node": "n019", "round": 14, "started": [], "rc": 0}

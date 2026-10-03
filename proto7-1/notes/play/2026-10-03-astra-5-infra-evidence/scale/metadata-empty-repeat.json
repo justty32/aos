@@ -1,0 +1,16 @@
+{
+  "python": "3.14.7 (main, Aug 10 2026, 07:46:56) [GCC 16.1.1 20260728]",
+  "kernel": "6.18.49-1-MANJARO",
+  "cpu_count": 16,
+  "affinity": 16,
+  "interval_ms": 100,
+  "task_count_per_timeline_per_round": 0,
+  "task": [
+    "/bin/sleep",
+    "0.01"
+  ],
+  "duration_target_s": 15.0,
+  "sampler_period_s": 0.25,
+  "harness_subreaper": true,
+  "notes": "No CPU isolation; daemon cpu excludes tick/tock/runner/task CPU. Proc count is sampled live processes matching root plus descendants. Action wall times include subprocess startup/wait. Product default archival enabled; active and old task dirs both counted."
+}
