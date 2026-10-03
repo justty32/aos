@@ -26,7 +26,7 @@
 | `demo/` | `play.py` 與場景 `scene/`（team＝kernel、amy／bob／carol＝agent、team/sub＝子 daemon）；`real.py` 與真模型場景 `real_scene/`（lead／coder／ci）、`real_later/rita/`（中途加入） |
 | `tests/` | unittest（`test_infra.py`＝第一波探針與 astra-4 逼出來的基礎設施修補；`test_wave2.py`＝第二波；`test_astra5.py`＝astra-5 F-01～F-11）；`_proc.py`＝起子程序的測試共用收尾（N-55） |
 | `probes/` | 發散探針：`probelib.py`（開暫存根、起 daemon、收乾淨）、`run_all.py`、每個探針一個資料夾（`probe.py`＋任務腳本＋README）；第二波另有 `llmop.py`（LLM 操作者 harness）與 `llm_card.md`（給 LLM 的操作卡） |
-| `notes/` | 問題紀錄；`notes/play/` 試玩報告與證據；`notes/runs/` 真模型場景跑的紀錄；`notes/research/` 調查報告（[astra：kernel 能從 Linux 借什麼](notes/research/2026-10-03-linux-kernel-borrow.md)） |
+| `notes/` | 問題紀錄；`notes/play/` 試玩報告與證據；`notes/runs/` 真模型場景跑的紀錄；`notes/research/` 調查報告（[astra：kernel 能從 Linux 借什麼](notes/research/2026-10-03-linux-kernel-borrow.md)、[Linux 以外的 OS 與學術概念](notes/research/2026-10-03-other-os-borrow.md)） |
 
 ## 來源（複製進來，不 import 外部路徑）
 
