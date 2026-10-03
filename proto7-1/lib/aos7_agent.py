@@ -112,6 +112,8 @@ def write_progress(ctx, st):
 def on_tock(ctx, st, rnd):
     """收到第 rnd 回合的 tock：換一次狀態並做新狀態的事。回新的 st（也已存檔）。"""
     st["round"], st["tocks"] = rnd, st.get("tocks", 0) + 1
+    for r in tools.flush_outbox(ctx):   # 上回合等加掛的信，掛上了就先寄
+        log(ctx, st, r)
     s = st["state"]
     if s == "idle":
         names, goal = tools.list_inbox(ctx["node"]), tools.pending_goal(ctx["node"])

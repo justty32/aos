@@ -40,7 +40,8 @@ def tock(root, node_id):
             alive.append(tid)
 
     summary = {"round": rnd, "tick_at": state.get("tick_at"), "tock_at": at,
-               "started": state.get("started", []), "alive": alive, "ended": ended, "ctl": ctl}
+               "started": state.get("started", []), "alive": alive, "ended": ended, "ctl": ctl,
+               "mounts": state.get("mounts", [])}
     write_json(os.path.join(node, ".aos", "rounds", "%d.json" % rnd), summary)
     state.update({"open": False, "tock_at": at})
     write_json(rpath, state)

@@ -6,6 +6,7 @@ import json
 import os
 import sys
 
+import aos7_mount
 import aos7_task
 from aos7_fs import node_path, now, read_json, write_json
 
@@ -26,15 +27,27 @@ def live_names(node):
     return names
 
 
+def serve_mounts(root, node):
+    """審核活任務的加掛請求（S-23、M-6）：tasks.json 的 `mount_allow` 前綴清單，沒寫＝全給。"""
+    t = read_json(os.path.join(node, ".aos", "tasks.json"), {})
+    allow = t.get("mount_allow") if isinstance(t, dict) else None
+    out = []
+    for tid in aos7_task.live_tasks(node):
+        for r in aos7_mount.serve(root, aos7_task.task_dir(node, tid), allow):
+            out.append(dict(r, tid=tid))
+    return out
+
+
 def tick(root, node_id):
     """做一次 tick，回 {"round", "started", "ctl"}。"""
     node = node_path(root, node_id)
     rpath = os.path.join(node, ".aos", "round.json")
     rnd = read_json(rpath, {}).get("round", 0) + 1
-    state = {"round": rnd, "open": True, "tick_at": now(), "tock_at": None, "started": [], "ctl": []}
+    state = {"round": rnd, "open": True, "tick_at": now(), "tock_at": None, "started": [], "ctl": [], "mounts": []}
     write_json(rpath, state)
 
     state["ctl"] = aos7_task.run_all_ctl(node)
+    state["mounts"] = serve_mounts(root, node)
 
     started = []
     sdir = os.path.join(node, ".aos", "spawn")

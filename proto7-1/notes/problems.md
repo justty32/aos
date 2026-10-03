@@ -72,7 +72,7 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - 先這樣：照字面，pause＝凍結一切，控制也一起凍結。
 - 要決定的：「在 tick-tock 時」是指控制**只能**落在回合邊界上，還是只是 kernel 判斷的節奏？如果是後者，daemon 在 pause 時也可以照樣執行 ctl.json。
 
-## 掛載之後要使用者決定的（1 條）
+## 掛載之後要使用者決定的（2 條，M-6 已答）
 
 ### M-6 掛載在任務出生時就定了，agent 想寄給沒掛的對象就寄不出去〔要使用者決定，10-03 已答〕
 
@@ -88,8 +88,27 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
   - （a）不行，只能改 tasks.json＋restart（現在的做法）。誰能改任務表仍是核心「之後再說」的事。
   - （b）任務寫一個「請求加掛」的檔，下個 tick 由 tick 決定給不給、給了就把連結補進任務資料夾。這等於讓 tick 多一個「審核」的角色。
   - （c）把共同的上層資料夾整個掛進來（例如掛 `team/agents`），之後誰都寄得到。簡單，但「只碰給的資料夾」就變得很寬。
+- **怎麼做的（10-03，照 (b)）**：
+  - 任務寫 `$AOS7_TASK/mount-req/<名字>.json`＝`{"name", "path", "why"}`。下一個 tick 在執行完 ctl 後審核活任務的請求：路徑不合、不在 tasks.json 的 `mount_allow`（空間路徑前綴清單；沒寫＝全給）、名字撞了 → 拒絕；否則補 `mnt/<名字>` 連結、加進 birth.json。回條寫 `mount-done/<同名>.json`（`result.ok`／`msg`），本回合的審核結果也記進 round.json 與 `rounds/<N>.json` 的 `mounts`。restart 會帶上加掛的。卸掛不做。
+  - agent：寄給沒掛的對象時寫加掛請求，信先放 `<node>/outbox/`；之後每個 tock 一開始清 outbox，掛上了就寄，被拒就搬到 `outbox/failed/`。
+  - kernel：每輪對 kernel.json 的成員 `.aos` 和 daemon 的 `.aosd` 檢查，沒掛的就自己請求。示範的 kernel 在 tasks.json 已經不寫 mounts。
+  - 示範：新加的 carol 原本什麼都沒掛，臨時寄給 bob，加掛後寄到；bob 回信給 carol 也一樣。跑到 30% 時 play.py 改 kernel.json 加成員 carol，kernel 自己加掛。檢查項目多三條。
+  - 新問題記在 M-7～M-10，其中 M-10 要使用者決定。
 
-## 其餘問題一覽（技術選型 24 條、默認正常 16 條）
+### M-10 加掛預設全給，「只碰給的資料夾」實際上沒有門檻〔要使用者決定〕
+
+- 層：掛載審核；S-23、S-10。
+- 發生了什麼：
+  - tick 審核只看 tasks.json 的 `mount_allow`。沒寫就全給，任務想碰什麼寫個請求，下一回合就掛上。
+  - 示範的四個 node 都寫了允許清單（agents 只能掛 `team/agents/` 底下，team 只能掛 `.aosd` 和 `team/agents/`），但這得靠寫 tasks.json 的人記得寫。
+  - 允許清單寫在**被掛的那一方之外**：bob 管不了誰能掛自己的 inbox，是請求者所在 node 的 tasks.json 說了算。
+- 先這樣：沒寫允許清單就全給；有寫就照前綴。
+- 要決定的：審核的預設與權力在哪一邊？（不代替你選）
+  - （a）照現在：請求者那邊的 tasks.json 寫允許清單，沒寫＝全給。
+  - （b）預設全拒，沒寫允許清單就不能加掛。比較安全，但新 node 一開始什麼都做不了。
+  - （c）被掛的那一方也要同意（例如目標 node 放一份「誰可以掛我」的清單），兩邊都允許才掛。比較像「把收訊資料夾借給對方」，但要多一份設定。
+
+## 其餘問題一覽（技術選型 27 條、默認正常 17 條）
 
 細節點進分檔看。
 
@@ -119,6 +138,9 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [M-3](#m-3-寫入紀錄只看得到-python-程序只記寫不記讀技術選型先這樣) 寫入紀錄只看得到 Python 程序，只記寫、不記讀。
 - [M-4](#m-4-argv-展開-aos7_子-daemon-跑在掛載點路徑上技術選型先這樣) argv 展開 `$AOS7_*`；子 daemon 跑在掛載點路徑上。
 - [M-5](#m-5-自己的-node不含裡面巢狀的-node技術選型先這樣) 「自己的 node」不含裡面巢狀的 node。
+- [M-7](#m-7-加掛要等下一個-tick寄信多-12-回合技術選型先這樣) 加掛要等下一個 tick，寄信多 1～2 回合。
+- [M-8](#m-8-被拒的回條會一直擋住同一個請求技術選型先這樣) 被拒的回條會一直擋住同一個請求。
+- [M-9](#m-9-卸掛不做掛載只增不減技術選型先這樣) 卸掛不做，掛載只增不減。
 
 **默認正常**
 
@@ -138,6 +160,7 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - [I-1](#i-1-被-kill-的子-daemon-結束碼是-0默認正常) 被 kill 的子 daemon，結束碼是 0。
 - [I-3](#i-3-pause-的回合在時間線紀錄裡不留痕跡默認正常) pause 的期間在時間線紀錄裡不留痕跡。
 - [I-4](#i-4-示範的結果依賴牆鐘默認正常) 示範的結果依賴牆鐘。
+- [M-11](#m-11-kernel-看到新成員要晚一兩回合默認正常) kernel 看到新成員要晚一兩回合。
 
 ## 整合時碰到的（I-）
 
@@ -206,4 +229,27 @@ proto7-1 從 daemon 一路做到 kernel 與 agent，示範場景（`demo/play.py
 - 層：掛載 × 檢查；S-10、S-13、S-15。
 - 發生了什麼：team 這個資料夾裡面就有 `agents/amy`、`agents/bob`、`sub`。如果「tick 給的資料夾」是整個 team 資料夾，kernel 不用掛載也碰得到成員，掛載就沒意義了。
 - 先這樣：寫入紀錄判斷時，自己的 node 扣掉裡面巢狀的 node（有 `.aos/timeline.json`）與 daemon 根（有 `.aosd/`）。要碰它們就得掛。kernel 對自己 node 的任務（例如壽命 kill subd）直接寫。
+
+### M-7 加掛要等下一個 tick，寄信多 1～2 回合〔技術選型，先這樣〕
+
+- 層：掛載 × agent；S-23、S-08。
+- 發生了什麼：請求在 act 時寫出，下一個 tick 才審核，再下一個 tock 才從 outbox 寄出。示範裡 carol 第 2 回合寫的 ping 1，在 bob 的信箱裡跟 amy 同一回合的信一起被處理，延遲看不太出來；回合長時會明顯。
+- 先這樣：審核只在 tick（跟 ctl 一樣落在回合邊界）。
+
+### M-8 被拒的回條會一直擋住同一個請求〔技術選型，先這樣〕
+
+- 層：掛載；S-23。
+- 發生了什麼：`aos7_mount.request` 看到同名的被拒回條就直接回 refused，不再重請；agent 對那個對象的信直接失敗（outbox 裡的搬到 `outbox/failed/`）。後來改了 `mount_allow` 也不會自動重試。
+- 先這樣：要重請就刪掉 `mount-done/` 裡那份回條。回條在任務資料夾，restart 換 tid 後自然會重請一次。
+
+### M-9 卸掛不做，掛載只增不減〔技術選型，先這樣〕
+
+- 層：掛載；S-23。
+- 發生了什麼：agent 寄過一次信就一直掛著對方的 inbox；kernel 從 kernel.json 拿掉成員後，掛載還在，只是不再看。restart 會把所有加掛帶到新任務。
+- 先這樣：不卸。要卸就改 tasks.json 後 kill（不是 restart）讓任務表重起一個。
+
+### M-11 kernel 看到新成員要晚一兩回合〔默認正常〕
+
+- 層：掛載 × kernel；S-23、S-16。
+- 發生了什麼：kernel 讀到新成員才請求加掛，下一個 tick 才掛上，再下一輪才看得到。這期間新成員當作不存在，預算規則第一次看到它時才當基準（K-8），之前的用量不算。kernel 剛起來時連 `.aosd` 都還沒掛，第一輪下的 pause 會被記成 skipped。
 

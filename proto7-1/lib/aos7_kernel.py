@@ -74,10 +74,23 @@ def apply_decision(env, d, seq, resolve):
     return None
 
 
+def ask_mounts(env, cfg):
+    """kernel.json 的成員（與 daemon 的 .aosd）沒掛給自己的，寫加掛請求，下個 tick 掛上（S-23、M-6）。
+
+    所以新增成員只要改 kernel.json；掛上之前那個成員看不到（快照 mounted: false）。"""
+    want = [".aosd"] + ["%s/.aos" % fs.join_id(env["node_id"], rel) for rel in cfg.get("members") or []
+                        if isinstance(rel, str) and fs.join_id(env["node_id"], rel) != env["node_id"]]
+    for path in want:
+        st = aos7_mount.request(env["task"], path, why="kernel 要看／控制 %s" % path)
+        if st != "mounted":
+            print("aos7-kernel: 加掛 %s：%s" % (path, st), flush=True)
+
+
 def one_round(env, rnd):
     """收到第 rnd 回合的 tock：快照 → 規則 → 寫控制檔、decisions.jsonl、kernel-state.json。"""
     cfg = load_config(env["node"])
     state = load_state(env)
+    ask_mounts(env, cfg)
     resolve = aos7_mount.resolver(env["task"])
     snap = snapshot(env["root"], env["node_id"], env["tid"], cfg, rnd, resolve)
     decisions, new = run_rules(cfg, state, snap)

@@ -132,17 +132,41 @@ class StepByStep(unittest.TestCase):
         r = do_tool(self.w["amy"], {"tool": "send", "to": "../../etc", "body": "x"}, 1)
         self.assertIn("失敗", r)
 
-    def test_send_only_through_mount(self):
-        """S-23：沒掛給我的收信資料夾寄不到（amy 只掛了 bob 的 inbox）。"""
+    def test_send_unmounted_goes_to_outbox_then_mount(self):
+        """S-23、M-6：沒掛的對象，信先放 outbox、寫加掛請求；tick 給了之後，下個 tock 寄出。"""
         from aos7_agent_tools import do_tool
-        os.makedirs(os.path.join(self.tmp, "team", "agents", "carol", "inbox"))
-        r = do_tool(self.w["amy"], {"tool": "send", "to": "team/agents/carol", "body": "x"}, 1)
-        self.assertIn("沒掛載", r)
-        self.assertEqual(os.listdir(os.path.join(self.tmp, "team", "agents", "carol", "inbox")), [])
-        r = do_tool(self.w["amy"], {"tool": "send", "to": "team/agents/bob", "body": "x"}, 1)
+        amy = self.w["amy"]
+        carol_in = os.path.join(self.tmp, "team", "agents", "carol", "inbox")
+        os.makedirs(carol_in)
+        r = do_tool(amy, {"tool": "send", "to": "team/agents/carol", "body": "hi"}, 1)
+        self.assertIn("outbox", r)
+        self.assertEqual(os.listdir(carol_in), [])
+        self.assertEqual(len(os.listdir(os.path.join(amy["node"], "outbox"))), 1)
+        req = read_json(os.path.join(amy["task"], "mount-req", "team_agents_carol_inbox.json"))
+        self.assertEqual(req["path"], "team/agents/carol/inbox")
+        st = aos7_agent.on_tock(amy, aos7_agent.load_state(amy), 1)   # 還沒掛：信留著
+        self.assertEqual(len([n for n in os.listdir(os.path.join(amy["node"], "outbox")) if n.endswith(".json")]), 1)
+        res = aos7_mount.serve(self.tmp, amy["task"], ["team/agents/"])            # 下一個 tick 審核
+        self.assertTrue(res[0]["ok"], res)
+        aos7_agent.on_tock(amy, st, 2)
+        self.assertEqual(read_json(os.path.join(carol_in, os.listdir(carol_in)[0]))["body"], "hi")
+        self.assertFalse([n for n in os.listdir(os.path.join(amy["node"], "outbox")) if n.endswith(".json")])
+        r = do_tool(amy, {"tool": "send", "to": "team/agents/carol", "body": "again"}, 3)   # 掛上後直接寄
         self.assertIn("send →", r)
-        self.assertEqual(len(os.listdir(os.path.join(self.w["bob"]["node"], "inbox"))), 1)
+        self.assertEqual(len(os.listdir(carol_in)), 2)
 
+    def test_refused_mount_moves_letter_to_failed(self):
+        from aos7_agent_tools import do_tool
+        amy = self.w["amy"]
+        os.makedirs(os.path.join(self.tmp, "other", "inbox"))
+        do_tool(amy, {"tool": "send", "to": "other", "body": "x"}, 1)
+        res = aos7_mount.serve(self.tmp, amy["task"], ["team/agents/"])
+        self.assertFalse(res[0]["ok"])
+        aos7_agent.on_tock(amy, aos7_agent.load_state(amy), 1)
+        self.assertEqual(len(os.listdir(os.path.join(amy["node"], "outbox", "failed"))), 1)
+        r = do_tool(amy, {"tool": "send", "to": "other", "body": "y"}, 2)   # 被拒過：直接失敗
+        self.assertIn("被拒", r)
+        self.assertEqual(os.listdir(os.path.join(self.tmp, "other", "inbox")), [])
 
 class TwoProcesses(unittest.TestCase):
     def test_ping_pong_to_limit(self):

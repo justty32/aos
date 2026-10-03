@@ -63,6 +63,42 @@ class TestMount(CoreCase):
             self.assertEqual(os.path.realpath(os.path.dirname(p)), want)
 
 
+class TestMountRequest(CoreCase):
+    """執行中加掛（M-6 選 (b)）：任務寫 mount-req/，下一個 tick 依 tasks.json 的 mount_allow 審核。"""
+
+    def test_tick_serves_requests(self):
+        node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": ["python3", "-c", "import time; time.sleep(60)"],
+                                  "mounts": {"box": "b/inbox"}}])
+        t = read_json(os.path.join(node, ".aos", "tasks.json"))
+        t["mount_allow"] = ["b", "c/inbox"]
+        write_json(os.path.join(node, ".aos", "tasks.json"), t)
+        self.tick()
+        td = self.tdir(node, "s-r1")
+        self.wait_for(lambda: self.state(node, "s-r1") == "live")
+        self.assertEqual(aos7_mount.request(td, "b/inbox/x.json"), "mounted")
+        self.assertEqual(aos7_mount.request(td, "c/inbox", why="test"), "pending")
+        self.assertEqual(aos7_mount.request(td, "c/inbox"), "pending")             # 不重寫
+        self.assertEqual(aos7_mount.request(td, "d/inbox"), "pending")             # 不在允許清單
+        write_json(os.path.join(td, "mount-req", "box.json"), {"name": "box", "path": "b/other"})   # 名字撞
+        write_json(os.path.join(td, "mount-req", "junk.json"), [])
+        self.tick()
+        summary = read_json(os.path.join(node, ".aos", "round.json"))["mounts"]
+        self.assertEqual(sorted((str(m["name"]), m["ok"]) for m in summary),
+                         [("None", False), ("box", False), ("c_inbox", True), ("d_inbox", False)])
+        self.assertEqual(os.listdir(os.path.join(td, "mount-req")), [])
+        self.assertTrue(read_json(os.path.join(td, "mount-done", "c_inbox.json"))["result"]["ok"])
+        self.assertIn("mount_allow", read_json(os.path.join(td, "mount-done", "d_inbox.json"))["result"]["msg"])
+        self.assertEqual(read_json(os.path.join(td, "birth.json"))["mounts"]["c_inbox"]["to"], "c/inbox")
+        self.assertTrue(os.path.isdir(os.path.join(td, "mnt", "c_inbox")))
+        self.assertEqual(aos7_mount.request(td, "c/inbox"), "mounted")
+        self.assertTrue(aos7_mount.request(td, "d/inbox").startswith("refused"))
+        # restart：加掛的也一起帶到新任務
+        self.prog("aos7-ctl", "task", td, "restart")
+        self.tick()
+        self.assertEqual(sorted(read_json(os.path.join(self.tdir(node, "s-r3"), "birth.json"))["mounts"]),
+                         ["box", "c_inbox"])
+
+
 class TestAudit(CoreCase):
     """AOS7_AUDIT：任務的寫入記在 writes.jsonl；寫出自己的 node 與掛載點的會被標出來（只記不擋）。"""
 

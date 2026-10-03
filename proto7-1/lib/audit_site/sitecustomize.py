@@ -16,14 +16,18 @@ def _install():
     task, node, root = e.get("AOS7_TASK"), e.get("AOS7_NODE"), e.get("AOS7_ROOT")
     if not (e.get("AOS7_AUDIT") and task and node and root):
         return
-    try:
-        with open(os.path.join(task, "birth.json"), encoding="utf-8") as f:
-            mounts = json.load(f).get("mounts") or {}
-    except (OSError, ValueError):
-        mounts = {}
     rp = os.path.realpath
     root_r, node_r = rp(root), rp(node)
-    targets = [rp(v["at"]) for v in mounts.values() if isinstance(v, dict) and "at" in v]
+
+    def load_targets():
+        """birth.json 的掛載點目標；執行中加掛（M-6）後 tick 會改 birth.json，所以判不過時重讀一次。"""
+        try:
+            with open(os.path.join(task, "birth.json"), encoding="utf-8") as f:
+                mounts = json.load(f).get("mounts") or {}
+        except (OSError, ValueError):
+            mounts = {}
+        return [rp(v["at"]) for v in mounts.values() if isinstance(v, dict) and "at" in v]
+    targets = load_targets()
     log = os.path.join(task, "writes.jsonl")
     busy = []
     wflags = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_TRUNC
@@ -47,6 +51,9 @@ def _install():
         if not under(real, root_r) or real == rp(log):
             return
         ok = any(under(real, t) for t in targets) or (under(real, node_r) and not nested(real))
+        if not ok:
+            targets[:] = load_targets()
+            ok = any(under(real, t) for t in targets)
         rec = {"op": op, "path": real, "ok": ok, "pid": os.getpid()}
         given = os.path.abspath(os.fsdecode(path))
         if given != real:

@@ -1,4 +1,5 @@
-{"tasks": [
+{"mount_allow": ["team/agents/"],
+ "tasks": [
  {"name": "agent", "mode": "keep", "argv": ["aos7-agent"], "mounts": {"amy": "team/agents/amy/inbox"}},
  {"name": "worker", "mode": "keep", "argv": ["python3", "worker.py"]}
 ]}
