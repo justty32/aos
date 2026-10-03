@@ -126,6 +126,46 @@ def reap_stale_owner(node, gen):
     return pid
 
 
+def holder_unverified(node, gen):
+    """reap_stale_owner 沒殺時呼叫：action.lock 現在真的有人拿著、卻無法確認是舊世代的同一個程序，回說明 dict
+    {"pid", "why", "hint"}；鎖沒人拿（例如逾時的是自己的動作、已被收掉）回 None。不殺任何程序（astra-6 G-10）。"""
+    import fcntl
+    try:
+        fd = os.open(os.path.join(node, ".aos", "action.lock"), os.O_RDONLY | os.O_NONBLOCK)
+    except OSError:
+        return None
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        held = True
+    else:
+        held = False
+    finally:
+        os.close(fd)
+    if not held:
+        return None
+    ow = read_json(os.path.join(node, ".aos", OWNER))
+    pid = ow.get("pid") if isinstance(ow, dict) else None
+    if not isinstance(ow, dict):
+        why = "action.owner.json 讀不到或壞了，認不出持鎖者"
+    elif not (isinstance(pid, int) and pid > 1):
+        why = "action.owner.json 缺 pid（拿到 %r）" % (pid,)
+    elif not isinstance(ow.get("gen"), int):
+        why = "action.owner.json 缺 gen（拿到 %r），分不出是不是舊 daemon 的" % (ow.get("gen"),)
+    elif isinstance(gen, int) and ow["gen"] >= gen:
+        why = "持鎖者記的世代 %d 不比現在的 %d 舊，不是舊 daemon 留下的" % (ow["gen"], gen)
+    elif ow.get("starttime") is None:
+        why = "action.owner.json 缺 starttime（寫的當下讀不到 /proc），無法確認 pid %d 還是同一個程序" % pid
+    else:
+        cur = proc_starttime(pid)
+        why = ("讀不到 /proc/%d/stat（程序不在或沒權限），無法確認身分" % pid if cur is None else
+               "pid %d 的啟動時間 %s 跟紀錄的 %s 不符（pid 可能已被重用）" % (pid, cur, ow.get("starttime")))
+    hint = ("沒殺任何程序。請人工確認是誰拿著 %s（例如 `fuser`／`lsof`）：確定是舊的 tick／tock 就 kill 它，"
+            "或補正 action.owner.json 的 pid／gen／starttime，下一次逾時會自動回收" % os.path.join(real_path(node), ".aos",
+                                                                                       "action.lock"))
+    return {"pid": pid if isinstance(pid, int) else None, "why": why, "hint": hint}
+
+
 FD_PREFIX = "/proc/self/fd/"
 
 
@@ -145,12 +185,21 @@ def real_path(p):
 
 
 def append_jsonl(path, obj):
-    """流水帳加一行。"""
+    """流水帳加一行。檔尾是沒寫完的一行（上次 append 中途被殺、沒有換行結尾）就先補換行，
+    新的一行獨立成行，不會跟半行黏成一條壞行（astra-6 G-08）。回補換行前那段半行的位元組數（沒有是 0）。"""
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    with open(path, "a+b") as f:
+        end = f.seek(0, os.SEEK_END)
+        torn = 0
+        if end and os.pread(f.fileno(), 1, end - 1) != b"\n":
+            back = min(end, 1 << 20)
+            tail = os.pread(f.fileno(), back, end - back)
+            torn = len(tail) - (tail.rfind(b"\n") + 1)
+            f.write(b"\n")
+        f.write((json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8"))
+    return torn
 
 
 def read_jsonl(path):

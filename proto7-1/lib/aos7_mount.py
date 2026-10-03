@@ -38,23 +38,28 @@ def in_root(root, to):
     return t == r or t.startswith(r + os.sep)
 
 
-def make(root, taskdir, decl, fs_taskdir=None):
+def make(root, taskdir, decl, fs_taskdir=None, node=None, fnode=None):
     """建掛載點，回寫進 birth.json 的 `mounts`：{名字: {"to", "at"}}，壞的宣告記成 {"error"}。
 
     目標不存在就先建成資料夾（收訊資料夾常常還沒人建過；problems.md M-2）。沿連結會跑出空間根的目標不掛。
-    fs_taskdir＝實際建連結的位置（tick 經 node 的 fd 寫，astra-5 F-09）；`at` 與連結內容照 taskdir（實際路徑）算。"""
+    fs_taskdir＝實際建連結的位置（tick 經 node 的 fd 寫，astra-5 F-09）；`at` 與連結內容照 taskdir（實際路徑）算。
+    node／fnode＝任務的 node 實際路徑與 tick 抓著的 fd 路徑：目標在 node 底下時經 fnode 建，node 中途被搬走
+    不會照舊路徑把它建回來（astra-6 G-02）。"""
     good, bad = check(decl)
     out = {}
     for name, to in sorted(good.items()):
         real = node_path(root, to)
         at = os.path.join(taskdir, MNT, name)
         fat = os.path.join(fs_taskdir or taskdir, MNT, name)
+        freal = real
+        if node and fnode and (real == node or real.startswith(node + os.sep)):
+            freal = os.path.join(fnode, os.path.relpath(real, node))
         if not in_root(root, to):
             out[name] = {"to": to, "error": "%s 沿符號連結跑出空間根" % to}
             continue
         try:
-            if not os.path.exists(real):
-                os.makedirs(real, exist_ok=True)
+            if not os.path.exists(freal):
+                os.makedirs(freal, exist_ok=True)
             os.makedirs(os.path.dirname(fat), exist_ok=True)
             os.symlink(os.path.relpath(real, os.path.dirname(at)), fat)
             out[name] = {"to": to, "at": at}

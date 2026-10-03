@@ -12,7 +12,7 @@ import sys
 import time
 
 import aos7_mount
-from aos7_fs import BIN, env_with_bin, node_path, now, read_json, real_path, tail_jsonl, write_json
+from aos7_fs import BIN, FD_PREFIX, env_with_bin, node_path, now, read_json, real_path, tail_jsonl, write_json
 
 
 KILL_GRACE = 1.0   # spec 第 6 節：SIGTERM 後等至多 1 秒，還在就 SIGKILL
@@ -358,13 +358,18 @@ def reload_item(node, birth):
         why = "；".join(errs) if errs and not items else "tasks.json 沒有名為 %s 的項目" % name
         return None, "%s；沒執行（沒 kill）。不加 reload 會照出生時的定義重起" % why
     try:
-        aos7_tick.validate(found[0])
+        aos7_tick.check_item(found[0])   # 第 4 節完整檢查（含 mode／from_round／max_live）先過，才剝排程欄位（astra-6 G-05）
     except ValueError as e:
         return None, "tasks.json 的 %s 不合格：%s；沒執行（沒 kill）" % (name, e)
     item = {k: v for k, v in found[0].items() if k not in ("mode", "from_round", "max_live", "restart_of", "spawn",
                                                              "mounts_dyn")}
     item["name"] = name
-    item["mounts"] = dict(dyn_mounts(birth), **(item.get("mounts") or {}))
+    decl = item.get("mounts") or {}
+    # 同名以宣告為準，來源也改成宣告：只有沒被宣告接管的才算執行中加掛（標 dyn；astra-6 G-06）
+    dyn = {n: to for n, to in dyn_mounts(birth).items() if n not in decl}
+    item["mounts"] = dict(dyn, **decl)
+    if dyn:
+        item["mounts_dyn"] = sorted(dyn)
     return item, None
 
 
@@ -412,8 +417,8 @@ def run_ctl(node, tid):
             item["mounts"] = aos7_mount.decl_of(birth)   # 新任務照原本的宣告重新掛
         if item is not None:
             dyn = dyn_mounts(birth)
-            if dyn:
-                item["mounts_dyn"] = sorted(dyn)   # 新任務照樣標 dyn（下次 reload 還分得出來）
+            if dyn and not reload:
+                item["mounts_dyn"] = sorted(dyn)   # 新任務照樣標 dyn（下次 reload 還分得出來）；reload 的由 reload_item 算
             if reload:
                 diff = def_diff(birth, item)
             ok, msg = kill_task(tdir)
@@ -485,6 +490,33 @@ def stopped_note(root, sub):
         sub, st.get("by") or "?", st.get("at") or "?", "（%s）" % st["why"] if st.get("why") else "", sub)
 
 
+def subroot_running(sp):
+    """子根 `<sp>/.aosd/daemon.lock` 有人拿著嗎（有 daemon 在跑）：非阻塞 flock 試得到就馬上放掉、回 False（astra-6 G-04）。"""
+    import fcntl
+    try:
+        fd = os.open(os.path.join(sp, ".aosd", "daemon.lock"), os.O_RDONLY | os.O_NONBLOCK)
+    except OSError:
+        return False   # 沒有鎖檔：沒人跑過
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return True
+    finally:
+        os.close(fd)   # 關掉就放掉
+    return False
+
+
+def same_dir(node, fnode):
+    """tick 抓著的 node（fnode＝`/proc/self/fd/N`）跟字串路徑 node 現在指的還是同一個資料夾嗎（中途搬走、換成符號連結就不是；
+    astra-6 G-02）。不是 fd 路徑當同一個。"""
+    if not fnode.startswith(FD_PREFIX):
+        return True
+    try:
+        return os.path.samestat(os.stat(node), os.stat(fnode))
+    except OSError:
+        return False
+
+
 def start_task(root, node_id, item, rnd, fnode=None):
     """建掛載點、寫 birth.json，用 aos7-run 起任務（新 session，不等）。回 tid。
 
@@ -500,12 +532,30 @@ def start_task(root, node_id, item, rnd, fnode=None):
         note = stopped_note(root, sub_ok)
         if note:
             raise ValueError(note)
+    sp = None
+    if sub_ok:
+        sp = os.path.join(fnode, os.path.relpath(node_path(root, sub_ok), node))   # 子根在 node 底下：經 fnode 看
+        if subroot_running(sp):
+            # 子根已經有 daemon 在跑：這個任務起了也拿不到 daemon.lock，不能先把 owner.json 改成自己（astra-6 G-04）
+            ow = read_json(os.path.join(sp, ".aosd", "owner.json"))
+            ow = ow if isinstance(ow, dict) else {}
+            raise ValueError("子根 %s 已經有 daemon 在跑（owner：node %s 任務 %s），沒起、沒改 owner.json" % (
+                sub_ok, ow.get("node", "?"), ow.get("tid", "?")))
     tid = new_tid(fnode, item.get("name"), rnd)
     tdir = task_dir(node, tid)
     ftdir = task_dir(fnode, tid)
     os.makedirs(ftdir, exist_ok=True)   # 先佔住 tid，掛載點建在裡面
+    if not same_dir(node, fnode):
+        # tick 抓著 node 的期間它被搬走或換掉：不照舊路徑建掛載、不起 runner（會建回舊 node 或跑到別的 node），
+        # 受控失敗：寫 birth＋exit.json（code 127），任務是 ended，不會永遠 born；新位置由 keep 重起（Q4；astra-6 G-02）
+        why = "node %s 在 tick 中途被搬走或換掉（現在在 %s），沒起" % (node_id, real_path(fnode))
+        write_json(os.path.join(ftdir, "birth.json"), {"tid": tid, "name": item.get("name") or "task", "node": node_id,
+                                                       "round": rnd, "mounts": {}, "at": now(),
+                                                       "restart_of": item.get("restart_of"), "error": why})
+        write_json(os.path.join(ftdir, "exit.json"), {"code": 127, "at": now(), "round": rnd, "error": why})
+        return tid
     birth = {"tid": tid, "name": item.get("name") or "task", "node": node_id, "round": rnd,
-             "mounts": aos7_mount.make(root, tdir, item.get("mounts") or {}, fs_taskdir=ftdir),
+             "mounts": aos7_mount.make(root, tdir, item.get("mounts") or {}, fs_taskdir=ftdir, node=node, fnode=fnode),
              "at": now(), "restart_of": item.get("restart_of")}
     for n in item.get("mounts_dyn") or ():
         # restart 帶過來的執行中加掛：照樣標 dyn，之後 reload 才分得出哪些不是 tasks.json 宣告的（Q6）
@@ -518,7 +568,6 @@ def start_task(root, node_id, item, rnd, fnode=None):
     if sub_ok:
         # 這個任務要在 sub 開子 daemon（路一）：先建 `<sub>/.aosd/`，父 daemon 掃描就跳過它，
         # 不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）
-        sp = os.path.join(fnode, os.path.relpath(node_path(root, sub_ok), node))   # 子根在 node 底下：經 fnode 建
         os.makedirs(os.path.join(sp, ".aosd"), exist_ok=True)
         # 子 daemon 歸屬起它的 node（使用者 10-03 Q5）：路二的 stop 要 allow_stop 才有效；擁有者可直接改這個檔
         write_json(os.path.join(sp, ".aosd", "owner.json"),
@@ -540,11 +589,20 @@ def start_task(root, node_id, item, rnd, fnode=None):
         env["AOS7_SUBROOT"] = node_path(root, birth["subroot"])
     # 寫入紀錄（spec 第 5 節）：aos7-run 起任務時才把 audit_site/ 放進任務的 PYTHONPATH，
     # 不給 aos7-run 自己（它寫的 pid.json、exit.json 不算任務的寫入；probes/polyglot N7）
+    # aos7-run 拿任務資料夾的 fd（第二個參數）讀 birth、寫 pid／exit，cwd 也是 tick 抓著的 node：之後 node 被搬走，
+    # runner 跟著同一個資料夾，不會照舊路徑讀不到 birth 而留下「永遠剛起」的任務（astra-6 G-02）
     try:
-        subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir], cwd=node, env=env,
-                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         start_new_session=True)
+        tfd = os.open(ftdir, os.O_RDONLY | os.O_DIRECTORY)
     except OSError as e:
-        # 連 aos7-run 都起不來（node 中途被搬走、cwd 不在…）：照樣寫 exit.json，不留「永遠剛起」的任務
         write_json(os.path.join(ftdir, "exit.json"), {"code": 127, "at": now(), "round": rnd, "error": str(e)})
+        return tid
+    try:
+        subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir, str(tfd)], cwd=fnode, env=env,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True, pass_fds=(tfd,))
+    except OSError as e:
+        # 連 aos7-run 都起不來（node 中途被刪、cwd 不在…）：照樣寫 exit.json，不留「永遠剛起」的任務
+        write_json(os.path.join(ftdir, "exit.json"), {"code": 127, "at": now(), "round": rnd, "error": str(e)})
+    finally:
+        os.close(tfd)
     return tid

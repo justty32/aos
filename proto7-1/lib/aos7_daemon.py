@@ -16,7 +16,7 @@ import time
 
 import aos7_task
 from aos7_daemon_timeline import POLL, Timeline
-from aos7_fs import append_jsonl, is_regular, node_path, now, read_json, write_json
+from aos7_fs import FD_PREFIX, append_jsonl, is_regular, node_path, now, read_json, write_json
 
 SCAN_BATCH = 20      # 一圈最多起幾條新時間線；多的下一圈再起，主迴圈不停擺（probes/fleet N2）
 CTL_BATCH = 200      # 一圈最多處理幾個控制檔；多的下一圈接著做（照檔名順序），status 照常寫（astra-5 F-10）
@@ -107,7 +107,11 @@ def declared_subroots(root, node_id):
 class Daemon:
     def __init__(self, root):
         self.root = os.path.abspath(root)
-        self.aosd = os.path.join(self.root, ".aosd")
+        # 自己的 `.aosd` 一律經 root 資料夾的 fd 寫（`/proc/self/fd/N/.aosd`）：root 被搬走就寫到新位置，被刪掉就寫不進去，
+        # 不會照舊路徑 makedirs 把它建回來（astra-6 G-03）。root 換了身分由 root_ok 發現，照 stop 收尾
+        self.rfd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY)
+        self.aosd = FD_PREFIX + str(self.rfd) + "/.aosd"
+        self.root_gone = False
         self.timelines = {}
         self.stopping = False
         self.kill_on_stop = False
@@ -124,6 +128,8 @@ class Daemon:
         self.io_errors = 0
         self.scan_errors = {}        # 上一圈掃描看不到的地方（astra-5 F-03）
         self.ctl_backlog = False     # 上一圈控制檔沒處理完（astra-5 F-10）
+        self.ctl_stuck = set()       # 處理失敗、又搬不到 ctl-failed/ 的控制檔名：之後排到最後（astra-6 G-01）
+        self.last_ctl_error = None   # 最近一次控制檔處理失敗（status.json 帶出來）
 
     # ---------- 給 Timeline 用 ----------
 
@@ -224,6 +230,9 @@ class Daemon:
             names = sorted(n for n in os.listdir(cdir) if not n.startswith("."))
         except OSError:
             return
+        self.ctl_stuck &= set(names)
+        # 失敗過、搬不走的排到最後：照檔名順序處理其他件，不會每圈卡在同一件（astra-6 G-01）
+        names = [n for n in names if n not in self.ctl_stuck] + [n for n in names if n in self.ctl_stuck]
         self.ctl_backlog = False
         t_end = time.monotonic() + CTL_BUDGET_S
         for k, n in enumerate(names):
@@ -231,31 +240,61 @@ class Daemon:
                 # 控制檔洪水（一萬個 wake）不能佔住主迴圈：剩下的下一圈接著做，順序照檔名不變（astra-5 F-10）
                 self.ctl_backlog = True
                 break
-            path = os.path.join(cdir, n)
-            bad = None
-            if not n.endswith(".json"):
-                bad = "檔名要以 .json 結尾"          # 以前默默略過，寫的人等不到回條（probes/llmkernel）
-            elif not is_regular(path):
-                bad = "不是一般檔（FIFO、資料夾…）"   # 以前 FIFO 卡死主迴圈、資料夾每圈重處理（probes/chaos B5、B10）
-            if bad:
-                self.reject_ctl(n, path, bad)
-                continue
-            ctl = read_json(path)
-            if isinstance(ctl, dict):
-                ok, msg = self.apply(ctl)
-            else:
-                ctl, ok, msg = {"raw": "unreadable"}, False, "not a JSON object"
             try:
-                queued = datetime.datetime.fromtimestamp(os.path.getmtime(path)).isoformat(timespec="milliseconds")
-            except OSError:
-                queued = None
-            ctl["result"] = {"ok": ok, "msg": msg, "at": now(), "queued_at": queued}
+                self.ctl_one(cdir, n)
+            except Exception as e:   # noqa: BLE001  一件的回條寫不進去（ctl-done/<名>.json 是資料夾…）不擋同圈其他件（astra-6 G-01）
+                self.ctl_failed(cdir, n, e)
+
+    def ctl_one(self, cdir, n):
+        path = os.path.join(cdir, n)
+        bad = None
+        if not n.endswith(".json"):
+            bad = "檔名要以 .json 結尾"          # 以前默默略過，寫的人等不到回條（probes/llmkernel）
+        elif not is_regular(path):
+            bad = "不是一般檔（FIFO、資料夾…）"   # 以前 FIFO 卡死主迴圈、資料夾每圈重處理（probes/chaos B5、B10）
+        if bad:
+            self.reject_ctl(n, path, bad)
+            return
+        ctl = read_json(path)
+        if isinstance(ctl, dict):
+            ok, msg = self.apply(ctl)
+        else:
+            ctl, ok, msg = {"raw": "unreadable"}, False, "not a JSON object"
+        try:
+            queued = datetime.datetime.fromtimestamp(os.path.getmtime(path)).isoformat(timespec="milliseconds")
+        except OSError:
+            queued = None
+        ctl["result"] = {"ok": ok, "msg": msg, "at": now(), "queued_at": queued}
+        try:
             write_json(os.path.join(self.aosd, "ctl-done", n), ctl)
-            try:
-                os.remove(path)
-            except OSError:
-                pass
-            self.log(ev="ctl", file=n, op=ctl.get("op"), node=ctl.get("node"), by=ctl.get("by"), ok=ok, msg=msg)
+        except Exception as e:   # noqa: BLE001
+            raise RuntimeError("已執行（ok=%s：%s），但回條寫不進去：%r" % (ok, msg, e)) from e
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        self.log(ev="ctl", file=n, op=ctl.get("op"), node=ctl.get("node"), by=ctl.get("by"), ok=ok, msg=msg)
+
+    def ctl_failed(self, cdir, n, err):
+        """一件控制檔處理失敗：搬到 `.aosd/ctl-failed/<名>`（可追蹤、不再每圈重做）；搬不走就留在 ctl/、之後排到最後。
+        log `ev: "ctl-error"`，status 的 `io_errors` +1、`last_ctl_error` 記下來（astra-6 G-01）。"""
+        self.io_errors += 1
+        moved = None
+        try:
+            fdir = os.path.join(self.aosd, "ctl-failed")
+            os.makedirs(fdir, exist_ok=True)
+            dst = os.path.join(fdir, n)
+            if os.path.lexists(dst):
+                dst = os.path.join(fdir, "%s.%d" % (n, time.time_ns()))
+            os.rename(os.path.join(cdir, n), dst)
+            moved = "ctl-failed/" + os.path.basename(dst)
+        except OSError:
+            self.ctl_stuck.add(n)
+        self.last_ctl_error = {"file": n, "at": now(), "err": repr(err)[:300], "moved_to": moved}
+        try:
+            self.log(ev="ctl-error", file=n, err=repr(err)[:300], moved_to=moved)
+        except OSError:
+            pass
 
     def reject_ctl(self, n, path, msg):
         """不是 `<名>.json` 一般檔的控制檔：原物搬到 ctl-done/<名>.bad，另寫 ctl-done/<名>.json 回條 ok: false。"""
@@ -366,10 +405,33 @@ class Daemon:
                 nodes[nid]["steps_left"] = self.steps[nid]
             if tl.last_error:
                 nodes[nid]["last_error"] = tl.last_error
-        write_json(os.path.join(self.aosd, "status.json"),
-                   {"pid": os.getpid(), "root": self.root, "at": now(), "poll_s": POLL,
-                    "gen": self.gen, "io_errors": self.io_errors, "stopping": self.stopping, "stopped": stopped,
-                    "kill_on_stop": self.kill_on_stop, "nodes": nodes})
+        st = {"pid": os.getpid(), "root": self.root, "at": now(), "poll_s": POLL,
+              "gen": self.gen, "io_errors": self.io_errors, "stopping": self.stopping, "stopped": stopped,
+              "kill_on_stop": self.kill_on_stop, "nodes": nodes}
+        if self.last_ctl_error:
+            st["last_ctl_error"] = self.last_ctl_error
+        if self.root_gone:
+            st["root_gone"] = True
+        write_json(os.path.join(self.aosd, "status.json"), st)
+
+    def check_root(self):
+        """root 的字串路徑還指著自己抓著的資料夾嗎：被刪（ENOENT／ENOTDIR）或搬走、換成別的（inode 不同）＝root 消失，
+        照 stop 帶 kill 收尾（Q4：搬家＝舊任務全死；astra-6 G-03）。ESTALE、EIO 這類看不到的不算。"""
+        try:
+            same = os.path.samestat(os.stat(self.root), os.fstat(self.rfd))
+        except OSError as e:
+            if e.errno not in GONE_ERRNO:
+                return
+            same = False
+        if same:
+            return
+        if not self.root_gone:
+            self.root_gone = True
+            self.stop(True)
+            try:
+                self.log(ev="root-gone", root=self.root)   # 搬走的寫到新位置；刪掉的寫不進去
+            except OSError:
+                pass
 
     # ---------- 主迴圈 ----------
 
@@ -398,7 +460,7 @@ class Daemon:
             except OSError:
                 pass
         while not self.stopping:
-            for step in (self.handle_ctl, self.scan, self.write_status):
+            for step in (self.check_root, self.handle_ctl, self.scan, self.write_status):
                 self.guard(step)
             if not self.ctl_backlog:
                 time.sleep(POLL)
