@@ -6,6 +6,7 @@
 - 只看得到 Python 程序（含 Python 起的 Python）；sh、C 程式的寫入看不到（problems.md M-3）。
 - 只記不擋。aos7-run 只在 AOS7_AUDIT 有值時把這個資料夾放進任務的 PYTHONPATH（aos7-run 自己不載入）。
 """
+import fcntl
 import json
 import os
 import sys
@@ -75,10 +76,20 @@ def _install():
         given = os.path.normpath(os.path.join(base_of(dir_fd), os.fsdecode(path)))
         if given != real:
             rec["via"] = given   # 經過掛載點（或別的連結）寫的：寫的時候用的路徑
-        line = json.dumps(rec, ensure_ascii=False) + "\n"
-        fd = os.open(log, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        line = (json.dumps(rec, ensure_ascii=False) + "\n").encode()
+        # 同共用的 append_jsonl：檔尾是沒寫完的半行（上次寫到一半被殺）就先補換行，新紀錄不跟半行黏成壞行（astra-7 H-03）。
+        # 多個 Python 後代同時寫：看檔尾＋寫入期間對 log 拿 flock，一次 os.write 寫完。這裡的 open／flock 也會觸發
+        # audit 事件，但 hook 的 busy 旗標擋住遞迴
+        fd = os.open(log, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o644)
         try:
-            os.write(fd, line.encode())
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX)
+            except OSError:
+                pass
+            end = os.fstat(fd).st_size
+            if end and os.pread(fd, 1, end - 1) != b"\n":
+                line = b"\n" + line
+            os.write(fd, line)
         finally:
             os.close(fd)
 

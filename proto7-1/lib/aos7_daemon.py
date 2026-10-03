@@ -22,6 +22,7 @@ SCAN_BATCH = 20      # 一圈最多起幾條新時間線；多的下一圈再起
 CTL_BATCH = 200      # 一圈最多處理幾個控制檔；多的下一圈接著做（照檔名順序），status 照常寫（astra-5 F-10）
 CTL_BUDGET_S = 0.05  # 一圈處理控制檔最多花幾秒（跟 CTL_BATCH 取先到的）
 LIVE_EVERY = 0.25    # status.json 的 live 多久重算一次（秒）；任務資料夾多時每圈全掃太貴（probes/fleet N3、swarm N4）
+DISK_EVERY = 30.0    # status.json 的 disk（容量粗估）與 .aosd/retention.json 的保留政策多久做一次（秒；astra-7 H-08）
 
 
 GONE_ERRNO = (errno.ENOENT, errno.ENOTDIR)   # 這兩種才算「確定不存在」；其他（ESTALE、EIO、EACCES…）是「看不到」
@@ -36,6 +37,33 @@ def _probe(path):
             return None
         raise
     return "file" if stat.S_ISREG(st.st_mode) else "dir" if stat.S_ISDIR(st.st_mode) else "other"
+
+
+def move_noclobber(src, ddir, name, suffix=""):
+    """把 src 搬到 `ddir/<name><suffix>`，**保證不覆蓋**既有的檔（astra-7 H-07）：撞名就換 `<name>.<time_ns>[.k]<suffix>`。
+    一般檔用 os.link（目的地已存在就 EEXIST，原子的排他建立）再刪原檔；連結不了（資料夾、檔案系統不支援）才退回
+    「沒有才 rename」。回最後的路徑；搬不動丟 OSError。"""
+    cands = [name + suffix]
+    stamp = time.time_ns()
+    cands += ["%s.%d%s" % (name, stamp, suffix)] + ["%s.%d.%d%s" % (name, stamp, k, suffix) for k in range(1, 100)]
+    for c in cands:
+        dst = os.path.join(ddir, c)
+        try:
+            os.link(src, dst, follow_symlinks=False)
+        except FileExistsError:
+            continue
+        except OSError:
+            if os.path.lexists(dst):
+                continue
+            os.rename(src, dst)   # 資料夾、FIFO 等連結不了的：退回 rename（只在目的地不存在時）
+            return dst
+        try:
+            os.unlink(src)
+        except OSError:
+            os.unlink(dst)   # 原檔刪不掉：不留兩份，當搬不動
+            raise
+        return dst
+    raise FileExistsError("%s 撞名太多次" % os.path.join(ddir, name))
 
 
 def scan_nodes(root, errors=None):
@@ -130,6 +158,8 @@ class Daemon:
         self.ctl_backlog = False     # 上一圈控制檔沒處理完（astra-5 F-10）
         self.ctl_stuck = set()       # 處理失敗、又搬不到 ctl-failed/ 的控制檔名：之後排到最後（astra-6 G-01）
         self.last_ctl_error = None   # 最近一次控制檔處理失敗（status.json 帶出來）
+        self.disk = None             # 最近一次容量粗估（status.json 的 disk）
+        self._disk_t = None          # 上次算 disk 的時間（monotonic）
 
     # ---------- 給 Timeline 用 ----------
 
@@ -172,6 +202,26 @@ class Daemon:
     def log(self, **kw):
         with self._log_lock:
             append_jsonl(os.path.join(self.aosd, "log.jsonl"), dict(at=now(), **kw))
+
+    def claim_owner(self):
+        """子 daemon 的認領（Q5；astra-7 H-02）：tick 起帶 `subroot` 的任務時**不寫** owner.json，只經環境變數
+        `AOS7_OWNER_NODE`／`AOS7_OWNER_TID`／`AOS7_ALLOW_STOP` 把擁有者交給任務；這裡（已拿到 daemon.lock）才寫
+        `.aosd/owner.json`。拿不到鎖的敗者在 run() 開頭就退出、什麼都不寫，所以 owner 一定是真正在跑的那個 daemon 的。
+        只在自己的 root 就是任務的 `AOS7_SUBROOT` 時發布（任務另外開到別處的 daemon 不認領）。這三個變數用完就從環境拿掉，
+        不傳給自己的 tick／tock／任務。"""
+        env = os.environ
+        onode, otid, allow = env.pop("AOS7_OWNER_NODE", None), env.pop("AOS7_OWNER_TID", None), \
+            env.pop("AOS7_ALLOW_STOP", None)
+        sub = env.get("AOS7_SUBROOT")
+        if not (onode and otid and sub):
+            return
+        try:
+            if not os.path.samestat(os.stat(sub), os.fstat(self.rfd)):
+                return
+        except OSError:
+            return
+        write_json(os.path.join(self.aosd, "owner.json"),
+                   {"node": onode, "tid": otid, "allow_stop": allow == "1", "at": now(), "daemon_pid": os.getpid()})
 
     # ---------- 控制檔 ----------
 
@@ -283,10 +333,7 @@ class Daemon:
         try:
             fdir = os.path.join(self.aosd, "ctl-failed")
             os.makedirs(fdir, exist_ok=True)
-            dst = os.path.join(fdir, n)
-            if os.path.lexists(dst):
-                dst = os.path.join(fdir, "%s.%d" % (n, time.time_ns()))
-            os.rename(os.path.join(cdir, n), dst)
+            dst = move_noclobber(os.path.join(cdir, n), fdir, n)
             moved = "ctl-failed/" + os.path.basename(dst)
         except OSError:
             self.ctl_stuck.add(n)
@@ -301,11 +348,8 @@ class Daemon:
         done = os.path.join(self.aosd, "ctl-done")
         os.makedirs(done, exist_ok=True)
         base = n if n.endswith(".json") else n + ".json"
-        dst = os.path.join(done, n + ".bad")
-        if os.path.lexists(dst):
-            dst = os.path.join(done, "%s.%d.bad" % (n, time.time_ns()))
         try:
-            os.rename(path, dst)
+            move_noclobber(path, done, n, ".bad")
         except OSError:
             pass
         write_json(os.path.join(done, base), {"raw": "not read", "result": {"ok": False, "msg": msg, "at": now(),
@@ -412,7 +456,77 @@ class Daemon:
             st["last_ctl_error"] = self.last_ctl_error
         if self.root_gone:
             st["root_gone"] = True
+        if self.disk is not None:
+            st["disk"] = self.disk
         write_json(os.path.join(self.aosd, "status.json"), st)
+
+    def retention(self):
+        """`.aosd/retention.json`（可選，人寫）：`{"ctl_done_max": N, "ctl_failed_max": N, "log_max_bytes": N}`。
+        ctl-done／ctl-failed 超過 N 件刪最舊的（依 mtime）；log.jsonl 超過 N bytes 就輪替成 `log.1.jsonl`（只留一份舊的）。
+        沒有這個檔＝都不刪（預設，Q3）。值不是非負整數的那一項不管（astra-7 H-08）。"""
+        cfg = read_json(os.path.join(self.aosd, "retention.json"))
+        if not isinstance(cfg, dict):
+            return
+        def num(k):
+            v = cfg.get(k)
+            return v if isinstance(v, int) and not isinstance(v, bool) and v >= 0 else None
+        for key, sub in (("ctl_done_max", "ctl-done"), ("ctl_failed_max", "ctl-failed")):
+            cap = num(key)
+            if cap is None:
+                continue
+            d = os.path.join(self.aosd, sub)
+            try:
+                ents = [(e.stat(follow_symlinks=False).st_mtime, e.name) for e in os.scandir(d)
+                        if not e.name.startswith(".")]
+            except OSError:
+                continue
+            ents.sort()
+            for _, name in ents[:max(0, len(ents) - cap)]:
+                try:
+                    os.remove(os.path.join(d, name))
+                except IsADirectoryError:
+                    import shutil
+                    shutil.rmtree(os.path.join(d, name), ignore_errors=True)
+                except OSError:
+                    pass
+        cap = num("log_max_bytes")
+        if cap is not None:
+            lp = os.path.join(self.aosd, "log.jsonl")
+            with self._log_lock:
+                try:
+                    if os.path.getsize(lp) > cap:
+                        os.replace(lp, os.path.join(self.aosd, "log.1.jsonl"))
+                except OSError:
+                    pass
+
+    def disk_usage(self):
+        """容量粗估（status.json 的 disk；astra-7 H-08）：各 node 的 tasks／tasks-old 資料夾數、`.aosd` 的總 bytes。"""
+        nodes = {}
+        for nid, tl in list(self.timelines.items()):
+            row = {}
+            for key, sub in (("tasks", "tasks"), ("tasks_old", "tasks-old")):
+                try:
+                    row[key] = sum(1 for n in os.listdir(os.path.join(tl.node, ".aos", sub)) if not n.startswith("."))
+                except OSError:
+                    row[key] = 0
+            nodes[nid] = row
+        total = 0
+        for d, _, files in os.walk(self.aosd):
+            for f in files:
+                try:
+                    total += os.lstat(os.path.join(d, f)).st_size
+                except OSError:
+                    pass
+        return {"at": now(), "every_s": DISK_EVERY, "aosd_bytes": total, "nodes": nodes}
+
+    def housekeep(self):
+        """每 DISK_EVERY 秒一次：套 retention.json、重算 disk。"""
+        t = time.monotonic()
+        if self._disk_t is not None and t - self._disk_t < DISK_EVERY:
+            return
+        self._disk_t = t
+        self.retention()
+        self.disk = self.disk_usage()
 
     def check_root(self):
         """root 的字串路徑還指著自己抓著的資料夾嗎：被刪（ENOENT／ENOTDIR）或搬走、換成別的（inode 不同）＝root 消失，
@@ -445,6 +559,7 @@ class Daemon:
             return 1
         for s in (signal.SIGTERM, signal.SIGINT):
             signal.signal(s, lambda *_: self.stop(True))
+        self.claim_owner()   # 拿到 daemon.lock 才發布 owner.json：認領跟執行權一致（astra-7 H-02）
         # 換世代：之後這個 daemon 起的 tick／tock 帶 AOS7_GEN，舊 daemon 留下的動作拿到 action.lock 時看到世代不同就不寫（astra-4 I-01）
         self._save_paused()   # 一起來就有 paused.json（空清單也寫），讀的人不會碰到「不存在」（probes/llmkernel 誤解 3）
         old = read_json(os.path.join(self.aosd, "gen.json"), {}) or {}
@@ -460,7 +575,7 @@ class Daemon:
             except OSError:
                 pass
         while not self.stopping:
-            for step in (self.check_root, self.handle_ctl, self.scan, self.write_status):
+            for step in (self.check_root, self.handle_ctl, self.scan, self.housekeep, self.write_status):
                 self.guard(step)
             if not self.ctl_backlog:
                 time.sleep(POLL)

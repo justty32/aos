@@ -153,7 +153,8 @@ class G04OwnerClaim(DaemonCase):
         node = self.mknode("lab", [{"name": "d", "mode": "keep", "argv": SLEEPER, "subroot": "lab/sub"}])
         self.assertEqual(self.tick("lab")["started"], ["d-r1"])
         opath = os.path.join(node, "sub", ".aosd", "owner.json")
-        first = read_json(opath)
+        first = {"node": "lab", "tid": "d-r1", "allow_stop": False, "at": "t"}
+        write_json(opath, first)   # astra-7 H-02：owner.json 由拿到鎖的子 daemon 寫；這裡模擬 d-r1 的子 daemon
         with open(os.path.join(node, "sub", ".aosd", "daemon.lock"), "w") as lk:   # 模擬 d-r1 起的子 daemon 在跑
             fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.tock("lab")
@@ -167,9 +168,9 @@ class G04OwnerClaim(DaemonCase):
         self.tock("lab")
         write_json(os.path.join(node, ".aos", "spawn", "third.json"),
                    {"name": "other", "argv": SLEEPER, "subroot": "lab/sub", "allow_stop": True})
-        started = self.tick("lab")["started"]   # 鎖放了：照常認領
+        started = self.tick("lab")["started"]   # 鎖放了：照常起（owner.json 等它的子 daemon 拿到鎖才改）
         self.assertEqual(len(started), 1)
-        self.assertEqual(read_json(opath)["tid"], started[0])
+        self.assertEqual(read_json(opath), first)
 
     def test_real_second_daemon(self):
         """真的兩個 daemon：n 的 first 起 n/inner/sub；n/inner 的 second 宣告同一子根，不能改掉現役 owner。"""

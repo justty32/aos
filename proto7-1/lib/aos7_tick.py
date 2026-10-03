@@ -183,6 +183,7 @@ def _tick(root, node_id, node, fnode=None):
     state["mounts"] = serve_mounts(root, fnode, node)
 
     started = []
+    claimed = set()   # 這個 tick 已經認領的子根：同 tick 第二項宣告同一個不起（astra-7 H-02）
     sdir = os.path.join(fnode, ".aos", "spawn")
     live = live_names(fnode)
     for fn in sorted(os.listdir(sdir)) if os.path.isdir(sdir) else []:
@@ -201,7 +202,7 @@ def _tick(root, node_id, node, fnode=None):
                 if not should_start(dict(item, from_round=1), rnd, live):
                     errs.append("spawn %s：%s 已有活的（keep／max_live），沒起" % (fn, item_name(item)))
                     continue
-                tid = aos7_task.start_task(root, node_id, dict(item, spawn=fn), rnd, fnode=fnode)
+                tid = aos7_task.start_task(root, node_id, dict(item, spawn=fn), rnd, fnode=fnode, claimed=claimed)
             except Exception as e:   # noqa: BLE001  壞的一項只跳過那項，檔照刪，不變成每回合的毒丸（probes/chaos B3、astra-5 F-06）
                 node_still_there(fnode)
                 errs.append("spawn %s：%s" % (fn, e))
@@ -227,7 +228,7 @@ def _tick(root, node_id, node, fnode=None):
             errs.append("%s：%s" % (label, e))
             continue
         try:
-            started.append(aos7_task.start_task(root, node_id, item, rnd, fnode=fnode))
+            started.append(aos7_task.start_task(root, node_id, item, rnd, fnode=fnode, claimed=claimed))
         except Exception as e:   # noqa: BLE001  起不來的一項只記它，其他項照起（astra-5 F-06）
             node_still_there(fnode)
             errs.append("%s：%s" % (label, e))

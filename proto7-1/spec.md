@@ -8,7 +8,7 @@
 
 - 所有狀態與控制都是 **JSON 檔**，能用 `cat` 看懂、用寫檔操作。寫檔一律「寫暫存檔再 rename」（原子），讀不到或壞掉當作不存在。**不是一般檔（FIFO、資料夾、裝置）也當不存在**：讀 JSON 一律非阻塞開、先看檔案型別，控制檔、tasks.json、spawn 被換成 FIFO 不會卡住 daemon 或 tick（probes/chaos B10、llmops）。暫存檔名以 `.` 開頭（`.<名字>.tmp.<pid>`），列資料夾的人略過 `.` 開頭的檔，就不會讀到寫一半的（probes/polyglot）。
 - 多個寫的人要讀—改—寫同一個 JSON 檔（例如 tasks.json）時，約定對 `<檔>.lock` 拿 `flock`；`aos7_fs.edit_json(path, fn)` 就是這樣做。tick 只讀不拿鎖（probes/selfmod、lifecycle：不拿鎖會互相蓋掉）。
-- 流水帳用 JSON Lines（`*.jsonl`，一行一個 JSON 物件）。讀的人跳過解析不了的行，後面的合法行照讀。`append_jsonl` 加行前先看檔尾：上次 append 中途被殺、留下沒換行結尾的半行，就先補一個換行再寫（半行原樣留著當證據），新的一行不會跟半行黏成一條壞行（astra-6 G-08）。
+- 流水帳用 JSON Lines（`*.jsonl`，一行一個 JSON 物件）。讀的人跳過解析不了的行，後面的合法行照讀。`append_jsonl` 加行前先看檔尾：上次 append 中途被殺、留下沒換行結尾的半行，就先補一個換行再寫（半行原樣留著當證據），新的一行不會跟半行黏成一條壞行（astra-6 G-08）；任務的寫入紀錄 `writes.jsonl`（audit hook 直接寫，第 5 節）也一樣先補換行，看檔尾＋寫入期間對檔拿 `flock`（astra-7 H-03）。讀的一律**以 bytes 逐行**、每行各自 UTF-8 解碼＋`json.loads`：半個 UTF-8 字元（append 被殺在多 byte 字元中間）也只壞那一行，不會整檔丟例外或回空清單；`aos7_fs.read_jsonl(path, with_bad=True)` 回 `(紀錄, 壞行數)`，`aos7_audit.scan` 多 `bad_lines`（astra-7 H-04）。
 - 時間欄位 `at` 是 ISO 8601 字串（本機時間，到毫秒）；只給人看，邏輯不依賴牆鐘。
 - 每支程式是 `bin/` 下一個 Python 檔（薄入口），本體在 `lib/aos7_*.py`。純標準庫，Python 3.11+。
 
@@ -27,7 +27,7 @@
 {"interval_ms": 100}
 ```
 
-沒寫 `interval_ms` 當 1000。可選 `keep_ended_rounds`（非負整數，預設 20）：結束超過這麼多回合的任務資料夾，由 tock 搬到 `.aos/tasks-old/`（第 7 節）。
+沒寫 `interval_ms` 當 1000。可選 `keep_ended_rounds`（非負整數，預設 20）：結束超過這麼多回合的任務資料夾，由 tock 搬到 `.aos/tasks-old/`（第 7 節）。可選 `keep_old_rounds`（非負整數；**不寫＝永久保留**，Q3 的預設不變）：tasks-old 裡結束超過這麼多回合的任務資料夾，由 tock 刪掉（astra-7 H-08）。
 
 生一個新 node：**先寫 tasks.json（與其他檔），最後寫 timeline.json**。timeline.json 一出現 daemon 就開回合（1～2 ms 內撿到，不必寫 rescan）；順序反過來會有空回合（probes/subtimeline）。
 
@@ -53,7 +53,9 @@
 
 **tock 被逾時收掉**（astra-5 F-05）：round.json 還開著，daemon 馬上補一次 tock（`AOS7_INCOMPLETE=tock`、log 的 tock 行帶 `replay: true`）。被殺的 tock 若已經寫了總結，補的這次照第 7 節「同回合已有總結」只收尾、不寫第二行；沒寫過就寫一行帶 `incomplete: "tock"` 的總結。補的也逾時、或停機已超時，就留給下一次「沒關的回合」。
 
-**沒關的回合**：時間線起來後第一次開回合前，round.json 若還是 `open: true`（node 在回合中消失又出現、daemon 回合中死掉重開），先 tock 一次把它關掉，總結標 `incomplete: "unclosed"`，rounds.jsonl 不缺號（probes/chaos B8）。round.json 壞掉（不是物件、round 不是整數）時，時間線當 0 起、不讓 daemon 退出（chaos B1）；tick（以及 tick 之後才被寫壞時的 tock）從 rounds.jsonl 最後幾行裡最大的整數 round 接著數，並記 `tasks_error`（chaos B6）。
+**沒關的回合**：時間線起來後第一次開回合前，round.json 若還是 `open: true`（node 在回合中消失又出現、daemon 回合中死掉重開），先 tock 一次把它關掉，總結標 `incomplete: "unclosed"`，rounds.jsonl 不缺號（probes/chaos B8）。
+
+**tock 沒把回合關上**（astra-7 H-01）：每次 tock 完都看 round.json，還是 `open: true`（不只逾時：非零退出、第 7 節讀回確認失敗、印出不確定的結果都算）就馬上補一次 tock（同上面的逾時補 tock；同回合已有總結就只收尾、不寫第二行）。補的也沒關上 → log `ev: "round-unclosed"`、`phase: "error"`、`last_error` 寫「第 N 回合沒關上…」，**下一次 tick 之前先走上面「沒關的回合」恢復**；恢復成功前不開新回合（round 不往前跳、不越過沒提交的總結），失敗就保持 error、退避重試（0.5 秒起加倍，最多 8 秒）。resume 帶 `rounds` 的倒數也要等回合真的關上才算一回合。停機中不做這段（回合留著 open，下次起來照「沒關的回合」收）。round.json 壞掉（不是物件、round 不是整數）時，時間線當 0 起、不讓 daemon 退出（chaos B1）；tick（以及 tick 之後才被寫壞時的 tock）從 rounds.jsonl 最後幾行裡最大的整數 round 接著數，並記 `tasks_error`（chaos B6）。
 
 daemon 跑 tock 時給環境變數 `AOS7_EARLY`（`1`＝本回合起的任務都結束、提前進場；`0`＝等滿 interval）。tick 印 `gone`（node 已不在）時這圈不開回合，等掃描收掉這條。
 
@@ -91,7 +93,7 @@ stop 帶 `kill`（含 SIGTERM／SIGINT）時，所有時間線結束後再**掃�
 
 `pause`／`resume`／`wake` 的 node 落在含 `.aosd/` 的子資料夾（別的 daemon 的根）底下時回 `ok: false`，msg 說它屬於哪個 daemon（probes/multid N4）。node 目前不存在照樣接受（可以預先 pause），msg 加註「目前沒有這個 node，出現時才生效」。同一批控制檔依檔名排序執行。
 
-**逐件錯誤邊界**（astra-6 G-01）：一件控制檔處理丟例外（最常見：回條 `ctl-done/<名>.json` 是資料夾、寫不進去），不擋同圈其他件（特別是 stop）：那件原物搬到 `.aosd/ctl-failed/<名>`（撞名加時間戳），log 記 `ev: "ctl-error"`（`file`、`err`、`moved_to`），status 的 `io_errors` +1、`last_ctl_error`＝`{"file", "at", "err", "moved_to"}`。那件的效果可能已經生效（回條才失敗；err 會寫「已執行（ok=…）」），所以**不重做**；要重送就把檔搬回 `ctl/`。連 `ctl-failed/` 都搬不進去時留在 `ctl/`，之後每圈排到最後（不會每圈卡在同一件、讓後面的餓死）。
+**逐件錯誤邊界**（astra-6 G-01）：一件控制檔處理丟例外（最常見：回條 `ctl-done/<名>.json` 是資料夾、寫不進去），不擋同圈其他件（特別是 stop）：那件原物搬到 `.aosd/ctl-failed/<名>`（撞名換 `<名>.<time_ns>`、再撞加 `.1`、`.2`…；一般檔用 `os.link` 排他建立再刪原檔，**保證不覆蓋**舊的隔離檔，astra-7 H-07；`ctl-done/<名>.bad` 同樣），log 記 `ev: "ctl-error"`（`file`、`err`、`moved_to`），status 的 `io_errors` +1、`last_ctl_error`＝`{"file", "at", "err", "moved_to"}`。那件的效果可能已經生效（回條才失敗；err 會寫「已執行（ok=…）」），所以**不重做**；要重送就把檔搬回 `ctl/`。連 `ctl-failed/` 都搬不進去時留在 `ctl/`，之後每圈排到最後（不會每圈卡在同一件、讓後面的餓死）。
 
 `ctl/` 底下不以 `.` 開頭的每個名字都會處理：不是 `.json` 結尾、或不是一般檔（FIFO、資料夾）的，原物搬到 `ctl-done/<名>.bad`、另寫 `ctl-done/<名>.json`（不是 .json 結尾的補上）回條 `ok: false`（以前默默略過、FIFO 卡死主迴圈、資料夾每圈重處理；probes/llmkernel、chaos B5、B10）。寫給停著的 daemon 的控制檔留在 `ctl/`，下次起來才執行。
 
@@ -101,10 +103,10 @@ daemon 收到 SIGTERM／SIGINT＝`stop` 加 `kill: true`（路一：子 daemon �
 
 **子 daemon 的所有權**（使用者 10-03 答 Q5：「子daemon歸屬於哪個node，那他的所有權就歸屬於那個node，如果那個node允許，那stop就有用。」）：
 
-- tick 起帶 `subroot` 的任務時寫 `<subroot>/.aosd/owner.json`＝`{"node": 擁有者 node id, "tid", "allow_stop": bool, "at"}`（`allow_stop` 取任務項目的，預設 false；第 4 節）。擁有者想即時改權限，直接改這個檔（它在擁有者自己的 node 底下）；任務重起（keep、restart）時照項目重寫。
+- `<subroot>/.aosd/owner.json`＝`{"node": 擁有者 node id, "tid", "allow_stop": bool, "at", "daemon_pid"}`（`allow_stop` 取任務項目的，預設 false；第 4 節）。**由子 daemon 自己在拿到 `daemon.lock` 之後寫**（astra-7 H-02）：tick 起帶 `subroot` 的任務時不寫 owner.json，只給任務三個環境變數 `AOS7_OWNER_NODE`、`AOS7_OWNER_TID`、`AOS7_ALLOW_STOP`（`1`／`0`）；aos7-daemon 拿到鎖後，若自己的 root 就是 `AOS7_SUBROOT`（同一個資料夾），照這三個寫 owner.json，然後把它們從自己的環境拿掉（不傳給自己的 tick／tock／任務）。拿不到鎖的敗者在開頭就退出、什麼都不寫，所以 owner 一定指著真正在跑的那個。擁有者想即時改權限，直接改這個檔（它在擁有者自己的 node 底下）；任務重起（keep、restart）後新的子 daemon 起來時照項目重寫。
 - 控制檔 `stop`：daemon 讀自己根的 `.aosd/owner.json`。有這個檔、而 `allow_stop` 不是 `true`（檔壞掉也算）→ 不停，回條 `ok: false`，msg 說它屬於哪個 node（任務 tid）、要停請那個 node 設 `allow_stop` 或 kill 這個任務。`allow_stop: true` → 照常 stop，並先寫 `<根>/.aosd/stopped.json`＝`{"by", "why", "at", "kill"}`（取控制檔的 `by`、`why`、`kill`）。沒有 owner.json（頂層 daemon）照舊，不寫 stopped.json。只管 `stop`；pause／resume／wake／rescan 不看所有權。
 - SIGTERM／SIGINT（路一：擁有者 kill 任務）照舊，不看 allow_stop、不寫 stopped.json。
-- **認領要跟 daemon.lock 一致**（astra-6 G-04）：tick 起帶 `subroot` 的任務、寫 owner.json 之前，先對 `<subroot>/.aosd/daemon.lock` 試非阻塞 flock：拿得到就馬上放掉、照常起；拿不到＝已經有 daemon 在跑 → **不起（不佔 tid）、不改 owner.json**，記 `tasks_error`（「子根已經有 daemon 在跑（owner：node … 任務 …），沒起、沒改 owner.json」），spawn 檔照刪；keep 下一回合再試。失敗的第二個啟動者因此改不掉現役 owner。剩下的窗口：兩個 tick 在子 daemon 拿到鎖之前（起任務後數十 ms 內）同時認領，後寫的 owner 會贏、先起的 daemon 可能是另一個——沒有跨 node 的認領鎖，這個窗口照實留著。
+- **認領要跟 daemon.lock 一致**（astra-6 G-04、astra-7 H-02）：tick 起帶 `subroot` 的任務之前，先對 `<subroot>/.aosd/daemon.lock` 試非阻塞 flock：拿得到就馬上放掉、照常起；拿不到＝已經有 daemon 在跑 → **不起（不佔 tid）**，記 `tasks_error`（「子根已經有 daemon 在跑（owner：node … 任務 …），沒起、沒改 owner.json」），spawn 檔照刪；keep 下一回合再試。同一個 tick 裡第二項（spawn 或 tasks.json）宣告同一個子根也不起，記 `tasks_error`（「這個 tick 已經有別的任務認領」）。兩個 tick（不同 node）在子 daemon 拿到鎖之前同時起任務時，兩個子 daemon 搶 daemon.lock，敗者退出（任務 exit 1）、不寫 owner.json——owner 只由贏家寫，不會再指錯（以前 tick 先寫 owner，12 次有 9 次指錯）。
 - 擁有者 node 的 tick 起帶 `subroot` 的任務（tasks.json 的 keep／each、spawn、restart 寫的 spawn 全部）時，`<subroot>/.aosd/stopped.json` 在 → 不起（不佔 tid），記 `tasks_error`（「子 daemon 已被誰在何時 stop；刪掉 stopped.json 就會再起」），spawn 檔照刪。刪掉 stopped.json，下一回合 keep 照常起。
 - daemon 起來時 stopped.json 還在（tick 會擋，所以多半是人手跑 aos7-daemon）：算人決定的，刪掉標記、log 記 `ev: "stopped-cleared"`（`was`＝原內容）。
 - **這是合作式檔案協定**（astra-6 G-09，技術選型）：owner.json、stopped.json 都是普通檔，只照檔案的值判斷，**分不出是誰改的**——擁有者、子 daemon 底下的任務、人都改得動。任務把 `allow_stop` 改成 true，外部 stop 就成功；任務刪掉 stopped.json，父的 keep 就重起；刪掉 owner.json，子 daemon 就當自己是頂層（stop 成功、不留 stopped.json）。「人手跑 aos7-daemon 清標記」也無法確認真的是人。要防的是**失誤**，不是惡意任務；帳號隔離、FUSE、cgroup 不在範圍內。同樣地，stop-sweep 與 node 消失的收程序以環境變數 **`AOS7_NODE`＋`AOS7_TID`** 認程序、**不比 `AOS7_ROOT`**（Q1 的範圍）：不同 NODE、沒有 TID 的不收；相同 NODE＋TID 但 ROOT 不同的照收。這不是 daemon 身分驗證。
@@ -118,9 +120,11 @@ daemon 收到 SIGTERM／SIGINT＝`stop` 加 `kill: true`（路一：子 daemon �
                     "interval_ms": 100, "live": ["kernel-r1"]}}}
 ```
 
-`phase`：`idle`（等下回合）／`tick`／`running`（回合中）／`tock`／`paused`／`error`（迴圈出例外、等著接著跑）／`stopped`。`pause_pending`＝已要求 pause、但這回合還沒收完。`interval_ms`＝最近一回合實際用的。`live` 每 0.25 秒才重算一次（任務資料夾多時每圈全掃太貴；probes/fleet、swarm）。`stopped: true`＝daemon 正常退出前寫的最後一份；`at` 超過幾個 `poll_s` 沒動，daemon 可能卡住或死了（probes/multid N5）。另有 `kill_on_stop`。`round` 以 tick 印的結果為準，tick 沒印（失敗）時讀 round.json。tick／tock 退出碼非 0 時，該 node 多一欄 `last_error`：`{"prog", "rc", "round", "at", "err"}`（stderr 末段），留著直到下次出錯覆寫（認不出持鎖者時 `prog` 是 `"action-lock"`，見上面 G-10）。控制檔處理失敗過時多 `last_ctl_error`；root 消失時多 `root_gone: true`。
+`phase`：`idle`（等下回合）／`tick`／`running`（回合中）／`tock`／`paused`／`error`（迴圈出例外、等著接著跑）／`stopped`。`pause_pending`＝已要求 pause、但這回合還沒收完。`interval_ms`＝最近一回合實際用的。`live` 每 0.25 秒才重算一次（任務資料夾多時每圈全掃太貴；probes/fleet、swarm）。`disk`＝容量粗估（每 30 秒算一次，`DISK_EVERY`；astra-7 H-08）：`{"at", "every_s", "aosd_bytes": .aosd 底下檔案 bytes 合計, "nodes": {id: {"tasks": 數, "tasks_old": 數}}}`。`stopped: true`＝daemon 正常退出前寫的最後一份；`at` 超過幾個 `poll_s` 沒動，daemon 可能卡住或死了（probes/multid N5）。另有 `kill_on_stop`。`round` 以 tick 印的結果為準，tick 沒印（失敗）時讀 round.json。tick／tock 退出碼非 0 時，該 node 多一欄 `last_error`：`{"prog", "rc", "round", "at", "err"}`（stderr 末段），留著直到下次出錯覆寫（認不出持鎖者時 `prog` 是 `"action-lock"`，見上面 G-10）。控制檔處理失敗過時多 `last_ctl_error`；root 消失時多 `root_gone: true`。
 
 **流水帳** `<root>/.aosd/log.jsonl`：daemon 每個 tick、tock、ctl、node 出現消失寫一行（`node+` 時若在 paused 清單裡多 `paused: true`）。
+
+**保留政策（可選；astra-7 H-08）**：預設什麼都不刪（Q3 只搬不刪）。人寫 `<root>/.aosd/retention.json`＝`{"ctl_done_max": N, "ctl_failed_max": N, "log_max_bytes": N}`（每項可省；值不是非負整數的那項不管）：daemon 每 30 秒（跟 `disk` 一起）把 `ctl-done/`、`ctl-failed/` 超過 N 件的刪最舊的（依 mtime），`log.jsonl` 超過 N bytes 就換名成 `log.1.jsonl`（覆蓋上一份，只留一份舊的）、之後寫新的 `log.jsonl`。node 的任務歷史用 timeline.json 的 `keep_old_rounds`（第 1 節）。
 
 主迴圈（讀控制檔、掃描、寫 status）任一步丟例外不退出：印 stderr、寫得進去就記 log（OSError 記 `ev: "io-error"`，其他例外記 `ev: "error"`）、status 的 `io_errors` +1，下一圈再試（astra-4 I-07；chaos B1：一個 node 的壞檔以前會讓整個 daemon 退出）。掃描一圈最多起 20 條新時間線，其餘下一圈（啟動時 node 很多，控制檔與 status 不會停擺；probes/fleet N2、astra-4 I-11）。
 
@@ -165,7 +169,7 @@ tick 把 round +1、`open: true`，並記下本回合的 `started`、`ctl`、`mo
 - `from_round`：從第幾回合起才生效（預設 1）。
 - `name`：沒寫當 `"task"`（birth.json 與 keep 判斷都用它）。
 - `max_live`（可選）：同名活任務已有這麼多個，本回合不起（`keep`＝`each` 加 `max_live: 1`；probes/longrun N-3）。
-- `subroot`（可選，空間路徑）：這個任務要在那裡開子 daemon（路一）。**要在任務自己的 node 底下、不能是 node 本身**（S-10；不合的不建、birth.json 記 `subroot_error`；probes/llmteam 寫成 `"sub"` 就在空間根建了 `.aosd`）。tick 起它之前先建 `<subroot>/.aosd/`，父 daemon 掃描就跳過那棵，不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）。任務多一個環境變數 `AOS7_SUBROOT`＝子根的絕對路徑，argv 寫 `["aos7-daemon", "$AOS7_SUBROOT"]`（cwd 是 node，寫空間路徑會跑錯地方；llmteam 兩個模型都犯）。寫入紀錄把子根整棵算這個任務的（子 daemon 與它的 tick／tock 繼承這個任務的環境）。tick 建 `.aosd/` 之前，父 daemon 的掃描也已經照第 1 節跳過宣告了的子根，子 node 先建好也不會被父撿走（astra-5 F-08）。restart 會帶上。tick 同時寫 `<subroot>/.aosd/owner.json`；子根有 `.aosd/stopped.json`、或 `.aosd/daemon.lock` 已經有人拿著（已有 daemon 在跑；astra-6 G-04）時不起、不改 owner（第 2 節「子 daemon 的所有權」）。
+- `subroot`（可選，空間路徑）：這個任務要在那裡開子 daemon（路一）。**要在任務自己的 node 底下、不能是 node 本身**（S-10；不合的不建、birth.json 記 `subroot_error`；probes/llmteam 寫成 `"sub"` 就在空間根建了 `.aosd`）。tick 起它之前先建 `<subroot>/.aosd/`，父 daemon 掃描就跳過那棵，不會在子 daemon 起來前把裡面的 node 當自己的（P-11；probes/nest3 N3）。任務多一個環境變數 `AOS7_SUBROOT`＝子根的絕對路徑，argv 寫 `["aos7-daemon", "$AOS7_SUBROOT"]`（cwd 是 node，寫空間路徑會跑錯地方；llmteam 兩個模型都犯）。寫入紀錄把子根整棵算這個任務的（子 daemon 與它的 tick／tock 繼承這個任務的環境）。另給 `AOS7_OWNER_NODE`／`AOS7_OWNER_TID`／`AOS7_ALLOW_STOP`，子 daemon 拿到鎖後用來寫 owner.json（第 2 節；astra-7 H-02）。tick 建 `.aosd/` 之前，父 daemon 的掃描也已經照第 1 節跳過宣告了的子根，子 node 先建好也不會被父撿走（astra-5 F-08）。restart 會帶上。owner.json 由子 daemon 拿到鎖後寫（不是 tick）；子根有 `.aosd/stopped.json`、`.aosd/daemon.lock` 已經有人拿著（已有 daemon 在跑；astra-6 G-04）、或同一個 tick 已有別項認領這個子根（astra-7 H-02）時不起（第 2 節「子 daemon 的所有權」）。
 - `allow_stop`（可選，bool，預設 false；只對帶 `subroot` 的有意義）：允許別人用路二的控制檔 `stop` 這個子 daemon（Q5，第 2 節）。restart 會帶上。
 - 某一項欄位型別不對（**在算 tid、起任務之前就整項驗完**；`name` 不是非空字串、`argv` 不是非空字串陣列、沒 argv 時 `inst` 不是字串、`mounts` 不是物件、`subroot` 不是字串、`allow_stop` 不是 bool、`from_round` 不是整數、`mode` 不認得）：**只跳過那一項**（tasks.json 與 spawn 同一套檢查；probes/chaos B2～B4），其他照起；tasks.json 整份讀不懂當空表。兩種都記在 round.json 與回合總結的 `tasks_error`（probes/selfmod）。
 - 起任務本身失敗（建掛載點、寫 birth.json 丟例外…）也只記那一項的 `tasks_error`，其他項照起；連 aos7-run 都起不來時任務資料夾照樣寫 `exit.json` `{"code": 127, "error"}`。spawn 的 `batch` 裡不是物件、或欄位壞掉的項目只跳過那項（記 `tasks_error`），其他照起、檔照刪（astra-5 F-06）。
@@ -190,7 +194,7 @@ tick 把 round +1、`open: true`，並記下本回合的 `started`、`ctl`、`mo
 
 **抓著 node 目錄做整個動作**（astra-5 F-09）：tick、tock 一開始 `os.open(node, O_RDONLY|O_DIRECTORY)`，之後 `.aos/` 底下的讀寫（action.lock、round.json、rounds.jsonl、任務資料夾、spawn…）都經過 `/proc/self/fd/N/…` 做。動作中途 node 被搬走：寫到新位置；被刪掉：寫入失敗（被刪的資料夾不能再建東西），收手印 `{"gone": true}`，**不會**在舊路徑建出鬼目錄。任務的環境變數、掛載點記錄（birth.json 的 `at`）仍用實際路徑。
 
-**起任務也跟抓著的 node 一致**（astra-6 G-02）：起每個任務、建掛載前，比 node 的字串路徑與抓著的 fd（`samestat`）：已經不是同一個資料夾（中途被搬走、換成指到別處的符號連結）→ **受控失敗**：不建掛載、不起 aos7-run，任務資料夾（經 fd，在新位置）寫 birth.json（帶 `error`）與 `exit.json` `{"code": 127, "error": "node … 在 tick 中途被搬走或換掉…"}`，任務是 ended、不會永遠 born；新位置由 keep 重起（Q4）。還是同一個時：掛載目標落在 node 底下的經 fd 建（之後才搬走也不建回舊 node）；aos7-run 的 cwd 是抓著的 node，第二個參數是任務資料夾的 fd（第 5 節），讀 birth、寫 pid／exit 都經它，不靠舊的字串路徑。tick、tock 收到 SIGTERM 不中斷（把這個動作做完；被一起 kill 的子 daemon 群組裡的 tick／tock 不會寫一半；probes/nest3 N1），SIGKILL 保底。
+**起任務也跟抓著的 node 一致**（astra-6 G-02）：起每個任務、建掛載前，比 node 的字串路徑與抓著的 fd（`samestat`）：已經不是同一個資料夾（中途被搬走、換成指到別處的符號連結）→ **受控失敗**：不建掛載、不起 aos7-run，任務資料夾（經 fd，在新位置）寫 birth.json（帶 `error`）與 `exit.json` `{"code": 127, "error": "node … 在 tick 中途被搬走或換掉…"}`，任務是 ended、不會永遠 born；新位置由 keep 重起（Q4）。還是同一個時：掛載目標落在 node 底下的經 fd 建（之後才搬走也不建回舊 node）；aos7-run 的 cwd 是抓著的 node，第二個參數是任務資料夾的 fd（第 5 節），讀 birth、寫 pid／exit 都經它，不靠舊的字串路徑。**最後交接**（astra-7 H-05）：Popen aos7-run 之前 tick 再比一次 node；aos7-run 起任務之前也比：給任務的 `AOS7_TASK`、`AOS7_NODE`（也是 argv 展開、birth.json 掛載點 `at` 用的同一個字串路徑）現在要跟它抓著的任務資料夾 fd、cwd 是同一個資料夾，不是就**不起任務**、經 fd 寫 `exit.json` `{"code": 127, "error": "AOS7_… 已經不是 runner 抓著的資料夾…"}`（寫到新位置），新位置由 keep 重起。任務起來之後才搬家的（長命任務整個生命期）不追隨，照 Q4 由 daemon 收。tick、tock 收到 SIGTERM 不中斷（把這個動作做完；被一起 kill 的子 daemon 群組裡的 tick／tock 不會寫一半；probes/nest3 N1），SIGKILL 保底。
 
 ## 5. 任務（S-10、S-11、S-16）
 
@@ -203,6 +207,7 @@ tid＝`<name>-r<回合>`，同回合撞名加 `-2`、`-3`（name 裡不是英數
 | `writes.jsonl` | 任務（audit hook） | 開了寫入紀錄才有，見下 |
 | `mount-req/<名字>.json` | 任務 | 執行中加掛的請求（第 4 節） |
 | `mount-done/<名字>.json` | tick | 加掛回條 |
+| `runner.json` | tick | `{"pid","starttime","at"}`：起的 aos7-run 是誰（Popen 之後寫；astra-7 H-06） |
 | `pid.json` | aos7-run | `{"pid","pgid","runner_pid","at"}` |
 | `out.log` | 任務 | stdout＋stderr |
 | `exit.json` | aos7-run | `{"code","at","round"}`；code 負數＝被訊號殺（-15）；`round` 是結束時 node 的回合數。aos7-run 一開始就抓住任務資料夾的 fd，out.log、pid.json、exit.json 都經過它寫：node 搬家就寫到新位置，被刪就不寫回舊路徑（probes/rename N8；第二波：pid.json 以前用 makedirs 寫，任務資料夾剛被刪時會建回來、測試留下 /tmp 殘留）。一開始資料夾就不在，aos7-run 什麼都不做就退出 |
@@ -211,17 +216,19 @@ tid＝`<name>-r<回合>`，同回合撞名加 `-2`、`-3`（name 裡不是英數
 | `ctl-done.json` | tick／tock | ctl.json 搬過來加 `result` |
 | `ended.json` | tock | `{"round": N}`：tock 在第 N 回合記下它結束 |
 
-tick 用 `aos7-run <taskdir> <fd>` 起任務（新 session，tick 不等它）：`<fd>` 是 tick 開好、傳下去的任務資料夾 fd，cwd 是 tick 抓著的 node（astra-6 G-02）；aos7-run 經這個 fd 讀 birth.json、寫 out.log／pid.json／exit.json，不再照 `<taskdir>` 字串重開（人手跑時不給 fd，照 `<taskdir>` 開）。**讀不到 birth.json 也經 fd 寫 `exit.json` `{"code": 127, "error": "讀不到 birth.json"}`**，不留永遠 born 的任務。aos7-run 讀 birth.json，把真正的任務起在**自己的程序群組**，寫 pid.json，等它結束，寫 exit.json。起不來（找不到程式、argv 有非字串或 NUL 等）直接寫 exit.json `{"code": 127, "error": "..."}`（以前 argv 有數字時 aos7-run 當場例外，任務永遠算「剛起」；chaos B4）。
+tick 用 `aos7-run <taskdir> <fd>` 起任務（新 session，tick 不等它）：`<fd>` 是 tick 開好、傳下去的任務資料夾 fd，cwd 是 tick 抓著的 node（astra-6 G-02）；aos7-run 經這個 fd 讀 birth.json、寫 out.log／pid.json／exit.json，不再照 `<taskdir>` 字串重開（人手跑時不給 fd，照 `<taskdir>` 開）。**讀不到 birth.json 也經 fd 寫 `exit.json` `{"code": 127, "error": "讀不到 birth.json"}`**，不留永遠 born 的任務。aos7-run 讀 birth.json，把真正的任務起在**自己的程序群組**，寫 pid.json，等它結束，寫 exit.json。起不來（找不到程式、argv 有非字串或 NUL 等）直接寫 exit.json `{"code": 127, "error": "..."}`（以前 argv 有數字時 aos7-run 當場例外，任務永遠算「剛起」；chaos B4）。**起程序前的任何 I/O 失敗**（例如 `out.log` 是資料夾、開不了）也一樣：stderr 說明、經 fd 寫 exit.json `{"code": 127, "error"}`；連 exit.json 都寫不進去時 stderr 再說一次，由 tock 照 `runner.json` 判 lost（astra-7 H-06）。
+
+**`<fd>` 是內部交接的能力，不是身分約束**（astra-7 H-09，技術選型）：第二參數必須是呼叫者開好、繼承下來的任務資料夾 fd，cwd 也由呼叫者保證是那個 node；給了它，fd 就是權威（`<taskdir>` 字串只拿來跟環境對照）。fd 無效（不是數字、沒開、不是資料夾）時 stderr 說清楚、退出碼 2，**不回退**去寫 `<taskdir>` 字串指的地方（可能已被換掉）。這個入口不是驗證或隔離任務身分的邊界：字串與 fd 指不同任務時照 fd 跑。
 
 任務的環境變數（找到自己的唯一管道）：`AOS7_ROOT`、`AOS7_NODE`（絕對路徑）、`AOS7_NODE_ID`、`AOS7_TASK`（任務資料夾絕對路徑）、`AOS7_TID`；`PATH` 前面加 `bin/`。cwd＝node。
 
-任務狀態判斷：有 exit.json＝結束；有 pid.json 且任務程序或 aos7-run（`runner_pid`）還在＝活；有 pid.json、兩者都不在、又沒 exit.json＝**lost**（tock 替它寫 `exit.json` `{"code": null, "lost": true}`）；只有 birth.json＝剛起（算活）。
+任務狀態判斷：有 exit.json＝結束；有 pid.json 且任務程序或 aos7-run（`runner_pid`）還在＝活；有 pid.json、兩者都不在、又沒 exit.json＝**lost**（tock 替它寫 `exit.json` `{"code": null, "lost": true}`）；沒有 pid.json、`runner.json` 記的 aos7-run 確定已不在（pid 不在／殭屍、或 starttime 不同）＝也是 **lost**（runner 在寫 pid.json 前就死了；astra-7 H-06）；其餘只有 birth.json＝剛起（算活；沒有 runner.json 的、starttime 沒記到的不猜）。
 
 任務自己知道時間的方法：輪詢 `$AOS7_TASK/tock.json`（S-11）。非 Python 任務可用 `aos7-wait-tock [--after N] [--timeout 秒]`：等到就印回合數（逾時退出碼 1；probes/polyglot N6）。tock.json 不是物件（`[1]`、`2`）當沒有、繼續等（astra-5 F-06）。
 
 **只碰給的資料夾**（S-10、S-23）：任務能寫的是自己的 node（**扣掉裡面巢狀的別的 node 與 daemon 根**）加上掛載點的目標。程式碰別的 node 一律用 `lib/aos7_mount.py` 的 `resolver(taskdir)`：把空間裡的路徑換成掛載點下的路徑，沒掛到回 None（不寫）。
 
-**寫入紀錄**（檢查用，只記不擋）：起 daemon 的環境有 `AOS7_AUDIT`（任何非空值）時，aos7-run 起任務時把 `lib/audit_site/` 放進任務的 `PYTHONPATH`（aos7-run 自己不載入，它寫的 pid.json、exit.json 不算任務的寫入；probes/polyglot N7），Python 任務啟動時載入 audit hook，把空間根底下每個寫入動作（開檔寫、rename／replace、remove、mkdir、rmdir、symlink）記一行到 `$AOS7_TASK/writes.jsonl`：`{"op", "path"（實際位置）, "ok", "pid", "via"（經過連結時寫的路徑）}`。`ok`＝實際位置在上面說的範圍內；掛載點的範圍取 birth.json 宣告的 `to`（接空間根再 realpath），不看連結現在指哪（任務自己改指連結不算）；判不過時重讀 birth.json，算進執行中加掛的。帶 `dir_fd` 的 mkdir／rmdir／remove／rename／replace／symlink／link 以那個 fd 指的資料夾為起點；`open` 的 audit 事件不帶 dir_fd，看不到（M-12）。`lib/aos7_audit.py` 的 `scan(root)` 把整個空間的紀錄拼起來挑出 `ok: false` 的。只看得到 Python 程序（problems.md M-3）。
+**寫入紀錄**（檢查用，只記不擋）：起 daemon 的環境有 `AOS7_AUDIT`（任何非空值）時，aos7-run 起任務時把 `lib/audit_site/` 放進任務的 `PYTHONPATH`（aos7-run 自己不載入，它寫的 pid.json、exit.json 不算任務的寫入；probes/polyglot N7），Python 任務啟動時載入 audit hook，把空間根底下每個寫入動作（開檔寫、rename／replace、remove、mkdir、rmdir、symlink）記一行到 `$AOS7_TASK/writes.jsonl`：`{"op", "path"（實際位置）, "ok", "pid", "via"（經過連結時寫的路徑）}`。`ok`＝實際位置在上面說的範圍內；掛載點的範圍取 birth.json 宣告的 `to`（接空間根再 realpath），不看連結現在指哪（任務自己改指連結不算）；判不過時重讀 birth.json，算進執行中加掛的。帶 `dir_fd` 的 mkdir／rmdir／remove／rename／replace／symlink／link 以那個 fd 指的資料夾為起點；`open` 的 audit 事件不帶 dir_fd，看不到（M-12）。`lib/aos7_audit.py` 的 `scan(root)` 把整個空間的紀錄拼起來挑出 `ok: false` 的（壞行跳過、計 `bad_lines`）。hook 寫 writes.jsonl 也先補半行的換行（第 0 節；astra-7 H-03）。只看得到 Python 程序（problems.md M-3）。
 
 ## 6. 任務控制（S-17）
 
@@ -251,6 +258,7 @@ tick 用 `aos7-run <taskdir> <fd>` 起任務（新 session，tick 不等它）�
 - node 不在（同 tick，含動作中途被刪）印 `{"gone": true}`；舊世代印 `{"stale": true}`；round.json 已是 `open: false`（這回合 tock 過了，例如 tick 被打斷）印 `skipped`、不寫第二行總結（probes/nest3 N1）。
 - **同回合已有總結**（astra-5 F-05）：寫總結前看 `rounds.jsonl` 最後 5 行，已有這個 round 的（上一次 tock 寫完總結就被 kill -9 或逾時收掉）就不寫第二行，只把收尾做完：那行總結 `ended` 裡的任務補 `ended.json`（總結之後才結束的不補，留給下一回合報，不會漏）、`alive` 裡還沒收到這回合 tock.json 的補寫，round.json 關上並標 `replayed: true`、`incomplete`（`AOS7_INCOMPLETE`，沒給是 `"tock"`）。stdout 印原總結加 `replayed: true`。所以 rounds.jsonl 每個 round 至多一行；要知道哪回合的收尾是補做的，看 round.json（最近一回合）或 daemon log 的 `replay`。
 - 一個任務的資料夾壞掉（birth.json 不是物件、tock.json 被改成資料夾…）只記在總結的 `errors`（`[{"tid","phase","err"}]`），其他任務照收 tock（astra-4 I-05）。birth.json 讀不到時 name 從 tid 推（`<name>-r<N>[-k]`），keep 不會以為沒有活實例又起一份。
+- timeline.json 設了 `keep_old_rounds`（第 1 節）時，tock 也把 tasks-old 裡 `本回合 − ended 的回合 > keep_old_rounds` 的任務資料夾刪掉，總結多 `purged: [tid...]`（刪不掉的記 `errors` 的 `phase: "purge"`；astra-7 H-08）。沒設不刪。
 - 總結多三欄：`early`（同 tock.json）；`ended` 每項多 `name`，被 kill／restart 收掉的多 `by_ctl: {"op","by"}`（probes/lifecycle N-4）；有的話 `tasks_error`。
 
 ## 8. 小工具（S-01）

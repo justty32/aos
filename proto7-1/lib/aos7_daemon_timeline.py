@@ -16,6 +16,7 @@ from aos7_fs import BIN, env_with_bin, holder_unverified, node_path, now, read_j
 POLL = 0.02
 DEFAULT_INTERVAL_MS = 1000
 ERROR_BACKOFF = 0.5    # 時間線迴圈丟例外後，等多久再接著跑
+RECOVER_BACKOFF_MAX = 8.0   # 沒關的回合恢復一直失敗時，重試間隔（從 ERROR_BACKOFF 加倍）最多到幾秒（astra-7 H-01）
 ACTION_TIMEOUT = 30.0  # tick／tock 一次最多跑幾秒（timeline.json 的 `action_timeout_s` 可改）
 STOP_GRACE = 3.0       # daemon 停機時，正在跑的 tick／tock 最多再等幾秒
 TIMEOUT_RC = -9
@@ -73,7 +74,9 @@ class Timeline(threading.Thread):
         self.gone = False            # node 消失：不再 tock（tock 會把資料夾建回來）
         self.wake = threading.Event()
         self.kick = False            # daemon ctl `wake`：不等滿 interval，馬上開下一回合（probes/event N1）
-        self.check_unclosed = True   # 第一次開回合前，看有沒有上一段留下沒 tock 的回合
+        self.check_unclosed = True   # 開回合前先看有沒有沒 tock 完的回合（第一次、或上一次 tock 沒確認關上；astra-7 H-01）
+        self.recover_fails = 0       # 沒關的回合連續恢復失敗幾次（退避用）
+        self.owe_done = False        # 這段自己開的回合 tock 沒關成：恢復關上後才算 round_done（resume rounds 的倒數）
         self.unverified = None       # 上次記過的「認不出持鎖者」原因（同一個只記一次；astra-6 G-10）
 
     def disk_round(self):
@@ -145,8 +148,19 @@ class Timeline(threading.Thread):
                 self.wake.wait(POLL)
                 continue
             if self.check_unclosed:
+                if not self.close_unclosed():
+                    # 回合還開著（恢復也失敗：持續 I/O 錯、讀回不確定）：不開下一回合、不讓 round 往前跳過沒提交的總結，
+                    # phase=error、last_error 留著，退避後再試（astra-7 H-01）
+                    self.recover_fails += 1
+                    self.note_unclosed(None)
+                    self.phase = "error"
+                    self.wake.wait(min(ERROR_BACKOFF * 2 ** (self.recover_fails - 1), RECOVER_BACKOFF_MAX))
+                    continue
                 self.check_unclosed = False
-                self.close_unclosed()
+                self.recover_fails = 0
+                if self.owe_done:
+                    self.owe_done = False
+                    self.d.round_done(self.node_id)
             t0 = time.monotonic()
             t_end = t0 + self.interval()
             self.kick = False
@@ -192,26 +206,59 @@ class Timeline(threading.Thread):
                        **({"incomplete": True} if tock_cut else {}))
             if tock_cut:
                 self.reap_holder()
+            if self.round_open():
+                # tock 沒把回合關上：逾時被殺、非零退出（讀回確認失敗…）、或印了不確定的結果。馬上補一次（同回合已有總結就只收尾）
                 self.replay_tock()
-            self.d.round_done(self.node_id)   # resume 帶 rounds 的倒數（probes/sched N2）
+            if self.round_open() and not self.done():
+                # 補的也沒關上：下一次 tick 之前先走「沒關的回合」恢復，恢復成功前不開新回合（astra-7 H-01）
+                self.check_unclosed = True
+                self.owe_done = True
+                self.note_unclosed(rc)
+                self.d.log(ev="round-unclosed", node=self.node_id, round=self.round, rc=rc)
+                self.phase = "error"
+                continue
+            self.d.round_done(self.node_id)   # resume 帶 rounds 的倒數（probes/sched N2）；回合確定關上才算
             self.phase = "idle"
             self.sleep_until(t_end)
         if not self.gone:
             self.kill_if_stopping()
 
-    def close_unclosed(self):
-        """round.json 還是 open: true（node 回合中消失又出現、daemon 回合中死掉重開）：先 tock 一次把它關掉，
-        rounds.jsonl 不缺號，總結標 `incomplete: "unclosed"`（probes/chaos B8）。"""
+    def note_unclosed(self, rc):
+        """回合沒關上：last_error 說明（前面是原因，後面接 tock 的 stderr 末段）。"""
+        prev = (self.last_error or {}).get("err") or ""
+        if prev.startswith("第 "):
+            prev = prev.split("；", 1)[-1]
+        self.last_error = {"prog": "tock", "rc": rc if rc is not None else (self.last_error or {}).get("rc"),
+                           "round": self.round, "at": now(),
+                           "err": "第 %s 回合沒關上（tock 失敗或讀回不確定），恢復成功前不開下一回合（已試 %d 次）；%s" % (
+                               self.round, self.recover_fails, prev[-200:])}
+
+    def round_open(self):
+        """round.json 還是 open: true 嗎（node 不在、讀不到、壞掉都當沒開著：交給掃描／tick 的既有路徑）。"""
+        if self.gone:
+            return False
         r = read_json(os.path.join(self.node, ".aos", "round.json"), {})
-        if not (isinstance(r, dict) and r.get("open") is True):
-            return
+        return isinstance(r, dict) and r.get("open") is True
+
+    def close_unclosed(self):
+        """round.json 還是 open: true（node 回合中消失又出現、daemon 回合中死掉重開、上一次 tock 失敗沒關上）：先 tock 一次
+        把它關掉，rounds.jsonl 不缺號，總結標 `incomplete: "unclosed"`（probes/chaos B8）；同回合已有總結的只收尾、不寫第二行。
+        回 True＝回合已關（或本來就沒開）；False＝還開著，呼叫的人不能開下一回合（astra-7 H-01）。"""
+        if not self.round_open():
+            return True
         self.phase = "tock"
         rc, out, err = run_prog("aos7-tock", self.d.root, self.node_id, {"AOS7_EARLY": "0", "AOS7_INCOMPLETE": "unclosed"},
                                 gen=getattr(self.d, "gen", None), timeout=self.action_timeout(), abort=self.stop_overdue)
         self.note_error("tock", rc, err)
+        if rc == TIMEOUT_RC and out is None:
+            self.reap_holder()
         self.d.log(ev="tock", node=self.node_id, round=self.round, rc=rc, ended=(out or {}).get("ended"),
-                   incomplete="unclosed")
+                   incomplete="unclosed", **({"err": err[-500:]} if rc else {}),
+                   **({"replayed": True} if (out or {}).get("replayed") else {}))
+        if (out or {}).get("stale"):
+            return True   # 換了世代：留給 tick 的 stale 路徑停這條線
         self.phase = "idle"
+        return not self.round_open()
 
     def reap_holder(self):
         """動作等 action.lock 逾時：持有者若是舊世代、仍是同一個程序（pid＋啟動時間），SIGKILL 它，
