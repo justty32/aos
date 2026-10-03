@@ -34,6 +34,7 @@
 | N-59 | 壞項目的檢查涵蓋 name／argv 型別，spawn 也適用，毒丸不留 | 已做（第二波） |
 | N-55 | 起程序的測試／示範／探針先收程序、再刪空間 | 已做（astra-5） |
 | N-63 | kill 不能被任務改過的 pid.json 導去打別人 | 已做（第二波） |
+| N-77 | 服務驗得出請求是誰送的（可信執行身分，E-01；只在宣稱付費硬限制時必要） | 沒做，要使用者決定（ledger 探針） |
 
 ## A. 回合與時間
 
@@ -173,6 +174,15 @@
 | N-55 | 建立程序的測試／示範／探針必須**先回收程序，再刪空間**：正常、逾時、assertion、I/O 錯、中斷都一樣 | astra-5 F-11 | `test_agent.RoundsFlag` 用固定 sleep 送 tock：agent 起得慢只看到最後一次，`--rounds 2` 永遠等不滿；5 秒 communicate 逾時後 cleanup 只 rmtree，agent 留著、`AOS7_ROOT` 指向已刪的 /tmp。`demo/play.py` 沒 finally：寫 stop 檔遇 EIO 就拋錯，daemon 留著還把 `.aosd` 建回 | 必要 | S-06（測試工具不能把自己的洩漏當產品結果） | **已做**：`tests/_proc.py` 的 `track`（Popen 成功當下登記；unittest cleanup 後進先出，比 rmtree 先跑；Ctrl-C 時 atexit 補收）／`reap`（terminate → 限時 wait → kill → wait）；CoreCase 改成 cleanup 先收 daemon（SIGTERM 讓它收自己的任務）與 pid.json 的群組、最後才刪空間；test_agent／kernel／infra／demo 的 Popen 全登記；`RoundsFlag` 每送一次 tock 等 state.json 確認。`demo/play.py`、`real.py` 用 finally 收 daemon（SIGTERM 也走 finally）；探針收 SIGTERM 轉 KeyboardInterrupt 讓 `Space` 照樣收，`run_all` 逾時先 SIGTERM 探針 | 技術選型 |
 
 `--rounds N` 只是「處理 N 次通知就走」，不是資源清理機制；收程序靠擁有者（測試、demo、daemon）的 finally 與 PID，不用廣泛的 `pkill -f`。
+
+## J. astra 調查報告二的實驗探針（10-03）
+
+來源是 [astra 調查報告二](research/2026-10-03-other-os-borrow.md) §14 的實驗一、二，做成兩個全離線的探針 [probes/namespace](../probes/namespace/README.md)、[probes/ledger](../probes/ledger/README.md)，daemon／tick 沒改。報告 §13 預測「三個實驗都能不改 daemon／tick 先做」，結果成立：服務卡、epoch、去重、委派帳、未知在途都在任務層做得到。逼出的只有下面兩條，「對應」欄是報告的 E- 編號。
+
+| 編號 | 需求 | 來源 | 證據 | 優先 | 核心 | 現況 | 決定 |
+|---|---|---|---|---|---|---|---|
+| N-77 | 服務要驗得出請求是誰送的（可信執行身分；對應 E-01） | ledger 第 6 步 | Q 的任務拿洩漏的 P grant、在 claim 裡自稱 `p:w-real-r99`：帳本 claim 成、provider 照做、記給 P。請求檔的寄件者都是自報的；mounts 的宣告不受 `mount_allow` 管；寫入紀錄只看得到 Python、是事後的。tick 知道 birth 的 node／tid／mounts，卻沒有交給服務驗的管道 | 必要（只在要宣稱「付費硬限制」時；合作式不需要） | 權限屬之後再說 | **沒做** | **要使用者決定**（權限是核心「之後再說」；做法會牽動 tick／aos7-run 怎麼替任務背書） |
+| N-78 | 活任務換服務時，舊目標上的在途請求要有路收尾（對應 E-03） | namespace 第 3、4 步 | reload 換掉整份 mounts，舊服務上還沒回的 a-job5 新任務就看不到了（任務只能報 unknown、不重送）；要 kernel 自己約定多掛 `model-prev`，拿掉它又得再 reload（kill）一次，因為卸掛不做。兩次 reload，4 個控制步 | 可以 | S-23 | **沒做**（現有基底做得到，只是彆扭） | — |
 
 ## 要使用者決定
 
