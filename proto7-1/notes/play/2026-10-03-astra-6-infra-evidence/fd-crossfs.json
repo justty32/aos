@@ -1,0 +1,18 @@
+{
+  "case": "fd-crossfs",
+  "real_cross_device_test": false,
+  "method": "EXDEV injected; real copytree+rmtree while directory fd held",
+  "errno": 18,
+  "action": {
+    "gone": true
+  },
+  "old_path_recreated": false,
+  "copied_round": null,
+  "write_errno": 2,
+  "seconds": 0.011,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-fd-crossfs-s0axxyb2",
+    "root_exists": false
+  }
+}

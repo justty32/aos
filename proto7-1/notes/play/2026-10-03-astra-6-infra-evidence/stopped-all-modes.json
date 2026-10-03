@@ -1,0 +1,42 @@
+{
+  "case": "stopped-all-modes",
+  "action": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": []
+    },
+    "err": ""
+  },
+  "round": {
+    "round": 1,
+    "open": true,
+    "tick_at": "2026-10-03T19:24:50.472",
+    "tock_at": null,
+    "started": [],
+    "ctl": [
+      {
+        "tid": "old-r1",
+        "op": "restart",
+        "ok": true
+      }
+    ],
+    "mounts": [],
+    "tasks_error": [
+      "spawn one.json：子 daemon（n/sub）已被 probe 在 ? stop（must stay stopped）；刪掉 n/sub/.aosd/stopped.json 就會再起",
+      "spawn restart-old-r1.json：子 daemon（n/sub）已被 probe 在 ? stop（must stay stopped）；刪掉 n/sub/.aosd/stopped.json 就會再起",
+      "each：子 daemon（n/sub）已被 probe 在 ? stop（must stay stopped）；刪掉 n/sub/.aosd/stopped.json 就會再起",
+      "keep：子 daemon（n/sub）已被 probe 在 ? stop（must stay stopped）；刪掉 n/sub/.aosd/stopped.json 就會再起"
+    ]
+  },
+  "task_dirs": [
+    "old-r1"
+  ],
+  "owner": null,
+  "seconds": 0.043,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-stopped-all-modes-or3jpw_g",
+    "root_exists": false
+  }
+}

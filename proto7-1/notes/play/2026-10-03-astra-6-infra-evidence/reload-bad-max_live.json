@@ -1,0 +1,57 @@
+{
+  "case": "reload-bad-max_live",
+  "action": {
+    "round": 2,
+    "started": [
+      "x-r2"
+    ]
+  },
+  "receipt": {
+    "op": "restart",
+    "reload": true,
+    "result": {
+      "ok": true,
+      "msg": "killed; spawn written（reload：照 tasks.json 的 x；argv [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\"] → [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"new\"]）",
+      "at": "2026-10-03T19:14:37.964",
+      "diff": {
+        "argv": {
+          "old": [
+            "/usr/bin/python3",
+            "-c",
+            "import time;time.sleep(60)"
+          ],
+          "new": [
+            "/usr/bin/python3",
+            "-c",
+            "import time;time.sleep(60)",
+            "new"
+          ]
+        }
+      }
+    }
+  },
+  "old_alive": false,
+  "round": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T19:14:37.952",
+    "tock_at": null,
+    "started": [
+      "x-r2"
+    ],
+    "ctl": [
+      {
+        "tid": "x-r1",
+        "op": "restart",
+        "ok": true
+      }
+    ],
+    "mounts": []
+  },
+  "seconds": 0.127,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-reload-bad-max_live-5i78_sj7",
+    "root_exists": false
+  }
+}

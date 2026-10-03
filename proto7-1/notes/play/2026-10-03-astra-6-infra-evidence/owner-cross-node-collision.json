@@ -1,0 +1,38 @@
+{
+  "case": "owner-cross-node-collision",
+  "old_owner": {
+    "node": "n",
+    "tid": "first-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T19:22:24.259"
+  },
+  "new_owner": {
+    "node": "n/inner",
+    "tid": "second-r1",
+    "allow_stop": true,
+    "at": "2026-10-03T19:22:24.341"
+  },
+  "actual_pid_before": 2823591,
+  "actual_pid_after": 2823591,
+  "failed_claimant_exit": {
+    "code": 1,
+    "at": "2026-10-03T19:22:24.390",
+    "round": 1
+  },
+  "receipt": {
+    "op": "stop",
+    "kill": true,
+    "result": {
+      "ok": true,
+      "msg": "stopping with kill；已寫 .aosd/stopped.json，n/inner 不會再起它（刪掉才會）",
+      "at": "2026-10-03T19:22:24.405",
+      "queued_at": "2026-10-03T19:22:24.398"
+    }
+  },
+  "seconds": 0.277,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-owner-cross-node-collision-uv19t55_",
+    "root_exists": false
+  }
+}

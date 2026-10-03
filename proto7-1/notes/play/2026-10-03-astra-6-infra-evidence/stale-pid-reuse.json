@@ -1,0 +1,14 @@
+{
+  "case": "stale-pid-reuse",
+  "pid": 2805156,
+  "real_starttime": 3868570,
+  "reaped": null,
+  "alive": true,
+  "method": "mismatched starttime simulates reused PID; no host PID manipulated",
+  "seconds": 0.012,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-stale-pid-reuse-x4jk54er",
+    "root_exists": false
+  }
+}

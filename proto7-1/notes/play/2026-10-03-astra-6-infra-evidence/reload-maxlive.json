@@ -1,0 +1,44 @@
+{
+  "case": "reload-maxlive",
+  "action": {
+    "round": 3,
+    "started": [
+      "x-r3"
+    ]
+  },
+  "receipt": {
+    "op": "restart",
+    "reload": true,
+    "result": {
+      "ok": true,
+      "msg": "killed; spawn written（reload：照 tasks.json 的 x；argv [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\"] → [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"new\"]）",
+      "at": "2026-10-03T19:14:36.606",
+      "diff": {
+        "argv": {
+          "old": [
+            "/usr/bin/python3",
+            "-c",
+            "import time;time.sleep(60)"
+          ],
+          "new": [
+            "/usr/bin/python3",
+            "-c",
+            "import time;time.sleep(60)",
+            "new"
+          ]
+        }
+      }
+    }
+  },
+  "live": [
+    "x-r2",
+    "x-r3"
+  ],
+  "note": "reload spawn explicitly strips max_live; record contract, not automatically a bug",
+  "seconds": 0.17,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-reload-maxlive-czgnjmhc",
+    "root_exists": false
+  }
+}

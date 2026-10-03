@@ -1,0 +1,57 @@
+{
+  "case": "reload-spawn",
+  "no_named_definition": {
+    "action": {
+      "round": 2,
+      "started": []
+    },
+    "receipt": {
+      "op": "restart",
+      "reload": true,
+      "result": {
+        "ok": false,
+        "msg": "tasks.json 沒有名為 x 的項目；沒執行（沒 kill）。不加 reload 會照出生時的定義重起",
+        "at": "2026-10-03T19:14:36.127"
+      }
+    },
+    "alive": "live"
+  },
+  "definition_added": {
+    "action": {
+      "round": 3,
+      "started": [
+        "x-r3"
+      ]
+    },
+    "receipt": {
+      "op": "restart",
+      "reload": true,
+      "result": {
+        "ok": true,
+        "msg": "killed; spawn written（reload：照 tasks.json 的 x；argv [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\"] → [\"/usr/bin/python3\", \"-c\", \"import time;time.sleep(60)\", \"new\"]）",
+        "at": "2026-10-03T19:14:36.184",
+        "diff": {
+          "argv": {
+            "old": [
+              "/usr/bin/python3",
+              "-c",
+              "import time;time.sleep(60)"
+            ],
+            "new": [
+              "/usr/bin/python3",
+              "-c",
+              "import time;time.sleep(60)",
+              "new"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "seconds": 0.172,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-reload-spawn-6xdqvled",
+    "root_exists": false
+  }
+}

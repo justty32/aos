@@ -1,0 +1,19 @@
+{
+  "case": "child-deletes-mark",
+  "receipt": {
+    "ok": true,
+    "msg": "stopping；已寫 .aosd/stopped.json，n 不會再起它（刪掉才會）",
+    "at": "2026-10-03T19:17:38.569",
+    "queued_at": "2026-10-03T19:17:38.550"
+  },
+  "before_gen": 1,
+  "after_gen": 2,
+  "marker_exists": false,
+  "deletion_by_real_child_task": true,
+  "seconds": 0.486,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-child-deletes-mark-clymki8h",
+    "root_exists": false
+  }
+}

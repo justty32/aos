@@ -1,0 +1,52 @@
+{
+  "case": "nested-owner",
+  "owners": {
+    "middle": {
+      "node": "n",
+      "tid": "child-r1",
+      "allow_stop": true,
+      "at": "2026-10-03T19:17:39.628"
+    },
+    "deep": {
+      "node": "x",
+      "tid": "deep-r1",
+      "allow_stop": false,
+      "at": "2026-10-03T19:17:39.684"
+    }
+  },
+  "deep_stop": {
+    "ok": false,
+    "msg": "這個 daemon 屬於 node x（任務 deep-r1），x 不允許外部 stop；要停請 x 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 x kill 這個任務",
+    "at": "2026-10-03T19:17:40.003",
+    "queued_at": "2026-10-03T19:17:39.989"
+  },
+  "middle_stop": {
+    "ok": true,
+    "msg": "stopping with kill；已寫 .aosd/stopped.json，n 不會再起它（刪掉才會）",
+    "at": "2026-10-03T19:17:40.027",
+    "queued_at": "2026-10-03T19:17:40.009"
+  },
+  "pids": [
+    2806113,
+    2806117,
+    2806123
+  ],
+  "alive_after": [
+    false,
+    false,
+    false
+  ],
+  "middle_marker": {
+    "by": null,
+    "why": null,
+    "at": "2026-10-03T19:17:40.027",
+    "kill": true
+  },
+  "deep_marker": null,
+  "seconds": 0.776,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-nested-owner-3ke3bqxp",
+    "root_exists": false
+  }
+}

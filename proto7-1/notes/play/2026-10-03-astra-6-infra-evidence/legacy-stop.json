@@ -1,0 +1,29 @@
+{
+  "case": "legacy-stop",
+  "cases": [
+    {
+      "case": "fork",
+      "daemon_rc": 0,
+      "stop_ms": 31.334453000454232,
+      "survivors_after_stop": [],
+      "owned_before_stop": [
+        2805461
+      ]
+    },
+    {
+      "case": "forksetsid",
+      "daemon_rc": 0,
+      "stop_ms": 31.306872006098274,
+      "survivors_after_stop": [],
+      "owned_before_stop": [
+        2805483
+      ]
+    }
+  ],
+  "seconds": 1.909,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-legacy-stop-02fqxeh9",
+    "root_exists": false
+  }
+}

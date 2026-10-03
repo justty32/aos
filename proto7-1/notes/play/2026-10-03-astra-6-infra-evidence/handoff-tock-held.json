@@ -1,0 +1,44 @@
+{
+  "case": "handoff-tock-held",
+  "marker": {
+    "pid": 2805855,
+    "path": "/proc/self/fd/3/.aos/round.json",
+    "args": [
+      "/proc/self/fd/3/.aos/.round.json.tmp.2805855",
+      "/proc/self/fd/3/.aos/round.json"
+    ]
+  },
+  "before_resume": {
+    "round": 6,
+    "open": false,
+    "tick_at": "2026-10-03T19:16:24.033",
+    "tock_at": "2026-10-03T19:16:24.062",
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "owner_alive": false,
+  "after_resume": {
+    "round": 6,
+    "open": false,
+    "tick_at": "2026-10-03T19:16:24.033",
+    "tock_at": "2026-10-03T19:16:24.062",
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "handoff_logs": [
+    {
+      "at": "2026-10-03T19:16:23.579",
+      "ev": "stale-holder-kill",
+      "node": ".",
+      "pid": 2805855
+    }
+  ],
+  "seconds": 1.249,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-handoff-tock-held-p34_qkj4",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "case": "legacy-archive",
+  "cases": [
+    {
+      "case": "agent",
+      "root": "/tmp/astra6-legacy-archive-am8qhtjm/astra5-tasks-archive-hh0dzoje",
+      "method": "pause read just before opening selected old pathname; run actual aos7-tock process; resume read",
+      "before": {
+        "state": "act",
+        "round": 2,
+        "steps": 9,
+        "tocks": 0,
+        "plan": null,
+        "pc": 4,
+        "letters": [],
+        "goal": null,
+        "last": "接續前任 worker-r1（它停在 act）",
+        "from": "worker-r1"
+      },
+      "tock": {
+        "round": 3,
+        "tick_at": null,
+        "tock_at": "2026-10-03T19:16:04.014",
+        "started": [],
+        "alive": [
+          "worker-r3"
+        ],
+        "ended": [],
+        "ctl": [],
+        "mounts": [],
+        "early": null,
+        "archived": [
+          "worker-r1"
+        ]
+      },
+      "during": {
+        "state": "act",
+        "round": 2,
+        "steps": 9,
+        "tocks": 0,
+        "plan": null,
+        "pc": 4,
+        "letters": [],
+        "goal": null,
+        "last": "接續前任 worker-r1（它停在 act）",
+        "from": "worker-r1"
+      },
+      "after": {
+        "state": "act",
+        "round": 2,
+        "steps": 9,
+        "tocks": 0,
+        "plan": null,
+        "pc": 4,
+        "letters": [],
+        "goal": null,
+        "last": "接續前任 worker-r1（它停在 act）",
+        "from": "worker-r1"
+      },
+      "barrier_hit": true
+    },
+    {
+      "case": "kernel",
+      "root": "/tmp/astra6-legacy-archive-am8qhtjm/astra5-tasks-archive-wv31a4kj",
+      "method": "pause read just before opening selected old pathname; run actual aos7-tock process; resume read",
+      "before": {
+        "progress": {},
+        "usage": {},
+        "paused": {},
+        "issued": {},
+        "sentinel": "inherited-state",
+        "inherited_from": "worker-r1"
+      },
+      "tock": {
+        "round": 3,
+        "tick_at": null,
+        "tock_at": "2026-10-03T19:16:04.044",
+        "started": [],
+        "alive": [
+          "worker-r3"
+        ],
+        "ended": [],
+        "ctl": [],
+        "mounts": [],
+        "early": null,
+        "archived": [
+          "worker-r1"
+        ]
+      },
+      "during": {
+        "progress": {},
+        "usage": {},
+        "paused": {},
+        "issued": {},
+        "sentinel": "inherited-state",
+        "inherited_from": "worker-r1"
+      },
+      "after": {
+        "progress": {},
+        "usage": {},
+        "paused": {},
+        "issued": {},
+        "sentinel": "inherited-state",
+        "inherited_from": "worker-r1"
+      },
+      "barrier_hit": true
+    },
+    {
+      "case": "usage",
+      "barrier_hit": true,
+      "before": {
+        "exists": true,
+        "mounted": true,
+        "round": 3,
+        "tasks": [
+          {
+            "tid": "worker-r1",
+            "name": "worker",
+            "birth_round": 1,
+            "alive": false,
+            "progress": null,
+            "has_ctl": false
+          },
+          {
+            "tid": "worker-r3",
+            "name": "worker",
+            "birth_round": 3,
+            "alive": true,
+            "progress": null,
+            "has_ctl": false
+          }
+        ],
+        "usage_total": 1234
+      },
+      "during": {
+        "exists": true,
+        "mounted": true,
+        "round": 3,
+        "tasks": [
+          {
+            "tid": "worker-r1",
+            "name": "worker",
+            "birth_round": 1,
+            "alive": false,
+            "progress": null,
+            "has_ctl": false
+          },
+          {
+            "tid": "worker-r3",
+            "name": "worker",
+            "birth_round": 3,
+            "alive": true,
+            "progress": null,
+            "has_ctl": false
+          }
+        ],
+        "usage_total": 1234
+      },
+      "after": {
+        "exists": true,
+        "mounted": true,
+        "round": 3,
+        "tasks": [
+          {
+            "tid": "worker-r3",
+            "name": "worker",
+            "birth_round": 3,
+            "alive": true,
+            "progress": null,
+            "has_ctl": false
+          },
+          {
+            "tid": "worker-r1",
+            "name": "worker",
+            "birth_round": 1,
+            "alive": false,
+            "progress": null,
+            "has_ctl": false
+          }
+        ],
+        "usage_total": 1234
+      }
+    }
+  ],
+  "seconds": 0.117,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-legacy-archive-am8qhtjm",
+    "root_exists": false
+  }
+}

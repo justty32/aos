@@ -1,0 +1,47 @@
+{
+  "case": "allow-stop-types",
+  "action": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": [
+        "spawn-healthy-r1",
+        "healthy-r1"
+      ]
+    },
+    "err": ""
+  },
+  "round": {
+    "round": 1,
+    "open": true,
+    "tick_at": "2026-10-03T19:24:50.411",
+    "tock_at": null,
+    "started": [
+      "spawn-healthy-r1",
+      "healthy-r1"
+    ],
+    "ctl": [],
+    "mounts": [],
+    "tasks_error": [
+      "spawn batch.json：allow_stop 要是 true 或 false，拿到 None",
+      "spawn batch.json：allow_stop 要是 true 或 false，拿到 0",
+      "spawn batch.json：allow_stop 要是 true 或 false，拿到 1",
+      "spawn batch.json：allow_stop 要是 true 或 false，拿到 'true'",
+      "spawn batch.json：allow_stop 要是 true 或 false，拿到 []",
+      "spawn batch.json：allow_stop 要是 true 或 false，拿到 {}",
+      "bad0：allow_stop 要是 true 或 false，拿到 None",
+      "bad1：allow_stop 要是 true 或 false，拿到 0",
+      "bad2：allow_stop 要是 true 或 false，拿到 1",
+      "bad3：allow_stop 要是 true 或 false，拿到 'true'",
+      "bad4：allow_stop 要是 true 或 false，拿到 []",
+      "bad5：allow_stop 要是 true 或 false，拿到 {}"
+    ]
+  },
+  "bad_subroots_created": [],
+  "seconds": 0.061,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-allow-stop-types-telk5azz",
+    "root_exists": false
+  }
+}

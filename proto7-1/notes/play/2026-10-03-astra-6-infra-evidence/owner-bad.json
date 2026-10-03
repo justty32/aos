@@ -1,0 +1,83 @@
+{
+  "case": "owner-bad",
+  "original": {
+    "node": "n",
+    "tid": "child-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T19:17:37.279"
+  },
+  "cases": [
+    {
+      "owner": {},
+      "result": {
+        "ok": false,
+        "msg": "這個 daemon 屬於 node ?（任務 ?），? 不允許外部 stop；要停請 ? 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 ? kill 這個任務",
+        "at": "2026-10-03T19:17:37.348",
+        "queued_at": "2026-10-03T19:17:37.337"
+      }
+    },
+    {
+      "owner": [],
+      "result": {
+        "ok": false,
+        "msg": "這個 daemon 屬於 node ?（任務 ?），? 不允許外部 stop；要停請 ? 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 ? kill 這個任務",
+        "at": "2026-10-03T19:17:37.368",
+        "queued_at": "2026-10-03T19:17:37.358"
+      }
+    },
+    {
+      "owner": null,
+      "result": {
+        "ok": false,
+        "msg": "這個 daemon 屬於 node ?（任務 ?），? 不允許外部 stop；要停請 ? 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 ? kill 這個任務",
+        "at": "2026-10-03T19:17:37.389",
+        "queued_at": "2026-10-03T19:17:37.378"
+      }
+    },
+    {
+      "owner": {
+        "allow_stop": "true"
+      },
+      "result": {
+        "ok": false,
+        "msg": "這個 daemon 屬於 node ?（任務 ?），? 不允許外部 stop；要停請 ? 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 ? kill 這個任務",
+        "at": "2026-10-03T19:17:37.409",
+        "queued_at": "2026-10-03T19:17:37.398"
+      }
+    },
+    {
+      "owner": {
+        "allow_stop": 1
+      },
+      "result": {
+        "ok": false,
+        "msg": "這個 daemon 屬於 node ?（任務 ?），? 不允許外部 stop；要停請 ? 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 ? kill 這個任務",
+        "at": "2026-10-03T19:17:37.429",
+        "queued_at": "2026-10-03T19:17:37.419"
+      }
+    },
+    {
+      "owner": {
+        "allow_stop": true
+      },
+      "result": {
+        "ok": true,
+        "msg": "stopping with kill；已寫 .aosd/stopped.json，? 不會再起它（刪掉才會）",
+        "at": "2026-10-03T19:17:37.450",
+        "queued_at": "2026-10-03T19:17:37.439"
+      }
+    }
+  ],
+  "mark": {
+    "by": null,
+    "why": null,
+    "at": "2026-10-03T19:17:37.450",
+    "kill": true
+  },
+  "seconds": 0.296,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-owner-bad-556azu8h",
+    "root_exists": false
+  }
+}

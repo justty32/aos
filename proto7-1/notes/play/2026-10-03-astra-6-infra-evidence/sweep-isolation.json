@@ -1,0 +1,19 @@
+{
+  "case": "sweep-isolation",
+  "groups": 2,
+  "clean": true,
+  "alive_after": {
+    "owned": false,
+    "nested": true,
+    "foreign": true,
+    "same_node_other_root": false,
+    "node_no_tid": true
+  },
+  "note": "same_node_other_root explicitly supplies mismatching ROOT; Q1 identity is NODE/TID, not a security test",
+  "seconds": 0.101,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-sweep-isolation-c27pmp35",
+    "root_exists": false
+  }
+}

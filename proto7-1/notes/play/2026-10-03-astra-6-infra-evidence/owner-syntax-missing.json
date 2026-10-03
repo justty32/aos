@@ -1,0 +1,39 @@
+{
+  "case": "owner-syntax-missing",
+  "corrupt_receipt": {
+    "ok": false,
+    "msg": "這個 daemon 屬於 node ?（任務 ?），? 不允許外部 stop；要停請 ? 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 ? kill 這個任務",
+    "at": "2026-10-03T19:17:37.640",
+    "queued_at": "2026-10-03T19:17:37.624"
+  },
+  "missing_receipt": {
+    "ok": true,
+    "msg": "stopping with kill",
+    "at": "2026-10-03T19:17:37.660",
+    "queued_at": "2026-10-03T19:17:37.644"
+  },
+  "stopped_marker_exists": false,
+  "later_gen": {
+    "gen": 2,
+    "pid": 2806033,
+    "at": "2026-10-03T19:17:37.752"
+  },
+  "later_status": {
+    "pid": 2806033,
+    "root": "/tmp/astra6-owner-syntax-missing-g0zqj225/n/sub",
+    "at": "2026-10-03T19:17:38.075",
+    "poll_s": 0.02,
+    "gen": 2,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {}
+  },
+  "seconds": 0.634,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-owner-syntax-missing-g0zqj225",
+    "root_exists": false
+  }
+}

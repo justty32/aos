@@ -1,0 +1,33 @@
+{
+  "case": "fd-symlink-empty",
+  "hook": {
+    "pid": 2806522,
+    "path": "/proc/self/fd/3/.aos/round.json",
+    "args": [
+      "/proc/self/fd/3/.aos/.round.json.tmp.2806522",
+      "/proc/self/fd/3/.aos/round.json"
+    ]
+  },
+  "rc": 0,
+  "moved_round": {
+    "round": 1,
+    "open": true,
+    "tick_at": "2026-10-03T19:19:20.831",
+    "tock_at": null,
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "old_path_exists": true,
+  "old_path_symlink": true,
+  "target_round": null,
+  "target_sentinel": {
+    "unchanged": true
+  },
+  "seconds": 0.201,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-fd-symlink-empty-0vodtpnj",
+    "root_exists": false
+  }
+}

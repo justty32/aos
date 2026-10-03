@@ -1,0 +1,68 @@
+{
+  "case": "replay-same-round",
+  "summaries": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T19:16:24.156",
+      "tock_at": "2026-10-03T19:16:24.202",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    }
+  ],
+  "round": {
+    "round": 1,
+    "open": false,
+    "tick_at": "2026-10-03T19:16:24.156",
+    "tock_at": "2026-10-03T19:16:24.202",
+    "started": [
+      "one-r1"
+    ],
+    "ctl": [],
+    "mounts": [],
+    "replayed": true,
+    "incomplete": "tock"
+  },
+  "replay_logs": [],
+  "again": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T19:16:24.156",
+      "tock_at": "2026-10-03T19:16:24.202",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null,
+      "replayed": true
+    },
+    "err": ""
+  },
+  "seconds": 0.109,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-replay-same-round-b8kr9ux9",
+    "root_exists": false
+  }
+}

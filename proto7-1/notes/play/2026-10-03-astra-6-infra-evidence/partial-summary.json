@@ -1,0 +1,63 @@
+{
+  "case": "partial-summary",
+  "injection": "persist first 24 JSON characters, SIGSTOP, controller SIGKILL; models partial regular-file append, not atomic full append",
+  "prefix": "{\"round\": 1, \"tick_at\": ",
+  "retry": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T19:23:54.125",
+      "tock_at": "2026-10-03T19:23:54.206",
+      "started": [
+        "one-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "one-r1",
+          "name": "one",
+          "code": 0
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    },
+    "err": ""
+  },
+  "raw_after_retry": "{\"round\": 1, \"tick_at\": {\"round\": 1, \"tick_at\": \"2026-10-03T19:23:54.125\", \"tock_at\": \"2026-10-03T19:23:54.206\", \"started\": [\"one-r1\"], \"alive\": [], \"ended\": [{\"tid\": \"one-r1\", \"name\": \"one\", \"code\": 0}], \"ctl\": [], \"mounts\": [], \"early\": null}\n",
+  "valid_rows_after_retry": [],
+  "round_after_retry": {
+    "round": 1,
+    "open": false,
+    "tick_at": "2026-10-03T19:23:54.125",
+    "tock_at": "2026-10-03T19:23:54.206",
+    "started": [
+      "one-r1"
+    ],
+    "ctl": [],
+    "mounts": []
+  },
+  "ended_mark": {
+    "round": 1
+  },
+  "later_valid_rows": [
+    {
+      "round": 2,
+      "tick_at": "2026-10-03T19:23:54.234",
+      "tock_at": "2026-10-03T19:23:54.260",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    }
+  ],
+  "seconds": 0.172,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-partial-summary-gpx_1_pn",
+    "root_exists": false
+  }
+}

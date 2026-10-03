@@ -1,0 +1,13 @@
+{
+  "case": "ctl-budget",
+  "wake_count": 150,
+  "stop_receipt_from_launch_ms": 40.9,
+  "rc": 0,
+  "ctl_done": 151,
+  "seconds": 0.086,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-ctl-budget-xdko7opm",
+    "root_exists": false
+  }
+}

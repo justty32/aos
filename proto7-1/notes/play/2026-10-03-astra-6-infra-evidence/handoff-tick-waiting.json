@@ -1,0 +1,37 @@
+{
+  "case": "handoff-tick-waiting",
+  "marker": {
+    "pid": 2829710,
+    "path": "<_io.TextIOWrapper name='/proc/self/fd/3/.aos/action.lock' mode='a' encoding='UTF-8'>",
+    "args": [
+      "<_io.TextIOWrapper name='/proc/self/fd/3/.aos/action.lock' mode='a' encoding='UTF-8'>",
+      "2"
+    ]
+  },
+  "before_resume": {
+    "round": 12,
+    "open": true,
+    "tick_at": "2026-10-03T19:33:51.747",
+    "tock_at": null,
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "owner_alive": true,
+  "after_resume": {
+    "round": 12,
+    "open": true,
+    "tick_at": "2026-10-03T19:33:51.747",
+    "tock_at": null,
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "handoff_logs": [],
+  "seconds": 1.263,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra6-handoff-tick-waiting-h6ww4bdg",
+    "root_exists": false
+  }
+}
