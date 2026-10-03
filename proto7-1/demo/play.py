@@ -222,7 +222,7 @@ def checks(root, left):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--root", help="空間根（預設開一個暫存資料夾）；會先清空")
+    ap.add_argument("--root", help="空間根（預設開一個暫存資料夾，全 OK 就刪掉）；會先清空，跑完留著")
     ap.add_argument("--seconds", type=float, default=8.0)
     ap.add_argument("--quiet", action="store_true", help="只印檢查結果")
     a = ap.parse_args()
@@ -241,7 +241,13 @@ def main():
         print("  [%s] %s" % ("OK" if ok else "--", text))
     if left:
         print("  殘留程序：%s（已 SIGKILL）" % left)
-    return 0 if all(ok for _, ok in res) else 1
+    good = all(ok for _, ok in res)
+    if not a.root:   # 自己開的暫存根：全 OK 就清掉；有失敗留著給人看
+        if good:
+            shutil.rmtree(root, ignore_errors=True)
+        else:
+            print("  有檢查沒過，空間根留著：%s" % root)
+    return 0 if good else 1
 
 
 if __name__ == "__main__":

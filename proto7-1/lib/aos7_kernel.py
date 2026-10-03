@@ -86,12 +86,40 @@ def ask_mounts(env, cfg):
             print("aos7-kernel: 加掛 %s：%s" % (path, st), flush=True)
 
 
+ROSTER = "roster.json"
+
+
+def roster_of(env, cfg):
+    """成員名冊（problems-real.md R-2，使用者選 (b)）：kernel.json 的 members，各帶 node id、收件路徑、角色一句
+    （kernel.json 的 `roles`：{成員相對路徑: "一句"}，沒寫就空字串）。"""
+    roles = cfg.get("roles") if isinstance(cfg.get("roles"), dict) else {}
+    out = []
+    for rel in cfg.get("members") or []:
+        if isinstance(rel, str):
+            mid = fs.join_id(env["node_id"], rel)
+            out.append({"node": mid, "inbox": mid + "/inbox", "role": str(roles.get(rel, ""))})
+    return {"by": env["node_id"], "members": out}
+
+
+def write_rosters(env, cfg, resolve):
+    """把名冊寫進每個成員自己的 `.aos/roster.json`（經過 kernel 已有的 `.aos` 掛載點）；內容沒變就不寫。"""
+    ros = roster_of(env, cfg)
+    for m in ros["members"]:
+        aos = fs.aos_dir(env["node"]) if m["node"] == env["node_id"] else resolve(m["node"] + "/.aos")
+        if aos is None:
+            continue
+        path = os.path.join(aos, ROSTER)
+        if fs.read_json(path) != ros:
+            fs.write_json(path, ros)
+
+
 def one_round(env, rnd):
     """收到第 rnd 回合的 tock：快照 → 規則 → 寫控制檔、decisions.jsonl、kernel-state.json。"""
     cfg = load_config(env["node"])
     state = load_state(env)
     ask_mounts(env, cfg)
     resolve = aos7_mount.resolver(env["task"])
+    write_rosters(env, cfg, resolve)
     snap = snapshot(env["root"], env["node_id"], env["tid"], cfg, rnd, resolve)
     decisions, new = run_rules(cfg, state, snap)
     for i, d in enumerate(decisions):

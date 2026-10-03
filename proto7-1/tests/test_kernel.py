@@ -136,6 +136,75 @@ class RuleTest(unittest.TestCase):
         self.assertEqual([(x["target"], x["op"]) for x in ds], [("team/agents/bob", "resume")])
         self.assertEqual(st["usage"]["team/agents/bob"]["acc"], 0)
 
+    def test_removed_member_still_resumed(self):
+        """astra-2 二-7：kernel 自己 pause 的，對方被移出 members 也照樣到期 resume。"""
+        d = self.w.task("team/agents/bob", "agent-r1")
+        fs.write_json(os.path.join(d, "usage.json"), {"tokens": 0})
+        ds, st = self.step({}, 1)
+        fs.write_json(os.path.join(d, "usage.json"), {"tokens": 500})
+        ds, st = self.step(st, 2)
+        self.assertEqual([(x["target"], x["op"]) for x in ds], [("team/agents/bob", "pause")])
+        self.cfg["members"] = ["agents/amy"]
+        ds, st = self.step(st, 3)
+        self.assertEqual(ds, [])
+        ds, st = self.step(st, 4)
+        self.assertEqual([(x["target"], x["op"]) for x in ds], [("team/agents/bob", "resume")])
+        self.assertEqual(st["paused"], {})
+
+    def test_llm_wait_is_not_stuck(self):
+        """R-3：progress 寫著 llm_since（在等 LLM）不算卡住；另設 llm_stuck_rounds 才管。"""
+        d = self.w.task("team/agents/amy", "agent-r1")
+        fs.write_json(os.path.join(d, "progress.json"), {"steps": 5, "state": "think", "llm_since": "t0"})
+        st = {}
+        for i in range(1, 8):
+            self.w.set_round("team/agents/amy", i)
+            ds, st = self.step(st, i)
+            self.assertEqual(ds, [])
+        self.cfg["llm_stuck_rounds"] = 10
+        got = []
+        for i in range(8, 13):
+            self.w.set_round("team/agents/amy", i)
+            ds, st = self.step(st, i)
+            got += ds
+        ds = got
+        self.assertEqual([(x["target"], x["op"]) for x in ds], [("team/agents/amy:agent-r1", "restart")])
+        self.assertIn("等 LLM", ds[0]["why"])
+
+    def test_cap_pause_waits_for_config_change(self):
+        """R-4：用量總和超過 cap_tokens → pause，冷卻不會 resume；人調高 cap_tokens 後才 resume。"""
+        self.cfg.update(budget_tokens=10 ** 9, cap_tokens=300)
+        d = self.w.task("team/agents/bob", "agent-r1")
+        fs.write_json(os.path.join(d, "usage.json"), {"tokens": 100})
+        ds, st = self.step({}, 1)
+        self.assertEqual(ds, [])
+        fs.write_json(os.path.join(d, "usage.json"), {"tokens": 400})
+        ds, st = self.step(st, 2)
+        self.assertEqual([(x["rule"], x["target"], x["op"]) for x in ds], [("cap", "team/agents/bob", "pause")])
+        self.assertIn("要人改", ds[0]["why"])
+        for i in range(3, 10):
+            ds, st = self.step(st, i)
+            self.assertEqual(ds, [])
+        self.cfg["cap_tokens"] = 1000
+        ds, st = self.step(st, 10)
+        self.assertEqual([(x["rule"], x["op"]) for x in ds], [("cap", "resume")])
+
+    def test_roster_written_to_members(self):
+        """R-2 (b)：kernel 把成員名冊寫進每個成員的 .aos/roster.json（經過掛載點），沒變就不重寫。"""
+        import aos7_kernel
+        self.cfg["roles"] = {"agents/amy": "寫程式"}
+        env = {"node_id": "team", "node": fs.node_path(self.w.root, "team"), "tid": "kernel-r1"}
+        aos7_kernel.write_rosters(env, self.cfg, aos7_mount.resolver(self.kdir))
+        for who in ("amy", "bob"):
+            r = fs.read_json(os.path.join(self.w.root, "team/agents", who, ".aos", "roster.json"))
+            self.assertEqual(r["members"], [
+                {"node": "team/agents/amy", "inbox": "team/agents/amy/inbox", "role": "寫程式"},
+                {"node": "team/agents/bob", "inbox": "team/agents/bob/inbox", "role": ""}])
+        p = os.path.join(self.w.root, "team/agents/amy/.aos/roster.json")
+        m = os.stat(p).st_mtime_ns
+        time.sleep(0.01)
+        aos7_kernel.write_rosters(env, self.cfg, aos7_mount.resolver(self.kdir))
+        self.assertEqual(os.stat(p).st_mtime_ns, m)
+
     def test_budget_skips_own_node(self):
         self.cfg["members"] = ["."]
         d = self.w.task("team", "agent-r1")
@@ -245,7 +314,7 @@ class IntegrationTest(unittest.TestCase):
         cfg["members"].append("agents/carol")
         fs.write_json(os.path.join(self.node, "kernel.json"), cfg)
         self.tock(1)
-        self.assertTrue(os.path.exists(os.path.join(self.kdir, "mount-req", "team_agents_carol__aos.json")))
+        self.assertTrue(os.path.exists(os.path.join(self.kdir, "mount-req", aos7_mount.req_name("team/agents/carol/.aos") + ".json")))
         res = aos7_mount.serve(self.w.root, self.kdir, None)
         self.assertEqual([(r["path"], r["ok"]) for r in res], [("team/agents/carol/.aos", True)])
         snap = snapshot(self.w.root, "team", "kernel-r1", cfg, 2, aos7_mount.resolver(self.kdir))

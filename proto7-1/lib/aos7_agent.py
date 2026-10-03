@@ -82,7 +82,11 @@ def do_think(ctx, st):
     cfg = load_cfg(ctx)
     mem = tools.memory(ctx["node"], cfg["memory"], skip=st["letters"]) if cfg.get("memory") else None
     rnd_before = (read_json(os.path.join(ctx["node"], ".aos", "round.json"), {}) or {}).get("round")
-    res = aos7_llm.think(cfg, st["goal"], letters, ctx["node_id"], mem)
+    # 等 LLM 期間收不到 tock、progress 不會更新：先寫明「在等 LLM，從何時起」，kernel 就不當卡住（R-3）
+    write_json(os.path.join(ctx["task"], "progress.json"),
+               {"round": st["round"], "state": "think", "steps": st["steps"], "llm_since": now()})
+    roster = read_json(os.path.join(ctx["node"], ".aos", "roster.json"))  # kernel 寫的成員名冊（R-2），有就帶上
+    res = aos7_llm.think(cfg, st["goal"], letters, ctx["node_id"], mem, roster if isinstance(roster, dict) else None)
     add_usage(ctx, res["tokens"], res.get("calls", 1))
     if "ms" in res:  # 真模型：每次呼叫記一行（花多久、跨了幾個回合、原文），事後看得懂它想了什麼
         rnd_now = (read_json(os.path.join(ctx["node"], ".aos", "round.json"), {}) or {}).get("round")
@@ -101,7 +105,10 @@ def do_act(ctx, st):
     """從 pc 接著跑 plan；每做完一個存一次檔。最後搬信、用掉 goal。"""
     plan = st["plan"] or []
     while st["pc"] < len(plan):
-        r = tools.do_tool(ctx, plan[st["pc"]], st["round"])
+        try:
+            r = tools.do_tool(ctx, plan[st["pc"]], st["round"])
+        except Exception as e:  # 工具出錯算這一步失敗，agent 不死（astra-2 二-5）
+            r = "工具失敗：%s: %s" % (type(e).__name__, e)
         st["pc"] += 1
         st["last"] = r
         save(ctx, st)

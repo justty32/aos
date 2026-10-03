@@ -99,6 +99,67 @@ class TestMountRequest(CoreCase):
                          ["box", "c_inbox"])
 
 
+class TestMountRequestEdges(CoreCase):
+    """astra-2 第二輪的 bug：壞請求、自動名稱碰撞、沿連結跑出空間根。"""
+
+    def fake_task(self, mounts=None):
+        td = os.path.join(self.root, "t")
+        write_json(os.path.join(td, "birth.json"), {"mounts": aos7_mount.make(self.root, td, mounts or {})})
+        return td
+
+    def test_bad_name_gets_receipt_and_rest_served(self):
+        """二-1：name 是非空陣列也寫失敗回條；同一輪後面的請求照樣處理，tick 不出錯。"""
+        node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": ["python3", "-c", "import time; time.sleep(60)"]}])
+        self.tick()
+        td = self.tdir(node, "s-r1")
+        self.wait_for(lambda: self.state(node, "s-r1") == "live")
+        write_json(os.path.join(td, "mount-req", "01-good.json"), {"name": "g", "path": "b/inbox"})
+        write_json(os.path.join(td, "mount-req", "02-bad.json"), {"name": ["bad"], "path": "b/inbox"})
+        write_json(os.path.join(td, "mount-req", "03-later.json"), {"name": "l", "path": "c/inbox"})
+        write_json(os.path.join(td, "mount-req", "04-num.json"), {"name": "n", "path": 3})
+        self.tick()
+        res = {f: read_json(os.path.join(td, "mount-done", f))["result"]["ok"] for f in os.listdir(os.path.join(td, "mount-done"))}
+        self.assertEqual(res, {"01-good.json": True, "02-bad.json": False, "03-later.json": True, "04-num.json": False})
+        self.assertEqual(len(read_json(os.path.join(node, ".aos", "round.json"))["mounts"]), 4)
+        self.assertEqual(self.tick()["round"], 3)
+
+    def test_auto_names_do_not_collide(self):
+        """二-2：`a/b` 與 `a_b` 推出不同名字，兩個都掛得上。"""
+        self.assertEqual(aos7_mount.req_name("team/agents/bob/inbox"), "team_agents_bob_inbox")
+        self.assertNotEqual(aos7_mount.req_name("a/b/inbox"), aos7_mount.req_name("a_b/inbox"))
+        self.assertNotEqual(aos7_mount.req_name(".aosd"), aos7_mount.req_name("aosd"))
+        td = self.fake_task()
+        for p in ("a/b/inbox", "a_b/inbox"):
+            self.assertEqual(aos7_mount.request(td, p), "pending")
+        self.assertEqual([r["ok"] for r in aos7_mount.serve(self.root, td, None)], [True, True])
+        r = aos7_mount.resolver(td)
+        self.assertNotEqual(os.path.realpath(r("a/b/inbox")), os.path.realpath(r("a_b/inbox")))
+
+    def test_allow_and_make_follow_symlinks(self):
+        """二-3：mount_allow 比 realpath；沿連結跑出空間根的不給、也不在外面建資料夾。"""
+        outside = os.path.realpath(self.mkdtemp_outside())
+        os.makedirs(os.path.join(self.root, "c"))
+        os.makedirs(os.path.join(self.root, "allowed", "real"))
+        os.symlink("../c", os.path.join(self.root, "allowed", "inside"))
+        os.symlink(outside, os.path.join(self.root, "allowed", "outside"))
+        td = self.fake_task()
+        for i, p in enumerate(("allowed/real", "allowed/inside", "allowed/outside/new-by-tick")):
+            write_json(os.path.join(td, "mount-req", "%d.json" % i), {"name": "m%d" % i, "path": p})
+        self.assertEqual([r["ok"] for r in aos7_mount.serve(self.root, td, ["allowed"])], [True, False, False])
+        self.assertEqual(os.listdir(outside), [])
+        td2 = os.path.join(self.root, "t2")
+        m = aos7_mount.make(self.root, td2, {"o": "allowed/outside/x"})   # tasks.json 的 mounts 宣告也一樣
+        self.assertIn("error", m["o"])
+        self.assertEqual(os.listdir(outside), [])
+
+    def mkdtemp_outside(self):
+        import shutil
+        import tempfile
+        d = tempfile.mkdtemp(prefix="aos7-outside-")
+        self.addCleanup(shutil.rmtree, d, True)
+        return d
+
+
 class TestAudit(CoreCase):
     """AOS7_AUDIT：任務的寫入記在 writes.jsonl；寫出自己的 node 與掛載點的會被標出來（只記不擋）。"""
 
@@ -128,6 +189,28 @@ class TestAudit(CoreCase):
         self.assertIn('"via"', recs)                       # 經過掛載點寫的，記得寫的時候用的路徑
         self.assertGreaterEqual(au["tasks"], 4)
 
+
+    def test_audit_uses_dir_fd_and_declared_target(self):
+        """二-4：dir_fd 的相對路徑記成實際位置；任務自己把掛載點改指別處，寫入不算 ok。"""
+        self.mknode("b")
+        self.mknode("c")
+        b = os.path.join(self.root, "b")
+        dirfd = ("import os, sys; fd = os.open(sys.argv[1], os.O_RDONLY); "
+                 "os.mkdir('dd', dir_fd=fd); os.rmdir('dd', dir_fd=fd)")
+        retarget = ("import os, sys; m = os.path.join(os.environ['AOS7_TASK'], 'mnt', 'box'); os.remove(m); "
+                    "os.symlink(sys.argv[1], m); open(os.path.join(m, 'retarget.txt'), 'w').write('x')")
+        node = self.mknode("a", [
+            {"name": "fd", "argv": ["python3", "-c", dirfd, b]},
+            {"name": "re", "argv": ["python3", "-c", retarget, os.path.join(self.root, "c")], "mounts": {"box": "b"}},
+        ])
+        self.tick_audit("a")
+        for t in ("fd-r1", "re-r1"):
+            self.wait_for(lambda t=t: self.state(node, t) == "ended")
+        self.assertEqual(read_json(os.path.join(self.tdir(node, "re-r1"), "exit.json"))["code"], 0)
+        bad = sorted((os.path.basename(d), r["op"], os.path.relpath(r["path"], self.root))
+                     for d, r in aos7_audit.scan(self.root)["bad"])
+        self.assertEqual(bad, [("fd-r1", "os.mkdir", "b/dd"), ("fd-r1", "os.rmdir", "b/dd"),
+                               ("re-r1", "open", "c/retarget.txt")])
 
 if __name__ == "__main__":
     unittest.main()
