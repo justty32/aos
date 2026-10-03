@@ -32,8 +32,9 @@ kernel／agent 在這裡**只是探針**：刻意寫得彼此不同，用來逼�
 | [selfprog](selfprog/README.md) | agent 執行中改自己的 tasks.json、開子時間線、改 interval、wake | result 3/3 對、「每檔只算一次」0/3（一次性工作寫進 tasks.json）；子 node 的 cwd、掛載點位置、tasks-old 搬太快。edit_json 用不上也沒出事。真模型 82 次 |
 | [llmteam](llmteam/README.md) | 路一（任務開子 daemon）＋路二（外部 LLM 寫子 daemon 控制檔） | 子 daemon 路徑基準兩個模型都寫錯→crash loop（已補 `$AOS7_SUBROOT`）；subroot 跑出 node（已擋）；路二 stop 被路一 keep 0.2 秒內起回來（Q5，已做：stop 要擁有者 `allow_stop`，允許時留 stopped.json 擋住 keep）。真模型 115 次 |
 | [chaos](chaos/README.md) | 不用 LLM：高頻亂寫控制面＋10 個單一壞輸入 | 不變式全守住；B1～B10 全重現後全修（daemon 被一個壞 round.json 弄退出、FIFO 卡死主迴圈、毒丸 spawn、kill 被偽造的 pid.json 導去打別人…），現在 B 段是 check |
-| **astra 調查報告二 §14 的實驗**（離線、mock 服務） | | |
+| **astra 調查報告二 §14 的實驗**（離線、mock 服務；hsched 另有真模型比較） | | |
 | [namespace](namespace/README.md) | 實驗一：同一份 reviewer 只認 `mnt/mail`／`model`／`context`，兩個專案掛不同服務；服務 kill 換 epoch、reload 換服務、介面不合 | 現有基底足夠；在途請求不重送、可讀拒絕都做得到。換服務時舊服務的在途請求要 kernel 多掛 `model-prev`、再 reload 兩次（N-78，E-03） |
 | [ledger](ledger/README.md) | 實驗二：帳本是 keep 任務、唯一寫入者；split 委派、搶最後額度、同一 grant 給兩個 worker、三個切點 kill、未知在途 | §11.2 守恆式每步由獨立重算器驗過，全成立；帳本、provider 都分不出請求是誰寫的：洩漏的 grant 被 Q 的任務冒名花掉（N-77，E-01，要使用者決定） |
+| [hsched](hsched/README.md) | 實驗三：控制 node（確定性 kernel＋驗證器）、共用閘門、兩專案各 3 個 mock worker；同一 trace 比 A stride／B 固定窗口／C LLM 直接挑／D LLM 提政策＋kernel 執行 | 離線：預錄的晚三回合、壞 JSON、超父額、舊 epoch、pause 自己全被拒，保底下一次決策接手，越權生效 0，P 擴到 10 個 worker 在途仍 ≤3。真模型（223 次呼叫）：D 未達採用門檻（p95 只 1/6 次降 ≥20%，同成本合格反少 6～9%），手調一次的確定性規則全面勝出；C 最差。保留 A；現有基底足夠 |
 
 寫新探針：照 [probelib.py](probelib.py) 開頭的範例。
