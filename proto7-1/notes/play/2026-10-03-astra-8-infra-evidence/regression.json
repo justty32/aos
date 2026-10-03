@@ -1,0 +1,870 @@
+{
+  "count": 72,
+  "ok": true,
+  "tests": [
+    {
+      "test": "test_astra5.F01StopSweep.test_fork_same_group",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.165
+    },
+    {
+      "test": "test_astra5.F01StopSweep.test_fork_setsid",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.144
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_agent_state",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.025
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_kernel_state",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.025
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_usage_total",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.024
+    },
+    {
+      "test": "test_astra5.F02ArchiveRace.test_vanished_is_unknown_not_zero",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_eio_timeline_stat",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.322
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_estale_scandir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.322
+    },
+    {
+      "test": "test_astra5.F03ScanError.test_really_gone_still_killed",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.041
+    },
+    {
+      "test": "test_astra5.F04StaleHolder.test_new_daemon_reaps_old_holder",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.586
+    },
+    {
+      "test": "test_astra5.F04StaleHolder.test_not_same_process_not_killed",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.002
+    },
+    {
+      "test": "test_astra5.F05SummaryOnce.test_same_round_replay",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.164
+    },
+    {
+      "test": "test_astra5.F05SummaryOnce.test_timeout_after_summary",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.71
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_ctl_receipt_dir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.098
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_interval_huge_int",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_numeric_name_first",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.139
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_poison_batch",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.024
+    },
+    {
+      "test": "test_astra5.F06Isolation.test_wait_tock_non_object",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.516
+    },
+    {
+      "test": "test_astra5.F07MountReceipt.test_receipt_dir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.002
+    },
+    {
+      "test": "test_astra5.F08SubrootFirstScan.test_three_cold_starts",
+      "ok": true,
+      "errors": [],
+      "seconds": 1.292
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tick_delete",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.043
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tick_rename",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.043
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tock_delete",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.043
+    },
+    {
+      "test": "test_astra5.F09GoneMidAction.test_tock_rename",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.043
+    },
+    {
+      "test": "test_astra5.F10CtlFlood.test_budget_per_loop",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.018
+    },
+    {
+      "test": "test_astra5.F10CtlFlood.test_status_moves_during_flood",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.405
+    },
+    {
+      "test": "test_astra5.F11ProcHelper.test_cleanup_order",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra5.F11ProcHelper.test_reap_stubborn",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.307
+    },
+    {
+      "test": "test_astra6.G01CtlReceiptPoison.test_poisoned_receipt_does_not_block_stop",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.065
+    },
+    {
+      "test": "test_astra6.G01CtlReceiptPoison.test_unmovable_failure_goes_last",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra6.G02MovedDuringStart.test_rename_with_mount",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.086
+    },
+    {
+      "test": "test_astra6.G02MovedDuringStart.test_runner_follows_held_taskdir",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.063
+    },
+    {
+      "test": "test_astra6.G02MovedDuringStart.test_symlink_swap",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.087
+    },
+    {
+      "test": "test_astra6.G03DaemonRootMoved.test_root_rename",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.124
+    },
+    {
+      "test": "test_astra6.G04OwnerClaim.test_real_second_daemon",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.296
+    },
+    {
+      "test": "test_astra6.G04OwnerClaim.test_running_subroot_keeps_owner",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.118
+    },
+    {
+      "test": "test_astra6.G05ReloadValidates.test_from_round",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.092
+    },
+    {
+      "test": "test_astra6.G05ReloadValidates.test_max_live",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.091
+    },
+    {
+      "test": "test_astra6.G05ReloadValidates.test_mode",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.09
+    },
+    {
+      "test": "test_astra6.G06ReloadDynMount.test_promote_then_remove",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.234
+    },
+    {
+      "test": "test_astra6.G06ReloadDynMount.test_undeclared_dyn_still_carried",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.153
+    },
+    {
+      "test": "test_astra6.G07AtexitKeepsOptions.test_interpreter_exit",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.164
+    },
+    {
+      "test": "test_astra6.G08TornSummary.test_read_jsonl_skips_bad_line",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra6.G08TornSummary.test_torn_tail_then_tock",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.115
+    },
+    {
+      "test": "test_astra6.G09SweepIdentity.test_node_tid_not_root",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.118
+    },
+    {
+      "test": "test_astra6.G10UnverifiedHolder.test_unverified_then_repaired",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.546
+    },
+    {
+      "test": "test_owner_reload.TestOwnerDaemon.test_stop_needs_owner_permission",
+      "ok": true,
+      "errors": [],
+      "seconds": 1.5
+    },
+    {
+      "test": "test_owner_reload.TestOwnerDaemon.test_top_level_stop_and_manual_start_clears_mark",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.097
+    },
+    {
+      "test": "test_owner_reload.TestOwnerTick.test_allow_stop_type_and_restart_carries_it",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.151
+    },
+    {
+      "test": "test_owner_reload.TestOwnerTick.test_owner_json_and_stopped_blocks_keep_and_spawn",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.193
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_ctl_reload_only_for_restart",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.024
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_plain_restart_still_uses_birth",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.127
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_carries_dynamic_mounts",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.28
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_refused_without_kill",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.232
+    },
+    {
+      "test": "test_owner_reload.TestRestartReload.test_reload_takes_new_definition",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.127
+    },
+    {
+      "test": "test_astra7.H01UnclosedRoundRecovery.test_persistent_failure_holds_round",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.864
+    },
+    {
+      "test": "test_astra7.H01UnclosedRoundRecovery.test_readback_failure_not_reported_twice",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.414
+    },
+    {
+      "test": "test_astra7.H01UnclosedRoundRecovery.test_torn_append_round_not_lost",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.422
+    },
+    {
+      "test": "test_astra7.H02SubrootClaim.test_loser_of_lock_race_writes_nothing",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.188
+    },
+    {
+      "test": "test_astra7.H02SubrootClaim.test_same_tick_second_claim_refused",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.083
+    },
+    {
+      "test": "test_astra7.H03AuditTornTail.test_two_writes_after_torn_tail",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.016
+    },
+    {
+      "test": "test_astra7.H04Utf8TornLine.test_audit_scan_survives_torn_utf8",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra7.H04Utf8TornLine.test_read_jsonl_skips_torn_utf8",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.0
+    },
+    {
+      "test": "test_astra7.H05LateMoveHandoff.test_move_right_before_runner",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.287
+    },
+    {
+      "test": "test_astra7.H06RunnerPreStartIO.test_out_log_is_directory",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.08
+    },
+    {
+      "test": "test_astra7.H06RunnerPreStartIO.test_runner_died_without_exit_is_lost",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.046
+    },
+    {
+      "test": "test_astra7.H07CtlFailedNoClobber.test_suffix_collision_keeps_both",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra7.H08Retention.test_default_keeps_everything",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.335
+    },
+    {
+      "test": "test_astra7.H08Retention.test_keep_old_rounds",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.551
+    },
+    {
+      "test": "test_astra7.H08Retention.test_retention_json",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.001
+    },
+    {
+      "test": "test_astra7.H08Retention.test_status_disk",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.128
+    },
+    {
+      "test": "test_astra7.H09RunnerFdContract.test_bad_fd_is_diagnosed",
+      "ok": true,
+      "errors": [],
+      "seconds": 0.049
+    }
+  ],
+  "pre_harness_cleanup_children": {
+    "3233906": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4412946"
+    },
+    "3233908": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4412948"
+    },
+    "3233913": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4412962"
+    },
+    "3233915": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4412964"
+    },
+    "3233922": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4412980"
+    },
+    "3233925": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413012"
+    },
+    "3233952": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413108"
+    },
+    "3233962": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413119"
+    },
+    "3233968": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413127"
+    },
+    "3233983": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413196"
+    },
+    "3233987": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413200"
+    },
+    "3233991": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413205"
+    },
+    "3233995": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413209"
+    },
+    "3233999": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413214"
+    },
+    "3234003": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413219"
+    },
+    "3234004": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413219"
+    },
+    "3234005": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413219"
+    },
+    "3234011": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413277"
+    },
+    "3234021": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413319"
+    },
+    "3234031": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413357"
+    },
+    "3234054": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413504"
+    },
+    "3234055": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413505"
+    },
+    "3234061": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413519"
+    },
+    "3234062": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413520"
+    },
+    "3234066": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413525"
+    },
+    "3234072": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413538"
+    },
+    "3234082": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413565"
+    },
+    "3234084": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413567"
+    },
+    "3234089": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413575"
+    },
+    "3234091": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413577"
+    },
+    "3234092": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413578"
+    },
+    "3234096": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413586"
+    },
+    "3234097": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413588"
+    },
+    "3234101": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413595"
+    },
+    "3234102": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413597"
+    },
+    "3234106": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413604"
+    },
+    "3234114": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413617"
+    },
+    "3234118": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413623"
+    },
+    "3234120": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413624"
+    },
+    "3234122": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413628"
+    },
+    "3234128": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413641"
+    },
+    "3234131": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413643"
+    },
+    "3234133": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413659"
+    },
+    "3234137": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413666"
+    },
+    "3234155": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413741"
+    },
+    "3234188": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413864"
+    },
+    "3234198": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413897"
+    },
+    "3234203": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413908"
+    },
+    "3234204": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413909"
+    },
+    "3234206": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413912"
+    },
+    "3234213": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413927"
+    },
+    "3234214": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413928"
+    },
+    "3234218": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413934"
+    },
+    "3234223": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413944"
+    },
+    "3234225": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413946"
+    },
+    "3234232": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413962"
+    },
+    "3234237": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413972"
+    },
+    "3234239": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413974"
+    },
+    "3234240": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413976"
+    },
+    "3234245": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413986"
+    },
+    "3234247": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413987"
+    },
+    "3234252": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4413998"
+    },
+    "3234257": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414008"
+    },
+    "3234261": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414013"
+    },
+    "3234288": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414099"
+    },
+    "3234302": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414141"
+    },
+    "3234315": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414184"
+    },
+    "3234317": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414189"
+    },
+    "3234320": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414199"
+    },
+    "3234325": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414231"
+    },
+    "3234330": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414243"
+    },
+    "3234335": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414250"
+    },
+    "3234339": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414257"
+    },
+    "3234343": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414264"
+    },
+    "3234347": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414271"
+    },
+    "3234351": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414277"
+    },
+    "3234355": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414284"
+    },
+    "3234359": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414291"
+    },
+    "3234363": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414298"
+    },
+    "3234367": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414305"
+    },
+    "3234371": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414311"
+    },
+    "3234375": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414318"
+    },
+    "3234379": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414325"
+    },
+    "3234383": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414332"
+    },
+    "3234390": {
+      "state": "Z",
+      "ppid": 3233898,
+      "start": "4414342"
+    }
+  },
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-suite-d6t12v11",
+    "root_exists": false
+  }
+}

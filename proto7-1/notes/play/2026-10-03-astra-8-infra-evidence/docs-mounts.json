@@ -1,0 +1,50 @@
+{
+  "case": "docs-mounts",
+  "D08_mount_env": {
+    "cwd": "/tmp/astra8-docs-mounts-cbt9qmq6/team/n",
+    "env": {
+      "AOS7_ROOT": "/tmp/astra8-docs-mounts-cbt9qmq6",
+      "AOS7_NODE": "/tmp/astra8-docs-mounts-cbt9qmq6/team/n",
+      "AOS7_NODE_ID": "team/n",
+      "AOS7_TASK": "/tmp/astra8-docs-mounts-cbt9qmq6/team/n/.aos/tasks/record-r1",
+      "AOS7_TID": "record-r1"
+    },
+    "mounted": true
+  },
+  "birth": {
+    "tid": "record-r1",
+    "name": "record",
+    "node": "team/n",
+    "round": 1,
+    "mounts": {
+      "peer": {
+        "to": "peer/inbox",
+        "at": "/tmp/astra8-docs-mounts-cbt9qmq6/team/n/.aos/tasks/record-r1/mnt/peer"
+      }
+    },
+    "at": "2026-10-03T20:51:11.788",
+    "restart_of": null,
+    "argv": [
+      "/usr/bin/python3",
+      "-c",
+      "import os,json;from pathlib import Path;p=Path(os.environ['AOS7_TASK']);(p/'observed.json').write_text(json.dumps({'cwd':os.getcwd(),'env':{k:v for k,v in os.environ.items() if k.startswith('AOS7_')},'mounted':(p/'mnt/peer').is_dir()}))"
+    ]
+  },
+  "mount_target": "../../../../../../peer/inbox",
+  "tick": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": [
+        "record-r1"
+      ]
+    },
+    "err": ""
+  },
+  "seconds": 0.062,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-docs-mounts-cbt9qmq6",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "case": "docs-controls",
+  "D02_single_daemon_rc": 1,
+  "D03_pause": {
+    "receipt": {
+      "receipt": {
+        "op": "pause",
+        "node": "n",
+        "result": {
+          "ok": true,
+          "msg": "pause n",
+          "at": "2026-10-03T20:51:09.672",
+          "queued_at": "2026-10-03T20:51:09.669"
+        }
+      },
+      "latency_s": 0.01018601399846375
+    },
+    "same_round": true,
+    "closed": true,
+    "task_survived": true
+  },
+  "D04_resume_n": {
+    "receipt": {
+      "receipt": {
+        "op": "resume",
+        "node": "n",
+        "rounds": 2,
+        "result": {
+          "ok": true,
+          "msg": "resume n rounds=2",
+          "at": "2026-10-03T20:51:09.935",
+          "queued_at": "2026-10-03T20:51:09.929"
+        }
+      },
+      "latency_s": 0.010164193001401145
+    },
+    "before": 3,
+    "after": 5,
+    "delta": 2
+  },
+  "D06_task_ctl_paused": {
+    "pending_until_resume": true,
+    "receipt": {
+      "op": "kill",
+      "result": {
+        "ok": true,
+        "msg": "killed",
+        "at": "2026-10-03T20:51:10.372"
+      }
+    },
+    "task_dead": true
+  },
+  "D05_keep_cross_round": {
+    "birth_tid": "stay-r1",
+    "round_before_pause": 3,
+    "tock": {
+      "round": 5,
+      "at": "2026-10-03T20:51:10.081",
+      "early": true
+    }
+  },
+  "seconds": 1.141,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-docs-controls-yaml_gy8",
+    "root_exists": false
+  }
+}

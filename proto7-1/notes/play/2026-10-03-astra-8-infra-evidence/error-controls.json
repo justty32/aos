@@ -1,0 +1,243 @@
+{
+  "case": "error-controls",
+  "first": {
+    "pid": 3234982,
+    "root": "/tmp/astra8-error-controls-y5n_x_e2",
+    "at": "2026-10-03T20:49:36.574",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "n": {
+        "round": 1,
+        "phase": "error",
+        "paused": false,
+        "interval_ms": 100,
+        "pause_pending": false,
+        "live": [],
+        "last_error": {
+          "prog": "tock",
+          "rc": 1,
+          "round": 1,
+          "at": "2026-10-03T20:49:36.564",
+          "err": "第 1 回合沒關上（tock 失敗或讀回不確定），恢復成功前不開下一回合（已試 1 次）；R-10）\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/astra8-error-controls-y5n_x_e2/hook/sitecustomize.py\", line 8, in failing\n    raise OSError(errno.ENOSPC, \"injected\")\nOSError: [Errno 28] injected"
+        }
+      }
+    },
+    "disk": {
+      "at": "2026-10-03T20:49:36.330",
+      "every_s": 30.0,
+      "aosd_bytes": 232,
+      "nodes": {
+        "n": {
+          "tasks": 0,
+          "tasks_old": 0
+        }
+      }
+    }
+  },
+  "pause": {
+    "receipt": {
+      "op": "pause",
+      "node": "n",
+      "result": {
+        "ok": true,
+        "msg": "pause n",
+        "at": "2026-10-03T20:49:36.594",
+        "queued_at": "2026-10-03T20:49:36.584"
+      }
+    },
+    "latency_s": 0.020278832998883445
+  },
+  "paused": {
+    "pid": 3234982,
+    "root": "/tmp/astra8-error-controls-y5n_x_e2",
+    "at": "2026-10-03T20:49:37.084",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "n": {
+        "round": 1,
+        "phase": "paused",
+        "paused": true,
+        "interval_ms": 100,
+        "pause_pending": false,
+        "live": [
+          "live-r1"
+        ],
+        "last_error": {
+          "prog": "tock",
+          "rc": 1,
+          "round": 1,
+          "at": "2026-10-03T20:49:36.564",
+          "err": "第 1 回合沒關上（tock 失敗或讀回不確定），恢復成功前不開下一回合（已試 1 次）；R-10）\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/astra8-error-controls-y5n_x_e2/hook/sitecustomize.py\", line 8, in failing\n    raise OSError(errno.ENOSPC, \"injected\")\nOSError: [Errno 28] injected"
+        }
+      }
+    },
+    "disk": {
+      "at": "2026-10-03T20:49:36.330",
+      "every_s": 30.0,
+      "aosd_bytes": 232,
+      "nodes": {
+        "n": {
+          "tasks": 0,
+          "tasks_old": 0
+        }
+      }
+    }
+  },
+  "open_when_paused": {
+    "round": 1,
+    "open": true,
+    "tick_at": "2026-10-03T20:49:36.356",
+    "tock_at": null,
+    "started": [
+      "live-r1"
+    ],
+    "ctl": [],
+    "mounts": []
+  },
+  "round_after_pause_wait": {
+    "round": 1,
+    "open": true,
+    "tick_at": "2026-10-03T20:49:36.356",
+    "tock_at": null,
+    "started": [
+      "live-r1"
+    ],
+    "ctl": [],
+    "mounts": []
+  },
+  "resume": {
+    "receipt": {
+      "op": "resume",
+      "node": "n",
+      "result": {
+        "ok": true,
+        "msg": "resume n",
+        "at": "2026-10-03T20:49:37.697",
+        "queued_at": "2026-10-03T20:49:37.693"
+      }
+    },
+    "latency_s": 0.010205970997049008
+  },
+  "before_stop": {
+    "pid": 3234982,
+    "root": "/tmp/astra8-error-controls-y5n_x_e2",
+    "at": "2026-10-03T20:49:52.938",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "n": {
+        "round": 1,
+        "phase": "error",
+        "paused": false,
+        "interval_ms": 100,
+        "pause_pending": false,
+        "live": [
+          "live-r1"
+        ],
+        "last_error": {
+          "prog": "tock",
+          "rc": 1,
+          "round": 1,
+          "at": "2026-10-03T20:49:52.922",
+          "err": "第 1 回合沒關上（tock 失敗或讀回不確定），恢復成功前不開下一回合（已試 6 次）；R-10）\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/astra8-error-controls-y5n_x_e2/hook/sitecustomize.py\", line 8, in failing\n    raise OSError(errno.ENOSPC, \"injected\")\nOSError: [Errno 28] injected"
+        }
+      }
+    },
+    "disk": {
+      "at": "2026-10-03T20:49:36.330",
+      "every_s": 30.0,
+      "aosd_bytes": 232,
+      "nodes": {
+        "n": {
+          "tasks": 0,
+          "tasks_old": 0
+        }
+      }
+    }
+  },
+  "stop": {
+    "receipt": {
+      "op": "stop",
+      "kill": true,
+      "result": {
+        "ok": true,
+        "msg": "stopping with kill",
+        "at": "2026-10-03T20:49:52.958",
+        "queued_at": "2026-10-03T20:49:52.947"
+      }
+    },
+    "latency_s": 0.020397584994498175
+  },
+  "stop_exit_s": 0.0517805959971156,
+  "rc": 0,
+  "final": {
+    "pid": 3234982,
+    "root": "/tmp/astra8-error-controls-y5n_x_e2",
+    "at": "2026-10-03T20:49:52.981",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": true,
+    "stopped": true,
+    "kill_on_stop": true,
+    "nodes": {
+      "n": {
+        "round": 1,
+        "phase": "stopped",
+        "paused": false,
+        "interval_ms": 100,
+        "pause_pending": false,
+        "live": [],
+        "last_error": {
+          "prog": "tock",
+          "rc": 1,
+          "round": 1,
+          "at": "2026-10-03T20:49:52.922",
+          "err": "第 1 回合沒關上（tock 失敗或讀回不確定），恢復成功前不開下一回合（已試 6 次）；R-10）\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/astra8-error-controls-y5n_x_e2/hook/sitecustomize.py\", line 8, in failing\n    raise OSError(errno.ENOSPC, \"injected\")\nOSError: [Errno 28] injected"
+        }
+      }
+    },
+    "disk": {
+      "at": "2026-10-03T20:49:36.330",
+      "every_s": 30.0,
+      "aosd_bytes": 232,
+      "nodes": {
+        "n": {
+          "tasks": 0,
+          "tasks_old": 0
+        }
+      }
+    }
+  },
+  "tock_error_times": [
+    "2026-10-03T20:49:36.481",
+    "2026-10-03T20:49:36.523",
+    "2026-10-03T20:49:36.564",
+    "2026-10-03T20:49:37.750",
+    "2026-10-03T20:49:38.793",
+    "2026-10-03T20:49:40.837",
+    "2026-10-03T20:49:44.880",
+    "2026-10-03T20:49:52.922"
+  ],
+  "product_live_before_cleanup": {},
+  "seconds": 16.716,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-error-controls-y5n_x_e2",
+    "root_exists": false
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "case": "H02-race",
+  "barrier_saw_locked": "False",
+  "first_tick": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": [
+        "first-r1"
+      ]
+    },
+    "err": ""
+  },
+  "before_owner": {
+    "node": "n",
+    "tid": "first-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T20:46:11.907",
+    "daemon_pid": 3234488
+  },
+  "after_owner": {
+    "node": "n",
+    "tid": "first-r1",
+    "allow_stop": false,
+    "at": "2026-10-03T20:46:11.907",
+    "daemon_pid": 3234488
+  },
+  "same_daemon_pid": true,
+  "loser_exit": {
+    "code": 1,
+    "at": "2026-10-03T20:46:11.955",
+    "round": 1
+  },
+  "stop_receipt": {
+    "op": "stop",
+    "kill": true,
+    "result": {
+      "ok": false,
+      "msg": "這個 daemon 屬於 node n（任務 first-r1），n 不允許外部 stop；要停請 n 在 tasks.json 那項設 allow_stop: true（或直接改 .aosd/owner.json），或由 n kill 這個任務",
+      "at": "2026-10-03T20:46:11.968",
+      "queued_at": "2026-10-03T20:46:11.960"
+    }
+  },
+  "seconds": 0.169,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H02-race-9hrwcdqq",
+    "root_exists": false
+  }
+}

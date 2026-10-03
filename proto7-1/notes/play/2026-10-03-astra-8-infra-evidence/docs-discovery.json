@@ -1,0 +1,28 @@
+{
+  "case": "docs-discovery",
+  "D01_new_node_ms_until_first_round_json": [
+    33.445790999394376,
+    40.39472300064517,
+    20.64688000245951,
+    40.23679799865931,
+    21.074919000966474,
+    40.21910499432124,
+    21.208168000157457,
+    39.992242003791034,
+    21.053128999483306,
+    20.436798004084267,
+    20.218250996549614,
+    21.277608000673354,
+    40.53307099820813,
+    20.791050003026612,
+    40.69484300271142
+  ],
+  "all_nodes_discovered": 15,
+  "note": "upper endpoint includes tick process start/write; the docs say 1-2ms detection, not this whole interval",
+  "seconds": 0.557,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-docs-discovery-rowli4tc",
+    "root_exists": false
+  }
+}

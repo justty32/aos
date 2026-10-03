@@ -1,0 +1,47 @@
+{
+  "case": "owner-nested3",
+  "owners": [
+    {
+      "node": "n",
+      "tid": "child-r1",
+      "allow_stop": false,
+      "at": "2026-10-03T20:49:54.462",
+      "daemon_pid": 3235064
+    },
+    {
+      "node": "m",
+      "tid": "grand-r1",
+      "allow_stop": false,
+      "at": "2026-10-03T20:49:54.541",
+      "daemon_pid": 3235069
+    }
+  ],
+  "leaf_env": {
+    "AOS7_GEN": "1",
+    "AOS7_ROOT": "/tmp/astra8-owner-nested3-juje5s41/n/sub/m/sub",
+    "AOS7_NODE": "/tmp/astra8-owner-nested3-juje5s41/n/sub/m/sub/leaf",
+    "AOS7_NODE_ID": "leaf",
+    "AOS7_TASK": "/tmp/astra8-owner-nested3-juje5s41/n/sub/m/sub/leaf/.aos/tasks/env-r1",
+    "AOS7_TID": "env-r1"
+  },
+  "stop": {
+    "receipt": {
+      "op": "stop",
+      "kill": true,
+      "result": {
+        "ok": true,
+        "msg": "stopping with kill",
+        "at": "2026-10-03T20:49:54.626",
+        "queued_at": "2026-10-03T20:49:54.612"
+      }
+    },
+    "latency_s": 0.02022166600363562
+  },
+  "product_live_before_cleanup": {},
+  "seconds": 0.632,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-owner-nested3-juje5s41",
+    "root_exists": false
+  }
+}

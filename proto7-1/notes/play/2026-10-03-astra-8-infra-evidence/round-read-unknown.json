@@ -1,0 +1,62 @@
+{
+  "case": "round-read-unknown",
+  "fault": "daemon-only round.json read returns None (as fs.read_json does on EIO), tock ENOSPC; tick unaffected",
+  "before_recovery": {
+    "round": 3,
+    "open": true,
+    "tick_at": "2026-10-03T20:54:40.297",
+    "tock_at": null,
+    "started": [],
+    "ctl": [],
+    "mounts": []
+  },
+  "status_during_fault": {
+    "pid": 3241522,
+    "root": "/tmp/astra8-round-read-unknown-r9xdloaf",
+    "at": "2026-10-03T20:54:40.294",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "n": {
+        "round": 2,
+        "phase": "tick",
+        "paused": false,
+        "interval_ms": 100,
+        "pause_pending": false,
+        "live": [],
+        "last_error": {
+          "prog": "tock",
+          "rc": 1,
+          "round": 2,
+          "at": "2026-10-03T20:54:40.241",
+          "err": "/lib/aos7_tock.py\", line 179, in _tock\n    append_jsonl(rpath_l, summary)  # 一回合一行，不再一回合一檔（P-12、R-10）\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/astra8-round-read-unknown-r9xdloaf/hook/sitecustomize.py\", line 8, in failing\n    raise OSError(errno.ENOSPC, \"injected\")\nOSError: [Errno 28] injected"
+        }
+      }
+    },
+    "disk": {
+      "at": "2026-10-03T20:54:40.071",
+      "every_s": 30.0,
+      "aosd_bytes": 232,
+      "nodes": {
+        "n": {
+          "tasks": 0,
+          "tasks_old": 0
+        }
+      }
+    }
+  },
+  "committed_rounds": [
+    3,
+    4
+  ],
+  "seconds": 0.448,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-round-read-unknown-r9xdloaf",
+    "root_exists": false
+  }
+}

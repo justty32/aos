@@ -1,0 +1,134 @@
+{
+  "case": "error-rounds",
+  "resume": {
+    "receipt": {
+      "op": "resume",
+      "node": "n",
+      "rounds": 1,
+      "result": {
+        "ok": true,
+        "msg": "resume n rounds=1",
+        "at": "2026-10-03T20:49:53.067",
+        "queued_at": "2026-10-03T20:49:53.056"
+      }
+    },
+    "latency_s": 0.020217989003867842
+  },
+  "before": {
+    "pid": 3235037,
+    "root": "/tmp/astra8-error-rounds-j83tu088",
+    "at": "2026-10-03T20:49:53.249",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "n": {
+        "round": 1,
+        "phase": "error",
+        "paused": false,
+        "interval_ms": 100,
+        "pause_pending": false,
+        "live": [],
+        "steps_left": 1,
+        "last_error": {
+          "prog": "tock",
+          "rc": 1,
+          "round": 1,
+          "at": "2026-10-03T20:49:53.240",
+          "err": "第 1 回合沒關上（tock 失敗或讀回不確定），恢復成功前不開下一回合（已試 1 次）；2、R-10）\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/astra8-error-rounds-j83tu088/hook/sitecustomize.py\", line 8, in failing\n    raise OSError(errno.ENOSPC, \"injected\")\nOSError: [Errno 28] injected"
+        }
+      }
+    },
+    "disk": {
+      "at": "2026-10-03T20:49:53.047",
+      "every_s": 30.0,
+      "aosd_bytes": 256,
+      "nodes": {
+        "n": {
+          "tasks": 0,
+          "tasks_old": 0
+        }
+      }
+    }
+  },
+  "after": {
+    "pid": 3235037,
+    "root": "/tmp/astra8-error-rounds-j83tu088",
+    "at": "2026-10-03T20:49:53.839",
+    "poll_s": 0.02,
+    "gen": 1,
+    "io_errors": 0,
+    "stopping": false,
+    "stopped": false,
+    "kill_on_stop": false,
+    "nodes": {
+      "n": {
+        "round": 2,
+        "phase": "paused",
+        "paused": true,
+        "interval_ms": 100,
+        "pause_pending": false,
+        "live": [],
+        "last_error": {
+          "prog": "tock",
+          "rc": 1,
+          "round": 1,
+          "at": "2026-10-03T20:49:53.240",
+          "err": "第 1 回合沒關上（tock 失敗或讀回不確定），恢復成功前不開下一回合（已試 1 次）；2、R-10）\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/astra8-error-rounds-j83tu088/hook/sitecustomize.py\", line 8, in failing\n    raise OSError(errno.ENOSPC, \"injected\")\nOSError: [Errno 28] injected"
+        }
+      }
+    },
+    "disk": {
+      "at": "2026-10-03T20:49:53.047",
+      "every_s": 30.0,
+      "aosd_bytes": 256,
+      "nodes": {
+        "n": {
+          "tasks": 0,
+          "tasks_old": 0
+        }
+      }
+    }
+  },
+  "summaries": [
+    {
+      "round": 1,
+      "tick_at": "2026-10-03T20:49:53.114",
+      "tock_at": "2026-10-03T20:49:53.769",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": false,
+      "incomplete": "unclosed"
+    },
+    {
+      "round": 2,
+      "tick_at": "2026-10-03T20:49:53.798",
+      "tock_at": "2026-10-03T20:49:53.829",
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "ctl": [],
+      "mounts": [],
+      "early": true
+    }
+  ],
+  "steps_done": [
+    {
+      "at": "2026-10-03T20:49:53.772",
+      "ev": "steps-done",
+      "node": "n"
+    }
+  ],
+  "seconds": 0.896,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-error-rounds-j83tu088",
+    "root_exists": false
+  }
+}

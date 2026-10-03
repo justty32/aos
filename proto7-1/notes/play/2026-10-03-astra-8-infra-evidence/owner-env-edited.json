@@ -1,0 +1,29 @@
+{
+  "case": "owner-env-edited",
+  "owner": {
+    "node": "edited",
+    "tid": "edited-r99",
+    "allow_stop": true,
+    "at": "2026-10-03T20:49:54.321",
+    "daemon_pid": 3235059
+  },
+  "stop": {
+    "receipt": {
+      "op": "stop",
+      "kill": true,
+      "result": {
+        "ok": true,
+        "msg": "stopping with kill；已寫 .aosd/stopped.json，edited 不會再起它（刪掉才會）",
+        "at": "2026-10-03T20:49:54.342",
+        "queued_at": "2026-10-03T20:49:54.331"
+      }
+    },
+    "latency_s": 0.020197972997266334
+  },
+  "seconds": 0.122,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-owner-env-edited-jvng49sp",
+    "root_exists": false
+  }
+}

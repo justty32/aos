@@ -1,0 +1,26 @@
+{
+  "case": "H05-late-move",
+  "barrier": "immediately before runner Popen, after same_dir check",
+  "tick": {
+    "round": 1,
+    "started": [
+      "x-r1"
+    ],
+    "ctl": []
+  },
+  "moved_exit": {
+    "code": 127,
+    "at": "2026-10-03T20:46:13.066",
+    "round": 1,
+    "error": "AOS7_TASK=/tmp/astra8-H05-late-move-ilc3gumg/n/.aos/tasks/x-r1 已經不是 runner 抓著的資料夾（node 在起任務時被搬走或換掉），沒起"
+  },
+  "ghost_progress": null,
+  "old_node_recreated": false,
+  "moved_progress": null,
+  "seconds": 0.029,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H05-late-move-ilc3gumg",
+    "root_exists": false
+  }
+}

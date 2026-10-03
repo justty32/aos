@@ -1,0 +1,18 @@
+{
+  "case": "retention-reader",
+  "initial_open_read": "{\"at\": \"2026-10-03T20:49:55.023\", \"ev\": \"before\", \"seq\": -1}\n",
+  "held_fd_after_rotations": "{\"at\": \"2026-10-03T20:49:55.024\", \"ev\": \"sequence\", \"seq\": 0}\n",
+  "reopening_reader_unique_seen": 2,
+  "read_errors": [],
+  "retained_seq": [
+    60,
+    59
+  ],
+  "total_emitted": 62,
+  "seconds": 0.085,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-retention-reader-zjjkukar",
+    "root_exists": false
+  }
+}

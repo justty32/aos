@@ -1,0 +1,24 @@
+{
+  "case": "audit-parallel",
+  "workers": 8,
+  "writes_per_worker": 20,
+  "rcs": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "records": 160,
+  "unique_paths": 160,
+  "bad_lines": 1,
+  "seconds": 0.046,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-audit-parallel-tgz0h52h",
+    "root_exists": false
+  }
+}

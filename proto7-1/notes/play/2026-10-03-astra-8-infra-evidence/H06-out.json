@@ -1,0 +1,42 @@
+{
+  "case": "H06-out",
+  "first": {
+    "round": 1,
+    "started": [
+      "x-r1"
+    ],
+    "ctl": []
+  },
+  "runner_rc": 1,
+  "next_tick": {
+    "round": 2,
+    "started": [
+      "x-r2"
+    ],
+    "ctl": []
+  },
+  "state": "ended",
+  "exit": {
+    "code": 127,
+    "at": "2026-10-03T20:46:13.095",
+    "round": 1,
+    "error": "開不了 out.log：[Errno 21] Is a directory: 'out.log'"
+  },
+  "round": {
+    "round": 2,
+    "open": true,
+    "tick_at": "2026-10-03T20:46:13.113",
+    "tock_at": null,
+    "started": [
+      "x-r2"
+    ],
+    "ctl": [],
+    "mounts": []
+  },
+  "seconds": 0.059,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H06-out-k0alks2j",
+    "root_exists": false
+  }
+}

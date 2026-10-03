@@ -1,0 +1,32 @@
+{
+  "case": "H07-collision",
+  "normal_failures": 100,
+  "unique_sequences": 100,
+  "suffix_collision_after": {
+    "sentinel": "earlier failure"
+  },
+  "stop": {
+    "op": "stop",
+    "kill": true,
+    "result": {
+      "ok": true,
+      "msg": "stopping with kill",
+      "at": "2026-10-03T20:46:13.150",
+      "queued_at": "2026-10-03T20:46:13.150"
+    }
+  },
+  "failed_count_after": 102,
+  "last_error": {
+    "file": "x.json",
+    "at": "2026-10-03T20:46:13.150",
+    "err": "RuntimeError(\"已執行（ok=True：wake n（目前沒有這個 node，出現時才生效）），但回條寫不進去：IsADirectoryError(21, 'Is a directory')\")",
+    "moved_to": "ctl-failed/x.json.42.1"
+  },
+  "injection": "fixed time_ns=42 with preexisting x.json.42",
+  "seconds": 0.019,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H07-collision-eh_s8ly0",
+    "root_exists": false
+  }
+}

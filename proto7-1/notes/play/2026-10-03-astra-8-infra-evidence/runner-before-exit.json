@@ -1,0 +1,82 @@
+{
+  "case": "runner-before-exit",
+  "point": "before-exit",
+  "tick": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "started": [
+        "x-r1"
+      ]
+    },
+    "err": ""
+  },
+  "before": {
+    "state": "live",
+    "runner": {
+      "pid": 3235099,
+      "starttime": 4440375,
+      "at": "2026-10-03T20:49:55.543"
+    },
+    "pid": {
+      "pid": 3235100,
+      "pgid": 3235100,
+      "runner_pid": 3235099,
+      "at": "2026-10-03T20:49:55.558"
+    }
+  },
+  "after_kill": "lost",
+  "tock": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T20:49:55.542",
+      "tock_at": "2026-10-03T20:49:55.597",
+      "started": [
+        "x-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "x-r1",
+          "name": "x",
+          "code": null,
+          "lost": true
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    },
+    "err": ""
+  },
+  "next_tick": {
+    "rc": 0,
+    "out": {
+      "round": 2,
+      "started": [
+        "x-r2"
+      ]
+    },
+    "err": ""
+  },
+  "old_exit": {
+    "code": null,
+    "lost": true,
+    "at": "2026-10-03T20:49:55.597",
+    "round": 1
+  },
+  "old_task_processes": {
+    "3235103": {
+      "state": "R",
+      "ppid": 3234979,
+      "start": "4440383"
+    }
+  },
+  "seconds": 0.133,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-runner-before-exit-h8ctomsg",
+    "root_exists": false
+  }
+}

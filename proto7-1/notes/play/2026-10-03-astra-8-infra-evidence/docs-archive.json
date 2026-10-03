@@ -1,0 +1,83 @@
+{
+  "case": "docs-archive",
+  "D10_default_archive": {
+    "summaries": [
+      {
+        "round": 1,
+        "tick_at": "2026-10-03T20:51:11.981",
+        "tock_at": "2026-10-03T20:51:12.025",
+        "started": [
+          "one-r1"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "one-r1",
+            "name": "one",
+            "code": 0
+          }
+        ],
+        "ctl": [],
+        "mounts": [],
+        "early": null
+      },
+      {
+        "round": 2,
+        "tick_at": "2026-10-03T20:51:12.048",
+        "tock_at": "2026-10-03T20:51:12.092",
+        "started": [
+          "one-r2"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "one-r2",
+            "name": "one",
+            "code": 0
+          }
+        ],
+        "ctl": [],
+        "mounts": [],
+        "early": null,
+        "archived": [
+          "one-r1"
+        ]
+      },
+      {
+        "round": 3,
+        "tick_at": "2026-10-03T20:51:12.115",
+        "tock_at": "2026-10-03T20:51:12.160",
+        "started": [
+          "one-r3"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "tid": "one-r3",
+            "name": "one",
+            "code": 0
+          }
+        ],
+        "ctl": [],
+        "mounts": [],
+        "early": null,
+        "archived": [
+          "one-r2"
+        ]
+      }
+    ],
+    "active": [
+      "one-r3"
+    ],
+    "old": [
+      "one-r1",
+      "one-r2"
+    ]
+  },
+  "seconds": 0.21,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-docs-archive-tfehn_1y",
+    "root_exists": false
+  }
+}

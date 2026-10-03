@@ -1,0 +1,69 @@
+{
+  "case": "retention-values",
+  "values": [
+    {
+      "value": 0,
+      "old_exists": false,
+      "purged": [
+        "x-r1"
+      ],
+      "done_count": 0,
+      "failed_count": 0,
+      "current_log_exists": false
+    },
+    {
+      "value": -1,
+      "old_exists": true,
+      "purged": [],
+      "done_count": 3,
+      "failed_count": 3,
+      "current_log_exists": true
+    },
+    {
+      "value": 1.5,
+      "old_exists": true,
+      "purged": [],
+      "done_count": 3,
+      "failed_count": 3,
+      "current_log_exists": true
+    },
+    {
+      "value": "2",
+      "old_exists": true,
+      "purged": [],
+      "done_count": 3,
+      "failed_count": 3,
+      "current_log_exists": true
+    },
+    {
+      "value": true,
+      "old_exists": true,
+      "purged": [],
+      "done_count": 3,
+      "failed_count": 3,
+      "current_log_exists": true
+    },
+    {
+      "value": null,
+      "old_exists": true,
+      "purged": [],
+      "done_count": 3,
+      "failed_count": 3,
+      "current_log_exists": true
+    },
+    {
+      "value": 2,
+      "old_exists": true,
+      "purged": [],
+      "done_count": 2,
+      "failed_count": 2,
+      "current_log_exists": false
+    }
+  ],
+  "seconds": 0.012,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-retention-values-wmpejcj8",
+    "root_exists": false
+  }
+}

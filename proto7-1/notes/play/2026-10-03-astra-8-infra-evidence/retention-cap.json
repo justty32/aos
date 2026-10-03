@@ -1,0 +1,57 @@
+{
+  "case": "retention-cap",
+  "cfg_unchanged": {
+    "cap_tokens": 500
+  },
+  "before": {
+    "exists": true,
+    "mounted": true,
+    "round": 3,
+    "tasks": [
+      {
+        "tid": "a-r1",
+        "name": "a",
+        "birth_round": 1,
+        "alive": false,
+        "progress": null,
+        "has_ctl": false
+      }
+    ],
+    "usage_total": 1000
+  },
+  "decision_before": [
+    {
+      "round": 1,
+      "rule": "cap",
+      "target": "n",
+      "op": "pause",
+      "why": "用量總和 1000 > cap_tokens 500；不會自動恢復，要人改 kernel.json"
+    }
+  ],
+  "purge": [
+    "a-r1"
+  ],
+  "after": {
+    "exists": true,
+    "mounted": true,
+    "round": 3,
+    "tasks": [],
+    "usage_total": 0
+  },
+  "decision_after": [
+    {
+      "round": 2,
+      "rule": "cap",
+      "target": "n",
+      "op": "resume",
+      "why": "用量 0 ≤ cap_tokens 500"
+    }
+  ],
+  "note": "real snapshot+tock+rules, no LLM, synthetic usage.json; pending/current tock or manual tock allows purge despite cap pause",
+  "seconds": 0.012,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-retention-cap-5e2x93zy",
+    "root_exists": false
+  }
+}

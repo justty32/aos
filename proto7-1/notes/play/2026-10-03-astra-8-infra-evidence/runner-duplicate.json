@@ -1,0 +1,66 @@
+{
+  "case": "runner-duplicate",
+  "tock": {
+    "rc": 0,
+    "out": {
+      "round": 1,
+      "tick_at": "2026-10-03T20:53:14.435",
+      "tock_at": "2026-10-03T20:53:14.490",
+      "started": [
+        "x-r1"
+      ],
+      "alive": [],
+      "ended": [
+        {
+          "tid": "x-r1",
+          "name": "x",
+          "code": null,
+          "lost": true
+        }
+      ],
+      "ctl": [],
+      "mounts": [],
+      "early": null
+    },
+    "err": ""
+  },
+  "next_tick": {
+    "rc": 0,
+    "out": {
+      "round": 2,
+      "started": [
+        "x-r2"
+      ]
+    },
+    "err": ""
+  },
+  "simultaneous": {
+    "old_pid": 3240946,
+    "new_pid": 3240958,
+    "old_alive": true,
+    "new_alive": true
+  },
+  "stop": {
+    "receipt": {
+      "op": "stop",
+      "kill": true,
+      "result": {
+        "ok": true,
+        "msg": "stopping with kill",
+        "at": "2026-10-03T20:53:14.579",
+        "queued_at": "2026-10-03T20:53:14.566"
+      }
+    },
+    "latency_s": 0.020230273003107868
+  },
+  "after_stop": {
+    "old_alive": false,
+    "new_alive": false
+  },
+  "seconds": 0.212,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-runner-duplicate-eckujwv2",
+    "root_exists": false
+  }
+}

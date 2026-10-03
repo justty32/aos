@@ -1,0 +1,22 @@
+{
+  "case": "docs-scan-latency",
+  "D01_create_to_node_plus_ms": [
+    13.425220000499394,
+    20.246693995431997,
+    20.307065999077167,
+    10.295938998751808,
+    20.74713799811434,
+    20.237466000253335,
+    10.466556996107101,
+    20.93559999775607,
+    20.491399998718407,
+    19.997487994260155
+  ],
+  "polling_resolution_ms": 0.5,
+  "seconds": 0.474,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-docs-scan-latency-dz5n8h3q",
+    "root_exists": false
+  }
+}

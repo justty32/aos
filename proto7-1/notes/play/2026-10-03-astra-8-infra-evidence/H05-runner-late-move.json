@@ -1,0 +1,23 @@
+{
+  "case": "H05-runner-late-move",
+  "barrier": "runner Popen immediately after env_mismatch and out.log open",
+  "exit": {
+    "code": 0,
+    "at": "2026-10-03T20:53:14.682",
+    "round": 1
+  },
+  "old_node_recreated": true,
+  "ghost_marker": "/tmp/astra8-H05-runner-late-move-q6miizq7/moved",
+  "moved_pid": {
+    "pid": 3240982,
+    "pgid": 3240982,
+    "runner_pid": 3240980,
+    "at": "2026-10-03T20:53:14.670"
+  },
+  "seconds": 0.072,
+  "cleanup": {
+    "remaining_children_before_delete": [],
+    "root": "/tmp/astra8-H05-runner-late-move-q6miizq7",
+    "root_exists": false
+  }
+}
