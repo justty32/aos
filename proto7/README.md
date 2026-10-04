@@ -7,6 +7,7 @@ proto7 從使用者 2026-10-03 的分層想法開始：daemon 是運行層，檔
 ## 入口
 
 - **[核心 spec](spec/core.md)**（[spec 入口](spec/README.md)）：使用者定下的核心概念，條號 S-；之後的細部 spec、程式與測試都以它為準。
+- **[設計原則](notes/principles.md)**：使用者說過、影響所有設計判斷的原則（核心極簡、糾結做選項、node 視角、上層不碰底層、agent／LLM 只是其中一個目標）。
 - [notes](notes/2026-10-03-aos-layering.md)：使用者 10-03 的分層想法原文，核心 spec 的「第 N 行」指這份。
 - [LLM 端點是一種資源](notes/2026-10-04-llm-endpoint-resource.md)：使用者 10-04 的想法（「資源可以無限定義」的例子：獨占端點的分配者、可往下切的使用權），附頂層對照與待定點。
   - [第一輪思考綜合](notes/thinking/2026-10-04-r1-synthesis.md)：Fable 與 astra 兩份獨立報告的共識、分歧、對 daemon／tick 的要求、待拍板題與探針（原報告同資料夾）。
