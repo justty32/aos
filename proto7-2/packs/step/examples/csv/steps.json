@@ -1,0 +1,9 @@
+{"job": "csv", "start": "convert",
+ "note": "CSV 轉 JSON → 統計報表。兩步都有限、可重算、只寫 out/；stats 只讀 convert 已採用的那一版（帶 request 核對）",
+ "steps": {
+  "convert": {"run": ["python3", "${job}/convert.py", "${job}/data.csv", "${out}/data.json", "${request}"],
+              "finite": true, "idempotent": true, "expect": ["${out}/data.json"], "ok": "stats", "fail": "failed"},
+  "stats": {"run": ["python3", "${job}/stats.py", "${out}/data.json", "${req:convert}", "${out}/report.json"],
+            "finite": true, "idempotent": true, "expect": ["${out}/report.json"], "ok": "done", "fail": "failed"},
+  "done": {"end": "ok"},
+  "failed": {"end": "failed"}}}

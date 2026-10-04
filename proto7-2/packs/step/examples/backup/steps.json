@@ -1,0 +1,14 @@
+{"job": "backup", "start": "dump",
+ "note": "dump→verify→rotate→notify。rotate 不冪等（跑兩次會多推一代、丟掉一份舊備份）：不在重試圈裡、未知時停住等人",
+ "steps": {
+  "dump": {"run": ["sh", "${job}/dump.sh", "${job}/src", "${out}/dump.tgz"],
+           "finite": true, "idempotent": true, "expect": ["${out}/dump.tgz"], "ok": "verify", "fail": "retry_dump"},
+  "retry_dump": {"count": 2, "then": "dump", "exhausted": "failed"},
+  "verify": {"run": ["sh", "${job}/verify.sh", "${out}/dump.tgz", "${out}/dump.sha256"],
+             "finite": true, "idempotent": true, "expect": ["${out}/dump.sha256"], "ok": "rotate", "fail": "failed"},
+  "rotate": {"run": ["sh", "${job}/rotate.sh", "${out}/dump.tgz", "${job}/archive"],
+             "finite": true, "idempotent": false, "ok": "notify", "fail": "failed"},
+  "notify": {"run": ["sh", "${job}/notify.sh", "${job}/archive", "${out}/notify.txt", "${request}"],
+             "finite": true, "idempotent": true, "expect": ["${out}/notify.txt"], "ok": "done", "fail": "failed"},
+  "done": {"end": "ok"},
+  "failed": {"end": "failed"}}}
