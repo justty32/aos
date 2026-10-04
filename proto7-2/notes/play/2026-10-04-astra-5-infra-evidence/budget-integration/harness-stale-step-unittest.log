@@ -1,0 +1,170 @@
+test_end_to_end_and_replay_after_close (__main__.Daemon.test_end_to_end_and_replay_after_close) ... FAIL
+test_pause_SIGKILL_daemon_restart (__main__.Daemon.test_pause_SIGKILL_daemon_restart) ... ok
+test_pause_and_daemon_restart_clock (__main__.Daemon.test_pause_and_daemon_restart_clock)
+completed_tock：pause 時不前進；daemon 重開接續原回合（不歸零）；之後 call 照常、帳的 clock_hw 不超過時鐘。 ... FAIL
+test_restart_on_end_new_request_new_transaction (__main__.Daemon.test_restart_on_end_new_request_new_transaction)
+restart_on_end：每個新 inst 是新 request＝新交易；額度 3 用完後第四次 reserve 被拒，工作走 failed。 ... FAIL
+test_work_failure_still_counts (__main__.Daemon.test_work_failure_still_counts)
+後端已受理、處理失敗：step ok:false 走 failed，但帳照受理結算 1（不因 step 失敗退款）。 ... FAIL
+test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) ... 
+  test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='call-after-reserve') ... FAIL
+  test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='gateway-after-intent') ... FAIL
+  test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='backend-after-effect') ... FAIL
+  test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='gateway-after-receipt') ... FAIL
+  test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='call-after-settle') ... FAIL
+test_expired_between_rounds (__main__.Step.test_expired_between_rounds)
+reserve 後被殺、step 停在 unknown；回合走過 until 後 resume --resend：首次准入被擋 → 結算 0、step 走 failed。 ... ok
+test_slot_gone_settle_without_step (__main__.Step.test_slot_gone_settle_without_step)
+入口回條寫了、結算前被殺，step 停在 unknown（不自動重送）；once 槽刪掉後直接 settle 照入口證據結算 1； ... FAIL
+
+======================================================================
+FAIL: test_end_to_end_and_replay_after_close (__main__.Daemon.test_end_to_end_and_replay_after_close)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 92, in test_end_to_end_and_replay_after_close
+    L = self.audit(self.bd, final=True)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 106, in audit
+    dest=snapshot(bd,name,final)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 23, in snapshot
+    r=audit(dest,final); AUDITS.append(r); assert r['ok'],r
+                                                  ~^^^^^^
+AssertionError: {'ok': False, 'errors': ['9298132bc0a8577ebb46: spent receipt without effect'], 'path': '/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_end_to_end_and_replay_after_close-1', 'transitions': 2, 'keys': 1, 'accepted': 1, 'balances': [2, 0, 1], 'final': True}
+
+======================================================================
+FAIL: test_pause_and_daemon_restart_clock (__main__.Daemon.test_pause_and_daemon_restart_clock)
+completed_tock：pause 時不前進；daemon 重開接續原回合（不歸零）；之後 call 照常、帳的 clock_hw 不超過時鐘。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 153, in test_pause_and_daemon_restart_clock
+    L = self.audit(self.bd, final=True)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 106, in audit
+    dest=snapshot(bd,name,final)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 23, in snapshot
+    r=audit(dest,final); AUDITS.append(r); assert r['ok'],r
+                                                  ~^^^^^^
+AssertionError: {'ok': False, 'errors': ['6366af5d2ded154a130a: spent receipt without effect'], 'path': '/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_pause_and_daemon_restart_clock-1', 'transitions': 4, 'keys': 2, 'accepted': 2, 'balances': [1, 0, 2], 'final': True}
+
+======================================================================
+FAIL: test_restart_on_end_new_request_new_transaction (__main__.Daemon.test_restart_on_end_new_request_new_transaction)
+restart_on_end：每個新 inst 是新 request＝新交易；額度 3 用完後第四次 reserve 被拒，工作走 failed。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 119, in test_restart_on_end_new_request_new_transaction
+    L = self.audit(self.bd)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 106, in audit
+    dest=snapshot(bd,name,final)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 23, in snapshot
+    r=audit(dest,final); AUDITS.append(r); assert r['ok'],r
+                                                  ~^^^^^^
+AssertionError: {'ok': False, 'errors': ['89390e9b4b8a95701549: spent receipt without effect', '786a3ac39879a6933a23: spent receipt without effect', '63e35e44a6ffbfd39020: spent receipt without effect'], 'path': '/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_restart_on_end_new_request_new_transaction-1', 'transitions': 6, 'keys': 3, 'accepted': 3, 'balances': [0, 0, 3], 'final': False}
+
+======================================================================
+FAIL: test_work_failure_still_counts (__main__.Daemon.test_work_failure_still_counts)
+後端已受理、處理失敗：step ok:false 走 failed，但帳照受理結算 1（不因 step 失敗退款）。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 130, in test_work_failure_still_counts
+    L = self.audit(self.bd, final=True)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 106, in audit
+    dest=snapshot(bd,name,final)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 23, in snapshot
+    r=audit(dest,final); AUDITS.append(r); assert r['ok'],r
+                                                  ~^^^^^^
+AssertionError: {'ok': False, 'errors': ['20f088c84ba259ef509f: spent receipt without effect'], 'path': '/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_work_failure_still_counts-1', 'transitions': 2, 'keys': 1, 'accepted': 1, 'balances': [2, 0, 1], 'final': True}
+
+======================================================================
+FAIL: test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='call-after-reserve')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 173, in test_crash_points_resend_same_request
+    L = self.audit(self.bd, final=True)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 106, in audit
+    dest=snapshot(bd,name,final)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 23, in snapshot
+    r=audit(dest,final); AUDITS.append(r); assert r['ok'],r
+                                                  ~^^^^^^
+AssertionError: {'ok': False, 'errors': ['289debaea7a11eccc416: spent receipt without effect'], 'path': '/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_crash_points_resend_same_request-1', 'transitions': 2, 'keys': 1, 'accepted': 1, 'balances': [2, 0, 1], 'final': True}
+
+======================================================================
+FAIL: test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='gateway-after-intent')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 166, in test_crash_points_resend_same_request
+    self.set_tasks(node, self.install(node))
+                         ~~~~~~~~~~~~^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 30, in install
+    self.bd = self.setup_budget(node, g, clock=None)
+              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/budgetcase.py", line 52, in setup_budget
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : {"ok": false, "why": "ledger.json 已存在（或讀不到），不重開"}
+
+
+======================================================================
+FAIL: test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='backend-after-effect')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 166, in test_crash_points_resend_same_request
+    self.set_tasks(node, self.install(node))
+                         ~~~~~~~~~~~~^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 30, in install
+    self.bd = self.setup_budget(node, g, clock=None)
+              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/budgetcase.py", line 52, in setup_budget
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : {"ok": false, "why": "ledger.json 已存在（或讀不到），不重開"}
+
+
+======================================================================
+FAIL: test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='gateway-after-receipt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 166, in test_crash_points_resend_same_request
+    self.set_tasks(node, self.install(node))
+                         ~~~~~~~~~~~~^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 30, in install
+    self.bd = self.setup_budget(node, g, clock=None)
+              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/budgetcase.py", line 52, in setup_budget
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : {"ok": false, "why": "ledger.json 已存在（或讀不到），不重開"}
+
+
+======================================================================
+FAIL: test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) (point='call-after-settle')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 166, in test_crash_points_resend_same_request
+    self.set_tasks(node, self.install(node))
+                         ~~~~~~~~~~~~^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 30, in install
+    self.bd = self.setup_budget(node, g, clock=None)
+              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/budgetcase.py", line 52, in setup_budget
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : {"ok": false, "why": "ledger.json 已存在（或讀不到），不重開"}
+
+
+======================================================================
+FAIL: test_slot_gone_settle_without_step (__main__.Step.test_slot_gone_settle_without_step)
+入口回條寫了、結算前被殺，step 停在 unknown（不自動重送）；once 槽刪掉後直接 settle 照入口證據結算 1；
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/tests/test_budget_step.py", line 192, in test_slot_gone_settle_without_step
+    self.assertEqual(self.audit(self.bd)["inflight"], 1)
+                     ~~~~~~~~~~^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 106, in audit
+    dest=snapshot(bd,name,final)
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/run_probes.py", line 23, in snapshot
+    r=audit(dest,final); AUDITS.append(r); assert r['ok'],r
+                                                  ~^^^^^^
+AssertionError: {'ok': False, 'errors': ['b9014d23739c3712492e: spent receipt without effect'], 'path': '/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_slot_gone_settle_without_step-1', 'transitions': 1, 'keys': 1, 'accepted': 1, 'balances': [2, 1, 0], 'final': False}
+
+----------------------------------------------------------------------
+Ran 8 tests in 7.020s
+
+FAILED (failures=10)

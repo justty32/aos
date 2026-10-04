@@ -1,0 +1,601 @@
+{
+  "head": "392a1d645eceec98c41678ab2b685959e7ab0522",
+  "tmp": "/tmp/astra5-subd-edge-l0m0xprf",
+  "cases": [
+    {
+      "name": "boundaries",
+      "pids": {
+        "old": 579387,
+        "prefix": 579388,
+        "sibling": 579389,
+        "nested": 579390,
+        "manual_no_identity": 579391,
+        "manual_inherited_identity": 579392
+      },
+      "alive": {
+        "old": false,
+        "prefix": true,
+        "sibling": true,
+        "nested": false,
+        "manual_no_identity": true,
+        "manual_inherited_identity": false
+      },
+      "expected": {
+        "old": false,
+        "prefix": true,
+        "sibling": true,
+        "nested": false,
+        "manual_no_identity": true,
+        "manual_inherited_identity": false
+      },
+      "pass": true,
+      "classification": "normal；按 AOS7 身分回收，非 aos 執行檔本身不構成 M；純 cwd 位在子根的程序無誤殺",
+      "cleanup": {
+        "before": [
+          579388,
+          579389
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-6.log": "aos7-subd: 子根 a/sub 前代已空（收了 3 個程序、1 輪）\n"
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.396
+    },
+    {
+      "name": "crash-recovering-tmp",
+      "point": "tmp:subd-life.json",
+      "nth": 1,
+      "crash_rc": -9,
+      "hit": {
+        "pid": 579417,
+        "point": "tmp:subd-life.json",
+        "count": 1
+      },
+      "life_at_crash": {},
+      "old_alive_at_crash": true,
+      "old_alive_after_restart": false,
+      "new_daemon": 579449,
+      "new_task": 579454,
+      "pass": true,
+      "classification": "X；恢復符合保證",
+      "cleanup": {
+        "before": [
+          579419,
+          579449,
+          579453,
+          579454
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "aos7-subd: 子根 a/sub 前代已空（收了 1 個程序、1 輪）\n",
+          "wrapper-1.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.473
+    },
+    {
+      "name": "crash-reaping",
+      "point": "subd-reaping",
+      "nth": 1,
+      "crash_rc": -9,
+      "hit": {
+        "pid": 579467,
+        "point": "subd-reaping",
+        "count": 1
+      },
+      "life_at_crash": {
+        "state": "recovering",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 579467
+        },
+        "at": "2026-10-04T17:08:50.908",
+        "prev": null
+      },
+      "old_alive_at_crash": true,
+      "old_alive_after_restart": false,
+      "new_daemon": 579480,
+      "new_task": 579493,
+      "pass": true,
+      "classification": "X；恢復符合保證",
+      "cleanup": {
+        "before": [
+          579468,
+          579480,
+          579492,
+          579493
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "aos7-subd: 子根 a/sub 前代已空（收了 1 個程序、1 輪）\n",
+          "wrapper-1.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.492
+    },
+    {
+      "name": "crash-reaped",
+      "point": "subd-reaped",
+      "nth": 1,
+      "crash_rc": -9,
+      "hit": {
+        "pid": 579508,
+        "point": "subd-reaped",
+        "count": 1
+      },
+      "life_at_crash": {
+        "state": "recovering",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 579508
+        },
+        "at": "2026-10-04T17:08:52.400",
+        "prev": null
+      },
+      "old_alive_at_crash": false,
+      "old_alive_after_restart": false,
+      "new_daemon": 579532,
+      "new_task": 579537,
+      "pass": true,
+      "classification": "X；恢復符合保證",
+      "cleanup": {
+        "before": [
+          579531,
+          579532,
+          579536,
+          579537
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 前代已空（收了 1 個程序、1 輪）\n"
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.497
+    },
+    {
+      "name": "crash-running-tmp",
+      "point": "tmp:subd-life.json",
+      "nth": 2,
+      "crash_rc": -9,
+      "hit": {
+        "pid": 579540,
+        "point": "tmp:subd-life.json",
+        "count": 2
+      },
+      "life_at_crash": {
+        "state": "recovering",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 579540
+        },
+        "at": "2026-10-04T17:08:53.898",
+        "prev": null
+      },
+      "old_alive_at_crash": false,
+      "old_alive_after_restart": false,
+      "new_daemon": 579542,
+      "new_task": 579547,
+      "pass": true,
+      "classification": "X；恢復符合保證",
+      "cleanup": {
+        "before": [
+          579541,
+          579542,
+          579546,
+          579547
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 前代已空（收了 1 個程序、1 輪）\n"
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.495
+    },
+    {
+      "name": "crash-before-argv",
+      "point": "subd-before-argv",
+      "nth": 1,
+      "crash_rc": -9,
+      "hit": {
+        "pid": 579550,
+        "point": "subd-before-argv",
+        "count": 1
+      },
+      "life_at_crash": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 579550
+        },
+        "since": "2026-10-04T17:08:56.456"
+      },
+      "old_alive_at_crash": false,
+      "old_alive_after_restart": false,
+      "new_daemon": 579552,
+      "new_task": 579557,
+      "pass": true,
+      "classification": "X；恢復符合保證",
+      "cleanup": {
+        "before": [
+          579551,
+          579552,
+          579556,
+          579557
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 前代已空（收了 1 個程序、1 輪）\n"
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.496
+    },
+    {
+      "name": "crash-guard-tmp",
+      "point": "tmp:stop-guard.json",
+      "nth": 1,
+      "crash_rc": -9,
+      "hit": {
+        "pid": 579560,
+        "point": "tmp:stop-guard.json",
+        "count": 1
+      },
+      "life_at_crash": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 579560
+        },
+        "since": "2026-10-04T17:08:57.967"
+      },
+      "old_alive_at_crash": false,
+      "old_alive_after_restart": false,
+      "new_daemon": 579629,
+      "new_task": 579691,
+      "pass": true,
+      "classification": "X；恢復符合保證",
+      "cleanup": {
+        "before": [
+          579628,
+          579629,
+          579669,
+          579691,
+          579704
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 前代已空（收了 1 個程序、1 輪）\n"
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.625
+    },
+    {
+      "name": "crash-owner-tmp",
+      "point": "tmp:owner.json",
+      "rc_restart": 1,
+      "daemon_alive": true,
+      "task_alive": true,
+      "life": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 579815
+        },
+        "since": "2026-10-04T17:08:58.578"
+      },
+      "pass": true,
+      "classification": "X；daemon.lock 持有期間拒絕重開，契約已明列",
+      "cleanup": {
+        "before": [
+          579846,
+          579866,
+          579869
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 已經有 daemon 在跑（不是這個包裝起的），沒起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 0.506
+    },
+    {
+      "name": "crash-active-wrapper",
+      "point": "active wrapper SIGKILL",
+      "rc_restart": 1,
+      "daemon_alive": true,
+      "task_alive": true,
+      "life": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 579899
+        },
+        "since": "2026-10-04T17:08:59.020"
+      },
+      "pass": true,
+      "classification": "X；daemon.lock 持有期間拒絕重開，契約已明列",
+      "cleanup": {
+        "before": [
+          579900,
+          579905,
+          579908
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 已經有 daemon 在跑（不是這個包裝起的），沒起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 0.398
+    },
+    {
+      "name": "daemon-self-crash",
+      "old_daemon": 579928,
+      "old_task": 579935,
+      "wrapper_rc": 137,
+      "life_after_daemon_crash": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 579927
+        },
+        "since": "2026-10-04T17:08:59.418"
+      },
+      "new_daemon": 579997,
+      "new_task": 580009,
+      "old_alive_after_restart": false,
+      "pass": true,
+      "classification": "X；子 daemon 自崩後回收符合保證",
+      "cleanup": {
+        "before": [
+          579940,
+          579997,
+          580007,
+          580009
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 前代已空（收了 2 個程序、1 輪）\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.579
+    },
+    {
+      "name": "allow-stop-normal",
+      "point": null,
+      "nth": 1,
+      "before": {
+        "old_alive": true,
+        "life": {
+          "state": "stopped",
+          "subroot": "a/sub",
+          "owner": {
+            "node": "a",
+            "tid": "sub",
+            "run": "1",
+            "pid": 580043
+          },
+          "at": "2026-10-04T17:09:01.144"
+        },
+        "stopped_exists": true,
+        "hit": {},
+        "wrapper_rc": 0,
+        "receipt": {
+          "op": "stop",
+          "by": "astra5",
+          "result": {
+            "ok": true,
+            "msg": "stopping",
+            "at": "2026-10-04T17:09:01.119",
+            "queued_at": "2026-10-04T17:09:01.105"
+          }
+        },
+        "blocked_rc": 1
+      },
+      "new_daemon": 580072,
+      "old_task": 580058,
+      "old_alive_after_restart": true,
+      "pass": true,
+      "classification": "normal",
+      "cleanup": {
+        "before": [
+          580052,
+          580058,
+          580071,
+          580072
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）已被 astra5 在 2026-10-04T17:09:01.119 stop；刪掉 /tmp/astra5-subd-edge-l0m0xprf/allow-stop-normal/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 0.832
+    },
+    {
+      "name": "allow-stop-crash-stopped-tmp",
+      "point": "tmp:stopped.json",
+      "nth": 1,
+      "before": {
+        "old_alive": true,
+        "life": {
+          "state": "running",
+          "subroot": "a/sub",
+          "owner": {
+            "node": "a",
+            "tid": "sub",
+            "run": "1",
+            "pid": 580130
+          },
+          "since": "2026-10-04T17:09:01.833"
+        },
+        "stopped_exists": false,
+        "hit": {
+          "pid": 580130,
+          "point": "tmp:stopped.json",
+          "count": 1
+        },
+        "wrapper_rc": -9,
+        "receipt": {
+          "op": "stop",
+          "by": "astra5",
+          "result": {
+            "ok": true,
+            "msg": "stopping",
+            "at": "2026-10-04T17:09:01.958",
+            "queued_at": "2026-10-04T17:09:01.948"
+          }
+        }
+      },
+      "new_daemon": 580213,
+      "old_task": 580143,
+      "old_alive_after_restart": false,
+      "pass": false,
+      "classification": "B 候選：已允許 stop 的持久化中断後重開收掉應接回任務",
+      "cleanup": {
+        "before": [
+          580147,
+          580213,
+          580224,
+          580225
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 前代已空（收了 2 個程序、1 輪）\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.896
+    },
+    {
+      "name": "allow-stop-crash-life-tmp",
+      "point": "tmp:subd-life.json",
+      "nth": 3,
+      "before": {
+        "old_alive": true,
+        "life": {
+          "state": "running",
+          "subroot": "a/sub",
+          "owner": {
+            "node": "a",
+            "tid": "sub",
+            "run": "1",
+            "pid": 580271
+          },
+          "since": "2026-10-04T17:09:03.729"
+        },
+        "stopped_exists": true,
+        "hit": {
+          "pid": 580271,
+          "point": "tmp:subd-life.json",
+          "count": 3
+        },
+        "wrapper_rc": -9,
+        "receipt": {
+          "op": "stop",
+          "by": "astra5",
+          "result": {
+            "ok": true,
+            "msg": "stopping",
+            "at": "2026-10-04T17:09:03.855",
+            "queued_at": "2026-10-04T17:09:03.844"
+          }
+        },
+        "blocked_rc": 1
+      },
+      "new_daemon": 580371,
+      "old_task": 580284,
+      "old_alive_after_restart": false,
+      "pass": false,
+      "classification": "B 候選：已允許 stop 的持久化中断後重開收掉應接回任務",
+      "cleanup": {
+        "before": [
+          580294,
+          580371,
+          580378,
+          580379
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "aos7-subd: 子根 a/sub 前代已空（收了 2 個程序、1 輪）\n",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）已被 astra5 在 2026-10-04T17:09:03.855 stop；刪掉 /tmp/astra5-subd-edge-l0m0xprf/allow-stop-crash-life-tmp/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.912
+    }
+  ],
+  "final_proc_remaining": [],
+  "tmp_removed": true,
+  "classification_note": "初版edges.log將手動構造身分直接標M過強，此處及summary校正；原始觀察與PID結果未變。"
+}

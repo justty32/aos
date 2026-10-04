@@ -1,0 +1,19 @@
+{
+  "path": "proto7-2/packs/budget/spec.md",
+  "head": "392a1d645eceec98c41678ab2b685959e7ab0522",
+  "lines": 84,
+  "headings": [
+    "## 1. 預算資料夾與檔案所有權",
+    "## 2. grant 與時鐘",
+    "## 3. 帳",
+    "## 4. 入口",
+    "## 5. 假後端",
+    "## 6. call 包裝程式",
+    "## 7. 測試鉤子",
+    "## 8. 明確不管（誤用，不處理）"
+  ],
+  "sha256": "a2806558a852f9aeb24c08eb1628e171ba2f7f5a63bccb1292ef3d16d4f8ed25",
+  "creation_commit_lines": 84,
+  "creation_commit_same": true,
+  "self_declared_five_gaps_found": false
+}

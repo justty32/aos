@@ -1,0 +1,461 @@
+{
+ "note": "results.json ok means probe observations completed, not product conformity. Two B probes demonstrate one finding. M probes are not bugs.",
+ "cases": [
+  {
+   "name": "concurrent-same",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "normal",
+   "finding": null,
+   "seconds": 0.164
+  },
+  {
+   "name": "concurrent-different",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "normal",
+   "finding": null,
+   "seconds": 0.221
+  },
+  {
+   "name": "concurrent-conflict",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "normal",
+   "finding": null,
+   "seconds": 0.167
+  },
+  {
+   "name": "concurrent-cancel",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "normal",
+   "finding": null,
+   "seconds": 2.116
+  },
+  {
+   "name": "hook-reserve-before-commit",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.241
+  },
+  {
+   "name": "hook-reserve-after-commit",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.24
+  },
+  {
+   "name": "hook-settle-before-commit",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.219
+  },
+  {
+   "name": "hook-settle-after-commit",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.22
+  },
+  {
+   "name": "hook-call-after-reserve",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.196
+  },
+  {
+   "name": "hook-gateway-after-intent",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.176
+  },
+  {
+   "name": "hook-backend-after-effect",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.177
+  },
+  {
+   "name": "hook-gateway-after-receipt",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.198
+  },
+  {
+   "name": "hook-call-after-settle",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.177
+  },
+  {
+   "name": "window-ledger-reserve-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.2
+  },
+  {
+   "name": "window-ledger-reserve-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.24
+  },
+  {
+   "name": "window-ledger-settle-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.26
+  },
+  {
+   "name": "window-ledger-settle-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.222
+  },
+  {
+   "name": "window-gateway-intent-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.201
+  },
+  {
+   "name": "window-gateway-intent-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.198
+  },
+  {
+   "name": "window-backend-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.199
+  },
+  {
+   "name": "window-backend-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.199
+  },
+  {
+   "name": "window-gateway-done-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.199
+  },
+  {
+   "name": "window-gateway-done-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.199
+  },
+  {
+   "name": "window-receipt-reserve-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.241
+  },
+  {
+   "name": "window-receipt-reserve-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.22
+  },
+  {
+   "name": "window-receipt-settle-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.26
+  },
+  {
+   "name": "window-receipt-settle-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.251
+  },
+  {
+   "name": "window-inbox-reserve-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.168
+  },
+  {
+   "name": "window-inbox-reserve-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.169
+  },
+  {
+   "name": "window-inbox-settle-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.2
+  },
+  {
+   "name": "window-inbox-settle-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.179
+  },
+  {
+   "name": "window-output-before",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.178
+  },
+  {
+   "name": "window-output-after",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.178
+  },
+  {
+   "name": "cancel-call-after-reserve",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "normal",
+   "finding": null,
+   "seconds": 0.289
+  },
+  {
+   "name": "cancel-gateway-after-intent",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "normal",
+   "finding": null,
+   "seconds": 0.288
+  },
+  {
+   "name": "cancel-backend-after-effect",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "normal",
+   "finding": null,
+   "seconds": 0.29
+  },
+  {
+   "name": "unknown-gateway",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "M",
+   "finding": null,
+   "seconds": 0.197
+  },
+  {
+   "name": "ledger-missing",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "M",
+   "finding": null,
+   "seconds": 0.155
+  },
+  {
+   "name": "ledger-malformed",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "M",
+   "finding": null,
+   "seconds": 0.154
+  },
+  {
+   "name": "eio-ledger.json",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.264
+  },
+  {
+   "name": "eio-backend.json",
+   "result_file": "verified/results.json",
+   "harness_completed": true,
+   "contract_result": "violation",
+   "classification": "B",
+   "finding": "A6-02",
+   "seconds": 0.18
+  },
+  {
+   "name": "eio-grant.json",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.177
+  },
+  {
+   "name": "eio-gateway/519457d6f54d32335539.json",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.177
+  },
+  {
+   "name": "eacces-backend",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "violation",
+   "classification": "B",
+   "finding": "A6-02",
+   "seconds": 0.286
+  },
+  {
+   "name": "cancel-window-before-gateway-after-intent",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.196
+  },
+  {
+   "name": "cancel-window-before-backend-after-effect",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.196
+  },
+  {
+   "name": "init-window-before",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.132
+  },
+  {
+   "name": "cancel-window-after-gateway-after-intent",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.177
+  },
+  {
+   "name": "cancel-window-after-backend-after-effect",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.197
+  },
+  {
+   "name": "init-window-after",
+   "result_file": "extra/results.json",
+   "harness_completed": true,
+   "contract_result": "observed_documented_behavior",
+   "classification": "X",
+   "finding": null,
+   "seconds": 0.114
+  }
+ ],
+ "totals": {
+  "probes_completed": 50,
+  "conforming_or_M_observations": 48,
+  "B_reproductions": 2,
+  "unique_B": 1
+ }
+}

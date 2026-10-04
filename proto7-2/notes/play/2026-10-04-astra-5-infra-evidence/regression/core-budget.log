@@ -1,0 +1,33 @@
+test_core_line_budget (__main__.TestBudget.test_core_line_budget) ... /home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_daemon.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_daemon_timeline.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_fs.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_mount.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_proc.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_run.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_task.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_tick.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/core/test_budget.py:23: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_tock.py' mode='r' encoding='utf-8'>
+  src = open(path, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.039s
+
+OK

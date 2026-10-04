@@ -1,0 +1,46 @@
+{
+  "sources": [
+    {
+      "file": "results.json",
+      "tmp": "/tmp/astra5-subd-stress-lqvzau9p",
+      "tmp_exists": false,
+      "tmp_removed": true,
+      "final_proc_remaining": [],
+      "all_case_pid_checks_empty": true
+    },
+    {
+      "file": "stress-parallel.json",
+      "tmp": "/tmp/astra5-subd-stress-oomkg7ni",
+      "tmp_exists": false,
+      "tmp_removed": true,
+      "final_proc_remaining": [],
+      "all_case_pid_checks_empty": true
+    },
+    {
+      "file": "g3-r7.json",
+      "tmp": "/tmp/astra5-subd-stress-15a6fqfw",
+      "tmp_exists": false,
+      "tmp_removed": true,
+      "final_proc_remaining": [],
+      "all_case_pid_checks_empty": true
+    },
+    {
+      "file": "edges.json",
+      "tmp": "/tmp/astra5-subd-edge-l0m0xprf",
+      "tmp_exists": false,
+      "tmp_removed": true,
+      "final_proc_remaining": [],
+      "all_case_pid_checks_empty": true
+    },
+    {
+      "file": "confirm-stop.json",
+      "tmp": "/tmp/astra5-subd-edge-a41mph5n",
+      "tmp_exists": false,
+      "tmp_removed": true,
+      "final_proc_remaining": [],
+      "all_case_pid_checks_empty": true
+    }
+  ],
+  "ps_check": [],
+  "at_epoch": 1791105206.489862
+}

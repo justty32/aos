@@ -1,0 +1,166 @@
+{
+  "suites": [
+    {
+      "run": 1,
+      "pid": 573072,
+      "started_utc": "2026-10-04T09:06:26.186428+00:00",
+      "seconds": 137.309,
+      "rc": 0,
+      "tests": 322,
+      "unittest_seconds": 137.252,
+      "ok": true,
+      "failures": []
+    },
+    {
+      "run": 2,
+      "pid": 579181,
+      "started_utc": "2026-10-04T09:08:43.495637+00:00",
+      "seconds": 132.839,
+      "rc": 0,
+      "tests": 322,
+      "unittest_seconds": 132.782,
+      "ok": true,
+      "failures": []
+    },
+    {
+      "run": 3,
+      "pid": 587022,
+      "started_utc": "2026-10-04T09:10:56.334621+00:00",
+      "seconds": 139.68,
+      "rc": 0,
+      "tests": 322,
+      "unittest_seconds": 139.623,
+      "ok": true,
+      "failures": []
+    }
+  ],
+  "unstable_cases": [],
+  "core_probe_count": 17,
+  "step_probe_count": 8,
+  "f47_step_probe_count": 2,
+  "core_lines": {
+    "files": {
+      "aos7_daemon.py": [
+        630,
+        518
+      ],
+      "aos7_daemon_timeline.py": [
+        309,
+        247
+      ],
+      "aos7_fs.py": [
+        343,
+        221
+      ],
+      "aos7_mount.py": [
+        168,
+        130
+      ],
+      "aos7_proc.py": [
+        249,
+        178
+      ],
+      "aos7_run.py": [
+        113,
+        87
+      ],
+      "aos7_task.py": [
+        334,
+        249
+      ],
+      "aos7_tick.py": [
+        414,
+        331
+      ],
+      "aos7_tock.py": [
+        197,
+        162
+      ]
+    },
+    "total": 2757,
+    "code": 2123,
+    "total_max": 2800,
+    "code_max": 2200
+  },
+  "longrun": {
+    "closed_round": 450,
+    "seconds": 25.416,
+    "samples": 451,
+    "completed": 111,
+    "report_ok": 111,
+    "all_first_attempt": true,
+    "errors": 0,
+    "ended_job_files": [
+      10
+    ],
+    "ended_job_bytes": [
+      4381,
+      4397
+    ],
+    "all_phase_file_ranges": {
+      "job": [
+        4,
+        11
+      ],
+      "node": [
+        7,
+        30
+      ],
+      "root": [
+        8,
+        37
+      ]
+    }
+  },
+  "new_B_or_G": [],
+  "source_files_unchanged": 104,
+  "harness_notes": {
+    "corrections": [],
+    "strengthening": [
+      "長跑退出條件補存 round.json open=false 且 round>=450；last-round.json 可在 tock 收尾前先提交，原 astra-4 腳本只看 last-round 不足以直接證明已關。第一次長跑 rc0，採加強後重跑結果。"
+    ],
+    "production_findings": []
+  },
+  "cleanup": {
+    "checked_utc": "2026-10-04T09:13:42.288964+00:00",
+    "known_case_roots": [
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-vbh58e4f",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-u3mknl88",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-pt2_gr69",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-g0xw4d58",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-108x9vhc",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-fi9gxycd",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-v_brxulw",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-o701jodm",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-gtk4hh94",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-0anlgb68",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-wbti06lj",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-2gkjpux6",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-2ss123am",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-w58mgfzs",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-wh7j6yy1",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-n3a707k3",
+      "/tmp/astra5-core-jtpw9z_p/aos72-test-qlp76vb0",
+      "/tmp/aos72-test-e1zvp3l2",
+      "/tmp/aos72-test-tk4wu1ew",
+      "/tmp/aos72-test-cek953mt",
+      "/tmp/aos72-test-_76ux8gy",
+      "/tmp/aos72-test-1l8m9fg0",
+      "/tmp/aos72-test-v_2mndyk",
+      "/tmp/aos72-test-5orr4mrh",
+      "/tmp/aos72-test-8xlf1ytk",
+      "/tmp/aos72-test-1mw0v2rx",
+      "/tmp/aos72-test-ih08b2yz",
+      "/tmp/aos72-test-wizhj_1g"
+    ],
+    "roots_remaining": [],
+    "matching_pids": [],
+    "ps_root_matches": [],
+    "suite_pids": [
+      573072,
+      579181,
+      587022
+    ],
+    "suite_pids_remaining": []
+  }
+}

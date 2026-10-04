@@ -1,0 +1,540 @@
+[
+ {
+  "name": "eio-grant.json",
+  "ok": true,
+  "data": {
+   "hits": [
+    {
+     "pid": 590425,
+     "mode": "EIO",
+     "target": "grant.json",
+     "path": "/tmp/astra5-budget-crash-k1ymxnyq/eio-grant.json/budget/demo/grant.json"
+    }
+   ],
+   "failure": {
+    "pid": 590425,
+    "rc": 3,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "unknown",
+     "stage": "run",
+     "why": "grant.json grant.json 讀不到：OSError(5, 'QA injected read failure')"
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"unknown\", \"stage\": \"run\", \"why\": \"grant.json grant.json 讀不到：OSError(5, 'QA injected read failure')\"}\n",
+    "stderr": ""
+   },
+   "recovered": {
+    "pid": 590428,
+    "rc": 0,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "accepted",
+     "used": 1,
+     "response": {
+      "ok": true,
+      "echo": null
+     },
+     "settle": {
+      "seq": 2,
+      "used": 1,
+      "outcome": "accepted",
+      "evidence": "90e12e1964504cdbbcfa18ebcfab47e08c1be388b7d47e98083fb4c2b9481fe3",
+      "at": "2026-10-04T17:12:26.025"
+     }
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"settle\": {\"seq\": 2, \"used\": 1, \"outcome\": \"accepted\", \"evidence\": \"90e12e1964504cdbbcfa18ebcfab47e08c1be388b7d47e98083fb4c2b9481fe3\", \"at\": \"2026-10-04T17:12:26.025\"}}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.177
+ },
+ {
+  "name": "eio-gateway/519457d6f54d32335539.json",
+  "ok": true,
+  "data": {
+   "hits": [
+    {
+     "pid": 590432,
+     "mode": "EIO",
+     "target": "gateway/519457d6f54d32335539.json",
+     "path": "/tmp/astra5-budget-crash-k1ymxnyq/eio-gateway_519457d6f54d32335539.json/budget/demo/gateway/519457d6f54d32335539.json"
+    }
+   ],
+   "failure": {
+    "pid": 590432,
+    "rc": 3,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "unknown",
+     "stage": "run",
+     "why": "入口紀錄讀不到：519457d6f54d32335539.json 讀不到：OSError(5, 'QA injected read failure')"
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"unknown\", \"stage\": \"run\", \"why\": \"入口紀錄讀不到：519457d6f54d32335539.json 讀不到：OSError(5, 'QA injected read failure')\"}\n",
+    "stderr": ""
+   },
+   "recovered": {
+    "pid": 590433,
+    "rc": 0,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "accepted",
+     "used": 1,
+     "response": {
+      "ok": true,
+      "echo": null
+     },
+     "settle": {
+      "seq": 2,
+      "used": 1,
+      "outcome": "accepted",
+      "evidence": "357f94055eb73a2d7f8737f129f1247ae09c17d940ac61b062bb0466f41b312b",
+      "at": "2026-10-04T17:12:26.201"
+     }
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"settle\": {\"seq\": 2, \"used\": 1, \"outcome\": \"accepted\", \"evidence\": \"357f94055eb73a2d7f8737f129f1247ae09c17d940ac61b062bb0466f41b312b\", \"at\": \"2026-10-04T17:12:26.201\"}}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.177
+ },
+ {
+  "name": "eacces-backend",
+  "ok": true,
+  "data": {
+   "real_EACCES": true,
+   "uid": 1000,
+   "failure": {
+    "pid": 590438,
+    "rc": 1,
+    "result": null,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/bin/aos7-budget\", line 8, in <module>\n    sys.exit(aos7_budget.main())\n             ~~~~~~~~~~~~~~~~^^\n  File \"/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/aos7_budget.py\", line 423, in main\n    return gate.call(bud, key, a.amount, a.resource, a.payload, a.out, a.patience)\n           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/aos7_budget_gate.py\", line 174, in call\n    gw = run(bud, key, content, payload)\n  File \"/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/aos7_budget_gate.py\", line 100, in run\n    eff = backend_accept(bud, kid, key, content[\"amount\"], payload)\n  File \"/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/budget/aos7_budget_gate.py\", line 40, in backend_accept\n    edit_json(bud.p(\"backend.json\"), fn)\n    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/lorkhan/repo/simple_tools/aos/proto7-2/lib/aos7_fs.py\", line 211, in edit_json\n    raise Unknown(\"%s %s，不知道原本有什麼，沒寫\" % (os.path.basename(path), cur), kind=st)\naos7_fs.Unknown: backend.json backend.json 讀不到：PermissionError(13, 'Permission denied')，不知道原本有什麼，沒寫\n"
+   },
+   "unknown": {
+    "pid": 590439,
+    "rc": 3,
+    "result": {
+     "result": "unknown",
+     "why": "入口紀錄不是終局（stage 'intent'）；預留留著",
+     "op": "settle",
+     "at": "2026-10-04T17:12:26.418"
+    },
+    "stdout": "{\"result\": \"unknown\", \"why\": \"入口紀錄不是終局（stage 'intent'）；預留留著\", \"op\": \"settle\", \"at\": \"2026-10-04T17:12:26.418\"}\n",
+    "stderr": ""
+   },
+   "before": {
+    "available": 98,
+    "inflight": 1,
+    "used": 1,
+    "seq": 3
+   },
+   "recovered": {
+    "pid": 590440,
+    "rc": 0,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "accepted",
+     "used": 1,
+     "response": {
+      "ok": true,
+      "echo": null
+     },
+     "settle": {
+      "seq": 4,
+      "used": 1,
+      "outcome": "accepted",
+      "evidence": "ae935a293ef4af9dedb2eef6aa27f77d553fc10d7ff1f8c6227e805fc7ff21d8",
+      "at": "2026-10-04T17:12:26.478"
+     }
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"settle\": {\"seq\": 4, \"used\": 1, \"outcome\": \"accepted\", \"evidence\": \"ae935a293ef4af9dedb2eef6aa27f77d553fc10d7ff1f8c6227e805fc7ff21d8\", \"at\": \"2026-10-04T17:12:26.478\"}}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 98,
+    "inflight": 0,
+    "used": 2,
+    "seq": 4
+   },
+   "data_unchanged_during_fault": true
+  },
+  "seconds": 0.286
+ },
+ {
+  "name": "cancel-window-before-gateway-after-intent",
+  "ok": true,
+  "data": {
+   "hits": [
+    {
+     "pid": 590444,
+     "mode": "before",
+     "target": "gateway-done",
+     "dst": "/tmp/astra5-budget-crash-k1ymxnyq/cancel-window-before-gateway-after-intent/budget/demo/gateway/519457d6f54d32335539.json",
+     "src": "/tmp/astra5-budget-crash-k1ymxnyq/cancel-window-before-gateway-after-intent/budget/demo/gateway/.519457d6f54d32335539.json.tmp.590444"
+    }
+   ],
+   "cancel": {
+    "pid": 590445,
+    "rc": 0,
+    "result": {
+     "stage": "done",
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+     "outcome": "cancelled",
+     "used": 0,
+     "at": "2026-10-04T17:12:26.626"
+    },
+    "stdout": "{\"stage\": \"done\", \"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"digest\": \"03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002\", \"outcome\": \"cancelled\", \"used\": 0, \"at\": \"2026-10-04T17:12:26.626\"}\n",
+    "stderr": ""
+   },
+   "late": {
+    "pid": 590446,
+    "rc": 1,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "cancelled",
+     "used": 0,
+     "response": null,
+     "settle": {
+      "seq": 2,
+      "used": 0,
+      "outcome": "cancelled",
+      "evidence": "6135638fee8134f97f69e93803acfed2c4f67d34cf0d8f3f2c5d867286c980fd",
+      "at": "2026-10-04T17:12:26.684"
+     }
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"cancelled\", \"used\": 0, \"response\": null, \"settle\": {\"seq\": 2, \"used\": 0, \"outcome\": \"cancelled\", \"evidence\": \"6135638fee8134f97f69e93803acfed2c4f67d34cf0d8f3f2c5d867286c980fd\", \"at\": \"2026-10-04T17:12:26.684\"}}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 100,
+    "inflight": 0,
+    "used": 0,
+    "seq": 2
+   }
+  },
+  "seconds": 0.196
+ },
+ {
+  "name": "cancel-window-before-backend-after-effect",
+  "ok": true,
+  "data": {
+   "hits": [
+    {
+     "pid": 590450,
+     "mode": "before",
+     "target": "gateway-done",
+     "dst": "/tmp/astra5-budget-crash-k1ymxnyq/cancel-window-before-backend-after-effect/budget/demo/gateway/519457d6f54d32335539.json",
+     "src": "/tmp/astra5-budget-crash-k1ymxnyq/cancel-window-before-backend-after-effect/budget/demo/gateway/.519457d6f54d32335539.json.tmp.590450"
+    }
+   ],
+   "cancel": {
+    "pid": 590451,
+    "rc": 1,
+    "result": {
+     "stage": "done",
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+     "outcome": "accepted",
+     "used": 1,
+     "response": {
+      "ok": true,
+      "echo": null
+     },
+     "at": "2026-10-04T17:12:26.822"
+    },
+    "stdout": "{\"stage\": \"done\", \"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"digest\": \"03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002\", \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"at\": \"2026-10-04T17:12:26.822\"}\n",
+    "stderr": ""
+   },
+   "late": {
+    "pid": 590453,
+    "rc": 0,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "accepted",
+     "used": 1,
+     "response": {
+      "ok": true,
+      "echo": null
+     },
+     "settle": {
+      "seq": 2,
+      "used": 1,
+      "outcome": "accepted",
+      "evidence": "77d08e7944281f27864b8f5734b7d191f76b518ba4e9dfd35cf3f6d8b4120512",
+      "at": "2026-10-04T17:12:26.880"
+     }
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"settle\": {\"seq\": 2, \"used\": 1, \"outcome\": \"accepted\", \"evidence\": \"77d08e7944281f27864b8f5734b7d191f76b518ba4e9dfd35cf3f6d8b4120512\", \"at\": \"2026-10-04T17:12:26.880\"}}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.196
+ },
+ {
+  "name": "init-window-before",
+  "ok": true,
+  "data": {
+   "hits": [
+    {
+     "pid": 590457,
+     "mode": "before",
+     "target": "ledger-init",
+     "dst": "/tmp/astra5-budget-crash-k1ymxnyq/init-before/budget/demo/ledger.json",
+     "src": "/tmp/astra5-budget-crash-k1ymxnyq/init-before/budget/demo/.ledger.json.tmp.590457"
+    }
+   ],
+   "ledger_existed_after_kill": false,
+   "reinit": {
+    "pid": 590461,
+    "rc": 0,
+    "result": {
+     "ok": true,
+     "why": null
+    },
+    "stdout": "{\"ok\": true, \"why\": null}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 4,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.132
+ },
+ {
+  "name": "cancel-window-after-gateway-after-intent",
+  "ok": true,
+  "data": {
+   "hits": [
+    {
+     "pid": 590478,
+     "mode": "after",
+     "target": "gateway-done",
+     "dst": "/tmp/astra5-budget-crash-k1ymxnyq/cancel-window-after-gateway-after-intent/budget/demo/gateway/519457d6f54d32335539.json",
+     "src": "/tmp/astra5-budget-crash-k1ymxnyq/cancel-window-after-gateway-after-intent/budget/demo/gateway/.519457d6f54d32335539.json.tmp.590478"
+    }
+   ],
+   "cancel": {
+    "pid": 590479,
+    "rc": 0,
+    "result": {
+     "stage": "done",
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+     "outcome": "cancelled",
+     "used": 0,
+     "at": "2026-10-04T17:12:27.110"
+    },
+    "stdout": "{\"stage\": \"done\", \"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"digest\": \"03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002\", \"outcome\": \"cancelled\", \"used\": 0, \"at\": \"2026-10-04T17:12:27.110\"}\n",
+    "stderr": ""
+   },
+   "late": {
+    "pid": 590481,
+    "rc": 1,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "cancelled",
+     "used": 0,
+     "response": null,
+     "settle": {
+      "seq": 2,
+      "used": 0,
+      "outcome": "cancelled",
+      "evidence": "f827a2ca643a97e8ba4ae95133b92949b9297e3de05479d92d82efa9b51972a1",
+      "at": "2026-10-04T17:12:27.188"
+     }
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"cancelled\", \"used\": 0, \"response\": null, \"settle\": {\"seq\": 2, \"used\": 0, \"outcome\": \"cancelled\", \"evidence\": \"f827a2ca643a97e8ba4ae95133b92949b9297e3de05479d92d82efa9b51972a1\", \"at\": \"2026-10-04T17:12:27.188\"}}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 100,
+    "inflight": 0,
+    "used": 0,
+    "seq": 2
+   }
+  },
+  "seconds": 0.177
+ },
+ {
+  "name": "cancel-window-after-backend-after-effect",
+  "ok": true,
+  "data": {
+   "hits": [
+    {
+     "pid": 590498,
+     "mode": "after",
+     "target": "gateway-done",
+     "dst": "/tmp/astra5-budget-crash-k1ymxnyq/cancel-window-after-backend-after-effect/budget/demo/gateway/519457d6f54d32335539.json",
+     "src": "/tmp/astra5-budget-crash-k1ymxnyq/cancel-window-after-backend-after-effect/budget/demo/gateway/.519457d6f54d32335539.json.tmp.590498"
+    }
+   ],
+   "cancel": {
+    "pid": 590501,
+    "rc": 1,
+    "result": {
+     "stage": "done",
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+     "outcome": "accepted",
+     "used": 1,
+     "response": {
+      "ok": true,
+      "echo": null
+     },
+     "at": "2026-10-04T17:12:27.307"
+    },
+    "stdout": "{\"stage\": \"done\", \"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"digest\": \"03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002\", \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"at\": \"2026-10-04T17:12:27.307\"}\n",
+    "stderr": ""
+   },
+   "late": {
+    "pid": 590502,
+    "rc": 0,
+    "result": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "accepted",
+     "used": 1,
+     "response": {
+      "ok": true,
+      "echo": null
+     },
+     "settle": {
+      "seq": 2,
+      "used": 1,
+      "outcome": "accepted",
+      "evidence": "908119f02dd80b059c5ce87e6e3719b0c473bac6f453937c753e9c7f198d9f28",
+      "at": "2026-10-04T17:12:27.386"
+     }
+    },
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"settle\": {\"seq\": 2, \"used\": 1, \"outcome\": \"accepted\", \"evidence\": \"908119f02dd80b059c5ce87e6e3719b0c473bac6f453937c753e9c7f198d9f28\", \"at\": \"2026-10-04T17:12:27.386\"}}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.197
+ },
+ {
+  "name": "init-window-after",
+  "ok": true,
+  "data": {
+   "hits": [
+    {
+     "pid": 590507,
+     "mode": "after",
+     "target": "ledger-init",
+     "dst": "/tmp/astra5-budget-crash-k1ymxnyq/init-after/budget/demo/ledger.json",
+     "src": "/tmp/astra5-budget-crash-k1ymxnyq/init-after/budget/demo/.ledger.json.tmp.590507"
+    }
+   ],
+   "ledger_existed_after_kill": true,
+   "reinit": {
+    "pid": 590510,
+    "rc": 1,
+    "result": {
+     "ok": false,
+     "why": "ledger.json 已存在（或讀不到），不重開"
+    },
+    "stdout": "{\"ok\": false, \"why\": \"ledger.json 已存在（或讀不到），不重開\"}\n",
+    "stderr": ""
+   },
+   "final": {
+    "available": 4,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.114
+ }
+]

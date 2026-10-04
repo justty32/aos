@@ -1,0 +1,10 @@
+{
+  "head_before": "392a1d645eceec98c41678ab2b685959e7ab0522",
+  "head_after": "392a1d645eceec98c41678ab2b685959e7ab0522",
+  "tracked_count": 286,
+  "changed_tracked_proto7_2": [],
+  "remaining_test_processes": [],
+  "report_broken_relative_links": [],
+  "git_status": "?? proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/\n?? proto7-2/notes/play/2026-10-04-astra-5-infra.md\n?? proto7/user-advice.md\n",
+  "ps_file": "ps-final.txt"
+}
