@@ -298,6 +298,7 @@ class Daemon:
             return False, "rounds 要是正整數"
         with self._lock:
             lst = self.paused.setdefault(nid, [])
+            was = bool(lst)
             if ctl.get("all") is True:
                 lst.clear()
                 self.steps.pop(nid, None)
@@ -310,11 +311,14 @@ class Daemon:
                 self.steps.setdefault(nid, {})[owner] = rounds
             self.save_paused()
             left = list(lst)
-        if not left:
-            self._kick(nid)   # 沒人 pause 了：順便 wake（N-84）
+        if not left and was:
+            # 因此變成沒人 pause：順便 wake（N-84）。本來就沒人 pause 的 resume 不 wake——P2-01 之後 wake 會提前結束
+            # 固定 interval 的回合，一個沒作用的 resume 不該切掉正在跑的回合
+            self._kick(nid)
         return True, "resume %s（owner %r%s%s）；%s%s" % (
             nid, owner, "，all" if ctl.get("all") is True else "", "，rounds=%d" % rounds if rounds else "",
-            "還有 %s 在 pause" % left if left else "沒人 pause 了，馬上開回合", self._note(nid))
+            "還有 %s 在 pause" % left if left else ("沒人 pause 了，馬上開回合" if was else "本來就沒人 pause"),
+            self._note(nid))
 
     def _drop_steps(self, nid, owner):
         """拿掉 nid 上 owner 的 rounds 倒數（同一 owner 再 pause／resume 時清掉；spec §2.4、A2-06）。呼叫的人拿著 _lock。"""
@@ -326,7 +330,8 @@ class Daemon:
 
     def op_wake(self, nid, ctl):
         """依控制請求喚醒 nid 等下一回合的時間線（spec §2.3；ctl 為派送介面的控制物件）。
-        回 (True, msg) 表示已接受；node 不存在也只提示，回合中不提前 tock（P2-01）。"""
+        回 (True, msg) 表示已接受；node 不存在也只提示。固定 interval 的 node 回合中收到會提前結束這回合、馬上開下一回合
+        （P2-01 選 (b)）；early_tock 的 node 回合中照舊不起作用（A2-11）。"""
         self._kick(nid)
         return True, "wake %s%s" % (nid, self._note(nid))
 

@@ -60,10 +60,20 @@ def _tock(root, node_id, node, fnode, early):
     if st == ROUND_NONE:
         return {"round": None, "skipped": "no round.json"}     # P2-06：沒有回合可關
     if st == ROUND_CLOSED:
-        return {"round": state["round"], "skipped": "round already closed"}
+        out = {"round": state["round"], "skipped": "round already closed"}
+        if state.get("notify_errors"):
+            # A3-08：回合關上時有沒寫進去的 tock.json，再 tock 一次就補（權限恢復後人手跑 aos7-tock 也有用）
+            left = retry_notify(fnode, node, state)
+            state["notify_errors"] = left
+            if not left:
+                state.pop("notify_errors")
+            write_json(rpath, state)
+            out["notify_retried"] = True
+            out["notify_errors"] = left
+        return out
     if st != ROUND_OPEN:
         raise Unknown(why)
-    lst, lr = read_json3(lpath)
+    lst, lr = read_json3(lpath, strict=True)   # A3-03：不是一般檔＝不知道，不當沒有總結去重新產生
     if lst == IO:
         raise Unknown("last-round.json 讀不到：%s，判斷不了這回合總結寫過沒" % lr)
     lr = lr if lst == OK else None
@@ -83,6 +93,10 @@ def _tock(root, node_id, node, fnode, early):
     for slot in slots:
         fslot = aos7_task.slot_dir(fnode, slot)
         sweep_tmp(fslot)
+        # A3-07：mount-req／mount-done 也是基礎設施子目錄（任務與 tick 原子寫回條／請求），寫者死了留下的暫存檔一起清；
+        # 不遞迴清任務自己的資料夾
+        for sub in ("mount-req", "mount-done"):
+            sweep_tmp(os.path.join(fslot, sub))
         try:
             v = aos7_task.judge_resolved(fslot, node, slot, rnd)
         except Exception as e:   # noqa: BLE001  一個槽壞掉只記它，其他照做
@@ -141,8 +155,44 @@ def _notify(fnode, rnd, at, early, views):
                 write_json(os.path.join(aos7_task.slot_dir(fnode, slot), "tock.json"),
                            {"run": v.run, "round": rnd, "at": at, "early": early})
             except OSError as e:
-                errs.append({"slot": slot, "phase": "tock.json", "err": repr(e)[:200]})
+                errs.append({"slot": slot, "run": v.run, "round": rnd, "phase": "tock.json", "err": repr(e)[:200]})
     return errs
+
+
+def retry_notify(fnode, node, state):
+    """A3-08：補寫 round.json `notify_errors` 記著、還欠的 tock.json。回還補不上的清單（每筆 {"slot","run","round","err"}）。
+
+    每筆照槽現在的判定：同一個 run 還活著 → 補寫（那個槽的 tock.json 已經是這回合或更新的就不寫）；槽換了 run、已結束、
+    或槽不在了 → 那份通知已經沒有對象，丟掉；判不出（UNKNOWN）或寫不進去 → 留著，下次再補。
+    tick 開下一回合前、tock 遇到已關的回合時呼叫（拿著 action.lock）。state 不是物件或沒有 notify_errors 回 []。"""
+    owed = state.get("notify_errors") if isinstance(state, dict) else None
+    if not isinstance(owed, list):
+        return []
+    left = []
+    for e in owed:
+        if not (isinstance(e, dict) and isinstance(e.get("slot"), str) and is_int(e.get("run")) and is_int(e.get("round"))):
+            continue   # 舊格式（沒有 run／round）補不了，也不留
+        fslot = aos7_task.slot_dir(fnode, e["slot"])
+        try:
+            v = aos7_task.judge(fslot, node, e["slot"], e["round"])
+        except Exception as ex:   # noqa: BLE001
+            left.append(dict(e, err="判定失敗：%r" % (ex,)))
+            continue
+        if v.state == UNKNOWN:
+            left.append(dict(e, err="槽判不出：%s" % v.get("why")))
+            continue
+        if v.state != LIVE or v.run != e["run"]:
+            continue
+        tp = os.path.join(fslot, "tock.json")
+        old = read_json(tp)
+        if isinstance(old, dict) and old.get("run") == e["run"] and is_int(old.get("round")) and old["round"] >= e["round"]:
+            continue
+        try:
+            write_json(tp, {"run": e["run"], "round": e["round"], "at": state.get("tock_at") or now(),
+                            "early": None, "late": True})
+        except OSError as ex:
+            left.append(dict(e, err=repr(ex)[:200]))
+    return left
 
 
 def _mark_seen(fslot, run, rnd):
@@ -165,7 +215,7 @@ def _finish(fnode, rnd, marks, views):
             _mark_seen(aos7_task.slot_dir(fnode, slot), v.run, rnd)
         except OSError:
             pass   # 補不上下次會再報一次（重複），不會漏
-    st, t = read_json3(os.path.join(fnode, ".aos", "tasks.json"))
+    st, t = read_json3(os.path.join(fnode, ".aos", "tasks.json"), strict=True)   # 被換成 FIFO＝不知道表上有誰，不刪
     if st == MISSING:
         table = set()
     elif st == OK and isinstance(t, dict) and isinstance(t.get("tasks"), list):
@@ -181,6 +231,7 @@ def _finish(fnode, rnd, marks, views):
         if done or (v.state == EMPTY and not v.get("broken")):
             try:
                 shutil.rmtree(aos7_task.slot_dir(fnode, slot))
+                aos7_task.write_seen(fnode, slot, None)   # A3-01：槽刪了，它的控制完成證據也拿掉（ctl.json 跟著槽沒了）
             except OSError:
                 pass
 
@@ -197,16 +248,27 @@ def _replayed(root, node_id, node, fnode, rpath, state, rnd, prior):
         raise Unknown("列不出 .aos/tasks/：%s（重播收尾做不了，回合先不關）" % lerr)
     reported = {e.get("run") for e in prior.get("ended") or [] if isinstance(e, dict)}
     alive = set(x for x in prior.get("alive") or [] if isinstance(x, str))
+    owed = {}   # 總結 alive 裡的 run：slot → run（A3-08：補不上的要留紀錄，不能吞掉）
+    for x in alive:
+        sl, _, r = x.rpartition("#")
+        if r.isdigit():
+            owed[sl] = int(r)
+    notify_err = []
     for slot in slots:
         fslot = aos7_task.slot_dir(fnode, slot)
         try:
             v = aos7_task.judge(fslot, node, slot, rnd)
-        except Exception:   # noqa: BLE001
+        except Exception as e:   # noqa: BLE001
+            if slot in owed:
+                notify_err.append({"slot": slot, "run": owed[slot], "round": rnd, "phase": "judge", "err": repr(e)[:200]})
             continue
         views[slot] = v
         rid = aos7_task.run_id(slot, v.run)
         if v.state == ENDED and rid in reported:
             marks.append((slot, v))
+        if slot in owed and v.state == UNKNOWN:
+            notify_err.append({"slot": slot, "run": owed[slot], "round": rnd, "phase": "judge",
+                               "err": "槽判不出，tock.json 沒補：%s" % v.get("why")})
         if rid in alive and v.run is not None:
             tp = os.path.join(fslot, "tock.json")
             old = read_json(tp)
@@ -214,15 +276,22 @@ def _replayed(root, node_id, node, fnode, rpath, state, rnd, prior):
                 try:
                     write_json(tp, {"run": v.run, "round": rnd, "at": prior.get("tock_at") or now(),
                                     "early": prior.get("early")})
-                except OSError:
-                    pass
+                except OSError as e:
+                    notify_err.append({"slot": slot, "run": v.run, "round": rnd, "phase": "tock.json",
+                                       "err": repr(e)[:200]})
     # spec §7：本次才補 seen_round 的 View 還沒有舊標記，不拿它當作可刪的既報結束。
     _finish(fnode, rnd, marks, {s: v for s, v in views.items() if v.state != ENDED or
                                 is_int((v.get("exit") or {}).get("seen_round"))})
     state.update({"open": False, "tock_at": prior.get("tock_at") or now(), "replayed": True,
                   "incomplete": os.environ.get("AOS7_INCOMPLETE") or "tock"})
+    if notify_err:
+        # A3-08：跟正常收尾一樣記在 round.json 的 notify_errors（總結已提交、不改它）；下一個 tick／再一次 tock 會補（retry_notify）
+        state["notify_errors"] = notify_err
     write_json(rpath, state)
-    return dict(prior, replayed=True)
+    out = dict(prior, replayed=True)
+    if notify_err:
+        out["notify_errors"] = notify_err
+    return out
 
 
 def main(argv=None):

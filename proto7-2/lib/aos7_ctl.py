@@ -1,7 +1,7 @@
 """aos7-ctl：替你寫控制檔的小工具——LLM 直接寫同樣的 JSON 檔也做得到（spec.md 第 10 節，S-01）。
 
     aos7-ctl daemon <root|掛載點> <op> [node] [--kill|--no-kill] [--rounds N] [--owner X] [--all] [--by WHO]
-    aos7-ctl task <槽資料夾> <kill|restart> [why] [--reload] [--run N] [--by WHO]
+    aos7-ctl task <槽資料夾> <kill|restart> [why] [--reload] [--run N] [--id ID] [--by WHO]
     aos7-ctl add <node 資料夾> '<項目 JSON>'... [--by WHO]
 
 daemon 控制檔用固定名 `<by>.<op>.<node>[@<owner>].json`（回條同名蓋掉，只留每個寫的人、每個 owner、每件事的上一次；W3、A2-13）。
@@ -43,16 +43,29 @@ def ctl_dir(where):
     return os.path.join(where, ".aosd", "ctl")   # daemon 根（daemon 還沒起也行，起來才處理；2.3）
 
 
+PART_MAX = 64   # 一段編碼後超過這麼長就截短加雜湊尾碼（檔名總長要在 255 bytes 內）
+
+
+def enc(s):
+    """檔名的一段：**無損編碼**（A3-06）。`/` 換成 `+`（node id 好讀），其他不是英數、`_`、`-` 的位元組（含 `+`、`.`、`@`、`%`、
+    非 ASCII）一律 `%XX`。不同字串一定編成不同片段（以前不安全字元都換成 `_`，「甲」「乙」都變 `_` 而互蓋）；`.` 與 `@` 也被編碼，
+    所以段與段的分隔不會混淆。編碼後太長：取前 40 字＋`~`＋完整字串 sha1 前 16 碼（`~` 不會出現在一般編碼裡，不會撞到短的）。"""
+    import hashlib
+    out = "".join(c if re.match(r"[A-Za-z0-9_-]", c) else "+" if c == "/" else
+                  "".join("%%%02X" % b for b in c.encode("utf-8")) for c in s)
+    if len(out) > PART_MAX:
+        out = out[:40] + "~" + hashlib.sha1(s.encode("utf-8")).hexdigest()[:16]
+    return out
+
+
 def fixed_name(by, op, node, owner=None):
     """由寫入者 by、動作 op、可省略的 node 與 owner 回傳固定檔名；同名回條覆寫以免累積（spec §2.3、§10）。
-    A2-13：帶 owner 時檔名多一段 `@<owner>`——不同 owner 是不同控制者，daemon 處理前的待辦請求不能互相蓋掉。"""
-    def safe(s):
-        """將字串 s 的 / 換 +、不安全字元換 _，回傳非隱藏且非空的檔名片段。"""
-        return re.sub(r"[^A-Za-z0-9_.:+-]", "_", s.replace("/", "+")).lstrip(".") or "_"
-    parts = [safe(by), op] + ([safe(node)] if node is not None else [])
+    A2-13：帶 owner 時檔名多一段 `@<owner>`——不同 owner 是不同控制者，daemon 處理前的待辦請求不能互相蓋掉。
+    A3-06：各段用 enc 無損編碼，不同的 by／node／owner 不會撞成同一個檔名（空字串 owner 是 `@` 後面空著，跟沒帶 owner 不同）。"""
+    parts = [enc(by) or "%", op] + ([enc(node)] if node is not None else [])
     name = ".".join(parts)
     if owner is not None:
-        name += "@" + (safe(owner) if owner else "_")
+        name += "@" + enc(owner)
     return name + ".json"
 
 
@@ -81,14 +94,16 @@ def daemon_ctl(root, op, node=None, kill=None, by=None, rounds=None, owner=None,
     return path
 
 
-def task_ctl(slot_dir, op, why="", by=None, reload=False, run=None):
+def task_ctl(slot_dir, op, why="", by=None, reload=False, run=None, id_=None):
     """向 slot_dir 寫 op（kill／restart），回傳 ctl.json 路徑；已有請求覆寫（spec §6、§10）。
 
     why／by 記原因與來源；reload 要求重讀任務定義；run 可限定這次執行，省略指現在這次。
+    id_：這件請求的識別；沒給就自動產生一個新的（A3-05：新請求用新 id，重送同一件才用 `--id` 沿用原 id）。
     寫入失敗拋例外；請求等 tick／tock 才執行。
     """
+    import uuid
     path = os.path.join(os.path.abspath(slot_dir), "ctl.json")
-    obj = {"op": op, "by": by or default_by(), "why": why}
+    obj = {"op": op, "by": by or default_by(), "why": why, "id": id_ or uuid.uuid4().hex}
     if reload:
         obj["reload"] = True
     if run is not None:
@@ -139,6 +154,7 @@ def main(argv=None):
     t.add_argument("--reload", action="store_true", help="restart 照 node 現在 tasks.json 的同名項目")
     t.add_argument("--run", type=int, help="只在槽現在的 run 是這個時執行")
     t.add_argument("--by")
+    t.add_argument("--id", help="請求識別（預設自動產生新的；重送同一件請求時沿用原 id，最多 200 字）")
     a_ = sub.add_parser("add")
     a_.add_argument("node")
     a_.add_argument("items", nargs="+")
@@ -156,7 +172,10 @@ def main(argv=None):
         if a.reload and a.op != "restart":
             print("aos7-ctl: --reload 只給 restart", file=sys.stderr)
             return 1
-        path = task_ctl(a.slot_dir, a.op, a.why, a.by, a.reload, a.run)
+        if a.id is not None and not (0 < len(a.id) <= 200):
+            print("aos7-ctl: --id 要是 1～200 字（不截斷；A3-04）", file=sys.stderr)
+            return 1
+        path = task_ctl(a.slot_dir, a.op, a.why, a.by, a.reload, a.run, a.id)
     else:
         try:
             items = [json.loads(x) for x in a.items]

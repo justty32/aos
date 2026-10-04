@@ -286,9 +286,15 @@ class Timeline(threading.Thread):
             self.round_open = True
             # 4. 等
             self.phase = "running"
+            woke = False
             while not self.leaving() and time.monotonic() < t_end:
-                # P2-01：固定 interval 的這段仍在回合中，因此 wake 不縮短它；只在第 6 步看 kick。
                 if early and all(self.run_done(r) for r in started):
+                    break
+                # P2-01 選 (b)：固定 interval（early_tock=false）時，tick 之後送來的 wake／resume 提前結束這回合——
+                # 馬上 tock、跳過第 6 步、馬上開下一回合（固定節拍是「沒人叫時」的預設，wake 是明確的請求）。
+                # early_tock=true 的 node 照舊：回合中的 wake 不起作用、也不留到回合後（A2-11）。
+                if not early and self.kick is not None and self.kick >= t0:
+                    woke = True
                     break
                 self.wake.wait(POLL)
                 self.wake.clear()
@@ -314,6 +320,9 @@ class Timeline(threading.Thread):
                 continue   # 下一圈頂端走不變條件一
             closed_at = time.monotonic()
             self.d.round_done(self.node_id)
+            if woke:
+                self.event("woke", round=self.round)   # P2-01：被 wake 提前結束的回合，不等剩下的 interval
+                continue
             # 6. 等滿 interval（wake、resume 打斷；只認回合關上之後送來的，A2-11）
             self.phase = "idle"
             self.sleep_until(t_end, kick_after=closed_at)
