@@ -2,7 +2,7 @@
 
 ← [proto7-2](README.md)｜要合的：[proto7 核心 spec](../proto7/spec/core.md)（條號 S-）｜跟 proto7-1 的差別：[changes-from-7-1](notes/changes-from-7-1.md)
 
-**這是草稿，還沒有程式。** 寫的是規則本身；來源只標條號或一個簡短出處（N-／K-／Q 編號指 [proto7-1 需求清單](../proto7-1/notes/infra-needs.md)、[生命週期決定](../proto7-1/notes/decisions/2026-10-03-lifecycle-invariants.md)、[astra-8](../proto7-1/notes/play/2026-10-03-astra-8-infra.md)）。程式名沿用 proto7-1 的 `aos7-*`。標「W」的地方還等使用者決定（題目在 changes 最後），先照推薦寫；「Q1～Q6」是 proto7-1 使用者已答的題。
+**照這份做的程式在 `lib/`、`bin/`（10-04），做的時候改過的地方標「P2-」，理由在 [notes/problems.md](notes/problems.md)。** 寫的是規則本身；來源只標條號或一個簡短出處（N-／K-／Q 編號指 [proto7-1 需求清單](../proto7-1/notes/infra-needs.md)、[生命週期決定](../proto7-1/notes/decisions/2026-10-03-lifecycle-invariants.md)、[astra-8](../proto7-1/notes/play/2026-10-03-astra-8-infra.md)）。程式名沿用 proto7-1 的 `aos7-*`。標「W」的地方還等使用者決定（題目在 changes 最後），先照推薦寫；「Q1～Q6」是 proto7-1 使用者已答的題。
 
 ## 0. 共同約定（S-01、S-06）
 
@@ -42,7 +42,7 @@ daemon 主迴圈每 ~20 ms：讀控制檔（有預算）→ 檢查已登記 node
 3. 跑 `aos7-tick <root> <node-id>`，從 stdout 讀回本回合起了什麼。
 4. 等：`early_tock: false` 時等到離 tick 滿 interval；`true` 時等到「本回合起的任務都結束」或「滿 interval」先到者。
 5. 跑 `aos7-tock <root> <node-id>`（環境 `AOS7_EARLY`＝`1` 提前、`0` 沒有）。tock 完 round.json 沒關上 → 馬上補一次 tock（`AOS7_INCOMPLETE=tock`）。
-6. 等到離本回合 tick 滿 interval（`wake`、`resume` 會打斷這段等待），回 1。
+6. 等到離本回合 tick 滿 interval（`wake`、`resume` 會打斷這段等待），回 1。`early_tock: false` 時第 4 步已經等滿 interval，這段幾乎是 0：固定 interval 的 node 整段都在回合中，`wake` 照「回合中照舊」不起作用（P2-01，要使用者決定）。
 
 時間線迴圈丟任何例外：記 `last_error`，等 0.5 秒接著跑。主迴圈任一步丟例外不退出，status 的 `io_errors` +1，下一圈再試。
 
@@ -129,7 +129,7 @@ daemon 每圈只看**已登記**的 node：
                     "interval_ms": 1000, "early_tock": false, "live": ["kernel#3"]}}}
 ```
 
-- `phase`：`idle`／`tick`／`running`／`tock`／`paused`／`error`／`missing`／`stopped`。
+- `phase`：`idle`／`tick`／`running`／`tock`／`paused`／`error`／`missing`／`unregistering`（已 unregister、本回合還沒收完；P2-12）／`stopped`。
 - `live` 列 run id（第 5.2 節），每 0.25 秒重算。
 - 有的話多 `last_error`（每 node：`{"prog", "rc", "round", "at", "err"}`）、`last_ctl_error`、`root_gone`、`steps_left`。
 - `last_event`（全域與每 node 各一）：最近一件值得看的事（`node-gone-kill`、`stale-holder-kill`、`stopped-cleared`…），只留最近一件。
@@ -151,7 +151,7 @@ daemon 每圈只看**已登記**的 node：
 ```
 
 - `ended`＝上次 tock 之後才看到結束的任務；`skipped`＝這回合該起卻沒起的（還在跑、子根被擋、沒空槽…）。
-- 回合數接續：round.json 讀得到但內容壞掉（不是物件、round 不是整數）→ 用 last-round.json 的 `round` 接著數，記 `tasks_error`；兩個都不能用 → 不知道 → 停在 `error`，等人寫回 round.json。讀不到（I/O）一律是不知道。
+- 回合數接續：round.json 讀得到但內容壞掉（不是物件、round 不是整數）→ 用 last-round.json 的 `round` 接著數，記 `tasks_error`；兩個都不能用 → 不知道 → 停在 `error`，等人寫回 round.json。讀不到（I/O）一律是不知道。round.json 不存在：tick 用 last-round.json 的 `round` 接著數（也沒有就從 1 起），tock 印 `skipped`（沒有回合可關；P2-06）。tick／tock 推定不了時什麼都不寫，退出碼 3（daemon 照 2.2 退避）。
 - 漏掉的回合（例如任務太忙、只看到最新的 tock）核心不補，看得到的只有「上一次」；要每回合都留，用第 9 節。
 
 ## 4. 任務表與 tick（S-09、S-10、S-12）
@@ -198,6 +198,8 @@ daemon 每圈只看**已登記**的 node：
 6. 有起成的 `once`：再拿鎖，刪掉 `launch` 標記對得上的那些項（照標記比對，不照位置；中間有人改過檔也不會刪錯），放鎖。
 7. stdout 印 `{"round": N, "started": [run id...], "tasks_rev": "<讀到的 tasks.json 前 12 碼 sha1>"}`。**不等任務。**
 
+要重用的槽裡如果有「已結束、還沒在 last-round.json 報過」的 run（tock 之後才結束、下一個 tick 就重用），清掉之前先把它記進 round.json 的 `reaped`，tock 併進 `ended` 照樣報（P2-03）。`.aos/tasks/` 列不出來（I/O）＝不知道，在寫 round.json 之前就退出碼 3。
+
 `tasks_rev` 也寫進 round.json，看得出這回合用的是哪一版表（N-80）。
 
 ### 4.3 tick 改 tasks.json 的約定
@@ -213,7 +215,7 @@ daemon 每圈只看**已登記**的 node：
 - 槽的 birth.json 不是這個 run（或沒有）→ 上次在寫 birth.json 之前就被殺了，任務確定沒起 → 用新的 run 照常起，更新標記。
 - birth.json 讀不到 → 不知道 → 這項留著，下一回合再看。
 
-所以 tick 在任何一步被殺，once 項都不會變兩份，也不會無痕消失。
+所以 tick 在任何一步被殺，once 項都不會變兩份，也不會無痕消失。代價：被殺在「寫了 birth.json、runner 還沒記進去」這一段時，分不出 runner 起了沒，只能照 5.4 等兩回合判 lost——這項**一次都沒跑，但會在 `ended` 報成 lost**（最多一次，不是至少一次；P2-02，要使用者決定）。
 
 ### 4.5 掛載（S-23）
 
@@ -238,7 +240,7 @@ daemon 每圈只看**已登記**的 node：
 | `out.log` | 任務 | stdout＋stderr（這次 run 的） |
 | `exit.json` | aos7-run（lost 時 tock） | `{"run","code","at","round"}`；code 負數＝被訊號殺；lost 是 `{"code": null, "lost": true}`；tock 報過之後補 `seen_round` |
 | `tock.json` | tock | `{"run","round","at","early"}`，覆寫、只留最新 |
-| `ctl.json`／`ctl-done.json` | 任何人／tick、tock | 任務控制與回條（第 6 節），各只有一份 |
+| ~~`ctl.json`／`ctl-done.json`~~ | 任何人／tick、tock | **不在換 run 時清**（P2-04）：各只有一份、下一次控制就蓋掉；restart 的回條要活過新 run 起來那一刻，請求者才讀得到。回條 `result.run` 記它作用在哪個 run |
 | `mnt/`、`mount-req/`、`mount-done/`、`writes.jsonl` | tick／任務 | 第 4.5 節 |
 
 - 讀到的 pid.json、exit.json、tock.json 的 `run` 跟 birth.json 不同 → 是上一個 run 沒清乾淨的，當不存在。
@@ -282,7 +284,7 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起任務前最後確認一次 
 | starttime 讀不到 | **不知道** → 當活（保守），記原因（K-05） |
 | 其餘（剛起） | 活 |
 
-**疑似 lost 一律先做身分掃描**（NODE＋TID＋RUN）：找到相符的活程序 → 先照 Q1 範圍 kill，再判 lost；找不到 → lost。lost 由 tock 寫 `exit.json` `{"run", "code": null, "lost": true}`。這樣 keep 重起前舊的一定已經收掉，不會雙開（K-04）。
+**疑似 lost 一律先做身分掃描**（NODE＋TID＋RUN）：找到相符的活程序 → 先照 Q1 範圍 kill，再判 lost；找不到 → lost。lost 寫 `exit.json` `{"run", "code": null, "lost": true}`（tock，以及要在這個槽起新 run 的 tick；P2-03）。收了 SIGKILL 還在＝不知道，不判 lost。這樣 keep 重起前舊的一定已經收掉，不會雙開（K-04）。
 
 ### 5.5 任務看得到什麼
 
@@ -297,7 +299,7 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起任務前最後確認一次 
 - **`run`（可選）**：指定要收的是哪一次。跟槽現在的 run 不同（已經換人）→ 不執行、`ok: false`。不寫＝現在這次。
 - **kill 的範圍**（Q1 (a)）：任務的程序群組、群組成員活著的後代所在的群組、環境變數 NODE＋TID＋RUN 相符的程序（含被 init 收養的）。打群組前先確認群組裡有程序的環境是這個任務，不是就不打（防改了 pgid 的任務讓 kill 打到別人）。SIGTERM，最多等 1 秒，還在就 SIGKILL。故意脫離（setsid 又改環境、刪自己的槽）由任務自負。
 - 已結束的任務：kill 算成功，順便收掉相符的殘留程序。
-- **restart**：kill，然後在 tasks.json（拿鎖）加一項 `once`，`slot`＝這個槽、定義照 birth.json（`name`、`argv`／`inst`、`subroot`、`allow_stop`、`mounts` 宣告，執行中加掛的寫進 `mounts_dyn`）、`restart_of`＝原 run id。下一個 tick 起它（維持 S-10「任務一律由 tick 啟動」）。槽沒換，所以任務自己寫的 state 接得上。
+- **restart**：在 tasks.json（拿鎖，最多等 1 秒，等不到整個 ctl 不執行）加一項 `once`，然後 kill（先加後殺：中途被殺時 once 項等槽空了才起，不會「殺了沒重起」；P2-07）。once 項的 `slot`＝這個槽、定義照 birth.json（`name`、`argv`／`inst`、`subroot`、`allow_stop`、`mounts` 宣告，執行中加掛的寫進 `mounts_dyn`）、`restart_of`＝原 run id。下一個 tick 起它（維持 S-10「任務一律由 tick 啟動」）。槽沒換，所以任務自己寫的 state 接得上。
 - **`reload: true`**（Q6，proto7-1）：定義改取 tasks.json 裡同名的第一個非 `once` 項（完整驗證過再用，去掉 `mode`、`from_round`、`max_live`、`enabled`），掛載＝項目宣告加上沒被宣告接管的執行中加掛。找不到、讀不懂、不合格 → **整個 ctl 不執行（不 kill）**，`ok: false` 說原因。成功時回條 `result.diff` 列有變的欄（`argv`、`inst`、`mounts`、`subroot`、`allow_stop`）。
 - restart 的 once 項跟同名的 keep 項搶同一個槽時：tick 先處理 once，keep 看到槽已活就不起。
 - ctl.json 讀不懂或不是物件：不執行，照樣搬成 ctl-done.json，`ok: false`。
