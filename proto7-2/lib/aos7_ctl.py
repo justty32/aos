@@ -4,7 +4,7 @@
     aos7-ctl task <槽資料夾> <kill|restart> [why] [--reload] [--run N] [--by WHO]
     aos7-ctl add <node 資料夾> '<項目 JSON>'... [--by WHO]
 
-daemon 控制檔用固定名 `<by>.<op>.<node>.json`（回條同名蓋掉，只留每個寫的人、每件事的上一次；W3）。
+daemon 控制檔用固定名 `<by>.<op>.<node>[@<owner>].json`（回條同名蓋掉，只留每個寫的人、每個 owner、每件事的上一次；W3、A2-13）。
 起點是 proto7-1 lib/aos7_ctl.py。
 由人或任務呼叫；只負責寫 daemon 的 .aosd/ctl/、槽內 ctl.json，或鎖住後讀改 .aos/tasks.json。
 控制的接受與執行分別留給 daemon／tick／tock（spec §2.3、§6）；印出路徑不代表已執行。
@@ -43,13 +43,17 @@ def ctl_dir(where):
     return os.path.join(where, ".aosd", "ctl")   # daemon 根（daemon 還沒起也行，起來才處理；2.3）
 
 
-def fixed_name(by, op, node):
-    """由寫入者 by、動作 op、可省略的 node 回傳固定檔名；同名回條覆寫以免累積（spec §2.3、§10）。"""
+def fixed_name(by, op, node, owner=None):
+    """由寫入者 by、動作 op、可省略的 node 與 owner 回傳固定檔名；同名回條覆寫以免累積（spec §2.3、§10）。
+    A2-13：帶 owner 時檔名多一段 `@<owner>`——不同 owner 是不同控制者，daemon 處理前的待辦請求不能互相蓋掉。"""
     def safe(s):
         """將字串 s 的 / 換 +、不安全字元換 _，回傳非隱藏且非空的檔名片段。"""
         return re.sub(r"[^A-Za-z0-9_.:+-]", "_", s.replace("/", "+")).lstrip(".") or "_"
     parts = [safe(by), op] + ([safe(node)] if node is not None else [])
-    return ".".join(parts) + ".json"
+    name = ".".join(parts)
+    if owner is not None:
+        name += "@" + (safe(owner) if owner else "_")
+    return name + ".json"
 
 
 def daemon_ctl(root, op, node=None, kill=None, by=None, rounds=None, owner=None, all_=False, why=None):
@@ -72,7 +76,7 @@ def daemon_ctl(root, op, node=None, kill=None, by=None, rounds=None, owner=None,
         obj["all"] = True
     if why:
         obj["why"] = why
-    path = os.path.join(ctl_dir(root), fixed_name(by, op, node))
+    path = os.path.join(ctl_dir(root), fixed_name(by, op, node, owner))
     write_json(path, obj)
     return path
 

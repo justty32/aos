@@ -25,12 +25,14 @@ import time
 import aos7_proc
 import aos7_task
 from aos7_daemon_timeline import POLL, Timeline
-from aos7_fs import (FD_PREFIX, append_jsonl, is_int, is_regular, node_path, now, read_json, write_json)
+from aos7_fs import (FD_PREFIX, GONE_ERRNO, append_jsonl, canonical_node, inject, is_int, is_regular, locked, node_path,
+                     now, read_json, sweep_tmp, write_json)
 
 CTL_BATCH = 200      # 一圈最多處理幾個控制檔（2.3）
 CTL_BUDGET_S = 0.05  # 一圈處理控制檔最多花幾秒（跟 CTL_BATCH 取先到的）
 LIVE_EVERY = 0.25    # status.json 的 live 與記著的 pgid 多久重算一次（秒；2.6、2.8）
-GONE_ERRNO = (errno.ENOENT, errno.ENOTDIR)   # 這兩種才算「確定不存在」；其他（ESTALE、EIO、EACCES…）是「看不到」
+SWEEP_EVERY = 1.0    # 多久清一次 .aosd／ctl／ctl-done 裡寫者已死的暫存檔（秒；A2-07）
+# GONE_ERRNO（ENOENT／ENOTDIR）才算「確定不存在」；其他（ESTALE、EIO、EACCES…）是「看不到」——定義在 aos7_fs 共用。
 
 
 def norm_id(node):
@@ -58,7 +60,8 @@ class Daemon:
     def __init__(self, root):
         """建立管理 root 空間根的 daemon 狀態，抓住目錄 fd（spec §1、§2.5）。
         root 是已存在的資料夾路徑；初始化回 None，開目錄失敗向上拋；此時尚未拿 daemon.lock。"""
-        self.root = os.path.abspath(root)
+        # A2-04：以實際路徑當空間根——node 的身分（canonical_node）照實際位置比，根本身是連結也不會把 "." 判成連結。
+        self.root = os.path.realpath(root)
         # spec §2.5：/proc/self/fd 固定指向已開啟的 inode，路徑被換掉也不會寫進替身 root。
         # 自己的 `.aosd` 一律經 root 的 fd 讀寫：root 被搬走寫到新位置，被刪就寫不進去（2.5）
         self.rfd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY)
@@ -75,9 +78,12 @@ class Daemon:
         self.kill_on_stop = False
         self._lock = threading.Lock()
         self.paused = {}             # {id: [owner...]}（2.4）
-        self.steps = {}              # {id: {"owner", "left"}}：resume 帶 rounds
+        self.steps = {}              # {id: {owner: left}}：resume 帶 rounds，按 owner 各記一份（A2-06）
         self._live = {}              # {id: (monotonic, [run id])}
         self._pgids = {}             # {id: {pgid}}：活任務的程序群組，node 消失時收（2.6）
+        self._uncertain = {}         # {id: [{"slot","run","why"}]}：判不出的槽（UNKNOWN／unsure），進 status（A2-08）
+        self._swept = 0.0            # 上次清暫存檔的 monotonic 時刻（A2-07）
+        self.root_error = None       # 看 root 時的「看不到」錯誤（不是消失；註解疑點 daemon:595）
         self.gen = None
         self.io_errors = 0
         self.ctl_backlog = False
@@ -105,9 +111,12 @@ class Daemon:
 
     def save_paused(self):
         """將記憶體非空 owner 清單原子寫回 paused.json（spec §2.4）。
-        無額外參數，回 None；呼叫端負責協調記憶體存取，寫入錯誤向上拋。"""
-        write_json(os.path.join(self.aosd, "paused.json"),
-                   {"paused": {k: v for k, v in sorted(self.paused.items()) if v}})
+        無額外參數，回 None；呼叫端負責協調記憶體存取，寫入錯誤向上拋。
+        daemon 是 paused.json 唯一的寫者（daemon.lock 保證只有一個），照 spec §0 仍對 paused.json.lock 拿 flock
+        （註解疑點 daemon:106），讓讀—改—寫的外部工具有一致的約定。"""
+        path = os.path.join(self.aosd, "paused.json")
+        with locked(path, timeout=1.0):
+            write_json(path, {"paused": {k: v for k, v in sorted(self.paused.items()) if v}})
 
     def load_state(self):
         """啟動時讀 nodes.json、paused.json 恢復登記與 pause owner（spec §1、§2.4）。
@@ -131,21 +140,29 @@ class Daemon:
         return bool(self.paused.get(nid))
 
     def round_done(self, nid):
-        """時間線確認關回合後，對 nid 的 rounds 倒數；到零以原 owner 再 pause（spec §2.4）。
+        """時間線確認關回合後，對 nid 每個 owner 的 rounds 倒數各扣一；到零的以那個 owner 再 pause（spec §2.4；A2-06）。
         回 None；沒有倒數就不動，paused.json 寫入錯誤向上拋。"""
+        done = []
         with self._lock:
             s = self.steps.get(nid)
             if not s:
                 return
-            s["left"] -= 1
-            if s["left"] > 0:
+            for owner in list(s):
+                s[owner] -= 1
+                if s[owner] <= 0:
+                    del s[owner]
+                    done.append(owner)
+            if not s:
+                del self.steps[nid]
+            if not done:
                 return
-            del self.steps[nid]
             lst = self.paused.setdefault(nid, [])
-            if s["owner"] not in lst:
-                lst.append(s["owner"])
+            for owner in done:
+                if owner not in lst:
+                    lst.append(owner)
             self.save_paused()
-        self.log(ev="steps-done", node=nid, owner=s["owner"])
+        for owner in done:
+            self.log(ev="steps-done", node=nid, owner=owner)
 
     def other_root(self, nid):
         """沿 nid 的路徑找帶 .aosd/ 的子根，回其 id，否則 None（spec §1、§2.3；S-15）。
@@ -225,6 +242,9 @@ class Daemon:
         rq = os.path.realpath(q)
         if not (rq == real_root or rq.startswith(real_root + os.sep)):
             return False, "%s 沿符號連結跑出空間根（%s），不登記" % (nid, rq)
+        if os.path.realpath(p) != canonical_node(self.root, nid):
+            # A2-04：登記綁定實際路徑；路徑上有符號連結（即使指在空間根內）就不登記，請登記實際位置。
+            return False, "%s 的路徑經過符號連結（實際在 %s），請登記實際位置" % (nid, os.path.realpath(p))
         if os.path.lexists(p) and not os.path.isdir(p):
             return False, "%s 不是資料夾，不登記" % nid
         self.registry[nid] = {"by": ctl.get("by"), "at": now()}
@@ -263,8 +283,7 @@ class Daemon:
             lst = self.paused.setdefault(nid, [])
             if owner not in lst:
                 lst.append(owner)
-            if (self.steps.get(nid) or {}).get("owner") == owner:
-                del self.steps[nid]
+            self._drop_steps(nid, owner)
             self.save_paused()
         return True, "pause %s（owner %r；現在：%s）%s" % (nid, owner, self.paused[nid], self._note(nid))
 
@@ -281,12 +300,14 @@ class Daemon:
             lst = self.paused.setdefault(nid, [])
             if ctl.get("all") is True:
                 lst.clear()
-            elif owner in lst:
-                lst.remove(owner)
-            if (self.steps.get(nid) or {}).get("owner") == owner or ctl.get("all") is True:
                 self.steps.pop(nid, None)
+            else:
+                if owner in lst:
+                    lst.remove(owner)
+                self._drop_steps(nid, owner)
             if rounds is not None:
-                self.steps[nid] = {"owner": owner, "left": rounds}
+                # A2-06：倒數按 owner 各記一份；B 的 rounds 不會蓋掉 A 的。
+                self.steps.setdefault(nid, {})[owner] = rounds
             self.save_paused()
             left = list(lst)
         if not left:
@@ -295,6 +316,14 @@ class Daemon:
             nid, owner, "，all" if ctl.get("all") is True else "", "，rounds=%d" % rounds if rounds else "",
             "還有 %s 在 pause" % left if left else "沒人 pause 了，馬上開回合", self._note(nid))
 
+    def _drop_steps(self, nid, owner):
+        """拿掉 nid 上 owner 的 rounds 倒數（同一 owner 再 pause／resume 時清掉；spec §2.4、A2-06）。呼叫的人拿著 _lock。"""
+        s = self.steps.get(nid)
+        if s:
+            s.pop(owner, None)
+            if not s:
+                del self.steps[nid]
+
     def op_wake(self, nid, ctl):
         """依控制請求喚醒 nid 等下一回合的時間線（spec §2.3；ctl 為派送介面的控制物件）。
         回 (True, msg) 表示已接受；node 不存在也只提示，回合中不提前 tock（P2-01）。"""
@@ -302,11 +331,11 @@ class Daemon:
         return True, "wake %s%s" % (nid, self._note(nid))
 
     def _kick(self, nid):
-        """替 nid 的現有時間線設 kick 並喚醒 Event（spec §2.1、§2.3）。
-        回 None；沒有時間線就不動，是否跳過等待由時間線所處階段判定。"""
+        """替 nid 的現有時間線記下 kick 時刻並喚醒 Event（spec §2.1、§2.3）。
+        回 None；沒有時間線就不動。時間線只認回合關上之後的 kick（A2-11：回合中的 wake 不留到 idle 才生效）。"""
         tl = self.timelines.get(nid)
         if tl:
-            tl.kick = True
+            tl.kick = time.monotonic()
             tl.wake.set()
 
     def _note(self, nid):
@@ -343,7 +372,11 @@ class Daemon:
         except OSError:
             return
         self.ctl_stuck &= set(names)
-        names = [n for n in names if n not in self.ctl_stuck] + [n for n in names if n in self.ctl_stuck]
+        # spec §2.3：處理失敗的「效果可能已生效，不重做」——搬不走而卡在 ctl/ 的不再執行，只每圈再試著搬到 ctl-failed/
+        # （註解疑點 daemon:346／416：以前會排到最後再執行一次）。daemon 重開後記憶體清空，才會再被當新請求。
+        for n in sorted(self.ctl_stuck):
+            self._move_failed(cdir, n)
+        names = [n for n in names if n not in self.ctl_stuck]
         self.ctl_backlog = False
         # spec §2.3：件數與單調時間雙重預算，控制檔持續湧入仍要讓 node 檢查與 status 前進。
         t_end = time.monotonic() + CTL_BUDGET_S
@@ -406,16 +439,21 @@ class Daemon:
         """將 cdir/n 的失敗原物移到 ctl-failed，記 err 與最近錯誤（spec §2.3）。
         回 None；搬不走就留在 ctl/，之後排到最後；同名目的原物覆蓋（P2-13）。"""
         self.io_errors += 1
-        moved = None
+        self.ctl_stuck.add(n)
+        moved = self._move_failed(cdir, n)
+        self.last_ctl_error = {"file": n, "at": now(), "err": repr(err)[:300], "moved_to": moved}
+        self.log(ev="ctl-error", file=n, err=repr(err)[:300], moved_to=moved)
+
+    def _move_failed(self, cdir, n):
+        """把處理失敗的 cdir/n 搬到 ctl-failed/（蓋掉同名舊的）；搬成就從 ctl_stuck 拿掉、回新位置，搬不走回 None。"""
         try:
             fdir = os.path.join(self.aosd, "ctl-failed")
             os.makedirs(fdir, exist_ok=True)
             _replace(os.path.join(cdir, n), os.path.join(fdir, n))
-            moved = "ctl-failed/" + n
         except OSError:
-            self.ctl_stuck.add(n)
-        self.last_ctl_error = {"file": n, "at": now(), "err": repr(err)[:300], "moved_to": moved}
-        self.log(ev="ctl-error", file=n, err=repr(err)[:300], moved_to=moved)
+            return None
+        self.ctl_stuck.discard(n)
+        return "ctl-failed/" + n
 
     def stop(self, kill):
         """要求所有時間線停止；kill 為是否一併收任務（spec §2.7）。
@@ -443,12 +481,21 @@ class Daemon:
             path = node_path(self.root, nid)
             tl = self.timelines.get(nid)
             try:
-                st = os.stat(path)
-                gone = None if stat.S_ISDIR(st.st_mode) else "不是資料夾了"
+                inject("stat", path)
+                st = os.lstat(path)
+                if stat.S_ISLNK(st.st_mode):
+                    gone = "換成符號連結了（A2-04：登記綁定實際資料夾，不跟著連結走）"
+                elif not stat.S_ISDIR(st.st_mode):
+                    gone = "不是資料夾了"
+                elif os.path.realpath(path) != canonical_node(self.root, nid):
+                    gone = "路徑經過符號連結（實際在 %s；A2-04）" % os.path.realpath(path)
+                else:
+                    gone = None
             except OSError as e:
                 if e.errno not in GONE_ERRNO:
-                    # spec §0、§2.6 三態：看不到不是消失；不能因此殺任務或丟掉原時間線。
-                    err = {"prog": "daemon", "rc": None, "at": now(), "err": "看不到 node（%r），保留現狀" % e}
+                    # spec §0、§2.6 三態：看不到不是消失；不能因此殺任務或丟掉原時間線。錯誤類型分欄記（A2-08）。
+                    err = {"prog": "daemon", "rc": None, "at": now(), "kind": errno.errorcode.get(e.errno, str(e.errno)),
+                           "err": "看不到 node（%r），保留現狀" % e}
                     if tl:
                         tl.last_error = err
                     else:
@@ -518,22 +565,35 @@ class Daemon:
         t, live = self._live.get(nid, (None, None))
         if t is not None and time.monotonic() - t < LIVE_EVERY:
             return live
-        live, pgids = [], set()
-        slots, _ = aos7_task.list_slots(tl.node)
+        live, pgids, uncertain = [], set(), []
+        slots, lerr = aos7_task.list_slots(tl.node)
+        if lerr:
+            # 註解疑點 daemon:522：列不出槽＝不知道，保留上次的 live 與記著的 pgid（不能清空，不然 node 消失時漏收）。
+            prev = (self._live.get(nid) or (None, []))[1] or []
+            self._live[nid] = (time.monotonic(), prev)
+            self._uncertain[nid] = [{"slot": None, "run": None, "why": "列不出槽：%s" % lerr}]
+            return prev
         for slot in slots:
             fslot = aos7_task.slot_dir(tl.node, slot)
             try:
                 v = aos7_task.judge(fslot, tl.node, slot, tl.round)
-            except Exception:   # noqa: BLE001
+            except Exception as e:   # noqa: BLE001
+                uncertain.append({"slot": slot, "run": None, "why": repr(e)[:200]})
                 continue
-            if v.state in (aos7_task.LIVE, aos7_task.UNKNOWN) and v.run is not None:
+            if v.state == aos7_task.UNKNOWN or v.get("unsure") or v.get("broken"):
+                # A2-08：判不出的槽進 status，不再「保守停著但看似正常」。
+                uncertain.append({"slot": slot, "run": v.run, "why": v.get("unsure") or v.get("why")})
+            if v.state in (aos7_task.LIVE, aos7_task.UNKNOWN):
                 # P2-08：status 對未知仍保守列活；這個觀測不授權重用槽（不變條件二，spec §5.4）。
-                live.append(aos7_task.run_id(slot, v.run))
+                live.append(aos7_task.run_id(slot, v.run if v.run is not None else "?"))
                 pid = read_json(os.path.join(fslot, "pid.json"))
-                if isinstance(pid, dict) and pid.get("run") == v.run and is_int(pid.get("pgid")):
+                if isinstance(pid, dict) and is_int(pid.get("pgid")) and (v.run is None or pid.get("run") == v.run):
                     pgids.add(pid["pgid"])
+                elif v.state == aos7_task.UNKNOWN:
+                    pgids |= {g for g in self._pgids.get(nid, ()) if g}   # 判不出的槽：沿用記著的群組，不丟
         self._live[nid] = (time.monotonic(), live)
         self._pgids[nid] = pgids
+        self._uncertain[nid] = uncertain
         return live
 
     def sweep_leftovers(self):
@@ -572,10 +632,12 @@ class Daemon:
                        "interval_ms": tl.interval_ms, "early_tock": tl.early_tock, "live": self.live_of(nid, tl)}
                 if tl.last_error:
                     row["last_error"] = tl.last_error
+                if self._uncertain.get(nid):
+                    row["uncertain"] = self._uncertain[nid]
                 if tl.last_event:
                     row["last_event"] = tl.last_event
             if nid in self.steps:
-                row["steps_left"] = self.steps[nid]["left"]
+                row["steps_left"] = dict(self.steps[nid])   # {owner: 剩幾回合}（A2-06）
             nodes[nid] = row
         st = {"pid": os.getpid(), "root": self.root, "at": now(), "poll_s": POLL, "gen": self.gen,
               "io_errors": self.io_errors, "stopping": self.stopping, "stopped": stopped,
@@ -584,6 +646,8 @@ class Daemon:
             st["last_ctl_error"] = self.last_ctl_error
         if self.root_gone:
             st["root_gone"] = True
+        if self.root_error:
+            st["last_error"] = self.root_error
         write_json(os.path.join(self.aosd, "status.json"), st)
 
     def check_root(self):
@@ -593,8 +657,12 @@ class Daemon:
             same = os.path.samestat(os.stat(self.root), os.fstat(self.rfd))
         except OSError as e:
             if e.errno not in GONE_ERRNO:
+                # 看不到 root 不是消失：保留現狀，但記下來（註解疑點 daemon:595），status 頂層 last_error 看得到。
+                self.root_error = {"prog": "daemon", "at": now(), "kind": errno.errorcode.get(e.errno, str(e.errno)),
+                                   "err": "看不到 root（%r），保留現狀" % e}
                 return
             same = False
+        self.root_error = None
         if not same and not self.root_gone:
             self.root_gone = True
             self.stop(True)
@@ -634,7 +702,7 @@ class Daemon:
                 pass
             self.log(ev="stopped-cleared", was=was)
         while not self.stopping:
-            for step in (self.check_root, self.handle_ctl, self.check_nodes, self.write_status):
+            for step in (self.check_root, self.handle_ctl, self.check_nodes, self.write_status, self.sweep_tmps):
                 self.guard(step)
             if not self.ctl_backlog:
                 time.sleep(POLL)
@@ -651,6 +719,16 @@ class Daemon:
         self.guard(lambda: self.write_status(stopped=True))
         self.guard(lambda: self.log(ev="stop"))
         return 0
+
+    def sweep_tmps(self):
+        """每 SWEEP_EVERY 秒清一次 `.aosd/`、`ctl/`、`ctl-done/` 裡寫者已死的原子寫暫存檔（A2-07）。回 None。"""
+        if time.monotonic() - self._swept < SWEEP_EVERY:
+            return
+        self._swept = time.monotonic()
+        for d in (self.aosd, os.path.join(self.aosd, "ctl"), os.path.join(self.aosd, "ctl-done")):
+            gone = sweep_tmp(d)
+            if gone:
+                self.log(ev="tmp-swept", dir=os.path.basename(d), files=gone[:20], n=len(gone))
 
     def guard(self, step):
         """執行無參數回呼 step，隔離主迴圈錯誤（spec §2.1；S-06）。
