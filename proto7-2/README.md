@@ -37,7 +37,7 @@ python3 $P/aos7-ctl daemon /tmp/sp stop --kill
 python3 -m unittest discover -s proto7-2/tests
 ```
 
-離線、純標準庫，103 項約 40 秒。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
+離線、純標準庫，219 項約 60 秒（其中 116 項是 A2 回歸矩陣 `test_matrix*.py`）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
 
 | 檔 | 測什麼 |
 |---|---|
@@ -46,6 +46,10 @@ python3 -m unittest discover -s proto7-2/tests
 | `test_once_threestate.py` | **once 在 launch 標記後、birth 後、Popen 後、刪項目前各點 kill -9 tick**、成組 once 中途被殺；**三態**：round.json／birth.json 讀不到、starttime 讀不到、槽列不出來 |
 | `test_daemon.py` | **登記／取消登記**、node 刪掉／搬走／換掉 → missing、看不到≠不存在、**early_tock 兩種**、**pause owner**、resume 順便 wake、resume rounds、stop／SIGTERM、第二個 daemon、root 搬走、回條同名蓋掉、控制檔洪水與壞檔、ctl-failed、log.on、卡住的 tick／tock、**kill -9 daemon 後新 daemon 收回合不雙開**、舊動作接管 |
 | `test_subdaemon_modules.py` | **子 daemon 所有權**（owner／daemon 兩塊、allow_stop、stopped.json、人手重開沿用 owner）、subroot 檢查、counter 示範、歷史 module |
+| `test_matrix_faults.py` | **A2 回歸矩陣：讀不到＝不知道**——/proc（list／stat／environ／cmdline）× EIO／ESTALE／EACCES × 情境（健康、孤兒、兩者都死、birth 壞）；birth／exit／pid／round／last-round 開檔與列槽讀不到；daemon 看 node 讀不到 |
+| `test_matrix_docs.py` | **A2 矩陣：檔案半寫、缺欄、型別錯**——round.json（不知道、不 tick、人寫回後接著數）、birth.json × 其他證據（活程序／exit／pid／都沒有）、last-round.json（重新產生、不跳號） |
+| `test_matrix_once.py` | **A2 矩陣：once／keep 在 tick 七個點與 aos7-run 兩個點 SIGKILL**——執行次數、lost 只報一次、同槽不雙開 |
+| `test_matrix_misc.py`、`test_matrix_daemon.py` | **A2 矩陣其餘**：restart 在三個交接點被殺只重起一次、node 換符號連結（同 inode／指到 root 外／父層）＝missing 且不寫出 root、rounds 按 owner、CLI 檔名含 owner、暫存檔清理、wake 不保留、tock.json 晚於總結、診斷不截前綴、history 事件也截行 |
 
 ## 結構
 
