@@ -5,6 +5,8 @@
 - ok＝寫入的實際位置落在自己的 node（不含裡面巢狀的別的 node／daemon 根）或某個掛載點的目標底下。
 - 只看得到 Python 程序（含 Python 起的 Python）；sh、C 程式的寫入看不到（problems.md M-3）。
 - 只記不擋。aos7-run 只在 AOS7_AUDIT 有值時把這個資料夾放進任務的 PYTHONPATH（aos7-run 自己不載入）。
+任務的 Python 啟動機制自動呼叫本模組；讀 birth.json 的 mounts／subroot 與巢狀節點標記，
+只寫 writes.jsonl，不替 tick 建掛載；檔尾半行的補換行與鎖定依第 0 節（S-01、S-10、S-23）。
 """
 import fcntl
 import json
@@ -13,6 +15,7 @@ import sys
 
 
 def _install():
+    """無參數；依 AOS7_* 環境安裝寫入觀測 hook，回 None；缺 audit 開關或任務路徑時不安裝。"""
     e = os.environ
     task, node, root = e.get("AOS7_TASK"), e.get("AOS7_NODE"), e.get("AOS7_ROOT")
     if not (e.get("AOS7_AUDIT") and task and node and root):
@@ -23,6 +26,7 @@ def _install():
     def load_targets():
         """birth.json 的掛載點目標；執行中加掛（M-6）後 tick 會改 birth.json，所以判不過時重讀一次。
 
+        無參數，使用外層 task／root；回實際目標路徑清單，讀檔或解析失敗當無宣告、回 []。
         目標取宣告的空間路徑 `to`（接空間根再 realpath），不看掛載點連結現在指去哪：任務自己改指連結不算數（astra-2 二-4）。"""
         try:
             with open(os.path.join(task, "birth.json"), encoding="utf-8") as f:
@@ -42,10 +46,14 @@ def _install():
     wflags = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_TRUNC
 
     def under(p, base):
+        """回 p 是否等於 base 或在其路徑段底下；參數都是已解析路徑，不讀檔、沒有不確定狀態。"""
         return p == base or p.startswith(base + os.sep)
 
     def nested(real):
-        """real 與 node 之間有沒有別的 node（.aos/timeline.json）或 daemon 根（.aosd/）。"""
+        """回 real 的上層到本 node 間是否有另一 node 或 daemon 根（第 5 節）。
+
+        以 .aos/timeline.json／.aosd 判定；找不到或 exists／isdir 無法確認時回 False，未提供 unknown。
+        """
         d = os.path.dirname(real)
         while d != node_r and under(d, node_r):
             if os.path.exists(os.path.join(d, ".aos", "timeline.json")) or os.path.isdir(os.path.join(d, ".aosd")):
@@ -54,7 +62,10 @@ def _install():
         return False
 
     def base_of(dir_fd):
-        """相對路徑的起點：有 dir_fd 就是那個 fd 指的資料夾（/proc/self/fd），不然是 cwd（astra-2 二-4）。"""
+        """回 dir_fd 指向的資料夾字串；未給有效 fd 或 /proc 讀不到時回 cwd（astra-2 二-4）。
+
+        第 5 節：mkdir 等動作可以相對 fd 操作，不能一律拿 cwd 解讀；getcwd 失敗向外拋出。
+        """
         if isinstance(dir_fd, int) and dir_fd >= 0:
             try:
                 return os.readlink("/proc/self/fd/%d" % dir_fd)
@@ -63,6 +74,11 @@ def _install():
         return os.getcwd()
 
     def record(op, path, dir_fd=None):
+        """將 op 對 path 的寫入意圖記入 JSONL，dir_fd 決定相對起點；回 None。
+
+        只記根內字串／bytes 路徑，略過紀錄檔自己；依掛載與 node 範圍判定 ok，例外可能略過紀錄。
+        第 5 節的 hook 發生在操作前，因此 ok 表示範圍合規、不代表寫入成功；I/O 例外交 hook 忽略。
+        """
         if not isinstance(path, (str, bytes)):
             return
         real = rp(os.path.join(base_of(dir_fd), os.fsdecode(path)))
@@ -70,6 +86,7 @@ def _install():
             return
         ok = any(under(real, t) for t in targets) or (under(real, node_r) and not nested(real))
         if not ok:
+            # 第 4、5 節：tick 可能剛核准動態加掛，拒判前重讀宣告，避免沿用啟動時的舊快照。
             targets[:] = load_targets()
             ok = any(under(real, t) for t in targets)
         rec = {"op": op, "path": real, "ok": ok, "pid": os.getpid()}
@@ -77,7 +94,7 @@ def _install():
         if given != real:
             rec["via"] = given   # 經過掛載點（或別的連結）寫的：寫的時候用的路徑
         line = (json.dumps(rec, ensure_ascii=False) + "\n").encode()
-        # 同共用的 append_jsonl：檔尾是沒寫完的半行（上次寫到一半被殺）就先補換行，新紀錄不跟半行黏成壞行（astra-7 H-03）。
+        # 第 0、5 節，同共用的 append_jsonl：檔尾是沒寫完的半行（上次寫到一半被殺）就先補換行，新紀錄不跟半行黏成壞行（astra-7 H-03）。
         # 多個 Python 後代同時寫：看檔尾＋寫入期間對 log 拿 flock，一次 os.write 寫完。這裡的 open／flock 也會觸發
         # audit 事件，但 hook 的 busy 旗標擋住遞迴
         fd = os.open(log, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o644)
@@ -94,11 +111,16 @@ def _install():
             os.close(fd)
 
     def hook(event, args):
+        """接 Python audit 的 event 與 args，挑寫入事件記錄，回 None；觀測失敗一律忽略（第 5 節）。
+
+        這是只記不擋的檢查工具；busy 避免寫紀錄本身再觸發 hook 造成無限遞迴。
+        """
         if busy:
             return
         try:
             busy.append(1)
             if event == "open":
+                # 第 5 節、M-12：open 的 audit 參數沒有 dir_fd，相對 fd 的真正起點在此無法取得。
                 path, mode, flags = (tuple(args) + (None, None))[:3]
                 w = (isinstance(flags, int) and flags & wflags) or (isinstance(mode, str) and any(c in mode for c in "wax+"))
                 if w:

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """aos-exec 的命令列入口——薄薄一層，真東西在 ../lib/aos_exec.py。"""
+# 由 aos7-run 執行 inst 時呼叫；本入口只載入 lib，輸入輸出交給 aos_exec（spec.md 第 4、5 節）。
 import os
 import sys
 

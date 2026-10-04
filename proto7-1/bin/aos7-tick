@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """aos7-tick 的命令列入口——本體在 ../lib/aos7_tick.py。"""
+# 由 daemon 每回合呼叫，也可人手執行；開 round 與起任務交給本體（spec.md 第 3、4 節）。
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))

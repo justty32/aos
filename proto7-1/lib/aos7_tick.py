@@ -1,5 +1,10 @@
 """aos7-tick：開一個回合——round +1、執行任務控制、起任務，印一行 JSON 就結束，不等任務（spec.md 第 4 節）。
 
+由 daemon 每回合呼叫，也可由人手跑；落實 S-09／S-10，控制與加掛見 spec §6／§4。
+讀 node 的 timeline.json、tasks.json、spawn 與任務狀態；寫 round.json，透過 task／mount
+寫任務出生、控制回條與掛載，消耗 spawn。action.lock／世代由共用 helper 管理（spec §2）。
+整個動作的讀寫綁 node fd，實際路徑只供任務環境及掛載記錄使用（spec §4）。
+
     aos7-tick <root> <node-id>
 """
 import json
@@ -14,7 +19,11 @@ from aos7_fs import FD_PREFIX, action_lock, is_regular, node_path, now, read_jso
 
 
 def load_items(node):
-    """讀 tasks.json 的項目，回 (項目清單, 錯誤清單)。整份讀不懂當空表並記錯（probes/selfmod 6）。"""
+    """從 node 路徑讀 tasks.json，回 (物件項目清單, 錯誤清單)（spec §4）。
+
+    整份讀不懂當空表並記錯（probes/selfmod 6）；路徑不存在或存在性無法確認時可能不記錯。
+    非物件的單項跳過，其他合法物件留給後續欄位驗證。
+    """
     path = os.path.join(node, ".aos", "tasks.json")
     if os.path.lexists(path) and not is_regular(path):
         return [], ["tasks.json 不是一般檔（FIFO、資料夾…），當空表"]   # read_json 不讀它（probes/llmops n3）
@@ -29,13 +38,19 @@ def load_items(node):
 
 
 def item_name(item):
-    """項目的名字（沒寫是 "task"，跟 birth.json 一樣；probes/selfmod bug 1）。"""
+    """取項目物件 item 的名字，回非空字串；缺少或型別不對回 "task"（spec §4）。
+
+    與 birth.json 的預設一致，避免 keep 用另一個名字計數（probes/selfmod bug 1）。
+    """
     n = item.get("name")
     return n if isinstance(n, str) and n else "task"
 
 
 def validate(item):
-    """項目的欄位型別（tasks.json 與 spawn 共用）；不對丟 ValueError，只跳過這一項（probes/chaos B2～B4）。"""
+    """驗證項目物件 item 的定義欄位；通過回 None，不合丟 ValueError（spec §4）。
+
+    tasks.json 與 spawn 共用，呼叫者只跳過這一項（probes/chaos B2～B4）；不在這裡讀檔。
+    """
     n = item.get("name")
     if n is not None and not (isinstance(n, str) and n):
         raise ValueError("name 要是非空字串，拿到 %r" % (n,))
@@ -55,7 +70,8 @@ def validate(item):
 
 
 def check_item(item):
-    """第 4 節的完整檢查：validate 的定義欄位，加上排程欄位 from_round／mode／max_live 的型別。不對丟 ValueError。
+    """對項目物件 item 做 spec §4 的完整檢查，通過回 None，不對丟 ValueError。
+    包含 validate 的定義欄位與排程欄位 from_round／mode／max_live；不在這裡讀檔。
     restart reload 也先過這一關再剝排程欄位（astra-6 G-05）。"""
     validate(item)
     fr = item.get("from_round", 1)
@@ -69,7 +85,11 @@ def check_item(item):
 
 
 def should_start(item, rnd, live):
-    """這一項本回合要不要起；欄位型別不對丟 ValueError（只跳過這一項）。"""
+    """依項目 item、本回合 rnd、同名活任務計數 live 回傳是否可起（spec §4）。
+
+    未到起始回合或名額已滿回 False；live 沒有的名字按 0 算，不另判讀取是否可靠。
+    欄位型別不對丟 ValueError，交由呼叫者只跳過這一項。
+    """
     check_item(item)
     if rnd < item.get("from_round", 1):
         return False
@@ -82,7 +102,10 @@ def should_start(item, rnd, live):
 
 
 def live_names(node):
-    """活任務的 {name: 個數}（keep、max_live 判斷用）。"""
+    """掃 node 路徑的活任務，回 {name: 個數}，供 keep／max_live 判斷（spec §4／§5）。
+
+    活性與缺檔沿用 task_state；列不到 tasks 會回空表，birth 讀不到則由 name_of 從 tid 推名。
+    """
     names = {}
     for tid in aos7_task.live_tasks(node):
         n = aos7_task.name_of(aos7_task.task_dir(node, tid))
@@ -91,14 +114,20 @@ def live_names(node):
 
 
 def spawn_items(obj):
-    """一個 spawn 檔的內容 → 項目清單：單一項目，或 `{"batch": [項目, ...]}`（一個檔一次 rename，整批同一回合起；probes/swarm N3）。"""
+    """把已讀取的 spawn 內容 obj 轉成物件項目清單（spec §4）。
+
+    支援單項或 `{"batch": [項目, ...]}`（一個檔一次 rename，整批同一回合起；probes/swarm N3）。
+    obj 非物件回空清單，batch 的非物件項目略過；欄位合法性留給 should_start。
+    """
     if isinstance(obj, dict) and isinstance(obj.get("batch"), list):
         return [i for i in obj["batch"] if isinstance(i, dict)]
     return [obj] if isinstance(obj, dict) else []
 
 
 def serve_mounts(root, fnode, node=None):
-    """審核活任務的加掛請求（S-23、M-6）：tasks.json 的 `mount_allow` 前綴清單，沒寫＝全給。
+    """審核空間根 root 下活任務的加掛請求，回含 tid 的結果清單（spec §4；S-23、M-6）。
+
+    tasks.json 的 `mount_allow` 前綴清單沒寫或整份讀不到＝全給（仍驗空間邊界）。
 
     fnode＝讀寫用的 node 路徑（tick 給 `/proc/self/fd/N`），node＝實際路徑（掛載點記在 birth.json 的 `at`）。
     一個任務處理失敗只記在它那筆，其他照做（astra-5 F-06）。"""
@@ -117,7 +146,10 @@ def serve_mounts(root, fnode, node=None):
 
 
 def node_still_there(fnode):
-    """node 中途被刪（timeline.json 不見了）就丟 FileNotFoundError，讓 held_node 收成 gone；還在就沒事。"""
+    """檢查 fd 路徑 fnode 的 timeline.json，仍是一般檔時回 None（spec §4）。
+
+    不在、不是一般檔或 stat 失敗皆丟 FileNotFoundError，讓 held_node 收成 gone。
+    """
     if not os.path.isfile(os.path.join(fnode, ".aos", "timeline.json")):
         raise FileNotFoundError(fnode)
 
@@ -127,7 +159,11 @@ GONE = {"round": None, "started": [], "ctl": [], "gone": True}
 
 def held_node(fn, root, node_id, gone):
     """抓住 node 目錄的 fd，把 `/proc/self/fd/N`（fnode）交給 fn(fnode, node) 做整個動作（astra-5 F-09）：
-    node 被搬走時寫到新位置；被刪掉時寫入失敗（不會在舊路徑建出鬼目錄）→ 回 gone。"""
+    node 被搬走時寫到新位置；被刪掉時寫入失敗（不會在舊路徑建出鬼目錄）→ 回 gone（spec §4）。
+
+    root 是空間根、node_id 是相對路徑；回 fn 的結果或 gone 字典的副本。
+    開不了 node（含 I/O 錯誤）或看不到 timeline.json 也回 gone；其他動作例外原樣上拋。
+    """
     node = node_path(root, node_id)
     try:
         nfd = os.open(node, os.O_RDONLY | os.O_DIRECTORY)
@@ -149,8 +185,13 @@ def held_node(fn, root, node_id, gone):
 
 
 def tick(root, node_id):
-    """做一次 tick，回 {"round", "started", "ctl"}（node 不在多 `gone`，舊 daemon 的動作多 `stale`，都什麼都不寫）。"""
+    """對空間根 root、相對 node_id 做一次 tick，回 {"round", "started", "ctl"}（spec §2／§4）。
+
+    node 不在或無法開啟多 gone，舊 daemon 的動作多 stale；這兩種不做回合寫入。
+    """
     def act(fnode, node):
+        """以 fd 路徑 fnode 鎖住動作，node 為實際路徑；回 tick 結果或世代不符的 stale。"""
+        # spec §2：鎖住後才比 gen，避免舊 daemon 的排隊動作倒寫新世代的回合。
         with action_lock(root, fnode) as ok:
             if not ok:
                 return {"round": None, "started": [], "ctl": [], "stale": True}
@@ -159,7 +200,11 @@ def tick(root, node_id):
 
 
 def _tick(root, node_id, node, fnode=None):
-    """node＝實際路徑（任務的環境、cwd、掛載點）；fnode＝讀寫用的（tick 給 node 目錄 fd 的 `/proc/self/fd/N`）。"""
+    """在已拿鎖的 node 開回合、處理控制與啟動，回 {round, started, ctl}（spec §3／§4／§6）。
+
+    root／node_id 定位空間；node 是實際路徑（環境、cwd、掛載點），fnode 是讀寫用的
+    `/proc/self/fd/N`（省略時用 node）。回合讀不懂就從流水帳接號；帳也讀不到從 1 起。
+    """
     fnode = fnode or node
     rpath = os.path.join(fnode, ".aos", "round.json")
     old = read_json(rpath, {})
@@ -179,6 +224,7 @@ def _tick(root, node_id, node, fnode=None):
     if os.environ.get("AOS7_TEST_TICK_HANG") == node_id:
         time.sleep(10 ** 6)   # 只給測試：模擬 tick 卡在 I/O（以前用 FIFO 的 tasks.json，現在 read_json 不會卡了）
 
+    # spec §4：先控制再加掛、再起任務，使 restart 寫的 spawn 能在這次 tick 接著啟動。
     state["ctl"] = aos7_task.run_all_ctl(fnode)
     state["mounts"] = serve_mounts(root, fnode, node)
 
@@ -186,6 +232,7 @@ def _tick(root, node_id, node, fnode=None):
     claimed = set()   # 這個 tick 已經認領的子根：同 tick 第二項宣告同一個不起（astra-7 H-02）
     sdir = os.path.join(fnode, ".aos", "spawn")
     live = live_names(fnode)
+    # spec §4：先處理 spawn 並即時加計名額，後面的 tasks.json 不會忽略同回合剛起的 keep。
     for fn in sorted(os.listdir(sdir)) if os.path.isdir(sdir) else []:
         if not fn.endswith(".json") or fn.startswith("."):
             continue
@@ -243,6 +290,7 @@ def _tick(root, node_id, node, fnode=None):
 
 
 def main(argv=None):
+    """薄入口呼叫；argv 為 root、node-id（None 取命令列），印 JSON，正常回 0、用法錯回 1。"""
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 2:
         print("用法: aos7-tick <root> <node-id>", file=sys.stderr)
