@@ -1,0 +1,7 @@
+{"sense": "temp", "src": "src/out/temp.json", "src_clock": "src/.aos/round.json",
+ "max_age": 3, "patience": 2, "stall": null,
+ "steps": [{"select": "value.t_dc"},
+           {"scale": {"mul": 0.1, "q": 0.05, "round": 1, "as": "c"}},
+           {"threshold": {"ge": 80, "as": "hot"}}],
+ "need": ["c"],
+ "note": "來源 t_dc 是整數十分之一度；c 是攝氏、誤差界 0.05；hot＝c ≥ 80，誤差帶跨過 80 就 null"}
