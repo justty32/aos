@@ -6,12 +6,13 @@
 
 分級：**〔要使用者決定〕**＝語意題，先照最簡推薦做；〔技術選型，先這樣〕；〔默認正常〕。
 
-## 要使用者決定（2 條）
+## 要使用者決定（2 條；10-04 使用者說「隨意，真的糾結就做選項」，頂層已定，待下一輪修補實作）
 
 ### P2-01 固定 interval 時 `wake` 沒有作用
 
 - `early_tock: false`（預設）時，時間線在第 4 步就等滿 interval 才 tock，第 6 步「等到滿 interval」幾乎是 0。所以固定 interval 的 node **整段都在回合中**，照 2.3「回合中照舊」，`wake` 不起作用；`resume` 順便 wake 也只在 node 停在 pause 時有用（那時本來就不在回合中，照樣馬上開）。
 - 現在：照 spec 字面做，測試的 wake 用 `early_tock: true`。
+- **頂層定（10-04）：選（b），不做選項。** wake 是明確的請求，固定節拍是「沒人叫時」的預設；kernel 有信要叫醒閒置 node（第三波 tickless）靠它。
 - 其他選項：（b）固定 interval 時 `wake` 打斷第 4 步，馬上 tock、馬上開下一回合（等於「這回合提前結束」）；（c）`wake` 只縮短下一回合（下一回合的 interval 從 wake 那一刻重算）。
 
 ### P2-02 once 被殺在「寫了 birth、runner 還沒記到」之間：報成 lost，一次都沒跑
@@ -19,6 +20,7 @@
 - 4.4 的 launch 標記保證不重起。但 tick 被 kill -9 在 birth.json 寫完、Popen 之前或剛 Popen 之後（runner 還沒補進 birth.json）時，下一個 tick 分不出 runner 起了沒，只能照 5.4 等兩回合、身分掃描找不到就判 lost。
 - 結果：這項**沒跑過，但 last-round.json 會報 `{"run": "o#1", "code": null, "lost": true}`**，不會無痕消失，但也不會再跑。測試 `test_crash_after_birth` 鎖住這個行為。
 - 這是「最多一次」（at-most-once）。要「至少一次」可以：判 lost 時若 birth.json 沒有 runner、也沒有 pid.json、out.log 是空的，就把 once 項加回 tasks.json 重起（有極小機率真的跑了兩次）。要不要改由你定。
+- **頂層定（10-04）：做成選項。** once 項加可選 `retry_lost`（bool，預設 false＝最多一次，現狀）；true 時用上面「至少一次」的判法把 once 項加回重起（可能跑兩次）。兩邊各有道理（付費工作怕重複 vs. 怕漏跑），照使用者「糾結就做選項」。
 
 ## 技術選型，先這樣
 

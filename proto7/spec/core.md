@@ -48,7 +48,7 @@
 ## 同像性
 
 - **S-20 時間線像一個大號的任務。** daemon 與 tick-tock、tick-tock 與任務之間有同像性；daemon 和 tick-tock 的位置仍然特殊，好處只在實作上共用，能共用的都可以（第 79～81 行）。
-- **S-21 tick-tock 控制 daemon，兩條路都要。** 路一：時間線的 tick 生出一個任務，任務開一個 daemon，子 daemon 對父時間線就是普通任務，daemon 核心不知道從屬。路二：寫別的 daemon 的控制檔，跟 S-18 是同一個動作，對象換成 daemon（第 83～84 行）。子 daemon 歸屬起它的 node；路二對子 daemon 的 stop，要那個 node 允許才有效（使用者 10-03 答 Q5）。
+- **S-21 tick-tock 控制 daemon，兩條路都要。** 路一：時間線的 tick 生出一個任務，任務開一個 daemon，子 daemon 對父時間線就是普通任務，daemon 核心不知道從屬（從屬由子 daemon 自己寫在子根的 owner.json）。路二：寫別的 daemon 的控制檔，跟 S-18 是同一個動作，對象換成 daemon（第 83～84 行）。子 daemon 歸屬起它的 node；路二對子 daemon 的 stop，要那個 node 允許才有效（使用者 10-03 答 Q5）。
 - **S-22 控制成環不管。** 使用者承擔風險（第 85 行）。
 
 ## 不在核心（使用者說之後再說）
