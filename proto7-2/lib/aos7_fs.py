@@ -1,6 +1,9 @@
 """proto7-2 共用的小工具：JSON 檔讀寫（原子、三態）、時間字串、路徑、動作鎖、任務環境（spec.md 第 0、2.5、5 節）。
 
-起點複製自 proto7-1 lib/aos7_fs.py，拿掉 tasks-old／tail_jsonl，加上三態讀檔 read_json3 與 edit_json 的等鎖逾時。"""
+起點複製自 proto7-1 lib/aos7_fs.py，拿掉 tasks-old／tail_jsonl，加上三態讀檔 read_json3 與 edit_json 的等鎖逾時。
+
+daemon、tick／tock、ctl 與普通任務共用；依呼叫者給的 path 讀寫 JSON／JSONL 與 .lock，
+並讀 /proc 的程序身分。動作鎖另讀 .aosd/gen.json、寫 .aos/action.owner.json；不自行推進回合。"""
 import contextlib
 import datetime
 import json
@@ -12,14 +15,19 @@ BIN = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
 
 
 def now():
-    """給人看的時間字串（spec 第 0 節：邏輯不依賴它）。"""
+    """給人看的時間字串（spec 第 0 節：邏輯不依賴它）。
+
+    無參數；回本機 ISO 8601 字串，精度毫秒。"""
     return datetime.datetime.now().isoformat(timespec="milliseconds")
 
 
 def read_json(path, default=None):
     """讀 JSON 檔；不存在、壞掉或不是一般檔（FIFO、資料夾…）回 default。
 
-    用 O_NONBLOCK 開：控制檔、tasks.json、spawn 被換成 FIFO 時不會卡死 daemon 主迴圈或 tick（probes/chaos B10、llmops）。"""
+    用 O_NONBLOCK 開：控制檔、tasks.json、spawn 被換成 FIFO 時不會卡死 daemon 主迴圈或 tick（probes/chaos B10、llmops）。
+
+    path 是檔案路徑，default 是失敗時的回值；成功回任意 JSON 值。此寬鬆介面不分失敗原因，
+    要保留「不知道」的生命週期判定應用 read_json3（spec §0）。"""
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
     except OSError:
@@ -35,7 +43,9 @@ def read_json(path, default=None):
 
 
 def is_regular(path):
-    """path 是一般檔（不跟符號連結以外的特殊檔：FIFO、資料夾、裝置都回 False）。"""
+    """path 指向一般檔嗎（跟隨符號連結；FIFO、資料夾、裝置都回 False）。
+
+    參數 path 可為符號連結（會跟隨）；回 bool，stat 讀不到也回 False，並非三態判定（spec §0）。"""
     try:
         return stat.S_ISREG(os.stat(path).st_mode)
     except OSError:
@@ -43,11 +53,13 @@ def is_regular(path):
 
 
 def write_json(path, obj):
-    """原子寫：先寫暫存檔再 rename；需要的話建資料夾。"""
+    """原子寫：先寫暫存檔再 rename；需要的話建資料夾。
+
+    path 是目的檔、obj 是可 JSON 編碼的值；成功回 None，寫入失敗向外拋例外（spec §0）。"""
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
-    # 暫存檔以 `.` 開頭：別人列資料夾（`*.json`、sh 的 `ls`）時不會讀到寫一半的檔（probes/polyglot N11）
+    # spec §0：暫存檔以 `.` 開頭，列資料夾時不讀到半份 JSON（probes/polyglot N11）。
     tmp = os.path.join(d, ".%s.tmp.%d" % (os.path.basename(path), os.getpid()))
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=1)
@@ -61,11 +73,14 @@ class LockTimeout(Exception):
 
 @contextlib.contextmanager
 def locked(path, timeout=None):
-    """對 `<path>.lock` 拿 flock（spec 第 0 節：多人讀—改—寫同一個檔的約定）。timeout 秒內拿不到丟 LockTimeout；None＝一直等。"""
+    """對 `<path>.lock` 拿 flock（spec 第 0 節：多人讀—改—寫同一個檔的約定）。timeout 秒內拿不到丟 LockTimeout；None＝一直等。
+
+    path 是資料檔路徑；作為 context manager yield None，區塊結束時關 fd 釋放鎖。"""
     import fcntl
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
+    # spec §0、§2.5：只關 fd 釋鎖，不 unlink；保留同一 inode 才不會讓等鎖者與新來者各鎖一份。
     with open(path + ".lock", "a") as lk:
         if timeout is None:
             fcntl.flock(lk, fcntl.LOCK_EX)
@@ -85,7 +100,9 @@ def locked(path, timeout=None):
 def edit_json(path, fn, default=None, timeout=None):
     """讀—改—寫一個 JSON 檔，期間拿 `<path>.lock`（tasks.json、paused.json 的寫的人都用它，就不會互相蓋掉）。
 
-    fn(舊內容) 回新內容；回 None＝不寫。回寫進去的內容。timeout 見 locked。"""
+    fn(舊內容) 回新內容；回 None＝不寫。回寫進去的內容。timeout 見 locked。
+
+    path 是目的檔；default 供讀不到時交給 fn；回 fn 的結果（含 None），鎖／寫入錯誤向外拋。"""
     with locked(path, timeout):
         new = fn(read_json(path, default))
         if new is not None:
@@ -104,7 +121,10 @@ def read_json3(path, dir_fd=None):
     - ("ok", 值)：讀到、解得開（值可能不是物件，型別由呼叫的人看）。
     - ("missing", None)：確定不存在（ENOENT／ENOTDIR），或不是一般檔（FIFO、資料夾當不存在；spec 第 0 節）。
     - ("bad", None)：一般檔、讀得到，但不是 JSON（人手寫壞）。
-    - ("io", 錯誤字串)：讀不到（EIO、EACCES、ESTALE…）＝**不知道**，不能當不存在也不能當壞掉去做破壞性動作。"""
+    - ("io", 錯誤字串)：讀不到（EIO、EACCES、ESTALE…）＝**不知道**，不能當不存在也不能當壞掉去做破壞性動作。
+
+    path 是檔案路徑，dir_fd 可指定相對路徑的基準目錄 fd。四種讀檔結果供上層組成
+    是／否／不知道三態；BAD 如何解讀由該檔案的契約決定，不混同 I/O 失敗。"""
     import errno
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK, dir_fd=dir_fd)
@@ -129,7 +149,10 @@ def read_json3(path, dir_fd=None):
 
 
 def test_point(name):
-    """只給測試：環境 AOS7_TEST_CRASH 列到 name（逗號分隔）就在這裡 SIGKILL 自己，模擬 kill -9 打在這一步。"""
+    """只給測試：環境 AOS7_TEST_CRASH 列到 name（逗號分隔）就在這裡 SIGKILL 自己，模擬 kill -9 打在這一步。
+
+    name 是測試點；AOS7_TEST_HANG 列到它就長睡，否則回 None。
+    P2-15：故意保留斷電／卡住的重現點，正常環境不設這兩個變數。"""
     want = os.environ.get("AOS7_TEST_CRASH")
     if want and name in want.split(","):
         import signal
@@ -140,9 +163,11 @@ def test_point(name):
 
 
 def proc_starttime(pid):
-    """程序的啟動時間（`/proc/<pid>/stat` 第 22 欄，開機後的 clock tick）；程序不在回 None。
+    """程序的啟動時間（`/proc/<pid>/stat` 第 22 欄，開機後的 clock tick）；讀不到回 None。
 
-    跟 pid 一起記，才認得出「還是同一個程序」（pid 會被重用；astra-5 F-04）。"""
+    跟 pid 一起記，才認得出「還是同一個程序」（pid 會被重用；astra-5 F-04）。
+
+    pid 是程序號；成功回 int，讀不到或 stat 內容不合也回 None（不知道），不據此認定死亡（spec §2.5、§5.4）。"""
     try:
         with open("/proc/%d/stat" % pid) as f:
             return int(f.read().rsplit(")", 1)[1].split()[19])
@@ -163,7 +188,10 @@ def action_lock(root, node):
 
     拿到鎖後寫 `.aos/action.owner.json`＝`{"pid","gen","starttime"}`：新 daemon 的動作等鎖逾時時，靠它認出
     「舊世代、還是同一個程序」的持有者並 SIGKILL（astra-5 F-04；不 unlink 鎖檔）。node 是動作拿著的路徑
-    （tick／tock 給的是 `/proc/self/fd/N`，node 被刪時開不了鎖檔 → FileNotFoundError，由呼叫的人當 gone）。"""
+    （tick／tock 給的是 `/proc/self/fd/N`，node 被刪時開不了鎖檔 → FileNotFoundError，由呼叫的人當 gone）。
+
+    root 是 daemon 根，node 是已抓住的 node 路徑；回值是 context manager，
+    區塊取得布林寫入許可。gen 檔內容不是 dict 時目前也放行；I/O 例外由呼叫者處理（spec §2.5）。"""
     import fcntl
     with open(os.path.join(node, ".aos", "action.lock"), "a") as lk:
         fcntl.flock(lk, fcntl.LOCK_EX)
@@ -174,18 +202,23 @@ def action_lock(root, node):
                         "starttime": proc_starttime(os.getpid()), "at": now()})
         except OSError:
             pass
+        # spec §2.5：拿鎖後才比 gen，讓排在新 daemon 後面的舊動作看到世代已換。
         cur = read_json(os.path.join(root, ".aosd", "gen.json"), {}) or {}
         yield mine is None or not isinstance(cur, dict) or str(cur.get("gen")) == mine
 
 
 def reap_stale_owner(node, gen):
     """新 daemon（世代 gen）的動作等 action.lock 逾時後呼叫：持有者是舊世代、而且 pid 的啟動時間跟它記的一樣
-    （確定是同一個程序）就 SIGKILL 它，鎖跟著放掉，下一圈重試（astra-5 F-04）。回被殺的 pid 或 None。"""
+    （確定是同一個程序）就 SIGKILL 它，鎖跟著放掉，下一圈重試（astra-5 F-04）。回被殺的 pid 或 None。
+
+    node 指向持鎖者紀錄所在 node；gen 是接管者世代。讀不到紀錄、不能核對身分或送訊號失敗
+    都回 None；三態的「不知道」保留程序，交上層記 last_error（spec §0、§2.5）。"""
     import signal
     ow = read_json(os.path.join(node, ".aos", OWNER))
     if not isinstance(ow, dict):
         return None
     pid, og, st = ow.get("pid"), ow.get("gen"), ow.get("starttime")
+    # spec §0、§2.5：pid 可能重用；舊 gen 加上同 starttime 都確認，才有權收持鎖者。
     if not (isinstance(pid, int) and pid > 1 and pid != os.getpid() and isinstance(og, int) and isinstance(gen, int)
             and og < gen and st is not None and proc_starttime(pid) == st):
         return None
@@ -198,7 +231,10 @@ def reap_stale_owner(node, gen):
 
 def holder_unverified(node, gen):
     """reap_stale_owner 沒殺時呼叫：action.lock 現在真的有人拿著、卻無法確認是舊世代的同一個程序，回說明 dict
-    {"pid", "why", "hint"}；鎖沒人拿（例如逾時的是自己的動作、已被收掉）回 None。不殺任何程序（astra-6 G-10）。"""
+    {"pid", "why", "hint"}；鎖沒人拿（例如逾時的是自己的動作、已被收掉）回 None。不殺任何程序（astra-6 G-10）。
+
+    node 是鎖所在 node，gen 是目前世代；開不了鎖檔也回 None，不能據此證明無持鎖者。
+    這是人工恢復診斷，並不授權 kill（spec §2.5）。"""
     import fcntl
     try:
         fd = os.open(os.path.join(node, ".aos", "action.lock"), os.O_RDONLY | os.O_NONBLOCK)
@@ -240,7 +276,10 @@ FD_PREFIX = "/proc/self/fd/"
 
 
 def real_path(p):
-    """`/proc/self/fd/N/...`（tick／tock 抓著 node 的 fd 寫檔；astra-5 F-09）→ 現在的實際路徑；其他原樣。"""
+    """`/proc/self/fd/N/...`（tick／tock 抓著 node 的 fd 寫檔；astra-5 F-09）→ 現在的實際路徑；其他原樣。
+
+    p 是字串路徑；回供顯示或環境使用的字串，readlink 失敗保留 p。
+    轉出的路徑不取代實際寫入用的 fd，避免目錄換名後寫到另一個 inode（spec §2.5）。"""
     if not p.startswith(FD_PREFIX):
         return p
     rest = p[len(FD_PREFIX):]
@@ -256,7 +295,10 @@ def real_path(p):
 
 def append_jsonl(path, obj):
     """流水帳加一行。檔尾是沒寫完的一行（上次 append 中途被殺、沒有換行結尾）就先補換行，
-    新的一行獨立成行，不會跟半行黏成一條壞行（astra-6 G-08）。回補換行前那段半行的位元組數（沒有是 0）。"""
+    新的一行獨立成行，不會跟半行黏成一條壞行（astra-6 G-08）。回補換行前那段半行的位元組數（沒有是 0）。
+
+    path 是流水帳檔，obj 是要追加的 JSON 值；寫失敗拋例外。用於可選歷史／事件紀錄，
+    不負責輪替或清理（spec §9）。"""
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
@@ -275,7 +317,10 @@ def append_jsonl(path, obj):
 def read_jsonl(path, with_bad=False):
     """讀流水帳，壞行跳過。以 bytes 逐行讀、每行各自 UTF-8 解碼＋json.loads：半個 UTF-8 字元（append 被殺在多 byte 字元中間）
     也只壞那一行，後面的合法行照讀，不會整檔丟例外或回空清單（astra-7 H-04）。with_bad=True 時回 (紀錄, 壞行數)；
-    空行不算壞行。"""
+    空行不算壞行。
+
+    path 是流水帳檔；with_bad 決定回清單或二元組。讀不到時回已讀到的結果（通常空清單），
+    不把它當作核心狀態的三態證據（spec §9）。"""
     out, bad = [], 0
     try:
         with open(path, "rb") as f:
@@ -292,19 +337,25 @@ def read_jsonl(path, with_bad=False):
 
 
 def node_path(root, node_id):
-    """node id → 絕對路徑（根是 "."）。"""
+    """node id → 絕對路徑（根是 "."）。
+
+    root 是空間根、node_id 是相對 id；回路徑字串，不驗證邊界或存在性（spec §1、S-14）。"""
     root = os.path.abspath(root)
     return root if node_id in (".", "") else os.path.join(root, node_id)
 
 
 def node_id_of(root, path):
-    """絕對路徑 → node id。"""
+    """絕對路徑 → node id。
+
+    root 是空間根、path 是 node 路徑；回以 / 分隔的相對 id，不驗證是否越界（spec §1、S-14）。"""
     rel = os.path.relpath(os.path.abspath(path), os.path.abspath(root))
     return "." if rel == "." else rel.replace(os.sep, "/")
 
 
 def join_id(base, rel):
-    """node id 接相對路徑（kernel 算成員 id 用）。"""
+    """node id 接相對路徑（kernel 算成員 id 用）。
+
+    base 是基準 id、rel 是相對路徑；回正規化 id，不做 root 邊界驗證（spec §1）。"""
     if base in (".", ""):
         return os.path.normpath(rel).replace(os.sep, "/")
     return os.path.normpath(os.path.join(base, rel)).replace(os.sep, "/")
@@ -313,11 +364,14 @@ def join_id(base, rel):
 
 
 def aos_dir(node):
+    """依 node 路徑回傳其 .aos/ 路徑字串；不存取磁碟（spec §3）。"""
     return os.path.join(node, ".aos")
 
 
 def task_env():
-    """任務從環境變數讀自己是誰（spec 5.5）。缺了丟 KeyError。"""
+    """任務從環境變數讀自己是誰（spec 5.5）。缺了丟 KeyError。
+
+    無參數；回 root／node／node_id／task／tid／run 字典，run 轉成整數，格式錯誤拋 ValueError。"""
     e = os.environ
     return {"root": e["AOS7_ROOT"], "node": e["AOS7_NODE"], "node_id": e["AOS7_NODE_ID"],
             "task": e["AOS7_TASK"], "tid": e["AOS7_TID"], "run": int(e["AOS7_RUN"])}
@@ -326,13 +380,17 @@ def task_env():
 def wait_tock(task_dir, last_round, poll=0.02, timeout=None, run=None):
     """等 tock.json 的 round 比 last_round 大，回新的 round；逾時回 None（S-11）。
 
-    run＝這次執行的 run（預設取環境 AOS7_RUN）：tock.json 的 `run` 對不上（上一個 run 沒清乾淨的）當不存在（spec 5.1）。"""
+    run＝這次執行的 run（預設取環境 AOS7_RUN）：tock.json 的 `run` 對不上（上一個 run 沒清乾淨的）當不存在（spec 5.1）。
+
+    task_dir 是槽路徑、last_round 是已見回合；poll 是輪詢秒數、timeout 是等待上限秒數，
+    None 表示不設上限。讀不到、格式壞或 run 不合就繼續等；不確定不假造回合（spec §5.5）。"""
     if run is None and os.environ.get("AOS7_RUN", "").isdigit():
         run = int(os.environ["AOS7_RUN"])
     path = os.path.join(task_dir, "tock.json")
     end = None if timeout is None else time.monotonic() + timeout
     while True:
         t = read_json(path)
+        # spec §5.1、§5.5：槽會重用，run 不符的舊通知不能讓新任務誤認已過一回合。
         if isinstance(t, dict) and isinstance(t.get("round"), int) and t["round"] > last_round \
                 and (run is None or t.get("run") == run):
             return t["round"]
@@ -342,12 +400,16 @@ def wait_tock(task_dir, last_round, poll=0.02, timeout=None, run=None):
 
 
 def env_with_bin(env=None):
-    """複製一份環境，PATH 前面加上 proto7-2 的 bin/。"""
+    """複製一份環境，PATH 前面加上 proto7-2 的 bin/。
+
+    env 是來源映射（None 取目前環境）；回新 dict，不修改原本環境（spec §5.5）。"""
     env = dict(os.environ if env is None else env)
     env["PATH"] = BIN + os.pathsep + env.get("PATH", "")
     return env
 
 
 def is_int(v):
-    """真的整數（bool 不算）。"""
+    """真的整數（bool 不算）。
+
+    v 是待驗值；回 bool，排除 JSON 的 true／false 冒充回合或 run 整數（spec §3、§5.2）。"""
     return isinstance(v, int) and not isinstance(v, bool)

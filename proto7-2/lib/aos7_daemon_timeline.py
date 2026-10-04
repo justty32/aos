@@ -1,6 +1,10 @@
 """一條 tick-tock 時間線的迴圈（spec.md 2.1、2.2、2.5）：不變條件一 → pause → tick → 等（固定 interval 或提前 tock）→ tock → 等滿 interval。
 
 迴圈本身是 daemon 裡的一個 thread；tick、tock 每次都是獨立程序（S-04）。起點是 proto7-1 lib/aos7_daemon_timeline.py。
+
+由 daemon.check_nodes 建立，每條服務一個已登記 node（S-05、S-13）。讀 .aos/timeline.json、round.json
+與任務槽的 birth.json／exit.json，tick/tock 子程序負責寫回合與任務檔；本模組只更新 daemon 記憶體狀態，
+事件經 daemon 寫 status.json（及有 log.on 時的 log.jsonl），鎖接管另讀 action.owner.json（spec §2.5、§2.8、§9）。
 """
 import json
 import math
@@ -25,8 +29,11 @@ UNKNOWN_RC = 3               # tick／tock 推定不了（round.json 讀不到�
 
 
 def run_prog(name, root, node_id, extra_env=None, gen=None, timeout=None, abort=None):
-    """跑 `bin/<name> <root> <node-id>`，回 (returncode, 最後一行 JSON 或 None, stderr)。逾時或 abort() 為真就 SIGKILL。"""
+    """以獨立程序跑 bin/name，root／node_id 指定空間與時間線（spec §2.1、§2.5；S-04）。
+    extra_env 加動作變數、gen 給世代、timeout 限秒數、abort 為無參數停止判定回呼。
+    回 (退出碼, stdout 最後一行 JSON 或 None, stderr)；輸出不明回 None，逾時或 abort 為真則 kill 並回 -9。"""
     env = env_with_bin()
+    # spec §2.1、§2.5：每次動作各自決定 early/incomplete，避免子 daemon 繼承父動作的回合標記。
     for k in ("AOS7_EARLY", "AOS7_INCOMPLETE"):
         env.pop(k, None)
     env.update(extra_env or {})
@@ -60,7 +67,8 @@ def run_prog(name, root, node_id, extra_env=None, gen=None, timeout=None, abort=
 
 
 def read_config(node):
-    """`<node>/.aos/timeline.json`（可有可無；W12）→ (interval_ms, early_tock, action_timeout_s, 錯誤或 None)。"""
+    """讀 node/.aos/timeline.json，回 (interval_ms, early_tock, timeout_s, 錯誤或 None)（spec §1）。
+    檔案可無（W12）；讀不懂用預設，interval 不合檢查時另回錯誤，timeout 不合則用預設。"""
     t = read_json(os.path.join(node, ".aos", "timeline.json"), {})
     t = t if isinstance(t, dict) else {}
     err = None
@@ -80,6 +88,8 @@ class Timeline(threading.Thread):
     log(**kw)、kill_live(nid, node)。"""
 
     def __init__(self, daemon, node_id, ident):
+        """建立 daemon 管理的 node_id 時間線；ident 是起線時 (st_dev, st_ino)（spec §2.1、§2.6）。
+        回 None；僅初始化未啟動 thread，回合數讀不懂先顯示 0，開回合前仍會檢查磁碟。"""
         super().__init__(name="tl:" + node_id, daemon=True)
         self.d = daemon
         self.node_id = node_id
@@ -105,29 +115,43 @@ class Timeline(threading.Thread):
     # ---------- 小工具 ----------
 
     def disk_round(self):
+        """讀 round.json 供顯示回合數（spec §2.8），無額外參數，回整數。
+        檔案讀不到或 round 不合型別時保留記憶體回合（初始 0），不據此推定回合已關。"""
         r = read_json(os.path.join(self.node, ".aos", "round.json"), {})
         v = r.get("round") if isinstance(r, dict) else None
         return v if is_int(v) else getattr(self, "round", 0)
 
     def err(self, prog, rc, msg):
+        """把 prog、rc 與 msg 記成此 node 最近錯誤，帶目前回合與時間（spec §2.8）。
+        回 None；rc 可為 None，msg 為空時留空字串，文字只留最後 300 字。"""
         self.last_error = {"prog": prog, "rc": rc, "round": self.round, "at": now(), "err": (msg or "")[-300:]}
 
     def stop_overdue(self):
+        """判定 daemon 的停止寬限期是否已過，供動作程序 abort 使用（spec §2.5、§2.7）。
+        無額外參數，回 bool；沒有停止起點回 False，時間用 monotonic 避免牆鐘跳動。"""
         since = getattr(self.d, "stopping_since", None)
         return since is not None and time.monotonic() - since > STOP_GRACE
 
     def done(self):
+        """讀記憶體旗標判定 daemon 停止或 node 消失，無額外參數，回 bool（spec §2.6、§2.7）。
+        不讀磁碟；不知道 node 是否消失時，須由 daemon 保留 gone 原值。"""
         return self.d.stopping or self.gone
 
     def leaving(self):
+        """判定時間線應否結束，包含 done 與 unregister 的 retire（spec §2.3、§2.7）。
+        無額外參數，回 bool；只讀既有旗標，不另推定檔案或程序是否存在。"""
         return self.done() or self.retire
 
     def sleep_until(self, t_end, kickable):
+        """等到 monotonic 時刻 t_end；kickable 決定 wake/resume 能否跳過等待（spec §2.1）。
+        回 None；停止或 retire 隨時可打斷，喚醒 Event 後仍重查條件。"""
         while not self.leaving() and not (kickable and self.kick) and time.monotonic() < t_end:
             self.wake.wait(min(POLL, max(0.0, t_end - time.monotonic())))
             self.wake.clear()
 
     def backoff(self):
+        """不變條件一無法確認／恢復時指數退避，0.5 秒起至 8 秒（spec §2.1、§2.2）。
+        無額外參數，回 None；phase 記 error，停止或 retire 可提前離開等待。"""
         self.recover_fails += 1
         self.phase = "error"
         t = min(ERROR_BACKOFF * 2 ** (self.recover_fails - 1), RECOVER_BACKOFF_MAX)
@@ -136,6 +160,8 @@ class Timeline(threading.Thread):
             self.wake.wait(min(POLL * 5, end - time.monotonic()))
 
     def prog(self, name, extra=None, timeout=None):
+        """以當前世代跑 name 動作，extra 給環境，timeout 覆蓋設定秒數（spec §2.5）。
+        回 (退出碼, JSON 或 None, stderr)；非零記錯，逾時後嘗試辨識舊鎖持有者，不明則不殺。"""
         rc, out, err = run_prog(name, self.d.root, self.node_id, extra, gen=self.d.gen,
                                 timeout=timeout or self.cfg_timeout, abort=self.stop_overdue)
         if rc:
@@ -145,9 +171,11 @@ class Timeline(threading.Thread):
         return rc, out, err
 
     def check_round(self):
-        """不變條件一（2.2）：回 True／False（round.json 確知開著／確知關了或沒有）／None（讀不到＝不知道）。"""
+        """讀 round.json 更新 round_open，供不變條件一檢查（spec §2.2）。
+        無額外參數；回 True 表示 open 明確為 true，IO 回 None（不知道）；其餘情形目前回 False。"""
         st, r = read_json3(os.path.join(self.node, ".aos", "round.json"))
         if st == IO:
+            # spec §0、§2.2 三態：I/O 不明留 None，呼叫端只能退避，不能把它當成已關回合。
             self.round_open = None
             return None
         self.round_open = st == OK and isinstance(r, dict) and r.get("open") is True
@@ -156,6 +184,8 @@ class Timeline(threading.Thread):
     # ---------- 迴圈 ----------
 
     def run(self):
+        """thread 入口，重試 _loop 並隔離單條時間線例外（spec §2.1；S-05、S-06）。
+        無額外參數，回 None；例外記錯等 0.5 秒再試，離開時一律標 stopped。"""
         try:
             while True:
                 try:
@@ -171,12 +201,14 @@ class Timeline(threading.Thread):
             self.phase = "stopped"
 
     def _loop(self):
+        """推進不變條件一、pause、tick、等待、tock、剩餘等待六步（spec §2.1、§2.2）。
+        無額外參數，回 None；舊世代或 node 消失離開，讀不到回合則保留狀態並退避（P2-09）。"""
         self.cfg_timeout = ACTION_TIMEOUT
         while not self.leaving():
             ms, early, self.cfg_timeout, cerr = read_config(self.node)
             if cerr:
                 self.err("timeline", None, cerr)
-            # 1. 不變條件一：舊回合確知已關才開下一回合
+            # 1. spec §2.2 不變條件一：先檢查舊回合；內容損壞的回合數另由 tick 的 §3 fallback 處理。
             ro = self.check_round()
             if ro is None:
                 self.err("round", None, "round.json 讀不到（不知道回合關了沒），不 tick，退避後再看")
@@ -197,6 +229,7 @@ class Timeline(threading.Thread):
                 self.recover_fails = 0
                 self.event("round-recovered", round=self.disk_round())
                 if self.owe_done:
+                    # spec §2.4：關回合才消耗 rounds；延後恢復成功時補扣，不能在失敗 tock 時先扣。
                     self.owe_done = False
                     self.d.round_done(self.node_id)
                 continue   # 回到迴圈頂端重新看 pause 與 rounds 倒數
@@ -209,6 +242,7 @@ class Timeline(threading.Thread):
                 continue
             # 3. tick
             self.interval_ms, self.early_tock = ms, early
+            # spec §0、§2.1：間隔靠 monotonic，ISO at 只供人看；牆鐘校時不會改變等待長度。
             t0 = time.monotonic()
             t_end = t0 + ms / 1000.0
             self.kick = False
@@ -222,6 +256,7 @@ class Timeline(threading.Thread):
                 self.wake.wait(POLL)
                 continue
             if rc == UNKNOWN_RC:
+                # P2-09：退出碼 3 表示無法推定，不是空回合；退避後重新檢查，不接著正常 tock。
                 self.backoff()
                 continue
             started = (out or {}).get("started") or []
@@ -230,6 +265,7 @@ class Timeline(threading.Thread):
             # 4. 等
             self.phase = "running"
             while not self.leaving() and time.monotonic() < t_end:
+                # P2-01：固定 interval 的這段仍在回合中，因此 wake 不縮短它；只在第 6 步看 kick。
                 if early and all(self.run_done(r) for r in started):
                     break
                 self.wake.wait(POLL)
@@ -242,6 +278,7 @@ class Timeline(threading.Thread):
             is_early = time.monotonic() < t_end and not self.leaving()
             env = {"AOS7_EARLY": "1" if is_early else "0"}
             if tick_cut:
+                # spec §2.5：被截斷的 tick 可能已寫 round/birth，讓 tock 如實標 incomplete 而非宣稱完整。
                 env["AOS7_INCOMPLETE"] = "tick"
             rc, out, err = self.prog("aos7-tock", env)
             if self.check_round():
@@ -249,6 +286,7 @@ class Timeline(threading.Thread):
                 if not self.gone and not self.stop_overdue():
                     self.prog("aos7-tock", {"AOS7_EARLY": "0", "AOS7_INCOMPLETE": "tock"})
             if self.check_round() is not False:
+                # spec §2.2、§2.4：含「不知道」都不算完成，欠下的 rounds 扣除等恢復確實關上才做。
                 self.owe_done = True
                 self.event("round-unclosed", round=self.round, rc=rc)
                 continue   # 下一圈頂端走不變條件一
@@ -262,7 +300,8 @@ class Timeline(threading.Thread):
                 self.prog("aos7-tock", {"AOS7_EARLY": "0", "AOS7_INCOMPLETE": "unregister"})
 
     def run_done(self, rid):
-        """本回合起的 run 結束了嗎（提前 tock 用）：同 run 的 exit.json，或槽已經換人。"""
+        """判定本回合 rid（槽#run）是否已結束，供提前 tock（spec §2.1 第 4 步）。
+        同 run 有 exit，或 birth 物件的 run 不同（含缺值）回 True；兩檔讀不到則回 False，繼續等。"""
         slot, _, run = rid.rpartition("#")
         fslot = aos7_task.slot_dir(self.node, slot)
         ex = read_json(os.path.join(fslot, "exit.json"))
@@ -272,16 +311,20 @@ class Timeline(threading.Thread):
         return isinstance(b, dict) and str(b.get("run")) != run
 
     def event(self, ev, **kw):
+        """將事件名 ev 與欄位 kw 記為 node 最近事件，再轉給 daemon（spec §2.8、§9）。
+        回 None；daemon 決定是否依 log.on 追加事件檔。"""
         self.last_event = dict(ev=ev, at=now(), **kw)
         self.d.log(ev=ev, node=self.node_id, **kw)
 
     def kill_if_leaving(self):
-        """stop 帶 kill、或 unregister 帶 kill：收掉本 node 所有活任務。"""
+        """stop 或 unregister 帶 kill 時，請 daemon 收此 node 活任務（spec §2.7；P2-10）。
+        無額外參數，回 None；未要求 kill 就不動，程序身分判定交給 kill_live。"""
         if (self.d.stopping and self.d.kill_on_stop) or (self.retire and self.retire_kill):
             self.d.kill_live(self.node_id, self.node)
 
     def reap_holder(self):
-        """動作等 action.lock 逾時：持有者若是舊世代、仍是同一個程序就 SIGKILL；認不出身分就不殺，記人工恢復提示（2.5）。"""
+        """動作逾時後嘗試接管舊世代鎖持有者（spec §2.5），無額外參數，回 None。
+        只有 gen 較舊且 pid/starttime 確認同一程序才殺；不知道則保留、記人工恢復提示，重複提示去重。"""
         pid = reap_stale_owner(self.node, self.d.gen)
         if pid:
             self.event("stale-holder-kill", pid=pid)

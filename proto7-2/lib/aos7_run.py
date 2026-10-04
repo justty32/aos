@@ -4,6 +4,10 @@
 
     aos7-run <taskdir> [<taskdir 的 fd>]
 
+由 tick 啟動，作為 Linux 子程序與檔案協定間的交接者（S-10；spec §5.3 不變條件二）。
+經任務 fd 讀 birth.json 及 ../../round.json；寫 out.log、pid.json、exit.json。
+任務自己寫的 state／usage 等檔不由 runner 清理，跨 run 的狀態由同槽接續（spec §5.1、§8）。
+
 tick 用新 session 起它，並把任務資料夾的 fd 傳進來、cwd 設成它抓著的 node（astra-6 G-02）、不等；它自己活到任務結束。環境變數（AOS7_*）由 tick 給好，這裡原樣傳下去。
 
 **第二個參數是內部交接用的能力，不是身分約束**（astra-7 H-09）：它必須是呼叫者開好、繼承下來的任務資料夾 fd，cwd 也由呼叫者保證
@@ -24,7 +28,8 @@ RUN = [None]   # 這次的 run（讀到 birth.json 後填上；寫 pid.json／ex
 
 
 def build_argv(birth, node):
-    """birth.json → 實際 argv。`inst` 用搬來的 aos-exec 跑（S-12）。"""
+    """由 birth 任務定義與 node 路徑回傳實際 argv 清單（spec §4.1、§5.3）。
+    inst 相對 node 定位並交搬來的 aos-exec（S-12）；否則展開 argv，未給 argv 回空清單由呼叫者報錯。"""
     if birth.get("inst"):
         inst = os.path.normpath(os.path.join(node, birth["inst"]))
         return [sys.executable, os.path.join(BIN, "aos-exec"), inst]
@@ -32,13 +37,15 @@ def build_argv(birth, node):
 
 
 def expand(arg):
-    """argv 裡的 `$AOS7_TASK`、`${AOS7_NODE}` 這類 AOS7_* 變數展開（讓 argv 指得到掛載點）；其他 `$` 原樣。"""
+    """展開 arg 字串中的 $AOS7_TASK、${AOS7_NODE} 等 AOS7_* 環境值，回展開結果。
+    未設變數保留原文，其他 $ 不展開，非字串原樣回傳；讓 argv 指到槽與掛載點（spec §4.1、§5.5）。"""
     return re.sub(r"\$\{?(AOS7_[A-Z_]+)\}?", lambda m: os.environ.get(m.group(1), m.group(0)), arg) \
         if isinstance(arg, str) else arg
 
 
 def read_birth(dfd):
-    """經任務資料夾的 fd 讀 birth.json；讀不到或壞掉回 None。"""
+    """從任務目錄 fd（dfd）讀 birth.json，回 JSON 值；讀不到、非一般檔或 JSON 壞掉回 None。
+    非阻塞開再檢查型別，避免 FIFO 卡住交接；只依 fd，搬移時不追舊路徑（spec §0、§5.3）。"""
     try:
         fd = os.open("birth.json", os.O_RDONLY | os.O_NONBLOCK, dir_fd=dfd)
     except OSError:
@@ -54,8 +61,9 @@ def read_birth(dfd):
 
 
 def fail(dfd, msg):
-    """起程序前就失敗：stderr 說明，經 fd 寫 exit.json `{"code": 127, "error"}`（任務不會永遠 born；astra-7 H-06）。
-    連 exit.json 都寫不進去時 stderr 再說一次；tick 記在 birth.json 的 runner 讓 tock 之後把它判成 lost。"""
+    """將起程序前的失敗 msg 寫 stderr，經目錄 fd（dfd）寫 exit 127，回 runner 退出碼 1。
+    連 exit.json 都寫不進去時再告警；tick 記的 runner 讓 tock 後續判 lost（spec §5.3；astra-7 H-06）。
+    這裡的 127 是任務結果，不是本函式回傳值，避免起失敗的任務永遠停在 born。"""
     print("aos7-run: %s" % msg, file=sys.stderr, flush=True)
     if not write_at(dfd, "exit.json", {"run": RUN[0], "code": 127, "at": now(), "round": round_at(dfd), "error": msg}):
         print("aos7-run: exit.json 也寫不進去；tock 會照 birth.json 的 runner 判 lost", file=sys.stderr, flush=True)
@@ -63,9 +71,9 @@ def fail(dfd, msg):
 
 
 def env_mismatch(dfd):
-    """最後交接（astra-7 H-05）：給任務的 `AOS7_TASK`／`AOS7_NODE`（字串路徑，也是 argv 展開與掛載點記錄用的）
-    現在還指著 runner 抓著的任務資料夾（fd）與 node（cwd）嗎。不一致（起任務的半路 node 被搬走、換掉）回說明，否則 None。
-    沒有這些環境變數（人手跑）不比。"""
+    """檢查 AOS7_TASK 對應 dfd、AOS7_NODE 對應 cwd；一致或人手跑未設變數時回 None。
+    路徑不符或 stat 讀不到回原因字串，停止起任務；不是把不確定當作可以交接。
+    此為起動前最後核對（spec §5.3 不變條件二；astra-7 H-05），字串亦供 argv 展開與掛載紀錄。"""
     for var, here in (("AOS7_TASK", lambda: os.fstat(dfd)), ("AOS7_NODE", lambda: os.stat("."))):
         p = os.environ.get(var)
         if not p:
@@ -80,6 +88,9 @@ def env_mismatch(dfd):
 
 
 def main(argv=None):
+    """執行 argv（None 用命令列）的 taskdir／可選繼承 fd，等任務結束並記錄 pid／exit。
+    回 0 表示已走完啟動嘗試或等待流程；1 表示用法／前置失敗，2 表示交接 fd 無效。
+    任務的成功、失敗與訊號碼寫 exit.json，不直接當 runner 回傳值（spec §5.3）。"""
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) not in (1, 2):
         print("用法: aos7-run <taskdir> [<taskdir 的 fd>]", file=sys.stderr)
@@ -116,7 +127,7 @@ def main(argv=None):
     env = dict(os.environ)
     site = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_site")
     if env.get("AOS7_AUDIT") and site not in env.get("PYTHONPATH", "").split(os.pathsep):
-        # 寫入紀錄（spec 第 5 節）：只給任務，不給 aos7-run 自己（probes/polyglot N7）
+        # 寫入紀錄（spec §4.5、P2-17）：只給任務，不給 aos7-run 自己（probes/polyglot N7）
         env["PYTHONPATH"] = os.pathsep.join(x for x in (site, env.get("PYTHONPATH")) if x)
     try:
         out = os.fdopen(os.open("out.log", os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644, dir_fd=dfd), "ab")
@@ -126,6 +137,7 @@ def main(argv=None):
         cmd = build_argv(birth, node) if isinstance(birth, dict) else []
         if not cmd:
             raise FileNotFoundError("argv 是空的")
+        # spec §5.3、§6：任務另立程序群組，收任務群組時 runner 才能留下來 wait 並記退出結果。
         proc = subprocess.Popen(cmd, cwd=None if held else node, env=env, stdin=subprocess.DEVNULL, stdout=out,
                                 stderr=subprocess.STDOUT, process_group=0)
     except (OSError, TypeError, ValueError) as e:   # argv 有非字串、NUL：照樣寫 exit.json，不留「永遠剛起」的任務（probes/chaos B4）
@@ -137,6 +149,7 @@ def main(argv=None):
         write_at(dfd, "exit.json", {"run": RUN[0], "code": 127, "at": now(), "round": round_at(dfd), "error": str(e)})
         return 0
     # pid.json 也經過 fd 寫：任務資料夾剛被刪（測試收尾、node 被 rm -rf）時不會用 makedirs 把它建回來
+    # spec §5.4、P2-08：pid 可能重用，連同 starttime 才能辨認同一程序；讀不到由判定層保守處理。
     write_at(dfd, "pid.json", {"run": RUN[0], "pid": proc.pid, "pgid": proc.pid, "starttime": proc_starttime(proc.pid),
                                "runner_pid": os.getpid(), "at": now()})
     code = proc.wait()
@@ -146,7 +159,8 @@ def main(argv=None):
 
 
 def round_at(dfd):
-    """經過任務資料夾的 fd 讀 `../../round.json`（node 搬走也讀得到）。"""
+    """由任務目錄 fd（dfd）讀 ../../round.json，回其中 round 值（spec §5.1 的 exit 欄位）。
+    node 搬走仍定位同一目錄；I/O、JSON 壞掉、非物件或沒有 round 時回 None，不猜回合。"""
     try:
         fd = os.open("../../round.json", os.O_RDONLY, dir_fd=dfd)
         with os.fdopen(fd, encoding="utf-8") as f:
@@ -157,8 +171,9 @@ def round_at(dfd):
 
 
 def write_at(dfd, name, obj):
-    """經過 fd 原子寫 `name`（exit.json、pid.json）：node 被搬走就寫到新位置；被刪掉就寫進已刪的資料夾（等於丟掉），
-    不會在舊路徑把資料夾建回來（probes/rename N8、N9，subtimeline 1）。回有沒有寫成。"""
+    """把 JSON 值 obj 原子寫入目錄 fd（dfd）下的 name；成功 True、I/O 失敗 False（spec §0、§5.3）。
+    供 pid.json／exit.json 使用：先寫點開頭暫存檔再 rename，讀者不會讀到半份 JSON。
+    node 搬走就寫到新位置；目錄已刪則寫入失敗，不沿舊路徑重建鬼目錄（probes/rename N8、N9，subtimeline 1）。"""
     tmp = ".%s.tmp.%d" % (name, os.getpid())
     try:
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644, dir_fd=dfd)

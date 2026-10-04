@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """aos7-tick 的命令列入口——本體在 ../lib/aos7_tick.py。"""
+# 由 daemon 呼叫，委派開回合、讀任務表並更新 round.json 與各槽（spec §4.2，S-09）。
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
