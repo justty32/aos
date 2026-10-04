@@ -1,0 +1,325 @@
+[
+  {
+    "name": "mount_request_EIO_consumed",
+    "observations": {
+      "fault_hits": [
+        [
+          "open",
+          "EIO",
+          "/proc/self/fd/3/.aos/tasks/job/mount-req/data.json"
+        ]
+      ],
+      "birth_before": {
+        "name": "job",
+        "slot": "job",
+        "run": 1,
+        "round": 1,
+        "node": "a",
+        "once": false,
+        "at": "2026-10-04T15:32:37.893",
+        "runner": {
+          "pid": 492617,
+          "starttime": 2587799
+        },
+        "argv": [
+          "sh",
+          "-c",
+          "echo $AOS7_RUN >> \"$AOS7_NODE/ran-job.txt\"; exec sleep 60"
+        ],
+        "mounts": {}
+      },
+      "birth_after": {
+        "name": "job",
+        "slot": "job",
+        "run": 1,
+        "round": 1,
+        "node": "a",
+        "once": false,
+        "at": "2026-10-04T15:32:37.893",
+        "runner": {
+          "pid": 492617,
+          "starttime": 2587799
+        },
+        "argv": [
+          "sh",
+          "-c",
+          "echo $AOS7_RUN >> \"$AOS7_NODE/ran-job.txt\"; exec sleep 60"
+        ],
+        "mounts": {}
+      },
+      "request_retained": false,
+      "receipt": {
+        "raw": null,
+        "result": {
+          "ok": false,
+          "msg": "not a JSON object",
+          "at": "2026-10-04T15:32:37.914"
+        }
+      },
+      "tick": {
+        "round": 2,
+        "started": [],
+        "tasks_rev": "0083091e132b"
+      },
+      "task_alive": true,
+      "mount_exists": false,
+      "classification": "B",
+      "contract": "卡 2.3；spec 0 U 請求留著下一圈再看"
+    },
+    "probe_assertions": "passed",
+    "elapsed_s": 0.078,
+    "case_root": "/tmp/astra3-core-probes-l0_0hvok/aos72-test-e3ee7rg4",
+    "case_root_removed": true
+  },
+  {
+    "name": "mount_birth_EIO_clobbered",
+    "observations": {
+      "fault_hits": [
+        [
+          "open",
+          "EIO",
+          "/proc/self/fd/3/.aos/tasks/job/birth.json"
+        ]
+      ],
+      "birth_before": {
+        "name": "job",
+        "slot": "job",
+        "run": 1,
+        "round": 1,
+        "node": "a",
+        "once": false,
+        "at": "2026-10-04T15:32:37.971",
+        "runner": {
+          "pid": 492624,
+          "starttime": 2587806
+        },
+        "argv": [
+          "sh",
+          "-c",
+          "echo $AOS7_RUN >> \"$AOS7_NODE/ran-job.txt\"; exec sleep 60"
+        ],
+        "mounts": {}
+      },
+      "birth_after": {
+        "mounts": {
+          "data": {
+            "to": "data",
+            "at": "/tmp/astra3-core-probes-l0_0hvok/aos72-test-hxe0qkai/a/.aos/tasks/job/mnt/data",
+            "dyn": true
+          }
+        }
+      },
+      "request_retained": false,
+      "receipt": {
+        "name": "data",
+        "path": "data",
+        "why": "valid request",
+        "result": {
+          "ok": true,
+          "msg": "掛上 mnt/data → data",
+          "at": "2026-10-04T15:32:37.992"
+        }
+      },
+      "tick": {
+        "round": 2,
+        "started": [],
+        "tasks_rev": "0083091e132b"
+      },
+      "task_alive": true,
+      "mount_exists": true,
+      "post_fault_view": {
+        "state": "unknown",
+        "run": null,
+        "why": "birth.json 壞了；確認沒在跑後刪掉 birth.json 就會當空槽"
+      },
+      "post_fault_tock": {
+        "round": 2,
+        "tick_at": "2026-10-04T15:32:37.992",
+        "tock_at": "2026-10-04T15:32:37.993",
+        "early": null,
+        "started": [],
+        "alive": [],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [
+          {
+            "name": "data",
+            "path": "data",
+            "ok": true,
+            "msg": "掛上 mnt/data → data",
+            "run": "job#1"
+          }
+        ],
+        "tasks_error": [],
+        "errors": [
+          {
+            "slot": "job",
+            "kind": "unknown",
+            "where": "judge",
+            "why": "birth.json 壞了；確認沒在跑後刪掉 birth.json 就會當空槽",
+            "at": "2026-10-04T15:32:37.993"
+          }
+        ],
+        "tasks_rev": "0083091e132b"
+      },
+      "classification": "B",
+      "contract": "卡 2.3；spec 0 U 保留現狀及 4.5 加掛"
+    },
+    "probe_assertions": "passed",
+    "elapsed_s": 0.077,
+    "case_root": "/tmp/astra3-core-probes-l0_0hvok/aos72-test-hxe0qkai",
+    "case_root_removed": true
+  },
+  {
+    "name": "until_round_after-launch",
+    "observations": {
+      "crash_point": "after-launch",
+      "returncode": -9,
+      "until_round": 1,
+      "pending_before": [
+        {
+          "name": "o",
+          "mode": "once",
+          "argv": [
+            "sh",
+            "-c",
+            "echo $AOS7_RUN >> \"$AOS7_NODE/ran-o.txt\""
+          ],
+          "until_round": 1,
+          "launch": {
+            "slot": "o",
+            "run": 1,
+            "round": 1
+          }
+        }
+      ],
+      "birth_before": {},
+      "recovery_started": [],
+      "external_runs": [],
+      "final_tasks": [
+        {
+          "name": "o",
+          "mode": "once",
+          "argv": [
+            "sh",
+            "-c",
+            "echo $AOS7_RUN >> \"$AOS7_NODE/ran-o.txt\""
+          ],
+          "until_round": 1,
+          "launch": {
+            "slot": "o",
+            "run": 1,
+            "round": 1
+          }
+        }
+      ],
+      "ended": [],
+      "classification": "X handled to contract"
+    },
+    "probe_assertions": "passed",
+    "elapsed_s": 0.02,
+    "case_root": "/tmp/astra3-core-probes-l0_0hvok/aos72-test-f2wa_ita",
+    "case_root_removed": true
+  },
+  {
+    "name": "until_round_after-birth",
+    "observations": {
+      "crash_point": "after-birth",
+      "returncode": -9,
+      "until_round": 1,
+      "pending_before": [
+        {
+          "name": "o",
+          "mode": "once",
+          "argv": [
+            "sh",
+            "-c",
+            "echo $AOS7_RUN >> \"$AOS7_NODE/ran-o.txt\""
+          ],
+          "until_round": 1,
+          "launch": {
+            "slot": "o",
+            "run": 1,
+            "round": 1
+          }
+        }
+      ],
+      "birth_before": {
+        "name": "o",
+        "slot": "o",
+        "run": 1,
+        "round": 1,
+        "node": "a",
+        "once": true,
+        "at": "2026-10-04T15:32:38.084",
+        "runner": null,
+        "argv": [
+          "sh",
+          "-c",
+          "echo $AOS7_RUN >> \"$AOS7_NODE/ran-o.txt\""
+        ],
+        "mounts": {}
+      },
+      "recovery_started": [],
+      "external_runs": [],
+      "final_tasks": [],
+      "ended": [
+        {
+          "run": "o#1",
+          "code": null,
+          "lost": true,
+          "never_started": true
+        }
+      ],
+      "classification": "X handled to contract"
+    },
+    "probe_assertions": "passed",
+    "elapsed_s": 0.024,
+    "case_root": "/tmp/astra3-core-probes-l0_0hvok/aos72-test-8rl0j65a",
+    "case_root_removed": true
+  },
+  {
+    "name": "until_round_busy_then_expired",
+    "observations": {
+      "expired_once_pending": [
+        {
+          "name": "job",
+          "mode": "once",
+          "slot": "job",
+          "argv": [
+            "sh",
+            "-c",
+            "echo $AOS7_RUN >> \"$AOS7_NODE/ran-new.txt\""
+          ],
+          "until_round": 2
+        }
+      ],
+      "starts": [],
+      "new_external_runs": [],
+      "old_runs": [
+        "1"
+      ],
+      "round": 5
+    },
+    "probe_assertions": "passed",
+    "elapsed_s": 0.035,
+    "case_root": "/tmp/astra3-core-probes-l0_0hvok/aos72-test-oeyht71t",
+    "case_root_removed": true
+  },
+  {
+    "name": "until_round_keep_alive_then_ended",
+    "observations": {
+      "alive_through_round": 5,
+      "post_expiry_started": [],
+      "runs": [
+        "1"
+      ],
+      "last_round": 8
+    },
+    "probe_assertions": "passed",
+    "elapsed_s": 0.036,
+    "case_root": "/tmp/astra3-core-probes-l0_0hvok/aos72-test-q8917yao",
+    "case_root_removed": true
+  }
+]

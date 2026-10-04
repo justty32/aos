@@ -1,0 +1,537 @@
+{
+  "control_late_same_id": {
+    "first": {
+      "ok": true,
+      "msg": "once 項已加進 tasks.json（slot w），已送 kill w#1",
+      "run": "w#1",
+      "req_id": "same-request",
+      "ctl": "/tmp/aos72-test-roc_azow/a/.aos/tasks/w/ctl.json",
+      "once": "added"
+    },
+    "at_run2": {
+      "ok": true,
+      "msg": "這件 restart 已經起了 w#2（w#1 的重起），沒再做",
+      "run": "w#2",
+      "req_id": "same-request",
+      "once": "done"
+    },
+    "birth_after_keep": {
+      "name": "w",
+      "slot": "w",
+      "run": 3,
+      "round": 3,
+      "node": "a",
+      "once": false,
+      "at": "2026-10-04T15:36:17.210",
+      "runner": {
+        "pid": 498531,
+        "starttime": 2609730
+      },
+      "argv": [
+        "sh",
+        "-c",
+        "echo $AOS7_RUN >> \"$AOS7_NODE/ran-w.txt\""
+      ],
+      "mounts": {}
+    },
+    "at_run3": {
+      "ok": true,
+      "msg": "once 項已加進 tasks.json（slot w），已送 kill w#3",
+      "run": "w#3",
+      "req_id": "same-request",
+      "ctl": "/tmp/aos72-test-roc_azow/a/.aos/tasks/w/ctl.json",
+      "once": "added"
+    },
+    "queued": [
+      {
+        "name": "w",
+        "mode": "keep",
+        "argv": [
+          "sh",
+          "-c",
+          "echo $AOS7_RUN >> \"$AOS7_NODE/ran-w.txt\""
+        ]
+      },
+      {
+        "argv": [
+          "sh",
+          "-c",
+          "echo $AOS7_RUN >> \"$AOS7_NODE/ran-w.txt\""
+        ],
+        "mounts": {},
+        "name": "w",
+        "mode": "once",
+        "slot": "w",
+        "x": {
+          "restart_of": "w#3",
+          "req_id": "same-request"
+        }
+      }
+    ],
+    "runs": [
+      "1",
+      "2",
+      "3"
+    ],
+    "classification": "G: completion-id lifetime unspecified after ordinary keep replacement"
+  },
+  "_cases": [
+    {
+      "test": "__main__.Cases.test_control_late_same_id",
+      "seconds": 0.069,
+      "failed": false
+    },
+    {
+      "test": "__main__.Cases.test_control_reload_and_g1",
+      "seconds": 0.106,
+      "failed": false
+    },
+    {
+      "test": "__main__.Cases.test_control_same_id_concurrent_snapshot",
+      "seconds": 0.068,
+      "failed": false
+    },
+    {
+      "test": "__main__.Cases.test_control_stale_kill_replay",
+      "seconds": 0.091,
+      "failed": false
+    },
+    {
+      "test": "__main__.Cases.test_diag_unknown_readonly",
+      "seconds": 0.095,
+      "failed": false
+    },
+    {
+      "test": "__main__.Cases.test_once_retry_pending",
+      "seconds": 0.044,
+      "failed": false
+    },
+    {
+      "test": "__main__.Cases.test_once_retry_started_lost",
+      "seconds": 0.069,
+      "failed": false
+    },
+    {
+      "test": "__main__.Cases.test_tools_unknown_and_encoding",
+      "seconds": 0.076,
+      "failed": false
+    },
+    {
+      "test": "__main__.AuditCase.test_registration_refresh",
+      "seconds": 0.239,
+      "failed": false
+    },
+    {
+      "test": "subd_probe.TestOwnership.test_owner_blocks_and_stop_refused",
+      "seconds": 0.54,
+      "failed": false
+    },
+    {
+      "test": "subd_probe.TestOwnership.test_allow_stop_writes_stopped_and_parent_does_not_restart",
+      "seconds": 0.738,
+      "failed": false
+    },
+    {
+      "test": "subd_probe.TestSubrootChecks.test_subroot_rules",
+      "seconds": 0.115,
+      "failed": false
+    }
+  ],
+  "control_reload_and_g1": {
+    "invalid_reload": {
+      "ok": false,
+      "msg": "tasks.json 的 w 不合格：max_live 要是正整數，拿到 'bad'；沒做（沒 kill）",
+      "run": "w#1",
+      "req_id": "f8d101f04306420ea4d6c100ff50db1e"
+    },
+    "EIO_refusal": {
+      "ok": false,
+      "msg": "tasks.json tasks.json 讀不到：OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')，不知道原本有什麼，沒寫；沒做（沒 kill）",
+      "run": "w#1",
+      "req_id": "ece6717930024c94aec1d23841a6ca01"
+    },
+    "EIO_hits": 1,
+    "valid_reload": {
+      "ok": true,
+      "msg": "once 項已加進 tasks.json（slot w），已送 kill w#1",
+      "run": "w#1",
+      "req_id": "reload",
+      "ctl": "/tmp/aos72-test-defdg8i_/a/.aos/tasks/w/ctl.json",
+      "once": "added",
+      "diff": {
+        "argv": {
+          "old": [
+            "sleep",
+            "60"
+          ],
+          "new": [
+            "sleep",
+            "59"
+          ]
+        },
+        "x": {
+          "old": null,
+          "new": {
+            "tag": "new"
+          }
+        }
+      }
+    },
+    "birth": {
+      "name": "w",
+      "slot": "w",
+      "run": 2,
+      "round": 2,
+      "node": "a",
+      "once": true,
+      "at": "2026-10-04T15:36:17.264",
+      "runner": {
+        "pid": 498535,
+        "starttime": 2609736
+      },
+      "argv": [
+        "sleep",
+        "59"
+      ],
+      "mounts": {},
+      "x": {
+        "tag": "new",
+        "restart_of": "w#1",
+        "req_id": "reload"
+      }
+    }
+  },
+  "control_same_id_concurrent_snapshot": {
+    "scheduling_hook_hits": 1,
+    "trace": [
+      {
+        "B": {
+          "ok": true,
+          "msg": "once 項已加進 tasks.json（slot w），已送 kill w#1",
+          "run": "w#1",
+          "req_id": "concurrent",
+          "ctl": "/tmp/aos72-test-3_ut54qh/a/.aos/tasks/w/ctl.json",
+          "once": "added"
+        },
+        "birth_before_A_lock": {
+          "name": "w",
+          "slot": "w",
+          "run": 2,
+          "round": 2,
+          "node": "a",
+          "once": true,
+          "at": "2026-10-04T15:36:17.363",
+          "runner": {
+            "pid": 498539,
+            "starttime": 2609746
+          },
+          "argv": [
+            "sh",
+            "-c",
+            "echo $AOS7_RUN >> \"$AOS7_NODE/ran-w.txt\""
+          ],
+          "mounts": {},
+          "x": {
+            "restart_of": "w#1",
+            "req_id": "concurrent"
+          }
+        }
+      }
+    ],
+    "A": {
+      "ok": true,
+      "msg": "once 項已加進 tasks.json（slot w），已送 kill w#1",
+      "run": "w#1",
+      "req_id": "concurrent",
+      "ctl": "/tmp/aos72-test-3_ut54qh/a/.aos/tasks/w/ctl.json",
+      "once": "added"
+    },
+    "queued": [
+      {
+        "name": "w",
+        "mode": "keep",
+        "enabled": false,
+        "argv": [
+          "sh",
+          "-c",
+          "echo $AOS7_RUN >> \"$AOS7_NODE/ran-w.txt\""
+        ]
+      },
+      {
+        "argv": [
+          "sh",
+          "-c",
+          "echo $AOS7_RUN >> \"$AOS7_NODE/ran-w.txt\""
+        ],
+        "mounts": {},
+        "name": "w",
+        "mode": "once",
+        "slot": "w",
+        "x": {
+          "restart_of": "w#1",
+          "req_id": "concurrent"
+        }
+      }
+    ],
+    "third_birth": {
+      "name": "w",
+      "slot": "w",
+      "run": 3,
+      "round": 3,
+      "node": "a",
+      "once": true,
+      "at": "2026-10-04T15:36:17.385",
+      "runner": {
+        "pid": 498541,
+        "starttime": 2609748
+      },
+      "argv": [
+        "sh",
+        "-c",
+        "echo $AOS7_RUN >> \"$AOS7_NODE/ran-w.txt\""
+      ],
+      "mounts": {},
+      "x": {
+        "restart_of": "w#1",
+        "req_id": "concurrent"
+      }
+    },
+    "runs": [
+      "1",
+      "2",
+      "3"
+    ],
+    "classification": "B: concurrent same-id request queues duplicate after other caller completed; no documented single-caller precondition"
+  },
+  "control_stale_kill_replay": {
+    "unlink_fault_hits": 7,
+    "runs": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "receipt": {
+      "op": "kill",
+      "run": 1,
+      "by": "control",
+      "why": "restart",
+      "id": "stale-kill",
+      "result": {
+        "ok": false,
+        "msg": "指定的 run 1 已經不是現在的（現在是 w#4），沒執行",
+        "at": "2026-10-04T15:36:17.496",
+        "run": "w#4"
+      }
+    },
+    "ctl_summaries": [
+      [
+        {
+          "slot": "w",
+          "run": "w#1",
+          "op": "kill",
+          "ok": true,
+          "err": "ctl.json 刪不掉：PermissionError(13, 'injected ctl unlink')；下一次再執行也只對同一個 run"
+        }
+      ],
+      [
+        {
+          "slot": "w",
+          "run": "w#1",
+          "op": "kill",
+          "ok": true,
+          "err": "ctl.json 刪不掉：PermissionError(13, 'injected ctl unlink')；下一次再執行也只對同一個 run"
+        },
+        {
+          "slot": "w",
+          "run": "w#2",
+          "op": "kill",
+          "ok": false,
+          "err": "ctl.json 刪不掉：PermissionError(13, 'injected ctl unlink')；下一次再執行也只對同一個 run"
+        }
+      ],
+      [
+        {
+          "slot": "w",
+          "run": "w#2",
+          "op": "kill",
+          "ok": false,
+          "err": "ctl.json 刪不掉：PermissionError(13, 'injected ctl unlink')；下一次再執行也只對同一個 run"
+        },
+        {
+          "slot": "w",
+          "run": "w#3",
+          "op": "kill",
+          "ok": false,
+          "err": "ctl.json 刪不掉：PermissionError(13, 'injected ctl unlink')；下一次再執行也只對同一個 run"
+        }
+      ],
+      [
+        {
+          "slot": "w",
+          "run": "w#3",
+          "op": "kill",
+          "ok": false,
+          "err": "ctl.json 刪不掉：PermissionError(13, 'injected ctl unlink')；下一次再執行也只對同一個 run"
+        },
+        {
+          "slot": "w",
+          "run": "w#4",
+          "op": "kill",
+          "ok": false,
+          "err": "ctl.json 刪不掉：PermissionError(13, 'injected ctl unlink')；下一次再執行也只對同一個 run"
+        }
+      ]
+    ],
+    "birth": {
+      "name": "w",
+      "slot": "w",
+      "run": 4,
+      "round": 4,
+      "node": "a",
+      "once": false,
+      "at": "2026-10-04T15:36:17.475",
+      "runner": {
+        "pid": 498556,
+        "starttime": 2609757
+      },
+      "argv": [
+        "sh",
+        "-c",
+        "echo $AOS7_RUN >> \"$AOS7_NODE/ran-w.txt\""
+      ],
+      "mounts": {}
+    },
+    "classification": "X handled; old run kill never hits replacements"
+  },
+  "diag_unknown_readonly": {
+    "fault_hits": 1,
+    "files_unchanged": true,
+    "report": {
+      "root": "/tmp/aos72-test-pjl6_jod",
+      "status_at": null,
+      "nodes": {
+        "a": {
+          "uncertain": [
+            {
+              "slot": "w",
+              "run": null,
+              "why": "birth.json 讀不到：OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')"
+            }
+          ],
+          "hints": [
+            {
+              "slot": "w",
+              "hint": "修 I/O 後自動恢復；不是一般檔的刪掉換回一般檔（原內容不可考時等於刪 birth）"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "once_retry_pending": {
+    "lost": [
+      {
+        "run": "w#1",
+        "code": null,
+        "lost": true,
+        "never_started": true
+      }
+    ],
+    "fault_hits": 1,
+    "pending_ids": [
+      "w#1"
+    ],
+    "queued_count": 1,
+    "runs": [
+      "4"
+    ]
+  },
+  "once_retry_started_lost": {
+    "killed_pids": [
+      498564,
+      498565
+    ],
+    "ended": [
+      {
+        "run": "w#1",
+        "code": null,
+        "lost": true
+      }
+    ],
+    "queued": [],
+    "runs": [
+      "1"
+    ]
+  },
+  "tools_unknown_and_encoding": {
+    "errors": [
+      "birth.json birth.json 讀不到：OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')，不知道現在是哪個 run；用 --run 指定",
+      "tasks.json tasks.json 讀不到：PermissionError(13, 'Permission denied（AOS7_TEST_FAULT 注入）')，不知道原本有什麼，沒寫"
+    ],
+    "fault_hits": [
+      1,
+      1
+    ],
+    "names": {
+      "甲": "cli.pause.a@%E7%94%B2.json",
+      "乙": "cli.pause.a@%E4%B9%99.json",
+      "A/B": "cli.pause.a@A+B.json",
+      "A+B": "cli.pause.a@A%2BB.json",
+      "x?": "cli.pause.a@x%3F.json",
+      "x!": "cli.pause.a@x%21.json",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1": "cli.pause.a@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa~961f0e46df000150.json",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2": "cli.pause.a@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa~f04b5c3fce680d3a.json"
+    },
+    "table_unchanged": true
+  },
+  "audit_registration_refresh": {
+    "registration": {
+      "op": "register",
+      "by": "cli",
+      "node": "a/nested",
+      "result": {
+        "ok": true,
+        "msg": "registered a/nested",
+        "at": "2026-10-04T15:36:17.904",
+        "queued_at": "2026-10-04T15:36:17.888"
+      }
+    },
+    "write": [
+      {
+        "op": "open",
+        "path": "/tmp/aos72-test-742v58fz/a/nested/result.txt",
+        "ok": true,
+        "pid": 498576
+      }
+    ],
+    "scan": {
+      "tasks": 1,
+      "writes": 3,
+      "bad": [],
+      "bad_lines": 0
+    },
+    "classification": "B if dynamic registration included in audit boundary guarantee; audit failed to flag caller misuse"
+  },
+  "_summary": {
+    "ran": 12,
+    "failures": 0,
+    "errors": 0,
+    "own_roots_removed": true,
+    "own_roots": [
+      "/tmp/aos72-test-roc_azow",
+      "/tmp/aos72-test-defdg8i_",
+      "/tmp/aos72-test-3_ut54qh",
+      "/tmp/aos72-test-5g13jcev",
+      "/tmp/aos72-test-pjl6_jod",
+      "/tmp/aos72-test-ri6kcno5",
+      "/tmp/aos72-test-va5h6rqa",
+      "/tmp/aos72-test-xh60i0ub",
+      "/tmp/aos72-test-742v58fz",
+      "/tmp/aos72-test-ahaz_9gm",
+      "/tmp/aos72-test-ndgbb5ac",
+      "/tmp/aos72-test-g6l2d1df"
+    ],
+    "live_pids_after_cleanup": []
+  }
+}

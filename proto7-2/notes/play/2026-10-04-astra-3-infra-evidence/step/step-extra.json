@@ -1,0 +1,163 @@
+[
+  {
+    "probe": "frame_EACCES_freeze_recover",
+    "classification": "X",
+    "fault": "chmod frame.json 000: real EACCES",
+    "error": {
+      "kind": "frame",
+      "where": "pass",
+      "why": "frame.json frame.json 讀不到：PermissionError(13, 'Permission denied')；不前進，等人修好或刪掉重來",
+      "at": "2026-10-04T15:34:28.922",
+      "round": 4,
+      "tock": 4
+    },
+    "fault_hit": true,
+    "frame_unchanged_during_failure": true,
+    "child_runs_during_failure": 1,
+    "final_frame": {
+      "v": 1,
+      "job": "io",
+      "inst": "5dcee698",
+      "table": "e746f652893b",
+      "pc": "done",
+      "phase": "ended",
+      "counts": {},
+      "visits": {
+        "a": 1,
+        "b": 1,
+        "done": 1
+      },
+      "accepted": {
+        "a": {
+          "request": "5dcee698-a-1",
+          "attempt": "5dcee698-a-1-a1",
+          "ok": true,
+          "run": "step-io-a#2",
+          "code": 0
+        },
+        "b": {
+          "request": "5dcee698-b-1",
+          "attempt": "5dcee698-b-1-a1",
+          "ok": true,
+          "run": "step-io-b#6",
+          "code": 0
+        }
+      },
+      "tries": {
+        "5dcee698-a-1": 1,
+        "5dcee698-b-1": 1
+      },
+      "pending": null,
+      "halt": null,
+      "end": "ok",
+      "since": 7,
+      "seen": 7,
+      "rev": 11,
+      "tock": 7,
+      "at": "2026-10-04T15:34:29.104"
+    }
+  },
+  {
+    "probe": "late_result_resume_close",
+    "classification": "pass",
+    "halted": {
+      "v": 1,
+      "job": "lateok",
+      "inst": "7c7ab377",
+      "table": "d84921445b35",
+      "pc": "a",
+      "phase": "halted",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "7c7ab377-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "7c7ab377-a-1",
+        "attempt": "7c7ab377-a-1-a1",
+        "n": 1,
+        "task": "step-lateok-a",
+        "result": "jobs/lateok/results/a/7c7ab377-a-1-a1.json",
+        "state": "queued",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": {
+        "kind": "timeout",
+        "why": "等了 2 回合（patience 1，本地回合）；逾時不等於沒做，遲到的結果照樣留著",
+        "step": "a",
+        "round": 3,
+        "at": "2026-10-04T15:34:29.353"
+      },
+      "end": null,
+      "since": null,
+      "seen": 3,
+      "rev": 7,
+      "tock": 3,
+      "at": "2026-10-04T15:34:29.353"
+    },
+    "result_arrived_but_phase": "halted",
+    "resume_returncode": 0,
+    "ended": {
+      "v": 1,
+      "job": "lateok",
+      "inst": "7c7ab377",
+      "table": "d84921445b35",
+      "pc": "done",
+      "phase": "ended",
+      "counts": {},
+      "visits": {
+        "a": 1,
+        "b": 1,
+        "done": 1
+      },
+      "accepted": {
+        "a": {
+          "request": "7c7ab377-a-1",
+          "attempt": "7c7ab377-a-1-a1",
+          "ok": true,
+          "run": "step-lateok-a#2",
+          "code": 0
+        },
+        "b": {
+          "request": "7c7ab377-b-1",
+          "attempt": "7c7ab377-b-1-a1",
+          "ok": true,
+          "run": "step-lateok-b#6",
+          "code": 0
+        }
+      },
+      "tries": {
+        "7c7ab377-a-1": 1,
+        "7c7ab377-b-1": 1
+      },
+      "pending": null,
+      "halt": null,
+      "end": "ok",
+      "since": 7,
+      "seen": 7,
+      "rev": 14,
+      "tock": 7,
+      "at": "2026-10-04T15:34:29.635"
+    },
+    "a_runs": 1,
+    "close_returncode": 0,
+    "results_directory_exists": false,
+    "output_preserved": true,
+    "closed": true
+  },
+  {
+    "probe": "cleanup",
+    "roots": [
+      "/tmp/aos72-test-ddcv0kfg",
+      "/tmp/aos72-test-936h3j24"
+    ],
+    "roots_remaining": [],
+    "ps_root_matches": []
+  }
+]

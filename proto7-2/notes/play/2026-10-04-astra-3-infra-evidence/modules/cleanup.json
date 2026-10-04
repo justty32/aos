@@ -1,0 +1,21 @@
+{
+  "command": "ps -eo pid=,ppid=,stat=,args=",
+  "own_roots": [
+    "/tmp/aos72-test-roc_azow",
+    "/tmp/aos72-test-defdg8i_",
+    "/tmp/aos72-test-3_ut54qh",
+    "/tmp/aos72-test-5g13jcev",
+    "/tmp/aos72-test-pjl6_jod",
+    "/tmp/aos72-test-ri6kcno5",
+    "/tmp/aos72-test-va5h6rqa",
+    "/tmp/aos72-test-xh60i0ub",
+    "/tmp/aos72-test-742v58fz",
+    "/tmp/aos72-test-ahaz_9gm",
+    "/tmp/aos72-test-ndgbb5ac",
+    "/tmp/aos72-test-g6l2d1df"
+  ],
+  "roots_remaining": [],
+  "proc_environ_survivors": [],
+  "ps_matching_own_roots": [],
+  "scratchpad_touched": false
+}

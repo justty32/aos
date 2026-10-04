@@ -1,0 +1,49 @@
+{
+  "comparison_cases": 8,
+  "same_report_all": true,
+  "report_sha256": "cef28552d7b896c569b17f1488dbb9fd2225b5a36d47a4df68789a955c58de7d",
+  "rounds": 450,
+  "closed_rounds_samples": 451,
+  "observed_completed_instances": 112,
+  "elapsed_s": 25.195,
+  "ended_job_files": [
+    10
+  ],
+  "ended_job_bytes_range": [
+    4381,
+    4397
+  ],
+  "first_end": {
+    "end": "ok",
+    "inst": "48f79a9c",
+    "job": {
+      "bytes": 4381,
+      "files": 10
+    },
+    "report_ok": true,
+    "round": 4,
+    "tries": [
+      1,
+      1
+    ]
+  },
+  "last_end": {
+    "end": "ok",
+    "inst": "87e7ab68",
+    "job": {
+      "bytes": 4397,
+      "files": 10
+    },
+    "report_ok": true,
+    "round": 448,
+    "tries": [
+      1,
+      1
+    ]
+  },
+  "errors": [],
+  "all_ended_reports_rows_version_ok": true,
+  "all_ended_attempts_once": true,
+  "all_temp_roots_removed": true,
+  "all_ps_only_header": true
+}
