@@ -1,0 +1,5 @@
+{
+  "corrections": [],
+  "strengthening": ["長跑退出條件補存 round.json open=false 且 round>=450；last-round.json 可在 tock 收尾前先提交，原 astra-4 腳本只看 last-round 不足以直接證明已關。第一次長跑 rc0，採加強後重跑結果。"],
+  "production_findings": []
+}

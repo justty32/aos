@@ -1,0 +1,542 @@
+{
+  "seconds": 8.239448975000414,
+  "own_probes": [
+    {
+      "case": "clock_boundaries_open_closed_rollback_below_success_hw",
+      "pass": true,
+      "observed": [
+        {
+          "code": 3,
+          "out": {
+            "kid": "d44fbe615559918e2bdf",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "before"
+            },
+            "outcome": "unknown",
+            "stage": "reserve",
+            "why": "還沒生效（c=4 < from=5）"
+          },
+          "err": ""
+        },
+        {
+          "code": 0,
+          "out": {
+            "kid": "50ab2156bc4ff443b38e",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "from"
+            },
+            "outcome": "accepted",
+            "used": 1,
+            "response": {
+              "ok": true,
+              "echo": null
+            },
+            "settle": {
+              "seq": 2,
+              "used": 1,
+              "outcome": "accepted",
+              "evidence": "126f979ed3724ebd0fd4068f0de8ca8474e0d4671fe143f913fac3a513017579",
+              "at": "2026-10-04T17:11:32.259"
+            }
+          },
+          "err": ""
+        },
+        {
+          "code": 0,
+          "out": {
+            "kid": "fa854595fc4ecd0c12a5",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "before-until"
+            },
+            "outcome": "accepted",
+            "used": 1,
+            "response": {
+              "ok": true,
+              "echo": null
+            },
+            "settle": {
+              "seq": 4,
+              "used": 1,
+              "outcome": "accepted",
+              "evidence": "1a761f6bf2c5618c66e8e12eecca912dc1976829be94da15d02528d2c103f1e7",
+              "at": "2026-10-04T17:11:32.320"
+            }
+          },
+          "err": ""
+        },
+        {
+          "code": 1,
+          "out": {
+            "kid": "a9e0e5ef28c10f3764b3",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "until"
+            },
+            "outcome": "denied",
+            "stage": "reserve",
+            "why": "已到期（c=10 ≥ until=10）"
+          },
+          "err": ""
+        },
+        {
+          "code": 3,
+          "out": {
+            "kid": "377371be53884ffbdb63",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "rollback"
+            },
+            "outcome": "unknown",
+            "stage": "reserve",
+            "why": "時鐘倒退（c=8 < 帳看過的 9）"
+          },
+          "err": ""
+        }
+      ]
+    },
+    {
+      "case": "intent_SIGKILL_recover_at_until",
+      "pass": true,
+      "observed": [
+        {
+          "code": -9,
+          "out": null,
+          "err": ""
+        },
+        {
+          "code": 0,
+          "out": {
+            "kid": "e5abd21656b073833b90",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "admitted"
+            },
+            "outcome": "accepted",
+            "used": 1,
+            "response": {
+              "ok": true,
+              "echo": null
+            },
+            "settle": {
+              "seq": 2,
+              "used": 1,
+              "outcome": "accepted",
+              "evidence": "fbbe9ab9f617c30ecffc0090357a2ac3930133d12e4a928f0255d91282bef861",
+              "at": "2026-10-04T17:11:32.549"
+            }
+          },
+          "err": ""
+        },
+        {
+          "code": 1,
+          "out": {
+            "kid": "2d74bf62994213174e06",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "new-after-expiry"
+            },
+            "outcome": "denied",
+            "stage": "reserve",
+            "why": "已到期（c=10 ≥ until=10）"
+          },
+          "err": ""
+        }
+      ]
+    },
+    {
+      "case": "clock_highwater_after_expired_observation",
+      "pass": false,
+      "observed": [
+        {
+          "code": 1,
+          "out": {
+            "kid": "fd1ba7e70572f6cee586",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "expired"
+            },
+            "outcome": "denied",
+            "stage": "reserve",
+            "why": "已到期（c=10 ≥ until=10）"
+          },
+          "err": ""
+        },
+        {
+          "clock_hw": 5
+        },
+        {
+          "code": 0,
+          "out": {
+            "kid": "87b6ea830eb4031ae4f4",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "after-regress"
+            },
+            "outcome": "accepted",
+            "used": 1,
+            "response": {
+              "ok": true,
+              "echo": null
+            },
+            "settle": {
+              "seq": 4,
+              "used": 1,
+              "outcome": "accepted",
+              "evidence": "7669ab3db5b9fd0b35027069e754b633aff80ce4d1b08863fb6ed46bb0edbba0",
+              "at": "2026-10-04T17:11:32.784"
+            }
+          },
+          "err": ""
+        }
+      ],
+      "note": "synthetic repaired/rebuilt clock; classification must honor README forbids transplanting old grant"
+    },
+    {
+      "case": "clock_highwater_after_gateway_observation",
+      "pass": false,
+      "observed": [
+        {
+          "admitted_at": 9,
+          "clock_hw": 5
+        },
+        {
+          "code": 0,
+          "out": {
+            "kid": "c6bdab5d86b3c7c107c1",
+            "key": {
+              "budget": "demo",
+              "holder": "api",
+              "request": "two"
+            },
+            "outcome": "accepted",
+            "used": 1,
+            "response": {
+              "ok": true,
+              "echo": null
+            },
+            "settle": {
+              "seq": 4,
+              "used": 1,
+              "outcome": "accepted",
+              "evidence": "3765e4809644d627dd99569b02322d8d9a4580161f5e90713e233f5cead6215c",
+              "at": "2026-10-04T17:11:33.004"
+            }
+          },
+          "err": ""
+        }
+      ],
+      "note": "synthetic repaired/rebuilt clock; classification must honor README forbids transplanting old grant"
+    },
+    {
+      "case": "patience_paused_clock_then_one_completed_tock",
+      "pass": true,
+      "wall_wait_without_timeout": 0.3,
+      "out": {
+        "kid": "04b2160c01a344b94074",
+        "key": {
+          "budget": "demo",
+          "holder": "api",
+          "request": "wait"
+        },
+        "outcome": "unknown",
+        "stage": "reserve",
+        "why": "等了 1 回合帳沒回條（請求留著，帳之後照樣處理）"
+      }
+    },
+    {
+      "case": "true_daemon_pause_SIGKILL_restart",
+      "pass": true,
+      "clock_before": 6,
+      "clock_after": 8,
+      "gen_before": 1,
+      "gen_after": 2
+    }
+  ],
+  "step_tests": {
+    "run": 8,
+    "failures": 10,
+    "errors": 0
+  },
+  "audits": [
+    {
+      "ok": true,
+      "errors": [],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/clock-boundaries",
+      "transitions": 4,
+      "keys": 2,
+      "accepted": 2,
+      "balances": [
+        18,
+        0,
+        2
+      ],
+      "final": true
+    },
+    {
+      "ok": true,
+      "errors": [],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/intent-before-expiry",
+      "transitions": 1,
+      "keys": 1,
+      "accepted": 0,
+      "balances": [
+        19,
+        1,
+        0
+      ],
+      "final": false
+    },
+    {
+      "ok": true,
+      "errors": [],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/intent-after-expiry",
+      "transitions": 2,
+      "keys": 1,
+      "accepted": 1,
+      "balances": [
+        19,
+        0,
+        1
+      ],
+      "final": true
+    },
+    {
+      "ok": true,
+      "errors": [],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/highwater-after-denied",
+      "transitions": 4,
+      "keys": 2,
+      "accepted": 2,
+      "balances": [
+        18,
+        0,
+        2
+      ],
+      "final": true
+    },
+    {
+      "ok": true,
+      "errors": [],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/highwater-after-gateway",
+      "transitions": 4,
+      "keys": 2,
+      "accepted": 2,
+      "balances": [
+        18,
+        0,
+        2
+      ],
+      "final": true
+    },
+    {
+      "ok": false,
+      "errors": [
+        "9298132bc0a8577ebb46: spent receipt without effect"
+      ],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_end_to_end_and_replay_after_close-1",
+      "transitions": 2,
+      "keys": 1,
+      "accepted": 1,
+      "balances": [
+        2,
+        0,
+        1
+      ],
+      "final": true
+    },
+    {
+      "ok": true,
+      "errors": [],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_pause_SIGKILL_daemon_restart-1",
+      "transitions": 4,
+      "keys": 2,
+      "accepted": 2,
+      "balances": [
+        1,
+        0,
+        2
+      ],
+      "final": true
+    },
+    {
+      "ok": false,
+      "errors": [
+        "6366af5d2ded154a130a: spent receipt without effect"
+      ],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_pause_and_daemon_restart_clock-1",
+      "transitions": 4,
+      "keys": 2,
+      "accepted": 2,
+      "balances": [
+        1,
+        0,
+        2
+      ],
+      "final": true
+    },
+    {
+      "ok": false,
+      "errors": [
+        "89390e9b4b8a95701549: spent receipt without effect",
+        "786a3ac39879a6933a23: spent receipt without effect",
+        "63e35e44a6ffbfd39020: spent receipt without effect"
+      ],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_restart_on_end_new_request_new_transaction-1",
+      "transitions": 6,
+      "keys": 3,
+      "accepted": 3,
+      "balances": [
+        0,
+        0,
+        3
+      ],
+      "final": false
+    },
+    {
+      "ok": false,
+      "errors": [
+        "20f088c84ba259ef509f: spent receipt without effect"
+      ],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_work_failure_still_counts-1",
+      "transitions": 2,
+      "keys": 1,
+      "accepted": 1,
+      "balances": [
+        2,
+        0,
+        1
+      ],
+      "final": true
+    },
+    {
+      "ok": false,
+      "errors": [
+        "289debaea7a11eccc416: spent receipt without effect"
+      ],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_crash_points_resend_same_request-1",
+      "transitions": 2,
+      "keys": 1,
+      "accepted": 1,
+      "balances": [
+        2,
+        0,
+        1
+      ],
+      "final": true
+    },
+    {
+      "ok": true,
+      "errors": [],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_expired_between_rounds-1",
+      "transitions": 1,
+      "keys": 1,
+      "accepted": 0,
+      "balances": [
+        2,
+        1,
+        0
+      ],
+      "final": false
+    },
+    {
+      "ok": true,
+      "errors": [],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_expired_between_rounds-2",
+      "transitions": 2,
+      "keys": 1,
+      "accepted": 0,
+      "balances": [
+        3,
+        0,
+        0
+      ],
+      "final": true
+    },
+    {
+      "ok": false,
+      "errors": [
+        "b9014d23739c3712492e: spent receipt without effect"
+      ],
+      "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-integration/snapshots/test_slot_gone_settle_without_step-1",
+      "transitions": 1,
+      "keys": 1,
+      "accepted": 1,
+      "balances": [
+        2,
+        1,
+        0
+      ],
+      "final": false
+    }
+  ],
+  "cleanups": [
+    {
+      "case": "test_end_to_end_and_replay_after_close",
+      "root": "/tmp/aos72-test-90xznrs0",
+      "root_removed": true,
+      "live_pids": [],
+      "ps": ""
+    },
+    {
+      "case": "test_pause_SIGKILL_daemon_restart",
+      "root": "/tmp/aos72-test-ffkjhuoz",
+      "root_removed": true,
+      "live_pids": [],
+      "ps": ""
+    },
+    {
+      "case": "test_pause_and_daemon_restart_clock",
+      "root": "/tmp/aos72-test-uvuoi9l2",
+      "root_removed": true,
+      "live_pids": [],
+      "ps": ""
+    },
+    {
+      "case": "test_restart_on_end_new_request_new_transaction",
+      "root": "/tmp/aos72-test-cbntzrug",
+      "root_removed": true,
+      "live_pids": [],
+      "ps": ""
+    },
+    {
+      "case": "test_work_failure_still_counts",
+      "root": "/tmp/aos72-test-7fevq911",
+      "root_removed": true,
+      "live_pids": [],
+      "ps": ""
+    },
+    {
+      "case": "test_crash_points_resend_same_request",
+      "root": "/tmp/aos72-test-hitbtwk5",
+      "root_removed": true,
+      "live_pids": [],
+      "ps": ""
+    },
+    {
+      "case": "test_expired_between_rounds",
+      "root": "/tmp/aos72-test-7oq2hzpl",
+      "root_removed": true,
+      "live_pids": [],
+      "ps": ""
+    },
+    {
+      "case": "test_slot_gone_settle_without_step",
+      "root": "/tmp/aos72-test-gkwovahn",
+      "root_removed": true,
+      "live_pids": [],
+      "ps": ""
+    }
+  ]
+}

@@ -1,0 +1,903 @@
+[
+  {
+    "probe": "durable_result_across_four_missed_tocks",
+    "classification": "pass/X",
+    "before": {
+      "frame": {
+        "v": 1,
+        "job": "f47result",
+        "inst": "e5359db5",
+        "table": "609d6dfbe513",
+        "pc": "a",
+        "phase": "running",
+        "counts": {},
+        "visits": {
+          "a": 1
+        },
+        "accepted": {},
+        "tries": {
+          "e5359db5-a-1": 1
+        },
+        "pending": {
+          "step": "a",
+          "request": "e5359db5-a-1",
+          "attempt": "e5359db5-a-1-a1",
+          "n": 1,
+          "task": "step-f47result-a",
+          "result": "jobs/f47result/results/a/e5359db5-a-1-a1.json",
+          "state": "queued",
+          "intent_round": 1,
+          "since": 1,
+          "resends": 0
+        },
+        "halt": null,
+        "end": null,
+        "since": 1,
+        "seen": 1,
+        "rev": 5,
+        "tock": 1,
+        "at": "2026-10-04T17:08:07.268"
+      },
+      "round": {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-04T17:08:07.194",
+        "tock_at": "2026-10-04T17:08:07.253",
+        "started": [
+          "step-f47result#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "e646bea3befb",
+        "reaped": [],
+        "skipped": []
+      },
+      "tock": {
+        "run": 1,
+        "round": 1,
+        "at": "2026-10-04T17:08:07.253",
+        "early": null
+      }
+    },
+    "failed_notifications": [
+      {
+        "hits": [
+          {
+            "operation": "write_json",
+            "errno": "EIO",
+            "path": "/proc/self/fd/3/.aos/tasks/step-f47result/tock.json",
+            "round": 2
+          }
+        ],
+        "summary": {
+          "round": 2,
+          "tick_at": "2026-10-04T17:08:07.290",
+          "tock_at": "2026-10-04T17:08:07.334",
+          "early": null,
+          "started": [
+            "step-f47result-a#2"
+          ],
+          "alive": [
+            "step-f47result#1"
+          ],
+          "ended": [
+            {
+              "run": "step-f47result-a#2",
+              "code": 0
+            }
+          ],
+          "skipped": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_error": [],
+          "errors": [],
+          "tasks_rev": "2b9dc85939fa"
+        },
+        "frame": {
+          "v": 1,
+          "job": "f47result",
+          "inst": "e5359db5",
+          "table": "609d6dfbe513",
+          "pc": "a",
+          "phase": "running",
+          "counts": {},
+          "visits": {
+            "a": 1
+          },
+          "accepted": {},
+          "tries": {
+            "e5359db5-a-1": 1
+          },
+          "pending": {
+            "step": "a",
+            "request": "e5359db5-a-1",
+            "attempt": "e5359db5-a-1-a1",
+            "n": 1,
+            "task": "step-f47result-a",
+            "result": "jobs/f47result/results/a/e5359db5-a-1-a1.json",
+            "state": "queued",
+            "intent_round": 1,
+            "since": 1,
+            "resends": 0
+          },
+          "halt": null,
+          "end": null,
+          "since": 1,
+          "seen": 1,
+          "rev": 5,
+          "tock": 1,
+          "at": "2026-10-04T17:08:07.268"
+        },
+        "round": {
+          "round": 2,
+          "open": false,
+          "tick_at": "2026-10-04T17:08:07.290",
+          "tock_at": "2026-10-04T17:08:07.334",
+          "started": [
+            "step-f47result-a#2"
+          ],
+          "ctl": [],
+          "mounts": [],
+          "tasks_rev": "2b9dc85939fa",
+          "reaped": [],
+          "skipped": [],
+          "notify_errors": [
+            {
+              "slot": "step-f47result",
+              "run": 1,
+              "round": 2,
+              "kind": "EIO",
+              "where": "tock.json",
+              "why": "OSError(5, 'astra5 injected notification write failure')",
+              "at": "2026-10-04T17:08:07.335"
+            }
+          ]
+        },
+        "tock": {
+          "run": 1,
+          "round": 1,
+          "at": "2026-10-04T17:08:07.253",
+          "early": null
+        }
+      },
+      {
+        "hits": [
+          {
+            "operation": "write_json",
+            "errno": "EIO",
+            "path": "/proc/self/fd/3/.aos/tasks/step-f47result/tock.json",
+            "round": 3
+          }
+        ],
+        "summary": {
+          "round": 3,
+          "tick_at": "2026-10-04T17:08:07.350",
+          "tock_at": "2026-10-04T17:08:07.353",
+          "early": null,
+          "started": [],
+          "alive": [
+            "step-f47result#1"
+          ],
+          "ended": [],
+          "skipped": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_error": [],
+          "errors": [],
+          "tasks_rev": "e646bea3befb"
+        },
+        "frame": {
+          "v": 1,
+          "job": "f47result",
+          "inst": "e5359db5",
+          "table": "609d6dfbe513",
+          "pc": "a",
+          "phase": "running",
+          "counts": {},
+          "visits": {
+            "a": 1
+          },
+          "accepted": {},
+          "tries": {
+            "e5359db5-a-1": 1
+          },
+          "pending": {
+            "step": "a",
+            "request": "e5359db5-a-1",
+            "attempt": "e5359db5-a-1-a1",
+            "n": 1,
+            "task": "step-f47result-a",
+            "result": "jobs/f47result/results/a/e5359db5-a-1-a1.json",
+            "state": "queued",
+            "intent_round": 1,
+            "since": 1,
+            "resends": 0
+          },
+          "halt": null,
+          "end": null,
+          "since": 1,
+          "seen": 1,
+          "rev": 5,
+          "tock": 1,
+          "at": "2026-10-04T17:08:07.268"
+        },
+        "round": {
+          "round": 3,
+          "open": false,
+          "tick_at": "2026-10-04T17:08:07.350",
+          "tock_at": "2026-10-04T17:08:07.353",
+          "started": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_rev": "e646bea3befb",
+          "reaped": [],
+          "skipped": [],
+          "notify_errors": [
+            {
+              "slot": "step-f47result",
+              "run": 1,
+              "round": 3,
+              "kind": "EIO",
+              "where": "tock.json",
+              "why": "OSError(5, 'astra5 injected notification write failure')",
+              "at": "2026-10-04T17:08:07.353"
+            }
+          ]
+        },
+        "tock": {
+          "run": 1,
+          "round": 1,
+          "at": "2026-10-04T17:08:07.253",
+          "early": null
+        }
+      },
+      {
+        "hits": [
+          {
+            "operation": "write_json",
+            "errno": "EIO",
+            "path": "/proc/self/fd/3/.aos/tasks/step-f47result/tock.json",
+            "round": 4
+          }
+        ],
+        "summary": {
+          "round": 4,
+          "tick_at": "2026-10-04T17:08:07.368",
+          "tock_at": "2026-10-04T17:08:07.371",
+          "early": null,
+          "started": [],
+          "alive": [
+            "step-f47result#1"
+          ],
+          "ended": [],
+          "skipped": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_error": [],
+          "errors": [],
+          "tasks_rev": "e646bea3befb"
+        },
+        "frame": {
+          "v": 1,
+          "job": "f47result",
+          "inst": "e5359db5",
+          "table": "609d6dfbe513",
+          "pc": "a",
+          "phase": "running",
+          "counts": {},
+          "visits": {
+            "a": 1
+          },
+          "accepted": {},
+          "tries": {
+            "e5359db5-a-1": 1
+          },
+          "pending": {
+            "step": "a",
+            "request": "e5359db5-a-1",
+            "attempt": "e5359db5-a-1-a1",
+            "n": 1,
+            "task": "step-f47result-a",
+            "result": "jobs/f47result/results/a/e5359db5-a-1-a1.json",
+            "state": "queued",
+            "intent_round": 1,
+            "since": 1,
+            "resends": 0
+          },
+          "halt": null,
+          "end": null,
+          "since": 1,
+          "seen": 1,
+          "rev": 5,
+          "tock": 1,
+          "at": "2026-10-04T17:08:07.268"
+        },
+        "round": {
+          "round": 4,
+          "open": false,
+          "tick_at": "2026-10-04T17:08:07.368",
+          "tock_at": "2026-10-04T17:08:07.371",
+          "started": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_rev": "e646bea3befb",
+          "reaped": [],
+          "skipped": [],
+          "notify_errors": [
+            {
+              "slot": "step-f47result",
+              "run": 1,
+              "round": 4,
+              "kind": "EIO",
+              "where": "tock.json",
+              "why": "OSError(5, 'astra5 injected notification write failure')",
+              "at": "2026-10-04T17:08:07.372"
+            }
+          ]
+        },
+        "tock": {
+          "run": 1,
+          "round": 1,
+          "at": "2026-10-04T17:08:07.253",
+          "early": null
+        }
+      },
+      {
+        "hits": [
+          {
+            "operation": "write_json",
+            "errno": "EIO",
+            "path": "/proc/self/fd/3/.aos/tasks/step-f47result/tock.json",
+            "round": 5
+          }
+        ],
+        "summary": {
+          "round": 5,
+          "tick_at": "2026-10-04T17:08:07.386",
+          "tock_at": "2026-10-04T17:08:07.389",
+          "early": null,
+          "started": [],
+          "alive": [
+            "step-f47result#1"
+          ],
+          "ended": [],
+          "skipped": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_error": [],
+          "errors": [],
+          "tasks_rev": "e646bea3befb"
+        },
+        "frame": {
+          "v": 1,
+          "job": "f47result",
+          "inst": "e5359db5",
+          "table": "609d6dfbe513",
+          "pc": "a",
+          "phase": "running",
+          "counts": {},
+          "visits": {
+            "a": 1
+          },
+          "accepted": {},
+          "tries": {
+            "e5359db5-a-1": 1
+          },
+          "pending": {
+            "step": "a",
+            "request": "e5359db5-a-1",
+            "attempt": "e5359db5-a-1-a1",
+            "n": 1,
+            "task": "step-f47result-a",
+            "result": "jobs/f47result/results/a/e5359db5-a-1-a1.json",
+            "state": "queued",
+            "intent_round": 1,
+            "since": 1,
+            "resends": 0
+          },
+          "halt": null,
+          "end": null,
+          "since": 1,
+          "seen": 1,
+          "rev": 5,
+          "tock": 1,
+          "at": "2026-10-04T17:08:07.268"
+        },
+        "round": {
+          "round": 5,
+          "open": false,
+          "tick_at": "2026-10-04T17:08:07.386",
+          "tock_at": "2026-10-04T17:08:07.389",
+          "started": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_rev": "e646bea3befb",
+          "reaped": [],
+          "skipped": [],
+          "notify_errors": [
+            {
+              "slot": "step-f47result",
+              "run": 1,
+              "round": 5,
+              "kind": "EIO",
+              "where": "tock.json",
+              "why": "OSError(5, 'astra5 injected notification write failure')",
+              "at": "2026-10-04T17:08:07.390"
+            }
+          ]
+        },
+        "tock": {
+          "run": 1,
+          "round": 1,
+          "at": "2026-10-04T17:08:07.253",
+          "early": null
+        }
+      }
+    ],
+    "slot_removed_before_resume": true,
+    "closed_replay": {
+      "round": 5,
+      "skipped": "round already closed"
+    },
+    "resumed": {
+      "frame": {
+        "v": 1,
+        "job": "f47result",
+        "inst": "e5359db5",
+        "table": "609d6dfbe513",
+        "pc": "b",
+        "phase": "running",
+        "counts": {},
+        "visits": {
+          "a": 1,
+          "b": 1
+        },
+        "accepted": {
+          "a": {
+            "request": "e5359db5-a-1",
+            "attempt": "e5359db5-a-1-a1",
+            "ok": true,
+            "run": "step-f47result-a#2",
+            "code": 0
+          }
+        },
+        "tries": {
+          "e5359db5-a-1": 1,
+          "e5359db5-b-1": 1
+        },
+        "pending": {
+          "step": "b",
+          "request": "e5359db5-b-1",
+          "attempt": "e5359db5-b-1-a1",
+          "n": 1,
+          "task": "step-f47result-b",
+          "result": "jobs/f47result/results/b/e5359db5-b-1-a1.json",
+          "state": "queued",
+          "intent_round": 6,
+          "since": 6,
+          "resends": 0
+        },
+        "halt": null,
+        "end": null,
+        "since": 6,
+        "seen": 6,
+        "rev": 8,
+        "tock": 6,
+        "at": "2026-10-04T17:08:07.449"
+      },
+      "round": {
+        "round": 6,
+        "open": false,
+        "tick_at": "2026-10-04T17:08:07.424",
+        "tock_at": "2026-10-04T17:08:07.442",
+        "started": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "e646bea3befb",
+        "reaped": [],
+        "skipped": []
+      },
+      "tock": {
+        "run": 1,
+        "round": 6,
+        "at": "2026-10-04T17:08:07.442",
+        "early": null
+      }
+    },
+    "final": {
+      "v": 1,
+      "job": "f47result",
+      "inst": "e5359db5",
+      "table": "609d6dfbe513",
+      "pc": "done",
+      "phase": "ended",
+      "counts": {},
+      "visits": {
+        "a": 1,
+        "b": 1,
+        "done": 1
+      },
+      "accepted": {
+        "a": {
+          "request": "e5359db5-a-1",
+          "attempt": "e5359db5-a-1-a1",
+          "ok": true,
+          "run": "step-f47result-a#2",
+          "code": 0
+        },
+        "b": {
+          "request": "e5359db5-b-1",
+          "attempt": "e5359db5-b-1-a1",
+          "ok": true,
+          "run": "step-f47result-b#7",
+          "code": 0
+        }
+      },
+      "tries": {
+        "e5359db5-a-1": 1,
+        "e5359db5-b-1": 1
+      },
+      "pending": null,
+      "halt": null,
+      "end": "ok",
+      "since": 8,
+      "seen": 8,
+      "rev": 10,
+      "tock": 8,
+      "at": "2026-10-04T17:08:07.570"
+    },
+    "runs_a": 1,
+    "runs_b": 1,
+    "observation": "r2～r5通知各EIO一次不補；once槽已清但槽外結果保留，r6正常通知接回原attempt，不重派",
+    "cleanup": {
+      "root": "/tmp/aos72-test-1mw0v2rx",
+      "root_removed": true,
+      "tracked_before_cleanup": [],
+      "matching_after_cleanup": [],
+      "ps_after": ""
+    }
+  },
+  {
+    "probe": "wait_patience_after_three_missed_tocks",
+    "classification": "pass/X",
+    "before": {
+      "frame": {
+        "v": 1,
+        "job": "f47wait",
+        "inst": "d7fcaaf2",
+        "table": "8522dc2085a1",
+        "pc": "w",
+        "phase": "running",
+        "counts": {},
+        "visits": {
+          "w": 1
+        },
+        "accepted": {},
+        "tries": {},
+        "pending": null,
+        "halt": null,
+        "end": null,
+        "since": 1,
+        "seen": 1,
+        "rev": 3,
+        "tock": 1,
+        "at": "2026-10-04T17:08:07.675"
+      },
+      "round": {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-04T17:08:07.601",
+        "tock_at": "2026-10-04T17:08:07.659",
+        "started": [
+          "step-f47wait#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "ed388a3d86bd",
+        "reaped": [],
+        "skipped": []
+      },
+      "tock": {
+        "run": 1,
+        "round": 1,
+        "at": "2026-10-04T17:08:07.659",
+        "early": null
+      }
+    },
+    "failed_notifications": [
+      {
+        "hits": [
+          {
+            "operation": "write_json",
+            "errno": "EIO",
+            "path": "/proc/self/fd/3/.aos/tasks/step-f47wait/tock.json",
+            "round": 2
+          }
+        ],
+        "summary": {
+          "round": 2,
+          "tick_at": "2026-10-04T17:08:07.697",
+          "tock_at": "2026-10-04T17:08:07.700",
+          "early": null,
+          "started": [],
+          "alive": [
+            "step-f47wait#1"
+          ],
+          "ended": [],
+          "skipped": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_error": [],
+          "errors": [],
+          "tasks_rev": "ed388a3d86bd"
+        },
+        "frame": {
+          "v": 1,
+          "job": "f47wait",
+          "inst": "d7fcaaf2",
+          "table": "8522dc2085a1",
+          "pc": "w",
+          "phase": "running",
+          "counts": {},
+          "visits": {
+            "w": 1
+          },
+          "accepted": {},
+          "tries": {},
+          "pending": null,
+          "halt": null,
+          "end": null,
+          "since": 1,
+          "seen": 1,
+          "rev": 3,
+          "tock": 1,
+          "at": "2026-10-04T17:08:07.675"
+        },
+        "round": {
+          "round": 2,
+          "open": false,
+          "tick_at": "2026-10-04T17:08:07.697",
+          "tock_at": "2026-10-04T17:08:07.700",
+          "started": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_rev": "ed388a3d86bd",
+          "reaped": [],
+          "skipped": [],
+          "notify_errors": [
+            {
+              "slot": "step-f47wait",
+              "run": 1,
+              "round": 2,
+              "kind": "EIO",
+              "where": "tock.json",
+              "why": "OSError(5, 'astra5 injected notification write failure')",
+              "at": "2026-10-04T17:08:07.700"
+            }
+          ]
+        },
+        "tock": {
+          "run": 1,
+          "round": 1,
+          "at": "2026-10-04T17:08:07.659",
+          "early": null
+        }
+      },
+      {
+        "hits": [
+          {
+            "operation": "write_json",
+            "errno": "EIO",
+            "path": "/proc/self/fd/3/.aos/tasks/step-f47wait/tock.json",
+            "round": 3
+          }
+        ],
+        "summary": {
+          "round": 3,
+          "tick_at": "2026-10-04T17:08:07.715",
+          "tock_at": "2026-10-04T17:08:07.718",
+          "early": null,
+          "started": [],
+          "alive": [
+            "step-f47wait#1"
+          ],
+          "ended": [],
+          "skipped": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_error": [],
+          "errors": [],
+          "tasks_rev": "ed388a3d86bd"
+        },
+        "frame": {
+          "v": 1,
+          "job": "f47wait",
+          "inst": "d7fcaaf2",
+          "table": "8522dc2085a1",
+          "pc": "w",
+          "phase": "running",
+          "counts": {},
+          "visits": {
+            "w": 1
+          },
+          "accepted": {},
+          "tries": {},
+          "pending": null,
+          "halt": null,
+          "end": null,
+          "since": 1,
+          "seen": 1,
+          "rev": 3,
+          "tock": 1,
+          "at": "2026-10-04T17:08:07.675"
+        },
+        "round": {
+          "round": 3,
+          "open": false,
+          "tick_at": "2026-10-04T17:08:07.715",
+          "tock_at": "2026-10-04T17:08:07.718",
+          "started": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_rev": "ed388a3d86bd",
+          "reaped": [],
+          "skipped": [],
+          "notify_errors": [
+            {
+              "slot": "step-f47wait",
+              "run": 1,
+              "round": 3,
+              "kind": "EIO",
+              "where": "tock.json",
+              "why": "OSError(5, 'astra5 injected notification write failure')",
+              "at": "2026-10-04T17:08:07.718"
+            }
+          ]
+        },
+        "tock": {
+          "run": 1,
+          "round": 1,
+          "at": "2026-10-04T17:08:07.659",
+          "early": null
+        }
+      },
+      {
+        "hits": [
+          {
+            "operation": "write_json",
+            "errno": "EIO",
+            "path": "/proc/self/fd/3/.aos/tasks/step-f47wait/tock.json",
+            "round": 4
+          }
+        ],
+        "summary": {
+          "round": 4,
+          "tick_at": "2026-10-04T17:08:07.733",
+          "tock_at": "2026-10-04T17:08:07.737",
+          "early": null,
+          "started": [],
+          "alive": [
+            "step-f47wait#1"
+          ],
+          "ended": [],
+          "skipped": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_error": [],
+          "errors": [],
+          "tasks_rev": "ed388a3d86bd"
+        },
+        "frame": {
+          "v": 1,
+          "job": "f47wait",
+          "inst": "d7fcaaf2",
+          "table": "8522dc2085a1",
+          "pc": "w",
+          "phase": "running",
+          "counts": {},
+          "visits": {
+            "w": 1
+          },
+          "accepted": {},
+          "tries": {},
+          "pending": null,
+          "halt": null,
+          "end": null,
+          "since": 1,
+          "seen": 1,
+          "rev": 3,
+          "tock": 1,
+          "at": "2026-10-04T17:08:07.675"
+        },
+        "round": {
+          "round": 4,
+          "open": false,
+          "tick_at": "2026-10-04T17:08:07.733",
+          "tock_at": "2026-10-04T17:08:07.737",
+          "started": [],
+          "ctl": [],
+          "mounts": [],
+          "tasks_rev": "ed388a3d86bd",
+          "reaped": [],
+          "skipped": [],
+          "notify_errors": [
+            {
+              "slot": "step-f47wait",
+              "run": 1,
+              "round": 4,
+              "kind": "EIO",
+              "where": "tock.json",
+              "why": "OSError(5, 'astra5 injected notification write failure')",
+              "at": "2026-10-04T17:08:07.737"
+            }
+          ]
+        },
+        "tock": {
+          "run": 1,
+          "round": 1,
+          "at": "2026-10-04T17:08:07.659",
+          "early": null
+        }
+      }
+    ],
+    "after": {
+      "frame": {
+        "v": 1,
+        "job": "f47wait",
+        "inst": "d7fcaaf2",
+        "table": "8522dc2085a1",
+        "pc": "w",
+        "phase": "halted",
+        "counts": {},
+        "visits": {
+          "w": 1
+        },
+        "accepted": {},
+        "tries": {},
+        "pending": null,
+        "halt": {
+          "kind": "timeout",
+          "why": "等了 4 回合（patience 2，本地回合）；逾時不等於沒做，遲到的結果照樣留著",
+          "step": "w",
+          "round": 5,
+          "at": "2026-10-04T17:08:07.775"
+        },
+        "end": null,
+        "since": 1,
+        "seen": 5,
+        "rev": 4,
+        "tock": 5,
+        "at": "2026-10-04T17:08:07.775"
+      },
+      "round": {
+        "round": 5,
+        "open": false,
+        "tick_at": "2026-10-04T17:08:07.752",
+        "tock_at": "2026-10-04T17:08:07.770",
+        "started": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "ed388a3d86bd",
+        "reaped": [],
+        "skipped": []
+      },
+      "tock": {
+        "run": 1,
+        "round": 5,
+        "at": "2026-10-04T17:08:07.770",
+        "early": null
+      }
+    },
+    "observation": "漏r2～r4通知；r5恢復即依本地回合差timeout，耐性不因漏通知而重設",
+    "cleanup": {
+      "root": "/tmp/aos72-test-ih08b2yz",
+      "root_removed": true,
+      "tracked_before_cleanup": [
+        577350,
+        577352
+      ],
+      "matching_after_cleanup": [],
+      "ps_after": "PID    PPID    PGID STAT COMMAND"
+    }
+  }
+]

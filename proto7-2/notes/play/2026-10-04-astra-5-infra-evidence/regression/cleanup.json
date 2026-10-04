@@ -1,0 +1,42 @@
+{
+  "checked_utc": "2026-10-04T09:13:42.288964+00:00",
+  "known_case_roots": [
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-vbh58e4f",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-u3mknl88",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-pt2_gr69",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-g0xw4d58",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-108x9vhc",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-fi9gxycd",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-v_brxulw",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-o701jodm",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-gtk4hh94",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-0anlgb68",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-wbti06lj",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-2gkjpux6",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-2ss123am",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-w58mgfzs",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-wh7j6yy1",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-n3a707k3",
+    "/tmp/astra5-core-jtpw9z_p/aos72-test-qlp76vb0",
+    "/tmp/aos72-test-e1zvp3l2",
+    "/tmp/aos72-test-tk4wu1ew",
+    "/tmp/aos72-test-cek953mt",
+    "/tmp/aos72-test-_76ux8gy",
+    "/tmp/aos72-test-1l8m9fg0",
+    "/tmp/aos72-test-v_2mndyk",
+    "/tmp/aos72-test-5orr4mrh",
+    "/tmp/aos72-test-8xlf1ytk",
+    "/tmp/aos72-test-1mw0v2rx",
+    "/tmp/aos72-test-ih08b2yz",
+    "/tmp/aos72-test-wizhj_1g"
+  ],
+  "roots_remaining": [],
+  "matching_pids": [],
+  "ps_root_matches": [],
+  "suite_pids": [
+    573072,
+    579181,
+    587022
+  ],
+  "suite_pids_remaining": []
+}

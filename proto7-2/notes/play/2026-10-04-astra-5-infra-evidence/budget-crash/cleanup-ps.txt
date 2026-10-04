@@ -1,0 +1,399 @@
+    PID    PPID    PGID STAT COMMAND
+      1       0       1 Ss   /sbin/init splash
+      2       0       0 S    [kthreadd]
+      3       2       0 S    [pool_workqueue_release]
+      4       2       0 I<   [kworker/R-rcu_gp]
+      5       2       0 I<   [kworker/R-sync_wq]
+      6       2       0 I<   [kworker/R-kvfree_rcu_reclaim]
+      7       2       0 I<   [kworker/R-slub_flushwq]
+      8       2       0 I<   [kworker/R-netns]
+     11       2       0 I<   [kworker/0:0H-events_highpri]
+     14       2       0 I<   [kworker/R-mm_percpu_wq]
+     15       2       0 S    [ksoftirqd/0]
+     16       2       0 I    [rcu_preempt]
+     17       2       0 S    [rcub/0]
+     18       2       0 S    [rcu_exp_par_gp_kthread_worker/0]
+     19       2       0 S    [rcu_exp_gp_kthread_worker]
+     20       2       0 S    [migration/0]
+     21       2       0 S    [idle_inject/0]
+     22       2       0 S    [cpuhp/0]
+     23       2       0 S    [cpuhp/1]
+     24       2       0 S    [idle_inject/1]
+     25       2       0 S    [migration/1]
+     26       2       0 S    [ksoftirqd/1]
+     28       2       0 I<   [kworker/1:0H-events_highpri]
+     29       2       0 S    [cpuhp/2]
+     30       2       0 S    [idle_inject/2]
+     31       2       0 S    [migration/2]
+     32       2       0 S    [ksoftirqd/2]
+     34       2       0 I<   [kworker/2:0H-events_highpri]
+     35       2       0 S    [cpuhp/3]
+     36       2       0 S    [idle_inject/3]
+     37       2       0 S    [migration/3]
+     38       2       0 S    [ksoftirqd/3]
+     39       2       0 I    [kworker/3:0-events]
+     40       2       0 I<   [kworker/3:0H-events_highpri]
+     41       2       0 S    [cpuhp/4]
+     42       2       0 S    [idle_inject/4]
+     43       2       0 S    [migration/4]
+     44       2       0 S    [ksoftirqd/4]
+     45       2       0 I    [kworker/4:0-mm_percpu_wq]
+     46       2       0 I<   [kworker/4:0H-events_highpri]
+     47       2       0 S    [cpuhp/5]
+     48       2       0 S    [idle_inject/5]
+     49       2       0 S    [migration/5]
+     50       2       0 S    [ksoftirqd/5]
+     51       2       0 I    [kworker/5:0-events_freezable]
+     52       2       0 I<   [kworker/5:0H-events_highpri]
+     53       2       0 S    [cpuhp/6]
+     54       2       0 S    [idle_inject/6]
+     55       2       0 S    [migration/6]
+     56       2       0 S    [ksoftirqd/6]
+     58       2       0 I<   [kworker/6:0H-events_highpri]
+     59       2       0 S    [cpuhp/7]
+     60       2       0 S    [idle_inject/7]
+     61       2       0 S    [migration/7]
+     62       2       0 S    [ksoftirqd/7]
+     64       2       0 I<   [kworker/7:0H-events_highpri]
+     65       2       0 S    [cpuhp/8]
+     66       2       0 S    [idle_inject/8]
+     67       2       0 S    [migration/8]
+     68       2       0 S    [ksoftirqd/8]
+     69       2       0 I    [kworker/8:0-mm_percpu_wq]
+     70       2       0 I<   [kworker/8:0H-events_highpri]
+     71       2       0 S    [cpuhp/9]
+     72       2       0 S    [idle_inject/9]
+     73       2       0 S    [migration/9]
+     74       2       0 S    [ksoftirqd/9]
+     76       2       0 I<   [kworker/9:0H-events_highpri]
+     77       2       0 S    [cpuhp/10]
+     78       2       0 S    [idle_inject/10]
+     79       2       0 S    [migration/10]
+     80       2       0 S    [ksoftirqd/10]
+     82       2       0 I<   [kworker/10:0H-events_highpri]
+     83       2       0 S    [cpuhp/11]
+     84       2       0 S    [idle_inject/11]
+     85       2       0 S    [migration/11]
+     86       2       0 S    [ksoftirqd/11]
+     88       2       0 I<   [kworker/11:0H-events_highpri]
+     89       2       0 S    [cpuhp/12]
+     90       2       0 S    [idle_inject/12]
+     91       2       0 S    [migration/12]
+     92       2       0 S    [ksoftirqd/12]
+     94       2       0 I<   [kworker/12:0H-events_highpri]
+     95       2       0 S    [cpuhp/13]
+     96       2       0 S    [idle_inject/13]
+     97       2       0 S    [migration/13]
+     98       2       0 S    [ksoftirqd/13]
+     99       2       0 I    [kworker/13:0-events]
+    100       2       0 I<   [kworker/13:0H-events_highpri]
+    101       2       0 S    [cpuhp/14]
+    102       2       0 S    [idle_inject/14]
+    103       2       0 S    [migration/14]
+    104       2       0 S    [ksoftirqd/14]
+    106       2       0 I<   [kworker/14:0H-events_highpri]
+    107       2       0 S    [cpuhp/15]
+    108       2       0 S    [idle_inject/15]
+    109       2       0 S    [migration/15]
+    110       2       0 S    [ksoftirqd/15]
+    111       2       0 I    [kworker/15:0-events]
+    112       2       0 I<   [kworker/15:0H-events_highpri]
+    113       2       0 S    [kdevtmpfs]
+    114       2       0 I<   [kworker/R-inet_frag_wq]
+    115       2       0 I    [rcu_tasks_kthread]
+    116       2       0 I    [rcu_tasks_rude_kthread]
+    117       2       0 I    [rcu_tasks_trace_kthread]
+    118       2       0 S    [kauditd]
+    119       2       0 S    [khungtaskd]
+    121       2       0 S    [oom_reaper]
+    122       2       0 I<   [kworker/R-writeback]
+    123       2       0 S    [kcompactd0]
+    124       2       0 SN   [ksmd]
+    125       2       0 SN   [khugepaged]
+    126       2       0 I<   [kworker/R-kblockd]
+    127       2       0 I<   [kworker/R-blkcg_punt_bio]
+    128       2       0 I<   [kworker/R-kintegrityd]
+    130       2       0 S    [irq/9-acpi]
+    131       2       0 I    [kworker/2:1-mm_percpu_wq]
+    132       2       0 I    [kworker/9:1-mm_percpu_wq]
+    134       2       0 I<   [kworker/R-tpm_dev_wq]
+    135       2       0 I<   [kworker/R-ata_sff]
+    136       2       0 I<   [kworker/R-edac-poller]
+    137       2       0 I<   [kworker/R-devfreq_wq]
+    138       2       0 S    [watchdogd]
+    139       2       0 I<   [kworker/R-quota_events_unbound]
+    141       2       0 I<   [kworker/3:1H-kblockd]
+    142       2       0 S    [irq/26-AMD-Vi]
+    143       2       0 S    [kswapd0]
+    144       2       0 I<   [kworker/R-kthrotld]
+    146       2       0 I<   [kworker/R-acpi_thermal_pm]
+    148       2       0 S    [scsi_eh_0]
+    149       2       0 I<   [kworker/R-scsi_tmf_0]
+    150       2       0 S    [scsi_eh_1]
+    151       2       0 I<   [kworker/R-scsi_tmf_1]
+    152       2       0 S    [scsi_eh_2]
+    153       2       0 I<   [kworker/R-scsi_tmf_2]
+    154       2       0 S    [scsi_eh_3]
+    155       2       0 I<   [kworker/R-scsi_tmf_3]
+    156       2       0 S    [scsi_eh_4]
+    157       2       0 I<   [kworker/R-scsi_tmf_4]
+    158       2       0 S    [scsi_eh_5]
+    159       2       0 I<   [kworker/R-scsi_tmf_5]
+    167       2       0 I<   [kworker/R-mld]
+    168       2       0 I<   [kworker/11:1H-kblockd]
+    169       2       0 I<   [kworker/R-ipv6_addrconf]
+    170       2       0 I<   [kworker/R-kstrp]
+    173       2       0 I    [kworker/12:1-mm_percpu_wq]
+    180       2       0 I<   [kworker/R-zswap-shrink]
+    181       2       0 I<   [kworker/0:1H-kblockd]
+    185       2       0 I    [kworker/6:1-events]
+    186       2       0 I<   [kworker/13:1H-kblockd]
+    215       2       0 I<   [kworker/10:1H-kblockd]
+    232       2       0 I<   [kworker/12:1H-kblockd]
+    278       2       0 I<   [kworker/15:1H-kblockd]
+    279       2       0 I<   [kworker/4:1H-kblockd]
+    280       2       0 I<   [kworker/2:1H-kblockd]
+    281       2       0 I<   [kworker/14:1H-kblockd]
+    282       2       0 I<   [kworker/8:1H-kblockd]
+    283       2       0 I<   [kworker/5:1H-kblockd]
+    284       2       0 I<   [kworker/6:1H-kblockd]
+    285       2       0 I<   [kworker/7:1H-kblockd]
+    286       2       0 I<   [kworker/1:1H-kblockd]
+    287       2       0 I<   [kworker/9:1H-kblockd]
+    288       2       0 I<   [kworker/R-uas]
+    289       2       0 I<   [kworker/R-nvme-wq]
+    290       2       0 I<   [kworker/R-nvme-reset-wq]
+    291       2       0 I<   [kworker/R-nvme-delete-wq]
+    292       2       0 I<   [kworker/R-nvme-auth-wq]
+    293       2       0 S    [scsi_eh_6]
+    294       2       0 I<   [kworker/R-scsi_tmf_6]
+    296       2       0 S    [scsi_eh_7]
+    297       2       0 I<   [kworker/R-scsi_tmf_7]
+    298       2       0 S    [usb-storage]
+    299       2       0 I<   [kworker/R-amdgpu-reset-dev]
+    300       2       0 I<   [kworker/R-ttm]
+    301       2       0 I<   [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    302       2       0 I<   [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    303       2       0 I<   [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    304       2       0 I<   [kworker/R-dm_vblank_control_workqueue]
+    305       2       0 S    [card1-crtc0]
+    306       2       0 S    [card1-crtc1]
+    307       2       0 S    [card1-crtc2]
+    308       2       0 S    [card1-crtc3]
+    309       2       0 I<   [kworker/R-gfx_0.0.0]
+    310       2       0 I<   [kworker/R-gfx_0.1.0]
+    311       2       0 I<   [kworker/R-comp_1.0.0]
+    312       2       0 I<   [kworker/R-comp_1.1.0]
+    313       2       0 I<   [kworker/R-comp_1.2.0]
+    314       2       0 I<   [kworker/R-comp_1.3.0]
+    315       2       0 I<   [kworker/R-comp_1.0.1]
+    316       2       0 I<   [kworker/R-comp_1.1.1]
+    317       2       0 I<   [kworker/R-comp_1.2.1]
+    318       2       0 I<   [kworker/R-comp_1.3.1]
+    319       2       0 I<   [kworker/R-sdma0]
+    320       2       0 I<   [kworker/R-vcn_dec_0]
+    321       2       0 I<   [kworker/R-vcn_enc_0.0]
+    322       2       0 I<   [kworker/R-vcn_enc_0.1]
+    323       2       0 I<   [kworker/R-jpeg_dec]
+    395       2       0 S    [jbd2/nvme0n1p5-8]
+    396       2       0 I<   [kworker/R-ext4-rsv-conversion]
+    451       1     451 Ss   /usr/lib/systemd/systemd-journald
+    466       1     466 Ss   /usr/lib/systemd/systemd-userdbd
+    483       2       0 I    [kworker/1:2-mm_percpu_wq]
+    486       2       0 S    [nv_queue]
+    487       2       0 S    [nv_mem_pool_scrubber_queue]
+    488       2       0 S    [nv_mem_pool_scrubber_queue]
+    489       2       0 S    [nv_mem_pool_scrubber_queue]
+    490       2       0 S    [nv_queue]
+    491       2       0 S    [nv_open_q]
+    497       2       0 S    [psimon]
+    502       1     502 Ssl  /usr/lib/systemd/systemd-timesyncd
+    507       1     507 Ss   /usr/lib/systemd/systemd-udevd
+    510       2       0 S    [psimon]
+    568       2       0 I    [kworker/0:3-events]
+    589       2       0 S    [UVM global queue]
+    590       2       0 S    [UVM deferred release queue]
+    591       2       0 S    [UVM Tools Event Queue]
+    633       2       0 S    [nvidia-modeset/kthread_q]
+    634       2       0 S    [nvidia-modeset/deferred_close_kthread_q]
+    636       2       0 S    [irq/98-nvidia]
+    637       2       0 S    [irq/99-nvidia]
+    639       2       0 S    [irq/100-nvidia]
+    641       2       0 S    [irq/101-nvidia]
+    643       2       0 S    [irq/102-nvidia]
+    644       2       0 S    [irq/103-nvidia]
+    645       2       0 S    [irq/104-nvidia]
+    646       2       0 S    [irq/105-nvidia]
+    647       2       0 I<   [kworker/R-led_workqueue]
+    648       2       0 S    [nvidia]
+    649       2       0 S    [nv_queue]
+    654       2       0 I<   [kworker/R-cfg80211]
+    692       2       0 S    [napi/phy0-0]
+    693       2       0 S    [napi/phy0-0]
+    694       2       0 S    [napi/phy0-0]
+    721       2       0 S    [mt76-tx phy0]
+    754       2       0 I    [kworker/11:2-mm_percpu_wq]
+    757       1     757 Ss   /usr/bin/dbus-broker-launch --scope system --audit
+    759     757     757 S    dbus-broker --log 10 --controller 9 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 536870912 --max-fds 4096 --max-matches 131072 --audit
+    760       1     760 Ssl  /usr/bin/NetworkManager --no-daemon
+    762       1     762 Ss   /usr/lib/bluetooth/bluetoothd
+    763       1     763 Ssl  /usr/lib/polkit-1/polkitd --no-debug --log-level=notice
+    765       1     765 Ss   /usr/lib/systemd/systemd-logind
+    829       2       0 S    [psimon]
+    830       1     830 Ssl  /usr/bin/ModemManager
+    842       1     842 Ss   /usr/bin/cupsd -l
+    845       1     845 Ss   /usr/sbin/crond -n
+    848       1     848 Ss   /usr/lib/systemd/systemd --user
+    851     848     848 S    (sd-pam)
+    859     848     859 Ssl  /usr/bin/mongod --dbpath /home/lorkhan/data/mongodb --bind_ip 127.0.0.1 --port 27017 --nounixsocket
+    860     848     860 Ssl  /usr/bin/sbcl --noinform --disable-debugger --load /home/lorkhan/.config/common-lisp/swank-server.lisp
+    935       1     935 Ssl  /usr/lib/power-profiles-daemon
+    936       1     936 Ssl  /usr/bin/sddm
+    944     936     944 Ssl+ /usr/lib/Xorg -nolisten tcp -background none -seat seat0 vt2 -auth /run/sddm/xauth_ovTjZe -noreset -displayfd 16
+    955       2       0 S    [nvidia-drm/timeline-f2]
+    961     936     936 S    /usr/lib/sddm/sddm-helper --socket /tmp/sddm-auth-e6f1d8ca-b72a-4e1d-b7a6-a194ea8bfed9 --id 1 --start /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland --user lorkhan --autologin
+    963     961     963 Ssl+ /usr/bin/startplasma-wayland
+   1008     848    1008 Ss   /usr/bin/dbus-broker-launch --scope user
+   1009    1008    1008 S    dbus-broker --log 11 --controller 10 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 100000000000000 --max-fds 25000000000000 --max-matches 5000000000
+   1017     848    1017 Ssl  /usr/bin/kwin_wayland_wrapper --xwayland
+   1023    1017    1017 Sl   /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-0 --xwayland-fd 8 --xwayland-fd 9 --xwayland-display :1 --xwayland-xauthority /run/user/1000/xauth_REQNWm --xwayland
+   1032       2       0 S    [nvidia-drm/timeline-f3]
+   1035       2       0 S    [nvidia-drm/timeline-100]
+   1038       2       0 S    [nvidia-drm/timeline-101]
+   1041       2       0 S    [nvidia-drm/timeline-102]
+   1042       2       0 S    [nvidia-drm/timeline-103]
+   1043       2       0 S    [nvidia-drm/timeline-104]
+   1044       2       0 S    [nvidia-drm/timeline-105]
+   1045       2       0 S    [nvidia-drm/timeline-106]
+   1046       2       0 S    [nvidia-drm/timeline-107]
+   1075       2       0 S    [nvidia-drm/timeline-132]
+   1076       2       0 S    [nvidia-drm/timeline-133]
+   1077     848    1077 S<sl /usr/bin/pipewire
+   1078     848    1078 S<sl /usr/bin/wireplumber
+   1083       1    1083 SNsl /usr/lib/rtkit-daemon
+   1086    1023    1017 S    /usr/lib/fcitx5-wayland-launcher --reopen
+   1090     848    1090 Ssl  /usr/bin/fcitx5
+   1106    1023    1017 S    /usr/bin/Xwayland :1 -auth /run/user/1000/xauth_REQNWm -listenfd 8 -listenfd 9 -displayfd 137 -wm 139 -rootless
+   1112       2       0 S    [nvidia-drm/timeline-134]
+   1126     848    1126 Ssl  /usr/lib/at-spi-bus-launcher
+   1137    1126    1126 S    /usr/bin/dbus-broker-launch --config-file=/usr/share/defaults/at-spi2/accessibility.conf --scope user
+   1141    1137    1126 S    dbus-broker --log 10 --controller 9 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 100000000000000 --max-fds 6400000 --max-matches 5000000000
+   1142     848    1142 Ssl  /usr/lib/at-spi2-registryd --use-gnome-session
+   1161       2       0 S<   [krfcommd]
+   1163     848    1163 Ssl  /usr/bin/ksmserver
+   1165     848    1165 Ssl  /usr/bin/kded6
+   1172     848    1172 Ssl  /usr/bin/plasmashell --no-respawn
+   1181     848    1181 Ssl  /usr/lib/dconf-service
+   1192     848    1192 Ssl  /usr/lib/kactivitymanagerd
+   1199     848    1199 Ssl  /usr/bin/gmenudbusmenuproxy
+   1200     848    1200 Ssl  /usr/bin/kaccess
+   1201     848    1201 Ssl  /usr/lib/polkit-kde-authentication-agent-1
+   1202     848    1202 Ssl  /usr/lib/org_kde_powerdevil
+   1203     848    1203 Ssl  /usr/bin/xembedsniproxy
+   1235       1    1235 Ssl  /usr/lib/upowerd
+   1247     848    1247 S<sl /usr/bin/pipewire-pulse
+   1261       1    1261 Ssl  /usr/lib/udisks2/udisksd
+   1326     848    1325 S    /usr/bin/xsettingsd
+   1330       2       0 S    [nvidia-drm/timeline-13f]
+   1345     848    1345 Ssl  /usr/bin/kdeconnectd
+   1411     848    1411 Ssl  /usr/bin/msm_kde_notifier
+   1426     848    1426 Ssl  /usr/lib/xdg-desktop-portal
+   1433     848    1433 Ssl  /usr/bin/pamac-tray-plasma
+   1447     848    1447 Ssl  /usr/lib/xdg-permission-store
+   1453     848    1453 Ssl  /usr/lib/xdg-document-portal
+   1463    1453    1463 Ss   fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+   1470     848    1470 Ssl  /usr/lib/xdg-desktop-portal-gtk
+   1491     848    1491 Ssl  /usr/lib/xdg-desktop-portal-kde
+   1592       1    1592 Ssl  /usr/lib/accounts-daemon
+   1632     848    1632 Ss   bash /home/lorkhan/.local/share/Steam/steam.sh -srt-logger-opened
+   1650     848    1649 S    /home/lorkhan/.local/share/Steam/ubuntu12_32/steam-runtime/usr/libexec/steam-runtime-tools-0/srt-logger --sh-syntax --rotate=8388608 --log-directory /home/lorkhan/.local/share/Steam/logs --filename console-linux.txt --log-fd=7 --journal-fd=5 --parse-level-prefix
+   1744    1632    1632 Sl   /home/lorkhan/.local/share/Steam/ubuntu12_32/steam -srt-logger-opened
+   1790       2       0 S    [nvidia-drm/timeline-14d]
+   1865    1744    1865 Ss   /home/lorkhan/.local/share/Steam/steamrt64/pv-runtime/steam-runtime-steamrt/pressure-vessel/libexec/steam-runtime-tools-0/srt-bwrap --args 26 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1744 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   1877     848    1876 S    /home/lorkhan/.local/share/Steam/ubuntu12_32/steam-runtime/usr/libexec/steam-runtime-tools-0/srt-logger --sh-syntax --rotate=8388608 --log-directory /home/lorkhan/.steam/steam/logs --filename webhelper-linux.txt --log-fd=7 --journal-fd=5 --parse-level-prefix --journal-level=info
+   2241    1865    2241 Ss   /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1744 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   2243    1744    1632 Sl   steam-runtime-launcher-service --alongside-steam
+   2347    2241    2241 Sl   ./steamwebhelper -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1744 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   2383    2241    2382 Sl   /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --monitor-self-annotation=ptype=crashpad-handler --type=crashpad-handler --max-uploads=5 --max-db-size=20 --max-db-age=5 --database=/tmp/dumps --url=https://crash.steampowered.com/submit --annotation=lsb-release=Steam Runtime 3c (steamrt3c) --annotation=platform=linux64 --annotation=product=cefwebhelper --annotation=version=1788652215 --initial-client-fd=7 --shared-client-connection
+   2388    2347    2241 S    /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   2389    2347    2241 S    /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   2391    2389    2241 S    /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   2407    2388    2241 Sl   /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   2412       2       0 S    [nvidia-drm/timeline-173]
+   2431    2407    2241 S    /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   2459    2347    2241 Sl   /proc/self/exe --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4 --shared-files --field-trial-handle=3,i,638293995335115645,9281540306640527362,262144 --enable-features=PlatformHEVCDecoderSupport --disable-features=BlockPromptsIfIgnoredOften,DcheckIsFatal,SpareRendererForSitePerProcess,ValveFFmpegAllowLowDelayHEVC,WebUsbDeviceDetection,WinRetrieveSuggestionsOnlyOnDemand --variations-seed-version --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt
+   2472    2391    2241 Sl   /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   2554    2391    2241 Sl   /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   2646       2       0 S    [nvidia-drm/timeline-19c]
+   2680     848    2680 Ssl  /home/lorkhan/.config/discord/app-1.0.159/Discord --url --
+   2683    2680    2680 S    /home/lorkhan/.config/discord/app-1.0.159/Discord --type=zygote --no-zygote-sandbox
+   2684    2680    2680 S    /home/lorkhan/.config/discord/app-1.0.159/Discord --type=zygote
+   2687    2684    2680 S    /home/lorkhan/.config/discord/app-1.0.159/Discord --type=zygote
+   2717     848    2716 Sl   /home/lorkhan/.config/discord/app-1.0.159/chrome_crashpad_handler --monitor-self-annotation=ptype=crashpad-handler --no-rate-limit --database=/home/lorkhan/.config/discord/Crashpad --url=https://f.a.k/e --annotation=_productName=discord --annotation=_version=1.0.159 --annotation=lsb-release=Manjaro Linux --annotation=plat=Linux --annotation=prod=Electron --annotation=ver=42.11.4 --initial-client-fd=37 --shared-client-connection
+   2748    2683    2680 Sl   /home/lorkhan/.config/discord/app-1.0.159/Discord --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD129 --crashpad-handler-pid=2717 --enable-crash-reporter=1ecdfa10-03e4-4f9e-a836-3abce091c790,no_channel --user-data-dir=/home/lorkhan/.config/discord --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --field-trial-handle=3,i,9573821140350702655,3569743563431898056,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports --disable-features=AllowAggressiveThrottlingWithWebSocket,DropInputEventsWhilePaintHolding,HardwareMediaKeyHandling,IntensiveWakeUpThrottling,LocalNetworkAccessChecks,MediaSessionService,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation,UseEcoQoSForBackgroundProcess,WaylandWpColorManagerV1,WinRetrieveSuggestionsOnlyOnDemand --variations-seed-version --pseudonymization-salt-handle=7,i,5135207084052467056,8868156181888484911,4 --trace-process-track-uuid=3190708988185955192
+   2754    2680    2680 Sl   /home/lorkhan/.config/discord/app-1.0.159/Discord --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD129 --crashpad-handler-pid=2717 --enable-crash-reporter=1ecdfa10-03e4-4f9e-a836-3abce091c790,no_channel --user-data-dir=/home/lorkhan/.config/discord --standard-schemes=disclip --secure-schemes=disclip,sentry-ipc --bypasscsp-schemes=sentry-ipc --cors-schemes=disclip,sentry-ipc --fetch-schemes=disclip,sentry-ipc --streaming-schemes=disclip --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,9573821140350702655,3569743563431898056,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports --disable-features=AllowAggressiveThrottlingWithWebSocket,DropInputEventsWhilePaintHolding,HardwareMediaKeyHandling,IntensiveWakeUpThrottling,LocalNetworkAccessChecks,MediaSessionService,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation,UseEcoQoSForBackgroundProcess,WaylandWpColorManagerV1,WinRetrieveSuggestionsOnlyOnDemand --variations-seed-version --pseudonymization-salt-handle=7,i,5135207084052467056,8868156181888484911,4 --trace-process-track-uuid=3190708989122997041
+   2799       2       0 S    [nvidia-drm/timeline-1bd]
+   2814       2       0 S    [nvidia-drm/timeline-1ca]
+   2817       2       0 S    [nvidia-drm/timeline-1cb]
+   2820       2       0 S    [nvidia-drm/timeline-1cc]
+   2842    2680    2680 Sl   /home/lorkhan/.config/discord/app-1.0.159/Discord --type=renderer --crashpad-handler-pid=2717 --enable-crash-reporter=1ecdfa10-03e4-4f9e-a836-3abce091c790,no_channel --user-data-dir=/home/lorkhan/.config/discord --standard-schemes=disclip --secure-schemes=disclip,sentry-ipc --bypasscsp-schemes=sentry-ipc --cors-schemes=disclip,sentry-ipc --fetch-schemes=disclip,sentry-ipc --streaming-schemes=disclip --app-path=/home/lorkhan/.config/discord/app-1.0.159/resources/app.asar --no-sandbox --no-zygote --enable-blink-features=EnumerateDevices,AudioOutputDevices --autoplay-policy=no-user-gesture-required --openh264-library-path=/home/lorkhan/.config/discord/discord_asset_cache/openh264/libopenh264-2.5.1-linux64.7.so --enable-libopenh264 --ozone-platform=wayland --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=6 --time-ticks-at-unix-epoch=-1791073279902031 --launch-time-ticks=205761913 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,9573821140350702655,3569743563431898056,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports --disable-features=AllowAggressiveThrottlingWithWebSocket,DropInputEventsWhilePaintHolding,HardwareMediaKeyHandling,IntensiveWakeUpThrottling,LocalNetworkAccessChecks,MediaSessionService,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation,UseEcoQoSForBackgroundProcess,WaylandWpColorManagerV1,WinRetrieveSuggestionsOnlyOnDemand --variations-seed-version --pseudonymization-salt-handle=7,i,5135207084052467056,8868156181888484911,4 --trace-process-track-uuid=3190708991934122588 --enable-node-leakage-in-renderers
+   2983       2       0 S    [nvidia-drm/timeline-1dc]
+   3050    2680    2680 Sl   /home/lorkhan/.config/discord/app-1.0.159/Discord --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD129 --crashpad-handler-pid=2717 --enable-crash-reporter=1ecdfa10-03e4-4f9e-a836-3abce091c790,no_channel --user-data-dir=/home/lorkhan/.config/discord --standard-schemes=disclip --secure-schemes=disclip,sentry-ipc --bypasscsp-schemes=sentry-ipc --cors-schemes=disclip,sentry-ipc --fetch-schemes=disclip,sentry-ipc --streaming-schemes=disclip --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,9573821140350702655,3569743563431898056,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports --disable-features=AllowAggressiveThrottlingWithWebSocket,DropInputEventsWhilePaintHolding,HardwareMediaKeyHandling,IntensiveWakeUpThrottling,LocalNetworkAccessChecks,MediaSessionService,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation,UseEcoQoSForBackgroundProcess,WaylandWpColorManagerV1,WinRetrieveSuggestionsOnlyOnDemand --variations-seed-version --pseudonymization-salt-handle=7,i,5135207084052467056,8868156181888484911,4 --trace-process-track-uuid=3190708992871164437
+  12269    2391    2241 Sl   /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=2383 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+  16342     848   16342 Ssl  /usr/bin/ghostty --gtk-single-instance=true --initial-window=false
+  16360       2       0 S    [nvidia-drm/timeline-59d]
+  16388   16342   16388 Ss   /usr/bin/zsh
+  17048   16342   17048 Ss   /usr/bin/zsh
+  17784   17048   17784 Sl+  claude --dangerously-skip-permissions --remote-control --resume
+  17895   17784   17784 Sl+  /home/lorkhan/tools/housecarl/server/housecarl-mcp
+  17896   17784   17784 S+   python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+  17959   16342   17959 Ss   /usr/bin/zsh
+  18287   17959   18287 Sl+  claude --dangerously-skip-permissions --remote-control
+  18345   18287   18287 Sl+  /home/lorkhan/tools/housecarl/server/housecarl-mcp
+  18346   18287   18287 S+   python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+  18947   16388   18947 Sl+  claude --dangerously-skip-permissions --remote-control --resume
+  19052   18947   18947 Sl+  /home/lorkhan/tools/housecarl/server/housecarl-mcp
+  19053   18947   18947 S+   python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+  27465     848   27465 Ssl  /usr/bin/krunner --daemon
+  27504       2       0 S    [nvidia-drm/timeline-7e3]
+  30891       2       0 I<   [kworker/u65:0-ttm]
+  30892       2       0 I<   [kworker/u65:2-ttm]
+  48195       2       0 S    [nvidia-drm/timeline-c54]
+  48350       2       0 S    [nvidia-drm/timeline-c59]
+ 325509       2       0 I    [kworker/7:2-mm_percpu_wq]
+ 325640       2       0 I    [kworker/14:0-mm_percpu_wq]
+ 423404     848  423404 Ssl  /usr/lib/baloorunner
+ 424341       2       0 I    [kworker/13:1-events]
+ 438658     848   17784 S+   wl-copy
+ 443052       2       0 I    [kworker/7:0]
+ 443144       2       0 I    [kworker/10:0-mm_percpu_wq]
+ 443641       2       0 I    [kworker/9:2-events]
+ 466610       2       0 I    [kworker/5:1]
+ 499619       2       0 I    [kworker/u64:2-kvfree_rcu_reclaim]
+ 527686       2       0 I    [kworker/u64:3-ext4-rsv-conversion]
+ 527713       2       0 I    [kworker/8:3-events]
+ 527738       2       0 I    [kworker/11:0]
+ 528233       2       0 I    [kworker/12:0-events]
+ 528323       2       0 I    [kworker/6:2-events]
+ 528360       2       0 I    [kworker/2:0-events]
+ 528454       2       0 I    [kworker/0:0-events]
+ 528471       2       0 I    [kworker/15:1-events]
+ 528632       2       0 I    [kworker/14:1-events]
+ 528699       2       0 I    [kworker/3:1-events]
+ 528763       2       0 I    [kworker/10:1]
+ 528852       2       0 I    [kworker/4:1-events]
+ 529436       2       0 I    [kworker/1:1]
+ 554545       2       0 I    [kworker/u64:1-flush-259:0]
+ 558627       2       0 I    [kworker/u64:4-kvfree_rcu_reclaim]
+ 571673   17784  571673 Ss   /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791078285207-j9okhw.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'S=/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/reg; cat > $S/astra-reg5.md <<'"'"'EOF'"'"' （以下為 repo 擁有者委託的 QA 回歸測試。可以開自己的 subagent 平行做事（最多 4 條）。**不要刪或清空 scratchpad 裡任何東西。**）  # proto7-2 第五輪回歸（astra-5）：loop5 驗收（subd 回收前代、budget 包）  repo：/home/lorkhan/repo/simple_tools/aos，對象 `proto7-2/`（HEAD `db387812` 之後）。繁體中文、台灣用語。  ## 背景 - 上一輪：proto7-2/notes/play/2026-10-04-astra-4-infra.md（A5-01）與 -evidence/。 - loop5 藍圖 proto7-2/notes/blueprint-loop5.md（原名 account，使用者要求改名 **budget**，避免跟 Linux account 重疊）。 - 修補：subd 重開前回收前代（8c2145c4；`subd-life.json`；驗收摘要 proto7-2/notes/play/2026-10-04-loop5-subd-evidence/summary.md）。新包 `proto7-2/packs/budget/`（025d2bfe；grant／ledger／gateway，示範＝假 API 受理次數，接 step；README 契約卡、spec 末有 5 個自認契約缺口）。整合 db387812。 - **判定規則**：照 proto7-2/notes/component-contracts.md、各包 README 契約卡、proto7/notes/principles.md 第 9、10 條分類 B／G／X／M（M 不是 bug）。不要因「理論上可以更穩」列 bug。  ## 要做的 1. 全套 `python3 proto7-2/tests/run_all.py` 跑三次（應 322 全過），記耗時與不穩定案。 2. **subd**：獨立重跑 G3 壓力（可用 astra-4 的 run_stress.py）；另打新做法的邊角：回收時誤殺的風險（sibling、同名前綴路徑、巢狀子空間、使用者手動在子根起的非 aos 程序——後者屬不屬誤用照契約判）、subd 自己在各點被 SIGKILL、子 daemon 自己崩潰（非父 kill）後重開、allow-stop 後重開不回收的語意。 3. **budget**：照 packs/budget/README.md 契約卡與 spec 打邊角——並行競爭、各持久點真 SIGKILL、unknown／取消／晚到 run、效期與 completed_tock（pause、daemon 重開、時鐘倒退）、壞帳／缺帳、step 整合（同 request 新 attempt、close 後重播、restart_on_end）。自己寫一個**獨立核帳**（不 import 包的程式）重算守恆與每 K 效果最多一次。評估它自列的 5 個契約缺口：哪些該在 v1 補、哪些合理留待之後。 4. 回歸：step 450 回合長跑檔數不長；A4-01～07、F47、§4.4 抽查沒退化。 5. 核心行數 `tests/core/test_budget.py` 仍綠（總行應仍 2757）。  ## 規矩 - **不改 proto7-2 的程式碼、測試、文件**；不 commit；不 push。證據寫到 `proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/`，報告寫到 `proto7-2/notes/play/2026-10-04-astra-5-infra.md`（連結用相對路徑）。 - 測試根放 /tmp 或 scratchpad 自建目錄，跑完清掉自己的；不留殘留程序（PID 殺，不用 pkill -f；結束前 ps 核對）。 - 不用 LM Studio／ollama／任何本機 LLM；不打 LLM。  ## 報告格式 開頭一段結論；測試結果表；A5-01 驗收；發現清單（A6-01…，分類、契約條目、重現、證據、建議修法一行）；budget 5 個自列缺口的評估表；長跑；最後「最該修的三條」（沒有就寫沒有，不湊數）。完整報告也當最後一則訊息輸出。 EOF codex exec -m gpt-6-astra -c model_reasoning_effort=high --dangerously-bypass-approvals-and-sandbox -C /home/lorkhan/repo/simple_tools/aos -o $S/astra-reg5-out.md - < $S/astra-reg5.md > $S/astra-reg5-log.txt 2>&1; echo "exit $?"; wc -c $S/astra-reg5-out.md' && pwd -P >| /tmp/claude-bdce-cwd
+ 571676  571673  571673 Sl   codex exec -m gpt-6-astra -c model_reasoning_effort=high --dangerously-bypass-approvals-and-sandbox -C /home/lorkhan/repo/simple_tools/aos -o /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/reg/astra-reg5-out.md -
+ 571869  571676  571869 Sl   /home/lorkhan/tools/housecarl/server/housecarl-mcp
+ 571982  571676  571982 Sl   /opt/openai-codex/bin/codex-code-mode-host
+ 572776     466     466 S    systemd-userwork: waiting...
+ 573065  571676  573065 Ss   python3 proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/regression/run_suites.py
+ 578081     466     466 S    systemd-userwork: waiting...
+ 578389     466     466 S    systemd-userwork: waiting...
+ 579181  573065  573065 S    python3 proto7-2/tests/run_all.py -v
+ 579579  571676  579579 Ss   python3 proto7-2/notes/play/2026-10-04-astra-5-infra-evidence/budget-crash/run_probes.py
+ 580876  579181  580876 Ss   /usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-run /tmp/aos72-test-eqcb_c0i/a/.aos/tasks/k 5
+ 580877  579579  579579 R    ps -eo pid,ppid,pgid,stat,args
