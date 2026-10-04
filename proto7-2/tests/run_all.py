@@ -3,7 +3,7 @@
 
     python3 proto7-2/tests/run_all.py [-v] [-k 樣式]... [資料夾...]
 
-不給資料夾時收 `tests/core/`、`modules/*/tests/`、`modules/tests/` 底下所有 `test_*.py`；給了就只跑那些
+不給資料夾時收 `tests/core/`、`modules/*/tests/`、`modules/tests/`、`packs/*/tests/` 底下所有 `test_*.py`；給了就只跑那些
 （相對 proto7-2/ 或絕對路徑）。`-k` 同 unittest（可重複）。退出碼 0＝全綠、1＝有失敗。
 
 各資料夾的測試檔名要唯一（每個資料夾各自 discover，同名模組會在 sys.modules 撞名）；共用工具 base／_matrix／_proc 在 tests/。
@@ -20,11 +20,12 @@ sys.path.insert(0, HERE)
 
 
 def test_dirs():
-    """預設要跑的測試資料夾：核心先，再各模組包。"""
+    """預設要跑的測試資料夾：核心先，再各模組包，最後上層任務包。"""
     dirs = [os.path.join(HERE, "core")]
     dirs += sorted(d for d in glob.glob(os.path.join(TOP, "modules", "*", "tests")) if os.path.isdir(d))
     if os.path.isdir(os.path.join(TOP, "modules", "tests")):
         dirs.append(os.path.join(TOP, "modules", "tests"))
+    dirs += sorted(d for d in glob.glob(os.path.join(TOP, "packs", "*", "tests")) if os.path.isdir(d))
     return dirs
 
 
