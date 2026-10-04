@@ -33,7 +33,10 @@
 - `wait_tock(task_dir, last_round, timeout=None)`：同 aos7-wait-tock；`run` 對不上的舊 tock.json 不算。
 - `resolver(taskdir)`：空間路徑 → 經過 `mnt/` 掛載點的實際路徑（取最長前綴，沒掛到回 None）。
 - `request(taskdir, path, why)`：執行中加掛——寫 `mount-req/<名>.json`，下一個 tick 審核（核心 spec 4.5），回 `mounted`／`pending`／`refused: 原因`。
+- `read_jsonl(path)`：讀流水帳（歷史、事件），壞行跳過。
+- `decl_of(birth)`：birth.json 的 mounts → 原本的宣告（控制包、once 保證包照 birth 重起時用）。
 
 ## 界線
 
-工具的 bug 歸工具，不因工具的問題改 daemon／tick（組件契約藍圖 2.9；A2-13、A3-06 兩次都照這條修在工具）。
+- `aos7-ctl task … kill` 沒給 `--run` 就照 birth.json 帶現在的 run：寫完到 tick／tock 執行之間槽換了 run，這份 kill 就不會打到新的那個（回條說已換人），要收新的再送一次。
+- 工具的 bug 歸工具，不因工具的問題改 daemon／tick（組件契約藍圖 2.9；A2-13、A3-06 兩次都照這條修在工具）。

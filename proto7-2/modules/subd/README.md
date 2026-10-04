@@ -35,7 +35,7 @@
 - argv 結束、**不是**因為包裝程式自己收到 SIGTERM（父 kill 時整個群組一起收到）、而且子根 `status.json` 是 `stopped: true` → 那是被允許的外部 stop：寫 `stopped.json`＝`{"by", "why", "at"}`（取 `ctl-done/` 裡最近一份成功的 stop 回條）。父 node 的 keep 項下一回合再起包裝程式時就被擋下（退出碼 1）。
 - 父 kill 這個任務：SIGTERM 打到整個群組，子 daemon 照 SIGTERM＝stop＋kill 收自己的任務（核心 2.3），不看守門檔。
 
-## 界線
+## 界線（方案 6.1 第 2 點）
 
 - **繞過包裝**（argv 直接寫 `aos7-daemon <子根>`）：沒有守門檔、沒有 stopped.json、也沒有重複認領的擋法；重複認領時第二個 daemon 拿不到 daemon.lock、退出碼 1，keep 每回合重試，總結裡會一直看到失敗。stop 權限只靠守門檔，守門檔由這個包寫。
 - **人手直接起子 daemon**：守門檔與 owner.json 照舊留著（核心不碰），stopped.json 也留著——刪不刪由人決定。

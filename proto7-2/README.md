@@ -6,17 +6,20 @@
 
 ## 入口
 
-- **[spec.md](spec.md)**：細部 spec，每節標 S- 條號；實作時改過的地方標 P2-，astra 第一輪之後改的標 A2-，第二輪之後的標 A3-。會停下等人的情況與恢復步驟在[診斷包](modules/diag/README.md)。
-- **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題（P2-01、P2-02 頂層已定並實作：wake 提前結束固定 interval 回合、once 可選 `retry_lost`），最後兩節是 astra 第一輪 A2、第二輪 A3 的處理。
+- **[spec.md](spec.md)**：核心 spec，只放規則，每條引 S- 條號或核心選項；條目上的 P2-／A2-／A3- 只是編號，由來寫在 problems。
+- **[modules/README.md](modules/README.md)**：模組包總覽（每包做什麼、接法、預設、依賴、入口檔），各包的規則在各包 README；會停下等人的情況與恢復步驟在[診斷包](modules/diag/README.md)。
+- **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題與各條的由來（沒有待你決定的），含 astra 第一輪 A2、第二輪 A3 的處理，與核心精簡刪掉的誤用保護、搬出核心的設計。
 - [notes/changes-from-7-1.md](notes/changes-from-7-1.md)：跟 proto7-1 的對照表，最後是 W1～W12（程式照推薦做）。
 - [notes/play/](notes/play/README.md)：astra 回歸與試玩紀錄（一輪一列）。
-- **[notes/core-slimming.md](notes/core-slimming.md)**：核心精簡方案（只出方案）——盤點、核心最小集、錯誤四分支、擴充點與模組包、kernel 任務包，**3 點要你決定**。
+- **[notes/core-slimming.md](notes/core-slimming.md)**：核心精簡方案——盤點、核心最小集、錯誤四分支、擴充點與模組包、kernel 任務包；已照頂層定案做完（kernel 任務包、aos7-pack 還沒做）。
 - [notes/component-contracts.md](notes/component-contracts.md)：組件契約藍圖（Fable；各組件的職責／前置條件／保證／明確不管，錯誤四類 M 誤用／X 外部故障／B 組件 bug／G 契約缺口，A2/A3 試分類）。
 - [notes/layer-interfaces.md](notes/layer-interfaces.md)：四層（daemon、tick-tock、kernel、agent）之間的交接點調查——誰寫誰讀、延遲、通用 vs 只為 agent／LLM、proto7-1 的 kernel／agent 接上來會怎樣、缺口清單。
 
 ## 一句話看改了什麼
 
 node 改成登記、不再掃資料夾；tock 預設照固定 interval，提前 tock 變成可選；只剩 tasks.json 一個任務表（一次性任務是裡面 `mode: "once"` 的一項）；任務資料夾照名字重用，不再每回合新增；核心只留「上一次」，更前面的歷史交給可選的歷史 module。
+
+10-04 核心精簡：核心 lib 4501→2791 行，restart／子 daemon／retry_lost／診斷／工具／稽核改成模組包。
 
 ## 怎麼跑
 
@@ -79,25 +82,27 @@ python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾�
 
 | 位置 | 是什麼 |
 |---|---|
+| `spec.md` | 核心 spec（只放規則） |
 | `bin/` | 薄入口：`aos7-daemon`、`aos7-tick`、`aos7-tock`、`aos7-run`、`aos7-ctl`、`aos7-wait-tock`（後兩個的本體在工具包），與搬來的 `aos-exec` |
-| `lib/aos7_daemon.py`、`aos7_daemon_timeline.py` | daemon：登記、控制檔、node 消失、status；每個 node 一條時間線（第 1、2 節） |
+| **核心** `lib/aos7_*.py` | 受行數預算管（見上），共九檔： |
+| `lib/aos7_daemon.py`、`aos7_daemon_timeline.py` | daemon：登記、控制檔、node 消失、status；每個 node 一條時間線（spec 第 1、2 節） |
 | `lib/aos7_tick.py`、`aos7_tock.py` | 開回合（tasks.json、once 的 launch 標記）／關回合（last-round.json、刪槽）（第 3、4、7 節） |
-| `lib/aos7_task.py` | 槽、三態判定、lost 前的身分掃描、任務控制、在槽裡起新 run（第 5、6 節） |
-| `lib/aos7_proc.py` | 程序工具：程序的事實（`proc`：不在／starttime／不知道）、同一個程序嗎、身分掃描、Q1 範圍的收程序 |
+| `lib/aos7_task.py` | 槽、三態判定、lost 前的身分掃描、kill（第 5、6 節） |
+| `lib/aos7_proc.py` | 程序的事實（`proc`：不在／starttime／不知道）、同一個程序嗎、身分掃描、Q1 範圍的收程序 |
 | `lib/aos7_run.py` | 任務的包裝：pid.json、exit.json（帶 run） |
 | `lib/aos7_fs.py` | 錯誤四分支的入口（讀檔 `fact`、紀錄 `hold`、例外 `Unknown`）、原子寫、flock、動作鎖與世代、測試鉤子的轉接（`AOS7_TEST_HOOKS` 有設才載入 `tests/_hooks.py`） |
 | `lib/aos7_mount.py` | 掛載（4.5）：tick 建掛載、審核執行中加掛 |
-| `modules/tools/` | [工具包](modules/tools/README.md)：`aos7_ctl.py`（`aos7-ctl daemon／task／add`）、`aos7_taskside.py`（任務端的 wait_tock、task_env、resolver、request） |
-| `modules/audit/` | [稽核包](modules/audit/README.md)：可選的寫入紀錄（包裝程式 `aos7-audit`、`aos7_audit.py`、`audit_site/`） |
-| `modules/subd/` | [子 daemon 包](modules/subd/README.md)：包裝程式 `aos7-subd`（子根所有權、守門檔、stopped.json） |
-| `modules/control/` | [控制包](modules/control/README.md)：restart／reload 在請求端做（`aos7_control.restart`：先加釘同槽的 once，再寫 kill 帶 run） |
-| `modules/diag/` | [診斷包](modules/diag/README.md)：唯讀工具 `aos7-diag`（按需重算判不出的槽、對到恢復步驟）＋操作手冊（會停下等人的情況） |
-| `modules/once_retry/` | [once 保證包](modules/once_retry/README.md)：`retry_lost.py`（keep 任務，把從沒起來過就 lost 的 once 加回，至少一次） |
-| `lib/aos_*.py` | 搬來的 inst 執行器 |
-| `modules/counter.py` | 最小示範任務：讀同槽上一次的 state.json、收 tock.json |
-| `modules/history.py` | 歷史 module 的參考實作（第 9 節）：普通 keep 任務，每個 tock 把 last-round.json 追加到 `history/` |
-| `tests/` | 見上 |
-| `notes/` | problems.md、changes-from-7-1.md |
+| `lib/aos_*.py` | 搬來的 inst 執行器（不算核心預算） |
+| **模組** `modules/` | [總覽](modules/README.md)；每包一個資料夾，自帶 README 與 `tests/` |
+| `modules/tools/` | [工具包](modules/tools/README.md)：`aos7-ctl`、`aos7-wait-tock`、任務端函式 |
+| `modules/control/` | [控制包](modules/control/README.md)：restart／reload 在請求端做 |
+| `modules/subd/` | [子 daemon 包](modules/subd/README.md)：包裝程式 `aos7-subd` |
+| `modules/once_retry/` | [once 保證包](modules/once_retry/README.md)：`retry_lost.py`（keep 任務） |
+| `modules/audit/` | [稽核包](modules/audit/README.md)：包裝程式 `aos7-audit`，可選的寫入紀錄 |
+| `modules/diag/` | [診斷包](modules/diag/README.md)：唯讀工具 `aos7-diag`＋會停下等人的情況與恢復步驟 |
+| `modules/counter.py`、`history.py` | 最小示範任務、歷史 module 的參考實作（觀測任務包的雛形） |
+| `tests/` | 核心測試 `tests/core/`、共用工具、`run_all.py`（見上） |
+| `notes/` | problems.md、core-slimming.md、component-contracts.md、layer-interfaces/、changes-from-7-1.md、play/ |
 
 ## 來源（複製進來，不 import 外部路徑）
 

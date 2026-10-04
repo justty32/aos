@@ -1,4 +1,4 @@
-"""歷史 module 的參考實作（spec.md 第 9 節，可選、非核心）：一個普通的 keep 任務，每收到一次 tock 把「上一次」追加到自己的地方。
+"""歷史 module 的參考實作（modules/README.md「歷史 module」，可選、非核心）：一個普通的 keep 任務，每收到一次 tock 把「上一次」追加到自己的地方。
 
     tasks.json：{"name": "history", "mode": "keep",
                  "argv": ["python3", "<這個檔>", "--src", "team", "--src", "team/agents/amy", "--max-lines", "1000"],
@@ -13,7 +13,7 @@
 - 它是取樣的：看到 `round` 跳號就記一行 `{"gap": [從, 到]}`，補不回來。已記到第幾回合存在槽裡的 state.json（換 run 接得上）。
 
 由 tick 經 aos7-run 啟動（S-10），以 wait_tock 讀槽內 tock.json；這是 P2-16 的參考 module。
-另讀／寫 state.json 保存取樣進度，追加 history/*.jsonl；保留期限屬 module，核心只留上一次（spec §0、§8、§9）。
+另讀／寫 state.json 保存取樣進度，追加 history/*.jsonl；保留期限屬 module，核心只留上一次（spec §0、§8）。
 """
 import argparse
 import json
@@ -29,7 +29,7 @@ from aos7_taskside import resolver, task_env, wait_tock  # noqa: E402
 def src_path(me, resolve, nid, rel):
     """node id 的 `.aos/<rel>`：有掛載走掛載，否則照空間根讀。
 
-    me 是 task_env 結果、resolve 是掛載解析器、nid 是來源 node id、rel 是 .aos 下檔名；回傳路徑，不驗證存在（spec §9）。
+    me 是 task_env 結果、resolve 是掛載解析器、nid 是來源 node id、rel 是 .aos 下檔名；回傳路徑，不驗證存在（modules/README.md）。
     """
     space = (".aos/" if nid in (".", "") else nid.rstrip("/") + "/.aos/") + rel
     p = resolve(space)
@@ -39,7 +39,7 @@ def src_path(me, resolve, nid, rel):
 def trim(path, keep):
     """只留最後 keep 行（整份重寫；它自己的檔，自己管大小）。
 
-    path 是自己的歷史檔、keep 是保留行數；回傳 None。讀不到就保留現況，寫入失敗交呼叫端處理（spec §9）。
+    path 是自己的歷史檔、keep 是保留行數；回傳 None。讀不到就保留現況，寫入失敗交呼叫端處理（modules/README.md）。
     """
     try:
         with open(path, "rb") as f:
@@ -57,7 +57,7 @@ def trim(path, keep):
 def once(me, args, resolve, st):
     """記一次：每個來源的 last-round.json 有新的 round 就追加；跳號記 gap。回有沒有改 state。
 
-    me 是環境、args 是來源與輸出選項、resolve 是掛載解析器、st 是原地更新的進度；回傳 bool（spec §9）。
+    me 是環境、args 是來源與輸出選項、resolve 是掛載解析器、st 是原地更新的進度；回傳 bool（modules/README.md）。
     來源不可讀或回合欄位不合就略過、保留已見回合；未知不當作新回合或 gap。
     """
     changed = False
@@ -71,7 +71,7 @@ def once(me, args, resolve, st):
             continue
         out = os.path.join(args.out, nid.replace("/", "+") + ".jsonl")
         if prev is not None and lr["round"] > prev + 1:
-            # spec §9：核心只留上一次；缺號只能留下 gap，不把沒看見的回合捏成歷史。
+            # 核心只留上一次；缺號只能留下 gap，不把沒看見的回合捏成歷史。
             append_jsonl(out, {"gap": [prev + 1, lr["round"] - 1], "at": now()})
         append_jsonl(out, lr)
         if args.max_lines:
@@ -92,7 +92,7 @@ def once(me, args, resolve, st):
 
 
 def main(argv=None):
-    """解析 argv（None 用命令列），以 keep 任務身分等待 tock 並取樣；達 --rounds 限制回 0，預設持續執行（spec §9，P2-16）。"""
+    """解析 argv（None 用命令列），以 keep 任務身分等待 tock 並取樣；達 --rounds 限制回 0，預設持續執行（modules/README.md，P2-16）。"""
     ap = argparse.ArgumentParser(prog="history")
     ap.add_argument("--src", action="append")
     ap.add_argument("--status", action="store_true")

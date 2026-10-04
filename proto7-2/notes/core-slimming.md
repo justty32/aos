@@ -1,5 +1,7 @@
 # daemon／tick-tock 核心精簡方案（只出方案，沒改程式）
 
+**已照頂層定案執行（commit 範圍 1e94ba09～本次），F47 與 kernel 任務包、aos7-pack 未做。**
+
 ← [proto7-2](../README.md)｜[spec](../spec.md)｜[problems](problems.md)｜照的原則：[principles](../../proto7/notes/principles.md) 第 1、2、4、5、7～10 條｜核心要求：[core.md](../../proto7/spec/core.md)（S- 條）
 
 **10-04 依使用者「核心保持精簡、類似用途集結成模組／模組包」（第 7 條）、「kernel 也分層、成任務包」（第 8 條）、「KISS、錯誤分類、誤用不歸組件管」（第 9 條）寫的方案。** 以 git HEAD（6ed9a7a7）為準。工作區另有另一個隊伍未 commit 的 A3 測試（`tests/test_matrix_a3.py`、`test_options_a3.py`），只拿來參考，用到的地方會標明。這份不改程式、spec、測試。
