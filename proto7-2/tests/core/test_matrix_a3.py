@@ -18,6 +18,8 @@
 8. **A3-08** 重播（tock-summary 被殺）時通知失敗 → round.json 與回傳都有 notify_errors；之後 tick／再 tock 會補寫。
 9. **P2-01** 真 daemon、early_tock:false、interval 2500ms：回合中送 wake 很快開下一回合（記事件 woke）；沒 wake 的照節拍。
 """
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import datetime
 import json
 import os
@@ -81,6 +83,7 @@ class A3Case(MatrixCase):
 # ---------- A3-01 ----------
 
 class TestCtlSeen(A3Case):
+    """〔control〕ctl-seen 完成證據（A3-01，F39）：隨 restart／重播保護移出到控制包。"""
     def test_undeletable_ctl_runs_once_across_runs(self):
         """A3-01：restart 完成後 ctl.json 刪不掉，keep 跨兩次換 run：同一份請求只執行一次，之後的新 run 不被它殺。"""
         argv = ["sh", "-c", 'echo $AOS7_RUN >> "$AOS7_NODE/ran-k.txt"; if [ "$AOS7_RUN" -ge 3 ]; then exec sleep 60; fi']
@@ -184,6 +187,7 @@ class TestCtlSeen(A3Case):
 # ---------- A3-04、A3-05 ----------
 
 class TestCtlId(A3Case):
+    """〔control〕ctl_id 識別（A3-04、A3-05，F39）：隨重播保護移出到控制包；CLI 自動 id 屬工具包。"""
     def test_too_long_id_refused(self):
         """A3-04：id 超過 200 字 → 回條 ok:false 說 id 太長，不執行（不截斷）。"""
         node = self.mknode("a", [{"name": "o", "mode": "once", "argv": rec_argv("o")}])
@@ -271,6 +275,7 @@ class TestCtlId(A3Case):
 # ---------- A3-06 ----------
 
 class TestOwnerNames(DaemonCase):
+    """〔tools〕aos7-ctl 的固定檔名無損編碼（A2-13、A3-06，F57）。"""
     def test_fixed_name_lossless(self):
         """A3-06：甲／乙、A/B 與 A+B、x? 與 x!（owner、by、node 各段）都編成不同檔名；很長的也不同、不超過 255 bytes。"""
         pairs = [("甲", "乙"), ("A/B", "A+B"), ("x?", "x!"), ("a.b", "a@b"), ("%41", "A"),
@@ -317,6 +322,7 @@ def back_to_file(path, raw):
 
 
 class TestNonRegular(A3Case):
+    """〔core〕"""
     def _slot_file(self, name):
         """槽的生命週期檔 name 被換成 FIFO＝不知道：槽 UNKNOWN、tick 不起第二份、tock errors 有它；換回一般檔後恢復。"""
         if name == "exit.json":
@@ -433,6 +439,7 @@ def environ_hidden_supported():
 
 
 class TestHiddenEnviron(A3Case):
+    """〔misuse M-2.8〕不可 dumpable／environ 讀不到權限的任務在已知 session／群組裡＝不知道（A3-02，F33）：任務違反前置「同 uid、environ 可讀」。"""
     def setUp(self):
         super().setUp()
         ok, why = environ_hidden_supported()
@@ -540,6 +547,7 @@ class TestHiddenEnviron(A3Case):
 # ---------- A3-07 ----------
 
 class TestMountTmpSweep(A3Case):
+    """〔core〕"""
     def test_mount_dirs_dead_tmp_swept(self):
         """A3-07：槽的 mount-req／mount-done 裡寫者已死的 `.<名>.tmp.<pid>` 被 tock 清掉，活寫者的不動。"""
         node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": SLEEP}])
@@ -565,6 +573,7 @@ class TestMountTmpSweep(A3Case):
 # ---------- A3-08 ----------
 
 class TestReplayNotify(A3Case):
+    """〔core〕"""
     def replay_with_blocked_tock(self):
         """keep 任務活著，第 1 回合 tock 寫完總結就被殺，再把 tock.json 佔成資料夾，重播 tock。回 (node, 重播結果)。"""
         node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": SLEEP}])
@@ -641,6 +650,7 @@ class TestReplayNotify(A3Case):
 # ---------- P2-01 ----------
 
 class TestWakeFixedInterval(DaemonCase):
+    """〔core〕"""
     INTERVAL = 2500
 
     def setup_node(self):

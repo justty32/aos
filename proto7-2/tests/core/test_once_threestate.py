@@ -1,4 +1,6 @@
 """once 不重起、不漏起（4.4，N-86）：tick 在各點被 kill -9 後下一個 tick 結果正確；三態判定（第 0 節）：讀不到時不做破壞性動作。"""
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import os
 import stat
 import unittest
@@ -17,6 +19,7 @@ def once_item(name):
 
 
 class TestOnceCrash(CoreCase):
+    """〔core〕"""
     def ran(self, node, name):
         try:
             with open(os.path.join(node, "ran-%s.txt" % name)) as f:
@@ -91,6 +94,7 @@ class TestOnceCrash(CoreCase):
 
 @unittest.skipIf(os.geteuid() == 0, "root 讀得到 chmod 000 的檔")
 class TestThreeState(CoreCase):
+    """〔core〕"""
     def test_round_json_unreadable_tick_tock_do_nothing(self):
         node = self.mknode("a", [{"name": "j", "argv": ["true"]}])
         self.round_trip()

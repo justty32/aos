@@ -30,6 +30,8 @@
 3. **daemon 看 node 的 stat 讀不到** × errno：時間線保留、不進 missing、不起 reaper，last_error 帶 errno 類型。
    另有一案真 daemon 用 `AOS7_TEST_FAULT=@規則檔` 中途開關（命中紀錄檔經環境傳給 daemon 子程序）。
 """
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import errno
 import json
 import os
@@ -57,6 +59,7 @@ def keep_item(name="k"):
 
 
 class TestProcUnknown(MatrixCase):
+    """〔core〕"""
     def _healthy(self, op, e):
         """/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。"""
         node = self.mknode("a", [keep_item()])
@@ -224,7 +227,11 @@ gen(TestProcUnknown, "healthy", [("%s_%s" % (op, e), (op, e)) for op in PROC_OPS
 # EACCES 一律不知道。orphan 的任務 sid＝runner pid，所以 environ／cmdline × EACCES 也判 UNKNOWN，全部 12 組都跑。
 # deadboth 的 environ × EACCES 另外是 deadboth_skip：任務真的死了、沒有相關程序 → 照常判 lost 一次。
 UNSURE_SCAN = [(op, e) for op in PROC_OPS for e in ERRNOS]
-gen(TestProcUnknown, "orphan", [("%s_%s" % (op, e), (op, e)) for op, e in UNSURE_SCAN], TestProcUnknown._orphan)
+gen(TestProcUnknown, "orphan", [("%s_%s" % (op, e), (op, e)) for op, e in UNSURE_SCAN
+                                if (op, e) != ("proc-environ", "EACCES")], TestProcUnknown._orphan)
+# 〔misuse M-2.8〕environ EACCES 在任務的 session 裡＝不知道（A3-02，F33）：任務違反前置「environ 可讀」
+gen(TestProcUnknown, "orphan", [("proc-environ_EACCES", ("proc-environ", "EACCES"))], TestProcUnknown._orphan,
+    doc="〔misuse M-2.8〕" + TestProcUnknown._orphan.__doc__)
 gen(TestProcUnknown, "deadboth", [("%s_%s" % (op, e), (op, e)) for op, e in UNSURE_SCAN
                                   if op in ("proc-list", "proc-environ")
                                   and not (op == "proc-environ" and e == "EACCES")], TestProcUnknown._deadboth)
@@ -232,6 +239,7 @@ gen(TestProcUnknown, "brokenbirth_environ", [(e, (e,)) for e in ("EIO", "ESTALE"
 
 
 class TestFileUnknown(MatrixCase):
+    """〔core〕"""
     def _slot_file(self, fname, e):
         """槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。"""
         node = self.mknode("a", [keep_item()])
@@ -331,6 +339,7 @@ gen(TestFileUnknown, "listdir_tasks", [(e, (e,)) for e in ERRNOS], TestFileUnkno
 
 
 class TestDaemonStatUnknown(MatrixCase):
+    """〔core〕"""
     def _stat(self, e):
         """daemon 看已登記 node 的 stat 讀不到：時間線保留、不進 missing、不起 reaper，last_error 帶 errno 類型。"""
         node = self.mknode("a")
@@ -357,6 +366,7 @@ gen(TestDaemonStatUnknown, "node_stat", [(e, (e,)) for e in ERRNOS], TestDaemonS
 
 
 class TestDaemonStatRuleFile(DaemonCase):
+    """〔core〕"""
     def test_real_daemon_node_stat_rule_file(self):
         """真 daemon、`AOS7_TEST_FAULT=@規則檔` 中途開關：命中紀錄檔經環境傳給 daemon，證明 stat 注入真的打中；
         看不到 node 時不進 missing、任務不被收、last_error 帶 errno 類型；拿掉規則檔後回合照常前進。"""

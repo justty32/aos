@@ -37,24 +37,27 @@ python3 $P/aos7-ctl daemon /tmp/sp stop --kill
 在 repo 根跑：
 
 ```sh
-python3 -m unittest discover -s proto7-2/tests
+python3 proto7-2/tests/run_all.py            # 全套：tests/core/、modules/*/tests/、modules/tests/
+python3 proto7-2/tests/run_all.py -k restart # 只跑名字含 restart 的
+python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾（相對 proto7-2/）
 ```
 
-離線、純標準庫，252 項約 90 秒（`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；`test_options_a3.py` 是 retry_lost／until_round）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
+離線、純標準庫，252 項約 90 秒（`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；`test_options_a3.py` 是 retry_lost／until_round）。核心測試在 `tests/core/`，模組包的在 `modules/<包>/tests/`，counter／歷史 module 的在 `modules/tests/`；共用工具（`base.py`、`_matrix.py`、`_proc.py`）留在 `tests/`。各資料夾的測試檔名要唯一。每個測試類別的 docstring 開頭標類別：`〔core〕`、`〔<包名>〕`（control、subd、once_retry、diag、tools、observe）或 `〔misuse M-<契約卡號>〕`（誤用造成的，照[組件契約藍圖](notes/component-contracts.md)，之後隨精簡刪掉）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
 
 | 檔 | 測什麼 |
 |---|---|
-| `test_tick_tock.py` | 槽與 run 號、換 run 清基礎設施檔留任務的檔、each 跳過與 max_live 槽、keep 不雙開、from_round／enabled、once、刪槽（報完再一回合）、**200 回合檔案數不變**、tock 之後才結束的 run 照樣報、inst |
-| `test_ctl.py` | kill／restart／reload／指定 run、kill 範圍（setsid 孫程序、偽造 pgid、inst 的另一個 session）、**lost 前的身分掃描（NODE＋TID＋RUN）**、掛載與執行中加掛 |
-| `test_once_threestate.py` | **once 在 launch 標記後、birth 後、Popen 後、刪項目前各點 kill -9 tick**、成組 once 中途被殺；**三態**：round.json／birth.json 讀不到、starttime 讀不到、槽列不出來 |
-| `test_daemon.py` | **登記／取消登記**、node 刪掉／搬走／換掉 → missing、看不到≠不存在、**early_tock 兩種**、**pause owner**、resume 順便 wake、resume rounds、stop／SIGTERM、第二個 daemon、root 搬走、回條同名蓋掉、控制檔洪水與壞檔、ctl-failed、log.on、卡住的 tick／tock、**kill -9 daemon 後新 daemon 收回合不雙開**、舊動作接管 |
-| `test_subdaemon_modules.py` | **子 daemon 所有權**（owner／daemon 兩塊、allow_stop、stopped.json、人手重開沿用 owner）、subroot 檢查、counter 示範、歷史 module |
-| `test_matrix_faults.py` | **A2 回歸矩陣：讀不到＝不知道**——/proc（list／stat／environ／cmdline）× EIO／ESTALE／EACCES × 情境（健康、孤兒、兩者都死、birth 壞）；birth／exit／pid／round／last-round 開檔與列槽讀不到；daemon 看 node 讀不到 |
-| `test_matrix_docs.py` | **A2 矩陣：檔案半寫、缺欄、型別錯**——round.json（不知道、不 tick、人寫回後接著數）、birth.json × 其他證據（活程序／exit／pid／都沒有）、last-round.json（重新產生、不跳號） |
-| `test_matrix_once.py` | **A2 矩陣：once／keep 在 tick 七個點與 aos7-run 兩個點 SIGKILL**——執行次數、lost 只報一次、同槽不雙開 |
-| `test_matrix_a3.py` | **A3 回歸**：ctl.json 刪不掉跨 run 只執行一次（ctl-seen）、id 不截斷／新 inode／跨槽、owner 檔名無損編碼、生命週期檔換 FIFO、不可 dumpable 任務在 runner 死後不判 lost 且 kill 回 ok:false、mount 子目錄暫存、重播通知失敗記錄與補寫、P2-01 wake 提前結束固定 interval 回合 |
-| `test_options_a3.py` | P2-02 `retry_lost`（加回只跑一次／預設最多一次／型別錯跳過）、`until_round` |
-| `test_matrix_misc.py`、`test_matrix_daemon.py` | **A2 矩陣其餘**：restart 在三個交接點被殺只重起一次、node 換符號連結（同 inode／指到 root 外／父層）＝missing 且不寫出 root、rounds 按 owner、CLI 檔名含 owner、暫存檔清理、wake 不保留、tock.json 晚於總結、診斷不截前綴、history 事件也截行 |
+| `tests/core/test_tick_tock.py` | 槽與 run 號、換 run 清基礎設施檔留任務的檔、each 跳過與 max_live 槽、keep 不雙開、from_round／enabled、once、刪槽（報完再一回合）、**200 回合檔案數不變**、tock 之後才結束的 run 照樣報、inst |
+| `tests/core/test_ctl.py` | kill／restart／reload／指定 run、kill 範圍（setsid 孫程序、偽造 pgid、inst 的另一個 session）、**lost 前的身分掃描（NODE＋TID＋RUN）**、掛載與執行中加掛 |
+| `tests/core/test_once_threestate.py` | **once 在 launch 標記後、birth 後、Popen 後、刪項目前各點 kill -9 tick**、成組 once 中途被殺；**三態**：round.json／birth.json 讀不到、starttime 讀不到、槽列不出來 |
+| `tests/core/test_daemon.py` | **登記／取消登記**、node 刪掉／搬走／換掉 → missing、看不到≠不存在、**early_tock 兩種**、**pause owner**、resume 順便 wake、resume rounds、stop／SIGTERM、第二個 daemon、root 搬走、回條同名蓋掉、控制檔洪水與壞檔、ctl-failed、log.on、卡住的 tick／tock、**kill -9 daemon 後新 daemon 收回合不雙開**、舊動作接管 |
+| `modules/subd/tests/test_subd_ownership.py` | **子 daemon 所有權**（owner／daemon 兩塊、allow_stop、stopped.json、人手重開沿用 owner）、subroot 檢查 |
+| `modules/tests/test_modules_history.py` | counter 示範、歷史 module、history 事件也截行 |
+| `tests/core/test_matrix_faults.py` | **A2 回歸矩陣：讀不到＝不知道**——/proc（list／stat／environ／cmdline）× EIO／ESTALE／EACCES × 情境（健康、孤兒、兩者都死、birth 壞）；birth／exit／pid／round／last-round 開檔與列槽讀不到；daemon 看 node 讀不到 |
+| `tests/core/test_matrix_docs.py` | **A2 矩陣：檔案半寫、缺欄、型別錯**——round.json（不知道、不 tick、人寫回後接著數）、birth.json × 其他證據（活程序／exit／pid／都沒有）、last-round.json（重新產生、不跳號） |
+| `tests/core/test_matrix_once.py` | **A2 矩陣：once／keep 在 tick 七個點與 aos7-run 兩個點 SIGKILL**——執行次數、lost 只報一次、同槽不雙開 |
+| `tests/core/test_matrix_a3.py` | **A3 回歸**：ctl.json 刪不掉跨 run 只執行一次（ctl-seen）、id 不截斷／新 inode／跨槽、owner 檔名無損編碼、生命週期檔換 FIFO、不可 dumpable 任務在 runner 死後不判 lost 且 kill 回 ok:false、mount 子目錄暫存、重播通知失敗記錄與補寫、P2-01 wake 提前結束固定 interval 回合 |
+| `tests/core/test_options_a3.py` | P2-02 `retry_lost`（加回只跑一次／預設最多一次／型別錯跳過）、`until_round` |
+| `tests/core/test_matrix_misc.py`、`test_matrix_daemon.py` | **A2 矩陣其餘**：restart 在三個交接點被殺只重起一次、node 換符號連結（同 inode／指到 root 外／父層）＝missing 且不寫出 root、rounds 按 owner、CLI 檔名含 owner、暫存檔清理、wake 不保留、tock.json 晚於總結、診斷不截前綴 |
 
 ## 結構
 
