@@ -26,8 +26,9 @@ from aos7_fs import N, OK, U, Unknown, edit_json, fact, is_int, now, write_json 
 RESULT_BIN = os.path.join(HERE, "bin", "aos7-step-result")
 NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 KINDS = ("run", "wait", "count", "end")
+# 可逐步覆蓋的選項只有 wake（run）、on_timeout、on_unknown；restart_on_end 是工作級（spec §2）
 FIELDS = {"run": {"run", "ok", "fail", "finite", "idempotent", "patience", "on_timeout", "on_unknown", "receipt",
-                  "expect", "note"},
+                  "expect", "wake", "note"},
           "wait": {"wait", "then", "patience", "on_timeout", "fail", "note"},
           "count": {"count", "then", "exhausted", "note"},
           "end": {"end", "note"}}
@@ -110,6 +111,25 @@ def _cycles(steps):
     return out
 
 
+def _type_issues(table):
+    """圖檢查之前先驗型別：會拿去查表（`in steps`、`in OPS`）的欄必須是字串，否則圖檢查會拋例外。回 [(步, 說明)]。"""
+    steps = table["steps"]
+    out = [] if isinstance(table.get("start", ""), str) else [(None, "start 要是步名字串")]
+    for name, s in steps.items():
+        if not isinstance(s, dict):
+            continue
+        for f in ("ok", "fail", "then", "exhausted"):
+            if f in s and not isinstance(s[f], str):
+                out.append((name, "%s 要是步名字串，拿到 %r" % (f, s[f])))
+        for where, c in (("wait", s.get("wait")), ("receipt", s.get("receipt"))):
+            if isinstance(c, dict):
+                if "result.ok" in c and not isinstance(c["result.ok"], str):
+                    out.append((name, "%s 的 result.ok 要是步名字串" % where))
+                if "num" in c and "op" in c and not isinstance(c["op"], str):
+                    out.append((name, "%s 的 op 要是字串" % where))
+    return out
+
+
 def check(table):
     """檢查步驟表，回 [{"level", "step", "rule", "why"}]。rule：struct／R1／R2／R3。不執行、不改檔。"""
     issues = []
@@ -120,6 +140,11 @@ def check(table):
         add("error", None, "struct", "步驟表要是 {\"job\", \"start\", \"steps\": {...}}")
         return issues
     steps = table["steps"]
+    bad = _type_issues(table)
+    for step, why in bad:            # 型別不對就只報這些、不做圖檢查（不拋例外）
+        add("error", step, "struct", why)
+    if bad:
+        return issues
     for k in set(table) - {"job", "start", "steps", "options", "note"}:
         add("error", None, "R3" if TIME_RE.search(k) else "struct", "不認得的頂層欄 %r" % k)
     if not (isinstance(table.get("job"), str) and NAME_RE.match(table["job"])):
@@ -156,11 +181,12 @@ def check(table):
         if "patience" in s and not (is_int(s["patience"]) and s["patience"] >= 0):
             add("error", name, "R3", "patience 只接受非負整數（本 node 的回合數）；v1 沒有其他時間線，拿到 %r"
                 % (s["patience"],))
-        ot = s.get("on_timeout", opts.get("on_timeout", "unknown"))
+        ot = s.get("on_timeout", opts.get("on_timeout", "unknown"))     # 套全域預設後的有效值
         if "on_timeout" in s and s["on_timeout"] not in OPTIONS["on_timeout"]:
             add("error", name, "struct", "on_timeout 只能是 unknown／fail／kill")
-        elif ot == "kill" and k != "run" and "on_timeout" in s:
-            add("error", name, "struct", "on_timeout: kill 只給 run 步")
+        elif ot == "kill" and k == "wait":
+            add("error", name, "struct", "on_timeout: kill 只給 run 步%s" % (
+                "" if "on_timeout" in s else "（全域選項是 kill，要在步內改回 unknown／fail）"))
         elif ot == "fail" and k in ("run", "wait") and "patience" in s and "fail" not in s:
             add("error", name, "struct", "on_timeout: fail 要有 fail 目標")
         if k == "run":
@@ -172,7 +198,7 @@ def check(table):
             if not (isinstance(ex, list) and all(isinstance(x, str) for x in ex)):
                 add("error", name, "struct", "expect 要是路徑字串陣列")
                 ex = []
-            for f in ("finite", "idempotent"):
+            for f in ("finite", "idempotent", "wake"):
                 if f in s and not isinstance(s[f], bool):
                     add("error", name, "struct", "%s 要是 true／false" % f)
             ou = s.get("on_unknown", opts.get("on_unknown", "stop"))
@@ -288,11 +314,11 @@ class Job:
         fr["rev"] = want + 1
 
 
-def new_frame(t, rev):
-    """新工作：新 inst、pc=start（spec §3）。rev=0 表示磁碟上還沒有框架。"""
+def new_frame(t, rev, rnd=None):
+    """新工作：新 inst、pc=start、since＝現在的回合（spec §3；不知道就留 None，advance 開頭補）。rev=0 表示磁碟上還沒有框架。"""
     return {"v": 1, "job": t["job"], "inst": uuid.uuid4().hex[:8], "table": rev, "pc": t["start"],
             "phase": "running", "counts": {}, "visits": {t["start"]: 1}, "accepted": {}, "tries": {},
-            "pending": None, "halt": None, "end": None, "since": None, "seen": None, "rev": 0}
+            "pending": None, "halt": None, "end": None, "since": rnd, "seen": None, "rev": 0}
 
 
 # ---------- 讀核心公開的檔 ----------
@@ -574,6 +600,8 @@ class Interp:
     def advance(self):
         """照 pc 前進，最多登記一個 once。回 True＝工作結束。"""
         fr = self.fr
+        if fr["since"] is None and self.rnd is not None:      # 建框架時回合還不知道：第一次知道就當耐性起點
+            fr["since"] = self.rnd
         for _ in range(MAX_STEPS_PER_PASS):
             if fr["phase"] != "running":
                 break
@@ -629,12 +657,12 @@ def run_pass(jd, tock_round=None, node=None):
         t, rev = job.load_table()
         st, fr = job.read_frame()
         if st == N:
-            fr = new_frame(t, rev)
+            fr = new_frame(t, rev, rnd)
             job.save(fr)
         if fr["phase"] == "ended":
             if not t.get("options", {}).get("restart_on_end"):
                 return "exit"
-            close(job, fr, reopen=(t, rev))
+            close(job, fr, reopen=(t, rev, rnd))
             st, fr = job.read_frame()
         it = Interp(job, t, fr, rnd)
         if fr["phase"] == "running" and fr["table"] != rev:
@@ -656,7 +684,7 @@ def run_pass(jd, tock_round=None, node=None):
 
 
 def close(job, fr, reopen=None):
-    """結案：清 results/，框架標 closed（reopen＝(表, 版本) 時直接換成新工作）。只准已結束的工作。"""
+    """結案：清 results/，框架標 closed（reopen＝(表, 版本, 回合) 時直接換成新工作）。只准已結束的工作。"""
     if fr["phase"] != "ended":
         raise Unknown("工作還沒結束（phase %s），不能 close" % fr["phase"], kind="close")
     shutil.rmtree(job.a(job.p("results")), ignore_errors=True)
