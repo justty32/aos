@@ -6,10 +6,17 @@
 daemon 在 node 消失／停止時呼叫，tick／tock 透過 aos7_task 判定與收程序（S-03、S-17）。
 讀 /proc 的 stat、cmdline、environ；不寫協定檔，exit.json 留給 runner 或上層。
 
-**三態一路傳到底（A2-01）**：/proc 讀取只分三種結果——讀到、確定不在（ENOENT／ESRCH：程序剛走）、讀不到（EIO、ESTALE、
-自己 uid 的程序 EACCES…）。讀不到一律丟 `ProcUnknown`，不再悄悄當成「沒有」：掃描不完整就不能支持 lost、清槽、重起，
+**三態一路傳到底（A2-01）**：/proc 讀取只分三種結果——讀到、確定不在（ENOENT／ESRCH：程序剛走）、讀不到（EIO、ESTALE…）。
+讀不到一律丟 `ProcUnknown`，不再悄悄當成「沒有」：掃描不完整就不能支持 lost、清槽、重起，
 收程序的確認也不能說「收乾淨了」。呼叫的人（aos7_task.judge／resolve、kill_identity、daemon 的收程序）接住它，
-保留現狀、把原因記進 errors／last_error（spec §0）。"""
+保留現狀、把原因記進 errors／last_error（spec §0）。
+
+**environ 的 EACCES 另算（A3-02）**：別的 uid、或同 uid 但不可 ptrace 的程序（systemd --user…），environ 讀不到權限是常態，
+每次掃都會碰到；一律當「不知道」會讓所有掃描停住。所以 environ EACCES 回 `DENIED`：預設當「不是可辨認的任務」略過——
+**但它若在已知任務的 session 或程序群組裡**（呼叫的人從 aos7-run 記的 runner pid／pid.json 的 pgid 給 `related`），
+就是「自己還沒交接完、或自己變得不可讀的任務」，丟 ProcUnknown（不知道），不能當沒有。
+管理範圍（spec §11）：任務程序必須跟 daemon 同 uid、environ 可讀；setuid／換 uid／關掉 dumpable 的程式不在保證範圍。
+cmdline 是全世界可讀的，EACCES 不是常態，照一般讀取錯誤當不知道。"""
 import errno
 import os
 import signal
@@ -24,6 +31,9 @@ ALIVE, GONE, UNKNOWN = "alive", "gone", "unknown"
 PROC_GONE_ERRNO = (errno.ENOENT, errno.ESRCH)   # 讀 /proc/<pid>/* 時這兩種＝程序已經不在
 
 
+DENIED = object()   # environ 讀不到權限（EACCES／EPERM）：身分不可見，不是「不在」也不是讀到（A3-02）
+
+
 class ProcUnknown(Exception):
     """/proc 讀不完整（列不出 /proc、某個程序的 stat／environ／cmdline 讀不到）：掃描結果不能當「確定沒有」（A2-01）。"""
 
@@ -31,9 +41,9 @@ class ProcUnknown(Exception):
 def _read_proc(pid, name, binary=False):
     """讀 `/proc/<pid>/<name>`：回內容；程序確定不在回 None；其他讀取錯誤丟 ProcUnknown（三態的唯一入口，A2-01）。
 
-    environ／cmdline 遇到 EACCES／EPERM 回 b""＝「讀不到身分、不是可辨認的任務」：別的 uid 的程序、以及同 uid 但不可 ptrace 的程序
-    （systemd --user、帶 capability 的桌面程式…）本來就這樣，每次掃都會碰到；我們起的任務是可讀的，自己變成不可讀算故意脫離
-    （spec §11：身分掃描靠環境變數）。其他錯誤（EIO、ESTALE…）才是「不知道」。stat 沒有權限問題，任何讀取錯誤都是「不知道」。"""
+    只有 environ 遇到 EACCES／EPERM 回 `DENIED`（身分不可見；怎麼算由 env_procs／group_is_task 照 `related` 決定，A3-02）。
+    stat、cmdline 本來全世界可讀，任何讀取錯誤都是「不知道」（以前 cmdline 的 EACCES 也當 b""，會把讀不到 cmdline 的
+    aos7-run 當成任務去打）。"""
     path = "/proc/%d/%s" % (pid, name)
     try:
         inject("proc-" + name, path)
@@ -42,8 +52,8 @@ def _read_proc(pid, name, binary=False):
     except OSError as e:
         if e.errno in PROC_GONE_ERRNO:
             return None
-        if binary and e.errno in (errno.EACCES, errno.EPERM):
-            return b""
+        if name == "environ" and e.errno in (errno.EACCES, errno.EPERM):
+            return DENIED
         raise ProcUnknown("讀不到 %s：%r" % (path, e)) from None
 
 
@@ -101,13 +111,14 @@ def all_pids():
 
 
 def stat_of(pid):
-    """回 (state, ppid, pgid)；程序確定不在回 None；讀不到或內容解析不了丟 ProcUnknown（A2-01）。"""
+    """回 (state, ppid, pgid, sid)；程序確定不在回 None；讀不到或內容解析不了丟 ProcUnknown（A2-01）。
+    sid（session）給 A3-02：tick 用新 session 起 aos7-run，任務留在那個 session，sid＝runner 的 pid。"""
     text = _read_proc(pid, "stat")
     if text is None:
         return None
     try:
         rest = text.rsplit(")", 1)[1].split()
-        return rest[0], int(rest[1]), int(rest[2])
+        return rest[0], int(rest[1]), int(rest[2]), int(rest[3])
     except (IndexError, ValueError):
         raise ProcUnknown("/proc/%d/stat 內容解析不了" % pid) from None
 
@@ -154,9 +165,29 @@ def is_runner(pid):
 
 
 def environ_of(pid):
-    """讀 /proc/<pid>/environ；回 bytes 環境項目的 set；程序已不在或是別人的程序回 None；讀不到丟 ProcUnknown（A2-01）。"""
+    """讀 /proc/<pid>/environ；回 bytes 環境項目的 set；程序已不在（或環境是空的）回 None；
+    沒有權限讀（別的 uid、不可 ptrace）回 DENIED；其他讀不到丟 ProcUnknown（A2-01、A3-02）。"""
     data = _read_proc(pid, "environ", binary=True)
+    if data is DENIED:
+        return DENIED
     return set(data.split(b"\0")) if data else None
+
+
+def related_of(runner=None, pgid=None):
+    """A3-02：從 aos7-run 記下的身分組出「已知任務的 session／群組」：runner＝birth.json 的 runner pid（tick 用新 session 起它，
+    任務的 sid 就是它）、pgid＝pid.json 的 pgid。回 {"sids", "pgids"}；都沒有回 None（沒有已知範圍，environ 讀不到的照常略過）。"""
+    sids = {runner} if isinstance(runner, int) and not isinstance(runner, bool) and runner > 1 else set()
+    pgids = {pgid} if isinstance(pgid, int) and not isinstance(pgid, bool) and pgid > 1 else set()
+    return {"sids": sids, "pgids": pgids} if sids or pgids else None
+
+
+def _denied_related(pid, st, related):
+    """environ 讀不到權限的程序 pid（stat 是 st）在不在 related 的 session／群組裡；在就丟 ProcUnknown（A3-02）。"""
+    # 殭屍（已死、等父程序收）的 environ 也是 EACCES：它不會再做任何事，不算
+    if related and st and st[0] != "Z" and (st[3] in related["sids"] or st[2] in related["pgids"]):
+        raise ProcUnknown("pid %d 的 environ 沒有權限讀，但它在已知任務的 session／群組裡（sid %d、pgid %d）："
+                          "可能是還沒交接完、或自己變得不可讀的任務，不能當沒有（A3-02；spec §11：任務要跟 daemon 同 uid、"
+                          "environ 可讀）" % (pid, st[3], st[2]))
 
 
 def want_env(node, tid=None, run=None):
@@ -171,12 +202,13 @@ def want_env(node, tid=None, run=None):
     return w
 
 
-def env_procs(nodes, tid=None, run=None, skip=(), runners=False):
+def env_procs(nodes, tid=None, run=None, skip=(), runners=False, related=None):
     """一次掃 `/proc/*/environ`（spec 5.2 身分掃描）：AOS7_NODE 在 nodes 裡、有 AOS7_TID（給了 tid 要相符）、
     給了 run 要 AOS7_RUN 相符的程序。預設不含 aos7-run。回 pid 清單。
 
     nodes 可為單一路徑或可迭代路徑集；skip 是排除 pid，runners=True 才包含包裝程序。
-    回空清單＝**掃完了、確定沒有**；掃描不完整（列不出 /proc、自己的程序 environ 讀不到…）丟 ProcUnknown（spec §0、§5.2；A2-01）。"""
+    related（related_of 的結果）：environ 讀不到權限、又在這些 session／群組裡的程序＝不知道（A3-02）；其他讀不到權限的略過。
+    回空清單＝**掃完了、確定沒有**；掃描不完整（列不出 /proc、environ 讀不到…）丟 ProcUnknown（spec §0、§5.2；A2-01）。"""
     nodes = [nodes] if isinstance(nodes, str) else list(nodes)
     want_nodes = {b"AOS7_NODE=" + n.encode() for n in nodes}
     want_tid = None if tid is None else b"AOS7_TID=" + tid.encode()
@@ -187,6 +219,9 @@ def env_procs(nodes, tid=None, run=None, skip=(), runners=False):
         if pid in skip:
             continue
         env = environ_of(pid)
+        if env is DENIED:
+            _denied_related(pid, stat_of(pid), related)
+            continue
         if not env or not (env & want_nodes):
             continue
         if want_tid is not None:
@@ -221,18 +256,25 @@ def group_is_task(pgid, node, tid, run):
     """pid.json 的 pgid 真的是這個任務（這一次 run）的嗎：群組沒有活成員（沒東西可打），或有成員（或成員的父程序＝aos7-run）
     的環境是 NODE＋TID＋RUN。pid.json 在任務自己寫得到的槽裡，改了 pgid 的不能讓 kill 打到別人（spec 第 6 節）。
 
-    pgid 是待核對群組，node／tid／run 是目標身分；回 bool。成員環境核對不到回 False；掃描不完整丟 ProcUnknown。"""
+    pgid 是待核對群組，node／tid／run 是目標身分；回 bool。成員環境讀得到、都不是這個任務回 False；掃描不完整丟 ProcUnknown。
+    A3-09：有成員的 environ 沒有權限讀、又沒有任何成員核對得到 → 丟 ProcUnknown（群組是 pid.json 記的，可能就是任務自己變得
+    不可讀）——不能回 False 讓 kill 說「沒動它、收乾淨了」。"""
     if not isinstance(pgid, int) or isinstance(pgid, bool) or pgid <= 1:
         return False
     want = want_env(node, tid, run)
     members = [(p, st) for p, st in _table().items() if st[2] == pgid and st[0] != "Z"]
     if not members:
         return True
+    denied = []
     for p, st in members:
         e = environ_of(p)
         pe = environ_of(st[1])
-        if (e and want <= e) or (pe and want <= pe):
+        if (e not in (None, DENIED) and want <= e) or (pe not in (None, DENIED) and want <= pe):
             return True
+        if e is DENIED and st[0] != "Z":
+            denied.append(p)
+    if denied:
+        raise ProcUnknown("群組 %d 的成員 %s environ 沒有權限讀，核對不了是不是這個任務（A3-09）" % (pgid, denied[:5]))
     return False
 
 
@@ -287,15 +329,18 @@ def groups_of(pids):
     return out
 
 
-def kill_identity(node, tid, run, pgid=None):
+def kill_identity(node, tid, run, pgid=None, runner=None, task=None):
     """Q1 (a) 的範圍收一次 run：pid.json 的群組（先確認是這個任務的）、群組成員活著的後代所在的群組、
     環境變數 NODE＋TID＋RUN 相符的程序（含被 init 收養的）。回 (乾不乾淨, 說明)。
 
-    node／tid／run 指定唯一一次執行，pgid 可帶紀錄的群組；回 (bool, 字串)。身分無法核對的群組不打。
-    /proc 掃描不完整回 (False, 說明)：不知道有沒有收乾淨，呼叫的人當「不知道」處理（spec §6；A2-01）。"""
+    node／tid／run 指定唯一一次執行，pgid 可帶紀錄的群組；runner＝birth.json 的 runner pid（A3-02 的已知 session）；
+    task＝pid.json 的 (pid, starttime)。回 (bool, 字串)。身分無法核對的群組不打。
+    /proc 掃描不完整回 (False, 說明)：不知道有沒有收乾淨，呼叫的人當「不知道」處理（spec §6；A2-01）。
+    **A3-09**：最後再看一次 pid.json 記的任務程序——它還活著（或認不出死了沒）就不能回「收乾淨」，即使群組身分核對不了
+    而沒送訊號（以前 groups 空就回 True，回條寫 ok:true 加「沒動它」，任務其實還活著）。"""
     try:
         me = me_and_ancestors()
-        found = env_procs(node, tid, run, skip=me)
+        found = env_procs(node, tid, run, skip=me, related=related_of(runner, pgid))
         groups = groups_of(found)
         note = ""
         # spec §6：pid.json 是任務能改的檔，不能只相信其中的 pgid 就向別人送訊號。
@@ -304,11 +349,16 @@ def kill_identity(node, tid, run, pgid=None):
                 groups.add(pgid)
             else:
                 note = "；pid.json 的 pgid %r 不是這個任務的群組，沒動它" % (pgid,)
-        if not groups:
-            return True, "no process" + note
-        clean = kill_groups(groups)
+        clean = kill_groups(groups) if groups else True
     except ProcUnknown as e:
         return False, "unknown：/proc 讀不完整，不知道有沒有收乾淨（%s）" % e
+    if task and task[0]:
+        ts = same_process(task[0], task[1])
+        if ts != GONE:
+            return False, "unknown：pid.json 記的任務程序 %d %s，不能說收乾淨%s" % (
+                task[0], "還活著" if ts == ALIVE else "認不出死了沒", note)
+    if not groups:
+        return True, "no process" + note
     return clean, ("killed %d group(s)" % len(groups) if clean else "still alive after SIGKILL") + note
 
 
@@ -321,11 +371,18 @@ def kill_node(node, known_pgids=()):
     groups = {g for g in known_pgids if isinstance(g, int) and g > 1}
     try:
         me = me_and_ancestors()
-        groups |= groups_of(env_procs(node, skip=me))
+        # A3-02：environ 讀不到權限、又在記著的任務群組裡的程序＝不知道（clean=False），不當「沒有」
+        groups |= groups_of(env_procs(node, skip=me, related={"sids": set(), "pgids": set(groups)} if groups else None))
         if not groups:
             return 0, True
         return len(groups), kill_groups(groups)
     except ProcUnknown:
+        # spec §2.6：掃描不完整時只打記著的群組（astra-2 讀碼：以前這裡直接回 False，連記著的群組都沒收）
+        try:
+            if groups:
+                kill_groups(groups)
+        except ProcUnknown:
+            pass
         return len(groups), False
 
 

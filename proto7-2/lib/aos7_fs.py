@@ -53,7 +53,23 @@ def inject(op, path):
             continue
         code = getattr(errno, parts[2].strip(), None)
         if isinstance(code, int):
+            _record_hit(op, path, parts[2].strip())
             raise OSError(code, "%s（AOS7_TEST_FAULT 注入）" % os.strerror(code), str(path))
+
+
+def _record_hit(op, path, name):
+    """**只給測試**：注入真的命中時，在環境變數 `AOS7_TEST_FAULT_HITS` 指的檔追加一行 `op<TAB>errno<TAB>path`（astra-2 矩陣盲點）。
+
+    矩陣每個案例都要證明「指定的故障確實打中 ≥1 次」，不能只靠綠燈（healthy 12 案曾有 9 案沒打中卻全過）。
+    用檔案而不是記憶體計數：子程序（tick／tock／daemon）命中的也算得到。寫不進去就算了，不影響被測程式。"""
+    hits = os.environ.get("AOS7_TEST_FAULT_HITS")
+    if not hits:
+        return
+    try:
+        with open(hits, "a", encoding="utf-8") as f:
+            f.write("%s\t%s\t%s\n" % (op, name, path))
+    except OSError:
+        pass
 
 
 def now():
@@ -192,29 +208,36 @@ def edit_json(path, fn, default=None, timeout=None):
 OK, MISSING, BAD, IO = "ok", "missing", "bad", "io"
 
 
-def read_json3(path, dir_fd=None):
+def read_json3(path, dir_fd=None, strict=False):
     """讀 JSON，分清楚三態：回 (狀態, 值)。
 
     - ("ok", 值)：讀到、解得開（值可能不是物件，型別由呼叫的人看）。
-    - ("missing", None)：確定不存在（ENOENT／ENOTDIR），或不是一般檔（FIFO、資料夾當不存在；spec 第 0 節）。
+    - ("missing", None)：確定不存在（ENOENT／ENOTDIR）；`strict=False` 時不是一般檔（FIFO、資料夾、socket）也當不存在。
     - ("bad", None)：一般檔、讀得到，但不是 JSON（人手寫壞）。
     - ("io", 錯誤字串)：讀不到（EIO、EACCES、ESTALE…）＝**不知道**，不能當不存在也不能當壞掉去做破壞性動作。
 
+    **strict=True 給生命週期檔**（round.json、last-round.json、birth.json、pid.json、exit.json；A3-03）：存在但不是一般檔
+    ＝「有東西在那裡、讀不出內容」＝不知道，回 ("io", 說明)，不當不存在——否則把 birth.json 換成 FIFO 會被當空槽而雙開、
+    把開著的 round.json 換成 FIFO 會從 last-round.json 接號再開同一回合。照樣非阻塞開，FIFO 不會卡住讀的人。
+    其他檔（控制垃圾、tasks.json、timeline.json…）維持「當不存在」。
+
     path 是檔案路徑，dir_fd 可指定相對路徑的基準目錄 fd。四種讀檔結果供上層組成
     是／否／不知道三態；BAD 如何解讀由該檔案的契約決定，不混同 I/O 失敗。"""
+    notreg = (IO, "%s 存在但不是一般檔（FIFO、資料夾…），讀不出內容（A3-03）" % os.path.basename(str(path))) \
+        if strict else (MISSING, None)
     try:
         inject("open", path)
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK, dir_fd=dir_fd)
     except OSError as e:
-        if e.errno in (errno.ENOENT, errno.ENOTDIR, errno.ENXIO):
+        if e.errno in (errno.ENOENT, errno.ENOTDIR):
             return MISSING, None
-        if e.errno == errno.EISDIR:
-            return MISSING, None
+        if e.errno in (errno.ENXIO, errno.EISDIR):
+            return notreg   # socket 等開不了的特殊檔、資料夾：有東西，不是一般檔
         return IO, repr(e)[:200]
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             os.close(fd)
-            return MISSING, None
+            return notreg
         with os.fdopen(fd, "rb") as f:
             data = f.read()
     except OSError as e:
@@ -235,7 +258,7 @@ def read_round(path):
     - ("none", None, None)：確定不存在（新空間、或被人刪了；tick 照 last-round.json 接著數）。
     - (IO, None, 說明)：讀不到。
     - (BAD, 內容, 說明)：半寫、不是物件、缺 `open`、型別不對——跟讀不到一樣是「不知道」，不能當已關（不然會跳過或覆蓋未提交的回合）。"""
-    st, r = read_json3(path)
+    st, r = read_json3(path, strict=True)   # A3-03：round.json 被換成 FIFO／資料夾＝不知道，不是新空間
     if st == MISSING:
         return ROUND_NONE, None, None
     if st == IO:

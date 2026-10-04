@@ -160,8 +160,10 @@ def main(argv=None):
     # pid.json 也經過 fd 寫：任務資料夾剛被刪（測試收尾、node 被 rm -rf）時不會用 makedirs 把它建回來
     # spec §5.4、P2-08：pid 可能重用，連同 starttime 才能辨認同一程序；讀不到由判定層保守處理。
     crash_point("runner-before-pid")
+    # A3-02：記下任務的 uid（＝runner 的 uid，子程序繼承）。管理範圍是「跟 daemon 同 uid、environ 可讀」的任務（spec §11）；
+    # 事後 environ 讀不到時，靠這裡的 pid／pgid 與 birth 的 runner（session）認出「這是自己的任務」，當不知道而不是沒有。
     write_at(dfd, "pid.json", {"run": RUN[0], "pid": proc.pid, "pgid": proc.pid, "starttime": proc_starttime(proc.pid),
-                               "runner_pid": os.getpid(), "at": now()})
+                               "runner_pid": os.getpid(), "uid": os.getuid(), "at": now()})
     code = proc.wait()
     out.close()
     crash_point("runner-before-exit")
