@@ -214,7 +214,7 @@ class TestPause(DaemonCase):
         self.assertEqual(self.nstat()["paused_by"], ["k"])
 
     def test_wake(self):
-        # 固定 interval 時整段 interval 都在回合中（wake 照舊不打斷）；提前 tock 才有「等下一回合」的空檔（P2-06）
+        # 固定 interval 時整段 interval 都在回合中（wake 照舊不打斷）；提前 tock 才有「等下一回合」的空檔（P2-01）
         self.mknode("a", interval_ms=5000, early=True)
         self.start_daemon(register=["a"])
         self.wait_round(1)
