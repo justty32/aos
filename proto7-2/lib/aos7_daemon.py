@@ -486,8 +486,9 @@ class Daemon:
 
     def write_status(self, stopped=False):
         nodes = {}
-        for nid in sorted(set(self.registry) | set(self.timelines)):
-            tl = self.timelines.get(nid)
+        retiring = {nid: t for nid, (t, _k) in self.retiring.items() if t.is_alive()}
+        for nid in sorted(set(self.registry) | set(self.timelines) | set(retiring)):
+            tl = self.timelines.get(nid) or retiring.get(nid)
             by = list(self.paused.get(nid) or [])
             if tl is None:
                 row = {"round": None, "round_open": None, "recovery_pending": False,
@@ -499,6 +500,8 @@ class Daemon:
                     row["last_error"] = self.node_errors[nid]
             else:
                 phase = "paused" if by and tl.phase == "idle" else tl.phase
+                if nid in retiring and phase != "stopped":
+                    phase = "unregistering"   # unregister 了，本回合收完才結束（2.3）
                 row = {"round": tl.round, "round_open": tl.round_open, "recovery_pending": tl.recovery_pending,
                        "phase": phase, "paused_by": by,
                        "pause_pending": bool(by) and phase not in ("paused", "stopped", "error"),
