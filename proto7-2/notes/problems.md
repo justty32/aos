@@ -2,25 +2,25 @@
 
 ← [proto7-2](../README.md)｜[spec](../spec.md)｜[跟 proto7-1 的差別](changes-from-7-1.md)
 
-照 [spec.md](../spec.md) 做 daemon／tick／tock／run／ctl（10-04）時，spec 說不清、做不出來、或有更簡單的做法的地方。spec 裡對應的地方標了「P2-」。W1～W12 照推薦做，沒有在這裡重列。astra 第一輪回歸（[報告](play/2026-10-04-astra-1-infra.md)）的 A2-01～A2-13 與讀碼疑點的處理在最後一節，spec 對應處標「A2-」。
+照 [spec.md](../spec.md) 做 daemon／tick／tock／run／ctl（10-04）時，spec 說不清、做不出來、或有更簡單的做法的地方。spec 裡對應的地方標了「P2-」。W1～W12 照推薦做，沒有在這裡重列。astra 第一輪回歸（[報告](play/2026-10-04-astra-1-infra.md)）的 A2-01～A2-13 與讀碼疑點的處理在倒數第二節，spec 對應處標「A2-」；astra 第二輪（[報告](play/2026-10-04-astra-2-infra.md)）的 A3-01～A3-09 在最後一節，spec 對應處標「A3-」。
 
 分級：**〔要使用者決定〕**＝語意題，先照最簡推薦做；〔技術選型，先這樣〕；〔默認正常〕。
 
-## 要使用者決定（2 條；10-04 使用者說「隨意，真的糾結就做選項」，頂層已定，待下一輪修補實作）
+## 要使用者決定（0 條）
 
-### P2-01 固定 interval 時 `wake` 沒有作用
+原有的 P2-01、P2-02 兩條：10-04 使用者說「隨意，真的糾結就做選項」，頂層定案，astra-2 修補（commit 79e67233）已實作，語意如下。
 
-- `early_tock: false`（預設）時，時間線在第 4 步就等滿 interval 才 tock，第 6 步「等到滿 interval」幾乎是 0。所以固定 interval 的 node **整段都在回合中**，照 2.3「回合中照舊」，`wake` 不起作用；`resume` 順便 wake 也只在 node 停在 pause 時有用（那時本來就不在回合中，照樣馬上開）。
-- 現在：照 spec 字面做，測試的 wake 用 `early_tock: true`。
-- **頂層定（10-04）：選（b），不做選項。** wake 是明確的請求，固定節拍是「沒人叫時」的預設；kernel 有信要叫醒閒置 node（第三波 tickless）靠它。
-- 其他選項：（b）固定 interval 時 `wake` 打斷第 4 步，馬上 tock、馬上開下一回合（等於「這回合提前結束」）；（c）`wake` 只縮短下一回合（下一回合的 interval 從 wake 那一刻重算）。
+### P2-01 固定 interval 時 `wake` 沒有作用 → 已定 (b)、已實作
 
-### P2-02 once 被殺在「寫了 birth、runner 還沒記到」之間：報成 lost，一次都沒跑
+- 原狀：`early_tock: false`（預設）時，時間線在第 4 步就等滿 interval 才 tock，第 6 步幾乎是 0，整段都在回合中，照「回合中照舊」`wake` 不起作用。
+- **頂層定（10-04）：選 (b)，不做選項。** wake 是明確的請求，固定節拍是「沒人叫時」的預設；kernel 有信要叫醒閒置 node（第三波 tickless）靠它。沒選的：(c) `wake` 只縮短下一回合。
+- **做法**：tick 開始之後收到 wake（或讓 node 從有人 pause 變成沒人 pause 的 resume）→ 提前結束這回合：馬上 tock（`AOS7_EARLY=1`）、跳過第 6 步、馬上開下一回合，記事件 `woke`。`early_tock: true` 照舊（回合中 wake 不起作用，A2-11）。resume 只在 node 因此變成沒人 pause 時才順便 wake（本來就沒人 pause 的 resume 不切掉正在跑的回合）。spec 2.1 第 4、6 步、2.3。
 
-- 4.4 的 launch 標記保證不重起。但 tick 被 kill -9 在 birth.json 寫完、Popen 之前或剛 Popen 之後（runner 還沒補進 birth.json）時，下一個 tick 分不出 runner 起了沒，只能照 5.4 等兩回合、身分掃描找不到就判 lost。
-- 結果：這項**沒跑過，但 last-round.json 會報 `{"run": "o#1", "code": null, "lost": true}`**，不會無痕消失，但也不會再跑。測試 `test_crash_after_birth` 鎖住這個行為。
-- 這是「最多一次」（at-most-once）。要「至少一次」可以：判 lost 時若 birth.json 沒有 runner、也沒有 pid.json、out.log 是空的，就把 once 項加回 tasks.json 重起（有極小機率真的跑了兩次）。要不要改由你定。
-- **頂層定（10-04）：做成選項。** once 項加可選 `retry_lost`（bool，預設 false＝最多一次，現狀）；true 時用上面「至少一次」的判法把 once 項加回重起（可能跑兩次）。兩邊各有道理（付費工作怕重複 vs. 怕漏跑），照使用者「糾結就做選項」。
+### P2-02 once 被殺在「寫了 birth、runner 還沒記到」之間：報成 lost，一次都沒跑 → 已做成選項 `retry_lost`
+
+- 原狀：tick 被 kill -9 在 birth.json 寫完、runner 還沒補進去時，下一個 tick 分不出 runner 起了沒，等兩回合身分掃描找不到就判 lost，last-round.json 報 `{"run": "o#1", "code": null, "lost": true}`，不再跑（最多一次）。測試 `test_crash_after_birth` 鎖住這個預設行為。
+- **頂層定（10-04）：做成選項。** 兩邊各有道理（付費工作怕重複 vs. 怕漏跑），照使用者「糾結就做選項」。
+- **做法**：once 項可選 `retry_lost`（bool，預設 false＝最多一次，現狀）。true 時判 lost 若 birth 沒 runner、沒 pid.json、out.log 不存在或空 → 先把 once 項照 birth 定義加回 tasks.json（`slot` 釘同槽、`retry_lost: true`、`retry_of`＝原 run id；同槽同 `retry_of` 不重加；表鎖一秒拿不到就先不判 lost，下次再看），再寫 lost exit（帶 `retried: true`，`ended` 也帶）；可能跑兩次。out.log 讀不到大小＝不加回。spec 4.1、4.4。
 
 ## 技術選型，先這樣
 
@@ -79,14 +79,14 @@
 
 ## 默認正常
 
-- **P2-15 測試鉤子留在程式裡（只給測試用）**：環境變數 `AOS7_TEST_CRASH=<點>`（在那個點自己 SIGKILL；tick：`before-launch`、`after-launch`、`after-birth`、`after-popen`、`after-runner`、`before-once-delete`、`after-once-delete`；任務控制：`restart-after-append`、`restart-after-kill`、`ctl-after-done`；tock：`tock-summary`、`tock-after-finish`；原子寫：`tmp:<檔名>`）、`AOS7_TEST_HANG=<點>`（`tick-opened`、`tock-summary` 卡住）、`AOS7_TEST_RUNNER_CRASH=<點>`（aos7-run 的 `runner-before-pid`、`runner-before-exit`；aos7-run 一開始就從環境拿掉）、`AOS7_TEST_FAULT=<op:glob:ERRNO;…>` 或 `@<規則檔>`（在 /proc 讀取、三態讀檔、列槽、daemon 看 node、tick 開 node 注入 errno；規則檔每次重讀，給跑著的 daemon 中途開關）。用來做 A2 回歸矩陣（`tests/test_matrix*.py`）。tick 起任務時把 CRASH／HANG／FAULT 從任務環境拿掉；正常環境沒有這些變數，程式只多一次環境查詢。
+- **P2-15 測試鉤子留在程式裡（只給測試用）**：環境變數 `AOS7_TEST_CRASH=<點>`（在那個點自己 SIGKILL；tick：`before-launch`、`after-launch`、`after-birth`、`after-popen`、`after-runner`、`before-once-delete`、`after-once-delete`；任務控制：`restart-after-append`、`restart-after-kill`、`ctl-after-done`；tock：`tock-summary`、`tock-after-finish`；任務控制另有 `ctl-after-seen`（記完 ctl-seen.json、寫回條之前，A3-01）；原子寫：`tmp:<檔名>`）、`AOS7_TEST_HANG=<點>`（`tick-opened`、`tock-summary` 卡住）、`AOS7_TEST_RUNNER_CRASH=<點>`（aos7-run 的 `runner-before-pid`、`runner-before-exit`；aos7-run 一開始就從環境拿掉）、`AOS7_TEST_FAULT=<op:glob:ERRNO;…>` 或 `@<規則檔>`（在 /proc 讀取、三態讀檔、列槽、daemon 看 node、tick 開 node 注入 errno；規則檔每次重讀，給跑著的 daemon 中途開關）、`AOS7_TEST_FAULT_HITS=<檔>`（注入真的命中時追加一行 `op<TAB>errno<TAB>路徑`，子程序命中也記得到；矩陣用來斷言故障確實打中，A3）。用來做 A2 回歸矩陣（`tests/test_matrix*.py`）。tick 起任務時把 CRASH／HANG／FAULT／FAULT_HITS 從任務環境拿掉；正常環境沒有這些變數，程式只多一次環境查詢。
 - **P2-16 kernel／agent 沒做**：照這次的範圍只做基礎設施。第 8 節（kernel 用量累計）沒有程式；第 9 節的歷史 module 有參考實作（`modules/history.py`），另有最小示範任務 `modules/counter.py`（讀同槽上一次的 state、收 tock.json）。
 - **P2-17 寫入紀錄（`AOS7_AUDIT`）照搬沒測**：`lib/audit_site/`、`aos7_audit.py` 原樣複製自 proto7-1，`writes.jsonl` 換 run 時清（5.1）。這次沒有對它寫測試。
 - **P2-18 max_live 要是正整數**：0 不合（整項跳過）；要停用用 `enabled: false`。
 
 ## astra 第一輪（A2）的處理
 
-依 [astra 第一輪報告](play/2026-10-04-astra-1-infra.md) 與 astra 加註解時讀出的 14 處疑點（commit b749d5eb）。三件核心工作（未知一路保留、回合與槽的身分證據、控制意圖重播只生效一次）做成固定回歸矩陣：`tests/test_matrix*.py`（維度與判定見各檔檔頭）。P2-01、P2-02 仍待使用者決定，語意沒動。
+依 [astra 第一輪報告](play/2026-10-04-astra-1-infra.md) 與 astra 加註解時讀出的 14 處疑點（commit b749d5eb）。三件核心工作（未知一路保留、回合與槽的身分證據、控制意圖重播只生效一次）做成固定回歸矩陣：`tests/test_matrix*.py`（維度與判定見各檔檔頭）。P2-01、P2-02 當時仍待使用者決定，語意沒動（後來的處理見上面 P2-01、P2-02）。
 
 | 編號 | 處理 | 做法（spec 對應處標 A2-） |
 |---|---|---|
@@ -122,3 +122,23 @@
 | aos7_daemon.py:346、416（控制檔失敗又搬不走會再執行） | 已修：卡住的不再執行，只每圈再試著搬到 ctl-failed（daemon 重開後才會再當新請求，已接受） |
 | sitecustomize.py:63（靠 timeline.json 認巢狀 node） | 已修：改讀 nodes.json（P2-17 仍沒有專門測試） |
 | aos7_mount.py:202（列掛載請求沒排除 `.` 開頭） | 已修 |
+
+## astra 第二輪（A3）的處理
+
+依 [astra 第二輪報告](play/2026-10-04-astra-2-infra.md)。修補在 commit 537ef674（A3-02、03、09、命中紀錄）與 79e67233（其餘、P2-01、P2-02、until_round）。報告第四節的人工停點表改寫成 spec 第 12 節（給操作者的停止範圍、證據、恢復步驟），並補上報告指出的缺口（N 從哪裡核實、刪 birth＝重新授權執行、uncertain 非空不等於要人工、恢復前先保存證據並 pause）。
+
+| 編號 | 處理 | 做法（spec 對應處標 A3-） |
+|---|---|---|
+| A3-01 restart 完成證據隨 keep 換 run 消失 | 已修 | node 層 `.aos/ctl-seen.json` 每槽記最近一件已處理的任務控制（不隨換 run 清，tock 刪槽時拿掉）；順序是先記 seen、再寫 ctl-done、再刪 ctl.json。同 ctl_id 再出現不執行，回條沒寫成就照 seen 補寫（`replayed`）；ctl.json 刪不掉在總結 ctl 帶 `err`；seen 讀不到／壞掉＝請求留著。birth 與 pending once 的查重保留，蓋「執行完、記 seen 之前被殺」。spec §6 |
+| A3-02 environ EACCES 使不可 ptrace 任務雙開 | 已修＋改 spec | environ EACCES 的程序在這個 run 的 runner session 或 pid.json 群組裡（殭屍除外）＝不知道，不判 lost；其他照舊當不是任務。cmdline 讀不到（含 EACCES）＝不知道。pid.json 多 `uid`。spec §11 明寫管理範圍（同 uid、environ 可讀；setuid／換 uid／關 dumpable 不在範圍），§5.4「不會雙開」加上只對管理範圍內成立 |
+| A3-03 非一般檔當不存在，繞過 round／birth 保護 | 已修 | 三態讀檔加嚴格模式給生命週期檔（round、last-round、birth、pid、exit，及 ctl-seen）：存在但不是一般檔＝不知道；其他檔照舊當不存在。tock 刪槽前讀 tasks.json 也用嚴格讀。spec §0 |
+| A3-04 明確 id 靜默截 64 字 | 已修 | id 完整使用、不截斷；超過 200 字拒絕（回條 ok:false 說明）。spec §6 |
+| A3-05 內容＋mtime 不是唯一意圖、作用域未定 | 已修＋改 spec | 沒帶 id 時雜湊加上 `<node-id>/<槽>`、st_dev、st_ino；id 作用域定為同 node 同槽，pending once 查重比同槽＋同 ctl_id。`aos7-ctl task` 自動產生 uuid，`--id` 重送沿用。spec §6、§10 |
+| A3-06 owner 檔名有損編碼互蓋 | 已修 | by／node／owner 每段無損編碼（`/`→`+`，其他 `%XX`；太長取前 40＋`~`＋sha1 前 16）。spec 2.3、§10 |
+| A3-07 mount 子目錄的暫存檔漏清 | 已修 | tock 清槽暫存檔時連 `mount-req/`、`mount-done/` 一起，不遞迴清任務自己的資料夾。spec §0 |
+| A3-08 重播通知失敗被吞 | 已修 | 重播補 tock.json 失敗、alive 的槽判不出／判定例外都記進 round.json `notify_errors`（每筆帶 slot、run、round）與回傳；下一個 tick 開回合前補（同 run 還活著才補，補不上進 `tasks_error`），對已關回合再跑 tock 也補（`notify_retried`）。spec §7 |
+| A3-09 任務仍活、群組核對不了，kill 卻回成功 | 已修 | kill 最後確認 pid.json 記的任務程序（pid＋starttime）已不在，否則 `ok: false`（unknown）；群組有成員 environ 讀不到權限又沒成員核對得到＝不知道。spec §6 |
+| 讀碼：`kill_node` 掃描不完整時沒打記著的群組 | 已修 | 照 spec 2.6 照樣打記著的群組，事件 ok:false；environ 讀不到權限又在記著群組裡＝不完整 |
+| 矩陣盲點（healthy 12 案有 9 案注入命中 0 次） | 已修 | 測試鉤子加 `AOS7_TEST_FAULT_HITS` 命中紀錄（P2-15），每個注入案例斷言命中 ≥1。補了 EACCES 孤兒、restart 完成證據跨 run、FIFO 生命週期檔、id 碰撞等組合——見 [tests/test_matrix_a3.py](../tests/test_matrix_a3.py) |
+
+- **until_round**（使用者 10-04，不是 astra 的題）：tasks.json 項目可選非負整數，回合數大於它就不再起新 run，跟 `from_round` 對稱；已在跑的不殺；once 已起過的照 launch 標記刪項，沒起成又過期的留著不起（commit 060dca8b）。用途：分配者掛了，使用權照樣到期。spec 4.1。
