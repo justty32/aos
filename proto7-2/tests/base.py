@@ -18,8 +18,12 @@ TOP = os.path.dirname(HERE)
 LIB = os.path.join(TOP, "lib")
 BIN = os.path.join(TOP, "bin")
 MODULES = os.path.join(TOP, "modules")
+TOOLS = os.path.join(MODULES, "tools")   # 工具包（aos7_ctl、任務端函式 aos7_taskside）
+sys.path.insert(0, TOOLS)
 sys.path.insert(0, LIB)
 sys.path.insert(0, HERE)
+# 測試鉤子（故障注入、SIGKILL／卡住點）：核心 aos7_fs 只在這個環境變數指到 _hooks.py 時才載入；所有子程序都繼承
+os.environ["AOS7_TEST_HOOKS"] = os.path.join(HERE, "_hooks.py")
 
 import _proc  # noqa: E402
 import aos7_task  # noqa: E402
@@ -35,13 +39,14 @@ SLEEP = ["sleep", "60"]
 
 # 收到 n 次 tock 就自己結束的任務（S-11）；每收到一次記一行到槽裡的 seen.jsonl（任務自己的檔，換 run 不清）
 WAITER = """import os, sys
-sys.path.insert(0, %r)
-from aos7_fs import wait_tock, append_jsonl
+sys.path[:0] = [%r, %r]
+from aos7_fs import append_jsonl
+from aos7_taskside import wait_tock
 n, last = int(sys.argv[1]), 0
 for _ in range(n):
     last = wait_tock(os.environ["AOS7_TASK"], last)
     append_jsonl(os.path.join(os.environ["AOS7_TASK"], "seen.jsonl"), {"round": last, "run": int(os.environ["AOS7_RUN"])})
-""" % LIB
+""" % (LIB, TOOLS)
 
 
 def kill_space_procs(root):

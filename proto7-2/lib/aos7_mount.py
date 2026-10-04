@@ -1,9 +1,9 @@
-"""掛載（S-23）：tick 把 tasks.json 的 `mounts` 做成任務資料夾裡的符號連結；任務用 resolve 把「空間裡的路徑」換成掛進來的路徑（spec.md 第 4、5 節）。
+"""掛載（S-23）：tick 把 tasks.json 的 `mounts` 做成任務資料夾裡的符號連結；任務（工具包的 resolver）把「空間裡的路徑」換成掛進來的路徑（spec.md 第 4、5 節）。
 
 掛載點＝`<taskdir>/mnt/<名字>`，是指向目標的**相對**符號連結（整個空間搬家也不壞）。
 目標寫成空間裡的路徑（相對空間根，跟 node id 同一套，例如 `team/agents/bob/inbox`、`.aosd/ctl`）。
 
-對應 spec §4.5、§5.5、§6（S-10、S-23）。tick 建立／審核掛載，任務呼叫 resolver／request 使用或申請。
+對應 spec §4.5、§5.5、§6（S-10、S-23）。tick 建立／審核掛載；任務端的 resolver／request 在工具包（modules/tools/aos7_taskside.py）。
 讀 birth.json 與 mount-req/，寫 mnt/ 連結、birth.json、mount-done/；只實作合作式協定，不是權限隔離（§11）。
 """
 import hashlib
@@ -98,31 +98,6 @@ def decl_of(birth):
     return {n: v["to"] for n, v in m.items() if isinstance(v, dict) and "to" in v and "at" in v}
 
 
-def resolver(taskdir):
-    """回一個函式 resolve(空間路徑) → 經過掛載點的實際路徑；沒有掛載蓋到這個路徑就回 None。
-
-    比對以路徑段為單位，取最長的掛載目標（`team/agents/bob/inbox` 蓋得到 `team/agents/bob/inbox/x.json`）。
-
-    taskdir 是槽路徑，回傳上述 resolve 函式；birth.json 缺失或讀不到時採空表，無掛載可解析（spec §4.5）。
-    """
-    m = (read_json(os.path.join(taskdir, "birth.json"), {}) or {}).get("mounts") or {}
-    table = sorted(((v["to"], v["at"]) for v in m.values() if isinstance(v, dict) and "at" in v),
-                   key=lambda x: -len(x[0]))
-
-    def resolve(path):
-        """將參數 path 空間路徑映到已授予的最長掛載前綴，回傳路徑；首段為 .. 或無對應回 None，不檢查目標存活（spec §4.5）。"""
-        p = _norm(path)
-        if p.split("/")[0] == "..":
-            return None
-        for to, at in table:
-            # spec §4.5：完整路徑段與最長前綴優先，避免 bob 的掛載誤涵蓋 bobby。
-            if to == "." or p == to or p.startswith(to + "/"):
-                rest = p if to == "." else p[len(to) + 1:]
-                return os.path.join(at, rest) if rest and rest != "." else at
-        return None
-    return resolve
-
-
 # ---------- 執行中加掛（M-6，使用者選 (b)）：任務寫請求，下一個 tick 審核 ----------
 
 REQ = "mount-req"     # 任務寫：<taskdir>/mount-req/<名字>.json＝{"name", "path", "why"}
@@ -142,26 +117,6 @@ def req_name(path):
         return p.replace("/", "_")
     base = re.sub(r"[^A-Za-z0-9_-]", "_", p).strip("_") or "root"
     return "%s-%s" % (base, hashlib.sha1(p.encode()).hexdigest()[:8])
-
-
-def request(taskdir, path, why="", name=None):
-    """任務這邊用：要 path 能經過掛載點碰到。回 "mounted"／"pending"／"refused: 原因"；需要時寫請求檔（已有就不重寫）。
-
-    被拒的回條留著，同一個名字不再自動重請；要再請就刪掉 mount-done 裡那份。
-
-    taskdir 是槽、path 是目標、why 是理由、name 可指定請求名（spec §4.5）。
-    掛載未知時回 pending；讀不到拒絕回條也會當作尚未拒絕而申請，真正准駁仍由 tick 審核。
-    """
-    if resolver(taskdir)(path) is not None:
-        return "mounted"
-    n = name or req_name(path)
-    done = read_json(os.path.join(taskdir, DONE, n + ".json"))
-    if isinstance(done, dict) and not (done.get("result") or {}).get("ok", True):
-        return "refused: %s" % done["result"].get("msg")
-    req = os.path.join(taskdir, REQ, n + ".json")
-    if not os.path.exists(req):
-        write_json(req, {"name": n, "path": path, "why": why})
-    return "pending"
 
 
 def allowed(root, path, allow):

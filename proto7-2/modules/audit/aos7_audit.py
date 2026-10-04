@@ -1,6 +1,6 @@
 """讀寫入紀錄：把空間裡所有任務的 `writes.jsonl` 拼起來，挑出寫到「自己的 node 與掛載點」之外的（spec.md 第 5 節）。
 
-紀錄由 lib/audit_site/sitecustomize.py 在任務裡寫（環境有 AOS7_AUDIT 才寫）。
+紀錄由同包的 audit_site/sitecustomize.py 在任務裡寫（環境有 AOS7_AUDIT 才寫）。
 
 由人或檢查工具呼叫 scan；唯讀掃描 root 下帶 birth.json 的 writes.jsonl，不改任務狀態。
 對應 spec §4.5、§5.1、§5.5（S-10、S-23）；沿用紀錄工具、未另加本版專測（P2-17）。

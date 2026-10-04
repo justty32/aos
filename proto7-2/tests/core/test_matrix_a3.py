@@ -41,7 +41,6 @@ def _kill_quiet(pid):
 
 from base import BIN, SLEEP, DaemonCase
 from _matrix import MatrixCase, alive, dead_pid, env, gen, rec_argv
-import aos7_ctl
 import aos7_proc
 import aos7_task
 from aos7_fs import read_json, read_jsonl, write_json
@@ -271,40 +270,6 @@ class TestCtlId(A3Case):
         self.prog("aos7-ctl", "task", self.slot(node, "o"), "restart", "--id", "y" * 200)
         self.assertEqual(read_json(self.ctl_path(node, "o"))["id"], "y" * 200)
 
-
-# ---------- A3-06 ----------
-
-class TestOwnerNames(DaemonCase):
-    """〔tools〕aos7-ctl 的固定檔名無損編碼（A2-13、A3-06，F57）。"""
-    def test_fixed_name_lossless(self):
-        """A3-06：甲／乙、A/B 與 A+B、x? 與 x!（owner、by、node 各段）都編成不同檔名；很長的也不同、不超過 255 bytes。"""
-        pairs = [("甲", "乙"), ("A/B", "A+B"), ("x?", "x!"), ("a.b", "a@b"), ("%41", "A"),
-                 ("l" * 300 + "1", "l" * 300 + "2")]
-        for a, b in pairs:
-            self.assertNotEqual(aos7_ctl.fixed_name("cli", "pause", "a", a), aos7_ctl.fixed_name("cli", "pause", "a", b),
-                                "owner %r 與 %r 撞名" % (a, b))
-            self.assertNotEqual(aos7_ctl.fixed_name(a, "pause", "n"), aos7_ctl.fixed_name(b, "pause", "n"),
-                                "by %r 與 %r 撞名" % (a, b))
-            self.assertNotEqual(aos7_ctl.fixed_name("cli", "pause", a), aos7_ctl.fixed_name("cli", "pause", b),
-                                "node %r 與 %r 撞名" % (a, b))
-            for x in (a, b):
-                self.assertLessEqual(len(aos7_ctl.fixed_name(x, "pause", x, x).encode()), 255)
-        self.assertNotEqual(aos7_ctl.fixed_name("cli", "pause", "a", ""), aos7_ctl.fixed_name("cli", "pause", "a"))
-
-    def test_non_ascii_owner_pauses_both_kept(self):
-        """A3-06：daemon 沒起前送兩份 pause（owner 甲、乙），起來後兩個 owner 都在 paused.json。"""
-        self.mknode("a", interval_ms=120)
-        a = self.ctl("pause", "a", "--owner", "甲")
-        b = self.ctl("pause", "a", "--owner", "乙")
-        self.assertNotEqual(a, b, "不同 owner 的 pause 寫成同一個檔")
-        self.start_daemon(register=["a"])
-        self.wait_receipt(a)
-        self.wait_receipt(b)
-        owners = ((read_json(os.path.join(self.root, ".aosd", "paused.json"), {}) or {}).get("paused") or {}).get("a")
-        self.assertEqual(sorted(owners or []), sorted(["甲", "乙"]))
-
-
-# ---------- A3-03 ----------
 
 def to_fifo(path):
     """把 path 換成 FIFO，回原本的內容（bytes）。"""

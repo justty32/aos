@@ -1,4 +1,5 @@
-"""proto7-2 共用的小工具：JSON 檔讀寫（原子、三態）、時間字串、路徑、動作鎖、任務環境（spec.md 第 0、2.5、5 節）。
+"""proto7-2 共用的小工具：JSON 檔讀寫（原子、三態）、時間字串、路徑、動作鎖、PATH 加 bin（spec.md 第 0、2.5、5 節）。
+任務端的 wait_tock／task_env 在工具包（modules/tools/aos7_taskside.py）；測試鉤子的本體在 tests/_hooks.py。
 
 起點複製自 proto7-1 lib/aos7_fs.py，拿掉 tasks-old／tail_jsonl，加上三態讀檔 read_json3 與 edit_json 的等鎖逾時。
 
@@ -7,7 +8,6 @@ daemon、tick／tock、ctl 與普通任務共用；依呼叫者給的 path 讀�
 import contextlib
 import datetime
 import errno
-import fnmatch
 import json
 import os
 import re
@@ -31,45 +31,26 @@ class Unknown(Exception):
     """推定不了的事實（round.json 讀不到、gen.json 不能用、看不到 node…）：tick／tock 什麼都不寫，退出碼 3（P2-09）。"""
 
 
+_HOOKS = []   # 測試鉤子模組（tests/_hooks.py）：環境 AOS7_TEST_HOOKS 指到它才載入；正常環境 inject／test_point 什麼都不做
+
+
+def _hooks():
+    """第一次呼叫時照 AOS7_TEST_HOOKS 載入測試鉤子模組，回它或 None。"""
+    if not _HOOKS:
+        path, mod = os.environ.get("AOS7_TEST_HOOKS"), None
+        if path:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("aos7_test_hooks", path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+        _HOOKS.append(mod)
+    return _HOOKS[0]
+
+
 def inject(op, path):
-    """**只給測試**的故障注入點（A2 回歸矩陣）：環境變數 `AOS7_TEST_FAULT` 有符合 op 與 path 的規則就丟那個 errno 的 OSError。
-
-    規則：分號分隔的 `op:glob:ERRNO`（例 `proc-stat:*:EIO;open:*/round.json:ESTALE`），glob 用 fnmatch 比完整路徑；
-    值是 `@/路徑` 時每次從那個檔讀規則（檔不在＝沒有注入；給跑著的 daemon 中途開關用）。
-    op：proc-list、proc-stat、proc-environ、proc-cmdline、open（read_json3）、listdir（列槽）、stat（daemon 看 node）、
-    node-open（tick／tock 開 node）。正常環境沒有這個變數，這裡只多一次環境查詢；tick 不把它傳給任務（P2-15）。"""
-    spec = os.environ.get("AOS7_TEST_FAULT")
-    if not spec:
-        return
-    if spec.startswith("@"):
-        try:
-            with open(spec[1:], encoding="utf-8") as f:
-                spec = f.read()
-        except OSError:
-            return
-    for rule in re.split(r"[;\n]", spec):
-        parts = rule.strip().split(":")
-        if len(parts) != 3 or parts[0] != op or not fnmatch.fnmatchcase(str(path), parts[1]):
-            continue
-        code = getattr(errno, parts[2].strip(), None)
-        if isinstance(code, int):
-            _record_hit(op, path, parts[2].strip())
-            raise OSError(code, "%s（AOS7_TEST_FAULT 注入）" % os.strerror(code), str(path))
-
-
-def _record_hit(op, path, name):
-    """**只給測試**：注入真的命中時，在環境變數 `AOS7_TEST_FAULT_HITS` 指的檔追加一行 `op<TAB>errno<TAB>path`（astra-2 矩陣盲點）。
-
-    矩陣每個案例都要證明「指定的故障確實打中 ≥1 次」，不能只靠綠燈（healthy 12 案曾有 9 案沒打中卻全過）。
-    用檔案而不是記憶體計數：子程序（tick／tock／daemon）命中的也算得到。寫不進去就算了，不影響被測程式。"""
-    hits = os.environ.get("AOS7_TEST_FAULT_HITS")
-    if not hits:
-        return
-    try:
-        with open(hits, "a", encoding="utf-8") as f:
-            f.write("%s\t%s\t%s\n" % (op, name, path))
-    except OSError:
-        pass
+    """故障注入點（只給測試）：有鉤子模組就交給它決定要不要丟 OSError。"""
+    if _hooks():
+        _HOOKS[0].inject(op, path)
 
 
 def now():
@@ -279,17 +260,9 @@ def summary_ok(lr):
 
 
 def test_point(name):
-    """只給測試：環境 AOS7_TEST_CRASH 列到 name（逗號分隔）就在這裡 SIGKILL 自己，模擬 kill -9 打在這一步。
-
-    name 是測試點；AOS7_TEST_HANG 列到它就長睡，否則回 None。
-    P2-15：故意保留斷電／卡住的重現點，正常環境不設這兩個變數。"""
-    want = os.environ.get("AOS7_TEST_CRASH")
-    if want and name in want.split(","):
-        import signal
-        os.kill(os.getpid(), signal.SIGKILL)
-    hang = os.environ.get("AOS7_TEST_HANG")
-    if hang and name in hang.split(","):
-        time.sleep(10 ** 6)
+    """SIGKILL／卡住的重現點（只給測試，P2-15）：有鉤子模組就交給它。"""
+    if _hooks():
+        _HOOKS[0].test_point(name)
 
 
 def proc_starttime(pid):
@@ -510,37 +483,6 @@ def join_id(base, rel):
 def aos_dir(node):
     """依 node 路徑回傳其 .aos/ 路徑字串；不存取磁碟（spec §3）。"""
     return os.path.join(node, ".aos")
-
-
-def task_env():
-    """任務從環境變數讀自己是誰（spec 5.5）。缺了丟 KeyError。
-
-    無參數；回 root／node／node_id／task／tid／run 字典，run 轉成整數，格式錯誤拋 ValueError。"""
-    e = os.environ
-    return {"root": e["AOS7_ROOT"], "node": e["AOS7_NODE"], "node_id": e["AOS7_NODE_ID"],
-            "task": e["AOS7_TASK"], "tid": e["AOS7_TID"], "run": int(e["AOS7_RUN"])}
-
-
-def wait_tock(task_dir, last_round, poll=0.02, timeout=None, run=None):
-    """等 tock.json 的 round 比 last_round 大，回新的 round；逾時回 None（S-11）。
-
-    run＝這次執行的 run（預設取環境 AOS7_RUN）：tock.json 的 `run` 對不上（上一個 run 沒清乾淨的）當不存在（spec 5.1）。
-
-    task_dir 是槽路徑、last_round 是已見回合；poll 是輪詢秒數、timeout 是等待上限秒數，
-    None 表示不設上限。讀不到、格式壞或 run 不合就繼續等；不確定不假造回合（spec §5.5）。"""
-    if run is None and os.environ.get("AOS7_RUN", "").isdigit():
-        run = int(os.environ["AOS7_RUN"])
-    path = os.path.join(task_dir, "tock.json")
-    end = None if timeout is None else time.monotonic() + timeout
-    while True:
-        t = read_json(path)
-        # spec §5.1、§5.5：槽會重用，run 不符的舊通知不能讓新任務誤認已過一回合。
-        if isinstance(t, dict) and isinstance(t.get("round"), int) and t["round"] > last_round \
-                and (run is None or t.get("run") == run):
-            return t["round"]
-        if end is not None and time.monotonic() >= end:
-            return None
-        time.sleep(poll)
 
 
 def env_with_bin(env=None):

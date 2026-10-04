@@ -20,9 +20,10 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
-import aos7_mount  # noqa: E402
-from aos7_fs import append_jsonl, now, read_json, task_env, wait_tock, write_json  # noqa: E402
+TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
+from aos7_fs import append_jsonl, now, read_json, write_json  # noqa: E402
+from aos7_taskside import resolver, task_env, wait_tock  # noqa: E402
 
 
 def src_path(me, resolve, nid, rel):
@@ -101,7 +102,7 @@ def main(argv=None):
     args = ap.parse_args(sys.argv[1:] if argv is None else argv)
     me = task_env()
     args.out = args.out or os.path.join(me["node"], "history")
-    resolve = aos7_mount.resolver(me["task"])
+    resolve = resolver(me["task"])
     spath = os.path.join(me["task"], "state.json")
     # spec §5.1、§8 不變條件三：進度屬任務自己的 state，換 run 不清，避免從頭重記歷史。
     st = read_json(spath, {})
