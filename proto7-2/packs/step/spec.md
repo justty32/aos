@@ -30,7 +30,7 @@
 ```
 
 - 步名、`job`：英數與 `_`，最多 32 字。每步恰好一個種類鍵：
-  - **`run`**（字串陣列）：派一個子工作。欄：`ok`（必填）、`fail`、`finite`、`idempotent`（預設 false）、`patience`、`on_timeout`、`on_unknown`、`wake`、`receipt`（條件）、`expect`（產物路徑陣列）。
+  - **`run`**（字串陣列）：派一個子工作。欄：`ok`（必填）、`fail`、`finite`、`idempotent`（預設 false）、`patience`、`on_timeout`、`on_unknown`、`max_resends`（非負整數，預設 1）、`wake`、`receipt`（條件）、`expect`（產物路徑陣列）。
   - **`wait`**（條件）：每回合看一次，成立走 `then`。欄：`patience`、`on_timeout`（`unknown`／`fail`）、`fail`。
   - **`count`**（非負整數 N）：框架裡這步的計數 +1，≤N 走 `then`，否則走 `exhausted`。
   - **`end`**（字串）：工作結束，狀態寫進框架。
@@ -81,7 +81,7 @@
      - 「第三個 tock」不是核心直接承諾的數字，是本包從核心兩條保證推出的：(a) once 項從表上拿掉時，該槽 `birth.json` 已寫好（[核心 spec](../../spec.md) §4.4）；(b) 已結束的槽最早在**報結束的下一個 tock** 才刪（核心 spec §5.1）。所以加項後到第三個 tock 之前，「表上有」或「槽裡有」至少一邊看得到這個 attempt。
    - `wait`：條件成立走 `then`；不成立看耐性。`count`、`end` 見 §2。
 5. **耐性**：`patience` 是本 node 的回合數，起點 `since` 寫在框架；`現在回合 − since > patience` 才算到期。pause 時沒有回合，耐性不走。到期照 `on_timeout`：`unknown`（停，`halt.kind=timeout`）、`fail`（走 `fail`）、`kill`（只給 `run`：對槽寫帶 run 的 kill，再停住——`halt.kind=timeout`，處理同 unknown，等人 `resume`；不抹掉之後到的結果）。
-6. **unknown**：`on_unknown: stop`（預設）＝`halt` unknown，等人。`resend` 只准冪等步（檢查器與執行時都擋），同一 request 新 attempt，最多一次，之後仍 unknown 就停。有 `receipt` 的先查，成立就當 ok。
+6. **unknown**：`on_unknown: stop`（預設）＝`halt` unknown，等人。`resend` 只准冪等步（檢查器與執行時都擋），同一 request 新 attempt，最多 `max_resends` 次（步內欄，預設 1；0＝不自動重送），之後仍 unknown 就停；人手 `resume --resend` 重派之後，自動重送次數從 0 重算。有 `receipt` 的先查，成立就當 ok。
 7. 結果 `ok: false`：走 `fail`；沒寫 `fail`＝`halt` failed。
 8. 每圈結束寫 `seen`＝這圈看到的回合。
 

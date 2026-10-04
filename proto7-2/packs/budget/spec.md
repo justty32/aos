@@ -2,7 +2,7 @@
 
 ← [budget 包](README.md)｜[核心 spec](../../spec.md)｜[step 包 spec](../step/spec.md)
 
-寫的是規則；理由在 [loop5 藍圖](../../notes/blueprint-loop5.md) §2、§3。路徑相對 node（任務的 cwd）；預算資料夾 `A`＝`<node>/budget/<id>/`，`<id>` 就是預算識別（英數、`_`、`-`，最多 32 字）。
+寫的是規則；理由在 [loop5 藍圖](../../notes/blueprint-loop5.md) §2、§3 與 [loop6 藍圖](../../notes/blueprint-loop6.md) §1、§2。路徑相對 node（任務的 cwd）；預算資料夾 `A`＝`<node>/budget/<id>/`，`<id>` 就是預算識別（英數、`_`、`-`，最多 32 字）。
 
 ## 1. 預算資料夾與檔案所有權
 
@@ -11,12 +11,13 @@
 | `A/grant.json` | 發行者（人） | grant（§2），開帳後不改 |
 | `A/ledger.json` | 帳任務（`init` 開第一份） | 帳（§3）；`ledger.json.lock`／`ledger.lock` 是鎖 |
 | `A/inbox/<kid>.<op>.<nonce>.json` | 包裝程式 | 給帳的請求；帳發回條後刪 |
-| `A/receipts/<同名>` | 帳任務 | 回條；包裝程式讀完刪 |
+| `A/receipts/<同名>` | 帳任務 | 回條；包裝程式讀完刪，沒人讀的孤兒帳自己掃（§9 第 3 條） |
 | `A/gateway/<kid>.json` | 入口（在包裝程式／`cancel` 程序裡跑，持同名 `.lock`） | 准入意圖與終局回條（§4） |
 | `A/backend.json` | 假後端（持 `.lock`） | `{"accepted": 受理次數, "effects": {kid: 效果}}`（§5） |
 | `A/error.json` | 帳任務 | 最近一筆錯誤 `{"kind","where","why","at"}`，覆寫 |
+| `A/retired.json` | 人 | 退役標記（§10），寫了就不收新 K |
 
-`kid`＝`sha256(JSON [budget, holder, request])` 前 20 個 hex；檔內都帶完整的 `key`。v1 不自動清任何紀錄（藍圖 §2 保存）；`inbox/`、`receipts/` 只有在途的檔。
+`kid`＝`sha256(JSON [budget, holder, request])` 前 20 個 hex；檔內都帶完整的 `key`。v1 不自動清帳、入口、後端的紀錄（保存到退役，§10）；`inbox/`、`receipts/` 只有在途的檔，加上帳還沒掃掉的孤兒回條。
 
 ## 2. grant 與時鐘
 
@@ -26,7 +27,8 @@
 ```
 
 - 欄位齊全、型別對（`amount`、`from`、`until` 非負整數、`from ≤ until`；`clock` 只准 `completed_tock`；`delegate` 必須是 `false`）才算讀到；`budget` 要等於資料夾名。
-- **時鐘** `c`＝本 node 的 completed_tock：`.aos/round.json` 照核心判定（核心 spec §3）是 closed 取 `round`、open 取 `round−1`；不存在、讀不到、壞＝未知。帳記住看過的最大值 `clock_hw`；`c < clock_hw`（時鐘倒退，例如 round.json 被重建）＝未知。
+- **時鐘** `c`＝本 node 的 completed_tock：`.aos/round.json` 照核心判定（核心 spec §3）是 closed 取 `round`、open 取 `round−1`；不存在、讀不到、壞＝未知。帳每處理一件請求就讀一次 c，合法且大於 `clock_hw` 就推高（含拒絕、重播；這是只動 `clock_hw` 的單獨一次寫入，不動餘額與 log）；`c < clock_hw`（時鐘倒退）＝未知。
+- **前置條件**（發行者／部署者守）：時鐘只往前。重建 round.json（回合歸零）＝換預算識別（新資料夾）、不移植舊 grant；帳只抓得到退到 `clock_hw` 以下的倒退（§9 第 2 條）。
 - **判定** `judge(grant, holder, resource, gateway, c)` 依序：grant 讀不到／壞／雜湊跟帳記的不同＝`unknown`；`parent` 存在或 `delegate` 不是 false＝`denied`（子 grant）；holder／resource／gateway 不符＝`denied`；`c` 未知＝`unknown`；`c < from`＝`not_yet`（非終局）；`c ≥ until`＝`denied`（到期）；其餘 `ok`。
 
 ## 3. 帳
@@ -43,7 +45,7 @@
 
 - **開帳**（`init`）：`ledger.json` 已存在＝拒絕；grant 判定不是 ok 也照開（效期是使用時的事），但子 grant、欄位不合＝拒絕。帳任務**不自動開帳**：`ledger.json` 不存在、讀不到、壞＝不受理任何請求，記 `error.json`，請求留在 `inbox/`。
 - **請求**＝`{"op": "reserve"|"settle", "key", "content": {"resource", "gateway", "amount", "payload_sha"}, "digest"}`（settle 只要 `op`、`key`）。`digest`＝content 加 key 的雜湊；attempt 等傳輸資訊不在裡面。請求檔壞＝回條 `bad`、刪請求。
-- **reserve(K)**：K 已在帳上——digest 不同＝`conflict`；相同＝照帳上的階段回 `reserved`／`settled`（重播）。不在——判定 grant（§2），不是 ok 回 `denied`／`not_yet`／`unknown`；`available < amount`＝`denied`（額度不足）；否則 `available −= amount`、`inflight += amount`、記 ops 與 log。**拒絕不入帳**（沒動餘額，重送照當下再判）。
+- **reserve(K)**：K 已在帳上——digest 不同＝`conflict`；相同＝照帳上的階段回 `reserved`／`settled`（重播）。不在——`retired.json` 在＝`denied`（已退役）、讀不到＝`unknown`；再判定 grant（§2），不是 ok 回 `denied`／`not_yet`／`unknown`；`available < amount`＝`denied`（額度不足）；否則 `available −= amount`、`inflight += amount`、記 ops 與 log。**拒絕不入帳**（沒動餘額，重送照當下再判）。
 - **settle(K)**：K 不在帳上＝`unknown`；已結算＝重播同一結果；否則帳**自己讀** `A/gateway/<kid>.json`：不是終局（沒有、讀不到、`intent`）＝`unknown`，預留留著；終局就以回條的 `used`（0 或 amount）結算：`inflight −= amount`、`used += u`、`available += amount − u`。結算不看時鐘。
 - **提交**：一筆轉移＝讀帳 → 改 → `write_json`（原子 rename）一次寫入餘額、ops、log、`seq`；之後才寫回條、刪請求。被殺在寫入前＝沒發生；寫入後回條前＝重開時請求還在 `inbox/`，帳從 ops 重建同一回條（不重扣）。
 - **不變條件**：log 每一筆都滿足 `available + inflight + used_total = initial` 且各項 ≥ 0；每個 K 最多一筆 reserve、一筆 settle。
@@ -55,9 +57,11 @@
 1. 讀 `gateway/<kid>.json`：讀不到／壞＝`unknown`。終局（`stage: done`）＝回它（`cancelled` 不比內容；其餘 digest 不同＝`conflict`）。`intent`＝已准入：**不再查 grant 與效期**，直接到第 4 點。
 2. 首次准入：讀帳（讀不到／壞＝`unknown`），以帳記的 grant 雜湊與 `clock_hw` 判定 grant（§2）：`unknown`／`not_yet` 回非終局、不寫檔；`denied`（含到期）寫終局 `{"stage": "done", "outcome": "denied", "used": 0}`。
 3. 核對預留：帳上 K 要是 `reserved` 且 digest 相同，不是＝非終局 `unknown`／`conflict`、不寫檔。通過才寫 `{"stage": "intent", "admitted_tock": c}`。
-4. 呼叫假後端 `accept(K, payload)`（§5，以 K 去重），寫終局 `{"stage": "done", "outcome": accepted|failed|rejected, "used", "response"}`。
+4. 呼叫假後端 `accept(K, payload)`（§5，以 K 去重），寫終局 `{"stage": "done", "outcome": accepted|failed|rejected, "used", "response"}`。後端讀寫不到（`backend.json` 讀不到、鎖拿不到）＝回非終局 `{"outcome": "unknown", "stage": "intent"}`、不寫終局，intent 留著（同 K 重送時再問後端）。
 
 `cancel(K)`（同一把鎖）：已終局＝回原回條（不是 cancelled 就表示取消不成）；`intent`＝向後端查 K：有效果就寫成那個終局（取消不成），沒有就寫 `cancelled`（後端呼叫只在鎖內發生，所以持鎖時查不到＝沒發生，這只對可查回的假後端成立）；沒紀錄＝寫 `cancelled`。`cancelled`、`denied`、`rejected` 的 `used` 是 0；`accepted`、`failed` 是 amount。
+
+**cancel 的前置條件**：後端對 K 可查回（有沒有效果查得到確定答案）。不可查回的後端，intent 的取消只能記 `cancel_requested`、不得寫 `cancelled`；終局只來自後端證據，查不到就永遠 unknown（v1 只有可查回的假後端，所以沒做這條分支，§9 第 1 條）。
 
 ## 5. 假後端
 
@@ -73,7 +77,8 @@
 4. 結果（stdout 最後一行；有 `--out` 時原子寫一份）`{"kid","key","outcome","used","response","settle"}`；`outcome: accepted` 退出 0，其餘終局退出 1。
 
 - **等回條的耐性**：completed_tock 比開始時多 `patience`（預設 5）回合仍沒回條＝退出 3；時鐘未知或 pause 時不到期。請求檔留著，帳之後照樣處理（同 K 冪等）。
-- 對同 K 冪等：重跑只把沒做完的做完。step 步可標 `idempotent: true`、`on_unknown: resend`；step 的 `ok:false` 不代表退款，退款只看入口回條。
+- **共同故障邊界**：`call`、`cancel`、`settle` 途中任何讀寫不到（核心 `Unknown`、帳／後端讀不到、`OSError`）＝未知：stdout 印一行 `{"outcome": "unknown", "stage", "why"}`、退出 3、不留 traceback，帳與入口狀態不動（intent、預留留著）。`cancel` 退出碼：0＝取消了、1＝已有別的終局（取消不成）、3＝未知。不重試、不動帳。
+- 對同 K 冪等：重跑只把沒做完的做完。step 的 `on_unknown: resend` 可配 `max_resends`（step spec §2）；停住後 `aos7-step resume --resend` 也不重扣。step 步可標 `idempotent: true`、`on_unknown: resend`；step 的 `ok:false` 不代表退款，退款只看入口回條。
 
 ## 7. 測試鉤子
 
@@ -82,3 +87,17 @@
 ## 8. 明確不管（誤用，不處理）
 
 兩個帳任務同時跑（有 `ledger.lock` 擋，但不保證）、人手改 `ledger.json`／`gateway/`／`backend.json`、開帳後改 `grant.json`（偵測到＝未知，不前進）、不經入口直接呼叫後端、同一 node 兩個預算同名。
+
+## 9. 已知界線（v1）
+
+1. **取消靠後端可查回**：`cancel` 對 intent 寫 `cancelled` 只因假後端可查回且呼叫在同一把 K 鎖內；不可查回的後端要改記 `cancel_requested`、終局只來自後端證據（§4）。
+2. **時鐘倒退只在退到 `clock_hw` 以下才抓得到**：水位隨每件請求推高（§2），但兩件請求之間的倒退、或退了仍高於水位就看不出；重建時鐘換預算識別是部署者的前置條件（原則 9：誤用）。
+3. **儲存只增不清**：帳（ops、log 全檔重寫）、`gateway/<kid>.json`（＋`.lock`）、`backend.json` 的效果隨 K 增長；只有孤兒回條會清——K 已結算、`inbox/` 沒同名請求、帳第一次掃到後本 node 又完成 3 回合（`ORPHAN_ROUNDS`）仍在才刪（帳任務起時與每次回合變了各掃一次；重播由 ops 重建同一回條）。log 壓縮、容量上限等真用量出現再做。
+4. **holder 是呼叫者自報**：由部署者寫死在 steps.json 的 argv（合作式）；真偽不是 budget 的事（README gateway 卡前置條件）。
+5. **自動重送有上限**：step 的 `max_resends`（預設 1）用完、wrapper 仍未知，step 就停住等人；不做無上限重試。
+
+## 10. 保存與退役
+
+- **成長率**：每個 K＝帳 `ops` 一項＋`log` 兩筆（reserve、settle）＋`gateway/<kid>.json` 與它的 `.lock` 各一檔＋`backend.json` 效果一項（受理、失敗、拒絕都記；取消、denied 沒有）。`inbox/`、`receipts/` 只有在途與待掃的孤兒。
+- **保存契約**：保存到預算明確退役；退役前不刪任何帳、入口、後端紀錄。
+- **退役（人手）**：① 停掉所有呼叫者（step 表不再 call 這個預算）；② `aos7-budget status` 看 `inflight == 0`，不是 0 就逐一 `settle`／`cancel` 收完；③ 寫 `A/retired.json`（`{"at", "why"}`）——帳從此不收新 K（`denied`），已有 K 照樣重播；④ 停掉帳任務（tasks.json 移除 `budget-<id>` 項）；⑤ 把資料夾整個搬走封存。退役的識別不重用（同 id＝同 K，舊呼叫者重送會在新預算扣款）。

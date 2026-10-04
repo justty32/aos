@@ -11,7 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import aos7_budget as bg  # noqa: E402
 from aos7_budget import GATEWAY, kid_of  # noqa: E402
-from aos7_fs import N, OK, edit_json, fact, locked, now, write_json  # noqa: E402
+from aos7_fs import N, OK, Unknown, edit_json, fact, locked, now, write_json  # noqa: E402
 
 MODES = {"ok": ("accepted", True), "fail": ("failed", True), "reject": ("rejected", False)}
 
@@ -96,8 +96,11 @@ def run(bud, key, content, payload):
             write_json(path, {"stage": "intent", "kid": kid, "key": key, "digest": digest, "admitted_tock": c,
                               "at": now()})
             bg.test_crash(bud, "gateway-after-intent")
-        # 已准入（剛寫或恢復）：不再查效期，只向後端要 K 的效果（以 K 去重）
-        eff = backend_accept(bud, kid, key, content["amount"], payload)
+        # 已准入（剛寫或恢復）：不再查效期，只向後端要 K 的效果（以 K 去重）；後端讀寫不到＝非終局，intent 留著
+        try:
+            eff = backend_accept(bud, kid, key, content["amount"], payload)
+        except (Unknown, bg.LedgerDown) as e:
+            return {"outcome": "unknown", "stage": "intent", "why": "後端讀寫不到（intent 留著）：%s" % e}
         rec = done_from(eff, kid, key, digest)
         write_json(path, rec)
         bg.test_crash(bud, "gateway-after-receipt")
@@ -147,8 +150,20 @@ def pending(kid, key, stage, r):
     return 3
 
 
+def io_boundary(fn, kid, key):
+    """共同故障邊界（spec §6）：讀寫不到（核心 Unknown、帳／後端讀不到、OSError）＝未知，印一行 JSON、退出 3，不留 traceback。"""
+    try:
+        return fn()
+    except (Unknown, bg.LedgerDown, OSError) as e:
+        return pending(kid, key, "io", {"why": "讀寫不到：%r" % e})
+
+
 def call(bud, key, amount, resource, payload_path, out, patience):
     """reserve → 入口 run → settle；拿到終局結算回條才退出。0＝受理成功、1＝已結算但不成功或被拒、3＝未知（預留留著）。"""
+    return io_boundary(lambda: _call(bud, key, amount, resource, payload_path, out, patience), kid_of(key), key)
+
+
+def _call(bud, key, amount, resource, payload_path, out, patience):
     payload = None
     if payload_path:
         st, payload = fact(payload_path)
