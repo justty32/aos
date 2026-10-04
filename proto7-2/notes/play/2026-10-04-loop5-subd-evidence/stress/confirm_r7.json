@@ -1,0 +1,106 @@
+{
+  "old_daemon": 563595,
+  "old_tasks": [
+    {
+      "pid": 563602,
+      "state": "S",
+      "ppid": 563599,
+      "pgid": 563602,
+      "starttime": 3092641
+    },
+    {
+      "pid": 563603,
+      "state": "S",
+      "ppid": 563600,
+      "pgid": 563603,
+      "starttime": 3092641
+    },
+    {
+      "pid": 563604,
+      "state": "S",
+      "ppid": 563601,
+      "pgid": 563604,
+      "starttime": 3092641
+    }
+  ],
+  "old_runners": [
+    {
+      "pid": 563599,
+      "state": "S",
+      "ppid": 563587,
+      "pgid": 563599,
+      "starttime": 3092640
+    },
+    {
+      "pid": 563600,
+      "state": "S",
+      "ppid": 563587,
+      "pgid": 563600,
+      "starttime": 3092640
+    },
+    {
+      "pid": 563601,
+      "state": "S",
+      "ppid": 563587,
+      "pgid": 563601,
+      "starttime": 3092640
+    }
+  ],
+  "old_runs": [
+    "s0#1",
+    "s1#1",
+    "s2#1"
+  ],
+  "new_daemon": 563632,
+  "new_gen": 2,
+  "last_round": 7,
+  "last_round_alive": [
+    "s0#2",
+    "s1#2",
+    "s2#2"
+  ],
+  "old_tasks_alive": [],
+  "old_runners_alive": [],
+  "old_runs_in_alive": [],
+  "subd_life": {
+    "state": "running",
+    "subroot": "a/sub",
+    "owner": {
+      "node": "a",
+      "tid": "sub",
+      "run": "2",
+      "pid": 563608
+    },
+    "since": "2026-10-04T16:56:48.565"
+  },
+  "parent_out_log": "aos7-subd: 子根 a/sub 前代已空（收了 4 個程序、1 輪）\n",
+  "pass": true,
+  "cleanup": {
+    "before": [
+      563590,
+      563607,
+      563608,
+      563632,
+      563638,
+      563639,
+      563640,
+      563642,
+      563643,
+      563644,
+      563666,
+      563667
+    ],
+    "pid_sigkill": [
+      563638,
+      563639,
+      563640,
+      563642,
+      563643,
+      563644
+    ],
+    "after": [],
+    "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+    "known_alive": []
+  },
+  "tmp_removed": true
+}

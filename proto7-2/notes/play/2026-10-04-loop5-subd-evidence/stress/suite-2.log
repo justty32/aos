@@ -1,0 +1,518 @@
+test_core_line_budget (test_budget.TestBudget.test_core_line_budget) ... ok
+test_bad_ctl_gets_failed_receipt (test_ctl.TestCtl.test_bad_ctl_gets_failed_receipt)
+〔core〕 ... ok
+test_kill_at_tock_reported_by_ctl (test_ctl.TestCtl.test_kill_at_tock_reported_by_ctl)
+〔core〕 ... ok
+test_kill_with_stale_run_refused (test_ctl.TestCtl.test_kill_with_stale_run_refused)
+〔core〕 ... ok
+test_lost_kills_leftover_before_keep_restarts (test_ctl.TestIdentityScan.test_lost_kills_leftover_before_keep_restarts)
+runner 與任務主程序都被 kill -9，setsid 的孫程序還在：lost 判定前先身分掃描收掉它，keep 不雙開。 ... ok
+test_no_runner_young_birth_is_live_old_is_lost (test_ctl.TestIdentityScan.test_no_runner_young_birth_is_live_old_is_lost) ... ok
+test_old_run_leftover_not_taken_as_new_run (test_ctl.TestIdentityScan.test_old_run_leftover_not_taken_as_new_run)
+同一個槽上一個 run 留下的孫程序：不算這次的活任務、kill 這次也不打到它。 ... ok
+test_runner_died_without_pid_json_is_lost (test_ctl.TestIdentityScan.test_runner_died_without_pid_json_is_lost) ... ok
+test_forged_pgid_not_killed (test_ctl.TestKillRange.test_forged_pgid_not_killed) ... ok
+test_inst_kill_reaches_other_session (test_ctl.TestKillRange.test_inst_kill_reaches_other_session) ... ok
+test_kill_reaches_setsid_grandchild (test_ctl.TestKillRange.test_kill_reaches_setsid_grandchild) ... ok
+test_mount_request_served (test_ctl.TestMounts.test_mount_request_served)
+執行中加掛：下一個 tick 審核、寫回條、建 mnt、在 birth 標 dyn；換 run 時照宣告重建（加掛的不帶過去，要帶用控制包 restart）。 ... ok
+test_mounts_made_and_rebuilt_per_run (test_ctl.TestMounts.test_mounts_made_and_rebuilt_per_run) ... ok
+test_bad_files_get_receipts (test_daemon.TestCtlFiles.test_bad_files_get_receipts) ... ok
+test_flood_budget_and_status_moves (test_daemon.TestCtlFiles.test_flood_budget_and_status_moves) ... ok
+test_log_on_switch (test_daemon.TestCtlFiles.test_log_on_switch) ... ok
+test_receipt_failure_drops_request_and_stop_still_works (test_daemon.TestCtlFiles.test_receipt_failure_drops_request_and_stop_still_works)
+回條寫不進去（處理丟例外）：效果可能已生效，不重做——請求刪掉、記 last_ctl_error；同圈的 stop 照樣生效。 ... ok
+test_receipt_overwritten_same_name (test_daemon.TestCtlFiles.test_receipt_overwritten_same_name) ... ok
+test_kill9_daemon_new_daemon_recovers_round_no_double (test_daemon.TestDaemonDeath.test_kill9_daemon_new_daemon_recovers_round_no_double) ... ok
+test_new_daemon_reaps_old_holder (test_daemon.TestDaemonDeath.test_new_daemon_reaps_old_holder) ... ok
+test_unverified_holder_not_killed (test_daemon.TestDaemonDeath.test_unverified_holder_not_killed) ... ok
+test_default_fixed_interval (test_daemon.TestEarlyTock.test_default_fixed_interval) ... ok
+test_early_tock_when_all_ended (test_daemon.TestEarlyTock.test_early_tock_when_all_ended) ... ok
+test_move_kills_old_new_place_needs_register (test_daemon.TestNodeGone.test_move_kills_old_new_place_needs_register) ... ok
+test_replaced_by_other_dir_is_new_timeline (test_daemon.TestNodeGone.test_replaced_by_other_dir_is_new_timeline) ... ok
+test_rm_rf_kills_and_stays_registered (test_daemon.TestNodeGone.test_rm_rf_kills_and_stays_registered) ... ok
+test_unreadable_node_is_unknown_not_gone (test_daemon.TestNodeGone.test_unreadable_node_is_unknown_not_gone) ... ok
+test_owner_pause_not_released_by_other (test_daemon.TestPause.test_owner_pause_not_released_by_other) ... ok
+test_resume_all_and_no_owner_slot (test_daemon.TestPause.test_resume_all_and_no_owner_slot) ... ok
+test_resume_rounds_then_pauses_with_same_owner (test_daemon.TestPause.test_resume_rounds_then_pauses_with_same_owner) ... ok
+test_resume_wakes_immediately (test_daemon.TestPause.test_resume_wakes_immediately) ... ok
+test_wake (test_daemon.TestPause.test_wake) ... ok
+test_register_absent_dir_then_appears (test_daemon.TestRegister.test_register_absent_dir_then_appears) ... ok
+test_register_checks (test_daemon.TestRegister.test_register_checks) ... ok
+test_register_runs_only_registered (test_daemon.TestRegister.test_register_runs_only_registered) ... ok
+test_registered_before_daemon_starts (test_daemon.TestRegister.test_registered_before_daemon_starts)
+寫給停著的 daemon 的控制檔留在 ctl/，起來才做（子 daemon 起來前先登記就靠這個）。 ... ok
+test_restart_daemon_follows_nodes_json (test_daemon.TestRegister.test_restart_daemon_follows_nodes_json) ... ok
+test_unregister_kills_by_default (test_daemon.TestRegister.test_unregister_kills_by_default) ... ok
+test_unregister_no_kill_leaves_task (test_daemon.TestRegister.test_unregister_no_kill_leaves_task) ... ok
+test_root_moved_stops_with_kill (test_daemon.TestStop.test_root_moved_stops_with_kill) ... ok
+test_second_daemon_refused (test_daemon.TestStop.test_second_daemon_refused) ... ok
+test_stop_kill_and_sigterm (test_daemon.TestStop.test_stop_kill_and_sigterm) ... ok
+test_stop_without_kill_leaves_tasks (test_daemon.TestStop.test_stop_without_kill_leaves_tasks) ... ok
+test_stop_not_blocked_by_stuck_tick (test_daemon.TestStuckActions.test_stop_not_blocked_by_stuck_tick) ... ok
+test_stuck_tick_cut_and_round_marked (test_daemon.TestStuckActions.test_stuck_tick_cut_and_round_marked) ... ok
+test_tock_killed_after_summary_is_replayed_once (test_daemon.TestStuckActions.test_tock_killed_after_summary_is_replayed_once) ... ok
+test_unreadable_round_json_holds_timeline (test_daemon.TestStuckActions.test_unreadable_round_json_holds_timeline) ... ok
+test_tasks_fifo_starts_nothing_deletes_nothing (test_errors.TestNotRegularInput.test_tasks_fifo_starts_nothing_deletes_nothing)
+tasks.json 換成 FIFO：這回合不起、記 tasks_error；tock 不知道表上有誰，不刪槽。 ... ok
+test_timeline_fifo_uses_defaults_and_notes (test_errors.TestNotRegularInput.test_timeline_fifo_uses_defaults_and_notes)
+timeline.json 換成 FIFO：用預設並回一筆說明（時間線記進 last_error）。 ... ok
+test_add_refused_eio (test_errors.TestTasksWriteG1.test_add_refused_eio)
+tasks.json 半寫／被換成 FIFO／讀不到（EIO 注入）時 `aos7-ctl add` 拒寫：退出碼非 0、說明原因、檔案原封不動。［eio］ ... ok
+test_add_refused_fifo (test_errors.TestTasksWriteG1.test_add_refused_fifo)
+tasks.json 半寫／被換成 FIFO／讀不到（EIO 注入）時 `aos7-ctl add` 拒寫：退出碼非 0、說明原因、檔案原封不動。［fifo］ ... ok
+test_add_refused_half (test_errors.TestTasksWriteG1.test_add_refused_half)
+tasks.json 半寫／被換成 FIFO／讀不到（EIO 注入）時 `aos7-ctl add` 拒寫：退出碼非 0、說明原因、檔案原封不動。［half］ ... ok
+test_add_to_missing_table_creates_it (test_errors.TestTasksWriteG1.test_add_to_missing_table_creates_it)
+對照：tasks.json 不存在＝空表，照常加。 ... ok
+test_readonly_aos_does_not_eat_rounds (test_errors.TestTickFailureG2.test_readonly_aos_does_not_eat_rounds) ... ok
+test_never_started_on_crash_after_birth (test_exits.TestNeverStarted.test_never_started_on_crash_after_birth) ... ok
+test_no_never_started_when_task_ran (test_exits.TestNeverStarted.test_no_never_started_when_task_ran) ... ok
+test_guard_blocks_then_allows (test_exits.TestStopGuard.test_guard_blocks_then_allows) ... ok
+test_sigterm_ignores_guard (test_exits.TestStopGuard.test_sigterm_ignores_guard) ... ok
+test_bad_x_and_old_subroot_skipped (test_exits.TestX.test_bad_x_and_old_subroot_skipped) ... ok
+test_x_copied_to_birth (test_exits.TestX.test_x_copied_to_birth) ... ok
+test_crash_after_receipt_replays_harmlessly (test_matrix_a3.TestKillReplay.test_crash_after_receipt_replays_harmlessly)
+tock 寫完回條、刪請求前被殺（ctl-after-done）：下一次再執行同一份 kill run 1——run 1 已結束，只補收殘留、回 ok:true； ... ok
+test_undeletable_kill_only_hits_that_run (test_matrix_a3.TestKillReplay.test_undeletable_kill_only_hits_that_run)
+kill run 1 完成後 ctl.json 刪不掉、每次 tick／tock 都再看到：只收掉 run 1，之後 keep 起的新 run 不被它殺（回條說已換人）。 ... ok
+test_wrong_run_refused_then_resend (test_matrix_a3.TestKillReplay.test_wrong_run_refused_then_resend)
+run 不是現在的（7）＝ok:false、沒動手；改對 run 重送照樣執行。run 缺＝輸入不合，回條 ok:false、請求刪掉。 ... ok
+test_mount_dirs_dead_tmp_swept (test_matrix_a3.TestMountTmpSweep.test_mount_dirs_dead_tmp_swept)
+A3-07：槽的 mount-req／mount-done 裡寫者已死的 `.<名>.tmp.<pid>` 被 tock 清掉，活寫者的不動。 ... ok
+test_last_round_fifo (test_matrix_a3.TestNonRegular.test_last_round_fifo)
+A3-03：last-round.json 換成 FIFO → tock 退出碼 3、回合不關；round.json 不在時 tick 也退出碼 3（不從 1 重數）；換回後恢復。 ... ok
+test_open_round_fifo (test_matrix_a3.TestNonRegular.test_open_round_fifo)
+A3-03：開著的 round.json 換成 FIFO → tick／tock 退出碼 3、不從 last-round 接號重開同號回合；換回後照常收、開下一回合。 ... ok
+test_slot_fifo_birth_json (test_matrix_a3.TestNonRegular.test_slot_fifo_birth_json)
+槽的生命週期檔 name 被換成 FIFO＝不知道：槽 UNKNOWN、tick 不起第二份、tock errors 有它；換回一般檔後恢復。［birth.json］ ... ok
+test_slot_fifo_exit_json (test_matrix_a3.TestNonRegular.test_slot_fifo_exit_json)
+槽的生命週期檔 name 被換成 FIFO＝不知道：槽 UNKNOWN、tick 不起第二份、tock errors 有它；換回一般檔後恢復。［exit.json］ ... ok
+test_slot_fifo_pid_json (test_matrix_a3.TestNonRegular.test_slot_fifo_pid_json)
+槽的生命週期檔 name 被換成 FIFO＝不知道：槽 UNKNOWN、tick 不起第二份、tock errors 有它；換回一般檔後恢復。［pid.json］ ... ok
+test_closed_round_tock_skips (test_matrix_a3.TestReplayNotify.test_closed_round_tock_skips)
+F47：對已關的回合再跑 tock 只回 skipped，不補送、notify_errors 原樣留在 round.json（給要補的模組讀）。 ... ok
+test_replay_notify_error_recorded_not_resent (test_matrix_a3.TestReplayNotify.test_replay_notify_error_recorded_not_resent)
+A3-08＋F47：重播時 tock.json 寫不進去 → round.json 與回傳都有 notify_errors；恢復後不補送，下一回合正常。 ... ok
+test_replay_unjudgeable_slot_recorded (test_matrix_a3.TestReplayNotify.test_replay_unjudgeable_slot_recorded)
+A3-08：重播時槽判不出（birth.json 換成 FIFO）→ notify_errors 記著（phase judge），不默默關回合。 ... ok
+test_no_wake_keeps_interval (test_matrix_a3.TestWakeFixedInterval.test_no_wake_keeps_interval)
+P2-01 對照組：沒送 wake 的回合照 interval 節拍（第 2 回合不早於第 1 回合 tick 後約 interval）。 ... ok
+test_wake_mid_round_starts_next_soon (test_matrix_a3.TestWakeFixedInterval.test_wake_mid_round_starts_next_soon)
+P2-01：early_tock:false 的 node 回合中送 wake → 馬上 tock（early）、下一回合遠早於 interval 開始，記事件 woke。 ... ok
+test_daemon_sweeps_dead_tmp (test_matrix_daemon.TestDaemonMatrix.test_daemon_sweeps_dead_tmp) ... ok
+test_owner_pause_files_distinct (test_matrix_daemon.TestDaemonMatrix.test_owner_pause_files_distinct) ... ok
+test_register_symlink_refused (test_matrix_daemon.TestDaemonMatrix.test_register_symlink_refused) ... ok
+test_rounds_per_owner (test_matrix_daemon.TestDaemonMatrix.test_rounds_per_owner) ... ok
+test_symlink_outside_root (test_matrix_daemon.TestDaemonMatrix.test_symlink_outside_root) ... ok
+test_symlink_same_inode (test_matrix_daemon.TestDaemonMatrix.test_symlink_same_inode)
+〔core〕node 本身換成連回原資料夾的符號連結：lstat 看到連結＝不是資料夾 → missing、收任務（O_NOFOLLOW 擋 tick／tock）。 ... ok
+test_wake_not_kept_from_running_to_idle (test_matrix_daemon.TestDaemonMatrix.test_wake_not_kept_from_running_to_idle) ... ok
+test_birth_none_half (test_matrix_docs.TestBrokenBirth.test_birth_none_half)
+birth 壞 → UNKNOWN：不起、tock errors 有說明；人刪掉 birth.json 後照常起。［half］ ... ok
+test_birth_none_list (test_matrix_docs.TestBrokenBirth.test_birth_none_list)
+birth 壞 → UNKNOWN：不起、tock errors 有說明；人刪掉 birth.json 後照常起。［list］ ... ok
+test_birth_none_run_str (test_matrix_docs.TestBrokenBirth.test_birth_none_run_str)
+birth 壞 → UNKNOWN：不起、tock errors 有說明；人刪掉 birth.json 後照常起。［run_str］ ... ok
+test_bad_last_round_half (test_matrix_docs.TestLastRoundJson.test_bad_last_round_half)
+last-round.json 壞（round.json 是開著的第 2 回合）：tock 重新產生完整總結，不是 replayed；之後開第 3 回合。［half］ ... ok
+test_bad_last_round_no_fields (test_matrix_docs.TestLastRoundJson.test_bad_last_round_no_fields)
+last-round.json 壞（round.json 是開著的第 2 回合）：tock 重新產生完整總結，不是 replayed；之後開第 3 回合。［no_fields］ ... ok
+test_bad_last_round_round_str (test_matrix_docs.TestLastRoundJson.test_bad_last_round_round_str)
+last-round.json 壞（round.json 是開著的第 2 回合）：tock 重新產生完整總結，不是 replayed；之後開第 3 回合。［round_str］ ... ok
+test_complete_summary_is_replayed (test_matrix_docs.TestLastRoundJson.test_complete_summary_is_replayed)
+對照：last-round.json 已是完整的第 N 回合總結（tock 寫完總結就被殺）→ replayed，不重寫。 ... ok
+test_bad_round_half (test_matrix_docs.TestRoundJson.test_bad_round_half)
+round.json 內容壞掉＝不知道回合關了沒：tick／tock 退出碼 3、什麼都不寫；人寫回 open:false 後照常。［half］ ... ok
+test_bad_round_list (test_matrix_docs.TestRoundJson.test_bad_round_list)
+round.json 內容壞掉＝不知道回合關了沒：tick／tock 退出碼 3、什麼都不寫；人寫回 open:false 後照常。［list］ ... ok
+test_bad_round_no_open (test_matrix_docs.TestRoundJson.test_bad_round_no_open)
+round.json 內容壞掉＝不知道回合關了沒：tick／tock 退出碼 3、什麼都不寫；人寫回 open:false 後照常。［no_open］ ... ok
+test_bad_round_open_str (test_matrix_docs.TestRoundJson.test_bad_round_open_str)
+round.json 內容壞掉＝不知道回合關了沒：tick／tock 退出碼 3、什麼都不寫；人寫回 open:false 後照常。［open_str］ ... ok
+test_bad_round_round_str (test_matrix_docs.TestRoundJson.test_bad_round_round_str)
+round.json 內容壞掉＝不知道回合關了沒：tick／tock 退出碼 3、什麼都不寫；人寫回 open:false 後照常。［round_str］ ... ok
+test_both_missing_starts_at_one (test_matrix_docs.TestRoundJson.test_both_missing_starts_at_one) ... ok
+test_missing_round_bad_last_round (test_matrix_docs.TestRoundJson.test_missing_round_bad_last_round)
+round.json 不存在、last-round.json 壞：推定不了回合數 → tick 3，什麼都不寫。 ... ok
+test_open_round_tick_refuses (test_matrix_docs.TestRoundJson.test_open_round_tick_refuses)
+round.json 還開著：tick 退出碼 3（說回合還開著）；人寫回 open:false 後開下一回合。 ... ok
+test_real_daemon_node_stat_rule_file (test_matrix_faults.TestDaemonStatRuleFile.test_real_daemon_node_stat_rule_file)
+真 daemon、`AOS7_TEST_FAULT=@規則檔` 中途開關：命中紀錄檔經環境傳給 daemon，證明 stat 注入真的打中； ... ok
+test_node_stat_EACCES (test_matrix_faults.TestDaemonStatUnknown.test_node_stat_EACCES)
+daemon 看已登記 node 的 stat 讀不到：時間線保留、不進 missing、不起 reaper，last_error 帶 errno 類型。［EACCES］ ... ok
+test_node_stat_EIO (test_matrix_faults.TestDaemonStatUnknown.test_node_stat_EIO)
+daemon 看已登記 node 的 stat 讀不到：時間線保留、不進 missing、不起 reaper，last_error 帶 errno 類型。［EIO］ ... ok
+test_node_stat_ESTALE (test_matrix_faults.TestDaemonStatUnknown.test_node_stat_ESTALE)
+daemon 看已登記 node 的 stat 讀不到：時間線保留、不進 missing、不起 reaper，last_error 帶 errno 類型。［ESTALE］ ... ok
+test_last_round_json_EACCES (test_matrix_faults.TestFileUnknown.test_last_round_json_EACCES)
+last-round.json 讀不到：tock 3（判斷不了這回合總結寫過沒），回合不關；拿掉後關上第 N 回合。［EACCES］ ... ok
+test_last_round_json_EIO (test_matrix_faults.TestFileUnknown.test_last_round_json_EIO)
+last-round.json 讀不到：tock 3（判斷不了這回合總結寫過沒），回合不關；拿掉後關上第 N 回合。［EIO］ ... ok
+test_last_round_json_ESTALE (test_matrix_faults.TestFileUnknown.test_last_round_json_ESTALE)
+last-round.json 讀不到：tock 3（判斷不了這回合總結寫過沒），回合不關；拿掉後關上第 N 回合。［ESTALE］ ... ok
+test_listdir_tasks_EACCES (test_matrix_faults.TestFileUnknown.test_listdir_tasks_EACCES)
+`.aos/tasks` 列不出來：tick 3、tock 3，什麼都沒寫；拿掉後恢復。［EACCES］ ... ok
+test_listdir_tasks_EIO (test_matrix_faults.TestFileUnknown.test_listdir_tasks_EIO)
+`.aos/tasks` 列不出來：tick 3、tock 3，什麼都沒寫；拿掉後恢復。［EIO］ ... ok
+test_listdir_tasks_ESTALE (test_matrix_faults.TestFileUnknown.test_listdir_tasks_ESTALE)
+`.aos/tasks` 列不出來：tick 3、tock 3，什麼都沒寫；拿掉後恢復。［ESTALE］ ... ok
+test_round_json_EACCES (test_matrix_faults.TestFileUnknown.test_round_json_EACCES)
+round.json 讀不到：tick 3、tock 3，什麼都沒寫；拿掉後回合連續。［EACCES］ ... ok
+test_round_json_EIO (test_matrix_faults.TestFileUnknown.test_round_json_EIO)
+round.json 讀不到：tick 3、tock 3，什麼都沒寫；拿掉後回合連續。［EIO］ ... ok
+test_round_json_ESTALE (test_matrix_faults.TestFileUnknown.test_round_json_ESTALE)
+round.json 讀不到：tick 3、tock 3，什麼都沒寫；拿掉後回合連續。［ESTALE］ ... ok
+test_slotfile_birth_EACCES (test_matrix_faults.TestFileUnknown.test_slotfile_birth_EACCES)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［birth_EACCES］ ... ok
+test_slotfile_birth_EIO (test_matrix_faults.TestFileUnknown.test_slotfile_birth_EIO)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［birth_EIO］ ... ok
+test_slotfile_birth_ESTALE (test_matrix_faults.TestFileUnknown.test_slotfile_birth_ESTALE)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［birth_ESTALE］ ... ok
+test_slotfile_exit_EACCES (test_matrix_faults.TestFileUnknown.test_slotfile_exit_EACCES)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［exit_EACCES］ ... ok
+test_slotfile_exit_EIO (test_matrix_faults.TestFileUnknown.test_slotfile_exit_EIO)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［exit_EIO］ ... ok
+test_slotfile_exit_ESTALE (test_matrix_faults.TestFileUnknown.test_slotfile_exit_ESTALE)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［exit_ESTALE］ ... ok
+test_slotfile_pid_EACCES (test_matrix_faults.TestFileUnknown.test_slotfile_pid_EACCES)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［pid_EACCES］ ... ok
+test_slotfile_pid_EIO (test_matrix_faults.TestFileUnknown.test_slotfile_pid_EIO)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［pid_EIO］ ... ok
+test_slotfile_pid_ESTALE (test_matrix_faults.TestFileUnknown.test_slotfile_pid_ESTALE)
+槽裡的 birth／exit／pid.json 讀不到：UNKNOWN——不起、不判 lost、不刪槽；拿掉後恢復，回合不跳號。［pid_ESTALE］ ... ok
+test_birth_unreadable_while_serving (test_matrix_faults.TestMountUnknown.test_birth_unreadable_while_serving) ... ok
+test_request_unreadable_kept (test_matrix_faults.TestMountUnknown.test_request_unreadable_kept) ... ok
+test_deadboth_proc_environ_EIO (test_matrix_faults.TestProcUnknown.test_deadboth_proc_environ_EIO)
+runner 與任務都死了、沒 exit.json：身分掃描讀不到＝UNKNOWN 不寫 lost；拿掉後判 lost 一次。［proc-environ_EIO］ ... ok
+test_deadboth_proc_environ_ESTALE (test_matrix_faults.TestProcUnknown.test_deadboth_proc_environ_ESTALE)
+runner 與任務都死了、沒 exit.json：身分掃描讀不到＝UNKNOWN 不寫 lost；拿掉後判 lost 一次。［proc-environ_ESTALE］ ... ok
+test_deadboth_proc_list_EACCES (test_matrix_faults.TestProcUnknown.test_deadboth_proc_list_EACCES)
+runner 與任務都死了、沒 exit.json：身分掃描讀不到＝UNKNOWN 不寫 lost；拿掉後判 lost 一次。［proc-list_EACCES］ ... ok
+test_deadboth_proc_list_EIO (test_matrix_faults.TestProcUnknown.test_deadboth_proc_list_EIO)
+runner 與任務都死了、沒 exit.json：身分掃描讀不到＝UNKNOWN 不寫 lost；拿掉後判 lost 一次。［proc-list_EIO］ ... ok
+test_deadboth_proc_list_ESTALE (test_matrix_faults.TestProcUnknown.test_deadboth_proc_list_ESTALE)
+runner 與任務都死了、沒 exit.json：身分掃描讀不到＝UNKNOWN 不寫 lost；拿掉後判 lost 一次。［proc-list_ESTALE］ ... ok
+test_deadboth_skip_proc_environ_EACCES (test_matrix_faults.TestProcUnknown.test_deadboth_skip_proc_environ_EACCES)
+environ 全部 EACCES＝身分讀不到的程序略過（不是不知道）：任務確實死了 → 照常判 lost 一次、重起一個，不雙開。 ... ok
+test_healthy_proc_cmdline_EACCES (test_matrix_faults.TestProcUnknown.test_healthy_proc_cmdline_EACCES)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-cmdline_EACCES］ ... ok
+test_healthy_proc_cmdline_EIO (test_matrix_faults.TestProcUnknown.test_healthy_proc_cmdline_EIO)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-cmdline_EIO］ ... ok
+test_healthy_proc_cmdline_ESTALE (test_matrix_faults.TestProcUnknown.test_healthy_proc_cmdline_ESTALE)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-cmdline_ESTALE］ ... ok
+test_healthy_proc_environ_EACCES (test_matrix_faults.TestProcUnknown.test_healthy_proc_environ_EACCES)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-environ_EACCES］ ... ok
+test_healthy_proc_environ_EIO (test_matrix_faults.TestProcUnknown.test_healthy_proc_environ_EIO)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-environ_EIO］ ... ok
+test_healthy_proc_environ_ESTALE (test_matrix_faults.TestProcUnknown.test_healthy_proc_environ_ESTALE)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-environ_ESTALE］ ... ok
+test_healthy_proc_list_EACCES (test_matrix_faults.TestProcUnknown.test_healthy_proc_list_EACCES)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-list_EACCES］ ... ok
+test_healthy_proc_list_EIO (test_matrix_faults.TestProcUnknown.test_healthy_proc_list_EIO)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-list_EIO］ ... ok
+test_healthy_proc_list_ESTALE (test_matrix_faults.TestProcUnknown.test_healthy_proc_list_ESTALE)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-list_ESTALE］ ... ok
+test_healthy_proc_stat_EACCES (test_matrix_faults.TestProcUnknown.test_healthy_proc_stat_EACCES)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-stat_EACCES］ ... ok
+test_healthy_proc_stat_EIO (test_matrix_faults.TestProcUnknown.test_healthy_proc_stat_EIO)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-stat_EIO］ ... ok
+test_healthy_proc_stat_ESTALE (test_matrix_faults.TestProcUnknown.test_healthy_proc_stat_ESTALE)
+/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。［proc-stat_ESTALE］ ... ok
+test_kill_identity_incomplete_scan (test_matrix_faults.TestProcUnknown.test_kill_identity_incomplete_scan)
+掃描不完整：env_procs 丟 Unknown、kill_identity 回 (False, 說明)，不殺。 ... ok
+test_orphan_proc_cmdline_EACCES (test_matrix_faults.TestProcUnknown.test_orphan_proc_cmdline_EACCES)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-cmdline_EACCES］ ... ok
+test_orphan_proc_cmdline_EIO (test_matrix_faults.TestProcUnknown.test_orphan_proc_cmdline_EIO)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-cmdline_EIO］ ... ok
+test_orphan_proc_cmdline_ESTALE (test_matrix_faults.TestProcUnknown.test_orphan_proc_cmdline_ESTALE)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-cmdline_ESTALE］ ... ok
+test_orphan_proc_environ_EIO (test_matrix_faults.TestProcUnknown.test_orphan_proc_environ_EIO)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-environ_EIO］ ... ok
+test_orphan_proc_environ_ESTALE (test_matrix_faults.TestProcUnknown.test_orphan_proc_environ_ESTALE)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-environ_ESTALE］ ... ok
+test_orphan_proc_list_EACCES (test_matrix_faults.TestProcUnknown.test_orphan_proc_list_EACCES)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-list_EACCES］ ... ok
+test_orphan_proc_list_EIO (test_matrix_faults.TestProcUnknown.test_orphan_proc_list_EIO)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-list_EIO］ ... ok
+test_orphan_proc_list_ESTALE (test_matrix_faults.TestProcUnknown.test_orphan_proc_list_ESTALE)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-list_ESTALE］ ... ok
+test_orphan_proc_stat_EACCES (test_matrix_faults.TestProcUnknown.test_orphan_proc_stat_EACCES)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-stat_EACCES］ ... ok
+test_orphan_proc_stat_EIO (test_matrix_faults.TestProcUnknown.test_orphan_proc_stat_EIO)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-stat_EIO］ ... ok
+test_orphan_proc_stat_ESTALE (test_matrix_faults.TestProcUnknown.test_orphan_proc_stat_ESTALE)
+runner 在 pid.json 前被殺、任務還活：要身分掃描才能判 lost；掃描讀不到＝UNKNOWN，拿掉後才判 lost，只報一次。［proc-stat_ESTALE］ ... ok
+test_symlink_node_self (test_matrix_misc.TestSymlinkInProcess.test_symlink_node_self)
+node 本身是符號連結（指到 root 外）：tick／tock 回 gone，連結目標裡沒被建 `.aos`。［self］ ... ok
+test_crash_before_rename_leaves_nothing (test_matrix_misc.TestTmpSweep.test_crash_before_rename_leaves_nothing) ... ok
+test_dead_writer_tmp_cleared_live_kept (test_matrix_misc.TestTmpSweep.test_dead_writer_tmp_cleared_live_kept) ... ok
+test_last_round_written_before_tock_json (test_matrix_misc.TestTockOrder.test_last_round_written_before_tock_json) ... ok
+test_keep_after_birth (test_matrix_once.TestLaunchCrash.test_keep_after_birth)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［after-birth］ ... ok
+test_keep_after_launch (test_matrix_once.TestLaunchCrash.test_keep_after_launch)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［after-launch］ ... ok
+test_keep_after_once_delete (test_matrix_once.TestLaunchCrash.test_keep_after_once_delete)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［after-once-delete］ ... ok
+test_keep_after_popen (test_matrix_once.TestLaunchCrash.test_keep_after_popen)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［after-popen］ ... ok
+test_keep_after_runner (test_matrix_once.TestLaunchCrash.test_keep_after_runner)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［after-runner］ ... ok
+test_keep_before_launch (test_matrix_once.TestLaunchCrash.test_keep_before_launch)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［before-launch］ ... ok
+test_keep_before_once_delete (test_matrix_once.TestLaunchCrash.test_keep_before_once_delete)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［before-once-delete］ ... ok
+test_keep_runner_before_exit (test_matrix_once.TestLaunchCrash.test_keep_runner_before_exit)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［runner-before-exit］ ... ok
+test_keep_runner_before_pid (test_matrix_once.TestLaunchCrash.test_keep_runner_before_pid)
+keep 任務的起動交接在 point 被 SIGKILL：任何檢查點同槽活程序 ≤ 1，恢復後剛好一個活的。［runner-before-pid］ ... ok
+test_once_after_birth (test_matrix_once.TestLaunchCrash.test_once_after_birth)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［after-birth］ ... ok
+test_once_after_launch (test_matrix_once.TestLaunchCrash.test_once_after_launch)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［after-launch］ ... ok
+test_once_after_once_delete (test_matrix_once.TestLaunchCrash.test_once_after_once_delete)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［after-once-delete］ ... ok
+test_once_after_popen (test_matrix_once.TestLaunchCrash.test_once_after_popen)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［after-popen］ ... ok
+test_once_after_runner (test_matrix_once.TestLaunchCrash.test_once_after_runner)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［after-runner］ ... ok
+test_once_before_launch (test_matrix_once.TestLaunchCrash.test_once_before_launch)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［before-launch］ ... ok
+test_once_before_once_delete (test_matrix_once.TestLaunchCrash.test_once_before_once_delete)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［before-once-delete］ ... ok
+test_once_runner_before_exit (test_matrix_once.TestLaunchCrash.test_once_runner_before_exit)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［runner-before-exit］ ... ok
+test_once_runner_before_pid (test_matrix_once.TestLaunchCrash.test_once_runner_before_pid)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［runner-before-pid］ ... ok
+test_crash_after_birth (test_once_threestate.TestOnceCrash.test_crash_after_birth)
+birth.json 寫了、runner 沒起（或起了沒記到）：不重起，判 lost 報出來，不會無痕消失。 ... ok
+test_crash_after_launch_marker (test_once_threestate.TestOnceCrash.test_crash_after_launch_marker) ... ok
+test_crash_after_popen (test_once_threestate.TestOnceCrash.test_crash_after_popen) ... ok
+test_crash_before_item_delete (test_once_threestate.TestOnceCrash.test_crash_before_item_delete) ... ok
+test_crash_between_birth_and_item_delete (test_once_threestate.TestOnceCrash.test_crash_between_birth_and_item_delete)
+線頭 1（spec §4.4 保證 (a)）：birth 寫好、移項前被殺 → 表上那項帶 launch、槽的 birth 是同一個 run； ... ok
+test_gang_crash_mid_batch (test_once_threestate.TestOnceCrash.test_gang_crash_mid_batch)
+五項 once 起到第一個就被殺（after-popen）：其他四項有標記沒 birth → 照常起；每項剛好一次（N-86）。 ... ok
+test_unreadable_birth_keeps_once_item (test_once_threestate.TestOnceCrash.test_unreadable_birth_keeps_once_item) ... ok
+test_birth_unreadable_no_start_no_lost_no_delete (test_once_threestate.TestThreeState.test_birth_unreadable_no_start_no_lost_no_delete) ... ok
+test_broken_round_and_no_last_round_is_unknown (test_once_threestate.TestThreeState.test_broken_round_and_no_last_round_is_unknown) ... ok
+test_broken_round_json_is_unknown_even_with_last_round (test_once_threestate.TestThreeState.test_broken_round_json_is_unknown_even_with_last_round)
+A2-02：round.json 壞了＝不知道上一回合關了沒，即使 last-round.json 能用也不接著數（會覆蓋還開著的同號回合）。 ... ok
+test_fact_states (test_once_threestate.TestThreeState.test_fact_states)
+單一讀檔入口 fact：不存在＝N、壞 JSON＝BAD、讀不到＝U；存在但不是一般檔（FIFO、資料夾）一律＝U（頂層定案 3）。 ... ok
+test_pid_reused_is_gone (test_once_threestate.TestThreeState.test_pid_reused_is_gone)
+starttime 對不上（pid 被重用）＝確定不在。 ... ok
+test_round_json_unreadable_tick_tock_do_nothing (test_once_threestate.TestThreeState.test_round_json_unreadable_tick_tock_do_nothing) ... ok
+test_starttime_unreadable_counts_as_alive (test_once_threestate.TestThreeState.test_starttime_unreadable_counts_as_alive)
+starttime 讀不到＝不知道 → 當活：不判 lost、keep 不雙開（K-05）。用同程序的 tick／tock mock 掉 starttime。 ... ok
+test_tasks_dir_unlistable_no_start (test_once_threestate.TestThreeState.test_tasks_dir_unlistable_no_start) ... ok
+test_each_stops_after_until_round (test_options_a3.TestUntilRound.test_each_stops_after_until_round)
+until_round：each 任務 until_round=2 → 第 1、2 回合起，第 3 回合起不再起；項目留在表上。 ... ok
+test_keep_running_not_killed (test_options_a3.TestUntilRound.test_keep_running_not_killed)
+until_round：keep 的 run 過了 until_round 不被殺；它自己結束後不再起新 run。 ... ok
+test_until_round_bad_type_skipped (test_options_a3.TestUntilRound.test_until_round_bad_type_skipped)
+until_round 型別錯（負數、字串、bool）→ 只跳過該項、記 tasks_error；until_round=0 合法（一次都不起）；好項照起。 ... ok
+test_gone_node_not_recreated (test_tick_tock.TestGone.test_gone_node_not_recreated) ... ok
+test_unregistered_but_existing_dir_works_by_hand (test_tick_tock.TestGone.test_unregistered_but_existing_dir_works_by_hand) ... ok
+test_argv_and_inst_exclusive (test_tick_tock.TestInst.test_argv_and_inst_exclusive) ... ok
+test_inst_task (test_tick_tock.TestInst.test_inst_task) ... ok
+test_disabled_keeps_slot_and_state (test_tick_tock.TestModes.test_disabled_keeps_slot_and_state) ... ok
+test_each_max_live_slots (test_tick_tock.TestModes.test_each_max_live_slots) ... ok
+test_each_skips_while_previous_still_running (test_tick_tock.TestModes.test_each_skips_while_previous_still_running) ... ok
+test_from_round_and_enabled (test_tick_tock.TestModes.test_from_round_and_enabled) ... ok
+test_keep_does_not_double_start (test_tick_tock.TestModes.test_keep_does_not_double_start) ... ok
+test_keep_fills_all_slots_and_restarts_ended (test_tick_tock.TestModes.test_keep_fills_all_slots_and_restarts_ended) ... ok
+test_batch_once_same_round (test_tick_tock.TestOnce.test_batch_once_same_round) ... ok
+test_once_from_round (test_tick_tock.TestOnce.test_once_from_round) ... ok
+test_once_in_busy_slot_waits (test_tick_tock.TestOnce.test_once_in_busy_slot_waits) ... ok
+test_once_runs_once_and_item_removed (test_tick_tock.TestOnce.test_once_runs_once_and_item_removed) ... ok
+test_200_rounds_file_count_constant (test_tick_tock.TestOnlyLastKept.test_200_rounds_file_count_constant)
+槽重用：同名跑 200 回合，`.aos` 底下的檔案數維持常數（核心只留上一次）。 ... ok
+test_ended_after_tock_then_reused_still_reported (test_tick_tock.TestOnlyLastKept.test_ended_after_tock_then_reused_still_reported)
+上一個 run 在 tock 之後才結束、下一個 tick 就重用槽：清掉前記進 round.json，tock 照樣報（P2-03）。 ... ok
+test_live_slot_of_removed_name_kept (test_tick_tock.TestSlotRemoval.test_live_slot_of_removed_name_kept) ... ok
+test_once_slot_deleted_after_report (test_tick_tock.TestSlotRemoval.test_once_slot_deleted_after_report) ... ok
+test_removed_name_slot_deleted_one_round_after_report (test_tick_tock.TestSlotRemoval.test_removed_name_slot_deleted_one_round_after_report) ... ok
+test_shrunk_max_live_slot_deleted (test_tick_tock.TestSlotRemoval.test_shrunk_max_live_slot_deleted) ... ok
+test_unreadable_table_deletes_nothing (test_tick_tock.TestSlotRemoval.test_unreadable_table_deletes_nothing) ... ok
+test_bad_field_types_skip_only_that_item (test_tick_tock.TestSlotsAndRuns.test_bad_field_types_skip_only_that_item) ... ok
+test_bad_names_skipped_not_mangled (test_tick_tock.TestSlotsAndRuns.test_bad_names_skipped_not_mangled) ... ok
+test_infra_files_cleared_task_files_kept (test_tick_tock.TestSlotsAndRuns.test_infra_files_cleared_task_files_kept) ... ok
+test_run_is_round_and_increases (test_tick_tock.TestSlotsAndRuns.test_run_is_round_and_increases) ... ok
+test_stale_infra_of_other_run_ignored (test_tick_tock.TestSlotsAndRuns.test_stale_infra_of_other_run_ignored) ... ok
+test_task_env_and_tock_json (test_tick_tock.TestSlotsAndRuns.test_task_env_and_tock_json) ... ok
+test_tick_starts_in_slot_and_does_not_wait (test_tick_tock.TestSlotsAndRuns.test_tick_starts_in_slot_and_does_not_wait) ... ok
+test_timeline_json_optional (test_tick_tock.TestSlotsAndRuns.test_timeline_json_optional) ... ok
+test_unreadable_tasks_json_is_empty_table (test_tick_tock.TestSlotsAndRuns.test_unreadable_tasks_json_is_empty_table) ... ok
+test_nested_registered_while_running (test_audit_wrapper.TestAuditRegistration.test_nested_registered_while_running) ... ok
+test_wrapped_python_task_writes_recorded (test_audit_wrapper.TestAuditWrapper.test_wrapped_python_task_writes_recorded) ... ok
+test_cli_restart_auto_id_and_resend (test_control.TestReqId.test_cli_restart_auto_id_and_resend)
+`aos7-ctl task <槽> restart` 每次自動帶新的 req_id，兩次都生效；`--id` 沿用原 id 重送＝once 不重加。 ... ok
+test_concurrent_same_req_id_snapshot (test_control.TestReqId.test_concurrent_same_req_id_snapshot)
+A4-02：A 讀完 run 1 的 birth、停在拿表鎖前；B 用同一個 req_id 做完重起（run 2 的 birth 帶它）；A 恢復 ... ok
+test_same_prefix_req_ids_distinct (test_control.TestReqId.test_same_prefix_req_ids_distinct) ... ok
+test_two_slots_same_req_id (test_control.TestReqId.test_two_slots_same_req_id) ... ok
+test_reload_refused_without_kill (test_control.TestRestart.test_reload_refused_without_kill) ... ok
+test_restart_carries_dynamic_mounts (test_control.TestRestart.test_restart_carries_dynamic_mounts)
+執行中加掛的掛載，restart 照 birth 抄進新 once 項的 mounts 宣告，新 run 照樣有。 ... ok
+test_restart_receipt_survives_new_run (test_control.TestRestart.test_restart_receipt_survives_new_run)
+kill 的回條換 run 不清（P2-04）：重起的新 run 起來之後，請求端照樣讀得到 `result.run` 是舊的那次。 ... ok
+test_restart_reload_takes_new_definition (test_control.TestRestart.test_restart_reload_takes_new_definition) ... ok
+test_restart_same_slot_new_run_keeps_state (test_control.TestRestart.test_restart_same_slot_new_run_keeps_state) ... ok
+test_restart_with_bad_table_does_not_kill (test_control.TestRestart.test_restart_with_bad_table_does_not_kill)
+G1：要先加 once 項，表壞掉＝加不進去 → ok:false、不寫 kill、表原封不動。 ... ok
+test_restart_keep_requester_after_append (test_control.TestRestartCrash.test_restart_keep_requester_after_append)
+活著的 keep 被 restart：任何檢查點同槽活程序 ≤ 1；重起只發生一次；新 birth 帶 x.restart_of。［requester-after-append］ ... ok
+test_restart_keep_tick_ctl_after_done (test_control.TestRestartCrash.test_restart_keep_tick_ctl_after_done)
+活著的 keep 被 restart：任何檢查點同槽活程序 ≤ 1；重起只發生一次；新 birth 帶 x.restart_of。［tick-ctl-after-done］ ... ok
+test_restart_keep_tock_ctl_after_done (test_control.TestRestartCrash.test_restart_keep_tock_ctl_after_done)
+活著的 keep 被 restart：任何檢查點同槽活程序 ≤ 1；重起只發生一次；新 birth 帶 x.restart_of。［tock-ctl-after-done］ ... ok
+test_restart_once_requester_after_append (test_control.TestRestartCrash.test_restart_once_requester_after_append)
+跑完的 once 被 restart：恢復後只重起一次（執行紀錄兩次），表上最後沒有殘項。［requester-after-append］ ... ok
+test_restart_once_tick_ctl_after_done (test_control.TestRestartCrash.test_restart_once_tick_ctl_after_done)
+跑完的 once 被 restart：恢復後只重起一次（執行紀錄兩次），表上最後沒有殘項。［tick-ctl-after-done］ ... ok
+test_restart_once_tock_ctl_after_done (test_control.TestRestartCrash.test_restart_once_tock_ctl_after_done)
+跑完的 once 被 restart：恢復後只重起一次（執行紀錄兩次），表上最後沒有殘項。［tock-ctl-after-done］ ... ok
+test_diag_is_read_only (test_diag.TestDiag.test_diag_is_read_only)
+跑 diag 前後空間裡的檔案（名字、大小、mtime、內容）完全不變。 ... ok
+test_timeline_err_keeps_kind_prefix (test_diag.TestDiag.test_timeline_err_keeps_kind_prefix)
+時間線的長錯誤（hold 格式）保留開頭、≤ 320 字、kind 分欄；diag 照抄並對到恢復步驟（找持鎖者、不要 unlink 鎖檔）。 ... ok
+test_unsure_listed (test_diag.TestDiag.test_unsure_listed)
+starttime 讀不到的任務：tock 總結的 errors 留 unsure（核心），diag 按需重算也列在 uncertain、給恢復步驟。 ... ok
+test_old_field_rejected_and_non_true_ignored (test_once_retry.TestRetryLost.test_old_field_rejected_and_non_true_ignored)
+舊的頂層 `retry_lost` 欄：核心跳過該項、tasks_error 指到這個包；`x.retry_lost` 不是 true（字串）：核心照起，模組不理。 ... ok
+test_retry_lost_default_at_most_once (test_once_retry.TestRetryLost.test_retry_lost_default_at_most_once)
+不帶 x.retry_lost：模組照跑也不加回，維持最多一次：0 次、報一次 lost。 ... ok
+test_retry_lost_true_runs_once (test_once_retry.TestRetryLost.test_retry_lost_true_runs_once)
+x.retry_lost:true 的 once 從沒起來過 → 模組加回、同槽新 run 跑一次（副作用 1 次）；ended 的 lost 帶 never_started。 ... ok
+test_module_as_keep_task (test_once_retry.TestRetryLostTask.test_module_as_keep_task) ... ok
+test_allow_stop_writes_stopped_and_parent_does_not_restart (test_subd_ownership.TestOwnership.test_allow_stop_writes_stopped_and_parent_does_not_restart)
+允許的 stop：包裝程式寫 stopped.json；父 keep 再起它時包裝程式退出碼 1（總結 ended 看得到）、子 daemon 沒起； ... ok
+test_manual_restart_keeps_owner_block (test_subd_ownership.TestOwnership.test_manual_restart_keeps_owner_block)
+人手直接起 aos7-daemon（繞過包裝）：守門檔與 owner 塊照舊留著（核心不碰它們），stopped.json 也留著 ... ok
+test_owner_blocks_and_stop_refused (test_subd_ownership.TestOwnership.test_owner_blocks_and_stop_refused) ... ok
+test_parent_kill_takes_child_tasks (test_subd_ownership.TestOwnership.test_parent_kill_takes_child_tasks) ... ok
+test_subroot_rules (test_subd_ownership.TestSubrootChecks.test_subroot_rules) ... ok
+test_allowed_stop_without_kill_keeps_tasks (test_subd_recover.TestBoundary.test_allowed_stop_without_kill_keeps_tasks)
+被允許的 stop（不帶 kill）留下的任務是擁有者要留的：刪掉 stopped.json 再起時不回收，照核心接回。 ... ok
+test_sibling_and_current_gen_untouched (test_subd_recover.TestBoundary.test_sibling_and_current_gen_untouched) ... ok
+test_killed_after_reaped_before_new_gen (test_subd_recover.TestInterrupted.test_killed_after_reaped_before_new_gen) ... ok
+test_killed_before_argv (test_subd_recover.TestInterrupted.test_killed_before_argv) ... ok
+test_killed_while_reaping (test_subd_recover.TestInterrupted.test_killed_while_reaping) ... ok
+test_paused_node_reaped_and_stays_paused (test_subd_recover.TestParentKill.test_paused_node_reaped_and_stays_paused)
+子空間的 n1 被 pause：照環境身分收，不必 resume；pause 留著（包不改 pause）。 ... ok
+test_reaped_before_new_daemon (test_subd_recover.TestParentKill.test_reaped_before_new_daemon) ... ok
+test_bad_record_does_not_start (test_subd_recover.TestUnknown.test_bad_record_does_not_start) ... ok
+test_no_record_with_old_slots_is_not_fresh (test_subd_recover.TestUnknown.test_no_record_with_old_slots_is_not_fresh)
+沒有記錄（例如舊版包起的）但子根已有前代：不當全新空間，照樣先收。 ... ok
+test_scan_incomplete_does_not_start (test_subd_recover.TestUnknown.test_scan_incomplete_does_not_start) ... ok
+test_aos7_ctl_task (test_tools_ctl.TestCtlTask.test_aos7_ctl_task)
+〔tools〕 ... ok
+test_fixed_name_lossless (test_tools_ctl.TestOwnerNames.test_fixed_name_lossless)
+A3-06：甲／乙、A/B 與 A+B、x? 與 x!（owner、by、node 各段）都編成不同檔名；很長的也不同、不超過 255 bytes。 ... ok
+test_non_ascii_owner_pauses_both_kept (test_tools_ctl.TestOwnerNames.test_non_ascii_owner_pauses_both_kept)
+A3-06：daemon 沒起前送兩份 pause（owner 甲、乙），起來後兩個 owner 都在 paused.json。 ... ok
+test_max_lines_applies_to_daemon_events (test_modules_history.TestHistoryMaxLines.test_max_lines_applies_to_daemon_events) ... ok
+test_counter_reads_previous_state_and_gets_tock (test_modules_history.TestModules.test_counter_reads_previous_state_and_gets_tock) ... ok
+test_history_module_appends_last_rounds (test_modules_history.TestModules.test_history_module_appends_last_rounds) ... ok
+test_cancel_after_effect_refused (test_budget_ledger.TestCrash.test_cancel_after_effect_refused)
+後端已受理（入口回條未寫）時取消：查回效果、寫成 accepted，取消不成；結算 1。 ... ok
+test_cancel_run_race (test_budget_ledger.TestCrash.test_cancel_run_race)
+十個 K 各自同時跑 call 與 cancel：每個 K 恰為「後端受理」或「已取消」之一，不雙花；途中每份帳快照都守恆。 ... ok
+test_cancel_then_late_run (test_budget_ledger.TestCrash.test_cancel_then_late_run)
+預留後取消：終局 cancelled，晚到的 run(K) 不執行、結算 0、額度退回。 ... ok
+test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) ... ok
+test_unknown_then_evidence (test_budget_ledger.TestCrash.test_unknown_then_evidence)
+准入意圖寫了就被殺：settle 回 unknown、預留留著（不退）；補上證據（重跑同 K）才結算。 ... ok
+test_wrapper_points (test_budget_ledger.TestCrash.test_wrapper_points)
+包裝程式在 reserve 後、准入意圖後、後端效果後（回條未寫）、入口回條後、結算後被殺：重跑同 K 不重扣、不重做。 ... ok
+test_child_grant_refused (test_budget_ledger.TestGrant.test_child_grant_refused)
+子 grant（parent 或 delegate 不是 false）：開帳拒絕、判定 denied。 ... ok
+test_clock_unknown_and_backwards (test_budget_ledger.TestGrant.test_clock_unknown_and_backwards) ... ok
+test_grant_changed_or_missing_is_unknown (test_budget_ledger.TestGrant.test_grant_changed_or_missing_is_unknown) ... ok
+test_init_refuses_existing (test_budget_ledger.TestGrant.test_init_refuses_existing) ... ok
+test_ok_and_mismatch (test_budget_ledger.TestGrant.test_ok_and_mismatch) ... ok
+test_window_half_open (test_budget_ledger.TestGrant.test_window_half_open)
+from ≤ c < until：until 那一回合起就到期；from 之前是 not_yet（非終局）。 ... ok
+test_consume_one (test_budget_ledger.TestNormal.test_consume_one) ... ok
+test_mismatch_denied (test_budget_ledger.TestNormal.test_mismatch_denied)
+持有人、資源、入口不符：reserve 被拒、不入帳。 ... ok
+test_race_last_unit (test_budget_ledger.TestNormal.test_race_last_unit)
+額度 1，六個不同 K 同時搶：恰一個成功，其餘 denied（不入帳）。 ... ok
+test_reject_zero_fail_one (test_budget_ledger.TestNormal.test_reject_zero_fail_one)
+後端明確拒絕計 0、退回預留；已受理後處理失敗仍計 1。 ... ok
+test_same_key_concurrent (test_budget_ledger.TestNormal.test_same_key_concurrent)
+同 K 同內容六個並行：全部回同一個成功結果，後端只受理一次、只扣一次。 ... ok
+test_same_key_other_content_conflict (test_budget_ledger.TestNormal.test_same_key_other_content_conflict) ... ok
+test_admitted_then_expired_still_settles (test_budget_ledger.TestTime.test_admitted_then_expired_still_settles)
+已准入（意圖寫了）後到期：恢復不再查效期，照常受理並結算 1。 ... ok
+test_bad_clock (test_budget_ledger.TestTime.test_bad_clock)
+壞鐘：新 reserve 未知（不入帳）；已有入口證據的結算照做（不看時鐘）；時鐘倒退＝未知。 ... ok
+test_bad_ledger_refuses (test_budget_ledger.TestTime.test_bad_ledger_refuses)
+壞帳：帳任務不受理（記 error.json、請求留著），包裝程式等滿耐性回 3；修好後同一請求照常處理、只扣一次。 ... ok
+test_missing_ledger_not_reopened (test_budget_ledger.TestTime.test_missing_ledger_not_reopened) ... ok
+test_not_yet_is_not_terminal (test_budget_ledger.TestTime.test_not_yet_is_not_terminal) ... ok
+test_reserve_after_expiry_denied (test_budget_ledger.TestTime.test_reserve_after_expiry_denied) ... ok
+test_reserved_then_expired_first_run_denied (test_budget_ledger.TestTime.test_reserved_then_expired_first_run_denied)
+到期前 reserve、到期後首次准入被擋：入口終局 denied、結算 0、額度退回。 ... ok
+test_end_to_end_and_replay_after_close (test_budget_step.TestBudgetDaemon.test_end_to_end_and_replay_after_close) ... ok
+test_pause_and_daemon_restart_clock (test_budget_step.TestBudgetDaemon.test_pause_and_daemon_restart_clock)
+completed_tock：pause 時不前進；daemon 重開接續原回合（不歸零）；之後 call 照常、帳的 clock_hw 不超過時鐘。 ... ok
+test_restart_on_end_new_request_new_transaction (test_budget_step.TestBudgetDaemon.test_restart_on_end_new_request_new_transaction)
+restart_on_end：每個新 inst 是新 request＝新交易；額度 3 用完後第四次 reserve 被拒，工作走 failed。 ... ok
+test_work_failure_still_counts (test_budget_step.TestBudgetDaemon.test_work_failure_still_counts)
+後端已受理、處理失敗：step ok:false 走 failed，但帳照受理結算 1（不因 step 失敗退款）。 ... ok
+test_crash_points_resend_same_request (test_budget_step.TestBudgetStepProbes.test_crash_points_resend_same_request) ... ok
+test_expired_between_rounds (test_budget_step.TestBudgetStepProbes.test_expired_between_rounds)
+reserve 後被殺、step 停在 unknown；回合走過 until 後 resume --resend：首次准入被擋 → 結算 0、step 走 failed。 ... ok
+test_slot_gone_settle_without_step (test_budget_step.TestBudgetStepProbes.test_slot_gone_settle_without_step)
+入口回條寫了、結算前被殺，step 停在 unknown（不自動重送）；once 槽刪掉後直接 settle 照入口證據結算 1； ... ok
+test_bad_types_json_diagnostics (test_step.TestCheck.test_bad_types_json_diagnostics)
+start=[]、ok=[]、result.ok=[]：CLI 回 JSON 診斷陣列（error）、rc 1、stderr 沒有 traceback（A4-04）。 ... ok
+test_examples_pass (test_step.TestCheck.test_examples_pass) ... ok
+test_global_kill_on_wait (test_step.TestCheck.test_global_kill_on_wait)
+全域 on_timeout: kill＋wait 步 → error（查套預設後的有效值）；步內改回 unknown 就過（A4-04）。 ... ok
+test_r1_finite_or_patience (test_step.TestCheck.test_r1_finite_or_patience) ... ok
+test_r2_non_idempotent_in_retry_loop (test_step.TestCheck.test_r2_non_idempotent_in_retry_loop)
+rotate（不冪等）放進重試圈 → R2；改成先查回條（receipt）就過；on_unknown: resend 不冪等 → R2。 ... ok
+test_r3_only_local_rounds (test_step.TestCheck.test_r3_only_local_rounds) ... ok
+test_run_step_wake (test_step.TestCheck.test_run_step_wake)
+run 步可逐步覆蓋 wake（A4-07）；型別要是 true／false；restart_on_end 不能寫在步內。 ... ok
+test_structure (test_step.TestCheck.test_structure) ... ok
+test_backup_end_to_end (test_step.TestStepDaemon.test_backup_end_to_end)
+備份四步走通：rotate 一次、通知帶 request；dump 失敗兩次後成功（count 計數 2）。 ... ok
+test_csv_end_to_end (test_step.TestStepDaemon.test_csv_end_to_end)
+CSV→JSON→報表：兩步各一個核心 run（不同槽），第二步只讀第一步已採用的 request，結果檔各一份。 ... ok
+test_file_count_bounded (test_step.TestStepDaemon.test_file_count_bounded)
+restart_on_end：同一個工作跑 6 次，結案時清結果，工作資料夾檔數與槽數不隨次數長。 ... ok
+test_pause_freezes_patience (test_step.TestStepDaemon.test_pause_freezes_patience)
+wait 步耐性 10 回合；pause node 1.5 秒（≈15 個 interval）：框架不動、不逾時；resume 後條件成立照常結束。 ... ok
+test_wake_option (test_step.TestStepDaemon.test_wake_option)
+wake: true：登記完 once 就寫 daemon 的 wake（回條 ok）；預設不寫。 ... ok
+test_backup_rotate_fail_not_retried (test_step.TestStepProbes.test_backup_rotate_fail_not_retried)
+備份：rotate 直接失敗 → 走 fail（結束 failed），不重試。 ... ok
+test_backup_rotate_unknown_not_retried (test_step.TestStepProbes.test_backup_rotate_unknown_not_retried)
+備份：rotate（不冪等）轉完、結果寫出前被殺 → unknown 停住，不重送（只轉過一次）。 ... ok
+test_bad_tasks_json_refused (test_step.TestStepProbes.test_bad_tasks_json_refused)
+壞 tasks.json：直譯器拒寫（表原封不動）、撤掉意圖、記 error.json；修好後照常派、走完。 ... ok
+test_broken_frame_and_changed_table (test_step.TestStepProbes.test_broken_frame_and_changed_table)
+框架壞掉：不前進、記錯、不從結果檔反推；工作進行中改了步驟表：停（version）。 ... ok
+test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once)
+直譯器在三個點被殺（存意圖後、加項後、讀到結果還沒推進 pc）：每步都只跑一次、只推進一次。 ... ok
+test_idempotent_resend_keeps_request (test_step.TestStepProbes.test_idempotent_resend_keeps_request)
+冪等步＋on_unknown: resend：被殺後自動重派一次，request 不變、attempt +1。 ... ok
+test_interp_killed_reattaches_same_attempt (test_step.TestStepProbes.test_interp_killed_reattaches_same_attempt)
+子工作還在跑時 SIGKILL 直譯器：keep 重開接回同一個 attempt，不多派；放閘門後照常走完。 ... ok
+test_killed_after_artifact_before_result (test_step.TestStepProbes.test_killed_after_artifact_before_result)
+產物寫了、結果沒寫時 kill 子工作：停在 unknown（不誤報成功、不當沒做、不自動重送）。 ... ok
+test_once_slot_gone_result_carries_on (test_step.TestStepProbes.test_once_slot_gone_result_carries_on)
+直譯器停了好幾回合、子工作的 once 槽已被刪：重開後靠槽外結果繼續，不重派。 ... ok
+test_start_wait_patience (test_step.TestStepProbes.test_start_wait_patience)
+start 就是 wait（耐性 2）：建框架那圈就有耐性起點，條件不成立照 patience 停在 timeout（A4-03）。 ... ok
+test_wait_timeout_and_receipt (test_step.TestStepProbes.test_wait_timeout_and_receipt)
+wait 耐性 2 回合到期 → 停（timeout，預設 unknown）；條件之後成立、resume 後照走。receipt 成立的 run 步不派。 ... ok
+
+----------------------------------------------------------------------
+Ran 322 tests in 140.315s
+
+OK
