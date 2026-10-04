@@ -67,9 +67,9 @@ python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾�
 | `lib/aos7_daemon.py`、`aos7_daemon_timeline.py` | daemon：登記、控制檔、node 消失、status；每個 node 一條時間線（第 1、2 節） |
 | `lib/aos7_tick.py`、`aos7_tock.py` | 開回合（tasks.json、once 的 launch 標記）／關回合（last-round.json、刪槽）（第 3、4、7 節） |
 | `lib/aos7_task.py` | 槽、三態判定、lost 前的身分掃描、任務控制、在槽裡起新 run（第 5、6 節） |
-| `lib/aos7_proc.py` | 程序工具：同一個程序嗎（pid＋starttime 三態）、身分掃描、Q1 範圍的收程序 |
+| `lib/aos7_proc.py` | 程序工具：程序的事實（`proc`：不在／starttime／不知道）、同一個程序嗎、身分掃描、Q1 範圍的收程序 |
 | `lib/aos7_run.py` | 任務的包裝：pid.json、exit.json（帶 run） |
-| `lib/aos7_fs.py` | 原子寫、三態讀（`read_json3`）、flock、動作鎖與世代、測試鉤子的轉接（`AOS7_TEST_HOOKS` 有設才載入 `tests/_hooks.py`） |
+| `lib/aos7_fs.py` | 錯誤四分支的入口（讀檔 `fact`、紀錄 `hold`、例外 `Unknown`）、原子寫、flock、動作鎖與世代、測試鉤子的轉接（`AOS7_TEST_HOOKS` 有設才載入 `tests/_hooks.py`） |
 | `lib/aos7_mount.py` | 掛載（4.5）：tick 建掛載、審核執行中加掛 |
 | `modules/tools/` | [工具包](modules/tools/README.md)：`aos7_ctl.py`（`aos7-ctl daemon／task／add`）、`aos7_taskside.py`（任務端的 wait_tock、task_env、resolver、request） |
 | `modules/audit/` | [稽核包](modules/audit/README.md)：可選的寫入紀錄（`aos7_audit.py`、`audit_site/`） |

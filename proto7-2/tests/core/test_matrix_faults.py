@@ -20,7 +20,7 @@
      不知道。所以 orphan 的 environ × EACCES 不在矩陣裡（那是誤用，已刪）；`deadboth_skip`（environ 全部 EACCES、任務確實死了）
      照常判 lost 一次、重起一個。
    **每個注入都斷言命中 ≥1**（`_matrix.fault`／`run_prog` 經 AOS7_TEST_FAULT_HITS 命中紀錄檔，子程序也算）。
-   另有 `kill_identity` 在掃描不完整時回 (False, 說明)、`env_procs` 丟 `aos7_proc.ProcUnknown`。
+   另有 `kill_identity` 在掃描不完整時回 (False, 說明)、`env_procs` 丟 `aos7_fs.Unknown`。
 2. **檔案讀不到**（open 注入）：檔 ∈ {birth.json、exit.json、pid.json} × errno → 槽 UNKNOWN：不起、不判 lost、不刪槽（名字拿掉也不刪）、
    tock errors 一筆；拿掉後恢復（lost 只報一次、重新起一個），回合不跳號。
    檔 ∈ {round.json（tick 3、tock 3，round.json 原樣）、last-round.json（tock 3）}、listdir `.aos/tasks`（tick 3、tock 3）× errno：
@@ -38,6 +38,7 @@ import unittest
 from _matrix import ERRNOS, DaemonCase, Fault, MatrixCase, alive, fault, gen, rec_argv
 import aos7_daemon
 import aos7_daemon_timeline
+import aos7_fs
 import aos7_proc
 import aos7_task
 
@@ -90,7 +91,7 @@ class TestProcUnknown(MatrixCase):
         self.assertIn("k#1", lr2["alive"])
         if v.get("unsure"):
             errs = self.errors_for(lr, "k")
-            self.assertTrue(any(x.get("phase") in ("unsure", "judge") and x.get("err") for x in errs),
+            self.assertTrue(any(x.get("where") == "judge" and x.get("why") for x in errs),
                             "unsure 的槽要在 tock 的 errors 留一筆：%r" % lr.get("errors"))
         # kill 控制：回合總結的 ctl 紀錄 ok:false；回條 ctl-done.json 的 result.ok false、訊息帶 unknown；請求已消費
         recs = [c for c in (lr2.get("ctl") or []) if c.get("slot") == "k"]
@@ -125,7 +126,7 @@ class TestProcUnknown(MatrixCase):
             lr = self.itock()
             sums.append(lr)
             self.assertTrue(alive(pid), "掃描讀不到時把孤兒任務殺了")
-            self.assertTrue(any(x.get("phase") in ("unsure", "judge") and x.get("err")
+            self.assertTrue(any(x.get("where") == "judge" and x.get("why")
                                 for x in self.errors_for(lr, "k")), "tock errors 沒有這個槽：%r" % lr.get("errors"))
             self.assertEqual(self.itick()["started"], [], "掃描讀不到時起了新的 run")
             sums.append(self.itock())
@@ -155,7 +156,7 @@ class TestProcUnknown(MatrixCase):
             self.assertEqual(self.itick()["started"], [], "掃描讀不到時起了新的 run")
             lr = self.itock()
             sums.append(lr)
-            self.assertTrue(any(x.get("phase") in ("unsure", "judge") and x.get("err")
+            self.assertTrue(any(x.get("where") == "judge" and x.get("why")
                                 for x in self.errors_for(lr, "k")), "tock errors 沒有這個槽：%r" % lr.get("errors"))
         self.assertIsNone(self.exit_raw(node, "k"), "掃描讀不到時寫了 lost")
         for _ in range(2):
@@ -182,12 +183,12 @@ class TestProcUnknown(MatrixCase):
         self.wait_for(lambda: len(self.live_procs(node, "k")) == 1, 5, "恢復後槽裡不是剛好一個活程序")
 
     def test_kill_identity_incomplete_scan(self):
-        """掃描不完整：env_procs 丟 ProcUnknown、kill_identity 回 (False, 說明)，不殺。"""
+        """掃描不完整：env_procs 丟 Unknown、kill_identity 回 (False, 說明)，不殺。"""
         node = self.mknode("a", [keep_item()])
         self.itick()
         pid = self.wait_pid(node, "k")["pid"]
         with fault("proc-list:/proc:EIO"):
-            with self.assertRaises(aos7_proc.ProcUnknown):
+            with self.assertRaises(aos7_fs.Unknown):
                 aos7_proc.env_procs(node, "k")
             ok, msg = aos7_proc.kill_identity(node, "k", 1)
         self.assertIs(ok, False)
@@ -326,7 +327,7 @@ class TestDaemonStatUnknown(MatrixCase):
         self.assertNotIn("a", d.reapers)
         self.assertFalse(tl.gone)
         le = tl.last_error or {}
-        err = le.get("err", "")
+        err = le.get("why", "")
         # 契約（隊長 10-04）：errno 類型放在 last_error 的 kind（errno 名）；err 文字裡帶也算
         self.assertTrue(le.get("kind") == e or e in err or "Errno %d" % getattr(errno, e) in err,
                         "last_error 沒有 errno 類型：%r" % tl.last_error)

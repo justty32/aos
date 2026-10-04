@@ -7,13 +7,17 @@
 ## 0. 共同約定（S-01、S-06）
 
 - 狀態與控制都是 JSON 檔，`cat` 看得懂、寫檔就能操作。寫檔一律寫 `.` 開頭的暫存檔（`.<名>.tmp.<pid>`）再 rename；列資料夾的人略過 `.` 開頭的檔。寫的人在 rename 前被殺會留下暫存檔：tick／tock 在自己的 `.aos/` 與槽（tock 連槽的 `mount-req/`、`mount-done/` 一起，A3-07；不遞迴清任務自己的資料夾）、daemon 在 `.aosd/`、`ctl/`、`ctl-done/` 清掉「寫者 pid 確定已不在」的（A2-07）。
-- 讀 JSON 先看檔案型別、非阻塞開（FIFO 不會卡住讀的人）。存在但不是一般檔（FIFO、資料夾、socket）分兩種（A3-03）：
-  - **生命週期檔**（round.json、last-round.json、birth.json、pid.json、exit.json，加上 ctl-seen.json）＝**不知道**：有東西在那裡、讀不出內容，照三態保留現狀（不起新 run、不開新回合、原因進 `last_error`／`errors`）。以前當不存在：birth.json 換成 FIFO 會被當空槽而雙開，開著的 round.json 換成 FIFO 會從 last-round.json 接號再開同一回合。
-  - 其他檔（控制垃圾、tasks.json、timeline.json…）照舊當不存在。例外：tock 刪槽前讀 tasks.json 也用嚴格讀——不是一般檔＝不知道表上有誰，不刪槽。
+- **錯誤四分支**：核心碰到的每個錯先分類，同類只走一條路，不在各處各判一次。
+  - **N 不存在**（ENOENT／ENOTDIR；/proc 程序確定不在或是殭屍）：當沒有——新空間、空槽、沒有請求。
+  - **U 不知道**（其他讀取錯誤；存在但不是一般檔（FIFO、資料夾、socket）；/proc 讀不到或掃描不完整；**核心自己寫的檔**內容不合，含被手改）：保留現狀，不前進、不做破壞性動作，記一筆、下一圈再看。停多大看事實歸誰：回合事實＝整 node，槽事實＝單槽，請求＝那一件。
+  - **B 輸入不合**（**別人寫給核心的**請求、設定、表項格式不對：控制檔、tasks.json、timeline.json、加掛請求）：拒收那一件並回報（回條 `ok: false`、`tasks_error`、設定用預設並記一筆），其他照做。
+  - **K 中斷**（自己被殺、逾時被收）：不偵測。靠「先寫證據再動作」的順序、下一次重做是冪等的、清掉寫者已死的暫存檔。
+  - 判定入口：讀檔只經一個（三態：不存在／讀到／不知道，讀到但不是 JSON 另標，由呼叫的人照「誰寫的」歸 U 或 B；非阻塞開，FIFO 不會卡住讀的人）、程序只經一個（不在／同一個程序的 starttime／不知道）。紀錄一律 `{"kind", "where", "why", "at"}`（`kind` 是錯誤類型如 errno 名、`round-unknown`、`unsure`；`where` 是哪一步；`why` 太長保留頭尾），status 的 `last_error`、總結的 `errors`、round.json 的 `notify_errors` 都是這個格式。
+  - 誤用（違反組件前置條件，11 節）不另立一類：落到哪類就照哪類走，順手偵測到的記一筆，不保證偵測到、不為它加檢查。
 - 多人讀—改—寫同一個檔時，對 `<檔>.lock` 拿 `flock`（tasks.json、paused.json 都是）。
 - `at` 欄是 ISO 8601 本機時間，只給人看，邏輯不依賴牆鐘。
-- **三態判定**（K 系列的總原則）：daemon、tick、tock 要推定一個事實（回合關了沒、任務活著沒、程序是不是同一個）時，結果只有**是／否／不知道**。讀不到、EIO、starttime 讀不到、檔案半寫、缺欄位、型別不對都是「不知道」；只有 ENOENT／ENOTDIR 是「確定不存在」。「不知道」不能當「否」，也不能當「是」去做破壞性動作；處理一律是**保留現狀、記在 status（`last_error`，錯誤類型分欄放、不被截掉）或回合總結的 `errors`、下一圈再看**。下文每個判定都照這條。
-- **判定收在少數幾處**（A2-01）：檔案＝三態讀檔（存在／不存在／壞掉／讀不到）；回合＝round.json 判定（3 節）；程序＝/proc 讀取（讀到／程序已不在／讀不到，讀不到一路往上傳，掃描不完整就不能當「沒有」）；槽＝5.4 的判定。/proc 讀不到時：不殺、不判 lost、不起新 run、不清 daemon 記著的 live／pgid。
+- **三態判定**（K 系列的總原則）：daemon、tick、tock 要推定一個事實（回合關了沒、任務活著沒、程序是不是同一個）時，結果只有**是／否／不知道**；「不知道」（上面的 U）不能當「否」，也不能當「是」去做破壞性動作。下文每個判定都照這條。
+- **判定收在少數幾處**：檔案＝上面的讀檔入口；回合＝round.json 判定（3 節）；程序＝/proc 讀取（讀到／程序已不在／讀不到，讀不到一路往上傳，掃描不完整就不能當「沒有」）；槽＝5.4 的判定。/proc 讀不到時：不殺、不判 lost、不起新 run、不清 daemon 記著的 live／pgid。
 - **核心只留「上一次」**（使用者 10-04 追加）：每個 node 只留最近一回合的總結，每個任務資料夾只留最近一次執行的結果，daemon 的回條每個名字只留最近一份。更前面的歷史核心不管，所以核心也沒有「保留上限」這類設定；要歷史用第 9 節的可選 module。
 
 ## 1. 空間與 node：登記，不掃描（S-07、S-13～S-15）
@@ -48,6 +52,7 @@ daemon 主迴圈每 ~20 ms：讀控制檔（有預算）→ 檢查已登記 node
 5. 跑 `aos7-tock <root> <node-id>`（環境 `AOS7_EARLY`＝`1` 提前、`0` 沒有）。tock 完 round.json 沒關上 → 馬上補一次 tock（`AOS7_INCOMPLETE=tock`）。
 6. 等到離本回合 tick 滿 interval（**回合關上之後**送來的 `wake`、`resume` 會打斷這段等待；`early_tock: true` 的回合中送來的不起作用，也不留到這裡才生效，A2-11），回 1。`early_tock: false` 時第 4 步已經等滿 interval，這段幾乎是 0；被 wake 提前結束的回合不走這步（P2-01）。
 
+tick／tock 的退出碼只看三種：0＝做了；3＝不知道；其他（例外、退出碼 1）＝失敗。後兩者都記 `last_error`、退避（同第 1 步），回到迴圈頂端，**不算一個回合**（不扣 `rounds` 倒數；tick 若已開了回合，頂端照 2.2 先 tock 收掉）。tick 被動作逾時收掉（SIGKILL）照第 5 步 tock，總結標 `incomplete: "tick"`。
 時間線迴圈丟任何例外：記 `last_error`，等 0.5 秒接著跑。主迴圈任一步丟例外不退出，status 的 `io_errors` +1，下一圈再試。
 
 ### 2.2 不變條件一：回合（K-01、K-02）
@@ -75,7 +80,7 @@ daemon 主迴圈每 ~20 ms：讀控制檔（有預算）→ 檢查已登記 node
 
 - 處理完把原檔搬到 `<root>/.aosd/ctl-done/<同名>.json`，加 `"result": {"ok", "msg", "at", "queued_at"}`。**同名的舊回條直接蓋掉**（每個名字只留最近一份）。`ok` 只表示 daemon 接受並改了狀態；真的停了沒要看 status。
 - **檔名由寫的人取，建議固定**（`<by>.<op>.<node>[@<owner>].json` 這類），這樣回條自然只留「每個寫的人、每個 owner、每件事的上一次」，不會越積越多；每次取新名字的人，回條留多少由他自己收（W3）。`aos7-ctl` 預設就用固定名，帶 `--owner` 時檔名含 owner：不同 owner 是不同控制者，daemon 處理前的待辦請求不互相蓋掉（A2-13）。檔名每段（by、node、owner）**無損編碼**：`/`→`+`，其他不是英數、`_`、`-` 的字元（含 `.`、`@`、`+`、`%`、非 ASCII）把 UTF-8 位元組寫成 `%XX`；一段編碼後超過 64 字就取前 40 字＋`~`＋原字串 sha1 前 16 碼。不同的 by／node／owner 不會撞成同一個檔名（A3-06：以前不安全字元都換成 `_`，「甲」「乙」都成 `@_` 而互蓋）。
-- 讀不懂的、不是 `.json` 結尾、不是一般檔的：照樣寫回條 `ok: false`（原物搬成 `ctl-done/<名>.bad`，同樣蓋掉舊的）。
+- 讀不到（I/O）的請求留著，下一圈再看。讀不懂的、不是 `.json` 結尾、不是一般檔的（B）：照樣寫回條 `ok: false`（原物搬成 `ctl-done/<名>.bad`，同樣蓋掉舊的）。
 - 一件處理丟例外不擋同圈其他件（特別是 stop）：原物搬到 `.aosd/ctl-failed/<名>`（蓋掉同名舊的），status 記 `last_ctl_error`；效果可能已生效，所以不重做——搬不走而留在 `ctl/` 的也不再執行，只每圈再試著搬（daemon 重開後才會被當成新請求）。
 - **每圈有預算**：最多 200 件或 0.05 秒，先到為準，剩下的照檔名順序下一圈做。
 - 寫給停著的 daemon 的控制檔留在 `ctl/`，下次起來才做（子 daemon 起來前先登記 node 就靠這個）。
@@ -92,7 +97,7 @@ daemon 主迴圈每 ~20 ms：讀控制檔（有預算）→ 檢查已登記 node
 
 ### 2.5 世代、動作鎖、逾時（S-06）
 
-- **世代**：daemon 拿到 `.aosd/daemon.lock`（flock；鎖不到就退出碼 1）後把 `.aosd/gen.json` 的 `gen` +1，起 tick／tock 時給 `AOS7_GEN`。
+- **世代**：daemon 拿到 `.aosd/daemon.lock`（flock；鎖不到就退出碼 1）後把 `.aosd/gen.json` 的 `gen` +1，起 tick／tock 時給 `AOS7_GEN`。起來時 `nodes.json`、`paused.json`、`gen.json`（只有 daemon 寫）讀不到或壞掉＝不知道 → daemon 不起來（退出碼 3、stderr 說明），不當空的照跑、也不蓋掉它們。
 - **動作鎖**：tick、tock 整個動作期間對 `<node>/.aos/action.lock` 拿 flock，拿到後比對 `AOS7_GEN` 與 gen.json，不同就什麼都不寫（連 action.owner.json 也不寫）、印 `{"stale": true}`；gen.json 讀不到或不是 `{"gen": 整數}`＝不知道 → 什麼都不寫、退出碼 3。確定是現役才寫 `action.owner.json`＝`{"pid", "gen", "starttime", "at"}`。
 - **動作逾時**：tick、tock 最多跑 `action_timeout_s` 秒，超過 SIGKILL、記 `last_error`。tick 被收掉的回合，tock 收到 `AOS7_INCOMPLETE=tick`。
 - **舊動作接管**：等鎖逾時時讀 action.owner.json，`gen` 比自己舊、而且那個 pid 現在的 starttime 跟記的一樣 → SIGKILL 它。認不出身分（讀不到、starttime 不同或讀不到）＝不知道 → **不殺**，`last_error` 寫人工恢復提示。鎖檔不 unlink。
@@ -135,7 +140,7 @@ daemon 每圈只看**已登記**的 node：
 
 - `phase`：`idle`／`tick`／`running`／`tock`／`paused`／`error`／`missing`／`unregistering`（已 unregister、本回合還沒收完；P2-12）／`stopped`。
 - `live` 列 run id（第 5.2 節），每 0.25 秒重算。
-- 有的話多 `last_error`（每 node：`{"prog", "rc", "round", "at", "kind", "err"}`；`kind` 是錯誤類型，`err` 太長時保留開頭與結尾，A2-08）、`uncertain`（每 node：判不出的槽 `[{"slot", "run", "why"}]`——UNKNOWN、pid／starttime 讀不到當活的、birth 壞掉的，A2-08）、`last_ctl_error`、`root_gone`、頂層 `last_error`（看不到 root）、`steps_left`。
+- 有的話多 `last_error`（每 node：第 0 節的紀錄格式 `{"kind", "where", "why", "at"}`，時間線的另帶 `rc`、`round`）、`uncertain`（每 node：判不出的槽 `[{"slot", "run", "why"}]`——UNKNOWN、pid／starttime 讀不到當活的、birth 壞掉的，A2-08）、`last_ctl_error`、`root_gone`、頂層 `last_error`（看不到 root）、`steps_left`。
 - `last_event`（全域與每 node 各一）：最近一件值得看的事（`node-gone-kill`、`stale-holder-kill`、`stopped-cleared`…），只留最近一件。
 - `stopped: true`＝正常退出前寫的最後一份；`at` 好幾個 `poll_s` 沒動，daemon 可能卡住或死了。
 - 核心**沒有 log.jsonl**：要事件流水帳用第 9 節的可選開關。
@@ -191,6 +196,8 @@ daemon 每圈只看**已登記**的 node：
 | `retry_of` | 只給 `retry_lost` 加回的 `once` 項：原 run id（4.4） |
 | `launch` | tick 寫的起動標記（4.4），別人不要動 |
 
+- **讀**：不存在＝空表；讀不到或不是一般檔（U）＝這回合不起、記 `tasks_error`、tock 不刪槽；不是 JSON 或不是 `{"tasks": [...]}`（B）＝當空表、記 `tasks_error`。
+- **寫**（G1）：寫的人（tick、工具、kernel）讀舊內容也照三態——不存在＝從空表起；讀不到、不是一般檔、壞掉＝**不知道原本有什麼，拒寫**並回報（`aos7-ctl add` 退出碼非 0、restart 回條 `ok: false` 不 kill、tick 記 `tasks_error`），絕不當空表把整份換掉。
 - 欄位型別不對（`name`、`argv`、`mode`、`max_live`、`from_round`、`until_round`、`enabled`、`mounts`、`subroot`、`allow_stop`、`retry_lost`（含非 once 項帶它）、`retry_of` 任一）：**只跳過那一項**，記 `tasks_error`，其他照起；整份讀不懂當空表。驗證在挑槽、算 run 之前做完。
 - 想一次加一批任務：一次 `edit_json` 加多項（同一次 rename，同一回合看到）。全有全無的成組准入（N-85）不做，要的用合作式協定。
 
@@ -293,7 +300,7 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起在自己的程序群組，�
 | 有 pid.json、兩者確定都不在 | 疑似 lost → 身分掃描 |
 | 沒有 pid.json、runner 確定已不在（pid 不在或 starttime 不同） | 疑似 lost → 身分掃描 |
 | 沒有 pid.json、沒有 runner、birth 的 round 已比現在早 2 回合以上 | 疑似 lost → 身分掃描（tick 與 runner 都死了，K-03） |
-| starttime 或 `/proc/<pid>/stat` 讀不到（pid 還在） | **不知道** → 當活（保守），原因進 tock 總結的 `errors`（`phase: "unsure"`）與 status 的 `uncertain`（K-05、A2-01、A2-08） |
+| starttime 或 `/proc/<pid>/stat` 讀不到（pid 還在） | **不知道** → 當活（保守），原因進 tock 總結的 `errors`（`kind: "unsure"`）與 status 的 `uncertain`（K-05、A2-01、A2-08） |
 | 其餘（剛起） | 活 |
 
 **疑似 lost 一律先做身分掃描**（NODE＋TID＋RUN）：找到這個 run 的 aos7-run 還活著（birth 沒記到 runner、pid.json 還沒寫）→ 當活（unsure），等它起任務；找到相符的任務程序 → 先照 Q1 範圍 kill，再判 lost；**確定**找不到 → lost。lost 寫 `exit.json` `{"run", "code": null, "lost": true}`（tock，以及要在這個槽起新 run 的 tick；P2-03）。收了 SIGKILL 還在、掃描不完整（列不出 /proc、某個程序的 stat／cmdline 讀不到（cmdline 的 EACCES 也算）、environ 讀不到（EACCES 除外：當成不是任務）；A2-01）、最後重讀 exit.json 讀不到＝不知道，不判 lost。
@@ -334,7 +341,7 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起在自己的程序群組，�
 2. 執行任務控制（第 6 節）。
 3. 掃所有槽（順便清槽裡寫者已死的暫存檔）：照 5.4 判定，lost 的補 exit.json；記下新結束的（同 run 的 exit.json 還沒有 `seen_round`）。一個槽壞掉、判不出、當活但 unsure 的都記進 `errors`，其他照做。
 4. **寫 last-round.json**（覆寫），整份讀回確認；確認不了就失敗退出，不做後面，下次 tock 重來。
-5. 之後才對每個活任務寫 `tock.json`（A2-12：任務收到這回合的 tock 時，last-round.json 一定已經是這回合的；寫不進去的記在 round.json 的 `notify_errors`，每筆 `{"slot", "run", "round", "phase", "err"}`，A3-08）。
+5. 之後才對每個活任務寫 `tock.json`（A2-12：任務收到這回合的 tock 時，last-round.json 一定已經是這回合的；寫不進去的記在 round.json 的 `notify_errors`，每筆是第 0 節的紀錄格式，另帶 `slot`、`run`、`round`）。
 6. 替新結束的補 `seen_round`、刪掉該刪的槽（5.1）。
 7. 寫 round.json（`open: false`），stdout 印總結。
 
@@ -409,10 +416,10 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起在自己的程序群組，�
 | gen.json 讀不到或不是 `{"gen": 整數}` | 所有 node（tick／tock 退出碼 3）｜各 node 的 `last_error` | 修存取；壞了寫回現役 daemon 的世代（status 的 `gen`），不要猜一個放舊動作過 |
 | 看不到 node／root（EIO、EACCES…） | 該 node／整個 daemon 保留現狀｜node 的 `last_error.kind` 是 errno 名；root 是頂層 `last_error` | 修存取後自動恢復 |
 | action.lock 持有者身分核對不了 | 整 node｜`last_error.kind: stale-holder-unverified` 與提示 | 用 `fuser`／`lsof` 找持有者，確定是舊動作才收掉；**不要 unlink 鎖檔** |
-| 槽的 birth／pid／exit 讀不到，或**存在但不是一般檔**（A3-03） | 單槽｜status `uncertain`、總結 `errors`（`phase: judge`） | 修 I/O 後自動恢復；不是一般檔的刪掉換回——原內容不可考時等於刪 birth（上面通則） |
+| 槽的 birth／pid／exit 讀不到，或**存在但不是一般檔**（A3-03） | 單槽｜status `uncertain`、總結 `errors`（`where: judge`） | 修 I/O 後自動恢復；不是一般檔的刪掉換回——原內容不可考時等於刪 birth（上面通則） |
 | birth.json 壞掉（半寫、不是物件、run 不是整數） | 單槽｜`uncertain`／總結 `errors` 有刪 birth 的提示 | 確認沒有活程序、也確認 once 的副作用後才刪 birth.json |
-| 活 pid 讀不到 stat／starttime，或 pid.json 的 starttime 本來就是 null | 單槽（當活＋unsure）｜`uncertain`、總結 `errors`（`phase: unsure`） | 暫時讀錯自己會好；starttime null 不會因 /proc 恢復而補上身分，要等程序結束，或人工確認後收掉 |
-| 疑似 lost，但掃描不完整、SIGKILL 後還在、最後重讀 exit.json 讀不到 | 單槽（UNKNOWN）｜總結 `errors`（`phase: judge`）；ctl 留著 | 解除 I/O／權限／程序卡住後自動重判；不要為了進度手寫 lost |
+| 活 pid 讀不到 stat／starttime，或 pid.json 的 starttime 本來就是 null | 單槽（當活＋unsure）｜`uncertain`、總結 `errors`（`kind: unsure`） | 暫時讀錯自己會好；starttime null 不會因 /proc 恢復而補上身分，要等程序結束，或人工確認後收掉 |
+| 疑似 lost，但掃描不完整、SIGKILL 後還在、最後重讀 exit.json 讀不到 | 單槽（UNKNOWN）｜總結 `errors`（`where: judge`）；ctl 留著 | 解除 I/O／權限／程序卡住後自動重判；不要為了進度手寫 lost |
 | **kill 回 `ok: false`（unknown）**（A3-09） | 單請求（已處理掉、不會自己重試）｜ctl-done.json `result.ok: false`、msg 以 `unknown` 開頭；總結 `ctl` 那筆 `ok: false`。restart 的 once 項已加，等槽空才起（`skipped` 記 busy） | 手動確認並收掉 pid.json 記的那個程序；要再送 kill 用**新的 id**（動手過的 kill 已記進 ctl-seen，同 id 會被當成做過） |
 | ctl.json 讀不到、目標槽 UNKNOWN | 單請求（留著）｜總結 `ctl` 那筆帶 `err` | 原因解除後自動執行 |
 | **ctl-seen.json 讀不到、壞掉、不是一般檔**（A3-01） | 這個 node 所有任務控制都等著｜總結 `ctl` 每筆 `err`「分不出這件控制做過沒」 | 修 I/O；壞掉的先逐槽比對 ctl-done.json 的 `result.ctl_id` 與留著的 ctl.json——同一件的就是做過的，先刪那些 ctl.json；再刪掉 ctl-seen.json 或修成 `{"slots": {}}`。**注意：刪掉 ctl-seen.json 會讓留著的同一件 ctl.json 再執行一次** |

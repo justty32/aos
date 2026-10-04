@@ -175,3 +175,40 @@
 | `test_matrix_misc.TestSymlinkInProcess.test_symlink_node_parent` | F03 | 同上（同程序 tick／tock 版） |
 
 沒有加回的：`deadboth` 矩陣裡排除的 environ × EACCES——`_deadboth` 斷言「掃描讀不到＝UNKNOWN、不寫 lost」，現在 environ EACCES 當成不是任務會直接判 lost，正好就是已有的 `test_deadboth_skip_proc_environ_EACCES`，不重複加。`test_symlink_same_inode`（node 本身換成連回原處的連結）照新程式仍過（lstat 看到連結＝不是資料夾），改標〔core〕保留。F28 沒有專門測試。
+
+## 核心精簡：錯誤四分支（10-04）
+
+照[精簡方案](core-slimming.md)第 4 節與頂層定案第 3、4 條。判定入口：讀檔 `aos7_fs.fact`（N／OK／BAD／U）、程序 `aos7_proc.proc`（N／OK starttime／U）、例外 `aos7_fs.Unknown(why, kind)`（併掉 `ProcUnknown`、`ReadBack`、tick 的 `_Skip`；`LockTimeout` 改成 Unknown 的子類）、紀錄 `aos7_fs.hold(where, kind, why, **extra)`（`{"kind","where","why","at"}`；`clip` 搬進 fs）。`read_json3`（含 strict 參數）、`is_regular`、`pid_state` 拿掉；`read_json` 只剩寬鬆包裝（顯示、任務端用）。
+
+**行為變化**（都照四分支的規則，不是另加的檢查）：
+
+| 變化 | 以前 | 現在 | 類 |
+|---|---|---|---|
+| G1：寫 tasks.json 的人讀舊內容 | `edit_json` 用寬鬆讀，壞掉／讀不到／FIFO 一律當空表，寫回只剩新項（實驗重現過） | 讀不到、不是一般檔、壞掉＝不知道，丟 Unknown、不寫；`aos7-ctl add` 退出碼 1、restart 回條 ok:false 不 kill、tick 記 tasks_error、retry_lost 當不知道 | 真 bug（B） |
+| tick 在表鎖內重讀 tasks.json（寫 launch 標記） | 讀不到時以空表為基底寫回 | 丟 Unknown：這回合一個都不起（once 不能沒標記就起）、記 tasks_error | 同 G1 |
+| G2：tick 非 3 的失敗（例外、退出碼 1） | 照常往下 tock（印 skipped），被當成一回合，扣 `resume --rounds` 倒數 | 退出碼只看 0／3／其他：其他＝失敗退避、回頂端，不算回合、不扣倒數；tick 被逾時收掉照舊標 `incomplete: tick` | 真 bug（B） |
+| 存在但不是一般檔（頂層定案 3） | 生命週期檔＝不知道，其他檔（tasks.json、timeline.json…）＝不存在 | 一律＝不知道（U）。tasks.json：這回合不起、tock 不刪槽；timeline.json：用預設並記一筆；daemon 控制檔不是一般檔照舊回條 ok:false（B：請求本身不合） | U |
+| pid.json／exit.json 內容壞掉 | 當不存在 | 不知道（核心自己寫的檔壞了只能是被手改或磁碟壞） | U |
+| daemon 起來時 nodes.json／paused.json／gen.json 讀不到或壞掉 | 當空的照跑（gen 從 1 重數，之後一寫就把原內容蓋掉） | daemon 不起來，退出碼 3、stderr 說明 | U |
+| daemon 控制檔讀不到（I/O） | 回條 `not a JSON object` 並搬走 | 留著，下一圈再看 | U |
+| tasks.json 讀不到時的加掛審核 | `mount_allow` 當沒寫（全給） | 這回合不審，請求留著 | U |
+| tock 總結讀回確認不了 | 退出碼 1 | 退出碼 3（不知道；時間線本來就看 round.json 有沒有關上，結果一樣） | U |
+| 錯誤紀錄格式 | `last_error` 是 `{"prog","rc","round","at","kind","err"}`；總結 `errors` 與 `notify_errors` 是 `{"slot","phase","err"}` | 一律 `{"kind","where","why","at"}`＋身分欄（`slot`／`run`／`round`／`rc`）；`phase: judge` → `where: judge`、`kind: unknown`；`phase: unsure` → `kind: unsure` | — |
+
+**保留的例外**：last-round.json 內容壞掉（BAD）照舊**重新產生**總結、不當不知道停住——tock 是它唯一的寫者，總結本來就由各槽重算，重寫不丟任何東西（`test_matrix_docs.TestLastRoundJson` 鎖住這個行為）；讀不到（U）照規則退出碼 3。
+
+**改了斷言的既有測試**（行為沒變，只是格式或名字跟著改）：
+
+| 測試 | 改了什麼 |
+|---|---|
+| `test_once_threestate.TestThreeState.test_read_json3_states` → `test_fact_states` | `read_json3` 拿掉，改測 `fact`；FIFO 從「不存在」改成 U（定案 3），多測資料夾＝U |
+| `test_matrix_faults.TestProcUnknown` 的 healthy／orphan／deadboth 系列 | 總結 errors 的判斷從 `phase in (unsure, judge)＋err` 改成 `where == judge＋why` |
+| `test_matrix_faults.TestProcUnknown.test_kill_identity_incomplete_scan` | `aos7_proc.ProcUnknown` → `aos7_fs.Unknown` |
+| `test_matrix_faults.TestDaemonStatUnknown` | `last_error.err` → `why` |
+| `test_matrix_misc.TestDiagnostics`（兩項） | `err` → `why`；`phase: unsure` → `kind: unsure` |
+| `test_matrix_docs.TestBrokenBirth.test_birth_none_*` | errors 的 `err` → `why` |
+| `test_daemon.TestStuckActions.test_stuck_tick_cut_and_round_marked` | `last_error.prog` → `where` |
+| `test_daemon.TestDaemonDeath.test_unverified_holder_not_killed` | `last_error.err` → `why` |
+| `test_matrix_a3.TestReplayNotify`（兩處） | notify_errors 的 `err` → `why`、`phase` → `where` |
+
+**新增測試**（`tests/core/test_errors.py`，8 項）：G1 的 `aos7-ctl add` 遇半寫／FIFO／EIO 注入拒寫且檔案原封不動（3）、不存在照常加（1）、restart 遇壞表回 ok:false 不 kill（1）；定案 3 的 tasks.json FIFO 不起不刪、timeline.json FIFO 用預設並記錯（2）；G2 的 `.aos/` 唯讀時 `resume --rounds 3` 不被吃掉、修好後剛好跑 3 回合再 pause（1；改回舊判斷會失敗，已驗證）。

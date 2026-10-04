@@ -353,7 +353,7 @@ class TestStuckActions(DaemonCase):
         self.start_daemon(env={"AOS7_TEST_HANG": "tick-opened"}, register=["a"])
         self.wait_for(lambda: self.last_round(node).get("incomplete") == "tick" and
                       self.last_round(node)["round"] >= 2, 15, "沒有 incomplete=tick 的回合")
-        self.assertEqual(self.nstat()["last_error"]["prog"], "tick")
+        self.assertEqual(self.nstat()["last_error"]["where"], "tick")
 
     def test_stop_not_blocked_by_stuck_tick(self):
         self.mknode("a", interval_ms=50, action_timeout_s=1000)
@@ -431,7 +431,7 @@ class TestDaemonDeath(DaemonCase):
         holder = _proc.track(self, subprocess.Popen([sys.executable, "-c", self.HOLD % (LIB, self.root, node, mark)]))
         self.wait_for(lambda: os.path.exists(mark))   # 沒有 AOS7_GEN：action.owner.json 的 gen 是 null → 認不出
         self.start_daemon(register=["a"])
-        self.wait_for(lambda: "stale-holder-unverified" in (self.nstat().get("last_error") or {}).get("err", ""), 10)
+        self.wait_for(lambda: "stale-holder-unverified" in (self.nstat().get("last_error") or {}).get("why", ""), 10)
         self.assertIsNone(holder.poll())
 
 

@@ -152,7 +152,7 @@ class TestBrokenBirth(MatrixCase):
         self.assertEqual(self.itick()["started"], [], "沒有證據時就在壞 birth 的槽起了任務")
         lr = self.itock()
         errs = self.errors_for(lr, "k")
-        self.assertTrue(errs and all(x.get("err") for x in errs), "tock errors 沒說明：%r" % lr.get("errors"))
+        self.assertTrue(errs and all(x.get("why") for x in errs), "tock errors 沒說明：%r" % lr.get("errors"))
         self.assertEqual(self.itick()["started"], [])
         self.itock()
         os.remove(os.path.join(self.slot(node, "k"), "birth.json"))

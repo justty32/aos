@@ -15,8 +15,8 @@ import threading
 import time
 
 import aos7_task
-from aos7_fs import (BIN, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, env_with_bin, holder_unverified, is_int, node_path, now,
-                     read_json, read_round, reap_stale_owner)
+from aos7_fs import (BIN, N, OK, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, env_with_bin, fact, hold, holder_unverified, is_int,
+                     node_path, now, read_json, read_round, reap_stale_owner)
 
 POLL = 0.02
 DEFAULT_INTERVAL_MS = 1000
@@ -26,14 +26,6 @@ ACTION_TIMEOUT = 30.0        # tick／tock 一次最多跑幾秒（timeline.json
 STOP_GRACE = 3.0             # daemon 停機時，正在跑的 tick／tock 最多再等幾秒
 TIMEOUT_RC = -9
 UNKNOWN_RC = 3               # tick／tock 推定不了（round.json 讀不到…）的退出碼
-
-
-def clip(msg, limit=300):
-    """把 msg 縮到約 limit 字：保留開頭（錯誤類型、根因）與結尾（路徑、提示），中間換成「…」（A2-08）。"""
-    if len(msg) <= limit:
-        return msg
-    head = limit * 2 // 5
-    return msg[:head] + " … " + msg[-(limit - head - 3):]
 
 
 def run_prog(name, root, node_id, extra_env=None, gen=None, timeout=None, abort=None):
@@ -76,10 +68,12 @@ def run_prog(name, root, node_id, extra_env=None, gen=None, timeout=None, abort=
 
 def read_config(node):
     """讀 node/.aos/timeline.json，回 (interval_ms, early_tock, timeout_s, 錯誤或 None)（spec §1）。
-    檔案可無（W12）；讀不懂用預設，interval 不合檢查時另回錯誤，timeout 不合則用預設。"""
-    t = read_json(os.path.join(node, ".aos", "timeline.json"), {})
-    t = t if isinstance(t, dict) else {}
+    檔案可無（W12）。別人寫的設定：讀不到（U）或讀不懂（B）都用預設並回錯誤；timeout 不合則用預設。"""
+    st, t = fact(os.path.join(node, ".aos", "timeline.json"))
     err = None
+    if st not in (OK, N) or (st == OK and not isinstance(t, dict)):
+        err = "timeline.json %s，先全用預設" % (t if st != OK else "不是物件")
+    t = t if st == OK and isinstance(t, dict) else {}
     ms = t.get("interval_ms", DEFAULT_INTERVAL_MS)
     # spec §1：有限非負數字就照用（註解疑點 timeline:76／83：不再另設 365 天上限、也不截掉小數）。
     if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not math.isfinite(ms) or ms < 0:
@@ -130,14 +124,11 @@ class Timeline(threading.Thread):
         v = r.get("round") if isinstance(r, dict) else None
         return v if is_int(v) else getattr(self, "round", 0)
 
-    def err(self, prog, rc, msg, kind=None):
-        """把 prog、rc 與 msg 記成此 node 最近錯誤，帶目前回合與時間（spec §2.8）。回 None。
-
-        A2-08：`kind` 是錯誤類型（例 `stale-holder-unverified`、`round-unknown`），分欄放、不會被截掉；
-        msg 太長時保留開頭與結尾、中間換成「…」（以前只留最後 300 字，深路徑會把開頭的錯誤類型與根因截掉）。"""
-        self.last_error = {"prog": prog, "rc": rc, "round": self.round, "at": now(), "err": clip(msg or "")}
-        if kind:
-            self.last_error["kind"] = kind
+    def err(self, where, rc, msg, kind=None):
+        """把這個 node 最近一筆錯誤記成 hold 格式 {"kind","where","why","at"}＋rc／round（spec §2.8）。回 None。
+        kind 是錯誤類型（errno 名、round-unknown、stale-holder-unverified…），沒給時照退出碼：3＝unknown，其他＝fail。"""
+        self.last_error = hold(where, kind or ("unknown" if rc == UNKNOWN_RC else "fail"), msg or "", rc=rc,
+                               round=self.round)
 
     def stop_overdue(self):
         """判定 daemon 的停止寬限期是否已過，供動作程序 abort 使用（spec §2.5、§2.7）。
@@ -277,8 +268,9 @@ class Timeline(threading.Thread):
             if (out or {}).get("gone"):
                 self.wake.wait(POLL)
                 continue
-            if rc == UNKNOWN_RC:
-                # P2-09：退出碼 3 表示無法推定，不是空回合；退避後重新檢查，不接著正常 tock。
+            if rc and not tick_cut:
+                # 退出碼只看三種：0 做了；3＝不知道；其他＝失敗。後兩者都不是一個回合：退避後回到頂端重新看
+                # （tick 若已開了回合，頂端照不變條件一先 tock 收掉；rounds 倒數不扣，G2）。
                 self.backoff()
                 continue
             started = (out or {}).get("started") or []

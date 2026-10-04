@@ -1,10 +1,9 @@
-"""proto7-2 共用的小工具：JSON 檔讀寫（原子、三態）、時間字串、路徑、動作鎖、PATH 加 bin（spec.md 第 0、2.5、5 節）。
-任務端的 wait_tock／task_env 在工具包（modules/tools/aos7_taskside.py）；測試鉤子的本體在 tests/_hooks.py。
+"""proto7-2 共用的小工具：錯誤四分支的判定入口（讀檔 fact、記錄 hold、例外 Unknown）、原子寫、flock、動作鎖、路徑
+（spec.md 第 0、2.5 節）。daemon、tick／tock、aos7-run 與工具共用；任務端的 wait_tock／task_env 在工具包
+（modules/tools/aos7_taskside.py），測試鉤子的本體在 tests/_hooks.py。
 
-起點複製自 proto7-1 lib/aos7_fs.py，拿掉 tasks-old／tail_jsonl，加上三態讀檔 read_json3 與 edit_json 的等鎖逾時。
-
-daemon、tick／tock、ctl 與普通任務共用；依呼叫者給的 path 讀寫 JSON／JSONL 與 .lock，
-並讀 /proc 的程序身分。動作鎖另讀 .aosd/gen.json、寫 .aos/action.owner.json；不自行推進回合。"""
+**錯誤四分支**（spec §0）：N 不存在＝當沒有；U 不知道＝保留現狀、不前進、記一筆（hold）；B 輸入不合＝拒收那一件並回報；
+K 中斷＝不偵測，靠「先寫證據再動作」＋重做冪等＋清死寫者的暫存檔。讀檔一律經 fact，程序一律經 aos7_proc.proc。"""
 import contextlib
 import datetime
 import errno
@@ -17,18 +16,43 @@ import time
 BIN = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin")
 
 
-# ---------- 三態的共同小工具（spec 第 0 節；A2-01 把判定收斂到這裡與 aos7_proc、aos7_task.judge） ----------
+# ---------- 錯誤四分支（spec §0） ----------
 
 GONE_ERRNO = (errno.ENOENT, errno.ENOTDIR)   # 只有這兩種算「確定不存在」；其他（EIO、ESTALE、EACCES…）是「看不到」
+N, OK, BAD, U = "missing", "ok", "bad", "unknown"
 
 
 def is_gone(e):
-    """OSError e 是不是「確定不存在」（ENOENT／ENOTDIR）。其他錯誤一律是「不知道」，呼叫的人要保留現狀（spec §0）。"""
+    """OSError e 是不是「確定不存在」（ENOENT／ENOTDIR）。其他錯誤一律是「不知道」。"""
     return isinstance(e, OSError) and e.errno in GONE_ERRNO
 
 
+def errname(e):
+    """OSError 的 errno 名（EIO…），給紀錄的 kind 用。"""
+    return errno.errorcode.get(getattr(e, "errno", None), type(e).__name__)
+
+
 class Unknown(Exception):
-    """推定不了的事實（round.json 讀不到、gen.json 不能用、看不到 node…）：tick／tock 什麼都不寫，退出碼 3（P2-09）。"""
+    """U 不知道：讀不到、核心自己寫的檔壞掉、/proc 讀不完整、等鎖逾時……呼叫的人保留現狀、不前進、記一筆。
+    kind 是錯誤類型（errno 名、round-unknown、lock…）。tick／tock 遇到它什麼都不寫，退出碼 3。"""
+
+    def __init__(self, why, kind="unknown"):
+        super().__init__(why)
+        self.kind = kind
+
+
+def clip(msg, limit=300):
+    """把 msg 縮到約 limit 字：保留開頭（錯誤類型、根因）與結尾（路徑、提示），中間換成「…」。"""
+    if len(msg) <= limit:
+        return msg
+    head = limit * 2 // 5
+    return msg[:head] + " … " + msg[-(limit - head - 3):]
+
+
+def hold(where, kind, why, **extra):
+    """組一筆「不知道／失敗」紀錄：{"kind", "where", "why", "at"}＋extra（status 的 last_error、總結的 errors、notify_errors
+    都用這個格式）。why 太長保留頭尾。"""
+    return dict(extra, kind=kind, where=where, why=clip(str(why)), at=now())
 
 
 _HOOKS = []   # 測試鉤子模組（tests/_hooks.py）：環境 AOS7_TEST_HOOKS 指到它才載入；正常環境 inject／test_point 什麼都不做
@@ -61,34 +85,9 @@ def now():
 
 
 def read_json(path, default=None):
-    """讀 JSON 檔；不存在、壞掉或不是一般檔（FIFO、資料夾…）回 default。
-
-    用 O_NONBLOCK 開：控制檔、tasks.json、spawn 被換成 FIFO 時不會卡死 daemon 主迴圈或 tick（probes/chaos B10、llmops）。
-
-    path 是檔案路徑，default 是失敗時的回值；成功回任意 JSON 值。此寬鬆介面不分失敗原因，
-    要保留「不知道」的生命週期判定應用 read_json3（spec §0）。"""
-    try:
-        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
-    except OSError:
-        return default
-    try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
-            os.close(fd)
-            return default
-        with os.fdopen(fd, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return default
-
-
-def is_regular(path):
-    """path 指向一般檔嗎（跟隨符號連結；FIFO、資料夾、裝置都回 False）。
-
-    參數 path 可為符號連結（會跟隨）；回 bool，stat 讀不到也回 False，並非三態判定（spec §0）。"""
-    try:
-        return stat.S_ISREG(os.stat(path).st_mode)
-    except OSError:
-        return False
+    """寬鬆讀：不是 OK 就回 default。只給「讀不到就照預設也無妨」的地方（顯示、提示、任務端）；判定一律用 fact。"""
+    st, v = fact(path)
+    return v if st == OK else default
 
 
 def write_json(path, obj):
@@ -141,8 +140,11 @@ def sweep_tmp(d):
     return out
 
 
-class LockTimeout(Exception):
-    """edit_json／locked 等鎖超過時限。"""
+class LockTimeout(Unknown):
+    """edit_json／locked 等鎖超過時限（U 的一種：這次不做，下次再試）。"""
+
+    def __init__(self, why):
+        super().__init__(why, kind="lock")
 
 
 @contextlib.contextmanager
@@ -172,89 +174,80 @@ def locked(path, timeout=None):
 
 
 def edit_json(path, fn, default=None, timeout=None):
-    """讀—改—寫一個 JSON 檔，期間拿 `<path>.lock`（tasks.json、paused.json 的寫的人都用它，就不會互相蓋掉）。
+    """讀—改—寫一個 JSON 檔，期間拿 `<path>.lock`（tasks.json 的寫的人都用它，就不會互相蓋掉）。
 
-    fn(舊內容) 回新內容；回 None＝不寫。回寫進去的內容。timeout 見 locked。
-
-    path 是目的檔；default 供讀不到時交給 fn；回 fn 的結果（含 None），鎖／寫入錯誤向外拋。"""
+    舊內容照三態：不存在＝交給 fn 的是 default；讀到＝交給 fn；**讀不到或壞掉＝不知道原本有什麼 → 丟 Unknown、不寫**
+    （不能當空表把整份換掉，G1）。fn(舊內容) 回新內容；回 None＝不寫。回 fn 的結果。等鎖逾時丟 LockTimeout。"""
     with locked(path, timeout):
-        new = fn(read_json(path, default))
+        st, cur = fact(path)
+        if st not in (OK, N):
+            raise Unknown("%s %s，不知道原本有什麼，沒寫" % (os.path.basename(path), cur), kind=st)
+        new = fn(cur if st == OK else default)
         if new is not None:
             write_json(path, new)
         return new
 
 
-# ---------- 三態讀檔（spec 第 0 節） ----------
+# ---------- 讀檔（spec 第 0 節） ----------
 
-OK, MISSING, BAD, IO = "ok", "missing", "bad", "io"
+def fact(path, dir_fd=None):
+    """核心讀 JSON 檔的唯一入口，回 (狀態, 值)：
 
+    - (N, None)：確定不存在（ENOENT／ENOTDIR）。
+    - (OK, 值)：讀到、解得開（值的型別由呼叫的人看）。
+    - (BAD, 說明)：一般檔、讀得到，但不是 JSON。
+    - (U, 說明)：讀不到（EIO、EACCES、ESTALE…），或**存在但不是一般檔**（FIFO、資料夾、socket：有東西、讀不出內容）。
 
-def read_json3(path, dir_fd=None, strict=False):
-    """讀 JSON，分清楚三態：回 (狀態, 值)。
-
-    - ("ok", 值)：讀到、解得開（值可能不是物件，型別由呼叫的人看）。
-    - ("missing", None)：確定不存在（ENOENT／ENOTDIR）；`strict=False` 時不是一般檔（FIFO、資料夾、socket）也當不存在。
-    - ("bad", None)：一般檔、讀得到，但不是 JSON（人手寫壞）。
-    - ("io", 錯誤字串)：讀不到（EIO、EACCES、ESTALE…）＝**不知道**，不能當不存在也不能當壞掉去做破壞性動作。
-
-    **strict=True 給生命週期檔**（round.json、last-round.json、birth.json、pid.json、exit.json；A3-03）：存在但不是一般檔
-    ＝「有東西在那裡、讀不出內容」＝不知道，回 ("io", 說明)，不當不存在——否則把 birth.json 換成 FIFO 會被當空槽而雙開、
-    把開著的 round.json 換成 FIFO 會從 last-round.json 接號再開同一回合。照樣非阻塞開，FIFO 不會卡住讀的人。
-    其他檔（控制垃圾、tasks.json、timeline.json…）維持「當不存在」。
-
-    path 是檔案路徑，dir_fd 可指定相對路徑的基準目錄 fd。四種讀檔結果供上層組成
-    是／否／不知道三態；BAD 如何解讀由該檔案的契約決定，不混同 I/O 失敗。"""
-    notreg = (IO, "%s 存在但不是一般檔（FIFO、資料夾…），讀不出內容（A3-03）" % os.path.basename(str(path))) \
-        if strict else (MISSING, None)
+    BAD 怎麼歸由呼叫的人照「誰寫的檔」決定：核心自己寫的檔壞了＝U（只可能是被手改或磁碟壞）；別人寫給核心的（tasks.json、
+    timeline.json、控制請求）壞了＝B（拒收那一件並回報）。非阻塞開，FIFO 不會卡住讀的人。"""
+    name = os.path.basename(str(path))
     try:
         inject("open", path)
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK, dir_fd=dir_fd)
     except OSError as e:
-        if e.errno in (errno.ENOENT, errno.ENOTDIR):
-            return MISSING, None
+        if e.errno in GONE_ERRNO:
+            return N, None
         if e.errno in (errno.ENXIO, errno.EISDIR):
-            return notreg   # socket 等開不了的特殊檔、資料夾：有東西，不是一般檔
-        return IO, repr(e)[:200]
+            return U, "%s 存在但不是一般檔，讀不出內容" % name
+        return U, "%s 讀不到：%r" % (name, e)
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             os.close(fd)
-            return notreg
+            return U, "%s 存在但不是一般檔，讀不出內容" % name
         with os.fdopen(fd, "rb") as f:
             data = f.read()
     except OSError as e:
-        return IO, repr(e)[:200]
+        return U, "%s 讀不到：%r" % (name, e)
     try:
         return OK, json.loads(data.decode("utf-8"))
     except ValueError:
-        return BAD, None
+        return BAD, "%s 不是 JSON（半寫或寫壞）" % name
 
 
 ROUND_OPEN, ROUND_CLOSED, ROUND_NONE = "open", "closed", "none"
 
 
 def read_round(path):
-    """round.json 的三態（spec §2.2、§3；A2-02）：回 (狀態, 內容, 說明)。daemon、tick、tock 都只用這一個判定。
+    """round.json 的判定（daemon、tick、tock 共用；spec §2.2、§3）：回 (狀態, 內容, 說明)。
 
-    - ("open", r, None)／("closed", r, None)：物件、`round` 是整數、`open` 是 true／false——**只有明確的 `open: false` 才是已關的證據**。
-    - ("none", None, None)：確定不存在（新空間、或被人刪了；tick 照 last-round.json 接著數）。
-    - (IO, None, 說明)：讀不到。
-    - (BAD, 內容, 說明)：半寫、不是物件、缺 `open`、型別不對——跟讀不到一樣是「不知道」，不能當已關（不然會跳過或覆蓋未提交的回合）。"""
-    st, r = read_json3(path, strict=True)   # A3-03：round.json 被換成 FIFO／資料夾＝不知道，不是新空間
-    if st == MISSING:
+    - (ROUND_OPEN／ROUND_CLOSED, r, None)：物件、`round` 是整數、`open` 是 true／false——只有明確的 `open: false` 才是已關。
+    - (ROUND_NONE, None, None)：確定不存在（新空間）。
+    - (U, 內容或 None, 說明)：讀不到、不是一般檔、半寫、缺欄、型別不對——不知道，不能當已關。"""
+    st, r = fact(path)
+    if st == N:
         return ROUND_NONE, None, None
-    if st == IO:
-        return IO, None, "round.json 讀不到：%s" % r
     if st == OK and isinstance(r, dict) and is_int(r.get("round")) and isinstance(r.get("open"), bool):
         return (ROUND_OPEN if r["open"] else ROUND_CLOSED), r, None
-    shown = "半寫或不是 JSON" if st == BAD else json.dumps(r, ensure_ascii=False)[:120]
-    return BAD, r, ("round.json 內容不完整（%s）；要 {\"round\": 整數, \"open\": true/false}，"
-                    "確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}" % shown)
+    if st == U:
+        return U, None, r
+    shown = r if st == BAD else json.dumps(r, ensure_ascii=False)[:120]
+    return U, (r if st == OK else None), ("round.json 內容不完整（%s）；要 {\"round\": 整數, \"open\": true/false}，"
+                                          "確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}" % shown)
 
 
 def summary_ok(lr):
-    """last-round.json 的內容是不是一份完整的總結（tock 自己寫的那種）：物件、round 是整數、tock_at 是字串、
-    started／alive／ended 是陣列（spec §3、§7）。不完整的不拿來重播，tock 照常重新產生一份（A2-02 疑點：原本只比 round）。
-    tock 自己寫的總結是原子寫、寫完讀回確認，只有人手寫壞的才會走到這裡；那時已補過 seen_round 的結束不會再報（核心不補）。"""
+    """last-round.json 的內容是不是一份完整的總結（物件、round 整數、tock_at 字串、started／alive／ended 陣列；spec §7）。
+    不完整的不拿來重播，tock 照常重新產生一份。"""
     return (isinstance(lr, dict) and is_int(lr.get("round")) and isinstance(lr.get("tock_at"), str)
             and all(isinstance(lr.get(k), list) for k in ("started", "alive", "ended")))
 
@@ -302,9 +295,10 @@ def action_lock(root, node):
         mine = os.environ.get("AOS7_GEN")
         if mine is not None:
             # spec §2.5：拿鎖後才比 gen，讓排在新 daemon 後面的舊動作看到世代已換。
-            st, cur = read_json3(os.path.join(root, ".aosd", "gen.json"))
+            st, cur = fact(os.path.join(root, ".aosd", "gen.json"))
             if st != OK or not isinstance(cur, dict) or not is_int(cur.get("gen")):
-                raise Unknown("gen.json 不能用（%s），分不出自己是不是舊世代的動作，什麼都沒寫" % (cur if st == IO else st))
+                raise Unknown("gen.json 不能用（%s），分不出自己是不是舊世代的動作，什麼都沒寫" % cur,
+                              kind="gen-unknown")
             if str(cur["gen"]) != mine:
                 yield False
                 return

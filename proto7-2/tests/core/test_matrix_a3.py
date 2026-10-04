@@ -413,7 +413,7 @@ class TestReplayNotify(A3Case):
     def assert_owed(self, errs, rnd=1):
         self.assertTrue(errs, "沒有 notify_errors")
         self.assertEqual([(e["slot"], e["run"], e["round"]) for e in errs], [("k", 1, rnd)], errs)
-        self.assertTrue(all(e.get("err") for e in errs), errs)
+        self.assertTrue(all(e.get("why") for e in errs), errs)
 
     def test_replay_notify_error_then_tick_retries(self):
         """A3-08：重播時 tock.json 寫不進去 → round.json 與回傳都有 notify_errors；恢復後下一個 tick 補寫上一回合的 tock.json。"""
@@ -464,7 +464,7 @@ class TestReplayNotify(A3Case):
         out = self.itock()
         self.assertIs(out.get("replayed"), True, out)
         self.assert_owed(out.get("notify_errors"))
-        self.assertEqual(out["notify_errors"][0].get("phase"), "judge")
+        self.assertEqual(out["notify_errors"][0].get("where"), "judge")
         back_to_file(bpath, raw)
         self.itick()
         self.assertEqual((read_json(os.path.join(self.slot(node, "k"), "tock.json")) or {}).get("round"), 1)
