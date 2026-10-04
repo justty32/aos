@@ -130,11 +130,11 @@
 | 編號 | 處理 | 做法（spec 對應處標 A3-） |
 |---|---|---|
 | A3-01 restart 完成證據隨 keep 換 run 消失 | 已修 | node 層 `.aos/ctl-seen.json` 每槽記最近一件已處理的任務控制（不隨換 run 清，tock 刪槽時拿掉）；順序是先記 seen、再寫 ctl-done、再刪 ctl.json。同 ctl_id 再出現不執行，回條沒寫成就照 seen 補寫（`replayed`）；ctl.json 刪不掉在總結 ctl 帶 `err`；seen 讀不到／壞掉＝請求留著。birth 與 pending once 的查重保留，蓋「執行完、記 seen 之前被殺」。spec §6 |
-| A3-02 environ EACCES 使不可 ptrace 任務雙開 | 已修＋改 spec | environ EACCES 的程序在這個 run 的 runner session 或 pid.json 群組裡（殭屍除外）＝不知道，不判 lost；其他照舊當不是任務。cmdline 讀不到（含 EACCES）＝不知道。pid.json 多 `uid`。spec §11 明寫管理範圍（同 uid、environ 可讀；setuid／換 uid／關 dumpable 不在範圍），§5.4「不會雙開」加上只對管理範圍內成立 |
-| A3-03 非一般檔當不存在，繞過 round／birth 保護 | 已修 | 三態讀檔加嚴格模式給生命週期檔（round、last-round、birth、pid、exit，及 ctl-seen）：存在但不是一般檔＝不知道；其他檔照舊當不存在。tock 刪槽前讀 tasks.json 也用嚴格讀。spec §0 |
+| A3-02 environ EACCES 使不可 ptrace 任務雙開 | **誤用，不處理（原則 9）**；spec 框範圍 | 任務自己變得不可讀（關 dumpable、換 uid）＝故意脫離身分，是誤用，不歸核心管；spec §11 寫明管理範圍即是處理。本輪在原則 9 定下前已寫的保護先留著（之後核心精簡統一處理），不再擴張：environ EACCES 的程序在這個 run 的 runner session 或 pid.json 群組裡（殭屍除外）＝不知道，不判 lost；其他照舊當不是任務。cmdline 讀不到（含 EACCES）＝不知道。pid.json 多 `uid`。spec §11 明寫管理範圍（同 uid、environ 可讀；setuid／換 uid／關 dumpable 不在範圍），§5.4「不會雙開」加上只對管理範圍內成立 |
+| A3-03 非一般檔當不存在，繞過 round／birth 保護 | **誤用，不處理（原則 9）** | 把生命週期檔換成 FIFO／資料夾是錯誤操作，不歸核心管。原則 9 定下前已寫的保護先留著（之後核心精簡統一處理），不再擴張：三態讀檔加嚴格模式給生命週期檔（round、last-round、birth、pid、exit，及 ctl-seen）：存在但不是一般檔＝不知道；其他檔照舊當不存在。tock 刪槽前讀 tasks.json 也用嚴格讀。spec §0 |
 | A3-04 明確 id 靜默截 64 字 | 已修 | id 完整使用、不截斷；超過 200 字拒絕（回條 ok:false 說明）。spec §6 |
 | A3-05 內容＋mtime 不是唯一意圖、作用域未定 | 已修＋改 spec | 沒帶 id 時雜湊加上 `<node-id>/<槽>`、st_dev、st_ino；id 作用域定為同 node 同槽，pending once 查重比同槽＋同 ctl_id。`aos7-ctl task` 自動產生 uuid，`--id` 重送沿用。spec §6、§10 |
-| A3-06 owner 檔名有損編碼互蓋 | 已修 | by／node／owner 每段無損編碼（`/`→`+`，其他 `%XX`；太長取前 40＋`~`＋sha1 前 16）。spec 2.3、§10 |
+| A3-06 owner 檔名有損編碼互蓋 | 已修（不是誤用：非 ASCII owner 如「甲」「乙」是正常用法） | by／node／owner 每段無損編碼（`/`→`+`，其他 `%XX`；太長取前 40＋`~`＋sha1 前 16）。spec 2.3、§10 |
 | A3-07 mount 子目錄的暫存檔漏清 | 已修 | tock 清槽暫存檔時連 `mount-req/`、`mount-done/` 一起，不遞迴清任務自己的資料夾。spec §0 |
 | A3-08 重播通知失敗被吞 | 已修 | 重播補 tock.json 失敗、alive 的槽判不出／判定例外都記進 round.json `notify_errors`（每筆帶 slot、run、round）與回傳；下一個 tick 開回合前補（同 run 還活著才補，補不上進 `tasks_error`），對已關回合再跑 tock 也補（`notify_retried`）。spec §7 |
 | A3-09 任務仍活、群組核對不了，kill 卻回成功 | 已修 | kill 最後確認 pid.json 記的任務程序（pid＋starttime）已不在，否則 `ok: false`（unknown）；群組有成員 environ 讀不到權限又沒成員核對得到＝不知道。spec §6 |
