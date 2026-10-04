@@ -22,7 +22,7 @@ import sys
 import aos7_mount
 import aos7_task
 from aos7_fs import (BAD, FD_PREFIX, IO, MISSING, OK, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, LockTimeout, Unknown,
-                     action_lock, canonical_node, edit_json, inject, is_gone, is_int, locked, node_path, now,
+                     action_lock, edit_json, inject, is_gone, is_int, locked, node_path, now,
                      read_json, read_json3, read_round, sweep_tmp, test_point, write_json)
 from aos7_task import EMPTY, ENDED, LIVE, UNKNOWN, NAME_RE, SLOT_RE
 
@@ -274,10 +274,9 @@ def held_node(fn, root, node_id, gone):
     """持有 root／node_id 的目錄 fd，呼叫 fn(fnode, node)，回其結果或 gone 的副本。
     fnode 是 /proc/self/fd/N，node 是字串路徑；fd 讓搬移後仍操作原目錄（spec §2.5）。
 
-    開 node 時（A2-04、註解疑點 aos7_tick.py:258）：
-    - 確定不存在（ENOENT／ENOTDIR），或最後一段是符號連結（O_NOFOLLOW → ELOOP）→ gone。
-    - 開到的資料夾 realpath 不是 canonical_node（路徑上有一段被換成符號連結）→ gone：**絕不沿符號連結寫出空間根**，
-      也不把連回搬走資料夾的連結當成原 node（daemon 那邊同時會判 missing）。
+    開 node 時：
+    - 確定不存在（ENOENT／ENOTDIR），或 node 本身被換成符號連結（O_NOFOLLOW → ELOOP）→ gone。這是「不沿連結寫出空間根」的
+      最小保險；路徑中間段被換成符號連結是誤用（spec §11），不再每次重驗整條路徑。
     - 其他錯誤（EIO、ESTALE、EACCES…）＝看不到 → 丟 Unknown（退出碼 3），不當 gone。
     動作中 .aos 確定消失也回 gone，其餘例外外拋。fd 最後關閉；不沿舊字串路徑重建被刪掉的 node（P2-05）。"""
     node = node_path(root, node_id)
@@ -290,13 +289,6 @@ def held_node(fn, root, node_id, gone):
         raise Unknown("看不到 node %s：%r" % (node_id, e)) from None
     fnode = FD_PREFIX + str(nfd)
     try:
-        try:
-            real = os.readlink(fnode)
-        except OSError as e:
-            raise Unknown("認不出抓著的 node 在哪：%r" % (e,)) from None
-        if real != canonical_node(root, node_id):
-            return dict(gone, why="node 的實際位置是 %s，不是 %s（路徑經過符號連結，A2-04）"
-                        % (real, canonical_node(root, node_id)))
         try:
             # spec §1、P2-05：登記不要求 .aos 預先存在，經 fd 建立才不會復活已搬走的舊路徑。
             os.makedirs(os.path.join(fnode, ".aos"), exist_ok=True)
@@ -341,7 +333,7 @@ def tick(root, node_id):
     """替空間 root 的 node_id 開一次回合，回 round／started／tasks_rev 結果（spec §4.2）。
     node 開不了回 gone，舊世代回 stale；推定不了丟 Unknown，交 main 回退出碼 3。
     呼叫者 daemon 先確認舊回合已關（§2.2 不變條件一），此入口負責 fd 與動作鎖。"""
-    root = os.path.realpath(root)   # A2-04：node 的身分以實際路徑比對；空間根本身經過連結也照實際位置
+    root = os.path.realpath(root)   # 空間根本身經過連結也照實際位置
 
     def act(fnode, node):
         """以 fnode（持有的 fd 路徑）、node（原字串路徑）在動作鎖內跑 tick，回結果。

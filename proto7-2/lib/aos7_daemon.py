@@ -60,7 +60,7 @@ class Daemon:
     def __init__(self, root):
         """建立管理 root 空間根的 daemon 狀態，抓住目錄 fd（spec §1、§2.5）。
         root 是已存在的資料夾路徑；初始化回 None，開目錄失敗向上拋；此時尚未拿 daemon.lock。"""
-        # A2-04：以實際路徑當空間根——node 的身分（canonical_node）照實際位置比，根本身是連結也不會把 "." 判成連結。
+        # 以實際路徑當空間根：登記檢查（canonical_node）照實際位置比，根本身是連結也不會把 "." 判成連結。
         self.root = os.path.realpath(root)
         # spec §2.5：/proc/self/fd 固定指向已開啟的 inode，路徑被換掉也不會寫進替身 root。
         # 自己的 `.aosd` 一律經 root 的 fd 讀寫：root 被搬走寫到新位置，被刪就寫不進去（2.5）
@@ -243,7 +243,7 @@ class Daemon:
         if not (rq == real_root or rq.startswith(real_root + os.sep)):
             return False, "%s 沿符號連結跑出空間根（%s），不登記" % (nid, rq)
         if os.path.realpath(p) != canonical_node(self.root, nid):
-            # A2-04：登記綁定實際路徑；路徑上有符號連結（即使指在空間根內）就不登記，請登記實際位置。
+            # 登記綁定實際路徑；路徑上有符號連結（即使指在空間根內）就不登記，請登記實際位置。
             return False, "%s 的路徑經過符號連結（實際在 %s），請登記實際位置" % (nid, os.path.realpath(p))
         if os.path.lexists(p) and not os.path.isdir(p):
             return False, "%s 不是資料夾，不登記" % nid
@@ -488,14 +488,8 @@ class Daemon:
             try:
                 inject("stat", path)
                 st = os.lstat(path)
-                if stat.S_ISLNK(st.st_mode):
-                    gone = "換成符號連結了（A2-04：登記綁定實際資料夾，不跟著連結走）"
-                elif not stat.S_ISDIR(st.st_mode):
-                    gone = "不是資料夾了"
-                elif os.path.realpath(path) != canonical_node(self.root, nid):
-                    gone = "路徑經過符號連結（實際在 %s；A2-04）" % os.path.realpath(path)
-                else:
-                    gone = None
+                # 換成符號連結（lstat 看到的是連結本身）也算「不是資料夾了」；路徑中間段換連結是誤用（spec §11）
+                gone = None if stat.S_ISDIR(st.st_mode) else "不是資料夾了（或換成了符號連結）"
             except OSError as e:
                 if e.errno not in GONE_ERRNO:
                     # spec §0、§2.6 三態：看不到不是消失；不能因此殺任務或丟掉原時間線。錯誤類型分欄記（A2-08）。
@@ -585,7 +579,7 @@ class Daemon:
             except Exception as e:   # noqa: BLE001
                 uncertain.append({"slot": slot, "run": None, "why": repr(e)[:200]})
                 continue
-            if v.state == aos7_task.UNKNOWN or v.get("unsure") or v.get("broken"):
+            if v.state == aos7_task.UNKNOWN or v.get("unsure"):
                 # A2-08：判不出的槽進 status，不再「保守停著但看似正常」。
                 uncertain.append({"slot": slot, "run": v.run, "why": v.get("unsure") or v.get("why")})
             if v.state in (aos7_task.LIVE, aos7_task.UNKNOWN):

@@ -4,9 +4,9 @@
 
 矩陣維度與判定：
 
-1. **A2-04 已登記 node 被換成符號連結** × 換法 ∈ {`same_inode`：mv a moved; ln -s moved a、`outside`：ln -s <root 外> a、
-   `parent`：登記 p/a，mv p p2; ln -s <root 外（裡面有 a/）> p} → 2 秒內 phase `missing`；same_inode 時任務被收、
-   moved 的回合不再前進；outside／parent 時 root 外沒被建 `.aos`。另外 register 本身是符號連結、或路徑經過符號連結的 node → 回條 ok:false。
+1. **已登記 node 本身被換成符號連結** × 換法 ∈ {`same_inode`：mv a moved; ln -s moved a、`outside`：ln -s <root 外> a}
+   → 2 秒內 phase `missing`；same_inode 時任務被收、moved 的回合不再前進；outside 時 root 外沒被建 `.aos`。
+   （路徑中間段換成符號連結的 `parent` 案已刪：誤用 M-2.1，見 notes/problems.md。）另外 register 本身是符號連結、或路徑經過符號連結的 node → 回條 ok:false。
 2. **A2-06 rounds 按 owner**：A、B 都 pause；A `resume --rounds 1`（B 還擋著）；B `resume --rounds 3` → 跑一回合後 A 自動再 pause，
    `steps_left`＝`{"B": 2}`；A 再 resume 後 B 照扣，再跑兩回合 B 自動 pause。
 3. **A2-13**：`pause --owner A` 與 `--owner B` 寫出不同檔名；daemon 起來後 paused.json 兩個 owner 都在。
@@ -46,7 +46,7 @@ class TestDaemonMatrix(DaemonCase):
     # ---------- A2-04 ----------
 
     def test_symlink_same_inode(self):
-        """〔misuse M-2.1〕node 運行中路徑換成符號連結（A2-04 每圈重驗，F03）"""
+        """〔core〕node 本身換成連回原資料夾的符號連結：lstat 看到連結＝不是資料夾 → missing、收任務（O_NOFOLLOW 擋 tick／tock）。"""
         node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEP}], interval_ms=150)
         self.start_daemon(register=["a"])
         pid = self.wait_pid(node, "s")["pid"]
@@ -71,19 +71,6 @@ class TestDaemonMatrix(DaemonCase):
         self.wait_phase("missing")
         time.sleep(0.5)
         self.assertFalse(os.path.exists(os.path.join(out, ".aos")), "寫出 root 外")
-
-    def test_symlink_parent_outside_root(self):
-        """〔misuse M-2.1〕node 運行中路徑換成符號連結（A2-04 每圈重驗，F03）"""
-        self.mknode("p/a", interval_ms=150)
-        out = self.outside()
-        os.makedirs(os.path.join(out, "a"))
-        self.start_daemon(register=["p/a"])
-        self.wait_round(2, "p/a")
-        os.rename(os.path.join(self.root, "p"), os.path.join(self.root, "p2"))
-        os.symlink(out, os.path.join(self.root, "p"))
-        self.wait_phase("missing", "p/a")
-        time.sleep(0.5)
-        self.assertFalse(os.path.exists(os.path.join(out, "a", ".aos")), "寫出 root 外")
 
     def test_register_symlink_refused(self):
         os.makedirs(os.path.join(self.root, "real", "a"))

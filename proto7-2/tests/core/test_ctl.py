@@ -230,17 +230,6 @@ class TestIdentityScan(CoreCase):
         self.assertEqual(aos7_task.judge(sd, node, "x", 2).state, aos7_task.LIVE)
         self.assertEqual(aos7_task.judge(sd, node, "x", 3).state, aos7_task.SUSPECT)
 
-    def test_broken_birth_uses_node_tid_scan(self):
-        """〔misuse M-2.3〕壞 birth 靠 NODE＋TID 掃描判活（A2-03，F31）"""
-        node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": SLEEP}])
-        self.tick()
-        self.wait_pid(node, "k")
-        with open(os.path.join(self.slot(node, "k"), "birth.json"), "w") as f:
-            f.write("{broken")
-        self.assertEqual(self.view(node, "k", 1).state, aos7_task.LIVE)   # 有相符活程序＝活（run 不明）
-        self.tock()
-        self.assertEqual(self.tick()["started"], [])                        # keep 不雙開
-
 
 class TestMounts(CoreCase):
     """〔core〕"""

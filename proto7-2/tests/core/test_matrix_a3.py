@@ -9,11 +9,10 @@
    同一份請求不再殺新 run；`ctl-after-seen` 崩潰後下一次 tock 照 ctl-seen.json 補寫回條（`replayed: true`），不再執行。
 2. **A3-04** id 超過 200 字 → 回條 ok:false、不執行；200 字內前綴相同的兩個 id 各自生效。
 3. **A3-05** 保留 mtime 的新 inode 複製（shutil.copy2）＝新請求；兩個槽同內容同 mtime 各自生效；`aos7-ctl task` 自動帶 id。
-4. **A3-06** owner／by／node 的檔名編碼無損；daemon 起來前送兩份不同非 ASCII owner 的 pause，兩個 owner 都在 paused。
+4. （A3-06 檔名編碼的案例已搬到 modules/tools/tests/test_tools_ctl.py。）
 5. **A3-03** 生命週期檔（birth／pid／exit／round／last-round）被換成 FIFO＝不知道：不起第二份、tick／tock 退出碼 3、不重開同號回合；
    換回一般檔後恢復。
-6. **A3-02／A3-09** 真不可 dumpable 任務（prctl PR_SET_DUMPABLE=0，同 uid 讀 environ 也 EACCES）：runner-before-pid 後不判 lost、
-   不起第二份；kill 回 ok:false。測試結束用 PID（cmdline 帶著 root）自己收掉它。
+6. （A3-02 不可 dumpable 任務的兩案已刪：誤用 M-2.8，理由見 notes/problems.md「核心精簡：刪掉的誤用保護」。）
 7. **A3-07** 槽的 mount-req／mount-done 裡死寫者的暫存檔被 tock 清掉，活寫者的留著。
 8. **A3-08** 重播（tock-summary 被殺）時通知失敗 → round.json 與回傳都有 notify_errors；之後 tick／再 tock 會補寫。
 9. **P2-01** 真 daemon、early_tock:false、interval 2500ms：回合中送 wake 很快開下一回合（記事件 woke）；沒 wake 的照節拍。
@@ -366,147 +365,6 @@ class TestNonRegular(A3Case):
 
 
 gen(TestNonRegular, "slot_fifo", [(n, (n,)) for n in ("birth.json", "pid.json", "exit.json")], TestNonRegular._slot_file)
-
-
-# ---------- A3-02、A3-09 ----------
-
-HIDDEN = ("import ctypes, os, time\n"
-          "assert ctypes.CDLL(None).prctl(4, 0, 0, 0, 0) == 0\n"
-          "open(os.environ['AOS7_NODE'] + '/pid-' + os.environ['AOS7_RUN'], 'w').write(str(os.getpid()))\n"
-          "time.sleep(60)\n"
-          "# %s\n")
-
-
-def environ_hidden_supported():
-    """同 uid 讀不可 dumpable 程序的 /proc/<pid>/environ 會不會 EACCES（A3-02 要的前提）。回 (bool, 說明)。"""
-    import subprocess
-    try:
-        p = subprocess.Popen([sys.executable, "-c", "import ctypes,sys,time\n"
-                              "ok = ctypes.CDLL(None).prctl(4, 0, 0, 0, 0) == 0\n"
-                              "print(ok, flush=True); time.sleep(5)"], stdout=subprocess.PIPE, text=True)
-    except OSError as e:
-        return False, "起不了 python：%r" % (e,)
-    try:
-        if p.stdout.readline().strip() != "True":
-            return False, "prctl(PR_SET_DUMPABLE, 0) 失敗"
-        try:
-            with open("/proc/%d/environ" % p.pid, "rb") as f:
-                f.read()
-            return False, "同 uid 讀得到不可 dumpable 程序的 environ（例如以 root 跑或核心設定不同），重現不了 EACCES"
-        except PermissionError:
-            return True, ""
-        except OSError as e:
-            return False, "讀 environ 得到 %r，不是 EACCES" % (e,)
-    finally:
-        p.kill()
-        p.wait()
-        p.stdout.close()
-
-
-class TestHiddenEnviron(A3Case):
-    """〔misuse M-2.8〕不可 dumpable／environ 讀不到權限的任務在已知 session／群組裡＝不知道（A3-02，F33）：任務違反前置「同 uid、environ 可讀」。"""
-    def setUp(self):
-        super().setUp()
-        ok, why = environ_hidden_supported()
-        if not ok:
-            self.skipTest("這個環境做不出 environ EACCES：%s" % why)
-        self.addCleanup(self.kill_hidden)
-
-    def kill_hidden(self):
-        """收掉 cmdline 帶著這個測試 root 的程序（不可 dumpable 的任務 environ 讀不到，base 的保底掃不到它）。"""
-        mark = self.root.encode()
-        for _ in range(3):
-            left = []
-            for p in os.listdir("/proc"):
-                if not p.isdigit() or int(p) == os.getpid():
-                    continue
-                try:
-                    with open("/proc/%s/cmdline" % p, "rb") as f:
-                        cmd = f.read()
-                except OSError:
-                    continue
-                if mark in cmd:
-                    left.append(int(p))
-                    try:
-                        os.kill(int(p), signal.SIGKILL)
-                    except OSError:
-                        pass
-            if not left:
-                return
-            time.sleep(0.05)
-
-    def hidden_node(self):
-        return self.mknode("a", [{"name": "k", "mode": "keep", "argv": [sys.executable, "-c", HIDDEN % self.root]}])
-
-    def hidden_pid(self, node, run):
-        p = os.path.join(node, "pid-%d" % run)
-
-        def get():
-            try:
-                with open(p) as f:
-                    v = f.read().strip()
-                return int(v) if v else None
-            except OSError:
-                return None
-        return self.wait_for(get, 10, "不可 dumpable 的任務沒起來")
-
-    def test_runner_dead_before_pid_not_lost(self):
-        """A3-02：不可 dumpable 任務、runner 在寫 pid.json 前死：tock 不判 lost、tick 不起第二份；kill 回 ok:false（A3-09）、任務還活著。"""
-        node = self.hidden_node()
-        rc, _out, err = self.run_prog("aos7-tick", env={"AOS7_TEST_RUNNER_CRASH": "runner-before-pid"})
-        self.assertEqual(rc, 0, err)
-        pid = self.hidden_pid(node, 1)
-        runner = (self.birth(node, "k").get("runner") or {}).get("pid")
-        self.assertTrue(runner, self.birth(node, "k"))
-        self.wait_for(lambda: not alive(runner), 5, "runner 沒死")
-        self.assertIsNone(read_json(os.path.join(self.slot(node, "k"), "pid.json")), "測試時序不成立：有 pid.json")
-        with self.assertRaises(PermissionError):
-            open("/proc/%d/environ" % pid, "rb").read()
-        sums = [self.itock()]
-        for _ in range(2):
-            out = self.itick()
-            self.assertEqual(out["started"], [], "不可讀身分的任務還活著就起了第二份：%r" % out)
-            sums.append(self.itock())
-        self.assertEqual(self.ends_of(sums, "k"), [], "判了 lost：%r" % self.ends_of(sums, "k"))
-        self.assertIsNone(self.exit_raw(node, "k"), "寫了 exit.json：%r" % self.exit_raw(node, "k"))
-        self.assertTrue(all(self.errors_for(s, "k") for s in sums), "沒在 errors 說明不知道：%r" % [s.get("errors") for s in sums])
-        self.assertFalse(os.path.exists(os.path.join(node, "pid-2")), "起了第二份")
-        self.assertEqual(self.birth(node, "k")["run"], 1)
-        self.assertTrue(alive(pid))
-        # A3-09：送 kill——判不出來，不能回成功
-        self.write_ctl(node, "k", op="kill")
-        lr = self.itock() if self.round_json(node).get("open") else (self.itick(), self.itock())[1]
-        recs = self.ctl_recs([lr], "k")
-        self.assertTrue(recs, lr.get("ctl"))
-        self.assertTrue(all(c.get("ok") is False for c in recs), "kill 回了成功：%r" % recs)
-        d = self.done(node, "k")
-        self.assertTrue(d is None or d["result"]["ok"] is False, "回條說成功：%r" % d)
-        self.assertTrue(alive(pid), "測試時序不成立：任務被收掉了")
-        os.kill(pid, signal.SIGKILL)
-        self.wait_for(lambda: not alive(pid), 5, "任務收不掉")
-
-    def test_kill_live_hidden_task_not_ok(self):
-        """A3-09：pid.json 記著的不可 dumpable 任務、runner 已死，送 kill：任務仍活 → 回條 ok:false（unknown），不說收乾淨。"""
-        node = self.hidden_node()
-        self.itick()
-        pid = self.hidden_pid(node, 1)
-        pj = self.wait_pid(node, "k")
-        self.assertEqual(pj["pid"], pid)
-        runner = (self.birth(node, "k").get("runner") or {}).get("pid")
-        os.kill(runner, signal.SIGKILL)
-        self.wait_for(lambda: not alive(runner), 5, "runner 沒死")
-        self.itock()
-        self.itick()
-        self.write_ctl(node, "k", op="kill")
-        lr = self.itock()
-        d = self.done(node, "k")
-        self.assertIsNotNone(d, "沒有回條：%r" % lr.get("ctl"))
-        self.assertIs(d["result"]["ok"], False, "任務還活著，kill 卻回成功：%r" % d)
-        self.assertIn("unknown", d["result"]["msg"])
-        self.assertTrue(alive(pid))
-        self.assertIn("k#1", lr["alive"])
-        os.kill(pid, signal.SIGKILL)
-        self.wait_for(lambda: not alive(pid), 5, "任務收不掉")
 
 
 # ---------- A3-07 ----------

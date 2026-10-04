@@ -455,8 +455,8 @@ def node_path(root, node_id):
 
 
 def canonical_node(root, node_id):
-    """node 的「實際身分」路徑＝realpath(root)／node_id（A2-04）：登記與每次使用時，node 的 realpath 要等於它。
-    不等＝路徑上某一段被換成符號連結（指到別處、或連回搬走的同一個資料夾），一律當 node 不在，絕不沿連結寫出空間根。"""
+    """node 的「實際身分」路徑＝realpath(root)／node_id：登記時 node 的 realpath 要等於它（路徑上不能有符號連結）。
+    不等＝路徑上有符號連結，不登記（請登記實際位置）。"""
     r = os.path.realpath(root)
     return r if node_id in (".", "") else os.path.join(r, node_id)
 
