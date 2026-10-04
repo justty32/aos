@@ -115,6 +115,8 @@
 | diag 診斷包 | [modules/diag/README.md](../modules/diag/README.md#契約卡) |
 | tools 工具包 | [modules/tools/README.md](../modules/tools/README.md#契約卡) |
 | step 任務包 | [packs/step/README.md](../packs/step/README.md)（「四個組件」節） |
+| budget 任務包（grant／帳／入口） | [packs/budget/README.md](../packs/budget/README.md) |
+| adapt 任務包（最新值轉接） | [packs/adapt/README.md](../packs/adapt/README.md) |
 
 ### 2.8 任務（kernel、agent 都是）
 
