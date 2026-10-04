@@ -1,0 +1,12 @@
+{
+  "workload_roots_removed": {
+    "aos72-test-1956a3h_": true,
+    "aos72-test-j2mhdx8v": true,
+    "aos72-test-3e6e2tmq": true,
+    "aos72-test-3foku3yc": true
+  },
+  "residual_matching_processes": [],
+  "remaining_evidence_temp_directories": [],
+  "outside_tmp_created": false,
+  "process_cleanup": "DaemonCase reaps tracked PIDs/PGIDs and matching AOS7_ROOT identities before removing roots; no pkill."
+}

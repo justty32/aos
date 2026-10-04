@@ -1,0 +1,157 @@
+{
+  "history_notification_before_commit": {
+    "observations": [
+      {
+        "publishing_round": 1,
+        "rows_before_summary": [],
+        "notified_round": null
+      },
+      {
+        "publishing_round": 2,
+        "rows_before_summary": [
+          {
+            "round": 1,
+            "tick_at": "2026-10-04T12:49:39.083",
+            "tock_at": "2026-10-04T12:49:39.104",
+            "early": null,
+            "started": [
+              "history#1"
+            ],
+            "alive": [
+              "history#1"
+            ],
+            "ended": [],
+            "skipped": [],
+            "ctl": [],
+            "mounts": [],
+            "tasks_error": [],
+            "errors": [],
+            "tasks_rev": "81d0a2d66009"
+          }
+        ],
+        "notified_round": 1
+      }
+    ],
+    "final_summary_round": 2,
+    "final_history_rows": [
+      {
+        "round": 1,
+        "tick_at": "2026-10-04T12:49:39.083",
+        "tock_at": "2026-10-04T12:49:39.104",
+        "early": null,
+        "started": [
+          "history#1"
+        ],
+        "alive": [
+          "history#1"
+        ],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "81d0a2d66009"
+      },
+      {
+        "round": 2,
+        "tick_at": "2026-10-04T12:49:39.305",
+        "tock_at": "2026-10-04T12:49:39.305",
+        "early": null,
+        "started": [],
+        "alive": [
+          "history#1"
+        ],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "81d0a2d66009"
+      }
+    ],
+    "injection": "200ms delay only at actual last-round.json write; real history process and actual tick/tock"
+  },
+  "mount_runtime": {
+    "accepted": {
+      "name": "dynamic",
+      "path": "allowed/dynamic",
+      "result": {
+        "ok": true,
+        "msg": "掛上 mnt/dynamic → allowed/dynamic",
+        "at": "2026-10-04T12:49:39.629"
+      }
+    },
+    "refused": {
+      "name": "bad",
+      "path": "denied",
+      "result": {
+        "ok": false,
+        "msg": "denied 不在這個 node 的 mount_allow 裡（或沿連結跑出空間根）",
+        "at": "2026-10-04T12:49:39.629"
+      }
+    },
+    "remaining_requests": []
+  },
+  "reload_mounts": {
+    "birth": {
+      "run": 5,
+      "restart_of": "m#3",
+      "argv": [
+        "sleep",
+        "59"
+      ],
+      "mounts": {
+        "declared": {
+          "to": "allowed/new",
+          "at": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a2/proto7-2/notes/play/2026-10-04-astra-2-infra-evidence/aos72-test-4vvfte3v/a/.aos/tasks/m/mnt/declared"
+        },
+        "dynamic": {
+          "to": "allowed/dynamic",
+          "at": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a2/proto7-2/notes/play/2026-10-04-astra-2-infra-evidence/aos72-test-4vvfte3v/a/.aos/tasks/m/mnt/dynamic",
+          "dyn": true
+        }
+      }
+    },
+    "receipt": {
+      "op": "restart",
+      "reload": true,
+      "run": 3,
+      "result": {
+        "ok": true,
+        "msg": "killed 1 group(s); once 項已加進 tasks.json（slot m）（reload：argv [\"sleep\", \"60\"] → [\"sleep\", \"59\"]；mounts {\"declared\": \"allowed/one\", \"dynamic\": \"allowed/dynamic\"} → {\"dynamic\": \"allowed/dynamic\", \"declared\": \"allowed/new\"}）",
+        "at": "2026-10-04T12:49:39.644",
+        "run": "m#3",
+        "diff": {
+          "argv": {
+            "old": [
+              "sleep",
+              "60"
+            ],
+            "new": [
+              "sleep",
+              "59"
+            ]
+          },
+          "mounts": {
+            "old": {
+              "declared": "allowed/one",
+              "dynamic": "allowed/dynamic"
+            },
+            "new": {
+              "dynamic": "allowed/dynamic",
+              "declared": "allowed/new"
+            }
+          }
+        }
+      }
+    },
+    "links": {
+      "dynamic": "../../../../../allowed/dynamic",
+      "declared": "../../../../../allowed/new"
+    },
+    "mount_done_cleared": true
+  },
+  "cleanup_root_removed": true
+}

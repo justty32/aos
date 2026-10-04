@@ -1,0 +1,158 @@
+{
+  "cases": [
+    {
+      "root": "once-work-j_317fu6/before-launch",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/after-launch",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/before-birth",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/after-birth",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/before-runner",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/after-runner",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/before-delete",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/after-delete",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/once-birth-corrupt",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/proc_starttime_none",
+      "killed_pids": [
+        212627,
+        212649
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/proc_stat_eio",
+      "killed_pids": [
+        212679,
+        212702
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/proc_all_eio",
+      "killed_pids": [
+        212736,
+        212757
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/birth_bad_proc_environ_eio",
+      "killed_pids": [
+        212785,
+        212809
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/round_eio",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/round_bad",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/round_open_missing",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/direct_tick_open",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/restart-after-append",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/restart-new_mtime",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/restart-same_mtime",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/restart-long_ids",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/restart-replay-after-birth-reuse",
+      "killed_pids": [
+        213605,
+        213628,
+        213630
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/runner-dead-before-pid",
+      "killed_pids": [
+        213935,
+        213955
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/old-run-residue",
+      "killed_pids": [
+        213986,
+        214007
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/cross-slot-explicit_same_id",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-j_317fu6/cross-slot-same_raw_mtime",
+      "killed_pids": [],
+      "surviving_pids": []
+    }
+  ],
+  "remaining_test_pids": [],
+  "temp_root_exists": false
+}

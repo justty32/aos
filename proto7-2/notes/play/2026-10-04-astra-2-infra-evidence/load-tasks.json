@@ -1,0 +1,119 @@
+{
+  "label": "tasks",
+  "node_count": 10,
+  "target_rounds_per_node": 100,
+  "workload": "one sleep keep + one true each per node; node n00 also history(max-lines=25)",
+  "samples": [
+    {
+      "round_per_node": 10,
+      "closed_node_rounds": 100,
+      "checkpoint_seconds": 1.152,
+      "completion_seconds": {
+        "min": 1.001,
+        "median": 1.001,
+        "max": 1.001
+      },
+      "node_rounds_per_second": 86.842,
+      "cpu_since_start": {
+        "self_seconds": 0.12,
+        "waited_children_seconds": 8.06
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 32843,
+        "dot_tmp": 0
+      },
+      "summary_errors": []
+    },
+    {
+      "round_per_node": 50,
+      "closed_node_rounds": 500,
+      "checkpoint_seconds": 3.558,
+      "completion_seconds": {
+        "min": 3.408,
+        "median": 3.408,
+        "max": 3.408
+      },
+      "node_rounds_per_second": 112.426,
+      "cpu_since_start": {
+        "self_seconds": 0.55,
+        "waited_children_seconds": 39.65
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 37775,
+        "dot_tmp": 0
+      },
+      "summary_errors": []
+    },
+    {
+      "round_per_node": 100,
+      "closed_node_rounds": 1000,
+      "checkpoint_seconds": 4.557,
+      "completion_seconds": {
+        "min": 4.207,
+        "median": 4.407,
+        "max": 4.407
+      },
+      "node_rounds_per_second": 109.718,
+      "cpu_since_start": {
+        "self_seconds": 1.09,
+        "waited_children_seconds": 79.82
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 38304,
+        "dot_tmp": 0
+      },
+      "summary_errors": []
+    }
+  ],
+  "uncertain_observations": [
+    {
+      "elapsed_s": 1.554,
+      "node": "n09",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 15,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 1.754,
+      "node": "n09",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 15,
+          "why": "剛起"
+        }
+      ]
+    }
+  ],
+  "error_observations": [],
+  "polls": 47,
+  "root_basename": "aos72-test-j2mhdx8v",
+  "total_seconds": 9.271,
+  "final_rounds": {
+    "n00": 100,
+    "n01": 100,
+    "n02": 100,
+    "n03": 100,
+    "n04": 100,
+    "n05": 100,
+    "n06": 100,
+    "n07": 100,
+    "n08": 100,
+    "n09": 100
+  },
+  "history": {
+    "rows": 25,
+    "last_round": 100,
+    "gap_rows": 0
+  },
+  "daemon_returncode": 0,
+  "cleanup_root_removed": true,
+  "cleanup_daemon_returncode": 0
+}

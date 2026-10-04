@@ -1,0 +1,78 @@
+{
+  "healthy_matrix": [
+    {
+      "op": "proc-list",
+      "errno": "EIO",
+      "status": "pass",
+      "matching_injection_calls": 0
+    },
+    {
+      "op": "proc-list",
+      "errno": "ESTALE",
+      "status": "pass",
+      "matching_injection_calls": 0
+    },
+    {
+      "op": "proc-list",
+      "errno": "EACCES",
+      "status": "pass",
+      "matching_injection_calls": 0
+    },
+    {
+      "op": "proc-stat",
+      "errno": "EIO",
+      "status": "pass",
+      "matching_injection_calls": 6
+    },
+    {
+      "op": "proc-stat",
+      "errno": "ESTALE",
+      "status": "pass",
+      "matching_injection_calls": 6
+    },
+    {
+      "op": "proc-stat",
+      "errno": "EACCES",
+      "status": "pass",
+      "matching_injection_calls": 6
+    },
+    {
+      "op": "proc-environ",
+      "errno": "EIO",
+      "status": "pass",
+      "matching_injection_calls": 0
+    },
+    {
+      "op": "proc-environ",
+      "errno": "ESTALE",
+      "status": "pass",
+      "matching_injection_calls": 0
+    },
+    {
+      "op": "proc-environ",
+      "errno": "EACCES",
+      "status": "pass",
+      "matching_injection_calls": 0
+    },
+    {
+      "op": "proc-cmdline",
+      "errno": "EIO",
+      "status": "pass",
+      "matching_injection_calls": 0
+    },
+    {
+      "op": "proc-cmdline",
+      "errno": "ESTALE",
+      "status": "pass",
+      "matching_injection_calls": 0
+    },
+    {
+      "op": "proc-cmdline",
+      "errno": "EACCES",
+      "status": "pass",
+      "matching_injection_calls": 0
+    }
+  ],
+  "zero_hit_cases": 9,
+  "temporary_leftovers": []
+}

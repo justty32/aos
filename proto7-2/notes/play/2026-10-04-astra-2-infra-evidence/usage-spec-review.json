@@ -1,0 +1,18 @@
+{
+  "scope": "spec §8 arithmetic only; kernel is not implemented",
+  "old_probe_unchanged": {
+    "old_run": 1,
+    "old_usage": 100,
+    "new_run": 3,
+    "new_usage": 150,
+    "slot_deleted": true
+  },
+  "old_rule_total": 150,
+  "new_run_keyed_maxima": {
+    "job#1": 100,
+    "job#3": 150
+  },
+  "new_rule_observed_total": 250,
+  "unobserved_tail_cannot_be_counted": true,
+  "note": "舊 probe 保留 tokens 格式只用來重現舊反例；新 §8 合約為 {run, usage}，以觀測到的 run 分別取最大再相加。"
+}
