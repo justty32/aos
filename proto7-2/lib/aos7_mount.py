@@ -90,7 +90,7 @@ def make(root, taskdir, decl, fs_taskdir=None, node=None, fnode=None):
 
 
 def decl_of(birth):
-    """birth.json 的 mounts → 原本的宣告 {名字: 空間路徑}（restart 時抄回 spawn 用）。
+    """birth.json 的 mounts → 原本的宣告 {名字: 空間路徑}（控制包 restart 時抄回新的 once 項用）。
 
     參數 birth 是出生紀錄或空值，只選同時帶 to／at 的成功掛載，回傳 {名字: 空間路徑}；空值回空字典，不把失敗掛載帶入重啟（spec §6）。
     """
@@ -215,8 +215,7 @@ def _serve_one(root, taskdir, allow, item, real_taskdir=None):
         ok = "at" in m
         msg = "掛上 mnt/%s → %s" % (name, good[name]) if ok else m.get("error", "?")
         if ok:
-            # spec §6：標記來源，reload 時新宣告可接管同名掛載，其餘動態掛載延續。
-            m["dyn"] = True   # 執行中加掛的：restart reload 照新定義重起時要另外帶過去（Q6）
+            m["dyn"] = True   # 執行中加掛的（事實）：控制包 reload 照新定義重起時，靠它分出要另外帶過去的掛載
             mounts[name] = m
             birth["mounts"] = mounts
             write_json(bpath, birth)

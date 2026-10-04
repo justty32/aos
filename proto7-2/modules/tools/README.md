@@ -8,7 +8,7 @@
 |---|---|
 | 接法 | C 工具（命令列）＋任務端函式庫 |
 | 預設 | 開（入口 `aos7-ctl`、`aos7-wait-tock` 留在 `proto7-2/bin/`，任務的 `PATH` 有它） |
-| 依賴 | 無（只用核心公開的檔案格式；import 核心 `lib/` 的讀寫小函式） |
+| 依賴 | [控制包](../control/README.md)（`aos7-ctl task … restart` 呼叫它）；其餘只用核心公開的檔案格式，import 核心 `lib/` 的讀寫小函式 |
 | 程式 | `aos7_ctl.py`（`bin/aos7-ctl` 的本體）、`aos7_taskside.py`（任務端函式） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py modules/tools/tests`） |
 
@@ -16,7 +16,8 @@
 
 - `aos7-ctl daemon <root> <op> [node] [--kill] [--rounds N] [--owner X] [--all]`：寫 `<root>/.aosd/ctl/<by>.<op>.<node>.json`；帶 `--owner` 時是 `<by>.<op>.<node>@<owner>.json`。固定名，回條只留最近一份。`<root>` 也可以是掛進來的 `.aosd`。
 - **檔名編碼**：by／node／owner 每段無損編碼——`/`→`+`；其他不是英數、`_`、`-` 的字元（含 `.`、`@`、`+`、`%`、非 ASCII）把 UTF-8 位元組寫成 `%XX`；一段編碼後超過 64 字就取前 40 字＋`~`＋原字串 sha1 前 16 碼。不同的 by／node／owner 不會撞成同一個檔名。
-- `aos7-ctl task <槽> <kill|restart> [why] [--reload] [--run N] [--id ID]`：寫 ctl.json。沒給 `--id` 就自動產生新的 id（uuid）；重送同一件請求才用 `--id` 沿用原 id（1～200 字）。
+- `aos7-ctl task <槽> kill [why] [--run N]`：寫 ctl.json `{"op": "kill", "run"}`；沒給 `--run` 就讀槽的 birth.json 帶現在的 run（讀不到＝報錯、不寫）。
+- `aos7-ctl task <槽> restart [why] [--reload] [--id ID]`：呼叫控制包的 `restart`（先加 once 再寫 kill），stdout 印它的結果（加上 `wrote`）；沒給 `--id` 就自動產生新的請求 id，重送同一件才沿用原 id。`ok: false` 時退出碼 1。
 - `aos7-ctl add <node> '<項目 JSON>'...`：拿 `tasks.json.lock` 把一或多項加進 tasks.json（一次 rename）。
 - 都可加 `--by WHO`（預設：在任務裡是 `<node-id>:<tid>`，否則 `cli`）；stdout 印 `{"wrote": 路徑}`。印出路徑只表示寫好了，接受與執行看 daemon／tick／tock 的回條。
 

@@ -231,7 +231,6 @@ def _finish(fnode, rnd, marks, views):
         if done or v.state == EMPTY:
             try:
                 shutil.rmtree(aos7_task.slot_dir(fnode, slot))
-                aos7_task.write_seen(fnode, slot, None)   # A3-01：槽刪了，它的控制完成證據也拿掉（ctl.json 跟著槽沒了）
             except OSError:
                 pass
 

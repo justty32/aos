@@ -77,7 +77,7 @@ class TestProcUnknown(MatrixCase):
             # 已知 pid／runner 活著的判定走捷徑，proc-list／environ／cmdline 不一定會讀到（astra-2：命中 0 次）。
             # kill 一定要身分掃描（Q1 範圍、A3-09 再看一次 pid.json 的任務）→ 在同樣的故障下送一份 kill 控制，證明讀取失敗＝不知道
             with open(ctl_path, "w") as fh:
-                json.dump({"op": "kill", "by": "t"}, fh)
+                json.dump({"op": "kill", "run": 1, "by": "t"}, fh)
             before = f.hits(op)
             out2 = self.itick()
             self.assertGreater(f.hits(op), before, "kill 控制沒有打中 %s 的注入（命中 %r）" % (op, f.records()))

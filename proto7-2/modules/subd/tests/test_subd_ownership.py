@@ -64,7 +64,7 @@ class TestOwnership(SubCase):
         a, n1, p = self.setup_child()
         child_task = self.wait_pid(n1, "s")["pid"]
         child_pid = self.status(self.sub)["pid"]
-        write_json(os.path.join(self.slot(a, "sub"), "ctl.json"), {"op": "kill", "by": "t"})
+        write_json(os.path.join(self.slot(a, "sub"), "ctl.json"), {"op": "kill", "run": self.birth(a, "sub")["run"], "by": "t"})
         self.wait_for(lambda: not aos7_proc.pid_alive(child_pid), 15, "子 daemon 沒被收")
         self.wait_for(lambda: not aos7_proc.pid_alive(child_task), 15, "子 daemon 的任務沒被帶走")
 

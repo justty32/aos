@@ -32,7 +32,7 @@ def gc_pid(node, slot, wait=None):
 
 
 class TestCtl(CoreCase):
-    """〔control〕任務控制：kill 的案例是核心（標〔core〕），restart／reload 是控制包，aos7-ctl task 那項搬到 modules/tools/tests/。"""
+    """〔core〕任務控制 kill（run 必填）。restart／reload 的案例搬到 modules/control/tests/，aos7-ctl task 那項搬到 modules/tools/tests/。"""
     def write_ctl(self, node, slot, **ctl):
         write_json(os.path.join(self.slot(node, slot), "ctl.json"), dict({"by": "test"}, **ctl))
 
@@ -44,7 +44,7 @@ class TestCtl(CoreCase):
         node = self.mknode("a", [{"name": "s", "argv": SLEEP}])
         self.tick()
         self.wait_pid(node, "s")
-        self.write_ctl(node, "s", op="kill")
+        self.write_ctl(node, "s", op="kill", run=1)
         lr = self.tock()
         d = self.done(node, "s")
         self.assertTrue(d["result"]["ok"], d)
@@ -63,51 +63,6 @@ class TestCtl(CoreCase):
         self.assertIn("已經不是現在的", d["result"]["msg"])
         self.assertEqual(self.view(node, "s", 1).state, aos7_task.LIVE)
 
-    def test_restart_same_slot_new_run_keeps_state(self):
-        node = self.mknode("a", [{"name": "w", "argv": ["sh", "-c", 'echo $AOS7_RUN >> "$AOS7_TASK/runs.txt"; sleep 60'],
-                                  "from_round": 1}])
-        self.tick()
-        self.wait_pid(node, "w")
-        self.set_tasks(node, [])   # 名字拿掉也照樣 restart（照 birth.json 的定義）
-        self.write_ctl(node, "w", op="restart", why="test")
-        self.tock()
-        once = self.tasks(node)
-        self.assertEqual(len(once), 1)
-        self.assertEqual((once[0]["mode"], once[0]["slot"], once[0]["restart_of"]), ("once", "w", "w#1"))
-        out = self.tick()
-        self.assertEqual(out["started"], ["w#2"])
-        self.assertEqual(self.tasks(node), [])
-        b = self.birth(node, "w")
-        self.assertEqual((b["run"], b["restart_of"]), (2, "w#1"))
-        def runs():
-            with open(os.path.join(self.slot(node, "w"), "runs.txt")) as f:
-                return f.read().split() == ["1", "2"]
-        self.wait_for(runs)
-
-    def test_restart_reload_takes_new_definition(self):
-        node = self.mknode("a", [{"name": "w", "mode": "keep", "argv": SLEEP}])
-        self.tick()
-        self.wait_pid(node, "w")
-        self.set_tasks(node, [{"name": "w", "mode": "keep", "argv": ["sleep", "59"]}])
-        self.write_ctl(node, "w", op="restart", reload=True)
-        self.tock()
-        d = self.done(node, "w")
-        self.assertTrue(d["result"]["ok"], d)
-        self.assertEqual(d["result"]["diff"], {"argv": {"old": SLEEP, "new": ["sleep", "59"]}})
-        self.tick()
-        self.assertEqual(self.birth(node, "w")["argv"], ["sleep", "59"])
-
-    def test_reload_refused_without_kill(self):
-        node = self.mknode("a", [{"name": "w", "mode": "keep", "argv": SLEEP}])
-        self.tick()
-        self.wait_pid(node, "w")
-        self.set_tasks(node, [{"name": "w", "mode": "keep", "argv": SLEEP, "max_live": "2"}])
-        self.write_ctl(node, "w", op="restart", reload=True)
-        self.tock()
-        self.assertFalse(self.done(node, "w")["result"]["ok"])
-        self.assertEqual(self.view(node, "w", 1).state, aos7_task.LIVE)   # 沒 kill
-        self.assertEqual(len(self.tasks(node)), 1)
-
     def test_bad_ctl_gets_failed_receipt(self):
         """〔core〕"""
         node = self.mknode("a", [{"name": "s", "argv": SLEEP}])
@@ -118,15 +73,6 @@ class TestCtl(CoreCase):
         self.assertFalse(self.done(node, "s")["result"]["ok"])
         self.assertFalse(os.path.exists(os.path.join(self.slot(node, "s"), "ctl.json")))
 
-    def test_restart_receipt_survives_new_run(self):
-        node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEP}])
-        self.tick()
-        self.wait_pid(node, "s")
-        self.write_ctl(node, "s", op="restart")
-        self.tock()
-        self.tick()
-        self.assertEqual(self.done(node, "s")["result"]["run"], "s#1")   # 換 run 不清回條（P2-04）
-
 
 class TestKillRange(CoreCase):
     """〔core〕"""
@@ -135,7 +81,7 @@ class TestKillRange(CoreCase):
         self.tick()
         gc = gc_pid(node, "g", wait=5)
         self.assertTrue(aos7_proc.pid_alive(gc))
-        write_json(os.path.join(self.slot(node, "g"), "ctl.json"), {"op": "kill"})
+        write_json(os.path.join(self.slot(node, "g"), "ctl.json"), {"op": "kill", "run": 1})
         self.tock()
         self.wait_for(lambda: not aos7_proc.pid_alive(gc), 3, "setsid 的孫程序沒收到")
 
@@ -148,7 +94,7 @@ class TestKillRange(CoreCase):
         pj = self.wait_pid(node, "s")
         pj["pgid"] = victim.pid
         write_json(os.path.join(self.slot(node, "s"), "pid.json"), pj)
-        write_json(os.path.join(self.slot(node, "s"), "ctl.json"), {"op": "kill"})
+        write_json(os.path.join(self.slot(node, "s"), "ctl.json"), {"op": "kill", "run": 1})
         self.tock()
         self.assertIsNone(victim.poll())
         self.assertIn("不是這個任務的群組", read_json(os.path.join(self.slot(node, "s"), "ctl-done.json"))["result"]["msg"])
@@ -160,7 +106,7 @@ class TestKillRange(CoreCase):
         pj = self.wait_pid(node, "i")
         self.wait_for(lambda: len(aos7_proc.groups_with_descendants(pj["pgid"])) >= 2)
         groups = aos7_proc.groups_with_descendants(pj["pgid"])
-        write_json(os.path.join(self.slot(node, "i"), "ctl.json"), {"op": "kill"})
+        write_json(os.path.join(self.slot(node, "i"), "ctl.json"), {"op": "kill", "run": 1})
         self.tock()
         self.assertFalse(any(aos7_proc.group_alive(g) for g in groups))
 
@@ -247,7 +193,8 @@ class TestMounts(CoreCase):
         self.tick()
         self.assertEqual(sorted(os.listdir(os.path.join(sd, "mnt"))), ["c"])
 
-    def test_mount_request_served_and_restart_carries_dyn(self):
+    def test_mount_request_served(self):
+        """執行中加掛：下一個 tick 審核、寫回條、建 mnt、在 birth 標 dyn；換 run 時照宣告重建（加掛的不帶過去，要帶用控制包 restart）。"""
         node = self.mknode("a", [{"name": "m", "mode": "keep", "argv": SLEEP}])
         os.makedirs(os.path.join(self.root, "z"))
         self.tick()
@@ -259,12 +206,12 @@ class TestMounts(CoreCase):
         self.assertTrue(read_json(os.path.join(sd, "mount-done", "z.json"))["result"]["ok"])
         self.assertFalse(os.path.exists(os.path.join(sd, "mount-req", "z.json")))
         self.assertTrue(self.birth(node, "m")["mounts"]["z"].get("dyn"))
-        write_json(os.path.join(sd, "ctl.json"), {"op": "restart"})
+        write_json(os.path.join(sd, "ctl.json"), {"op": "kill", "run": 1})
         self.tock()
         self.tick()
         b = self.birth(node, "m")
         self.assertEqual(b["run"], 3)
-        self.assertTrue(b["mounts"]["z"].get("dyn"))
+        self.assertNotIn("z", b["mounts"])
         self.assertFalse(os.path.exists(os.path.join(sd, "mount-done")))   # 新 run 清掉
 
 
