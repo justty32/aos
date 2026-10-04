@@ -1,0 +1,43 @@
+{
+  "before": {
+    "files": 5,
+    "bytes": 299,
+    "hidden_temporary_files": 0,
+    "hidden_temporary_bytes": 0
+  },
+  "fault": "SIGKILL before last-round.json atomic rename, 20 separate PIDs",
+  "returncodes": [
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9,
+    -9
+  ],
+  "after_crashes": {
+    "files": 25,
+    "bytes": 5539,
+    "hidden_temporary_files": 20,
+    "hidden_temporary_bytes": 5240
+  },
+  "after_10_healthy_rounds": {
+    "files": 26,
+    "bytes": 5825,
+    "hidden_temporary_files": 20,
+    "hidden_temporary_bytes": 5240
+  }
+}

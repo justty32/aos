@@ -1,0 +1,244 @@
+{
+  "document_contracts": [
+    {
+      "id": "D01",
+      "result": {
+        "unregistered_started": false,
+        "no_timeline_registered_round": 1,
+        "default_interval_ms": 1000
+      }
+    },
+    {
+      "id": "D02",
+      "result": {
+        "first": {
+          "round": 1,
+          "started": [
+            "o#1"
+          ],
+          "tasks_rev": "49fa8b91d551"
+        },
+        "second": {
+          "round": 2,
+          "started": [],
+          "tasks_rev": "badd5360c67c"
+        },
+        "tasks": [],
+        "ended": [
+          {
+            "run": "o#1",
+            "code": 0
+          }
+        ],
+        "slot_removed": true
+      }
+    },
+    {
+      "id": "D03",
+      "result": {
+        "r1": [
+          "k#1",
+          "k.1#1",
+          "e#1"
+        ],
+        "r2": [
+          "e.1#2"
+        ],
+        "r3": [],
+        "r3_skipped": [
+          {
+            "name": "e",
+            "why": "busy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "D04",
+      "result": {
+        "new_run": [
+          "x#2"
+        ],
+        "state": {
+          "counter": 71
+        },
+        "out": ""
+      }
+    },
+    {
+      "id": "D05",
+      "result": {
+        "started": [
+          "ok#1"
+        ],
+        "errors": [
+          "bad：max_live 要是正整數，拿到 0"
+        ]
+      }
+    },
+    {
+      "id": "D06",
+      "result": {
+        "cwd": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/docs-work/aos72-test-lwiq11lv/team/n",
+        "env": {
+          "AOS7_ROOT": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/docs-work/aos72-test-lwiq11lv",
+          "AOS7_NODE": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/docs-work/aos72-test-lwiq11lv/team/n",
+          "AOS7_NODE_ID": "team/n",
+          "AOS7_TASK": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/docs-work/aos72-test-lwiq11lv/team/n/.aos/tasks/env",
+          "AOS7_TID": "env",
+          "AOS7_RUN": "1"
+        },
+        "path_first": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/bin"
+      }
+    },
+    {
+      "id": "D07",
+      "result": {
+        "started": [
+          "a#1",
+          "b#1"
+        ],
+        "table": {
+          "tasks": [
+            {
+              "name": "a",
+              "argv": [
+                "true"
+              ]
+            },
+            {
+              "name": "b",
+              "argv": [
+                "true"
+              ]
+            }
+          ],
+          "mount_allow": [
+            "peer"
+          ]
+        }
+      }
+    },
+    {
+      "id": "D08",
+      "result": {
+        "after_resume_A": {
+          "paused": {
+            "a": [
+              "B"
+            ]
+          }
+        },
+        "after_resume_B": {
+          "paused": {}
+        },
+        "round": 2
+      }
+    },
+    {
+      "id": "D09",
+      "result": {
+        "replayed": true,
+        "summary_unchanged": true,
+        "closed": true
+      }
+    },
+    {
+      "id": "D10",
+      "result": {
+        "same_path": true,
+        "pause_receipts": [
+          "cli.pause.a.json"
+        ]
+      }
+    },
+    {
+      "id": "restart_crash_after_append_before_kill",
+      "result": {
+        "cut_rc": -9,
+        "queued_after_cut": [
+          {
+            "name": "x",
+            "argv": [
+              "/usr/bin/python3",
+              "-c",
+              "import os;f=open(os.environ['AOS7_NODE']+'/executions','a');f.write(os.environ['AOS7_RUN']+'\\n');f.close()"
+            ],
+            "mounts": {},
+            "mode": "once",
+            "slot": "x",
+            "restart_of": "x#1"
+          }
+        ],
+        "ctl_still_pending": true,
+        "queued_after_recovery": [
+          {
+            "name": "x",
+            "argv": [
+              "/usr/bin/python3",
+              "-c",
+              "import os;f=open(os.environ['AOS7_NODE']+'/executions','a');f.write(os.environ['AOS7_RUN']+'\\n');f.close()"
+            ],
+            "mounts": {},
+            "mode": "once",
+            "slot": "x",
+            "restart_of": "x#1"
+          },
+          {
+            "name": "x",
+            "argv": [
+              "/usr/bin/python3",
+              "-c",
+              "import os;f=open(os.environ['AOS7_NODE']+'/executions','a');f.write(os.environ['AOS7_RUN']+'\\n');f.close()"
+            ],
+            "mounts": {},
+            "mode": "once",
+            "slot": "x",
+            "restart_of": "x#1"
+          }
+        ],
+        "next_started": [
+          [
+            "x#2"
+          ],
+          [
+            "x#3"
+          ]
+        ],
+        "executions": [
+          "1",
+          "2",
+          "3"
+        ]
+      }
+    },
+    {
+      "id": "owner_cli_pending_collision",
+      "result": {
+        "same_request_path": true,
+        "owners": {
+          "paused": {
+            "a": [
+              "B"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "spec_size": {
+    "proto7-1": {
+      "lines": 350,
+      "characters": 34778,
+      "bytes": 58592,
+      "headings": 12
+    },
+    "proto7-2": {
+      "lines": 356,
+      "characters": 20659,
+      "bytes": 35177,
+      "headings": 31
+    }
+  },
+  "temporary_leftovers": []
+}

@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-10-04T12:16:47+0800",
+  "remaining_test_processes": [],
+  "remaining_evidence_subdirectories": [],
+  "temporary_roots_outside_copy_created": false,
+  "files_modified_outside_allowed_outputs_since_first_evidence": [
+    "log.txt"
+  ],
+  "runtime_transcript_note": "log.txt is the pre-existing Codex session transcript automatically appended by the host; test scripts did not open it for writing or modify it.",
+  "unexpected_product_or_document_changes": [],
+  "invalid_json": [],
+  "invalid_python": [],
+  "broken_report_links": [],
+  "evidence_file_count": 27,
+  "evidence_bytes": 151332,
+  "report_bytes": 30574
+}
