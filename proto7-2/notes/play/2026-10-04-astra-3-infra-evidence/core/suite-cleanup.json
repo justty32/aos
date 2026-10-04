@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-10-04T15:34:24.824207",
+  "roots": [
+    "/tmp/astra3-core-suite-ql8uybrs",
+    "/tmp/astra3-core-suite-yt61l830",
+    "/tmp/astra3-core-suite-u52jq6br",
+    "/tmp/astra3-core-probes-l0_0hvok"
+  ],
+  "roots_remaining": [],
+  "ps_command": "ps -eo pid,ppid,stat,args",
+  "ps_matches": [],
+  "proc_env_matches": [],
+  "probe_case_roots_remaining": []
+}

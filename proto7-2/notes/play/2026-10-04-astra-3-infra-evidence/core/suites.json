@@ -1,0 +1,38 @@
+[
+  {
+    "run": 1,
+    "elapsed_s": 80.971,
+    "returncode": 0,
+    "test_count": 272,
+    "unittest_s": 80.915,
+    "failures": [],
+    "errors": [],
+    "tmp": "/tmp/astra3-core-suite-ql8uybrs",
+    "tmp_remaining_before_cleanup": [],
+    "tmp_removed": true
+  },
+  {
+    "run": 2,
+    "elapsed_s": 80.679,
+    "returncode": 0,
+    "test_count": 272,
+    "unittest_s": 80.623,
+    "failures": [],
+    "errors": [],
+    "tmp": "/tmp/astra3-core-suite-yt61l830",
+    "tmp_remaining_before_cleanup": [],
+    "tmp_removed": true
+  },
+  {
+    "run": 3,
+    "elapsed_s": 80.947,
+    "returncode": 0,
+    "test_count": 272,
+    "unittest_s": 80.891,
+    "failures": [],
+    "errors": [],
+    "tmp": "/tmp/astra3-core-suite-u52jq6br",
+    "tmp_remaining_before_cleanup": [],
+    "tmp_removed": true
+  }
+]

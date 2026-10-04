@@ -1,0 +1,145 @@
+{
+  "review_kind": "static review plus existing regression execution; not an exhaustive proof",
+  "regressions": [
+    {
+      "old": "A2-01/A3-09",
+      "evidence": "test_matrix_faults.TestProcUnknown healthy/orphan/deadboth matrices",
+      "result": "合作式程序 /proc EIO、ESTALE、EACCES（排除明定 environ EACCES）走不知道，不起、不判 lost；kill 掃描命中 ≥1 且回 unknown。"
+    },
+    {
+      "old": "A2-02",
+      "evidence": "test_matrix_docs.TestRoundJson and TestLastRoundJson",
+      "result": "round 半寫/缺欄/型別錯/open 不重開；missing round 不拿壞 last-round 接號。"
+    },
+    {
+      "old": "A2-03",
+      "evidence": "test_once_threestate.TestOnceCrash; test_matrix_docs.TestBrokenBirth",
+      "result": "合法 once 交接 SIGKILL 標記仍防重複；壞 birth 判 UNKNOWN，已移除推回 run 的誤用保護。"
+    },
+    {
+      "old": "A2-04",
+      "evidence": "test_matrix_daemon.TestDaemonMatrix symlink tests; test_matrix_misc.TestSymlinkInProcess",
+      "result": "登記拒絕 symlink、node 本身被換仍攔截；中間段改 symlink 已是明定 M。"
+    },
+    {
+      "old": "A2-05/A3-01/A3-04/A3-05",
+      "evidence": "test_matrix_a3.TestKillReplay; modules/control/tests (另由 modules 線深化)",
+      "result": "核心 kill 必帶 run，undeletable/crash 回條重播不傷新 run；請求端長期同 req_id 的去重範圍交 control README 與 modules 線實測。"
+    },
+    {
+      "old": "A2-06",
+      "evidence": "test_matrix_daemon.TestDaemonMatrix.test_rounds_per_owner",
+      "result": "rounds 按 owner 各記。"
+    },
+    {
+      "old": "A2-07/A3-07",
+      "evidence": "test_matrix_misc.TestTmpSweep; test_matrix_a3.TestMountTmpSweep",
+      "result": "死寫者暫存清理，含 mount-req/mount-done；活寫者保留。"
+    },
+    {
+      "old": "A2-08",
+      "evidence": "test_daemon.TestDaemonDeath.test_unverified_holder_not_killed",
+      "result": "不明持鎖者不杀及診斷保留，現有全套涵蓋。"
+    },
+    {
+      "old": "A2-09",
+      "evidence": "spec 現行用量歸模組/任務，舊報告",
+      "result": "舊模型契約缺口，不當核心執行回歸缺陷。"
+    },
+    {
+      "old": "A2-10/A2-13/A3-06",
+      "evidence": "modules/tests; modules/tools/tests; modules 線",
+      "result": "歷史上限與工具命名由模組測試涵蓋，不歸核心恢復。"
+    },
+    {
+      "old": "A2-11",
+      "evidence": "test_matrix_daemon.TestDaemonMatrix.test_wake_not_kept_from_running_to_idle",
+      "result": "early 回合中 wake 不遺留；fixed wake 見 test_matrix_a3.TestWakeFixedInterval。"
+    },
+    {
+      "old": "A2-12/A3-08",
+      "evidence": "test_matrix_misc.TestTockOrder; test_matrix_a3.TestReplayNotify (4)",
+      "result": "先總結後通知，重播寫通知失敗留下 notify_errors、tick/closed tock 補通知。"
+    },
+    {
+      "old": "A3-02",
+      "evidence": "problems F33; spec 11",
+      "result": "不可讀身分/主動降低 dumpable 是 M；不當核心退步。"
+    },
+    {
+      "old": "A3-03",
+      "evidence": "test_matrix_a3.TestNonRegular (5); test_errors.TestNotRegularInput (2)",
+      "result": "round/last-round/birth/pid/exit 非一般檔 UNKNOWN；tasks FIFO 不起不刪；timeline FIFO 記錯用預設。輸入本身 M，現有保守行為不要求擴充保護。"
+    },
+    {
+      "old": "G1",
+      "evidence": "test_errors.TestTasksWriteG1 (4); control 壞表測試",
+      "result": "half/FIFO/EIO 拒寫原封不動；missing 表可新建；EIO fault 必有命中。"
+    },
+    {
+      "old": "G2",
+      "evidence": "test_errors.TestTickFailureG2.test_readonly_aos_does_not_eat_rounds",
+      "result": "真 chmod .aos 0555 導致 tick 失敗，steps_left X=3 保留，解除後剛好 +3 回合 pause；本機非 root，未 skip。"
+    }
+  ],
+  "deleted_protection_boundaries": [
+    {
+      "id": "F31",
+      "classification": "M for caller corruption; B if core corrupts it",
+      "card": "2.3",
+      "review": "核心自己原子寫 birth；人改壞/換檔違反前置，不再推回 run，UNKNOWN 即可。本輪 mount 由核心讀 U 後改壞是另一個 B，不能推給 M，也不需要復活整套推理。"
+    },
+    {
+      "id": "F33",
+      "classification": "M",
+      "card": "2.5/2.8",
+      "review": "任務須同 uid、environ 可讀；自己清 AOS7/降 dumpable/脫離身分不保證收得到。不重新跑這類既已接受的誤用來報 B。"
+    },
+    {
+      "id": "F28",
+      "classification": "M",
+      "card": "2.5",
+      "review": "caller 在起動期間搬 node 或人手不照 tick fd/env 約定啟動 runner 違反前置；保留 fd 權威及正常 daemon 搬移行為測試。未新增時序搬移探針。"
+    },
+    {
+      "id": "F03",
+      "classification": "M",
+      "card": "2.1",
+      "review": "中間路徑運行中換 symlink 違反 node 路徑无symlink；登記檢查與 leaf O_NOFOLLOW 尚在，既有合法功能回歸全套涵蓋。"
+    },
+    {
+      "id": "F36",
+      "classification": "M for pgid tampering; external PID reuse stays protected",
+      "card": "2.6 Q1",
+      "review": "任務改 pgid 是 M，刪父環境推論不需補；群組有本 run 成員或無活成員才打的最小保護仍在。"
+    }
+  ],
+  "four_error_routes_review": {
+    "fact": "主要 JSON 判定經 fact；aos7_mount.serve/_serve_one 的 read_json 抹平 U 是已重現 B。aos7_tick.load_items 額外 raw open 僅算 tasks_rev hash，不決定啟動，不因此列 B。",
+    "proc": "主要身分/活性經 aos7_proc；aos7_fs.proc_starttime 用於 action-owner 核對，錯誤轉 None 後拒殺，是保守結果，不只是不同函式名就列 B。",
+    "Unknown": "tick/tock CLI rc3；時間線非0/非timeout失敗退避；槽判定例外單槽 UNKNOWN。mount 請求/Birth 讀不到卻進 destructive 分支為漏洞。",
+    "hold": "status last_error、summary errors、round notify_errors 有統一格式；mount 錯誤回條不是未知型別且會消費請求。"
+  },
+  "contract_drift": [
+    {
+      "source": "component-contracts 2.2",
+      "stale": "tick rc1 當回合/G2待定",
+      "current": "spec 2.1 与實作已不扣 rounds"
+    },
+    {
+      "source": "component-contracts 1/2.3/2.4/2.6",
+      "stale": "ctl-seen/ctl_id，run可省，核心restart",
+      "current": "spec 6 kill帶run；restart/reload控制包"
+    },
+    {
+      "source": "component-contracts 2.5",
+      "stale": "pid.json uid",
+      "current": "spec5.1及F33已移除"
+    },
+    {
+      "source": "spec 0 vs 2.3; aos7_daemon.ctl_one",
+      "stale": "共同U含所有非一般檔，但daemon非一般控制請求明定B、搬bad回條",
+      "current": "需要明寫例外或統一說法；這是M輸入的G界線，非核心B"
+    }
+  ]
+}
