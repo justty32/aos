@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """aos-exec 的命令列入口——薄薄一層，真東西在 ../lib/aos_exec.py。"""
+# 由 aos7-run 呼叫以執行 inst JSON；輸入與結果交 aos_exec 處理（spec §4.1，S-12）。
 import os
 import sys
 

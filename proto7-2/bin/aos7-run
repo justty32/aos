@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """aos7-run 的命令列入口——本體在 ../lib/aos7_run.py。"""
+# 由 tick 呼叫，委派經槽 fd 讀 birth.json、寫 pid.json／out.log／exit.json（spec §5.3）。
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))

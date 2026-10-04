@@ -6,6 +6,8 @@
 
 daemon 控制檔用固定名 `<by>.<op>.<node>.json`（回條同名蓋掉，只留每個寫的人、每件事的上一次；W3）。
 起點是 proto7-1 lib/aos7_ctl.py。
+由人或任務呼叫；只負責寫 daemon 的 .aosd/ctl/、槽內 ctl.json，或鎖住後讀改 .aos/tasks.json。
+控制的接受與執行分別留給 daemon／tick／tock（spec §2.3、§6）；印出路徑不代表已執行。
 """
 import argparse
 import json
@@ -20,7 +22,7 @@ TASK_OPS = ("kill", "restart")
 
 
 def default_by():
-    """沒給 --by 時：在任務裡就是 `<node-id>:<tid>`，否則 `cli`。"""
+    """無參數；讀任務環境，回傳預設 by 字串；沒有 tid 時回 cli，node id 缺漏用 ?（spec §10）。"""
     e = os.environ
     if e.get("AOS7_TID"):
         return "%s:%s" % (e.get("AOS7_NODE_ID", "?"), e["AOS7_TID"])
@@ -28,7 +30,10 @@ def default_by():
 
 
 def ctl_dir(where):
-    """`where` 可以是 daemon 根、掛進來的 `.aosd`、或掛進來的 `.aosd/ctl` 本身（S-23）。"""
+    """將 where（daemon 根、掛入的 .aosd 或 ctl）轉成控制目錄絕對路徑（spec §10，S-23）。
+
+    以連結的實際目標辨識種類，回傳路徑仍經原掛載點；不要求 daemon 已啟動。
+    """
     where = os.path.abspath(where)
     real = os.path.realpath(where)
     if os.path.basename(real) == ".aosd":
@@ -39,15 +44,20 @@ def ctl_dir(where):
 
 
 def fixed_name(by, op, node):
-    """`<by>.<op>.<node>.json`：`/` 換成 `+`，其他不安全的字元換成 `_`。"""
+    """由寫入者 by、動作 op、可省略的 node 回傳固定檔名；同名回條覆寫以免累積（spec §2.3、§10）。"""
     def safe(s):
+        """將字串 s 的 / 換 +、不安全字元換 _，回傳非隱藏且非空的檔名片段。"""
         return re.sub(r"[^A-Za-z0-9_.:+-]", "_", s.replace("/", "+")).lstrip(".") or "_"
     parts = [safe(by), op] + ([safe(node)] if node is not None else [])
     return ".".join(parts) + ".json"
 
 
 def daemon_ctl(root, op, node=None, kill=None, by=None, rounds=None, owner=None, all_=False, why=None):
-    """寫 `<ctl 資料夾>/<by>.<op>.<node>.json`，回檔案路徑。"""
+    """向 root 寫 op 控制檔，回傳路徑；寫入失敗向呼叫者拋例外（spec §2.3、§2.4、§10）。
+
+    node 指目標；kill 控制收程序；by／why 記來源與原因；rounds／owner／all_ 控制 pause 倒數與歸屬。
+    未提供的選項不落檔，讓 daemon 採協定預設；這裡不等待回條。
+    """
     by = by or default_by()
     obj = {"op": op, "by": by}
     if node is not None:
@@ -68,7 +78,11 @@ def daemon_ctl(root, op, node=None, kill=None, by=None, rounds=None, owner=None,
 
 
 def task_ctl(slot_dir, op, why="", by=None, reload=False, run=None):
-    """寫 `<槽>/ctl.json`（已有就覆寫：只留最後一個），回檔案路徑。"""
+    """向 slot_dir 寫 op（kill／restart），回傳 ctl.json 路徑；已有請求覆寫（spec §6、§10）。
+
+    why／by 記原因與來源；reload 要求重讀任務定義；run 可限定這次執行，省略指現在這次。
+    寫入失敗拋例外；請求等 tick／tock 才執行。
+    """
     path = os.path.join(os.path.abspath(slot_dir), "ctl.json")
     obj = {"op": op, "by": by or default_by(), "why": why}
     if reload:
@@ -80,10 +94,14 @@ def task_ctl(slot_dir, op, why="", by=None, reload=False, run=None):
 
 
 def add_items(node, items):
-    """拿 tasks.json.lock 把幾項加進 `<node>/.aos/tasks.json`（一次 rename，同一回合看到）。回檔案路徑。"""
+    """將 items 一批加進 node 的 tasks.json，回傳檔案路徑（spec §4.1、§10）。
+
+    拿鎖後一次 rename，避免 tick 看見半批或互蓋；既有表型別錯誤拋 ValueError，不覆蓋它。
+    """
     path = os.path.join(os.path.abspath(node), ".aos", "tasks.json")
 
     def fn(t):
+        """以讀到的表 t 建立追加 items 的新表並回傳；缺檔從空表起，結構不符就拋 ValueError。"""
         if t is None:
             t = {"tasks": []}
         if not isinstance(t, dict) or not isinstance(t.get("tasks", []), list):
@@ -96,6 +114,7 @@ def add_items(node, items):
 
 
 def main(argv=None):
+    """解析 argv（None 用命令列），寫指定控制檔並印路徑；成功／說明回 0，參數錯誤回 1。"""
     ap = argparse.ArgumentParser(prog="aos7-ctl", description="寫 aos7 控制檔")
     sub = ap.add_subparsers(dest="what", required=True)
     d = sub.add_parser("daemon")

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """aos7-tock 的命令列入口——本體在 ../lib/aos7_tock.py。"""
+# 由 daemon 呼叫，委派寫 tock.json／last-round.json 並關 round.json（spec §7，S-11）。
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))

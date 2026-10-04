@@ -4,6 +4,9 @@
     aos7-wait-tock [--after N] [--timeout 秒] [--task 任務資料夾]
 
 逾時退出碼 1、什麼都不印。sh 裡：`r=$(aos7-wait-tock --after "$r")`。
+
+由人或任務呼叫，唯讀 --task（預設 AOS7_TASK）下的 tock.json，不寫檔（spec §5.5，S-11）。
+讀不到或未見較新回合就繼續等；逾時回 1，缺任務路徑回 2。只觀察最新通知，不補漏掉的回合。
 """
 import argparse
 import os
@@ -20,6 +23,7 @@ if __name__ == "__main__":
     if not a.task:
         print("aos7-wait-tock: 沒有 AOS7_TASK，也沒給 --task", file=sys.stderr)
         sys.exit(2)
+    # spec §5.5：把跨語言的等待委派同一輪詢規則；未知先等，沒有新通知不印假回合。
     r = wait_tock(a.task, a.after, timeout=a.timeout)
     if r is None:
         sys.exit(1)

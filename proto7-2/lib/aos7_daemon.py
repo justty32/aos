@@ -6,6 +6,10 @@
 SIGTERM／SIGINT＝stop 加 kill（S-21 路一：子 daemon 被父時間線 kill 時帶走自己的任務）。
 起點是 proto7-1 lib/aos7_daemon.py；掃描、rescan、log.jsonl（改成 log.on 開關）、retention／disk 拿掉，加上 register／unregister、
 pause owner、node 消失的 inode 比對。
+
+由人或父 node 的任務經 bin/aos7-daemon 啟動（S-21）；daemon 只管理登記與程序生命週期。
+讀寫 root/.aosd/ 的 nodes.json、paused.json、gen.json、owner.json、控制請求／回條、status.json；
+持有 daemon.lock，按需處理 stopped.json 與 log.on/log.jsonl，讀 node 的回合／任務狀態供監督（spec §2.8、§9）。
 """
 import datetime
 import errno
@@ -30,7 +34,8 @@ GONE_ERRNO = (errno.ENOENT, errno.ENOTDIR)   # 這兩種才算「確定不存在
 
 
 def norm_id(node):
-    """控制檔裡的 node → node id（`/` 分隔，根是 "."）；不合（絕對路徑、`..`、`.` 開頭的段、非字串）回 None。"""
+    """將控制檔的 node 值正規化為相對 id，根為「.」（spec §1）。
+    參數 node 可為任意值；非法或不可判讀時回 None，合法時回以 / 分隔的字串。"""
     if not isinstance(node, str) or node.startswith("/") or "\0" in node:
         return None
     parts = [p for p in node.split("/") if p not in ("", ".")]
@@ -40,15 +45,21 @@ def norm_id(node):
 
 
 def _replace(src, dst):
-    """搬 src 到 dst，蓋掉同名舊的（資料夾也蓋）：只留最近一份（spec 2.3）。"""
+    """把 src 原物搬到 dst，蓋掉同名舊物（含資料夾），只留最近一份（spec §2.3；P2-11、P2-13）。
+    src、dst 是來源與目的路徑；成功回 None，檔案系統錯誤向上拋。"""
     if os.path.isdir(dst) and not os.path.islink(dst):
         shutil.rmtree(dst)
     os.replace(src, dst)
 
 
 class Daemon:
+    """管理一個 root 的登記、控制、狀態與多條時間線；共享狀態由主迴圈及時間線協作更新（spec §2）。"""
+
     def __init__(self, root):
+        """建立管理 root 空間根的 daemon 狀態，抓住目錄 fd（spec §1、§2.5）。
+        root 是已存在的資料夾路徑；初始化回 None，開目錄失敗向上拋；此時尚未拿 daemon.lock。"""
         self.root = os.path.abspath(root)
+        # spec §2.5：/proc/self/fd 固定指向已開啟的 inode，路徑被換掉也不會寫進替身 root。
         # 自己的 `.aosd` 一律經 root 的 fd 讀寫：root 被搬走寫到新位置，被刪就寫不進去（2.5）
         self.rfd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY)
         self.aosd = FD_PREFIX + str(self.rfd) + "/.aosd"
@@ -77,7 +88,8 @@ class Daemon:
     # ---------- 小工具 ----------
 
     def log(self, **kw):
-        """記一件事：status 的 last_event 只留最近一件；有 `.aosd/log.on` 才追加到 log.jsonl（W9）。"""
+        """以事件欄位 kw 更新 last_event；有 log.on 才追加 log.jsonl（spec §2.8、§9；W9）。
+        回 None；事件檔寫入失敗不阻止主流程，記憶體仍留最近事件。"""
         ev = dict(at=now(), **kw)
         self.last_event = ev
         try:
@@ -88,13 +100,18 @@ class Daemon:
             pass
 
     def save_nodes(self):
+        """將記憶體 registry 原子覆寫為 nodes.json（spec §1）；無額外參數，回 None，寫入錯誤向上拋。"""
         write_json(os.path.join(self.aosd, "nodes.json"), {"nodes": self.registry})
 
     def save_paused(self):
+        """將記憶體非空 owner 清單原子寫回 paused.json（spec §2.4）。
+        無額外參數，回 None；呼叫端負責協調記憶體存取，寫入錯誤向上拋。"""
         write_json(os.path.join(self.aosd, "paused.json"),
                    {"paused": {k: v for k, v in sorted(self.paused.items()) if v}})
 
     def load_state(self):
+        """啟動時讀 nodes.json、paused.json 恢復登記與 pause owner（spec §1、§2.4）。
+        無額外參數，回 None；非 None 的 JSON 若 nodes 結構不合就記錯；非法 id 略過，讀取失敗當空值，相容舊 pause 清單。"""
         nj = read_json(os.path.join(self.aosd, "nodes.json"))
         nodes = nj.get("nodes") if isinstance(nj, dict) else None
         if isinstance(nodes, dict):
@@ -109,10 +126,13 @@ class Daemon:
             self.paused = {k: [""] for k in pl if isinstance(k, str)}
 
     def is_paused(self, nid):
+        """查 nid 的記憶體 owner 清單是否非空（spec §2.4），回 bool。
+        不讀磁碟；沒有 nid 或清單為空回 False，這不是磁碟可讀性的判定。"""
         return bool(self.paused.get(nid))
 
     def round_done(self, nid):
-        """時間線每關上一回合呼叫：resume 帶 rounds 的倒數，到 0 以同一個 owner 再 pause（2.4）。"""
+        """時間線確認關回合後，對 nid 的 rounds 倒數；到零以原 owner 再 pause（spec §2.4）。
+        回 None；沒有倒數就不動，paused.json 寫入錯誤向上拋。"""
         with self._lock:
             s = self.steps.get(nid)
             if not s:
@@ -128,7 +148,8 @@ class Daemon:
         self.log(ev="steps-done", node=nid, owner=s["owner"])
 
     def other_root(self, nid):
-        """node 落在別的 daemon 的根（含 `.aosd/` 的子資料夾）底下時，回那個根的 id；否則 None（S-15）。"""
+        """沿 nid 的路徑找帶 .aosd/ 的子根，回其 id，否則 None（spec §1、§2.3；S-15）。
+        nid 須已正規化；isdir 看不到目錄也會視作未發現，這裡沒有獨立的未知回傳值。"""
         parts = [p for p in nid.split("/") if p not in ("", ".")]
         for k in range(1, len(parts) + 1):
             sub = "/".join(parts[:k])
@@ -137,7 +158,8 @@ class Daemon:
         return None
 
     def owner(self):
-        """`.aosd/owner.json` 的 owner 塊（2.7）：沒有這個檔回 None（頂層 daemon）；壞掉或沒有 owner 塊當 {}（不允許）。"""
+        """讀 owner.json 的 owner 塊，判定控制檔 stop 的權限（spec §2.7；S-21）。
+        無額外參數；lexists 未看見檔回 None（頂層），可見但讀不懂或缺 owner 回 {}，不允許 stop。"""
         path = os.path.join(self.aosd, "owner.json")
         if not os.path.lexists(path):
             return None
@@ -146,8 +168,9 @@ class Daemon:
         return o if isinstance(o, dict) else {}
 
     def claim_owner(self):
-        """拿到 daemon.lock 之後才寫 owner.json（2.7、K-08）：owner 塊照 tick 給的三個環境變數（任務重起時照項目重寫），
-        沒給就沿用（人手重開）；daemon 塊每次都更新。三個變數用完從環境拿掉。頂層 daemon（沒 owner 也沒給變數）不寫。"""
+        """拿到 daemon.lock 後，依 tick 的三個 owner 環境變數認領子根（spec §2.7；K-08）。
+        無額外參數，回 None；任務重起重寫權限，人手重開沿用，daemon 塊每次更新。
+        變數用完移除；頂層不寫，舊 owner 壞掉則保留以拒絕 stop；寫入錯誤向上拋。"""
         env = os.environ
         onode, otid, allow = env.pop("AOS7_OWNER_NODE", None), env.pop("AOS7_OWNER_TID", None), \
             env.pop("AOS7_ALLOW_STOP", None)
@@ -172,7 +195,8 @@ class Daemon:
     # ---------- 控制檔 ----------
 
     def apply(self, ctl):
-        """執行一個 daemon 控制，回 (ok, msg)。"""
+        """解析控制物件 ctl，檢查 node 與子 daemon 邊界，再派送操作（spec §2.3）。
+        回 (ok, msg)；無效 op、node 或越界回 False 與原因，執行例外交給控制檔隔離流程。"""
         op = ctl.get("op")
         if op in ("register", "unregister", "pause", "resume", "wake"):
             nid = norm_id(ctl.get("node"))
@@ -189,6 +213,8 @@ class Daemon:
         return False, "unknown op %r" % (op,)
 
     def op_register(self, nid, ctl):
+        """依控制物件 ctl 的 by 登記 nid，檢查 realpath 不出根（spec §1）。
+        回 (ok, msg)；已登記或資料夾尚未出現仍成功，越界或既存非目錄回 False；I/O 例外向上拋。"""
         if nid in self.registry:
             return True, "%s 已登記" % nid
         real_root = os.path.realpath(self.root)
@@ -207,9 +233,12 @@ class Daemon:
         return True, "registered %s%s" % (nid, "" if os.path.isdir(p) else "（資料夾目前不在，出現時才開回合）")
 
     def op_unregister(self, nid, ctl):
+        """依 ctl 取消 nid 登記，安排現有回合收尾與可選 kill（spec §2.3；P2-10）。
+        回 (ok, msg)；未登記視為成功，預設 kill；成功只表示已接受，時間線可能仍在收尾。"""
         if nid not in self.registry:
             return True, "%s 沒有登記" % nid
         kill = ctl.get("kill", True) is not False
+        # P2-10：先持久化取消登記，死在收尾途中也不會於重啟後自動再開；重登記時才恢復舊回合。
         del self.registry[nid]
         self.save_nodes()
         tl = self.timelines.pop(nid, None)
@@ -225,6 +254,8 @@ class Daemon:
         return True, "unregistered %s（%s）" % (nid, "活任務會被收掉" if kill else "kill: false，任務留著、從此收不到 tock")
 
     def op_pause(self, nid, ctl):
+        """把 ctl.owner 加進 nid 的 pause 清單並取消同 owner 倒數（spec §2.4）。
+        回 (ok, msg)；owner 非字串回 False，否則持久化後回 True；本回合仍照常收尾。"""
         owner = ctl.get("owner", "")
         if not isinstance(owner, str):
             return False, "owner 要是字串"
@@ -238,6 +269,8 @@ class Daemon:
         return True, "pause %s（owner %r；現在：%s）%s" % (nid, owner, self.paused[nid], self._note(nid))
 
     def op_resume(self, nid, ctl):
+        """依 ctl 移除 nid 的 owner（或 all 全清），可設定 rounds 倒數（spec §2.4）。
+        回 (ok, msg)；owner 或 rounds 不合法回 False；沒人 pause 才喚醒，I/O 例外向上拋。"""
         owner = ctl.get("owner", "")
         rounds = ctl.get("rounds")
         if not isinstance(owner, str):
@@ -263,21 +296,29 @@ class Daemon:
             "還有 %s 在 pause" % left if left else "沒人 pause 了，馬上開回合", self._note(nid))
 
     def op_wake(self, nid, ctl):
+        """依控制請求喚醒 nid 等下一回合的時間線（spec §2.3；ctl 為派送介面的控制物件）。
+        回 (True, msg) 表示已接受；node 不存在也只提示，回合中不提前 tock（P2-01）。"""
         self._kick(nid)
         return True, "wake %s%s" % (nid, self._note(nid))
 
     def _kick(self, nid):
+        """替 nid 的現有時間線設 kick 並喚醒 Event（spec §2.1、§2.3）。
+        回 None；沒有時間線就不動，是否跳過等待由時間線所處階段判定。"""
         tl = self.timelines.get(nid)
         if tl:
             tl.kick = True
             tl.wake.set()
 
     def _note(self, nid):
+        """按 nid 是否登記、是否有時間線，回控制回條的補充文字（spec §2.3）。
+        只讀記憶體，不驗證磁碟；都有時回空字串，未登記或尚無時間線時回提示。"""
         if nid not in self.registry:
             return "（%s 沒有登記，登記後才生效）" % nid
         return "" if nid in self.timelines else "（目前沒有這個 node 的資料夾，出現時才生效）"
 
     def op_stop(self, ctl):
+        """處理 ctl 的整體停止請求與子 daemon stop 權限（spec §2.7；S-21）。
+        回 (ok, msg)；帶 node、owner 不明或不允許時回 False；子 daemon 先落 stopped.json 才要求停止。"""
         if ctl.get("node") is not None:
             return False, "stop 是整個 daemon，不收 node；要停一個 node 用 pause 或 unregister"
         ow = self.owner()
@@ -286,6 +327,7 @@ class Daemon:
                            "allow_stop: true，或由 %s kill 這個任務" % (ow.get("node", "?"), ow.get("tid", "?"),
                                                                       ow.get("node", "?"), ow.get("node", "?")))
         if ow is not None:
+            # spec §2.7：先留停止標記，父 node 下次 tick 才不會立刻把已允許停止的子 daemon 補起。
             write_json(os.path.join(self.aosd, "stopped.json"),
                        {"by": ctl.get("by"), "why": ctl.get("why"), "at": now(), "kill": bool(ctl.get("kill"))})
         self.stop(bool(ctl.get("kill")))
@@ -293,6 +335,8 @@ class Daemon:
             "；已寫 .aosd/stopped.json，%s 不會再起它（刪掉才會）" % ow.get("node", "?") if ow is not None else "")
 
     def handle_ctl(self):
+        """每圈依件數與時間預算處理 ctl/，單件失敗隔離（spec §2.3）。
+        無額外參數，回 None；列目錄失敗本圈不做，個別例外交 ctl_failed，下一圈再看。"""
         cdir = os.path.join(self.aosd, "ctl")
         try:
             names = sorted(n for n in os.listdir(cdir) if not n.startswith("."))
@@ -301,6 +345,7 @@ class Daemon:
         self.ctl_stuck &= set(names)
         names = [n for n in names if n not in self.ctl_stuck] + [n for n in names if n in self.ctl_stuck]
         self.ctl_backlog = False
+        # spec §2.3：件數與單調時間雙重預算，控制檔持續湧入仍要讓 node 檢查與 status 前進。
         t_end = time.monotonic() + CTL_BUDGET_S
         for k, n in enumerate(names):
             if k >= CTL_BATCH or time.monotonic() >= t_end:
@@ -312,6 +357,8 @@ class Daemon:
                 self.ctl_failed(cdir, n, e)
 
     def ctl_one(self, cdir, n):
+        """處理 cdir 中檔名 n 的一件請求，寫同名最近回條再移除請求（spec §2.3）。
+        回 None；格式錯誤回 ok:false，執行或寫回條失敗向上拋，避免把接受誤當已完成收尾。"""
         path = os.path.join(cdir, n)
         done = os.path.join(self.aosd, "ctl-done")
         bad = None
@@ -320,6 +367,7 @@ class Daemon:
         elif not is_regular(path):
             bad = "不是一般檔（FIFO、資料夾…）"
         if bad:
+            # P2-11：壞檔保留原物為 .bad，另寫可讀 JSON 回條，FIFO 不能為了回條而阻塞讀取。
             os.makedirs(done, exist_ok=True)
             base = n if n.endswith(".json") else n + ".json"
             try:
@@ -343,6 +391,7 @@ class Daemon:
         try:
             dst = os.path.join(done, n)
             if os.path.isdir(dst) and not os.path.islink(dst):
+                # P2-13：同名覆蓋也含資料夾，避免舊回條路徑變成永久擋路的毒丸。
                 shutil.rmtree(dst)
             write_json(dst, ctl)   # 同名的舊回條直接蓋掉（每個名字只留最近一份；W3）
         except Exception as e:   # noqa: BLE001
@@ -354,7 +403,8 @@ class Daemon:
         self.log(ev="ctl", file=n, op=ctl.get("op"), node=ctl.get("node"), by=ctl.get("by"), ok=ok, msg=msg)
 
     def ctl_failed(self, cdir, n, err):
-        """一件控制檔處理丟例外：原物搬到 `.aosd/ctl-failed/<名>`（蓋掉同名舊的）；搬不走就留在 ctl/、之後排到最後。"""
+        """將 cdir/n 的失敗原物移到 ctl-failed，記 err 與最近錯誤（spec §2.3）。
+        回 None；搬不走就留在 ctl/，之後排到最後；同名目的原物覆蓋（P2-13）。"""
         self.io_errors += 1
         moved = None
         try:
@@ -368,6 +418,8 @@ class Daemon:
         self.log(ev="ctl-error", file=n, err=repr(err)[:300], moved_to=moved)
 
     def stop(self, kill):
+        """要求所有時間線停止；kill 為是否一併收任務（spec §2.7）。
+        回 None；重複呼叫不重置停止起點，已要求 kill 不會被後來的 False 撤銷。"""
         if not self.stopping:
             self.stopping_since = time.monotonic()
         self.stopping = True
@@ -378,8 +430,8 @@ class Daemon:
     # ---------- node ----------
 
     def check_nodes(self):
-        """每圈只看已登記的 node（2.6）：確定不存在或 inode 換了 → 收程序、時間線停、phase missing、登記保留；
-        看不到＝不知道，保留現狀；在、沒有時間線（而且收程序做完了）→ 開時間線。"""
+        """只檢查已登記 node，確定消失或 inode 換了才停線、收程序（spec §2.6）。
+        無額外參數，回 None；三態的「不知道」保留現狀並記錯；重現後等舊程序收完才重開，登記保留。"""
         if self.stopping:
             return
         for nid, (tl, kill) in list(self.retiring.items()):
@@ -395,6 +447,7 @@ class Daemon:
                 gone = None if stat.S_ISDIR(st.st_mode) else "不是資料夾了"
             except OSError as e:
                 if e.errno not in GONE_ERRNO:
+                    # spec §0、§2.6 三態：看不到不是消失；不能因此殺任務或丟掉原時間線。
                     err = {"prog": "daemon", "rc": None, "at": now(), "err": "看不到 node（%r），保留現狀" % e}
                     if tl:
                         tl.last_error = err
@@ -403,6 +456,7 @@ class Daemon:
                     continue
                 gone, st = "不存在", None
             if tl and not gone and (st.st_dev, st.st_ino) != tl.node_ident:
+                # spec §2.6：同一路徑可能已是另一個目錄，不能讓新目錄承接舊任務的生命週期。
                 gone = "inode 換了（被搬走或換成別的資料夾）"
             if gone:
                 if tl:
@@ -430,10 +484,13 @@ class Daemon:
             self.log(ev="node+", node=nid, round=tl.round, **({"paused": True} if self.is_paused(nid) else {}))
 
     def reap(self, nid, node, ev, why=None):
-        """背景收掉 node 上的任務（Q1 範圍：記著的 pgid＋環境變數 AOS7_NODE 相符），不擋主迴圈。"""
+        """在背景收 node 的任務，nid 用來取記住的 pgid，ev／why 用於事件（spec §2.6）。
+        回 None；Q1 範圍是記住的 pgid 加 AOS7_NODE/AOS7_TID 身分掃描，不阻塞主迴圈。"""
         known = self._pgids.pop(nid, set())
 
         def work():
+            """依外層捕獲的 node、known 收程序，將 ev／nid／why 與收尾結果記事件（spec §2.6）。
+            無參數，回 None；clean=False 也照實記錄，不在背景另開新時間線。"""
             n, clean = aos7_proc.kill_node(node, known)
             self.log(ev=ev, node=nid, groups=n, ok=clean, **({"why": why} if why else {}))
         th = threading.Thread(target=work, name="reap:" + nid, daemon=True)
@@ -441,7 +498,8 @@ class Daemon:
         th.start()
 
     def kill_live(self, nid, node):
-        """時間線呼叫：stop 或 unregister 帶 kill 時收掉本 node 所有活任務（逐槽照 Q1 範圍）。"""
+        """時間線要求收 nid／node 的活任務，先逐槽再掃 Q1 範圍（spec §2.6、§2.7）。
+        回 None；單槽判定或 kill 例外只記錯並繼續，不把未知身分直接當可殺。"""
         slots, _ = aos7_task.list_slots(node)
         for slot in slots:
             fslot = aos7_task.slot_dir(node, slot)
@@ -455,7 +513,8 @@ class Daemon:
         aos7_proc.kill_node(node, self._pgids.get(nid, ()))
 
     def live_of(self, nid, tl):
-        """活任務的 run id（每 LIVE_EVERY 秒重算），順便記 pgid（2.6）。只讀不殺：疑似 lost 不算活。"""
+        """取 nid／tl 的活 run id 清單，每 LIVE_EVERY 秒重算並記 pgid（spec §2.6、§2.8）。
+        回清單；只讀不殺，疑似 lost 不列，UNKNOWN 有 run 時保守列入（P2-08）；單槽例外略過。"""
         t, live = self._live.get(nid, (None, None))
         if t is not None and time.monotonic() - t < LIVE_EVERY:
             return live
@@ -468,6 +527,7 @@ class Daemon:
             except Exception:   # noqa: BLE001
                 continue
             if v.state in (aos7_task.LIVE, aos7_task.UNKNOWN) and v.run is not None:
+                # P2-08：status 對未知仍保守列活；這個觀測不授權重用槽（不變條件二，spec §5.4）。
                 live.append(aos7_task.run_id(slot, v.run))
                 pid = read_json(os.path.join(fslot, "pid.json"))
                 if isinstance(pid, dict) and pid.get("run") == v.run and is_int(pid.get("pgid")):
@@ -477,6 +537,8 @@ class Daemon:
         return live
 
     def sweep_leftovers(self):
+        """停止時按已登記 node 掃環境身分，補收殘留並記結果（spec §2.7）。
+        無額外參數，回 None；沒有 node 就不掃，程序掃描的未知結果由事件 ok 呈現。"""
         nodes = [node_path(self.root, n) for n in self.registry]
         if nodes:
             n, clean = aos7_proc.sweep_nodes(nodes)
@@ -485,6 +547,8 @@ class Daemon:
     # ---------- status ----------
 
     def write_status(self, stopped=False):
+        """彙整登記、運行與 unregister 收尾中的狀態，覆寫 status.json（spec §2.8；P2-12）。
+        stopped 表示是否為正常退出前快照；回 None，未知 round_open 保留 null，寫入錯誤向上拋。"""
         nodes = {}
         retiring = {nid: t for nid, (t, _k) in self.retiring.items() if t.is_alive()}
         for nid in sorted(set(self.registry) | set(self.timelines) | set(retiring)):
@@ -501,7 +565,7 @@ class Daemon:
             else:
                 phase = "paused" if by and tl.phase == "idle" else tl.phase
                 if nid in retiring and phase != "stopped":
-                    phase = "unregistering"   # unregister 了，本回合收完才結束（2.3）
+                    phase = "unregistering"   # P2-12：unregister 了，本回合收完才結束（spec §2.3、§2.8）
                 row = {"round": tl.round, "round_open": tl.round_open, "recovery_pending": tl.recovery_pending,
                        "phase": phase, "paused_by": by,
                        "pause_pending": bool(by) and phase not in ("paused", "stopped", "error"),
@@ -523,7 +587,8 @@ class Daemon:
         write_json(os.path.join(self.aosd, "status.json"), st)
 
     def check_root(self):
-        """root 的字串路徑還指著抓著的資料夾嗎：確定不存在或 inode 換了＝root 消失，照 stop 加 kill 收尾（2.5）。"""
+        """比對 root 路徑與已抓住 fd 的 inode（spec §2.5），確定消失或 inode 更換才 stop 加 kill。
+        無額外參數，回 None；ENOENT／ENOTDIR 算消失，其他讀取錯誤不改狀態。"""
         try:
             same = os.path.samestat(os.stat(self.root), os.fstat(self.rfd))
         except OSError as e:
@@ -538,7 +603,10 @@ class Daemon:
     # ---------- 主迴圈 ----------
 
     def run(self):
+        """拿單實例鎖、建立世代並跑主迴圈，停止時等時間線與收尾（spec §2.1、§2.5、§2.7）。
+        無額外參數；正常結束回 0，鎖拿不到回 1；每圈步驟由 guard 隔離例外。"""
         os.makedirs(os.path.join(self.aosd, "ctl"), exist_ok=True)
+        # spec §2.5：flock 綁 inode，不能 unlink 鎖檔，否則新舊程序可各鎖一個同名 inode。
         lock = open(os.path.join(self.aosd, "daemon.lock"), "a")
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -553,6 +621,7 @@ class Daemon:
         if not os.path.lexists(os.path.join(self.aosd, "nodes.json")):
             self.save_nodes()
         old = read_json(os.path.join(self.aosd, "gen.json"), {}) or {}
+        # spec §2.5：先獨占 daemon.lock 才遞增 gen；舊動作晚拿到 action.lock 時可辨識自己已過期。
         self.gen = (old.get("gen", 0) if isinstance(old, dict) and is_int(old.get("gen")) else 0) + 1
         write_json(os.path.join(self.aosd, "gen.json"), {"gen": self.gen, "pid": os.getpid(), "at": now()})
         self.log(ev="start", pid=os.getpid(), gen=self.gen)
@@ -584,7 +653,8 @@ class Daemon:
         return 0
 
     def guard(self, step):
-        """主迴圈的一步丟例外不讓 daemon 退出：io_errors +1、stderr 說明，下一圈再試。"""
+        """執行無參數回呼 step，隔離主迴圈錯誤（spec §2.1；S-06）。
+        回 None；例外增加 io_errors、寫 stderr 與事件，讓下一步／下一圈仍可繼續。"""
         try:
             step()
         except Exception as e:   # noqa: BLE001
@@ -597,6 +667,8 @@ class Daemon:
 
 
 def main(argv=None):
+    """解析人或任務啟動 aos7-daemon 的 argv（不含程式名），None 使用 sys.argv（spec §1）。
+    回退出碼：參數或 root 不合法為 1，否則沿用 Daemon.run；初始化 I/O 例外向上拋。"""
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1 or not os.path.isdir(argv[0]):
         print("用法: aos7-daemon <root>（root 要是已存在的資料夾）", file=sys.stderr)
