@@ -59,7 +59,7 @@ class TestOnceCrash(CoreCase):
             reported += self.tock()["ended"]
         self.assertEqual(self.tasks(node), [])
         self.assertEqual(self.ran(node, "o"), [])
-        self.assertEqual(reported, [{"run": "o#1", "code": None, "lost": True}])
+        self.assertEqual(reported, [{"run": "o#1", "code": None, "lost": True, "never_started": True}])
 
     def test_crash_after_popen(self):
         node = self.crash_then_continue("after-popen")

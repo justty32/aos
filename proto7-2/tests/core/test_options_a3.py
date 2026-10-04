@@ -42,7 +42,7 @@ class TestRetryLost(MatrixCase):
         self.assertEqual(len(self.ran(node, "o")), 1, "retry_lost 的 once 執行了 %r" % self.ran(node, "o"))
         ends = self.ends_of(sums, "o")
         first = [e for e in ends if e["run"] == "o#1"]
-        self.assertEqual(first, [{"run": "o#1", "code": None, "lost": True, "retried": True}], ends)
+        self.assertEqual(first, [{"run": "o#1", "code": None, "lost": True, "never_started": True, "retried": True}], ends)
         again = [e for e in ends if e["run"] != "o#1"]
         self.assertEqual(len(again), 1, ends)
         self.assertEqual(again[0]["code"], 0, again)
@@ -53,7 +53,7 @@ class TestRetryLost(MatrixCase):
         """P2-02：預設（不帶 retry_lost）維持最多一次：0 次、報一次 lost、沒有 retried。"""
         node, sums = self.lost_once()
         self.assertEqual(self.ran(node, "o"), [])
-        self.assertEqual(self.ends_of(sums, "o"), [{"run": "o#1", "code": None, "lost": True}])
+        self.assertEqual(self.ends_of(sums, "o"), [{"run": "o#1", "code": None, "lost": True, "never_started": True}])
         self.assertEqual(self.tasks(node), [])
 
     def test_retry_lost_bad_type_skipped(self):

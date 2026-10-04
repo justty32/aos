@@ -88,10 +88,11 @@ def check_item(item):
         raise ValueError("enabled 要是 true 或 false，拿到 %r" % (item.get("enabled"),))
     if item.get("mounts") is not None and not isinstance(item["mounts"], dict):
         raise ValueError("mounts 要是物件")
-    if "subroot" in item and not isinstance(item["subroot"], str):
-        raise ValueError("subroot 要是字串")
-    if "allow_stop" in item and not isinstance(item["allow_stop"], bool):
-        raise ValueError("allow_stop 要是 true 或 false，拿到 %r" % (item["allow_stop"],))
+    if "x" in item and not isinstance(item["x"], dict):
+        raise ValueError("x 要是物件（模組用的宣告欄位，核心照抄）")
+    if "subroot" in item or "allow_stop" in item:
+        raise ValueError("subroot／allow_stop 已移到子 daemon 包：argv 改成 aos7-subd <subroot> [--allow-stop] -- ..."
+                         "（modules/subd/README.md）")
     if "slot" in item:
         s = item["slot"]
         if mode != "once":
@@ -410,13 +411,9 @@ def _tick(root, node_id, node, fnode):
     write_json(rpath, state)
 
     started, once_started = [], []
-    claimed = set()   # spec §2.7：同一 tick 的多項 subroot 不可重複認領，子 daemon 尚未拿鎖也要擋。
     for item, slot, run, once in p.starts:
         try:
-            sub = aos7_task.check_subroot(ctx, item, claimed)
-            if sub:
-                claimed.add(sub)
-            rid = aos7_task.start_in_slot(ctx, item, slot, run, sub)
+            rid = aos7_task.start_in_slot(ctx, item, slot, run)
         except Exception as e:   # noqa: BLE001  起不來的一項只記它，其他項照起
             if not os.path.isdir(os.path.join(fnode, ".aos")):
                 raise FileNotFoundError(fnode)

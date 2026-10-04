@@ -8,8 +8,8 @@ SIGTERM／SIGINT＝stop 加 kill（S-21 路一：子 daemon 被父時間線 kill
 pause owner、node 消失的 inode 比對。
 
 由人或父 node 的任務經 bin/aos7-daemon 啟動（S-21）；daemon 只管理登記與程序生命週期。
-讀寫 root/.aosd/ 的 nodes.json、paused.json、gen.json、owner.json、控制請求／回條、status.json；
-持有 daemon.lock，按需處理 stopped.json 與 log.on/log.jsonl，讀 node 的回合／任務狀態供監督（spec §2.8、§9）。
+讀寫 root/.aosd/ 的 nodes.json、paused.json、gen.json、控制請求／回條、status.json，讀 stop-guard.json；
+持有 daemon.lock，按需寫 log.jsonl（有 log.on 時），讀 node 的回合／任務狀態供監督（spec §2.8、§9）。
 """
 import datetime
 import fcntl
@@ -181,41 +181,6 @@ class Daemon:
                 return sub
         return None
 
-    def owner(self):
-        """讀 owner.json 的 owner 塊，判定控制檔 stop 的權限（spec §2.7；S-21）。
-        無額外參數；lexists 未看見檔回 None（頂層），可見但讀不懂或缺 owner 回 {}，不允許 stop。"""
-        path = os.path.join(self.aosd, "owner.json")
-        if not os.path.lexists(path):
-            return None
-        ow = read_json(path)
-        o = ow.get("owner") if isinstance(ow, dict) else None
-        return o if isinstance(o, dict) else {}
-
-    def claim_owner(self):
-        """拿到 daemon.lock 後，依 tick 的三個 owner 環境變數認領子根（spec §2.7；K-08）。
-        無額外參數，回 None；任務重起重寫權限，人手重開沿用，daemon 塊每次更新。
-        變數用完移除；頂層不寫，舊 owner 壞掉則保留以拒絕 stop；寫入錯誤向上拋。"""
-        env = os.environ
-        onode, otid, allow = env.pop("AOS7_OWNER_NODE", None), env.pop("AOS7_OWNER_TID", None), \
-            env.pop("AOS7_ALLOW_STOP", None)
-        sub = env.get("AOS7_SUBROOT")
-        path = os.path.join(self.aosd, "owner.json")
-        owner = None
-        if onode and otid and sub:
-            try:
-                if os.path.samestat(os.stat(sub), os.fstat(self.rfd)):
-                    owner = {"node": onode, "tid": otid, "allow_stop": allow == "1"}
-            except OSError:
-                pass
-        if owner is None:
-            if not os.path.lexists(path):
-                return
-            cur = read_json(path)
-            if not (isinstance(cur, dict) and isinstance(cur.get("owner"), dict)):
-                return   # 壞掉的不蓋（stop 照樣當不允許）
-            owner = cur["owner"]
-        write_json(path, {"owner": owner, "daemon": {"pid": os.getpid(), "since": now()}})
-
     # ---------- 控制檔 ----------
 
     def apply(self, ctl):
@@ -358,22 +323,18 @@ class Daemon:
         return "" if nid in self.timelines else "（目前沒有這個 node 的資料夾，出現時才生效）"
 
     def op_stop(self, ctl):
-        """處理 ctl 的整體停止請求與子 daemon stop 權限（spec §2.7；S-21）。
-        回 (ok, msg)；帶 node、owner 不明或不允許時回 False；子 daemon 先落 stopped.json 才要求停止。"""
+        """整個 daemon 停止（spec §2.7）。回 (ok, msg)；帶 node 回 False。`.aosd/stop-guard.json` 存在而 `allow` 不是 true
+        （讀不到、壞掉也算）→ 不停、回 False（msg 帶守門檔的 `note`）。核心不知道守門的語意（例如子 daemon 的從屬），
+        守門檔由寫它的模組管；SIGTERM 不看守門檔。"""
         if ctl.get("node") is not None:
             return False, "stop 是整個 daemon，不收 node；要停一個 node 用 pause 或 unregister"
-        ow = self.owner()
-        if ow is not None and ow.get("allow_stop") is not True:
-            return False, ("這個 daemon 屬於 node %s（任務 %s），不允許外部 stop；要停請 %s 在 tasks.json 那項設 "
-                           "allow_stop: true，或由 %s kill 這個任務" % (ow.get("node", "?"), ow.get("tid", "?"),
-                                                                      ow.get("node", "?"), ow.get("node", "?")))
-        if ow is not None:
-            # spec §2.7：先留停止標記，父 node 下次 tick 才不會立刻把已允許停止的子 daemon 補起。
-            write_json(os.path.join(self.aosd, "stopped.json"),
-                       {"by": ctl.get("by"), "why": ctl.get("why"), "at": now(), "kill": bool(ctl.get("kill"))})
+        st, g = fact(os.path.join(self.aosd, "stop-guard.json"))
+        good = st == OK and isinstance(g, dict)
+        if st != N and not (good and g.get("allow") is True):
+            note = g.get("note") if good else ("守門檔讀不到或不是一般檔" if st == U else "守門檔壞了")
+            return False, "不允許外部 stop（.aosd/stop-guard.json）%s" % ("：%s" % note if isinstance(note, str) and note else "")
         self.stop(bool(ctl.get("kill")))
-        return True, "stopping" + (" with kill" if self.kill_on_stop else "") + (
-            "；已寫 .aosd/stopped.json，%s 不會再起它（刪掉才會）" % ow.get("node", "?") if ow is not None else "")
+        return True, "stopping" + (" with kill" if self.kill_on_stop else "")
 
     def handle_ctl(self):
         """每圈依件數與時間預算處理 ctl/，單件失敗隔離（spec §2.3）。
@@ -703,7 +664,6 @@ class Daemon:
         except Unknown as e:
             print("aos7-daemon: %s" % e, file=sys.stderr)
             return 3
-        self.claim_owner()
         self.save_paused()   # 一起來就寫一份（空的也寫）
         if not os.path.lexists(os.path.join(self.aosd, "nodes.json")):
             self.save_nodes()
@@ -711,14 +671,6 @@ class Daemon:
         self.gen = old_gen + 1
         write_json(os.path.join(self.aosd, "gen.json"), {"gen": self.gen, "pid": os.getpid(), "at": now()})
         self.log(ev="start", pid=os.getpid(), gen=self.gen)
-        sp = os.path.join(self.aosd, "stopped.json")
-        if os.path.lexists(sp):
-            was = read_json(sp)
-            try:
-                os.remove(sp)
-            except OSError:
-                pass
-            self.log(ev="stopped-cleared", was=was)
         while not self.stopping:
             for step in (self.check_root, self.handle_ctl, self.check_nodes, self.write_status, self.sweep_tmps):
                 self.guard(step)

@@ -4,10 +4,10 @@
 - 只記空間根（AOS7_ROOT）底下的寫入；空間外（/dev/null、__pycache__ 等）不管。
 - ok＝寫入的實際位置落在自己的 node（不含裡面巢狀的別的 node／daemon 根）或某個掛載點的目標底下。
 - 只看得到 Python 程序（含 Python 起的 Python）；sh、C 程式的寫入看不到（problems.md M-3）。
-- 只記不擋。aos7-run 只在 AOS7_AUDIT 有值時把這個資料夾放進任務的 PYTHONPATH（aos7-run 自己不載入）。
+- 只記不擋。由包裝程式 `aos7-audit -- <argv>` 設 AOS7_AUDIT 並把這個資料夾放進任務的 PYTHONPATH。
 
 對應 spec §4.5、§5.1、§5.5（S-10、S-23）；本版沿用、尚無專門測試（P2-17）。
-由 aos7-run 啟用後讓 Python 自動載入；讀 birth.json 與路徑邊界標記，追加 writes.jsonl，換 run 由 tick 清掉。
+由 aos7-audit 啟用後讓 Python 自動載入；讀 birth.json 與路徑邊界標記，追加 writes.jsonl，換 run 由 tick 清掉。
 """
 import fcntl
 import json
@@ -39,9 +39,6 @@ def _install():
             birth, mounts = {}, {}
         out = [rp(os.path.join(root_r, v["to"])) for v in mounts.values()
                if isinstance(v, dict) and "at" in v and isinstance(v.get("to"), str)]
-        if isinstance(birth.get("subroot"), str):
-            # 路一的子根整棵算這個任務的（子 daemon 與它的 tick／tock 繼承了這個任務的環境；probes/llmteam）
-            out.append(rp(os.path.join(root_r, birth["subroot"])))
         return out
     targets = load_targets()
     log = os.path.join(task, "writes.jsonl")

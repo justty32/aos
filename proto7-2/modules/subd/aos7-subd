@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""aos7-subd：子 daemon 包的包裝程式——讓一個 node 的任務擁有一個子空間根（spec S-21 路一；modules/subd/README.md）。
+
+    aos7-subd <subroot> [--allow-stop] -- <argv...>
+
+以任務身分被 tick 起（要有 AOS7_ROOT／AOS7_NODE_ID／AOS7_TID）。<subroot> 是空間路徑（相對空間根，跟 node id 同一套）。
+起之前檢查，不合就印原因、退出碼 1、什麼都不起：
+- 子根要在自己的 node 底下、不能是 node 本身、不能包住父 daemon 已登記的 node（讀 `$AOS7_ROOT/.aosd/nodes.json`）；
+- `<subroot>/.aosd/stopped.json` 存在（被允許的 stop 停過，刪掉才再起）；
+- 已有別的 aos7-subd 認領這個子根（`<subroot>/.aosd/subd.lock`），或子根 daemon.lock 有人拿著（例如人手起的）。
+通過後寫 `<subroot>/.aosd/stop-guard.json`（核心的通用守門檔：`allow`＝有沒有 --allow-stop、`note` 說屬於誰）與
+`owner.json`（給人看：owner 塊與現役 daemon 的 pid），設 `AOS7_SUBROOT`（子根絕對路徑）後起 argv 當子程序並等它。
+argv 結束、而且不是因為自己收到 SIGTERM（父 kill 時整個群組一起收到）、子根 status.json 是 `stopped: true` → 那是被允許的
+外部 stop：寫 `stopped.json`＝`{"by","why","at"}`（取 ctl-done 裡最近一份 stop 回條），父 node 的 keep 項之後再起它會被擋。
+退出碼照 argv（被訊號殺＝128＋訊號號）。
+"""
+import fcntl
+import os
+import signal
+import subprocess
+import sys
+
+TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(TOP, "lib"))
+from aos7_fs import N, OK, fact, now, write_json  # noqa: E402
+
+
+def norm(p):
+    """空間路徑正規化；絕對路徑或跑出空間根回 None。"""
+    if not isinstance(p, str) or os.path.isabs(p):
+        return None
+    q = os.path.normpath(p).replace(os.sep, "/")
+    return None if q == ".." or q.startswith("../") else q
+
+
+def check(root, node_id, sub):
+    """子根位置檢查：回 (子根絕對路徑, None) 或 (None, 原因)。"""
+    sp = norm(sub)
+    if sp is None:
+        return None, "subroot %r 要是空間根底下的相對路徑" % (sub,)
+    node = os.path.realpath(root if node_id in (".", "") else os.path.join(root, node_id))
+    real = os.path.realpath(os.path.join(root, sp))
+    if not real.startswith(node + os.sep):
+        return None, "subroot %s 要在自己的 node（%s）底下，不能是 node 本身" % (sp, node_id)
+    st, nj = fact(os.path.join(root, ".aosd", "nodes.json"))
+    if st not in (OK, N):
+        return None, "父 daemon 的 nodes.json %s，不知道子根有沒有包住已登記的 node，不起" % nj
+    nodes = (nj or {}).get("nodes") if isinstance(nj, dict) else {}
+    inside = sorted(n for n in (nodes or {}) if n == sp or n.startswith(sp + "/"))
+    if inside:
+        return None, "subroot %s 包住了父 daemon 已登記的 node %s" % (sp, ", ".join(inside))
+    return real, None
+
+
+def lock_held(path):
+    """path 這個 flock 有沒有人拿著（試得到就放掉、回 False；開不了＝沒人拿過）。"""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    except OSError:
+        return False
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return True
+    finally:
+        os.close(fd)
+    return False
+
+
+def last_stop(aosd):
+    """ctl-done 裡最近一份成功的 stop 回條 → {"by","why","at"}；找不到回只有 at 的。"""
+    best = None
+    try:
+        names = os.listdir(os.path.join(aosd, "ctl-done"))
+    except OSError:
+        names = []
+    for n in names:
+        st, c = fact(os.path.join(aosd, "ctl-done", n))
+        res = c.get("result") if st == OK and isinstance(c, dict) else None
+        if c and isinstance(res, dict) and c.get("op") == "stop" and res.get("ok") is True:
+            if best is None or str(res.get("at")) > str(best["at"]):
+                best = {"by": c.get("by"), "why": c.get("why"), "at": res.get("at")}
+    return best or {"by": None, "why": "daemon 照控制檔 stop 停了（回條找不到）", "at": now()}
+
+
+def main(argv):
+    allow = "--allow-stop" in argv[:argv.index("--")] if "--" in argv else False
+    head = [a for a in (argv[:argv.index("--")] if "--" in argv else argv) if a != "--allow-stop"]
+    cmd = argv[argv.index("--") + 1:] if "--" in argv else []
+    if len(head) != 1 or not cmd:
+        print("用法: aos7-subd <subroot> [--allow-stop] -- <argv...>", file=sys.stderr)
+        return 2
+    e = os.environ
+    root, node_id, tid = e.get("AOS7_ROOT"), e.get("AOS7_NODE_ID"), e.get("AOS7_TID")
+    if not (root and node_id and tid):
+        print("aos7-subd: 要以任務身分起（缺 AOS7_ROOT／AOS7_NODE_ID／AOS7_TID）", file=sys.stderr)
+        return 2
+    sub, why = check(root, node_id, head[0])
+    if why:
+        print("aos7-subd: %s，沒起" % why, file=sys.stderr)
+        return 1
+    aosd = os.path.join(sub, ".aosd")
+    os.makedirs(aosd, exist_ok=True)
+    st, stopped = fact(os.path.join(aosd, "stopped.json"))
+    if st != N:
+        s = stopped if st == OK and isinstance(stopped, dict) else {}
+        print("aos7-subd: 子 daemon（%s）已被 %s 在 %s stop%s；刪掉 %s 就會再起" % (
+            head[0], s.get("by") or "?", s.get("at") or "?", "（%s）" % s["why"] if s.get("why") else "",
+            os.path.join(aosd, "stopped.json")), file=sys.stderr)
+        return 1
+    lk = open(os.path.join(aosd, "subd.lock"), "a")
+    try:
+        fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        print("aos7-subd: 子根 %s 已經有別的 aos7-subd 認領，沒起" % head[0], file=sys.stderr)
+        return 1
+    if lock_held(os.path.join(aosd, "daemon.lock")):
+        print("aos7-subd: 子根 %s 已經有 daemon 在跑（不是這個包裝起的），沒起" % head[0], file=sys.stderr)
+        return 1
+    owner = {"node": node_id, "tid": tid, "allow_stop": allow}
+    write_json(os.path.join(aosd, "stop-guard.json"), {
+        "allow": allow, "note": "這個 daemon 屬於 node %s（任務 %s）%s" % (
+            node_id, tid, "，允許外部 stop" if allow else "；要停請 %s 那項加 --allow-stop，或由 %s kill 這個任務" % (
+                node_id, node_id))})
+    got_term = []
+
+    def on_term(signum, _frame):
+        got_term.append(signum)
+        if child is not None and child.poll() is None:
+            child.send_signal(signum)
+    child = None
+    for s in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(s, on_term)
+    child = subprocess.Popen(cmd, env=dict(e, AOS7_SUBROOT=sub))
+    write_json(os.path.join(aosd, "owner.json"), {"owner": owner, "daemon": {"pid": child.pid, "since": now()}})
+    while True:
+        try:
+            rc = child.wait()
+            break
+        except InterruptedError:
+            continue
+    if not got_term:
+        st, status = fact(os.path.join(aosd, "status.json"))
+        if st == OK and isinstance(status, dict) and status.get("stopped") is True:
+            write_json(os.path.join(aosd, "stopped.json"), last_stop(aosd))
+    return 128 - rc if rc < 0 else rc
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""aos7-audit：稽核包的包裝程式——替後面的命令開寫入紀錄，再 exec 它（modules/audit/README.md）。
+
+    aos7-audit -- <argv...>
+
+設 `AOS7_AUDIT=1`，把同包的 `audit_site/` 放到 `PYTHONPATH` 最前面，然後 exec argv。argv 是 Python 程式時，
+它每個寫入動作都記到 `$AOS7_TASK/writes.jsonl`（只記不擋）。核心不知道稽核：tasks.json 項目的 argv 前面加這支就好。
+"""
+import os
+import sys
+
+SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_site")
+
+
+def main(argv):
+    if len(argv) < 2 or argv[0] != "--":
+        print("用法: aos7-audit -- <argv...>", file=sys.stderr)
+        return 2
+    env = dict(os.environ, AOS7_AUDIT="1")
+    paths = [p for p in env.get("PYTHONPATH", "").split(os.pathsep) if p and p != SITE]
+    env["PYTHONPATH"] = os.pathsep.join([SITE] + paths)
+    try:
+        os.execvpe(argv[1], argv[1:], env)
+    except OSError as e:
+        print("aos7-audit: 起不了 %s：%s" % (argv[1], e), file=sys.stderr)
+        return 127
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

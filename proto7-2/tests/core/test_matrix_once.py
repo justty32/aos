@@ -62,7 +62,7 @@ class TestLaunchCrash(MatrixCase):
         ends = self.ends_of(sums, "o")
         if point == "after-birth":
             self.assertEqual(n, 0, self.ran(node, "o"))
-            self.assertEqual(ends, [{"run": "o#1", "code": None, "lost": True}])
+            self.assertEqual(ends, [{"run": "o#1", "code": None, "lost": True, "never_started": True}])
         else:
             self.assertEqual(n, 1, "once 在 %s 被打斷後執行了 %d 次：%r" % (point, n, self.ran(node, "o")))
             self.assertEqual(len(ends), 1, "once 的結束報了 %d 次：%r" % (len(ends), ends))

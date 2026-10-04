@@ -92,10 +92,6 @@ def main(argv=None):
     node = os.environ.get("AOS7_NODE") or os.getcwd()
     # 測試鉤子的環境（AOS7_TEST_*，P2-15）只給 aos7-run 自己，不傳給任務
     env = {k: v for k, v in os.environ.items() if not k.startswith("AOS7_TEST_")}
-    site = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "modules", "audit", "audit_site")
-    if env.get("AOS7_AUDIT") and site not in env.get("PYTHONPATH", "").split(os.pathsep):
-        # 寫入紀錄（spec §4.5、P2-17）：只給任務，不給 aos7-run 自己（probes/polyglot N7）
-        env["PYTHONPATH"] = os.pathsep.join(x for x in (site, env.get("PYTHONPATH")) if x)
     try:
         out = os.fdopen(os.open("out.log", os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644, dir_fd=dfd), "ab")
     except OSError as e:
