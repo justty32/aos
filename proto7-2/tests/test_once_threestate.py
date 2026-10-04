@@ -106,13 +106,16 @@ class TestThreeState(CoreCase):
         self.assertEqual(read_json(rp), before)
         self.assertEqual(self.birth(node, "j")["run"], 1)   # 沒起新的
 
-    def test_broken_round_json_continues_from_last_round(self):
+    def test_broken_round_json_is_unknown_even_with_last_round(self):
+        """A2-02：round.json 壞了＝不知道上一回合關了沒，即使 last-round.json 能用也不接著數（會覆蓋還開著的同號回合）。"""
         node = self.mknode("a")
         for _ in range(3):
             self.round_trip()
         write_json(os.path.join(node, ".aos", "round.json"), ["broken"])
+        self.assertIn("unknown", self.tick(rc=3))
+        self.assertEqual(read_json(os.path.join(node, ".aos", "round.json")), ["broken"])
+        write_json(os.path.join(node, ".aos", "round.json"), {"round": 3, "open": False})   # 人確認後寫回
         self.assertEqual(self.tick()["round"], 4)
-        self.assertTrue(self.round_json(node)["tasks_error"])
 
     def test_broken_round_and_no_last_round_is_unknown(self):
         node = self.mknode("a")

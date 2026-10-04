@@ -16,8 +16,8 @@ import time
 
 import aos7_mount
 import aos7_proc
-from aos7_fs import (BIN, BAD, FD_PREFIX, IO, MISSING, OK, edit_json, env_with_bin, is_int, node_path, now,
-                     proc_starttime, read_json, read_json3, real_path, test_point, write_json, LockTimeout)
+from aos7_fs import (BIN, BAD, FD_PREFIX, IO, MISSING, OK, edit_json, env_with_bin, inject, is_gone, is_int, node_path,
+                     now, proc_starttime, read_json, read_json3, real_path, test_point, write_json, LockTimeout)
 
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 SLOT_RE = re.compile(r"^([A-Za-z0-9_-]+)(?:\.([1-9][0-9]*))?$")
@@ -60,11 +60,11 @@ def list_slots(node):
 
     node 是實際或 fd 路徑；確定目錄不存在回 ([], None)，其他 I/O 回 ([], 錯誤字串)。
     呼叫端據此保留未知狀態，不在列目錄失敗時重用槽（spec §0、§4.2、P2-09）。"""
-    import errno
     try:
+        inject("listdir", tasks_dir(node))
         names = os.listdir(tasks_dir(node))
     except OSError as e:
-        if e.errno in (errno.ENOENT, errno.ENOTDIR):
+        if is_gone(e):
             return [], None
         return [], repr(e)[:200]
     return sorted(n for n in names if not n.startswith(".") and SLOT_RE.match(n)), None
@@ -106,17 +106,15 @@ def judge(fslot, node, slot, cur_round):
 
     不做任何破壞性動作；SUSPECT（疑似 lost）交給 resolve。
 
-    slot 是槽名、cur_round 是目前回合；檔案 I/O 回 UNKNOWN，starttime 不明回 LIVE 加 unsure，
-    暫未完成交接也保守當 LIVE（spec §0、§5.3 不變條件二、P2-08）。"""
+    slot 是槽名、cur_round 是目前回合；檔案 I/O 回 UNKNOWN，pid／starttime 讀不到回 LIVE 加 unsure，
+    暫未完成交接也保守當 LIVE（spec §0、§5.3 不變條件二、P2-08）。birth.json 壞掉交給 _judge_broken（A2-03）。"""
     bst, birth = read_json3(os.path.join(fslot, "birth.json"))
     if bst == MISSING:
         return View(state=EMPTY, run=None)
     if bst == IO:
         return View(state=UNKNOWN, run=None, why="birth.json 讀不到：%s" % birth)
     if bst == BAD or not isinstance(birth, dict) or not is_int(birth.get("run")):
-        # spec §5.4：內容壞掉已無可信 run，只比 NODE＋TID 掃描，避免覆蓋仍活著的任務。
-        alive = aos7_proc.env_procs(node, slot, runners=True)
-        return View(state=LIVE if alive else EMPTY, run=None, why="birth.json 壞了", broken=True)
+        return _judge_broken(fslot, node, slot)
     run = birth["run"]
     v = View(state=None, run=run, birth=birth)
     est, ex = _same_run(os.path.join(fslot, "exit.json"), run)
@@ -135,19 +133,52 @@ def judge(fslot, node, slot, cur_round):
             return View(v, state=LIVE, pid=pid)
         # spec §5.3 不變條件二、P2-08：身分不明用 LIVE＋unsure 保住槽，不讓 tick 再起一份。
         if aos7_proc.UNKNOWN in (t_state, r_state):
-            return View(v, state=LIVE, pid=pid, unsure="starttime 讀不到，當活（K-05）")
+            return View(v, state=LIVE, pid=pid, unsure="任務或 runner 的 /proc（pid／starttime）讀不到，當活（K-05、A2-01）")
         return _recheck(View(v, pid=pid), fslot, run, "任務與 runner 都不在")
     if runner:
         if r_state == aos7_proc.ALIVE:
             return View(v, state=LIVE)
         if r_state == aos7_proc.UNKNOWN:
-            return View(v, state=LIVE, unsure="runner 的 starttime 讀不到，當活（K-05）")
+            return View(v, state=LIVE, unsure="runner 的 /proc（pid／starttime）讀不到，當活（K-05、A2-01）")
         return _recheck(v, fslot, run, "沒有 pid.json，runner 已不在")
     br = birth.get("round")
     # spec §5.4、P2-02：birth 與 runner 登記有交接空窗，等兩回合才走 lost 掃描；once 不自動重起。
     if is_int(br) and is_int(cur_round) and br <= cur_round - 2:
         return _recheck(v, fslot, run, "沒有 pid.json、沒有 runner，起了兩回合以上")
     return View(v, state=LIVE, unsure="剛起")
+
+
+def _judge_broken(fslot, node, slot):
+    """birth.json 壞掉（半寫、不是物件、run 不是整數）時的判定（spec §5.4；A2-03）。**掃不到活程序不是「從未執行」的證明**：
+
+    1. 身分掃描（只比 NODE＋TID，含 aos7-run）有相符的活程序 → LIVE（run 不明），不起第二份；掃描讀不完整 → UNKNOWN。
+    2. 沒有活程序時看同槽的其他證據：換 run 時 clear_slot 先刪舊的 pid／exit 才寫新 birth，所以槽裡的 exit.json／pid.json 一定是
+       這一個 run 寫的——exit.json 帶 run R → ENDED（run R，照常報 ended）；只有 pid.json 帶 run R → 疑似 lost（交 resolve 掃 RUN 再判）。
+    3. 什麼證據都沒有（分不出 runner 起過沒、跑完沒）→ UNKNOWN：不起、不判 lost、不刪槽，記 errors 等人確認後刪掉 birth.json。
+    once 的 launch 標記照 run 比對：情形 2 認得出 run 就刪項、不重跑；情形 1、3 留著項目。"""
+    why = "birth.json 壞了（半寫、不是物件或 run 不是整數）"
+    try:
+        alive = aos7_proc.env_procs(node, slot, runners=True)
+    except aos7_proc.ProcUnknown as e:
+        return View(state=UNKNOWN, run=None, broken=True, why="%s，身分掃描讀不完整：%s" % (why, e))
+    if alive:
+        return View(state=LIVE, run=None, broken=True, why="%s，有相符的活程序（run 不明）" % why)
+    found = {}
+    for name in ("exit.json", "pid.json"):
+        st, v = read_json3(os.path.join(fslot, name))
+        if st == IO:
+            return View(state=UNKNOWN, run=None, broken=True, why="%s，%s 讀不到：%s" % (why, name, v))
+        if st == OK and isinstance(v, dict) and is_int(v.get("run")):
+            found[name] = v
+    if "exit.json" in found:
+        ex = found["exit.json"]
+        return View(state=ENDED, run=ex["run"], exit=ex, broken=True, why="%s，exit.json 認得出 run %d" % (why, ex["run"]))
+    if "pid.json" in found:
+        pj = found["pid.json"]
+        return View(state=SUSPECT, run=pj["run"], pid=pj, broken=True,
+                    why="%s，pid.json 是 run %d、沒有相符的活程序、也沒有 exit.json" % (why, pj["run"]))
+    return View(state=UNKNOWN, run=None, broken=True,
+                why="%s，也沒有 pid.json／exit.json 可以認出是哪個 run、跑過沒；確認沒在跑後刪掉 birth.json 就會當空槽" % why)
 
 
 def _recheck(v, fslot, run, why):
@@ -172,17 +203,25 @@ def resolve(v, fslot, node, slot, cur_round):
     if v.state != SUSPECT:
         return v
     pgid = (v.get("pid") or {}).get("pgid")
-    found = aos7_proc.env_procs(node, slot, v.run)
+    try:
+        found = aos7_proc.env_procs(node, slot, v.run)
+        grp = bool(pgid) and aos7_proc.group_alive(pgid)
+    except aos7_proc.ProcUnknown as e:
+        # A2-01：掃描不完整＝不知道有沒有相符的程序，不能判 lost（判了 keep 就會重起、跟還活著的前任雙開）。
+        return View(v, state=UNKNOWN, why="疑似 lost（%s），但身分掃描讀不完整，先不判：%s" % (v.get("why"), e))
     note = None
     # spec §5.3 不變條件二、§5.4：先收殘留再宣告 lost，keep 才不會跟前任雙開（K-04）。
-    if found or (pgid and aos7_proc.group_alive(pgid)):
+    if found or grp:
         clean, msg = aos7_proc.kill_identity(node, slot, v.run, pgid)
         if not clean:
-            return View(v, state=UNKNOWN, why="疑似 lost，但相符的程序收不掉：%s" % msg)
+            return View(v, state=UNKNOWN, why="疑似 lost，但相符的程序收不掉或確認不了：%s" % msg)
         note = "lost 前收掉相符的殘留程序：%s" % msg
     est, ex = _same_run(os.path.join(fslot, "exit.json"), v.run)
     if est == OK:
         return View(v, state=ENDED, exit=ex)
+    if est == IO:
+        # 疑點（aos7_task.py:183）：最後重讀 exit.json 讀不到，不能覆寫成 lost（runner 可能剛寫了真的結果）。
+        return View(v, state=UNKNOWN, why="疑似 lost，但最後重讀 exit.json 讀不到：%s" % ex)
     ex = {"run": v.run, "code": None, "lost": True, "at": now(), "round": cur_round}
     if note:
         ex["note"] = note
@@ -226,7 +265,7 @@ def unreported(v):
 
 RESTART_KEYS = ("name", "argv", "inst", "subroot", "allow_stop")
 DIFF_KEYS = ("argv", "inst", "mounts", "subroot", "allow_stop")
-SCHED_KEYS = ("mode", "from_round", "max_live", "enabled", "launch", "slot", "restart_of", "mounts_dyn")
+SCHED_KEYS = ("mode", "from_round", "max_live", "enabled", "launch", "slot", "restart_of", "mounts_dyn", "ctl_id")
 
 
 def dyn_mounts(birth):
@@ -312,35 +351,66 @@ def kill_run(fslot, node, slot, v):
     return clean, msg
 
 
+def ctl_id_of(path, ctl):
+    """一份控制請求的穩定識別（A2-05）：請求帶字串 `id` 就用它；否則用「原始內容＋檔案 mtime（ns）」的 sha1 前 16 碼。
+
+    同一份檔被重播（處理到一半被殺、下次再讀）內容與 mtime 都不變 → 同一個 id；有人重新寫一份（即使內容一樣）mtime 會變 → 新 id。
+    讀不到丟 OSError（呼叫的人當「不知道」、請求留著）。"""
+    import hashlib
+    if isinstance(ctl, dict) and isinstance(ctl.get("id"), str) and ctl["id"]:
+        return "id:" + ctl["id"][:64]
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    try:
+        st = os.fstat(fd)
+        raw = os.read(fd, 1 << 20)
+    finally:
+        os.close(fd)
+    return "h:" + hashlib.sha1(raw + b"@" + str(st.st_mtime_ns).encode()).hexdigest()[:16]
+
+
 def run_ctl(ctx, slot):
     """執行 `<槽>/ctl.json`（若有），搬成 ctl-done.json（蓋掉舊的）。回紀錄 dict 或 None。
 
-    ctx 是本次動作環境、slot 是槽名；沒有請求回 None，讀 ctl 的 I/O 失敗回錯誤紀錄並留待下次。
-    judge_resolved 可先處理疑似 lost；判定仍未知或 run 已換人就拒絕請求，寫入錯誤向外拋（spec §0、§6）。"""
+    ctx 是本次動作環境、slot 是槽名；沒有請求回 None。讀 ctl 的 I/O 失敗、或槽的狀態「不知道」時**請求留著**、回錯誤紀錄，
+    下一次 tick／tock 再看（spec §0；A2-01 前不知道也會把請求搬成 ok:false 的回條）。
+    restart 用 ctl_id_of 的識別做到「重播只生效一次」（A2-05）：新 run 的 birth 帶同一個 ctl_id＝已經重起過、只補回條；
+    tasks.json 已有同 ctl_id 的 once 項＝已經加過、不再加；kill 本來就冪等（已結束的算成功）。寫入錯誤向外拋（spec §6）。"""
     fslot = slot_dir(ctx.fnode, slot)
     path = os.path.join(fslot, "ctl.json")
     st, ctl = read_json3(path)
     if st == MISSING:
         return None
     if st == IO:
-        return {"slot": slot, "op": None, "ok": False, "err": "ctl.json 讀不到：%s（下一次再看）" % ctl}
+        return {"slot": slot, "op": None, "ok": False, "err": "ctl.json 讀不到：%s（請求留著，下一次再看）" % ctl}
     bad = None
     if st == BAD or not isinstance(ctl, dict):
         bad = "unreadable JSON" if st == BAD else "not a JSON object"
         ctl = {"raw": "unreadable" if st == BAD else ctl}
     op = ctl.get("op")
     diff = None
-    v = judge_resolved(fslot, ctx.node, slot, ctx.round)
     target = ctl.get("run")
+    if not bad and op in ("kill", "restart") and (target is None or is_int(target)):
+        v = judge_resolved(fslot, ctx.node, slot, ctx.round)
+        if v.state == UNKNOWN:
+            return {"slot": slot, "op": op, "ok": False,
+                    "err": "槽的狀態不知道（%s），請求留著，下一次再看" % v.get("why")}
+        try:
+            cid = ctl_id_of(path, ctl) if op == "restart" else None
+        except OSError as e:
+            return {"slot": slot, "op": op, "ok": False, "err": "ctl.json 讀不到：%r（請求留著，下一次再看）" % (e,)}
+    else:
+        v, cid = View(state=None, run=None), None
     rid = run_id(slot, v.run) if v.run is not None else None
+    birth = v.get("birth") or {}
     if bad:
         ok, msg = False, bad
     elif op not in ("kill", "restart"):
         ok, msg = False, "unknown op %r" % (op,)
     elif target is not None and not is_int(target):
         ok, msg = False, "run 要是整數，拿到 %r" % (target,)
-    elif v.state == UNKNOWN:
-        ok, msg = False, "槽的狀態不知道（%s），沒執行" % v.get("why")
+    elif op == "restart" and birth.get("ctl_id") == cid:
+        # A2-05：上次處理到一半被殺（回條沒寫成），這份請求已經起出現在這個 run——只補回條，不再 kill、不再加項。
+        ok, msg = True, "這份 restart 請求已經起了 %s（%s 的重起；重播不重做）" % (rid, birth.get("restart_of"))
     elif v.state == EMPTY or v.run is None:
         ok, msg = False, "槽裡沒有可以 %s 的 run" % op
     elif target is not None and target != v.run:
@@ -348,7 +418,6 @@ def run_ctl(ctx, slot):
     elif op == "kill":
         ok, msg = kill_run(fslot, ctx.node, slot, v)
     else:
-        birth = v.get("birth") or {}
         reload = ctl.get("reload", False)
         item = None
         if not isinstance(reload, bool):
@@ -365,16 +434,26 @@ def run_ctl(ctx, slot):
         if item is not None:
             if reload:
                 diff = def_diff(birth, item)
-            item.update({"name": birth.get("name"), "mode": "once", "slot": slot, "restart_of": rid})
+            item.update({"name": birth.get("name"), "mode": "once", "slot": slot, "restart_of": rid, "ctl_id": cid})
+            dup = []
+
+            def add(t):
+                """加 once 項；表裡已有同 ctl_id 的（上次加完就被殺）回 None＝不寫（A2-05）。"""
+                cur = _append_items(t, [])
+                if any(isinstance(i, dict) and i.get("ctl_id") == cid for i in cur["tasks"]):
+                    dup.append(True)
+                    return None
+                return _append_items(t, [item])
             # spec §6、P2-07：先加 once 再 kill，崩潰後仍有重起意圖；實際起動留給 tick（S-10）。
             try:
-                edit_json(os.path.join(ctx.fnode, ".aos", "tasks.json"),
-                          lambda t: _append_items(t, [item]), default=None, timeout=1.0)
+                edit_json(os.path.join(ctx.fnode, ".aos", "tasks.json"), add, default=None, timeout=1.0)
             except LockTimeout:
                 ok, msg = False, "tasks.json.lock 一秒內拿不到，沒執行（沒 kill）"
             else:
+                test_point("restart-after-append")
                 ok, msg = kill_run(fslot, ctx.node, slot, v)
-                msg += "; once 項已加進 tasks.json（slot %s）" % slot
+                test_point("restart-after-kill")
+                msg += "; once 項%s（slot %s）" % ("上次已加過、沒再加" if dup else "已加進 tasks.json", slot)
                 if reload:
                     msg += "（reload：%s）" % ("；".join("%s %s → %s" % (
                         k, json.dumps(d["old"], ensure_ascii=False), json.dumps(d["new"], ensure_ascii=False))
@@ -383,6 +462,7 @@ def run_ctl(ctx, slot):
     if diff is not None:
         ctl["result"]["diff"] = diff
     write_json(os.path.join(fslot, "ctl-done.json"), ctl)
+    test_point("ctl-after-done")
     try:
         os.remove(path)
     except OSError:
@@ -579,6 +659,8 @@ def start_in_slot(ctx, item, slot, run, sub=None):
     clear_slot(fslot)
     birth = {"name": item.get("name"), "slot": slot, "run": run, "round": rnd, "node": ctx.node_id,
              "once": item.get("mode") == "once", "restart_of": item.get("restart_of"), "at": now(), "runner": None}
+    if item.get("ctl_id"):
+        birth["ctl_id"] = item["ctl_id"]   # A2-05：哪一份 restart 請求起的；同一份請求重播時認得出「已經起過」
     if "inst" in item:
         birth["inst"] = item["inst"]
     else:
@@ -607,8 +689,9 @@ def start_in_slot(ctx, item, slot, run, sub=None):
     test_point("after-birth")
     env = env_with_bin()
     # spec §2.7、§5.5、P2-15：每次重建身分，動作控制與測試鉤子不傳給任務或子 daemon。
-    for k in ("AOS7_SUBROOT", "AOS7_GEN", "AOS7_EARLY", "AOS7_INCOMPLETE", "AOS7_TEST_CRASH", "AOS7_TEST_HANG") \
-            + OWNER_ENV:
+    # AOS7_TEST_RUNNER_CRASH 留給 aos7-run（它起任務前自己拿掉）；其他測試鉤子不傳。
+    for k in ("AOS7_SUBROOT", "AOS7_GEN", "AOS7_EARLY", "AOS7_INCOMPLETE", "AOS7_TEST_CRASH", "AOS7_TEST_HANG",
+              "AOS7_TEST_FAULT") + OWNER_ENV:
         env.pop(k, None)
     env.update({"AOS7_ROOT": root, "AOS7_NODE": node, "AOS7_NODE_ID": ctx.node_id, "AOS7_TASK": tdir,
                 "AOS7_TID": slot, "AOS7_RUN": str(run)})
@@ -642,6 +725,7 @@ def start_in_slot(ctx, item, slot, run, sub=None):
                 write_json(bpath, cur)
         except OSError:
             pass
+        test_point("after-runner")
     finally:
         os.close(tfd)
     return run_id(slot, run)

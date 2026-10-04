@@ -6,12 +6,54 @@ daemon、tick／tock、ctl 與普通任務共用；依呼叫者給的 path 讀�
 並讀 /proc 的程序身分。動作鎖另讀 .aosd/gen.json、寫 .aos/action.owner.json；不自行推進回合。"""
 import contextlib
 import datetime
+import errno
+import fnmatch
 import json
 import os
+import re
 import stat
 import time
 
 BIN = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin")
+
+
+# ---------- 三態的共同小工具（spec 第 0 節；A2-01 把判定收斂到這裡與 aos7_proc、aos7_task.judge） ----------
+
+GONE_ERRNO = (errno.ENOENT, errno.ENOTDIR)   # 只有這兩種算「確定不存在」；其他（EIO、ESTALE、EACCES…）是「看不到」
+
+
+def is_gone(e):
+    """OSError e 是不是「確定不存在」（ENOENT／ENOTDIR）。其他錯誤一律是「不知道」，呼叫的人要保留現狀（spec §0）。"""
+    return isinstance(e, OSError) and e.errno in GONE_ERRNO
+
+
+class Unknown(Exception):
+    """推定不了的事實（round.json 讀不到、gen.json 不能用、看不到 node…）：tick／tock 什麼都不寫，退出碼 3（P2-09）。"""
+
+
+def inject(op, path):
+    """**只給測試**的故障注入點（A2 回歸矩陣）：環境變數 `AOS7_TEST_FAULT` 有符合 op 與 path 的規則就丟那個 errno 的 OSError。
+
+    規則：分號分隔的 `op:glob:ERRNO`（例 `proc-stat:*:EIO;open:*/round.json:ESTALE`），glob 用 fnmatch 比完整路徑；
+    值是 `@/路徑` 時每次從那個檔讀規則（檔不在＝沒有注入；給跑著的 daemon 中途開關用）。
+    op：proc-list、proc-stat、proc-environ、proc-cmdline、open（read_json3）、listdir（列槽）、stat（daemon 看 node）、
+    node-open（tick／tock 開 node）。正常環境沒有這個變數，這裡只多一次環境查詢；tick 不把它傳給任務（P2-15）。"""
+    spec = os.environ.get("AOS7_TEST_FAULT")
+    if not spec:
+        return
+    if spec.startswith("@"):
+        try:
+            with open(spec[1:], encoding="utf-8") as f:
+                spec = f.read()
+        except OSError:
+            return
+    for rule in re.split(r"[;\n]", spec):
+        parts = rule.strip().split(":")
+        if len(parts) != 3 or parts[0] != op or not fnmatch.fnmatchcase(str(path), parts[1]):
+            continue
+        code = getattr(errno, parts[2].strip(), None)
+        if isinstance(code, int):
+            raise OSError(code, "%s（AOS7_TEST_FAULT 注入）" % os.strerror(code), str(path))
 
 
 def now():
@@ -60,11 +102,46 @@ def write_json(path, obj):
     if d:
         os.makedirs(d, exist_ok=True)
     # spec §0：暫存檔以 `.` 開頭，列資料夾時不讀到半份 JSON（probes/polyglot N11）。
+    # 被 SIGKILL 在 rename 之前會留下暫存檔：寫者 pid 不在之後由 sweep_tmp 清（A2-07）。
     tmp = os.path.join(d, ".%s.tmp.%d" % (os.path.basename(path), os.getpid()))
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=1)
         f.write("\n")
+    test_point("tmp:" + os.path.basename(path))
     os.replace(tmp, path)
+
+
+TMP_RE = re.compile(r"^\.(.+)\.tmp\.([0-9]+)$")
+
+
+def sweep_tmp(d):
+    """清掉資料夾 d 裡「寫者已經不在」的原子寫暫存檔 `.<名>.tmp.<pid>`（A2-07）。回清掉的檔名清單。
+
+    write_json／aos7-run 的 write_at 被 SIGKILL 在 rename 之前會留下它們，平常沒人收就會一直累積。
+    只看 pid 確定不在（kill(0) 回 ESRCH）才刪；pid 在（可能被重用）、看不到、列不出資料夾都保留，下次再看（spec §0）。
+    tick／tock 在拿著 action.lock 時清自己的 `.aos/` 與槽；daemon 清 `.aosd/`、`ctl/`、`ctl-done/`。"""
+    out = []
+    try:
+        names = os.listdir(d)
+    except OSError:
+        return out
+    for n in names:
+        m = TMP_RE.match(n)
+        if not m:
+            continue
+        try:
+            os.kill(int(m.group(2)), 0)
+            continue                     # 寫者還在（或 pid 被重用）：不動
+        except ProcessLookupError:
+            pass
+        except OSError:
+            continue                     # EPERM 等：程序在，只是不是我們的
+        try:
+            os.unlink(os.path.join(d, n))
+            out.append(n)
+        except OSError:
+            pass
+    return out
 
 
 class LockTimeout(Exception):
@@ -125,8 +202,8 @@ def read_json3(path, dir_fd=None):
 
     path 是檔案路徑，dir_fd 可指定相對路徑的基準目錄 fd。四種讀檔結果供上層組成
     是／否／不知道三態；BAD 如何解讀由該檔案的契約決定，不混同 I/O 失敗。"""
-    import errno
     try:
+        inject("open", path)
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK, dir_fd=dir_fd)
     except OSError as e:
         if e.errno in (errno.ENOENT, errno.ENOTDIR, errno.ENXIO):
@@ -146,6 +223,36 @@ def read_json3(path, dir_fd=None):
         return OK, json.loads(data.decode("utf-8"))
     except ValueError:
         return BAD, None
+
+
+ROUND_OPEN, ROUND_CLOSED, ROUND_NONE = "open", "closed", "none"
+
+
+def read_round(path):
+    """round.json 的三態（spec §2.2、§3；A2-02）：回 (狀態, 內容, 說明)。daemon、tick、tock 都只用這一個判定。
+
+    - ("open", r, None)／("closed", r, None)：物件、`round` 是整數、`open` 是 true／false——**只有明確的 `open: false` 才是已關的證據**。
+    - ("none", None, None)：確定不存在（新空間、或被人刪了；tick 照 last-round.json 接著數）。
+    - (IO, None, 說明)：讀不到。
+    - (BAD, 內容, 說明)：半寫、不是物件、缺 `open`、型別不對——跟讀不到一樣是「不知道」，不能當已關（不然會跳過或覆蓋未提交的回合）。"""
+    st, r = read_json3(path)
+    if st == MISSING:
+        return ROUND_NONE, None, None
+    if st == IO:
+        return IO, None, "round.json 讀不到：%s" % r
+    if st == OK and isinstance(r, dict) and is_int(r.get("round")) and isinstance(r.get("open"), bool):
+        return (ROUND_OPEN if r["open"] else ROUND_CLOSED), r, None
+    shown = "半寫或不是 JSON" if st == BAD else json.dumps(r, ensure_ascii=False)[:120]
+    return BAD, r, ("round.json 內容不完整（%s）；要 {\"round\": 整數, \"open\": true/false}，"
+                    "確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}" % shown)
+
+
+def summary_ok(lr):
+    """last-round.json 的內容是不是一份完整的總結（tock 自己寫的那種）：物件、round 是整數、tock_at 是字串、
+    started／alive／ended 是陣列（spec §3、§7）。不完整的不拿來重播，tock 照常重新產生一份（A2-02 疑點：原本只比 round）。
+    tock 自己寫的總結是原子寫、寫完讀回確認，只有人手寫壞的才會走到這裡；那時已補過 seen_round 的結束不會再報（核心不補）。"""
+    return (isinstance(lr, dict) and is_int(lr.get("round")) and isinstance(lr.get("tock_at"), str)
+            and all(isinstance(lr.get(k), list) for k in ("started", "alive", "ended")))
 
 
 def test_point(name):
@@ -169,6 +276,7 @@ def proc_starttime(pid):
 
     pid 是程序號；成功回 int，讀不到或 stat 內容不合也回 None（不知道），不據此認定死亡（spec §2.5、§5.4）。"""
     try:
+        inject("proc-stat", "/proc/%d/stat" % pid)
         with open("/proc/%d/stat" % pid) as f:
             return int(f.read().rsplit(")", 1)[1].split()[19])
     except (OSError, IndexError, ValueError):
@@ -186,25 +294,31 @@ def action_lock(root, node):
     新 daemon 先換世代才起時間線；舊動作要嘛在新動作之前做完（拿著鎖時新的進不來），要嘛拿到鎖時看到世代變了。
     沒有 AOS7_GEN（人手跑、測試）不比對。
 
-    拿到鎖後寫 `.aos/action.owner.json`＝`{"pid","gen","starttime"}`：新 daemon 的動作等鎖逾時時，靠它認出
-    「舊世代、還是同一個程序」的持有者並 SIGKILL（astra-5 F-04；不 unlink 鎖檔）。node 是動作拿著的路徑
-    （tick／tock 給的是 `/proc/self/fd/N`，node 被刪時開不了鎖檔 → FileNotFoundError，由呼叫的人當 gone）。
+    **先比世代、確定是現役才寫** `.aos/action.owner.json`＝`{"pid","gen","starttime"}`（舊世代的動作什麼都不寫）：新 daemon 的動作
+    等鎖逾時時，靠它認出「舊世代、還是同一個程序」的持有者並 SIGKILL（astra-5 F-04；不 unlink 鎖檔）。
+    gen.json 讀不到、壞掉、不是 `{"gen": 整數}`＝不知道世代 → 丟 Unknown（退出碼 3、daemon 退避），不當成現役放行。
+    node 是動作拿著的路徑（tick／tock 給的是 `/proc/self/fd/N`，node 被刪時開不了鎖檔 → FileNotFoundError，由呼叫的人當 gone）。
 
-    root 是 daemon 根，node 是已抓住的 node 路徑；回值是 context manager，
-    區塊取得布林寫入許可。gen 檔內容不是 dict 時目前也放行；I/O 例外由呼叫者處理（spec §2.5）。"""
+    root 是 daemon 根，node 是已抓住的 node 路徑；回值是 context manager，區塊取得布林寫入許可（spec §2.5）。"""
     import fcntl
     with open(os.path.join(node, ".aos", "action.lock"), "a") as lk:
         fcntl.flock(lk, fcntl.LOCK_EX)
         mine = os.environ.get("AOS7_GEN")
+        if mine is not None:
+            # spec §2.5：拿鎖後才比 gen，讓排在新 daemon 後面的舊動作看到世代已換。
+            st, cur = read_json3(os.path.join(root, ".aosd", "gen.json"))
+            if st != OK or not isinstance(cur, dict) or not is_int(cur.get("gen")):
+                raise Unknown("gen.json 不能用（%s），分不出自己是不是舊世代的動作，什麼都沒寫" % (cur if st == IO else st))
+            if str(cur["gen"]) != mine:
+                yield False
+                return
         try:
             write_json(os.path.join(node, ".aos", OWNER),
                        {"pid": os.getpid(), "gen": int(mine) if mine and mine.isdigit() else None,
                         "starttime": proc_starttime(os.getpid()), "at": now()})
         except OSError:
             pass
-        # spec §2.5：拿鎖後才比 gen，讓排在新 daemon 後面的舊動作看到世代已換。
-        cur = read_json(os.path.join(root, ".aosd", "gen.json"), {}) or {}
-        yield mine is None or not isinstance(cur, dict) or str(cur.get("gen")) == mine
+        yield True
 
 
 def reap_stale_owner(node, gen):
@@ -342,6 +456,13 @@ def node_path(root, node_id):
     root 是空間根、node_id 是相對 id；回路徑字串，不驗證邊界或存在性（spec §1、S-14）。"""
     root = os.path.abspath(root)
     return root if node_id in (".", "") else os.path.join(root, node_id)
+
+
+def canonical_node(root, node_id):
+    """node 的「實際身分」路徑＝realpath(root)／node_id（A2-04）：登記與每次使用時，node 的 realpath 要等於它。
+    不等＝路徑上某一段被換成符號連結（指到別處、或連回搬走的同一個資料夾），一律當 node 不在，絕不沿連結寫出空間根。"""
+    r = os.path.realpath(root)
+    return r if node_id in (".", "") else os.path.join(r, node_id)
 
 
 def node_id_of(root, path):

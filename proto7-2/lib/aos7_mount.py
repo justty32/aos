@@ -199,7 +199,8 @@ def serve(root, taskdir, allow, real_taskdir=None):
     """
     rdir = os.path.join(taskdir, REQ)
     try:
-        names = sorted(n for n in os.listdir(rdir) if n.endswith(".json"))
+        # spec §0：`.` 開頭的是寫到一半的原子寫暫存檔，不當請求（註解疑點 aos7_mount.py:202）。
+        names = sorted(n for n in os.listdir(rdir) if n.endswith(".json") and not n.startswith("."))
     except OSError:
         return []
     out = []

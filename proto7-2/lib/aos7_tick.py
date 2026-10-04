@@ -8,9 +8,11 @@
 共用 action.lock 並讀 .aosd/gen.json、寫 .aos/action.owner.json（spec §2.5）；
 交接見 §5.3：只起 runner，任務結果由 runner 與 tock 接續。
 
-退出碼：0＝做了（或 gone／stale，stdout 說明）；3＝round.json 讀不到或兩份回合數都不能用（不知道，什麼都沒寫）。
+退出碼：0＝做了（或 gone／stale，stdout 說明）；3＝不知道（round.json 讀不到／內容不完整／上一回合還開著、
+last-round.json 不能接、列不出槽、gen.json 不能用、看不到 node；什麼都沒寫，A2-02、P2-09）。
 起點是 proto7-1 lib/aos7_tick.py；spawn/ 拿掉，一次性任務改成 tasks.json 的 `mode: "once"` 項（4.4 的 launch 標記）。
 """
+import errno
 import hashlib
 import json
 import os
@@ -19,8 +21,9 @@ import sys
 
 import aos7_mount
 import aos7_task
-from aos7_fs import (BAD, FD_PREFIX, IO, MISSING, OK, LockTimeout, action_lock, edit_json, is_int, locked,
-                     node_path, now, read_json, read_json3, test_point, write_json)
+from aos7_fs import (BAD, FD_PREFIX, IO, MISSING, OK, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, LockTimeout, Unknown,
+                     action_lock, canonical_node, edit_json, inject, is_gone, is_int, locked, node_path, now,
+                     read_json, read_json3, read_round, sweep_tmp, test_point, write_json)
 from aos7_task import EMPTY, ENDED, LIVE, UNKNOWN, NAME_RE, SLOT_RE
 
 MODES = ("keep", "each", "once")
@@ -96,6 +99,8 @@ def check_item(item):
     if "mounts_dyn" in item and not (isinstance(item["mounts_dyn"], list)
                                      and all(isinstance(x, str) for x in item["mounts_dyn"])):
         raise ValueError("mounts_dyn 要是字串陣列")
+    if "ctl_id" in item and not isinstance(item["ctl_id"], str):
+        raise ValueError("ctl_id 要是字串（restart 寫的，A2-05）")
 
 
 def launch_of(item):
@@ -250,15 +255,30 @@ GONE = {"round": None, "started": [], "gone": True}
 def held_node(fn, root, node_id, gone):
     """持有 root／node_id 的目錄 fd，呼叫 fn(fnode, node)，回其結果或 gone 的副本。
     fnode 是 /proc/self/fd/N，node 是字串路徑；fd 讓搬移後仍操作原目錄（spec §2.5）。
-    開 node 的 OSError 目前一律回 gone；動作中 .aos 確定消失也回 gone，其餘例外外拋。
-    fd 最後關閉；不沿舊字串路徑重建被刪掉的 node（P2-05）。"""
+
+    開 node 時（A2-04、註解疑點 aos7_tick.py:258）：
+    - 確定不存在（ENOENT／ENOTDIR），或最後一段是符號連結（O_NOFOLLOW → ELOOP）→ gone。
+    - 開到的資料夾 realpath 不是 canonical_node（路徑上有一段被換成符號連結）→ gone：**絕不沿符號連結寫出空間根**，
+      也不把連回搬走資料夾的連結當成原 node（daemon 那邊同時會判 missing）。
+    - 其他錯誤（EIO、ESTALE、EACCES…）＝看不到 → 丟 Unknown（退出碼 3），不當 gone。
+    動作中 .aos 確定消失也回 gone，其餘例外外拋。fd 最後關閉；不沿舊字串路徑重建被刪掉的 node（P2-05）。"""
     node = node_path(root, node_id)
     try:
-        nfd = os.open(node, os.O_RDONLY | os.O_DIRECTORY)
-    except OSError:
-        return dict(gone)
+        inject("node-open", node)
+        nfd = os.open(node, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except OSError as e:
+        if is_gone(e) or e.errno == errno.ELOOP:
+            return dict(gone)
+        raise Unknown("看不到 node %s：%r" % (node_id, e)) from None
     fnode = FD_PREFIX + str(nfd)
     try:
+        try:
+            real = os.readlink(fnode)
+        except OSError as e:
+            raise Unknown("認不出抓著的 node 在哪：%r" % (e,)) from None
+        if real != canonical_node(root, node_id):
+            return dict(gone, why="node 的實際位置是 %s，不是 %s（路徑經過符號連結，A2-04）"
+                        % (real, canonical_node(root, node_id)))
         try:
             # spec §1、P2-05：登記不要求 .aos 預先存在，經 fd 建立才不會復活已搬走的舊路徑。
             os.makedirs(os.path.join(fnode, ".aos"), exist_ok=True)
@@ -275,36 +295,35 @@ class _Skip(Exception):
     """這回合不從 tasks.json 起任何東西（錯誤已記）。"""
 
 
-class Unknown(Exception):
-    """推定不了的事實（round.json 讀不到…）：什麼都不寫，退出碼 3。"""
-
-
 def next_round(fnode):
-    """讀 fnode 下的回合檔，回 (新回合數, 錯誤清單)（spec §3、P2-06）。
-    round.json 內容壞掉用 last-round.json 接續；不存在且無可用前次回合時從 1 起。
-    I/O 或壞 round 又無可用總結丟 Unknown，不臆測回合數（§0 三態、P2-09）。"""
-    st, r = read_json3(os.path.join(fnode, ".aos", "round.json"))
-    if st == IO:
-        raise Unknown("round.json 讀不到：%s" % r)
-    if st == OK and isinstance(r, dict) and is_int(r.get("round")):
+    """讀 fnode 下的回合檔，回 (新回合數, 錯誤清單)（spec §2.2、§3、P2-06；A2-02）。判定只用 read_round：
+
+    - 明確 `open: false` → round+1。
+    - `open: true` → 丟 Unknown：上一回合還開著，tick 不自己開下一回合（不變條件一，daemon 會先 tock 收掉）。
+    - 讀不到、半寫、缺 open、型別不對 → 丟 Unknown：分不出上一回合關了沒，**不再用 last-round.json 接著數**
+      （那樣會把還開著的同號回合再開一次、蓋掉它的 reaped／started；A2-02）。請人確認後寫回 round.json。
+    - 不存在 → 用 last-round.json 的 round 接著數；last-round.json 也不存在從 1 起；它讀不到或壞掉丟 Unknown（不從 1 重數）。"""
+    st, r, why = read_round(os.path.join(fnode, ".aos", "round.json"))
+    if st == ROUND_CLOSED:
         return r["round"] + 1, []
+    if st == ROUND_OPEN:
+        raise Unknown("第 %d 回合還開著（round.json open: true），先 tock 收掉才開下一回合" % r["round"])
+    if st != ROUND_NONE:
+        raise Unknown(why)
     lst, lr = read_json3(os.path.join(fnode, ".aos", "last-round.json"))
-    if lst == IO:
-        raise Unknown("round.json 不能用、last-round.json 讀不到：%s" % lr)
-    lr_round = lr.get("round") if lst == OK and isinstance(lr, dict) and is_int(lr.get("round")) else None
-    if st == MISSING:
-        return (lr_round or 0) + 1, ([] if lr_round is None else ["round.json 不見了，從 last-round.json 的 %d 接著數"
-                                                                  % lr_round])
-    if lr_round is None:
-        raise Unknown("round.json 壞了，last-round.json 也不能用；請人寫回 round.json（例如 {\"round\": N, \"open\": false}）")
-    return lr_round + 1, ["round.json 壞了，從 last-round.json 的 %d 接著數" % lr_round]
+    if lst == MISSING:
+        return 1, []
+    if lst == OK and isinstance(lr, dict) and is_int(lr.get("round")):
+        return lr["round"] + 1, ["round.json 不見了，從 last-round.json 的 %d 接著數" % lr["round"]]
+    raise Unknown("round.json 不見了，last-round.json 也%s；請人寫回 round.json（例如 {\"round\": N, \"open\": false}）"
+                  % ("讀不到：%s" % lr if lst == IO else "不能用"))
 
 
 def tick(root, node_id):
     """替空間 root 的 node_id 開一次回合，回 round／started／tasks_rev 結果（spec §4.2）。
     node 開不了回 gone，舊世代回 stale；推定不了丟 Unknown，交 main 回退出碼 3。
     呼叫者 daemon 先確認舊回合已關（§2.2 不變條件一），此入口負責 fd 與動作鎖。"""
-    root = os.path.abspath(root)
+    root = os.path.realpath(root)   # A2-04：node 的身分以實際路徑比對；空間根本身經過連結也照實際位置
 
     def act(fnode, node):
         """以 fnode（持有的 fd 路徑）、node（原字串路徑）在動作鎖內跑 tick，回結果。
@@ -322,6 +341,7 @@ def _tick(root, node_id, node, fnode):
     開回合前無法讀回合或列槽丟 Unknown；開後的單項錯誤記 tasks_error，其他項繼續。"""
     rpath = os.path.join(fnode, ".aos", "round.json")
     rnd, errs = next_round(fnode)
+    sweep_tmp(os.path.join(fnode, ".aos"))   # A2-07：拿著 action.lock 時清掉寫者已死的原子寫暫存檔
     _slots, lerr = aos7_task.list_slots(fnode)
     if lerr:
         raise Unknown("列不出 .aos/tasks/：%s" % lerr)
@@ -358,6 +378,7 @@ def _tick(root, node_id, node, fnode):
             p.errors += lerrs
             plan_round(ctx, items, views, rnd, p)
             if p.changed:
+                test_point("before-launch")
                 write_json(tpath, _rewrite(tpath, items, p))   # launch 標記在寫 birth.json 之前落地（4.4）
                 test_point("after-launch")
     except LockTimeout:
@@ -401,6 +422,7 @@ def _tick(root, node_id, node, fnode):
         except (LockTimeout, ValueError) as e:
             # 刪不掉沒關係：下一個 tick 照 launch 標記比對 birth.json，知道已經起了就刪（4.4）
             state.setdefault("tasks_error", []).append("起完的 once 項這回合沒刪成：%s" % e)
+        test_point("after-once-delete")
     state["started"] = started
     write_json(rpath, state)
     return {"round": rnd, "started": started, "tasks_rev": rev}
