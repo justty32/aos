@@ -1,23 +1,13 @@
-"""aos7-tick：開一個回合——round +1、執行任務控制、審核加掛、照 tasks.json 在槽裡起任務，印一行 JSON 就結束，不等任務（spec.md 第 4 節）。
-
-    aos7-tick <root> <node-id>
-
-由 daemon 的 node 時間線呼叫（S-04、S-09、S-10），也可由人手執行。
-讀 .aos/round.json、last-round.json、tasks.json 與各槽的 birth／pid／exit／ctl／mount-req；
-寫 round.json、必要的 tasks.json，以及經 task／mount 層更新的槽檔、控制與掛載回條。
-共用 action.lock 並讀 .aosd/gen.json、寫 .aos/action.owner.json（spec §2.5）；
-交接見 §5.3：只起 runner，任務結果由 runner 與 tock 接續。
-
-退出碼：0＝做了（或 gone／stale，stdout 說明）；3＝不知道（round.json 讀不到／內容不完整／上一回合還開著、
-last-round.json 不能接、列不出槽、gen.json 不能用、看不到 node；什麼都沒寫，A2-02、P2-09）。
-起點是 proto7-1 lib/aos7_tick.py；spawn/ 拿掉，一次性任務改成 tasks.json 的 `mode: "once"` 項（4.4 的 launch 標記）。
-"""
+"""aos7-tick <root> <node-id>：開一個回合——round +1、任務控制、審核加掛、照 tasks.json 在槽裡起任務，印一行 JSON 就結束，
+不等任務（spec.md 第 4 節）。退出碼：0＝做了（或 gone／stale）；3＝不知道（回合判不出或還開著、列不出槽、gen.json 不能用、
+看不到 node），什麼都沒寫；其他（例外）＝失敗，時間線照樣退避、不算一回合。"""
 import errno
 import hashlib
 import json
 import os
 import signal
 import sys
+import types
 
 import aos7_mount
 import aos7_task
@@ -27,15 +17,14 @@ from aos7_fs import (BAD, FD_PREFIX, N, OK, U, ROUND_CLOSED, ROUND_NONE, ROUND_O
 from aos7_task import EMPTY, ENDED, LIVE, UNKNOWN, NAME_RE, SLOT_RE
 
 MODES = ("keep", "each", "once")
-LOCK_WAIT = 1.0   # 4.2 第 4 步：tasks.json.lock 最多等 1 秒
+LOCK_WAIT = 1.0   # tasks.json.lock 最多等 1 秒
 
 
 # ---------- tasks.json ----------
 
 def load_items(fnode):
-    """從 fnode（持有的 node fd 路徑）讀任務表，回 (物件項目清單, 錯誤清單, tasks_rev)。
-    不存在＝空表、不記錯；讀不到或不是一般檔（U）＝這回合不起、記錯；不是 JSON 或不是 {"tasks": [...]}（B，別人寫的輸入不合）
-    ＝當空表、記錯。只決定本回合能否起任務，不據此刪槽（spec §4.1～4.3）。"""
+    """讀任務表，回 (物件項目, 錯誤, tasks_rev＝原文 sha1 前 12 碼)。不存在＝空表；讀不到或不是一般檔（U）＝這回合不起、記錯；
+    不是 JSON 或不是 {"tasks": [...]}（B：別人寫的輸入不合）＝當空表、記錯。"""
     path = os.path.join(fnode, ".aos", "tasks.json")
     st, t = fact(path)
     rev = None
@@ -58,9 +47,24 @@ def load_items(fnode):
     return [i for i in items if isinstance(i, dict)], errs, rev
 
 
+# 欄位：(名字, 沒寫時的值, 合格嗎, 不合時說什麼)。不合的那一項跳過、記 tasks_error，其他照起（spec §4.1）
+FIELDS = (("mode", "each", lambda v: v in MODES, "要是 keep、each 或 once"),
+          ("max_live", 1, lambda v: is_int(v) and v >= 1, "要是正整數"),
+          ("from_round", 1, is_int, "要是整數"),
+          ("until_round", None, lambda v: v is None or (is_int(v) and v >= 0), "要是非負整數"),
+          ("enabled", True, lambda v: isinstance(v, bool), "要是 true 或 false"),
+          ("mounts", None, lambda v: v is None or isinstance(v, dict), "要是物件"),
+          ("x", {}, lambda v: isinstance(v, dict), "要是物件（模組用的宣告欄位，核心照抄）"))
+# 移出核心的舊欄位：帶了＝那項不合，指到接手的模組包（不靜默忽略：忽略會讓人以為功能還在）
+MOVED = {"subroot": "subroot／allow_stop 已移到子 daemon 包：argv 改成 aos7-subd <subroot> [--allow-stop] -- ..."
+                    "（modules/subd/README.md）",
+         "retry_lost": "retry_lost 已移到 once 保證包：改寫成 \"x\": {\"retry_lost\": true}，並在 node 上跑 retry_lost 任務"
+                       "（modules/once_retry/README.md）"}
+MOVED["allow_stop"] = MOVED["subroot"]
+
+
 def check_item(item):
-    """驗證 item 任務物件的欄位型別，成功回 None，不合丟 ValueError。
-    呼叫者只跳過這一項；必須在挑槽、算 run 前驗完（spec §4.1；P2-18 的 max_live 必須大於零）。"""
+    """驗證一個任務項目，不合丟 ValueError（呼叫的人只跳過這一項）。要在挑槽、算 run 之前驗完。"""
     n = item.get("name")
     if not (isinstance(n, str) and NAME_RE.match(n)):
         raise ValueError("name 必填，只能用英數、_、-，拿到 %r" % (n,))
@@ -72,42 +76,23 @@ def check_item(item):
             raise ValueError("argv 與 inst 只能二選一")
     elif not isinstance(item.get("inst"), str):
         raise ValueError("要有 argv（字串陣列）或 inst（字串）")
-    mode = item.get("mode", "each")
-    if mode not in MODES:
-        raise ValueError("mode 要是 keep、each 或 once，拿到 %r" % (mode,))
-    ml = item.get("max_live", 1)
-    if not is_int(ml) or ml < 1:
-        raise ValueError("max_live 要是正整數，拿到 %r" % (ml,))
-    fr = item.get("from_round", 1)
-    if not is_int(fr):
-        raise ValueError("from_round 要是整數，拿到 %r" % (fr,))
-    ur = item.get("until_round")
-    if ur is not None and not (is_int(ur) and ur >= 0):
-        raise ValueError("until_round 要是非負整數，拿到 %r" % (ur,))
-    if not isinstance(item.get("enabled", True), bool):
-        raise ValueError("enabled 要是 true 或 false，拿到 %r" % (item.get("enabled"),))
-    if item.get("mounts") is not None and not isinstance(item["mounts"], dict):
-        raise ValueError("mounts 要是物件")
-    if "x" in item and not isinstance(item["x"], dict):
-        raise ValueError("x 要是物件（模組用的宣告欄位，核心照抄）")
-    if "subroot" in item or "allow_stop" in item:
-        raise ValueError("subroot／allow_stop 已移到子 daemon 包：argv 改成 aos7-subd <subroot> [--allow-stop] -- ..."
-                         "（modules/subd/README.md）")
-    if "slot" in item:
+    for k, default, ok, why in FIELDS:
+        if not ok(item.get(k, default)):
+            raise ValueError("%s %s，拿到 %r" % (k, why, item.get(k, default)))
+    for k, why in MOVED.items():
+        if k in item:
+            raise ValueError(why)
+    if "slot" in item:   # once 釘槽（控制包 restart、once 保證包加回時用）
         s = item["slot"]
-        if mode != "once":
-            raise ValueError("slot 只給 once 項")
         m = SLOT_RE.match(s) if isinstance(s, str) else None
+        if item.get("mode", "each") != "once":
+            raise ValueError("slot 只給 once 項")
         if not m or m.group(1) != n:
             raise ValueError("slot 要是 %s 或 %s.<數字>，拿到 %r" % (n, n, s))
-    if "retry_lost" in item:
-        raise ValueError("retry_lost 已移到 once 保證包：改寫成 \"x\": {\"retry_lost\": true}，並在 node 上跑 retry_lost 任務"
-                         "（modules/once_retry/README.md）")
 
 
 def launch_of(item):
-    """從 item 取出有效的 once 起動標記，回原 launch 物件（spec §4.4）。
-    沒有標記、slot 或 run 格式不合回 None；此處不讀 birth，也不判定任務是否真的起過。"""
+    """once 項的起動標記 `launch`＝{"slot", "run", "round"}（spec §4.4）；沒有或格式不合回 None。"""
     la = item.get("launch")
     if isinstance(la, dict) and isinstance(la.get("slot"), str) and SLOT_RE.match(la["slot"]) and is_int(la.get("run")):
         return la
@@ -115,15 +100,12 @@ def launch_of(item):
 
 
 def next_run(prev, rnd):
-    """由上一個 run 值 prev、本回合 rnd 算出新 run 整數（spec §5.2，W4）。
-    prev 不是整數就用 rnd；否則至少是 prev + 1，人工倒退回合也不重用舊身分。"""
+    """新 run＝起它的回合數；不大於上一個 run（回合數被人手倒退）就用上一個＋1，run 一定遞增（spec §5.2）。"""
     return rnd if not is_int(prev) or rnd > prev else prev + 1
 
 
 def table_slots(items):
-    """從 items 任務物件清單回傳表上仍認得的槽名集合，供 tock 刪槽判斷（spec §5.1）。
-    無效 name 跳過；max_live 壞掉先保留基本槽，另保留明示 slot 與有效 launch 指向的槽。
-    這是保守保留清單，不等同 check_item 的可啟動清單，也不負責讀表失敗的判斷。"""
+    """表上還認得的槽名（tock 刪槽用）：保守的保留清單——max_live 壞了也留基本槽，釘的 slot、launch 指的槽都算。"""
     names = set()
     for it in items:
         n = it.get("name")
@@ -141,32 +123,15 @@ def table_slots(items):
 
 # ---------- 挑這回合要起的 ----------
 
-class Plan:
-    """一回合的起動計畫：在表鎖內選槽、記 launch，放鎖後才真正 spawn（spec §4.2）。"""
-    def __init__(self):
-        """建立空的計畫、佔槽集合與錯誤／略過清單；無參數，初始化 self，回 None。"""
-        self.starts = []        # [(item, slot, run, once_key)]
-        self.used = set()       # 這個 tick 已排的槽
-        self.skipped = []       # [{"name", "slot"?, "why"}]
-        self.errors = []
-        self.drop = []          # 已經起過的 once 項（照 launch 標記比對）：直接刪
-        self.changed = False    # tasks.json 要寫回
-
-
 def plan_round(ctx, items, views, rnd, p):
-    """在表鎖內替 rnd 回合選槽與 run，原地更新 items、views 快取及計畫 p，回 None。
-    ctx 提供 node 路徑；未知狀態留槽不啟動，錯項只記 p.errors（spec §4.1～4.4、§5.3）。
-    once 先排，launch 先記；這裡不 spawn，呼叫者須先把更新後任務表落盤。"""
+    """表鎖內替這回合選槽、算 run（spec §4.2～4.4），結果放進 p；once 項要起的先在 items 裡記 launch（呼叫的人寫回
+    tasks.json 之後才起）。只在確知是空槽或已結束的槽起；判不出的槽不起、記 skipped。"""
     def view(slot):
-        """取 slot 的判定 View，缺快取就依 ctx／rnd 判定並存入 views。
-        讀不到保留 UNKNOWN；starttime 不明可為帶 unsure 的 LIVE（spec §5.4、P2-08）。"""
         if slot not in views:
             views[slot] = aos7_task.judge_resolved(aos7_task.slot_dir(ctx.fnode, slot), ctx.node, slot, rnd)
         return views[slot]
 
     def free(slot):
-        """回 slot 是否本回合未佔用且確知空槽或已結束；未知／活著一律 False。
-        這是准入判斷，不把「不知道」說成「已結束」（spec §0、§5.3 不變條件二）。"""
         return slot not in p.used and view(slot).state in (EMPTY, ENDED)
 
     valid = []
@@ -184,8 +149,7 @@ def plan_round(ctx, items, views, rnd, p):
         name, mode = item["name"], item.get("mode", "each")
         if item.get("enabled", True) is False or rnd < item.get("from_round", 1):
             continue
-        # until_round（使用者 10-04）：回合數超過它就不再起新 run（跟 from_round 對稱；已在跑的不殺，要收由 kernel 自己 kill）。
-        # 用途：分配者掛了，使用權照樣到期。項目與槽留著，跟 enabled:false 一樣。
+        # until_round：回合數超過它就不再起新 run（已在跑的不殺；分配者掛了，使用權照樣到期）。項目與槽留著
         expired = item.get("until_round") is not None and rnd > item["until_round"]
         if expired and not (item.get("mode") == "once" and launch_of(item)):
             continue
@@ -197,7 +161,7 @@ def plan_round(ctx, items, views, rnd, p):
                 if v.state == UNKNOWN and v.run is None:
                     p.skipped.append({"name": name, "slot": la["slot"], "why": "unknown: %s" % v.get("why")})
                     continue
-                # spec §4.4、P2-02：birth 同 run 就視為交接已開始；可能沒跑過，但不得再起第二份。
+                # 槽的 run 就是標記的 run＝交接已開始（可能沒跑成，但不能再起第二份）
                 if v.run == la["run"]:
                     p.drop.append(item)     # 已經起了（或起到一半，交給 5.4 判定）：刪掉這項，不重起
                     p.changed = True
@@ -217,31 +181,25 @@ def plan_round(ctx, items, views, rnd, p):
             p.changed = True
             p.used.add(slot)
             p.starts.append((item, slot, run, True))
-        elif mode == "keep":
-            for slot in slots:
-                if free(slot):
-                    p.used.add(slot)
-                    p.starts.append((item, slot, next_run(view(slot).run, rnd), False))
-                elif slot not in p.used and view(slot).state == UNKNOWN:
-                    p.skipped.append({"name": name, "slot": slot, "why": "unknown: %s" % view(slot).get("why")})
-        else:   # each：一個空槽起一次；上一次還在跑（沒空槽）就跳過這回合
-            slot = next((s for s in slots if free(s)), None)
-            if slot is None:
-                unk = [s for s in slots if s not in p.used and view(s).state == UNKNOWN]
+        else:   # keep：補滿所有空槽；each：一個空槽起一次，上一次還在跑（沒空槽）就跳過這回合
+            pick = [s for s in slots if free(s)]
+            pick = pick if mode == "keep" else pick[:1]
+            unk = [s for s in slots if s not in p.used and s not in pick and view(s).state == UNKNOWN]
+            for slot in pick:
+                p.used.add(slot)
+                p.starts.append((item, slot, next_run(view(slot).run, rnd), False))
+            if mode == "keep":
+                p.skipped += [{"name": name, "slot": s, "why": "unknown: %s" % view(s).get("why")} for s in unk]
+            elif not pick:
                 p.skipped.append({"name": name, "why": "unknown" if unk else "busy"})
-                continue
-            p.used.add(slot)
-            p.starts.append((item, slot, next_run(view(slot).run, rnd), False))
 
 
 # ---------- 審核加掛（4.5） ----------
 
 def serve_mounts(ctx, views):
-    """替 views 中已知 run 的活槽處理加掛請求，ctx 提供空間及 node 路徑。
-    回附 run id 的回條清單；單槽例外變失敗回條，UNKNOWN 槽不處理。
-    mount_allow 讀不到時目前沿用未設定值 None（spec §4.5 的根內預設許可）。"""
+    """審核活任務的執行中加掛請求（spec §4.5），回帶 run id 的紀錄。tasks.json 讀不到＝不知道 mount_allow，這回合不審。"""
     st, t = fact(os.path.join(ctx.fnode, ".aos", "tasks.json"))
-    if st == U:   # 不知道 mount_allow 是什麼：這回合不審，請求留著
+    if st == U:
         return [{"run": None, "name": None, "path": None, "ok": False, "msg": "%s，這回合不審加掛（請求留著）" % t}]
     allow = t.get("mount_allow") if st == OK and isinstance(t, dict) else None
     out = []
@@ -260,18 +218,10 @@ def serve_mounts(ctx, views):
 
 # ---------- tick 本體 ----------
 
-GONE = {"round": None, "started": [], "gone": True}
-
-
 def held_node(fn, root, node_id, gone):
-    """持有 root／node_id 的目錄 fd，呼叫 fn(fnode, node)，回其結果或 gone 的副本。
-    fnode 是 /proc/self/fd/N，node 是字串路徑；fd 讓搬移後仍操作原目錄（spec §2.5）。
-
-    開 node 時：
-    - 確定不存在（ENOENT／ENOTDIR），或 node 本身被換成符號連結（O_NOFOLLOW → ELOOP）→ gone。這是「不沿連結寫出空間根」的
-      最小保險；路徑中間段被換成符號連結是誤用（spec §11），不再每次重驗整條路徑。
-    - 其他錯誤（EIO、ESTALE、EACCES…）＝看不到 → 丟 Unknown（退出碼 3），不當 gone。
-    動作中 .aos 確定消失也回 gone，其餘例外外拋。fd 最後關閉；不沿舊字串路徑重建被刪掉的 node（P2-05）。"""
+    """抓住 node 的 fd 跑 fn(fnode, node)（fnode＝`/proc/self/fd/N`：node 中途被搬走照樣寫到它，被刪就寫不進去）。
+    node 不在、或 node 本身是符號連結（O_NOFOLLOW：絕不沿連結寫出空間根的最小保險）→ 回 gone；看不到（EIO…）丟 Unknown。
+    動作中 node 被刪（.aos 不在了）也回 gone。`.aos/` 不在就經 fd 建（登記不要求它先存在）。"""
     node = node_path(root, node_id)
     try:
         inject("node-open", node)
@@ -283,25 +233,20 @@ def held_node(fn, root, node_id, gone):
     fnode = FD_PREFIX + str(nfd)
     try:
         try:
-            # spec §1、P2-05：登記不要求 .aos 預先存在，經 fd 建立才不會復活已搬走的舊路徑。
             os.makedirs(os.path.join(fnode, ".aos"), exist_ok=True)
             return fn(fnode, node)
         except (FileNotFoundError, NotADirectoryError):
             if not os.path.isdir(os.path.join(fnode, ".aos")):
-                return dict(gone)   # 動作中途 node 被刪：寫不進去就收手
+                return dict(gone)
             raise
     finally:
         os.close(nfd)
 
 
 def next_round(fnode):
-    """讀 fnode 下的回合檔，回 (新回合數, 錯誤清單)（spec §2.2、§3、P2-06；A2-02）。判定只用 read_round：
-
-    - 明確 `open: false` → round+1。
-    - `open: true` → 丟 Unknown：上一回合還開著，tick 不自己開下一回合（不變條件一，daemon 會先 tock 收掉）。
-    - 讀不到、半寫、缺 open、型別不對 → 丟 Unknown：分不出上一回合關了沒，**不再用 last-round.json 接著數**
-      （那樣會把還開著的同號回合再開一次、蓋掉它的 reaped／started；A2-02）。請人確認後寫回 round.json。
-    - 不存在 → 用 last-round.json 的 round 接著數；last-round.json 也不存在從 1 起；它讀不到或壞掉丟 Unknown（不從 1 重數）。"""
+    """這回合的回合數，回 (回合數, 說明)（spec §3）：明確 `open: false` → round＋1；還開著、或判不出 → 丟 Unknown（不拿
+    last-round.json 接號：那樣會把還開著的同號回合再開一次）；round.json 不存在 → 照 last-round.json 接著數，它也不存在
+    從 1 起，它讀不到或壞掉丟 Unknown（不從 1 重數）。"""
     st, r, why = read_round(os.path.join(fnode, ".aos", "round.json"))
     if st == ROUND_CLOSED:
         return r["round"] + 1, []
@@ -319,29 +264,24 @@ def next_round(fnode):
 
 
 def tick(root, node_id):
-    """替空間 root 的 node_id 開一次回合，回 round／started／tasks_rev 結果（spec §4.2）。
-    node 開不了回 gone，舊世代回 stale；推定不了丟 Unknown，交 main 回退出碼 3。
-    呼叫者 daemon 先確認舊回合已關（§2.2 不變條件一），此入口負責 fd 與動作鎖。"""
+    """開一個回合（spec §4.2），回 {round, started, tasks_rev}；node 不在回 gone、舊世代的動作回 stale。"""
     root = os.path.realpath(root)   # 空間根本身經過連結也照實際位置
 
     def act(fnode, node):
-        """以 fnode（持有的 fd 路徑）、node（原字串路徑）在動作鎖內跑 tick，回結果。
-        拿鎖後比世代，舊 daemon 的動作回 stale，不繼續改回合（spec §2.5）。"""
         with action_lock(root, fnode) as ok:
             if not ok:
                 return {"round": None, "started": [], "stale": True}
             return _tick(root, node_id, node, fnode)
-    return held_node(act, root, node_id, GONE)
+    return held_node(act, root, node_id, {"round": None, "started": [], "gone": True})
 
 
 def _tick(root, node_id, node, fnode):
-    """在已持有動作鎖下開回合、處理控制／加掛並起任務，回 round／started／tasks_rev。
-    root、node_id 是空間識別，node 是原路徑，fnode 是持有的 fd 路徑（spec §4.2）。
-    開回合前無法讀回合或列槽丟 Unknown；開後的單項錯誤記 tasks_error，其他項繼續。"""
+    """動作鎖內開回合：判回合、清暫存、補欠的 tock.json、寫 round.json、任務控制、判槽、審加掛、挑要起的（表鎖內記 launch）、
+    記 reaped、起任務、刪起完的 once。開回合之前推定不了丟 Unknown；開了之後單項出錯只記 tasks_error。"""
     rpath = os.path.join(fnode, ".aos", "round.json")
     rnd, errs = next_round(fnode)
-    sweep_tmp(os.path.join(fnode, ".aos"))   # A2-07：拿著 action.lock 時清掉寫者已死的原子寫暫存檔
-    # A3-08：上一回合關上時有沒寫進去的 tock.json（round.json 的 notify_errors），開下一回合前補一次；還補不上的記進 tasks_error
+    sweep_tmp(os.path.join(fnode, ".aos"))
+    # 上一回合關上時沒寫進去的 tock.json（round.json 的 notify_errors）開回合前補一次；還補不上的記進 tasks_error
     import aos7_tock
     owed = aos7_tock.retry_notify(fnode, node, read_json(rpath))
     if owed:
@@ -349,10 +289,9 @@ def _tick(root, node_id, node, fnode):
     _slots, lerr = aos7_task.list_slots(fnode)
     if lerr:
         raise Unknown("列不出 .aos/tasks/：%s" % lerr, kind="listdir")
-    # spec §0、§4.2、P2-09：開回合前先確認能列槽，不把 I/O 失敗當成沒有任務。
     state = {"round": rnd, "open": True, "tick_at": now(), "tock_at": None, "started": [], "ctl": [], "mounts": []}
     write_json(rpath, state)
-    test_point("tick-opened")   # P2-15：保留可重現卡住動作的測試鉤子，供 daemon 逾時恢復驗證。
+    test_point("tick-opened")
     ctx = aos7_task.Ctx(root, node_id, node, fnode, rnd)
 
     state["ctl"] = aos7_task.run_all_ctl(ctx)
@@ -370,18 +309,19 @@ def _tick(root, node_id, node, fnode):
             views[slot] = aos7_task.View(state=UNKNOWN, run=None, why=repr(e)[:200])
     state["mounts"] = serve_mounts(ctx, views)
 
-    p = Plan()
+    # 這回合的起動計畫：starts＝[(項目, 槽, run, 是 once)]、used＝已排的槽、drop＝已經起過的 once 項、changed＝表要寫回
+    p = types.SimpleNamespace(starts=[], used=set(), skipped=[], errors=[], drop=[], changed=False)
     tpath = os.path.join(fnode, ".aos", "tasks.json")
     rev = None
     try:
-        # spec §4.2～4.3：先鎖表完成准入與 launch 落盤，放鎖才 spawn，避免整段起程序佔住共用表。
+        # 表鎖內只挑槽、寫 launch，放鎖之後才起程序（不讓起程序的時間佔住共用的表）
         with locked(tpath, LOCK_WAIT):
             items, lerrs, rev = load_items(fnode) if slots is not None else ([], [], None)
             p.errors += lerrs
             plan_round(ctx, items, views, rnd, p)
             if p.changed:
                 test_point("before-launch")
-                write_json(tpath, _rewrite(tpath, items, p))   # launch 標記在寫 birth.json 之前落地（4.4）
+                write_json(tpath, _rewrite(tpath, items, p))   # launch 標記在寫 birth.json 之前落地
                 test_point("after-launch")
     except LockTimeout:
         p.errors.append("tasks.json.lock 一秒內拿不到，這回合不從 tasks.json 起任何東西")
@@ -389,7 +329,7 @@ def _tick(root, node_id, node, fnode):
         p.starts = []   # launch 標記沒落地：這回合一個都不起（once 不能沒有標記就起）
         p.errors.append("%s；這回合不起任何東西" % e)
 
-    # 要重用的槽裡有「已結束、還沒報過」的 run：清掉之前先記進 round.json，tock 照樣報（problems.md P2-03）
+    # 要重用的槽裡有「已結束、還沒報過」的 run（tock 之後才結束）：清掉之前先記進 round.json，tock 照樣報
     reaped = []
     for item, slot, run, _once in p.starts:
         v = views.get(slot)
@@ -404,7 +344,7 @@ def _tick(root, node_id, node, fnode):
     for item, slot, run, once in p.starts:
         try:
             rid = aos7_task.start_in_slot(ctx, item, slot, run)
-        except Exception as e:   # noqa: BLE001  起不來的一項只記它，其他項照起
+        except Exception as e:   # noqa: BLE001  起不來的一項只記它；node 被刪了就整個收手
             if not os.path.isdir(os.path.join(fnode, ".aos")):
                 raise FileNotFoundError(fnode)
             state.setdefault("tasks_error", []).append("%s：%s" % (item.get("name"), e))
@@ -414,12 +354,11 @@ def _tick(root, node_id, node, fnode):
         if once:
             once_started.append((slot, run))
     test_point("before-once-delete")
-    # spec §4.4：spawn 交接成功才刪 once；若先刪、再 spawn 時被殺，任務會無痕漏掉。
+    # 起了才刪 once 項（先刪再起，中途被殺就無痕漏掉）；刪不掉沒關係，下一個 tick 照 launch 標記比對 birth 就知道起過了
     if once_started:
         try:
             edit_json(tpath, lambda t: _drop_launched(t, once_started), timeout=LOCK_WAIT)
         except Unknown as e:
-            # 刪不掉沒關係：下一個 tick 照 launch 標記比對 birth.json，知道已經起了就刪（4.4）
             state.setdefault("tasks_error", []).append("起完的 once 項這回合沒刪成：%s" % e)
         test_point("after-once-delete")
     state["started"] = started
@@ -427,19 +366,12 @@ def _tick(root, node_id, node, fnode):
     return {"round": rnd, "started": started, "tasks_rev": rev}
 
 
-def _raw_items(t):
-    """從已讀 JSON 值 t 取 tasks 清單；回原 list，格式不符回 None，不做檔案 I/O。"""
-    items = t.get("tasks") if isinstance(t, dict) else None
-    return items if isinstance(items, list) else None
-
-
 def _rewrite(tpath, items, p):
-    """在表鎖內重組 tpath 任務表並回新物件，實際寫入由呼叫者做（spec §4.3）。
-    items 是已加 launch 的物件清單，p.drop 是要移除的原物件；其餘欄位與非物件項位置保留。
-    鎖內重讀照三態：讀不到、壞掉或不是 {"tasks": [...]}＝不知道原本有什麼 → 丟 Unknown、不寫回（G1）。"""
+    """表鎖內重組任務表（記了 launch 的項目換進去、已起過的 once 拿掉，其餘原樣）。重讀照三態：讀不到、壞掉或不是
+    {"tasks": [...]}＝不知道原本有什麼 → 丟 Unknown、不寫回（G1）。"""
     st, t = fact(tpath)
-    raw = _raw_items(t) if st == OK else None
-    if raw is None:
+    raw = t.get("tasks") if st == OK and isinstance(t, dict) else None
+    if not isinstance(raw, list):
         raise Unknown("tasks.json 重讀時%s，launch 標記沒寫" % (t if st != OK else "不是 {\"tasks\": [...]}"))
     t = dict(t)
     it = iter(items)
@@ -456,9 +388,7 @@ def _rewrite(tpath, items, p):
 
 
 def _drop_launched(t, started):
-    """從最新任務表 t 刪除 launch 的 slot＋run 符合 started 配對清單的 once，回新表。
-    格式不合或沒有項目可刪回 None，讓 edit_json 不寫回（spec §4.2 第 6 步、§4.4）。
-    比對起動身分而非列表位置，避免 spawn 期間別人增刪表後刪錯項。"""
+    """從最新的表刪掉起完的 once（照 launch 的 slot＋run 比對，不照位置：中間有人改過表也不會刪錯）；沒得刪回 None。"""
     if not isinstance(t, dict) or not isinstance(t.get("tasks"), list):
         return None
     keys = {(s, r) for s, r in started}
@@ -472,13 +402,12 @@ def _drop_launched(t, started):
 
 
 def main(argv=None):
-    """解析 argv（None 用命令列）的 root／node-id，跑 tick 並印 JSON。
-    回 0 表示完成或 gone／stale，1 表示用法錯，3 表示 Unknown（spec §4.2、P2-09）。"""
+    """命令列入口；退出碼見檔頭。"""
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 2:
         print("用法: aos7-tick <root> <node-id>", file=sys.stderr)
         return 1
-    signal.signal(signal.SIGTERM, lambda *_: None)   # 收到 SIGTERM 不中斷，把動作做完（SIGKILL 保底；spec 2.5）
+    signal.signal(signal.SIGTERM, lambda *_: None)   # SIGTERM 不中斷，把動作做完（逾時由 SIGKILL 保底）
     try:
         r = tick(argv[0], argv[1])
     except Unknown as e:

@@ -1,11 +1,6 @@
-"""掛載（S-23）：tick 把 tasks.json 的 `mounts` 做成任務資料夾裡的符號連結；任務（工具包的 resolver）把「空間裡的路徑」換成掛進來的路徑（spec.md 第 4、5 節）。
-
-掛載點＝`<taskdir>/mnt/<名字>`，是指向目標的**相對**符號連結（整個空間搬家也不壞）。
-目標寫成空間裡的路徑（相對空間根，跟 node id 同一套，例如 `team/agents/bob/inbox`、`.aosd/ctl`）。
-
-對應 spec §4.5、§5.5、§6（S-10、S-23）。tick 建立／審核掛載；任務端的 resolver／request 在工具包（modules/tools/aos7_taskside.py）。
-讀 birth.json 與 mount-req/，寫 mnt/ 連結、birth.json、mount-done/；只實作合作式協定，不是權限隔離（§11）。
-"""
+"""掛載（spec.md 4.5，S-23）：tick 把 tasks.json 的 `mounts` 做成任務資料夾裡的 `mnt/<名字>`（指向目標的**相對**符號連結，
+整個空間搬家也不壞），並審核任務執行中寫的加掛請求。目標寫成空間裡的路徑（相對空間根，跟 node id 同一套）。
+只是合作式的方便，不是權限隔離（spec §11）。任務端的 resolver／request 在工具包（modules/tools/aos7_taskside.py）。"""
 import hashlib
 import os
 import re
@@ -13,21 +8,17 @@ import re
 from aos7_fs import node_path, now, read_json, write_json
 
 MNT = "mnt"
+REQ = "mount-req"     # 任務寫：<槽>/mount-req/<名字>.json＝{"name", "path", "why"}
+DONE = "mount-done"   # tick 寫：同名回條，請求內容加 {"result": {"ok", "msg", "at"}}
 
 
 def _norm(p):
-    """空間路徑正規化：`a/b/../c` → `a/c`；根是 "."。
-
-    參數 p 是空間路徑字串，回傳正規化字串；只整理字面，不判定目標是否存在（spec §4.5）。
-    """
+    """空間路徑正規化（`a/b/../c` → `a/c`；根是 "."），只整理字面。"""
     return os.path.normpath(p).replace(os.sep, "/") if p not in ("", ".") else "."
 
 
 def check(decl):
-    """檢查 mounts 宣告，回 (好的 {名字: 空間路徑}, 錯誤清單)。名字不能有 `/`、不能以 `.` 開頭；路徑不能是絕對、不能跑出空間根。
-
-    參數 decl 是待驗宣告；不合型別的非空輸入列錯誤，空值視為空宣告。只做字面檢查，不查檔案（spec §4.5）。
-    """
+    """檢查掛載宣告，回 (好的 {名字: 空間路徑}, 錯誤)。名字不能有 `/`、不能 `.` 開頭；路徑不能是絕對、不能跑出空間根（字面）。"""
     good, bad = {}, []
     if not isinstance(decl, dict):
         return good, ["mounts 要是 {名字: 空間路徑}"] if decl else []
@@ -42,44 +33,30 @@ def check(decl):
 
 
 def in_root(root, to):
-    """空間路徑沿符號連結走到的實際位置還在空間根內嗎（astra-2 二-3：不能只看字面）。
-
-    root 是空間根、to 是相對空間路徑；回傳 realpath 後是否位於根內的 bool（spec §4.5）。
-    不存在的目標也可判路徑；此處沒有三態 I/O 探測，True 不表示目標確實可讀寫。
-    """
+    """空間路徑沿符號連結走到的實際位置還在空間根內嗎（看 realpath，不只看字面）。"""
     r, t = os.path.realpath(root), os.path.realpath(node_path(root, to))
     return t == r or t.startswith(r + os.sep)
 
 
 def make(root, taskdir, decl, fs_taskdir=None, node=None, fnode=None):
-    """建掛載點，回寫進 birth.json 的 `mounts`：{名字: {"to", "at"}}，壞的宣告記成 {"error"}。
-
-    目標不存在就先建成資料夾（收訊資料夾常常還沒人建過；problems.md M-2）。沿連結會跑出空間根的目標不掛。
-    fs_taskdir＝實際建連結的位置（tick 經 node 的 fd 寫，astra-5 F-09）；`at` 與連結內容照 taskdir（實際路徑）算。
-    node／fnode＝任務的 node 實際路徑與 tick 抓著的 fd 路徑：目標在 node 底下時經 fnode 建，node 中途被搬走
-    不會照舊路徑把它建回來（astra-6 G-02）。
-
-    root 是空間根，decl 是掛載宣告；回傳每個名稱的成功位置或 error，個別 OSError 不擋其他掛載（spec §4.5）。
-    node／fnode 配對時沿持有目錄 fd 寫入，落實不變條件二的搬移邊界（§2.5、§5.3），避免重建舊 node。
-    """
+    """建掛載點，回寫進 birth.json 的 `mounts`：{名字: {"to", "at"}}，壞的記成 {"error"}（一個壞不擋其他）。
+    目標不存在先建成資料夾（收訊資料夾常常還沒人建過）；沿連結跑出空間根的不掛。fs_taskdir＝實際建連結的位置（tick 經
+    node 的 fd 寫）；`at` 與連結內容照 taskdir（實際路徑）算，不把 /proc/self/fd 寫進連結。目標在 node 底下的經抓著的
+    fnode 建：node 中途被搬走，不會照舊路徑把它建回來。"""
     good, bad = check(decl)
     out = {}
     for name, to in sorted(good.items()):
         real = node_path(root, to)
         at = os.path.join(taskdir, MNT, name)
         fat = os.path.join(fs_taskdir or taskdir, MNT, name)
-        freal = real
-        if node and fnode and (real == node or real.startswith(node + os.sep)):
-            # spec §2.5、§5.3：寫進抓住的 inode，不沿可能已換人的 node 字串路徑重建資料夾。
-            freal = os.path.join(fnode, os.path.relpath(real, node))
+        freal = os.path.join(fnode, os.path.relpath(real, node)) if node and fnode and (
+            real == node or real.startswith(node + os.sep)) else real
         if not in_root(root, to):
             out[name] = {"to": to, "error": "%s 沿符號連結跑出空間根" % to}
             continue
         try:
-            if not os.path.exists(freal):
-                os.makedirs(freal, exist_ok=True)
+            os.makedirs(freal, exist_ok=True)
             os.makedirs(os.path.dirname(fat), exist_ok=True)
-            # spec §4.5：相對連結跟整個空間一起搬家；內容依實際位置算，不把 /proc/self/fd 寫進連結。
             os.symlink(os.path.relpath(real, os.path.dirname(at)), fat)
             out[name] = {"to": to, "at": at}
         except OSError as e:
@@ -89,29 +66,11 @@ def make(root, taskdir, decl, fs_taskdir=None, node=None, fnode=None):
     return out
 
 
-def decl_of(birth):
-    """birth.json 的 mounts → 原本的宣告 {名字: 空間路徑}（控制包 restart 時抄回新的 once 項用）。
-
-    參數 birth 是出生紀錄或空值，只選同時帶 to／at 的成功掛載，回傳 {名字: 空間路徑}；空值回空字典，不把失敗掛載帶入重啟（spec §6）。
-    """
-    m = (birth or {}).get("mounts") or {}
-    return {n: v["to"] for n, v in m.items() if isinstance(v, dict) and "to" in v and "at" in v}
-
-
-# ---------- 執行中加掛（M-6，使用者選 (b)）：任務寫請求，下一個 tick 審核 ----------
-
-REQ = "mount-req"     # 任務寫：<taskdir>/mount-req/<名字>.json＝{"name", "path", "why"}
-DONE = "mount-done"   # tick 寫：同名回條，請求內容加 {"result": {"ok", "msg", "at"}}
-
+# ---------- 執行中加掛：任務寫請求，下一個 tick 審核 ----------
 
 def req_name(path):
-    """由空間路徑推一個掛載名字（`team/agents/bob/inbox` → `team_agents_bob_inbox`）。
-
-    不同路徑一定推出不同名字（astra-2 二-2：`a/b` 與 `a_b` 原本都變 `a_b`）：路徑只有英數、`-`、`/` 時
-    `/` 換 `_` 就不會撞；其他情況（含 `_`、`.`）後面加路徑的短雜湊。
-
-    參數 path 為空間路徑，回傳可用的名稱字串；不讀檔、不代表掛載已獲准（spec §4.5）。
-    """
+    """由空間路徑推掛載名字（`team/agents/bob/inbox` → `team_agents_bob_inbox`）。不同路徑一定推出不同名字：
+    只有英數、`-`、`/` 時 `/` 換 `_` 不會撞；其他情況（含 `_`、`.`）後面加路徑的短雜湊。"""
     p = _norm(path)
     if re.fullmatch(r"[A-Za-z0-9-]+(/[A-Za-z0-9-]+)*", p):
         return p.replace("/", "_")
@@ -120,41 +79,26 @@ def req_name(path):
 
 
 def allowed(root, path, allow):
-    """tasks.json 的 `mount_allow`（空間路徑前綴清單）；沒寫＝全給。
-
-    比的是沿符號連結走到的實際位置（realpath），不是字面（astra-2 二-3）；跑出空間根的一律不給。
-
-    root 是空間根、path 是申請目標、allow 是允許前綴或 None；回傳 bool（spec §4.5）。
-    越界或非空但非清單的 allow 拒絕；不查目標存在性，無獨立「不知道」結果。
-    """
+    """tasks.json 的 `mount_allow`（空間路徑前綴清單，比 realpath 後的實際位置）；沒寫＝空間根內全給，跑出空間根的一律不給。"""
     if not in_root(root, path):
         return False
     if allow is None:
         return True
-    rp = os.path.realpath
-    p = rp(node_path(root, _norm(path)))
+    p = os.path.realpath(node_path(root, _norm(path)))
     for a in allow if isinstance(allow, list) else []:
-        if not isinstance(a, str) or os.path.isabs(a):
-            continue
-        a = rp(node_path(root, _norm(a)))
-        if p == a or p.startswith(a + os.sep):
-            return True
+        if isinstance(a, str) and not os.path.isabs(a):
+            a = os.path.realpath(node_path(root, _norm(a)))
+            if p == a or p.startswith(a + os.sep):
+                return True
     return False
 
 
 def serve(root, taskdir, allow, real_taskdir=None):
-    """tick 這邊用：處理一個任務的所有加掛請求，給了就補連結、更新 birth.json。回 [{"name", "path", "ok", "msg"}]。
-
-    taskdir＝讀寫用的路徑，real_taskdir＝實際路徑（掛載點的 `at`；tick 經 node 的 fd 寫時兩者不同）。
-    **先寫回條、成功才刪請求**（astra-5 F-07）：回條寫不進去就留著請求、這筆記錯，同一輪其他請求照做；
-    下次重處理同一請求是冪等的（已經掛了同名同目標就直接補回條）。
-
-    root 是空間根、allow 是允許前綴（None 全給）；列不出請求目錄回空清單（spec §4.5）。
-    審核例外轉成 ok: false；回條寫入失敗加 receipt_error，留下請求再試。
-    """
+    """處理一個任務的所有加掛請求（`.` 開頭的是寫到一半的暫存檔，不算），回 [{"name", "path", "ok", "msg"}]。
+    taskdir＝讀寫用的路徑，real_taskdir＝實際路徑（掛載點的 `at`）。先寫回條、寫成才刪請求：回條寫不進去就留著請求、
+    這筆記錯，下次重處理是冪等的（同名同目標已經掛了就直接補回條）。壞請求也一定有回條，不拖垮整個 tick。"""
     rdir = os.path.join(taskdir, REQ)
     try:
-        # spec §0：`.` 開頭的是寫到一半的原子寫暫存檔，不當請求（註解疑點 aos7_mount.py:202）。
         names = sorted(n for n in os.listdir(rdir) if n.endswith(".json") and not n.startswith("."))
     except OSError:
         return []
@@ -163,46 +107,38 @@ def serve(root, taskdir, allow, real_taskdir=None):
         item = read_json(os.path.join(rdir, fn))
         try:
             item, r = _serve_one(root, taskdir, allow, item, real_taskdir)
-        except Exception as e:  # 任何壞請求都要有回條，不拖垮整個 tick（astra-2 二-1）
+        except Exception as e:   # noqa: BLE001
             item = item if isinstance(item, dict) else {"raw": item}
             r = {"name": None, "path": None, "ok": False, "msg": "請求處理失敗：%s: %s" % (type(e).__name__, e)}
         item["result"] = {"ok": r["ok"], "msg": r["msg"], "at": now()}
         try:
-            # spec §4.5：請求者先看得到回條才移除請求，I/O 失敗仍保有下次重試的依據。
             write_json(os.path.join(taskdir, DONE, fn), item)
         except OSError as e:
-            # 回條寫不進去（mount-done/x.json 是資料夾…）：請求留著，下個 tick 再試；這筆標出來
             r = dict(r, receipt_error=repr(e)[:200], msg="%s；回條寫不進去，請求留著：%s" % (r["msg"], e))
-            out.append(r)
-            continue
-        try:
-            os.remove(os.path.join(rdir, fn))
-        except OSError:
-            pass
+        else:
+            try:
+                os.remove(os.path.join(rdir, fn))
+            except OSError:
+                pass
         out.append(r)
     return out
 
 
 def _serve_one(root, taskdir, allow, item, real_taskdir=None):
-    """審一個請求，回 (要寫回條的請求內容, {"name", "path", "ok", "msg"})。
-
-    root／taskdir 指空間根與槽、allow 指允許前綴、item 是請求，real_taskdir 用於記錄實際掛載位置。
-    壞請求回 ok: false；掛載或出生紀錄的讀寫例外交給 serve 隔離成該筆失敗（spec §4.5）。
-    """
+    """審一個請求，回 (要寫回條的請求內容, {"name", "path", "ok", "msg"})。給了就建 mnt/<名字>、在 birth.json 記下並標 dyn。"""
     if not isinstance(item, dict):
         return {"raw": item}, {"name": None, "path": None, "ok": False, "msg": "not a JSON object"}
     path, name = item.get("path"), item.get("name")
     if name is None and isinstance(path, str):
         name = req_name(path)
-    ok, msg = False, ""
     if not isinstance(name, str) or not isinstance(path, str):
-        msg = "name 與 path 要是字串（name 可省）"
-        name = name if isinstance(name, str) else None
-        return item, {"name": name, "path": path if isinstance(path, str) else None, "ok": False, "msg": msg}
+        return item, {"name": name if isinstance(name, str) else None, "path": path if isinstance(path, str) else None,
+                      "ok": False, "msg": "name 與 path 要是字串（name 可省）"}
     good, bad = check({name: path})
     bpath = os.path.join(taskdir, "birth.json")
     birth = read_json(bpath, {}) or {}
     mounts = birth.get("mounts") or {}
+    ok = False
     if bad:
         msg = bad[0]
     elif not allowed(root, path, allow):
@@ -215,7 +151,7 @@ def _serve_one(root, taskdir, allow, item, real_taskdir=None):
         ok = "at" in m
         msg = "掛上 mnt/%s → %s" % (name, good[name]) if ok else m.get("error", "?")
         if ok:
-            m["dyn"] = True   # 執行中加掛的（事實）：控制包 reload 照新定義重起時，靠它分出要另外帶過去的掛載
+            m["dyn"] = True   # 執行中加掛的（事實）：控制包 reload 重起時靠它分出要另外帶過去的掛載
             mounts[name] = m
             birth["mounts"] = mounts
             write_json(bpath, birth)

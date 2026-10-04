@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""aos7-diag：診斷包的唯讀工具——按需重算核心 status 不放的細節，並印出適用的恢復步驟（modules/diag/README.md）。
+
+    aos7-diag <root> [node-id]
+
+印一份 JSON：每個已登記 node 的 phase／round／round_open／last_error／paused_by／steps_left（照抄 status.json），
+加上 `uncertain`（重新判定每個槽：判不出的、保守當活的，各列槽、run、原因）與 `hints`（照錯誤類型對到 README 的恢復步驟）。
+唯讀：只用核心的判定（judge，不做 lost 前的身分掃描、不收程序），不寫任何檔。退出碼 0；root 不像空間根回 2。
+"""
+import json
+import os
+import sys
+
+TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(TOP, "lib"))
+import aos7_task  # noqa: E402
+from aos7_fs import N, OK, fact, node_path  # noqa: E402
+
+# 錯誤類型 → 恢復步驟（一句；細節在 README 的表）
+KIND_HINTS = {
+    "round-unknown": "round.json 判不出：先 pause、保存證據，照 README「核實回合數 N」寫回 {\"round\": N, \"open\": false 或 true}",
+    "round-open": "上一回合還開著：daemon 會先 tock 收掉；一直收不掉看 last_error 的原因",
+    "gen-unknown": "gen.json 讀不到或壞了：寫回現役 daemon 的世代（status 的 gen），不要猜一個放舊動作過",
+    "stale-holder-unverified": "action.lock 有人拿著但認不出：用 fuser／lsof 找持有者，確定是舊的 tick／tock 才收掉；不要 unlink 鎖檔",
+    "readback": "總結寫了卻讀回確認不了：多半是檔案系統問題，修好後 daemon 自動重試 tock",
+    "listdir": "列不出 .aos/tasks/：修存取後自動恢復",
+    "state-unknown": "daemon 自己的 nodes.json／paused.json／gen.json 讀不到或壞了：修好或確認後刪掉再起 daemon",
+    "fail": "tick／tock 失敗（例外）：看 why 的 traceback，修好後自動重試（不算回合、不扣 rounds）",
+}
+ERRNO_HINT = "看不到（%s）：修存取或權限後自動恢復，期間保留現狀"
+
+
+def slot_hint(why):
+    """判不出的槽 → 恢復步驟。"""
+    if "birth.json 壞了" in why:
+        return "確認沒有活程序、也確認 once 的副作用之後，刪掉 birth.json（＝重新授權執行，槽會當空槽）"
+    if "讀不到" in why and "/proc" in why:
+        return "pid／starttime 讀不到：暫時讀錯會自己好；當初沒記到 starttime 的要等程序結束或人工確認後收掉"
+    if why == "剛起":
+        return "剛起（birth→runner→pid.json 交接中）是正常暫態，看它持續多久"
+    return "修 I/O 後自動恢復；不是一般檔的刪掉換回一般檔（原內容不可考時等於刪 birth）"
+
+
+def node_report(root, nid, row):
+    node = node_path(root, nid)
+    st, r = fact(os.path.join(node, ".aos", "round.json"))
+    rnd = r.get("round") if st == OK and isinstance(r, dict) else None
+    out = {k: row.get(k) for k in ("phase", "round", "round_open", "last_error", "paused_by", "steps_left", "missing")
+           if row.get(k) is not None}
+    uncertain, hints = [], []
+    slots, lerr = aos7_task.list_slots(node)
+    if lerr:
+        uncertain.append({"slot": None, "run": None, "why": "列不出槽：%s" % lerr})
+    for slot in slots:
+        try:
+            v = aos7_task.judge(aos7_task.slot_dir(node, slot), node, slot, rnd)
+        except Exception as e:   # noqa: BLE001
+            uncertain.append({"slot": slot, "run": None, "why": repr(e)[:300]})
+            continue
+        if v.state == aos7_task.UNKNOWN or v.get("unsure"):
+            uncertain.append({"slot": slot, "run": v.run, "why": v.get("unsure") or v.get("why") or "?"})
+    for u in uncertain:
+        hints.append({"slot": u["slot"], "hint": slot_hint(str(u["why"]))})
+    le = row.get("last_error")
+    if isinstance(le, dict) and le.get("kind"):
+        k = le["kind"]
+        hints.append({"last_error": k, "hint": KIND_HINTS.get(k, ERRNO_HINT % k if k.isupper() else "看 why 的說明")})
+    out["uncertain"] = uncertain
+    out["hints"] = hints
+    return out
+
+
+def main(argv):
+    if not argv or len(argv) > 2:
+        print("用法: aos7-diag <root> [node-id]", file=sys.stderr)
+        return 1
+    root = os.path.realpath(argv[0])
+    ns, nj = fact(os.path.join(root, ".aosd", "nodes.json"))
+    if ns not in (OK, N):
+        print("aos7-diag: %s 的 .aosd/nodes.json %s" % (root, nj), file=sys.stderr)
+        return 2
+    ss, status = fact(os.path.join(root, ".aosd", "status.json"))
+    rows = (status.get("nodes") or {}) if ss == OK and isinstance(status, dict) else {}
+    nids = [argv[1]] if len(argv) == 2 else sorted(set(((nj or {}).get("nodes") or {}) if isinstance(nj, dict) else {})
+                                                    | set(rows))
+    rep = {"root": root, "status_at": status.get("at") if ss == OK and isinstance(status, dict) else None,
+           "nodes": {nid: node_report(root, nid, rows.get(nid) or {}) for nid in nids}}
+    if ss == OK and isinstance(status, dict) and status.get("last_error"):
+        rep["last_error"] = status["last_error"]
+    print(json.dumps(rep, ensure_ascii=False, indent=1))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

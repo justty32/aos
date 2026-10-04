@@ -1,18 +1,7 @@
-"""程序工具：活不活、程序群組、身分掃描（環境變數 NODE＋TID＋RUN）、收程序（spec.md 2.6、5.2、6 節；Q1 範圍）。
-
-起點複製自 proto7-1 lib/aos7_task.py 的「程序」一段；身分掃描多比 `AOS7_RUN`（同一個槽上一個 run 的殘留不算這次的）。
-所有函式只讀 /proc 與送訊號，不留記憶體狀態。
-
-daemon 在 node 消失／停止時呼叫，tick／tock 透過 aos7_task 判定與收程序（S-03、S-17）。
-讀 /proc 的 stat、cmdline、environ；不寫協定檔，exit.json 留給 runner 或上層。
-
-**錯誤四分支（spec §0）**：單一程序的事實只經 `proc(pid)`——(N) 確定不在／殭屍、(OK, starttime)、(U, 說明) 讀不到。
-掃描（列 /proc、讀 stat／environ／cmdline）讀不到一律丟 `aos7_fs.Unknown`（kind "proc"），不當成「沒有」：掃描不完整就不能
-支持 lost、清槽、重起，收程序也不能說「收乾淨了」。呼叫的人接住它，保留現狀、記一筆。
-
-**environ 讀不到權限（EACCES／EPERM）＝不是可辨認的任務、略過**：別的 uid、不可 ptrace 的程序（systemd --user…）本來就這樣。
-管理範圍（spec §11）：任務程序必須跟 daemon 同 uid、environ 可讀；脫離這個範圍的任務是誤用，核心不保證認得出它。
-cmdline 是全世界可讀的，EACCES 不是常態，照一般讀取錯誤當不知道。"""
+"""程序工具（spec.md 2.6、5.2、6 節；Q1 範圍）：程序的事實、程序群組、身分掃描（環境變數 NODE＋TID＋RUN）、收程序。
+只讀 /proc、送訊號，不寫檔、不留狀態。單一程序的事實只經 `proc(pid)`：(N) 確定不在或殭屍、(OK, starttime)、(U, 說明)。
+掃描讀不到一律丟 `aos7_fs.Unknown`（kind "proc"），不當「沒有」：掃描不完整就不能支持 lost、清槽、重起，也不能說「收乾淨了」。
+environ 沒有權限讀＝不是可辨認的任務、略過（任務必須跟 daemon 同 uid、environ 可讀，spec §11）；stat、cmdline 讀不到照常是不知道。"""
 import errno
 import os
 import signal
@@ -20,33 +9,25 @@ import time
 
 from aos7_fs import N, OK, U, Unknown, inject, is_int, proc_starttime
 
-KILL_GRACE = 1.0   # spec 第 6 節：SIGTERM 後等至多 1 秒，還在就 SIGKILL
-
+KILL_GRACE = 1.0   # SIGTERM 後最多等 1 秒，還在就 SIGKILL
 ALIVE, GONE, UNKNOWN = "alive", "gone", "unknown"
-
-PROC_GONE_ERRNO = (errno.ENOENT, errno.ESRCH)   # 讀 /proc/<pid>/* 時這兩種＝程序已經不在
 
 
 def _read_proc(pid, name, binary=False):
-    """讀 `/proc/<pid>/<name>`：回內容；程序確定不在回 None；其他讀取錯誤丟 Unknown（三態的唯一入口）。
-
-    只有 environ 遇到 EACCES／EPERM 回 None（身分讀不到＝不是可辨認的任務，跟「不在」一樣略過）。
-    stat、cmdline 本來全世界可讀，任何讀取錯誤都是「不知道」。"""
+    """讀 `/proc/<pid>/<name>`：程序確定不在（ENOENT／ESRCH）或 environ 沒有權限讀回 None；其他讀不到丟 Unknown。"""
     path = "/proc/%d/%s" % (pid, name)
     try:
         inject("proc-" + name, path)
         with open(path, "rb" if binary else "r") as f:
             return f.read()
     except OSError as e:
-        if e.errno in PROC_GONE_ERRNO:
-            return None
-        if name == "environ" and e.errno in (errno.EACCES, errno.EPERM):
+        if e.errno in (errno.ENOENT, errno.ESRCH) or (name == "environ" and e.errno in (errno.EACCES, errno.EPERM)):
             return None
         raise Unknown("讀不到 %s：%r" % (path, e), kind="proc") from None
 
 
 def proc(pid):
-    """一個程序的事實（唯一入口）：(N, None) 確定不在（含殭屍）｜(OK, starttime)｜(U, 說明) 在，但 /proc 讀不到。"""
+    """一個程序的事實：(N, None) 確定不在（含殭屍）｜(OK, starttime)｜(U, 說明) 在，但 /proc 讀不到。"""
     if not is_int(pid) or pid <= 0:
         return N, None
     try:
@@ -66,13 +47,13 @@ def proc(pid):
 
 
 def pid_alive(pid):
-    """程序在不在（bool）：只有確定不在才是 False（不知道不能當否）。給顯示與測試用。"""
+    """程序在不在：只有確定不在才是 False（不知道不能當否）。給顯示與測試用。"""
     return proc(pid)[0] != N
 
 
 def same_process(pid, starttime):
-    """pid＋starttime 還是同一個程序嗎：GONE（不在、殭屍、或 starttime 不同＝pid 被重用）｜ALIVE｜UNKNOWN（讀不到，
-    或當初沒記到 starttime；不知道當活，spec §5.4）。"""
+    """pid＋starttime 還是同一個程序嗎：GONE（不在、殭屍、或 starttime 不同＝pid 被重用）｜ALIVE｜
+    UNKNOWN（讀不到，或當初沒記到 starttime；判定照「不知道當活」）。"""
     st, cur = proc(pid)
     if st == N:
         return GONE
@@ -82,7 +63,7 @@ def same_process(pid, starttime):
 
 
 def all_pids():
-    """列 /proc 的數字目錄回 pid 清單；列不出來丟 Unknown（空清單不能當「確定沒有程序」）。"""
+    """/proc 底下所有 pid；列不出來丟 Unknown（空清單不能當「確定沒有程序」）。"""
     try:
         inject("proc-list", "/proc")
         return [int(p) for p in os.listdir("/proc") if p.isdigit()]
@@ -91,7 +72,7 @@ def all_pids():
 
 
 def stat_of(pid):
-    """回 (state, ppid, pgid)；程序確定不在回 None；讀不到或內容解析不了丟 Unknown。"""
+    """(state, ppid, pgid)；程序確定不在回 None；讀不到或解析不了丟 Unknown。"""
     text = _read_proc(pid, "stat")
     if text is None:
         return None
@@ -103,75 +84,47 @@ def stat_of(pid):
 
 
 def _table():
-    """一次掃完 /proc：回 {pid: (state, ppid, pgid)}，掃描中途走掉的程序不列；任何一個讀不到就丟 Unknown。"""
-    out = {}
-    for p in all_pids():
-        st = stat_of(p)
-        if st:
-            out[p] = st
-    return out
+    """一次掃完 /proc：{pid: (state, ppid, pgid)}（掃描中途走掉的不列）；任何一個讀不到就丟 Unknown。"""
+    return {p: st for p, st in ((p, stat_of(p)) for p in all_pids()) if st}
 
 
 def group_alive(pgid):
-    """程序群組還有沒有成員（殭屍不算）：回 bool；掃描不完整丟 Unknown。"""
-    if not isinstance(pgid, int) or pgid <= 0:
-        return False
-    return any(st[2] == pgid and st[0] != "Z" for st in _table().values())
+    """程序群組還有沒有活成員（殭屍不算）。"""
+    return is_int(pgid) and pgid > 0 and any(st[2] == pgid and st[0] != "Z" for st in _table().values())
 
 
 def groups_with_descendants(pgid):
-    """pgid 本身，加上這群組成員所有後代所在的群組（aos-exec 把 inst 的子程式開在另一個 session；proto7-1 P-05）。
-
-    pgid 是起點群組；回群組號 set。掃描不完整丟 Unknown，不拿半份表去決定要打哪些群組（spec §6、Q1）。"""
+    """pgid 本身，加上群組成員所有後代所在的群組（aos-exec 把 inst 的子程式開在另一個 session，也要收得到）。"""
     table = _table()
-    members = {p for p, s in table.items() if s[2] == pgid}
-    seen, todo = set(members), list(members)
+    seen = {p for p, s in table.items() if s[2] == pgid}
+    todo = list(seen)
     while todo:
         parent = todo.pop()
         for p, s in table.items():
             if s[1] == parent and p not in seen:
                 seen.add(p)
                 todo.append(p)
-    return {pgid} | {table[p][2] for p in seen if p in table}
+    return {pgid} | {table[p][2] for p in seen}
 
 
 def is_runner(pid):
-    """是 aos7-run（任務的包裝）嗎：它等任務死了自己寫 exit.json，不先殺它。
-
-    pid 是待辨識程序；回 bool，程序已不在回 False；cmdline 讀不到丟 Unknown（spec §2.6、§5.3）。"""
+    """是 aos7-run 嗎：它等任務死了自己寫 exit.json，不先殺它。"""
     data = _read_proc(pid, "cmdline", binary=True)
     return bool(data) and any(a.endswith(b"aos7-run") for a in data.split(b"\0"))
 
 
 def environ_of(pid):
-    """讀 /proc/<pid>/environ；回 bytes 環境項目的 set；程序已不在、環境是空的、或沒有權限讀（別的 uid、不可 ptrace）回 None；
-    其他讀不到丟 Unknown。"""
+    """/proc/<pid>/environ 的項目 set；程序不在、環境是空的、沒有權限讀回 None。"""
     data = _read_proc(pid, "environ", binary=True)
     return set(data.split(b"\0")) if data else None
 
 
-def want_env(node, tid=None, run=None):
-    """身分掃描要比的環境變數集合。
-
-    node 是 node 絕對路徑；tid／run 可省略，指定時加入比對。回 bytes 項目的 set（spec §5.2）。"""
-    w = {b"AOS7_NODE=" + node.encode()}
-    if tid is not None:
-        w.add(b"AOS7_TID=" + tid.encode())
-    if run is not None:
-        w.add(b"AOS7_RUN=" + str(run).encode())
-    return w
-
-
 def env_procs(nodes, tid=None, run=None, skip=(), runners=False):
-    """一次掃 `/proc/*/environ`（spec 5.2 身分掃描）：AOS7_NODE 在 nodes 裡、有 AOS7_TID（給了 tid 要相符）、
-    給了 run 要 AOS7_RUN 相符的程序。預設不含 aos7-run。回 pid 清單。
-
-    nodes 可為單一路徑或可迭代路徑集；skip 是排除 pid，runners=True 才包含包裝程序。
-    回空清單＝**掃完了、確定沒有**；掃描不完整（列不出 /proc、environ 讀不到…）丟 Unknown（spec §0、§5.2）。"""
+    """身分掃描（spec 5.2）：AOS7_NODE 在 nodes 裡、有 AOS7_TID（給了 tid 要相符）、給了 run 要 AOS7_RUN 相符的活程序 pid。
+    槽名跨 run 重用，比 RUN 才不會把前任的殘留算成這次的。預設不含 aos7-run。回空清單＝掃完了、確定沒有。"""
     nodes = [nodes] if isinstance(nodes, str) else list(nodes)
     want_nodes = {b"AOS7_NODE=" + n.encode() for n in nodes}
     want_tid = None if tid is None else b"AOS7_TID=" + tid.encode()
-    # spec §5.2：槽名跨 run 重用；加上 RUN 才不把前任殘留當成本次任務。
     want_run = None if run is None else b"AOS7_RUN=" + str(run).encode()
     out = []
     for pid in all_pids():
@@ -180,28 +133,22 @@ def env_procs(nodes, tid=None, run=None, skip=(), runners=False):
         env = environ_of(pid)
         if not env or not (env & want_nodes):
             continue
-        if want_tid is not None:
-            if want_tid not in env:
-                continue
-        elif not any(x.startswith(b"AOS7_TID=") for x in env):
+        if (want_tid not in env) if want_tid is not None else not any(x.startswith(b"AOS7_TID=") for x in env):
             continue
         if want_run is not None and want_run not in env:
             continue
         st = stat_of(pid)
-        if st is None or st[0] == "Z":
-            continue
-        if not runners and is_runner(pid):
+        if st is None or st[0] == "Z" or (not runners and is_runner(pid)):
             continue
         out.append(pid)
     return out
 
 
 def me_and_ancestors():
-    """無參數；回自己與祖先的 pid set，供 P2-14 排除收程序時不能打到的管理鏈（spec §2.7、§6）。
-    祖先的 stat 讀不到丟 Unknown：認不出管理鏈就不能放心送訊號。"""
+    """自己與祖先的 pid（子 daemon 本身也是某個 node 的任務：收程序絕不能打到管理鏈）。祖先讀不到丟 Unknown。"""
     me = {os.getpid()}
     p = os.getppid()
-    while p > 1 and p not in me:      # 不殺自己與祖先（子 daemon 本身也是某個 node 的任務）
+    while p > 1 and p not in me:
         me.add(p)
         st = stat_of(p)
         p = st[1] if st else 1
@@ -209,84 +156,65 @@ def me_and_ancestors():
 
 
 def group_is_task(pgid, node, tid, run):
-    """pid.json 的 pgid 還能打嗎：群組沒有活成員＝True（沒東西可打）；有成員的環境含這個 run 的 NODE＋TID＋RUN＝True；
-    否則 False。防的是 pgid 被重用（外部故障）：pid.json 記的群組號後來給了別人，kill 不能打過去（spec 第 6 節）。
-
-    pgid 是待核對群組，node／tid／run 是目標身分；回 bool。掃描不完整丟 Unknown。"""
-    if not isinstance(pgid, int) or isinstance(pgid, bool) or pgid <= 1:
+    """pid.json 的 pgid 還能打嗎：群組沒有活成員（沒東西可打）、或有成員的環境是這個 run 的 NODE＋TID＋RUN。
+    防 pgid 被重用（外部故障）：記的群組號後來給了別人，kill 不能打過去。任務自己改 pgid 是誤用。"""
+    if not is_int(pgid) or pgid <= 1:
         return False
-    want = want_env(node, tid, run)
+    want = {b"AOS7_NODE=" + node.encode(), b"AOS7_TID=" + tid.encode(), b"AOS7_RUN=" + str(run).encode()}
     members = [p for p, st in _table().items() if st[2] == pgid and st[0] != "Z"]
-    if not members:
-        return True
-    return any(want <= (environ_of(p) or set()) for p in members)
+    return not members or any(want <= (environ_of(p) or set()) for p in members)
+
+
+def _signal(groups, sig):
+    for g in groups:
+        try:
+            os.killpg(g, sig)
+        except (ProcessLookupError, PermissionError):
+            pass
 
 
 def kill_groups(groups, grace=KILL_GRACE):
-    """對一組群組（各自連同後代的群組）SIGTERM，等至多 grace 秒，還在就 SIGKILL。回 True＝確定收乾淨。
-
-    groups 是群組號集合，grace 是寬限秒數；不送訊號給自己／祖先群組（P2-14）。
-    掃描不完整丟 Unknown（送訊號之前）；送完之後確認不了＝回 False（不能說收乾淨）。"""
+    """對一組群組（連同後代的群組）SIGTERM，最多等 grace 秒，還在就 SIGKILL。回 True＝確定收乾淨。
+    不打自己與祖先所在的群組。送訊號前掃描不完整丟 Unknown；送完確認不了＝回 False（不能說收乾淨）。"""
     me = me_and_ancestors()
     allg = set()
     for g in groups:
-        if isinstance(g, int) and g > 1:
+        if is_int(g) and g > 1:
             allg |= groups_with_descendants(g)
-    # spec §2.7、P2-14：子 daemon 本身也是任務，排除整個祖先群組才不會收掉管理鏈。
     my_groups = {st[2] for st in (stat_of(p) for p in me) if st}
     allg = {g for g in allg if g > 1 and g not in me and g not in my_groups}
     if not allg:
         return True
 
     def any_alive():
-        """還有沒有群組活著；確認不了當「還活著」（不能宣稱收乾淨）。"""
         try:
             return any(group_alive(g) for g in allg)
         except Unknown:
             return True
-    for g in allg:
-        try:
-            os.killpg(g, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError):
-            pass
+    _signal(allg, signal.SIGTERM)
     end = time.monotonic() + grace
     while time.monotonic() < end:
         if not any_alive():
             return True
         time.sleep(0.02)
-    for g in allg:
-        try:
-            os.killpg(g, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            pass
+    _signal(allg, signal.SIGKILL)
     time.sleep(0.05)
     return not any_alive()
 
 
 def groups_of(pids):
-    """pids 是程序號集合；回這些程序的 pgid set（掃描中途走掉的略過；讀不到丟 Unknown）。"""
-    out = set()
-    for pid in pids:
-        st = stat_of(pid)
-        if st:
-            out.add(st[2])
-    return out
+    """這些程序的 pgid（掃描中途走掉的略過）。"""
+    return {st[2] for st in (stat_of(p) for p in pids) if st}
 
 
 def kill_identity(node, tid, run, pgid=None, task=None):
-    """Q1 (a) 的範圍收一次 run：pid.json 的群組（先確認是這個任務的）、群組成員活著的後代所在的群組、
-    環境變數 NODE＋TID＋RUN 相符的程序（含被 init 收養的）。回 (乾不乾淨, 說明)。
-
-    node／tid／run 指定唯一一次執行，pgid 可帶紀錄的群組；task＝pid.json 的 (pid, starttime)。回 (bool, 字串)。
-    身分核對不了的群組不打。/proc 掃描不完整回 (False, 說明)：不知道有沒有收乾淨，呼叫的人當「不知道」處理（spec §6）。
-    最後再看一次 pid.json 記的任務程序：它還活著（或認不出死了沒）就不能回「收乾淨」，即使群組沒打（回條不能說謊）。"""
+    """照 Q1 (a) 的範圍收一次 run，回 (乾不乾淨, 說明)：pid.json 的群組（先確認還是這個任務的）、群組成員的後代所在的群組、
+    環境變數 NODE＋TID＋RUN 相符的程序（含被 init 收養的）。/proc 掃描不完整回 (False, "unknown…")。
+    task＝pid.json 的 (pid, starttime)：最後再看一次它，還活著或認不出死了沒就不能回「收乾淨」（回條不能說謊）。"""
     try:
-        me = me_and_ancestors()
-        found = env_procs(node, tid, run, skip=me)
-        groups = groups_of(found)
+        groups = groups_of(env_procs(node, tid, run, skip=me_and_ancestors()))
         note = ""
-        # spec §6：pid.json 是任務能改的檔，不能只相信其中的 pgid 就向別人送訊號。
-        if pgid is not None:
+        if pgid is not None:   # pid.json 是任務寫得到的檔：不能只信它的 pgid 就向別人送訊號
             if group_is_task(pgid, node, tid, run):
                 groups.add(pgid)
             else:
@@ -304,39 +232,18 @@ def kill_identity(node, tid, run, pgid=None, task=None):
     return clean, ("killed %d group(s)" % len(groups) if clean else "still alive after SIGKILL") + note
 
 
-def kill_node(node, known_pgids=()):
-    """node 消失或取消登記時收它上面的任務（Q4、Q1）：daemon 記著的 pgid，加上環境變數 AOS7_NODE 是這個 node、有 AOS7_TID 的程序。
-    回 (收到的群組數, 乾不乾淨)。aos7-run 不殺（任務死了它自己經 fd 寫 exit.json）。
-
-    node 是 node 絕對路徑，known_pgids 是 daemon 記住的群組；沒有群組回 (0, True)。
-    /proc 掃描不完整時只打記住的群組、回 clean=False（不能說收乾淨；spec §2.6）。"""
-    groups = {g for g in known_pgids if isinstance(g, int) and g > 1}
+def kill_node(nodes, known_pgids=()):
+    """收一個或幾個 node 上的任務（node 消失、取消登記、stop 帶 kill 的最後補掃）：記著的 pgid，加上環境 AOS7_NODE 是它們、
+    有 AOS7_TID 的程序（aos7-run 不殺，任務死了它自己寫 exit.json）。回 (群組數, 乾不乾淨)。
+    掃描不完整時照樣打記著的群組，回 clean=False。"""
+    groups = {g for g in known_pgids if is_int(g) and g > 1}
     try:
-        me = me_and_ancestors()
-        groups |= groups_of(env_procs(node, skip=me))
-        if not groups:
-            return 0, True
-        return len(groups), kill_groups(groups)
+        groups |= groups_of(env_procs(nodes, skip=me_and_ancestors()))
+        return len(groups), (kill_groups(groups) if groups else True)
     except Unknown:
-        # spec §2.6：掃描不完整時只打記著的群組（astra-2 讀碼：以前這裡直接回 False，連記著的群組都沒收）
         try:
             if groups:
                 kill_groups(groups)
         except Unknown:
             pass
         return len(groups), False
-
-
-def sweep_nodes(nodes):
-    """daemon stop（帶 kill）的最後收尾：環境變數 AOS7_NODE 是 nodes 之一、有 AOS7_TID 的程序連同群組收掉（不含 aos7-run、自己與祖先）。
-
-    nodes 是 node 路徑集合；回 (群組數, bool)，掃不到回 (0, True)，掃描不完整回 (0, False)。
-    這次補掃補上時間線收尾途中才出現的任務，仍以 Q1 範圍為界（spec §2.7）。"""
-    try:
-        me = me_and_ancestors()
-        groups = groups_of(env_procs(list(nodes), skip=me))
-        if not groups:
-            return 0, True
-        return len(groups), kill_groups(groups)
-    except Unknown:
-        return 0, False

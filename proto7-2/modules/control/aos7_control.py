@@ -1,5 +1,5 @@
 """控制包：restart／reload 在請求端做——先在 tasks.json 加一項釘同槽的 once，再寫核心的 kill（帶 run）。
-spec 見同資料夾的 README.md。kernel 可以直接 import（把 proto7-2/modules/control 與 proto7-2/lib 加進 sys.path）。
+spec 見同資料夾的 README.md。kernel 可以直接 import（把 proto7-2/modules/control、modules/tools 與 lib 加進 sys.path）。
 
     restart(node, slot, why="", reload=False, req_id=None, by=None) → {"ok", "msg", "run", "req_id", "ctl", "once", "diff"?}
 
@@ -8,8 +8,8 @@ spec 見同資料夾的 README.md。kernel 可以直接 import（把 proto7-2/mo
 import os
 import uuid
 
-import aos7_mount
 from aos7_fs import N, OK, Unknown, edit_json, fact, test_point, write_json
+from aos7_taskside import decl_of
 
 DEF_KEYS = ("argv", "inst", "x")                               # 從 birth 抄回去的定義（外加 name、mounts）
 SCHED_KEYS = ("mode", "from_round", "until_round", "max_live", "enabled", "launch", "slot")   # reload 時去掉的排程欄
@@ -46,7 +46,7 @@ def def_diff(birth, item):
     """birth 的舊定義與 item 的新定義差在哪：{欄位: {old, new}}。"""
     out = {}
     for k in ("argv", "inst", "mounts", "x"):
-        old = aos7_mount.decl_of(birth) if k == "mounts" else birth.get(k)
+        old = decl_of(birth) if k == "mounts" else birth.get(k)
         new = (item.get(k) or {}) if k == "mounts" else item.get(k)
         if old != new:
             out[k] = {"old": old, "new": new}
@@ -84,7 +84,7 @@ def restart(node, slot, why="", reload=False, req_id=None, by=None):
         diff = def_diff(birth, item)
     else:
         item = {k: birth[k] for k in DEF_KEYS if k in birth}
-        item["mounts"] = aos7_mount.decl_of(birth)
+        item["mounts"] = decl_of(birth)
     item.update({"name": birth["name"], "mode": "once", "slot": slot,
                  "x": dict(item.get("x") or {}, restart_of=rid, req_id=req_id)})
     dup = []

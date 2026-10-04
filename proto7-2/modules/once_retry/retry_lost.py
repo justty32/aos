@@ -12,8 +12,8 @@ import sys
 
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
-import aos7_mount  # noqa: E402
 from aos7_fs import OK, Unknown, edit_json, fact  # noqa: E402
+from aos7_taskside import decl_of  # noqa: E402
 
 
 def candidates(node):
@@ -34,7 +34,7 @@ def candidates(node):
 def requeue(node, rid, slot, birth):
     """照 birth 的定義把 once 加回 tasks.json（表上已有同 retry_of 的就不加）。回 True＝加了或已有；表鎖拿不到、表壞掉丟 Unknown。"""
     item = {k: birth[k] for k in ("argv", "inst") if k in birth}
-    item.update({"name": birth["name"], "mode": "once", "slot": slot, "mounts": aos7_mount.decl_of(birth),
+    item.update({"name": birth["name"], "mode": "once", "slot": slot, "mounts": decl_of(birth),
                  "x": dict(birth.get("x") or {}, retry_of=rid)})
 
     def add(t):

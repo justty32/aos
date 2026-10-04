@@ -41,7 +41,8 @@ from base import BIN, SLEEP, DaemonCase
 from _matrix import MatrixCase, alive, dead_pid, env, gen, rec_argv
 import aos7_proc
 import aos7_task
-from aos7_fs import read_json, read_jsonl, write_json
+from aos7_fs import read_json, write_json
+from aos7_taskside import read_jsonl
 
 
 def ts(s):

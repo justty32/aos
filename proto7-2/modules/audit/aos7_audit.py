@@ -6,8 +6,10 @@
 對應 spec §4.5、§5.1、§5.5（S-10、S-23）；沿用紀錄工具、未另加本版專測（P2-17）。
 """
 import os
+import sys
 
-from aos7_fs import read_jsonl
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
+from aos7_taskside import read_jsonl  # noqa: E402
 
 
 def scan(root):

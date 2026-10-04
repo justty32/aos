@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import unittest  # noqa: E402
 
 from base import MODULES, CoreCase  # noqa: E402
-from aos7_fs import read_jsonl  # noqa: E402
+from aos7_taskside import read_jsonl  # noqa: E402
 
 AUDIT = os.path.join(MODULES, "audit", "aos7-audit")
 WRITE = "open('out.txt', 'w').write('x')"
