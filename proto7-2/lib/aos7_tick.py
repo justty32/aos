@@ -195,7 +195,8 @@ def plan_round(ctx, items, views, rnd, p):
             continue
         # until_round（使用者 10-04）：回合數超過它就不再起新 run（跟 from_round 對稱；已在跑的不殺，要收由 kernel 自己 kill）。
         # 用途：分配者掛了，使用權照樣到期。項目與槽留著，跟 enabled:false 一樣。
-        if item.get("until_round") is not None and rnd > item["until_round"]:
+        expired = item.get("until_round") is not None and rnd > item["until_round"]
+        if expired and not (item.get("mode") == "once" and launch_of(item)):
             continue
         slots = aos7_task.slot_names(name, item.get("max_live", 1))
         if mode == "once":
@@ -210,6 +211,8 @@ def plan_round(ctx, items, views, rnd, p):
                     p.drop.append(item)     # 已經起了（或起到一半，交給 5.4 判定）：刪掉這項，不重起
                     p.changed = True
                     continue
+                if expired:
+                    continue                # 上次沒起成、但已過 until_round：不再起（項目留著給人看）
                 cands = [la["slot"]]        # 上次在寫 birth.json 之前就被殺：同一個槽用新的 run 照常起
             else:
                 cands = [item["slot"]] if isinstance(item.get("slot"), str) else slots
