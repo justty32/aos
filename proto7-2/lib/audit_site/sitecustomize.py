@@ -52,15 +52,26 @@ def _install():
         """以完整路徑段比對 p 是否在 base 內，回傳 bool；純字串判定，不查檔案（spec §5.5）。"""
         return p == base or p.startswith(base + os.sep)
 
-    def nested(real):
-        """real 與 node 之間有沒有別的 node（.aos/timeline.json）或 daemon 根（.aosd/）。
+    def registered():
+        """空間根 `.aosd/nodes.json` 登記的 node 實際路徑 set（spec §1：node＝登記的資料夾，W12 起不再靠 timeline.json 認）。
+        讀不到回空 set（只影響紀錄的 ok）。"""
+        try:
+            with open(os.path.join(root_r, ".aosd", "nodes.json"), encoding="utf-8") as f:
+                nodes = json.load(f).get("nodes") or {}
+            return {root_r if k == "." else os.path.join(root_r, k) for k in nodes if isinstance(k, str)}
+        except (OSError, ValueError, AttributeError):
+            return set()
+    others = registered() - {node_r}
 
-        參數 real 是寫入的實際路徑，回傳是否碰到巢狀邊界；查不到標記則回 False（spec §5.5）。
-        此沿用檢查沒有三態回傳，只影響紀錄的 ok，不阻止寫入或控制程序（P2-17）。
+    def nested(real):
+        """real 與 node 之間有沒有別的已登記 node 或 daemon 根（.aosd/）。
+
+        參數 real 是寫入的實際路徑，回傳是否碰到巢狀邊界（spec §5.5）。註解疑點 sitecustomize:63：
+        以前靠 `.aos/timeline.json` 認 node，登記制（§1、W12）之後改看 nodes.json。只影響紀錄的 ok，不阻止寫入（P2-17）。
         """
         d = os.path.dirname(real)
         while d != node_r and under(d, node_r):
-            if os.path.exists(os.path.join(d, ".aos", "timeline.json")) or os.path.isdir(os.path.join(d, ".aosd")):
+            if d in others or os.path.isdir(os.path.join(d, ".aosd")):
                 return True
             d = os.path.dirname(d)
         return False

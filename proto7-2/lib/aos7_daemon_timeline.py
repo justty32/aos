@@ -15,8 +15,8 @@ import threading
 import time
 
 import aos7_task
-from aos7_fs import (BIN, IO, OK, env_with_bin, holder_unverified, is_int, node_path, now, read_json, read_json3,
-                     reap_stale_owner)
+from aos7_fs import (BIN, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, env_with_bin, holder_unverified, is_int, node_path, now,
+                     read_json, read_round, reap_stale_owner)
 
 POLL = 0.02
 DEFAULT_INTERVAL_MS = 1000
@@ -26,6 +26,14 @@ ACTION_TIMEOUT = 30.0        # tick／tock 一次最多跑幾秒（timeline.json
 STOP_GRACE = 3.0             # daemon 停機時，正在跑的 tick／tock 最多再等幾秒
 TIMEOUT_RC = -9
 UNKNOWN_RC = 3               # tick／tock 推定不了（round.json 讀不到…）的退出碼
+
+
+def clip(msg, limit=300):
+    """把 msg 縮到約 limit 字：保留開頭（錯誤類型、根因）與結尾（路徑、提示），中間換成「…」（A2-08）。"""
+    if len(msg) <= limit:
+        return msg
+    head = limit * 2 // 5
+    return msg[:head] + " … " + msg[-(limit - head - 3):]
 
 
 def run_prog(name, root, node_id, extra_env=None, gen=None, timeout=None, abort=None):
@@ -73,14 +81,14 @@ def read_config(node):
     t = t if isinstance(t, dict) else {}
     err = None
     ms = t.get("interval_ms", DEFAULT_INTERVAL_MS)
-    if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not (0 <= ms <= 86400000 * 365) \
-            or not math.isfinite(ms):
+    # spec §1：有限非負數字就照用（註解疑點 timeline:76／83：不再另設 365 天上限、也不截掉小數）。
+    if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not math.isfinite(ms) or ms < 0:
         err = "interval_ms 要是有限非負數字，拿到 %r；先用 %d" % (ms, DEFAULT_INTERVAL_MS)
         ms = DEFAULT_INTERVAL_MS
     early = t.get("early_tock", False) is True
     v = t.get("action_timeout_s")
     tmo = float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and 0 < v < 1e6 else ACTION_TIMEOUT
-    return int(ms), early, tmo, err
+    return ms, early, tmo, err
 
 
 class Timeline(threading.Thread):
@@ -107,7 +115,8 @@ class Timeline(threading.Thread):
         self.retire = False              # unregister：本回合收完就結束
         self.retire_kill = True
         self.wake = threading.Event()
-        self.kick = False                # wake／resume：idle 時不等滿 interval
+        self.kick = None                 # wake／resume 的 monotonic 時刻；只有回合關上「之後」的才打斷第 6 步（A2-11）
+        self.round_why = None            # check_round 判不出時的原因（寫進 last_error）
         self.recover_fails = 0
         self.owe_done = False
         self.unverified = None
@@ -121,10 +130,14 @@ class Timeline(threading.Thread):
         v = r.get("round") if isinstance(r, dict) else None
         return v if is_int(v) else getattr(self, "round", 0)
 
-    def err(self, prog, rc, msg):
-        """把 prog、rc 與 msg 記成此 node 最近錯誤，帶目前回合與時間（spec §2.8）。
-        回 None；rc 可為 None，msg 為空時留空字串，文字只留最後 300 字。"""
-        self.last_error = {"prog": prog, "rc": rc, "round": self.round, "at": now(), "err": (msg or "")[-300:]}
+    def err(self, prog, rc, msg, kind=None):
+        """把 prog、rc 與 msg 記成此 node 最近錯誤，帶目前回合與時間（spec §2.8）。回 None。
+
+        A2-08：`kind` 是錯誤類型（例 `stale-holder-unverified`、`round-unknown`），分欄放、不會被截掉；
+        msg 太長時保留開頭與結尾、中間換成「…」（以前只留最後 300 字，深路徑會把開頭的錯誤類型與根因截掉）。"""
+        self.last_error = {"prog": prog, "rc": rc, "round": self.round, "at": now(), "err": clip(msg or "")}
+        if kind:
+            self.last_error["kind"] = kind
 
     def stop_overdue(self):
         """判定 daemon 的停止寬限期是否已過，供動作程序 abort 使用（spec §2.5、§2.7）。
@@ -142,10 +155,14 @@ class Timeline(threading.Thread):
         無額外參數，回 bool；只讀既有旗標，不另推定檔案或程序是否存在。"""
         return self.done() or self.retire
 
-    def sleep_until(self, t_end, kickable):
-        """等到 monotonic 時刻 t_end；kickable 決定 wake/resume 能否跳過等待（spec §2.1）。
+    def sleep_until(self, t_end, kick_after=None):
+        """等到 monotonic 時刻 t_end；kick_after 不是 None 時，在那個時刻之後送來的 wake／resume 會打斷等待（spec §2.1）。
+        A2-11：回合中送來的 wake 照「回合中照舊」不起作用，也不留到回合後的 idle 才生效。
         回 None；停止或 retire 隨時可打斷，喚醒 Event 後仍重查條件。"""
-        while not self.leaving() and not (kickable and self.kick) and time.monotonic() < t_end:
+        def kicked():
+            """有沒有在 kick_after 之後收到 wake／resume。"""
+            return kick_after is not None and self.kick is not None and self.kick >= kick_after
+        while not self.leaving() and not kicked() and time.monotonic() < t_end:
             self.wake.wait(min(POLL, max(0.0, t_end - time.monotonic())))
             self.wake.clear()
 
@@ -171,14 +188,18 @@ class Timeline(threading.Thread):
         return rc, out, err
 
     def check_round(self):
-        """讀 round.json 更新 round_open，供不變條件一檢查（spec §2.2）。
-        無額外參數；回 True 表示 open 明確為 true，IO 回 None（不知道）；其餘情形目前回 False。"""
-        st, r = read_json3(os.path.join(self.node, ".aos", "round.json"))
-        if st == IO:
-            # spec §0、§2.2 三態：I/O 不明留 None，呼叫端只能退避，不能把它當成已關回合。
+        """讀 round.json 更新 round_open，供不變條件一檢查（spec §2.2）。判定只用 aos7_fs.read_round（A2-02）：
+        回 True＝明確 `open: true`；False＝明確 `open: false` 或確定沒有 round.json（新空間）；
+        None＝不知道（讀不到、半寫、缺 open、型別不對），原因放 round_why，呼叫端只能退避、不 tick。"""
+        st, _r, why = read_round(os.path.join(self.node, ".aos", "round.json"))
+        self.round_why = why
+        if st == ROUND_OPEN:
+            self.round_open = True
+        elif st in (ROUND_CLOSED, ROUND_NONE):
+            self.round_open = False
+        else:
+            # spec §0、§2.2 三態：不明留 None，呼叫端只能退避，不能把它當成已關回合（以前缺 open／半寫當已關）。
             self.round_open = None
-            return None
-        self.round_open = st == OK and isinstance(r, dict) and r.get("open") is True
         return self.round_open
 
     # ---------- 迴圈 ----------
@@ -211,7 +232,8 @@ class Timeline(threading.Thread):
             # 1. spec §2.2 不變條件一：先檢查舊回合；內容損壞的回合數另由 tick 的 §3 fallback 處理。
             ro = self.check_round()
             if ro is None:
-                self.err("round", None, "round.json 讀不到（不知道回合關了沒），不 tick，退避後再看")
+                self.err("round", None, "不知道上一回合關了沒，不 tick，退避後再看：%s" % self.round_why,
+                         kind="round-unknown")
                 self.backoff()
                 continue
             if ro:
@@ -245,7 +267,7 @@ class Timeline(threading.Thread):
             # spec §0、§2.1：間隔靠 monotonic，ISO at 只供人看；牆鐘校時不會改變等待長度。
             t0 = time.monotonic()
             t_end = t0 + ms / 1000.0
-            self.kick = False
+            self.kick = None
             self.phase = "tick"
             rc, out, err = self.prog("aos7-tick")
             tick_cut = rc == TIMEOUT_RC and out is None
@@ -290,10 +312,11 @@ class Timeline(threading.Thread):
                 self.owe_done = True
                 self.event("round-unclosed", round=self.round, rc=rc)
                 continue   # 下一圈頂端走不變條件一
+            closed_at = time.monotonic()
             self.d.round_done(self.node_id)
-            # 6. 等滿 interval（wake、resume 打斷）
+            # 6. 等滿 interval（wake、resume 打斷；只認回合關上之後送來的，A2-11）
             self.phase = "idle"
-            self.sleep_until(t_end, kickable=True)
+            self.sleep_until(t_end, kick_after=closed_at)
         if not self.gone:
             self.kill_if_leaving()
             if self.retire and self.check_round():
@@ -301,14 +324,15 @@ class Timeline(threading.Thread):
 
     def run_done(self, rid):
         """判定本回合 rid（槽#run）是否已結束，供提前 tock（spec §2.1 第 4 步）。
-        同 run 有 exit，或 birth 物件的 run 不同（含缺值）回 True；兩檔讀不到則回 False，繼續等。"""
+        同 run 有 exit，或 birth 的 run 是**另一個整數**（槽已換人）回 True；讀不到、壞掉、缺 run 都回 False，
+        繼續等到 interval（註解疑點 timeline:311：缺 run 的 birth 以前會當已換人、准許提前 tock）。"""
         slot, _, run = rid.rpartition("#")
         fslot = aos7_task.slot_dir(self.node, slot)
         ex = read_json(os.path.join(fslot, "exit.json"))
         if isinstance(ex, dict) and str(ex.get("run")) == run:
             return True
         b = read_json(os.path.join(fslot, "birth.json"))
-        return isinstance(b, dict) and str(b.get("run")) != run
+        return isinstance(b, dict) and is_int(b.get("run")) and str(b["run"]) != run
 
     def event(self, ev, **kw):
         """將事件名 ev 與欄位 kw 記為 node 最近事件，再轉給 daemon（spec §2.8、§9）。
@@ -333,7 +357,8 @@ class Timeline(threading.Thread):
         info = holder_unverified(self.node, self.d.gen)
         if not info:
             return
-        self.err("action-lock", None, "stale-holder-unverified：%s。%s" % (info["why"], info["hint"]))
+        self.err("action-lock", None, "stale-holder-unverified：%s。%s" % (info["why"], info["hint"]),
+                 kind="stale-holder-unverified")
         if info["why"] != self.unverified:
             self.unverified = info["why"]
             self.event("stale-holder-unverified", pid=info["pid"], why=info["why"])

@@ -7,7 +7,9 @@
 - `--src <node id>`：要記哪個 node 的 `.aos/last-round.json`（可多個；預設自己的 node）。先找掛載（resolve 空間路徑），
   沒掛就照 `$AOS7_ROOT/<id>` 讀——要守 S-10「只碰給的資料夾」的話，別的 node 請用 mounts 掛進來。
 - `--status`：另外記 daemon 的 `.aosd/status.json` 的 `last_event`（取樣，可能漏；要完整的用 `.aosd/log.on`）。
-- 寫到 `<自己的 node>/history/<id 換成 +>.jsonl`（`--out` 改資料夾）；`--max-lines N` 超過就只留最後 N 行（輪替是它自己的事）。
+- 寫到 `<自己的 node>/history/<id 換成 +>.jsonl`（`--out` 改資料夾）；`--max-lines N` 超過就只留最後 N 行（輪替是它自己的事），
+  node 歷史與 `daemon-events.jsonl` 都套用（A2-10）。
+- 收到 tock 時 last-round.json 已經是那一回合的（tock 先提交總結才寫 tock.json；A2-12），不會讀到上一回合。
 - 它是取樣的：看到 `round` 跳號就記一行 `{"gap": [從, 到]}`，補不回來。已記到第幾回合存在槽裡的 state.json（換 run 接得上）。
 
 由 tick 經 aos7-run 啟動（S-10），以 wait_tock 讀槽內 tock.json；這是 P2-16 的參考 module。
@@ -79,7 +81,10 @@ def once(me, args, resolve, st):
         s = read_json(os.path.join(me["root"], ".aosd", "status.json"))
         ev = s.get("last_event") if isinstance(s, dict) else None
         if isinstance(ev, dict) and ev != st.get("last_event"):
-            append_jsonl(os.path.join(args.out, "daemon-events.jsonl"), ev)
+            out = os.path.join(args.out, "daemon-events.jsonl")
+            append_jsonl(out, ev)
+            if args.max_lines:
+                trim(out, args.max_lines)   # A2-10：--max-lines 也套在事件歷史
             st["last_event"] = ev
             changed = True
     return changed
