@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """aos7-kernel 的命令列入口——本體在 ../lib/aos7_kernel.py。"""
+# 由 tick 當任務啟動，透過 aos7-run 交接；回合規則與控制檔讀寫交給本體（spec.md 第 5、9 節）。
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))

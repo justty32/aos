@@ -2,7 +2,10 @@
 
 tick、tock、daemon 共用；kernel 也可以 import `list_tasks`／`task_state`／`is_live` 來看任務。
 所有函式只讀寫檔案與送訊號，不留任何記憶體狀態。
-"""
+
+對應 spec §2 的 node 消失／停機收尾、§4～§6 的任務生命週期與 §7 的歷史定位（S-10、S-17）。
+讀 .aos/tasks、tasks-old、rounds.jsonl、tasks.json 與任務 birth／runner／pid／exit／ctl；
+寫 birth、runner、起不來時的 exit、ctl-done 與 spawn，建立掛載／子根 .aosd，透過 /proc 核對程序。"""
 import json
 import os
 import re
@@ -23,21 +26,28 @@ LIVE_STATES = ("born", "live")
 # ---------- 路徑 ----------
 
 def tasks_dir(node):
-    """`<node>/.aos/tasks/`。"""
+    """`<node>/.aos/tasks/`。
+
+    node 是 node 路徑；回現役任務區的路徑字串，不建立目錄（spec §5）。"""
     return os.path.join(node, ".aos", "tasks")
 
 
 def task_dir(node, tid):
+    """由 node 路徑與 tid 回現役任務資料夾路徑，不建立目錄（spec §5）。"""
     return os.path.join(tasks_dir(node), tid)
 
 
 def old_dir(node):
-    """`<node>/.aos/tasks-old/`：tock 把結束超過 keep_ended_rounds 回合的任務資料夾搬來這裡（Q3）。"""
+    """`<node>/.aos/tasks-old/`：tock 把結束超過 keep_ended_rounds 回合的任務資料夾搬來這裡（Q3）。
+
+    node 是 node 路徑；回歷史區的路徑字串，不建立目錄（spec §7）。"""
     return os.path.join(node, ".aos", "tasks-old")
 
 
 def find_task_dir(node, tid):
-    """tid 的資料夾：先找 tasks/，再找 tasks-old/；都沒有回 None。"""
+    """tid 的資料夾：先找 tasks/，再找 tasks-old/；都沒有回 None。
+
+    node 是 node 路徑、tid 是任務識別字；無法確認資料夾存在也回 None（spec §7）。"""
     for d in (task_dir(node, tid), os.path.join(old_dir(node), tid)):
         if os.path.isdir(d):
             return d
@@ -45,7 +55,9 @@ def find_task_dir(node, tid):
 
 
 def last_logged_round(node):
-    """rounds.jsonl 最後幾行裡最大的整數 round（round.json 壞掉時接著數用；probes/chaos B6）；沒有回 None。"""
+    """rounds.jsonl 最後幾行裡最大的整數 round（round.json 壞掉時接著數用；probes/chaos B6）；沒有回 None。
+
+    node 是 node 路徑；回尾端最多 20 行裡可用的最大回合數，讀不到或沒有合法紀錄回 None（spec §3、§7）。"""
     rows = tail_jsonl(os.path.join(node, ".aos", "rounds.jsonl"), 20)
     rs = [x.get("round") for x in rows if isinstance(x, dict)]
     rs = [r for r in rs if isinstance(r, int) and not isinstance(r, bool)]
@@ -53,7 +65,9 @@ def last_logged_round(node):
 
 
 def list_tasks(node):
-    """回這個 node 所有任務的 tid（排序過）。node 是絕對路徑。"""
+    """回這個 node 所有任務的 tid（排序過）。node 是絕對路徑。
+
+    只列 .aos/tasks 中有一般檔 birth.json 的項目，不含 tasks-old；列目錄失敗回 []（spec §5、§7）。"""
     try:
         return sorted(d for d in os.listdir(tasks_dir(node))
                       if os.path.isfile(os.path.join(tasks_dir(node), d, "birth.json")))
@@ -62,13 +76,17 @@ def list_tasks(node):
 
 
 def birth_of(tdir):
-    """讀 birth.json；壞掉或不是物件回 {}（任務自己改壞也不拖垮 tick／tock；astra-4 I-05）。"""
+    """讀 birth.json；壞掉或不是物件回 {}（任務自己改壞也不拖垮 tick／tock；astra-4 I-05）。
+
+    tdir 是任務資料夾；回 birth 物件，讀不到也回空 dict（spec §5、§7）。"""
     b = read_json(os.path.join(tdir, "birth.json"))
     return b if isinstance(b, dict) else {}
 
 
 def name_of(tdir):
-    """任務的 name：birth.json 的，讀不到就從 tid 推（`<name>-r<回合>[-k]`），免得 keep 以為沒有活實例又起一份。"""
+    """任務的 name：birth.json 的，讀不到就從 tid 推（`<name>-r<回合>[-k]`），免得 keep 以為沒有活實例又起一份。
+
+    tdir 是任務資料夾；回 name 字串。tid 已把部分字元換成 _，備援只能近似原名（spec §5、§7）。"""
     n = birth_of(tdir).get("name")
     if isinstance(n, str) and n:
         return n
@@ -78,7 +96,9 @@ def name_of(tdir):
 # ---------- 程序 ----------
 
 def pid_alive(pid):
-    """程序在不在（殭屍算不在）。"""
+    """程序在不在（殭屍算不在）。
+
+    pid 是程序編號；回 bool。無效／不存在回 False，kill(0) 無權限回 True；其後 /proc 讀不到卻回 False（spec §5）。"""
     if not isinstance(pid, int) or pid <= 0:
         return False
     try:
@@ -95,7 +115,9 @@ def pid_alive(pid):
 
 
 def group_alive(pgid):
-    """程序群組還有沒有成員（殭屍不算）。"""
+    """程序群組還有沒有成員（殭屍不算）。
+
+    pgid 是群組編號；回 bool。無效或沒有可讀的非殭屍成員回 False；個別 /proc 讀取失敗略過（spec §6）。"""
     if not isinstance(pgid, int) or pgid <= 0:
         return False
     for pid in _all_pids():
@@ -106,11 +128,14 @@ def group_alive(pgid):
 
 
 def _all_pids():
+    """無參數；列 /proc 數字項並回 PID 整數 list。列目錄失敗直接拋出，不當作空清單（spec §6）。"""
     return [int(p) for p in os.listdir("/proc") if p.isdigit()]
 
 
 def _stat(pid):
-    """回 (state, ppid, pgid) 或 None。"""
+    """回 (state, ppid, pgid) 或 None。
+
+    pid 是程序編號；讀不到／欄位壞掉回 None。從最後一個右括號後解析，避免程序名裡的空格打亂欄位（spec §6）。"""
     try:
         with open("/proc/%d/stat" % pid) as f:
             rest = f.read().rsplit(")", 1)[1].split()
@@ -123,7 +148,9 @@ def _groups_with_descendants(pgid):
     """pgid 本身，加上這群組成員所有後代所在的群組。
 
     為什麼要後代：搬來的 aos-exec 會把 inst 的子程式開在**另一個 session**，
-    只殺 aos-exec 的群組收不到它（problems-core.md P-05）。"""
+    只殺 aos-exec 的群組收不到它（problems-core.md P-05）。
+
+    pgid 是起始群組；回群組編號 set。讀不到的程序略過，至少保留傳入 pgid，結果不保證含已脫離的後代（spec §6）。"""
     table = {p: _stat(p) for p in _all_pids()}
     table = {p: s for p, s in table.items() if s}
     members = {p for p, s in table.items() if s[2] == pgid}
@@ -138,7 +165,9 @@ def _groups_with_descendants(pgid):
 
 
 def _is_runner(pid):
-    """是 aos7-run（任務的包裝）嗎：它等任務死了自己寫 exit.json，不能先殺它。"""
+    """是 aos7-run（任務的包裝）嗎：它等任務死了自己寫 exit.json，不能先殺它。
+
+    pid 是程序編號；回命令列是否含 aos7-run 入口的 bool，cmdline 讀不到回 False（spec §6）。"""
     try:
         with open("/proc/%d/cmdline" % pid, "rb") as f:
             return any(a.endswith(b"aos7-run") for a in f.read().split(b"\0"))
@@ -147,6 +176,7 @@ def _is_runner(pid):
 
 
 def _env_has(pid, want):
+    """判斷 pid 的環境是否包含 want（bytes 的 NAME=value 集合）；回 bool，environ 讀不到回 False（spec §6）。"""
     try:
         with open("/proc/%d/environ" % pid, "rb") as f:
             return want <= set(f.read().split(b"\0"))
@@ -156,7 +186,10 @@ def _env_has(pid, want):
 
 def group_is_task(pgid, tid, node):
     """pid.json 的 pgid 真的是這個任務的嗎：群組沒有活成員（沒東西可打），或有成員（或成員的父程序＝aos7-run）
-    的環境變數 AOS7_TID＋AOS7_NODE 是這個任務。pid.json 在任務自己寫得到的 taskdir，改了 pgid 的不能讓 kill 打到別人（probes/chaos B7）。"""
+    的環境變數 AOS7_TID＋AOS7_NODE 是這個任務。pid.json 在任務自己寫得到的 taskdir，改了 pgid 的不能讓 kill 打到別人（probes/chaos B7）。
+
+    pgid 是待送訊號的群組、tid／node 是目標身分；回 bool。無效 pgid 回 False；無可讀活成員回 True，
+    有成員但環境全讀不到或不符回 False。這是合作式驗證，並非權限隔離（spec §6）。"""
     if not isinstance(pgid, int) or pgid <= 1:
         return False
     want = {b"AOS7_NODE=" + node.encode(), b"AOS7_TID=" + tid.encode()}
@@ -168,12 +201,17 @@ def group_is_task(pgid, tid, node):
 
 def _escaped(tid, node, skip):
     """環境變數 AOS7_TID、AOS7_NODE 都是這個任務、但已經不是後代的程序（雙 fork、setsid 後被 init 收養；probes/polyglot N5）。
-    tid 給 None＝這個 node 的任何任務（有 AOS7_TID 就算；node 消失時用，Q4）。"""
+    tid 給 None＝這個 node 的任何任務（有 AOS7_TID 就算；node 消失時用，Q4）。
+
+    node 是 AOS7_NODE 的路徑字串、skip 是略過的 PID 集合；回符合身分的 PID list，讀不到環境的程序略過（spec §6）。"""
     return _env_procs({node}, tid, skip)
 
 
 def _env_procs(nodes, tid, skip):
-    """一次掃 `/proc/*/environ`：AOS7_NODE 在 nodes 裡（tid 給了還要 AOS7_TID 相符；沒給要有 AOS7_TID）的程序，不含 aos7-run。"""
+    """一次掃 `/proc/*/environ`：AOS7_NODE 在 nodes 裡（tid 給了還要 AOS7_TID 相符；沒給要有 AOS7_TID）的程序，不含 aos7-run。
+
+    nodes 是 node 路徑集合、tid 是可選任務識別字、skip 是排除的 PID 集合；回 PID list。
+    個別 environ 讀不到就略過；空結果只代表此次沒找到，並非確認不存在（spec §2、§6）。"""
     want_nodes = {b"AOS7_NODE=" + n.encode() for n in nodes}
     want_tid = None if tid is None else b"AOS7_TID=" + tid.encode()
     out = []
@@ -194,6 +232,7 @@ def _env_procs(nodes, tid, skip):
 
 
 def _me_and_ancestors():
+    """無參數；回自己與可辨識祖先的 PID set，避免子 daemon 收尾時打到父 daemon；祖先資料讀不到就停止上溯（spec §2）。"""
     me = {os.getpid()}
     p = os.getppid()
     while p > 1 and p not in me:      # 不殺自己與祖先（子 daemon 本身也是某個 node 的任務）
@@ -206,7 +245,9 @@ def _me_and_ancestors():
 def sweep_nodes(nodes):
     """daemon stop（帶 kill）的最後收尾（astra-5 F-01）：環境變數 AOS7_NODE 是 nodes 之一、有 AOS7_TID 的程序
     （已結束任務留下的子孫、tasks-old 裡的也算；Q1 範圍：群組＋活後代＋環境相符），連同它們的群組與後代收掉。
-    一次掃 /proc，不逐任務掃。aos7-run 不殺（它等任務死了自己寫 exit.json）。回 (收到的群組數, 乾不乾淨)。"""
+    一次掃 /proc，不逐任務掃。aos7-run 不殺（它等任務死了自己寫 exit.json）。回 (收到的群組數, 乾不乾淨)。
+
+    nodes 是 node 路徑 iterable；回 (群組數, bool)，bool 沿用 kill_group 的可觀測存活結果，未知程序可能漏收（spec §2、§6）。"""
     me = _me_and_ancestors()
     groups = set()
     for pid in _env_procs(set(nodes), None, me):
@@ -220,7 +261,10 @@ def sweep_nodes(nodes):
 
 
 def kill_group(pgid, grace=KILL_GRACE, also=()):
-    """對 pgid（連同後代的群組）與 also（另外找到的程序所在的群組）送 SIGTERM，等至多 grace 秒，還在就 SIGKILL。回 True＝收乾淨。"""
+    """對 pgid（連同後代的群組）與 also（另外找到的程序所在的群組）送 SIGTERM，等至多 grace 秒，還在就 SIGKILL。回 True＝收乾淨。
+
+    pgid 是主群組、grace 是寬限秒數、also 是補收 PID iterable；回 bool。送訊號失敗先略過，
+    最後只依可觀測成員判斷；True 不保證收掉 Q1 範圍外或 /proc 讀不到的程序（spec §6）。"""
     groups = _groups_with_descendants(pgid)
     for pid in also:
         st = _stat(pid)
@@ -254,14 +298,18 @@ def task_state(tdir):
     - "live"：有 pid.json，任務程序或 aos7-run 還在
     - "lost"：有 pid.json，任務與 aos7-run 都不在，又沒 exit.json
     - "born"：只有 birth.json（剛起，算活）
-    """
+
+    tdir 是任務資料夾；回上述字串，不寫檔。pid.json 讀不到時改看 runner，身分不足通常回 born；
+    沒有 pid.json 但 runner 確認已死也回 lost；目前無 unknown 狀態，觀測失敗仍可能誤判 lost（見 K-05）。"""
     if os.path.exists(os.path.join(tdir, "exit.json")):
         return "ended"
     pid = read_json(os.path.join(tdir, "pid.json"))
     if not isinstance(pid, dict) or not pid:
+        # 已知問題 K-04：runner 死了但真任務已出生時，此處未先掃身分就判 lost，keep 可能雙開（未修，proto7-2 重做）
         if runner_dead(tdir) and not os.path.exists(os.path.join(tdir, "exit.json")) \
                 and not isinstance(read_json(os.path.join(tdir, "pid.json")), dict):
             return "lost"   # runner 在寫 pid.json 前就死了、也沒寫成 exit.json（astra-7 H-06）
+        # 已知問題 K-03：缺 runner.json／starttime 又沒有 pid／exit 時，無活程序也可能永久 born（未修，proto7-2 重做）
         return "born"
     if pid_alive(pid.get("pid")) or pid_alive(pid.get("runner_pid")):
         return "live"
@@ -273,28 +321,37 @@ def task_state(tdir):
 
 def runner_dead(tdir):
     """tick 記的 runner（`runner.json` 的 pid＋starttime）確定已經不在了嗎。沒有 runner.json（舊任務、人手起的）、
-    讀不懂、starttime 沒記到都回 False（不猜）；pid 不在、是殭屍、或 starttime 不同（pid 被重用）回 True。"""
+    讀不懂、starttime 沒記到都回 False（不猜）；pid 不在、是殭屍、或 starttime 不同（pid 被重用）回 True。
+
+    tdir 是任務資料夾；回 bool。注意上述保守處理只涵蓋紀錄缺漏；目前 /proc starttime 讀不到也會回 True（K-05；spec §5）。"""
     r = read_json(os.path.join(tdir, "runner.json"))
     if not isinstance(r, dict) or not isinstance(r.get("pid"), int) or r.get("starttime") is None:
         return False
     if not pid_alive(r["pid"]):
         return True
+    # 已知問題 K-05：目前 starttime 讀不到的 None 也算不相符，會把未知誤判成 runner 已死（未修，proto7-2 重做）
     return proc_starttime(r["pid"]) != r["starttime"]
 
 
 def is_live(state):
+    """輸入狀態字串 state，回是否為 born／live 的 bool；未知字串回 False（spec §5）。"""
     return state in LIVE_STATES
 
 
 def live_tasks(node):
-    """回 node 上活著（born 或 live）的 tid 清單。"""
+    """回 node 上活著（born 或 live）的 tid 清單。
+
+    node 是 node 路徑；回排序後的現役 tid list，列不到任務回 []，狀態讀取沿用 task_state 的限制（spec §5）。"""
     return [t for t in list_tasks(node) if is_live(task_state(task_dir(node, t)))]
 
 
 # ---------- 控制 ----------
 
 def kill_task(tdir):
-    """kill 一個任務，回 (ok, msg)。已結束當成功。"""
+    """kill 一個任務，回 (ok, msg)。已結束當成功。
+
+    tdir 是任務資料夾；回 (bool, 說明)，pid 資料尚未發布先等 KILL_GRACE 秒，仍無資料回失敗。
+    先核對群組身分才送訊號，未知身分不直接採信 pid.json；壞的非物件內容可能向上拋錯（spec §6）。"""
     if os.path.exists(os.path.join(tdir, "exit.json")):
         # 主程序結束了，但它開的子孫可能還在（astra-4 I-04）：照樣找環境變數是這個任務的程序收掉
         tid = os.path.basename(tdir)
@@ -315,6 +372,7 @@ def kill_task(tdir):
     node = real_path(os.path.dirname(os.path.dirname(os.path.dirname(tdir))))
     tid = os.path.basename(tdir)
     also = _escaped(tid, node, {os.getpid(), pid.get("runner_pid")})
+    # spec §6：pid.json 可由任務改寫，送訊號前須用合作式環境身分核對，不能只信檔內的 pgid。
     if not group_is_task(pid.get("pgid"), tid, node):
         # pid.json 被改過（或 pgid 壞掉）：不打那個群組，只收環境變數相符的
         if also:
@@ -330,7 +388,10 @@ def kill_task(tdir):
 
 def kill_node_procs(node, known=(), skip=()):
     """node 消失時收掉它上面的任務（Q4）：known＝daemon 平常記著的 [(pgid, runner_pid)]（只用 pgid），
-    再加上環境變數 AOS7_NODE 是這個 node 的程序（pid.json 跟著資料夾被刪了也找得到）。回收到的群組數與乾不乾淨。"""
+    再加上環境變數 AOS7_NODE 是這個 node 的程序（pid.json 跟著資料夾被刪了也找得到）。回收到的群組數與乾不乾淨。
+
+    node 是消失前的 node 路徑；known 是已記錄群組／runner 配對、skip 目前未使用。
+    回 (群組數, bool)；環境讀不到的程序略過，結果有 Q1 的觀測邊界（spec §2、§6）。"""
     me = _me_and_ancestors()
     groups = set()
     for pgid, _runner in known:
@@ -348,7 +409,9 @@ def kill_node_procs(node, known=(), skip=()):
 
 
 def write_spawn(node, fname, item):
-    """寫 `<node>/.aos/spawn/<fname>.json`：請下個 tick 起一個任務。"""
+    """寫 `<node>/.aos/spawn/<fname>.json`：請下個 tick 起一個任務。
+
+    node 是目標 node、fname 是不含 .json 的檔名、item 是任務定義；成功回 None，寫入失敗拋出（spec §4、§6；S-10）。"""
     write_json(os.path.join(node, ".aos", "spawn", fname + ".json"), item)
 
 
@@ -357,14 +420,18 @@ DIFF_KEYS = ("argv", "inst", "mounts", "subroot", "allow_stop")
 
 
 def dyn_mounts(birth):
-    """birth.json 裡執行中加掛的（標了 dyn）→ {名字: 空間路徑}。"""
+    """birth.json 裡執行中加掛的（標了 dyn）→ {名字: 空間路徑}。
+
+    birth 是出生定義（None 當空）；回有效動態掛載的 dict，缺欄或無 dyn 的項目不收（spec §6）。"""
     m = (birth or {}).get("mounts") or {}
     return {n: v["to"] for n, v in m.items() if isinstance(v, dict) and v.get("dyn") and "to" in v and "at" in v}
 
 
 def reload_item(node, birth):
     """restart reload 的新定義：node 現在的 tasks.json 裡跟 birth.json 同名的項目（第一個），去掉 mode／from_round／max_live，
-    掛載＝項目的宣告加上執行中加掛的（同名以項目為準）。回 (項目, None) 或 (None, 說明)；說明時整個 ctl 不執行。"""
+    掛載＝項目的宣告加上執行中加掛的（同名以項目為準）。回 (項目, None) 或 (None, 說明)；說明時整個 ctl 不執行。
+
+    node 是目標 node、birth 是原出生定義；找不到／讀不懂／定義不合格回 (None, 說明)，此時不可 kill（spec §6）。"""
     import aos7_tick   # tick import 這個模組，放在這裡免得互相 import
     name = birth.get("name") if isinstance(birth.get("name"), str) and birth.get("name") else "task"
     items, errs = aos7_tick.load_items(node)
@@ -389,7 +456,9 @@ def reload_item(node, birth):
 
 
 def def_diff(birth, item):
-    """舊（birth.json）→ 新（reload 的項目）定義有變的欄位：{欄: {"old", "new"}}。掛載比宣告（名字→空間路徑）。"""
+    """舊（birth.json）→ 新（reload 的項目）定義有變的欄位：{欄: {"old", "new"}}。掛載比宣告（名字→空間路徑）。
+
+    birth 是舊定義、item 是新定義；回差異 dict，無變化回 {}，未設掛載視同空宣告（spec §6）。"""
     out = {}
     for k in DIFF_KEYS:
         old = aos7_mount.decl_of(birth) if k == "mounts" else birth.get(k)
@@ -402,7 +471,10 @@ def def_diff(birth, item):
 
 
 def run_ctl(node, tid):
-    """執行 `<taskdir>/ctl.json`（若有），搬成 ctl-done.json。回紀錄 dict 或 None。"""
+    """執行 `<taskdir>/ctl.json`（若有），搬成 ctl-done.json。回紀錄 dict 或 None。
+
+    node／tid 定位現役任務；控制檔不存在回 None，否則回 {tid, op, ok}。壞 JSON 寫失敗回條；
+    執行或寫回條的例外留給 run_all_ctl 隔離，不把 I/O 失敗誤報成功（spec §6）。"""
     tdir = task_dir(node, tid)
     path = os.path.join(tdir, "ctl.json")
     ctl = read_json(path)
@@ -436,6 +508,7 @@ def run_ctl(node, tid):
                 item["mounts_dyn"] = sorted(dyn)   # 新任務照樣標 dyn（下次 reload 還分得出來）；reload 的由 reload_item 算
             if reload:
                 diff = def_diff(birth, item)
+            # spec §6／S-10：控制只寫下一次 tick 的 spawn，不能在 tock 或 daemon 中直接生新任務。
             ok, msg = kill_task(tdir)
             item["restart_of"] = tid
             write_spawn(node, "restart-" + tid, item)
@@ -448,6 +521,7 @@ def run_ctl(node, tid):
     ctl["result"] = {"ok": ok, "msg": msg, "at": now()}
     if diff is not None:
         ctl["result"]["diff"] = diff   # reload：舊 → 新定義有變的欄位，讀回條就知道生效的是哪版
+    # spec §6：先留回條才移除請求；回條寫失敗會留下 ctl，下一次 tick／tock 仍可能重做效果。
     write_json(os.path.join(tdir, "ctl-done.json"), ctl)
     try:
         os.remove(path)
@@ -458,7 +532,9 @@ def run_ctl(node, tid):
 
 def run_all_ctl(node):
     """對 node 每個任務執行 ctl.json，回紀錄清單。一個任務的 ctl 處理失敗（ctl-done.json 變成資料夾、寫不進去…）
-    只在它那筆記 `ok: false`＋`err`，其他任務照做，不拖垮 tick／tock（astra-5 F-06）。"""
+    只在它那筆記 `ok: false`＋`err`，其他任務照做，不拖垮 tick／tock（astra-5 F-06）。
+
+    node 是目標 node；回控制處理紀錄 list，列不到任務回 []，個別例外轉成失敗紀錄（spec §6）。"""
     out = []
     for tid in list_tasks(node):
         try:
@@ -473,10 +549,13 @@ def run_all_ctl(node):
 # ---------- 起任務 ----------
 
 def new_tid(node, name, rnd):
-    """`<name>-r<回合>`，撞名加 -2、-3。"""
+    """`<name>-r<回合>`，撞名加 -2、-3。
+
+    node 是目標 node、name 是任務名、rnd 是出生回合；回未在 tasks／tasks-old 佔用的識別字（spec §5、§7）。"""
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", name or "task")
     base = "%s-r%d" % (safe, rnd)
     tid, n = base, 1
+    # spec §5、§7：歸檔只換位置，歷史 tid 仍代表原任務，不能被新任務重用而接錯前任狀態。
     while os.path.exists(task_dir(node, tid)) or os.path.exists(os.path.join(old_dir(node), tid)):
         n += 1
         tid = "%s-%d" % (base, n)
@@ -485,7 +564,9 @@ def new_tid(node, name, rnd):
 
 def subroot_of(root, node_id, sub):
     """檢查任務的 `subroot`：回 (空間路徑, None) 或 (None, 錯誤)。要在任務自己的 node 底下、不能是 node 本身
-    （S-10；probes/llmteam 誤解 2：寫成 "sub" 就在空間根建了 .aosd）。"""
+    （S-10；probes/llmteam 誤解 2：寫成 "sub" 就在空間根建了 .aosd）。
+
+    root 是空間根、node_id 是擁有者 id、sub 是子根空間路徑；回正規化路徑或錯誤說明，無法證明在 node 內就拒絕（spec §4）。"""
     good, bad = aos7_mount.check({"subroot": sub})
     sp = node_path(root, good["subroot"]) if good else None
     if good and aos7_mount.in_root(root, good["subroot"]) and os.path.realpath(sp).startswith(
@@ -495,7 +576,10 @@ def subroot_of(root, node_id, sub):
 
 
 def stopped_note(root, sub):
-    """子根有 `.aosd/stopped.json`（子 daemon 被路二 stop 過，Q5）就回說明字串，否則 None。"""
+    """子根有 `.aosd/stopped.json`（子 daemon 被路二 stop 過，Q5）就回說明字串，否則 None。
+
+    root 是空間根、sub 是子根空間路徑；回字串或 None。lexists 無法確認也回 None；
+    確認標記存在但讀不到內容仍阻止重起，身分欄以 ? 顯示（spec §2、§4）。"""
     path = os.path.join(node_path(root, sub), ".aosd", "stopped.json")
     if not os.path.lexists(path):
         return None
@@ -506,7 +590,9 @@ def stopped_note(root, sub):
 
 
 def subroot_running(sp):
-    """子根 `<sp>/.aosd/daemon.lock` 有人拿著嗎（有 daemon 在跑）：非阻塞 flock 試得到就馬上放掉、回 False（astra-6 G-04）。"""
+    """子根 `<sp>/.aosd/daemon.lock` 有人拿著嗎（有 daemon 在跑）：非阻塞 flock 試得到就馬上放掉、回 False（astra-6 G-04）。
+
+    sp 是子根路徑；回 bool。開鎖檔失敗回 False，flock 失敗回 True，兩者目前都不區分 I/O 錯誤（spec §2、§4）。"""
     import fcntl
     try:
         fd = os.open(os.path.join(sp, ".aosd", "daemon.lock"), os.O_RDONLY | os.O_NONBLOCK)
@@ -523,7 +609,9 @@ def subroot_running(sp):
 
 def same_dir(node, fnode):
     """tick 抓著的 node（fnode＝`/proc/self/fd/N`）跟字串路徑 node 現在指的還是同一個資料夾嗎（中途搬走、換成符號連結就不是；
-    astra-6 G-02）。不是 fd 路徑當同一個。"""
+    astra-6 G-02）。不是 fd 路徑當同一個。
+
+    node 是對外路徑、fnode 是動作抓住的目錄；回 bool。任一 stat 失敗回 False，非 fd 路徑不驗證便回 True（spec §4）。"""
     if not fnode.startswith(FD_PREFIX):
         return True
     try:
@@ -541,7 +629,10 @@ def start_task(root, node_id, item, rnd, fnode=None, claimed=None):
     帶 `subroot` 而子根有 stopped.json（路二 stop 過；Q5）時不起，丟 ValueError（tick 記進 tasks_error）。
     fnode＝寫檔用的 node 路徑（tick 給 node 目錄 fd 的 `/proc/self/fd/N`：node 中途被刪就寫不進去、不建鬼目錄；
     astra-5 F-09）；任務的環境、cwd、掛載點記錄用實際路徑。claimed＝同一個 tick 已經認領的子根（set，起了就加進去）：
-    同一 tick 第二項宣告同一個子根丟 ValueError、不起（astra-7 H-02）。"""
+    同一 tick 第二項宣告同一個子根丟 ValueError、不起（astra-7 H-02）。
+
+    root 是空間根、node_id 是 node id、item 是已驗過的定義、rnd 是出生回合；回 tid（也可能是已記 exit 127 的失敗任務）。
+    子根認領衝突在分配 tid 前拋 ValueError，其他 I/O 例外可交 tick 逐項處理；不等待真任務結束（spec §4、§5；S-09、S-10）。"""
     root = os.path.abspath(root)
     node = node_path(root, node_id)
     fnode = fnode or node
@@ -565,6 +656,7 @@ def start_task(root, node_id, item, rnd, fnode=None, claimed=None):
     tid = new_tid(fnode, item.get("name"), rnd)
     tdir = task_dir(node, tid)
     ftdir = task_dir(fnode, tid)
+    # spec §4：對外身分保留字串 tdir，寫檔走抓住 node 的 ftdir；搬家跟著 inode，刪除時不建回舊路徑。
     os.makedirs(ftdir, exist_ok=True)   # 先佔住 tid，掛載點建在裡面
     if not same_dir(node, fnode):
         # tick 抓著 node 的期間它被搬走或換掉：不照舊路徑建掛載、不起 runner（會建回舊 node 或跑到別的 node），
@@ -634,6 +726,7 @@ def start_task(root, node_id, item, rnd, fnode=None, claimed=None):
     else:
         # runner 是誰：它在寫 pid.json 之前就死了（out.log 開不了、連 exit.json 都寫不進去）時，tock 靠這個判 lost，
         # 不會永遠 born（astra-7 H-06）。runner 自己 Popen 後跟 node 再比一次（H-05），不一致就寫 exit 127、不起任務
+        # 已知問題 K-03：Popen 與 runner.json 發布之間若 tick、runner 都死，仍會留下無法結案的 born（未修，proto7-2 重做）
         try:
             write_json(os.path.join(ftdir, "runner.json"), {"pid": p.pid, "starttime": proc_starttime(p.pid), "at": now()})
         except OSError:

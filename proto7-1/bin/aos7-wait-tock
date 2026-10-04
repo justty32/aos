@@ -4,6 +4,9 @@
     aos7-wait-tock [--after N] [--timeout 秒] [--task 任務資料夾]
 
 逾時退出碼 1、什麼都不印。sh 裡：`r=$(aos7-wait-tock --after "$r")`。
+人或非 Python 任務呼叫；只輪詢指定任務資料夾的 tock.json，不寫檔、不阻塞 daemon（S-11）。
+--task 優先於 AOS7_TASK；--after 是已看過的回合，未設 timeout 就持續等待。
+讀不到、JSON 壞掉或不是物件時都繼續等；只取最新通知，錯過的回合依第 5 節另讀 rounds.jsonl。
 """
 import argparse
 import os
@@ -18,9 +21,12 @@ if __name__ == "__main__":
     ap.add_argument("--task", default=os.environ.get("AOS7_TASK"))
     a = ap.parse_args()
     if not a.task:
+        # 第 5 節：任務從環境取得自己位置；人手呼叫可明給 --task，缺兩者就無從等待。
         print("aos7-wait-tock: 沒有 AOS7_TASK，也沒給 --task", file=sys.stderr)
         sys.exit(2)
+    # 第 5 節、S-11：把輪詢留在任務端，tock 覆寫通知後即可繼續服務其他任務。
     r = wait_tock(a.task, a.after, timeout=a.timeout)
     if r is None:
+        # timeout 用退出碼區別，stdout 僅在成功時放回合數，方便 shell 接續 --after。
         sys.exit(1)
     print(r)
