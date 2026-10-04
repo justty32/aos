@@ -12,6 +12,17 @@
 | 程式 | `aos7-subd`（可執行 Python） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py modules/subd/tests`） |
 
+## 契約卡
+
+- **職責**：讓一個 node 的任務擁有子空間根、跑自己的 daemon：起之前檢查位置與認領，寫守門檔與 `owner.json`，被允許的 stop 之後寫 `stopped.json` 擋下一次重起（下面規則節）。
+- **前置條件**：以任務身分起（`AOS7_ROOT`、`AOS7_NODE_ID`、`AOS7_TID`）；argv 經這個包裝程式起子 daemon，不繞過；子根只由這個包認領；父的 `nodes.json` 只有父 daemon 寫。
+- **保證**：
+  - 位置不合、子根已被認領、有 `stopped.json`、父 nodes.json 讀不到＝印原因、退出碼 1、什麼都不起。
+  - 守門檔照 `--allow-stop` 寫，核心照它擋控制檔 stop（核心 spec §2.7）；SIGTERM 不看守門檔。
+  - 父 kill 這個任務＝整個群組收到 SIGTERM，子 daemon 照 stop＋kill 收自己的任務（核心 §2.3、§6）；寬限內收不完的見界線。
+  - 被允許的外部 stop 留 `stopped.json`，父 node 的 keep 項之後再起就被擋。
+- **明確不管**：繞過包裝或人手起的子 daemon（界線）；擁有者檔被手改；惡意任務（合作式）。
+
 ## 用法
 
 ```json
@@ -41,3 +52,5 @@
 - **人手直接起子 daemon**：守門檔與 owner.json 照舊留著（核心不碰），stopped.json 也留著——刪不刪由人決定。
 - 跟以前（核心 tick 做）的差別：被擋的情況以前是「tick 不起、記 tasks_error、總結 skipped」，現在是「包裝程式起了又馬上退出碼 1、總結 ended 看得到失敗、原因在 out.log」。
 - 擁有者、守門檔、stopped.json 都是普通檔（合作式）：防失誤，不防惡意。
+- **父 kill 的 1 秒**是核心 kill 的通用寬限（核心 spec §6），不是這包的設定：子 daemon 在寬限內收不完的子任務，由**下一個子 daemon** 起來時的身分掃描收（核心 §5.4）。
+- **要永久拿掉子空間**：先對子 daemon 下允許的 stop（`--allow-stop` 的才收）、等 `<subroot>/.aosd/stopped.json` 出現，再拿掉父 tasks.json 那項。

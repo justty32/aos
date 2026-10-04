@@ -136,12 +136,31 @@
 | A3-05 內容＋mtime 不是唯一意圖、作用域未定 | 已修＋改 spec | 沒帶 id 時雜湊加上 `<node-id>/<槽>`、st_dev、st_ino；id 作用域定為同 node 同槽，pending once 查重比同槽＋同 ctl_id。`aos7-ctl task` 自動產生 uuid，`--id` 重送沿用。spec §6、§10 |
 | A3-06 owner 檔名有損編碼互蓋 | 已修（不是誤用：非 ASCII owner 如「甲」「乙」是正常用法） | by／node／owner 每段無損編碼（`/`→`+`，其他 `%XX`；太長取前 40＋`~`＋sha1 前 16）。spec 2.3、§10 |
 | A3-07 mount 子目錄的暫存檔漏清 | 已修 | tock 清槽暫存檔時連 `mount-req/`、`mount-done/` 一起，不遞迴清任務自己的資料夾。spec §0 |
-| A3-08 重播通知失敗被吞 | 已修 | 重播補 tock.json 失敗、alive 的槽判不出／判定例外都記進 round.json `notify_errors`（每筆帶 slot、run、round）與回傳；下一個 tick 開回合前補（同 run 還活著才補，補不上進 `tasks_error`），對已關回合再跑 tock 也補（`notify_retried`）。spec §7 |
+| A3-08 重播通知失敗被吞 | 已修 | 重播補 tock.json 失敗、alive 的槽判不出／判定例外都記進 round.json `notify_errors`（每筆帶 slot、run、round）與回傳；下一個 tick 開回合前補（同 run 還活著才補，補不上進 `tasks_error`），對已關回合再跑 tock 也補（`notify_retried`）。spec §7。**loop4 F47 改成只記不補**：跨回合補送已刪，只留記錄與同回合重播補寫 |
 | A3-09 任務仍活、群組核對不了，kill 卻回成功 | 已修 | kill 最後確認 pid.json 記的任務程序（pid＋starttime）已不在，否則 `ok: false`（unknown）；群組有成員 environ 讀不到權限又沒成員核對得到＝不知道。spec §6 |
 | 讀碼：`kill_node` 掃描不完整時沒打記著的群組 | 已修 | 照 spec 2.6 照樣打記著的群組，事件 ok:false；environ 讀不到權限又在記著群組裡＝不完整 |
 | 矩陣盲點（healthy 12 案有 9 案注入命中 0 次） | 已修 | 測試鉤子加 `AOS7_TEST_FAULT_HITS` 命中紀錄（P2-15），每個注入案例斷言命中 ≥1。補了 EACCES 孤兒、restart 完成證據跨 run、FIFO 生命週期檔、id 碰撞等組合——見 [tests/core/test_matrix_a3.py](../tests/core/test_matrix_a3.py) |
 
 - **until_round**（使用者 10-04，不是 astra 的題）：tasks.json 項目可選非負整數，回合數大於它就不再起新 run，跟 `from_round` 對稱；已在跑的不殺；once 已起過的照 launch 標記刪項，沒起成又過期的留著不起（commit 060dca8b）。用途：分配者掛了，使用權照樣到期。spec 4.1。
+
+## astra 第三輪（A4）與 loop4 的處理
+
+依 [astra 第三輪報告](play/2026-10-04-astra-3-infra.md)、[loop4 藍圖](blueprint-loop4.md)。核心 commit daf8d5cf、step 包 39681eec、control／audit 62e8c46b、契約卡見 play README 該列。核心 2791→2757 總行、2151→2123 實際程式。
+
+| 編號 | 歸屬／類 | 處理 |
+|---|---|---|
+| A4-01 加掛讀不到當空值 | 核心 tick／B | 請求與 birth 改走 `fact`：U（birth 不是物件也算）＝請求留著、不寫回條、不改 birth，round.json `mounts` 記一筆 `unknown`；壞請求照舊回 `ok:false`。spec §0、§4.5 |
+| A4-02 control 並行同 req_id 多起一次 | control 包／B | 表鎖內重讀 birth：已帶同 req_id 或 run 已換＝不改表、回 `once:"done"`；鎖內 birth 不能用＝拒寫。control README |
+| A4-03 step 初始 wait 沒耐性起點 | step 包／B | 新框架（含 `restart_on_end` 重開）`since`＝當下回合；不知道就每圈開頭補。step spec §3 |
+| A4-04 step checker 壞型別拋例外、漏查繼承限制 | step 包／B | 先驗欄位型別（不合只報型別、不拋例外）；`on_timeout: kill` 查套全域預設後的有效值（wait 步報錯）。step spec §2、§6 |
+| A4-05 audit 不更新登記邊界 | audit 包／B | 判巢狀邊界時重讀 nodes.json；只記不擋不變。audit README |
+| A4-06 control 去重期限 | control 包／G→文件 | 寫明完成證據＝表上 pending once 或**目前** birth 帶該 id；換 run 後再送同 id＝新意圖，跨 run 去重由呼叫者自己留證據；不加回 ctl-seen。control README 契約卡 |
+| A4-07 step 選項覆蓋／停點名稱 | step 包／G→文件＋小改 | run 步接受 `wake`；spec §2 列明可逐步覆蓋的只有 `wake`／`on_timeout`／`on_unknown`；§5.5 寫明 kill 後 `halt.kind=timeout`、處理同 unknown |
+| A4-08 契約卡過時 | 契約文件／G→文件 | 核心卡留 [component-contracts](component-contracts.md)，包的卡住進七個包 README「契約卡」節；卡只寫職責／前置／保證／明確不管，保證引 spec 節號 |
+| F47 欠的 tock.json | 核心 tock／簡化 | 刪跨回合補送（`retry_notify`、tock 已關分支、tick 開回合前補）；寫不進去只記 `notify_errors`，同回合重播補寫保留。任務本來只看得到最新 tock（S-11）；要補由模組讀 round.json。spec §7、卡 2.4 |
+
+- 線頭 1：spec §4.4 寫明核心給上層的兩個原語 (a) 移項時 birth 已寫好、(b) 槽最早在報結束的下一個 tock 才刪；step「第三個 tock」寫在 step spec §5 引這兩句；加 birth 與移項之間 SIGKILL 的測試。
+- 線頭 3（G3）：本輪不改程式；subd README 界線補兩句；重現了再做 `kill_grace_s` 選項。
 
 ## 核心精簡：刪掉的誤用保護（10-04）
 
@@ -302,7 +321,7 @@
 - **docstring／註解**：只留「做什麼、保證什麼、丟什麼」與「為什麼」；參數逐一唸過的套話縮成一句；由來編號（A2-／A3-／P2-／astra-N／K-／N-、「以前…」、「註解疑點 檔:行」）拿掉，仍有價值的記在下面。
 - **防再胖**：`tests/core/test_budget.py`（總行 ≤ 2800、實際程式 ≤ 2200）；README「防再胖：新功能預設進模組」寫進核心的三問。
 
-**沒做的**：F47（欠的 tock.json 只記不補）——組件契約卡 2.4 的保證寫「通知寫失敗不吞，記 notify_errors，下一個 tick 補」，跟方案衝突；其他手段已經壓到預算內，照隊長指示不做。
+**沒做的**：F47（欠的 tock.json 只記不補）——組件契約卡 2.4 的保證寫「通知寫失敗不吞，記 notify_errors，下一個 tick 補」，跟方案衝突；其他手段已經壓到預算內，照隊長指示不做。→ loop4 做了（見下面「astra 第三輪（A4）」，卡 2.4 一併改）。
 
 **改了的既有測試**：`test_daemon.TestCtlFiles.test_receipt_failure_goes_to_ctl_failed_and_stop_still_works` → `test_receipt_failure_drops_request_and_stop_still_works`（斷言請求刪掉、沒有 ctl-failed、有 last_ctl_error；stop 照樣生效）。`test_matrix_misc.TestDiagnostics` 兩項搬到 `modules/diag/tests/test_diag.py` 改成斷言 aos7-diag 的輸出（核心的部分——hold 保留頭尾、tock 總結 errors 有 unsure——照樣斷言），另加一項「diag 唯讀」。新增 `tests/core/test_budget.py` 一項。
 
@@ -333,7 +352,7 @@
 | aos7_daemon_timeline.err | 診斷截尾把錯誤類型與根因截掉，改成保留頭尾、kind 分欄（A2-08） |
 | aos7_tick.held_node | `.aos/` 經 fd 建，不復活已搬走的舊路徑（P2-05）；O_NOFOLLOW 是 A2-04 刪剩的最小保險 |
 | aos7_tick.next_round | round.json 不存在照 last-round.json 接號（P2-06）；判不出不再用 last-round 接（A2-02） |
-| aos7_tick._tick | tock 之後才結束的 run 先記進 reaped（P2-03）；欠的 tock.json 開回合前補（A3-08） |
+| aos7_tick._tick | tock 之後才結束的 run 先記進 reaped（P2-03）；欠的 tock.json 開回合前補（A3-08，loop4 F47 刪） |
 | aos7_tick.check_item | max_live 要大於零（P2-18） |
 | aos7_tock._tock | 總結提交後才寫 tock.json，歷史 module 才不會讀到上一回合（A2-12）；總結整份讀回比對（註解疑點 aos7_tock.py:130） |
 | aos7_tock._replayed | 列不出槽不能照樣關回合（註解疑點 aos7_tock.py:185）；重播補 tock.json 失敗不吞（A3-08） |
@@ -348,7 +367,7 @@
 | aos7_proc.kill_node | 掃描不完整時以前連記著的群組都沒收（astra-2 讀碼） |
 | aos7_mount.req_name | `a/b` 與 `a_b` 曾推出同一個名字（astra-2 二-2） |
 | aos7_mount.in_root／allowed | 只看字面會被符號連結繞出空間根（astra-2 二-3） |
-| aos7_mount.serve | 先寫回條、成功才刪請求（astra-5 F-07）；壞請求也要有回條（astra-2 二-1）；`.` 開頭的是暫存檔（註解疑點 aos7_mount.py:202） |
+| aos7_mount.serve | 先寫回條、成功才刪請求（astra-5 F-07）；壞請求也要有回條（astra-2 二-1）；`.` 開頭的是暫存檔（註解疑點 aos7_mount.py:202）；請求／birth 讀不到留著、不寫回條（A4-01） |
 | aos7_mount.make | 目標不存在先建資料夾（problems M-2）；經 fd 寫、目標在 node 底下經抓著的 fnode 建（astra-5 F-09、astra-6 G-02） |
 | aos7_run（檔頭） | 第二參數是內部交接用的 fd 不是身分約束（astra-7 H-09）；fd 無效不回退字串路徑、cwd 是抓著的 node（astra-6 G-02） |
 | aos7_run.main | out.log 被建成資料夾照樣寫 exit 127（astra-7 H-06）；argv 有非字串、NUL 照樣寫 exit（probes/chaos B4） |

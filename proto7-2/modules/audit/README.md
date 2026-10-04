@@ -12,6 +12,16 @@
 | 程式 | `aos7-audit`（包裝程式）、`audit_site/sitecustomize.py`（任務裡的 audit hook，寫 `$AOS7_TASK/writes.jsonl`）、`aos7_audit.py`（`scan(root)` 掃全空間的紀錄） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py modules/audit/tests`） |
 
+## 契約卡
+
+- **職責**：Python 任務的寫入紀錄（`writes.jsonl`）＋全空間掃描挑出越界的；**只記不擋**（下面規則節）。
+- **前置條件**：argv 經 `aos7-audit` 包起；任務是 Python 程序；`nodes.json` 只有 daemon 寫。
+- **保證**：
+  - 空間根底下每筆寫入都有紀錄與 `ok` 判定：落在自己的 node（扣掉巢狀的別的 node／daemon 根）或某個掛載目標底下（核心 spec §5.5）。
+  - 登記邊界照**判定當下**的 `nodes.json`：執行中才登記的巢狀 node，之後寫進去就是 `ok: false`（A4-05）。
+  - 不改任務的行為、不擋寫入；紀錄只留這次 run（核心 §5.1 換 run 清掉）。
+- **明確不管**：非 Python 的寫入；繞過包裝；強制隔離（S-10 仍是合作式）。
+
 ## 規則
 
 - 例：`{"name": "w", "argv": ["python3", "<proto7-2>/modules/audit/aos7-audit", "--", "python3", "job.py"]}`。
