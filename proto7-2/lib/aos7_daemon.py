@@ -495,7 +495,7 @@ class Daemon:
                 if e.errno not in GONE_ERRNO:
                     # spec §0、§2.6 三態：看不到不是消失；不能因此殺任務或丟掉原時間線。錯誤類型分欄記（A2-08）。
                     err = {"prog": "daemon", "rc": None, "at": now(), "kind": errno.errorcode.get(e.errno, str(e.errno)),
-                           "err": "看不到 node（%r），保留現狀" % e}
+                           "err": "%s：看不到 node（%r），保留現狀" % (errno.errorcode.get(e.errno, e.errno), e)}
                     if tl:
                         tl.last_error = err
                     else:

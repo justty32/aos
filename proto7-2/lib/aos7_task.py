@@ -205,10 +205,15 @@ def resolve(v, fslot, node, slot, cur_round):
     pgid = (v.get("pid") or {}).get("pgid")
     try:
         found = aos7_proc.env_procs(node, slot, v.run)
+        everyone = aos7_proc.env_procs(node, slot, v.run, runners=True)
         grp = bool(pgid) and aos7_proc.group_alive(pgid)
     except aos7_proc.ProcUnknown as e:
         # A2-01：掃描不完整＝不知道有沒有相符的程序，不能判 lost（判了 keep 就會重起、跟還活著的前任雙開）。
         return View(v, state=UNKNOWN, why="疑似 lost（%s），但身分掃描讀不完整，先不判：%s" % (v.get("why"), e))
+    if set(everyone) - set(found):
+        # 這個 run 的 aos7-run 還活著（birth 沒記到 runner、pid.json 還沒寫：例如 tick 被殺在 after-popen，而回合跑得比 runner
+        # 起來還快）：它等一下就會起任務、寫 pid.json／exit.json。判 lost 會讓 keep 雙開、once 被收掉，所以當活（矩陣 after-popen）。
+        return View(v, state=LIVE, unsure="疑似 lost（%s），但這個 run 的 aos7-run 還在，當活" % v.get("why"))
     note = None
     # spec §5.3 不變條件二、§5.4：先收殘留再宣告 lost，keep 才不會跟前任雙開（K-04）。
     if found or grp:
