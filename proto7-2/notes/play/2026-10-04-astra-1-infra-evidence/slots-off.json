@@ -1,0 +1,130 @@
+{
+  "history": false,
+  "target_rounds": 500,
+  "samples": [
+    {
+      "observed_round": 10,
+      "aos": {
+        "files": 39,
+        "bytes": 5229,
+        "directories": 9
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1725,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 50,
+      "aos": {
+        "files": 39,
+        "bytes": 5229,
+        "directories": 9
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1666,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 100,
+      "aos": {
+        "files": 39,
+        "bytes": 5263,
+        "directories": 9
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1667,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 250,
+      "aos": {
+        "files": 39,
+        "bytes": 5263,
+        "directories": 9
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1669,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 400,
+      "aos": {
+        "files": 39,
+        "bytes": 5263,
+        "directories": 9
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1669,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 500,
+      "aos": {
+        "files": 39,
+        "bytes": 5263,
+        "directories": 9
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1669,
+        "directories": 2
+      }
+    }
+  ],
+  "final_round": {
+    "round": 500,
+    "open": false,
+    "tick_at": "2026-10-04T12:05:35.498",
+    "tock_at": "2026-10-04T12:05:35.527",
+    "started": [
+      "each_fast#500",
+      "keep_fast#500",
+      "keep_fast.1#500"
+    ],
+    "ctl": [],
+    "mounts": [],
+    "tasks_rev": "48955dce27af",
+    "reaped": [],
+    "skipped": [
+      {
+        "name": "each_busy",
+        "why": "busy"
+      }
+    ]
+  },
+  "stable_final": {
+    "aos": {
+      "files": 39,
+      "bytes": 5263,
+      "directories": 9
+    },
+    "aosd": {
+      "files": 8,
+      "bytes": 1669,
+      "directories": 2
+    }
+  },
+  "slots": [
+    "each_busy",
+    "each_busy.1",
+    "each_busy.2",
+    "each_fast",
+    "keep",
+    "keep.1",
+    "keep_fast",
+    "keep_fast.1"
+  ],
+  "history_exists": false,
+  "seconds": 29.631,
+  "cleanup_root_removed": true
+}

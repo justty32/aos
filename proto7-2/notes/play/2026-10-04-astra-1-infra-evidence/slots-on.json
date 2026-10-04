@@ -1,0 +1,192 @@
+{
+  "history": {
+    "node_rows": 50,
+    "rounds": [
+      451,
+      452,
+      453,
+      454,
+      455,
+      456,
+      457,
+      458,
+      459,
+      460,
+      461,
+      462,
+      463,
+      464,
+      465,
+      466,
+      467,
+      468,
+      469,
+      470,
+      471,
+      472,
+      473,
+      474,
+      475,
+      476,
+      477,
+      478,
+      479,
+      480,
+      481,
+      482,
+      483,
+      484,
+      485,
+      486,
+      487,
+      488,
+      489,
+      490,
+      491,
+      492,
+      493,
+      494,
+      495,
+      496,
+      497,
+      498,
+      499,
+      500
+    ],
+    "gaps": [],
+    "event_rows": 9,
+    "size": {
+      "files": 2,
+      "bytes": 28063,
+      "directories": 0
+    }
+  },
+  "target_rounds": 500,
+  "samples": [
+    {
+      "observed_round": 10,
+      "aos": {
+        "files": 44,
+        "bytes": 6302,
+        "directories": 10
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1683,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 50,
+      "aos": {
+        "files": 44,
+        "bytes": 6450,
+        "directories": 10
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1683,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 100,
+      "aos": {
+        "files": 44,
+        "bytes": 6486,
+        "directories": 10
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1684,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 250,
+      "aos": {
+        "files": 44,
+        "bytes": 6487,
+        "directories": 10
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1686,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 400,
+      "aos": {
+        "files": 44,
+        "bytes": 6338,
+        "directories": 10
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1751,
+        "directories": 2
+      }
+    },
+    {
+      "observed_round": 500,
+      "aos": {
+        "files": 44,
+        "bytes": 6338,
+        "directories": 10
+      },
+      "aosd": {
+        "files": 8,
+        "bytes": 1686,
+        "directories": 2
+      }
+    }
+  ],
+  "final_round": {
+    "round": 500,
+    "open": false,
+    "tick_at": "2026-10-04T12:06:05.622",
+    "tock_at": "2026-10-04T12:06:05.651",
+    "started": [
+      "each_fast#500",
+      "keep_fast#500",
+      "keep_fast.1#500"
+    ],
+    "ctl": [],
+    "mounts": [],
+    "tasks_rev": "c616f102c090",
+    "reaped": [],
+    "skipped": [
+      {
+        "name": "each_busy",
+        "why": "busy"
+      }
+    ]
+  },
+  "stable_final": {
+    "aos": {
+      "files": 44,
+      "bytes": 6338,
+      "directories": 10
+    },
+    "aosd": {
+      "files": 8,
+      "bytes": 1686,
+      "directories": 2
+    }
+  },
+  "slots": [
+    "each_busy",
+    "each_busy.1",
+    "each_busy.2",
+    "each_fast",
+    "history",
+    "keep",
+    "keep.1",
+    "keep_fast",
+    "keep_fast.1"
+  ],
+  "history_exists": true,
+  "seconds": 29.976,
+  "cleanup_root_removed": true
+}

@@ -1,0 +1,397 @@
+{
+  "actual_eacces": {
+    "uid": 1000,
+    "status_during": {
+      "round": 2,
+      "round_open": null,
+      "recovery_pending": false,
+      "phase": "error",
+      "paused_by": [],
+      "pause_pending": false,
+      "interval_ms": 200,
+      "early_tock": false,
+      "live": [],
+      "last_error": {
+        "prog": "daemon",
+        "rc": null,
+        "at": "2026-10-04T12:06:39.987",
+        "err": "看不到 node（PermissionError(13, 'Permission denied')），保留現狀"
+      },
+      "last_event": {
+        "ev": "round-unclosed",
+        "at": "2026-10-04T12:06:39.489",
+        "round": 2,
+        "rc": 0
+      }
+    },
+    "task_alive_during": true,
+    "status_recovered": {
+      "round": 4,
+      "round_open": true,
+      "recovery_pending": false,
+      "phase": "running",
+      "paused_by": [],
+      "pause_pending": false,
+      "interval_ms": 200,
+      "early_tock": false,
+      "live": [
+        "s#1"
+      ],
+      "last_error": {
+        "prog": "round",
+        "rc": null,
+        "round": 2,
+        "at": "2026-10-04T12:06:39.989",
+        "err": "round.json 讀不到（不知道回合關了沒），不 tick，退避後再看"
+      },
+      "last_event": {
+        "ev": "round-recovered",
+        "at": "2026-10-04T12:06:41.018",
+        "round": 2
+      }
+    },
+    "same_task_pid": true
+  },
+  "fd_mid_move": {
+    "tick_move": {
+      "tick": {
+        "round": 1,
+        "started": [
+          "s#1"
+        ],
+        "tasks_rev": "c2e20c89c6d7"
+      },
+      "original_recreated": false,
+      "moved_birth": {
+        "name": "s",
+        "slot": "s",
+        "run": 1,
+        "round": 1,
+        "node": "a",
+        "once": false,
+        "restart_of": null,
+        "at": "2026-10-04T12:06:41.421",
+        "runner": null,
+        "argv": [
+          "true"
+        ],
+        "mounts": {},
+        "error": "node a 在 tick 中途被搬走或換掉（現在在 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/daemon-temp-30mex8na/aos72-test-if8lhiuf/moved），沒起"
+      },
+      "moved_exit": {
+        "run": 1,
+        "code": 127,
+        "at": "2026-10-04T12:06:41.421",
+        "round": 1,
+        "error": "node a 在 tick 中途被搬走或換掉（現在在 /tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/daemon-temp-30mex8na/aos72-test-if8lhiuf/moved），沒起"
+      }
+    },
+    "runner_move": {
+      "original_recreated": false,
+      "moved_exit": {
+        "run": 1,
+        "code": 0,
+        "at": "2026-10-04T12:06:41.810",
+        "round": 1
+      }
+    }
+  },
+  "stale_generation": {
+    "tick": {
+      "round": null,
+      "started": [],
+      "stale": true
+    },
+    "tock": {
+      "round": null,
+      "stale": true
+    },
+    "round_created": false,
+    "birth": {}
+  },
+  "pause_owners": {
+    "after_A_resume": {
+      "round": 2,
+      "round_open": false,
+      "recovery_pending": false,
+      "phase": "paused",
+      "paused_by": [
+        "B"
+      ],
+      "pause_pending": false,
+      "interval_ms": 150,
+      "early_tock": false,
+      "live": []
+    },
+    "after_restart": {
+      "round": 2,
+      "round_open": null,
+      "recovery_pending": false,
+      "phase": "paused",
+      "paused_by": [
+        "B"
+      ],
+      "pause_pending": false,
+      "interval_ms": null,
+      "early_tock": false,
+      "live": []
+    },
+    "B_resume_to_next_tick_s": 0.084
+  },
+  "rounds_owner_collision": {
+    "after_A_resume_1": {
+      "round": 0,
+      "round_open": false,
+      "recovery_pending": false,
+      "phase": "paused",
+      "paused_by": [
+        "B"
+      ],
+      "pause_pending": false,
+      "interval_ms": null,
+      "early_tock": false,
+      "live": [],
+      "steps_left": 1
+    },
+    "final": {
+      "round": 3,
+      "round_open": false,
+      "recovery_pending": false,
+      "phase": "paused",
+      "paused_by": [
+        "B"
+      ],
+      "pause_pending": false,
+      "interval_ms": 120,
+      "early_tock": false,
+      "live": []
+    },
+    "expected_A_pause_after_one_missing": true
+  },
+  "stat_io_fault_injection": {
+    "cases": [
+      {
+        "errno": 13,
+        "preserved": true,
+        "missing": false,
+        "reaping": false,
+        "error": {
+          "prog": "daemon",
+          "rc": null,
+          "at": "2026-10-04T12:06:43.376",
+          "err": "看不到 node（PermissionError(13, 'Permission denied')），保留現狀"
+        }
+      },
+      {
+        "errno": 5,
+        "preserved": true,
+        "missing": false,
+        "reaping": false,
+        "error": {
+          "prog": "daemon",
+          "rc": null,
+          "at": "2026-10-04T12:06:43.376",
+          "err": "看不到 node（OSError(5, 'Input/output error')），保留現狀"
+        }
+      },
+      {
+        "errno": 116,
+        "preserved": true,
+        "missing": false,
+        "reaping": false,
+        "error": {
+          "prog": "daemon",
+          "rc": null,
+          "at": "2026-10-04T12:06:43.376",
+          "err": "看不到 node（OSError(116, 'Stale file handle')），保留現狀"
+        }
+      }
+    ]
+  },
+  "symlink_outside_root": {
+    "phase": "running",
+    "wrote_target_aos": true,
+    "target_round": {
+      "round": 1,
+      "open": true,
+      "tick_at": "2026-10-04T12:06:43.717",
+      "tock_at": null,
+      "started": [],
+      "ctl": [],
+      "mounts": [],
+      "tasks_rev": null,
+      "reaped": [],
+      "skipped": []
+    }
+  },
+  "symlink_same_inode": {
+    "phase": "running",
+    "before_round": 2,
+    "after_round": 5,
+    "task_still_alive": true,
+    "node_is_symlink": true,
+    "status": {
+      "round": 5,
+      "round_open": true,
+      "recovery_pending": false,
+      "phase": "running",
+      "paused_by": [],
+      "pause_pending": false,
+      "interval_ms": 200,
+      "early_tock": false,
+      "live": [
+        "s#1"
+      ]
+    }
+  },
+  "timing_modes": {
+    "interval_ms": 1800,
+    "wake_to_early_next_s": 0.108,
+    "fixed_unchanged_at_early_wake": true,
+    "fixed_round_s": 1.809,
+    "fixed_early": false,
+    "early_round_s": 0.048,
+    "early_early": true
+  },
+  "unverified_holder_diagnostic": {
+    "holder_alive": true,
+    "samples": [
+      {
+        "round": 0,
+        "round_open": true,
+        "recovery_pending": false,
+        "phase": "tock",
+        "paused_by": [],
+        "pause_pending": false,
+        "interval_ms": 100,
+        "early_tock": false,
+        "live": [],
+        "last_error": {
+          "prog": "action-lock",
+          "rc": null,
+          "round": 0,
+          "at": "2026-10-04T12:06:47.655",
+          "err": "-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/daemon-temp-30mex8na/aos72-test-e7fx5ya3/a/.aos/action.lock（例如 `fuser`／`lsof`）：確定是舊的 tick／tock 就 kill 它，或補正 action.owner.json 的 pid／gen／starttime，下一次逾時會自動回收"
+        },
+        "last_event": {
+          "ev": "stale-holder-unverified",
+          "at": "2026-10-04T12:06:47.655",
+          "pid": 111123,
+          "why": "action.owner.json 缺 gen（拿到 None），分不出是不是舊 daemon 的"
+        }
+      },
+      {
+        "round": 0,
+        "round_open": false,
+        "recovery_pending": false,
+        "phase": "tick",
+        "paused_by": [],
+        "pause_pending": false,
+        "interval_ms": 100,
+        "early_tock": false,
+        "live": [],
+        "last_error": {
+          "prog": "action-lock",
+          "rc": null,
+          "round": 0,
+          "at": "2026-10-04T12:06:47.957",
+          "err": "-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/daemon-temp-30mex8na/aos72-test-e7fx5ya3/a/.aos/action.lock（例如 `fuser`／`lsof`）：確定是舊的 tick／tock 就 kill 它，或補正 action.owner.json 的 pid／gen／starttime，下一次逾時會自動回收"
+        },
+        "last_event": {
+          "ev": "stale-holder-unverified",
+          "at": "2026-10-04T12:06:47.655",
+          "pid": 111123,
+          "why": "action.owner.json 缺 gen（拿到 None），分不出是不是舊 daemon 的"
+        }
+      },
+      {
+        "round": 0,
+        "round_open": true,
+        "recovery_pending": false,
+        "phase": "tock",
+        "paused_by": [],
+        "pause_pending": false,
+        "interval_ms": 100,
+        "early_tock": false,
+        "live": [],
+        "last_error": {
+          "prog": "action-lock",
+          "rc": null,
+          "round": 0,
+          "at": "2026-10-04T12:06:48.258",
+          "err": "-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/daemon-temp-30mex8na/aos72-test-e7fx5ya3/a/.aos/action.lock（例如 `fuser`／`lsof`）：確定是舊的 tick／tock 就 kill 它，或補正 action.owner.json 的 pid／gen／starttime，下一次逾時會自動回收"
+        },
+        "last_event": {
+          "ev": "stale-holder-unverified",
+          "at": "2026-10-04T12:06:47.655",
+          "pid": 111123,
+          "why": "action.owner.json 缺 gen（拿到 None），分不出是不是舊 daemon 的"
+        }
+      },
+      {
+        "round": 0,
+        "round_open": true,
+        "recovery_pending": false,
+        "phase": "tock",
+        "paused_by": [],
+        "pause_pending": false,
+        "interval_ms": 100,
+        "early_tock": false,
+        "live": [],
+        "last_error": {
+          "prog": "action-lock",
+          "rc": null,
+          "round": 0,
+          "at": "2026-10-04T12:06:48.258",
+          "err": "-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/daemon-temp-30mex8na/aos72-test-e7fx5ya3/a/.aos/action.lock（例如 `fuser`／`lsof`）：確定是舊的 tick／tock 就 kill 它，或補正 action.owner.json 的 pid／gen／starttime，下一次逾時會自動回收"
+        },
+        "last_event": {
+          "ev": "stale-holder-unverified",
+          "at": "2026-10-04T12:06:47.655",
+          "pid": 111123,
+          "why": "action.owner.json 缺 gen（拿到 None），分不出是不是舊 daemon 的"
+        }
+      },
+      {
+        "round": 0,
+        "round_open": false,
+        "recovery_pending": false,
+        "phase": "tick",
+        "paused_by": [],
+        "pause_pending": false,
+        "interval_ms": 100,
+        "early_tock": false,
+        "live": [],
+        "last_error": {
+          "prog": "action-lock",
+          "rc": null,
+          "round": 0,
+          "at": "2026-10-04T12:06:48.559",
+          "err": "-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/daemon-temp-30mex8na/aos72-test-e7fx5ya3/a/.aos/action.lock（例如 `fuser`／`lsof`）：確定是舊的 tick／tock 就 kill 它，或補正 action.owner.json 的 pid／gen／starttime，下一次逾時會自動回收"
+        },
+        "last_event": {
+          "ev": "stale-holder-unverified",
+          "at": "2026-10-04T12:06:47.655",
+          "pid": 111123,
+          "why": "action.owner.json 缺 gen（拿到 None），分不出是不是舊 daemon 的"
+        }
+      }
+    ],
+    "prefix_visible": false
+  },
+  "wake_in_active_early_round": {
+    "interval_ms": 2500,
+    "wake_to_next_tick_s": 0.768,
+    "skipped_remaining_idle": true
+  },
+  "_suite": {
+    "tests": 11,
+    "failures": [],
+    "errors": [],
+    "elapsed_s": 11.164
+  },
+  "_cleanup": {
+    "transient_removed": true,
+    "remaining_pids": []
+  }
+}

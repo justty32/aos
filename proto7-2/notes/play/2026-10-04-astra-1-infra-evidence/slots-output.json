@@ -1,0 +1,27 @@
+{
+  "notes": "Known W10 boundary: a single live run can grow out.log; not per-round historical file leakage.",
+  "samples": [
+    {
+      "round": 1,
+      "run": 1,
+      "files": 11,
+      "aos_bytes": 5907,
+      "out_log_bytes": 4096
+    },
+    {
+      "round": 5,
+      "run": 1,
+      "files": 11,
+      "aos_bytes": 22261,
+      "out_log_bytes": 20480
+    },
+    {
+      "round": 10,
+      "run": 1,
+      "files": 11,
+      "aos_bytes": 42744,
+      "out_log_bytes": 40960
+    }
+  ],
+  "cleanup_root_removed": true
+}

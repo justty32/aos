@@ -1,0 +1,128 @@
+{
+  "cases": [
+    {
+      "root": "once-work-5ok5tjmf/before-launch",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/after-launch",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/before-birth",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/after-birth",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/before-runner",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/after-runner",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/before-delete",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/after-delete",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/once-birth-corrupt",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/three-state",
+      "killed_pids": [
+        102117,
+        102118
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/proc_stat_eio",
+      "killed_pids": [
+        102121,
+        102122
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/proc_all_eio",
+      "killed_pids": [
+        102123,
+        102124,
+        102125,
+        102126
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/birth_bad_proc_environ_eio",
+      "killed_pids": [
+        102127,
+        102128,
+        102129,
+        102130
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/runner-dead-before-pid",
+      "killed_pids": [
+        102134,
+        102135
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/old-run-residue",
+      "killed_pids": [
+        102136,
+        102137
+      ],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/round_eio",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/round_bad",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/round_open_missing",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/recovery_pause_count",
+      "killed_pids": [],
+      "surviving_pids": []
+    },
+    {
+      "root": "once-work-5ok5tjmf/direct-tick-open",
+      "killed_pids": [],
+      "surviving_pids": []
+    }
+  ],
+  "remaining_test_pids": [],
+  "temp_root_exists": false
+}

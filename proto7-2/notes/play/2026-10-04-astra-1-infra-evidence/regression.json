@@ -1,0 +1,423 @@
+{
+  "command": "PYTHONDONTWRITEBYTECODE=1 python3 proto7-2/notes/play/2026-10-04-astra-1-infra-evidence/regression.py",
+  "tests": 103,
+  "failures": 1,
+  "errors": 0,
+  "seconds": 53.122,
+  "results": [
+    {
+      "test": "test_ctl.TestCtl.test_aos7_ctl_task",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestCtl.test_bad_ctl_gets_failed_receipt",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestCtl.test_kill_at_tock_reported_by_ctl",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestCtl.test_kill_with_stale_run_refused",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestCtl.test_reload_refused_without_kill",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestCtl.test_restart_receipt_survives_new_run",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestCtl.test_restart_reload_takes_new_definition",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestCtl.test_restart_same_slot_new_run_keeps_state",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestIdentityScan.test_broken_birth_uses_node_tid_scan",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestIdentityScan.test_lost_kills_leftover_before_keep_restarts",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestIdentityScan.test_no_runner_young_birth_is_live_old_is_lost",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestIdentityScan.test_old_run_leftover_not_taken_as_new_run",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestIdentityScan.test_runner_died_without_pid_json_is_lost",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestKillRange.test_forged_pgid_not_killed",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestKillRange.test_inst_kill_reaches_other_session",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestKillRange.test_kill_reaches_setsid_grandchild",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestMounts.test_mount_request_served_and_restart_carries_dyn",
+      "status": "pass"
+    },
+    {
+      "test": "test_ctl.TestMounts.test_mounts_made_and_rebuilt_per_run",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestCtlFiles.test_bad_files_get_receipts",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestCtlFiles.test_flood_budget_and_status_moves",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestCtlFiles.test_log_on_switch",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestCtlFiles.test_receipt_failure_goes_to_ctl_failed_and_stop_still_works",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestCtlFiles.test_receipt_overwritten_same_name",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestDaemonDeath.test_kill9_daemon_new_daemon_recovers_round_no_double",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestDaemonDeath.test_new_daemon_reaps_old_holder",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestDaemonDeath.test_unverified_holder_not_killed",
+      "status": "fail",
+      "detail": "Traceback (most recent call last):\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/tests/test_daemon.py\", line 424, in test_unverified_holder_not_killed\n    self.wait_for(lambda: \"stale-holder-unverified\" in (self.nstat().get(\"last_error\") or {}).get(\"err\", \"\"), 10)\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/461a4f54-6065-4eee-aca1-317ca61b9852/scratchpad/p72a1/proto7-2/tests/base.py\", line 179, in wait_for\n    self.fail(msg)\n    ~~~~~~~~~^^^^^\nAssertionError: timeout\n"
+    },
+    {
+      "test": "test_daemon.TestEarlyTock.test_default_fixed_interval",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestEarlyTock.test_early_tock_when_all_ended",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestNodeGone.test_move_kills_old_new_place_needs_register",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestNodeGone.test_replaced_by_other_dir_is_new_timeline",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestNodeGone.test_rm_rf_kills_and_stays_registered",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestNodeGone.test_unreadable_node_is_unknown_not_gone",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestPause.test_owner_pause_not_released_by_other",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestPause.test_resume_all_and_no_owner_slot",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestPause.test_resume_rounds_then_pauses_with_same_owner",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestPause.test_resume_wakes_immediately",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestPause.test_wake",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestRegister.test_register_absent_dir_then_appears",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestRegister.test_register_checks",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestRegister.test_register_runs_only_registered",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestRegister.test_registered_before_daemon_starts",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestRegister.test_restart_daemon_follows_nodes_json",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestRegister.test_unregister_kills_by_default",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestRegister.test_unregister_no_kill_leaves_task",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestStop.test_root_moved_stops_with_kill",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestStop.test_second_daemon_refused",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestStop.test_stop_kill_and_sigterm",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestStop.test_stop_without_kill_leaves_tasks",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestStuckActions.test_stop_not_blocked_by_stuck_tick",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestStuckActions.test_stuck_tick_cut_and_round_marked",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestStuckActions.test_tock_killed_after_summary_is_replayed_once",
+      "status": "pass"
+    },
+    {
+      "test": "test_daemon.TestStuckActions.test_unreadable_round_json_holds_timeline",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestOnceCrash.test_crash_after_birth",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestOnceCrash.test_crash_after_launch_marker",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestOnceCrash.test_crash_after_popen",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestOnceCrash.test_crash_before_item_delete",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestOnceCrash.test_gang_crash_mid_batch",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestOnceCrash.test_unreadable_birth_keeps_once_item",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestThreeState.test_birth_unreadable_no_start_no_lost_no_delete",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestThreeState.test_broken_round_and_no_last_round_is_unknown",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestThreeState.test_broken_round_json_continues_from_last_round",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestThreeState.test_pid_reused_is_gone",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestThreeState.test_read_json3_states",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestThreeState.test_round_json_unreadable_tick_tock_do_nothing",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestThreeState.test_starttime_unreadable_counts_as_alive",
+      "status": "pass"
+    },
+    {
+      "test": "test_once_threestate.TestThreeState.test_tasks_dir_unlistable_no_start",
+      "status": "pass"
+    },
+    {
+      "test": "test_subdaemon_modules.TestModules.test_counter_reads_previous_state_and_gets_tock",
+      "status": "pass"
+    },
+    {
+      "test": "test_subdaemon_modules.TestModules.test_history_module_appends_last_rounds",
+      "status": "pass"
+    },
+    {
+      "test": "test_subdaemon_modules.TestOwnership.test_allow_stop_writes_stopped_and_parent_does_not_restart",
+      "status": "pass"
+    },
+    {
+      "test": "test_subdaemon_modules.TestOwnership.test_manual_restart_keeps_owner_block",
+      "status": "pass"
+    },
+    {
+      "test": "test_subdaemon_modules.TestOwnership.test_owner_blocks_and_stop_refused",
+      "status": "pass"
+    },
+    {
+      "test": "test_subdaemon_modules.TestOwnership.test_parent_kill_takes_child_tasks",
+      "status": "pass"
+    },
+    {
+      "test": "test_subdaemon_modules.TestSubrootChecks.test_subroot_rules",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestGone.test_gone_node_not_recreated",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestGone.test_unregistered_but_existing_dir_works_by_hand",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestInst.test_argv_and_inst_exclusive",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestInst.test_inst_task",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestModes.test_disabled_keeps_slot_and_state",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestModes.test_each_max_live_slots",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestModes.test_each_skips_while_previous_still_running",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestModes.test_from_round_and_enabled",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestModes.test_keep_does_not_double_start",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestModes.test_keep_fills_all_slots_and_restarts_ended",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestOnce.test_batch_once_same_round",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestOnce.test_once_from_round",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestOnce.test_once_in_busy_slot_waits",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestOnce.test_once_runs_once_and_item_removed",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestOnlyLastKept.test_200_rounds_file_count_constant",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestOnlyLastKept.test_ended_after_tock_then_reused_still_reported",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotRemoval.test_live_slot_of_removed_name_kept",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotRemoval.test_once_slot_deleted_after_report",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotRemoval.test_removed_name_slot_deleted_one_round_after_report",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotRemoval.test_shrunk_max_live_slot_deleted",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotRemoval.test_unreadable_table_deletes_nothing",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_bad_field_types_skip_only_that_item",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_bad_names_skipped_not_mangled",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_infra_files_cleared_task_files_kept",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_run_is_round_and_increases",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_stale_infra_of_other_run_ignored",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_task_env_and_tock_json",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_tick_starts_in_slot_and_does_not_wait",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_timeline_json_optional",
+      "status": "pass"
+    },
+    {
+      "test": "test_tick_tock.TestSlotsAndRuns.test_unreadable_tasks_json_is_empty_table",
+      "status": "pass"
+    }
+  ],
+  "temporary_leftovers": []
+}

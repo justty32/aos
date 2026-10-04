@@ -1,0 +1,24 @@
+{
+  "proto7-1/README.md": {
+    "lines": 35,
+    "characters": 3828,
+    "bytes_utf8": 6160
+  },
+  "proto7-1/spec.md": {
+    "lines": 350,
+    "characters": 34778,
+    "bytes_utf8": 58592
+  },
+  "proto7-2/README.md": {
+    "lines": 72,
+    "characters": 4136,
+    "bytes_utf8": 6138
+  },
+  "proto7-2/spec.md": {
+    "lines": 356,
+    "characters": 20659,
+    "bytes_utf8": 35177
+  },
+  "cleanup_script_processes": [],
+  "cleanup_all_run_results_confirm_removed": true
+}
