@@ -64,7 +64,7 @@ A6-02 修法同時關掉 astra-4 第三條意見（unknown 不永久定案）的
 | 讀到半寫／壞檔／EIO | 來源檔 tmp 內容截斷、或注入 U：第 1～patience 回合 state 仍 ok（舊 basis）、`why` 記錄；超過翻 unknown、`last` 保留；修好後下一回合 ok。 |
 | dst 被 pause | dst 沒回合 → 耐性不走、暫存器不動；resume 後照常。 |
 | adapt 任務被殺（keep 重起） | 新 run 從槽內 state.json 接 `since`／`last_seq`，`skipped` 不重算、不重複寫同一版。 |
-| 門檻邊界 | `t_dc=800`→`hot:true`；`799`→`hot:null`＋unknown（誤差 0.05 跨 80）；`790`→false。 |
+| 門檻邊界 | 〔astra-6 勘誤：原寫 800→true、799→null 算錯〕誤差 0.05 時 `t_dc=801`→`hot:true`；`800`→`hot:null`＋unknown（區間 79.95～80.05 跨 80）；`799`、`790`→false。 |
 | step 消費 | step `wait` 的 `num` 條件讀 `in/temp.json`，值到就走 `then`，unknown 時（欄位缺）不成立、耐性照步算。 |
 | 長跑 | 300 個 dst 回合後 `in/`、`adapt/`、槽內檔數不變（暫存器覆寫）。 |
 
