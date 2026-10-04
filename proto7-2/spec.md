@@ -287,7 +287,7 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起任務前最後確認一次 
 | starttime 或 `/proc/<pid>/stat` 讀不到（pid 還在） | **不知道** → 當活（保守），原因進 tock 總結的 `errors`（`phase: "unsure"`）與 status 的 `uncertain`（K-05、A2-01、A2-08） |
 | 其餘（剛起） | 活 |
 
-**疑似 lost 一律先做身分掃描**（NODE＋TID＋RUN）：找到相符的活程序 → 先照 Q1 範圍 kill，再判 lost；**確定**找不到 → lost。lost 寫 `exit.json` `{"run", "code": null, "lost": true}`（tock，以及要在這個槽起新 run 的 tick；P2-03）。收了 SIGKILL 還在、掃描不完整（列不出 /proc、某個程序的 stat／environ 讀不到；A2-01）、最後重讀 exit.json 讀不到＝不知道，不判 lost。這樣 keep 重起前舊的一定已經收掉，不會雙開（K-04）。environ 是 EACCES 的程序（別的 uid、不可 ptrace 的）讀不到身分，當成不是任務（11 節）。
+**疑似 lost 一律先做身分掃描**（NODE＋TID＋RUN）：找到這個 run 的 aos7-run 還活著（birth 沒記到 runner、pid.json 還沒寫）→ 當活（unsure），等它起任務；找到相符的任務程序 → 先照 Q1 範圍 kill，再判 lost；**確定**找不到 → lost。lost 寫 `exit.json` `{"run", "code": null, "lost": true}`（tock，以及要在這個槽起新 run 的 tick；P2-03）。收了 SIGKILL 還在、掃描不完整（列不出 /proc、某個程序的 stat／environ 讀不到；A2-01）、最後重讀 exit.json 讀不到＝不知道，不判 lost。這樣 keep 重起前舊的一定已經收掉，不會雙開（K-04）。environ 是 EACCES 的程序（別的 uid、不可 ptrace 的）讀不到身分，當成不是任務（11 節）。
 
 ### 5.5 任務看得到什麼
 

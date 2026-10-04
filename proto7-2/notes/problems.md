@@ -88,7 +88,7 @@
 
 | 編號 | 處理 | 做法（spec 對應處標 A2-） |
 |---|---|---|
-| A2-01 /proc 讀不到當沒有 | 已修 | `aos7_proc` 的 /proc 讀取只剩一個入口：讀到／程序已不在／讀不到（丟 `ProcUnknown`）。`pid_state` 三態、掃描不完整整個丟出；judge 當活＋unsure、resolve 判 UNKNOWN 不寫 lost、kill_identity 回「不知道收乾淨沒」。environ 是 EACCES 的程序（別的 uid、同 uid 但不可 ptrace，例如 systemd --user）當成不是任務，否則每次掃描都不完整（spec §11） |
+| A2-01 /proc 讀不到當沒有 | 已修 | `aos7_proc` 的 /proc 讀取只剩一個入口：讀到／程序已不在／讀不到（丟 `ProcUnknown`）。`pid_state` 三態、掃描不完整整個丟出；judge 當活＋unsure、resolve 判 UNKNOWN 不寫 lost、kill_identity 回「不知道收乾淨沒」；疑似 lost 時這個 run 的 aos7-run 還活著（tick 被殺在 after-popen、回合跑得比 runner 起來快）也當活，不判 lost（矩陣抓到的雙開）。environ 是 EACCES 的程序（別的 uid、同 uid 但不可 ptrace，例如 systemd --user）當成不是任務，否則每次掃描都不完整（spec §11） |
 | A2-02 round.json 半寫／缺 open 當已關 | 已修 | `aos7_fs.read_round` 一個判定給 daemon、tick、tock：只有明確 `open: false` 是已關；壞掉＝不知道（daemon 退避、tick／tock 退出碼 3）。tick 不再用 last-round.json 接壞掉的 round.json，也拒絕在 `open: true` 時開下一回合；tock 不再替壞掉的 round 補號 |
 | A2-03 birth 半寫使 once 重跑 | 已修 | birth 壞掉＋掃不到活程序時看同槽 exit.json／pid.json 的 run（換 run 時先清舊的才寫新 birth，所以一定是這個 run 的）：exit → 結束（run R，once 的 launch 對得上就刪項）；只有 pid → 疑似 lost；都沒有 → UNKNOWN（不起，等人刪 birth.json）。§0 與 §5.4 不再衝突 |
 | A2-04 node 換符號連結 | 已修 | 登記要求路徑沒有符號連結（realpath＝`realpath(root)/<id>`）；daemon 每圈用 lstat＋realpath 比對，變成連結或路徑經過連結＝missing；tick／tock 開 node 用 O_NOFOLLOW，開到後再比 realpath，不合印 gone——不會沿連結寫出 root。沒有另存 dev+inode 到 nodes.json：Q4「刪掉又出現就重開」要保留，inode 仍照時間線開始時記的比 |
