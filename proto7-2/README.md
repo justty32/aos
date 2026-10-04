@@ -50,7 +50,9 @@ python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾�
 | `tests/core/test_ctl.py` | kill／restart／reload／指定 run、kill 範圍（setsid 孫程序、偽造 pgid、inst 的另一個 session）、**lost 前的身分掃描（NODE＋TID＋RUN）**、掛載與執行中加掛 |
 | `tests/core/test_once_threestate.py` | **once 在 launch 標記後、birth 後、Popen 後、刪項目前各點 kill -9 tick**、成組 once 中途被殺；**三態**：round.json／birth.json 讀不到、starttime 讀不到、槽列不出來 |
 | `tests/core/test_daemon.py` | **登記／取消登記**、node 刪掉／搬走／換掉 → missing、看不到≠不存在、**early_tock 兩種**、**pause owner**、resume 順便 wake、resume rounds、stop／SIGTERM、第二個 daemon、root 搬走、回條同名蓋掉、控制檔洪水與壞檔、ctl-failed、log.on、卡住的 tick／tock、**kill -9 daemon 後新 daemon 收回合不雙開**、舊動作接管 |
-| `modules/subd/tests/test_subd_ownership.py` | **子 daemon 所有權**（owner／daemon 兩塊、allow_stop、stopped.json、人手重開沿用 owner）、subroot 檢查 |
+| `modules/subd/tests/test_subd_ownership.py` | **子 daemon 包**（包裝程式 aos7-subd）：守門檔與 owner、allow-stop、stopped.json、人手重開、子根位置檢查與重複認領 |
+| `modules/audit/tests/test_audit_wrapper.py` | 稽核包：包裝過的任務寫檔有紀錄 |
+| `tests/core/test_errors.py`、`test_exits.py` | 錯誤四分支（G1 寫表三態、G2 tick 失敗不算回合、不是一般檔＝不知道）；核心給模組的出口（`x` 照抄、`never_started`、stop-guard.json） |
 | `modules/tests/test_modules_history.py` | counter 示範、歷史 module、history 事件也截行 |
 | `tests/core/test_matrix_faults.py` | **A2 回歸矩陣：讀不到＝不知道**——/proc（list／stat／environ／cmdline）× EIO／ESTALE／EACCES × 情境（健康、孤兒、兩者都死、birth 壞）；birth／exit／pid／round／last-round 開檔與列槽讀不到；daemon 看 node 讀不到 |
 | `tests/core/test_matrix_docs.py` | **A2 矩陣：檔案半寫、缺欄、型別錯**——round.json（不知道、不 tick、人寫回後接著數）、birth.json × 其他證據（活程序／exit／pid／都沒有）、last-round.json（重新產生、不跳號） |
@@ -72,7 +74,8 @@ python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾�
 | `lib/aos7_fs.py` | 錯誤四分支的入口（讀檔 `fact`、紀錄 `hold`、例外 `Unknown`）、原子寫、flock、動作鎖與世代、測試鉤子的轉接（`AOS7_TEST_HOOKS` 有設才載入 `tests/_hooks.py`） |
 | `lib/aos7_mount.py` | 掛載（4.5）：tick 建掛載、審核執行中加掛 |
 | `modules/tools/` | [工具包](modules/tools/README.md)：`aos7_ctl.py`（`aos7-ctl daemon／task／add`）、`aos7_taskside.py`（任務端的 wait_tock、task_env、resolver、request） |
-| `modules/audit/` | [稽核包](modules/audit/README.md)：可選的寫入紀錄（`aos7_audit.py`、`audit_site/`） |
+| `modules/audit/` | [稽核包](modules/audit/README.md)：可選的寫入紀錄（包裝程式 `aos7-audit`、`aos7_audit.py`、`audit_site/`） |
+| `modules/subd/` | [子 daemon 包](modules/subd/README.md)：包裝程式 `aos7-subd`（子根所有權、守門檔、stopped.json） |
 | `lib/aos_*.py` | 搬來的 inst 執行器 |
 | `modules/counter.py` | 最小示範任務：讀同槽上一次的 state.json、收 tock.json |
 | `modules/history.py` | 歷史 module 的參考實作（第 9 節）：普通 keep 任務，每個 tock 把 last-round.json 追加到 `history/` |

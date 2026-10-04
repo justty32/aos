@@ -212,3 +212,35 @@
 | `test_matrix_a3.TestReplayNotify`（兩處） | notify_errors 的 `err` → `why`、`phase` → `where` |
 
 **新增測試**（`tests/core/test_errors.py`，8 項）：G1 的 `aos7-ctl add` 遇半寫／FIFO／EIO 注入拒寫且檔案原封不動（3）、不存在照常加（1）、restart 遇壞表回 ok:false 不 kill（1）；定案 3 的 tasks.json FIFO 不起不刪、timeline.json FIFO 用預設並記錯（2）；G2 的 `.aos/` 唯讀時 `resume --rounds 3` 不被吃掉、修好後剛好跑 3 回合再 pause（1；改回舊判斷會失敗，已驗證）。
+
+## 核心精簡：擴充點、子 daemon 包、稽核包（10-04）
+
+照[精簡方案](core-slimming.md)第 5.2、6 節。核心給模組三個小出口（核心不知道它們的語意）：
+
+- **`x` 透傳**：tasks.json 項目可帶 `x`（物件），tick 不看內容、照抄進 birth.json；restart 照 birth 重起時也帶著（`RESTART_KEYS`）。不是物件＝那項不合、跳過、記 tasks_error。
+- **事實欄位 `never_started`**：lost 時 birth 沒有 runner、沒有 pid.json、out.log 不存在或空 → exit.json 與總結 `ended` 那筆帶 `never_started: true`（out.log 讀不到大小＝不帶）。retry_lost 的判斷改成建立在這個事實上（retry_lost 本身下一步才移出）。
+- **通用守門檔** `.aosd/stop-guard.json`：存在而 `allow` 不是 true（讀不到、壞掉也算）→ 控制檔 stop 回 ok:false（帶 `note`）；SIGTERM 照停。
+
+**移出核心**（F50 → 子 daemon 包 `modules/subd/aos7-subd`；F55 → 稽核包 `modules/audit/aos7-audit`）：tasks.json 的 `subroot`／`allow_stop` 欄、tick 的子根檢查與同 tick 認領、起任務時的 `AOS7_SUBROOT` 與三個 owner 環境變數、aos7_task 的 `registered_nodes`／`under`／`subroot_of`／`stopped_note`／`subroot_running`／`check_subroot`、daemon 的 `owner()`／`claim_owner()`／stop 時寫 stopped.json／起來時刪 stopped.json；aos7-run 裡 `AOS7_AUDIT` 那段（包裝程式自己設 `AOS7_AUDIT` 與 `PYTHONPATH`）。
+
+**舊項目帶 `subroot`／`allow_stop`**：選「那項不合、跳過、記 tasks_error 指到子 daemon 包」，不選「當未知欄位忽略」——忽略的話那項照起，argv 裡常見的 `"$AOS7_SUBROOT"` 會是空的，子 daemon 會起在錯的地方。
+
+**行為變化**：
+
+| 情況 | 以前（核心 tick 做） | 現在（包裝程式做） |
+|---|---|---|
+| 子根有 stopped.json、已被認領、位置不合 | tick 不起，記 tasks_error，總結 `skipped` | 包裝程式起了、印原因到 out.log、退出碼 1；總結 `ended` 該 run code 1 |
+| 同一個 tick 兩項認領同一個子根 | tick 在同一回合擋下第二項 | 兩項都起，先拿到 `<子根>/.aosd/subd.lock` 的那個跑，另一個退出碼 1 |
+| 人手直接起子 daemon | daemon 起來時更新 owner.json 的 daemon 塊、刪掉 stopped.json | daemon 不碰 owner.json、stop-guard.json、stopped.json；刪 stopped.json 由人決定 |
+| 子 daemon 被允許的 stop | daemon 自己寫 stopped.json 再停 | daemon 照常停；包裝程式看到子程序結束、自己沒收到 SIGTERM、status `stopped: true` → 寫 stopped.json（by／why 取 ctl-done 最近一份 stop 回條） |
+| 任務的 `AOS7_OWNER_*` 環境變數 | tick 給 | 沒有了（擁有者寫在 owner.json，給人看） |
+| 稽核 | 任務環境有 `AOS7_AUDIT` 時 aos7-run 加 PYTHONPATH | argv 前面加 `aos7-audit --` |
+
+**改了斷言的既有測試**：
+
+| 測試 | 改了什麼 |
+|---|---|
+| `modules/subd/tests/test_subd_ownership.py`（5 項，案例一個不少） | 全部改用包裝程式起子 daemon。`test_allow_stop_writes_stopped_and_parent_does_not_restart`：「父 tick 擋下、tasks_error 有 stop」改成「包裝程式退出碼 1（總結 ended code 1）、out.log 有原因、子 daemon 沒起」。`test_manual_restart_keeps_owner_block`：「owner.json 的 daemon 塊更新成新 pid、stopped.json 被刪」改成「owner 塊與守門檔留著、stopped.json 也留著」。`test_subroot_rules`：「tick 只起 s1、tasks_error 列三種原因、任務環境有 AOS7_OWNER_TID」改成「五項都起、不合的三項退出碼 1 且 out.log 有原因、同子根兩項一項退出碼 1（已被認領）、留下那項的子程序環境有 AOS7_SUBROOT」 |
+| `test_matrix_once.TestLaunchCrash.test_once_after_birth`、`test_once_threestate.TestOnceCrash.test_crash_after_birth`、`test_options_a3.TestRetryLost`（兩項） | lost 紀錄多了事實欄 `never_started: true`（tick 在 after-birth 被殺，birth 沒有 runner） |
+
+**新增測試**：`tests/core/test_exits.py` 6 項（`x` 照抄、壞 `x` 與舊 subroot 欄跳過、never_started 有／無、守門檔擋／壞掉擋／放、SIGTERM 不看守門檔）；`modules/audit/tests/test_audit_wrapper.py` 1 項。

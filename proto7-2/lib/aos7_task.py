@@ -3,7 +3,7 @@
 tick、tock、daemon 共用。起點是 proto7-1 lib/aos7_task.py，改成「槽＝照名字重用的任務資料夾」＋ run 號。
 讀寫一律經呼叫的人給的路徑（tick／tock 給 `/proc/self/fd/N/...`，node 中途被刪就寫不進去、不建鬼目錄）。
 
-讀取 .aos/tasks.json、各槽 birth／pid／exit／ctl、父根 .aosd/nodes.json 與子根的 stopped／owner／鎖；
+讀取 .aos/tasks.json、各槽 birth／pid／exit／ctl；
 寫任務表、出生／結束／控制回條，重建槽的基礎設施與掛載；實際任務交 aos7-run 啟動（S-10）。
 不變條件二在 judge／resolve／start_in_slot 分段落實；換 run 保留上層 state 是不變條件三（spec §5.3、§8）。"""
 import json
@@ -16,7 +16,7 @@ import time
 
 import aos7_mount
 import aos7_proc
-from aos7_fs import (BIN, N, OK, U, Unknown, edit_json, env_with_bin, fact, inject, is_gone, is_int, node_path, now,
+from aos7_fs import (BIN, N, OK, U, Unknown, edit_json, env_with_bin, fact, inject, is_gone, is_int, now,
                      proc_starttime, read_json, test_point, write_json)
 
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -194,6 +194,8 @@ def resolve(v, fslot, node, slot, cur_round):
     ex = {"run": v.run, "code": None, "lost": True, "at": now(), "round": cur_round}
     if note:
         ex["note"] = note
+    if never_started(v, fslot):
+        ex["never_started"] = True   # 事實出口：給模組（例如 once 保證包）讀，核心自己不據此做事
     if retry_wanted(v, fslot):
         # P2-02 選項 retry_lost：先把 once 項加回（照 retry_of 去重），再寫 lost；加不回就先不判（下次再看），不默默降成最多一次
         ok, msg = requeue_lost_once(fslot, slot, v)
@@ -204,17 +206,23 @@ def resolve(v, fslot, node, slot, cur_round):
     return View(v, state=ENDED, exit=ex)
 
 
-def retry_wanted(v, fslot):
-    """P2-02 的「至少一次」判法（只給 birth 帶 `retry_lost: true` 的 once）：birth.json 沒記到 runner、沒有 pid.json、
-    out.log 不存在或是空的——任務看起來從沒起來過，就加回重起（極小機率真的跑過：可能跑兩次，這是選它的人接受的代價）。
-    out.log 讀不到大小（EIO…）＝不知道，不加回（照最多一次）。回 bool。"""
+def never_started(v, fslot):
+    """lost 的 run 看起來從沒起來過嗎：birth.json 沒記到 runner、沒有 pid.json、out.log 不存在或是空的。
+    out.log 讀不到大小＝不知道＝回 False（不帶這個事實）。"""
     b = v.get("birth") or {}
-    if not (b.get("once") is True and b.get("retry_lost") is True and not b.get("runner") and v.get("pid") is None):
+    if b.get("runner") or v.get("pid") is not None:
         return False
     try:
         return os.stat(os.path.join(fslot, "out.log")).st_size == 0
     except OSError as e:
         return is_gone(e)
+
+
+def retry_wanted(v, fslot):
+    """P2-02 選項 retry_lost（只給 birth 帶 `retry_lost: true` 的 once）：看起來從沒起來過（never_started）就加回重起
+    （極小機率真的跑過：可能跑兩次，這是選它的人接受的代價）。回 bool。"""
+    b = v.get("birth") or {}
+    return b.get("once") is True and b.get("retry_lost") is True and never_started(v, fslot)
 
 
 def requeue_lost_once(fslot, slot, v):
@@ -259,6 +267,8 @@ def ended_record(v, fslot):
     rec = {"run": run_id(os.path.basename(fslot), v.run), "code": ex.get("code")}
     if ex.get("lost"):
         rec["lost"] = True
+    if ex.get("never_started"):
+        rec["never_started"] = True
     if ex.get("retried"):
         rec["retried"] = True   # P2-02 retry_lost：已把 once 項加回重起
     if ex.get("error"):
@@ -280,8 +290,8 @@ def unreported(v):
 
 # ---------- 任務控制（第 6 節） ----------
 
-RESTART_KEYS = ("name", "argv", "inst", "subroot", "allow_stop")
-DIFF_KEYS = ("argv", "inst", "mounts", "subroot", "allow_stop")
+RESTART_KEYS = ("name", "argv", "inst", "x")
+DIFF_KEYS = ("argv", "inst", "mounts", "x")
 SCHED_KEYS = ("mode", "from_round", "max_live", "enabled", "launch", "slot", "restart_of", "mounts_dyn", "ctl_id",
               "retry_lost", "retry_of", "until_round")
 
@@ -613,102 +623,6 @@ def run_all_ctl(ctx):
     return out
 
 
-# ---------- 子 daemon（2.7） ----------
-
-OWNER_ENV = ("AOS7_OWNER_NODE", "AOS7_OWNER_TID", "AOS7_ALLOW_STOP")
-
-
-def registered_nodes(root):
-    """`<root>/.aosd/nodes.json` 登記的 node id（讀不到回空）。
-
-    root 是 daemon 根；回 id 清單，JSON 結構不合也回 []，此讀取沒有三態（spec §1、§2.7）。"""
-    nj = read_json(os.path.join(root, ".aosd", "nodes.json"))
-    nodes = nj.get("nodes") if isinstance(nj, dict) else None
-    return list(nodes) if isinstance(nodes, dict) else []
-
-
-def under(nid, prefix):
-    """node id nid 在 prefix 底下或就是它。
-
-    nid 與 prefix 是標準化 id 字串；回 bool，純字串判斷，不查 realpath／檔案系統（spec §1）。"""
-    return prefix == "." or nid == prefix or nid.startswith(prefix + "/")
-
-
-def subroot_of(root, node_id, sub):
-    """檢查 `subroot`：回 (空間路徑, None) 或 (None, 錯誤)。要在自己的 node 底下、不能是 node 本身、
-    不能包住父 daemon 已登記的 node（spec 4.1）。
-
-    root 是 daemon 根、node_id 是擁有者、sub 是宣告的空間路徑；
-    回驗證二元組。登記表讀不到時沿用 registered_nodes 的空清單（spec §2.7、§4.1）。"""
-    good, bad = aos7_mount.check({"subroot": sub})
-    if not good:
-        return None, (bad or ["subroot 不合"])[0]
-    sp = good["subroot"]
-    if not (aos7_mount.in_root(root, sp) and os.path.realpath(node_path(root, sp)).startswith(
-            os.path.realpath(node_path(root, node_id)) + os.sep)):
-        return None, "subroot %s 要在自己的 node（%s）底下" % (sub, node_id)
-    inside = [n for n in registered_nodes(root) if under(n, sp)]
-    if inside:
-        return None, "subroot %s 包住了父 daemon 已登記的 node %s" % (sp, ", ".join(sorted(inside)))
-    return sp, None
-
-
-def stopped_note(root, sub):
-    """以 root 根與 sub 子根 id 讀 stopped.json；回停止原因字串，檔不存在（含 lexists 判不到）
-    回 None，存在但內容讀不懂仍回提示並用 ? 代未知欄位（spec §2.7）。"""
-    path = os.path.join(node_path(root, sub), ".aosd", "stopped.json")
-    if not os.path.lexists(path):
-        return None
-    st = read_json(path)
-    st = st if isinstance(st, dict) else {}
-    return "子 daemon（%s）已被 %s 在 %s stop%s；刪掉 %s/.aosd/stopped.json 就會再起" % (
-        sub, st.get("by") or "?", st.get("at") or "?", "（%s）" % st["why"] if st.get("why") else "", sub)
-
-
-def subroot_running(sp):
-    """子根 `<sp>/.aosd/daemon.lock` 有人拿著嗎：非阻塞 flock 試得到就馬上放掉、回 False。
-
-    sp 是子根路徑；回 bool，開不了鎖檔回 False，試鎖有 OSError 回 True；
-    不 unlink 鎖檔，避免同一路徑出現兩個可各自上鎖的 inode（spec §2.5、§2.7）。"""
-    import fcntl
-    try:
-        fd = os.open(os.path.join(sp, ".aosd", "daemon.lock"), os.O_RDONLY | os.O_NONBLOCK)
-    except OSError:
-        return False
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
-        return True
-    finally:
-        os.close(fd)
-    return False
-
-
-def check_subroot(ctx, item, claimed):
-    """起帶 subroot 的任務前的檢查（2.7）。不合丟 ValueError；合格回子根空間路徑或 None（沒帶 subroot）。
-
-    ctx 是動作環境、item 是任務項目、claimed 是本 tick 已認領的子根集合；
-    不修改 claimed，交由選槽端記錄認領，避免同 tick 雙開（spec §2.7）。"""
-    sub = item.get("subroot")
-    if sub is None:
-        return None
-    sp, err = subroot_of(ctx.root, ctx.node_id, sub)
-    if err:
-        raise ValueError(err)
-    note = stopped_note(ctx.root, sp)
-    if note:
-        raise ValueError(note)
-    if sp in claimed:
-        raise ValueError("子根 %s 這個 tick 已經有別項認領，沒起" % sp)
-    fsp = os.path.join(ctx.fnode, os.path.relpath(node_path(ctx.root, sp), ctx.node))
-    if subroot_running(fsp):
-        ow = read_json(os.path.join(fsp, ".aosd", "owner.json"))
-        o = (ow.get("owner") if isinstance(ow, dict) else None) or {}
-        raise ValueError("子根 %s 已經有 daemon 在跑（owner：node %s 任務 %s），沒起" % (
-            sp, o.get("node", "?"), o.get("tid", "?")))
-    return sp
-
-
 # ---------- 起任務（5.3） ----------
 
 class Ctx:
@@ -742,12 +656,12 @@ def clear_slot(fslot):
             shutil.rmtree(p)
 
 
-def start_in_slot(ctx, item, slot, run, sub=None):
+def start_in_slot(ctx, item, slot, run):
     """在槽裡起新的 run（spec 5.3 第 2～5 步；第 1 步的判定由呼叫的人做完）。回 run id。
 
     起不來（開不了槽 fd、aos7-run 起不了）照樣寫 exit.json code 127，任務不會永遠算剛起。
 
-    ctx 是動作環境，item 是已驗證的定義，slot／run 指定本次執行，sub 是已核准子根或 None。
+    ctx 是動作環境，item 是已驗證的定義，slot／run 指定本次執行。
     清槽／掛載等前置 I/O 例外向外拋；捕捉到的開槽 fd／Popen 失敗寫 exit 127（spec §5.3）。"""
     root, node, fnode, rnd = ctx.root, ctx.node, ctx.fnode, ctx.round
     tdir = slot_dir(node, slot)
@@ -770,30 +684,20 @@ def start_in_slot(ctx, item, slot, run, sub=None):
     for n in item.get("mounts_dyn") or ():
         if isinstance(birth["mounts"].get(n), dict):
             birth["mounts"][n]["dyn"] = True
-    if "allow_stop" in item:
-        birth["allow_stop"] = item["allow_stop"]
-    if sub:
-        birth["subroot"] = sub
-        fsp = os.path.join(fnode, os.path.relpath(node_path(root, sub), node))
-        os.makedirs(os.path.join(fsp, ".aosd"), exist_ok=True)
-    elif item.get("subroot") is not None:
-        birth["subroot_error"] = "subroot 沒通過檢查"
+    if "x" in item:
+        birth["x"] = item["x"]   # 模組用的宣告欄位：核心不看內容，照抄（擴充點）
     bpath = os.path.join(fslot, "birth.json")
     # spec §5.3 不變條件二：先留下 birth，再起 runner；中途被殺仍有可恢復的交接證據。
     write_json(bpath, birth)
     test_point("after-birth")
     env = env_with_bin()
-    # spec §2.7、§5.5、P2-15：每次重建身分，動作控制與測試鉤子不傳給任務或子 daemon。
-    # AOS7_TEST_HOOKS、AOS7_TEST_RUNNER_CRASH 留給 aos7-run（它交給任務的環境拿掉全部 AOS7_TEST_*）；其他測試鉤子不傳。
-    for k in ("AOS7_SUBROOT", "AOS7_GEN", "AOS7_EARLY", "AOS7_INCOMPLETE", "AOS7_TEST_CRASH", "AOS7_TEST_HANG",
-              "AOS7_TEST_FAULT", "AOS7_TEST_FAULT_HITS") + OWNER_ENV:
+    # spec §5.5：每次重建身分，動作控制與測試鉤子不傳給任務。AOS7_TEST_HOOKS、AOS7_TEST_RUNNER_CRASH 留給 aos7-run
+    # （它交給任務的環境拿掉全部 AOS7_TEST_*）。
+    for k in ("AOS7_GEN", "AOS7_EARLY", "AOS7_INCOMPLETE", "AOS7_TEST_CRASH", "AOS7_TEST_HANG", "AOS7_TEST_FAULT",
+              "AOS7_TEST_FAULT_HITS"):
         env.pop(k, None)
     env.update({"AOS7_ROOT": root, "AOS7_NODE": node, "AOS7_NODE_ID": ctx.node_id, "AOS7_TASK": tdir,
                 "AOS7_TID": slot, "AOS7_RUN": str(run)})
-    if sub:
-        env["AOS7_SUBROOT"] = node_path(root, sub)
-        env.update({"AOS7_OWNER_NODE": ctx.node_id, "AOS7_OWNER_TID": slot,
-                    "AOS7_ALLOW_STOP": "1" if item.get("allow_stop") is True else "0"})
     try:
         tfd = os.open(fslot, os.O_RDONLY | os.O_DIRECTORY)
     except OSError as e:
