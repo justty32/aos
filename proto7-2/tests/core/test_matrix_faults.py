@@ -34,13 +34,16 @@ import errno
 import json
 import os
 import unittest
+from unittest import mock
 
 from _matrix import ERRNOS, DaemonCase, Fault, MatrixCase, alive, fault, gen, rec_argv
 import aos7_daemon
 import aos7_daemon_timeline
 import aos7_fs
+import aos7_mount
 import aos7_proc
 import aos7_task
+from aos7_fs import read_json, write_json
 
 PROC_OPS = ("proc-list", "proc-stat", "proc-environ", "proc-cmdline")
 
@@ -307,6 +310,50 @@ gen(TestFileUnknown, "slotfile", [("%s_%s" % (f.split(".")[0], e), (f, e))
 gen(TestFileUnknown, "round_json", [(e, (e,)) for e in ERRNOS], TestFileUnknown._round_json)
 gen(TestFileUnknown, "last_round_json", [(e, (e,)) for e in ERRNOS], TestFileUnknown._last_round)
 gen(TestFileUnknown, "listdir_tasks", [(e, (e,)) for e in ERRNOS], TestFileUnknown._listdir)
+
+
+class TestMountUnknown(MatrixCase):
+    """〔core〕A4-01（spec §0、§4.5）：加掛請求或 birth.json 讀不到＝那一件不知道——請求留著、不寫回條、不改 birth，
+    round.json 的 mounts 記一筆 unknown；故障解除後下一個 tick 照常掛上。"""
+    def _setup(self):
+        node = self.mknode("a", [keep_item("job")])
+        self.itick()
+        self.wait_pid(node, "job")
+        self.itock()
+        sd = self.slot(node, "job")
+        write_json(os.path.join(sd, "mount-req", "data.json"), {"name": "data", "path": "data", "why": "t"})
+        return node, sd, self.birth(node, "job")
+
+    def _held_then_served(self, node, sd, before):
+        self.assertTrue(os.path.exists(os.path.join(sd, "mount-req", "data.json")), "讀不到時把請求刪了")
+        self.assertFalse(os.path.exists(os.path.join(sd, "mount-done", "data.json")), "讀不到時寫了回條")
+        self.assertEqual(self.birth(node, "job"), before, "讀不到時改了 birth")
+        self.assertTrue([m for m in self.round_json(node)["mounts"] if m.get("unknown")], self.round_json(node)["mounts"])
+        self.itock()
+        self.itick()
+        self.assertTrue(read_json(os.path.join(sd, "mount-done", "data.json"))["result"]["ok"])
+        b = self.birth(node, "job")
+        self.assertEqual((b["run"], b["mounts"]["data"].get("dyn")), (1, True), b)
+        self.assertTrue(os.path.islink(os.path.join(sd, "mnt", "data")))
+
+    def test_request_unreadable_kept(self):
+        node, sd, before = self._setup()
+        with fault("open:*/mount-req/data.json:EIO"):
+            self.itick()
+        self._held_then_served(node, sd, before)
+
+    def test_birth_unreadable_while_serving(self):
+        node, sd, before = self._setup()
+        real = aos7_mount.fact
+
+        def fact(path, *a, **kw):   # 只讓加掛重讀 birth 那一下讀不到（槽判定照常）
+            if str(path).endswith("/birth.json"):
+                with fault("open:*/birth.json:EIO"):
+                    return real(path, *a, **kw)
+            return real(path, *a, **kw)
+        with mock.patch.object(aos7_mount, "fact", side_effect=fact):
+            self.itick()
+        self._held_then_served(node, sd, before)
 
 
 class TestDaemonStatUnknown(MatrixCase):

@@ -48,16 +48,7 @@ def _tock(root, node_id, node, fnode, early):
     if st == ROUND_NONE:
         return {"round": None, "skipped": "no round.json"}
     if st == ROUND_CLOSED:
-        out = {"round": state["round"], "skipped": "round already closed"}
-        if state.get("notify_errors"):
-            # 回合關上時有沒寫進去的 tock.json：再跑一次 tock 就補（權限修好後人手跑也有用）
-            left = retry_notify(fnode, node, state)
-            state["notify_errors"] = left
-            if not left:
-                state.pop("notify_errors")
-            write_json(rpath, state)
-            out.update(notify_retried=True, notify_errors=left)
-        return out
+        return {"round": state["round"], "skipped": "round already closed"}
     if st != ROUND_OPEN:
         raise Unknown(why, kind="round-unknown")
     lst, lr = fact(lpath)
@@ -107,7 +98,7 @@ def _tock(root, node_id, node, fnode, early):
     st2, back = fact(lpath)
     if not (st2 == OK and back == json.loads(json.dumps(summary, ensure_ascii=False))):   # 整份比對
         raise Unknown("last-round.json 讀回確認不了第 %d 回合（%s），回合沒關，下次 tock 重來" % (rnd, st2), kind="readback")
-    # 總結提交之後才通知；寫不進去的記在 round.json 的 notify_errors（總結已提交，不改它），下一個 tick 補
+    # 總結提交之後才通知；寫不進去的記在 round.json 的 notify_errors（總結已提交，不改它），不跨回合補送（spec §7）
     notify_err = [e for e in (_tell(aos7_task.slot_dir(fnode, s), {"run": v.run, "round": rnd, "at": at, "early": early},
                                     {"slot": s, "run": v.run, "round": rnd})
                               for s, v in views.items() if v.state == LIVE and v.run is not None) if e]
@@ -118,36 +109,6 @@ def _tock(root, node_id, node, fnode, early):
         state["notify_errors"] = notify_err
     write_json(rpath, state)
     return summary
-
-
-def retry_notify(fnode, node, state):
-    """補寫 round.json `notify_errors` 記著的 tock.json，回還補不上的（hold 格式）。tick 開下一回合前、tock 遇到已關的回合時呼叫。
-    同一個 run 還活著才補（那個槽的 tock.json 已經是這回合或更新的就不寫）；槽換了 run、已結束、不在了＝通知沒有對象，丟掉；
-    判不出或寫不進去＝留著下次再補。"""
-    owed = state.get("notify_errors") if isinstance(state, dict) else None
-    left = []
-    for e in owed if isinstance(owed, list) else []:
-        if not (isinstance(e, dict) and isinstance(e.get("slot"), str) and is_int(e.get("run")) and is_int(e.get("round"))):
-            continue   # 格式不對的補不了，也不留
-        who = {k: e[k] for k in ("slot", "run", "round")}
-        fslot = aos7_task.slot_dir(fnode, e["slot"])
-        try:
-            v = aos7_task.judge(fslot, node, e["slot"], e["round"])
-        except Exception as ex:   # noqa: BLE001
-            left.append(hold("judge", _kind(ex), repr(ex), **who))
-            continue
-        if v.state == UNKNOWN:
-            left.append(hold("judge", "unknown", v.get("why"), **who))
-            continue
-        old = read_json(os.path.join(fslot, "tock.json"))
-        if v.state != LIVE or v.run != e["run"] or (isinstance(old, dict) and old.get("run") == e["run"]
-                                                     and is_int(old.get("round")) and old["round"] >= e["round"]):
-            continue
-        err = _tell(fslot, {"run": e["run"], "round": e["round"], "at": state.get("tock_at") or now(), "early": None,
-                            "late": True}, who)
-        if err:
-            left.append(err)
-    return left
 
 
 def _finish(fnode, rnd, marks, views):

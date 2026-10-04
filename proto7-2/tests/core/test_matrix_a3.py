@@ -13,7 +13,7 @@
    換回一般檔後恢復。
 6. （A3-02 不可 dumpable 任務的兩案已刪：誤用 M-2.8，理由見 notes/problems.md「核心精簡：刪掉的誤用保護」。）
 7. **A3-07** 槽的 mount-req／mount-done 裡死寫者的暫存檔被 tock 清掉，活寫者的留著。
-8. **A3-08** 重播（tock-summary 被殺）時通知失敗 → round.json 與回傳都有 notify_errors；之後 tick／再 tock 會補寫。
+8. **A3-08** 重播（tock-summary 被殺）時通知失敗 → round.json 與回傳都有 notify_errors；F47：不跨回合補送，下一回合照常通知。
 9. **P2-01** 真 daemon、early_tock:false、interval 2500ms：回合中送 wake 很快開下一回合（記事件 woke）；沒 wake 的照節拍。
 """
 import os, sys  # noqa: E401
@@ -312,43 +312,33 @@ class TestReplayNotify(A3Case):
         self.assertEqual([(e["slot"], e["run"], e["round"]) for e in errs], [("k", 1, rnd)], errs)
         self.assertTrue(all(e.get("why") for e in errs), errs)
 
-    def test_replay_notify_error_then_tick_retries(self):
-        """A3-08：重播時 tock.json 寫不進去 → round.json 與回傳都有 notify_errors；恢復後下一個 tick 補寫上一回合的 tock.json。"""
+    def next_round_normal(self, node):
+        """F47（spec §7）：不跨回合補送——下一個 tick 不補第 1 回合、不記 tasks_error；第 2 回合的 tock.json 照常寫。"""
+        tp = os.path.join(self.slot(node, "k"), "tock.json")
+        self.assertEqual(self.itick()["round"], 2)
+        self.assertFalse(self.round_json(node).get("tasks_error"), self.round_json(node).get("tasks_error"))
+        self.assertIsNone(read_json(tp), "補送了第 1 回合的 tock.json")
+        self.assertNotIn("notify_errors", self.itock())
+        self.assertEqual((read_json(tp) or {}).get("round"), 2)
+
+    def test_replay_notify_error_recorded_not_resent(self):
+        """A3-08＋F47：重播時 tock.json 寫不進去 → round.json 與回傳都有 notify_errors；恢復後不補送，下一回合正常。"""
         node, out = self.replay_with_blocked_tock()
         self.assert_owed(out.get("notify_errors"))
         rj = self.round_json(node)
         self.assertIs(rj["open"], False)
         self.assert_owed(rj.get("notify_errors"))
-        tp = os.path.join(self.slot(node, "k"), "tock.json")
-        os.rmdir(tp)
-        r = self.itick()
-        self.assertEqual(r["round"], 2)
-        t = read_json(tp)
-        self.assertEqual((t or {}).get("round"), 1, "沒補寫第 1 回合的 tock.json：%r" % t)
-        self.assertEqual(t["run"], 1)
-        self.assertFalse(self.round_json(node).get("tasks_error"), self.round_json(node).get("tasks_error"))
+        os.rmdir(os.path.join(self.slot(node, "k"), "tock.json"))
+        self.next_round_normal(node)
 
-    def test_replay_notify_still_failing_goes_to_tasks_error(self):
-        """A3-08：補寫時 tock.json 還寫不進去 → 新回合的 tasks_error 記著欠的通知。"""
+    def test_closed_round_tock_skips(self):
+        """F47：對已關的回合再跑 tock 只回 skipped，不補送、notify_errors 原樣留在 round.json（給要補的模組讀）。"""
         node, _out = self.replay_with_blocked_tock()
-        self.itick()
-        errs = self.round_json(node).get("tasks_error") or []
-        self.assertTrue([e for e in errs if "tock.json" in e and "1" in e], "補不上的通知沒進 tasks_error：%r" % errs)
-
-    def test_closed_round_tock_retries(self):
-        """A3-08：對已關的回合再跑 tock：還寫不進去 → notify_retried＋留著；恢復後再跑 → 補寫、notify_errors 清掉。"""
-        node, _out = self.replay_with_blocked_tock()
+        os.rmdir(os.path.join(self.slot(node, "k"), "tock.json"))
         r = self.itock()
-        self.assertIs(r.get("notify_retried"), True, r)
-        self.assert_owed(r.get("notify_errors"))
+        self.assertEqual(r, {"round": 1, "skipped": "round already closed"})
         self.assert_owed(self.round_json(node).get("notify_errors"))
-        tp = os.path.join(self.slot(node, "k"), "tock.json")
-        os.rmdir(tp)
-        r = self.itock()
-        self.assertIs(r.get("notify_retried"), True, r)
-        self.assertEqual(r.get("notify_errors"), [], r)
-        self.assertNotIn("notify_errors", self.round_json(node))
-        self.assertEqual((read_json(tp) or {}).get("round"), 1)
+        self.assertIsNone(read_json(os.path.join(self.slot(node, "k"), "tock.json")))
 
     def test_replay_unjudgeable_slot_recorded(self):
         """A3-08：重播時槽判不出（birth.json 換成 FIFO）→ notify_errors 記著（phase judge），不默默關回合。"""
@@ -363,8 +353,7 @@ class TestReplayNotify(A3Case):
         self.assert_owed(out.get("notify_errors"))
         self.assertEqual(out["notify_errors"][0].get("where"), "judge")
         back_to_file(bpath, raw)
-        self.itick()
-        self.assertEqual((read_json(os.path.join(self.slot(node, "k"), "tock.json")) or {}).get("round"), 1)
+        self.next_round_normal(node)
 
 
 # ---------- P2-01 ----------

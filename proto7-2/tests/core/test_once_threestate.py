@@ -69,6 +69,20 @@ class TestOnceCrash(CoreCase):
         node = self.crash_then_continue("before-once-delete")
         self.assertEqual(len(self.ran(node, "o")), 1)
 
+    def test_crash_between_birth_and_item_delete(self):
+        """線頭 1（spec §4.4 保證 (a)）：birth 寫好、移項前被殺 → 表上那項帶 launch、槽的 birth 是同一個 run；
+        下一個 tick 就移項、不再起，總共只跑一次。"""
+        node = self.mknode("a", [once_item("o")])
+        self.tick(env={"AOS7_TEST_CRASH": "before-once-delete"}, rc=None)
+        run = self.tasks(node)[0]["launch"]["run"]
+        self.assertEqual(self.birth(node, "o").get("run"), run)
+        self.tock(env={"AOS7_INCOMPLETE": "tick"})
+        self.assertEqual(self.tick()["started"], [])
+        self.assertEqual(self.tasks(node), [])
+        self.wait_ended(node, "o", run)
+        self.tock()
+        self.assertEqual(self.ran(node, "o"), [str(run)])
+
     def test_gang_crash_mid_batch(self):
         """五項 once 起到第一個就被殺（after-popen）：其他四項有標記沒 birth → 照常起；每項剛好一次（N-86）。"""
         names = ("g1", "g2", "g3", "g4", "g5")

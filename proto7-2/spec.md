@@ -10,6 +10,7 @@
   - **N 不存在**（ENOENT／ENOTDIR；程序確定不在或是殭屍）：當沒有——新空間、空槽、沒有請求。
   - **U 不知道**（其他讀取錯誤；存在但不是一般檔；/proc 讀不到或掃描不完整；**核心自己寫的檔**內容不合）：保留現狀，不前進、不做破壞性動作，記一筆、下一圈再看。停多大看事實歸誰：回合事實＝整 node，槽事實＝單槽，請求＝那一件。
   - **B 輸入不合**（**別人寫給核心的**控制檔、tasks.json、timeline.json、加掛請求格式不對）：拒收那一件並回報（回條 `ok: false`、`tasks_error`、設定用預設並記一筆），其他照做。
+    例外：daemon 控制檔（2.3）**不是一般檔**也算 B（搬 `.bad`、回條 `ok: false`），不當 U 留著——請求檔只可能是別人放的，留著只會每圈卡同一件。
   - **K 中斷**（自己被殺、逾時被收）：不偵測。靠「先寫證據再動作」的順序、重做是冪等的、清掉寫者已死的暫存檔。
   - 誤用（違反組件前置條件，11 節）不另立一類：落到哪類就照哪類走；順手偵測到的記一筆，不保證偵測到、不為它加檢查。
 - **判定入口**：讀檔只經一個（不存在／讀到／讀到但不是 JSON／不知道；非阻塞開，FIFO 不會卡住讀的人）；程序只經一個（不在／同一個程序的 starttime／不知道）；回合＝round.json 的判定（第 3 節）；槽＝5.4 的表。
@@ -151,7 +152,7 @@
 `aos7-tick <root> <node-id>`：
 
 1. 抓 node fd、拿動作鎖、比世代（2.5）。node 不在印 `{"gone": true}`。
-2. 判上一回合已關（第 3 節），清暫存檔；補上一回合欠的 tock.json（第 7 節末）；列不出 `.aos/tasks/`＝不知道、退出碼 3。round +1，寫 round.json。
+2. 判上一回合已關（第 3 節），清暫存檔；列不出 `.aos/tasks/`＝不知道、退出碼 3。round +1，寫 round.json。
 3. 執行任務控制（第 6 節）；判定每個槽（5.4，疑似 lost 先掃描）；審核活任務的加掛請求（4.5）。
 4. **拿 tasks.json.lock**（最多等 1 秒；等不到這回合不起、記 `tasks_error`）：驗證、挑要起的（先 once 照檔案順序，再 keep／each），決定槽與 run；有 once 要起就在那項寫 `launch` 並寫回。鎖內重讀表照三態，不知道＝這回合一個都不起。放鎖。
 5. 要重用的槽裡有「已結束、還沒報過」的 run：先記進 round.json 的 `reaped`，tock 照樣報（P2-03）。
@@ -174,10 +175,16 @@
 
 被殺在「寫了 birth、runner 還沒記上」之間：只能照 5.4 等兩回合判 lost，這項一次都沒跑、報成 lost（帶 `never_started`），不再起——**最多一次**。要至少一次用 [once 保證包](modules/once_retry/README.md)（P2-02）。
 
+給上層推算用的兩個保證（核心只承諾這兩句；step 包「第三個 tock 才刪」之類的推論寫在包裡）：
+
+- **(a)** once 項從表上拿掉時，該槽的 birth.json 已經寫好（4.2 第 3→7 步的順序；移項前被殺，下一個 tick 照上面第一條移項、不多起）。
+- **(b)** 已結束的槽，最早在**報出結束的下一個** tock 才刪（5.1 的 `seen_round` < 現在）。
+
 ### 4.5 掛載（S-23）
 
 - `mounts`＝`{"名字": "空間路徑"}`：tick 起任務時建 `mnt/<名字>`（相對符號連結，目標不在先建成資料夾）。名字不能含 `/`、不能 `.` 開頭；路徑不能絕對、realpath 後要在空間根內。不合的不掛，記在 birth.json。
 - **執行中加掛**：任務寫 `mount-req/<名字>.json`＝`{"name", "path", "why"}`；下一個 tick 審核（`mount_allow`＝允許的空間路徑前綴，比 realpath；沒寫＝空間根內全給；tasks.json 讀不到＝這回合不審），回條寫 `mount-done/<同名>.json`，寫成才刪請求；成功的建 `mnt/<名字>`、在 birth.json 標 `dyn`。不卸掛。
+  請求或 birth.json 讀不到（第 0 節 U，birth 不是物件也算）＝那一件不知道：請求留著、不寫回條、不改 birth，round.json 的 `mounts` 記一筆 `unknown`，下一個 tick 再審（A4-01）。請求不是 JSON 物件照 B 回 `ok: false`。
 - 每次起新的 run，照項目的宣告重建 `mnt/`，清掉 `mount-req/`、`mount-done/`。掛載只是方便，不強制（沒有 FUSE）；要記寫入用[稽核包](modules/audit/README.md)。
 
 ## 5. 任務（S-10、S-11、S-16）
@@ -244,16 +251,16 @@ aos7-run 經 fd 讀 birth、開 out.log，把任務起在自己的程序群組�
 
 `aos7-tock <root> <node-id>`：
 
-1. 抓 node fd、拿鎖、比世代。node 不在 `{"gone": true}`；舊世代 `{"stale": true}`；回合已關印 `skipped`（順便補欠的 tock.json）。
+1. 抓 node fd、拿鎖、比世代。node 不在 `{"gone": true}`；舊世代 `{"stale": true}`；回合已關只印 `skipped`。
 2. 執行任務控制（第 6 節）。
 3. 掃所有槽（順便清暫存檔），照 5.4 判定、lost 的補 exit.json；判不出、當活但 unsure 的記進 `errors`。
 4. **寫 last-round.json，整份讀回確認**；確認不了＝不知道、退出碼 3，回合不關，下次重來。
-5. 之後才對每個活任務寫 `tock.json`（任務收到這回合的 tock 時，總結一定已經是這回合的）；寫不進去的記在 round.json 的 `notify_errors`。
+5. 之後才對每個活任務寫 `tock.json`（任務收到這回合的 tock 時，總結一定已經是這回合的）；寫不進去的記在 round.json 的 `notify_errors`，**不跨回合補送**（F47）。
 6. 新結束的補 `seen_round`，刪該刪的槽（5.1；表讀不到不刪）。
 7. 寫 round.json `open: false`，stdout 印總結。
 
 - **重播**：同回合已有完整的總結（上一次寫完就被殺）→ 不重寫，只收尾（補 `seen_round`、補沒收到的 tock.json、關回合並標 `replayed`）；列不出槽就不關。總結壞掉或不完整就照常重新產生。恢復只靠 round.json 與 last-round.json。
-- **欠的 tock.json**：round.json 有 `notify_errors` 時，下一個 tick 開回合前（或對已關的回合再跑 tock）照它補：同一個 run 還活著才補（帶 `late: true`）；換了 run、結束、槽不在了就丟掉；補不上的記進新回合的 `tasks_error`。
+- **沒寫進去的 tock.json**（F47）：只記在 round.json 的 `notify_errors`，下一回合照常通知、不補上一回合的。任務本來就只看得到最新一次 tock、可能漏（S-11、5.5）；要補的模組自己讀 round.json 做。同回合重播的補寫（上一條）是中斷恢復，不在此限。
 
 ## 8. 不變條件三：清掉的東西不改上層的累計（K-07）
 
