@@ -1,0 +1,730 @@
+{
+ "contract": "wf-table/1",
+ "source": "summary.md",
+ "extracted": "2026-10-04",
+ "columns": [
+  "id",
+  "claim",
+  "card",
+  "card_text",
+  "spec_sections",
+  "spec_evidence",
+  "result"
+ ],
+ "rows": [
+  {
+   "id": "2.1-a",
+   "claim": "只跑登記 node、一 node 一時間線",
+   "card": "proto7-2/notes/component-contracts.md:50",
+   "card_text": "- **保證**：只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。",
+   "spec_sections": "1、2.1",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:26",
+     "text": "- **node＝登記在 `.aosd/nodes.json` 的資料夾**（`{\"nodes\": {\"team\": {\"by\", \"at\"}, …}}`，只有 daemon 寫）。daemon 不掃資料夾；node id＝相對 root 的路徑（根是 `.`）。"
+    },
+    {
+     "location": "proto7-2/spec.md:37",
+     "text": "主迴圈每 ~20 ms：處理控制檔（有預算）→ 檢查已登記 node → 寫 status。每個已登記、資料夾在的 node 一條時間線（thread；每個動作都是獨立程序，S-04）："
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.1-b",
+   "claim": "路徑登記檢查與 O_NOFOLLOW",
+   "card": "proto7-2/notes/component-contracts.md:50",
+   "card_text": "- **保證**：只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。",
+   "spec_sections": "1、2.5",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:27",
+     "text": "- 登記時檢查：在 root 底下、**路上沒有符號連結**（realpath 要等於 `realpath(root)/<id>`）、路上沒有別的 daemon 的根（帶 `.aosd/` 的資料夾，S-15）。不合回條 `ok: false`。資料夾還不在照樣接受，出現時才開回合。"
+    },
+    {
+     "location": "proto7-2/spec.md:28",
+     "text": "- 之後只防 node **本身**被換掉：daemon 每圈 lstat（不是資料夾——含換成符號連結——或 inode 變了＝missing，2.6），tick／tock 用 `O_NOFOLLOW` 開 node。絕不沿符號連結寫出空間根。"
+    },
+    {
+     "location": "proto7-2/spec.md:89",
+     "text": "- **抓著目錄的 fd 做事**：daemon 經 root 的 fd 讀寫 `.aosd/`；tick、tock 經 node 的 fd 讀寫 `.aos/`（node 不在或本身是符號連結＝`{\"gone\": true}`；開不了但不是 ENOENT＝不知道、退出碼 3）。root 確定不在或換了 inode → stop 加 kill、status 記 `root_gone`；看不到 root 保留現狀、頂層記 `last_error`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.1-c",
+   "claim": "missing 與 I/O、proc 未知時保留",
+   "card": "proto7-2/notes/component-contracts.md:50",
+   "card_text": "- **保證**：只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。",
+   "spec_sections": "0、2.6",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:18",
+     "text": "- **三態判定**（K 系列）：推定一個事實（回合關了沒、任務活著沒、程序是不是同一個）時，結果只有是／否／不知道；不知道不能當否，也不能當是去做破壞性動作。/proc 讀不到時：不殺、不判 lost、不起新 run、不清 daemon 記著的 live／pgid。"
+    },
+    {
+     "location": "proto7-2/spec.md:94",
+     "text": "- 確定不在、不是資料夾了（含換成符號連結）、inode 跟時間線開始時的不同 → kill 那個 node 的活任務、時間線停下、`phase: missing`，**登記保留**；資料夾回來就重開時間線。"
+    },
+    {
+     "location": "proto7-2/spec.md:95",
+     "text": "- 看不到（EIO、ESTALE、EACCES…）＝不知道 → 保留時間線與記著的程序，記 `last_error`（`kind` 是 errno 名）。"
+    },
+    {
+     "location": "proto7-2/spec.md:97",
+     "text": "- **收程序的範圍**（Q1 (a)）：daemon 記著的各 node 活任務 pgid（跟 `live` 每 0.25 秒更新；判不出的沿用，不清空），加上環境 `AOS7_NODE` 是那個 node、有 `AOS7_TID` 的程序。掃描不完整時照樣打記著的群組，事件記 `ok: false`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.1-d",
+   "claim": "SIGTERM stop+kill、守門檔",
+   "card": "proto7-2/notes/component-contracts.md:50",
+   "card_text": "- **保證**：只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。",
+   "spec_sections": "2.7（SIGTERM 同見 2.3）",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:74",
+     "text": "- SIGTERM／SIGINT＝`stop` 加 `kill: true`。"
+    },
+    {
+     "location": "proto7-2/spec.md:101",
+     "text": "- `stop`：時間線不等 interval，（帶 `kill` 先 kill 本 node 活任務）立刻 tock 收回合；全部結束後帶 `kill` 的再掃一次環境身分，收掉殘留（不含 aos7-run、daemon 自己與祖先）。"
+    },
+    {
+     "location": "proto7-2/spec.md:102",
+     "text": "- **守門檔** `.aosd/stop-guard.json`：存在而 `allow` 不是 `true`（讀不到、壞掉也算）→ 控制檔 `stop` 回 `ok: false`（帶 `note`）。SIGTERM 不看守門檔。核心不知道守門的語意；子 daemon 的所有權見[子 daemon 包](../../../../modules/subd/README.md)。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.1-e",
+   "claim": "status 最終 stopped",
+   "card": "proto7-2/notes/component-contracts.md:50",
+   "card_text": "- **保證**：只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。",
+   "spec_sections": "2.8",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:106",
+     "text": "`.aosd/status.json` 每圈覆寫："
+    },
+    {
+     "location": "proto7-2/spec.md:116",
+     "text": "- `stopped: true`＝正常退出前的最後一份；`at` 好幾個 `poll_s` 沒動＝daemon 可能卡住或死了。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.1-f",
+   "claim": "重開 gen+1、自有檔讀不到拒開",
+   "card": "proto7-2/notes/component-contracts.md:50",
+   "card_text": "- **保證**：只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。",
+   "spec_sections": "2.5",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:85",
+     "text": "- **世代**：daemon 拿到 `.aosd/daemon.lock`（拿不到退出碼 1）後把 `gen.json` 的 `gen` +1，起 tick／tock 時給 `AOS7_GEN`。起來時 `nodes.json`、`paused.json`、`gen.json` 讀不到或壞掉＝不知道 → 不起來（退出碼 3），不當空的照跑、不蓋掉它們。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.1-g",
+   "claim": "清已死寫者暫存檔",
+   "card": "proto7-2/notes/component-contracts.md:50",
+   "card_text": "- **保證**：只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。",
+   "spec_sections": "0",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:19",
+     "text": "- 狀態與控制都是 JSON 檔，`cat` 看得懂、寫檔就能操作。寫檔一律先寫 `.<名>.tmp.<pid>` 再 rename；列資料夾的人略過 `.` 開頭的。寫者確定不在的暫存檔由 tick／tock（自己的 `.aos/` 與槽，含槽的 `mount-req/`、`mount-done/`，不遞迴）、daemon（`.aosd/`、`ctl/`、`ctl-done/`）清掉。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.2-a",
+   "claim": "動作互斥、世代",
+   "card": "proto7-2/notes/component-contracts.md:57",
+   "card_text": "- **保證**：同一 node 不會同時跑兩個動作（動作鎖＋世代，§2.5）；舊回合確知已關才開下一回合，不知道＝停在 `error` 退避（§2.2）；tock 沒關上馬上補一次（§2.1）；**tick 退出碼非 0／3＝失敗：記 `last_error`、退避、不算回合、不扣 `rounds`**（§2.1）；動作逾時 SIGKILL 並記、舊世代持鎖者認得出才殺（§2.5）；pause 清單非空不開回合、`rounds` 倒數按 owner 各記（§2.4）；wake／resume 的提前結束照 §2.1 第 4、6 步；迴圈丟例外記 `last_error`、0.5 秒後續跑。",
+   "spec_sections": "2.5",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:86",
+     "text": "- **動作鎖**：tick、tock 整個動作期間拿 `<node>/.aos/action.lock`，拿到後比 `AOS7_GEN` 與 gen.json：不同就什麼都不寫、印 `{\"stale\": true}`；gen.json 不能用＝不知道、退出碼 3。確定是現役才寫 `action.owner.json`＝`{\"pid\", \"gen\", \"starttime\", \"at\"}`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.2-b",
+   "claim": "回合未知退避、不開下回",
+   "card": "proto7-2/notes/component-contracts.md:57",
+   "card_text": "- **保證**：同一 node 不會同時跑兩個動作（動作鎖＋世代，§2.5）；舊回合確知已關才開下一回合，不知道＝停在 `error` 退避（§2.2）；tock 沒關上馬上補一次（§2.1）；**tick 退出碼非 0／3＝失敗：記 `last_error`、退避、不算回合、不扣 `rounds`**（§2.1）；動作逾時 SIGKILL 並記、舊世代持鎖者認得出才殺（§2.5）；pause 清單非空不開回合、`rounds` 倒數按 owner 各記（§2.4）；wake／resume 的提前結束照 §2.1 第 4、6 步；迴圈丟例外記 `last_error`、0.5 秒後續跑。",
+   "spec_sections": "2.2",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:51",
+     "text": "- **舊回合確知已關才開下一回合**：round.json 是物件、`round` 整數、`open` 明確 `false`，或確定不存在（新空間）。其餘＝不知道 → 停在 `error` 退避、`last_error.kind: round-unknown`，不 tick，等人寫回。tick 自己也照這條檢查。"
+    },
+    {
+     "location": "proto7-2/spec.md:52",
+     "text": "- round.json 還開著（daemon 在回合中死掉重開、補 tock 也失敗）→ 先 tock 關掉（`incomplete: \"unclosed\"`），成功後回頂端重新看 pause 與倒數。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.2-c",
+   "claim": "tock 補一次、非0/3失敗不扣回合",
+   "card": "proto7-2/notes/component-contracts.md:57",
+   "card_text": "- **保證**：同一 node 不會同時跑兩個動作（動作鎖＋世代，§2.5）；舊回合確知已關才開下一回合，不知道＝停在 `error` 退避（§2.2）；tock 沒關上馬上補一次（§2.1）；**tick 退出碼非 0／3＝失敗：記 `last_error`、退避、不算回合、不扣 `rounds`**（§2.1）；動作逾時 SIGKILL 並記、舊世代持鎖者認得出才殺（§2.5）；pause 清單非空不開回合、`rounds` 倒數按 owner 各記（§2.4）；wake／resume 的提前結束照 §2.1 第 4、6 步；迴圈丟例外記 `last_error`、0.5 秒後續跑。",
+   "spec_sections": "2.1",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:43",
+     "text": "5. 跑 `aos7-tock`（`AOS7_EARLY`＝`1` 提前、`0` 沒有）。沒關上就馬上補一次（`AOS7_INCOMPLETE=tock`）。"
+    },
+    {
+     "location": "proto7-2/spec.md:46",
+     "text": "- **tick／tock 的退出碼只看三種**：0＝做了；3＝不知道；其他（例外、退出碼 1）＝失敗。後兩者記 `last_error`、退避、回頂端，**不算一個回合**（不扣 `rounds` 倒數）。tick 被動作逾時收掉照第 5 步 tock，總結標 `incomplete: \"tick\"`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.2-d",
+   "claim": "逾時與舊動作接管",
+   "card": "proto7-2/notes/component-contracts.md:57",
+   "card_text": "- **保證**：同一 node 不會同時跑兩個動作（動作鎖＋世代，§2.5）；舊回合確知已關才開下一回合，不知道＝停在 `error` 退避（§2.2）；tock 沒關上馬上補一次（§2.1）；**tick 退出碼非 0／3＝失敗：記 `last_error`、退避、不算回合、不扣 `rounds`**（§2.1）；動作逾時 SIGKILL 並記、舊世代持鎖者認得出才殺（§2.5）；pause 清單非空不開回合、`rounds` 倒數按 owner 各記（§2.4）；wake／resume 的提前結束照 §2.1 第 4、6 步；迴圈丟例外記 `last_error`、0.5 秒後續跑。",
+   "spec_sections": "2.5",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:87",
+     "text": "- **動作逾時**：tick、tock 最多跑 `action_timeout_s` 秒，超過 SIGKILL、記 `last_error`。"
+    },
+    {
+     "location": "proto7-2/spec.md:88",
+     "text": "- **舊動作接管**：等鎖逾時時，持有者是舊世代、而且 pid 的 starttime 跟記的一樣 → SIGKILL 它；認不出＝不知道 → 不殺，`last_error.kind: stale-holder-unverified`。鎖檔不 unlink。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.2-e",
+   "claim": "pause、owner 各自 rounds",
+   "card": "proto7-2/notes/component-contracts.md:57",
+   "card_text": "- **保證**：同一 node 不會同時跑兩個動作（動作鎖＋世代，§2.5）；舊回合確知已關才開下一回合，不知道＝停在 `error` 退避（§2.2）；tock 沒關上馬上補一次（§2.1）；**tick 退出碼非 0／3＝失敗：記 `last_error`、退避、不算回合、不扣 `rounds`**（§2.1）；動作逾時 SIGKILL 並記、舊世代持鎖者認得出才殺（§2.5）；pause 清單非空不開回合、`rounds` 倒數按 owner 各記（§2.4）；wake／resume 的提前結束照 §2.1 第 4、6 步；迴圈丟例外記 `last_error`、0.5 秒後續跑。",
+   "spec_sections": "2.4",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:78",
+     "text": "- `.aosd/paused.json`＝`{\"paused\": {\"team/agents/bob\": [\"budget\", \"human\"]}}`，**清單空了才開回合**；daemon 起來就寫一份。沒寫 `owner` 用 `\"\"`。"
+    },
+    {
+     "location": "proto7-2/spec.md:79",
+     "text": "- `resume` 只拿掉自己的 owner；`\"all\": true` 全清（含所有倒數）。"
+    },
+    {
+     "location": "proto7-2/spec.md:80",
+     "text": "- **核心選項 `rounds`**：`resume` 帶 `\"rounds\": N`＝再跑 N 回合（回合確知關上才算）就以同一個 owner 再 pause；倒數按 owner 各記一份（A2-06），同一 owner 再 pause／resume 時清掉。status 的 `steps_left`＝`{owner: 剩幾回合}`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.2-f",
+   "claim": "wake/resume、例外0.5秒",
+   "card": "proto7-2/notes/component-contracts.md:57",
+   "card_text": "- **保證**：同一 node 不會同時跑兩個動作（動作鎖＋世代，§2.5）；舊回合確知已關才開下一回合，不知道＝停在 `error` 退避（§2.2）；tock 沒關上馬上補一次（§2.1）；**tick 退出碼非 0／3＝失敗：記 `last_error`、退避、不算回合、不扣 `rounds`**（§2.1）；動作逾時 SIGKILL 並記、舊世代持鎖者認得出才殺（§2.5）；pause 清單非空不開回合、`rounds` 倒數按 owner 各記（§2.4）；wake／resume 的提前結束照 §2.1 第 4、6 步；迴圈丟例外記 `last_error`、0.5 秒後續跑。",
+   "spec_sections": "2.1",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:42",
+     "text": "4. 等：固定 interval 時等滿 interval，但 tick 之後收到 `wake`（或讓 node 從有人 pause 變成沒人 pause 的 `resume`）就**提前結束這回合**（P2-01）；`early_tock` 時等到本回合起的任務都結束或滿 interval，回合中的 wake 不起作用（A2-11）。"
+    },
+    {
+     "location": "proto7-2/spec.md:44",
+     "text": "6. 等到離 tick 滿 interval；回合關上之後送來的 wake／resume 打斷等待。被 wake 提前結束的回合不走這步。"
+    },
+    {
+     "location": "proto7-2/spec.md:47",
+     "text": "- 時間線丟例外：記 `last_error`，0.5 秒後接著跑。主迴圈一步丟例外不退出，`io_errors` +1。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.3-a",
+   "claim": "只在確定已關後開",
+   "card": "proto7-2/notes/component-contracts.md:65",
+   "card_text": "  - 上一回合確知已關才開（§3）；不知道＝退出 3、什麼都不寫。",
+   "spec_sections": "3",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:123",
+     "text": "- 判定（daemon、tick、tock 共用）：物件、`round` 整數、`open` 是 true／false 才算讀到；確定不存在另算；其餘＝不知道。"
+    },
+    {
+     "location": "proto7-2/spec.md:124",
+     "text": "- **回合數接續**：tick 只在明確 `open: false` 時開 `round + 1`；還開著、不知道 → 什麼都不寫、退出碼 3（不拿 last-round.json 接號，A2-02）。round.json 不存在：照 last-round.json 的 `round` 接著數，它也不存在從 1 起，它讀不到或壞掉＝不知道（P2-06）。tock 只收開著的回合；不存在、已關印 `skipped`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.3-b",
+   "claim": "單槽一次、只空/結束、reaped",
+   "card": "proto7-2/notes/component-contracts.md:66",
+   "card_text": "  - 一個槽一個 tick 最多起一次；只在「空」或「已結束」的槽起（§5.3、§5.4）；起之前把「已結束未報」的 run 記進 `reaped`（§4.2 第 5 步）。",
+   "spec_sections": "5.3、5.4、4.2",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:158",
+     "text": "5. 要重用的槽裡有「已結束、還沒報過」的 run：先記進 round.json 的 `reaped`，tock 照樣報（P2-03）。"
+    },
+    {
+     "location": "proto7-2/spec.md:159",
+     "text": "6. 一個一個起（5.3）；一個槽一個 tick 最多起一次。"
+    },
+    {
+     "location": "proto7-2/spec.md:214",
+     "text": "1. 判定槽（5.4）：只有空槽或已結束才往下；活著或不知道就跳過（`skipped`）。"
+    },
+    {
+     "location": "proto7-2/spec.md:224",
+     "text": "| 沒有 birth.json | 空槽 |"
+    },
+    {
+     "location": "proto7-2/spec.md:227",
+     "text": "| 有同 run 的 exit.json | 結束 |"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.3-c",
+   "claim": "壞單項跳過、表未知或鎖逾時不起",
+   "card": "proto7-2/notes/component-contracts.md:67",
+   "card_text": "  - 單項欄位錯只跳那項；表讀不到（U）＝這回合不起、表鎖 1 秒拿不到＝回合照開、不起，都記 `tasks_error`（§4.1、§4.2）。",
+   "spec_sections": "4.1、4.2",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:146",
+     "text": "- **讀**：不存在＝空表；讀不到、不是一般檔（U）＝這回合不起、記 `tasks_error`、tock 不刪槽；不是 JSON 或不是 `{\"tasks\": [...]}`（B）＝當空表、記 `tasks_error`。"
+    },
+    {
+     "location": "proto7-2/spec.md:148",
+     "text": "- 一項的欄位不合：**只跳過那一項**、記 `tasks_error`，其他照起；驗證在挑槽、算 run 之前做完。已移到模組包的舊欄位（`subroot`、`allow_stop`、`retry_lost`）也算不合，訊息指到接手的包。"
+    },
+    {
+     "location": "proto7-2/spec.md:157",
+     "text": "4. **拿 tasks.json.lock**（最多等 1 秒；等不到這回合不起、記 `tasks_error`）：驗證、挑要起的（先 once 照檔案順序，再 keep／each），決定槽與 run；有 once 要起就在那項寫 `launch` 並寫回。鎖內重讀表照三態，不知道＝這回合一個都不起。放鎖。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.3-d",
+   "claim": "once 最多一次、birth先於移項",
+   "card": "proto7-2/notes/component-contracts.md:68",
+   "card_text": "  - once 不重起、最多一次、不無痕消失（`launch` 標記，§4.4）；**(a) once 項從表上拿掉時，該槽 `birth.json` 已寫好**（§4.4）。被殺在任一點＝下一個 tick 靠 `launch`／birth／exit／pid 證據恢復，不多起。",
+   "spec_sections": "4.4",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:170",
+     "text": "`launch`＝`{\"slot\", \"run\", \"round\"}`，在**寫 birth.json 之前**落地。下一個 tick 看到帶 `launch` 的 once："
+    },
+    {
+     "location": "proto7-2/spec.md:172",
+     "text": "- 槽判定出的 run 就是標記的 run → 已經起了（或起到一半）→ 刪掉這項，不重起。"
+    },
+    {
+     "location": "proto7-2/spec.md:173",
+     "text": "- 不是這個 run（或槽是空的）→ 上次在寫 birth 之前就被殺了 → 用新的 run 照常起。"
+    },
+    {
+     "location": "proto7-2/spec.md:174",
+     "text": "- 判不出 → 這項留著，下一回合再看。"
+    },
+    {
+     "location": "proto7-2/spec.md:176",
+     "text": "被殺在「寫了 birth、runner 還沒記上」之間：只能照 5.4 等兩回合判 lost，這項一次都沒跑、報成 lost（帶 `never_started`），不再起——**最多一次**。要至少一次用 [once 保證包](../../../../modules/once_retry/README.md)（P2-02）。"
+    },
+    {
+     "location": "proto7-2/spec.md:180",
+     "text": "- **(a)** once 項從表上拿掉時，該槽的 birth.json 已經寫好（4.2 第 3→7 步的順序；移項前被殺，下一個 tick 照上面第一條移項、不多起）。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.3-e",
+   "claim": "加掛 U 保留、B 拒收",
+   "card": "proto7-2/notes/component-contracts.md:69",
+   "card_text": "  - 加掛：請求與 birth 一律經檔判定（§0、§4.5）——請求讀不到（U）＝那一件留著、不寫回條、不改 birth，記一筆在 round.json／總結的 `mounts`；請求不是 JSON 物件（B）＝回 `ok: false` 回條；birth 不是讀到（OK）的物件＝不審、請求留著。",
+   "spec_sections": "0、4.5",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:11",
+     "text": "  - **U 不知道**（其他讀取錯誤；存在但不是一般檔；/proc 讀不到或掃描不完整；**核心自己寫的檔**內容不合）：保留現狀，不前進、不做破壞性動作，記一筆、下一圈再看。停多大看事實歸誰：回合事實＝整 node，槽事實＝單槽，請求＝那一件。"
+    },
+    {
+     "location": "proto7-2/spec.md:12",
+     "text": "  - **B 輸入不合**（**別人寫給核心的**控制檔、tasks.json、timeline.json、加掛請求格式不對）：拒收那一件並回報（回條 `ok: false`、`tasks_error`、設定用預設並記一筆），其他照做。"
+    },
+    {
+     "location": "proto7-2/spec.md:186",
+     "text": "- **執行中加掛**：任務寫 `mount-req/<名字>.json`＝`{\"name\", \"path\", \"why\"}`；下一個 tick 審核（`mount_allow`＝允許的空間路徑前綴，比 realpath；沒寫＝空間根內全給；tasks.json 讀不到＝這回合不審），回條寫 `mount-done/<同名>.json`，寫成才刪請求；成功的建 `mnt/<名字>`、在 birth.json 標 `dyn`。不卸掛。"
+    },
+    {
+     "location": "proto7-2/spec.md:187",
+     "text": "  請求或 birth.json 讀不到（第 0 節 U，birth 不是物件也算）＝那一件不知道：請求留著、不寫回條、不改 birth，round.json 的 `mounts` 記一筆 `unknown`，下一個 tick 再審（A4-01）。請求不是 JSON 物件照 B 回 `ok: false`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.3-f",
+   "claim": "未知槽不起不lost、tick不刪槽",
+   "card": "proto7-2/notes/component-contracts.md:70",
+   "card_text": "  - 不知道的槽不起、不判 lost、記 `errors`（§5.4）；tick 不刪槽（刪槽是 tock 的，§5.1）。",
+   "spec_sections": "5.4、5.1",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:205",
+     "text": "- **槽什麼時候刪**：名字不在表上（或槽號 ≥ `max_live`）、run 已結束、結束早在之前的回合報過（`seen_round` < 現在）→ tock 刪整個槽。所以 once 的結果在報完後再留一回合；**交付物寫到槽外面**（W7）。"
+    },
+    {
+     "location": "proto7-2/spec.md:225",
+     "text": "| birth／exit／pid 讀不到或不是一般檔 | **不知道**：不起、不判 lost，記 `errors` |"
+    },
+    {
+     "location": "proto7-2/spec.md:233",
+     "text": "**疑似 lost 先做身分掃描**（NODE＋TID＋RUN）：這個 run 的 aos7-run 還在＝當活（unsure）；有相符的任務程序＝先照 Q1 收掉再判 lost；確定沒有＝lost，寫 `exit.json` `{\"run\", \"code\": null, \"lost\": true}`。**事實出口**：birth 沒有 runner、沒有 pid.json、out.log 不存在或空（讀不到大小＝不帶）→ 帶 `never_started: true`，給模組讀。掃描不完整（列不出 /proc、stat／cmdline 讀不到；environ 讀不到權限的程序當成不是任務）、收不掉、最後重讀 exit.json 讀不到＝不知道，不判 lost。這樣 keep 重起前舊的一定已經收掉，不會雙開（K-04）——只對管理範圍內的任務成立（11 節）。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.4-a",
+   "claim": "先總結讀回確認才通知",
+   "card": "proto7-2/notes/component-contracts.md:78",
+   "card_text": "  - **先提交 `last-round.json`（讀回確認）才寫 `tock.json`**：任務收到通知時總結一定已在；確認不了＝退出 3、回合不關（§7 第 4、5 步）。",
+   "spec_sections": "7",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:257",
+     "text": "4. **寫 last-round.json，整份讀回確認**；確認不了＝不知道、退出碼 3，回合不關，下次重來。"
+    },
+    {
+     "location": "proto7-2/spec.md:258",
+     "text": "5. 之後才對每個活任務寫 `tock.json`（任務收到這回合的 tock 時，總結一定已經是這回合的）；寫不進去的記在 round.json 的 `notify_errors`，**不跨回合補送**（F47）。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.4-b",
+   "claim": "未知不lost不刪、列不出不關",
+   "card": "proto7-2/notes/component-contracts.md:79",
+   "card_text": "  - 不知道的槽不判 lost、不刪、記 `errors`（§5.4）；列不出槽＝不關回合（§7）。",
+   "spec_sections": "5.4、7",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:225",
+     "text": "| birth／exit／pid 讀不到或不是一般檔 | **不知道**：不起、不判 lost，記 `errors` |"
+    },
+    {
+     "location": "proto7-2/spec.md:233",
+     "text": "**疑似 lost 先做身分掃描**（NODE＋TID＋RUN）：這個 run 的 aos7-run 還在＝當活（unsure）；有相符的任務程序＝先照 Q1 收掉再判 lost；確定沒有＝lost，寫 `exit.json` `{\"run\", \"code\": null, \"lost\": true}`。**事實出口**：birth 沒有 runner、沒有 pid.json、out.log 不存在或空（讀不到大小＝不帶）→ 帶 `never_started: true`，給模組讀。掃描不完整（列不出 /proc、stat／cmdline 讀不到；environ 讀不到權限的程序當成不是任務）、收不掉、最後重讀 exit.json 讀不到＝不知道，不判 lost。這樣 keep 重起前舊的一定已經收掉，不會雙開（K-04）——只對管理範圍內的任務成立（11 節）。"
+    },
+    {
+     "location": "proto7-2/spec.md:256",
+     "text": "3. 掃所有槽（順便清暫存檔），照 5.4 判定、lost 的補 exit.json；判不出、當活但 unsure 的記進 `errors`。"
+    },
+    {
+     "location": "proto7-2/spec.md:262",
+     "text": "- **重播**：同回合已有完整的總結（上一次寫完就被殺）→ 不重寫，只收尾（補 `seen_round`、補沒收到的 tock.json、關回合並標 `replayed`）；列不出槽就不關。總結壞掉或不完整就照常重新產生。恢復只靠 round.json 與 last-round.json。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.4-c",
+   "claim": "已報結束下一tock才刪、表未知不刪",
+   "card": "proto7-2/notes/component-contracts.md:80",
+   "card_text": "  - 只刪「名字不在表上、已結束、結束已報過」的槽，表讀不到不刪（§5.1）；**(b) 已結束的槽最早在報結束的下一個 tock 才刪**（§5.1）。",
+   "spec_sections": "5.1",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:181",
+     "text": "- **(b)** 已結束的槽，最早在**報出結束的下一個** tock 才刪（5.1 的 `seen_round` < 現在）。"
+    },
+    {
+     "location": "proto7-2/spec.md:205",
+     "text": "- **槽什麼時候刪**：名字不在表上（或槽號 ≥ `max_live`）、run 已結束、結束早在之前的回合報過（`seen_round` < 現在）→ tock 刪整個槽。所以 once 的結果在報完後再留一回合；**交付物寫到槽外面**（W7）。"
+    },
+    {
+     "location": "proto7-2/spec.md:259",
+     "text": "6. 新結束的補 `seen_round`，刪該刪的槽（5.1；表讀不到不刪）。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.4-d",
+   "claim": "同回合重播補通知",
+   "card": "proto7-2/notes/component-contracts.md:81",
+   "card_text": "  - 同回合已有完整總結（寫完就被殺）→ 重播不重寫、只收尾，並補寫沒收到的 `tock.json`（§7 重播）。",
+   "spec_sections": "7",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:262",
+     "text": "- **重播**：同回合已有完整的總結（上一次寫完就被殺）→ 不重寫，只收尾（補 `seen_round`、補沒收到的 tock.json、關回合並標 `replayed`）；列不出槽就不關。總結壞掉或不完整就照常重新產生。恢復只靠 round.json 與 last-round.json。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.4-e",
+   "claim": "F47不跨回合補送",
+   "card": "proto7-2/notes/component-contracts.md:82",
+   "card_text": "  - 通知（`tock.json`）寫失敗記 round.json 的 `notify_errors`，**不跨回合補送**；要補由模組讀 round.json 自己做（§7）。",
+   "spec_sections": "7",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:258",
+     "text": "5. 之後才對每個活任務寫 `tock.json`（任務收到這回合的 tock 時，總結一定已經是這回合的）；寫不進去的記在 round.json 的 `notify_errors`，**不跨回合補送**（F47）。"
+    },
+    {
+     "location": "proto7-2/spec.md:263",
+     "text": "- **沒寫進去的 tock.json**（F47）：只記在 round.json 的 `notify_errors`，下一回合照常通知、不補上一回合的。任務本來就只看得到最新一次 tock、可能漏（S-11、5.5）；要補的模組自己讀 round.json 做。同回合重播的補寫（上一條）是中斷恢復，不在此限。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.5-a",
+   "claim": "runner交接、失敗127、壞fd2、exit",
+   "card": "proto7-2/notes/component-contracts.md:89",
+   "card_text": "- **保證**：起程序前任何失敗→`exit.json` code 127；fd 無效退出碼 2，不回退字串路徑；活到任務結束才寫 exit；`AOS7_*` 原樣傳給任務（§5.3）。runner 被殺由 tick／tock 靠身分掃描與 pid.json 判定（§5.4），不是 runner 自己處理。",
+   "spec_sections": "5.3",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:216",
+     "text": "4. 起 `aos7-run <taskdir> <fd>`（新 session；fd 是 tick 開好的槽，cwd 是抓著的 node）。5. 把 runner 的 pid 與 starttime 補進 birth。"
+    },
+    {
+     "location": "proto7-2/spec.md:218",
+     "text": "aos7-run 經 fd 讀 birth、開 out.log，把任務起在自己的程序群組，寫 pid.json，等它結束，寫 exit.json；起之前的任何失敗寫 exit 127；fd 無效退出碼 2，不回退寫字串路徑。node 在起任務途中被搬走照 2.6 處理（鬼目錄已接受，K-06）。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.5-b",
+   "claim": "環境傳遞與runner被殺判定",
+   "card": "proto7-2/notes/component-contracts.md:89",
+   "card_text": "- **保證**：起程序前任何失敗→`exit.json` code 127；fd 無效退出碼 2，不回退字串路徑；活到任務結束才寫 exit；`AOS7_*` 原樣傳給任務（§5.3）。runner 被殺由 tick／tock 靠身分掃描與 pid.json 判定（§5.4），不是 runner 自己處理。",
+   "spec_sections": "5.3、5.4；環境清單在5.5",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:218",
+     "text": "aos7-run 經 fd 讀 birth、開 out.log，把任務起在自己的程序群組，寫 pid.json，等它結束，寫 exit.json；起之前的任何失敗寫 exit 127；fd 無效退出碼 2，不回退寫字串路徑。node 在起任務途中被搬走照 2.6 處理（鬼目錄已接受，K-06）。"
+    },
+    {
+     "location": "proto7-2/spec.md:233",
+     "text": "**疑似 lost 先做身分掃描**（NODE＋TID＋RUN）：這個 run 的 aos7-run 還在＝當活（unsure）；有相符的任務程序＝先照 Q1 收掉再判 lost；確定沒有＝lost，寫 `exit.json` `{\"run\", \"code\": null, \"lost\": true}`。**事實出口**：birth 沒有 runner、沒有 pid.json、out.log 不存在或空（讀不到大小＝不帶）→ 帶 `never_started: true`，給模組讀。掃描不完整（列不出 /proc、stat／cmdline 讀不到；environ 讀不到權限的程序當成不是任務）、收不掉、最後重讀 exit.json 讀不到＝不知道，不判 lost。這樣 keep 重起前舊的一定已經收掉，不會雙開（K-04）——只對管理範圍內的任務成立（11 節）。"
+    },
+    {
+     "location": "proto7-2/spec.md:237",
+     "text": "- 環境：`AOS7_ROOT`、`AOS7_NODE`（絕對路徑）、`AOS7_NODE_ID`、`AOS7_TASK`（槽的絕對路徑）、`AOS7_TID`、`AOS7_RUN`；`PATH` 前面加 `bin/`；cwd＝node。"
+    }
+   ],
+   "result": "行為與責任一致；環境原樣傳遞的節號較粗，精確清單在5.5，非新的B/G"
+  },
+  {
+   "id": "2.6-a",
+   "claim": "daemon請求回條或留、接受不等於生效、例外不重做",
+   "card": "proto7-2/notes/component-contracts.md:97",
+   "card_text": "  - daemon ctl：每件要嘛回條（`ctl-done/`）、要嘛留著下一圈；回條 `ok` 只表示 daemon 接受、不表示已生效；一件丟例外不擋同圈其他件，效果可能已生效、不重做（刪請求、記 `last_ctl_error`，刪不掉就不再執行）（§2.3）。",
+   "spec_sections": "2.3",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:68",
+     "text": "- 處理完原檔搬到 `ctl-done/<同名>.json`，加 `\"result\": {\"ok\", \"msg\", \"at\", \"queued_at\"}`，**同名舊回條直接蓋掉**。`ok` 只表示 daemon 接受了。"
+    },
+    {
+     "location": "proto7-2/spec.md:70",
+     "text": "- 讀不到（I/O）的請求留著下一圈再看。讀不懂、不是 `.json` 結尾、不是一般檔（B）：回條 `ok: false`，原物留成 `ctl-done/<名>.bad`。"
+    },
+    {
+     "location": "proto7-2/spec.md:71",
+     "text": "- 一件處理丟例外不擋同圈其他件（特別是 stop）：效果可能已生效、不重做——刪掉請求、記 `last_ctl_error`；刪不掉就不再執行，每圈再試著刪。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.6-b",
+   "claim": "非一般daemon請求B例外；I/O保留",
+   "card": "proto7-2/notes/component-contracts.md:98",
+   "card_text": "  - **請求檔不是一般檔＝B 拒收**（搬成 `ctl-done/<名>.bad`、給失敗回條）：這是 §0 U 規則的例外，因為請求檔只可能是別人放的（§0、§2.3）。讀不到（I/O）＝留著。",
+   "spec_sections": "0、2.3",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:13",
+     "text": "    例外：daemon 控制檔（2.3）**不是一般檔**也算 B（搬 `.bad`、回條 `ok: false`），不當 U 留著——請求檔只可能是別人放的，留著只會每圈卡同一件。"
+    },
+    {
+     "location": "proto7-2/spec.md:70",
+     "text": "- 讀不到（I/O）的請求留著下一圈再看。讀不懂、不是 `.json` 結尾、不是一般檔（B）：回條 `ok: false`，原物留成 `ctl-done/<名>.bad`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.6-c",
+   "claim": "kill run必填、換run拒收、未知保留",
+   "card": "proto7-2/notes/component-contracts.md:99",
+   "card_text": "  - 槽 kill：`run` 缺、不是整數、op 不是 kill＝回條 `ok: false`；`run` 不是槽現在的＝`ok: false`、不執行；帶 `run` 讓重播只對同一個 run（§6）。槽不知道、ctl.json 讀不到＝請求留著（§6）。",
+   "spec_sections": "6",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:243",
+     "text": "任何人寫 `<槽>/ctl.json`＝`{\"op\": \"kill\", \"run\": 整數, \"by\", \"why\"}`，**tick 與 tock 時刻**執行；執行完寫 `ctl-done.json`（請求加 `result`，蓋掉舊的）再刪請求。node 被 pause 時等到 resume。槽的狀態不知道、ctl.json 讀不到＝請求留著。"
+    },
+    {
+     "location": "proto7-2/spec.md:245",
+     "text": "- **只有 kill，`run` 必填**：op 不是 kill、`run` 缺或不是整數＝輸入不合，回條 `ok: false`、刪請求。`run` 不是槽現在的 → `ok: false`、不執行。那個 run 已結束＝成功，順便收殘留。帶 `run` 讓重播只生效一次；刪不掉時總結那筆帶 `err`。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.6-d",
+   "claim": "kill成功條件與Q1、防pgid重用",
+   "card": "proto7-2/notes/component-contracts.md:100",
+   "card_text": "  - kill 只在確知任務程序已不在時回 `ok: true`，否則 `ok: false`（msg 以 `unknown` 開頭）；範圍是 Q1，打 pgid 前防重用（§6）。",
+   "spec_sections": "6",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:246",
+     "text": "- **kill 的範圍**（Q1 (a)）：任務的程序群組、群組成員的後代所在的群組、環境 NODE＋TID＋RUN 相符的程序。打 pid.json 記的群組前先確認：群組沒有活成員，或有成員是這個 run 的，才打（防 pgid 被重用）。SIGTERM，最多等 1 秒，還在就 SIGKILL。"
+    },
+    {
+     "location": "proto7-2/spec.md:247",
+     "text": "- **kill 回成功的條件**：最後確認 pid.json 記的任務程序已經不在；還活著或認不出 → `ok: false`（msg 以 `unknown` 開頭）。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.7",
+   "claim": "模組檔案接入、總結先於通知、x透傳",
+   "card": "proto7-2/notes/component-contracts.md:105",
+   "card_text": "核心完全不知道模組存在（沒有鉤子，§9）：模組只從檔案協定接上（A 任務／B 包裝程式／C 工具），加上核心給的三個小出口。**核心對模組的保證就是對任務的保證（2.8）**，加上：收到自己 node 的 `tock.json` 時 `last-round.json` 已是該回合（§7）；`x` 照抄進 birth（§4.1）。模組漏取樣、模組自己的 bug、模組寫壞自己的檔、模組慢了拖住 early_tock，都不歸核心。",
+   "spec_sections": "9、7、4.1",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:142",
+     "text": "| `x` | 模組用的宣告欄位（物件）：tick 不看內容，照抄進 birth.json |"
+    },
+    {
+     "location": "proto7-2/spec.md:258",
+     "text": "5. 之後才對每個活任務寫 `tock.json`（任務收到這回合的 tock 時，總結一定已經是這回合的）；寫不進去的記在 round.json 的 `notify_errors`，**不跨回合補送**（F47）。"
+    },
+    {
+     "location": "proto7-2/spec.md:271",
+     "text": "核心不呼叫模組、不知道模組的語意，也沒有 tick／tock 裡的鉤子。模組只從檔案協定接進來——**A 任務**（tick 起，收 tock、讀「上一次」檔、寫 tasks.json、ctl）、**B argv 包裝程式**、**C 工具**——加上核心給的三個小出口：tasks.json 的 `x` 照抄進 birth（4.1）、事實欄位（`never_started`，5.4）與事件出口 `log.on`（2.8）、通用守門檔 `stop-guard.json`（2.7）。包的清單與規則見 [modules/README.md](../../../../modules/README.md)。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.8-a",
+   "claim": "環境、cwd、PATH",
+   "card": "proto7-2/notes/component-contracts.md:123",
+   "card_text": "- **保證**：環境變數齊、cwd＝node、`PATH` 有 `bin/`（§5.5）；同槽上一次的 state 讀得到（§5.1、§8）；每回合結束有 `tock.json`（可能漏、只留最新，§5.5）；kill 範圍是 Q1（§6）；keep 重起前舊的已收掉（管理範圍內，§5.4）。",
+   "spec_sections": "5.5",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:237",
+     "text": "- 環境：`AOS7_ROOT`、`AOS7_NODE`（絕對路徑）、`AOS7_NODE_ID`、`AOS7_TASK`（槽的絕對路徑）、`AOS7_TID`、`AOS7_RUN`；`PATH` 前面加 `bin/`；cwd＝node。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.8-b",
+   "claim": "同槽state保存",
+   "card": "proto7-2/notes/component-contracts.md:123",
+   "card_text": "- **保證**：環境變數齊、cwd＝node、`PATH` 有 `bin/`（§5.5）；同槽上一次的 state 讀得到（§5.1、§8）；每回合結束有 `tock.json`（可能漏、只留最新，§5.5）；kill 範圍是 Q1（§6）；keep 重起前舊的已收掉（管理範圍內，§5.4）。",
+   "spec_sections": "5.1、8",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:195",
+     "text": "- 每次在槽裡起新的 run，先清掉上一個 run 的**基礎設施檔**：`birth.json`、`pid.json`、`out.log`、`exit.json`、`tock.json`、`writes.jsonl`、`mnt/`、`mount-req/`、`mount-done/`。任務自己寫的檔留著（同槽的下一個 run 接得上，W6）；`ctl.json`／`ctl-done.json` 也不清（回條要活過新 run 起來那一刻，P2-04）。"
+    },
+    {
+     "location": "proto7-2/spec.md:267",
+     "text": "核心會刪的只有換 run 時上一個 run 的基礎設施檔、名字不在表上的槽（5.1）。依賴它們的上層改依賴自己的 state 檔：同槽的下一個 run 直接讀上一個 run 留下的 state；用量以 run 為單位記、由上層加總（設計見 [problems](../../../problems.md)「kernel 用量以 run 為單位」）；tock 恢復只靠第 7 節的兩份「上一次」。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.8-c",
+   "claim": "tock最新可漏、Q1、keep無雙開",
+   "card": "proto7-2/notes/component-contracts.md:123",
+   "card_text": "- **保證**：環境變數齊、cwd＝node、`PATH` 有 `bin/`（§5.5）；同槽上一次的 state 讀得到（§5.1、§8）；每回合結束有 `tock.json`（可能漏、只留最新，§5.5）；kill 範圍是 Q1（§6）；keep 重起前舊的已收掉（管理範圍內，§5.4）。",
+   "spec_sections": "5.5、6、5.4",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:238",
+     "text": "- 知道時間：輪詢 `$AOS7_TASK/tock.json`（S-11；工具包有 `aos7-wait-tock`）。漏掉的回合只看得到最新一個。"
+    },
+    {
+     "location": "proto7-2/spec.md:246",
+     "text": "- **kill 的範圍**（Q1 (a)）：任務的程序群組、群組成員的後代所在的群組、環境 NODE＋TID＋RUN 相符的程序。打 pid.json 記的群組前先確認：群組沒有活成員，或有成員是這個 run 的，才打（防 pgid 被重用）。SIGTERM，最多等 1 秒，還在就 SIGKILL。"
+    },
+    {
+     "location": "proto7-2/spec.md:233",
+     "text": "**疑似 lost 先做身分掃描**（NODE＋TID＋RUN）：這個 run 的 aos7-run 還在＝當活（unsure）；有相符的任務程序＝先照 Q1 收掉再判 lost；確定沒有＝lost，寫 `exit.json` `{\"run\", \"code\": null, \"lost\": true}`。**事實出口**：birth 沒有 runner、沒有 pid.json、out.log 不存在或空（讀不到大小＝不帶）→ 帶 `never_started: true`，給模組讀。掃描不完整（列不出 /proc、stat／cmdline 讀不到；environ 讀不到權限的程序當成不是任務）、收不掉、最後重讀 exit.json 讀不到＝不知道，不判 lost。這樣 keep 重起前舊的一定已經收掉，不會雙開（K-04）——只對管理範圍內的任務成立（11 節）。"
+    }
+   ],
+   "result": "對得上"
+  },
+  {
+   "id": "2.9",
+   "claim": "狀態可讀、回條、停點恢復",
+   "card": "proto7-2/notes/component-contracts.md:130",
+   "card_text": "- **保證**（核心給的）：所有狀態 `cat` 看得懂（S-01）；每件控制有回條（2.6）；停下等人的情況都有證據與恢復步驟（§12）。",
+   "spec_sections": "S-01、卡2.6、12",
+   "spec_evidence": [
+    {
+     "location": "proto7-2/spec.md:19",
+     "text": "- 狀態與控制都是 JSON 檔，`cat` 看得懂、寫檔就能操作。寫檔一律先寫 `.<名>.tmp.<pid>` 再 rename；列資料夾的人略過 `.` 開頭的。寫者確定不在的暫存檔由 tick／tock（自己的 `.aos/` 與槽，含槽的 `mount-req/`、`mount-done/`，不遞迴）、daemon（`.aosd/`、`ctl/`、`ctl-done/`）清掉。"
+    },
+    {
+     "location": "proto7-2/spec.md:68",
+     "text": "- 處理完原檔搬到 `ctl-done/<同名>.json`，加 `\"result\": {\"ok\", \"msg\", \"at\", \"queued_at\"}`，**同名舊回條直接蓋掉**。`ok` 只表示 daemon 接受了。"
+    },
+    {
+     "location": "proto7-2/spec.md:243",
+     "text": "任何人寫 `<槽>/ctl.json`＝`{\"op\": \"kill\", \"run\": 整數, \"by\", \"why\"}`，**tick 與 tock 時刻**執行；執行完寫 `ctl-done.json`（請求加 `result`，蓋掉舊的）再刪請求。node 被 pause 時等到 resume。槽的狀態不知道、ctl.json 讀不到＝請求留著。"
+    },
+    {
+     "location": "proto7-2/spec.md:298",
+     "text": "「不知道」保留現狀（第 0 節），停的範圍分三種：整 node 停開回合／單槽保留／單請求等待。哪些情況會停、證據在哪、怎麼恢復，見[診斷包](../../../../modules/diag/README.md)的操作手冊；判不出的槽用 `aos7-diag <root> [node]` 按需重算。"
+    }
+   ],
+   "result": "對得上"
+  }
+ ]
+}
