@@ -4,7 +4,7 @@
 
 矩陣維度與判定：
 
-1. **A2-04 node 是符號連結**（同程序 tick／tock）× 連結位置 ∈ {node 本身、node 的上層} → tick／tock 回 gone，連結目標裡沒建 `.aos`。
+1. **node 本身是符號連結**（同程序 tick／tock）→ tick／tock 回 gone（O_NOFOLLOW），連結目標裡沒建 `.aos`。上層是連結的案已刪（誤用 M-2.1）。
 2. **A2-07 暫存檔清理** × 情境 ∈ {放好的死 pid 暫存（`.aos/`、槽裡）＋活 pid 暫存、`tmp:last-round.json` 連殺 5 次 tock}
    → tick＋tock 後死的被清、活的留著；連殺後再正常 tock，`.aos/` 底下沒有 `.tmp.` 殘留。
 3. **A2-08 診斷不截掉前綴**：`Timeline.err(..., kind=)` 的 err 以 kind 開頭、≤ 320 字、帶 kind；starttime 讀不到的任務在 tock 總結
@@ -37,26 +37,17 @@ class _FakeDaemon:
 class TestSymlinkInProcess(MatrixCase):
     """〔core〕"""
     def _symlink(self, where):
-        """node（或它的上層）是符號連結：tick／tock 回 gone，連結目標裡沒被建 `.aos`。"""
+        """node 本身是符號連結（指到 root 外）：tick／tock 回 gone，連結目標裡沒被建 `.aos`。"""
         out = tempfile.mkdtemp(prefix="aos72-matrix-out-")
         self.addCleanup(shutil.rmtree, out, True)
-        if where == "self":
-            os.symlink(out, os.path.join(self.root, "a"))
-            nid, target = "a", out
-        else:
-            os.makedirs(os.path.join(out, "a"))
-            os.symlink(out, os.path.join(self.root, "p"))
-            nid, target = "p/a", os.path.join(out, "a")
-        r = self.itick(nid)
+        os.symlink(out, os.path.join(self.root, "a"))
+        r = self.itick("a")
         self.assertTrue(r.get("gone"), "符號連結的 node 照樣開了回合：%r" % r)
-        self.assertTrue(self.itock(nid).get("gone"))
-        self.assertFalse(os.path.exists(os.path.join(target, ".aos")), "寫進了 root 外的連結目標")
+        self.assertTrue(self.itock("a").get("gone"))
+        self.assertFalse(os.path.exists(os.path.join(out, ".aos")), "寫進了 root 外的連結目標")
 
 
 gen(TestSymlinkInProcess, "symlink_node", [("self", ("self",))], TestSymlinkInProcess._symlink)
-# 〔misuse M-2.1〕node 的上層換成符號連結（A2-04 每圈重驗整條路徑，F03）；node 本身是連結（O_NOFOLLOW）留核心
-gen(TestSymlinkInProcess, "symlink_node", [("parent", ("parent",))], TestSymlinkInProcess._symlink,
-    doc="〔misuse M-2.1〕" + TestSymlinkInProcess._symlink.__doc__)
 
 
 class TestTmpSweep(MatrixCase):

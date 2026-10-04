@@ -11,7 +11,7 @@
 tick 用新 session 起它，並把任務資料夾的 fd 傳進來、cwd 設成它抓著的 node（astra-6 G-02）、不等；它自己活到任務結束。環境變數（AOS7_*）由 tick 給好，這裡原樣傳下去。
 
 **第二個參數是內部交接用的能力，不是身分約束**（astra-7 H-09）：它必須是呼叫者開好、繼承下來的任務資料夾 fd，cwd 也由呼叫者保證
-是那個 node。給了第二參數，fd 就是權威：讀 birth、寫 pid／out／exit 都經它，`<taskdir>` 字串只拿來對照環境；fd 無效（不是數字、
+是那個 node。給了第二參數，fd 就是權威：讀 birth、寫 pid／out／exit 都經它，`<taskdir>` 字串只給錯誤訊息用；fd 無效（不是數字、
 沒開、不是資料夾）時 stderr 說清楚、退出碼 2，**不回退**去寫 `<taskdir>` 字串指的地方（可能已被換掉）。這不是驗證或隔離任務身分的邊界。
 """
 import json
@@ -68,23 +68,6 @@ def fail(dfd, msg):
     return 1
 
 
-def env_mismatch(dfd):
-    """檢查 AOS7_TASK 對應 dfd、AOS7_NODE 對應 cwd；一致或人手跑未設變數時回 None。
-    路徑不符或 stat 讀不到回原因字串，停止起任務；不是把不確定當作可以交接。
-    此為起動前最後核對（spec §5.3 不變條件二；astra-7 H-05），字串亦供 argv 展開與掛載紀錄。"""
-    for var, here in (("AOS7_TASK", lambda: os.fstat(dfd)), ("AOS7_NODE", lambda: os.stat("."))):
-        p = os.environ.get(var)
-        if not p:
-            continue
-        try:
-            same = os.path.samestat(os.stat(p), here())
-        except OSError:
-            same = False
-        if not same:
-            return "%s=%s 已經不是 runner 抓著的資料夾（node 在起任務時被搬走或換掉），沒起" % (var, p)
-    return None
-
-
 def main(argv=None):
     """執行 argv（None 用命令列）的 taskdir／可選繼承 fd，等任務結束並記錄 pid／exit。
     回 0 表示已走完啟動嘗試或等待流程；1 表示用法／前置失敗，2 表示交接 fd 無效。
@@ -118,10 +101,6 @@ def main(argv=None):
         # 經 fd 寫 exit.json：任務不會永遠算剛起（astra-6 G-02）；資料夾已刪就等於丟掉，不建回來
         return fail(dfd, "讀不到 birth.json")
     node = os.environ.get("AOS7_NODE") or os.getcwd()
-    if held:
-        why = env_mismatch(dfd)
-        if why:
-            return fail(dfd, why)
     # 測試鉤子的環境（AOS7_TEST_*，P2-15）只給 aos7-run 自己，不傳給任務
     env = {k: v for k, v in os.environ.items() if not k.startswith("AOS7_TEST_")}
     site = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "modules", "audit", "audit_site")
@@ -150,10 +129,8 @@ def main(argv=None):
     # pid.json 也經過 fd 寫：任務資料夾剛被刪（測試收尾、node 被 rm -rf）時不會用 makedirs 把它建回來
     # spec §5.4、P2-08：pid 可能重用，連同 starttime 才能辨認同一程序；讀不到由判定層保守處理。
     test_point("runner-before-pid")
-    # A3-02：記下任務的 uid（＝runner 的 uid，子程序繼承）。管理範圍是「跟 daemon 同 uid、environ 可讀」的任務（spec §11）；
-    # 事後 environ 讀不到時，靠這裡的 pid／pgid 與 birth 的 runner（session）認出「這是自己的任務」，當不知道而不是沒有。
     write_at(dfd, "pid.json", {"run": RUN[0], "pid": proc.pid, "pgid": proc.pid, "starttime": proc_starttime(proc.pid),
-                               "runner_pid": os.getpid(), "uid": os.getuid(), "at": now()})
+                               "runner_pid": os.getpid(), "at": now()})
     code = proc.wait()
     out.close()
     test_point("runner-before-exit")

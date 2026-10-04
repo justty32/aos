@@ -142,3 +142,36 @@
 | 矩陣盲點（healthy 12 案有 9 案注入命中 0 次） | 已修 | 測試鉤子加 `AOS7_TEST_FAULT_HITS` 命中紀錄（P2-15），每個注入案例斷言命中 ≥1。補了 EACCES 孤兒、restart 完成證據跨 run、FIFO 生命週期檔、id 碰撞等組合——見 [tests/test_matrix_a3.py](../tests/test_matrix_a3.py) |
 
 - **until_round**（使用者 10-04，不是 astra 的題）：tasks.json 項目可選非負整數，回合數大於它就不再起新 run，跟 `from_round` 對稱；已在跑的不殺；once 已起過的照 launch 標記刪項，沒起成又過期的留著不起（commit 060dca8b）。用途：分配者掛了，使用權照樣到期。spec 4.1。
+
+## 核心精簡：刪掉的誤用保護（10-04）
+
+照 [精簡方案](core-slimming.md)「頂層定案」第 2 條與[組件契約藍圖](component-contracts.md)：違反組件前置條件造成的問題（M 類）不歸組件管，保護刪掉，spec 只留界線一句（§11「其他誤用，不處理」）。順手偵測到的記一筆，不保證偵測到（定案第 4 條）。
+
+**刪掉的保護**（F 號照 [盤點表](core-slimming-inventory.json)）：
+
+| F | 類別／卡 | 原編號 | 刪了什麼 | 界線一句 |
+|---|---|---|---|---|
+| F31 | M／卡 2.3（tick 前置：生命週期檔只有核心寫） | A2-03 | `aos7_task._judge_broken`：birth.json 壞掉時身分掃描（NODE＋TID）判活、看 exit.json／pid.json 推回 run；View 的 `broken` 欄 | birth.json 被手改或寫壞＝不知道，單槽保留；確認沒在跑後人刪 birth.json |
+| F33 | M／卡 2.8、2.5（任務前置：同 uid、environ 可讀） | A3-02 | `aos7_proc.DENIED`、`related_of`、`_denied_related`、`env_procs` 的 `related`、`kill_identity` 的 `runner`、`group_is_task` 的 denied 分支、`stat_of` 的 sid、pid.json 的 `uid` | environ 讀不到權限的程序一律當成不是任務；脫離管理範圍的任務不保證不雙開、kill 收得到 |
+| F28 | M／卡 2.5（runner 前置：由 tick 照約定起）、K-06 | K-06、astra-7 H-05 | `aos7_task.same_dir` 與 start_in_slot 兩處比對、`aos7_run.env_mismatch` | 起任務途中搬 node＝誤用；鬼目錄已接受 |
+| F03 | M／卡 2.1（daemon 前置：node 路徑沒有符號連結） | A2-04 | daemon `check_nodes` 每圈 realpath 比對與 S_ISLNK 分支（併進「不是資料夾」）；tick／tock `held_node` 的 readlink＋canonical_node 比對 | 運行中把 node 路徑**中間段**換成符號連結＝誤用。留：登記時檢查、`O_NOFOLLOW` 開 node、lstat 不是資料夾或 inode 變了＝missing |
+| F36（簡化） | 卡 2.6（kill 範圍 Q1） | — | `group_is_task` 看成員父程序環境的那段 | 只留「群組沒有活成員，或有成員是這個 run」才打，防 pgid 被重用（外部故障）；任務改自己的 pgid＝誤用 |
+
+**保留**（不是誤用）：A3-09「kill 最後確認 pid.json 記的任務程序已不在才回 ok:true」（B，回條不能說謊）；A3-03 生命週期檔「存在但不是一般檔＝不知道」（定案第 3 條併成統一規則，之後收進單一讀檔入口）。
+
+**刪掉的測試**（17 項；252 → 235）：
+
+| 測試 | 對應 | 理由 |
+|---|---|---|
+| `test_matrix_docs.TestBrokenBirth.test_birth_live_{half,list,run_str}` | F31 | 壞 birth＋活程序判 LIVE 是證據鏈；現在一律 UNKNOWN（`test_birth_none_*` 仍斷言不起、不判 lost、刪 birth 後照常起） |
+| `test_matrix_docs.TestBrokenBirth.test_birth_exit_{half,list,run_str}` | F31 | 壞 birth＋exit.json 推回 run 是證據鏈 |
+| `test_matrix_docs.TestBrokenBirth.test_birth_pid_{half,list,run_str}` | F31 | 壞 birth＋pid.json 推回 run 判 lost 是證據鏈 |
+| `test_ctl.TestIdentityScan.test_broken_birth_uses_node_tid_scan` | F31 | 同上（壞 birth 靠 NODE＋TID 掃描判活） |
+| `test_matrix_faults.TestProcUnknown.test_brokenbirth_environ_{EIO,ESTALE}` | F31 | 壞 birth 不再做身分掃描，environ 注入打不中（矩陣要求命中 ≥1）；壞 birth＝UNKNOWN 已由 `test_birth_none_*` 測 |
+| `test_matrix_a3.TestHiddenEnviron.test_runner_dead_before_pid_not_lost` | F33 | 不可 dumpable 任務在已知 session 裡＝不知道，是誤用保護 |
+| `test_matrix_a3.TestHiddenEnviron.test_kill_live_hidden_task_not_ok` | F33 | 同上；A3-09 的「kill 不說謊」由 `test_matrix_faults` healthy 系列的 kill 控制（ok:false／unknown）繼續測 |
+| `test_matrix_faults.TestProcUnknown.test_orphan_proc_environ_EACCES` | F33 | 孤兒任務自己 environ 讀不到＝任務違反「environ 可讀」；現在當成不是任務 |
+| `test_matrix_daemon.TestDaemonMatrix.test_symlink_parent_outside_root` | F03 | node 的上層換成符號連結＝路徑中間段，誤用 |
+| `test_matrix_misc.TestSymlinkInProcess.test_symlink_node_parent` | F03 | 同上（同程序 tick／tock 版） |
+
+沒有加回的：`deadboth` 矩陣裡排除的 environ × EACCES——`_deadboth` 斷言「掃描讀不到＝UNKNOWN、不寫 lost」，現在 environ EACCES 當成不是任務會直接判 lost，正好就是已有的 `test_deadboth_skip_proc_environ_EACCES`，不重複加。`test_symlink_same_inode`（node 本身換成連回原處的連結）照新程式仍過（lstat 看到連結＝不是資料夾），改標〔core〕保留。F28 沒有專門測試。

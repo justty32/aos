@@ -16,11 +16,9 @@
    - `orphan`：runner 在 pid.json 前被 SIGKILL、任務還活（疑似 lost，要身分掃描）。判定：注入時 UNKNOWN——不殺、不寫 lost、
      不起新 run、tock errors 有一筆；拿掉後才收掉孤兒、判 lost，而且 lost 只報一次，之後槽裡剛好一個活程序。12 組全跑。
    - `deadboth`（只有 proc-list、proc-environ 全部 pid；environ × EACCES 除外）：runner 與任務都被 SIGKILL、沒 exit.json。判定同 orphan。
-   - **契約（A3-02）**：environ 的 EACCES＝DENIED：不在已知任務的 session（birth.json 的 runner pid＝任務的 sid）或
-     pid.json 的 pgid 裡＝略過（同 uid 的桌面程序本來就這樣）；在裡面＝不知道。cmdline 的 EACCES 一律是不知道。
-     所以 orphan 的 environ／cmdline × EACCES 也判 UNKNOWN；`deadboth_skip`（environ 全部 EACCES、任務確實死了、沒有相關程序）
+   - **environ 的 EACCES＝不是可辨認的任務、略過**（任務要跟 daemon 同 uid、environ 可讀，spec §11）；cmdline 的 EACCES 一律是
+     不知道。所以 orphan 的 environ × EACCES 不在矩陣裡（那是誤用，已刪）；`deadboth_skip`（environ 全部 EACCES、任務確實死了）
      照常判 lost 一次、重起一個。
-   - `brokenbirth`（只有 proc-environ × EIO、ESTALE）：birth.json 壞掉，只能靠身分掃描 → UNKNOWN、不雙開；拿掉後判活（同一個 pid）。
    **每個注入都斷言命中 ≥1**（`_matrix.fault`／`run_prog` 經 AOS7_TEST_FAULT_HITS 命中紀錄檔，子程序也算）。
    另有 `kill_identity` 在掃描不完整時回 (False, 說明)、`env_procs` 丟 `aos7_proc.ProcUnknown`。
 2. **檔案讀不到**（open 注入）：檔 ∈ {birth.json、exit.json、pid.json} × errno → 槽 UNKNOWN：不起、不判 lost、不刪槽（名字拿掉也不刪）、
@@ -183,28 +181,6 @@ class TestProcUnknown(MatrixCase):
                          [{"run": "k#1", "code": None, "lost": True}])
         self.wait_for(lambda: len(self.live_procs(node, "k")) == 1, 5, "恢復後槽裡不是剛好一個活程序")
 
-    def _brokenbirth(self, e):
-        """birth.json 壞掉＋身分掃描讀不到（proc-environ）＝UNKNOWN：不雙開；拿掉後判活（同一個 pid）。"""
-        node = self.mknode("a", [keep_item()])
-        self.itick()
-        pid = self.wait_pid(node, "k")["pid"]
-        self.itock()
-        runner = (self.birth(node, "k").get("runner") or {}).get("pid")
-        with open(os.path.join(self.slot(node, "k"), "birth.json"), "w") as f:
-            f.write("{")
-        with fault(proc_rules("proc-environ", [pid, runner], e)):
-            v = self.view(node, "k", 2)
-            self.assertEqual(v.state, aos7_task.UNKNOWN, v)
-            self.assertEqual(self.itick()["started"], [], "birth 壞＋掃描讀不到時起了新的 run（雙開）")
-            lr = self.itock()
-            self.assertTrue(self.errors_for(lr, "k"), "tock errors 沒有這個槽：%r" % lr.get("errors"))
-        self.assertTrue(alive(pid))
-        self.assertEqual(self.live_procs(node, "k"), [pid])
-        self.assertEqual(self.itick()["started"], [])
-        self.itock()
-        self.assertEqual(self.live_procs(node, "k"), [pid])
-        self.assertEqual(self.ran(node, "k"), ["1"])
-
     def test_kill_identity_incomplete_scan(self):
         """掃描不完整：env_procs 丟 ProcUnknown、kill_identity 回 (False, 說明)，不殺。"""
         node = self.mknode("a", [keep_item()])
@@ -222,20 +198,14 @@ class TestProcUnknown(MatrixCase):
 
 gen(TestProcUnknown, "healthy", [("%s_%s" % (op, e), (op, e)) for op in PROC_OPS for e in ERRNOS],
     TestProcUnknown._healthy)
-# 契約（A3-02，隊長 10-04 改）：environ 的 EACCES 回 DENIED——不在已知任務的 session（birth.json 的 runner pid）或 pid.json 的
-# pgid 裡就略過（桌面上同 uid 的 systemd --user、kwin 等本來就是 EACCES）；**在**裡面就是不知道（ProcUnknown）。cmdline 的
-# EACCES 一律不知道。orphan 的任務 sid＝runner pid，所以 environ／cmdline × EACCES 也判 UNKNOWN，全部 12 組都跑。
-# deadboth 的 environ × EACCES 另外是 deadboth_skip：任務真的死了、沒有相關程序 → 照常判 lost 一次。
+# environ 的 EACCES＝不是可辨認的任務（略過）；cmdline 的 EACCES 一律不知道。orphan 的 environ × EACCES 是任務自己變得不可讀
+#（誤用 M-2.8，已刪）；其餘 11 組照跑。deadboth 的 environ × EACCES 另外是 deadboth_skip：任務真的死了 → 照常判 lost 一次。
 UNSURE_SCAN = [(op, e) for op in PROC_OPS for e in ERRNOS]
 gen(TestProcUnknown, "orphan", [("%s_%s" % (op, e), (op, e)) for op, e in UNSURE_SCAN
                                 if (op, e) != ("proc-environ", "EACCES")], TestProcUnknown._orphan)
-# 〔misuse M-2.8〕environ EACCES 在任務的 session 裡＝不知道（A3-02，F33）：任務違反前置「environ 可讀」
-gen(TestProcUnknown, "orphan", [("proc-environ_EACCES", ("proc-environ", "EACCES"))], TestProcUnknown._orphan,
-    doc="〔misuse M-2.8〕" + TestProcUnknown._orphan.__doc__)
 gen(TestProcUnknown, "deadboth", [("%s_%s" % (op, e), (op, e)) for op, e in UNSURE_SCAN
                                   if op in ("proc-list", "proc-environ")
                                   and not (op == "proc-environ" and e == "EACCES")], TestProcUnknown._deadboth)
-gen(TestProcUnknown, "brokenbirth_environ", [(e, (e,)) for e in ("EIO", "ESTALE")], TestProcUnknown._brokenbirth)
 
 
 class TestFileUnknown(MatrixCase):

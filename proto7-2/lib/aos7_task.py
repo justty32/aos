@@ -16,8 +16,8 @@ import time
 
 import aos7_mount
 import aos7_proc
-from aos7_fs import (BIN, BAD, FD_PREFIX, IO, MISSING, OK, edit_json, env_with_bin, inject, is_gone, is_int, node_path,
-                     now, proc_starttime, read_json, read_json3, real_path, test_point, write_json, LockTimeout)
+from aos7_fs import (BIN, BAD, IO, MISSING, OK, edit_json, env_with_bin, inject, is_gone, is_int, node_path,
+                     now, proc_starttime, read_json, read_json3, test_point, write_json, LockTimeout)
 
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 SLOT_RE = re.compile(r"^([A-Za-z0-9_-]+)(?:\.([1-9][0-9]*))?$")
@@ -107,14 +107,15 @@ def judge(fslot, node, slot, cur_round):
     不做任何破壞性動作；SUSPECT（疑似 lost）交給 resolve。
 
     slot 是槽名、cur_round 是目前回合；檔案 I/O 回 UNKNOWN，pid／starttime 讀不到回 LIVE 加 unsure，
-    暫未完成交接也保守當 LIVE（spec §0、§5.3 不變條件二、P2-08）。birth.json 壞掉交給 _judge_broken（A2-03）。"""
+    暫未完成交接也保守當 LIVE（spec §0、§5.3 不變條件二、P2-08）。birth.json 內容壞掉也是 UNKNOWN：生命週期檔只有核心寫，
+    壞了只能是被手改或磁碟壞，不從其他證據推回 run。"""
     bst, birth = read_json3(os.path.join(fslot, "birth.json"), strict=True)   # A3-03：FIFO／資料夾＝不知道，不是空槽
     if bst == MISSING:
         return View(state=EMPTY, run=None)
     if bst == IO:
         return View(state=UNKNOWN, run=None, why="birth.json 讀不到：%s" % birth)
     if bst == BAD or not isinstance(birth, dict) or not is_int(birth.get("run")):
-        return _judge_broken(fslot, node, slot)
+        return View(state=UNKNOWN, run=None, why="birth.json 壞了；確認沒在跑後刪掉 birth.json 就會當空槽")
     run = birth["run"]
     v = View(state=None, run=run, birth=birth)
     est, ex = _same_run(os.path.join(fslot, "exit.json"), run)
@@ -148,39 +149,6 @@ def judge(fslot, node, slot, cur_round):
     return View(v, state=LIVE, unsure="剛起")
 
 
-def _judge_broken(fslot, node, slot):
-    """birth.json 壞掉（半寫、不是物件、run 不是整數）時的判定（spec §5.4；A2-03）。**掃不到活程序不是「從未執行」的證明**：
-
-    1. 身分掃描（只比 NODE＋TID，含 aos7-run）有相符的活程序 → LIVE（run 不明），不起第二份；掃描讀不完整 → UNKNOWN。
-    2. 沒有活程序時看同槽的其他證據：換 run 時 clear_slot 先刪舊的 pid／exit 才寫新 birth，所以槽裡的 exit.json／pid.json 一定是
-       這一個 run 寫的——exit.json 帶 run R → ENDED（run R，照常報 ended）；只有 pid.json 帶 run R → 疑似 lost（交 resolve 掃 RUN 再判）。
-    3. 什麼證據都沒有（分不出 runner 起過沒、跑完沒）→ UNKNOWN：不起、不判 lost、不刪槽，記 errors 等人確認後刪掉 birth.json。
-    once 的 launch 標記照 run 比對：情形 2 認得出 run 就刪項、不重跑；情形 1、3 留著項目。"""
-    why = "birth.json 壞了（半寫、不是物件或 run 不是整數）"
-    try:
-        alive = aos7_proc.env_procs(node, slot, runners=True)
-    except aos7_proc.ProcUnknown as e:
-        return View(state=UNKNOWN, run=None, broken=True, why="%s，身分掃描讀不完整：%s" % (why, e))
-    if alive:
-        return View(state=LIVE, run=None, broken=True, why="%s，有相符的活程序（run 不明）" % why)
-    found = {}
-    for name in ("exit.json", "pid.json"):
-        st, v = read_json3(os.path.join(fslot, name), strict=True)
-        if st == IO:
-            return View(state=UNKNOWN, run=None, broken=True, why="%s，%s 讀不到：%s" % (why, name, v))
-        if st == OK and isinstance(v, dict) and is_int(v.get("run")):
-            found[name] = v
-    if "exit.json" in found:
-        ex = found["exit.json"]
-        return View(state=ENDED, run=ex["run"], exit=ex, broken=True, why="%s，exit.json 認得出 run %d" % (why, ex["run"]))
-    if "pid.json" in found:
-        pj = found["pid.json"]
-        return View(state=SUSPECT, run=pj["run"], pid=pj, broken=True,
-                    why="%s，pid.json 是 run %d、沒有相符的活程序、也沒有 exit.json" % (why, pj["run"]))
-    return View(state=UNKNOWN, run=None, broken=True,
-                why="%s，也沒有 pid.json／exit.json 可以認出是哪個 run、跑過沒；確認沒在跑後刪掉 birth.json 就會當空槽" % why)
-
-
 def _recheck(v, fslot, run, why):
     """判成疑似 lost 前再看一次 exit.json（runner 可能剛好在這一瞬間寫完；proto7-1 P-07）。
 
@@ -203,12 +171,9 @@ def resolve(v, fslot, node, slot, cur_round):
     if v.state != SUSPECT:
         return v
     pgid = (v.get("pid") or {}).get("pgid")
-    runner = ((v.get("birth") or {}).get("runner") or {}).get("pid")
-    # A3-02：environ 讀不到權限、又在這個 run 的 runner session／pid.json 群組裡的程序＝不知道（不判 lost、不起第二份）
-    related = aos7_proc.related_of(runner, pgid)
     try:
-        found = aos7_proc.env_procs(node, slot, v.run, related=related)
-        everyone = aos7_proc.env_procs(node, slot, v.run, runners=True, related=related)
+        found = aos7_proc.env_procs(node, slot, v.run)
+        everyone = aos7_proc.env_procs(node, slot, v.run, runners=True)
         grp = bool(pgid) and aos7_proc.group_alive(pgid)
     except aos7_proc.ProcUnknown as e:
         # A2-01：掃描不完整＝不知道有沒有相符的程序，不能判 lost（判了 keep 就會重起、跟還活著的前任雙開）。
@@ -220,7 +185,7 @@ def resolve(v, fslot, node, slot, cur_round):
     note = None
     # spec §5.3 不變條件二、§5.4：先收殘留再宣告 lost，keep 才不會跟前任雙開（K-04）。
     if found or grp:
-        clean, msg = aos7_proc.kill_identity(node, slot, v.run, pgid, runner)
+        clean, msg = aos7_proc.kill_identity(node, slot, v.run, pgid)
         if not clean:
             return View(v, state=UNKNOWN, why="疑似 lost，但相符的程序收不掉或確認不了：%s" % msg)
         note = "lost 前收掉相符的殘留程序：%s" % msg
@@ -392,16 +357,15 @@ def kill_run(fslot, node, slot, v):
 
     fslot 是槽路徑，node／slot 是掃描身分，v 是已判定的 run；回 (bool, 說明)，
     程序收乾淨與否由 kill_identity 決定，exit 等不到不更改該結果（spec §6）。"""
-    runner = ((v.get("birth") or {}).get("runner") or {}).get("pid")
     if v.state == ENDED:
-        clean, msg = aos7_proc.kill_identity(node, slot, v.run, runner=runner)
+        clean, msg = aos7_proc.kill_identity(node, slot, v.run)
         return clean, "already ended" + ("" if msg.startswith("no process") else "; leftover: " + msg)
     pid = v.get("pid")
     if pid is None and v.state == LIVE:
         pid = _wait_pid_json(fslot, v.run, v)
     pid = pid or {}
-    # A3-09：帶上 pid.json 記的任務 (pid, starttime)：kill 之後它還活著（例如群組身分核對不了而沒送訊號）就不能回成功
-    clean, msg = aos7_proc.kill_identity(node, slot, v.run, pid.get("pgid"), runner,
+    # 帶上 pid.json 記的任務 (pid, starttime)：kill 之後它還活著（例如群組核對不了而沒送訊號）就不能回成功
+    clean, msg = aos7_proc.kill_identity(node, slot, v.run, pid.get("pgid"),
                                          (pid.get("pid"), pid.get("starttime")) if is_int(pid.get("pid")) else None)
     # 給 runner 一點時間寫 exit.json（code 負數＝被訊號殺），回合總結才看得到結束
     end = time.monotonic() + 0.5
@@ -759,19 +723,6 @@ class Ctx:
         self.root, self.node_id, self.node, self.fnode, self.round = root, node_id, node, fnode, rnd
 
 
-def same_dir(node, fnode):
-    """抓著的 node（fd 路徑）跟字串路徑 node 現在指的還是同一個資料夾嗎。不是 fd 路徑當同一個。
-
-    node 是對外路徑，fnode 是抓住的目錄；回 bool，stat 讀不到回 False，
-    此 False 表示不能確認可安全啟動，呼叫者拒絕 Popen（spec §5.3 不變條件二）。"""
-    if not fnode.startswith(FD_PREFIX):
-        return True
-    try:
-        return os.path.samestat(os.stat(node), os.stat(fnode))
-    except OSError:
-        return False
-
-
 def clear_slot(fslot):
     """換 run：清掉上一個 run 的基礎設施檔，任務自己寫的檔留著（spec 5.1，W6）。
 
@@ -798,7 +749,7 @@ def clear_slot(fslot):
 def start_in_slot(ctx, item, slot, run, sub=None):
     """在槽裡起新的 run（spec 5.3 第 2～5 步；第 1 步的判定由呼叫的人做完）。回 run id。
 
-    起不來（aos7-run 起不了、node 中途被換掉）照樣寫 exit.json code 127，任務不會永遠算剛起。
+    起不來（開不了槽 fd、aos7-run 起不了）照樣寫 exit.json code 127，任務不會永遠算剛起。
 
     ctx 是動作環境，item 是已驗證的定義，slot／run 指定本次執行，sub 是已核准子根或 None。
     清槽／掛載等前置 I/O 例外向外拋；捕捉到的開槽 fd／Popen 失敗寫 exit 127（spec §5.3）。"""
@@ -819,12 +770,6 @@ def start_in_slot(ctx, item, slot, run, sub=None):
         birth["inst"] = item["inst"]
     else:
         birth["argv"] = item.get("argv", [])
-    if not same_dir(node, fnode):
-        why = "node %s 在 tick 中途被搬走或換掉（現在在 %s），沒起" % (ctx.node_id, real_path(fnode))
-        birth.update({"mounts": {}, "error": why})
-        write_json(os.path.join(fslot, "birth.json"), birth)
-        write_json(os.path.join(fslot, "exit.json"), {"run": run, "code": 127, "at": now(), "round": rnd, "error": why})
-        return run_id(slot, run)
     birth["mounts"] = aos7_mount.make(root, tdir, item.get("mounts") or {}, fs_taskdir=fslot, node=node, fnode=fnode)
     for n in item.get("mounts_dyn") or ():
         if isinstance(birth["mounts"].get(n), dict):
@@ -860,8 +805,6 @@ def start_in_slot(ctx, item, slot, run, sub=None):
                                                       "error": str(e)})
         return run_id(slot, run)
     try:
-        if not same_dir(node, fnode):
-            raise OSError("node %s 在起任務前被搬走或換掉（現在在 %s），沒起" % (ctx.node_id, real_path(fnode)))
         # spec §2.5、§5.3：傳已開的槽 fd 並用抓住的 cwd，字串路徑被換掉也不另建鬼目錄。
         p = subprocess.Popen([sys.executable, os.path.join(BIN, "aos7-run"), tdir, str(tfd)], cwd=fnode, env=env,
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,

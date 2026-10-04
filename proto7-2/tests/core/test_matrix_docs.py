@@ -11,12 +11,8 @@
 2. **last-round.json 壞**（round.json 是開著的第 N 回合）：內容 ∈ {`{`、`{"round": N}`（缺欄）、`{"round": "N"}`}
    → tock 重新產生完整總結（round＝N、有 ended／alive／tock_at、不是 replayed）、回合關上、之後 tick 開 N+1。
    對照：last-round.json 是完整的第 N 回合總結 → replayed。
-3. **birth.json 壞** 內容 ∈ {`{`、`[]`、`{"run": "x"}`} × 其他證據 ∈
-   - `live`：有相符活程序（NODE＋TID）→ LIVE，不起、不判 lost，槽裡仍只有那一個程序；
-   - `exit`：沒活程序、有 exit.json（run R）→ ENDED、run＝R；once 項的 launch.run＝R 時 tick 刪掉這項、不重跑
-     （重現 astra 的 once_corrupt_birth：tick 死在 before-once-delete、run 1 跑完、birth 寫壞 → 槽外副作用只有一次）；
-   - `pid`：沒活程序、有 pid.json（run R）、任務已死、沒 exit → 疑似 lost → tock 寫 lost（run R）；
-   - `none`：什麼證據都沒有 → UNKNOWN：tick 不起、tock errors 有說明；人刪掉 birth.json 後下一回合照常起。
+3. **birth.json 壞** 內容 ∈ {`{`、`[]`、`{"run": "x"}`} → UNKNOWN（單槽保留）：tick 不起、tock errors 有說明；人刪掉 birth.json 後
+   下一回合照常起。不從其他證據（活程序、exit.json、pid.json）推回 run（那是誤用，已刪）。
 """
 import os, sys  # noqa: E401
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
@@ -142,63 +138,13 @@ gen(TestLastRoundJson, "bad_last_round", [("half", ("{",)), ("no_fields", ('{"ro
 
 
 class TestBrokenBirth(MatrixCase):
-    """〔misuse M-2.3〕birth.json 壞掉時從其他證據推回 run（A2-03 證據鏈，F31）：live／exit／pid 三種是誤用（生命週期檔只有核心寫），none 那種是核心（壞 birth＝不知道）。"""
+    """〔core〕birth.json 壞掉＝不知道（單槽保留）。以前從其他證據推回 run 的 live／exit／pid 三種已刪（誤用 M-2.3，見 problems.md）。"""
     def corrupt(self, node, slot, content):
         with open(os.path.join(self.slot(node, slot), "birth.json"), "w") as f:
             f.write(content)
 
-    def _live(self, content):
-        """〔misuse M-2.3〕birth 壞＋有相符活程序 → LIVE：不起、不判 lost，仍只有那一個程序。"""
-        node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": rec_argv("k", keep=True)}])
-        self.itick()
-        pid = self.wait_pid(node, "k")["pid"]
-        self.itock()
-        self.corrupt(node, "k", content)
-        self.assertEqual(self.view(node, "k", 2).state, aos7_task.LIVE)
-        self.assertEqual(self.itick()["started"], [], "birth 壞、任務還活時起了第二份")
-        lr = self.itock()
-        self.assertEqual(self.ends_of([lr], "k"), [])
-        self.assertTrue(alive(pid))
-        self.assertEqual(self.live_procs(node, "k"), [pid])
-        self.assertEqual(self.ran(node, "k"), ["1"])
-
-    def _exit(self, content):
-        """〔misuse M-2.3〕birth 壞＋有 exit.json（run 1）→ ENDED、run＝1；once 項（launch.run＝1）刪掉、不重跑（astra once_corrupt_birth）。"""
-        node = self.mknode("a", [{"name": "o", "mode": "once", "argv": rec_argv("o")}])
-        self.crash("aos7-tick", "before-once-delete")
-        self.wait_ended(node, "o", 1)
-        self.wait_for(lambda: not self.live_procs(node, "o"), 5)
-        self.assertEqual(len(self.tasks(node)), 1)     # once 項還在（帶 launch run 1）
-        self.corrupt(node, "o", content)
-        v = self.view(node, "o", 2)
-        self.assertEqual((v.state, v.run), (aos7_task.ENDED, 1), v)
-        sums = [self.itock()]
-        for _ in range(2):
-            self.itick()
-            self.settle(node, "o")
-            sums.append(self.itock())
-        self.assertEqual(self.ran(node, "o"), ["1"], "birth 壞掉後 once 又跑了一次")
-        self.assertEqual(self.tasks(node), [], "once 項沒刪掉")
-        self.assertLessEqual(len(self.ends_of(sums, "o")), 1, self.ends_of(sums, "o"))
-
-    def _pid(self, content):
-        """〔misuse M-2.3〕birth 壞＋有 pid.json（run 1）、任務已死、沒 exit → 疑似 lost → tock 寫 lost（run 1）。"""
-        node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": rec_argv("k", keep=True)}])
-        self.itick()
-        self.wait_pid(node, "k")
-        self.itock()
-        self.kill_runner_and_task(node, "k")
-        self.corrupt(node, "k", content)
-        self.itick()
-        lr = self.itock()
-        ex = self.exit_raw(node, "k")
-        lost = [x for x in self.ends_of([lr], "k") if x.get("lost")]
-        self.assertEqual([x["run"] for x in lost], ["k#1"], "沒照 pid.json 的 run 判 lost：%r／exit=%r" % (lr["ended"], ex))
-        self.wait_for(lambda: len(self.live_procs(node, "k")) <= 1, 2)
-        self.assertLessEqual(len(self.live_procs(node, "k")), 1)
-
     def _none(self, content):
-        """〔core〕birth 壞、沒有任何其他證據 → UNKNOWN：不起、tock errors 有說明；人刪掉 birth.json 後照常起。"""
+        """birth 壞 → UNKNOWN：不起、tock errors 有說明；人刪掉 birth.json 後照常起。"""
         node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": rec_argv("k", keep=True)}])
         os.makedirs(self.slot(node, "k"))
         self.corrupt(node, "k", content)
@@ -214,8 +160,7 @@ class TestBrokenBirth(MatrixCase):
         self.wait_for(lambda: len(self.live_procs(node, "k")) == 1, 5)
 
 
-for _kind in ("live", "exit", "pid", "none"):
-    gen(TestBrokenBirth, "birth_%s" % _kind, [(n, (c,)) for n, c in BAD_BIRTH], getattr(TestBrokenBirth, "_" + _kind))
+gen(TestBrokenBirth, "birth_none", [(n, (c,)) for n, c in BAD_BIRTH], TestBrokenBirth._none)
 
 
 if __name__ == "__main__":

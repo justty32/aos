@@ -32,7 +32,7 @@ def tock(root, node_id, early=None):
     """替 root 空間的 node_id 收一回合，early 是 daemon 給的提前進場值（可為 None）。
     回本回合總結，或 gone／stale／skipped 結果；不確定丟 Unknown，確認總結失敗丟 ReadBack。
     此入口持有 node fd 並拿動作鎖；任務可以跨回合，不因 tock 而結束（spec §2.5、§7；S-11）。"""
-    root = os.path.realpath(root)   # 同 tick（A2-04）
+    root = os.path.realpath(root)   # 同 tick
 
     def act(fnode, node):
         """以持有的 fnode 及原路徑 node 執行鎖內 tock，回總結或 stale 結果。
@@ -110,8 +110,8 @@ def _tock(root, node_id, node, fnode, early):
         elif v.state == LIVE:
             # spec §5.4、P2-08：starttime／pid 讀不到以 LIVE＋unsure 保留；A2-08：原因也進總結 errors，不再「保守停著但看似正常」。
             alive.append(aos7_task.run_id(slot, v.run if v.run is not None else "?"))
-            if v.get("unsure") or v.get("broken"):
-                errors.append({"slot": slot, "phase": "unsure", "err": v.get("unsure") or v.get("why")})
+            if v.get("unsure"):
+                errors.append({"slot": slot, "phase": "unsure", "err": v["unsure"]})
         elif v.state == UNKNOWN:
             errors.append({"slot": slot, "phase": "judge", "err": v.get("why")})
     # spec §4.2、P2-03：tick 重用槽前先保存的舊結束也要報，以 run id 去重避免同次結束報兩份。
@@ -228,7 +228,7 @@ def _finish(fnode, rnd, marks, views):
         ex = v.get("exit") or {}
         # spec §5.1：嚴格小於本回合，讓 once 的結束至少留下完整一回合供任務讀取。
         done = v.state == ENDED and is_int(ex.get("seen_round")) and ex["seen_round"] < rnd
-        if done or (v.state == EMPTY and not v.get("broken")):
+        if done or v.state == EMPTY:
             try:
                 shutil.rmtree(aos7_task.slot_dir(fnode, slot))
                 aos7_task.write_seen(fnode, slot, None)   # A3-01：槽刪了，它的控制完成證據也拿掉（ctl.json 跟著槽沒了）
