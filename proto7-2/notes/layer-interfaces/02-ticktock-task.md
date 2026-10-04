@@ -17,7 +17,7 @@ kernel 和 agent 對 tick-tock 來說都只是「任務」（S-16），所以這
 | `pid.json` | aos7-run → tock、tick、daemon、kernel | 任務起來後 | `{run, pid, pgid, starttime, runner_pid, uid, at}` | 通用 |
 | `out.log` | 任務的 stdout＋stderr | 整個 run | 這次 run 的，換 run 清 | 通用 |
 | `exit.json` | aos7-run（lost 時是 tock 或 tick）→ tock → `last-round.json` 的 `ended` | 任務結束 | `{run, code, at, round}`；code 負數＝被訊號殺、127＝沒起成、lost 是 `{code: null, lost: true}`；報過補 `seen_round` | 通用 |
-| `tock.json` | tock → 任務 | 每回合結束（總結提交之後） | `{run, round, at, early}`，覆寫；補寫的帶 `late: true` | 通用 |
+| `tock.json` | tock → 任務 | 每回合結束（總結提交之後） | `{run, round, at, early}`，覆寫（不跨回合補送，F47） | 通用 |
 | `aos7-wait-tock` ／ `aos7_fs.wait_tock` | 任務自己呼叫 | 任何時候 | 等 `round > --after` 且 `run` 相符，印回合數；逾時退出碼 1 | 通用 |
 | `ctl.json` → `ctl-done.json` | 任何人 → tick／tock → 請求者 | **只在 tick 和 tock 時刻**執行 | `{op: kill/restart, by, why, run?, reload?, id?}`；回條加 `result: {ok, msg, at, run, ctl_id, diff?, replayed?}` | 通用 |
 | `.aos/ctl-seen.json` | tick／tock（完成證據） | 執行後、寫回條前 | `{"slots": {槽: {ctl_id, op, ok, msg, run, at}}}` | 通用 |
@@ -52,7 +52,7 @@ kernel 和 agent 對 tick-tock 來說都只是「任務」（S-16），所以這
 | 下層發生 | 任務看到的 |
 |---|---|
 | tick 被殺在起任務途中 | 可能還沒起、或起了但 birth.json 沒記到 runner；核心照 5.4 判，等不到就判 lost。once 預設不重跑（`retry_lost` 可改） |
-| tock 沒寫進某個 tock.json | 這回合沒收到通知；round.json 記 `notify_errors`，下一個 tick 補寫（帶 `late: true`） |
+| tock 沒寫進某個 tock.json | 這回合沒收到通知；round.json 記 `notify_errors`，不補送（F47，spec §7），下一回合照常通知 |
 | 回合卡在「不知道」（round.json 壞掉、gen.json 壞掉） | **完全安靜**：沒有新 tock.json，任務照跑；`wait_tock` 沒設逾時就一直等 |
 | node 被 pause | 同上：沒有 tock、`ctl.json` 不執行、mount-req 不審 |
 | node 確定消失／搬走／換成符號連結 | 被收掉（SIGTERM→SIGKILL）；新位置要另外 register |

@@ -12,7 +12,7 @@ import types
 import aos7_mount
 import aos7_task
 from aos7_fs import (BAD, FD_PREFIX, N, OK, U, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, LockTimeout, Unknown, action_lock,
-                     edit_json, errname, fact, inject, is_gone, is_int, locked, node_path, now, read_json, read_round,
+                     edit_json, errname, fact, inject, is_gone, is_int, locked, node_path, now, read_round,
                      sweep_tmp, test_point, write_json)
 from aos7_task import EMPTY, ENDED, LIVE, UNKNOWN, NAME_RE, SLOT_RE
 
@@ -276,16 +276,11 @@ def tick(root, node_id):
 
 
 def _tick(root, node_id, node, fnode):
-    """動作鎖內開回合：判回合、清暫存、補欠的 tock.json、寫 round.json、任務控制、判槽、審加掛、挑要起的（表鎖內記 launch）、
+    """動作鎖內開回合：判回合、清暫存、寫 round.json、任務控制、判槽、審加掛、挑要起的（表鎖內記 launch）、
     記 reaped、起任務、刪起完的 once。開回合之前推定不了丟 Unknown；開了之後單項出錯只記 tasks_error。"""
     rpath = os.path.join(fnode, ".aos", "round.json")
     rnd, errs = next_round(fnode)
     sweep_tmp(os.path.join(fnode, ".aos"))
-    # 上一回合關上時沒寫進去的 tock.json（round.json 的 notify_errors）開回合前補一次；還補不上的記進 tasks_error
-    import aos7_tock
-    owed = aos7_tock.retry_notify(fnode, node, read_json(rpath))
-    if owed:
-        errs.append("第 %d 回合欠的 tock.json 還補不上：%s" % (rnd - 1, json.dumps(owed, ensure_ascii=False)[:300]))
     _slots, lerr = aos7_task.list_slots(fnode)
     if lerr:
         raise Unknown("列不出 .aos/tasks/：%s" % lerr, kind="listdir")

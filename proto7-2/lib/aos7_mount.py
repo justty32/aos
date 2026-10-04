@@ -5,7 +5,7 @@ import hashlib
 import os
 import re
 
-from aos7_fs import node_path, now, read_json, write_json
+from aos7_fs import BAD, N, OK, U, Unknown, fact, node_path, now, write_json
 
 MNT = "mnt"
 REQ = "mount-req"     # 任務寫：<槽>/mount-req/<名字>.json＝{"name", "path", "why"}
@@ -96,7 +96,8 @@ def allowed(root, path, allow):
 def serve(root, taskdir, allow, real_taskdir=None):
     """處理一個任務的所有加掛請求（`.` 開頭的是寫到一半的暫存檔，不算），回 [{"name", "path", "ok", "msg"}]。
     taskdir＝讀寫用的路徑，real_taskdir＝實際路徑（掛載點的 `at`）。先寫回條、寫成才刪請求：回條寫不進去就留著請求、
-    這筆記錯，下次重處理是冪等的（同名同目標已經掛了就直接補回條）。壞請求也一定有回條，不拖垮整個 tick。"""
+    這筆記錯，下次重處理是冪等的（同名同目標已經掛了就直接補回條）。壞請求也一定有回條，不拖垮整個 tick。
+    請求或 birth.json 讀不到＝那一件不知道（spec §0）：請求留著、不寫回條、不改 birth，只記一筆 unknown。"""
     rdir = os.path.join(taskdir, REQ)
     try:
         names = sorted(n for n in os.listdir(rdir) if n.endswith(".json") and not n.startswith("."))
@@ -104,9 +105,16 @@ def serve(root, taskdir, allow, real_taskdir=None):
         return []
     out = []
     for fn in names:
-        item = read_json(os.path.join(rdir, fn))
+        st, item = fact(os.path.join(rdir, fn))
+        if st == N:
+            continue
         try:
-            item, r = _serve_one(root, taskdir, allow, item, real_taskdir)
+            if st == U:
+                raise Unknown(item)
+            item, r = _serve_one(root, taskdir, allow, item if st == OK else None, real_taskdir)
+        except Unknown as e:
+            out.append({"name": None, "path": None, "ok": False, "unknown": True, "msg": "%s，請求留著" % e})
+            continue
         except Exception as e:   # noqa: BLE001
             item = item if isinstance(item, dict) else {"raw": item}
             r = {"name": None, "path": None, "ok": False, "msg": "請求處理失敗：%s: %s" % (type(e).__name__, e)}
@@ -136,7 +144,9 @@ def _serve_one(root, taskdir, allow, item, real_taskdir=None):
                       "ok": False, "msg": "name 與 path 要是字串（name 可省）"}
     good, bad = check({name: path})
     bpath = os.path.join(taskdir, "birth.json")
-    birth = read_json(bpath, {}) or {}
+    bst, birth = fact(bpath)
+    if bst != OK or not isinstance(birth, dict):
+        raise Unknown(birth if bst in (U, BAD) else "birth.json 不在或不是物件")
     mounts = birth.get("mounts") or {}
     ok = False
     if bad:
