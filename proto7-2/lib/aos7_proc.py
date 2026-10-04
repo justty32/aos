@@ -6,10 +6,9 @@
 daemon 在 node 消失／停止時呼叫，tick／tock 透過 aos7_task 判定與收程序（S-03、S-17）。
 讀 /proc 的 stat、cmdline、environ；不寫協定檔，exit.json 留給 runner 或上層。
 
-**三態一路傳到底（A2-01）**：/proc 讀取只分三種結果——讀到、確定不在（ENOENT／ESRCH：程序剛走）、讀不到（EIO、ESTALE…）。
-讀不到一律丟 `ProcUnknown`，不再悄悄當成「沒有」：掃描不完整就不能支持 lost、清槽、重起，
-收程序的確認也不能說「收乾淨了」。呼叫的人（aos7_task.judge／resolve、kill_identity、daemon 的收程序）接住它，
-保留現狀、把原因記進 errors／last_error（spec §0）。
+**錯誤四分支（spec §0）**：單一程序的事實只經 `proc(pid)`——(N) 確定不在／殭屍、(OK, starttime)、(U, 說明) 讀不到。
+掃描（列 /proc、讀 stat／environ／cmdline）讀不到一律丟 `aos7_fs.Unknown`（kind "proc"），不當成「沒有」：掃描不完整就不能
+支持 lost、清槽、重起，收程序也不能說「收乾淨了」。呼叫的人接住它，保留現狀、記一筆。
 
 **environ 讀不到權限（EACCES／EPERM）＝不是可辨認的任務、略過**：別的 uid、不可 ptrace 的程序（systemd --user…）本來就這樣。
 管理範圍（spec §11）：任務程序必須跟 daemon 同 uid、environ 可讀；脫離這個範圍的任務是誤用，核心不保證認得出它。
@@ -19,7 +18,7 @@ import os
 import signal
 import time
 
-from aos7_fs import inject, proc_starttime
+from aos7_fs import N, OK, U, Unknown, inject, is_int, proc_starttime
 
 KILL_GRACE = 1.0   # spec 第 6 節：SIGTERM 後等至多 1 秒，還在就 SIGKILL
 
@@ -28,12 +27,8 @@ ALIVE, GONE, UNKNOWN = "alive", "gone", "unknown"
 PROC_GONE_ERRNO = (errno.ENOENT, errno.ESRCH)   # 讀 /proc/<pid>/* 時這兩種＝程序已經不在
 
 
-class ProcUnknown(Exception):
-    """/proc 讀不完整（列不出 /proc、某個程序的 stat／environ／cmdline 讀不到）：掃描結果不能當「確定沒有」（A2-01）。"""
-
-
 def _read_proc(pid, name, binary=False):
-    """讀 `/proc/<pid>/<name>`：回內容；程序確定不在回 None；其他讀取錯誤丟 ProcUnknown（三態的唯一入口）。
+    """讀 `/proc/<pid>/<name>`：回內容；程序確定不在回 None；其他讀取錯誤丟 Unknown（三態的唯一入口）。
 
     只有 environ 遇到 EACCES／EPERM 回 None（身分讀不到＝不是可辨認的任務，跟「不在」一樣略過）。
     stat、cmdline 本來全世界可讀，任何讀取錯誤都是「不知道」。"""
@@ -47,64 +42,56 @@ def _read_proc(pid, name, binary=False):
             return None
         if name == "environ" and e.errno in (errno.EACCES, errno.EPERM):
             return None
-        raise ProcUnknown("讀不到 %s：%r" % (path, e)) from None
+        raise Unknown("讀不到 %s：%r" % (path, e), kind="proc") from None
 
 
-def pid_state(pid):
-    """pid 在不在（三態）：ALIVE／GONE（不存在或殭屍）／UNKNOWN（kill(0) 說在，但 stat 讀不到）。A2-01 前讀不到當死。"""
-    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
-        return GONE
+def proc(pid):
+    """一個程序的事實（唯一入口）：(N, None) 確定不在（含殭屍）｜(OK, starttime)｜(U, 說明) 在，但 /proc 讀不到。"""
+    if not is_int(pid) or pid <= 0:
+        return N, None
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
-        return GONE
+        return N, None
     except PermissionError:
         pass                                  # 在，只是不是我們的
     try:
         st = stat_of(pid)
-    except ProcUnknown:
-        return UNKNOWN
-    if st is None:
-        return GONE
-    return GONE if st[0] == "Z" else ALIVE
+    except Unknown as e:
+        return U, str(e)
+    if st is None or st[0] == "Z":
+        return N, None
+    t = proc_starttime(pid)
+    return (OK, t) if t is not None else (U, "/proc/%d/stat 的 starttime 讀不到" % pid)
 
 
 def pid_alive(pid):
-    """程序在不在（bool）：GONE 才是 False；UNKNOWN 保守算在（spec §0：不知道不能當否）。給測試與顯示用，判定請用 pid_state。"""
-    return pid_state(pid) != GONE
+    """程序在不在（bool）：只有確定不在才是 False（不知道不能當否）。給顯示與測試用。"""
+    return proc(pid)[0] != N
 
 
 def same_process(pid, starttime):
-    """pid＋starttime 還是同一個程序嗎（三態，spec 第 0 節）：
-
-    - "gone"：pid 確定不在（或是殭屍），或 starttime 確定不同（pid 被重用）。
-    - "alive"：在，而且 starttime 相同。
-    - "unknown"：pid 在但 /proc 讀不到、現在的 starttime 讀不到、或當初沒記到 starttime（K-05：不知道當活）。
-
-    pid 是紀錄的程序號，starttime 是紀錄的啟動 tick；回 ALIVE／GONE／UNKNOWN（spec §5.4、P2-08）。"""
-    ps = pid_state(pid)
-    if ps != ALIVE:
-        return ps
-    # spec §5.4、P2-08：pid 還在也不等於身分已確定；缺啟動時間要保留 UNKNOWN。
-    if starttime is None:
-        return UNKNOWN
-    cur = proc_starttime(pid)
-    if cur is None:
+    """pid＋starttime 還是同一個程序嗎：GONE（不在、殭屍、或 starttime 不同＝pid 被重用）｜ALIVE｜UNKNOWN（讀不到，
+    或當初沒記到 starttime；不知道當活，spec §5.4）。"""
+    st, cur = proc(pid)
+    if st == N:
+        return GONE
+    if st == U or starttime is None:
         return UNKNOWN
     return ALIVE if cur == starttime else GONE
 
 
 def all_pids():
-    """列 /proc 的數字目錄回 pid 清單；列不出來丟 ProcUnknown（A2-01：空清單不能當「確定沒有程序」）。"""
+    """列 /proc 的數字目錄回 pid 清單；列不出來丟 Unknown（空清單不能當「確定沒有程序」）。"""
     try:
         inject("proc-list", "/proc")
         return [int(p) for p in os.listdir("/proc") if p.isdigit()]
     except OSError as e:
-        raise ProcUnknown("列不出 /proc：%r" % e) from None
+        raise Unknown("列不出 /proc：%r" % e, kind="proc") from None
 
 
 def stat_of(pid):
-    """回 (state, ppid, pgid)；程序確定不在回 None；讀不到或內容解析不了丟 ProcUnknown。"""
+    """回 (state, ppid, pgid)；程序確定不在回 None；讀不到或內容解析不了丟 Unknown。"""
     text = _read_proc(pid, "stat")
     if text is None:
         return None
@@ -112,11 +99,11 @@ def stat_of(pid):
         rest = text.rsplit(")", 1)[1].split()
         return rest[0], int(rest[1]), int(rest[2])
     except (IndexError, ValueError):
-        raise ProcUnknown("/proc/%d/stat 內容解析不了" % pid) from None
+        raise Unknown("/proc/%d/stat 內容解析不了" % pid, kind="proc") from None
 
 
 def _table():
-    """一次掃完 /proc：回 {pid: (state, ppid, pgid)}，掃描中途走掉的程序不列；任何一個讀不到就丟 ProcUnknown。"""
+    """一次掃完 /proc：回 {pid: (state, ppid, pgid)}，掃描中途走掉的程序不列；任何一個讀不到就丟 Unknown。"""
     out = {}
     for p in all_pids():
         st = stat_of(p)
@@ -126,7 +113,7 @@ def _table():
 
 
 def group_alive(pgid):
-    """程序群組還有沒有成員（殭屍不算）：回 bool；掃描不完整丟 ProcUnknown（A2-01 前讀不到當「沒成員」）。"""
+    """程序群組還有沒有成員（殭屍不算）：回 bool；掃描不完整丟 Unknown。"""
     if not isinstance(pgid, int) or pgid <= 0:
         return False
     return any(st[2] == pgid and st[0] != "Z" for st in _table().values())
@@ -135,7 +122,7 @@ def group_alive(pgid):
 def groups_with_descendants(pgid):
     """pgid 本身，加上這群組成員所有後代所在的群組（aos-exec 把 inst 的子程式開在另一個 session；proto7-1 P-05）。
 
-    pgid 是起點群組；回群組號 set。掃描不完整丟 ProcUnknown，不拿半份表去決定要打哪些群組（spec §6、Q1）。"""
+    pgid 是起點群組；回群組號 set。掃描不完整丟 Unknown，不拿半份表去決定要打哪些群組（spec §6、Q1）。"""
     table = _table()
     members = {p for p, s in table.items() if s[2] == pgid}
     seen, todo = set(members), list(members)
@@ -151,14 +138,14 @@ def groups_with_descendants(pgid):
 def is_runner(pid):
     """是 aos7-run（任務的包裝）嗎：它等任務死了自己寫 exit.json，不先殺它。
 
-    pid 是待辨識程序；回 bool，程序已不在回 False；cmdline 讀不到丟 ProcUnknown（spec §2.6、§5.3；A2-01）。"""
+    pid 是待辨識程序；回 bool，程序已不在回 False；cmdline 讀不到丟 Unknown（spec §2.6、§5.3）。"""
     data = _read_proc(pid, "cmdline", binary=True)
     return bool(data) and any(a.endswith(b"aos7-run") for a in data.split(b"\0"))
 
 
 def environ_of(pid):
     """讀 /proc/<pid>/environ；回 bytes 環境項目的 set；程序已不在、環境是空的、或沒有權限讀（別的 uid、不可 ptrace）回 None；
-    其他讀不到丟 ProcUnknown。"""
+    其他讀不到丟 Unknown。"""
     data = _read_proc(pid, "environ", binary=True)
     return set(data.split(b"\0")) if data else None
 
@@ -180,7 +167,7 @@ def env_procs(nodes, tid=None, run=None, skip=(), runners=False):
     給了 run 要 AOS7_RUN 相符的程序。預設不含 aos7-run。回 pid 清單。
 
     nodes 可為單一路徑或可迭代路徑集；skip 是排除 pid，runners=True 才包含包裝程序。
-    回空清單＝**掃完了、確定沒有**；掃描不完整（列不出 /proc、environ 讀不到…）丟 ProcUnknown（spec §0、§5.2；A2-01）。"""
+    回空清單＝**掃完了、確定沒有**；掃描不完整（列不出 /proc、environ 讀不到…）丟 Unknown（spec §0、§5.2）。"""
     nodes = [nodes] if isinstance(nodes, str) else list(nodes)
     want_nodes = {b"AOS7_NODE=" + n.encode() for n in nodes}
     want_tid = None if tid is None else b"AOS7_TID=" + tid.encode()
@@ -211,7 +198,7 @@ def env_procs(nodes, tid=None, run=None, skip=(), runners=False):
 
 def me_and_ancestors():
     """無參數；回自己與祖先的 pid set，供 P2-14 排除收程序時不能打到的管理鏈（spec §2.7、§6）。
-    祖先的 stat 讀不到丟 ProcUnknown：認不出管理鏈就不能放心送訊號（A2-01）。"""
+    祖先的 stat 讀不到丟 Unknown：認不出管理鏈就不能放心送訊號。"""
     me = {os.getpid()}
     p = os.getppid()
     while p > 1 and p not in me:      # 不殺自己與祖先（子 daemon 本身也是某個 node 的任務）
@@ -225,7 +212,7 @@ def group_is_task(pgid, node, tid, run):
     """pid.json 的 pgid 還能打嗎：群組沒有活成員＝True（沒東西可打）；有成員的環境含這個 run 的 NODE＋TID＋RUN＝True；
     否則 False。防的是 pgid 被重用（外部故障）：pid.json 記的群組號後來給了別人，kill 不能打過去（spec 第 6 節）。
 
-    pgid 是待核對群組，node／tid／run 是目標身分；回 bool。掃描不完整丟 ProcUnknown。"""
+    pgid 是待核對群組，node／tid／run 是目標身分；回 bool。掃描不完整丟 Unknown。"""
     if not isinstance(pgid, int) or isinstance(pgid, bool) or pgid <= 1:
         return False
     want = want_env(node, tid, run)
@@ -239,7 +226,7 @@ def kill_groups(groups, grace=KILL_GRACE):
     """對一組群組（各自連同後代的群組）SIGTERM，等至多 grace 秒，還在就 SIGKILL。回 True＝確定收乾淨。
 
     groups 是群組號集合，grace 是寬限秒數；不送訊號給自己／祖先群組（P2-14）。
-    掃描不完整丟 ProcUnknown（送訊號之前）；送完之後確認不了＝回 False（不能說收乾淨；A2-01）。"""
+    掃描不完整丟 Unknown（送訊號之前）；送完之後確認不了＝回 False（不能說收乾淨）。"""
     me = me_and_ancestors()
     allg = set()
     for g in groups:
@@ -255,7 +242,7 @@ def kill_groups(groups, grace=KILL_GRACE):
         """還有沒有群組活著；確認不了當「還活著」（不能宣稱收乾淨）。"""
         try:
             return any(group_alive(g) for g in allg)
-        except ProcUnknown:
+        except Unknown:
             return True
     for g in allg:
         try:
@@ -277,7 +264,7 @@ def kill_groups(groups, grace=KILL_GRACE):
 
 
 def groups_of(pids):
-    """pids 是程序號集合；回這些程序的 pgid set（掃描中途走掉的略過；讀不到丟 ProcUnknown）。"""
+    """pids 是程序號集合；回這些程序的 pgid set（掃描中途走掉的略過；讀不到丟 Unknown）。"""
     out = set()
     for pid in pids:
         st = stat_of(pid)
@@ -305,7 +292,7 @@ def kill_identity(node, tid, run, pgid=None, task=None):
             else:
                 note = "；pid.json 的 pgid %r 不是這個任務的群組，沒動它" % (pgid,)
         clean = kill_groups(groups) if groups else True
-    except ProcUnknown as e:
+    except Unknown as e:
         return False, "unknown：/proc 讀不完整，不知道有沒有收乾淨（%s）" % e
     if task and task[0]:
         ts = same_process(task[0], task[1])
@@ -322,7 +309,7 @@ def kill_node(node, known_pgids=()):
     回 (收到的群組數, 乾不乾淨)。aos7-run 不殺（任務死了它自己經 fd 寫 exit.json）。
 
     node 是 node 絕對路徑，known_pgids 是 daemon 記住的群組；沒有群組回 (0, True)。
-    /proc 掃描不完整時只打記住的群組、回 clean=False（不能說收乾淨；spec §2.6、§11；A2-01）。"""
+    /proc 掃描不完整時只打記住的群組、回 clean=False（不能說收乾淨；spec §2.6）。"""
     groups = {g for g in known_pgids if isinstance(g, int) and g > 1}
     try:
         me = me_and_ancestors()
@@ -330,12 +317,12 @@ def kill_node(node, known_pgids=()):
         if not groups:
             return 0, True
         return len(groups), kill_groups(groups)
-    except ProcUnknown:
+    except Unknown:
         # spec §2.6：掃描不完整時只打記著的群組（astra-2 讀碼：以前這裡直接回 False，連記著的群組都沒收）
         try:
             if groups:
                 kill_groups(groups)
-        except ProcUnknown:
+        except Unknown:
             pass
         return len(groups), False
 
@@ -351,5 +338,5 @@ def sweep_nodes(nodes):
         if not groups:
             return 0, True
         return len(groups), kill_groups(groups)
-    except ProcUnknown:
+    except Unknown:
         return 0, False

@@ -15,7 +15,7 @@ import os
 import re
 import sys
 
-from aos7_fs import edit_json, write_json
+from aos7_fs import Unknown, edit_json, write_json
 
 DAEMON_OPS = ("register", "unregister", "pause", "resume", "wake", "stop")
 TASK_OPS = ("kill", "restart")
@@ -115,16 +115,16 @@ def task_ctl(slot_dir, op, why="", by=None, reload=False, run=None, id_=None):
 def add_items(node, items):
     """將 items 一批加進 node 的 tasks.json，回傳檔案路徑（spec §4.1、§10）。
 
-    拿鎖後一次 rename，避免 tick 看見半批或互蓋；既有表型別錯誤拋 ValueError，不覆蓋它。
+    拿鎖後一次 rename，避免 tick 看見半批或互蓋。既有表讀不到、壞掉或結構不合都丟 Unknown，不覆蓋它（G1）。
     """
     path = os.path.join(os.path.abspath(node), ".aos", "tasks.json")
 
     def fn(t):
-        """以讀到的表 t 建立追加 items 的新表並回傳；缺檔從空表起，結構不符就拋 ValueError。"""
+        """以讀到的表 t 建立追加 items 的新表並回傳；缺檔從空表起，結構不符就丟 Unknown。"""
         if t is None:
             t = {"tasks": []}
         if not isinstance(t, dict) or not isinstance(t.get("tasks", []), list):
-            raise ValueError("tasks.json 不是 {\"tasks\": [...]}，沒加")
+            raise Unknown("tasks.json 不是 {\"tasks\": [...]}，沒加", kind="bad")
         t = dict(t)
         t["tasks"] = list(t.get("tasks", [])) + list(items)
         return t
@@ -187,7 +187,7 @@ def main(argv=None):
             return 1
         try:
             path = add_items(a.node, items)
-        except ValueError as e:
+        except Unknown as e:
             print("aos7-ctl: %s" % e, file=sys.stderr)
             return 1
     print(json.dumps({"wrote": path}, ensure_ascii=False))

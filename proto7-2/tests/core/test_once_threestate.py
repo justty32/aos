@@ -170,19 +170,23 @@ class TestThreeState(CoreCase):
         self.assertEqual(aos7_proc.same_process(os.getpid(), aos7_fs.proc_starttime(os.getpid()) + 1), aos7_proc.GONE)
         self.assertEqual(aos7_proc.same_process(os.getpid(), None), aos7_proc.UNKNOWN)
 
-    def test_read_json3_states(self):
+    def test_fact_states(self):
+        """單一讀檔入口 fact：不存在＝N、壞 JSON＝BAD、讀不到＝U；存在但不是一般檔（FIFO、資料夾）一律＝U（頂層定案 3）。"""
         d = self.root
         p = os.path.join(d, "x.json")
-        self.assertEqual(aos7_fs.read_json3(p)[0], aos7_fs.MISSING)
+        self.assertEqual(aos7_fs.fact(p)[0], aos7_fs.N)
         with open(p, "w") as f:
             f.write("{")
-        self.assertEqual(aos7_fs.read_json3(p)[0], aos7_fs.BAD)
+        self.assertEqual(aos7_fs.fact(p)[0], aos7_fs.BAD)
         os.chmod(p, 0)
-        self.assertEqual(aos7_fs.read_json3(p)[0], aos7_fs.IO)
+        self.assertEqual(aos7_fs.fact(p)[0], aos7_fs.U)
         os.chmod(p, 0o600)
         os.remove(p)
         os.mkfifo(p)
-        self.assertEqual(aos7_fs.read_json3(p)[0], aos7_fs.MISSING)
+        self.assertEqual(aos7_fs.fact(p)[0], aos7_fs.U)
+        os.remove(p)
+        os.mkdir(p)
+        self.assertEqual(aos7_fs.fact(p)[0], aos7_fs.U)
 
     def test_tasks_dir_unlistable_no_start(self):
         node = self.mknode("a", [{"name": "j", "argv": ["true"]}])

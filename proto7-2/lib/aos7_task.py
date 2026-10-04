@@ -16,8 +16,8 @@ import time
 
 import aos7_mount
 import aos7_proc
-from aos7_fs import (BIN, BAD, IO, MISSING, OK, edit_json, env_with_bin, inject, is_gone, is_int, node_path,
-                     now, proc_starttime, read_json, read_json3, test_point, write_json, LockTimeout)
+from aos7_fs import (BIN, N, OK, U, Unknown, edit_json, env_with_bin, fact, inject, is_gone, is_int, node_path, now,
+                     proc_starttime, read_json, test_point, write_json)
 
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 SLOT_RE = re.compile(r"^([A-Za-z0-9_-]+)(?:\.([1-9][0-9]*))?$")
@@ -73,18 +73,14 @@ def list_slots(node):
 # ---------- 讀一個槽 ----------
 
 def _same_run(path, run):
-    """讀 pid.json／exit.json／tock.json：回 (狀態, 值)；`run` 跟這次不同（上一個 run 沒清乾淨的）當不存在（spec 5.1）。
-
-    path 是槽內狀態檔、run 是出生紀錄的序號；IO 原樣傳回供三態保留現狀（存在但不是一般檔也算 IO，A3-03），
-    壞 JSON／型別不合／run 不合回 (MISSING, None)，避免拿前任結果判定本次（spec §5.1）。"""
-    st, v = read_json3(path, strict=True)
-    if st == OK:
-        if isinstance(v, dict) and v.get("run") == run:
-            return OK, v
-        return MISSING, None
-    if st == BAD:
-        return MISSING, None   # 原子寫不會半寫；壞掉的是別人寫壞的，不算這次的
-    return st, v
+    """讀 pid.json／exit.json／tock.json：回 (N／OK／U, 值或說明)。`run` 跟這次不同（上一個 run 沒清乾淨的）當不存在（spec 5.1）；
+    讀不到、不是一般檔、內容壞掉＝U（核心自己寫的檔，壞了只能是被手改或磁碟壞）。"""
+    st, v = fact(path)
+    if st == OK and isinstance(v, dict):
+        return (OK, v) if v.get("run") == run else (N, None)
+    if st == N:
+        return N, None
+    return U, (v if st != OK else "%s 內容不是物件" % os.path.basename(path))
 
 
 class View(dict):
@@ -109,23 +105,23 @@ def judge(fslot, node, slot, cur_round):
     slot 是槽名、cur_round 是目前回合；檔案 I/O 回 UNKNOWN，pid／starttime 讀不到回 LIVE 加 unsure，
     暫未完成交接也保守當 LIVE（spec §0、§5.3 不變條件二、P2-08）。birth.json 內容壞掉也是 UNKNOWN：生命週期檔只有核心寫，
     壞了只能是被手改或磁碟壞，不從其他證據推回 run。"""
-    bst, birth = read_json3(os.path.join(fslot, "birth.json"), strict=True)   # A3-03：FIFO／資料夾＝不知道，不是空槽
-    if bst == MISSING:
+    bst, birth = fact(os.path.join(fslot, "birth.json"))
+    if bst == N:
         return View(state=EMPTY, run=None)
-    if bst == IO:
-        return View(state=UNKNOWN, run=None, why="birth.json 讀不到：%s" % birth)
-    if bst == BAD or not isinstance(birth, dict) or not is_int(birth.get("run")):
+    if bst == U:
+        return View(state=UNKNOWN, run=None, why=birth)
+    if bst != OK or not isinstance(birth, dict) or not is_int(birth.get("run")):
         return View(state=UNKNOWN, run=None, why="birth.json 壞了；確認沒在跑後刪掉 birth.json 就會當空槽")
     run = birth["run"]
     v = View(state=None, run=run, birth=birth)
     est, ex = _same_run(os.path.join(fslot, "exit.json"), run)
     if est == OK:
         return View(v, state=ENDED, exit=ex)
-    if est == IO:
-        return View(v, state=UNKNOWN, why="exit.json 讀不到：%s" % ex)
+    if est == U:
+        return View(v, state=UNKNOWN, why=ex)
     pst, pid = _same_run(os.path.join(fslot, "pid.json"), run)
-    if pst == IO:
-        return View(v, state=UNKNOWN, why="pid.json 讀不到：%s" % pid)
+    if pst == U:
+        return View(v, state=UNKNOWN, why=pid)
     runner = birth.get("runner") if isinstance(birth.get("runner"), dict) else None
     r_state = aos7_proc.same_process(runner.get("pid"), runner.get("starttime")) if runner else None
     if pst == OK:
@@ -157,8 +153,8 @@ def _recheck(v, fslot, run, why):
     est, ex = _same_run(os.path.join(fslot, "exit.json"), run)
     if est == OK:
         return View(v, state=ENDED, exit=ex)
-    if est == IO:
-        return View(v, state=UNKNOWN, why="exit.json 讀不到")
+    if est == U:
+        return View(v, state=UNKNOWN, why=ex)
     return View(v, state=SUSPECT, why=why)
 
 
@@ -175,7 +171,7 @@ def resolve(v, fslot, node, slot, cur_round):
         found = aos7_proc.env_procs(node, slot, v.run)
         everyone = aos7_proc.env_procs(node, slot, v.run, runners=True)
         grp = bool(pgid) and aos7_proc.group_alive(pgid)
-    except aos7_proc.ProcUnknown as e:
+    except Unknown as e:
         # A2-01：掃描不完整＝不知道有沒有相符的程序，不能判 lost（判了 keep 就會重起、跟還活著的前任雙開）。
         return View(v, state=UNKNOWN, why="疑似 lost（%s），但身分掃描讀不完整，先不判：%s" % (v.get("why"), e))
     if set(everyone) - set(found):
@@ -192,8 +188,8 @@ def resolve(v, fslot, node, slot, cur_round):
     est, ex = _same_run(os.path.join(fslot, "exit.json"), v.run)
     if est == OK:
         return View(v, state=ENDED, exit=ex)
-    if est == IO:
-        # 疑點（aos7_task.py:183）：最後重讀 exit.json 讀不到，不能覆寫成 lost（runner 可能剛寫了真的結果）。
+    if est == U:
+        # 最後重讀 exit.json 讀不到：不能覆寫成 lost（runner 可能剛寫了真的結果）
         return View(v, state=UNKNOWN, why="疑似 lost，但最後重讀 exit.json 讀不到：%s" % ex)
     ex = {"run": v.run, "code": None, "lost": True, "at": now(), "round": cur_round}
     if note:
@@ -241,9 +237,9 @@ def requeue_lost_once(fslot, slot, v):
         return _append_items(t, [item])
     try:
         edit_json(os.path.join(fslot, "..", "..", "tasks.json"), add, default=None, timeout=1.0)
-    except LockTimeout:
-        return False, "tasks.json.lock 一秒內拿不到"
-    except (OSError, ValueError) as e:
+    except Unknown as e:
+        return False, "加不回 tasks.json：%s" % e
+    except OSError as e:
         return False, "加不回 tasks.json：%r" % (e,)
     return True, "已加回"
 
@@ -412,12 +408,12 @@ def seen_path(fnode):
 def read_seen(fnode):
     """讀 ctl-seen.json：回 (dict 或 None, 錯誤或 None)。不存在＝{}；讀不到、壞掉、不是 `{"slots": {...}}`＝不知道（回錯誤），
     呼叫的人讓請求留著——分不出這件做過沒，就不能再做一次（A3-01）。"""
-    st, v = read_json3(seen_path(fnode), strict=True)
-    if st == MISSING:
+    st, v = fact(seen_path(fnode))
+    if st == N:
         return {}, None
     if st == OK and isinstance(v, dict) and isinstance(v.get("slots", {}), dict):
         return v.get("slots", {}), None
-    return None, "ctl-seen.json %s" % ("讀不到：%s" % v if st == IO else "壞了（要是 {\"slots\": {...}}）")
+    return None, v if st == U else "ctl-seen.json 壞了（要是 {\"slots\": {...}}）"
 
 
 def write_seen(fnode, slot, rec):
@@ -425,7 +421,7 @@ def write_seen(fnode, slot, rec):
     rec＝None 時拿掉 slot 那筆（tock 刪槽時）。寫入錯誤向外拋。"""
     slots, err = read_seen(fnode)
     if err:
-        raise OSError(err)
+        raise Unknown(err)
     slots = dict(slots)
     if rec is None:
         if slot not in slots:
@@ -445,15 +441,15 @@ def run_ctl(ctx, slot):
     tasks.json 已有同 ctl_id 的 once 項＝已經加過、不再加；kill 本來就冪等（已結束的算成功）。寫入錯誤向外拋（spec §6）。"""
     fslot = slot_dir(ctx.fnode, slot)
     path = os.path.join(fslot, "ctl.json")
-    st, ctl = read_json3(path)
-    if st == MISSING:
+    st, ctl = fact(path)
+    if st == N:
         return None
-    if st == IO:
-        return {"slot": slot, "op": None, "ok": False, "err": "ctl.json 讀不到：%s（請求留著，下一次再看）" % ctl}
+    if st == U:
+        return {"slot": slot, "op": None, "ok": False, "err": "%s（請求留著，下一次再看）" % ctl}
     bad = None
-    if st == BAD or not isinstance(ctl, dict):
-        bad = "unreadable JSON" if st == BAD else "not a JSON object"
-        ctl = {"raw": "unreadable" if st == BAD else ctl}
+    if st != OK or not isinstance(ctl, dict):   # B：別人寫給核心的請求格式不對＝拒收這一件、回條說明
+        bad = "unreadable JSON" if st != OK else "not a JSON object"
+        ctl = {"raw": "unreadable" if st != OK else ctl}
     op = ctl.get("op")
     diff = None
     target = ctl.get("run")
@@ -530,8 +526,8 @@ def run_ctl(ctx, slot):
             # spec §6、P2-07：先加 once 再 kill，崩潰後仍有重起意圖；實際起動留給 tick（S-10）。
             try:
                 edit_json(os.path.join(ctx.fnode, ".aos", "tasks.json"), add, default=None, timeout=1.0)
-            except LockTimeout:
-                ok, msg = False, "tasks.json.lock 一秒內拿不到，沒執行（沒 kill）"
+            except Unknown as e:
+                ok, msg = False, "%s，沒執行（沒 kill）" % ("tasks.json.lock 一秒內拿不到" if e.kind == "lock" else e)
             else:
                 test_point("restart-after-append")
                 acted = True
@@ -587,12 +583,12 @@ def _seen_again(fslot, path, slot, ctl, cid, prev):
 def _append_items(t, items):
     """tasks.json 內容加幾項（結構不合拋例外，不覆寫原表）。
 
-    t 是原任務表（None 視為空表），items 是新增項目；回新的表，結構不合拋 ValueError，
+    t 是原任務表（None 視為空表），items 是新增項目；回新的表，結構不合丟 Unknown（kind "bad"），
     由 edit_json 在拿鎖期間呼叫，不在這裡寫檔（spec §4.1、§6）。"""
     if t is None:
         t = {"tasks": []}
     if not isinstance(t, dict) or not isinstance(t.get("tasks", []), list):
-        raise ValueError("tasks.json 不是 {\"tasks\": [...]}，沒加")
+        raise Unknown("tasks.json 不是 {\"tasks\": [...]}，沒加", kind="bad")
     t = dict(t)
     t["tasks"] = list(t.get("tasks", [])) + list(items)
     return t

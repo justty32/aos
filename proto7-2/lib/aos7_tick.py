@@ -21,9 +21,9 @@ import sys
 
 import aos7_mount
 import aos7_task
-from aos7_fs import (BAD, FD_PREFIX, IO, MISSING, OK, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, LockTimeout, Unknown,
-                     action_lock, edit_json, inject, is_gone, is_int, locked, node_path, now,
-                     read_json, read_json3, read_round, sweep_tmp, test_point, write_json)
+from aos7_fs import (BAD, FD_PREFIX, N, OK, U, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, LockTimeout, Unknown, action_lock,
+                     edit_json, errname, fact, inject, is_gone, is_int, locked, node_path, now, read_json, read_round,
+                     sweep_tmp, test_point, write_json)
 from aos7_task import EMPTY, ENDED, LIVE, UNKNOWN, NAME_RE, SLOT_RE
 
 MODES = ("keep", "each", "once")
@@ -34,10 +34,10 @@ LOCK_WAIT = 1.0   # 4.2 第 4 步：tasks.json.lock 最多等 1 秒
 
 def load_items(fnode):
     """從 fnode（持有的 node fd 路徑）讀任務表，回 (物件項目清單, 錯誤清單, tasks_rev)。
-    不存在回空表、不記錯；I/O、格式壞掉回空表並記錯，讀不出原文時 rev 可為 None。
-    只決定本回合能否起任務，不據此刪槽（spec §4.1～4.3、P2-09）。"""
+    不存在＝空表、不記錯；讀不到或不是一般檔（U）＝這回合不起、記錯；不是 JSON 或不是 {"tasks": [...]}（B，別人寫的輸入不合）
+    ＝當空表、記錯。只決定本回合能否起任務，不據此刪槽（spec §4.1～4.3）。"""
     path = os.path.join(fnode, ".aos", "tasks.json")
-    st, t = read_json3(path)
+    st, t = fact(path)
     rev = None
     try:
         if st in (OK, BAD):
@@ -45,10 +45,10 @@ def load_items(fnode):
                 rev = hashlib.sha1(f.read()).hexdigest()[:12]
     except OSError:
         pass
-    if st == MISSING:
+    if st == N:
         return [], [], rev
-    if st == IO:
-        return [], ["tasks.json 讀不到：%s，這回合不起" % t], rev
+    if st == U:
+        return [], ["%s，這回合不起" % t], rev
     if st == BAD:
         return [], ["tasks.json 讀不懂（不是 JSON），當空表"], rev
     items = t.get("tasks") if isinstance(t, dict) else None
@@ -249,8 +249,10 @@ def serve_mounts(ctx, views):
     """替 views 中已知 run 的活槽處理加掛請求，ctx 提供空間及 node 路徑。
     回附 run id 的回條清單；單槽例外變失敗回條，UNKNOWN 槽不處理。
     mount_allow 讀不到時目前沿用未設定值 None（spec §4.5 的根內預設許可）。"""
-    t = read_json(os.path.join(ctx.fnode, ".aos", "tasks.json"), {})
-    allow = t.get("mount_allow") if isinstance(t, dict) else None
+    st, t = fact(os.path.join(ctx.fnode, ".aos", "tasks.json"))
+    if st == U:   # 不知道 mount_allow 是什麼：這回合不審，請求留著
+        return [{"run": None, "name": None, "path": None, "ok": False, "msg": "%s，這回合不審加掛（請求留著）" % t}]
+    allow = t.get("mount_allow") if st == OK and isinstance(t, dict) else None
     out = []
     for slot, v in sorted(views.items()):
         if v.state != LIVE or v.run is None:
@@ -286,7 +288,7 @@ def held_node(fn, root, node_id, gone):
     except OSError as e:
         if is_gone(e) or e.errno == errno.ELOOP:
             return dict(gone)
-        raise Unknown("看不到 node %s：%r" % (node_id, e)) from None
+        raise Unknown("看不到 node %s：%r" % (node_id, e), kind=errname(e)) from None
     fnode = FD_PREFIX + str(nfd)
     try:
         try:
@@ -301,10 +303,6 @@ def held_node(fn, root, node_id, gone):
         os.close(nfd)
 
 
-class _Skip(Exception):
-    """這回合不從 tasks.json 起任何東西（錯誤已記）。"""
-
-
 def next_round(fnode):
     """讀 fnode 下的回合檔，回 (新回合數, 錯誤清單)（spec §2.2、§3、P2-06；A2-02）。判定只用 read_round：
 
@@ -317,16 +315,16 @@ def next_round(fnode):
     if st == ROUND_CLOSED:
         return r["round"] + 1, []
     if st == ROUND_OPEN:
-        raise Unknown("第 %d 回合還開著（round.json open: true），先 tock 收掉才開下一回合" % r["round"])
+        raise Unknown("第 %d 回合還開著（round.json open: true），先 tock 收掉才開下一回合" % r["round"], kind="round-open")
     if st != ROUND_NONE:
-        raise Unknown(why)
-    lst, lr = read_json3(os.path.join(fnode, ".aos", "last-round.json"), strict=True)   # A3-03：不是一般檔＝不知道
-    if lst == MISSING:
+        raise Unknown(why, kind="round-unknown")
+    lst, lr = fact(os.path.join(fnode, ".aos", "last-round.json"))
+    if lst == N:
         return 1, []
     if lst == OK and isinstance(lr, dict) and is_int(lr.get("round")):
         return lr["round"] + 1, ["round.json 不見了，從 last-round.json 的 %d 接著數" % lr["round"]]
-    raise Unknown("round.json 不見了，last-round.json 也%s；請人寫回 round.json（例如 {\"round\": N, \"open\": false}）"
-                  % ("讀不到：%s" % lr if lst == IO else "不能用"))
+    raise Unknown("round.json 不見了，last-round.json 也不能用（%s）；請人寫回 round.json（例如 {\"round\": N, \"open\": false}）"
+                  % (lr if lst != OK else "內容不完整"), kind="round-unknown")
 
 
 def tick(root, node_id):
@@ -359,7 +357,7 @@ def _tick(root, node_id, node, fnode):
         errs.append("第 %d 回合欠的 tock.json 還補不上：%s" % (rnd - 1, json.dumps(owed, ensure_ascii=False)[:300]))
     _slots, lerr = aos7_task.list_slots(fnode)
     if lerr:
-        raise Unknown("列不出 .aos/tasks/：%s" % lerr)
+        raise Unknown("列不出 .aos/tasks/：%s" % lerr, kind="listdir")
     # spec §0、§4.2、P2-09：開回合前先確認能列槽，不把 I/O 失敗當成沒有任務。
     state = {"round": rnd, "open": True, "tick_at": now(), "tock_at": None, "started": [], "ctl": [], "mounts": []}
     write_json(rpath, state)
@@ -385,11 +383,9 @@ def _tick(root, node_id, node, fnode):
     tpath = os.path.join(fnode, ".aos", "tasks.json")
     rev = None
     try:
-        if slots is None:
-            raise _Skip()
         # spec §4.2～4.3：先鎖表完成准入與 launch 落盤，放鎖才 spawn，避免整段起程序佔住共用表。
         with locked(tpath, LOCK_WAIT):
-            items, lerrs, rev = load_items(fnode)
+            items, lerrs, rev = load_items(fnode) if slots is not None else ([], [], None)
             p.errors += lerrs
             plan_round(ctx, items, views, rnd, p)
             if p.changed:
@@ -398,8 +394,9 @@ def _tick(root, node_id, node, fnode):
                 test_point("after-launch")
     except LockTimeout:
         p.errors.append("tasks.json.lock 一秒內拿不到，這回合不從 tasks.json 起任何東西")
-    except _Skip:
-        pass
+    except Unknown as e:
+        p.starts = []   # launch 標記沒落地：這回合一個都不起（once 不能沒有標記就起）
+        p.errors.append("%s；這回合不起任何東西" % e)
 
     # 要重用的槽裡有「已結束、還沒報過」的 run：清掉之前先記進 round.json，tock 照樣報（problems.md P2-03）
     reaped = []
@@ -434,7 +431,7 @@ def _tick(root, node_id, node, fnode):
     if once_started:
         try:
             edit_json(tpath, lambda t: _drop_launched(t, once_started), timeout=LOCK_WAIT)
-        except (LockTimeout, ValueError) as e:
+        except Unknown as e:
             # 刪不掉沒關係：下一個 tick 照 launch 標記比對 birth.json，知道已經起了就刪（4.4）
             state.setdefault("tasks_error", []).append("起完的 once 項這回合沒刪成：%s" % e)
         test_point("after-once-delete")
@@ -452,10 +449,12 @@ def _raw_items(t):
 def _rewrite(tpath, items, p):
     """在表鎖內重組 tpath 任務表並回新物件，實際寫入由呼叫者做（spec §4.3）。
     items 是已加 launch 的物件清單，p.drop 是要移除的原物件；其餘欄位與非物件項位置保留。
-    重讀值不是物件時以空表為基底；本函式不重新驗證起動計畫。"""
-    t = read_json(tpath)
-    t = dict(t) if isinstance(t, dict) else {}
-    raw = _raw_items(t) or []
+    鎖內重讀照三態：讀不到、壞掉或不是 {"tasks": [...]}＝不知道原本有什麼 → 丟 Unknown、不寫回（G1）。"""
+    st, t = fact(tpath)
+    raw = _raw_items(t) if st == OK else None
+    if raw is None:
+        raise Unknown("tasks.json 重讀時%s，launch 標記沒寫" % (t if st != OK else "不是 {\"tasks\": [...]}"))
+    t = dict(t)
     it = iter(items)
     out = []
     for x in raw:

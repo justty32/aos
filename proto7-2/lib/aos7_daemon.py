@@ -12,7 +12,6 @@ pause owner、node 消失的 inode 比對。
 持有 daemon.lock，按需處理 stopped.json 與 log.on/log.jsonl，讀 node 的回合／任務狀態供監督（spec §2.8、§9）。
 """
 import datetime
-import errno
 import fcntl
 import os
 import shutil
@@ -25,8 +24,8 @@ import time
 import aos7_proc
 import aos7_task
 from aos7_daemon_timeline import POLL, Timeline
-from aos7_fs import (FD_PREFIX, GONE_ERRNO, append_jsonl, canonical_node, inject, is_int, is_regular, locked, node_path,
-                     now, read_json, sweep_tmp, write_json)
+from aos7_fs import (BAD, FD_PREFIX, GONE_ERRNO, N, OK, U, Unknown, append_jsonl, canonical_node, errname, fact, hold, inject,
+                     is_int, locked, node_path, now, read_json, sweep_tmp, write_json)
 
 CTL_BATCH = 200      # 一圈最多處理幾個控制檔（2.3）
 CTL_BUDGET_S = 0.05  # 一圈處理控制檔最多花幾秒（跟 CTL_BATCH 取先到的）
@@ -119,20 +118,28 @@ class Daemon:
             write_json(path, {"paused": {k: v for k, v in sorted(self.paused.items()) if v}})
 
     def load_state(self):
-        """啟動時讀 nodes.json、paused.json 恢復登記與 pause owner（spec §1、§2.4）。
-        無額外參數，回 None；非 None 的 JSON 若 nodes 結構不合就記錯；非法 id 略過，讀取失敗當空值，相容舊 pause 清單。"""
-        nj = read_json(os.path.join(self.aosd, "nodes.json"))
-        nodes = nj.get("nodes") if isinstance(nj, dict) else None
-        if isinstance(nodes, dict):
-            self.registry = {k: (v if isinstance(v, dict) else {}) for k, v in nodes.items() if norm_id(k) == k}
-        elif nj is not None:
-            self.node_errors["."] = {"prog": "nodes.json", "at": now(), "err": "nodes.json 讀不懂，當空的（沒改它）"}
-        pj = read_json(os.path.join(self.aosd, "paused.json"), {})
-        pl = pj.get("paused") if isinstance(pj, dict) else None
+        """啟動時讀 nodes.json、paused.json、gen.json 恢復登記、pause owner 與世代（spec §1、§2.4、§2.5）。
+        三份都只有 daemon 寫：不存在＝新空間；讀不到或壞掉＝不知道 → 丟 Unknown，daemon 不起來（不能當空的照跑，
+        也不能蓋掉它們）。"""
+        def load(name, ok):
+            st, v = fact(os.path.join(self.aosd, name))
+            if st == N:
+                return None
+            if st == OK and ok(v):
+                return v
+            raise Unknown("%s %s，不知道原本的內容，daemon 不起來；修好或確認後刪掉再起" % (
+                name, v if st != OK else "內容不合"), kind="state-unknown")
+        nj = load("nodes.json", lambda v: isinstance(v, dict) and isinstance(v.get("nodes"), dict))
+        pj = load("paused.json", lambda v: isinstance(v, dict) and isinstance(v.get("paused"), (dict, list)))
+        gj = load("gen.json", lambda v: isinstance(v, dict) and is_int(v.get("gen")))
+        if nj:
+            self.registry = {k: (v if isinstance(v, dict) else {}) for k, v in nj["nodes"].items() if norm_id(k) == k}
+        pl = pj["paused"] if pj else {}
         if isinstance(pl, dict):
             self.paused = {k: [o for o in v if isinstance(o, str)] for k, v in pl.items() if isinstance(v, list)}
-        elif isinstance(pl, list):   # proto7-1 的格式：一個 node 一個開關 → 不帶 owner 的那一格
+        else:   # proto7-1 的格式：一個 node 一個開關 → 不帶 owner 的那一格
             self.paused = {k: [""] for k in pl if isinstance(k, str)}
+        return gj["gen"] if gj else 0
 
     def is_paused(self, nid):
         """查 nid 的記憶體 owner 清單是否非空（spec §2.4），回 bool。
@@ -399,11 +406,23 @@ class Daemon:
         回 None；格式錯誤回 ok:false，執行或寫回條失敗向上拋，避免把接受誤當已完成收尾。"""
         path = os.path.join(cdir, n)
         done = os.path.join(self.aosd, "ctl-done")
-        bad = None
+        bad, ctl = None, None
         if not n.endswith(".json"):
             bad = "檔名要以 .json 結尾"
-        elif not is_regular(path):
-            bad = "不是一般檔（FIFO、資料夾…）"
+        else:
+            st, ctl = fact(path)
+            if st == N:
+                return                     # 剛被拿走：沒有請求
+            if st == U:
+                try:
+                    regular = stat.S_ISREG(os.stat(path).st_mode)
+                except OSError:
+                    regular = True
+                if regular:
+                    return                 # 讀不到（U）：請求留著，下一圈再看
+                bad = "不是一般檔（FIFO、資料夾…）"   # B：請求本身不合，回條拒收
+            elif st == BAD:
+                ctl = None
         if bad:
             # P2-11：壞檔保留原物為 .bad，另寫可讀 JSON 回條，FIFO 不能為了回條而阻塞讀取。
             os.makedirs(done, exist_ok=True)
@@ -416,7 +435,6 @@ class Daemon:
                                                                               "queued_at": None}})
             self.log(ev="ctl", file=n, op=None, ok=False, msg=bad)
             return
-        ctl = read_json(path)
         if isinstance(ctl, dict):
             ok, msg = self.apply(ctl)
         else:
@@ -493,8 +511,7 @@ class Daemon:
             except OSError as e:
                 if e.errno not in GONE_ERRNO:
                     # spec §0、§2.6 三態：看不到不是消失；不能因此殺任務或丟掉原時間線。錯誤類型分欄記（A2-08）。
-                    err = {"prog": "daemon", "rc": None, "at": now(), "kind": errno.errorcode.get(e.errno, str(e.errno)),
-                           "err": "%s：看不到 node（%r），保留現狀" % (errno.errorcode.get(e.errno, e.errno), e)}
+                    err = hold("daemon", errname(e), "%s：看不到 node（%r），保留現狀" % (errname(e), e))
                     if tl:
                         tl.last_error = err
                     else:
@@ -657,8 +674,7 @@ class Daemon:
         except OSError as e:
             if e.errno not in GONE_ERRNO:
                 # 看不到 root 不是消失：保留現狀，但記下來（註解疑點 daemon:595），status 頂層 last_error 看得到。
-                self.root_error = {"prog": "daemon", "at": now(), "kind": errno.errorcode.get(e.errno, str(e.errno)),
-                                   "err": "看不到 root（%r），保留現狀" % e}
+                self.root_error = hold("daemon", errname(e), "看不到 root（%r），保留現狀" % e)
                 return
             same = False
         self.root_error = None
@@ -682,14 +698,17 @@ class Daemon:
             return 1
         for s in (signal.SIGTERM, signal.SIGINT):
             signal.signal(s, lambda *_: self.stop(True))
+        try:
+            old_gen = self.load_state()
+        except Unknown as e:
+            print("aos7-daemon: %s" % e, file=sys.stderr)
+            return 3
         self.claim_owner()
-        self.load_state()
         self.save_paused()   # 一起來就寫一份（空的也寫）
         if not os.path.lexists(os.path.join(self.aosd, "nodes.json")):
             self.save_nodes()
-        old = read_json(os.path.join(self.aosd, "gen.json"), {}) or {}
         # spec §2.5：先獨占 daemon.lock 才遞增 gen；舊動作晚拿到 action.lock 時可辨識自己已過期。
-        self.gen = (old.get("gen", 0) if isinstance(old, dict) and is_int(old.get("gen")) else 0) + 1
+        self.gen = old_gen + 1
         write_json(os.path.join(self.aosd, "gen.json"), {"gen": self.gen, "pid": os.getpid(), "at": now()})
         self.log(ev="start", pid=os.getpid(), gen=self.gen)
         sp = os.path.join(self.aosd, "stopped.json")

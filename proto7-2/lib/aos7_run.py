@@ -21,7 +21,7 @@ import stat
 import subprocess
 import sys
 
-from aos7_fs import BIN, now, proc_starttime, test_point
+from aos7_fs import BIN, OK, fact, now, proc_starttime, test_point
 
 
 RUN = [None]   # 這次的 run（讀到 birth.json 後填上；寫 pid.json／exit.json 用）
@@ -42,20 +42,9 @@ def expand(arg):
 
 
 def read_birth(dfd):
-    """從任務目錄 fd（dfd）讀 birth.json，回 JSON 值；讀不到、非一般檔或 JSON 壞掉回 None。
-    非阻塞開再檢查型別，避免 FIFO 卡住交接；只依 fd，搬移時不追舊路徑（spec §0、§5.3）。"""
-    try:
-        fd = os.open("birth.json", os.O_RDONLY | os.O_NONBLOCK, dir_fd=dfd)
-    except OSError:
-        return None
-    try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
-            os.close(fd)
-            return None
-        with os.fdopen(fd, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return None
+    """從任務目錄 fd（dfd）讀 birth.json（經 fact：非阻塞、只讀一般檔），回 JSON 值；讀不到或壞掉回 None。"""
+    st, b = fact("birth.json", dir_fd=dfd)
+    return b if st == OK else None
 
 
 def fail(dfd, msg):
@@ -139,19 +128,9 @@ def main(argv=None):
 
 
 def round_at(dfd):
-    """由任務目錄 fd（dfd）讀 ../../round.json，回其中 round 值（spec §5.1 的 exit 欄位）。
-    node 搬走仍定位同一目錄；I/O、JSON 壞掉、非物件或沒有 round 時回 None，不猜回合。
-    非阻塞開、只讀一般檔：round.json 被換成 FIFO 也不會卡住 runner、寫不出 exit.json（spec §0；註解疑點 aos7_run.py:165）。"""
-    try:
-        fd = os.open("../../round.json", os.O_RDONLY | os.O_NONBLOCK, dir_fd=dfd)
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
-            os.close(fd)
-            return None
-        with os.fdopen(fd, encoding="utf-8") as f:
-            r = json.load(f)
-        return r.get("round") if isinstance(r, dict) else None
-    except (OSError, ValueError):
-        return None
+    """由任務目錄 fd（dfd）讀 ../../round.json 的 round（exit.json 的欄位）；讀不到、壞掉或沒有 round 回 None，不猜回合。"""
+    st, r = fact("../../round.json", dir_fd=dfd)
+    return r.get("round") if st == OK and isinstance(r, dict) else None
 
 
 def write_at(dfd, name, obj):

@@ -91,8 +91,8 @@ class TestDiagnostics(MatrixCase):
         tl = aos7_daemon_timeline.Timeline(_FakeDaemon(self.root), "a", None)
         tl.err("action-lock", None, "stale-holder-unverified：" + "x" * 2000, kind="stale-holder-unverified")
         e = tl.last_error
-        self.assertTrue(e["err"].startswith("stale-holder-unverified"), e["err"][:80])
-        self.assertLessEqual(len(e["err"]), 320)
+        self.assertTrue(e["why"].startswith("stale-holder-unverified"), e["why"][:80])
+        self.assertLessEqual(len(e["why"]), 320)
         self.assertEqual(e.get("kind"), "stale-holder-unverified")
 
     def test_unsure_in_tock_errors(self):
@@ -105,7 +105,7 @@ class TestDiagnostics(MatrixCase):
                 mock.patch.object(aos7_fs, "proc_starttime", lambda pid: None):
             lr = self.itock()
         self.assertIn("k#1", lr["alive"])
-        self.assertTrue([x for x in self.errors_for(lr, "k") if x.get("phase") == "unsure" and x.get("err")],
+        self.assertTrue([x for x in self.errors_for(lr, "k") if x.get("kind") == "unsure" and x.get("why")],
                         "starttime 讀不到的任務沒在 errors 留 unsure：%r" % lr.get("errors"))
 
 
