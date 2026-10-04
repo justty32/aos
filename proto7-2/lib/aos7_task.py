@@ -494,6 +494,7 @@ def run_ctl(ctx, slot):
     diff = None
     target = ctl.get("run")
     cid = None
+    acted = False   # 這件有沒有真的動手（送了 kill／加了 once 項）；只有動手過的才記進 ctl-seen
     long_id = not bad and isinstance(ctl.get("id"), str) and len(ctl["id"]) > ID_MAX
     if not bad and not long_id and op in ("kill", "restart") and (target is None or is_int(target)):
         try:
@@ -532,6 +533,7 @@ def run_ctl(ctx, slot):
     elif target is not None and target != v.run:
         ok, msg = False, "指定的 run %d 已經不是現在的（現在是 %s），沒執行" % (target, rid)
     elif op == "kill":
+        acted = True
         ok, msg = kill_run(fslot, ctx.node, slot, v)
     else:
         reload = ctl.get("reload", False)
@@ -568,6 +570,7 @@ def run_ctl(ctx, slot):
                 ok, msg = False, "tasks.json.lock 一秒內拿不到，沒執行（沒 kill）"
             else:
                 test_point("restart-after-append")
+                acted = True
                 ok, msg = kill_run(fslot, ctx.node, slot, v)
                 test_point("restart-after-kill")
                 msg += "; once 項%s（slot %s）" % ("上次已加過、沒再加" if dup else "已加進 tasks.json", slot)
@@ -578,6 +581,9 @@ def run_ctl(ctx, slot):
     ctl["result"] = {"ok": ok, "msg": msg, "at": now(), "run": rid}
     if cid:
         ctl["result"]["ctl_id"] = cid
+    if cid and (ok or acted):
+        # 只記「真的動手了」的（kill／restart 執行過）：沒動手的 ok:false（表鎖拿不到、run 不符、槽空…）不記，
+        # 同一個 id 重送還能再試
         # A3-01：先記完成證據（node 層、不隨換 run 消失）再寫回條、刪請求；之後任何一步失敗，這件都不會再執行
         write_seen(ctx.fnode, slot, {"ctl_id": cid, "op": op, "ok": ok, "msg": msg, "run": rid, "at": ctl["result"]["at"]})
         test_point("ctl-after-seen")
