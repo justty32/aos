@@ -207,6 +207,37 @@ class TestCheck(unittest.TestCase):
             self.assertIn(("struct", s), got)
         self.assertEqual(self.rules({"steps": {}}), [("struct", None)])
 
+    def test_bad_types_json_diagnostics(self):
+        """start=[]、ok=[]、result.ok=[]：CLI 回 JSON 診斷陣列（error）、rc 1、stderr 沒有 traceback（A4-04）。"""
+        t1 = probe_table("j")
+        t1["start"] = []
+        t2 = probe_table("j", a={"ok": []})
+        t3 = probe_table("j")
+        t3["steps"]["w"] = {"wait": {"result.ok": []}, "then": "done"}
+        for case, t in (("start", t1), ("ok", t2), ("result.ok", t3)):
+            with self.subTest(case=case):
+                r = subprocess.run([PY, STEP, "check", "/dev/stdin"], input=json.dumps(t), capture_output=True,
+                                   text=True)
+                self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+                self.assertNotIn("Traceback", r.stderr)
+                got = json.loads(r.stdout)
+                self.assertTrue(any(i["level"] == "error" for i in got), got)
+
+    def test_global_kill_on_wait(self):
+        """全域 on_timeout: kill＋wait 步 → error（查套預設後的有效值）；步內改回 unknown 就過（A4-04）。"""
+        t = probe_table("j", b={"ok": "w"})
+        t["options"] = {"on_timeout": "kill"}
+        t["steps"]["w"] = {"wait": {"exists": "x"}, "patience": 2, "then": "done"}
+        self.assertEqual(self.rules(t), [("struct", "w")])
+        t["steps"]["w"]["on_timeout"] = "unknown"
+        self.assertEqual(self.rules(t), [])
+
+    def test_run_step_wake(self):
+        """run 步可逐步覆蓋 wake（A4-07）；型別要是 true／false；restart_on_end 不能寫在步內。"""
+        self.assertEqual(self.rules(probe_table("j", a={"wake": True})), [])
+        self.assertEqual(self.rules(probe_table("j", a={"wake": "yes"})), [("struct", "a")])
+        self.assertEqual(self.rules(probe_table("j", a={"restart_on_end": True})), [("struct", "a")])
+
 
 # ---------------------------------------------------------------- daemon：正常走通、pause、檔案數、wake
 
@@ -523,6 +554,18 @@ class TestStepProbes(StepCase):
         self.assertEqual(self.step_cli(node, "close", "jobs/w").returncode, 0)
         self.assertFalse(os.path.exists(self.jd(node, "w", "results")))
         self.assertTrue(self.frame(node, "w")["closed"])
+
+    def test_start_wait_patience(self):
+        """start 就是 wait（耐性 2）：建框架那圈就有耐性起點，條件不成立照 patience 停在 timeout（A4-03）。"""
+        t = {"job": "sw", "start": "w", "steps": {
+            "w": {"wait": {"exists": "${job}/never"}, "patience": 2, "then": "done"},
+            "done": {"end": "ok"}}}
+        node = self.setup_job("sw", t)
+        self.run_until(node, "sw", lambda: self.frame(node, "sw").get("phase") == "halted", limit=8, msg="沒逾時")
+        fr = self.frame(node, "sw")
+        self.assertEqual((fr["halt"]["kind"], fr["pc"]), ("timeout", "w"), fr)
+        self.assertIsNotNone(fr["since"])
+        self.assertEqual(fr["halt"]["round"] - fr["since"], 3)
 
 
 if __name__ == "__main__":

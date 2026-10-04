@@ -8,18 +8,18 @@
 |---|---|
 | 分類 | 通用任務包（`layer: kernel`），單 node |
 | 接法 | A 普通 keep 任務：`{"name": "step-<job>", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/step/bin/aos7-step", "run", "jobs/<job>"]}` |
-| 預設 | 不裝就不存在；選項預設見 spec §5 |
+| 預設 | 不裝就不存在；選項預設與可逐步覆蓋的選項見 spec §2 |
 | 依賴 | 工具包（`aos7_taskside.wait_tock`、`aos7_ctl`）、核心 `aos7_fs`（`edit_json`、`fact`） |
 | 程式 | `aos7_step.py`（直譯器、檢查器、人手指令）、`aos7_step_result.py`（子工作包裝程式）、`bin/aos7-step`、`bin/aos7-step-result` |
 | 範例 | `examples/csv/`（CSV→JSON→統計報表，兩步都冪等）、`examples/backup/`（dump→verify→rotate→notify，rotate 不冪等） |
-| 測試 | `tests/`（`python3 proto7-2/tests/run_all.py packs/step/tests`；run_all 預設不收 `packs/`，要明確給路徑） |
+| 測試 | `tests/`（`python3 proto7-2/tests/run_all.py` 預設就收 `packs/*/tests`；只跑本包給 `packs/step/tests`） |
 
 ## 四個組件（契約卡，細節在 spec.md）
 
 **直譯器 `aos7-step run <工作資料夾>`**
 - 職責：每收到一次 tock 讀框架、查槽外結果、推進 `pc`；一次最多登記一個子工作的 `once`。框架 `frame.json` 只放接續狀態與把手。
 - 前置條件：自己是 `max_live: 1` 的 keep（同一工作同時只有一個直譯器，核心保證 keep 不雙開）；步驟表過了檢查器；`frame.json`、`results/` 只有本包寫；改 tasks.json 的人都拿表鎖。
-- 保證：同一嘗試不派第二次；同一結果只推進一次；證據不足停在 `unknown`，不自動重送（除非步宣告冪等且選了 `on_unknown: resend`）；壞表拒寫；框架壞了不前進、記錯、等人；耐性用本地回合（pause 時不走）；工作進行中步驟表被改＝停（版本固定）。
+- 保證：同一嘗試不派第二次；同一結果只推進一次；證據不足停在 `unknown`，不自動重送（除非步宣告冪等且選了 `on_unknown: resend`）；壞表拒寫；框架壞了不前進、記錯、等人；耐性用本地回合、自走進該步（含 `start` 步）的回合起算（pause 時不走）；工作進行中步驟表被改＝停（版本固定）。
 - 明確不管：子工作做的事對不對、外部效果（只看結果檔與它宣告的產物）；人手改 `frame.json`／`results/`；派工以外的資源、帳、鄰居。
 
 **子工作包裝程式 `aos7-step-result`**
@@ -30,7 +30,7 @@
 
 **結果檔 `results/<step>/<attempt>.json`**：工作交付的依據；`exit.json` 只是旁證。到工作結案（`aos7-step close`）才清。
 
-**檢查器 `aos7-step check <steps.json>`**：結構錯誤＋三條（等結束只等有限工作；重試要冪等或先查回條；時間值標線——v1 只有本地回合）。不執行、不改檔；有錯退出碼 1。
+**檢查器 `aos7-step check <steps.json>`**：先驗欄位型別（壞型別也回 JSON 診斷、不拋例外）、結構錯誤（選項限制查套預設後的有效值）＋三條（等結束只等有限工作；重試要冪等或先查回條；時間值標線——v1 只有本地回合）。不執行、不改檔；有錯退出碼 1。
 
 ## 人手指令
 
