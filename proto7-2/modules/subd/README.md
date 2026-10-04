@@ -45,7 +45,7 @@
   - `<subroot>/.aosd/stop-guard.json`＝`{"allow": 有沒有 --allow-stop, "note": "這個 daemon 屬於 node X（任務 Y）…"}`——核心照它擋控制檔 `stop`；
   - `<subroot>/.aosd/owner.json`＝`{"owner": {"node", "tid", "allow_stop"}, "daemon": {"pid", "since"}}`——給人看。
 - 設 `AOS7_SUBROOT`（子根絕對路徑）後把 argv 起成子程序（同一個程序群組），等它結束；退出碼照它（被訊號殺＝128＋訊號號）。
-- argv 結束後判定是不是**被允許的外部 stop**（`allowed_stop`，以核心停止事實判定）：子根 `status.json` 是 `stopped: true`，**且** `ctl-done/` 有 `op: stop`、`result.ok: true`、`result.at` 不早於本代 `running` 記錄的 `since` 的回條。控制檔 stop 一定留回條，SIGTERM（父 kill、或有人直接 TERM 子 daemon）不留（核心 2.3），這就是兩者的區別；舊於 `since` 的回條是上一代的 stop，不算。成立就提交：先寫 `stopped.json`＝`{"by", "why", "at"}`（那份回條），再寫生命週期 `stopped`。父 node 的 keep 項下一回合再起包裝程式時就被擋下（退出碼 1）。
+- argv 結束後判定是不是**被允許的外部 stop**（`allowed_stop`，以核心停止事實判定）：子根 `status.json` 是 `stopped: true`，**且** `ctl-done/` 有 `op: stop`、`result.ok: true`、`result.at` 不早於本代 `running` 記錄的 `since` 的回條。控制檔 stop 一定留回條，SIGTERM（父 kill、或有人直接 TERM 子 daemon）不留（核心 2.3），這就是兩者的區別；舊於 `since` 的回條是上一代的 stop，不算。成立就提交：先寫 `stopped.json`＝`{"by", "why", "at"}`（那份回條），再寫生命週期 `stopped`。父 node 的 keep 項下一回合再起包裝程式時就被擋下（退出碼 1）。（時間比較用牆鐘字串：**前置是主機牆鐘不倒退**；倒退超過一代時，本代成功 stop 的回條可能早於 `since` 而被當成沒停，重開會回收原任務——astra-6 實測，照原則 9 不另防。）
 - 父 kill 這個任務：SIGTERM 打到整個群組，子 daemon 照 SIGTERM＝stop＋kill 收自己的任務（核心 2.3），不看守門檔。父 kill 的 1 秒寬限（核心 §6）內收不完的，留給下一次起包時的回收。
 
 ## 重開前回收（A5-01）

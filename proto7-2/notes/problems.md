@@ -180,6 +180,7 @@
 | A6-01 合法 stop 記錄提交中斷後重開錯收 | subd 包／B | 「允許的 stop 已完成」改以核心停止事實判定：status `stopped` ＋ `ctl-done/` 成功 stop 回條且時間 ≥ 本代 since（父 kill 不留回條）；重開時成立就補完提交、不回收。95426b17；[驗收](play/2026-10-04-loop6-subd-evidence/summary.md) |
 | A6-02 budget 後端讀取故障回 1 | budget 包／B | 入口回非終局 unknown；call／cancel／settle 共同故障邊界 rc 3、一行 JSON。bd9dcc10；[驗收](play/2026-10-04-loop6-budget-evidence/summary.md) |
 | budget 五缺口 | budget 包／G | spec §9 已知界線五條、§10 保存與退役；`clock_hw` 每次推高；孤兒回條掃（3 回合寬限）；退役拒收新 K；step run 步 `max_resends`（預設 1）。bd9dcc10 |
+| A7-01 adapt scale 平手取偶數 | adapt 包／B（低） | `round_half_up`（Decimal ROUND_HALF_UP，平手遠離零）；spec §2 寫明；單元測試 0.5／1.5／2.5／4.5／-2.5。藍圖 §3.3 門檻例子勘誤（801 true、800 null、799 false）；subd README 補牆鐘不倒退前置（astra-6） |
 | adapt 第一版 | 新任務包 | 最新值轉接（d3738e04）；自報缺口：換鏈只能偵測不能切換、任務端無法注入測試故障、時鐘函式跟 budget 重複（待搬進工具包） |
 
 ## 核心精簡：刪掉的誤用保護（10-04）

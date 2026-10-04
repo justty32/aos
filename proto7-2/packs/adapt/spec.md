@@ -38,7 +38,7 @@
 **三種步**（不開運算式）：
 
 - `{"select": "a.b.c"}`：從來源物件取一個值（點分路徑，每段非空）。路徑走不到＝`select_missing`（unknown 分支）。誤差界 0。
-- `{"scale": {"mul": 數, "q": 數, "round": 整數?, "as": 名?}}`：`x ← x × mul`，有 `round` 就四捨五入到小數 `round` 位；誤差界 `err ← |mul| × err + q`。`q ≥ 0`；有 `round` 時 `q` 不得小於取整的半個單位（`0.5 × 10^-round`）。`x` 不是數字（含 bool）＝`not_number`（unknown 分支）。有 `as` 就把 `x` 放進產出。
+- `{"scale": {"mul": 數, "q": 數, "round": 整數?, "as": 名?}}`：`x ← x × mul`，有 `round` 就四捨五入到小數 `round` 位（平手遠離零：2.5→3、-2.5→-3；以十進位表示取整，不用 Python 內建 round 的取偶數）；誤差界 `err ← |mul| × err + q`。`q ≥ 0`；有 `round` 時 `q` 不得小於取整的半個單位（`0.5 × 10^-round`）。`x` 不是數字（含 bool）＝`not_number`（unknown 分支）。有 `as` 就把 `x` 放進產出。
 - `{"threshold": {"ge"|"gt"|"le"|"lt": 數, "as": 名}}`：恰一個比較鍵；`as` 必填。區間 `[x − err, x + err]` 整段成立＝`true`、整段不成立＝`false`、跨過門檻＝`null`（`within_error_band`）。`x` 不變。
 
 `as` 的名字英數與 `_`，同一條鏈不重複。檢查器（§6）只看宣告，不執行。

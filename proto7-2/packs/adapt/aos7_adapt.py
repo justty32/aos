@@ -8,6 +8,7 @@
 自己 node 的 round.json（框架起點）。核心不知道這個包。判定都走 aos7_fs.fact 的三態（N 不存在／OK／其餘不知道）。
 """
 import argparse
+import decimal
 import hashlib
 import json
 import math
@@ -30,6 +31,12 @@ META = ("v", "seq", "round", "at")          # 來源物件的信封欄，不算 
 FRAME_KEYS = ("sense", "chain", "since", "my_round", "last_ok_my_round", "last_clock", "last_seq", "stall_rounds",
               "skipped", "resetting", "void_sha", "prev_state", "cur", "last")
 
+
+
+def round_half_up(x, nd):
+    """四捨五入到小數 nd 位（平手遠離零；Python 內建 round 是平手取偶數，不合 spec §2）。"""
+    q = decimal.Decimal(1).scaleb(-nd)
+    return float(decimal.Decimal(repr(x)).quantize(q, rounding=decimal.ROUND_HALF_UP))
 
 def sha(obj):
     """正規 JSON（鍵排序）的 sha256：依據版本與鏈版本都用它。"""
@@ -203,7 +210,7 @@ def run_chain(steps, doc):
         if k == "scale":
             x = x * a["mul"]
             if "round" in a:
-                x = round(x, a["round"])
+                x = round_half_up(x, a["round"])
             e = abs(a["mul"]) * e + a["q"]
             trace.append({"step": "scale", "x": x, "err": e})
             if "as" in a:

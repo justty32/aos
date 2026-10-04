@@ -107,6 +107,13 @@ class TestChain(unittest.TestCase):
         self.assertEqual(ch["omitted"], ["value.other.a"])
         self.assertEqual([t["step"] for t in ch["trace"]], ["select", "scale", "scale", "threshold"])
 
+    def test_round_half_up(self):
+        """A7-01：scale 的 round 是四捨五入（平手遠離零），不是 Python round 的取偶數。"""
+        steps = [{"select": "value.x"}, {"scale": {"mul": 1, "q": 0.5, "round": 0, "as": "c"}}]
+        for x, want in ((0.5, 1.0), (1.5, 2.0), (2.5, 3.0), (4.5, 5.0), (-2.5, -3.0), (2.4, 2.0)):
+            with self.subTest(x=x):
+                self.assertEqual(self.run_(None, steps, value={"x": x})["out"]["c"], want)
+
     def test_fail_reasons(self):
         self.assertEqual(self.run_(None, value={"nope": 1})["fail"], "select_missing")
         self.assertEqual(self.run_(None, value={"t_dc": "hot"})["fail"], "not_number")
