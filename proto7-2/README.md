@@ -11,6 +11,7 @@
 - [notes/changes-from-7-1.md](notes/changes-from-7-1.md)：跟 proto7-1 的對照表，最後是 W1～W12（程式照推薦做）。
 - [notes/play/](notes/play/README.md)：astra 回歸與試玩紀錄（一輪一列）。
 - **[notes/core-slimming.md](notes/core-slimming.md)**：核心精簡方案（只出方案）——盤點、核心最小集、錯誤四分支、擴充點與模組包、kernel 任務包，**3 點要你決定**。
+- [notes/component-contracts.md](notes/component-contracts.md)：組件契約藍圖（Fable；各組件的職責／前置條件／保證／明確不管，錯誤四類 M 誤用／X 外部故障／B 組件 bug／G 契約缺口，A2/A3 試分類）。
 - [notes/layer-interfaces.md](notes/layer-interfaces.md)：四層（daemon、tick-tock、kernel、agent）之間的交接點調查——誰寫誰讀、延遲、通用 vs 只為 agent／LLM、proto7-1 的 kernel／agent 接上來會怎樣、缺口清單。
 
 ## 一句話看改了什麼
