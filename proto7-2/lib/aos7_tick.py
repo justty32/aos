@@ -81,6 +81,9 @@ def check_item(item):
     fr = item.get("from_round", 1)
     if not is_int(fr):
         raise ValueError("from_round 要是整數，拿到 %r" % (fr,))
+    ur = item.get("until_round")
+    if ur is not None and not (is_int(ur) and ur >= 0):
+        raise ValueError("until_round 要是非負整數，拿到 %r" % (ur,))
     if not isinstance(item.get("enabled", True), bool):
         raise ValueError("enabled 要是 true 或 false，拿到 %r" % (item.get("enabled"),))
     if item.get("mounts") is not None and not isinstance(item["mounts"], dict):
@@ -101,6 +104,14 @@ def check_item(item):
         raise ValueError("mounts_dyn 要是字串陣列")
     if "ctl_id" in item and not isinstance(item["ctl_id"], str):
         raise ValueError("ctl_id 要是字串（restart 寫的，A2-05）")
+    if "retry_lost" in item:
+        # P2-02 選項：預設 false＝最多一次；true＝判 lost 時若看起來從沒起來過，加回重起（可能跑兩次）
+        if not isinstance(item["retry_lost"], bool):
+            raise ValueError("retry_lost 要是 true 或 false，拿到 %r" % (item["retry_lost"],))
+        if mode != "once":
+            raise ValueError("retry_lost 只給 once 項")
+    if "retry_of" in item and not isinstance(item["retry_of"], str):
+        raise ValueError("retry_of 要是字串（retry_lost 加回時寫的）")
 
 
 def launch_of(item):
@@ -181,6 +192,10 @@ def plan_round(ctx, items, views, rnd, p):
     for item in order:
         name, mode = item["name"], item.get("mode", "each")
         if item.get("enabled", True) is False or rnd < item.get("from_round", 1):
+            continue
+        # until_round（使用者 10-04）：回合數超過它就不再起新 run（跟 from_round 對稱；已在跑的不殺，要收由 kernel 自己 kill）。
+        # 用途：分配者掛了，使用權照樣到期。項目與槽留著，跟 enabled:false 一樣。
+        if item.get("until_round") is not None and rnd > item["until_round"]:
             continue
         slots = aos7_task.slot_names(name, item.get("max_live", 1))
         if mode == "once":
@@ -310,7 +325,7 @@ def next_round(fnode):
         raise Unknown("第 %d 回合還開著（round.json open: true），先 tock 收掉才開下一回合" % r["round"])
     if st != ROUND_NONE:
         raise Unknown(why)
-    lst, lr = read_json3(os.path.join(fnode, ".aos", "last-round.json"))
+    lst, lr = read_json3(os.path.join(fnode, ".aos", "last-round.json"), strict=True)   # A3-03：不是一般檔＝不知道
     if lst == MISSING:
         return 1, []
     if lst == OK and isinstance(lr, dict) and is_int(lr.get("round")):
@@ -342,6 +357,11 @@ def _tick(root, node_id, node, fnode):
     rpath = os.path.join(fnode, ".aos", "round.json")
     rnd, errs = next_round(fnode)
     sweep_tmp(os.path.join(fnode, ".aos"))   # A2-07：拿著 action.lock 時清掉寫者已死的原子寫暫存檔
+    # A3-08：上一回合關上時有沒寫進去的 tock.json（round.json 的 notify_errors），開下一回合前補一次；還補不上的記進 tasks_error
+    import aos7_tock
+    owed = aos7_tock.retry_notify(fnode, node, read_json(rpath))
+    if owed:
+        errs.append("第 %d 回合欠的 tock.json 還補不上：%s" % (rnd - 1, json.dumps(owed, ensure_ascii=False)[:300]))
     _slots, lerr = aos7_task.list_slots(fnode)
     if lerr:
         raise Unknown("列不出 .aos/tasks/：%s" % lerr)
