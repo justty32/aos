@@ -1,4 +1,4 @@
-"""〔modules〕可選模組（不在核心）：counter 示範任務、歷史 module（spec 第 9 節）。
+"""〔modules〕可選模組（不在核心）：counter 示範任務、歷史 module（modules/README.md）。
 
 從 tests/test_subdaemon_modules.py 的 TestModules 與 tests/test_matrix_misc.py 的 TestHistoryMaxLines（A2-10）搬來，內容未改。
 """

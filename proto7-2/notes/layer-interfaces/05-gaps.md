@@ -6,10 +6,10 @@
 
 ## 一、接上 kernel／agent 前該處理
 
-**G1 tasks.json 壞掉時，寫入工具會把整份表換成只剩新項（實驗）**
+**G1 tasks.json 壞掉時，寫入工具會把整份表換成只剩新項（實驗）** 已修（commit eab869c9）
 `aos7_fs.edit_json`（`lib/aos7_fs.py:193-203`）用寬鬆的 `read_json`（`:82-100`）讀舊內容：檔案半寫、不是 JSON、讀不到（EIO）、被換成 FIFO，一律回 `default`（`None`）。`aos7-ctl add`（`lib/aos7_ctl.py:115-131`）、restart 加 once 項（`lib/aos7_task.py:568`）、`retry_lost` 加回（`lib/aos7_task.py:278`）都把 `None` 當空表，於是寫回只剩新加的那項。實驗：寫一份壞掉的 tasks.json（兩項、少了結尾），跑 `aos7-ctl add` 加一項，結果檔裡只剩新的那一項。tick 讀表時是三態（壞掉＝當空表、不起），但**寫表的路徑沒有照三態**，spec 第 4.1 節也只規定了讀。kernel 接上後是最常寫 tasks.json 的角色，這會直接丟掉人寫的項目。
 
-**G2 tick 的非 3 失敗被當成一回合，吃掉 `resume --rounds` 的倒數（實驗）**
+**G2 tick 的非 3 失敗被當成一回合，吃掉 `resume --rounds` 的倒數（實驗）** 已修（commit eab869c9）
 `lib/aos7_daemon_timeline.py:280-286` 只特別處理退出碼 3 和逾時；其他失敗（Python 例外、退出碼 1）往下走成正常回合，tock 看到回合已關印 `skipped`，`:316-322` 判定「關上了」就呼叫 `round_done` 扣倒數。spec 第 2.1 節第 3 步沒定義 3 以外的失敗。實驗：`.aos/` 設唯讀，`resume --rounds 3` 只真跑 1 回合，node 又被同 owner pause 回去，status 只在 `last_error` 看得到 traceback。kernel 用 `rounds` 做「只跑 N 回合」、預算放行時會被騙。
 
 **G3 父 kill 子 daemon 時，子 daemon 的任務可能變孤兒（實驗）**
@@ -58,7 +58,7 @@ spec 第 236 行：重建 `mnt/` 只照宣告加上 restart 帶的 `mounts_dyn`�
 **G16 用量（usage.json）有三種說法**
 proto7-1 程式：`{tokens, calls}` 一直累加（`proto7-1/lib/aos7_agent.py:67-70`），kernel 把所有任務的 `tokens` 加總（`aos7_kernel_rules.py:44-47`）。proto7-2 spec 第 354-357 行（A2-09 後）：usage.json 只記這一次 run，`{run, usage}`，kernel 對每個 run id 取最大值再相加。`notes/changes-from-7-1.md:29` 還是舊說法：「usage.json 在槽裡跨 run 只增不減；kernel-state 記每槽已見最大值＋`retired`」。槽重用後，照 proto7-1 寫法的 agent 會把前幾個 run 的累計帶下去，照 spec 的算法會重複算。
 
-**G17 README 過時**
+**G17 README 過時** 已修（核心精簡的文件 commit，接在 ab01c5d5 之後）
 `proto7-2/README.md:10` 還寫「2 條要你決定：P2-01、P2-02」，`notes/problems.md` 已是 0 條；`:40` 寫「219 項」，最新 commit 訊息是 222 項，工作區另有兩個還沒 commit 的測試檔（`tests/test_matrix_a3.py`、`test_options_a3.py`，別的隊伍正在做）。
 
 **G18 第一輪綜合筆記過時**

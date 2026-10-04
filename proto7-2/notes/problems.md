@@ -139,7 +139,7 @@
 | A3-08 重播通知失敗被吞 | 已修 | 重播補 tock.json 失敗、alive 的槽判不出／判定例外都記進 round.json `notify_errors`（每筆帶 slot、run、round）與回傳；下一個 tick 開回合前補（同 run 還活著才補，補不上進 `tasks_error`），對已關回合再跑 tock 也補（`notify_retried`）。spec §7 |
 | A3-09 任務仍活、群組核對不了，kill 卻回成功 | 已修 | kill 最後確認 pid.json 記的任務程序（pid＋starttime）已不在，否則 `ok: false`（unknown）；群組有成員 environ 讀不到權限又沒成員核對得到＝不知道。spec §6 |
 | 讀碼：`kill_node` 掃描不完整時沒打記著的群組 | 已修 | 照 spec 2.6 照樣打記著的群組，事件 ok:false；environ 讀不到權限又在記著群組裡＝不完整 |
-| 矩陣盲點（healthy 12 案有 9 案注入命中 0 次） | 已修 | 測試鉤子加 `AOS7_TEST_FAULT_HITS` 命中紀錄（P2-15），每個注入案例斷言命中 ≥1。補了 EACCES 孤兒、restart 完成證據跨 run、FIFO 生命週期檔、id 碰撞等組合——見 [tests/test_matrix_a3.py](../tests/test_matrix_a3.py) |
+| 矩陣盲點（healthy 12 案有 9 案注入命中 0 次） | 已修 | 測試鉤子加 `AOS7_TEST_FAULT_HITS` 命中紀錄（P2-15），每個注入案例斷言命中 ≥1。補了 EACCES 孤兒、restart 完成證據跨 run、FIFO 生命週期檔、id 碰撞等組合——見 [tests/core/test_matrix_a3.py](../tests/core/test_matrix_a3.py) |
 
 - **until_round**（使用者 10-04，不是 astra 的題）：tasks.json 項目可選非負整數，回合數大於它就不再起新 run，跟 `from_round` 對稱；已在跑的不殺；once 已起過的照 launch 標記刪項，沒起成又過期的留著不起（commit 060dca8b）。用途：分配者掛了，使用權照樣到期。spec 4.1。
 
@@ -353,3 +353,7 @@
 | aos7_run（檔頭） | 第二參數是內部交接用的 fd 不是身分約束（astra-7 H-09）；fd 無效不回退字串路徑、cwd 是抓著的 node（astra-6 G-02） |
 | aos7_run.main | out.log 被建成資料夾照樣寫 exit 127（astra-7 H-06）；argv 有非字串、NUL 照樣寫 exit（probes/chaos B4） |
 | aos7_run.round_at | 非阻塞、只讀一般檔，round.json 換成 FIFO 不會卡住 runner（註解疑點 aos7_run.py:165） |
+
+### 從核心 spec 搬出的設計：kernel 用量以 run 為單位（A2-09；kernel 還沒做）
+
+核心會刪的只有換 run 的基礎設施檔與名字不在表上的槽，所以上層的累計要靠自己的 state（核心 spec 第 8 節）。用量的設計：任務的 `usage.json` 只記**這一次 run** 的用量（`{"run": <AOS7_RUN>, "usage": N}`，run 內只增不減，新 run 從 0 起）；kernel 在自己的 kernel-state 對每個 run id（`<槽>#<run>`）記「已見最大值」，**總用量＝所有見過的 run 的最大值相加**，只增不減。換 run、槽被刪又重建都只是多一個 run id（同名槽重建後的 run 取起它的回合數，回合只增，不會撞），不靠「usage 變小」去猜重建。代價：kernel 是取樣的，run 最後一次被看到之後又用掉、還沒被看到就結束並被清掉的那段算不到——總數是已觀測用量的下界；要精確的 cap，任務在超用前自己停。run 紀錄何時合併成「已退役總和」由 kernel 自己決定。
