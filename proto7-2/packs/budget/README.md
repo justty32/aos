@@ -11,9 +11,9 @@
 | 分類 | 通用任務包（`layer: kernel`），單 node |
 | 第一版範圍 | 單 node、一個預算、一種整數消耗資源、一個入口、一份不可再分的 grant（`delegate: false`）。沒有 split、跨 node、動態配額、LLM |
 | 示範資源 | **假 API 受理次數**（`fakeapi.calls`）：純本機假後端，每個業務請求預留 1 次；明確拒絕計 0，已受理後工作失敗仍計 1 |
-| 接法 | ① 帳：普通 keep 任務 `{"name": "budget-<id>", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/budget/bin/aos7-budget", "ledger", "budget/<id>"]}`（`max_live` 預設 1）<br>② 使用：step 的普通 `run` 步呼叫 `aos7-budget call budget/<id> --holder H --request ${request}`（包裝程式內部 reserve → run → settle） |
+| 接法 | ① 帳：普通 keep 任務 `{"name": "budget-<id>", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/budget/bin/aos7-budget", "ledger", "budget/<id>"]}`（`max_live` 預設 1）<br>② 使用：step 的普通 `run` 步呼叫 `aos7-budget call budget/<id> --holder H --request ${request}`（包裝程式內部 reserve → run → settle）<br>holder 由部署者寫死在 steps.json 的 argv（合作式；真偽不是 budget 的事，見 gateway 卡前置條件）<br>call 對同 K 冪等：步可標 `idempotent: true`、`on_unknown: resend`，`max_resends` 可設 2～3；停住後 `aos7-step resume --resend` 不重扣 |
 | 時鐘 | 本 node 的 **completed_tock**（round.json closed 取 round、open 取 round−1；沒有合法值＝未知）；效期 `from ≤ c < until` |
-| 保存 | 全在 `<node>/budget/<id>/`，活過 once 槽刪除與 step close；v1 不自動清，保存到預算明確退役 |
+| 保存 | 全在 `<node>/budget/<id>/`，活過 once 槽刪除與 step close；v1 只掃孤兒回條，其餘保存到預算明確退役（成長率與退役步驟見 spec §10） |
 | 依賴 | 核心 `aos7_fs`（`fact`、`write_json`、`edit_json`、`locked`、`read_round`、`sweep_tmp`）；不依賴 step（step 只是呼叫者） |
 | 程式 | `aos7_budget.py`（grant、時鐘、帳、CLI）、`aos7_budget_gate.py`（入口、假後端、call 包裝程式）、`bin/aos7-budget` |
 | 範例 | `examples/fakeapi/`（grant＋步驟表：呼叫假 API 一次） |
@@ -23,7 +23,7 @@
 
 **grant：使用權（`grant.json`，判斷在 `aos7_budget.judge`）**
 - 職責：判斷誰可在指定預算、資源、入口與效期內使用多少資源。
-- 前置條件：發行者寫一份唯讀、固定內容的 `grant.json`（預算、持有人、資源、入口、額度、時鐘、`from`／`until`、`delegate: false`）；帳開帳時記下它的雜湊，之後不改。
+- 前置條件：發行者寫一份唯讀、固定內容的 `grant.json`（預算、持有人、資源、入口、額度、時鐘、`from`／`until`、`delegate: false`）；帳開帳時記下它的雜湊，之後不改。時鐘只往前：重建 round.json（回合歸零）＝換預算識別、不移植舊 grant。
 - 保證：判定只分**准許／拒絕／未知**（spec §2）；讀不到、壞掉、內容被改、時鐘讀不到或倒退＝未知，不當「沒有限制」也不當「已過期」；`delegate` 不是 false 或帶 `parent` 的子 grant＝拒絕（開帳也拒）；效期是半開 `from ≤ c < until`，到期只擋**新的**預留與首次准入。
 - 明確不管：量測資源、即時餘額（帳的事）、供應或完成期限、惡意繞過（合作式，同核心 §11）；grant 再分（v1 不實作、不宣稱支援）。
 
@@ -37,19 +37,21 @@
 - 職責：首次准入前核對資格與預留、准入後呼叫後端、保存支用證據（終局回條）；也處理取消。
 - 前置條件：合作式部署（請求人自報的 holder 對應 grant 持有人，不提供 OS 隔離）；呼叫前已有同 K、同內容的預留；同 K 的准入、恢復、取消都在 `gateway/<kid>.json.lock` 下互斥；後端呼叫只經入口。
 - 保證：首次准入前查 grant 與效期，未知不放行、不存成永久拒絕；呼叫後端前先持久記准入意圖（intent）；已准入者恢復不再查效期，只向後端查回／重播同 K；終局回條（accepted／failed／rejected／denied／cancelled）寫了就固定，重送同 K 拿同一份；取消與支用互斥，留下 K 已取消的終局紀錄，晚到的 run(K) 也不會執行。假後端把「K 的效果＋受理計數」同次原子提交、以 K 去重，所以同 K 後端效果最多一次，效果完成、回條未寫也查得回。
-- 明確不管：caller 欄位的真偽；替任意外部 API 保證只發生一次（本保證只對這個可查回的假後端成立）；支用成功不等於工作產物成功。
+- 明確不管：caller 欄位的真偽；替任意外部 API 保證只發生一次（本保證只對這個可查回的假後端成立）；不可查回的後端的取消（那種後端 intent 只能記 `cancel_requested`、不得寫 `cancelled`，終局只來自後端證據，v1 沒做，spec §4、§9）；支用成功不等於工作產物成功。
 
-**call 包裝程式（接 step 的那一層，不是第四個組件）**：`aos7-budget call` 以業務鍵 `K = (budget_id, holder, request)` 依序做 reserve → gateway run → settle，拿到**終局結算回條**才退出（0＝後端受理成功、1＝已結算但不成功或被拒、3＝未知，預留留著）；對同 K 冪等，所以 step 步可標 `idempotent: true`。attempt、`slot#run` 只當追查資訊，不是新扣款鍵。
+**call 包裝程式（接 step 的那一層，不是第四個組件）**：`aos7-budget call` 以業務鍵 `K = (budget_id, holder, request)` 依序做 reserve → gateway run → settle，拿到**終局結算回條**才退出（0＝後端受理成功、1＝已結算但不成功或被拒、3＝未知，預留留著；途中任何讀寫不到都歸 3，印一行 JSON、不留 traceback）；對同 K 冪等，所以 step 步可標 `idempotent: true`。attempt、`slot#run` 只當追查資訊，不是新扣款鍵。
 
 ## 人手指令
 
 - `aos7-budget init budget/<id>`：照 `grant.json` 開帳（帳已存在、grant 不合或是子 grant＝拒絕）。
 - `aos7-budget status budget/<id> [--holder H --request R]`：印餘額，或某個 K 的階段、預留、入口證據與結算結果。
-- `aos7-budget cancel budget/<id> --holder H --request R`：取消 K（已有支用就回原終局、不取消）；之後 `settle` 或重跑 `call` 結算 0。
+- `aos7-budget cancel budget/<id> --holder H --request R`：取消 K（已有支用就回原終局、不取消；退出 0 取消了／1 取消不成／3 未知）；之後 `settle` 或重跑 `call` 結算 0。
+- 退役：`inflight == 0` 後寫 `budget/<id>/retired.json`，帳不收新 K；步驟見 spec §10。
 - `aos7-budget settle budget/<id> --holder H --request R`：只送結算（入口證據已終局才會結）。
 
 ## 界線
 
 - 預留到結算之間 step 失敗、槽被刪、結果沒發布、`close`：帳與入口仍認得 K，同 K 重跑 `call` 只把沒做完的做完；新工作 inst 產生新 request 才是新交易。
-- unknown 是非終局：逾時只讓包裝程式回 3 等人／等 step 重送，**不自動退款**。
+- unknown 是非終局：逾時、後端讀寫不到只讓包裝程式回 3 等人／等 step 重送，**不自動退款**。
+- v1 已知界線五條（取消靠後端可查回、時鐘倒退只抓水位以下、儲存只增不清、holder 自報、自動重送有上限）見 spec §9。
 - 時鐘只有本 node 的 completed_tock：pause 不前進；daemon 重開接續原回合；重建時鐘（round.json 歸零）須換預算識別、不移植舊 grant（帳偵測到時鐘倒退＝未知）。

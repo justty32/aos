@@ -1,0 +1,410 @@
+[
+ {
+  "name": "loop6-eio-backend-1",
+  "ok": true,
+  "data": {
+   "faults": {
+    "call": [
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "run",
+       "why": "後端讀寫不到（intent 留著）：backend.json backend.json 讀不到：OSError(5, 'QA injected read failure')，不知道原本有什麼，沒寫"
+      }
+     },
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "run",
+       "why": "後端讀寫不到（intent 留著）：backend.json backend.json 讀不到：OSError(5, 'QA injected read failure')，不知道原本有什麼，沒寫"
+      }
+     }
+    ],
+    "cancel": [
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "cancel",
+       "why": "backend.json 讀不到：backend.json 讀不到：OSError(5, 'QA injected read failure')"
+      }
+     }
+    ],
+    "settle": [
+     {
+      "rc": 3,
+      "result": {
+       "result": "unknown",
+       "why": "入口紀錄不是終局（stage 'intent'）；預留留著",
+       "op": "settle",
+       "at": "2026-10-04T17:39:40.336"
+      }
+     }
+    ]
+   },
+   "hits": 3,
+   "kept": {
+    "available": 99,
+    "inflight": 1,
+    "used": 0,
+    "seq": 1
+   },
+   "recovered": {
+    "kid": "519457d6f54d32335539",
+    "key": {
+     "budget": "demo",
+     "holder": "api",
+     "request": "r"
+    },
+    "outcome": "accepted",
+    "used": 1,
+    "response": {
+     "ok": true,
+     "echo": null
+    },
+    "settle": {
+     "seq": 2,
+     "used": 1,
+     "outcome": "accepted",
+     "evidence": "28b6b22a51b947ffbe7937cc770918293e563714104dbaff0dce709503120821",
+     "at": "2026-10-04T17:39:40.437"
+    }
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.354
+ },
+ {
+  "name": "loop6-eio-backend-2",
+  "ok": true,
+  "data": {
+   "faults": {
+    "call": [
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "run",
+       "why": "後端讀寫不到（intent 留著）：backend.json backend.json 讀不到：OSError(5, 'QA injected read failure')，不知道原本有什麼，沒寫"
+      }
+     },
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "run",
+       "why": "後端讀寫不到（intent 留著）：backend.json backend.json 讀不到：OSError(5, 'QA injected read failure')，不知道原本有什麼，沒寫"
+      }
+     }
+    ],
+    "cancel": [
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "cancel",
+       "why": "backend.json 讀不到：backend.json 讀不到：OSError(5, 'QA injected read failure')"
+      }
+     }
+    ],
+    "settle": [
+     {
+      "rc": 3,
+      "result": {
+       "result": "unknown",
+       "why": "入口紀錄不是終局（stage 'intent'）；預留留著",
+       "op": "settle",
+       "at": "2026-10-04T17:39:40.669"
+      }
+     }
+    ]
+   },
+   "hits": 3,
+   "kept": {
+    "available": 99,
+    "inflight": 1,
+    "used": 0,
+    "seq": 1
+   },
+   "recovered": {
+    "kid": "519457d6f54d32335539",
+    "key": {
+     "budget": "demo",
+     "holder": "api",
+     "request": "r"
+    },
+    "outcome": "accepted",
+    "used": 1,
+    "response": {
+     "ok": true,
+     "echo": null
+    },
+    "settle": {
+     "seq": 2,
+     "used": 1,
+     "outcome": "accepted",
+     "evidence": "e4170ff165d339d413363259fb897777cad5af7bb3d31aa7eb12933aceb0b7b5",
+     "at": "2026-10-04T17:39:40.770"
+    }
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.333
+ },
+ {
+  "name": "loop6-eio-backend-3",
+  "ok": true,
+  "data": {
+   "faults": {
+    "call": [
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "run",
+       "why": "後端讀寫不到（intent 留著）：backend.json backend.json 讀不到：OSError(5, 'QA injected read failure')，不知道原本有什麼，沒寫"
+      }
+     },
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "run",
+       "why": "後端讀寫不到（intent 留著）：backend.json backend.json 讀不到：OSError(5, 'QA injected read failure')，不知道原本有什麼，沒寫"
+      }
+     }
+    ],
+    "cancel": [
+     {
+      "rc": 3,
+      "result": {
+       "kid": "519457d6f54d32335539",
+       "key": {
+        "budget": "demo",
+        "holder": "api",
+        "request": "r"
+       },
+       "outcome": "unknown",
+       "stage": "cancel",
+       "why": "backend.json 讀不到：backend.json 讀不到：OSError(5, 'QA injected read failure')"
+      }
+     }
+    ],
+    "settle": [
+     {
+      "rc": 3,
+      "result": {
+       "result": "unknown",
+       "why": "入口紀錄不是終局（stage 'intent'）；預留留著",
+       "op": "settle",
+       "at": "2026-10-04T17:39:41.024"
+      }
+     }
+    ]
+   },
+   "hits": 3,
+   "kept": {
+    "available": 99,
+    "inflight": 1,
+    "used": 0,
+    "seq": 1
+   },
+   "recovered": {
+    "kid": "519457d6f54d32335539",
+    "key": {
+     "budget": "demo",
+     "holder": "api",
+     "request": "r"
+    },
+    "outcome": "accepted",
+    "used": 1,
+    "response": {
+     "ok": true,
+     "echo": null
+    },
+    "settle": {
+     "seq": 2,
+     "used": 1,
+     "outcome": "accepted",
+     "evidence": "ee6cb4c92a2c9cc7bea848e645e4fcf639c7e675b77faad462c8ec6c46da7b36",
+     "at": "2026-10-04T17:39:41.125"
+    }
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.354
+ },
+ {
+  "name": "loop6-clock-hw",
+  "ok": true,
+  "data": {
+   "clock_hw": [
+    [
+     "success@5",
+     5
+    ],
+    [
+     "denied@10",
+     10
+    ],
+    [
+     "replay@12",
+     12
+    ],
+    [
+     "rollback@6",
+     12
+    ]
+   ],
+   "rollback": {
+    "kid": "eb74c70b6e824b85ba6d",
+    "key": {
+     "budget": "demo",
+     "holder": "api",
+     "request": "back"
+    },
+    "outcome": "unknown",
+    "stage": "reserve",
+    "why": "時鐘倒退（c=6 < 帳看過的 12）"
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.287
+ },
+ {
+  "name": "loop6-orphans",
+  "ok": true,
+  "data": {
+   "kept_through": [
+    6,
+    7,
+    8
+   ],
+   "swept_at": 9,
+   "inflight_receipt_kept": true,
+   "replay_equal_except_at": true,
+   "final": {
+    "available": 98,
+    "inflight": 0,
+    "used": 2,
+    "seq": 4
+   }
+  },
+  "seconds": 1.35
+ },
+ {
+  "name": "loop6-retired",
+  "ok": true,
+  "data": {
+   "new": {
+    "kid": "8c18c8e3d44cdcc19eb5",
+    "key": {
+     "budget": "demo",
+     "holder": "api",
+     "request": "new"
+    },
+    "outcome": "denied",
+    "stage": "reserve",
+    "why": "預算已退役"
+   },
+   "old": {
+    "kid": "db723ba90e520c94274a",
+    "key": {
+     "budget": "demo",
+     "holder": "api",
+     "request": "old"
+    },
+    "outcome": "accepted",
+    "used": 1,
+    "response": {
+     "ok": true,
+     "echo": null
+    },
+    "settle": {
+     "seq": 2,
+     "used": 1,
+     "outcome": "accepted",
+     "evidence": "6b0146a9b3da5e606256a81e298c1aeba20599a3379217581c45c305ebd8d90d",
+     "at": "2026-10-04T17:39:42.935"
+    }
+   },
+   "final": {
+    "available": 99,
+    "inflight": 0,
+    "used": 1,
+    "seq": 2
+   }
+  },
+  "seconds": 0.198
+ }
+]

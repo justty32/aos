@@ -1,0 +1,45 @@
+[
+  {
+    "mutation": "double-backend-count",
+    "detected": true,
+    "errors": [
+      "backend accepted != positive effects: possible repeated K",
+      "backend effect ordinals are not unique contiguous"
+    ]
+  },
+  {
+    "mutation": "bad-log-balance",
+    "detected": true,
+    "errors": [
+      "log 1: replay balances"
+    ]
+  },
+  {
+    "mutation": "duplicate-reserve",
+    "detected": true,
+    "errors": [
+      "log 5: sequence",
+      "50ab2156bc4ff443b38e: duplicate reserve",
+      "log 5: replay balances",
+      "final replay balances",
+      "final seq",
+      "50ab2156bc4ff443b38e: op stage",
+      "final inflight != 0"
+    ]
+  },
+  {
+    "mutation": "wrong-evidence-hash",
+    "detected": true,
+    "errors": [
+      "50ab2156bc4ff443b38e: gateway receipt hash"
+    ]
+  },
+  {
+    "mutation": "missing-op",
+    "detected": true,
+    "errors": [
+      "ops/log key set differs",
+      "50ab2156bc4ff443b38e: backend key differs"
+    ]
+  }
+]

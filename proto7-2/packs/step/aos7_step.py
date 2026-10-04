@@ -27,8 +27,8 @@ RESULT_BIN = os.path.join(HERE, "bin", "aos7-step-result")
 NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 KINDS = ("run", "wait", "count", "end")
 # 可逐步覆蓋的選項只有 wake（run）、on_timeout、on_unknown；restart_on_end 是工作級（spec §2）
-FIELDS = {"run": {"run", "ok", "fail", "finite", "idempotent", "patience", "on_timeout", "on_unknown", "receipt",
-                  "expect", "wake", "note"},
+FIELDS = {"run": {"run", "ok", "fail", "finite", "idempotent", "patience", "on_timeout", "on_unknown", "max_resends",
+                  "receipt", "expect", "wake", "note"},
           "wait": {"wait", "then", "patience", "on_timeout", "fail", "note"},
           "count": {"count", "then", "exhausted", "note"},
           "end": {"end", "note"}}
@@ -204,6 +204,8 @@ def check(table):
             ou = s.get("on_unknown", opts.get("on_unknown", "stop"))
             if ou not in OPTIONS["on_unknown"]:
                 add("error", name, "struct", "on_unknown 只能是 stop／resend")
+            if "max_resends" in s and not (is_int(s["max_resends"]) and s["max_resends"] >= 0):
+                add("error", name, "struct", "max_resends 要是非負整數（自動重送次數，預設 1）")
             for w in _var_issues(a + ex, steps):
                 add("error", name, "struct", w)
             if "receipt" in s:
@@ -568,7 +570,8 @@ class Interp:
         if "receipt" in s and self.cond(s["receipt"], step):
             self.accept(step, s, {"request": p["request"], "attempt": p["attempt"], "ok": True, "receipt": True})
             return True
-        if self.opt(s, "on_unknown") == "resend" and s.get("idempotent") is True and p.get("resends", 0) < 1:
+        if self.opt(s, "on_unknown") == "resend" and s.get("idempotent") is True \
+                and p.get("resends", 0) < s.get("max_resends", 1):
             q = self.new_pending(step)
             q["resends"] = p.get("resends", 0) + 1
             self.dispatch(step, s, q)

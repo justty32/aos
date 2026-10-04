@@ -238,6 +238,14 @@ class TestCheck(unittest.TestCase):
         self.assertEqual(self.rules(probe_table("j", a={"wake": "yes"})), [("struct", "a")])
         self.assertEqual(self.rules(probe_table("j", a={"restart_on_end": True})), [("struct", "a")])
 
+    def test_max_resends_type(self):
+        """max_resends（run 步）：非負整數才過；0 也合法（＝不自動重送）。"""
+        for v in (0, 1, 3):
+            self.assertEqual(self.rules(probe_table("j", a={"on_unknown": "resend", "max_resends": v})), [], v)
+        for v in (-1, True, "2", 1.5, None):
+            self.assertEqual(self.rules(probe_table("j", a={"on_unknown": "resend", "max_resends": v})),
+                             [("struct", "a")], v)
+
 
 # ---------------------------------------------------------------- daemon：正常走通、pause、檔案數、wake
 
@@ -486,6 +494,27 @@ class TestStepProbes(StepCase):
         self.assertEqual(acc["request"], first["request"])
         self.assertEqual(acc["attempt"], first["request"] + "-a2")
         self.assertEqual(len(self.ran(node, "r-a")), 2)
+
+    def test_max_resends_two(self):
+        """max_resends: 2：被殺兩次都自動重派（同 request、a2、a3），第三次 unknown 才停；共跑 3 次。"""
+        node = self.setup_job("m", probe_table("m", a={"on_unknown": "resend", "max_resends": 2}, gate=True))
+        open(self.jd(node, "m", "gate-a"), "w").close()
+        req = None
+        for k in (1, 2, 3):
+            self.run_until(node, "m", lambda: len(self.ran(node, "m-a")) == k
+                           and (self.birth(node, "step-m-a") or {}).get("run"), msg="a%d 沒起" % k)
+            p = self.frame(node, "m")["pending"]
+            req = req or p["request"]
+            self.assertEqual((p["request"], p["attempt"]), (req, "%s-a%d" % (req, k)))
+            self.wait_for(lambda: os.path.exists(self.jd(node, "m", "gate-a.entered")), 10, "a%d 沒進閘門" % k)
+            os.unlink(self.jd(node, "m", "gate-a.entered"))
+            aos7_ctl.task_ctl(self.slot(node, "step-m-a"), why="probe", run=self.birth(node, "step-m-a")["run"])
+            if k < 3:
+                self.run_until(node, "m", lambda: (self.frame(node, "m").get("pending") or {}).get("attempt")
+                               == "%s-a%d" % (req, k + 1), msg="沒重派 a%d" % (k + 1))
+        self.run_until(node, "m", lambda: self.frame(node, "m").get("phase") == "halted", msg="沒停住")
+        fr = self.frame(node, "m")
+        self.assertEqual((fr["halt"]["kind"], fr["tries"][req], len(self.ran(node, "m-a"))), ("unknown", 3, 3), fr)
 
     def test_bad_tasks_json_refused(self):
         """壞 tasks.json：直譯器拒寫（表原封不動）、撤掉意圖、記 error.json；修好後照常派、走完。"""

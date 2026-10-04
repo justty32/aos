@@ -1,0 +1,290 @@
+[
+ {
+  "name": "concurrent-same-final",
+  "final": true
+ },
+ {
+  "name": "concurrent-different-final",
+  "final": true
+ },
+ {
+  "name": "concurrent-conflict-final",
+  "final": true
+ },
+ {
+  "name": "concurrent-cancel-final",
+  "final": true
+ },
+ {
+  "name": "hook-reserve-before-commit-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-reserve-before-commit-final",
+  "final": true
+ },
+ {
+  "name": "hook-reserve-after-commit-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-reserve-after-commit-final",
+  "final": true
+ },
+ {
+  "name": "hook-settle-before-commit-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-settle-before-commit-final",
+  "final": true
+ },
+ {
+  "name": "hook-settle-after-commit-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-settle-after-commit-final",
+  "final": true
+ },
+ {
+  "name": "hook-call-after-reserve-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-call-after-reserve-final",
+  "final": true
+ },
+ {
+  "name": "hook-gateway-after-intent-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-gateway-after-intent-final",
+  "final": true
+ },
+ {
+  "name": "hook-backend-after-effect-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-backend-after-effect-final",
+  "final": true
+ },
+ {
+  "name": "hook-gateway-after-receipt-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-gateway-after-receipt-final",
+  "final": true
+ },
+ {
+  "name": "hook-call-after-settle-interrupted",
+  "final": false
+ },
+ {
+  "name": "hook-call-after-settle-final",
+  "final": true
+ },
+ {
+  "name": "window-ledger-reserve-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-ledger-reserve-before-final",
+  "final": true
+ },
+ {
+  "name": "window-ledger-reserve-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-ledger-reserve-after-final",
+  "final": true
+ },
+ {
+  "name": "window-ledger-settle-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-ledger-settle-before-final",
+  "final": true
+ },
+ {
+  "name": "window-ledger-settle-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-ledger-settle-after-final",
+  "final": true
+ },
+ {
+  "name": "window-gateway-intent-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-gateway-intent-before-final",
+  "final": true
+ },
+ {
+  "name": "window-gateway-intent-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-gateway-intent-after-final",
+  "final": true
+ },
+ {
+  "name": "window-backend-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-backend-before-final",
+  "final": true
+ },
+ {
+  "name": "window-backend-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-backend-after-final",
+  "final": true
+ },
+ {
+  "name": "window-gateway-done-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-gateway-done-before-final",
+  "final": true
+ },
+ {
+  "name": "window-gateway-done-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-gateway-done-after-final",
+  "final": true
+ },
+ {
+  "name": "window-receipt-reserve-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-receipt-reserve-before-final",
+  "final": true
+ },
+ {
+  "name": "window-receipt-reserve-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-receipt-reserve-after-final",
+  "final": true
+ },
+ {
+  "name": "window-receipt-settle-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-receipt-settle-before-final",
+  "final": true
+ },
+ {
+  "name": "window-receipt-settle-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-receipt-settle-after-final",
+  "final": true
+ },
+ {
+  "name": "window-inbox-reserve-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-inbox-reserve-before-final",
+  "final": true
+ },
+ {
+  "name": "window-inbox-reserve-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-inbox-reserve-after-final",
+  "final": true
+ },
+ {
+  "name": "window-inbox-settle-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-inbox-settle-before-final",
+  "final": true
+ },
+ {
+  "name": "window-inbox-settle-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-inbox-settle-after-final",
+  "final": true
+ },
+ {
+  "name": "window-output-before-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-output-before-final",
+  "final": true
+ },
+ {
+  "name": "window-output-after-interrupted",
+  "final": false
+ },
+ {
+  "name": "window-output-after-final",
+  "final": true
+ },
+ {
+  "name": "cancel-call-after-reserve-final",
+  "final": true
+ },
+ {
+  "name": "cancel-gateway-after-intent-final",
+  "final": true
+ },
+ {
+  "name": "cancel-backend-after-effect-final",
+  "final": true
+ },
+ {
+  "name": "unknown-gateway-final",
+  "final": true
+ },
+ {
+  "name": "ledger-missing-recovered",
+  "final": true
+ },
+ {
+  "name": "ledger-malformed-recovered",
+  "final": true
+ },
+ {
+  "name": "eio-ledger.json-interrupted",
+  "final": false
+ },
+ {
+  "name": "eio-ledger.json-final",
+  "final": true
+ },
+ {
+  "name": "eio-backend.json-interrupted",
+  "final": false
+ },
+ {
+  "name": "eio-backend.json-final",
+  "final": true
+ }
+]

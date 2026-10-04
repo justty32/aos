@@ -52,9 +52,9 @@ class BudgetMixin:
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         return bd
 
-    def cli(self, node, *args, timeout=30):
+    def cli(self, node, *args, timeout=30, env=None):
         return subprocess.run([PY, BUDGET, *args], cwd=node, capture_output=True, text=True, timeout=timeout,
-                              start_new_session=True)
+                              start_new_session=True, env=dict(os.environ, **env) if env else None)
 
     def call_args(self, request, holder="api", payload=None, extra=()):
         a = ["call", "budget/demo", "--holder", holder, "--request", request, *extra]

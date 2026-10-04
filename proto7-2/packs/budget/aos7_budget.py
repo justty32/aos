@@ -29,6 +29,7 @@ GATEWAY = "fakeapi"                 # v1 只有一個入口（假 API）
 RESOURCE = "fakeapi.calls"
 GRANT_FIELDS = ("grant", "budget", "holder", "resource", "gateway", "amount", "clock", "from", "until", "delegate")
 POLL = 0.02
+ORPHAN_ROUNDS = 3                   # 孤兒回條：帳看到它之後本 node 再完成這麼多回合仍沒人讀走才刪（spec §9）
 
 
 # ---------- 共用 ----------
@@ -243,6 +244,10 @@ def handle(bud, req):
         L, why = read_ledger(bud)
         if L is None:
             raise LedgerDown(why)
+        c = completed_tock(bud.node)    # 時鐘水位：每次讀到合法 c 就推高（含拒絕與重播），只動 clock_hw
+        if is_int(c) and not (is_int(L.get("clock_hw")) and c <= L["clock_hw"]):
+            L["clock_hw"] = c
+            write_json(bud.p("ledger.json"), L)
         rec = L["ops"].get(kid)
         if op == "reserve":
             content = req.get("content")
@@ -253,6 +258,10 @@ def handle(bud, req):
                 if rec["digest"] != digest:
                     return {"result": "conflict", "why": "同一個 K 已用不同內容預留"}
                 return receipt_from(op, rec)
+            st, r = fact(bud.p("retired.json"))           # 退役（spec「保存與退役」）：新 K 一律不收
+            if st != N:
+                return {"result": "denied" if st == OK else "unknown", "why": "預算已退役" if st == OK else
+                        "retired.json 讀不到：%s" % r}
             verdict, why, c = judge(bud, key["holder"], content.get("resource"), content.get("gateway"), L)
             if verdict != "ok":
                 return {"result": verdict, "why": why}
@@ -319,8 +328,32 @@ def process_inbox(bud):
     return n
 
 
+def sweep_receipts(bud, seen, c):
+    """掃孤兒回條（spec §9）：K 已結算、inbox/ 沒有同名請求、帳看到它之後本 node 又完成 ORPHAN_ROUNDS 回合仍在＝等的人已不在，刪。
+    seen＝{回條名: 第一次看到時的 c}（帳任務記憶體裡，重開從頭算）。重播由帳上 ops 重建同一回條，所以刪了也不丟東西。"""
+    try:
+        names = [n for n in os.listdir(bud.p("receipts")) if n.endswith(".json") and not n.startswith(".")]
+    except OSError:
+        return 0
+    L = read_ledger(bud)[0]
+    gone = 0
+    for name in set(seen) - set(names):
+        del seen[name]
+    for name in names:
+        rec = L and L["ops"].get(name.split(".", 1)[0])
+        if c is None or not rec or rec["stage"] != "settled" or os.path.exists(bud.p("inbox", name)):
+            seen.pop(name, None)
+        elif c - seen.setdefault(name, c) >= ORPHAN_ROUNDS:
+            try:
+                os.unlink(bud.p("receipts", name))
+                gone += 1
+            except OSError:
+                pass
+    return gone
+
+
 def serve(bud):
-    """帳任務本體：拿 `ledger.lock`（防舊代殘留雙寫；拿不到就等），之後每 POLL 秒處理一次 inbox/。"""
+    """帳任務本體：拿 `ledger.lock`（防舊代殘留雙寫；拿不到就等），之後每 POLL 秒處理一次 inbox/；本 node 回合變了就掃一次孤兒回條。"""
     import fcntl
     os.makedirs(bud.p("inbox"), exist_ok=True)
     with open(bud.p("ledger.lock"), "a") as lk:
@@ -332,8 +365,13 @@ def serve(bud):
                 time.sleep(0.2)
         for d in (bud.dir, bud.p("inbox"), bud.p("receipts")):
             sweep_tmp(d)
+        seen, last = {}, False
         while True:
             process_inbox(bud)
+            c = completed_tock(bud.node)
+            if c != last:
+                last = c
+                sweep_receipts(bud, seen, c)
             time.sleep(POLL)
 
 
@@ -421,13 +459,21 @@ def main(argv=None):
     import aos7_budget_gate as gate
     if a.cmd == "call":
         return gate.call(bud, key, a.amount, a.resource, a.payload, a.out, a.patience)
+    kid = kid_of(key)
     if a.cmd == "cancel":
-        r = gate.cancel(bud, key)
+        def do_cancel():
+            r = gate.cancel(bud, key)
+            if r.get("stage") != "done":                     # 非終局（入口紀錄或後端讀不到）＝未知
+                return gate.pending(kid, key, "cancel", r)
+            print(json.dumps(r, ensure_ascii=False))
+            return 0 if r.get("outcome") == "cancelled" else 1
+        return gate.io_boundary(do_cancel, kid, key)
+
+    def do_settle():
+        r = ask(bud, "settle", key, patience=a.patience)
         print(json.dumps(r, ensure_ascii=False))
-        return 0 if r.get("outcome") == "cancelled" else 1
-    r = ask(bud, "settle", key, patience=a.patience)
-    print(json.dumps(r, ensure_ascii=False))
-    return 0 if r.get("result") == "settled" else 3
+        return 0 if r.get("result") == "settled" else 3
+    return gate.io_boundary(do_settle, kid, key)
 
 
 if __name__ == "__main__":
