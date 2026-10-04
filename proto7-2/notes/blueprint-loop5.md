@@ -1,7 +1,8 @@
 # proto7-2 第五輪改進循環藍圖（loop5，astra）
 
+> **改名（使用者 10-04）**：原名 account 會跟 Linux account 的定義重疊，包名改為 **budget**（`packs/budget/`、`<node>/budget/`、`budget_id`；「帳戶」改稱「一份預算」）。組件名 grant／ledger／gateway 不變。下文已替換；astra 原意見檔仍是舊名。
 
-**本輪先修 A5-01，再整合 account 第一版；兩者可平行實作，核心零新增。** 依原則 10，先定契約與歸屬，再修、再回歸。
+**本輪先修 A5-01，再整合 budget 第一版；兩者可平行實作，核心零新增。** 依原則 10，先定契約與歸屬，再修、再回歸。
 本次只有唯讀設計，未改檔、未 commit、未執行會寫入的測試，未刪除或清空 scratchpad。
 基準：唯讀重算核心 **2757／2800 總行、2123／2200 程式行**；astra-4 全套三次各 280 項通過，G3 壓力探針 0／10 通過。
 
@@ -28,9 +29,9 @@
 | 放行 | 確認前代已空，先寫本代未完成記錄，再釋放 `daemon.lock`、起 argv；`subd.lock` 全程持有。只有確認乾淨才解除未完成狀態。 |
 | 文件同步 | subd 契約改成「由包在重開前補收」，移除「核心 §5.4 自動收前代」說法；原有外部 stop、守門檔與 `stopped.json` 行為保留。 |
 
-**2．account 第一版：契約卡**
+**2．budget 第一版：契約卡**
 
-以[草稿](../packs/account/README.md)與 [astra 五項意見](play/2026-10-04-astra-4-infra-evidence/contracts/summary.md#account-草稿意見不算發現)收斂；三個邏輯組件都放 `packs/account/`，屬通用任務包。
+以[草稿](../packs/budget/README.md)與 [astra 五項意見](play/2026-10-04-astra-4-infra-evidence/contracts/summary.md#account-草稿意見不算發現)收斂；三個邏輯組件都放 `packs/budget/`，屬通用任務包。
 
 | 組件 | 職責 | 前置條件 | 保證 | 明確不管 |
 |---|---|---|---|---|
@@ -44,10 +45,10 @@
 | 非 LLM 示範 | **假 API 受理次數**：純本機假後端，每個業務請求預留 1 次。明確拒絕計 0；已受理後工作失敗仍計 1。效果可精確記錄，避免把 CPU／磁碟取樣誤當精確帳。 |
 | grant 再分 | 本輪不實作、不宣稱支援。未來 split 必須同時驗「子不超父」並從父可用額度轉出，不能只複製 grant 檔。 |
 | 時鐘 | 明定本 node 的 **completed_tock**：合法 `round.json` 為 closed 時取 round，open 時取 round−1；沒有合法值即未知。效期為 `from ≤ c < until`。 |
-| 時鐘邊界 | pause 不前進；daemon 重開接續原回合，不綁 daemon gen。重建 account／時鐘須換識別，不移植舊 grant。半開 until 不直接抄成核心含上界的 `until_round`。 |
+| 時鐘邊界 | pause 不前進；daemon 重開接續原回合，不綁 daemon gen。重建 budget／時鐘須換識別，不移植舊 grant。半開 until 不直接抄成核心含上界的 `until_round`。 |
 | 到期 | reserve 與首次入口准入各查一次效期；到期擋新准入，已准入的恢復與結算繼續。讀不到時鐘不阻擋已有證據的結算。 |
 | unknown | 非終局，可隨證據補齊更新；逾時只觸發查證／提示，**不自動退款**。 |
-| 保存 | 帳、入口意圖／回條、效果與取消紀錄、去重證據放 `<node>/account/`，活過槽刪除與 step close；v1 不自動清除，保存至帳戶明確退役。 |
+| 保存 | 帳、入口意圖／回條、效果與取消紀錄、去重證據放 `<node>/budget/`，活過槽刪除與 step close；v1 不自動清除，保存至帳戶明確退役。 |
 
 **3．reserve → run → settle 如何接 step**
 
@@ -55,8 +56,8 @@
 
 | 項目 | 契約 |
 |---|---|
-| 接法 | 一個普通 `run` 呼叫 account 包裝程式；內部依序 reserve → gateway run → settle。取得終局結算回條後才完成包裝命令，再由既有 step 結果包裝發布結果。 |
-| 業務鍵 | `K = (account_id, holder, step.request)`；同一 request 的新 attempt 沿用 K。attempt、slot#run 只作追查，不作新扣款鍵。 |
+| 接法 | 一個普通 `run` 呼叫 budget 包裝程式；內部依序 reserve → gateway run → settle。取得終局結算回條後才完成包裝命令，再由既有 step 結果包裝發布結果。 |
+| 業務鍵 | `K = (budget_id, holder, step.request)`；同一 request 的新 attempt 沿用 K。attempt、slot#run 只作追查，不作新扣款鍵。 |
 | 操作去重 | 分別使用 `(K,reserve)`、`(K,run)`、`(K,settle)`，避免 reserve 擋掉 settle。同鍵不同業務內容拒絕；attempt 等傳輸資訊不算內容變更。 |
 | 帳提交與回條 | 餘額、操作結果、去重紀錄同次原子提交，再發布回條。帳已提交但回條未寫時，重開由帳重建，不再扣款。 |
 | 入口恢復 | 呼叫後端前先持久記錄准入意圖；未准入者恢復須重查 grant，已准入者查詢／重播同 K。unknown 不保存成永久拒絕。 |
@@ -70,20 +71,20 @@
 
 | 順序 | 工作與完成門檻 |
 |---|---|
-| ① 先定契約 | 將本藍圖落成 subd 修正契約與 account v1 spec；明列檔案所有權、去重期限與未知分支。 |
-| ② 可平行實作 | A 線只動 `modules/subd/` 與其測試；B 線只動 `packs/account/`、範例與其測試。共享導航由整合者同步。 |
-| ③ A5-01 先過關 | 先通過原壓力探針，確認基礎設施修補成立，再做 account＋step 整合驗收。 |
-| ④ astra 回歸 | 沿用「藍圖→修→回歸」，新問題先按契約分類；誤用不列 bug，不因 account 把資源語意塞回 daemon／tick。 |
+| ① 先定契約 | 將本藍圖落成 subd 修正契約與 budget v1 spec；明列檔案所有權、去重期限與未知分支。 |
+| ② 可平行實作 | A 線只動 `modules/subd/` 與其測試；B 線只動 `packs/budget/`、範例與其測試。共享導航由整合者同步。 |
+| ③ A5-01 先過關 | 先通過原壓力探針，確認基礎設施修補成立，再做 budget＋step 整合驗收。 |
+| ④ astra 回歸 | 沿用「藍圖→修→回歸」，新問題先按契約分類；誤用不列 bug，不因 budget 把資源語意塞回 daemon／tick。 |
 
 | 驗收項目 | 通過条件 |
 |---|---|
 | A5-01 同探針 | 沿用 [run_stress.py](play/2026-10-04-astra-4-infra-evidence/stress/run_stress.py) 的負載與判準：三次全套並行，4＋3＋3 共 10 案，每案三個忽略 TERM 任務、父帶 run kill、追原 PID／starttime。**10／10 通過**，替代 daemon 出現後兩回合內原任務全消失；補查 r7 與殘留 runner。 |
 | subd 恢復窗口 | 起 argv 前、回收中、回收完但尚未起新代時中斷皆可接續；paused node 也收；未知不起新代；不殺 sibling／新代；既有 stop、guard、認領、stopped 測試全綠。 |
-| account 正常與競爭 | 正常消耗 1；兩請求搶最後 1 額度只能一個成功；同鍵同內容並行不重做，異內容拒絕；持有人／資源／入口不符拒絕；子 grant 拒絕。 |
-| account 崩潰 | reserve／准入／效果／settle 各持久提交前後中斷；效果完成但回條未寫可恢復；unknown 補證據可結算；取消與晚到 run 競爭不雙花。 |
-| account 時間與失敗 | 到期前 reserve、到期後首次 run 被擋；已准入可結算；pause、daemon 重開、壞鐘／壞帳符合契約；工作失敗但已受理仍計 1。 |
+| budget 正常與競爭 | 正常消耗 1；兩請求搶最後 1 額度只能一個成功；同鍵同內容並行不重做，異內容拒絕；持有人／資源／入口不符拒絕；子 grant 拒絕。 |
+| budget 崩潰 | reserve／准入／效果／settle 各持久提交前後中斷；效果完成但回條未寫可恢復；unknown 補證據可結算；取消與晚到 run 競爭不雙花。 |
+| budget 時間與失敗 | 到期前 reserve、到期後首次 run 被擋；已准入可結算；pause、daemon 重開、壞鐘／壞帳符合契約；工作失敗但已受理仍計 1。 |
 | step 整合 | 同 request 新 attempt、槽已消失、結果未發布、close 後重播均不重扣／重做；結算恢復不依賴 step 結果仍存在。 |
 | 獨立核帳 | 每次持久轉移重算守恆與非負；每 K 後端效果最多一次；全部終局後，實際受理次數與已用帳一致。 |
-| 全套與既有回歸 | 從 repo 根跑 `python3 proto7-2/tests/run_all.py`，三次皆綠；重驗 A4-01～07、F47、§4.4、step 450 回合固定階段檔數。account 帳依保存契約成長，另驗每 K 不因重播重複累積。 |
+| 全套與既有回歸 | 從 repo 根跑 `python3 proto7-2/tests/run_all.py`，三次皆綠；重驗 A4-01～07、F47、§4.4、step 450 回合固定階段檔數。budget 帳依保存契約成長，另驗每 K 不因重播重複累積。 |
 | 行數 | [test_budget](../tests/core/test_budget.py) 通過；本輪核心維持 **2757／2800、2123／2200**，保留 43／77 行餘量，不調高上限。 |
 | 文件與證據 | 更新包契約、入口導航與 code map；新回歸另存 evidence，不覆寫 astra-4。全程不刪除或清空 scratchpad。 |
