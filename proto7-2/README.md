@@ -6,8 +6,8 @@
 
 ## 入口
 
-- **[spec.md](spec.md)**：細部 spec，每節標 S- 條號；實作時改過的地方標 P2-，astra 第一輪之後改的標 A2-。
-- **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題（**2 條要你決定**：P2-01 固定 interval 時 wake 沒作用、P2-02 once 被殺在特定一段時報 lost 不重跑），最後一節是 astra 第一輪 A2-01～A2-13 與讀碼疑點的處理。
+- **[spec.md](spec.md)**：細部 spec，每節標 S- 條號；實作時改過的地方標 P2-，astra 第一輪之後改的標 A2-，第二輪之後的標 A3-；第 12 節是「會停下等人的情況與恢復步驟」。
+- **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題（P2-01、P2-02 頂層已定並實作：wake 提前結束固定 interval 回合、once 可選 `retry_lost`），最後兩節是 astra 第一輪 A2、第二輪 A3 的處理。
 - [notes/changes-from-7-1.md](notes/changes-from-7-1.md)：跟 proto7-1 的對照表，最後是 W1～W12（程式照推薦做）。
 - [notes/play/](notes/play/README.md)：astra 回歸與試玩紀錄（一輪一列）。
 
@@ -37,7 +37,7 @@ python3 $P/aos7-ctl daemon /tmp/sp stop --kill
 python3 -m unittest discover -s proto7-2/tests
 ```
 
-離線、純標準庫，219 項約 60 秒（其中 116 項是 A2 回歸矩陣 `test_matrix*.py`）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
+離線、純標準庫，252 項約 90 秒（`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；`test_options_a3.py` 是 retry_lost／until_round）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
 
 | 檔 | 測什麼 |
 |---|---|
@@ -49,6 +49,8 @@ python3 -m unittest discover -s proto7-2/tests
 | `test_matrix_faults.py` | **A2 回歸矩陣：讀不到＝不知道**——/proc（list／stat／environ／cmdline）× EIO／ESTALE／EACCES × 情境（健康、孤兒、兩者都死、birth 壞）；birth／exit／pid／round／last-round 開檔與列槽讀不到；daemon 看 node 讀不到 |
 | `test_matrix_docs.py` | **A2 矩陣：檔案半寫、缺欄、型別錯**——round.json（不知道、不 tick、人寫回後接著數）、birth.json × 其他證據（活程序／exit／pid／都沒有）、last-round.json（重新產生、不跳號） |
 | `test_matrix_once.py` | **A2 矩陣：once／keep 在 tick 七個點與 aos7-run 兩個點 SIGKILL**——執行次數、lost 只報一次、同槽不雙開 |
+| `test_matrix_a3.py` | **A3 回歸**：ctl.json 刪不掉跨 run 只執行一次（ctl-seen）、id 不截斷／新 inode／跨槽、owner 檔名無損編碼、生命週期檔換 FIFO、不可 dumpable 任務在 runner 死後不判 lost 且 kill 回 ok:false、mount 子目錄暫存、重播通知失敗記錄與補寫、P2-01 wake 提前結束固定 interval 回合 |
+| `test_options_a3.py` | P2-02 `retry_lost`（加回只跑一次／預設最多一次／型別錯跳過）、`until_round` |
 | `test_matrix_misc.py`、`test_matrix_daemon.py` | **A2 矩陣其餘**：restart 在三個交接點被殺只重起一次、node 換符號連結（同 inode／指到 root 外／父層）＝missing 且不寫出 root、rounds 按 owner、CLI 檔名含 owner、暫存檔清理、wake 不保留、tock.json 晚於總結、診斷不截前綴、history 事件也截行 |
 
 ## 結構
