@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""aos7-run 的命令列入口——本體在 ../lib/aos7_run.py。"""
+import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+import aos7_run  # noqa: E402
+if __name__ == "__main__":
+    sys.exit(aos7_run.main())
