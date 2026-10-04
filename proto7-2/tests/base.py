@@ -19,6 +19,8 @@ LIB = os.path.join(TOP, "lib")
 BIN = os.path.join(TOP, "bin")
 MODULES = os.path.join(TOP, "modules")
 TOOLS = os.path.join(MODULES, "tools")   # 工具包（aos7_ctl、任務端函式 aos7_taskside）
+CONTROL = os.path.join(MODULES, "control")   # 控制包（aos7_control：restart／reload）
+sys.path.insert(0, CONTROL)
 sys.path.insert(0, TOOLS)
 sys.path.insert(0, LIB)
 sys.path.insert(0, HERE)

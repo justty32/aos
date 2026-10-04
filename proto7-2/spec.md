@@ -185,15 +185,12 @@ daemon 每圈只看**已登記**的 node：
 | `enabled` | 預設 `true`；`false` 時不起，但項目與槽都留著（N-79，W11） |
 | `mounts` | 掛載宣告（4.5） |
 | `x` | 可選物件：模組用的宣告欄位（例如任務包的 `x.pack`），tick 不看內容、照抄進 birth.json。不是物件＝那項不合。舊的 `subroot`／`allow_stop` 欄已移到子 daemon 包，帶了＝那項不合（記 `tasks_error` 指到包） |
-| `slot` | 只給 `once`：指定要起在哪個槽（restart 用，第 6 節） |
-| `retry_lost` | 只給 `once`，bool，預設 `false`＝最多一次；`true`＝判 lost 時若看起來從沒起來過就加回重起，可能跑兩次（4.4，P2-02） |
-| `restart_of`、`mounts_dyn` | 只給 restart 寫的 `once` 項 |
-| `retry_of` | 只給 `retry_lost` 加回的 `once` 項：原 run id（4.4） |
+| `slot` | 只給 `once`：釘在哪個槽起（控制包 restart、once 保證包加回時用） |
 | `launch` | tick 寫的起動標記（4.4），別人不要動 |
 
 - **讀**：不存在＝空表；讀不到或不是一般檔（U）＝這回合不起、記 `tasks_error`、tock 不刪槽；不是 JSON 或不是 `{"tasks": [...]}`（B）＝當空表、記 `tasks_error`。
-- **寫**（G1）：寫的人（tick、工具、kernel）讀舊內容也照三態——不存在＝從空表起；讀不到、不是一般檔、壞掉＝**不知道原本有什麼，拒寫**並回報（`aos7-ctl add` 退出碼非 0、restart 回條 `ok: false` 不 kill、tick 記 `tasks_error`），絕不當空表把整份換掉。
-- 欄位型別不對（`name`、`argv`、`mode`、`max_live`、`from_round`、`until_round`、`enabled`、`mounts`、`x`、`retry_lost`（含非 once 項帶它）、`retry_of` 任一）：**只跳過那一項**，記 `tasks_error`，其他照起；整份讀不懂當空表。驗證在挑槽、算 run 之前做完。
+- **寫**（G1）：寫的人（tick、工具、kernel）讀舊內容也照三態——不存在＝從空表起；讀不到、不是一般檔、壞掉＝**不知道原本有什麼，拒寫**並回報（`aos7-ctl add` 退出碼非 0、控制包 restart 回 `ok: false` 不 kill、tick 記 `tasks_error`），絕不當空表把整份換掉。
+- 欄位型別不對（`name`、`argv`、`mode`、`max_live`、`from_round`、`until_round`、`enabled`、`mounts`、`x` 任一；舊的 `retry_lost` 欄＝不合，指到 once 保證包）：**只跳過那一項**，記 `tasks_error`，其他照起；整份讀不懂當空表。驗證在挑槽、算 run 之前做完。
 - 想一次加一批任務：一次 `edit_json` 加多項（同一次 rename，同一回合看到）。全有全無的成組准入（N-85）不做，要的用合作式協定。
 
 ### 4.2 tick 的步驟
@@ -225,17 +222,14 @@ daemon 每圈只看**已登記**的 node：
 - 判定出的 run 不是這個 run（或槽是空的）→ 上次在寫 birth.json 之前就被殺了，任務確定沒起 → 用新的 run 照常起，更新標記。
 - 判不出（birth.json 讀不到或壞掉＝5.4 的不知道）→ 這項留著，下一回合再看。
 
-所以 tick 在任何一步被殺，once 項都不會變兩份，也不會無痕消失。被殺在「寫了 birth.json、runner 還沒記進去」這一段時，分不出 runner 起了沒，只能照 5.4 等兩回合判 lost。這時怎麼辦看 `retry_lost`（P2-02，頂層 10-04 定做成選項）：
-
-- **預設（`false`）＝最多一次**：這項一次都沒跑，但會在 `ended` 報成 lost，不再起。
-- **`retry_lost: true`＝至少一次**：判 lost 時若 birth.json 沒有 runner、沒有 pid.json、out.log 不存在或是空的（看起來從沒起來過）→ **先**把 once 項照 birth.json 的定義加回 tasks.json（`slot` 釘同槽、帶 `retry_lost: true`、`retry_of`＝原 run id；表上已有同槽同 `retry_of` 的就不重加；表鎖一秒拿不到或寫不進去就先不判 lost，當不知道、下次再看），**再**寫 lost 的 exit.json（帶 `retried: true`，`ended` 那筆也帶）。極小機率真的跑過：可能跑兩次，是選它的人接受的代價。out.log 讀不到大小（EIO…）＝不知道，不加回（照最多一次判 lost）。加回的項同樣帶 `retry_lost`，再遇到同樣情況會再加回。
+所以 tick 在任何一步被殺，once 項都不會變兩份，也不會無痕消失。被殺在「寫了 birth.json、runner 還沒記進去」這一段時，分不出 runner 起了沒，只能照 5.4 等兩回合判 lost。預設＝**最多一次**：這項一次都沒跑，`ended` 報成 lost（帶事實欄 `never_started: true`，5.4），不再起。要**至少一次**的，用 [once 保證包](modules/once_retry/README.md)（項目帶 `x.retry_lost: true`、node 上跑它的任務；P2-02）。
 
 ### 4.5 掛載（S-23）
 
 - `mounts`：`{"名字": "空間裡的路徑"}`。tick 起任務時在任務資料夾建 `mnt/<名字>`（相對符號連結，目標不在先建成資料夾）。名字不能含 `/`、不能以 `.` 開頭；路徑不能絕對、realpath 後要在空間根內。不合的不掛，記在 birth.json。
 - `mount_allow`（tasks.json 頂層，可選）：執行中加掛允許的空間路徑前綴，比 realpath 後的實際位置。沒寫＝空間根內全給。
 - **執行中加掛**：任務寫 `$AOS7_TASK/mount-req/<名字>.json`＝`{"name", "path", "why"}`；下一個 tick 審核，回條寫 `mount-done/<同名>.json`（**寫成功才刪請求**），成功的建 `mnt/<名字>`、在 birth.json 標 `dyn`。卸掛不做。
-- 每次起新的 run，tick 依定義重建 `mnt/`（宣告的，加上 restart 帶的 `mounts_dyn`），清掉 `mount-req/`、`mount-done/`。
+- 每次起新的 run，tick 依定義重建 `mnt/`（照項目的宣告），清掉 `mount-req/`、`mount-done/`。
 - 不強制（沒有 FUSE）；要記任務的寫入，用[稽核包](modules/audit/README.md)的包裝程式 `aos7-audit -- <argv>`（核心不知道稽核），`writes.jsonl` 也只留這次 run。
 
 ## 5. 任務（S-10、S-11、S-16）
@@ -248,14 +242,13 @@ daemon 每圈只看**已登記**的 node：
 
 | 基礎設施檔（換 run 時清掉） | 誰寫 | 內容 |
 |---|---|---|
-| `birth.json` | tick | `{"name","slot","run","round","node","argv"或"inst","mounts","once","restart_of","at","runner"}`，有的話另帶 `x`（4.1）、`ctl_id`（第 6 節）、`retry_lost`／`retry_of`（4.4）；`runner`＝`{"pid","starttime"}`，Popen 之後才補上 |
+| `birth.json` | tick | `{"name","slot","run","round","node","argv"或"inst","mounts","once","at","runner"}`，有的話另帶 `x`（4.1）；`runner`＝`{"pid","starttime"}`，Popen 之後才補上 |
 | `pid.json` | aos7-run | `{"run","pid","pgid","starttime","runner_pid","at"}` |
 | `out.log` | 任務 | stdout＋stderr（這次 run 的） |
 | `exit.json` | aos7-run（lost 時 tock） | `{"run","code","at","round"}`；code 負數＝被訊號殺；lost 是 `{"code": null, "lost": true}`；tock 報過之後補 `seen_round` |
 | `tock.json` | tock | `{"run","round","at","early"}`，覆寫、只留最新 |
-| ~~`ctl.json`／`ctl-done.json`~~ | 任何人／tick、tock | **不在換 run 時清**（P2-04）：各只有一份、下一次控制就蓋掉；restart 的回條要活過新 run 起來那一刻，請求者才讀得到。回條 `result.run` 記它作用在哪個 run |
+| ~~`ctl.json`／`ctl-done.json`~~ | 任何人／tick、tock | **不在換 run 時清**（P2-04）：各只有一份、下一次控制就蓋掉；kill 的回條要活過新 run 起來那一刻（控制包 restart），請求者才讀得到。回條 `result.run` 記它作用在哪個 run |
 | `mnt/`、`mount-req/`、`mount-done/`、`writes.jsonl` | tick／任務 | 第 4.5 節 |
-| ~~`<node>/.aos/ctl-seen.json`~~ | tick、tock | **node 層、不在槽裡，不隨換 run 清**（A3-01）：每個槽最近一件已處理的任務控制（完成證據，第 6 節）；tock 刪槽時一併拿掉那槽的一筆 |
 
 - 讀到的 pid.json、exit.json、tock.json 的 `run` 跟 birth.json 不同 → 是上一個 run 沒清乾淨的，當不存在。
 - **槽什麼時候刪**：名字已不在 tasks.json（或槽號 ≥ 現在的 `max_live`）、run 已結束、而且結束已經在某一回合的 last-round.json 報過（`seen_round` 比現在的回合小）→ tock 刪掉整個槽（含任務自己寫的檔）。所以 once 任務的資料夾在報完結束後再留一回合；**交付物要寫到槽外面**（W7）。
@@ -310,23 +303,13 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起在自己的程序群組，�
 
 ## 6. 任務控制（S-17）
 
-任何人寫 `<槽>/ctl.json`＝`{"op": "kill"或"restart", "by", "why", "run": 可選, "reload": 可選, "id": 可選}`。**tick 與 tock 時刻**才執行；執行完先記完成證據（`ctl-seen.json`），再寫 `ctl-done.json`（蓋掉舊的，請求內容加 `result`），再刪 ctl.json（A3-01，見下面「重播只生效一次」）。node 被 pause 時等到 resume。槽的狀態不知道、ctl.json 讀不到、或 ctl-seen.json 讀不到／壞掉時**請求留著**，下一次再看（不寫 ok:false 的回條）。
+任何人寫 `<槽>/ctl.json`＝`{"op": "kill", "run": 整數, "by", "why"}`。**tick 與 tock 時刻**才執行；執行完寫 `ctl-done.json`（蓋掉舊的，請求內容加 `result`），再刪 ctl.json。node 被 pause 時等到 resume。槽的狀態不知道、ctl.json 讀不到時**請求留著**，下一次再看。
 
-- **`run`（可選）**：指定要收的是哪一次。跟槽現在的 run 不同（已經換人）→ 不執行、`ok: false`。不寫＝現在這次。
+- **只有 kill，`run` 必填**：op 不是 kill、`run` 缺或不是整數＝輸入不合（B）：回條 `ok: false`、刪請求。`run` 跟槽現在的 run 不同（已經換人）→ 不執行、`ok: false`。那個 run 已結束 → 算成功，順便收掉相符的殘留程序。
+- **重播天然只生效一次**：處理到一半被殺、或處理完 ctl.json 刪不掉，同一份請求下次會再看到——因為帶著 `run`，再執行也只對同一個 run（已結束就只是補收）；刪不掉時總結那筆 ctl 紀錄帶 `err`。
 - **kill 的範圍**（Q1 (a)）：任務的程序群組、群組成員活著的後代所在的群組、環境變數 NODE＋TID＋RUN 相符的程序（含被 init 收養的）。打 pid.json 記的群組前先確認：群組沒有活成員（沒東西可打），或有成員的環境是這個 run 的 NODE＋TID＋RUN，才打；不是就不打（防 pgid 被重用、打到別人）。任務自己改 pgid 是誤用。SIGTERM，最多等 1 秒，還在就 SIGKILL。故意脫離（setsid 又改環境、刪自己的槽）由任務自負。
 - **kill 回成功的條件**（A3-09）：最後確認 pid.json 記的任務程序（pid＋starttime）已經不在。還活著或認不出死了沒 → `ok: false`（msg 以 `unknown` 開頭），即使是因為群組核對不了而根本沒送訊號。
-- 已結束的任務：kill 算成功，順便收掉相符的殘留程序。
-- **restart**：在 tasks.json（拿鎖，最多等 1 秒，等不到整個 ctl 不執行）加一項 `once`，然後 kill（先加後殺：中途被殺時 once 項等槽空了才起，不會「殺了沒重起」；P2-07）。once 項的 `slot`＝這個槽、定義照 birth.json（`name`、`argv`／`inst`、`x`、`mounts` 宣告，執行中加掛的寫進 `mounts_dyn`）、`restart_of`＝原 run id、`ctl_id`＝這份請求的識別。下一個 tick 起它（維持 S-10「任務一律由 tick 啟動」），新 run 的 birth.json 也帶 `ctl_id`。槽沒換，所以任務自己寫的 state 接得上。
-- **重播只生效一次**（A2-05、A3-01、A3-04、A3-05）：處理到一半被殺、或處理完 ctl.json 刪不掉時，同一份 ctl.json 下次會再看到。
-  - **ctl_id**＝請求的 `id`（字串，**完整、不截斷**；超過 200 字拒絕：不執行，回條 `ok: false` 說明，A3-04）；沒帶 `id`＝sha1(`<node-id>/<槽>`＋檔案 st_dev＋st_ino＋mtime_ns＋原始內容) 前 16 碼——重播（同一份檔）全都不變，有人重新寫一份（原子寫＝新 inode、新 mtime）就變；加 inode 是因為保留 mtime 的複製／還原會讓「內容＋mtime」相同，加槽是因為兩個槽同內容同 mtime 會互吃（A3-05）。
-  - **id 的作用域是同一個 node 的同一個槽**。新請求用新 id（`aos7-ctl task` 自動產生 uuid），重送同一件才沿用原 id（`--id`）。
-  - **完成證據**（A3-01）：處理完先寫 node 層 `.aos/ctl-seen.json`＝`{"slots": {槽: {"ctl_id", "op", "ok", "msg", "run", "at"}}}`（每槽只留最近一件：ctl.json 一個槽只有一份，留一件就夠，合「核心只留上一次」；tock 刪槽時一併拿掉那槽的），再寫 ctl-done.json（`result` 帶 `ctl_id`），再刪 ctl.json。**只記真的動手過的**（送了 kill、加了 once 項，或認出已經重起過）；沒動手的 `ok: false`（表鎖拿不到、`run` 不符、槽是空的…）不記，同一個 id 重送還能再試。ctl.json 刪不掉時，回合總結那筆 ctl 紀錄帶 `err`（看得到，以前被吞掉）。
-  - 下次看到 ctl-seen.json 記過的同一個 ctl_id：**不執行**；回條還沒寫成（記完 seen 就被殺）就照 seen 補寫（`result.replayed: true`），再試著刪 ctl.json；總結那筆帶 `dup: true`。完成證據不隨換 run 消失，所以中間槽換了幾個 run 都不會再殺再起（以前只看現在的 birth 與待起的 once 項，keep 換一次 run 就忘了）。
-  - ctl-seen.json 讀不到、壞掉（不是 `{"slots": {...}}`）＝分不出這件做過沒 → 請求留著，等人處理（12 節）。
-  - 原有的查重保留，蓋「執行完、記 seen 之前被殺」那一段：restart 時槽現在的 birth.json 帶同一個 `ctl_id` → 已經重起過，只補回條、不 kill；tasks.json 已有**同槽**同 `ctl_id` 的 once 項 → 不再加（A3-05：別的槽同 id 的不算）。kill 在「執行完、記 seen 之前」被殺或記 seen 失敗時會再執行一次：同一個 run 已結束就只是補收殘留；**不帶 `run` 的 kill 若中間槽已換 run，會打到新 run**——要嚴格只收某一次就帶 `run`（已接受的窄窗口）。
-- **`reload: true`**（Q6，proto7-1）：定義改取 tasks.json 裡同名的第一個非 `once` 項（完整驗證過再用，去掉 `mode`、`from_round`、`max_live`、`enabled`），掛載＝項目宣告加上沒被宣告接管的執行中加掛。找不到、讀不懂、不合格 → **整個 ctl 不執行（不 kill）**，`ok: false` 說原因。成功時回條 `result.diff` 列有變的欄（`argv`、`inst`、`mounts`、`x`）。
-- restart 的 once 項跟同名的 keep 項搶同一個槽時：tick 先處理 once，keep 看到槽已活就不起。
-- ctl.json 讀不懂或不是物件：不執行，照樣搬成 ctl-done.json，`ok: false`。
+- **restart／reload 不在核心**：由請求端做（[控制包](modules/control/README.md)：先在 tasks.json 加一項釘同槽的 `once`，再寫上面的 kill）。tick 每回合先處理 once 項，所以重起的 once 會先佔住那個槽，同名的 keep 看到槽已活就不起。
 
 ## 7. tock（S-08、S-11）
 
@@ -375,7 +358,7 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起在自己的程序群組，�
 `aos7-ctl` 只是替你寫檔，LLM 直接寫檔一樣做得到：
 
 - `aos7-ctl daemon <root> <op> [node] [--kill] [--rounds N] [--owner X] [--all]`：寫 `<root>/.aosd/ctl/<by>.<op>.<node>.json`，帶 `--owner` 時是 `<by>.<op>.<node>@<owner>.json`（固定名，回條只留最近一份；A2-13）。by／node／owner 每段照 2.3 無損編碼（A3-06）。`<root>` 也可以是掛進來的 `.aosd`。
-- `aos7-ctl task <槽> <kill|restart> [why] [--reload] [--run N] [--id ID]`：寫 ctl.json。沒給 `--id` 就自動產生新的 id（uuid）；重送同一件請求才用 `--id` 沿用原 id（1～200 字，第 6 節；A3-05）。
+- `aos7-ctl task <槽> kill [why] [--run N]`：寫 ctl.json（沒給 `--run` 就讀槽的 birth.json 帶現在的 run）；`restart [--reload] [--id ID]` 走控制包。工具都在[工具包](modules/tools/README.md)。
 - `aos7-ctl add <node> '<項目 JSON>'...`：拿鎖把一或多項加進 tasks.json（一次 rename）。
 - 都可加 `--by WHO`（預設：在任務裡是 `<node-id>:<tid>`，否則 `cli`）；stdout 印 `{"wrote": 路徑}`。
 
@@ -398,7 +381,7 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起在自己的程序群組，�
 **通則**：
 
 - **不是每個「不知道」都要人**：status 的 `uncertain` 非空不等於要人工——「剛起」（birth→runner→pid.json 交接中）是正常暫態，看它持續多久、run 有沒有往前。`last_error` 只是最近一筆，不代表現在還壞著；合看 `phase`、`round`、`at`。
-- **動手前**：先保存證據（複製 `.aos/round.json`、`last-round.json`、`ctl-seen.json`、相關槽的 birth／pid／exit／ctl／ctl-done，和 `.aosd/status.json`），再 `pause` 這個 node（例 `aos7-ctl daemon <root> pause <node> --owner human`）讓會寫檔的動作停止競爭；pause 時不 tick／tock，也不執行任務控制。修完 `resume` 同一個 owner。
+- **動手前**：先保存證據（複製 `.aos/round.json`、`last-round.json`、相關槽的 birth／pid／exit／ctl／ctl-done，和 `.aosd/status.json`），再 `pause` 這個 node（例 `aos7-ctl daemon <root> pause <node> --owner human`）讓會寫檔的動作停止競爭；pause 時不 tick／tock，也不執行任務控制。修完 `resume` 同一個 owner。
 - **核實回合數 N**（round.json 壞掉、不在、或不是一般檔時要寫回）：看 last-round.json 的 `round`（已提交的最後一回合）、各槽 birth.json 的 `round` 與 exit.json 的 `round`／`seen_round`，取看得到的最大值。N＝last-round 的 `round` → 第 N 回合已收，寫 `{"round": N, "open": false}`；有槽的 birth `round` 比 last-round 大（＝N）→ 第 N 回合開了、總結沒提交，寫 `{"round": N, "open": true}` 讓 daemon 先照 2.2 tock 收掉（總結標 `incomplete`），**不要盲寫 false**——那會跳過這回合的結束與通知。
 - **刪 birth.json＝重新授權執行**：槽變空槽，keep／each 會再起；只確認「現在沒有活程序」不能證明 once 沒產生過外部副作用（交付物要看槽外）。
 
@@ -415,10 +398,9 @@ aos7-run：經 fd 讀 birth.json、開 out.log；起在自己的程序群組，�
 | birth.json 壞掉（半寫、不是物件、run 不是整數） | 單槽｜`uncertain`／總結 `errors` 有刪 birth 的提示 | 確認沒有活程序、也確認 once 的副作用後才刪 birth.json |
 | 活 pid 讀不到 stat／starttime，或 pid.json 的 starttime 本來就是 null | 單槽（當活＋unsure）｜`uncertain`、總結 `errors`（`kind: unsure`） | 暫時讀錯自己會好；starttime null 不會因 /proc 恢復而補上身分，要等程序結束，或人工確認後收掉 |
 | 疑似 lost，但掃描不完整、SIGKILL 後還在、最後重讀 exit.json 讀不到 | 單槽（UNKNOWN）｜總結 `errors`（`where: judge`）；ctl 留著 | 解除 I/O／權限／程序卡住後自動重判；不要為了進度手寫 lost |
-| **kill 回 `ok: false`（unknown）**（A3-09） | 單請求（已處理掉、不會自己重試）｜ctl-done.json `result.ok: false`、msg 以 `unknown` 開頭；總結 `ctl` 那筆 `ok: false`。restart 的 once 項已加，等槽空才起（`skipped` 記 busy） | 手動確認並收掉 pid.json 記的那個程序；要再送 kill 用**新的 id**（動手過的 kill 已記進 ctl-seen，同 id 會被當成做過） |
+| **kill 回 `ok: false`（unknown）**（A3-09） | 單請求（已處理掉、不會自己重試）｜ctl-done.json `result.ok: false`、msg 以 `unknown` 開頭；總結 `ctl` 那筆 `ok: false`。控制包 restart 的 once 項已加，等槽空才起（`skipped` 記 busy） | 手動確認並收掉 pid.json 記的那個程序；要再送 kill 照樣帶同一個 run |
 | ctl.json 讀不到、目標槽 UNKNOWN | 單請求（留著）｜總結 `ctl` 那筆帶 `err` | 原因解除後自動執行 |
-| **ctl-seen.json 讀不到、壞掉、不是一般檔**（A3-01） | 這個 node 所有任務控制都等著｜總結 `ctl` 每筆 `err`「分不出這件控制做過沒」 | 修 I/O；壞掉的先逐槽比對 ctl-done.json 的 `result.ctl_id` 與留著的 ctl.json——同一件的就是做過的，先刪那些 ctl.json；再刪掉 ctl-seen.json 或修成 `{"slots": {}}`。**注意：刪掉 ctl-seen.json 會讓留著的同一件 ctl.json 再執行一次** |
-| ctl.json 處理完刪不掉（A3-01） | 不停（不會再執行）｜總結 `ctl` 每回合一筆 `dup: true`＋`err`「刪不掉」 | 修權限後下一次自動刪；或人手刪 |
+| ctl.json 處理完刪不掉 | 不停（每回合再執行一次，只對同一個 run，無害）｜總結 `ctl` 每回合一筆帶 `err`「刪不掉」 | 修權限後下一次自動刪；或人手刪 |
 | 欠的 tock.json 補不上（A3-08） | 不停｜round.json `notify_errors`；之後的回合 `tasks_error`「欠的 tock.json 還補不上」 | 修權限後下一個 tick 自動補，或人手跑 `aos7-tock` 對已關回合補 |
 | daemon 控制檔處理例外、搬不走 | 單請求｜`last_ctl_error`、`.aosd/ctl-failed/` | 效果可能已生效：先看 status 核實，再決定要不要重送；重開 daemon 會把卡在 `ctl/` 的當新請求 |
 | tasks.json 讀不到／壞掉、表鎖逾時、項目不合法 | 回合照開、那些項不起｜round.json／總結的 `tasks_error`、`skipped` | 修表；status 只看到回合往前，看不出沒起工作，要讀總結 |

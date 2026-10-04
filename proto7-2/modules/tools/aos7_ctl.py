@@ -1,7 +1,8 @@
 """aos7-ctl：替你寫控制檔的小工具——LLM 直接寫同樣的 JSON 檔也做得到（spec.md 第 10 節，S-01）。
 
     aos7-ctl daemon <root|掛載點> <op> [node] [--kill|--no-kill] [--rounds N] [--owner X] [--all] [--by WHO]
-    aos7-ctl task <槽資料夾> <kill|restart> [why] [--reload] [--run N] [--id ID] [--by WHO]
+    aos7-ctl task <槽資料夾> kill [why] [--run N] [--by WHO]
+    aos7-ctl task <槽資料夾> restart [why] [--reload] [--id ID] [--by WHO]   （控制包 modules/control）
     aos7-ctl add <node 資料夾> '<項目 JSON>'... [--by WHO]
 
 daemon 控制檔用固定名 `<by>.<op>.<node>[@<owner>].json`（回條同名蓋掉，只留每個寫的人、每個 owner、每件事的上一次；W3、A2-13）。
@@ -15,7 +16,7 @@ import os
 import re
 import sys
 
-from aos7_fs import Unknown, edit_json, write_json
+from aos7_fs import OK, Unknown, edit_json, fact, write_json
 
 DAEMON_OPS = ("register", "unregister", "pause", "resume", "wake", "stop")
 TASK_OPS = ("kill", "restart")
@@ -94,21 +95,17 @@ def daemon_ctl(root, op, node=None, kill=None, by=None, rounds=None, owner=None,
     return path
 
 
-def task_ctl(slot_dir, op, why="", by=None, reload=False, run=None, id_=None):
-    """向 slot_dir 寫 op（kill／restart），回傳 ctl.json 路徑；已有請求覆寫（spec §6、§10）。
+def task_ctl(slot_dir, why="", by=None, run=None):
+    """向 slot_dir 寫 kill 請求（核心的任務控制只有 kill，`run` 必填），回 ctl.json 路徑；已有請求覆寫（spec §6、§10）。
 
-    why／by 記原因與來源；reload 要求重讀任務定義；run 可限定這次執行，省略指現在這次。
-    id_：這件請求的識別；沒給就自動產生一個新的（A3-05：新請求用新 id，重送同一件才用 `--id` 沿用原 id）。
-    寫入失敗拋例外；請求等 tick／tock 才執行。
-    """
-    import uuid
+    沒給 run 就讀槽的 birth.json 帶現在的 run；讀不到、壞掉丟 Unknown（不寫）。請求等 tick／tock 才執行。"""
     path = os.path.join(os.path.abspath(slot_dir), "ctl.json")
-    obj = {"op": op, "by": by or default_by(), "why": why, "id": id_ or uuid.uuid4().hex}
-    if reload:
-        obj["reload"] = True
-    if run is not None:
-        obj["run"] = run
-    write_json(path, obj)
+    if run is None:
+        st, b = fact(os.path.join(os.path.abspath(slot_dir), "birth.json"))
+        if not (st == OK and isinstance(b, dict) and isinstance(b.get("run"), int)):
+            raise Unknown("birth.json %s，不知道現在是哪個 run；用 --run 指定" % (b if st != OK else "內容不合"))
+        run = b["run"]
+    write_json(path, {"op": "kill", "run": run, "by": by or default_by(), "why": why})
     return path
 
 
@@ -152,9 +149,9 @@ def main(argv=None):
     t.add_argument("op", choices=TASK_OPS)
     t.add_argument("why", nargs="?", default="")
     t.add_argument("--reload", action="store_true", help="restart 照 node 現在 tasks.json 的同名項目")
-    t.add_argument("--run", type=int, help="只在槽現在的 run 是這個時執行")
+    t.add_argument("--run", type=int, help="kill：要收的是哪一次（預設讀 birth.json 的現在這次）")
     t.add_argument("--by")
-    t.add_argument("--id", help="請求識別（預設自動產生新的；重送同一件請求時沿用原 id，最多 200 字）")
+    t.add_argument("--id", help="restart：請求 id（預設自動產生新的；重送同一件請求時沿用原 id，表上同槽同 id 的 once 不重加）")
     a_ = sub.add_parser("add")
     a_.add_argument("node")
     a_.add_argument("items", nargs="+")
@@ -169,13 +166,23 @@ def main(argv=None):
             return 1
         path = daemon_ctl(a.root, a.op, a.node, a.kill, a.by, a.rounds, a.owner, a.all, a.why)
     elif a.what == "task":
-        if a.reload and a.op != "restart":
-            print("aos7-ctl: --reload 只給 restart", file=sys.stderr)
+        if (a.reload or a.id) and a.op != "restart":
+            print("aos7-ctl: --reload／--id 只給 restart", file=sys.stderr)
             return 1
-        if a.id is not None and not (0 < len(a.id) <= 200):
-            print("aos7-ctl: --id 要是 1～200 字（不截斷；A3-04）", file=sys.stderr)
+        if a.op == "restart":
+            import aos7_control   # 控制包（工具包依賴它）
+            sd = os.path.abspath(a.slot_dir)
+            r = aos7_control.restart(os.path.dirname(os.path.dirname(os.path.dirname(sd))), os.path.basename(sd),
+                                     a.why, a.reload, a.id, a.by or default_by())
+            print(json.dumps(dict(r, wrote=r.get("ctl")), ensure_ascii=False))
+            if not r["ok"]:
+                print("aos7-ctl: %s" % r["msg"], file=sys.stderr)
+            return 0 if r["ok"] else 1
+        try:
+            path = task_ctl(a.slot_dir, a.why, a.by, a.run)
+        except Unknown as e:
+            print("aos7-ctl: %s" % e, file=sys.stderr)
             return 1
-        path = task_ctl(a.slot_dir, a.op, a.why, a.by, a.reload, a.run, a.id)
     else:
         try:
             items = [json.loads(x) for x in a.items]

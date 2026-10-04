@@ -100,19 +100,9 @@ def check_item(item):
         m = SLOT_RE.match(s) if isinstance(s, str) else None
         if not m or m.group(1) != n:
             raise ValueError("slot 要是 %s 或 %s.<數字>，拿到 %r" % (n, n, s))
-    if "mounts_dyn" in item and not (isinstance(item["mounts_dyn"], list)
-                                     and all(isinstance(x, str) for x in item["mounts_dyn"])):
-        raise ValueError("mounts_dyn 要是字串陣列")
-    if "ctl_id" in item and not isinstance(item["ctl_id"], str):
-        raise ValueError("ctl_id 要是字串（restart 寫的，A2-05）")
     if "retry_lost" in item:
-        # P2-02 選項：預設 false＝最多一次；true＝判 lost 時若看起來從沒起來過，加回重起（可能跑兩次）
-        if not isinstance(item["retry_lost"], bool):
-            raise ValueError("retry_lost 要是 true 或 false，拿到 %r" % (item["retry_lost"],))
-        if mode != "once":
-            raise ValueError("retry_lost 只給 once 項")
-    if "retry_of" in item and not isinstance(item["retry_of"], str):
-        raise ValueError("retry_of 要是字串（retry_lost 加回時寫的）")
+        raise ValueError("retry_lost 已移到 once 保證包：改寫成 \"x\": {\"retry_lost\": true}，並在 node 上跑 retry_lost 任務"
+                         "（modules/once_retry/README.md）")
 
 
 def launch_of(item):
@@ -188,7 +178,7 @@ def plan_round(ctx, items, views, rnd, p):
             p.errors.append("%s：%s" % (label, e))
             continue
         valid.append(item)
-    # spec §6：restart 的 once 先佔槽，避免同名 keep 搶先啟動；used 保證一槽一回合只起一次。
+    # once 先排：控制包 restart 加的 once（釘同槽）先佔槽，同名 keep 才不會搶先起；used 保證一槽一回合只起一次。
     order = [i for i in valid if i.get("mode") == "once"] + [i for i in valid if i.get("mode", "each") != "once"]
     for item in order:
         name, mode = item["name"], item.get("mode", "each")

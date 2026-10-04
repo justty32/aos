@@ -244,3 +244,46 @@
 | `test_matrix_once.TestLaunchCrash.test_once_after_birth`、`test_once_threestate.TestOnceCrash.test_crash_after_birth`、`test_options_a3.TestRetryLost`（兩項） | lost 紀錄多了事實欄 `never_started: true`（tick 在 after-birth 被殺，birth 沒有 runner） |
 
 **新增測試**：`tests/core/test_exits.py` 6 項（`x` 照抄、壞 `x` 與舊 subroot 欄跳過、never_started 有／無、守門檔擋／壞掉擋／放、SIGTERM 不看守門檔）；`modules/audit/tests/test_audit_wrapper.py` 1 項。
+
+## 核心精簡：控制包與 once 保證包（10-04）
+
+照[精簡方案](core-slimming.md)頂層定案第 1、5 條（第 6 節、6.1 第 1、3 點）。
+
+**核心的任務控制只剩 kill，`run` 必填**：槽 ctl.json＝`{"op": "kill", "run": 整數, "by", "why"}`。op 不是 kill、run 缺或不是整數＝輸入不合（B）：回條 ok:false、刪請求；run 已換人＝ok:false；run 已結束＝ok:true 順便收殘留；A3-09「最後確認任務程序不在才 ok:true」保留。帶 run 讓重播天然冪等，所以拿掉了：restart／reload 整段、`ctl_id_of`（id 與檔案 inode＋mtime 雜湊）、`ctl-seen.json`（read_seen／write_seen／_seen_again、tock 刪槽時拿掉那筆）、`reload_item`、`def_diff`、`dyn_mounts`、`RESTART_KEYS`／`DIFF_KEYS`／`SCHED_KEYS`、`_append_items`、birth.json 的 `ctl_id`／`restart_of`、tasks.json 的 `restart_of`／`mounts_dyn`／`ctl_id` 欄、起任務時照 `mounts_dyn` 標 dyn。`slot`（once 釘槽）留在核心。
+
+**移到控制包**（`modules/control/aos7_control.py`）：`restart(node, slot, why, reload, req_id, by)`——讀 birth → 拿表鎖加釘同槽的 once（`x.restart_of`、`x.req_id`，同槽同 req_id 不重加；birth 已帶同 req_id＝已經重起過，什麼都不做；表壞掉照 G1 拒寫）→ 寫 kill 帶 run。`aos7-ctl task … restart` 改呼叫它；`aos7-ctl task … kill` 沒給 `--run` 就讀 birth 帶現在的 run。
+
+**動態掛載的 `dyn` 標記**：留在核心——它是加掛審核寫進 birth 的事實（「這個掛載是執行中加的」），控制包 reload 靠它分出要另外帶過去的掛載；拿掉的只有「起任務時照 `mounts_dyn` 再標 dyn」那段（只為 restart 存在）。代價：restart 後新 birth 把帶過去的掛載當宣告、不再標 dyn，之後再 reload 不會帶它們。
+
+**移到 once 保證包**（`modules/once_retry/retry_lost.py`，普通 keep 任務）：核心拿掉 tasks.json 的 `retry_lost`／`retry_of` 欄、`retry_wanted`、`requeue_lost_once`、lost exit 的 `retried`。核心只留事實欄 `never_started`。舊的頂層 `retry_lost` 欄＝那項不合、tasks_error 指到這個包（不靜默忽略：忽略會讓人以為還有至少一次）。要保證的 once 改帶 `x.retry_lost: true`。
+
+**行為變化**：
+
+| 情況 | 以前 | 現在 |
+|---|---|---|
+| ctl.json 不帶 run 的 kill | 收現在這次 | 輸入不合：回條 ok:false、刪請求、沒執行（`aos7-ctl task … kill` 會自動帶） |
+| ctl.json 的 restart | tick／tock 原子做（加 once＋kill，ctl-seen 防重播） | 回條 ok:false「op 只有 kill」；restart 由請求端（控制包）做 |
+| 請求端在加 once 之後、寫 kill 之前死掉 | （核心做，不存在） | once 等槽空才起（busy）；重試責任在請求端（同 req_id 再呼叫一次） |
+| retry_lost | 核心判 lost 時同步加回（精確） | 模組收到 tock 才加回（取樣：慢了、被 pause 錯過那筆就退回最多一次） |
+| lost 紀錄 | 加回時帶 `retried: true` | 不帶（核心不知道）；看 tasks.json 的 `x.retry_of` |
+
+**搬走、改寫的測試**（250 → 250）：
+
+| 原測試 | 去向 |
+|---|---|
+| `test_ctl.TestCtl` 的 restart 四項（same_slot_new_run_keeps_state、reload_takes_new_definition、reload_refused_without_kill、restart_receipt_survives_new_run） | 搬到 `modules/control/tests/test_control.py`，改用 `aos7_control.restart`（reload 拒絕改成「回 ok:false、沒寫 kill」） |
+| `test_ctl.TestMounts.test_mount_request_served_and_restart_carries_dyn` | 拆兩項：核心留 `test_mount_request_served`（加掛審核、dyn 標記；換 run 改用 kill，加掛的不帶過去）；控制包 `test_restart_carries_dynamic_mounts`（新增一項） |
+| `test_errors.TestTasksWriteG1.test_restart_with_bad_table_does_not_kill` | 搬到控制包（壞表＝restart 回 ok:false、不寫 kill） |
+| `test_matrix_once.TestRestartCrash`（once／keep × 3 點，6 項） | 搬到控制包改寫：3 點改成「請求端加完 once、寫 kill 前被殺（同 req_id 重試）」「tock 寫完 kill 回條、刪請求前被殺」「tick 同上」；斷言照舊（只重起一次、不雙開、表上不留殘項），新 birth 帶 `x.restart_of`（以前是 `ctl_id`＋`restart_of`） |
+| `test_matrix_a3.TestCtlSeen`（3 項） | 改寫留在核心成 `TestKillReplay`：ctl.json 刪不掉＝每次再執行也只對同一個 run（新 run 不被打到）；run 不對＝ok:false、run 缺＝輸入不合、改對重送照樣執行；`ctl-after-done` 被殺後再執行同一份 kill＝already ended、只重起一次 |
+| `test_matrix_a3.TestCtlId.test_same_prefix_ids_distinct` | 改寫到控制包 `test_same_prefix_req_ids_distinct`（前 199 字相同的兩個 req_id 各自生效） |
+| `test_matrix_a3.TestCtlId.test_two_slots_same_content_mtime` | 改寫到控制包 `test_two_slots_same_req_id`（同 req_id 不同槽各自生效） |
+| `test_matrix_a3.TestCtlId.test_cli_task_auto_id` | 改寫到控制包 `test_cli_restart_auto_id_and_resend`（自動 req_id 兩次都生效；`--id` 重送＝once 不重加）；「--id 超過 200 字被拒」那段拿掉（req_id 不截斷、不雜湊，沒有長度限制的理由） |
+| `test_options_a3.TestRetryLost`（3 項） | 搬到 `modules/once_retry/tests/test_once_retry.py`：true_runs_once（同程序呼叫模組的 scan；ended 不再帶 `retried`）、default_at_most_once（照舊）、bad_type_skipped 改成「舊的頂層欄被拒、`x.retry_lost` 不是 true 模組不理」；另新增 `test_module_as_keep_task`（模組真的當 keep 任務跑） |
+
+**刪掉的測試**（類別：移出核心＝控制包，頂層定案 1）：
+
+| 測試 | 理由 |
+|---|---|
+| `test_matrix_a3.TestCtlId.test_too_long_id_refused` | 防的是 ctl_id 被截斷後兩件請求撞成同一件（A3-04）；ctl_id 拿掉了，控制包的 req_id 原樣比對、不截斷，沒有這個問題 |
+| `test_matrix_a3.TestCtlId.test_copy_with_same_mtime_new_inode_is_new` | 防的是「沒帶 id 時用檔案 inode＋mtime＋內容雜湊當識別」誤判重播（A3-05）；kill 帶 run 後重播天然冪等，不再需要識別請求檔 |

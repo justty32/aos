@@ -61,22 +61,6 @@ class TestTasksWriteG1(MatrixCase):
         self.prog("aos7-ctl", "add", node, ITEM)
         self.assertEqual([i["name"] for i in self.tasks(node)], ["x"])
 
-    def test_restart_with_bad_table_does_not_kill(self):
-        """restart 要先加 once 項：表壞掉＝加不進去 → 回條 ok:false、不 kill、表原封不動。"""
-        node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEP}])
-        self.tick()
-        pid = self.wait_pid(node, "s")["pid"]
-        self.tock()
-        with open(tasks_path(node), "w") as f:
-            f.write(HALF)
-        write_json(os.path.join(self.slot(node, "s"), "ctl.json"), {"op": "restart", "by": "t"})
-        self.tick()
-        done = json.load(open(os.path.join(self.slot(node, "s"), "ctl-done.json")))
-        self.assertIs(done["result"]["ok"], False, done["result"])
-        self.assertIn("沒 kill", done["result"]["msg"])
-        self.assertTrue(alive(pid), "表壞掉還是 kill 了")
-        self.assertEqual(snapshot(tasks_path(node)), HALF.encode())
-
 
 gen(TestTasksWriteG1, "add_refused", [(k, (k,)) for k in ("half", "fifo", "eio")], TestTasksWriteG1._add_refused)
 
