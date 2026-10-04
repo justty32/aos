@@ -36,7 +36,7 @@ class TestSlotsAndRuns(CoreCase):
         self.assertEqual((t["run"], t["round"]), (1, 1))
         self.round_trip()
         self.wait_ended(node, "w", 1)
-        seen = [x["round"] for x in __import__("aos7_fs").read_jsonl(os.path.join(self.slot(node, "w"), "seen.jsonl"))]
+        seen = [x["round"] for x in __import__("aos7_taskside").read_jsonl(os.path.join(self.slot(node, "w"), "seen.jsonl"))]
         self.assertEqual(seen, [1, 2])
         lr = self.tock() if self.round_json(node).get("open") else self.round_trip()
         self.assertIn({"run": "w#1", "code": 0}, self.last_round(node)["ended"] + lr.get("ended", []))

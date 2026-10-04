@@ -14,7 +14,8 @@ import unittest
 from base import BIN, LIB, SLEEP, DaemonCase, kill_space_procs
 import aos7_fs
 import aos7_proc
-from aos7_fs import read_json, read_jsonl, write_json
+from aos7_fs import read_json, write_json
+from aos7_taskside import read_jsonl
 
 
 class TestRegister(DaemonCase):
@@ -320,7 +321,8 @@ class TestCtlFiles(DaemonCase):
         self.assertTrue(os.path.exists(os.path.join(done, "fifo.json.bad")))
         self.assertTrue(self.status()["pid"])
 
-    def test_receipt_failure_goes_to_ctl_failed_and_stop_still_works(self):
+    def test_receipt_failure_drops_request_and_stop_still_works(self):
+        """回條寫不進去（處理丟例外）：效果可能已生效，不重做——請求刪掉、記 last_ctl_error；同圈的 stop 照樣生效。"""
         self.start_daemon()
         self.wait_for(lambda: self.status().get("pid"))
         aosd = os.path.join(self.root, ".aosd")
@@ -331,7 +333,8 @@ class TestCtlFiles(DaemonCase):
         write_json(os.path.join(aosd, "ctl", "b-stop.json"), {"op": "stop"})
         p = self.procs[-1]
         self.assertEqual(p.wait(15), 0)
-        self.assertEqual(sorted(os.listdir(os.path.join(aosd, "ctl-failed"))), ["a-wake.json", "b-stop.json"])
+        self.assertEqual([n for n in os.listdir(os.path.join(aosd, "ctl")) if not n.startswith(".")], [])
+        self.assertFalse(os.path.exists(os.path.join(aosd, "ctl-failed")))
         self.assertIn("last_ctl_error", self.status())
 
     def test_log_on_switch(self):

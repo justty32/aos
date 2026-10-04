@@ -7,8 +7,7 @@
 1. **node 本身是符號連結**（同程序 tick／tock）→ tick／tock 回 gone（O_NOFOLLOW），連結目標裡沒建 `.aos`。上層是連結的案已刪（誤用 M-2.1）。
 2. **A2-07 暫存檔清理** × 情境 ∈ {放好的死 pid 暫存（`.aos/`、槽裡）＋活 pid 暫存、`tmp:last-round.json` 連殺 5 次 tock}
    → tick＋tock 後死的被清、活的留著；連殺後再正常 tock，`.aos/` 底下沒有 `.tmp.` 殘留。
-3. **A2-08 診斷不截掉前綴**：`Timeline.err(..., kind=)` 的 err 以 kind 開頭、≤ 320 字、帶 kind；starttime 讀不到的任務在 tock 總結
-   `errors` 留 `phase: "unsure"`。
+3. （A2-08 診斷的兩案搬到診斷包 modules/diag/tests/test_diag.py。）
 4. **A2-10**：history module 的 `--max-lines` 也套在 `daemon-events.jsonl`——已搬到 modules/tests/test_modules_history.py。
 5. **A2-12**：tock 寫 last-round.json 早於任何 tock.json（任務收到 tock 時已經讀得到這回合的總結）。
 """
@@ -22,16 +21,8 @@ from unittest import mock
 
 from base import SLEEP
 from _matrix import MatrixCase, dead_pid, gen
-import aos7_daemon_timeline
-import aos7_fs
-import aos7_proc
 import aos7_tock
 from aos7_fs import write_json
-
-
-class _FakeDaemon:
-    def __init__(self, root):
-        self.root = root
 
 
 class TestSymlinkInProcess(MatrixCase):
@@ -82,31 +73,6 @@ class TestTmpSweep(MatrixCase):
         self.itock()
         left = [os.path.join(d, n) for d, _ds, ns in os.walk(os.path.join(node, ".aos")) for n in ns if ".tmp." in n]
         self.assertEqual(left, [], "暫存檔殘留")
-
-
-class TestDiagnostics(MatrixCase):
-    """〔diag〕status／總結的診斷欄（A2-08，F53）。"""
-    def test_timeline_err_keeps_kind_prefix(self):
-        os.makedirs(os.path.join(self.root, "a"))
-        tl = aos7_daemon_timeline.Timeline(_FakeDaemon(self.root), "a", None)
-        tl.err("action-lock", None, "stale-holder-unverified：" + "x" * 2000, kind="stale-holder-unverified")
-        e = tl.last_error
-        self.assertTrue(e["why"].startswith("stale-holder-unverified"), e["why"][:80])
-        self.assertLessEqual(len(e["why"]), 320)
-        self.assertEqual(e.get("kind"), "stale-holder-unverified")
-
-    def test_unsure_in_tock_errors(self):
-        node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": SLEEP}])
-        self.itick()
-        self.wait_pid(node, "k")
-        self.itock()
-        self.itick()
-        with mock.patch.object(aos7_proc, "proc_starttime", lambda pid: None), \
-                mock.patch.object(aos7_fs, "proc_starttime", lambda pid: None):
-            lr = self.itock()
-        self.assertIn("k#1", lr["alive"])
-        self.assertTrue([x for x in self.errors_for(lr, "k") if x.get("kind") == "unsure" and x.get("why")],
-                        "starttime 讀不到的任務沒在 errors 留 unsure：%r" % lr.get("errors"))
 
 
 class TestTockOrder(MatrixCase):

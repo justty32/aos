@@ -14,7 +14,7 @@ import json  # noqa: E402
 import subprocess  # noqa: E402
 import unittest  # noqa: E402
 
-from base import CONTROL, LIB, SLEEP, CoreCase  # noqa: E402
+from base import CONTROL, LIB, SLEEP, TOOLS, CoreCase  # noqa: E402
 from _matrix import MatrixCase, alive, env, gen, rec_argv  # noqa: E402
 import aos7_control  # noqa: E402
 import aos7_task  # noqa: E402
@@ -191,8 +191,8 @@ class TestRestartCrash(MatrixCase):
     def do_restart(self, node, slot, point):
         """照 point 送 restart，必要時讓對應的一方被殺。"""
         if point == "requester-after-append":
-            code = ("import sys; sys.path[:0] = [%r, %r]; import aos7_control; aos7_control.restart(%r, %r, req_id='r1')"
-                    % (CONTROL, LIB, node, slot))
+            code = ("import sys; sys.path[:0] = [%r, %r, %r]; import aos7_control; aos7_control.restart(%r, %r, req_id='r1')"
+                    % (CONTROL, TOOLS, LIB, node, slot))
             p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=30,
                                env=dict(os.environ, AOS7_TEST_CRASH="restart-after-append"))
             self.assertEqual(p.returncode, -9, "請求端沒在 restart-after-append 被殺：%s" % p.stderr)
@@ -203,7 +203,7 @@ class TestRestartCrash(MatrixCase):
         self.assertTrue(aos7_control.restart(node, slot, req_id="r1")["ok"])
         self.crash("aos7-tick" if point.startswith("tick") else "aos7-tock", "ctl-after-done")
 
-    def recover(self, node, slot, point, check):
+    def recover(self, node, slot, point, check, settle=True):
         """恢復：先把被打斷的回合收掉，再跑幾回合；請求端被殺的情境中途用同一個 req_id 重試一次。"""
         with env(AOS7_INCOMPLETE="tick" if point.startswith("tick") else "tock"):
             self.itock()
@@ -213,7 +213,8 @@ class TestRestartCrash(MatrixCase):
                 self.assertIn(aos7_control.restart(node, slot, req_id="r1")["once"], ("dup", "done"))
             self.itick()
             check("第 %d 次恢復 tick 後" % r)
-            self.settle(node, slot)
+            if settle:   # once 很快就結束，等它；keep 的任務一直活著，等它只是白等
+                self.settle(node, slot)
             self.itock()
             check("第 %d 次恢復 tock 後" % r)
 
@@ -244,7 +245,7 @@ class TestRestartCrash(MatrixCase):
             self.assert_le_one(node, "k", when)
             self.assert_one_restart_item(node, when)
             runs.add(self.birth(node, "k").get("run"))
-        self.recover(node, "k", point, check)
+        self.recover(node, "k", point, check, settle=False)
         self.wait_for(lambda: len(self.live_procs(node, "k")) == 1, 5, "恢復後槽裡不是剛好一個活程序")
         self.assertEqual(len(runs), 2, "birth 的 run 前進了 %d 次：%r" % (len(runs) - 1, sorted(runs)))
         self.assertEqual(len(self.ran(node, "k")), 2, self.ran(node, "k"))

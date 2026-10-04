@@ -31,7 +31,8 @@ import _proc  # noqa: E402
 import aos7_task  # noqa: E402
 import aos7_tick  # noqa: E402
 import aos7_tock  # noqa: E402
-from aos7_fs import read_json, read_jsonl, write_json  # noqa: E402
+from aos7_fs import read_json, write_json  # noqa: E402
+from aos7_taskside import read_jsonl  # noqa: E402,F401
 
 # 同程序跑 tick（itick）時起的 aos7-run 不等它（tick 本來就不等任務），Popen 物件被回收時的 ResourceWarning 不看
 warnings.simplefilter("ignore", ResourceWarning)

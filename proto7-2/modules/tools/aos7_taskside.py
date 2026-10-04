@@ -4,10 +4,13 @@
 - `wait_tock(...)`：等 `$AOS7_TASK/tock.json` 的回合數變大（S-11）。
 - `resolver(taskdir)`：空間路徑 → 經過掛載點的實際路徑。
 - `request(taskdir, path, ...)`：執行中加掛的請求（寫 `mount-req/`，tick 審核）。
+- `read_jsonl(path)`：讀流水帳（歷史、事件），壞行跳過。
+- `decl_of(birth)`：birth.json 的 mounts → 原本的宣告（控制包、once 保證包照 birth 重起時用）。
 
 只讀寫任務自己的槽（tock.json、birth.json、mount-req／mount-done）；核心不 import 這個檔。
 用法：把 `proto7-2/modules/tools` 與 `proto7-2/lib` 加進 sys.path 再 import。
 """
+import json
 import os
 import time
 
@@ -89,3 +92,27 @@ def request(taskdir, path, why="", name=None):
     if not os.path.exists(req):
         write_json(req, {"name": n, "path": path, "why": why})
     return "pending"
+
+
+def read_jsonl(path, with_bad=False):
+    """讀流水帳，壞行跳過：逐行各自解碼（append 被殺在多 byte 字元中間也只壞那一行）。with_bad=True 時回 (紀錄, 壞行數)。
+    讀不到回已讀到的（通常空清單）。"""
+    out, bad = [], 0
+    try:
+        with open(path, "rb") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    out.append(json.loads(line.decode("utf-8")))
+                except ValueError:   # UnicodeDecodeError 也是 ValueError
+                    bad += 1
+    except OSError:
+        pass
+    return (out, bad) if with_bad else out
+
+
+def decl_of(birth):
+    """birth.json 的 mounts → 原本的宣告 {名字: 空間路徑}（只取掛上了的）。"""
+    m = (birth or {}).get("mounts") or {}
+    return {n: v["to"] for n, v in m.items() if isinstance(v, dict) and "to" in v and "at" in v}

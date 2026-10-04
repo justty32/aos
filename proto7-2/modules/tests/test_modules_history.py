@@ -12,7 +12,8 @@ import unittest  # noqa: E402
 
 from base import MODULES, DaemonCase  # noqa: E402
 from _matrix import MatrixCase  # noqa: E402
-from aos7_fs import read_json, read_jsonl, write_json  # noqa: E402
+from aos7_fs import read_json, write_json  # noqa: E402
+from aos7_taskside import read_jsonl  # noqa: E402
 
 
 class TestModules(DaemonCase):

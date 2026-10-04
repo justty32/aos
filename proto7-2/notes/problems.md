@@ -287,3 +287,69 @@
 |---|---|
 | `test_matrix_a3.TestCtlId.test_too_long_id_refused` | 防的是 ctl_id 被截斷後兩件請求撞成同一件（A3-04）；ctl_id 拿掉了，控制包的 req_id 原樣比對、不截斷，沒有這個問題 |
 | `test_matrix_a3.TestCtlId.test_copy_with_same_mtime_new_inode_is_new` | 防的是「沒帶 id 時用檔案 inode＋mtime＋內容雜湊當識別」誤判重播（A3-05）；kill 帶 run 後重播天然冪等，不再需要識別請求檔 |
+
+## 核心精簡：程式減肥、診斷包、防再胖（10-04）
+
+照[精簡方案](core-slimming.md)第 3.3、9 節。核心 `lib/aos7_*.py` 從 3544 總行／2444 實際程式降到預算內（數字見 `tests/core/test_budget.py` 的訊息，README「防再胖」）。
+
+**做了的**：
+
+- **診斷包** `modules/diag/aos7-diag`（F53）：status 拿掉 `uncertain`（以前 daemon 每 0.25 秒判一次所有槽、把判不出的放進 status），改由唯讀工具按需重算並對到恢復步驟；核心 spec §12 的恢復表搬到 [modules/diag/README.md](../modules/diag/README.md) 當操作手冊。`steps_left` 是 daemon 記憶體裡的倒數，工具算不出來，留在 status。
+- **F13 控制檔通道**：拿掉 `.aosd/ctl-failed/`。處理丟例外（例如回條寫不進去）的請求：效果可能已生效、不重做——直接刪掉並記 `last_ctl_error`；刪不掉就記著、不再執行、每圈再試著刪（以前是搬到 ctl-failed，搬不走才留著）。壞的請求一律回條 ok:false（原本就是）。
+- **F16 舊動作接管**：`reap_stale_owner` 與 `holder_unverified` 併成一個函式，回 (殺了的 pid, 認不出的原因)；last_error 只記一句原因（kind `stale-holder-unverified`），人工步驟（fuser／lsof、補正 action.owner.json、不要 unlink 鎖檔）寫在診斷包 README。順帶：以前會先試著殺「舊世代、同 starttime」的持有者再看鎖有沒有人拿，現在先看鎖——沒人拿就什麼都不做。
+- **F21 任務表驗證改表驅動**：`aos7_tick.FIELDS`（欄位、預設、合格判斷、說明）＋ `MOVED`（移到模組包的舊欄位）。錯誤訊息格式統一成「<欄位> <說明>，拿到 <值>」。
+- **收掉的程式**（grep 確認沒人用或只剩一處用）：`aos7_fs` 的 `node_id_of`、`join_id`、`aos_dir`、`real_path`、`clip`（併進 `hold`）、`is_regular`；`read_jsonl` 搬到工具包（只有測試、歷史、稽核用）；`append_jsonl` 不再回半行的位元組數；`aos7_mount.decl_of` 搬到工具包（只有控制包、once 保證包用）；`aos7_proc` 的 `want_env`（併進 `group_is_task`）、`sweep_nodes`（`kill_node` 收多個 node 就是它）；`aos7_task` 的 `tasks_dir`、`_wait_pid_json`（併進 `kill_run`）、`Ctx` 改 namedtuple；`aos7_tick` 的 `Plan`（改 SimpleNamespace）、`_Skip`、`_raw_items`、`GONE`；keep／each 挑槽併成一段；時間線的 `done()`（併進 `leaving()`）；aos7-run 的 `read_birth`（直接用 fact），起程序失敗與起之前失敗共用 `fail()`（runner 退出碼 0→1，exit.json 的 error 改成「起不來：…」）。
+- **docstring／註解**：只留「做什麼、保證什麼、丟什麼」與「為什麼」；參數逐一唸過的套話縮成一句；由來編號（A2-／A3-／P2-／astra-N／K-／N-、「以前…」、「註解疑點 檔:行」）拿掉，仍有價值的記在下面。
+- **防再胖**：`tests/core/test_budget.py`（總行 ≤ 2800、實際程式 ≤ 2200）；README「防再胖：新功能預設進模組」寫進核心的三問。
+
+**沒做的**：F47（欠的 tock.json 只記不補）——組件契約卡 2.4 的保證寫「通知寫失敗不吞，記 notify_errors，下一個 tick 補」，跟方案衝突；其他手段已經壓到預算內，照隊長指示不做。
+
+**改了的既有測試**：`test_daemon.TestCtlFiles.test_receipt_failure_goes_to_ctl_failed_and_stop_still_works` → `test_receipt_failure_drops_request_and_stop_still_works`（斷言請求刪掉、沒有 ctl-failed、有 last_ctl_error；stop 照樣生效）。`test_matrix_misc.TestDiagnostics` 兩項搬到 `modules/diag/tests/test_diag.py` 改成斷言 aos7-diag 的輸出（核心的部分——hold 保留頭尾、tock 總結 errors 有 unsure——照樣斷言），另加一項「diag 唯讀」。新增 `tests/core/test_budget.py` 一項。
+
+### 從程式搬來的由來（一條一行）
+
+| 檔／函式 | 由來 |
+|---|---|
+| aos7_fs.write_json | 暫存檔用 `.` 開頭，列資料夾的人不會讀到半份 JSON（probes/polyglot N11） |
+| aos7_fs.sweep_tmp | SIGKILL 在 rename 前留下的暫存檔沒人收會一直累積（A2-07）；tock 連槽的 mount-req／mount-done 一起清（A3-07） |
+| aos7_fs.append_jsonl | append 被殺留下沒換行的半行，新的一行會黏成一條壞行（astra-6 G-08） |
+| aos7_taskside.read_jsonl | 逐行各自解碼：半個 UTF-8 字元只壞那一行，不會整檔丟例外（astra-7 H-04） |
+| aos7_fs.fact | 生命週期檔換成 FIFO 曾被當不存在而雙開、重開同號回合（A3-03）；頂層定案 3 併成「不是一般檔一律不知道」 |
+| aos7_fs.read_round | 半寫、缺 open 的 round.json 以前當已關，會跳過或覆蓋未提交的回合（A2-02） |
+| aos7_fs.summary_ok | 重播只拿完整的同回合總結（A2-02 疑點：原本只比 round） |
+| aos7_fs.action_lock | 拿鎖後才比世代，排在新 daemon 後面的舊動作看得到世代換了（astra-4 I-01） |
+| aos7_fs.reap_stale_owner | 舊世代持鎖者要 pid＋starttime 都對得上才殺（astra-5 F-04）；認不出就不殺、記提示（astra-6 G-10） |
+| aos7_fs.edit_json | 寬鬆讀把壞表當空表、寫回只剩新項（G1，layer-interfaces 05-gaps） |
+| aos7_daemon.save_paused | daemon 是 paused.json 唯一寫者，仍拿 flock 是為了外部工具的約定（註解疑點 daemon:106） |
+| aos7_daemon.ctl_one | 壞控制檔原物留成 .bad（P2-11）；回條路徑被佔成資料夾直接蓋掉（P2-13） |
+| aos7_daemon.handle_ctl | 處理失敗的不再執行（註解疑點 daemon:346／416：以前會排到最後再執行一次） |
+| aos7_daemon.op_unregister | 先寫回 nodes.json 再收尾（P2-10） |
+| aos7_daemon.op_resume | rounds 按 owner 各記一份（A2-06）；沒人 pause 的 resume 不 wake（P2-01 之後 wake 會切掉固定 interval 的回合） |
+| aos7_daemon.live_of | 列不出槽沿用上次的 live 與 pgid，不能清空（註解疑點 daemon:522） |
+| aos7_daemon.check_root | 看不到 root 不是消失，記在 status 頂層（註解疑點 daemon:595） |
+| aos7_daemon_timeline.read_config | interval 不另設上限、不截小數（註解疑點 timeline:76／83） |
+| aos7_daemon_timeline._loop | wake 提前結束固定 interval 的回合（P2-01 選 (b)）；early_tock 的回合中 wake 不起作用、也不留到回合後（A2-11）；tick 非 3 的失敗不算回合（G2） |
+| aos7_daemon_timeline.run_done | birth 缺 run 以前當已換人、准許提前 tock（註解疑點 timeline:311） |
+| aos7_daemon_timeline.err | 診斷截尾把錯誤類型與根因截掉，改成保留頭尾、kind 分欄（A2-08） |
+| aos7_tick.held_node | `.aos/` 經 fd 建，不復活已搬走的舊路徑（P2-05）；O_NOFOLLOW 是 A2-04 刪剩的最小保險 |
+| aos7_tick.next_round | round.json 不存在照 last-round.json 接號（P2-06）；判不出不再用 last-round 接（A2-02） |
+| aos7_tick._tick | tock 之後才結束的 run 先記進 reaped（P2-03）；欠的 tock.json 開回合前補（A3-08） |
+| aos7_tick.check_item | max_live 要大於零（P2-18） |
+| aos7_tock._tock | 總結提交後才寫 tock.json，歷史 module 才不會讀到上一回合（A2-12）；總結整份讀回比對（註解疑點 aos7_tock.py:130） |
+| aos7_tock._replayed | 列不出槽不能照樣關回合（註解疑點 aos7_tock.py:185）；重播補 tock.json 失敗不吞（A3-08） |
+| aos7_task.judge | /proc 讀不到當活＋unsure（K-05、A2-01、P2-08）；沒 runner 沒 pid.json 等兩回合才掃描（P2-02） |
+| aos7_task._recheck | 判疑似 lost 前再看一次 exit.json（proto7-1 P-07） |
+| aos7_task.resolve | 這個 run 的 aos7-run 還在就當活（矩陣 after-popen）；掃描不完整不判 lost（A2-01） |
+| aos7_task.INFRA_FILES | ctl.json／ctl-done.json 換 run 不清，回條要活過新 run（P2-04） |
+| aos7_task.kill_run | kill 最後確認任務程序不在才回成功（A3-09） |
+| aos7_proc（檔頭） | /proc 讀不到一路往上傳，不再悄悄當沒有（A2-01）；cmdline 的 EACCES 以前當 b""，會把讀不到的 aos7-run 當任務去打 |
+| aos7_proc.groups_with_descendants | aos-exec 把 inst 的子程式開在另一個 session（proto7-1 P-05） |
+| aos7_proc.kill_groups | 不打自己與祖先所在的群組（P2-14） |
+| aos7_proc.kill_node | 掃描不完整時以前連記著的群組都沒收（astra-2 讀碼） |
+| aos7_mount.req_name | `a/b` 與 `a_b` 曾推出同一個名字（astra-2 二-2） |
+| aos7_mount.in_root／allowed | 只看字面會被符號連結繞出空間根（astra-2 二-3） |
+| aos7_mount.serve | 先寫回條、成功才刪請求（astra-5 F-07）；壞請求也要有回條（astra-2 二-1）；`.` 開頭的是暫存檔（註解疑點 aos7_mount.py:202） |
+| aos7_mount.make | 目標不存在先建資料夾（problems M-2）；經 fd 寫、目標在 node 底下經抓著的 fnode 建（astra-5 F-09、astra-6 G-02） |
+| aos7_run（檔頭） | 第二參數是內部交接用的 fd 不是身分約束（astra-7 H-09）；fd 無效不回退字串路徑、cwd 是抓著的 node（astra-6 G-02） |
+| aos7_run.main | out.log 被建成資料夾照樣寫 exit 127（astra-7 H-06）；argv 有非字串、NUL 照樣寫 exit（probes/chaos B4） |
+| aos7_run.round_at | 非阻塞、只讀一般檔，round.json 換成 FIFO 不會卡住 runner（註解疑點 aos7_run.py:165） |
