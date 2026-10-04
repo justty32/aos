@@ -1,0 +1,3 @@
+{"v": 1, "grant": "g1", "budget": "demo", "holder": "api", "resource": "fakeapi.calls", "gateway": "fakeapi",
+ "amount": 3, "clock": "completed_tock", "from": 0, "until": 1000, "delegate": false,
+ "note": "示範：持有人 api 在本 node 第 0～999 個完成回合內可呼叫假 API 3 次；放到 <node>/budget/demo/grant.json 再 aos7-budget init"}
