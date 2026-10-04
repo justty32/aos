@@ -1,0 +1,1788 @@
+{
+  "head": "68b6a2c730a50c2a42a0aa3ccddf466c29b3414d",
+  "cases": [
+    {
+      "flow": "blueprint",
+      "kind": "normal",
+      "repeat": 1,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601497,
+            "state": "S",
+            "starttime": 3353848
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601507,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601497,
+            "state": "S",
+            "starttime": 3353848
+          }
+        }
+      ],
+      "before": {
+        "pid": 601497,
+        "state": "S",
+        "starttime": 3353848
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:18.442",
+          "queued_at": "2026-10-04T17:40:18.427"
+        }
+      },
+      "wrapper_rc": 0,
+      "hit": {},
+      "life_at_crash": "stopped",
+      "stopped_at_crash": true,
+      "new_daemon": 601507,
+      "after": {
+        "pid": 601497,
+        "state": "S",
+        "starttime": 3353848
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601496,
+          601497,
+          601505,
+          601507
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）已被 astra5 在 2026-10-04T17:40:18.442 stop；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-normal-1/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "normal",
+      "repeat": 2,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601548,
+            "state": "S",
+            "starttime": 3353962
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601553,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601548,
+            "state": "S",
+            "starttime": 3353962
+          }
+        }
+      ],
+      "before": {
+        "pid": 601548,
+        "state": "S",
+        "starttime": 3353962
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:19.582",
+          "queued_at": "2026-10-04T17:40:19.567"
+        }
+      },
+      "wrapper_rc": 0,
+      "hit": {},
+      "life_at_crash": "stopped",
+      "stopped_at_crash": true,
+      "new_daemon": 601553,
+      "after": {
+        "pid": 601548,
+        "state": "S",
+        "starttime": 3353962
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601547,
+          601548,
+          601552,
+          601553
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）已被 astra5 在 2026-10-04T17:40:19.582 stop；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-normal-2/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "normal",
+      "repeat": 3,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601572,
+            "state": "S",
+            "starttime": 3354076
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601577,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601572,
+            "state": "S",
+            "starttime": 3354076
+          }
+        }
+      ],
+      "before": {
+        "pid": 601572,
+        "state": "S",
+        "starttime": 3354076
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:20.722",
+          "queued_at": "2026-10-04T17:40:20.708"
+        }
+      },
+      "wrapper_rc": 0,
+      "hit": {},
+      "life_at_crash": "stopped",
+      "stopped_at_crash": true,
+      "new_daemon": 601577,
+      "after": {
+        "pid": 601572,
+        "state": "S",
+        "starttime": 3354076
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601571,
+          601572,
+          601576,
+          601577
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）已被 astra5 在 2026-10-04T17:40:20.722 stop；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-normal-3/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "stop-seen",
+      "repeat": 1,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601596,
+            "state": "S",
+            "starttime": 3354191
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601608,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601596,
+            "state": "S",
+            "starttime": 3354191
+          }
+        }
+      ],
+      "before": {
+        "pid": 601596,
+        "state": "S",
+        "starttime": 3354191
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:21.869",
+          "queued_at": "2026-10-04T17:40:21.858"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601590,
+        "point": "subd-stop-seen",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 601608,
+      "after": {
+        "pid": 601596,
+        "state": "S",
+        "starttime": 3354191
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601595,
+          601596,
+          601607,
+          601608
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-stop-seen-1/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "stop-seen",
+      "repeat": 2,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601627,
+            "state": "S",
+            "starttime": 3354308
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601632,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601627,
+            "state": "S",
+            "starttime": 3354308
+          }
+        }
+      ],
+      "before": {
+        "pid": 601627,
+        "state": "S",
+        "starttime": 3354308
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:23.040",
+          "queued_at": "2026-10-04T17:40:23.029"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601621,
+        "point": "subd-stop-seen",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 601632,
+      "after": {
+        "pid": 601627,
+        "state": "S",
+        "starttime": 3354308
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601626,
+          601627,
+          601631,
+          601632
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-stop-seen-2/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "stop-seen",
+      "repeat": 3,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601651,
+            "state": "S",
+            "starttime": 3354425
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601656,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601651,
+            "state": "S",
+            "starttime": 3354425
+          }
+        }
+      ],
+      "before": {
+        "pid": 601651,
+        "state": "S",
+        "starttime": 3354425
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:24.211",
+          "queued_at": "2026-10-04T17:40:24.200"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601645,
+        "point": "subd-stop-seen",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 601656,
+      "after": {
+        "pid": 601651,
+        "state": "S",
+        "starttime": 3354425
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601650,
+          601651,
+          601655,
+          601656
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-stop-seen-3/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "stopped-tmp",
+      "repeat": 1,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601675,
+            "state": "S",
+            "starttime": 3354539
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601680,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601675,
+            "state": "S",
+            "starttime": 3354539
+          }
+        }
+      ],
+      "before": {
+        "pid": 601675,
+        "state": "S",
+        "starttime": 3354539
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:25.351",
+          "queued_at": "2026-10-04T17:40:25.339"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601669,
+        "point": "tmp:stopped.json",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 601680,
+      "after": {
+        "pid": 601675,
+        "state": "S",
+        "starttime": 3354539
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601674,
+          601675,
+          601679,
+          601680
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-stopped-tmp-1/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "stopped-tmp",
+      "repeat": 2,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601730,
+            "state": "S",
+            "starttime": 3354653
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601739,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601730,
+            "state": "S",
+            "starttime": 3354653
+          }
+        }
+      ],
+      "before": {
+        "pid": 601730,
+        "state": "S",
+        "starttime": 3354653
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:26.487",
+          "queued_at": "2026-10-04T17:40:26.477"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601723,
+        "point": "tmp:stopped.json",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 601739,
+      "after": {
+        "pid": 601730,
+        "state": "S",
+        "starttime": 3354653
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601729,
+          601730,
+          601737,
+          601739
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-stopped-tmp-2/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "stopped-tmp",
+      "repeat": 3,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601803,
+            "state": "S",
+            "starttime": 3354770
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601811,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601803,
+            "state": "S",
+            "starttime": 3354770
+          }
+        }
+      ],
+      "before": {
+        "pid": 601803,
+        "state": "S",
+        "starttime": 3354770
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:27.656",
+          "queued_at": "2026-10-04T17:40:27.645"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601794,
+        "point": "tmp:stopped.json",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 601811,
+      "after": {
+        "pid": 601803,
+        "state": "S",
+        "starttime": 3354770
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601801,
+          601803,
+          601810,
+          601811
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-stopped-tmp-3/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "life-tmp",
+      "repeat": 1,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601891,
+            "state": "S",
+            "starttime": 3354884
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601905,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601891,
+            "state": "S",
+            "starttime": 3354884
+          }
+        }
+      ],
+      "before": {
+        "pid": 601891,
+        "state": "S",
+        "starttime": 3354884
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:28.793",
+          "queued_at": "2026-10-04T17:40:28.782"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601879,
+        "point": "tmp:subd-life.json",
+        "count": 3
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": true,
+      "new_daemon": 601905,
+      "after": {
+        "pid": 601891,
+        "state": "S",
+        "starttime": 3354884
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601890,
+          601891,
+          601904,
+          601905
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）已被 astra5 在 2026-10-04T17:40:28.793 stop；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-life-tmp-1/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "life-tmp",
+      "repeat": 2,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601951,
+            "state": "S",
+            "starttime": 3354997
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601956,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601951,
+            "state": "S",
+            "starttime": 3354997
+          }
+        }
+      ],
+      "before": {
+        "pid": 601951,
+        "state": "S",
+        "starttime": 3354997
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:29.929",
+          "queued_at": "2026-10-04T17:40:29.919"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601945,
+        "point": "tmp:subd-life.json",
+        "count": 3
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": true,
+      "new_daemon": 601956,
+      "after": {
+        "pid": 601951,
+        "state": "S",
+        "starttime": 3354997
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601950,
+          601951,
+          601955,
+          601956
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）已被 astra5 在 2026-10-04T17:40:29.929 stop；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-life-tmp-2/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "blueprint",
+      "kind": "life-tmp",
+      "repeat": 3,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 601982,
+            "state": "S",
+            "starttime": 3355111
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 601987,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 601982,
+            "state": "S",
+            "starttime": 3355111
+          }
+        }
+      ],
+      "before": {
+        "pid": 601982,
+        "state": "S",
+        "starttime": 3355111
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:31.065",
+          "queued_at": "2026-10-04T17:40:31.056"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 601976,
+        "point": "tmp:subd-life.json",
+        "count": 3
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": true,
+      "new_daemon": 601987,
+      "after": {
+        "pid": 601982,
+        "state": "S",
+        "starttime": 3355111
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          601981,
+          601982,
+          601986,
+          601987
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）已被 astra5 在 2026-10-04T17:40:31.065 stop；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-blueprint-life-tmp-3/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "normal",
+      "repeat": 1,
+      "steps": [
+        "rm stopped.json",
+        {
+          "daemon": 602038,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602029,
+            "state": "S",
+            "starttime": 3355224
+          }
+        }
+      ],
+      "before": {
+        "pid": 602029,
+        "state": "S",
+        "starttime": 3355224
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:32.199",
+          "queued_at": "2026-10-04T17:40:32.185"
+        }
+      },
+      "wrapper_rc": 0,
+      "hit": {},
+      "life_at_crash": "stopped",
+      "stopped_at_crash": true,
+      "new_daemon": 602038,
+      "after": {
+        "pid": 602029,
+        "state": "S",
+        "starttime": 3355224
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602028,
+          602029,
+          602036,
+          602038
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "normal",
+      "repeat": 2,
+      "steps": [
+        "rm stopped.json",
+        {
+          "daemon": 602095,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602091,
+            "state": "S",
+            "starttime": 3355336
+          }
+        }
+      ],
+      "before": {
+        "pid": 602091,
+        "state": "S",
+        "starttime": 3355336
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:33.317",
+          "queued_at": "2026-10-04T17:40:33.303"
+        }
+      },
+      "wrapper_rc": 0,
+      "hit": {},
+      "life_at_crash": "stopped",
+      "stopped_at_crash": true,
+      "new_daemon": 602095,
+      "after": {
+        "pid": 602091,
+        "state": "S",
+        "starttime": 3355336
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602090,
+          602091,
+          602094,
+          602095
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "normal",
+      "repeat": 3,
+      "steps": [
+        "rm stopped.json",
+        {
+          "daemon": 602139,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602129,
+            "state": "S",
+            "starttime": 3355447
+          }
+        }
+      ],
+      "before": {
+        "pid": 602129,
+        "state": "S",
+        "starttime": 3355447
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:34.434",
+          "queued_at": "2026-10-04T17:40:34.420"
+        }
+      },
+      "wrapper_rc": 0,
+      "hit": {},
+      "life_at_crash": "stopped",
+      "stopped_at_crash": true,
+      "new_daemon": 602139,
+      "after": {
+        "pid": 602129,
+        "state": "S",
+        "starttime": 3355447
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602127,
+          602129,
+          602137,
+          602139
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "stop-seen",
+      "repeat": 1,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602181,
+            "state": "S",
+            "starttime": 3355560
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602187,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602181,
+            "state": "S",
+            "starttime": 3355560
+          }
+        }
+      ],
+      "before": {
+        "pid": 602181,
+        "state": "S",
+        "starttime": 3355560
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:35.561",
+          "queued_at": "2026-10-04T17:40:35.548"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602171,
+        "point": "subd-stop-seen",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 602187,
+      "after": {
+        "pid": 602181,
+        "state": "S",
+        "starttime": 3355560
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602178,
+          602181,
+          602186,
+          602187
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-stop-seen-1/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "stop-seen",
+      "repeat": 2,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602206,
+            "state": "S",
+            "starttime": 3355674
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602211,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602206,
+            "state": "S",
+            "starttime": 3355674
+          }
+        }
+      ],
+      "before": {
+        "pid": 602206,
+        "state": "S",
+        "starttime": 3355674
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:36.695",
+          "queued_at": "2026-10-04T17:40:36.686"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602200,
+        "point": "subd-stop-seen",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 602211,
+      "after": {
+        "pid": 602206,
+        "state": "S",
+        "starttime": 3355674
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602205,
+          602206,
+          602210,
+          602211
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-stop-seen-2/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "stop-seen",
+      "repeat": 3,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602230,
+            "state": "S",
+            "starttime": 3355788
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602235,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602230,
+            "state": "S",
+            "starttime": 3355788
+          }
+        }
+      ],
+      "before": {
+        "pid": 602230,
+        "state": "S",
+        "starttime": 3355788
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:37.834",
+          "queued_at": "2026-10-04T17:40:37.824"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602224,
+        "point": "subd-stop-seen",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 602235,
+      "after": {
+        "pid": 602230,
+        "state": "S",
+        "starttime": 3355788
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602229,
+          602230,
+          602234,
+          602235
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-stop-seen-3/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "stopped-tmp",
+      "repeat": 1,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602254,
+            "state": "S",
+            "starttime": 3355902
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602259,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602254,
+            "state": "S",
+            "starttime": 3355902
+          }
+        }
+      ],
+      "before": {
+        "pid": 602254,
+        "state": "S",
+        "starttime": 3355902
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:38.974",
+          "queued_at": "2026-10-04T17:40:38.963"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602248,
+        "point": "tmp:stopped.json",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 602259,
+      "after": {
+        "pid": 602254,
+        "state": "S",
+        "starttime": 3355902
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602253,
+          602254,
+          602258,
+          602259
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-stopped-tmp-1/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "stopped-tmp",
+      "repeat": 2,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602296,
+            "state": "S",
+            "starttime": 3356015
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602304,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602296,
+            "state": "S",
+            "starttime": 3356015
+          }
+        }
+      ],
+      "before": {
+        "pid": 602296,
+        "state": "S",
+        "starttime": 3356015
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:40.109",
+          "queued_at": "2026-10-04T17:40:40.099"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602289,
+        "point": "tmp:stopped.json",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 602304,
+      "after": {
+        "pid": 602296,
+        "state": "S",
+        "starttime": 3356015
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602295,
+          602296,
+          602303,
+          602304
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-stopped-tmp-2/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "stopped-tmp",
+      "repeat": 3,
+      "steps": [
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602361,
+            "state": "S",
+            "starttime": 3356129
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602370,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602361,
+            "state": "S",
+            "starttime": 3356129
+          }
+        }
+      ],
+      "before": {
+        "pid": 602361,
+        "state": "S",
+        "starttime": 3356129
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:41.248",
+          "queued_at": "2026-10-04T17:40:41.237"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602352,
+        "point": "tmp:stopped.json",
+        "count": 1
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": false,
+      "new_daemon": 602370,
+      "after": {
+        "pid": 602361,
+        "state": "S",
+        "starttime": 3356129
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602360,
+          602361,
+          602369,
+          602370
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-stopped-tmp-3/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "life-tmp",
+      "repeat": 1,
+      "steps": [
+        "rm stopped.json",
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602416,
+            "state": "S",
+            "starttime": 3356243
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602421,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602416,
+            "state": "S",
+            "starttime": 3356243
+          }
+        }
+      ],
+      "before": {
+        "pid": 602416,
+        "state": "S",
+        "starttime": 3356243
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:42.386",
+          "queued_at": "2026-10-04T17:40:42.374"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602410,
+        "point": "tmp:subd-life.json",
+        "count": 3
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": true,
+      "new_daemon": 602421,
+      "after": {
+        "pid": 602416,
+        "state": "S",
+        "starttime": 3356243
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602415,
+          602416,
+          602420,
+          602421
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-life-tmp-1/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "life-tmp",
+      "repeat": 2,
+      "steps": [
+        "rm stopped.json",
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602476,
+            "state": "S",
+            "starttime": 3356356
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602481,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602476,
+            "state": "S",
+            "starttime": 3356356
+          }
+        }
+      ],
+      "before": {
+        "pid": 602476,
+        "state": "S",
+        "starttime": 3356356
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:43.520",
+          "queued_at": "2026-10-04T17:40:43.510"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602470,
+        "point": "tmp:subd-life.json",
+        "count": 3
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": true,
+      "new_daemon": 602481,
+      "after": {
+        "pid": 602476,
+        "state": "S",
+        "starttime": 3356356
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602475,
+          602476,
+          602480,
+          602481
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-life-tmp-2/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    },
+    {
+      "flow": "original",
+      "kind": "life-tmp",
+      "repeat": 3,
+      "steps": [
+        "rm stopped.json",
+        {
+          "rc": 1,
+          "stopped_json": true,
+          "life": "stopped",
+          "task": {
+            "pid": 602507,
+            "state": "S",
+            "starttime": 3356470
+          }
+        },
+        "rm stopped.json",
+        {
+          "daemon": 602512,
+          "stopped_json": false,
+          "life": "running",
+          "task": {
+            "pid": 602507,
+            "state": "S",
+            "starttime": 3356470
+          }
+        }
+      ],
+      "before": {
+        "pid": 602507,
+        "state": "S",
+        "starttime": 3356470
+      },
+      "stop_receipt": {
+        "op": "stop",
+        "by": "astra5",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:40:44.660",
+          "queued_at": "2026-10-04T17:40:44.649"
+        }
+      },
+      "wrapper_rc": -9,
+      "hit": {
+        "pid": 602501,
+        "point": "tmp:subd-life.json",
+        "count": 3
+      },
+      "life_at_crash": "running",
+      "stopped_at_crash": true,
+      "new_daemon": 602512,
+      "after": {
+        "pid": 602507,
+        "state": "S",
+        "starttime": 3356470
+      },
+      "slot_run": 1,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          602506,
+          602507,
+          602511,
+          602512
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra5-subd-edge-f7aajxbh/loop6-original-life-tmp-3/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      }
+    }
+  ],
+  "summary": {
+    "blueprint/normal": "3/3",
+    "blueprint/stop-seen": "3/3",
+    "blueprint/stopped-tmp": "3/3",
+    "blueprint/life-tmp": "3/3",
+    "original/normal": "3/3",
+    "original/stop-seen": "3/3",
+    "original/stopped-tmp": "3/3",
+    "original/life-tmp": "3/3"
+  },
+  "final_proc_remaining": [],
+  "tmp": "/tmp/astra5-subd-edge-f7aajxbh",
+  "tmp_removed": true
+}

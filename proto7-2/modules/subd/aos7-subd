@@ -10,14 +10,17 @@
 - 已有別的 aos7-subd 認領這個子根（`<subroot>/.aosd/subd.lock`），或子根 daemon.lock 有人拿著（例如人手起的）。
 通過後寫 `<subroot>/.aosd/stop-guard.json`（核心的通用守門檔：`allow`＝有沒有 --allow-stop、`note` 說屬於誰）與
 `owner.json`（給人看：owner 塊與現役 daemon 的 pid），設 `AOS7_SUBROOT`（子根絕對路徑）後起 argv 當子程序並等它。
-argv 結束、而且不是因為自己收到 SIGTERM（父 kill 時整個群組一起收到）、子根 status.json 是 `stopped: true` → 那是被允許的
-外部 stop：寫 `stopped.json`＝`{"by","why","at"}`（取 ctl-done 裡最近一份 stop 回條），父 node 的 keep 項之後再起它會被擋。
-退出碼照 argv（被訊號殺＝128＋訊號號）。
+argv 結束後問 `allowed_stop`（被允許的 stop 停過沒有：子根 status.json 是 `stopped: true`，且 ctl-done 有本代起點之後的
+成功 stop 回條——控制檔 stop 一定留回條，SIGTERM（父 kill）不留）：成立就提交，先寫 `stopped.json`＝`{"by","why","at"}`（那份回條）
+再寫生命週期 `stopped`；父 node 的 keep 項之後再起它會被擋。退出碼照 argv（被訊號殺＝128＋訊號號）。
 
 重開前回收（A5-01）：父 kill 只給 1 秒寬限，子 daemon 不一定收得完自己的任務；核心重開會把還活著的任務當活接回來（§5.4）。
 所以包自己記生命週期（`<subroot>/.aosd/subd-life.json`），起 argv 前收前代：
 - 拿到 subd.lock 後，回收期間也拿著子根的 daemon.lock（有人拿著＝有 daemon 在跑，不起）；
-- 生命週期記錄不是 `stopped`（被允許的外部 stop）就回收：子根裡前代的 launcher（子 daemon、tick、tock）、runner、任務，
+- 生命週期記錄是 `running` 時先問同一個 `allowed_stop`（A6-01：stop 的提交在三個窗口被殺時記錄還是 running）：成立＝
+  補完提交（stopped.json、生命週期 stopped）、退出碼 1、不回收；讀不到＝不知道＝不起、不收。`stopped.json` 還在而被擋時也順手
+  補完生命週期（這樣人刪掉 stopped.json 再起就直接接回）；
+- 其他（不是 `stopped`）就回收：子根裡前代的 launcher（子 daemon、tick、tock）、runner、任務，
   掃到一次「確定沒有」才算乾淨；paused node 一樣收（照環境身分掃，不看 pause）；
 - 乾淨了先寫本代 `running` 記錄，再放 daemon.lock、起 argv；掃描讀不完整、收不掉、記錄讀不到＝印原因、退出碼 1、不起，
   記錄留著，下一次再接著收。
@@ -135,20 +138,70 @@ def reap(sub):
     return False, "收了 %d 輪還有前代程序 %s" % (REAP_PASSES, sorted(sum(left.values(), []))), total
 
 
-def last_stop(aosd):
-    """ctl-done 裡最近一份成功的 stop 回條 → {"by","why","at"}；找不到回只有 at 的。"""
-    best = None
+def allowed_stop(aosd, since):
+    """被允許的 stop 停過沒有（A6-01）：起點與收尾共用的持久判定，不信生命週期的 `stopped`（那只是快取）。
+    成立＝子根 status.json 是 `stopped: true`，**且** ctl-done 有 `op: stop`、`result.ok: true`、`result.at ≥ since`（本代
+    running 記錄的起點）的回條——控制檔 stop 一定留回條，SIGTERM（父 kill）不留（核心 §2.3）；舊於 since 的是上一代的 stop，不算。
+    成立回最近那份回條 {"by","why","at"}（寫 stopped.json 用），不成立回 None；status／回條讀不到丟 Unknown（不知道＝不起、不收）。"""
+    if not isinstance(since, str):
+        return None   # 記錄沒有起點（舊版包寫的）：判不出是不是本代的 stop，照前代沒收乾淨處理
+    st, status = fact(os.path.join(aosd, "status.json"))
+    if st == N:
+        return None
+    if st != OK or not isinstance(status, dict):
+        raise Unknown("子根 status.json %s" % (status if st != OK else "不是物件"))
+    if status.get("stopped") is not True:
+        return None
     try:
         names = os.listdir(os.path.join(aosd, "ctl-done"))
-    except OSError:
-        names = []
+    except FileNotFoundError:
+        return None
+    except OSError as e:
+        raise Unknown("列不出子根 ctl-done：%s" % e)
+    best = None
     for n in names:
+        if n.startswith(".") or not n.endswith(".json"):
+            continue
         st, c = fact(os.path.join(aosd, "ctl-done", n))
-        res = c.get("result") if st == OK and isinstance(c, dict) else None
-        if c and isinstance(res, dict) and c.get("op") == "stop" and res.get("ok") is True:
-            if best is None or str(res.get("at")) > str(best["at"]):
-                best = {"by": c.get("by"), "why": c.get("why"), "at": res.get("at")}
-    return best or {"by": None, "why": "daemon 照控制檔 stop 停了（回條找不到）", "at": now()}
+        if st == N:
+            continue
+        if st != OK:
+            raise Unknown("子根回條 %s %s" % (n, c))
+        if not isinstance(c, dict):
+            raise Unknown("子根回條 %s 不是物件" % n)
+        res = c.get("result")
+        if c.get("op") == "stop" and isinstance(res, dict) and res.get("ok") is True and isinstance(res.get("at"), str) \
+                and res["at"] >= since and (best is None or res["at"] > best["at"]):
+            best = {"by": c.get("by"), "why": c.get("why"), "at": res["at"]}
+    return best
+
+
+def commit_stop(aosd, life_path, rec, life):
+    """提交被允許的 stop：先 stopped.json（還沒有才寫），再生命週期 `stopped`（life 是要寫的內容）。順序固定：
+    中間被殺時記錄還是 running，下一代用 allowed_stop 判得出來、補完（A6-01）。"""
+    test_point("subd-stop-seen")
+    if fact(os.path.join(aosd, "stopped.json"))[0] == N:
+        write_json(os.path.join(aosd, "stopped.json"), rec)
+    test_point("subd-stop-marked")
+    write_json(life_path, dict(life, state="stopped", at=now()))
+
+
+def finish_stop(aosd, life_path, me):
+    """生命週期是 `running` 而 allowed_stop 成立＝前代的 stop 提交被中斷：補完（不回收）。回 True＝補完了（被允許的 stop 停過）、
+    False＝不是。記錄讀不到或 status／回條讀不到丟 Unknown。呼叫的人拿著 subd.lock 與 daemon.lock。"""
+    st, life = fact(life_path)
+    if st == N:
+        return False
+    if st != OK or not isinstance(life, dict):
+        raise Unknown("%s %s" % (LIFE, life if st != OK else "內容不合"))
+    if life.get("state") != "running":
+        return False
+    rec = allowed_stop(aosd, life.get("since"))
+    if rec is None:
+        return False
+    commit_stop(aosd, life_path, rec, {"subroot": life.get("subroot"), "owner": life.get("owner"),
+                                        "since": life.get("since"), "finished_by": me})
+    return True
 
 
 def main(argv):
@@ -169,8 +222,18 @@ def main(argv):
         return 1
     aosd = os.path.join(sub, ".aosd")
     os.makedirs(aosd, exist_ok=True)
+    life_path = os.path.join(aosd, LIFE)
+    me = {"node": node_id, "tid": tid, "run": e.get("AOS7_RUN"), "pid": os.getpid()}
     st, stopped = fact(os.path.join(aosd, "stopped.json"))
     if st != N:
+        # 被擋時順手補完生命週期（stopped.json 寫了、life 還沒寫就被殺的窗口）：之後人刪 stopped.json 再起就直接接回
+        lk = take_lock(os.path.join(aosd, "subd.lock"))
+        dl = lk and take_lock(os.path.join(aosd, "daemon.lock"))
+        if dl:
+            try:
+                finish_stop(aosd, life_path, me)
+            except Unknown:
+                pass   # 補不完也照樣擋；下一次再看
         s = stopped if st == OK and isinstance(stopped, dict) else {}
         print("aos7-subd: 子 daemon（%s）已被 %s 在 %s stop%s；刪掉 %s 就會再起" % (
             head[0], s.get("by") or "?", s.get("at") or "?", "（%s）" % s["why"] if s.get("why") else "",
@@ -184,13 +247,20 @@ def main(argv):
     if dl is None:
         print("aos7-subd: 子根 %s 已經有 daemon 在跑（不是這個包裝起的），沒起" % head[0], file=sys.stderr)
         return 1
-    life_path = os.path.join(aosd, LIFE)
     st, life = fact(life_path)
     if st not in (OK, N) or (st == OK and not (isinstance(life, dict) and isinstance(life.get("state"), str))):
         print("aos7-subd: %s %s，不知道前代收乾淨沒有，沒起；確認子根裡沒有前代程序後修好或刪掉它" % (
             LIFE, life if st != OK else "內容不合"), file=sys.stderr)
         return 1
-    me = {"node": node_id, "tid": tid, "run": e.get("AOS7_RUN"), "pid": os.getpid()}
+    try:
+        done = finish_stop(aosd, life_path, me)
+    except Unknown as ex:
+        print("aos7-subd: 不知道前代是不是被允許的 stop 停的（%s），不收也不起；記錄留著，下一次再看" % ex, file=sys.stderr)
+        return 1
+    if done:
+        print("aos7-subd: 子 daemon（%s）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 %s 就會再起" % (
+            head[0], os.path.join(aosd, "stopped.json")), file=sys.stderr)
+        return 1
     if not (st == OK and life["state"] == "stopped"):
         # 前代沒有照允許的 stop 結束（或沒有記錄＝不知道前代怎麼結束）：先收再起
         write_json(life_path, {"state": "recovering", "subroot": head[0], "owner": me, "at": now(),
@@ -202,7 +272,8 @@ def main(argv):
         if n:
             print("aos7-subd: 子根 %s %s" % (head[0], msg), file=sys.stderr)   # 進 out.log：前代留了東西
         test_point("subd-reaped")
-    write_json(life_path, {"state": "running", "subroot": head[0], "owner": me, "since": now()})
+    since = now()
+    write_json(life_path, {"state": "running", "subroot": head[0], "owner": me, "since": since})
     test_point("subd-before-argv")
     owner = {"node": node_id, "tid": tid, "allow_stop": allow}
     write_json(os.path.join(aosd, "stop-guard.json"), {
@@ -229,12 +300,14 @@ def main(argv):
             break
         except InterruptedError:
             continue
-    if not got_term:
-        st, status = fact(os.path.join(aosd, "status.json"))
-        if st == OK and isinstance(status, dict) and status.get("stopped") is True:
-            write_json(os.path.join(aosd, "stopped.json"), last_stop(aosd))
-            # 被允許的 stop 是擁有者要的結束：下一代不回收（不帶 kill 的 stop 留下的任務照核心接回）
-            write_json(life_path, {"state": "stopped", "subroot": head[0], "owner": me, "at": now()})
+    # 收尾跟起點同一個判定（A6-01）：被允許的 stop 是擁有者要的結束，提交後下一代不回收（不帶 kill 的 stop 留下的任務照核心接回）。
+    # 不成立或讀不到就不寫：running 記錄留著，下一代再用同一個判定看一次（讀到了照樣補完、不回收）
+    try:
+        rec = allowed_stop(aosd, since)
+    except Unknown:
+        rec = None
+    if rec is not None:
+        commit_stop(aosd, life_path, rec, {"subroot": head[0], "owner": me, "since": since})
     return 128 - rc if rc < 0 else rc
 
 
