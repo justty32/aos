@@ -1,0 +1,44 @@
+...................................................................................................................................................................................................................................................................................FF.......F..............................................................................
+======================================================================
+FAIL: test_adapt_killed_reattaches (test_adapt_flow.TestFaults.test_adapt_killed_reattaches)
+adapt 被 SIGKILL、keep 重起：新 run 從槽內 state.json 接 since／last_seq，skipped 不重算、同一版不當新版。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/adapt/tests/test_adapt_flow.py", line 312, in test_adapt_killed_reattaches
+    self.wait_ok(lambda r: r["basis"]["seq"] == 1)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/adapt/tests/test_adapt_flow.py", line 94, in kill_slot
+    os.killpg(pj["pgid"], signal.SIGKILL)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/base.py", line 193, in wait_ended
+    self.wait_for(ok, timeout, "槽 %s 一直沒結束" % s)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/tests/base.py", line 187, in wait_for
+    self.fail(msg)
+    ~~~~~~~~~^^^^^
+AssertionError: 槽 adapt-temp 一直沒結束
+
+======================================================================
+FAIL: test_dst_pause (test_adapt_flow.TestFaults.test_dst_pause)
+dst pause：沒回合 → 暫存器不動（內容與 mtime）、耐性不走；resume 後照常 ok。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/adapt/tests/test_adapt_flow.py", line 300, in test_dst_pause
+    time.sleep(1.2)
+    ~~~~~~~~~~^^^^^
+AssertionError: 2 != 3
+
+======================================================================
+FAIL: test_source_rebuilt (test_adapt_flow.TestSource.test_source_rebuilt)
+來源 node 重建（回合從 1 起、舊檔還在）：src_state reset、state unknown、舊依據作廢；新值到才 ok，basis 是新鐘。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/adapt/tests/test_adapt_flow.py", line 217, in test_source_rebuilt
+    resets = [r for r in regs if r["src_state"] == "reset"]
+AssertionError: [] is not true : [('ok', 'stalled', None)]
+
+----------------------------------------------------------------------
+Ran 363 tests in 191.053s
+
+FAILED (failures=3)
+rc=1

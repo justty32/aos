@@ -21,7 +21,7 @@
   - 守門檔照 `--allow-stop` 寫，核心照它擋控制檔 stop（核心 spec §2.7）；SIGTERM 不看守門檔。
   - 父 kill 這個任務＝整個群組收到 SIGTERM，子 daemon 照 stop＋kill 收自己的任務（核心 §2.3、§6）。父 kill 回 `ok:true` 只表示父那個任務收掉了（核心 §6），**不代表子空間已空**。
   - **重開前回收**：下一次起 argv 之前，包自己收子根裡前代的 launcher、runner、任務（含 paused node），一次掃描確定沒有才起新代；所以新代子 daemon 起來時，前代的任務已經不在。查不清、收不掉、記錄壞掉＝不起（退出碼 1），下一次接著收。被允許的 stop 之後不回收（見規則）。
-  - 被允許的外部 stop 留 `stopped.json`，父 node 的 keep 項之後再起就被擋。
+  - 被允許的外部 stop 留 `stopped.json`，父 node 的 keep 項之後再起就被擋。「被允許的 stop」**以核心停止事實（子根 status＋stop 回條）判定**，起點與收尾同一個判定；提交（stopped.json、生命週期）中途被殺，下一次起包時補完、不回收（A6-01）。
 - **明確不管**：繞過包裝或人手起的子 daemon（界線）；擁有者檔被手改；惡意任務（合作式：改掉環境身分、換 uid 的程序掃不到）；父 kill 之後、下一次起包之前那段時間裡前代任務還在跑（父不再起它就一直不收，見界線）。
 
 ## 用法
@@ -45,7 +45,7 @@
   - `<subroot>/.aosd/stop-guard.json`＝`{"allow": 有沒有 --allow-stop, "note": "這個 daemon 屬於 node X（任務 Y）…"}`——核心照它擋控制檔 `stop`；
   - `<subroot>/.aosd/owner.json`＝`{"owner": {"node", "tid", "allow_stop"}, "daemon": {"pid", "since"}}`——給人看。
 - 設 `AOS7_SUBROOT`（子根絕對路徑）後把 argv 起成子程序（同一個程序群組），等它結束；退出碼照它（被訊號殺＝128＋訊號號）。
-- argv 結束、**不是**因為包裝程式自己收到 SIGTERM（父 kill 時整個群組一起收到）、而且子根 `status.json` 是 `stopped: true` → 那是被允許的外部 stop：寫 `stopped.json`＝`{"by", "why", "at"}`（取 `ctl-done/` 裡最近一份成功的 stop 回條）。父 node 的 keep 項下一回合再起包裝程式時就被擋下（退出碼 1）。
+- argv 結束後判定是不是**被允許的外部 stop**（`allowed_stop`，以核心停止事實判定）：子根 `status.json` 是 `stopped: true`，**且** `ctl-done/` 有 `op: stop`、`result.ok: true`、`result.at` 不早於本代 `running` 記錄的 `since` 的回條。控制檔 stop 一定留回條，SIGTERM（父 kill、或有人直接 TERM 子 daemon）不留（核心 2.3），這就是兩者的區別；舊於 `since` 的回條是上一代的 stop，不算。成立就提交：先寫 `stopped.json`＝`{"by", "why", "at"}`（那份回條），再寫生命週期 `stopped`。父 node 的 keep 項下一回合再起包裝程式時就被擋下（退出碼 1）。
 - 父 kill 這個任務：SIGTERM 打到整個群組，子 daemon 照 SIGTERM＝stop＋kill 收自己的任務（核心 2.3），不看守門檔。父 kill 的 1 秒寬限（核心 §6）內收不完的，留給下一次起包時的回收。
 
 ## 重開前回收（A5-01）
@@ -55,10 +55,11 @@
 - **生命週期記錄** `<subroot>/.aosd/subd-life.json`（包自有，核心不讀）＝`{"state", "subroot", "owner": {"node", "tid", "run", "pid"}, …}`，`state`：
   - `running`：起 argv **之前**原子寫好（不靠 SIGTERM handler）；之後不管 argv 怎麼結束（父 kill、子 daemon 掛了）都留著＝「前代可能沒收乾淨」。
   - `recovering`：正在收前代（`prev` 是前一份記錄）；收到一半被殺就留著，下一次接著收。
-  - `stopped`：被允許的外部 stop 結束（緊接 `stopped.json` 之後寫）。
+  - `stopped`：被允許的外部 stop 結束（緊接 `stopped.json` 之後寫）。只是快取：`running` 不代表沒被允許 stop 過（見第 2 步）。
 - **步驟**（拿到 `subd.lock` 之後，它全程拿著）：
   1. 拿子根的 `daemon.lock`（拿不到＝有 daemon 在跑，不起），回收期間一直拿著：其他 daemon 起不來，舊 daemon 也確定不在。
-  2. 讀記錄：讀不到或內容不合＝不知道，不起（確認子根裡沒有前代程序後修好或刪掉它）。`stopped` → 跳過回收。其他（`running`、`recovering`、**沒有記錄**）→ 回收：沒有記錄不當全新空間（例如舊版包起過、記錄被刪），一樣先掃。
+  2. 讀記錄：讀不到或內容不合＝不知道，不起（確認子根裡沒有前代程序後修好或刪掉它）。`running` → 先問 `allowed_stop`（同收尾那個判定，起點用記錄的 `since`）：成立＝前代被允許的 stop 的提交被中斷（status 已 stopped 還沒寫 stopped.json、stopped.json 寫了生命週期還沒寫、暫存檔沒 rename），**補完提交**（沒有才寫 `stopped.json`、生命週期 `stopped`）、印「被允許的 stop 停過」、退出碼 1、不回收；status／回條讀不到＝不知道，不收、不起（退出碼 1）。`stopped` → 跳過回收。其他（`running` 且判定不成立、`recovering`、**沒有記錄**）→ 回收：沒有記錄不當全新空間（例如舊版包起過、記錄被刪），一樣先掃。
+     - `stopped.json` 還在而被擋時（規則節起之前的檢查），拿得到兩把鎖就順手做同一個補完（只寫生命週期），所以人刪掉 `stopped.json` 再起時直接接回；若人在任何一次被擋之前就刪掉，第一次再起會補寫 `stopped.json` 擋一次，再刪一次就接回（任務一直不收）。
   3. 回收：寫 `recovering`，照環境身分掃子根（核心 §5.2 的身分，經核心 `aos7_proc`）：`AOS7_NODE` 是子根或在它底下、有 `AOS7_TID` 的是任務或 runner（巢狀子空間也在內；paused node 照樣掃到，不 resume、不改 pause）；`AOS7_SUBROOT` 正好是這個子根的是 launcher（前代子 daemon、tick、tock）。不含自己與祖先；sibling 子根路徑不同（比到 `/`），不算。每輪先打 launcher（TERM 後立刻 KILL：tick 收到 TERM 會做完動作、可能再起 runner），再照核心 kill 的寬限收任務的群組（TERM、等 1 秒、KILL），等 runner 寫完 `exit.json` 自己退出（最多 0.5 秒），還在的再收；然後重掃。**一次掃描確定沒有才算乾淨**；最多 5 輪、掃描讀不完整＝不起，記錄留著。
   4. 乾淨了：寫本代 `running` → 放掉 `daemon.lock` → 寫守門檔、起 argv。
 - 不寫核心的 birth／exit／round、不改 pause；被收掉的槽由新代 daemon 照核心判定（runner 寫了 `exit.json` 就是結束，沒寫就照 §5.4 判 lost），keep 照常重起。

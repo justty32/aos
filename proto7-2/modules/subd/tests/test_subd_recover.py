@@ -1,6 +1,6 @@
 """〔subd〕重開前回收（A5-01）：父 kill 只給 1 秒寬限，子 daemon 收不完忽略 SIGTERM 的任務；下一個 aos7-subd 起 argv 前
 自己收前代（launcher、runner、任務），確定乾淨才起新代。起 argv 前／回收中／回收完未起新代時被殺都能接續；paused node 也收；
-不知道就不起；不碰 sibling 子根與新代；被允許的 stop 之後不回收。
+不知道就不起；不碰 sibling 子根與新代；被允許的 stop 之後不回收——提交（stopped.json、生命週期）中途被殺也一樣（A6-01）。
 
 兩種起法：經父 daemon（真的父 kill，同 astra-4 壓力探針的負載）；或測試直接當任務起 aos7-subd（才能帶 AOS7_TEST_CRASH／FAULT：
 經 tick 起的任務環境會拿掉 AOS7_TEST_*），「父 kill」照核心 kill 的樣子打它的群組：SIGTERM、等 1 秒、SIGKILL。"""
@@ -241,6 +241,124 @@ class TestBoundary(RecoverCase):
         self.new_daemon(sub, old_daemon)
         self.wait_for(lambda: "s0#1" in self.nstat("n1", sub).get("live", []), 10, "新代沒接回原任務")
         self.assertTrue(aos7_proc.pid_alive(pid))
+
+
+class TestAllowedStopInterrupted(RecoverCase):
+    """A6-01：被允許的 stop（不帶 kill）的提交在三個窗口被真 SIGKILL：status 已 stopped 還沒寫 stopped.json、stopped.json 的暫存檔
+    還沒 rename、stopped.json 寫了生命週期還沒寫。生命週期都還是 running；下一次起包要用核心停止事實（status＋stop 回條）判出
+    「被允許的 stop 停過」：補完提交、退出碼 1、不回收；刪掉 stopped.json 再起＝核心 §5.4 接回原任務（同 PID／starttime、沒有 run 2）。
+    反例：父 kill（SIGTERM，不留回條）照收；上一代留下的舊 stop 回條＋本代父 kill 也照收（兩者都把 status 補成 stopped，見 status_stopped）。"""
+    def stopped_by_ctl(self, run=1, env=None):
+        """起包（--allow-stop）、等任務起好、控制檔 stop（不帶 kill）：回 (子根, n1, 任務 pid, starttime, 子 daemon pid, 包)。"""
+        sub, n1 = self.child_space(n=1)
+        p = self.run_subd(run=run, allow_stop=True, env=env)
+        pid = self.ready_pids(n1, n=1)[0]
+        start = aos7_proc.proc(pid)[1]
+        daemon = self.wait_for(lambda: self.status(sub).get("pid"), 10, "子 daemon 沒起")
+        self.assertTrue(self.wait_receipt(self.ctl("stop", root=sub))["result"]["ok"])
+        return sub, n1, pid, start, daemon, p
+
+    def status_stopped(self, sub):
+        """父 kill 時子 daemon 常在收任務途中就被 SIGKILL、status 還沒寫 stopped；這裡補成 stopped: true，模擬「寬限內收完、
+        寫好 stopped」——最容易被誤判成被允許的 stop 的情況（判定要靠回條分辨，不能只看 status）。"""
+        path = os.path.join(sub, ".aosd", "status.json")
+        st = read_json(path)
+        if st.get("stopped") is not True:
+            write_json(path, dict(st, stopped=True))
+
+    def same(self, pid, start):
+        return aos7_proc.same_process(pid, start) == aos7_proc.ALIVE
+
+    def crash_window(self, point, marker_written):
+        sub, n1, pid, start, daemon, p = self.stopped_by_ctl(env={"AOS7_TEST_CRASH": point})
+        self.assertEqual(p.wait(15), -signal.SIGKILL, self.err(p))
+        stopped = os.path.join(sub, ".aosd", "stopped.json")
+        self.assertEqual(self.life(sub)["state"], "running", "前提不成立：生命週期已經提交了")
+        self.assertEqual(os.path.exists(stopped), marker_written)
+        self.assertTrue(self.same(pid, start))
+        p2 = self.run_subd(run=2, allow_stop=True)
+        self.assertEqual(p2.wait(15), 1, self.err(p2))
+        self.assertIn("stop", self.err(p2))
+        self.assertTrue(os.path.exists(stopped), "沒補寫 stopped.json")
+        self.assertIsInstance(read_json(stopped).get("at"), str, "stopped.json 沒取那份 stop 回條")
+        self.assertEqual(self.life(sub)["state"], "stopped", "沒補完生命週期")
+        self.assertTrue(self.same(pid, start), "被允許的 stop 留下的任務被收了")
+        self.assert_no_daemon(sub, daemon)
+        os.remove(stopped)
+        self.run_subd(run=3, allow_stop=True)
+        self.new_daemon(sub, daemon)
+        self.wait_for(lambda: "s0#1" in self.nstat("n1", sub).get("live", []), 10, "新代沒接回原任務")
+        self.assertTrue(self.same(pid, start), "接回時原任務不是同一個程序")
+        self.assertEqual(self.birth(n1, "s0")["run"], 1, "起了 run 2")
+        self.assertEqual(self.life(sub)["state"], "running")
+
+    def test_killed_before_marker(self):
+        """status 已 stopped、stopped.json 還沒寫。"""
+        self.crash_window("subd-stop-seen", False)
+
+    def test_killed_before_marker_rename(self):
+        """stopped.json 的暫存檔寫了、還沒 rename。"""
+        self.crash_window("tmp:stopped.json", False)
+
+    def test_killed_after_marker_before_life(self):
+        """stopped.json 寫了、生命週期還沒寫：先被 stopped.json 擋（順手補完生命週期），刪掉再起就接回。"""
+        self.crash_window("subd-stop-marked", True)
+
+    def test_unknown_status_neither_reaps_nor_starts(self):
+        """窗口中斷後子根 status.json 讀不到＝不知道是不是被允許的 stop：退出碼 1、不收、不起、記錄不動；讀得到了照常補完。"""
+        sub, n1, pid, start, daemon, p = self.stopped_by_ctl(env={"AOS7_TEST_CRASH": "subd-stop-seen"})
+        self.assertEqual(p.wait(15), -signal.SIGKILL, self.err(p))
+        p2 = self.run_subd(run=2, allow_stop=True, env={"AOS7_TEST_FAULT": "open:*/a/sub/.aosd/status.json:EIO"})
+        self.assertEqual(p2.wait(15), 1, self.err(p2))
+        self.assertIn("不知道", self.err(p2))
+        self.assertTrue(self.same(pid, start))
+        self.assertEqual(self.life(sub)["state"], "running")
+        self.assertFalse(os.path.exists(os.path.join(sub, ".aosd", "stopped.json")))
+        self.assert_no_daemon(sub, daemon)
+        p3 = self.run_subd(run=3, allow_stop=True)
+        self.assertEqual(p3.wait(15), 1, self.err(p3))
+        self.assertEqual(self.life(sub)["state"], "stopped")
+        self.assertTrue(self.same(pid, start))
+
+    def test_parent_kill_with_allow_stop_reaps(self):
+        """父 kill（SIGTERM＝stop＋kill，不留回條）：子根 status 也是 stopped，但不是被允許的 stop——照收、不寫 stopped.json。"""
+        sub, n1 = self.child_space()
+        p = self.run_subd(run=1, allow_stop=True)
+        old = self.ready_pids(n1)
+        daemon = self.wait_for(lambda: self.status(sub).get("pid"), 10, "子 daemon 沒起")
+        self.parent_kill(p)
+        self.wait_for(lambda: not aos7_proc.pid_alive(daemon), 5, "子 daemon 沒死")
+        self.status_stopped(sub)
+        self.assertTrue(all(aos7_proc.pid_alive(x) for x in old), "前提不成立：父 kill 後原任務已經沒了")
+        self.assertFalse(os.path.exists(os.path.join(sub, ".aosd", "stopped.json")))
+        self.assertEqual(self.life(sub)["state"], "running")
+        self.run_subd(run=2, allow_stop=True)
+        self.new_daemon(sub, daemon)
+        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [], "父 kill 留下的前代沒收")
+
+    def test_old_stop_receipt_then_parent_kill_reaps(self):
+        """上一代被允許的 stop 留下的回條（早於本代 since）不算：本代被父 kill 照收。"""
+        sub, n1 = self.child_space()
+        p = self.run_subd(run=1, allow_stop=True)
+        gen1 = self.ready_pids(n1)
+        d1 = self.wait_for(lambda: self.status(sub).get("pid"), 10, "子 daemon 沒起")
+        self.assertTrue(self.wait_receipt(self.ctl("stop", "--kill", root=sub))["result"]["ok"])
+        self.assertEqual(p.wait(15), 0)
+        self.assertEqual(self.life(sub)["state"], "stopped")
+        os.remove(os.path.join(sub, ".aosd", "stopped.json"))
+        p2 = self.run_subd(run=2, allow_stop=True)
+        d2 = self.new_daemon(sub, d1)
+        old = self.ready_pids(n1, not_in=gen1)
+        self.parent_kill(p2)
+        self.wait_for(lambda: not aos7_proc.pid_alive(d2), 5, "第二代子 daemon 沒死")
+        self.status_stopped(sub)
+        self.assertTrue(all(aos7_proc.pid_alive(x) for x in old), "前提不成立：父 kill 後原任務已經沒了")
+        self.assertEqual(self.life(sub)["state"], "running")
+        p3 = self.run_subd(run=3, allow_stop=True)
+        self.new_daemon(sub, d2)
+        self.assertIsNone(p3.poll())
+        self.assertFalse(os.path.exists(os.path.join(sub, ".aosd", "stopped.json")), "拿上一代的回條判成被允許的 stop")
+        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [], "父 kill 留下的前代沒收")
 
 
 if __name__ == "__main__":
