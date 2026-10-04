@@ -8,27 +8,34 @@
 1. **/proc 讀不到**：op ∈ {proc-list（`/proc`）、proc-stat、proc-environ、proc-cmdline（只打在這個任務／runner 的 pid 上）}
    × errno ∈ {EIO、ESTALE、EACCES} × 情境 ∈
    - `healthy`：keep 任務正常活著。判定：judge 是 LIVE（proc-stat 時帶 `unsure`）；tick 不起新 run（started＝[]、birth 的 run 不變）、
-     不殺（pid 還活）、不寫 exit.json；tock 的 alive 列它，unsure 時 errors 有這個槽一筆（phase unsure／judge）。拿掉注入：
-     同一個 pid 繼續活、tock 的 alive 列它、執行次數仍 1。
+     不殺（pid 還活）、不寫 exit.json；tock 的 alive 列它，unsure 時 errors 有這個槽一筆（phase unsure／judge）。
+     已知 pid／runner 活著的判定走捷徑、不一定讀到 proc-list／environ／cmdline（astra-2：12 案有 9 案命中 0 次），所以同樣的故障下
+     再送一份 kill 控制（kill 一定要身分掃描）：命中 ≥1、任務沒被殺、回合總結的 ctl 紀錄 ok:false、ctl-done.json 的
+     result.ok＝false 且訊息帶 unknown、ctl.json 消費掉。拿掉注入：同一個 pid 繼續活、tock 的 alive 列它、執行次數仍 1、
+     那件 kill 不重做（已記在 ctl-seen.json）。
    - `orphan`：runner 在 pid.json 前被 SIGKILL、任務還活（疑似 lost，要身分掃描）。判定：注入時 UNKNOWN——不殺、不寫 lost、
-     不起新 run、tock errors 有一筆；拿掉後才收掉孤兒、判 lost，而且 lost 只報一次，之後槽裡剛好一個活程序。
-   - `deadboth`（只有 proc-list、proc-environ 全部 pid）：runner 與任務都被 SIGKILL、沒 exit.json。判定同 orphan。
-   - **契約**：proc-environ／proc-cmdline 的 EACCES＝「身分讀不到＝不是可辨認的任務、略過」（同 uid 的桌面程序本來就這樣），
-     不是不知道；所以 orphan／deadboth／brokenbirth 不跑 environ、cmdline × EACCES，改成 healthy 的「不雙開、不誤殺」，
-     加上 `deadboth_skip`（environ 全部 EACCES、任務確實死了 → 照常判 lost 一次、重起一個）。
+     不起新 run、tock errors 有一筆；拿掉後才收掉孤兒、判 lost，而且 lost 只報一次，之後槽裡剛好一個活程序。12 組全跑。
+   - `deadboth`（只有 proc-list、proc-environ 全部 pid；environ × EACCES 除外）：runner 與任務都被 SIGKILL、沒 exit.json。判定同 orphan。
+   - **契約（A3-02）**：environ 的 EACCES＝DENIED：不在已知任務的 session（birth.json 的 runner pid＝任務的 sid）或
+     pid.json 的 pgid 裡＝略過（同 uid 的桌面程序本來就這樣）；在裡面＝不知道。cmdline 的 EACCES 一律是不知道。
+     所以 orphan 的 environ／cmdline × EACCES 也判 UNKNOWN；`deadboth_skip`（environ 全部 EACCES、任務確實死了、沒有相關程序）
+     照常判 lost 一次、重起一個。
    - `brokenbirth`（只有 proc-environ × EIO、ESTALE）：birth.json 壞掉，只能靠身分掃描 → UNKNOWN、不雙開；拿掉後判活（同一個 pid）。
+   **每個注入都斷言命中 ≥1**（`_matrix.fault`／`run_prog` 經 AOS7_TEST_FAULT_HITS 命中紀錄檔，子程序也算）。
    另有 `kill_identity` 在掃描不完整時回 (False, 說明)、`env_procs` 丟 `aos7_proc.ProcUnknown`。
 2. **檔案讀不到**（open 注入）：檔 ∈ {birth.json、exit.json、pid.json} × errno → 槽 UNKNOWN：不起、不判 lost、不刪槽（名字拿掉也不刪）、
    tock errors 一筆；拿掉後恢復（lost 只報一次、重新起一個），回合不跳號。
    檔 ∈ {round.json（tick 3、tock 3，round.json 原樣）、last-round.json（tock 3）}、listdir `.aos/tasks`（tick 3、tock 3）× errno：
    什麼都沒寫；拿掉後恢復、回合連續。
 3. **daemon 看 node 的 stat 讀不到** × errno：時間線保留、不進 missing、不起 reaper，last_error 帶 errno 類型。
+   另有一案真 daemon 用 `AOS7_TEST_FAULT=@規則檔` 中途開關（命中紀錄檔經環境傳給 daemon 子程序）。
 """
 import errno
+import json
 import os
 import unittest
 
-from _matrix import ERRNOS, MatrixCase, alive, fault, gen, rec_argv
+from _matrix import ERRNOS, DaemonCase, Fault, MatrixCase, alive, fault, gen, rec_argv
 import aos7_daemon
 import aos7_daemon_timeline
 import aos7_proc
@@ -51,33 +58,56 @@ def keep_item(name="k"):
 
 class TestProcUnknown(MatrixCase):
     def _healthy(self, op, e):
-        """/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；拿掉注入自動回正。"""
+        """/proc 讀不到、任務其實健康地活著：不殺、不起、不判 lost；同樣故障下的 kill 控制回 unknown、不殺；拿掉注入自動回正。"""
         node = self.mknode("a", [keep_item()])
         self.itick()
         pid = self.wait_pid(node, "k")["pid"]
         self.itock()
         runner = (self.birth(node, "k").get("runner") or {}).get("pid")
-        with fault(proc_rules(op, [pid, runner], e)):
+        ctl_path = os.path.join(self.slot(node, "k"), "ctl.json")
+        with fault(proc_rules(op, [pid, runner], e)) as f:
             v = self.view(node, "k", 2)
             self.assertEqual(v.state, aos7_task.LIVE, v)
             if op == "proc-stat":
                 self.assertTrue(v.get("unsure"), "pid／starttime 讀不到要判 LIVE＋unsure：%r" % v)
             out = self.itick()
             lr = self.itock()
+            # 已知 pid／runner 活著的判定走捷徑，proc-list／environ／cmdline 不一定會讀到（astra-2：命中 0 次）。
+            # kill 一定要身分掃描（Q1 範圍、A3-09 再看一次 pid.json 的任務）→ 在同樣的故障下送一份 kill 控制，證明讀取失敗＝不知道
+            with open(ctl_path, "w") as fh:
+                json.dump({"op": "kill", "by": "t"}, fh)
+            before = f.hits(op)
+            out2 = self.itick()
+            self.assertGreater(f.hits(op), before, "kill 控制沒有打中 %s 的注入（命中 %r）" % (op, f.records()))
+            lr2 = self.itock()
         self.assertEqual(out["started"], [], "讀不到 /proc 時起了新的 run（雙開）")
-        self.assertTrue(alive(pid), "讀不到 /proc 時把活任務殺了")
+        self.assertEqual(out2["started"], [], "讀不到 /proc 時（kill 控制那回合）起了新的 run")
+        self.assertTrue(alive(pid), "讀不到 /proc 時把活任務殺了（kill 控制在掃描不完整時不能動手）")
         self.assertEqual(self.birth(node, "k")["run"], 1)
         self.assertIsNone(self.exit_raw(node, "k"), "讀不到 /proc 時寫了 exit.json")
         self.assertIn("k#1", lr["alive"])
+        self.assertIn("k#1", lr2["alive"])
         if v.get("unsure"):
             errs = self.errors_for(lr, "k")
             self.assertTrue(any(x.get("phase") in ("unsure", "judge") and x.get("err") for x in errs),
                             "unsure 的槽要在 tock 的 errors 留一筆：%r" % lr.get("errors"))
-        # 拿掉注入：自動回正
+        # kill 控制：回合總結的 ctl 紀錄 ok:false；回條 ctl-done.json 的 result.ok false、訊息帶 unknown；請求已消費
+        recs = [c for c in (lr2.get("ctl") or []) if c.get("slot") == "k"]
+        self.assertEqual([(c.get("op"), c.get("ok")) for c in recs], [("kill", False)], "回合總結的 ctl：%r" % lr2.get("ctl"))
+        done = self.raw(os.path.join(self.slot(node, "k"), "ctl-done.json"))
+        self.assertIsNotNone(done, "kill 控制沒有回條")
+        res = json.loads(done).get("result") or {}
+        self.assertIs(res.get("ok"), False, res)
+        self.assertIn("unknown", res.get("msg", ""), "掃描不完整的 kill 回條要說 unknown：%r" % res)
+        self.assertFalse(os.path.exists(ctl_path), "處理過的 ctl.json 沒有消費掉")
+        # 拿掉注入：自動回正（同一個 pid、執行一次；ok:false 的那件已記在 ctl-seen，不會再被執行）
         self.assertEqual(self.itick()["started"], [])
-        lr2 = self.itock()
-        self.assertIn("k#1", lr2["alive"])
+        lr3 = self.itock()
+        self.assertEqual([c for c in (lr3.get("ctl") or []) if c.get("slot") == "k"], [], "kill 控制被重做了")
+        self.assertIn("k#1", lr3["alive"])
         self.assertTrue(alive(pid))
+        self.assertEqual(self.wait_pid(node, "k")["pid"], pid)
+        self.assertEqual(self.birth(node, "k")["run"], 1)
         self.assertEqual(self.ran(node, "k"), ["1"])
 
     def _orphan(self, op, e):
@@ -189,14 +219,15 @@ class TestProcUnknown(MatrixCase):
 
 gen(TestProcUnknown, "healthy", [("%s_%s" % (op, e), (op, e)) for op in PROC_OPS for e in ERRNOS],
     TestProcUnknown._healthy)
-# 契約（隊長 10-04）：proc-environ／proc-cmdline 的 EACCES＝「讀不到身分＝不是可辨認的任務、略過」（桌面上同 uid 的
-# systemd --user、kwin 等本來就是 EACCES），不是「不知道」。所以「掃描不完整＝UNKNOWN」只用下面這些組合；
-# environ／cmdline × EACCES 的判定是 healthy 情境的「不雙開、不誤殺」與 deadboth_skip 的「照常判 lost 一次」。
-UNSURE_SCAN = [(op, e) for op in PROC_OPS for e in ERRNOS
-               if not (op in ("proc-environ", "proc-cmdline") and e == "EACCES")]
+# 契約（A3-02，隊長 10-04 改）：environ 的 EACCES 回 DENIED——不在已知任務的 session（birth.json 的 runner pid）或 pid.json 的
+# pgid 裡就略過（桌面上同 uid 的 systemd --user、kwin 等本來就是 EACCES）；**在**裡面就是不知道（ProcUnknown）。cmdline 的
+# EACCES 一律不知道。orphan 的任務 sid＝runner pid，所以 environ／cmdline × EACCES 也判 UNKNOWN，全部 12 組都跑。
+# deadboth 的 environ × EACCES 另外是 deadboth_skip：任務真的死了、沒有相關程序 → 照常判 lost 一次。
+UNSURE_SCAN = [(op, e) for op in PROC_OPS for e in ERRNOS]
 gen(TestProcUnknown, "orphan", [("%s_%s" % (op, e), (op, e)) for op, e in UNSURE_SCAN], TestProcUnknown._orphan)
 gen(TestProcUnknown, "deadboth", [("%s_%s" % (op, e), (op, e)) for op, e in UNSURE_SCAN
-                                  if op in ("proc-list", "proc-environ")], TestProcUnknown._deadboth)
+                                  if op in ("proc-list", "proc-environ")
+                                  and not (op == "proc-environ" and e == "EACCES")], TestProcUnknown._deadboth)
 gen(TestProcUnknown, "brokenbirth_environ", [(e, (e,)) for e in ("EIO", "ESTALE")], TestProcUnknown._brokenbirth)
 
 
@@ -323,6 +354,35 @@ class TestDaemonStatUnknown(MatrixCase):
 
 
 gen(TestDaemonStatUnknown, "node_stat", [(e, (e,)) for e in ERRNOS], TestDaemonStatUnknown._stat)
+
+
+class TestDaemonStatRuleFile(DaemonCase):
+    def test_real_daemon_node_stat_rule_file(self):
+        """真 daemon、`AOS7_TEST_FAULT=@規則檔` 中途開關：命中紀錄檔經環境傳給 daemon，證明 stat 注入真的打中；
+        看不到 node 時不進 missing、任務不被收、last_error 帶 errno 類型；拿掉規則檔後回合照常前進。"""
+        node = self.mknode("a", [keep_item()], interval_ms=150)
+        rules = os.path.join(self.root, "fault-rules.txt")
+        f = Fault("@" + rules, ops={"stat"})
+        self.addCleanup(f.close)
+        self.start_daemon(env=f.env, register=["a"])
+        pid = self.wait_pid(node, "k")["pid"]
+        self.wait_round(2)
+        self.assertEqual(f.hits(), 0, "規則檔還沒寫就有命中：%r" % f.records())
+        with open(rules, "w") as fh:
+            fh.write("stat:%s:EIO\n" % node)
+        self.wait_for(lambda: f.hits("stat") >= 2, 5, "daemon 沒有打中 stat 注入（命中 %r）" % f.records())
+        self.wait_for(lambda: (self.nstat().get("last_error") or {}).get("kind") == "EIO", 5,
+                      "last_error 沒有 errno 類型：%r" % self.nstat())
+        self.assertNotEqual(self.nstat().get("phase"), "missing", "看不到 node 就進 missing：%r" % self.nstat())
+        self.assertTrue(alive(pid), "看不到 node 就把任務收了")
+        f.check(where="（真 daemon、@規則檔）")
+        os.remove(rules)
+        n = f.hits("stat")
+        r = self.node_round()
+        self.wait_round(r + 2)
+        self.assertEqual(f.hits("stat"), n, "拿掉規則檔後還在命中")
+        self.assertTrue(alive(pid))
+        self.assertEqual(self.wait_pid(node, "k")["pid"], pid)
 
 
 if __name__ == "__main__":
