@@ -12,6 +12,17 @@
 | 程式 | `aos7_ctl.py`（`bin/aos7-ctl` 的本體）、`aos7_taskside.py`（任務端函式） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py modules/tools/tests`） |
 
+## 契約卡
+
+- **職責**：替人、LLM、kernel 寫檔與輪詢——`aos7-ctl` 寫控制檔、加任務，`aos7-wait-tock` 等 tock，任務端函式（下面各節）；不在核心的任何迴圈裡。
+- **前置條件**：呼叫者給對 root、槽、node；任務端函式在任務環境裡用（`AOS7_*` 齊）。
+- **保證**：
+  - daemon 控制檔名照 by／node／owner 無損編碼，不同的不會撞成同一個檔名（檔名是寫者的事，核心 spec §2.3、W3）。
+  - `task … kill` 一律帶 `run`；沒給 `--run` 就讀槽 birth，讀不到＝報錯、不寫（核心 §6）。`restart` 交給[控制包](../control/README.md)。
+  - `add` 拿表鎖、一次 rename 加多項（核心 §4.3）。
+  - 印出路徑只表示寫好了；接受與執行看回條。
+- **明確不管**：寫完到執行之間槽換了 run（kill 不打新的，見界線）；工具的 bug 不改 daemon／tick（[組件契約](../../notes/component-contracts.md) 2.9）。
+
 ## aos7-ctl
 
 - `aos7-ctl daemon <root> <op> [node] [--kill] [--rounds N] [--owner X] [--all]`：寫 `<root>/.aosd/ctl/<by>.<op>.<node>.json`；帶 `--owner` 時是 `<by>.<op>.<node>@<owner>.json`。固定名，回條只留最近一份。`<root>` 也可以是掛進來的 `.aosd`。

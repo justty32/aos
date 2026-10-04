@@ -12,6 +12,13 @@
 | 程式 | `aos7-diag` |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py modules/diag/tests`） |
 
+## 契約卡
+
+- **職責**：唯讀重算判不出的槽、把原因對到恢復步驟；保管「會停下等人」的操作手冊（核心 spec §12）。
+- **前置條件**：人或工具按需呼叫；status.json 由 daemon 寫。
+- **保證**：不寫任何檔、不收程序、不做身分掃描；判定用核心同一套入口（`judge`、`fact`，核心 §0、§5.4），不另判一次。
+- **明確不管**：跟 tick／tock 掃描後的結論可能不同（這裡是掃描前的樣子，只供參考）；替人動手修；`steps_left`（daemon 記憶體裡，留在核心 status）。
+
 ## aos7-diag
 
 印一份 JSON：每個已登記 node 的 `phase`／`round`／`round_open`／`last_error`／`paused_by`／`steps_left`（照抄 status.json），加上：
@@ -56,7 +63,7 @@ status 不再放 `uncertain`（以前 daemon 每 0.25 秒重算一次）；`step
 | **kill 回 `ok: false`（unknown）** | 單請求（已處理掉、不會自己重試）｜ctl-done.json `result.ok: false`、msg 以 `unknown` 開頭；總結 `ctl` 那筆 `ok: false`。控制包 restart 的 once 項已加，等槽空才起（`skipped` 記 busy） | 手動確認並收掉 pid.json 記的那個程序；要再送 kill 照樣帶同一個 run |
 | ctl.json 讀不到、目標槽 UNKNOWN | 單請求（留著）｜總結 `ctl` 那筆帶 `err` | 原因解除後自動執行 |
 | ctl.json 處理完刪不掉 | 不停（每回合再執行一次，只對同一個 run，無害）｜總結 `ctl` 每回合一筆帶 `err`「刪不掉」 | 修權限後下一次自動刪；或人手刪 |
-| 欠的 tock.json 補不上 | 不停｜round.json `notify_errors`；之後的回合 `tasks_error`「欠的 tock.json 還補不上」 | 修權限後下一個 tick 自動補，或人手跑 `aos7-tock` 對已關回合補 |
+| tock.json 寫不進去 | 不停｜round.json `notify_errors`（核心不跨回合補送，F47） | 修權限後下一回合照常通知；要補上一回合的由模組讀 round.json 自己做 |
 | daemon 控制檔處理丟例外（例如回條寫不進去） | 單請求｜status 的 `last_ctl_error`；請求刪掉（刪不掉就留在 `ctl/`，不再執行，每圈再試著刪） | 效果可能已生效：先看 status 核實，再決定要不要重送；重開 daemon 會把還卡在 `ctl/` 的當新請求 |
 | tasks.json 讀不到／壞掉、表鎖逾時、項目不合法 | 回合照開、那些項不起｜round.json／總結的 `tasks_error`、`skipped` | 修表；status 只看到回合往前，看不出沒起工作，要讀總結 |
 | 子 daemon 包擋下（子根有 stopped.json、已被認領、位置不合） | 那項的包裝程式退出碼 1｜總結 `ended` 該 run code 1、它的 out.log 有原因 | 見[子 daemon 包](../subd/README.md)；要重起就刪 stopped.json |

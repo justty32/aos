@@ -14,6 +14,7 @@
 
 **G3 父 kill 子 daemon 時，子 daemon 的任務可能變孤兒（實驗）**
 父的 kill 是 SIGTERM 加 1 秒寬限（`lib/aos7_proc.py:27`、`lib/aos7_task.py:390-411`）；子 daemon 把 SIGTERM 當 stop＋kill（spec 第 83 行），逐槽收自己的任務、每槽也最多 1 秒。子任務各在新 session、身分是子 node 的，父的 Q1 範圍（spec 第 315 行）蓋不到。實驗見 [04 第 3 節](04-cross-layer.md#3-子-daemon--父時間線s-21-路一)：兩個不理 SIGTERM 的子任務留下。父表那項還在時新的子 daemon 會接手；拿掉那項就沒人管。
+loop4（2026-10-04）：astra-3 三次全套未重現；界線已寫進 [subd README](../../modules/subd/README.md)（父 kill 的 1 秒是核心通用寬限、要永久拿掉子空間先對子 daemon 下 stop），重現了再做成選項（預設：tasks.json 項目 `kill_grace_s`）。
 
 **G4 daemon 控制檔沒有請求 id，回條同名蓋掉，也沒有完成證據（讀碼）**
 spec 第 76-77 行、`lib/aos7_daemon.py:397-440`。kernel 想知道「我上一次下的 pause 生效了沒」只能比 `queued_at`，同名的下一份請求一進來舊回條就沒了；請求刪不掉時（`:438` 吞掉 OSError）同一份每圈重做，`resume --rounds` 會一直被重設。任務控制已經有 `ctl_id`＋`ctl-seen.json`，daemon 這一側沒有對應的東西。

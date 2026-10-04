@@ -12,6 +12,15 @@
 | 程式 | `retry_lost.py`（`scan(node)` 也可以同程序呼叫） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py modules/once_retry/tests`） |
 
+## 契約卡
+
+- **職責**：把「看起來從沒起來過」的 lost once 加回 tasks.json 重起一次，讓選它的 once 變成至少一次（下面規則節）。
+- **前置條件**：要保證的 once 項帶 `x.retry_lost: true`；本任務是收得到 tock 的普通 keep；改 tasks.json 的人都拿表鎖（核心 spec §4.3）。
+- **保證**：
+  - 只加回 `lost`＋`never_started`（核心 §5.4 事實欄）、槽 birth 同 run、`once`、`x.retry_lost` 都成立的那筆；加回的項釘同槽、帶 `x.retry_of`，表上已有同 `retry_of` 的不重加。
+  - 表讀不到、壞掉、表鎖拿不到＝不寫（核心 §4.1 G1），記著下一次 tock 再試。
+- **明確不管**：取樣漏掉那一回合（退回最多一次）；槽已被刪（核心 §5.1）；極小機率真的跑過而跑兩次（選它的人接受的代價）。
+
 ## 規則
 
 - 要保證的 once 項帶 `"x": {"retry_lost": true}`（核心照抄進 birth.json，不看內容）。舊的頂層 `retry_lost` 欄核心不收（那項不合、tasks_error 指到這裡）。
