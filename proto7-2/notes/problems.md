@@ -171,6 +171,17 @@
 | A5-01（＝G3）父 kill 後子空間原任務不被收 | subd 包／B | subd 起 argv 前寫包自有紀錄 `subd-life.json`；重開時（紀錄非 `stopped`、含缺）持 `daemon.lock`，以子根路徑前綴＋環境身分收前代 launcher／runner／任務並重掃，乾淨才放行，掃不完不起新代。核心 §5.4 不保證重開必收前代，原 README 說法撤回。8c2145c4；同壓力探針 10／10（[evidence](play/2026-10-04-loop5-subd-evidence/stress/results.json)） |
 | account 草稿 5 條意見 | budget 包（原名 account）／設計 | 收進 budget v1 契約卡與 spec：失敗不等於未支用、三種操作鍵、帳活過 step close、不可再分、半開效期與 completed_tock。025d2bfe。另記 5 個契約缺口在 budget spec（取消需可查詢後端、時鐘重建只靠規則、儲存只增不清、holder 合作式綁定、step 自動重送只一次） |
 
+## astra 第五輪（A6）與 loop6 的處理
+
+依 [astra 第五輪報告](play/2026-10-04-astra-5-infra.md)、[loop6 藍圖](blueprint-loop6.md)。核心零改動（仍 2757／2800）。
+
+| 編號 | 歸屬／類 | 處理 |
+|---|---|---|
+| A6-01 合法 stop 記錄提交中斷後重開錯收 | subd 包／B | 「允許的 stop 已完成」改以核心停止事實判定：status `stopped` ＋ `ctl-done/` 成功 stop 回條且時間 ≥ 本代 since（父 kill 不留回條）；重開時成立就補完提交、不回收。95426b17；[驗收](play/2026-10-04-loop6-subd-evidence/summary.md) |
+| A6-02 budget 後端讀取故障回 1 | budget 包／B | 入口回非終局 unknown；call／cancel／settle 共同故障邊界 rc 3、一行 JSON。bd9dcc10；[驗收](play/2026-10-04-loop6-budget-evidence/summary.md) |
+| budget 五缺口 | budget 包／G | spec §9 已知界線五條、§10 保存與退役；`clock_hw` 每次推高；孤兒回條掃（3 回合寬限）；退役拒收新 K；step run 步 `max_resends`（預設 1）。bd9dcc10 |
+| adapt 第一版 | 新任務包 | 最新值轉接（d3738e04）；自報缺口：換鏈只能偵測不能切換、任務端無法注入測試故障、時鐘函式跟 budget 重複（待搬進工具包） |
+
 ## 核心精簡：刪掉的誤用保護（10-04）
 
 照 [精簡方案](core-slimming.md)「頂層定案」第 2 條與[組件契約藍圖](component-contracts.md)：違反組件前置條件造成的問題（M 類）不歸組件管，保護刪掉，spec 只留界線一句（§11「其他誤用，不處理」）。順手偵測到的記一筆，不保證偵測到（定案第 4 條）。
