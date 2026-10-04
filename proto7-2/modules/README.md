@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|
 | [tools](tools/README.md) 工具包 | `aos7-ctl`（寫控制檔、加任務）、`aos7-wait-tock`、任務端函式（task_env、wait_tock、resolver、request、read_jsonl） | C | 開 | 控制包（restart） | `bin/aos7-ctl`、`bin/aos7-wait-tock`、`tools/aos7_ctl.py`、`tools/aos7_taskside.py` |
 | [control](control/README.md) 控制包 | restart／reload 在請求端做：先加釘同槽的 once，再寫 kill 帶 run | C | 開（隨工具包） | 核心 kill、once 的 `slot`、`x` | `control/aos7_control.py` |
-| [subd](subd/README.md) 子 daemon 包 | 一個 node 的任務擁有子空間根：位置檢查、守門檔、owner、stopped.json | B | 關 | 核心守門檔 | `subd/aos7-subd` |
+| [subd](subd/README.md) 子 daemon 包 | 一個 node 的任務擁有子空間根：位置檢查、守門檔、owner、stopped.json；重開前回收前代（`subd-life.json`） | B | 關 | 核心守門檔 | `subd/aos7-subd` |
 | [once_retry](once_retry/README.md) once 保證包 | 從沒起來過就 lost 的 once 加回（至少一次） | A | 關 | 事實欄 `never_started`、`x` | `once_retry/retry_lost.py` |
 | [audit](audit/README.md) 稽核包 | Python 任務的寫入紀錄（只記不擋） | B | 關 | 無 | `audit/aos7-audit` |
 | [diag](diag/README.md) 診斷包 | 唯讀重算判不出的槽、對到恢復步驟；操作手冊 | C | 開（工具） | 核心的判定函式（只讀） | `diag/aos7-diag` |

@@ -162,6 +162,15 @@
 - 線頭 1：spec §4.4 寫明核心給上層的兩個原語 (a) 移項時 birth 已寫好、(b) 槽最早在報結束的下一個 tock 才刪；step「第三個 tock」寫在 step spec §5 引這兩句；加 birth 與移項之間 SIGKILL 的測試。
 - 線頭 3（G3）：本輪不改程式；subd README 界線補兩句；重現了再做 `kill_grace_s` 選項。
 
+## astra 第四輪（A5）與 loop5 的處理
+
+依 [astra 第四輪報告](play/2026-10-04-astra-4-infra.md)、[loop5 藍圖](blueprint-loop5.md)。核心零改動（仍 2757／2800）。
+
+| 編號 | 歸屬／類 | 處理 |
+|---|---|---|
+| A5-01（＝G3）父 kill 後子空間原任務不被收 | subd 包／B | subd 起 argv 前寫包自有紀錄 `subd-life.json`；重開時（紀錄非 `stopped`、含缺）持 `daemon.lock`，以子根路徑前綴＋環境身分收前代 launcher／runner／任務並重掃，乾淨才放行，掃不完不起新代。核心 §5.4 不保證重開必收前代，原 README 說法撤回。8c2145c4；同壓力探針 10／10（[evidence](play/2026-10-04-loop5-subd-evidence/stress/results.json)） |
+| account 草稿 5 條意見 | budget 包（原名 account）／設計 | 收進 budget v1 契約卡與 spec：失敗不等於未支用、三種操作鍵、帳活過 step close、不可再分、半開效期與 completed_tock。025d2bfe。另記 5 個契約缺口在 budget spec（取消需可查詢後端、時鐘重建只靠規則、儲存只增不清、holder 合作式綁定、step 自動重送只一次） |
+
 ## 核心精簡：刪掉的誤用保護（10-04）
 
 照 [精簡方案](core-slimming.md)「頂層定案」第 2 條與[組件契約藍圖](component-contracts.md)：違反組件前置條件造成的問題（M 類）不歸組件管，保護刪掉，spec 只留界線一句（§11「其他誤用，不處理」）。順手偵測到的記一筆，不保證偵測到（定案第 4 條）。

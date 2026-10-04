@@ -28,7 +28,7 @@
 |---|---|---|
 | `.aosd/nodes.json`、`paused.json`、`gen.json`、`status.json`、`ctl-done/` | daemon | 沒有人 |
 | `.aosd/ctl/*.json`、`log.on` | — | 人、任務、kernel |
-| `.aosd/stop-guard.json`、`owner.json` | 包（[子 daemon 包](../modules/subd/README.md)）或人 | 核心只讀守門檔 `stop-guard.json`（§2.7）；`owner.json` 給人看，核心不讀 |
+| `.aosd/stop-guard.json`、`owner.json`、`subd-life.json` | 包（[子 daemon 包](../modules/subd/README.md)）或人（`subd-life.json` 只有 subd 寫） | 核心只讀守門檔 `stop-guard.json`（§2.7）；`owner.json` 給人看，核心不讀 |
 | `.aos/round.json`、`last-round.json`、`action.owner.json` | tick／tock | 沒有人（修復例外：先 pause、保存證據） |
 | `.aos/tasks.json` | 多人，**一律拿 `tasks.json.lock`**（§4.1、§4.3） | 人、kernel、包；tick 只寫 once 的 `launch` 欄與移項（§4.4） |
 | `.aos/timeline.json`、`mount_allow` | — | 人、kernel |
