@@ -25,6 +25,14 @@ from aos7_fs import BIN, now, proc_starttime
 
 
 RUN = [None]   # 這次的 run（讀到 birth.json 後填上；寫 pid.json／exit.json 用）
+CRASH = [None]  # 只給測試：AOS7_TEST_RUNNER_CRASH 的點（main 一開始就從環境拿掉，不傳給任務；P2-15）
+
+
+def crash_point(name):
+    """只給測試：AOS7_TEST_RUNNER_CRASH 列到 name 就在這裡 SIGKILL 自己（runner-before-pid、runner-before-exit；A2 回歸矩陣）。"""
+    if CRASH[0] and name in CRASH[0].split(","):
+        import signal
+        os.kill(os.getpid(), signal.SIGKILL)
 
 
 def build_argv(birth, node):
@@ -95,6 +103,7 @@ def main(argv=None):
     if len(argv) not in (1, 2):
         print("用法: aos7-run <taskdir> [<taskdir 的 fd>]", file=sys.stderr)
         return 1
+    CRASH[0] = os.environ.pop("AOS7_TEST_RUNNER_CRASH", None)
     tdir = os.path.abspath(argv[0])
     held = len(argv) == 2   # tick 起的：第二個參數是任務資料夾的 fd，cwd 是 tick 抓著的 node（astra-6 G-02）
     if held:
@@ -150,19 +159,25 @@ def main(argv=None):
         return 0
     # pid.json 也經過 fd 寫：任務資料夾剛被刪（測試收尾、node 被 rm -rf）時不會用 makedirs 把它建回來
     # spec §5.4、P2-08：pid 可能重用，連同 starttime 才能辨認同一程序；讀不到由判定層保守處理。
+    crash_point("runner-before-pid")
     write_at(dfd, "pid.json", {"run": RUN[0], "pid": proc.pid, "pgid": proc.pid, "starttime": proc_starttime(proc.pid),
                                "runner_pid": os.getpid(), "at": now()})
     code = proc.wait()
     out.close()
+    crash_point("runner-before-exit")
     write_at(dfd, "exit.json", {"run": RUN[0], "code": code, "at": now(), "round": round_at(dfd)})
     return 0
 
 
 def round_at(dfd):
     """由任務目錄 fd（dfd）讀 ../../round.json，回其中 round 值（spec §5.1 的 exit 欄位）。
-    node 搬走仍定位同一目錄；I/O、JSON 壞掉、非物件或沒有 round 時回 None，不猜回合。"""
+    node 搬走仍定位同一目錄；I/O、JSON 壞掉、非物件或沒有 round 時回 None，不猜回合。
+    非阻塞開、只讀一般檔：round.json 被換成 FIFO 也不會卡住 runner、寫不出 exit.json（spec §0；註解疑點 aos7_run.py:165）。"""
     try:
-        fd = os.open("../../round.json", os.O_RDONLY, dir_fd=dfd)
+        fd = os.open("../../round.json", os.O_RDONLY | os.O_NONBLOCK, dir_fd=dfd)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            os.close(fd)
+            return None
         with os.fdopen(fd, encoding="utf-8") as f:
             r = json.load(f)
         return r.get("round") if isinstance(r, dict) else None

@@ -10,7 +10,8 @@
 這裡是「先留下可恢復的總結、再清理」的提交點，核心只保留上一次（spec §0、§7～8）。
 
 退出碼：0＝做了（或 gone／stale／skipped，stdout 說明）；1＝last-round.json 讀回確認不了（回合沒關，下次重來）；
-3＝round.json／last-round.json 讀不到、或列不出槽（不知道，什麼都沒寫）。
+3＝不知道（round.json 讀不到或內容不完整、last-round.json 讀不到、列不出槽、gen.json 不能用、看不到 node；什麼都沒寫，A2-02）。
+順序：總結提交（寫＋整份讀回）→ 通知活任務（tock.json，A2-12）→ 補 seen_round／刪槽 → 關 round.json。
 起點是 proto7-1 lib/aos7_tock.py；rounds.jsonl、tasks-old、ended.json 拿掉，改成只留上一次（last-round.json＋exit.json 的 seen_round）。
 """
 import json
@@ -20,16 +21,18 @@ import signal
 import sys
 
 import aos7_task
-from aos7_fs import IO, MISSING, OK, action_lock, is_int, now, read_json, read_json3, test_point, write_json
+from aos7_fs import (MISSING, OK, ROUND_OPEN, ROUND_CLOSED, ROUND_NONE, action_lock, is_int, now, read_json, read_json3,
+                     read_round, summary_ok, sweep_tmp, test_point, write_json)
 from aos7_task import ENDED, EMPTY, LIVE, UNKNOWN
 from aos7_tick import Unknown, held_node, table_slots
+from aos7_fs import IO
 
 
 def tock(root, node_id, early=None):
     """替 root 空間的 node_id 收一回合，early 是 daemon 給的提前進場值（可為 None）。
     回本回合總結，或 gone／stale／skipped 結果；不確定丟 Unknown，確認總結失敗丟 ReadBack。
     此入口持有 node fd 並拿動作鎖；任務可以跨回合，不因 tock 而結束（spec §2.5、§7；S-11）。"""
-    root = os.path.abspath(root)
+    root = os.path.realpath(root)   # 同 tick（A2-04）
 
     def act(fnode, node):
         """以持有的 fnode 及原路徑 node 執行鎖內 tock，回總結或 stale 結果。
@@ -48,33 +51,26 @@ class ReadBack(Exception):
 def _tock(root, node_id, node, fnode, early):
     """在動作鎖內收回合，回總結或 skipped；root／node_id／node／fnode 定位空間與原目錄。
     early 寫入通知和總結；回合／總結讀不到或列槽失敗丟 Unknown，總結讀回不符丟 ReadBack。
-    先提交總結才標已報／刪槽／關回合，保留重做所需的證據（spec §7、§8 不變條件三）。"""
+    先提交總結才通知任務（tock.json）、標已報／刪槽、關回合，保留重做所需的證據（spec §7、§8 不變條件三；A2-12）。"""
     rpath = os.path.join(fnode, ".aos", "round.json")
     lpath = os.path.join(fnode, ".aos", "last-round.json")
-    st, state = read_json3(rpath)
-    if st == IO:
-        raise Unknown("round.json 讀不到：%s" % state)
-    # spec §3、P2-06：沒有 round.json 就沒有可關回合；I/O 的不知道在前面另行退出。
-    if st == MISSING:
-        return {"round": None, "skipped": "no round.json"}
-    bad_round = None
-    if not isinstance(state, dict):
-        state = {}
-    if state.get("open") is False:
-        return {"round": state.get("round"), "skipped": "round already closed"}
+    sweep_tmp(os.path.join(fnode, ".aos"))   # A2-07：拿著 action.lock 時清掉寫者已死的原子寫暫存檔
+    # spec §2.2、§3；A2-02：只有 read_round 說 open 才收；壞掉／缺 open／讀不到＝不知道，不猜回合數（以前會用 last-round 接）。
+    st, state, why = read_round(rpath)
+    if st == ROUND_NONE:
+        return {"round": None, "skipped": "no round.json"}     # P2-06：沒有回合可關
+    if st == ROUND_CLOSED:
+        return {"round": state["round"], "skipped": "round already closed"}
+    if st != ROUND_OPEN:
+        raise Unknown(why)
     lst, lr = read_json3(lpath)
     if lst == IO:
         raise Unknown("last-round.json 讀不到：%s，判斷不了這回合總結寫過沒" % lr)
-    lr = lr if lst == OK and isinstance(lr, dict) else None
-    rnd = state.get("round")
-    if not is_int(rnd):
-        # round.json 被寫壞（tick 之後才壞的）：從 last-round.json 接著數
-        if lr is None or not is_int(lr.get("round")):
-            raise Unknown("round.json 壞了，last-round.json 也不能用；請人寫回 round.json")
-        bad_round, rnd = rnd, lr["round"] + 1
-        state["round"] = rnd
+    lr = lr if lst == OK else None
+    rnd = state["round"]
     # spec §7：上次可能在總結落盤後被殺；依既有總結重播，避免重算 ended 使證據消失。
-    if lr is not None and lr.get("round") == rnd:
+    # 只拿「完整的同回合總結」重播（summary_ok）；缺欄、型別錯的照常重新產生（註解疑點 aos7_tock.py:77）。
+    if summary_ok(lr) and lr["round"] == rnd:
         return _replayed(root, node_id, node, fnode, rpath, state, rnd, lr)
     slots, lerr = aos7_task.list_slots(fnode)
     if lerr:
@@ -86,6 +82,7 @@ def _tock(root, node_id, node, fnode, early):
     alive, ended, errors, marks, views = [], [], [], [], {}
     for slot in slots:
         fslot = aos7_task.slot_dir(fnode, slot)
+        sweep_tmp(fslot)
         try:
             v = aos7_task.judge_resolved(fslot, node, slot, rnd)
         except Exception as e:   # noqa: BLE001  一個槽壞掉只記它，其他照做
@@ -97,8 +94,10 @@ def _tock(root, node_id, node, fnode, early):
                 ended.append(aos7_task.ended_record(v, fslot))
                 marks.append((slot, v))
         elif v.state == LIVE:
-            # spec §5.4、P2-08：starttime 不明以 LIVE＋unsure 保留；檔案讀不到則 UNKNOWN，只記 errors。
+            # spec §5.4、P2-08：starttime／pid 讀不到以 LIVE＋unsure 保留；A2-08：原因也進總結 errors，不再「保守停著但看似正常」。
             alive.append(aos7_task.run_id(slot, v.run if v.run is not None else "?"))
+            if v.get("unsure") or v.get("broken"):
+                errors.append({"slot": slot, "phase": "unsure", "err": v.get("unsure") or v.get("why")})
         elif v.state == UNKNOWN:
             errors.append({"slot": slot, "phase": "judge", "err": v.get("why")})
     # spec §4.2、P2-03：tick 重用槽前先保存的舊結束也要報，以 run id 去重避免同次結束報兩份。
@@ -106,34 +105,44 @@ def _tock(root, node_id, node, fnode, early):
     reaped = [e for e in state.get("reaped") or [] if isinstance(e, dict) and e.get("run") not in seen]
     ended = reaped + ended
 
+    summary = {"round": rnd, "tick_at": state.get("tick_at"), "tock_at": at, "early": early,
+               "started": state.get("started") or [], "alive": alive, "ended": ended,
+               "skipped": state.get("skipped") or [], "ctl": ctl, "mounts": state.get("mounts") or [],
+               "tasks_error": list(state.get("tasks_error") or []), "errors": errors,
+               "tasks_rev": state.get("tasks_rev")}
+    if os.environ.get("AOS7_INCOMPLETE"):
+        summary["incomplete"] = os.environ["AOS7_INCOMPLETE"]
+    # spec §7、§8 不變條件三：先存總結並讀回確認，才允許通知任務、標已報、清槽與關回合。
+    write_json(lpath, summary)
+    test_point("tock-summary")   # P2-15：在提交與收尾之間卡住／被殺，驗證下次只靠「上一次」就能恢復。
+    st2, back = read_json3(lpath)
+    if not (st2 == OK and back == json.loads(json.dumps(summary, ensure_ascii=False))):
+        # 註解疑點 aos7_tock.py:130：整份比對，不只比 round／tock_at。
+        raise ReadBack("last-round.json 讀回確認不了第 %d 回合（%s），回合沒關，下次 tock 重來" % (rnd, st2))
+    # A2-12：tock.json 在總結提交之後才寫——任務（例如歷史 module）收到這回合的 tock 時，last-round.json 一定已經是這回合的。
+    # 在這之前被殺：下次 tock 走重播，照總結的 alive 補寫沒收到的 tock.json。
+    notify_err = _notify(fnode, rnd, at, early, views)
+    _finish(fnode, rnd, marks, views)
+    test_point("tock-after-finish")
+    # spec §2.2 不變條件一：這一步關上後，daemon 才有依據准許下一次 tick。
+    state.update({"open": False, "tock_at": at})
+    if notify_err:
+        state["notify_errors"] = notify_err
+    write_json(rpath, state)
+    return summary
+
+
+def _notify(fnode, rnd, at, early, views):
+    """對活任務寫 tock.json（S-11），回寫不進去的清單（記進 round.json 的 notify_errors；總結已經提交，不改它）。"""
+    errs = []
     for slot, v in views.items():
         if v.state == LIVE and v.run is not None:
             try:
                 write_json(os.path.join(aos7_task.slot_dir(fnode, slot), "tock.json"),
                            {"run": v.run, "round": rnd, "at": at, "early": early})
             except OSError as e:
-                errors.append({"slot": slot, "phase": "tock.json", "err": repr(e)[:200]})
-
-    summary = {"round": rnd, "tick_at": state.get("tick_at"), "tock_at": at, "early": early,
-               "started": state.get("started") or [], "alive": alive, "ended": ended,
-               "skipped": state.get("skipped") or [], "ctl": ctl, "mounts": state.get("mounts") or [],
-               "tasks_error": list(state.get("tasks_error") or []), "errors": errors,
-               "tasks_rev": state.get("tasks_rev")}
-    if bad_round is not None:
-        summary["tasks_error"].append("round.json 的 round 壞了（%r），從 last-round.json 接成 %d" % (bad_round, rnd))
-    if os.environ.get("AOS7_INCOMPLETE"):
-        summary["incomplete"] = os.environ["AOS7_INCOMPLETE"]
-    # spec §7、§8 不變條件三：先存總結並讀回確認，才允許標已報、清槽與關回合。
-    write_json(lpath, summary)
-    test_point("tock-summary")   # P2-15：在提交與收尾之間卡住，驗證下次只靠「上一次」就能恢復。
-    st2, back = read_json3(lpath)
-    if not (st2 == OK and isinstance(back, dict) and back.get("round") == rnd and back.get("tock_at") == at):
-        raise ReadBack("last-round.json 讀回確認不了第 %d 回合（%s），回合沒關，下次 tock 重來" % (rnd, st2))
-    _finish(fnode, rnd, marks, views)
-    # spec §2.2 不變條件一：這一步關上後，daemon 才有依據准許下一次 tick。
-    state.update({"open": False, "tock_at": at})
-    write_json(rpath, state)
-    return summary
+                errs.append({"slot": slot, "phase": "tock.json", "err": repr(e)[:200]})
+    return errs
 
 
 def _mark_seen(fslot, run, rnd):
@@ -182,7 +191,10 @@ def _replayed(root, node_id, node, fnode, rpath, state, rnd, prior):
     prior 的 ended 用來補 seen_round，alive 用來補 tock；槽判定例外跳過，通知 I/O 失敗略過。
     恢復只依 round／last-round 兩份上次記錄，無須歷史檔（§8 不變條件三）。"""
     marks, views = [], {}
-    slots, _ = aos7_task.list_slots(fnode)
+    slots, lerr = aos7_task.list_slots(fnode)
+    if lerr:
+        # 註解疑點 aos7_tock.py:185：列不出槽就補不了 seen_round／tock.json，不能照樣關回合。
+        raise Unknown("列不出 .aos/tasks/：%s（重播收尾做不了，回合先不關）" % lerr)
     reported = {e.get("run") for e in prior.get("ended") or [] if isinstance(e, dict)}
     alive = set(x for x in prior.get("alive") or [] if isinstance(x, str))
     for slot in slots:
