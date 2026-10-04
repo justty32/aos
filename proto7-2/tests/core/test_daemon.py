@@ -1,5 +1,7 @@
 """daemon 的測試：登記／取消登記、node 消失搬走 → missing、early_tock 兩種、pause owner、resume 順便 wake、stop／SIGTERM、
 控制檔洪水與壞檔、回條只留上一次、卡住的 tick／tock、kill -9 daemon 後接手、舊動作接管、root 消失、log.on。"""
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import json
 import os
 import shutil
@@ -16,6 +18,7 @@ from aos7_fs import read_json, read_jsonl, write_json
 
 
 class TestRegister(DaemonCase):
+    """〔core〕"""
     def test_register_runs_only_registered(self):
         a = self.mknode("a", [{"name": "j", "argv": ["true"]}])
         b = self.mknode("b", [{"name": "j", "argv": ["true"]}])
@@ -92,6 +95,7 @@ class TestRegister(DaemonCase):
 
 
 class TestNodeGone(DaemonCase):
+    """〔core〕"""
     def test_rm_rf_kills_and_stays_registered(self):
         node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEP}])
         self.start_daemon(register=["a"])
@@ -143,6 +147,7 @@ class TestNodeGone(DaemonCase):
 
 
 class TestEarlyTock(DaemonCase):
+    """〔core〕"""
     def test_default_fixed_interval(self):
         node = self.mknode("a", [{"name": "q", "argv": ["true"]}], interval_ms=1200)
         self.start_daemon(register=["a"])
@@ -161,6 +166,7 @@ class TestEarlyTock(DaemonCase):
 
 
 class TestPause(DaemonCase):
+    """〔core〕"""
     def test_owner_pause_not_released_by_other(self):
         self.mknode("a", interval_ms=50)
         self.start_daemon(register=["a"])
@@ -225,6 +231,7 @@ class TestPause(DaemonCase):
 
 
 class TestStop(DaemonCase):
+    """〔core〕"""
     def test_stop_kill_and_sigterm(self):
         node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEP}])
         p = self.start_daemon(register=["a"])
@@ -273,6 +280,7 @@ class TestStop(DaemonCase):
 
 
 class TestCtlFiles(DaemonCase):
+    """〔core〕"""
     def test_receipt_overwritten_same_name(self):
         self.mknode("a", interval_ms=50)
         self.start_daemon(register=["a"])
@@ -339,6 +347,7 @@ class TestCtlFiles(DaemonCase):
 
 
 class TestStuckActions(DaemonCase):
+    """〔core〕"""
     def test_stuck_tick_cut_and_round_marked(self):
         node = self.mknode("a", interval_ms=50, action_timeout_s=0.5)
         self.start_daemon(env={"AOS7_TEST_HANG": "tick-opened"}, register=["a"])
@@ -380,6 +389,7 @@ class TestStuckActions(DaemonCase):
 
 
 class TestDaemonDeath(DaemonCase):
+    """〔core〕"""
     def test_kill9_daemon_new_daemon_recovers_round_no_double(self):
         node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEP}], interval_ms=2000)
         p = self.start_daemon(register=["a"])

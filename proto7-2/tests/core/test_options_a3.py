@@ -11,6 +11,8 @@
 2. **until_round** each 任務 until_round=2 → 第 3 回合起不再起；keep 在跑的 run 過了 until_round 不被殺、結束後不再起；
    型別錯（負數、字串、bool）→ 跳過該項記 tasks_error，同表其他項照起。
 """
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import os
 import signal
 import unittest
@@ -19,6 +21,7 @@ from _matrix import MatrixCase, alive, env, rec_argv
 
 
 class TestRetryLost(MatrixCase):
+    """〔once_retry〕retry_lost 選項（P2-02，F26）：移成 once 保證包。"""
     def lost_once(self, **opt):
         """once 項（帶 opt）在 after-birth 被打斷，之後恢復 tock＋四回合。回 (node, 各回合總結)。"""
         node = self.mknode("a", [dict({"name": "o", "mode": "once", "argv": rec_argv("o")}, **opt)])
@@ -66,6 +69,7 @@ class TestRetryLost(MatrixCase):
 
 
 class TestUntilRound(MatrixCase):
+    """〔core〕"""
     def test_each_stops_after_until_round(self):
         """until_round：each 任務 until_round=2 → 第 1、2 回合起，第 3 回合起不再起；項目留在表上。"""
         node = self.mknode("a", [{"name": "e", "argv": rec_argv("e"), "until_round": 2}])

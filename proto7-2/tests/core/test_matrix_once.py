@@ -17,6 +17,8 @@
    - keep（活著的 keep restart）：任何檢查點同槽活程序 ≤ 1；重起只發生一次（birth 的 run 只前進一次、執行紀錄兩次），
      新 birth 帶 `ctl_id`。
 """
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import os
 import unittest
 
@@ -32,6 +34,7 @@ RESTART_POINTS = ("restart-after-append", "restart-after-kill", "ctl-after-done"
 
 
 class TestLaunchCrash(MatrixCase):
+    """〔core〕"""
     def interrupt_tick(self, point):
         """在 point 打斷第 1 回合的 tick（或 runner）；回恢復用的第一個 tock 要帶的環境。"""
         if point in RUNNER_POINTS:
@@ -91,6 +94,7 @@ gen(TestLaunchCrash, "keep", [(p, (p,)) for p in TICK_POINTS + RUNNER_POINTS], T
 
 
 class TestRestartCrash(MatrixCase):
+    """〔control〕restart 在三個交接點被殺只重起一次（A2-05，F39）。"""
     def restart_items(self, node):
         return [i for i in self.tasks(node) or [] if isinstance(i, dict) and i.get("restart_of")]
 

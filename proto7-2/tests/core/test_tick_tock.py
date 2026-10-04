@@ -1,4 +1,6 @@
 """tick／tock／任務的測試（不起 daemon）：槽與 run、mode、max_live、once、刪槽、核心只留上一次、tasks.json 驗證、inst。"""
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import os
 import time
 import unittest
@@ -9,6 +11,7 @@ from aos7_fs import read_json, write_json
 
 
 class TestSlotsAndRuns(CoreCase):
+    """〔core〕"""
     def test_tick_starts_in_slot_and_does_not_wait(self):
         node = self.mknode("a", [{"name": "s", "argv": SLEEP}])
         t0 = time.monotonic()
@@ -112,6 +115,7 @@ class TestSlotsAndRuns(CoreCase):
 
 
 class TestModes(CoreCase):
+    """〔core〕"""
     def test_each_skips_while_previous_still_running(self):
         node = self.mknode("a", [{"name": "e", "argv": SLEEP}])
         self.assertEqual(self.tick()["started"], ["e#1"])
@@ -166,6 +170,7 @@ class TestModes(CoreCase):
 
 
 class TestOnce(CoreCase):
+    """〔core〕"""
     def test_once_runs_once_and_item_removed(self):
         node = self.mknode("a", [{"name": "fix", "mode": "once", "argv": ["true"]},
                                  {"name": "k", "mode": "keep", "argv": SLEEP}])
@@ -204,6 +209,7 @@ class TestOnce(CoreCase):
 
 
 class TestSlotRemoval(CoreCase):
+    """〔core〕"""
     def test_removed_name_slot_deleted_one_round_after_report(self):
         node = self.mknode("a", [{"name": "j", "argv": ["sh", "-c", "echo hi > mine.txt"]}])
         self.tick()
@@ -262,6 +268,7 @@ class TestSlotRemoval(CoreCase):
 
 
 class TestOnlyLastKept(CoreCase):
+    """〔core〕"""
     def count_files(self, node):
         n = 0
         for d, dirs, files in os.walk(os.path.join(node, ".aos")):
@@ -303,6 +310,7 @@ class TestOnlyLastKept(CoreCase):
 
 
 class TestInst(CoreCase):
+    """〔core〕"""
     def test_inst_task(self):
         node = self.mknode("a", [{"name": "i", "inst": "i.inst.json"}])
         write_json(os.path.join(node, "i.inst.json"),
@@ -322,6 +330,7 @@ class TestInst(CoreCase):
 
 
 class TestGone(CoreCase):
+    """〔core〕"""
     def test_gone_node_not_recreated(self):
         node = self.mknode("a")
         os.rename(node, node + "-moved")

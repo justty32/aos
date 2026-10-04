@@ -9,24 +9,24 @@
    → tick＋tock 後死的被清、活的留著；連殺後再正常 tock，`.aos/` 底下沒有 `.tmp.` 殘留。
 3. **A2-08 診斷不截掉前綴**：`Timeline.err(..., kind=)` 的 err 以 kind 開頭、≤ 320 字、帶 kind；starttime 讀不到的任務在 tock 總結
    `errors` 留 `phase: "unsure"`。
-4. **A2-10**：history module 的 `--max-lines` 也套在 `daemon-events.jsonl`。
+4. **A2-10**：history module 的 `--max-lines` 也套在 `daemon-events.jsonl`——已搬到 modules/tests/test_modules_history.py。
 5. **A2-12**：tock 寫 last-round.json 早於任何 tock.json（任務收到 tock 時已經讀得到這回合的總結）。
 """
-import argparse
-import importlib.util
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import os
 import shutil
 import tempfile
 import unittest
 from unittest import mock
 
-from base import MODULES, SLEEP
+from base import SLEEP
 from _matrix import MatrixCase, dead_pid, gen
 import aos7_daemon_timeline
 import aos7_fs
 import aos7_proc
 import aos7_tock
-from aos7_fs import read_jsonl, write_json
+from aos7_fs import write_json
 
 
 class _FakeDaemon:
@@ -35,6 +35,7 @@ class _FakeDaemon:
 
 
 class TestSymlinkInProcess(MatrixCase):
+    """〔core〕"""
     def _symlink(self, where):
         """node（或它的上層）是符號連結：tick／tock 回 gone，連結目標裡沒被建 `.aos`。"""
         out = tempfile.mkdtemp(prefix="aos72-matrix-out-")
@@ -52,10 +53,14 @@ class TestSymlinkInProcess(MatrixCase):
         self.assertFalse(os.path.exists(os.path.join(target, ".aos")), "寫進了 root 外的連結目標")
 
 
-gen(TestSymlinkInProcess, "symlink_node", [("self", ("self",)), ("parent", ("parent",))], TestSymlinkInProcess._symlink)
+gen(TestSymlinkInProcess, "symlink_node", [("self", ("self",))], TestSymlinkInProcess._symlink)
+# 〔misuse M-2.1〕node 的上層換成符號連結（A2-04 每圈重驗整條路徑，F03）；node 本身是連結（O_NOFOLLOW）留核心
+gen(TestSymlinkInProcess, "symlink_node", [("parent", ("parent",))], TestSymlinkInProcess._symlink,
+    doc="〔misuse M-2.1〕" + TestSymlinkInProcess._symlink.__doc__)
 
 
 class TestTmpSweep(MatrixCase):
+    """〔core〕"""
     def test_dead_writer_tmp_cleared_live_kept(self):
         node = self.mknode("a", [{"name": "j", "argv": ["true"]}])
         self.itick()
@@ -89,6 +94,7 @@ class TestTmpSweep(MatrixCase):
 
 
 class TestDiagnostics(MatrixCase):
+    """〔diag〕status／總結的診斷欄（A2-08，F53）。"""
     def test_timeline_err_keeps_kind_prefix(self):
         os.makedirs(os.path.join(self.root, "a"))
         tl = aos7_daemon_timeline.Timeline(_FakeDaemon(self.root), "a", None)
@@ -112,27 +118,8 @@ class TestDiagnostics(MatrixCase):
                         "starttime 讀不到的任務沒在 errors 留 unsure：%r" % lr.get("errors"))
 
 
-class TestHistoryMaxLines(MatrixCase):
-    def test_max_lines_applies_to_daemon_events(self):
-        spec = importlib.util.spec_from_file_location("aos7_matrix_history", os.path.join(MODULES, "history.py"))
-        hist = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(hist)
-        node = self.mknode("a")
-        out = os.path.join(node, "history")
-        me = {"root": self.root, "node": node, "node_id": "a", "task": os.path.join(node, ".aos", "tasks", "h")}
-        args = argparse.Namespace(src=["a"], status=True, out=out, max_lines=2)
-        st = {}
-        for k in range(1, 6):
-            write_json(os.path.join(node, ".aos", "last-round.json"), {"round": k, "ended": [], "alive": []})
-            write_json(os.path.join(self.root, ".aosd", "status.json"), {"last_event": {"ev": "e%d" % k, "at": str(k)}})
-            hist.once(me, args, lambda p: None, st)
-        rows = read_jsonl(os.path.join(out, "daemon-events.jsonl"))
-        self.assertLessEqual(len(rows), 2, "daemon-events.jsonl 沒套 --max-lines：%d 行" % len(rows))
-        self.assertEqual(rows[-1]["ev"], "e5")
-        self.assertLessEqual(len(read_jsonl(os.path.join(out, "a.jsonl"))), 2)
-
-
 class TestTockOrder(MatrixCase):
+    """〔core〕"""
     def test_last_round_written_before_tock_json(self):
         node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": SLEEP}])
         self.itick()

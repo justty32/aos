@@ -1,4 +1,6 @@
 """任務控制（ctl.json：kill／restart／reload／run）、kill 範圍（Q1）、lost 前的身分掃描（NODE＋TID＋RUN）、掛載。"""
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import os
 import signal
 import time
@@ -30,6 +32,7 @@ def gc_pid(node, slot, wait=None):
 
 
 class TestCtl(CoreCase):
+    """〔control〕任務控制：kill 的案例是核心（標〔core〕），restart／reload 是控制包，aos7-ctl task 是工具包（標〔tools〕）。"""
     def write_ctl(self, node, slot, **ctl):
         write_json(os.path.join(self.slot(node, slot), "ctl.json"), dict({"by": "test"}, **ctl))
 
@@ -37,6 +40,7 @@ class TestCtl(CoreCase):
         return read_json(os.path.join(self.slot(node, slot), "ctl-done.json"))
 
     def test_kill_at_tock_reported_by_ctl(self):
+        """〔core〕"""
         node = self.mknode("a", [{"name": "s", "argv": SLEEP}])
         self.tick()
         self.wait_pid(node, "s")
@@ -48,6 +52,7 @@ class TestCtl(CoreCase):
         self.assertEqual(lr["ended"], [{"run": "s#1", "code": -15, "by_ctl": {"op": "kill", "by": "test"}}])
 
     def test_kill_with_stale_run_refused(self):
+        """〔core〕"""
         node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEP}])
         self.tick()
         self.wait_pid(node, "s")
@@ -104,6 +109,7 @@ class TestCtl(CoreCase):
         self.assertEqual(len(self.tasks(node)), 1)
 
     def test_bad_ctl_gets_failed_receipt(self):
+        """〔core〕"""
         node = self.mknode("a", [{"name": "s", "argv": SLEEP}])
         self.tick()
         with open(os.path.join(self.slot(node, "s"), "ctl.json"), "w") as f:
@@ -122,6 +128,7 @@ class TestCtl(CoreCase):
         self.assertEqual(self.done(node, "s")["result"]["run"], "s#1")   # 換 run 不清回條（P2-04）
 
     def test_aos7_ctl_task(self):
+        """〔tools〕"""
         node = self.mknode("a", [{"name": "s", "argv": SLEEP}])
         self.tick()
         self.wait_pid(node, "s")
@@ -131,6 +138,7 @@ class TestCtl(CoreCase):
 
 
 class TestKillRange(CoreCase):
+    """〔core〕"""
     def test_kill_reaches_setsid_grandchild(self):
         node = self.mknode("a", [{"name": "g", "argv": ["sh", "-c", LEAVE_GC + "sleep 60"]}])
         self.tick()
@@ -167,6 +175,7 @@ class TestKillRange(CoreCase):
 
 
 class TestIdentityScan(CoreCase):
+    """〔core〕"""
     def test_lost_kills_leftover_before_keep_restarts(self):
         """runner 與任務主程序都被 kill -9，setsid 的孫程序還在：lost 判定前先身分掃描收掉它，keep 不雙開。"""
         node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": ["sh", "-c", LEAVE_GC + "sleep 60"]}])
@@ -231,6 +240,7 @@ class TestIdentityScan(CoreCase):
         self.assertEqual(aos7_task.judge(sd, node, "x", 3).state, aos7_task.SUSPECT)
 
     def test_broken_birth_uses_node_tid_scan(self):
+        """〔misuse M-2.3〕壞 birth 靠 NODE＋TID 掃描判活（A2-03，F31）"""
         node = self.mknode("a", [{"name": "k", "mode": "keep", "argv": SLEEP}])
         self.tick()
         self.wait_pid(node, "k")
@@ -242,6 +252,7 @@ class TestIdentityScan(CoreCase):
 
 
 class TestMounts(CoreCase):
+    """〔core〕"""
     def test_mounts_made_and_rebuilt_per_run(self):
         node = self.mknode("a", [{"name": "m", "argv": ["true"], "mounts": {"bob": "b/inbox", "bad/": "x"}}])
         self.tick()

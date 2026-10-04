@@ -1,13 +1,15 @@
-"""子 daemon 的所有權（2.7、Q5、K-08 的 owner／daemon 兩塊）、subroot 檢查；可選模組：counter 示範任務與歷史 module（第 9 節）。"""
+"""〔subd〕子 daemon 的所有權（2.7、Q5、K-08 的 owner／daemon 兩塊）、subroot 檢查（從 tests/test_subdaemon_modules.py 拆出；counter／歷史 module 的案例搬到 modules/tests/）。"""
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tests"))  # tests/：base、_matrix
 import os
 import subprocess
 import sys
 import time
 import unittest
 
-from base import BIN, MODULES, SLEEP, DaemonCase
+from base import SLEEP, DaemonCase
 import aos7_proc
-from aos7_fs import read_json, read_jsonl, write_json
+from aos7_fs import read_json, write_json
 
 # 子 daemon 任務：先往子根的 ctl/ 寫 register（子 daemon 還沒起也行），再 exec 子 daemon
 CHILD = ["sh", "-c", 'aos7-ctl daemon "$AOS7_SUBROOT" register n1 --by boot > /dev/null && exec aos7-daemon "$AOS7_SUBROOT"']
@@ -30,6 +32,7 @@ class SubCase(DaemonCase):
 
 
 class TestOwnership(SubCase):
+    """〔subd〕子 daemon 所有權（F50）。"""
     def test_owner_blocks_and_stop_refused(self):
         a, n1, p = self.setup_child()
         ow = self.owner_json()
@@ -79,6 +82,7 @@ class TestOwnership(SubCase):
 
 
 class TestSubrootChecks(DaemonCase):
+    """〔subd〕subroot 位置檢查與認領（F50）。"""
     def test_subroot_rules(self):
         a = self.mknode("a", [{"name": "x", "argv": ["true"], "subroot": "a"},
                               {"name": "y", "argv": ["true"], "subroot": "b"},
@@ -96,36 +100,6 @@ class TestSubrootChecks(DaemonCase):
             env = f.read().split(b"\0")
         self.assertIn(b"AOS7_OWNER_TID=s1", env)
         self.assertIn(("AOS7_SUBROOT=" + os.path.join(a, "s")).encode(), env)
-
-
-class TestModules(DaemonCase):
-    def test_counter_reads_previous_state_and_gets_tock(self):
-        node = self.mknode("a", [{"name": "c", "mode": "keep",
-                                  "argv": ["python3", os.path.join(MODULES, "counter.py"), "2"]}], interval_ms=100)
-        self.start_daemon(register=["a"])
-        st_path = os.path.join(self.slot(node, "c"), "state.json")
-        self.wait_for(lambda: (read_json(st_path) or {}).get("count", 0) >= 6, 20)
-        st = read_json(st_path)
-        self.assertGreaterEqual(len(st["runs"]), 3)
-        self.assertEqual(st["runs"], sorted(set(st["runs"])))   # run 遞增，同一個槽接著數
-
-    def test_history_module_appends_last_rounds(self):
-        node = self.mknode("a", [{"name": "j", "argv": ["true"]},
-                                 {"name": "history", "mode": "keep",
-                                  "argv": ["python3", os.path.join(MODULES, "history.py"), "--status",
-                                           "--max-lines", "1000"]}], interval_ms=100)
-        self.start_daemon(register=["a"])
-        hp = os.path.join(node, "history", "a.jsonl")
-        self.wait_for(lambda: len(read_jsonl(hp)) >= 8, 20)
-        rows = read_jsonl(hp)
-        covered = []
-        for r in rows:
-            if "gap" in r:
-                covered += list(range(r["gap"][0], r["gap"][1] + 1))
-            else:
-                covered.append(r["round"])
-        self.assertEqual(covered, list(range(covered[0], covered[0] + len(covered))))   # 跳號都記了 gap
-        self.assertTrue(read_jsonl(os.path.join(node, "history", "daemon-events.jsonl")))
 
 
 if __name__ == "__main__":

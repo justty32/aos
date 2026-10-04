@@ -14,6 +14,8 @@
 5. **A2-11**（early_tock、interval 1500ms、任務 sleep 0.4）：回合中送 wake → 下一個 tick 不早於這回合 tick 後約 1.3 秒；
    idle 時送 wake 照樣馬上開（< 0.5 秒）。
 """
+import os, sys  # noqa: E401
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import datetime
 import os
 import shutil
@@ -31,6 +33,7 @@ def ts(s):
 
 
 class TestDaemonMatrix(DaemonCase):
+    """〔core〕"""
     def outside(self):
         d = tempfile.mkdtemp(prefix="aos72-matrix-out-")
         self.addCleanup(shutil.rmtree, d, True)   # 比 daemon 早登記：daemon 收掉之後才刪
@@ -43,6 +46,7 @@ class TestDaemonMatrix(DaemonCase):
     # ---------- A2-04 ----------
 
     def test_symlink_same_inode(self):
+        """〔misuse M-2.1〕node 運行中路徑換成符號連結（A2-04 每圈重驗，F03）"""
         node = self.mknode("a", [{"name": "s", "mode": "keep", "argv": SLEEP}], interval_ms=150)
         self.start_daemon(register=["a"])
         pid = self.wait_pid(node, "s")["pid"]
@@ -69,6 +73,7 @@ class TestDaemonMatrix(DaemonCase):
         self.assertFalse(os.path.exists(os.path.join(out, ".aos")), "寫出 root 外")
 
     def test_symlink_parent_outside_root(self):
+        """〔misuse M-2.1〕node 運行中路徑換成符號連結（A2-04 每圈重驗，F03）"""
         self.mknode("p/a", interval_ms=150)
         out = self.outside()
         os.makedirs(os.path.join(out, "a"))
