@@ -13,5 +13,6 @@ proto7 從使用者 2026-10-03 的分層想法開始：daemon 是運行層，檔
   - [第一輪思考綜合](notes/thinking/2026-10-04-r1-synthesis.md)：Fable 與 astra 兩份獨立報告的共識、分歧、對 daemon／tick 的要求、待拍板題與探針（原報告同資料夾）。
 - [事實的傳遞與時間確定性](notes/2026-10-04-fact-propagation.md)：使用者 10-04 的想法（多層轉手的延遲與失真、事實帶出處、邏輯時鐘；RTOS 時間確定性放 kernel 選項／module；備援先不考慮）。
   - [第二輪思考綜合](notes/thinking/2026-10-04-r2-synthesis.md)：Fable 與 astra 兩份獨立報告的共識、分歧、對 daemon／tick 的要求（標通用／只為 agent／LLM）、kernel 任務分兩類、待拍板題與探針（原報告同資料夾）。
+  - [第三輪思考綜合](notes/thinking/2026-10-04-r3-synthesis.md)：受限 node 與必然的轉手——事實轉接任務包草案（通用／LLM 標記、與 tock.json 的關係）、對 daemon／tick 零新增、「時機到了」的訊號與最便宜的準備、待拍板題與探針（原報告同資料夾）。
 - **[proto7-1](../proto7-1/README.md)**：照核心 spec 一路做到 kernel／agent 的 Python 試做，重點是 [做下去遇到的問題](../proto7-1/notes/problems.md)。
 - **[proto7-2](../proto7-2/README.md)**：照使用者 10-04 的建議重做 daemon／tick 的第二次試做（node 登記、固定 interval、只留 tasks.json、任務資料夾重用、核心只留上一次）；目前只有 spec 草稿。
