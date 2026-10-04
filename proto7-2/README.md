@@ -10,6 +10,7 @@
 - **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題（P2-01、P2-02 頂層已定並實作：wake 提前結束固定 interval 回合、once 可選 `retry_lost`），最後兩節是 astra 第一輪 A2、第二輪 A3 的處理。
 - [notes/changes-from-7-1.md](notes/changes-from-7-1.md)：跟 proto7-1 的對照表，最後是 W1～W12（程式照推薦做）。
 - [notes/play/](notes/play/README.md)：astra 回歸與試玩紀錄（一輪一列）。
+- **[notes/core-slimming.md](notes/core-slimming.md)**：核心精簡方案（只出方案）——盤點、核心最小集、錯誤四分支、擴充點與模組包、kernel 任務包，**3 點要你決定**。
 - [notes/layer-interfaces.md](notes/layer-interfaces.md)：四層（daemon、tick-tock、kernel、agent）之間的交接點調查——誰寫誰讀、延遲、通用 vs 只為 agent／LLM、proto7-1 的 kernel／agent 接上來會怎樣、缺口清單。
 
 ## 一句話看改了什麼
