@@ -1,0 +1,420 @@
+{
+  "core_pass": 17,
+  "step_pass": 8,
+  "f47_step_pass": 2,
+  "longrun": {
+    "closed_round": 450,
+    "seconds": 25.253,
+    "samples": 451,
+    "completed_snapshots": 112,
+    "completed_job_files": [
+      10
+    ],
+    "completed_job_bytes": [
+      4381,
+      4397
+    ],
+    "phases": {
+      "job": {
+        "files": [
+          4,
+          10
+        ]
+      },
+      "node": {
+        "files": [
+          7,
+          32
+        ]
+      },
+      "root": {
+        "files": [
+          8,
+          39
+        ]
+      }
+    },
+    "errors": 0
+  },
+  "suites": [
+    {
+      "run": 1,
+      "pid": 684616,
+      "started_utc": "2026-10-04T10:05:19.053410+00:00",
+      "ended_utc": "2026-10-04T10:08:23.223584+00:00",
+      "seconds": 184.17,
+      "rc": 0,
+      "timed_single_line_cases_count": 145,
+      "tests": 363,
+      "unittest_seconds": 184.112,
+      "overall_ok": true,
+      "adapt": [
+        {
+          "test": "test_long_run_file_count (test_adapt_flow.TestConsumers.test_long_run_file_count)",
+          "ok": true
+        },
+        {
+          "test": "test_step_num_condition (test_adapt_flow.TestConsumers.test_step_num_condition)",
+          "ok": true
+        },
+        {
+          "test": "test_threshold_and_fan (test_adapt_flow.TestConsumers.test_threshold_and_fan)",
+          "ok": true
+        },
+        {
+          "test": "test_adapt_killed_reattaches (test_adapt_flow.TestFaults.test_adapt_killed_reattaches)",
+          "ok": true
+        },
+        {
+          "test": "test_dst_pause (test_adapt_flow.TestFaults.test_dst_pause)",
+          "ok": true
+        },
+        {
+          "test": "test_half_written_unreadable_dir (test_adapt_flow.TestFaults.test_half_written_unreadable_dir)",
+          "ok": true
+        },
+        {
+          "test": "test_fast_source (test_adapt_flow.TestFlow.test_fast_source)",
+          "ok": true
+        },
+        {
+          "test": "test_same_rate (test_adapt_flow.TestFlow.test_same_rate)",
+          "ok": true
+        },
+        {
+          "test": "test_slow_source (test_adapt_flow.TestFlow.test_slow_source)",
+          "ok": true
+        },
+        {
+          "test": "test_daemon_kill9_restart (test_adapt_flow.TestSource.test_daemon_kill9_restart)",
+          "ok": true
+        },
+        {
+          "test": "test_pause_stall_3 (test_adapt_flow.TestSource.test_pause_stall_3)",
+          "ok": true
+        },
+        {
+          "test": "test_pause_stall_null (test_adapt_flow.TestSource.test_pause_stall_null)",
+          "ok": true
+        },
+        {
+          "test": "test_source_rebuilt (test_adapt_flow.TestSource.test_source_rebuilt)",
+          "ok": true
+        },
+        {
+          "test": "test_err_propagation (test_adapt_unit.TestChain.test_err_propagation)",
+          "ok": true
+        },
+        {
+          "test": "test_fail_reasons (test_adapt_unit.TestChain.test_fail_reasons)",
+          "ok": true
+        },
+        {
+          "test": "test_threshold_band (test_adapt_unit.TestChain.test_threshold_band)",
+          "ok": true
+        },
+        {
+          "test": "test_bad_types_no_exception (test_adapt_unit.TestCheck.test_bad_types_no_exception)",
+          "ok": true
+        },
+        {
+          "test": "test_cli_rc1_on_error (test_adapt_unit.TestCheck.test_cli_rc1_on_error)",
+          "ok": true
+        },
+        {
+          "test": "test_errors (test_adapt_unit.TestCheck.test_errors)",
+          "ok": true
+        },
+        {
+          "test": "test_example_passes_cli (test_adapt_unit.TestCheck.test_example_passes_cli)",
+          "ok": true
+        },
+        {
+          "test": "test_absent_and_band_and_clock_unknown (test_adapt_unit.TestEvaluate.test_absent_and_band_and_clock_unknown)",
+          "ok": true
+        },
+        {
+          "test": "test_expired_by_source_clock (test_adapt_unit.TestEvaluate.test_expired_by_source_clock)",
+          "ok": true
+        },
+        {
+          "test": "test_frame_not_mutated (test_adapt_unit.TestEvaluate.test_frame_not_mutated)",
+          "ok": true
+        },
+        {
+          "test": "test_ok_then_patience_then_unknown (test_adapt_unit.TestEvaluate.test_ok_then_patience_then_unknown)",
+          "ok": true
+        },
+        {
+          "test": "test_reset_voids_old_basis (test_adapt_unit.TestEvaluate.test_reset_voids_old_basis)",
+          "ok": true
+        },
+        {
+          "test": "test_same_round_not_double_counted (test_adapt_unit.TestEvaluate.test_same_round_not_double_counted)",
+          "ok": true
+        },
+        {
+          "test": "test_skipped_counts_gaps_once (test_adapt_unit.TestEvaluate.test_skipped_counts_gaps_once)",
+          "ok": true
+        },
+        {
+          "test": "test_stall_option (test_adapt_unit.TestEvaluate.test_stall_option)",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "pid": 696028,
+      "started_utc": "2026-10-04T10:08:23.223868+00:00",
+      "ended_utc": "2026-10-04T10:11:29.870021+00:00",
+      "seconds": 186.646,
+      "rc": 0,
+      "timed_single_line_cases_count": 145,
+      "tests": 363,
+      "unittest_seconds": 186.588,
+      "overall_ok": true,
+      "adapt": [
+        {
+          "test": "test_long_run_file_count (test_adapt_flow.TestConsumers.test_long_run_file_count)",
+          "ok": true
+        },
+        {
+          "test": "test_step_num_condition (test_adapt_flow.TestConsumers.test_step_num_condition)",
+          "ok": true
+        },
+        {
+          "test": "test_threshold_and_fan (test_adapt_flow.TestConsumers.test_threshold_and_fan)",
+          "ok": true
+        },
+        {
+          "test": "test_adapt_killed_reattaches (test_adapt_flow.TestFaults.test_adapt_killed_reattaches)",
+          "ok": true
+        },
+        {
+          "test": "test_dst_pause (test_adapt_flow.TestFaults.test_dst_pause)",
+          "ok": true
+        },
+        {
+          "test": "test_half_written_unreadable_dir (test_adapt_flow.TestFaults.test_half_written_unreadable_dir)",
+          "ok": true
+        },
+        {
+          "test": "test_fast_source (test_adapt_flow.TestFlow.test_fast_source)",
+          "ok": true
+        },
+        {
+          "test": "test_same_rate (test_adapt_flow.TestFlow.test_same_rate)",
+          "ok": true
+        },
+        {
+          "test": "test_slow_source (test_adapt_flow.TestFlow.test_slow_source)",
+          "ok": true
+        },
+        {
+          "test": "test_daemon_kill9_restart (test_adapt_flow.TestSource.test_daemon_kill9_restart)",
+          "ok": true
+        },
+        {
+          "test": "test_pause_stall_3 (test_adapt_flow.TestSource.test_pause_stall_3)",
+          "ok": true
+        },
+        {
+          "test": "test_pause_stall_null (test_adapt_flow.TestSource.test_pause_stall_null)",
+          "ok": true
+        },
+        {
+          "test": "test_source_rebuilt (test_adapt_flow.TestSource.test_source_rebuilt)",
+          "ok": true
+        },
+        {
+          "test": "test_err_propagation (test_adapt_unit.TestChain.test_err_propagation)",
+          "ok": true
+        },
+        {
+          "test": "test_fail_reasons (test_adapt_unit.TestChain.test_fail_reasons)",
+          "ok": true
+        },
+        {
+          "test": "test_threshold_band (test_adapt_unit.TestChain.test_threshold_band)",
+          "ok": true
+        },
+        {
+          "test": "test_bad_types_no_exception (test_adapt_unit.TestCheck.test_bad_types_no_exception)",
+          "ok": true
+        },
+        {
+          "test": "test_cli_rc1_on_error (test_adapt_unit.TestCheck.test_cli_rc1_on_error)",
+          "ok": true
+        },
+        {
+          "test": "test_errors (test_adapt_unit.TestCheck.test_errors)",
+          "ok": true
+        },
+        {
+          "test": "test_example_passes_cli (test_adapt_unit.TestCheck.test_example_passes_cli)",
+          "ok": true
+        },
+        {
+          "test": "test_absent_and_band_and_clock_unknown (test_adapt_unit.TestEvaluate.test_absent_and_band_and_clock_unknown)",
+          "ok": true
+        },
+        {
+          "test": "test_expired_by_source_clock (test_adapt_unit.TestEvaluate.test_expired_by_source_clock)",
+          "ok": true
+        },
+        {
+          "test": "test_frame_not_mutated (test_adapt_unit.TestEvaluate.test_frame_not_mutated)",
+          "ok": true
+        },
+        {
+          "test": "test_ok_then_patience_then_unknown (test_adapt_unit.TestEvaluate.test_ok_then_patience_then_unknown)",
+          "ok": true
+        },
+        {
+          "test": "test_reset_voids_old_basis (test_adapt_unit.TestEvaluate.test_reset_voids_old_basis)",
+          "ok": true
+        },
+        {
+          "test": "test_same_round_not_double_counted (test_adapt_unit.TestEvaluate.test_same_round_not_double_counted)",
+          "ok": true
+        },
+        {
+          "test": "test_skipped_counts_gaps_once (test_adapt_unit.TestEvaluate.test_skipped_counts_gaps_once)",
+          "ok": true
+        },
+        {
+          "test": "test_stall_option (test_adapt_unit.TestEvaluate.test_stall_option)",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "pid": 704300,
+      "started_utc": "2026-10-04T10:11:29.870322+00:00",
+      "ended_utc": "2026-10-04T10:14:46.143688+00:00",
+      "seconds": 196.273,
+      "rc": 0,
+      "timed_single_line_cases_count": 145,
+      "tests": 363,
+      "unittest_seconds": 196.214,
+      "overall_ok": true,
+      "adapt": [
+        {
+          "test": "test_long_run_file_count (test_adapt_flow.TestConsumers.test_long_run_file_count)",
+          "ok": true
+        },
+        {
+          "test": "test_step_num_condition (test_adapt_flow.TestConsumers.test_step_num_condition)",
+          "ok": true
+        },
+        {
+          "test": "test_threshold_and_fan (test_adapt_flow.TestConsumers.test_threshold_and_fan)",
+          "ok": true
+        },
+        {
+          "test": "test_adapt_killed_reattaches (test_adapt_flow.TestFaults.test_adapt_killed_reattaches)",
+          "ok": true
+        },
+        {
+          "test": "test_dst_pause (test_adapt_flow.TestFaults.test_dst_pause)",
+          "ok": true
+        },
+        {
+          "test": "test_half_written_unreadable_dir (test_adapt_flow.TestFaults.test_half_written_unreadable_dir)",
+          "ok": true
+        },
+        {
+          "test": "test_fast_source (test_adapt_flow.TestFlow.test_fast_source)",
+          "ok": true
+        },
+        {
+          "test": "test_same_rate (test_adapt_flow.TestFlow.test_same_rate)",
+          "ok": true
+        },
+        {
+          "test": "test_slow_source (test_adapt_flow.TestFlow.test_slow_source)",
+          "ok": true
+        },
+        {
+          "test": "test_daemon_kill9_restart (test_adapt_flow.TestSource.test_daemon_kill9_restart)",
+          "ok": true
+        },
+        {
+          "test": "test_pause_stall_3 (test_adapt_flow.TestSource.test_pause_stall_3)",
+          "ok": true
+        },
+        {
+          "test": "test_pause_stall_null (test_adapt_flow.TestSource.test_pause_stall_null)",
+          "ok": true
+        },
+        {
+          "test": "test_source_rebuilt (test_adapt_flow.TestSource.test_source_rebuilt)",
+          "ok": true
+        },
+        {
+          "test": "test_err_propagation (test_adapt_unit.TestChain.test_err_propagation)",
+          "ok": true
+        },
+        {
+          "test": "test_fail_reasons (test_adapt_unit.TestChain.test_fail_reasons)",
+          "ok": true
+        },
+        {
+          "test": "test_threshold_band (test_adapt_unit.TestChain.test_threshold_band)",
+          "ok": true
+        },
+        {
+          "test": "test_bad_types_no_exception (test_adapt_unit.TestCheck.test_bad_types_no_exception)",
+          "ok": true
+        },
+        {
+          "test": "test_cli_rc1_on_error (test_adapt_unit.TestCheck.test_cli_rc1_on_error)",
+          "ok": true
+        },
+        {
+          "test": "test_errors (test_adapt_unit.TestCheck.test_errors)",
+          "ok": true
+        },
+        {
+          "test": "test_example_passes_cli (test_adapt_unit.TestCheck.test_example_passes_cli)",
+          "ok": true
+        },
+        {
+          "test": "test_absent_and_band_and_clock_unknown (test_adapt_unit.TestEvaluate.test_absent_and_band_and_clock_unknown)",
+          "ok": true
+        },
+        {
+          "test": "test_expired_by_source_clock (test_adapt_unit.TestEvaluate.test_expired_by_source_clock)",
+          "ok": true
+        },
+        {
+          "test": "test_frame_not_mutated (test_adapt_unit.TestEvaluate.test_frame_not_mutated)",
+          "ok": true
+        },
+        {
+          "test": "test_ok_then_patience_then_unknown (test_adapt_unit.TestEvaluate.test_ok_then_patience_then_unknown)",
+          "ok": true
+        },
+        {
+          "test": "test_reset_voids_old_basis (test_adapt_unit.TestEvaluate.test_reset_voids_old_basis)",
+          "ok": true
+        },
+        {
+          "test": "test_same_round_not_double_counted (test_adapt_unit.TestEvaluate.test_same_round_not_double_counted)",
+          "ok": true
+        },
+        {
+          "test": "test_skipped_counts_gaps_once (test_adapt_unit.TestEvaluate.test_skipped_counts_gaps_once)",
+          "ok": true
+        },
+        {
+          "test": "test_stall_option (test_adapt_unit.TestEvaluate.test_stall_option)",
+          "ok": true
+        }
+      ]
+    }
+  ],
+  "partial_per_case_timing_note": "suite-*-cases.json 僅包含沒有額外 docstring 行的 unittest verbose 案，耗時從輸出開始標記到結尾量；完整每案 pass/fail 以 suite-*.log 為準。"
+}

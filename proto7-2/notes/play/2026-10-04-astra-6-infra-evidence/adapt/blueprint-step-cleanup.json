@@ -1,0 +1,10 @@
+{
+ "root": "/tmp/astra6-adapt-blueprint-step-u02k75rx",
+ "killed_by_pid": [
+  696611,
+  696613,
+  696622
+ ],
+ "remaining": [],
+ "removed": true
+}

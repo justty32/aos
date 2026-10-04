@@ -1,0 +1,9 @@
+test_edge_zero (__main__.Edges.test_edge_zero) ... ok
+test_edge_default (__main__.Edges.test_edge_default) ... ok
+test_edge_three (__main__.Edges.test_edge_three) ... ok
+test_edge_manual_after_zero (__main__.Edges.test_edge_manual_after_zero) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 2.528s
+
+OK

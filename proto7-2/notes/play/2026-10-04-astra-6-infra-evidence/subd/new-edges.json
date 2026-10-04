@@ -1,0 +1,593 @@
+{
+  "cases": [
+    {
+      "name": "term-allow-False",
+      "classification": "normal：SIGTERM 是核心 stop+kill，非 subd 被允許外部 stop；不留 stopped.json，keep 可重開",
+      "allow_stop": false,
+      "stale_receipt": null,
+      "since": "2026-10-04T18:07:16.071",
+      "before_task": {
+        "pid": 692452,
+        "state": "S",
+        "starttime": 3515623
+      },
+      "after_term_task": {
+        "pid": 692452,
+        "state": "gone"
+      },
+      "wrapper_rc": 0,
+      "status": {
+        "pid": 692447,
+        "root": "/tmp/astra6-subd-edge-hc7msr5d/term-allow-False/a/sub",
+        "at": "2026-10-04T18:07:17.263",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": true,
+        "stopped": true,
+        "last_event": {
+          "at": "2026-10-04T18:07:17.263",
+          "ev": "stop-sweep",
+          "groups": 0,
+          "ok": true
+        },
+        "nodes": {
+          "n1": {
+            "round": 1,
+            "round_open": false,
+            "recovery_pending": false,
+            "paused_by": [],
+            "pause_pending": false,
+            "interval_ms": 100,
+            "early_tock": false,
+            "live": [],
+            "phase": "stopped"
+          }
+        }
+      },
+      "life": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 692446
+        },
+        "since": "2026-10-04T18:07:16.071"
+      },
+      "receipts": [
+        {
+          "op": "register",
+          "by": "qa",
+          "node": "n1",
+          "result": {
+            "ok": true,
+            "msg": "registered n1",
+            "at": "2026-10-04T18:07:16.111",
+            "queued_at": "2026-10-04T18:07:16.093"
+          }
+        }
+      ],
+      "stopped_json": false,
+      "new_daemon": 692501,
+      "new_task": 692508,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          692500,
+          692501,
+          692506,
+          692508
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.599
+    },
+    {
+      "name": "term-allow-True",
+      "classification": "normal：SIGTERM 是核心 stop+kill，非 subd 被允許外部 stop；不留 stopped.json，keep 可重開",
+      "allow_stop": true,
+      "stale_receipt": null,
+      "since": "2026-10-04T18:07:17.670",
+      "before_task": {
+        "pid": 692534,
+        "state": "S",
+        "starttime": 3515783
+      },
+      "after_term_task": {
+        "pid": 692534,
+        "state": "gone"
+      },
+      "wrapper_rc": 0,
+      "status": {
+        "pid": 692528,
+        "root": "/tmp/astra6-subd-edge-hc7msr5d/term-allow-True/a/sub",
+        "at": "2026-10-04T18:07:18.861",
+        "poll_s": 0.02,
+        "gen": 1,
+        "io_errors": 0,
+        "stopping": true,
+        "stopped": true,
+        "last_event": {
+          "at": "2026-10-04T18:07:18.861",
+          "ev": "stop-sweep",
+          "groups": 0,
+          "ok": true
+        },
+        "nodes": {
+          "n1": {
+            "round": 1,
+            "round_open": false,
+            "recovery_pending": false,
+            "paused_by": [],
+            "pause_pending": false,
+            "interval_ms": 100,
+            "early_tock": false,
+            "live": [],
+            "phase": "stopped"
+          }
+        }
+      },
+      "life": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 692527
+        },
+        "since": "2026-10-04T18:07:17.670"
+      },
+      "receipts": [
+        {
+          "op": "register",
+          "by": "qa",
+          "node": "n1",
+          "result": {
+            "ok": true,
+            "msg": "registered n1",
+            "at": "2026-10-04T18:07:17.710",
+            "queued_at": "2026-10-04T18:07:17.692"
+          }
+        }
+      ],
+      "stopped_json": false,
+      "new_daemon": 692619,
+      "new_task": 692629,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          692615,
+          692619,
+          692627,
+          692629
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.599
+    },
+    {
+      "name": "term-with-old-receipt",
+      "classification": "normal：SIGTERM 是核心 stop+kill，非 subd 被允許外部 stop；不留 stopped.json，keep 可重開",
+      "allow_stop": true,
+      "stale_receipt": {
+        "op": "stop",
+        "by": "astra6",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T18:07:19.391",
+          "queued_at": "2026-10-04T18:07:19.377"
+        }
+      },
+      "since": "2026-10-04T18:07:19.454",
+      "before_task": {
+        "pid": 692664,
+        "state": "S",
+        "starttime": 3515943
+      },
+      "after_term_task": {
+        "pid": 692664,
+        "state": "gone"
+      },
+      "wrapper_rc": 0,
+      "status": {
+        "pid": 692676,
+        "root": "/tmp/astra6-subd-edge-hc7msr5d/term-with-old-receipt/a/sub",
+        "at": "2026-10-04T18:07:20.604",
+        "poll_s": 0.02,
+        "gen": 2,
+        "io_errors": 0,
+        "stopping": true,
+        "stopped": true,
+        "last_event": {
+          "at": "2026-10-04T18:07:20.604",
+          "ev": "stop-sweep",
+          "groups": 0,
+          "ok": true
+        },
+        "nodes": {
+          "n1": {
+            "round": 2,
+            "round_open": false,
+            "recovery_pending": false,
+            "paused_by": [],
+            "pause_pending": false,
+            "interval_ms": 100,
+            "early_tock": false,
+            "live": [],
+            "phase": "stopped"
+          }
+        }
+      },
+      "life": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 692675
+        },
+        "since": "2026-10-04T18:07:19.454"
+      },
+      "receipts": [
+        {
+          "op": "stop",
+          "by": "astra6",
+          "result": {
+            "ok": true,
+            "msg": "stopping",
+            "at": "2026-10-04T18:07:19.391",
+            "queued_at": "2026-10-04T18:07:19.377"
+          }
+        },
+        {
+          "op": "register",
+          "by": "qa",
+          "node": "n1",
+          "result": {
+            "ok": true,
+            "msg": "n1 已登記",
+            "at": "2026-10-04T18:07:19.493",
+            "queued_at": "2026-10-04T18:07:19.476"
+          }
+        }
+      ],
+      "stopped_json": false,
+      "new_daemon": 692767,
+      "new_task": 692776,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          692765,
+          692767,
+          692775,
+          692776
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "",
+          "wrapper-1.log": "",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.749
+    },
+    {
+      "name": "synthetic-life-no-since",
+      "classification": "M synthetic compatibility fixture；life 只准 subd 寫，此案手移除 since 不列 bug；歷史初版無 life、A5 首引入已有 since",
+      "original_life": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 692801
+        },
+        "since": "2026-10-04T18:07:21.022"
+      },
+      "synthetic_life": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 692801
+        }
+      },
+      "receipt": {
+        "op": "stop",
+        "by": "astra6",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T18:07:21.147",
+          "queued_at": "2026-10-04T18:07:21.136"
+        }
+      },
+      "old_task": 692814,
+      "new_task": 692913,
+      "new_daemon": 692902,
+      "old_alive_after_restart": false,
+      "stopped_json": false,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          692823,
+          692902,
+          692910,
+          692913
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 前代已空（收了 2 個程序、1 輪）\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.64
+    },
+    {
+      "name": "clock-rollback",
+      "classification": "X 環境牆鐘倒退／已知 KISS 界線；非 B/G（README 判定即 at>=since；loop6 自報不另防）",
+      "injection": "僅測試程序 datetime.now() 倒退3600秒，主機時鐘未改",
+      "since": "2026-10-04T18:07:22.662",
+      "receipt": {
+        "op": "stop",
+        "by": "astra6",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T17:07:22.786",
+          "queued_at": "2026-10-04T18:07:22.777"
+        }
+      },
+      "wrapper_rc": 0,
+      "before_restart": {
+        "life": {
+          "state": "running",
+          "subroot": "a/sub",
+          "owner": {
+            "node": "a",
+            "tid": "sub",
+            "run": "1",
+            "pid": 692936
+          },
+          "since": "2026-10-04T18:07:22.662"
+        },
+        "status": {
+          "pid": 692938,
+          "root": "/tmp/astra6-subd-edge-hc7msr5d/clock-rollback/a/sub",
+          "at": "2026-10-04T17:07:22.807",
+          "poll_s": 0.02,
+          "gen": 1,
+          "io_errors": 0,
+          "stopping": true,
+          "stopped": true,
+          "last_event": {
+            "at": "2026-10-04T17:07:22.806",
+            "ev": "stopping",
+            "kill": false
+          },
+          "nodes": {
+            "n1": {
+              "round": 1,
+              "round_open": false,
+              "recovery_pending": false,
+              "paused_by": [],
+              "pause_pending": false,
+              "interval_ms": 100,
+              "early_tock": false,
+              "live": [
+                "w#1"
+              ],
+              "phase": "stopped"
+            }
+          }
+        },
+        "stopped": false,
+        "task": {
+          "pid": 692949,
+          "state": "S",
+          "starttime": 3516283
+        }
+      },
+      "new_daemon": 693039,
+      "new_task": 693048,
+      "old_alive": false,
+      "pass": true,
+      "cleanup": {
+        "before": [
+          692958,
+          693039,
+          693047,
+          693048
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-1.log": "aos7-subd: 子根 a/sub 前代已空（收了 2 個程序、1 輪）\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 1.651
+    },
+    {
+      "name": "eio-status",
+      "classification": "X 已保守處理：讀不到就不收不起，恢復讀取後補完 stop",
+      "target": "/tmp/astra6-subd-edge-hc7msr5d/eio-status/a/sub/.aosd/status.json",
+      "receipt": {
+        "op": "stop",
+        "by": "astra6",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T18:07:24.438",
+          "queued_at": "2026-10-04T18:07:24.428"
+        }
+      },
+      "rc_eio": 1,
+      "during": {
+        "pid": 693085,
+        "state": "S",
+        "starttime": 3516448
+      },
+      "life_during": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 693072
+        },
+        "since": "2026-10-04T18:07:24.313"
+      },
+      "stopped_during": false,
+      "repair_rc": 1,
+      "life_after": {
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 693072
+        },
+        "since": "2026-10-04T18:07:24.313",
+        "finished_by": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 693097
+        },
+        "state": "stopped",
+        "at": "2026-10-04T18:07:24.517"
+      },
+      "after": {
+        "pid": 693085,
+        "state": "S",
+        "starttime": 3516448
+      },
+      "pass": true,
+      "cleanup": {
+        "before": [
+          693083,
+          693085
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra6-subd-edge-hc7msr5d/eio-status/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-1.log": "aos7-subd: 不知道前代是不是被允許的 stop 停的（子根 status.json status.json 讀不到：OSError(5, 'QA injected EIO')），不收也不起；記錄留著，下一次再看\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 0.506
+    },
+    {
+      "name": "eio-receipt",
+      "classification": "X 已保守處理：讀不到就不收不起，恢復讀取後補完 stop",
+      "target": "/tmp/astra6-subd-edge-hc7msr5d/eio-receipt/a/sub/.aosd/ctl-done/astra6.stop.json",
+      "receipt": {
+        "op": "stop",
+        "by": "astra6",
+        "result": {
+          "ok": true,
+          "msg": "stopping",
+          "at": "2026-10-04T18:07:24.944",
+          "queued_at": "2026-10-04T18:07:24.934"
+        }
+      },
+      "rc_eio": 1,
+      "during": {
+        "pid": 693133,
+        "state": "S",
+        "starttime": 3516499
+      },
+      "life_during": {
+        "state": "running",
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 693120
+        },
+        "since": "2026-10-04T18:07:24.819"
+      },
+      "stopped_during": false,
+      "repair_rc": 1,
+      "life_after": {
+        "subroot": "a/sub",
+        "owner": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 693120
+        },
+        "since": "2026-10-04T18:07:24.819",
+        "finished_by": {
+          "node": "a",
+          "tid": "sub",
+          "run": "1",
+          "pid": 693168
+        },
+        "state": "stopped",
+        "at": "2026-10-04T18:07:25.056"
+      },
+      "after": {
+        "pid": 693133,
+        "state": "S",
+        "starttime": 3516499
+      },
+      "pass": true,
+      "cleanup": {
+        "before": [
+          693131,
+          693133
+        ],
+        "after": [],
+        "known_live": [],
+        "ps": "    PID    PPID    PGID STAT COMMAND\n",
+        "logs": {
+          "wrapper-2.log": "aos7-subd: 子 daemon（a/sub）被允許的 stop 停過（前代的記錄提交被中斷，已補完）；不回收、沒起；刪掉 /tmp/astra6-subd-edge-hc7msr5d/eio-receipt/a/sub/.aosd/stopped.json 就會再起\n",
+          "wrapper-1.log": "aos7-subd: 不知道前代是不是被允許的 stop 停的（子根回條 astra6.stop.json astra6.stop.json 讀不到：OSError(5, 'QA injected EIO')），不收也不起；記錄留著，下一次再看\n",
+          "wrapper-0.log": ""
+        },
+        "tmp_removed": true
+      },
+      "elapsed_s": 0.559
+    }
+  ],
+  "tmp": "/tmp/astra6-subd-edge-hc7msr5d",
+  "final_proc_remaining": [],
+  "tmp_removed": true
+}

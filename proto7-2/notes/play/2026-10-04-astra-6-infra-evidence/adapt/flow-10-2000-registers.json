@@ -1,0 +1,404 @@
+[
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "69b99a0cfd24539fb6eea63f44a2aff40c5986446cf51cb569726441a54ce3b2",
+   "seq": 116,
+   "src_round": 116
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 57,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "69b99a0cfd24539fb6eea63f44a2aff40c5986446cf51cb569726441a54ce3b2",
+    "seq": 116,
+    "src_round": 116
+   },
+   "my_round": 2
+  },
+  "my_round": 2,
+  "at": "2026-10-04T18:08:59.735"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "3318b22fb3d6abec1c56f766178761cac1931ee1546b4c5e389410012f10e6f5",
+   "seq": 174,
+   "src_round": 174
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 114,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "3318b22fb3d6abec1c56f766178761cac1931ee1546b4c5e389410012f10e6f5",
+    "seq": 174,
+    "src_round": 174
+   },
+   "my_round": 3
+  },
+  "my_round": 3,
+  "at": "2026-10-04T18:09:01.760"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "7604a13a042f4a83df708263f6987cb0fcb0e77d7ca99c2dc38789845d79c85c",
+   "seq": 232,
+   "src_round": 232
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 171,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "7604a13a042f4a83df708263f6987cb0fcb0e77d7ca99c2dc38789845d79c85c",
+    "seq": 232,
+    "src_round": 232
+   },
+   "my_round": 4
+  },
+  "my_round": 4,
+  "at": "2026-10-04T18:09:03.774"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "96b2ffce4dce570e4faaf1f732c15d3be0fa188a5bf341fe5b1185306e7b44ed",
+   "seq": 291,
+   "src_round": 291
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 229,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "96b2ffce4dce570e4faaf1f732c15d3be0fa188a5bf341fe5b1185306e7b44ed",
+    "seq": 291,
+    "src_round": 291
+   },
+   "my_round": 5
+  },
+  "my_round": 5,
+  "at": "2026-10-04T18:09:05.799"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "397d2934f0a96226a33a497f1709641ec2e6265987204fcab2b27b07475307dc",
+   "seq": 349,
+   "src_round": 349
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 286,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "397d2934f0a96226a33a497f1709641ec2e6265987204fcab2b27b07475307dc",
+    "seq": 349,
+    "src_round": 349
+   },
+   "my_round": 6
+  },
+  "my_round": 6,
+  "at": "2026-10-04T18:09:07.814"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "71b1f97a016c489f572ddd1dbf57d7a64985da4054ec6c83bd28f0f124846548",
+   "seq": 408,
+   "src_round": 408
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 344,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "71b1f97a016c489f572ddd1dbf57d7a64985da4054ec6c83bd28f0f124846548",
+    "seq": 408,
+    "src_round": 408
+   },
+   "my_round": 7
+  },
+  "my_round": 7,
+  "at": "2026-10-04T18:09:09.840"
+ }
+]

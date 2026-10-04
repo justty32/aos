@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-04T18:16:09.322527+08:00",
+  "head_before": "04c5d28866cdeacbb71e8bde43000f0e14a0c149",
+  "head_after": "04c5d28866cdeacbb71e8bde43000f0e14a0c149",
+  "head_unchanged": true,
+  "tracked_files_checked": 460,
+  "tracked_changes": [],
+  "git_status": "?? proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/\n?? proto7-2/notes/play/2026-10-04-astra-6-infra.md\n?? proto7/user-advice.md\n",
+  "missing_report_summary_links": [],
+  "process_evidence": "ps-final.txt; each line's cleanup JSON is the PID-specific source"
+}

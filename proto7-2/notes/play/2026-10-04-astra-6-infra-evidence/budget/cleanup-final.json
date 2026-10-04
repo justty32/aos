@@ -1,0 +1,58 @@
+{
+  "archives": [
+    {
+      "path": "crash/verified/snapshots.tar.gz",
+      "files": 680,
+      "bytes": 50069,
+      "sha256": "00fada24f4100b998267776605220867ad651c51b449dfc2e06788e3ece02850"
+    },
+    {
+      "path": "crash/extra/snapshots.tar.gz",
+      "files": 122,
+      "bytes": 8555,
+      "sha256": "ed0d6f2c0678ad5c4af3bc2ed4a773bdb9fec156cadeba0d94813e4b0683e910"
+    },
+    {
+      "path": "crash/loop6/snapshots.tar.gz",
+      "files": 80,
+      "bytes": 6208,
+      "sha256": "7321d291d70eb5cc101f7d3761342694fe32361d9c045f6de797bbdf5a3ed663"
+    },
+    {
+      "path": "crash/edges/snapshots.tar.gz",
+      "files": 181,
+      "bytes": 23750,
+      "sha256": "f6612d8e81e5b3046f4a076de61de163bc07d4967c4e5ebbf333fd6280088311"
+    },
+    {
+      "path": "integration/snapshots.tar.gz",
+      "files": 117,
+      "bytes": 13115,
+      "sha256": "9b28220f48a101d32489904da573116a67fe2985f16d7a20943e11992dca951e"
+    }
+  ],
+  "tracked_pids": 638,
+  "live_tracked_pids": [],
+  "roots": [
+    "/tmp/astra5-budget-crash-muqwkgsg",
+    "/tmp/astra5-budget-crash-ruxhlenr",
+    "/tmp/astra5-budget-crash-gcvsky22",
+    "/tmp/astra5-budget-crash-kw3iwnc0",
+    "/tmp/astra5-budget-integration-o4q8kna1",
+    "/tmp/aos72-test-sb_1dv04",
+    "/tmp/aos72-test-kryy3ggs",
+    "/tmp/aos72-test-nilwhkqt",
+    "/tmp/aos72-test-h79m7vj2",
+    "/tmp/aos72-test-8u4dg06o",
+    "/tmp/aos72-test-vmyzzb41",
+    "/tmp/aos72-test-vqj277rw",
+    "/tmp/aos72-test-6zuvkcnz",
+    "/tmp/aos72-test-as80n3k_",
+    "/tmp/aos72-test-esvwqt63",
+    "/tmp/aos72-test-ndlogf_9",
+    "/tmp/aos72-test-5j2itc4s"
+  ],
+  "remaining_roots": [],
+  "remaining_root_mentions": [],
+  "clean": true
+}

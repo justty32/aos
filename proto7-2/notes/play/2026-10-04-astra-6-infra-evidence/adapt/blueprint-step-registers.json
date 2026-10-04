@@ -1,0 +1,863 @@
+[
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 79.0,
+   "hot": false
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "ef227ca0d3a5d0e9596cfed15273fdda37a00a3c8e88abe788928ba505c97d13",
+   "seq": 1,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 790,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 79.0,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79.0,
+    "hot": false
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "ef227ca0d3a5d0e9596cfed15273fdda37a00a3c8e88abe788928ba505c97d13",
+    "seq": 1,
+    "src_round": 1
+   },
+   "my_round": 1
+  },
+  "my_round": 1,
+  "at": "2026-10-04T18:08:42.607"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 79.0,
+   "hot": false
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "ef227ca0d3a5d0e9596cfed15273fdda37a00a3c8e88abe788928ba505c97d13",
+   "seq": 1,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 790,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 79.0,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 1,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79.0,
+    "hot": false
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "ef227ca0d3a5d0e9596cfed15273fdda37a00a3c8e88abe788928ba505c97d13",
+    "seq": 1,
+    "src_round": 1
+   },
+   "my_round": 2
+  },
+  "my_round": 2,
+  "at": "2026-10-04T18:08:42.617"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 79.0,
+   "hot": false
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "6d35d7cbae47c6e998ce6474cc5655ef7ea8974ca6a1a48a4b0dd4cf90a993fe",
+   "seq": 2,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 790,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 79.0,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 2,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79.0,
+    "hot": false
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "6d35d7cbae47c6e998ce6474cc5655ef7ea8974ca6a1a48a4b0dd4cf90a993fe",
+    "seq": 2,
+    "src_round": 1
+   },
+   "my_round": 3
+  },
+  "my_round": 3,
+  "at": "2026-10-04T18:08:42.628"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 79.0,
+   "hot": false
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "6d35d7cbae47c6e998ce6474cc5655ef7ea8974ca6a1a48a4b0dd4cf90a993fe",
+   "seq": 2,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 790,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 79.0,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 3,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79.0,
+    "hot": false
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "6d35d7cbae47c6e998ce6474cc5655ef7ea8974ca6a1a48a4b0dd4cf90a993fe",
+    "seq": 2,
+    "src_round": 1
+   },
+   "my_round": 4
+  },
+  "my_round": 4,
+  "at": "2026-10-04T18:08:42.638"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 79.9,
+   "hot": false
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "26745976cc0c0b3b935bf1ffc37138c237850411cfdaf7af82050d15621d587f",
+   "seq": 3,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 799,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 79.9,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 4,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79.9,
+    "hot": false
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "26745976cc0c0b3b935bf1ffc37138c237850411cfdaf7af82050d15621d587f",
+    "seq": 3,
+    "src_round": 1
+   },
+   "my_round": 5
+  },
+  "my_round": 5,
+  "at": "2026-10-04T18:08:42.648"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 79.9,
+   "hot": false
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "26745976cc0c0b3b935bf1ffc37138c237850411cfdaf7af82050d15621d587f",
+   "seq": 3,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 799,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 79.9,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 5,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79.9,
+    "hot": false
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "26745976cc0c0b3b935bf1ffc37138c237850411cfdaf7af82050d15621d587f",
+    "seq": 3,
+    "src_round": 1
+   },
+   "my_round": 6
+  },
+  "my_round": 6,
+  "at": "2026-10-04T18:08:42.659"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "d1c5366c06bdd6961f8b6b661649c0c8816e191e3eb796399d2a5a3abcde045a",
+   "seq": 4,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 800,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.0,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": null
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 6,
+  "skipped": 0,
+  "why": "within_error_band",
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79.9,
+    "hot": false
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "26745976cc0c0b3b935bf1ffc37138c237850411cfdaf7af82050d15621d587f",
+    "seq": 3,
+    "src_round": 1
+   },
+   "my_round": 6
+  },
+  "my_round": 7,
+  "at": "2026-10-04T18:08:42.669"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "d1c5366c06bdd6961f8b6b661649c0c8816e191e3eb796399d2a5a3abcde045a",
+   "seq": 4,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 800,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.0,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": null
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 7,
+  "skipped": 0,
+  "why": "within_error_band",
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79.9,
+    "hot": false
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "26745976cc0c0b3b935bf1ffc37138c237850411cfdaf7af82050d15621d587f",
+    "seq": 3,
+    "src_round": 1
+   },
+   "my_round": 6
+  },
+  "my_round": 8,
+  "at": "2026-10-04T18:08:42.679"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+   "seq": 9,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 8,
+  "skipped": 4,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+    "seq": 9,
+    "src_round": 1
+   },
+   "my_round": 9
+  },
+  "my_round": 9,
+  "at": "2026-10-04T18:08:42.690"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+   "seq": 9,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 9,
+  "skipped": 4,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+    "seq": 9,
+    "src_round": 1
+   },
+   "my_round": 10
+  },
+  "my_round": 10,
+  "at": "2026-10-04T18:08:42.700"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+   "seq": 9,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 10,
+  "skipped": 4,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+    "seq": 9,
+    "src_round": 1
+   },
+   "my_round": 11
+  },
+  "my_round": 11,
+  "at": "2026-10-04T18:08:42.710"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+   "seq": 9,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 11,
+  "skipped": 4,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+    "seq": 9,
+    "src_round": 1
+   },
+   "my_round": 12
+  },
+  "my_round": 12,
+  "at": "2026-10-04T18:08:42.721"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+   "seq": 9,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 12,
+  "skipped": 4,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "853b731ab1bcccf1a2256d0bd1e1d3df03997dfa1f1a50cff9eb3e840806ba8c",
+    "seq": 9,
+    "src_round": 1
+   },
+   "my_round": 13
+  },
+  "my_round": 13,
+  "at": "2026-10-04T18:08:42.731"
+ }
+]

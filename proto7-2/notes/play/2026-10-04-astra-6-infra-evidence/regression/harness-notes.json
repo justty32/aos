@@ -1,0 +1,6 @@
+{
+  "copied_from": "2026-10-04-astra-5-infra-evidence/regression",
+  "probe_adjustments": ["只更換 astra5/astra-5 為 astra6/astra-6，檔案相同深度", "額外 summarize.py 對舊探針觀察值加結果斷言"],
+  "suite_timing_correction": "初版 cases_count 記的是單行 verbose 案的計時樣本數 145；docstring 多行案不納入計時，但官方 unittest footer 是完整 363。欄位已改為 timed_single_line_cases_count，結果 tests 採 footer，不改原始測試與 log。",
+  "initial_selector_check": "曾以 -k CoreBudget 單跑，0 tests；不當成驗證。後改直接 tests/core/test_budget.py -v，確實 1 test 通過，保留 core-budget.log。"
+}

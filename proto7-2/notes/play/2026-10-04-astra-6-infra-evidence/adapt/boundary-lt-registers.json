@@ -1,0 +1,394 @@
+[
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 801,
+   "hot": false
+  },
+  "err": {
+   "c": 0.5
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "a79854ebf2f7fe051654e53adb6e4fbf4e017a2317ca6c87fe9de93cf83ac82a",
+   "seq": 1,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "78e250e5f5b8e260"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 801,
+    "err": 0.5
+   },
+   {
+    "step": "threshold",
+    "lt": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 801,
+    "hot": false
+   },
+   "err": {
+    "c": 0.5
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "a79854ebf2f7fe051654e53adb6e4fbf4e017a2317ca6c87fe9de93cf83ac82a",
+    "seq": 1,
+    "src_round": 1
+   },
+   "my_round": 1
+  },
+  "my_round": 1,
+  "at": "2026-10-04T18:08:42.305"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 79,
+   "hot": true
+  },
+  "err": {
+   "c": 0.5
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "785b44bbc57d054be19e1393cd2e3f8396c1595de1f78a1fcba5c8782cf3fc41",
+   "seq": 2,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "78e250e5f5b8e260"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 79,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 79,
+    "err": 0.5
+   },
+   {
+    "step": "threshold",
+    "lt": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 1,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79,
+    "hot": true
+   },
+   "err": {
+    "c": 0.5
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "785b44bbc57d054be19e1393cd2e3f8396c1595de1f78a1fcba5c8782cf3fc41",
+    "seq": 2,
+    "src_round": 1
+   },
+   "my_round": 2
+  },
+  "my_round": 2,
+  "at": "2026-10-04T18:08:42.316"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "e06a7f3a81166788914fc54f4b55a2316c83d0d166f0896b6b1f39d7738c3aec",
+   "seq": 3,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "78e250e5f5b8e260"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 79.5,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 79.5,
+    "err": 0.5
+   },
+   {
+    "step": "threshold",
+    "lt": 80,
+    "as": "hot",
+    "v": null
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 2,
+  "skipped": 0,
+  "why": "within_error_band",
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79,
+    "hot": true
+   },
+   "err": {
+    "c": 0.5
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "785b44bbc57d054be19e1393cd2e3f8396c1595de1f78a1fcba5c8782cf3fc41",
+    "seq": 2,
+    "src_round": 1
+   },
+   "my_round": 2
+  },
+  "my_round": 3,
+  "at": "2026-10-04T18:08:42.326"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "344da0bbb551e981f292827a9624c70dcb7c06e9f1476fa42df1cf7248190158",
+   "seq": 4,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "78e250e5f5b8e260"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 80,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80,
+    "err": 0.5
+   },
+   {
+    "step": "threshold",
+    "lt": 80,
+    "as": "hot",
+    "v": null
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 3,
+  "skipped": 0,
+  "why": "within_error_band",
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 79,
+    "hot": true
+   },
+   "err": {
+    "c": 0.5
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "785b44bbc57d054be19e1393cd2e3f8396c1595de1f78a1fcba5c8782cf3fc41",
+    "seq": 2,
+    "src_round": 1
+   },
+   "my_round": 2
+  },
+  "my_round": 4,
+  "at": "2026-10-04T18:08:42.336"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.5,
+   "hot": false
+  },
+  "err": {
+   "c": 0.5
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "87da2bc6775518dc99cfd35cb6456c68e68dac589bef66a750b552d7f3acc8ef",
+   "seq": 5,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "78e250e5f5b8e260"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 80.5,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.5,
+    "err": 0.5
+   },
+   {
+    "step": "threshold",
+    "lt": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 4,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.5,
+    "hot": false
+   },
+   "err": {
+    "c": 0.5
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "87da2bc6775518dc99cfd35cb6456c68e68dac589bef66a750b552d7f3acc8ef",
+    "seq": 5,
+    "src_round": 1
+   },
+   "my_round": 5
+  },
+  "my_round": 5,
+  "at": "2026-10-04T18:08:42.347"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 81,
+   "hot": false
+  },
+  "err": {
+   "c": 0.5
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "7a2fa527e2fdf96a7abe4680413659adec9196b9ee2ad23fbae91d5818c274bd",
+   "seq": 6,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "78e250e5f5b8e260"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 81,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 81,
+    "err": 0.5
+   },
+   {
+    "step": "threshold",
+    "lt": 80,
+    "as": "hot",
+    "v": false
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 5,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 81,
+    "hot": false
+   },
+   "err": {
+    "c": 0.5
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "7a2fa527e2fdf96a7abe4680413659adec9196b9ee2ad23fbae91d5818c274bd",
+    "seq": 6,
+    "src_round": 1
+   },
+   "my_round": 6
+  },
+  "my_round": 6,
+  "at": "2026-10-04T18:08:42.357"
+ }
+]

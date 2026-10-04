@@ -1,0 +1,18 @@
+test_end_to_end_and_replay_after_close (__main__.Daemon.test_end_to_end_and_replay_after_close) ... ok
+test_pause_SIGKILL_daemon_restart (__main__.Daemon.test_pause_SIGKILL_daemon_restart) ... ok
+test_pause_and_daemon_restart_clock (__main__.Daemon.test_pause_and_daemon_restart_clock)
+completed_tock：pause 時不前進；daemon 重開接續原回合（不歸零）；之後 call 照常、帳的 clock_hw 不超過時鐘。 ... ok
+test_restart_on_end_new_request_new_transaction (__main__.Daemon.test_restart_on_end_new_request_new_transaction)
+restart_on_end：每個新 inst 是新 request＝新交易；額度 3 用完後第四次 reserve 被拒，工作走 failed。 ... ok
+test_work_failure_still_counts (__main__.Daemon.test_work_failure_still_counts)
+後端已受理、處理失敗：step ok:false 走 failed，但帳照受理結算 1（不因 step 失敗退款）。 ... ok
+test_crash_points_resend_same_request (__main__.Step.test_crash_points_resend_same_request) ... ok
+test_expired_between_rounds (__main__.Step.test_expired_between_rounds)
+reserve 後被殺、step 停在 unknown；回合走過 until 後 resume --resend：首次准入被擋 → 結算 0、step 走 failed。 ... ok
+test_slot_gone_settle_without_step (__main__.Step.test_slot_gone_settle_without_step)
+入口回條寫了、結算前被殺，step 停在 unknown（不自動重送）；once 槽刪掉後直接 settle 照入口證據結算 1； ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 8.683s
+
+OK

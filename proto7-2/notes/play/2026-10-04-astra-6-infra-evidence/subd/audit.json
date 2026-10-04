@@ -1,0 +1,19 @@
+{
+  "head": "04c5d28866cdeacbb71e8bde43000f0e14a0c149",
+  "stop_cases": 24,
+  "stop_pass": 24,
+  "hook_exact_hits": 18,
+  "g3_formal_pass": 10,
+  "g3_full_suite_overlap": 10,
+  "g3_first_new_daemon_old_tasks_absent": 10,
+  "g3_seconds": 27.342,
+  "edge_pass": 7,
+  "all_case_cleanup_ok": true,
+  "all_top_tmp_removed": true,
+  "remaining": {
+    "stop": [],
+    "stress": [],
+    "edges": [],
+    "preliminary": []
+  }
+}

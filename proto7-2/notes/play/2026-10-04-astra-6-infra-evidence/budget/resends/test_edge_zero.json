@@ -1,0 +1,86 @@
+{
+  "case": "test_edge_zero",
+  "configured": 0,
+  "automatic_resends": 0,
+  "initial_plus_automatic": 1,
+  "manual_resume": false,
+  "seconds": 0.42386859800171806,
+  "frames": [
+    {
+      "v": 1,
+      "job": "edge",
+      "inst": "a0840e8b",
+      "table": "80f0f21a92df",
+      "pc": "a",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "a0840e8b-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "a0840e8b-a-1",
+        "attempt": "a0840e8b-a-1-a1",
+        "n": 1,
+        "task": "step-edge-a",
+        "result": "jobs/edge/results/a/a0840e8b-a-1-a1.json",
+        "state": "queued",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": null,
+      "end": null,
+      "since": 1,
+      "seen": 3,
+      "rev": 7,
+      "tock": 3,
+      "at": "2026-10-04T18:08:51.118"
+    },
+    {
+      "v": 1,
+      "job": "edge",
+      "inst": "a0840e8b",
+      "table": "80f0f21a92df",
+      "pc": "a",
+      "phase": "halted",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "a0840e8b-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "a0840e8b-a-1",
+        "attempt": "a0840e8b-a-1-a1",
+        "n": 1,
+        "task": "step-edge-a",
+        "result": "jobs/edge/results/a/a0840e8b-a-1-a1.json",
+        "state": "queued",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": {
+        "kind": "unknown",
+        "why": "子工作 step-edge-a#2 結束了（code -15）卻沒有結果檔",
+        "step": "a",
+        "round": 4,
+        "at": "2026-10-04T18:08:51.198"
+      },
+      "end": null,
+      "since": 1,
+      "seen": 4,
+      "rev": 8,
+      "tock": 4,
+      "at": "2026-10-04T18:08:51.198"
+    }
+  ]
+}

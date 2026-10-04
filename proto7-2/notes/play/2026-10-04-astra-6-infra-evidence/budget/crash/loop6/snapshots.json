@@ -1,0 +1,42 @@
+[
+ {
+  "name": "loop6-eio-backend-1-interrupted",
+  "final": false
+ },
+ {
+  "name": "loop6-eio-backend-1-final",
+  "final": true
+ },
+ {
+  "name": "loop6-eio-backend-2-interrupted",
+  "final": false
+ },
+ {
+  "name": "loop6-eio-backend-2-final",
+  "final": true
+ },
+ {
+  "name": "loop6-eio-backend-3-interrupted",
+  "final": false
+ },
+ {
+  "name": "loop6-eio-backend-3-final",
+  "final": true
+ },
+ {
+  "name": "loop6-clock-hw-final",
+  "final": true
+ },
+ {
+  "name": "loop6-orphans-interrupted",
+  "final": false
+ },
+ {
+  "name": "loop6-orphans-final",
+  "final": true
+ },
+ {
+  "name": "loop6-retired-final",
+  "final": true
+ }
+]

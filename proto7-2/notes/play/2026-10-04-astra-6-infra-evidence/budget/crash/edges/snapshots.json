@@ -1,0 +1,34 @@
+[
+ {
+  "name": "orphan-restart-final",
+  "final": true
+ },
+ {
+  "name": "orphan-clock-unknown-final",
+  "final": true
+ },
+ {
+  "name": "preservation-before-rounds",
+  "final": true
+ },
+ {
+  "name": "preservation-final",
+  "final": true
+ },
+ {
+  "name": "retired-unreadable-final",
+  "final": true
+ },
+ {
+  "name": "rollback-above-hw-final",
+  "final": true
+ },
+ {
+  "name": "permission-boundaries-interrupted",
+  "final": false
+ },
+ {
+  "name": "permission-boundaries-final",
+  "final": true
+ }
+]
