@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import json  # noqa: E402
 import subprocess  # noqa: E402
 import unittest  # noqa: E402
+from unittest import mock  # noqa: E402
 
 from base import CONTROL, LIB, SLEEP, TOOLS, CoreCase  # noqa: E402
 from _matrix import MatrixCase, alive, env, gen, rec_argv  # noqa: E402
@@ -175,6 +176,36 @@ class TestReqId(MatrixCase):
         b = self.prog("aos7-ctl", "task", self.slot(node, "o"), "restart", "--id", "again")
         self.assertEqual((a["once"], b["once"]), ("added", "dup"))
         self.assertEqual(len(restart_items(self, node)), 1)
+
+    def test_concurrent_same_req_id_snapshot(self):
+        """A4-02：A 讀完 run 1 的 birth、停在拿表鎖前；B 用同一個 req_id 做完重起（run 2 的 birth 帶它）；A 恢復
+        → 鎖內重讀 birth 看到已做完，不再加 once、回 done，不會多起 run 3。"""
+        node = self.mknode("a", [{"name": "w", "mode": "keep", "argv": rec_argv("w")}])
+        self.itick()
+        self.wait_ended(node, "w", 1)
+        self.itock()
+        self.set_tasks(node, [{"name": "w", "mode": "keep", "enabled": False, "argv": rec_argv("w")}])  # 只剩 restart 會起
+        real, hits = aos7_control.edit_json, []
+
+        def paused(path, fn, **kw):
+            # A 在這裡被排開：B 走真的 edit_json 完成整件 restart，接著才輪 A 拿鎖
+            with mock.patch.object(aos7_control, "edit_json", real):
+                hits.append(aos7_control.restart(node, "w", req_id="same"))
+                self.itick()
+                self.wait_ended(node, "w", 2)
+                self.itock()
+            return real(path, fn, **kw)
+        with mock.patch.object(aos7_control, "edit_json", paused):
+            a = aos7_control.restart(node, "w", req_id="same")
+        self.assertEqual(len(hits), 1, "排程 hook 沒命中")
+        self.assertEqual(hits[0]["once"], "added", hits[0])
+        self.assertEqual(self.birth(node, "w")["x"]["req_id"], "same")
+        self.assertEqual((a["ok"], a["once"], a["run"]), (True, "done", "w#2"), a)
+        self.assertEqual(restart_items(self, node), [], "A 用舊快照又加了 once")
+        self.assertFalse(os.path.exists(os.path.join(self.slot(node, "w"), "ctl.json")), "A 又送了 kill")
+        self.full_round(node, "w")
+        self.assertEqual(self.birth(node, "w")["run"], 2)
+        self.assertEqual(len(self.ran(node, "w")), 2, self.ran(node, "w"))
 
 
 CRASH_POINTS = ("requester-after-append", "tock-ctl-after-done", "tick-ctl-after-done")
