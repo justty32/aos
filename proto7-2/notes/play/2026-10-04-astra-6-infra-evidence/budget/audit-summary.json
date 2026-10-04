@@ -1,0 +1,28 @@
+{
+  "snapshots": 127,
+  "transitions": 460,
+  "passed": 127,
+  "negative_detected": 5,
+  "by_batch": {
+    "verified": {
+      "snapshots": 72,
+      "transitions": 229
+    },
+    "extra": {
+      "snapshots": 16,
+      "transitions": 29
+    },
+    "loop6": {
+      "snapshots": 10,
+      "transitions": 20
+    },
+    "edges": {
+      "snapshots": 8,
+      "transitions": 133
+    },
+    "integration": {
+      "snapshots": 21,
+      "transitions": 49
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "method": "Python decimal exact arithmetic; does not import adapt",
+  "cases": [
+    {
+      "t_dc": 790,
+      "x": "79.0",
+      "err": "0.05",
+      "low": "78.95",
+      "high": "79.05",
+      "ge80": false
+    },
+    {
+      "t_dc": 799,
+      "x": "79.9",
+      "err": "0.05",
+      "low": "79.85",
+      "high": "79.95",
+      "ge80": false
+    },
+    {
+      "t_dc": 800,
+      "x": "80.0",
+      "err": "0.05",
+      "low": "79.95",
+      "high": "80.05",
+      "ge80": null
+    },
+    {
+      "t_dc": 801,
+      "x": "80.1",
+      "err": "0.05",
+      "low": "80.05",
+      "high": "80.15",
+      "ge80": true
+    }
+  ],
+  "verdict": "spec formula is internally consistent; blueprint 3.3 values for 800 and 799 need correction"
+}

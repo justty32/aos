@@ -1,0 +1,675 @@
+{
+ "contract": "packs/adapt/spec.md §2 scale: 有 round 就四捨五入",
+ "check": {
+  "returncode": 0,
+  "stdout": "[]\n",
+  "stderr": "",
+  "declaration": {
+   "sense": "temp",
+   "src": "src/out/temp.json",
+   "src_clock": "src/.aos/round.json",
+   "max_age": null,
+   "patience": 2,
+   "stall": null,
+   "steps": [
+    {
+     "select": "value.x"
+    },
+    {
+     "scale": {
+      "mul": 1,
+      "q": 0.5,
+      "round": 0,
+      "as": "c"
+     }
+    }
+   ],
+   "need": [
+    "c"
+   ]
+  }
+ },
+ "rows": [
+  {
+   "source": 0.5,
+   "actual": 0.0,
+   "usual_half_up": 1.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": 0.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "c0efe5613efb8dbe0f0f22827759297133c0e94f957fc1f7ea6cbf50a00fc4eb",
+     "seq": 2,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": 0.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": 0.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 1,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": 0.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "c0efe5613efb8dbe0f0f22827759297133c0e94f957fc1f7ea6cbf50a00fc4eb",
+      "seq": 2,
+      "src_round": 1
+     },
+     "my_round": 2
+    },
+    "my_round": 2,
+    "at": "2026-10-04T18:10:28.476"
+   }
+  },
+  {
+   "source": 1.5,
+   "actual": 2.0,
+   "usual_half_up": 2.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": 2.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "319fb6d0888c7887d5213aae3e4f3571ce4c69a9c3a71a5f059ad84b6f4f2b90",
+     "seq": 3,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": 1.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": 2.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 2,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": 2.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "319fb6d0888c7887d5213aae3e4f3571ce4c69a9c3a71a5f059ad84b6f4f2b90",
+      "seq": 3,
+      "src_round": 1
+     },
+     "my_round": 3
+    },
+    "my_round": 3,
+    "at": "2026-10-04T18:10:28.486"
+   }
+  },
+  {
+   "source": 2.5,
+   "actual": 2.0,
+   "usual_half_up": 3.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": 2.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "4c4f1df5b9f1f849e93ecd0407086bf87fc1bdcdc26a3abd5e2dad2a531c4103",
+     "seq": 4,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": 2.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": 2.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 3,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": 2.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "4c4f1df5b9f1f849e93ecd0407086bf87fc1bdcdc26a3abd5e2dad2a531c4103",
+      "seq": 4,
+      "src_round": 1
+     },
+     "my_round": 4
+    },
+    "my_round": 4,
+    "at": "2026-10-04T18:10:28.497"
+   }
+  },
+  {
+   "source": 3.5,
+   "actual": 4.0,
+   "usual_half_up": 4.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": 4.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "2cf76c7fd65238a0e4af5b54051b461c6b582ac6b4aca415c4ab3541ab2d6681",
+     "seq": 5,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": 3.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": 4.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 4,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": 4.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "2cf76c7fd65238a0e4af5b54051b461c6b582ac6b4aca415c4ab3541ab2d6681",
+      "seq": 5,
+      "src_round": 1
+     },
+     "my_round": 5
+    },
+    "my_round": 5,
+    "at": "2026-10-04T18:10:28.507"
+   }
+  },
+  {
+   "source": 4.5,
+   "actual": 4.0,
+   "usual_half_up": 5.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": 4.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "19bfeb35a8c1ff1a0368d48087f9b0b2e9e60253c1162826fbef5128d31f6c27",
+     "seq": 6,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": 4.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": 4.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 5,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": 4.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "19bfeb35a8c1ff1a0368d48087f9b0b2e9e60253c1162826fbef5128d31f6c27",
+      "seq": 6,
+      "src_round": 1
+     },
+     "my_round": 6
+    },
+    "my_round": 6,
+    "at": "2026-10-04T18:10:28.517"
+   }
+  },
+  {
+   "source": 5.5,
+   "actual": 6.0,
+   "usual_half_up": 6.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": 6.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "28e2c2724d42557e1ee6793f56db4c5fc028416addc4cc90edf1c0095fb3b41c",
+     "seq": 7,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": 5.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": 6.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 6,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": 6.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "28e2c2724d42557e1ee6793f56db4c5fc028416addc4cc90edf1c0095fb3b41c",
+      "seq": 7,
+      "src_round": 1
+     },
+     "my_round": 7
+    },
+    "my_round": 7,
+    "at": "2026-10-04T18:10:28.527"
+   }
+  },
+  {
+   "source": -0.5,
+   "actual": -0.0,
+   "usual_half_up": -1.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": -0.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "0fc1970ffd11c07edbb55b9a8d1b66d4b50a07d953c5fb86347e3fd716f8393f",
+     "seq": 8,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": -0.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": -0.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 7,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": -0.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "0fc1970ffd11c07edbb55b9a8d1b66d4b50a07d953c5fb86347e3fd716f8393f",
+      "seq": 8,
+      "src_round": 1
+     },
+     "my_round": 8
+    },
+    "my_round": 8,
+    "at": "2026-10-04T18:10:28.538"
+   }
+  },
+  {
+   "source": -1.5,
+   "actual": -2.0,
+   "usual_half_up": -2.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": -2.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "f4f40c34f8f553ef2ccd4240375ae9cc0364e0dd58b3765f123402cfe08af6db",
+     "seq": 9,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": -1.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": -2.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 8,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": -2.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "f4f40c34f8f553ef2ccd4240375ae9cc0364e0dd58b3765f123402cfe08af6db",
+      "seq": 9,
+      "src_round": 1
+     },
+     "my_round": 9
+    },
+    "my_round": 9,
+    "at": "2026-10-04T18:10:28.548"
+   }
+  },
+  {
+   "source": -2.5,
+   "actual": -2.0,
+   "usual_half_up": -3.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": -2.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "9bfea4bfbd0bfd32542c8db8359c2a468a5f2e31f367747438d73532c5aa4e24",
+     "seq": 10,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": -2.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": -2.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 9,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": -2.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "9bfea4bfbd0bfd32542c8db8359c2a468a5f2e31f367747438d73532c5aa4e24",
+      "seq": 10,
+      "src_round": 1
+     },
+     "my_round": 10
+    },
+    "my_round": 10,
+    "at": "2026-10-04T18:10:28.558"
+   }
+  },
+  {
+   "source": -3.5,
+   "actual": -4.0,
+   "usual_half_up": -4.0,
+   "register": {
+    "v": 1,
+    "sense": "temp",
+    "state": "ok",
+    "value": {
+     "c": -4.0
+    },
+    "err": {
+     "c": 0.5
+    },
+    "basis": {
+     "src": "src/out/temp.json",
+     "sha": "4e1d604895f7c88f309da667439fda927e8e0e14a67c89fbce1acba41c4a0f6c",
+     "seq": 11,
+     "src_round": 1
+    },
+    "chain": {
+     "sha": "f3de966a887c6d79"
+    },
+    "trace": [
+     {
+      "step": "select",
+      "x": -3.5,
+      "err": 0.0
+     },
+     {
+      "step": "scale",
+      "x": -4.0,
+      "err": 0.5
+     }
+    ],
+    "omitted": [
+     "value.other"
+    ],
+    "age_src_rounds": 0,
+    "src_state": "stalled",
+    "stall_rounds": 10,
+    "skipped": 0,
+    "why": null,
+    "detail": null,
+    "held": 0,
+    "last": {
+     "value": {
+      "c": -4.0
+     },
+     "err": {
+      "c": 0.5
+     },
+     "basis": {
+      "src": "src/out/temp.json",
+      "sha": "4e1d604895f7c88f309da667439fda927e8e0e14a67c89fbce1acba41c4a0f6c",
+      "seq": 11,
+      "src_round": 1
+     },
+     "my_round": 11
+    },
+    "my_round": 11,
+    "at": "2026-10-04T18:10:28.569"
+   }
+  }
+ ],
+ "note": "實作是 Python ties-to-even；誤差界仍涵蓋原值。正2.5已足以證明文字落差；負值另附對照，不依賴負值四捨五入定義判bug。"
+}

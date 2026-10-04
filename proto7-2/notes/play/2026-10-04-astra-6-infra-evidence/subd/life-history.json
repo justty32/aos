@@ -1,0 +1,68 @@
+[
+  {
+    "commit": "8c6f08b8",
+    "lifecycle_record_introduced": false,
+    "relevant_lines": [
+      {
+        "line": 135,
+        "text": "    write_json(os.path.join(aosd, \"owner.json\"), {\"owner\": owner, \"daemon\": {\"pid\": child.pid, \"since\": now()}})"
+      }
+    ]
+  },
+  {
+    "commit": "8c2145c4",
+    "lifecycle_record_introduced": true,
+    "relevant_lines": [
+      {
+        "line": 196,
+        "text": "        write_json(life_path, {\"state\": \"recovering\", \"subroot\": head[0], \"owner\": me, \"at\": now(),"
+      },
+      {
+        "line": 205,
+        "text": "    write_json(life_path, {\"state\": \"running\", \"subroot\": head[0], \"owner\": me, \"since\": now()})"
+      },
+      {
+        "line": 225,
+        "text": "    write_json(os.path.join(aosd, \"owner.json\"), {\"owner\": owner, \"daemon\": {\"pid\": child.pid, \"since\": now()}})"
+      },
+      {
+        "line": 237,
+        "text": "            write_json(life_path, {\"state\": \"stopped\", \"subroot\": head[0], \"owner\": me, \"at\": now()})"
+      }
+    ]
+  },
+  {
+    "commit": "95426b17",
+    "lifecycle_record_introduced": true,
+    "relevant_lines": [
+      {
+        "line": 186,
+        "text": "    write_json(life_path, dict(life, state=\"stopped\", at=now()))"
+      },
+      {
+        "line": 203,
+        "text": "                                        \"since\": life.get(\"since\"), \"finished_by\": me})"
+      },
+      {
+        "line": 266,
+        "text": "        write_json(life_path, {\"state\": \"recovering\", \"subroot\": head[0], \"owner\": me, \"at\": now(),"
+      },
+      {
+        "line": 275,
+        "text": "    since = now()"
+      },
+      {
+        "line": 276,
+        "text": "    write_json(life_path, {\"state\": \"running\", \"subroot\": head[0], \"owner\": me, \"since\": since})"
+      },
+      {
+        "line": 296,
+        "text": "    write_json(os.path.join(aosd, \"owner.json\"), {\"owner\": owner, \"daemon\": {\"pid\": child.pid, \"since\": now()}})"
+      },
+      {
+        "line": 310,
+        "text": "        commit_stop(aosd, life_path, rec, {\"subroot\": head[0], \"owner\": me, \"since\": since})"
+      }
+    ]
+  }
+]

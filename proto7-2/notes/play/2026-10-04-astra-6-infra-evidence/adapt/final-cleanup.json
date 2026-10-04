@@ -1,0 +1,22 @@
+{
+  "roots_checked": [
+    "/tmp/astra6-adapt-long320-1bra295k",
+    "/tmp/astra6-adapt-rounding-ckfb3s78",
+    "/tmp/astra6-adapt-flow-50-50-bcelrlqm",
+    "/tmp/astra6-adapt-flow-200-20-bmfplanp",
+    "/tmp/astra6-adapt-matrix-oisli7qe",
+    "/tmp/astra6-adapt-boundary-gt-_ehoodra",
+    "/tmp/astra6-adapt-max_age-__e369q8",
+    "/tmp/astra6-adapt-boundary-ge-cjjxbt6b",
+    "/tmp/astra6-adapt-flow-20-200-isng9pph",
+    "/tmp/astra6-adapt-blueprint-step-u02k75rx",
+    "/tmp/astra6-adapt-flow-2000-10-bjmtlbc4",
+    "/tmp/astra6-adapt-boundary-lt-vob8khq4",
+    "/tmp/astra6-adapt-boundary-le-vznv6sxr",
+    "/tmp/astra6-adapt-stall-y5lf8rvr",
+    "/tmp/astra6-adapt-flow-10-2000-oo3n11vi"
+  ],
+  "all_roots_removed": true,
+  "all_cleanup_remaining_empty": true,
+  "remaining_owned_live": []
+}

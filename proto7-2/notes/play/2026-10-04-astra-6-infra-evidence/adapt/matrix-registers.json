@@ -1,0 +1,2466 @@
+[
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "a79854ebf2f7fe051654e53adb6e4fbf4e017a2317ca6c87fe9de93cf83ac82a",
+   "seq": 1,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 0,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "a79854ebf2f7fe051654e53adb6e4fbf4e017a2317ca6c87fe9de93cf83ac82a",
+    "seq": 1,
+    "src_round": 1
+   },
+   "my_round": 1
+  },
+  "my_round": 1,
+  "at": "2026-10-04T18:08:40.709"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 1,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 2
+  },
+  "my_round": 2,
+  "at": "2026-10-04T18:08:40.720"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 2,
+  "skipped": 8,
+  "why": "src_bad",
+  "detail": "temp.json 不是 JSON（半寫或寫壞）",
+  "held": 1,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 2
+  },
+  "my_round": 3,
+  "at": "2026-10-04T18:08:40.730"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 3,
+  "skipped": 8,
+  "why": "src_bad",
+  "detail": "temp.json 不是 JSON（半寫或寫壞）",
+  "held": 2,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 2
+  },
+  "my_round": 4,
+  "at": "2026-10-04T18:08:40.740"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": null,
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [],
+  "omitted": [],
+  "age_src_rounds": null,
+  "src_state": "stalled",
+  "stall_rounds": 4,
+  "skipped": 8,
+  "why": "src_bad",
+  "detail": "temp.json 不是 JSON（半寫或寫壞）",
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 2
+  },
+  "my_round": 5,
+  "at": "2026-10-04T18:08:40.751"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+   "seq": 11,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 5,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+    "seq": 11,
+    "src_round": 1
+   },
+   "my_round": 6
+  },
+  "my_round": 6,
+  "at": "2026-10-04T18:08:40.761"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 6,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 7
+  },
+  "my_round": 7,
+  "at": "2026-10-04T18:08:40.771"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 7,
+  "skipped": 8,
+  "why": "src_unreadable",
+  "detail": "temp.json 讀不到：PermissionError(13, 'Permission denied')",
+  "held": 1,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 7
+  },
+  "my_round": 8,
+  "at": "2026-10-04T18:08:40.782"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 8,
+  "skipped": 8,
+  "why": "src_unreadable",
+  "detail": "temp.json 讀不到：PermissionError(13, 'Permission denied')",
+  "held": 2,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 7
+  },
+  "my_round": 9,
+  "at": "2026-10-04T18:08:40.792"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": null,
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [],
+  "omitted": [],
+  "age_src_rounds": null,
+  "src_state": "stalled",
+  "stall_rounds": 9,
+  "skipped": 8,
+  "why": "src_unreadable",
+  "detail": "temp.json 讀不到：PermissionError(13, 'Permission denied')",
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 7
+  },
+  "my_round": 10,
+  "at": "2026-10-04T18:08:40.802"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+   "seq": 11,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 10,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+    "seq": 11,
+    "src_round": 1
+   },
+   "my_round": 11
+  },
+  "my_round": 11,
+  "at": "2026-10-04T18:08:40.813"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 11,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 12
+  },
+  "my_round": 12,
+  "at": "2026-10-04T18:08:40.823"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 12,
+  "skipped": 8,
+  "why": "src_unreadable",
+  "detail": "temp.json 存在但不是一般檔，讀不出內容",
+  "held": 1,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 12
+  },
+  "my_round": 13,
+  "at": "2026-10-04T18:08:40.834"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 13,
+  "skipped": 8,
+  "why": "src_unreadable",
+  "detail": "temp.json 存在但不是一般檔，讀不出內容",
+  "held": 2,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 12
+  },
+  "my_round": 14,
+  "at": "2026-10-04T18:08:40.844"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": null,
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [],
+  "omitted": [],
+  "age_src_rounds": null,
+  "src_state": "stalled",
+  "stall_rounds": 14,
+  "skipped": 8,
+  "why": "src_unreadable",
+  "detail": "temp.json 存在但不是一般檔，讀不出內容",
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 12
+  },
+  "my_round": 15,
+  "at": "2026-10-04T18:08:40.854"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+   "seq": 11,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 15,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+    "seq": 11,
+    "src_round": 1
+   },
+   "my_round": 16
+  },
+  "my_round": 16,
+  "at": "2026-10-04T18:08:40.865"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 16,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 17
+  },
+  "my_round": 17,
+  "at": "2026-10-04T18:08:40.875"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 17,
+  "skipped": 8,
+  "why": "select_missing",
+  "detail": null,
+  "held": 1,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 17
+  },
+  "my_round": 18,
+  "at": "2026-10-04T18:08:40.885"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 18,
+  "skipped": 8,
+  "why": "select_missing",
+  "detail": null,
+  "held": 2,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 17
+  },
+  "my_round": 19,
+  "at": "2026-10-04T18:08:40.896"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "e45fe84384c156644024c29fa8a7a2b35bbd9b64895d5ae295fbb0c63ecb968b",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [],
+  "omitted": [
+   "value"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 19,
+  "skipped": 8,
+  "why": "select_missing",
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 17
+  },
+  "my_round": 20,
+  "at": "2026-10-04T18:08:40.906"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+   "seq": 11,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 20,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+    "seq": 11,
+    "src_round": 1
+   },
+   "my_round": 21
+  },
+  "my_round": 21,
+  "at": "2026-10-04T18:08:40.916"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 21,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 22
+  },
+  "my_round": 22,
+  "at": "2026-10-04T18:08:40.927"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 22,
+  "skipped": 8,
+  "why": "src_bad",
+  "detail": "來源不是物件或缺整數 round",
+  "held": 1,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 22
+  },
+  "my_round": 23,
+  "at": "2026-10-04T18:08:40.937"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 23,
+  "skipped": 8,
+  "why": "src_bad",
+  "detail": "來源不是物件或缺整數 round",
+  "held": 2,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 22
+  },
+  "my_round": 24,
+  "at": "2026-10-04T18:08:40.948"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": null,
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [],
+  "omitted": [],
+  "age_src_rounds": null,
+  "src_state": "stalled",
+  "stall_rounds": 24,
+  "skipped": 8,
+  "why": "src_bad",
+  "detail": "來源不是物件或缺整數 round",
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 22
+  },
+  "my_round": 25,
+  "at": "2026-10-04T18:08:40.958"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+   "seq": 11,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 25,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+    "seq": 11,
+    "src_round": 1
+   },
+   "my_round": 26
+  },
+  "my_round": 26,
+  "at": "2026-10-04T18:08:40.968"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 26,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 27
+  },
+  "my_round": 27,
+  "at": "2026-10-04T18:08:40.979"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 27,
+  "skipped": 8,
+  "why": "not_number",
+  "detail": null,
+  "held": 1,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 27
+  },
+  "my_round": 28,
+  "at": "2026-10-04T18:08:40.989"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 28,
+  "skipped": 8,
+  "why": "not_number",
+  "detail": null,
+  "held": 2,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 27
+  },
+  "my_round": 29,
+  "at": "2026-10-04T18:08:40.999"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "61116476cad350d9b9638df081d445b903b6852fd156cec1f6b19544315da6ea",
+   "seq": 10,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": true,
+    "err": 0.0
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 29,
+  "skipped": 8,
+  "why": "not_number",
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "88e904dd4195657222d746b462b1bb44b40badc08da8988a1b786760fe1c4d49",
+    "seq": 10,
+    "src_round": 1
+   },
+   "my_round": 27
+  },
+  "my_round": 30,
+  "at": "2026-10-04T18:08:41.010"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+   "seq": 11,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 30,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+    "seq": 11,
+    "src_round": 1
+   },
+   "my_round": 31
+  },
+  "my_round": 31,
+  "at": "2026-10-04T18:08:41.020"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "absent",
+  "value": null,
+  "err": null,
+  "basis": null,
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [],
+  "omitted": [],
+  "age_src_rounds": null,
+  "src_state": "stalled",
+  "stall_rounds": 31,
+  "skipped": 8,
+  "why": "src_missing",
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "8f2d1ede199b97e9a202494dab5ce53f675f01ac7f0ec37529c940e895f9832d",
+    "seq": 11,
+    "src_round": 1
+   },
+   "my_round": 31
+  },
+  "my_round": 32,
+  "at": "2026-10-04T18:08:41.030"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "a9c57c87e827bac2af56d6096f74fb7456275c5ef26b4adccff1679685df7017",
+   "seq": 12,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 32,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "a9c57c87e827bac2af56d6096f74fb7456275c5ef26b4adccff1679685df7017",
+    "seq": 12,
+    "src_round": 1
+   },
+   "my_round": 33
+  },
+  "my_round": 33,
+  "at": "2026-10-04T18:08:41.041"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": null,
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [],
+  "omitted": [],
+  "age_src_rounds": null,
+  "src_state": null,
+  "stall_rounds": null,
+  "skipped": null,
+  "why": "chain_changed",
+  "detail": "鏈宣告在工作中被改（89439e191ef2d4b3→9007674f51255f49）；改回原宣告，或停任務、刪槽 state.json 換鏈",
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "a9c57c87e827bac2af56d6096f74fb7456275c5ef26b4adccff1679685df7017",
+    "seq": 12,
+    "src_round": 1
+   },
+   "my_round": 33
+  },
+  "my_round": 34,
+  "at": "2026-10-04T18:08:41.051"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "a9c57c87e827bac2af56d6096f74fb7456275c5ef26b4adccff1679685df7017",
+   "seq": 12,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 33,
+  "skipped": 8,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "a9c57c87e827bac2af56d6096f74fb7456275c5ef26b4adccff1679685df7017",
+    "seq": 12,
+    "src_round": 1
+   },
+   "my_round": 35
+  },
+  "my_round": 35,
+  "at": "2026-10-04T18:08:41.061"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "1e34a41d6c998d1235fb8d1145a2c347891608ad921b7428e26aad189a7268d2",
+   "seq": 17,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 34,
+  "skipped": 12,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "1e34a41d6c998d1235fb8d1145a2c347891608ad921b7428e26aad189a7268d2",
+    "seq": 17,
+    "src_round": 1
+   },
+   "my_round": 36
+  },
+  "my_round": 36,
+  "at": "2026-10-04T18:08:41.072"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "1e34a41d6c998d1235fb8d1145a2c347891608ad921b7428e26aad189a7268d2",
+   "seq": 17,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 35,
+  "skipped": 12,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "1e34a41d6c998d1235fb8d1145a2c347891608ad921b7428e26aad189a7268d2",
+    "seq": 17,
+    "src_round": 1
+   },
+   "my_round": 37
+  },
+  "my_round": 37,
+  "at": "2026-10-04T18:08:41.112"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "89e09fdb1deeda1947ab4d04a15e49d620e5eeb2dc0fda3222bacbff09796689",
+   "seq": 18,
+   "src_round": 16
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "advancing",
+  "stall_rounds": 0,
+  "skipped": 12,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "89e09fdb1deeda1947ab4d04a15e49d620e5eeb2dc0fda3222bacbff09796689",
+    "seq": 18,
+    "src_round": 16
+   },
+   "my_round": 38
+  },
+  "my_round": 38,
+  "at": "2026-10-04T18:08:41.123"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "unknown",
+  "value": null,
+  "err": null,
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "89e09fdb1deeda1947ab4d04a15e49d620e5eeb2dc0fda3222bacbff09796689",
+   "seq": 18,
+   "src_round": 16
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "reset",
+  "stall_rounds": 0,
+  "skipped": 12,
+  "why": "void_basis",
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "89e09fdb1deeda1947ab4d04a15e49d620e5eeb2dc0fda3222bacbff09796689",
+    "seq": 18,
+    "src_round": 16
+   },
+   "my_round": 38,
+   "void": true
+  },
+  "my_round": 39,
+  "at": "2026-10-04T18:08:41.133"
+ },
+ {
+  "v": 1,
+  "sense": "temp",
+  "state": "ok",
+  "value": {
+   "c": 80.1,
+   "hot": true
+  },
+  "err": {
+   "c": 0.05
+  },
+  "basis": {
+   "src": "src/out/temp.json",
+   "sha": "a79854ebf2f7fe051654e53adb6e4fbf4e017a2317ca6c87fe9de93cf83ac82a",
+   "seq": 1,
+   "src_round": 1
+  },
+  "chain": {
+   "sha": "89439e191ef2d4b3"
+  },
+  "trace": [
+   {
+    "step": "select",
+    "x": 801,
+    "err": 0.0
+   },
+   {
+    "step": "scale",
+    "x": 80.1,
+    "err": 0.05
+   },
+   {
+    "step": "threshold",
+    "ge": 80,
+    "as": "hot",
+    "v": true
+   }
+  ],
+  "omitted": [
+   "value.other"
+  ],
+  "age_src_rounds": 0,
+  "src_state": "stalled",
+  "stall_rounds": 1,
+  "skipped": 12,
+  "why": null,
+  "detail": null,
+  "held": 0,
+  "last": {
+   "value": {
+    "c": 80.1,
+    "hot": true
+   },
+   "err": {
+    "c": 0.05
+   },
+   "basis": {
+    "src": "src/out/temp.json",
+    "sha": "a79854ebf2f7fe051654e53adb6e4fbf4e017a2317ca6c87fe9de93cf83ac82a",
+    "seq": 1,
+    "src_round": 1
+   },
+   "my_round": 40
+  },
+  "my_round": 40,
+  "at": "2026-10-04T18:08:41.143"
+ }
+]

@@ -1,0 +1,66 @@
+[
+ {
+  "name": "eio-grant.json-interrupted",
+  "final": false
+ },
+ {
+  "name": "eio-grant.json-final",
+  "final": true
+ },
+ {
+  "name": "eio-gateway_519457d6f54d32335539.json-interrupted",
+  "final": false
+ },
+ {
+  "name": "eio-gateway_519457d6f54d32335539.json-final",
+  "final": true
+ },
+ {
+  "name": "eacces-backend-interrupted",
+  "final": false
+ },
+ {
+  "name": "eacces-backend-final",
+  "final": true
+ },
+ {
+  "name": "cancel-window-before-gateway-after-intent-interrupted",
+  "final": false
+ },
+ {
+  "name": "cancel-window-before-gateway-after-intent-final",
+  "final": true
+ },
+ {
+  "name": "cancel-window-before-backend-after-effect-interrupted",
+  "final": false
+ },
+ {
+  "name": "cancel-window-before-backend-after-effect-final",
+  "final": true
+ },
+ {
+  "name": "init-before-final",
+  "final": true
+ },
+ {
+  "name": "cancel-window-after-gateway-after-intent-interrupted",
+  "final": false
+ },
+ {
+  "name": "cancel-window-after-gateway-after-intent-final",
+  "final": true
+ },
+ {
+  "name": "cancel-window-after-backend-after-effect-interrupted",
+  "final": false
+ },
+ {
+  "name": "cancel-window-after-backend-after-effect-final",
+  "final": true
+ },
+ {
+  "name": "init-after-final",
+  "final": true
+ }
+]

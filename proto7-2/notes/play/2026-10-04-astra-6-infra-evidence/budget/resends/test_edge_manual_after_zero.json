@@ -1,0 +1,128 @@
+{
+  "case": "test_edge_manual_after_zero",
+  "configured": 0,
+  "automatic_resends": 0,
+  "initial_plus_automatic": 1,
+  "manual_resume": true,
+  "seconds": 0.6717877230039448,
+  "frames": [
+    {
+      "v": 1,
+      "job": "edge",
+      "inst": "5412f755",
+      "table": "80f0f21a92df",
+      "pc": "a",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "5412f755-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "5412f755-a-1",
+        "attempt": "5412f755-a-1-a1",
+        "n": 1,
+        "task": "step-edge-a",
+        "result": "jobs/edge/results/a/5412f755-a-1-a1.json",
+        "state": "queued",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": null,
+      "end": null,
+      "since": 1,
+      "seen": 2,
+      "rev": 6,
+      "tock": 2,
+      "at": "2026-10-04T18:08:52.947"
+    },
+    {
+      "v": 1,
+      "job": "edge",
+      "inst": "5412f755",
+      "table": "80f0f21a92df",
+      "pc": "a",
+      "phase": "halted",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "5412f755-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "5412f755-a-1",
+        "attempt": "5412f755-a-1-a1",
+        "n": 1,
+        "task": "step-edge-a",
+        "result": "jobs/edge/results/a/5412f755-a-1-a1.json",
+        "state": "queued",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": {
+        "kind": "unknown",
+        "why": "子工作 step-edge-a#2 結束了（code -15）卻沒有結果檔",
+        "step": "a",
+        "round": 3,
+        "at": "2026-10-04T18:08:53.008"
+      },
+      "end": null,
+      "since": 1,
+      "seen": 3,
+      "rev": 7,
+      "tock": 3,
+      "at": "2026-10-04T18:08:53.008"
+    },
+    {
+      "v": 1,
+      "job": "edge",
+      "inst": "5412f755",
+      "table": "80f0f21a92df",
+      "pc": "done",
+      "phase": "ended",
+      "counts": {},
+      "visits": {
+        "a": 1,
+        "b": 1,
+        "done": 1
+      },
+      "accepted": {
+        "a": {
+          "request": "5412f755-a-1",
+          "attempt": "5412f755-a-1-a2",
+          "ok": true,
+          "run": "step-edge-a#8",
+          "code": 0
+        },
+        "b": {
+          "request": "5412f755-b-1",
+          "attempt": "5412f755-b-1-a1",
+          "ok": true,
+          "run": "step-edge-b#10",
+          "code": 0
+        }
+      },
+      "tries": {
+        "5412f755-a-1": 2,
+        "5412f755-b-1": 1
+      },
+      "pending": null,
+      "halt": null,
+      "end": "ok",
+      "since": 11,
+      "seen": 11,
+      "rev": 20,
+      "tock": 11,
+      "at": "2026-10-04T18:08:53.452"
+    }
+  ]
+}

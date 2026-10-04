@@ -1,0 +1,121 @@
+{
+  "case": "test_edge_default",
+  "configured": null,
+  "automatic_resends": 1,
+  "initial_plus_automatic": 2,
+  "manual_resume": false,
+  "seconds": 0.51147183500143,
+  "frames": [
+    {
+      "v": 1,
+      "job": "edge",
+      "inst": "5dc365b3",
+      "table": "9b814cf4859d",
+      "pc": "a",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "5dc365b3-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "5dc365b3-a-1",
+        "attempt": "5dc365b3-a-1-a1",
+        "n": 1,
+        "task": "step-edge-a",
+        "result": "jobs/edge/results/a/5dc365b3-a-1-a1.json",
+        "state": "queued",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": null,
+      "end": null,
+      "since": 1,
+      "seen": 2,
+      "rev": 6,
+      "tock": 2,
+      "at": "2026-10-04T18:08:51.579"
+    },
+    {
+      "v": 1,
+      "job": "edge",
+      "inst": "5dc365b3",
+      "table": "9b814cf4859d",
+      "pc": "a",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "5dc365b3-a-1": 2
+      },
+      "pending": {
+        "step": "a",
+        "request": "5dc365b3-a-1",
+        "attempt": "5dc365b3-a-1-a2",
+        "n": 2,
+        "task": "step-edge-a",
+        "result": "jobs/edge/results/a/5dc365b3-a-1-a2.json",
+        "state": "queued",
+        "intent_round": 3,
+        "since": 3,
+        "resends": 1
+      },
+      "halt": null,
+      "end": null,
+      "since": 1,
+      "seen": 4,
+      "rev": 10,
+      "tock": 4,
+      "at": "2026-10-04T18:08:51.700"
+    },
+    {
+      "v": 1,
+      "job": "edge",
+      "inst": "5dc365b3",
+      "table": "9b814cf4859d",
+      "pc": "a",
+      "phase": "halted",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "5dc365b3-a-1": 2
+      },
+      "pending": {
+        "step": "a",
+        "request": "5dc365b3-a-1",
+        "attempt": "5dc365b3-a-1-a2",
+        "n": 2,
+        "task": "step-edge-a",
+        "result": "jobs/edge/results/a/5dc365b3-a-1-a2.json",
+        "state": "queued",
+        "intent_round": 3,
+        "since": 3,
+        "resends": 1
+      },
+      "halt": {
+        "kind": "unknown",
+        "why": "子工作 step-edge-a#4 結束了（code -15）卻沒有結果檔",
+        "step": "a",
+        "round": 5,
+        "at": "2026-10-04T18:08:51.761"
+      },
+      "end": null,
+      "since": 1,
+      "seen": 5,
+      "rev": 11,
+      "tock": 5,
+      "at": "2026-10-04T18:08:51.761"
+    }
+  ]
+}

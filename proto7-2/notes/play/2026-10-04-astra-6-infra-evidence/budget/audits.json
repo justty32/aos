@@ -1,0 +1,1907 @@
+[
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/concurrent-same-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/concurrent-different-final",
+    "transitions": 34,
+    "keys": 17,
+    "accepted": 17,
+    "balances": [
+      0,
+      0,
+      17
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/concurrent-conflict-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/concurrent-cancel-final",
+    "transitions": 80,
+    "keys": 40,
+    "accepted": 3,
+    "balances": [
+      97,
+      0,
+      3
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-reserve-before-commit-interrupted",
+    "transitions": 0,
+    "keys": 0,
+    "accepted": 0,
+    "balances": [
+      100,
+      0,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-reserve-before-commit-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-reserve-after-commit-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-reserve-after-commit-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-settle-before-commit-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-settle-before-commit-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-settle-after-commit-interrupted",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-settle-after-commit-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-call-after-reserve-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-call-after-reserve-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-gateway-after-intent-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-gateway-after-intent-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-backend-after-effect-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-backend-after-effect-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-gateway-after-receipt-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-gateway-after-receipt-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-call-after-settle-interrupted",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/hook-call-after-settle-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-ledger-reserve-before-interrupted",
+    "transitions": 0,
+    "keys": 0,
+    "accepted": 0,
+    "balances": [
+      100,
+      0,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-ledger-reserve-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-ledger-reserve-after-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-ledger-reserve-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-ledger-settle-before-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-ledger-settle-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-ledger-settle-after-interrupted",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-ledger-settle-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-gateway-intent-before-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-gateway-intent-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-gateway-intent-after-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-gateway-intent-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-backend-before-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-backend-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-backend-after-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-backend-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-gateway-done-before-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-gateway-done-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-gateway-done-after-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-gateway-done-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-receipt-reserve-before-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-receipt-reserve-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-receipt-reserve-after-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-receipt-reserve-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-receipt-settle-before-interrupted",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-receipt-settle-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-receipt-settle-after-interrupted",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-receipt-settle-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-inbox-reserve-before-interrupted",
+    "transitions": 0,
+    "keys": 0,
+    "accepted": 0,
+    "balances": [
+      100,
+      0,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-inbox-reserve-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-inbox-reserve-after-interrupted",
+    "transitions": 0,
+    "keys": 0,
+    "accepted": 0,
+    "balances": [
+      100,
+      0,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-inbox-reserve-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-inbox-settle-before-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-inbox-settle-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-inbox-settle-after-interrupted",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-inbox-settle-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-output-before-interrupted",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-output-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-output-after-interrupted",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/window-output-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/cancel-call-after-reserve-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      100,
+      0,
+      0
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/cancel-gateway-after-intent-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      100,
+      0,
+      0
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/cancel-backend-after-effect-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/unknown-gateway-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/ledger-missing-recovered",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/ledger-malformed-recovered",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/eio-ledger.json-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/eio-ledger.json-final",
+    "transitions": 4,
+    "keys": 2,
+    "accepted": 2,
+    "balances": [
+      98,
+      0,
+      2
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/eio-backend.json-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/verified/snapshots/eio-backend.json-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "verified"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/eio-grant.json-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/eio-grant.json-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/eio-gateway_519457d6f54d32335539.json-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/eio-gateway_519457d6f54d32335539.json-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/eacces-backend-interrupted",
+    "transitions": 3,
+    "keys": 2,
+    "accepted": 1,
+    "balances": [
+      98,
+      1,
+      1
+    ],
+    "final": false,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/eacces-backend-final",
+    "transitions": 4,
+    "keys": 2,
+    "accepted": 2,
+    "balances": [
+      98,
+      0,
+      2
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/cancel-window-before-gateway-after-intent-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/cancel-window-before-gateway-after-intent-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      100,
+      0,
+      0
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/cancel-window-before-backend-after-effect-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/cancel-window-before-backend-after-effect-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/init-before-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      4,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/cancel-window-after-gateway-after-intent-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/cancel-window-after-gateway-after-intent-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      100,
+      0,
+      0
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/cancel-window-after-backend-after-effect-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/cancel-window-after-backend-after-effect-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/extra/snapshots/init-after-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      4,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "extra"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-eio-backend-1-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-eio-backend-1-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-eio-backend-2-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-eio-backend-2-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-eio-backend-3-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-eio-backend-3-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-clock-hw-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-orphans-interrupted",
+    "transitions": 3,
+    "keys": 2,
+    "accepted": 1,
+    "balances": [
+      98,
+      1,
+      1
+    ],
+    "final": false,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-orphans-final",
+    "transitions": 4,
+    "keys": 2,
+    "accepted": 2,
+    "balances": [
+      98,
+      0,
+      2
+    ],
+    "final": true,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/loop6/snapshots/loop6-retired-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "loop6"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/edges/snapshots/orphan-restart-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "edges"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/edges/snapshots/orphan-clock-unknown-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "edges"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/edges/snapshots/preservation-before-rounds",
+    "transitions": 60,
+    "keys": 30,
+    "accepted": 20,
+    "balances": [
+      80,
+      0,
+      20
+    ],
+    "final": true,
+    "batch": "edges"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/edges/snapshots/preservation-final",
+    "transitions": 60,
+    "keys": 30,
+    "accepted": 20,
+    "balances": [
+      80,
+      0,
+      20
+    ],
+    "final": true,
+    "batch": "edges"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/edges/snapshots/retired-unreadable-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "edges"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/edges/snapshots/rollback-above-hw-final",
+    "transitions": 4,
+    "keys": 2,
+    "accepted": 2,
+    "balances": [
+      98,
+      0,
+      2
+    ],
+    "final": true,
+    "batch": "edges"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/edges/snapshots/permission-boundaries-interrupted",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      99,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "edges"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/edges/snapshots/permission-boundaries-final",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      99,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "edges"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/clock-boundaries",
+    "transitions": 4,
+    "keys": 2,
+    "accepted": 2,
+    "balances": [
+      18,
+      0,
+      2
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/intent-before-expiry",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      19,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/intent-after-expiry",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      19,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/highwater-after-denied",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      19,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/highwater-after-gateway",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      19,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_end_to_end_and_replay_after_close-1",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_end_to_end_and_replay_after_close-2",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_pause_SIGKILL_daemon_restart-1",
+    "transitions": 4,
+    "keys": 2,
+    "accepted": 2,
+    "balances": [
+      1,
+      0,
+      2
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_pause_and_daemon_restart_clock-1",
+    "transitions": 4,
+    "keys": 2,
+    "accepted": 2,
+    "balances": [
+      1,
+      0,
+      2
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_restart_on_end_new_request_new_transaction-1",
+    "transitions": 6,
+    "keys": 3,
+    "accepted": 3,
+    "balances": [
+      0,
+      0,
+      3
+    ],
+    "final": false,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_work_failure_still_counts-1",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_crash_points_resend_same_request-1",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_crash_points_resend_same_request-2",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_crash_points_resend_same_request-3",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_crash_points_resend_same_request-4",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_crash_points_resend_same_request-5",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_expired_between_rounds-1",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      2,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_expired_between_rounds-2",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 0,
+    "balances": [
+      3,
+      0,
+      0
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_slot_gone_settle_without_step-1",
+    "transitions": 1,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      1,
+      0
+    ],
+    "final": false,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_slot_gone_settle_without_step-2",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  },
+  {
+    "ok": true,
+    "errors": [],
+    "path": "/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/snapshots/1791108376799960912/test_slot_gone_settle_without_step-3",
+    "transitions": 2,
+    "keys": 1,
+    "accepted": 1,
+    "balances": [
+      2,
+      0,
+      1
+    ],
+    "final": true,
+    "batch": "integration"
+  }
+]

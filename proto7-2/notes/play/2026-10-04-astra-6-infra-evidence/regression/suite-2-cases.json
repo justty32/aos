@@ -1,0 +1,582 @@
+[
+  {
+    "line": "test_core_line_budget (test_budget.TestBudget.test_core_line_budget) ... ok",
+    "seconds_observed": 0.037085
+  },
+  {
+    "line": "test_no_runner_young_birth_is_live_old_is_lost (test_ctl.TestIdentityScan.test_no_runner_young_birth_is_live_old_is_lost) ... ok",
+    "seconds_observed": 0.002484
+  },
+  {
+    "line": "test_runner_died_without_pid_json_is_lost (test_ctl.TestIdentityScan.test_runner_died_without_pid_json_is_lost) ... ok",
+    "seconds_observed": 0.023496
+  },
+  {
+    "line": "test_forged_pgid_not_killed (test_ctl.TestKillRange.test_forged_pgid_not_killed) ... ok",
+    "seconds_observed": 0.068644
+  },
+  {
+    "line": "test_inst_kill_reaches_other_session (test_ctl.TestKillRange.test_inst_kill_reaches_other_session) ... ok",
+    "seconds_observed": 0.102782
+  },
+  {
+    "line": "test_kill_reaches_setsid_grandchild (test_ctl.TestKillRange.test_kill_reaches_setsid_grandchild) ... ok",
+    "seconds_observed": 0.071602
+  },
+  {
+    "line": "test_mounts_made_and_rebuilt_per_run (test_ctl.TestMounts.test_mounts_made_and_rebuilt_per_run) ... ok",
+    "seconds_observed": 0.129403
+  },
+  {
+    "line": "test_bad_files_get_receipts (test_daemon.TestCtlFiles.test_bad_files_get_receipts) ... ok",
+    "seconds_observed": 0.074166
+  },
+  {
+    "line": "test_flood_budget_and_status_moves (test_daemon.TestCtlFiles.test_flood_budget_and_status_moves) ... ok",
+    "seconds_observed": 0.481426
+  },
+  {
+    "line": "test_log_on_switch (test_daemon.TestCtlFiles.test_log_on_switch) ... ok",
+    "seconds_observed": 0.222829
+  },
+  {
+    "line": "test_receipt_overwritten_same_name (test_daemon.TestCtlFiles.test_receipt_overwritten_same_name) ... ok",
+    "seconds_observed": 0.865998
+  },
+  {
+    "line": "test_kill9_daemon_new_daemon_recovers_round_no_double (test_daemon.TestDaemonDeath.test_kill9_daemon_new_daemon_recovers_round_no_double) ... ok",
+    "seconds_observed": 0.211142
+  },
+  {
+    "line": "test_new_daemon_reaps_old_holder (test_daemon.TestDaemonDeath.test_new_daemon_reaps_old_holder) ... ok",
+    "seconds_observed": 0.613018
+  },
+  {
+    "line": "test_unverified_holder_not_killed (test_daemon.TestDaemonDeath.test_unverified_holder_not_killed) ... ok",
+    "seconds_observed": 0.400742
+  },
+  {
+    "line": "test_default_fixed_interval (test_daemon.TestEarlyTock.test_default_fixed_interval) ... ok",
+    "seconds_observed": 1.302684
+  },
+  {
+    "line": "test_early_tock_when_all_ended (test_daemon.TestEarlyTock.test_early_tock_when_all_ended) ... ok",
+    "seconds_observed": 0.137645
+  },
+  {
+    "line": "test_move_kills_old_new_place_needs_register (test_daemon.TestNodeGone.test_move_kills_old_new_place_needs_register) ... ok",
+    "seconds_observed": 0.806694
+  },
+  {
+    "line": "test_replaced_by_other_dir_is_new_timeline (test_daemon.TestNodeGone.test_replaced_by_other_dir_is_new_timeline) ... ok",
+    "seconds_observed": 0.210978
+  },
+  {
+    "line": "test_rm_rf_kills_and_stays_registered (test_daemon.TestNodeGone.test_rm_rf_kills_and_stays_registered) ... ok",
+    "seconds_observed": 0.371303
+  },
+  {
+    "line": "test_unreadable_node_is_unknown_not_gone (test_daemon.TestNodeGone.test_unreadable_node_is_unknown_not_gone) ... ok",
+    "seconds_observed": 0.619113
+  },
+  {
+    "line": "test_owner_pause_not_released_by_other (test_daemon.TestPause.test_owner_pause_not_released_by_other) ... ok",
+    "seconds_observed": 0.89011
+  },
+  {
+    "line": "test_resume_all_and_no_owner_slot (test_daemon.TestPause.test_resume_all_and_no_owner_slot) ... ok",
+    "seconds_observed": 0.311371
+  },
+  {
+    "line": "test_resume_rounds_then_pauses_with_same_owner (test_daemon.TestPause.test_resume_rounds_then_pauses_with_same_owner) ... ok",
+    "seconds_observed": 0.749152
+  },
+  {
+    "line": "test_resume_wakes_immediately (test_daemon.TestPause.test_resume_wakes_immediately) ... ok",
+    "seconds_observed": 4.206444
+  },
+  {
+    "line": "test_wake (test_daemon.TestPause.test_wake) ... ok",
+    "seconds_observed": 0.214116
+  },
+  {
+    "line": "test_register_absent_dir_then_appears (test_daemon.TestRegister.test_register_absent_dir_then_appears) ... ok",
+    "seconds_observed": 0.29095
+  },
+  {
+    "line": "test_register_checks (test_daemon.TestRegister.test_register_checks) ... ok",
+    "seconds_observed": 0.134473
+  },
+  {
+    "line": "test_register_runs_only_registered (test_daemon.TestRegister.test_register_runs_only_registered) ... ok",
+    "seconds_observed": 0.660211
+  },
+  {
+    "line": "test_restart_daemon_follows_nodes_json (test_daemon.TestRegister.test_restart_daemon_follows_nodes_json) ... ok",
+    "seconds_observed": 0.539633
+  },
+  {
+    "line": "test_unregister_kills_by_default (test_daemon.TestRegister.test_unregister_kills_by_default) ... ok",
+    "seconds_observed": 0.186219
+  },
+  {
+    "line": "test_unregister_no_kill_leaves_task (test_daemon.TestRegister.test_unregister_no_kill_leaves_task) ... ok",
+    "seconds_observed": 0.535363
+  },
+  {
+    "line": "test_root_moved_stops_with_kill (test_daemon.TestStop.test_root_moved_stops_with_kill) ... ok",
+    "seconds_observed": 0.153287
+  },
+  {
+    "line": "test_second_daemon_refused (test_daemon.TestStop.test_second_daemon_refused) ... ok",
+    "seconds_observed": 0.070727
+  },
+  {
+    "line": "test_stop_kill_and_sigterm (test_daemon.TestStop.test_stop_kill_and_sigterm) ... ok",
+    "seconds_observed": 0.342624
+  },
+  {
+    "line": "test_stop_without_kill_leaves_tasks (test_daemon.TestStop.test_stop_without_kill_leaves_tasks) ... ok",
+    "seconds_observed": 0.228707
+  },
+  {
+    "line": "test_stop_not_blocked_by_stuck_tick (test_daemon.TestStuckActions.test_stop_not_blocked_by_stuck_tick) ... ok",
+    "seconds_observed": 3.234226
+  },
+  {
+    "line": "test_stuck_tick_cut_and_round_marked (test_daemon.TestStuckActions.test_stuck_tick_cut_and_round_marked) ... ok",
+    "seconds_observed": 1.123052
+  },
+  {
+    "line": "test_tock_killed_after_summary_is_replayed_once (test_daemon.TestStuckActions.test_tock_killed_after_summary_is_replayed_once) ... ok",
+    "seconds_observed": 0.660551
+  },
+  {
+    "line": "test_unreadable_round_json_holds_timeline (test_daemon.TestStuckActions.test_unreadable_round_json_holds_timeline) ... ok",
+    "seconds_observed": 1.896602
+  },
+  {
+    "line": "test_readonly_aos_does_not_eat_rounds (test_errors.TestTickFailureG2.test_readonly_aos_does_not_eat_rounds) ... ok",
+    "seconds_observed": 2.39382
+  },
+  {
+    "line": "test_never_started_on_crash_after_birth (test_exits.TestNeverStarted.test_never_started_on_crash_after_birth) ... ok",
+    "seconds_observed": 0.023136
+  },
+  {
+    "line": "test_no_never_started_when_task_ran (test_exits.TestNeverStarted.test_no_never_started_when_task_ran) ... ok",
+    "seconds_observed": 0.12252
+  },
+  {
+    "line": "test_guard_blocks_then_allows (test_exits.TestStopGuard.test_guard_blocks_then_allows) ... ok",
+    "seconds_observed": 0.174417
+  },
+  {
+    "line": "test_sigterm_ignores_guard (test_exits.TestStopGuard.test_sigterm_ignores_guard) ... ok",
+    "seconds_observed": 0.130393
+  },
+  {
+    "line": "test_bad_x_and_old_subroot_skipped (test_exits.TestX.test_bad_x_and_old_subroot_skipped) ... ok",
+    "seconds_observed": 0.055637
+  },
+  {
+    "line": "test_x_copied_to_birth (test_exits.TestX.test_x_copied_to_birth) ... ok",
+    "seconds_observed": 0.055502
+  },
+  {
+    "line": "test_daemon_sweeps_dead_tmp (test_matrix_daemon.TestDaemonMatrix.test_daemon_sweeps_dead_tmp) ... ok",
+    "seconds_observed": 0.054549
+  },
+  {
+    "line": "test_owner_pause_files_distinct (test_matrix_daemon.TestDaemonMatrix.test_owner_pause_files_distinct) ... ok",
+    "seconds_observed": 0.126798
+  },
+  {
+    "line": "test_register_symlink_refused (test_matrix_daemon.TestDaemonMatrix.test_register_symlink_refused) ... ok",
+    "seconds_observed": 0.106435
+  },
+  {
+    "line": "test_rounds_per_owner (test_matrix_daemon.TestDaemonMatrix.test_rounds_per_owner) ... ok",
+    "seconds_observed": 1.164309
+  },
+  {
+    "line": "test_symlink_outside_root (test_matrix_daemon.TestDaemonMatrix.test_symlink_outside_root) ... ok",
+    "seconds_observed": 0.799436
+  },
+  {
+    "line": "test_wake_not_kept_from_running_to_idle (test_matrix_daemon.TestDaemonMatrix.test_wake_not_kept_from_running_to_idle) ... ok",
+    "seconds_observed": 2.177987
+  },
+  {
+    "line": "test_both_missing_starts_at_one (test_matrix_docs.TestRoundJson.test_both_missing_starts_at_one) ... ok",
+    "seconds_observed": 0.003056
+  },
+  {
+    "line": "test_birth_unreadable_while_serving (test_matrix_faults.TestMountUnknown.test_birth_unreadable_while_serving) ... ok",
+    "seconds_observed": 0.077913
+  },
+  {
+    "line": "test_request_unreadable_kept (test_matrix_faults.TestMountUnknown.test_request_unreadable_kept) ... ok",
+    "seconds_observed": 0.077689
+  },
+  {
+    "line": "test_crash_before_rename_leaves_nothing (test_matrix_misc.TestTmpSweep.test_crash_before_rename_leaves_nothing) ... ok",
+    "seconds_observed": 0.080622
+  },
+  {
+    "line": "test_dead_writer_tmp_cleared_live_kept (test_matrix_misc.TestTmpSweep.test_dead_writer_tmp_cleared_live_kept) ... ok",
+    "seconds_observed": 0.045341
+  },
+  {
+    "line": "test_last_round_written_before_tock_json (test_matrix_misc.TestTockOrder.test_last_round_written_before_tock_json) ... ok",
+    "seconds_observed": 0.075933
+  },
+  {
+    "line": "test_crash_after_launch_marker (test_once_threestate.TestOnceCrash.test_crash_after_launch_marker) ... ok",
+    "seconds_observed": 0.19941
+  },
+  {
+    "line": "test_crash_after_popen (test_once_threestate.TestOnceCrash.test_crash_after_popen) ... ok",
+    "seconds_observed": 0.177225
+  },
+  {
+    "line": "test_crash_before_item_delete (test_once_threestate.TestOnceCrash.test_crash_before_item_delete) ... ok",
+    "seconds_observed": 0.177483
+  },
+  {
+    "line": "test_unreadable_birth_keeps_once_item (test_once_threestate.TestOnceCrash.test_unreadable_birth_keeps_once_item) ... ok",
+    "seconds_observed": 0.088793
+  },
+  {
+    "line": "test_birth_unreadable_no_start_no_lost_no_delete (test_once_threestate.TestThreeState.test_birth_unreadable_no_start_no_lost_no_delete) ... ok",
+    "seconds_observed": 0.181343
+  },
+  {
+    "line": "test_broken_round_and_no_last_round_is_unknown (test_once_threestate.TestThreeState.test_broken_round_and_no_last_round_is_unknown) ... ok",
+    "seconds_observed": 0.019773
+  },
+  {
+    "line": "test_round_json_unreadable_tick_tock_do_nothing (test_once_threestate.TestThreeState.test_round_json_unreadable_tick_tock_do_nothing) ... ok",
+    "seconds_observed": 0.072681
+  },
+  {
+    "line": "test_tasks_dir_unlistable_no_start (test_once_threestate.TestThreeState.test_tasks_dir_unlistable_no_start) ... ok",
+    "seconds_observed": 0.019896
+  },
+  {
+    "line": "test_gone_node_not_recreated (test_tick_tock.TestGone.test_gone_node_not_recreated) ... ok",
+    "seconds_observed": 0.019969
+  },
+  {
+    "line": "test_unregistered_but_existing_dir_works_by_hand (test_tick_tock.TestGone.test_unregistered_but_existing_dir_works_by_hand) ... ok",
+    "seconds_observed": 0.072591
+  },
+  {
+    "line": "test_argv_and_inst_exclusive (test_tick_tock.TestInst.test_argv_and_inst_exclusive) ... ok",
+    "seconds_observed": 0.019744
+  },
+  {
+    "line": "test_inst_task (test_tick_tock.TestInst.test_inst_task) ... ok",
+    "seconds_observed": 0.060989
+  },
+  {
+    "line": "test_disabled_keeps_slot_and_state (test_tick_tock.TestModes.test_disabled_keeps_slot_and_state) ... ok",
+    "seconds_observed": 0.162256
+  },
+  {
+    "line": "test_each_max_live_slots (test_tick_tock.TestModes.test_each_max_live_slots) ... ok",
+    "seconds_observed": 0.198517
+  },
+  {
+    "line": "test_each_skips_while_previous_still_running (test_tick_tock.TestModes.test_each_skips_while_previous_still_running) ... ok",
+    "seconds_observed": 0.126665
+  },
+  {
+    "line": "test_from_round_and_enabled (test_tick_tock.TestModes.test_from_round_and_enabled) ... ok",
+    "seconds_observed": 0.108443
+  },
+  {
+    "line": "test_keep_does_not_double_start (test_tick_tock.TestModes.test_keep_does_not_double_start) ... ok",
+    "seconds_observed": 0.178806
+  },
+  {
+    "line": "test_keep_fills_all_slots_and_restarts_ended (test_tick_tock.TestModes.test_keep_fills_all_slots_and_restarts_ended) ... ok",
+    "seconds_observed": 0.332568
+  },
+  {
+    "line": "test_batch_once_same_round (test_tick_tock.TestOnce.test_batch_once_same_round) ... ok",
+    "seconds_observed": 0.096917
+  },
+  {
+    "line": "test_once_from_round (test_tick_tock.TestOnce.test_once_from_round) ... ok",
+    "seconds_observed": 0.108792
+  },
+  {
+    "line": "test_once_in_busy_slot_waits (test_tick_tock.TestOnce.test_once_in_busy_slot_waits) ... ok",
+    "seconds_observed": 0.146073
+  },
+  {
+    "line": "test_once_runs_once_and_item_removed (test_tick_tock.TestOnce.test_once_runs_once_and_item_removed) ... ok",
+    "seconds_observed": 0.129479
+  },
+  {
+    "line": "test_live_slot_of_removed_name_kept (test_tick_tock.TestSlotRemoval.test_live_slot_of_removed_name_kept) ... ok",
+    "seconds_observed": 0.17988
+  },
+  {
+    "line": "test_once_slot_deleted_after_report (test_tick_tock.TestSlotRemoval.test_once_slot_deleted_after_report) ... ok",
+    "seconds_observed": 0.094092
+  },
+  {
+    "line": "test_removed_name_slot_deleted_one_round_after_report (test_tick_tock.TestSlotRemoval.test_removed_name_slot_deleted_one_round_after_report) ... ok",
+    "seconds_observed": 0.093527
+  },
+  {
+    "line": "test_shrunk_max_live_slot_deleted (test_tick_tock.TestSlotRemoval.test_shrunk_max_live_slot_deleted) ... ok",
+    "seconds_observed": 0.150343
+  },
+  {
+    "line": "test_unreadable_table_deletes_nothing (test_tick_tock.TestSlotRemoval.test_unreadable_table_deletes_nothing) ... ok",
+    "seconds_observed": 0.145166
+  },
+  {
+    "line": "test_bad_field_types_skip_only_that_item (test_tick_tock.TestSlotsAndRuns.test_bad_field_types_skip_only_that_item) ... ok",
+    "seconds_observed": 0.072427
+  },
+  {
+    "line": "test_bad_names_skipped_not_mangled (test_tick_tock.TestSlotsAndRuns.test_bad_names_skipped_not_mangled) ... ok",
+    "seconds_observed": 0.072716
+  },
+  {
+    "line": "test_infra_files_cleared_task_files_kept (test_tick_tock.TestSlotsAndRuns.test_infra_files_cleared_task_files_kept) ... ok",
+    "seconds_observed": 0.096764
+  },
+  {
+    "line": "test_run_is_round_and_increases (test_tick_tock.TestSlotsAndRuns.test_run_is_round_and_increases) ... ok",
+    "seconds_observed": 0.239202
+  },
+  {
+    "line": "test_stale_infra_of_other_run_ignored (test_tick_tock.TestSlotsAndRuns.test_stale_infra_of_other_run_ignored) ... ok",
+    "seconds_observed": 0.092783
+  },
+  {
+    "line": "test_task_env_and_tock_json (test_tick_tock.TestSlotsAndRuns.test_task_env_and_tock_json) ... ok",
+    "seconds_observed": 0.201623
+  },
+  {
+    "line": "test_tick_starts_in_slot_and_does_not_wait (test_tick_tock.TestSlotsAndRuns.test_tick_starts_in_slot_and_does_not_wait) ... ok",
+    "seconds_observed": 0.092585
+  },
+  {
+    "line": "test_timeline_json_optional (test_tick_tock.TestSlotsAndRuns.test_timeline_json_optional) ... ok",
+    "seconds_observed": 0.072954
+  },
+  {
+    "line": "test_unreadable_tasks_json_is_empty_table (test_tick_tock.TestSlotsAndRuns.test_unreadable_tasks_json_is_empty_table) ... ok",
+    "seconds_observed": 0.055735
+  },
+  {
+    "line": "test_nested_registered_while_running (test_audit_wrapper.TestAuditRegistration.test_nested_registered_while_running) ... ok",
+    "seconds_observed": 0.238049
+  },
+  {
+    "line": "test_wrapped_python_task_writes_recorded (test_audit_wrapper.TestAuditWrapper.test_wrapped_python_task_writes_recorded) ... ok",
+    "seconds_observed": 0.061449
+  },
+  {
+    "line": "test_same_prefix_req_ids_distinct (test_control.TestReqId.test_same_prefix_req_ids_distinct) ... ok",
+    "seconds_observed": 0.069236
+  },
+  {
+    "line": "test_two_slots_same_req_id (test_control.TestReqId.test_two_slots_same_req_id) ... ok",
+    "seconds_observed": 0.049022
+  },
+  {
+    "line": "test_reload_refused_without_kill (test_control.TestRestart.test_reload_refused_without_kill) ... ok",
+    "seconds_observed": 0.110686
+  },
+  {
+    "line": "test_restart_reload_takes_new_definition (test_control.TestRestart.test_restart_reload_takes_new_definition) ... ok",
+    "seconds_observed": 0.137696
+  },
+  {
+    "line": "test_restart_same_slot_new_run_keeps_state (test_control.TestRestart.test_restart_same_slot_new_run_keeps_state) ... ok",
+    "seconds_observed": 0.157986
+  },
+  {
+    "line": "test_module_as_keep_task (test_once_retry.TestRetryLostTask.test_module_as_keep_task) ... ok",
+    "seconds_observed": 0.117151
+  },
+  {
+    "line": "test_owner_blocks_and_stop_refused (test_subd_ownership.TestOwnership.test_owner_blocks_and_stop_refused) ... ok",
+    "seconds_observed": 0.540135
+  },
+  {
+    "line": "test_parent_kill_takes_child_tasks (test_subd_ownership.TestOwnership.test_parent_kill_takes_child_tasks) ... ok",
+    "seconds_observed": 0.419606
+  },
+  {
+    "line": "test_subroot_rules (test_subd_ownership.TestSubrootChecks.test_subroot_rules) ... ok",
+    "seconds_observed": 0.115107
+  },
+  {
+    "line": "test_sibling_and_current_gen_untouched (test_subd_recover.TestBoundary.test_sibling_and_current_gen_untouched) ... ok",
+    "seconds_observed": 6.847492
+  },
+  {
+    "line": "test_killed_after_reaped_before_new_gen (test_subd_recover.TestInterrupted.test_killed_after_reaped_before_new_gen) ... ok",
+    "seconds_observed": 5.661031
+  },
+  {
+    "line": "test_killed_before_argv (test_subd_recover.TestInterrupted.test_killed_before_argv) ... ok",
+    "seconds_observed": 8.448219
+  },
+  {
+    "line": "test_killed_while_reaping (test_subd_recover.TestInterrupted.test_killed_while_reaping) ... ok",
+    "seconds_observed": 5.686309
+  },
+  {
+    "line": "test_reaped_before_new_daemon (test_subd_recover.TestParentKill.test_reaped_before_new_daemon) ... ok",
+    "seconds_observed": 3.648064
+  },
+  {
+    "line": "test_bad_record_does_not_start (test_subd_recover.TestUnknown.test_bad_record_does_not_start) ... ok",
+    "seconds_observed": 1.189807
+  },
+  {
+    "line": "test_scan_incomplete_does_not_start (test_subd_recover.TestUnknown.test_scan_incomplete_does_not_start) ... ok",
+    "seconds_observed": 2.318061
+  },
+  {
+    "line": "test_max_lines_applies_to_daemon_events (test_modules_history.TestHistoryMaxLines.test_max_lines_applies_to_daemon_events) ... ok",
+    "seconds_observed": 0.002967
+  },
+  {
+    "line": "test_counter_reads_previous_state_and_gets_tock (test_modules_history.TestModules.test_counter_reads_previous_state_and_gets_tock) ... ok",
+    "seconds_observed": 0.901413
+  },
+  {
+    "line": "test_history_module_appends_last_rounds (test_modules_history.TestModules.test_history_module_appends_last_rounds) ... ok",
+    "seconds_observed": 1.18336
+  },
+  {
+    "line": "test_err_propagation (test_adapt_unit.TestChain.test_err_propagation) ... ok",
+    "seconds_observed": 3.1e-05
+  },
+  {
+    "line": "test_fail_reasons (test_adapt_unit.TestChain.test_fail_reasons) ... ok",
+    "seconds_observed": 6.7e-05
+  },
+  {
+    "line": "test_bad_types_no_exception (test_adapt_unit.TestCheck.test_bad_types_no_exception) ... ok",
+    "seconds_observed": 2.3e-05
+  },
+  {
+    "line": "test_cli_rc1_on_error (test_adapt_unit.TestCheck.test_cli_rc1_on_error) ... ok",
+    "seconds_observed": 0.023997
+  },
+  {
+    "line": "test_errors (test_adapt_unit.TestCheck.test_errors) ... ok",
+    "seconds_observed": 0.000268
+  },
+  {
+    "line": "test_example_passes_cli (test_adapt_unit.TestCheck.test_example_passes_cli) ... ok",
+    "seconds_observed": 0.023852
+  },
+  {
+    "line": "test_absent_and_band_and_clock_unknown (test_adapt_unit.TestEvaluate.test_absent_and_band_and_clock_unknown) ... ok",
+    "seconds_observed": 0.000166
+  },
+  {
+    "line": "test_expired_by_source_clock (test_adapt_unit.TestEvaluate.test_expired_by_source_clock) ... ok",
+    "seconds_observed": 0.000135
+  },
+  {
+    "line": "test_frame_not_mutated (test_adapt_unit.TestEvaluate.test_frame_not_mutated) ... ok",
+    "seconds_observed": 3e-05
+  },
+  {
+    "line": "test_ok_then_patience_then_unknown (test_adapt_unit.TestEvaluate.test_ok_then_patience_then_unknown) ... ok",
+    "seconds_observed": 0.000119
+  },
+  {
+    "line": "test_reset_voids_old_basis (test_adapt_unit.TestEvaluate.test_reset_voids_old_basis) ... ok",
+    "seconds_observed": 0.000114
+  },
+  {
+    "line": "test_same_round_not_double_counted (test_adapt_unit.TestEvaluate.test_same_round_not_double_counted) ... ok",
+    "seconds_observed": 4.8e-05
+  },
+  {
+    "line": "test_skipped_counts_gaps_once (test_adapt_unit.TestEvaluate.test_skipped_counts_gaps_once) ... ok",
+    "seconds_observed": 0.000157
+  },
+  {
+    "line": "test_stall_option (test_adapt_unit.TestEvaluate.test_stall_option) ... ok",
+    "seconds_observed": 0.000327
+  },
+  {
+    "line": "test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) ... ok",
+    "seconds_observed": 0.660502
+  },
+  {
+    "line": "test_clock_unknown_and_backwards (test_budget_ledger.TestGrant.test_clock_unknown_and_backwards) ... ok",
+    "seconds_observed": 0.026806
+  },
+  {
+    "line": "test_grant_changed_or_missing_is_unknown (test_budget_ledger.TestGrant.test_grant_changed_or_missing_is_unknown) ... ok",
+    "seconds_observed": 0.026861
+  },
+  {
+    "line": "test_init_refuses_existing (test_budget_ledger.TestGrant.test_init_refuses_existing) ... ok",
+    "seconds_observed": 0.049821
+  },
+  {
+    "line": "test_ok_and_mismatch (test_budget_ledger.TestGrant.test_ok_and_mismatch) ... ok",
+    "seconds_observed": 0.026526
+  },
+  {
+    "line": "test_consume_one (test_budget_ledger.TestNormal.test_consume_one) ... ok",
+    "seconds_observed": 0.1154
+  },
+  {
+    "line": "test_same_key_other_content_conflict (test_budget_ledger.TestNormal.test_same_key_other_content_conflict) ... ok",
+    "seconds_observed": 0.202607
+  },
+  {
+    "line": "test_missing_ledger_not_reopened (test_budget_ledger.TestTime.test_missing_ledger_not_reopened) ... ok",
+    "seconds_observed": 0.071797
+  },
+  {
+    "line": "test_not_yet_is_not_terminal (test_budget_ledger.TestTime.test_not_yet_is_not_terminal) ... ok",
+    "seconds_observed": 0.13639
+  },
+  {
+    "line": "test_reserve_after_expiry_denied (test_budget_ledger.TestTime.test_reserve_after_expiry_denied) ... ok",
+    "seconds_observed": 0.091868
+  },
+  {
+    "line": "test_end_to_end_and_replay_after_close (test_budget_step.TestBudgetDaemon.test_end_to_end_and_replay_after_close) ... ok",
+    "seconds_observed": 0.443976
+  },
+  {
+    "line": "test_crash_points_resend_same_request (test_budget_step.TestBudgetStepProbes.test_crash_points_resend_same_request) ... ok",
+    "seconds_observed": 2.075291
+  },
+  {
+    "line": "test_examples_pass (test_step.TestCheck.test_examples_pass) ... ok",
+    "seconds_observed": 0.04742
+  },
+  {
+    "line": "test_r1_finite_or_patience (test_step.TestCheck.test_r1_finite_or_patience) ... ok",
+    "seconds_observed": 3e-05
+  },
+  {
+    "line": "test_r3_only_local_rounds (test_step.TestCheck.test_r3_only_local_rounds) ... ok",
+    "seconds_observed": 0.0001
+  },
+  {
+    "line": "test_structure (test_step.TestCheck.test_structure) ... ok",
+    "seconds_observed": 7.2e-05
+  }
+]
