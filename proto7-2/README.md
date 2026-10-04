@@ -6,9 +6,10 @@
 
 ## 入口
 
-- **[spec.md](spec.md)**：細部 spec，每節標 S- 條號；實作時改過的地方標 P2-。
-- **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題（**2 條要你決定**：P2-01 固定 interval 時 wake 沒作用、P2-02 once 被殺在特定一段時報 lost 不重跑）。
+- **[spec.md](spec.md)**：細部 spec，每節標 S- 條號；實作時改過的地方標 P2-，astra 第一輪之後改的標 A2-。
+- **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題（**2 條要你決定**：P2-01 固定 interval 時 wake 沒作用、P2-02 once 被殺在特定一段時報 lost 不重跑），最後一節是 astra 第一輪 A2-01～A2-13 與讀碼疑點的處理。
 - [notes/changes-from-7-1.md](notes/changes-from-7-1.md)：跟 proto7-1 的對照表，最後是 W1～W12（程式照推薦做）。
+- [notes/play/](notes/play/README.md)：astra 回歸與試玩紀錄（一輪一列）。
 
 ## 一句話看改了什麼
 
@@ -70,4 +71,3 @@ python3 -m unittest discover -s proto7-2/tests
 - `lib/aos_inst.py`、`aos_directives*.py`、`aos_dirname.py`、`aos_exec*.py`、`bin/aos-exec`：**原樣複製自 proto7-1**（10-04；proto7-1 當初從 proto6 複製）。
 - `lib/aos7_fs.py`、`aos7_run.py`、`aos7_mount.py`、`aos7_ctl.py`、`aos7_audit.py`、`audit_site/`、`tests/_proc.py`：從 proto7-1 複製後改寫（`aos7_audit.py`、`audit_site/`、`_proc.py`、`aos7_mount.py` 幾乎沒改）。
 - `lib/aos7_daemon*.py`、`aos7_tick.py`、`aos7_tock.py`、`aos7_task.py`、`aos7_proc.py`：照 proto7-1 同名檔的結構重寫（程序工具從 proto7-1 `aos7_task.py` 拆出來）。
-- [notes/play/](notes/play/README.md)：astra 回歸與試玩紀錄（一輪一列）。
