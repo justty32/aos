@@ -1,0 +1,1706 @@
+{
+  "tmp": "/tmp/astra4-stress-gre32c4e",
+  "head": "025d2bfe71bf6a1a7b9353631e99118719121e3d",
+  "suites": [
+    {
+      "run": 1,
+      "pid": 551369,
+      "elapsed_s": 134.381,
+      "returncode": 0,
+      "test_count": 322,
+      "unittest_s": 134.323,
+      "failures": [],
+      "errors": [],
+      "skips": [],
+      "tmp_remaining": [],
+      "proc_remaining": [],
+      "tmp_removed": true
+    },
+    {
+      "run": 2,
+      "pid": 555424,
+      "elapsed_s": 140.372,
+      "returncode": 0,
+      "test_count": 322,
+      "unittest_s": 140.315,
+      "failures": [],
+      "errors": [],
+      "skips": [],
+      "tmp_remaining": [],
+      "proc_remaining": [],
+      "tmp_removed": true
+    },
+    {
+      "run": 3,
+      "pid": 559484,
+      "elapsed_s": 142.425,
+      "returncode": 0,
+      "test_count": 322,
+      "unittest_s": 142.368,
+      "failures": [],
+      "errors": [],
+      "skips": [],
+      "tmp_remaining": [],
+      "proc_remaining": [],
+      "tmp_removed": true
+    }
+  ],
+  "g3": [
+    {
+      "case": 1,
+      "suite_pid": 551369,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-01",
+      "old_daemon": 551376,
+      "old_tasks": [
+        {
+          "pid": 551387,
+          "state": "S",
+          "ppid": 551384,
+          "pgid": 551387,
+          "starttime": 3048103
+        },
+        {
+          "pid": 551388,
+          "state": "S",
+          "ppid": 551385,
+          "pgid": 551388,
+          "starttime": 3048103
+        },
+        {
+          "pid": 551389,
+          "state": "S",
+          "ppid": 551386,
+          "pgid": 551389,
+          "starttime": 3048103
+        }
+      ],
+      "ready": [
+        {
+          "pid": 551387,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 551388,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 551389,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:49:20.921",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "ad227fca0db6",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0148,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          551387,
+          551388,
+          551389
+        ],
+        "status_pid": 551376,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.2426,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 551501,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.2426,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 551501,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            551387,
+            551388,
+            551389
+          ],
+          "status_pid": 551376,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0148,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            551387,
+            551388,
+            551389
+          ],
+          "status_pid": 551376,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1211,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 551376,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.2426,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 551501,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:49:22.018",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          551371,
+          551442,
+          551443,
+          551501,
+          551507
+        ],
+        "pid_sigkill": [],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 2.623
+    },
+    {
+      "case": 2,
+      "suite_pid": 551369,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-02",
+      "old_daemon": 551541,
+      "old_tasks": [
+        {
+          "pid": 551552,
+          "state": "S",
+          "ppid": 551548,
+          "pgid": 551552,
+          "starttime": 3048367
+        },
+        {
+          "pid": 551553,
+          "state": "S",
+          "ppid": 551549,
+          "pgid": 551553,
+          "starttime": 3048367
+        },
+        {
+          "pid": 551554,
+          "state": "S",
+          "ppid": 551550,
+          "pgid": 551554,
+          "starttime": 3048367
+        }
+      ],
+      "ready": [
+        {
+          "pid": 551552,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 551553,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 551554,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:49:23.568",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "49e5cbe0e050",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0143,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          551552,
+          551553,
+          551554
+        ],
+        "status_pid": 551541,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.2414,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 551636,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.2414,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 551636,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            551552,
+            551553,
+            551554
+          ],
+          "status_pid": 551541,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0143,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            551552,
+            551553,
+            551554
+          ],
+          "status_pid": 551541,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1299,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 551541,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.2414,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 551636,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:49:24.668",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          551531,
+          551600,
+          551601,
+          551636,
+          551639
+        ],
+        "pid_sigkill": [],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 2.624
+    },
+    {
+      "case": 3,
+      "suite_pid": 551369,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-03",
+      "old_daemon": 551648,
+      "old_tasks": [
+        {
+          "pid": 551655,
+          "state": "S",
+          "ppid": 551652,
+          "pgid": 551655,
+          "starttime": 3048632
+        },
+        {
+          "pid": 551656,
+          "state": "S",
+          "ppid": 551653,
+          "pgid": 551656,
+          "starttime": 3048632
+        },
+        {
+          "pid": 551657,
+          "state": "S",
+          "ppid": 551654,
+          "pgid": 551657,
+          "starttime": 3048632
+        }
+      ],
+      "ready": [
+        {
+          "pid": 551655,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 551656,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 551657,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:49:26.216",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "b7372c7531eb",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0243,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          551655,
+          551656,
+          551657
+        ],
+        "status_pid": 551648,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.2518,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 551732,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.2518,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 551732,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            551655,
+            551656,
+            551657
+          ],
+          "status_pid": 551648,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0243,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            551655,
+            551656,
+            551657
+          ],
+          "status_pid": 551648,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1302,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 551648,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.2518,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 551732,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:49:27.320",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          551643,
+          551680,
+          551681,
+          551732,
+          551735
+        ],
+        "pid_sigkill": [],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 2.633
+    },
+    {
+      "case": 4,
+      "suite_pid": 551369,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-04",
+      "old_daemon": 551754,
+      "old_tasks": [
+        {
+          "pid": 551762,
+          "state": "S",
+          "ppid": 551759,
+          "pgid": 551762,
+          "starttime": 3048898
+        },
+        {
+          "pid": 551763,
+          "state": "S",
+          "ppid": 551760,
+          "pgid": 551763,
+          "starttime": 3048898
+        },
+        {
+          "pid": 551764,
+          "state": "S",
+          "ppid": 551761,
+          "pgid": 551764,
+          "starttime": 3048898
+        }
+      ],
+      "ready": [
+        {
+          "pid": 551762,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 551763,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 551764,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:49:28.874",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "714c62f0b3d6",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0245,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          551762,
+          551763,
+          551764
+        ],
+        "status_pid": 551754,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.2524,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 551822,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.2524,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 551822,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            551762,
+            551763,
+            551764
+          ],
+          "status_pid": 551754,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0245,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            551762,
+            551763,
+            551764
+          ],
+          "status_pid": 551754,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1311,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 551754,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.2524,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 551822,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:49:29.979",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          551746,
+          551794,
+          551795,
+          551822,
+          551825
+        ],
+        "pid_sigkill": [],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 2.637
+    },
+    {
+      "case": 5,
+      "suite_pid": 555424,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-05",
+      "old_daemon": 555431,
+      "old_tasks": [
+        {
+          "pid": 555442,
+          "state": "S",
+          "ppid": 555439,
+          "pgid": 555442,
+          "starttime": 3061542
+        },
+        {
+          "pid": 555443,
+          "state": "S",
+          "ppid": 555440,
+          "pgid": 555443,
+          "starttime": 3061542
+        },
+        {
+          "pid": 555444,
+          "state": "S",
+          "ppid": 555441,
+          "pgid": 555444,
+          "starttime": 3061542
+        }
+      ],
+      "ready": [
+        {
+          "pid": 555442,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 555443,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 555444,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:51:35.310",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "bd3cb95366d3",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0459,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          555442,
+          555443,
+          555444
+        ],
+        "status_pid": 555431,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.2942,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 555563,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.2942,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 555563,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            555442,
+            555443,
+            555444
+          ],
+          "status_pid": 555431,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0459,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            555442,
+            555443,
+            555444
+          ],
+          "status_pid": 555431,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1624,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 555431,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.2942,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 555563,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:51:36.446",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          555426,
+          555497,
+          555499,
+          555563
+        ],
+        "pid_sigkill": [],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 2.69
+    },
+    {
+      "case": 6,
+      "suite_pid": 555424,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-06",
+      "old_daemon": 555604,
+      "old_tasks": [
+        {
+          "pid": 555616,
+          "state": "S",
+          "ppid": 555613,
+          "pgid": 555616,
+          "starttime": 3061813
+        },
+        {
+          "pid": 555617,
+          "state": "S",
+          "ppid": 555614,
+          "pgid": 555617,
+          "starttime": 3061813
+        },
+        {
+          "pid": 555618,
+          "state": "S",
+          "ppid": 555615,
+          "pgid": 555618,
+          "starttime": 3061813
+        }
+      ],
+      "ready": [
+        {
+          "pid": 555616,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 555617,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 555618,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:51:38.023",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "2c1ddf876e80",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0554,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          555616,
+          555617,
+          555618
+        ],
+        "status_pid": 555604,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.294,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 555706,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.294,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 555706,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            555616,
+            555617,
+            555618
+          ],
+          "status_pid": 555604,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0554,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            555616,
+            555617,
+            555618
+          ],
+          "status_pid": 555604,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1624,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 555604,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.294,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 555706,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:51:39.161",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          555595,
+          555668,
+          555670,
+          555706
+        ],
+        "pid_sigkill": [
+          555711,
+          555712,
+          555713,
+          555714,
+          555715,
+          555716
+        ],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 3.741
+    },
+    {
+      "case": 7,
+      "suite_pid": 555424,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-07",
+      "old_daemon": 555741,
+      "old_tasks": [
+        {
+          "pid": 555748,
+          "state": "S",
+          "ppid": 555745,
+          "pgid": 555748,
+          "starttime": 3062189
+        },
+        {
+          "pid": 555749,
+          "state": "S",
+          "ppid": 555746,
+          "pgid": 555749,
+          "starttime": 3062189
+        },
+        {
+          "pid": 555750,
+          "state": "S",
+          "ppid": 555747,
+          "pgid": 555750,
+          "starttime": 3062189
+        }
+      ],
+      "ready": [
+        {
+          "pid": 555748,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 555749,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 555750,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:51:41.788",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "0998367df70d",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0562,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          555748,
+          555749,
+          555750
+        ],
+        "status_pid": 555741,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.2936,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 555825,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.2936,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 555825,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            555748,
+            555749,
+            555750
+          ],
+          "status_pid": 555741,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0562,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            555748,
+            555749,
+            555750
+          ],
+          "status_pid": 555741,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.172,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 555741,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.2936,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 555825,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:51:42.927",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          555736,
+          555791,
+          555793,
+          555825
+        ],
+        "pid_sigkill": [],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 2.689
+    },
+    {
+      "case": 8,
+      "suite_pid": 559484,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-08",
+      "old_daemon": 559491,
+      "old_tasks": [
+        {
+          "pid": 559502,
+          "state": "S",
+          "ppid": 559499,
+          "pgid": 559502,
+          "starttime": 3075580
+        },
+        {
+          "pid": 559503,
+          "state": "S",
+          "ppid": 559500,
+          "pgid": 559503,
+          "starttime": 3075580
+        },
+        {
+          "pid": 559504,
+          "state": "S",
+          "ppid": 559501,
+          "pgid": 559504,
+          "starttime": 3075580
+        }
+      ],
+      "ready": [
+        {
+          "pid": 559502,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 559503,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 559504,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:53:55.692",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "93917d071054",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0438,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          559502,
+          559503,
+          559504
+        ],
+        "status_pid": 559491,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.3012,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 559610,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.3012,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 559610,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            559502,
+            559503,
+            559504
+          ],
+          "status_pid": 559491,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0438,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            559502,
+            559503,
+            559504
+          ],
+          "status_pid": 559491,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1696,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 559491,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.3012,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 559610,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:53:56.826",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          559486,
+          559549,
+          559551,
+          559610
+        ],
+        "pid_sigkill": [
+          559615,
+          559616,
+          559617,
+          559618,
+          559619,
+          559620
+        ],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 3.761
+    },
+    {
+      "case": 9,
+      "suite_pid": 559484,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-09",
+      "old_daemon": 559709,
+      "old_tasks": [
+        {
+          "pid": 559717,
+          "state": "S",
+          "ppid": 559713,
+          "pgid": 559717,
+          "starttime": 3075958
+        },
+        {
+          "pid": 559716,
+          "state": "S",
+          "ppid": 559714,
+          "pgid": 559716,
+          "starttime": 3075958
+        },
+        {
+          "pid": 559718,
+          "state": "S",
+          "ppid": 559715,
+          "pgid": 559718,
+          "starttime": 3075958
+        }
+      ],
+      "ready": [
+        {
+          "pid": 559717,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 559716,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 559718,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:53:59.477",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "5286d6ca8d43",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0443,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          559717,
+          559716,
+          559718
+        ],
+        "status_pid": 559709,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.3031,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 559774,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.3031,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 559774,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            559717,
+            559716,
+            559718
+          ],
+          "status_pid": 559709,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0443,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            559717,
+            559716,
+            559718
+          ],
+          "status_pid": 559709,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1612,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 559709,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.3031,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 559774,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:54:00.614",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          559704,
+          559740,
+          559742,
+          559774,
+          559780
+        ],
+        "pid_sigkill": [
+          559781,
+          559782,
+          559783,
+          559784,
+          559785,
+          559786
+        ],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 3.764
+    },
+    {
+      "case": 10,
+      "suite_pid": 559484,
+      "suite_running_at_start": true,
+      "root": "/tmp/astra4-stress-gre32c4e/g3-10",
+      "old_daemon": 559834,
+      "old_tasks": [
+        {
+          "pid": 559846,
+          "state": "S",
+          "ppid": 559843,
+          "pgid": 559846,
+          "starttime": 3076337
+        },
+        {
+          "pid": 559847,
+          "state": "S",
+          "ppid": 559844,
+          "pgid": 559847,
+          "starttime": 3076337
+        },
+        {
+          "pid": 559848,
+          "state": "S",
+          "ppid": 559845,
+          "pgid": 559848,
+          "starttime": 3076337
+        }
+      ],
+      "ready": [
+        {
+          "pid": 559846,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 559847,
+          "run": 1,
+          "ignores_sigterm": true
+        },
+        {
+          "pid": 559848,
+          "run": 1,
+          "ignores_sigterm": true
+        }
+      ],
+      "before_round": {
+        "round": 1,
+        "open": true,
+        "tick_at": "2026-10-04T16:54:03.266",
+        "tock_at": null,
+        "started": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "0499ef6e426a",
+        "reaped": [],
+        "skipped": []
+      },
+      "parent_run": 1,
+      "at_old_daemon_exit": {
+        "t_s": 1.0467,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [
+          559846,
+          559847,
+          559848
+        ],
+        "status_pid": 559834,
+        "round": 1,
+        "open": true
+      },
+      "new_daemon_seen": {
+        "t_s": 2.3044,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 559914,
+        "round": 1,
+        "open": true
+      },
+      "recovery": {
+        "t_s": 2.3044,
+        "old_daemon_alive": false,
+        "old_tasks_alive": [],
+        "status_pid": 559914,
+        "round": 1,
+        "open": true
+      },
+      "pass": true,
+      "events": [
+        {
+          "t_s": 0.0001,
+          "old_daemon_alive": true,
+          "old_tasks_alive": [
+            559846,
+            559847,
+            559848
+          ],
+          "status_pid": 559834,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 1.0467,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [
+            559846,
+            559847,
+            559848
+          ],
+          "status_pid": 559834,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.1728,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 559834,
+          "round": 1,
+          "open": true
+        },
+        {
+          "t_s": 2.3044,
+          "old_daemon_alive": false,
+          "old_tasks_alive": [],
+          "status_pid": 559914,
+          "round": 1,
+          "open": true
+        }
+      ],
+      "kill_receipt": {
+        "op": "kill",
+        "run": 1,
+        "by": "astra4-g3",
+        "result": {
+          "ok": true,
+          "msg": "killed 1 group(s)",
+          "at": "2026-10-04T16:54:04.408",
+          "run": "sub#1"
+        }
+      },
+      "suite_running_at_end": true,
+      "had_orphans": true,
+      "cleanup": {
+        "before": [
+          559828,
+          559862,
+          559864,
+          559914
+        ],
+        "pid_sigkill": [
+          559919,
+          559920,
+          559921,
+          559922,
+          559923,
+          559924
+        ],
+        "after": [],
+        "ps_known_pids": "    PID    PPID    PGID STAT COMMAND\n",
+        "known_alive": []
+      },
+      "tmp_removed": true,
+      "elapsed_s": 3.768
+    }
+  ],
+  "tmp_remaining": [],
+  "tmp_removed": true,
+  "final_proc_remaining": []
+}

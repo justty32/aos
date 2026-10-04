@@ -13,16 +13,30 @@
 argv 結束、而且不是因為自己收到 SIGTERM（父 kill 時整個群組一起收到）、子根 status.json 是 `stopped: true` → 那是被允許的
 外部 stop：寫 `stopped.json`＝`{"by","why","at"}`（取 ctl-done 裡最近一份 stop 回條），父 node 的 keep 項之後再起它會被擋。
 退出碼照 argv（被訊號殺＝128＋訊號號）。
+
+重開前回收（A5-01）：父 kill 只給 1 秒寬限，子 daemon 不一定收得完自己的任務；核心重開會把還活著的任務當活接回來（§5.4）。
+所以包自己記生命週期（`<subroot>/.aosd/subd-life.json`），起 argv 前收前代：
+- 拿到 subd.lock 後，回收期間也拿著子根的 daemon.lock（有人拿著＝有 daemon 在跑，不起）；
+- 生命週期記錄不是 `stopped`（被允許的外部 stop）就回收：子根裡前代的 launcher（子 daemon、tick、tock）、runner、任務，
+  掃到一次「確定沒有」才算乾淨；paused node 一樣收（照環境身分掃，不看 pause）；
+- 乾淨了先寫本代 `running` 記錄，再放 daemon.lock、起 argv；掃描讀不完整、收不掉、記錄讀不到＝印原因、退出碼 1、不起，
+  記錄留著，下一次再接著收。
 """
 import fcntl
 import os
 import signal
 import subprocess
 import sys
+import time
 
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(TOP, "lib"))
-from aos7_fs import N, OK, fact, now, write_json  # noqa: E402
+import aos7_proc  # noqa: E402
+from aos7_fs import N, OK, Unknown, fact, now, test_point, write_json  # noqa: E402
+
+LIFE = "subd-life.json"   # 包自有的生命週期記錄：running／recovering／stopped
+REAP_PASSES = 5           # 回收最多幾輪「掃描→收」；之後還掃得到＝收不掉
+RUNNER_WAIT = 0.5         # 任務死後等 runner 自己寫完 exit.json 退出的秒數，還在才收它
 
 
 def norm(p):
@@ -52,19 +66,73 @@ def check(root, node_id, sub):
     return real, None
 
 
-def lock_held(path):
-    """path 這個 flock 有沒有人拿著（試得到就放掉、回 False；開不了＝沒人拿過）。"""
+def take_lock(path):
+    """非阻塞拿 path 的 flock，回開著的檔（拿著）或 None（有人拿著）。鎖檔不 unlink（flock 綁 inode）；fd 不傳給子程序。"""
+    f = open(path, "a")
     try:
-        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        return False
+        f.close()
+        return None
+    return f
+
+
+def leftovers(sub):
+    """子根 sub 裡前代留下的活程序，分三類回 {"launcher", "task", "runner"}：
+    - task／runner：環境 AOS7_NODE 是 sub 或在它底下、有 AOS7_TID（核心的任務身分，spec §5.2；巢狀子空間也在內）；
+    - launcher：環境 AOS7_SUBROOT 正好是 sub（這個包起的子 daemon 與它的 tick／tock）。
+    不含自己與祖先；sibling 子根的路徑不同（比到 `/` 為止），不會算進來。掃描讀不完整丟 Unknown（不能說乾淨）。"""
+    node_eq = b"AOS7_NODE=" + sub.encode()
+    node_in = node_eq + b"/"
+    sub_eq = b"AOS7_SUBROOT=" + sub.encode()
+    skip = aos7_proc.me_and_ancestors()
+    out = {"launcher": [], "task": [], "runner": []}
+    for pid in aos7_proc.all_pids():
+        if pid in skip:
+            continue
+        env = aos7_proc.environ_of(pid)
+        if not env:
+            continue
+        task = any(x == node_eq or x.startswith(node_in) for x in env) and any(x.startswith(b"AOS7_TID=") for x in env)
+        if not task and sub_eq not in env:
+            continue
+        st = aos7_proc.stat_of(pid)
+        if st is None or st[0] == "Z":
+            continue
+        out["runner" if aos7_proc.is_runner(pid) else "task" if task else "launcher"].append(pid)
+    return out
+
+
+def reap(sub):
+    """收子根 sub 裡前代的程序，回 (乾淨?, 說明, 收了幾個)。每輪：先打 launcher（TERM 後立刻 KILL，tick 收到 TERM 會把動作做完、
+    可能再起 runner）→ 任務照核心 kill 的寬限（TERM、最多等 1 秒、KILL）→ 等 runner 自己寫完 exit.json 退出，還在的再收；
+    下一輪重掃。要一次掃描確定沒有才算乾淨。收程序都經核心的 aos7_proc（群組連同後代、不打自己與祖先的群組）。"""
+    total = 0
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
-        return True
-    finally:
-        os.close(fd)
-    return False
+        for i in range(REAP_PASSES):
+            found = leftovers(sub)
+            n = sum(len(v) for v in found.values())
+            if not n:
+                return True, "前代已空（收了 %d 個程序、%d 輪）" % (total, i), total
+            total += n
+            test_point("subd-reaping")
+            if found["launcher"]:
+                aos7_proc.kill_groups(aos7_proc.groups_of(found["launcher"]), grace=0)
+            if found["task"]:
+                aos7_proc.kill_groups(aos7_proc.groups_of(found["task"]))
+            end = time.monotonic() + RUNNER_WAIT
+            runners = found["runner"]
+            while runners and time.monotonic() < end:
+                time.sleep(0.02)
+                runners = [p for p in runners if aos7_proc.proc(p)[0] != N]
+            if runners:
+                aos7_proc.kill_groups(aos7_proc.groups_of(runners))
+        left = leftovers(sub)
+    except Unknown as e:
+        return False, "掃描子根的程序讀不完整，不知道前代收乾淨沒有（%s）" % e, total
+    if not any(left.values()):
+        return True, "前代已空（收了 %d 個程序）" % total, total
+    return False, "收了 %d 輪還有前代程序 %s" % (REAP_PASSES, sorted(sum(left.values(), []))), total
 
 
 def last_stop(aosd):
@@ -108,15 +176,34 @@ def main(argv):
             head[0], s.get("by") or "?", s.get("at") or "?", "（%s）" % s["why"] if s.get("why") else "",
             os.path.join(aosd, "stopped.json")), file=sys.stderr)
         return 1
-    lk = open(os.path.join(aosd, "subd.lock"), "a")
-    try:
-        fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
+    lk = take_lock(os.path.join(aosd, "subd.lock"))   # 全程拿著，直到這個程序結束
+    if lk is None:
         print("aos7-subd: 子根 %s 已經有別的 aos7-subd 認領，沒起" % head[0], file=sys.stderr)
         return 1
-    if lock_held(os.path.join(aosd, "daemon.lock")):
+    dl = take_lock(os.path.join(aosd, "daemon.lock"))  # 回收期間拿著：其他 daemon 起不來
+    if dl is None:
         print("aos7-subd: 子根 %s 已經有 daemon 在跑（不是這個包裝起的），沒起" % head[0], file=sys.stderr)
         return 1
+    life_path = os.path.join(aosd, LIFE)
+    st, life = fact(life_path)
+    if st not in (OK, N) or (st == OK and not (isinstance(life, dict) and isinstance(life.get("state"), str))):
+        print("aos7-subd: %s %s，不知道前代收乾淨沒有，沒起；確認子根裡沒有前代程序後修好或刪掉它" % (
+            LIFE, life if st != OK else "內容不合"), file=sys.stderr)
+        return 1
+    me = {"node": node_id, "tid": tid, "run": e.get("AOS7_RUN"), "pid": os.getpid()}
+    if not (st == OK and life["state"] == "stopped"):
+        # 前代沒有照允許的 stop 結束（或沒有記錄＝不知道前代怎麼結束）：先收再起
+        write_json(life_path, {"state": "recovering", "subroot": head[0], "owner": me, "at": now(),
+                               "prev": life if st == OK else None})
+        clean, msg, n = reap(sub)
+        if not clean:
+            print("aos7-subd: %s；記錄留著，下一次再收，沒起" % msg, file=sys.stderr)
+            return 1
+        if n:
+            print("aos7-subd: 子根 %s %s" % (head[0], msg), file=sys.stderr)   # 進 out.log：前代留了東西
+        test_point("subd-reaped")
+    write_json(life_path, {"state": "running", "subroot": head[0], "owner": me, "since": now()})
+    test_point("subd-before-argv")
     owner = {"node": node_id, "tid": tid, "allow_stop": allow}
     write_json(os.path.join(aosd, "stop-guard.json"), {
         "allow": allow, "note": "這個 daemon 屬於 node %s（任務 %s）%s" % (
@@ -131,6 +218,9 @@ def main(argv):
     child = None
     for s in (signal.SIGTERM, signal.SIGINT):
         signal.signal(s, on_term)
+    dl.close()   # 放掉 daemon.lock，讓 argv 的子 daemon 拿
+    if got_term:  # 起之前就被收：不起，running 記錄留著，下一代照樣先收
+        return 128 + got_term[0]
     child = subprocess.Popen(cmd, env=dict(e, AOS7_SUBROOT=sub))
     write_json(os.path.join(aosd, "owner.json"), {"owner": owner, "daemon": {"pid": child.pid, "since": now()}})
     while True:
@@ -143,6 +233,8 @@ def main(argv):
         st, status = fact(os.path.join(aosd, "status.json"))
         if st == OK and isinstance(status, dict) and status.get("stopped") is True:
             write_json(os.path.join(aosd, "stopped.json"), last_stop(aosd))
+            # 被允許的 stop 是擁有者要的結束：下一代不回收（不帶 kill 的 stop 留下的任務照核心接回）
+            write_json(life_path, {"state": "stopped", "subroot": head[0], "owner": me, "at": now()})
     return 128 - rc if rc < 0 else rc
 
 

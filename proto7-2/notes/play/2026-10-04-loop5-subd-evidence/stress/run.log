@@ -1,0 +1,13 @@
+{"case": 1, "pass": true, "orphans": true, "elapsed": 2.623, "error": null}
+{"case": 2, "pass": true, "orphans": true, "elapsed": 2.624, "error": null}
+{"case": 3, "pass": true, "orphans": true, "elapsed": 2.633, "error": null}
+{"case": 4, "pass": true, "orphans": true, "elapsed": 2.637, "error": null}
+{"suite": {"run": 1, "pid": 551369, "elapsed_s": 134.381, "returncode": 0, "test_count": 322, "unittest_s": 134.323, "failures": [], "errors": [], "skips": [], "tmp_remaining": [], "proc_remaining": [], "tmp_removed": true}}
+{"case": 5, "pass": true, "orphans": true, "elapsed": 2.69, "error": null}
+{"case": 6, "pass": true, "orphans": true, "elapsed": 3.741, "error": null}
+{"case": 7, "pass": true, "orphans": true, "elapsed": 2.689, "error": null}
+{"suite": {"run": 2, "pid": 555424, "elapsed_s": 140.372, "returncode": 0, "test_count": 322, "unittest_s": 140.315, "failures": [], "errors": [], "skips": [], "tmp_remaining": [], "proc_remaining": [], "tmp_removed": true}}
+{"case": 8, "pass": true, "orphans": true, "elapsed": 3.761, "error": null}
+{"case": 9, "pass": true, "orphans": true, "elapsed": 3.764, "error": null}
+{"case": 10, "pass": true, "orphans": true, "elapsed": 3.768, "error": null}
+{"suite": {"run": 3, "pid": 559484, "elapsed_s": 142.425, "returncode": 0, "test_count": 322, "unittest_s": 142.368, "failures": [], "errors": [], "skips": [], "tmp_remaining": [], "proc_remaining": [], "tmp_removed": true}}
