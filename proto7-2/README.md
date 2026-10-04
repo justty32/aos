@@ -42,7 +42,7 @@ python3 proto7-2/tests/run_all.py -k restart # 只跑名字含 restart 的
 python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾（相對 proto7-2/）
 ```
 
-離線、純標準庫，252 項約 90 秒（`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；`test_options_a3.py` 是 retry_lost／until_round）。核心測試在 `tests/core/`，模組包的在 `modules/<包>/tests/`，counter／歷史 module 的在 `modules/tests/`；共用工具（`base.py`、`_matrix.py`、`_proc.py`）留在 `tests/`。各資料夾的測試檔名要唯一。每個測試類別的 docstring 開頭標類別：`〔core〕`、`〔<包名>〕`（control、subd、once_retry、diag、tools、observe）或 `〔misuse M-<契約卡號>〕`（誤用造成的，照[組件契約藍圖](notes/component-contracts.md)，之後隨精簡刪掉）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
+離線、純標準庫，252 項約 90 秒（`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；`test_options_a3.py` 是 retry_lost／until_round）。核心測試在 `tests/core/`，模組包的在 `modules/<包>/tests/`，counter／歷史 module 的在 `modules/tests/`；共用工具（`base.py`、`_matrix.py`、`_proc.py`、測試鉤子 `_hooks.py`）留在 `tests/`。各資料夾的測試檔名要唯一。每個測試類別的 docstring 開頭標類別：`〔core〕`、`〔<包名>〕`（control、subd、once_retry、diag、tools、observe）或 `〔misuse M-<契約卡號>〕`（誤用造成的，照[組件契約藍圖](notes/component-contracts.md)，之後隨精簡刪掉）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
 
 | 檔 | 測什麼 |
 |---|---|
@@ -63,15 +63,16 @@ python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾�
 
 | 位置 | 是什麼 |
 |---|---|
-| `bin/` | 薄入口：`aos7-daemon`、`aos7-tick`、`aos7-tock`、`aos7-run`、`aos7-ctl`、`aos7-wait-tock`，與搬來的 `aos-exec` |
+| `bin/` | 薄入口：`aos7-daemon`、`aos7-tick`、`aos7-tock`、`aos7-run`、`aos7-ctl`、`aos7-wait-tock`（後兩個的本體在工具包），與搬來的 `aos-exec` |
 | `lib/aos7_daemon.py`、`aos7_daemon_timeline.py` | daemon：登記、控制檔、node 消失、status；每個 node 一條時間線（第 1、2 節） |
 | `lib/aos7_tick.py`、`aos7_tock.py` | 開回合（tasks.json、once 的 launch 標記）／關回合（last-round.json、刪槽）（第 3、4、7 節） |
 | `lib/aos7_task.py` | 槽、三態判定、lost 前的身分掃描、任務控制、在槽裡起新 run（第 5、6 節） |
 | `lib/aos7_proc.py` | 程序工具：同一個程序嗎（pid＋starttime 三態）、身分掃描、Q1 範圍的收程序 |
 | `lib/aos7_run.py` | 任務的包裝：pid.json、exit.json（帶 run） |
-| `lib/aos7_fs.py` | 原子寫、三態讀（`read_json3`）、flock、動作鎖與世代、測試鉤子 |
-| `lib/aos7_ctl.py` | `aos7-ctl daemon／task／add`（第 10 節） |
-| `lib/aos7_mount.py`、`aos7_audit.py`、`audit_site/` | 掛載（4.5）與可選的寫入紀錄 |
+| `lib/aos7_fs.py` | 原子寫、三態讀（`read_json3`）、flock、動作鎖與世代、測試鉤子的轉接（`AOS7_TEST_HOOKS` 有設才載入 `tests/_hooks.py`） |
+| `lib/aos7_mount.py` | 掛載（4.5）：tick 建掛載、審核執行中加掛 |
+| `modules/tools/` | [工具包](modules/tools/README.md)：`aos7_ctl.py`（`aos7-ctl daemon／task／add`）、`aos7_taskside.py`（任務端的 wait_tock、task_env、resolver、request） |
+| `modules/audit/` | [稽核包](modules/audit/README.md)：可選的寫入紀錄（`aos7_audit.py`、`audit_site/`） |
 | `lib/aos_*.py` | 搬來的 inst 執行器 |
 | `modules/counter.py` | 最小示範任務：讀同槽上一次的 state.json、收 tock.json |
 | `modules/history.py` | 歷史 module 的參考實作（第 9 節）：普通 keep 任務，每個 tock 把 last-round.json 追加到 `history/` |
@@ -81,5 +82,5 @@ python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾�
 ## 來源（複製進來，不 import 外部路徑）
 
 - `lib/aos_inst.py`、`aos_directives*.py`、`aos_dirname.py`、`aos_exec*.py`、`bin/aos-exec`：**原樣複製自 proto7-1**（10-04；proto7-1 當初從 proto6 複製）。
-- `lib/aos7_fs.py`、`aos7_run.py`、`aos7_mount.py`、`aos7_ctl.py`、`aos7_audit.py`、`audit_site/`、`tests/_proc.py`：從 proto7-1 複製後改寫（`aos7_audit.py`、`audit_site/`、`_proc.py`、`aos7_mount.py` 幾乎沒改）。
+- `lib/aos7_fs.py`、`aos7_run.py`、`aos7_mount.py`、`modules/tools/aos7_ctl.py`、`modules/audit/aos7_audit.py`、`modules/audit/audit_site/`、`tests/_proc.py`：從 proto7-1 複製後改寫（`aos7_audit.py`、`audit_site/`、`_proc.py`、`aos7_mount.py` 幾乎沒改）。
 - `lib/aos7_daemon*.py`、`aos7_tick.py`、`aos7_tock.py`、`aos7_task.py`、`aos7_proc.py`：照 proto7-1 同名檔的結構重寫（程序工具從 proto7-1 `aos7_task.py` 拆出來）。

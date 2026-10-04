@@ -32,7 +32,7 @@ def gc_pid(node, slot, wait=None):
 
 
 class TestCtl(CoreCase):
-    """〔control〕任務控制：kill 的案例是核心（標〔core〕），restart／reload 是控制包，aos7-ctl task 是工具包（標〔tools〕）。"""
+    """〔control〕任務控制：kill 的案例是核心（標〔core〕），restart／reload 是控制包，aos7-ctl task 那項搬到 modules/tools/tests/。"""
     def write_ctl(self, node, slot, **ctl):
         write_json(os.path.join(self.slot(node, slot), "ctl.json"), dict({"by": "test"}, **ctl))
 
@@ -126,15 +126,6 @@ class TestCtl(CoreCase):
         self.tock()
         self.tick()
         self.assertEqual(self.done(node, "s")["result"]["run"], "s#1")   # 換 run 不清回條（P2-04）
-
-    def test_aos7_ctl_task(self):
-        """〔tools〕"""
-        node = self.mknode("a", [{"name": "s", "argv": SLEEP}])
-        self.tick()
-        self.wait_pid(node, "s")
-        self.prog("aos7-ctl", "task", self.slot(node, "s"), "kill", "why", "--run", "1")
-        self.tock()
-        self.assertTrue(self.done(node, "s")["result"]["ok"])
 
 
 class TestKillRange(CoreCase):

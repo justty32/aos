@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""aos7-ctl 的命令列入口——本體在 ../lib/aos7_ctl.py。"""
-# 由人或任務呼叫，委派寫 daemon／任務控制檔與 tasks.json（spec §10，S-01）。
+"""aos7-ctl 的命令列入口——本體在工具包 ../modules/tools/aos7_ctl.py（核心 lib 只當函式庫用）。"""
+# 由人或任務呼叫，委派寫 daemon／任務控制檔與 tasks.json（spec §10，S-01）。任務的 PATH 只加 proto7-2/bin，所以入口留在這裡。
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
 import aos7_ctl  # noqa: E402
 if __name__ == "__main__":
     sys.exit(aos7_ctl.main())

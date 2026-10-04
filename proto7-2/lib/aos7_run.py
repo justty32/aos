@@ -21,20 +21,10 @@ import stat
 import subprocess
 import sys
 
-from aos7_fs import BIN, now, proc_starttime
+from aos7_fs import BIN, now, proc_starttime, test_point
 
 
 RUN = [None]   # 這次的 run（讀到 birth.json 後填上；寫 pid.json／exit.json 用）
-CRASH = [None]  # 只給測試：AOS7_TEST_RUNNER_CRASH 的點（main 一開始就從環境拿掉，不傳給任務；P2-15）
-
-
-def crash_point(name):
-    """只給測試：AOS7_TEST_RUNNER_CRASH 列到 name 就在這裡 SIGKILL 自己（runner-before-pid、runner-before-exit；A2 回歸矩陣）。"""
-    if CRASH[0] and name in CRASH[0].split(","):
-        import signal
-        os.kill(os.getpid(), signal.SIGKILL)
-
-
 def build_argv(birth, node):
     """由 birth 任務定義與 node 路徑回傳實際 argv 清單（spec §4.1、§5.3）。
     inst 相對 node 定位並交搬來的 aos-exec（S-12）；否則展開 argv，未給 argv 回空清單由呼叫者報錯。"""
@@ -103,7 +93,6 @@ def main(argv=None):
     if len(argv) not in (1, 2):
         print("用法: aos7-run <taskdir> [<taskdir 的 fd>]", file=sys.stderr)
         return 1
-    CRASH[0] = os.environ.pop("AOS7_TEST_RUNNER_CRASH", None)
     tdir = os.path.abspath(argv[0])
     held = len(argv) == 2   # tick 起的：第二個參數是任務資料夾的 fd，cwd 是 tick 抓著的 node（astra-6 G-02）
     if held:
@@ -133,8 +122,9 @@ def main(argv=None):
         why = env_mismatch(dfd)
         if why:
             return fail(dfd, why)
-    env = dict(os.environ)
-    site = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_site")
+    # 測試鉤子的環境（AOS7_TEST_*，P2-15）只給 aos7-run 自己，不傳給任務
+    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS7_TEST_")}
+    site = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "modules", "audit", "audit_site")
     if env.get("AOS7_AUDIT") and site not in env.get("PYTHONPATH", "").split(os.pathsep):
         # 寫入紀錄（spec §4.5、P2-17）：只給任務，不給 aos7-run 自己（probes/polyglot N7）
         env["PYTHONPATH"] = os.pathsep.join(x for x in (site, env.get("PYTHONPATH")) if x)
@@ -159,14 +149,14 @@ def main(argv=None):
         return 0
     # pid.json 也經過 fd 寫：任務資料夾剛被刪（測試收尾、node 被 rm -rf）時不會用 makedirs 把它建回來
     # spec §5.4、P2-08：pid 可能重用，連同 starttime 才能辨認同一程序；讀不到由判定層保守處理。
-    crash_point("runner-before-pid")
+    test_point("runner-before-pid")
     # A3-02：記下任務的 uid（＝runner 的 uid，子程序繼承）。管理範圍是「跟 daemon 同 uid、environ 可讀」的任務（spec §11）；
     # 事後 environ 讀不到時，靠這裡的 pid／pgid 與 birth 的 runner（session）認出「這是自己的任務」，當不知道而不是沒有。
     write_at(dfd, "pid.json", {"run": RUN[0], "pid": proc.pid, "pgid": proc.pid, "starttime": proc_starttime(proc.pid),
                                "runner_pid": os.getpid(), "uid": os.getuid(), "at": now()})
     code = proc.wait()
     out.close()
-    crash_point("runner-before-exit")
+    test_point("runner-before-exit")
     write_at(dfd, "exit.json", {"run": RUN[0], "code": code, "at": now(), "round": round_at(dfd)})
     return 0
 

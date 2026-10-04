@@ -843,7 +843,7 @@ def start_in_slot(ctx, item, slot, run, sub=None):
     test_point("after-birth")
     env = env_with_bin()
     # spec §2.7、§5.5、P2-15：每次重建身分，動作控制與測試鉤子不傳給任務或子 daemon。
-    # AOS7_TEST_RUNNER_CRASH 留給 aos7-run（它起任務前自己拿掉）；其他測試鉤子不傳。
+    # AOS7_TEST_HOOKS、AOS7_TEST_RUNNER_CRASH 留給 aos7-run（它交給任務的環境拿掉全部 AOS7_TEST_*）；其他測試鉤子不傳。
     for k in ("AOS7_SUBROOT", "AOS7_GEN", "AOS7_EARLY", "AOS7_INCOMPLETE", "AOS7_TEST_CRASH", "AOS7_TEST_HANG",
               "AOS7_TEST_FAULT", "AOS7_TEST_FAULT_HITS") + OWNER_ENV:
         env.pop(k, None)

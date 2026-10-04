@@ -11,8 +11,10 @@ keep 會在下一回合用同一個槽起新的 run，state.json 留著（W6）�
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
-from aos7_fs import read_json, task_env, wait_tock, write_json  # noqa: E402
+TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
+from aos7_fs import read_json, write_json  # noqa: E402
+from aos7_taskside import task_env, wait_tock  # noqa: E402
 
 
 def main(argv=None):
