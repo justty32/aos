@@ -1,0 +1,672 @@
+{
+  "label": "long-tasks",
+  "node_count": 10,
+  "target_rounds_per_node": 1000,
+  "workload": "one sleep keep + one true each per node; node n00 also history(max-lines=25)",
+  "samples": [
+    {
+      "round_per_node": 10,
+      "closed_node_rounds": 100,
+      "checkpoint_seconds": 1.152,
+      "completion_seconds": {
+        "min": 1.001,
+        "median": 1.001,
+        "max": 1.001
+      },
+      "node_rounds_per_second": 86.835,
+      "cpu_since_start": {
+        "self_seconds": 0.12,
+        "waited_children_seconds": 8.17
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 32843,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.034,
+        "median": 0.043,
+        "max": 0.047
+      },
+      "last_runs": {
+        "n00": {
+          "keep": 1,
+          "each": 10
+        },
+        "n01": {
+          "keep": 1,
+          "each": 10
+        },
+        "n02": {
+          "keep": 1,
+          "each": 10
+        },
+        "n03": {
+          "keep": 1,
+          "each": 10
+        },
+        "n04": {
+          "keep": 1,
+          "each": 10
+        },
+        "n05": {
+          "keep": 1,
+          "each": 10
+        },
+        "n06": {
+          "keep": 1,
+          "each": 10
+        },
+        "n07": {
+          "keep": 1,
+          "each": 10
+        },
+        "n08": {
+          "keep": 1,
+          "each": 10
+        },
+        "n09": {
+          "keep": 1,
+          "each": 10
+        }
+      }
+    },
+    {
+      "round_per_node": 100,
+      "closed_node_rounds": 1000,
+      "checkpoint_seconds": 8.164,
+      "completion_seconds": {
+        "min": 7.813,
+        "median": 8.014,
+        "max": 8.014
+      },
+      "node_rounds_per_second": 110.243,
+      "cpu_since_start": {
+        "self_seconds": 1.11,
+        "waited_children_seconds": 81.93
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 37968,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.031,
+        "median": 0.0385,
+        "max": 0.044
+      },
+      "last_runs": {
+        "n00": {
+          "keep": 1,
+          "each": 100
+        },
+        "n01": {
+          "keep": 1,
+          "each": 100
+        },
+        "n02": {
+          "keep": 1,
+          "each": 100
+        },
+        "n03": {
+          "keep": 1,
+          "each": 100
+        },
+        "n04": {
+          "keep": 1,
+          "each": 100
+        },
+        "n05": {
+          "keep": 1,
+          "each": 100
+        },
+        "n06": {
+          "keep": 1,
+          "each": 100
+        },
+        "n07": {
+          "keep": 1,
+          "each": 100
+        },
+        "n08": {
+          "keep": 1,
+          "each": 100
+        },
+        "n09": {
+          "keep": 1,
+          "each": 100
+        }
+      }
+    },
+    {
+      "round_per_node": 250,
+      "closed_node_rounds": 2500,
+      "checkpoint_seconds": 12.771,
+      "completion_seconds": {
+        "min": 12.62,
+        "median": 12.62,
+        "max": 12.62
+      },
+      "node_rounds_per_second": 117.458,
+      "cpu_since_start": {
+        "self_seconds": 2.68,
+        "waited_children_seconds": 201.2
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 38225,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.03,
+        "median": 0.035,
+        "max": 0.055
+      },
+      "last_runs": {
+        "n00": {
+          "keep": 1,
+          "each": 250
+        },
+        "n01": {
+          "keep": 1,
+          "each": 250
+        },
+        "n02": {
+          "keep": 1,
+          "each": 250
+        },
+        "n03": {
+          "keep": 1,
+          "each": 250
+        },
+        "n04": {
+          "keep": 1,
+          "each": 250
+        },
+        "n05": {
+          "keep": 1,
+          "each": 250
+        },
+        "n06": {
+          "keep": 1,
+          "each": 250
+        },
+        "n07": {
+          "keep": 1,
+          "each": 250
+        },
+        "n08": {
+          "keep": 1,
+          "each": 250
+        },
+        "n09": {
+          "keep": 1,
+          "each": 250
+        }
+      }
+    },
+    {
+      "round_per_node": 500,
+      "closed_node_rounds": 5000,
+      "checkpoint_seconds": 20.385,
+      "completion_seconds": {
+        "min": 20.035,
+        "median": 20.235,
+        "max": 20.235
+      },
+      "node_rounds_per_second": 122.64,
+      "cpu_since_start": {
+        "self_seconds": 5.21,
+        "waited_children_seconds": 396.24
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 38792,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.03,
+        "median": 0.036000000000000004,
+        "max": 0.043
+      },
+      "last_runs": {
+        "n00": {
+          "keep": 1,
+          "each": 500
+        },
+        "n01": {
+          "keep": 1,
+          "each": 500
+        },
+        "n02": {
+          "keep": 1,
+          "each": 500
+        },
+        "n03": {
+          "keep": 1,
+          "each": 500
+        },
+        "n04": {
+          "keep": 1,
+          "each": 500
+        },
+        "n05": {
+          "keep": 1,
+          "each": 500
+        },
+        "n06": {
+          "keep": 1,
+          "each": 500
+        },
+        "n07": {
+          "keep": 1,
+          "each": 500
+        },
+        "n08": {
+          "keep": 1,
+          "each": 500
+        },
+        "n09": {
+          "keep": 1,
+          "each": 500
+        }
+      }
+    },
+    {
+      "round_per_node": 750,
+      "closed_node_rounds": 7500,
+      "checkpoint_seconds": 20.38,
+      "completion_seconds": {
+        "min": 20.03,
+        "median": 20.03,
+        "max": 20.23
+      },
+      "node_rounds_per_second": 122.67,
+      "cpu_since_start": {
+        "self_seconds": 7.76,
+        "waited_children_seconds": 591.14
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 39359,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.03,
+        "median": 0.035,
+        "max": 0.044
+      },
+      "last_runs": {
+        "n00": {
+          "keep": 1,
+          "each": 750
+        },
+        "n01": {
+          "keep": 1,
+          "each": 750
+        },
+        "n02": {
+          "keep": 1,
+          "each": 750
+        },
+        "n03": {
+          "keep": 1,
+          "each": 750
+        },
+        "n04": {
+          "keep": 1,
+          "each": 750
+        },
+        "n05": {
+          "keep": 1,
+          "each": 750
+        },
+        "n06": {
+          "keep": 1,
+          "each": 750
+        },
+        "n07": {
+          "keep": 1,
+          "each": 750
+        },
+        "n08": {
+          "keep": 1,
+          "each": 750
+        },
+        "n09": {
+          "keep": 1,
+          "each": 750
+        }
+      }
+    },
+    {
+      "round_per_node": 1000,
+      "closed_node_rounds": 10000,
+      "checkpoint_seconds": 20.38,
+      "completion_seconds": {
+        "min": 20.03,
+        "median": 20.03,
+        "max": 20.23
+      },
+      "node_rounds_per_second": 122.668,
+      "cpu_since_start": {
+        "self_seconds": 10.3,
+        "waited_children_seconds": 786.1
+      },
+      "storage": {
+        "files": 183,
+        "bytes": 39975,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.03,
+        "median": 0.0345,
+        "max": 0.043
+      },
+      "last_runs": {
+        "n00": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n01": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n02": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n03": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n04": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n05": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n06": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n07": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n08": {
+          "keep": 1,
+          "each": 1000
+        },
+        "n09": {
+          "keep": 1,
+          "each": 1000
+        }
+      }
+    }
+  ],
+  "uncertain_observations": [
+    {
+      "elapsed_s": 0.401,
+      "node": "n00",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 3,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 0.401,
+      "node": "n01",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 3,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 1.556,
+      "node": "n00",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 15,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 1.756,
+      "node": "n00",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 15,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 6.363,
+      "node": "n08",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 67,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 7.364,
+      "node": "n08",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 79,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 11.123,
+      "node": "n06",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 121,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 11.324,
+      "node": "n06",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 121,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 17.134,
+      "node": "n07",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 192,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 18.536,
+      "node": "n03",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 210,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 18.736,
+      "node": "n03",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 210,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 21.339,
+      "node": "n03",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 244,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 21.539,
+      "node": "n03",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 244,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 21.74,
+      "node": "n02",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 248,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 22.893,
+      "node": "n00",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 260,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 23.894,
+      "node": "n03",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 272,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 24.095,
+      "node": "n03",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 272,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 27.903,
+      "node": "n00",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 323,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 28.103,
+      "node": "n00",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 323,
+          "why": "剛起"
+        }
+      ]
+    },
+    {
+      "elapsed_s": 31.51,
+      "node": "n03",
+      "uncertain": [
+        {
+          "slot": "each",
+          "run": 367,
+          "why": "剛起"
+        }
+      ]
+    }
+  ],
+  "uncertain_reason_counts": {
+    "剛起": 42
+  },
+  "error_observations": [],
+  "polls": 417,
+  "logical_cpus": 16,
+  "root_basename": "aos72-test-3foku3yc",
+  "total_seconds": 83.242,
+  "final_rounds": {
+    "n00": 1000,
+    "n01": 1000,
+    "n02": 1000,
+    "n03": 1000,
+    "n04": 1000,
+    "n05": 1000,
+    "n06": 1000,
+    "n07": 1000,
+    "n08": 1000,
+    "n09": 1000
+  },
+  "history": {
+    "rows": 25,
+    "last_round": 1000,
+    "gap_rows": 0
+  },
+  "daemon_returncode": 0,
+  "cleanup_root_removed": true,
+  "cleanup_daemon_returncode": 0
+}

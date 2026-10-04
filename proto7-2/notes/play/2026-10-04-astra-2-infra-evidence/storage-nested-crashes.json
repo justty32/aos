@@ -1,0 +1,46 @@
+{
+  "before": [],
+  "returncodes": {
+    "/mount-done/": [
+      -9,
+      -9,
+      -9,
+      -9,
+      -9
+    ],
+    "/mount-req/": [
+      -9,
+      -9,
+      -9,
+      -9,
+      -9
+    ]
+  },
+  "after_crashes": [
+    "mount-done/.x.json.tmp.171557",
+    "mount-done/.x.json.tmp.171579",
+    "mount-done/.x.json.tmp.171595",
+    "mount-done/.x.json.tmp.171611",
+    "mount-done/.x.json.tmp.171632",
+    "mount-req/.other.json.tmp.171650",
+    "mount-req/.other.json.tmp.171674",
+    "mount-req/.other.json.tmp.171692",
+    "mount-req/.other.json.tmp.171711",
+    "mount-req/.other.json.tmp.171733"
+  ],
+  "after_10_healthy_rounds": [
+    "mount-done/.x.json.tmp.171557",
+    "mount-done/.x.json.tmp.171579",
+    "mount-done/.x.json.tmp.171595",
+    "mount-done/.x.json.tmp.171611",
+    "mount-done/.x.json.tmp.171632",
+    "mount-req/.other.json.tmp.171650",
+    "mount-req/.other.json.tmp.171674",
+    "mount-req/.other.json.tmp.171692",
+    "mount-req/.other.json.tmp.171711",
+    "mount-req/.other.json.tmp.171733"
+  ],
+  "request_accepted": true,
+  "kept_run": 1,
+  "cleanup_root_removed": true
+}

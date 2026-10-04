@@ -1,0 +1,238 @@
+{
+  "label": "long-empty",
+  "node_count": 50,
+  "target_rounds_per_node": 1000,
+  "workload": "empty tasks",
+  "samples": [
+    {
+      "round_per_node": 10,
+      "closed_node_rounds": 500,
+      "checkpoint_seconds": 3.572,
+      "completion_seconds": {
+        "min": 3.022,
+        "median": 3.222,
+        "max": 3.422
+      },
+      "node_rounds_per_second": 139.968,
+      "cpu_since_start": {
+        "self_seconds": 0.82,
+        "waited_children_seconds": 48.03
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 79709,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.032,
+        "median": 0.1075,
+        "max": 0.18
+      },
+      "last_runs": {}
+    },
+    {
+      "round_per_node": 100,
+      "closed_node_rounds": 5000,
+      "checkpoint_seconds": 29.741,
+      "completion_seconds": {
+        "min": 28.79,
+        "median": 29.391,
+        "max": 29.591
+      },
+      "node_rounds_per_second": 151.307,
+      "cpu_since_start": {
+        "self_seconds": 7.37,
+        "waited_children_seconds": 482.61
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 79859,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.03,
+        "median": 0.098,
+        "max": 0.189
+      },
+      "last_runs": {}
+    },
+    {
+      "round_per_node": 250,
+      "closed_node_rounds": 12500,
+      "checkpoint_seconds": 49.659,
+      "completion_seconds": {
+        "min": 48.303,
+        "median": 49.309,
+        "max": 49.509
+      },
+      "node_rounds_per_second": 151.029,
+      "cpu_since_start": {
+        "self_seconds": 18.2,
+        "waited_children_seconds": 1209.36
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 79959,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.029,
+        "median": 0.094,
+        "max": 0.174
+      },
+      "last_runs": {}
+    },
+    {
+      "round_per_node": 500,
+      "closed_node_rounds": 25000,
+      "checkpoint_seconds": 82.721,
+      "completion_seconds": {
+        "min": 81.165,
+        "median": 82.37,
+        "max": 82.571
+      },
+      "node_rounds_per_second": 151.111,
+      "cpu_since_start": {
+        "self_seconds": 36.18,
+        "waited_children_seconds": 2421.39
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 79959,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.029,
+        "median": 0.077,
+        "max": 0.195
+      },
+      "last_runs": {}
+    },
+    {
+      "round_per_node": 750,
+      "closed_node_rounds": 37500,
+      "checkpoint_seconds": 81.083,
+      "completion_seconds": {
+        "min": 79.927,
+        "median": 80.733,
+        "max": 80.933
+      },
+      "node_rounds_per_second": 154.163,
+      "cpu_since_start": {
+        "self_seconds": 53.97,
+        "waited_children_seconds": 3630.68
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 79959,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.03,
+        "median": 0.092,
+        "max": 0.196
+      },
+      "last_runs": {}
+    },
+    {
+      "round_per_node": 1000,
+      "closed_node_rounds": 50000,
+      "checkpoint_seconds": 83.721,
+      "completion_seconds": {
+        "min": 82.168,
+        "median": 83.171,
+        "max": 83.571
+      },
+      "node_rounds_per_second": 149.305,
+      "cpu_since_start": {
+        "self_seconds": 72.06,
+        "waited_children_seconds": 4844.8
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 80109,
+        "dot_tmp": 0
+      },
+      "summary_errors": [],
+      "task_errors": [],
+      "sampled_round_tick_to_tock_seconds": {
+        "min": 0.031,
+        "median": 0.104,
+        "max": 0.198
+      },
+      "last_runs": {}
+    }
+  ],
+  "uncertain_observations": [],
+  "uncertain_reason_counts": {},
+  "error_observations": [],
+  "polls": 1643,
+  "logical_cpus": 16,
+  "root_basename": "aos72-test-3e6e2tmq",
+  "total_seconds": 330.52,
+  "final_rounds": {
+    "n00": 1000,
+    "n01": 1000,
+    "n02": 1000,
+    "n03": 1000,
+    "n04": 1000,
+    "n05": 1000,
+    "n06": 1000,
+    "n07": 1000,
+    "n08": 1000,
+    "n09": 1000,
+    "n10": 1000,
+    "n11": 1000,
+    "n12": 1000,
+    "n13": 1000,
+    "n14": 1000,
+    "n15": 1000,
+    "n16": 1000,
+    "n17": 1000,
+    "n18": 1000,
+    "n19": 1000,
+    "n20": 1000,
+    "n21": 1000,
+    "n22": 1000,
+    "n23": 1000,
+    "n24": 1000,
+    "n25": 1000,
+    "n26": 1000,
+    "n27": 1000,
+    "n28": 1000,
+    "n29": 1000,
+    "n30": 1000,
+    "n31": 1000,
+    "n32": 1000,
+    "n33": 1000,
+    "n34": 1000,
+    "n35": 1000,
+    "n36": 1000,
+    "n37": 1000,
+    "n38": 1000,
+    "n39": 1000,
+    "n40": 1000,
+    "n41": 1000,
+    "n42": 1000,
+    "n43": 1000,
+    "n44": 1000,
+    "n45": 1000,
+    "n46": 1000,
+    "n47": 1000,
+    "n48": 1000,
+    "n49": 1000
+  },
+  "daemon_returncode": 0,
+  "cleanup_root_removed": true,
+  "cleanup_daemon_returncode": 0
+}

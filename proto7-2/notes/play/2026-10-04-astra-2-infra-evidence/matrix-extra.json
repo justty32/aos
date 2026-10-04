@@ -1,0 +1,208 @@
+{
+  "owner_encoding_collision": {
+    "collisions": [
+      {
+        "owners": [
+          "A/B",
+          "A+B"
+        ],
+        "same_filename": true,
+        "filename": "cli.pause.a@A+B.json"
+      },
+      {
+        "owners": [
+          "甲",
+          "乙"
+        ],
+        "same_filename": true,
+        "filename": "cli.pause.a@_.json"
+      },
+      {
+        "owners": [
+          "x?",
+          "x!"
+        ],
+        "same_filename": true,
+        "filename": "cli.pause.a@x_.json"
+      }
+    ],
+    "same_path": true,
+    "paused": {
+      "a": [
+        "乙"
+      ]
+    },
+    "receipt_owner": "乙"
+  },
+  "replay_birth_real_eacces": {
+    "failure": "read",
+    "during": {
+      "rc": 0,
+      "replayed": true,
+      "round": {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-04T12:55:13.749",
+        "tock_at": "2026-10-04T12:55:13.995",
+        "started": [
+          "w#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "64fe62a8c17e",
+        "reaped": [],
+        "skipped": [],
+        "replayed": true,
+        "incomplete": "tock"
+      },
+      "notification": null,
+      "actual_errno": 13
+    },
+    "after_permission_restored": {
+      "retry": {
+        "round": 1,
+        "skipped": "round already closed"
+      },
+      "notification": null,
+      "task_alive": true,
+      "state": {
+        "count": 0,
+        "runs": [
+          1
+        ]
+      },
+      "summary_errors": []
+    },
+    "next_round_state": {
+      "count": 1,
+      "runs": [
+        1
+      ],
+      "last_round": 2
+    }
+  },
+  "replay_notify_real_eacces": {
+    "failure": "write",
+    "during": {
+      "rc": 0,
+      "replayed": true,
+      "round": {
+        "round": 1,
+        "open": false,
+        "tick_at": "2026-10-04T12:55:14.380",
+        "tock_at": "2026-10-04T12:55:14.624",
+        "started": [
+          "w#1"
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "64fe62a8c17e",
+        "reaped": [],
+        "skipped": [],
+        "replayed": true,
+        "incomplete": "tock"
+      },
+      "notification": null,
+      "actual_errno": 13
+    },
+    "after_permission_restored": {
+      "retry": {
+        "round": 1,
+        "skipped": "round already closed"
+      },
+      "notification": null,
+      "task_alive": true,
+      "state": {
+        "count": 0,
+        "runs": [
+          1
+        ]
+      },
+      "summary_errors": []
+    },
+    "next_round_state": {
+      "count": 1,
+      "runs": [
+        1
+      ],
+      "last_round": 2
+    }
+  },
+  "nonregular_birth_live_task": {
+    "fault": "真 FIFO 取代 birth.json",
+    "view": {
+      "state": "empty",
+      "run": null
+    },
+    "tick": {
+      "round": 2,
+      "started": [
+        "k#2"
+      ],
+      "tasks_rev": "bc65501f0f3b"
+    },
+    "pids": [
+      241493,
+      241527
+    ],
+    "both_alive": true,
+    "live_procs": [
+      241493,
+      241527
+    ]
+  },
+  "nonregular_open_round": {
+    "fault": "真 FIFO 取代開著的 round.json",
+    "before": {
+      "round": 2,
+      "open": true,
+      "tick_at": "2026-10-04T12:55:15.376",
+      "tock_at": null,
+      "started": [],
+      "ctl": [],
+      "mounts": [],
+      "tasks_rev": "badd5360c67c",
+      "reaped": [],
+      "skipped": []
+    },
+    "second_tick": {
+      "round": 2,
+      "started": [],
+      "tasks_rev": "badd5360c67c"
+    },
+    "after": {
+      "round": 2,
+      "open": true,
+      "tick_at": "2026-10-04T12:55:15.376",
+      "tock_at": null,
+      "started": [],
+      "ctl": [],
+      "mounts": [],
+      "tasks_rev": "badd5360c67c",
+      "reaped": [],
+      "skipped": [],
+      "tasks_error": [
+        "round.json 不見了，從 last-round.json 的 1 接著數"
+      ]
+    },
+    "last_round": {
+      "round": 1,
+      "tick_at": "2026-10-04T12:55:15.372",
+      "tock_at": "2026-10-04T12:55:15.373",
+      "early": null,
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "skipped": [],
+      "ctl": [],
+      "mounts": [],
+      "tasks_error": [],
+      "errors": [],
+      "tasks_rev": "badd5360c67c"
+    },
+    "same_round_opened_again": true
+  },
+  "cleanup": {
+    "remaining_paths": []
+  }
+}

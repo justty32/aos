@@ -1,0 +1,131 @@
+{
+  "label": "empty",
+  "node_count": 50,
+  "target_rounds_per_node": 100,
+  "workload": "empty tasks",
+  "samples": [
+    {
+      "round_per_node": 10,
+      "closed_node_rounds": 500,
+      "checkpoint_seconds": 3.784,
+      "completion_seconds": {
+        "min": 3.233,
+        "median": 3.634,
+        "max": 3.634
+      },
+      "node_rounds_per_second": 132.141,
+      "cpu_since_start": {
+        "self_seconds": 0.84,
+        "waited_children_seconds": 48.66
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 79709,
+        "dot_tmp": 0
+      },
+      "summary_errors": []
+    },
+    {
+      "round_per_node": 50,
+      "closed_node_rounds": 2500,
+      "checkpoint_seconds": 14.651,
+      "completion_seconds": {
+        "min": 13.694,
+        "median": 14.3,
+        "max": 14.501
+      },
+      "node_rounds_per_second": 136.51,
+      "cpu_since_start": {
+        "self_seconds": 3.99,
+        "waited_children_seconds": 244.75
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 79709,
+        "dot_tmp": 0
+      },
+      "summary_errors": []
+    },
+    {
+      "round_per_node": 100,
+      "closed_node_rounds": 5000,
+      "checkpoint_seconds": 17.257,
+      "completion_seconds": {
+        "min": 16.506,
+        "median": 16.907,
+        "max": 17.107
+      },
+      "node_rounds_per_second": 144.866,
+      "cpu_since_start": {
+        "self_seconds": 7.69,
+        "waited_children_seconds": 486.82
+      },
+      "storage": {
+        "files": 456,
+        "bytes": 79859,
+        "dot_tmp": 0
+      },
+      "summary_errors": []
+    }
+  ],
+  "uncertain_observations": [],
+  "error_observations": [],
+  "polls": 178,
+  "root_basename": "aos72-test-1956a3h_",
+  "total_seconds": 35.702,
+  "final_rounds": {
+    "n00": 100,
+    "n01": 100,
+    "n02": 100,
+    "n03": 100,
+    "n04": 100,
+    "n05": 100,
+    "n06": 100,
+    "n07": 100,
+    "n08": 100,
+    "n09": 100,
+    "n10": 100,
+    "n11": 100,
+    "n12": 100,
+    "n13": 100,
+    "n14": 100,
+    "n15": 100,
+    "n16": 100,
+    "n17": 100,
+    "n18": 100,
+    "n19": 100,
+    "n20": 100,
+    "n21": 100,
+    "n22": 100,
+    "n23": 100,
+    "n24": 100,
+    "n25": 100,
+    "n26": 100,
+    "n27": 100,
+    "n28": 100,
+    "n29": 100,
+    "n30": 100,
+    "n31": 100,
+    "n32": 100,
+    "n33": 100,
+    "n34": 100,
+    "n35": 100,
+    "n36": 100,
+    "n37": 100,
+    "n38": 100,
+    "n39": 100,
+    "n40": 100,
+    "n41": 100,
+    "n42": 100,
+    "n43": 100,
+    "n44": 100,
+    "n45": 100,
+    "n46": 100,
+    "n47": 100,
+    "n48": 100,
+    "n49": 100
+  },
+  "daemon_returncode": 0,
+  "cleanup_root_removed": true,
+  "cleanup_daemon_returncode": 0
+}

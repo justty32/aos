@@ -1,0 +1,55 @@
+{
+  "slot_recreated": {
+    "before": {
+      "run": 1,
+      "usage": {
+        "tokens": 100
+      },
+      "state": {
+        "previous": true
+      }
+    },
+    "deleted": true,
+    "after": {
+      "run": 3,
+      "usage": {
+        "tokens": 150
+      },
+      "state": null
+    },
+    "kernel_rule_simulation": {
+      "observations": [
+        100,
+        150
+      ],
+      "spec8_retired": 0,
+      "spec8_total": 150,
+      "true_usage": 250,
+      "conclusion": "No observed decrease: slot-name+max counter cannot distinguish new lifetime. kernel is absent; this is design simulation, not an implemented kernel bug."
+    }
+  },
+  "history_max_lines": {
+    "max_lines": 3,
+    "node_rows": 3,
+    "event_rows": 3
+  },
+  "history_gap": {
+    "rows": [
+      {
+        "round": 100
+      },
+      {
+        "gap": [
+          101,
+          109
+        ],
+        "at": "2026-10-04T12:49:39.012"
+      },
+      {
+        "round": 110
+      }
+    ],
+    "initial_rounds_1_to_99_explicit_gap": false
+  },
+  "cleanup_root_removed": true
+}

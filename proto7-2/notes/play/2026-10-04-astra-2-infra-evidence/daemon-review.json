@@ -1,0 +1,227 @@
+{
+  "A2-04-same-inode": {
+    "phase": "missing",
+    "before_round": 2,
+    "after_round": 0,
+    "task_alive": false,
+    "outside_aos": null
+  },
+  "A2-04-outside": {
+    "phase": "missing",
+    "before_round": 2,
+    "after_round": 0,
+    "task_alive": false,
+    "outside_aos": false
+  },
+  "A2-06-and-A2-13": {
+    "different_request_paths": true,
+    "initial": {
+      "round": 0,
+      "round_open": false,
+      "recovery_pending": false,
+      "phase": "paused",
+      "paused_by": [
+        "A",
+        "B"
+      ],
+      "pause_pending": false,
+      "interval_ms": null,
+      "early_tock": false,
+      "live": []
+    },
+    "after_one": {
+      "round": 1,
+      "round_open": false,
+      "recovery_pending": false,
+      "phase": "paused",
+      "paused_by": [
+        "A"
+      ],
+      "pause_pending": false,
+      "interval_ms": 120,
+      "early_tock": false,
+      "live": [],
+      "steps_left": {
+        "B": 2
+      }
+    },
+    "after_three": {
+      "round": 3,
+      "round_open": false,
+      "recovery_pending": false,
+      "phase": "paused",
+      "paused_by": [
+        "B"
+      ],
+      "pause_pending": false,
+      "interval_ms": 120,
+      "early_tock": false,
+      "live": []
+    }
+  },
+  "A2-11": {
+    "interval_ms": 2500,
+    "wake_to_next_tick_s": 2.439,
+    "receipt": {
+      "ok": true,
+      "msg": "wake a",
+      "at": "2026-10-04T12:52:44.146",
+      "queued_at": "2026-10-04T12:52:44.130"
+    }
+  },
+  "manual-round": {
+    "second_tick_rc": 3,
+    "original_open_unchanged": true,
+    "daemon_recovered_open": true,
+    "corrupt_status": {
+      "round": 2,
+      "round_open": null,
+      "recovery_pending": false,
+      "phase": "error",
+      "paused_by": [
+        ""
+      ],
+      "pause_pending": false,
+      "interval_ms": 100,
+      "early_tock": false,
+      "live": [],
+      "last_error": {
+        "prog": "round",
+        "rc": null,
+        "round": 2,
+        "at": "2026-10-04T12:52:47.958",
+        "err": "不知道上一回合關了沒，不 tick，退避後再看：round.json 內容不完整（半寫或不是 JSON）；要 {\"round\": 整數, \"open\": true/false}，確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}",
+        "kind": "round-unknown"
+      },
+      "last_event": {
+        "ev": "round-recovered",
+        "at": "2026-10-04T12:52:47.560",
+        "round": 1
+      }
+    },
+    "repaired_round": 3,
+    "repaired_status": {
+      "round": 3,
+      "round_open": true,
+      "recovery_pending": false,
+      "phase": "tock",
+      "paused_by": [],
+      "pause_pending": false,
+      "interval_ms": 100,
+      "early_tock": false,
+      "live": [],
+      "last_error": {
+        "prog": "round",
+        "rc": null,
+        "round": 2,
+        "at": "2026-10-04T12:52:47.958",
+        "err": "不知道上一回合關了沒，不 tick，退避後再看：round.json 內容不完整（半寫或不是 JSON）；要 {\"round\": 整數, \"open\": true/false}，確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}",
+        "kind": "round-unknown"
+      },
+      "last_event": {
+        "ev": "round-recovered",
+        "at": "2026-10-04T12:52:47.560",
+        "round": 1
+      }
+    }
+  },
+  "manual-birth": {
+    "unknown_status": {
+      "round": 2,
+      "round_open": true,
+      "recovery_pending": false,
+      "phase": "tock",
+      "paused_by": [],
+      "pause_pending": false,
+      "interval_ms": 150,
+      "early_tock": false,
+      "live": [
+        "k#?"
+      ],
+      "uncertain": [
+        {
+          "slot": "k",
+          "run": null,
+          "why": "birth.json 壞了（半寫、不是物件或 run 不是整數），也沒有 pid.json／exit.json 可以認出是哪個 run、跑過沒；確認沒在跑後刪掉 birth.json 就會當空槽"
+        }
+      ]
+    },
+    "after_delete_birth": {
+      "name": "k",
+      "slot": "k",
+      "run": 3,
+      "round": 3,
+      "node": "a",
+      "once": false,
+      "restart_of": null,
+      "at": "2026-10-04T12:52:50.103",
+      "runner": {
+        "pid": 196160,
+        "starttime": 1629020
+      },
+      "argv": [
+        "true"
+      ],
+      "mounts": {}
+    }
+  },
+  "real-environ-eacces": {
+    "uid": 1000,
+    "environ_errno": 13,
+    "expected_eacces": 13,
+    "target_pid": 196347,
+    "runner_pid": 196325,
+    "env_scan": [],
+    "ctl_receipt": {
+      "op": "kill",
+      "by": "real-eacces",
+      "result": {
+        "ok": true,
+        "msg": "no process；pid.json 的 pgid 196347 不是這個任務的群組，沒動它",
+        "at": "2026-10-04T12:52:51.460",
+        "run": "k#1"
+      }
+    },
+    "target_alive_after_kill": true,
+    "tock_alive": [
+      "k#1"
+    ],
+    "status": {
+      "round": 1,
+      "round_open": null,
+      "recovery_pending": false,
+      "phase": "idle",
+      "paused_by": [],
+      "pause_pending": false,
+      "interval_ms": null,
+      "early_tock": false,
+      "live": [
+        "k#1"
+      ]
+    }
+  },
+  "real-environ-eacces-before-pid": {
+    "environ_errno": 13,
+    "runner_dead": true,
+    "pid_json_absent": true,
+    "tock_ended": [
+      {
+        "run": "k#1",
+        "code": null,
+        "lost": true
+      }
+    ],
+    "next_started": [
+      "k#2"
+    ],
+    "two_live_pids": [
+      197205,
+      197346
+    ]
+  },
+  "_cleanup": {
+    "remaining_recorded_pids": [],
+    "work_entries": [],
+    "work_removed": true
+  }
+}

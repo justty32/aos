@@ -1,0 +1,1501 @@
+{
+  "once_boundaries": [
+    {
+      "point": "before-launch",
+      "tick_rc": -9,
+      "crash_birth": null,
+      "crash_tasks": {
+        "tasks": [
+          {
+            "name": "o",
+            "mode": "once",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ]
+          }
+        ]
+      },
+      "executions": [
+        "2"
+      ],
+      "ended": [
+        {
+          "run": "o#2",
+          "code": 0
+        }
+      ],
+      "final_tasks": {
+        "tasks": []
+      },
+      "rounds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "point": "after-launch",
+      "tick_rc": -9,
+      "crash_birth": null,
+      "crash_tasks": {
+        "tasks": [
+          {
+            "name": "o",
+            "mode": "once",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "launch": {
+              "slot": "o",
+              "run": 1,
+              "round": 1
+            }
+          }
+        ]
+      },
+      "executions": [
+        "2"
+      ],
+      "ended": [
+        {
+          "run": "o#2",
+          "code": 0
+        }
+      ],
+      "final_tasks": {
+        "tasks": []
+      },
+      "rounds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "point": "before-birth",
+      "tick_rc": -9,
+      "crash_birth": null,
+      "crash_tasks": {
+        "tasks": [
+          {
+            "name": "o",
+            "mode": "once",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "launch": {
+              "slot": "o",
+              "run": 1,
+              "round": 1
+            }
+          }
+        ]
+      },
+      "executions": [
+        "2"
+      ],
+      "ended": [
+        {
+          "run": "o#2",
+          "code": 0
+        }
+      ],
+      "final_tasks": {
+        "tasks": []
+      },
+      "rounds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "point": "after-birth",
+      "tick_rc": -9,
+      "crash_birth": {
+        "name": "o",
+        "slot": "o",
+        "run": 1,
+        "round": 1,
+        "node": "n",
+        "once": true,
+        "restart_of": null,
+        "at": "2026-10-04T12:53:39.170",
+        "runner": null,
+        "argv": [
+          "sh",
+          "-c",
+          "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+        ],
+        "mounts": {}
+      },
+      "crash_tasks": {
+        "tasks": [
+          {
+            "name": "o",
+            "mode": "once",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "launch": {
+              "slot": "o",
+              "run": 1,
+              "round": 1
+            }
+          }
+        ]
+      },
+      "executions": [],
+      "ended": [
+        {
+          "run": "o#1",
+          "code": null,
+          "lost": true
+        }
+      ],
+      "final_tasks": {
+        "tasks": []
+      },
+      "rounds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "point": "before-runner",
+      "tick_rc": -9,
+      "crash_birth": {
+        "name": "o",
+        "slot": "o",
+        "run": 1,
+        "round": 1,
+        "node": "n",
+        "once": true,
+        "restart_of": null,
+        "at": "2026-10-04T12:53:40.030",
+        "runner": null,
+        "argv": [
+          "sh",
+          "-c",
+          "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+        ],
+        "mounts": {}
+      },
+      "crash_tasks": {
+        "tasks": [
+          {
+            "name": "o",
+            "mode": "once",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "launch": {
+              "slot": "o",
+              "run": 1,
+              "round": 1
+            }
+          }
+        ]
+      },
+      "executions": [
+        "1"
+      ],
+      "ended": [
+        {
+          "run": "o#1",
+          "code": 0
+        }
+      ],
+      "final_tasks": {
+        "tasks": []
+      },
+      "rounds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "point": "after-runner",
+      "tick_rc": -9,
+      "crash_birth": {
+        "name": "o",
+        "slot": "o",
+        "run": 1,
+        "round": 1,
+        "node": "n",
+        "once": true,
+        "restart_of": null,
+        "at": "2026-10-04T12:53:40.818",
+        "runner": {
+          "pid": 211793,
+          "starttime": 1634091
+        },
+        "argv": [
+          "sh",
+          "-c",
+          "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+        ],
+        "mounts": {}
+      },
+      "crash_tasks": {
+        "tasks": [
+          {
+            "name": "o",
+            "mode": "once",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "launch": {
+              "slot": "o",
+              "run": 1,
+              "round": 1
+            }
+          }
+        ]
+      },
+      "executions": [
+        "1"
+      ],
+      "ended": [
+        {
+          "run": "o#1",
+          "code": 0
+        }
+      ],
+      "final_tasks": {
+        "tasks": []
+      },
+      "rounds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "point": "before-delete",
+      "tick_rc": -9,
+      "crash_birth": {
+        "name": "o",
+        "slot": "o",
+        "run": 1,
+        "round": 1,
+        "node": "n",
+        "once": true,
+        "restart_of": null,
+        "at": "2026-10-04T12:53:41.571",
+        "runner": {
+          "pid": 212044,
+          "starttime": 1634166
+        },
+        "argv": [
+          "sh",
+          "-c",
+          "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+        ],
+        "mounts": {}
+      },
+      "crash_tasks": {
+        "tasks": [
+          {
+            "name": "o",
+            "mode": "once",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "launch": {
+              "slot": "o",
+              "run": 1,
+              "round": 1
+            }
+          }
+        ]
+      },
+      "executions": [
+        "1"
+      ],
+      "ended": [
+        {
+          "run": "o#1",
+          "code": 0
+        }
+      ],
+      "final_tasks": {
+        "tasks": []
+      },
+      "rounds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "point": "after-delete",
+      "tick_rc": -9,
+      "crash_birth": {
+        "name": "o",
+        "slot": "o",
+        "run": 1,
+        "round": 1,
+        "node": "n",
+        "once": true,
+        "restart_of": null,
+        "at": "2026-10-04T12:53:42.337",
+        "runner": {
+          "pid": 212274,
+          "starttime": 1634243
+        },
+        "argv": [
+          "sh",
+          "-c",
+          "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+        ],
+        "mounts": {}
+      },
+      "crash_tasks": {
+        "tasks": []
+      },
+      "executions": [
+        "1"
+      ],
+      "ended": [
+        {
+          "run": "o#1",
+          "code": 0
+        }
+      ],
+      "final_tasks": {
+        "tasks": []
+      },
+      "rounds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    }
+  ],
+  "once_corrupt_birth": {
+    "tick_crash_rc": -9,
+    "before": {
+      "launch": {
+        "tasks": [
+          {
+            "name": "o",
+            "mode": "once",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "launch": {
+              "slot": "o",
+              "run": 1,
+              "round": 1
+            }
+          }
+        ]
+      },
+      "exit": {
+        "run": 1,
+        "code": 0,
+        "at": "2026-10-04T12:53:43.167",
+        "round": 1
+      },
+      "executions": [
+        "1"
+      ]
+    },
+    "corrupt_tock": {
+      "round": 1,
+      "tick_at": "2026-10-04T12:53:43.083",
+      "tock_at": "2026-10-04T12:53:43.192",
+      "early": null,
+      "started": [],
+      "alive": [],
+      "ended": [
+        {
+          "run": "o#1",
+          "code": 0
+        }
+      ],
+      "skipped": [],
+      "ctl": [],
+      "mounts": [],
+      "tasks_error": [],
+      "errors": [],
+      "tasks_rev": "736061d3a733"
+    },
+    "recovery_tick": {
+      "round": 2,
+      "started": [],
+      "tasks_rev": "dac50ca41ad0"
+    },
+    "executions": [
+      "1"
+    ],
+    "final_tasks": {
+      "tasks": []
+    },
+    "final_summary": {
+      "round": 2,
+      "tick_at": "2026-10-04T12:53:43.222",
+      "tock_at": "2026-10-04T12:53:43.355",
+      "early": null,
+      "started": [],
+      "alive": [],
+      "ended": [],
+      "skipped": [],
+      "ctl": [],
+      "mounts": [],
+      "tasks_error": [],
+      "errors": [],
+      "tasks_rev": "dac50ca41ad0"
+    }
+  },
+  "three_state": {
+    "proc_starttime_none": {
+      "view": {
+        "state": "live",
+        "run": 1,
+        "birth": {
+          "name": "o",
+          "slot": "o",
+          "run": 1,
+          "round": 1,
+          "node": "n",
+          "once": false,
+          "restart_of": null,
+          "at": "2026-10-04T12:53:43.455",
+          "runner": {
+            "pid": 212627,
+            "starttime": 1634355
+          },
+          "argv": [
+            "sleep",
+            "60"
+          ],
+          "mounts": {}
+        },
+        "pid": {
+          "run": 1,
+          "pid": 212649,
+          "pgid": 212649,
+          "starttime": 1634363,
+          "runner_pid": 212627,
+          "at": "2026-10-04T12:53:43.537"
+        },
+        "unsure": "任務或 runner 的 /proc（pid／starttime）讀不到，當活（K-05、A2-01）"
+      },
+      "tick": {
+        "round": 2,
+        "started": [],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "summary": {
+        "round": 2,
+        "tick_at": "2026-10-04T12:53:43.542",
+        "tock_at": "2026-10-04T12:53:43.543",
+        "early": null,
+        "started": [],
+        "alive": [
+          "o#1"
+        ],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [
+          {
+            "slot": "o",
+            "phase": "unsure",
+            "err": "任務或 runner 的 /proc（pid／starttime）讀不到，當活（K-05、A2-01）"
+          }
+        ],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "old_pid": 212649,
+      "old_alive": true,
+      "pid_unchanged": true
+    },
+    "proc_stat_eio": {
+      "view": {
+        "state": "live",
+        "run": 1,
+        "birth": {
+          "name": "o",
+          "slot": "o",
+          "run": 1,
+          "round": 1,
+          "node": "n",
+          "once": false,
+          "restart_of": null,
+          "at": "2026-10-04T12:53:43.630",
+          "runner": {
+            "pid": 212679,
+            "starttime": 1634372
+          },
+          "argv": [
+            "sleep",
+            "60"
+          ],
+          "mounts": {}
+        },
+        "pid": {
+          "run": 1,
+          "pid": 212702,
+          "pgid": 212702,
+          "starttime": 1634380,
+          "runner_pid": 212679,
+          "at": "2026-10-04T12:53:43.712"
+        },
+        "unsure": "任務或 runner 的 /proc（pid／starttime）讀不到，當活（K-05、A2-01）"
+      },
+      "tick": {
+        "round": 2,
+        "started": [],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "summary": {
+        "round": 2,
+        "tick_at": "2026-10-04T12:53:43.713",
+        "tock_at": "2026-10-04T12:53:43.714",
+        "early": null,
+        "started": [],
+        "alive": [
+          "o#1"
+        ],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [
+          {
+            "slot": "o",
+            "phase": "unsure",
+            "err": "任務或 runner 的 /proc（pid／starttime）讀不到，當活（K-05、A2-01）"
+          }
+        ],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "old_pid": 212702,
+      "old_alive": true,
+      "pid_unchanged": true
+    },
+    "proc_all_eio": {
+      "view": {
+        "state": "live",
+        "run": 1,
+        "birth": {
+          "name": "o",
+          "slot": "o",
+          "run": 1,
+          "round": 1,
+          "node": "n",
+          "once": false,
+          "restart_of": null,
+          "at": "2026-10-04T12:53:43.799",
+          "runner": {
+            "pid": 212736,
+            "starttime": 1634389
+          },
+          "argv": [
+            "sleep",
+            "60"
+          ],
+          "mounts": {}
+        },
+        "pid": {
+          "run": 1,
+          "pid": 212757,
+          "pgid": 212757,
+          "starttime": 1634397,
+          "runner_pid": 212736,
+          "at": "2026-10-04T12:53:43.875"
+        },
+        "unsure": "任務或 runner 的 /proc（pid／starttime）讀不到，當活（K-05、A2-01）"
+      },
+      "tick": {
+        "round": 2,
+        "started": [],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "summary": {
+        "round": 2,
+        "tick_at": "2026-10-04T12:53:43.879",
+        "tock_at": "2026-10-04T12:53:43.880",
+        "early": null,
+        "started": [],
+        "alive": [
+          "o#1"
+        ],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [
+          {
+            "slot": "o",
+            "phase": "unsure",
+            "err": "任務或 runner 的 /proc（pid／starttime）讀不到，當活（K-05、A2-01）"
+          }
+        ],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "old_pid": 212757,
+      "old_alive": true,
+      "pid_unchanged": true
+    },
+    "birth_bad_proc_environ_eio": {
+      "view": {
+        "state": "unknown",
+        "run": null,
+        "broken": true,
+        "why": "birth.json 壞了（半寫、不是物件或 run 不是整數），身分掃描讀不完整：讀不到 /proc/1/environ：OSError(5, 'injected /proc EIO')"
+      },
+      "tick": {
+        "round": 2,
+        "started": [],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "summary": {
+        "round": 2,
+        "tick_at": "2026-10-04T12:53:44.047",
+        "tock_at": "2026-10-04T12:53:44.048",
+        "early": null,
+        "started": [],
+        "alive": [],
+        "ended": [],
+        "skipped": [
+          {
+            "name": "o",
+            "slot": "o",
+            "why": "unknown: birth.json 壞了（半寫、不是物件或 run 不是整數），身分掃描讀不完整：讀不到 /proc/1/environ：OSError(5, 'injected /proc EIO')"
+          }
+        ],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [
+          {
+            "slot": "o",
+            "phase": "judge",
+            "err": "birth.json 壞了（半寫、不是物件或 run 不是整數），身分掃描讀不完整：讀不到 /proc/1/environ：OSError(5, 'injected /proc EIO')"
+          }
+        ],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "old_pid": 212809,
+      "old_alive": true,
+      "pid_unchanged": true
+    }
+  },
+  "rounds": {
+    "round_eio": {
+      "tick": {
+        "exception": "Unknown",
+        "message": "round.json 讀不到：OSError(5, 'injected round EIO')"
+      },
+      "tock": {
+        "exception": "Unknown",
+        "message": "round.json 讀不到：OSError(5, 'injected round EIO')"
+      },
+      "round_bytes_unchanged": true,
+      "last_round": {
+        "round": 1,
+        "tick_at": "2026-10-04T12:53:44.110",
+        "tock_at": "2026-10-04T12:53:44.111",
+        "early": null,
+        "started": [],
+        "alive": [],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "badd5360c67c"
+      }
+    },
+    "round_bad": {
+      "tick": {
+        "exception": "Unknown",
+        "message": "round.json 內容不完整（半寫或不是 JSON）；要 {\"round\": 整數, \"open\": true/false}，確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}"
+      },
+      "tock": {
+        "exception": "Unknown",
+        "message": "round.json 內容不完整（半寫或不是 JSON）；要 {\"round\": 整數, \"open\": true/false}，確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}"
+      },
+      "round_bytes_unchanged": true,
+      "last_round": {
+        "round": 1,
+        "tick_at": "2026-10-04T12:53:44.180",
+        "tock_at": "2026-10-04T12:53:44.181",
+        "early": null,
+        "started": [],
+        "alive": [],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "badd5360c67c"
+      }
+    },
+    "round_open_missing": {
+      "tick": {
+        "exception": "Unknown",
+        "message": "round.json 內容不完整（{\"round\": 2, \"tick_at\": \"2026-10-04T12:53:44.206\", \"tock_at\": null, \"started\": [], \"ctl\": [], \"mounts\": [], \"tasks_rev\":）；要 {\"round\": 整數, \"open\": true/false}，確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}"
+      },
+      "tock": {
+        "exception": "Unknown",
+        "message": "round.json 內容不完整（{\"round\": 2, \"tick_at\": \"2026-10-04T12:53:44.206\", \"tock_at\": null, \"started\": [], \"ctl\": [], \"mounts\": [], \"tasks_rev\":）；要 {\"round\": 整數, \"open\": true/false}，確認上一回合收完後請人寫回，例如 {\"round\": N, \"open\": false}"
+      },
+      "round_bytes_unchanged": true,
+      "last_round": {
+        "round": 1,
+        "tick_at": "2026-10-04T12:53:44.205",
+        "tock_at": "2026-10-04T12:53:44.206",
+        "early": null,
+        "started": [],
+        "alive": [],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "badd5360c67c"
+      }
+    },
+    "direct_tick_open": {
+      "tick": {
+        "exception": "Unknown",
+        "message": "第 2 回合還開著（round.json open: true），先 tock 收掉才開下一回合"
+      },
+      "tock": {
+        "round": 2,
+        "tick_at": "2026-10-04T12:53:44.227",
+        "tock_at": "2026-10-04T12:53:44.228",
+        "early": null,
+        "started": [],
+        "alive": [],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "badd5360c67c"
+      },
+      "round_bytes_unchanged": false,
+      "last_round": {
+        "round": 2,
+        "tick_at": "2026-10-04T12:53:44.227",
+        "tock_at": "2026-10-04T12:53:44.228",
+        "early": null,
+        "started": [],
+        "alive": [],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "badd5360c67c"
+      }
+    }
+  },
+  "restart": {
+    "original_append_sigkill": {
+      "rc": -9,
+      "queued_after_cut": {
+        "tasks": [
+          {
+            "name": "o",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "mounts": {},
+            "mode": "once",
+            "slot": "o",
+            "restart_of": "o#1",
+            "ctl_id": "h:45e19a4c178aa0e8"
+          }
+        ]
+      },
+      "queued_after_recovery": {
+        "tasks": [
+          {
+            "name": "o",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\""
+            ],
+            "mounts": {},
+            "mode": "once",
+            "slot": "o",
+            "restart_of": "o#1",
+            "ctl_id": "h:45e19a4c178aa0e8"
+          }
+        ]
+      },
+      "started": [
+        [
+          "o#2"
+        ],
+        [],
+        []
+      ],
+      "executions": [
+        "1",
+        "2"
+      ]
+    },
+    "new_mtime": {
+      "ctl_ids": [
+        "h:325673f6b95cfe4f",
+        "h:b0c4892cc645ebbf"
+      ],
+      "inodes": [
+        677824,
+        677985
+      ],
+      "executions": [
+        "1",
+        "2",
+        "3"
+      ],
+      "receipts": [
+        {
+          "op": "restart",
+          "by": "probe",
+          "result": {
+            "ok": true,
+            "msg": "already ended; once 項已加進 tasks.json（slot o）",
+            "at": "2026-10-04T12:53:44.997",
+            "run": "o#1"
+          }
+        },
+        {
+          "op": "restart",
+          "by": "probe",
+          "result": {
+            "ok": true,
+            "msg": "already ended; once 項已加進 tasks.json（slot o）",
+            "at": "2026-10-04T12:53:45.133",
+            "run": "o#2"
+          }
+        }
+      ]
+    },
+    "same_mtime": {
+      "ctl_ids": [
+        "h:b2946bc1ed0d8c80",
+        "h:b2946bc1ed0d8c80"
+      ],
+      "inodes": [
+        678326,
+        678493
+      ],
+      "executions": [
+        "1",
+        "2"
+      ],
+      "receipts": [
+        {
+          "op": "restart",
+          "by": "probe",
+          "result": {
+            "ok": true,
+            "msg": "already ended; once 項已加進 tasks.json（slot o）",
+            "at": "2026-10-04T12:53:45.422",
+            "run": "o#1"
+          }
+        },
+        {
+          "op": "restart",
+          "by": "probe",
+          "result": {
+            "ok": true,
+            "msg": "這份 restart 請求已經起了 o#2（o#1 的重起；重播不重做）",
+            "at": "2026-10-04T12:53:45.534",
+            "run": "o#2"
+          }
+        }
+      ]
+    },
+    "long_ids": {
+      "ctl_ids": [
+        "id:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "id:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ],
+      "inodes": [
+        678764,
+        678914
+      ],
+      "executions": [
+        "1",
+        "2"
+      ],
+      "receipts": [
+        {
+          "op": "restart",
+          "by": "probe",
+          "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0",
+          "result": {
+            "ok": true,
+            "msg": "already ended; once 項已加進 tasks.json（slot o）",
+            "at": "2026-10-04T12:53:45.750",
+            "run": "o#1"
+          }
+        },
+        {
+          "op": "restart",
+          "by": "probe",
+          "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1",
+          "result": {
+            "ok": true,
+            "msg": "這份 restart 請求已經起了 o#2（o#1 的重起；重播不重做）",
+            "at": "2026-10-04T12:53:45.866",
+            "run": "o#2"
+          }
+        }
+      ]
+    },
+    "ctl_unlink_denied_birth_reused": {
+      "real_unlink_errors": [
+        {
+          "errno": 13,
+          "mode": "0o555"
+        },
+        {
+          "errno": 13,
+          "mode": "0o555"
+        },
+        {
+          "errno": 13,
+          "mode": "0o555"
+        },
+        {
+          "errno": 13,
+          "mode": "0o555"
+        },
+        {
+          "errno": 13,
+          "mode": "0o555"
+        },
+        {
+          "errno": 13,
+          "mode": "0o555"
+        },
+        {
+          "errno": 13,
+          "mode": "0o555"
+        },
+        {
+          "errno": 13,
+          "mode": "0o555"
+        }
+      ],
+      "rows": [
+        {
+          "tick": {
+            "round": 2,
+            "started": [
+              "o#2"
+            ],
+            "tasks_rev": "37fa96fbeadf"
+          },
+          "birth": {
+            "name": "o",
+            "slot": "o",
+            "run": 2,
+            "round": 2,
+            "node": "n",
+            "once": true,
+            "restart_of": "o#1",
+            "at": "2026-10-04T12:53:46.133",
+            "runner": {
+              "pid": 213484,
+              "starttime": 1634623
+            },
+            "ctl_id": "id:one-request",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+            ],
+            "mounts": {}
+          },
+          "receipt": {
+            "op": "restart",
+            "id": "one-request",
+            "result": {
+              "ok": true,
+              "msg": "這份 restart 請求已經起了 o#2（o#1 的重起；重播不重做）",
+              "at": "2026-10-04T12:53:46.258",
+              "run": "o#2"
+            }
+          },
+          "tasks": {
+            "tasks": [
+              {
+                "name": "o",
+                "mode": "keep",
+                "argv": [
+                  "sh",
+                  "-c",
+                  "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+                ]
+              }
+            ]
+          },
+          "summary_ctl": [
+            {
+              "slot": "o",
+              "run": "o#1",
+              "op": "restart",
+              "ok": true
+            },
+            {
+              "slot": "o",
+              "run": "o#2",
+              "op": "restart",
+              "ok": true
+            }
+          ]
+        },
+        {
+          "tick": {
+            "round": 3,
+            "started": [
+              "o#3"
+            ],
+            "tasks_rev": "c5bcd76550ce"
+          },
+          "birth": {
+            "name": "o",
+            "slot": "o",
+            "run": 3,
+            "round": 3,
+            "node": "n",
+            "once": false,
+            "restart_of": null,
+            "at": "2026-10-04T12:53:46.263",
+            "runner": {
+              "pid": 213534,
+              "starttime": 1634636
+            },
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+            ],
+            "mounts": {}
+          },
+          "receipt": {
+            "op": "restart",
+            "id": "one-request",
+            "result": {
+              "ok": true,
+              "msg": "killed 1 group(s); once 項已加進 tasks.json（slot o）",
+              "at": "2026-10-04T12:53:46.474",
+              "run": "o#3"
+            }
+          },
+          "tasks": {
+            "tasks": [
+              {
+                "name": "o",
+                "mode": "keep",
+                "argv": [
+                  "sh",
+                  "-c",
+                  "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+                ]
+              },
+              {
+                "name": "o",
+                "argv": [
+                  "sh",
+                  "-c",
+                  "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+                ],
+                "mounts": {},
+                "mode": "once",
+                "slot": "o",
+                "restart_of": "o#3",
+                "ctl_id": "id:one-request"
+              }
+            ]
+          },
+          "summary_ctl": [
+            {
+              "slot": "o",
+              "run": "o#2",
+              "op": "restart",
+              "ok": true
+            },
+            {
+              "slot": "o",
+              "run": "o#3",
+              "op": "restart",
+              "ok": true
+            }
+          ]
+        },
+        {
+          "tick": {
+            "round": 4,
+            "started": [
+              "o#4"
+            ],
+            "tasks_rev": "f277bf33cc0c"
+          },
+          "birth": {
+            "name": "o",
+            "slot": "o",
+            "run": 4,
+            "round": 4,
+            "node": "n",
+            "once": true,
+            "restart_of": "o#3",
+            "at": "2026-10-04T12:53:46.498",
+            "runner": {
+              "pid": 213605,
+              "starttime": 1634659
+            },
+            "ctl_id": "id:one-request",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+            ],
+            "mounts": {}
+          },
+          "receipt": {
+            "op": "restart",
+            "id": "one-request",
+            "result": {
+              "ok": true,
+              "msg": "這份 restart 請求已經起了 o#4（o#3 的重起；重播不重做）",
+              "at": "2026-10-04T12:53:46.626",
+              "run": "o#4"
+            }
+          },
+          "tasks": {
+            "tasks": [
+              {
+                "name": "o",
+                "mode": "keep",
+                "argv": [
+                  "sh",
+                  "-c",
+                  "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+                ]
+              }
+            ]
+          },
+          "summary_ctl": [
+            {
+              "slot": "o",
+              "run": "o#3",
+              "op": "restart",
+              "ok": true
+            },
+            {
+              "slot": "o",
+              "run": "o#4",
+              "op": "restart",
+              "ok": true
+            }
+          ]
+        },
+        {
+          "tick": {
+            "round": 5,
+            "started": [],
+            "tasks_rev": "c5bcd76550ce"
+          },
+          "birth": {
+            "name": "o",
+            "slot": "o",
+            "run": 4,
+            "round": 4,
+            "node": "n",
+            "once": true,
+            "restart_of": "o#3",
+            "at": "2026-10-04T12:53:46.498",
+            "runner": {
+              "pid": 213605,
+              "starttime": 1634659
+            },
+            "ctl_id": "id:one-request",
+            "argv": [
+              "sh",
+              "-c",
+              "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+            ],
+            "mounts": {}
+          },
+          "receipt": {
+            "op": "restart",
+            "id": "one-request",
+            "result": {
+              "ok": true,
+              "msg": "這份 restart 請求已經起了 o#4（o#3 的重起；重播不重做）",
+              "at": "2026-10-04T12:53:46.755",
+              "run": "o#4"
+            }
+          },
+          "tasks": {
+            "tasks": [
+              {
+                "name": "o",
+                "mode": "keep",
+                "argv": [
+                  "sh",
+                  "-c",
+                  "echo \"$AOS7_RUN\" >> \"$AOS7_NODE/ran\"; if [ \"$AOS7_RUN\" -ge 3 ]; then sleep 60; fi"
+                ]
+              }
+            ]
+          },
+          "summary_ctl": [
+            {
+              "slot": "o",
+              "run": "o#4",
+              "op": "restart",
+              "ok": true
+            },
+            {
+              "slot": "o",
+              "run": "o#4",
+              "op": "restart",
+              "ok": true
+            }
+          ]
+        }
+      ],
+      "executions": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "ctl_still_present": true
+    }
+  },
+  "identity": {
+    "runner_before_pid": {
+      "tick_rc": 0,
+      "old_pids": [
+        213902
+      ],
+      "birth": {
+        "name": "o",
+        "slot": "o",
+        "run": 1,
+        "round": 1,
+        "node": "n",
+        "once": false,
+        "restart_of": null,
+        "at": "2026-10-04T12:53:47.149",
+        "runner": {
+          "pid": 213812,
+          "starttime": 1634724
+        },
+        "argv": [
+          "sleep",
+          "60"
+        ],
+        "mounts": {}
+      },
+      "pid_json": null,
+      "old_alive_before_tock": [
+        213902
+      ],
+      "summary": {
+        "round": 1,
+        "tick_at": "2026-10-04T12:53:47.148",
+        "tock_at": "2026-10-04T12:53:47.460",
+        "early": null,
+        "started": [
+          "o#1"
+        ],
+        "alive": [],
+        "ended": [
+          {
+            "run": "o#1",
+            "code": null,
+            "lost": true
+          }
+        ],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "next_tick": {
+        "round": 2,
+        "started": [
+          "o#2"
+        ],
+        "tasks_rev": "1a34d30f0a20"
+      },
+      "old_alive": [],
+      "new_pid": 213955
+    },
+    "old_run_residue": {
+      "view": {
+        "state": "suspect",
+        "run": 100,
+        "birth": {
+          "name": "o",
+          "slot": "o",
+          "run": 100,
+          "round": 1,
+          "node": "n",
+          "once": false,
+          "restart_of": null,
+          "at": "2026-10-04T12:53:47.672",
+          "runner": null,
+          "argv": [
+            "sleep",
+            "60"
+          ],
+          "mounts": {}
+        },
+        "why": "沒有 pid.json、沒有 runner，起了兩回合以上"
+      },
+      "old_identity_matches_new": [],
+      "old_identity_matches_old": [
+        214007
+      ]
+    }
+  },
+  "cross_slot_ids": {
+    "explicit_same_id": {
+      "tick": {
+        "round": 2,
+        "started": [
+          "o#2"
+        ],
+        "tasks_rev": "b88eb170f6c6"
+      },
+      "receipts": {
+        "o": {
+          "op": "restart",
+          "by": "probe",
+          "id": "both-slots",
+          "result": {
+            "ok": true,
+            "msg": "already ended; once 項已加進 tasks.json（slot o）",
+            "at": "2026-10-04T12:53:47.971",
+            "run": "o#1"
+          }
+        },
+        "p": {
+          "op": "restart",
+          "by": "probe",
+          "id": "both-slots",
+          "result": {
+            "ok": true,
+            "msg": "already ended; once 項上次已加過、沒再加（slot p）",
+            "at": "2026-10-04T12:53:47.985",
+            "run": "p#1"
+          }
+        }
+      },
+      "executions": {
+        "o": [
+          "1",
+          "2"
+        ],
+        "p": [
+          "1"
+        ]
+      }
+    },
+    "same_raw_mtime": {
+      "tick": {
+        "round": 2,
+        "started": [
+          "o#2"
+        ],
+        "tasks_rev": "e10b254f91ad"
+      },
+      "receipts": {
+        "o": {
+          "op": "restart",
+          "by": "probe",
+          "result": {
+            "ok": true,
+            "msg": "already ended; once 項已加進 tasks.json（slot o）",
+            "at": "2026-10-04T12:53:48.293",
+            "run": "o#1"
+          }
+        },
+        "p": {
+          "op": "restart",
+          "by": "probe",
+          "result": {
+            "ok": true,
+            "msg": "already ended; once 項上次已加過、沒再加（slot p）",
+            "at": "2026-10-04T12:53:48.335",
+            "run": "p#1"
+          }
+        }
+      },
+      "executions": {
+        "o": [
+          "1",
+          "2"
+        ],
+        "p": [
+          "1"
+        ]
+      }
+    }
+  }
+}

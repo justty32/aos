@@ -1,0 +1,30 @@
+{
+  "crash_returncode": -9,
+  "after_crash": {
+    "round": {
+      "round": 1,
+      "open": true,
+      "tick_at": "2026-10-04T12:52:24.687",
+      "tock_at": null,
+      "started": [
+        "history#1"
+      ],
+      "ctl": [],
+      "mounts": [],
+      "tasks_rev": "81d0a2d66009",
+      "reaped": [],
+      "skipped": []
+    },
+    "summary_round": 1,
+    "notification": null,
+    "history_rows": 0
+  },
+  "after_replay": {
+    "replayed": true,
+    "round_open": false,
+    "history_rounds": [
+      1
+    ]
+  },
+  "cleanup_root_removed": true
+}

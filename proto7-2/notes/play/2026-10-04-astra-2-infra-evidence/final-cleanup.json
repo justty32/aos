@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-10-04T13:06:45+0800",
+  "remaining_test_processes": [],
+  "remaining_evidence_subdirectories": [],
+  "temporary_roots_outside_copy_created": false,
+  "files_modified_outside_allowed_outputs_since_first_evidence": [
+    "log.txt"
+  ],
+  "runtime_transcript_note": "log.txt is the pre-existing runtime transcript, automatically updated by the host; scripts did not modify it.",
+  "unexpected_product_or_document_changes": [],
+  "source_files_checked": 1630,
+  "baseline_sources_digest": "7b5bca134310542d6ce9330bf1d526f10083a9572abb3efc496aa8e789519c3a",
+  "current_sources_digest": "7b5bca134310542d6ce9330bf1d526f10083a9572abb3efc496aa8e789519c3a",
+  "changed_sources_since_hash_snapshot": [],
+  "invalid_json": [],
+  "invalid_python": [],
+  "broken_report_links": [],
+  "evidence_file_count": 36,
+  "evidence_bytes": 196386,
+  "report_bytes": 29137
+}

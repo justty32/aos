@@ -1,0 +1,22 @@
+{
+  "normal": {
+    "round_open": false,
+    "notify_errors": [
+      {
+        "slot": "keep",
+        "phase": "tock.json",
+        "err": "IsADirectoryError(21, 'Is a directory')"
+      }
+    ],
+    "summary_errors": [],
+    "replayed": false
+  },
+  "crash_returncode": -9,
+  "replay": {
+    "round_open": false,
+    "notify_errors": null,
+    "summary_errors": [],
+    "replayed": true
+  },
+  "cleanup_root_removed": true
+}
