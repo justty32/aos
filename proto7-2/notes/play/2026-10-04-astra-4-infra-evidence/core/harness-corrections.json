@@ -1,0 +1,44 @@
+{
+  "initial_probe_failures": [
+    {
+      "case": "A4-01_request_EIO",
+      "reason": "KeyError: 'mounts'"
+    },
+    {
+      "case": "A4-01_request_EACCES",
+      "reason": "KeyError: 'mounts'"
+    },
+    {
+      "case": "A4-01_request_ESTALE",
+      "reason": "KeyError: 'mounts'"
+    },
+    {
+      "case": "A4-01_birth_EIO",
+      "reason": "KeyError: 'mounts'"
+    },
+    {
+      "case": "A4-01_birth_EACCES",
+      "reason": "KeyError: 'mounts'"
+    },
+    {
+      "case": "A4-01_birth_ESTALE",
+      "reason": "KeyError: 'mounts'"
+    },
+    {
+      "case": "A4-05_audit_refresh",
+      "reason": "TypeError: tuple indices must be integers or slices, not str"
+    }
+  ],
+  "corrections": [
+    "mounts resides in round.json, tick return JSON is concise",
+    "audit scan bad contains (slot, record) tuples"
+  ],
+  "initial_cleanup": {
+    "root": "/tmp/astra4-core-3oq54nfk",
+    "case_roots_removed": true,
+    "remaining": [],
+    "ps_matching": [],
+    "live_pids": [],
+    "root_removed": true
+  }
+}

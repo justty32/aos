@@ -1,0 +1,79 @@
+{
+ "contract": "wf-table/1",
+ "source": "summary.md",
+ "extracted": "2026-10-04",
+ "columns": [
+  "name",
+  "card",
+  "code",
+  "card_lines",
+  "code_lines",
+  "result",
+  "notes"
+ ],
+ "rows": [
+  {
+   "name": "control",
+   "card": "proto7-2/modules/control/README.md",
+   "code": "proto7-2/modules/control/aos7_control.py",
+   "card_lines": "17-25",
+   "code_lines": "85-93,107-131",
+   "result": "已對照，未確認新B/G",
+   "notes": "鎖內重讀birth、same req/run changed回done、先append再kill、G1拒寫、去重期限與目前birth/pending once一致"
+  },
+  {
+   "name": "subd",
+   "card": "proto7-2/modules/subd/README.md",
+   "code": "proto7-2/modules/subd/aos7-subd",
+   "card_lines": "17-24,55-56",
+   "code_lines": "36-52,98-145",
+   "result": "靜態分支已核；G3動態反例由壓測線記A5-01，不能判全包一致",
+   "notes": "位置/認領/stopped拒起、守門檔、同群組、外部stop留stopped的靜態分支一致；README55的下一daemon掃描收尾承諾被G3動態探針推翻，見../stress/summary.md"
+  },
+  {
+   "name": "once_retry",
+   "card": "proto7-2/modules/once_retry/README.md",
+   "code": "proto7-2/modules/once_retry/retry_lost.py",
+   "card_lines": "17-22",
+   "code_lines": "19-30,34-63,66-72",
+   "result": "已對照，未確認新B/G",
+   "notes": "lost+never_started+同run+once+retry_lost選候選、retry_of去重、G1 pending、漏取樣/槽已刪排除一致"
+  },
+  {
+   "name": "audit",
+   "card": "proto7-2/modules/audit/README.md",
+   "code": "proto7-2/modules/audit/audit_site/sitecustomize.py",
+   "card_lines": "17-23",
+   "code_lines": "52-75,89-121,123-154",
+   "result": "已對照，未確認新B/G",
+   "notes": "判定需用登記邊界時每次重讀nodes、只記不擋、Python audit hook範圍一致；A4-05動態探針由模組線驗"
+  },
+  {
+   "name": "diag",
+   "card": "proto7-2/modules/diag/README.md",
+   "code": "proto7-2/modules/diag/aos7-diag",
+   "card_lines": "17-20,66",
+   "code_lines": "44-70,73-91",
+   "result": "已對照，未確認新B/G",
+   "notes": "只調judge/fact重算、不寫檔/kill/身分掃描；F47操作手冊已改不補送"
+  },
+  {
+   "name": "tools",
+   "card": "proto7-2/modules/tools/README.md",
+   "code": "proto7-2/modules/tools/aos7_ctl.py",
+   "card_lines": "17-24",
+   "code_lines": "50-70,93-129,168-198",
+   "result": "已對照，未確認新B/G",
+   "notes": "編碼/長名hash、kill讀birth補run、add表鎖rename、restart委派control一致；不把hash理論碰撞當新bug"
+  },
+  {
+   "name": "step",
+   "card": "proto7-2/packs/step/README.md",
+   "code": "proto7-2/packs/step/aos7_step.py",
+   "card_lines": "17-33",
+   "code_lines": "106-139,184-191,293-313,317-321,480-526,542-592,599-691",
+   "result": "已對照，未確認新B/G",
+   "notes": "型別預檢、有效選項、起始since、同attempt不重派、unknown與timeout界線一致；wrapper原子發布使用link，不影響卡的完整/不覆寫保證"
+  }
+ ]
+}

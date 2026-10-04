@@ -1,0 +1,19 @@
+{
+  "roots": [
+    "/tmp/aos72-test-xa37q13v",
+    "/tmp/aos72-test-_jsmdluu",
+    "/tmp/aos72-test-520jefca",
+    "/tmp/aos72-test-ag53pm60",
+    "/tmp/aos72-test-n5u4_mt9",
+    "/tmp/aos72-test-9ot2s640",
+    "/tmp/aos72-test-mqbdez72",
+    "/tmp/aos72-test-yab706ml",
+    "/tmp/aos72-test-vvm39j_d",
+    "/tmp/aos72-test-p520w6px",
+    "/tmp/aos72-test-wig6vsc2"
+  ],
+  "remaining_roots": [],
+  "matching_processes": [],
+  "ps": "    PID    PPID    PGID STAT COMMAND\n 521398  521397  521397 S    python3 -\n",
+  "probe_harness_notes": "F47初版用不存在的rename故障hook，命中0後改用tock.write_json排程內EIO；只最終命中紀錄作產品判定。初版自建2個空/tmp hits檔已逐名刪除；其測試根由finally清掉。"
+}

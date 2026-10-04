@@ -1,0 +1,86 @@
+{
+  "suites": [
+    {
+      "run": 1,
+      "pid": 517030,
+      "elapsed_s": 81.911,
+      "returncode": 0,
+      "test_count": 280,
+      "unittest_s": 81.855,
+      "failures": [],
+      "errors": [],
+      "skips": [],
+      "tmp_remaining": [],
+      "proc_remaining": [],
+      "tmp_removed": true
+    },
+    {
+      "run": 2,
+      "pid": 520330,
+      "elapsed_s": 83.082,
+      "returncode": 0,
+      "test_count": 280,
+      "unittest_s": 83.027,
+      "failures": [],
+      "errors": [],
+      "skips": [],
+      "tmp_remaining": [],
+      "proc_remaining": [],
+      "tmp_removed": true
+    },
+    {
+      "run": 3,
+      "pid": 523690,
+      "elapsed_s": 84.376,
+      "returncode": 0,
+      "test_count": 280,
+      "unittest_s": 84.321,
+      "failures": [],
+      "errors": [],
+      "skips": [],
+      "tmp_remaining": [],
+      "proc_remaining": [],
+      "tmp_removed": true
+    }
+  ],
+  "g3_total": 10,
+  "g3_pass": 0,
+  "g3_fail": 10,
+  "g3_all_overlapped_suite": true,
+  "confirmation_gen": 2,
+  "confirmation_closed_round": 7,
+  "confirmation_identities": [
+    {
+      "slot": "s0",
+      "pid": 521011,
+      "same_starttime": true,
+      "live_state": "S",
+      "sid": 521008,
+      "runner_pid": 521008
+    },
+    {
+      "slot": "s1",
+      "pid": 521012,
+      "same_starttime": true,
+      "live_state": "S",
+      "sid": 521009,
+      "runner_pid": 521009
+    },
+    {
+      "slot": "s2",
+      "pid": 521013,
+      "same_starttime": true,
+      "live_state": "S",
+      "sid": 521010,
+      "runner_pid": 521010
+    }
+  ],
+  "all_g3_clean": true,
+  "tmp_removed": true,
+  "final_proc_remaining": [],
+  "finding": {
+    "classification": "B",
+    "component": "subd",
+    "guarantee": "README 界線：下一個子 daemon 起來時的身分掃描收寬限內收不完的子任務"
+  }
+}

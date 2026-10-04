@@ -1,0 +1,464 @@
+{
+  "baseline": {
+    "517030": {
+      "pid": 517030,
+      "state": "gone"
+    },
+    "521011": {
+      "pid": 521011,
+      "state": "S",
+      "ppid": 521008,
+      "pgid": 521011,
+      "starttime": 2831860
+    },
+    "521012": {
+      "pid": 521012,
+      "state": "S",
+      "ppid": 521009,
+      "pgid": 521012,
+      "starttime": 2831860
+    },
+    "521013": {
+      "pid": 521013,
+      "state": "S",
+      "ppid": 521010,
+      "pgid": 521013,
+      "starttime": 2831860
+    },
+    "521004": {
+      "pid": 521004,
+      "state": "S",
+      "ppid": 521003,
+      "pgid": 521003,
+      "starttime": 2831853
+    },
+    "521053": {
+      "pid": 521053,
+      "state": "S",
+      "ppid": 521051,
+      "pgid": 521051,
+      "starttime": 2831976
+    }
+  },
+  "snapshots": [
+    {
+      "root": "/tmp/astra4-stress-1vu34cl4/g3-11",
+      "generation": {
+        "gen": 2,
+        "pid": 521053,
+        "at": "2026-10-04T16:13:19.702"
+      },
+      "status": {
+        "pid": 521053,
+        "root": "/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+        "at": "2026-10-04T16:13:20.530",
+        "poll_s": 0.02,
+        "gen": 2,
+        "io_errors": 0,
+        "stopping": false,
+        "stopped": false,
+        "last_event": {
+          "at": "2026-10-04T16:13:19.720",
+          "ev": "round-recovered",
+          "node": "n1",
+          "round": 1
+        },
+        "nodes": {
+          "n1": {
+            "round": 7,
+            "round_open": true,
+            "recovery_pending": false,
+            "paused_by": [],
+            "pause_pending": false,
+            "interval_ms": 100,
+            "early_tock": false,
+            "live": [
+              "s0#1",
+              "s1#1",
+              "s2#1"
+            ],
+            "phase": "tock",
+            "last_event": {
+              "ev": "round-recovered",
+              "at": "2026-10-04T16:13:19.720",
+              "round": 1
+            }
+          }
+        }
+      },
+      "round": {
+        "round": 7,
+        "open": false,
+        "tick_at": "2026-10-04T16:13:20.413",
+        "tock_at": "2026-10-04T16:13:20.531",
+        "started": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_rev": "62b780da3a2d",
+        "reaped": [],
+        "skipped": []
+      },
+      "last_round": {
+        "round": 7,
+        "tick_at": "2026-10-04T16:13:20.413",
+        "tock_at": "2026-10-04T16:13:20.531",
+        "early": false,
+        "started": [],
+        "alive": [
+          "s0#1",
+          "s1#1",
+          "s2#1"
+        ],
+        "ended": [],
+        "skipped": [],
+        "ctl": [],
+        "mounts": [],
+        "tasks_error": [],
+        "errors": [],
+        "tasks_rev": "62b780da3a2d"
+      },
+      "processes": [
+        {
+          "pid": 520999,
+          "state": "S",
+          "ppid": 520995,
+          "pgid": 520995,
+          "starttime": 2831848,
+          "sid": 520995,
+          "cmdline": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-daemon /tmp/astra4-stress-1vu34cl4/g3-11",
+          "identity": [],
+          "status_signals": [
+            "SigIgn:\t0000000001001000",
+            "SigCgt:\t0000000100004002"
+          ]
+        },
+        {
+          "pid": 521008,
+          "state": "S",
+          "ppid": 520995,
+          "pgid": 521008,
+          "starttime": 2831859,
+          "sid": 521008,
+          "cmdline": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-run /tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s0 5",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1",
+            "AOS7_RUN=1",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s0",
+            "AOS7_SUBROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE_ID=n1",
+            "AOS7_TID=s0"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001001000",
+            "SigCgt:\t0000000000000002"
+          ]
+        },
+        {
+          "pid": 521009,
+          "state": "S",
+          "ppid": 520995,
+          "pgid": 521009,
+          "starttime": 2831859,
+          "sid": 521009,
+          "cmdline": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-run /tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s1 5",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1",
+            "AOS7_RUN=1",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s1",
+            "AOS7_SUBROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE_ID=n1",
+            "AOS7_TID=s1"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001001000",
+            "SigCgt:\t0000000000000002"
+          ]
+        },
+        {
+          "pid": 521010,
+          "state": "S",
+          "ppid": 520995,
+          "pgid": 521010,
+          "starttime": 2831859,
+          "sid": 521010,
+          "cmdline": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-run /tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s2 5",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1",
+            "AOS7_RUN=1",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s2",
+            "AOS7_SUBROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE_ID=n1",
+            "AOS7_TID=s2"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001001000",
+            "SigCgt:\t0000000000000002"
+          ]
+        },
+        {
+          "pid": 521011,
+          "state": "S",
+          "ppid": 521008,
+          "pgid": 521011,
+          "starttime": 2831860,
+          "sid": 521008,
+          "cmdline": "/usr/bin/python3 /tmp/astra4-stress-1vu34cl4/g3-11/ignore_term.py",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1",
+            "AOS7_RUN=1",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s0",
+            "AOS7_SUBROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE_ID=n1",
+            "AOS7_TID=s0"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001005000",
+            "SigCgt:\t0000000000000002"
+          ]
+        },
+        {
+          "pid": 521012,
+          "state": "S",
+          "ppid": 521009,
+          "pgid": 521012,
+          "starttime": 2831860,
+          "sid": 521009,
+          "cmdline": "/usr/bin/python3 /tmp/astra4-stress-1vu34cl4/g3-11/ignore_term.py",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1",
+            "AOS7_RUN=1",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s1",
+            "AOS7_SUBROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE_ID=n1",
+            "AOS7_TID=s1"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001005000",
+            "SigCgt:\t0000000000000002"
+          ]
+        },
+        {
+          "pid": 521013,
+          "state": "S",
+          "ppid": 521010,
+          "pgid": 521013,
+          "starttime": 2831860,
+          "sid": 521010,
+          "cmdline": "/usr/bin/python3 /tmp/astra4-stress-1vu34cl4/g3-11/ignore_term.py",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1",
+            "AOS7_RUN=1",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub/n1/.aos/tasks/s2",
+            "AOS7_SUBROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE_ID=n1",
+            "AOS7_TID=s2"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001005000",
+            "SigCgt:\t0000000000000002"
+          ]
+        },
+        {
+          "pid": 521049,
+          "state": "S",
+          "ppid": 520995,
+          "pgid": 521049,
+          "starttime": 2831973,
+          "sid": 521049,
+          "cmdline": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-run /tmp/astra4-stress-1vu34cl4/g3-11/a/.aos/tasks/sub 5",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a",
+            "AOS7_NODE_ID=a",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/.aos/tasks/sub",
+            "AOS7_TID=sub",
+            "AOS7_RUN=2"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001001000",
+            "SigCgt:\t0000000000000002"
+          ]
+        },
+        {
+          "pid": 521051,
+          "state": "S",
+          "ppid": 521049,
+          "pgid": 521051,
+          "starttime": 2831974,
+          "sid": 521049,
+          "cmdline": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/modules/subd/aos7-subd a/sub -- sh -c aos7-ctl daemon \"$AOS7_SUBROOT\" register n1 --by boot > /dev/null && exec aos7-daemon \"$AOS7_SUBROOT\"",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a",
+            "AOS7_NODE_ID=a",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/.aos/tasks/sub",
+            "AOS7_TID=sub",
+            "AOS7_RUN=2"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001001000",
+            "SigCgt:\t0000000000004002"
+          ]
+        },
+        {
+          "pid": 521053,
+          "state": "S",
+          "ppid": 521051,
+          "pgid": 521051,
+          "starttime": 2831976,
+          "sid": 521049,
+          "cmdline": "python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-daemon /tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a",
+            "AOS7_RUN=2",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/.aos/tasks/sub",
+            "AOS7_SUBROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE_ID=a",
+            "AOS7_TID=sub"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001001000",
+            "SigCgt:\t0000000100004002"
+          ]
+        },
+        {
+          "pid": 521117,
+          "state": "R",
+          "ppid": 521053,
+          "pgid": 521051,
+          "starttime": 2832063,
+          "sid": 521049,
+          "cmdline": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-tick /tmp/astra4-stress-1vu34cl4/g3-11/a/sub n1",
+          "identity": [
+            "AOS7_ROOT=/tmp/astra4-stress-1vu34cl4/g3-11",
+            "AOS7_NODE=/tmp/astra4-stress-1vu34cl4/g3-11/a",
+            "AOS7_RUN=2",
+            "AOS7_TASK=/tmp/astra4-stress-1vu34cl4/g3-11/a/.aos/tasks/sub",
+            "AOS7_SUBROOT=/tmp/astra4-stress-1vu34cl4/g3-11/a/sub",
+            "AOS7_NODE_ID=a",
+            "AOS7_TID=sub",
+            "AOS7_GEN=2"
+          ],
+          "status_signals": [
+            "SigIgn:\t0000000001001000",
+            "SigCgt:\t0000000000000002"
+          ]
+        }
+      ],
+      "slots": [
+        {
+          "name": "s0",
+          "birth": {
+            "name": "s0",
+            "slot": "s0",
+            "run": 1,
+            "round": 1,
+            "node": "n1",
+            "once": false,
+            "at": "2026-10-04T16:13:18.494",
+            "runner": {
+              "pid": 521008,
+              "starttime": 2831859
+            },
+            "argv": [
+              "/usr/bin/python3",
+              "/tmp/astra4-stress-1vu34cl4/g3-11/ignore_term.py"
+            ],
+            "mounts": {}
+          },
+          "pid": {
+            "run": 1,
+            "pid": 521011,
+            "pgid": 521011,
+            "starttime": 2831860,
+            "runner_pid": 521008,
+            "at": "2026-10-04T16:13:18.506"
+          },
+          "exit": {},
+          "ready": {
+            "pid": 521011,
+            "run": 1,
+            "ignores_sigterm": true
+          }
+        },
+        {
+          "name": "s1",
+          "birth": {
+            "name": "s1",
+            "slot": "s1",
+            "run": 1,
+            "round": 1,
+            "node": "n1",
+            "once": false,
+            "at": "2026-10-04T16:13:18.495",
+            "runner": {
+              "pid": 521009,
+              "starttime": 2831859
+            },
+            "argv": [
+              "/usr/bin/python3",
+              "/tmp/astra4-stress-1vu34cl4/g3-11/ignore_term.py"
+            ],
+            "mounts": {}
+          },
+          "pid": {
+            "run": 1,
+            "pid": 521012,
+            "pgid": 521012,
+            "starttime": 2831860,
+            "runner_pid": 521009,
+            "at": "2026-10-04T16:13:18.506"
+          },
+          "exit": {},
+          "ready": {
+            "pid": 521012,
+            "run": 1,
+            "ignores_sigterm": true
+          }
+        },
+        {
+          "name": "s2",
+          "birth": {
+            "name": "s2",
+            "slot": "s2",
+            "run": 1,
+            "round": 1,
+            "node": "n1",
+            "once": false,
+            "at": "2026-10-04T16:13:18.495",
+            "runner": {
+              "pid": 521010,
+              "starttime": 2831859
+            },
+            "argv": [
+              "/usr/bin/python3",
+              "/tmp/astra4-stress-1vu34cl4/g3-11/ignore_term.py"
+            ],
+            "mounts": {}
+          },
+          "pid": {
+            "run": 1,
+            "pid": 521013,
+            "pgid": 521013,
+            "starttime": 2831860,
+            "runner_pid": 521010,
+            "at": "2026-10-04T16:13:18.507"
+          },
+          "exit": {},
+          "ready": {
+            "pid": 521013,
+            "run": 1,
+            "ignores_sigterm": true
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1463 @@
+{
+  "at_epoch": 1791102050.1744573,
+  "scope": "Read-only final verification; no product tests rerun; no process signals sent.",
+  "baseline_file_count": 205,
+  "hash_changed": [],
+  "missing_baseline_files": [],
+  "new_files": [
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/baseline.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/check_contracts.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/checks.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/core-guarantees.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/pack-review.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/cleanup.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/harness-corrections.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/probe.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/probe_core.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/results.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/summary.md",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/final-audit.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/final_audit.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/handoff.md",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/cleanup.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/csv_worker.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/f47-step.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/longrun.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/probe_f47.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/probe_step.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/run_comparison.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/step-probes.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/cleanup.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm/g3-11.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm/identity.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm/results.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm_g3.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-01.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-02.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-03.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-04.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-05.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-06.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-07.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-08.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-09.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-10.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/results.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/run.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/run_stress.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/suite-1.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/suite-2.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/suite-3.log",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summarize.py",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.json",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md",
+    "proto7-2/notes/play/2026-10-04-astra-4-infra.md"
+  ],
+  "unexpected_new_files": [],
+  "existing_unhashed_cache_count": 65,
+  "existing_unhashed_caches": [
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_ctl.cpython-314.pyc",
+      "mtime": 1791091526.3753085,
+      "ctime": 1791091526.3753486,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_daemon.cpython-314.pyc",
+      "mtime": 1791097697.148785,
+      "ctime": 1791097697.148816,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_daemon_timeline.cpython-314.pyc",
+      "mtime": 1791097231.090251,
+      "ctime": 1791097231.0902784,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_fs.cpython-314.pyc",
+      "mtime": 1791097697.1226902,
+      "ctime": 1791097697.1227236,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_mount.cpython-314.pyc",
+      "mtime": 1791100741.7352173,
+      "ctime": 1791100741.7352548,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_proc.cpython-314.pyc",
+      "mtime": 1791097697.124315,
+      "ctime": 1791097697.1243453,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_run.cpython-314.pyc",
+      "mtime": 1791097697.1751058,
+      "ctime": 1791097697.1751444,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_task.cpython-314.pyc",
+      "mtime": 1791097697.1189137,
+      "ctime": 1791097697.1189735,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_tick.cpython-314.pyc",
+      "mtime": 1791100717.8431296,
+      "ctime": 1791100717.8431659,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos7_tock.cpython-314.pyc",
+      "mtime": 1791100717.8445647,
+      "ctime": 1791100717.844593,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos_directives.cpython-314.pyc",
+      "mtime": 1791086969.7878215,
+      "ctime": 1791086969.787839,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos_directives_base.cpython-314.pyc",
+      "mtime": 1791086969.7883985,
+      "ctime": 1791086969.7884114,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos_directives_options.cpython-314.pyc",
+      "mtime": 1791086969.7889495,
+      "ctime": 1791086969.7889717,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos_dirname.cpython-314.pyc",
+      "mtime": 1791086969.7847204,
+      "ctime": 1791086969.7847366,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos_exec.cpython-314.pyc",
+      "mtime": 1791086969.780721,
+      "ctime": 1791086969.780744,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos_exec_run.cpython-314.pyc",
+      "mtime": 1791086969.790129,
+      "ctime": 1791086969.7901459,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos_exec_wait.cpython-314.pyc",
+      "mtime": 1791086969.793509,
+      "ctime": 1791086969.7935262,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/lib/__pycache__/aos_inst.cpython-314.pyc",
+      "mtime": 1791086969.7859433,
+      "ctime": 1791086969.7859604,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/__pycache__/history.cpython-314.pyc",
+      "mtime": 1791098597.6605027,
+      "ctime": 1791098597.660589,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/audit/__pycache__/aos7_audit.cpython-314.pyc",
+      "mtime": 1791099203.9417598,
+      "ctime": 1791099203.9417598,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/audit/audit_site/__pycache__/sitecustomize.cpython-314.pyc",
+      "mtime": 1791100770.2406957,
+      "ctime": 1791100770.2407427,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/audit/tests/__pycache__/test_audit_wrapper.cpython-314.pyc",
+      "mtime": 1791100761.4304996,
+      "ctime": 1791100761.4305456,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/control/__pycache__/aos7_control.cpython-314.pyc",
+      "mtime": 1791101139.4422004,
+      "ctime": 1791101139.4422317,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/control/tests/__pycache__/test_control.cpython-314.pyc",
+      "mtime": 1791100736.681735,
+      "ctime": 1791100736.681796,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/diag/tests/__pycache__/test_diag.cpython-314.pyc",
+      "mtime": 1791097906.6760075,
+      "ctime": 1791097906.6760454,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/once_retry/__pycache__/retry_lost.cpython-314.pyc",
+      "mtime": 1791097231.106157,
+      "ctime": 1791097231.106182,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/once_retry/tests/__pycache__/test_once_retry.cpython-314.pyc",
+      "mtime": 1791096295.494598,
+      "ctime": 1791096295.4946263,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/subd/tests/__pycache__/test_subd_ownership.cpython-314.pyc",
+      "mtime": 1791096295.4980829,
+      "ctime": 1791096295.4981132,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/tests/__pycache__/test_modules_history.cpython-314.pyc",
+      "mtime": 1791098531.1841817,
+      "ctime": 1791098531.1842341,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/tools/__pycache__/aos7_ctl.cpython-314.pyc",
+      "mtime": 1791096295.4967484,
+      "ctime": 1791096295.4967794,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/tools/__pycache__/aos7_taskside.cpython-314.pyc",
+      "mtime": 1791097231.0738106,
+      "ctime": 1791097231.0738347,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/modules/tools/tests/__pycache__/test_tools_ctl.cpython-314.pyc",
+      "mtime": 1791093962.2188756,
+      "ctime": 1791093962.2188756,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/packs/step/__pycache__/aos7_step.cpython-314.pyc",
+      "mtime": 1791101139.4526813,
+      "ctime": 1791101139.4527137,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/packs/step/__pycache__/aos7_step_result.cpython-314.pyc",
+      "mtime": 1791098803.0321739,
+      "ctime": 1791098803.0321739,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/packs/step/tests/__pycache__/test_step.cpython-314.pyc",
+      "mtime": 1791101139.4484744,
+      "ctime": 1791101139.448523,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/_hooks.cpython-314.pyc",
+      "mtime": 1791095242.4213521,
+      "ctime": 1791095242.421383,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/_matrix.cpython-314.pyc",
+      "mtime": 1791091840.654214,
+      "ctime": 1791091840.654248,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/_proc.cpython-314.pyc",
+      "mtime": 1791086967.9728081,
+      "ctime": 1791086967.9728239,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/base.cpython-314.pyc",
+      "mtime": 1791097231.0627367,
+      "ctime": 1791097231.0627894,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_ctl.cpython-314.pyc",
+      "mtime": 1791086967.968412,
+      "ctime": 1791086967.968412,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_daemon.cpython-314.pyc",
+      "mtime": 1791086967.9887943,
+      "ctime": 1791086967.988814,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_matrix_a3.cpython-314.pyc",
+      "mtime": 1791092931.7411423,
+      "ctime": 1791092931.7411923,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_matrix_daemon.cpython-314.pyc",
+      "mtime": 1791091055.3119917,
+      "ctime": 1791091055.3120084,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_matrix_docs.cpython-314.pyc",
+      "mtime": 1791091055.3253133,
+      "ctime": 1791091055.3253314,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_matrix_faults.cpython-314.pyc",
+      "mtime": 1791091909.8652565,
+      "ctime": 1791091909.8653052,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_matrix_misc.cpython-314.pyc",
+      "mtime": 1791091055.33298,
+      "ctime": 1791091055.3329954,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_matrix_once.cpython-314.pyc",
+      "mtime": 1791091055.3341336,
+      "ctime": 1791091055.3341498,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_once_threestate.cpython-314.pyc",
+      "mtime": 1791091055.3353877,
+      "ctime": 1791091055.335429,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_options_a3.cpython-314.pyc",
+      "mtime": 1791092223.0744915,
+      "ctime": 1791092223.0745163,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_subdaemon_modules.cpython-314.pyc",
+      "mtime": 1791086968.003012,
+      "ctime": 1791086968.003062,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/__pycache__/test_tick_tock.cpython-314.pyc",
+      "mtime": 1791086968.00543,
+      "ctime": 1791086968.0054488,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_budget.cpython-314.pyc",
+      "mtime": 1791097950.9546118,
+      "ctime": 1791097950.9546256,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_ctl.cpython-314.pyc",
+      "mtime": 1791096436.812257,
+      "ctime": 1791096436.81312,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_daemon.cpython-314.pyc",
+      "mtime": 1791097697.1316962,
+      "ctime": 1791097697.1317253,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_errors.cpython-314.pyc",
+      "mtime": 1791096436.8198085,
+      "ctime": 1791096436.8198469,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_exits.cpython-314.pyc",
+      "mtime": 1791095616.2686727,
+      "ctime": 1791095616.2687147,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_matrix_a3.cpython-314.pyc",
+      "mtime": 1791101139.4337215,
+      "ctime": 1791101139.4337723,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_matrix_daemon.cpython-314.pyc",
+      "mtime": 1791094463.2503216,
+      "ctime": 1791094463.25038,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_matrix_docs.cpython-314.pyc",
+      "mtime": 1791095003.220619,
+      "ctime": 1791095003.2206483,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_matrix_faults.cpython-314.pyc",
+      "mtime": 1791101139.4374378,
+      "ctime": 1791101139.4374745,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_matrix_misc.cpython-314.pyc",
+      "mtime": 1791097950.9750926,
+      "ctime": 1791097950.9751256,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_matrix_once.cpython-314.pyc",
+      "mtime": 1791096436.8394482,
+      "ctime": 1791096436.8394735,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_once_threestate.cpython-314.pyc",
+      "mtime": 1791101139.4397998,
+      "ctime": 1791101139.4398305,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_options_a3.cpython-314.pyc",
+      "mtime": 1791096436.8404133,
+      "ctime": 1791096436.8404481,
+      "predates_baseline": true
+    },
+    {
+      "path": "proto7-2/tests/core/__pycache__/test_tick_tock.cpython-314.pyc",
+      "mtime": 1791097231.1010952,
+      "ctime": 1791097231.101123,
+      "predates_baseline": true
+    }
+  ],
+  "cache_scope_note": "Baseline omitted existing bytecode. Their filesystem mtime and ctime precede baseline; this checks no new/modified cache, not historical byte-for-byte cache identity.",
+  "head": "b8568cdbf8122b1aaa11b9e67c49228e0e145d2c",
+  "head_matches_baseline": true,
+  "git_status": "?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/baseline.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/check_contracts.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/checks.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/core-guarantees.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/pack-review.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/cleanup.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/harness-corrections.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/probe.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/probe_core.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/results.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/summary.md\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/final-audit.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/final_audit.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/handoff.md\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/cleanup.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/csv_worker.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/f47-step.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/longrun.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/probe_f47.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/probe_step.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/run_comparison.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/step-probes.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/cleanup.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm/g3-11.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm/identity.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm/results.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm_g3.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-01.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-02.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-03.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-04.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-05.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-06.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-07.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-08.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-09.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/g3-10.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/results.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/run.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/run_stress.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/suite-1.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/suite-2.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/suite-3.log\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summarize.py\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.json\n?? proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md\n?? proto7-2/notes/play/2026-10-04-astra-4-infra.md\n?? proto7/user-advice.md\n",
+  "baseline_git_status": "?? proto7/user-advice.md\n",
+  "unexpected_git_status": [],
+  "python_ast": [
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/check_contracts.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/probe_core.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/final_audit.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/csv_worker.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/probe_f47.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/probe_step.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/run_comparison.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm_g3.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/run_stress.py",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summarize.py",
+      "ok": true
+    }
+  ],
+  "json_parse": [
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/baseline.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/checks.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/core-guarantees.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/pack-review.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/cleanup.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/harness-corrections.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/results.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/cleanup.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/f47-step.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/longrun.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/step-probes.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/cleanup.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm/identity.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/confirm/results.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/results.json",
+      "ok": true
+    },
+    {
+      "path": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.json",
+      "ok": true
+    }
+  ],
+  "report_exists": true,
+  "report_sha256": "e87c6ff92d793ba3fdde673a765a32c366fbf19fd85cd588d338758a58e9ca47",
+  "markdown_links": {
+    "documents": [
+      "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+      "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/summary.md",
+      "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+      "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md",
+      "proto7-2/notes/play/2026-10-04-astra-4-infra.md"
+    ],
+    "checked_count": 46,
+    "missing": [],
+    "links": [
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "target": "../stress/summary.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "target": "checks.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "target": "check_contracts.py",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "target": "core-guarantees.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "target": "pack-review.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "target": "../../../../../proto7/notes/thinking/2026-10-04-r6-synthesis.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "target": "../../../../packs/account/README.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "target": "../../../../../proto7/notes/thinking/2026-10-04-r1-synthesis.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/summary.md",
+        "target": "probe_core.py",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/summary.md",
+        "target": "results.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/summary.md",
+        "target": "probe.log",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/summary.md",
+        "target": "cleanup.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/summary.md",
+        "target": "harness-corrections.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+        "target": "step-probes.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+        "target": "probe_step.py",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+        "target": "probe_f47.py",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+        "target": "f47-step.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+        "target": "longrun.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+        "target": "run_comparison.py",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/summary.md",
+        "target": "cleanup.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md",
+        "target": "confirm/identity.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md",
+        "target": "results.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md",
+        "target": "suite-1.log",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md",
+        "target": "suite-2.log",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md",
+        "target": "suite-3.log",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/summary.md",
+        "target": "confirm/results.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "../component-contracts.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "../../../proto7/notes/principles.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/stress/results.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/core/summary.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/step/summary.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/core/results.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/step/step-probes.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/contracts/checks.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/core/results.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/step/f47-step.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/core/probe_core.py",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "../../modules/subd/README.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/stress/results.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/stress/confirm/identity.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/stress/run_stress.py",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/stress/results.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/step/longrun.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/contracts/summary.md",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/final-audit.json",
+        "exists": true
+      },
+      {
+        "source": "proto7-2/notes/play/2026-10-04-astra-4-infra.md",
+        "target": "2026-10-04-astra-4-infra-evidence/contracts/summary.md#account-草稿意見不算發現",
+        "exists": true
+      }
+    ]
+  },
+  "cleanup_reports": {
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/core/cleanup.json": {
+      "root": "/tmp/astra4-core-7vg1agy6",
+      "case_roots_removed": true,
+      "remaining": [],
+      "ps_matching": [],
+      "live_pids": [],
+      "root_removed": true
+    },
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/step/cleanup.json": {
+      "roots": [
+        "/tmp/aos72-test-xa37q13v",
+        "/tmp/aos72-test-_jsmdluu",
+        "/tmp/aos72-test-520jefca",
+        "/tmp/aos72-test-ag53pm60",
+        "/tmp/aos72-test-n5u4_mt9",
+        "/tmp/aos72-test-9ot2s640",
+        "/tmp/aos72-test-mqbdez72",
+        "/tmp/aos72-test-yab706ml",
+        "/tmp/aos72-test-vvm39j_d",
+        "/tmp/aos72-test-p520w6px",
+        "/tmp/aos72-test-wig6vsc2"
+      ],
+      "remaining_roots": [],
+      "matching_processes": [],
+      "ps": "    PID    PPID    PGID STAT COMMAND\n 521398  521397  521397 S    python3 -\n",
+      "probe_harness_notes": "F47初版用不存在的rename故障hook，命中0後改用tock.write_json排程內EIO；只最終命中紀錄作產品判定。初版自建2個空/tmp hits檔已逐名刪除；其測試根由finally清掉。"
+    },
+    "proto7-2/notes/play/2026-10-04-astra-4-infra-evidence/stress/cleanup.json": {
+      "known_pids": [
+        517030,
+        517032,
+        517037,
+        517046,
+        517047,
+        517048,
+        517049,
+        517050,
+        517051,
+        517107,
+        517108,
+        517109,
+        517136,
+        517228,
+        517237,
+        517245,
+        517246,
+        517247,
+        517249,
+        517250,
+        517251,
+        517290,
+        517291,
+        517292,
+        517312,
+        517319,
+        517329,
+        517334,
+        517335,
+        517336,
+        517337,
+        517338,
+        517339,
+        517377,
+        517378,
+        517380,
+        517403,
+        517421,
+        517427,
+        517436,
+        517437,
+        517438,
+        517439,
+        517440,
+        517441,
+        517476,
+        517477,
+        517478,
+        517491,
+        520330,
+        520332,
+        520337,
+        520345,
+        520346,
+        520347,
+        520348,
+        520349,
+        520350,
+        520401,
+        520402,
+        520403,
+        520426,
+        520495,
+        520504,
+        520513,
+        520514,
+        520515,
+        520516,
+        520517,
+        520518,
+        520558,
+        520560,
+        520563,
+        520591,
+        520600,
+        520607,
+        520608,
+        520609,
+        520610,
+        520611,
+        520612,
+        520644,
+        520646,
+        520647,
+        520669,
+        520999,
+        521004,
+        521008,
+        521009,
+        521010,
+        521011,
+        521012,
+        521013,
+        521049,
+        521051,
+        521053,
+        521117,
+        523690,
+        523692,
+        523697,
+        523705,
+        523706,
+        523707,
+        523708,
+        523709,
+        523710,
+        523756,
+        523759,
+        523762,
+        523862,
+        523871,
+        523879,
+        523880,
+        523881,
+        523883,
+        523884,
+        523885,
+        523925,
+        523926,
+        523927,
+        523948,
+        523960,
+        523967,
+        523975,
+        523976,
+        523977,
+        523979,
+        523980,
+        523981,
+        524010,
+        524013,
+        524017
+      ],
+      "ps_returncode": 1,
+      "ps_stdout": "    PID    PPID    PGID STAT COMMAND\n",
+      "ps_stderr": "",
+      "tmp_roots_exist": {
+        "/tmp/astra4-stress-551e_5nz": false,
+        "/tmp/astra4-stress-1vu34cl4": false
+      }
+    }
+  },
+  "temporary_roots": {
+    "count": 15,
+    "paths": [
+      "/tmp/aos72-test-520jefca",
+      "/tmp/aos72-test-9ot2s640",
+      "/tmp/aos72-test-_jsmdluu",
+      "/tmp/aos72-test-ag53pm60",
+      "/tmp/aos72-test-mqbdez72",
+      "/tmp/aos72-test-n5u4_mt9",
+      "/tmp/aos72-test-p520w6px",
+      "/tmp/aos72-test-vvm39j_d",
+      "/tmp/aos72-test-wig6vsc2",
+      "/tmp/aos72-test-xa37q13v",
+      "/tmp/aos72-test-yab706ml",
+      "/tmp/astra4-core-3oq54nfk",
+      "/tmp/astra4-core-7vg1agy6",
+      "/tmp/astra4-stress-1vu34cl4",
+      "/tmp/astra4-stress-551e_5nz"
+    ],
+    "remaining": []
+  },
+  "process_audit": {
+    "method": "/proc AOS7_ROOT/AOS7_SUBROOT boundary match or entire /tmp path argv entries; ps cross-check; no substring prompt matches and no killing.",
+    "proc_scanned": 393,
+    "unreadable_pids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      11,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      28,
+      29,
+      30,
+      31,
+      32,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      58,
+      59,
+      60,
+      61,
+      62,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      76,
+      77,
+      78,
+      79,
+      80,
+      82,
+      83,
+      84,
+      85,
+      86,
+      88,
+      89,
+      90,
+      91,
+      92,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      130,
+      131,
+      132,
+      134,
+      135,
+      136,
+      137,
+      138,
+      139,
+      141,
+      142,
+      143,
+      144,
+      146,
+      148,
+      149,
+      150,
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      167,
+      168,
+      169,
+      170,
+      173,
+      180,
+      181,
+      185,
+      186,
+      215,
+      232,
+      278,
+      279,
+      280,
+      281,
+      282,
+      283,
+      284,
+      285,
+      286,
+      287,
+      288,
+      289,
+      290,
+      291,
+      292,
+      293,
+      294,
+      296,
+      297,
+      298,
+      299,
+      300,
+      301,
+      302,
+      303,
+      304,
+      305,
+      306,
+      307,
+      308,
+      309,
+      310,
+      311,
+      312,
+      313,
+      314,
+      315,
+      316,
+      317,
+      318,
+      319,
+      320,
+      321,
+      322,
+      323,
+      395,
+      396,
+      451,
+      466,
+      483,
+      486,
+      487,
+      488,
+      489,
+      490,
+      491,
+      497,
+      502,
+      507,
+      510,
+      568,
+      589,
+      590,
+      591,
+      633,
+      634,
+      636,
+      637,
+      639,
+      641,
+      643,
+      644,
+      645,
+      646,
+      647,
+      648,
+      649,
+      654,
+      692,
+      693,
+      694,
+      721,
+      728,
+      754,
+      757,
+      759,
+      760,
+      762,
+      763,
+      765,
+      829,
+      830,
+      842,
+      845,
+      848,
+      851,
+      935,
+      936,
+      944,
+      955,
+      961,
+      1023,
+      1032,
+      1035,
+      1038,
+      1041,
+      1042,
+      1043,
+      1044,
+      1045,
+      1046,
+      1075,
+      1076,
+      1083,
+      1112,
+      1161,
+      1201,
+      1235,
+      1261,
+      1330,
+      1463,
+      1592,
+      1790,
+      2412,
+      2646,
+      2799,
+      2814,
+      2817,
+      2820,
+      2983,
+      16360,
+      27504,
+      30891,
+      30892,
+      48195,
+      48350,
+      325509,
+      325640,
+      419625,
+      424341,
+      425036,
+      442930,
+      443045,
+      443052,
+      443144,
+      443372,
+      443398,
+      443547,
+      443592,
+      443641,
+      444161,
+      462076,
+      466609,
+      466610,
+      467481,
+      499134,
+      499619,
+      523579,
+      527097,
+      527098,
+      527403
+    ],
+    "matching_processes": [],
+    "ps_matching": [],
+    "known_cleanup_pids": [
+      517030,
+      517032,
+      517037,
+      517046,
+      517047,
+      517048,
+      517049,
+      517050,
+      517051,
+      517107,
+      517108,
+      517109,
+      517136,
+      517228,
+      517237,
+      517245,
+      517246,
+      517247,
+      517249,
+      517250,
+      517251,
+      517290,
+      517291,
+      517292,
+      517312,
+      517319,
+      517329,
+      517334,
+      517335,
+      517336,
+      517337,
+      517338,
+      517339,
+      517377,
+      517378,
+      517380,
+      517403,
+      517421,
+      517427,
+      517436,
+      517437,
+      517438,
+      517439,
+      517440,
+      517441,
+      517476,
+      517477,
+      517478,
+      517491,
+      520330,
+      520332,
+      520337,
+      520345,
+      520346,
+      520347,
+      520348,
+      520349,
+      520350,
+      520401,
+      520402,
+      520403,
+      520426,
+      520495,
+      520504,
+      520513,
+      520514,
+      520515,
+      520516,
+      520517,
+      520518,
+      520558,
+      520560,
+      520563,
+      520591,
+      520600,
+      520607,
+      520608,
+      520609,
+      520610,
+      520611,
+      520612,
+      520644,
+      520646,
+      520647,
+      520669,
+      520999,
+      521004,
+      521008,
+      521009,
+      521010,
+      521011,
+      521012,
+      521013,
+      521049,
+      521051,
+      521053,
+      521117,
+      523690,
+      523692,
+      523697,
+      523705,
+      523706,
+      523707,
+      523708,
+      523709,
+      523710,
+      523756,
+      523759,
+      523762,
+      523862,
+      523871,
+      523879,
+      523880,
+      523881,
+      523883,
+      523884,
+      523885,
+      523925,
+      523926,
+      523927,
+      523948,
+      523960,
+      523967,
+      523975,
+      523976,
+      523977,
+      523979,
+      523980,
+      523981,
+      524010,
+      524013,
+      524017
+    ],
+    "known_cleanup_pids_ps_rc": 1,
+    "known_cleanup_pids_ps": "    PID    PPID    PGID STAT COMMAND\n",
+    "known_cleanup_pids_ps_stderr": ""
+  },
+  "passed": true
+}

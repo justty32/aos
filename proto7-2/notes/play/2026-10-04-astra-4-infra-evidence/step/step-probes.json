@@ -1,0 +1,707 @@
+[
+  {
+    "probe": "initial_wait_patience",
+    "classification": "pass",
+    "checker_errors": [],
+    "frames": [
+      {
+        "pc": "w",
+        "phase": "running",
+        "since": 1,
+        "seen": 1,
+        "halt": null
+      },
+      {
+        "pc": "w",
+        "phase": "running",
+        "since": 1,
+        "seen": 2,
+        "halt": null
+      },
+      {
+        "pc": "w",
+        "phase": "running",
+        "since": 1,
+        "seen": 3,
+        "halt": null
+      },
+      {
+        "pc": "w",
+        "phase": "halted",
+        "since": 1,
+        "seen": 4,
+        "halt": {
+          "kind": "timeout",
+          "why": "等了 3 回合（patience 2，本地回合）；逾時不等於沒做，遲到的結果照樣留著",
+          "step": "w",
+          "round": 4,
+          "at": "2026-10-04T16:09:53.381"
+        }
+      },
+      {
+        "pc": "w",
+        "phase": "halted",
+        "since": 1,
+        "seen": 5,
+        "halt": {
+          "kind": "timeout",
+          "why": "等了 3 回合（patience 2，本地回合）；逾時不等於沒做，遲到的結果照樣留著",
+          "step": "w",
+          "round": 4,
+          "at": "2026-10-04T16:09:53.381"
+        }
+      },
+      {
+        "pc": "w",
+        "phase": "halted",
+        "since": 1,
+        "seen": 6,
+        "halt": {
+          "kind": "timeout",
+          "why": "等了 3 回合（patience 2，本地回合）；逾時不等於沒做，遲到的結果照樣留著",
+          "step": "w",
+          "round": 4,
+          "at": "2026-10-04T16:09:53.381"
+        }
+      },
+      {
+        "pc": "w",
+        "phase": "halted",
+        "since": 1,
+        "seen": 7,
+        "halt": {
+          "kind": "timeout",
+          "why": "等了 3 回合（patience 2，本地回合）；逾時不等於沒做，遲到的結果照樣留著",
+          "step": "w",
+          "round": 4,
+          "at": "2026-10-04T16:09:53.381"
+        }
+      },
+      {
+        "pc": "w",
+        "phase": "halted",
+        "since": 1,
+        "seen": 8,
+        "halt": {
+          "kind": "timeout",
+          "why": "等了 3 回合（patience 2，本地回合）；逾時不等於沒做，遲到的結果照樣留著",
+          "step": "w",
+          "round": 4,
+          "at": "2026-10-04T16:09:53.381"
+        }
+      }
+    ],
+    "observed": "since=1，r4差值3>2後 timeout，A4-03修好"
+  },
+  {
+    "probe": "entered_wait_patience",
+    "classification": "pass",
+    "frames": [
+      {
+        "pc": "a",
+        "phase": "running",
+        "since": 1,
+        "seen": 1,
+        "halt": null
+      },
+      {
+        "pc": "a",
+        "phase": "running",
+        "since": 1,
+        "seen": 2,
+        "halt": null
+      },
+      {
+        "pc": "w",
+        "phase": "running",
+        "since": 3,
+        "seen": 3,
+        "halt": null
+      },
+      {
+        "pc": "w",
+        "phase": "running",
+        "since": 3,
+        "seen": 4,
+        "halt": null
+      },
+      {
+        "pc": "w",
+        "phase": "running",
+        "since": 3,
+        "seen": 5,
+        "halt": null
+      },
+      {
+        "pc": "w",
+        "phase": "halted",
+        "since": 3,
+        "seen": 6,
+        "halt": {
+          "kind": "timeout",
+          "why": "等了 3 回合（patience 2，本地回合）；逾時不等於沒做，遲到的結果照樣留著",
+          "step": "w",
+          "round": 6,
+          "at": "2026-10-04T16:09:54.006"
+        }
+      }
+    ],
+    "observed": "run→wait 有 since，差值>2 時 timeout"
+  },
+  {
+    "probe": "delayed_intent_unknown",
+    "classification": "X",
+    "before": {
+      "v": 1,
+      "job": "late",
+      "inst": "5b2d6489",
+      "table": "fc19fe73995b",
+      "pc": "a",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "5b2d6489-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "5b2d6489-a-1",
+        "attempt": "5b2d6489-a-1-a1",
+        "n": 1,
+        "task": "step-late-a",
+        "result": "jobs/late/results/a/5b2d6489-a-1-a1.json",
+        "state": "intent",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": null,
+      "end": null,
+      "since": 1,
+      "seen": null,
+      "rev": 2,
+      "at": "2026-10-04T16:09:54.115"
+    },
+    "after": {
+      "v": 1,
+      "job": "late",
+      "inst": "5b2d6489",
+      "table": "fc19fe73995b",
+      "pc": "a",
+      "phase": "halted",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "5b2d6489-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "5b2d6489-a-1",
+        "attempt": "5b2d6489-a-1-a1",
+        "n": 1,
+        "task": "step-late-a",
+        "result": "jobs/late/results/a/5b2d6489-a-1-a1.json",
+        "state": "intent",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": {
+        "kind": "unknown",
+        "why": "派工意圖寫了、表上沒有這項、槽也沒有（回合 5，意圖在 1）：說不清加上過沒有",
+        "step": "a",
+        "round": 5,
+        "at": "2026-10-04T16:09:54.298"
+      },
+      "end": null,
+      "since": 1,
+      "seen": 5,
+      "rev": 4,
+      "at": "2026-10-04T16:09:54.338",
+      "tock": 5
+    },
+    "runs_a": 0,
+    "observed": "意圖寫後 SIGKILL，跨超過1回合才接回：unknown，不重派"
+  },
+  {
+    "probe": "resend_at_most_once",
+    "classification": "X",
+    "snapshots": [
+      {
+        "v": 1,
+        "job": "twice",
+        "inst": "b0f270cd",
+        "table": "aa4d2822ec87",
+        "pc": "a",
+        "phase": "running",
+        "counts": {},
+        "visits": {
+          "a": 1
+        },
+        "accepted": {},
+        "tries": {
+          "b0f270cd-a-1": 1
+        },
+        "pending": {
+          "step": "a",
+          "request": "b0f270cd-a-1",
+          "attempt": "b0f270cd-a-1-a1",
+          "n": 1,
+          "task": "step-twice-a",
+          "result": "jobs/twice/results/a/b0f270cd-a-1-a1.json",
+          "state": "queued",
+          "intent_round": 1,
+          "since": 1,
+          "resends": 0
+        },
+        "halt": null,
+        "end": null,
+        "since": 1,
+        "seen": 2,
+        "rev": 6,
+        "tock": 2,
+        "at": "2026-10-04T16:09:54.552"
+      },
+      {
+        "v": 1,
+        "job": "twice",
+        "inst": "b0f270cd",
+        "table": "aa4d2822ec87",
+        "pc": "a",
+        "phase": "running",
+        "counts": {},
+        "visits": {
+          "a": 1
+        },
+        "accepted": {},
+        "tries": {
+          "b0f270cd-a-1": 2
+        },
+        "pending": {
+          "step": "a",
+          "request": "b0f270cd-a-1",
+          "attempt": "b0f270cd-a-1-a2",
+          "n": 2,
+          "task": "step-twice-a",
+          "result": "jobs/twice/results/a/b0f270cd-a-1-a2.json",
+          "state": "queued",
+          "intent_round": 3,
+          "since": 3,
+          "resends": 1
+        },
+        "halt": null,
+        "end": null,
+        "since": 1,
+        "seen": 4,
+        "rev": 10,
+        "tock": 4,
+        "at": "2026-10-04T16:09:54.673"
+      }
+    ],
+    "after": {
+      "v": 1,
+      "job": "twice",
+      "inst": "b0f270cd",
+      "table": "aa4d2822ec87",
+      "pc": "a",
+      "phase": "halted",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "b0f270cd-a-1": 2
+      },
+      "pending": {
+        "step": "a",
+        "request": "b0f270cd-a-1",
+        "attempt": "b0f270cd-a-1-a2",
+        "n": 2,
+        "task": "step-twice-a",
+        "result": "jobs/twice/results/a/b0f270cd-a-1-a2.json",
+        "state": "queued",
+        "intent_round": 3,
+        "since": 3,
+        "resends": 1
+      },
+      "halt": {
+        "kind": "unknown",
+        "why": "子工作 step-twice-a#4 結束了（code -15）卻沒有結果檔",
+        "step": "a",
+        "round": 5,
+        "at": "2026-10-04T16:09:54.733"
+      },
+      "end": null,
+      "since": 1,
+      "seen": 8,
+      "rev": 14,
+      "tock": 8,
+      "at": "2026-10-04T16:09:54.895"
+    },
+    "runs_a": 2,
+    "observed": "僅自動重派一次，同request不同attempt，第二次未知停住"
+  },
+  {
+    "probe": "timeout_kill",
+    "classification": "pass",
+    "frame": {
+      "v": 1,
+      "job": "tk",
+      "inst": "96e9a766",
+      "table": "8918d18da18f",
+      "pc": "a",
+      "phase": "halted",
+      "counts": {},
+      "visits": {
+        "a": 1
+      },
+      "accepted": {},
+      "tries": {
+        "96e9a766-a-1": 1
+      },
+      "pending": {
+        "step": "a",
+        "request": "96e9a766-a-1",
+        "attempt": "96e9a766-a-1-a1",
+        "n": 1,
+        "task": "step-tk-a",
+        "result": "jobs/tk/results/a/96e9a766-a-1-a1.json",
+        "state": "queued",
+        "intent_round": 1,
+        "since": 1,
+        "resends": 0
+      },
+      "halt": {
+        "kind": "timeout",
+        "why": "等了 2 回合（patience 1，本地回合）；已送 kill（run 2）；逾時不等於沒做，遲到的結果照樣留著",
+        "step": "a",
+        "round": 3,
+        "at": "2026-10-04T16:09:55.154"
+      },
+      "end": null,
+      "since": 1,
+      "seen": 3,
+      "rev": 7,
+      "tock": 3,
+      "at": "2026-10-04T16:09:55.154"
+    },
+    "kill_request": {
+      "op": "kill",
+      "run": 2,
+      "by": "a:step-tk",
+      "why": "step timeout"
+    },
+    "exit": null,
+    "results": [],
+    "observed": "timeout kill 帶run，停住且不假報結果"
+  },
+  {
+    "probe": "close_active_refused",
+    "classification": "pass",
+    "returncode": 3,
+    "stderr": "aos7-step: 工作還沒結束（phase running），不能 close\n",
+    "phase": "running"
+  },
+  {
+    "probe": "checker_edges",
+    "classification": "pass",
+    "cases": [
+      {
+        "case": "scalar_step",
+        "input": {
+          "job": "check",
+          "start": "a",
+          "steps": {
+            "a": 3,
+            "b": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-b",
+                "${out}/b.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "ok": "done"
+            },
+            "done": {
+              "end": "ok"
+            }
+          }
+        },
+        "returncode": 1,
+        "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"a\",\n  \"rule\": \"struct\",\n  \"why\": \"每步恰好一個種類鍵（run／wait／count／end）\"\n },\n {\n  \"level\": \"warn\",\n  \"step\": \"b\",\n  \"rule\": \"struct\",\n  \"why\": \"從 start 走不到\"\n },\n {\n  \"level\": \"warn\",\n  \"step\": \"done\",\n  \"rule\": \"struct\",\n  \"why\": \"從 start 走不到\"\n }\n]\n",
+        "stderr_tail": ""
+      },
+      {
+        "case": "list_target",
+        "input": {
+          "job": "check",
+          "start": "a",
+          "steps": {
+            "a": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-a",
+                "${out}/a.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "expect": [
+                "${out}/a.txt"
+              ],
+              "ok": []
+            },
+            "b": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-b",
+                "${out}/b.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "ok": "done"
+            },
+            "done": {
+              "end": "ok"
+            }
+          }
+        },
+        "returncode": 1,
+        "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"a\",\n  \"rule\": \"struct\",\n  \"why\": \"ok 要是步名字串，拿到 []\"\n }\n]\n",
+        "stderr_tail": ""
+      },
+      {
+        "case": "list_start",
+        "input": {
+          "job": "check",
+          "start": [],
+          "steps": {
+            "a": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-a",
+                "${out}/a.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "expect": [
+                "${out}/a.txt"
+              ],
+              "ok": "b"
+            },
+            "b": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-b",
+                "${out}/b.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "ok": "done"
+            },
+            "done": {
+              "end": "ok"
+            }
+          }
+        },
+        "returncode": 1,
+        "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": null,\n  \"rule\": \"struct\",\n  \"why\": \"start 要是步名字串\"\n }\n]\n",
+        "stderr_tail": ""
+      },
+      {
+        "case": "list_result_condition",
+        "input": {
+          "job": "check",
+          "start": "a",
+          "steps": {
+            "a": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-a",
+                "${out}/a.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "expect": [
+                "${out}/a.txt"
+              ],
+              "ok": "b"
+            },
+            "b": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-b",
+                "${out}/b.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "ok": "done"
+            },
+            "done": {
+              "end": "ok"
+            },
+            "w": {
+              "wait": {
+                "result.ok": []
+              },
+              "then": "done"
+            }
+          }
+        },
+        "returncode": 1,
+        "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"w\",\n  \"rule\": \"struct\",\n  \"why\": \"wait 的 result.ok 要是步名字串\"\n }\n]\n",
+        "stderr_tail": ""
+      },
+      {
+        "case": "global_kill_wait",
+        "input": {
+          "job": "check",
+          "start": "w",
+          "steps": {
+            "a": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-a",
+                "${out}/a.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "expect": [
+                "${out}/a.txt"
+              ],
+              "ok": "b"
+            },
+            "b": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-b",
+                "${out}/b.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "ok": "done"
+            },
+            "done": {
+              "end": "ok"
+            },
+            "w": {
+              "wait": {
+                "exists": "never"
+              },
+              "patience": 1,
+              "then": "done"
+            }
+          },
+          "options": {
+            "on_timeout": "kill"
+          }
+        },
+        "returncode": 1,
+        "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"w\",\n  \"rule\": \"struct\",\n  \"why\": \"on_timeout: kill 只給 run 步（全域選項是 kill，要在步內改回 unknown／fail）\"\n },\n {\n  \"level\": \"warn\",\n  \"step\": \"a\",\n  \"rule\": \"struct\",\n  \"why\": \"從 start 走不到\"\n },\n {\n  \"level\": \"warn\",\n  \"step\": \"b\",\n  \"rule\": \"struct\",\n  \"why\": \"從 start 走不到\"\n }\n]\n",
+        "stderr_tail": ""
+      },
+      {
+        "case": "step_wake_override",
+        "input": {
+          "job": "check",
+          "start": "a",
+          "steps": {
+            "a": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-a",
+                "${out}/a.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "expect": [
+                "${out}/a.txt"
+              ],
+              "ok": "b",
+              "wake": true
+            },
+            "b": {
+              "run": [
+                "/usr/bin/python3",
+                "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/tests/child.py",
+                "check-b",
+                "${out}/b.txt",
+                "-",
+                "0"
+              ],
+              "finite": true,
+              "idempotent": true,
+              "ok": "done"
+            },
+            "done": {
+              "end": "ok"
+            }
+          }
+        },
+        "returncode": 0,
+        "stdout": "[]\n",
+        "stderr_tail": ""
+      }
+    ],
+    "observed": "A4-04、A4-07檢查器反例消失，壞型別均JSON診斷"
+  },
+  {
+    "probe": "malformed_frame_misuse",
+    "classification": "M",
+    "returncode": 1,
+    "stderr_tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys;sys.path.insert(0,sys.argv[1]);import aos7_step;aos7_step.run_pass('jobs/badfr')\n                                                               ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^\n  File \"/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/aos7_step.py\", line 673, in run_pass\n    it.advance()\n    ~~~~~~~~~~^^\n  File \"/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/aos7_step.py\", line 608, in advance\n    step = fr[\"pc\"]\n           ~~^^^^^^\nKeyError: 'pc'\n",
+    "observed": "手改frame刪pc後KeyError，誤用、不處理；此案不列要修"
+  },
+  {
+    "probe": "cleanup",
+    "roots": [
+      "/tmp/aos72-test-xa37q13v",
+      "/tmp/aos72-test-_jsmdluu",
+      "/tmp/aos72-test-520jefca",
+      "/tmp/aos72-test-ag53pm60",
+      "/tmp/aos72-test-n5u4_mt9",
+      "/tmp/aos72-test-9ot2s640",
+      "/tmp/aos72-test-mqbdez72",
+      "/tmp/aos72-test-yab706ml"
+    ],
+    "roots_remaining": [],
+    "ps_root_matches": []
+  }
+]

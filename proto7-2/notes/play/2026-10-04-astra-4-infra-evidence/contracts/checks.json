@@ -1,0 +1,42 @@
+{
+  "head": "b8568cdbf8122b1aaa11b9e67c49228e0e145d2c",
+  "grep": {
+    "argv": [
+      "grep",
+      "-n",
+      "ctl-seen\\|ctl_id\\|uid\\|G2",
+      "proto7-2/notes/component-contracts.md"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "",
+    "matches": 0
+  },
+  "core_guarantee_groups_checked": 35,
+  "spec_sections_missing": [],
+  "seven_readmes_have_contract_section": {
+    "control": true,
+    "subd": true,
+    "once_retry": true,
+    "audit": true,
+    "diag": true,
+    "tools": true,
+    "step": true
+  },
+  "seven_readmes_have_four_fields": {
+    "control": true,
+    "subd": true,
+    "once_retry": true,
+    "audit": true,
+    "diag": true,
+    "tools": true,
+    "step": true
+  },
+  "A4-08": "修好：舊責任與控制檔例外已同步，packs測試入口已改",
+  "A4-10": "文件界線修好；手改frame缺pc仍屬M，不計bug",
+  "new_findings": [],
+  "cross_line_findings": [
+    "G3動態反例A5-01推翻subd README55的收尾承諾，見stress/summary.md"
+  ],
+  "scope": "靜態契約核對；動態驗收由其他線提供"
+}
