@@ -134,7 +134,8 @@ class TestIdentityScan(CoreCase):
     def test_old_run_leftover_not_taken_as_new_run(self):
         """同一個槽上一個 run 留下的孫程序：不算這次的活任務、kill 這次也不打到它。"""
         node = self.mknode("a", [{"name": "e", "argv": ["sh", "-c",
-                                                        'if [ "$AOS7_RUN" = 1 ]; then ' + LEAVE_GC + 'exit 0; fi; sleep 60']}])
+                                                        'if [ "$AOS7_RUN" = 1 ]; then ' + LEAVE_GC + 'exit 0; fi; exec sleep 60']}])
+        # exec：dash 不 exec 最後一個命令，不寫的話 run 2 是 sh＋sleep 兩個程序，下面「只有主程序」的斷言會多一個 pid
         self.tick()
         self.wait_ended(node, "e", 1)
         gc = gc_pid(node, "e", wait=5)

@@ -137,11 +137,13 @@ def rec_argv(name, keep=False, short_first=False):
     """每跑一次往 node 的 ran-<name>.txt 加一行 $AOS7_RUN（槽外副作用：數得出到底執行了幾次）。
 
     keep=True：記完 exec sleep 60（環境帶著 AOS7_*，身分掃描找得到）。
-    short_first=True：第一次執行只睡 0.2 秒就結束（給 runner-before-exit 這種要任務先結束的點），之後的執行才長睡。"""
+    short_first=True：第一次執行只睡 0.2 秒就結束（給 runner-before-exit 這種要任務先結束的點），之後的執行才長睡。
+    最後的命令一律 `exec`：dash（Ubuntu 24.04 的 /bin/sh）不把 -c 的最後一個命令 exec 掉、會 fork 出子程序，同一個 run 就有
+    sh＋sleep 兩個活程序，數「同槽活程序」的斷言會誤判雙開。"""
     rec = 'echo $AOS7_RUN >> "$AOS7_NODE/ran-%s.txt"' % name
     if short_first:
         mark = '"$AOS7_NODE/first-done-%s"' % name
-        return ["sh", "-c", rec + "; if [ -e %s ]; then exec sleep 60; fi; touch %s; sleep 0.2" % (mark, mark)]
+        return ["sh", "-c", rec + "; if [ -e %s ]; then exec sleep 60; fi; touch %s; exec sleep 0.2" % (mark, mark)]
     if keep:
         return ["sh", "-c", rec + "; exec sleep 60"]
     return ["sh", "-c", rec]

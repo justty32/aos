@@ -21,6 +21,7 @@
 | [spec-readability](spec-readability.md) | 文件可讀性與一致性（收尾版） | 主因是把有條件保證寫成絕對保證、跨包同名術語語義不同；先修診斷手冊回合恢復判準、pause 說明、budget 接 step 的 unknown 處理 |
 | [test-review](test-review.md) | 364 項測試審查 | 正常與故障恢復覆蓋扎實，但綠燈仍會漏「沒真的崩潰、故障打錯階段」；先補判定與同步再平行化 |
 | [wf-structure](wf-structure.md) | wf 文件結構整理（收尾版） | 排除封存後 150 份 Markdown 超過 8 KiB；先清失效待辦與舊介面說明，再抽資料與拆檔，不以全壓到 8 KiB 為目標 |
+| [wsl-3-failures](wsl-3-failures.md) | WSL 上 3 項穩定失敗 | 測試對 dash 不 exec 最後命令、aos7-run 起得比恢復回合快的假設錯；產品無誤，已改測試 |
 
 ## 多線交叉撞到的問題
 
