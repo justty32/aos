@@ -2,7 +2,7 @@
 
 [dispatch](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
 
-十條都是實跑之後才長出來的，寫在這裡是為了**下一份交接書送出前對一次**。
+十一條都是實跑之後才長出來的，寫在這裡是為了**下一份交接書送出前對一次**。
 
 ## 1. 派線前的預掃要涵蓋全部組別
 
@@ -84,3 +84,7 @@
 
 - 派線流程 → [dispatch](README.md)；怎麼驅動外部 CLI 線 → [driving-cli-agents](driving-cli-agents.md)。
 - 交接書骨架 → [TEMPLATE.handoff](../TEMPLATE.handoff.md)。
+
+## 11. 會對程序群組亂送訊號的測試改動，在公司 WSL 上會把整個 WSL 弄掛（2026-10-05）
+
+修「假綠」測試（test-review T8 系列）那條線改了共用收尾工具 `tests/_proc.py`，讓 `reap` 對程序群組反覆送 SIGKILL 直到群組變空，另外動了 subd、daemon、matrix 等測試。跑這些測試時 WSL 連續兩次整個掛掉、重開，`/tmp` 被清空。改動沒 commit，使用者說直接丟掉。**之後碰 `tests/_proc.py`、`killpg`、程序群組收尾的改動，不要在公司 WSL 上跑**；要做就在可丟棄的環境，並先檢查 pgid 不是 0、1 或測試程序自己的群組。
