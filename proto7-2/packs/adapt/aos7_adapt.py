@@ -33,10 +33,41 @@ FRAME_KEYS = ("sense", "chain", "since", "my_round", "last_ok_my_round", "last_c
 
 
 
+# 鏈的數值一律用精確十進位算（A8-01～03）：精度、指數都開到上限，乘、加、比較都是精確的（鏈裡沒有除法），
+# 不會因 Decimal 預設 28 位拋例外，也不會在 float 端點塌縮。來源與宣告的數字取 JSON 文字的十進位值（float 取 repr）。
+EXACT = decimal.Context(prec=decimal.MAX_PREC, Emax=decimal.MAX_EMAX, Emin=decimal.MIN_EMIN)
+FLOAT_MAX = decimal.Decimal(repr(sys.float_info.max))
+
+
+def dec(v):
+    """JSON 數字 → 精確十進位（int 原樣；float 取 repr，也就是讀進來的那段文字）。"""
+    return decimal.Decimal(v) if isinstance(v, int) else decimal.Decimal(repr(v))
+
+
 def round_half_up(x, nd):
-    """四捨五入到小數 nd 位（平手遠離零；Python 內建 round 是平手取偶數，不合 spec §2）。"""
-    q = decimal.Decimal(1).scaleb(-nd)
-    return float(decimal.Decimal(repr(x)).quantize(q, rounding=decimal.ROUND_HALF_UP))
+    """十進位 x 四捨五入到小數 nd 位（平手遠離零；Python 內建 round 是平手取偶數，不合 spec §2）。精確，不轉 float。"""
+    return x.quantize(decimal.Decimal(1).scaleb(-nd), rounding=decimal.ROUND_HALF_UP, context=EXACT)
+
+
+def publish(x, e=None):
+    """精確十進位 → 發布用的 JSON 數字。回 (值, 誤差界)；超出 float 範圍（A8-04）回 (None, None)。
+    整數值且小數點後沒有位數（整數相乘、round 0），或整數值但 float 放不下＝ Python int，原樣不失真（A8-02）；其餘＝float，
+    float 的 repr 跟 x 不同時，差距算進誤差界（A8-02），誤差界本身往上取到 float。"""
+    if abs(x) > FLOAT_MAX or (e is not None and e > FLOAT_MAX):
+        return None, None
+    v = float(x)
+    if x == x.to_integral_value() and (x.as_tuple().exponent >= 0 or dec(v) != x):
+        v = int(x)
+    elif v == 0.0:
+        v = 0.0              # 不發布 -0.0
+    if e is None:
+        return v, None
+    e = e + abs(dec(v) - x) if isinstance(v, float) else e
+    f = float(e)
+    if dec(f) < e:
+        f = math.nextafter(f, math.inf)
+    return v, (f if math.isfinite(f) else None)
+
 
 def sha(obj):
     """正規 JSON（鍵排序）的 sha256：依據版本與鏈版本都用它。"""
@@ -44,8 +75,10 @@ def sha(obj):
 
 
 def is_num(v):
-    """有限的數字（JSON 的 true／false 不算）。"""
-    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+    """有限的數字（JSON 的 true／false 不算）。int 一律有限（大整數不轉 float，免得 OverflowError）。"""
+    if isinstance(v, bool):
+        return False
+    return isinstance(v, int) or (isinstance(v, float) and math.isfinite(v))
 
 
 def space_path_ok(p):
@@ -117,7 +150,7 @@ def check(d):
                 err(where, "type", "scale.q（取整誤差界）要是非負數字")
             if "round" in a and not (is_int(a["round"]) and 0 <= a["round"] <= 12):
                 err(where, "type", "scale.round 要是 0～12 的整數（小數位數）")
-            elif "round" in a and is_num(a.get("q")) and a["q"] < 0.5 * 10 ** -a["round"] * (1 - 1e-9):
+            elif "round" in a and is_num(a.get("q")) and dec(a["q"]) < decimal.Decimal(5).scaleb(-a["round"] - 1):
                 err(where, "err", "scale.q=%r 蓋不住取整到小數 %d 位的誤差（至少 %g）"
                     % (a["q"], a["round"], 0.5 * 10 ** -a["round"]))
         else:   # threshold
@@ -188,10 +221,11 @@ def band(op, t, lo, hi):
 
 
 def run_chain(steps, doc):
-    """跑一次鏈。回 {"out", "err", "trace", "omitted", "fail", "band"}：fail＝走 unknown 分支的原因（select_missing／not_number），
-    band＝落在誤差帶的產出欄。從固定的 doc 重算，不讀上一跳。"""
-    out, errs, trace, x, e = {}, {}, [], None, 0.0
-    selected, fail, inband = "", None, []
+    """跑一次鏈。回 {"out", "err", "trace", "omitted", "fail", "band", "range"}：fail＝走 unknown 分支的原因
+    （select_missing／not_number），band＝落在誤差帶的產出欄，range＝超出 float 範圍、不能發布的產出欄（A8-04）。
+    從固定的 doc 重算，不讀上一跳。中間值都是精確十進位，只有寫進 out／err／trace 時才轉成 JSON 數字。"""
+    out, errs, trace, x, e = {}, {}, [], None, decimal.Decimal(0)
+    selected, fail, inband, outrange = "", None, [], []
     for s in steps:
         k = next(k for k in STEP_KINDS if k in s)
         a = s[k]
@@ -201,28 +235,32 @@ def run_chain(steps, doc):
             if not found:
                 fail = "select_missing"
                 break
-            e = 0.0
-            trace.append({"step": "select", "x": x, "err": e})
+            trace.append({"step": "select", "x": x, "err": 0})
+            if is_num(x):
+                x = dec(x)
             continue
-        if not is_num(x):
+        if not isinstance(x, decimal.Decimal):
             fail = "not_number"
             break
         if k == "scale":
-            x = x * a["mul"]
+            x = EXACT.multiply(x, dec(a["mul"]))
             if "round" in a:
                 x = round_half_up(x, a["round"])
-            e = abs(a["mul"]) * e + a["q"]
-            trace.append({"step": "scale", "x": x, "err": e})
+            e = EXACT.add(EXACT.multiply(abs(dec(a["mul"])), e), dec(a["q"]))
+            v, ev = publish(x, e)
+            trace.append({"step": "scale", "x": v if ev is not None else str(x), "err": ev if ev is not None else str(e)})
             if "as" in a:
-                out[a["as"]], errs[a["as"]] = x, e
+                if ev is None:
+                    outrange.append(a["as"])
+                out[a["as"]], errs[a["as"]] = v, ev
         else:
             op = next(c for c in CMP_KEYS if c in a)
-            v = band(op, a[op], x - e, x + e)
+            v = band(op, dec(a[op]), EXACT.subtract(x, e), EXACT.add(x, e))
             trace.append({"step": "threshold", op: a[op], "as": a["as"], "v": v})
             out[a["as"]] = v
             if v is None:
                 inband.append(a["as"])
-    return {"out": out, "err": errs, "trace": trace, "fail": fail, "band": inband,
+    return {"out": out, "err": errs, "trace": trace, "fail": fail, "band": inband, "range": outrange,
             "omitted": omitted_of(doc, selected) if selected and isinstance(doc, dict) else []}
 
 
@@ -344,6 +382,8 @@ def evaluate(decl, fr, my_round, ct, src):
             state, why = "unknown", "void_basis"
         elif gate(basis):
             state, why = "unknown", gate(basis)
+        elif ch["range"]:
+            state, why = "unknown", "out_of_range"
         elif ch["band"]:
             state, why = "unknown", "within_error_band"
         elif any(ch["out"].get(n) is None for n in decl["need"]):
@@ -454,7 +494,13 @@ class Adapter:
             return
         clock = self.resolve(d["src_clock"])
         ct = completed_tock(clock) if clock else None
-        fr, reg = evaluate(d, fr, my_round, ct, read_source(self.resolve(d["src"])))
+        try:
+            fr, reg = evaluate(d, fr, my_round, ct, read_source(self.resolve(d["src"])))
+        except Exception as e:      # 沒料到的例外：不退出留下舊 ok（A8-01），這圈 unknown、框架不動
+            self.log("判定拋例外：%r；這圈 unknown，框架不動" % e)
+            self.write_reg(d["sense"], unknown_register(d["sense"], "internal_error", repr(e)[:300], my_round,
+                                                        fr["last"], fr["chain"]))
+            return
         if clock is None and reg["why"] == "clock_unknown":
             reg["why"] = "clock_not_mounted"
         try:

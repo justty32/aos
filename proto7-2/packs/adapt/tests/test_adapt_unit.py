@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import unittest
+from decimal import Decimal
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PACK = os.path.dirname(HERE)
@@ -118,6 +119,110 @@ class TestChain(unittest.TestCase):
         self.assertEqual(self.run_(None, value={"nope": 1})["fail"], "select_missing")
         self.assertEqual(self.run_(None, value={"t_dc": "hot"})["fail"], "not_number")
         self.assertEqual(self.run_(None, value={"t_dc": True})["fail"], "not_number")
+
+
+class TestNumeric(unittest.TestCase):
+    """〔adapt〕A8-01～04：鏈用精確十進位算（不受 Decimal 預設 28 位、float 端點塌縮影響）；發布的數字不失真、
+    表示誤差算進 err；超出 float 範圍不發布 ok。來源數字照 JSON 文字的十進位值（float 取 repr）。"""
+
+    def chain(self, x, *steps):
+        return A.run_chain([{"select": "value.x"}] + list(steps), src(value={"x": x})[1])
+
+    def evaluate(self, x, *steps, need=("c",)):
+        d = {"sense": "n", "src": "src/out/n.json", "src_clock": "src/.aos/round.json",
+             "steps": [{"select": "value.x"}] + list(steps), "need": list(need)}
+        self.assertEqual(A.check(d), [])
+        _, reg = A.evaluate(d, A.new_frame("n", A.sha(d), 1), 2, 10, src(value={"x": x}, rnd=10))
+        json.dumps(reg, allow_nan=False)          # 暫存器一定是標準 JSON（沒有 Infinity／NaN）
+        return reg
+
+    def test_a8_01_precision_no_exception(self):
+        """A8-01：合法宣告＋合法來源不拋 decimal.InvalidOperation（1e16 取到 12 位、1e28 取到 0 位）。"""
+        for x, sc, want in ((1e16, {"mul": 1, "q": 5e-13, "round": 12, "as": "c"}, 10 ** 16),
+                            (1e28, {"mul": 1, "q": 0.5, "round": 0, "as": "c"}, 10 ** 28),
+                            (123456789012345678901234567890, {"mul": 1, "q": 5e-13, "round": 12, "as": "c"},
+                             123456789012345678901234567890)):
+            with self.subTest(x=x):
+                reg = self.evaluate(x, {"scale": sc})
+                self.assertEqual(reg["state"], "ok", reg)
+                self.assertEqual(Decimal(repr(reg["value"]["c"])), Decimal(want))
+
+    def test_a8_01_unexpected_exception_not_stale_ok(self):
+        """A8-01 的後果面：判定拋了沒料到的例外，任務不退出、不留下舊 ok——這圈寫 unknown（internal_error），框架不動。"""
+        import shutil
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix="aos72-adapt-guard-")
+        self.addCleanup(shutil.rmtree, tmp)
+        node, slot = os.path.join(tmp, "dst"), os.path.join(tmp, "slot")
+        d = {"sense": "n", "src": "src/out/n.json", "src_clock": "src/.aos/round.json",
+             "steps": [{"select": "value.x"}, {"scale": {"mul": 1, "q": 0, "as": "c"}}], "need": ["c"]}
+        A.write_json(os.path.join(node, "adapt", "n.json"), d)
+        A.write_json(os.path.join(tmp, "src", ".aos", "round.json"), {"round": 10, "open": False})
+        A.write_json(os.path.join(tmp, "src", "out", "n.json"), {"v": 1, "round": 10, "value": {"x": 1}})
+        ad = A.Adapter("adapt/n.json", node, slot, lambda p: os.path.join(tmp, p))
+        logs = []
+        ad.log = logs.append
+        ad.pass_(1)
+        regp = os.path.join(node, "in", "n.json")
+        self.assertEqual(A.fact(regp)[1]["state"], "ok")
+        frame = A.fact(ad.frame_path)[1]
+        real = A.run_chain
+
+        def boom(*a):
+            raise ArithmeticError("boom")
+        A.run_chain = boom
+        try:
+            ad.pass_(2)
+        finally:
+            A.run_chain = real
+        r = A.fact(regp)[1]
+        self.assertEqual((r["state"], r["why"], r["my_round"], r["value"]), ("unknown", "internal_error", 2, None))
+        self.assertEqual(r["last"]["value"], {"c": 1})
+        self.assertEqual(A.fact(ad.frame_path)[1], frame)
+        self.assertTrue(any("boom" in m for m in logs), logs)
+
+    def test_a8_02_integer_exact(self):
+        """A8-02：整數取整後不強轉 float；2^53+1 原樣發布，誤差不突破宣告。"""
+        for sc in ({"mul": 1, "q": 0.5, "round": 0, "as": "c"}, {"mul": 1, "q": 0, "as": "c"}):
+            with self.subTest(sc=sc):
+                reg = self.evaluate(9007199254740993, {"scale": sc})
+                self.assertEqual(reg["state"], "ok", reg)
+                self.assertEqual(reg["value"]["c"], 9007199254740993)
+                self.assertIsInstance(reg["value"]["c"], int)
+                self.assertEqual(reg["err"]["c"], sc["q"])
+
+    def test_a8_02_repr_error_in_err(self):
+        """A8-02：非整數結果 float 放不下時，發布值與真值的差算進 err（真值一定落在 value ± err）。"""
+        reg = self.evaluate(12345678901234567, {"scale": {"mul": 0.1, "q": 0.05, "round": 1, "as": "c"}})
+        self.assertEqual(reg["state"], "ok", reg)
+        true = Decimal("1234567890123456.7")
+        self.assertLessEqual(abs(Decimal(repr(reg["value"]["c"])) - true), Decimal(repr(reg["err"]["c"])))
+        self.assertGreaterEqual(Decimal(repr(reg["err"]["c"])), Decimal("0.05"))
+
+    def test_a8_03_band_not_collapsed(self):
+        """A8-03：x=10000、err=5e-13、門檻 10000：四種比較都落在誤差帶（null），不硬判。"""
+        for op in A.CMP_KEYS:
+            with self.subTest(op=op):
+                reg = self.evaluate(10000, {"scale": {"mul": 1, "q": 5e-13, "round": 12, "as": "c"}},
+                                    {"threshold": {op: 10000, "as": "h"}}, need=("c", "h"))
+                self.assertEqual((reg["state"], reg["why"]), ("unknown", "within_error_band"), reg)
+
+    def test_a8_04_overflow_not_ok(self):
+        """A8-04：有限來源乘出 float 範圍外＝unknown（out_of_range，讀取成功、不撐舊值），不發布 ok/Infinity。"""
+        for x, sc, *more in ((1e308, {"mul": 2, "q": 0, "as": "c"}),
+                      (1e308, {"mul": 10, "q": 0.5, "round": 0, "as": "c"}),
+                      (10 ** 309, {"mul": 1, "q": 0, "as": "c"}),                       # 來源 JSON 大整數
+                      (0, {"mul": 1e300, "q": 1e300}, {"scale": {"mul": 1e10, "q": 0, "as": "c"}})):   # 值 0、誤差界超出
+            with self.subTest(x=x, sc=sc):
+                reg = self.evaluate(x, {"scale": sc}, *more)
+                self.assertEqual((reg["state"], reg["why"], reg["value"]), ("unknown", "out_of_range", None), reg)
+
+    def test_a8_04_intermediate_overflow_exact(self):
+        """中間值超出 float 範圍、最後縮回來：精確算，照常 ok。"""
+        reg = self.evaluate(1e300, {"scale": {"mul": 1e300, "q": 0}}, {"scale": {"mul": 1e-300, "q": 0, "as": "c"}})
+        self.assertEqual((reg["state"], Decimal(repr(reg["value"]["c"]))), ("ok", Decimal("1e300")), reg)
+        reg = self.evaluate(10 ** 309, {"scale": {"mul": 1e-10, "q": 0, "as": "c"}})     # 來源大整數縮回範圍內
+        self.assertEqual((reg["state"], reg["value"]["c"]), ("ok", 1e299), reg)
 
 
 class TestEvaluate(unittest.TestCase):
