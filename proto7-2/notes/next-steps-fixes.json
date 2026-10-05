@@ -1,0 +1,1198 @@
+{
+ "contract": "wf-table/1",
+ "source": "next-steps.md",
+ "extracted": "2026-10-05",
+ "link_columns": [],
+ "columns": [
+  "id",
+  "group",
+  "title",
+  "cls",
+  "severity",
+  "source",
+  "also_hit",
+  "note"
+ ],
+ "rows": [
+  {
+   "id": "A8-01",
+   "group": "1 adapt 回歸",
+   "title": "Decimal 精度不足，合法來源使任務反覆退出、留下舊 `ok`",
+   "cls": "B／adapt",
+   "severity": "中",
+   "source": "[play7 A8-01](reviews/2026-10-05/play7.md#a8-01badapt中decimal-精度不足合法來源使任務反覆退出留下舊-ok)",
+   "also_hit": "",
+   "note": "97191272 小修引入的回歸（play7 §3）"
+  },
+  {
+   "id": "A8-02",
+   "group": "1 adapt 回歸",
+   "title": "取整後強轉 float，合法整數失真且突破誤差界",
+   "cls": "B／adapt",
+   "severity": "中",
+   "source": "[play7 A8-02](reviews/2026-10-05/play7.md#a8-02badapt中取整後強轉-float合法整數失真且突破誤差界)",
+   "also_hit": "",
+   "note": "97191272 小修引入的回歸（play7 §3）"
+  },
+  {
+   "id": "A8-03",
+   "group": "1 adapt 回歸",
+   "title": "浮點端點塌縮，跨門檻的誤差帶被判成確定答案",
+   "cls": "B／adapt",
+   "severity": "中",
+   "source": "[play7 A8-03](reviews/2026-10-05/play7.md#a8-03badapt中浮點端點塌縮跨門檻的誤差帶被判成確定答案)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "A8-04",
+   "group": "1 adapt 回歸",
+   "title": "有限輸入乘法溢位，仍發布 `ok/Infinity`",
+   "cls": "B／adapt",
+   "severity": "中",
+   "source": "[play7 A8-04](reviews/2026-10-05/play7.md#a8-04badapt中有限輸入乘法溢位仍發布-okinfinity)",
+   "also_hit": "[code-quality R8-23（可能中，未核完）](reviews/2026-10-05/code-quality.md#r8-23可能中adapt-的合法數值可導致-infinity量化例外與門檻誤判)",
+   "note": ""
+  },
+  {
+   "id": "A8-09",
+   "group": "2 subd 誤收保留任務",
+   "title": "合法 no-kill stop 的回條寫失敗，重開後誤收應保留任務",
+   "cls": "B／subd",
+   "severity": "高",
+   "source": "[play7 A8-09](reviews/2026-10-05/play7.md#a8-09bsubd高合法-no-kill-stop-的回條寫失敗重開後誤收應保留任務)",
+   "also_hit": "[model-check MC-01](reviews/2026-10-05/model-check.md#4-mc-01重新接回前覆寫停止證據可能誤殺應保留任務)；README 交叉表",
+   "note": "play7 §8 列為第一優先"
+  },
+  {
+   "id": "MC-01",
+   "group": "2 subd 誤收保留任務",
+   "title": "刪 stopped.json 準備接回、新 running 已寫但 argv 前中斷，再重開時舊 stop 回條不符新 since，回收保留任務",
+   "cls": "B／subd",
+   "severity": "高（讀碼候選反例，未重現）",
+   "source": "[model-check MC-01](reviews/2026-10-05/model-check.md#4-mc-01重新接回前覆寫停止證據可能誤殺應保留任務)",
+   "also_hit": "[play7 A8-09](reviews/2026-10-05/play7.md#a8-09bsubd高合法-no-kill-stop-的回條寫失敗重開後誤收應保留任務)；README 交叉表",
+   "note": "與 A8-09 同在 subd 合法 stop 判定，但觸發路徑不同（A8-09 是回條寫失敗；MC-01 是刪標記重接後中斷），修時兩條都要有驗收案例"
+  },
+  {
+   "id": "R8-01",
+   "group": "3 kill／回收時序",
+   "title": "runner 尚未完成啟動，kill 就可能回成功",
+   "cls": "G 或 B（play7 依 kill 原意而定）",
+   "severity": "高",
+   "source": "[code-quality R8-01](reviews/2026-10-05/code-quality.md#r8-01高runner-尚未完成啟動kill-就可能回成功)",
+   "also_hit": "[play7 A8-06（G／中，獨立重現 2 次）](reviews/2026-10-05/play7.md#a8-06g槽-kill中啟動中的-run-回報-kill-成功後仍可開始同一次工作)",
+   "note": "R8-01 與 A8-06 是同一窗口：runner 已起、任務未 Popen 時 kill 回成功"
+  },
+  {
+   "id": "R8-02",
+   "group": "3 kill／回收時序",
+   "title": "node 回收失敗，仍會啟動新時間線",
+   "cls": "未分類",
+   "severity": "高",
+   "source": "[code-quality R8-02](reviews/2026-10-05/code-quality.md#r8-02高node-回收失敗仍會啟動新時間線)",
+   "also_hit": "[deep-play C8-02](reviews/2026-10-05/deep-play.md#c8-02b高node-替換後中斷回收新舊任務同時存活)（同族）；README 交叉表",
+   "note": ""
+  },
+  {
+   "id": "R8-03",
+   "group": "3 kill／回收時序",
+   "title": "unregister 寫檔失敗後，記憶體已取消登記，時間線卻繼續跑",
+   "cls": "未分類",
+   "severity": "高",
+   "source": "[code-quality R8-03](reviews/2026-10-05/code-quality.md#r8-03高unregister-寫檔失敗後記憶體已取消登記時間線卻繼續跑)",
+   "also_hit": "[play7 A8-05（B／daemon，中，8／8）](reviews/2026-10-05/play7.md#a8-05bdaemon中登記持久化失敗後正常重送仍回成功卻不修復磁碟狀態)；[deep-play C8-01](reviews/2026-10-05/deep-play.md#c8-01b高取消登記後-daemon-被殺回收義務永久遺失)（同族）；README 交叉表",
+   "note": "A8-05 同根因（register／unregister 先改記憶體再寫 nodes.json），嚴重度兩報告不同：R8-03 高、A8-05 中"
+  },
+  {
+   "id": "C8-01",
+   "group": "3 kill／回收時序",
+   "title": "取消登記後 daemon 被殺，回收義務永久遺失",
+   "cls": "B",
+   "severity": "高",
+   "source": "[deep-play C8-01](reviews/2026-10-05/deep-play.md#c8-01b高取消登記後-daemon-被殺回收義務永久遺失)",
+   "also_hit": "[code-quality R8-03](reviews/2026-10-05/code-quality.md#r8-03高unregister-寫檔失敗後記憶體已取消登記時間線卻繼續跑)；README 交叉表",
+   "note": "中斷 3／3 漏收；與 C8-02 同族：回收義務只在 daemon 記憶體，宜持久化意圖（evidence-summary）"
+  },
+  {
+   "id": "C8-02",
+   "group": "3 kill／回收時序",
+   "title": "node 替換後中斷回收，新舊任務同時存活",
+   "cls": "B",
+   "severity": "高",
+   "source": "[deep-play C8-02](reviews/2026-10-05/deep-play.md#c8-02b高node-替換後中斷回收新舊任務同時存活)",
+   "also_hit": "[code-quality R8-02](reviews/2026-10-05/code-quality.md#r8-02高node-回收失敗仍會啟動新時間線)；README 交叉表",
+   "note": "中斷 3／3 新舊同活；只補 unregister 恢復不涵蓋 node 替換"
+  },
+  {
+   "id": "K-04",
+   "group": "3 kill／回收時序",
+   "title": "官方 inst 子程序在清場快照後出生，仍有漏收窗口（原 keep 雙開已部分解）",
+   "cls": "proto7-1 K 系列遷移",
+   "severity": "部分解",
+   "source": "[k-crosscheck R02（K-04／N-25）](reviews/2026-10-05/k-crosscheck.md#r02k-04n-25官方-inst-在清場快照後出生)",
+   "also_hit": "",
+   "note": "與 R8-01 同屬「啟動交接中的 kill／回收」"
+  },
+  {
+   "id": "R8-29",
+   "group": "3 kill／回收時序",
+   "title": "daemon 保存的裸 pgid 缺少身分重驗",
+   "cls": "未分類",
+   "severity": "設計風險待核",
+   "source": "[code-quality R8-29](reviews/2026-10-05/code-quality.md#r8-29設計風險待核daemon-保存的裸-pgid-缺少身分重驗)",
+   "also_hit": "",
+   "note": "kill 相關，未核完"
+  },
+  {
+   "id": "A8-10",
+   "group": "4 budget unknown 接 step",
+   "title": "budget 的非終局 rc 3，被 step 當成一般失敗結案",
+   "cls": "G／step＋budget",
+   "severity": "中",
+   "source": "[play7 A8-10](reviews/2026-10-05/play7.md#a8-10gstepbudget中budget-的非終局-rc-3被-step-當成一般失敗結案)",
+   "also_hit": "[code-quality R8-27](reviews/2026-10-05/code-quality.md#r8-27契約交接待核budget-的-rc-3-不會自然觸發-step-的-on_unknown); [spec-readability F03](reviews/2026-10-05/spec-readability.md#f03budget-的-unknown-不會直接觸發-step-的-on_unknown); [packs-use 4.4](reviews/2026-10-05/packs-use.md#44-budget-unknown-與-step-unknown-是不同事情); README 交叉表",
+   "note": "程式與文件兩面：要嘛定義 rc 3 接 step 有限重送，要嘛文件明寫兩種 unknown 不同；F03 是同件事的文件面"
+  },
+  {
+   "id": "packs-use 4.3",
+   "group": "4 budget unknown 接 step",
+   "title": "budget 退出碼 3 不代表「預留一定還留著」（可能已結算、只是輸出失敗）",
+   "cls": "文件",
+   "severity": "",
+   "source": "[packs-use 4.3](reviews/2026-10-05/packs-use.md#43-budget-的退出碼-3不代表預留一定還留著)",
+   "also_hit": "[spec-readability F19](reviews/2026-10-05/spec-readability.md#f19budget-的退出碼契約自相矛盾並漏列-payload-失敗的-2)（退出碼契約自相矛盾）",
+   "note": "報告附建議改文"
+  },
+  {
+   "id": "R8-13",
+   "group": "4 budget unknown 接 step",
+   "title": "step 過期 intent 直接 halt，繞過 on_unknown 策略",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-13](reviews/2026-10-05/code-quality.md#r8-13中step-過期-intent-直接-halt繞過-on_unknown-策略)",
+   "also_hit": "",
+   "note": "step 側的 unknown 處理，與 A8-10 同一交接面"
+  },
+  {
+   "id": "A8-11",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "有限的大整數 interval 讓設定驗證拋例外、node 不開回合",
+   "cls": "B／timeline",
+   "severity": "低",
+   "source": "[play7 A8-11](reviews/2026-10-05/play7.md#a8-11btimeline低有限的大整數-interval-讓設定驗證拋例外node-不開回合)",
+   "also_hit": "[k-crosscheck R04（N-21／N-62，遷移退步）](reviews/2026-10-05/k-crosscheck.md#r04n-21n-62巨大整數-interval-卡住-node)；README 交叉表",
+   "note": ""
+  },
+  {
+   "id": "R8-05",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "回合已關但確認讀取暫時失敗，rounds 倒數會少扣",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-05](reviews/2026-10-05/code-quality.md#r8-05中回合已關但確認讀取暫時失敗rounds-倒數會少扣)",
+   "also_hit": "[k-crosscheck R01（K-02／N-06）](reviews/2026-10-05/k-crosscheck.md#r01k-02n-06回合已關但確認失敗倒數漏扣)；README 交叉表",
+   "note": ""
+  },
+  {
+   "id": "N-06",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "daemon 重開遺失剩餘回合數（倒數只在記憶體）",
+   "cls": "proto7-1 N 系列",
+   "severity": "部分解",
+   "source": "[k-crosscheck R07](reviews/2026-10-05/k-crosscheck.md#r07n-06daemon-重開遺失剩餘回合數)",
+   "also_hit": "",
+   "note": "與 R8-05／K-02 同一功能（rounds 倒數）"
+  },
+  {
+   "id": "N-66 subroot",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "移出核心後 AOS7_SUBROOT 隔代清除失去保護，README 的三層 subd 用法會指回上一層",
+   "cls": "proto7-1 N 系列遷移退步",
+   "severity": "",
+   "source": "[k-crosscheck R05](reviews/2026-10-05/k-crosscheck.md#r05n-66readme-的三層-subd-用法指回上一層)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "N-66 audit＋subd",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "audit＋subd 組合把合法子根寫入記成越界（舊版子根屬擁有者稽核範圍未接回）",
+   "cls": "proto7-1 N 系列遷移退步",
+   "severity": "",
+   "source": "[k-crosscheck R06](reviews/2026-10-05/k-crosscheck.md#r06n-66auditsubd-把合法子根寫入記成越界)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "N-86",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "已 launch 的 once 改排程後，同名 keep 先重用槽，原 once 仍可能再跑一次",
+   "cls": "proto7-1 N 系列",
+   "severity": "部分解",
+   "source": "[k-crosscheck R03](reviews/2026-10-05/k-crosscheck.md#r03n-86已執行-once-的排程變更使它再次執行)",
+   "also_hit": "",
+   "note": "頂層清單沒列，交叉核對新找到的合法反例"
+  },
+  {
+   "id": "A8-07",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "連結已建立、birth 尚未提交，中斷後無法冪等恢復",
+   "cls": "B／tick 動態加掛",
+   "severity": "中",
+   "source": "[play7 A8-07](reviews/2026-10-05/play7.md#a8-07btick-動態加掛中連結已建立birth-尚未提交中斷後無法冪等恢復)",
+   "also_hit": "[code-quality R8-08](reviews/2026-10-05/code-quality.md#r8-08中動態掛載在-symlink-建好birth-更新前中斷重播會拒收原請求)",
+   "note": "兩份報告同一件"
+  },
+  {
+   "id": "A8-08",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "共同 I/O 未知邊界仍漏掉兩條路徑",
+   "cls": "B／budget call",
+   "severity": "中",
+   "source": "[play7 A8-08](reviews/2026-10-05/play7.md#a8-08bbudget-call中共同-io-未知邊界仍漏掉兩條路徑)",
+   "also_hit": "[code-quality R8-15](reviews/2026-10-05/code-quality.md#r8-15中budget-payload-讀取故障回退出碼-2不符合共同-unknown-邊界)；[R8-16](reviews/2026-10-05/code-quality.md#r8-16中budget-已結算重播時入口回條讀取故障被吞成成功)",
+   "note": "兩條路徑分別對應 R8-15（payload 讀不到回 2）與 R8-16（已結算重播吞成成功）"
+  },
+  {
+   "id": "R8-04",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "LIVE 槽第二次讀 pid.json 失敗，会清掉已記住的 pgid",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-04](reviews/2026-10-05/code-quality.md#r8-04中live-槽第二次讀-pidjson-失敗会清掉已記住的-pgid)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-06",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "錯誤退避可能忙轉，長期失敗又會溢位",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-06](reviews/2026-10-05/code-quality.md#r8-06中錯誤退避可能忙轉長期失敗又會溢位)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-07",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "fact() 在 fstat 失敗時漏關檔案描述元",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-07](reviews/2026-10-05/code-quality.md#r8-07中fact-在-fstat-失敗時漏關檔案描述元)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-09",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "靜態掛載失敗的紀錄，會被誤認成已成功掛載",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-09](reviews/2026-10-05/code-quality.md#r8-09中靜態掛載失敗的紀錄會被誤認成已成功掛載)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-10",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "runner 讀 birth 失敗時，把 exit 寫成 run:null",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-10](reviews/2026-10-05/code-quality.md#r8-10中runner-讀-birth-失敗時把-exit-寫成-runnull)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-11",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "is_runner() 會把一般任務的普通參數當成 runner 身分",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-11](reviews/2026-10-05/code-quality.md#r8-11中is_runner-會把一般任務的普通參數當成-runner-身分)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-12",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "非 UTF-8 的 /proc stat 內容會漏出例外，堵住程序掃描",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-12](reviews/2026-10-05/code-quality.md#r8-12中非-utf-8-的-proc-stat-內容會漏出例外堵住程序掃描)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-14",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "step 表寫入暫時失敗，会重設自動重送計數",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-14](reviews/2026-10-05/code-quality.md#r8-14中step-表寫入暫時失敗会重設自動重送計數)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-17",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "history 的檔名編碼會碰撞",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-17](reviews/2026-10-05/code-quality.md#r8-17中history-的檔名編碼會碰撞)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-18",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "subd 恢復紀錄會逐次巢狀包入舊紀錄，最後無法序列化",
+   "cls": "未分類",
+   "severity": "中",
+   "source": "[code-quality R8-18](reviews/2026-10-05/code-quality.md#r8-18中subd-恢復紀錄會逐次巢狀包入舊紀錄最後無法序列化)",
+   "also_hit": "[play7 §6「subd 的 recovering.prev 遞迴成長」（未驗完）](reviews/2026-10-05/play7.md#6-做到一半尚未驗完)",
+   "note": ""
+  },
+  {
+   "id": "R8-20",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "timeline 的部分非法設定被靜默換成預設",
+   "cls": "未分類",
+   "severity": "低",
+   "source": "[code-quality R8-20](reviews/2026-10-05/code-quality.md#r8-20低timeline-的部分非法設定被靜默換成預設)",
+   "also_hit": "",
+   "note": "頂層清單沒列（低）"
+  },
+  {
+   "id": "R8-21",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "history 留有確定未使用的 import",
+   "cls": "未分類",
+   "severity": "低",
+   "source": "[code-quality R8-21](reviews/2026-10-05/code-quality.md#r8-21低history-留有確定未使用的-import)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "R8-22",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "step 的 intent_round＋1 補加窗口可能造成同 attempt 再執行",
+   "cls": "未分類",
+   "severity": "可能高",
+   "source": "[code-quality R8-22](reviews/2026-10-05/code-quality.md#r8-22可能高step-的-intent_round1-補加窗口可能造成同-attempt-再執行)",
+   "also_hit": "",
+   "note": "待核（報告 §3 做到一半）"
+  },
+  {
+   "id": "R8-24",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "subd 的別名路徑可漏過「包住父 node」檢查",
+   "cls": "未分類",
+   "severity": "可能中",
+   "source": "[code-quality R8-24](reviews/2026-10-05/code-quality.md#r8-24可能中subd-的別名路徑可漏過包住父-node檢查)",
+   "also_hit": "",
+   "note": "待核（報告 §3 做到一半）"
+  },
+  {
+   "id": "R8-25",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "audit 全域 busy 旗標會漏掉其他 thread 的寫入",
+   "cls": "未分類",
+   "severity": "可能中",
+   "source": "[code-quality R8-25](reviews/2026-10-05/code-quality.md#r8-25可能中audit-全域-busy-旗標會漏掉其他-thread-的寫入)",
+   "also_hit": "",
+   "note": "待核（報告 §3 做到一半）"
+  },
+  {
+   "id": "R8-26",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "once_retry 使用舊 birth 加回已經重試過的工作",
+   "cls": "未分類",
+   "severity": "可能中低",
+   "source": "[code-quality R8-26](reviews/2026-10-05/code-quality.md#r8-26可能中低once_retry-使用舊-birth-加回已經重試過的工作)",
+   "also_hit": "",
+   "note": "待核（報告 §3 做到一半）"
+  },
+  {
+   "id": "R8-28",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "inst 指示詞解析有漏判與例外外洩",
+   "cls": "未分類",
+   "severity": "可能低至中",
+   "source": "[code-quality R8-28](reviews/2026-10-05/code-quality.md#r8-28可能低至中inst-指示詞解析有漏判與例外外洩)",
+   "also_hit": "",
+   "note": "待核（報告 §3 做到一半）"
+  },
+  {
+   "id": "R8-30",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "部分搬入的公開 API 在本版本沒有呼叫者",
+   "cls": "未分類",
+   "severity": "維護性待核",
+   "source": "[code-quality R8-30](reviews/2026-10-05/code-quality.md#r8-30維護性待核部分搬入的公開-api-在本版本沒有呼叫者)",
+   "also_hit": "",
+   "note": "待核（報告 §3 做到一半）"
+  },
+  {
+   "id": "C8-03",
+   "group": "5 數值、遷移漏接與其他",
+   "title": "任務包槽外暫存檔缺少回收責任",
+   "cls": "G",
+   "severity": "中",
+   "source": "[deep-play C8-03](reviews/2026-10-05/deep-play.md#c8-03g中任務包槽外暫存檔缺少回收責任)",
+   "also_hit": "",
+   "note": "頂層清單沒列"
+  },
+  {
+   "id": "T8-01",
+   "group": "6 測試",
+   "title": "runner-before-exit 沒有證明 runner 真的被殺",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-01](reviews/2026-10-05/test-review.md#t8-01高runner-before-exit-沒有證明-runner-真的被殺)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-02",
+   "group": "6 測試",
+   "title": "step 三個 crash 點只驗 marker 消失",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-02](reviews/2026-10-05/test-review.md#t8-02高step-三個-crash-點只驗-marker-消失)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-03",
+   "group": "6 測試",
+   "title": "subd 用「至少死一個」驗「全部收完」",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-03](reviews/2026-10-05/test-review.md#t8-03高subd-用至少死一個驗全部收完)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-04",
+   "group": "6 測試",
+   "title": "budget 帳本 crash 核帳不在崩潰快照上",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-04](reviews/2026-10-05/test-review.md#t8-04高budget-帳本-crash-核帳不在崩潰快照上)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-05",
+   "group": "6 測試",
+   "title": "last-round 故障打在寫前，沒有測到寫後讀回",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-05](reviews/2026-10-05/test-review.md#t8-05高last-round-故障打在寫前沒有測到寫後讀回)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-06",
+   "group": "6 測試",
+   "title": "tock 重播沒有 ENDED once 的收尾案例",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-06](reviews/2026-10-05/test-review.md#t8-06高tock-重播沒有-ended-once-的收尾案例)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-07",
+   "group": "6 測試",
+   "title": "Fault.check 只證明 op 命中，未證明每條規則命中",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "中",
+   "source": "[test-review T8-07](reviews/2026-10-05/test-review.md#t8-07中faultcheck-只證明-op-命中未證明每條規則命中)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-08",
+   "group": "6 測試",
+   "title": "once_retry 的「非 true 忽略」沒有候選資料",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-08](reviews/2026-10-05/test-review.md#t8-08高once_retry-的非-true-忽略沒有候選資料)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-09",
+   "group": "6 測試",
+   "title": "控制洪水測試可以在預算完全失效時通過",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-09](reviews/2026-10-05/test-review.md#t8-09高控制洪水測試可以在預算完全失效時通過)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-10",
+   "group": "6 測試",
+   "title": "budget 競爭程序失敗可被事後補跑掩蓋",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-10](reviews/2026-10-05/test-review.md#t8-10高budget-競爭程序失敗可被事後補跑掩蓋)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-11",
+   "group": "6 測試",
+   "title": "獨立核帳缺少完整身分與證據的獨立驗算",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-11](reviews/2026-10-05/test-review.md#t8-11高獨立核帳缺少完整身分與證據的獨立驗算)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-12",
+   "group": "6 測試",
+   "title": "budget sampler 丟掉非法快照，空樣本也不失敗",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-12](reviews/2026-10-05/test-review.md#t8-12高budget-sampler-丟掉非法快照空樣本也不失敗)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-13",
+   "group": "6 測試",
+   "title": "diag 唯讀測試避開了最危險的 SUSPECT 分支",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-13](reviews/2026-10-05/test-review.md#t8-13高diag-唯讀測試避開了最危險的-suspect-分支)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-14",
+   "group": "6 測試",
+   "title": "history 可過度刪除；gap 只靠偶然漏取樣",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "中",
+   "source": "[test-review T8-14](reviews/2026-10-05/test-review.md#t8-14中history-可過度刪除gap-只靠偶然漏取樣)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-15",
+   "group": "6 測試",
+   "title": "kill 重播拒絕斷言有 `all([])` 空集合漏洞",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "中",
+   "source": "[test-review T8-15](reviews/2026-10-05/test-review.md#t8-15中kill-重播拒絕斷言有-all-空集合漏洞)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-16",
+   "group": "6 測試",
+   "title": "adapt 長跑的觀察範圍比「逐回合、檔數不長」窄",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "中",
+   "source": "[test-review T8-16](reviews/2026-10-05/test-review.md#t8-16中adapt-長跑的觀察範圍比逐回合檔數不長窄)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-17",
+   "group": "6 測試",
+   "title": "共用 reap 可能先移除追蹤，卻留下同群組程序",
+   "cls": "假綠（斷言空洞／故障沒命中）",
+   "severity": "高",
+   "source": "[test-review T8-17](reviews/2026-10-05/test-review.md#t8-17高共用-reap-可能先移除追蹤卻留下同群組程序)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-18",
+   "group": "6 測試",
+   "title": "metadata 不等於任務 ready（只等 pid 就送下一個 tock）",
+   "cls": "flaky 風險",
+   "severity": "",
+   "source": "[test-review §二](reviews/2026-10-05/test-review.md#二時間與機器負載造成的-flaky-風險)",
+   "also_hit": "",
+   "note": "頂層清單沒列；報告建議先修 T8-17 清理再換成明確握手"
+  },
+  {
+   "id": "T8-19",
+   "group": "6 測試",
+   "title": "sleep 猜生命週期，PID 數誤當 run 數",
+   "cls": "flaky 風險",
+   "severity": "",
+   "source": "[test-review §二](reviews/2026-10-05/test-review.md#二時間與機器負載造成的-flaky-風險)",
+   "also_hit": "",
+   "note": "頂層清單沒列；報告建議先修 T8-17 清理再換成明確握手"
+  },
+  {
+   "id": "T8-20",
+   "group": "6 測試",
+   "title": "subd 的進度推測（只等 wrapper pid 就要求 children 非空）",
+   "cls": "flaky 風險",
+   "severity": "",
+   "source": "[test-review §二](reviews/2026-10-05/test-review.md#二時間與機器負載造成的-flaky-風險)",
+   "also_hit": "",
+   "note": "頂層清單沒列；報告建議先修 T8-17 清理再換成明確握手"
+  },
+  {
+   "id": "T8-21",
+   "group": "6 測試",
+   "title": "adapt 輸入與排程假設不成立（feed 未固定）",
+   "cls": "flaky 風險",
+   "severity": "",
+   "source": "[test-review §二](reviews/2026-10-05/test-review.md#二時間與機器負載造成的-flaky-風險)",
+   "also_hit": "",
+   "note": "頂層清單沒列；報告建議先修 T8-17 清理再換成明確握手"
+  },
+  {
+   "id": "T8-22",
+   "group": "6 測試",
+   "title": "budget 推鐘前未確認消費者進度",
+   "cls": "flaky 風險",
+   "severity": "",
+   "source": "[test-review §二](reviews/2026-10-05/test-review.md#二時間與機器負載造成的-flaky-風險)",
+   "also_hit": "",
+   "note": "頂層清單沒列；報告建議先修 T8-17 清理再換成明確握手"
+  },
+  {
+   "id": "T8-23",
+   "group": "6 測試",
+   "title": "故障啟停本身有競態",
+   "cls": "flaky 風險",
+   "severity": "",
+   "source": "[test-review §二](reviews/2026-10-05/test-review.md#二時間與機器負載造成的-flaky-風險)",
+   "also_hit": "",
+   "note": "頂層清單沒列；報告建議先修 T8-17 清理再換成明確握手"
+  },
+  {
+   "id": "T8-24",
+   "group": "6 測試",
+   "title": "權限與硬時間上限的環境相依",
+   "cls": "flaky 風險",
+   "severity": "",
+   "source": "[test-review §二](reviews/2026-10-05/test-review.md#二時間與機器負載造成的-flaky-風險)",
+   "also_hit": "",
+   "note": "頂層清單沒列；報告建議先修 T8-17 清理再換成明確握手"
+  },
+  {
+   "id": "T8-25",
+   "group": "6 測試",
+   "title": "核心啟動與世代隔離缺直接回歸",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-25](reviews/2026-10-05/test-review.md#t8-25核心啟動與世代隔離缺直接回歸)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-26",
+   "group": "6 測試",
+   "title": "兩個契約差異已被弱邊界案例放過",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-26](reviews/2026-10-05/test-review.md#t8-26兩個契約差異已被弱邊界案例放過)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-27",
+   "group": "6 測試",
+   "title": "核心其餘明文保證缺少辨識力案例",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-27](reviews/2026-10-05/test-review.md#t8-27核心其餘明文保證缺少辨識力案例)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-28",
+   "group": "6 測試",
+   "title": "tools：三個重要 API 分支未被核心間接測試補到",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-28](reviews/2026-10-05/test-review.md#t8-28tools三個重要-api-分支未被核心間接測試補到)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-29",
+   "group": "6 測試",
+   "title": "control：掛載目標、reload 合併與不同 id 的換 run 競態",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-29](reviews/2026-10-05/test-review.md#t8-29control掛載目標reload-合併與不同-id-的換-run-競態)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-30",
+   "group": "6 測試",
+   "title": "once_retry：重派資格、pending 保留與去重",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-30](reviews/2026-10-05/test-review.md#t8-30once_retry重派資格pending-保留與去重)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-31",
+   "group": "6 測試",
+   "title": "audit：兩個 open/write 案例不足以保護全部事件規則",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-31](reviews/2026-10-05/test-review.md#t8-31audit兩個-openwrite-案例不足以保護全部事件規則)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-32",
+   "group": "6 測試",
+   "title": "subd：位置與完整回收範圍尚有空缺",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-32](reviews/2026-10-05/test-review.md#t8-32subd位置與完整回收範圍尚有空缺)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-33",
+   "group": "6 測試",
+   "title": "step：安全補派、結果驗證、耐性與重送額度",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-33](reviews/2026-10-05/test-review.md#t8-33step安全補派結果驗證耐性與重送額度)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-34",
+   "group": "6 測試",
+   "title": "adapt：提交窗口、獨立值驗證及狀態交叉",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-34](reviews/2026-10-05/test-review.md#t8-34adapt提交窗口獨立值驗證及狀態交叉)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-35",
+   "group": "6 測試",
+   "title": "budget：可信證據、非單位金額及共同I/O邊界",
+   "cls": "缺覆蓋",
+   "severity": "",
+   "source": "[test-review T8-35](reviews/2026-10-05/test-review.md#t8-35budget可信證據非單位金額及共同io邊界)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "T8-36",
+   "group": "6 測試",
+   "title": "空選集會被報成成功；逐案计時仍不完整",
+   "cls": "測試入口",
+   "severity": "中",
+   "source": "[test-review T8-36](reviews/2026-10-05/test-review.md#t8-36中空選集會被報成成功逐案计時仍不完整)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "fast-tests",
+   "group": "6 測試",
+   "title": "364 項中位數 190→65 秒（4 worker＋耗時排序、條件等待、fixture 快取），19 輪全過；patch 未入 repo，要照報告重做",
+   "cls": "測試加速",
+   "severity": "",
+   "source": "[fast-tests](reviews/2026-10-05/fast-tests.md)；[evidence-summary](reviews/2026-10-05/evidence-summary.md#fast-tests)",
+   "also_hit": "[test-review T8-37（加速估算）](reviews/2026-10-05/test-review.md#t8-37加速方案與估算)",
+   "note": "原樣複本只有 359／364，比較基準要先套同一份穩定性修補（6 處，只動測試）；瓶頸 test_subd_recover 約 58 秒"
+  },
+  {
+   "id": "R8-19",
+   "group": "6 測試",
+   "title": "step 壞型別 CLI 測試沒有真的測到檢查器",
+   "cls": "測試",
+   "severity": "低",
+   "source": "[code-quality R8-19](reviews/2026-10-05/code-quality.md#r8-19低step-壞型別-cli-測試沒有真的測到檢查器)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F01",
+   "group": "7 文件",
+   "title": "診斷手冊把「總結已提交」誤當成「回合已收完」",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F01](reviews/2026-10-05/spec-readability.md#f01診斷手冊把總結已提交誤當成回合已收完)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F02",
+   "group": "7 文件",
+   "title": "pause 被描述成能停止所有寫檔競爭",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F02](reviews/2026-10-05/spec-readability.md#f02pause-被描述成能停止所有寫檔競爭)",
+   "also_hit": "[packs-use §5 pause 卡點](reviews/2026-10-05/packs-use.md#subd-與日常操作)",
+   "note": ""
+  },
+  {
+   "id": "F04",
+   "group": "7 文件",
+   "title": "「永久拿掉子空間」的步驟少了清除任務的條件",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F04](reviews/2026-10-05/spec-readability.md#f04永久拿掉子空間的步驟少了清除任務的條件)",
+   "also_hit": "[packs-use 4.6](reviews/2026-10-05/packs-use.md#46-子空間永久移除流程可能留下仍在工作的-worker)",
+   "note": ""
+  },
+  {
+   "id": "F05",
+   "group": "7 文件",
+   "title": "subd 宣稱「控制檔 stop 一定留回條」，與核心故障契約矛盾",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F05](reviews/2026-10-05/spec-readability.md#f05subd-宣稱控制檔-stop-一定留回條與核心故障契約矛盾)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F06",
+   "group": "7 文件",
+   "title": "step 宣稱不依賴槽保留時間，但補派判斷實際依賴它",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F06](reviews/2026-10-05/spec-readability.md#f06step-宣稱不依賴槽保留時間但補派判斷實際依賴它)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F07",
+   "group": "7 文件",
+   "title": "subd 範例直接使用不在預設 PATH 的程式",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F07](reviews/2026-10-05/spec-readability.md#f07subd-範例直接使用不在預設-path-的程式)",
+   "also_hit": "[packs-use §5 subd 範例卡點](reviews/2026-10-05/packs-use.md#subd-與日常操作)",
+   "note": ""
+  },
+  {
+   "id": "F08",
+   "group": "7 文件",
+   "title": "`wait_tock` 的文件簽名把第三個參數寫錯",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F08](reviews/2026-10-05/spec-readability.md#f08wait_tock-的文件簽名把第三個參數寫錯)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F09",
+   "group": "7 文件",
+   "title": "once 中斷窗口被寫得過度籠統",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F09](reviews/2026-10-05/spec-readability.md#f09once-中斷窗口被寫得過度籠統)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F10",
+   "group": "7 文件",
+   "title": "重試與重起的首頁保證，比實際契約更強",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F10](reviews/2026-10-05/spec-readability.md#f10重試與重起的首頁保證比實際契約更強)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F11",
+   "group": "7 文件",
+   "title": "step 的普通 `resume` 也可能重派，並非只有 `--resend` 才會",
+   "cls": "文件",
+   "severity": "優先（可能操作錯誤）",
+   "source": "[spec-readability F11](reviews/2026-10-05/spec-readability.md#f11step-的普通-resume-也可能重派並非只有---resend-才會)",
+   "also_hit": "[packs-use 4.2](reviews/2026-10-05/packs-use.md#42-step-的普通-resume-可能重做非冪等工作)",
+   "note": ""
+  },
+  {
+   "id": "F12",
+   "group": "7 文件",
+   "title": "固定 interval 的起算點寫成了 tick 結束後",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F12](reviews/2026-10-05/spec-readability.md#f12固定-interval-的起算點寫成了-tick-結束後)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F13",
+   "group": "7 文件",
+   "title": "tick 與 tock 的非零退出碼被錯誤概括成同一條規則",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F13](reviews/2026-10-05/spec-readability.md#f13tick-與-tock-的非零退出碼被錯誤概括成同一條規則)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F14",
+   "group": "7 文件",
+   "title": "壞 JSON 控制檔不一定保存成 `.bad`",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F14](reviews/2026-10-05/spec-readability.md#f14壞-json-控制檔不一定保存成-bad)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F15",
+   "group": "7 文件",
+   "title": "`each` 的描述漏掉 `max_live > 1` 的情況",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F15](reviews/2026-10-05/spec-readability.md#f15each-的描述漏掉-max_live--1-的情況)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F16",
+   "group": "7 文件",
+   "title": "kill 的冪等性被寫成「只生效一次」",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F16](reviews/2026-10-05/spec-readability.md#f16kill-的冪等性被寫成只生效一次)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F17",
+   "group": "7 文件",
+   "title": "step 的耐性起點不全是「走進該步」",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F17](reviews/2026-10-05/spec-readability.md#f17step-的耐性起點不全是走進該步)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F18",
+   "group": "7 文件",
+   "title": "step 結果的發布方式寫錯，且「產物都在」不足以代表通過",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F18](reviews/2026-10-05/spec-readability.md#f18step-結果的發布方式寫錯且產物都在不足以代表通過)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F19",
+   "group": "7 文件",
+   "title": "budget 的退出碼契約自相矛盾，並漏列 payload 失敗的 2",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F19](reviews/2026-10-05/spec-readability.md#f19budget-的退出碼契約自相矛盾並漏列-payload-失敗的-2)",
+   "also_hit": "[packs-use 4.3](reviews/2026-10-05/packs-use.md#43-budget-的退出碼-3不代表預留一定還留著)",
+   "note": ""
+  },
+  {
+   "id": "F20",
+   "group": "7 文件",
+   "title": "grant 的三分法漏掉 `not_yet`",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F20](reviews/2026-10-05/spec-readability.md#f20grant-的三分法漏掉-not_yet)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F21",
+   "group": "7 文件",
+   "title": "budget 取消後「結算 0」少了取消成功的前提",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F21](reviews/2026-10-05/spec-readability.md#f21budget-取消後結算-0少了取消成功的前提)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F22",
+   "group": "7 文件",
+   "title": "adapt 同時寫「每次重算」與「重起後不重算」",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F22](reviews/2026-10-05/spec-readability.md#f22adapt-同時寫每次重算與重起後不重算)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F23",
+   "group": "7 文件",
+   "title": "adapt 的耐性不是所有未知情況都能撐住舊值",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F23](reviews/2026-10-05/spec-readability.md#f23adapt-的耐性不是所有未知情況都能撐住舊值)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F24",
+   "group": "7 文件",
+   "title": "adapt 的「pause 時都不走」沒有指明是哪一個 node",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F24](reviews/2026-10-05/spec-readability.md#f24adapt-的pause-時都不走沒有指明是哪一個-node)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F25",
+   "group": "7 文件",
+   "title": "audit 的「每筆寫入都有紀錄」超過實作涵蓋範圍",
+   "cls": "文件",
+   "severity": "一致性落差",
+   "source": "[spec-readability F25](reviews/2026-10-05/spec-readability.md#f25audit-的每筆寫入都有紀錄超過實作涵蓋範圍)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F26",
+   "group": "7 文件",
+   "title": "step README 派工窗口指錯章節",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F27",
+   "group": "7 文件",
+   "title": "模組總覽仍寫 kernel 任務包尚未做、各處列的包不一致",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F28",
+   "group": "7 文件",
+   "title": "budget README 的 caller 是欄位名殘留（實為 holder）",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F29",
+   "group": "7 文件",
+   "title": "tools README 的 resolver 回傳函式，文件像直接回路徑",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F30",
+   "group": "7 文件",
+   "title": "檔名編碼宣稱無損，同段卻寫截斷加雜湊",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F31",
+   "group": "7 文件",
+   "title": "「依賴」欄混用契約依賴與 Python 匯入依賴",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F32",
+   "group": "7 文件",
+   "title": "step 範例缺「整份放到 node 工作目錄」等接續步驟",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F33",
+   "group": "7 文件",
+   "title": "step 啟動時也會推進，非必須等第一個 tock",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "F34",
+   "group": "7 文件",
+   "title": "回合三態的「其餘」範圍寫太大",
+   "cls": "文件",
+   "severity": "引用與命名",
+   "source": "[spec-readability §三](reviews/2026-10-05/spec-readability.md#三引用命名與入口可讀性)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "packs-use 4.1",
+   "group": "7 文件",
+   "title": "step／adapt／budget 都缺第一份可直接用的設定範本（steps.json、鏈宣告、grant JSON）",
+   "cls": "文件",
+   "severity": "",
+   "source": "[packs-use 4.1](reviews/2026-10-05/packs-use.md#41-三個上層包都缺第一份可直接使用的設定)",
+   "also_hit": "",
+   "note": "新手評分 5.4／10 的主因；step 11 次、adapt 19 次試錯才成功"
+  },
+  {
+   "id": "packs-use 4.5",
+   "group": "7 文件",
+   "title": "budget 示範資源「次數」與 --amount 不一致（要選次數或加權成本）",
+   "cls": "文件／契約",
+   "severity": "",
+   "source": "[packs-use 4.5](reviews/2026-10-05/packs-use.md#45-budget-示範資源的次數與---amount-不一致)",
+   "also_hit": "",
+   "note": "含一個要使用者選的語意題：次數 vs 加權成本"
+  },
+  {
+   "id": "packs-use 4.7",
+   "group": "7 文件",
+   "title": "成功回覆、回合前進、diag 空提示都不是完整健康判斷",
+   "cls": "文件",
+   "severity": "",
+   "source": "[packs-use 4.7](reviews/2026-10-05/packs-use.md#47-成功回覆回合前進diag-空提示都不是完整健康判斷)",
+   "also_hit": "",
+   "note": ""
+  },
+  {
+   "id": "packs-use §5",
+   "group": "7 文件",
+   "title": "README 讀完仍卡住的完整清單（共通入口、step／budget、adapt、subd 四組，每條附改法）",
+   "cls": "文件",
+   "severity": "",
+   "source": "[packs-use §5](reviews/2026-10-05/packs-use.md#5-readme-讀完仍卡住的完整清單與改法)",
+   "also_hit": "",
+   "note": "與 F 系列部分重疊，修文件時一起看"
+  }
+ ]
+}
