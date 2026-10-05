@@ -22,7 +22,7 @@
   - **去重的完成證據＝表上同槽的 pending once 帶該 `req_id`，或槽**目前**的 birth 帶該 `req_id`**；判定在 tasks 表鎖內做（鎖內重讀 birth，A4-02），並行送同一件只加一次 once。
   - **去重期限**：槽正常換 run 後（例如 keep 下一次重起），目前的 birth 不再帶該 id，證據就消失；之後再送同 id＝新意圖，照新請求做（A4-06）。要跨換 run 去重由呼叫者自己留證據（例如記下 restart 的回傳，或比對新 birth 的 `x.restart_of`）；不把 ctl-seen 加回核心。
   - 回 `ok` 只表示請求端兩步做完；真的重起看 ctl-done.json 與下一回合總結。
-- **明確不管**：加完 once、寫 kill 之前死掉的重試（請求端用同 `req_id` 再呼叫，下面「被打斷時」）；kill 回 unknown 的收尾（[診斷包](../diag/README.md)）；同一個 id 拿去送不同意圖。
+- **明確不管**：加完 once、寫 kill 之前死掉的重試（請求端用同 `req_id` 再呼叫，下面「被打斷時」）；kill 回 unknown 的收尾（[診斷包](../diag/recovery.md)）；同一個 id 拿去送不同意圖。
 
 ## restart(node, slot, why="", reload=False, req_id=None, by=None)
 
