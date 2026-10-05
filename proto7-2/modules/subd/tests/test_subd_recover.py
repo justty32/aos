@@ -101,6 +101,19 @@ class RecoverCase(DaemonCase):
         return self.wait_for(lambda: (lambda d: d if d and d != old_daemon and aos7_proc.pid_alive(d) else None)(
             self.status(sub).get("pid")), timeout, "新代子 daemon 沒起")
 
+    def stopped_by_ctl(self, run=1, env=None):
+        """起包（--allow-stop）、等任務起好、控制檔 stop（不帶 kill）：回 (子根, n1, 任務 pid, starttime, 子 daemon pid, 包)。"""
+        sub, n1 = self.child_space(n=1)
+        p = self.run_subd(run=run, allow_stop=True, env=env)
+        pid = self.ready_pids(n1, n=1)[0]
+        start = aos7_proc.proc(pid)[1]
+        daemon = self.wait_for(lambda: self.status(sub).get("pid"), 10, "子 daemon 沒起")
+        self.assertTrue(self.wait_receipt(self.ctl("stop", root=sub))["result"]["ok"])
+        return sub, n1, pid, start, daemon, p
+
+    def same(self, pid, start):
+        return aos7_proc.same_process(pid, start) == aos7_proc.ALIVE
+
     def assert_no_daemon(self, sub, old_daemon):
         self.assertIn(self.status(sub).get("pid"), (None, old_daemon), "不該起新代子 daemon")
         self.assertFalse(aos7_proc.pid_alive(self.status(sub).get("pid") or 0))
@@ -132,7 +145,9 @@ class TestParentKill(RecoverCase):
         self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [], "新代子 daemon 起來時原任務還活著")
         life = self.life(sub)
         self.assertEqual(life["state"], "running")
-        self.assertEqual(life["owner"]["run"], str(run + 1))
+        # 新 run＝起它的回合數（核心 next_run），不一定是 run+1：比現役槽的 run、且晚於被 kill 的那個
+        self.assertEqual(life["owner"]["run"], str(self.birth(a, "sub")["run"]))
+        self.assertGreater(int(life["owner"]["run"]), run)
         self.ready_pids(n1, not_in=old)   # 新代照常起任務
 
     def test_paused_node_reaped_and_stays_paused(self):
@@ -248,15 +263,6 @@ class TestAllowedStopInterrupted(RecoverCase):
     還沒 rename、stopped.json 寫了生命週期還沒寫。生命週期都還是 running；下一次起包要用核心停止事實（status＋stop 回條）判出
     「被允許的 stop 停過」：補完提交、退出碼 1、不回收；刪掉 stopped.json 再起＝核心 §5.4 接回原任務（同 PID／starttime、沒有 run 2）。
     反例：父 kill（SIGTERM，不留回條）照收；上一代留下的舊 stop 回條＋本代父 kill 也照收（兩者都把 status 補成 stopped，見 status_stopped）。"""
-    def stopped_by_ctl(self, run=1, env=None):
-        """起包（--allow-stop）、等任務起好、控制檔 stop（不帶 kill）：回 (子根, n1, 任務 pid, starttime, 子 daemon pid, 包)。"""
-        sub, n1 = self.child_space(n=1)
-        p = self.run_subd(run=run, allow_stop=True, env=env)
-        pid = self.ready_pids(n1, n=1)[0]
-        start = aos7_proc.proc(pid)[1]
-        daemon = self.wait_for(lambda: self.status(sub).get("pid"), 10, "子 daemon 沒起")
-        self.assertTrue(self.wait_receipt(self.ctl("stop", root=sub))["result"]["ok"])
-        return sub, n1, pid, start, daemon, p
 
     def status_stopped(self, sub):
         """父 kill 時子 daemon 常在收任務途中就被 SIGKILL、status 還沒寫 stopped；這裡補成 stopped: true，模擬「寬限內收完、
@@ -265,9 +271,6 @@ class TestAllowedStopInterrupted(RecoverCase):
         st = read_json(path)
         if st.get("stopped") is not True:
             write_json(path, dict(st, stopped=True))
-
-    def same(self, pid, start):
-        return aos7_proc.same_process(pid, start) == aos7_proc.ALIVE
 
     def crash_window(self, point, marker_written):
         sub, n1, pid, start, daemon, p = self.stopped_by_ctl(env={"AOS7_TEST_CRASH": point})

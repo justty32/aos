@@ -201,6 +201,17 @@
 - 檢查器的 `q` 夠不夠蓋取整改精確比（原本有 1e-9 相對寬容，會放行少一點點的 `q`）。
 - 驗證：單元測試 +7（`TestNumeric`，修之前全紅）；play7 證據的 `numeric_matrix.py` 改斷言後對本版跑過（390 個平手案例取整正確且在誤差界內、52 個精度邊界 0 例外、6 個大整數原樣、4 個門檻都落誤差帶、2 個值域都 `out_of_range`）。
 
+## 10-05 審查（A8／MC／R8）的處理
+
+依 [next-steps 修補清單](next-steps-fixes.json) 第 2 組。核心零改動。
+
+| 編號 | 歸屬／類 | 處理 |
+|---|---|---|
+| A8-09 合法 no-kill stop 的回條寫失敗，重開後誤收應保留任務 | subd 包／B | 判定補一條：status `stopped`、沒有合格 stop 回條、但本代有 `last_ctl_error`（at ≥ since，核心 §2.3 處理例外的紀錄）且這代 `--allow-stop`＝不知道是不是那件 stop，**不轉成可回收**：照被允許的 stop 提交（stopped.json 帶 `unconfirmed`），刪掉再起照核心接回。不解析錯誤文字。代價：同代別件控制檔出錯又被父 kill、子 daemon 寬限內收完時會多擋一次（任務已被收，不毀東西）。測試 `test_subd_keep.TestReceiptLost`（`ctl-done/` chmod 555 重現，修前紅） |
+| MC-01 刪 stopped.json 重接、argv 前中斷，重開時舊回條不符新 since 而回收保留任務 | subd 包／B | **真程式重現**（`AOS7_TEST_CRASH=subd-before-argv`，修前紅）。從 `stopped` 跳過回收寫的 `running` 帶 `kept`；再起時本代還沒有 daemon 起來過（子根 gen.json 的 at 早於 since）仍照被允許的 stop 不回收、`kept` 沿用；daemon 起來過＝已照核心接回，之後照一般前代。測試 `test_subd_keep.TestReattachInterrupted` |
+| R8-18 subd recovering.prev 遞迴成長 | subd 包／品質 | 回收一再被打斷時 `prev` 沿用最初那份前代記錄、加 `attempt` 計次，記錄大小固定。測試 `test_subd_keep.TestRecoveringRecord` |
+| （順手）`test_reaped_before_new_daemon` 斷言 run＋1 | 測試 | 新 run＝起它的回合數（核心 `next_run`），父 kill 後隔一回合才重起時是 run＋2；改成比現役槽的 run、且大於被 kill 的 run。改前用 HEAD 的 aos7-subd 一樣紅，非本輪回歸 |
+
 ## 核心精簡：刪掉的誤用保護（10-04）
 
 照 [精簡方案](core-slimming.md)「頂層定案」第 2 條與[組件契約藍圖](component-contracts.md)：違反組件前置條件造成的問題（M 類）不歸組件管，保護刪掉，spec 只留界線一句（§11「其他誤用，不處理」）。順手偵測到的記一筆，不保證偵測到（定案第 4 條）。
