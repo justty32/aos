@@ -43,8 +43,8 @@ status 不再放 `uncertain`（以前 daemon 每 0.25 秒重算一次）；`step
 **通則**：
 
 - **不是每個「不知道」都要人**：`aos7-diag` 列出的 `uncertain` 非空不等於要人工——「剛起」（birth→runner→pid.json 交接中）是正常暫態，看它持續多久、run 有沒有往前。`last_error` 只是最近一筆，不代表現在還壞著；合看 `phase`、`round`、`at`。
-- **動手前**：先保存證據（複製 `.aos/round.json`、`last-round.json`、相關槽的 birth／pid／exit／ctl／ctl-done，和 `.aosd/status.json`），再 `pause` 這個 node（例 `aos7-ctl daemon <root> pause <node> --owner human`）讓會寫檔的動作停止競爭；pause 時不 tick／tock，也不執行任務控制。修完 `resume` 同一個 owner。
-- **核實回合數 N**（round.json 壞掉、不在、或不是一般檔時要寫回）：看 last-round.json 的 `round`（已提交的最後一回合）、各槽 birth.json 的 `round` 與 exit.json 的 `round`／`seen_round`，取看得到的最大值。N＝last-round 的 `round` → 第 N 回合已收，寫 `{"round": N, "open": false}`；有槽的 birth `round` 比 last-round 大（＝N）→ 第 N 回合開了、總結沒提交，寫 `{"round": N, "open": true}` 讓 daemon 先 tock 收掉（核心 spec 2.2）（總結標 `incomplete`），**不要盲寫 false**——那會跳過這回合的結束與通知。
+- **動手前**：先保存證據（複製 `.aos/round.json`、`last-round.json`、相關槽的 birth／pid／exit／ctl／ctl-done，和 `.aosd/status.json`），再 `pause` 這個 node（例 `aos7-ctl daemon <root> pause <node> --owner human`）不讓它開新回合；pause 時不開新的 tick，也就不執行新一輪任務控制。**pause 不等於沒人寫檔**：已啟動的任務照跑照寫，進行中的回合照常收完，未關回合的恢復 tock 也排在 pause 判斷之前（核心 spec 2.1、2.4）——動手前另行確認相關寫者與動作已停，不能只憑 pause 回條認定沒有競爭。修完 `resume` 同一個 owner。
+- **核實回合數 N**（round.json 壞掉、不在、或不是一般檔時要寫回）：看 last-round.json 的 `round`（已提交的最後一回合）、各槽 birth.json 的 `round` 與 exit.json 的 `round`／`seen_round`，取看得到的最大值。N＝last-round 的 `round` → 只證明第 N 回合**總結已提交**，不能單憑它認定收尾（通知、補 `seen_round`、刪槽、關回合）做完：寫 `{"round": N, "open": true}` 讓 daemon 照那份已提交的總結重播收尾（核心 spec 第 7 節「重播」，總結標 `replayed`），另有可靠證據確認收尾已做完才寫 `{"round": N, "open": false}`；有槽的 birth `round` 比 last-round 大（＝N）→ 第 N 回合開了、總結沒提交，寫 `{"round": N, "open": true}` 讓 daemon 先 tock 收掉（核心 spec 2.2）（總結標 `incomplete`），**不要盲寫 false**——那會跳過這回合的結束與通知。
 - **刪 birth.json＝重新授權執行**：槽變空槽，keep／each 會再起；只確認「現在沒有活程序」不能證明 once 沒產生過外部副作用（交付物要看槽外）。
 
 | 情況 | 停止範圍｜看得到的證據 | 恢復步驟 |

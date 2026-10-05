@@ -1,0 +1,7 @@
+{"job": "minimal", "start": "hello",
+ "note": "最小步驟表：一步 run（有限、冪等、宣告產物），成功走 done。整份放到 <node>/jobs/minimal/",
+ "steps": {
+  "hello": {"run": ["sh", "-c", "mkdir -p \"$1\" && echo hello > \"$1/hello.txt\"", "sh", "${out}"],
+            "finite": true, "idempotent": true, "expect": ["${out}/hello.txt"], "ok": "done", "fail": "failed"},
+  "done": {"end": "ok"},
+  "failed": {"end": "failed"}}}

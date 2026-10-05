@@ -17,7 +17,7 @@
 - **職責**：替人、LLM、kernel 寫檔與輪詢——`aos7-ctl` 寫控制檔、加任務，`aos7-wait-tock` 等 tock，任務端函式（下面各節）；不在核心的任何迴圈裡。
 - **前置條件**：呼叫者給對 root、槽、node；任務端函式在任務環境裡用（`AOS7_*` 齊）。
 - **保證**：
-  - daemon 控制檔名照 by／node／owner 無損編碼，不同的不會撞成同一個檔名（檔名是寫者的事，核心 spec §2.3、W3）。
+  - daemon 控制檔名照 by／node／owner 逐段編碼：短的可逆編碼、不同的不會撞名；編碼後太長的改用前綴＋雜湊，屬實務上的低碰撞命名、不是數學上的零碰撞（下面「檔名編碼」；檔名是寫者的事，核心 spec §2.3、W3）。
   - `task … kill` 一律帶 `run`；沒給 `--run` 就讀槽 birth，讀不到＝報錯、不寫（核心 §6）。`restart` 交給[控制包](../control/README.md)。
   - `add` 拿表鎖、一次 rename 加多項（核心 §4.3）。
   - 印出路徑只表示寫好了；接受與執行看回條。
@@ -26,7 +26,7 @@
 ## aos7-ctl
 
 - `aos7-ctl daemon <root> <op> [node] [--kill] [--rounds N] [--owner X] [--all]`：寫 `<root>/.aosd/ctl/<by>.<op>.<node>.json`；帶 `--owner` 時是 `<by>.<op>.<node>@<owner>.json`。固定名，回條只留最近一份。`<root>` 也可以是掛進來的 `.aosd`。
-- **檔名編碼**：by／node／owner 每段無損編碼——`/`→`+`；其他不是英數、`_`、`-` 的字元（含 `.`、`@`、`+`、`%`、非 ASCII）把 UTF-8 位元組寫成 `%XX`；一段編碼後超過 64 字就取前 40 字＋`~`＋原字串 sha1 前 16 碼。不同的 by／node／owner 不會撞成同一個檔名。
+- **檔名編碼**：by／node／owner 每段編碼——`/`→`+`；其他不是英數、`_`、`-` 的字元（含 `.`、`@`、`+`、`%`、非 ASCII）把 UTF-8 位元組寫成 `%XX`；一段編碼後超過 64 字就取前 40 字＋`~`＋原字串 sha1 前 16 碼。沒截短的段是可逆、不撞名的；截短的段靠 64-bit 雜湊尾碼區分，只是實務上不撞，不是無損。
 - `aos7-ctl task <槽> kill [why] [--run N]`：寫 ctl.json `{"op": "kill", "run"}`；沒給 `--run` 就讀槽的 birth.json 帶現在的 run（讀不到＝報錯、不寫）。
 - `aos7-ctl task <槽> restart [why] [--reload] [--id ID]`：呼叫控制包的 `restart`（先加 once 再寫 kill），stdout 印它的結果（加上 `wrote`）；沒給 `--id` 就自動產生新的請求 id，重送同一件才沿用原 id。`ok: false` 時退出碼 1。
 - `aos7-ctl add <node> '<項目 JSON>'...`：拿 `tasks.json.lock` 把一或多項加進 tasks.json（一次 rename）。
@@ -41,8 +41,8 @@
 把 `proto7-2/modules/tools` 與 `proto7-2/lib` 加進 `sys.path` 後 import：
 
 - `task_env()`：從 `AOS7_*` 環境讀自己是誰（root、node、node_id、task、tid、run）。
-- `wait_tock(task_dir, last_round, timeout=None)`：同 aos7-wait-tock；`run` 對不上的舊 tock.json 不算。
-- `resolver(taskdir)`：空間路徑 → 經過 `mnt/` 掛載點的實際路徑（取最長前綴，沒掛到回 None）。
+- `wait_tock(task_dir, last_round, poll=0.02, timeout=None, run=None)`：同 aos7-wait-tock，回新的回合數、逾時回 `None`；`run`（預設取 `AOS7_RUN`）對不上的舊 tock.json 不算。**第三個位置參數是輪詢間隔秒數**，要設等待上限寫 `wait_tock(task, last, timeout=5)`。
+- `resolver(taskdir)`：回一個解析函式——`resolve = resolver(taskdir)`，再 `resolve(空間路徑)` 取得經過 `mnt/` 掛載點的實際路徑（取最長前綴，沒掛到回 None）。
 - `request(taskdir, path, why)`：執行中加掛——寫 `mount-req/<名>.json`，下一個 tick 審核（核心 spec 4.5），回 `mounted`／`pending`／`refused: 原因`。
 - `read_jsonl(path)`：讀流水帳（歷史、事件），壞行跳過。
 - `decl_of(birth)`：birth.json 的 mounts → 原本的宣告（控制包、once 保證包照 birth 重起時用）。

@@ -19,12 +19,32 @@
 | 範例 | `examples/fakeapi/`（grant＋步驟表：呼叫假 API 一次） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py packs/budget/tests`；全套預設就收） |
 
+## 第一次跑（示範 fakeapi，已實跑）
+
+`grant.json` 放在 `<node>/budget/<id>/`，**`grant.budget` 必須等於資料夾名 `<id>`**（不同時 `init` 拒絕、退出 1）。人手指令都在 **node 目錄**下執行，路徑寫 `budget/<id>`。`<proto7-2>` 換成原型目錄的絕對路徑。
+
+```sh
+P=<proto7-2>
+mkdir -p <root>/<node>/budget/demo && cp $P/packs/budget/examples/fakeapi/grant.json <root>/<node>/budget/demo/
+python3 $P/bin/aos7-ctl daemon <root> register <node>
+python3 $P/bin/aos7-ctl add <root>/<node> '{"name": "budget-demo", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/budget/bin/aos7-budget", "ledger", "budget/demo"]}'
+python3 $P/bin/aos7-daemon <root> &
+cd <root>/<node>
+python3 $P/packs/budget/bin/aos7-budget init budget/demo     # {"ok": true, ...}（daemon 沒起也能開帳）
+python3 $P/packs/budget/bin/aos7-budget call budget/demo --holder api --request r1 --payload $P/packs/budget/examples/fakeapi/payload.json
+                                                             # outcome accepted、used 1、退出 0；同 K 再跑拿同一份、不再扣
+python3 $P/packs/budget/bin/aos7-budget status budget/demo   # initial 3、available 2、inflight 0、used 1
+python3 $P/bin/aos7-ctl daemon <root> stop --kill
+```
+
+`call` 要等帳任務起來、經過回合才拿得到回條。經 step 呼叫的接法見 `examples/fakeapi/steps.json`（`@BUDGET@` 換成 `bin/aos7-budget` 的絕對路徑）。
+
 ## 三個組件（契約卡，細節在 spec.md）
 
 **grant：使用權（`grant.json`，判斷在 `aos7_budget.judge`）**
 - 職責：判斷誰可在指定預算、資源、入口與效期內使用多少資源。
 - 前置條件：發行者寫一份唯讀、固定內容的 `grant.json`（預算、持有人、資源、入口、額度、時鐘、`from`／`until`、`delegate: false`）；帳開帳時記下它的雜湊，之後不改。時鐘只往前：重建 round.json（回合歸零）＝換預算識別、不移植舊 grant。
-- 保證：判定只分**准許／拒絕／未知**（spec §2）；讀不到、壞掉、內容被改、時鐘讀不到或倒退＝未知，不當「沒有限制」也不當「已過期」；`delegate` 不是 false 或帶 `parent` 的子 grant＝拒絕（開帳也拒）；效期是半開 `from ≤ c < until`，到期只擋**新的**預留與首次准入。
+- 保證：判定回 **准許（`ok`）／拒絕（`denied`）／未知（`unknown`）／尚未生效（`not_yet`，還沒到 `from`，非終局）**（spec §2），`not_yet` 不存成永久拒絕；讀不到、壞掉、內容被改、時鐘讀不到或倒退＝未知，不當「沒有限制」也不當「已過期」；`delegate` 不是 false 或帶 `parent` 的子 grant＝拒絕（開帳也拒）；效期是半開 `from ≤ c < until`，到期只擋**新的**預留與首次准入。
 - 明確不管：量測資源、即時餘額（帳的事）、供應或完成期限、惡意繞過（合作式，同核心 §11）；grant 再分（v1 不實作、不宣稱支援）。
 
 **ledger：帳（`ledger.json`，寫者是 `aos7-budget ledger` 這個 keep 任務）**
@@ -37,7 +57,7 @@
 - 職責：首次准入前核對資格與預留、准入後呼叫後端、保存支用證據（終局回條）；也處理取消。
 - 前置條件：合作式部署（請求人自報的 holder 對應 grant 持有人，不提供 OS 隔離）；呼叫前已有同 K、同內容的預留；同 K 的准入、恢復、取消都在 `gateway/<kid>.json.lock` 下互斥；後端呼叫只經入口。
 - 保證：首次准入前查 grant 與效期，未知不放行、不存成永久拒絕；呼叫後端前先持久記准入意圖（intent）；已准入者恢復不再查效期，只向後端查回／重播同 K；終局回條（accepted／failed／rejected／denied／cancelled）寫了就固定，重送同 K 拿同一份；取消與支用互斥，留下 K 已取消的終局紀錄，晚到的 run(K) 也不會執行。假後端把「K 的效果＋受理計數」同次原子提交、以 K 去重，所以同 K 後端效果最多一次，效果完成、回條未寫也查得回。
-- 明確不管：caller 欄位的真偽；替任意外部 API 保證只發生一次（本保證只對這個可查回的假後端成立）；不可查回的後端的取消（那種後端 intent 只能記 `cancel_requested`、不得寫 `cancelled`，終局只來自後端證據，v1 沒做，spec §4、§9）；支用成功不等於工作產物成功。
+- 明確不管：呼叫者自報的 holder 是否真為本人；替任意外部 API 保證只發生一次（本保證只對這個可查回的假後端成立）；不可查回的後端的取消（那種後端 intent 只能記 `cancel_requested`、不得寫 `cancelled`，終局只來自後端證據，v1 沒做，spec §4、§9）；支用成功不等於工作產物成功。
 
 **call 包裝程式（接 step 的那一層，不是第四個組件）**：`aos7-budget call` 以業務鍵 `K = (budget_id, holder, request)` 依序做 reserve → gateway run → settle，拿到**終局結算回條**才退出（0＝後端受理成功、1＝已結算但不成功或被拒、3＝未知，預留留著；途中任何讀寫不到都歸 3，印一行 JSON、不留 traceback）；對同 K 冪等，所以 step 步可標 `idempotent: true`。attempt、`slot#run` 只當追查資訊，不是新扣款鍵。
 
@@ -45,7 +65,7 @@
 
 - `aos7-budget init budget/<id>`：照 `grant.json` 開帳（帳已存在、grant 不合或是子 grant＝拒絕）。
 - `aos7-budget status budget/<id> [--holder H --request R]`：印餘額，或某個 K 的階段、預留、入口證據與結算結果。
-- `aos7-budget cancel budget/<id> --holder H --request R`：取消 K（已有支用就回原終局、不取消；退出 0 取消了／1 取消不成／3 未知）；之後 `settle` 或重跑 `call` 結算 0。
+- `aos7-budget cancel budget/<id> --holder H --request R`：取消 K（已有支用就回原終局、不取消；退出 0 取消了／1 取消不成／3 未知）；取消成功（入口終局 `cancelled`）之後 `settle` 或同 K 重跑 `call` 才按 used＝0 結算；取消不成就照原終局的 used 結算（`accepted`／`failed` 是 amount），不能假定退款（spec §4）。
 - 退役：`inflight == 0` 後寫 `budget/<id>/retired.json`，帳不收新 K；步驟見 spec §10。
 - `aos7-budget settle budget/<id> --holder H --request R`：只送結算（入口證據已終局才會結）。
 

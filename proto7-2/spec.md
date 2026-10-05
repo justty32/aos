@@ -27,7 +27,7 @@
 - 登記時檢查：在 root 底下、**路上沒有符號連結**（realpath 要等於 `realpath(root)/<id>`）、路上沒有別的 daemon 的根（帶 `.aosd/` 的資料夾，S-15）。不合回條 `ok: false`。資料夾還不在照樣接受，出現時才開回合。
 - 之後只防 node **本身**被換掉：daemon 每圈 lstat（不是資料夾——含換成符號連結——或 inode 變了＝missing，2.6），tick／tock 用 `O_NOFOLLOW` 開 node。絕不沿符號連結寫出空間根。
 - `<node>/.aos/timeline.json` 可有可無（W12），預設 `{"interval_ms": 1000, "early_tock": false, "action_timeout_s": 30}`。讀不到或數值不合＝用預設並記一筆（B）；`interval_ms` 是有限非負數字，0 合法（不等）。
-- **核心選項 `early_tock`**：`false`（預設）＝固定 interval，tick 之後等滿 interval 才 tock；`true`＝本回合起的任務都結束就提前 tock（S-09）。
+- **核心選項 `early_tock`**：`false`（預設）＝固定 interval，從本回合啟動 tick 前的單調時間起算（含 tick 執行時間），等滿才 tock；`true`＝本回合起的任務都結束就提前 tock（S-09）。
 - 跨 node 靠掛載（4.5，S-23），不做 FUSE。
 
 ## 2. daemon（S-03～S-06、S-18、S-21）
@@ -39,16 +39,16 @@
 1. 不變條件一（2.2）沒過 → 停在 `error`，退避（0.5 秒起加倍，最多 8 秒），回 1。
 2. node 被 pause（2.4）→ 等，回 1。
 3. 跑 `aos7-tick <root> <node-id>`，從 stdout 讀回起了什麼。
-4. 等：固定 interval 時等滿 interval，但 tick 之後收到 `wake`（或讓 node 從有人 pause 變成沒人 pause 的 `resume`）就**提前結束這回合**（P2-01）；`early_tock` 時等到本回合起的任務都結束或滿 interval，回合中的 wake 不起作用（A2-11）。
+4. 等：固定 interval 時等到 interval 滿（從第 3 步起 tick 前起算，tick 跑掉的時間也算在內，tick 結束後只等剩下的），但 tick 之後收到 `wake`（或讓 node 從有人 pause 變成沒人 pause 的 `resume`）就**提前結束這回合**（P2-01）；`early_tock` 時等到本回合起的任務都結束或滿 interval，回合中的 wake 不起作用（A2-11）。
 5. 跑 `aos7-tock`（`AOS7_EARLY`＝`1` 提前、`0` 沒有）。沒關上就馬上補一次（`AOS7_INCOMPLETE=tock`）。
 6. 等到離 tick 滿 interval；回合關上之後送來的 wake／resume 打斷等待。被 wake 提前結束的回合不走這步。
 
-- **tick／tock 的退出碼只看三種**：0＝做了；3＝不知道；其他（例外、退出碼 1）＝失敗。後兩者記 `last_error`、退避、回頂端，**不算一個回合**（不扣 `rounds` 倒數）。tick 被動作逾時收掉照第 5 步 tock，總結標 `incomplete: "tick"`。
+- **tick／tock 的退出碼只看三種**：0＝做了；3＝不知道；其他（例外、退出碼 1）＝失敗。tick 的後兩者記 `last_error`、退避、回頂端，**不算一個回合**（不扣 `rounds` 倒數）。tock 不只看退出碼：跑完重新判定 round.json，還沒確知關上就補一次或走第 1 步的恢復，確知關上才扣一次 `rounds`（恢復路徑關上時也是）。tick 被動作逾時收掉照第 5 步 tock，總結標 `incomplete: "tick"`。
 - 時間線丟例外：記 `last_error`，0.5 秒後接著跑。主迴圈一步丟例外不退出，`io_errors` +1。
 
 ### 2.2 不變條件一：回合（K-01、K-02）
 
-- **舊回合確知已關才開下一回合**：round.json 是物件、`round` 整數、`open` 明確 `false`，或確定不存在（新空間）。其餘＝不知道 → 停在 `error` 退避、`last_error.kind: round-unknown`，不 tick，等人寫回。tick 自己也照這條檢查。
+- **舊回合確知已關才開下一回合**：round.json 是物件、`round` 整數、`open` 明確 `false`，或確定不存在（新空間）。明確 `open: true` 走下一條（先收尾）。缺欄、型別不合、讀不到等其餘＝不知道 → 停在 `error` 退避、`last_error.kind: round-unknown`，不 tick，等人寫回。tick 自己也照這條檢查。
 - round.json 還開著（daemon 在回合中死掉重開、補 tock 也失敗）→ 先 tock 關掉（`incomplete: "unclosed"`），成功後回頂端重新看 pause 與倒數。
 - status 每個 node 寫 `round_open`（`true`／`false`／`null`＝不知道）與 `recovery_pending`。
 
@@ -67,7 +67,7 @@
 
 - 處理完原檔搬到 `ctl-done/<同名>.json`，加 `"result": {"ok", "msg", "at", "queued_at"}`，**同名舊回條直接蓋掉**。`ok` 只表示 daemon 接受了。
 - 檔名由寫的人取，建議固定（工具的編碼見[工具包](modules/tools/README.md)），回條就只留每件事的上一次（W3）。
-- 讀不到（I/O）的請求留著下一圈再看。讀不懂、不是 `.json` 結尾、不是一般檔（B）：回條 `ok: false`，原物留成 `ctl-done/<名>.bad`。
+- 讀不到（I/O）的請求留著下一圈再看。不是 `.json` 結尾、不是一般檔（B）：回條 `ok: false`，原物試著留成 `ctl-done/<名>.bad`。一般檔但 JSON 讀不懂或不是物件：回條 `ok: false`，不保證保留原始內容。
 - 一件處理丟例外不擋同圈其他件（特別是 stop）：效果可能已生效、不重做——刪掉請求、記 `last_ctl_error`；刪不掉就不再執行，每圈再試著刪。
 - 每圈最多 200 件或 0.05 秒，剩下的照檔名順序下一圈做。寫給停著的 daemon 的控制檔留到它起來。
 - `pause`／`resume`／`wake`／`register` 的 node 在別的 daemon 的根底下 → `ok: false`。
@@ -134,7 +134,7 @@
 |---|---|
 | `name` | 必填，英數、`_`、`-`（W5） |
 | `argv`／`inst` | 二選一。`argv` 直接跑（cwd＝node，`$AOS7_*` 由 aos7-run 展開）；`inst` 是 inst JSON 的路徑，用 `aos-exec` 跑（S-12） |
-| `mode` | `keep`＝槽沒有活任務就起，把所有空槽補滿；`each`＝每回合在一個空槽起一次，上一次還在跑就跳過；`once`＝起一次，起完 tick 刪掉這項。預設 `each` |
+| `mode` | `keep`＝槽沒有活任務就起，把所有空槽補滿；`each`＝每回合最多在一個空槽起一次，還有空槽時即使別的同名 run 還在跑也起，沒有空槽才跳過（`max_live: 1` 時就是上一次還在跑就跳過）；`once`＝起一次，起完 tick 刪掉這項。預設 `each` |
 | `max_live` | 同名最多幾個同時跑（＝幾個槽），預設 1 |
 | `from_round`／`until_round` | 第幾回合起才起（預設 1）／回合數大於它就不再起新 run（已在跑的不殺，項目與槽留著）。once 也看 |
 | `enabled` | `false`＝不起，項目與槽留著（W11） |
@@ -173,7 +173,7 @@
 - 不是這個 run（或槽是空的）→ 上次在寫 birth 之前就被殺了 → 用新的 run 照常起。
 - 判不出 → 這項留著，下一回合再看。
 
-被殺在「寫了 birth、runner 還沒記上」之間：只能照 5.4 等兩回合判 lost，這項一次都沒跑、報成 lost（帶 `never_started`），不再起——**最多一次**。要至少一次用 [once 保證包](modules/once_retry/README.md)（P2-02）。
+被殺在「寫了 birth、runner 還沒起」之間：只能照 5.4 等兩回合判 lost，這項一次都沒跑、報成 lost（帶 `never_started`），不再起——**最多一次**。被殺在「runner 已起、還沒補記進 birth」之間則可能已經在跑：照 runner、pid、exit 與身分掃描（5.4）判定，不能只憑 birth 缺 runner 認定沒跑。要把沒跑的那種補回，用 [once 保證包](modules/once_retry/README.md)（P2-02；它是取樣式補登，降低遺失機會，不是無條件的至少一次）。
 
 給上層推算用的兩個保證（核心只承諾這兩句；step 包「第三個 tock 才刪」之類的推論寫在包裡）：
 
@@ -242,7 +242,7 @@ aos7-run 經 fd 讀 birth、開 out.log，把任務起在自己的程序群組�
 
 任何人寫 `<槽>/ctl.json`＝`{"op": "kill", "run": 整數, "by", "why"}`，**tick 與 tock 時刻**執行；執行完寫 `ctl-done.json`（請求加 `result`，蓋掉舊的）再刪請求。node 被 pause 時等到 resume。槽的狀態不知道、ctl.json 讀不到＝請求留著。
 
-- **只有 kill，`run` 必填**：op 不是 kill、`run` 缺或不是整數＝輸入不合，回條 `ok: false`、刪請求。`run` 不是槽現在的 → `ok: false`、不執行。那個 run 已結束＝成功，順便收殘留。帶 `run` 讓重播只生效一次；刪不掉時總結那筆帶 `err`。
+- **只有 kill，`run` 必填**：op 不是 kill、`run` 缺或不是整數＝輸入不合，回條 `ok: false`、刪請求。`run` 不是槽現在的 → `ok: false`、不執行。那個 run 已結束＝成功，順便收殘留。帶 `run` 讓重播始終只針對原 run、不會誤殺槽裡的新 run；同一請求可能重複執行（刪不掉就每回合再做），但重複收掉已結束的同一 run 是冪等的，不是只執行一次。刪不掉時總結那筆帶 `err`。
 - **kill 的範圍**（Q1 (a)）：任務的程序群組、群組成員的後代所在的群組、環境 NODE＋TID＋RUN 相符的程序。打 pid.json 記的群組前先確認：群組沒有活成員，或有成員是這個 run 的，才打（防 pgid 被重用）。SIGTERM，最多等 1 秒，還在就 SIGKILL。
 - **kill 回成功的條件**：最後確認 pid.json 記的任務程序已經不在；還活著或認不出 → `ok: false`（msg 以 `unknown` 開頭）。
 - restart／reload 不在核心，見[控制包](modules/control/README.md)（請求端先加釘同槽的 once，再寫 kill；tick 先處理 once，所以它先佔住槽）。

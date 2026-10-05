@@ -8,7 +8,7 @@
 |---|---|
 | 接法 | C 工具＋函式庫：`aos7_control.restart(...)`；工具包的 `aos7-ctl task … restart` 呼叫它（工具包依賴這包） |
 | 預設 | 開（隨工具包） |
-| 依賴 | 核心的 kill（`run` 必填）、tasks.json 的 `slot`（once 釘槽）與 `x` 透傳、執行中加掛的 `dyn` 標記 |
+| 依賴 | 核心協定：kill（`run` 必填）、tasks.json 的 `slot`（once 釘槽）與 `x` 透傳、執行中加掛的 `dyn` 標記；程式依賴：匯入工具包的 `aos7_taskside`（`decl_of`） |
 | 程式 | `aos7_control.py` |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py modules/control/tests`） |
 
@@ -18,7 +18,7 @@
 - **前置條件**：新意圖用新 `req_id`、重送同一件才沿用；改 tasks.json 的人都拿表鎖（核心 spec §4.3）；槽的 birth.json 只有核心寫。
 - **保證**：
   - 表讀不到、不是一般檔、壞掉＝拒寫、不 kill（核心 §4.1 G1）；birth 讀不到、reload 的定義不合格＝不做、不 kill。
-  - 不會「殺了沒重起」：once 先於 kill 落地，tick 先處理 once 佔住槽（核心 §6 末句）。
+  - 不會因請求端兩步之間中斷而「殺了沒重起」：once 先於 kill 落地，tick 先處理 once 佔住槽（核心 §6 末句）。之後那個 once 能不能真的起來，仍照核心 once 的契約（核心 §4.4：tick 中斷在 birth 與 runner 之間的那種最多一次）。
   - **去重的完成證據＝表上同槽的 pending once 帶該 `req_id`，或槽**目前**的 birth 帶該 `req_id`**；判定在 tasks 表鎖內做（鎖內重讀 birth，A4-02），並行送同一件只加一次 once。
   - **去重期限**：槽正常換 run 後（例如 keep 下一次重起），目前的 birth 不再帶該 id，證據就消失；之後再送同 id＝新意圖，照新請求做（A4-06）。要跨換 run 去重由呼叫者自己留證據（例如記下 restart 的回傳，或比對新 birth 的 `x.restart_of`）；不把 ctl-seen 加回核心。
   - 回 `ok` 只表示請求端兩步做完；真的重起看 ctl-done.json 與下一回合總結。

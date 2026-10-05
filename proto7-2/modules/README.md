@@ -19,7 +19,7 @@
 
 `history.py`、`counter.py` 是**觀測任務包（kernel 層）的雛形**，這輪不動；它們的測試在 `tests/`。每個包的測試在 `<包>/tests/`，全套用 `python3 proto7-2/tests/run_all.py` 一起跑。
 
-**包的格式**：一個資料夾，有 `README.md`（做什麼、接法、預設、依賴、**契約卡**（職責／前置條件／保證／明確不管，核心卡在[組件契約](../notes/component-contracts.md)）、規則、界線、測試位置）、程式、`tests/`。可執行的包裝程式／工具放包的根目錄（`bin/` 會被 gitignore）。安裝工具 `aos7-pack` 與 kernel 任務包（方案第 10 節）這輪不做。
+**包的格式**：一個資料夾，有 `README.md`（做什麼、接法、預設、依賴、**契約卡**（職責／前置條件／保證／明確不管，核心卡在[組件契約](../notes/component-contracts.md)）、規則、界線、測試位置）、程式、`tests/`。可執行的包裝程式／工具放包的根目錄（`bin/` 會被 gitignore）。安裝工具 `aos7-pack`（方案第 10 節）尚未實作；上層任務包另放在 `packs/`，目前已有 step、budget、adapt，入口見[專案 README](../README.md) 的結構表。
 
 ## 歷史 module（從核心 spec 搬來）
 
