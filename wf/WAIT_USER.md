@@ -17,6 +17,8 @@
 
 > 編號是固定的（別處用「WAIT_USER 第 N 條」引用），拍掉的號碼不回收，所以會跳號（1、2、7 已結；9 移到 C）。**編號固定不回收**——已按類別搬進 [`wait-user/`](wait-user/README.md)，本檔只留導航表。
 
+> **15 分鐘拍完清單**（2026-10-05，71 題裡 28 題建議直接結掉、43 題真正要答）：[wait-user/digest-2026-10-05.md](wait-user/digest-2026-10-05.md)
+
 | 類別 | open | 清單 |
 |------|------|------|
 | proto2（辯論場／hackathon／proto2 舊題） | 9 | [wait-user/proto2.md](wait-user/proto2.md)（3、4、5、6、8、10、11、12、13） |
