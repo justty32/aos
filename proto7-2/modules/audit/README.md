@@ -2,13 +2,13 @@
 
 ← [proto7-2](../../README.md)｜[核心 spec](../../spec.md)
 
-**可選的寫入紀錄**：任務是 Python 程式時，記下它每個「寫」的動作，事後挑出寫到「自己的 node 與掛載點」之外的（S-10「只碰給的資料夾」沒有強制，這裡只記不擋）。
+**可選的寫入紀錄**：任務是 Python 程式時，盡力記下它的「寫」動作（涵蓋範圍見保證），事後挑出寫到「自己的 node 與掛載點」之外的（S-10「只碰給的資料夾」沒有強制，這裡只記不擋）。
 
 | 項目 | 內容 |
 |---|---|
 | 接法 | B 包裝程式：tasks.json 項目的 argv 寫成 `aos7-audit -- <argv...>`（設 `AOS7_AUDIT=1`、把 `audit_site/` 放到 `PYTHONPATH` 最前面，再 exec argv）。核心不知道稽核 |
 | 預設 | 關 |
-| 依賴 | 無 |
+| 依賴 | 核心協定：無；程式依賴：`aos7_audit.py` 匯入工具包的 `aos7_taskside`（`read_jsonl`） |
 | 程式 | `aos7-audit`（包裝程式）、`audit_site/sitecustomize.py`（任務裡的 audit hook，寫 `$AOS7_TASK/writes.jsonl`）、`aos7_audit.py`（`scan(root)` 掃全空間的紀錄） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py modules/audit/tests`） |
 
@@ -17,7 +17,7 @@
 - **職責**：Python 任務的寫入紀錄（`writes.jsonl`）＋全空間掃描挑出越界的；**只記不擋**（下面規則節）。
 - **前置條件**：argv 經 `aos7-audit` 包起；任務是 Python 程序；`nodes.json` 只有 daemon 寫。
 - **保證**：
-  - 空間根底下每筆寫入都有紀錄與 `ok` 判定：落在自己的 node（扣掉巢狀的別的 node／daemon 根）或某個掛載目標底下（核心 spec §5.5）。
+  - 已涵蓋的 Python audit 寫入事件，在空間根底下的都有紀錄與 `ok` 判定：落在自己的 node（扣掉巢狀的別的 node／daemon 根）或某個掛載目標底下（核心 spec §5.5）。以整數 fd 指定的目標、沒涵蓋的事件、紀錄本身寫失敗（吞掉、只記不擋）時可能沒有紀錄——`writes.jsonl` 是觀察資料，不是完整寫入清單，沒有紀錄不能證明沒寫。
   - 登記邊界照**判定當下**的 `nodes.json`：執行中才登記的巢狀 node，之後寫進去就是 `ok: false`（A4-05）。
   - 不改任務的行為、不擋寫入；紀錄只留這次 run（核心 §5.1 換 run 清掉）。
 - **明確不管**：非 Python 的寫入；繞過包裝；強制隔離（S-10 仍是合作式）。

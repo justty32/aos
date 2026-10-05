@@ -9,6 +9,7 @@
 | [code-quality](code-quality.md) | 程式品質與正確性（收尾版） | 啟動、回收、中斷恢復有數項缺陷，優先修「kill 過早回成功」與「舊任務未確認收乾淨就起新時間線」 |
 | [cpp-core](cpp-core.md) | C++ 核心移植審查（收尾版） | 移植應先重建錯誤判定、程序身分與可恢復的執行交接，再接 agent／LLM；現有 C++ 有漏工作、誤報成功、併發覆寫缺口 |
 | [deep-play](deep-play.md) | 長跑與壓力（收尾版） | 確認兩個同族 daemon 回收缺陷（C8-01／02）與任務包暫存檔缺口；長跑與一小時 chaos 未達門檻 |
+| [docs-align](docs-align.md) | 文件與程式對齊（spec-readability F01～F34、packs-use 4.1 的落實） | 照程式改 32 條文件說法（F06 只改 README 半條）、三包加「第一次跑」並實跑；F03、F19、F06 spec 半條、4.5 等牽涉 D4～D6 留給使用者 |
 | [event-store](event-store.md) | 事件保存候選方案 | 核心零改動可存快照、daemon 追加事件與任務主動發布的事件；要所有底層事件不漏須補來源端交接契約 |
 | [fast-tests](fast-tests.md) | 測試加速 | 364 項中位數 190.19 秒降到 65.19 秒（省 65.7%），19 輪全過；原樣複本本身只有 359/364 |
 | [k-crosscheck](k-crosscheck.md) | proto7-1 K 系列與第三波需求對照 | 生命週期與 once 去重未完全封閉，另有巨大 interval、巢狀 subd 啟動、子根稽核三項遷移退步 |

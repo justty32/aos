@@ -2,7 +2,7 @@
 
 ← [proto7-2](../../README.md)｜[核心 spec](../../spec.md)（4.4 once、5.4 的事實欄 `never_started`）
 
-**讓 once 至少一次**：核心的 once 是最多一次——tick 被殺在「寫了 birth.json、runner 還沒記到」之間，那項一次都沒跑、報成 lost、不再起（P2-02）。這包把「看起來從沒起來過」的 lost 加回 tasks.json，重起一次。可能跑兩次（極小機率真的跑過），是選它的人接受的代價。
+**讓 once 盡量至少一次**：核心的 once 是最多一次——tick 被殺在「寫了 birth.json、runner 還沒起」之間，那項一次都沒跑、報成 lost、不再起（P2-02）。這包把「看起來從沒起來過」的 lost 加回 tasks.json，重起一次。它靠取樣、也要槽證據還在，所以不是無條件的至少一次（見「明確不管」與界線）；可能跑兩次（極小機率真的跑過），是選它的人接受的代價。
 
 | 項目 | 內容 |
 |---|---|
@@ -14,7 +14,7 @@
 
 ## 契約卡
 
-- **職責**：把「看起來從沒起來過」的 lost once 加回 tasks.json 重起一次，讓選它的 once 變成至少一次（下面規則節）。
+- **職責**：把「看起來從沒起來過」的 lost once 加回 tasks.json 重起一次，讓選它的 once 在觀察得到、槽證據還在時補登成至少一次（下面規則節）；取樣漏掉或槽已刪就退回最多一次。
 - **前置條件**：要保證的 once 項帶 `x.retry_lost: true`；本任務是收得到 tock 的普通 keep；改 tasks.json 的人都拿表鎖（核心 spec §4.3）。
 - **保證**：
   - 只加回 `lost`＋`never_started`（核心 §5.4 事實欄）、槽 birth 同 run、`once`、`x.retry_lost` 都成立的那筆；加回的項釘同槽、帶 `x.retry_of`，表上已有同 `retry_of` 的不重加。

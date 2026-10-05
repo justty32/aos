@@ -14,18 +14,36 @@
 | 範例 | `examples/temp/`：發布者 `sensor.py`、宣告 `temp.json`、消費者 `fan.py` |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py packs/adapt/tests`；全套預設就收） |
 
+## 第一次跑（示範 temp，已實跑）
+
+兩個 node：`src` 跑發布者 `sensor.py`（寫 `src/out/temp.json`），`dst` 跑本包。鏈宣告的 `src`、`src_clock` 是**空間路徑**（`src/out/temp.json`、`src/.aos/round.json`），要被任務 `mounts` 的值（`src/out`、`src/.aos`）蓋到才讀得到。人手指令（`check` 以外）在 **dst 目錄**下執行。`<proto7-2>` 換成原型目錄的絕對路徑。
+
+```sh
+P=<proto7-2>
+mkdir -p <root>/src <root>/dst/adapt && cp $P/packs/adapt/examples/temp/temp.json <root>/dst/adapt/
+python3 $P/packs/adapt/bin/aos7-adapt check <root>/dst/adapt/temp.json   # 印 []、退出 0
+python3 $P/bin/aos7-ctl daemon <root> register src
+python3 $P/bin/aos7-ctl daemon <root> register dst
+python3 $P/bin/aos7-ctl add <root>/src '{"name": "sensor", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/adapt/examples/temp/sensor.py"]}'
+python3 $P/bin/aos7-ctl add <root>/dst '{"name": "adapt-temp", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/adapt/bin/aos7-adapt", "run", "adapt/temp.json"], "mounts": {"src": "src/out", "srcclock": "src/.aos"}}'
+python3 $P/bin/aos7-daemon <root> &
+cd <root>/dst && python3 $P/packs/adapt/bin/aos7-adapt status adapt/temp.json   # 約第 2 回合 "state": "ok"
+cat in/temp.json                                                                 # 暫存器：value {"c": …, "hot": …}、basis、trace
+python3 $P/bin/aos7-ctl daemon <root> stop --kill
+```
+
 ## 契約卡
 
-- **職責**：把來源的一份事實檔（位準型：最新值）投影成消費端吃得下的窄格式；每次都從**固定版本的依據**重算（不吃上一跳）；標出依據版本 `basis`、出處 `src`、鏈版本 `chain.sha`、來源鐘的年齡、來源狀態；交付三態 `ok／unknown／absent`。
+- **職責**：把來源的一份事實檔（位準型：最新值）投影成消費端吃得下的窄格式；每次都從本次讀到的**固定版本依據**重跑整條鏈（不把前一輪的暫存器輸出當新來源；鏈內各步仍是逐步轉換）；標出依據版本 `basis`、出處 `src`、鏈版本 `chain.sha`、來源鐘的年齡、來源狀態；交付三態 `ok／unknown／absent`。
 - **前置條件**：自己是 `max_live: 1` 的 keep；來源檔經 mounts 掛進來（空間路徑，`mount_allow` 放行）、由來源用原子 rename 寫（核心 `write_json`）、內容是 JSON 物件且帶整數 `round`（建議帶 `seq`）；來源 node 的 `.aos/round.json` 也掛得到；鏈宣告 `<node>/adapt/<sense>.json` 過了檢查器、工作中不改；`in/<sense>.json` 只有本包寫；槽內 `state.json` 只有本包寫。
 - **保證**：
   - 暫存器要嘛完整要嘛舊版（rename）；每個自己的 tock 寫一次（`my_round` 前進），pause 時不動。
   - `state: ok` 時 `value` 一定是從 `basis.sha` 那一版算出來的；鏈每步可重算（`trace`）、列出 `omitted` 與誤差界 `err`。
-  - 來源讀不到、半寫、缺欄、路徑指不到、選不到、型別不對＝同一條 unknown 分支：**先靠耐性撐住舊值、到期才翻 unknown**（不假造值、不丟 `last`）；來源檔確定不存在＝`absent`。
-  - 效期 `max_age` 用來源回合數算、耐性 `patience` 用自己回合數算（pause 時都不走）；來源回合倒退＝`reset`、舊依據作廢；來源慢**不是**錯（只是年齡）、來源快只是漏取樣（記 `skipped`，不補）。
+  - 來源讀不到、半寫、缺欄、路徑指不到、選不到、型別不對＝同一條耐性分支：**上一份輸出是 `ok`、耐性沒到期、舊依據沒因 reset 作廢時才撐住舊值，否則翻 unknown**（不假造值、不丟 `last`）；宣告壞、依據作廢、過期、停太久、誤差帶跨門檻等直接 unknown、不靠耐性撐（spec §4.2 判定表）；來源檔確定不存在＝`absent`。
+  - 效期 `max_age` 用來源 node 的回合數算（來源 pause 時年齡不長）、耐性 `patience` 用消費端（自己）node 的回合數算（自己 pause 時耐性不走），兩邊的 pause 互不代替；來源回合倒退＝`reset`、舊依據作廢；來源慢**不是**錯（只是年齡）、來源快只是漏取樣（記 `skipped`，不補）。
   - 門檻判斷時誤差區間跨過門檻＝那一欄 `null`、`state: unknown`、`why: within_error_band`，不硬判。
   - 鏈用精確十進位算；發布的數字不失真（整數原樣、float 的表示誤差算進 `err`），超出 float 範圍＝`out_of_range` unknown，不發布 `Infinity`（spec §2「數值」）。
-  - 被殺重起：從槽內 `state.json` 接回 `since`、`last_seq`、`skipped`，不重算、不把同一版當新版。框架先寫、暫存器後寫。
+  - 被殺重起：從槽內 `state.json` 接回 `since`、`last_seq`、`skipped`；下一圈可以重算同一版，但不把它當新版、`skipped` 不重加。框架先寫、暫存器後寫。
 - **明確不管**：來源說的是不是真話；消費者拿到 unknown 之後怎麼辦；事件／窗口（只有最新值）；不可重算的（LLM）步驟；跨子 daemon 交付；來源沒帶 `seq` 時漏了幾版；掛載權限；人手改 `in/`、`state.json`、鏈宣告。
 
 ## 界線
