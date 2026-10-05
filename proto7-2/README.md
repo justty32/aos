@@ -6,6 +6,7 @@
 
 ## 入口
 
+- **沒跟上進度？先讀 [notes/catch-up.md](notes/catch-up.md)**（10-04 早 → 10-05 下午的追進度導讀：現在是什麼、怎麼來的、注意力該放哪；名詞表 [catch-up-glossary.md](notes/catch-up-glossary.md)）。
 - **[spec.md](spec.md)**：核心 spec，只放規則，每條引 S- 條號或核心選項；條目上的 P2-／A2-／A3- 只是編號，由來寫在 problems。
 - **[modules/README.md](modules/README.md)**：模組包總覽（每包做什麼、接法、預設、依賴、入口檔），各包的規則在各包 README；會停下等人的情況與恢復步驟在[診斷包](modules/diag/README.md)。
 - **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題與各條的由來（沒有待你決定的），含 astra 第一輪 A2、第二輪 A3 的處理，與核心精簡刪掉的誤用保護、搬出核心的設計。
