@@ -62,4 +62,4 @@ SESSION-LOG 10-04 傍晚記的順序是事件保存 → agent／LLM 作者與 ad
 
 ## 五、頂層建議（建議，不是決定）
 
-先開 loop7 修第一節的 1～5 組（adapt 回歸 → subd 誤收 → kill／回收時序 → budget unknown → 其餘），測試（6）與文件（7）視 loop7 分線容量併入或下一輪。loop7 進行期間，使用者看事件保存的 5 題待決；修完回到事件保存，之後照原定順序接 agent／LLM 作者與 adapt-llm。
+先開 loop7 修第一節的 1～5 組（adapt 回歸 → subd 誤收 → kill／回收時序 → budget unknown → 其餘），測試（6）與文件（7）視 loop7 分線容量併入或下一輪。loop7 進行期間，使用者看事件保存的 5 題待決；修完回到事件保存，之後照原定順序接 agent／LLM 作者與 adapt-llm。 第 3～6 組（第 6 組只含先修假綠 T8-01～08）的根因、修法選項、待決題與分線見 [loop7 藍圖](blueprint-loop7.md)（逐條在 [blueprint-loop7-items.json](blueprint-loop7-items.json)）。
