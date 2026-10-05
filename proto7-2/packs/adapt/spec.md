@@ -38,7 +38,8 @@
 **三種步**（不開運算式）：
 
 - `{"select": "a.b.c"}`：從來源物件取一個值（點分路徑，每段非空）。路徑走不到＝`select_missing`（unknown 分支）。誤差界 0。
-- `{"scale": {"mul": 數, "q": 數, "round": 整數?, "as": 名?}}`：`x ← x × mul`，有 `round` 就四捨五入到小數 `round` 位（平手遠離零：2.5→3、-2.5→-3；以十進位表示取整，不用 Python 內建 round 的取偶數）；誤差界 `err ← |mul| × err + q`。`q ≥ 0`；有 `round` 時 `q` 不得小於取整的半個單位（`0.5 × 10^-round`）。`x` 不是數字（含 bool）＝`not_number`（unknown 分支）。有 `as` 就把 `x` 放進產出。
+- `{"scale": {"mul": 數, "q": 數, "round": 整數?, "as": 名?}}`：`x ← x × mul`，有 `round` 就四捨五入到小數 `round` 位（平手遠離零：2.5→3、-2.5→-3；以十進位表示取整，不用 Python 內建 round 的取偶數）；誤差界 `err ← |mul| × err + q`。`q ≥ 0`；有 `round` 時 `q` 不得小於取整的半個單位（`0.5 × 10^-round`，精確比）。`x` 不是數字（含 bool）＝`not_number`（unknown 分支）。有 `as` 就把 `x` 放進產出。
+- **數值（A8）**：鏈裡的 `x`、`err`、門檻區間都用**精確十進位**算（數字取 JSON 文字的十進位值；不受精度上限、不在 float 端點塌縮）。只有寫進產出時才轉 JSON 數字：整數值且沒有小數位（或 float 放不下）＝整數原樣；其餘＝float，**float 跟精確值的差加進那一欄的 `err`**（誤差界再往上取到 float），所以真值一定在 `value ± err` 裡。產出欄的值或誤差界超出 float 範圍＝`out_of_range`（§4.2 第 7 列），不發布 `Infinity`。
 - `{"threshold": {"ge"|"gt"|"le"|"lt": 數, "as": 名}}`：恰一個比較鍵；`as` 必填。區間 `[x − err, x + err]` 整段成立＝`true`、整段不成立＝`false`、跨過門檻＝`null`（`within_error_band`）。`x` 不變。
 
 `as` 的名字英數與 `_`，同一條鏈不重複。檢查器（§6）只看宣告，不執行。
@@ -76,7 +77,7 @@
 | 4 | 依據作廢：來源 `round > ct + 1`（舊鐘留下的檔），或 `sha` 等於 reset 時作廢的那一份 | unknown（`void_basis`） |
 | 5 | 過期（§3） | unknown（`expired`） |
 | 6 | 停太久（§3） | unknown（`stalled`） |
-| 7 | `within_error_band`、`need` 欄是 null（`need_missing`） | unknown |
+| 7 | 產出超出 float 範圍（`out_of_range`，A8-04）、`within_error_band`、`need` 欄是 null（`need_missing`） | unknown |
 | 8 | 其餘 | `ok`，採用新依據 |
 
 - 第 4～8 列都算「讀取成功」（`last_ok_my_round`＝這回合）：讀到了，只是答案是不能用；不靠耐性撐舊值。
@@ -85,7 +86,7 @@
 
 ### 4.3 寫
 
-先寫框架（槽 `state.json`），再寫暫存器——被殺在兩者之間，下一圈從框架重算同一版，`skipped` 不重加。寫不進去記 stderr（`out.log`），下一圈再來。
+先寫框架（槽 `state.json`），再寫暫存器——被殺在兩者之間，下一圈從框架重算同一版，`skipped` 不重加。寫不進去記 stderr（`out.log`），下一圈再來。判定拋了沒料到的例外＝這圈暫存器寫 unknown（`internal_error`，`detail` 放例外、`last` 照框架），框架不動、任務不退出——不留下舊 `ok`（A8-01）。
 
 ## 5. 暫存器與框架
 

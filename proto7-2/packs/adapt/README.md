@@ -24,6 +24,7 @@
   - 來源讀不到、半寫、缺欄、路徑指不到、選不到、型別不對＝同一條 unknown 分支：**先靠耐性撐住舊值、到期才翻 unknown**（不假造值、不丟 `last`）；來源檔確定不存在＝`absent`。
   - 效期 `max_age` 用來源回合數算、耐性 `patience` 用自己回合數算（pause 時都不走）；來源回合倒退＝`reset`、舊依據作廢；來源慢**不是**錯（只是年齡）、來源快只是漏取樣（記 `skipped`，不補）。
   - 門檻判斷時誤差區間跨過門檻＝那一欄 `null`、`state: unknown`、`why: within_error_band`，不硬判。
+  - 鏈用精確十進位算；發布的數字不失真（整數原樣、float 的表示誤差算進 `err`），超出 float 範圍＝`out_of_range` unknown，不發布 `Infinity`（spec §2「數值」）。
   - 被殺重起：從槽內 `state.json` 接回 `since`、`last_seq`、`skipped`，不重算、不把同一版當新版。框架先寫、暫存器後寫。
 - **明確不管**：來源說的是不是真話；消費者拿到 unknown 之後怎麼辦；事件／窗口（只有最新值）；不可重算的（LLM）步驟；跨子 daemon 交付；來源沒帶 `seq` 時漏了幾版；掛載權限；人手改 `in/`、`state.json`、鏈宣告。
 
