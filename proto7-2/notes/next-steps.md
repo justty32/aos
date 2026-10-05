@@ -1,6 +1,6 @@
 # proto7-2 接下來可以做的方向
 
-← [proto7-2](../README.md)｜[10-05 報告索引](reviews/2026-10-05/README.md)｜[證據濃縮](reviews/2026-10-05/evidence-summary.md)｜[問題與由來](problems.md)｜[回歸紀錄](play/README.md)
+← [proto7-2](../README.md)｜[10-05 報告索引](reviews/2026-10-05/README.md)｜[證據濃縮](reviews/2026-10-05/evidence-summary.md)｜[問題與由來](problems.md)｜[回歸紀錄](play/README.md)｜**[第七輪思考素材](../../proto7/notes/thinking/2026-10-05-r7-material.md)**（給使用者深想用：現況一頁、六個大問題、[待決題速查](../../proto7/notes/thinking/2026-10-05-r7-decisions.md)）
 
 10-05 整理自 15 份 astra 報告、[SESSION-LOG](../../wf/SESSION-LOG.md)、[WAIT_USER](../../wf/WAIT_USER.md)。**只整理選項與報告的預設建議，方向由使用者決定**（AGENTS 鐵律 5）；第五節是頂層建議。
 
