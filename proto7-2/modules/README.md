@@ -22,6 +22,7 @@
 | [compact](compact/README.md) 記憶整理包 | 舊紀錄先封存再換摘要，open 項與最近 N 則留下 | A＋C | 關 | 標準庫、核心 aos7_fs、工具包任務端函式；選配 llmcall／events | `compact/aos7-compact`（子命令 now／forget／watch） |
 | [mail](mail/README.md) 信箱包 | 檔案寄信、輪詢、未結請求 audit 與日誌辦結復原 | C | 關 | events 包公開介面＋aos7_fs | `mail/aos7-mail`（send／read／done；進階 audit／roster／team 見 ADVANCED） |
 | [llmdiag](llmdiag/README.md) LLM 待辦診斷包 | 唯讀列出 llmcall 沒回條的呼叫、author 停住的 job、budget 還在飛的預留 | C | 開（工具） | 無（只讀別包的檔） | `llmdiag/aos7-llmdiag`（A5 真 AI 學徒寫） |
+| [up](up/README.md) 起步入口 | 一次備好 node、工作簿、信箱、技能與心跳；up／status／stop（ask 見 brain） | C | 關 | wfnode、budget、llmcall、skills、compact、mail、tools | `up/aos7-up` |
 | `history.py` 歷史 module | 每個 tock 把「上一次」追加到自己的地方（見下） | A | 關 | 工具包的任務端函式 | `history.py` |
 | `counter.py` 示範任務 | 讀同槽上一次的 state、收 tock.json | A | — | 工具包的任務端函式 | `counter.py` |
 
