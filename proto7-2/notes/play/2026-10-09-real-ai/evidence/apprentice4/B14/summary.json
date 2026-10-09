@@ -1,0 +1,195 @@
+{
+ "variant": "B",
+ "rep": 14,
+ "model": "chatgpt-gpt-6-sol-low",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 6,
+ "offline": false,
+ "stop": null,
+ "calls_total": 272,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB14",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 7922,
+   "review_tokens": 5766,
+   "secs": 59.7,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 7922,
+     "review_tokens": 5766,
+     "secs": 44.7,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 15.0,
+    "tokens": 6503,
+    "bytes": 3077
+   },
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "runs",
+   "rid": "runsB14",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 8855,
+   "review_tokens": 6753,
+   "secs": 78.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 8855,
+     "review_tokens": 6753,
+     "secs": 59.0,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 19.0,
+    "tokens": 8658,
+    "bytes": 3705
+   },
+   "order": 2,
+   "skill_in_prompt": true
+  },
+  {
+   "task": "audit",
+   "rid": "auditB14",
+   "passed": true,
+   "rounds": 3,
+   "reasks": 2,
+   "fails": {
+    "1": 0,
+    "2": 2,
+    "3": 0
+   },
+   "tokens": 35286,
+   "review_tokens": 6788,
+   "secs": 155.7,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer"
+     ],
+     "tokens": 8440,
+     "review_tokens": null,
+     "secs": 30.8,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "answer",
+       "why": "['case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0.0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0.0},{\"id\":\"carol-20261009T182909-f2e380fe4d5a\",\"from\":\"carol\",\"t"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 14481,
+     "review_tokens": null,
+     "secs": 37.4,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                                       'age_min': -1}])\n                                       ^^^^^^^^^^^^^^^^\nAssertionError: Lists differ: [{'id[13 chars]'from': 'alice', 'to': 'bob', 'where': 'inbox', 'age_min': 1}] != [{'id[1"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12365,
+     "review_tokens": 6788,
+     "secs": 65.9,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 21.6,
+    "tokens": 11751,
+    "bytes": 4579
+   },
+   "order": 3,
+   "skill_in_prompt": true
+  }
+ ]
+}

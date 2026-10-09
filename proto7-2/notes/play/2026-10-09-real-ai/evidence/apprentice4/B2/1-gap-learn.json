@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "gapB2",
+ "skill": "aos-tool-apprentice",
+ "into": "/tmp/ap4-work/runs/B2/skillnode/skills/aos-tool-apprentice/SKILL.md",
+ "bytes": 2708,
+ "llm": {
+  "model": "chatgpt-gpt-6-luna",
+  "call_id": "gapB2-learn-1791556413",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 824,
+   "prompt_tokens": 6253,
+   "total_tokens": 7077,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 7077,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/ap4-node/llmcall/llm/gapB2-learn-1791556413/receipt.json"
+ }
+}

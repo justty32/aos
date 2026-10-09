@@ -1,0 +1,106 @@
+---
+name: aos-tool-apprentice
+description: 記錄 aos 唯讀工具交付時的資料邊界、測試核對與檔案骨架。
+triggers: aos-tool、唯讀彙總、JSONL、fixture 核對
+---
+
+## 踩過的坑
+
+- 症狀：把題目要求當成已驗收，報告宣稱測試通過卻沒有執行紀錄。→ 下次怎麼做：分開寫「已交付」與「已驗證」；只有工具實際退出 0 且核對結果為 true，才宣稱過關。
+- 症狀：唯讀程式不寫資料，卻漏查輸入的位元組、權限或時間戳是否改變。→ 下次怎麼做：測試前後比對檔名、內容、mode 與 mtime_ns，並以獨立 fixture 工具核對；不要匯入既有寫入、復原或鎖定路徑。
+- 症狀：用 `splitlines()` 處理 JSONL，將合法的行內 CR 當成分行。→ 下次怎麼做：以 `b'\n'` 切位元組；最後一段非空且沒有換行時，先記為 torn，不嘗試彙總。
+- 症狀：Python 把 `bool` 視為 `int`，或 JSON 解碼器接受 NaN、Infinity，讓無效紀錄混入統計。→ 下次怎麼做：用 `type(value) is int` 驗證整數，並在 JSON 解碼時拒絕非標準常數。
+- 症狀：單一 channel 的 state 無效，連帶抹掉另一個有效 channel；或每個欄位各記一筆錯誤。→ 下次怎麼做：先驗證整份 state 的結構，再分 channel 驗證必要欄位；無效 state 只記一筆 bad_state。
+- 症狀：測試只確認 JSON 可解析，漏掉退出碼、空 stdout、排序、重複序號及 null 與整數的差異。→ 下次怎麼做：以子程序跑入口，逐項斷言鍵集合、精確型別、bad 順序、缺號閉區間及輸入不變；再跑指定的實質測試與獨立核對。
+
+## 驗過的骨架
+
+入口保持精簡，供 checker 以 Python 直接執行；模組從包內匯入：
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from aos7_evgap import main
+
+if __name__ == '__main__':
+    sys.exit(main())
+```
+
+模組中的整數與 JSON 邊界可獨立封裝，CLI 成功時只印一行，無效資料夾退出 2 且不印 stdout：
+
+```python
+import json
+import sys
+from pathlib import Path
+
+def integer(value):
+    return type(value) is int
+
+def parse(data):
+    def reject_constant(value):
+        raise ValueError(value)
+    return json.loads(data, parse_constant=reject_constant)
+
+def main():
+    if len(sys.argv) != 2 or not Path(sys.argv[1]).is_dir():
+        return 2
+    result = collect(Path(sys.argv[1]))
+    print(json.dumps(result, ensure_ascii=True, separators=(',', ':')))
+    return 0
+```
+
+測試以檔案位置定位入口，透過子程序觀察真正的 stdout 與退出碼；測試檔沿用 `unittest`，由指定 runner discover：
+
+```python
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+ENTRY = Path(__file__).resolve().parents[1] / 'bin' / 'aos7-evgap'
+
+class ToolTests(unittest.TestCase):
+    def run_cli(self, path):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(path)],
+            capture_output=True,
+        )
+```
+
+```sh
+python3 proto7-2/tests/run_all.py packs/evgap/tests
+python3 check_answer.py <proto7-2> fixture
+```
+
+README 至少交代用途、唯讀邊界、輸入與輸出、失敗退出碼，並提供第一次執行及測試指令：
+
+```markdown
+# 工具名稱
+
+## 第一次跑
+
+`python3 packs/<包名>/bin/<入口> <資料夾>`
+
+成功時 stdout 為一行 JSON；無效資料夾退出 2、stdout 為空。
+工具只讀取指定輸入，不修復或寫回資料。
+
+測試：`python3 proto7-2/tests/run_all.py packs/<包名>/tests`。
+```
+
+索引只新增該包的一列；交付報告區分實際驗證結果與待執行指令，並以指定工具標題結尾：
+
+```markdown
+| `packs/<包名>/` | [工具名稱](packs/<包名>/README.md) | 唯讀彙總用途 |
+
+# REPORT
+
+交付檔案與實際驗證結果；未執行的核對不得寫成通過。
+
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/<包名>/tests`：實質測試。
+- `python3 check_answer.py <proto7-2> fixture`：獨立答案與唯讀核對。
+```

@@ -1,0 +1,533 @@
+{
+ "variant": "B",
+ "rep": 4,
+ "model": "chatgpt-gpt-6-luna",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 6,
+ "offline": false,
+ "stop": null,
+ "calls_total": 178,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB4",
+   "passed": false,
+   "rounds": 6,
+   "reasks": 5,
+   "fails": {
+    "1": 6,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 62415,
+   "review_tokens": 0,
+   "secs": 142.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 7767,
+     "review_tokens": null,
+     "secs": 22.2,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 7589 字元起還有多餘內容 『,\"row\":\"| `packs/evgap/` | 唯讀彙總 node 的 JSONL 序號、缺號、重複與狀態 | [README](packs/evgap/』"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11079,
+     "review_tokens": null,
+     "secs": 24.5,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8387 字元起還有多餘內容 『,\"row\":\"| `packs/evgap/` | 唯讀彙總 node 的 JSONL 序號、缺號、重複與狀態 | [README](packs/evgap/』"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11137,
+     "review_tokens": null,
+     "secs": 22.5,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8283 字元起還有多餘內容 『}』"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10740,
+     "review_tokens": null,
+     "secs": 18.5,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8282 字元起還有多餘內容 『}』"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10712,
+     "review_tokens": null,
+     "secs": 19.3,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8274 字元起還有多餘內容 『}』"
+      }
+     ]
+    },
+    {
+     "round": 6,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10980,
+     "review_tokens": null,
+     "secs": 22.4,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8262 字元起還有多餘內容 『}』"
+      }
+     ]
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 12.6,
+    "tokens": 7261,
+    "bytes": 3639
+   },
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "runs",
+   "rid": "runsB4",
+   "passed": false,
+   "rounds": 6,
+   "reasks": 5,
+   "fails": {
+    "1": 4,
+    "2": 2,
+    "3": 0
+   },
+   "tokens": 70094,
+   "review_tokens": 0,
+   "secs": 155.1,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "territory"
+     ],
+     "tokens": 8887,
+     "review_tokens": null,
+     "secs": 27.9,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "territory",
+       "why": "INDEX.md；索引列寫在頂層 row 欄，不放 files"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 12203,
+     "review_tokens": null,
+     "secs": 27.1,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_runs (unittest.loader._FailedTest.test_runs)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_runs\nTraceback (most recent call last):\n  File \"/us"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 12266,
+     "review_tokens": null,
+     "secs": 22.8,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "  File \"/tmp/aos-three-rbwou9zz/proto7-2/packs/runs/tests/test_runs.py\", line 44, in test_rows_states_and_sorting\n    self.assertEqual([x[\"state\"] for x in result[\"schedule\"]], [\"interrupted\", \"due\"])\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionErr"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 12298,
+     "review_tokens": null,
+     "secs": 23.2,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 9189 字元起還有多餘內容 『, \"kind\":\"aos-tool\",\"name\":\"runs\",\"report\":\"# REPORT\\n\\n修正 schedule 測試資料：將未 clai』"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 12192,
+     "review_tokens": null,
+     "secs": 20.1,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 9189 字元起還有多餘內容 『, \"kind\":\"aos-tool\",\"name\":\"runs\",\"report\":\"# REPORT\\n\\n候選包含唯讀彙總工具、入口、使用說明與四項測試案』"
+      }
+     ]
+    },
+    {
+     "round": 6,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 12248,
+     "review_tokens": null,
+     "secs": 23.4,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 9193 字元起還有多餘內容 『, \"kind\":\"aos-tool\",\"name\":\"runs\",\"report\":\"# REPORT\\n\\n候選包含唯讀彙總工具、入口、使用說明與四項測試案』"
+      }
+     ]
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 10.7,
+    "tokens": 9523,
+    "bytes": 3646
+   },
+   "order": 2,
+   "skill_in_prompt": true
+  },
+  {
+   "task": "audit",
+   "rid": "auditB4",
+   "passed": false,
+   "rounds": 6,
+   "reasks": 5,
+   "fails": {
+    "1": 1,
+    "2": 5,
+    "3": 0
+   },
+   "tokens": 71038,
+   "review_tokens": 0,
+   "secs": 145.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 8101,
+     "review_tokens": null,
+     "secs": 22.6,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "======================================================================\nFAIL: test_bad_frontmatter_is_reported (test_mailtodo_basic.MailtodoTests.test_bad_frontmatter_is_reported)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/ao"
+      },
+      {
+       "rule": "answer",
+       "why": "['case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":2},\"carol\":{\"inbox\":{},\"done\":0}},\"bad\":[]}\\n', 'case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":2},\"carol\":{\"inbox\":{},\"done\":0}},\"ba"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 12734,
+     "review_tokens": null,
+     "secs": 24.6,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_mailtodo (unittest.loader._FailedTest.test_mailtodo)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_mailtodo\nTraceback (most recent call last):"
+      },
+      {
+       "rule": "answer",
+       "why": "['case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":2},\"carol\":{\"inbox\":{},\"done\":0}},\"bad\":[]}\\n', 'case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":2},\"carol\":{\"inbox\":{},\"done\":0}},\"ba"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 12724,
+     "review_tokens": null,
+     "secs": 19.7,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 7992 字元起還有多餘內容 『, \"row\":\"| `packs/mailtodo/` | 唯讀彙總 mailtodo 信件 | [README](packs/mailtodo/README』"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 11503,
+     "review_tokens": null,
+     "secs": 21.1,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "  File \"/tmp/aos-three-3bd1x9u0/proto7-2/packs/mailtodo/tests/test_mailtodo.py\", line 31, in test_reports_bad_frontmatter_before_bad_name\n    self.assertEqual(summarize(self.root, self.now)[\"bad\"],\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                     [{\"file\": \"a/inbox/x."
+      },
+      {
+       "rule": "answer",
+       "why": "['case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":2},\"carol\":{\"inbox\":{},\"done\":0}},\"bad\":[]}\\n', 'case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":2},\"carol\":{\"inbox\":{},\"done\":0}},\"ba"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 12868,
+     "review_tokens": null,
+     "secs": 21.7,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "  File \"/tmp/aos-three-vr01_jj_/proto7-2/packs/mailtodo/tests/test_mailtodo.py\", line 31, in test_reports_bad_frontmatter_before_bad_name\n    self.assertEqual(summarize(self.root, self.now)[\"bad\"],\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                     [{\"file\": \"a/inbox/x."
+      },
+      {
+       "rule": "answer",
+       "why": "['case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":2},\"carol\":{\"inbox\":{},\"done\":0}},\"bad\":[]}\\n', 'case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":2},\"carol\":{\"inbox\":{},\"done\":0}},\"ba"
+      }
+     ]
+    },
+    {
+     "round": 6,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 13108,
+     "review_tokens": null,
+     "secs": 23.1,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/aos-three-b1snuimh/proto7-2/packs/mailtodo/tests/test_mailtodo.py\", line 31, in test_reports_bad_frontmatter_before_bad_name\n    self.assertEqual(summarize(self.root, self.now)[\"bad"
+      }
+     ]
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 12.7,
+    "tokens": 15484,
+    "bytes": 4726
+   },
+   "order": 3,
+   "skill_in_prompt": true
+  }
+ ]
+}

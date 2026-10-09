@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditB12",
+ "skill": "aos-tool-apprentice",
+ "into": "/tmp/ap4-work/runs/B12/skillnode/skills/aos-tool-apprentice/SKILL.md",
+ "bytes": 3776,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-low",
+  "call_id": "auditB12-learn-1791557871",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 1148,
+   "prompt_tokens": 9948,
+   "total_tokens": 11096,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 11096,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/ap4-node/llmcall/llm/auditB12-learn-1791557871/receipt.json"
+ }
+}

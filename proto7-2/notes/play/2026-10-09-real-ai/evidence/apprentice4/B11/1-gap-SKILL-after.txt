@@ -1,0 +1,103 @@
+---
+name: aos-tool-apprentice
+description: 製作 aos 唯讀工具時，對照候選交付與驗收紀錄，整理可重用的實作、測試及交接骨架。
+triggers: aos-tool、唯讀工具、候選交付、驗收
+---
+
+## 踩過的坑
+
+- 症狀：候選內容與測試碼都已備齊，卻把「尚未執行」寫成「已通過」→下次怎麼做：分開記錄已提供的檔案、已執行的測試與核對結果；沒有實際執行紀錄就明說未驗證。
+- 症狀：唯讀工具在輸入目錄留下快取或改動原檔→下次怎麼做：只讀取輸入，測試前後比對檔名、內容、權限與時間；把允許的快取例外和其他寫入分開判斷。
+- 症狀：JSONL 的壞尾行被當成完整記錄，或布林值被當成整數→下次怎麼做：以位元組 `b'\n'` 切行，先判斷結尾是否完整；整數使用 `type(value) is int` 檢查。
+- 症狀：壞資料被彙總，或錯誤原因與順序不穩定→下次怎麼做：先分類並排除無效記錄，再彙總有效序號；輸出前依檔名、行號及原因排序錯誤。
+- 症狀：一個頻道的狀態無效，連另一個有效頻道也被清空→下次怎麼做：先驗證整份狀態的外形，再逐頻道驗證必要欄位；錯誤只登記一次。
+
+## 驗過的骨架
+
+以下是候選內容與所附 gate 紀錄中未列出問題的寫法；gate 紀錄不是命令執行輸出，不能據此宣稱測試或獨立核對已跑過。
+
+入口保持精簡，由腳本所在位置匯入同包模組，並把退出碼交還給 CLI：
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from aos7_evgap import main
+
+if __name__ == '__main__':
+    sys.exit(main())
+```
+
+模組自行解析資料，不匯入既有寫入、修復或鎖定路徑；輸出由單一入口控制：
+
+```python
+def _integer(value):
+    return type(value) is int
+
+def main():
+    if len(sys.argv) != 2 or not Path(sys.argv[1]).is_dir():
+        return 2
+    print(json.dumps(summarize(Path(sys.argv[1])), separators=(',', ':')))
+    return 0
+```
+
+測試以腳本路徑啟動子程序，檢查退出碼、stdout 與資料不變；測試檔保留供指定 runner discover 的標準測試入口：
+
+```python
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+ENTRY = ROOT / 'bin' / 'aos7-evgap'
+
+class ToolTests(unittest.TestCase):
+    def run_cli(self, folder):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(folder)],
+            capture_output=True,
+            text=True,
+        )
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+README 至少交代用途、唯讀邊界、首次執行方式、成功輸出與無效輸入行為；保留首次執行章節：
+
+```markdown
+# 工具名稱
+
+簡述讀取範圍與不修復資料的邊界。
+
+## 第一次跑
+
+```sh
+python3 packs/<包名>/bin/<工具名> /path/to/node
+```
+
+成功時 stdout 為一行 JSON；無效輸入的退出碼與 stdout 行為須寫明。
+```
+
+索引只新增所屬包的一列，連到該包 README：
+
+```markdown
+| `packs/<包名>/` | [工具名稱](packs/<包名>/README.md) |
+```
+
+REPORT 區分交付與驗證狀態，結尾保留工具交接標題並列出實際應執行的命令：
+
+```markdown
+# REPORT
+
+已提供的檔案與索引列：……
+已執行的測試及結果：……；未執行時明說未驗證。
+
+## 以後交接書該點名的工具
+
+`python3 proto7-2/tests/run_all.py packs/<包名>/tests`
+`python3 check_answer.py <proto7-2> fixture`
+```

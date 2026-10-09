@@ -1,0 +1,93 @@
+---
+name: aos-tool-apprentice
+description: 建置 aos 工具時，依規格控管檔案範圍、實作唯讀行為、驗證測試與交付格式。
+triggers: aos-tool、唯讀工具、aos 套件、JSON 彙總
+---
+
+## 踩過的坑
+
+- 候選 JSON 物件後出現多餘文字或欄位→交付前確認內容恰好是一個 JSON 物件，所有資訊都在規定欄位內。
+- JSON 引號或跳脫格式錯誤→產出前檢查 JSON 語法，尤其是字串中的引號、換行與反斜線。
+- 測試執行器無法匯入套件模組→依實際執行方式確認模組搜尋路徑，並讓測試以指定命令可被發現及匯入。
+- 缺少輸入檔與格式錯誤的輸入混為一談→依契約分別處理缺檔與壞資料；壞表格不得混入部分結果，且錯誤原因須精確。
+- 重複名稱與格式錯誤列的優先次序不符→先追蹤每個非空名稱，再依規格套用重複判定優先權，無效列不得計入彙總。
+- `bool` 被當作整數→需要整數時使用精確型別檢查，不以一般整數判斷或隱式轉型代替。
+- 空字串代碼被錯判為失敗→先區分空值、執行中標記與整數代碼；只有規格指定的非零整數才可觸發失敗狀態，並測試空代碼搭配時間的情況。
+- 狀態分支順序改變結果→依需求明列優先順序實作，並用互相競爭的狀態條件測試優先權。
+- 報告把預期結果寫成已驗證→只有實際執行指定測試與獨立 checker 後才能宣稱通過；未執行就明確註明。
+- 索引列或報告結尾不符格式→逐項核對索引列、驗收數量與報告要求的固定結尾。
+- 修改越界或破壞輸入資料→先確認允許路徑與檔案數上限；不碰排除項目，不呼叫寫入、修復或鎖定流程，並核對輸入內容與中繼資料未變。
+
+## 驗過的骨架
+
+入口腳本：
+
+```python
+#!/usr/bin/env python3
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos7_runs import main
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+模組匯入：
+
+```python
+import json
+import os
+import re
+import sys
+from datetime import datetime, timedelta, timezone
+```
+
+測試匯入與 discover：
+
+```python
+import contextlib
+import io
+import json
+import os
+import sys
+import tempfile
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos7_runs import main
+
+
+class RunsTests(unittest.TestCase):
+    def test_example(self):
+        self.assertTrue(True)
+
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+README 必要章節：
+
+```markdown
+# 工具名稱
+
+說明工具用途與唯讀行為。
+
+## 第一次跑
+
+說明執行方式、參數要求、成功與錯誤輸出，以及測試命令。
+```
+
+索引列：
+
+```text
+| `packs/runs/` | [aos7-runs](packs/runs/README.md) | Read-only JSON summary |
+```
+
+REPORT 結尾：
+
+```markdown
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/runs/tests`：執行實質測試。
+- `python3 check_answer.py <proto7-2> fixture`：獨立核對答案與唯讀性。
+```

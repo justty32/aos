@@ -1,0 +1,98 @@
+---
+name: aos-tool-apprentice
+description: aos 工具交付學徒規範，涵蓋範圍控制、唯讀實作、格式與驗收。
+triggers: aos-tool、aos、唯讀彙總、交付驗收
+---
+
+## 踩過的坑
+
+- 候選 JSON 後面又附上索引列或報告文字，或外層括號、字串跳脫錯誤 → 下次確認交付只有一個 JSON 物件，檢查括號與字串跳脫；索引列和報告各放在規定欄位。
+- 索引列放進 files，導致範圍驗收失敗 → 下次把檔案內容放在 files，索引列單獨放在 row。
+- 測試匯入失敗，或測試案例預期與資料狀態不一致 → 下次按實際測試執行器的匯入方式安排路徑，並確認每筆測試資料確實符合預期狀態。
+- 把未執行驗證寫成驗收通過 → 下次實際執行指定測試與 checker；無法執行時據實記錄，不宣稱通過。
+- 入口超過行數限制，或未按指定方式執行 → 下次保持入口精簡，計算行數並實際測試指定命令。
+- 讀取範圍超出允許檔名，或把符號連結當作一般檔案 → 下次只處理明確指定的目標，檢查檔案型別；唯讀要求下不得改寫輸入。
+- 將布林值當成整數，或混淆欄位缺失、null 與空字串 → 下次對規定型別使用精確檢查，逐一驗證欄位存在與內容。
+- 壞資料處理不完整，或只測正常路徑 → 下次測試壞 JSON、無效列、重複資料、缺欄及輸入錯誤，並核對輸出、退出碼與其他有效資料是否正確保留。
+- 順手修改允許範圍外的檔案 → 下次先列出允許路徑與件數上限，保留既有修改，只交付規定範圍內的變更。
+
+## 驗過的骨架
+
+入口：以 Python 執行時將包目錄加入模組搜尋路徑，再呼叫模組的 `main`；保持精簡以符合行數限制。
+
+```python
+#!/usr/bin/env python3
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos_tool import main
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+模組匯入：入口使用的模組放在包目錄，提供入口及測試可呼叫的函式。
+
+```python
+# packs/example/aos_tool.py
+def summarize(folder):
+    ...
+
+def main(argv=None):
+    ...
+```
+
+測試匯入與 discover：測試檔名採 `test_*.py`，使測試執行器能發現案例；匯入路徑須配合執行器的實際搜尋方式。
+
+```python
+# packs/example/tests/test_tool.py
+import unittest
+
+from aos_tool import summarize
+
+
+class ToolTests(unittest.TestCase):
+    def test_summary(self):
+        self.assertEqual(summarize("fixture")["v"], 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+README 必要章節：說明用途與唯讀界線，包含指定標題、入口用法、成功及錯誤行為與測試命令。
+
+```markdown
+# 工具名稱
+
+簡述工具用途與唯讀界線。
+
+## 第一次跑
+
+```sh
+python3 packs/example/bin/tool <folder>
+```
+
+說明成功及輸入錯誤時的輸出與退出狀態。
+
+```sh
+python3 proto7-2/tests/run_all.py packs/example/tests
+```
+```
+
+索引列：只新增一列，路徑與 README 連結一致；交付時依格式規定放在 row 欄位，不混入 files。
+
+```markdown
+| `packs/example/` | 唯讀彙總資料 | [README](packs/example/README.md) |
+```
+
+report 結尾：記錄指定驗證命令與實際結果；不得以未驗證的描述代替結果，並以指定標題結尾。
+
+```markdown
+# REPORT
+
+記錄實際執行的驗證命令及結果；若未能執行，明確說明。
+
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/example/tests`
+- `python3 check_answer.py <proto7-2> fixture`
+```

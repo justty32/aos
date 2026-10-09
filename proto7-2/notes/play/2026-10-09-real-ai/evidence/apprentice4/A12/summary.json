@@ -1,0 +1,204 @@
+{
+ "variant": "A",
+ "rep": 12,
+ "model": "chatgpt-gpt-6-sol-low",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 6,
+ "offline": false,
+ "stop": null,
+ "calls_total": 236,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA12",
+   "passed": true,
+   "rounds": 2,
+   "reasks": 1,
+   "fails": {
+    "1": 1,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 18297,
+   "review_tokens": 6270,
+   "secs": 88.7,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "layout",
+      "lint",
+      "readme",
+      "territory",
+      "tests"
+     ],
+     "tokens": 7611,
+     "review_tokens": null,
+     "secs": 28.4,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "territory",
+       "why": "README.md"
+      },
+      {
+       "rule": "territory",
+       "why": "bin/aos7-evgap"
+      },
+      {
+       "rule": "territory",
+       "why": "aos7_evgap.py"
+      },
+      {
+       "rule": "territory",
+       "why": "tests/test_evgap.py"
+      },
+      {
+       "rule": "layout",
+       "why": "缺必要檔：packs/evgap/README.md、packs/evgap/bin/aos7-evgap、packs/evgap/aos7_evgap.py（files 的鍵要寫完整路徑）"
+      },
+      {
+       "rule": "tests",
+       "why": "缺測試（要有 packs/evgap/tests/test_*.py）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 10686,
+     "review_tokens": 6270,
+     "secs": 60.3,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "runs",
+   "rid": "runsA12",
+   "passed": true,
+   "rounds": 2,
+   "reasks": 1,
+   "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+   },
+   "tokens": 17793,
+   "review_tokens": 6323,
+   "secs": 85.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 7269,
+     "review_tokens": null,
+     "secs": 37.7,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "======================================================================\nFAIL: test_summary_bad_rows_and_read_only (test_runs.RunsTests.test_summary_bad_rows_and_read_only)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/aos-three-"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 10524,
+     "review_tokens": 6323,
+     "secs": 47.5,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 2,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "audit",
+   "rid": "auditA12",
+   "passed": true,
+   "rounds": 2,
+   "reasks": 1,
+   "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+   },
+   "tokens": 20824,
+   "review_tokens": 6531,
+   "secs": 95.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer"
+     ],
+     "tokens": 7474,
+     "review_tokens": null,
+     "secs": 42.6,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "answer",
+       "why": "['case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0.0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0.0},{\"id\":\"carol-20261009T182909-f2e380fe4d5a\",\"from\":\"carol\",\"t"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13350,
+     "review_tokens": 6531,
+     "secs": 53.3,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 3,
+   "skill_in_prompt": false
+  }
+ ]
+}

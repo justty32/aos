@@ -1,0 +1,340 @@
+{
+ "variant": "A",
+ "rep": 90,
+ "model": "chatgpt-gpt-6-luna",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 4,
+ "offline": false,
+ "stop": null,
+ "calls_total": 16,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA90",
+   "passed": false,
+   "rounds": 4,
+   "reasks": 3,
+   "fails": {
+    "1": 3,
+    "2": 1,
+    "3": 0
+   },
+   "tokens": 35486,
+   "review_tokens": 0,
+   "secs": 64.8,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "layout",
+      "readme",
+      "tests"
+     ],
+     "tokens": 5539,
+     "review_tokens": null,
+     "secs": 4.7,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "layout",
+       "why": "缺必要檔或入口太長"
+      },
+      {
+       "rule": "tests",
+       "why": "缺測試或測試檔名撞名"
+      },
+      {
+       "rule": "readme",
+       "why": "README 缺指定章節"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 8560,
+     "review_tokens": null,
+     "secs": 24.6,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "Extra data: line 1 column 8918 (char 8917)"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10880,
+     "review_tokens": null,
+     "secs": 18.4,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "Extra data: line 1 column 7463 (char 7462)"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 10507,
+     "review_tokens": null,
+     "secs": 17.2,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_evgap (unittest.loader._FailedTest.test_evgap)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_evgap\nTraceback (most recent call last):\n  File \""
+      },
+      {
+       "rule": "answer",
+       "why": "['variant 7: 答案、型別或一行 stdout 不合：{\"v\":1,\"channels\":{\"obs\":{\"count\":11,\"first\":1,\"last\":12,\"missing\":[[2,2]],\"dup\":[],\"next_seq\":null,\"unacked\":null,\"stale_next\":null},\"must\":{\"count\":12,\"first\":1,\"last\":12,\"missing\":[],\"dup\":[],\"next_seq\":null,\"unacked\":null,\"stale_next\":null}},\"bad\":[{\"file\":\"obs.ac"
+      }
+     ]
+    }
+   ],
+   "learn": null,
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "runs",
+   "rid": "runsA90",
+   "passed": true,
+   "rounds": 4,
+   "reasks": 3,
+   "fails": {
+    "1": 1,
+    "2": 1,
+    "3": 1
+   },
+   "tokens": 41011,
+   "review_tokens": 14128,
+   "secs": 120.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 7157,
+     "review_tokens": null,
+     "secs": 22.7,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "Extra data: line 1 column 9200 (char 9199)"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 10768,
+     "review_tokens": null,
+     "secs": 26.6,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_runs (unittest.loader._FailedTest.test_runs)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_runs\nTraceback (most recent call last):\n  File \"/us"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 11482,
+     "review_tokens": 7057,
+     "secs": 38.0,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": "['錯誤：packs/runs/aos7_runs.py 的 `elif code_out != 0` 會把空 last_code 轉成的 None 判為 failed，違反 work 10 僅「整數 code != 0」才是 failed 的規則。例如 --now=2025-01-01T00:00:00+00:00，routines 列為 {\"name\":\"x\",\"every\":\"1h\",\"last_time\":\"2025-01-01T00:00:00+00:00\",\"last_code\":\"\"} 時，應輸出 last_code:null、state:\"ok\"，目前卻輸出 state:\"fa"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 11604,
+     "review_tokens": 7071,
+     "secs": 33.1,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 2,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "audit",
+   "rid": "auditA90",
+   "passed": false,
+   "rounds": 4,
+   "reasks": 3,
+   "fails": {
+    "1": 0,
+    "2": 2,
+    "3": 2
+   },
+   "tokens": 40703,
+   "review_tokens": 13489,
+   "secs": 134.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 7476,
+     "review_tokens": null,
+     "secs": 26.7,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_mailtodo (unittest.loader._FailedTest.test_mailtodo)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_mailtodo\nTraceback (most recent call last):"
+      },
+      {
+       "rule": "answer",
+       "why": "['variant 0: 退出碼不合：1', 'variant 0: 答案、型別或一行 stdout 不合：', 'variant 1: 退出碼不合：1', 'variant 1: 答案、型別或一行 stdout 不合：', 'variant 2: 退出碼不合：1', 'variant 2: 答案、型別或一行 stdout 不合：', 'variant 3: 退出碼不合：1', 'variant 3: 答案、型別或一行 stdout 不合：', 'variant 4: 退出碼不合：1', 'variant 4: 答案、型別或一行 stdout 不合：', 'variant 5: 退出碼不合：1"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 11277,
+     "review_tokens": null,
+     "secs": 22.0,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_mailtodo (unittest.loader._FailedTest.test_mailtodo)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_mailtodo\nTraceback (most recent call last):"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 10978,
+     "review_tokens": 6509,
+     "secs": 38.8,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": "['錯誤：packs/mailtodo/aos7_mailtodo.py 的 summarize() 僅將 where == \"inbox\" 的 REQUEST 納入 open，且輸出的 where 固定為 \"inbox\"。需求第 7 點要求所有有效且未被有效回覆解除的 REQUEST 都納入 open，包括 done 內的 REQUEST。因此，done 中存在未解除的有效 REQUEST 時會漏報；應移除 inbox 限制，並使用信件實際的 where。']"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 10972,
+     "review_tokens": 6980,
+     "secs": 46.6,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": "['錯誤：packs/mailtodo/aos7_mailtodo.py 的 main 額外以 os.path.islink(args.folder) 拒絕輸入資料夾。若 <folder> 是指向有效資料目錄的符號連結，程式會退出 2 且不輸出 JSON；需求只排除被掃描的符號連結郵件檔，未禁止輸入資料夾本身是符號連結。這類有效資料夾應正常彙總、輸出一行 JSON 並退出 0。']"
+      }
+     ]
+    }
+   ],
+   "learn": null,
+   "order": 3,
+   "skill_in_prompt": false
+  }
+ ]
+}

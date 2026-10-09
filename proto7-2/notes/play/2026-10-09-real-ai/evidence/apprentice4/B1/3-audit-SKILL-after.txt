@@ -1,0 +1,91 @@
+---
+name: aos-tool-apprentice
+description: 新增 aos 工具時，遵守範圍限制，實作唯讀行為，核對輸出契約與交付格式。
+triggers: aos-tool、唯讀彙總、工具包、候選 JSON、驗收
+---
+
+## 踩過的坑
+
+- 候選 JSON 尾隨逗號或額外文字→提交前確認整份輸出恰好是一個合法 JSON 物件；交付欄位必須都在同一物件內。
+- 索引列放錯位置→將 Markdown 索引列放在頂層 `row` 欄位，不放進檔案清單。
+- 只修已知缺陷，沒重跑完整驗收→依序執行指定測試與獨立檢查，確認三關結果後再回報。
+- 測試只檢查摘要數字，沒驗證錯誤分類→對有效及無效記錄寫具體斷言，涵蓋原因、排序、型別、空值與退出碼。
+- 驗證順序錯誤造成錯誤分類→按規格明定的優先順序檢查，測試多項同時無效的案例。
+- 只彙總主要資料夾，漏掉其他指定子目錄→逐一核對每個輸入位置與輸出欄位；不要自行縮小規格範圍。
+- 腳本或匯入依賴超出限制→入口保持簡短，並將入口、模組、測試與文件都計入檔案數及行數限制。
+- 測試匯入路徑依賴工作目錄而失敗→由測試檔自身位置定位入口，並確認測試 runner 的 discovery 慣例。
+- 唯讀任務意外修改資料或權限→只讀輸入，不呼叫寫入、復原或鎖定路徑；核對前後目錄、內容與權限。
+- 用系統時間造成輸出不可重現→使用明確提供的時間參數，驗證其格式與時區，不讀取系統時鐘。
+- 文件或測試成功就宣稱交付完成→如實記錄實際執行的檢查；無法執行時明確揭露，不宣稱通過。
+
+## 驗過的骨架
+
+入口將套件目錄加入匯入路徑，再匯入模組的 `main`：
+
+```python
+#!/usr/bin/env python3
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos_tool import main
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+模組由標準函式庫實作，並支援直接執行：
+
+```python
+import sys
+
+def main(argv=None):
+    # 解析參數並執行工具。
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+測試從自身位置定位入口，以 unittest 撰寫並透過子程序驗證真實 CLI 行為：
+
+```python
+import os
+import subprocess
+import sys
+import unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENTRY = os.path.join(ROOT, "bin", "aos-tool")
+
+class ToolTests(unittest.TestCase):
+    def run_tool(self, folder):
+        return subprocess.run(
+            [sys.executable, ENTRY, folder],
+            text=True,
+            capture_output=True,
+        )
+```
+
+README 至少包含工具標題、「第一次跑」章節、呼叫方式及測試命令：
+
+```markdown
+# aos-tool
+
+## 第一次跑
+
+說明工具的執行命令與基本行為。
+
+測試：`python3 proto7-2/tests/run_all.py packs/tool/tests`
+```
+
+索引列放在頂層 `row` 欄位：
+
+```markdown
+| `packs/tool/` | 工具用途 | [README](packs/tool/README.md) |
+```
+
+候選交付應是一個 JSON 物件；檔案、索引列與報告各放在對應欄位。REPORT 說明交付與實際檢查結果，最後以指定標題及工具用途作結：
+
+```markdown
+## 以後交接書該點名的工具
+
+- `工具名稱`：用途簡述。
+```

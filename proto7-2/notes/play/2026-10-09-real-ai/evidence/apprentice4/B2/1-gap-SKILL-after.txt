@@ -1,0 +1,86 @@
+---
+name: aos-tool-apprentice
+description: 建置 aos 工具時，依規格控制修改範圍、實作唯讀行為，並檢查交付格式與驗收要求。
+triggers: aos-tool、唯讀工具、aos 套件、JSONL 彙總
+---
+
+## 踩過的坑
+
+- 候選 JSON 在物件結束後仍有額外文字或欄位→交付前確認整份內容恰好是一個 JSON 物件，且欄位和巢狀結構符合要求。
+- 重複序號或錯誤資料混入彙總→先逐行解析與驗證，只把有效記錄納入統計；明確區分 JSON 無效、缺少有效序號與未結尾的最後一行。
+- 把 `bool` 當作整數→驗證整數時使用精確型別檢查，不以一般整數判斷或轉型代替。
+- 狀態檔整體無效與單一 channel 無效未分開處理→按規格分別驗證整體結構及 channel 欄位，僅讓應失效的欄位歸空，並按要求記錄錯誤。
+- 測試只檢查成功路徑→加入壞 JSON、重複與缺號、狀態驗證，以及無效輸入的退出碼和空 stdout 測試。
+- 報告把預期結果寫成已驗證→只有實際執行指定測試與獨立 checker 後才能宣稱通過；未執行就明確註明。
+- 索引列或報告不符合交付格式→逐項核對索引列、固定驗收數量，以及報告指定的結尾文字。
+- 修改越界或破壞輸入資料→先確認允許路徑與檔案數上限；不碰排除項目，不呼叫寫入、修復或鎖定流程，並核對輸入內容與中繼資料未變。
+
+## 驗過的骨架
+
+以下是交付時可參照的結構片段；實際名稱與路徑須按任務規格調整。
+
+入口腳本：
+
+```python
+#!/usr/bin/env python3
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos_module import main
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+模組匯入：
+
+```python
+import json
+import os
+import re
+import stat
+import sys
+from collections import Counter
+```
+
+測試匯入及 discover：
+
+```python
+import unittest
+
+from aos_module import main
+
+
+class ToolTests(unittest.TestCase):
+    def test_example(self):
+        self.assertTrue(True)
+
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+README 必要章節：
+
+```markdown
+# 工具名稱
+
+工具用途與唯讀行為簡介。
+
+## 第一次跑
+
+說明如何執行工具、成功與錯誤輸出行為，以及如何執行測試。
+```
+
+索引列：
+
+```text
+| `packs/example/` | [tool-name](packs/example/README.md) | Read-only summary |
+```
+
+REPORT 結尾：
+
+```markdown
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/example/tests`：執行實質測試。
+- `python3 check_answer.py <proto7-2> fixture`：獨立核對答案與唯讀性。
+```

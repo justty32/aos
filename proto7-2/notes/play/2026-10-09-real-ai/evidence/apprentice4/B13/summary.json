@@ -1,0 +1,243 @@
+{
+ "variant": "B",
+ "rep": 13,
+ "model": "chatgpt-gpt-6-sol-low",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 6,
+ "offline": false,
+ "stop": null,
+ "calls_total": 272,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB13",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 7962,
+   "review_tokens": 6007,
+   "secs": 62.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 7962,
+     "review_tokens": 6007,
+     "secs": 45.4,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 16.6,
+    "tokens": 6903,
+    "bytes": 4139
+   },
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "runs",
+   "rid": "runsB13",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 9175,
+   "review_tokens": 6730,
+   "secs": 63.3,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 9175,
+     "review_tokens": 6730,
+     "secs": 42.0,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 21.2,
+    "tokens": 9143,
+    "bytes": 4218
+   },
+   "order": 2,
+   "skill_in_prompt": true
+  },
+  {
+   "task": "audit",
+   "rid": "auditB13",
+   "passed": true,
+   "rounds": 5,
+   "reasks": 4,
+   "fails": {
+    "1": 4,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 53532,
+   "review_tokens": 5864,
+   "secs": 173.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 8405,
+     "review_tokens": null,
+     "secs": 34.3,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8172 字元起還有多餘內容 『,\"report\":\"# REPORT\\n\\n已交付唯讀彙總入口、解析模組、README、實質測試及 INDEX.md 待新增的一列；候選內容未修改 node。』"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11282,
+     "review_tokens": null,
+     "secs": 25.6,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8163 字元起還有多餘內容 『,\"report\":\"# REPORT\\n\\n已交付唯讀彙總入口、解析模組、README、實質測試及 INDEX.md 待新增的一列；候選內容未修改 node。』"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11282,
+     "review_tokens": null,
+     "secs": 28.8,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8163 字元起還有多餘內容 『, \"report\":\"# REPORT\\n\\n已交付唯讀彙總入口、解析模組、README、實質測試及 INDEX.md 待新增的一列；候選內容未修改 node』"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11282,
+     "review_tokens": null,
+     "secs": 30.3,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8163 字元起還有多餘內容 『, \"report\":\"# REPORT\\n\\n已交付唯讀彙總入口、解析模組、README、實質測試及 INDEX.md 待新增的一列；候選內容未修改 node』"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 11281,
+     "review_tokens": 5864,
+     "secs": 39.6,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 14.6,
+    "tokens": 8777,
+    "bytes": 4359
+   },
+   "order": 3,
+   "skill_in_prompt": true
+  }
+ ]
+}

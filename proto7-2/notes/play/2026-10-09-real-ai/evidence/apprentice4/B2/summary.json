@@ -1,0 +1,427 @@
+{
+ "variant": "B",
+ "rep": 2,
+ "model": "chatgpt-gpt-6-luna",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 6,
+ "offline": false,
+ "stop": null,
+ "calls_total": 80,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB2",
+   "passed": false,
+   "rounds": 6,
+   "reasks": 5,
+   "fails": {
+    "1": 6,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 61621,
+   "review_tokens": 0,
+   "secs": 141.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 7888,
+     "review_tokens": null,
+     "secs": 25.6,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 6667 字元起還有多餘內容 『, \"row\":\"| `packs/evgap/` | [aos7-evgap](packs/evgap/README.md) | Read-only obs/』"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10196,
+     "review_tokens": null,
+     "secs": 16.9,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "Expecting ':' delimiter: line 1 column 6677 (char 6676)"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10536,
+     "review_tokens": null,
+     "secs": 22.9,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8022 字元起還有多餘內容 『,\"row\":\"| `packs/evgap/` | [aos7-evgap](packs/evgap/README.md) | Read-only obs/m』"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10901,
+     "review_tokens": null,
+     "secs": 22.7,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 7864 字元起還有多餘內容 『, \"row\":\"| `packs/evgap/` | [aos7-evgap](packs/evgap/README.md) | Read-only obs/』"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10915,
+     "review_tokens": null,
+     "secs": 19.2,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 7698 字元起還有多餘內容 『, \"row\":\"| `packs/evgap/` | [aos7-evgap](packs/evgap/README.md) | Read-only obs/』"
+      }
+     ]
+    },
+    {
+     "round": 6,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11185,
+     "review_tokens": null,
+     "secs": 24.4,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 7876 字元起還有多餘內容 『, \"row\":\"| `packs/evgap/` | [aos7-evgap](packs/evgap/README.md) | Read-only obs/』"
+      }
+     ]
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 9.3,
+    "tokens": 7077,
+    "bytes": 2708
+   },
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "runs",
+   "rid": "runsB2",
+   "passed": true,
+   "rounds": 6,
+   "reasks": 5,
+   "fails": {
+    "1": 3,
+    "2": 1,
+    "3": 1
+   },
+   "tokens": 70208,
+   "review_tokens": 14621,
+   "secs": 171.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 7485,
+     "review_tokens": null,
+     "secs": 16.5,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 6683 字元起還有多餘內容 『, \"kind\":\"aos-tool\",\"name\":\"runs\",\"report\":\"# REPORT\\n\\n已提供唯讀彙總工具、入口、說明與實質測試。依目前』"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11320,
+     "review_tokens": null,
+     "secs": 23.8,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "Expecting property name enclosed in double quotes: line 1 column 344 (char 343)"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 12854,
+     "review_tokens": null,
+     "secs": 26.3,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 10980 字元起還有多餘內容 『, \"kind\":\"aos-tool\",\"name\":\"runs\",\"report\":\"# REPORT\\n\\n新增 `packs/runs/` 唯讀彙總工具、』"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 12617,
+     "review_tokens": null,
+     "secs": 23.4,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_runs (unittest.loader._FailedTest.test_runs)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_runs\nTraceback (most recent call last):\n  File \"/us"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 12862,
+     "review_tokens": 7276,
+     "secs": 36.6,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": "['錯誤：packs/runs/aos7_runs.py 的 routines 狀態判斷以 code_value != 0 判定 failed，導致 last_code 為空字串（轉成 null）且 last_time 非空時也被判為 failed；需求僅允許非零整數代碼觸發 failed。例如 --now=2025-01-01T00:00:00+00:00，資料列 every=\"1h\"、last_time=\"2025-01-01T00:00:00+00:00\"、last_code=\"\" 應為 ok，實際卻為 failed，連帶 counts 錯誤。應先確認 code_value 是整數且非零"
+      }
+     ]
+    },
+    {
+     "round": 6,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13070,
+     "review_tokens": 7345,
+     "secs": 34.7,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 9.8,
+    "tokens": 9756,
+    "bytes": 3133
+   },
+   "order": 2,
+   "skill_in_prompt": true
+  },
+  {
+   "task": "audit",
+   "rid": "auditB2",
+   "passed": true,
+   "rounds": 3,
+   "reasks": 2,
+   "fails": {
+    "1": 2,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 31652,
+   "review_tokens": 6338,
+   "secs": 86.5,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 8406,
+     "review_tokens": null,
+     "secs": 24.0,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8712 字元起還有多餘內容 『}』"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11755,
+     "review_tokens": null,
+     "secs": 23.4,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 9087 字元起還有多餘內容 『,\"\"}』"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 11491,
+     "review_tokens": 6338,
+     "secs": 31.0,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 8.1,
+    "tokens": 8205,
+    "bytes": 3136
+   },
+   "order": 3,
+   "skill_in_prompt": true
+  }
+ ]
+}

@@ -1,0 +1,85 @@
+---
+name: aos-tool-apprentice
+description: 記錄 aos 唯讀工具交付時的踩坑檢查與已驗過的檔案骨架。
+triggers: aos-tool、唯讀彙總、候選交付
+---
+
+## 踩過的坑
+
+- 症狀：把未執行的測試寫成已通過 → 下次怎麼做：report 分清已驗證結果與待執行命令；沒有工具時明說無法核對。
+- 症狀：合法 JSON 卻不是可用記錄，例如 `seq` 是布林值 → 下次怎麼做：先嚴格解析 JSON，再用 `type(seq) is int` 檢查，無效行不得計入彙總。
+- 症狀：未以換行結尾的片段被當成完整記錄 → 下次怎麼做：以位元組 `b'\n'` 分割，只解析完整行，剩餘片段記為 torn。
+- 症狀：state 某個 channel 無效時連另一個也被清空 → 下次怎麼做：先驗整體結構，再逐 channel 驗欄位；只將無效 channel 的 state 輸出設為 null，並只記一筆 bad_state。
+- 症狀：唯讀工具意外改動輸入 → 下次怎麼做：測試前後比對檔案位元組、權限與修改時間，並交由獨立 fixture 核對。
+
+## 驗過的骨架
+
+入口腳本保持短小；由腳本所在位置匯入同包模組，不依賴呼叫時的工作目錄：
+
+```python
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from aos7_evgap import summarize
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2 or not Path(sys.argv[1]).is_dir():
+        sys.exit(2)
+    print(json.dumps(summarize(Path(sys.argv[1])), separators=(',', ':')))
+```
+
+模組自行解析輸入，不匯入寫入、修復或鎖定路徑；嚴格區分整數與布林值，拒絕非標準 JSON 常數：
+
+```python
+import json
+
+def integer(value):
+    return type(value) is int
+
+def strict_json(data):
+    def reject_constant(value):
+        raise ValueError(value)
+    return json.loads(data, parse_constant=reject_constant)
+```
+
+測試從自身路徑定位入口，以子行程驗證實際 CLI；測試檔使用 discover 可辨識的 `test_*.py` 名稱：
+
+```python
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+ENTRY = ROOT / 'bin' / 'aos7-evgap'
+
+class ToolTests(unittest.TestCase):
+    def run_cli(self, folder):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(folder)],
+            capture_output=True, text=True,
+        )
+```
+
+README 至少包含首次執行章節、呼叫方式、測試命令與唯讀行為：
+
+```markdown
+## 第一次跑
+
+python3 packs/evgap/bin/aos7-evgap <node-folder>
+python3 proto7-2/tests/run_all.py packs/evgap/tests
+python3 check_answer.py proto7-2 fixture
+```
+
+INDEX 只交付一列，連到包內 README；report 明列驗證狀態，並以指定章節收尾：
+
+```markdown
+| `packs/evgap/` | [aos7-evgap](packs/evgap/README.md) | 唯讀彙總 node 記錄缺口與重複序號 |
+
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/evgap/tests`：實質測試。
+- `python3 check_answer.py proto7-2 fixture`：獨立答案與唯讀核對。
+```

@@ -1,0 +1,77 @@
+---
+name: aos-tool-apprentice
+description: 新增 aos 工具時，遵守候選交付格式、範圍限制並用指定測試與檢查器驗收。
+triggers: aos-tool、候選 JSON、唯讀彙總、INDEX.md、REPORT
+---
+
+## 踩過的坑
+
+- 候選 JSON 多出一個結尾大括號或其他尾隨內容→送出前確認全文恰好是一個合法 JSON 物件。
+- 把索引列塞進 `files`→索引列須放在頂層 `row` 欄；`files` 只放允許新增的檔案。
+- 測試直接匯入模組，但測試執行器未將套件目錄加入匯入路徑→測試檔自行將模組所在目錄加入 `sys.path`，再匯入模組。
+- 腳本與手動檢查看似合理，但測試仍失敗→以指定測試命令實際執行；特別核對 distinct 與 count 等統計語意，讓測試預期符合規格。
+- 沒有執行指定測試或獨立檢查器→如實報告未驗證，不得宣稱通過；有執行時記錄結果。
+- README 缺少規定章節、交付報告缺少指定結尾→提交前逐項檢查章節標題與報告最後一節。
+- 工具需要唯讀，但讀檔或解析流程可能碰到不合法輸入→不要呼叫寫入、修復、鎖定或復原路徑；用測試檢查資料與中繼資料未變。
+
+## 驗過的骨架
+
+入口保持精簡，讓檢查器能以 `python3` 執行：
+
+```python
+#!/usr/bin/env python3
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos7_evgap import main
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+模組以一般 Python 模組供入口和測試匯入。測試執行器可能從 tests 目錄載入測試，因此測試檔明確加入模組所在目錄：
+
+```python
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos7_evgap import main
+```
+
+測試可用標準 `unittest` discover 載入，測試檔名採 `test_*.py`，並提供標準入口：
+
+```python
+import unittest
+
+class ToolTests(unittest.TestCase):
+    def test_example(self):
+        self.assertTrue(True)
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+README 至少提供工具用途和規定的第一次執行章節，並說明基本執行方式：
+
+```markdown
+# aos-tool
+
+## 第一次跑
+
+```sh
+python3 bin/aos-tool <folder>
+```
+```
+
+索引列放在頂層 `row` 欄，不混入檔案內容：
+
+```text
+| `packs/example/` | [aos-tool 說明](packs/example/README.md) |
+```
+
+報告在最後提供規定的交接標題：
+
+```markdown
+## 以後交接書該點名的工具
+```
+
+候選的頂層 `report` 欄必須以該標題及所需工具資訊作結；不可在其後附加其他內容。

@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsB14",
+ "skill": "aos-tool-apprentice",
+ "into": "/tmp/ap4-work/runs/B14/skillnode/skills/aos-tool-apprentice/SKILL.md",
+ "bytes": 3705,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-low",
+  "call_id": "runsB14-learn-1791558008",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 1106,
+   "prompt_tokens": 7552,
+   "total_tokens": 8658,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 8658,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/ap4-node/llmcall/llm/runsB14-learn-1791558008/receipt.json"
+ }
+}

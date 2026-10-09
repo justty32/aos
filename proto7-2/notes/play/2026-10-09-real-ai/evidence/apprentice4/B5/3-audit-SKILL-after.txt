@@ -1,0 +1,81 @@
+---
+name: aos-tool-apprentice
+description: 建立與驗收 aos-tool 候選交付，遵守檔案範圍、格式、測試與唯讀要求。
+triggers: aos-tool、aos、候選、驗收、SKILL.md
+---
+
+## 踩過的坑
+- 候選 JSON 後面多出交付欄位 → 先確認最外層 JSON 結構恰好符合要求，避免把欄位放在錯誤層級或留下多餘文字。
+- 僅憑測試程式碼推定測試會通過 → 執行指定 runner，依實際失敗輸出修正，再重跑確認。
+- 測試只驗證一般情境 → 加入會區分排序、驗證優先序及重複資料處理的案例，並逐項核對預期結果。
+- 入口檔超出行數限制或承載過多邏輯 → 入口保持精簡，將實作放在同包模組。
+- 測試檔沒有被指定 runner 發現 → 依 runner 的 discover 規則放置測試，使用明確的匯入方式並實際執行。
+- README 缺少指定章節 → 使用要求的章節標題，並提供可直接執行的示例。
+- 索引列放進 `files` → 索引列使用頂層 `row` 欄位。
+- report 缺少指定結尾 → 交付前確認必需的最後一節存在，且內容以該節結尾。
+- 未執行獨立 checker 卻宣稱驗收完成 → 分別執行所有指定驗收命令；未執行的項目如實標示，不宣稱通過。
+
+## 驗過的骨架
+
+入口：
+```python
+#!/usr/bin/env python3
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos7_runs import main
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+模組匯入與執行入口：
+```python
+import argparse
+import json
+import os
+import re
+import sys
+from datetime import datetime, timedelta, timezone
+
+def main(argv=None):
+    ...
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+測試匯入與 discover：
+```python
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENTRY = os.path.join(ROOT, "bin", "aos7-runs")
+
+class RunsTests(unittest.TestCase):
+    ...
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+README 必要章節：
+```markdown
+## 第一次跑
+```
+
+索引列（放在頂層 `row`，不放進 `files`）：
+```text
+| `packs/runs/` | [aos7-runs 唯讀彙總工具](packs/runs/README.md) |
+```
+
+report 結尾：
+```markdown
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/runs/tests`
+- `python3 check_answer.py <proto7-2> fixture`
+```

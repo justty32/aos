@@ -1,0 +1,105 @@
+---
+name: aos-tool-apprentice
+description: 記錄 aos 唯讀工具的解析、排序、測試與交付檢查，區分候選寫法和實際驗證結果。
+triggers: aos-tool、唯讀彙總、候選交付
+---
+
+## 踩過的坑
+
+- 症狀：`age_min` 算對數值卻輸出 `0.0`、`90.0`，不符合整數契約 → 下次怎麼做：用 `timedelta` 整除一分鐘；測試以 `type(value) is int` 核對，避免 `bool` 混入。
+- 症狀：負時間差的測試預期寫反，實作正確仍使測試失敗 → 下次怎麼做：由 `now - at` 推導預期；未來一分鐘是 `-1`，並實測負值。
+- 症狀：跨 `inbox`、`done` 查重時，把目錄遍歷順序當成相對路徑字典序 → 下次怎麼做：收集全部候選路徑，按輸入相對 POSIX 路徑排序後再解析、查重；只讓第一封有效信占用 ID。
+- 症狀：先查重或檔名，覆蓋了較優先的錯誤原因 → 下次怎麼做：依契約依序判斷 frontmatter 分隔線、必填欄位與時間、檔名，最後才判重複 ID；無效信不參與計數或回覆判定。
+- 症狀：把不相關資料或符號連結納入彙總，或唯讀工具改動輸入 → 下次怎麼做：只掃指定層級的非隱藏一般 `.md` 檔，不遞迴、不跟隨符號連結；自行解析，不匯入寫入、修復或鎖定路徑，並比對執行前後的目錄項目、位元組、權限與修改時間。
+- 症狀：候選檔案與測試已寫好，卻把未執行的驗證寫成通過 → 下次怎麼做：report 明列實際執行狀態；沒有命令執行結果時，不宣稱測試、fixture 或唯讀核對成功。
+
+## 驗過的骨架
+
+入口腳本保持短小，從自身位置匯入同包模組，不依賴工作目錄；錯誤路徑不寫 stdout：
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tool_module import main
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
+```
+
+模組只用標準函式庫讀取與彙總；時間由參數提供，資料中的無時區時間套用參數時區，不讀系統時鐘。先排序路徑，再決定哪封有效信占用 ID：
+
+```python
+from datetime import datetime, timedelta
+
+def timestamp(value, default_tz):
+    parsed = datetime.fromisoformat(value)
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=default_tz)
+
+age_min = (now - timestamp(value, now.tzinfo)) // timedelta(minutes=1)
+
+for relative, mailbox, location, path in sorted(paths):
+    fields = parse_letter(path)
+    if fields['id'] in seen:
+        record_bad(relative, 'dup_id')
+        continue
+    seen.add(fields['id'])
+    record_valid(mailbox, location, fields)
+```
+
+測試從自身位置定位入口，以子行程核對退出碼、stdout 一行及 JSON 型別；檔名使用 discover 可辨識的 `test_*.py`。查重測試的預期須依相對路徑排序，負時間差另設案例：
+
+```python
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ENTRY = Path(__file__).resolve().parents[1] / 'bin' / 'tool-name'
+
+class ToolTests(unittest.TestCase):
+    def call(self, folder, *args):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(folder), *args],
+            capture_output=True, text=True,
+        )
+
+    def test_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            run = self.call(temp, '--now', '2026-10-09T19:00:00+08:00')
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(run.stdout.count('\n'), 1)
+            result = json.loads(run.stdout)
+            self.assertIs(type(result['v']), int)
+```
+
+README 包含首次執行章節、帶時區的 CLI 範例、掃描範圍、唯讀限制及驗證命令：
+
+```markdown
+## 第一次跑
+
+python3 packs/<package>/bin/<tool> <node-folder> --now <timezone-aware-ISO>
+python3 proto7-2/tests/run_all.py packs/<package>/tests
+python3 check_answer.py proto7-2 fixture
+```
+
+INDEX 只新增一列，連到包內 README：
+
+```markdown
+| `packs/<package>/` | [<tool>](packs/<package>/README.md) | 唯讀彙總用途 |
+```
+
+report 寫明交付範圍與實際驗證結果，末尾保留交接工具章節；未執行時使用明確措辭：
+
+```markdown
+未執行驗證：目前無法執行命令，因此不宣稱測試或 fixture 已通過。
+
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/<package>/tests`：實質測試。
+- `python3 check_answer.py proto7-2 fixture`：獨立答案與唯讀核對。
+```

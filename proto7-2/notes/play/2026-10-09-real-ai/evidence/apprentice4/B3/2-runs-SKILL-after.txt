@@ -1,0 +1,86 @@
+---
+name: aos-tool-apprentice
+description: 新增 aos 工具時，遵守交付格式與範圍限制，檢查唯讀行為，並以指定測試及檢查器驗收。
+triggers: aos-tool、候選 JSON、唯讀彙總、INDEX.md、REPORT
+---
+
+## 踩過的坑
+
+- 候選 JSON 多出結尾大括號或尾隨文字→送出前確認全文恰好是一個合法 JSON 物件。
+- 把索引列放進 `files`→索引列放在頂層 `row` 欄；`files` 只放允許新增的檔案。
+- 測試匯入模組失敗→測試檔明確把模組所在目錄加入 `sys.path`，再匯入模組。
+- 手動檢查似乎正確，但測試失敗→實際執行指定測試命令，並逐項核對規格與邊界情況；讓測試預期反映規定的統計語意。
+- 空值轉換後被誤分類→先檢查型別，再進行數值比較；對空值與有效時間等組合補回歸測試。
+- 未執行測試或獨立檢查器→如實標示未驗證，不得宣稱通過；實際執行時記錄結果。
+- README 缺少規定章節，或報告缺少指定結尾→交付前逐項檢查章節標題與報告最後一節。
+- 唯讀工具因不合法輸入意外觸發寫入、修復、鎖定或復原→只實作必要的讀取與解析；以測試確認檔案內容、目錄與中繼資料未變。
+- 變更超出允許範圍或檔案數超標→開始前確認白名單與件數 gate，完成後檢查差異，只保留允許的變更。
+
+## 驗過的骨架
+
+入口保持精簡，讓檢查器能以 `python3` 執行：
+
+```python
+#!/usr/bin/env python3
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos7_evgap import main
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+模組供入口與測試匯入，避免入口複製實作：
+
+```python
+# aos7_evgap.py
+def main(argv=None):
+    ...
+```
+
+測試檔明確加入模組所在目錄，再匯入所需函式；採用 `test_*.py` 命名與標準 `unittest` 入口，供 discover 載入：
+
+```python
+import os
+import sys
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos7_evgap import main
+
+class ToolTests(unittest.TestCase):
+    def test_example(self):
+        self.assertTrue(True)
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+README 包含工具用途、基本執行方式與規定的第一次執行章節：
+
+```markdown
+# aos-tool
+
+以唯讀方式處理輸入資料，並說明必要參數及輸出用途。
+
+## 第一次跑
+
+```sh
+python3 bin/aos-tool <folder>
+```
+```
+
+索引列放在頂層 `row` 欄，不混入檔案內容：
+
+```text
+| `packs/example/` | [aos-tool 說明](packs/example/README.md) |
+```
+
+報告放在頂層 `report` 欄，並以指定交接標題和工具資訊結尾，標題之後不附加其他內容：
+
+```markdown
+## 以後交接書該點名的工具
+
+- `python3 ...`：執行指定測試。
+- `python3 check_answer.py ...`：執行獨立檢查。
+```

@@ -40,7 +40,7 @@ kind 為 `aos-tool`／`aos-module`：學徒交新增檔案、索引列與 REPORT
 - 審查人：`--review-llm` 指定讀碼模型，與學徒一樣經 llmcall 使用 budget。只因真錯誤（照需求寫明的行為在真實資料上答錯／當掉）、唯讀違規、越界改動退件；需求沒寫明的極端邊角列進 reasons 當「建議：」、不擋（只列建議的 reject 照 accept 算）。標準在檢查器的 `REVIEW_CRITERIA`，llmcall 與 astra 審查共用。第一關 size 會寫明哪個檔、實際 bytes、上限。
 - 重問：用 `--previous`、`--feedback` 與 `--gotchas` 把上一份候選、檢查結果和踩坑交回學徒。
 - 發布：重跑三關後只新增 apprentice 分支，合併由人處理。
-- 技能學習：`learn --skill-into NODE --skill NAME [--candidate PATH]` 把踩坑和驗過的骨架改寫成整本 SKILL.md；驗過格式與 kind 觸發詞才替換，可再用 `--skills` 讀回。與 `--into` 恰選一個；只有技能學習允許 `--candidate` 與 `--llm` 共存。candidate 不存在或是資料夾時，呼叫模型前退 invalid／2；其他讀取故障退 unknown／3。格式檢查退 1 算拒收（invalid／1），其他非零碼算 unknown／3，保留模型回條與舊書。拿鎖後若書的 bytes／存在狀態與學習前不同，保留新版、退 conflict／1，提示重跑 learn。
+- 技能學習：`learn --skill-into NODE --skill NAME [--candidate PATH]` 把踩坑和驗過的骨架改寫成整本 SKILL.md，過了 skills 格式檢查（triggers 含 kind）才原子替換；與 `--into` 恰選一個。退出碼：candidate 路徑錯 2、書被拒 1、學習期間書被改過 conflict 1、驗證沒完成 3。
 - 學習：`learn` 讀歷次檢查結果，把下次該知道的事追加到既有踩坑檔。
 
 `$A` 指 author 包；`$CANDIDATE`、`$REVIEW` 取 propose 回覆，`$REPO`／`$REF` 是發布位置與基準；先備好 history.json、GOTCHAS.md。
