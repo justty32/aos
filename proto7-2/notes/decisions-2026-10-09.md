@@ -223,3 +223,6 @@
 - 待你決定｜同上一條 LiteLLM 設定：設 `CHATGPT_DEFAULT_INSTRUCTIONS` 為一句短句，這題每單預估從約 2606 降到約 1000 token（−62%）；說明頁寫了怎麼設、風險、怎麼驗與怎麼還原。你同意後 EF1 會再跑 12 圈補「改後」數字
 - 結果｜RV 回頭審第二輪 → [blueprint-simplify-2](blueprint-simplify-2.md)：學徒寫的 usage 拿真資料跑全是 0（題目樣本是手捏的）；author 與 mail 共用必讀通道會互相誤標「已處理」（最嚴重）
 - B｜頂層代定 RV 五題（全照建議）：①usage 用 `--by model` 併進 metrics `job`，usage 搬 archive 留轉址 ②llmdiag 併成 `aos7-diag --llm`，diag 先補意圖卡 ③必讀通道：author 看到別人的事件就停下、不標已處理，印一行說誰擋住 ④五張意圖卡（skills、compact、events、up、author）照現況改字 ⑤移除的東西用 git mv 放 `proto7-2/archive/<包>/`。events `read --ack` 本輪印轉址、下一輪移除
+- C｜I5：INDEX、tests README（1000 項）、模組總覽、code map 同步；列出 64 個 worktree 清單 → [worktree-cleanup](worktree-cleanup-2026-10-09.md)
+- C｜頂層：刪了 51 個**已合進 main 且沒有未追蹤檔**的 worktree 與分支（`git worktree remove` 與 `git branch -d` 都會拒絕刪有東西的，所以沒有遺失）。留著：6 個有隊伍暫存資料夾的（要 --force，等你看）、5 條 `apprentice/*` 與 `_check_main`（等你）、`roadmap-run`、`main-ref`、本輪進行中的
+- 觀察｜全套跑一次要 13～14 分鐘，跑的途中不能有人合進 main（否則會中途讀到半新半舊的檔）
