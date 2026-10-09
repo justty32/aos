@@ -55,16 +55,67 @@ class ReviewCase(unittest.TestCase):
             rows = [mail.letter(p) for p in (path.parent / 'done').glob('*.md')]
             self.assertEqual({r['id'] for r in rows}, {first['id'], second['id']}, '歸檔不可覆蓋舊信')
 
+    def test_minute_filenames_and_collision_retry(self):
+        class Fixed(datetime.datetime):
+            second = 1
+            @classmethod
+            def now(cls):
+                return cls(2026, 10, 9, 12, 0, cls.second)
+        with patch.object(mail.datetime, 'datetime', Fixed):
+            first = self.send()
+            Fixed.second = 59
+            second = self.send()
+            self.assertEqual(Path(first['sent']).name, '20261009T1200-alice-PROGRESS.md')
+            self.assertEqual(Path(second['sent']).name, '20261009T1200_1-alice-PROGRESS.md')
+            self.assertIn('20261009T120001', first['id'])
+            self.assertIn('20261009T120059', second['id'])
+            original = Path(first['sent']).read_bytes()
+            mail.done(self.root, 'bob', first['id'])
+            # 模擬既有同名歸檔：link 必須拒覆蓋、重試分鐘格式。
+            archived = Path(first['sent']).parent / 'done' / Path(first['sent']).name
+            archived.rename(archived.parent / Path(second['sent']).name)
+            mail.done(self.root, 'bob', second['id'])
+            self.assertEqual((archived.parent / Path(second['sent']).name).read_bytes(), original)
+            third = self.send()
+            paths = mail.letters(mail.inbox(self.root, 'bob'), True)
+            for path in paths:
+                self.assertRegex(path.name, r'^\d{8}T\d{4}(_\d+)?-alice-PROGRESS\.md$')
+            self.assertEqual(len(paths), 3)
+            self.assertEqual(mail.letter(third['sent'])['reply-to'], str(self.root / 'alice/wf/inbox'))
+
+    def test_roster_appends_inside_template_active_section(self):
+        path = self.root / 'alice/wf/workflows/inbox/ROSTER.md'
+        path.parent.mkdir(parents=True)
+        prefix = '# ROSTER — 身份簿\n\n## 規則\n只加自己的格。\n\n'
+        active = '## 現役成員\n\n### `existing`\n- **上游**：old-chief\n\n'
+        suffix = '## 退役成員\n\n### `retired`\n原樣保留。\n'
+        path.write_text(prefix + active + suffix)
+        mail.roster(self.root, 'alice', '測試者', 'chief', 'alice/', '寄信', '驗身份')
+        text = path.read_text()
+        self.assertTrue(text.startswith(prefix + active))
+        self.assertEqual(text[text.index('## 退役成員'):], suffix)
+        self.assertLess(text.index('### `existing`'), text.index('### `alice`'))
+        self.assertLess(text.index('### `alice`'), text.index('## 退役成員'))
+        self.assertEqual(mail.upstream(self.root, 'alice'), 'chief')
+        self.assertFalse((self.root / 'alice/wf/ROSTER.md').exists())
+        # 沒有現役段時只加在檔尾，保留既有內容。
+        other = self.root / 'bob/wf/workflows/inbox/ROSTER.md'
+        other.parent.mkdir(parents=True)
+        other.write_text(prefix + suffix)
+        mail.roster(self.root, 'bob', '測試者', 'chief', 'bob/', '寄信', '驗身份')
+        self.assertTrue(other.read_text().startswith(prefix + suffix + '\n### `bob`'))
+
     def test_review2_seen_only_after_flush(self):
         self.run_cli('team', 'dev', 'lead', 'bob')
         self.send(title='個人新信')
         self.send(sender='lead', to='team:dev', title='團隊新信')
-        orders = self.root / 'bob/orders.md'
+        orders = self.root / 'bob/wf/inbox/orders/bob.md'
+        orders.parent.mkdir(parents=True, exist_ok=True)
         orders.write_text('## 新指示\n正文\n')
         # 真 SIGKILL：print 已進 buffer，flush 前被殺，三種游標都不得提交。
         self.run_cli('read', 'bob', '--quiet', rc=-signal.SIGKILL,
                      env={'AOS7_TEST_CRASH': 'mail.before_output_flush'})
-        box = self.root / 'bob/inbox'
+        box = self.root / 'bob/wf/inbox'
         for marker in ('.seen', '.seen-team', '.orders-offset'):
             self.assertFalse((box / marker).exists(), 'flush 前不得保存 ' + marker)
         # stdout flush 失敗與後段 audit 失敗也不得消耗批次。
@@ -91,7 +142,7 @@ class ReviewCase(unittest.TestCase):
         publish(events, 'mail.request', 'seed', {'id': 'seed'}, must=True, node='bob',
                 config={'keep': 1, 'segment_bytes': 1})
         # 第一筆也已辦；讓 must seq1 能進位。
-        box = self.root / 'bob/inbox'
+        box = self.root / 'bob/wf/inbox'
         (box / 'done').mkdir(parents=True)
         seed = self.send(status='REQUEST', title='第一封')
         # 用寄出的 seq2 請求內容表示 seed 的已辦記錄。
@@ -147,7 +198,7 @@ class ReviewCase(unittest.TestCase):
         sent = self.send(status='REQUEST')
         for title in ('   ', '第一行\n第二行', '第一行\r第二行'):
             self.run_cli('done', 'bob', sent['id'], 'DONE', title, rc=2)
-            self.assertFalse((self.root / 'bob/inbox/.handled' / (sent['id'] + '.json')).exists(),
+            self.assertFalse((self.root / 'bob/wf/inbox/.handled' / (sent['id'] + '.json')).exists(),
                              '非法回信不得建立日誌')
         mail.done(self.root, 'bob', sent['id'], 'DONE', '正確結論')
         self.assertEqual(mail.audit(self.root), [])
@@ -171,6 +222,104 @@ class ReviewCase(unittest.TestCase):
         self.assertTrue(Path(sent['sent']).exists(), '任何個人不可移走團隊廣播')
         self.assertIn('團隊', self.run_cli('read', 'bob').stdout)
 
+    def test_round2_numbers_bind_snapshot(self):
+        class Fixed(datetime.datetime):
+            @classmethod
+            def now(cls):
+                return cls(2026, 10, 9, 12, 0, 0)
+        with patch.object(mail.datetime, 'datetime', Fixed):
+            first = self.send(sender='z-last')
+            self.assertIn('請先 read', self.run_cli('done', 'bob', '1', rc=2).stderr)
+            self.run_cli('read', 'bob')  # 非 JSON 也保存快照。
+            box = mail.inbox(self.root, 'bob')
+            self.assertEqual(mail.load(box / '.numbers.json'), {'1': first['id']})
+            new = self.send(sender='a-first')
+            self.assertLess(Path(new['sent']).name, Path(first['sent']).name)
+            self.run_cli('done', 'bob', '1')
+            self.assertTrue(Path(new['sent']).exists(), '序號不得辦掉後插入的信')
+            self.assertFalse(Path(first['sent']).exists())
+            again = self.run_cli('done', 'bob', '1').stdout
+            self.assertEqual(again, '已辦結過 ' + Path(first['sent']).name + '\n')
+            self.assertIn('請先 read', self.run_cli('done', 'bob', '2', rc=2).stderr)
+            self.run_cli('read', 'bob', '--quiet', '--json')
+            self.assertEqual(mail.load(box / '.numbers.json'), {'1': new['id']})
+            self.run_cli('read', 'bob', '--quiet')
+            self.assertEqual(mail.load(box / '.numbers.json'), {}, '只綁這次列出的個人信')
+
+    def test_round2_numbers_resume_journal(self):
+        class Fixed(datetime.datetime):
+            @classmethod
+            def now(cls):
+                return cls(2026, 10, 9, 12, 0, 0)
+        with patch.object(mail.datetime, 'datetime', Fixed):
+            first = self.send(status='REQUEST', sender='a-first')
+            second = self.send(title='另一封', sender='z-last')
+        rows = json.loads(self.run_cli('read', 'bob', '--json').stdout)
+        number = str(next(r['number'] for r in rows if r['id'] == first['id']))
+        self.run_cli('done', 'bob', number, 'DONE', '已辦', rc=-signal.SIGKILL,
+                     env={'AOS7_TEST_CRASH': 'mail.after_journal'})
+        self.run_cli('done', 'bob', number)
+        self.assertTrue(Path(second['sent']).exists(), '重跑序號必須復原原 journal 的信')
+        replies = [mail.letter(p) for p in mail.letters(mail.inbox(self.root, 'a-first'), True)
+                   if mail.letter(p).get('re') == first['id']]
+        self.assertEqual(len(replies), 1)
+        self.assertEqual(replies[0]['status'], 'DONE')
+        self.assertIn('已辦結過', self.run_cli('done', 'bob', number).stdout)
+
+    def test_round2_snapshot_only_after_flush(self):
+        first = self.send()
+        self.run_cli('read', 'bob')
+        snapshot = mail.inbox(self.root, 'bob') / '.numbers.json'
+        original = snapshot.read_bytes()
+        self.send(title='新信')
+        self.run_cli('read', 'bob', rc=-signal.SIGKILL,
+                     env={'AOS7_TEST_CRASH': 'mail.before_output_flush'})
+        self.assertEqual(snapshot.read_bytes(), original)
+        self.run_cli('read', 'bob')
+        self.assertEqual(len(mail.load(snapshot)), 2)
+
+    def test_round2_roster_atomic_replace(self):
+        path = self.root / 'alice/wf/workflows/inbox/ROSTER.md'
+        path.parent.mkdir(parents=True)
+        original = '# ROSTER\n\n## 現役成員\n既有資料\n'.encode()
+        path.write_bytes(original)
+        args = ('roster', 'alice', '--who', '測試者', '--up', 'chief',
+                '--territory', 'alice/', '--can', '寄信', '--cannot', '驗身份')
+        self.run_cli(*args, rc=-signal.SIGKILL,
+                     env={'AOS7_TEST_CRASH': 'mail.roster_before_replace'})
+        self.assertEqual(path.read_bytes(), original, 'replace 前被殺原 ROSTER 必須不變')
+        self.run_cli(*args)
+        self.assertIn('### `alice`', path.read_text())
+        self.assertTrue(path.read_bytes().startswith(original))
+
+    def test_round2_team_atomic_publish(self):
+        args = ('team', 'dev', 'lead', 'bob')
+        self.run_cli(*args, rc=-signal.SIGKILL,
+                     env={'AOS7_TEST_CRASH': 'mail.team_before_publish'})
+        self.assertIsNone(mail.team_of(self.root, 'bob'), '中斷時 team_of 不得看到半份名冊')
+        self.assertFalse((self.root / 'teams/dev').exists())
+        stale = list((self.root / '.staging').glob('mail-team-*'))
+        self.assertEqual(len(stale), 1)
+        self.assertEqual((stale[0] / 'members').read_text(), 'lead\nbob\n')
+        self.assertTrue((stale[0] / 'inbox').is_dir())
+        self.run_cli(*args)
+        self.assertEqual(mail.team_of(self.root, 'bob'), ('dev', 'lead'))
+        self.assertEqual(list((self.root / '.staging').iterdir()), [])
+        self.run_cli(*args)  # 完全相同為冪等成功。
+        self.run_cli('team', 'dev', 'lead', 'carol', rc=2)
+        self.assertEqual((self.root / 'teams/dev/members').read_text(), 'lead\nbob\n')
+
+    def test_round2_team_request_rejected_first(self):
+        self.run_cli('team', 'dev', 'lead', 'bob')
+        message = '團隊信箱只收廣播（PROGRESS／終局）；要人辦事請直接寄給成員'
+        for sender in ('bob', 'outsider'):
+            p = self.run_cli('send', sender, 'team:dev', 'REQUEST', '請辦事', rc=2)
+            self.assertEqual(p.stderr.strip(), message)
+        self.assertEqual(mail.letters(mail.inbox(self.root, 'team:dev')), [])
+        self.assertFalse((self.root / 'teams/dev/events').exists())
+        for status in sorted(mail.STATUSES - {'REQUEST'}):
+            self.run_cli('send', 'bob', 'team:dev', status, '廣播')
+
     def test_human_numbers_quiet_and_new_mailbox(self):
         p = self.run_cli('send', 'alice', 'bob', 'REQUEST', '第一封')
         first = json.loads(p.stdout)
@@ -186,7 +335,9 @@ class ReviewCase(unittest.TestCase):
         self.assertEqual(rows[0]['number'], pending.index(Path(second['sent'])) + 1)
         self.assertEqual(self.run_cli('read', 'bob', '--quiet', '--json').stdout, '')
         mail.done(self.root, 'bob', second['id'])
+        self.run_cli('read', 'bob')
         self.assertIn('已回 DONE 給 alice', self.run_cli('done', 'bob', '1', 'DONE', '辦好了').stdout)
+        self.run_cli('read', 'alice')
         self.assertIn('已歸檔 ', self.run_cli('done', 'alice', '1').stdout)
         self.assertEqual(self.run_cli('read', 'alice').stdout, '（沒有新信）\n')
         self.assertEqual(self.run_cli('read', 'alice', '--quiet').stdout, '')

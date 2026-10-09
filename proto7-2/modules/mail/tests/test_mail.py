@@ -34,7 +34,7 @@ class MailCase(unittest.TestCase):
         return json.loads(self.cli('send', sender, to, status, title).stdout)
 
     def box(self, who):
-        return self.root / who / 'inbox'
+        return self.root / who / 'wf/inbox'
 
     def test_parallel_delivery(self):
         # 固定所有子程序的牆鐘：保證同秒撞名，不依賴机器快慢。
@@ -153,6 +153,11 @@ m.handle(root, 'bob', handler)
         records = read(events, 'must')['records']
         self.assertEqual([r['kind'] for r in records], ['mail.request', 'mail.request'])
         self.assertEqual(records[0]['event_id'], first['id'])
+        self.cli('read', 'bob')
+        self.assertEqual(self.acked('bob'), 0, '讀信不算 ack')
+        self.cli('done', 'bob', Path(first['sent']).name, 'DONE', '中斷於歸檔前',
+                 rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'mail.after_reply'})
+        self.assertEqual(self.acked('bob'), 0, '終局回信已落盤但原信未進 done 仍不得 ack')
         self.cli('done', 'bob', Path(second['sent']).name, 'DONE', '第二封先完成')
         self.assertEqual(self.acked('bob'), 0)
         self.cli('done', 'bob', Path(first['sent']).name, 'DONE', '第一封完成')
@@ -188,7 +193,8 @@ m.handle(root, 'bob', handler)
         for who in ('bob', 'carol'):
             self.assertIn('團隊廣播', self.cli('read', who, '--quiet').stdout)
             self.assertEqual(self.cli('read', who, '--quiet').stdout, '')
-        orders = self.root / 'bob/orders.md'
+        orders = self.root / 'bob/wf/inbox/orders/bob.md'
+        orders.parent.mkdir(parents=True, exist_ok=True)
         orders.write_text('## 時間 — from: lead — 新指令\n中文正文\n')
         self.assertIn('指示  ## 時間 — from: lead — 新指令', self.cli('read', 'bob').stdout)
         self.assertEqual(self.cli('read', 'bob', '--quiet', '--json').stdout, '')
@@ -203,12 +209,12 @@ m.handle(root, 'bob', handler)
         args = ('roster', 'alice', '--who', '測試者', '--up', 'chief', '--territory', '我的資料夾',
                 '--can', '寄信', '--cannot', '驗身份')
         self.cli(*args)
-        text = (self.root / 'alice/wf/ROSTER.md').read_text()
+        text = (self.root / 'alice/wf/workflows/inbox/ROSTER.md').read_text()
         self.assertIn('## 現役成員', text)
         self.assertIn('### `alice`', text)
         self.assertIn('- **上游**：chief', text)
         self.cli(*args, rc=2)
-        self.assertEqual((self.root / 'alice/wf/ROSTER.md').read_text(), text)
+        self.assertEqual((self.root / 'alice/wf/workflows/inbox/ROSTER.md').read_text(), text)
         sent = self.send('alice', '--up', 'PROGRESS', '讀 ROSTER 路由')
         self.assertEqual(Path(sent['sent']).parent, self.box('chief'))
         self.cli('team', 'dev', 'alice', 'bob')

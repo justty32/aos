@@ -10,9 +10,9 @@
 | 接法 | C 工具 `aos7-mail`、函式 `aos7_mail.handle` |
 | 預設 | 關，不裝就不存在 |
 | 依賴 | Python 3 標準庫、events 包公開 publish/read/CLI、核心 aos7_fs |
-| 程式 | `aos7-mail` 薄殼呼叫 `aos7_mail_cli.py`（參數與白話輸出）；`aos7_mail.py` 負責投遞、路由、輪詢、audit、辦結與復原 |
+| 程式 | `aos7-mail` 薄殼呼叫 `aos7_mail_cli.py`（參數與白話輸出）；`aos7_mail.py` 負責投遞、路由、輪詢、audit、辦結與復原；`aos7_mail_setup.py` 負責 ROSTER 原子追加與 team 完整發布 |
 | 範例 | [examples/two_nodes.sh](examples/two_nodes.sh)，自己檢查後印 OK |
-| 測試 | [tests/test_mail.py](tests/test_mail.py)＋[tests/test_mail_review.py](tests/test_mail_review.py)，18 項測試 |
+| 測試 | [tests/test_mail.py](tests/test_mail.py)＋[tests/test_mail_review.py](tests/test_mail_review.py)，26 項測試 |
 
 ## 五個概念
 
@@ -39,16 +39,15 @@ export AOS_MAIL_ROOT="$R"
 "$P/modules/mail/aos7-mail" audit; echo $?
 ```
 
-實跑輸出（包含 stderr 的新信箱提醒；路徑、時間與 id 每次不同）：
+實跑輸出（10-09 隊長在 repo 根照抄實跑，指令本身 0.3 秒；包含 stderr 的新信箱提醒；路徑、時間與 id 每次不同）：
 
 ```text
 注意：bob 是新信箱（第一次收信）
-{"sent": "/tmp/tmp.HcTq6krzhg/bob/inbox/20261009T145154-alice-REQUEST.md", "id": "alice-20261009T145154-fb8d1fa03b6d"}
-1  20261009T145154-alice-REQUEST.md  請 bob 檢查範例
-注意：alice 是新信箱（第一次收信）
-已辦結 20261009T145154-alice-REQUEST.md，已回 DONE 給 alice
-1  20261009T145154-bob-DONE.md  bob 已完成範例檢查
-已歸檔 20261009T145154-bob-DONE.md
+{"sent": "/tmp/tmp.X8FITG8e8P/bob/wf/inbox/20261009T1458-alice-REQUEST.md", "id": "alice-20261009T145856-c17907a21a96"}
+1  20261009T1458-alice-REQUEST.md  請 bob 檢查範例
+已辦結 20261009T1458-alice-REQUEST.md，已回 DONE 給 alice
+1  20261009T1458-bob-DONE.md  bob 已完成範例檢查
+已歸檔 20261009T1458-bob-DONE.md
 0
 ```
 
@@ -75,9 +74,9 @@ read 的個人未辦信依檔名排序，從 1 起列 `<序號>  <檔名>  <一�
 
 read／done／handle 的 `<我>` 只准個人名；`team:` 僅可當 send 收件者。
 done 可以給序號、檔名或 id；成功印 `已辦結 <檔名>，已回 DONE 給 alice`，非 REQUEST 印 `已歸檔 <檔名>`。
-序號代表當下依檔名排序的未辦信；若有另一個收件程序辦結，請重跑 read，或用固定檔名／id。
+read 在 stdout flush 後原子保存 `.numbers.json`（序號→信 id），只含這次列出的個人未辦信，非 JSON 也一樣。done 序號只照最近這份快照找信，不因新信插入或 journal 復原而改指別封；快照不存在或序號不在快照時退出 2「請先 read」。信已在 done 則成功印 `已辦結過 <檔名>`。quiet 沒列個人信會保存空快照。
 
-REQUEST 的 done 必須給終局 STATUS 與結論；自動回給 reply-to（本郵局的 inbox 路徑，未填則 from），`re` 指向請求 id。團隊成員回覆非領導的對象時也給領導一封副本（領導自己辦結也會收到這份副本）。重跑同一封 done 不再回信。
+REQUEST 的 done 必須給終局 STATUS 與結論；自動回給 reply-to（本郵局的 `R/<名字>/wf/inbox` 路徑，未填則 from），`re` 指向請求 id。團隊成員回覆非領導的對象時也給領導一封副本（領導自己辦結也會收到這份副本）。重跑同一封 done 不再回信。
 
 退出碼：0 成功；1 僅 audit 發現未結 REQUEST；2 用法／檔案錯誤，stderr 一行說明。read 有未結請求仍退出 0。
 
@@ -91,9 +90,9 @@ REQUEST 的 done 必須給終局 STATUS 與結論；自動回給 reply-to（本�
 "$P/modules/mail/aos7-mail" send alice --up PROGRESS '開始檢查'
 ```
 
-ROSTER 位在 `$R/alice/wf/ROSTER.md`，新檔有標題與「現役成員」，每格照專案 ROSTER 格式寫九個欄位。可加 `--team dev` 聲明團隊；領導與無團隊者的 `--up` 讀自己那格的上游。
+ROSTER 位在 `$R/alice/wf/workflows/inbox/ROSTER.md`，依 D1，以模板那份為正本；既有檔只在「## 現役成員」段尾加格，沒有該段則加在檔尾；不存在才建有標題與「現役成員」的最小檔。每格照專案 ROSTER 格式寫九個欄位；鎖內先寫同目錄暫存、完整關閉後 os.replace，程序中斷不會截斷原檔。可加 `--team dev` 聲明團隊；領導與無團隊者的 `--up` 讀自己那格的上游。
 
-建立團隊（同一人不能在別隊；既有團隊不覆寫）：
+建立團隊（同一人不能在別隊；既有 members 完全相同則冪等成功，不同則退出 2）：
 
 ```sh
 "$P/modules/mail/aos7-mail" team dev lead bob carol
@@ -102,9 +101,9 @@ ROSTER 位在 `$R/alice/wf/ROSTER.md`，新檔有標題與「現役成員」，�
 "$P/modules/mail/aos7-mail" read bob --quiet
 ```
 
-`$R/teams/dev/members` 首行是 lead；只有成員可投 team:dev。每人的 `.seen-team` 記已讀信 id 集合，避免同秒後來發布的信被時間游標漏掉。團隊信是廣播，不會由某個成員 read 移走。
+`$R/teams/dev/members` 首行是 lead；只有成員可投 team:dev，且只收 PROGRESS／終局廣播；REQUEST 先退出 2「團隊信箱只收廣播（PROGRESS／終局）；要人辦事請直接寄給成員」。team 在 `R/.staging/mail-team-*` 準備完整 members 與 inbox 後 rename 發布；中斷時 team_of 看不到未發布名冊，下次 team 持 membership 鎖清掉殘留 staging 後可重跑。每人的 `.seen-team` 記已讀信 id 集合，避免同分鐘後來發布的信被時間游標漏掉。團隊信是廣播，不會由某個成員 read 移走。
 
-orders 位在 `$R/<我>/orders.md`，只能追加；每段用 `## <ISO時間> — from: <名字> — <結論>` 開頭。read 以 `.orders-offset` 保存讀到的 byte offset；檔案截短會拒絕。上游指示的權重依專案協定，由讀信者判斷。
+orders 位在 `$R/<我>/wf/inbox/orders/<我>.md`，只能追加；每段用 `## <ISO時間> — from: <名字> — <結論>` 開頭。read 以 `.orders-offset` 保存讀到的 byte offset；檔案截短會拒絕。上游指示的權重依專案協定，由讀信者判斷。
 
 `audit [<我>]` 單獨檢查未結 REQUEST；不給名字就掃整個郵局。掃所有 inbox 與 done，比對 REQUEST 的 id 與終局信的 re；PROGRESS 不會結案。個人 audit 列出自己寄出或收到的未結請求。
 
@@ -130,13 +129,15 @@ handle 處理個人 inbox 所有未辦信，同格操作拿辦結鎖。handler �
 
 信格式照 inbox PROTOCOL：frontmatter 是 `from to status at reply-to id re`，正文固定「做了什麼／產出／沒做到／需要決定」四段。信 id 使用寄件者＋秒級時間＋隨機值。
 
-未辦信路徑：`R/<名字>/inbox/<YYYYmmddTHHMMSS>-<寄件者>-<STATUS>.md`。先在 `.tmp/` 寫完整關閉，再 `os.link(tmp, final)` 原子發布；撞名以 `<時間>_<n>` 重試，同時避開 inbox／done 檔名，完成後刪暫存。`.delivery.lock` 共用於固定 id 查重、投遞、歸檔與 audit 的每格快照；不覆蓋既有信。frontmatter 只認獨立一行的 `---`，名字中的三連字號不會截斷欄位。
+node 信箱的未辦信、`done/`、`.tmp/`、`.handled/`、`.seen` 等都在 `R/<名字>/wf/inbox/`；events 仍在 `R/<名字>/events/`。團隊仍用 `R/teams/<團隊>/members`（首行領導）與 `R/teams/<團隊>/inbox/`。
+
+未辦信路徑：`R/<名字>/wf/inbox/<YYYYmmddTHHMM>-<寄件者>-<STATUS>.md`。先在 `.tmp/` 寫完整關閉，再 `os.link(tmp, final)` 原子發布；撞名以 `<YYYYmmddTHHMM>_<n>-<寄件者>-<STATUS>.md` 重試，同時避開 inbox／done 檔名，完成後刪暫存。`.delivery.lock` 共用於固定 id 查重、投遞、歸檔與 audit 的每格快照；link 失敗不覆蓋既有信。同寄件者一分鐘內多封時，直接拒收會丟信，所以拒覆蓋後加序號重試。frontmatter 只認獨立一行的 `---`，名字中的三連字號不會截斷欄位。
 
 辦結順序固定：
 
 1. 先完整驗證回信，再原子寫 `.handled/<id>.json`，保存所有回信對象與內容；非法結論不會留下復原日誌。
 2. 寄固定 id `re-<請求id>-<STATUS>` 的回信與領導副本；在對方 inbox＋done 查同 id，有就不重寄。
-3. 在 delivery 鎖下 link 原信進 done，再 unlink 頂層；既有同 id 表示已發布，不同 id 則加 `_archive<n>` 避撞，絕不覆蓋歷史。
+3. 在 delivery 鎖下 link 原信進 done，再 unlink 頂層；既有同 id 表示已發布，不同 id 則重試 `<YYYYmmddTHHMM>_<n>-<寄件者>-<STATUS>.md` 避撞，絕不覆蓋歷史。
 4. 從 must 最前面開始，僅確認連續 `kind=mail.request` 且 id 對到已辦 REQUEST 的事件；未辦或非 mail 事件擋住後續 ack。
 
 read 遇到已有日誌的頂層信會補做 2–4，並印 `復原`；搬移後被殺也會在下一次 read／done 補 ack。每次 ack 先透過公開 CLI `read --channel must --ack 0` 取得 events 真正的 `acked_upto`，同步 `.acked` 再往下檢查；events 已確認但本地落後、舊段被淘汰時也能繼續。保留 `.handled` 與所有鎖檔，不要人工清掉它們。
@@ -147,6 +148,8 @@ REQUEST 的 must 以 `publish(..., kind="mail.request", event_id=信id, payload=
 
 - **職責**：完整投遞檔案信、身份與團隊路由、輪詢追加資料、查未結請求、日誌保護的辦結復原。
 - **前置條件**：本地支援 hard link／rename／flock 的檔案系統，所有寫者走本包、信體發布後不改；reply-to 指向同 root 的參與者 inbox；orders append-only；events must 單消費者。
+- **F5**：讀信不算 ack；終局回信落盤、原 REQUEST 搬進 `done/` 之後才推進 must ack。
+- **D2**：一個 node 的 events must 通道由 mail 獨佔；學徒（author）的 must 用別的 node，以既有 send 轉交留回條。
 - **保證**：並行寄件不互蓋、不見半封信；STATUS 拒絕非法值；終局回覆對到請求；日誌落地後不重做 handler；固定回信 id 防重寄；不越過非 mail must 確認。
 - **明確不管**：handler 外部效果交易、產品決策、授權、身份鑑別、網路送信、斷電耐久、歷史清理。
 
@@ -154,9 +157,9 @@ REQUEST 的 must 以 `publish(..., kind="mail.request", event_id=信id, payload=
 
 - 不 fsync，抗程序 SIGKILL，不承諾斷電；send 若在信落地與 events publish 之間被殺，可能缺提醒，信仍是權威。
 - send 被殺可能留下 `.tmp/` 完整或未完整暫存，收件輪詢不看暫存；正常投遞後會清空。
-- events must 是單消費者，勿讓其他消費者替本包推進同一通道；非 mail 事件會阻住後續 mail ack，需要該事件擁有者另行協調。
+- 依契約卡 D2，mail／author 必須分 node；共用 must 時，非 mail 事件會阻住後續 mail ack，其他消費者也可能提前確認 mail 提醒。
 - 收件者名／寄件者名不驗真偽，audit 的 re 是合作式證據，不是不可偽造的憑證。
-- 團隊信是共讀廣播；done／handle 只處理個人 inbox。需要指定人辦的 REQUEST 請直接寄給該人。
+- 團隊信是共讀廣播，只收 PROGRESS／終局，send 團隊 REQUEST 退出 2；done／handle 只處理個人 inbox。需要指定人辦的 REQUEST 請直接寄給該人。
 - 掃描信與去重是線性搜尋，seen／seen-team、handled 與歷史不自動縮減；不含重試提醒、跨郵局 reply-to 或團隊增刪成員。
 - 非 quiet 未辦信與等回信會重列；quiet 是新信提醒，已報過但未辦的信請用非 quiet read 查看。
 - read 的函式 API 是批次 context manager：`with poll(root, me, quiet=True) as rows:`，呼叫者須在區塊內輸出並 flush，正常離開才保存游標；區塊內出錯不保存。
@@ -172,11 +175,12 @@ systemd-run --user --scope -p TasksMax=300 python3 proto7-2/tests/run_all.py mod
 sh proto7-2/modules/mail/examples/two_nodes.sh
 ```
 
-18 項測試全綠，範例印 OK，第一次跑整段已在真實檔案系統執行，最後 audit 退出 0。
+26 項測試全綠，範例印 OK，第一次跑整段已在真實檔案系統執行，最後 audit 退出 0。
 測試 import base 啟用 SIGKILL 鉤子；既有 10 項保留，新增審查 1–7 各一項與人類介面一項。
-涵蓋 160 封固定同秒並行投遞、辦結中斷與 handler 一次、連續 must ack，以及輸出 flush 前／後中斷、flush／audit 失敗、真的 retention gap、並行送／辦／audit。
+新增分鐘信名／歸檔避撞與模板 ROSTER 段內追加兩項；另確認讀信及終局回信後、原信歸檔前皆不 ack。
+涵蓋 160 封固定同分鐘並行投遞、辦結中斷與 handler 一次、連續 must ack，以及輸出 flush 前／後中斷、flush／audit 失敗、真的 retention gap、並行送／辦／audit。
 
-七項退化驗證各只跑對應 `test_review<N>_`，全部退出 1，還原後清除 `__pycache__` 再跑全套全綠：
+前輪七項退化驗證各只跑對應 `test_review<N>_`，全部退出 1，還原後清除 `__pycache__` 再跑全套全綠：
 
 | 審查 | 拿掉的修法 | 對應測試／紅燈訊息 |
 |---|---|---|
@@ -190,4 +194,16 @@ sh proto7-2/modules/mail/examples/two_nodes.sh
 
 另單獨退化歸檔防覆蓋（保留投遞避撞），審查 1 同測試紅：`歸檔不可覆蓋舊信`；只移除 audit 的 delivery 鎖，審查 4 同測試紅：`BlockingIOError not raised : audit 必須在 delivery 鎖下列檔讀信`。
 
-原始防撞／日誌也重新退化實跑：直接 rename 投遞令 `test_parallel_delivery` 紅：`8 != 160 : 160 封同秒投遞不可被覆蓋`；省略日誌令 `test_handle_crash_side_effect_once` 紅：`'2' != '1'`。本輪審查完整輸出在 `/tmp/x1/red1.txt`～`red7.txt`，額外證據在同處 `red-1-archive-only.txt`、`red-4-audit-only.txt`、`red-delivery-link.txt`、`red-journal.txt`。
+原始防撞／日誌也重新退化實跑：直接 rename 投遞令 `test_parallel_delivery` 紅：`8 != 160 : 160 封同秒投遞不可被覆蓋`；省略日誌令 `test_handle_crash_side_effect_once` 紅：`'2' != '1'`。前輪審查完整輸出在 `/tmp/x1/red1.txt`～`red7.txt`，額外證據在同處 `red-1-archive-only.txt`、`red-4-audit-only.txt`、`red-delivery-link.txt`、`red-journal.txt`。
+
+第二輪新增 6 項：序號綁快照（同分鐘插入／已辦冪等／quiet 快照）、序號 journal 中斷重跑、flush 前不改快照、ROSTER replace 前 SIGKILL、team publish 前 SIGKILL／重試／冪等、團隊 REQUEST 先拒絕。每條拿掉修法實跑退出 1，還原後再驗證全綠：
+
+| 條目 | 拿掉的修法 | 紅燈證據 |
+|---|---|---|
+| 1 插入 | 保留快照檢查，但改依即時未辦信排序選信 | `test_round2_numbers_bind_snapshot`：`False is not true : 序號不得辦掉後插入的信` |
+| 1 journal | 同上，排除已 journal 信再選序號 | `test_round2_numbers_resume_journal`：`False is not true : 重跑序號必須復原原 journal 的信` |
+| 2 | replace 前先 truncate／寫入原檔 | `test_round2_roster_atomic_replace`：`replace 前被殺原 ROSTER 必須不變` |
+| 3 | 改在公開 teams 目錄直接準備 | `test_round2_team_atomic_publish`：`('dev', 'lead') is not None : 中斷時 team_of 不得看到半份名冊` |
+| 4 | 移除團隊 REQUEST 拒絕 | `test_round2_team_request_rejected_first`：`0 != 2` |
+
+第二輪完整紅燈輸出：`/tmp/x1/round2/{numbers-insert,numbers-journal,roster,team,request}.txt`。
