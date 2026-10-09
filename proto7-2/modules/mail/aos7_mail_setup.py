@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
-from aos7_mail import name, inbox, team_of, locked, test_point
+from aos7_mail import name, inbox, team_of, locked, test_point, Refused
 
 def roster(root, me, who, up, territory, can, cannot, team=None):
     name(me)
@@ -15,12 +15,12 @@ def roster(root, me, who, up, territory, can, cannot, team=None):
     with locked(str(path)):
         text = path.read_text() if path.exists() else '# ROSTER\n\n## 現役成員\n'
         if f'### `{me}`' in text.splitlines():
-            raise ValueError('同名 ROSTER 格已存在')
+            raise Refused('同名 ROSTER 格已存在。ROSTER 只追加；要改請手動編輯 ROSTER.md')
         fields = [('狀態', '現役'), ('我是誰', who), ('團隊', f'`teams/{team}`' if team else '無'),
                   ('上游', up), ('領地', territory), ('答得出什麼', can), ('答不出什麼', cannot),
                   ('怎麼找我', str(inbox(root, me))), ('訂閱主題', '無')]
         if any('\n' in v or '\r' in v for _, v in fields):
-            raise ValueError('ROSTER 每欄必須是一行')
+            raise ValueError('ROSTER 每欄必須是一行。把換行拿掉再跑')
         active = re.search(r'^## 現役成員\s*$', text, re.M)
         following = re.search(r'^## ', text[active.end():], re.M) if active else None
         end = active.end() + following.start() if following else len(text)
@@ -48,9 +48,9 @@ def team(root, group, leader, members):
         if folder.exists():
             if (folder / 'members').read_text() == content:
                 return
-            raise ValueError('團隊已存在且 members 不同')
+            raise Refused('團隊已存在且 members 不同。換個隊名，或照原名單重跑')
         if len(set(people)) != len(people) or any(team_of(root, p) for p in people):
-            raise ValueError('成員重複或已在別的團隊')
+            raise Refused('成員重複或已在別的團隊。一人只能在一隊，名單裡也不要重複')
         prepared = Path(tempfile.mkdtemp(prefix='mail-team-', dir=staging))
         (prepared / 'inbox').mkdir()
         (prepared / 'members').write_text(content)
