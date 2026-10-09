@@ -251,13 +251,21 @@ def main_aos(a):
         prev = [a.previous, a.feedback]
 
         def attempt(model, i):
-            # 升級時把上一級的候選與檢查結果當重問交下一級
-            r = propose_one(Namespace(**dict(vars(a), llm=model, call=rung_call(a.call, i),
-                                             previous=prev[0], feedback=prev[1])), req, dict(out))
+            # 升級時把上一級的候選與檢查結果當重問交下一級；各級候選分檔，例外只結束這一級
+            out_i = None if not a.out or i == 0 else '%s-r%d%s' % (os.path.splitext(a.out)[0], i, os.path.splitext(a.out)[1])
+            b = Namespace(**dict(vars(a), llm=model, call=rung_call(a.call, i), out=out_i or a.out,
+                                 previous=prev[0], feedback=prev[1]))
+            try:
+                r = propose_one(b, req, dict(out))
+            except (ValueError, UnicodeError, KeyError, TypeError) as exc:
+                return dict(out, ok=False, why='invalid', error=str(exc))
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                return dict(out, ok=False, why='unknown', error=str(exc))
             if r.get('candidate_path') and isinstance(r.get('check'), dict):
                 prev[:] = [r['candidate_path'], r['check']]
             return r
-        return climb(attempt)
+        # 只有三關（含審查）真的擋下才升級；審查模型沒答成不算
+        return climb(attempt, lambda r: isinstance(r.get('check'), dict) and r['check'].get('failed_gate') is not None)
     except (ValueError, UnicodeError, KeyError, TypeError) as exc:
         return dict(out, ok=False, why='invalid', error=str(exc))
     except (OSError, subprocess.TimeoutExpired) as exc:

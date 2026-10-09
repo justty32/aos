@@ -872,7 +872,7 @@ def main(argv=None):
     ap.add_argument("arg", nargs="?", help="register 給需求檔；其餘給 rid")
     source = ap.add_mutually_exclusive_group()
     source.add_argument("--candidate", help="propose：候選檔")
-    source.add_argument("--llm", nargs="?", const="auto", help="propose：模型名（經 llmcall）；不給＝先便宜後升級")
+    source.add_argument("--llm", nargs="?", const="\0auto", help="propose：模型名（經 llmcall）；不給＝先便宜後升級")
     ap.add_argument("--budget", help="propose --llm：budget 目錄")
     ap.add_argument("--call", help="固定 call_id；新生成請明給新 ID")
     ap.add_argument("--reserve", type=int, default=1000000)
@@ -888,7 +888,7 @@ def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
     aos_flags = ('reviewer', 'review_llm', 'out', 'context', 'gotchas', 'previous',
                  'feedback', 'history', 'into', 'repo', 'ref', 'no_scope')
-    positionals = []
+    positionals, optional_at = [], None
     options = dict(ap._option_string_actions)
     options.update({'--' + flag.replace('_', '-'): None for flag in aos_flags})
     i = 0
@@ -902,12 +902,19 @@ def main(argv=None):
             matches = [name for name in options if name.startswith(flag)]
             action = options.get(matches[0]) if len(matches) == 1 else None
             takes_value = action.nargs != 0 if action is not None else flag != '--no-scope'
-            if action is not None and action.nargs == '?' and (i + 1 >= len(args) or args[i + 1].startswith('-')):
-                takes_value = False
+            if action is not None and action.nargs == '?' and '=' not in token:
+                if i + 1 >= len(args) or args[i + 1].startswith('-'):
+                    takes_value = False
+                else:
+                    optional_at = i + 1
             i += 2 if takes_value and '=' not in token else 1
         else:
             positionals.append(token)
             i += 1
+    if optional_at is not None and len(positionals) < 2:
+        # `propose --llm csv1 …`：少了 rid／需求檔，那個值其實是位置參數，--llm 沒給模型
+        args.insert(optional_at - 1, args.pop(optional_at))
+        positionals.append(args[optional_at - 1])
     is_aos = False
     if len(positionals) >= 2 and positionals[0] in ('propose', 'publish', 'learn') and os.path.isfile(positionals[1]):
         from aos7_author_aos import strict
