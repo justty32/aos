@@ -124,8 +124,7 @@
    "team": "ER-mail",
    "name": "aos7-mail",
    "entry": "modules/mail/aos7-mail",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-mail）"
+   "unsure": {"argv": ["--root", "{tmp}/post", "send", "alice", "bob", "收件信箱不可寫"], "files": {"post/bob/inbox/": ""}, "chmod": {"post/bob/inbox": "0o500"}}
   },
   {
    "pack": "up",
