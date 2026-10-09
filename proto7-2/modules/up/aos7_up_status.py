@@ -184,8 +184,8 @@ def status(node):
         return 2
     settings = config(node)
     n = number(node)
-    print(f'心跳：活著，第 {n} 下' if alive(node.parent) else
-          f'心跳：停了（最後第 {n} 下）；起它：aos7-up {node}')
+    print(f'心跳：活著，已叫醒 {node.name} {n} 次' if alive(node.parent) else
+          f'心跳：停了（共叫醒 {node.name} {n} 次）；要再起：aos7-up {node}')
     inbox = letters(node / 'inbox')
     waiting = sum(v.get('status') == 'REQUEST' for v in inbox.values())
     finished = letters(node / 'inbox/done')
@@ -196,16 +196,16 @@ def status(node):
     replies = letters(node.parent / 'you/inbox')
     needs = sum(v.get('status') == 'NEEDS-USER' for v in replies.values())
     blocked = sum(v.get('status') == 'BLOCKED' for v in replies.values())
-    line = (f'信：{node.name} 收到 {total} 封要辦的信，回過信 {done} 封' if total else
-            f'信：{node.name} 還沒收到要辦的信')
+    line = (f'信：{node.name} 一共收到 {total} 封，回了 {done} 封' if total else
+            f'信：{node.name} 還沒收到信')
     if doing:
         line += '、正在辦 1 封'
     if queue:
         line += f'、排隊 {queue} 封'
-    line += f'；你的信箱有 {len(replies)} 封回信沒看'
+    line += f'；你的信箱有 {len(replies)} 封回信還沒看'
     hints = ([f'{needs} 封要你決定'] if needs else []) + ([f'{blocked} 封說卡住了'] if blocked else [])
     if hints:
-        hints[-1] += f'；信在 {node.parent / "you/inbox"}，每封都寫了怎麼辦，照做或用 ask 再寄一封'
+        hints[-1] += f'；信在 {node.parent / "you/inbox"}，打開照信做'
     print(line + ('（' + '、'.join(hints) + '）' if hints else ''))
     try:
         unsure = read(node / 'brain/unsure.json')
@@ -214,7 +214,7 @@ def status(node):
             limit = float(settings.get('deadline', 60 if settings.get('model') in (None, 'fake', '') else 600))
             waited = time.time() - unsure['since']
             print(f'卡住了：信「{short(letter.get("title", ""))}」問了 AI，不確定 AI 回了沒，已等 {waited:.0f} 秒；'
-                  f'你不用動手，滿 {limit:g} 秒 {node.name} 會回信說怎麼辦，再辦下一封')
+                  f'你不用動手，滿 {limit:g} 秒 {node.name} 會寄信到你的信箱說怎麼辦，再接著辦下一封')
     except (ValueError, OSError, TypeError, KeyError, AttributeError):
         pass
     count = sum(s.startswith('- ') for rel in ('SESSION-LOG.md', 'WAIT_USER.md')
@@ -222,14 +222,14 @@ def status(node):
     check = call('modules/wfnode/aos7-wfnode', 'check', node)
     print(f'工作簿：最後記下：{state(node, titles)}' + (f'；還有 {count} 件事沒做完' if count else '') +
           (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if check.returncode else ''))
-    print(f'技能：{skill_count(node)} 本')
+    print(f'技能：{skill_count(node)} 本（AI 自己挑來用）')
     calls = sum(p.is_file() for p in (node / 'llmcall/llm').glob('*/raw.json'))
     budget = call('packs/budget/bin/aos7-budget', 'status', 'budget/llm', cwd=node)
     try:
         used = json.loads(budget.stdout).get('used', '—') if budget.returncode == 0 else '—'
     except ValueError:
         used = '—'
-    usage = f'用量約 {used} 字（讀加寫）' if isinstance(used, (int, float)) else '用量不明'
+    usage = f'來回共約 {used} 字' if isinstance(used, (int, float)) else '來回字數不明'
     print(f'AI：{settings.get("model") or "假 AI（不連網、不花錢，照抄你的信回你）"}；問過 {calls} 次，{usage}')
     print(cleanup_hint(node))
     return 0
@@ -262,6 +262,8 @@ def watch(node, daemon):
             pending.clear()
             last = n
         if daemon is not None and daemon.poll() is not None:
+            if last is not None:
+                raise UpError(1, f'心跳被別處停掉了（例如跑了 stop）；檔案都留著，再跑 aos7-up {node} 就接上')
             raise UpError(1, f'心跳沒跑起來。請看 {node.parent}/.aosd/up-daemon.log 後重跑')
         time.sleep(.2)
 
