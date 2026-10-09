@@ -21,7 +21,7 @@ class UpModel(cases.UpTests):
         self.assertEqual(before, [(self.node / p).read_bytes() for p in paths])
 
     def test_ask_through_up(self):
-        # 藍圖 S2：經 aos7-up 起的 node，ask 假 AI 一圈拿到回信；status 記到一次 AI
+        # 藍圖 S2：經 aos7-up 起的 node，ask 練習用的 AI 一圈拿到回信；status 記到一次 AI
         self.invoke(self.node, '-d')
         out = self.invoke('ask', self.node, '用一句話介紹你自己', '--wait', '30')
         self.assertIn('回信', out)

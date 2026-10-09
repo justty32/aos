@@ -237,8 +237,8 @@ def status(node):
     times = f'一共問過 AI {asked} 次' + (f'（其中 {asked - calls} 次還沒收到回答）' if asked > calls else '')
     model = settings.get('model')
     if model in (None, '', 'fake'):
-        # 假 AI 不花錢，字數對新手沒意義，不印
-        print(f'AI：假 AI（不連網、不花錢，照抄你的信回你）；{node.name} {times}')
+        # 練習用的 AI 不花錢，字數對新手沒意義，不印
+        print(f'AI：練習用的 AI（不連網、不花錢，照抄你的信回你）；{node.name} {times}')
     else:
         budget = call('packs/budget/bin/aos7-budget', 'status', 'budget/llm', cwd=node)
         try:

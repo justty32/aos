@@ -1,4 +1,4 @@
-"""啟動白話錯誤、假 AI 請求與時間比較。"""
+"""啟動白話錯誤、練習用的 AI 請求與時間比較。"""
 import contextlib
 import io
 import json

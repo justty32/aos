@@ -111,15 +111,15 @@ def fake_text(letter, step, ref=None, got=None, latest=None):
     title = flat(letter['title'])
     want = re.search(r'(\d+)\s*回合', title)
     if '要你決定' in title:
-        return f'要你決定：（假 AI）缺資料，請補上\n停在哪：第 {step} 回合等你'
+        return f'要你決定：（練習用的 AI）缺資料，請補上\n停在哪：第 {step} 回合等你'
     if '沒進展' in title:
-        return f'繼續：（假 AI）第 {step} 回合還是卡住\n停在哪：卡在同一處'
+        return f'繼續：（練習用的 AI）第 {step} 回合還是卡住\n停在哪：卡在同一處'
     if want and step < int(want[1]):
-        return f'繼續：（假 AI）第 {step} 回合做完\n停在哪：第 {step} 回合，下一步第 {step + 1} 回合'
+        return f'繼續：（練習用的 AI）第 {step} 回合做完\n停在哪：第 {step} 回合，下一步第 {step + 1} 回合'
     if '要檔案' in title and ref is None and latest:
         return '要檔案：' + latest
     attached = f'（附了前件 {ref}）' if got is not None else ''
-    return '回信：（假 AI）收到你的信：' + title + attached + '\n停在哪：回了 ' + letter['id']
+    return '回信：（練習用的 AI）收到你的信：' + title + attached + '\n停在哪：回了 ' + letter['id']
 def request(node, letter, cid, cfg):
     work = node / 'brain'
     req = work / 'req.json'
@@ -286,7 +286,7 @@ def compact_if_big(node, cfg):
 def progress(node, letter, step, title, body):
     """寄 PROGRESS 給寄件人；同一回合的 PROGRESS 已在對方信箱就不再寄。"""
     who = Path(letter.get('reply-to') or '').parent.name or letter['from']
-    head = f'# 第 {step} 回合：'
+    head = f'# 第 {step} 步：'
     path = node / 'brain/progress.md'
     for p in (node.parent / who / 'inbox').rglob('*.md'):
         try:
@@ -327,9 +327,9 @@ def step_on(node, letter, text, cfg):
     line = line or f'第 {step} 回合'
     stall = task['stall'] + 1 if line == task['line'] else 0
     if stall >= cfg.get('stall', 3):
-        return None, f'連續 {stall} 回合沒進展，停在：{line}'
+        return None, f'連續 {stall} 步沒進展，停在：{line}'
     if step >= cfg.get('max_steps', 40):
-        return None, f'做了 {step} 回合還沒做完，停在：{line}'
+        return None, f'做了 {step} 步還沒做完，停在：{line}'
     ident = letter['id']
     cut = result if len(result) <= LAST_MAX else result[:LAST_MAX] + f'\n（後面還有 {len(result) - LAST_MAX} 字沒附上）'
     (node / 'brain/last.md').write_text(f'上一回合（第 {step} 回合）的成果：\n{cut}\n', encoding='utf-8')
@@ -398,14 +398,15 @@ def stuck_reply(node, cid, step, waited, cfg, ask=''):
     work.mkdir(parents=True, exist_ok=True)
     write_text(work / 'how.md', (f'# 卡住的回信：「{name}」\n\n第 {step} 回合的 call {cid}；{reserve}。\n' +
                                  how).rstrip() + '\n')
-    again = ('現在用的是假 AI，不花錢。' if is_fake(cfg) else
-             '現在用的是真 AI：如果上次 AI 其實已經回了，可能會多付一次錢。')
-    title = f'「{name}」問 AI 時被打斷，先停下'
-    body = (f'這封信「{name}」辦到一半，問 AI 時被打斷（例如程式被關掉），等了{minutes(waited)}還是不知道 AI 回了沒有，'
-            '所以先停下這封，後面的信照常辦。系統不會自己重問。\n'
-            '怎麼辦：\n① 什麼都不做：這封就停在這裡，不影響別的信。\n'
-            '② 再寄一次這封信：會從頭重新問 AI。' + again + '\n\n'
-            '細節見 `modules/up/ADVANCED.md` 的〈卡住的回信〉。\n')
+    again = ('現在用的是練習用的 AI（不連網、不花錢），重寄不花錢。' if is_fake(cfg) else
+             '現在用的是真 AI（照字數收錢）：如果上次 AI 其實已經回了，重寄可能會多付一次錢。')
+    who = node.name
+    title = f'「{name}」問 AI 時被打斷，{who} 先停下這封'
+    body = (f'這封信「{name}」辦到一半，{who} 問 AI 時被打斷（例如程式被關掉）。'
+            f'等了{minutes(waited)}，還是不知道 AI 回了沒有，所以 {who} 先停下這封，接著辦你後面寄的信。\n'
+            f'{who} 不會自己再問一次，要不要重問由你決定。\n'
+            '怎麼辦：二選一\n① 什麼都不做：這封就停在這裡，不影響別的信。\n'
+            f'② 把同一句話再寄一次（跟第一次一樣用 aos7-up ask 寄）：{who} 會從頭重新問 AI。' + again + '\n')
     return title, body, f'卡住：「{name}」問 AI 時被打斷', '什麼都不做，或再寄一次這封信（細節看回信）'
 def once(node, rnd):
     work = node / 'brain'

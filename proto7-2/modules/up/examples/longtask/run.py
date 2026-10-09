@@ -1,7 +1,7 @@
 """長任務實跑驅動：起 node、寄 12 封信、中途 SIGKILL brain 一次、邊跑邊記證據、收尾。
 
 從 repo 根跑：python3 -B proto7-2/modules/up/examples/longtask/run.py OUT [--model M] [--kill-step 7]
-不給 --model 就是假 AI（離線、不花錢；01 號信標題含「13 回合」，假 AI 照演）。
+不給 --model 就是練習用的 AI（離線、不花錢；01 號信標題含「13 回合」，練習用的 AI 照演）。
 OUT 是證據資料夾（會建）。房子在 /tmp，跑完停心跳，房子打包進 OUT/house.tar.gz 後刪掉。
 """
 import argparse
