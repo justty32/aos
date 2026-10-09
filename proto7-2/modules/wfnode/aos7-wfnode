@@ -2,15 +2,23 @@
 """替 aos node 建立工作流並記錄續行點。"""
 import argparse
 import os
+import shlex
 from pathlib import Path
 import sys
 
 sys.dont_write_bytecode = True
 import aos7_wfnode as wfnode
+from wfnode_state import fail
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.exit(fail(2, f'參數或用法不對（{message}）',
+                      '指令只有 init／state／check，例：aos7-wfnode init /tmp/mynode；完整看 --help'))
 
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = Parser(
         description='替 AI 準備一個「工作筆記資料夾」(node)，並記下每次停在哪。',
         epilog="例：aos7-wfnode init /tmp/mynode；aos7-wfnode state /tmp/mynode '寫完第一版，下一步跑測試'；"
                'aos7-wfnode check /tmp/mynode',
@@ -26,16 +34,22 @@ def main():
     inspect = commands.add_parser('check', help='體檢：印 OK（退出碼 0）＝資料夾沒壞')
     inspect.add_argument('node', help='init 過的資料夾')
     args = parser.parse_args()
-    node = Path(os.path.abspath(args.node))
     try:
+        node = Path(os.path.abspath(args.node))
         if args.command == 'init':
             return wfnode.init(node, args.flavor)
         if args.command == 'check':
             return wfnode.check(node)
         return wfnode.state(node, args.line)
-    except (OSError, ValueError) as error:
-        print(f'無法完成：{error}', file=sys.stderr)
-        return 2 if isinstance(error, ValueError) else 1
+    except (OSError, UnicodeDecodeError) as error:
+        if args.command == 'state' and args.line is not None:
+            how = (f'這句可能已記上：先跑 aos7-wfnode state {shlex.quote(args.node)} 看一下，'
+                   '沒記上再照原樣跑一次')
+        else:
+            how = '照原樣再跑一次會接續（init 只補缺的，check 不寫檔）'
+        return fail(3, f'不確定：讀寫檔案出錯（{error}），做到哪不確定，已寫的留著', how)
+    except ValueError as error:
+        return fail(2, f'參數讀不懂（{error}）', '路徑與句子別含特殊控制字元，例：aos7-wfnode init /tmp/mynode')
 
 
 if __name__ == '__main__':

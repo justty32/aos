@@ -160,6 +160,36 @@ class UnitTests(unittest.TestCase):
             text = wfnode.fill_text('{{測試 / build / lint 指令}}', 'demo')
         self.assertEqual(shlex.split(text.strip('`')), ['python3', '/tmp/my repo/tests/run_all.py'])
 
+    def test_lint_three_states(self):
+        cases = (
+            (0, 'TOTAL broken=0\n', 'ok'),
+            (1, 'BROKEN detail\nTOTAL broken=2\n', 'broken'),
+            (1, 'TOTAL broken=2\n', 'broken'),
+            (0, '', 'unknown'),
+            (0, 'boom\n', 'unknown'),
+            (2, 'boom\n', 'unknown'),
+            (2, 'TOTAL broken=0\n', 'unknown'),
+            (7, 'TOTAL broken=2\n', 'unknown'),
+            (0, 'TOTAL broken=2\n', 'unknown'),
+            (1, 'TOTAL broken=0\n', 'unknown'),
+            (0, 'TOTAL broken=1\nTOTAL broken=0\n', 'ok'),
+            (0, 'TOTAL broken=0\nTOTAL broken=1\n', 'unknown'),
+        )
+        for code, output, expected in cases:
+            with self.subTest(code=code, output=output):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                fake = subprocess.CompletedProcess([], code, output, '')
+                with patch.object(wfnode.subprocess, 'run', return_value=fake), \
+                        contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    self.assertEqual(wfnode.lint(self.node), expected)
+                self.assertEqual(stderr.getvalue(), '')
+                if expected == 'unknown':
+                    self.assertEqual(stdout.getvalue(), output or '（wf-lint 沒有輸出）\n')
+                elif expected == 'broken':
+                    self.assertIn('BROKEN detail' if 'BROKEN' in output else output, stdout.getvalue())
+                else:
+                    self.assertEqual(stdout.getvalue(), '')
+
     def test_lint_warnings_init_and_check(self):
         (self.node / 'AGENTS.md').write_text('# demo\n')
         for key in ('oversize', 'biglist', 'biglist_links', 'querycmd'):
