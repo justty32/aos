@@ -23,20 +23,11 @@ import aos7_up_cli as cli
 class UpDispatch(unittest.TestCase):
     """〔up〕凍結的 exec 分派與只讀事件顯示。"""
     def test_brain_forwarding(self):
-        class ExecCalled(Exception):
-            pass
+        import aos7_up_brain
         for sub in ('ask', 'brain'):
-            with patch.object(Path, 'is_file', return_value=True), \
-                 patch.object(cli.os, 'execv', side_effect=ExecCalled) as execute:
-                with self.assertRaises(ExecCalled):
-                    up.main([sub, '/tmp/bob', '--wait', '7', '一句話'])
-                execute.assert_called_once_with(sys.executable,
-                    [sys.executable, '-B', str(cases.UP.parent / 'aos7_up_brain.py'),
-                     sub, '/tmp/bob', '--wait', '7', '一句話'])
-            err = io.StringIO()
-            with patch.object(Path, 'is_file', return_value=False), contextlib.redirect_stderr(err):
-                self.assertEqual(up.main([sub]), 1)
-            self.assertIn('ask／brain 還沒裝好', err.getvalue())
+            with patch.object(aos7_up_brain, 'main', return_value=5) as forward:
+                self.assertEqual(up.main([sub, '/tmp/bob', '一句話', '--wait', '7']), 5)
+            forward.assert_called_once_with([sub, '/tmp/bob', '一句話', '--wait', '7'])
 
     def test_failed_start_reaps_daemon(self):
         child = subprocess.Popen(['python3', '-B', '-c', 'import time; time.sleep(60)'],
