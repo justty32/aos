@@ -52,7 +52,7 @@ python3 proto7-2/tests/run_all.py modules/subd/tests   # 只跑某個資料夾�
 
 ## 防再胖：新功能預設進模組
 
-核心（`lib/aos7_*.py`）有行數預算：**總行 ≤ 2800、實際程式（去空行、註解、docstring）≤ 2200**，之後收到 2000；`tests/core/test_budget.py` 超過就失敗（不算 `lib/aos_*.py` 搬來的 inst 執行器、模組包、測試）。新功能**預設進模組**（`modules/<包>/`：任務、argv 包裝程式、工具三種接法，加上核心給的 `x` 透傳、事實欄位與 log.on、stop-guard.json 三個小出口）。要進核心，三件事都要答得出來：
+核心（`lib/aos7_*.py`）有行數預算：**總行 ≤ 2800、實際程式（去空行、註解、docstring）≤ 2200**，之後收到 2000；`tests/core/test_budget.py` 量（不算 `lib/aos_*.py` 搬來的 inst 執行器、模組包、測試）。**10-09 起只印不擋**（loop7 D7：開發階段不設上限，整理階段再收、`ENFORCE` 改回 True）：loop7 後總行 2952、實際程式 2305，超過時逐檔表印到 stderr、測試照過。新功能**預設進模組**（`modules/<包>/`：任務、argv 包裝程式、工具三種接法，加上核心給的 `x` 透傳、事實欄位與 log.on、stop-guard.json 三個小出口）。要進核心，三件事都要答得出來：
 
 1. 引得到哪條 S- 條（[核心 spec](../proto7/spec/core.md)）或核心選項；
 2. 為什麼不能用任務、包裝程式、工具三個接面做到；
