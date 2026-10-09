@@ -153,8 +153,12 @@ class UpTests(DaemonCase):
         for word in ('回合', '帳', '預留', 'ack', '退出碼', 'daemon', 'tick', 'call', '體檢', 'you-2'):
             self.assertNotIn(word, '\n'.join(lines))
         self.assertIn('bob 還沒收到信', lines[1])
+        # 心跳行只說活著／停了，不印像秒數的次數；假 AI 不印字數
+        self.assertEqual(lines[0], '心跳：活著')
+        self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 0 次')
         self.invoke('stop', self.node)
-        self.assertIn('停了', self.invoke('status', self.node).splitlines()[0])
+        self.assertEqual(self.invoke('status', self.node).splitlines()[0],
+                         f'心跳：停了；要再起：aos7-up {self.node}')
         self.assertIn('心跳已經停了', self.invoke('stop', self.node))
 
     def test_invalid_and_missing(self):
