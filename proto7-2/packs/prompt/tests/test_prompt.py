@@ -35,8 +35,8 @@ class PromptTests(unittest.TestCase):
     def rendered(self, content, limit=0):
         return render(self.node, self.prompt(content), max_chars=limit)
     def test_examples(self):
-        """三個範例成功且最後一則恰為檔名降序的最新五封。"""
-        for name in ('entry', 'session', 'inbox'):
+        """四個範例成功、first 預設門檻就折疊週報，且 inbox 最後一則恰為檔名降序的最新五封。"""
+        for name in ('first', 'entry', 'session', 'inbox'):
             with self.subTest(name=name):
                 p = self.cli('render', self.node, 'prompts/' + name + '.json')
                 self.assertEqual(p.returncode, 0, p.stderr)
@@ -52,6 +52,9 @@ class PromptTests(unittest.TestCase):
                     self.assertIsInstance(msg['role'], str)
                     self.assertTrue(msg['role'])
                     self.assertIsInstance(msg['content'], str)
+        _, receipt = render(self.node, 'prompts/first.json')
+        self.assertEqual(len(receipt['folded']), 1)
+        self.assertLess(receipt['tokens_est'] * 10, receipt['tokens_est_full'])
         llm = render(self.node, 'prompts/inbox.json')[0]['litellm']
         files = sorted((self.node / 'wf/inbox').glob('*.md'), reverse=True)[:5]
         self.assertEqual([f.stem.rsplit('-', 1)[1] for f in files],

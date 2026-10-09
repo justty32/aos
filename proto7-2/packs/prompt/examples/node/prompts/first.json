@@ -1,0 +1,7 @@
+{
+ "note": "第一次跑：讀一份長文件，請 AI 摘要",
+ "messages": [
+  {"role": "system", "content": "你是幫忙讀文件的助理，回答要短。"},
+  {"role": "user", "content": ["請用三句話摘要下面這份週報：", {"$opt": "file", "$val": "docs/weekly.md"}]}
+ ]
+}
