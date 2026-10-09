@@ -1,0 +1,159 @@
+{
+ "contract": "wf-table/1",
+ "source": "blueprint-llm2.md",
+ "extracted": "2026-10-09",
+ "columns": [
+  "id",
+  "cut",
+  "title",
+  "files",
+  "how",
+  "test"
+ ],
+ "rows": [
+  {
+   "id": "I-1",
+   "cut": "2",
+   "title": "request.json（固定請求）",
+   "files": "新 packs/llmcall/aos7_llmcall.py、tests/test_llmcall.py",
+   "how": "call 第一步寫 <node>/llmcall/<budget>/<C>/request.json＝{v:1,call_id,logical,budget,holder,req_sha,reserve,meter:'fake.total_tokens/1',endpoint:'fake',request:<原請求>}；req_sha＝sha256(canonical JSON of request)。已存在且 req_sha／reserve／holder／budget 任一不同＝conflict 退出 1，不寫任何檔。call_id 只准 [A-Za-z0-9_-]{1,64}，否則退出 2。 整次 call 持 locked(request.json, timeout=0)（拿不到＝退出 3），鎖內再拿 K 鎖。",
+   "test": "同 C 同請求重跑不增檔；異請求 conflict 且 llmcall/、budget/ 位元組不變；壞 call_id 退出 2 且未送 reserve。 兩預算同 C 互不覆寫；同 C 併發兩程序，一個退出 3、sends 仍 ≤1。"
+  },
+  {
+   "id": "I-2",
+   "cut": "2",
+   "title": "reserve 內容",
+   "files": "新 packs/llmcall/aos7_llmcall.py、tests/test_llmcall.py",
+   "how": "K=make_key(budget,holder,call_id)；content={resource:'llm.tokens',gateway:'llm.fake',amount:R,payload_sha:req_sha}；走 aos7_budget.ask。denied／conflict／bad 退出 1；unknown／not_yet／等不到退出 3。grant 範例 resource llm.tokens、gateway llm.fake、holder author。",
+   "test": "帳上 K 恰一筆 reserve；重跑重播不重扣。"
+  },
+  {
+   "id": "I-3",
+   "cut": "2",
+   "title": "入口 intent／done",
+   "files": "新 packs/llmcall/aos7_llmcall.py、tests/test_llmcall.py",
+   "how": "持 gateway/<kid>.json.lock：done＝照用（digest 不同且非 cancelled＝conflict）；intent 且無 raw＝unknown 退出 3（不送）；無紀錄＝bg.read_ledger＋bg.judge 首次准入（denied 寫 done used 0；unknown／not_yet 不寫檔），核帳上 reserved 且 digest 同，寫 intent（欄位見藍圖 §4）後呼叫傳輸一次。",
+   "test": "intent 後任何重跑 sends 不增；denied 終局 used 0 可結算。"
+  },
+  {
+   "id": "I-4",
+   "cut": "2",
+   "title": "先存 raw 再算",
+   "files": "新 packs/llmcall/aos7_llmcall.py、tests/test_llmcall.py",
+   "how": "傳輸回 {status:'ok'|'error'|'reject',billed:bool,body:str,usage:obj|null}；原子寫 raw.json＝{v,call_id,req_sha,source:'transport'|'adopted',reply:<原樣>,at}，之後才算入口 done：outcome ok→answered、error→failed、reject 且 billed:false→rejected（used 0）；U＝usage.total_tokens 非負整數否則未知；U 已知：used=min(U,R)、overrun=max(0,U−R)、billing final 或 overrun；U 未知且非 rejected：無 used 欄、billing pending。raw_sha＝sha(raw)。 入口已 done 就沿用不重寫；由 raw 重建 done 時 at 取 raw.at（確定性）。",
+   "test": "raw 已存時重跑不送；入口 done 已存則位元組不變，未存則由 raw 重建，raw_sha＝sha(已存 raw)。"
+  },
+  {
+   "id": "I-5",
+   "cut": "2",
+   "title": "settle 與回條",
+   "files": "新 packs/llmcall/aos7_llmcall.py、tests/test_llmcall.py",
+   "how": "billing pending：不送 settle，回條 settle null、used null，退出 4。否則 bg.ask settle：settled 才寫 receipt.json（原子）並印 stdout 最後一行；其餘退出 3。退出碼：answered+final 0；終局不成功+final 1；pending／overrun 4。有 receipt 重跑＝原樣重印、同退出碼。",
+   "test": "回條欄位齊全（藍圖 §4 例子為準）；已有 receipt 時重跑位元組相同。"
+  },
+  {
+   "id": "I-6",
+   "cut": "2",
+   "title": "adopt 遲到回覆",
+   "files": "新 packs/llmcall/aos7_llmcall.py、tests/test_llmcall.py",
+   "how": "aos7-llmcall adopt A --holder H --call C --raw f：f＝{call_id,req_sha,reply:{status,billed,body,usage}}；持 call 鎖與 K 鎖，只在入口 intent 且無 raw.json、且 f 的 call_id／req_sha 等於 request.json 時收，寫 raw.json（source adopted、reply 原樣）；其他狀態或不符退出 1 不寫。之後同 C 重跑 call 走「有 raw」路徑。",
+   "test": "adopt 後 call 退出 0、sends 不增、帳一筆 settle。 別 call 的回覆、req_sha 不符各退出 1、無 raw.json。"
+  },
+  {
+   "id": "I-7",
+   "cut": "2",
+   "title": "假傳輸與注入",
+   "files": "新 packs/llmcall/aos7_llmcall_fake.py",
+   "how": "send(node,call_id,request,deadline)：讀 request.fake={mode,usage,text,delay}；先以 edit_json 在 <node>/llmcall/fake-remote.json 記 sends[call_id]+=1（模擬遠端受理），再回覆。mode：ok（usage {total_tokens:usage,prompt_tokens,completion_tokens}）、no_usage（usage null）、over（usage 由測試給 >R）、fail（status error、billed true、有 usage）、reject（billed false）、late（記受理後睡 delay>deadline，llmcall 逾時當 unknown）。llmcall 恢復路徑永不讀 fake-remote.json。",
+   "test": "測試只用 fake-remote.json 數 sends。"
+  },
+  {
+   "id": "I-8",
+   "cut": "2",
+   "title": "崩潰點",
+   "files": "新 packs/llmcall/aos7_llmcall.py、tests/test_llmcall.py",
+   "how": "<node>/llmcall/.crash 寫點名，到點刪檔並 SIGKILL 自己的程序群組（仿 budget §7）：after-request、after-reserve、after-intent、after-send（遠端已記、raw 未存）、after-raw、after-done、after-settle、after-receipt。",
+   "test": "每點 ×3 見 F-01／F-02。"
+  },
+  {
+   "id": "B2-1",
+   "cut": "2",
+   "title": "部分結算",
+   "files": "packs/budget/aos7_budget.py、新 tests/test_budget_partial.py",
+   "how": "handle settle：used 為整數且 0≤used≤amount 才結算（transition 原式即支援），否則 unknown 不動帳。加模組常數 PARTIAL_SETTLE=True。",
+   "test": "初始 1000、R 300、U 120 → available 880、inflight 0、used 120；U=R、U=0 各一案；used>amount、負數、非整數＝unknown 帳的 available／inflight／used／ops／log／seq 不變（clock_hw 照 spec §2 可推進）。"
+  },
+  {
+   "id": "B2-2",
+   "cut": "2",
+   "title": "billing pending",
+   "files": "packs/budget/aos7_budget.py、新 tests/test_budget_partial.py",
+   "how": "改 gateway_terminal：先認 stage done；有 billing 且不在 {final,overrun}＝回非終局（why 帶 billing pending，不要求 used），R 留著；之後才驗 used 為整數。沒有 billing 欄＝final（舊 fakeapi 紀錄相容）。",
+   "test": "pending 入口 → settle unknown、inflight 仍 R；重送照舊 unknown。"
+  },
+  {
+   "id": "B2-3",
+   "cut": "2",
+   "title": "overrun 記帳",
+   "files": "packs/budget/aos7_budget.py、新 tests/test_budget_partial.py",
+   "how": "入口 overrun 欄（缺＝0，非負整數否則 unknown）寫進 rec.settle.overrun 與該筆 log 的 overrun；帳頂 overrun 累計（舊帳缺＝0，第一次結算時補）；status 摘要多印 overrun。不自動停准入。",
+   "test": "入口 used=R、overrun=50 → used_total 加 R、overrun 50；守恆式不變。"
+  },
+  {
+   "id": "B2-4",
+   "cut": "2",
+   "title": "證據綁 key／digest",
+   "files": "packs/budget/aos7_budget.py、新 tests/test_budget_partial.py",
+   "how": "入口紀錄的 key 須等於帳上 rec.key、digest 須等於 rec.digest，否則 unknown；唯一豁免：outcome cancelled、used 0、digest null（cancel 無紀錄時寫的）。",
+   "test": "竄改 digest、換 key、digest null 但 outcome 非 cancelled 的入口紀錄 settle 皆 unknown；cancel 無紀錄案仍結算 0。"
+  },
+  {
+   "id": "B2-5",
+   "cut": "2",
+   "title": "cancel 守門",
+   "files": "packs/budget/aos7_budget_gate.py（只動 cancel）、tests/test_budget_partial.py",
+   "how": "cancel 讀到 intent 且其 gateway 欄存在且不等於 GATEWAY（fakeapi）＝回 {outcome:unknown,why:'不可查回入口，intent 不能取消'}、不寫檔（CLI 退出 3）。無紀錄、done 照舊。",
+   "test": "llm.fake intent 下 cancel 退出 3、入口紀錄位元組不變、帳餘額／ops 不變。"
+  },
+  {
+   "id": "B2-6",
+   "cut": "2",
+   "title": "文件與相容",
+   "files": "packs/budget/spec.md §3／§4／§9、README.md",
+   "how": "spec settle 段改寫 0≤used≤amount、billing、overrun、digest；§9 加 overrun 不停准入、pending 無自動補帳兩條界線。README 界線同步。",
+   "test": "舊 test_budget_ledger／test_budget_step 不改仍綠；搶最後額度：兩 K 各 R=available，恰一 reserved、一 denied，log 每筆守恆。"
+  },
+  {
+   "id": "F-01",
+   "cut": "2",
+   "title": "呼叫提交",
+   "files": "packs/llmcall/tests/test_llmcall.py",
+   "how": "崩潰點 after-request、after-reserve、after-intent、after-send 各 SIGKILL ×3，同 C 重跑。",
+   "test": "after-request／after-reserve：重跑退出 0、sends==1、帳 1 reserve 1 settle。after-intent：重跑退出 3、sends==0、inflight==R、入口 intent。after-send：重跑退出 3、sends==1、inflight==R；全程 call_id 不變、無新 K。"
+  },
+  {
+   "id": "F-02",
+   "cut": "2",
+   "title": "回覆恢復",
+   "files": "packs/llmcall/tests/test_llmcall.py",
+   "how": "after-raw、after-done、after-settle、after-receipt 各 SIGKILL ×3，同 C 重跑。",
+   "test": "退出 0、sends==1、帳恰 1 settle、available==initial−U；回條 outcome／used／usage／overrun／billing／settle.used 與無崩潰基準相同，raw_sha＝sha(已存 raw)；已有 receipt 的重跑位元組相同。"
+  },
+  {
+   "id": "F-03",
+   "cut": "2",
+   "title": "token（需 B2）",
+   "files": "packs/llmcall/tests/test_llmcall.py",
+   "how": "mode ok U<R、U=R；no_usage；over；兩 call 搶最後額度。",
+   "test": "U<R 退出 0、退 R−U；no_usage 退出 4、billing pending、used null、inflight R；over 退出 4、billing overrun、used R、overrun U−R、帳頂 overrun 累計；搶額度一個 1（denied）一個 0；每筆 log 守恆；bound 皆 soft。"
+  },
+  {
+   "id": "F-04",
+   "cut": "2",
+   "title": "取消與遲到",
+   "files": "packs/llmcall/tests/test_llmcall.py",
+   "how": "mode late：傳輸逾時；另在傳輸睡眠中 SIGKILL 整組 ×3；之後 aos7-budget cancel 同 K；再 adopt 遲到回覆。",
+   "test": "逾時與被殺後重跑皆退出 3、sends==1、不退款（inflight R）；budget cancel 退出 3、入口仍 intent；adopt 後 call 退出 0、sends 仍 1、帳 1 settle。"
+  }
+ ]
+}
