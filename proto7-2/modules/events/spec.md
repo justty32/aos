@@ -16,7 +16,7 @@ UTF-8 JSONL、ensure_ascii=False，完整換行才算一筆。鍵序為 v=1、st
 
 state 是 `{v:1,node,config,channels,sample,daemon_log,status_last}`。DEFAULTS：keep_segments=4、segment_bytes=1048576、max_record_bytes=65536。新建只合併三個設定，值須真正正整數（bool 不算），keep_segments ≤ 4（MAX_KEEP，守 12 檔），否則 ValueError。已有 state 以原設定為準；傳入 config 任一鍵不同，append 加 config_ignored=true；node 不符回 unknown。
 
-channels 的 obs／must 各有 next_seq=1、active_first=1、active_bytes=0（存 state 時活躍段 bytes）、segments=[]（封存首 seq 遞增）、dropped_upto=0、torn=0；must 加 acked_upto=0、refused=0。sample={} 存來源末 round；daemon_log=null 或 `{offset,dev,ino}`；status_last=null 或字串（最近保存的 daemon.status 事件鍵 `status_key(ev)`＝sort_keys JSON 的 sha256）。通道可另帶 torn_cut（非負整數，只在截半行的兩次 state 寫入之間存在）。V2 新增的 status_last、torn_cut 舊 state 缺欄位視為空；存在但型別不合同壞 state。
+channels 的 obs／must 各有 next_seq=1、active_first=1、active_bytes=0（存 state 時活躍段 bytes）、segments=[]（封存首 seq 遞增）、dropped_upto=0、torn=0；must 加 acked_upto=0、refused=0。sample={} 存來源末 round；daemon_log=null 或 `{offset,dev,ino}`；status_last=null 或字串（最近保存的 daemon.status 事件鍵 `status_key(ev)`＝sort_keys JSON 的 sha256）。通道可另帶 torn_cut（只能是非負整數、null 也算壞，只在截半行的兩次 state 寫入之間存在）。V2 新增的 status_last、torn_cut 舊 state 缺欄位視為空；存在但型別不合同壞 state。
 
 state 存在但 fact 非 OK、非 dict 或缺必要欄位／型別不合，append 回 unknown、ack 丟 Unknown、recover 回 None，絕不覆蓋。不存在才建，並恢復既有段。state 遺失只能推回留存的 seq、來源進度、淘汰下界，不能重建舊 ack 與計數。
 
