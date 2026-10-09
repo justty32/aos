@@ -10,7 +10,7 @@
 | 接法 | A keep 任務 `aos7-compact watch`；C 工具 `now`、`forget` |
 | 預設 | 關，不裝就不存在；裝後預設本機摘要 |
 | 依賴 | Python 標準庫、核心 `aos7_fs`、工具包任務端函式；選配 llmcall／events |
-| 程式 | `aos7-compact`（薄入口）、`aos7_compact.py`、examples/make_demo.py（造示範資料） |
+| 程式 | `aos7-compact`（薄入口）、`aos7_compact.py`、examples/make_demo.py（本機示範）、examples/real_ai.sh／real_journal.jsonl（真 AI 準備） |
 | 測試 | `python3 proto7-2/tests/run_all.py modules/compact/tests -v` |
 
 ## 第一次跑
@@ -29,7 +29,7 @@ python3 "$P/modules/compact/aos7-compact" now "$N" --force
 ```text
 已造好 <node>/notes/journal.jsonl：200 則舊紀錄＋20 則 open
 notes/journal.jsonl：220 則，open 20，會摘掉 200 則（原因：大小超過 16384）
-notes/journal.jsonl：220 則 → 21 則（摘掉 200、open 20 全留），102580 → 3964 bytes，原文在 compact/archive/<job>.jsonl
+notes/journal.jsonl：220 則 → 21 則（摘掉 200、open 20 全留），102580 → 4013 bytes，原文在 compact/archive/<job>.jsonl
 ```
 
 ## 接著試
@@ -56,33 +56,18 @@ python3 "$P/modules/compact/aos7-compact" forget "$N" --file notes/journal.jsonl
 1. **記憶檔**：`compact.json` 的 files 指定要整理的檔，沒有的略過。
 2. **則與 open 項**：jsonl 每個 LF 分隔的非空行算一則，md 每個第 0 欄 `- `／`* ` 項加縮排續行算一則；未完成項留下。
 3. **最近 N 則**：最後 keep_recent 則原樣保留，再從較舊的非 open 項取摘要。
-4. **觸發**：大小超限、現役段由有項目變空、或人手 force 才整理，少於兩則可摘就不動。
+4. **觸發**：檔太大，或上一段工作清空了、而新開的一段跟上一段不像（相似度低於門檻）；人手 force 也可整理，少於兩則可摘就不動。
 5. **摘要者**：llm 為 null 就用本機摘要，給物件才經 llmcall 問模型。
 
 node 沒有 `compact.json` 時用這份預設；壞 JSON 或不合設定退出 2：
 
 ```json
-{"files":["wf/SESSION-LOG.md","notes/journal.jsonl"],"max_bytes":16384,"keep_recent":10,"on_stage_change":true,"summary_max_chars":1200,"llm":null}
+{"files":["wf/SESSION-LOG.md","notes/journal.jsonl"],"max_bytes":16384,"keep_recent":10,"on_stage_change":true,"stage_similarity":0.2,"summary_max_chars":1200,"llm":null}
 ```
 
-jsonl 的 open 是物件 `open: true`／`status: "open"`，或字串值含 `- [ ]`；壞 JSON 行算一則但不摘要，原樣保留。md 的 open 是第一行以 `- [ ]`／`* [ ]` 開頭，標題、段落、空行、表格是骨架，留在原位。舊摘要也算普通一則，可再摘要。現役段取 files 第一個 md 的第一個 `## ` 到下一個 `## `；前次 ≥1 則、這次 0 則時，全部記憶檔都檢查，不看大小。
+jsonl 的 open 是物件 `open: true`／`status: "open"`，或字串值含 `- [ ]`；壞 JSON 行算一則但不摘要，原樣保留。md 的 open 是第一行以 `- [ ]`／`* [ ]` 開頭，標題、段落、空行、表格是骨架，留在原位。舊摘要也算普通一則，可再摘要。現役段取 files 第一個 md 的第一個 `## ` 到下一個 `## `；清空只記結段；下次出現新則，以去空白、小寫的字元 bigram Jaccard 比較新舊原文，低於 stage_similarity（0～1，預設 0.2）才讓全部記憶檔檢查，不看大小。state 保存 stage_last／stage_ended／stage_due；dry-run 只預覽、不寫 state。
 
-## 契約卡
-
-- **職責**：單 node 持鎖選舊段、摘要／忘掉、封存原文、替換檔案與留下 log。
-- **前置條件**：node 可讀寫；檔案是 md／jsonl；watch 有任務環境；使用 llmcall 時帳任務已運行、grant 允許 holder 與 gateway。
-- **保證**：先 archive 再換檔；now 不摘 open 與最近 N 則；pending 原子保存，SIGKILL 後沿同 call 接續，已有 summary 不再叫摘要。只保證持 write.lock 的追加者：最後讀檔到 rename 持共同短鎖，摘要／llmcall 期間不持有；追加尾巴接回，其他改寫則放棄 pending、下次重規劃；未完成的段落觸發留到全部檔成功。events/ 已存在才發布 obs，沿同 event_id 重送。
-- **明確不管**：不拿 write.lock 的追加在換檔瞬間可能丟，明確不管；斷電保證、摘要的語意正確性、封存保留期限；refs/、prompt 組裝、events store 都不由本包管理。
-
-合作的追加者先建 compact/，拿同一把鎖再追加（NODE 是 node 絕對路徑）：
-
-```sh
-mkdir -p "$NODE/compact"
-export NODE
-flock "$NODE/compact/write.lock" sh -c 'echo "{\"open\":true,\"text\":\"新待辦\"}" >> "$NODE/notes/journal.jsonl"'
-```
-
-資料都留在 `<node>/compact/`：lock、write.lock、state.json、pending.json、archive/、log.jsonl；req／result 在收尾清掉。本機摘要把每則壓成一行取前 60 字，以「；」串接後截短；llmcall 要求繁體中文、保留決定、數字、檔名與未完成事項。這裡整理的是記憶檔，事件只通知 `compact.done`／`compact.forget`。
+`ref://compact/<id>` ＝ `<node>/compact/archive/<id>.<原副檔名>`，存放原樣原文（逐字可接回）。jsonl 摘要帶 ref，md 行尾帶原文 ref；forget 不留則，log／事件帶 `<job>-forget` 的 ref。舊段在檔中連續（中間沒有標題等骨架、open、最近則）時，把摘要則換回 archive 即逐字還原；不連續時內容一字不缺，但位置不還原。SESSION-LOG 的現役段是進行中的工作，不摘要。細部契約與共同寫鎖見 [spec.md](spec.md)。
 
 ## 接 llmcall：第二次跑（fake 帳）
 
@@ -115,4 +100,15 @@ PY
 )
 ```
 
-預期成功，30 則變 11 則，帳 inflight 回 0；fake 回本機摘要文字。10-09 實跑 used 245、available 9755、inflight 0。`litellm` 請求格式已預留，但缺少 packs/llmcall/aos7_llmcall_litellm.py 時，選 `litellm` 回 3、保留 pending，不拿假回覆當真模型摘要。每次沿 pending 的 call_id 重跑，非 0 不拿半張回條替換原文；未成功的 pending 留待下次 now／watch 接續。
+預期成功，30 則變 11 則，帳 inflight 回 0；fake 回本機摘要文字。10-09 實跑 used 245、available 9755、inflight 0。每次沿 pending 的 call_id 重跑，非 0 不拿半張回條替換原文；未成功的 pending 留待下次 now／watch 接續。
+
+
+## 接真 AI（第三次跑）
+
+先開自己的 LiteLLM，設定 `AOS7_LITELLM_URL`（例如 `http://localhost:4000/v1`）；需要驗證才設 `AOS7_LITELLM_KEY`。從 repo 根執行：
+
+```sh
+bash proto7-2/modules/compact/examples/real_ai.sh ./compact-evidence
+```
+
+腳本建暫存 node 與大額帳，整理 60 則開發紀錄、保留 5 則 open；預設 model `chatgpt-gpt-6-sol-high`，不設 max_tokens，一次只花 1 次呼叫，不進測試。輸出資料夾保留 journal 前後、log、llmcall receipt／raw 與 stdout，最後印路徑；暫存 node 也保留。自動驗證只用 fake／本機摘要／本地假 HTTP，沒有實打真 AI。

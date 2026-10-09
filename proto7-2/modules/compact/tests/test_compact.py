@@ -9,6 +9,8 @@ import signal
 import subprocess
 import sys
 import unittest
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest import mock
 
 TOP = Path(__file__).resolve().parents[3]
@@ -82,7 +84,7 @@ class TestCompact(CoreCase):
             rows.append(line)
         if suffix == 'md':
             rows.insert(0, '# 記憶\n\n段落骨架\n| 表 | 格 |\n')
-            rows.insert(101, '\n## 中段\n原地骨架\n\n')
+            rows.insert(101, '\n### 中段\n原地骨架\n\n')
         path = node / name
         path.write_text(''.join(rows), encoding='utf-8')
         return path, old, opened, recent
@@ -99,9 +101,14 @@ class TestCompact(CoreCase):
         if path.suffix == '.jsonl':
             summaries = [json.loads(line) for line in text.splitlines() if line.strip()]
             self.assertEqual(sum(r.get('compact') == 'summary' for r in summaries), 1)
+            ref = next(r['ref'] for r in summaries if r.get('compact') == 'summary')
         else:
+            ref = re.search(r'（原文 (ref://compact/[^）]+)）', text).group(1)
+        archive = path.parent / 'compact/archive' / (ref.removeprefix('ref://compact/') + path.suffix)
+        self.assertEqual(archive.read_bytes(), ''.join(old).encode())
+        if path.suffix == '.md':
             self.assertEqual(text.count('（摘要 '), 1)
-            for skeleton in ['# 記憶\n\n段落骨架\n| 表 | 格 |\n', '\n## 中段\n原地骨架\n\n']:
+            for skeleton in ['# 記憶\n\n段落骨架\n| 表 | 格 |\n', '\n### 中段\n原地骨架\n\n']:
                 self.assertIn(skeleton, text)
 
     def test_open_archive_recent_jsonl_and_md(self):
@@ -110,8 +117,18 @@ class TestCompact(CoreCase):
                 node = self.node / suffix
                 node.mkdir()
                 path, old, opened, recent = self.fixture(node, suffix)
+                original = path.read_bytes()
                 self.now('--force', node=node)
                 self.assert_compacted(path, old, opened, recent)
+                if suffix == 'jsonl':
+                    marker = path.read_bytes().splitlines(keepends=True)[0]
+                    summary = json.loads(marker)
+                    archive = node / 'compact/archive' / (summary['ref'].split('/')[-1] + path.suffix)
+                    expanded = path.read_bytes().replace(marker, archive.read_bytes(), 1)
+                    for protected in opened + recent:
+                        original = original.replace(protected.encode(), b'', 1)
+                        expanded = expanded.replace(protected.encode(), b'', 1)
+                    self.assertEqual(expanded, original)
 
     def module(self):
         spec = importlib.util.spec_from_file_location('compact_review_test', CLI.with_name('aos7_compact.py'))
@@ -221,15 +238,54 @@ with (work / 'write.lock').open('a') as lock:
         self.config(files=[md.name, path.name])
         self.now()
         md.write_text('## active\n')
+        self.now()
+        md.write_text('## active\n- 設計宇宙航行導航介面\n- 觀測天體運行軌跡\n')
         self.now(rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-summary'})
         rewritten = path.read_text().replace('"n": 0', '"n": 99')
         path.write_text(rewritten)
         self.now()
-        self.assertEqual(path.read_text(), rewritten)
-        self.assertTrue(read_json(str(self.node / 'compact/state.json'))['stage_due'])
-        self.now()
-        self.assertNotEqual(path.read_text(), rewritten)
+        # 舊 pending 因改寫被放棄；同一次接著以 stage_due 重評這個檔並整理成功，due 才清。
+        log = [json.loads(x) for x in (self.node / 'compact/log.jsonl').read_text().splitlines()]
+        self.assertEqual([e.get('status') for e in log], ['abandoned', None])
+        self.assertEqual(log[1]['trigger'], 'stage_change')
+        self.assertIn('"n": 99', (self.node / 'compact/archive' / (log[1]['job'] + '.jsonl')).read_text())
         self.assertFalse(read_json(str(self.node / 'compact/state.json'))['stage_due'])
+
+    def test_resumed_pending_does_not_consume_new_stage_trigger(self):
+        """〔compact〕astra 二審 2：接完舊 force pending 後，同檔仍照新段落觸發重評。"""
+        md = self.node / 'stage.md'
+        md.write_text('## active\n- one\n- two\n- three\n')
+        path = self.node / 'journal.jsonl'
+        path.write_text(''.join(json.dumps({'n': n}) + '\n' for n in range(15)))
+        self.config(files=[md.name, path.name])
+        self.now()
+        md.write_text('## active\n')
+        self.now()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-summary'})
+        with path.open('a') as f:
+            f.write(''.join(json.dumps({'m': n}) + '\n' for n in range(3)))
+        md.write_text('## active\n- 設計宇宙航行導航介面\n- 觀測天體運行軌跡\n')
+        self.now()
+        log = [json.loads(x) for x in (self.node / 'compact/log.jsonl').read_text().splitlines()]
+        journal_jobs = [e for e in log if e['file'] == path.name]
+        self.assertEqual([e['trigger'] for e in journal_jobs], ['force', 'stage_change'])
+        self.assertFalse(read_json(str(self.node / 'compact/state.json'))['stage_due'])
+
+    def test_active_section_never_summarized(self):
+        """〔compact〕astra 二審 1：現役段是進行中的工作，force 也不摘；段落證據保持原文。"""
+        md = self.node / 'SESSION-LOG.md'
+        head = ''.join('- 舊 %d\n' % i for i in range(5))
+        live = ''.join('- 現役 %d\n' % i for i in range(4))
+        md.write_text(head + '## 最新進度\n' + live + '## 別段\n- 尾\n')
+        self.config(files=[md.name], keep_recent=0)
+        self.now()
+        before = read_json(str(self.node / 'compact/state.json'))['stage_last']
+        self.now('--force')
+        text = md.read_text()
+        self.assertIn('## 最新進度\n' + live + '## 別段\n', text)
+        self.assertEqual(text.count('（摘要 '), 1)
+        self.now()
+        self.assertEqual(read_json(str(self.node / 'compact/state.json'))['stage_last'], before)
 
     def test_long_node_event_and_pub_failure_reason(self):
         node = self.node / ('n' * 96)
@@ -309,7 +365,7 @@ with (work / 'write.lock').open('a') as lock:
         self.assertEqual(reply.returncode, 0, reply.stdout + reply.stderr)
         self.assertIn('已造好', reply.stdout)
         self.assertIn('220 則，open 20，會摘掉 200 則', reply.stdout)
-        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），102580 → 3964 bytes', reply.stdout)
+        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），102580 → 4013 bytes', reply.stdout)
         self.assertLessEqual(len(readme.encode()), 8192)
         concepts = readme.split('## 五個概念')[1].split('node 沒有')[0]
         self.assertEqual(len(re.findall(r'^\d\. ', concepts, re.M)), 5)
@@ -328,18 +384,78 @@ with (work / 'write.lock').open('a') as lock:
         self.now()
         self.assertNotEqual(path.read_bytes(), before[path.name])
 
-    def test_stage_change_compacts_small_journal(self):
+    def stage_fixture(self):
         md = self.node / 'SESSION-LOG.md'
-        md.write_text('# 進度\n## 現役\n- 一\n- 二\n- 三\n## 下段\n- 不算現役\n')
+        text = '- 修復資料庫索引查詢效能\n- 分析交易鎖競爭延遲\n- 新增資料庫備份驗證\n'
+        md.write_text('# 進度\n## 現役\n' + text + '## 下段\n- 不算現役\n')
         journal = self.node / 'journal.jsonl'
         journal.write_text(''.join(json.dumps({'n': n}) + '\n' for n in range(15)))
         self.config(files=[md.name, journal.name])
-        old = journal.read_bytes()
         self.now()
-        self.assertEqual(journal.read_bytes(), old)
         md.write_text('# 進度\n## 現役\n## 下段\n- 不算現役\n')
+        before = journal.read_bytes()
         self.now()
-        self.assertNotEqual(journal.read_bytes(), old)
+        self.assertEqual(journal.read_bytes(), before)
+        state = read_json(str(self.node / 'compact/state.json'))
+        self.assertEqual(state['stage_last'], text)
+        self.assertTrue(state['stage_ended'])
+        self.assertFalse(state['stage_due'])
+        return md, journal, text, before
+
+    def test_stage_change_compacts_small_journal(self):
+        md, journal, _, before = self.stage_fixture()
+        (self.node / 'events').mkdir()
+        md.write_text('## 現役\n- 繪製星系觀測動畫\n- 選擇畫布配色與字體\n')
+        dry_tree = tree(self.node)
+        preview = self.now('--dry-run')
+        self.assertEqual(tree(self.node), dry_tree)
+        self.assertIn('上一段已清空，新段相似度', preview.stdout)
+        plans = json.loads(preview.stdout.splitlines()[-1])['files']
+        evidence = plans[1]['evidence']
+        self.assertTrue(evidence['ended'])
+        self.assertLess(evidence['similarity'], .2)
+        result = self.now()
+        self.assertIn('上一段已清空，新段相似度', result.stdout)
+        self.assertNotEqual(journal.read_bytes(), before)
+        log = json.loads((self.node / 'compact/log.jsonl').read_text())
+        self.assertEqual(log['evidence'], evidence)
+        event = self.cli('read', '--events', self.node / 'events', binary=EVENTS)
+        payload = json.loads(event.stdout.splitlines()[-1])['records'][0]['payload']
+        self.assertEqual(payload['evidence'], evidence)
+        self.assertEqual(payload['ref'], log['ref'])
+        state = read_json(str(self.node / 'compact/state.json'))
+        self.assertFalse(state['stage_ended'])
+        self.assertFalse(state['stage_due'])
+
+    def test_stage_similar_restart_does_not_trigger(self):
+        md, journal, text, before = self.stage_fixture()
+        md.write_text('## 現役\n' + text.replace('效能', '效能改善'))
+        self.assertNotIn('會摘掉', self.now('--dry-run').stdout)
+        self.now()
+        self.assertEqual(journal.read_bytes(), before)
+        self.assertFalse((self.node / 'compact/log.jsonl').exists())
+        self.assertFalse(read_json(str(self.node / 'compact/state.json'))['stage_ended'])
+
+    def test_stage_bigram_and_threshold_validation(self):
+        module = self.module()
+        self.assertEqual(module.stage_jaccard(' A B C ', 'abc'), 1)
+        self.assertAlmostEqual(module.stage_jaccard('abcd', 'abxy'), 1 / 5)
+        self.assertEqual(module.stage_jaccard('aaaa', 'bbbb'), 0)
+        with mock.patch.object(module, 'stage_text', return_value='abxy'):
+            state = dict(stage_last='abcd', stage_ended=True)
+            for threshold, due in [(0.0, False), (.2, False), (.21, True), (1.0, True)]:
+                observed = module.observe_stage(self.node, dict(on_stage_change=True, stage_similarity=threshold), state)
+                self.assertEqual(observed['stage_due'], due)
+                self.assertEqual(observed['stage_last'], 'abxy')
+                self.assertFalse(observed['stage_ended'])
+            observed = module.observe_stage(self.node, dict(on_stage_change=False, stage_similarity=1.0), state)
+            self.assertFalse(observed['stage_due'])
+        for bad in [-.1, 1.1, True, '0.2', float('nan'), float('inf')]:
+            self.config(stage_similarity=bad)
+            self.now(rc=2)
+        for threshold in [0.0, .2, 1.0]:
+            self.config(stage_similarity=threshold)
+            self.now('--dry-run')
 
     def test_crash_each_point_three_times(self):
         reference = self.node / 'reference'
@@ -387,7 +503,12 @@ with (work / 'write.lock').open('a') as lock:
         path.write_text(''.join(lines))
         self.cli('forget', self.node, '--file', path.name, '--from', 1, '--to', 5, '--dry-run')
         self.assertEqual(path.read_text(), ''.join(lines))
+        (self.node / 'events').mkdir()
         self.cli('forget', self.node, '--file', path.name, '--from', 1, '--to', 5)
+        log = json.loads((self.node / 'compact/log.jsonl').read_text())
+        self.assertEqual(log['ref'], 'ref://compact/' + log['job'] + '-forget')
+        reply = self.cli('read', '--events', self.node / 'events', binary=EVENTS)
+        self.assertEqual(json.loads(reply.stdout.splitlines()[-1])['records'][0]['payload']['ref'], log['ref'])
         self.assertEqual(path.read_text(), ''.join(lines[5:]))
         self.assertEqual(next((self.node / 'compact/archive').glob('*')).read_text(), ''.join(lines[:5]))
         before = tree(self.node)
@@ -458,11 +579,11 @@ with (work / 'write.lock').open('a') as lock:
         self.assertEqual(len(records), 1)
         self.assertIn(pending['job'], records[0]['event_id'])
 
-    def ledger(self):
+    def ledger(self, gateway='fake'):
         write_json(str(self.node / '.aos/round.json'), {'round': 5, 'open': False})
         bd = self.node / 'budget/llm'
         write_json(str(bd / 'grant.json'), {'v': 1, 'grant': 'g1', 'budget': 'llm', 'holder': 'compact',
-                   'resource': 'llm.tokens', 'gateway': 'llm.fake', 'amount': 1000000,
+                   'resource': 'llm.tokens', 'gateway': 'llm.' + gateway, 'amount': 1000000,
                    'clock': 'completed_tock', 'from': 0, 'until': 1000, 'delegate': False})
         self.cli('init', 'budget/llm', binary=BUDGET)
         p = subprocess.Popen([sys.executable, str(BUDGET), 'ledger', 'budget/llm'], cwd=self.node,
@@ -470,7 +591,7 @@ with (work / 'write.lock').open('a') as lock:
         _proc.track(self, p, group=True)
         self.wait_for(lambda: (bd / 'ledger.lock').exists())
         self.config(llm={'budget': 'budget/llm', 'holder': 'compact', 'reserve': 100000,
-                         'gateway': 'fake', 'model': 'chatgpt-gpt-6-sol-high', 'deadline': 10, 'patience': 2})
+                         'gateway': gateway, 'model': 'chatgpt-gpt-6-sol-high', 'deadline': 10, 'patience': 2})
 
     def test_llm_summary_resume_sends_once(self):
         path, old, opened, recent = self.fixture()
@@ -498,14 +619,72 @@ with (work / 'write.lock').open('a') as lock:
         self.assertEqual(path.read_bytes(), before)
         self.assertTrue((self.node / 'compact/pending.json').exists())
 
-    def test_litellm_unsupported_is_pending_failure(self):
-        path, *_ = self.fixture()
-        before = path.read_bytes()
-        self.config(llm={'budget': 'budget/llm', 'holder': 'compact', 'reserve': 4000,
-                         'gateway': 'litellm', 'model': 'chatgpt-gpt-6-sol-high', 'deadline': 10, 'patience': 2})
-        self.now('--force', rc=3)
-        self.assertEqual(path.read_bytes(), before)
-        self.assertTrue((self.node / 'compact/pending.json').exists())
+    def test_ref_expansion_restores_contiguous_original_bytes(self):
+        for suffix in ['jsonl', 'md']:
+            with self.subTest(suffix=suffix):
+                path = self.node / ('journal.' + suffix)
+                rows = ([json.dumps({'text': f'開發紀錄 {i}'}, ensure_ascii=False) + '\r\n' for i in range(4)]
+                        if suffix == 'jsonl' else [f'- 開發紀錄 {i}\r\n  續行 {i}\r\n' for i in range(4)])
+                tail = ('{"open":true,"text":"等待驗證"}\r\n{"recent":1}\r\n' if suffix == 'jsonl'
+                        else '- [ ] 等待驗證\r\n- 最近一則\r\n')
+                head = '' if suffix == 'jsonl' else '# 日誌\r\n\r\n'
+                original = (head + ''.join(rows) + tail).encode()
+                path.write_bytes(original)
+                self.config(files=[path.name], keep_recent=1)
+                self.now('--force')
+                content = path.read_bytes()
+                marker = next(line for line in content.splitlines(keepends=True) if b'ref://compact/' in line)
+                ref_id = re.search(rb'ref://compact/(c[0-9]+-[0-9a-f]+)', marker).group(1).decode()
+                archive = self.node / 'compact/archive' / (ref_id + path.suffix)
+                self.assertEqual(archive.read_bytes(), ''.join(rows).encode())
+                self.assertEqual(content.replace(marker, archive.read_bytes(), 1), original)
+
+    def test_litellm_local_http_content_and_truncation(self):
+        path = self.node / 'journal.jsonl'
+        old = ''.join(json.dumps({'text': f'修改檔案 code-{i}.py，通過 {i + 2} 項測試'}, ensure_ascii=False) + '\n'
+                      for i in range(4))
+        path.write_text(old + '{"open":true,"text":"等待審查"}\n')
+        self.ledger('litellm')
+        self.config(keep_recent=0, summary_max_chars=100,
+                    llm={'gateway': 'litellm', 'reserve': 100000, 'deadline': 10})
+        bodies = []
+        content = ['保留決定、數字 42 與 code.py，待確認延遲。', '摘要過長' * 50]
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                bodies.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+                body = json.dumps({'choices': [{'message': {'content': content[len(bodies) - 1]}}],
+                                   'usage': {'total_tokens': 100}}).encode()
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            def log_message(self, *args):
+                pass
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        worker = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': .02})
+        worker.start()
+        try:
+            env = {'AOS7_LITELLM_URL': f'http://127.0.0.1:{server.server_port}/v1', 'AOS7_LITELLM_KEY': ''}
+            self.now('--force', env=env)
+            summary = json.loads(path.read_text().splitlines()[0])
+            self.assertEqual(summary['text'], content[0])
+            body = bodies[0]
+            self.assertEqual(body['model'], 'chatgpt-gpt-6-sol-high')
+            self.assertNotIn('max_tokens', body)
+            self.assertEqual(body['messages'][1], {'role': 'user', 'content': '以下是共 4 則舊紀錄：\n' + old})
+            for phrase in ['agent', '一段繁體中文', '≤100 字', '決定', '數字', '檔名', '未解問題', 'open', '只輸出摘要本文']:
+                self.assertIn(phrase, body['messages'][0]['content'])
+            self.assertNotIn('truncated', json.loads((self.node / 'compact/log.jsonl').read_text()))
+            path.write_text(old + '{"open":true,"text":"新的審查"}\n')
+            self.now('--force', env=env)
+            self.assertEqual(json.loads(path.read_text().splitlines()[0])['text'], content[1][:100])
+            logs = [json.loads(line) for line in (self.node / 'compact/log.jsonl').read_text().splitlines()]
+            self.assertTrue(logs[-1]['truncated'])
+            self.assertEqual(len(bodies), 2)
+        finally:
+            server.shutdown()
+            server.server_close()
+            worker.join(2)
 
     def test_jsonl_bad_line_and_open_string_recent_untouched(self):
         path = self.node / 'journal.jsonl'
