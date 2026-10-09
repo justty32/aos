@@ -1,6 +1,6 @@
 # compact 記憶整理包：把舊紀錄換成摘要，未完成項留下
 
-compact 看工作資料夾裡的記憶檔，太長時先把舊原文封存，再換成一則摘要。最近 5 則和未完成的項目原樣留下。摘要按每件事（每封信）列出做了什麼，人和 AI 都讀得懂。
+compact 看工作資料夾裡的記憶檔，太長時先把舊原文封存，再換成一則摘要。最近 5 則和未完成的項目原樣留下。摘要按每件事列出做了什麼，人和 AI 都讀得懂。
 
 ← [modules](../README.md)｜進階（全部指令、設定、AI 摘要、常駐、契約卡）→ [ADVANCED.md](ADVANCED.md)
 
@@ -28,18 +28,18 @@ python3 "$P/modules/compact/aos7-compact" now "$N"
 ```text
 已造好 <node>/notes/journal.jsonl：200 則舊紀錄＋20 則 open
 notes/journal.jsonl：220 則，open 20，會摘掉 200 則（原因：大小超過 2048）
-notes/journal.jsonl：220 則 → 21 則（摘掉 200、open 20 全留），138526 → 3233 bytes，原文在 compact/archive/<job>.jsonl（原因：大小超過 2048）
+notes/journal.jsonl：220 則 → 21 則（摘掉 200、open 20 全留），129712 → 2752 bytes，原文在 compact/archive/<job>.jsonl（原因：大小超過 2048）
 ```
 
 dry-run 和實跑印的是同一個原因：示範檔超過 2048 bytes，所以 `now` 自己就會整理（門檻可改，見 ADVANCED.md）。再跑一次 `now` 會說「不需要整理」。舊原文一字不缺在 `$N/compact/archive/`。
 
-21 則＝20 則 open 原樣留著＋1 則新摘要（最近 5 則剛好都是 open）。示範檔仿四封信各做 50 回合；`head -c 400 "$N/notes/journal.jsonl"` 看那則摘要，會像：
+21 則＝20 則 open 原樣留著＋1 則新摘要（最近 5 則剛好都是 open）。`head -c 300 "$N/notes/journal.jsonl"` 看那則摘要，開頭像這樣：
 
 ```text
-{"compact": "summary", "job": "<job>", "count": 200, "text": "本機摘要 200 則（09:01～12:20）｜信 you-…5d1c0a7f3e21 50 則（第 1～50 回合）：週報第 1 段寫好；下一步寫第 2 段 → …略 41 項… → 週報第 43 段寫好；…｜信 you-…8b42e6c19d07 50 則…", "ref": "ref://compact/<job>"}
+{"compact": "summary", "job": "<job>", "count": 200, "text": "本機摘要 200 則（09:01～12:20）｜週報 50 則：寫好第 1 段；下一步寫第 2 段 → …略 41 項… → 寫好第 43 段；…
 ```
 
-意思是：哪封信、做了幾回合、每回合做到哪（太長就省略中段）；`ref` 指回 archive 裡那份原文。`<job>` 是這次整理的編號，也就是 archive 的檔名。
+示範檔是四件事（週報、新手FAQ、會議紀錄、數字表）各 50 則；摘要每件事一段，列出每則做到哪，太長就省略中段。`<job>` 是這次整理的編號，也就是 archive 的檔名。
 
 ## 想做更多
 

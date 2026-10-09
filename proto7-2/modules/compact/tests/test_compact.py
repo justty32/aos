@@ -387,7 +387,7 @@ with (work / 'write.lock').open('a') as lock:
         self.assertEqual(reply.returncode, 0, reply.stdout + reply.stderr)
         self.assertIn('已造好', reply.stdout)
         self.assertIn('220 則，open 20，會摘掉 200 則', reply.stdout)
-        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），138526 → 3233 bytes', reply.stdout)
+        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），129712 → 2752 bytes', reply.stdout)
         # 第一次跑不用 --force：計畫行與結果行印同一個原因（新手回改）。
         self.assertNotIn('--force', shell)
         self.assertEqual(reply.stdout.count('（原因：大小超過 2048）'), 2)
@@ -428,7 +428,7 @@ with (work / 'write.lock').open('a') as lock:
         text = journal.read_text().splitlines()
         self.assertEqual(text[1:], [r.rstrip('\n') for r in rows[-5:]])
         summary = json.loads(text[0])['text']
-        self.assertIn('信 you-…4f20668237ce 15 則（第 1～15 回合）：已寫第 1 節；下一回合寫第 2 節', summary)
+        self.assertIn('you-…4f20668237ce 15 則（第 1～15 回合）：已寫第 1 節；下一回合寫第 2 節', summary)
         self.assertIn('已寫第 15 節', summary)
         self.assertNotIn('{"by"', summary)
         self.assertNotIn('成果原文', summary)
@@ -437,7 +437,7 @@ with (work / 'write.lock').open('a') as lock:
         self.assertIn('- [ ] 等人補人數\n', after)
         self.assertTrue(after.endswith(''.join(lines[-5:])))
         marker = next(s for s in after.splitlines() if s.startswith('- （摘要 '))
-        self.assertIn('信 you-…4f20668237ce 15 則（第 1～15 回合）：已寫第 1 節', marker)
+        self.assertIn('you-…4f20668237ce 15 則（第 1～15 回合）：已寫第 1 節', marker)
         self.assertLess(len(after.encode()), 0.6 * len(''.join(lines).encode()))
         # 再長一輪後重摘：舊摘要併進「更早」，不丟。
         with state.open('a') as f:
@@ -476,7 +476,7 @@ with (work / 'write.lock').open('a') as lock:
                 for k in range(1, 13)]
         text = mod.local_summary(rows, 200)
         self.assertLessEqual(len(text), 200)
-        self.assertIn('信 team-1-…4f2066823701', text)
+        self.assertIn('team-1-…4f2066823701', text)
         self.assertIn('第 12 封做完', text)
         self.assertRegex(text, r'…另 \d+ 段略…')
         self.assertEqual(mod.local_summary(rows, 1), '本')
