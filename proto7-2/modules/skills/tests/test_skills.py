@@ -127,6 +127,8 @@ class TestSkills(CoreCase):
         self.assertFalse((self.node / "budget").exists())
         logs = [json.loads(s) for s in (self.skills / ".pick/log.jsonl").read_text().splitlines()]
         self.assertEqual([(g["via"], g["picked"], g["rc"]) for g in logs], [("local", "coding", 0), ("local", None, 1)])
+        self.assertTrue(logs[0]["call"].startswith("local-"))
+        self.assertNotEqual(logs[0]["call"], logs[1]["call"])
         rc, out, err = self.runcli("pick", self.node, "python tests", "--budget", "budget/llm")
         self.assertEqual((rc, out), (2, ""))
         self.assertIn("grant", err)

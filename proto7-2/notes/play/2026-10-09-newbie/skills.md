@@ -42,9 +42,27 @@
 
 ## 回改
 
-狀態：未改（交頂層轉該隊）。改完由 U 隊用同樣兩位新手再試一次。
+狀態：已改（回改隊，分支 `loop9/skills`）；重試見下段。
 
-- [ ] 第一次跑先給一個不經帳的路徑（例如只跑 index＋本機挑選），把帳、grant、ledger 留到「接 AI 挑」那段
-- [ ] 若帳非得出現，在第一次跑旁一句白話說帳是什麼、grant 的 100000 是 token
-- [ ] 第一次跑開頭明寫「在 repo 根執行」（luna 走錯）
-- [ ] 新手要懂的詞壓到 ≤5（現在數到 10）
+- [x] 第一次跑先給一個不經帳的路徑（例如只跑 index＋本機挑選），把帳、grant、ledger 留到「接 AI 挑」那段
+- [x] 若帳非得出現，在第一次跑旁一句白話說帳是什麼、grant 的 100000 是 token
+- [x] 第一次跑開頭明寫「在 repo 根執行」（luna 走錯）
+- [x] 新手要懂的詞壓到 ≤5（現在數到 10）
+
+## 重試
+
+### 第 1 輪（2026-10-09，回改隊）
+
+改了什麼：`pick` 在 node 沒有 `budget/llm/` 時改走**本機關鍵字挑選**（不問 AI、不經 llmcall、不碰帳），stderr 一行提示；有帳或給 `--budget` 才走原本的 AI＋記帳路。第一次跑縮成五行（`index`＋`pick`，`git rev-parse` 自找 repo 根，repo 子目錄裡跑也對）；README 只留三個詞（skill、目錄、pick），帳／必用表／掛載全移到「進階」；`--help` 補白話與退出碼。原始回報：[raw/skills-haiku-r1.md](raw/skills-haiku-r1.md)、[raw/skills-luna-r1.md](raw/skills-luna-r1.md)。
+
+| 項目 | 值 | 門檻 | 過 |
+|---|---|---|---|
+| 第一次跑（人類估計分鐘） | 3（開頭＋第一次跑約 700 字 ≈ 1.8 分＋5 行指令 1.25 分＋卡點 0） | ≤10 | 是 |
+| 對外指令 | 3（index／pick／mount；第一次跑只用 2 個，不再需要 aos7-budget） | ≤3 | 是 |
+| 新概念（兩位取多） | 4（skill、目錄、pick、node） | ≤5 | 是 |
+| 分數（兩位取差） | 7.4（Haiku 7.4／luna 8.6） | ≥7 | 是 |
+| **總判** | **過** | | |
+
+剩下的意見（不擋過關）：Haiku 仍答「ELI5 之後複雜」，理由是**進階段**的帳、帳任務、llmcall 詞多；luna 答「否」。Haiku 另提 `git rev-parse` 在 repo 外會失敗（README 已有一句替代寫法）。
+
+審查（gpt-6-astra，read-only）3 條 P2 已修：bank.py 明給 `--budget budget/llm`（題庫一律走 AI，不落本機）；本機挑選的 log `call` 改成 `local-<題目＋目錄雜湊>`（重試統計不再把不同題當同一次）；README「換真 AI」改成另開新 node（開過的帳不能改 gateway）。

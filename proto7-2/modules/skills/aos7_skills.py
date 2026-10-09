@@ -148,7 +148,9 @@ def pick(node, args):
     try:
         result = build(node)
         if args.budget is None and not (node / DEFAULT_BUDGET).exists():
-            # 沒開帳就走本機挑選：不問 AI、不記帳；第一次跑走這條。
+            # 沒開帳就走本機挑選：不問 AI、不記帳；第一次跑走這條。call 仍按題目＋目錄取，供重試統計辨認。
+            log["call"] = "local-" + hashlib.sha256(
+                (args.question + "\n" + "\n".join(result["lines"])).encode()).hexdigest()[:16]
             log.update(via="local", answer=keyword_guess(args.question, result["skills"]), rc=1)
             error("本機挑選（關鍵字比對，沒問 AI、不記帳）；要讓 AI 挑，見 README「進階：讓 AI 挑」")
             show(node, result, log["answer"], log)

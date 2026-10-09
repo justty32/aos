@@ -61,7 +61,8 @@ def main(argv=None):
     try:
         for item in bank["questions"]:
             t = time.monotonic()
-            p = subprocess.run([sys.executable, SKILLS, "pick", node, item["q"], "--model", a.model],
+            p = subprocess.run([sys.executable, SKILLS, "pick", node, item["q"], "--model", a.model,
+                                "--budget", "budget/llm"],
                                capture_output=True, text=True, timeout=900)
             got = p.stdout.strip()
             got = os.path.basename(os.path.dirname(got)) if got.endswith("SKILL.md") else got or None
