@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""替 aos node 建立工作流並記錄續行點。"""
+import argparse
+import os
+from pathlib import Path
+import sys
+
+sys.dont_write_bytecode = True
+import aos7_wfnode as wfnode
+
+
+def main():
+    parser = argparse.ArgumentParser(description='建立 node 工作流、檢查活狀態、記下一行進度')
+    commands = parser.add_subparsers(dest='command', required=True, help='要做的事')
+    setup = commands.add_parser('init', help='導入工作流；重跑只補缺檔')
+    setup.add_argument('node', help='node 資料夾路徑')
+    setup.add_argument('--flavor', help='選用的模板包，以逗號分隔')
+    inspect = commands.add_parser('check', help='檢查連結、假 open 與殘留佔位')
+    inspect.add_argument('node', help='已導入的 node 資料夾')
+    record = commands.add_parser('state', help='追加一行進度，更新最新續行點')
+    record.add_argument('node', help='已導入的 node 資料夾')
+    record.add_argument('line', help='一行非空的進度文字')
+    args = parser.parse_args()
+    node = Path(os.path.abspath(args.node))
+    try:
+        if args.command == 'init':
+            return wfnode.init(node, args.flavor)
+        if args.command == 'check':
+            return wfnode.check(node)
+        return wfnode.state(node, args.line)
+    except (OSError, ValueError) as error:
+        print(f'無法完成：{error}', file=sys.stderr)
+        return 2 if isinstance(error, ValueError) else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
