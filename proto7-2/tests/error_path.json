@@ -34,16 +34,57 @@
    "team": "ER-llmcall-budget",
    "name": "aos7-budget",
    "entry": "packs/budget/bin/aos7-budget",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-llmcall-budget）"
+   "unsure": {
+    "argv": [
+     "settle",
+     "budget/demo",
+     "--holder",
+     "api",
+     "--request",
+     "r1",
+     "--patience",
+     "0"
+    ],
+    "files": {
+     ".aos/round.json": "{\"round\": 5, \"open\": false}",
+     "budget/demo/": ""
+    },
+    "lock": [
+     "budget/demo/ledger.lock"
+    ]
+   }
   },
   {
    "pack": "llmcall",
    "team": "ER-llmcall-budget",
    "name": "aos7-llmcall",
    "entry": "packs/llmcall/bin/aos7-llmcall",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-llmcall-budget）"
+   "unsure": {
+    "argv": [
+     "call",
+     "budget/llm",
+     "--holder",
+     "author",
+     "--call",
+     "c1",
+     "--request",
+     "req.json",
+     "--reserve",
+     "1",
+     "--patience",
+     "0"
+    ],
+    "files": {
+     ".aos/round.json": "{\"round\": 5, \"open\": false}",
+     "req.json": {
+      "fake": {}
+     },
+     "budget/llm/": ""
+    },
+    "lock": [
+     "budget/llm/ledger.lock"
+    ]
+   }
   },
   {
    "pack": "prompt",
