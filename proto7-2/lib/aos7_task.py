@@ -197,6 +197,10 @@ def kill_run(fslot, node, slot, v):
             pid = pj or {}
             break
         time.sleep(0.02)
+    if pid is None and _same_run(os.path.join(fslot, "exit.json"), v.run)[0] != OK:
+        runner = (v.get("birth") or {}).get("runner")
+        if runner is None or aos7_proc.same_process(runner.get("pid"), runner.get("starttime")) != aos7_proc.GONE:
+            return False, "unknown：runner 仍在啟動、還沒寫 pid.json，請求留著下次再試"
     pid = pid or {}
     clean, msg = aos7_proc.kill_identity(node, slot, v.run, pid.get("pgid"),
                                          (pid.get("pid"), pid.get("starttime")) if is_int(pid.get("pid")) else None)
@@ -210,7 +214,7 @@ def run_ctl(ctx, slot):
     """執行槽的 ctl.json（若有）：寫 ctl-done.json（蓋掉舊的），再刪請求。回紀錄 dict 或 None。
     請求只有 `{"op": "kill", "run": 整數, "by", "why"}`：op 不是 kill、run 缺或不是整數＝輸入不合，回條 ok:false、刪請求；
     run 不是槽現在的（已換人）＝ok:false。帶 run 讓重播天然冪等：處理到一半被殺或請求刪不掉，再執行也只對同一個 run。
-    ctl.json 讀不到、槽的狀態不知道＝請求留著，下一次再看。restart／reload 在控制包（modules/control）。"""
+    ctl.json 讀不到、槽的狀態不知道、runner 還在啟動交接＝請求留著，下一次再看。restart／reload 在控制包（modules/control）。"""
     fslot = slot_dir(ctx.fnode, slot)
     path = os.path.join(fslot, "ctl.json")
     st, ctl = fact(path)
@@ -241,6 +245,8 @@ def run_ctl(ctx, slot):
     write_json(os.path.join(fslot, "ctl-done.json"), ctl)
     test_point("ctl-after-done")
     rec = {"slot": slot, "run": rid, "op": ctl.get("op"), "ok": ok}
+    if msg.startswith("unknown：runner 仍在啟動"):
+        return rec
     try:
         os.remove(path)
     except FileNotFoundError:
@@ -303,10 +309,9 @@ def start_in_slot(ctx, item, slot, run):
     bpath = os.path.join(fslot, "birth.json")
     write_json(bpath, birth)
     test_point("after-birth")
-    env = env_with_bin()
-    # 動作控制與測試鉤子不傳給任務；AOS7_TEST_HOOKS／RUNNER_CRASH 留給 aos7-run（它交給任務前拿掉全部 AOS7_TEST_*）
-    for k in ("AOS7_GEN", "AOS7_EARLY", "AOS7_INCOMPLETE", "AOS7_TEST_CRASH", "AOS7_TEST_HANG", "AOS7_TEST_FAULT",
-              "AOS7_TEST_FAULT_HITS"):
+    env = {k: v for k, v in env_with_bin().items() if not k.startswith("AOS7_") or k.startswith("AOS7_TEST_")}
+    # 固定測試控制不傳給 runner，其餘測試鉤子由 runner 交給任務前移除。
+    for k in ("AOS7_TEST_CRASH", "AOS7_TEST_HANG", "AOS7_TEST_FAULT", "AOS7_TEST_FAULT_HITS"):
         env.pop(k, None)
     env.update({"AOS7_ROOT": root, "AOS7_NODE": node, "AOS7_NODE_ID": ctx.node_id, "AOS7_TASK": tdir,
                 "AOS7_TID": slot, "AOS7_RUN": str(run)})

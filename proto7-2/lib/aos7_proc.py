@@ -73,12 +73,12 @@ def all_pids():
 
 def stat_of(pid):
     """(state, ppid, pgid)；程序確定不在回 None；讀不到或解析不了丟 Unknown。"""
-    text = _read_proc(pid, "stat")
+    text = _read_proc(pid, "stat", binary=True)
     if text is None:
         return None
     try:
-        rest = text.rsplit(")", 1)[1].split()
-        return rest[0], int(rest[1]), int(rest[2])
+        rest = text.rsplit(b")", 1)[1].split()
+        return rest[0].decode("ascii"), int(rest[1]), int(rest[2])
     except (IndexError, ValueError):
         raise Unknown("/proc/%d/stat 內容解析不了" % pid, kind="proc") from None
 
@@ -110,7 +110,7 @@ def groups_with_descendants(pgid):
 def is_runner(pid):
     """是 aos7-run 嗎：它等任務死了自己寫 exit.json，不先殺它。"""
     data = _read_proc(pid, "cmdline", binary=True)
-    return bool(data) and any(a.endswith(b"aos7-run") for a in data.split(b"\0"))
+    return bool(data) and any(a.endswith(b"aos7-run") for a in data.split(b"\0")[:2])
 
 
 def environ_of(pid):
@@ -165,6 +165,16 @@ def group_is_task(pgid, node, tid, run):
     return not members or any(want <= (environ_of(p) or set()) for p in members)
 
 
+def group_is_node(pgid, nodes):
+    """記著的 pgid 沒有活成員、或有成員屬於這些 node 才能打（防群組號重用）。"""
+    if not is_int(pgid) or pgid <= 1:
+        return False
+    nodes = [nodes] if isinstance(nodes, str) else nodes
+    want = {b"AOS7_NODE=" + n.encode() for n in nodes}
+    members = [p for p, st in _table().items() if st[2] == pgid and st[0] != "Z"]
+    return not members or any(want & (environ_of(p) or set()) for p in members)
+
+
 def _signal(groups, sig):
     for g in groups:
         try:
@@ -207,6 +217,16 @@ def groups_of(pids):
     return {st[2] for st in (stat_of(p) for p in pids) if st}
 
 
+def _kill_remaining(nodes, tid=None, run=None):
+    """清場後再身分掃描，最多補收三輪；最後掃空才算收斂。"""
+    for _ in range(3):
+        pids = env_procs(nodes, tid, run, skip=me_and_ancestors())
+        if not pids:
+            return True
+        kill_groups(groups_of(pids))
+    return not env_procs(nodes, tid, run, skip=me_and_ancestors())
+
+
 def kill_identity(node, tid, run, pgid=None, task=None):
     """照 Q1 (a) 的範圍收一次 run，回 (乾不乾淨, 說明)：pid.json 的群組（先確認還是這個任務的）、群組成員的後代所在的群組、
     環境變數 NODE＋TID＋RUN 相符的程序（含被 init 收養的）。/proc 掃描不完整回 (False, "unknown…")。
@@ -220,6 +240,7 @@ def kill_identity(node, tid, run, pgid=None, task=None):
             else:
                 note = "；pid.json 的 pgid %r 不是這個任務的群組，沒動它" % (pgid,)
         clean = kill_groups(groups) if groups else True
+        clean = _kill_remaining(node, tid, run) and clean
     except Unknown as e:
         return False, "unknown：/proc 讀不完整，不知道有沒有收乾淨（%s）" % e
     if task and task[0]:
@@ -227,7 +248,7 @@ def kill_identity(node, tid, run, pgid=None, task=None):
         if ts != GONE:
             return False, "unknown：pid.json 記的任務程序 %d %s，不能說收乾淨%s" % (
                 task[0], "還活著" if ts == ALIVE else "認不出死了沒", note)
-    if not groups:
+    if not groups and clean:
         return True, "no process" + note
     return clean, ("killed %d group(s)" % len(groups) if clean else "still alive after SIGKILL") + note
 
@@ -236,11 +257,15 @@ def kill_node(nodes, known_pgids=()):
     """收一個或幾個 node 上的任務（node 消失、取消登記、stop 帶 kill 的最後補掃）：記著的 pgid，加上環境 AOS7_NODE 是它們、
     有 AOS7_TID 的程序（aos7-run 不殺，任務死了它自己寫 exit.json）。回 (群組數, 乾不乾淨)。
     掃描不完整時照樣打記著的群組，回 clean=False。"""
-    groups = {g for g in known_pgids if is_int(g) and g > 1}
+    known = {g for g in known_pgids if is_int(g) and g > 1}
+    groups = known.copy()
     try:
+        groups = {g for g in known if group_is_node(g, nodes)}
         groups |= groups_of(env_procs(nodes, skip=me_and_ancestors()))
-        return len(groups), (kill_groups(groups) if groups else True)
+        clean = kill_groups(groups) if groups else True
+        return len(groups), _kill_remaining(nodes) and clean
     except Unknown:
+        groups |= known   # 掃描不能重驗時，仍照 spec 2.6 打記著的群組
         try:
             if groups:
                 kill_groups(groups)

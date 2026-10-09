@@ -11,7 +11,7 @@ import sys
 
 from aos7_fs import BIN, OK, fact, now, proc_starttime, test_point
 
-RUN = [None]   # 這次的 run（讀到 birth.json 後填上；寫 pid.json／exit.json 用）
+RUN = [None]   # 這次的 run（先用環境，讀到 birth.json 後以它為準）
 
 
 def build_argv(birth, node):
@@ -58,6 +58,8 @@ def main(argv=None):
             dfd = os.open(tdir, os.O_RDONLY | os.O_DIRECTORY)
         except OSError:
             return 1   # 任務資料夾已經不在：不建回來
+    run = os.environ.get("AOS7_RUN", "")
+    RUN[0] = int(run) if re.fullmatch(r"[0-9]+", run) else None
     st, birth = fact("birth.json", dir_fd=dfd)
     if st != OK or not isinstance(birth, dict) or not birth:
         return fail(dfd, "讀不到 birth.json")
@@ -73,6 +75,7 @@ def main(argv=None):
         if not cmd:
             raise FileNotFoundError("argv 是空的")
         # 任務自己一個程序群組：收任務的群組時 runner 留下來 wait、記退出結果
+        test_point("runner-before-popen")
         proc = subprocess.Popen(cmd, cwd=None if held else node, env=env, stdin=subprocess.DEVNULL, stdout=out,
                                 stderr=subprocess.STDOUT, process_group=0)
     except (OSError, TypeError, ValueError) as e:   # 包含 argv 有非字串、NUL
