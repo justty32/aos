@@ -1,0 +1,6 @@
+{"v": 1,
+ "sources": [{"node": "bob", "slot": "brain", "kind": "brain"}],
+ "targets": [{"node": "bob", "slot": "brain"}],
+ "rules": [{"name": "supervise-brain", "no_progress_rounds": 6, "kill_after_rounds": 12, "notify": "you"}],
+ "events": false,
+ "mail": {"root": "..", "from": "kernel"}}
