@@ -216,6 +216,24 @@ TEST_CASE("llm extracts response content without going online") {
                     std::runtime_error);
 }
 
+TEST_CASE("llm takes the last non-empty choice when a proxy splits the reply") {
+    // LiteLLM 把 sol 的開場白（commentary）與答案拆成兩個 choice。
+    CHECK(aos::llm::parse_response_text(
+              R"({"choices":[{"message":{"content":"我先確認工作區"}},)"
+              R"({"message":{"content":"{\"ok\":1}"}}]})") == R"({"ok":1})");
+    CHECK(aos::llm::parse_response_text(
+              R"({"choices":[{"message":{"content":""}},)"
+              R"({"message":{"content":"答"}}]})") == "答");
+    CHECK(aos::llm::parse_response_text(
+              R"({"choices":[{"message":{"content":"答"}},)"
+              R"({"message":{"content":""}}]})") == "答");
+    CHECK(aos::llm::parse_response_text(
+              R"({"choices":[{"message":{"content":""}}]})").empty());
+    CHECK_THROWS_AS(
+        aos::llm::parse_response_text(R"({"choices":[{"message":{}}]})"),
+        std::runtime_error);
+}
+
 TEST_CASE("llm extracts the served model when present") {
     CHECK(aos::llm::parse_response_model(
               R"({"model":"qwen/qwen3.5-9b","choices":[]})") ==

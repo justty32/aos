@@ -16,7 +16,9 @@ sys.path.insert(0, str(HERE / 'checkers'))
 from aos_three_gates import request, brief, strict
 
 LLMCALL = HERE.parent / 'llmcall/bin/aos7-llmcall'
-SYSTEM = '你是 aos 的學徒工程師，只輸出一個 JSON 物件，不加說明、不加 Markdown 圍欄。'
+# sol 經 LiteLLM 會先講開場白；這句重放 4/4 有效（notes/play/2026-10-09-real-ai/litellm-truncation.md）
+NO_TOOLS = '你沒有任何工具、不能看檔或跑指令，所需資料都在使用者訊息裡。不要說明計畫、不要開場白，第一個字元就是 {}。'
+SYSTEM = '你是 aos 的學徒工程師，只輸出一個 JSON 物件，不加說明、不加 Markdown 圍欄。' + NO_TOOLS.format('{')
 RULES = '''files 的鍵都在 toolcard.root 下，只新增一個原型尚不存在的 root，不修改既有檔案；必有 toolcard.required 的所有檔。
 入口 ≤12 行、會被設成可執行，使用 #!/usr/bin/env python3。測試只收 <root>/tests/test_*.py，檔名不得與原型裡既有測試檔撞名，建議 test_<name>_*.py。
 每檔 ≤8192 bytes、全份候選 JSON ≤65536 bytes、檔數 ≤ min(工具卡 limits.max_files, 需求 scope.max_files)。
@@ -158,7 +160,7 @@ def learn(a, req, out):
         return dict(out, why='invalid', error='--into 必須是既有檔案')
     original = into.read_bytes()
     existing = original.decode('utf-8')
-    raw = prompt(a.llm, '你是 aos 的學徒工程師，只回踩坑條目，不加說明或 Markdown 圍欄。', {
+    raw = prompt(a.llm, '你是 aos 的學徒工程師，只回踩坑條目，不加說明或 Markdown 圍欄。' + NO_TOOLS.format('-'), {
         'brief': brief(req), 'history': [history_summary(p) for p in a.history], 'existing': existing,
         'rules': '只回 1～8 行，每行以 - 開頭並在 - 後加空格，每行 ≤200 字，寫「下次寫 aos 工具／模組前要先知道的事」，不重複既有條目。'})
     text, info, why = delivery(a, req, a.llm, raw, 'ln-')
@@ -284,7 +286,7 @@ def propose_checks(a, req, out, candidate, snapshot, data):
     if check.get('ok') and why is None:
         reviewer = a.reviewer or 'rules'
         if a.review_llm:
-            raw = prompt(a.review_llm, '你是 aos 的審查人，只回一個 JSON 物件 {"verdict":"accept"|"reject","reasons":[字串…]}，不加圍欄。', {
+            raw = prompt(a.review_llm, '你是 aos 的審查人，只回一個 JSON 物件 {"verdict":"accept"|"reject","reasons":[字串…]}，不加圍欄。' + NO_TOOLS.format('{'), {
                 'brief': brief(req), 'candidate': data.decode('utf-8'),
                 'gates': {k: check['gates'][k] for k in ('1', '2')},
                 'rules': '①② 已由檢查器在沙箱跑過；你只讀碼。審查所有檔案是否符合需求、工具卡與安全界線，挑出會讓答案錯、讓唯讀被破壞、或越界的問題'})

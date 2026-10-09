@@ -35,6 +35,25 @@ def clean(obj):
     return json.loads(json.dumps(obj, ensure_ascii=False).encode("utf-16", "surrogatepass").decode("utf-16", "replace"))
 
 
+def content_of(choice):
+    message = choice.get("message") if isinstance(choice, dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    return content if isinstance(content, str) else None
+
+
+def pick(choices):
+    """取最後一個 content 非空的 choice；LiteLLM 把 sol 的開場白／答案拆成多個 choice。
+
+    全空時退回 choices[0]（原行為）。回 (choice 或 None, 被略過的非空 choice [{index, chars, head}])。
+    """
+    last = next((i for i in range(len(choices) - 1, -1, -1) if content_of(choices[i])), None)
+    if last is None:
+        return (choices[0] if choices and isinstance(choices[0], dict) else None), []
+    skipped = [{"index": i, "chars": len(content_of(c)), "head": content_of(c)[:80]}
+               for i, c in enumerate(choices[:last]) if content_of(c)]
+    return choices[last], skipped
+
+
 def base_url():
     return os.environ.get("AOS7_LITELLM_URL", ENDPOINT)
 
@@ -61,7 +80,8 @@ def send(node, call_id, request, deadline):
             raise
         return {"status": "reject", "billed": False, "body": "連線被拒，未送達", "usage": None,
                 "model": None, "finish_reason": None, "http": None,
-                "elapsed": round(time.monotonic() - start, 3), "response": None}
+                "elapsed": round(time.monotonic() - start, 3), "response": None,
+                "choices_n": 0, "skipped": []}
     text = data.decode("utf-8", errors="replace")
     try:
         parsed = json.loads(text)
@@ -72,8 +92,8 @@ def send(node, call_id, request, deadline):
         response = parsed
     obj = parsed if isinstance(parsed, dict) else {}
     usage = obj.get("usage") if isinstance(obj.get("usage"), dict) else None
-    choices = obj.get("choices")
-    choice = choices[0] if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
+    choices = obj.get("choices") if isinstance(obj.get("choices"), list) else []
+    choice, skipped = pick(choices)
     message = choice.get("message") if choice else None
     body = message.get("content") if isinstance(message, dict) else None
     reject = code in NOT_BILLED and code not in (408, 429) and usage is None
@@ -81,4 +101,5 @@ def send(node, call_id, request, deadline):
             "billed": not reject, "body": data[:MAX_TEXT].decode("utf-8", errors="replace") if reject else
             body if isinstance(body, str) else None, "usage": None if reject else usage,
             "model": obj.get("model"), "finish_reason": choice.get("finish_reason") if choice else None,
-            "http": code, "elapsed": round(time.monotonic() - start, 3), "response": response})
+            "http": code, "elapsed": round(time.monotonic() - start, 3), "response": response,
+            "choices_n": len(choices), "skipped": skipped})

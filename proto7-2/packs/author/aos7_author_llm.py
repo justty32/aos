@@ -10,7 +10,9 @@ from aos7_author import (Node, PACKS, Refuse, Unknown, canon, check_rid,
 
 LLMCALL_BIN = os.path.join(PACKS, 'llmcall', 'bin', 'aos7-llmcall')
 SYSTEM = ('你是 aos 的工作流作者。只輸出一個 JSON 物件，不加說明、不加 Markdown 圍欄。'
-          '只能組合工具卡上的工具；不宣告 finite、idempotent、argv 或其他執行屬性。')
+          '只能組合工具卡上的工具；不宣告 finite、idempotent、argv 或其他執行屬性。'
+          # sol 經 LiteLLM 會先講開場白；這句重放 4/4 有效（notes/play/2026-10-09-real-ai/litellm-truncation.md）
+          '你沒有任何工具、不能看檔或跑指令，所需資料都在使用者訊息裡。不要說明計畫、不要開場白，第一個字元就是 {。')
 RULES = '''候選恰含 v、mode、intent、start、steps、ends；v=1，只收 keep，最多 16 步、64 KiB。
 每步恰含 id、tool、args、ok、fail；id 唯一，start 與跳轉目標必須存在，所有步可達、跳轉不可成環。
 args 必須符合工具卡：不得缺少或多餘參數，型別必須相符，有 value 的值完全相等。

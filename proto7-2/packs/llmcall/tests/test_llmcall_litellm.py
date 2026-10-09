@@ -256,6 +256,34 @@ class TestLlmcallLiteLLM(LlmcallCase):
         self.assertEqual(reply["response"], obj["text"])
         self.audit()
 
+    def test_multi_choice_takes_last_nonempty(self):
+        """LiteLLM 把 sol 的開場白與答案拆成多個 choice：取最後一個非空的，raw 記 choices_n／skipped。"""
+        answer = '{"files":{}}'
+        cases = [("two", [("我先確認工作區，再跑三關。", "stop"), (answer, "length")], 1),
+                 ("empty0", [("", "stop"), (answer, "length")], 0),
+                 ("tail", [("開場白", "stop"), (answer, "length"), ("", "stop")], 1)]
+        for c, parts, n_skipped in cases:
+            with self.subTest(c):
+                self.reply["choices"] = [{"index": i, "message": {"role": "assistant", "content": t},
+                                          "finish_reason": f} for i, (t, f) in enumerate(parts)]
+                obj = self.assert_receipt(self.call(c))
+                self.assertEqual((obj["outcome"], obj["text"]), ("answered", answer))
+                raw = read_json(str(self.cd(c) / "raw.json"))["reply"]
+                self.assertEqual((raw["choices_n"], raw["finish_reason"], len(raw["skipped"])),
+                                 (len(parts), "length", n_skipped))
+                self.assertNotIn("choices_n", obj)
+        self.assertEqual(read_json(str(self.cd("two") / "raw.json"))["reply"]["skipped"],
+                         [{"index": 0, "chars": 13, "head": "我先確認工作區，再跑三關。"}])
+        self.reply["choices"] = []
+        obj = self.assert_receipt(self.call("none"), 1)
+        self.assertEqual((obj["outcome"], obj["text"]), ("failed", None))
+        raw = read_json(str(self.cd("none") / "raw.json"))["reply"]
+        self.assertEqual((raw["status"], raw["choices_n"], raw["skipped"]), ("error", 0, []))
+        self.reply["choices"] = [{"message": {"content": ""}, "finish_reason": "stop"}]
+        obj = self.assert_receipt(self.call("allempty"))
+        self.assertEqual((obj["outcome"], obj["text"]), ("answered", ""))
+        self.audit()
+
     def test_other_connection_errors_are_unknown(self):
         for error in (URLError("DNS failure"), TimeoutError("timeout"), ConnectionResetError("reset")):
             with self.subTest(error=error), patch.object(transport, "urlopen", side_effect=error):

@@ -185,16 +185,34 @@ std::string make_request_json(const std::vector<Message> &messages,
 std::string parse_response_text(std::string_view text) {
     try {
         const Json root = Json::parse(text);
+        const auto content = [](const Json &choice) -> const Json * {
+            if (!choice.is_object() || !choice.contains("message") ||
+                !choice["message"].is_object() ||
+                !choice["message"].contains("content") ||
+                !choice["message"]["content"].is_string()) {
+                return nullptr;
+            }
+            return &choice["message"]["content"];
+        };
         if (!root.contains("choices") || !root["choices"].is_array() ||
-            root["choices"].empty() || !root["choices"][0].is_object() ||
-            !root["choices"][0].contains("message") ||
-            !root["choices"][0]["message"].is_object() ||
-            !root["choices"][0]["message"].contains("content") ||
-            !root["choices"][0]["message"]["content"].is_string()) {
+            root["choices"].empty()) {
             throw std::runtime_error(
                 "LLM 回應缺少 choices[0].message.content");
         }
-        return root["choices"][0]["message"]["content"].get<std::string>();
+        // LiteLLM 會把 sol 的開場白與答案拆成多個 choice：取最後一個非空的。
+        const Json &choices = root["choices"];
+        for (auto it = choices.rbegin(); it != choices.rend(); ++it) {
+            const Json *value = content(*it);
+            if (value && !value->get_ref<const std::string &>().empty()) {
+                return value->get<std::string>();
+            }
+        }
+        const Json *first = content(choices[0]);
+        if (!first) {
+            throw std::runtime_error(
+                "LLM 回應缺少 choices[0].message.content");
+        }
+        return first->get<std::string>();
     } catch (const std::runtime_error &) {
         throw;
     } catch (const Json::exception &error) {
