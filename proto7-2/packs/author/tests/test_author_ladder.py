@@ -7,7 +7,7 @@ PACK = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(PACK.parents[1] / 'tests'), str(PACK), str(PACK / 'tests')]
 import test_author_llm as csv_case
 import test_author_aos_cli as aos_case
-from aos7_author_llm import LADDER
+from aos7_author_llm import APPRENTICE_LADDER, LADDER
 
 CSV = PACK / 'examples/csv-request'
 USAGE = PACK / 'examples/aos-tool-usage'
@@ -129,43 +129,49 @@ class TestLadderCSV(Replies, csv_case.TestAuthorLLM):
 
 @own_tests_only
 class TestLadderAos(Replies, aos_case.TestAuthorAosCLI):
-    """〔author 升級鏈〕aos 學徒：被三關退回才升級，上一級的候選與檢查結果當重問交下一級。"""
+    """〔author 升級鏈〕aos 學徒：從 sol-high 起（不用 luna-nothink），被三關退回才升級，上一級的候選與檢查結果當重問交下一級。"""
 
     def test_gate_reject_climbs_with_feedback(self):
         self.content = (USAGE / 'valid.json').read_text()
-        self.replies = {LADDER[0]: (USAGE / 'bad-link.json').read_text()}
+        self.replies = {APPRENTICE_LADDER[0]: (USAGE / 'bad-link.json').read_text()}
         out = self.checked(self.aos('--budget', self.bd, '--llm'))
         self.assertTrue(out['ok'], out)
-        self.assertEqual(self.models(), list(LADDER[:2]))
+        self.assertEqual(self.models(), list(APPRENTICE_LADDER))
         self.assertEqual([(r['model'], r['why']) for r in out['rounds']],
-                         [(LADDER[0], 'invalid'), (LADDER[1], None)])
+                         [(APPRENTICE_LADDER[0], 'invalid'), (APPRENTICE_LADDER[1], None)])
         user = json.loads(self.bodies[1]['messages'][1]['content'])
         self.assertEqual(user['previous_candidate'], (USAGE / 'bad-link.json').read_text())
         self.assertEqual(user['feedback']['failed_gate'], 1)
         self.assertNotIn('previous_candidate', json.loads(self.bodies[0]['messages'][1]['content']))
 
     def test_out_per_rung_and_unanswered_review_does_not_climb(self):
-        self.replies = {LADDER[0]: (USAGE / 'bad-link.json').read_text()}
+        self.replies = {APPRENTICE_LADDER[0]: (USAGE / 'bad-link.json').read_text()}
         self.content = (USAGE / 'valid.json').read_text()
         self.codes = {'test/review': 400}
         out = self.checked(self.aos('--budget', self.bd, '--out', 'cand.json', '--review-llm', 'test/review', '--llm'), 1)
         self.assertEqual(Path(self.node, 'cand.json').read_text(), (USAGE / 'bad-link.json').read_text())
         self.assertEqual(Path(self.node, 'cand-r1.json').read_text(), self.content)
         self.assertEqual(out['candidate_path'], str(Path(self.node, 'cand-r1.json').resolve()))
-        self.assertEqual(self.models(), [LADDER[0], LADDER[1], 'test/review'])
-        self.assertEqual([r['model'] for r in out['rounds']], list(LADDER[:2]))
+        self.assertEqual(self.models(), [APPRENTICE_LADDER[0], APPRENTICE_LADDER[1], 'test/review'])
+        self.assertEqual([r['model'] for r in out['rounds']], list(APPRENTICE_LADDER))
 
     def test_checker_usage_error_does_not_climb(self):
         self.content = (USAGE / 'valid.json').read_text()
         out = self.checked(self.aos('--budget', self.bd, '--reviewer', 'file:' + str(Path(self.node, 'missing.json')), '--llm'), 1)
-        self.assertEqual(self.models(), [LADDER[0]])
+        self.assertEqual(self.models(), [APPRENTICE_LADDER[0]])
         self.assertEqual(len(out['rounds']), 1)
 
     def test_rung_exception_keeps_its_round(self):
-        self.replies = {LADDER[0]: (USAGE / 'bad-link.json').read_text()}
+        self.replies = {APPRENTICE_LADDER[0]: (USAGE / 'bad-link.json').read_text()}
         Path(self.node, 'cand-r1.json').mkdir()
         out = self.checked(self.aos('--budget', self.bd, '--out', 'cand.json', '--llm'), 3)
         self.assertEqual(out['why'], 'unknown')
-        self.assertEqual(self.models(), list(LADDER[:2]))
+        self.assertEqual(self.models(), list(APPRENTICE_LADDER))
         self.assertEqual(out['rounds'][1]['usage'], self.usage)
         self.assertTrue(out['rounds'][1]['call_id'])
+
+    def test_apprentice_starts_at_sol_high(self):
+        self.content = (USAGE / 'valid.json').read_text()
+        out = self.checked(self.aos('--budget', self.bd, '--llm'))
+        self.assertEqual(self.models(), ['chatgpt-gpt-6-sol-high'])
+        self.assertEqual([r['model'] for r in out['rounds']], ['chatgpt-gpt-6-sol-high'])

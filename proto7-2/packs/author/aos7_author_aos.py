@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 TOP = HERE.parents[1]
 sys.path.insert(0, str(HERE / 'checkers'))
 from aos_three_gates import request, brief, strict
-from aos7_author_llm import AUTO, LADDER, climb, rung_call  # noqa: E402
+from aos7_author_llm import APPRENTICE_LADDER, AUTO, LADDER, climb, rung_call  # noqa: E402
 
 LLMCALL = HERE.parent / 'llmcall/bin/aos7-llmcall'
 # sol 經 LiteLLM 會先講開場白；這句重放 4/4 有效（notes/play/2026-10-09-real-ai/litellm-truncation.md）
@@ -266,7 +266,8 @@ def main_aos(a):
                 prev[:] = [r['candidate_path'], r['check']]
             return r
         # 只有三關（含審查）真的擋下（檢查器退 1）才升級；審查模型沒答成、檢查器參數錯（退 2）不算
-        return climb(attempt, lambda r: isinstance(r.get('check'), dict) and bool(r['check'].get('_rejected')))
+        return climb(attempt, lambda r: isinstance(r.get('check'), dict) and bool(r['check'].get('_rejected')),
+                     APPRENTICE_LADDER)
     except (ValueError, UnicodeError, KeyError, TypeError) as exc:
         return dict(out, ok=False, why='invalid', error=str(exc))
     except (OSError, subprocess.TimeoutExpired) as exc:
