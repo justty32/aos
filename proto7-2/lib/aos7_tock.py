@@ -121,6 +121,7 @@ def _finish(fnode, rnd, marks, views):
             ex["seen_round"] = rnd
             try:
                 write_json(path, ex)
+                test_point("tock-seen-round")
             except OSError:
                 pass
     st, t = fact(os.path.join(fnode, ".aos", "tasks.json"))
