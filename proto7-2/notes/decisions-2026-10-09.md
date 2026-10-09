@@ -104,3 +104,4 @@
 - 結果｜I2：全套 ×3 在 a1be11b4 上各 556 項全過（約 300 秒）；核心行數總行 3004、程式 2353（D7 不擋）；白話報告草稿 [report-2026-10-09](report-2026-10-09.md)，最終版由 I3 補第三段後定稿
 - B｜V1：學徒改從事件必讀通道收單（`aos7-author send`／`intake`）。藍圖說的「回條」解讀為**收單回條**（不是發布回條）——等發布回條要等人按發布，會把單一消費者的必讀通道堵到滿
 - C｜V1：收單只登記、不自動提案或發布；壞單（`invalid`／`conflict`／`ignored`）照樣 ack 免得堵住後面；輸入檔還沒放到 node 上的單算 invalid
+- C｜B2：budget 部分結算（0≤用量≤預留）；cancel 遇到別的入口留下的任何非終局紀錄都回 unknown（比凍結介面的「intent」更嚴）；overrun 欄存在但 null 判 unknown；billing final 帶 overrun>0 照收
