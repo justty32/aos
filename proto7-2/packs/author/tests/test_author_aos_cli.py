@@ -414,6 +414,174 @@ class TestAuthorAosCLI(DaemonCase):
             else:
                 self.assertFalse(into.exists())
 
+    def skill_book(self, trigger='aos-tool'):
+        return ('---\nname: apprentice\ndescription: 寫工具前用\ntriggers: ' + trigger +
+                '\n---\n## 踩過的坑\n- 匯入失敗→先設定路徑。\n## 驗過的骨架\n```python\nimport sys\n```\n')
+
+    def skill_node(self, text=None):
+        node = Path(self.root, 'books')
+        book = node / 'skills/apprentice/SKILL.md'
+        book.parent.mkdir(parents=True, exist_ok=True)
+        book.write_text(self.skill_book() if text is None else text, encoding='utf-8')
+        return node, book
+
+    def skill_learn(self, node, *extra):
+        history = Path(self.node, 'skill-history.json')
+        history.write_text('{"failed_gate":1,"gates":{"1":{"issues":["缺必要檔"]}}}')
+        return self.aos('--llm', MODEL, '--budget', self.bd, '--history', history,
+                        '--skill-into', node, '--skill', 'apprentice', *extra, cmd='learn')
+
+    def test_skills_picked_and_prompt_preview(self):
+        node, book = self.skill_node()
+        out = self.checked(self.apprentice('--skills', node))
+        self.assertEqual(out['skill']['picked'], 'apprentice')
+        user = json.loads(self.bodies[0]['messages'][1]['content'])
+        self.assertEqual(user['skill'], {'name': 'apprentice', 'text': book.read_text()})
+        self.assertIn('與需求衝突時以需求為準', user['rules'])
+        self.checked(self.apprentice('--skills', node, '--prompt-out', 'skill-preview.json'))
+        raw = Path(self.node, 'skill-preview.json').read_bytes()
+        self.assertEqual(json.loads(json.loads(raw)['litellm']['messages'][1]['content']), user)
+
+    def test_skills_none_preserves_prompt_bytes(self):
+        node, _ = self.skill_node(self.skill_book('不會命中'))
+        out = self.checked(self.apprentice('--skills', node, '--prompt-out', 'none.json'))
+        self.assertIsNone(out['skill']['picked'])
+        self.assertNotIn('skill', self.checked(self.apprentice('--prompt-out', 'plain.json')))
+        self.assertEqual(Path(self.node, 'none.json').read_bytes(), Path(self.node, 'plain.json').read_bytes())
+        self.assertEqual(Path(self.node, 'plain.json').read_bytes(), prompt_request(REQUEST, MODEL))
+
+    def test_skills_bad_node_stops_before_writes(self):
+        out = self.checked(self.apprentice('--skills', Path(self.root, 'absent'),
+                           '--prompt-out', 'must-not-exist.json'), 2)
+        self.assertEqual(out['why'], 'invalid')
+        self.assertFalse(Path(self.node, 'must-not-exist.json').exists())
+        self.assertEqual(self.bodies, [])
+        self.assertEqual(self.cli('propose', 'csv1', '--candidate', EXAMPLE / 'valid.json',
+                                  '--skills', self.root).returncode, 2)
+
+    def test_skills_exit_mapping_and_question(self):
+        a = argparse.Namespace(arg=str(REQUEST), cmd='propose', llm=MODEL, skills='bad-node')
+        req = json.loads(REQUEST.read_bytes())
+        for code, why in ((2, 'invalid'), (3, 'unknown'), (9, 'unknown')):
+            with mock.patch('aos7_author_aos.subprocess.run', return_value=
+                            subprocess.CompletedProcess([], code, '', '挑選失敗')) as run:
+                out = main_aos(a)
+            self.assertEqual(out['why'], why)
+            self.assertFalse(out['ok'])
+            self.assertEqual(run.call_args.args[0], ['python3', str(TOP / 'modules/skills/aos7-skills'),
+                             'pick', 'bad-node', ' '.join(req[k] for k in ('kind', 'name', 'task', 'goal'))])
+            self.assertEqual(run.call_count, 1)
+
+    def test_skills_oversize_preserves_prompt(self):
+        node, _ = self.skill_node(self.skill_book() + '大' * 3000)
+        out = self.checked(self.apprentice('--skills', node, '--prompt-out', 'large.json'))
+        self.assertIsNone(out['skill']['picked'])
+        self.assertIn('8192', out['skill']['why'])
+        self.assertEqual(Path(self.node, 'large.json').read_bytes(), prompt_request(REQUEST, MODEL))
+
+    def test_skill_learn_replaces_and_includes_candidate(self):
+        node, book = self.skill_node()
+        existing = book.read_text()
+        candidate = Path(self.node, 'source.txt')
+        candidate.write_text('骨' * 25000)
+        self.content = self.skill_book() + '\n改寫後的內容\n'
+        out = self.checked(self.skill_learn(node, '--candidate', candidate))
+        self.assertEqual((out['skill'], out['into'], out['bytes']),
+                         ('apprentice', str(book), len(self.content.encode())))
+        self.assertEqual(book.read_text(), self.content)
+        self.assertEqual(out['why'], None)
+        self.assertTrue(out['llm']['call_id'].startswith('ln-'))
+        receipt = Path(out['llm']['receipt_path']).with_name('request.json')
+        self.assertEqual(json.loads(receipt.read_bytes())['logical'], 'author-learn/usage1')
+        user = json.loads(self.bodies[0]['messages'][1]['content'])
+        self.assertEqual(user['existing'], existing)
+        self.assertEqual(user['candidate'], '骨' * 24000)
+        self.assertEqual(user['history'][0]['failed_gate'], 1)
+        self.assertIn('整本 SKILL.md', self.bodies[0]['messages'][0]['content'])
+        self.assertTrue((book.parent / '.lock').is_file())
+        self.assertEqual(list(book.parent.glob('.SKILL-*')), [])
+
+    def test_skill_learn_creates_missing_book(self):
+        node = Path(self.root, 'new-books')
+        node.mkdir()
+        self.content = self.skill_book()
+        self.checked(self.skill_learn(node))
+        self.assertEqual((node / 'skills/apprentice/SKILL.md').read_text(), self.content)
+        user = json.loads(self.bodies[0]['messages'][1]['content'])
+        self.assertEqual(user['existing'], '')
+        self.assertNotIn('candidate', user)
+
+    def test_skill_learn_invalid_never_replaces(self):
+        node, book = self.skill_node()
+        before = book.read_bytes()
+        for i, text in enumerate(['沒有 frontmatter', self.skill_book('aos-module'),
+                                  self.skill_book() + '大' * 3000]):
+            self.content = text
+            out = self.checked(self.skill_learn(node, '--call', 'bad-skill-' + str(i)), 1)
+            self.assertEqual(out['why'], 'invalid')
+            self.assertEqual(book.read_bytes(), before)
+        self.content = self.skill_book('aos-module')
+        self.assertIn('triggers', json.loads(self.skill_learn(node, '--call', 'bad-trigger').stdout)['error'])
+
+    def test_skill_learn_argument_exclusion_and_bad_node(self):
+        node, book = self.skill_node()
+        self.assertEqual(self.skill_learn(node, '--into', book).returncode, 2)
+        self.assertEqual(self.skill_learn(node, '--skill', 'Bad_Name').returncode, 2)
+        for bad in (Path(self.root, 'absent'), book):
+            out = self.checked(self.skill_learn(bad), 2)
+            self.assertEqual(out['why'], 'invalid')
+        self.assertEqual(self.bodies, [])
+
+    def test_gate_schema_explains_all_fields(self):
+        c = json.loads((USAGE / 'valid.json').read_bytes())
+        c['files']['REPORT.md'] = c.pop('report')
+        c.update(v=True, rid='bad', kind='bad', name='bad', row=0, extra=1)
+        candidate = Path(self.node, 'bad-schema.json')
+        candidate.write_text(json.dumps(c))
+        out = self.checked(self.aos('--candidate', candidate), 1)
+        issue = out['check']['gates']['1']['issues'][0]
+        self.assertEqual(issue['rule'], 'schema')
+        for phrase in ('缺 report 欄', 'REPORT 要寫在頂層 report 字串', '多 extra 欄',
+                       'v 必須是整數 1', 'rid 應為 usage1', 'kind 應為 aos-tool', 'name 應為 usage', 'row 必須是字串'):
+            self.assertIn(phrase, issue['why'])
+        c.update(files=[], report='無章節', row='')
+        candidate.write_text(json.dumps(c))
+        out = self.checked(self.aos('--candidate', candidate), 1)
+        why = out['check']['gates']['1']['issues'][0]['why']
+        self.assertIn('files 必須是「路徑→字串」物件', why)
+        self.assertIn('report 缺「以後交接書該點名的工具」一節', why)
+
+    def test_gate_extra_data_and_index_hint(self):
+        candidate = Path(self.node, 'extra.json')
+        raw = (USAGE / 'valid.json').read_text() + '\n' + '{"extra":true}'
+        candidate.write_text(raw)
+        out = self.checked(self.aos('--candidate', candidate), 2)
+        why = out['check']['gates']['1']['issues'][0]['why']
+        self.assertIn('候選必須恰好是一個 JSON 物件', why)
+        self.assertIn(f'第 {raw.index(chr(123) + chr(34) + "extra") + 1} 字元', why)
+        self.assertIn('『{"extra":true}』', why)
+        c = json.loads((USAGE / 'valid.json').read_bytes())
+        c['files']['INDEX.md'] = '| 索引 |'
+        candidate.write_text(json.dumps(c))
+        out = self.checked(self.aos('--candidate', candidate), 1)
+        issues = out['check']['gates']['1']['issues']
+        self.assertTrue(any(i['rule'] == 'territory' and '索引列寫在頂層 row 欄，不放 files' in i['why'] for i in issues))
+
+    def test_gate_layout_tests_readme_name_the_file(self):
+        c = json.loads((USAGE / 'valid.json').read_bytes())
+        c['files'] = {k: v for k, v in c['files'].items() if '/tests/' not in k and not k.endswith('aos7_usage.py')}
+        c['files']['packs/usage/README.md'] = '# usage\n'
+        c['files']['packs/usage/bin/aos7-usage'] += '\n' * 20
+        candidate = Path(self.node, 'layout.json')
+        candidate.write_text(json.dumps(c))
+        out = self.checked(self.aos('--candidate', candidate), 1)
+        whys = {i['rule']: i['why'] for i in out['check']['gates']['1']['issues'] if i['rule'] != 'layout'}
+        layout = [i['why'] for i in out['check']['gates']['1']['issues'] if i['rule'] == 'layout']
+        self.assertIn('缺必要檔：packs/usage/aos7_usage.py', layout[0])
+        self.assertIn('入口 packs/usage/bin/aos7-usage 超過 12 行', layout[1])
+        self.assertIn('缺測試（要有 packs/usage/tests/test_*.py）', whys['tests'])
+        self.assertIn('packs/usage/README.md 缺指定章節', whys['readme'])
+
     def test_checker_unknown_mapping(self):
         import argparse
         a = argparse.Namespace(arg=str(REQUEST), no_scope=True, repo=None, ref=baseline_ref('packs/usage'))

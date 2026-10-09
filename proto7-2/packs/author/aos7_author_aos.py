@@ -17,6 +17,7 @@ sys.path.insert(0, str(HERE / 'checkers'))
 from aos_three_gates import REVIEW_CRITERIA, request, brief, strict
 from aos7_author_llm import APPRENTICE_LADDER, AUTO, LADDER, climb, rung_call  # noqa: E402
 
+SKILLS = TOP / 'modules/skills/aos7-skills'
 LLMCALL = HERE.parent / 'llmcall/bin/aos7-llmcall'
 # sol 經 LiteLLM 會先講開場白；這句重放 4/4 有效（notes/play/2026-10-09-real-ai/litellm-truncation.md）
 NO_TOOLS = '你沒有任何工具、不能看檔或跑指令，所需資料都在使用者訊息裡。不要說明計畫、不要開場白，第一個字元就是 {}。'
@@ -44,7 +45,7 @@ def prompt(model, system, user):
         {'role': 'system', 'content': system}, {'role': 'user', 'content': canon(user).decode('utf-8')}]}})
 
 
-def prompt_request(req_path, model, context=(), gotchas=None, previous=None, feedback=None):
+def prompt_request(req_path, model, context=(), gotchas=None, previous=None, feedback=None, skill=None):
     req, card = request(Path(req_path))
     card = {k: card[k] for k in ('root', 'required', 'entry', 'entry_max_lines', 'tests',
                                'row', 'readme_must', 'limits', 'review_rules')}
@@ -72,6 +73,9 @@ def prompt_request(req_path, model, context=(), gotchas=None, previous=None, fee
             raise ValueError('feedback.check 必須是物件')
         user['feedback'] = {k: check.get(k) for k in ('failed_gate', 'gates')}
         user['rules'] += '\n上一份沒過，照 feedback 修正後交出完整的新候選。'
+    if skill:
+        user['skill'] = skill
+        user['rules'] += '\nskill 是你自己之前做同類題後留下的技能書：照它避開踩過的坑、沿用驗過的骨架；與需求衝突時以需求為準。'
     return prompt(model, SYSTEM, user)
 
 
@@ -193,6 +197,79 @@ def learn(a, req, out):
     return dict(out, ok=True, why=None, added=lines)
 
 
+def pick_skill(a, req, out):
+    question = ' '.join(req[k] for k in ('kind', 'name', 'task', 'goal'))
+    proc = subprocess.run(['python3', str(SKILLS), 'pick', a.skills, question],
+                          capture_output=True, text=True, encoding='utf-8', timeout=900)
+    out['skill'] = {'picked': None, 'why': '沒有挑到技能書'}
+    if proc.returncode == 1:
+        return None
+    if proc.returncode != 0:
+        out['skill']['why'] = proc.stderr.strip() or 'skills pick 未完成'
+        out.update(why='invalid' if proc.returncode == 2 else 'unknown', error=out['skill']['why'])
+        return out
+    lines = proc.stdout.strip().splitlines()
+    if not lines:
+        return dict(out, why='unknown', error='skills pick 退 0 卻沒有 SKILL.md 路徑')
+    path = Path(lines[-1])
+    data = path.read_bytes()
+    if len(data) > 8192:
+        out['skill']['why'] = '技能書超過 8192 bytes，這次不放入提示'
+    else:
+        a.picked_skill = {'name': path.parent.name, 'text': data.decode('utf-8')}
+        out['skill'] = {'picked': path.parent.name, 'why': '已挑到技能書並放入提示'}
+    return None
+
+
+def learn_skill(a, req, out):
+    node = Path(a.skill_into).resolve()
+    into = node / 'skills' / a.skill / 'SKILL.md'
+    out.update(skill=a.skill, into=str(into), bytes=0, llm=None)
+    if not node.is_dir():
+        return dict(out, why='invalid', error='--skill-into 必須是既有資料夾')
+    user = {'brief': brief(req), 'history': [history_summary(p) for p in a.history],
+            'existing': into.read_text(encoding='utf-8') if into.exists() else '',
+            'rules': f'''回整本 SKILL.md，改寫既有內容而不是只追加，不寫這題特有的答案細節；全文 ≤8192 bytes UTF-8。
+frontmatter 必須是 ---、name: {a.skill}、description: 一行（≤300 字）、triggers: 用「、」分隔且必含 {req['kind']}、---。
+正文兩節：## 踩過的坑（每條：症狀→下次怎麼做）；## 驗過的骨架（從 candidate 裡過了關的寫法摘出入口、模組匯入、測試匯入與 discover、README 必要章節、索引列、report 結尾等，用程式碼圍欄）。'''}
+    if a.candidate:
+        user['candidate'] = Path(a.candidate).read_text(encoding='utf-8')[:24000]
+    raw = prompt(a.llm, '你是 aos 的學徒工程師，只回整本 SKILL.md，不加說明或外層 Markdown 圍欄。' + NO_TOOLS.format('-'), user)
+    text, info, why = delivery(a, req, a.llm, raw, 'ln-')
+    out['llm'] = info
+    if why:
+        return dict(out, why=why, _rejected=why == 'invalid')
+    try:
+        data = text.encode('utf-8')
+        if len(data) > 8192:
+            raise ValueError('技能書超過 8192 bytes')
+        with tempfile.TemporaryDirectory(prefix='author-skill-') as tmp:
+            book = Path(tmp, 'skills', a.skill, 'SKILL.md')
+            book.parent.mkdir(parents=True)
+            book.write_bytes(data)
+            proc = subprocess.run(['python3', str(SKILLS), 'index', tmp], capture_output=True, timeout=900)
+            if proc.returncode != 0:
+                raise ValueError('技能書格式不合：' + proc.stderr.decode('utf-8', 'replace').strip())
+            indexed = strict(Path(tmp, 'skills/index.json').read_bytes())['skills'][a.skill]
+            if req['kind'] not in indexed['triggers']:
+                raise ValueError('triggers 缺需求 kind：' + req['kind'])
+    except (ValueError, UnicodeError, KeyError) as exc:
+        return dict(out, why='invalid', error=str(exc), _rejected=True)
+    into.parent.mkdir(parents=True, exist_ok=True)
+    with (into.parent / '.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        path = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=into.parent, prefix='.SKILL-', delete=False) as stream:
+                path = Path(stream.name)
+                stream.write(data)
+            os.replace(path, into)
+        finally:
+            if path is not None and path.exists():
+                path.unlink()
+    return dict(out, ok=True, why=None, bytes=len(data))
+
+
 def close_aos(a, req, out):
     from aos7_author import Node, Unknown, fact, N, OK, write_json
     nd = Node()
@@ -234,6 +311,8 @@ def main_aos(a):
         if a.llm == AUTO and a.cmd == 'learn':
             a.llm = LADDER[0]
         if a.cmd == 'learn':
+            if getattr(a, 'skill_into', None):
+                return learn_skill(a, req, dict(ok=False, why=None, rid=req['rid']))
             return learn(a, req, dict(ok=False, why=None, rid=req['rid'],
                                       into=str(Path(a.into).resolve()), added=[], llm=None))
         if a.cmd == 'publish':
@@ -246,6 +325,10 @@ def main_aos(a):
             if out.get('ok') and why is None:
                 return close_aos(a, req, out)
             return out
+        if getattr(a, 'skills', None):
+            failure = pick_skill(a, req, out)
+            if failure is not None:
+                return failure
         if a.llm != AUTO:
             return propose_one(a, req, out)
         prev = [a.previous, a.feedback]
@@ -277,7 +360,7 @@ def main_aos(a):
 def propose_one(a, req, out):
     candidate = Path(a.candidate).resolve() if a.candidate else None
     if a.llm:
-        raw = prompt_request(a.arg, a.llm, a.context, a.gotchas, a.previous, a.feedback)
+        raw = prompt_request(a.arg, a.llm, a.context, a.gotchas, a.previous, a.feedback, getattr(a, 'picked_skill', None))
         info = call_info(a.llm, req['rid'], raw, a.call, reserve=a.reserve)
         out['llm'] = info
         if a.prompt_out:
