@@ -11,10 +11,10 @@
 | 預設 | `propose` 只產可審查候選、不發布；人另跑 `publish`。`--auto` 只給固定試驗與測試 |
 | 保存 | `<node>/author/`：共用 `author.lock`＋常數 `events.json` 收件帳＋每需求 `req/<rid>/` ≤5 檔；`close` 後只剩 `request.json`＋`receipt.json`（檔數隨需求數、不隨回合／候選數） |
 | 依賴 | 核心 `aos7_fs`（`fact`、`write_json`、`edit_json`、`locked`、`test_point`、`sweep_tmp`）、`aos7_tick.check_item`（唯讀）；step 的 `check`／`table_rev`（唯讀） |
-| 程式 | `aos7_author.py`（需求、工具卡、候選驗證與編譯、answer、close、send／intake 入口、CLI）、`aos7_author_pub.py`（發布、恢復、send／intake）、`aos7_author_llm.py`（`--llm` 提示與交付原文）、`bin/aos7-author` |
+| 程式 | `aos7_author.py`（需求、工具卡、候選驗證與編譯、answer、close、send／intake 入口、CLI）、`aos7_author_pub.py`（發布、恢復、send／intake）、`aos7_author_llm.py`（`--llm` 提示與交付原文）、`aos7_author_aos.py`（aos 工具／模組學徒、三關分派、llmcall 審查與 learn）、`bin/aos7-author` |
 | 工具卡 | `toolcards/csv.json`：`csv.convert`、`csv.stats`（腳本原樣取自 [step CSV 範例](../step/examples/csv/)、記 SHA-256） |
 | 範例 | [llm-request](examples/llm-request/README.md)（`--llm` 一整圈實跑）；[events-request](examples/events-request/README.md)（must 收件實跑）；`examples/csv-request/`：`request.json`（rid `csv1`）、七份候選（`valid.json` 一份合法；`bad-json`／`bad-params`／`bad-dependency`／`bad-mode`／`bad-idempotent`／`bad-path` 六份壞）、`check_answer.py` |
-| 測試 | `tests/test_author_llm.py`（`--llm` 本地 HTTP、原文驗證、重跑與 CLI）；`tests/test_author.py`（既有驗收）、`tests/test_author_events.py`（must 收件與 crash）；`tests/`（`python3 proto7-2/tests/run_all.py packs/author/tests`；全套預設就收） |
+| 測試 | `tests/test_author_aos_cli.py`（aos 分派、本地 HTTP 學徒／審查、重問、publish 與 learn）；`tests/test_author_llm.py`（`--llm` 本地 HTTP、原文驗證、重跑與 CLI）；`tests/test_author.py`（既有驗收）、`tests/test_author_events.py`（must 收件與 crash）；`tests/`（`python3 proto7-2/tests/run_all.py packs/author/tests`；全套預設就收） |
 
 ## 第一次跑（已實跑）
 
@@ -51,6 +51,29 @@ python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
 `--prompt-out` 只寫 llmcall 請求供人審查。提示只含需求、白名單工具卡、候選 schema 與限制，不含標準答案；不設 max_tokens／temperature。預設 call_id 按請求雜湊固定，重跑重印 llmcall 回條、不重送；要新生成請明給 `--call NEW_ID`。模型原文不剝圍欄、不修 JSON，照原有三層驗證；`--auto` 可配但預設仍另行 publish。
 
 完整實跑與證據收集見 [examples/llm-request/](examples/llm-request/README.md)：`bash proto7-2/packs/author/examples/llm-request/run.sh MODEL [OUTDIR]`。這支腳本不進測試套，由人啟動自己的 LiteLLM 後跑。
+
+## 學徒寫 aos 工具／模組
+
+需求檔的 kind 是 `aos-tool` 或 `aos-module` 時，author 讓學徒交出新增檔案、索引列與 REPORT，先驗三關，再由人決定發布；候選原文保存在目前目錄的 `author/aos/<rid>/`，也能用 `--out` 指定位置。
+
+- 學徒：`--llm` 指定寫候選的模型，提示帶需求與工具卡。
+- 審查人：`--review-llm` 指定讀碼模型，與學徒一樣經 llmcall 使用 budget。
+- 重問：用 `--previous`、`--feedback` 與 `--gotchas` 把上一份候選、檢查結果和踩坑交回學徒。
+- 發布：重跑三關後只新增 apprentice 分支，合併由人處理。
+- 學習：`learn` 讀歷次檢查結果，把下次該知道的事追加到既有踩坑檔。
+
+以下沿用 `$A` 指向 author 包，`request.json` 是 aos 需求；發布前從 propose 回覆的 candidate_path 找到候選，存為 `$CANDIDATE`，將檢查回覆保存成 history.json，並先備好 GOTCHAS.md。
+
+```sh
+python3 "$A/bin/aos7-author" propose request.json --llm MODEL --review-llm REVIEW_MODEL --budget ../llm/budget/llm
+python3 "$A/bin/aos7-author" publish request.json --candidate "$CANDIDATE" --reviewer "file:$REVIEW" --repo "$REPO" --ref "$REF"
+python3 "$A/bin/aos7-author" learn request.json --llm MODEL --budget ../llm/budget/llm --history history.json --into GOTCHAS.md
+```
+
+`$REVIEW` 是 propose 回覆的 review.path，`$REPO`／`$REF` 指向要發布的 repo 與基準版本；離線檔案驗證可用 `--candidate` 與預設 `--reviewer rules`，模型審查不用 astra 旗標。
+propose 固定候選快照，兩次檢查與審查提示使用相同 bytes；publish 使用 `file:` 審查前仍先通過 rules，且不接受 `--review-llm`。learn 在寫入時鎖住既有檔案、重讀驗重，檔案消失就拒絕。
+
+三關細節見 [checkers/README.md](checkers/README.md)。
 
 ## 五個組件（契約卡，細節在 spec.md）
 
