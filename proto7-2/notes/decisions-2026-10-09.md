@@ -226,3 +226,4 @@
 - C｜I5：INDEX、tests README（1000 項）、模組總覽、code map 同步；列出 64 個 worktree 清單 → [worktree-cleanup](worktree-cleanup-2026-10-09.md)
 - C｜頂層：刪了 51 個**已合進 main 且沒有未追蹤檔**的 worktree 與分支（`git worktree remove` 與 `git branch -d` 都會拒絕刪有東西的，所以沒有遺失）。留著：6 個有隊伍暫存資料夾的（要 --force，等你看）、5 條 `apprentice/*` 與 `_check_main`（等你）、`roadmap-run`、`main-ref`、本輪進行中的
 - 觀察｜全套跑一次要 13～14 分鐘，跑的途中不能有人合進 main（否則會中途讀到半新半舊的檔）
+- C｜FL：llmcall drip 測試是測試時序寫錯，已修（負載下 20／20 綠）；up 兩個偶發紅是**產品 bug**——印出「起好了」後、設 `handed` 前有一小段空檔，這時按 Ctrl-C 會誤報「裝到一半被中斷」退 3 → 開小修
