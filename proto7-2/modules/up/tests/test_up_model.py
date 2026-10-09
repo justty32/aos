@@ -27,7 +27,7 @@ class UpModel(cases.UpTests):
         self.assertIn('回信', out)
         lines = self.invoke('status', self.node).splitlines()
         self.assertIn('問過 1 次', lines[4])
-        self.assertIn('收到 1 封要辦的信，回過信 1 封', lines[1])
+        self.assertIn('bob 一共收到 1 封，回了 1 封', lines[1])
         self.assertIn('工作簿：最後記下：回了「用一句話介紹你自己」', lines[2])
         self.assertNotIn('you-2', '\n'.join(lines))
 

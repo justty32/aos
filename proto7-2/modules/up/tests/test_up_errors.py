@@ -140,6 +140,20 @@ class InterfaceTests(unittest.TestCase):
             with self.subTest(raw=raw):
                 self.assertEqual(view.plain(raw, titles), wanted)
 
+    def test_watch_heartbeat_stopped_elsewhere(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            node = Path(tmp) / 'bob'
+            node.mkdir()
+            daemon = subprocess.Popen(['true'])
+            daemon.wait()
+            for n, wanted in ((3, f'心跳被別處停掉了（例如跑了 stop）；檔案都留著，再跑 aos7-up {node} 就接上'),
+                              (0, f'心跳沒跑起來。請看 {tmp}/.aosd/up-daemon.log 後重跑')):
+                with patch.object(view, 'number', return_value=n), \
+                     contextlib.redirect_stdout(io.StringIO()), \
+                     self.assertRaises(view.UpError) as caught:
+                    view.watch(node, daemon)
+                self.assertEqual(str(caught.exception), wanted)
+
     def test_status_checkup_only_when_broken(self):
         with tempfile.TemporaryDirectory() as tmp:
             node = Path(tmp) / 'bob'
@@ -154,7 +168,7 @@ class InterfaceTests(unittest.TestCase):
                 lines = out.getvalue().splitlines()
                 self.assertEqual(lines[2], '工作簿：最後記下：還沒開始' +
                                  (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if rc else ''))
-                self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 0 次，用量不明')
+                self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 0 次，來回字數不明')
                 self.assertNotIn('體檢', out.getvalue())
             (node / 'wf').mkdir()
             (node / 'wf/SESSION-LOG.md').write_text('## open\n- 寫報告\n- 改錯字\n')
@@ -186,9 +200,9 @@ class InterfaceTests(unittest.TestCase):
                        model=None, litellm_url='', budget='budget/llm', holder='brain', gateway='llm.fake')
             (node / '.aos/up.json').write_text(json.dumps(cfg))
             before = {p: p.read_bytes() for p in node.rglob('*') if p.is_file()}
-            for rc, content, wanted in ((3, '', '用量不明'), (0, '{}', '用量不明'),
-                                         (0, 'bad', '用量不明'),
-                                         (0, '{"used":1104}', '用量約 1104 字（讀加寫）')):
+            for rc, content, wanted in ((3, '', '來回字數不明'), (0, '{}', '來回字數不明'),
+                                         (0, 'bad', '來回字數不明'),
+                                         (0, '{"used":1104}', '來回共約 1104 字')):
                 with patch.object(view, 'call', return_value=subprocess.CompletedProcess([], rc, content)), \
                      contextlib.redirect_stdout(io.StringIO()) as out:
                     self.assertEqual(view.status(node), 0)
