@@ -41,3 +41,6 @@
 - B｜S：R8-22 驗證成立，取縮窗——補加只准同一回合（`cur == intent_round`）；代價：存意圖後加項前被殺，重開已是下一回合就走 on_unknown（預設 stop 的步停在 unknown 等 `resume --resend`）→ `packs/step/aos7_step.py`
 - C｜S：`unknown_codes` 只給 run 步（非空、不重複、1～255 整數）；重送次數記框架新欄 `resends`，`resume --resend` 歸零；直譯器只在啟動時清死暫存檔
 - 觀察｜subd `test_allow_stop_writes_stopped_and_parent_does_not_restart` 全套負載下紅一次（log 空），單跑 3 次綠；同 `test_unsure_listed`，暫歸時序不穩
+- C｜B：重播時入口回條拿不到一律退 3（gate 自判）；退出碼 3 文字只承諾到 `--out` 寫入失敗，不承諾 stdout → `packs/budget/`
+- C｜B：不做 A8-10 (c)（fakeapi call 步保留 `fail: failed`；開了 unknown_codes 後 3 本不走 fail，改了會破三個測試）
+- C｜B：帳任務只在啟動時掃一次 `gateway/` 死暫存檔（非每回合）
