@@ -115,8 +115,11 @@
    "team": "ER-compact",
    "name": "aos7-compact",
    "entry": "modules/compact/aos7-compact",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-compact）"
+   "unsure": {
+    "argv": ["now", "{tmp}/n"],
+    "files": {"n/compact/": ""},
+    "lock": ["n/compact/lock"]
+   }
   },
   {
    "pack": "mail",
