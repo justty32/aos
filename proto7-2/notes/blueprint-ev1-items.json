@@ -1,0 +1,127 @@
+{
+ "contract": "wf-table/1",
+ "source": "blueprint-ev1.md",
+ "extracted": "2026-10-09",
+ "columns": [
+  "id",
+  "lane",
+  "title",
+  "files",
+  "how",
+  "test"
+ ],
+ "rows": [
+  {
+   "id": "E1-1",
+   "lane": "E1",
+   "title": "store：鎖、恢復、append",
+   "files": "aos7_events_store.py",
+   "how": "`append(events_dir, channel, rec, *, config=None)`：`locked(<dir>/state.json, timeout=5)` → 刪殘留 `.state.json.tmp.*`（持鎖即無他人在寫）→ 恢復（藍圖 §3：截半行 torn+1、尾端 seq≥next_seq 補 state、補列／移除段）→ published 先在仍保留段找同 event_id（有就回 dup）→ 配 seq、填 v／stream／at、序列化成最終一行（UTF-8 含換行）再比 `max_record_bytes`，超過回 too_large 且不輪替不寫 → 需要就輪替（E1-2）→ 寫一行＋flush → `write_json(<dir>/state.json, st)`。鎖逾時或任何 OSError 回 `{ok:false, why:unknown}`（可能已寫入，重送靠 event_id 去重）。`node` 參數必填：建 state 時寫入，之後不符回 unknown；傳入 config 與 state 不同時以 state 為準並回 `config_ignored:true`。測試點 `events:after-partial`（寫半行後）、`events:after-append`（寫完未存 state）。",
+   "test": "子程序各點 SIGKILL ×3：重跑同批（同 event_id）後每個回過 ok 的都在、seq 連續無重、event_id 無重；半行被截、torn 計數對。"
+  },
+  {
+   "id": "E1-2",
+   "lane": "E1",
+   "title": "store：輪替與清垃圾",
+   "files": "aos7_events_store.py",
+   "how": "append 前活躍段 ≥ segment_bytes 就輪替，**先判容量再動檔**：must 封存已 N 段 → 先刪 seq ≤ acked_upto 的整段，仍 N 段 → 拒收回 `full`（refused+1），段配置不動。可輪替時：`os.rename(<ch>.active.jsonl → <ch>.<active_first 12 位>.jsonl)` → state 加段、active_first=next_seq → 清：obs 段數 >N 刪最舊並推 dropped_upto。目的檔已存在不得覆蓋，回 unknown。測試點 `events:after-rename`、`events:after-unlink`。",
+   "test": "rename 後／unlink 後 SIGKILL ×3：恢復後段清單與檔案一致、讀不到重複、dropped_upto 正確；must 滿時回 full、ack 後恢復可收。"
+  },
+  {
+   "id": "E1-3",
+   "lane": "E1",
+   "title": "store：ack 與 load_state",
+   "files": "aos7_events_store.py",
+   "how": "`ack(events_dir, upto)`：鎖內把 must.acked_upto 推到 min(upto, next_seq-1)，只增不減，回新值；`load_state(events_dir)`：唯讀讀 state.json，不拿鎖、不恢復，不在回 None。",
+   "test": "ack 倒退被忽略；ack 超過已寫回夾到 next_seq-1；ack 後下次輪替刪掉已全確認段。"
+  },
+  {
+   "id": "E1-4",
+   "lane": "E1",
+   "title": "取樣器 `aos7-events`（A 任務）",
+   "files": "aos7-events",
+   "how": "仿 history.py 的接法（task_env、resolver、wait_tock；`--src` 可多個、`--status`、`--rounds`、`--out` 預設 `<node>/events`、`--keep`、`--segment-bytes`）：每 tock 讀來源 last-round.json，round 比 state.sample 新就寫 `round.observed`（capture sample），跳號先寫 `gap`（`source.round`＝缺段末號）；round 倒退＝來源重建，寫 `gap why=source_reset_unknown` 並以新 round 為基準。進度恢復規則：取該來源最後一筆 sample 紀錄（含 gap）的 `source.round`，所以 gap 與快照之間被殺不會重記 gap。`--daemon-log`：從 state.daemon_log.offset 續讀 `.aosd/log.jsonl` 完整行寫 `capture:source_log`，每筆 `source` 帶 `log_dev`、`log_ino`、`off_from`、`off_to`（恢復與去重都靠它推 daemon_log），檔變短或 dev/ino 變 → 記 `gap why=source_reset_unknown` 並從 0 讀；只讀不裁。",
+   "test": "300 回合（segment_bytes 調小）後 events/ 檔數 ≤12、封存 ≤N、dropped_upto>0；跳號有 gap；被殺重起不重記同回合；log 被換報 source_reset_unknown。round 倒退報 source_reset_unknown；gap 與快照之間 SIGKILL 不重記 gap；log 續讀被殺不重不漏。"
+  },
+  {
+   "id": "E1-5",
+   "lane": "E1",
+   "title": "模組 spec",
+   "files": "spec.md",
+   "how": "把藍圖 §2～§5 寫成契約：目錄與檔名、紀錄欄位、state 欄位與恢復規則、append 回值、兩種確認、滿載政策、只抗 SIGKILL、不做清單。條列 >1 KB 照資料檔契約另抽。",
+   "test": "spec 各節能對到 E1-1～E1-4 測試名。"
+  },
+  {
+   "id": "E1-6",
+   "lane": "E1",
+   "title": "測試檔",
+   "files": "tests/test_events_store.py",
+   "how": "以上各條的單元＋SIGKILL 測試；子程序設 `AOS7_TEST_HOOKS`／`AOS7_TEST_CRASH` 直接呼叫 store；限 systemd-run TasksMax=300 跑本檔。 不改 tests/_proc.py、tests/_hooks.py。",
+   "test": "本檔綠；全套一份綠（表定 15:15）。"
+  },
+  {
+   "id": "E2-1",
+   "lane": "E2",
+   "title": "發布函式與 CLI",
+   "files": "aos7_events_pub.py",
+   "how": "`publish(events_dir, kind, event_id, payload, *, must=False, source=None)` → 組紀錄（capture published）呼叫 `store.append`；CLI `--events DIR --kind K --event-id ID [--must] [--source JSON] --payload JSON`，退出碼 0＝已保存（含 dup）、2＝用法錯或 too_large、3＝full、4＝unknown（照同 id 重送）。event_id 必填、≤128 字元，建議 `<node>/<task>/<run>/<n>`。",
+   "test": "重送同 event_id 回 dup 且只有一筆；full 回 3 且沒寫；鎖被佔逾時回 4。"
+  },
+  {
+   "id": "E2-2",
+   "lane": "E2",
+   "title": "讀者函式與 CLI",
+   "files": "aos7_events_read.py",
+   "how": "`read(events_dir, channel, cursor=None, *, kind=None, source=None, round=None, limit=100)`：不拿鎖；列封存段（依名排序）＋活躍段，只收完整換行的行、seq ≥ cursor；讀完核對：首筆 seq 必須＝max(cursor, earliest)，段內與段間 seq 連續；有洞（列檔與輪替／刪段交錯）→ 重列一次；仍有洞且在 dropped_upto 以內記 retention gap，否則進 errors 且 **next_cursor 停在洞前**，不跨過未證明淘汰的缺口。`limit` 算命中筆數；游標依已檢查的完整紀錄前進（篩掉的也算走過）。回 records、next_cursor（最後一筆 seq+1，無則原值）、earliest_cursor、coverage（依 capture×來源各一項 `{capture, source, mode: sampled|log_tail|per_event, from_seq}`，sample／source_log 永不標 per_event）、gaps（retention、round_skip、source_reset_unknown）、errors（壞 JSON 行、段內 seq 不連續、state 不可讀）。CLI 輸出 JSON 或 `--text`；`--ack N` 呼叫 store.ack（累積確認：N 以前 must 全部算處理完，讀者自負；不因篩選自動 ack）。",
+   "test": "手寫 fixture：壞尾不前進游標；壞行進 errors 且後面照讀；cursor 早於最早 → retention gap；分兩次讀游標接續不重不漏。"
+  },
+  {
+   "id": "E2-3",
+   "lane": "E2",
+   "title": "示範發布者",
+   "files": "examples/（longrun/ 除外）",
+   "how": "一個小 once 任務（例 `examples/demo_pub.py`＋tasks.json 片段）：做 n 件可冪等重做的工作，進度存槽內 state；每件做完用固定 event_id 發到 must，**收到保存確認才開始下一件**；full／unknown 就停、非零退出，下次從未確認那件重做並重送同 id。示範只發不讀，不接三包。",
+   "test": "跑兩次（中間 SIGKILL）後 must 每件剛好一筆。"
+  },
+  {
+   "id": "E2-4",
+   "lane": "E2",
+   "title": "測試檔",
+   "files": "tests/test_events_read.py",
+   "how": "E2-1～E2-3 的測試；讀者用手寫 fixture（照藍圖 §3 格式），發布測試需 store，E1 進 main 後 rebase 再跑。",
+   "test": "本檔綠；全套一份綠（表定 15:30）。"
+  },
+  {
+   "id": "E2-5",
+   "lane": "E2",
+   "title": "不重疊守則",
+   "files": "—",
+   "how": "不寫 store、spec、README、longrun；介面有疑問照藍圖 §6 凍結簽名，必要改動回報隊長由 E1 改。",
+   "test": "diff 只落在 E2 領地。"
+  },
+  {
+   "id": "E3-1",
+   "lane": "E3",
+   "title": "README 與契約卡",
+   "files": "README.md、../README.md 一列",
+   "how": "包格式（做什麼、接法 A＋C、預設關、依賴 tools、契約卡、測試位置）；modules/README 表加一列。",
+   "test": "照 README 從空 node 起取樣器＋示範發布者、讀回、ack 可完成。"
+  },
+  {
+   "id": "E3-2",
+   "lane": "E3",
+   "title": "長跑",
+   "files": "examples/longrun/",
+   "how": "取樣器＋示範發布者跑 ≥300 回合，段大小調小；中途 SIGKILL 寫者 ≥3 次。",
+   "test": "events/ 檔數全程 ≤12；obs 有 retention gap；must 未確認不丟、ack 後封存會清；無殘留 tmp。"
+  },
+  {
+   "id": "E3-3",
+   "lane": "E3",
+   "title": "問題記錄",
+   "files": "notes/problems.md 一節",
+   "how": "記長跑與整合新發現；已知限制（不抗斷電、單消費者、去重窗口）列為界線。",
+   "test": "每條有編號、嚴重度、位置。"
+  }
+ ]
+}
