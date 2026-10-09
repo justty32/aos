@@ -132,3 +132,5 @@
 - B｜人類面門檻：第一次跑 ≤10 分鐘、對外指令 ≤3、新概念 ≤5；新手試用者打分 <7 要回改
 - B｜真 AI 只用 LiteLLM 的 `chatgpt-gpt-6-sol/-astra/-luna/gpt-reserve`（沒有 6.1-sol），預設 `chatgpt-gpt-6-sol-high`，一律走 llmcall；效率四指標由 `aos7-metrics` 量，本輪只排優化項
 - C｜移到之後候選：adapt-llm 第三刀、消耗事件、回合身分、budget hold、kernel 任務包
+- 使用者 15:10：「持續改進」＝做一做 → 回頭看做好的東西 OK 不 OK → 回頭修改，或乾脆重造
+- B｜頂層落法：每一波進 main 後排一輪「回頭審」（astra 審設計＋新手試用者實際上手），結論分三種：OK／修改／重造；重造不算浪費，照常開隊
