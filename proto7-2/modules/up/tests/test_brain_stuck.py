@@ -207,8 +207,10 @@ class BrainStuckTests(DaemonCase):
         self.cli('modules/mail/aos7-mail', 'done', 'bob', first, 'DONE', '做完了', '--root', self.root)
         ident = self.send('卡住的標題')
         self.send('排隊的信')
-        for status in ('NEEDS-USER', 'BLOCKED'):
-            self.cli('modules/mail/aos7-mail', 'send', 'bob', 'you', status, status, '--root', self.root)
+        self.cli('modules/mail/aos7-mail', 'send', 'bob', 'you', 'BLOCKED', 'BLOCKED', '--root', self.root)
+        # 只有說卡住的信：看看就好，不叫人照信做（卡住那行說過不用動手）
+        self.assertTrue(self.up_status()[1].endswith(f'（1 封說卡住了；信在 {self.root}/you/inbox，打開看看就好）'))
+        self.cli('modules/mail/aos7-mail', 'send', 'bob', 'you', 'NEEDS-USER', 'NEEDS-USER', '--root', self.root)
         expected = ('信：bob 一共收到 3 封，回了 1 封、正在辦 1 封、排隊 1 封；你的信箱有 3 封回信還沒看'
                     f'（1 封要你決定、1 封說卡住了；信在 {self.root}/you/inbox，打開照信做）')
         self.assertEqual(self.up_status()[1], expected)

@@ -168,7 +168,7 @@ class InterfaceTests(unittest.TestCase):
                 lines = out.getvalue().splitlines()
                 self.assertEqual(lines[2], '工作簿：最後記下：還沒開始' +
                                  (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if rc else ''))
-                self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 0 次')
+                self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；bob 問過它 0 次')
                 self.assertNotIn('體檢', out.getvalue())
             (node / 'wf').mkdir()
             (node / 'wf/SESSION-LOG.md').write_text('## open\n- 寫報告\n- 改錯字\n')
@@ -200,10 +200,10 @@ class InterfaceTests(unittest.TestCase):
                        model='m1', litellm_url='', budget='budget/llm', holder='brain', gateway='llm.litellm')
             (node / '.aos/up.json').write_text(json.dumps(cfg))
             before = {p: p.read_bytes() for p in node.rglob('*') if p.is_file()}
-            for rc, content, wanted in ((3, '', 'AI：m1；問過 0 次，用了多少字不明'),
-                                         (0, '{}', 'AI：m1；問過 0 次，用了多少字不明'),
+            for rc, content, wanted in ((3, '', 'AI：m1；bob 問過它 0 次，用了多少字不明'),
+                                         (0, '{}', 'AI：m1；bob 問過它 0 次，用了多少字不明'),
                                          (0, 'bad', '用了多少字不明'), (0, '[1]', '用了多少字不明'),
-                                         (0, '{"used":1104}', 'AI：m1；問過 0 次，AI 讀加寫共約 1104 字（真 AI 照字數收錢）')):
+                                         (0, '{"used":1104}', 'AI：m1；bob 問過它 0 次，AI 讀加寫共約 1104 字（真 AI 照字數收錢）')):
                 with patch.object(view, 'call', return_value=subprocess.CompletedProcess([], rc, content)), \
                      contextlib.redirect_stdout(io.StringIO()) as out:
                     self.assertEqual(view.status(node), 0)

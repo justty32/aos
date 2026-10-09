@@ -204,7 +204,8 @@ def status(node):
     line += f'；你的信箱有 {len(replies)} 封回信還沒看'
     hints = ([f'{needs} 封要你決定'] if needs else []) + ([f'{blocked} 封說卡住了'] if blocked else [])
     if hints:
-        hints[-1] += f'；信在 {node.parent / "you/inbox"}，打開照信做'
+        # 要你決定的才要照信做；只有說卡住的信，看看就好（status 卡住那行說過不用動手）
+        hints[-1] += f'；信在 {node.parent / "you/inbox"}，' + ('打開照信做' if needs else '打開看看就好')
     print(line + ('（' + '、'.join(hints) + '）' if hints else ''))
     try:
         unsure = read(node / 'brain/unsure.json')
@@ -227,7 +228,7 @@ def status(node):
     model = settings.get('model')
     if model in (None, '', 'fake'):
         # 假 AI 不花錢，字數對新手沒意義，不印
-        print(f'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 {calls} 次')
+        print(f'AI：假 AI（不連網、不花錢，照抄你的信回你）；{node.name} 問過它 {calls} 次')
     else:
         budget = call('packs/budget/bin/aos7-budget', 'status', 'budget/llm', cwd=node)
         try:
@@ -236,7 +237,7 @@ def status(node):
             used = None
         usage = (f'AI 讀加寫共約 {used} 字（真 AI 照字數收錢）' if isinstance(used, (int, float))
                  else '用了多少字不明')
-        print(f'AI：{model}；問過 {calls} 次，{usage}')
+        print(f'AI：{model}；{node.name} 問過它 {calls} 次，{usage}')
     print(cleanup_hint(node))
     return 0
 
