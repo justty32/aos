@@ -27,7 +27,7 @@ class UpModel(cases.UpTests):
         self.assertIn('回信', out)
         lines = self.invoke('status', self.node).splitlines()
         self.assertIn('問過 1 次', lines[4])
-        self.assertIn('待回 0 封', lines[1])
+        self.assertIn('要回 0 封', lines[1])
 
 
 # Only the model cases belong to this subclass.

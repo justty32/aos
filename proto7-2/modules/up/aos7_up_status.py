@@ -135,13 +135,13 @@ def status(node):
           f'心跳：停了（最後第 {n} 下）；起它：aos7-up {node}')
     inbox = letters(node / 'inbox')
     waiting = sum(v.get('status') == 'REQUEST' for v in inbox.values())
-    print(f'信：未讀 {len(inbox)} 封（其中待回 {waiting} 封）；你的信箱有 '
+    print(f'信：未讀 {len(inbox)} 封（要回 {waiting} 封）；你的信箱有 '
           f'{len(letters(node.parent / "you/inbox"))} 封回信')
     count = sum(s.startswith('- ') for rel in ('SESSION-LOG.md', 'WAIT_USER.md')
                 for s in text(node / 'wf' / rel).splitlines())
     check = call('modules/wfnode/aos7-wfnode', 'check', node)
     health = 'OK' if check.returncode == 0 else '有問題'
-    print(f'工作簿：open {count} 項；停在：{state(node)}；體檢 {health}' +
+    print(f'工作簿：還有 {count} 件事沒做完；停在：{state(node)}；體檢 {health}' +
           (f'（看細節：aos7-wfnode check {node}）' if check.returncode else ''))
     print(f'技能：{skill_count(node)} 本')
     calls = sum(p.is_file() for p in (node / 'llmcall/llm').glob('*/raw.json'))
