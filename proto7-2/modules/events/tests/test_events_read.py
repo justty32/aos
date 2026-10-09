@@ -15,7 +15,6 @@ from aos7_fs import locked, write_json, read_json  # noqa: E402
 EVENTS = os.path.join(MODULES, "events")
 sys.path.insert(0, EVENTS)
 import aos7_events_read as reader  # noqa: E402
-STORE = os.path.join(EVENTS, "aos7_events_store.py")
 
 
 def record(seq, **extra):
@@ -95,6 +94,8 @@ class TestEventsRead(Fixtures):
         self.assertEqual((self.seqs(r), r["next_cursor"]), ([1], 2))
         self.assertIn({"kind": "seq_hole", "from": 2, "to": 3}, r["errors"])
         self.state(acked_upto=3)
+        self.assertEqual(self.seqs(reader.read(self.dir, "obs")), [1])
+        self.state(dropped_upto=3)
         self.assertEqual(self.seqs(reader.read(self.dir, "obs")), [1, 4])
 
     def test_order_stops_and_bad_credit_does_not_carry(self):
@@ -135,7 +136,7 @@ class TestEventsRead(Fixtures):
         self.assertEqual((len(calls), self.seqs(r), r["errors"]), (2, [1, 2, 3], []))
 
     def test_acked_hole_relists_before_retention(self):
-        """must 已確認到 3、讀到 1 與 4：先重列，重列後仍缺才報 retention。"""
+        """must 已確認到 3、讀到 1 與 4：ack 不是淘汰證明，先重列；重列後讀全。"""
         self.segment("must.active.jsonl", [record(1), record(4)])
         write_json(os.path.join(self.dir, "state.json"), {"v": 1, "node": "a", "channels": {"must": {"acked_upto": 3}}})
         snapshot = reader._snapshot
@@ -208,7 +209,6 @@ class TestEventsRead(Fixtures):
         self.assertEqual(self.cli("aos7_events_read.py", "--ack", "1").returncode, 2)
 
 
-@unittest.skipUnless(os.path.exists(STORE), "等 E1 store")
 class TestEventsPublish(Fixtures):
     def setUp(self):
         super().setUp()
@@ -231,6 +231,13 @@ class TestEventsPublish(Fixtures):
         self.assertTrue(self.pub.publish(self.dir, "item", "a/2", {}, must=True)["ok"])
         p = self.cli("aos7_events_read.py", "--channel", "must", "--ack", "1")
         self.assertEqual((p.returncode, json.loads(p.stdout)), (0, {"acked_upto": 1}))
+        fresh = os.path.join(self.dir, "fresh")   # 新建時 config 不合 → store 丟 ValueError → usage、沒寫
+        r = self.pub.publish(fresh, "item", "a/3", {}, node="a", config={"keep_segments": 0})
+        self.assertEqual(r["why"], "usage")
+        self.assertIsNone(self.pub.store.load_state(fresh))
+        with locked(os.path.join(self.dir, "state.json")):
+            p = self.cli("aos7_events_read.py", "--channel", "must", "--ack", "2")
+        self.assertEqual(p.returncode, 4, p.stderr)
 
     def test_full_cli_and_lock_timeout(self):
         config = {"keep_segments": 1, "segment_bytes": 1}

@@ -26,7 +26,7 @@ def _snapshot(events_dir, channel):
     channels = state.get("channels")
     st = channels.get(channel, {}) if isinstance(channels, dict) else {}
     st = st if isinstance(st, dict) else {}
-    proven = max(_number(st.get("dropped_upto")), _number(st.get("acked_upto")))
+    proven = _number(st.get("dropped_upto"))   # 只有 dropped_upto 算淘汰證明；acked_upto 以前的紀錄可能還在磁碟上
     try:
         names = sorted(n for n in os.listdir(events_dir) if re.fullmatch(channel + r"\.[0-9]{12}\.jsonl", n))
     except FileNotFoundError:
@@ -145,7 +145,13 @@ def main(argv=None):
         if a.channel != "must" or a.ack < 0:
             ap.error("--ack 須使用 must 通道與非負整數")
         import aos7_events_store as store
-        print(json.dumps({"acked_upto": store.ack(a.events, a.ack)}))
+        from aos7_fs import Unknown
+        try:
+            upto = store.ack(a.events, a.ack)
+        except Unknown as e:   # 鎖逾時或 I/O 錯：不知道推了沒有，照同值重送
+            print(json.dumps({"acked_upto": None, "why": "unknown", "detail": str(e)}, ensure_ascii=False))
+            return 4
+        print(json.dumps({"acked_upto": upto}))
         return 0
     try:
         result = read(a.events, a.channel, a.cursor, kind=a.kind, source=a.source, round=a.round, run=a.run, limit=a.limit)
