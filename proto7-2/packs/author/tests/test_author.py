@@ -235,6 +235,126 @@ class TestAuthorCore(TestAuthorHelpers):
                     (out / "esc").symlink_to(outside, target_is_directory=True)
                 self.reject_candidate(node, "csv1", path, rule, name == "symlink")
 
+    def test_tool_tmp_symlink_at_propose(self):
+        """審查拒絕工具暫存寫路徑外連。"""
+        node = self.mknode("propose")
+        self.register(node)
+        path = EXAMPLE / "valid.json"
+        job = "csv1_" + digest(path.read_bytes())[:8]
+        out = Path(node, "jobs", job, "out")
+        out.mkdir(parents=True)
+        outside = Path(self.root, "outside.json")
+        outside.write_bytes(b"untouched")
+        (out / "report.json.tmp").symlink_to(outside)
+        self.reject_candidate(node, "csv1", path, "path", preexisting=True)
+        self.assertEqual(outside.read_bytes(), b"untouched")
+
+    def test_tool_tmp_symlink_at_publish(self):
+        """審查之後新增的工具暫存 symlink 在發布時拒絕。"""
+        node, v = self.prepared()
+        outside = Path(self.root, "outside.json")
+        outside.write_bytes(b"untouched")
+        out = Path(node, "jobs", v["job"], "out")
+        self.assertFalse(out.exists())
+        out.mkdir()
+        (out / "data.json.tmp").symlink_to(outside)
+        before = self.table_path(node).read_bytes()
+        r = self.cli(node, "publish", "csv1", rc=2)
+        self.assertIn("symlink", r["error"])
+        self.assertEqual(self.table_path(node).read_bytes(), before)
+        self.assertIsNone(self.doc(node, "csv1", "intent"))
+        self.assertEqual(outside.read_bytes(), b"untouched")
+
+    def test_frame_recovery_binds_fixed_sources(self):
+        """相符 frame 可補回條，但資料快照改動使證據失效。"""
+        for changed in (False, True):
+            with self.subTest(changed=changed):
+                node, v = self.prepared("changed" if changed else "same")
+                self.crash_publish(node, "csv1", "after-intent")
+                job = Path(node, "jobs", v["job"])
+                write_json(str(job / "frame.json"),
+                           {"job": v["job"], "table": author.aos7_step.table_rev((job / "steps.json").read_bytes())})
+                if changed:
+                    (job / "data.csv").write_bytes((job / "data.csv").read_bytes() + b"\n")
+                before = self.table_path(node).read_bytes()
+                r = self.cli(node, "publish", "csv1", rc=4 if changed else 0)
+                self.assertEqual(self.table_path(node).read_bytes(), before)
+                self.assertEqual(self.tasks(node), [])
+                if changed:
+                    self.assertIsNone(self.doc(node, "csv1", "receipt"))
+                else:
+                    self.assertEqual(r["receipt"]["evidence"], "frame")
+                    self.version_counts(node, "csv1", v, count=0)
+
+    def test_input_cannot_shadow_step_control(self):
+        """輸入 basename 不得覆寫 step 的 frame 控制檔。"""
+        node = self.mknode()
+        control = Path(node, "frame.json")
+        control.write_bytes(b'{"job": "input"}')
+        request = json.loads(self.request(node).read_bytes())
+        request["inputs"].append({"path": "frame.json", "sha256": digest(control.read_bytes())})
+        path = self.source("control-request.json", request)
+        registered = author.register_request(node, str(path))
+        if not registered["ok"]:
+            self.refused(registered, "invalid")
+            self.assertFalse(Path(node, "jobs").exists())
+            return
+        self.reject_candidate(node, "csv1", EXAMPLE / "valid.json", "source")
+
+    def test_replace_candidate_without_verdict_cleans_job(self):
+        """編譯後未存 verdict 的殘留會被換候選清理，且不能結案。"""
+        node, old = self.prepared()
+        verdict_path = Path(node, "author/req/csv1/verdict.json")
+        edit_json(str(verdict_path),
+                  lambda d: dict(d, versions={k: v for k, v in d["versions"].items()
+                                              if k != old["candidate_sha"]}))
+        self.assertTrue(Path(node, "jobs", old["job"]).exists())
+        self.cli(node, "close", "csv1", rc=3)
+        candidate = json.loads((EXAMPLE / "valid.json").read_bytes())
+        candidate["intent"] = "換待審候選"
+        new = self.propose(node, candidate=candidate)
+        self.assertNotEqual(old["job"], new["job"])
+        self.assertFalse(Path(node, "jobs", old["job"]).exists())
+        self.assertTrue(Path(node, "jobs", new["job"], "steps.json").exists())
+        self.assertEqual(set(self.doc(node, "csv1", "candidate")["versions"]), {new["candidate_sha"]})
+        self.assertEqual(set(self.doc(node, "csv1", "verdict")["versions"]), {new["candidate_sha"]})
+
+    def test_candidate_list_fields_are_schema_errors(self):
+        """tool/start 陣列是 schema 錯誤，CLI 必須回 JSON 而非 traceback。"""
+        for field in ("tool", "start"):
+            with self.subTest(field=field):
+                node = self.mknode(field)
+                self.register(node)
+                candidate = json.loads((EXAMPLE / "valid.json").read_bytes())
+                target = candidate["steps"][0] if field == "tool" else candidate
+                target[field] = []
+                path = self.source("list-field.json", candidate)
+                r = self.cli(node, "propose", "csv1", "--candidate", path, rc=2)
+                self.assertIn("schema", {i["rule"] for i in r["issues"]})
+                self.assertFalse(Path(node, "jobs", "csv1_" + digest(path.read_bytes())[:8]).exists())
+
+    def test_pending_candidate_prefix_collision(self):
+        """待審 sha 前八碼相同時拒絕覆寫候選與 job。"""
+        node, old = self.prepared()
+        path = EXAMPLE / "valid.json"
+        sha = digest(path.read_bytes())
+        fake = sha[:8] + ("0" if sha[8] != "0" else "1") + sha[9:]
+        folder = Path(node, "author/req/csv1")
+        cdoc = self.doc(node, "csv1", "candidate")
+        cdoc["active"] = fake
+        cdoc["versions"] = {fake: cdoc["versions"][sha]}
+        write_json(str(folder / "candidate.json"), cdoc)
+        vdoc = self.doc(node, "csv1", "verdict")
+        verdict = vdoc["versions"][sha]
+        verdict["candidate_sha"] = fake
+        vdoc["versions"] = {fake: verdict}
+        write_json(str(folder / "verdict.json"), vdoc)
+        before = {p.name: p.read_bytes() for p in folder.iterdir()}
+        steps = Path(node, "jobs", old["job"], "steps.json").read_bytes()
+        self.cli(node, "propose", "csv1", "--candidate", path, rc=3)
+        self.assertEqual({p.name: p.read_bytes() for p in folder.iterdir()}, before)
+        self.assertEqual(Path(node, "jobs", old["job"], "steps.json").read_bytes(), steps)
+
     def test_propose_default_and_auto(self):
         """預設只審查，明示自動才發布。"""
         node = self.mknode()
@@ -393,6 +513,14 @@ class TestAuthorCore(TestAuthorHelpers):
         self.refused(pub.recover(node, "csv1"), "unknown")
         self.assertEqual(self.table_path(node).read_bytes(), raw)
 
+    def test_null_tasks_not_overwritten(self):
+        """JSON null 不代表空任務表；發布回 unknown 並保留 bytes。"""
+        node, _ = self.prepared()
+        self.table_path(node).write_bytes(b"null")
+        self.cli(node, "publish", "csv1", rc=4)
+        self.assertEqual(self.table_path(node).read_bytes(), b"null")
+        self.assertIsNone(self.doc(node, "csv1", "receipt"))
+
     def test_two_versions_and_full(self):
         """同需求兩版並存，第三版超額拒絕。"""
         node, v1 = self.prepared()
@@ -442,11 +570,18 @@ class TestAuthorDaemon(TestAuthorHelpers, DaemonCase):
     def test_answer_and_close(self):
         """真跑兩步各一次，壞答案拒絕，結案只留雙檔。"""
         node = self.running()
-        v = self.executed(node, "csv1")
+        self.register(node)
+        candidate = json.loads((EXAMPLE / "valid.json").read_bytes())
+        candidate["start"] = "c"
+        candidate["steps"][0].update(id="c", ok="s")
+        candidate["steps"][1]["id"] = "s"
+        candidate["steps"][1]["args"]["request"] = "${req:c}"
+        v = self.propose(node, candidate=candidate, auto=True)
+        self.wait_job(node, v["job"])
         job = Path(node, "jobs", v["job"])
         frame = self.frame(node, v["job"])
         self.cli(node, "close", "csv1", rc=3)
-        for step in ("convert", "stats"):
+        for step in ("c", "s"):
             self.assertEqual(len(list((job / "results" / step).glob("*.json"))), 1)
         self.cli(node, "answer", "csv1")
         self.assertTrue(self.doc(node, "csv1", "verdict")["versions"][v["candidate_sha"]]["answer"]["ok"])
@@ -509,7 +644,20 @@ class TestAuthorDaemon(TestAuthorHelpers, DaemonCase):
         self.check_answer(node, v["job"], ok=False)
         output.write_bytes(original)
         self.check_answer(node, v["job"])
-        self.good(author.answer(node, "evidence"))
+        # answer 必須讀 job 的固定快照；node 原始輸入事後改掉無關。
+        source = Path(node, "data.csv")
+        saved_source = source.read_bytes()
+        source.write_bytes(saved_source.replace(b"120", b"999"))
+        self.cli(node, "answer", "evidence")
+        snapshot = job / "data.csv"
+        saved_snapshot = snapshot.read_bytes()
+        snapshot.write_bytes(saved_snapshot + b"\n")
+        r = self.cli(node, "answer", "evidence", rc=2)
+        self.assertFalse(r["answer"]["ok"])
+        self.assertTrue(any("manifest" in issue for issue in r["answer"]["issues"]), r)
+        snapshot.write_bytes(saved_snapshot)
+        self.cli(node, "answer", "evidence")
+        source.write_bytes(saved_source)
         self.step_close(node, v["job"])
         self.good(author.close_request(node, "evidence"))
 
