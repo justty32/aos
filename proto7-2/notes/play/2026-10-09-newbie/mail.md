@@ -43,10 +43,23 @@
 
 ## 回改
 
-狀態：未改（交頂層轉該隊）。改完由 U 隊用同樣兩位新手再試一次。
+狀態：回改隊已改（分支 `loop9/mail`），重試結果見下段「重試」。
 
-- [ ] 補 `--help`（沒設 root 也能看用法）
-- [ ] README 只留日常三指令＋audit；roster／team、復原、契約卡、已知限制移到另一份檔（如 ADVANCED.md）
-- [ ] D1／F5／W0／審查 1–7 等內部代號從 README 拿掉或換白話
-- [ ] STATUS 第一次只教 REQUEST／DONE 兩種，其他四種列在進階
-- [ ] 「done 要先 read」寫一句理由（防止辦結到你沒看過的信）
+- [x] 補 `--help`（沒設 root 也能看用法）
+- [x] README 只留日常三指令＋audit；roster／team、復原、契約卡、已知限制移到另一份檔（如 ADVANCED.md）
+- [x] D1／F5／W0／審查 1–7 等內部代號從 README 拿掉或換白話
+- [x] STATUS 第一次只教 REQUEST／DONE 兩種，其他四種列在進階
+- [x] 「done 要先 read」寫一句理由（防止辦結到你沒看過的信）
+
+## 重試
+
+回改隊（mail）2026-10-09，同樣兩位新手（Haiku、gpt-6-luna effort low），同樣任務模板，只准讀 README 與 `--help`；題目＝第一次跑＋自己另寄一封請求辦完。原始回報：`raw/mail-retry<輪>-<試用者>.md`。
+
+| 輪 | 改了什麼 | 指令 | 概念（Haiku／luna） | 分數（Haiku／luna，取差） | 判 |
+|---|---|---|---|---|---|
+| 1 | `--help` 不需 root；send 省略 STATUS＝REQUEST、done 只給一句話＝DONE；錯誤訊息白話附例；README 只留 send／read／done／audit 與四概念，其餘移 [ADVANCED.md](../../../modules/mail/ADVANCED.md)，內部代號換白話 | 4 | 6／4 | 7.6／9.4 → **7.6** | 不過：指令 4、概念 6 |
+| 2 | 第一次跑先 `cd` 到 repo 根；概念編號、信箱併進郵局資料夾；序號理由改白話；列出進階有什麼；不留 `__pycache__` | 4 | 4／4 | 8.2／8.6 → **8.2** | 不過：指令 4 |
+| 3 | audit 移進階，日常只剩 send／read／done（第一次跑以 `read alice` 顯示「（沒有新信）」收尾）；補「`<我>`＝自己名字」「export 只在本終端有效」 | 3 | 6／4 | 7.6／8.8 → **7.6** | 分鐘、指令、分數過；概念照「取多」是 6，不過 |
+
+第三輪 Haiku 的 6 個概念是把「請求」「完成」拆成兩個、另算「信箱」與「歸檔」；README 本身只列四個（第二輪同一位數成 4）。Haiku 第三輪剩下的卡點：「已辦結／已歸檔／完成」三種字眼分不清、「中間來新信也不改號」看不懂、`--help` 提到 audit／roster／team 但不能讀 ADVANCED。已用完三輪，未再改；是否以四概念（README 實際列數）判過，交頂層。
+
