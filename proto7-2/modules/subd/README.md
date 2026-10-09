@@ -37,10 +37,11 @@
 ## 規則
 
 - `<subroot>` 是空間路徑（相對空間根）。包裝程式以任務身分起（要有 `AOS7_ROOT`、`AOS7_NODE_ID`、`AOS7_TID`），起之前檢查，**不合就印原因（進 out.log）、退出碼 1、什麼都不起**：
-  - 子根要在自己的 node 底下、不能是 node 本身、不能包住父 daemon 已登記的 node（讀 `$AOS7_ROOT/.aosd/nodes.json`；讀不到或壞掉＝不知道＝不起）；
+  - 子根要在自己的 node 底下、不能是 node 本身、不能包住父 daemon 已登記的 node（子根與每個 node 都比實際路徑，連結別名也一樣；讀 `$AOS7_ROOT/.aosd/nodes.json`；讀不到或壞掉＝不知道＝不起）；
   - `<subroot>/.aosd/stopped.json` 存在（被允許的 stop 停過）→ 不起，刪掉它下一次才起；
   - 已有別的 `aos7-subd` 認領這個子根（它全程拿著 `<subroot>/.aosd/subd.lock`），或子根的 `daemon.lock` 有人拿著（例如人手起的）→ 不起。
   - 前代沒收乾淨、或不知道收乾淨沒有（見「重開前回收」）→ 不起。
+- 通過後把子根絕對路徑加進 `AOS7_AUDIT_ALLOW`（通用寫入紀錄豁免，`os.pathsep` 分隔；這包不認識 audit；子根路徑本身含 `:` 就不加，紀錄會多報 `ok: false`）。
 - 通過後寫：
   - `<subroot>/.aosd/stop-guard.json`＝`{"allow": 有沒有 --allow-stop, "note": "這個 daemon 屬於 node X（任務 Y）…"}`——核心照它擋控制檔 `stop`；
   - `<subroot>/.aosd/owner.json`＝`{"owner": {"node", "tid", "allow_stop"}, "daemon": {"pid", "since"}}`——給人看。

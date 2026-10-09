@@ -19,6 +19,8 @@
 - **保證**：
   - 已涵蓋的 Python audit 寫入事件，在空間根底下的都有紀錄與 `ok` 判定：落在自己的 node（扣掉巢狀的別的 node／daemon 根）或某個掛載目標底下（核心 spec §5.5）。以整數 fd 指定的目標、沒涵蓋的事件、紀錄本身寫失敗（吞掉、只記不擋）時可能沒有紀錄——`writes.jsonl` 是觀察資料，不是完整寫入清單，沒有紀錄不能證明沒寫。
   - 登記邊界照**判定當下**的 `nodes.json`：執行中才登記的巢狀 node，之後寫進去就是 `ok: false`（A4-05）。
+  - 通用 `AOS7_AUDIT_ALLOW` 由包裝程式設定（例如 subd 包設子根），以 `os.pathsep` 分隔絕對路徑；每次判定重讀並取 realpath，只承認自己 node 內的項目，其底下寫入豁免巢狀邊界，node 外的項目忽略（N-66、D9）。
+  - 遞迴旗標各 thread 獨立；其他 thread 正在追加紀錄時，也會記下本 thread 的寫入（R8-25）。
   - 不改任務的行為、不擋寫入；紀錄只留這次 run（核心 §5.1 換 run 清掉）。
 - **明確不管**：非 Python 的寫入；繞過包裝；強制隔離（S-10 仍是合作式）。
 
@@ -26,6 +28,7 @@
 
 - 例：`{"name": "w", "argv": ["python3", "<proto7-2>/modules/audit/aos7-audit", "--", "python3", "job.py"]}`。
 - 紀錄每筆 `{"op", "path"（實際位置）, "ok", "pid", "via"}`；只記空間根底下的寫入。`ok`＝落在自己的 node（扣掉巢狀的別的 node／daemon 根）或某個掛載目標底下。`aos7_audit.scan(root)` 把全空間的紀錄拼起來，挑出 ok 是 false 的。
+- `AOS7_AUDIT_ALLOW` 是通用巢狀邊界豁免：包裝程式可設 `os.pathsep` 分隔的絕對路徑（例如 subd 包設子根），每次寫入判定都重讀並取 realpath；只在自己 node 內的項目底下直接判 `ok: true`，相對路徑與 node 外項目忽略，不能藉此把 node 外變合法。
 - `writes.jsonl` 也只留這次 run（換 run 時 tick 清掉）。
 
 ## 界線

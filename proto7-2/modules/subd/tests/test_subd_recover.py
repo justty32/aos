@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tests"))  # tests/：base
 
 import unittest  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
 import _proc  # noqa: E402
 from base import BIN, MODULES, DaemonCase  # noqa: E402
@@ -40,15 +41,27 @@ class RecoverCase(DaemonCase):
         return os.path.join(self.root, sub), n1
 
     def ready_pids(self, n1, n=N_TASKS, timeout=20, not_in=()):
-        """n 個任務都起好（ready.json 是現在這個 run 的、pid 不在 not_in：ready.json 是任務自己的檔，換 run 不清）→ pid。"""
+        """n 個任務都起好（ready.json 是現在這個 run 的、pid 不在 not_in：ready.json 是任務自己的檔，換 run 不清）→ pid，並記下 starttime。"""
         def ok():
             rs = [read_json(os.path.join(self.slot(n1, "s%d" % i), "ready.json")) for i in range(n)]
             bs = [self.birth(n1, "s%d" % i) for i in range(n)]
             if all(isinstance(r, dict) and r.get("run") == b.get("run") and r.get("pid") not in not_in
                    for r, b in zip(rs, bs)):
-                return [r["pid"] for r in rs]
+                pids = [r["pid"] for r in rs]
+                facts = [aos7_proc.proc(pid) for pid in pids]
+                if any(f[0] != aos7_proc.OK for f in facts):
+                    return None   # starttime 讀不到就再等，不把錯誤說明當身分
+                if not hasattr(self, "_ready_starts"):
+                    self._ready_starts = {}
+                self._ready_starts.update((pid, f[1]) for pid, f in zip(pids, facts))
+                return pids
             return None
         return self.wait_for(ok, timeout, "子任務沒起好")
+
+    def alive_old(self, pids):
+        """用 ready 時的 pid＋starttime 認原程序；讀不清也不能說收完。"""
+        return [pid for pid in pids
+                if aos7_proc.same_process(pid, self._ready_starts[pid]) != aos7_proc.GONE]
 
     def life(self, sub):
         return read_json(os.path.join(sub, ".aosd", "subd-life.json"))
@@ -94,7 +107,7 @@ class RecoverCase(DaemonCase):
         daemon = self.wait_for(lambda: self.status(sub).get("pid"), 10, "子 daemon 沒起")
         self.parent_kill(p)
         self.wait_for(lambda: not aos7_proc.pid_alive(daemon), 5, "第一代子 daemon 沒死")
-        self.assertTrue(all(aos7_proc.pid_alive(x) for x in old), "前提不成立：父 kill 後原任務已經沒了")
+        self.assertTrue(all(self.same(x, self._ready_starts[x]) for x in old), "前提不成立：父 kill 後原任務已經沒了")
         return sub, n1, old, daemon
 
     def new_daemon(self, sub, old_daemon, timeout=20):
@@ -142,7 +155,7 @@ class TestParentKill(RecoverCase):
         a, sub, n1, old, old_daemon = self.setup_parent()
         run = self.kill_parent_task(a)
         self.new_daemon(sub, old_daemon)
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [], "新代子 daemon 起來時原任務還活著")
+        self.assertEqual([], self.alive_old(old), "新代子 daemon 起來時原任務還活著")
         life = self.life(sub)
         self.assertEqual(life["state"], "running")
         # 新 run＝起它的回合數（核心 next_run），不一定是 run+1：比現役槽的 run、且晚於被 kill 的那個
@@ -155,7 +168,7 @@ class TestParentKill(RecoverCase):
         a, sub, n1, old, old_daemon = self.setup_parent(pause_child=True)
         self.kill_parent_task(a)
         self.new_daemon(sub, old_daemon)
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [])
+        self.assertEqual([], self.alive_old(old))
         self.wait_for(lambda: self.nstat("n1", sub).get("phase") == "paused", 10, "新代的 n1 沒維持 paused")
         self.assertTrue(self.nstat("n1", sub).get("paused_by"))
 
@@ -168,11 +181,15 @@ class TestInterrupted(RecoverCase):
         self.assertEqual(p2.wait(15), -signal.SIGKILL, self.err(p2))
         self.assert_no_daemon(sub, old_daemon)
         self.assertEqual(self.life(sub)["state"], "running" if point == "subd-before-argv" else "recovering")
-        self.assertEqual(all(aos7_proc.pid_alive(x) for x in old), old_alive_after_crash)
+        alive_old = self.alive_old(old)
+        if old_alive_after_crash:
+            self.assertTrue(all(self.same(x, self._ready_starts[x]) for x in old))
+        else:
+            self.assertEqual([], alive_old, "回收窗口結束後原任務必須全收完")
         p3 = self.run_subd(run=3)
         self.new_daemon(sub, old_daemon)
         self.assertIsNone(p3.poll())
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [])
+        self.assertEqual([], self.alive_old(old))
         self.assertEqual(self.life(sub)["state"], "running")
         self.assertEqual(self.life(sub)["owner"]["run"], "3")
         self.ready_pids(n1, not_in=old)
@@ -196,10 +213,10 @@ class TestUnknown(RecoverCase):
         self.assertIn("讀不完整", self.err(p2))
         self.assert_no_daemon(sub, old_daemon)
         self.assertEqual(self.life(sub)["state"], "recovering")
-        self.assertTrue(all(aos7_proc.pid_alive(x) for x in old))
+        self.assertTrue(all(self.same(x, self._ready_starts[x]) for x in old))
         self.run_subd(run=3)
         self.new_daemon(sub, old_daemon)
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [])
+        self.assertEqual([], self.alive_old(old))
 
     def test_bad_record_does_not_start(self):
         sub, n1, old, old_daemon = self.leftover_gen()
@@ -209,7 +226,7 @@ class TestUnknown(RecoverCase):
         self.assertEqual(p2.wait(15), 1)
         self.assertIn("subd-life.json", self.err(p2))
         self.assert_no_daemon(sub, old_daemon)
-        self.assertTrue(all(aos7_proc.pid_alive(x) for x in old))
+        self.assertTrue(all(self.same(x, self._ready_starts[x]) for x in old))
 
     def test_no_record_with_old_slots_is_not_fresh(self):
         """沒有記錄（例如舊版包起的）但子根已有前代：不當全新空間，照樣先收。"""
@@ -217,7 +234,7 @@ class TestUnknown(RecoverCase):
         os.remove(os.path.join(sub, ".aosd", "subd-life.json"))
         self.run_subd(run=2)
         self.new_daemon(sub, old_daemon)
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [])
+        self.assertEqual([], self.alive_old(old))
 
 
 class TestBoundary(RecoverCase):
@@ -229,15 +246,15 @@ class TestBoundary(RecoverCase):
         sub, n1, old, old_daemon = self.leftover_gen("a/sub")
         self.run_subd(run=2)
         cur_daemon = self.new_daemon(sub, old_daemon)
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [])
-        self.assertTrue(aos7_proc.pid_alive(sib[0]), "收到 sibling 子根 a/sub2 的任務了")
+        self.assertEqual([], self.alive_old(old))
+        self.assertTrue(self.same(sib[0], self._ready_starts[sib[0]]), "收到 sibling 子根 a/sub2 的任務了")
         self.assertIsNone(q.poll())
         cur = self.ready_pids(n1, not_in=old)
         # 同一子根再起一個包：拿不到 subd.lock，退出碼 1，不掃、不收現役新代
         p3 = self.run_subd(run=3)
         self.assertEqual(p3.wait(15), 1)
         self.assertIn("認領", self.err(p3))
-        self.assertTrue(all(aos7_proc.pid_alive(x) for x in cur), "收到現役新代的任務了")
+        self.assertTrue(all(self.same(x, self._ready_starts[x]) for x in cur), "收到現役新代的任務了")
         self.assertEqual(self.status(sub).get("pid"), cur_daemon)
 
     def test_allowed_stop_without_kill_keeps_tasks(self):
@@ -250,12 +267,12 @@ class TestBoundary(RecoverCase):
         self.assertEqual(p.wait(15), 0)
         self.assertEqual(self.life(sub)["state"], "stopped")
         self.assertTrue(os.path.exists(os.path.join(sub, ".aosd", "stopped.json")))
-        self.assertTrue(aos7_proc.pid_alive(pid))
+        self.assertTrue(self.same(pid, self._ready_starts[pid]))
         os.remove(os.path.join(sub, ".aosd", "stopped.json"))
         self.run_subd(run=2, allow_stop=True)
         self.new_daemon(sub, old_daemon)
         self.wait_for(lambda: "s0#1" in self.nstat("n1", sub).get("live", []), 10, "新代沒接回原任務")
-        self.assertTrue(aos7_proc.pid_alive(pid))
+        self.assertTrue(self.same(pid, self._ready_starts[pid]))
 
 
 class TestAllowedStopInterrupted(RecoverCase):
@@ -332,12 +349,12 @@ class TestAllowedStopInterrupted(RecoverCase):
         self.parent_kill(p)
         self.wait_for(lambda: not aos7_proc.pid_alive(daemon), 5, "子 daemon 沒死")
         self.status_stopped(sub)
-        self.assertTrue(all(aos7_proc.pid_alive(x) for x in old), "前提不成立：父 kill 後原任務已經沒了")
+        self.assertTrue(all(self.same(x, self._ready_starts[x]) for x in old), "前提不成立：父 kill 後原任務已經沒了")
         self.assertFalse(os.path.exists(os.path.join(sub, ".aosd", "stopped.json")))
         self.assertEqual(self.life(sub)["state"], "running")
         self.run_subd(run=2, allow_stop=True)
         self.new_daemon(sub, daemon)
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [], "父 kill 留下的前代沒收")
+        self.assertEqual([], self.alive_old(old), "父 kill 留下的前代沒收")
 
     def test_old_stop_receipt_then_parent_kill_reaps(self):
         """上一代被允許的 stop 留下的回條（早於本代 since）不算：本代被父 kill 照收。"""
@@ -355,13 +372,35 @@ class TestAllowedStopInterrupted(RecoverCase):
         self.parent_kill(p2)
         self.wait_for(lambda: not aos7_proc.pid_alive(d2), 5, "第二代子 daemon 沒死")
         self.status_stopped(sub)
-        self.assertTrue(all(aos7_proc.pid_alive(x) for x in old), "前提不成立：父 kill 後原任務已經沒了")
+        self.assertTrue(all(self.same(x, self._ready_starts[x]) for x in old), "前提不成立：父 kill 後原任務已經沒了")
         self.assertEqual(self.life(sub)["state"], "running")
         p3 = self.run_subd(run=3, allow_stop=True)
         self.new_daemon(sub, d2)
         self.assertIsNone(p3.poll())
         self.assertFalse(os.path.exists(os.path.join(sub, ".aosd", "stopped.json")), "拿上一代的回條判成被允許的 stop")
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [], "父 kill 留下的前代沒收")
+        self.assertEqual([], self.alive_old(old), "父 kill 留下的前代沒收")
+
+
+class TestRecoveryAssertions(unittest.TestCase):
+    def test_partial_reap_is_rejected_before_resume(self):
+        """T8-03：三個只死一個，必須在第三代補收之前就報錯。"""
+        case = TestInterrupted("test_killed_after_reaped_before_new_gen")
+        case._ready_starts = {101: 1, 102: 2, 103: 3}
+        class Crashed:
+            def wait(self, timeout):
+                return -signal.SIGKILL
+            def poll(self):
+                return None
+        with patch.object(case, "leftover_gen", return_value=("sub", "n1", [101, 102, 103], 99)), \
+                patch.object(case, "run_subd", return_value=Crashed()) as launch, \
+                patch.object(case, "err", return_value=""), patch.object(case, "assert_no_daemon"), \
+                patch.object(case, "new_daemon"), patch.object(case, "ready_pids"), \
+                patch.object(case, "life", side_effect=[{"state": "recovering"}, {"state": "running"}, {"owner": {"run": "3"}}]), \
+                patch.object(aos7_proc, "pid_alive", side_effect=lambda pid: pid != 101 and launch.call_count == 1), \
+                patch.object(aos7_proc, "same_process", side_effect=lambda pid, start: aos7_proc.GONE if pid == 101 else aos7_proc.ALIVE):
+            with self.assertRaises(AssertionError):
+                case.crash_then_resume("subd-reaped", False)
+            self.assertEqual(launch.call_count, 1, "不能靠第三代補收掩蓋")
 
 
 if __name__ == "__main__":

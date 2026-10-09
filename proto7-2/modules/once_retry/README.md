@@ -25,7 +25,8 @@
 
 - 要保證的 once 項帶 `"x": {"retry_lost": true}`（核心照抄進 birth.json，不看內容）。舊的頂層 `retry_lost` 欄核心不收（那項不合、tasks_error 指到這裡）。
 - 每收到一次 tock，讀自己 node 的 `.aos/last-round.json`：`ended` 裡 `lost` 而且 `never_started`（核心判 lost 時 birth 沒有 runner、沒有 pid.json、out.log 不存在或空）的那筆，槽的 birth.json（槽還在）同一個 run、`once`、`x.retry_lost` 是 true → 照 birth 的定義（`argv`／`inst`、`mounts`、`x`）拿表鎖加回一項 once：`slot` 釘同槽、`x.retry_of`＝原 run id。表上已有同 `retry_of` 的不重加。
-- 加不回（表鎖一秒拿不到、表讀不到或壞掉）＝記著，下一次 tock 再試；任務重起就忘了（取樣，見下）。
+- 加不回（表鎖一秒拿不到、表讀不到或壞掉、birth 讀不到或壞掉）＝記著，下一次 tock 再試；任務重起就忘了（取樣，見下）。
+- 每次加回都在表鎖內重讀槽的 birth：run 已換、不是 once、`x.retry_lost` 不再是 true，或 birth 確定不存在，就丟掉該候選，不再重試；不拿 pending 裡的舊 birth 當作證據。表鎖不護 birth：核心在這次重讀與提交之間正好重用該槽時仍可能多加回一次（契約是至少一次，R8-26 只縮窗口）。
 - 加回的項同樣帶 `x.retry_lost`，再遇到同樣情況會再加回。
 
 ## 界線（方案 6.1 第 3 點）
