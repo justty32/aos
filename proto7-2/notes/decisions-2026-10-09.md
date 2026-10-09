@@ -295,3 +295,5 @@
 - C｜KF 留下：brain 進度句「第 1 回合，下一步第 2 回合」回合／步混用 → 交 UW 一起改
 - 未證明但收｜AP4：學徒自我改進 A／B 對照（luna 5×2、sol-low 4×2，297 次真 AI、約 279 萬 token）→ 讀自己技能書的 B 組沒比 A 好、token 多 25～36%；唯一小訊號「測試匯入不到自己的模組」A 7 次 B 3 次。主因：luna 151 輪有 81 輪是 JSON 括號手滑、sol 第 1 題就過沒坑可省。機制收下：`propose --skills`（挑一本技能書放進提示，不給時提示一字不變）、`learn --skill-into`（學徒改寫整本 SKILL.md）、第 1 關錯誤訊息具體化
 - C｜頂層：開 AP5——交件改「每個檔一段文字」去掉 JSON 手滑、題目換成知識型的坑（需求不寫、只能從檢查結果學的格式細節）；AP4 不發布 apprentice/ 分支照收
+- 未過但收｜UW：up 用語白話——「假 AI」→「練習用的 AI」、卡住信改寫（拿掉 ADVANCED 路徑、寫明重寄方式）、進度一律叫「步」、「回合」只指心跳。新手兩輪都答對，Haiku 4／5、luna 7／7；Haiku 扣分多在 status 詞與信頭（領地外），照「不追分」收
+- C｜頂層：「假 AI」殘留（README-head、kernel ADVANCED／範例、skills、compact、INDEX、tests README、longtask 範例信）與 KF 的 E5、藍圖 C10 註記一起歸最後整合隊 I2
