@@ -37,12 +37,12 @@ def load(path, default=None):
 def inbox(root, who):
     if who.startswith('team:'):
         return Path(root) / 'teams' / name(who[5:]) / 'inbox'
-    return Path(root) / name(who) / 'wf/inbox'
+    return Path(root) / name(who) / 'inbox'
 
 
 def letters(box, done=False):
-    paths = sorted(box.glob('*.md'))
-    return paths + sorted((box / 'done').glob('*.md')) if done else paths
+    paths = sorted(p for p in box.glob('*.md') if not p.name.startswith('.') and p.is_file())
+    return paths + letters(box / 'done') if done else paths
 
 
 def letter(path):
@@ -162,7 +162,7 @@ def send(root, me, to, status, title, body='', re_id='', ident=None):
 def audit(root, me=None):
     if me is not None:
         name(me)
-    boxes = sorted(set(Path(root).glob('*/wf/inbox')) | set(Path(root).glob('teams/*/inbox')))
+    boxes = sorted(set(Path(root).glob('*/inbox')) | set(Path(root).glob('teams/*/inbox')))
     all_mail = []
     for box in boxes:
         with locked(str(box / '.delivery')):
@@ -185,7 +185,7 @@ def ack(root, me):
     upto = actual
     write_json(str(marker), upto)
     cursor = upto + 1
-    ended = {l['id'] for p in (box / 'done').glob('*.md')
+    ended = {l['id'] for p in letters(box / 'done')
              if (l := letter(p))['status'] == 'REQUEST'}
     while True:
         result = events_read(events, 'must', cursor=cursor)
@@ -251,7 +251,7 @@ def complete(root, me, path, status=None, title=None, body='', handler=None):
                 raise ValueError('REQUEST 辦結必須給終局 STATUS 與一句結論')
             validate_reply(status, title, body)
             reply_to = l.get('reply-to') or l['from']
-            to = l['from'] if '/' not in reply_to else Path(reply_to).parents[1].name
+            to = l['from'] if '/' not in reply_to else Path(reply_to).parent.name
             name(to)
             destinations = [to]
             team = team_of(root, me)
