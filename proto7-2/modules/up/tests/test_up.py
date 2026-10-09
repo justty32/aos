@@ -149,7 +149,9 @@ class UpTests(DaemonCase):
         self.send()
         lines = self.invoke('status', self.node).splitlines()
         self.assertEqual(len(lines), 6)
-        self.assertEqual([s.split('：')[0] for s in lines], ['心跳', '信', '工作簿', '技能', 'AI', '檔案'])
+        self.assertEqual([s.split('：')[0] for s in lines], ['心跳', '信', '工作簿', '技能', 'AI', '要收掉'])
+        for word in ('回合', '帳', '預留', 'ack', '退出碼', 'daemon', 'tick', 'call', '體檢', 'you-2'):
+            self.assertNotIn(word, '\n'.join(lines))
         self.assertIn('bob 還沒收到要辦的信', lines[1])
         self.invoke('stop', self.node)
         self.assertIn('停了', self.invoke('status', self.node).splitlines()[0])

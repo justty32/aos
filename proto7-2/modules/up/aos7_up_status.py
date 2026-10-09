@@ -132,33 +132,49 @@ def skill_count(node):
     return sum(p.is_file() for p in (node / 'skills').glob('*/SKILL.md'))
 
 
-def state(node):
+LETTER_ID = re.compile(r'[\w.-]*-\d{8}T\d{6}-[0-9a-f]{12}(?:-s\d+)?')
+
+
+def short(title, size=24):
+    return title if len(title) <= size else title[:size] + '…'
+
+
+def plain(line, titles):
+    """工作簿最後一行給新手看：去掉時間、信／call 的 id 換成信的標題（前面的 call 一字也拿掉）、「回合」說成「步」。"""
+    line = re.sub(r'^-\s*(\d{1,2}:\d{2}\s+)?', '', line.strip())
+    def name(m):
+        title = titles.get(re.sub(r'-s\d+$', '', m.group(1)))
+        return f'「{short(title)}」' if title else '一封信'
+    line = re.sub(r'\s*(' + LETTER_ID.pattern + r')\s*', name, line)
+    line = re.sub(r'\bcall\s*(?=「|一封信)', '', line)
+    return line.replace('回合', '步').strip() or '還沒開始'
+
+
+def state(node, titles=None):
     pointer = node / 'wf/handoffs/NEXT-SESSION.md'
     for link in re.findall(r'\]\(([^)]+STATE\.md)\)', text(pointer)):
         lines = [s for s in text(pointer.parent / link).splitlines() if s.strip()]
         if lines:
-            return lines[-1]
-    return '（還沒記）'
+            return plain(lines[-1], titles or {})
+    return '還沒開始'
 
 
 def cleanup_hint(node):
-    """只在房子全屬 up 時建議整屋清理；共用檔案留給其他 node。"""
+    """給新手一行「怎麼收掉」：心跳還在就先叫他停；只在房子全屬 up 時整屋刪，共用檔案留給其他 node。"""
     house = node.parent
     entries = sorted(house.iterdir(), key=lambda p: p.name)
     nodes = [p for p in entries if p.is_dir() and (p / '.aos/up.json').is_file()]
     known = set(nodes) | {house / 'you', house / '.aosd'}
     if all(p in known for p in entries):
-        names = [p.name for p in nodes]
-        names += [name for name in ('you', '.aosd') if house / name in entries]
-        return (f'檔案：都在 {house}（' + '、'.join(names) +
-                f'）；全清：先停心跳，再 rm -r {shlex.quote(str(house))}')
-    targets = [node]
-    # 有 .aos/ 的都算 node（不論是不是 up 起的）：別的 node 還在用 you 與 .aosd
-    if not any(p != node and (p / '.aos').is_dir() for p in entries):
-        targets += [house / 'you', house / '.aosd']
-    command = ' '.join(shlex.quote(str(p)) for p in targets)
-    return (f'檔案：{node}、{house}/you、{house}/.aosd；'
-            f'全清：先停心跳，再 rm -r {command}')
+        targets = [house]
+    else:
+        targets = [node]
+        # 有 .aos/ 的都算 node（不論是不是 up 起的）：別的 node 還在用 you 與 .aosd
+        if not any(p != node and (p / '.aos').is_dir() for p in entries):
+            targets += [house / 'you', house / '.aosd']
+    command = 'rm -r ' + ' '.join(shlex.quote(str(p)) for p in targets)
+    return (f'要收掉：先在視窗 1 按 Ctrl-C 停心跳，再 {command}' if alive(house) else
+            f'要收掉：{command}')
 
 
 def status(node):
@@ -171,7 +187,9 @@ def status(node):
           f'心跳：停了（最後第 {n} 下）；起它：aos7-up {node}')
     inbox = letters(node / 'inbox')
     waiting = sum(v.get('status') == 'REQUEST' for v in inbox.values())
-    done = sum(v.get('status') == 'REQUEST' for v in letters(node / 'inbox/done').values())
+    finished = letters(node / 'inbox/done')
+    done = sum(v.get('status') == 'REQUEST' for v in finished.values())
+    titles = {v['id']: v.get('title', '') for v in (*finished.values(), *inbox.values()) if v.get('id')}
     total, doing = waiting + done, min(1, waiting)
     queue = waiting - doing
     replies = letters(node.parent / 'you/inbox')
@@ -194,18 +212,15 @@ def status(node):
         if letter:
             limit = float(settings.get('deadline', 60 if settings.get('model') in (None, 'fake', '') else 600))
             waited = time.time() - unsure['since']
-            title = letter.get('title', '')
-            title = title if len(title) <= 24 else title[:24] + '…'
-            print(f'卡住了：正在辦的信「{title}」問了 AI，但不確定 AI 回了沒（多半是問到一半被打斷），'
-                  f'這封先停著、已等 {waited:.0f} 秒；你先不用動手，滿 {limit:g} 秒 {node.name} 會回信給你說怎麼處理，接著辦下一封')
+            print(f'卡住了：信「{short(letter.get("title", ""))}」問了 AI，不確定 AI 回了沒，已等 {waited:.0f} 秒；'
+                  f'你不用動手，滿 {limit:g} 秒 {node.name} 會回信說怎麼辦，再辦下一封')
     except (ValueError, OSError, TypeError, KeyError, AttributeError):
         pass
     count = sum(s.startswith('- ') for rel in ('SESSION-LOG.md', 'WAIT_USER.md')
                 for s in text(node / 'wf' / rel).splitlines())
     check = call('modules/wfnode/aos7-wfnode', 'check', node)
-    health = 'OK' if check.returncode == 0 else '有問題'
-    print(f'工作簿：還有 {count} 件事沒做完；停在：{state(node)}；體檢 {health}' +
-          (f'（看細節：aos7-wfnode check {node}）' if check.returncode else ''))
+    print(f'工作簿：還有 {count} 件事沒做完；停在：{state(node, titles)}' +
+          (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if check.returncode else ''))
     print(f'技能：{skill_count(node)} 本')
     calls = sum(p.is_file() for p in (node / 'llmcall/llm').glob('*/raw.json'))
     budget = call('packs/budget/bin/aos7-budget', 'status', 'budget/llm', cwd=node)
@@ -214,7 +229,7 @@ def status(node):
     except ValueError:
         used = '—'
     usage = f'讀寫約 {used} 字' if isinstance(used, (int, float)) else '讀寫字數不明'
-    print(f'AI：{settings.get("model") or "假 AI"}；問過 {calls} 次，{usage}')
+    print(f'AI：{settings.get("model") or "假 AI（不連網、不花錢，照抄你的信回你）"}；問過 {calls} 次，{usage}')
     print(cleanup_hint(node))
     return 0
 

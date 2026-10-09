@@ -58,7 +58,7 @@ compact 在工作簿變厚時自動整理。routines 只裝它的 keep 任務、
 - `<房子>/.aosd/`：心跳的鎖、紀錄、狀態與 `up-daemon.log`。
 - 常駐程式：心跳一個，node 上 `budget-llm`、`brain`、`compact`、`routines` 四個 keep 任務（brain 的 argv 凍結為 `python3 <proto7-2>/modules/up/aos7-up brain <node>`）。
 
-stop 收掉心跳與它起的全部任務，不刪任何檔。全清先停心跳再刪：房子裡只有 up 的 node、`you/`、`.aosd/` 時，status 與 stop 叫你 `rm -r <房子>`（括號列出會刪的每一項）；房子裡有別的東西時只列 `rm -r <node>`，房子裡沒別的 node（有 `.aos/` 的資料夾，不論是不是 up 起的）才加 `<房子>/you <房子>/.aosd`。
+stop 收掉心跳與它起的全部任務，不刪任何檔。status 與 stop 的最後一行是「要收掉：…」：心跳還活著時先叫你在視窗 1 按 Ctrl-C（用 `-d` 背景跑的改用 stop），心跳停了只給 `rm -r`。房子裡只有 up 的 node、`you/`、`.aosd/` 時叫你 `rm -r <房子>`（會刪房子裡全部 node、`you/` 與 `.aosd/`）；房子裡有別的東西時只列 `rm -r <node>`，房子裡沒別的 node（有 `.aos/` 的資料夾，不論是不是 up 起的）才加 `<房子>/you <房子>/.aosd`。
 
 ## 設定與重接
 
@@ -88,7 +88,7 @@ register 後最多等 15 秒（節拍超過 1 秒時多等那一拍；心跳已�
 子指令獨立 process group；中斷送整組 SIGTERM，等 5 秒再 SIGKILL，不留孫程序。
 所有 Python 子程序使用 -B，不在程式目錄留 __pycache__。
 
-status 唯讀，平常六行；體檢 OK 只報 OK，有問題附 check 指令。信那行先說 node 收到幾封要辦的信（REQUEST，含已辦完的）、辦完幾封、正在辦、排隊幾封，再說人的信箱（`you/inbox`）有幾封回信沒看、其中幾封要你決定、幾封說卡住了。brain 正在等一筆不確定的 AI 回覆時，信那行下面多一行「卡住了：正在辦的信「…」…已等 X 秒；滿 L 秒就回信…」，這時共七行。AI 行的「讀寫約 N 字」是 budget status 的 used（token 數，對中文約等於字數），讀不到印「讀寫字數不明」。
+status 唯讀，平常六行，只用新手五個詞（node、心跳、工作簿、信、技能）與白話。工作簿那行的「停在」是最後一筆 STATE 去掉時間、信／call 的 id 換成信的標題（找不到標題寫「一封信」）、「回合」說成「步」；`aos7-wfnode check` 沒過才在那行尾加「工作簿有地方寫壞了（看哪裡：…）」，過了不提。AI 行沒設模型時寫「假 AI（不連網、不花錢，照抄你的信回你）」。信那行先說 node 收到幾封要辦的信（REQUEST，含已辦完的）、辦完幾封、正在辦、排隊幾封，再說人的信箱（`you/inbox`）有幾封回信沒看、其中幾封要你決定、幾封說卡住了。brain 正在等一筆不確定的 AI 回覆時，信那行下面多一行「卡住了：信「…」問了 AI，不確定 AI 回了沒，已等 X 秒；你不用動手，滿 L 秒 bob 會回信說怎麼辦，再辦下一封」，這時共七行。AI 行的「讀寫約 N 字」是 budget status 的 used（token 數，對中文約等於字數），讀不到印「讀寫字數不明」。
 
 給人看的輸出不出現英文狀態詞：ask 的回信 DONE 不標、BLOCKED 標「卡住了」、NEEDS-USER 標「要你決定」、FAILED 標「沒辦成」；JSON 與信件欄位照舊是英文。
 
@@ -152,7 +152,7 @@ up.json 壞了時刪掉該檔再 up。未知結果不清檔、不重送。
 | `tests/test_up_model.py` | 模型、端點保存、拒絕 gateway 變更、經 up 的 ask 假 AI 一圈 |
 | `tests/test_up_beat.py` | 節拍生效、沿用、壞值退 2 |
 | `tests/test_up_edges.py` | 重跑保信、壞設定、共享心跳、訊號、並行與唯讀 |
-| `tests/test_up_errors.py` | 子指令摘要、未知讀寫、stop 逾時、壞名字無副作用 |
+| `tests/test_up_errors.py` | 子指令摘要、未知讀寫、stop 逾時、壞名字無副作用、「停在」去 id 與回合、體檢只在壞時出現、要收掉那行 |
 | `tests/test_up_dispatch.py` | 分派、真檔觀看事件、啟動／收尾逾時、中斷與程序組 |
 
 從 repo 根跑：
