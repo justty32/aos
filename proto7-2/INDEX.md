@@ -41,3 +41,4 @@
 - `lib/aos_inst.py`、`aos_directives*.py`、`aos_dirname.py`、`aos_exec*.py`、`bin/aos-exec`：**原樣複製自 proto7-1**（10-04；proto7-1 當初從 proto6 複製）。
 - `lib/aos7_fs.py`、`aos7_run.py`、`aos7_mount.py`、`modules/tools/aos7_ctl.py`、`modules/audit/aos7_audit.py`、`modules/audit/audit_site/`、`tests/_proc.py`：從 proto7-1 複製後改寫（`aos7_audit.py`、`audit_site/`、`_proc.py`、`aos7_mount.py` 幾乎沒改）。
 - `lib/aos7_daemon*.py`、`aos7_tick.py`、`aos7_tock.py`、`aos7_task.py`、`aos7_proc.py`：照 proto7-1 同名檔的結構重寫（程序工具從 proto7-1 `aos7_task.py` 拆出來）。
+| `packs/usage/` | [aos7-usage](packs/usage/README.md) | 唯讀彙總 llmcall 用量、帳差與缺口 |
