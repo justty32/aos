@@ -184,3 +184,7 @@
 - C｜F2：真 AI 一開始以為自己有工具（回「我先確認工作區…」），提示詞加「你沒有工具，資料都附在下面，直接回答」後正常
 - C｜ER0：統一錯誤規則的一致性測試 `tests/core/test_error_path.py`＋清單 `tests/error_path.json` 進 main；各包改完在清單自己那列拿掉 skip、補一個「不確定」案；核心 tick 用法錯退 1 視為相容；prompt 的 JSON 回條留在 stderr 照藍圖
 - C｜ER-prompt-metrics：prompt 出錯時 stderr 第一行照舊是 JSON、第二行加一句人話；metrics 錯誤改統一一行格式；兩包 README 只留新手部分、其餘搬 ADVANCED.md。新手重試 prompt 7.4／8.8、metrics 8.0／8.8
+- 結果｜A5 學徒（目標 3 第一個實證）：真 AI 學徒寫出 **2 個 aos 新元件並過三關合進來**——工具包 `packs/usage/`（看 token 用量）、模組 `modules/llmdiag/`（診斷 LLM 線路）；人工只修 1 次（把索引列搬進表格）。23 次真 AI 呼叫、23.6 萬 token；16 份候選有 10 份被三關擋下
+- 結果｜A5 自我改進：題 2 帶踩坑筆記比不帶少重問 1 次、少 15% token，但失敗原因都是 proxy 問題、筆記擋不住，**判定沒有足夠證據算「自我改進」**
+- 發現｜A5：經 LiteLLM 時 `chatgpt-gpt-6-sol-high` 11 次有 4 次只回一行開場白、卻計費 5～6 千輸出 token（astra 沒這問題）→ 下一輪查
+- C｜A5：學徒的 3 個沒合進來的 `apprentice/` 比較分支留著，刪不刪等你（刪分支算不可逆）
