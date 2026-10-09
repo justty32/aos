@@ -205,3 +205,5 @@
 - 發現｜proxy 截斷根因查到 → [litellm-truncation](play/2026-10-09-real-ai/litellm-truncation.md)：sol 的回答其實都有回來，但後端把「開場白」和「答案」拆成兩段，LiteLLM 轉成兩個 choice，**aos 只讀第一個**（`packs/llmcall/aos7_llmcall_litellm.py` 與 `core/llm/src/llm.cpp`）。另外 proxy 每次自帶的 1.6k 是寫死的 Codex 系統提示，讓模型以為自己在 Codex 裡、想先看檔
 - B｜頂層：開修補隊——讀「最後一個非空的 choice」並在收據記 choice 數；所有要 JSON 的呼叫在提示尾端固定加「你沒有任何工具，不要開場白，第一個字元就是 {」（重放 4/4 有效）
 - 待你決定｜LiteLLM 設定：啟動 proxy 前設 `CHATGPT_DEFAULT_INSTRUCTIONS` 換掉 Codex 系統提示（每次省約 1.4k token、模型不再誤以為在 Codex 裡；風險是後端可能擋、astra 的快取會失效）。這是你的設定，我沒動
+- C｜ER-up：status／stop 的全清提示改成列出房子裡每樣東西（有別的 node 時不叫人刪整間）；ask 回信不再帶英文 DONE、用量改「讀寫約 N 字」；`--help` 只列 3 個指令；起好時不再提 `--model`（ADVANCED 寫清模型名從哪查）。新人從零（只看 QUICKSTART）第 3 輪 Haiku 7.0／luna 8.8，概念 5、指令 3
+- C｜頂層：QUICKSTART 的「aos 資料夾」補一句「就是你 git clone 下來的那個」（Haiku 最後的卡點）
