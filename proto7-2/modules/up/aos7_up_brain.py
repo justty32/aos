@@ -134,7 +134,7 @@ def request(node, letter, cid, cfg):
         lines = [f"{n}：{flat(v['description'])}" for n, v in skills.get('skills', {}).items()]
         skills_text = '技能：\n' + ('\n'.join(lines) or '（還沒有技能）') + '\n\n'
         skill = task.get('skill') if task else skill_of(node, letter)
-        parts = dict(skill='', trail='', attach='')
+        parts = dict(skill='', trail='', attach='', state=memory.state_text(node))
         if skill and (node / 'skills' / skill / 'SKILL.md').is_file():
             parts['skill'] = f'挑到的技能 {skill}：\n' + (node / 'skills' / skill / 'SKILL.md').read_text()[:3000] + '\n\n'
         letter_text = Path(letter['file']).read_text()
@@ -147,7 +147,7 @@ def request(node, letter, cid, cfg):
         if task:
             parts['trail'] = f"這是第 {step} 回合（最多 {cfg.get('max_steps', 40)}）。前幾回合（最近 8 回合）：\n" + '\n'.join(task['trail']) + '\n\n'
         def render():
-            (work / 'now.md').write_text(skills_text + parts['skill'] + index + parts['attach'] + parts['trail'] +
+            (work / 'now.md').write_text(skills_text + parts['skill'] + index + parts['attach'] + parts['state'] + parts['trail'] +
                                         '收到的信：\n' + letter_text, encoding='utf-8')
             checked(TOP / 'packs/prompt/bin/aos7-prompt', 'render', node, TOP / 'modules/up/prompts/brain.json',
                     '--out', req, node=node)
@@ -212,9 +212,28 @@ def ask_ai(node, letter, cid, cfg):
 def state_count(node, line):
     return sum(s.endswith(' ' + line) for p in (node / 'wf/handoffs').glob('*/STATE.md')
                for s in p.read_text().splitlines())
-def state_once(node, line):
-    if not state_count(node, line):
+def state_once(node, key, line, before=None):
+    path = node / 'brain/state.json'
+    st, saved = fact(str(path))
+    if (st != OK or not isinstance(saved, dict) or not isinstance(saved.get('done'), list)
+            or not all(isinstance(k, str) for k in saved['done'])
+            or (saved.get('doing') is not None and
+                (not isinstance(saved['doing'], dict) or not isinstance(saved['doing'].get('key'), str)
+                 or not isinstance(saved['doing'].get('count'), int)))):
+        saved = dict(done=[], doing=None)
+    if key in saved['done']:
+        return
+    doing = saved.get('doing')
+    if doing and doing['key'] == key:
+        before = doing['count']
+    elif before is None:
+        before = state_count(node, line)
+    saved['doing'] = dict(key=key, count=before)
+    write_json(str(path), saved)
+    if state_count(node, line) <= before:
         checked(WF, 'state', node, line, node=node)
+    saved.update(done=(saved['done'] + [key])[-50:], doing=None)
+    write_json(str(path), saved)
 def locked(node, edit):
     """跟 compact 共用 write.lock 改記憶檔（compact spec 的合作追加者）。"""
     (node / 'compact').mkdir(exist_ok=True)
@@ -257,13 +276,10 @@ def journal(node, ident, step, text):
 def compact_if_big(node, cfg):
     if cfg.get('compact', True) is False:
         return False
-    conf = read_json(str(node / 'compact.json'), {}) or {}
-    limit = conf.get('max_bytes', 16384)
-    files = conf.get('files', ['wf/SESSION-LOG.md', 'notes/journal.jsonl'])
-    if not any((node / f).is_file() and (node / f).stat().st_size > limit for f in files):
-        return False
-    p = run(TOP / 'modules/compact/aos7-compact', 'now', node, node=node, timeout=float(cfg.get('deadline', 600)) + 30)
     try:
+        p = run(TOP / 'modules/compact/aos7-compact', 'now', node, node=node, timeout=float(cfg.get('deadline', 600)) + 30)
+        if p.returncode:
+            return False
         return any('job' in f for f in json.loads(p.stdout.splitlines()[-1])['files'])
     except Exception:
         return False
@@ -294,8 +310,7 @@ def finish(node, pending, personal):
         body.write_text(pending['body'] + '\n', encoding='utf-8')
         mail(node, 'done', node.name, pending['id'], pending['status'], pending['title'], body)
     test_point('up-brain-after-mail')
-    if state_count(node, pending['line']) <= pending['state_count']:
-        checked(WF, 'state', node, pending['line'], node=node)
+    state_once(node, f'{pending["id"]}#end', pending['line'], before=pending['state_count'])
     test_point('up-brain-after-state')
     drop_task(node, pending['id'])
     (node / 'brain/pending.json').unlink()
@@ -319,7 +334,7 @@ def step_on(node, letter, text, cfg):
     cut = result if len(result) <= LAST_MAX else result[:LAST_MAX] + f'\n（後面還有 {len(result) - LAST_MAX} 字沒附上）'
     (node / 'brain/last.md').write_text(f'上一回合（第 {step} 回合）的成果：\n{cut}\n', encoding='utf-8')
     journal(node, ident, step, line + '｜' + flat(result)[:300])
-    state_once(node, f'第 {step} 回合 {ident}：{line}')
+    state_once(node, f'{ident}#s{step}', f'第 {step} 回合 {ident}：{line}')
     open_line(node, ident, f'{line}（做完第 {step} 回合）→ 下回合接著做')
     every = cfg.get('progress_every', 5)
     if every and step % every == 0:

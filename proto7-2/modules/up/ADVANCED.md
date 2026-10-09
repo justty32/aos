@@ -103,7 +103,7 @@ AI 每回合回三種之一：`回信：`（做完，回 DONE）、`繼續：`�
 - `notes/journal.jsonl` 一行（`by`、`re`、`step`，拿 `compact/write.lock`）；STATE 一行「第 k 回合 <信 id>：<停在哪>」。
 - SESSION-LOG 第一個 `## ` 段下一行 `- [brain] 信 <id>：…`，結案就刪。
 - 每 `progress_every` 回合（up.json，預設 5，0＝不寄）寄 PROGRESS 給寄件人，同回合不重寄。
-- 記憶檔超過 `compact.json` 的 `max_bytes` 就跑 `aos7-compact now`（up.json `compact: false` 關）。
+- 每回合跑一次 `aos7-compact now`（要不要整理、門檻與檔案清單照 compact 自己的設定，預設含 STATE；沒事不寫；up.json `compact: false` 關）。
 - 第 1 回合本機挑一本技能，之後每回合附上那本 SKILL.md。
 
 挑技能經沒帳的 `brain/.pick` 視角呼叫 `aos7-skills pick`，所以不問 AI、不花錢，紀錄照樣在 `skills/.pick/log.jsonl`。提示不用 `ref://` 折疊：AI 沒有工具展開，折起來等於看不到；每回合提示只多「最近 8 回合各一行＋上回合成果」，有上限，不隨回合數變長。
@@ -127,9 +127,9 @@ SESSION-LOG 的 brain 行會把 AI 寫的「停在哪」裡會讓 `aos7-wfnode c
 
 ### brain 跨信記憶
 
-結案回信全文存進 `notes/done/<id>.md`；`INDEX.md` 留最新 50 行，較舊的先搬到 `INDEX-old.md`。每回合附目錄（最多 2000 字）；信提到前件時再附一份全文（最多 3000 字）。AI 也能只回 `要檔案：<id>`，多用一回合拿全文；同樣受卡住與回合數上限保護。
+結案回信全文存進 `notes/done/<id>.md`；`INDEX.md` 留最新 50 行，較舊的先搬到 `INDEX-old.md`。每回合附目錄（最多 2000 字）；信提到前件時再附一份全文（最多 3000 字）。每回合也附最新一份 STATE（最多 1200 字，太長留摘要行＋最近幾行）。`notes/journal.jsonl` 不進提示，壓縮它只為了檔案變小。AI 也能只回 `要檔案：<id>`，多用一回合拿全文；同樣受卡住與回合數上限保護。
 
-`up.json` 可設 `max_prompt_chars`（預設 12000）：提示超過時先砍回合軌跡、再砍技能全文、再截前件全文，最後縮短上回合成果（至少留 200 字）；目錄永遠保留。砍完還超過（信或工作簿本身太長）就回 BLOCKED，說把信拆短或調大上限。寫全文與寄信之間被 SIGKILL，重起不重寫、不重加目錄、不重寄。假 AI 遇到標題含「要檔案」且還沒附前件，就演一次要檔案。
+`up.json` 可設 `max_prompt_chars`（預設 12000）：提示超過時依序砍回合軌跡、技能全文、STATE，再截前件全文，最後縮短上回合成果（至少留 200 字）；目錄永遠保留。砍完還超過（信或工作簿本身太長）就回 BLOCKED，說把信拆短或調大上限。寫全文與寄信之間被 SIGKILL，重起不重寫、不重加目錄、不重寄。假 AI 遇到標題含「要檔案」且還沒附前件，就演一次要檔案。
 
 ## 錯誤與退出
 
