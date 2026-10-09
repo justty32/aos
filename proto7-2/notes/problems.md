@@ -227,6 +227,8 @@
 | C8-01（＝R8-03 同族）取消登記後 daemon 被殺，回收義務遺失 | daemon／B | 回收意圖先寫 nodes.json `reaping`（`{id: {since, why}}`），確認乾淨且清除寫成功才拿掉；重開續收（spec §2.6）。K2 7ac33100；測試 `test_unregister_crash_before_kill_resumes` 等 |
 | C8-02（＝R8-02）node 替換後中斷回收，新舊任務同活 | daemon／B | 在 `reaping` 的 node 不開時間線；收不乾淨保留 missing、約每秒重試；舊時間線結束後再掃一次才算乾淨（K2 0b68b3a0）。磁碟不記 pgid，重開只靠身分掃描 |
 | C8-03 任務包槽外暫存檔沒人回收 | 核心＋各包／G | 原則寫進 spec §5.5：核心只清自己的資料夾，槽外由寫的人跑 `sweep_tmp`；step 直譯器啟動清工作資料夾與 results、budget 帳任務起時清 `gateway/`；adapt 份已做（`9d8767da`，`Adapter.init()` 啟動時清 `in/`）；三包都處理完 |
+| L3-1 `test_diag.test_unsure_listed` 上午連紅九次 | 測試流程／非 bug | 不是負載：T 隊驗證變異時兩次 sed 讓檔案大小不變、與還原 `cp` 落在同一秒，`__pycache__` 舊的變異版（runner 規則指到不存在的 pid＋`check()`）照用到檔案再被改動為止；照同樣步驟可 100% 重現（同一句 `Lists differ: [] != [('k', 1)]`），`touch` 一下就好。測試不改；變異驗證要用 `python3 -B` 或還原後 `touch` |
+| L3-2 subd `test_allow_stop_writes_stopped_and_parent_does_not_restart` 負載下 out.log 空 | 測試假設／非 bug | 父 keep 每回合再起被擋的包裝程式，每次先清槽（out.log 刪掉）再由包裝程式重寫；看到 `ended` code 1 後只讀一次，晚了就落在空窗（探針 3 秒內約 19% 讀到空）。改成等 out.log 出現說明（檔案證據） |
 
 已知限制（不修，記在代定清單）：N-06 回合已關、`steps` 還沒存之間當機，重開多跑一回合；daemon 停機時 node 被換掉偵測不到；once_retry R8-26 重讀 birth 到提交之間仍可能多補一次（契約是至少一次）；node id 很長（約 250 bytes）時 history 檔名太長。
 
