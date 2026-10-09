@@ -65,7 +65,7 @@ python3 proto7-2/modules/metrics/aos7-metrics job proto7-2/modules/metrics/basel
 | 回條 | 每次問完模型留下的用量單（真的用了幾個 token） |
 | 帳 | 預算帳本記下的用量 |
 | `帳差 0` | 帳－回條＝0，兩邊對得上；不是 0 才要查 |
-| `另 1 次呼叫沒帳、用 1649 token` | 那次沒走帳本（這裡是 litellm-smoke，直接打代理）。它的 token 照樣算進模型那行，只是不進對帳，所以模型各行加起來 32388＝有帳 30739＋沒帳 1649 |
+| `另 1 次呼叫沒帳、用 1649 token` | 那次沒走帳本。這裡是 litellm-smoke：用 sol 模型試打一次代理的測試，不是 loop 工作。它的 token 照樣算進 sol 那行（所以 sol 是 4 次＝3 次 loop＋1 次 smoke），只是不進對帳；模型各行加起來 32388＝有帳 30739＋沒帳 1649 |
 | 缺口、超支 | 有問沒回條的次數、用超過預留的 token；正常都是 0 |
 
 換 `--by holder`／`day`／`hour` 改按呼叫者／日／時分。
