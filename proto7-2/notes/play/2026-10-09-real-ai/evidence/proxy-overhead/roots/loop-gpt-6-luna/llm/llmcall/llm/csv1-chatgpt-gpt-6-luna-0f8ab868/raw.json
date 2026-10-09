@@ -1,0 +1,65 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-luna-0f8ab868",
+ "req_sha": "dfebef3916a3e53271438371fb331e387a54596575cccbefb85e86ca3ff8a905",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"部門統計：每個部門的筆數、總額、平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+  "usage": {
+   "completion_tokens": 226,
+   "prompt_tokens": 2409,
+   "total_tokens": 2635,
+   "completion_tokens_details": {
+    "reasoning_tokens": 87
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "model": "chatgpt-gpt-6-luna",
+  "finish_reason": "stop",
+  "http": 200,
+  "elapsed": 4.154,
+  "response": {
+   "id": "chatcmpl-08943ce9-ba9b-4f5a-a412-b4e1cb70c0c2",
+   "created": 1791540058,
+   "model": "chatgpt-gpt-6-luna",
+   "object": "chat.completion",
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "message": {
+      "content": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"部門統計：每個部門的筆數、總額、平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+      "role": "assistant",
+      "reasoning_content": "",
+      "reasoning_items": [
+       {
+        "type": "reasoning",
+        "id": "rs_05fa84e3b84b3bba016ac8bb5d16308191b8cd3bb48033906e",
+        "encrypted_content": "gAAAAABqyLtdIM_NdH4UER_p1sP0R3MGWqhUgo8tOGfZ_4WrgPX5-FbSRHraqeKGx4VAxzwQBCuIps_j5OsCb85obn5HtTvzFEcEvyBp0W-6ncjRFoLYx7If-V10kwLeX3EuguDWSdJIZx_sZMaUIhE3yYc41G-wx-mhFA10uXf8Zu1q_bOlSKVK1i3jztJvkfho6ZsziuovhppY-eN9h2jkb0y7IxmTdnMK4zhZcZLz2GALDHg1j8UUtOJwzzaLRxiuJ-2QC34e4rZfXjOL6vFpt1qpICvDbuQWO62qy_mPh9m7tnhDdNBq2O6o4iY1hMyV3vtCe9KngCWzQEZSA7lgxkg4XWt-tLO9D95fGTPkpcHd-HG5QIi4X2R0enRPrBmpHHWuJ0dx1PDz0VNkTTwbo9s8WFuRp66YTD1UQxveQdqZWxJM-hGKODsKFO7Tlor21FkHhyQ6Ui_oZ9F2zzKRw7HHPuZxtqOpP8kUFuPf8y6ja4Ao4SuGvzBL59rDKww_VOxlg060kE2ZO2e4-3uyGJBVilK2EteR90y_4KSc6-HLpAHAXOqhCWAW_IOkXQJM1gQeMPRG2YnyPzL-EpX91loKWabRjk1sUmxlL-r6yZs9--8hKgzIQDkbfqAZyUsTXgi2FDtSmZDIwIHQedbcw_CRosmZL8D0AhOap0-O4wIu0hs2P6LIez7sNBvePs4S1XbTQ9jFj-iwWNjRXr-zLFLkbMjiBUX0u8uuqvyy6MH-uS6Ll_IkwIHDVdveHt4gMaW1VW-IbL0_5v1tL3wZ0lVHKadM0hkdm68qwELzCW8J6ccY0uWhTylC2vCLxD8yC40J3w2cJna1j3-IoIMPwQofc-uorHxCvvSHGCpyptl65me3Z6ojMio8qJbDI9xoR8G3hC85PcQlB4vs5IfkP7I5xIH77c6LswNhlwKmvqeDoplnZ2dHnHc76RPPjycMPqtFwGXpqcqbC2pLrQvwYTodzMHqkwM_6juSb7GjzMcqd1cJ1VebLV4hGXjQDk5BbJ6XRSGlLE9d5eNqIlPHdAPp4ArRAM4L80bUoxr6tt4Xfu7BpGP-t9lxgeQ8EeP43JAIEnjwSovpJ6nX2fHbiYU3U-hspU-93OvwlUwWf-1o3s4d3n9sKen5xzNMAYWRKrkrsbUq9JKmUCqHZdw46BwPbsoHyQYULzJUWm91pMwzjl2EMmJt0NOMD8CXzbozTRU6mGz0XN-kFo6rq9NZ7NLDE4uAV9J3o_87c4pacJ79QKZtEWJcVXhUmjAz26tw-IlQ2b0FlCZ3dgZtjxgFFvHsaGCLssNPG2tImFgZY1Sy-y3dMt8u1di5x3qnPWBiaPIqVzpaRpFWrE9KYNgYOB91V12eG2jpTtSoxsH0J8HMN8utrzs9T8BCKelfdkIPcHMtNCk0WgNgMjgP38gnIwcvse4OEGzYaVWVIBxIjSMSmqGLW6a2oaFD5G3mhJ6bNO35_dSspF3AIKxjipzMynxEdlfQSP-_y11a0873N6zh9qt8p-FXRwwllYhMfSh4_YnbS2IgvsuUR_ByHKngqsQK8mcPJY8gbbFZS2H8-YVU3NXFThX1Bnura1Dv0Q4nrRIXjFMKVjl3mp4aiW1D74D9LfC5MEMSpfqnhE-Y2YcBfCMQYBPxgFo-MuCljwI7sHyclOtbDPF-w0_SFOyKGAMMX_Kd6OtcU9XOTrOf2I-NFelocnO9JzaRdERV7Itz-HC5_70JZqSMwF2tRPpOvMJ32roTyaJj0i0T7x3pC_7le2OcMDrjoWf5_TvfOFL33AM1BZtCBRNDlu-yWK9uf_ivzzSw7g==",
+        "summary": []
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "completion_tokens": 226,
+    "prompt_tokens": 2409,
+    "total_tokens": 2635,
+    "completion_tokens_details": {
+     "reasoning_tokens": 87
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  "choices_n": 1,
+  "skipped": []
+ },
+ "at": "2026-10-09T18:01:02.197"
+}

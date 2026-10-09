@@ -1,0 +1,3 @@
+{"v": 1, "rid": "csv1", "goal": "部門統計：每個部門的筆數、總額、平均",
+ "inputs": [{"path": "data.csv", "sha256": "c01f0a65d56dd37512adc1c4b6cddb18605cce606b87467a13b3102c3481681b"}],
+ "tools": ["csv.convert", "csv.stats"]}

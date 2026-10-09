@@ -1,0 +1,55 @@
+{
+ "v": 1,
+ "versions": {
+  "f4d339323615f5c98daaafc824d808aa6c0e17761a3a51405547773cbc2dfa94": {
+   "candidate_sha": "f4d339323615f5c98daaafc824d808aa6c0e17761a3a51405547773cbc2dfa94",
+   "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+   "job": "csv1_f4d33932",
+   "ok": true,
+   "validated": true,
+   "payload_sha": "895af6763b7dea876d4db681a75dcf6f9546c88a9c2bf92354abf97b0aa2ad28",
+   "issues": [],
+   "manifest": {
+    "v": 1,
+    "rid": "csv1",
+    "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+    "candidate_sha": "f4d339323615f5c98daaafc824d808aa6c0e17761a3a51405547773cbc2dfa94",
+    "job": "csv1_f4d33932",
+    "files": {
+     "convert.py": "f5c03903a4e679a797d87eb8503316d6b89d5f2f90e5b4fb9a2dd14365b3b62e",
+     "stats.py": "75cb120eb82a52e84eeb41041ec5a0b5db17f1e5a329a6c156a3d5e25b132ed8",
+     "data.csv": "c01f0a65d56dd37512adc1c4b6cddb18605cce606b87467a13b3102c3481681b",
+     "steps.json": "43f69fad90ecd9a010675f202186439c5946ef572745fd0debf6458256e14164"
+    },
+    "toolcards": {
+     "path": "toolcards/csv.json",
+     "sha256": "5f9812acc07fe123c25de5231b0b0bf8b7bf8a993e3a0662f4c39b557567e3ac"
+    },
+    "task": {
+     "name": "author-csv1_f4d33932",
+     "mode": "keep",
+     "max_live": 1,
+     "argv": [
+      "python3",
+      "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/bin/aos7-step",
+      "run",
+      "jobs/csv1_f4d33932"
+     ],
+     "x": {
+      "author": {
+       "owner": "author",
+       "rid": "csv1",
+       "candidate_sha": "f4d339323615f5c98daaafc824d808aa6c0e17761a3a51405547773cbc2dfa94"
+      }
+     }
+    }
+   },
+   "steps_sha256": "43f69fad90ecd9a010675f202186439c5946ef572745fd0debf6458256e14164",
+   "answer": {
+    "ok": true,
+    "issues": [],
+    "checker_sha256": "e383c9151da84550ded7875aa433d992726c075bfd733a81797c334efae67db6"
+   }
+  }
+ }
+}
