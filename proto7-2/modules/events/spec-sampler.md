@@ -10,9 +10,9 @@ aos7-events 是可執行 Python 腳本，使用 task_env、resolver(task)、wait
 
 來源 dict、round 真整數才收。未見則寫快照 round.observed／sample，source={node,round}、payload={last_round:來源}；同 round 不寫。跳號先寫 gap，source.round=r−1，payload={from:prev+1,to:r−1,why:round_skip}；倒退改 {from:prev,to:r,why:source_reset_unknown}。gap 成功後寫快照，重啟不重記 gap。快照 too_large 改 {last_round:{round:r},truncated:true} 再試。not ok 停此來源，下回合重試。
 
-status 只取 `<root>/.aosd/status.json` 的 dict last_event，與記憶體上次成功值不同才寫 daemon.status、capture=sample、source.node=.aosd、payload.last_event=事件。只記憶體去重，重起可能重記一筆。
+status 只取 `<root>/.aosd/status.json` 的 dict last_event，`status_key(事件)` 與 state.status_last 不同才寫 daemon.status、capture=sample、source.node=.aosd、payload.last_event=事件；寫成功由 derive 推 status_last，跨重起不重記同一事件（A→B→A 仍記三筆）。
 
-測試：`TestSampler.test_300_rounds`、`TestSampler.test_gaps_and_reset`
+測試：`TestSampler.test_300_rounds`、`TestSampler.test_gaps_and_reset`、`TestSampler.test_status_dedup_across_restarts`
 
 ## daemon log 續讀
 

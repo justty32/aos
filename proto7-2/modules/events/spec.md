@@ -14,9 +14,9 @@ UTF-8 JSONL、ensure_ascii=False，完整換行才算一筆。鍵序為 v=1、st
 
 ## state 與設定
 
-state 是 `{v:1,node,config,channels,sample,daemon_log}`。DEFAULTS：keep_segments=4、segment_bytes=1048576、max_record_bytes=65536。新建只合併三個設定，值須真正正整數（bool 不算），keep_segments ≤ 4（MAX_KEEP，守 12 檔），否則 ValueError。已有 state 以原設定為準；傳入 config 任一鍵不同，append 加 config_ignored=true；node 不符回 unknown。
+state 是 `{v:1,node,config,channels,sample,daemon_log,status_last}`。DEFAULTS：keep_segments=4、segment_bytes=1048576、max_record_bytes=65536。新建只合併三個設定，值須真正正整數（bool 不算），keep_segments ≤ 4（MAX_KEEP，守 12 檔），否則 ValueError。已有 state 以原設定為準；傳入 config 任一鍵不同，append 加 config_ignored=true；node 不符回 unknown。
 
-channels 的 obs／must 各有 next_seq=1、active_first=1、active_bytes=0（存 state 時活躍段 bytes）、segments=[]（封存首 seq 遞增）、dropped_upto=0、torn=0；must 加 acked_upto=0、refused=0。sample={} 存來源末 round；daemon_log=null 或 `{offset,dev,ino}`。
+channels 的 obs／must 各有 next_seq=1、active_first=1、active_bytes=0（存 state 時活躍段 bytes）、segments=[]（封存首 seq 遞增）、dropped_upto=0、torn=0；must 加 acked_upto=0、refused=0。sample={} 存來源末 round；daemon_log=null 或 `{offset,dev,ino}`；status_last=null 或字串（最近保存的 daemon.status 事件鍵 `status_key(ev)`＝sort_keys JSON 的 sha256）。通道可另帶 torn_cut（非負整數，只在截半行的兩次 state 寫入之間存在）。V2 新增的 status_last、torn_cut 舊 state 缺欄位視為空；存在但型別不合同壞 state。
 
 state 存在但 fact 非 OK、非 dict 或缺必要欄位／型別不合，append 回 unknown、ack 丟 Unknown、recover 回 None，絕不覆蓋。不存在才建，並恢復既有段。state 遺失只能推回留存的 seq、來源進度、淘汰下界，不能重建舊 ack 與計數。
 
@@ -26,9 +26,9 @@ state 存在但 fact 非 OK、非 dict 或缺必要欄位／型別不合，appen
 
 append／ack／recover 持鎖先恢復。列 `<ch>.(12位數字).jsonl`，升序取代 segments，忽略其他名。新段掃完整行的 dict、真整數 seq；按檔內順序 derive seq ≥ 掃描前 next_seq 者，next_seq=max(seq)+1。
 
-活躍段不存在：active_first=next_seq、active_bytes=0。大小等於 active_bytes 且無新段時不掃；其餘整檔讀。尾無換行截到最後換行後（無换行截 0），torn 加一；active_first 取第一筆有效 seq，空則 next_seq；同樣補尾端進度，active_bytes 更新為截後大小。最後 dropped_upto 推到最早封存首 seq−1，無封存則 active_first−1，只增不減；obs 封存多於 keep_segments（rename 後清段前被殺）就當場刪最舊。恢復只改記憶體，呼叫端寫回。
+活躍段不存在：active_first=next_seq、active_bytes=0。大小等於 active_bytes、無新段且無 torn_cut 時不掃；其餘整檔讀。尾無換行截到最後換行後（無换行截 0）：截點不等於 state 的 torn_cut 才 torn 加一，並把 torn 與 torn_cut＝截點**先存 state 再截檔**；截點等於 torn_cut＝上次已記、只補截。讀過 torn_cut 或截過檔，恢復末尾再存一次不帶 torn_cut 的 state，標記不會留到之後的寫入；active_first 取第一筆有效 seq，空則 next_seq；同樣補尾端進度，active_bytes 更新為截後大小。最後 dropped_upto 推到最早封存首 seq−1，無封存則 active_first−1，只增不減；obs 封存多於 keep_segments（rename 後清段前被殺）就當場刪最舊。除截半行的兩次寫入外，恢復只改記憶體，呼叫端寫回。
 
-共用 derive：sample 的 source.node 字串、round 真整數，推 sample[node]（含 gap）；source_log 的 log_dev、log_ino、off_to 真整數，推 daemon_log 的 dev、ino、offset。
+共用 derive：sample 的 source.node 字串、round 真整數，推 sample[node]（含 gap）；source_log 的 log_dev、log_ino、off_to 真整數，推 daemon_log 的 dev、ino、offset；kind=daemon.status、capture=sample、source.node=.aosd、payload.last_event 為 dict，推 status_last。
 
 `recover(events_dir, *, node, config=None)` 鎖內建檔／恢復／保存，回 state；逾時、OSError、壞 state、node 不符回 None。`load_state(events_dir)` 唯讀、不鎖、不恢復，fact OK 且 dict 回內容，其餘 None。
 
@@ -58,8 +58,8 @@ append 前 active_bytes ≥ segment_bytes 才輪替，一筆可讓段超過門�
 
 ## 測試點與限制
 
-測試點 `events:` 前綴：after-partial（半行 flush 後）、after-append（整行 flush 後、存 state 前）、after-rename（rename 後）、after-unlink（unlink 後）、sample-after-gap（gap 保存後）。state 沿用 `tmp:state.json`。
+測試點 `events:` 前綴：after-partial（半行 flush 後）、after-append（整行 flush 後、存 state 前）、after-rename（rename 後）、after-unlink（unlink 後）、after-torn-save（torn／torn_cut 已存、截檔前）、after-truncate（截檔後、清標記前）、sample-after-gap（gap 保存後）。state 沿用 `tmp:state.json`。
 
-限制與不做清單見 [README 已知限制](README.md#已知限制)；另：單取樣器是因進度在 recover 後離鎖使用；截尾後存 state 前被殺 torn 少記一次（紀錄不受影響）。
+限制與不做清單見 [README 已知限制](README.md#已知限制)；另：單取樣器是因進度在 recover 後離鎖使用。
 
-測試：`TestCrash.test_after_partial`、`TestCrash.test_after_rename`、`TestReviewRegressions.test_rotation_then_kill_does_not_reuse_seq`
+測試：`TestCrash.test_after_partial`、`TestCrash.test_after_rename`、`TestTornCount`、`TestReviewRegressions.test_rotation_then_kill_does_not_reuse_seq`
