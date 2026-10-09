@@ -80,11 +80,11 @@ def main(argv=None):
         result = {"ok": False, "seq": None, "dup": False, "why": "usage", "detail": "JSON 格式錯誤"}
     else:
         node = a.node
-        if node is None and not (isinstance(source, dict) and source.get("node")) \
+        if node is None and not (isinstance(source, dict) and "node" in source) \
                 and not os.path.lexists(os.path.join(a.events, "state.json")):
             node = default_node(a.events)
         result = publish(a.events, a.kind, event_id, payload, must=a.must, source=source, node=node)
-        if auto_id and result["ok"]:
+        if auto_id and result.get("why") != "usage":   # 存好或 unknown 都印，unknown 才能照同 id 重送
             result["event_id"] = event_id
     print(json.dumps(result, ensure_ascii=False))
     return exit_code(result)
