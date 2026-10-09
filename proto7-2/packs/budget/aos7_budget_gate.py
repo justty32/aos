@@ -202,7 +202,6 @@ def _call(bud, key, amount, resource, payload_path, out, patience, budget_arg=No
             bg.say("payload 不存在或不是 JSON。請給 JSON 檔，例：--payload payload.json")
             return 2
     if not bg.ledger_running(bud):
-        print(json.dumps({"kid": kid, "key": key, "outcome": "refused", "stage": "ledger", "why": "帳任務沒在跑"}, ensure_ascii=False))
         bg.say(bg.NOT_RUNNING % (budget_arg or os.path.relpath(bud.dir)))
         return 1
     content = {"resource": resource, "gateway": GATEWAY, "amount": amount,

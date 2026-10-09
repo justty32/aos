@@ -48,7 +48,7 @@ class Bud:
         return os.path.join(self.dir, *a)
 
 
-NOT_RUNNING = "帳任務沒在跑，沒送出。先在 node 目錄起帳任務：aos7-budget ledger %s（用 aos7-up 起的 node 會自動起好）"
+NOT_RUNNING = "帳任務沒在跑，什麼都沒送。另開一個終端，在 node 目錄跑 aos7-budget ledger %s 並讓它開著，再跑一次（用 aos7-up 起的 node 會自動起好）"
 
 
 def say(msg):
@@ -548,7 +548,6 @@ def main(argv=None):
 
     def do_settle():
         if not ledger_running(bud):
-            print(json.dumps({"result": "refused", "why": "帳任務沒在跑"}, ensure_ascii=False))
             say(NOT_RUNNING % a.bud)
             return 1
         r = ask(bud, "settle", key, patience=a.patience)

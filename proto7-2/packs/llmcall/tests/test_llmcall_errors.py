@@ -38,7 +38,7 @@ class TestLlmcallErrors(LlmcallCase):
                 p = self.call(extra=('--out', 'result.json'))
                 self.assertLess(time.monotonic() - start, 2)
                 self.line(p, 1, 'aos7-llmcall: 帳任務沒在跑')
-                self.assertEqual(json.loads(p.stdout), {'outcome': 'refused', 'stage': 'ledger', 'why': '帳任務沒在跑'})
+                self.assertEqual(p.stdout, '')
                 self.assertFalse((self.node / 'llmcall').exists())
                 self.assertFalse((self.node / 'result.json').exists())
                 self.assertEqual(tree(self.bd), before)

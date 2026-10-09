@@ -87,7 +87,7 @@
 
 只有 0 與 1 保證有終局結果交付（進門因帳任務沒在跑而退 1 是拒絕，沒有入口終局）。
 
-- **進門**：`call` 驗完 payload、`settle` 送請求前，先看帳任務在不在（`ledger.lock` 有人持有）；沒有＝退出 1（stdout `outcome`／`result` 為 `refused`、`stage: ledger`），不寫 inbox、不建任何檔。`status` 沒帳或帳壞＝退出 1，ledger.json 讀不到（I/O）＝退出 3。非 0 退出另在 stderr 印恰一行人話（格式見 [blueprint-errors](../../notes/blueprint-errors.md)）。
+- **進門**：`call` 驗完 payload、`settle` 送請求前，先看帳任務在不在（`ledger.lock` 有人持有）；沒有＝退出 1（stdout 不印、只有 stderr 一行），不寫 inbox、不建任何檔。`status` 沒帳或帳壞＝退出 1，ledger.json 讀不到（I/O）＝退出 3。非 0 退出另在 stderr 印恰一行人話（格式見 [blueprint-errors](../../notes/blueprint-errors.md)）。
 
 - **等回條的耐性**：completed_tock 比開始時多 `patience`（預設 5）回合仍沒回條＝退出 3；時鐘未知或 pause 時不到期。請求檔留著，帳之後照樣處理（同 K 冪等）。
 - **共同故障邊界**：`call`、`cancel`、`settle` 途中任何讀寫不到（核心 `Unknown`、帳／後端讀不到、`OSError`）＝未知：stdout 印一行 `{"outcome": "unknown", "stage", "why"}`、退出 3、不留 traceback，不推定帳與入口的階段（可能尚未預留、在途，或已結算但 `--out` 寫入失敗）。`cancel` 退出碼：0＝取消了、1＝已有別的終局（取消不成）、3＝未知。不重試、不動帳。
