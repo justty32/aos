@@ -195,3 +195,4 @@
 - C｜ER-routines：`add` 不再改 tasks.json（aos7-up 已自己裝 routines 任務）；`rm` 遇到沒清單的 node 不再建資料夾；格式錯改退 2、`ls --run` 遇鎖忙改退 3。新手 Haiku 7／luna 8
 - 觀察｜llmcall `test_in_process_drip` 在全套負載下偶發失敗一次、單跑全過；再出現就查
 - C｜ER-compact：不需整理時不再寫狀態檔；發事件改成可選（compact.json 的 `events`，預設關，發不出也不影響結果）；意外錯誤改退 3；README 只留新手部分。真 AI 壓縮 73%。新手 Haiku 7.6／luna 9.0
+- C｜wfnode 小修：重跑 init 不再改任何既有檔（含 inbox 信件）；init／check 不掃 inbox/；模板檔裡剩下的 `{{` 改成列出位置請人手補（不再自動補）
