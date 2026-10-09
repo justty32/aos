@@ -1,0 +1,106 @@
+{
+ "v": 1,
+ "gateway": "llm.litellm",
+ "model": "chatgpt-gpt-6-sol-high",
+ "node": "（暫存，已略）",
+ "score": 10,
+ "of": 10,
+ "metrics": {
+  "tokens_per_q": 2575.8,
+  "parallel": 1,
+  "seconds_per_q": 3.17,
+  "retries": 0
+ },
+ "rows": [
+  {
+   "q": "把這三份 Markdown 筆記做成可以在瀏覽器直接播放的簡報。",
+   "want": "markdown-html-slides",
+   "got": "markdown-html-slides",
+   "ok": true,
+   "rc": 0,
+   "seconds": 1.895,
+   "err": null
+  },
+  {
+   "q": "資料夾裡有二十份同一個模板做的 HTML 簡報，每份都內嵌一樣的 CSS 和 JS，想整批瘦身但保留各自獨立的簡報。",
+   "want": "html-slides-shared-assets",
+   "got": "html-slides-shared-assets",
+   "ok": true,
+   "rc": 0,
+   "seconds": 3.018,
+   "err": null
+  },
+  {
+   "q": "新的設定頁還沒定視覺，先做一個低保真的線框，驗證資訊架構和導覽流程。",
+   "want": "html-wireframe",
+   "got": "html-wireframe",
+   "ok": true,
+   "rc": 0,
+   "seconds": 1.599,
+   "err": null
+  },
+  {
+   "q": "畫一張圖說明 daemon、tick、tock 三者之間的狀態轉換。",
+   "want": "html-diagram",
+   "got": "html-diagram",
+   "ok": true,
+   "rc": 0,
+   "seconds": 2.832,
+   "err": null
+  },
+  {
+   "q": "我改完 proto7-2 的一個模組，要確認全套測試都還是綠的。",
+   "want": "aos-test",
+   "got": "aos-test",
+   "ok": true,
+   "rc": 0,
+   "seconds": 1.799,
+   "err": null
+  },
+  {
+   "q": "只跑名字裡有 restart 的那些測試，看看有沒有壞。",
+   "want": "aos-test",
+   "got": "aos-test",
+   "ok": true,
+   "rc": 0,
+   "seconds": 2.805,
+   "err": null
+  },
+  {
+   "q": "看看信箱，把別的 agent 寄來的信辦掉。",
+   "want": "aos-inbox",
+   "got": "aos-inbox",
+   "ok": true,
+   "rc": 0,
+   "seconds": 5.335,
+   "err": null
+  },
+  {
+   "q": "另一個 agent 寄了一封 REQUEST 給我，我要讀它並回覆終局狀態。",
+   "want": "aos-inbox",
+   "got": "aos-inbox",
+   "ok": true,
+   "rc": 0,
+   "seconds": 6.817,
+   "err": null
+  },
+  {
+   "q": "我把 wf/ 底下一份太長的 md 拆成兩份，想確認連結和錨點有沒有斷。",
+   "want": "wf-lint",
+   "got": "wf-lint",
+   "ok": true,
+   "rc": 0,
+   "seconds": 2.932,
+   "err": null
+  },
+  {
+   "q": "提交文檔改動之前，檢查 wf/ 有沒有超標檔或殘留的佔位符。",
+   "want": "wf-lint",
+   "got": "wf-lint",
+   "ok": true,
+   "rc": 0,
+   "seconds": 2.665,
+   "err": null
+  }
+ ]
+}

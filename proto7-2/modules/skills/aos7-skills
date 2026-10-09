@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Skill 工具薄入口。"""
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+TOP = os.path.dirname(os.path.dirname(HERE))
+sys.path[:0] = [HERE, os.path.join(TOP, "lib")]
+import aos7_skills
+
+if __name__ == "__main__":
+    sys.exit(aos7_skills.main())
