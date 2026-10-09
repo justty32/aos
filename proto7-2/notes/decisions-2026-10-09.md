@@ -219,3 +219,5 @@
 - C｜真 AI 呼叫上限：學徒三連題 ≤200、長任務 ≤100、效率各 ≤60、回歸 ≤200
 - 待你決定｜舊 worktree：loop7～10 已合進 main 的由頂層照整合隊清單刪；`apprentice/*` 分支與 `_check_main` 等你（刪分支不可逆）
 - C｜MC：llmcall 與 C++ 核心 llm client 改取「最後一個非空的 choice」；學徒／審查／learn／brain 提示補「不要開場白，第一個字就是…」。真 AI 重放 6 次全部拿到完整答案（修前同樣請求只拿到開場白）。choice 數與略過的開場白只記在 raw.json（回條凍結不加欄）；第一個 choice 為 null 但後面有答案改判答到
+- 結果｜EF1：MC 修好後重量 12 圈：proxy 每次仍自帶 1644 token（其中 Codex 系統提示 1620），占每單 63%；所有回覆都是單一 choice、`{` 開頭、全過三關 → [proxy-overhead](play/2026-10-09-real-ai/proxy-overhead.md)
+- 待你決定｜同上一條 LiteLLM 設定：設 `CHATGPT_DEFAULT_INSTRUCTIONS` 為一句短句，這題每單預估從約 2606 降到約 1000 token（−62%）；說明頁寫了怎麼設、風險、怎麼驗與怎麼還原。你同意後 EF1 會再跑 12 圈補「改後」數字
