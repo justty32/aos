@@ -146,11 +146,11 @@ class BrainStateTests(unittest.TestCase):
         with patch.object(brain, 'test_point', side_effect=crash):
             with self.assertRaises(RuntimeError):
                 brain.step_on(self.node, letter, text, dict(progress_every=0, compact=False))
-        self.assertEqual(brain.state_count(self.node, '第 1 回合 step-letter：下一步'), 1)
+        self.assertEqual(brain.state_count(self.node, '第 1 步 step-letter：下一步'), 1)
         self.assertFalse((self.node / 'brain/task.json').exists())
         self.compact_line()
         brain.step_on(self.node, letter, text, dict(progress_every=0, compact=False))
-        self.assertNotIn('第 1 回合 step-letter：下一步', self.state())
+        self.assertNotIn('第 1 步 step-letter：下一步', self.state())
         self.assertIn('step-letter#s1', self.ledger()['done'])
         self.assertEqual(json.loads((self.node / 'brain/task.json').read_text())['step'], 2)
 

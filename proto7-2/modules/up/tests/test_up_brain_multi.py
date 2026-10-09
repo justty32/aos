@@ -115,7 +115,7 @@ class BrainMultiTests(DaemonCase):
     def assert_state(self, ident, continues):
         rows = self.state().splitlines()
         for k in range(1, continues + 1):
-            self.assertEqual(sum(f'第 {k} 回合 {ident}：' in r for r in rows), 1)
+            self.assertEqual(sum(f'第 {k} 步 {ident}：' in r for r in rows), 1)
         self.assertEqual(sum(('回了 ' + ident) in r for r in rows), 1)
 
     def test_eight_rounds(self):
@@ -125,7 +125,7 @@ class BrainMultiTests(DaemonCase):
         self.assert_open(ident)
         self.wait_end(ident)
         self.assert_mail(ident, 'DONE', progress=1)
-        self.assertIn('第 5 回合', next(l['title'] for l in self.replies(ident)
+        self.assertIn('第 5 步', next(l['title'] for l in self.replies(ident)
                                       if l['status'] == 'PROGRESS'))
         used = self.assert_calls(ident, 8)
         self.assertLessEqual(used[7], used[1] * 1.3, f'各回合 used：{used}')
@@ -155,7 +155,7 @@ class BrainMultiTests(DaemonCase):
         self.assertFalse(any(l['status'] == 'DONE' for l in self.replies(ident)))
         self.resume(lambda: self.ended(ident))
         self.assert_mail(ident, 'DONE', progress=1)
-        self.assertIn('第 2 回合', next(l['title'] for l in self.replies(ident)
+        self.assertIn('第 2 步', next(l['title'] for l in self.replies(ident)
                                       if l['status'] == 'PROGRESS'))
         self.assert_calls(ident, 4)
         self.assert_state(ident, 3)
