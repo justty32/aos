@@ -101,3 +101,4 @@
 - B｜G0／頂層核可：第二刀藍圖 [blueprint-llm2](blueprint-llm2.md)——新包 `packs/llmcall/` 當 budget 第二種入口（假傳輸 `llm.fake`），介面凍結；遲到回覆只能人手 `adopt`；llmcall 多一個退出碼 4＝內容已交付但帳未清
 - B｜頂層：用量超過預留（U>R）時只記 overrun、退出 4，**不自動停新預留**（llm-author §6.5 建議停准入對帳，這條要翻就改 budget gate）
 - C｜V2：事件保存兩個限制都修掉（不只寫文件）：status 去重改落 state.json 的 `status_last`（存雜湊），重起不重記；半行截掉前先存 `torn`＋`torn_cut` 記號，計數不再少 1。恢復時會自己寫一次 state.json（spec 已註明例外）
+- 結果｜I2：全套 ×3 在 a1be11b4 上各 556 項全過（約 300 秒）；核心行數總行 3004、程式 2353（D7 不擋）；白話報告草稿 [report-2026-10-09](report-2026-10-09.md)，最終版由 I3 補第三段後定稿
