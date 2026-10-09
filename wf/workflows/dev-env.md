@@ -68,6 +68,8 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
 
 **GPU 是他的**：他常在打遊戲，不准碰 LM Studio、不准用 LiteLLM 上的 `ollama-*`（本機、吃 GPU）、不准 `lms load`。`deepseek-*`、gpt、claude 這些雲端的不吃 GPU。
 
+**2026-10-09 使用者准許 aos 的 LLM 包（llmcall／author）接真 AI**：走同一個 LiteLLM，**不用 `lm-*`**（也照舊不用 `ollama-*`），盡量用 gpt 系（`chatgpt-gpt-6-sol`、`chatgpt-gpt-6-astra` 等，帶 `-high`／`-max` 後綴可調推理強度）。token 額度、輸出長度、context 上限**全部拉到極限、不用省**；跑完一個大段落後再依實際消耗量訂限制。
+
 `deepseek-chat` 是別名，回應的 `model` 欄寫 `deepseek-flash`；任何「回應 model 要等於設定」的檢查都要對它放行。
 
 他明講可以用 LM Studio 時：一次只能載一顆，**換模型前先 `lms unload --all`**（VRAM 不夠會回看起來像端點壞掉的錯）；`lms ps` 看載了什麼（`/v1/models` 只代表下載了）；模型 id 用問的、不要猜。gemma 這類會先「想」的模型，想的字數算在 `max_tokens` 裡——冒煙測試不要設 `max_tokens`，要設就 1500 以上。
