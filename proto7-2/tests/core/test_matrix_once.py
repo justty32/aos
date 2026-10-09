@@ -10,6 +10,8 @@
    `AOS7_INCOMPLETE=tick`）再 tick／tock 四回合。
    - once（任務把 `$AOS7_RUN` 記到槽外）：執行次數 ≤ 1；除了 after-birth（P2-02：0 次、報一次 lost）都剛好 1 次；
      ended 裡這個 once 的結束只報一次（lost 或 code）；tasks.json 最後沒有這項。
+     runner-before-exit（T8-01）：恢復前先驗死亡快照（pid.json 有、exit.json 無、runner 已不在），恢復後 once 精確報
+     `{run o#1, code None, lost True}`、keep 換成第 2 個 run。
    - keep（launch／刪 once 項那四點另放一個不相干的 once 項當伴，tick 才會走到）：每個檢查點（被殺後、每次 tick／tock 後）同槽活程序 ≤ 1（`env_procs(node, slot, runners=False)`）；恢復後剛好一個活的。
 2. （restart 被打斷的案例隨 restart 搬到控制包 modules/control/tests/test_control.py。）
 """
@@ -41,9 +43,21 @@ class TestLaunchCrash(MatrixCase):
             r = self.birth(node, slot).get("runner") or {}
             self.wait_for(lambda: aos7_proc.same_process(r.get("pid"), r.get("starttime")) == aos7_proc.GONE, 5,
                           "runner 沒在 %s 被 SIGKILL：%r" % (point, r))
+            if point == "runner-before-exit":
+                self.death_snapshot(node, slot)
             return {}
         self.crash("aos7-tick", point)
         return {"AOS7_INCOMPLETE": "tick"}
+
+    def death_snapshot(self, node, slot):
+        """T8-01：runner-before-exit 的故障真的發生了——恢復前先拿死亡快照：pid.json 是這個 run（1）的、exit.json 沒有
+        （runner 寫 exit.json 前就死了）、runner 已不是原本那個程序。拿掉 SIGKILL 的話 runner 會正常寫 exit.json，這裡就紅。"""
+        b = self.birth(node, slot)
+        r = b.get("runner") or {}
+        pj = self.wait_pid(node, slot)
+        self.assertEqual((b.get("run"), pj.get("run")), (1, 1), "死亡快照：birth／pid.json 不是第 1 個 run：%r %r" % (b, pj))
+        self.assertIsNone(self.exit_raw(node, slot), "死亡快照：runner 應該在寫 exit.json 前被殺，卻有 exit.json")
+        self.assertEqual(aos7_proc.same_process(r.get("pid"), r.get("starttime")), aos7_proc.GONE, "死亡快照：runner 還在 %r" % r)
 
     def wait_run_gone(self, node, slot, why):
         """等這個槽的程序（含 aos7-run）全部不在。恢復回合在行程內跑、幾毫秒一圈，比 aos7-run 起 Python 再起任務還快
@@ -75,6 +89,9 @@ class TestLaunchCrash(MatrixCase):
         else:
             self.assertEqual(n, 1, "once 在 %s 被打斷後執行了 %d 次：%r" % (point, n, self.ran(node, "o")))
             self.assertEqual(len(ends), 1, "once 的結束報了 %d 次：%r" % (len(ends), ends))
+        if point == "runner-before-exit":
+            # T8-01：runner 沒寫 exit.json 就死＝結束碼不知道，只能報 lost（正常結束會是 code 0）
+            self.assertEqual(ends, [{"run": "o#1", "code": None, "lost": True}])
         self.assertEqual(self.tasks(node), [], "once 項沒刪掉")
 
     def _keep(self, point):
@@ -101,6 +118,9 @@ class TestLaunchCrash(MatrixCase):
         self.wait_for(lambda: self.live_procs(node, "k") == [pj["pid"]], 5,
                       "恢復後槽裡不是剛好一個活程序（run %r 的 %r）：%r" % (cur, pj["pid"], self.live_procs(node, "k")))
         self.assertEqual(self.view(node, "k").state, aos7_task.LIVE)
+        if point == "runner-before-exit":
+            # T8-01：第 1 個 run 的 runner 被殺、任務已結束 → 必須換成新 run（不是原本那個還活著）
+            self.assertEqual(self.birth(node, "k").get("run"), 2, self.birth(node, "k"))
 
 
 gen(TestLaunchCrash, "once", [(p, (p,)) for p in TICK_POINTS + RUNNER_POINTS], TestLaunchCrash._once)
