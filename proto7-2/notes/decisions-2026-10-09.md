@@ -120,3 +120,4 @@
 2. 做出現有 coding agent 常見的東西——compact、memory、skill 等——善用既有的 aos-directives 與先前各 proto 的想法
 3. 讓 AI 熟悉 aos 框架、能自我改進：自己做模組／工具／程式
 - 使用者另說：「持續推進／全力衝刺」看狀況決定，**不寫進偏好檔**（已撤回 user.md 那段）
+- 使用者 14:50：`~/repo/workflows` 就是我們的 `wf/`（wf/ 是它的實例）；另一套成熟的 workflows 體系在 `~/repo/moddings/skyrim`（含 agentctl）可參考；計畫回來後頂層直接開隊、不用等他
