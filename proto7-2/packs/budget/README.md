@@ -10,8 +10,8 @@
 |---|---|
 | 分類 | 通用任務包（`layer: kernel`），單 node |
 | 第一版範圍 | 單 node、一個預算、一種整數消耗資源、一個入口、一份不可再分的 grant（`delegate: false`）。沒有 split、跨 node、動態配額、LLM |
-| 示範資源 | **假 API 受理次數**（`fakeapi.calls`）：純本機假後端，每個業務請求預留 1 次；明確拒絕計 0，已受理後工作失敗仍計 1 |
-| 接法 | ① 帳：普通 keep 任務 `{"name": "budget-<id>", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/budget/bin/aos7-budget", "ledger", "budget/<id>"]}`（`max_live` 預設 1）<br>② 使用：step 的普通 `run` 步呼叫 `aos7-budget call budget/<id> --holder H --request ${request}`（包裝程式內部 reserve → run → settle）<br>holder 由部署者寫死在 steps.json 的 argv（合作式；真偽不是 budget 的事，見 gateway 卡前置條件）<br>call 對同 K 冪等：步可標 `idempotent: true`、`on_unknown: resend`，`max_resends` 可設 2～3；停住後 `aos7-step resume --resend` 不重扣 |
+| 示範資源 | **假 API 加權成本**（`fakeapi.calls`）：每個業務請求預留 `--amount` 單位（預設 1）；帳的 `used`／`available` 是加權成本單位，`backend.json` 的 `accepted` 才是受理次數；明確拒絕計 0，已受理後失敗仍計 amount |
+| 接法 | ① 帳：普通 keep 任務 `{"name": "budget-<id>", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/budget/bin/aos7-budget", "ledger", "budget/<id>"]}`（`max_live` 預設 1）<br>② 使用：step 的普通 `run` 步呼叫 `aos7-budget call budget/<id> --holder H --request ${request}`（包裝程式內部 reserve → run → settle）<br>holder 由部署者寫死在 steps.json 的 argv（合作式；真偽不是 budget 的事，見 gateway 卡前置條件）<br>call 對同 K 冪等：步可標 `idempotent: true`。step 拿不到結果（包裝程式被殺、槽被收、結果沒發布）＝step 的 unknown，走步的 `on_unknown`；`resend` 時同 request 新 attempt，受 `max_resends` 限，冪等所以不重扣。拿到退出碼 3＝step 拿到結果（`ok:false`），**預設走 `fail`**；要讓 3 也走 `on_unknown`，在步上開 `unknown_codes: [3]`（step 包選項，預設空；見 [step spec](../step/spec.md)）。不開時，人手先 `status` 查 K，再 `aos7-step resume --resend` 或直接同 K 重跑 `call`。 |
 | 時鐘 | 本 node 的 **completed_tock**（round.json closed 取 round、open 取 round−1；沒有合法值＝未知）；效期 `from ≤ c < until` |
 | 保存 | 全在 `<node>/budget/<id>/`，活過 once 槽刪除與 step close；v1 只掃孤兒回條，其餘保存到預算明確退役（成長率與退役步驟見 spec §10） |
 | 依賴 | 核心 `aos7_fs`（`fact`、`write_json`、`edit_json`、`locked`、`read_round`、`sweep_tmp`）；不依賴 step（step 只是呼叫者） |
@@ -59,7 +59,14 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
 - 保證：首次准入前查 grant 與效期，未知不放行、不存成永久拒絕；呼叫後端前先持久記准入意圖（intent）；已准入者恢復不再查效期，只向後端查回／重播同 K；終局回條（accepted／failed／rejected／denied／cancelled）寫了就固定，重送同 K 拿同一份；取消與支用互斥，留下 K 已取消的終局紀錄，晚到的 run(K) 也不會執行。假後端把「K 的效果＋受理計數」同次原子提交、以 K 去重，所以同 K 後端效果最多一次，效果完成、回條未寫也查得回。
 - 明確不管：呼叫者自報的 holder 是否真為本人；替任意外部 API 保證只發生一次（本保證只對這個可查回的假後端成立）；不可查回的後端的取消（那種後端 intent 只能記 `cancel_requested`、不得寫 `cancelled`，終局只來自後端證據，v1 沒做，spec §4、§9）；支用成功不等於工作產物成功。
 
-**call 包裝程式（接 step 的那一層，不是第四個組件）**：`aos7-budget call` 以業務鍵 `K = (budget_id, holder, request)` 依序做 reserve → gateway run → settle，拿到**終局結算回條**才退出（0＝後端受理成功、1＝已結算但不成功或被拒、3＝未知，預留留著；途中任何讀寫不到都歸 3，印一行 JSON、不留 traceback）；對同 K 冪等，所以 step 步可標 `idempotent: true`。attempt、`slot#run` 只當追查資訊，不是新扣款鍵。
+**call 包裝程式（接 step 的那一層，不是第四個組件）**：`aos7-budget call` 以業務鍵 `K = (budget_id, holder, request)` 依序做 reserve → gateway run → settle。對同 K 冪等，step 步可標 `idempotent: true`；attempt、`slot#run` 只當追查資訊，不是新扣款鍵。退出碼：
+
+- 0＝後端受理成功，已結算，終局結果已交付（stdout 最後一行＋有指定時的 `--out`）。
+- 1＝已有終局但不成功：後端 failed／rejected、入口 denied／cancelled 已結算，或 reserve 被拒（denied／conflict／bad）、入口 conflict。
+- 2＝壞輸入：參數不合、payload 不存在或不是 JSON；沒送任何請求。
+- 3＝**本次呼叫未完整交付終局結果**：可能還沒預留、在途（預留或 intent 留著），或已結算但 `--out` 寫入失敗。先 `aos7-budget status A --holder H --request R` 查 K，再同 K 重送 `call`（冪等，不重扣）。
+
+只有 0 與 1 保證有終局結果交付。
 
 ## 人手指令
 
@@ -72,6 +79,6 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
 ## 界線
 
 - 預留到結算之間 step 失敗、槽被刪、結果沒發布、`close`：帳與入口仍認得 K，同 K 重跑 `call` 只把沒做完的做完；新工作 inst 產生新 request 才是新交易。
-- unknown 是非終局：逾時、後端讀寫不到只讓包裝程式回 3 等人／等 step 重送，**不自動退款**。
+- call 回 3 可能尚未結算，也可能已結算但 `--out` 寫入失敗；先查 K 再同 K 重送，**不自動退款**。step `ok:false` 不代表退款，退款只看入口回條。
 - v1 已知界線五條（取消靠後端可查回、時鐘倒退只抓水位以下、儲存只增不清、holder 自報、自動重送有上限）見 spec §9。
 - 時鐘只有本 node 的 completed_tock：pause 不前進；daemon 重開接續原回合；重建時鐘（round.json 歸零）須換預算識別、不移植舊 grant（帳偵測到時鐘倒退＝未知）。

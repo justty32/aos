@@ -363,7 +363,7 @@ def serve(bud):
                 break
             except BlockingIOError:
                 time.sleep(0.2)
-        for d in (bud.dir, bud.p("inbox"), bud.p("receipts")):
+        for d in (bud.dir, bud.p("inbox"), bud.p("receipts"), bud.p("gateway")):
             sweep_tmp(d)
         seen, last = {}, False
         while True:

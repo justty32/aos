@@ -17,6 +17,8 @@
 | `A/error.json` | 帳任務 | 最近一筆錯誤 `{"kind","where","why","at"}`，覆寫 |
 | `A/retired.json` | 人 | 退役標記（§10），寫了就不收新 K |
 
+用 `write_json` 寫的資料夾由本包自己掃：帳任務起時掃 `A/`、`inbox/`、`receipts/`、`gateway/` 裡寫者已不在的暫存檔。
+
 `kid`＝`sha256(JSON [budget, holder, request])` 前 20 個 hex；檔內都帶完整的 `key`。v1 不自動清帳、入口、後端的紀錄（保存到退役，§10）；`inbox/`、`receipts/` 只有在途的檔，加上帳還沒掃掉的孤兒回條。
 
 ## 2. grant 與時鐘
@@ -65,20 +67,27 @@
 
 ## 5. 假後端
 
-`backend.json` 用 `edit_json` 一次寫入「`effects[kid]` ＋ `accepted` 計數」。同 kid 已有效果＝回原效果、不再計數。payload 的 `mode`：`ok`（預設，受理、計 1）、`fail`（受理後處理失敗、計 1、outcome `failed`）、`reject`（明確拒絕、計 0）。`query(kid)` 只讀。
+`backend.json` 用 `edit_json` 一次寫入「`effects[kid]` ＋ `accepted` 計數」。同 kid 已有效果＝回原效果、不再計數。每個業務請求預留 `--amount` 單位（預設 1）；帳的 `used`／`available` 是加權成本，`accepted` 才是受理次數。payload 的 `mode`：`ok`（預設，受理、成本計 amount）、`fail`（受理後處理失敗、成本仍計 amount、outcome `failed`）、`reject`（明確拒絕、成本計 0）；ok／fail 的受理次數各加 1，reject 不加。`query(kid)` 只讀。
 
 ## 6. call 包裝程式
 
 `aos7-budget call A --holder H --request R [--amount 1] [--resource fakeapi.calls] [--payload 檔] [--out 檔] [--patience N]`（入口固定是 `fakeapi`）：
 
-1. 送 reserve、等回條：`denied`／`conflict`／`bad`＝退出 1；`unknown`／`not_yet`／等不到＝退出 3。`settled`（重播）跳到第 4 點讀入口回條。
-2. 入口 `run`：非終局＝退出 3（預留留著）；`conflict`＝退出 1。
+1. 先讀 payload：不存在或不是 JSON＝退出 2；讀不到＝退出 3（`stage: payload`），不送請求。送 reserve、等回條：`denied`／`conflict`／`bad`＝退出 1；`unknown`／`not_yet`／等不到＝退出 3。`settled`（重播）讀入口回條：沒有、讀不到、不是終局＝退出 3（`stage: replay`），不以帳的 settle 補欄、不寫 `--out`；有終局才跳到第 4 點。
+2. 入口 `run`：非終局＝退出 3；`conflict`＝退出 1。
 3. 送 settle、等回條：`settled` 才往下；其餘＝退出 3。
 4. 結果（stdout 最後一行；有 `--out` 時原子寫一份）`{"kid","key","outcome","used","response","settle"}`；`outcome: accepted` 退出 0，其餘終局退出 1。
 
+- 0＝後端受理成功，已結算，終局結果已交付（stdout 最後一行＋有指定時的 `--out`）。
+- 1＝已有終局但不成功：後端 failed／rejected、入口 denied／cancelled 已結算，或 reserve 被拒（denied／conflict／bad）、入口 conflict。
+- 2＝壞輸入：參數不合、payload 不存在或不是 JSON；沒送任何請求。
+- 3＝**本次呼叫未完整交付終局結果**：可能還沒預留、在途（預留或 intent 留著），或已結算但 `--out` 寫入失敗。先 `aos7-budget status A --holder H --request R` 查 K，再同 K 重送 `call`（冪等，不重扣）。
+
+只有 0 與 1 保證有終局結果交付。
+
 - **等回條的耐性**：completed_tock 比開始時多 `patience`（預設 5）回合仍沒回條＝退出 3；時鐘未知或 pause 時不到期。請求檔留著，帳之後照樣處理（同 K 冪等）。
-- **共同故障邊界**：`call`、`cancel`、`settle` 途中任何讀寫不到（核心 `Unknown`、帳／後端讀不到、`OSError`）＝未知：stdout 印一行 `{"outcome": "unknown", "stage", "why"}`、退出 3、不留 traceback，帳與入口狀態不動（intent、預留留著）。`cancel` 退出碼：0＝取消了、1＝已有別的終局（取消不成）、3＝未知。不重試、不動帳。
-- 對同 K 冪等：重跑只把沒做完的做完。step 的 `on_unknown: resend` 可配 `max_resends`（step spec §2）；停住後 `aos7-step resume --resend` 也不重扣。step 步可標 `idempotent: true`、`on_unknown: resend`；step 的 `ok:false` 不代表退款，退款只看入口回條。
+- **共同故障邊界**：`call`、`cancel`、`settle` 途中任何讀寫不到（核心 `Unknown`、帳／後端讀不到、`OSError`）＝未知：stdout 印一行 `{"outcome": "unknown", "stage", "why"}`、退出 3、不留 traceback，不推定帳與入口的階段（可能尚未預留、在途，或已結算但 `--out` 寫入失敗）。`cancel` 退出碼：0＝取消了、1＝已有別的終局（取消不成）、3＝未知。不重試、不動帳。
+- 對同 K 冪等：重跑只把沒做完的做完。step 步可標 `idempotent: true`。step 拿不到結果（包裝程式被殺、槽被收、結果沒發布）＝step 的 unknown，走步的 `on_unknown`；`resend` 時同 request 新 attempt，受 `max_resends` 限，冪等所以不重扣。拿到退出碼 3＝step 拿到結果（`ok:false`），**預設走 `fail`**；要讓 3 也走 `on_unknown`，在步上開 `unknown_codes: [3]`（step 包選項，預設空；見 [step spec](../step/spec.md)）。不開時，人手先 `status` 查 K，再 `aos7-step resume --resend` 或直接同 K 重跑 `call`。step 的 `ok:false` 不代表退款，退款只看入口回條。
 
 ## 7. 測試鉤子
 

@@ -7,6 +7,8 @@ import json
 import os
 import shutil
 import signal
+import subprocess
+import sys
 import threading
 import time
 import unittest
@@ -93,8 +95,10 @@ class LedgerCase(BudgetCase):
         self.lp = self.start_ledger(self.node)
         return self.bd
 
-    def restart_ledger(self):
+    def restart_ledger(self, check=None):
         self.assertEqual(self.lp.wait(10), KILLED, "帳任務沒在鉤子點被殺")
+        if check is not None:
+            check()
         self.lp = self.start_ledger(self.node)
 
     def kid(self, req, holder="api"):
@@ -177,8 +181,24 @@ class TestCrash(LedgerCase):
                 bd = self.up()
                 self.crash_at(bd, point)
                 p = self.popen(self.node, *self.call_args("r1"))
-                self.restart_ledger()
-                self.audit(bd)                                   # 被殺的那一刻帳也守恆
+                def check():
+                    L = self.audit(bd)                           # 重起前核崩潰快照
+                    kid = self.kid("r1")
+                    seq, balances, stage = {
+                        "reserve-before-commit": (0, (3, 0, 0), None),
+                        "reserve-after-commit": (1, (2, 1, 0), "reserved"),
+                        "settle-before-commit": (1, (2, 1, 0), "reserved"),
+                        "settle-after-commit": (2, (2, 0, 1), "settled"),
+                    }[point]
+                    self.assertEqual(L["seq"], seq)
+                    self.assertEqual((L["available"], L["inflight"], L["used"]), balances)
+                    if stage is None:
+                        self.assertNotIn(kid, L["ops"])
+                    else:
+                        self.assertEqual(L["ops"][kid]["stage"], stage)
+                    if point == "settle-before-commit":
+                        self.assertEqual(self.gw(bd, kid)["stage"], "done")
+                self.restart_ledger(check)
                 self.assertEqual(p.wait(30), 0, p.stderr.read())
                 L = self.audit(bd, final=True)
                 self.assertEqual((L["used"], len(L["log"]), self.backend(bd)["accepted"]), (1, 2, 1))
@@ -374,13 +394,88 @@ class TestTime(LedgerCase):
 class TestBounds(LedgerCase):
     """〔budget〕loop6：後端讀寫故障回 3（A6-02）、時鐘水位推高、孤兒回條、退役拒收。"""
 
-    def fault_call(self, req, env, cmd="call"):
+    def fault_call(self, req, env, cmd="call", **kw):
         """在故障下跑 call／cancel／settle：回 (退出碼, 最後一行 JSON)，並確認 stdout 恰一行 JSON、stderr 沒有 traceback。"""
-        args = self.call_args(req) if cmd == "call" else (cmd, "budget/demo", "--holder", "api", "--request", req)
+        args = self.call_args(req, **kw) if cmd == "call" else (cmd, "budget/demo", "--holder", "api", "--request", req)
         r = self.cli(self.node, *args, env=env)
         self.assertNotIn("Traceback", r.stderr)
         self.assertEqual(len(r.stdout.strip().splitlines()), 1, r.stdout)
         return r.returncode, last_json(r.stdout)
+
+    def test_payload_eio_and_bad_input(self):
+        bd = self.up()
+        payload = self.payload(self.node, "payload.json", echo="hi")
+        hits = os.path.join(self.root, "hits.txt")
+        env = {"AOS7_TEST_FAULT": "open:*/payload.json:EIO", "AOS7_TEST_FAULT_HITS": hits}
+        rc, out = self.fault_call("p", env, payload=payload)
+        self.assertEqual((rc, out["outcome"], out["stage"]), (3, "unknown", "payload"))
+        with open(hits) as f:
+            self.assertIn("payload.json", f.read(), "EIO 沒打中")
+        os.unlink(payload)
+        for bad in (None, "{bad"):
+            if bad is not None:
+                with open(payload, "w") as f:
+                    f.write(bad)
+            r = self.cli(self.node, *self.call_args("p", payload=payload))
+            self.assertEqual(r.returncode, 2, r.stderr)
+            self.assertEqual(len(r.stderr.strip().splitlines()), 1)
+            self.assertEqual(r.stdout, "")
+        self.assertEqual(self.audit(bd)["seq"], 0)
+        self.assertEqual(os.listdir(os.path.join(bd, "inbox")), [])
+
+    def test_replay_eio_preserves_out(self):
+        bd = self.up()
+        outpath = os.path.join(self.node, "out.json")
+        extra = ("--out", outpath)
+        self.assertEqual(self.call(self.node, "r", extra=extra)[0], 0)
+        with open(outpath, "rb") as f:
+            before = f.read()
+        hits = os.path.join(self.root, "hits.txt")
+        env = {"AOS7_TEST_FAULT": "open:*/gateway/%s.json:EIO" % self.kid("r"),
+               "AOS7_TEST_FAULT_HITS": hits}
+        rc, out = self.fault_call("r", env, extra=extra)
+        self.assertEqual((rc, out["outcome"], out["stage"]), (3, "unknown", "replay"))
+        with open(hits) as f:
+            self.assertIn(self.kid("r") + ".json", f.read(), "EIO 沒打中")
+        with open(outpath, "rb") as f:
+            self.assertEqual(f.read(), before)
+        rc, out = self.call(self.node, "r", extra=extra)
+        self.assertEqual(rc, 0, out)
+        self.assertIsNotNone(out["response"])
+        self.assertEqual(self.audit(bd, final=True)["used"], 1)
+
+    def test_out_directory_then_replay(self):
+        bd = self.up()
+        rc, out = self.fault_call("o", None, extra=("--out", self.node))
+        self.assertEqual((rc, out["outcome"], out["stage"]), (3, "unknown", "io"))
+        L = self.audit(bd, final=True)
+        self.assertEqual((L["inflight"], L["used"], self.backend(bd)["accepted"]), (0, 1, 1))
+        rc, out = self.call(self.node, "o", extra=("--out", os.path.join(self.node, "out.json")))
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.backend(bd)["accepted"], 1)
+
+    def test_weighted_cost(self):
+        bd = self.up()
+        self.assertEqual(self.call(self.node, "one")[0], 0)
+        self.assertEqual(self.call(self.node, "two", extra=("--amount", "2"))[0], 0)
+        L = self.audit(bd, final=True)
+        self.assertEqual((L["used"], self.backend(bd)["accepted"], L["available"]), (3, 2, L["initial"] - 3))
+
+    def test_gateway_tmp_sweeps_only_dead_writer(self):
+        bd = self.setup_budget(self.node)
+        p = subprocess.Popen([sys.executable, "-c", "pass"])
+        self.assertEqual(p.wait(10), 0)
+        gateway = os.path.join(bd, "gateway")
+        os.makedirs(gateway, exist_ok=True)
+        dead = os.path.join(gateway, ".x.json.tmp.%d" % p.pid)
+        live = os.path.join(gateway, ".y.json.tmp.%d" % os.getpid())
+        for path in (dead, live):
+            with open(path, "w") as f:
+                f.write("{}")
+        self.lp = self.start_ledger(self.node)
+        self.assertEqual(self.call(self.node, "t")[0], 0)   # 帳處理過請求＝啟動掃描已跑完
+        self.assertFalse(os.path.exists(dead), "死亡寫者的暫存檔沒掃")
+        self.assertTrue(os.path.exists(live), "活寫者的暫存檔不該掃")
 
     def test_backend_eio_is_unknown(self):
         """A6-02：已有 intent，後端讀到 EIO：call、cancel 都回 3（非終局），intent 與預留留著；恢復後同 K 只受理一次。"""
