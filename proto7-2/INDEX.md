@@ -32,6 +32,7 @@
 | `packs/llmcall/` | [llmcall 包](packs/llmcall/README.md)：LLM 單次呼叫閘道（假傳輸＋真傳輸 llm.litellm），固定請求→預留→intent→raw→done→結算→回條；本地證據恢復、遲到 adopt、軟 token 帳；退出碼 0～4 |
 | `packs/adapt/` | [adapt 包](packs/adapt/README.md)：鄰居 node 的最新值轉接（固定版本、確定性鏈、依據 basis＋出處 src、三態暫存器），示範溫度感測→風扇 |
 | `packs/author/` | [author 包](packs/author/README.md)：LLM 作者第一刀（假候選）——需求＋候選經三層驗證、確定性編譯成獨立版本 step 工作，意圖→表鎖內合併自己那一項→回條；`close` 後每需求只留 request＋receipt；`send`／`intake` 經事件必讀通道收單（游標與收件回條在 `author/events.json`，回條寫成後才 ack）；退出碼 0／2／3／4／5；第二刀 `aos7_author_llm.py` 接 `propose --llm` 經 llmcall 真傳輸，`examples/llm-request/` 收一整圈證據 |
+| `packs/prompt/` | [prompt 包](packs/prompt/README.md)：`aos7-prompt render` 照 `prompt.json`（`aos_directives` 的 `$ref`／`$fmt`／`$env`／`$opt`，加讀檔 `file`／`tail`／`latest`、訊息 `append`／`clear`）拼出 llmcall 請求；超過 `max_chars` 的段折成 `ref://<sha>`（原文在 `<node>/refs/`），`expand` 換回；回條帶 token 估值（字數／3）；退出碼 0／2／3 |
 | `tests/` | 核心測試 `tests/core/`、共用工具、`run_all.py`；測試導引見 [tests/README.md](tests/README.md) |
 | `notes/` | problems.md、core-slimming.md、component-contracts.md、layer-interfaces/、changes-from-7-1.md、play/ |
 

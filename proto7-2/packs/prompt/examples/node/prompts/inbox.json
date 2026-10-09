@@ -1,0 +1,7 @@
+{
+ "note": "範例 3：範例 2 再加最新 5 封信",
+ "messages": [
+  {"$opt": "append", "$val": {"$ref": "prompts/session.json#/messages"}},
+  {"role": "user", "content": ["最新 5 封信：", {"$opt": "latest", "$val": "wf/inbox", "n": 5}]}
+ ]
+}
