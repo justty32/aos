@@ -43,9 +43,9 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
 
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:6px">
-    <span class="stamp">2026-10-09（五）· 最後更新 13:50 · 家裡 Manjaro</span>
+    <span class="stamp">2026-10-09（五）· 最後更新 15:40 · 家裡 Manjaro</span>
     <h1>aos 今日戰況</h1>
-    <p class="lead">一句話：上午把 loop7 修補全部做完、測試全綠；下午在做「事件保存」第一版。沒有卡在你身上的事。</p>
+    <p class="lead">一句話：今天原訂的全部做完（643 項測試全綠）；<b>真 AI 已接上</b>；現在照你給的三個目標在做「AI 用 wf 管自己＋會壓縮／記憶／技能＋能自己做工具」。沒有卡在你身上的事。</p>
   </header>
 
   <section>
@@ -214,6 +214,59 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
     </div>
     <div class="chips"><span class="chip done">✓ 設計圖（G0）</span><span class="chip done">✓ 日誌小修（V2）</span><span class="chip done">✓ 86 條壞連結修好（W1）</span><span class="chip run">● 帳本會照實結（B2）</span><span class="chip run">● 假 AI 呼叫（G1）</span><span class="chip run">● 學徒從必讀抽屜收單（V1）</span><span class="chip run">● 總整理＋白話報告（I2）</span></div>
     <p class="small">真的 AI 要等你看過設計圖才接。</p>
+  </section>
+
+  <section>
+    <h2>真 AI 接上了：學徒跑了 12 圈</h2>
+    <p>學徒用 6 種 gpt 模型各跑一到三次「寫 CSV 小流程」，12 次全部過關、答案全對。</p>
+    <div class="fig">
+    <svg viewBox="0 0 640 170" role="img" aria-label="每次呼叫約 2500 到 2700 token，其中約 1600 是 proxy 自帶">
+      <!-- 0..3000 token → 0..480px, x0=140 -->
+      <g font-size="12" fill="var(--mute)"><text x="130" y="38" text-anchor="end">一次呼叫</text><text x="130" y="78" text-anchor="end">其中 proxy 自帶</text><text x="130" y="118" text-anchor="end">我們的提示</text><text x="130" y="158" text-anchor="end">AI 回答</text></g>
+      <rect x="140" y="24" width="416" height="20" rx="3" fill="var(--accent)"/><text x="562" y="39" font-size="12" fill="var(--ink)">≈2600</text>
+      <rect x="140" y="64" width="256" height="20" rx="3" fill="var(--warn-soft)"/><text x="402" y="79" font-size="12" fill="var(--ink)">≈1600</text>
+      <rect x="140" y="104" width="115" height="20" rx="3" fill="var(--accent-soft)"/><text x="261" y="119" font-size="12" fill="var(--ink)">≈720</text>
+      <rect x="140" y="144" width="37" height="20" rx="3" fill="var(--run-soft)"/><text x="183" y="159" font-size="12" fill="var(--ink)">130～320</text>
+    </svg>
+    </div>
+    <p class="small">12 圈一共 30,739 token，每次 2～11 秒。這題太簡單，比不出模型差異；之後換難題再比。限制先不設，等跑完大段落再依實際用量定。</p>
+  </section>
+
+  <section>
+    <h2>現在：你給的三個目標</h2>
+    <div class="fig">
+    <svg viewBox="0 0 640 250" role="img" aria-label="三個目標與負責的隊">
+      <g font-size="12">
+        <rect x="6" y="10" width="200" height="230" rx="10" fill="var(--accent-soft)"/>
+        <text x="106" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent)">① AI 用 wf 管自己</text>
+        <text x="20" y="62" fill="var(--ink)">每個 AI 有自己的 wf/</text>
+        <text x="20" y="80" fill="var(--ink)">tick 當心跳叫醒它</text>
+        <text x="20" y="98" fill="var(--ink)">必達信、例行事務</text>
+        <text x="20" y="130" fill="var(--done)">✓ 設計圖（W0）</text>
+        <text x="20" y="150" fill="var(--done)">✓ 例行事務（H1）</text>
+        <text x="20" y="170" fill="var(--run)">● 建 wf（W1）</text>
+        <text x="20" y="190" fill="var(--run)">● 信箱（X1）</text>
+        <rect x="220" y="10" width="200" height="230" rx="10" fill="var(--run-soft)"/>
+        <text x="320" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="var(--run)">② 壓縮・記憶・技能</text>
+        <text x="234" y="62" fill="var(--ink)">記憶寫在檔案，不靠模型</text>
+        <text x="234" y="80" fill="var(--ink)">太長就摘要舊的，</text>
+        <text x="234" y="98" fill="var(--ink)">沒做完的事一條不丟</text>
+        <text x="234" y="130" fill="var(--run)">● 組提示（P1）</text>
+        <text x="234" y="150" fill="var(--run)">● 壓縮（C2）</text>
+        <text x="234" y="170" fill="var(--run)">● 技能（S1）</text>
+        <rect x="434" y="10" width="200" height="230" rx="10" fill="var(--warn-soft)"/>
+        <text x="534" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="var(--warn)">③ AI 自己做工具</text>
+        <text x="448" y="62" fill="var(--ink)">學徒從 CSV 進階到</text>
+        <text x="448" y="80" fill="var(--ink)">寫 aos 的工具／模組</text>
+        <text x="448" y="98" fill="var(--ink)">做好放分支，人來合併</text>
+        <text x="448" y="130" fill="var(--done)">✓ 接真 AI（R1）</text>
+        <text x="448" y="150" fill="var(--run)">● 新工具卡（A4）</text>
+        <text x="448" y="170" fill="var(--run)">● 故障測試（T9）</text>
+        <text x="448" y="190" fill="var(--mute)">○ 學徒實戰（A5）</text>
+      </g>
+    </svg>
+    </div>
+    <p class="small">每樣給人用的東西都要過：第一次跑 ≤10 分鐘、指令 ≤3 個、新概念 ≤5 個，最後找「新手」實際試、打分。效率另有一隊在量（E1）。做完一波就回頭審：OK／修改／重造。</p>
   </section>
 
   <section>
