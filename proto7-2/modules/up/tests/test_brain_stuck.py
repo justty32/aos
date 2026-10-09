@@ -244,6 +244,11 @@ class BrainStuckTests(DaemonCase):
         self.assertEqual(len(self.up_status()), 6)
         write_json(str(unsure), dict(id='已離開信箱', since=time.time()))
         self.assertEqual(len(self.up_status()), 6)
+        # 問了沒收到回答（卡住那筆）也算一次，另外註明
+        asked = self.node / 'llmcall/llm' / brain.call_id(ident, 1)
+        asked.mkdir(parents=True, exist_ok=True)
+        (asked / 'request.json').write_text('{}')
+        self.assertTrue(self.up_status()[4].endswith('bob 一共問過 AI 1 次（其中 1 次還沒收到回答）'))
         # 說卡住的那封不算「回了」：回了 1 封、1 封卡住
         unsure.unlink()
         self.cli('modules/mail/aos7-mail', 'done', 'bob', ident, 'BLOCKED', '卡住了', '--root', self.root)

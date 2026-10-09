@@ -232,10 +232,13 @@ def status(node):
           (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if check.returncode else ''))
     print(f'技能：{skill_count(node)} 本（AI 自己挑來用）')
     calls = sum(p.is_file() for p in (node / 'llmcall/llm').glob('*/raw.json'))
+    # 問了但沒收到回答（例如卡住那封）也算一次，另外註明，免得卡住後次數看起來沒動
+    asked = max(calls, sum(p.is_file() for p in (node / 'llmcall/llm').glob('*/request.json')))
+    times = f'一共問過 AI {asked} 次' + (f'（其中 {asked - calls} 次還沒收到回答）' if asked > calls else '')
     model = settings.get('model')
     if model in (None, '', 'fake'):
         # 假 AI 不花錢，字數對新手沒意義，不印
-        print(f'AI：假 AI（不連網、不花錢，照抄你的信回你）；{node.name} 問過 AI {calls} 次')
+        print(f'AI：假 AI（不連網、不花錢，照抄你的信回你）；{node.name} {times}')
     else:
         budget = call('packs/budget/bin/aos7-budget', 'status', 'budget/llm', cwd=node)
         try:
@@ -244,7 +247,7 @@ def status(node):
             used = None
         usage = (f'AI 讀加寫共約 {used} 字（真 AI 照字數收錢）' if isinstance(used, (int, float))
                  else '用了多少字不明')
-        print(f'AI：{model}；{node.name} 問過 AI {calls} 次，{usage}')
+        print(f'AI：{model}；{node.name} {times}，{usage}')
     print(cleanup_hint(node))
     return 0
 
