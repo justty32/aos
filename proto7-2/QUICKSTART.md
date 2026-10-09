@@ -33,7 +33,7 @@ aos7-up status /tmp/aos/bob                   # 3. 看 bob 現在怎樣
 視窗 1（數字每次不同；Ctrl-C 後印最後一行）：
 
 ```text
-bob 起好了：工作簿 ✓ 信箱 ✓ 技能 3 本 ✓ 假 AI（要真的加 --model）
+bob 起好了：工作簿 ✓ 信箱 ✓ 技能 3 本 ✓ 假 AI
 另開一個終端機問它：aos7-up ask /tmp/aos/bob '一句話'
 看狀態：aos7-up status /tmp/aos/bob　停：Ctrl-C
 心跳 4
@@ -45,7 +45,7 @@ bob 起好了：工作簿 ✓ 信箱 ✓ 技能 3 本 ✓ 假 AI（要真的加 
 指令 2（預設假 AI：不連網、不花錢、照抄你的信）：
 
 ```text
-bob 回信（DONE）：（假 AI）收到你的信：用一句話介紹你自己
+bob 回信：（假 AI）收到你的信：用一句話介紹你自己
 ```
 
 指令 3：
@@ -55,15 +55,15 @@ bob 回信（DONE）：（假 AI）收到你的信：用一句話介紹你自己
 信：未讀 0 封（要回 0 封）；你的信箱有 0 封回信
 工作簿：還有 0 件事沒做完；停在：- 16:51 回了 you-20261009T165125-4e36ba603228；體檢 OK
 技能：3 本
-AI：假 AI；問過 1 次，用了 1102 token
-檔案：/tmp/aos/bob、/tmp/aos/you（全清：先停心跳，再刪這兩個資料夾）
+AI：假 AI；問過 1 次，讀寫約 1102 字
+檔案：都在 /tmp/aos（bob、you、.aosd）；全清：先停心跳，再 rm -r /tmp/aos
 ```
 
-DONE＝辦完了；token＝AI 讀寫的字量。`--model` 與 `--help` 裡的 `-d`、`stop` 第一次用不到。
+真 AI、背景跑這些進階用法第一次用不到（`--help` 最後一行指給你）。
 
 ## 收掉
 
-視窗 1 按 Ctrl-C（心跳停，檔案留著）；不要了就 `rm -r /tmp/aos`，整個刪（含藏起來的 `.aosd`）。
+視窗 1 按 Ctrl-C（心跳停，檔案留著）；不要了就照指令 3 最後一行 `rm -r /tmp/aos`，整個刪（含藏起來的 `.aosd`）。
 
 到這裡就會了。細節 → [up](modules/up/README.md)。
 

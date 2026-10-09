@@ -54,8 +54,8 @@ class UpDispatch(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(f'---\nstatus: {status}\n{extra}---\n# x\n')
         for outcome, expected in [('DONE', '→ 問 AI → 已回信'),
-                                  ('FAILED', '→ AI 沒回成，已回 BLOCKED'),
-                                  ('BLOCKED', '→ AI 沒回成，已回 BLOCKED'),
+                                  ('FAILED', '→ AI 沒回成，已回信說卡住了'),
+                                  ('BLOCKED', '→ AI 沒回成，已回信說卡住了'),
                                   (None, '→ 已回信')]:
             with tempfile.TemporaryDirectory() as tmp:
                 node = Path(tmp) / 'bob'

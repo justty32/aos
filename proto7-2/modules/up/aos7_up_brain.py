@@ -1,4 +1,3 @@
-import argparse
 import datetime
 import hashlib
 import json
@@ -21,9 +20,17 @@ class Trouble(ValueError):
     def __init__(self, why, fix):
         self.why, self.fix = why, fix
         super().__init__(trouble(why, fix))
-class Parser(argparse.ArgumentParser):
-    def error(self, message):
-        self.exit(2, trouble('啟動參數不能用', '看 aos7-up --help') + '\n')
+class Later(Exception):
+    """同一封信與同一筆 AI 請求留到下一次處理。"""
+
+
+class AIReply(str):
+    def __new__(cls, text, usage_pending=False):
+        reply = super().__new__(cls, text)
+        reply.usage_pending = usage_pending
+        return reply
+
+
 def run(tool, *args, node=None, timeout=30, env=None):
     return subprocess.run([sys.executable, str(tool), *map(str, args)], cwd=node,
                           env=env, capture_output=True, text=True, timeout=timeout)
@@ -88,16 +95,20 @@ def ask_ai(node, letter, cid, cfg):
                 '--holder', cfg.get('holder', 'brain'), '--call', cid, '--logical', 'up/brain',
                 '--request', req, '--reserve', cfg.get('reserve', 1000000), '--deadline', deadline,
                 node=node, env=env, timeout=float(deadline) + 15)
+        if p.returncode == 3:
+            raise Later()
         if p.returncode not in (0, 4):
             raise ValueError()
         receipt = json.loads(p.stdout.splitlines()[-1])
         text = receipt.get('text')
         if not isinstance(text, str) or not text.strip():
             raise ValueError()
+    except Later:
+        raise
     except Exception:
         raise Trouble('AI 沒回應', AI_FIX) from None
     test_point('up-brain-after-llm')
-    return text
+    return AIReply(text, usage_pending=p.returncode == 4)
 def state_count(node, line):
     return sum(s.endswith(' ' + line) for p in (node / 'wf/handoffs').glob('*/STATE.md')
                for s in p.read_text().splitlines())
@@ -120,6 +131,8 @@ def once(node, rnd):
         finish(node, pending, personal)
         if pending['status'] == 'BLOCKED':
             print(f'回合 {rnd}：' + trouble(pending['line'], pending['body'].split('怎麼辦：')[-1]), flush=True)
+        elif pending.get('usage_pending'):
+            print(f'回合 {rnd}：已回信（AI 用量還沒對清，之後自己會對）', flush=True)
         return
     requests = []
     for letter in personal:
@@ -130,6 +143,7 @@ def once(node, rnd):
     if not requests: return
     letter = min(requests, key=fifo)
     ident, status, fix = letter['id'], 'DONE', ''
+    usage_pending = False
     try:
         try:
             cfg = json.loads((node / '.aos/up.json').read_text()) if (node / '.aos/up.json').exists() else {}
@@ -139,21 +153,29 @@ def once(node, rnd):
             raise Trouble('設定檔 .aos/up.json 壞了', '刪掉它再跑 aos7-up <node>') from None
         text = ask_ai(node, letter, cid_of(ident), cfg)
         reply, title, line = parse(text, ident)
+        usage_pending = getattr(text, 'usage_pending', False)
+    except Later:
+        print(f'回合 {rnd}：AI 還沒確定回沒回，下回合再看同一筆', flush=True)
+        return
     except Exception as e:
         status = 'BLOCKED'
         title, fix = (e.why, e.fix) if isinstance(e, Trouble) else ('讀寫沒完成', CHECK_FIX)
         reply, line = '原因：' + title + '\n怎麼辦：' + fix, '卡住：' + title
-    pending = dict(id=ident, status=status, title=title, body=reply, line=line, state_count=state_count(node, line))
+    pending = dict(id=ident, status=status, title=title, body=reply, line=line, state_count=state_count(node, line), usage_pending=usage_pending)
     write_json(str(work / 'pending.json'), pending)
     test_point('up-brain-after-pending')
     finish(node, pending, personal)
-    print(f'回合 {rnd}：' + (trouble(line, fix) if fix else '已回信'), flush=True)
+    note = '已回信（AI 用量還沒對清，之後自己會對）' if usage_pending else '已回信'
+    print(f'回合 {rnd}：' + (trouble(line, fix) if fix else note), flush=True)
 def main(argv=None):
+    from aos7_up_cli import Parser, show_help
     argv = sys.argv[1:] if argv is None else argv
+    if show_help(argv):
+        return 0
     if argv and argv[0] == 'ask':
         from aos7_up_ask import main as ask_main
         return ask_main(argv)
-    ap = Parser()
+    ap = Parser(command='brain')
     ap.add_argument('cmd', choices=['brain'])
     ap.add_argument('node')
     a = ap.parse_args(argv)
@@ -167,8 +189,11 @@ def main(argv=None):
                 once(node, last)
             except Exception:
                 print(f'回合 {last}：卡住：' + trouble('收尾沒完成', CHECK_FIX), flush=True)
-    except (KeyError, ValueError, OSError):
-        print(trouble('brain 無法啟動', '跑 aos7-up <node>'), file=sys.stderr)
+    except (KeyError, ValueError):
+        print('aos7-up: brain 只能由心跳起。用 aos7-up <node> 起 node', file=sys.stderr)
         return 2
+    except OSError:
+        print('aos7-up: 不確定：brain 讀寫故障。照原樣再跑 aos7-up <node> 會接續', file=sys.stderr)
+        return 3
 if __name__ == '__main__':
     sys.exit(main())

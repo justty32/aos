@@ -9,28 +9,51 @@ import sys
 from aos7_up import up, stop
 from aos7_up_status import status, UpError
 
+HELP = """用法：
+  aos7-up <node>                起 node；開著別關，停＝按 Ctrl-C
+  aos7-up ask <node> '一句話'    另開視窗寄信給它，等回信（最多 60 秒）
+  aos7-up status <node>         看它現在怎樣
+例：aos7-up /tmp/aos/bob
+更多（真 AI、背景跑、停）見 proto7-2/modules/up/ADVANCED.md"""
+
+
+def show_help(argv):
+    if any(arg in ('-h', '--help') for arg in argv):
+        print(HELP)
+        return True
+    return False
+
+
 class Parser(argparse.ArgumentParser):
+    def __init__(self, *args, command='up', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.command = command
+
     def error(self, message):
-        message = ' '.join(message.splitlines())
-        self.exit(2, f'aos7-up: {message}。請看 aos7-up --help 的用法，例如 aos7-up /tmp/aos/bob\n')
+        examples = {
+            'up': ('參數不對，起 node 只要給資料夾', 'aos7-up /tmp/aos/bob'),
+            'ask': ('ask 要 node 和一句話', "aos7-up ask /tmp/aos/bob '一句話'"),
+            'brain': ('brain 只能由心跳起', 'aos7-up /tmp/aos/bob'),
+            'status': ('status 要 node', 'aos7-up status /tmp/aos/bob'),
+            'stop': ('stop 要 node', 'aos7-up stop /tmp/aos/bob'),
+        }
+        why, example = examples[self.command]
+        self.exit(2, f'aos7-up: {why}。例如 {example}\n')
 
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if show_help(argv):
+        return 0
     sub = argv.pop(0) if argv and argv[0] in ('ask', 'brain', 'status', 'stop') else 'up'
     if sub in ('ask', 'brain'):
         import aos7_up_brain
         return aos7_up_brain.main([sub, *argv])
-    parser = Parser(description='起 node、看心跳與信；另開 shell 用 ask 問它。',
-                                     epilog="問它：aos7-up ask <node> '一句話'；看：aos7-up status <node>；停背景心跳：aos7-up stop <node>")
-    parser.epilog += '\n退出：0 做到了、1 做不到、2 參數不對、3 不確定（照原樣再跑會接續）'
-    parser._optionals.title = '選項'
-    parser._positionals.title = '位置參數'
-    parser._actions[0].help = '顯示說明'
-    parser.add_argument('node', help='AI 住的資料夾')
+    parser = Parser(command=sub)
+    parser.add_argument('node')
     if sub == 'up':
-        parser.add_argument('--model', help='使用真的 AI 模型；預設假 AI')
-        parser.add_argument('-d', action='store_true', help='讓心跳在背景跑')
+        parser.add_argument('--model', help=argparse.SUPPRESS)
+        parser.add_argument('-d', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     node = Path(os.path.abspath(args.node))
     def interrupt(signum, frame):

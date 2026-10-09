@@ -3,7 +3,9 @@ import json
 from pathlib import Path
 import re
 import time
-from aos7_up_brain import mail, trouble, Parser
+import sys
+from aos7_up_brain import mail
+from aos7_up_cli import Parser, show_help
 
 
 def show_body(text, title):
@@ -20,15 +22,18 @@ def show_body(text, title):
 
 
 def main(argv):
-    ap = Parser()
+    if show_help(argv):
+        return 0
+    ap = Parser(command='ask')
     ap.add_argument('cmd', choices=['ask'])
     ap.add_argument('node')
     ap.add_argument('sentence')
     ap.add_argument('--wait', type=float, default=60)
     a = ap.parse_args(argv)
     node = Path(a.node).absolute()
+    shown = str(node).replace('\n', '\\n').replace('\r', '\\r')
     if not node.is_dir() or not re.fullmatch(r'[A-Za-z0-9._-]+', node.name) or node.name in ('.', '..', 'teams'):
-        print(trouble('找不到 node，或名字不能用', '確認 node 路徑再 ask 一次'))
+        print(f'aos7-up: 找不到 node {shown}。先跑 aos7-up {shown} 起它', file=sys.stderr)
         return 2
     try:
         sent = json.loads(mail(node, 'send', 'you', node.name, 'REQUEST', a.sentence))
@@ -38,13 +43,15 @@ def main(argv):
             for l in rows:
                 if l.get('re') != sent['id'] or l.get('status') not in ('DONE', 'BLOCKED', 'NEEDS-USER', 'FAILED'):
                     continue
-                print(f"{node.name} 回信（{l['status']}）：{l['title']}")
-                show_body(l.get('body', ''), l['title'])
+                suffix = {'DONE': '', 'BLOCKED': '（卡住了）',
+                          'NEEDS-USER': '（要你決定）', 'FAILED': '（沒辦成）'}[l['status']]
                 mail(node, 'done', 'you', l['id'])
+                print(f"{node.name} 回信{suffix}：{l['title']}")
+                show_body(l.get('body', ''), l['title'])
                 return 0
             time.sleep(min(0.5, max(0, end - time.monotonic())))
-        print(trouble(f'{node.name} 還沒回（等了 {a.wait:g} 秒）', f'等一下用 aos7-up status {node} 看'))
+        print(f'{node.name} 還沒回（等了 {a.wait:g} 秒）。等一下用 aos7-up status {node} 看')
         return 0
     except Exception:
-        print(trouble('寄信或讀信沒完成', '確認 node 信箱可讀寫，再 ask 一次'))
-        return 2
+        print(f'aos7-up: 不確定：寄信或讀信沒完成，信可能已寄出。等一下用 aos7-up status {shown} 看，別急著重寄', file=sys.stderr)
+        return 3
