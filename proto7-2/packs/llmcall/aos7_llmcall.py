@@ -53,15 +53,36 @@ def emit(obj, out=None):
     print(json.dumps(obj, ensure_ascii=False))
 
 
+def say(msg):
+    print("aos7-llmcall: " + " ".join(str(msg).splitlines()), file=sys.stderr)
+
+
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        say(message.rstrip("。.") + "。用法看 aos7-llmcall --help")
+        self.exit(2)
+
+
 def problem(outcome, stage, why):
     emit({"outcome": outcome, "stage": stage, "why": why})
-    return 1 if outcome in ("conflict", "denied", "bad", "refused") else 3
+    if outcome in ("conflict", "denied", "bad", "refused"):
+        say("做不到：%s。用 aos7-llmcall status 看原請求與證據，修正後再跑" % why)
+        return 1
+    msg = {"busy": "同一個 call 正在別處跑", "reserve": "帳沒有確定回覆預留", "settle": "帳沒有確定回覆結算",
+           "intent": "送出後沒等到回覆，沒重送", "io": "讀寫或傳輸故障"}.get(stage, "入口沒有確定結果")
+    say("不確定：%s（%s），請求、預留與證據留著。照原樣再跑一次會接續；想放棄用 status 看證據" % (msg, why))
+    return 3
 
 
-def exit_of(receipt):
+def exit_of(receipt, a):
+    cmd = "aos7-llmcall status %s --holder %s --call %s" % (a.bud, a.holder, a.call)
     if receipt["billing"] in ("pending", "overrun"):
+        say("已交付但帳沒清（用量不明或超出預留）。內容照用、不用重送；對帳看 " + cmd)
         return 4
-    return 0 if receipt["outcome"] == "answered" else 1
+    if receipt["outcome"] != "answered":
+        say("AI 沒答成（outcome %s），已結帳。原文與細節看 %s" % (receipt["outcome"], cmd))
+        return 1
+    return 0
 
 
 def io_boundary(fn):
@@ -199,19 +220,24 @@ def call(bud, a):
     if st == U:
         raise Unknown(request)
     if st != OK or not isinstance(request, dict):
-        print("aos7-llmcall: request 不存在、不是 JSON 或不是物件", file=sys.stderr)
+        say('request 不存在、不是 JSON 或不是物件。請給 JSON 物件檔，例：--request req.json（內容 {"fake": {}}）')
         return 2
     gateway_name, meter, endpoint = GATEWAY, METER, ENDPOINT
     if "litellm" in request:
         body = request["litellm"]
         if "fake" in request or not isinstance(body, dict) or not isinstance(body.get("model"), str) \
                 or not isinstance(body.get("messages"), list) or body.get("stream") is True:
-            print("aos7-llmcall: litellm 請求不合", file=sys.stderr)
+            say('litellm 請求不合。請給 model 字串與 messages 陣列，例：{"litellm":{"model":"demo","messages":[]}}；不可混 fake 或串流')
             return 2
         gateway_name, meter = aos7_llmcall_litellm.GATEWAY, aos7_llmcall_litellm.METER
         endpoint = aos7_llmcall_litellm.base_url()
     deadline = a.deadline if a.deadline is not None else (MAX_DEADLINE if "litellm" in request else 60)
     cd, key, kid, path = paths(bud, a.call, a.holder)
+    have = lambda: os.path.exists(os.path.join(cd, "receipt.json"))  # noqa: E731  有回條就只重印，不需要帳
+    if not have() and not bg.ledger_running(bud) and not have():
+        emit({"outcome": "refused", "stage": "ledger", "why": "帳任務沒在跑"})
+        say(bg.NOT_RUNNING % a.bud)
+        return 1
     rp = os.path.join(cd, "request.json")
     with locked(rp, timeout=0):
         want = {"v": 1, "call_id": a.call, "logical": a.logical, "budget": bud.id, "holder": a.holder,
@@ -225,7 +251,7 @@ def call(bud, a):
         receipt = load(os.path.join(cd, "receipt.json"))
         if receipt is not None:
             emit(receipt, a.out)
-            return exit_of(receipt)
+            return exit_of(receipt, a)
         test_crash(bud.node, "after-request")
         content = {"resource": "llm.tokens", "gateway": gateway_name, "amount": req["reserve"], "payload_sha": req["req_sha"]}
         r = bg.ask(bud, "reserve", key, content, a.patience)
@@ -249,7 +275,7 @@ def call(bud, a):
             write_json(os.path.join(cd, "receipt.json"), receipt)
             test_crash(bud.node, "after-receipt")
         emit(receipt, a.out)
-        return exit_of(receipt)
+        return exit_of(receipt, a)
 
 
 def status(bud, a):
@@ -266,8 +292,10 @@ def status(bud, a):
 def adopt(bud, a):
     """只把人工帶來的遲到回覆接成 raw；不算 done、不結算。"""
     st, supplied = fact(a.raw)
+    if st == U:
+        raise Unknown(supplied)
     if st != OK or not isinstance(supplied, dict):
-        print("aos7-llmcall: raw 讀不到或不是物件", file=sys.stderr)
+        say("raw 讀不到或不是物件。請給遲到回覆的 JSON 物件檔，例：--raw reply.json")
         return 2
     cd, key, kid, path = paths(bud, a.call, a.holder)
     with locked(os.path.join(cd, "request.json"), timeout=0):
@@ -287,7 +315,7 @@ def adopt(bud, a):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-llmcall", description="LLM 單次呼叫閘道（fake／LiteLLM 傳輸）")
+    ap = ArgumentParser(prog="aos7-llmcall", description="問 AI 一次，留下原文與花費，斷掉重跑能接續。")
     sub = ap.add_subparsers(dest="cmd", required=True)
     for cmd in ("call", "status", "adopt"):
         p = sub.add_parser(cmd)
@@ -306,7 +334,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if not CALL_RE.fullmatch(a.call) or not a.holder or (a.cmd == "call" and (
             a.reserve <= 0 or (a.deadline is not None and not 0 < a.deadline <= MAX_DEADLINE) or a.patience < 0)):
-        print("aos7-llmcall: call_id、holder 或 reserve 不合", file=sys.stderr)
+        say("--call 要英數、_、-，1～64 字；holder 不可空，reserve、deadline 要正數，patience 非負。例：--holder author --call demo-c1 --reserve 623 --deadline 60 --patience 5")
         return 2
     bud = bg.Bud(a.bud)
     return io_boundary(lambda: {"call": call, "status": status, "adopt": adopt}[a.cmd](bud, a))

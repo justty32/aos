@@ -51,7 +51,7 @@ class LlmcallCase(CoreCase):
         p = self.cli("init", "budget/" + budget, binary=BUDGET)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
         self.popen("ledger", "budget/" + budget, binary=BUDGET)
-        self.wait_for(lambda: (bd / "ledger.lock").exists())
+        self.wait_for(lambda: bg.ledger_running(bg.Bud(str(bd)), wait=0), timeout=10)
         return bd
 
     def request(self, name, mode="ok", usage=R, **extra):
@@ -103,6 +103,12 @@ class LlmcallCase(CoreCase):
 
     def assert_receipt(self, p, rc=0):
         self.assertEqual(p.returncode, rc, p.stdout + p.stderr)
+        if rc:
+            self.assertEqual(len(p.stderr.splitlines()), 1)
+            self.assertTrue(p.stderr.startswith("aos7-llmcall: "))
+            self.assertIn("。", p.stderr)
+        else:
+            self.assertEqual(p.stderr, "")
         self.assertEqual(len(p.stdout.strip().splitlines()), 1)
         obj = last_json(p)
         self.assertEqual(list(obj), KEYS)

@@ -62,6 +62,8 @@ stdout 一行 `json.dumps(obj, ensure_ascii=False)`；receipt／--out 用 write_
 
 Unknown／bg.LedgerDown／OSError 印 unknown io／3、無 traceback；鎖忙 stage busy。patience 計 completed_tock，不是牆鐘。
 
+進門：輸入驗證後、拿 request 鎖前先看帳任務在不在（`ledger.lock` 有人持有）；沒有且沒 receipt＝退出 1、stdout `{"outcome":"refused","stage":"ledger","why":"帳任務沒在跑"}`、不寫任何檔、不寫 --out；已有 receipt 照重印、不需要帳。非 0 退出另在 stderr 印恰一行人話（格式見 [blueprint-errors](../../notes/blueprint-errors.md)）。
+
 ## 5. 假傳輸與 deadline
 
 `TRANSPORT = aos7_llmcall_fake.send` 保留。send 在 daemon thread 執行，join(deadline)；逾時／例外回 3、留 intent，程序不等 thread；重跑只看本地證據。
