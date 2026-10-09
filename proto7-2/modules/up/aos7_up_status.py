@@ -34,6 +34,16 @@ class UpError(Exception):
         super().__init__(message)
 
 
+BEAT_MS = (10, 86400000)   # 心跳間隔上下限：0.01 秒～一天
+
+
+def beat_ok(data):
+    """up.json 的節拍欄可有可無；有就要合法（interval_ms 整數毫秒、early_tock 布林）。"""
+    ms = data.get('interval_ms', 1000)
+    return (type(ms) is int and BEAT_MS[0] <= ms <= BEAT_MS[1] and
+            type(data.get('early_tock', False)) is bool)
+
+
 def config(node):
     path = node / '.aos/up.json'
     try:
@@ -43,7 +53,8 @@ def config(node):
         if (not isinstance(data, dict) or data.get('v') != 1 or
             any(not isinstance(data.get(k), str) for k in strings) or
             'model' not in data or
-            (data['model'] is not None and not isinstance(data['model'], str))):
+            (data['model'] is not None and not isinstance(data['model'], str)) or
+            not beat_ok(data)):
             raise ValueError()
         return data
     except FileNotFoundError:

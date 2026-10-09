@@ -10,7 +10,26 @@ Python 3.11+、純標準庫；在 repo 根跑。缺工作流模板時先裝
 - `aos7-up /tmp/aos/bob -d`：背景跑，確認 bob 被叫醒後印三行離開。
 - `aos7-up stop /tmp/aos/bob`：停整個房子的心跳與它起的全部任務，包含其他 node；不刪任何檔。
 - `aos7-up /tmp/aos/real --model chatgpt-gpt-6-sol-high -d`：真 AI。
+- `aos7-up /tmp/aos/bob --interval 0.5 --early`：改心跳節拍（見下「心跳節拍」）。
 - `brain`：心跳替 node 起的任務入口（argv 見下），人不直接跑。
+
+### 心跳節拍：`--interval`、`--early`／`--fixed`
+
+預設每 1 秒一回合、固定節拍（回合裡的事做完了也等滿 1 秒）。有人要固定、有人要快，可以自己設：
+
+- `--interval 秒`：每回合間隔，0.01～86400 秒，可帶小數，例如 `--interval 0.5`。
+- `--early`：回合裡起的事都做完就提早進下一回合（核心 `early_tock`）；`--fixed` 改回固定節拍。兩個只能給一個。
+
+```sh
+aos7-up /tmp/aos/bob --interval 0.5 --early   # 快
+aos7-up /tmp/aos/bob --fixed                  # 改回固定，間隔沿用 0.5
+```
+
+給過的值記在 `up.json`（`interval_ms`、`early_tock`），之後重跑不帶參數就沿用；從沒給過就不寫這兩欄、也不碰 `timeline.json`（核心預設 1 秒固定）。給過以後，每次 up 都把這兩欄寫回 `<node>/.aos/timeline.json`（其他欄保留），手改 timeline.json 的這兩欄會被蓋回——要改就用 up 的參數。心跳已經在跑時改節拍，下一回合生效（up 會順便叫醒 node）。
+
+快多少（2026-10-09 [EF2](../../notes/play/2026-10-09-real-ai/ef2.md) 量的作者工作「結算→結束」，離線平均）：1 秒固定 2.7 秒、1 秒＋`--early` 2.1 秒、0.5 秒固定 1.8 秒、0.5 秒＋`--early` 1.43 秒。代價：間隔短，心跳與常駐任務醒得更勤；`--early` 時回合中送來的 wake 不起作用，回合長短跟著工作走、不再整齊。
+
+壞值（不是數字、超出範圍、`--early` 與 `--fixed` 同給）退 2、什麼都沒動。
 
 ### 真 AI：`--model` 填什麼
 
@@ -45,7 +64,7 @@ stop 收掉心跳與它起的全部任務，不刪任何檔。全清先停心跳
 
 安裝與啟動拿 `<node>/.aos/up.lock`；up 自己寫的 JSON 都用暫存檔＋rename。
 重跑只補缺的 grant、ledger、技能連結與任務，更新技能 index，保留原信件。
-SIGKILL 心跳後重跑，核心接手收掉舊任務；不重新開帳。up 不寫 timeline。
+SIGKILL 心跳後重跑，核心接手收掉舊任務；不重新開帳。up 只在給過節拍時寫 timeline 的 `interval_ms`、`early_tock` 兩欄。
 
 `<node>/.aos/up.json` 必須是完整物件：
 
@@ -58,11 +77,12 @@ SIGKILL 心跳後重跑，核心接手收掉舊任務；不重新開帳。up 不
 | `litellm_url` | 環境變數 AOS7_LITELLM_URL 有設優先，其次舊值，再預設 http://localhost:4000/v1 |
 | `budget`、`holder` | 固定 budget/llm、brain |
 | `gateway` | llm.fake 或 llm.litellm，依 model 選 |
+| `interval_ms`、`early_tock` | 可有可無：給過 `--interval`／`--early`／`--fixed` 才有；整數毫秒 10～86400000、布林；沒給沿用舊值 |
 
 grant 固定 1000 萬 token，已有 grant 永不改。真 AI 同 gateway 可以換模型。
 名字只准英數、`.`、`_`、`-`，不能以 `.` 開頭，you 留給人。
 
-register 後最多等 15 秒，必須看到 node 的 round.json 回合號 ≥1 且大於開始前。
+register 後最多等 15 秒（節拍超過 1 秒時多等那一拍；心跳已在跑時順便 wake），必須看到 node 的 round.json 回合號 ≥1 且大於開始前。
 持鎖不是醒來的證據。自己起的心跳在交接前任何失敗都送 SIGINT，等 30 秒，逾時 SIGKILL。
 前景觀看中中斷且收乾淨退 0；收尾逾時退 3，可能仍有工作在跑，下次 up 由核心接手。
 子指令獨立 process group；中斷送整組 SIGTERM，等 5 秒再 SIGKILL，不留孫程序。
@@ -104,7 +124,7 @@ brain 對 llmcall 的退出：0 回信；4 也回信，回合行註「AI 用量�
 |---|---|
 | 0 | 做到了；前景正常停也算 |
 | 1 | 做不到：缺模板、子指令確定失敗（附 stderr 最後一行）、心跳起不來（附 log）；照訊息處理 |
-| 2 | 參數不對：名字、換假／真 AI、up.json 形狀錯、status 沒 node；修正再跑 |
+| 2 | 參數不對：名字、換假／真 AI、節拍壞值、up.json 形狀錯、status 沒 node；修正再跑 |
 | 3 | 不確定：準備中斷、子指令退 3、讀寫故障（含讀不到 up.json）、ask 寄信或讀信半路出錯、停不下來或沒看到 node 醒來；檔案留著，照原樣再跑會接續 |
 
 `ask` 等滿 60 秒還沒回信退 0（等過了算做到），stdout 說「還沒回」與用 status 再看。
@@ -122,6 +142,7 @@ up.json 壞了時刪掉該檔再 up。未知結果不清檔、不重送。
 | `aos7_up_status.py` | 六行狀態、觀看、設定驗證、子指令與 atomic |
 | `tests/test_up.py` | 起停、信與已花預算 SIGKILL 重接、唯讀摘要 |
 | `tests/test_up_model.py` | 模型、端點保存、拒絕 gateway 變更、經 up 的 ask 假 AI 一圈 |
+| `tests/test_up_beat.py` | 節拍生效、沿用、壞值退 2 |
 | `tests/test_up_edges.py` | 重跑保信、壞設定、共享心跳、訊號、並行與唯讀 |
 | `tests/test_up_errors.py` | 子指令摘要、未知讀寫、stop 逾時、壞名字無副作用 |
 | `tests/test_up_dispatch.py` | 分派、真檔觀看事件、啟動／收尾逾時、中斷與程序組 |

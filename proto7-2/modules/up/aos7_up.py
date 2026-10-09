@@ -34,7 +34,7 @@ def preflight(node, model):
     return previous, model, gateway, grant_path, grant
 
 
-def prepare(node, model):
+def prepare(node, model, beat=None):
     previous, model, gateway, grant_path, grant = preflight(node, model)
     home = Path(os.environ.get('AOS7_WF_HOME', '~/repo/workflows')).expanduser()
     if not (node / 'AGENTS.md').is_file() and not (home / 'tools/wf-init.sh').is_file():
@@ -45,7 +45,14 @@ def prepare(node, model):
                   you='you', mail_root=str(node.parent), model=model,
                   litellm_url=os.environ.get('AOS7_LITELLM_URL', previous.get('litellm_url', 'http://localhost:4000/v1')),
                   budget='budget/llm', holder='brain', gateway=gateway)
+    # 節拍（ADVANCED「心跳節拍」）：給過才有欄位，沒給沿用 up.json 舊值；從沒給過就不碰 timeline（核心預設 1 秒固定）
+    for key in ('interval_ms', 'early_tock'):
+        if key in (beat or {}):
+            settings[key] = beat[key]
+        elif key in previous:
+            settings[key] = previous[key]
     atomic(node / '.aos/up.json', settings)
+    changed = sync_timeline(node, settings)
     if grant is None:
         grant = dict(v=1, grant='up-llm', budget='llm', holder='brain',
                      resource='llm.tokens', gateway=gateway, amount=10000000,
@@ -74,7 +81,31 @@ def prepare(node, model):
     for box in (node / 'events', node.parent / 'you/inbox', node.parent / 'you/events'):
         box.mkdir(parents=True, exist_ok=True)
     run('bin/aos7-ctl', 'daemon', node.parent, 'register', node.name)
+    if alive(node.parent) and (changed or settings.get('interval_ms', 1000) > 1000):
+        # 已在跑的心跳：叫醒好讓新節拍馬上生效、長間隔也不必等滿一拍才看到醒來；沒叫成只是慢一點
+        call('bin/aos7-ctl', 'daemon', node.parent, 'wake', node.name)
     return settings
+
+
+def sync_timeline(node, settings):
+    """把 up.json 的節拍欄寫進核心的 timeline.json（其他欄保留）。回傳有沒有改。"""
+    beat = {k: settings[k] for k in ('interval_ms', 'early_tock') if k in settings}
+    if not beat:
+        return False
+    path = node / '.aos/timeline.json'
+    try:
+        current = json.loads(path.read_text())
+    except FileNotFoundError:
+        current = {}
+    except ValueError:
+        current = {}   # 核心也當它壞了、全用預設；照 up.json 重寫
+    if not isinstance(current, dict):
+        current = {}
+    want = dict(current, **beat)
+    if want == current:
+        return False
+    atomic(path, want)
+    return True
 
 
 def stop(node):
@@ -103,7 +134,7 @@ def node_round(node):
     return value if type(value) is int else 0
 
 
-def up(node, model, detached):
+def up(node, model, detached, beat=None):
     # Validate before creating even the lock file.
     preflight(node, model)
     before = node_round(node)
@@ -113,7 +144,7 @@ def up(node, model, detached):
     try:
         with (node / '.aos/up.lock').open('a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
-            settings = prepare(node, model)
+            settings = prepare(node, model, beat)
             if not alive(node.parent):
                 log = node.parent / '.aosd/up-daemon.log'
                 with log.open('a') as stream:
@@ -124,10 +155,11 @@ def up(node, model, detached):
                     if daemon.poll() is not None or time.monotonic() > end:
                         raise UpError(1, f'心跳起不來。請看 {log} 後重跑')
                     time.sleep(.02)
-            end = time.monotonic() + 15
+            wait = 15 + -(-max(settings.get('interval_ms', 1000) - 1000, 0) // 1000)   # 長間隔多等一拍；預設照舊 15 秒
+            end = time.monotonic() + wait
             while not (node_round(node) >= 1 and node_round(node) > before):
                 if time.monotonic() >= end:
-                    raise UpError(3, f'不確定：15 秒內沒看到 {node.name} 被叫醒，已裝的檔案留著。照原樣再跑 aos7-up {node} 會接續')
+                    raise UpError(3, f'不確定：{wait} 秒內沒看到 {node.name} 被叫醒，已裝的檔案留著。照原樣再跑 aos7-up {node} 會接續')
                 time.sleep(.05)
         ai = f'AI：{settings["model"]}' if settings['model'] else '假 AI'
         # 心跳已起、node 已醒：先記交棒，三行 print 中途被中斷也照交棒後收尾
