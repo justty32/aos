@@ -9,9 +9,9 @@
 | 分類 | 通用任務包（`layer: kernel`），單 node 視角（消費端的 node 跑它） |
 | 接法 | A 普通 keep 任務：`{"name": "adapt-<sense>", "mode": "keep", "argv": ["python3", "<proto7-2>/packs/adapt/bin/aos7-adapt", "run", "adapt/<sense>.json"], "mounts": {"src": "<來源 node>/out", "srcclock": "<來源 node>/.aos"}}` |
 | 預設 | 不裝就不存在；`max_age: null`（只報年齡）、`patience: 0`、`stall: null`（只報不翻）——見 spec §2 |
-| 依賴 | 工具包（`aos7_taskside.task_env`／`wait_tock`／`resolver`）、核心 `aos7_fs`（`fact`、`write_json`、`read_round`） |
+| 依賴 | 工具包（`aos7_taskside.task_env`／`wait_tock`／`resolver`）、核心 `aos7_fs`（`fact`、`write_json`、`read_round`、`sweep_tmp`） |
 | 程式 | `aos7_adapt.py`（宣告、檢查器、鏈、時鐘、暫存器、人手 `status`）、`bin/aos7-adapt` |
-| 範例 | `examples/temp/`：發布者 `sensor.py`、宣告 `temp.json`、消費者 `fan.py` |
+| 範例 | `examples/temp/`：發布者 `sensor.py`、宣告 `temp.json`、消費者 `fan.py`（兩者寫槽外 `out/`，啟動時各自跑 `sweep_tmp`） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py packs/adapt/tests`；全套預設就收） |
 
 ## 第一次跑（示範 temp，已實跑）
@@ -43,7 +43,7 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
   - 效期 `max_age` 用來源 node 的回合數算（來源 pause 時年齡不長）、耐性 `patience` 用消費端（自己）node 的回合數算（自己 pause 時耐性不走），兩邊的 pause 互不代替；來源回合倒退＝`reset`、舊依據作廢；來源慢**不是**錯（只是年齡）、來源快只是漏取樣（記 `skipped`，不補）。
   - 門檻判斷時誤差區間跨過門檻＝那一欄 `null`、`state: unknown`、`why: within_error_band`，不硬判。
   - 鏈用精確十進位算；發布的數字不失真（整數原樣、float 的表示誤差算進 `err`），超出 float 範圍＝`out_of_range` unknown，不發布 `Infinity`（spec §2「數值」）。
-  - 被殺重起：從槽內 `state.json` 接回 `since`、`last_seq`、`skipped`；下一圈可以重算同一版，但不把它當新版、`skipped` 不重加。框架先寫、暫存器後寫。
+  - 被殺重起：從槽內 `state.json` 接回 `since`、`last_seq`、`skipped`；下一圈可以重算同一版，但不把它當新版、`skipped` 不重加。框架先寫、暫存器後寫。`in/` 在槽外，核心不清；任務啟動時跑 `sweep_tmp` 清掉 `in/` 裡寫者已不在的 `.<名>.tmp.<pid>`（C8-03、核心 spec §5.5）。
 - **明確不管**：來源說的是不是真話；消費者拿到 unknown 之後怎麼辦；事件／窗口（只有最新值）；不可重算的（LLM）步驟；跨子 daemon 交付；來源沒帶 `seq` 時漏了幾版；掛載權限；人手改 `in/`、`state.json`、鏈宣告。
 
 ## 界線

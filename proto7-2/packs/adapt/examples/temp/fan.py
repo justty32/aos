@@ -12,13 +12,14 @@ import time
 
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 sys.path[:0] = [os.path.join(TOP, "lib")]
-from aos7_fs import OK, fact, is_int, now, write_json  # noqa: E402
+from aos7_fs import OK, fact, is_int, now, sweep_tmp, write_json  # noqa: E402
 
 OUT = os.path.join("out", "fan.json")
 
 
 def main():
     reg_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("in", "temp.json")
+    sweep_tmp("out")                               # out/ 在槽外，自己寫的自己清（C8-03）
     st, prev = fact(OUT)
     prev = prev if st == OK and isinstance(prev, dict) else {"on": None, "basis": None, "held": 0}
     seen = prev.get("my_round") if is_int(prev.get("my_round")) else 0
