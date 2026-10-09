@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import signal
 import sys
 import time
@@ -48,7 +49,11 @@ class Bud:
         return os.path.join(self.dir, *a)
 
 
-NOT_RUNNING = "帳任務沒在跑，什麼都沒送。另開一個終端，在 node 目錄跑 aos7-budget ledger %s 並讓它開著，再跑一次（用 aos7-up 起的 node 會自動起好）"
+def not_running(bud):
+    """「帳任務沒在跑」的人話（別包照用）：結尾是可直接複製的起帳指令。"""
+    return "帳任務沒在跑，什麼都沒送。另開一個終端起帳任務並讓它開著，再跑一次：cd %s && python3 %s ledger %s" % (
+        shlex.quote(bud.node), shlex.quote(os.path.join(HERE, "bin", "aos7-budget")),
+        shlex.quote(os.path.relpath(bud.dir, bud.node)))
 
 
 def say(msg):
@@ -532,7 +537,7 @@ def main(argv=None):
         ap.error("%s 要 --holder 與 --request" % a.cmd)
     import aos7_budget_gate as gate
     if a.cmd == "call":
-        return gate.call(bud, key, a.amount, a.resource, a.payload, a.out, a.patience, a.bud)
+        return gate.call(bud, key, a.amount, a.resource, a.payload, a.out, a.patience)
     kid = kid_of(key)
     if a.cmd == "cancel":
         def do_cancel():
@@ -548,7 +553,7 @@ def main(argv=None):
 
     def do_settle():
         if not ledger_running(bud):
-            say(NOT_RUNNING % a.bud)
+            say(not_running(bud))
             return 1
         r = ask(bud, "settle", key, patience=a.patience)
         print(json.dumps(r, ensure_ascii=False))
