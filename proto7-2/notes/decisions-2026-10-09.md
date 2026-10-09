@@ -284,3 +284,5 @@
 - C｜KC1：藍圖裡 brain 進度路徑寫錯，實際是 `<node>/brain/task.json`、run 取自槽的 birth.json → KE1 順手改藍圖
 - C｜頂層：kernel 不另加 init 指令，維持兩個指令（run 第一次跑會自己初始化；state 不見但決定紀錄還在就退 1 不重建）
 - 未過｜ST2：status 再白話（心跳只說活著、假 AI 不印字數、卡住倒數秒數）、QUICKSTART 補「bob 就是 node」與「卡住時」一節（3582 B）；新手三輪較差者都 6 分。剩：卡住信「進階」段嚇人、卡住那封被算進「回了」、範例秒數對不上、STATE 那行用語 → 開 ST3（brain＋status 一起改）
+- C｜KE1：kernel 範例（supervise-brain，約 30 秒、10/10 過、luna 5/5 無殘留）＋README／ADVANCED 進 main；新手第 1、2 輪過，第 3 輪 Haiku 6.6 是被 kernel 通知信本文拖低（「kernel kernel 的通知」、裸 JSON、NEEDS-USER 卻寫「需要決定：無」）→ README 不再叫人打開那封信；信本文、done 沒記基準、卡住時每個 run 重寄重殺 → 開 KF（astra 審＋修）
+- C｜KE1：範例 node 叫 bob 不用 `.`；kill 後範例縮短 deadline 讓卡住信收尾；codex 試跑用 bypass sandbox（sandbox 擋 systemd-run）
