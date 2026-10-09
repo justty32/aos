@@ -104,6 +104,15 @@ class LedgerCase(BudgetCase):
     def kid(self, req, holder="api"):
         return bg.kid_of(bg.make_key("demo", holder, req))
 
+    def assert_cancelled(self, bd, request, gateway="fakeapi", digest=None):
+        key = bg.make_key("demo", "api", request)
+        kid = bg.kid_of(key)
+        rec = self.gw(bd, kid)
+        self.assertEqual(rec, {"stage": "done", "kid": kid, "key": key, "digest": digest,
+                               "gateway": gateway, "call_id": request, "outcome": "cancelled", "used": 0,
+                               "usage": None, "overrun": 0, "billing": "final", "raw_sha": None, "at": rec["at"]})
+        self.assertIsInstance(rec["at"], str)
+
 
 class TestNormal(LedgerCase):
     """〔budget〕正常與競爭：消耗 1、搶最後 1、同鍵並行、異內容、不符、拒絕計 0、失敗計 1。"""
@@ -170,6 +179,49 @@ class TestNormal(LedgerCase):
         self.assertEqual((rc, out["outcome"], out["used"]), (1, "failed", 1), out)
         L = self.audit(bd, final=True)
         self.assertEqual((L["available"], L["used"], self.backend(bd)["accepted"]), (2, 1, 1))
+
+    def test_cancel_llm_reserved_before_intent(self):
+        bd = self.up(grant(gateway="llm.fake", resource="llm.tokens"))
+        key = bg.make_key("demo", "api", "llm-cancel")
+        content = {"gateway": "llm.fake", "resource": "llm.tokens", "amount": 2, "payload_sha": None}
+        r = bg.ask(bg.Bud(bd), "reserve", key, content)
+        self.assertEqual(r["result"], "reserved", r)
+        self.assertEqual(self.audit(bd)["inflight"], 2)
+        r = self.cli(self.node, "cancel", "budget/demo", "--holder", "api", "--request", key["request"])
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assert_cancelled(bd, key["request"], "llm.fake")
+        r = self.cli(self.node, "settle", "budget/demo", "--holder", "api", "--request", key["request"])
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        L = self.audit(bd, final=True)
+        self.assertEqual((L["used"], L["available"], L["inflight"]), (0, 3, 0))
+
+    def test_cancel_without_reservation(self):
+        bd = self.up()
+        self.assertNotIn(self.kid("absent"), self.ledger(bd)["ops"])
+        r = self.cli(self.node, "cancel", "budget/demo", "--holder", "api", "--request", "absent")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assert_cancelled(bd, "absent")
+        self.audit(bd, final=True)
+
+    def test_cancel_with_unreadable_ledger(self):
+        bd = self.setup_budget(self.node)
+        with open(os.path.join(bd, "ledger.json"), "w") as f:
+            f.write("{bad")
+        r = self.cli(self.node, "cancel", "budget/demo", "--holder", "api", "--request", "unreadable")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assert_cancelled(bd, "unreadable")
+
+    def test_cancel_intent_keeps_gateway_and_digest(self):
+        bd = self.up(grant(gateway="llm.fake", resource="llm.tokens"))
+        key = bg.make_key("demo", "api", "intent")
+        content = {"gateway": "llm.fake", "resource": "llm.tokens", "amount": 2, "payload_sha": None}
+        self.assertEqual(bg.ask(bg.Bud(bd), "reserve", key, content)["result"], "reserved")
+        digest = bg.digest_of(key, content)
+        write_json(os.path.join(bd, "gateway", self.kid("intent") + ".json"),
+                   {"stage": "intent", "gateway": "fakeapi", "digest": digest})
+        r = self.cli(self.node, "cancel", "budget/demo", "--holder", "api", "--request", "intent")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assert_cancelled(bd, "intent", digest=digest)
 
 
 class TestCrash(LedgerCase):
@@ -247,6 +299,7 @@ class TestCrash(LedgerCase):
         self.assertEqual(self.call(self.node, "c")[0], KILLED)
         r = self.cli(self.node, "cancel", "budget/demo", "--holder", "api", "--request", "c")
         self.assertEqual((r.returncode, last_json(r.stdout)["outcome"]), (0, "cancelled"), r.stdout)
+        self.assert_cancelled(bd, "c")
         rc, out = self.call(self.node, "c")
         self.assertEqual((rc, out["outcome"], out["used"]), (1, "cancelled", 0), out)
         L = self.audit(bd, final=True)
