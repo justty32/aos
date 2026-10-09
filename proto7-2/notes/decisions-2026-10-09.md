@@ -207,3 +207,5 @@
 - 待你決定｜LiteLLM 設定：啟動 proxy 前設 `CHATGPT_DEFAULT_INSTRUCTIONS` 換掉 Codex 系統提示（每次省約 1.4k token、模型不再誤以為在 Codex 裡；風險是後端可能擋、astra 的快取會失效）。這是你的設定，我沒動
 - C｜ER-up：status／stop 的全清提示改成列出房子裡每樣東西（有別的 node 時不叫人刪整間）；ask 回信不再帶英文 DONE、用量改「讀寫約 N 字」；`--help` 只列 3 個指令；起好時不再提 `--model`（ADVANCED 寫清模型名從哪查）。新人從零（只看 QUICKSTART）第 3 輪 Haiku 7.0／luna 8.8，概念 5、指令 3
 - C｜頂層：QUICKSTART 的「aos 資料夾」補一句「就是你 git clone 下來的那個」（Haiku 最後的卡點）
+- C｜ER-skills：pick 不再在帳夾建鎖檔（只讀試鎖）；帳沒在跑退 1 並附起帳指令；`.pick/log.jsonl` 只留 50 行、請求檔用完即刪；bank.py 暫存夾必清。新手 Haiku 7／luna 9。**統一錯誤規則全部 12 個模組完成**
+- C｜頂層：保留「沒開帳時本機關鍵字挑」，意圖卡改成這個說法（原卡寫「不用 AI 就不挑」，與已上線行為相衝）
