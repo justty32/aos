@@ -1,0 +1,76 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "gap-fixed-r1-1791541461",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6259,
+   "prompt_tokens": 4042,
+   "total_tokens": 10301,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2474
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 10301,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-ef3-p0_s5s0_/llm/llmcall/llm/gap-fixed-r1-1791541461/receipt.json"
+ },
+ "review": null,
+ "rid": "gap3",
+ "kind": "aos-tool",
+ "name": "evgap",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/EF3/proto7-2/notes/play/2026-10-09-real-ai/evidence/ef3/aos-sol-high-gap/gap/cand-r1.json",
+ "candidate_sha": "9a6d2ee99fbf509643bc5abba97f13ecc9452618e1c2a1cbfa5baa00206d5046",
+ "job": "gap3_9a6d2ee9",
+ "rules_check": {
+  "ok": true,
+  "rid": "gap3",
+  "name": "evgap",
+  "job": "gap3_9a6d2ee9",
+  "candidate_sha": "9a6d2ee99fbf509643bc5abba97f13ecc9452618e1c2a1cbfa5baa00206d5046",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "gap3",
+  "name": "evgap",
+  "job": "gap3_9a6d2ee9",
+  "candidate_sha": "9a6d2ee99fbf509643bc5abba97f13ecc9452618e1c2a1cbfa5baa00206d5046",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}

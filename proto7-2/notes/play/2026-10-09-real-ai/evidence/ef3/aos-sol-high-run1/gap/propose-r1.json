@@ -1,0 +1,89 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "gap-fixed-r1-1791540714",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6594,
+   "prompt_tokens": 4042,
+   "total_tokens": 10636,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2884
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 10636,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-ef3-r20__0ac/llm/llmcall/llm/gap-fixed-r1-1791540714/receipt.json"
+ },
+ "review": null,
+ "rid": "gap3",
+ "kind": "aos-tool",
+ "name": "evgap",
+ "candidate_path": "/tmp/aos7-ef3-r20__0ac/work/aos-sol-high/gap/cand-r1.json",
+ "candidate_sha": "3b6e3eb4068e29daf1c991149f31dceb16a6e65baebcbadd4815c335c8e851c7",
+ "job": "gap3_3b6e3eb4",
+ "rules_check": {
+  "ok": false,
+  "rid": "gap3",
+  "name": "evgap",
+  "job": "gap3_3b6e3eb4",
+  "candidate_sha": "3b6e3eb4068e29daf1c991149f31dceb16a6e65baebcbadd4815c335c8e851c7",
+  "failed_gate": 2,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "test",
+      "why": "    ^^\nAssertionError: {'count': 5, 'first': 1, 'last': 9, 'missing': [[2,[74 chars]alse} != {'count': 4, 'first': 1, 'last': 9, 'missing': [[2,[74 chars]alse}\n- {'count': 5,\n?           ^\n\n+ {'count': 4,\n?           ^\n\n   'dup': [5],\n   'first': 1,\n   'last': 9,\n   'missing': [[2, 4], [6, 8]],\n   'next_seq': 10,\n   'stale_next': False,\n   'unacked': None}\n\n----------------------------------------------------------------------\nRan 4 tests in 0.224s\n\nFAILED (failures=1)"
+     }
+    ]
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 2 關沒過（test：^^ AssertionError: {'count': 5, 'first': 1, 'last': 9, 'missing': [[2,[74 chars…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "check": {
+  "ok": false,
+  "rid": "gap3",
+  "name": "evgap",
+  "job": "gap3_3b6e3eb4",
+  "candidate_sha": "3b6e3eb4068e29daf1c991149f31dceb16a6e65baebcbadd4815c335c8e851c7",
+  "failed_gate": 2,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "test",
+      "why": "    ^^\nAssertionError: {'count': 5, 'first': 1, 'last': 9, 'missing': [[2,[74 chars]alse} != {'count': 4, 'first': 1, 'last': 9, 'missing': [[2,[74 chars]alse}\n- {'count': 5,\n?           ^\n\n+ {'count': 4,\n?           ^\n\n   'dup': [5],\n   'first': 1,\n   'last': 9,\n   'missing': [[2, 4], [6, 8]],\n   'next_seq': 10,\n   'stale_next': False,\n   'unacked': None}\n\n----------------------------------------------------------------------\nRan 4 tests in 0.224s\n\nFAILED (failures=1)"
+     }
+    ]
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 2 關沒過（test：^^ AssertionError: {'count': 5, 'first': 1, 'last': 9, 'missing': [[2,[74 chars…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 2 關沒過（test：^^ AssertionError: {'count': 5, 'first': 1, 'last': 9, 'missing': [[2,[74 chars…）。照 stdout JSON 的 gates 修正候選再跑"
+}

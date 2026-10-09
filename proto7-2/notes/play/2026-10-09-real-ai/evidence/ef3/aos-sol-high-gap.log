@@ -1,0 +1,2 @@
+{"task": "gap", "ok": true, "rounds": [{"model": "chatgpt-gpt-6-sol-high", "why": null, "tokens": 10301}], "secs": 82.944, "tokens": 10301, "root": "/tmp/aos7-ef3-p0_s5s0_"}
+[{"task": "gap", "ok": true, "rounds": [{"model": "chatgpt-gpt-6-sol-high", "why": null, "tokens": 10301}], "secs": 82.944, "tokens": 10301, "root": "/tmp/aos7-ef3-p0_s5s0_"}]

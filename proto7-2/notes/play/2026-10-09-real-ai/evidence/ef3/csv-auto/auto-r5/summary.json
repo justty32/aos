@@ -1,0 +1,14 @@
+{
+  "model": "auto",
+  "call_id": "csv1-chatgpt-gpt-6-luna-nothink-23dc37de",
+  "prompt_tokens": 2409,
+  "completion_tokens": 137,
+  "total_tokens": 2546,
+  "llm_seconds": 4.687,
+  "propose_ok": true,
+  "issues_rules": [],
+  "published": true,
+  "step_end": "ok",
+  "answer_ok": true,
+  "closed": true
+}

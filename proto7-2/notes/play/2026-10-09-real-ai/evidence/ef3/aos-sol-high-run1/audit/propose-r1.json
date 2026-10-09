@@ -1,0 +1,76 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "audit-fixed-r1-1791540924",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 7145,
+   "prompt_tokens": 4095,
+   "total_tokens": 11240,
+   "completion_tokens_details": {
+    "reasoning_tokens": 3106
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 11240,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-ef3-n_0aouj_/llm/llmcall/llm/audit-fixed-r1-1791540924/receipt.json"
+ },
+ "review": null,
+ "rid": "audit3",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "candidate_path": "/tmp/aos7-ef3-n_0aouj_/work/aos-sol-high/audit/cand-r1.json",
+ "candidate_sha": "62c9edbc76e2cd585e8ea8d1990e071a04a299e12c6d66e91481e7a298c3f76f",
+ "job": "audit3_62c9edbc",
+ "rules_check": {
+  "ok": true,
+  "rid": "audit3",
+  "name": "mailtodo",
+  "job": "audit3_62c9edbc",
+  "candidate_sha": "62c9edbc76e2cd585e8ea8d1990e071a04a299e12c6d66e91481e7a298c3f76f",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "audit3",
+  "name": "mailtodo",
+  "job": "audit3_62c9edbc",
+  "candidate_sha": "62c9edbc76e2cd585e8ea8d1990e071a04a299e12c6d66e91481e7a298c3f76f",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}
