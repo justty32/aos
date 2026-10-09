@@ -96,3 +96,5 @@
 - B｜budget 部分結算：settle 放寬為 0≤用量≤預留；用量超過預留時結算預留額並記 overrun，不偽裝成功
 - B｜wf-lint 超標的 31 份思想文件（ideas、spec 系列）不動，留你在場時整理；只清 86 條壞連結
 - C｜「多跑一回合」類已知限制今天不排；adapt-llm 第三刀明天先藍圖
+- C｜W1：86 條壞連結清零（約 70 條是寫成絕對路徑，改相對路徑）；目標已刪的改成純文字＋註明去向（例如 `packs/account` 已改名 budget，不改指以免變原句意思）
+- 待你決定｜`proto7/user-advice.md` 還沒 commit，有 3 份文件連到它，所以在別的 clone 或 worktree 裡是壞連結。等你寫完再 commit 就好
