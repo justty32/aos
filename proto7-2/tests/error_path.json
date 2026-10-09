@@ -1,0 +1,140 @@
+{
+ "contract": "wf-table/1",
+ "source": "../notes/blueprint-errors.md",
+ "extracted": "2026-10-09",
+ "note": "錯誤路徑一致性清單，tests/core/test_error_path.py 讀。欄位：name＝指令名（人話行前綴 `name: `）；entry＝入口（相對 proto7-2/，.py 用 python 跑）；help＝argv（缺省 [\"--help\"]）；bad＝argv 或案例物件（缺省 [\"--no-such-option\"]，跑完暫存夾不能有任何變動）；bad_code＝壞參數預期碼（缺省 2）；unsure＝自報退 3 的案 {argv, files, chmod, lock, env}：路徑相對暫存 cwd、`{tmp}` 換成它、不准逃出；files 鍵以 / 結尾是資料夾；lock＝執行期間測試持 flock 的檔；exempt＝{help|format|unsure: 理由}；skip＝非空就整列跳過。stderr 以 `{` 開頭的 JSON 行不算人話行。包照藍圖改完：拿掉 skip、填 unsure。",
+ "columns": [
+  "pack",
+  "team",
+  "name",
+  "entry",
+  "help",
+  "bad",
+  "bad_code",
+  "unsure",
+  "exempt",
+  "skip"
+ ],
+ "rows": [
+  {
+   "pack": "核心 tick／tock／daemon",
+   "team": "（凍結，不改）",
+   "name": "aos7-tick",
+   "entry": "bin/aos7-tick",
+   "bad": [],
+   "bad_code": 1,
+   "exempt": {
+    "help": "凍結核心沒有 --help（藍圖 §6：0／3／其他 已相容）",
+    "format": "凍結核心的用法行不改格式",
+    "unsure": "凍結核心的 3 要真的 node 現場，由 tests/core 的矩陣測"
+   }
+  },
+  {
+   "pack": "budget",
+   "team": "ER-llmcall-budget",
+   "name": "aos7-budget",
+   "entry": "packs/budget/bin/aos7-budget",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-llmcall-budget）"
+  },
+  {
+   "pack": "llmcall",
+   "team": "ER-llmcall-budget",
+   "name": "aos7-llmcall",
+   "entry": "packs/llmcall/bin/aos7-llmcall",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-llmcall-budget）"
+  },
+  {
+   "pack": "prompt",
+   "team": "ER-prompt-metrics",
+   "name": "aos7-prompt",
+   "entry": "packs/prompt/bin/aos7-prompt",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-prompt-metrics）"
+  },
+  {
+   "pack": "author",
+   "team": "ER-author",
+   "name": "aos7-author",
+   "entry": "packs/author/bin/aos7-author",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-author）"
+  },
+  {
+   "pack": "author 三關",
+   "team": "ER-author",
+   "name": "aos_three_gates",
+   "entry": "packs/author/checkers/aos_three_gates.py",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-author）"
+  },
+  {
+   "pack": "events",
+   "team": "ER-events",
+   "name": "aos7-events",
+   "entry": "modules/events/aos7-events",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-events）"
+  },
+  {
+   "pack": "routines",
+   "team": "ER-routines",
+   "name": "aos7-routines",
+   "entry": "modules/routines/aos7-routines",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-routines）"
+  },
+  {
+   "pack": "skills",
+   "team": "ER-skills",
+   "name": "aos7-skills",
+   "entry": "modules/skills/aos7-skills",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-skills）"
+  },
+  {
+   "pack": "wfnode",
+   "team": "ER-wfnode",
+   "name": "aos7-wfnode",
+   "entry": "modules/wfnode/aos7-wfnode",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-wfnode）"
+  },
+  {
+   "pack": "metrics",
+   "team": "ER-prompt-metrics",
+   "name": "aos7-metrics",
+   "entry": "modules/metrics/aos7-metrics",
+   "exempt": {
+    "unsure": "藍圖 §4 唯一豁免：metrics 是量尺，讀不了的檔算 0、行尾報缺口"
+   },
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-prompt-metrics）"
+  },
+  {
+   "pack": "compact",
+   "team": "ER-compact",
+   "name": "aos7-compact",
+   "entry": "modules/compact/aos7-compact",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-compact）"
+  },
+  {
+   "pack": "mail",
+   "team": "ER-mail",
+   "name": "aos7-mail",
+   "entry": "modules/mail/aos7-mail",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-mail）"
+  },
+  {
+   "pack": "up",
+   "team": "ER-up",
+   "name": "aos7-up",
+   "entry": "modules/up/aos7-up",
+   "unsure": null,
+   "skip": "尚未照藍圖改（ER-up）"
+  }
+ ]
+}
