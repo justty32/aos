@@ -18,14 +18,13 @@ python3 proto7-2/packs/prompt/bin/aos7-prompt expand "$D" "$D/req.json"
 
 **你應該看到**：
 
-- 第 2 行印一行回條，重點是 `"outcome": "rendered"`（成功），以及
-  `"tokens_est": 106`（收起來後約 106 token）對 `"tokens_est_full": 2606`（不收約 2606 token）——週報被收起來，省了九成多。
+- 第 2 行印一行回條，只要看兩件事：`"outcome": "rendered"`＝成功；`"tokens_est": 106` 對 `"tokens_est_full": 2606`＝送給 AI 的量（token，AI 算長度的單位，約 3 個字一個）從 2606 降到 106——週報被收起來，省了九成多。其他欄位不用管。
 - 打開 `$D/req.json`：週報那段變成 `ref://<一長串編號> 已折疊 7785 字，預覽：` 加開頭 200 字。原文存在 `$D/refs/`。
-- 第 3 行把收起來的段換回原文，印出完整的請求（很長，捲一下就看到週報全文）。
+- 第 3 行把收起來的段換回原文，印出完整的請求（很長，捲一下就看到週報全文）。最外層的 `litellm`／`model` 是送 AI 用的信封格式，交給 llmcall 處理，你不用懂；要換模型就在清單頂層加 `"model": "名字"`。
 
 （短檔不會收：一段超過 6000 字才收。所以清單裡都是短檔時，兩個數字會差不多，這是正常的。）
 
-## 三個概念
+## 要學的只有三個概念
 
 | 概念 | 白話 |
 |---|---|
@@ -33,11 +32,11 @@ python3 proto7-2/packs/prompt/bin/aos7-prompt expand "$D" "$D/req.json"
 | `prompt.json` | 清單：一串訊息，每則寫 `role`（`system`／`user`／`assistant`）和 `content`（一段字，或多段的陣列）。 |
 | 讀檔 | `content` 裡寫 `{"$opt": "file", "$val": "docs/weekly.md"}`＝「拼的時候把這個檔讀進來」。 |
 
-「收起來（`ref://`）」不用你寫，自動發生；要原文就 `expand`。
+「收起來（`ref://`）」不是新東西要學：它自動發生，要原文就跑 `expand`。
 
 ## 自己寫第一份清單
 
-照 `examples/node/prompts/first.json` 改檔名就好：
+照 `examples/node/prompts/first.json` 改檔名就好。檔名從 node 算起：例如在 `$D` 放 `你的檔.md`，清單存成 `$D/prompts/mine.json`，就跑 `render "$D" "$D/prompts/mine.json"`。
 
 ```json
 {
@@ -53,7 +52,7 @@ python3 proto7-2/packs/prompt/bin/aos7-prompt expand "$D" "$D/req.json"
 - `aos7-prompt render <node> <prompt.json> [--out 檔]`：拼出請求。有 `--out` 就寫檔、回條印在螢幕；沒有就把請求印在螢幕。
 - `aos7-prompt expand <node> <請求檔 或 ref://編號>`：印原文。
 
-失敗時印一行 `"outcome"` 不是 `rendered` 的回條，`why` 說哪裡錯；不會拼出半份、`--out` 的檔不動。`--help` 看全部選項。
+失敗時印一行 `"outcome"` 不是 `rendered` 的回條，`why` 說哪裡錯；不會拼出半份、`--out` 的檔不動。`aos7-prompt render --help` 看全部選項。
 
 ---
 
