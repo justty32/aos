@@ -344,8 +344,12 @@ def step_on(node, letter, text, cfg):
                trail=(task['trail'] + [f'第 {step} 回合：{line}｜成果：{flat(result)[:200]}'])[-8:]))
     note = '，整理了記憶' if compact_if_big(node, cfg) else ''
     return f'第 {step} 回合做完，下回合接著做{note}', None
+def minutes(seconds):
+    """給人看的等待時間：一律說「約 N 分鐘」（不印秒數，免得跟範例對不上）。"""
+    return f'約 {max(1, round(seconds / 60))} 分鐘'
 def stuck_reply(node, cid, step, waited, cfg, ask=''):
-    """留下人工接回條用的證據；brain 不替人重送或放掉預留。"""
+    """回信只寫白話；給維護者的哪一筆、預留與放掉預留的一行，寫在 brain/stuck/<call>/how.md。
+    brain 不替人重送或放掉預留。"""
     budget, holder = cfg.get('budget', 'budget/llm'), cfg.get('holder', 'brain')
     tool = TOP / 'packs/llmcall/bin/aos7-llmcall'
     def command(*args):
@@ -355,6 +359,7 @@ def stuck_reply(node, cid, step, waited, cfg, ask=''):
     reserve = '帳上沒有這筆的預留'
     how = ''
     status = None
+    work = node / 'brain/stuck' / cid
     if saved:
         reserve = '預留多少不確定，跑 ' + status_cmd + ' 看'
         try:
@@ -368,7 +373,6 @@ def stuck_reply(node, cid, step, waited, cfg, ask=''):
         except (ValueError, KeyError, TypeError, OSError, subprocess.TimeoutExpired):
             pass
     if status and (status.get('gateway') or {}).get('stage') == 'intent':
-        work = node / 'brain/stuck' / cid
         work.mkdir(parents=True, exist_ok=True)
         write_json(str(work / 'request.json'), saved['request'])
         write_json(str(work / 'reply.json'), dict(call_id=cid, req_sha=saved['req_sha'],
@@ -391,16 +395,18 @@ def stuck_reply(node, cid, step, waited, cfg, ask=''):
                 'cd ' + shlex.quote(str(node)) + ' && ' + budget_command('cancel') + ' && ' +
                 budget_command('settle'))
     name = flat(ask)[:30] or '這封信'
+    work.mkdir(parents=True, exist_ok=True)
+    write_text(work / 'how.md', (f'# 卡住的回信：「{name}」\n\n第 {step} 回合的 call {cid}；{reserve}。\n' +
+                                 how).rstrip() + '\n')
     again = ('現在用的是假 AI，不花錢。' if is_fake(cfg) else
              '現在用的是真 AI：如果上次 AI 其實已經回了，可能會多付一次錢。')
     title = f'「{name}」問 AI 時被打斷，先停下'
-    body = (f'這封信「{name}」辦到一半，問 AI 時被打斷（例如程式被關掉），等了 {waited:.0f} 秒還是不知道 AI 回了沒有，'
+    body = (f'這封信「{name}」辦到一半，問 AI 時被打斷（例如程式被關掉），等了{minutes(waited)}還是不知道 AI 回了沒有，'
             '所以先停下這封，後面的信照常辦。系統不會自己重問。\n'
             '怎麼辦：\n① 什麼都不做：這封就停在這裡，不影響別的信。\n'
             '② 再寄一次這封信：會從頭重新問 AI。' + again + '\n\n'
-            '進階（給維護者，平常不用看；說明見 modules/up/ADVANCED.md「不確定的期限」）：\n'
-            f'第 {step} 回合的 call {cid}；{reserve}。\n' + how).rstrip() + '\n'
-    return title, body, f'卡住：問 AI 那筆一直不確定（call {cid}）', '什麼都不做，或再寄一次這封信（細節看回信）'
+            '細節見 `modules/up/ADVANCED.md` 的〈卡住的回信〉。\n')
+    return title, body, f'卡住：「{name}」問 AI 時被打斷', '什麼都不做，或再寄一次這封信（細節看回信）'
 def once(node, rnd):
     work = node / 'brain'
     work.mkdir(exist_ok=True)

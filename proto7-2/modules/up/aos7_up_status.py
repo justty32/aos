@@ -195,8 +195,14 @@ def status(node):
     replies = letters(node.parent / 'you/inbox')
     needs = sum(v.get('status') == 'NEEDS-USER' for v in replies.values())
     blocked = sum(v.get('status') == 'BLOCKED' for v in replies.values())
-    line = (f'信：{node.name} 一共收到 {total} 封，回了 {done} 封' if total else
+    # 說卡住的回信不算「回了」：新手看「回了 2」會以為兩封都辦好了
+    stuck_ids = {v.get('re') for v in (*replies.values(), *letters(node.parent / 'you/inbox/done').values())
+                 if v.get('status') == 'BLOCKED'}
+    stuck = sum(v.get('status') == 'REQUEST' and v.get('id') in stuck_ids for v in finished.values())
+    line = (f'信：{node.name} 一共收到 {total} 封，回了 {done - stuck} 封' if total else
             f'信：{node.name} 還沒收到信')
+    if stuck:
+        line += f'、{stuck} 封卡住（已寄信說明）'
     if doing:
         line += '、正在辦 1 封'
     if queue:
@@ -212,8 +218,9 @@ def status(node):
         letter = next((v for v in inbox.values() if v.get('id') == unsure['id']), None)
         if letter:
             limit = float(settings.get('deadline', 60 if settings.get('model') in (None, 'fake', '') else 600))
-            left = math.ceil(limit - (time.time() - unsure['since']))
-            when = f'約 {left} 秒後' if left > 0 else '馬上'
+            left = limit - (time.time() - unsure['since'])
+            # 跟 QUICKSTART、卡住的信同一說法：約 N 分鐘（不印會倒數的秒數）
+            when = f'約 {max(1, math.ceil(left / 60))} 分鐘內' if left > 0 else '馬上'
             print(f'卡住了：「{short(letter.get("title", ""))}」問 AI 時被打斷，不知道 AI 回了沒；'
                   f'不用動手，{when} {node.name} 會寄信給你')
     except (ValueError, OSError, TypeError, KeyError, AttributeError):

@@ -77,17 +77,26 @@ class BrainStuckTests(DaemonCase):
         replies = self.replies(first)
         self.assertEqual([l['status'] for l in replies], ['BLOCKED'])
         body = replies[0]['body']
-        self.assertIn(cid, body)
-        plain = body.split('進階（給維護者')[0]
-        for word in (cid, '回合', 'adopt', '預留', 'LiteLLM', 'reply.json'):
+        plain = body
+        # 回信只有白話：不露 call、帳、給維護者的指令；細節只指去 ADVANCED
+        for word in (cid, '回合', 'adopt', '預留', 'LiteLLM', 'reply.json', 'call', '進階', '秒'):
             self.assertNotIn(word, plain)
+        self.assertIn('不花錢。\n\n細節見 `modules/up/ADVANCED.md` 的〈卡住的回信〉。\n', body)
+        self.assertIn('等了約 1 分鐘', body)
+        self.assertIn('〈卡住的回信〉', (TOP / 'modules/up/ADVANCED.md').read_text())
+        how = (self.node / 'brain/stuck' / cid / 'how.md').read_text()
+        self.assertIn(cid, how)
+        # 工作簿（STATE）那行白話：哪封信被打斷，不露 call id
+        state = ''.join(p.read_text() for p in (self.node / 'wf/handoffs').glob('*/STATE.md'))
+        self.assertIn('卡住：「A：先辦這封」問 AI 時被打斷', state)
+        self.assertNotIn(cid, state)
         self.assertIn('什麼都不做', plain)
         self.assertIn('再寄一次這封信', plain)
         self.assertIn('假 AI，不花錢', plain)
         self.assertNotIn('多付', plain)
         self.assertNotIn(cid, replies[0]['title'])
-        self.assertIn('帳上預留 1000000', body)
-        self.assertIn('--reserve', body)
+        self.assertIn('帳上預留 1000000', how)
+        self.assertIn('--reserve', how)
         self.assertEqual(body.count('怎麼辦：'), 1)
         self.assertFalse(unsure.exists())
         remote = read_json(str(self.node / 'llmcall/fake-remote.json'), {}) or {}
@@ -101,7 +110,7 @@ class BrainStuckTests(DaemonCase):
         self.assertEqual((a_op['stage'], a_op['amount']), ('reserved', 1000000))
         sends_before = read_json(str(self.node / 'llmcall/fake-remote.json'), {}).get('sends', {})
         # 直接跑人拿到的一行，不借用 brain 的結算函式。
-        commands = [line for line in body.splitlines() if line.startswith('cd ')]
+        commands = [line for line in how.splitlines() if line.startswith('cd ')]
         self.assertEqual(len(commands), 1)
         self.assertIn(' && python3 ', commands[0])
         self.assertNotIn('aos7-budget cancel', commands[0])
@@ -144,12 +153,14 @@ class BrainStuckTests(DaemonCase):
         self.assertEqual(ledger['inflight'], 1000000)
         cfg = read_json(str(self.node / '.aos/up.json'))
         # 不恢復 llmcall；status 唯讀，不能順手把 intent 補出來。
-        body = brain.stuck_reply(self.node, cid, 1, 99, cfg)[1]
+        letter = brain.stuck_reply(self.node, cid, 1, 99, cfg)[1]
+        self.assertNotIn('aos7-budget', letter)
+        body = (self.node / 'brain/stuck' / cid / 'how.md').read_text()
         self.assertIn('這筆還沒送出給 AI', body)
         self.assertIn('aos7-budget cancel', body)
         self.assertIn('aos7-budget settle', body)
         self.assertNotIn('adopt', body)
-        self.assertFalse((self.node / 'brain/stuck').exists())
+        self.assertFalse((self.node / 'brain/stuck' / cid / 'reply.json').exists())
         sends_before = read_json(str(self.node / 'llmcall/fake-remote.json'), {}).get('sends', {})
         self.assertNotIn(cid, sends_before)
         commands = [line for line in body.splitlines() if line.startswith('cd ')]
@@ -167,16 +178,18 @@ class BrainStuckTests(DaemonCase):
 
     def test_stuck_wording_real_ai(self):
         cfg = dict(read_json(str(self.node / '.aos/up.json')), model='chatgpt-x')
-        title, body, _, fix = brain.stuck_reply(self.node, 'some-call', 2, 700, cfg, '幫我寫一首短詩')
-        plain = body.split('進階（給維護者')[0]
+        title, body, line, fix = brain.stuck_reply(self.node, 'some-call', 2, 700, cfg, '幫我寫一首短詩')
+        plain = body
+        self.assertIn('等了約 12 分鐘', plain)
+        self.assertEqual(line, '卡住：「幫我寫一首短詩」問 AI 時被打斷')
         self.assertIn('「幫我寫一首短詩」', title)
         self.assertIn('「幫我寫一首短詩」', plain)
         self.assertIn('真 AI', plain)
         self.assertIn('多付一次', plain)
         self.assertNotIn('不花錢', plain)
-        for word in ('some-call', '回合', '預留'):
-            self.assertNotIn(word, plain + title + fix)
-        self.assertIn('some-call', body.split('進階（給維護者')[1])
+        for word in ('some-call', '回合', '預留', '進階', 'call'):
+            self.assertNotIn(word, plain + title + fix + line)
+        self.assertIn('some-call', (self.node / 'brain/stuck/some-call/how.md').read_text())
 
     def test_saved_request_without_usable_status(self):
         cid = 'saved-but-not-sent'
@@ -192,11 +205,12 @@ class BrainStuckTests(DaemonCase):
         ]
         for result in cases:
             with self.subTest(stdout=result.stdout), patch.object(brain, 'run', return_value=result):
-                body = brain.stuck_reply(self.node, cid, 1, 99, cfg)[1]
+                brain.stuck_reply(self.node, cid, 1, 99, cfg)
+                body = (self.node / 'brain/stuck' / cid / 'how.md').read_text()
                 self.assertNotIn('adopt', body)
                 self.assertNotIn('aos7-budget cancel', body)
                 self.assertFalse(any(line.startswith('cd ') for line in body.splitlines()))
-                self.assertFalse((self.node / 'brain/stuck').exists())
+                self.assertFalse((self.node / 'brain/stuck' / cid / 'reply.json').exists())
 
     def up_status(self):
         return self.cli('modules/up/aos7-up', 'status', self.node).splitlines()
@@ -222,7 +236,7 @@ class BrainStuckTests(DaemonCase):
         self.assertEqual(len(lines), 7)
         self.assertEqual(lines[1], expected)
         # 卡住那行：哪封信、被打斷、還要等多久就會寄信給你（不露已等秒數與時限）
-        self.assertRegex(lines[2], r'^卡住了：「卡住的標題」問 AI 時被打斷，不知道 AI 回了沒；不用動手，約 [12] 秒後 bob 會寄信給你$')
+        self.assertEqual(lines[2], '卡住了：「卡住的標題」問 AI 時被打斷，不知道 AI 回了沒；不用動手，約 1 分鐘內 bob 會寄信給你')
         self.assertEqual(before, {str(p): p.read_bytes() for p in Path(self.root).rglob('*') if p.is_file()})
         write_json(str(unsure), dict(call=brain.call_id(ident, 1), id=ident, since=time.time()-10))
         self.assertTrue(self.up_status()[2].endswith('不用動手，馬上 bob 會寄信給你'))
@@ -230,6 +244,15 @@ class BrainStuckTests(DaemonCase):
         self.assertEqual(len(self.up_status()), 6)
         write_json(str(unsure), dict(id='已離開信箱', since=time.time()))
         self.assertEqual(len(self.up_status()), 6)
+        # 說卡住的那封不算「回了」：回了 1 封、1 封卡住
+        unsure.unlink()
+        self.cli('modules/mail/aos7-mail', 'done', 'bob', ident, 'BLOCKED', '卡住了', '--root', self.root)
+        self.assertTrue(self.up_status()[1].startswith('信：bob 一共收到 3 封，回了 1 封、1 封卡住（已寄信說明）、正在辦 1 封；'))
+        # 人看過（信移到 done）也一樣
+        Path(self.root, 'you/inbox/done').mkdir(exist_ok=True)
+        for p in Path(self.root, 'you/inbox').glob('*.md'):
+            p.rename(p.parent / 'done' / p.name)
+        self.assertTrue(self.up_status()[1].startswith('信：bob 一共收到 3 封，回了 1 封、1 封卡住（已寄信說明）、正在辦 1 封；你的信箱有 0 封'))
 
     def test_open_line_neutral(self):
         brain.open_line(self.node, 'x', '英文草稿已完成；DONE ✅ 已結案 已收線（完成）✔ ~~ (done) [done]')
@@ -278,7 +301,8 @@ class BrainStuckTests(DaemonCase):
             brain.once(self.node, 1)
         replies = self.replies(ident)
         self.assertEqual([l['status'] for l in replies], ['BLOCKED'])
-        self.assertIn('帳上沒有這筆的預留', replies[0]['body'])
-        self.assertNotIn('adopt', replies[0]['body'])
-        self.assertFalse((work / 'stuck').exists())
+        how = (work / 'stuck' / brain.call_id(ident, 1) / 'how.md').read_text()
+        self.assertIn('帳上沒有這筆的預留', how)
+        self.assertNotIn('adopt', how)
+        self.assertFalse((work / 'stuck' / brain.call_id(ident, 1) / 'reply.json').exists())
         self.assertFalse((work / 'unsure.json').exists())
