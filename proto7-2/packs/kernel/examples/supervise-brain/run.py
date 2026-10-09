@@ -92,7 +92,7 @@ def main():
         if started:
             sh(UP, 'stop', node)
         if a.keep:
-            say(f'房子留著：{house}')
+            say(f'資料夾留著：{house}')
         elif not existing:
             shutil.rmtree(house, ignore_errors=True)
         else:

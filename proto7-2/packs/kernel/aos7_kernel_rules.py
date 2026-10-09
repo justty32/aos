@@ -110,7 +110,7 @@ def supervise_brain(ctx, snap, rstate):
                     '## 需要對方或使用者決定的事\n'
                     f'①先看一下 AI 服務是不是卡住了：`{command}`。\n'
                     f'②什麼都不做也可以：再卡到第 {threshold} 回合，監督者會把 {who} 收掉重來'
-                    f'（同一封信同一步最多 {maximum} 次，之後每次等待加倍）；'
+                    f'（重來後若還卡在同一步，下次會等兩倍久才再收，最多收 {maximum} 次）；'
                     f'{who} 從這一步接著做、不會重問 AI；{who} 等 AI 太久也會自己回信說卡住。')
             if key not in targets:
                 body = body[:body.index('②')] + f'②什麼都不做也可以：監督者會繼續觀察；{who} 等 AI 太久也會自己回信說卡住。'
