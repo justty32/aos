@@ -49,3 +49,8 @@
 - B｜K2：意圖寫檔失敗仍照殺、每圈重試寫檔（不殺不會讓當機後更好）
 - C｜K2：register／unregister 寫檔失敗回 `ok:false`、不變更、可重送；paused.json 存失敗只記 log 不丟例外；讀不到的槽不算「不確定」（免得 node 永遠卡住）
 - 已知限制｜K2：N-06「回合已關、steps 還沒存」之間當機，重起後多跑一回合（要動 K3 timeline 才能修）；daemon 停機時 node 被換掉偵測不到（以前就如此）
+- C｜頂層：M 隊 diff 403 行超過 300 行 gate（約 330 行是測試、正式程式約 60 行），照 D7「不設上限」接受
+- C｜M：history 檔名編碼 `%`→`%25`、`+`→`%2B`、`/`→`+`，`daemon-events` 改寫成 `daemon%2Devents`；舊檔名不變 → `modules/history.py`
+- B｜M：D9 落法——`AOS7_AUDIT_ALLOW` 以 `:` 分隔絕對路徑，每次寫入重讀、只認 node 內的；只能豁免巢狀邊界，不能讓 node 外變合法；subd 也設在自己身上；subroot 路徑含 `:` 時不設（audit 會多報）
+- C｜M：R8-25 重現後修（忙碌旗標改 per-thread）；R8-24 重現後修（兩邊都比 realpath）；once_retry birth 讀不到／非物件／沒 name 當不知道、留 pending
+- 已知限制｜M：once_retry R8-26 仍有窗口（重讀 birth 到提交之間核心重用槽可能多補一次重試；契約是至少一次，寫進 README）；node id 超過約 250 bytes 時 history 檔名太長（未修、未寫文件）
