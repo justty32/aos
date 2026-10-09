@@ -34,6 +34,7 @@ class KernelSmoke(KernelMixin, CoreCase):
         st = self.state()
         self.assertEqual(st["pending"], [], self.show(p))
         self.assertEqual(st["done"][-1]["result"], "ok")
+        self.assertEqual(st["done"][-1]["basis"], {"t": "test"})
         self.core_round()
         self.assertNotEqual(self.brain_run(), run)
         p = self.tock_kernel(3)
@@ -460,12 +461,109 @@ class KernelCore(KernelMixin, CoreCase):
         """status：在途 kill 顯示原 run 與等回條。"""
         self.cfg([self.kill_rule()])
         self.assert_ok(self.tock_kernel(1))
+        cfg = self.cfg([{'name': 'noop'}])
+        write_json(os.path.join(self.kslot, 'state.json'), dict(self.state(), config_sha=sha_of(cfg)))
         self.register_status_slot()
         p = self.official_status()
         self.assert_ok(p)
         self.assertEqual(len(p.stdout.splitlines()), 1)
         self.assertIn("等回條", p.stdout)
         self.assertIn("brain#%d" % self.brain_run(), p.stdout)
+
+    def test_config_validation_before_initialization(self):
+        cases = [{'no_progress_rounds': v} for v in (True, 0, -1, '6')]
+        cases += [{'kill_after_rounds': v} for v in (False, 0, 6, '12')]
+        cases += [{'max_kills': v} for v in (True, 0, -1, '3')]
+        cases += [{'no_progress_rounds': 12}, {'no_progress_rounds': 10, 'kill_after_rounds': 9}]
+        for params in cases:
+            with self.subTest(params=params):
+                self.cfg([dict(name='supervise-brain', **params)])
+                self.assert_error(self.tock_kernel(1), 2)
+                self.assert_error(self.official_status(), 2)
+                self.assertFalse(Path(self.kslot, 'state.json').exists())
+        self.cfg([{'name': 'noop'}], sources=[dict(node=f'n{i}', slot='brain', kind='brain') for i in range(11)],
+                 targets=[dict(node='n0', slot='brain')])
+        self.assert_error(self.tock_kernel(1), 2)
+        self.cfg([{'name': 'noop'}], mail={'root': '..', 'from': 123})
+        self.assert_error(self.tock_kernel(1), 2)
+
+    def test_deep_state_validation_preserves_bytes(self):
+        cfg = self.cfg([{'name': 'noop'}])
+        base = load_state(self.kslot, sha_of(cfg))
+        self.register_status_slot()
+        status_path = Path(self.slot(self.node, 'kslot'), 'state.json')
+        bad = [dict(base, pending=[None]), dict(base, done=[None]), dict(base, done=[{}])]
+        brain = dict(id='信', step=2, run=1, since=1, last=8, notified=True, gap=False)
+        for rstate in ([], {'brains': []}, {'gaps': {'a/brain': '壞'}}, {'killed': {'a/brain': True}}, {'notified': {'a/brain': 1}},
+                       {'retries': {'a/brain': {'id': '信', 'step': 2, 'count': False}}},
+                       {'brains': {'a/brain': dict(brain, last=True)}}):
+            bad.append(dict(base, rules={'supervise-brain': rstate}))
+        for damaged in bad:
+            with self.subTest(damaged=damaged):
+                write_json(str(Path(self.kslot, 'state.json')), damaged)
+                before = Path(self.kslot, 'state.json').read_bytes()
+                status_path.write_bytes(before)
+                self.assert_error(self.tock_kernel(1), 3)
+                self.assert_error(self.official_status(), 3)
+                self.assertEqual(Path(self.kslot, 'state.json').read_bytes(), before)
+                self.assertEqual(status_path.read_bytes(), before)
+                self.no_ctl()
+
+    def test_status_stall_gap_and_missing_state(self):
+        cfg = self.cfg([{'name': 'supervise-brain'}], mail={'root': '..'})
+        base = load_state(self.kslot, sha_of(cfg))
+        brain = dict(id='信', step=2, run=1, since=1, last=9, notified=True, gap=False)
+        state = dict(base, rules={'supervise-brain': {'brains': {'a/brain': brain}, 'notified': {'a/brain': '信'}}})
+        write_json(os.path.join(self.kslot, 'state.json'), state)
+        self.register_status_slot()
+        p = self.official_status()
+        self.assert_ok(p)
+        self.assertIn('停住 8 回合，已寄信給 you', p.stdout)
+        brain['gap'] = True
+        write_json(str(Path(self.slot(self.node, 'kslot'), 'state.json')), state)
+        p = self.official_status()
+        self.assert_ok(p)
+        self.assertIn('讀不到，等它恢復', p.stdout)
+        Path(self.slot(self.node, 'kslot'), 'state.json').unlink()
+        self.assert_error(self.official_status(), 1)
+
+    def test_config_normalization_and_snapshot_title(self):
+        from aos7_kernel_state import load_config
+        cfg = self.cfg([{'name': 'noop'}], sources=[dict(BRAIN, node='x/../a', kind='brain')])
+        normalized, sha = load_config(self.node, {'noop'})
+        self.assertEqual(normalized['sources'][0]['node'], normalized['targets'][0]['node'])
+        self.assertEqual(sha, sha_of(cfg))
+        task = Path(self.node, 'brain', 'task.json')
+        write_json(str(task), {'id': '原信', 'step': 2})
+        box = Path(self.node, 'inbox', 'done')
+        box.mkdir(parents=True)
+        letter = box / 'request.md'
+        letter.write_text('---\nid: 原信\n---\n# 做 5 回合的整理\n', encoding='utf-8')
+        def snap():
+            return snapshot(dict(node=self.node, node_id='a'), normalized, lambda _: None)[1]
+        self.assertEqual(snap()['title'], '做 5 回合的整理')
+        letter.write_bytes(b'\xff')
+        self.assertIsNone(snap()['title'])
+        self.assertEqual(snap()['read'], 'ok')
+
+    def test_boolean_receipt_and_tock_and_outer_exception(self):
+        import aos7_kernel as kernel
+        self.assertFalse(kernel._receipt_matches({'id': 'k', 'op': 'kill', 'run': True}, {'id': 'k', 'run': 1}))
+        env = dict(task=self.kslot, node=self.node, node_id='a', tid='kernel', run=1)
+        self.cfg([{'name': 'noop'}])
+        with patch.object(kernel, 'task_env', return_value=env), patch.object(kernel, 'resolver', return_value=lambda _: None), \
+                patch.object(kernel, 'wait_tock', side_effect=[True, '2', 1]), \
+                patch.object(kernel.signal, 'signal'):
+            self.assertEqual(kernel.main(['run', '--rounds', '1']), 0)
+        self.assertEqual(self.state()['rev'], 1)
+        import io
+        with patch.object(kernel, 'status_line', side_effect=RuntimeError('錯\n誤')), patch('sys.stderr', new_callable=io.StringIO) as err:
+            self.assertEqual(kernel.main(['status', self.node]), 3)
+            self.assertEqual(len(err.getvalue().splitlines()), 1)
+            self.assertNotIn('Traceback', err.getvalue())
+
+    def test_candidate_body_validation(self):
+        self.rejected_rules([self.raw_rule(dict(op='notify', target='you', text='提醒', body=3, basis={}))])
 
 
 class KernelUnderDaemon(KernelMixin, DaemonCase):
@@ -515,12 +613,12 @@ class KernelWithRealRule(KernelMixin, CoreCase):
                 self.core_round()   # 核心收掉、keep 重起
             self.core_round()       # 來源鐘前進一格
             results = [(d["op"], d["result"]) for d in self.state()["done"]]
-        # 新 run 起來 task.json 仍不動＝規則重建基準、之後可再通知（KR1 語意）；kill 只有原 run 那一次
+        # 新 run 起來 task.json 仍不動＝重建計時，同信不再通知；kill 只有原 run 那一次
         self.assertEqual(results[:2], [("notify", "logged"), ("kill", "ok")], self.state())
         kills = [d for d in self.state()["done"] if d["op"] == "kill"]
         self.assertEqual([k["run"] for k in kills], [run])
         self.assertGreater(self.brain_run(), run)
-        self.assertIn("bob-1", [d for d in self.state()["done"] if d["op"] == "notify"][0]["text"])
+        self.assertIn("bob-1…", [d for d in self.state()["done"] if d["op"] == "notify"][0]["text"])
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@
 
 設定 <node>/kernel/kernel.json；state 在自己的槽（$AOS7_TASK/state.json）。核心不知道這個包；控制只用核心的 ctl.json kill。
 """
+import contextlib
+import io
 import argparse
 import json
 import os
@@ -12,7 +14,7 @@ import signal
 import sys
 import time
 
-from aos7_kernel_state import (Stop, config_path, decisions_path, load_config, load_state, same_place,  # noqa: E402
+from aos7_kernel_state import (Stop, decisions_path, load_config, load_state, same_place,  # noqa: E402
                                save_state, slot_dir, snapshot, state_path, TOP)
 from aos7_fs import BAD, N, OK, U, fact, is_int, now, test_point, write_json  # noqa: E402
 from aos7_taskside import resolver, task_env, wait_tock  # noqa: E402
@@ -21,20 +23,15 @@ PROG = "aos7-kernel"
 NOTIFY_MAX = 10
 
 
-# ---------- 規則註冊（spec §5；薄入口可再注入） ----------
-
-def noop(ctx, snap, rstate):
-    """什麼都不做的規則（測試、只觀測用）。"""
-    return rstate, []
+from aos7_kernel_rules import RULES
 
 
-RULES = {"noop": noop}
-try:   # 真規則在 aos7_kernel_rules.py（KR1）；還沒有就只有 noop
-    import aos7_kernel_rules as _rules   # noqa: E402
-    if callable(getattr(_rules, "supervise_brain", None)):
-        RULES["supervise-brain"] = _rules.supervise_brain
-except ImportError:
-    pass
+def flat(value):
+    return " ".join(str(value).splitlines())
+
+
+def error(value):
+    print(flat(value), file=sys.stderr, flush=True)
 
 
 # ---------- 驗證（spec §5） ----------
@@ -92,8 +89,10 @@ def _bad_candidate(cfg, c):
     elif c.get("op") == "notify":
         if not isinstance(c.get("target"), str) or not c["target"]:
             return "notify 的 target 要是收件名"
-        if not isinstance(c.get("text"), str) or not c["text"].strip() or "\n" in c["text"]:
+        if not isinstance(c.get("text"), str) or not c["text"].strip() or "\n" in c["text"] or "\r" in c["text"]:
             return "text 要是非空的一行"
+        if "body" in c and not isinstance(c["body"], str):
+            return "body 要是字串"
     else:
         return "op 只有 kill、notify"
     return None if _jsonable(c.get("basis")) else "basis 要能存成 JSON"
@@ -103,7 +102,7 @@ def _bad_candidate(cfg, c):
 
 def _receipt_matches(r, p):
     """回條的原請求（id、op、run）是不是這筆意圖的。不看 result.run 來關聯：拒絕回條的 result.run 可能是新 run。"""
-    return isinstance(r, dict) and r.get("id") == p["id"] and r.get("op") == "kill" and r.get("run") == p["run"]
+    return isinstance(r, dict) and r.get("id") == p["id"] and r.get("op") == "kill" and is_int(r.get("run")) and r.get("run") == p["run"]
 
 
 def _result_ok(r, p):
@@ -162,10 +161,15 @@ def settle_notify(env, cfg, p):
     sys.path.insert(0, os.path.join(TOP, "modules", "mail"))
     import aos7_mail   # noqa: E402
     root = os.path.normpath(os.path.join(env["node"], mail["root"]))
+    body = p.get('body') or ('## 做了什麼\n監督者提醒你：「%s」。\n\n' % p['text'] +
+        '## 產出（檔案路徑 / commit / 分支）\n沒有產出，這封只是提醒。\n\n'
+        '## 沒做到、或證據不足的部分\n詳細原因尚待確認。\n\n'
+        '## 需要對方或使用者決定的事\n請先查看下方的紀錄，再決定是否處理。')
+    body += '\n\n想看細節的（給維護者）：' + state_path(env['task']) + '\n'
     try:
-        aos7_mail.send(root, mail.get("from", "kernel"), p["target"], "NEEDS-USER", p["text"],
-                       "kernel %s 的通知（依據：%s）" % (env["tid"], json.dumps(p.get("basis"), ensure_ascii=False)[:500]),
-                       ident=p["id"])
+        with contextlib.redirect_stderr(io.StringIO()):
+            aos7_mail.send(root, mail.get("from", "kernel"), p["target"], "NEEDS-USER", p["text"],
+                           body, ident=p["id"])
     except (OSError, ValueError) as e:
         return "wait", "寄信失敗：%s" % e
     test_point("kernel-after-mail")
@@ -182,7 +186,7 @@ def settle(env, cfg, state, resolve):
         except OSError as e:
             r = ("wait", "寫不進去：%s" % e)
         if r[0] == "done":
-            d = {k: p[k] for k in ("id", "op", "target", "run", "text", "tock") if k in p}
+            d = {k: p[k] for k in ("id", "op", "target", "run", "text", "body", "basis", "tock") if k in p}
             done.append(dict(d, result=r[1], msg=r[2], at=now()))
             changed = True
             continue
@@ -219,17 +223,17 @@ def decide(env, cfg, state, tock, resolve, rules=None):
         return None, [], rec
     busy = [c["target"]["slot"] for c in cands if c["op"] == "kill" and any(
         p["op"] == "kill" and same_place(p["target"], c["target"]) for p in state["pending"])]
-    notes = sum(1 for p in state["pending"] if p["op"] == "notify") + sum(1 for c in cands if c["op"] == "notify")
-    if busy or notes > NOTIFY_MAX:
+    notes = sum(1 for p in state["pending"] if p["op"] == "notify")
+    if busy or notes >= NOTIFY_MAX:
         # 整輪延後：規則狀態不存（它會以為已經出過），下一個 tock 重判（spec §5）
         rec["note"] = "延後：%s" % ("目標已有在途的 kill（%s）" % "、".join(busy) if busy
-                                   else "在途通知超過 %d 封" % NOTIFY_MAX)
+                                   else "在途通知已有 %d 封" % NOTIFY_MAX)
         return None, [], rec
     new = []
     for i, c in enumerate(cands):
         p = {"id": "k-%s-%d-%d" % (state["instance"][:8], state["rev"] + 1, i), "op": c["op"], "target": c["target"],
              "basis": c.get("basis"), "sent": False, "tock": tock, "rule": c["rule"]}
-        p.update({"run": c["run"], "why": c["why"]} if c["op"] == "kill" else {"text": c["text"]})
+        p.update({"run": c["run"], "why": c["why"]} if c["op"] == "kill" else {k: c[k] for k in ("text", "body") if k in c})
         new.append(p)
     rec["decided"] = new
     return states, new, rec
@@ -247,8 +251,7 @@ def one_tock(env, cfg, state, tock, resolve, rules=None):
     try:
         nxt = save_state(env["task"], nxt)
     except OSError as e:
-        print("%s: 不確定：state.json 寫不進去（%s），這個 tock 不算處理過。下一個 tock 再試" % (PROG, e),
-              file=sys.stderr, flush=True)
+        error("%s: 不確定：state.json 寫不進去（%s），這個 tock 不算處理過。下一個 tock 再試" % (PROG, e))
         return state
     test_point("kernel-after-state")
     try:
@@ -286,7 +289,7 @@ def cmd_run(args, rules=None):
     seen = 0
     while not stop:
         t = wait_tock(env["task"], state["last_tock"], timeout=0.2, run=env["run"])
-        if t is None:
+        if not is_int(t):
             continue
         load_config_same(env, rules, sha)
         state = _settle_safe(env, cfg, state, resolve)
@@ -313,7 +316,7 @@ def _settle_safe(env, cfg, state, resolve):
     try:
         return settle(env, cfg, state, resolve)
     except OSError as e:
-        print("%s: 不確定：state.json 寫不進去（%s），在途的留著。下一個 tock 再核" % (PROG, e), file=sys.stderr, flush=True)
+        error("%s: 不確定：state.json 寫不進去（%s），在途的留著。下一個 tock 再核" % (PROG, e))
         return state
 
 
@@ -327,23 +330,17 @@ def kernel_slots(node):
             and any("aos7-kernel" in str(a) for a in (i.get("argv") or []))]
 
 
-def status_line(node):
+def status_line(node, rules=None):
     """回 (退出碼, 一行)。"""
-    cst, cfg = fact(config_path(node))
-    if cst == N:
-        return 2, "這個 node 沒有 kernel/kernel.json。給有裝 kernel 的 node，例：aos7-kernel status house/bob"
-    if cst != OK or not isinstance(cfg, dict) or not isinstance(cfg.get("sources"), list):
-        return 3, "不確定：kernel.json 讀不到或不合。看一下 %s" % config_path(node)
-    n = len(cfg["sources"])
+    cfg, sha = load_config(node, rules or RULES)
+    n = len(cfg['sources'])
     slots = kernel_slots(node)
     if slots is None:
         return 3, "不確定：tasks.json 讀不到，找不到 kernel 的槽。照原樣再看一次"
-    slots = slots or ["kernel"]
-    sst, s = fact(state_path(os.path.join(node, ".aos", "tasks", slots[0])))
-    if sst == N:
+    task = os.path.join(node, '.aos', 'tasks', (slots or ['kernel'])[0])
+    s = load_state(task, sha, init=False)
+    if not os.path.exists(state_path(task)):
         return 0, "監督 %d 件：kernel 還沒開始（等它第一次收到心跳）" % n
-    if sst != OK or not isinstance(s, dict) or not isinstance(s.get("pending"), list):
-        return 3, "不確定：kernel 的 state.json 讀不到。照原樣再看一次；一直這樣請人看 %s" % slots[0]
     parts = []
     for p in s["pending"]:
         if p.get("op") == "kill":
@@ -353,12 +350,24 @@ def status_line(node):
             parts.append("通知 %s 還沒寄出" % p.get("target"))
         if p.get("wait"):
             parts[-1] += "（%s）" % p["wait"]
-    recent = [d for d in s.get("done", []) if d.get("tock") == s.get("last_tock")]
-    word = {"ok": "已 kill", "sent": "已寄信", "logged": "已記下", "superseded": "目標已換 run、沒 kill",
-            "rejected": "kill 被核心拒絕", "unknown": "kill 結果不確定"}
-    for d in recent:
-        parts.append("%s %s" % (word.get(d.get("result"), d.get("result")),
-                                d.get("target") if d.get("op") == "notify" else "%s#%s" % (d["target"].get("slot"), d.get("run"))))
+    word = {'ok': '已 kill', 'sent': '已寄信', 'logged': '已記下', 'superseded': '目標已換 run、沒 kill',
+            'rejected': 'kill 被核心拒絕', 'unknown': 'kill 結果不確定'}
+    for d in s['done']:
+        if d['tock'] == s['last_tock']:
+            target = d['target'] if d['op'] == 'notify' else '%s#%s' % (d['target']['slot'], d['run'])
+            parts.append('%s %s' % (word.get(d['result'], d['result']), target))
+    rstate = s['rules'].get('supervise-brain', {})
+    rule = next((r for r in cfg['rules'] if r['name'] == 'supervise-brain'), {})
+    for src in cfg['sources']:
+        key = src['node'] + '/' + src['slot']
+        brain = rstate.get('brains', {}).get(key)
+        if rstate.get('gaps', {}).get(key) or (brain and brain['gap']):
+            parts.append('%s 讀不到，等它恢復' % src['node'])
+        elif brain and brain['last'] - brain['since'] >= rule.get('no_progress_rounds', 6):
+            notified = rstate.get('notified', {}).get(key) == brain['id'] or brain['notified']
+            parts.append('%s 停在第 %d 步，停住 %d 回合%s' % (src['node'], brain['step'],
+                brain['last'] - brain['since'], ('，已寄信給 ' + rule.get('notify', 'you') if cfg.get('mail')
+                else '，提醒已記下') if notified and not any(p['op'] == 'notify' and isinstance(p.get('basis'), dict) and p['basis'].get('src') == key for p in s['pending']) else ''))
     if s.get("last_error"):
         parts.append("上次出錯：%s" % s["last_error"])
     return 0, "監督 %d 件：%s" % (n, "；".join(parts) if parts else "都在動，沒有要處理的")
@@ -373,7 +382,7 @@ def main(argv=None, rules=None):
     s = sub.add_parser("status", help="一行白話看 kernel 在做什麼")
     s.add_argument("node")
     def bad_usage(msg):
-        print("%s: 用法不對（%s）。例：aos7-kernel run、aos7-kernel status house/bob" % (PROG, msg), file=sys.stderr)
+        error("%s: 用法不對（%s）。例：aos7-kernel run、aos7-kernel status house/bob" % (PROG, msg))
         sys.exit(2)
     ap.error = bad_usage
     for p in (r, s):
@@ -381,17 +390,19 @@ def main(argv=None, rules=None):
     a = ap.parse_args(argv)
     try:
         if a.cmd == "status":
-            code, line = status_line(a.node)
+            code, line = status_line(a.node, rules)
             if code:
-                print("%s: %s" % (PROG, line), file=sys.stderr)
+                error("%s: %s" % (PROG, line))
             else:
-                print(line)
+                print(flat(line))
             return code
         return cmd_run(a, rules)
     except Stop as e:
-        print("%s: %s" % (PROG, e), file=sys.stderr, flush=True)
+        error("%s: %s" % (PROG, e))
         return e.code
     except OSError as e:
-        print("%s: 不確定：讀寫失敗（%s），已寫的 state 與在途請求都留著。照原樣再跑一次會接續" % (PROG, e),
-              file=sys.stderr, flush=True)
+        error("%s: 不確定：讀寫失敗（%s），已寫的 state 與在途請求都留著。照原樣再跑一次會接續" % (PROG, e))
+        return 3
+    except Exception as e:
+        error("%s: 不確定：程式出錯（%s: %s）。照原樣再跑一次；一直這樣請人看" % (PROG, type(e).__name__, e))
         return 3

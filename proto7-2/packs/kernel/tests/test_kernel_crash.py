@@ -374,7 +374,10 @@ class KernelReviewFixes(CrashBase):
 
     def notify_rule(self, n=1):
         return {"name": "echo", "until": 1, "emit": [{"op": "notify", "target": "you", "text": "第 %d 封" % i,
-                                                      "basis": {}} for i in range(n)]}
+                                                      "basis": {"age": 6}, "body": "## 做了什麼\n發現停住。\n\n"
+                        "## 產出（檔案路徑 / commit / 分支）\n沒有產出，這封只是提醒。\n\n"
+                        "## 沒做到、或證據不足的部分\n原因尚待確認。\n\n"
+                        "## 需要對方或使用者決定的事\n請看紀錄。"} for i in range(n)]}
 
     def test_notify_without_mail_kept_in_done(self):
         """審 3：沒設 mail，在存 state 後被殺，重起後通知文字仍留在 done（logged）。"""
@@ -382,6 +385,8 @@ class KernelReviewFixes(CrashBase):
         self._crash_tock(1, "kernel-after-state")
         st = self._ok_tock(2)
         self.assertEqual([(d["result"], d["text"]) for d in st["done"]], [("logged", "第 0 封")])
+        self.assertEqual(st["done"][0]["basis"], {"age": 6})
+        self.assertIn("## 做了什麼", st["done"][0]["body"])
 
     def test_notify_mail_once_across_sigkill(self):
         """通知經 mail：寄完、存 state 前被殺 ×3，收件匣只有一封 NEEDS-USER，信 id＝決定 id。"""
@@ -397,13 +402,49 @@ class KernelReviewFixes(CrashBase):
         text = open(os.path.join(box, letters[0]), encoding="utf-8").read()
         self.assertIn("status: NEEDS-USER", text)
         self.assertIn("id: %s" % st["done"][0]["id"], text)
+        self.assertEqual(st['done'][0]['basis'], {'age': 6})
+        self.assertIn('body', st['done'][0])
+        self.assertEqual(text.count('## '), 4)
+        for bad in ('無', 'kernel kernel', '{"'):
+            self.assertNotIn(bad, text)
 
-    def test_notify_cap_defers(self):
-        """審 5：一輪的在途通知超過 10 封＝整輪延後，state 不長。"""
-        self.cfg([self.notify_rule(11)])
-        st = self._ok_tock(1)
-        self.assertEqual((st["pending"], st["done"], st["rules"]), ([], [], {}))
-        self.assertIn("延後", self.decisions()["note"])
+    def test_notify_mail_suppresses_new_mailbox_hint(self):
+        self.cfg([self.notify_rule()], mail={'root': '..', 'from': 'kernel'})
+        p = self.tock_kernel(1)
+        self.assertEqual(p.returncode, 0, self.show(p))
+        self.assertEqual(p.stderr, '')
+        self.assertEqual(self.state()['done'][0]['result'], 'sent')
+
+    def test_notify_cap_allows_new_candidates(self):
+        """新候選不算在途；寄成功後下一輪仍能前進。"""
+        self.cfg([dict(self.notify_rule(11), until=3, once=False)])
+        for n in (1, 2, 3):
+            st = self._ok_tock(n)
+            self.assertEqual(st['pending'], [])
+            self.assertIsNone(self.decisions()['note'])
+        self.assertEqual(len(st['done']), 20)
+        self.assertEqual([d['tock'] for d in st['done']], [2] * 9 + [3] * 11)
+
+    def test_mail_failure_cap_recovers(self):
+        import aos7_kernel as kernel
+        from aos7_kernel_state import load_config, load_state
+        self.cfg([dict(self.notify_rule(10), until=3, once=False)])
+        cfg, sha = load_config(self.node, kernel.RULES | {'echo': lambda: None})
+        state = load_state(self.kslot, sha)
+        env = dict(task=self.kslot, node=self.node, node_id='a', tid='kernel')
+        import kernel_fake
+        state = kernel.one_tock(env, cfg, state, 1, lambda _: None, kernel_fake.RULES)
+        from unittest.mock import patch
+        with patch.object(kernel, 'settle_notify', return_value=('wait', '寄信失敗')):
+            state = kernel.settle(env, cfg, state, lambda _: None)
+        self.assertEqual(len(state['pending']), 10)
+        blocked = kernel.one_tock(env, cfg, state, 2, lambda _: None, kernel_fake.RULES)
+        self.assertEqual(blocked['pending'], state['pending'])
+        self.assertIn('延後', self.decisions()['note'])
+        state = kernel.settle(env, cfg, blocked, lambda _: None)
+        state = kernel.one_tock(env, cfg, state, 3, lambda _: None, kernel_fake.RULES)
+        self.assertEqual(len(state['pending']), 10)
+        self.assertIsNone(self.decisions()['note'])
 
 
 if __name__ == "__main__":

@@ -64,15 +64,15 @@ class SuperviseBrainTest(unittest.TestCase):
         self.assertEqual(kill['run'], 25)
         self.assertEqual(kill['target'], dict(node='bob', slot='brain'))
         self.assertEqual(kill['basis'], dict(src='bob/brain', file='brain/task.json', run=self.run,
-            completed_tock=self.ct + 12, id=self.task['id'], step=self.task['step'], since=self.ct, age=12))
-        self.assertIn(self.task['line'], out[6][0]['text'])
+            completed_tock=self.ct + 12, id=self.task['id'], title=None, step=self.task['step'], since=self.ct, age=12))
+        self.assertIn(self.task['line'], out[6][0]['body'])
         self.assertEqual(state['killed'], {'bob/brain': self.run})
 
     def test_new_run_rebuilds_02(self):
         state, _ = self.replay(self.frames(self.ct, self.ct + 79))
-        _, out = self.replay(self.frames(self.ct + 80, self.ct + 92, run=26), state=state)
-        self.assertEqual([(i, a['op']) for i, aa in enumerate(out) for a in aa], [(6, 'notify'), (12, 'kill')])
-        self.assertEqual(out[12][0]['run'], 26)
+        _, out = self.replay(self.frames(self.ct + 80, self.ct + 104, run=26), state=state)
+        self.assertEqual([(i, a['op']) for i, aa in enumerate(out) for a in aa], [(24, 'kill')])
+        self.assertEqual(out[24][0]['run'], 26)
 
     def test_quiet_idle_run3_03(self):
         birth = load('longtask-run3/birth.json')
@@ -89,7 +89,7 @@ class SuperviseBrainTest(unittest.TestCase):
         self.assertNotIn('bob/brain', state['brains'])
         _, out = self.replay(self.frames(self.ct + 13, self.ct + 19), state=state)
         self.assertEqual(out[:6], [[]] * 6)
-        self.assertEqual([a['op'] for a in out[6]], ['notify'])
+        self.assertEqual(out[6], [])
 
     def test_quiet_unknown_K09_05(self):
         for read in ('unknown', 'bad'):
@@ -131,7 +131,7 @@ class SuperviseBrainTest(unittest.TestCase):
                      dict(noisy, id=noisy['id'] + '新信')):
             _, out = self.replay(self.frames(self.ct + 13, self.ct + 25, task=task), state=state)
             self.assertEqual(out[:6], [[]] * 6)
-            self.assertEqual([a['op'] for a in self.flat(out)], ['notify'])
+            self.assertEqual([a['op'] for a in self.flat(out)], ['notify'] if task['id'] != noisy['id'] else [])
 
     def test_capture_fake_replay_09(self):
         records = [json.loads(line) for line in (FIX / 'capture-fake.jsonl').read_text(encoding='utf-8').splitlines()]
@@ -148,9 +148,7 @@ class SuperviseBrainTest(unittest.TestCase):
 
     def test_params_and_purity_10(self):
         frames = self.frames(self.ct, self.ct + 12)
-        for frame in frames:
-            frame[0]['src'] = 'bob/brain'
-        wrapped = [dict(items=f) for f in frames]
+        wrapped = frames
         _, out = self.replay(wrapped, config(no_progress_rounds=1, kill_after_rounds=2),
                              rule=dict(no_progress_rounds=3, kill_after_rounds=4, notify='管理者'))
         self.assertEqual([(i, a['op']) for i, aa in enumerate(out) for a in aa], [(3, 'notify'), (4, 'kill')])
@@ -164,6 +162,48 @@ class SuperviseBrainTest(unittest.TestCase):
         self.assertEqual([a['op'] for a in self.flat(out)], ['notify'])
         _, out = self.replay(frames, config(), rule='壞參數')
         self.assertEqual([a['op'] for a in self.flat(out)], ['notify', 'kill'])
+
+    def test_backoff_limit_new_letter_and_old_state(self):
+        state, out = self.replay(self.frames(0, 12))
+        self.assertEqual([a['op'] for a in self.flat(out)], ['notify', 'kill'])
+        state, out = self.replay(self.frames(13, 37, run=26), state=state)
+        self.assertEqual([(i, a['op']) for i, aa in enumerate(out) for a in aa], [(24, 'kill')])
+        state, out = self.replay(self.frames(38, 86, run=27), state=state)
+        self.assertEqual([(i, a['op']) for i, aa in enumerate(out) for a in aa], [(48, 'kill')])
+        state, out = self.replay(self.frames(87, 400, run=28), state=state)
+        self.assertEqual(self.flat(out), [])
+        new = dict(self.task, id='另一封信')
+        fresh, out = self.replay(self.frames(401, 413, run=29, task=new), state=state)
+        self.assertEqual([a['op'] for a in self.flat(out)], ['notify', 'kill'])
+        self.assertEqual(fresh['retries']['bob/brain']['count'], 1)
+        old = {k: state[k] for k in ('brains', 'killed')}
+        _, out = self.replay(self.frames(401, 425, run=29), state=old)
+        self.assertEqual([a['op'] for a in self.flat(out)], ['kill'])
+
+    def test_custom_maximum_and_step_reset(self):
+        state, _ = self.replay(self.frames(0, 12), config(max_kills=1))
+        _, out = self.replay(self.frames(13, 100, run=26), config(max_kills=1), state=state)
+        self.assertEqual(self.flat(out), [])
+        task = dict(self.task, step=self.task['step'] + 1)
+        _, out = self.replay(self.frames(101, 113, run=26, task=task), config(max_kills=1), state=state)
+        self.assertEqual([a['op'] for a in self.flat(out)], ['kill'])
+        for bad in (True, 0, -1, '3'):
+            state, _ = self.replay(self.frames(0, 12), config(max_kills=bad))
+            _, out = self.replay(self.frames(13, 37, run=26), config(max_kills=bad), state=state)
+            self.assertEqual([a['op'] for a in self.flat(out)], ['kill'])
+
+    def test_title_body_and_flattening(self):
+        frames = self.frames(0, 6, task=dict(self.task, line='第一行\n第二行' + '長' * 100))
+        for frame in frames:
+            frame[0]['title'] = '做 5 回合的整理\n附註' + '長' * 100
+        _, out = self.replay(frames)
+        note = out[6][0]
+        self.assertIn('做 5 回合的整理', note['text'])
+        self.assertNotIn(self.task['id'], note['text'])
+        self.assertNotIn('\n', note['text'])
+        self.assertIn('第一行 第二行', note['body'])
+        self.assertLess(len(note['basis']['title']), 61)
+        self.assertEqual(note['body'].count('## '), 4)
 
     def test_noop_11(self):
         self.assertEqual(set(RULES), {'supervise-brain', 'noop'})
@@ -180,12 +220,12 @@ class SuperviseBrainTest(unittest.TestCase):
         state = None
         for run in range(300):
             state, out = self.replay(self.frames(run * 13, run * 13 + 12, run=run), state=state)
-            self.assertEqual([a['op'] for a in self.flat(out)], ['notify', 'kill'])
+            self.assertEqual([a['op'] for a in self.flat(out)], ['notify', 'kill'] if run == 0 else [])
             if run == 19:
                 size = len(json.dumps(state))
         self.assertLess(abs(len(json.dumps(state)) - size), 50)
         state, _ = self.replay([[]], dict(sources=[], targets=[], rules=[]), state=state)
-        self.assertEqual(state, {'brains': {}, 'killed': {}})
+        self.assertEqual(state, {'brains': {}, 'killed': {}, 'notified': {}, 'retries': {}, 'gaps': {}})
 
     def test_invalid_observation_13(self):
         state, _ = self.replay(self.frames(self.ct, self.ct + 11))
@@ -215,7 +255,7 @@ class SuperviseBrainTest(unittest.TestCase):
         self.assertEqual(self.flat(out), [])
         state, _ = self.replay([[item(None, self.run, self.ct + 13)]], state=state)
         _, out = self.replay(self.frames(self.ct + 14, self.ct + 26), state=state)
-        self.assertEqual([a['op'] for a in self.flat(out)], ['notify'])
+        self.assertEqual(self.flat(out), [])
 
     def test_multiple_sources_and_output_copies_15(self):
         cfg = config()
@@ -223,7 +263,7 @@ class SuperviseBrainTest(unittest.TestCase):
         cfg['targets'].append(dict(node='alice', slot='brain', extra=['原物件']))
         frames = self.frames(self.ct, self.ct + 12)
         for frame in frames:
-            other = deepcopy(frame[0]); other['src'] = 'alice/brain'
+            other = deepcopy(frame[0]); other['src'] = dict(node='alice', slot='brain', kind='brain')
             frame.append(other)
         state, out = self.replay(frames, cfg)
         self.assertEqual(len(out[6]), 2)
