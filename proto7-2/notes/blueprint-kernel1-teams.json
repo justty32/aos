@@ -1,0 +1,64 @@
+{
+  "contract": "wf-table/1",
+  "source": "blueprint-kernel1.md",
+  "extracted": "2026-10-09",
+  "columns": ["team", "wave", "lead", "workers", "intent", "items", "territory", "excluded", "deps", "gates", "done", "handoff"],
+  "rows": [
+    {
+      "team": "KC1（kernel-core 骨架）",
+      "wave": "1（現在可開）",
+      "lead": "Opus（逐行審 state 與 ctl 那兩段）",
+      "workers": "gpt-6.1-sol ×2（甲：state／快照／執行順序；乙：ctl 送出與回條核對、崩潰矩陣測試）；gpt-6-astra（high）read-only 審",
+      "intent": "intents/kernel.md（Fable 已寫）",
+      "items": "新包 packs/kernel/：keep 任務 `aos7-kernel run`（等自己的 tock→讀 kernel.json 與 state→先核 pending→快照→規則→驗證→一次 rename 存 state→寫目標槽 ctl.json kill→依 ctl-done 更新）；`status <node>` 一行白話；快照每項帶 run／seq／completed_tock／read 四態，讀前後核對 run；規則註冊只掛 `noop`＋測試假規則（真規則歸 KR1）；驗證：未知 op／型別／不在 targets／run 非整數整份拒絕、重複合併、矛盾拒絕；config_sha 不合停提交留 pending；錯誤照 0～3 一行 stderr；spec.md 寫 state／快照／ctl 形狀（照藍圖 §3，不自創）",
+      "territory": "packs/kernel/aos7_kernel.py、aos7_kernel_state.py、bin/aos7-kernel、spec.md、tests/test_kernel_core.py（新包全新）",
+      "excluded": "不碰 lib/、modules/、其他 packs；不改核心 ctl 協定；不碰 README／ADVANCED（KE1）；不呼叫 judge_resolved",
+      "deps": "無；介面以藍圖 §3／§4 為準，想改先回報頂層",
+      "gates": "件數 1 線。diff >700 行停下回報。交棒前全套 1 份（systemd scope）",
+      "done": "K01、K02、K03、K04、K06、K10～K18、K21 各一案；K24：300 回合多次重起 state 大小不隨 run 數成長；四個崩潰點（存 state 前／後、送 ctl 後、回條後）SIGKILL ×3 不重送不漏送不誤殺新 run；全套退出碼 0；人類面：`status` 一行新手看得懂（U 隊驗）",
+      "handoff": "proto7-1/lib/aos7_kernel.py 的主迴圈與 apply_decision 可借形狀，但執行順序要改成「先存意圖再送」（報告 §6.1 說明舊順序有兩種空窗）；ctl kill JSON 可帶 id，核心會原樣寫回回條（modules/tools/aos7_ctl.py:108）；kill 範圍與回條語意見 spec §6"
+    },
+    {
+      "team": "KR1（supervise-brain 規則）",
+      "wave": "1（與 KC1 並行）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫規則＋純函式測試；gpt-6-astra read-only 審（重點：老化與 unknown 的邊界）",
+      "intent": "intents/kernel.md",
+      "items": "`aos7_kernel_rules.py`：`supervise_brain(ctx, snap, rstate)` 純函式（簽名照藍圖 §4）；進度來源＝brain/task.json 的 (id, step) 當基準；沒 task.json＝不納入；run 不合／讀不到＝unknown 不老化、恢復重建基準；老化用來源 completed_tock；≥no_progress_rounds 出 notify 一次、≥kill_after_rounds 出綁 run 的 kill 一個 run 最多一次；新信／新 step／新 run 重建基準；`noop` 規則；fixtures 用真 brain 跑出的 task.json／birth.json 形狀（從 longtask 的 house.tar.gz 抽，不手捏）",
+      "territory": "packs/kernel/aos7_kernel_rules.py、tests/test_kernel_rules.py、tests/fixtures/brain/",
+      "excluded": "不碰 aos7_kernel.py（KC1）；不改 modules/up；不起 daemon（純函式測）",
+      "deps": "無（簽名已凍結）",
+      "gates": "件數 1 線。diff >350 行停下回報",
+      "done": "K05、K07、K08、K09 各一案；三種不觸發（閒置、unknown、已結案）與兩種觸發（notify、kill）各一案；同 run 不重複 kill；fixture 來自真資料（附來源路徑）；全套退出碼 0",
+      "handoff": "brain 的 task.json 由 aos7_up_brain.py:291 寫（欄位 step／line／stall／trail）；brain 自己 3 回合沒進展會先回「要你決定」並刪 task.json，所以規則預設 6／12 是保底，測試要涵蓋「task.json 消失＝結案不是進度」"
+    },
+    {
+      "team": "KE1（範例＋文件＋人類面）",
+      "wave": "2（KC1、KR1 進 main 後）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 範例與文件；gpt-6-luna ×1 跑範例 5 次；Haiku＋luna 當新手試 README",
+      "intent": "intents/kernel.md",
+      "items": "`examples/supervise-brain/run.py`：用 aos7-up 起假 AI node，`aos7-ctl add` 裝 kernel keep 任務與 kernel.json；寄「沒進展」信→第 6 回合 NEEDS-USER、第 12 回合 kill 回條 ok、brain 重起接續；再寄正常信證零動作；README（三行頭＋第一次跑 ≤10 分鐘、不花錢、2 指令 ≤4 概念）；ADVANCED（契約卡、state、規則介面、裝法一行）；INDEX 一列；`tests/test_kernel_example.py` 假 AI 整圈",
+      "territory": "packs/kernel/examples/supervise-brain/、README.md、ADVANCED.md、tests/test_kernel_example.py、proto7-2/INDEX.md 一列",
+      "excluded": "不改 kernel 程式（發現 bug 回報頂層）；不碰 modules/up 的任何檔（M1／ST 在動；只用 CLI）；不碰 QUICKSTART",
+      "deps": "KC1、KR1 進 main；M1／ST 不必等（只用 aos7-up 的 CLI）",
+      "gates": "件數 1 線。diff >400 行停下回報；範例跑 5 次全過；交棒前全套 1 份",
+      "done": "範例 5／5（含 I01：kernel 被殺 brain 照辦）；README 新手 Haiku／luna ≥7、指令 ≤2、概念 ≤4；全套退出碼 0；play/README 一列",
+      "handoff": "範例信的標題含「沒進展」就會讓假 AI 一直回「卡住」（aos7_up_brain.py fake_text）；監督者寄的信要讓旁觀者從 `aos7-up status`／信箱看得出來"
+    },
+    {
+      "team": "KA（astra 審＋SIGKILL 矩陣復驗）",
+      "wave": "2",
+      "lead": "Opus",
+      "workers": "gpt-6-astra（high）×2 read-only（甲：對 kernel-pack §9 K01～K24／I01～I02 逐條；乙：對藍圖 §3～§6 契約逐句）",
+      "intent": "審查，免卡",
+      "items": "逐條核 KC1／KR1 測試是否真的驗到（每條「拿掉修法就紅」抽 5 條手動驗）；找崩潰空窗；新發現編 KN-xx；報告寫 notes/play/2026-10-09-kernel1/README.md",
+      "territory": "notes/play/2026-10-09-kernel1/（新）＋ play/README 一列",
+      "excluded": "不改程式（隊長 commit 報告）",
+      "deps": "KC1、KR1 進 main",
+      "gates": "逐條證據；systemd scope",
+      "done": "報告一份；燈號逐條；發現只記不修（≤5 行單檔例外由頂層代定）",
+      "handoff": "格式照 astra-7"
+    }
+  ]
+}
