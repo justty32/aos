@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA11",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A11/gotchas.txt",
+ "added": [
+  "- 下次寫唯讀彙總前，先把掃描邊界寫死：只看非隱藏信箱的 `inbox/*.md` 與 `inbox/done/*.md`，不跟隨符號連結、不遞迴。",
+  "- 前言欄位只在第一行與後續獨立的 `---` 之間解析；按第一個 `: ` 切分、不修剪值，重複鍵以最後一筆為準。",
+  "- 驗證順序會改變 `bad.why`：先判前言與必填欄位，再判檔名，最後才判重複 id；只有有效信件能占用 id。",
+  "- `--now` 必須有時區且不可讀系統時鐘；資料中的無時區時間用 `--now.tzinfo` 解讀，分鐘差向下取整，負數也一樣。",
+  "- 判定 REQUEST 未結案時，要查所有有效信件的 `re` 與結案狀態；`PROGRESS` 不算結案，尾隨空格的 `re: ` 是空目標。",
+  "- 輸出前逐項核對型別與排序：`v` 必須是整數 1 而非 `true`；空 inbox 仍須列入 boxes，open 與 bad 各依指定鍵排序。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA11-chatgpt-gpt-6-sol-high-e25c648b",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 433,
+   "prompt_tokens": 3317,
+   "total_tokens": 3750,
+   "completion_tokens_details": {
+    "reasoning_tokens": 118
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 3750,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA11-chatgpt-gpt-6-sol-high-e25c648b/receipt.json"
+ }
+}

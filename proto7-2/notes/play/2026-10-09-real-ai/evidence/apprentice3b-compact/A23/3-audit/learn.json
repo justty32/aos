@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA23",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A23/gotchas.txt",
+ "added": [
+  "- 掃描只收各 mailbox 的 `inbox/*.md` 與 `inbox/done/*.md`：排除點開頭、符號連結與非一般檔；有 `inbox` 的 mailbox 即使空的也要出現在 boxes。",
+  "- frontmatter 的界線必須是整行 `---`；欄位只按第一個 `: ` 切，值不 trim、重複鍵取最後一個，避免把空的 `re: ` 誤認成目標。",
+  "- 判壞信要依序查 no_frontmatter、no_field、bad_name、dup_id；只有有效信才佔用 id，並按相對路徑字典序決定誰先佔用。",
+  "- 檔名時間只用來驗證 `YYYYmmddTHHMM` 後緊接 `-` 或 `_`；age_min 要從 frontmatter 的 at 計算，負值也照整除向下取整。",
+  "- REQUEST 是否未結案要查所有有效信的 re 與結案 status，不限同一 mailbox 或 done；PROGRESS 不結案，to 也不必等於資料夾名。",
+  "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/mailtodo/tests`、`python3 check_answer.py <proto7-2> fixture`。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA23-chatgpt-gpt-6-sol-high-7be04098",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 431,
+   "prompt_tokens": 3635,
+   "total_tokens": 4066,
+   "completion_tokens_details": {
+    "reasoning_tokens": 117
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 4066,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA23-chatgpt-gpt-6-sol-high-7be04098/receipt.json"
+ }
+}

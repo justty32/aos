@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "rid": "gapA21",
+ "name": "evgap",
+ "job": "gapA21_0995a901",
+ "candidate_sha": "0995a9016bb9d166293ac9250a7f5eefbd2a57601a7e37b6ff2a38f47421c347",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ }
+}

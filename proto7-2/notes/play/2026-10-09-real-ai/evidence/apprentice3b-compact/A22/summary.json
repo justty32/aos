@@ -1,0 +1,232 @@
+{
+ "variant": "A",
+ "rep": 22,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": true,
+ "stop": null,
+ "calls_total": 128,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA22",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 13616,
+   "review_tokens": 7871,
+   "secs": 132.5,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13616,
+     "review_tokens": 7871,
+     "secs": 120.2,
+     "job": "gapA22_45b708d9",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA22_45b708d9",
+     "commit": "3ff8f57973924b0ac6011d0087aa201c6afd5b36",
+     "dup": false,
+     "secs": 2.3
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 唯讀工具前，先確認允許修改的路徑與件數 gate；這題只准動 `packs/evgap/` 和 `INDEX.md` 一列，不能改 node。",
+     "- 解析 jsonl 要按位元組以 `b'\\n'` 切行；未以換行結尾的最後一行先判 torn，內部 CR 不等於換行。",
+     "- Python 的 `bool` 是 `int` 子類；驗證 `seq`、`next_seq` 和 `acked_upto` 時要用真整數判斷，不能靠轉型。",
+     "- 壞紀錄不參與彙總；重複值仍計入 count，但 must 的 unacked 只計符合條件的不同 seq。",
+     "- 狀態檔壞掉與單一 channel 壞掉的歸零範圍不同；不論有幾個欄位錯，`bad_state` 只加一筆。",
+     "- 唯讀不只是不寫檔：也要核對輸入目錄、檔案位元組、權限與 metadata 不變；實測用 `run_all.py`，再用 `check_answer.py` 獨立核對。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/evgap/tests`、`python3 check_answer.py <proto7-2> fixture`。"
+    ],
+    "secs": 9.9,
+    "tokens": 3358,
+    "bytes_before": 793,
+    "bytes_after": 1783,
+    "compact": {
+     "exit": 0,
+     "bytes": 1783,
+     "over_2k": false
+    }
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA22",
+   "passed": false,
+   "proposed": false,
+   "published": false,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 51441,
+   "review_tokens": 19149,
+   "secs": 291.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 13692,
+     "review_tokens": 9243,
+     "secs": 132.1,
+     "job": "runsA22_6eb2d936",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "錯誤：packs/runs/aos7_runs.py 的 read_table 無條件使用 O_NOATIME。在 Linux 上，若合法表格可讀但屬於其他使用者，且執行者沒有 CAP_FOWNER，os.open 會因 O_NOATIME 回報 EPERM；程式隨即將有效表格判為 bad_table，漏掉全部有效列。這會影響共用或由其他帳號部署的唯讀 node，違反正常讀取與彙總要求。現有測試只讀取自己建立的檔案，未涵蓋此情境；應在維持唯讀與 metadata 要求的前提下處理讀取權限，不能將此類開啟失敗誤判成資料損壞。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 18917,
+     "review_tokens": null,
+     "secs": 71.9,
+     "job": "runsA22_cc96a8f3",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 9125 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 18832,
+     "review_tokens": 9906,
+     "secs": 80.6,
+     "job": "runsA22_9d61e192",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "唯讀：packs/runs/aos7_runs.py 的 read_table 在 O_NOATIME 因 EPERM 被拒絕時，會改用一般 O_RDONLY 讀取輸入檔。讀取其他使用者擁有但允許讀取的檔案即可觸發此分支；在 relatime 需要更新存取時間或 strictatime 的檔案系統上，會修改輸入檔的 atime，即使檔案權限是唯讀也一樣，違反 work 第 3 條要求 metadata 保持不變。test_noatime_permission_fallback 僅驗證成功讀取，未驗證此分支的 metadata 不變。"
+       ]
+      }
+     ]
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 唯讀工具前，要知道 `O_NOATIME` 可能因檔案屬於其他使用者且缺少 `CAP_FOWNER` 而回報 `EPERM`；不能把可讀的有效資料誤判為壞表。",
+     "- `O_NOATIME` 失敗後直接改用 `O_RDONLY`，可能在 relatime 或 strictatime 下更新 atime；測試這條分支時，讀取成功與 metadata 不變都要驗證。",
+     "- 測試檔也受每檔 8192 bytes 上限約束；超出時拆檔，並守住總檔數 ≤12 的 gate。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/tests`、`python3 check_answer.py <proto7-2> fixture`。"
+    ],
+    "secs": 7.3,
+    "tokens": 4264,
+    "bytes_before": 1783,
+    "bytes_after": 2426,
+    "compact": {
+     "exit": 0,
+     "bytes": 2306,
+     "over_2k": true
+    }
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA22",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 14041,
+   "review_tokens": 7761,
+   "secs": 118.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 14041,
+     "review_tokens": 7761,
+     "secs": 106.9,
+     "job": "auditA22_99d7efd1",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA22_99d7efd1",
+     "commit": "d4a06d0d72a6979a3c5117c8714586c17f37bd0c",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 唯讀工具前，先把 `--now` 驗證完再讀資料：缺值、格式錯或沒有時區都退出 2，stdout 留空；不能偷用系統時鐘。",
+     "- 掃描只到各非點名信箱的 `inbox/*.md` 與 `inbox/done/*.md`；跳過點名、symlink、非一般檔和更深層目錄，但空 inbox 的信箱仍要列入 boxes。",
+     "- frontmatter 的界線必須是整行 `---`；欄位只按第一個 `: ` 切開且不修剪值，重複欄位以最後一筆為準。",
+     "- 驗證順序會決定 bad 原因：先 `no_frontmatter`、`no_field`，再 `bad_name`、`dup_id`；無效信件不能搶 id，也不能參與任何彙總。",
+     "- REQUEST 是否仍 open，要看所有有效信件的 `re` 與結案狀態，不限同一信箱；`PROGRESS` 不結案，空 `re` 也不是目標。",
+     "- naive 資料時間套用 `--now.tzinfo`；age_min 對負數也要向下取整，不能用截斷除法。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/mailtodo/tests`、`python3 check_answer.py <proto7-2> fixture`。"
+    ],
+    "secs": 8.2,
+    "tokens": 3971,
+    "bytes_before": 2306,
+    "bytes_after": 3382,
+    "compact": {
+     "exit": 0,
+     "bytes": 2276,
+     "over_2k": true
+    }
+   },
+   "order": 3
+  }
+ ]
+}

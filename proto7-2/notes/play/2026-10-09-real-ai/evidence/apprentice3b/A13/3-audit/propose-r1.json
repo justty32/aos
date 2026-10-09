@@ -1,0 +1,143 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "auditA13-r1-1791546384",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6178,
+   "prompt_tokens": 6703,
+   "total_tokens": 12881,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2508
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 12881,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/auditA13-r1-1791546384/receipt.json"
+ },
+ "review": null,
+ "rid": "auditA13",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A13/3-audit/cand-r1.json",
+ "candidate_sha": "5d47f2b1e7f412e8a0f302d774341f92eaee9a4730c33ea3346ba43f6f4c3a03",
+ "job": "auditA13_5d47f2b1",
+ "rules_check": {
+  "ok": false,
+  "rid": "auditA13",
+  "name": "mailtodo",
+  "job": "auditA13_5d47f2b1",
+  "candidate_sha": "5d47f2b1e7f412e8a0f302d774341f92eaee9a4730c33ea3346ba43f6f4c3a03",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "territory",
+      "why": "README.md"
+     },
+     {
+      "rule": "territory",
+      "why": "bin/aos7-mailtodo"
+     },
+     {
+      "rule": "territory",
+      "why": "aos7_mailtodo.py"
+     },
+     {
+      "rule": "territory",
+      "why": "tests/test_mailtodo.py"
+     },
+     {
+      "rule": "layout",
+      "why": "缺必要檔或入口太長"
+     },
+     {
+      "rule": "tests",
+      "why": "缺測試或測試檔名撞名"
+     },
+     {
+      "rule": "readme",
+      "why": "README 缺指定章節"
+     },
+     {
+      "rule": "lint",
+      "why": "row 壞連結：packs/mailtodo/README.md"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（territory：README.md）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "check": {
+  "ok": false,
+  "rid": "auditA13",
+  "name": "mailtodo",
+  "job": "auditA13_5d47f2b1",
+  "candidate_sha": "5d47f2b1e7f412e8a0f302d774341f92eaee9a4730c33ea3346ba43f6f4c3a03",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "territory",
+      "why": "README.md"
+     },
+     {
+      "rule": "territory",
+      "why": "bin/aos7-mailtodo"
+     },
+     {
+      "rule": "territory",
+      "why": "aos7_mailtodo.py"
+     },
+     {
+      "rule": "territory",
+      "why": "tests/test_mailtodo.py"
+     },
+     {
+      "rule": "layout",
+      "why": "缺必要檔或入口太長"
+     },
+     {
+      "rule": "tests",
+      "why": "缺測試或測試檔名撞名"
+     },
+     {
+      "rule": "readme",
+      "why": "README 缺指定章節"
+     },
+     {
+      "rule": "lint",
+      "why": "row 壞連結：packs/mailtodo/README.md"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（territory：README.md）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 1 關沒過（territory：README.md）。照 stdout JSON 的 gates 修正候選再跑"
+}

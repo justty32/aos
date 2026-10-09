@@ -1,0 +1,32 @@
+# 共通踩坑（跨工作流）
+
+[common/README](README.md)
+
+不專屬任一工作流的坑記 / 查這裡；工作流專屬的坑記在該工作流自己的 `gotchas.md`（長出來後在下表加一列導流）。
+
+**何時用**：使用者說「記個踩坑」「上次也是這樣」；或動手前要查這個現象以前撞過沒。
+**何時不用**：坑專屬某個工作流、而那個工作流已有自己的 `gotchas.md` → 記在那裡；**只撞過一次**的意外 → 不記（門檻是第二次撞到）。
+
+## Done when
+
+- 下表對應的檔多一條坑（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
+
+## 哪類坑記哪裡
+
+| 坑的性質 | 記 / 查這裡 |
+|---------|------------|
+| 共通坑 | **本檔** |
+
+---
+
+（目前無）
+
+## gapA23（chatgpt-gpt-6-sol-high）
+- （摘要 c20261009120306-ca9fd675，7 則）本機摘要：- （摘要 c20261009120115-c6a4ec55，10 則）本機摘要：- 寫唯讀彙總工具前，先劃死可改範圍；；- 驗證列時，先記下非空字串名稱；後續同名列即使另有欄位錯誤，也要判為 dup_name。；- 時間判斷須以帶時區的 `--now` 為準；資料時間沒有時區時沿用它的時區，不可偷讀系統時鐘。；- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/；- 掃描只收各 mailbox 的 `inbox/*.md` 與 `inbox/done/*.md`：排除點開頭、符號連；- frontmatter 的界線必須是整行 `---`；欄位只按第一個 `: ` 切，值不 trim、重複鍵取最後一個；- 判壞信要依序查 no_frontmatter、no_field、bad_name、dup_id；只有有效信才佔用 i（原文 ref://compact/c20261009120306-ca9fd675）
+
+## runsA23（chatgpt-gpt-6-sol-high）
+
+## auditA23（chatgpt-gpt-6-sol-high）
+- 檔名時間只用來驗證 `YYYYmmddTHHMM` 後緊接 `-` 或 `_`；age_min 要從 frontmatter 的 at 計算，負值也照整除向下取整。
+- REQUEST 是否未結案要查所有有效信的 re 與結案 status，不限同一 mailbox 或 done；PROGRESS 不結案，to 也不必等於資料夾名。
+- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/mailtodo/tests`、`python3 check_answer.py <proto7-2> fixture`。

@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": null,
+ "review": null,
+ "rid": "auditA13",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "job": "auditA13_eacd6fb6",
+ "candidate_sha": "eacd6fb672a034355623ef7865245247188bde8e49e267f5354a75ff9e99e57c",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ },
+ "branch": "apprentice/auditA13_eacd6fb6",
+ "commit": "59e0cea950b8fdc61cc9334a665ba8d34d297134",
+ "dup": false
+}

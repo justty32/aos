@@ -1,0 +1,1 @@
+aos7-author: 候選沒過：第 3 關沒過（review：['錯誤：packs/runs/aos7_runs.py 的 read_table 無條件使用 O_NOATIME。在 Linux 上，若合法表格可讀但屬於其…）。照 stdout JSON 的 gates 修正候選再跑。照 stdout JSON 的 issues／gates 改候選，再 propose 一次

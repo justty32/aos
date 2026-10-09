@@ -1,0 +1,49 @@
+# 共通踩坑（跨工作流）
+
+[common/README](README.md)
+
+不專屬任一工作流的坑記 / 查這裡；工作流專屬的坑記在該工作流自己的 `gotchas.md`（長出來後在下表加一列導流）。
+
+**何時用**：使用者說「記個踩坑」「上次也是這樣」；或動手前要查這個現象以前撞過沒。
+**何時不用**：坑專屬某個工作流、而那個工作流已有自己的 `gotchas.md` → 記在那裡；**只撞過一次**的意外 → 不記（門檻是第二次撞到）。
+
+## Done when
+
+- 下表對應的檔多一條坑（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
+
+## 哪類坑記哪裡
+
+| 坑的性質 | 記 / 查這裡 |
+|---------|------------|
+| 共通坑 | **本檔** |
+
+---
+
+（目前無）
+
+## gapA12（chatgpt-gpt-6-sol-high）
+- 寫唯讀彙總工具前，先劃清邊界：只讀輸入與必要 state，不匯入既有寫入、復原或鎖定路徑，也不修改 node。
+- JSONL 要按位元組 `b'\n'` 切行；最後一行沒換行先判 torn，內部 `\r` 仍可作合法 JSON 空白。
+- Python 的 `bool` 是 `int` 子類；驗 `seq`、`next_seq`、`acked_upto` 時要用真正整數判定，不能靠 `isinstance(x, int)`。
+- 壞 JSON 整筆不彙總；重複序號仍計入 count，但 missing、dup 與 must.unacked 要依有效序號分別計算。
+- state 壞掉要只清空受影響頻道的三個 state 欄位，且整份 state 最多加一筆 `bad_state`；缺少 state 不算壞。
+- 先固定輸出鍵、排序與錯誤退出行為，再驗目錄、內容、metadata 都未變；唯讀輸入也要能執行。
+- 必跑 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具
+
+## runsA12（chatgpt-gpt-6-sol-high）
+- 測試檔也受大小 gate 約束：`packs/runs/tests/test_runs.py` 曾因 8360 bytes 超過單檔 8192 bytes 而失敗；案例要及早拆檔，總數仍須 ≤12。
+- 讀表時要拒絕 `NaN`、`Infinity`；JSON 能解析不代表符合 `wf-table/1`，表格結構不合格須整表清空並記 `bad_table`。
+- 每張表的非空名稱即使出現在無效列也要記住；後續同名列報 `dup_name`，優先於 `bad_row`。
+- `--now` 必須帶時區；資料時間若沒帶時區，採用 `--now.tzinfo`，不能拿系統時區補。
+- routines 狀態依序判 `running`、`never`、`failed`、`overdue`、`ok`；`r` 週期永不逾期，`next` 為 null。
+- 秒數週期的 `next` 要換成 UTC `YYYY-MM-DDTHH:MM:SSZ`；小數秒只在輸出時捨去，不可提前截斷影響逾期判定。
+- schedule 的 `claimed` 只要非空就先判 `interrupted`，即使 `at` 已到期也不改判 `due`。
+- runs 工作流必跑 `python3 proto7-2/tests/run_all.py packs/runs/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具
+
+## auditA12（chatgpt-gpt-6-sol-high）
+- 掃描範圍只到各非點名信箱的 `inbox/*.md` 與 `inbox/done/*.md`；只收非點名的一般檔案，排除符號連結，別遞迴。
+- frontmatter 必須以獨占一行的 `---` 開頭，並在下一個獨占一行的 `---` 結束；欄位只按第一個 `: ` 切，保留值的其餘空白，重複鍵以最後一筆為準。
+- 無效信件要按 `no_frontmatter`、`no_field`、`bad_name`、`dup_id` 的優先序判定；只有前面檢查都通過的信件才占用 id，依相對路徑字典序保留第一筆。
+- 檔名時間戳須能解析到分鐘，且後面緊接 `-` 或 `_`；不能只靠正則比對外形，讓不存在的日期混進彙總。
+- REQUEST 是否未結案要跨所有信箱及 done 檔查有效回信；只有 `re` 指向其 id 且狀態為 DONE、BLOCKED、NEEDS-USER 或 FAILED 才算結案，PROGRESS 不算。
+- `boxes` 要保留有 inbox 目錄但沒有有效信件的信箱；inbox 按實際出現的狀態計數，done 則計所有有效封存信件，不按狀態拆分。

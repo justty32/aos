@@ -1,0 +1,31 @@
+# 共通踩坑（跨工作流）
+
+[common/README](README.md)
+
+不專屬任一工作流的坑記 / 查這裡；工作流專屬的坑記在該工作流自己的 `gotchas.md`（長出來後在下表加一列導流）。
+
+**何時用**：使用者說「記個踩坑」「上次也是這樣」；或動手前要查這個現象以前撞過沒。
+**何時不用**：坑專屬某個工作流、而那個工作流已有自己的 `gotchas.md` → 記在那裡；**只撞過一次**的意外 → 不記（門檻是第二次撞到）。
+
+## Done when
+
+- 下表對應的檔多一條坑（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
+
+## 哪類坑記哪裡
+
+| 坑的性質 | 記 / 查這裡 |
+|---------|------------|
+| 共通坑 | **本檔** |
+
+---
+
+（目前無）
+
+## gapA12（chatgpt-gpt-6-sol-high）
+- 寫唯讀彙總工具前，先劃清邊界：只讀輸入與必要 state，不匯入既有寫入、復原或鎖定路徑，也不修改 node。
+- JSONL 要按位元組 `b'\n'` 切行；最後一行沒換行先判 torn，內部 `\r` 仍可作合法 JSON 空白。
+- Python 的 `bool` 是 `int` 子類；驗 `seq`、`next_seq`、`acked_upto` 時要用真正整數判定，不能靠 `isinstance(x, int)`。
+- 壞 JSON 整筆不彙總；重複序號仍計入 count，但 missing、dup 與 must.unacked 要依有效序號分別計算。
+- state 壞掉要只清空受影響頻道的三個 state 欄位，且整份 state 最多加一筆 `bad_state`；缺少 state 不算壞。
+- 先固定輸出鍵、排序與錯誤退出行為，再驗目錄、內容、metadata 都未變；唯讀輸入也要能執行。
+- 必跑 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具

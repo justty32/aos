@@ -1,0 +1,147 @@
+{
+ "variant": "B",
+ "rep": 13,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 79,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB13",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12693,
+   "review_tokens": 7150,
+   "secs": 105.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12693,
+     "review_tokens": 7150,
+     "secs": 102.8,
+     "job": "gapB13_137b561a",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapB13_137b561a",
+     "commit": "0a0969ade7e0c9e692527192ff5f8ba1b9fed37e",
+     "dup": false,
+     "secs": 2.3
+    }
+   ],
+   "learn": null,
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsB13",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 29265,
+   "review_tokens": 8986,
+   "secs": 152.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 12641,
+     "review_tokens": null,
+     "secs": 84.4,
+     "job": "runsB13_2638378b",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "F...\n======================================================================\nFAIL: test_bad_rows_duplicates_and_inherited_timezone (test_runs.RunsTests.test_bad_rows_duplicates_and_inherited_timezone)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/aos-three-88esjpnl/proto7-2/packs/runs/tests/test_runs.py\", line 108, in test_bad_rows_duplicates_and_inherited_timezone\n    self.assertEqual(data[\"routines\"][0][\"state\"], \"ok\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'overdue' != 'ok'\n- overdue\n+ ok\n\n\n----------------------------------------------------------------------\nRan 4 tests in 0.432s\n\nFAILED (failures=1)"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 16624,
+     "review_tokens": 8986,
+     "secs": 64.3,
+     "job": "runsB13_410a4976",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsB13_410a4976",
+     "commit": "3cd51e46589b53f9a3dae48286639774274bd4d4",
+     "dup": false,
+     "secs": 3.5
+    }
+   ],
+   "learn": null,
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditB13",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12804,
+   "review_tokens": 7866,
+   "secs": 129.3,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12804,
+     "review_tokens": 7866,
+     "secs": 126.1,
+     "job": "auditB13_5544c6c1",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditB13_5544c6c1",
+     "commit": "e1fba854e2ed557be78a59675994799012243267",
+     "dup": false,
+     "secs": 3.2
+    }
+   ],
+   "learn": null,
+   "order": 3
+  }
+ ]
+}

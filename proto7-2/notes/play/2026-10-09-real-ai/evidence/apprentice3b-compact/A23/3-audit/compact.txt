@@ -1,0 +1,2 @@
+gotchas.md：11 則 → 5 則（摘掉 7、open 0 全留），3555 → 2244 bytes，原文在 compact/archive/c20261009120306-ca9fd675.md（原因：大小超過 2048）
+{"ok": true, "dry_run": false, "files": [{"job": "c20261009120306-ca9fd675", "file": "gotchas.md", "before_bytes": 3555, "after_bytes": 2244, "count": 7, "open": 0, "trigger": "max_bytes", "at": "2026-10-09T20:03:06.500", "ref": "ref://compact/c20261009120306-ca9fd675"}]}

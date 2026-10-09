@@ -1,0 +1,170 @@
+{
+ "variant": "A",
+ "rep": 15,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 95,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA15",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 13228,
+   "review_tokens": 7344,
+   "secs": 123.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13228,
+     "review_tokens": 7344,
+     "secs": 112.4,
+     "job": "gapA15_3a45c31c",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA15_3a45c31c",
+     "commit": "43dd1794d7283e4c35985451b3351730bca3c20a",
+     "dup": false,
+     "secs": 1.7
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 唯讀工具前，先把輸入目錄視為不可寫；除了允許的 `__pycache__`，不得建立、刪除或改動檔案，也別匯入既有的寫入、修復或鎖定路徑。",
+     "- 解析 JSONL 要按 `b'\\n'` 切位元組；沒有結尾換行的那筆先判 torn，不能用 `splitlines()`，否則可能誤判含 CR 的合法 JSON。",
+     "- Python 的 `bool` 是 `int` 子類；檢查 `seq`、`next_seq`、`acked_upto` 時要用真正的整數型別判斷，且拒絕 `NaN`、`Infinity`。",
+     "- 彙總前先排除無效紀錄；`count` 包含重複筆數，`dup` 列重複序號，`must.unacked` 則只算未確認的有效序號種類。",
+     "- state 壞掉時只加一筆 `bad_state`；整份無效才清空兩個 channel 的狀態欄位，單一 channel 無效不要連帶清空另一個。",
+     "- 以後交接書該點名的工具：用 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 跑實質測試，再用 `python3 check_answer.py <proto7-2> fixture` 獨立核對唯讀與固定答案。"
+    ],
+    "secs": 9.9,
+    "tokens": 3415,
+    "bytes_before": 793,
+    "bytes_after": 1834
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA15",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 13019,
+   "review_tokens": 8752,
+   "secs": 105.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13019,
+     "review_tokens": 8752,
+     "secs": 92.2,
+     "job": "runsA15_17bf0a83",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsA15_17bf0a83",
+     "commit": "3f04e86731e7c26daf77db0b72dcbfb3bdbb62e6",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 彙總工具前，要把壞表與壞列分開處理：壞表整張視為空表並記 `bad_table`；壞列只排除該列，保留其他有效列。",
+     "- 下次驗證列資料時，先記住非空字串名稱，再檢查其他欄位；即使首次出現的列無效，後續同名列仍須判為 `dup_name`，且優先於 `bad_row`。",
+     "- 下次處理時間時，`--now` 必須有時區；資料時間若無時區才套用 `--now.tzinfo`。秒數週期的 `next` 轉 UTC 輸出，`r` 不算逾期。",
+     "- 下次寫 CLI 前，先鎖定失敗契約：路徑或 `--now` 不合法時退出 2 且 stdout 為空；成功時 stdout 恰好一行 JSON。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/tests` 跑實質測試；`python3 check_answer.py <proto7-2> fixture` 獨立核對答案與唯讀。"
+    ],
+    "secs": 9.9,
+    "tokens": 3906,
+    "bytes_before": 1834,
+    "bytes_after": 2712
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA15",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 13813,
+   "review_tokens": 7876,
+   "secs": 144.7,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13813,
+     "review_tokens": 7876,
+     "secs": 129.0,
+     "job": "auditA15_5b958b2d",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA15_5b958b2d",
+     "commit": "8037e2ea291a3bf3e3658e2c0430f02c2c5f1f1f",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 工具前，先固定掃描範圍：只看非隱藏郵箱的 inbox 與 inbox/done 直屬非隱藏、非符號連結的 .md 一般檔；有 inbox 的空郵箱也要列入 boxes。",
+     "- 下次解析信件前，先按輸入相對 POSIX 路徑排序；只讓第一封有效 id 生效，無效信不占 id，並依 no_frontmatter、no_field、bad_name、dup_id 的順序判錯。",
+     "- 下次解析 frontmatter 前，記得分隔線必須獨占一行且恰為 ---；欄位只按第一個「: 」切開、不修剪值，重複鍵以最後一筆為準。",
+     "- 下次計算待辦前，記得任何位置的有效回信都可能結案；只有 re 指向 REQUEST id 且狀態為 DONE、BLOCKED、NEEDS-USER 或 FAILED 才算，PROGRESS 不算。",
+     "- 下次處理 mailtodo 時，檔名時間只用來驗證名稱；age_min 取 frontmatter 的 at 計算並向下取整，負數也要保留。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/mailtodo/tests` 跑實質測試；`python3 check_answer.py <proto7-2> fixture` 核對固定答案與唯讀。"
+    ],
+    "secs": 12.4,
+    "tokens": 4135,
+    "bytes_before": 2712,
+    "bytes_after": 3827
+   },
+   "order": 3
+  }
+ ]
+}

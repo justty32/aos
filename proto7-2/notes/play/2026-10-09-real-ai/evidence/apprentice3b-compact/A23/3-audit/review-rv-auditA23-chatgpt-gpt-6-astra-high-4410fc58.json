@@ -1,0 +1,1 @@
+{"verdict":"accept","reasons":["建議：補測 BLOCKED、NEEDS-USER、FAILED 的跨信箱解決行為，以及未被解決的封存 REQUEST；目前測試僅直接驗證 DONE 能解決請求。","建議：增加輸入目錄與檔案設為唯讀權限的測試，並沿用 metadata 與內容快照核對，直接覆蓋唯讀輸入情境。"]}

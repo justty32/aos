@@ -1,0 +1,27 @@
+{
+ "ok": false,
+ "rid": "runsA23",
+ "name": "runs",
+ "job": "runsA23_1ac184b0",
+ "candidate_sha": "1ac184b04c42cc205b7ddb13a6c0ed4d8f9a0fb1456486bc9fa4e03ae206c303",
+ "failed_gate": 1,
+ "gates": {
+  "1": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "size",
+     "why": "packs/runs/tests/test_runs.py 有 8533 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+    }
+   ]
+  },
+  "2": {
+   "ok": null
+  },
+  "3": {
+   "ok": null
+  }
+ },
+ "_rejected": true,
+ "error": "第 1 關沒過（size：packs/runs/tests/test_runs.py 有 8533 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12））。照 stdout JSON 的 gates 修正候選再跑"
+}

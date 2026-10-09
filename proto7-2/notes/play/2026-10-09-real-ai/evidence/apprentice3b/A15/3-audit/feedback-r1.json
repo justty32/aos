@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "rid": "auditA15",
+ "name": "mailtodo",
+ "job": "auditA15_5b958b2d",
+ "candidate_sha": "5b958b2d4316e75c6404e94caff3fa108c1b4341fe5c6c02513ab15a35d95097",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ }
+}

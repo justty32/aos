@@ -1,0 +1,5 @@
+{"rid": "gapA12", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 11850, "review_tokens": 7031, "secs": 79.5, "job": "gapA12_4303a6d2", "proxy_suspect": false, "issues": []}
+{"rid": "runsA12", "round": 1, "exit": 1, "ok": false, "why": "invalid", "failed_gate": 1, "rules": ["size"], "tokens": 14597, "review_tokens": null, "secs": 101.8, "job": "runsA12_ae9abf32", "proxy_suspect": false, "issues": [{"rule": "size", "why": "packs/runs/tests/test_runs.py 有 8360 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"}]}
+{"rid": "runsA12", "round": 2, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 17724, "review_tokens": 9576, "secs": 66.6, "job": "runsA12_e2bd61c1", "proxy_suspect": false, "issues": []}
+{"rid": "auditA12", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 12942, "review_tokens": 7717, "secs": 97.1, "job": "auditA12_6b2cd149", "proxy_suspect": false, "issues": []}
+{"variant": "A", "rep": 12, "stop": null, "passed": [true, true, true], "reasks": [0, 1, 0]}

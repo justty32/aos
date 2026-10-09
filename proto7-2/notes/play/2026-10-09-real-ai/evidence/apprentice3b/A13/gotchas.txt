@@ -1,0 +1,43 @@
+# 共通踩坑（跨工作流）
+
+[common/README](README.md)
+
+不專屬任一工作流的坑記 / 查這裡；工作流專屬的坑記在該工作流自己的 `gotchas.md`（長出來後在下表加一列導流）。
+
+**何時用**：使用者說「記個踩坑」「上次也是這樣」；或動手前要查這個現象以前撞過沒。
+**何時不用**：坑專屬某個工作流、而那個工作流已有自己的 `gotchas.md` → 記在那裡；**只撞過一次**的意外 → 不記（門檻是第二次撞到）。
+
+## Done when
+
+- 下表對應的檔多一條坑（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
+
+## 哪類坑記哪裡
+
+| 坑的性質 | 記 / 查這裡 |
+|---------|------------|
+| 共通坑 | **本檔** |
+
+---
+
+（目前無）
+
+## gapA13（chatgpt-gpt-6-sol-high）
+- 寫唯讀 aos 工具前，先劃死修改範圍：只碰 `packs/evgap/` 與 `INDEX.md` 一列；讀 node 時不可借用既有寫入、復原或鎖定路徑。
+- 解析 JSONL 前先按 `b'\n'` 切位元組；末行缺換行是 torn，內部 CR 可是合法空白，不能用 `splitlines()` 混淆兩者。
+- 驗證 `seq`、`next_seq`、`acked_upto` 時要排除 bool；Python 的 `bool` 是 `int` 子類，直接用 `isinstance(x, int)` 會誤收。
+- 彙總前先分清記錄數與相異序號數：count 包含重複，must.unacked 只算相異有效序號；壞行不得進入任何統計。
+- 讀 state 時要分開處理整份無效與單一 channel 無效；前者清空兩邊狀態欄位，後者只清空該邊，bad_state 仍只記一次。
+- 測試不能只核對 JSON：還要核對錯誤輸入的退出碼與空 stdout，以及 fixture 前後的檔案、位元組、權限不變；先跑 `python3 proto7-2/tests/run_all.py packs/evgap/tests`，再跑 `python3 check_answer.py <proto7-2> fixture`。以後交接書該點名的工具
+
+## runsA13（chatgpt-gpt-6-sol-high）
+- 寫 `aos7-runs` 前先把 `--now` 當必填輸入驗證：`datetime.fromisoformat` 能解析還不夠，還須有時區；任何錯誤都要退出 2 且 stdout 為空，不能偷讀系統時鐘。
+- 讀兩張 wf table 時，缺檔與壞表不同：缺檔視為空陣列；JSON 無效（含 NaN、Infinity）或表格結構不合約，整張表清空並記一筆 `bad_table`。
+- 驗證 row 前先記錄每個非空字串 name；即使該 row 另有錯誤，後續同名仍須判 `dup_name`，且優先於 `bad_row`。
+- 時間比較前，無時區的資料時間要套用 `--now` 的時區；原字串照抄輸出，只有 `next` 轉為 UTC 秒精度並以 `Z` 結尾。
+- 算 routines 狀態要照 `running → never → failed → overdue → ok` 排優先序；`r` 是回合而非秒數，永不 overdue，`next` 一律為 null。
+- 交付前用 `python3 proto7-2/tests/run_all.py packs/runs/tests` 跑實質測試，再用 `python3 check_answer.py <proto7-2> fixture` 核對唯讀與固定答案；不要只憑自寫測試判定通過。以後交接書該點名的工具
+
+## auditA13（chatgpt-gpt-6-sol-high）
+- 下次寫 aos 工具前，先確認交付檔的完整路徑：`README.md`、入口、模組和測試都要放在 `packs/mailtodo/` 下；放在根目錄會同時觸發範圍與缺檔錯誤。
+- 新增 `INDEX.md` 列時，連結要指向實際存在的 `packs/mailtodo/README.md`；檔案放錯位置也會讓連結檢查失敗。
+- 交付前逐項核對版型：README 必有 `## 第一次跑`，入口不得超過 12 行，測試檔須存在且避免撞名；功能核對通過不代表版型關會過。

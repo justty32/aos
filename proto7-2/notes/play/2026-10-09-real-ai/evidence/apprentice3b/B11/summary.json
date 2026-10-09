@@ -1,0 +1,168 @@
+{
+ "variant": "B",
+ "rep": 11,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 48,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB11",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12277,
+   "review_tokens": 6782,
+   "secs": 89.7,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12277,
+     "review_tokens": 6782,
+     "secs": 87.9,
+     "job": "gapB11_209d92d5",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapB11_209d92d5",
+     "commit": "0b7f7ae86f08004f005d347bf532498d3fb63024",
+     "dup": false,
+     "secs": 1.8
+    }
+   ],
+   "learn": null,
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsB11",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 46780,
+   "review_tokens": 9010,
+   "secs": 220.1,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 11812,
+     "review_tokens": null,
+     "secs": 80.1,
+     "job": "runsB11_8bbb26ae",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 8885 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 17782,
+     "review_tokens": null,
+     "secs": 74.7,
+     "job": "runsB11_6518cb34",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "....E\n======================================================================\nERROR: test_read_only_on_read_only_node (test_runs_invalid.InvalidRunsTests.test_read_only_on_read_only_node)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/aos-three-ml2pj7_m/proto7-2/packs/runs/tests/test_runs_invalid.py\", line 56, in test_read_only_on_read_only_node\n    write_table(node, \"routines\", [routine(\"first\")])\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/aos-three-ml2pj7_m/proto7-2/packs/runs/tests/_runs_support.py\", line 13, in write_table\n    wf.mkdir(exist_ok=True)\n    ~~~~~~~~^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.14/pathlib/__init__.py\", line 1011, in mkdir\n    os.mkdir(self, mode)\n    ~~~~~~~~^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpdnqnzj2f/node/wf'\n\n----------------------------------------------------------------------\nRan 5 tests in 0.458s\n\nFAILED (errors=1)"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 17186,
+     "review_tokens": 9010,
+     "secs": 61.6,
+     "job": "runsB11_fb05bb25",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsB11_fb05bb25",
+     "commit": "b61f5ce6f467ca6a55c22e6acc88a3043f0a2b0b",
+     "dup": false,
+     "secs": 3.7
+    }
+   ],
+   "learn": null,
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditB11",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 14146,
+   "review_tokens": 7657,
+   "secs": 146.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 14146,
+     "review_tokens": 7657,
+     "secs": 142.9,
+     "job": "auditB11_b4c70814",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditB11_b4c70814",
+     "commit": "c0b91caa6aca46c0414c89a11919054a8c544ca1",
+     "dup": false,
+     "secs": 3.4
+    }
+   ],
+   "learn": null,
+   "order": 3
+  }
+ ]
+}

@@ -1,0 +1,195 @@
+{
+ "variant": "A",
+ "rep": 12,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 42,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA12",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 11850,
+   "review_tokens": 7031,
+   "secs": 94.5,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 11850,
+     "review_tokens": 7031,
+     "secs": 79.5,
+     "job": "gapA12_4303a6d2",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA12_4303a6d2",
+     "commit": "80294615cadd36fc4990101a13bb15c280b5cf87",
+     "dup": false,
+     "secs": 2.4
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 寫唯讀彙總工具前，先劃清邊界：只讀輸入與必要 state，不匯入既有寫入、復原或鎖定路徑，也不修改 node。",
+     "- JSONL 要按位元組 `b'\\n'` 切行；最後一行沒換行先判 torn，內部 `\\r` 仍可作合法 JSON 空白。",
+     "- Python 的 `bool` 是 `int` 子類；驗 `seq`、`next_seq`、`acked_upto` 時要用真正整數判定，不能靠 `isinstance(x, int)`。",
+     "- 壞 JSON 整筆不彙總；重複序號仍計入 count，但 missing、dup 與 must.unacked 要依有效序號分別計算。",
+     "- state 壞掉要只清空受影響頻道的三個 state 欄位，且整份 state 最多加一筆 `bad_state`；缺少 state 不算壞。",
+     "- 先固定輸出鍵、排序與錯誤退出行為，再驗目錄、內容、metadata 都未變；唯讀輸入也要能執行。",
+     "- 必跑 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+    ],
+    "secs": 12.6,
+    "tokens": 3521,
+    "bytes_before": 793,
+    "bytes_after": 1781
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA12",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 32321,
+   "review_tokens": 9576,
+   "secs": 183.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 14597,
+     "review_tokens": null,
+     "secs": 101.8,
+     "job": "runsA12_ae9abf32",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 8360 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 17724,
+     "review_tokens": 9576,
+     "secs": 66.6,
+     "job": "runsA12_e2bd61c1",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsA12_e2bd61c1",
+     "commit": "104a913b6875f1a2d3a95252f737bc7bc127bb71",
+     "dup": false,
+     "secs": 3.6
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 測試檔也受大小 gate 約束：`packs/runs/tests/test_runs.py` 曾因 8360 bytes 超過單檔 8192 bytes 而失敗；案例要及早拆檔，總數仍須 ≤12。",
+     "- 讀表時要拒絕 `NaN`、`Infinity`；JSON 能解析不代表符合 `wf-table/1`，表格結構不合格須整表清空並記 `bad_table`。",
+     "- 每張表的非空名稱即使出現在無效列也要記住；後續同名列報 `dup_name`，優先於 `bad_row`。",
+     "- `--now` 必須帶時區；資料時間若沒帶時區，採用 `--now.tzinfo`，不能拿系統時區補。",
+     "- routines 狀態依序判 `running`、`never`、`failed`、`overdue`、`ok`；`r` 週期永不逾期，`next` 為 null。",
+     "- 秒數週期的 `next` 要換成 UTC `YYYY-MM-DDTHH:MM:SSZ`；小數秒只在輸出時捨去，不可提前截斷影響逾期判定。",
+     "- schedule 的 `claimed` 只要非空就先判 `interrupted`，即使 `at` 已到期也不改判 `due`。",
+     "- runs 工作流必跑 `python3 proto7-2/tests/run_all.py packs/runs/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+    ],
+    "secs": 11.8,
+    "tokens": 4108,
+    "bytes_before": 1781,
+    "bytes_after": 2893
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA12",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12942,
+   "review_tokens": 7717,
+   "secs": 111.3,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12942,
+     "review_tokens": 7717,
+     "secs": 97.1,
+     "job": "auditA12_6b2cd149",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA12_6b2cd149",
+     "commit": "93031ee9c1fc0beb0a6e550be058d2306a3ad63f",
+     "dup": false,
+     "secs": 5.5
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 掃描範圍只到各非點名信箱的 `inbox/*.md` 與 `inbox/done/*.md`；只收非點名的一般檔案，排除符號連結，別遞迴。",
+     "- frontmatter 必須以獨占一行的 `---` 開頭，並在下一個獨占一行的 `---` 結束；欄位只按第一個 `: ` 切，保留值的其餘空白，重複鍵以最後一筆為準。",
+     "- 無效信件要按 `no_frontmatter`、`no_field`、`bad_name`、`dup_id` 的優先序判定；只有前面檢查都通過的信件才占用 id，依相對路徑字典序保留第一筆。",
+     "- 檔名時間戳須能解析到分鐘，且後面緊接 `-` 或 `_`；不能只靠正則比對外形，讓不存在的日期混進彙總。",
+     "- REQUEST 是否未結案要跨所有信箱及 done 檔查有效回信；只有 `re` 指向其 id 且狀態為 DONE、BLOCKED、NEEDS-USER 或 FAILED 才算結案，PROGRESS 不算。",
+     "- `boxes` 要保留有 inbox 目錄但沒有有效信件的信箱；inbox 按實際出現的狀態計數，done 則計所有有效封存信件，不按狀態拆分。"
+    ],
+    "secs": 8.7,
+    "tokens": 4160,
+    "bytes_before": 2893,
+    "bytes_after": 3956
+   },
+   "order": 3
+  }
+ ]
+}

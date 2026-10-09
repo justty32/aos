@@ -1,0 +1,32 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA21",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A21/gotchas.txt",
+ "added": [
+  "- 新增 mailtodo 時，README、入口、模組與測試都要放在 `packs/mailtodo/` 內；放在專案根目錄會同時踩到範圍與版面檢查。",
+  "- 先建好 `packs/mailtodo/README.md` 並寫入 `## 第一次跑`，再加 `INDEX.md` 那一列；連結指向尚不存在的檔案會被判壞連結。",
+  "- 入口 `bin/aos7-mailtodo` 要控制在 12 行內；實作移到模組，測試檔用指定的 `tests/test_mailtodo.py`，避免撞名或缺必要檔。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA21-chatgpt-gpt-6-sol-high-0675e766",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 266,
+   "prompt_tokens": 3713,
+   "total_tokens": 3979,
+   "completion_tokens_details": {
+    "reasoning_tokens": 106
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 3979,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA21-chatgpt-gpt-6-sol-high-0675e766/receipt.json"
+ }
+}

@@ -1,0 +1,99 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "auditA14-r1-1791546549",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 8352,
+   "prompt_tokens": 6472,
+   "total_tokens": 14824,
+   "completion_tokens_details": {
+    "reasoning_tokens": 4193
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 14824,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/auditA14-r1-1791546549/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-auditA14-chatgpt-gpt-6-astra-high-1f4e951d",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 219,
+    "prompt_tokens": 7935,
+    "total_tokens": 8154,
+    "completion_tokens_details": {
+     "reasoning_tokens": 203
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 8154,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-auditA14-chatgpt-gpt-6-astra-high-1f4e951d/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A14/3-audit/review-rv-auditA14-chatgpt-gpt-6-astra-high-1f4e951d.json"
+ },
+ "rid": "auditA14",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A14/3-audit/cand-r1.json",
+ "candidate_sha": "ca8093557fe4a29f872a6fa30fed3443847cb96b26e1c9471210259f291967f5",
+ "job": "auditA14_ca809355",
+ "rules_check": {
+  "ok": true,
+  "rid": "auditA14",
+  "name": "mailtodo",
+  "job": "auditA14_ca809355",
+  "candidate_sha": "ca8093557fe4a29f872a6fa30fed3443847cb96b26e1c9471210259f291967f5",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "auditA14",
+  "name": "mailtodo",
+  "job": "auditA14_ca809355",
+  "candidate_sha": "ca8093557fe4a29f872a6fa30fed3443847cb96b26e1c9471210259f291967f5",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}

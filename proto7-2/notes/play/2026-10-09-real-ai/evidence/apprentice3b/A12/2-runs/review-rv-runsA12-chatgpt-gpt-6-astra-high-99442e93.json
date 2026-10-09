@@ -1,0 +1,1 @@
+{"verdict":"accept","reasons":["建議：唯讀測試目前只比對權限、mtime、內容及 wf 直屬項目，可補上完整目錄樹與其他 metadata 的核對，並涵蓋 O_NOATIME 不可用時的讀取路徑。"]}

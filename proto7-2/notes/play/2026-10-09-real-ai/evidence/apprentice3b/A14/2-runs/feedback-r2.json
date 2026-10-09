@@ -1,0 +1,28 @@
+{
+ "ok": false,
+ "rid": "runsA14",
+ "name": "runs",
+ "job": "runsA14_c1adc972",
+ "candidate_sha": "c1adc9721bbbec83c663f9ebbd217e7b262144157df1de0aa3746299e42cc506",
+ "failed_gate": 2,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "test",
+     "why": "First differing element 0:\n{'nam[75 chars]t_code': 0, 'state': 'ok', 'next': '2025-01-02T00:00:00Z'}\n{'nam[75 chars]t_code': 0, 'state': 'overdue', 'next': '2025-01-02T00:00:00Z'}\n\n  [{'every': '1s',\n    'last_code': 0,\n    'last_time': '2025-01-01T23:59:59.500000Z',\n    'name': 'edge',\n    'next': '2025-01-02T00:00:00Z',\n-   'state': 'ok'}]\n?              ^\n\n+   'state': 'overdue'}]\n?              ^^^^^^\n\n\n----------------------------------------------------------------------\nRan 5 tests in 0.361s\n\nFAILED (failures=1)"
+    }
+   ]
+  },
+  "3": {
+   "ok": null
+  }
+ },
+ "_rejected": true,
+ "error": "第 2 關沒過（test：First differing element 0: {'nam[75 chars]t_code': 0, 'state': 'ok', 'next': '2…）。照 stdout JSON 的 gates 修正候選再跑"
+}

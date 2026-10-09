@@ -1,0 +1,55 @@
+{
+ "ok": false,
+ "rid": "gapA11",
+ "name": "evgap",
+ "job": "gapA11_35bc78f7",
+ "candidate_sha": "35bc78f7353a89cd89c3584e5545d5631b4920691a895abd1c44e652991688c1",
+ "failed_gate": 1,
+ "gates": {
+  "1": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "territory",
+     "why": "README.md"
+    },
+    {
+     "rule": "territory",
+     "why": "bin/aos7-evgap"
+    },
+    {
+     "rule": "territory",
+     "why": "aos7_evgap.py"
+    },
+    {
+     "rule": "territory",
+     "why": "tests/test_evgap.py"
+    },
+    {
+     "rule": "layout",
+     "why": "缺必要檔或入口太長"
+    },
+    {
+     "rule": "tests",
+     "why": "缺測試或測試檔名撞名"
+    },
+    {
+     "rule": "readme",
+     "why": "README 缺指定章節"
+    },
+    {
+     "rule": "lint",
+     "why": "row 壞連結：packs/evgap/README.md"
+    }
+   ]
+  },
+  "2": {
+   "ok": null
+  },
+  "3": {
+   "ok": null
+  }
+ },
+ "_rejected": true,
+ "error": "第 1 關沒過（territory：README.md）。照 stdout JSON 的 gates 修正候選再跑"
+}

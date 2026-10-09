@@ -1,0 +1,33 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "gapA11",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A11/gotchas.txt",
+ "added": [
+  "- 新增 aos 工具前先對照範圍：README、入口、模組和測試都要放在 `packs/evgap/`；放在根目錄會先卡 territory 與 layout gate。",
+  "- 加 `INDEX.md` 導流列前，先確認目標 README 已存在、指定章節齊全；入口也要守住 12 行上限。",
+  "- 唯讀彙總不能只驗輸出：還要核對 fixture 的位元組、權限與目錄不變，並測缺檔、壞資料和退出碼。",
+  "- 驗收要點名 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-gapA11-chatgpt-gpt-6-sol-high-2a480e70",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 562,
+   "prompt_tokens": 3118,
+   "total_tokens": 3680,
+   "completion_tokens_details": {
+    "reasoning_tokens": 372
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 3680,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-gapA11-chatgpt-gpt-6-sol-high-2a480e70/receipt.json"
+ }
+}

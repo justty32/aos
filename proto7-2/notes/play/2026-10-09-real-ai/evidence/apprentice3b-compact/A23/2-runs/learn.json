@@ -1,0 +1,34 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA23",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A23/gotchas.txt",
+ "added": [
+  "- 寫 aos 工具前先量測單檔大小；測試檔即使內容正確，超過 8192 bytes 仍會卡關，應拆檔並守住 12 檔上限。",
+  "- 彙總表格時，壞表與壞列要分開處理；NaN、Infinity 不能當合法 JSON 值，壞表也不能繼續彙總其中的列。",
+  "- 驗證列時，先記下非空字串名稱；後續同名列即使另有欄位錯誤，也要判為 dup_name。",
+  "- 時間判斷須以帶時區的 `--now` 為準；資料時間沒有時區時沿用它的時區，不可偷讀系統時鐘。",
+  "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/tests`、`python3 check_answer.py <proto7-2> fixture`。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA23-chatgpt-gpt-6-sol-high-12669a39",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 371,
+   "prompt_tokens": 3618,
+   "total_tokens": 3989,
+   "completion_tokens_details": {
+    "reasoning_tokens": 140
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 3989,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA23-chatgpt-gpt-6-sol-high-12669a39/receipt.json"
+ }
+}

@@ -1,0 +1,1 @@
+{"verdict":"accept","reasons":["建議：補測符號連結與唯讀目錄、重複 frontmatter 鍵最後值優先、跨信箱回覆，以及 BLOCKED／NEEDS-USER／FAILED 的解除待辦行為；目前程式已處理，但現有測試未直接覆蓋。"]}

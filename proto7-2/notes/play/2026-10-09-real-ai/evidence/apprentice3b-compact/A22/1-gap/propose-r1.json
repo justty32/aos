@@ -1,0 +1,99 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "gapA22-r1-1791546976",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 7046,
+   "prompt_tokens": 6570,
+   "total_tokens": 13616,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2994
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 13616,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/gapA22-r1-1791546976/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-gapA22-chatgpt-gpt-6-astra-high-f062c112",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 123,
+    "prompt_tokens": 7748,
+    "total_tokens": 7871,
+    "completion_tokens_details": {
+     "reasoning_tokens": 107
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 7871,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-gapA22-chatgpt-gpt-6-astra-high-f062c112/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A22/1-gap/review-rv-gapA22-chatgpt-gpt-6-astra-high-f062c112.json"
+ },
+ "rid": "gapA22",
+ "kind": "aos-tool",
+ "name": "evgap",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A22/1-gap/cand-r1.json",
+ "candidate_sha": "45b708d90d44abd22d1aa091be6aacac040c31c6296a3599fb15231e6fa2c37c",
+ "job": "gapA22_45b708d9",
+ "rules_check": {
+  "ok": true,
+  "rid": "gapA22",
+  "name": "evgap",
+  "job": "gapA22_45b708d9",
+  "candidate_sha": "45b708d90d44abd22d1aa091be6aacac040c31c6296a3599fb15231e6fa2c37c",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "gapA22",
+  "name": "evgap",
+  "job": "gapA22_45b708d9",
+  "candidate_sha": "45b708d90d44abd22d1aa091be6aacac040c31c6296a3599fb15231e6fa2c37c",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}

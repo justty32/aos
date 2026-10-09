@@ -1,0 +1,23 @@
+| 組 | rep | 題 | rid | 過 | 輪 | 重問 | 學徒 token | 審查 token | learn token | 秒 | 擋下（關:規則） |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| A | 21 | 1 gap | gapA21 | 是 | 1 | 0 | 12456 | 7585 | 3395 | 90.9 | - |
+| A | 21 | 2 runs | runsA21 | 是 | 2 | 1 | 30104 | 8624 | 3905 | 153.9 | 1:size |
+| A | 21 | 3 audit | auditA21 | 是 | 2 | 1 | 28559 | 7752 | 3979 | 160.9 | 1:layout 1:lint 1:readme 1:territory 1:tests |
+| A | 22 | 1 gap | gapA22 | 是 | 1 | 0 | 13616 | 7871 | 3358 | 132.5 | - |
+| A | 22 | 2 runs | runsA22 | 否 | 3 | 2 | 51441 | 19149 | 4264 | 291.9 | 3:review 1:size 3:review |
+| A | 22 | 3 audit | auditA22 | 是 | 1 | 0 | 14041 | 7761 | 3971 | 118.4 | - |
+| A | 23 | 1 gap | gapA23 | 是 | 1 | 0 | 12486 | 7343 | 3498 | 117.2 | - |
+| A | 23 | 2 runs | runsA23 | 是 | 2 | 1 | 30370 | 8577 | 3989 | 182.0 | 1:size |
+| A | 23 | 3 audit | auditA23 | 是 | 1 | 0 | 12726 | 7502 | 4066 | 110.8 | - |
+
+| 關 | 規則 | 次數 |
+|---|---|---|
+| 1 | layout | 1 |
+| 1 | lint | 1 |
+| 1 | readme | 1 |
+| 1 | size | 3 |
+| 1 | territory | 1 |
+| 1 | tests | 1 |
+| 3 | review | 2 |
+
+{"G0": false, "invalid": ["A／B rep 不成對：A=[21, 22, 23] B=[]"], "proxy_suspects": 0, "G1": false, "reask_drop_A": -1, "reask_drop_B": 0, "G2": false, "token_drop_A": -0.4477418098667691, "token_drop_B": null, "G3": false, "t23_A": 55747.0, "t23_B": 0.0, "G4": false, "all_with_learn_A": 80074.66666666667, "all_with_learn_B": 0.0, "verdict": "量不到：A／B rep 不成對：A=[21, 22, 23] B=[]"}

@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA15",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A15/gotchas.txt",
+ "added": [
+  "- 下次寫 aos 工具前，先固定掃描範圍：只看非隱藏郵箱的 inbox 與 inbox/done 直屬非隱藏、非符號連結的 .md 一般檔；有 inbox 的空郵箱也要列入 boxes。",
+  "- 下次解析信件前，先按輸入相對 POSIX 路徑排序；只讓第一封有效 id 生效，無效信不占 id，並依 no_frontmatter、no_field、bad_name、dup_id 的順序判錯。",
+  "- 下次解析 frontmatter 前，記得分隔線必須獨占一行且恰為 ---；欄位只按第一個「: 」切開、不修剪值，重複鍵以最後一筆為準。",
+  "- 下次計算待辦前，記得任何位置的有效回信都可能結案；只有 re 指向 REQUEST id 且狀態為 DONE、BLOCKED、NEEDS-USER 或 FAILED 才算，PROGRESS 不算。",
+  "- 下次處理 mailtodo 時，檔名時間只用來驗證名稱；age_min 取 frontmatter 的 at 計算並向下取整，負數也要保留。",
+  "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/mailtodo/tests` 跑實質測試；`python3 check_answer.py <proto7-2> fixture` 核對固定答案與唯讀。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA15-chatgpt-gpt-6-sol-high-6a6ebaaa",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 456,
+   "prompt_tokens": 3679,
+   "total_tokens": 4135,
+   "completion_tokens_details": {
+    "reasoning_tokens": 113
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 4135,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA15-chatgpt-gpt-6-sol-high-6a6ebaaa/receipt.json"
+ }
+}

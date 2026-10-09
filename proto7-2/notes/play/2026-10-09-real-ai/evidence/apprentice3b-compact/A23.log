@@ -1,0 +1,5 @@
+{"rid": "gapA23", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 12486, "review_tokens": 7343, "secs": 104.5, "job": "gapA23_c5bfbf56", "proxy_suspect": false, "issues": []}
+{"rid": "runsA23", "round": 1, "exit": 1, "ok": false, "why": "invalid", "failed_gate": 1, "rules": ["size"], "tokens": 13330, "review_tokens": null, "secs": 103.5, "job": "runsA23_1ac184b0", "proxy_suspect": false, "issues": [{"rule": "size", "why": "packs/runs/tests/test_runs.py 有 8533 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"}]}
+{"rid": "runsA23", "round": 2, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 17040, "review_tokens": 8577, "secs": 65.9, "job": "runsA23_59ae3351", "proxy_suspect": false, "issues": []}
+{"rid": "auditA23", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 12726, "review_tokens": 7502, "secs": 95.4, "job": "auditA23_309a3566", "proxy_suspect": false, "issues": []}
+{"variant": "A", "rep": 23, "stop": null, "passed": [true, true, true], "reasks": [0, 1, 0]}

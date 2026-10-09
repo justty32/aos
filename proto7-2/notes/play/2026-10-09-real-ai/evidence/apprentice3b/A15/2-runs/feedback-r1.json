@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "rid": "runsA15",
+ "name": "runs",
+ "job": "runsA15_17bf0a83",
+ "candidate_sha": "17bf0a836671dc23e8e5fdb4be973416265e279ea9906826f7c8f207c6a9dc88",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ }
+}

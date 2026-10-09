@@ -1,0 +1,33 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA22",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A22/gotchas.txt",
+ "added": [
+  "- 下次寫 aos 唯讀工具前，要知道 `O_NOATIME` 可能因檔案屬於其他使用者且缺少 `CAP_FOWNER` 而回報 `EPERM`；不能把可讀的有效資料誤判為壞表。",
+  "- `O_NOATIME` 失敗後直接改用 `O_RDONLY`，可能在 relatime 或 strictatime 下更新 atime；測試這條分支時，讀取成功與 metadata 不變都要驗證。",
+  "- 測試檔也受每檔 8192 bytes 上限約束；超出時拆檔，並守住總檔數 ≤12 的 gate。",
+  "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/tests`、`python3 check_answer.py <proto7-2> fixture`。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA22-chatgpt-gpt-6-sol-high-5b2df878",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 316,
+   "prompt_tokens": 3948,
+   "total_tokens": 4264,
+   "completion_tokens_details": {
+    "reasoning_tokens": 111
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 4264,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA22-chatgpt-gpt-6-sol-high-5b2df878/receipt.json"
+ }
+}

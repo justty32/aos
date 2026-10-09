@@ -1,0 +1,34 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA15",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A15/gotchas.txt",
+ "added": [
+  "- 下次寫 aos 彙總工具前，要把壞表與壞列分開處理：壞表整張視為空表並記 `bad_table`；壞列只排除該列，保留其他有效列。",
+  "- 下次驗證列資料時，先記住非空字串名稱，再檢查其他欄位；即使首次出現的列無效，後續同名列仍須判為 `dup_name`，且優先於 `bad_row`。",
+  "- 下次處理時間時，`--now` 必須有時區；資料時間若無時區才套用 `--now.tzinfo`。秒數週期的 `next` 轉 UTC 輸出，`r` 不算逾期。",
+  "- 下次寫 CLI 前，先鎖定失敗契約：路徑或 `--now` 不合法時退出 2 且 stdout 為空；成功時 stdout 恰好一行 JSON。",
+  "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/tests` 跑實質測試；`python3 check_answer.py <proto7-2> fixture` 獨立核對答案與唯讀。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA15-chatgpt-gpt-6-sol-high-48fcfcd6",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 400,
+   "prompt_tokens": 3506,
+   "total_tokens": 3906,
+   "completion_tokens_details": {
+    "reasoning_tokens": 110
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 3906,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA15-chatgpt-gpt-6-sol-high-48fcfcd6/receipt.json"
+ }
+}
