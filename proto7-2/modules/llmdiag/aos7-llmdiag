@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""唯讀列出 node 中未完成的工作與 inflight。"""
+import sys
+sys.dont_write_bytecode = True
+from aos7_llmdiag import main
+
+if __name__ == '__main__':
+    raise SystemExit(main())
