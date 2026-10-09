@@ -1,0 +1,10 @@
+{
+ "note": "demo node 的 AI",
+ "messages": [
+  {"role": "system", "content": [
+   {"$opt": "file", "$val": "wf/AGENTS.md"},
+   {"$opt": "tail", "$val": "wf/SESSION-LOG.md", "n": 20}
+  ]},
+  {"role": "user", "content": {"$fmt": {"$val": "你是「${who}」。接著做 SESSION-LOG 最上面那項。", "who": {"$ref": "", "$at": "/note"}}}}
+ ]
+}

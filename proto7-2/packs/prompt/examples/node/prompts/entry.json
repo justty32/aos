@@ -1,0 +1,7 @@
+{
+ "note": "範例 1：只給 AGENTS 入口",
+ "messages": [
+  {"role": "system", "content": {"$opt": "file", "$val": "wf/AGENTS.md"}},
+  {"role": "user", "content": "照入口說你下一步要讀哪個檔。"}
+ ]
+}
