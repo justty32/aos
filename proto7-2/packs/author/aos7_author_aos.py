@@ -255,17 +255,18 @@ def main_aos(a):
             out_i = None if not a.out or i == 0 else '%s-r%d%s' % (os.path.splitext(a.out)[0], i, os.path.splitext(a.out)[1])
             b = Namespace(**dict(vars(a), llm=model, call=rung_call(a.call, i), out=out_i or a.out,
                                  previous=prev[0], feedback=prev[1]))
+            mine = dict(out)
             try:
-                r = propose_one(b, req, dict(out))
+                r = propose_one(b, req, mine)
             except (ValueError, UnicodeError, KeyError, TypeError) as exc:
-                return dict(out, ok=False, why='invalid', error=str(exc))
+                return dict(mine, ok=False, why='invalid', error=str(exc))
             except (OSError, subprocess.TimeoutExpired) as exc:
-                return dict(out, ok=False, why='unknown', error=str(exc))
+                return dict(mine, ok=False, why='unknown', error=str(exc))
             if r.get('candidate_path') and isinstance(r.get('check'), dict):
                 prev[:] = [r['candidate_path'], r['check']]
             return r
-        # 只有三關（含審查）真的擋下才升級；審查模型沒答成不算
-        return climb(attempt, lambda r: isinstance(r.get('check'), dict) and r['check'].get('failed_gate') is not None)
+        # 只有三關（含審查）真的擋下（檢查器退 1）才升級；審查模型沒答成、檢查器參數錯（退 2）不算
+        return climb(attempt, lambda r: isinstance(r.get('check'), dict) and bool(r['check'].get('_rejected')))
     except (ValueError, UnicodeError, KeyError, TypeError) as exc:
         return dict(out, ok=False, why='invalid', error=str(exc))
     except (OSError, subprocess.TimeoutExpired) as exc:

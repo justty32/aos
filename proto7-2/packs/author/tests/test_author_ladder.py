@@ -104,6 +104,15 @@ class TestLadderCSV(Replies, csv_case.TestAuthorLLM):
         self.assertLessEqual(len(out['rounds'][1]['call_id']), 64)
         self.assertTrue(out['rounds'][1]['call_id'].endswith('-r1'))
 
+    def test_flag_before_command(self):
+        out = self.propose_argv('--llm', 'propose', 'csv1', '--budget', '../llm/budget/llm')
+        self.assertEqual([r['model'] for r in out['rounds']], [LADDER[0]])
+
+    def propose_argv(self, *argv):
+        p = self.cli(*argv)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        return json.loads(p.stdout)
+
     def test_literal_auto_is_a_model_name(self):
         p = self.cli('propose', 'csv1', '--llm', 'auto', '--budget', '../llm/budget/llm')
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
@@ -145,3 +154,18 @@ class TestLadderAos(Replies, aos_case.TestAuthorAosCLI):
         self.assertEqual(out['candidate_path'], str(Path(self.node, 'cand-r1.json').resolve()))
         self.assertEqual(self.models(), [LADDER[0], LADDER[1], 'test/review'])
         self.assertEqual([r['model'] for r in out['rounds']], list(LADDER[:2]))
+
+    def test_checker_usage_error_does_not_climb(self):
+        self.content = (USAGE / 'valid.json').read_text()
+        out = self.checked(self.aos('--budget', self.bd, '--reviewer', 'file:' + str(Path(self.node, 'missing.json')), '--llm'), 1)
+        self.assertEqual(self.models(), [LADDER[0]])
+        self.assertEqual(len(out['rounds']), 1)
+
+    def test_rung_exception_keeps_its_round(self):
+        self.replies = {LADDER[0]: (USAGE / 'bad-link.json').read_text()}
+        Path(self.node, 'cand-r1.json').mkdir()
+        out = self.checked(self.aos('--budget', self.bd, '--out', 'cand.json', '--llm'), 3)
+        self.assertEqual(out['why'], 'unknown')
+        self.assertEqual(self.models(), list(LADDER[:2]))
+        self.assertEqual(out['rounds'][1]['usage'], self.usage)
+        self.assertTrue(out['rounds'][1]['call_id'])

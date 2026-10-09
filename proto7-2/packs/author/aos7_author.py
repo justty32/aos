@@ -888,33 +888,38 @@ def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
     aos_flags = ('reviewer', 'review_llm', 'out', 'context', 'gotchas', 'previous',
                  'feedback', 'history', 'into', 'repo', 'ref', 'no_scope')
-    positionals, optional_at = [], None
     options = dict(ap._option_string_actions)
     options.update({'--' + flag.replace('_', '-'): None for flag in aos_flags})
-    i = 0
-    while i < len(args):
-        token = args[i]
-        if token == '--':
-            positionals.extend(args[i + 1:])
-            break
-        if token.startswith('-'):
-            flag = token.split('=', 1)[0]
-            matches = [name for name in options if name.startswith(flag)]
-            action = options.get(matches[0]) if len(matches) == 1 else None
-            takes_value = action.nargs != 0 if action is not None else flag != '--no-scope'
-            if action is not None and action.nargs == '?' and '=' not in token:
-                if i + 1 >= len(args) or args[i + 1].startswith('-'):
-                    takes_value = False
-                else:
-                    optional_at = i + 1
-            i += 2 if takes_value and '=' not in token else 1
-        else:
-            positionals.append(token)
-            i += 1
+
+    def scan(args):
+        positionals, optional_at = [], None
+        i = 0
+        while i < len(args):
+            token = args[i]
+            if token == '--':
+                positionals.extend(args[i + 1:])
+                break
+            if token.startswith('-'):
+                flag = token.split('=', 1)[0]
+                matches = [name for name in options if name.startswith(flag)]
+                action = options.get(matches[0]) if len(matches) == 1 else None
+                takes_value = action.nargs != 0 if action is not None else flag != '--no-scope'
+                if action is not None and action.nargs == '?' and '=' not in token:
+                    if i + 1 >= len(args) or args[i + 1].startswith('-'):
+                        takes_value = False
+                    else:
+                        optional_at = i + 1
+                i += 2 if takes_value and '=' not in token else 1
+            else:
+                positionals.append(token)
+                i += 1
+        return positionals, optional_at
+
+    positionals, optional_at = scan(args)
     if optional_at is not None and len(positionals) < 2:
         # `propose --llm csv1 …`：少了 rid／需求檔，那個值其實是位置參數，--llm 沒給模型
-        args.insert(optional_at - 1, args.pop(optional_at))
-        positionals.append(args[optional_at - 1])
+        args[optional_at - 1] = '--llm=\0auto'
+        positionals, _ = scan(args)
     is_aos = False
     if len(positionals) >= 2 and positionals[0] in ('propose', 'publish', 'learn') and os.path.isfile(positionals[1]):
         from aos7_author_aos import strict
