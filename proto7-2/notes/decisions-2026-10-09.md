@@ -107,3 +107,8 @@
 - C｜B2：budget 部分結算（0≤用量≤預留）；cancel 遇到別的入口留下的任何非終局紀錄都回 unknown（比凍結介面的「intent」更嚴）；overrun 欄存在但 null 判 unknown；billing final 帶 overrun>0 照收
 - C｜G1：假傳輸閘道 `packs/llmcall/` 完成；遠端次數只按 call ID 算；adopt 被拒印 `refused` 退出 1；billing pending 不寫 receipt.json（每次重跑重算、退出 4）；deadline 限 0～86400 秒；diff 1152 行（全新檔）照 D7 接受
 - 已知限制｜G1：budget `cancel` 在 intent 寫入前取消時，寫出的取消紀錄缺 gateway／call_id 等欄（llmcall 會補預設值仍可用），要改 budget，留下一輪
+
+## 使用者 14:20 回覆
+
+- 使用者：**大決定都 OK**；**准許接真 AI**（本地 LiteLLM，不用 `lm-*`，盡量 gpt 系），token／輸出長度／context 全部拉到極限，跑完大段落再依消耗定限制；要持續往前推進
+- B｜頂層：真 AI 先接在 llmcall 當第二種傳輸（`llm.litellm`），再讓學徒（author）用真 AI 產候選，走完一整圈：真 AI 寫草稿 → 三關檢查 → 發布 → step 跑 → 答案檢查；每次呼叫的 token 用量都記帳，跑完出一份消耗報告
