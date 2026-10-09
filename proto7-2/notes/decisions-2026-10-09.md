@@ -194,3 +194,4 @@
 - 發現｜F1：重跑 `wfnode init` 會把信裡的 `{{user}}` 改成「（未定：user）」→ 交 wfnode 修
 - C｜ER-routines：`add` 不再改 tasks.json（aos7-up 已自己裝 routines 任務）；`rm` 遇到沒清單的 node 不再建資料夾；格式錯改退 2、`ls --run` 遇鎖忙改退 3。新手 Haiku 7／luna 8
 - 觀察｜llmcall `test_in_process_drip` 在全套負載下偶發失敗一次、單跑全過；再出現就查
+- C｜ER-compact：不需整理時不再寫狀態檔；發事件改成可選（compact.json 的 `events`，預設關，發不出也不影響結果）；意外錯誤改退 3；README 只留新手部分。真 AI 壓縮 73%。新手 Haiku 7.6／luna 9.0
