@@ -276,3 +276,4 @@
 - B｜kernel 藍圖 [blueprint-kernel1](blueprint-kernel1.md)：新包 `packs/kernel/`、核心零改動；kernel 是普通 keep 任務，每個 tock 讀公開事實→純函式規則→先存意圖再送控制。第一條規則 **supervise-brain**：腦 6 回合沒進展就寄信問你、12 回合才 kill（腦自己 3 回合沒進展就會先問你，所以 kernel 是保底，只有腦真的壞死才會走到 kill）；同一次執行最多 kill 一次。對外 2 個指令（run、status），新手面零新概念、不進 aos7-up
 - C｜LT2：compact 摘要改成人看得懂（按信分組、列每回合做了什麼）；預設整理範圍加入 `STATE.md`（跟 wfnode 用同一把鎖）；門檻 16384→2048 bytes、保留最近 5 則。長任務裡會觸發 3 次，STATE.md 與 journal 各縮約一半；新手標準題 Haiku 7.2／luna 8.6
 - 待 brain｜LT2 發現：腦的提示裡根本沒帶 STATE.md 和 journal，所以壓縮沒省到 token；brain 的 `compact_if_big` 仍寫死舊門檻；STATE 去重靠數文字，壓縮後可能重寫一行 → M1 補丁之後開 brain 小修
+- C｜M1 補丁：「卡住」回信改白話——正文只講哪封信、被打斷、兩條路（什麼都不做／再寄一次），真假 AI 分開說要不要錢；call id、預留、指令移到信尾「進階（給維護者）」
