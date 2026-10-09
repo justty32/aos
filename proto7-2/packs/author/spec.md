@@ -108,13 +108,15 @@ step 不改：表項起 `aos7-step run jobs/<job>`（keep、`max_live:1`、`rest
 
 - `send <request.json> [--events events]`：嚴格 UTF-8 JSON、只驗 rid；送 `author.request`、`author/<rid>`，payload＝`{v:1,rid,request_sha,request}`（原文字串與原 bytes SHA-256），node 取 node 目錄名。完整欄位與輸入雜湊留到收件驗。
 - 保存成功含 dup 回 `seq`／`dup`；dup 讀回同 seq 比 request_sha，異文＝conflict，已淘汰則照成功。full 不算送出（退出 1）；unknown 照同 rid 重送；usage／too_large＝invalid。退出碼沿用 §8。
-- `intake [--events events] [--limit 20]`：作者是該 must 通道唯一消費者，全程共用 author.lock；只登記需求，不自動 propose／publish。
+- send 前看 events 夾在不在：不在（FileNotFoundError）＝conflict（退出 1），不建夾、不寫任何檔；夾由 aos7-up 或 `aos7-events pub --create` 建。
+- `intake [--events events] [--limit 20]`：只消費 `author.request`，全程共用 author.lock；只登記需求，不自動 propose／publish。
 - `author/events.json`＝`{v:1,events:<realpath>,cursor:N,last:{seq,event_id,rid,result,request_sha,error?}|null}`；cursor 是下一 seq，last 只留最後一筆收件回條（含拒絕原因）。不存在從 events 的 acked_upto＋1 起；壞／不可讀＝unknown；events 路徑不同＝conflict。
 - 順序：先補 `ack(cursor-1)` → 逐筆 read → 驗 payload 型別、版本、識別與原文雜湊 → 共用 register 驗證 → `intake-before-receipt` → 原子寫游標與回條 → `intake-after-receipt` → ack。恢復補 ack 前也觸發 after-receipt，供連續 SIGKILL 驗收。
-- 外來 kind＝ignored；壞 payload＝invalid；登記結果＝registered／dup／invalid／conflict。這些確定答案都寫回條並 ack，壞事件不卡後續。登記 unknown 不寫回條、不 ack、不推游標；讀取 errors（含 seq_hole）或 I/O／ack 未知都停下回 unknown。retention gaps 可取下一保留紀錄繼續。
+- 外來 kind（RV-fix-C，10-09）：讀 events state 的 acked_upto，≥ 該 seq＝別人已確認，讓過（不寫回條、不 ack、不算 limit）；否則停下，回 `{ok:false,why:"conflict",handled,cursor,acked_upto,blocked:{seq,kind,event_id},error}`，不寫回條、不 ack。舊帳 last.result＝ignored 照舊可讀，但不算處理完：恢復時從那筆重讀、照上面規則讓過或停下，不直接補 ack。
+- 壞 payload＝invalid；登記結果＝registered／dup／invalid／conflict。這些確定答案都寫回條並 ack，壞事件不卡後續。登記 unknown 不寫回條、不 ack、不推游標；讀取 errors（含 seq_hole）或 I/O／ack 未知都停下回 unknown。retention gaps 可取下一保留紀錄繼續。
 - 開頭在鎖內清作者夾的死暫存（回條寫到一半被殺不累積）；需求驗證中的編碼／值錯誤（如路徑含孤立代理字元）＝invalid，不當 unknown。
 - 回條前被殺重讀同筆；回條後被殺只補 ack、不重做。成功回 `{ok:true,why:null,handled:[{seq,rid,result}],cursor,acked_upto}`，unknown 回 `{ok:false,why:"unknown",handled,error}`。
-- 明確不管：多消費者、自動發布、obs 通道、窗口外去重；其他界線見 §9。
+- 明確不管：替別的消費者確認、自動發布、obs 通道、窗口外去重；其他界線見 §9。
 
 ## 11. LLM 來源（--llm）
 

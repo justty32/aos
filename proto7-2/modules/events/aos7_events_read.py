@@ -147,7 +147,7 @@ def main(argv=None):
     ap.add_argument("--cursor", type=int, help="從這個 seq 開始讀；把上次的 next_cursor 帶回來就接著讀")
     ap.add_argument("--round", type=int, help="只看這個回合的事件")
     ap.add_argument("--run", type=int, help="只看這個 run 的事件")
-    ap.add_argument("--ack", type=int, help="（舊寫法，仍可用；要搭 --channel must）確認 seq ≤ 這個數的都處理完了；只做確認、不讀")
+    ap.add_argument("--ack", type=int, help="（舊寫法，下一輪移除；改用 aos7-events ack）確認 seq ≤ 這個數的都處理完了；只做確認、不讀")
     ap.add_argument("--kind", help="只看這種 kind")
     ap.add_argument("--source", help="只看這個來源 node")
     ap.add_argument("--limit", type=int, default=100, help="最多幾筆（預設 100）")
@@ -156,7 +156,10 @@ def main(argv=None):
     if a.ack is not None:
         if a.channel != "must" or a.ack < 0:
             ap.error("--ack 須使用 must 通道與非負整數")
-        return ack_main(a.events, a.ack)
+        code = ack_main(a.events, a.ack)
+        if code == 0:   # 失敗時 stderr 只留那一行錯誤（錯誤藍圖 §3）
+            say("read --ack 是舊寫法，下一輪移除。改用 aos7-events ack --events %s %d" % (a.events, a.ack))
+        return code
     try:
         result = read(a.events, a.channel, a.cursor, kind=a.kind, source=a.source, round=a.round, run=a.run, limit=a.limit)
     except ValueError as e:

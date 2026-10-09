@@ -17,6 +17,7 @@ class TestAuthorEvents(TestAuthorHelpers):
         node = self.mknode()
         path = self.request(node)
         events = str(Path(node, "events"))
+        os.mkdir(events)                              # send 不替別人建 events 夾；起 node 的人先開
         self.assertEqual(self.good(pub.send_request(node, str(path), events))["seq"], 1)
         return node, path, events
 
@@ -70,8 +71,10 @@ class TestAuthorEvents(TestAuthorHelpers):
         self.refused(pub.send_request(node, str(path), events), "full")
         self.cli(node, "send", path, rc=1, why="full")
         self.assertFalse(Path(node, "author").exists())
-        self.assertEqual(len(self.good(pub.intake(node, events))["handled"]), 2)
-        self.assertEqual(regular_files(Path(node, "author")), ["author.lock", "events.json"])
+        got = self.refused(pub.intake(node, events), "conflict")   # 別人的事件沒確認：停下、不替它 ack
+        self.assertEqual((got["handled"], got["blocked"]), ([], dict(seq=1, kind="other", event_id="fill/0")))
+        self.assertEqual(self.acked(events), 0)
+        self.assertEqual(regular_files(Path(node, "author")), ["author.lock"])
         self.assertFalse(Path(node, "author/req/unsent/request.json").exists())
 
     def test_conflict_and_bad_payload_then_good(self):

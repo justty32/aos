@@ -13,3 +13,4 @@
 - 三關 `publish` 預設把分支建在檢查器所在的真 repo → **改成可選**：`--repo` 必填，沒給印「會建在哪」不建（U 隊也點名沒標風險）。
 - `propose --llm` 預設預留 100 萬 token → **保留**（軟預算）但 README 標明。
 - `propose` 換候選時 rmtree 舊未發布 job → **保留**（自己的檔）。
+- `intake` 遇外來 kind 記 ignored 照樣 ack（會替 mail 提前確認）→ **改成停下、不 ack**，stderr 說哪個 kind 擋住；別人已確認的才讓過。`send` 不再替沒 events/ 的 node 建夾（退 1）。（RV-fix-C，10-09）

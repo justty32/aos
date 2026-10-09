@@ -186,6 +186,11 @@ def send_request(node, request_path, events_dir):
         rid = req.get("rid") if isinstance(req, dict) else None
         check_rid(rid)
         payload = dict(v=1, rid=rid, request_sha=sha256(raw), request=raw.decode("utf-8"))
+        try:
+            os.stat(events_dir)
+        except FileNotFoundError:                    # 不替別人的 node 建 events 夾（跨包副作用歸 up）
+            raise Refuse("conflict", "對方沒開 events（%s 不存在），作者不替別人建夾；請用 aos7-up 起 node，"
+                         "或 aos7-events pub --create 先建" % events_dir)
         pub, reader, _ = _events()
         sent = pub.publish(events_dir, "author.request", "author/" + rid, payload,
                            must=True, node=os.path.basename(nd.node))
@@ -212,8 +217,6 @@ def _intake_record(nd, rec):
     p = rec.get("payload")
     rid = p.get("rid") if isinstance(p, dict) and isinstance(p.get("rid"), str) else None
     rsha = p.get("request_sha") if isinstance(p, dict) and isinstance(p.get("request_sha"), str) else None
-    if rec.get("kind") != "author.request":
-        return rid, rsha, "ignored", "外來 kind"
     try:
         check_rid(rid)
         if not (type(p.get("v")) is int and p["v"] == 1 and isinstance(p.get("request"), str)
@@ -229,8 +232,18 @@ def _intake_record(nd, rec):
     return rid, rsha, ("dup" if r.get("dup") else "registered") if r["ok"] else r["why"], r.get("error")
 
 
+def _foreign(store, events, rec):
+    """別人的 must 事件：已被確認（acked_upto ≥ seq）回目前確認值、讓過；還沒確認回 None＝停下，不替它 ack。"""
+    st = store.load_state(events)
+    upto = st["channels"]["must"]["acked_upto"] if st is not None else None
+    if type(upto) is not int or upto < 0:
+        raise Unknown("events 確認進度讀不到或格式不合")
+    return upto if upto >= rec["seq"] else None
+
+
 def intake(node, events_dir, limit=20):
-    """唯一 must 消費者：登記 → 固定回條 → ack；重起先補上次 ack。"""
+    """只收 author.request：登記 → 固定回條 → ack；重起先補上次 ack。
+    遇別人的事件（mail.request 等）：別人已確認就讓過；沒確認就停下回 conflict＋blocked，不替它 ack。"""
     nd = node if isinstance(node, Node) else Node(node)
     handled = []
     cursor, acked = None, 0
@@ -265,16 +278,29 @@ def intake(node, events_dir, limit=20):
                 if doc["events"] != events:
                     return result(False, "conflict", error="事件目錄與作者游標不符")
                 cursor = doc["cursor"]
+                if last is not None and last["result"] == "ignored":
+                    cursor = last["seq"]     # 舊版帳：ignored 不是處理完的證據，重讀那筆走外來事件規則，不直接補 ack
             if cursor > 1:
                 test_point("author:intake-after-receipt")  # 恢復仍在同一個回條與 ack 窗口，可連續殺死
                 acked = store.ack(events, cursor - 1)
-            for _ in range(limit):
+            while len(handled) < limit:
                 got = reader.read(events, "must", cursor=cursor, limit=1)
                 if got["errors"]:
                     raise Unknown("事件讀取有錯：%s" % got["errors"])
                 if not got["records"]:
                     break
                 rec = got["records"][0]
+                if rec.get("kind") != "author.request":
+                    upto = _foreign(store, events, rec)
+                    if upto is None:
+                        blocked = dict(seq=rec["seq"], kind=rec.get("kind"), event_id=rec.get("event_id"))
+                        return result(False, "conflict", handled=handled, cursor=cursor, acked_upto=acked, blocked=blocked,
+                                      error="must 第 %d 筆是別人的事件 %s（%s），作者不替它確認、停在這裡；"
+                                            "等它的主人處理並確認後再 intake（mail 的信用 aos7-mail 辦完；確定沒人要用 "
+                                            "aos7-events ack --events %s %d）"
+                                            % (rec["seq"], rec.get("kind"), rec.get("event_id"), events_dir, rec["seq"]))
+                    cursor, acked = rec["seq"] + 1, max(acked, upto)   # 別人已確認：讓過，不寫回條、不算筆數
+                    continue
                 rid, rsha, answer, error = _intake_record(nd, rec)
                 if answer == "unknown":
                     raise Unknown(error or "登記結果不明")
