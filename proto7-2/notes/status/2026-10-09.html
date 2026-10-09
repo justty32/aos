@@ -1,0 +1,191 @@
+<title>aos 今日戰況</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* layout: 一欄手機優先的「工地看板」：每段一張圖＋兩三句白話 */
+:root{
+  --bg:#f3f5f2; --panel:#ffffff; --ink:#1d2622; --mute:#5f6b65; --line:#d5dcd7;
+  --accent:#0f7b6c; --accent-soft:#d6efe9; --warn:#b5651d; --warn-soft:#f6e6d4;
+  --run:#3a5bbf; --run-soft:#dfe6fa; --done:#2f8f4e; --done-soft:#dcf1e2;
+  --sans:"Noto Sans TC",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111715; --panel:#18211e; --ink:#e4ece8; --mute:#9aa8a1; --line:#2c3833;
+  --accent:#4cc2ae; --accent-soft:#163731; --warn:#e3a061; --warn-soft:#3a2a1b;
+  --run:#8aa4f2; --run-soft:#1d2744; --done:#6fcf8f; --done-soft:#17321f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111715; --panel:#18211e; --ink:#e4ece8; --mute:#9aa8a1; --line:#2c3833;
+  --accent:#4cc2ae; --accent-soft:#163731; --warn:#e3a061; --warn-soft:#3a2a1b;
+  --run:#8aa4f2; --run-soft:#1d2744; --done:#6fcf8f; --done-soft:#17321f; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.7}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:22px}
+h1{font-size:1.7rem;font-weight:900;margin:0;text-wrap:balance;line-height:1.3}
+h2{font-size:1.2rem;font-weight:700;margin:0 0 6px;text-wrap:balance}
+p{margin:0}
+.stamp{font-family:var(--mono);font-size:.8rem;color:var(--mute);letter-spacing:.04em}
+.lead{color:var(--mute)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.fig{overflow-x:auto}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.small{font-size:.88rem;color:var(--mute)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:.85rem;padding:3px 10px;border-radius:999px;border:1px solid var(--line)}
+.chip.done{background:var(--done-soft);color:var(--done);border-color:transparent}
+.chip.run{background:var(--run-soft);color:var(--run);border-color:transparent}
+.chip.wait{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+.big{font-size:2.2rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{display:flex;flex-direction:column;gap:4px}
+@media (max-width:420px){.kpis{grid-template-columns:1fr 1fr}}
+.you{border-left:4px solid var(--warn)}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:6px">
+    <span class="stamp">2026-10-09（五）· 最後更新 12:30 · 家裡 Manjaro</span>
+    <h1>aos 今日戰況</h1>
+    <p class="lead">一句話：上午把 loop7 修補全部做完、測試全綠；下午在做「事件保存」第一版。沒有卡在你身上的事。</p>
+  </header>
+
+  <section>
+    <h2>今天走到哪了</h2>
+    <div class="fig">
+    <svg viewBox="0 0 640 120" role="img" aria-label="今天時間軸，10:45 到 18:00，目前約 12:30">
+      <rect x="20" y="50" width="600" height="14" rx="7" fill="var(--line)"/>
+      <!-- 10:45..18:00 = 435 分鐘 → 600px；12:30 = 105 分 → 145px -->
+      <rect x="20" y="50" width="145" height="14" rx="7" fill="var(--accent)"/>
+      <circle cx="165" cy="57" r="9" fill="var(--panel)" stroke="var(--accent)" stroke-width="4"/>
+      <text x="165" y="35" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent)">現在 12:30</text>
+      <text x="20" y="92" font-size="12" fill="var(--mute)">10:45 開工</text>
+      <text x="62" y="112" font-size="12" fill="var(--mute)">上午：loop7 修補（已完成）</text>
+      <text x="400" y="92" text-anchor="middle" font-size="12" fill="var(--mute)">下午：事件保存</text>
+      <text x="620" y="92" text-anchor="end" font-size="12" fill="var(--mute)">18:00 收</text>
+      <line x1="537" y1="45" x2="537" y2="70" stroke="var(--warn)" stroke-width="2"/>
+      <text x="537" y="35" text-anchor="middle" font-size="12" fill="var(--warn)">17:30 總整理</text>
+    </svg>
+    </div>
+    <p class="small">原本排到 15:30 才做完的修補，11:30 前就全部進主線了，所以下午提早開新工作。</p>
+  </section>
+
+  <section>
+    <h2>上午：把工廠的漏洞補起來（loop7）</h2>
+    <p>想像 aos 是一間工廠：<b>daemon</b> 是工頭、<b>任務</b>是工人、每「回合」是一個班次。上午九組人各修一塊，修好的都有測試守著。</p>
+    <div class="fig">
+    <svg viewBox="0 0 640 210" role="img" aria-label="九組修補全部完成">
+      <g font-size="13">
+        <g transform="translate(10,10)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 工人被叫停</text><text x="12" y="44" fill="var(--ink)" font-size="12">還在換衣服就被叫停→先說「不確定」</text></g>
+        <g transform="translate(220,10)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 工頭先記帳</text><text x="12" y="44" fill="var(--ink)" font-size="12">要趕人先寫進本子，昏倒醒來還記得</text></g>
+        <g transform="translate(430,10)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 班表數字</text><text x="12" y="44" fill="var(--ink)" font-size="12">離譜的間隔不再吞掉、倒數不少扣</text></g>
+        <g transform="translate(10,76)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 掛載中斷</text><text x="12" y="44" fill="var(--ink)" font-size="12">做一半被殺，回來能接著做完</text></g>
+        <g transform="translate(220,76)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ step 包</text><text x="12" y="44" fill="var(--ink)" font-size="12">同一步不會被重複做兩次</text></g>
+        <g transform="translate(430,76)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ budget 包</text><text x="12" y="44" fill="var(--ink)" font-size="12">「不確定」統一用退出碼 3 說</text></g>
+        <g transform="translate(10,142)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 模組＋subd</text><text x="12" y="44" fill="var(--ink)" font-size="12">4 個 bug 重現後修掉</text></g>
+        <g transform="translate(220,142)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 假綠測試</text><text x="12" y="44" fill="var(--ink)" font-size="12">壞了卻顯示通過的 8 個，修成會紅</text></g>
+        <g transform="translate(430,142)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 小修三隊</text><text x="12" y="44" fill="var(--ink)" font-size="12">回歸檢查找到的 5 個小問題</text></g>
+      </g>
+    </svg>
+    </div>
+    <p class="small">之後 astra 當「驗收員」整個重驗一遍：大致通過，長跑 450 回合檔案數不會變多。</p>
+  </section>
+
+  <section>
+    <h2>測試越來越多，而且全綠</h2>
+    <div class="kpis">
+      <div class="kpi"><span class="small">早上開工</span><span class="big" style="color:var(--mute)">376</span></div>
+      <div class="kpi"><span class="small">現在</span><span class="big">475</span></div>
+      <div class="kpi"><span class="small">失敗</span><span class="big" style="color:var(--done)">0</span></div>
+    </div>
+    <div class="fig">
+    <svg viewBox="0 0 640 150" role="img" aria-label="測試數由 376 增加到 475">
+      <!-- 刻度 0..500 → 0..520px，起點 x=100 -->
+      <g font-size="12" fill="var(--mute)">
+        <text x="90" y="34" text-anchor="end">10:45</text>
+        <text x="90" y="66" text-anchor="end">11:30</text>
+        <text x="90" y="98" text-anchor="end">11:55</text>
+        <text x="90" y="130" text-anchor="end">12:25</text>
+      </g>
+      <rect x="100" y="20" width="391" height="20" rx="3" fill="var(--line)"/><text x="497" y="35" font-size="12" fill="var(--ink)">376</text>
+      <rect x="100" y="52" width="452" height="20" rx="3" fill="var(--accent-soft)"/><text x="558" y="67" font-size="12" fill="var(--ink)">437</text>
+      <rect x="100" y="84" width="477" height="20" rx="3" fill="var(--accent-soft)"/><text x="583" y="99" font-size="12" fill="var(--ink)">459</text>
+      <rect x="100" y="116" width="494" height="20" rx="3" fill="var(--accent)"/><text x="600" y="131" font-size="12" fill="var(--ink)">475</text>
+    </svg>
+    </div>
+    <p class="small">早上有兩個「大家一起跑才會紅」的測試，查到了：一個是 Python 舊快取作怪，一個是測試讀檔太早。都不是程式本身的 bug。</p>
+  </section>
+
+  <section>
+    <h2>下午：事件保存＝工廠的「值班日誌」</h2>
+    <p>以後發生過的事會寫進日誌，事後可以翻、別的程式也能接著讀。照你說的「不要一堆垃圾檔」，日誌櫃有固定大小：</p>
+    <div class="fig">
+    <svg viewBox="0 0 640 230" role="img" aria-label="每個 node 一個事件資料夾，兩個抽屜各最多五本">
+      <rect x="10" y="10" width="620" height="210" rx="10" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="6 5"/>
+      <text x="26" y="34" font-size="13" font-weight="700" fill="var(--mute)">每個 node 只有一個 events/ 資料夾</text>
+      <!-- 抽屜 1 -->
+      <text x="26" y="66" font-size="14" font-weight="700" fill="var(--ink)">觀測抽屜</text>
+      <text x="26" y="84" font-size="12" fill="var(--mute)">看看就好，滿了丟最舊的</text>
+      <g transform="translate(200,50)">
+        <rect width="64" height="44" rx="5" fill="var(--accent)"/><text x="32" y="27" text-anchor="middle" font-size="12" fill="var(--panel)" font-weight="700">正在寫</text>
+        <rect x="74" width="64" height="44" rx="5" fill="var(--accent-soft)"/><text x="106" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 1</text>
+        <rect x="148" width="64" height="44" rx="5" fill="var(--accent-soft)"/><text x="180" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 2</text>
+        <rect x="222" width="64" height="44" rx="5" fill="var(--accent-soft)"/><text x="254" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 3</text>
+        <rect x="296" width="64" height="44" rx="5" fill="var(--accent-soft)"/><text x="328" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 4</text>
+        <text x="380" y="28" font-size="20" fill="var(--warn)">→ 🗑</text>
+      </g>
+      <!-- 抽屜 2 -->
+      <text x="26" y="136" font-size="14" font-weight="700" fill="var(--ink)">必讀抽屜</text>
+      <text x="26" y="154" font-size="12" fill="var(--mute)">一定要有人處理，處理完才丟</text>
+      <g transform="translate(200,120)">
+        <rect width="64" height="44" rx="5" fill="var(--warn)"/><text x="32" y="27" text-anchor="middle" font-size="12" fill="var(--panel)" font-weight="700">正在寫</text>
+        <rect x="74" width="64" height="44" rx="5" fill="var(--warn-soft)"/><text x="106" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 1</text>
+        <rect x="148" width="64" height="44" rx="5" fill="var(--warn-soft)"/><text x="180" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 2</text>
+        <rect x="222" width="64" height="44" rx="5" fill="var(--warn-soft)"/><text x="254" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 3</text>
+        <rect x="296" width="64" height="44" rx="5" fill="var(--warn-soft)"/><text x="328" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 4</text>
+        <text x="380" y="28" font-size="13" fill="var(--warn)">滿了→暫停收</text>
+      </g>
+      <text x="26" y="204" font-size="12" fill="var(--mute)">＋ 一張進度表、一把鎖 ＝ 整個資料夾最多 12 個檔，不會每回合多出新檔</text>
+    </svg>
+    </div>
+  </section>
+
+  <section>
+    <h2>現在誰在做什麼</h2>
+    <div class="fig">
+    <svg viewBox="0 0 640 170" role="img" aria-label="下午的隊伍流程">
+      <g font-size="13">
+        <rect x="10" y="20" width="130" height="50" rx="8" fill="var(--done-soft)"/><text x="75" y="42" text-anchor="middle" font-weight="700" fill="var(--done)">✓ 設計圖</text><text x="75" y="60" text-anchor="middle" font-size="11" fill="var(--ink)">E0 已交</text>
+        <line x1="140" y1="45" x2="180" y2="45" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar)"/>
+        <rect x="184" y="0" width="150" height="44" rx="8" fill="var(--run-soft)"/><text x="259" y="20" text-anchor="middle" font-weight="700" fill="var(--run)">● 寫日誌的手</text><text x="259" y="36" text-anchor="middle" font-size="11" fill="var(--ink)">E1 進行中</text>
+        <rect x="184" y="52" width="150" height="44" rx="8" fill="var(--run-soft)"/><text x="259" y="72" text-anchor="middle" font-weight="700" fill="var(--run)">● 讀日誌的眼</text><text x="259" y="88" text-anchor="middle" font-size="11" fill="var(--ink)">E2 一半，等 E1</text>
+        <line x1="334" y1="45" x2="374" y2="45" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar)"/>
+        <rect x="378" y="20" width="120" height="50" rx="8" fill="none" stroke="var(--line)" stroke-width="2"/><text x="438" y="42" text-anchor="middle" font-weight="700" fill="var(--mute)">長跑＋說明</text><text x="438" y="60" text-anchor="middle" font-size="11" fill="var(--mute)">E3 稍後</text>
+        <line x1="498" y1="45" x2="530" y2="45" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar)"/>
+        <rect x="534" y="20" width="96" height="50" rx="8" fill="none" stroke="var(--line)" stroke-width="2"/><text x="582" y="42" text-anchor="middle" font-weight="700" fill="var(--mute)">總整理</text><text x="582" y="60" text-anchor="middle" font-size="11" fill="var(--mute)">17:30</text>
+        <rect x="10" y="118" width="324" height="44" rx="8" fill="var(--done-soft)"/><text x="172" y="138" text-anchor="middle" font-weight="700" fill="var(--done)">✓ LLM 作者：設計圖已交</text><text x="172" y="154" text-anchor="middle" font-size="11" fill="var(--ink)">A0 完成，明天可開工第一刀</text>
+      </g>
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mute)"/></marker></defs>
+    </svg>
+    </div>
+    <div class="chips"><span class="chip done">已完成 17 隊</span><span class="chip run">進行中 2 隊</span><span class="chip">還沒開 2 隊</span></div>
+  </section>
+
+  <section>
+    <h2>我替你做的大決定</h2>
+    <ul>
+      <li>寫程式改交給 codex 新模型 <b>gpt-6.1-sol</b>，審查交給 <b>gpt-6-astra</b>；隊長仍是 Opus 逐行看。</li>
+      <li>工頭（daemon）要趕人前先寫進 <code>nodes.json</code>，不另開新檔。</li>
+      <li>日誌櫃分兩個抽屜，總共最多 12 個檔（比字面的 7 個多，因為兩個抽屜丟東西的規則不同）。</li>
+      <li>舊的歷史紀錄檔升級時改名封存，不丟資料。</li>
+      <li>LLM 作者第一步：讓 AI 寫「處理 CSV 的小流程」，只准用可信工具拼，寫好要人按一下才上線。</li>
+    </ul>
+    <p class="small">全部 40 多條（含小的）在 <code>proto7-2/notes/decisions-2026-10-09.md</code>，每條都寫了怎麼改回來。</p>
+  </section>
+
+  <section class="you">
+    <h2>有空再看就好</h2>
+    <ul>
+      <li>新模型的等級我先「暫定」：6.1-sol、astra 暫定 A 級，其他依序往下。只測了一題，要不要照這個算你決定。</li>
+      <li>你的 <code>user-advice.md</code> 我沒動，只拿來確保日誌設計不跟你的意見打架。</li>
+    </ul>
+  </section>
+</div>
