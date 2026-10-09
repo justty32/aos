@@ -202,3 +202,6 @@
 - C｜ER-author：三關檢查器指令名定為 `aos7-gates`；三關預設離線規則審（要 astra 審得明講，不自動花錢）；`publish` 沒給 `--repo` 不建分支、只說會建在哪；索引列改插進表格內；學徒／審查／learn 三種 AI 呼叫分開標記；被拒的候選退 1。新手 Haiku 7／luna 9
 - C｜ER-llmcall-budget：帳任務沒在跑時，llmcall／budget 1 秒內退 1、什麼都不寫（原本會一直等）；錯誤訊息直接附可複製的起帳指令；回條與 JSON 一個欄位都沒改。新手 Haiku 7／8／7、luna 10／10／9
 - 觀察｜up 模組兩個計時測試在全套負載下偶發失敗一次、單跑全過；和 llmcall `test_in_process_drip` 同類，再出現就一起查
+- 發現｜proxy 截斷根因查到 → [litellm-truncation](play/2026-10-09-real-ai/litellm-truncation.md)：sol 的回答其實都有回來，但後端把「開場白」和「答案」拆成兩段，LiteLLM 轉成兩個 choice，**aos 只讀第一個**（`packs/llmcall/aos7_llmcall_litellm.py` 與 `core/llm/src/llm.cpp`）。另外 proxy 每次自帶的 1.6k 是寫死的 Codex 系統提示，讓模型以為自己在 Codex 裡、想先看檔
+- B｜頂層：開修補隊——讀「最後一個非空的 choice」並在收據記 choice 數；所有要 JSON 的呼叫在提示尾端固定加「你沒有任何工具，不要開場白，第一個字元就是 {」（重放 4/4 有效）
+- 待你決定｜LiteLLM 設定：啟動 proxy 前設 `CHATGPT_DEFAULT_INSTRUCTIONS` 換掉 Codex 系統提示（每次省約 1.4k token、模型不再誤以為在 Codex 裡；風險是後端可能擋、astra 的快取會失效）。這是你的設定，我沒動
