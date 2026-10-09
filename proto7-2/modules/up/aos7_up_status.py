@@ -122,6 +122,8 @@ def letters(box):
         parts = re.split(r'^---\r?$', text(path), maxsplit=2, flags=re.M)
         fields = dict(line.split(': ', 1) for line in parts[1].strip().splitlines()
                       if ': ' in line) if len(parts) == 3 else {}
+        if len(parts) == 3:
+            fields['title'] = next((s[2:] for s in parts[2].splitlines() if s.startswith('# ')), '')
         result[path.name] = fields
     return result
 
@@ -169,8 +171,35 @@ def status(node):
           f'心跳：停了（最後第 {n} 下）；起它：aos7-up {node}')
     inbox = letters(node / 'inbox')
     waiting = sum(v.get('status') == 'REQUEST' for v in inbox.values())
-    print(f'信：未讀 {len(inbox)} 封（要回 {waiting} 封）；你的信箱有 '
-          f'{len(letters(node.parent / "you/inbox"))} 封回信')
+    done = sum(v.get('status') == 'REQUEST' for v in letters(node / 'inbox/done').values())
+    total, doing = waiting + done, min(1, waiting)
+    queue = waiting - doing
+    replies = letters(node.parent / 'you/inbox')
+    needs = sum(v.get('status') == 'NEEDS-USER' for v in replies.values())
+    blocked = sum(v.get('status') == 'BLOCKED' for v in replies.values())
+    line = (f'信：{node.name} 收到 {total} 封要辦的信，辦完 {done} 封' if total else
+            f'信：{node.name} 還沒收到要辦的信')
+    if doing:
+        line += '、正在辦 1 封'
+    if queue:
+        line += f'、排隊 {queue} 封'
+    line += f'；你的信箱有 {len(replies)} 封回信沒看'
+    hints = ([f'{needs} 封要你決定'] if needs else []) + ([f'{blocked} 封說卡住了'] if blocked else [])
+    if hints:
+        hints[-1] += f'；信在 {node.parent / "you/inbox"}，每封都寫了怎麼辦，照做或用 ask 再寄一封'
+    print(line + ('（' + '、'.join(hints) + '）' if hints else ''))
+    try:
+        unsure = read(node / 'brain/unsure.json')
+        letter = next((v for v in inbox.values() if v.get('id') == unsure['id']), None)
+        if letter:
+            limit = float(settings.get('deadline', 60 if settings.get('model') in (None, 'fake', '') else 600))
+            waited = time.time() - unsure['since']
+            title = letter.get('title', '')
+            title = title if len(title) <= 24 else title[:24] + '…'
+            print(f'卡住了：正在辦的信「{title}」問了 AI，但不確定 AI 回了沒（多半是問到一半被打斷），'
+                  f'這封先停著、已等 {waited:.0f} 秒；你先不用動手，滿 {limit:g} 秒 {node.name} 會回信給你說怎麼處理，接著辦下一封')
+    except (ValueError, OSError, TypeError, KeyError, AttributeError):
+        pass
     count = sum(s.startswith('- ') for rel in ('SESSION-LOG.md', 'WAIT_USER.md')
                 for s in text(node / 'wf' / rel).splitlines())
     check = call('modules/wfnode/aos7-wfnode', 'check', node)

@@ -97,6 +97,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('out')
     ap.add_argument('--model')
+    ap.add_argument('--fake-delay', type=float, default=0)
+    ap.add_argument('--deadline', type=float)
     ap.add_argument('--kill-step', type=int, default=7)
     # tree：brain 連同正在問 AI 的 llmcall 子程序一起殺（傳輸中途）；brain：只殺 brain，子程序留著；
     # idle：等 brain 沒在問 AI 時才殺 brain。
@@ -122,6 +124,13 @@ def main():
     if up.returncode:
         note(up.stderr)
         return 1
+    if not a.model and a.fake_delay > 0:
+        path = node / '.aos/up.json'
+        cfg = json.loads(path.read_text())
+        cfg['fake_delay'] = a.fake_delay
+        if a.deadline is not None:
+            cfg['deadline'] = a.deadline
+        path.write_text(json.dumps(cfg, ensure_ascii=False))
     (node / 'compact.json').write_text(json.dumps(COMPACT))
     t0 = time.time()
     sent = []
