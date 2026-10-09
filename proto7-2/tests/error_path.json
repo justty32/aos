@@ -214,8 +214,10 @@
    "team": "ER-skills",
    "name": "aos7-skills",
    "entry": "modules/skills/aos7-skills",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-skills）"
+   "unsure": {
+    "argv": ["mount", "node/skills/..", "alpha", "work"],
+    "files": {"node/.aosd/": "", "node/skills/alpha/SKILL.md": "---\nname: alpha\ndescription: x\n---\n", "node/.aos/tasks.json": "[]"}
+   }
   },
   {
    "pack": "wfnode",
