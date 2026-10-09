@@ -160,3 +160,5 @@
 - B｜頂層：照「做完回頭審→修或重造」開回改隊：README 改就能過的（compact、prompt、wfnode、metrics、mail）與要改第一次跑流程的（skills、routines、events；llmcall 等小修隊、author 等 A5 交件後再改）；每隊改完用同兩位新手重試到 ≥7 才算完成
 - B｜頂層：另開一隊「整體第一次體驗」設計：新手第一次跑就要碰 daemon、帳（budget）、回合等底層概念是共同病根，研究能否給一個共用的「一鍵起 node」入口把這些藏起來
 - C｜NP：llmcall 打 localhost／127.0.0.1／::1 時一律直連、不走環境 proxy（其他主機照舊）
+- A｜第一次體驗設計 [blueprint-firstrun](blueprint-firstrun.md)：加共用入口 `aos7-up`（新模組 `modules/up/`，核心不動），一行起 node 並自動裝好工作簿、帳、技能、例行與 daemon；前景跑、每秒印一行、Ctrl-C 收乾淨。新人只學 5 個詞（node、心跳、工作簿、信、技能）與 3 個指令（`aos7-up <node>`、`ask`、`status`）
+- B｜firstrun：預設假 AI，真 AI 只靠 `--model`（不自動花錢）；帳、回合、預留、ack、退出碼在 QUICKSTART 與各包開頭三行一律不出現；brain 一回合最多處理一封信、AI 回不來回 BLOCKED 不重試；人的信箱名固定 `you`
