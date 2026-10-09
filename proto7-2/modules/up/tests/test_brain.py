@@ -62,10 +62,10 @@ class BrainTests(DaemonCase):
         after = self.node_round('bob')
         output, errors = p.communicate(timeout=35)
         self.assertEqual(p.returncode, 0, errors)
-        self.assertIn('假 AI', output)
+        self.assertIn('練習用的 AI', output)
         self.assertNotIn('DONE', output)
         self.assertEqual(errors, '')
-        self.assertLessEqual(after - before, 3, f'假 AI 一圈 {after - before} 回合')
+        self.assertLessEqual(after - before, 3, f'練習用的 AI 一圈 {after - before} 回合')
         self.wait_for(lambda: len(self.rows()) == 1 and not (self.node / 'brain/pending.json').exists())
         entry = self.rows()[0]
         self.assertEqual(entry['status'], 'DONE')

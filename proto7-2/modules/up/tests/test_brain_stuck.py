@@ -78,12 +78,13 @@ class BrainStuckTests(DaemonCase):
         self.assertEqual([l['status'] for l in replies], ['BLOCKED'])
         body = replies[0]['body']
         plain = body
-        # 回信只有白話：不露 call、帳、給維護者的指令；細節只指去 ADVANCED
-        for word in (cid, '回合', 'adopt', '預留', 'LiteLLM', 'reply.json', 'call', '進階', '秒'):
+        # 回信只有白話：不露 call、帳、給維護者的指令、新手打不開的路徑與內部詞
+        for word in (cid, '回合', 'adopt', '預留', 'LiteLLM', 'reply.json', 'call', '進階', '秒',
+                     'ADVANCED', '假 AI', '系統', 'run', 'tock'):
             self.assertNotIn(word, plain)
-        self.assertIn('不花錢。\n\n細節見 `modules/up/ADVANCED.md` 的〈卡住的回信〉。', body)
+        self.assertIn('bob 不會自己再問一次，要不要重問由你決定。', body)
+        self.assertTrue(body.rstrip().endswith('練習用的 AI（不連網、不花錢），重寄不花錢。'), body)
         self.assertIn('等了約 1 分鐘', body)
-        self.assertIn('〈卡住的回信〉', (TOP / 'modules/up/ADVANCED.md').read_text())
         how = (self.node / 'brain/stuck' / cid / 'how.md').read_text()
         self.assertIn(cid, how)
         # 工作簿（STATE）那行白話：哪封信被打斷，不露 call id
@@ -91,8 +92,8 @@ class BrainStuckTests(DaemonCase):
         self.assertIn('卡住：「A：先辦這封」問 AI 時被打斷', state)
         self.assertNotIn(cid, state)
         self.assertIn('什麼都不做', plain)
-        self.assertIn('再寄一次這封信', plain)
-        self.assertIn('假 AI，不花錢', plain)
+        self.assertIn('把同一句話再寄一次（跟第一次一樣用 aos7-up ask 寄）', plain)
+        self.assertIn('練習用的 AI（不連網、不花錢）', plain)
         self.assertNotIn('多付', plain)
         self.assertNotIn(cid, replies[0]['title'])
         self.assertIn('帳上預留 1000000', how)

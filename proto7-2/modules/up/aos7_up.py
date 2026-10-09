@@ -29,7 +29,7 @@ def preflight(node, model):
     grant_path = node / 'budget/llm/grant.json'
     grant = read(grant_path)
     if grant is not None and grant.get('gateway') != gateway:
-        old = '假 AI' if grant.get('gateway') == 'llm.fake' else '真 AI'
+        old = '練習用的 AI' if grant.get('gateway') == 'llm.fake' else '真 AI'
         raise UpError(2, f'這個 node 已經用{old}起過，不能換。要換請另起一個 node，例如 aos7-up /tmp/aos/new')
     return previous, model, gateway, grant_path, grant
 
@@ -161,7 +161,7 @@ def up(node, model, detached, beat=None):
                 if time.monotonic() >= end:
                     raise UpError(3, f'不確定：{wait} 秒內沒看到 {node.name} 被叫醒，已裝的檔案留著。照原樣再跑 aos7-up {node} 會接續')
                 time.sleep(.05)
-        ai = f'AI：{settings["model"]}' if settings['model'] else '假 AI'
+        ai = f'AI：{settings["model"]}' if settings['model'] else '練習用的 AI'
         # 心跳已起、node 已醒：先記交棒，三行 print 中途被中斷也照交棒後收尾
         handed = True
         try:

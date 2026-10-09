@@ -153,9 +153,9 @@ class UpTests(DaemonCase):
         for word in ('回合', '帳', '預留', 'ack', '退出碼', 'daemon', 'tick', 'call', '體檢', 'you-2'):
             self.assertNotIn(word, '\n'.join(lines))
         self.assertIn('bob 還沒收到信', lines[1])
-        # 心跳行只說活著／停了，不印像秒數的次數；假 AI 不印字數
+        # 心跳行只說活著／停了，不印像秒數的次數；練習用的 AI 不印字數
         self.assertEqual(lines[0], '心跳：活著')
-        self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；bob 一共問過 AI 0 次')
+        self.assertEqual(lines[4], 'AI：練習用的 AI（不連網、不花錢，照抄你的信回你）；bob 一共問過 AI 0 次')
         self.invoke('stop', self.node)
         self.assertEqual(self.invoke('status', self.node).splitlines()[0],
                          f'心跳：停了；要再起：aos7-up {self.node}')

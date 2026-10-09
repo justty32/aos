@@ -170,7 +170,7 @@ class InterfaceTests(unittest.TestCase):
                 lines = out.getvalue().splitlines()
                 self.assertEqual(lines[2], '工作簿：最後記下：還沒開始' +
                                  (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if rc else ''))
-                self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；bob 一共問過 AI 0 次')
+                self.assertEqual(lines[4], 'AI：練習用的 AI（不連網、不花錢，照抄你的信回你）；bob 一共問過 AI 0 次')
                 self.assertNotIn('體檢', out.getvalue())
             (node / 'wf').mkdir()
             (node / 'wf/SESSION-LOG.md').write_text('## open\n- 寫報告\n- 改錯字\n')
