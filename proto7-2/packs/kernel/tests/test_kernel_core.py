@@ -495,5 +495,33 @@ class KernelUnderDaemon(KernelMixin, DaemonCase):
         self.assertIsNone(read_json(os.path.join(self.brain_slot(), "ctl.json")))
 
 
+class KernelWithRealRule(KernelMixin, CoreCase):
+    def setUp(self):
+        super().setUp()
+        self.setup_kernel()
+
+    def test_supervise_brain_end_to_end(self):
+        """快照接 KR1 的 supervise-brain（正式入口）：task.json 不動、來源鐘前進 → 第 2 回合起算的老化到 2 寄通知（無 mail＝logged），到 4 kill 當時的 run；新 run 在 8 個 tock 內不被追殺。"""
+        self.cfg([{"name": "supervise-brain", "no_progress_rounds": 2, "kill_after_rounds": 4, "notify": "you"}],
+                 sources=[dict(BRAIN, kind="brain")])
+        write_json(os.path.join(self.node, "brain", "task.json"),
+                   {"id": "bob-1", "step": 3, "line": "卡住", "stall": 0, "trail": []})
+        run, results = self.brain_run(), []
+        for n in range(1, 9):
+            write_json(os.path.join(self.kslot, "tock.json"), {"run": RUN, "round": n})
+            p = self.kernel("run", "--rounds", "1", entry=KERNEL)
+            self.assertEqual(p.returncode, 0, self.show(p))
+            if self.ctl():
+                self.core_round()   # 核心收掉、keep 重起
+            self.core_round()       # 來源鐘前進一格
+            results = [(d["op"], d["result"]) for d in self.state()["done"]]
+        # 新 run 起來 task.json 仍不動＝規則重建基準、之後可再通知（KR1 語意）；kill 只有原 run 那一次
+        self.assertEqual(results[:2], [("notify", "logged"), ("kill", "ok")], self.state())
+        kills = [d for d in self.state()["done"] if d["op"] == "kill"]
+        self.assertEqual([k["run"] for k in kills], [run])
+        self.assertGreater(self.brain_run(), run)
+        self.assertIn("bob-1", [d for d in self.state()["done"] if d["op"] == "notify"][0]["text"])
+
+
 if __name__ == "__main__":
     unittest.main()
