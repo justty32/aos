@@ -199,7 +199,12 @@ def kill_run(fslot, node, slot, v):
         time.sleep(0.02)
     if pid is None and _same_run(os.path.join(fslot, "exit.json"), v.run)[0] != OK:
         runner = (v.get("birth") or {}).get("runner")
-        if runner is None or aos7_proc.same_process(runner.get("pid"), runner.get("starttime")) != aos7_proc.GONE:
+        try:   # runner 還在、也還沒有相符的任務程序＝可能還沒 Popen：現在收不到，之後才起的任務會漏
+            starting = (runner is None or aos7_proc.same_process(runner.get("pid"), runner.get("starttime")) != aos7_proc.GONE) \
+                and not aos7_proc.env_procs(node, slot, v.run)
+        except Unknown:
+            starting = True
+        if starting:
             return False, "unknown：runner 仍在啟動、還沒寫 pid.json，請求留著下次再試"
     pid = pid or {}
     clean, msg = aos7_proc.kill_identity(node, slot, v.run, pid.get("pgid"),
