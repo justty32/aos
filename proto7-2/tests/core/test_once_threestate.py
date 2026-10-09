@@ -69,6 +69,60 @@ class TestOnceCrash(CoreCase):
         node = self.crash_then_continue("before-once-delete")
         self.assertEqual(len(self.ran(node, "o")), 1)
 
+    def once_keep_crash(self):
+        """同名 once／keep 都合法且共用基本槽；先等 once 結束，下一回合 keep 就能重用。"""
+        node = self.mknode("a", [once_item("o"), {"name": "o", "mode": "keep", "argv": ["true"]}])
+        self.assertIsNone(self.tick(env={"AOS7_TEST_CRASH": "before-once-delete"}, rc=-9))
+        self.assertTrue(self.round_json(node)["open"])
+        launch = self.tasks(node)[0]["launch"]
+        self.assertEqual(launch["slot"], "o")
+        self.assertEqual(self.birth(node, "o")["run"], launch["run"])
+        self.wait_ended(node, "o", launch["run"])
+        self.assertEqual(self.ran(node, "o"), [str(launch["run"])])
+        self.tock(env={"AOS7_INCOMPLETE": "tick"})
+        return node, launch["run"]
+
+    def once_keep_round(self, node):
+        """每回合等共槽短命任務結束，確保下一回合真的有重用槽的機會。"""
+        out = self.tick()
+        self.assertNotIn("tasks_error", self.round_json(node))
+        self.assertTrue(out["started"], "共槽任務沒起，未測到槽重用")
+        self.wait_ended(node, "o", self.birth(node, "o")["run"])
+        self.tock()
+
+    def test_n86_crash_before_delete_postpone_from_round(self):
+        """N-86：移項前被殺後推遲 from_round，同名 keep 重用槽也不能讓 once 再跑。"""
+        node, run = self.once_keep_crash()
+        target = self.round_json(node)["round"] + 2
+        items = self.tasks(node)
+        items[0]["from_round"] = target
+        self.set_tasks(node, items)
+        for _ in range(5):
+            self.once_keep_round(node)
+        self.assertGreater(self.round_json(node)["round"], target + 1)
+        self.assertGreater(self.birth(node, "o")["run"], run, "keep 沒重用槽")
+        self.assertEqual(self.ran(node, "o"), [str(run)], "once 重跑了")
+        self.assertEqual(self.tasks(node), [{"name": "o", "mode": "keep", "argv": ["true"]}])
+
+    def test_n86_crash_before_delete_disable_then_enable(self):
+        """N-86：移項前被殺後停用兩回合再啟用，同名 keep 重用槽也不能讓 once 再跑。"""
+        node, run = self.once_keep_crash()
+        items = self.tasks(node)
+        items[0]["enabled"] = False
+        self.set_tasks(node, items)
+        for _ in range(2):
+            self.once_keep_round(node)
+        self.assertGreater(self.birth(node, "o")["run"], run, "停用期間 keep 沒重用槽")
+        items = self.tasks(node)
+        for item in items:
+            if item.get("mode") == "once":
+                item["enabled"] = True     # 已移除就不加回；舊 bug 留在表上的 once 才重新啟用
+        self.set_tasks(node, items)
+        for _ in range(3):
+            self.once_keep_round(node)
+        self.assertEqual(self.ran(node, "o"), [str(run)], "once 重跑了")
+        self.assertEqual(self.tasks(node), [{"name": "o", "mode": "keep", "argv": ["true"]}])
+
     def test_crash_between_birth_and_item_delete(self):
         """線頭 1（spec §4.4 保證 (a)）：birth 寫好、移項前被殺 → 表上那項帶 launch、槽的 birth 是同一個 run；
         下一個 tick 就移項、不再起，總共只跑一次。"""

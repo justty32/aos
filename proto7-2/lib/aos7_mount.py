@@ -1,11 +1,12 @@
 """掛載（spec.md 4.5，S-23）：tick 把 tasks.json 的 `mounts` 做成任務資料夾裡的 `mnt/<名字>`（指向目標的**相對**符號連結，
 整個空間搬家也不壞），並審核任務執行中寫的加掛請求。目標寫成空間裡的路徑（相對空間根，跟 node id 同一套）。
 只是合作式的方便，不是權限隔離（spec §11）。任務端的 resolver／request 在工具包（modules/tools/aos7_taskside.py）。"""
+import errno
 import hashlib
 import os
 import re
 
-from aos7_fs import BAD, N, OK, U, Unknown, fact, node_path, now, write_json
+from aos7_fs import BAD, N, OK, U, Unknown, errname, fact, node_path, now, test_point, write_json
 
 MNT = "mnt"
 REQ = "mount-req"     # 任務寫：<槽>/mount-req/<名字>.json＝{"name", "path", "why"}
@@ -57,7 +58,18 @@ def make(root, taskdir, decl, fs_taskdir=None, node=None, fnode=None):
         try:
             os.makedirs(freal, exist_ok=True)
             os.makedirs(os.path.dirname(fat), exist_ok=True)
-            os.symlink(os.path.relpath(real, os.path.dirname(at)), fat)
+            rel = os.path.relpath(real, os.path.dirname(at))
+            try:
+                os.symlink(rel, fat)
+            except FileExistsError:   # 上次建了連結、還沒記進 birth 就被殺（A8-07）：指向同一處就當已建
+                try:
+                    cur = os.readlink(fat)
+                except OSError as e:   # 不是連結＝確定不同（EINVAL）；其他讀不到＝不知道，請求留著
+                    if e.errno == errno.EINVAL:
+                        raise FileExistsError(errno.EEXIST, "mnt/%s 已存在且不是連結" % name) from e
+                    raise Unknown("mnt/%s 讀不到：%r" % (name, e), kind=errname(e)) from e
+                if cur != rel:
+                    raise
             out[name] = {"to": to, "at": at}
         except OSError as e:
             out[name] = {"to": to, "error": str(e)}
@@ -153,7 +165,7 @@ def _serve_one(root, taskdir, allow, item, real_taskdir=None):
         msg = bad[0]
     elif not allowed(root, path, allow):
         msg = "%s 不在這個 node 的 mount_allow 裡（或沿連結跑出空間根）" % _norm(path)
-    elif name in mounts:
+    elif name in mounts and "at" in mounts[name] and "error" not in mounts[name]:   # 失敗紀錄不算已掛（R8-09）
         ok = mounts[name].get("to") == good[name]
         msg = "已經掛了" if ok else "名字 %s 已經掛了別的（%s）" % (name, mounts[name].get("to"))
     else:
@@ -163,6 +175,7 @@ def _serve_one(root, taskdir, allow, item, real_taskdir=None):
         if ok:
             m["dyn"] = True   # 執行中加掛的（事實）：控制包 reload 重起時靠它分出要另外帶過去的掛載
             mounts[name] = m
+            test_point("after-symlink")
             birth["mounts"] = mounts
             write_json(bpath, birth)
     return item, {"name": name, "path": path, "ok": ok, "msg": msg}

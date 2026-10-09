@@ -97,7 +97,12 @@ def fact(path, dir_fd=None):
             return N, None
         return notreg if e.errno in (errno.ENXIO, errno.EISDIR) else (U, "%s 讀不到：%r" % (name, e))
     try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
+        mode = os.fstat(fd).st_mode
+    except OSError as e:
+        os.close(fd)   # R8-07：fstat 失敗也要關
+        return U, "%s 讀不到：%r" % (name, e)
+    try:
+        if not stat.S_ISREG(mode):
             os.close(fd)
             return notreg
         with os.fdopen(fd, "rb") as f:
