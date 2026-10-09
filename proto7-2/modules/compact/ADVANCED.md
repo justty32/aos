@@ -96,7 +96,7 @@ PY
 )
 ```
 
-預期成功，30 則變 11 則，帳 inflight 回 0；fake 回本機摘要文字。每次沿 pending 的 call_id 重跑，非 0 不拿半張回條替換原文；未成功的 pending 留待下次 now／watch 接續。
+預期成功，30 則變 6 則，帳 inflight 回 0；fake 回本機摘要文字。每次沿 pending 的 call_id 重跑，非 0 不拿半張回條替換原文；未成功的 pending 留待下次 now／watch 接續。
 
 ## 用真 AI 摘要
 

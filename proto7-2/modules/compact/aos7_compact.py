@@ -48,16 +48,14 @@ def load(path, default):
 
 def expand(node, files):
     """files 裡含 * 的樣式換成 node 內實際存在的檔（排序）；其餘原樣。"""
-    out = []
+    out, seen = [], set()
     for rel in files:
-        if "*" not in rel:
-            out.append(rel)
-            continue
-        for path in sorted(node.glob(rel)):
-            found = path.relative_to(node).as_posix()
-            if path.is_file() and found not in out:
-                file_path(node, found)
-                out.append(found)
+        found = [rel] if "*" not in rel else [q.relative_to(node).as_posix() for q in sorted(node.glob(rel)) if q.is_file()]
+        for one in found:
+            real = file_path(node, one)
+            if real not in seen:  # 明列與樣式指到同一個實際檔只算一次（不論先後）
+                seen.add(real)
+                out.append(one)
     return out
 
 
@@ -162,7 +160,8 @@ def flat(text):
     return " ".join(text.split())
 
 
-LETTER = re.compile(r"[A-Za-z][\w.]*-\d{8}T\d{6}-[0-9a-f]{6,}")
+LETTER = re.compile(r"(?<![A-Za-z0-9._-])[A-Za-z0-9._-]+?-\d{8}T\d{6}-[0-9a-f]{6,}(?![A-Za-z0-9._-])")  # mail 的名字字元
+GAP = object()
 STEP = re.compile(r"^第\s*(\d+)\s*回合[\s：:，,]*")
 
 
@@ -208,6 +207,11 @@ def item(part, suffix):
 
 
 def local_summary(old, limit, suffix=".jsonl"):
+    text = _local_summary(old, limit, suffix)
+    return text.encode("utf-8", "backslashreplace").decode("utf-8")  # JSON 裡的孤立 surrogate 不讓 pending 寫不出
+
+
+def _local_summary(old, limit, suffix):
     """本機摘要：按信（或「其他」）分段，每段列出做了什麼；放不下就縮短每項、再省略中段。"""
     items = [item(p, suffix) for p in old]
     earlier = "；".join(i["summary"] for i in items if "summary" in i)
@@ -221,11 +225,18 @@ def local_summary(old, limit, suffix=".jsonl"):
     budget = min(limit, max(200, sum(len(p["text"].encode("utf-8")) for p in old) // 6))
 
     def clip(text, width):
-        return text if len(text) <= width else text[:max(1, width - 1)] + "…"
+        return text if len(text) <= width else text[:width] if width < 2 else text[:width - 1] + "…"
 
-    def render(width, tail):
+    def render(width, tail, drop=0):
         segs = ["更早：" + clip(earlier, width * 4)] if earlier else []
-        for key, rows in groups.items():
+        keys = list(groups)
+        if drop:  # 還放不下：中間幾段只留段數，第一段與最近幾段照列
+            keys = keys[:1] + [GAP] + keys[1 + drop:]
+        for key in keys:
+            if key is GAP:
+                segs.append(f"…另 {drop} 段略…")
+                continue
+            rows = groups[key]
             whats = [r["what"] for k, r in enumerate(rows) if not k or r["what"] != rows[k - 1]["what"]]
             if tail < 0 and len(whats) > 1:
                 whats = [f"…略 {len(whats) - 1} 項…", whats[-1]]
@@ -242,11 +253,12 @@ def local_summary(old, limit, suffix=".jsonl"):
     # 先每項都列（縮短每項），放不下才省略中段、只留第一項與最後幾項。
     tries = ([(w, 0) for w in (40, 28, 20, 14)] + [(w, t) for w in (28, 20, 14) for t in (12, 8, 5, 3)]
              + [(w, 1) for w in (20, 14, 10, 8)] + [(w, -1) for w in (14, 10)])
-    for width, tail in tries:
-        text = render(width, tail)
+    tries += [(10, -1, d) for d in range(1, len(groups) - 1)]
+    for width, tail, *drop in tries:
+        text = render(width, tail, *drop)
         if len(text) <= budget:
             return text
-    return clip(render(10, -1), budget)
+    return clip(text, budget)
 
 
 def stage_text(node, cfg):
@@ -402,11 +414,18 @@ def resume(node, work, p, cfg=None):
     with contextlib.ExitStack() as locks:
         writer = locks.enter_context((work / "write.lock").open("a"))
         fcntl.flock(writer, fcntl.LOCK_EX)
-        handoffs = node / "wf/handoffs"
-        if path.is_relative_to(handoffs):  # STATE.md 的寫者是 aos7-wfnode state，它持這把鎖追加。
-            state_lock = os.open(handoffs / ".state.lock", os.O_WRONLY | os.O_CREAT, 0o600)
+        if Path(p["file"]).parts[:2] == ("wf", "handoffs"):  # STATE.md 的寫者是 aos7-wfnode state，它持這把鎖追加。
+            handoffs = node / "wf/handoffs"
+            if not handoffs.resolve().is_relative_to(node):
+                raise Failure("wf/handoffs 指到 node 外面，這次沒換檔", 3, hint="把 wf/handoffs 改回 node 裡的資料夾，再照原樣跑一次會接續")
+            try:
+                state_lock = os.open(handoffs / ".state.lock", os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+            except OSError as error:
+                raise Failure(f"wf/handoffs/.state.lock 開不了（{error.strerror}）", 3, hint="它不能是 symlink；修好後照原樣再跑一次會接續") from error
             locks.callback(os.close, state_lock)
-            fcntl.flock(state_lock, fcntl.LOCK_EX)
+            mine, other = os.fstat(state_lock), os.fstat(writer.fileno())
+            if (mine.st_dev, mine.st_ino) != (other.st_dev, other.st_ino):  # 同一個檔就別鎖兩次（會卡住自己）
+                fcntl.flock(state_lock, fcntl.LOCK_EX)
         current = read_text(path)
         replaced = (not current.startswith(p["original"]) and p.get("new_len") is not None and len(current) >= p["new_len"]
                     and p.get("new_sha") == digest(current[:p["new_len"]]))
