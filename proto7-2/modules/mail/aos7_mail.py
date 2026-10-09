@@ -20,6 +20,9 @@ class Refused(ValueError):
 
 TERMINAL = {'DONE', 'BLOCKED', 'NEEDS-USER', 'FAILED'}
 STATUSES = TERMINAL | {'REQUEST', 'PROGRESS'}
+PLAIN = {'DONE': '辦好了', 'BLOCKED': '卡住了，下面寫了怎麼辦',
+         'NEEDS-USER': '要你決定，下面寫了要決定什麼', 'FAILED': '做不到，下面寫了原因',
+         'PROGRESS': '還在辦，這是進度'}
 HEADINGS = ('做了什麼', '產出（檔案路徑 / commit / 分支）', '沒做到、或證據不足的部分', '需要對方或使用者決定的事')
 
 
@@ -57,7 +60,11 @@ def letter(path):
     name(data['id'])
     data['title'] = next((s[2:] for s in parts[2].splitlines() if s.startswith('# ')), '')
     data['file'] = str(path)
-    data['body'] = parts[2].split('\n', 2)[-1].strip()
+    body = parts[2].split('\n', 2)[-1].lstrip('\n')
+    data['plain'] = PLAIN.get(data.get('status'), '')
+    if data['plain'] and body.split('\n', 1)[0] == '狀態：' + data['plain']:
+        body = body.partition('\n')[2].lstrip('\n')
+    data['body'] = body.strip()
     return data
 
 
@@ -86,10 +93,14 @@ def upstream(root, me):
 
 
 def body_text(body):
-    if body and all('## ' + h in body for h in HEADINGS):
-        return body.rstrip() + '\n'
-    return '\n\n'.join('## ' + h + '\n' + (body if i == 0 and body else '無')
-                         for i, h in enumerate(HEADINGS)) + '\n'
+    if not body or not body.strip():
+        return ''
+    parts = re.split(r'(?m)^(## [^\r\n]+[ \t]*\r?\n|## [^\r\n]+$)', body)
+    if all(any(s.strip() == '## ' + h for s in parts[1::2]) for h in HEADINGS):
+        # 以所有同級標題分段，避免連不屬於協定的段落一起刪掉。
+        body = parts[0] + ''.join(heading + text for heading, text in zip(parts[1::2], parts[2::2])
+                                 if heading.strip()[3:] not in HEADINGS or text.strip() not in ('', '無'))
+    return body.rstrip() + '\n' if body.strip() else ''
 
 
 def validate_reply(status, title, body):
@@ -117,7 +128,8 @@ def send(root, me, to, status, title, body='', re_id='', ident=None):
     ident = name(ident or f"{me}-{stamp.strftime('%Y%m%dT%H%M%S')}-{secrets.token_hex(6)}")
     data = {'from': me, 'to': to, 'status': status, 'at': stamp.isoformat(),
             'reply-to': str(inbox(root, me)), 'id': ident, 're': re_id}
-    text = '---\n' + ''.join(f'{k}: {v}\n' for k, v in data.items()) + '---\n# ' + title + '\n\n' + body_text(body)
+    plain = '狀態：' + PLAIN[status] + '\n\n' if status in PLAIN else ''
+    text = '---\n' + ''.join(f'{k}: {v}\n' for k, v in data.items()) + '---\n# ' + title + '\n\n' + plain + body_text(body)
     if not to.startswith('team:') and not (Path(root) / to).exists():
         print(f'aos7-mail: 注意：{to} 是新信箱（第一次收信）。確認名字沒打錯；沒錯就不用管', file=sys.stderr)
     inbox(root, me).mkdir(parents=True, exist_ok=True)  # 寄件者也算有信箱：回信時不再提示「新信箱」
