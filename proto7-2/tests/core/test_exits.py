@@ -3,10 +3,31 @@
 import os, sys  # noqa: E401
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import unittest  # noqa: E402
+import subprocess  # noqa: E402
 
-from base import SLEEP, DaemonCase  # noqa: E402
+from base import BIN, SLEEP, DaemonCase  # noqa: E402
 from _matrix import MatrixCase  # noqa: E402
 from aos7_fs import write_json  # noqa: E402
+
+
+class TestGiantReferenceIndex(DaemonCase):
+    """〔core〕A9-03：超長陣列索引回 125 與指示詞錯誤，不漏 traceback；4300 位數作對照。"""
+
+    def test_giant_index_reports_pointer_error(self):
+        path = os.path.join(self.root, "inst.json")
+        for digits in (5000, 4300):
+            with self.subTest(digits=digits):
+                write_json(path, {"array": [0], "argv": [{"$ref": "#/array/" + "9" * digits}]})
+                p = subprocess.run([os.path.join(BIN, "aos-exec"), path],
+                                   capture_output=True, text=True, timeout=10)
+                self.assertEqual(p.returncode, 125, p.stderr)
+                self.assertIn("ReferencePointerInvalid", p.stderr)
+                self.assertNotIn("Traceback", p.stderr)
+
+    def test_leading_zero_index_still_resolves(self):
+        import aos_directives as d
+        ctx = d.Context(d.Document(None, {"a": [7, 8]}))
+        self.assertEqual(d.resolve({"$ref": "#/a/0001"}, ctx, ["v"]), 8)
 
 
 class TestX(MatrixCase):

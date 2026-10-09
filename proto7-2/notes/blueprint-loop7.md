@@ -67,7 +67,7 @@ K1～K4 四條核心線**檔案互不重疊**但共用行數預算（D7）——
 
 - 全套 `python3 proto7-2/tests/run_all.py` ×3 皆綠，預期 364 → 約 400；`tests/core/test_budget.py` 以 D7 定的上限為準。
 - 第 3 組：runner 停在 Popen 前的 kill 回 unknown 且請求留著、放行後下一次成功；nodes.json 寫失敗重送後記憶體＝磁碟；unregister 後殺 daemon 重起舊 PID 已收；node 替換＋回收中斷重起新舊不同活；K-04 FIFO 案例、R8-29 偽 pgid 不打。deep-play C8-01／C8-02 重現步驟各跑 3／3。
-- 第 4 組：EIO 讓 call 回 3 → 開 `unknown_codes` 時 a2 同 request、`accepted==1`、超額才 halted unknown；不開時 halted failed 可 `resume --resend`；payload EIO rc 3 而壞 JSON 仍 rc 2；重播回條 EIO 時 `--out` bytes 不變；過期 intent 走 receipt／resend／stop 三型；R8-14 表寫失敗後 `ran==2`；astra-5 50 案與 `audit.py` 不退化。
+- 第 4 組：EIO 讓 call 回 3 → 開 `unknown_codes` 時 a2 同 request、`accepted==1`、超額才 halted unknown；不開時 halted failed 可 `resume --resend`；payload EIO rc 3 而壞 JSON 仍 rc 2；重播回條 EIO 時 `--out` bytes 不變；過期 intent 走 receipt／resend／stop 三型；R8-14 表寫失敗後 `ran==2`（指讀表拒寫那條路；attempt 號照加，派出的可能是 a1、a3，驗收看「不得有第三次實跑」，不是看號碼。實體寫入錯誤那條路停在 unknown、ran==1，人手 `resume --resend` 後 ran==2，見 step spec §5、A9-04）；astra-5 50 案與 `audit.py` 不退化。
 - 第 5 組：每條一案（json `test` 欄）；proto7-1 的 `test_interval_huge_int` 搬回；三層 subd 由 subd 隊驗。
 - 測試：T8-01～08 每條「拿掉故障注入就轉紅」各手動驗一次並記在 play README。
 - 文件：spec §2.3／§2.6／§4.3／§5.5／§6 各一句；budget README／spec 退出碼表與單位定義；step spec `unknown_codes`、過期 intent、重送額度歸 request；契約卡 2.1；problems.md 加 A8-05～A8-11、C8-01～03 列。

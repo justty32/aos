@@ -10,6 +10,8 @@
 - 寫到 `<自己的 node>/history/<編碼 id>.jsonl`：先 `%`→`%25`、`+`→`%2B`，再 `/`→`+`；結果為 `daemon-events` 時改成 `daemon%2Devents`。
   `--out` 改資料夾；`--max-lines N` 超過就只留最後 N 行（輪替是它自己的事），
   node 歷史與 `daemon-events.jsonl` 都套用（A2-10）。
+- 升級（A9-02）：輸出夾沒有 `.names-v2` 標記時，名字含 `+`／`%` 的舊檔與 `daemon-events.jsonl`（舊版 node `daemon-events` 也寫這裡）
+  第一次寫入前改名成 `.v1` 封存、不再追加，再寫標記；要接回請自己搬。
 - 收到 tock 時 last-round.json 已經是那一回合的（tock 先提交總結才寫 tock.json；A2-12），不會讀到上一回合。
 - 它是取樣的：看到 `round` 跳號就記一行 `{"gap": [從, 到]}`，補不回來。已記到第幾回合存在槽裡的 state.json（換 run 接得上）。
 
@@ -30,6 +32,27 @@ def hist_name(nid):
     """node id 的可逆檔名：保留舊的斜線編碼，跳脫百分號、加號與事件檔名。"""
     name = nid.replace("%", "%25").replace("+", "%2B").replace("/", "+")
     return "daemon%2Devents" if name == "daemon-events" else name
+
+
+def upgrade_names(out):
+    """第一次寫入前封存有歧義的舊檔名；OSError 往上丟，不寫標記也不追加。
+
+    中途停下可重跑：只改 *.jsonl、不碰已封存的 .v1；同名封存加流水號、不覆蓋。
+    """
+    marker = os.path.join(out, ".names-v2")
+    if os.path.exists(marker):
+        return
+    os.makedirs(out, exist_ok=True)
+    for name in os.listdir(out):
+        if not name.endswith(".jsonl") or not ("+" in name or "%" in name or name == "daemon-events.jsonl"):
+            continue
+        src = os.path.join(out, name)
+        dst, k = src + ".v1", 2
+        while os.path.exists(dst):
+            dst, k = src + ".v1." + str(k), k + 1
+        os.rename(src, dst)
+    with open(marker, "w") as f:
+        f.write("檔名已用新版編碼；有歧義的舊檔已封存。\n")
 
 
 def src_path(me, resolve, nid, rel):
@@ -66,6 +89,7 @@ def once(me, args, resolve, st):
     me 是環境、args 是來源與輸出選項、resolve 是掛載解析器、st 是原地更新的進度；回傳 bool（modules/README.md）。
     來源不可讀或回合欄位不合就略過、保留已見回合；未知不當作新回合或 gap。
     """
+    upgrade_names(args.out)
     changed = False
     seen = st.setdefault("seen", {})
     for nid in args.src or [me["node_id"]]:

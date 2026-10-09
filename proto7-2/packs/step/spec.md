@@ -36,7 +36,7 @@
   - **`wait`**（條件）：每回合看一次，成立走 `then`。欄：`patience`、`on_timeout`（`unknown`／`fail`）、`fail`。
   - **`count`**（非負整數 N）：框架裡這步的計數 +1，≤N 走 `then`，否則走 `exhausted`。
   - **`end`**（字串）：工作結束，狀態寫進框架。
-- `unknown_codes`：只給 run，提供時要是非空、互異的整數陣列（1～255，bool 不收）；不給當空。結果退出碼在清單中＝未交付終局結果，走 on_unknown。
+- `unknown_codes`：只給 run，提供時要是非空、互異的整數陣列（1～255，bool 不收）；不給當空。結果退出碼在清單中＝未交付終局結果，走 on_unknown。只列真的代表「可能未完成、可同 K 重送」的碼；把一般失敗碼（如 1、2）列進來又把不冪等的工作標成冪等，重送就會重複產生效果——誤用，不檢查（A9-05）。
 - **條件**只准四種：`{"exists": 路徑}`、`{"glob": 樣式}`（至少一個符合）、`{"result.ok": 步名}`（該步最近採用的結果 `ok`）、`{"num": 路徑, "key": "a.b", "op": "<|<=|==|!=|>=|>", "value": 數字}`（JSON 檔裡一個數字比一次）。不開運算式。
 - **展開**（只在 argv、`expect`、條件路徑裡）：`${job}`、`${out}`＝`${job}/out`、`${step}`、`${request}`、`${attempt}`、`${result}`（這次嘗試的結果檔）、`${req:<步>}`（該步最近採用結果的 request id）。展開不了＝那一步停（`halt`）。
 - **選項**（`options`）：`wake`（false）、`restart_on_end`（false）、`on_timeout`（`unknown`）、`on_unknown`（`stop`）。可在步內用同名欄逐步覆蓋的只有 `wake`（`run` 步）、`on_timeout`（`run`／`wait`）、`on_unknown`（`run`）；`restart_on_end` 是工作級，只能寫在 `options`。檢查器對**套預設後的有效值**查限制：全域 `on_timeout: kill` 時，每個 `wait` 步都要在步內改回 `unknown`／`fail`。
@@ -80,7 +80,7 @@
 2. `phase: ended`：`restart_on_end` 時先 close（清 `results/`）再開新 `inst`；否則立刻退出 0。
 3. `halted`：只更新 `seen`，不前進（遲到的結果照樣留在 `results/`，`resume` 後採用）。
 4. 照 `pc` 前進，一圈內可走多步，但**最多登記一個 once**：
-   - `run` 沒有 `pending`：有 `receipt` 且成立→當 ok、不派。否則**先存意圖**（`pending.state=intent`、`intent_round`＝現在的回合），再拿表鎖加 once 項（表上已有同 attempt 的不加），再寫 `state=queued`。表鎖拿不到、表讀不到或壞＝**拒寫**：撤掉 `pending`、記 `error.json`，下一圈重來（attempt 號照加）。`wake: true` 時再寫 daemon 的 wake。
+   - `run` 沒有 `pending`：有 `receipt` 且成立→當 ok、不派。否則**先存意圖**（`pending.state=intent`、`intent_round`＝現在的回合），再拿表鎖加 once 項（表上已有同 attempt 的不加），再寫 `state=queued`。表鎖拿不到、表讀不到或壞＝**拒寫**：撤掉 `pending`、記 `error.json`，下一圈重來（attempt 號照加）。表讀得到、寫回時才出實體寫入錯誤（例如 EIO）不算拒寫：意圖留著、記 `error.json`（`os`），照下一點的證據判斷——同回合再一圈就補加；跨回合＝過期 intent 走 on_unknown，額度已用完就停在 unknown，要人手 `resume --resend`（A9-04）。`wake: true` 時再寫 daemon 的 wake。
    - `run` 有 `pending`：照順序看證據——結果檔（識別相符）→採用、推進；表上有同 attempt 項→還沒起，等；槽 `birth.json` 的 `x.step.attempt` 相符→有 `exit.json` 就重讀一次結果檔，仍沒有＝**unknown**；沒結束就等。都沒有：`intent` 且現在回合 == `intent_round`＝確定沒加上→補加；其餘＝**unknown**。
      - 直譯器讀回合時，tick 可能已開回合 r、還沒讀表；加項可能在 r 就起，tock r 報結束、tock r+1 刪槽，因此 r+1 已說不清。同回合內槽最早到下一個 tock 才刪；tick 先寫 birth 再刪表項，先讀表再讀槽至少一邊看得到。代價：存意圖後、加項前被殺，下一回合重開就走 on_unknown（receipt／resend／stop），不再自動補加。
    - `wait`：條件成立走 `then`；不成立看耐性。`count`、`end` 見 §2。

@@ -12,7 +12,7 @@ import unittest  # noqa: E402
 
 from base import MODULES, DaemonCase  # noqa: E402
 from _matrix import MatrixCase  # noqa: E402
-from aos7_fs import read_json, write_json  # noqa: E402
+from aos7_fs import append_jsonl, read_json, write_json  # noqa: E402
 from aos7_taskside import read_jsonl  # noqa: E402
 
 
@@ -69,9 +69,9 @@ class TestHistoryMaxLines(MatrixCase):
 
 
 class TestHistoryNames(MatrixCase):
-    """〔observe〕來源檔名可逆編碼，且不占 daemon 事件檔名（R8-17）。"""
+    """〔observe〕來源檔名可逆編碼、不占事件檔名（R8-17）；舊編碼一次封存（A9-02）。"""
 
-    def sample(self, ids, status=False):
+    def sample(self, ids, status=False, pre=None, marked=False):
         spec = importlib.util.spec_from_file_location("aos7_names_history", os.path.join(MODULES, "history.py"))
         hist = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(hist)
@@ -81,6 +81,12 @@ class TestHistoryNames(MatrixCase):
             rows[nid] = {"round": 1, "ended": [], "alive": [], "source": nid}
             write_json(os.path.join(node, ".aos", "last-round.json"), rows[nid])
         out = os.path.join(self.root, "history")
+        os.makedirs(out, exist_ok=True)
+        for name, row in (pre or {}).items():
+            append_jsonl(os.path.join(out, name), row)
+        if marked:
+            with open(os.path.join(out, ".names-v2"), "w") as f:
+                f.write("新版檔名\n")
         me = {"root": self.root, "node_id": ids[0]}
         args = argparse.Namespace(src=ids, status=status, out=out, max_lines=0)
         self.assertTrue(hist.once(me, args, lambda p: None, {}))
@@ -90,6 +96,33 @@ class TestHistoryNames(MatrixCase):
         out, rows = self.sample(["a/b", "a+b", "a%2Bb", "plain"])
         for nid, name in [("a/b", "a+b"), ("a+b", "a%2Bb"), ("a%2Bb", "a%252Bb"), ("plain", "plain")]:
             self.assertEqual(read_jsonl(os.path.join(out, name + ".jsonl")), [rows[nid]])
+
+    def test_legacy_ambiguous_name_is_archived(self):
+        old = {"round": 1, "source": "old a+b"}
+        out, rows = self.sample(["a/b", "a+b"], pre={"a+b.jsonl": old})
+        self.assertEqual(read_jsonl(os.path.join(out, "a+b.jsonl")), [rows["a/b"]])
+        self.assertEqual(read_jsonl(os.path.join(out, "a%2Bb.jsonl")), [rows["a+b"]])
+        self.assertEqual(read_jsonl(os.path.join(out, "a+b.jsonl.v1")), [old])
+        self.assertTrue(os.path.exists(os.path.join(out, ".names-v2")))
+
+    def test_legacy_daemon_events_is_archived(self):
+        old = {"round": 1, "source": "old node daemon-events"}
+        event = {"ev": "register", "at": "1"}
+        write_json(os.path.join(self.root, ".aosd", "status.json"), {"last_event": event})
+        out, rows = self.sample(["plain"], status=True, pre={"daemon-events.jsonl": old})
+        self.assertEqual(read_jsonl(os.path.join(out, "daemon-events.jsonl")), [event])
+        self.assertEqual(read_jsonl(os.path.join(out, "daemon-events.jsonl.v1")), [old])
+
+    def test_legacy_plain_name_keeps_appending(self):
+        old = {"round": 0, "source": "old plain"}
+        out, rows = self.sample(["plain"], pre={"plain.jsonl": old})
+        self.assertEqual(read_jsonl(os.path.join(out, "plain.jsonl")), [old, rows["plain"]])
+
+    def test_marked_names_are_not_archived_again(self):
+        old = {"round": 0, "source": "a/b"}
+        out, rows = self.sample(["a/b"], pre={"a+b.jsonl": old}, marked=True)
+        self.assertEqual(read_jsonl(os.path.join(out, "a+b.jsonl")), [old, rows["a/b"]])
+        self.assertFalse(os.path.exists(os.path.join(out, "a+b.jsonl.v1")))
 
     def test_daemon_events_source_does_not_mix_with_status(self):
         event = {"ev": "register", "at": "1"}
