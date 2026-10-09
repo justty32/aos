@@ -109,8 +109,10 @@ class InterfaceTests(unittest.TestCase):
             (node / '.aos/up.json').write_text('{}')
             (house / 'you').mkdir()
             (house / '.aosd').mkdir()
-            self.assertEqual(view.cleanup_hint(node),
-                f'檔案：都在 {house}（bob、you、.aosd）；全清：先停心跳，再 rm -r {house}')
+            self.assertEqual(view.cleanup_hint(node), f'要收掉：rm -r {house}')
+            with patch.object(view, 'alive', return_value=True):
+                self.assertEqual(view.cleanup_hint(node),
+                                 f'要收掉：先在視窗 1 按 Ctrl-C 停心跳，再 rm -r {house}')
             (house / 'other.txt').write_text('保留')
             hint = view.cleanup_hint(node)
             self.assertEqual(hint.split('rm -r ')[1], f'{node} {house}/you {house}/.aosd')
@@ -119,11 +121,41 @@ class InterfaceTests(unittest.TestCase):
             (second / '.aos/up.json').write_text('{}')
             self.assertEqual(view.cleanup_hint(node).split('rm -r ')[1], str(node))
             (house / 'other.txt').unlink()
-            self.assertEqual(view.cleanup_hint(node),
-                f'檔案：都在 {house}（alice、bob、you、.aosd）；全清：先停心跳，再 rm -r {house}')
+            self.assertEqual(view.cleanup_hint(node), f'要收掉：rm -r {house}')
             # 不是 up 起的 node（只有 .aos/、沒有 up.json）也在用 you 與 .aosd：不整屋、也不刪共用
             (second / '.aos/up.json').unlink()
             self.assertEqual(view.cleanup_hint(node).split('rm -r ')[1], str(node))
+
+    def test_plain_state_line(self):
+        ident = 'you-20261009T195030-18814f9c0220'
+        titles = {ident: '幫我寫一首短詩', 'you-20261009T195030-aaaaaaaaaaaa': '一二三四五六七八九十一二三四五六七八九十一二三四五六七八九十'}
+        for raw, wanted in ((f'- 16:51 回了 {ident}', '回了「幫我寫一首短詩」'),
+                            (f'- 19:51 卡住：問 AI 那筆一直不確定（call {ident}）',
+                             '卡住：問 AI 那筆一直不確定（「幫我寫一首短詩」）'),
+                            (f'- 第 2 回合 {ident}-s2：第 2 回合，下一步第 3 回合',
+                             '第 2 步「幫我寫一首短詩」：第 2 步，下一步第 3 步'),
+                            ('- 10:00 回了 bob-20261009T195030-bbbbbbbbbbbb', '回了一封信'),
+                            ('- 回了 you-20261009T195030-aaaaaaaaaaaa', '回了「一二三四五六七八九十一二三四五六七八九十一二三四…」'),
+                            ('下一步測試', '下一步測試'), ('- ', '還沒開始')):
+            with self.subTest(raw=raw):
+                self.assertEqual(view.plain(raw, titles), wanted)
+
+    def test_status_checkup_only_when_broken(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            node = Path(tmp) / 'bob'
+            (node / '.aos').mkdir(parents=True)
+            cfg = dict(v=1, node=str(node), house=tmp, name='bob', you='you', mail_root=tmp,
+                       model=None, litellm_url='', budget='budget/llm', holder='brain', gateway='llm.fake')
+            (node / '.aos/up.json').write_text(json.dumps(cfg))
+            for rc in (0, 1):
+                with patch.object(view, 'call', return_value=subprocess.CompletedProcess([], rc, '{}')), \
+                     contextlib.redirect_stdout(io.StringIO()) as out:
+                    self.assertEqual(view.status(node), 0)
+                lines = out.getvalue().splitlines()
+                self.assertEqual(lines[2], '工作簿：還有 0 件事沒做完；停在：還沒開始' +
+                                 (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if rc else ''))
+                self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 0 次，讀寫字數不明')
+                self.assertNotIn('體檢', out.getvalue())
 
     def test_config_read_failure_before_writes(self):
         with tempfile.TemporaryDirectory() as tmp:

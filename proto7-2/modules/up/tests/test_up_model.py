@@ -28,6 +28,8 @@ class UpModel(cases.UpTests):
         lines = self.invoke('status', self.node).splitlines()
         self.assertIn('問過 1 次', lines[4])
         self.assertIn('收到 1 封要辦的信，辦完 1 封', lines[1])
+        self.assertIn('停在：回了「用一句話介紹你自己」', lines[2])
+        self.assertNotIn('you-2', '\n'.join(lines))
 
 
 # Only the model cases belong to this subclass.
