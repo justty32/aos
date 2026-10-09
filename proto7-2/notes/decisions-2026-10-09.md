@@ -135,3 +135,5 @@
 - 使用者 15:10：「持續改進」＝做一做 → 回頭看做好的東西 OK 不 OK → 回頭修改，或乾脆重造
 - B｜頂層落法：每一波進 main 後排一輪「回頭審」（astra 審設計＋新手試用者實際上手），結論分三種：OK／修改／重造；重造不算浪費，照常開隊
 - C｜B3：budget cancel 寫的取消紀錄補齊凍結欄位；看不出是哪個入口時記 `fakeapi`（保持 cancel 原退出碼）；cancel 遇到既有結果寫的 accepted／failed 紀錄仍是舊形狀（不在這次範圍）
+- B｜W0／頂層核可：[blueprint-wfnode](blueprint-wfnode.md) 凍結 F1～F10（node 骨架用 wf-init 照模板原樣產、根只留 AGENTS.md／CLAUDE.md／.claude/、信名與終局照 PROTOCOL、routines 機器表走 wf-table json、大輸出 ref:// 可逆折疊、學徒只發布 apprentice/）
+- C｜W0：信件狀態照模板 PROTOCOL 的六種（計畫寫「五狀態」是誤記）；mail 與學徒先分 node 各自獨佔必讀通道；prompt token「曲線平」＝頭尾 30 回合平均差 ≤5%
