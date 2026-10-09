@@ -16,7 +16,7 @@
 | 保存 | 全在 `<node>/budget/<id>/`，活過 once 槽刪除與 step close；v1 只掃孤兒回條，其餘保存到預算明確退役（成長率與退役步驟見 spec §10） |
 | 依賴 | 核心 `aos7_fs`（`fact`、`write_json`、`edit_json`、`locked`、`read_round`、`sweep_tmp`）；不依賴 step（step 只是呼叫者） |
 | 程式 | `aos7_budget.py`（grant、時鐘、帳、CLI）、`aos7_budget_gate.py`（入口、假後端、call 包裝程式）、`bin/aos7-budget` |
-| 範例 | `examples/fakeapi/`（grant＋步驟表：呼叫假 API 一次） |
+| 範例 | `examples/fakeapi/`（grant＋步驟表：呼叫假 API 一次；call 步開 `unknown_codes: [3]`，退出 3 也同 request 重送） |
 | 測試 | `tests/`（`python3 proto7-2/tests/run_all.py packs/budget/tests`；全套預設就收） |
 
 ## 第一次跑（示範 fakeapi，已實跑）
