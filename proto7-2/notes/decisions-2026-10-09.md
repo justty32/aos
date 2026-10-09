@@ -163,3 +163,4 @@
 - A｜第一次體驗設計 [blueprint-firstrun](blueprint-firstrun.md)：加共用入口 `aos7-up`（新模組 `modules/up/`，核心不動），一行起 node 並自動裝好工作簿、帳、技能、例行與 daemon；前景跑、每秒印一行、Ctrl-C 收乾淨。新人只學 5 個詞（node、心跳、工作簿、信、技能）與 3 個指令（`aos7-up <node>`、`ask`、`status`）
 - B｜firstrun：預設假 AI，真 AI 只靠 `--model`（不自動花錢）；帳、回合、預留、ack、退出碼在 QUICKSTART 與各包開頭三行一律不出現；brain 一回合最多處理一封信、AI 回不來回 BLOCKED 不重試；人的信箱名固定 `you`
 - C｜routines 回改：第一次跑改用 `ls --run`（不用開 daemon）；新手重試第 1 輪過關 7.4 分（Haiku 7.4／luna 8.8）、約 6 分鐘、3 指令、4 概念
+- C｜prompt 回改：新範例讓第一次跑就看得到「收起來」（省九成 token）；README 概念 11→3，其餘收進進階；新手第 2 輪過關（Haiku 7.8／luna 8.4）
