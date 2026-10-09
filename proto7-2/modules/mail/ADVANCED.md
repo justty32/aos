@@ -2,7 +2,7 @@
 
 ← [README（日常用法）](README.md)
 
-日常只要 README 的 send／read／done／audit。這份給要用其他狀態、團隊、身份格、程式 API，或要維護本包的人。
+日常只要 README 的 send／read／done；查帳用的 audit 也在這份。這份給要用其他狀態、團隊、身份格、程式 API，或要維護本包的人。
 
 ## 目錄
 
@@ -201,4 +201,4 @@ sh proto7-2/modules/mail/examples/two_nodes.sh
 
 本輪新增真 wfnode 雙 node 整合與雜檔過濾兩項：init alice／bob 後在模板「現役成員」段追加身份格，其餘內容逐字保留；REQUEST → read／done → 終局回信，`.gitkeep` 不列信。找不到 `AOS7_WF_HOME`（預設 `~/repo/workflows`）的 `tools/wf-init.sh` 時整合測試 skipTest。本機實跑未 skip，alice／bob 的 `aos7-wfnode check` 退出碼都是寄信前 0、收辦回信後 0。清除 mail 的 `__pycache__` 後再跑指定指令，兩輪都是 28 項全過；`aos7_mail.py` 357 行。
 
-10-09 回改（新手試用不過）：加 `--help`（不需 root）、send 省略 STATUS 預設 REQUEST、done 只給一句話預設 DONE、錯誤訊息改白話並附例子；README 只留日常四指令，其餘移來本檔。新增 `test_newbie_help_and_defaults`，共 29 項。
+10-09 回改（新手試用不過）：加 `--help`（不需 root）、send 省略 STATUS 預設 REQUEST、done 只給一句話預設 DONE、錯誤訊息改白話並附例子；README 只留日常三指令（send／read／done），audit 與其餘移來本檔。新增 `test_newbie_help_and_defaults`，共 29 項。
