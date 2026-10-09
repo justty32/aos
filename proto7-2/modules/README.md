@@ -14,6 +14,7 @@
 | [once_retry](once_retry/README.md) once 保證包 | 從沒起來過就 lost 的 once 加回（至少一次） | A | 關 | 事實欄 `never_started`、`x` | `once_retry/retry_lost.py` |
 | [audit](audit/README.md) 稽核包 | Python 任務的寫入紀錄（只記不擋） | B | 關 | 無 | `audit/aos7-audit` |
 | [diag](diag/README.md) 診斷包 | 唯讀重算判不出的槽、對到恢復步驟；操作手冊 | C | 開（工具） | 核心的判定函式（只讀） | `diag/aos7-diag` |
+| [events](events/README.md) 事件保存包 | 每 node 一個 events/ 固定檔數保存事件：取樣核心觀測＋合作來源逐件發布，垃圾由寫者清 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs | `events/aos7-events`（子命令 read／pub） |
 | `history.py` 歷史 module | 每個 tock 把「上一次」追加到自己的地方（見下） | A | 關 | 工具包的任務端函式 | `history.py` |
 | `counter.py` 示範任務 | 讀同槽上一次的 state、收 tock.json | A | — | 工具包的任務端函式 | `counter.py` |
 
