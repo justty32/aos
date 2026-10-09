@@ -62,10 +62,11 @@ with open(sys.argv[1], 'a') as f:
             {'records': [], 'gaps': [{'kind': 'retention', 'from': 1, 'to': 2}],
              'errors': [{'kind': 'bad_line'}]},
         ):
-            with patch.object(ackmod, 'events_read', return_value=result), patch.object(ackmod, 'event_ack', return_value=2) as confirm:
+            with patch.object(ackmod, 'events_read', return_value=result), patch.object(ackmod, 'event_ack', return_value=0) as confirm:
                 mail.ack(self.root, 'bob')
-                confirm.assert_not_called()
-                self.assertFalse(marker.exists())
+                # 讀不清只以原值 ack 一次（讓 events 復原），不得越過
+                confirm.assert_called_once_with(self.root / 'bob/events', 0)
+                self.assertEqual(mail.load(marker, 0), 0)
 
     def test_error_usage_format_and_help(self):
         for args in (('send',), ('read', '../bad'), ('sned',), ('--root',)):
@@ -85,7 +86,7 @@ with open(sys.argv[1], 'a') as f:
                 msg = stderr.getvalue()
                 self.assertEqual(len(msg.splitlines()), 1)
                 self.assertTrue(msg.startswith('aos7-mail: 不確定：'))
-                self.assertIn('留著。照原樣再跑一次會接續', msg)
+                self.assertIn('留著。read／done 照原樣再跑一次會接續', msg)
         sent = self.send()
         with patch.object(boxmod, 'letter', side_effect=OSError('讀檔失敗')), patch('sys.stderr', io.StringIO()) as stderr:
             self.assertEqual(cli.main(['--root', str(self.root), 'read', 'bob']), 3)

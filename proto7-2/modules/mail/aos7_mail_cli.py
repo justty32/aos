@@ -104,6 +104,8 @@ def _main(argv=None):
             else:
                 rows = audit(root, a.me)
                 output(rows, a.json, a.quiet if a.json else True)
+            if a.cmd == 'audit' and rows:
+                print(f'aos7-mail: 還有 {len(rows)} 封請求沒人辦完。請收件人 read 後 done，或寄件人去催', file=sys.stderr)
             return int(a.cmd == 'audit' and bool(rows))
         elif a.cmd == 'roster':
             roster(root, a.me, a.who, a.up, a.territory, a.can, a.cannot, a.team)
@@ -130,7 +132,7 @@ def main(argv=None):
         return _main(argv)
     except OSError as e:
         msg = " ".join(str(e).splitlines())
-        print(f"aos7-mail: 不確定：讀寫檔案或輸出時出錯（{msg}），這次可能只做了一半，已寫下的信與狀態都留著。照原樣再跑一次會接續", file=sys.stderr)
+        print(f"aos7-mail: 不確定：讀寫檔案或輸出時出錯（{msg}），可能只做了一半，已寫下的信與狀態都留著。read／done 照原樣再跑一次會接續；send 先用 audit <我> 看信到了沒，免得重寄", file=sys.stderr)
         try:  # 輸出壞了：丟掉沒寫出去的，免得結束時再炸一次、退出碼變 120
             os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
         except (OSError, ValueError):
