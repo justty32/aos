@@ -199,3 +199,4 @@
 - 結果｜QS 新人從零上手（只看 QUICKSTART）：第 2 輪過關，Haiku 7.6／luna 8.6，兩位都說「ELI5 之後不複雜」；每人約 6～10 分鐘、3 個指令。概念數 Haiku 數 8（輸出裡有英文 DONE、token 被算進去）→ [firstrun 試用](play/2026-10-10-firstrun/README.md)
 - B｜頂層：開 ER-up 隊，照 QS 回報改 aos7-up 的輸出：status 全清提示改成刪整個房子；DONE／token 換成中文白話；`--help` 只列 3 個指令（退出碼、-d、stop 搬到 ADVANCED）；`--model` 提示指向 ADVANCED
 - C｜ER-events：新增 `aos7-events ack`；`--help` 只列 pub／read／ack；ack 不再對沒 state 的夾建鎖檔；`pub` 不再自動建 events 夾（要 `--create`）；滿了改退 1、不確定改退 3、read 拼錯路徑改退 1（原本假裝空帳本）。新手 Haiku 7／luna 8
+- C｜ER-author：三關檢查器指令名定為 `aos7-gates`；三關預設離線規則審（要 astra 審得明講，不自動花錢）；`publish` 沒給 `--repo` 不建分支、只說會建在哪；索引列改插進表格內；學徒／審查／learn 三種 AI 呼叫分開標記；被拒的候選退 1。新手 Haiku 7／luna 9
