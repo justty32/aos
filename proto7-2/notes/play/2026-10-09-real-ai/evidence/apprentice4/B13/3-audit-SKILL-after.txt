@@ -1,0 +1,99 @@
+---
+name: aos-tool-apprentice
+description: 記錄 aos 唯讀彙總工具的資料邊界、候選 JSON 交付格式與驗證骨架。
+triggers: aos-tool、唯讀彙總、fixture 核對
+---
+
+## 踩過的坑
+
+- 症狀：候選 JSON 的檔案內容已結束，卻把 `report` 接在物件之外，造成「多餘內容」而卡在第一關。→ 下次怎麼做：先確認候選恰好是一個 JSON 物件，`report` 與 `files`、`row` 都在同一個最外層物件內；不要手動拼接已封閉的 JSON。
+- 症狀：交付了程式與測試，就把三關寫成已通過。→ 下次怎麼做：區分「已交付」與「已驗證」；只有指定測試實際退出 0、獨立核對回報 true，才宣稱過關。
+- 症狀：程式沒有明顯寫入動作，卻未確認輸入保持原狀。→ 下次怎麼做：自行解析檔案，不匯入寫入、復原或鎖定路徑；在唯讀目錄執行，前後比對檔案集合、位元組、type、size、mode 與 mtime_ns。
+- 症狀：只測 JSON 能解析，漏掉空 stdout、精確型別、排序和錯誤優先順序。→ 下次怎麼做：以子程序執行入口，斷言退出碼、stdout 行數、鍵集合、`null`、整數型別、排序及壞資料處理；`bool` 不算整數。
+- 症狀：以系統時鐘或無時區時間直接比較，結果隨執行環境改變。→ 下次怎麼做：要求可由 `datetime.fromisoformat` 解析且帶時區的 `--now`；資料時間若無時區，套用 `--now.tzinfo`，絕不讀系統時鐘。
+- 症狀：解析、判重與統計交錯，讓無效資料進入彙總。→ 下次怎麼做：先依規格順序完成欄位、名稱及重複識別檢查；只讓有效資料進入計數與待辦判定，最後明確排序輸出。
+
+## 驗過的骨架
+
+入口保持精簡，供 checker 直接以 Python 執行；先將包目錄加入匯入路徑，再呼叫模組的 `main`：
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from aos7_<tool> import main
+
+if __name__ == '__main__':
+    sys.exit(main())
+```
+
+模組自行解析輸入，不呼叫既有寫入或修復路徑。先驗證參數，再彙總；成功只印一行 JSON，無效參數退出 2 且 stdout 為空：
+
+```python
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+
+def main():
+    if len(sys.argv) != 4 or sys.argv[2] != '--now':
+        return 2
+    folder = Path(sys.argv[1])
+    if not folder.is_dir():
+        return 2
+    try:
+        now = datetime.fromisoformat(sys.argv[3])
+    except ValueError:
+        return 2
+    if now.tzinfo is None:
+        return 2
+    result = collect(folder, now)
+    print(json.dumps(result, ensure_ascii=True, separators=(',', ':')))
+    return 0
+```
+
+測試沿用 `unittest`，以測試檔位置定位入口，透過子程序檢查真正的 stdout 與退出碼；指定 runner discover 包內測試：
+
+```python
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+ENTRY = Path(__file__).resolve().parents[1] / 'bin' / 'aos7-<tool>'
+
+class ToolTests(unittest.TestCase):
+    def call(self, folder, *args):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(folder), *args],
+            capture_output=True,
+        )
+```
+
+README 至少包含用途、唯讀邊界、輸入輸出、失敗退出碼，以及 `## 第一次跑`：
+
+```markdown
+# 工具名稱
+
+說明讀取哪些輸入，以及不修復、不寫回資料的邊界。
+
+## 第一次跑
+
+`python3 packs/<包名>/bin/<入口> <資料夾> --now <帶時區的 ISO 時間>`
+
+成功時 stdout 僅有一行 JSON；無效參數退出 2，stdout 為空。
+```
+
+索引只新增所交付包的一列。候選交付時，索引列、檔案內容與報告必須同屬一個 JSON 物件；報告區分交付與實際驗證，並以指定工具清單結尾：
+
+```json
+{
+  "row": "| `packs/<包名>/` | [工具名稱](packs/<包名>/README.md) | 唯讀彙總用途 |",
+  "files": {
+    "packs/<包名>/README.md": "README 內容"
+  },
+  "report": "# REPORT\n\n交付範圍與實際驗證結果；未執行的核對不得寫成通過。\n\n## 以後交接書該點名的工具\n\n- `python3 proto7-2/tests/run_all.py packs/<包名>/tests`：實質測試。\n- `python3 check_answer.py <proto7-2> fixture`：獨立答案與唯讀核對。"
+}
+```

@@ -1,0 +1,30 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "rid": "gapB5",
+ "skill": "aos-tool-apprentice",
+ "into": "/tmp/ap4-work/runs/B5/skillnode/skills/aos-tool-apprentice/SKILL.md",
+ "bytes": 0,
+ "llm": {
+  "model": "chatgpt-gpt-6-luna",
+  "call_id": "gapB5-learn-1791557158",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 1039,
+   "prompt_tokens": 6110,
+   "total_tokens": 7149,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 7149,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/ap4-node/llmcall/llm/gapB5-learn-1791557158/receipt.json"
+ },
+ "error": "技能書格式不合：aos7-skills: 有 1 本不收：aos-tool-apprentice（SKILL.md 不合：缺少開頭 frontmatter ---）。改好那幾本的 SKILL.md 再跑 index，其他已照寫"
+}

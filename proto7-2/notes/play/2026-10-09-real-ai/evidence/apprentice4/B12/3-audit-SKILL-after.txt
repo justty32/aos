@@ -1,0 +1,100 @@
+---
+name: aos-tool-apprentice
+description: 建立唯讀 aos 工具時，沿用已過關的候選交付骨架，並區分程式碼審查與實際驗證。
+triggers: aos-tool、唯讀工具、候選交付
+---
+
+## 踩過的坑
+
+- 症狀→用 `/` 計算分鐘後直接輸出，JSON 中的 `age_min` 變成 `0.0`、`90.0`，數值看似正確卻不符合整數型別。下次怎麼做→以 `timedelta` 做分鐘向下取整，明確輸出 `int`；也測負數分鐘，避免截斷與向下取整混淆。
+- 症狀→把候選內容完整或關卡未列問題寫成「指定工具已執行且驗收通過」。下次怎麼做→report 只記實際執行的命令與結果；沒有工具可用時明說未驗證。
+- 症狀→唯讀測試只比對檔案內容，漏掉新增項目、權限及時間戳變化。下次怎麼做→執行前後比對目錄項目、檔案位元組及中繼資料；不能以程式沒有明寫入當作唯讀證明。
+- 症狀→正常輸出測試通過，卻漏掉無效資料的整筆排除、重複識別碼優先序及空信箱。下次怎麼做→用子程序測完整鍵集合、嚴格型別、排序、錯誤原因、退出碼與 stdout 行數。
+- 症狀→以 `Path.stat()` 篩選檔案，意外跟隨符號連結。下次怎麼做→掃描目錄項目時以 `lstat()` 判斷項目本身；只檢查指定層級，不遞迴。
+
+## 驗過的骨架
+
+入口保持短小，讓檢查器能直接以 Python 執行，並從入口位置定位同包模組：
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tool_module import main
+
+if __name__ == '__main__':
+    sys.exit(main())
+```
+
+模組自行解析資料，只匯入所需標準函式庫，不匯入既有寫入、修復或鎖定流程。先驗證帶時區的輸入時間及資料夾，再彙總；成功時才印一行 JSON。分鐘差須保持整數型別：
+
+```python
+import argparse
+import json
+import re
+import stat
+from datetime import datetime, timedelta
+from pathlib import Path
+
+age_min = int((now - parsed_at) // timedelta(minutes=1))
+```
+
+測試從測試檔位置定位入口，以子程序核對真實 CLI；使用 `test_*.py` 和 `unittest.TestCase` 供 runner discover：
+
+```python
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ENTRY = Path(__file__).resolve().parents[1] / 'bin' / 'tool-name'
+
+class ToolTests(unittest.TestCase):
+    def invoke(self, folder, *args):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(folder), *args],
+            capture_output=True,
+            text=True,
+        )
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+README 保留第一次執行章節，交代單行輸出、無效輸入退出碼、唯讀限制和驗證命令：
+
+```markdown
+# tool-name
+
+## 第一次跑
+
+在原型根目錄執行 `python3 packs/<pack>/bin/<tool> <folder> --now <ISO>`。
+成功時 stdout 為一行 JSON；無效輸入時 stdout 為空、退出碼為 2。
+工具只讀取指定資料，不修復資料，也不讀系統時鐘。
+
+測試：`python3 proto7-2/tests/run_all.py packs/<pack>/tests`。
+獨立核對：`python3 check_answer.py <proto7-2> fixture`。
+```
+
+索引只交付對應工具的一列，不改動其他包或既有列：
+
+```markdown
+| `packs/<pack>/` | [<tool>](packs/<pack>/README.md) | 工具用途 |
+```
+
+report 記錄交付範圍與實際驗證狀態；未執行時明說未驗證，並以指定工具清單收尾：
+
+```markdown
+# REPORT
+
+記錄交付範圍、實際執行的測試與結果；未執行就明說未驗證。
+
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/<pack>/tests`
+- `python3 check_answer.py <proto7-2> fixture`
+```

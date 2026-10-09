@@ -1,0 +1,117 @@
+{
+ "variant": "A",
+ "rep": 13,
+ "model": "chatgpt-gpt-6-sol-low",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 6,
+ "offline": false,
+ "stop": null,
+ "calls_total": 256,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA13",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 7814,
+   "review_tokens": 5800,
+   "secs": 45.1,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 7814,
+     "review_tokens": 5800,
+     "secs": 45.1,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "runs",
+   "rid": "runsA13",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 7552,
+   "review_tokens": 6777,
+   "secs": 51.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 7552,
+     "review_tokens": 6777,
+     "secs": 51.0,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 2,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "audit",
+   "rid": "auditA13",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 7425,
+   "review_tokens": 6461,
+   "secs": 52.1,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 7425,
+     "review_tokens": 6461,
+     "secs": 52.1,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 3,
+   "skill_in_prompt": false
+  }
+ ]
+}

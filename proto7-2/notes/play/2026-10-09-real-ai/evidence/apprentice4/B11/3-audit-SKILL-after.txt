@@ -1,0 +1,115 @@
+---
+name: aos-tool-apprentice
+description: 製作 aos 唯讀工具時，整理候選交付、驗收紀錄與可重用的實作及交接骨架。
+triggers: aos-tool、唯讀工具、候選交付、驗收
+---
+
+## 踩過的坑
+
+- 症狀：錯誤分類正確，測試卻因預期順序不同而失敗→下次怎麼做：依規格建立排序鍵；改完預期後重跑測試，不只靠人工推算。
+- 症狀：壞資料混入統計，或重複識別碼搶走有效資料的位置→下次怎麼做：按輸入相對路徑排序，先完成格式與欄位驗證，再讓第一筆有效識別碼取得資格；只累加有效資料。
+- 症狀：解析時順手清理欄位值，改變空值、重複欄位或關聯欄位的語意→下次怎麼做：依指定分隔符切第一處，保留原值，重複鍵以最後一筆為準；按規格順序判定錯誤。
+- 症狀：掃入隱藏檔、符號連結或非指定層級的資料→下次怎麼做：明列允許的目錄與副檔名，只巡覽指定層級的非隱藏一般檔，不遞迴搜尋。
+- 症狀：唯讀工具留下鎖檔或改動輸入→下次怎麼做：自行解析，不匯入寫入、修復或鎖定路徑；測試前後比對路徑、位元組、權限與修改時間，並涵蓋唯讀目錄。
+- 症狀：無效時間仍產生輸出，或資料時間暗中採用系統時鐘→下次怎麼做：先驗證參數可由 `datetime.fromisoformat` 解析且含時區；資料中的無時區時間採用參數時區，無效輸入退出 2 且 stdout 為空。
+- 症狀：把候選內容或 gate 紀錄寫成親自執行的結果→下次怎麼做：REPORT 分開寫交付內容與實際執行紀錄；沒有命令執行紀錄就明說未驗證。
+
+## 驗過的骨架
+
+入口維持精簡，從腳本位置匯入同包模組，直接傳回退出碼：
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from aos7_tool import main
+
+if __name__ == '__main__':
+    sys.exit(main())
+```
+
+模組自行解析輸入，不呼叫既有寫入或修復程式。先驗證 CLI，再彙總；成功只輸出一行 JSON：
+
+```python
+def main(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('folder')
+    parser.add_argument('--now', required=True)
+    args = parser.parse_args(argv)
+    try:
+        now = datetime.fromisoformat(args.now)
+    except ValueError:
+        return 2
+    folder = Path(args.folder)
+    if now.tzinfo is None or not folder.is_dir():
+        return 2
+    print(json.dumps(
+        summarize(folder, now),
+        ensure_ascii=True,
+        separators=(',', ':'),
+    ))
+    return 0
+```
+
+實質測試以腳本路徑啟動子程序，檢查退出碼、JSON 型別與排序、錯誤分類及輸入不變；測試檔保留 discover 相容入口：
+
+```python
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ENTRY = Path(__file__).resolve().parents[1] / 'bin' / 'aos7-tool'
+
+class ToolTests(unittest.TestCase):
+    def cli(self, folder, *args):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(folder), *args],
+            capture_output=True,
+            text=True,
+        )
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+README 至少說明讀取範圍、唯讀邊界、首次執行方式，以及成功與無效輸入的行為：
+
+````markdown
+# 工具名稱
+
+簡述讀取範圍；不修復資料，也不使用系統時鐘。
+
+## 第一次跑
+
+```sh
+python3 packs/<包名>/bin/<工具名> /path/to/node --now 2025-01-01T00:00:00+00:00
+```
+
+成功時 stdout 恰為一行 JSON；路徑或時間無效時退出 2，stdout 為空。
+````
+
+索引只新增所屬包的一列：
+
+```markdown
+| `packs/<包名>/` | [工具名稱](packs/<包名>/README.md) |
+```
+
+REPORT 區分交付和實際驗證，結尾點名實質測試與獨立核對工具：
+
+```markdown
+# REPORT
+
+交付的檔案與索引列：……
+實際執行的驗證及結果：……；未執行時明說未驗證。
+
+## 以後交接書該點名的工具
+
+`python3 proto7-2/tests/run_all.py packs/<包名>/tests`
+
+`python3 check_answer.py <proto7-2> fixture`
+```

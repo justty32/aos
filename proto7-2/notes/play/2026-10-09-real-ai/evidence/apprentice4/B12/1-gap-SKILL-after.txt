@@ -1,0 +1,88 @@
+---
+name: aos-tool-apprentice
+description: 建立唯讀 aos 工具時，保留已驗過的交付骨架，並防止檔案類型判斷與測試宣稱踩坑。
+triggers: aos-tool、唯讀工具、JSONL 彙總、候選交付
+---
+
+## 踩過的坑
+
+- 症狀→用 `Path.stat()` 判斷一般檔案會跟隨符號連結；符合檔名規則的懸空連結可能讓掃描拋出未捕捉例外。下次怎麼做→先用 `lstat()` 確認目錄項目本身是一般檔案，再讀取內容；以懸空連結測試確認工具仍正常輸出。
+- 症狀→程式碼與測試看起來完整，卻沒有實際執行結果可支持「驗收已過」。下次怎麼做→區分已寫入候選、已通過審查與已執行測試；不能執行指定工具時，在 report 明說未驗證，不宣稱通過。
+- 症狀→唯讀工具可能因測試只比較檔案內容，而漏查型別、權限或時間戳變化。下次怎麼做→按驗收要求核對輸入目錄與檔案的內容及中繼資料；不要把「程式沒有明寫入」當作唯讀證明。
+
+## 驗過的骨架
+
+入口保持短小，讓檢查器可直接以 Python 執行；模組路徑由入口自身定位：
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tool_module import main
+
+if __name__ == '__main__':
+    sys.exit(main())
+```
+
+模組自行解析資料，不匯入既有寫入、修復或鎖定流程。篩選檔案時，不跟隨符號連結：
+
+```python
+import stat
+
+if not stat.S_ISREG(path.lstat().st_mode):
+    continue
+data = path.read_bytes()
+```
+
+測試從測試檔位置定位入口，透過子程序驗證退出碼與 stdout；保留可供測試 runner discover 的 `test_*.py` 與 `unittest.TestCase`：
+
+```python
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+ENTRY = ROOT / 'bin' / 'tool-name'
+
+class ToolTests(unittest.TestCase):
+    def run_cli(self, folder):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(folder)],
+            capture_output=True,
+        )
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+README 包含第一次執行、退出行為與指定驗證命令；索引只新增對應工具的一列：
+
+```markdown
+## 第一次跑
+
+在原型根目錄執行 `python3 packs/<pack>/bin/<tool> <folder>`。
+說明成功及無效輸入的退出碼、stdout 行為與唯讀限制。
+
+執行 `python3 proto7-2/tests/run_all.py packs/<pack>/tests` 測試；
+用 `python3 check_answer.py <proto7-2> fixture` 獨立核對。
+```
+
+```markdown
+| `packs/<pack>/` | [<tool>](packs/<pack>/README.md) | 工具用途 |
+```
+
+report 如實記錄執行與核對狀態，並以指定標題收尾：
+
+```markdown
+# REPORT
+
+記錄交付範圍、實際執行的測試及結果；未執行就明說未驗證。
+
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/<pack>/tests`
+- `python3 check_answer.py <proto7-2> fixture`
+```

@@ -1,0 +1,94 @@
+---
+name: aos-tool-apprentice
+description: 記錄 aos 唯讀工具交付時的踩坑檢查、候選寫法與驗證邊界。
+triggers: aos-tool、唯讀彙總、候選交付
+---
+
+## 踩過的坑
+
+- 症狀：沒有執行命令，卻把測試寫成已通過 → 下次怎麼做：report 分清候選內容與實際驗證結果；無法執行時明說未核對，不推定 fixture 為 true。
+- 症狀：合法 JSON 含有不合契約的值，或含 `NaN`、`Infinity` → 下次怎麼做：解析時拒絕非標準常數，再分開驗整張表與逐列欄位；壞表不彙總，壞列不計數。
+- 症狀：Python 把 `bool` 當成 `int` → 下次怎麼做：契約要求真正整數時使用 `type(value) is int`，不要只用 `isinstance(value, int)`。
+- 症狀：先驗列再查重，讓重複名稱誤報為壞列 → 下次怎麼做：每張表各自記錄非空字串名稱，包含無效列；後續同名列先判 `dup_name`。
+- 症狀：狀態判斷順序或時間格式化改變結果 → 下次怎麼做：依契約順序決定狀態；先完成時間運算，再轉 UTC 輸出，僅在呈現時去掉小數秒。
+- 症狀：唯讀工具意外建立鎖檔或改動輸入 → 下次怎麼做：自行解析檔案，不匯入寫入、修復或鎖定程式；測試前後比對目錄項目、位元組、權限及修改時間，並用獨立 fixture 核對。
+
+## 驗過的骨架
+
+入口腳本保持短小，從腳本位置匯入同包模組，不依賴呼叫時的工作目錄；參數錯誤由 `main` 回傳退出碼，避免在 stdout 印出訊息：
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from tool_module import main
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
+```
+
+模組只用標準函式庫讀取、解析與彙總；拒絕非標準 JSON 常數，驗證資料時間時明確處理時區，不讀系統時鐘：
+
+```python
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+def strict_json(text):
+    def reject(value):
+        raise ValueError(value)
+    return json.loads(text, parse_constant=reject)
+
+def timestamp(value, default_tz):
+    parsed = datetime.fromisoformat(value)
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=default_tz)
+```
+
+測試以自身路徑定位入口，用子行程核對 stdout 與退出碼；測試檔命名為 discover 可辨識的 `test_*.py`：
+
+```python
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ENTRY = Path(__file__).resolve().parents[1] / 'bin' / 'tool-name'
+
+class ToolTests(unittest.TestCase):
+    def call(self, folder, *args):
+        return subprocess.run(
+            [sys.executable, str(ENTRY), str(folder), *args],
+            capture_output=True, text=True,
+        )
+```
+
+README 包含首次執行章節、CLI 呼叫方式、唯讀限制及驗證命令：
+
+```markdown
+## 第一次跑
+
+python3 packs/<package>/bin/<tool> <node-folder> --now <timezone-aware-ISO>
+python3 proto7-2/tests/run_all.py packs/<package>/tests
+python3 check_answer.py proto7-2 fixture
+```
+
+INDEX 只新增一列，連到包內 README：
+
+```markdown
+| `packs/<package>/` | [<tool>](packs/<package>/README.md) | 唯讀彙總用途 |
+```
+
+report 寫明實際驗證狀態，末尾保留交接工具章節；未執行時不得宣稱過關：
+
+```markdown
+未執行驗證：目前無法執行命令，因此不宣稱測試或 fixture 已通過。
+
+## 以後交接書該點名的工具
+
+- `python3 proto7-2/tests/run_all.py packs/<package>/tests`：實質測試。
+- `python3 check_answer.py proto7-2 fixture`：獨立答案與唯讀核對。
+```

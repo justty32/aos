@@ -1,0 +1,75 @@
+---
+name: aos-tool-apprentice
+description: 新增 aos 工具時，遵守範圍限制、實作唯讀行為、檢查輸出契約並提交可驗證的交付。
+triggers: aos-tool、唯讀彙總、工具包、候選 JSON、驗收
+---
+
+## 踩過的坑
+
+- 候選 JSON 尾隨逗號或額外文字→提交前確認整份輸出恰好是一個合法 JSON 物件，不加前言、尾註或圍欄。
+- 索引列放錯位置→將索引列放在頂層 `row` 欄位，不放進檔案清單。
+- 局部狀態欄位無效時清空其他有效頻道→只有整體結構無效才讓所有頻道欄位失效；單一頻道無效只清空該頻道。
+- 測試只檢查摘要數字，沒驗證錯誤分類→為有效與無效記錄寫具體斷言，核對錯誤原因、排序及輸出型別。
+- 腳本或匯入依賴超出限制→把入口、模組、測試及文件都納入檔案數與行數檢查，只在允許範圍新增檔案。
+- 文件或測試成功就當成交付完成→實際執行指定測試與獨立唯讀核對；不能執行時如實說明，不宣稱通過。
+- 寫入、修復或取得系統時間污染唯讀任務→只讀輸入，不呼叫既有寫入或復原路徑；核對前後目錄、內容與權限。
+- 測試匯入路徑依賴工作目錄而失敗→確認 runner 的 discovery 與匯入慣例，採用可重現的本地路徑。
+
+## 驗過的骨架
+
+入口保持短小，將套件目錄加入匯入路徑，再匯入模組的 `main`：
+
+```python
+#!/usr/bin/env python3
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from aos_tool import main
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+模組以標準函式庫實作；執行檔直接執行時呼叫 `main`。測試從自身位置定位入口，以 runner 可 discovery 的 unittest 類別撰寫，並透過子程序驗證真實 CLI 行為：
+
+```python
+import os
+import subprocess
+import sys
+import unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENTRY = os.path.join(ROOT, "bin", "aos-tool")
+
+class ToolTests(unittest.TestCase):
+    def run_tool(self, folder):
+        return subprocess.run(
+            [sys.executable, ENTRY, folder],
+            text=True,
+            capture_output=True,
+        )
+```
+
+README 至少包含標題與「第一次跑」章節，說明呼叫方式及測試命令：
+
+```markdown
+# aos-tool
+
+## 第一次跑
+
+執行工具的命令與基本輸出行為。
+
+測試：`python3 proto7-2/tests/run_all.py packs/tool/tests`
+```
+
+索引列以頂層 `row` 提供，路徑指向套件內 README：
+
+```markdown
+| `packs/tool/` | 工具用途 | [README](packs/tool/README.md) |
+```
+
+REPORT 說明交付與實際執行的檢查結果；無法執行的項目如實揭露，並以指定標題與工具用途作結：
+
+```markdown
+## 以後交接書該點名的工具
+
+- `工具名稱`：用途簡述。
+```

@@ -1,0 +1,4 @@
+{"rid": "gapA13", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 7814, "review_tokens": 5800, "secs": 45.1, "skill": null, "proxy_suspect": false, "issues": []}
+{"rid": "runsA13", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 7552, "review_tokens": 6777, "secs": 51.0, "skill": null, "proxy_suspect": false, "issues": []}
+{"rid": "auditA13", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 7425, "review_tokens": 6461, "secs": 52.1, "skill": null, "proxy_suspect": false, "issues": []}
+{"variant": "A", "rep": 13, "stop": null, "passed": [true, true, true], "rounds": [1, 1, 1]}

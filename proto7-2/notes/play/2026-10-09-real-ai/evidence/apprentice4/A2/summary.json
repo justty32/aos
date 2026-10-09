@@ -1,0 +1,473 @@
+{
+ "variant": "A",
+ "rep": 2,
+ "model": "chatgpt-gpt-6-luna",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 6,
+ "offline": false,
+ "stop": null,
+ "calls_total": 77,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA2",
+   "passed": false,
+   "rounds": 6,
+   "reasks": 5,
+   "fails": {
+    "1": 4,
+    "2": 2,
+    "3": 0
+   },
+   "tokens": 60919,
+   "review_tokens": 0,
+   "secs": 124.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "layout",
+      "readme",
+      "territory",
+      "tests"
+     ],
+     "tokens": 5340,
+     "review_tokens": null,
+     "secs": 2.9,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "territory",
+       "why": "row 必須為指定前綴的一列"
+      },
+      {
+       "rule": "layout",
+       "why": "缺必要檔：packs/evgap/README.md、packs/evgap/bin/aos7-evgap、packs/evgap/aos7_evgap.py（files 的鍵要寫完整路徑）"
+      },
+      {
+       "rule": "tests",
+       "why": "缺測試（要有 packs/evgap/tests/test_*.py）"
+      },
+      {
+       "rule": "readme",
+       "why": "packs/evgap/README.md 缺指定章節（行首、不在圍欄內）：## 第一次跑"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 8146,
+     "review_tokens": null,
+     "secs": 22.2,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_evgap (unittest.loader._FailedTest.test_evgap)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_evgap\nTraceback (most recent call last):\n  File \""
+      },
+      {
+       "rule": "answer",
+       "why": "['variant 7: 答案、型別或一行 stdout 不合：{\"v\":1,\"channels\":{\"obs\":{\"count\":11,\"first\":1,\"last\":12,\"missing\":[[2,2]],\"dup\":[],\"next_seq\":null,\"unacked\":null,\"stale_next\":null},\"must\":{\"count\":12,\"first\":1,\"last\":12,\"missing\":[],\"dup\":[],\"next_seq\":null,\"unacked\":null,\"stale_next\":null}},\"bad\":[{\"file\":\"obs.ac"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11737,
+     "review_tokens": null,
+     "secs": 24.8,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 9874 字元起還有多餘內容 『, \"row\":\"| `packs/evgap/` | [唯讀 JSONL channel 彙總工具](packs/evgap/README.md) |\",\"r』"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11896,
+     "review_tokens": null,
+     "secs": 24.1,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 10243 字元起還有多餘內容 『,\"row\":\"| `packs/evgap/` | [唯讀 JSONL channel 彙總工具](packs/evgap/README.md) |\"}』"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 11851,
+     "review_tokens": null,
+     "secs": 26.3,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                     [\"bad_json\", \"no_seq\", \"torn\", \"bad_state\"])\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Lists differ: ['no_seq', 'bad_json', 'torn', 'bad_state'] != ['bad_json', 'no_seq', 'torn'"
+      }
+     ]
+    },
+    {
+     "round": 6,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 11949,
+     "review_tokens": null,
+     "secs": 24.6,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 10152 字元起還有多餘內容 『}』"
+      }
+     ]
+    }
+   ],
+   "learn": null,
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "runs",
+   "rid": "runsA2",
+   "passed": false,
+   "rounds": 6,
+   "reasks": 5,
+   "fails": {
+    "1": 6,
+    "2": 0,
+    "3": 0
+   },
+   "tokens": 61283,
+   "review_tokens": 0,
+   "secs": 136.1,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 7476,
+     "review_tokens": null,
+     "secs": 25.3,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 9449 字元起還有多餘內容 『, \"kind\":\"aos-tool\",\"name\":\"runs\",\"report\":\"# REPORT\\n\\n- 新增唯讀 `aos7-runs`，讀取 ro』"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10897,
+     "review_tokens": null,
+     "secs": 21.9,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8939 字元起還有多餘內容 『, \"kind\":\"aos-tool\",\"name\":\"runs\",\"report\":\"# REPORT\\n\\n- 新增唯讀 `aos7-runs`，讀取 ro』"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10833,
+     "review_tokens": null,
+     "secs": 25.6,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8992 字元起還有多餘內容 『, \"row\":\"| `packs/runs/` | [aos7-runs](packs/runs/README.md) | 唯讀彙總 routines 與 s』"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10600,
+     "review_tokens": null,
+     "secs": 18.4,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8992 字元起還有多餘內容 『, \"row\":\"| `packs/runs/` | [aos7-runs](packs/runs/README.md) | 唯讀彙總 routines 與 s』"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10599,
+     "review_tokens": null,
+     "secs": 20.9,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 8992 字元起還有多餘內容 『, \"row\":\"| `packs/runs/` | [aos7-runs](packs/runs/README.md) | 唯讀彙總 routines 與 s』"
+      }
+     ]
+    },
+    {
+     "round": 6,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 10878,
+     "review_tokens": null,
+     "secs": 24.0,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 9019 字元起還有多餘內容 『, \"row\":\"| `packs/runs/` | [aos7-runs](packs/runs/README.md) | 唯讀彙總 routines 與 s』"
+      }
+     ]
+    }
+   ],
+   "learn": null,
+   "order": 2,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "audit",
+   "rid": "auditA2",
+   "passed": false,
+   "rounds": 6,
+   "reasks": 5,
+   "fails": {
+    "1": 4,
+    "2": 2,
+    "3": 0
+   },
+   "tokens": 56583,
+   "review_tokens": 0,
+   "secs": 118.1,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 6710,
+     "review_tokens": null,
+     "secs": 20.1,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 6907 字元起還有多餘內容 『, \"row\":\"| `packs/mailtodo/` | 唯讀 mailtodo 彙總工具 |\",\"report\":\"# REPORT\\n\\n新增 `pac』"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer"
+     ],
+     "tokens": 9175,
+     "review_tokens": null,
+     "secs": 16.6,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "answer",
+       "why": "['case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e380fe4d5a\",\"from\":\"carol\",\"to\":\""
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 12383,
+     "review_tokens": null,
+     "secs": 23.2,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 7373 字元起還有多餘內容 『,\"candidate\":\"{\\\"v\\\":1,\\\"open\\\":[{\\\"id\\\":\\\"bob-20261009T182909-0e11821ea302\\\",\\\"』"
+      }
+     ]
+    },
+    {
+     "round": 4,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 9454,
+     "review_tokens": null,
+     "secs": 15.4,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 7370 字元起還有多餘內容 『}』"
+      }
+     ]
+    },
+    {
+     "round": 5,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 9430,
+     "review_tokens": null,
+     "secs": 20.3,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "候選必須恰好是一個 JSON 物件：第 7373 字元起還有多餘內容 『}』"
+      }
+     ]
+    },
+    {
+     "round": 6,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer"
+     ],
+     "tokens": 9431,
+     "review_tokens": null,
+     "secs": 22.4,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "answer",
+       "why": "['case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e380fe4d5a\",\"from\":\"carol\",\"to\":\""
+      }
+     ]
+    }
+   ],
+   "learn": null,
+   "order": 3,
+   "skill_in_prompt": false
+  }
+ ]
+}
