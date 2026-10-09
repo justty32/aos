@@ -320,6 +320,21 @@ class ReviewCase(unittest.TestCase):
         for status in sorted(mail.STATUSES - {'REQUEST'}):
             self.run_cli('send', 'bob', 'team:dev', status, '廣播')
 
+    def test_newbie_help_and_defaults(self):
+        exe = str(Path(MODULES) / 'mail/aos7-mail')
+        env = {k: v for k, v in os.environ.items() if k != 'AOS_MAIL_ROOT'}
+        for args, rc in ((['--help'], 0), (['send', '--help'], 0), (['help', 'done'], 0), ([], 2)):
+            p = subprocess.run([exe, *args], capture_output=True, text=True, timeout=30, env=env)
+            self.assertEqual(p.returncode, rc, p.stderr)
+            self.assertIn('aos7-mail', p.stdout + p.stderr, '沒設 root 也要看得到用法')
+        self.assertIn('沒有 sned', self.run_cli('sned', 'x', rc=2).stderr)
+        sent = json.loads(self.run_cli('send', 'alice', 'bob', '請檢查').stdout)
+        self.assertTrue(sent['sent'].endswith('-alice-REQUEST.md'), '省略 STATUS 預設 REQUEST')
+        self.run_cli('read', 'bob')
+        self.assertIn('結論', self.run_cli('done', 'bob', '1', rc=2).stderr)
+        self.assertIn('已回 DONE 給 alice', self.run_cli('done', 'bob', '1', '查完了').stdout)
+        self.run_cli('audit')
+
     def test_human_numbers_quiet_and_new_mailbox(self):
         p = self.run_cli('send', 'alice', 'bob', 'REQUEST', '第一封')
         first = json.loads(p.stdout)

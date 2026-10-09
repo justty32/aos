@@ -23,7 +23,7 @@ HEADINGS = ('做了什麼', '產出（檔案路徑 / commit / 分支）', '沒�
 
 def name(value):
     if not re.fullmatch(r'[A-Za-z0-9._-]+', value) or value in ('.', '..', 'teams'):
-        raise ValueError('名字只准英數字、點、底線、短橫線，不能使用保留名')
+        raise ValueError(f'名字 {value!r} 不行：只准英數字、點、底線、短橫線，且不能是 . .. teams')
     return value
 
 
@@ -92,7 +92,7 @@ def body_text(body):
 
 def validate_reply(status, title, body):
     if status not in STATUSES:
-        raise ValueError('STATUS 不在白名單')
+        raise ValueError(f'STATUS {status} 不認得；只能是 REQUEST、PROGRESS、DONE、BLOCKED、NEEDS-USER、FAILED')
     if not isinstance(title, str) or not title.strip() or '\n' in title or '\r' in title:
         raise ValueError('結論必須是非空的一行')
     body_text(body).encode('utf-8')
@@ -248,7 +248,7 @@ def complete(root, me, path, status=None, title=None, body='', handler=None):
         replies = []
         if l['status'] == 'REQUEST':
             if status not in TERMINAL or not title:
-                raise ValueError('REQUEST 辦結必須給終局 STATUS 與一句結論')
+                raise ValueError(f"這封是請求（REQUEST），辦完要給一句結論回給寄件人，例：done {me} <序號> '做完了'")
             validate_reply(status, title, body)
             reply_to = l.get('reply-to') or l['from']
             to = l['from'] if '/' not in reply_to else Path(reply_to).parent.name
@@ -273,7 +273,8 @@ def done(root, me, filename, status=None, title=None, body=''):
             snapshot = load(box / '.numbers.json', {})
             ident = snapshot.get(str(int(filename)))
             if ident is None:
-                raise ValueError('請先 read')
+                raise ValueError(f'序號 {filename} 不在最近一次 read 的清單裡，請先 read {me} 再用它列的序號'
+                                 '（序號只認你看過的清單，避免辦到剛到、還沒看過的信）')
             path = next((p for p in letters(box, True) if letter(p)['id'] == ident), None)
             if path is None:
                 raise ValueError('找不到這封信')
