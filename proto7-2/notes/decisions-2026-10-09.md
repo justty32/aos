@@ -156,3 +156,6 @@
 - B｜A4：學徒寫 aos 工具／模組的三關檢查器 `packs/author/checkers/`（brief／check／publish）——第 1 關：領地、有測試、每檔 ≤8 KiB、連結不壞；第 2 關：在 bwrap 沙盒（無網路、無 /home、只有暫存樹可寫）跑學徒自己的測試；第 3 關：astra 審。publish 只建 `apprentice/<rid>_<sha8>` 分支，不碰 HEAD 與工作樹
 - C｜A4：題 1 做成新包 `packs/usage/`、題 2 做成新模組 `modules/llmdiag/`（學徒不准改別的包）；答案檢查用固定答案（隱藏或隨機題目留下一輪）
 - B｜X1：信箱 `modules/mail/`——日常 3 指令（send／read／done），另 3 個進階（audit／roster／team）暫不算入「≤3」，交新手試用判斷是否仍複雜；同分鐘同名信不拒收、改加序號（拒收會掉信）；發給團隊信箱的 REQUEST 暫不收（沒人負責確認）
+- 結果｜U 隊：10 個模組新手試用**全部沒過**（Haiku／luna 只看 README，取較差分數 5.2～6.8，門檻 7）；兩位都判「ELI5 後仍複雜」→ [newbie 總表](play/2026-10-09-newbie/README.md)
+- B｜頂層：照「做完回頭審→修或重造」開回改隊：README 改就能過的（compact、prompt、wfnode、metrics、mail）與要改第一次跑流程的（skills、routines、events；llmcall 等小修隊、author 等 A5 交件後再改）；每隊改完用同兩位新手重試到 ≥7 才算完成
+- B｜頂層：另開一隊「整體第一次體驗」設計：新手第一次跑就要碰 daemon、帳（budget）、回合等底層概念是共同病根，研究能否給一個共用的「一鍵起 node」入口把這些藏起來
