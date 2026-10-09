@@ -6,7 +6,7 @@ aos7-run 交給任務的環境拿掉所有 `AOS7_TEST_*`。規則都由環境變
 - `AOS7_TEST_FAULT`：故障注入。分號（或換行）分隔的 `op:glob:ERRNO`（例 `proc-stat:*:EIO;open:*/round.json:ESTALE`），
   glob 用 fnmatch 比完整路徑；值是 `@/路徑` 時每次從那個檔讀規則（檔不在＝沒有注入；給跑著的 daemon 中途開關用）。
   op：proc-list、proc-stat、proc-environ、proc-cmdline、open（讀檔入口 fact）、listdir（列槽）、stat（daemon 看 node）、
-  node-open（tick／tock 開 node）。
+  node-open（tick／tock 開 node）、write（核心原子寫 write_json，寫之前）。
 - `AOS7_TEST_FAULT_HITS`：注入真的命中時，在這個檔追加一行 `op<TAB>errno<TAB>path`（astra-2 矩陣盲點：每個案例都要證明
   故障確實打中 ≥1 次，不能只靠綠燈）。用檔案不用記憶體計數：子程序命中的也算得到。寫不進去就算了。
 - `AOS7_TEST_CRASH`：逗號分隔的測試點名，跑到就 SIGKILL 自己（模擬 kill -9 打在那一步）。

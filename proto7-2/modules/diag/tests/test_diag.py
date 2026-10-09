@@ -67,7 +67,7 @@ class TestDiag(MatrixCase):
         f = Fault("proc-stat:/proc/%d/stat:EIO;proc-stat:/proc/%d/stat:EIO" % (pid, runner))
         try:
             out = self.diag("a", env=f.env)["nodes"]["a"]
-            f.check()
+            f.check_rules()   # task 與 runner 兩條 proc-stat 各自要中（T8-07）
         finally:
             f.close()
         self.assertEqual([(u["slot"], u["run"]) for u in out["uncertain"]], [("k", 1)], out)
