@@ -134,7 +134,7 @@ class TestRoutines(MatrixCase):
         self.cli("add", node, "s", "--at", "+90s", "hello.sh")
         delta = (routines.instant(self.rows(node, "schedule")[0]["at"]) - dt.datetime.now().astimezone()).total_seconds()
         self.assertTrue(85 <= delta <= 90)
-        self.assertIn("next tock", self.cli("ls", node))
+        self.assertIn("next round", self.cli("ls", node))
         self.cli("rm", node, "r")
         self.cli("rm", node, "s")
         self.cli("rm", node, "s", code=1)
@@ -142,6 +142,23 @@ class TestRoutines(MatrixCase):
         with open(os.path.join(node, "wf", "routines.json"), "w") as f:
             f.write("{")
         self.cli("ls", node, code=3)
+    def test_ls_run_without_daemon(self):
+        """新手第一次跑：不開 daemon，ls --run 只照時間做（秒型、schedule），r 型留給 daemon；再跑一次沒有到期的。"""
+        node = self.setup_node()
+        self.cli("add", node, "s", "--every", "1m", "hello.sh")
+        self.cli("add", node, "r", "--every", "1r", "hello.sh")
+        self.put(node, "schedule", [dict(name="once", at=(dt.datetime.now().astimezone()-dt.timedelta(seconds=1)).isoformat(), inst="hello.sh")])
+        out = self.cli("ls", node, "--run")
+        self.assertIn("routine s code 0", out)
+        self.assertIn("schedule once code 0", out)
+        self.assertEqual(self.count(node), 2)
+        self.assertEqual(self.rows(node, "schedule"), [])
+        r = {row["name"]: row for row in self.rows(node, "routines")}
+        self.assertEqual((r["s"]["last_code"], r["r"]["last_round"]), ("0", ""))
+        self.assertIn("沒有到期", self.cli("ls", node, "--run"))
+        self.assertEqual(self.count(node), 2)
+        self.step(node, 1, dt.datetime.now().astimezone())  # daemon 回合仍照常接手 r 型
+        self.assertEqual(self.count(node), 3)
     def test_real_keep(self):
         node = self.setup_node([dict(name="routines", mode="keep", argv=[sys.executable, routines.ENTRY])])
         self.put(node, "routines", [dict(name="r", every="2r", inst="hello.sh")])
