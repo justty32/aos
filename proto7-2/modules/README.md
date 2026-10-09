@@ -16,7 +16,7 @@
 | [diag](diag/README.md) 診斷包 | 唯讀重算判不出的槽、對到恢復步驟；操作手冊 | C | 開（工具） | 核心的判定函式（只讀） | `diag/aos7-diag` |
 | [events](events/README.md) 事件保存包 | 一個 events/ 夾一本帳，固定檔數：pub 寫一筆、read 讀（不用 daemon）；選配取樣器記核心觀測 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs | `events/aos7-events`（子命令 read／pub） |
 | [routines](routines/README.md) 事務包 | 兩張表的例行／一次性到期事務，由 tick 喚醒、最多一次 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs／aos_exec | `routines/aos7-routines`（add／ls／rm；`ls --run` 免 daemon 立刻跑到期的） |
-| [skills](skills/README.md) skill 包 | node 的 `skills/<名>/SKILL.md`：產索引行（只 name＋description）與必用表、經 llmcall 讓 AI 挑一本、掛載給任務 | C | 開（工具） | llmcall、budget、核心 aos7_fs | `skills/aos7-skills`（子命令 index／pick／mount） |
+| [skills](skills/README.md) skill 包 | node 的 `skills/<名>/SKILL.md`：產索引行（只 name＋description）與必用表、挑一本（預設本機關鍵字、不碰帳；開帳後經 llmcall 讓 AI 挑）、掛載給任務 | C | 開（工具） | 核心 aos7_fs（AI 挑時：llmcall、budget） | `skills/aos7-skills`（子命令 index／pick／mount） |
 | [wfnode](wfnode/README.md) node 工作流包 | 給 node 裝 workflows 工作流樹（填事實、不瞎猜）、記續行點、體檢 open 衛生；三個指令 init／state／check | C | 開（工具） | `~/repo/workflows`（`AOS7_WF_HOME`） | `wfnode/aos7-wfnode` |
 | [metrics](metrics/README.md) 效率量測包 | 唯讀量一個資料夾的 AI 工作：每件 token、同時幾個呼叫、花幾秒、重試幾次，預設印白話一行（`--detail`／`--json` 給細節），可重跑 | C | 開（工具） | 無（只讀別包的檔） | `metrics/aos7-metrics`（job） |
 | [compact](compact/README.md) 記憶整理包 | 舊紀錄先封存再換摘要，open 項與最近 N 則留下 | A＋C | 關 | 標準庫、核心 aos7_fs、工具包任務端函式；選配 llmcall／events | `compact/aos7-compact`（子命令 now／forget／watch） |

@@ -108,11 +108,30 @@ class TestSkills(CoreCase):
         self.assertEqual(len(logs), 2)
         self.assertEqual(logs[0]["call"], logs[1]["call"])
         self.assertEqual(read_json(self.node / "llmcall/fake-remote.json")["sends"][logs[0]["call"]], 1)
-        self.assertEqual(set(logs[0]), {"at", "call", "q", "answer", "picked", "used", "rc", "elapsed"})
+        self.assertEqual(set(logs[0]), {"at", "via", "call", "q", "answer", "picked", "used", "rc", "elapsed"})
+        self.assertEqual(logs[0]["via"], "llmcall")
         self.assertGreater(logs[0]["used"], 0)
         self.assertEqual(logs[1]["picked"], "coding")
         self.assertGreater(logs[0]["elapsed"], 0)
         self.assertEqual(self.runcli("pick", self.node, "zzzz")[0:2], (1, "none"))
+
+    def test_pick_local_without_budget(self):
+        """第一次跑：沒有 budget/llm 就本機關鍵字挑，不碰帳與 llmcall；明給 --budget 仍要帳。"""
+        wanted = self.skill("coding", "python tests") / "SKILL.md"
+        self.skill("writing", "中文文章")
+        rc, out, err = self.runcli("pick", self.node, "python tests")
+        self.assertEqual((rc, out), (0, str(wanted.absolute())), err)
+        self.assertIn("本機挑選", err)
+        self.assertEqual(self.runcli("pick", self.node, "zzzz")[0:2], (1, "none"))
+        self.assertFalse((self.node / "llmcall").exists())
+        self.assertFalse((self.node / "budget").exists())
+        logs = [json.loads(s) for s in (self.skills / ".pick/log.jsonl").read_text().splitlines()]
+        self.assertEqual([(g["via"], g["picked"], g["rc"]) for g in logs], [("local", "coding", 0), ("local", None, 1)])
+        rc, out, err = self.runcli("pick", self.node, "python tests", "--budget", "budget/llm")
+        self.assertEqual((rc, out), (2, ""))
+        self.assertIn("grant", err)
+        (self.node / "budget/llm").mkdir(parents=True)
+        self.assertEqual(self.runcli("pick", self.node, "python tests")[0], 2)
 
     def test_parse_answer(self):
         for text in ('`ALPHA`', '"Alpha"', "'alpha'", "alpha\nbeta", "ALPHA extra", "```alpha```", " none "):
