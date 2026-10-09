@@ -71,3 +71,6 @@
 - 結案｜L3：上午 `test_unsure_listed` 連紅是驗證時「改壞再還原」同秒同大小，Python 沿用舊快取（非負載）；subd `allow_stop` 測試是讀 log 的時機假設錯，已改成等檔案出現。教訓記 dispatch lessons
 - C｜L4：A9-02 history 升級時把含 `+`／`%` 的舊檔與 `daemon-events.jsonl` 一次改名成 `.v1` 封存、不再續寫（不丟資料、只斷連續性），夾內放 `.names-v2` 記號 → `modules/history.py`
 - C｜L4：A9-03 陣列索引先去前導零再檢長度，超長回 125；前導零索引維持舊行為（照收，雖然 RFC 6901 說無效）
+- B｜L1：N-06 修法——paused.json 加 `owe: {node: 開回合前的回合號}`，關回合時扣倒數與清 owe 同一次寫入；重起時回合號前進才補扣。不確定時寧可少跑不多跑 → `aos7_daemon.py`、spec §2.4
+- C｜L1：A9-01 reaping 還在且沒時間線時 status 顯示 missing（含 `stop-kill` 留下的）→ spec §2.6；diff 239 行超 200 gate（多為測試），照 D7 接受
+- 已知限制｜L1：回合中途才下 `resume --rounds` 時正好當機、或 daemon 被殺時舊 tick 已拿鎖還沒寫 round.json，仍可能多跑一回合（要給每回合落身分標記才能修）
