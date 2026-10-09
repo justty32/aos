@@ -246,8 +246,10 @@ aos7-run 經 fd 讀 birth、開 out.log，把任務起在自己的程序群組�
 
 - **只有 kill，`run` 必填**：op 不是 kill、`run` 缺或不是整數＝輸入不合，回條 `ok: false`、刪請求。`run` 不是槽現在的 → `ok: false`、不執行。那個 run 已結束＝成功，順便收殘留。帶 `run` 讓重播始終只針對原 run、不會誤殺槽裡的新 run；同一請求可能重複執行（刪不掉就每回合再做），但重複收掉已結束的同一 run 是冪等的，不是只執行一次。刪不掉時總結那筆帶 `err`。
 - **kill 的範圍**（Q1 (a)）：任務的程序群組、群組成員的後代所在的群組、環境 NODE＋TID＋RUN 相符的程序。打 pid.json 記的群組前先確認：群組沒有活成員，或有成員是這個 run 的，才打（防 pgid 被重用）。SIGTERM，最多等 1 秒，還在就 SIGKILL。
-- **kill 回成功的條件**：最後確認 pid.json 記的任務程序已經不在；還活著或認不出 → `ok: false`（msg 以 `unknown` 開頭）。
+- **kill 回成功的條件**：沒有同 run 的 pid.json、exit.json，而 runner 還在（或認不出、birth 還沒記 runner）＝仍在啟動交接，回 `ok: false`（msg 以 `unknown` 開頭），**請求留著**下次再做。收完再身分掃描，快照後出生的相符程序再收，最多補收 3 輪，掃描收斂才算成功。最後確認 pid.json 記的任務程序已經不在；還活著或認不出 → `ok: false`（msg 以 `unknown` 開頭）。
 - restart／reload 不在核心，見[控制包](modules/control/README.md)（請求端先加釘同槽的 once，再寫 kill；tick 先處理 once，所以它先佔住槽）。
+
+任務環境只帶核心自己的六個 `AOS7_*` 身分變數；上一層繼承來的 `AOS7_*`（例如模組變數）不傳。
 
 ## 7. tock（S-08、S-11）
 
