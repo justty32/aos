@@ -106,7 +106,7 @@ class NodeTests(unittest.TestCase):
         log = self.node / 'wf/SESSION-LOG.md'
         with log.open('a') as stream:
             stream.write('\n- [dev] 寫 X → 跑測試\n')
-        self.assertIn('open 項 1', self.ok(run('check', self.node)))
+        self.assertIn('AI 手上 1 件', self.ok(run('check', self.node)))
         with log.open('a') as stream:
             stream.write('- [dev] 寫 Y ✅ 已完成\n')
         number = len(log.read_text().splitlines())
@@ -146,6 +146,13 @@ class NodeTests(unittest.TestCase):
         self.ok(run('check', self.node))
         self.ok(run('state', self.node, ''), 2)
         self.ok(run('state', self.node, '兩\n行'), 2)
+
+    def test_state_without_line_shows_latest(self):
+        self.assertIn('還沒記過', self.ok(run('state', self.node)))
+        self.ok(run('state', self.node, '寫完第一版', AOS7_WFNODE_NOW='2026-10-09T15:30'))
+        output = self.ok(run('state', self.node))
+        self.assertIn('2026-10-09/STATE.md', output)
+        self.assertIn('- 15:30 寫完第一版', output)
 
     def test_state_preserves_next_content(self):
         path = self.node / 'wf/handoffs/NEXT-SESSION.md'
