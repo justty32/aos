@@ -151,3 +151,5 @@
 - C｜頂層：llmcall 連 `localhost` 時應繞過系統 proxy 設定（T9 發現：設了 http_proxy 的機器可能把本機呼叫送進 proxy）→ 排進下一波小修
 - 結果｜E1：`aos7-metrics job <資料夾>` 一個指令量四指標；R1 基線每單平均 2562 token（proxy 自帶 1644＝64%、我們的提示 721、模型回答 197）、收單到完成平均 9.5 秒（模型 5.3 秒、之後等下一回合 4.1 秒）、重試 0 → [metrics-baseline](play/2026-10-09-real-ai/metrics-baseline.md)
 - 待你決定｜優化第 1 名是砍掉或快取 litellm proxy 每次自帶的 1644 token（省最多 64%），要改你的 LiteLLM 設定，我沒動
+- C｜C2：壓縮包 `modules/compact/`（now／forget／watch）——open 項逐字保留、檔長降 ≥60%；段落切換用字元相似度 <0.2 判斷（不另花 AI 呼叫，門檻暫定）；SESSION-LOG 的現役段不摘，實際主要整理 `notes/journal.jsonl`；diff 超 gate 照收
+- 結果｜C2 真 AI 一次：65 則→6 則、8968→2149 bytes（降 76%）、open 5 條全留、5429 token、約 12 秒
