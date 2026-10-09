@@ -1,0 +1,140 @@
+{
+  "contract": "wf-table/1",
+  "source": "plan-2026-10-09.md",
+  "extracted": "2026-10-09",
+  "columns": ["team", "lead", "workers", "items", "territory", "excluded", "deps", "gates", "done", "handoff"],
+  "rows": [
+    {
+      "team": "T（假綠測試）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 改測試；gpt-6-astra read-only 審一次",
+      "items": "T1：T8-07、test_budget 改只印不擋（D7）。T2：T8-01、T8-05、T8-06",
+      "territory": "tests/_matrix.py、tests/core/test_budget.py、tests/core/test_matrix_once.py、test_matrix_faults.py、test_matrix_docs.py、modules/diag/tests/test_diag.py",
+      "excluded": "tests/_proc.py 只准加 pgid 守門（不是 0、1、自己、父程序），不改 reap 語意；lib/ 一律不碰（T8-06 的 test_point 由 K4 加）",
+      "deps": "T1 最先、獨立 commit（11:30 前）；T2 等 K4 的 D3 注入點進 main 再 rebase",
+      "gates": "件數：只做上列 5 條。容量：diff >200 行停下回報。每個測試改完先單跑該檔，用 systemd scope",
+      "done": "T1、T2 各一個 commit；四條 T8 各手動驗「拿掉故障注入就轉紅」並記在 notes/play/README.md 一列；全套退出碼 0（翻紅的列出、不改回斷言）",
+      "handoff": "T8-07 的做法照 blueprint §4：Fault.check_rules() 逐條規則（op＋路徑＋errno）命中；T8-01 先拿死亡快照（pid.json 有、exit.json 無、same_process 假）"
+    },
+    {
+      "team": "X（模型探索）",
+      "lead": "Opus",
+      "workers": "codex 9 個 slug 各跑 1 個相同小任務（gpt-6.1-sol、gpt-6-astra、gpt-6-sol、gpt-6-luna、gpt-5.6-sol、gpt-5.6-terra、gpt-5.6-luna、gpt-reserve、gpt-5.5）；Claude 端 Sonnet 5.5、Haiku 5.5、Opus 5.5 各 1（Agent model 參數）",
+      "items": "① 小任務：在 scratchpad 複本唯讀審 proto7-2/lib/aos7_proc.py 並指出 R8-11、R8-12 兩處（藍圖 json 有答案）；記時間、tokens、答對幾條；② 更新 team-model.md 分級表：新 slug 各加一列、級別標「暫定，待使用者確認」、舊 gpt-sol／terra／luna 改對應 gpt-5.6-*；③ aos-teams.md 的 codex 段改今日實況",
+      "territory": "wf/workflows/team-model.md、wf/workflows/team-model/probe-2026-10-09.json（新）、wf/workflows/dispatch/aos-teams.md",
+      "excluded": "不改級別的既有列（使用者定的）；不碰 ~/.codex/config.toml；不碰 skyrim 側 team-model（別的 repo）",
+      "deps": "無；12:30 前交",
+      "gates": "件數：只做 ①②③。每個模型一次就好，失敗記下不重試超過 1 次",
+      "done": "probe json 12 列（模型、slug、秒數、tokens、答對數、備註）；分級表暫定列齊、備註「10-09 暫定」；aos-teams 寫明：9 個 slug 今日實測可用、`-c model_reasoning_effort=`、`--skip-git-repo-check`、家機 config 已 danger-full-access、公司 WSL 仍帶旗標",
+      "handoff": "呼叫：codex exec -m <slug> -s read-only --skip-git-repo-check -C <複本> --color never -o <out.md> - < task.md；10:45 已實測 9 個 slug 都回 OK（各 5～9 秒）"
+    },
+    {
+      "team": "K1（kill 啟動交接）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋測試；gpt-6-astra read-only 審 diff",
+      "items": "R8-01（D1：回 unknown）、K-04、R8-29（D2：修）、R8-10、R8-11、R8-12、N-66 subroot 核心 1～3 行",
+      "territory": "lib/aos7_task.py、lib/aos7_proc.py、lib/aos7_run.py、spec.md §5.4／§6、tests/core/test_ctl.py",
+      "excluded": "不碰 aos7_daemon*.py、aos7_tick.py、modules/subd/（三層測試歸 M 隊）",
+      "deps": "落地後通知 M 隊（N-66 改 subd launcher 判定）",
+      "gates": "件數 7 條。容量：diff >300 行或要碰領地外檔→停下回報",
+      "done": "runner 停在 Popen 前的 kill 回 unknown 且請求留著、放行後下一次成功；K-04 FIFO 案例；R8-29 偽 pgid 不打；R8-10／11／12 各一案；全套退出碼 0",
+      "handoff": "修法照 blueprint-loop7-items.json 各列 recommend 欄；spec §6 加一句"
+    },
+    {
+      "team": "K2（daemon 回收落盤）",
+      "lead": "Opus（隊長逐行審 diff：本輪唯一碰不變條件的線）",
+      "workers": "gpt-6-astra（effort high）×1 寫碼＋測試；gpt-6.1-sol read-only 第二眼",
+      "items": "R8-02（B(a)(b)(c2)：候選 registry 寫成才替換、未清不開線、nodes.json 留 retiring）、R8-03、R8-04、N-06（D8：paused.json 加 steps）",
+      "territory": "lib/aos7_daemon.py、spec.md §2.3／§2.4／§2.6、notes/component-contracts.md 2.1、tests/core/test_daemon.py",
+      "excluded": "不碰 aos7_fs.py（inject(\"write\") 由 K4 先加）、aos7_daemon_timeline.py（K3）",
+      "deps": "R8-03 的寫檔失敗測試等 K4-D3 進 main；之前用 chmod 0500 .aosd 製造",
+      "gates": "件數 4 條。容量：diff >400 行停下回報。每一步 SIGKILL ×3",
+      "done": "nodes.json 寫失敗重送後記憶體＝磁碟；unregister 後殺 daemon 重起舊 PID 已收；node 替換＋回收中斷重起新舊不同活；deep-play C8-01／C8-02 重現步驟各 3／3；N-06 重開後剩餘回合數接續；全套退出碼 0",
+      "handoff": "任務書附 deep-play 重現步驟當回歸；不設行數上限（D7）"
+    },
+    {
+      "team": "K3（timeline 數值）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1",
+      "items": "A8-11＋R8-20、R8-05、R8-06",
+      "territory": "lib/aos7_daemon_timeline.py、tests/core/test_errors.py、tests/core/test_timeline_rounds.py（新）",
+      "excluded": "不碰 test_daemon.py（K2 用）",
+      "deps": "無；13:00 前交",
+      "gates": "件數 3 條。容量：diff >150 行停下回報",
+      "done": "proto7-1 的 test_interval_huge_int 搬回且過；R8-05 回合已關讀失敗不少扣一案；R8-06 退避不忙轉、不溢位一案；全套退出碼 0",
+      "handoff": "對照 proto7-1 舊版驗證碼"
+    },
+    {
+      "team": "K4（mount／tick／fs）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×2（甲：D3 注入點先交；乙：其餘）",
+      "items": "D3 注入點（aos7_fs.py write_json inject(\"write\")、aos7_tock.py _finish test_point(\"tock-seen-round\")）；A8-07＋R8-09、N-86、R8-07、R8-28、C8-03 spec §5.5 一句",
+      "territory": "lib/aos7_mount.py、lib/aos7_tick.py、lib/aos7_fs.py、lib/aos7_tock.py、lib/aos_directives.py、spec.md §4.3／§5.5、tests/core/test_mount_dyn.py（新）、tests/core/test_once_threestate.py",
+      "excluded": "不碰 test_ctl.py（K1）",
+      "deps": "D3 獨立 commit 11:45 前交，K2／T 隊等它",
+      "gates": "件數 6 條。容量：diff >300 行停下回報",
+      "done": "D3 兩行進 main；A8-07 中斷後冪等恢復一案；N-86 once 改排程不再跑一案；R8-07 fd 不漏；全套退出碼 0",
+      "handoff": "test_mount_dyn.py 新檔，避開 test_ctl.py"
+    },
+    {
+      "team": "S（step 包）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋測試；gpt-6-astra read-only 審；收尾 T8-02 同一工人",
+      "items": "A8-10(b) unknown_codes 開關（D4，預設空）、R8-13、R8-14、R8-22（先驗再定，D5）、C8-03 step 份、T8-02",
+      "territory": "packs/step/ 全部（程式、spec、README、examples、tests）",
+      "excluded": "不碰 packs/budget/（budget README 的 on_unknown 文字歸 B 隊）、lib/",
+      "deps": "R8-22 驗證若牽到核心 tick → 回報頂層，不自己改 K4 的檔",
+      "gates": "件數 6 條。容量：diff >300 行停下回報",
+      "done": "EIO 讓 call 回 3 → 開 unknown_codes 時同 request、accepted==1、超額才 halted unknown；不開時 halted failed 可 resume --resend；過期 intent 走 receipt／resend／stop 三型；R8-14 表寫失敗後 ran==2；astra-5 50 案不退化；T8-02 三個 crash 點驗 exit.code==-9；全套退出碼 0",
+      "handoff": "四條同區序做：R8-13 → R8-14 → A8-10 → R8-22"
+    },
+    {
+      "team": "B（budget 包）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋文件＋測試；gpt-6-astra read-only 審；收尾 T8-04 同一工人",
+      "items": "A8-08、packs-use 4.3／F19 退出碼表、4.5 單位改加權成本（D6）、A8-10 文件面＋fakeapi 示範表開 [3]、C8-03 gateway 份、T8-04",
+      "territory": "packs/budget/ 全部（含 README、spec、tests、examples/fakeapi）",
+      "excluded": "不碰 packs/step/（unknown_codes 鍵名以 S 隊 spec 為準，先問 S 隊長）",
+      "deps": "fakeapi 表的 unknown_codes 鍵名等 S 隊定（13:00 前對一次）",
+      "gates": "件數 6 條。容量：diff >300 行停下回報",
+      "done": "payload EIO rc 3 而壞 JSON 仍 rc 2；重播回條 EIO 時 --out bytes 不變；退出碼表三處一致；T8-04 核帳在崩潰快照上；全套退出碼 0",
+      "handoff": "rc 3 定義：本次呼叫未完整交付終局結果；先 status 查 K 再同 K 重送"
+    },
+    {
+      "team": "M（模組包＋subd 尾）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋測試；gpt-6-luna ×1 只跑驗證、回報 log",
+      "items": "N-66 audit＋subd（D9：通用 AOS7_AUDIT_ALLOW 由 subd 設）、R8-17、R8-21、R8-25、R8-26、T8-08、R8-24、T8-03、N-66 subroot 三層測試",
+      "territory": "modules/audit/、modules/history.py、modules/once_retry/、modules/subd/（含 tests）、modules/tests/",
+      "excluded": "不碰 lib/（N-66 核心行由 K1）、modules/control／diag／tools",
+      "deps": "三層 subd 測試等 K1 進 main 再寫；其餘先做",
+      "gates": "件數 9 條。容量：diff >300 行停下回報。subd 測試一律 systemd scope",
+      "done": "每條一案；T8-03 用「全部收完」斷言；T8-08 用真 lost 候選；全套退出碼 0",
+      "handoff": "R8-25、R8-26 待核：核出不成立就寫一句進 README、不硬修"
+    },
+    {
+      "team": "I（整合）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 改文件；隊長親跑全套 ×3",
+      "items": "README／tests/README 測試數與表列、problems.md 加 A8-05～A8-11、C8-01～C8-03 列、play/README T8 翻紅紀錄、契約卡 2.1 對齊、wf code map 同步（鐵律 3）、INDEX",
+      "territory": "proto7-2/README.md、proto7-2/INDEX.md、proto7-2/tests/README.md、notes/problems.md、notes/play/README.md、notes/component-contracts.md、wf/workflows/common/code-map.md",
+      "excluded": "不改程式；SESSION-LOG／WAIT_USER／代定清單由頂層自己寫",
+      "deps": "15:30 八線全進 main 後開",
+      "gates": "件數 7 條",
+      "done": "全套 ×3 退出碼 0；測試數字與 run_all 輸出一致；code map 每個改過的檔都對得上；commit + push",
+      "handoff": "只對照 git log 與各隊回報，不重做隊的工作"
+    },
+    {
+      "team": "R（astra 第七輪回歸）",
+      "lead": "Opus",
+      "workers": "gpt-6-astra（effort high）×1，可開 subagent 最多 4",
+      "items": "blueprint-loop7 §7 驗收逐條、deep-play C8-01／02 與 K-04 壓力重現、step 450＋adapt 320 回合長跑、新發現編 A9-xx 並分類 B／G／M／X",
+      "territory": "只寫 proto7-2/notes/play/2026-10-09-astra-7-infra.md 與同名 -evidence/；跑在 main 的 worktree 複本",
+      "excluded": "不改程式與測試、不 commit（報告由隊長 commit）",
+      "deps": "檢查點 2 後開；17:15 交",
+      "gates": "逐條證據（腳本＋精簡 JSON），不收自我宣告；長跑用 systemd scope",
+      "done": "報告一份、play README 一列；發現只記不修（≤5 行單檔例外由頂層代定）",
+      "handoff": "任務書格式照 play/2026-10-04-astra-6-infra.md"
+    }
+  ]
+}
