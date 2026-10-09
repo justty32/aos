@@ -2,7 +2,7 @@
 
 # aos 的「C 語言」會長什麼樣？（思考報告，Fable，2026-10-04）
 
-題目：[brief4](brief4.md)。只讀 repo，沒改任何東西。依據：原則（`proto7/notes/principles.md`）第 1、3、5、7、8、9 條、核心 spec S-01／S-04／S-10／S-11／S-12／S-16／S-20、proto7-2 spec §4～§8、core-slimming §5／§10、r3 綜合。**這些都是提案，不是決定。**
+題目：brief4（brief4.md，已不存在）。只讀 repo，沒改任何東西。依據：原則（`proto7/notes/principles.md`）第 1、3、5、7、8、9 條、核心 spec S-01／S-04／S-10／S-11／S-12／S-16／S-20、proto7-2 spec §4～§8、core-slimming §5／§10、r3 綜合。**這些都是提案，不是決定。**
 
 ## 0. 結論先講
 

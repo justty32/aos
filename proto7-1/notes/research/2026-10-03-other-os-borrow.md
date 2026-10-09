@@ -42,7 +42,7 @@ token 不等於 WCET，lottery ticket 不等於存款；應用「工作帳戶＋
 
 ## 0. 範圍、現況與草圖讀法
 
-已讀 [核心 S-01～S-23](proto7/spec/core.md)、[proto7-1 細部規格](proto7-1/spec.md)、[上一份 Linux 報告](proto7-1/notes/research/2026-10-03-linux-kernel-borrow.md)，並對照 `proto7-1/lib/aos7_kernel.py`、`aos7_kernel_rules.py`、`notes/infra-needs.md` 與 sched／llmkernel 探針。沒有執行探針、daemon 或付費模型；本次只寫此報告。
+已讀 [核心 S-01～S-23](../../../proto7/spec/core.md)、[proto7-1 細部規格](../../spec.md)、[上一份 Linux 報告](2026-10-03-linux-kernel-borrow.md)，並對照 `proto7-1/lib/aos7_kernel.py`、`aos7_kernel_rules.py`、`notes/infra-needs.md` 與 sched／llmkernel 探針。沒有執行探針、daemon 或付費模型；本次只寫此報告。
 
 以下歷史事實依原論文、作者／研究機構或官方文件；**aos 對應、JSON、實驗與推薦是本報告的設計推論**，不是原系統已提供的功能。論文年份指發表／初稿年份，不採搜尋引擎的「幾個月前」日期。
 
@@ -1034,7 +1034,7 @@ parent 的 clock 決定補額；子 node pause 不停止父帳戶時鐘。contro
 }
 ```
 
-寫到目標 `<taskdir>/ctl.json`，tick／tock 才執行；node pause 仍要等 resume。未加 reload 仍按 birth 定義重起；即使按 birth 的 inst 路徑，該檔內容若變過，也不是完整歷史執行快照。以上對照 [現行 spec §6](proto7-1/spec.md)、[infra-needs N-31](proto7-1/notes/infra-needs.md)。
+寫到目標 `<taskdir>/ctl.json`，tick／tock 才執行；node pause 仍要等 resume。未加 reload 仍按 birth 定義重起；即使按 birth 的 inst 路徑，該檔內容若變過，也不是完整歷史執行快照。以上對照 [現行 spec §6](../../spec.md)、[infra-needs N-31](../infra-needs.md)。
 
 **沒有研究推翻舊報告「先有可信帳與准入，才談排程算法」的主結論。** 真正的新設計重點是工作跨服務的脈絡、可組裝命名空間，以及階層 scheduler 的承諾界線。不能為了寫第二份就把同一個 watchdog 或公平權重換名字當新發現。
 

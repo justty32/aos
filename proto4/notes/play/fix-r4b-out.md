@@ -8,12 +8,12 @@
 - JSON／Python／Lua 錯誤全文改放各自的 `<PROG>.error`，不同程式不互蓋，該格成功後刪除。
 - README 已補齊等待時間線、101、reset 警告、call 選項、`<OUT>.req.json`、LLM 兩種家與 binary 規則。
 
-Lua 載入與函式掃描拆至 [step_program.lua](/home/lorkhan/repo/simple_tools/aos/proto4-6/lua/step_program.lua)，所有程式碼與 README 均未超過 300 行。
+Lua 載入與函式掃描拆至 [step_program.lua](../../../proto4-6/lua/step_program.lua)，所有程式碼與 README 均未超過 300 行。
 
 ## 修改檔案
 
-- `proto4-4/`：[README.md](/home/lorkhan/repo/simple_tools/aos/proto4-4/README.md)、[state.janet](/home/lorkhan/repo/simple_tools/aos/proto4-4/src/state.janet)、[step.janet](/home/lorkhan/repo/simple_tools/aos/proto4-4/src/step.janet)、[test/step.janet](/home/lorkhan/repo/simple_tools/aos/proto4-4/test/step.janet)
-- `proto4-6/`：[README.md](/home/lorkhan/repo/simple_tools/aos/proto4-6/README.md)、三支執行器與共用 Python/Lua library，以及五份相關測試檔。
+- `proto4-4/`：[README.md](../../../proto4-4/README.md)、[state.janet](../../../proto4-4/src/state.janet)、[step.janet](../../../proto4-4/src/step.janet)、[test/step.janet](../../../proto4-4/test/step.janet)
+- `proto4-6/`：[README.md](../../../proto4-6/README.md)、三支執行器與共用 Python/Lua library，以及五份相關測試檔。
 
 ## 測試數字
 

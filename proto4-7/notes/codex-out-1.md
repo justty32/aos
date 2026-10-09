@@ -2,13 +2,13 @@
 
 ## 檔案清單
 
-- CLI：[aos-agent](/home/lorkhan/repo/simple_tools/aos/proto4-7/aos-agent)、[aos-user](/home/lorkhan/repo/simple_tools/aos/proto4-7/aos-user)
-- CLI 實作：[aos_agent_cli.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/aos_agent_cli.py)、[aos_user_cli.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/aos_user_cli.py)
-- 核心：[state_machine.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/state_machine.py)、[mailbox.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/mailbox.py)、[agent_tools.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/agent_tools.py)、[common.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/common.py)
-- 測試：[test_agent.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/test/test_agent.py)、[test_tools.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/test/test_tools.py)、[test_user.py](/home/lorkhan/repo/simple_tools/aos/proto4-7/test/test_user.py)
-- 文件：[proto4-7/README.md](/home/lorkhan/repo/simple_tools/aos/proto4-7/README.md)
-- 第 6 站：[make.sh](/home/lorkhan/repo/simple_tools/aos/playground/stations/6-agent/make.sh)、[playground/README.md](/home/lorkhan/repo/simple_tools/aos/playground/README.md)
-- 遊樂場接線：[env.sh](/home/lorkhan/repo/simple_tools/aos/playground/env.sh)、[up.sh](/home/lorkhan/repo/simple_tools/aos/playground/up.sh)
+- CLI：[aos-agent](../aos-agent)、[aos-user](../aos-user)
+- CLI 實作：[aos_agent_cli.py](../aos_agent_cli.py)、[aos_user_cli.py](../aos_user_cli.py)
+- 核心：[state_machine.py](../state_machine.py)、[mailbox.py](../mailbox.py)、[agent_tools.py](../agent_tools.py)、[common.py](../common.py)
+- 測試：[test_agent.py](../test/test_agent.py)、[test_tools.py](../test/test_tools.py)、[test_user.py](../test/test_user.py)
+- 文件：[proto4-7/README.md](../README.md)
+- 第 6 站：[make.sh](../../playground/stations/6-agent/make.sh)、[playground/README.md](../../playground/README.md)
+- 遊樂場接線：[env.sh](../../playground/env.sh)、up.sh（已改名 [play-up](../../playground/play-up)）
 
 ## 規格落地
 

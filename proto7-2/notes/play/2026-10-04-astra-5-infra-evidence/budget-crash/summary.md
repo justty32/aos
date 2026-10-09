@@ -29,8 +29,8 @@
 
 重現流程：開帳並起單一 ledger；以 `gateway-after-intent` 把 call 殺在 intent 之後；讓該 call 讀 `backend.json` 得 EIO，再以同 K call。實際退出碼 1、stdout 無 JSON，stderr 是 `aos7_fs.Unknown` traceback。另一次先用 seed 建合法 backend，再準備 r 的 intent，把自己 `/tmp` 的 backend 權限暫設 `000`，不用 injector 重現真 PermissionError；恢復原 mode 後確認 backend bytes 完全未變，再 call r 成功，沒有重扣。
 
-- EIO 證據：[verified/results.json](verified/results.json) 的 `eio-backend.json`，`hits` 記 1 次命中，`unknown_exit_contract: false`；[故障快照](verified/snapshots/eio-backend.json-interrupted/ledger.json)、[恢復快照](verified/snapshots/eio-backend.json-final/ledger.json)。
-- 真 EACCES 證據：[extra/results.json](extra/results.json) 的 `eacces-backend`，`real_EACCES: true`、uid=1000，故障時 available=98/inflight=1/used=1（seed 已結算）；`settle(r)` 仍回 3；[故障 ledger](extra/snapshots/eacces-backend-interrupted/ledger.json)、[恢復 ledger](extra/snapshots/eacces-backend-final/ledger.json)。
+- EIO 證據：[verified/results.json](verified/results.json) 的 `eio-backend.json`，`hits` 記 1 次命中，`unknown_exit_contract: false`；故障快照（verified/snapshots/eio-backend.json-interrupted/ledger.json，已打包進 [verified/snapshots.tar.gz](verified/snapshots.tar.gz)）、恢復快照（verified/snapshots/eio-backend.json-final/ledger.json，同上已打包）。
+- 真 EACCES 證據：[extra/results.json](extra/results.json) 的 `eacces-backend`，`real_EACCES: true`、uid=1000，故障時 available=98/inflight=1/used=1（seed 已結算）；`settle(r)` 仍回 3；故障 ledger（extra/snapshots/eacces-backend-interrupted/ledger.json，已打包進 [extra/snapshots.tar.gz](extra/snapshots.tar.gz)）、恢復 ledger（extra/snapshots/eacces-backend-final/ledger.json，同上已打包）。
 - 對照：`eio-ledger.json`、`eio-grant.json`、`eio-gateway/519457d6f54d32335539.json` 都回 3；同類讀取故障只在 backend 呼叫路徑漏接。
 - 實作位置：[aos7_budget_gate.py](../../../../packs/budget/aos7_budget_gate.py) 第 40 行 `edit_json` 丟出 Unknown，第 174 行 `call → run` 沒轉成 pending。
 - 建議修法一行：在 budget 入口／call 的共同外部故障邊界把 Unknown／讀取 OSError 轉成既有非終局 unknown 與退出碼 3，保留 intent／預留，沿同 K 重送。

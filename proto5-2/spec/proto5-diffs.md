@@ -36,7 +36,7 @@ aos-exec、inst-posix、directives，以及 kernel 的 syscall／判定／鏈、
 | proto5 位置 | 原句（短引） | proto5-2 的新說法 | 依據 |
 |---|---|---|---|
 | [aos-agent/collect.md §6.1](../../proto5/spec/aos-agent/collect.md) | `result.kind=aos` 那列：「aos-llm call 沒跑起來（kind=aos），看 `<K>/cpus/<llm 池的 cpu>/cpu.log`」 | 路徑改成 `<K>/pools/<池>/cpus/*/cpu.log` | [kernel-home.md §1](kernel-home.md) |
-| [aos-agent/cli-status.md §1.3](../../proto5/spec/aos-agent/cli-status.md) | 「K 知道且 [kernel 健康](../kernel/README.md) 不是 ok」，判定共用 `lib/aos_kernel_health.py` | 這行字不用改，但它呼叫的判定邏輯換了：改看池摘要（`k1-kernel` 的 `running` 是 0 才算 kernel cpu 不在，工作池少了改印 warn） | [kernel-cli.md `ls`](kernel-cli.md) |
+| [aos-agent/cli-status.md §1.3](../../proto5/spec/aos-agent/cli-status.md) | 「K 知道且 [kernel 健康](../../proto5/spec/kernel/README.md) 不是 ok」，判定共用 `lib/aos_kernel_health.py` | 這行字不用改，但它呼叫的判定邏輯換了：改看池摘要（`k1-kernel` 的 `running` 是 0 才算 kernel cpu 不在，工作池少了改印 warn） | [kernel-cli.md `ls`](kernel-cli.md) |
 | [aos-agent/register.md §11](../../proto5/spec/aos-agent/register.md)、[pause-clean.md §10](../../proto5/spec/aos-agent/pause-clean.md) | 兩份都靠偷看 `K/state.json` 的 `procs`／`replies`，或 `done_exit`／`bad_after` 兩個退出碼設定 | **不用改**：帳本第 2 版的 `procs` 一字不改，`acks`／`replies`／`deletes` 也同 proto5（astra 核對過） | [kernel-ledger.md §2](kernel-ledger.md) |
 
 ## aos-llm

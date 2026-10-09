@@ -13,11 +13,11 @@ fix-r5 #1–#8 已完成，沒有未做項目。未呼叫真 LLM、未讀 API ke
 
 ### 修改檔案
 
-- proto4-3：[aos_kernel.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/aos_kernel.py)、[aos_kernel_init.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/aos_kernel_init.py)、[aos_kernel_status.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/aos_kernel_status.py)、[test_kernel.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/test/test_kernel.py)
-- proto4-4：[README.md](/home/lorkhan/repo/simple_tools/aos/proto4-4/README.md)、[step.janet](/home/lorkhan/repo/simple_tools/aos/proto4-4/test/step.janet)
-- proto4-5：[README.md](/home/lorkhan/repo/simple_tools/aos/proto4-5/README.md)、[llm_cpu_home.py](/home/lorkhan/repo/simple_tools/aos/proto4-5/llm_cpu_home.py)、[llm_cpu_module.py](/home/lorkhan/repo/simple_tools/aos/proto4-5/llm_cpu_module.py)、[llm_cpu_manage.py](/home/lorkhan/repo/simple_tools/aos/proto4-5/llm_cpu_manage.py)、[test_module.py](/home/lorkhan/repo/simple_tools/aos/proto4-5/test/test_module.py)、[test_module_manage.py](/home/lorkhan/repo/simple_tools/aos/proto4-5/test/test_module_manage.py)
-- proto4-6：[README.md](/home/lorkhan/repo/simple_tools/aos/proto4-6/README.md)、[test_step_json.py](/home/lorkhan/repo/simple_tools/aos/proto4-6/test/test_step_json.py)、[test_step_py.py](/home/lorkhan/repo/simple_tools/aos/proto4-6/test/test_step_py.py)、[test_step_lua.py](/home/lorkhan/repo/simple_tools/aos/proto4-6/test/test_step_lua.py)
-- 導航：[code-map.md](/home/lorkhan/repo/simple_tools/aos/wf/workflows/common/code-map.md)
+- proto4-3：[aos_kernel.py](../../../proto4-3/aos_kernel.py)、[aos_kernel_init.py](../../../proto4-3/aos_kernel_init.py)、[aos_kernel_status.py](../../../proto4-3/aos_kernel_status.py)、test_kernel.py（已不存在，拆成 [proto4-3/test/](../../../proto4-3/test/) 的 _kernel_base.py 與 test_kernel_init／exit／daemon）
+- proto4-4：[README.md](../../../proto4-4/README.md)、[step.janet](../../../proto4-4/test/step.janet)
+- proto4-5：[README.md](../../../proto4-5/README.md)、[llm_cpu_home.py](../../../proto4-5/llm_cpu_home.py)、[llm_cpu_module.py](../../../proto4-5/llm_cpu_module.py)、[llm_cpu_manage.py](../../../proto4-5/llm_cpu_manage.py)、[test_module.py](../../../proto4-5/test/test_module.py)、[test_module_manage.py](../../../proto4-5/test/test_module_manage.py)
+- proto4-6：[README.md](../../../proto4-6/README.md)、[test_step_json.py](../../../proto4-6/test/test_step_json.py)、[test_step_py.py](../../../proto4-6/test/test_step_py.py)、[test_step_lua.py](../../../proto4-6/test/test_step_lua.py)
+- 導航：[code-map.md](../../../wf/workflows/common/code-map.md)
 
 ### 測試數字
 

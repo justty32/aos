@@ -16,7 +16,7 @@ HEAD `b8568cdbf8122b1aaa11b9e67c49228e0e145d2c`。本線只做靜態文件／程
 
 草稿維持單 node、通用任務包、核心零新增，方向對上 [r6](../../../../../proto7/notes/thinking/2026-10-04-r6-synthesis.md) 第 9～26 行。`reserve→run→settle` 可以接到既有 step 的普通 run／wait 與槽外結果，但目前只是接法構想，還不能稱為介面已定稿或已能直接接上。
 
-**四欄尚未齊全。** [account 草稿](../../../../packs/account/README.md) 的 grant（第 16～20 行）與 ledger（第 22～26 行）都有四欄；gateway（第 28～31 行）缺「前置條件」。至少要交代誰能提交 reserve／settle、請求 id 的作用域、同 id 是否必須同內容，以及核對的 grant／預留與放行對象要如何對上。這沿用 [r1](../../../../../proto7/notes/thinking/2026-10-04-r1-synthesis.md) 第 21、23、57 行對授權與入口的區分，沒有新增隔離方向。
+**四欄尚未齊全。** account 草稿（packs/account/README.md，已不存在；該包後改名 [packs/budget/](../../../../packs/budget/)） 的 grant（第 16～20 行）與 ledger（第 22～26 行）都有四欄；gateway（第 28～31 行）缺「前置條件」。至少要交代誰能提交 reserve／settle、請求 id 的作用域、同 id 是否必須同內容，以及核對的 grant／預留與放行對象要如何對上。這沿用 [r1](../../../../../proto7/notes/thinking/2026-10-04-r1-synthesis.md) 第 21、23、57 行對授權與入口的區分，沒有新增隔離方向。
 
 **「明確失敗就退回」過寬。** ledger 第 25 行把 `never_started` 與明確失敗都當成退回理由；但 step `ok:false` 可以是命令已花資源後退出非零，也可能是命令成功但宣告產物沒出現（step spec 第 70 行、結果包裝第 64～77 行）。核心 `never_started` 也是 birth／pid／out.log 的保守跡象（核心 spec 第 233 行；once_retry README 第 22 行承認極小機率跑過），不能代替資源入口的未支用證明。依 r1 第 22～23 行，應由資源入口／效果回條證明沒支用才全退；有支用就結算，未知繼續預留。
 
