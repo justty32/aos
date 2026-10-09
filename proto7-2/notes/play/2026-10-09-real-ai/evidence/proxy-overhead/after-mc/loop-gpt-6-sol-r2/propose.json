@@ -1,0 +1,30 @@
+{
+ "rid": "csv1",
+ "candidate_sha": "1c18b890a1d9a6fbff6529632123942788f424b371cb927ad9822e1fbb03abd7",
+ "job": "csv1_1c18b890",
+ "payload_sha": "b45bf5870c42c0e4f18d14043ce8c7bccefcaa73d85a3b37758efccfa12797dd",
+ "issues": [],
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol",
+  "call_id": "csv1-chatgpt-gpt-6-sol-3b403ffc",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 190,
+   "prompt_tokens": 2409,
+   "total_tokens": 2599,
+   "completion_tokens_details": {
+    "reasoning_tokens": 54
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 2599,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-author-llm.UNHgIk/llm/llmcall/llm/csv1-chatgpt-gpt-6-sol-3b403ffc/receipt.json"
+ }
+}

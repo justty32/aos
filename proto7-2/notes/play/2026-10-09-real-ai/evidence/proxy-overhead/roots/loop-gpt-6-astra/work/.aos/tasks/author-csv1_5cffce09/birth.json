@@ -1,0 +1,28 @@
+{
+ "name": "author-csv1_5cffce09",
+ "slot": "author-csv1_5cffce09",
+ "run": 5,
+ "round": 5,
+ "node": "work",
+ "once": false,
+ "at": "2026-10-09T18:00:52.351",
+ "runner": {
+  "pid": 2974657,
+  "starttime": 3523571
+ },
+ "argv": [
+  "python3",
+  "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/bin/aos7-step",
+  "run",
+  "jobs/csv1_5cffce09"
+ ],
+ "mounts": {},
+ "x": {
+  "author": {
+   "owner": "author",
+   "rid": "csv1",
+   "candidate_sha": "5cffce0922b3fe9f70dae73c1ceda9f68e0e45b6c7b61a0e3b162502aaac02cf",
+   "payload_sha": "59edc97fdbf7f1a32f340619e9baf0745d05688e46c44d764fbc0413712b0fb3"
+  }
+ }
+}

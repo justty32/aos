@@ -1,0 +1,56 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-astra-20a9deeb",
+ "req_sha": "daf42083c068ab1789bde896accc554c1d38d90a87566d2e1f3200fa25949015",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"依部門統計 data.csv 中每個部門的筆數、總額與平均。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"done\",\"fail\":\"failed\"}],\"ends\":{\"done\":\"ok\",\"failed\":\"failed\"}}",
+  "usage": {
+   "completion_tokens": 141,
+   "prompt_tokens": 2409,
+   "total_tokens": 2550,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "model": "chatgpt-gpt-6-astra",
+  "finish_reason": "stop",
+  "http": 200,
+  "elapsed": 4.679,
+  "response": {
+   "id": "chatcmpl-867797de-28fe-43be-8e96-d61525afadde",
+   "created": 1791540041,
+   "model": "chatgpt-gpt-6-astra",
+   "object": "chat.completion",
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "message": {
+      "content": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"依部門統計 data.csv 中每個部門的筆數、總額與平均。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"done\",\"fail\":\"failed\"}],\"ends\":{\"done\":\"ok\",\"failed\":\"failed\"}}",
+      "role": "assistant"
+     }
+    }
+   ],
+   "usage": {
+    "completion_tokens": 141,
+    "prompt_tokens": 2409,
+    "total_tokens": 2550,
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 1408
+    }
+   }
+  },
+  "choices_n": 1,
+  "skipped": []
+ },
+ "at": "2026-10-09T18:00:46.673"
+}

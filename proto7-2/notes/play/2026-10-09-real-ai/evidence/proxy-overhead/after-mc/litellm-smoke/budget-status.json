@@ -1,0 +1,12 @@
+{
+ "budget": "llm",
+ "grant": "litellm-demo",
+ "initial": 100000000,
+ "available": 99998351,
+ "inflight": 0,
+ "used": 1649,
+ "seq": 2,
+ "clock_hw": 5,
+ "keys": 1,
+ "overrun": 0
+}

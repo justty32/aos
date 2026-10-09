@@ -1,0 +1,36 @@
+{
+ "v": 1,
+ "rid": "csv1",
+ "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+ "closed": true,
+ "versions": {
+  "1c18b890a1d9a6fbff6529632123942788f424b371cb927ad9822e1fbb03abd7": {
+   "v": 1,
+   "rid": "csv1",
+   "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+   "candidate_sha": "1c18b890a1d9a6fbff6529632123942788f424b371cb927ad9822e1fbb03abd7",
+   "payload_sha": "b45bf5870c42c0e4f18d14043ce8c7bccefcaa73d85a3b37758efccfa12797dd",
+   "job": "csv1_1c18b890",
+   "task_name": "author-csv1_1c18b890",
+   "registered": true,
+   "evidence": "table",
+   "closed": true,
+   "answer": {
+    "ok": true,
+    "issues": [],
+    "checker_sha256": "e383c9151da84550ded7875aa433d992726c075bfd733a81797c334efae67db6"
+   },
+   "steps_sha256": "b922a97898f0917f83c7eb423eb6f7dba1e05f7091f079dd25239f79c2ae9aa9",
+   "files": {
+    "convert.py": "f5c03903a4e679a797d87eb8503316d6b89d5f2f90e5b4fb9a2dd14365b3b62e",
+    "stats.py": "75cb120eb82a52e84eeb41041ec5a0b5db17f1e5a329a6c156a3d5e25b132ed8",
+    "data.csv": "c01f0a65d56dd37512adc1c4b6cddb18605cce606b87467a13b3102c3481681b",
+    "steps.json": "b922a97898f0917f83c7eb423eb6f7dba1e05f7091f079dd25239f79c2ae9aa9"
+   },
+   "toolcards": {
+    "path": "toolcards/csv.json",
+    "sha256": "5f9812acc07fe123c25de5231b0b0bf8b7bf8a993e3a0662f4c39b557567e3ac"
+   }
+  }
+ }
+}

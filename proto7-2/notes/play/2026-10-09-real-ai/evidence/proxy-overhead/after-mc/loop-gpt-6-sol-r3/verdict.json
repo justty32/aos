@@ -1,0 +1,55 @@
+{
+ "v": 1,
+ "versions": {
+  "7e004f089b27d45067071a55ca20b05d2a220f7ab1ea177db81cb90246a106b2": {
+   "candidate_sha": "7e004f089b27d45067071a55ca20b05d2a220f7ab1ea177db81cb90246a106b2",
+   "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+   "job": "csv1_7e004f08",
+   "ok": true,
+   "validated": true,
+   "payload_sha": "944b616934f46f9cd8706a0ab6275123b69085b9a36e00b0b8154d78ab840070",
+   "issues": [],
+   "manifest": {
+    "v": 1,
+    "rid": "csv1",
+    "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+    "candidate_sha": "7e004f089b27d45067071a55ca20b05d2a220f7ab1ea177db81cb90246a106b2",
+    "job": "csv1_7e004f08",
+    "files": {
+     "convert.py": "f5c03903a4e679a797d87eb8503316d6b89d5f2f90e5b4fb9a2dd14365b3b62e",
+     "stats.py": "75cb120eb82a52e84eeb41041ec5a0b5db17f1e5a329a6c156a3d5e25b132ed8",
+     "data.csv": "c01f0a65d56dd37512adc1c4b6cddb18605cce606b87467a13b3102c3481681b",
+     "steps.json": "3abc8cd7445d4b1d69c49af6a461a1bbc648659efe84e5a8f83f9db9c73b15c3"
+    },
+    "toolcards": {
+     "path": "toolcards/csv.json",
+     "sha256": "5f9812acc07fe123c25de5231b0b0bf8b7bf8a993e3a0662f4c39b557567e3ac"
+    },
+    "task": {
+     "name": "author-csv1_7e004f08",
+     "mode": "keep",
+     "max_live": 1,
+     "argv": [
+      "python3",
+      "/home/lorkhan/repo/simple_tools/aos/proto7-2/packs/step/bin/aos7-step",
+      "run",
+      "jobs/csv1_7e004f08"
+     ],
+     "x": {
+      "author": {
+       "owner": "author",
+       "rid": "csv1",
+       "candidate_sha": "7e004f089b27d45067071a55ca20b05d2a220f7ab1ea177db81cb90246a106b2"
+      }
+     }
+    }
+   },
+   "steps_sha256": "3abc8cd7445d4b1d69c49af6a461a1bbc648659efe84e5a8f83f9db9c73b15c3",
+   "answer": {
+    "ok": true,
+    "issues": [],
+    "checker_sha256": "e383c9151da84550ded7875aa433d992726c075bfd733a81797c334efae67db6"
+   }
+  }
+ }
+}

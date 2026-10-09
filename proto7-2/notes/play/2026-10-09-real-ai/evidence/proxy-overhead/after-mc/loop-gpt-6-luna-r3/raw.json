@@ -1,0 +1,65 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-luna-0f8ab868",
+ "req_sha": "dfebef3916a3e53271438371fb331e387a54596575cccbefb85e86ca3ff8a905",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"將部門統計需求的 CSV 轉換為 JSON，並產生每個部門的筆數、總額與平均報告。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+  "usage": {
+   "completion_tokens": 204,
+   "prompt_tokens": 2409,
+   "total_tokens": 2613,
+   "completion_tokens_details": {
+    "reasoning_tokens": 50
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "model": "chatgpt-gpt-6-luna",
+  "finish_reason": "stop",
+  "http": 200,
+  "elapsed": 3.715,
+  "response": {
+   "id": "chatcmpl-c8bfea02-1f3e-401c-83a0-19043f9b5e34",
+   "created": 1791540093,
+   "model": "chatgpt-gpt-6-luna",
+   "object": "chat.completion",
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "message": {
+      "content": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"將部門統計需求的 CSV 轉換為 JSON，並產生每個部門的筆數、總額與平均報告。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+      "role": "assistant",
+      "reasoning_content": "",
+      "reasoning_items": [
+       {
+        "type": "reasoning",
+        "id": "rs_051f7d83a79f7a51016ac8bb800ba4819191db765395796924",
+        "encrypted_content": "gAAAAABqyLuAuk94MJHoGCVeg6NFw3yrhXe8eQO57vhw7jzL2jMgVveHMut5Y_fB8U28JHJvvjsSdSUim_huW4bZvQRbWYYKkUpF0MKh5-QBhQXTs3yWisHOQSIohBagQf6yGwKqpsiSTIGlL1iQCSt_GdjLHRJhhCgEJ6tBWtythtIDVQMro0OkCBwemuqJpQ7sFIUn6zEQR55uB0Qtz91sdKxpFTbZgA5Pwq5BKqGk1BLjOtZ0GfYyerW6FEVAP2IjVxPN75rFYCQAhLxy0zf1Rp_TdtlSMDFQRloeho5kPxUArLzZVd4mvMWfyVGXthpKi-DuI-3Iw170rhd5K36z-Mde0GmFQ0JjkdMmIUmk-uJHtJzOa7OF0DlKsGpOefsgoh6CspNqZSGRNuWAk2gF-35uIfqGMI7UEi7BsQickWGyCB24BAX4B4cPZJCF_C4OMxonY4etr46XiHYOnVttKUOkPD5sY1D-n3LaOAf9Bd0nJu3cRQfGuGVTis8g-_0Hf6xRmRMJR4nn6iZRUgzyBggLYZQfpzoG9SWGJHACxWz41XmaJD3m8ssWOGZKOYAelo6FQS9bNDu2-PKaLvFkcsobeJjjWsdp_WIiHbo5sgTplMZcE3NGjRHsKMLC8pfv94OGMYL4Mtnglj2h8lkTpTffUyDG4jkEnAmTygQVg5xxv8L7WbOk8egx9wNkXVAwwCmwc8s0aQUXecohTdC0dlKyXKHnbg-t-M4T8VzpbD2kokQKkEp25gjX5O20YaLTwEFPH7YlGltSYunZUrRVCHQMn4Nuf_b9RVD_IpVssvzxr4JjME_hWotBp7fEVWZR8Ei-K255VcNfQ1yikcl8SBG8Iu-H0kECmUl9-Wfk5XeGiHe_EvQ2f3-bRx4aAWBg1Y8eE3bNiRDfFJcnh2Lvg9T3Z48Ns90eIOwHgkEemvzXJDGUU7dDFipU1Yqvcn3NA_aNB6jJTffc7iSz3LoDZ7Go665ovkvzzQe3a_vt0SWBbH-vElCGHxL2dsAVRALjkZ-HDCZ3O0K2dYtJRQdCYJjSl-f0cSUcUwFFZhFl0Ralxv57gVgPxNCoHZ60IZP9tmXyxkGDXROrSp503ebhoUAK5AhbfUBA_v0-khvsYlJ9eCTub3qLub98-NqIkuRNyTznVcPokxqZM8bx-NMyBFTANrTgbSQCKIffXnbKeNwshwg1DmOexfrbFXqSAjfrYPiszm8t0FWCAegPJG2fmR_Z9wCv-8NKtOUplIGr7tH3HDKZEgJD_rO1-TTF2983pq4yEFX05x49-jZxaAE4VKVuKnHMXBpg8o7XIyFbEtO0scXXlN5PpfebXICJ64Da-5RxEYjsG7Xr5taF7W1N2VTcNTi4ZWO_HD3mfPWLaeJGmZLj5i0Q9319Zk0aimM-XF6-ZAmuEipDP3HFz5pOvrTK0tSCWQGjnAT--Dq1P3PcGUMkPkkeTK9ut0waXQcsDJ1KH8Le_hMJlqqkjrmpzzBr11q8LJAnyTuNZCr25QkX-X2IWDg28przWcUQuUzeFFo15JTSsWQtz-nm9TL8L7LPZ8deVwjwKTsGdpI_FLAWBfaPyBI=",
+        "summary": []
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "completion_tokens": 204,
+    "prompt_tokens": 2409,
+    "total_tokens": 2613,
+    "completion_tokens_details": {
+     "reasoning_tokens": 50
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  "choices_n": 1,
+  "skipped": []
+ },
+ "at": "2026-10-09T18:01:37.566"
+}

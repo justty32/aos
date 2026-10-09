@@ -1,0 +1,14 @@
+run,model,prompt_tokens,completion_tokens,reasoning_tokens,cached_tokens,total_tokens,http_seconds,choices_n,skipped_n,text_starts_brace,step_end,answer_ok,closed
+loop-gpt-6-astra,chatgpt-gpt-6-astra,2409,141,0,1408,2550,4.679,1,0,True,ok,True,True
+loop-gpt-6-astra-max,chatgpt-gpt-6-astra-max,2409,449,233,0,2858,13.163,1,0,True,ok,True,True
+loop-gpt-6-astra-r2,chatgpt-gpt-6-astra,2409,139,0,1408,2548,4.292,1,0,True,ok,True,True
+loop-gpt-6-astra-r3,chatgpt-gpt-6-astra,2409,137,0,2176,2546,4.557,1,0,True,ok,True,True
+loop-gpt-6-luna,chatgpt-gpt-6-luna,2409,226,87,0,2635,4.154,1,0,True,ok,True,True
+loop-gpt-6-luna-nothink,chatgpt-gpt-6-luna-nothink,2409,134,0,0,2543,2.577,1,0,True,ok,True,True
+loop-gpt-6-luna-r2,chatgpt-gpt-6-luna,2409,137,0,0,2546,2.605,1,0,True,ok,True,True
+loop-gpt-6-luna-r3,chatgpt-gpt-6-luna,2409,204,50,0,2613,3.715,1,0,True,ok,True,True
+loop-gpt-6-sol,chatgpt-gpt-6-sol,2409,180,44,0,2589,6.104,1,0,True,ok,True,True
+loop-gpt-6-sol-high,chatgpt-gpt-6-sol-high,2409,213,77,0,2622,6.046,1,0,True,ok,True,True
+loop-gpt-6-sol-r2,chatgpt-gpt-6-sol,2409,190,54,0,2599,4.455,1,0,True,ok,True,True
+loop-gpt-6-sol-r3,chatgpt-gpt-6-sol,2409,219,72,0,2628,5.45,1,0,True,ok,True,True
+litellm-smoke,chatgpt-gpt-6-sol,1644,5,0,1408,1649,1.831,1,0,False,,,

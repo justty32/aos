@@ -1,0 +1,14 @@
+{
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "csv1-chatgpt-gpt-6-sol-high-c08051b9",
+  "prompt_tokens": 2409,
+  "completion_tokens": 213,
+  "total_tokens": 2622,
+  "llm_seconds": 6.877,
+  "propose_ok": true,
+  "issues_rules": [],
+  "published": true,
+  "step_end": "ok",
+  "answer_ok": true,
+  "closed": true
+}

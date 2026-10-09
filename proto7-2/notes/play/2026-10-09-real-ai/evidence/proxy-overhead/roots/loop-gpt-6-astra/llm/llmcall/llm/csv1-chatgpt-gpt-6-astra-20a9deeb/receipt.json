@@ -1,0 +1,40 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-astra-20a9deeb",
+ "logical": "author/csv1",
+ "kid": "02849fbc2cf02389988c",
+ "key": {
+  "budget": "llm",
+  "holder": "author",
+  "request": "csv1-chatgpt-gpt-6-astra-20a9deeb"
+ },
+ "req_sha": "daf42083c068ab1789bde896accc554c1d38d90a87566d2e1f3200fa25949015",
+ "meter": "litellm.total_tokens/1",
+ "bound": "soft",
+ "reserve": 1000000,
+ "outcome": "answered",
+ "usage": {
+  "completion_tokens": 141,
+  "prompt_tokens": 2409,
+  "total_tokens": 2550,
+  "completion_tokens_details": {
+   "reasoning_tokens": 0
+  },
+  "prompt_tokens_details": {
+   "cached_tokens": 1408
+  }
+ },
+ "used": 2550,
+ "overrun": 0,
+ "billing": "final",
+ "raw_sha": "f64b07843ac9755d8b05c61f6cc2587436b01fab19f38b0b4be6178a18de89a1",
+ "text": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"依部門統計 data.csv 中每個部門的筆數、總額與平均。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"done\",\"fail\":\"failed\"}],\"ends\":{\"done\":\"ok\",\"failed\":\"failed\"}}",
+ "settle": {
+  "seq": 2,
+  "used": 2550,
+  "overrun": 0,
+  "outcome": "answered",
+  "evidence": "d4c602ad586b9ec45be50c9a5fd5b54758ee6b76a01a28c97b8bcf4e2cb017e0",
+  "at": "2026-10-09T18:00:46.696"
+ }
+}

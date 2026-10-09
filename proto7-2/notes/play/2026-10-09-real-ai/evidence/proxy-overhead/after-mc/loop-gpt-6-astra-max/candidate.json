@@ -1,0 +1,10 @@
+{
+ "v": 1,
+ "active": "4ab290ddfaaf614ffb61da0f1bdd61746c336406eb3732410a2da8df48c720fb",
+ "versions": {
+  "4ab290ddfaaf614ffb61da0f1bdd61746c336406eb3732410a2da8df48c720fb": {
+   "size": 665,
+   "raw": "{\n  \"v\": 1,\n  \"mode\": \"keep\",\n  \"intent\": \"部門統計：每個部門的筆數、總額、平均\",\n  \"start\": \"convert\",\n  \"steps\": [\n    {\n      \"id\": \"convert\",\n      \"tool\": \"csv.convert\",\n      \"args\": {\n        \"src\": \"${job}/data.csv\",\n        \"dst\": \"${out}/data.json\",\n        \"request\": \"${request}\"\n      },\n      \"ok\": \"stats\",\n      \"fail\": \"failed\"\n    },\n    {\n      \"id\": \"stats\",\n      \"tool\": \"csv.stats\",\n      \"args\": {\n        \"src\": \"${out}/data.json\",\n        \"request\": \"${req:convert}\",\n        \"dst\": \"${out}/report.json\"\n      },\n      \"ok\": \"ok\",\n      \"fail\": \"failed\"\n    }\n  ],\n  \"ends\": {\n    \"ok\": \"ok\",\n    \"failed\": \"failed\"\n  }\n}"
+  }
+ }
+}

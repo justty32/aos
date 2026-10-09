@@ -1,0 +1,5 @@
+{"ok": true, "why": null}
+{"v": 1, "call_id": "demo-c1", "logical": null, "kid": "486bf4f4a392810f86bd", "key": {"budget": "llm", "holder": "author", "request": "demo-c1"}, "req_sha": "02d81553dd9932cc789cec1a0125f29491cfc8037c2d210693dc482b1090d961", "meter": "litellm.total_tokens/1", "bound": "soft", "reserve": 1000000, "outcome": "answered", "usage": {"completion_tokens": 5, "prompt_tokens": 1644, "total_tokens": 1649, "completion_tokens_details": {"reasoning_tokens": 0}, "prompt_tokens_details": {"cached_tokens": 1408}}, "used": 1649, "overrun": 0, "billing": "final", "raw_sha": "255613372179aa5a163d587e031dd3c2d371525cad744b33240c6449be83b0e4", "text": "OK", "settle": {"seq": 2, "used": 1649, "overrun": 0, "outcome": "answered", "evidence": "5d8dabbe0808d9294b0e8546425b2ba23f2683ef2741e622a628cb8f8c98ffe2", "at": "2026-10-09T18:01:48.772"}}
+證據：/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-09-real-ai/evidence/proxy-overhead/after-mc/litellm-smoke
+暫存 node：<tmp>
+call 退出碼：0
