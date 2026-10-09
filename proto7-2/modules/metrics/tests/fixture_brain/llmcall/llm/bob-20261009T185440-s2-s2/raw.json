@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "call_id": "bob-20261009T185440-s2-s2",
+  "source": "transport",
+  "at": "2026-10-09T00:00:33",
+  "reply": {
+    "elapsed": 2,
+    "usage": {
+      "prompt_tokens": 20,
+      "completion_tokens": 10,
+      "total_tokens": 30
+    }
+  }
+}

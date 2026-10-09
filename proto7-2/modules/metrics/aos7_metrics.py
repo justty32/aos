@@ -34,6 +34,14 @@ def summary(flows, windows):
                 seconds=dict(mean=round(sum(seconds)/len(seconds), 3) if seconds else None,
                              max=max(seconds) if seconds else None, open=sum(f['open'] for f in flows)),
                 retries={k: sum(f['retries'][k] for f in flows) for k in ('reask', 'resends', 'extra_tries', 'adopted', 'total')})
+def letter_key(call_id, known=None):
+    """依 aos7_up_brain.call_id/cid_of 還原信件鍵；前 47 字相同的信會合併（已知限制）。
+    known＝看到的 brain call id：給了就只在去尾後那個第 1 回合 id 確實存在時才去 `-s數字`，信 id 本身以 -s數字 結尾也不拆件。"""
+    truncated = re.fullmatch(r'(.{47})-[0-9a-f]{16}', call_id)
+    if truncated:
+        return truncated[1]
+    step = re.fullmatch(r'(.+)-s\d+', call_id)
+    return (step[1] if step and (known is None or step[1] in known) else call_id)[:47]
 def _scan(path, overhead):
     root = Path(path).absolute()
     calls, authors, jobs, events, unreadable = {}, {}, {}, {}, []
@@ -107,11 +115,19 @@ def _scan(path, overhead):
                     key = 'author/' + rid
                     events[key] = extreme([events.get(key), stamp(event.get('at'))])
     grouped = {key: [] for key in authors}
-    for key, c in sorted(calls.items()):
+    for key, c in calls.items():
         cid = obj(c.get('request')).get('call_id')
         c['id'] = cid if isinstance(cid, str) else key[2]
+    brain_ids = {c['id'] for c in calls.values() if obj(c.get('request')).get('logical') == 'up/brain'}
+    for key, c in sorted(calls.items()):
         logical = obj(c.get('request')).get('logical')
-        grouped.setdefault(logical if isinstance(logical, str) else 'call:' + c['id'], []).append(c)
+        flow = logical if isinstance(logical, str) else 'call:' + c['id']
+        c['slot'] = c['id'] if logical == 'up/brain' else flow
+        if logical == 'up/brain':
+            flow = 'up/brain/' + letter_key(c['id'], brain_ids)
+        elif flow.startswith(('author-review/', 'author-learn/')):
+            flow = 'author/' + flow.split('/', 1)[1]
+        grouped.setdefault(flow, []).append(c)
     flows, all_windows = [], []
     for logical, group in sorted(grouped.items()):
         token = dict.fromkeys(('used', 'reserve', 'pending', 'pending_reserve', 'prompt', 'completion', 'reasoning', 'cached'), 0)
@@ -182,7 +198,7 @@ def _scan(path, overhead):
                     ends.append(stamp(jobs[j]['frame'].get('at')))
         start = extreme(starts)
         end = extreme(ends, True) if not logical.startswith('author/') or author.get('closed') is True else None
-        retries = dict(reask=max(0, len(group)-1), resends=sum(number(v) for f in frames for v in obj(f.get('resends')).values()),
+        retries = dict(reask=len(group)-len({c['slot'] for c in group}), resends=sum(number(v) for f in frames for v in obj(f.get('resends')).values()),
                        extra_tries=sum(max(0, number(v)-1) for f in frames for v in obj(f.get('tries')).values()),
                        adopted=sum(obj(c.get('raw')).get('source') == 'adopted' for c in group))
         retries['total'] = sum(retries.values())
@@ -262,7 +278,7 @@ EPILOG = """PATH 要量哪個資料夾：
 
 預設輸出（一行，每格白話）：
   名稱：N 件工作｜每件用 X token｜同時最多 P 個在問模型｜花 S 秒｜重試 R 次
-  件＝一件 AI 工作：同一張需求的所有呼叫算一件；不屬於任何需求的單次呼叫自己算一件。
+  件＝一件 AI 工作：按 logical 分，同一張需求的呼叫（含審查／學習）算一件；brain 一封信一件，同件多回合不算重試；沒標 logical 的單次呼叫自己算一件。
 
 --detail 把 token 拆成 prompt／completion／推理／cached，另列預留（先保留的上限，不是真的用掉）與未結，與帳差（帳上 used 減有帳呼叫的回條合計）、缺口。
 --json 欄位：{v, overhead, scopes, total}，scope 含 flows、tokens、max_parallel、seconds、retries 等；--overhead 量法與各欄算法見 ADVANCED.md。

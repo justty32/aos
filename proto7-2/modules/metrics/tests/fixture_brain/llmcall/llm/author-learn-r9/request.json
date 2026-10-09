@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "call_id": "author-learn-r9",
+  "logical": "author-learn/r9",
+  "reserve": 100,
+  "budget": "llm",
+  "holder": "author"
+}
