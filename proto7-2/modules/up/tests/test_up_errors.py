@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+import signal
 import subprocess
 import tempfile
 import unittest
@@ -16,6 +17,11 @@ import aos7_up_status as view
 
 
 class UpErrors(unittest.TestCase):
+    def setUp(self):
+        # cli.main 會換掉 SIGINT／SIGTERM 處理；測完還原，別留在測試程序裡
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            self.addCleanup(signal.signal, sig, signal.getsignal(sig))
+
     def test_child_failure_summary(self):
         for rc, expected in ((1, 1), (2, 1), (3, 3), (4, 1)):
             result = subprocess.CompletedProcess([], rc, '', '長說明\n最後原因\n')
@@ -57,6 +63,8 @@ class UpErrors(unittest.TestCase):
 
 
 class InterfaceTests(unittest.TestCase):
+    setUp = UpErrors.setUp
+
     def invoke(self, args):
         return subprocess.run([sys.executable, '-B', str(cases.UP), *args],
                               capture_output=True, text=True, timeout=10)

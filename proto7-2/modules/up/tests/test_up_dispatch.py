@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -22,6 +23,11 @@ import aos7_up_cli as cli
 
 class UpDispatch(unittest.TestCase):
     """〔up〕凍結的 exec 分派與只讀事件顯示。"""
+    def setUp(self):
+        # cli.main 會換掉 SIGINT／SIGTERM 處理；測完還原，別留在測試程序裡
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            self.addCleanup(signal.signal, sig, signal.getsignal(sig))
+
     def test_brain_forwarding(self):
         import aos7_up_brain
         for sub in ('ask', 'brain'):
@@ -85,6 +91,46 @@ class UpDispatch(unittest.TestCase):
             with patch.object(cli, 'up', side_effect=KeyboardInterrupt), contextlib.redirect_stderr(io.StringIO()) as err:
                 self.assertEqual(cli.main([str(Path(tmp) / 'bob')]), 3)
             self.assertIn('裝到一半被中斷', err.getvalue())
+
+    def test_signal_between_banner_lines(self):
+        # 第一行「起好了」印出後、其餘兩行印完前收到 SIGTERM：已交棒，照交棒後收尾、退 0
+        import builtins
+        from unittest.mock import Mock
+        for detached in (False, True):
+            daemon = Mock()
+            daemon.poll.return_value = None
+            daemon.wait.return_value = 0
+            printed = []
+            def banner(*args, **kwargs):
+                builtins.print(*args, **kwargs)
+                printed.append(args)
+                if len(printed) == 1:
+                    os.kill(os.getpid(), signal.SIGTERM)
+                    time.sleep(.5)  # 訊號一定落在第一行之後、第二行之前
+            with tempfile.TemporaryDirectory() as tmp:
+                node = Path(tmp) / 'bob'
+                (Path(tmp) / '.aosd').mkdir()
+                with patch.object(up, 'preflight'), \
+                     patch.object(up, 'prepare', return_value={'model': None}), \
+                     patch.object(up, 'alive', side_effect=[False, True]), \
+                     patch.object(up, 'node_round', side_effect=[0, 1, 1]), \
+                     patch.object(up, 'skill_count', return_value=0), \
+                     patch.object(up.subprocess, 'Popen', return_value=daemon), \
+                     patch.object(up, 'watch', side_effect=AssertionError('不該進觀看')), \
+                     patch.object(up, 'print', banner, create=True), \
+                     contextlib.redirect_stdout(io.StringIO()) as out, \
+                     contextlib.redirect_stderr(io.StringIO()) as err:
+                    args = [str(node)] + (['-d'] if detached else [])
+                    self.assertEqual(cli.main(args), 0, err.getvalue())
+            self.assertNotIn('另開一個終端機', out.getvalue())  # 第二行沒印到：真的落在空檔
+            self.assertNotIn('裝到一半被中斷', err.getvalue())
+            self.assertTrue(out.getvalue().startswith('bob 起好了'))
+            if detached:
+                daemon.send_signal.assert_not_called()
+                self.assertNotIn('心跳停了', out.getvalue())
+            else:
+                daemon.send_signal.assert_called_once_with(signal.SIGINT)
+                self.assertIn('心跳停了', out.getvalue())
 
     def test_wakeup_timeout_reaps(self):
         child = subprocess.Popen(['python3', '-B', '-c', 'import time; time.sleep(60)'])
