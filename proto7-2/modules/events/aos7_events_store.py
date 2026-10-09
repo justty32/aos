@@ -51,7 +51,7 @@ def _valid(st):
         keys += ("acked_upto", "refused") if ch == "must" else ()
         if not isinstance(c, dict) or not all(is_int(c.get(k)) and c[k] >= 0 for k in keys):
             return False
-        if c.get("torn_cut") is not None and not (is_int(c["torn_cut"]) and c["torn_cut"] >= 0):
+        if "torn_cut" in c and not (is_int(c["torn_cut"]) and c["torn_cut"] >= 0):
             return False
         segs = c.get("segments")
         if c["next_seq"] < 1 or c["active_first"] < 1 or not isinstance(segs, list):

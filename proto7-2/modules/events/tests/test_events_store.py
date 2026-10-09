@@ -348,9 +348,11 @@ class TestTornCount(EventsCase):
     def test_bad_cut(self):
         self.append()
         st = read_json(os.path.join(self.d, "state.json"))
-        st["channels"]["obs"]["torn_cut"] = "x"
-        write_json(os.path.join(self.d, "state.json"), st)
-        self.assertIsNone(store.recover(self.d, node="n"))
+        for bad in ("x", None, -1):
+            st["channels"]["obs"]["torn_cut"] = bad
+            write_json(os.path.join(self.d, "state.json"), st)
+            self.assertIsNone(store.recover(self.d, node="n"))
+            self.assertEqual(read_json(os.path.join(self.d, "state.json")), st)
 
 
 class TestReviewRegressions(EventsCase):
@@ -478,6 +480,9 @@ class TestSampler(EventsCase):
     def test_status_dedup_across_restarts(self):
         """V2：同一 status 事件跨真重起（子程序 ×3）、state 遺失重推、舊 state 缺欄位都只記一筆。"""
         write_json(os.path.join(self.root, ".aosd", "status.json"), {"last_event": {"ev": "start", "n": 1}})
+        # 整行已 flush、status_last 未存就被殺：重起由恢復掃尾推回（astra V2 #2）。
+        self.assertEqual(self.run_sampler("events:after-append", "--status").returncode, -9)
+        self.assertEqual(store.load_state(self.d).get("status_last"), None)
         for _ in range(3):
             self.assertEqual(self.run_sampler("", "--status").returncode, 0)
         self.assertEqual([r["kind"] for r in self.rows()].count("daemon.status"), 1)
