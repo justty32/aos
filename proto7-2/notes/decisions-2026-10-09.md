@@ -282,3 +282,4 @@
 - B｜頂層：KE1 範例改成「腦卡在等 AI 回覆、不再寫進度」的情境（拉長 deadline 或連子程序一起砍），**不改凍結的判斷基準 (信 id, step)**。理由：腦自己「連續 3 回合沒進展」會先處理一般的沒進展，kernel 只保底「腦真的壞死」
 - C｜KC1：kernel 骨架進 main——真 daemon 下當 keep 任務跑、kill 綁原 run、核心重起後記成功；規則輸出壞就整份不送；四個崩潰點各殺 3 次不重送不漏；300 回合 state 不長；對外 `run`／`status` 兩指令；有 `mail` 設定才寄信（信 id＝決定 id，不重寄）。diff 約 1795 行超 700 gate（約 1080 行是測試）照收
 - C｜KC1：藍圖裡 brain 進度路徑寫錯，實際是 `<node>/brain/task.json`、run 取自槽的 birth.json → KE1 順手改藍圖
+- C｜頂層：kernel 不另加 init 指令，維持兩個指令（run 第一次跑會自己初始化；state 不見但決定紀錄還在就退 1 不重建）
