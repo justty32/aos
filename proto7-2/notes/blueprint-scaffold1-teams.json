@@ -1,0 +1,64 @@
+{
+  "contract": "wf-table/1",
+  "source": "blueprint-scaffold1.md",
+  "extracted": "2026-10-09",
+  "columns": ["team", "wave", "lead", "workers", "intent", "items", "territory", "excluded", "deps", "gates", "done", "handoff"],
+  "rows": [
+    {
+      "team": "MN1（選單核心＋玩具選單）",
+      "wave": "1（現在可開，與 AP5 零交集）",
+      "lead": "Opus（逐行審 step 純函式與「先存 state 再呼叫」那兩段）",
+      "workers": "gpt-6.1-sol ×2（甲：aos7_menu.py 的 step／parse／五種格子檢查／選單驗證；乙：aos7_menu_run.py 的 llmcall 驅動、練習用的 AI、state 一次 rename、崩潰矩陣測試）；gpt-6-astra（high）read-only 審",
+      "intent": "intents/scaffold.md（Fable 已寫）",
+      "items": "新包 packs/menu/：`step(menu, state, reply) -> (state2, next)` 純函式（next＝下一層提示｜done｜stuck）；回法凍結（第一行 `選：N`，有格子時 `格：` 到結尾原樣）；不合＝同層重問一行、第 3 次退 1；每層出口固定最後編號；選單驗證（每層 2～5 選項、必有 exit、next 都指得到、do 只有 write／tool、slot 只有 max_bytes／max_lines／prefix／sections／tool）錯＝退 2；`do.write` 只寫 `<node>/menu/<run>/out/`；`do.tool`／`slot.tool` 只認 `packs/menu/tools.json` 登記的名字（argv 模板不經 shell、只填 args、輸出一行 JSON 或退出碼；沒登記＝選單錯退 2），**沒有 cmd／shell 動詞**；state 形狀照藍圖 §3，先存再呼叫、call_id＝`menu/<run>/<層>/<第幾次>`；log.jsonl 每步一行；`run`（無 --llm＝練習用的 AI：照固定腳本走、也會故意回錯一次測重問）與 `status` 一行白話；examples/hello/ 三層玩具（選要回誰→寫一句→做完）；spec.md 寫選單／state／回法形狀（照藍圖，不自創）",
+      "territory": "packs/menu/aos7_menu.py、aos7_menu_run.py、bin/aos7-menu、tools.json、spec.md、tests/test_menu_core.py、examples/hello/（新包全新）",
+      "excluded": "不碰 lib/、modules/、其他 packs（llmcall 只走 CLI）；不碰 README／ADVANCED／INDEX（MN4）；不做 aos-tool 選單（MN2）",
+      "deps": "無；介面以藍圖 §3 為準，想改先回報頂層",
+      "gates": "件數 1 線。diff >600 行停下回報。交棒前全套 1 份（systemd scope）",
+      "done": "純函式單測：合法回覆／不合三次／出口／when 條件／五種檢查各一案；選單錯五種各退 2 一案；存 state 與呼叫之間 SIGKILL ×3 同 call_id 不重問、不漏步；練習用的 AI 走 hello 10/10 且每步 log 一行；status 一行新手看得懂；全套退出碼 0",
+      "handoff": "kernel 的 state 一次 rename 與「先存意圖再送」可借形狀（packs/kernel/aos7_kernel_state.py）；llmcall 同 call 重跑不重問見 packs/llmcall/README；工具目錄先登記 aos7-gates、aos7-skills pick、aos7-ctl 三個既有指令當範例"
+    },
+    {
+      "team": "MN4（文件＋新手）",
+      "wave": "2（MN1 進 main 後；與 MN2 並行）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫文件；Haiku ×1、gpt-6-luna（low）×1 當新手；gpt-6.1-sol 計時",
+      "intent": "intents/scaffold.md",
+      "items": "README（三行頭＋第一次跑 hello 選單：練習用的 AI、不花錢、≤5 分鐘、2 指令、4 概念：選單／層／格子／出口）；ADVANCED（選單格式、回法、state、五種檢查、退出碼、--reply 手走）；proto7-2/INDEX.md、README、tests/README 各一列；wf code map 一行（鐵律 3）；新手試用報告 notes/play/2026-10-10-newbie-menu/",
+      "territory": "packs/menu/README.md、ADVANCED.md、proto7-2/INDEX.md 一列、proto7-2/README.md 一列、tests/README.md 一列、wf/workflows/common/code-map.md 一行、notes/play/2026-10-10-newbie-menu/（新）＋ play/README 一列",
+      "excluded": "不改程式（發現 bug 回報頂層）；不碰 QUICKSTART；不碰 examples/aos-tool/（MN2）",
+      "deps": "MN1 進 main",
+      "gates": "每位新手 ≤30 分鐘；交棒前 wf-lint 0 壞連結",
+      "done": "新手 Haiku／luna ≥7（照 10-09 新手規則；五題全對且較差者 ≥6、luna ≥7 亦可收）、指令 ≤2、概念 ≤4；wf-lint 0 壞連結；全套退出碼 0",
+      "handoff": "README 慣例照 kernel／skills；新手規則同 notes/play/2026-10-09-newbie/README"
+    },
+    {
+      "team": "MN2（學徒 aos-tool 選單）",
+      "wave": "2（MN1 進 main、且 AP5 進 main 後）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫 menu.json＋build.py＋測試；gpt-6-luna ×1 真走 3 次（冒煙）；gpt-6-astra read-only 審（重點：每步提示有沒有多餘訊息、已交檔不重附）",
+      "intent": "intents/scaffold.md",
+      "items": "examples/aos-tool/menu.json 照藍圖 §2 走法（which→write→…→row→report→gates→fix 迴圈，三關最多 5 輪）；每步提示＝需求摘要（brief，≤1500 字）＋已交檔名＋本層，改檔時只附那一檔與沒過那關的 issues ≤600 字；build.py 登記成工具 `aos-tool-gates`（tools.json 一列）：把 out/ 組成 AP5 凍結的 `=== 路徑 ===` 文字候選（row／report 保留名）、呼叫 `aos7-gates check request.json 候選 --ref`、把 failed_gate 與 issues 摘成 {issues} 變數、輸出一行 JSON；tests/test_menu_aos.py：練習用的 AI 整圈（含故意一次 gate 失敗→fix→過）；examples/aos-tool/README 一頁（怎麼對一題跑）",
+      "territory": "packs/menu/examples/aos-tool/（menu.json、build.py、README.md）、packs/menu/tests/test_menu_aos.py",
+      "excluded": "不碰 packs/author/ 任何檔（只走 aos7-gates／aos7-author CLI）；不改 aos7_menu.py（缺功能回報頂層，不順手加動詞）；不發布 apprentice/ 分支",
+      "deps": "MN1 進 main；AP5 進 main（段頭格式以 AP5 的 ADVANCED 為準，有變只改 build.py）",
+      "gates": "件數 1 線。diff >400 行停下回報。真 AI ≤40 次（luna 冒煙 3 次）；交棒前全套 1 份",
+      "done": "練習用的 AI 整圈過（含 fix 迴圈）；luna 對 gap 題走 3 次至少 1 次三關全過、0 次死在格式；每步提示字數記進 log、平均 ≤ AP4 單輪提示的 1/2；全套退出碼 0",
+      "handoff": "AP4 三題在 packs/author/examples/aos-tool-{gap,runs,audit}/；gates check 用法見 packs/author/checkers/README；luna 看到「你沒有工具」會拒做（ef3），選單提示改寫「所需資料都在下面」"
+    },
+    {
+      "team": "MN3（A／B 對照）",
+      "wave": "3（MN2 進 main 後）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫 drive.py／compare.py；gpt-6-luna 當學徒、gpt-6-astra-high 當審查（全走 llmcall）；gpt-6-astra read-only 審報告數字",
+      "intent": "intents/scaffold.md；判準＝藍圖 §4（先寫死，不改）",
+      "items": "A 組 `aos7-author propose --format text`（AP5）最多 6 輪、B 組 `aos7-menu run` 三關最多 5 輪；同 luna、同三題 gap／runs／audit、每組每題 5 次、rid `<題><組><rep>`；量：通過率、格式型被擋次數、每次三題總 token、呼叫次數、每步平均 token、收單到結案時間；報告 play/2026-10-10-real-ai/scaffold-1.md 開頭三行白話結論＋三條門檻燈號；證據 evidence/scaffold1/",
+      "territory": "notes/play/2026-10-10-real-ai/scaffold-1.md、notes/play/2026-10-10-real-ai/evidence/scaffold1/（drive.py、compare.py、各次 log）＋ play/README 一列",
+      "excluded": "不改任何模組（發現 bug 只記、回報頂層）；不發布分支；不改門檻",
+      "deps": "MN2 進 main；AP5 進 main",
+      "gates": "真 AI ≤300 次、≤250 萬 token；systemd scope；暫存學徒 node 收尾刪",
+      "done": "§4 三條逐條燈號（達／不達＋數字）；達 ①② 不達 ③ 時寫「再各跑 5 次」並停；花費表（aos7-metrics job）；報告 ≤6 KiB",
+      "handoff": "借 AP4 的 drive4.py／compare4.py 骨架；基線數字在 apprentice-4.md 兩張表"
+    }
+  ]
+}
