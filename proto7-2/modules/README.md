@@ -15,6 +15,7 @@
 | [audit](audit/README.md) 稽核包 | Python 任務的寫入紀錄（只記不擋） | B | 關 | 無 | `audit/aos7-audit` |
 | [diag](diag/README.md) 診斷包 | 唯讀重算判不出的槽、對到恢復步驟；操作手冊 | C | 開（工具） | 核心的判定函式（只讀） | `diag/aos7-diag` |
 | [events](events/README.md) 事件保存包 | 每 node 一個 events/ 固定檔數保存事件：取樣核心觀測＋合作來源逐件發布，垃圾由寫者清 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs | `events/aos7-events`（子命令 read／pub） |
+| [routines](routines/README.md) 事務包 | 兩張表的例行／一次性到期事務，由 tick 喚醒、最多一次 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs／aos_exec | `routines/aos7-routines`（add／ls／rm） |
 | `history.py` 歷史 module | 每個 tock 把「上一次」追加到自己的地方（見下） | A | 關 | 工具包的任務端函式 | `history.py` |
 | `counter.py` 示範任務 | 讀同槽上一次的 state、收 tock.json | A | — | 工具包的任務端函式 | `counter.py` |
 
