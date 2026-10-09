@@ -1,3 +1,5 @@
+已併入 [diag](../../modules/diag/README.md)（`aos7-diag --llm`）；本資料夾只留歷史，入口 `modules/llmdiag/aos7-llmdiag` 是轉址 stub。
+
 # llmdiag
 
 **職責**
