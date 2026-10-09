@@ -828,37 +828,93 @@ def main(argv=None):
     ap.add_argument("--resend", action="store_true", help="publish：結果 unknown 的版本由人負責重走首次發布")
     ap.add_argument("--events", default="events", help="send／intake：事件目錄")
     ap.add_argument("--limit", type=int, default=20, help="intake：至多收件筆數")
-    a = ap.parse_args(argv)
+    # 先看命令與需求檔；CSV 使用原 parser 與原縮寫集合。
+    args = list(sys.argv[1:] if argv is None else argv)
+    aos_flags = ('reviewer', 'review_llm', 'out', 'context', 'gotchas', 'previous',
+                 'feedback', 'history', 'into', 'repo', 'ref', 'no_scope')
+    positionals = []
+    options = dict(ap._option_string_actions)
+    options.update({'--' + flag.replace('_', '-'): None for flag in aos_flags})
+    i = 0
+    while i < len(args):
+        token = args[i]
+        if token == '--':
+            positionals.extend(args[i + 1:])
+            break
+        if token.startswith('-'):
+            flag = token.split('=', 1)[0]
+            matches = [name for name in options if name.startswith(flag)]
+            action = options.get(matches[0]) if len(matches) == 1 else None
+            takes_value = action.nargs != 0 if action is not None else flag != '--no-scope'
+            i += 2 if takes_value and '=' not in token else 1
+        else:
+            positionals.append(token)
+            i += 1
+    is_aos = False
+    if len(positionals) >= 2 and positionals[0] in ('propose', 'publish', 'learn') and os.path.isfile(positionals[1]):
+        from aos7_author_aos import strict
+        try:
+            with open(positionals[1], 'rb') as stream:
+                doc = strict(stream.read())
+            is_aos = isinstance(doc, dict) and doc.get('kind') in ('aos-tool', 'aos-module')
+        except (ValueError, UnicodeError, OSError):
+            pass
+    if is_aos:
+        import copy
+        ap = copy.deepcopy(ap)
+        ap._positionals._group_actions[0].choices += ('learn',)
+        for flag in aos_flags:
+            kw = {'action': 'append'} if flag in ('context', 'history') else {}
+            if flag == 'no_scope':
+                kw = {'action': 'store_true', 'default': None}
+            ap.add_argument('--' + flag.replace('_', '-'), **kw)
+    a = ap.parse_args(args)
     if a.cmd != "intake" and a.arg is None:
         ap.error("此命令需要需求檔或 rid")
     if a.llm and not a.budget:
         ap.error("--llm 必須帶 --budget")
     if a.prompt_out and not a.llm:
         ap.error("--prompt-out 必須帶 --llm")
-    nd = Node()
-    if a.cmd in ("send", "intake"):
-        r = send_request(nd, a.arg, a.events) if a.cmd == "send" else intake(nd, a.events, a.limit)
-    elif a.cmd == "register":
-        r = register_request(nd, a.arg)
-    elif a.cmd == "propose":
-        if a.llm:
-            from aos7_author_llm import propose_llm
-            r = propose_llm(nd, a.arg, model=a.llm, budget=a.budget, call=a.call,
-                            reserve=a.reserve, deadline=a.deadline, patience=a.patience,
-                            prompt_out=a.prompt_out, auto=a.auto)
-        else:
-            if not a.candidate:
-                ap.error("propose 要 --candidate 或 --llm")
-            r = propose(nd, a.arg, candidate_path=a.candidate, auto=a.auto)
-    elif a.cmd == "publish":
-        import aos7_author_pub
-        r = aos7_author_pub.publish(nd, a.arg, candidate_sha=a.sha, resend=a.resend)
-    elif a.cmd == "answer":
-        r = answer(nd, a.arg, candidate_sha=a.sha)
-    elif a.cmd == "close":
-        r = close_request(nd, a.arg)
+    if is_aos:
+        if a.cmd == 'publish' and a.review_llm:
+            ap.error('publish 不接受 --review-llm；請提供 --reviewer file:PATH')
+        if a.reviewer is not None and a.reviewer != 'rules' and not (a.reviewer.startswith('file:') and a.reviewer[5:]):
+            ap.error('--reviewer 只收 rules 或 file:PATH；模型審查用 --review-llm')
+        if a.review_llm and not a.budget:
+            ap.error('--review-llm 必須帶 --budget')
+        if a.cmd == 'propose' and not (a.candidate or a.llm):
+            ap.error('propose 要 --candidate 或 --llm')
+        if a.cmd == 'publish' and not a.candidate:
+            ap.error('publish 要 --candidate')
+        if a.cmd == 'learn' and not (a.llm and a.budget and a.history and a.into):
+            ap.error('learn 要 --llm、--budget、--history 與 --into')
+        from aos7_author_aos import main_aos
+        r = main_aos(a)
     else:
-        r = status(nd, a.arg)
+        nd = Node()
+        if a.cmd in ("send", "intake"):
+            r = send_request(nd, a.arg, a.events) if a.cmd == "send" else intake(nd, a.events, a.limit)
+        elif a.cmd == "register":
+            r = register_request(nd, a.arg)
+        elif a.cmd == "propose":
+            if a.llm:
+                from aos7_author_llm import propose_llm
+                r = propose_llm(nd, a.arg, model=a.llm, budget=a.budget, call=a.call,
+                                reserve=a.reserve, deadline=a.deadline, patience=a.patience,
+                                prompt_out=a.prompt_out, auto=a.auto)
+            else:
+                if not a.candidate:
+                    ap.error("propose 要 --candidate 或 --llm")
+                r = propose(nd, a.arg, candidate_path=a.candidate, auto=a.auto)
+        elif a.cmd == "publish":
+            import aos7_author_pub
+            r = aos7_author_pub.publish(nd, a.arg, candidate_sha=a.sha, resend=a.resend)
+        elif a.cmd == "answer":
+            r = answer(nd, a.arg, candidate_sha=a.sha)
+        elif a.cmd == "close":
+            r = close_request(nd, a.arg)
+        else:
+            r = status(nd, a.arg)
     print(json.dumps(r, ensure_ascii=False, indent=1))
     return CODES.get(r.get("why"), 1) if not r.get("ok") or r.get("why") else 0
 
