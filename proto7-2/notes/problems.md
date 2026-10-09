@@ -256,7 +256,7 @@
 
 | V2 限制小修（第三段） | E1 列的兩條已知限制修掉：`--status` 去重鍵存 state.json `status_last`，重起不重記同一事件；截半行前先把 torn 與 `torn_cut` 同存 state、截後清標記，計數不再少 1（`fcf44fe4`、`eb78ea82`）。測試 `test_events_store` 的 `test_status_dedup_across_restarts`、`test_torn_and_tmp` |
 
-已知限制（不修）：見 [events README「已知限制」](../modules/events/README.md#已知限制)。
+已知限制（不修）：見 [events README「已知限制」](../modules/events/ADVANCED.md#已知限制)。
 
 ## LLM 第二刀：llmcall 閘道與 budget 部分結算（10-09 第三段）
 

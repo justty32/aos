@@ -114,7 +114,7 @@
 | once_retry once 保證包 | [modules/once_retry/README.md](../modules/once_retry/README.md#契約卡) |
 | audit 稽核包 | [modules/audit/README.md](../modules/audit/README.md#契約卡) |
 | diag 診斷包 | [modules/diag/README.md](../modules/diag/README.md#契約卡) |
-| events 事件保存包 | [modules/events/README.md](../modules/events/README.md#契約卡) |
+| events 事件保存包 | [modules/events/README.md](../modules/events/ADVANCED.md#契約卡) |
 | tools 工具包 | [modules/tools/README.md](../modules/tools/README.md#契約卡) |
 | step 任務包 | [packs/step/README.md](../packs/step/README.md)（「四個組件」節） |
 | budget 任務包（grant／帳／入口） | [packs/budget/README.md](../packs/budget/README.md) |
