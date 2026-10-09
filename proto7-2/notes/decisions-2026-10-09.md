@@ -252,3 +252,5 @@
 - B｜本機挑技能意圖卡 [skills-local-pick](intents/skills-local-pick.md)：L 的 17 筆裡 15 筆正解是「不挑」，變準的關鍵是**敢說 none**；技能可寫 `triggers:`／`not_for:`，沒命中就不挑；有帳且拿不準才問 AI
 - C｜心跳可設定：`aos7-up <node> --interval 秒 --early／--fixed`，存進 up.json、重跑沿用；預設仍 1 秒固定；只寫在 ADVANCED（新手面不加概念）
 - 待修｜重跑 aos7-up 會整份重寫 up.json，人手加的 progress_every／stall／max_steps／compact 會被洗掉；`test_call_interrupt_kills_grandchild` 讀 /proc 時程序剛好被收走的時序問題（偶發）→ 排下一個 up 小修
+- C｜RV-fix-C：author 收件遇到別人還沒標的事件就停下、不替它標（退 1、印一行說誰擋住）；寄件不再替別人建 events 夾；events `read --ack` 成功時提示改用 `ack`。同 node 混用 mail＋author 的殺點測試全過
+- 待修｜mail 標已處理時遇到 author 已標過的事件也不越過 → 排在後面的 mail 提醒永遠清不掉（信照樣辦得完）→ 開小修；下一輪移除 `read --ack` 時，mail 測試輔助 `_mailcase.acked()` 要一起改
