@@ -180,3 +180,5 @@
 - A｜架構回頭審（Fable）：12 張意圖卡 [intents/](intents/README.md)；**全 aos 統一退出碼只留 5 個**：0 做到了／1 做不到（知道為什麼）／2 你給的不對／3 不知道（證據留著、再跑會接續）／4 做到了但帳沒清（只 llmcall 用）；錯誤訊息一律 stderr 一行「指令名: 發生什麼。怎麼辦」，機器看的 JSON 欄位一個不改 → [blueprint-errors](blueprint-errors.md)
 - A｜**跨包副作用一律歸 aos7-up**：各包不再順手動別包的檔（routines add 不再改 tasks.json、mail send 不在對方 node 建 events 夾、skills pick 不碰帳的鎖檔）
 - B｜要改數字的只有 author（5＝滿→1 等）、三關檢查器、events（滿 3→1）；llmcall／budget 凍結介面零衝突；不做共用錯誤函式庫
+- C｜F2：AI 的「腦」brain 進 main——每回合讀一封信→組提示→問 AI→回信→記續行點；`brain/` 只留 3 個檔、不累積紀錄；`model` 為空或 "fake" 都當假 AI。假 AI 1 回合回信約 800 token；真 AI（chatgpt-gpt-6-sol-high）1 回合回 DONE、2952 token、4 秒
+- C｜F2：真 AI 一開始以為自己有工具（回「我先確認工作區…」），提示詞加「你沒有工具，資料都附在下面，直接回答」後正常
