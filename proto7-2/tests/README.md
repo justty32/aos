@@ -2,7 +2,7 @@
 
 ← [proto7-2 README](../README.md)「測試」一節（從 README 拆出，內容原樣）；怎麼跑見那裡。
 
-離線、純標準庫，618 項約 300 秒（10-09 第三段 I3 收尾在 41fc7f11 實跑 ×3 全過，290～310 秒；比 I2 的 556 多 V2 5、V1 9、B2 13、G1 35；含 events、author、llmcall 三包；`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；要逐條規則都命中用 `_matrix.Fault.check_rules()`，T8-07）。核心測試在 `tests/core/`，模組包的在 `modules/<包>/tests/`，上層任務包的在 `packs/<包>/tests/`，counter／歷史 module 的在 `modules/tests/`；共用工具（`base.py`、`_matrix.py`、`_proc.py`、測試鉤子 `_hooks.py`）留在 `tests/`。各資料夾的測試檔名要唯一。每個測試類別的 docstring 開頭標類別：`〔core〕`、`〔<包名>〕`（control、subd、once_retry、diag、tools、observe）或 `〔misuse M-<契約卡號>〕`（誤用造成的，照[組件契約藍圖](../notes/component-contracts.md)，之後隨精簡刪掉）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
+離線、純標準庫，1000 項約 14 分鐘（10-09 r4 波 0 I5 在 634f4729 起跑實跑 999 項 826 秒；中途 MC 進 main 多 1 項；比上一份 618 多 r3 的十多個新包；10-09 第三段 I3 時 618 項約 300 秒、那時含 events、author、llmcall 三包；`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；要逐條規則都命中用 `_matrix.Fault.check_rules()`，T8-07）。核心測試在 `tests/core/`，模組包的在 `modules/<包>/tests/`，上層任務包的在 `packs/<包>/tests/`，counter／歷史 module 的在 `modules/tests/`；共用工具（`base.py`、`_matrix.py`、`_proc.py`、測試鉤子 `_hooks.py`）留在 `tests/`。各資料夾的測試檔名要唯一。每個測試類別的 docstring 開頭標類別：`〔core〕`、`〔<包名>〕`（control、subd、once_retry、diag、tools、observe）或 `〔misuse M-<契約卡號>〕`（誤用造成的，照[組件契約藍圖](../notes/component-contracts.md)，之後隨精簡刪掉）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
 
 | 檔 | 測什麼 |
 |---|---|
@@ -22,7 +22,7 @@
 | `modules/events/tests/test_events_read.py` | 事件保存包 讀者與發布：手寫 fixture 驗無鎖讀、壞尾不算、洞先重列再判淘汰（只認 `dropped_upto`）、游標不跨未證明的洞、`--ack`；發布 CLI 退出碼、示範發布者被殺不推進進度 |
 | `packs/author/tests/test_author.py` | **author 任務包**（LLM 作者第一刀，假候選）：需求同文重送／異文衝突、七份候選恰一合法、三層驗證與確定性編譯、symlink 與路徑逃逸、發布三個中斷點各殺三次不重複登記、合併保留別項、同需求最多兩版、answer／close 與有界清理；`test_author_llm.py` 驗 `--llm` 本地 HTTP、原文不修復、失敗回覆不當候選、usage、重跑去重、call_id 保留雜湊、提示預覽與 CLI；`test_author_error_contract.py` 驗錯誤路徑（退出碼 0／1／2／3 與 stderr 一行、三關預設 rules 不叫 codex、publish 要 --repo、索引列插進表格、aos 結案標記） |
 | `packs/author/tests/test_author_events.py` | author 任務包 **必讀通道收單**（V1，`send`／`intake`）：回條寫成後 ack 前被殺 ×3 不重做、回條前被殺重讀同一筆、must 滿不算送出、同 rid 異文 conflict 與壞 payload 照樣 ack 不卡後續、讀到 unknown 不算消費、回條暫存檔清掃 |
-| `packs/llmcall/tests/test_llmcall.py` | **llmcall 任務包**（LLM 單次呼叫閘道，假傳輸）：八個崩潰點同 call 各殺三次後重跑 sends≤1、一 reserve 至多一 settle（F-01／F-02）、token 計量 U=R／缺 usage pending／搶最後額度（F-03）、逾時與睡眠中殺整組、adopt 遲到回覆（F-04）、固定請求衝突不寫檔、壞輸入退出 2、部分結算 1000／300／120、overrun 帳頂累計、budget cancel 對 llm.fake intent 退 3；新增 `test_llmcall_litellm.py` 驗本地 HTTP 真傳輸、usage 原樣、多 choice 取最後非空（開場白／空字串／0 個）、拒絕／逾時及 SIGKILL 恢復 |
+| `packs/llmcall/tests/test_llmcall.py` | **llmcall 任務包**（LLM 單次呼叫閘道，假傳輸）：八個崩潰點同 call 各殺三次後重跑 sends≤1、一 reserve 至多一 settle（F-01／F-02）、token 計量 U=R／缺 usage pending／搶最後額度（F-03）、逾時與睡眠中殺整組、adopt 遲到回覆（F-04）、固定請求衝突不寫檔、壞輸入退出 2、部分結算 1000／300／120、overrun 帳頂累計、budget cancel 對 llm.fake intent 退 3；`test_llmcall_litellm.py` 驗本地 HTTP 真傳輸、usage 原樣、多 choice 取最後非空（開場白／空字串／0 個）、拒絕／逾時及 SIGKILL 恢復 |
 | `modules/audit/tests/test_audit_wrapper.py`、`test_audit_allow_threads.py` | 稽核包：包裝過的任務寫檔有紀錄；`AOS7_AUDIT_ALLOW` 只放寬自己 node 內的巢狀邊界、每次重讀（N-66／D9）；多 thread 同時寫不漏記（R8-25） |
 | `modules/control/tests/test_control.py` | 控制包：restart（同槽新 run、state 接得上、加掛帶過去）、reload 與拒絕、壞表不 kill、req_id 去重、請求端／tick／tock 在交接點被殺只重起一次 |
 | `modules/once_retry/tests/test_once_retry.py` | once 保證包：x.retry_lost 的 once 從沒起來過就加回跑一次、預設最多一次、舊欄位被拒、模組當 keep 任務跑；真 lost 候選（T8-08）、槽被 keep 重用／birth 讀不到／缺／撤回時的 pending 處理（R8-26） |
@@ -39,3 +39,17 @@
 | `tests/core/test_options_a3.py` | `until_round` |
 | `tests/core/test_matrix_misc.py`、`test_matrix_daemon.py` | **A2 矩陣其餘**：node 本身換成符號連結（同 inode／指到 root 外）＝missing 且不寫出 root、rounds 按 owner、暫存檔清理、wake 不保留、tock.json 晚於總結 |
 | `modules/up/tests/test_up.py`、`test_up_model.py`、`test_up_edges.py`、`test_up_dispatch.py`、`test_up_errors.py` | **up 起步入口**：重跑三次保信、SIGKILL 重接保留已花預算與信／ledger 不雙開、端點保存、壞設定退 2、前景訊號／逾時、啟動失敗回收、醒來證據、程序組不留孫程序、六行唯讀、並行與共享心跳、分派及 you/inbox/done 觀看事件 |
+| `modules/tools/tests/test_tools_ctl.py` | 工具包：`aos7-ctl` 固定檔名無損編碼（非 ASCII owner 兩個 pause 都留，A2-13／A3-06）、`task` 子命令寫 ctl.json（F57） |
+| `modules/routines/tests/test_routines.py` | **事務包**：兩張表 300 回合真 keep 取樣、秒與時鐘倒退、認領後被殺與原子寫、unknown 與壞列、舊快照與超大逾時、CLI 與錯誤路徑、`ls --run` 鎖忙＝不知道、免 daemon 跑到期 |
+| `modules/skills/tests/test_skills.py` | **skill 包**：索引混合好壞本、symlink 與必用表、缺 skills、假 AI pick 重用回條、沒帳本機挑、日誌留最新 50、llmcall 忙＝不確定、llmcall 退出碼與回條錯 |
+| `modules/wfnode/tests/test_wfnode.py`、`test_wfnode_alignment.py`、`test_wfnode_recovery.py`、`test_wfnode_unit.py` | **node 工作流包**：init 各口味、重跑不動位元組與 mtime、check open／壞連結／佔位、state 追加與 NEXT；W0 預設骨架與 strict 殘留；首次導入被打斷復原（標記最後發布、舊暫存丟棄）、導入判斷只改已知段；填寫、原子發佈、並發 state 不掉行 |
+| `modules/metrics/tests/test_metrics.py` | **效率量測包**：固定證據、唯讀、可重跑、R1 基線（`baseline/r1/`）、CLI 與一行錯誤、白話輸出、巢狀形狀、秒數溢位、gateway done／pending、子資料夾範圍、壞 jsonl 行 |
+| `modules/compact/tests/test_compact.py` | **記憶整理包**：open 原文、封存與最近 N 則、forget 被殺只重試一次、寫鎖等待不丟追加、unicode open 實體行、每個換檔故障點、帳任務整合（40 案例） |
+| `modules/mail/tests/test_mail_deliver_1.py`、`test_mail_deliver_2.py`、`test_mail_review_1.py`～`_3.py`、`test_mail_errors_effects.py` | **信箱包**：並行投遞、audit 進度與終局、done 被殺恢復、副作用只一次、events 連續 ack、事件失敗信照留；團隊／roster／wfnode 版面；三輪審查回歸（歸檔不蓋、分鐘檔名撞名重試、交付鎖共用、壞標題不毒日誌、團隊原子發布）；ER-mail 可選提醒、自身鎖、單次 ack 停在未證明的洞、一行錯誤 |
+| `modules/llmdiag/tests/test_llmdiag_scan.py` | **LLM 待辦診斷包**：三張表排序且唯讀、非資料夾退 2 |
+| `modules/up/tests/test_brain.py`、`test_brain_errors.py`、`test_brain_recovery.py`、`test_brain_review.py` | **up brain**：真 daemon＋mail＋ledger 一圈、LLM 後被殺重用同請求、FIFO 一回合一封、十封信健康、AI 失敗換下一封、ask 逾時、不確定重試同信同 call；啟動錯誤白話無 traceback、假 AI 只送假請求；mail／state 之間與刪 pending 前 SIGKILL；第二輪回歸（擋住的 pending 被殺不叫 AI、長信尾段、設定與渲染錯） |
+| `packs/author/tests/test_author_aos.py`、`test_author_aos_cli.py` | author **aos 學徒路徑**：三關可抽換、固定候選、git plumbing、沙箱擋寫 host、領地變體、publish／brief／answer 唯讀；CLI 經本地 HTTP 真 llmcall：三關、審查拒收／接受、rules 先擋不叫 LLM、重問與 learn |
+| `packs/budget/tests/test_budget_errors.py` | budget 進門唯讀拒絕與 stderr 一行契約：無在跑 call 與 settle、status 缺／壞／IO、壞參數與 help、不確定與終局失敗 |
+| `packs/llmcall/tests/test_llmcall_errors.py`、`test_llmcall_http.py` | llmcall 錯誤路徑（進門不寫檔、沒 ledger 照回放回條、忙＝不確定、鎖探測 IO 與 fd 關閉）；真 HTTP 故障矩陣七種 ×3（逾時保留預留、5xx、壞 JSON、缺 usage、截斷、受理後斷線、遲到人工接回）＋背景成功不落檔、本機不走代理 |
+| `packs/prompt/tests/test_prompt.py`、`test_prompt_rounds.py` | **prompt 包**：範例、段落、指示詞、append／clear、循環、未知保留輸出、壞輸入、折疊回條與重用、`expand` 來回、壞 refs、不遞迴展開、CLI 串流；三百回合開放事項與頂層信件維持有限視窗（對照組線性長） |
+| `packs/usage/tests/test_usage_aggregation.py` | **usage 包**：day／hour 彙總且唯讀、缺回條金額算 bad_json、壞與缺 ledger、非資料夾退 2 |
