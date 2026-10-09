@@ -18,6 +18,7 @@
 | [routines](routines/README.md) 事務包 | 兩張表的例行／一次性到期事務，由 tick 喚醒、最多一次 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs／aos_exec | `routines/aos7-routines`（add／ls／rm） |
 | [skills](skills/README.md) skill 包 | node 的 `skills/<名>/SKILL.md`：產索引行（只 name＋description）與必用表、經 llmcall 讓 AI 挑一本、掛載給任務 | C | 開（工具） | llmcall、budget、核心 aos7_fs | `skills/aos7-skills`（子命令 index／pick／mount） |
 | [wfnode](wfnode/README.md) node 工作流包 | 給 node 裝 workflows 工作流樹（填事實、不瞎猜）、記續行點、體檢 open 衛生；三個指令 init／state／check | C | 開（工具） | `~/repo/workflows`（`AOS7_WF_HOME`） | `wfnode/aos7-wfnode` |
+| [metrics](metrics/README.md) 效率量測包 | 唯讀掃證據算四指標（每單 token、並行呼叫數、收單→結案秒數、重試次數），可重跑 | C | 開（工具） | 無（只讀別包的檔） | `metrics/aos7-metrics`（job） |
 | `history.py` 歷史 module | 每個 tock 把「上一次」追加到自己的地方（見下） | A | 關 | 工具包的任務端函式 | `history.py` |
 | `counter.py` 示範任務 | 讀同槽上一次的 state、收 tock.json | A | — | 工具包的任務端函式 | `counter.py` |
 

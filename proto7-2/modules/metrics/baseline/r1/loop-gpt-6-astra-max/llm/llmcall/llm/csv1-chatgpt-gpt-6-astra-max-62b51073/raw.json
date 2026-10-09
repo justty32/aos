@@ -1,0 +1,63 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-astra-max-62b51073",
+ "req_sha": "47a157383ba488dd0da485fdb17be58ad23294e9470b12902bf328c8de669fa0",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"部門統計：每個部門的筆數、總額、平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"done\",\"fail\":\"failed\"}],\"ends\":{\"done\":\"ok\",\"failed\":\"failed\"}}",
+  "usage": {
+   "completion_tokens": 323,
+   "prompt_tokens": 2365,
+   "total_tokens": 2688,
+   "completion_tokens_details": {
+    "reasoning_tokens": 184
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "model": "chatgpt-gpt-6-astra-max",
+  "finish_reason": "stop",
+  "http": 200,
+  "elapsed": 10.891,
+  "response": {
+   "id": "chatcmpl-2479c1c4-315a-409c-8879-7e549cc1debb",
+   "created": 1791527719,
+   "model": "chatgpt-gpt-6-astra-max",
+   "object": "chat.completion",
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "message": {
+      "content": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"部門統計：每個部門的筆數、總額、平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"done\",\"fail\":\"failed\"}],\"ends\":{\"done\":\"ok\",\"failed\":\"failed\"}}",
+      "role": "assistant",
+      "reasoning_content": "",
+      "reasoning_items": [
+       {
+        "type": "reasoning",
+        "id": "rs_0b0c33909dfd6a25016ac88b2ff2f08191b4d22f6fed420334",
+        "encrypted_content": "gAAAAABqyIsvxvdCanBlSq1lr78CNZwkpvKNthjRfNrbgOITg8fKP3T0zlvJWT_iuGHF-Y5xLamgiy83_nFlq_gH8Mlx2gec2bGlbxNZ8XCuwhaIg-MriwAMoFnqHMBjN0PJ6-lYINpeUXq_JWC-_t6uTKHWjGSGEAYQFSww0MyBVCcdsL2REdtGME1pg31psL0hyWO3L3H4DUqPhuuAc0ECcHELhpWPio2RSixVz5yWijI_EnYnAf_2QyN3dmb2g5NrsEg_pbWWK2g_zZnk__y1thM57gFrUN9WgXSd4UScxbHjP7geRTJA1NO0WpEwdxwScuTv-BcNzPvIq-1qwicZ0WCPWQHbHspqaTtcgwUk4sb9qcbZAyraP2EdmJ6M_neMi4kqZfY3pDmK6l9BxWWCRdsZmQqfwn2Uk1hak-Tg3OVMCuFShEgmSSZOZt12Y4DO7fdOtGNSQgu5r8bFwXKnvetEbjDGuDVhUHJxKAN4uZFqRP8eglRsqQ-mpmO6UjdOXJrK4d8AzqeiXoaUXqocDqQbPKSRVui175kmUPdkETQGkXTDzOeJOmMZgMy0KNeaMyMwm2eCc5rm5W-lMiP7-XTPhqXE11BxMc8KpoNqKmF2fKSvTqR-p1nbQuEbZzxxDoKyL19rl4SZv-pSgYQ-e2CNrkC4l1JJl-w45-H76cbD-e2Ak79geZ3w2aAm9d4d_Grt0Yw1rcWjxQqz2ERABYM2StRFaBEptL7SFnBIwvauEYbEwNUvk_srEJKu8AnyYjEI6A9fskG_Z5U5flKpxhKpncziRA_r2hXpgUPmkOVYHj9-di4HaH7KgBjMAKWu5h4gLWeyTKklUDqMAZfgp8JE7pujNgVpT_mKPE8aNLe91MueMexqIz7feaUobOX4a7Tb29a8Igio0YYK0xCYkbfSI5U4v1QrqIkWR7Oh9AJ9BawuC3mt7-W8YKyFrtxroLeGzOzK-88LsfwpwHXBSh57SWibfhV9GHK2jX6AU1CdJjKui-UXE5uJ1IJow_nBFuoen_62nF6PqWZeGhj4PIgvSFTEIr2ZXgvn4UC7LFMsjJGjb1yEKA1lsq1j_Aby3mVF_BWU2TJlVMHKORXbUHpftysGW04L70713QFyNzEkZTxcGt6o3vjZIpaTcsguCuxN_9ZiOD583ANuV_Uuv1U2VXZJrWyfZ6YmyQ_XbA6usf5dTHiN_0xCXg_WA5XX8FtnZWJQSRhIsujV7N9wu8ZyrQ2YKW9ewZtMgZ9g6F5mMCU6UqkkrsPWtCX-gpqAidbwILYgLxRYzYEimuc5Ya8fNzD45dSuRPoNry7Qshe1k413XoQrZJElw6u4yJRwSemxed77cWd48irWI4KqwMUJXUga5j5BiflL94ZKCPUiqSUHK53qKsMzVY1j65qXrOfQcnCuUmeh9lmvIA2d4o1h6hdU6YCtTNzpVnO46cp4hZ1LxtSHbEePvyYknkYxZyPTXFiQyKFahsERIiNs78yyH3JvtX1mVu_vozS7XnDvhZyBq7PLoDb0kMOU7XxBtFEOp_H2aqmAxa0Fpd6Q9cuWwvyv30jhXxzuXYiH8eWHDpSY5Y-5C_YOo4HPmrA7LFqBzZ5rNmMtFQFj_3u70XjfcBaEBjcSbbez6scSvS63Dm8V0vtPf95mJNMH9rFCxf9NqM3hpemM1LFxzmQ9JwlOMgldbMBW5aDgaN_8rLh9-QBosENm4clbjD0RJiPSBPqREDmvDJnoqww4zmTHx0Gh0Q5kO-eC78gyFwugKBBcrIw_K45trcDghWI-UMM4hkz3GByzBYf5i9mvcI3T7kz7koj5NIYBE3pVKbZcB0C5nqwcP7JfM2--Q1m-1vFEG2LvY5-LuH8hPifyxf9imBTlY9Dc1z_cqqSb1ze-ofJ2t3UJDbIsbnqZkbd77N6Zkhgt4MiyOW28fP0Jh6TtVOhoWJKZsgc3cfabVlF1Wx1juoAR3EJOM8h8Q2eXYy75wNwKWRyG0hwkH7ne3M99FOQHOfr5FWebfXL6Q-g7gvL05M5TXM4-Kc1qdCkW0ICa-r9zV5XXc895DBYt2qFgLXMvX56R6rgor7bGY5Qf3ORQHD4ldX_3zm5ZlqGvaovxFXwyf7CmdFCBU4k0f6yuKxcXBuTG4O89SwC99WH2Ib_ERu__IWcJOE3135eVJZYTkiaD_9BxEN5OrZqSn93waQHzO7EnTlcwsW1dXGmn2TgB4C4yFtrCPb_gPF6_L6QvzbDjWNKAjPxkR4xHXagtzaEF25YFSnIc2iRwDZWrSRwmaK79UxbkXxvODbINxDUIDDSjZRSGmn-NbjK5Ak8PVVOZ0AmfuNJuzi7JH5U4wiet8BHDzJvGwuibG7FYHzXAPKkSUmVfhQYHB3sjvsfb6mkNRqmX-SnsiBGvXeLxffQugsOaW7YlRmU0ctuKV4FtEPEE52Vk",
+        "summary": []
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "completion_tokens": 323,
+    "prompt_tokens": 2365,
+    "total_tokens": 2688,
+    "completion_tokens_details": {
+     "reasoning_tokens": 184
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  }
+ },
+ "at": "2026-10-09T14:35:30.598"
+}

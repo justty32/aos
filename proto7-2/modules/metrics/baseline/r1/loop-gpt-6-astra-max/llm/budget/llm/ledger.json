@@ -1,0 +1,72 @@
+{
+ "v": 1,
+ "budget": "llm",
+ "grant": "author-llm-demo",
+ "grant_sha": "3db54a1d3c0f9a582b8b6b80b18bb1e7300d180c9ac14d093707c9a56380bf1a",
+ "initial": 100000000,
+ "available": 99997312,
+ "inflight": 0,
+ "used": 2688,
+ "clock_hw": 5,
+ "seq": 2,
+ "ops": {
+  "56ec59d0835d4c5d5e3f": {
+   "key": {
+    "budget": "llm",
+    "holder": "author",
+    "request": "csv1-chatgpt-gpt-6-astra-max-62b51073"
+   },
+   "digest": "bc956b9c0320106a14a4d06f85ec5509350f11f3791747fc9ae7c2d2be225e79",
+   "content": {
+    "resource": "llm.tokens",
+    "gateway": "llm.litellm",
+    "amount": 1000000,
+    "payload_sha": "47a157383ba488dd0da485fdb17be58ad23294e9470b12902bf328c8de669fa0"
+   },
+   "amount": 1000000,
+   "stage": "settled",
+   "reserve": {
+    "seq": 1,
+    "tock": 5,
+    "at": "2026-10-09T14:35:19.695"
+   },
+   "settle": {
+    "seq": 2,
+    "used": 2688,
+    "overrun": 0,
+    "outcome": "answered",
+    "evidence": "82e9fcd08389cb415ee66a34dbe7dfafae6d10dcb5d78241fc3aec3ff7e09f8d",
+    "at": "2026-10-09T14:35:30.612"
+   }
+  }
+ },
+ "log": [
+  {
+   "seq": 1,
+   "op": "reserve",
+   "kid": "56ec59d0835d4c5d5e3f",
+   "amount": 1000000,
+   "used": null,
+   "available": 99000000,
+   "inflight": 1000000,
+   "used_total": 0,
+   "tock": 5,
+   "at": "2026-10-09T14:35:19.695"
+  },
+  {
+   "seq": 2,
+   "op": "settle",
+   "kid": "56ec59d0835d4c5d5e3f",
+   "amount": 1000000,
+   "used": 2688,
+   "available": 99997312,
+   "inflight": 0,
+   "used_total": 2688,
+   "tock": null,
+   "at": "2026-10-09T14:35:30.612",
+   "overrun": 0
+  }
+ ],
+ "at": "2026-10-09T14:35:19.557",
+ "overrun": 0
+}

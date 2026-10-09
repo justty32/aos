@@ -1,0 +1,54 @@
+{
+ "v": 1,
+ "call_id": "demo-c1",
+ "req_sha": "02d81553dd9932cc789cec1a0125f29491cfc8037c2d210693dc482b1090d961",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "OK",
+  "usage": {
+   "completion_tokens": 5,
+   "prompt_tokens": 1644,
+   "total_tokens": 1649,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "model": "chatgpt-gpt-6-sol",
+  "finish_reason": "stop",
+  "http": 200,
+  "elapsed": 1.633,
+  "response": {
+   "id": "chatcmpl-bea4fa24-d6c3-41f0-a2e7-4e360c3fb417",
+   "created": 1791527206,
+   "model": "chatgpt-gpt-6-sol",
+   "object": "chat.completion",
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "message": {
+      "content": "OK",
+      "role": "assistant"
+     }
+    }
+   ],
+   "usage": {
+    "completion_tokens": 5,
+    "prompt_tokens": 1644,
+    "total_tokens": 1649,
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 1408
+    }
+   }
+  }
+ },
+ "at": "2026-10-09T14:26:47.738"
+}

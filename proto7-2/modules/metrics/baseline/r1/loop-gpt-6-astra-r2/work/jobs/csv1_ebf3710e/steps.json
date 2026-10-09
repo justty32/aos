@@ -1,0 +1,48 @@
+{
+ "job": "csv1_ebf3710e",
+ "options": {
+  "restart_on_end": false,
+  "wake": false
+ },
+ "start": "convert",
+ "steps": {
+  "convert": {
+   "expect": [
+    "${out}/data.json"
+   ],
+   "fail": "failed",
+   "finite": true,
+   "idempotent": true,
+   "ok": "stats",
+   "run": [
+    "python3",
+    "${job}/convert.py",
+    "${job}/data.csv",
+    "${out}/data.json",
+    "${request}"
+   ]
+  },
+  "done": {
+   "end": "ok"
+  },
+  "failed": {
+   "end": "failed"
+  },
+  "stats": {
+   "expect": [
+    "${out}/report.json"
+   ],
+   "fail": "failed",
+   "finite": true,
+   "idempotent": true,
+   "ok": "done",
+   "run": [
+    "python3",
+    "${job}/stats.py",
+    "${out}/data.json",
+    "${req:convert}",
+    "${out}/report.json"
+   ]
+  }
+ }
+}

@@ -1,0 +1,44 @@
+{
+ "v": 1,
+ "job": "csv1_d59d9ac4",
+ "inst": "c26a7382",
+ "table": "0d874d0d8ac6",
+ "pc": "ok",
+ "phase": "ended",
+ "counts": {},
+ "visits": {
+  "convert": 1,
+  "stats": 1,
+  "ok": 1
+ },
+ "accepted": {
+  "convert": {
+   "request": "c26a7382-convert-1",
+   "attempt": "c26a7382-convert-1-a1",
+   "ok": true,
+   "run": "step-csv1_d59d9ac4-convert#2",
+   "code": 0
+  },
+  "stats": {
+   "request": "c26a7382-stats-1",
+   "attempt": "c26a7382-stats-1-a1",
+   "ok": true,
+   "run": "step-csv1_d59d9ac4-stats#4",
+   "code": 0
+  }
+ },
+ "tries": {
+  "c26a7382-convert-1": 1,
+  "c26a7382-stats-1": 1
+ },
+ "resends": {},
+ "pending": null,
+ "halt": null,
+ "end": "ok",
+ "since": 4,
+ "seen": 4,
+ "rev": 11,
+ "tock": 4,
+ "at": "2026-10-09T14:35:14.103",
+ "closed": true
+}
