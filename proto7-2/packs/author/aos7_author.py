@@ -890,7 +890,7 @@ def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
     aos_flags = ('reviewer', 'review_llm', 'out', 'context', 'gotchas', 'previous',
                  'feedback', 'history', 'into', 'repo', 'ref', 'no_scope',
-                 'skills', 'skill_into', 'skill')
+                 'skills', 'skill_into', 'skill', 'format')
     options = dict(ap._option_string_actions)
     options.update({'--' + flag.replace('_', '-'): None for flag in aos_flags})
 
@@ -942,6 +942,8 @@ def main(argv=None):
                 group._group_actions[:] = [x for x in group._group_actions if x.dest != 'candidate']
         for flag in aos_flags:
             kw = {'action': 'append'} if flag in ('context', 'history') else {}
+            if flag == 'format':
+                kw = {'choices': ('json', 'text')}
             if flag == 'no_scope':
                 kw = {'action': 'store_true', 'default': None}
             ap.add_argument('--' + flag.replace('_', '-'), **kw)
@@ -956,6 +958,8 @@ def main(argv=None):
     if a.prompt_out and not a.llm:
         ap.error("--prompt-out 必須帶 --llm")
     if is_aos:
+        if a.format is not None and a.cmd != 'propose':
+            ap.error('--format 只用於 propose')
         if a.cmd == 'publish' and a.review_llm:
             ap.error('publish 不接受 --review-llm；請提供 --reviewer file:PATH')
         if a.reviewer is not None and a.reviewer != 'rules' and not (a.reviewer.startswith('file:') and a.reviewer[5:]):

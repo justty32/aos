@@ -45,7 +45,7 @@ def prompt(model, system, user):
         {'role': 'system', 'content': system}, {'role': 'user', 'content': canon(user).decode('utf-8')}]}})
 
 
-def prompt_request(req_path, model, context=(), gotchas=None, previous=None, feedback=None, skill=None):
+def prompt_request(req_path, model, context=(), gotchas=None, previous=None, feedback=None, skill=None, fmt='json'):
     req, card = request(Path(req_path))
     card = {k: card[k] for k in ('root', 'required', 'entry', 'entry_max_lines', 'tests',
                                'row', 'readme_must', 'limits', 'review_rules')}
@@ -61,6 +61,19 @@ def prompt_request(req_path, model, context=(), gotchas=None, previous=None, fee
         'v': 1, 'rid': req['rid'], 'kind': req['kind'], 'name': req['name'],
         'files': {card['root'] + '/相對路徑': '檔案全文'}, 'row': '索引檔要新增的一列',
         'report': '# REPORT …（末尾必有「以後交接書該點名的工具」一節）'}, rules=RULES, context=contents)
+    system = SYSTEM
+    if fmt == 'text':
+        system = '你是 aos 的學徒工程師，只輸出多檔文字候選，不加說明、不加 Markdown 圍欄。' + NO_TOOLS.format('=')
+        del user['candidate_schema']
+        user['candidate_format'] = (
+            f"=== {card['root']}/README.md ===\n檔案全文（原樣）\n"
+            f"=== {card['root']}/{card['entry']} ===\n檔案全文（原樣）\n"
+            f"=== row ===\n{card['row']['prefix']} … |\n=== report ===\n# REPORT\n"
+            '…（末尾必有「以後交接書該點名的工具」一節）\n'
+            '段頭獨立一行，完全符合 === <名字> ===，名字不含空白；每個名字只出現一次。'
+            'row、report 是兩個保留段，其餘名字是完整檔案路徑；必要檔案都要各有一段。'
+            'v/rid/kind/name 不用寫，由需求帶入；第一個字元就是 =。')
+        user['rules'] = RULES.replace('全份候選 JSON ≤65536 bytes', '全份候選 ≤65536 bytes')
     if gotchas:
         user['gotchas'] = Path(gotchas).read_text(encoding='utf-8')
     if previous and feedback:
@@ -76,7 +89,7 @@ def prompt_request(req_path, model, context=(), gotchas=None, previous=None, fee
     if skill:
         user['skill'] = skill
         user['rules'] += '\nskill 是你自己之前做同類題後留下的技能書：照它避開踩過的坑、沿用驗過的骨架；與需求衝突時以需求為準。'
-    return prompt(model, SYSTEM, user)
+    return prompt(model, system, user)
 
 
 def call_info(model, rid, raw, call_id=None, prefix='', reserve=1000000):
@@ -379,9 +392,11 @@ def main_aos(a):
 
 
 def propose_one(a, req, out):
+    fmt = getattr(a, 'format', None) or 'json'
+    suffix = '.txt' if fmt == 'text' else '.json'
     candidate = Path(a.candidate).resolve() if a.candidate else None
     if a.llm:
-        raw = prompt_request(a.arg, a.llm, a.context, a.gotchas, a.previous, a.feedback, getattr(a, 'picked_skill', None))
+        raw = prompt_request(a.arg, a.llm, a.context, a.gotchas, a.previous, a.feedback, getattr(a, 'picked_skill', None), fmt=fmt)
         info = call_info(a.llm, req['rid'], raw, a.call, reserve=a.reserve)
         out['llm'] = info
         if a.prompt_out:
@@ -392,7 +407,7 @@ def propose_one(a, req, out):
         out['llm'] = info
         if why:
             return dict(out, why=why, _rejected=why == 'invalid')
-        candidate = Path(a.out).resolve() if a.out else Path.cwd() / 'author/aos' / req['rid'] / (info['call_id'] + '.json')
+        candidate = Path(a.out).resolve() if a.out else Path.cwd() / 'author/aos' / req['rid'] / (info['call_id'] + suffix)
         candidate.parent.mkdir(parents=True, exist_ok=True)
         candidate.write_bytes(text.encode('utf-8'))
     try:
@@ -402,7 +417,7 @@ def propose_one(a, req, out):
     out.update(candidate_path=str(candidate), candidate_sha=sha(data), job=req['rid'] + '_' + sha(data)[:8])
     # 唯一暫存路徑避免來源或同 sha 快照被其他呼叫覆寫。
     with tempfile.NamedTemporaryFile(dir=candidate.parent, prefix=sha(data)[:8] + '-',
-                                     suffix='.snapshot.json', delete=False) as stream:
+                                     suffix='.snapshot' + suffix, delete=False) as stream:
         stream.write(data)
         snapshot = Path(stream.name)
     try:

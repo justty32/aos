@@ -32,6 +32,42 @@ def strict(data):
                       object_pairs_hook=pairs, parse_constant=lambda x: (_ for _ in ()).throw(ValueError(x)))
 
 
+def parse_candidate(data: bytes, req):
+    """辨別候選格式；文字檔內容原樣留下，身分由需求帶入。"""
+    if data.lstrip().startswith(b'{'):
+        try:
+            return strict(data), 'json'
+        except json.JSONDecodeError as exc:
+            if exc.msg == 'Extra data':
+                raise ValueError(f'候選必須恰好是一個 JSON 物件：第 {exc.pos + 1} 字元起還有多餘內容 『{exc.doc[exc.pos:exc.pos + 80]}』') from exc
+            raise
+    text = data.decode('utf-8')
+    heads = list(re.finditer(r'^=== ([^\s]+) ===(?:\r?\n|$)', text, re.M))
+    preamble = text[:heads[0].start()] if heads else text
+    if preamble.strip():
+        raise ValueError('多餘內容 『' + preamble.lstrip()[:80] + '』；文字候選要從 `=== 路徑 ===` 開始，不加說明、不加 Markdown 圍欄')
+    if not heads:
+        raise ValueError('文字候選沒有段頭；文字候選要從 `=== 路徑 ===` 開始，不加說明、不加 Markdown 圍欄')
+    c = dict(v=1, **{k: req[k] for k in ('rid', 'kind', 'name')}, files={})
+    seen = set()
+    for i, head in enumerate(heads):
+        name = head[1]
+        if name in seen:
+            raise ValueError('重複段名：' + name)
+        seen.add(name)
+        content = text[head.end():heads[i + 1].start() if i + 1 < len(heads) else len(text)]
+        if name == 'row':
+            c['row'] = content.strip()
+        elif name == 'report':
+            lines = content.splitlines(keepends=True)
+            while lines and not lines[-1].strip():
+                lines.pop()
+            c['report'] = ''.join(lines).rstrip('\r\n') + '\n'
+        else:
+            c['files'][name] = content
+    return c, 'text'
+
+
 def command(argv, **kw):
     try:
         return subprocess.run(argv, capture_output=True, timeout=900, **kw)
@@ -148,7 +184,9 @@ def gate_static(ctx):
     reasons = []
     missing = {'v', 'rid', 'kind', 'name', 'files', 'row', 'report'} - set(c)
     extra = set(c) - {'v', 'rid', 'kind', 'name', 'files', 'row', 'report'}
-    if missing:
+    if missing and ctx.get('fmt') == 'text':
+        reasons.extend(f'缺 `=== {k} ===` 段' for k in sorted(missing))
+    elif missing:
         reasons.append('缺 ' + '、'.join(sorted(missing)) + ' 欄' +
                        ('（REPORT 要寫在頂層 report 字串，不是 files 裡的檔）' if 'report' in missing else ''))
     if extra:
@@ -160,7 +198,7 @@ def gate_static(ctx):
             reasons.append(f'{k} 應為 {req[k]}')
     if not isinstance(files, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in files.items()):
         reasons.append('files 必須是「路徑→字串」物件')
-    if not isinstance(c.get('row'), str):
+    if not isinstance(c.get('row'), str) and not (ctx.get('fmt') == 'text' and 'row' in missing):
         reasons.append('row 必須是字串')
     if 'report' in c:
         if not isinstance(c['report'], str):
@@ -403,6 +441,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     out = {'ok': False, 'failed_gate': 1, 'gates': {'1': {'ok': False, 'issues': []}, '2': {'ok': None}, '3': {'ok': None}}}
     ctx = {}
+    fmt = 'json'
     try:
         req, card = request(a.request)
         if a.cmd == 'brief':
@@ -412,12 +451,8 @@ def main(argv=None):
             raise ValueError('候選或 reviewer 不合')
         data = a.candidate.read_bytes()
         out.update(rid=req['rid'], name=req['name'], candidate_sha=hashlib.sha256(data).hexdigest(), job=req['rid'] + '_' + hashlib.sha256(data).hexdigest()[:8])
-        try:
-            candidate = strict(data)
-        except json.JSONDecodeError as exc:
-            if exc.msg == 'Extra data':
-                raise ValueError(f'候選必須恰好是一個 JSON 物件：第 {exc.pos + 1} 字元起還有多餘內容 『{exc.doc[exc.pos:exc.pos + 80]}』') from exc
-            raise
+        fmt = 'json' if data.lstrip().startswith(b'{') else 'text'
+        candidate, fmt = parse_candidate(data, req)
         source = command(['git', '-C', str(HERE), 'rev-parse', '--show-toplevel'])
         if source.returncode:
             raise Unknown('git toplevel 不在')
@@ -430,7 +465,7 @@ def main(argv=None):
             return 2
         prefix = HERE.parents[2].relative_to(repo).as_posix()
         with tempfile.TemporaryDirectory(prefix='aos-three-') as tmp:
-            ctx = dict(source_repo=repo, request=req, card=card, candidate=candidate, bytes=data, repo=(a.repo or repo).resolve(), prefix=prefix, ref=a.ref, tmp=tmp, reqdir=a.request.resolve().parent, reviewer=a.reviewer, no_scope=a.no_scope, root=card['root'].format(name=req['name']))
+            ctx = dict(source_repo=repo, request=req, card=card, candidate=candidate, fmt=fmt, bytes=data, repo=(a.repo or repo).resolve(), prefix=prefix, ref=a.ref, tmp=tmp, reqdir=a.request.resolve().parent, reviewer=a.reviewer, no_scope=a.no_scope, root=card['root'].format(name=req['name']))
             ctx['ref'] = git(ctx, 'rev-parse', ctx['ref'] + '^{commit}').decode().strip()
             ctx['entry'] = ctx['root'] + '/' + card['entry'].format(name=req['name'])
             out = run_gates(ctx)
@@ -450,7 +485,9 @@ def main(argv=None):
         code = 3
     except (ValueError, UnicodeError, OSError, TypeError, KeyError, tarfile.TarError) as exc:
         out['ok'] = False
-        out['gates']['1'] = result([{'rule': 'json' if isinstance(exc, (ValueError, UnicodeError)) else 'schema', 'why': str(exc)}])
+        # 不是 UTF-8 的候選照舊歸 json（兩種格式都讀不了）
+        rule = 'json' if isinstance(exc, UnicodeError) else fmt if isinstance(exc, ValueError) else 'schema'
+        out['gates']['1'] = result([{'rule': rule, 'why': str(exc)}])
         code = 2
     print(json.dumps(out, ensure_ascii=False))
     if code:
