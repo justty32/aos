@@ -10,7 +10,9 @@ import shlex
 import time
 import sys
 TOP = Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(TOP / 'lib'), str(TOP / 'modules/tools')]
+sys.path[:0] = [str(Path(__file__).resolve().parent), str(TOP / 'lib'), str(TOP / 'modules/tools')]
+import aos7_up_memory as memory
+_PICKED = {}
 from aos7_fs import BAD, N, OK, fact, read_json, test_point, write_json
 from aos7_taskside import task_env, wait_tock
 MAIL = TOP / 'modules/mail/aos7-mail'
@@ -100,7 +102,12 @@ def pick_skill(node, title):
     finally:
         link.unlink(missing_ok=True)
         view.rmdir()
-def fake_text(letter, step):
+def skill_of(node, letter):
+    key = (str(node), letter['id'])
+    if key not in _PICKED:
+        _PICKED[key] = pick_skill(node, letter['title'])
+    return _PICKED[key]
+def fake_text(letter, step, ref=None, got=None, latest=None):
     title = flat(letter['title'])
     want = re.search(r'(\d+)\s*回合', title)
     if '要你決定' in title:
@@ -109,7 +116,10 @@ def fake_text(letter, step):
         return f'繼續：（假 AI）第 {step} 回合還是卡住\n停在哪：卡在同一處'
     if want and step < int(want[1]):
         return f'繼續：（假 AI）第 {step} 回合做完\n停在哪：第 {step} 回合，下一步第 {step + 1} 回合'
-    return '回信：（假 AI）收到你的信：' + title + '\n停在哪：回了 ' + letter['id']
+    if '要檔案' in title and ref is None and latest:
+        return '要檔案：' + latest
+    attached = f'（附了前件 {ref}）' if got is not None else ''
+    return '回信：（假 AI）收到你的信：' + title + attached + '\n停在哪：回了 ' + letter['id']
 def request(node, letter, cid, cfg):
     work = node / 'brain'
     req = work / 'req.json'
@@ -122,23 +132,49 @@ def request(node, letter, cid, cfg):
     try:
         skills = read_json(str(node / 'skills/index.json'), {}) or {}
         lines = [f"{n}：{flat(v['description'])}" for n, v in skills.get('skills', {}).items()]
-        text = '技能：\n' + ('\n'.join(lines) or '（還沒有技能）') + '\n\n'
-        skill = task.get('skill') if task else pick_skill(node, letter['title'])
+        skills_text = '技能：\n' + ('\n'.join(lines) or '（還沒有技能）') + '\n\n'
+        skill = task.get('skill') if task else skill_of(node, letter)
+        parts = dict(skill='', trail='', attach='')
         if skill and (node / 'skills' / skill / 'SKILL.md').is_file():
-            text += f'挑到的技能 {skill}：\n' + (node / 'skills' / skill / 'SKILL.md').read_text()[:3000] + '\n\n'
+            parts['skill'] = f'挑到的技能 {skill}：\n' + (node / 'skills' / skill / 'SKILL.md').read_text()[:3000] + '\n\n'
+        letter_text = Path(letter['file']).read_text()
+        ref = memory.wanted(task) if task else None
+        if ref is None:
+            ref = memory.pick(node, letter['title'] + '\n' + letter_text)
+        got = memory.attach(node, ref) if ref else None
+        index = memory.section(node, None, None)
+        parts['attach'] = memory.section(node, ref, got)[len(index):]
         if task:
-            text += f"這是第 {step} 回合（最多 {cfg.get('max_steps', 40)}）。前幾回合（最近 8 回合）：\n" + '\n'.join(task['trail']) + '\n\n'
-        (work / 'now.md').write_text(text + '收到的信：\n' + Path(letter['file']).read_text(), encoding='utf-8')
+            parts['trail'] = f"這是第 {step} 回合（最多 {cfg.get('max_steps', 40)}）。前幾回合（最近 8 回合）：\n" + '\n'.join(task['trail']) + '\n\n'
+        def render():
+            (work / 'now.md').write_text(skills_text + parts['skill'] + index + parts['attach'] + parts['trail'] +
+                                        '收到的信：\n' + letter_text, encoding='utf-8')
+            checked(TOP / 'packs/prompt/bin/aos7-prompt', 'render', node, TOP / 'modules/up/prompts/brain.json',
+                    '--out', req, node=node)
+            return json.loads(req.read_text())
+        def size(obj):
+            return sum(len(m['content']) for m in obj['litellm']['messages'])
         if not task:
             (work / 'last.md').write_text('', encoding='utf-8')
-        checked(TOP / 'packs/prompt/bin/aos7-prompt', 'render', node, TOP / 'modules/up/prompts/brain.json',
-                '--out', req, node=node)
-        obj = json.loads(req.read_text())
+        obj = render()
+        limit = cfg.get('max_prompt_chars', memory.PROMPT_MAX)
+        if size(obj) > limit:
+            parts, _ = memory.fit(parts, size(obj), limit)
+            obj = render()
+            if size(obj) > limit:
+                last = (work / 'last.md').read_text()
+                keep = max(200, len(last) - (size(obj) - limit))
+                write_text(work / 'last.md', last[:keep])
+                obj = render()
     except Exception:
         raise Trouble('讀不到工作簿的檔', CHECK_FIX) from None
+    if size(obj) > limit:
+        raise Trouble(f'提示砍過還是超過 {limit} 字（信或工作簿太長）', '把信拆短再寄，或調大 .aos/up.json 的 max_prompt_chars')
     if is_fake(cfg):
         chars = sum(len(m['content']) for m in obj['litellm']['messages'])
-        obj = {'fake': dict(mode='ok', usage=chars // 3 + 20, text=fake_text(letter, step))}
+        obj = {'fake': dict(mode='ok', usage=chars // 3 + 20, text=fake_text(letter, step, ref=ref, got=got,
+                               latest=(memory.index_text(node).splitlines()[-1][2:].split('｜', 1)[0]
+                                       if memory.index_text(node) else None)))}
         if cfg.get('fake_delay', 0) > 0:
             obj['fake'].update(mode='late', delay=cfg['fake_delay'])
     else:
@@ -253,6 +289,7 @@ def drop_task(node, ident):
         (node / 'brain' / name).unlink(missing_ok=True)
 def finish(node, pending, personal):
     if any(l['id'] == pending['id'] for l in personal):
+        memory.record(node, pending['id'], pending.get('ask') or pending['title'], pending['status'], pending['body'])
         body = node / 'brain/reply.md'
         body.write_text(pending['body'] + '\n', encoding='utf-8')
         mail(node, 'done', node.name, pending['id'], pending['status'], pending['title'], body)
@@ -264,11 +301,11 @@ def finish(node, pending, personal):
     (node / 'brain/pending.json').unlink()
 def kind_of(text):
     head = text.lstrip()
-    return next((k for k in ('繼續：', '要你決定：') if head.startswith(k)), '回信：')
+    return next((k for k in ('繼續：', '要你決定：', '要檔案：') if head.startswith(k)), '回信：')
 def step_on(node, letter, text, cfg):
     """AI 說繼續：記這一回合（每項重跑不重做），最後才寫 task.json 進下一回合。回 (回合行, 卡住句) 或 None＝要停。"""
     task = step_of(node, letter) or dict(id=letter['id'], step=1, line='', stall=0, trail=[],
-                                         skill=pick_skill(node, letter['title']))
+                                         skill=skill_of(node, letter))
     step = task['step']
     match = re.search(r'繼續：(.*?)停在哪：([^\n]*)', text, re.S)
     result, line = (match[1].strip(), flat(match[2])) if match else (text.strip()[len('繼續：'):].strip(), '')
@@ -383,6 +420,8 @@ def once(node, rnd):
         text = ask_ai(node, letter, cid, cfg)
         usage_pending = getattr(text, 'usage_pending', False)
         kind = kind_of(text)
+        if kind == '要檔案：':
+            text, kind = memory.want_step(memory.want_of(text)), '繼續：'
         if kind == '繼續：':
             note, stuck = step_on(node, letter, text, cfg)
             if note:
@@ -415,7 +454,7 @@ def once(node, rnd):
         status = 'BLOCKED'
         title, fix = (e.why, e.fix) if isinstance(e, Trouble) else ('讀寫沒完成', CHECK_FIX)
         reply, line = '原因：' + title + '\n怎麼辦：' + fix, '卡住：' + title
-    pending = dict(id=ident, status=status, title=title, body=reply, line=line, state_count=state_count(node, line), usage_pending=usage_pending, fix=fix)
+    pending = dict(id=ident, ask=letter['title'], status=status, title=title, body=reply, line=line, state_count=state_count(node, line), usage_pending=usage_pending, fix=fix)
     write_json(str(work / 'pending.json'), pending)
     test_point('up-brain-after-pending')
     finish(node, pending, personal)

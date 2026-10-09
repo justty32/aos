@@ -76,6 +76,7 @@ SIGKILL 心跳後重跑，核心接手收掉舊任務；不重新開帳。up 只
 | `model` | 字串或 null；null 是假 AI；不給 --model 保留原值 |
 | `litellm_url` | 環境變數 AOS7_LITELLM_URL 有設優先，其次舊值，再預設 http://localhost:4000/v1 |
 | `budget`、`holder` | 固定 budget/llm、brain |
+| `max_prompt_chars` | 每回合提示字數上限，預設 12000；先砍軌跡再砍技能全文，保留結案目錄 |
 | `gateway` | llm.fake 或 llm.litellm，依 model 選 |
 | `interval_ms`、`early_tock` | 可有可無：給過 `--interval`／`--early`／`--fixed` 才有；整數毫秒 10～86400000、布林；沒給沿用舊值 |
 
@@ -124,6 +125,12 @@ SESSION-LOG 的 brain 行會把 AI 寫的「停在哪」裡會讓 `aos7-wfnode c
 `up.json` 的 `fake_delay`（秒，只對假 AI）讓假 AI 每次回覆前等這麼久，給測試與 [longtask](examples/longtask/README.md) 重現「傳輸中被殺」用。
 觀看直接掃信件，包含 you/inbox/done 回信，不更新 mail 的讀取快照。
 
+### brain 跨信記憶
+
+結案回信全文存進 `notes/done/<id>.md`；`INDEX.md` 留最新 50 行，較舊的先搬到 `INDEX-old.md`。每回合附目錄（最多 2000 字）；信提到前件時再附一份全文（最多 3000 字）。AI 也能只回 `要檔案：<id>`，多用一回合拿全文；同樣受卡住與回合數上限保護。
+
+`up.json` 可設 `max_prompt_chars`（預設 12000）：提示超過時先砍回合軌跡、再砍技能全文、再截前件全文，最後縮短上回合成果（至少留 200 字）；目錄永遠保留。砍完還超過（信或工作簿本身太長）就回 BLOCKED，說把信拆短或調大上限。寫全文與寄信之間被 SIGKILL，重起不重寫、不重加目錄、不重寄。假 AI 遇到標題含「要檔案」且還沒附前件，就演一次要檔案。
+
 ## 錯誤與退出
 
 錯誤 stderr 一行 `aos7-up: 發生什麼。怎麼辦`，不印 traceback。
@@ -147,6 +154,7 @@ up.json 壞了時刪掉該檔再 up。未知結果不清檔、不重送。
 | `aos7_up.py` | 冪等安裝、起停、起動證據與回收 |
 | `aos7_up_cli.py` | 參數、錯誤與 ask／brain 分派 |
 | `aos7_up_brain.py`、`aos7_up_ask.py`、`prompts/`、`examples/` | brain 一回合（一封信可跨回合）與 ask（測試 `tests/test_brain*.py`、`tests/test_up_brain_multi.py`） |
+| `aos7_up_memory.py` | brain 跨信記憶：結案存 `notes/done/`、目錄輪替、挑前件、要檔案、提示上限裁切（測試 `tests/test_up_memory.py`） |
 | `aos7_up_status.py` | 六（卡住時七）行狀態、觀看、設定驗證、子指令與 atomic |
 | `tests/test_up.py` | 起停、信與已花預算 SIGKILL 重接、唯讀摘要 |
 | `tests/test_up_model.py` | 模型、端點保存、拒絕 gateway 變更、經 up 的 ask 假 AI 一圈 |
