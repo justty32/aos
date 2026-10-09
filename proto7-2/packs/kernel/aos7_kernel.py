@@ -10,6 +10,7 @@ import json
 import os
 import signal
 import sys
+import time
 
 from aos7_kernel_state import (Stop, config_path, decisions_path, load_config, load_state, same_place,  # noqa: E402
                                save_state, slot_dir, snapshot, state_path, TOP)
@@ -17,6 +18,7 @@ from aos7_fs import BAD, N, OK, U, fact, is_int, now, test_point, write_json  # 
 from aos7_taskside import resolver, task_env, wait_tock  # noqa: E402
 
 PROG = "aos7-kernel"
+NOTIFY_MAX = 10
 
 
 # ---------- 規則註冊（spec §5；薄入口可再注入） ----------
@@ -100,8 +102,18 @@ def _bad_candidate(cfg, c):
 # ---------- 送出與核對（spec §7） ----------
 
 def _receipt_matches(r, p):
-    return isinstance(r, dict) and r.get("id") == p["id"] and r.get("op") == "kill" and r.get("run") == p["run"] \
-        and isinstance(r.get("result"), dict)
+    """回條的原請求（id、op、run）是不是這筆意圖的。不看 result.run 來關聯：拒絕回條的 result.run 可能是新 run。"""
+    return isinstance(r, dict) and r.get("id") == p["id"] and r.get("op") == "kill" and r.get("run") == p["run"]
+
+
+def _result_ok(r, p):
+    """相符回條的結果：True 成功（result.run 也要是原 run）｜False 失敗｜None 形狀不合（不確定）。"""
+    res = r.get("result")
+    if not (isinstance(res, dict) and isinstance(res.get("ok"), bool) and isinstance(res.get("msg"), str)):
+        return None
+    if res["ok"]:
+        return True if res.get("run") == "%s#%d" % (p["target"]["slot"], p["run"]) else None
+    return False
 
 
 def settle_kill(env, p, resolve):
@@ -112,20 +124,22 @@ def settle_kill(env, p, resolve):
     cst, ctl = fact(os.path.join(sd, "ctl.json"))
     if cst == OK and isinstance(ctl, dict) and ctl.get("id") == p["id"]:
         rst, r = fact(os.path.join(sd, "ctl-done.json"))
-        if rst == OK and _receipt_matches(r, p) and r["result"].get("ok") is True:
-            return "done", "ok", str(r["result"].get("msg", ""))
+        if rst == OK and _receipt_matches(r, p) and _result_ok(r, p) is True:
+            return "done", "ok", r["result"]["msg"]
         return "sent", None
     if cst == OK or cst == BAD:
         return "wait", "控制衝突：槽裡已有別人的 ctl.json，不覆蓋"
     if cst != N:
         return "wait", "ctl.json 讀不到"
     rst, r = fact(os.path.join(sd, "ctl-done.json"))
-    if rst == U:
-        return "wait", "ctl-done.json 讀不到"
+    if rst == U or rst == BAD:   # 壞回條可能就是我們的：不確定，不補送
+        return "wait", "ctl-done.json 讀不到或壞了，不確定送過沒，不補送"
     if rst == OK and _receipt_matches(r, p):
-        res = r["result"]
-        msg = str(res.get("msg", ""))
-        if res.get("ok") is True:
+        ok = _result_ok(r, p)
+        if ok is None:
+            return "wait", "回條相符但結果欄位不合，不確定，不補送"
+        msg = r["result"]["msg"]
+        if ok:
             return "done", "ok", msg
         return "done", ("unknown" if msg.startswith("unknown") else "rejected"), msg
     bst, birth = fact(os.path.join(sd, "birth.json"))
@@ -144,7 +158,7 @@ def settle_kill(env, p, resolve):
 def settle_notify(env, cfg, p):
     mail = cfg.get("mail")
     if not mail:
-        return "done", "logged", "沒設 mail，只寫在 decisions.json"
+        return "done", "logged", "沒設 mail，通知只記在 state 的 done（status 看得到）"
     sys.path.insert(0, os.path.join(TOP, "modules", "mail"))
     import aos7_mail   # noqa: E402
     root = os.path.normpath(os.path.join(env["node"], mail["root"]))
@@ -168,7 +182,7 @@ def settle(env, cfg, state, resolve):
         except OSError as e:
             r = ("wait", "寫不進去：%s" % e)
         if r[0] == "done":
-            d = {k: p[k] for k in ("id", "op", "target", "run", "tock") if k in p}
+            d = {k: p[k] for k in ("id", "op", "target", "run", "text", "tock") if k in p}
             done.append(dict(d, result=r[1], msg=r[2], at=now()))
             changed = True
             continue
@@ -194,7 +208,7 @@ def decide(env, cfg, state, tock, resolve, rules=None):
     outs = []
     try:
         for r in cfg["rules"]:
-            ctx = {"v": 1, "tock": tock, "config": dict(cfg, **r)}
+            ctx = {"v": 1, "tock": tock, "config": dict(cfg, **r), "rule": r}
             outs.append((r["name"], rules[r["name"]](ctx, json.loads(json.dumps(snap)),
                                                        json.loads(json.dumps(state["rules"].get(r["name"], {}))))))
         states, cands, why = validate(cfg, outs)
@@ -203,19 +217,21 @@ def decide(env, cfg, state, tock, resolve, rules=None):
     rec = {"tock": tock, "at": now(), "decided": [], "rejected": why, "note": None}
     if why:
         return None, [], rec
-    new, skipped = [], []
+    busy = [c["target"]["slot"] for c in cands if c["op"] == "kill" and any(
+        p["op"] == "kill" and same_place(p["target"], c["target"]) for p in state["pending"])]
+    notes = sum(1 for p in state["pending"] if p["op"] == "notify") + sum(1 for c in cands if c["op"] == "notify")
+    if busy or notes > NOTIFY_MAX:
+        # 整輪延後：規則狀態不存（它會以為已經出過），下一個 tock 重判（spec §5）
+        rec["note"] = "延後：%s" % ("目標已有在途的 kill（%s）" % "、".join(busy) if busy
+                                   else "在途通知超過 %d 封" % NOTIFY_MAX)
+        return None, [], rec
+    new = []
     for i, c in enumerate(cands):
-        if c["op"] == "kill" and any(p["op"] == "kill" and same_place(p["target"], c["target"])
-                                     for p in state["pending"]):
-            skipped.append(c["target"]["slot"])
-            continue
         p = {"id": "k-%s-%d-%d" % (state["instance"][:8], state["rev"] + 1, i), "op": c["op"], "target": c["target"],
              "basis": c.get("basis"), "sent": False, "tock": tock, "rule": c["rule"]}
         p.update({"run": c["run"], "why": c["why"]} if c["op"] == "kill" else {"text": c["text"]})
         new.append(p)
     rec["decided"] = new
-    if skipped:
-        rec["note"] = "目標已有在途的 kill，略過：%s" % "、".join(skipped)
     return states, new, rec
 
 
@@ -257,7 +273,11 @@ def cmd_run(args, rules=None):
     state = load_state(env["task"], sha, init=not args.dry_run)
     if args.dry_run:
         _, new, rec = decide(env, cfg, state, state["last_tock"], resolve, rules)
+        for p in rec["decided"]:      # 模擬的 id 跟正式的分開，不會被誤認成之後真的決定
+            p["id"] = "dry-" + p["id"]
         print(json.dumps(rec, ensure_ascii=False))
+        if rec["rejected"]:
+            raise Stop(1, "規則的輸出被拒絕：%s。修好規則或 kernel.json 再試" % rec["rejected"])
         return 0
     stop = []
     signal.signal(signal.SIGTERM, lambda *_: stop.append(1))
@@ -272,7 +292,8 @@ def cmd_run(args, rules=None):
         state = _settle_safe(env, cfg, state, resolve)
         before = state
         state = one_tock(env, cfg, state, t, resolve, rules)
-        if state is before:      # 沒存進去：等下一個 tock
+        if state is before:      # 沒存進去：水位不前進，稍後重做同一個 tock
+            time.sleep(0.2)
             continue
         state = _settle_safe(env, cfg, state, resolve)
         seen += 1
@@ -297,8 +318,10 @@ def _settle_safe(env, cfg, state, resolve):
 
 
 def kernel_slots(node):
-    """tasks.json 裡 argv 含 aos7-kernel 的項目名（＝槽名）。"""
+    """tasks.json 裡 argv 含 aos7-kernel 的項目名（＝槽名）；讀不到回 None。"""
     st, t = fact(os.path.join(node, ".aos", "tasks.json"))
+    if st not in (N, OK):
+        return None
     items = t.get("tasks") if st == OK and isinstance(t, dict) and isinstance(t.get("tasks"), list) else []
     return [i["name"] for i in items if isinstance(i, dict) and isinstance(i.get("name"), str)
             and any("aos7-kernel" in str(a) for a in (i.get("argv") or []))]
@@ -312,7 +335,10 @@ def status_line(node):
     if cst != OK or not isinstance(cfg, dict) or not isinstance(cfg.get("sources"), list):
         return 3, "不確定：kernel.json 讀不到或不合。看一下 %s" % config_path(node)
     n = len(cfg["sources"])
-    slots = kernel_slots(node) or ["kernel"]
+    slots = kernel_slots(node)
+    if slots is None:
+        return 3, "不確定：tasks.json 讀不到，找不到 kernel 的槽。照原樣再看一次"
+    slots = slots or ["kernel"]
     sst, s = fact(state_path(os.path.join(node, ".aos", "tasks", slots[0])))
     if sst == N:
         return 0, "監督 %d 件：kernel 還沒開始（等它第一次收到心跳）" % n
@@ -346,6 +372,12 @@ def main(argv=None, rules=None):
     r.add_argument("--rounds", type=int, default=0, help=argparse.SUPPRESS)
     s = sub.add_parser("status", help="一行白話看 kernel 在做什麼")
     s.add_argument("node")
+    def bad_usage(msg):
+        print("%s: 用法不對（%s）。例：aos7-kernel run、aos7-kernel status house/bob" % (PROG, msg), file=sys.stderr)
+        sys.exit(2)
+    ap.error = bad_usage
+    for p in (r, s):
+        p.error = bad_usage
     a = ap.parse_args(argv)
     try:
         if a.cmd == "status":
@@ -359,3 +391,7 @@ def main(argv=None, rules=None):
     except Stop as e:
         print("%s: %s" % (PROG, e), file=sys.stderr, flush=True)
         return e.code
+    except OSError as e:
+        print("%s: 不確定：讀寫失敗（%s），已寫的 state 與在途請求都留著。照原樣再跑一次會接續" % (PROG, e),
+              file=sys.stderr, flush=True)
+        return 3

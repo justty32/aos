@@ -64,7 +64,8 @@ def load_config(node, rule_names):
     elif any(not any(same_place(t, s) for s in cfg["sources"]) for t in cfg["targets"]):
         why = "targets 每項都要也在 sources 裡（看得到才能控制）"
     elif not isinstance(cfg.get("rules"), list) or not cfg["rules"] \
-            or not all(isinstance(r, dict) and r.get("name") in rule_names for r in cfg["rules"]):
+            or not all(isinstance(r, dict) and isinstance(r.get("name"), str) and r["name"] in rule_names
+                       for r in cfg["rules"]):
         why = "rules 要是非空清單，name 只能是 %s" % "、".join(sorted(rule_names))
     elif len({r["name"] for r in cfg["rules"]}) != len(cfg["rules"]):
         why = "rules 的 name 不能重複"
@@ -115,8 +116,15 @@ def _state_ok(s):
     return isinstance(s, dict) and s.get("v") == V and isinstance(s.get("config_sha"), str) \
         and isinstance(s.get("instance"), str) and is_int(s.get("rev")) and is_int(s.get("last_tock")) \
         and isinstance(s.get("rules"), dict) and isinstance(s.get("pending"), list) \
-        and all(isinstance(p, dict) and isinstance(p.get("id"), str) and p.get("op") in ("kill", "notify")
-                for p in s["pending"]) and isinstance(s.get("done"), list)
+        and all(_pending_ok(p) for p in s["pending"]) and isinstance(s.get("done"), list)
+
+
+def _pending_ok(p):
+    if not (isinstance(p, dict) and isinstance(p.get("id"), str)):
+        return False
+    if p.get("op") == "kill":
+        return _where(p.get("target")) and is_int(p.get("run"))
+    return p.get("op") == "notify" and isinstance(p.get("target"), str) and isinstance(p.get("text"), str)
 
 
 def load_state(task, sha, init=True):
