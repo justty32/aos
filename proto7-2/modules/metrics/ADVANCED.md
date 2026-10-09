@@ -9,7 +9,7 @@
   python3 proto7-2/modules/metrics/aos7-metrics job proto7-2/modules/metrics/baseline/r1/loop-gpt-6-sol --detail --overhead 1644
   # loop-gpt-6-sol：1 件、1 次呼叫｜每件 token 2590（prompt 2365＝代理 1644＋自己 721、completion 225、推理 91、cached 0；預留 1000000、未結 0）｜並行最多 1｜收到→做完 11.486 秒｜重試 0
   ```
-- `--json`：給程式讀，印一行排序 JSON，欄位列在 `--help` 最後，各欄算法見下面「給維護者」。
+- `--json`：給程式讀，印一行排序 JSON：`{v, overhead, scopes:[每個 PATH], total:合計}`；每個 scope 有 scope、flows（每件明細）、calls、tokens、max_parallel、window_unknown、seconds{mean,max,open}、retries、unreadable。各欄算法見下面「給維護者」。
 
 ## 出錯與退出碼
 

@@ -222,14 +222,10 @@ EPILOG = """PATH 要量哪個資料夾：
   名稱：N 件工作｜每件用 X token｜同時最多 P 個在問模型｜花 S 秒｜重試 R 次
   件＝一件 AI 工作：同一張需求的所有呼叫算一件；不屬於任何需求的單次呼叫自己算一件。
 
---detail 把 token 拆開：prompt（送出）、completion（回答）、推理、cached（命中快取）、
-  預留（呼叫前先保留的 token 上限，不是真的用掉）、未結（還沒算完帳的呼叫數，正常 0）。
---overhead N 每次呼叫被代理（例如 LiteLLM）自動加進 prompt 的 token 數；只影響 --detail 和 --json，
-  不知道就不用給（預設 0）。量法：經代理送一個空 prompt，--detail 看到的 prompt 數就是 N。
---json 印一行 JSON：{v, overhead, scopes:[每個 PATH], total:合計}；每個 scope 有
-  scope、flows（每件明細）、calls、tokens、max_parallel、window_unknown、seconds{mean,max,open}、retries、unreadable。
+--detail 把 token 拆成 prompt／completion／推理／cached，另列預留（先保留的上限，不是真的用掉）與未結。
+--json 欄位：{v, overhead, scopes, total}，scope 含 flows、tokens、max_parallel、seconds、retries 等；--overhead 量法與各欄算法見 ADVANCED.md。
 
-退出碼：0 成功（有讀不了的檔也算）；2 參數不對或 PATH 不是資料夾。全 aos 共用表見 proto7-2/notes/blueprint-errors.md §2。
+退出碼：0 成功（有讀不了的檔也算）；2 參數不對或 PATH 不是資料夾。
 """
 class ArgumentParser(argparse.ArgumentParser):
     """用法錯誤只印一行人話，不印 usage。"""
