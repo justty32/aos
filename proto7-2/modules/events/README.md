@@ -1,12 +1,12 @@
 # events 事件保存包
 
-一個 `events/` 夾就是一本帳：`pub` 寫一筆、`read` 讀出來。檔數固定，舊的自己清。
+一個 `events/` 夾就是一本帳：`pub` 寫一筆、`read` 讀出來、`ack` 確認處理完。檔數固定，舊的自己清。
 
 ← [modules](../README.md)｜進階（讓 daemon 自動記、完整選項、檔案規則、契約卡）→ [ADVANCED.md](ADVANCED.md)
 
 ## 先懂這五個詞（照第一次跑出現的順序）
 
-1. **events 夾**：放事件的資料夾，`pub` 第一次寫時自動建。
+1. **events 夾**：放事件的資料夾，第一次 pub 加 `--create` 才建。
 2. **seq**：每筆的編號（1、2、3…）。`read --text` 最後一行 `# next_cursor 2` 就是「下一個要讀的 seq」，不是新東西，想接著讀時帶給 `--cursor`，不接著讀就不用管。
 3. **obs／must**：夾裡兩本帳。obs＝一般紀錄，滿了丟最舊的（預設寫這本）；must＝一定要有人處理完的，用 `--must` 寫、`--channel must` 讀。
 4. **ack**：對 must 說「seq 到這裡都處理完了」。讀到不算，ack 了才算；沒 ack 的一直留著，滿了 must 就拒收新的。
@@ -21,7 +21,7 @@
 ```sh
 cd "$(git rev-parse --show-toplevel)"
 P=$PWD/proto7-2; E=$(mktemp -d)/n1/events; EV=$P/modules/events/aos7-events
-$EV pub  --events $E --kind hello --payload '{"msg": "hi"}'
+$EV pub  --events $E --create --kind hello --payload '{"msg": "hi"}'
 $EV read --events $E --text
 ```
 
@@ -37,7 +37,7 @@ $EV read --events $E --text
 $EV pub  --events $E --kind job.done --payload '{"id": 7}' --event-id job/7 --must
 $EV pub  --events $E --kind job.done --payload '{"id": 7}' --event-id job/7 --must
 $EV read --events $E --channel must --text
-$EV read --events $E --channel must --ack 1
+$EV ack --events $E 1
 ls $E
 ```
 
@@ -50,8 +50,8 @@ ls $E
 must.active.jsonl  obs.active.jsonl  state.json  state.json.lock   # 兩本帳＋帳本自己的進度檔與鎖（別動）
 ```
 
-看到兩本帳各一筆、重送 `dup true`、`acked_upto 1` 就成功了（10-09 實跑）。完整選項：`$EV pub --help`、`$EV read --help`。
+看到兩本帳各一筆、重送 `dup true`、`acked_upto 1` 就成功了（10-09 實跑）。完整選項：`$EV pub --help`、`$EV read --help`、`$EV ack --help`。
 
 ## 想做更多
 
-日常用不到；需要時看 [ADVANCED.md](ADVANCED.md)：讓 daemon 每回合自動記、`pub`／`read` 全部選項與退出碼、檔案與檔數、契約卡、已知限制、長跑。測試：`python3 proto7-2/tests/run_all.py modules/events/tests`。
+日常用不到；需要時看 [ADVANCED.md](ADVANCED.md)：讓 daemon 每回合自動記、`pub`／`read`／`ack` 全部選項、檔案與檔數、契約卡、已知限制、長跑。測試：`python3 proto7-2/tests/run_all.py modules/events/tests`。

@@ -7,11 +7,12 @@ TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.ab
 sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib"), os.path.join(TOP, "modules", "events")]
 from aos7_fs import read_json, write_json, test_point  # noqa: E402
 from aos7_taskside import task_env  # noqa: E402
-from aos7_events_pub import publish, exit_code  # noqa: E402
+from aos7_events_pub import publish, exit_code, failure_message
+from aos7_events_cli import Parser, say  # noqa: E402
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = Parser(description=__doc__)
     ap.add_argument("--n", type=int, default=5)
     ap.add_argument("--batch", default="demo")
     for name in ("events", "node", "state", "out"):
@@ -42,7 +43,7 @@ def main(argv=None):
                          source={"node": a.node, "task": a.batch, "item": i}, node=a.node)
         test_point("events:demo-after-publish")
         if not result["ok"]:
-            print(result.get("why"), file=sys.stderr)
+            say(failure_message(result, "%s/%s/%d" % (a.node, a.batch, i)))
             return exit_code(result)
         write_json(a.state, {"done_upto": i})
     return 0

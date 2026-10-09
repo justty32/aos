@@ -7,6 +7,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [HERE, os.path.join(HERE, "..", "..", "lib")]
+from aos7_events_cli import Parser, ack_main, missing, say
 from aos7_fs import read_json  # noqa: E402
 
 
@@ -133,20 +134,20 @@ def read(events_dir, channel, cursor=None, *, kind=None, source=None, round=None
 READ_EPILOG = """例子：
   aos7-events read --events /tmp/demo/events --text
   aos7-events read --events /tmp/demo/events --channel must --text
-  aos7-events read --events /tmp/demo/events --channel must --ack 1   # 印 {"acked_upto": 1}
+  aos7-events ack --events /tmp/demo/events 1   # 印 {"acked_upto": 1}
 
-讀到不算處理完；must 本子要 --ack 才算，沒 ack 的會一直留著，滿了 pub --must 會被拒。"""
+讀到不算處理完；must 本子要 ack 才算，沒 ack 的會一直留著，滿了 pub --must 會被拒。"""
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-events read", description="讀 events 夾裡的事件；預設印一行 JSON，加 --text 一筆一行。",
+    ap = Parser(prog="aos7-events read", description="讀 events 夾裡的事件；預設印一行 JSON，加 --text 一筆一行。",
                                  epilog=READ_EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--events", required=True, help="events 夾路徑")
     ap.add_argument("--channel", choices=("obs", "must"), default="obs", help="讀哪本：obs（預設）或 must")
     ap.add_argument("--cursor", type=int, help="從這個 seq 開始讀；把上次的 next_cursor 帶回來就接著讀")
     ap.add_argument("--round", type=int, help="只看這個回合的事件")
     ap.add_argument("--run", type=int, help="只看這個 run 的事件")
-    ap.add_argument("--ack", type=int, help="（要搭 --channel must）確認 seq ≤ 這個數的都處理完了；只做確認、不讀")
+    ap.add_argument("--ack", type=int, help="（舊寫法，仍可用；要搭 --channel must）確認 seq ≤ 這個數的都處理完了；只做確認、不讀")
     ap.add_argument("--kind", help="只看這種 kind")
     ap.add_argument("--source", help="只看這個來源 node")
     ap.add_argument("--limit", type=int, default=100, help="最多幾筆（預設 100）")
@@ -155,19 +156,14 @@ def main(argv=None):
     if a.ack is not None:
         if a.channel != "must" or a.ack < 0:
             ap.error("--ack 須使用 must 通道與非負整數")
-        import aos7_events_store as store
-        from aos7_fs import Unknown
-        try:
-            upto = store.ack(a.events, a.ack)
-        except Unknown as e:   # 鎖逾時或 I/O 錯：不知道推了沒有，照同值重送
-            print(json.dumps({"acked_upto": None, "why": "unknown", "detail": str(e)}, ensure_ascii=False))
-            return 4
-        print(json.dumps({"acked_upto": upto}))
-        return 0
+        return ack_main(a.events, a.ack)
     try:
         result = read(a.events, a.channel, a.cursor, kind=a.kind, source=a.source, round=a.round, run=a.run, limit=a.limit)
     except ValueError as e:
         ap.error(str(e))
+    if missing(a.events):   # 用法先判；拼錯路徑不該看起來像空帳本
+        say("沒有這個 events 夾 %s。檢查 --events 路徑" % a.events)
+        return 1
     if a.text:
         for rec in result["records"]:
             src = rec.get("source")

@@ -8,6 +8,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = os.path.dirname(os.path.dirname(HERE))
 sys.path[:0] = [HERE, os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
+from aos7_events_cli import Parser, say
 import aos7_events_store as store  # noqa: E402
 from aos7_fs import is_int, read_json, test_point  # noqa: E402
 from aos7_taskside import resolver, task_env, wait_tock  # noqa: E402
@@ -115,22 +116,29 @@ def once(me, args, resolve, st):
         try:
             changed = _log(me, args, st) or changed
         except OSError:
-            print("events: daemon log 讀不到，本回合停止續讀", file=sys.stderr)
+            say("不確定：daemon log 讀不到，本回合停止續讀，已保存的進度留著。等下個心跳再試")
     return changed
 
 
 def main(argv=None):
     """解析選項，以 keep 任務等待 tock；未知 state 跳過本回合。"""
     argv = sys.argv[1:] if argv is None else argv
-    if argv[:1] in (["read"], ["pub"]):   # 讀者／發布 CLI 的子命令入口（E3），選項照原腳本
-        return __import__({"read": "aos7_events_read", "pub": "aos7_events_pub"}[argv[0]]).main(argv[1:])
-    ap = argparse.ArgumentParser(
-        prog="aos7-events", formatter_class=argparse.RawDescriptionHelpFormatter,
-        usage="aos7-events pub ...｜aos7-events read ...｜aos7-events [取樣器選項]（keep 任務）",
-        description="事件保存：寫一筆用 pub，讀用 read。\n"
-                    "  aos7-events pub --help    寫一筆事件\n"
-                    "  aos7-events read --help   讀事件、ack\n"
-                    "不帶子命令＝取樣器，只在 daemon 的 keep 任務裡跑（下面選項都屬於它）。")
+    if argv[:1] in (["read"], ["pub"], ["ack"]):
+        return __import__({"read": "aos7_events_read", "pub": "aos7_events_pub",
+                           "ack": "aos7_events_cli"}[argv[0]]).main(argv[1:])
+    if argv in (["--help"], ["-h"]):
+        print("""events 事件保存：pub 寫、read 讀、ack 確認處理完。
+  pub：第一次寫加 --create
+    aos7-events pub --events /tmp/demo/events --create --kind hello --payload '{}'
+  read：讀事件
+    aos7-events read --events /tmp/demo/events --text
+  ack：確認 must 到這個 seq 都處理完了
+    aos7-events ack --events /tmp/demo/events 1
+詳細：aos7-events pub --help（read、ack 同）
+取樣器（daemon 的 keep 任務用）：aos7-events --help-sampler；退出碼與契約見 ADVANCED.md""")
+        return 0
+    ap = Parser(prog="aos7-events", formatter_class=argparse.RawDescriptionHelpFormatter,
+                description="事件取樣器：只在 daemon 的 keep 任務裡跑；手動用 pub／read／ack。")
     ap.add_argument("--src", action="append", help="取樣哪個 node（可重複；預設自己）")
     ap.add_argument("--status", action="store_true", help="也記 daemon 的 status 變化")
     ap.add_argument("--daemon-log", action="store_true", help="也續讀 daemon 流水帳 .aosd/log.jsonl")
@@ -138,12 +146,19 @@ def main(argv=None):
     ap.add_argument("--out", help="events 夾（預設 <node>/events）")
     ap.add_argument("--keep", type=int, help="每本封存段數（≤4，只在初建時生效）")
     ap.add_argument("--segment-bytes", type=int, help="每段大小（預設 1 MiB，只在初建時生效）")
+    if argv == ["--help-sampler"]:
+        ap.print_help()
+        return 0
     args = ap.parse_args(argv)
     if args.rounds < 0 or any(v is not None and v <= 0 for v in (args.keep, args.segment_bytes)):
         ap.error("rounds 須非負，keep 與 segment-bytes 須為正")
     if args.keep is not None and args.keep > store.MAX_KEEP:
         ap.error("keep 不得超過 %d（events/ 檔數上限 12）" % store.MAX_KEEP)
-    me = task_env()
+    try:
+        me = task_env()
+    except (KeyError, ValueError):
+        say("取樣器只在 daemon 的 keep 任務裡跑（缺 AOS7_ 環境）。手動請用 pub／read／ack；取樣器見 --help-sampler")
+        return 2
     args.out = args.out or os.path.join(me["node"], "events")
     resolve = resolver(me["task"])
     last, k = 0, 0
@@ -152,7 +167,7 @@ def main(argv=None):
         k += 1
         st = store.recover(args.out, node=me["node_id"], config=_config(args))
         if st is None:
-            print("events: state 未知，本回合跳過", file=sys.stderr)
+            say("不確定：state 讀寫未完成，本回合跳過，既有紀錄與恢復證據留著。等下個心跳再試")
             continue
         once(me, args, resolve, st)
     return 0

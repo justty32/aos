@@ -3,6 +3,8 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tests"))
 
+import contextlib
+import io
 import json  # noqa: E402
 import signal  # noqa: E402
 import subprocess  # noqa: E402
@@ -10,11 +12,13 @@ import tempfile  # noqa: E402
 import unittest  # noqa: E402
 from unittest.mock import patch  # noqa: E402
 from base import MODULES, HERE  # noqa: E402
-from aos7_fs import locked, write_json, read_json  # noqa: E402
+from aos7_fs import Unknown, locked, write_json, read_json  # noqa: E402
 
 EVENTS = os.path.join(MODULES, "events")
 sys.path.insert(0, EVENTS)
 import aos7_events_read as reader  # noqa: E402
+import aos7_events_store as store  # noqa: E402
+import aos7_events_cli as cli  # noqa: E402
 
 
 def record(seq, **extra):
@@ -43,8 +47,13 @@ class Fixtures(unittest.TestCase):
         return [r["seq"] for r in result["records"]]
 
     def cli(self, script, *args, env=None):
-        return subprocess.run([sys.executable, os.path.join(EVENTS, script), "--events", self.dir, *args],
-                              capture_output=True, text=True, timeout=20, env=env)
+        p = subprocess.run([sys.executable, os.path.join(EVENTS, script), "--events", self.dir, *args],
+                           capture_output=True, text=True, timeout=20, env=env)
+        if p.returncode:
+            self.assertEqual(len(p.stderr.splitlines()), 1, p.stderr)
+            self.assertTrue(p.stderr.startswith("aos7-events: "), p.stderr)
+            self.assertIn("。", p.stderr)
+        return p
 
 
 class TestEventsRead(Fixtures):
@@ -237,7 +246,7 @@ class TestEventsPublish(Fixtures):
         self.assertIsNone(self.pub.store.load_state(fresh))
         with locked(os.path.join(self.dir, "state.json")):
             p = self.cli("aos7_events_read.py", "--channel", "must", "--ack", "2")
-        self.assertEqual(p.returncode, 4, p.stderr)
+        self.assertEqual(p.returncode, 3, p.stderr)
 
     def test_full_cli_and_lock_timeout(self):
         config = {"keep_segments": 1, "segment_bytes": 1}
@@ -249,11 +258,11 @@ class TestEventsPublish(Fixtures):
         before = reader.read(self.dir, "must")["records"]
         args = ("--kind", "item", "--event-id", "full", "--payload", "{}", "--node", "a", "--must")
         p = self.cli("aos7_events_pub.py", *args)
-        self.assertEqual(p.returncode, 3, p.stderr)
+        self.assertEqual(p.returncode, 1, p.stderr)
         self.assertEqual(reader.read(self.dir, "must")["records"], before)
         with locked(os.path.join(self.dir, "state.json")):
             p = self.cli("aos7_events_pub.py", *args)
-        self.assertEqual(p.returncode, 4, p.stderr)
+        self.assertEqual(p.returncode, 3, p.stderr)
 
     def test_demo_waits_for_save_ack(self):
         """示範發布者：發後確認前被殺、或保存回 unknown，都不推進進度、不做下一件；重跑同 event_id 只留一筆。"""
@@ -268,7 +277,7 @@ class TestEventsPublish(Fixtures):
         self.assertFalse(os.path.exists(os.path.join(out, "item-2.txt")))
         with locked(os.path.join(events, "state.json")):
             p = subprocess.run(args, env=env, capture_output=True, timeout=20)
-        self.assertEqual(p.returncode, 4, p.stderr)
+        self.assertEqual(p.returncode, 3, p.stderr)
         self.assertIsNone(read_json(state))
         self.assertFalse(os.path.exists(os.path.join(out, "item-2.txt")))
         p = subprocess.run(args, env=env, capture_output=True, timeout=20)
@@ -313,7 +322,7 @@ class TestNewbieCli(Fixtures):
         events = os.path.join(self.dir, "n1", "events")
         outs = []
         for _ in range(2):
-            p = self.run_cli("pub", "--events", events, "--kind", "hello", "--payload", '{"msg": "hi"}')
+            p = self.run_cli("pub", "--create", "--events", events, "--kind", "hello", "--payload", '{"msg": "hi"}')
             self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
             outs.append(json.loads(p.stdout))
         self.assertEqual([o["seq"] for o in outs], [1, 2])
@@ -341,26 +350,138 @@ class TestNewbieCli(Fixtures):
         self.assertEqual((p.returncode, json.loads(p.stdout)["why"]), (2, "usage"))
         fresh = os.path.join(self.dir, "n2", "events")   # 明給壞 source.node 仍是用法錯，不被預設 node 蓋過
         for bad in ('{"node": ""}', '{"node": 0}'):
-            p = self.run_cli("pub", "--events", fresh, "--kind", "k", "--payload", "{}", "--source", bad)
+            p = self.run_cli("pub", "--create", "--events", fresh, "--kind", "k", "--payload", "{}", "--source", bad)
             self.assertEqual(p.returncode, 2, p.stdout)
         self.assertFalse(os.path.exists(fresh))
 
     def test_auto_id_printed_on_unknown(self):
         events = os.path.join(self.dir, "n1", "events")
-        self.assertEqual(self.run_cli("pub", "--events", events, "--kind", "k", "--payload", "{}").returncode, 0)
+        self.assertEqual(self.run_cli("pub", "--create", "--events", events, "--kind", "k", "--payload", "{}").returncode, 0)
         with locked(os.path.join(events, "state.json")):
             p = self.run_cli("pub", "--events", events, "--kind", "k", "--payload", "{}")
         out = json.loads(p.stdout)
-        self.assertEqual((p.returncode, out["why"]), (4, "unknown"))
+        self.assertEqual((p.returncode, out["why"]), (3, "unknown"))
         self.assertTrue(out["event_id"].startswith("auto/"))
 
     def test_help_explains(self):
         top = self.run_cli("--help").stdout
         self.assertIn("aos7-events pub --help", top)
         pub_help = self.run_cli("pub", "--help").stdout
-        for text in ("must＝", "ack", "--event-id", "不存在會自動建"):
+        for text in ("must＝", "ack", "--event-id", "第一次寫加 --create"):
             self.assertIn(text, pub_help)
-        self.assertIn("--channel must --ack", self.run_cli("read", "--help").stdout)
+        self.assertIn("舊寫法，仍可用", self.run_cli("read", "--help").stdout)
+
+
+class TestErrorCli(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = tmp.name
+        self.events = os.path.join(self.root, 'n', 'events')
+
+    def run_cli(self, *args):
+        env = {k: v for k, v in os.environ.items() if not k.startswith('AOS7_')}
+        return subprocess.run([sys.executable, '-B', os.path.join(EVENTS, 'aos7-events'), *args],
+                              env=env, capture_output=True, text=True, timeout=15)
+
+    def failed(self, p, code):
+        self.assertEqual(p.returncode, code, p.stdout + p.stderr)
+        self.assertEqual(len(p.stderr.splitlines()), 1, p.stderr)
+        self.assertTrue(p.stderr.startswith('aos7-events: '), p.stderr)
+        self.assertIn('。', p.stderr)
+        if code == 3:
+            self.assertTrue(p.stderr.startswith('aos7-events: 不確定：'))
+
+    def pub(self, *extra):
+        return self.run_cli('pub', '--events', self.events, '--kind', 'hello', '--payload', '{}', *extra)
+
+    def test_create(self):
+        p = self.pub()
+        self.failed(p, 1)
+        self.assertEqual(json.loads(p.stdout), dict(ok=False, seq=None, dup=False, why='no_events'))
+        self.assertFalse(os.path.exists(os.path.dirname(self.events)))
+        self.assertEqual(self.pub('--create').returncode, 0)
+        self.assertTrue(os.path.isfile(os.path.join(self.events, 'state.json')))
+        # 已有空夾也可寫，不需 --create。
+        os.mkdir(os.path.join(self.root, 'empty'))
+        p = self.run_cli('pub', '--events', os.path.join(self.root, 'empty'), '--kind', 'k', '--payload', '{}')
+        self.assertEqual(p.returncode, 0, p.stderr)
+
+    def test_ack(self):
+        self.failed(self.run_cli('ack', '--events', self.events, '1'), 1)
+        self.assertFalse(os.path.exists(os.path.dirname(self.events)))
+        os.makedirs(self.events)
+        p = self.run_cli('ack', '--events', self.events, '1')
+        self.failed(p, 3)
+        self.assertEqual(json.loads(p.stdout)['why'], 'unknown')
+        self.assertIn('沒有 state.json', p.stderr)
+        self.assertEqual(os.listdir(self.events), [])
+        self.assertEqual(store.ack(self.events, 1), 0)
+        self.assertEqual(os.listdir(self.events), [])
+        self.failed(self.run_cli('read', '--events', self.events, '--channel', 'must', '--ack', '1'), 3)
+        self.assertEqual(os.listdir(self.events), [])
+        self.assertEqual(self.pub('--must').returncode, 0)
+        a = self.run_cli('ack', '--events', self.events, '1')
+        b = self.run_cli('read', '--events', self.events, '--channel', 'must', '--ack', '1')
+        self.assertEqual((a.returncode, b.returncode, a.stderr, b.stderr), (0, 0, '', ''))
+        self.assertEqual(json.loads(a.stdout), {'acked_upto': 1})
+        self.assertEqual(a.stdout, b.stdout)
+        with locked(os.path.join(self.events, 'state.json')):
+            self.failed(self.run_cli('ack', '--events', self.events, '1'), 3)
+            self.failed(self.pub(), 3)
+
+    def test_review_fixes(self):
+        """read 拼錯路徑退 1 不像空帳本；state.json 壞連結 ack 退 3；讀不到（非不存在）pub 不誤報沒夾。"""
+        p = self.run_cli('read', '--events', self.events, '--text')
+        self.failed(p, 1)
+        self.assertEqual(p.stdout, '')
+        os.makedirs(self.events)
+        os.symlink('missing-state', os.path.join(self.events, 'state.json'))
+        p = self.run_cli('ack', '--events', self.events, '1')
+        self.failed(p, 3)
+        os.unlink(os.path.join(self.events, 'state.json'))
+        locked_dir = os.path.join(self.root, 'locked')
+        os.mkdir(locked_dir, 0o000)
+        self.addCleanup(os.chmod, locked_dir, 0o700)
+        if os.geteuid() != 0:
+            p = self.run_cli('pub', '--events', os.path.join(locked_dir, 'events'), '--node', 'n',
+                             '--kind', 'k', '--payload', '{}')
+            self.failed(p, 3)
+
+    def test_pub_and_ack_errors(self):
+        self.assertEqual(self.pub('--create').returncode, 0)
+        for args in (('--payload', '{'), ('--kind', ''), ('--payload', json.dumps('漢' * 30000, ensure_ascii=False))):
+            self.failed(self.pub(*args), 2)
+        # 讀寫錯的 detail 含換行也只能印一行，證據留在原夾。
+        before = sorted(os.listdir(self.events))
+        out, err = io.StringIO(), io.StringIO()
+        with patch.object(store, 'ack', side_effect=Unknown('讀寫失敗\n細節')), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual(cli.ack_main(self.events, 1), 3)
+        self.assertEqual(json.loads(out.getvalue())['why'], 'unknown')
+        self.assertEqual(len(err.getvalue().splitlines()), 1)
+        self.assertTrue(err.getvalue().startswith('aos7-events: 不確定：'))
+        self.assertIn('。', err.getvalue())
+        self.assertEqual(sorted(os.listdir(self.events)), before)
+
+    def test_help_and_usage(self):
+        for flag in ('--help', '-h'):
+            p = self.run_cli(flag)
+            self.assertEqual((p.returncode, p.stderr), (0, ''))
+            self.assertLessEqual(len(p.stdout.splitlines()), 20)
+            for word in ('pub', 'read', 'ack', 'aos7-events pub --help'):
+                self.assertIn(word, p.stdout)
+            self.assertNotIn('--segment-bytes', p.stdout)
+        p = self.run_cli('--help-sampler')
+        self.assertEqual((p.returncode, p.stderr), (0, ''))
+        self.assertIn('--segment-bytes', p.stdout)
+        for args in ((), ('--no-such-option',), ('--rounds', '1'),
+                     ('ack', '--events', self.events, '--channel', 'obs', '1'),
+                     ('ack', '--events', self.events, '-1'), ('ack', '--events', self.events, 'x'),
+                     ('pub',), ('read', '--events', self.events, '--cursor', '0'),
+                     ('read', '--events', self.events, '--ack', '1')):
+            self.failed(self.run_cli(*args), 2)
+        self.assertFalse(os.path.exists(os.path.dirname(self.events)))
 
 
 if __name__ == "__main__":
