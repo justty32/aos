@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 HERE = Path(__file__).resolve().parent
 TOP = HERE.parents[1]
 sys.path.insert(0, str(HERE / 'checkers'))
-from aos_three_gates import request, brief, strict
+from aos_three_gates import REVIEW_CRITERIA, request, brief, strict
 from aos7_author_llm import APPRENTICE_LADDER, AUTO, LADDER, climb, rung_call  # noqa: E402
 
 LLMCALL = HERE.parent / 'llmcall/bin/aos7-llmcall'
@@ -318,7 +318,7 @@ def propose_checks(a, req, out, candidate, snapshot, data):
             raw = prompt(a.review_llm, '你是 aos 的審查人，只回一個 JSON 物件 {"verdict":"accept"|"reject","reasons":[字串…]}，不加圍欄。' + NO_TOOLS.format('{'), {
                 'brief': brief(req), 'candidate': data.decode('utf-8'),
                 'gates': {k: check['gates'][k] for k in ('1', '2')},
-                'rules': '①② 已由檢查器在沙箱跑過；你只讀碼。審查所有檔案是否符合需求、工具卡與安全界線，挑出會讓答案錯、讓唯讀被破壞、或越界的問題'})
+                'rules': '①② 已由檢查器在沙箱跑過；你只讀碼。審查所有檔案是否符合需求、工具卡與安全界線。' + REVIEW_CRITERIA})
             text, info, why = delivery(a, req, a.review_llm, raw, 'rv-', explicit=False)
             out['review'] = {'llm': info, 'path': None}
             if why:

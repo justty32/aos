@@ -188,6 +188,7 @@ class TestAuthorAosCLI(DaemonCase):
             user = json.loads(body['messages'][1]['content'])
             self.assertEqual(set(user['gates']), {'1', '2'})
             self.assertEqual(user['candidate'], self.content)
+            self.assertIn('不是退件理由', user['rules'])   # 極端邊角只當建議（S3b）
 
     def test_rules_stop_before_llm_review(self):
         out = self.checked(self.aos('--candidate', USAGE / 'bad-review.json',

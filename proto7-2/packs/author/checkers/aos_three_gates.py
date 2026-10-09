@@ -78,6 +78,14 @@ def request(path):
     return req, card
 
 
+# 第三關模型審查的退件標準（llmcall 審查與 astra 審查共用）。S3：審查拿需求沒要求的極端邊角退件，佔擋下原因 58%。
+REVIEW_CRITERIA = ('只有三種問題能退件（reject）：真錯誤——照需求 work／accept 寫明的行為，在 fixture 這類真實資料上會答錯、'
+                   '當掉或退出碼不對；唯讀違規——會建立、刪除或修改輸入（含鎖檔）；越界改動——碰 scope 以外的檔、改 node、'
+                   '用了禁用的呼叫。需求沒寫明的極端邊角（例如超長整數字串、西元 1 年或 9999 年附近的時間溢位、落單的 surrogate、'
+                   '罕見的換行字元、作業系統特有的格式差異）不是退件理由：verdict 照給 accept，把它們寫進 reasons 當建議，每條以「建議：」開頭。'
+                   'reject 時 reasons 每條都要以「錯誤：」「唯讀：」或「越界：」開頭，指明屬於哪一類。')
+
+
 def brief(req):
     scope = req['scope']
     return '\n'.join([f"# 任務：{req['task']}", '## 背景與唯一目標', req['goal'],
@@ -155,8 +163,16 @@ def gate_static(ctx):
     tests = [p for p in files if re.fullmatch(re.escape(root) + r'/tests/test_[^/]+\.py', p)]
     if not tests or any(Path(p).name in {Path(x).name for x in paths if Path(x).match('test_*.py')} for p in tests):
         add('tests', '缺測試或測試檔名撞名')
-    if len(files) > min(card['limits']['max_files'], req['scope']['max_files']) or len(ctx['bytes']) > card['limits']['max_candidate_bytes'] or any(len(s.encode('utf-8')) > card['limits']['max_file_bytes'] for s in files.values()):
-        add('size', '檔數或 bytes 超標')
+    # 超標要講清楚哪個檔、實際多大、上限多少，學徒才改得對（S3：只說「超標」時筆記只學到「要精簡」）。
+    lim, max_files = card['limits'], min(card['limits']['max_files'], req['scope']['max_files'])
+    if len(files) > max_files:
+        add('size', f'檔數 {len(files)} 超過上限 {max_files}')
+    if len(ctx['bytes']) > lim['max_candidate_bytes']:
+        add('size', f"整份候選 {len(ctx['bytes'])} bytes 超過上限 {lim['max_candidate_bytes']} bytes")
+    for p, s in sorted(files.items()):
+        n = len(s.encode('utf-8'))
+        if n > lim['max_file_bytes']:
+            add('size', f"{p} 有 {n} bytes，超過每檔上限 {lim['max_file_bytes']} bytes（可拆成多個檔，檔數上限 {max_files}）")
     readme = re.sub(r'^\s*(```|~~~)[^\n]*\n.*?^\s*\1[^\n]*(?:\n|$)', '', files.get(root + '/README.md', ''), flags=re.M | re.S)
     if any(not re.search(r'^(?:- )?' + re.escape(s), readme, re.M) for s in card['readme_must']):
         add('readme', 'README 缺指定章節')
@@ -238,7 +254,7 @@ def gate_review(ctx):
         # 回覆檔放沙箱碰不到的另一個暫存夾，學徒的碼不能預埋審查結果。
         side = tempfile.TemporaryDirectory(prefix='aos-review-')
         out = Path(side.name) / 'review.json'
-        prompt = brief(ctx['request']) + '\n' + json.dumps(ctx['candidate'], ensure_ascii=False) + '\n①②：' + json.dumps(ctx['gates'], ensure_ascii=False) + '\n①② 已由檢查器在沙箱跑過、結果如上；你只讀碼，不要執行或重跑。審查所有檔案與需求，只回 {"verdict":"accept"|"reject","reasons":[…]}'
+        prompt = brief(ctx['request']) + '\n' + json.dumps(ctx['candidate'], ensure_ascii=False) + '\n①②：' + json.dumps(ctx['gates'], ensure_ascii=False) + '\n①② 已由檢查器在沙箱跑過、結果如上；你只讀碼，不要執行或重跑。審查所有檔案與需求。' + REVIEW_CRITERIA + '只回 {"verdict":"accept"|"reject","reasons":[…]}'
         p = command(['codex', 'exec', '-m', 'gpt-6-astra', '-c', 'model_reasoning_effort="high"', '-s', 'read-only', '--skip-git-repo-check', '-C', ctx['tmp'], '-o', str(out), '-'], input=prompt.encode())
         if p.returncode or not out.exists():
             raise Unknown('審查器當掉：' + p.stderr.decode('utf-8', 'replace')[-2000:])
@@ -254,7 +270,8 @@ def gate_review(ctx):
             raise ValueError('schema')
     except (ValueError, TypeError):
         return result([{'rule': 'review', 'why': '審查回覆格式不合'}])
-    if verdict['verdict'] != 'accept':
+    # reject 卻只列「建議：」＝沒有能退件的理由，照 accept 算（極端邊角只當建議，不擋）。
+    if verdict['verdict'] != 'accept' and not (verdict['reasons'] and all(x.lstrip().startswith('建議：') for x in verdict['reasons'])):
         issues.append({'rule': 'review', 'why': verdict['reasons']})
     return result(issues)
 
