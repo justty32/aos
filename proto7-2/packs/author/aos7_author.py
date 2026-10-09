@@ -861,6 +861,8 @@ def error_line(r, rejected=False):
         body = detail + '。給符合需求的檔案與選項，例如 aos7-author propose csv1 --candidate candidate.json；用法看 aos7-author --help'
     elif why == 'full':
         body = detail + '。先 close 這張需求，再發新版'
+    elif r.get('blocked') or r.get('missing_events'):
+        body = detail   # 收件被別人事件擋住／寄件對方沒 events：訊息第二句已說怎麼接
     else:
         body = detail + '。照上面的原因處理（例如換一份候選、或先做完前一步）再跑'
     return 'aos7-author: ' + body
