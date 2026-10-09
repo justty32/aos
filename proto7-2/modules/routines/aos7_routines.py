@@ -7,7 +7,7 @@ import re
 import sys
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path[:0] = [os.path.join(TOP, "lib"), os.path.join(TOP, "modules", "tools")]
-from aos7_fs import N, OK, Unknown, edit_json, fact, test_point  # noqa: E402
+from aos7_fs import N, OK, LockTimeout, Unknown, edit_json, fact, test_point  # noqa: E402
 from aos7_taskside import task_env, wait_tock  # noqa: E402
 from aos_exec import run_target  # noqa: E402
 KINDS = ("routines", "schedule")
@@ -18,7 +18,7 @@ def instant(value):
 def interval(value):
     m = re.fullmatch(r"([1-9][0-9]*)([rsmhd])", value)
     if not m:
-        raise ValueError("every 要正整數加 r/s/m/h/d")
+        raise ValueError("every 要正整數加 s/m/h/d（r＝心跳回合）")
     return int(m[1]) * {"r": 1, "s": 1, "m": 60, "h": 3600, "d": 86400}[m[2]], m[2] == "r"
 def short(t):
     """顯示用：到秒、本地時區。"""
@@ -34,17 +34,23 @@ def load(path):
     state, value = fact(path)
     if state == N:
         return None
-    if state != OK:
-        raise Unknown(str(value))
-    return table(value)
+    try:
+        if state != OK:
+            raise Unknown(str(value))
+        return table(value)
+    except Unknown as e:
+        raise Unknown("讀不到 wf/%s（%s）" % (os.path.basename(path), e)) from e
 def due(row, kind, round, now):
     if not isinstance(row, dict) or not isinstance(row.get("name"), str) or not row["name"].strip() or not row.get("inst"):
         raise ValueError("name／inst 缺失")
     if not all(isinstance(v, str) for v in row.values()):
         raise ValueError("欄位必須是字串")
-    seconds = float(row.get("timeout") or "600")
+    try:
+        seconds = float(row.get("timeout") or "600")
+    except (ValueError, TypeError):
+        raise ValueError("timeout 要用大於 0、最多 1e9 的秒數") from None
     if not math.isfinite(seconds) or not 0 < seconds <= 1e9:
-        raise ValueError("timeout 要 0～1e9 秒")
+        raise ValueError("timeout 要大於 0、最多 1e9 秒")
     if kind == "schedule":
         return bool(row.get("claimed")) or instant(row["at"]) <= now
     n, rounds = interval(row.get("every", ""))
@@ -54,9 +60,10 @@ def due(row, kind, round, now):
     delta = round - int(last) if rounds and last else (now - instant(last)).total_seconds() if last else None
     return delta is None or delta < 0 or delta >= n
 def warn(why):
-    print(why, file=sys.stderr)
-def step(node, round, now):
-    """處理一回合；now 是 datetime 或 ISO 字串，不自行取時間，測試可直接傳假時間。
+    print("aos7-routines: " + " ".join(str(why).splitlines()), file=sys.stderr)
+def step(node, round, now, unknown=None):
+    """unknown＝串列時（手動 ls --run）不印壞列（ls 會列）、把不確定收進去讓呼叫者決定退出碼。
+    處理一回合；now 是 datetime 或 ISO 字串，不自行取時間，測試可直接傳假時間。
     round=None 是人手動 `ls --run`：只看時間（秒型 routine 與 schedule），r 型跳過。回跑了幾件。"""
     now = instant(now)
     stamp = now.isoformat()
@@ -80,7 +87,7 @@ def step(node, round, now):
                                     and all(row.get(k, "") == item.get(k, "") for k in ("last_round", "last_time", "claimed")):
                                 if kind == "schedule" and row.get("claimed"):
                                     rows.remove(row)
-                                    warn("schedule %s 被打斷、不重跑" % row["name"])
+                                    warn("schedule %s 被打斷、不重跑。要再做請重新 add" % row["name"])
                                 else:
                                     row.update(last_round=rnd, last_time=stamp, last_code="running") if kind == "routines" else row.update(claimed=stamp)
                                     claimed.append(dict(row))
@@ -111,23 +118,34 @@ def step(node, round, now):
                     print(("routine %s%s code %s" % (row["name"], where, code)) if kind == "routines" else "schedule %s code %s" % (row["name"], code), flush=True)
                     edit_json(path, finish, timeout=1)
                 except (ValueError, KeyError, TypeError) as e:
-                    warn("%s 跳過列 %r：%s" % (kind, item, e))
+                    if unknown is None:
+                        warn("%s 跳過列 %r：%s。修好這列後下次心跳再試" % (kind, item, e))
         except (Unknown, OSError) as e:
-            warn("%s unknown：%s" % (kind, e))
+            if unknown is None:
+                warn("不確定：%s 清單未處理完（%s），表與已有執行證據留著。下次心跳再試" % (kind, e))
+            else:
+                unknown.append("%s（%s）" % (kind, e))
     return ran
 HELP = """把要做的事寫進 node 的清單，到時候自動跑。
   add  加一件：--every 10s（每隔一段時間做）或 --at +5s／ISO 時刻（只做一次）
   ls   看清單；加 --run 先把現在到期的立刻做掉（不必開 daemon）
   rm   刪一件
 間隔單位 s/m/h/d；r＝回合＝daemon 每醒一次，只有 daemon 開著才算。"""
+class NameConflict(Exception):
+    """鎖內撞名，確定不能新增。"""
+
 class Parser(argparse.ArgumentParser):
     def error(self, message):
-        self.print_usage(sys.stderr)
-        self.exit(1, message + "\n")
+        warn("參數不對：%s。例：aos7-routines add <node> hello --every 1m hello.sh；完整說明加 --help" % message)
+        self.exit(2)
 def main(argv=None):
     raw = sys.argv[1:] if argv is None else argv
     if not raw:
-        e, last = task_env(), 0
+        try:
+            e, last = task_env(), 0
+        except (KeyError, ValueError):
+            warn("沒給子命令，也不是心跳叫起來的任務。例：aos7-routines ls <node>；說明加 --help")
+            return 2
         while True:
             last = wait_tock(e["task"], last)
             step(e["node"], last, dt.datetime.now().astimezone())
@@ -148,13 +166,20 @@ def main(argv=None):
             p.add_argument("inst", metavar="program", help="要跑的東西：可執行檔、inst.json 或資料夾；相對路徑以 node 為準")
             p.add_argument("--timeout", default="600", help="每次最多跑幾秒（預設 600）")
     a = ap.parse_args(raw)
+    changing = False
     try:
         now = dt.datetime.now().astimezone()
         paths = {k: os.path.join(os.path.abspath(a.node), "wf", k + ".json") for k in KINDS}
         tables = {k: load(paths[k]) for k in KINDS}
         if a.op == "ls":
             if a.run:
-                if not step(os.path.abspath(a.node), None, now):
+                changing = True
+                unknown = []
+                ran = step(os.path.abspath(a.node), None, now, unknown)
+                if unknown:
+                    warn("不確定：%s 沒處理完，表與已有執行證據留著。照原樣再跑一次會接續" % "；".join(unknown))
+                    return 3
+                if not ran:
                     print("（現在沒有到期的事）")
                 now = dt.datetime.now().astimezone()
                 tables = {k: load(paths[k]) for k in KINDS}
@@ -187,41 +212,47 @@ def main(argv=None):
                     return None
                 found.append(True)
                 return dict(cur, rows=kept)
-            for path in paths.values():
-                edit_json(path, remove, timeout=1)
+            for kind, path in paths.items():
+                if tables[kind] is not None:
+                    changing = True
+                    edit_json(path, remove, timeout=1)
             if not found:
-                warn("清單裡沒有 %s" % a.name)
+                warn(("清單裡沒有 %s。用 aos7-routines ls %s 看有哪些" if any(t is not None for t in tables.values()) else "清單是空的，沒有 %s。用 aos7-routines ls %s 看清單") % (a.name, a.node))
                 return 1
             print("removed %s" % a.name)
             return 0
-        kind = "routines" if a.every else "schedule"
-        at = (now + dt.timedelta(seconds=interval(a.at[1:])[0])).isoformat() if a.at and a.at.startswith("+") and not a.at.endswith("r") else a.at
-        row = dict(name=a.name, inst=a.inst, timeout=a.timeout, **({"every": a.every} if a.every else {"at": instant(at).isoformat()}))
+        kind = "routines" if a.every is not None else "schedule"
+        try:
+            at = (now + dt.timedelta(seconds=interval(a.at[1:])[0])).isoformat() if a.at and a.at.startswith("+") and not a.at.endswith("r") else a.at
+            row = dict(name=a.name, inst=a.inst, timeout=a.timeout, **({"every": a.every} if a.every is not None else {"at": instant(at).isoformat()}))
+        except (ValueError, TypeError, OverflowError):
+            raise ValueError("at 要 +正整數加 s/m/h/d，或含日期的 ISO 時刻") from None
         due(row, kind, 0, now)
         if any(isinstance(r, dict) and r.get("name") == a.name for t in tables.values() if t for r in t["rows"]):
-            warn("名字 %s 已經在清單裡；先 rm 再 add" % a.name)
+            warn("名字 %s 已經在清單裡。先 aos7-routines rm %s %s 再 add，或換個名字" % (a.name, a.node, a.name))
             return 1
         def add(cur):
             cur = empty(kind) if cur is None else table(cur)
             if any(isinstance(r, dict) and r.get("name") == a.name for r in cur["rows"]):
-                raise ValueError("name 重複")
+                raise NameConflict(a.name)
             return dict(cur, columns=list(dict.fromkeys(cur.get("columns", empty(kind)["columns"]) + ["timeout"])), rows=cur["rows"] + [dict.fromkeys(empty(kind)["columns"], "") | row])
-        def install(cur):
-            cur = {"tasks": []} if cur is None else cur
-            if not isinstance(cur, dict) or not isinstance(cur.get("tasks"), list):
-                raise Unknown("tasks.json 格式不合")
-            if any(isinstance(t, dict) and t.get("name") == "routines" for t in cur["tasks"]):
-                return None
-            return dict(cur, tasks=cur["tasks"] + [dict(name="routines", mode="keep", argv=["python3", ENTRY])])
-        edit_json(os.path.join(a.node, ".aos", "tasks.json"), install, timeout=1)
+        changing = True
         edit_json(paths[kind], add, timeout=1)
         if not os.path.exists(os.path.join(a.node, a.inst)):
-            warn("警告：inst 不存在，仍已登記")
-        print("added %s %s %s" % ("routine" if a.every else "schedule", a.name, "every " + a.every if a.every else "at " + short(instant(row["at"]))))
+            warn("注意：%s 現在不存在，仍已登記。到時候還不在會跑失敗" % a.inst)
+        print("added %s %s %s" % ("routine" if kind == "routines" else "schedule", a.name, "every " + a.every if kind == "routines" else "at " + short(instant(row["at"]))))
+        print("要讓心跳自動跑：aos7-up 起的 node 已裝好；自己裝用 aos7-ctl add，見 routines 的 ADVANCED.md")
         return 0
-    except (Unknown, OSError) as e:
-        warn("unknown：%s" % e)
-        return 3
-    except (ValueError, KeyError, TypeError) as e:
-        warn(str(e))
+    except NameConflict:
+        warn("名字 %s 已經在清單裡。先 aos7-routines rm %s %s 再 add，或換個名字" % (a.name, a.node, a.name))
         return 1
+    except LockTimeout:
+        warn("不確定：清單正被別人改，%s。等一下照原樣再跑一次" % ("已完成的改動留著" if a.op == "rm" and found else "什麼都沒動"))
+        return 3
+    except (Unknown, OSError) as e:
+        warn("不確定：%s，%s。修好或移走有問題的檔後照原樣再跑一次" % (e, "表與可能已寫的改動留著" if changing else "清單沒改"))
+        return 3
+    except (ValueError, KeyError, TypeError, OverflowError) as e:
+        reason = str(e)
+        warn("%s。例：--every 10s、--at +5s 或 --at 2026-10-10T09:00" % reason)
+        return 2
