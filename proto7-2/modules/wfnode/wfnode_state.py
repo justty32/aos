@@ -1,0 +1,75 @@
+"""鎖內追加 STATE 與更新 NEXT-SESSION。"""
+import datetime as dt
+import fcntl
+import os
+import re
+import tempfile
+
+
+NEXT = '# NEXT-SESSION — 續行點\n\n下一次開場先讀最新一份 STATE；`aos7-wfnode state` 會更新本檔第一行連結\n\n（尚無）\n'
+def atomic_write(path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
+                                         delete=False) as stream:
+            temp = stream.name
+            stream.write(content)
+        os.replace(temp, path)
+    finally:
+        if temp and os.path.exists(temp):
+            os.unlink(temp)
+
+
+def _after_open():
+    """首次開檔窗口的測試 hook（呼叫時仍持有 handoffs 鎖）。"""
+
+
+def state(node, line):
+    if not (node / 'wf/tools/wf-lint.sh').is_file():
+        print('還沒 init')
+        return 2
+    if not line.strip() or '\n' in line or '\r' in line:
+        print('請給一行非空的進度')
+        return 2
+    override = os.environ.get('AOS7_WFNODE_NOW')
+    if override and not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}', override):
+        print('AOS7_WFNODE_NOW 請用 YYYY-MM-DDTHH:MM')
+        return 2
+    now = dt.datetime.fromisoformat(override) if override else dt.datetime.now()
+    day, time = now.strftime('%Y-%m-%d'), now.strftime('%H:%M')
+    handoffs = node / 'wf/handoffs'
+    handoffs.mkdir(parents=True, exist_ok=True)
+    lock = os.open(handoffs / '.state.lock', os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        path = handoffs / day / 'STATE.md'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o666)
+        try:
+            _after_open()
+            if os.fstat(fd).st_size == 0:
+                os.write(fd, f'# 續行點 {day}\n\n## 進度\n'.encode('utf-8'))
+            head = b'' if path.read_bytes().endswith(b'\n') else b'\n'
+            os.write(fd, head + f'- {time} {line}\n'.encode('utf-8'))
+        finally:
+            os.close(fd)
+        next_path = handoffs / 'NEXT-SESSION.md'
+        text = next_path.read_text(encoding='utf-8') if next_path.exists() else NEXT
+        lines = (text or NEXT).splitlines(keepends=True)
+        link = f'> 最新：[{day}/STATE.md]({day}/STATE.md)\n'
+        slot = next((i for i, value in enumerate(lines) if value.startswith('> 最新：')), None)
+        if slot is None:
+            slot = next((i for i, value in enumerate(lines) if value.strip() == '（尚無）'), None)
+        if slot is not None:
+            lines[slot] = link
+        else:
+            if not lines[0].endswith('\n'):
+                lines[0] += '\n'
+            lines.insert(1, link)
+        atomic_write(next_path, ''.join(lines))
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
+        os.close(lock)
+    print(f'已記到 wf/handoffs/{day}/STATE.md')
+    return 0
