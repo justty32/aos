@@ -44,3 +44,19 @@ A5 的 5 次失敗都能從 raw.json 證實：4 次「只回開場白」和 1 �
 - **A. 換掉 Codex 系統提示**：啟動 proxy 前設定環境變數 `CHATGPT_DEFAULT_INSTRUCTIONS`（litellm `llms/chatgpt/common_utils.py:256` 會讀它，目前的程序沒設）。例如改成一句「You are a helpful assistant. You have no tools; answer directly.」。好處是每次呼叫少大約 1.4k token（E1 說占 64%），模型也不會再以為自己在 Codex 裡。風險是 chatgpt 後端可能檢查 instructions：有些舊版 Codex 後端會拒絕非官方的 instructions。先用一個模型試打 200 再定案。代價是 astra 那 1408 的前綴 cache 也會跟著失效。
 - **B. 回報 LiteLLM 上游**：chat 橋接應該看 `phase`，把 `commentary` 丟掉或併進 final，串流也一樣。這沒辦法靠設定修。等上游修好或升級前，靠 aos 的第 1 條處理。
 - 套用 A 或升級 LiteLLM 之後，用 `probe.py` 重放一次（約 10 次呼叫）確認。
+
+## 修補後（MC 隊，分支 loop10/mc）
+
+做了三件事：llmcall 真傳輸與 `core/llm/src/llm.cpp` 改成取「最後一個 content 非空的 choice」，全部是空的才退回 `choices[0]`；被略過的開場白記進 `raw.json` 的 reply（`choices_n`，`skipped` 記每段的 index、字數、前 80 字）。回條的鍵順序是凍結的，所以這些不進回條。author 的 propose、審查、learn 三個 system 尾端都加上上面驗過的那句；learn 要的是條列，所以改成「第一個字元就是 -」。
+
+**真 AI 重放**：經 llmcall 打 `chatgpt-gpt-6-sol-high`，共 6 次，請求是 A5 `diag-sol-r1` 原樣。其中 4 次用舊 system，2 次用新 system。
+
+| 組 | 次數 | 有 2 個 choice | 回條 text 是完整 JSON | files 有 5 檔 |
+|---|---|---|---|---|
+| 舊 system（只靠取 choice 的修法） | 4 | 3 | 4/4 | 3/4 |
+| 新 system（兩層保險） | 2 | 0 | 2/2 | 2/2 |
+
+- 舊 system 那 3 次分段，回條拿到的都是 `choices[1]` 的 JSON（9.1～9.7k 字）。開場白（31～50 字）只留在 raw 的 `skipped`。修補前這 3 次會只拿到開場白。
+- orig-2 的答案是完整的 JSON，但 `files:{}`（370 字）。原因是模型以為自己在 Codex 裡、讀不到原型檔，也就是上面講的「另一個原因」，不是取錯 choice。加了新 system 之後 2/2 都正常。
+- token：6 次合計 54,804（每次 5.1k～10.8k）。
+- 證據：`evidence/litellm-truncation/after-fix.jsonl`（每次的 choice 數、略過段、text 長度、usage），重放腳本是 `after-fix-run.sh`。

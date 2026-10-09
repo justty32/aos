@@ -14,9 +14,9 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 |------|----------|
 | `core/llm/include/aos/llm.hpp` | 公開 API：message／options／CLI options，以及環境設定、參數解析、request／response JSON、`parse_response_model()` 與帶可選 `served_model` 出參的 `complete()` 介面。 |
 | `core/llm/include/aos/slot.hpp` | 公開槽 API：兩層 CPU 上限、取槽／自動放槽、`waiting-llm` 與槽狀態查詢。 |
-| `core/llm/src/llm.cpp` | 函式庫實作：讀 `AOS_LLM_*`、組 OpenAI messages request、用 libcurl POST `<base>/chat/completions`，驗 HTTP 並抽出 `choices[0].message.content` 與實際 `model`。 |
+| `core/llm/src/llm.cpp` | 函式庫實作：讀 `AOS_LLM_*`、組 OpenAI messages request、用 libcurl POST `<base>/chat/completions`，驗 HTTP 並抽出回覆文字（最後一個 content 非空的 choice；全空才用 `choices[0]`，因 LiteLLM 會把 sol 的開場白與答案拆成多個 choice）與實際 `model`。 |
 | `core/llm/src/slot.cpp` | 使用者層與世界層上限合併，以 `flock` 槽與數字優先度等待票限制各 CPU 並行數，並統計佔用與等待。 |
 | `core/llm/src/run.cpp` | `aos llm` CLI 層：完整 help、stdin prompt 或 `--messages` 檔案進站，處理 `--system`／endpoint／model／timeout／`--engine`／`--priority`，呼叫前取槽；`--slots` 顯示並行上限現況；端點實際模型不同時仍印回覆、另報兩個模型並回 1。 |
-| `core/llm/tests/test_llm.cpp` | 離線驗環境／CLI 參數、messages 與 response JSON、實際模型抽取，以及 help 不連端點。 |
+| `core/llm/tests/test_llm.cpp` | 離線驗環境／CLI 參數、messages 與 response JSON（含多 choice 取最後非空）、實際模型抽取，以及 help 不連端點。 |
 | `core/llm/tests/smoke_slots.sh` | 手動端到端 smoke：離線假端點驗槽串行、逾時退回、世界層限縮，以及 pi step 持有 provider 槽。 |
 | `core/llm/README.md` | 使用入口、預設 LM Studio endpoint／model、`--engine`／`--priority`／`--slots`、兩層並行上限設定與錯誤語意。 |

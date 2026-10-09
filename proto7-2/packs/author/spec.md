@@ -119,7 +119,7 @@ step 不改：表項起 `aos7-step run jobs/<job>`（keep、`max_live:1`、`rest
 ## 11. LLM 來源（--llm）
 
 - `propose <rid> --llm MODEL --budget DIR [--call C] [--reserve 1000000] [--deadline D] [--patience 5] [--auto]`；與 `--candidate` 互斥，`--llm` 必須帶 budget。`--prompt-out f` 只寫請求，成功退出 0，不呼叫、不記候選。
-- author 鎖外讀登記需求與白名單卡。system 要求只輸出一個 JSON 物件、只能組卡、不宣告執行屬性；user 含需求原文、卡的 argv／params／artifacts、候選 schema、§3／§4 展開與限制，不放 valid.json。排序鍵、固定分隔、UTF-8 序列化，內容與模型相同即同 bytes。
+- author 鎖外讀登記需求與白名單卡。system 要求只輸出一個 JSON 物件、只能組卡、不宣告執行屬性，尾端固定加「你沒有任何工具…第一個字元就是 {。」（sol 經 LiteLLM 會先講開場白；aos 學徒／審查同句，learn 改成「第一個字元就是 -。」）；user 含需求原文、卡的 argv／params／artifacts、候選 schema、§3／§4 展開與限制，不放 valid.json。排序鍵、固定分隔、UTF-8 序列化，內容與模型相同即同 bytes。
 - 請求＝`{"litellm":{"model":MODEL,"messages":[system,user]}}`，不設 max_tokens／temperature。預設 call_id＝`<rid>-<model 只留 [A-Za-z0-9_-]>-<請求 sha256 前8>`；前兩段合起來截至 55 字，尾端 `-<雜湊前8>` 一定保留（不同請求不撞 call_id）。重跑由 llmcall 重印回條；新生成由呼叫者明給新 `--call`。
 - 請求暫存檔交 `python3 <llmcall_bin> call DIR --holder author --call C --logical author/<rid> --request TMP --reserve R [--deadline D] --patience P`（cwd=node），用完刪除；讀 stdout 最後一行 JSON。
 - llmcall 退出 0／4、outcome 是 answered 且 text 是字串：UTF-8 bytes 原樣交既有 propose，不剝圍欄、不修復，三層驗證與作者帳語意不變。加 `llm` 回值：model、call_id、exit、outcome、usage、used、billing、reserve、receipt_path（llmcall receipt 絕對路徑，不存在則 null）。pending／overrun 照 llmcall 原值記錄。
