@@ -1,0 +1,5 @@
+# 算這週 AI 花費
+請算這週三個模型的總花費（美元，算到小數兩位），列算式。
+- sol-high：輸入 420 千 token、輸出 95 千 token；每千 token 輸入 0.002、輸出 0.008
+- luna：輸入 1300 千 token、輸出 210 千 token；每千 token 輸入 0.0004、輸出 0.0016
+- astra-high：輸入 180 千 token、輸出 60 千 token；每千 token 輸入 0.005、輸出 0.02

@@ -1,0 +1,18 @@
+18:57:35 up rc=0 bob 起好了：工作簿 ✓ 信箱 ✓ 技能 3 本 ✓ AI：chatgpt-gpt-6-sol-high / 另開一個終端機問它：aos7-up ask /tmp/aos-longtask.avjslz2y/bob '一句話' / 看狀態：aos7-up status /tmp/aos-longtask.avjslz2y/bob　停：aos7-up stop /tmp/aos-longtask.avjslz2y/bob
+18:57:35 寄 01 rc=0 寫週報：aos 試營運報告 12 節，分 13 回合做完（每回合寫一節，第 
+18:57:36 寄 02 rc=0 把試營運六個數字整理成一張表
+18:57:37 寄 03 rc=0 新手 FAQ，分 2 回合做：先列最常卡的三件事，再寫成 FAQ
+18:57:38 寄 04 rc=0 回信前先跑全套測試：列出交件前的測試檢查清單
+18:57:40 寄 05 rc=0 檢查報告文檔的壞連結與佔位
+18:57:41 寄 06 rc=0 會議紀錄整理，分 3 回合做：決議、待辦、風險各一回合
+18:57:42 寄 07 rc=0 把八條使用者回饋分類
+18:57:43 寄 08 rc=0 英文摘要，分 2 回合做：先草稿再定稿
+18:57:44 寄 09 rc=0 算這週 AI 花費
+18:57:45 寄 10 rc=0 下週計畫，分 2 回合做：先排優先序，再寫成五項計畫
+18:57:46 寄 11 rc=0 照你交的週報第 5 節，寫三句話給主管
+18:57:48 寄 12 rc=0 附錄：算各隊人均產出
+18:58:18 SIGKILL（idle）[238013]（第 12 回合，進行中的 call []）
+19:00:11 12 封都有終局回信
+19:00:11 總秒數 156.6
+19:00:16 stop rc=0 心跳停了 / 檔案：/tmp/aos-longtask.avjslz2y/bob、/tmp/aos-longtask.avjslz2y/you、/tmp/aos-longtask.avjslz2y/.aosd；全清：先停心跳，再 rm -r /tmp/aos-longtask.avjslz2y/bob /tmp/aos-longtask.avjslz2y/you /tmp/aos-longtask.avjslz2y/.aosd
+19:00:16 房子打包好：/home/lorkhan/repo/simple_tools/aos/proto7-2/notes/play/2026-10-09-longtask/run3-kill-idle/house.tar.gz（原房子 /tmp/aos-longtask.avjslz2y）
