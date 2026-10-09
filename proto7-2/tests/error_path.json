@@ -82,8 +82,7 @@
    "team": "ER-routines",
    "name": "aos7-routines",
    "entry": "modules/routines/aos7-routines",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-routines）"
+   "unsure": {"argv": ["rm", "n", "x"], "files": {"n/wf/routines.json": {"contract": "wf-table/1", "columns": ["name"], "rows": []}}, "lock": ["n/wf/routines.json.lock"]}
   },
   {
    "pack": "skills",
