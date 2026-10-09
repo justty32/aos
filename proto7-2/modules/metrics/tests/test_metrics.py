@@ -170,6 +170,155 @@ class TestMetrics(unittest.TestCase):
                              'events/must.active.jsonl': rows[0] + '\n{bad\n[]\n' + rows[1] + '\n{'})
         self.assertEqual((s['calls'], s['flows'][0]['seconds'], s['seconds']['open']), (0, 2, 0))
         self.assertEqual(s['unreadable'], ['events/must.active.jsonl'])
+    def run_metrics(self, *args):
+        p = subprocess.run([sys.executable, '-B', str(PACKAGE / 'aos7-metrics'), *map(str, args)], capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        return p.stdout
+    def test_by_baseline(self):
+        node = BASELINE / 'loop-gpt-6-sol'
+        s = json.loads(self.run_metrics('job', node, '--by', 'model', '--json'))['scopes'][0]
+        self.assertEqual(s['by'], dict(field='model', groups=[dict(key='chatgpt-gpt-6-sol', calls=1, used=2590, overrun=0)]))
+        self.assertEqual(s['ledger'], dict(used=2590, receipts=2590, diff=0, gaps=0, bad=0, unbooked=0, unbooked_used=0))
+        data = json.loads(self.run_metrics('job', *sorted(BASELINE.iterdir()), '--by', 'model', '--json'))
+        self.assertEqual(len(data['scopes']), 13)
+        groups = data['total']['by']['groups']
+        self.assertEqual(len(groups), 6)
+        self.assertEqual(sum(g['calls'] for g in groups), sum(s['calls'] for s in data['scopes']))
+        self.assertEqual(sum(g['used'] for g in groups), 32388)
+        self.assertEqual(groups[4], dict(key='chatgpt-gpt-6-sol', calls=4, used=9449, overrun=0))
+        for s in data['scopes']:
+            # smoke 沒有 ledger；其他 12 個 scope 都已結帳、帳差為 0。
+            self.assertEqual(s['ledger']['diff'], None if s['scope'] == 'litellm-smoke' else 0)
+            self.assertEqual(s['ledger']['gaps'], 0)
+        # 合計只比有帳的呼叫：smoke 的 1649 不算進回條，帳差仍 0。
+        self.assertEqual(data['total']['ledger'], dict(used=30739, receipts=30739, diff=0, gaps=0, bad=0, unbooked=1, unbooked_used=1649))
+        total_line = self.run_metrics('job', *sorted(BASELINE.iterdir()), '--by', 'model').splitlines()[-7]
+        self.assertTrue(total_line.endswith('｜帳差 0（帳 30739－回條 30739；另 1 次呼叫沒帳、用 1649 token）、缺口 0'), total_line)
+    def test_by_default_compatibility(self):
+        nodes = sorted(BASELINE.iterdir())
+        output = self.run_metrics('job', *nodes)
+        readme = (PACKAGE / 'README.md').read_text()
+        blocks = readme.split('```text\n')
+        for before, text in zip(blocks, blocks[1:]):
+            if '--by' in before.rsplit('```sh', 1)[-1]:
+                continue  # --by 範例是細節行，不是預設行
+            for line in text.split('```')[0].splitlines():
+                if not line.startswith('…'):
+                    self.assertIn(line + '\n', output)
+        self.assertEqual(self.run_metrics('job', BASELINE / 'loop-gpt-6-sol'),
+                         'loop-gpt-6-sol：1 件工作｜每件用 2590 token｜同時最多 1 個在問模型｜花 11.486 秒｜重試 0 次\n')
+        times = [1.67, 8.739, 15.291, 9.167, 9.637, 6.918, 6.806, 7.328, 8.232, 11.486, 10.799, 10.157, 9.043]
+        used = [1649, 2504, 2688, 2505, 2502, 2551, 2499, 2558, 2566, 2590, 2566, 2627, 2583]
+        expected = ''.join(f'{n.name}：1 件工作｜每件用 {u} token｜同時最多 1 個在問模型｜花 {t} 秒｜重試 0 次\n' for n, u, t in zip(nodes, used, times))
+        expected += '合計：13 件工作｜平均每件用 2491 token｜同時最多 6 個在問模型｜平均花 8.867 秒（最長 15.291 秒）｜重試 0 次\n'
+        self.assertEqual(output.encode(), expected.encode())
+        data = json.loads(self.run_metrics('job', *nodes, '--json'))
+        for s in data['scopes'] + [data['total']]:
+            self.assertNotIn('by', s)
+            self.assertIn(s['ledger']['diff'], (0, None))
+        self.assertEqual(data['total']['ledger']['diff'], 0)
+    def test_by_usage_scenario(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'node'
+            files = {'budget/b/ledger.json': {'used': 13}, 'llmcall/b/bad/request.json': '{'}
+            for cid, model, holder, at, receipt in [
+                ('a', 'm1', 'h1', '2026-10-09T23:20:00+08:00', {'used': 3}),
+                ('b', 'm2', 'h2', '2026-10-10T00:20:00+08:00', {'used': 7, 'overrun': 2}),
+                ('c', 'm1', 'h2', '2026-10-10T00:30:00+08:00', None)]:
+                prefix = f'llmcall/b/{cid}/'
+                files[prefix + 'request.json'] = {'request': {'litellm': {'model': model}}, 'holder': holder}
+                files[prefix + 'raw.json'] = {'at': at}
+                if receipt is not None:
+                    files[prefix + 'receipt.json'] = receipt
+            self.evidence(root, files)
+            (root / 'llmcall/b/bad/request.json').write_text('{')
+            (root / 'llmcall/b/a/request.json').chmod(0o440)
+            def snapshot():
+                return {p.relative_to(root).as_posix(): (p.stat().st_mode, p.read_bytes() if p.is_file() else None) for p in [root, *root.rglob('*')]}
+            before = snapshot()
+            expected = {
+                'model': [('m1', 2, 3, 0), ('m2', 1, 7, 2)],
+                'holder': [('h1', 1, 3, 0), ('h2', 2, 7, 2)],
+                'day': [('2026-10-09', 1, 3, 0), ('2026-10-10', 2, 7, 2)],
+                'hour': [('2026-10-09T23', 1, 3, 0), ('2026-10-10T00', 2, 7, 2)]}
+            for field, rows in expected.items():
+                with self.subTest(field=field):
+                    data = json.loads(self.run_metrics('job', root, '--by', field, '--json'))
+                    s = data['scopes'][0]
+                    self.assertEqual(s['by'], dict(field=field, groups=[dict(zip(('key', 'calls', 'used', 'overrun'), row)) for row in rows]))
+                    self.assertEqual(s['unreadable'], ['llmcall/b/bad/request.json'])
+                    self.assertEqual(s['ledger'], dict(used=13, receipts=10, diff=3, gaps=2, bad=0, unbooked=0, unbooked_used=0))
+                    self.assertEqual(data['total']['by'], s['by'])
+                    self.assertEqual(data['total']['ledger'], s['ledger'])
+            detail = self.run_metrics('job', root, '--detail')
+            self.assertTrue(detail.rstrip().endswith('｜重試 0｜帳差 3（帳 13－回條 10）、缺口 2'))
+            self.assertEqual(snapshot(), before)
+    def test_by_fallbacks_and_ledgers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            files = {'budget/b/ledger.json': {'used': 5, 'ops': {}}, 'budget/c/ledger.json': {'used': 8}}
+            # raw → done → receipt.settle → op.settle → op.reserve → '-'，不把數字当日期。
+            for i, at in enumerate(['2026-10-09T23:00:00-05:00'] * 5 + [None]):
+                cid = str(i); prefix = f'llmcall/b/{cid}/'
+                files[prefix + 'request.json'] = {'request': {'litellm': {'model': 7}, 'model': 'fallback'} if i == 0 else {}, 'endpoint': 'endpoint' if i == 1 else None}
+                files[prefix + 'raw.json'] = {'at': at if i == 0 else 123}
+                op = {'key': {'request': cid, 'holder': 'ledger-holder'}, 'settle': {'overrun': 2}}
+                files['budget/b/ledger.json']['ops'][cid] = op
+                if i == 1:
+                    files[f'budget/b/gateway/{cid}.json'] = {'call_id': cid, 'stage': 'done', 'at': at, 'used': 4}
+                else:
+                    files[prefix + 'receipt.json'] = {'used': float('nan') if i == 5 else 1, 'overrun': float('inf') if i == 5 else 0,
+                                                    'settle': {'at': at if i == 2 else None}}
+                if i in (3, 4):
+                    op['settle' if i == 3 else 'reserve'] = {'at': at, 'overrun': 2}
+            # Receipt 優先於 gateway；無 request 的 ledger call 不加入分組。
+            files['budget/b/gateway/0.json'] = {'call_id': '0', 'stage': 'done', 'used': 99, 'overrun': 99}
+            files['budget/b/ledger.json']['ops']['orphan'] = {'key': {'request': 'orphan'}}
+            self.evidence(root, files)
+            for field, expected in [('model', [('?', 4, 3, 0), ('endpoint', 1, 4, 2), ('fallback', 1, 1, 0)]),
+                                    ('holder', [('ledger-holder', 6, 8, 2)]),
+                                    ('day', [('-', 1, 0, 0), ('2026-10-09', 5, 8, 2)]),
+                                    ('hour', [('-', 1, 0, 0), ('2026-10-09T23', 5, 8, 2)])]:
+                s = json.loads(self.run_metrics('job', root, '--by', field, '--json'))['scopes'][0]
+                self.assertEqual(s['by']['groups'], [dict(zip(('key', 'calls', 'used', 'overrun'), row)) for row in expected])
+                # 回條只算真 receipt（call 1 只有 gateway done → 不算回條、算缺口）；call 1 超支再算一個缺口。
+                self.assertEqual(s['ledger'], dict(used=13, receipts=4, diff=9, gaps=2, bad=0, unbooked=0, unbooked_used=0))
+            # 帳檔在卻壞（used 非整數或整檔壞）→ 帳差不明，不能當成沒帳而報 0。
+            (root / 'budget/d').mkdir()
+            (root / 'budget/d/ledger.json').write_text(json.dumps({'used': True}))
+            (root / 'budget/e').mkdir()
+            (root / 'budget/e/ledger.json').write_text('{')
+            data = json.loads(self.run_metrics('job', root, root, '--json'))
+            self.assertEqual(data['total']['ledger'], dict(used=None, receipts=8, diff=None, gaps=4, bad=4, unbooked=0, unbooked_used=0))
+            self.assertIn('｜帳差 不明（2 個帳檔讀不了）、缺口 2', self.run_metrics('job', root, '--detail'))
+            for b in ('b', 'c', 'd', 'e'):
+                (root / f'budget/{b}/ledger.json').unlink()
+            data = json.loads(self.run_metrics('job', root, root, '--json'))
+            self.assertEqual(data['total']['ledger'], dict(used=None, receipts=0, diff=None, gaps=2, bad=0, unbooked=12, unbooked_used=8))  # 帳刪了，op 的超支也跟著不見
+            self.assertIn('｜帳差 無帳、缺口 1', self.run_metrics('job', root, '--detail'))
+    def test_by_cli(self):
+        cli = [sys.executable, '-B', str(PACKAGE / 'aos7-metrics')]
+        p = subprocess.run(cli + ['job', str(BASELINE), '--by', 'bogus'], capture_output=True, text=True)
+        self.assertEqual((p.returncode, p.stdout, len(p.stderr.splitlines())), (2, '', 1))
+        self.assertTrue(p.stderr.startswith('aos7-metrics: '))
+        text = self.run_metrics('job', BASELINE / 'loop-gpt-6-sol', '--by', 'model')
+        self.assertEqual(text.splitlines()[1], '　　model chatgpt-gpt-6-sol：1 次呼叫、用 2590 token、超支 0')
+        self.assertIn('｜帳差 0（帳 2590－回條 2590）、缺口 0', text.splitlines()[0])
+        multi = self.run_metrics('job', BASELINE / 'loop-gpt-6-sol', BASELINE / 'loop-gpt-6-sol-r2', '--by', 'model')
+        self.assertEqual(multi.splitlines()[-1], '　　model chatgpt-gpt-6-sol：2 次呼叫、用 5217 token、超支 0')
+        help_text = self.run_metrics('--help')
+        self.assertIn('FIELD 是 model／holder／day／hour', ' '.join(help_text.split()))
+        self.assertIn('與帳差（帳上 used 減有帳呼叫的回條合計）、缺口', help_text)
+        self.assertLessEqual(len(help_text.splitlines()), 30)
+    def test_usage_stub_redirects(self):
+        # 舊 aos7-usage 已封存到 archive/usage/，原處只留轉址：一行、退 1、不讀參數。
+        stub = PACKAGE.parents[1] / 'packs/usage/bin/aos7-usage'
+        p = subprocess.run([sys.executable, '-B', str(stub), str(BASELINE)], capture_output=True, text=True)
+        self.assertEqual((p.returncode, p.stdout), (1, ''))
+        self.assertEqual(p.stderr, f'aos7-usage: 這個工具已停用，功能併進 aos7-metrics。看每個模型用多少，從 repo 根跑：python3 proto7-2/modules/metrics/aos7-metrics job {BASELINE} --by model（說明見 proto7-2/modules/metrics/README.md）\n')
+        p = subprocess.run([sys.executable, '-B', str(stub)], capture_output=True, text=True)
+        self.assertEqual((p.returncode, p.stdout, len(p.stderr.splitlines())), (1, '', 1))
+        self.assertIn('aos7-metrics job PATH --by model', p.stderr)
     def test_edges(self):
         a, b = metrics.stamp('2026-10-09T00:00:00+00:00'), metrics.stamp('2026-10-09T08:00:00+08:00')
         self.assertEqual(metrics.parallel([(a,b), (a,None)]), 1)
