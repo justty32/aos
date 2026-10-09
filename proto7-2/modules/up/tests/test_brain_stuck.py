@@ -188,7 +188,7 @@ class BrainStuckTests(DaemonCase):
         self.send('排隊的信')
         for status in ('NEEDS-USER', 'BLOCKED'):
             self.cli('modules/mail/aos7-mail', 'send', 'bob', 'you', status, status, '--root', self.root)
-        expected = ('信：bob 收到 3 封要辦的信，辦完 1 封、正在辦 1 封、排隊 1 封；你的信箱有 3 封回信沒看'
+        expected = ('信：bob 收到 3 封要辦的信，回過信 1 封、正在辦 1 封、排隊 1 封；你的信箱有 3 封回信沒看'
                     f'（1 封要你決定、1 封說卡住了；信在 {self.root}/you/inbox，每封都寫了怎麼辦，照做或用 ask 再寄一封）')
         self.assertEqual(self.up_status()[1], expected)
         unsure = self.node / 'brain/unsure.json'

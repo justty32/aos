@@ -172,8 +172,9 @@ def cleanup_hint(node):
         # 有 .aos/ 的都算 node（不論是不是 up 起的）：別的 node 還在用 you 與 .aosd
         if not any(p != node and (p / '.aos').is_dir() for p in entries):
             targets += [house / 'you', house / '.aosd']
-    command = 'rm -r ' + ' '.join(shlex.quote(str(p)) for p in targets)
-    return (f'要收掉：先在視窗 1 按 Ctrl-C 停心跳，再 {command}' if alive(house) else
+    what = '整個資料夾' if len(targets) == 1 and targets[0] == house else '這幾個資料夾'
+    command = f'刪掉{what}：rm -r ' + ' '.join(shlex.quote(str(p)) for p in targets)
+    return (f'要收掉：先在視窗 1 按 Ctrl-C 停心跳，再{command}' if alive(house) else
             f'要收掉：{command}')
 
 
@@ -195,7 +196,7 @@ def status(node):
     replies = letters(node.parent / 'you/inbox')
     needs = sum(v.get('status') == 'NEEDS-USER' for v in replies.values())
     blocked = sum(v.get('status') == 'BLOCKED' for v in replies.values())
-    line = (f'信：{node.name} 收到 {total} 封要辦的信，辦完 {done} 封' if total else
+    line = (f'信：{node.name} 收到 {total} 封要辦的信，回過信 {done} 封' if total else
             f'信：{node.name} 還沒收到要辦的信')
     if doing:
         line += '、正在辦 1 封'
@@ -219,7 +220,7 @@ def status(node):
     count = sum(s.startswith('- ') for rel in ('SESSION-LOG.md', 'WAIT_USER.md')
                 for s in text(node / 'wf' / rel).splitlines())
     check = call('modules/wfnode/aos7-wfnode', 'check', node)
-    print(f'工作簿：還有 {count} 件事沒做完；停在：{state(node, titles)}' +
+    print(f'工作簿：最後記下：{state(node, titles)}' + (f'；還有 {count} 件事沒做完' if count else '') +
           (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if check.returncode else ''))
     print(f'技能：{skill_count(node)} 本')
     calls = sum(p.is_file() for p in (node / 'llmcall/llm').glob('*/raw.json'))
@@ -228,7 +229,7 @@ def status(node):
         used = json.loads(budget.stdout).get('used', '—') if budget.returncode == 0 else '—'
     except ValueError:
         used = '—'
-    usage = f'讀寫約 {used} 字' if isinstance(used, (int, float)) else '讀寫字數不明'
+    usage = f'用量約 {used} 字（讀加寫）' if isinstance(used, (int, float)) else '用量不明'
     print(f'AI：{settings.get("model") or "假 AI（不連網、不花錢，照抄你的信回你）"}；問過 {calls} 次，{usage}')
     print(cleanup_hint(node))
     return 0
