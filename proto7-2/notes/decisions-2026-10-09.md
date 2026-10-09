@@ -177,3 +177,6 @@
 - C｜skills 回改：沒開帳時 pick 自動改本機關鍵字挑（不問 AI、不花錢），印一行提示；有帳或給 `--budget` 才問 AI。新手第 1 輪過關 7.4（Haiku 7.4／luna 8.6）、約 3 分鐘、4 概念
 - C｜events 第 4 輪：README 照新慣例只留五個詞＋第一次跑，其餘搬 ADVANCED.md；Haiku 7.4／luna 8.8 分數過。概念數照「只算 README 列的」為 5，**頂層判過**（Haiku 數 9 是把輸出欄位和自動帶的值都算進去）
 - C｜頂層：events 剩兩個介面卡點要修，排進架構回頭審的第二波：加 `aos7-events ack` 子命令（`read --ack` 照舊可用）、不帶子命令的 `--help` 只列給人用的指令（取樣器選項移到進階）
+- A｜架構回頭審（Fable）：12 張意圖卡 [intents/](intents/README.md)；**全 aos 統一退出碼只留 5 個**：0 做到了／1 做不到（知道為什麼）／2 你給的不對／3 不知道（證據留著、再跑會接續）／4 做到了但帳沒清（只 llmcall 用）；錯誤訊息一律 stderr 一行「指令名: 發生什麼。怎麼辦」，機器看的 JSON 欄位一個不改 → [blueprint-errors](blueprint-errors.md)
+- A｜**跨包副作用一律歸 aos7-up**：各包不再順手動別包的檔（routines add 不再改 tasks.json、mail send 不在對方 node 建 events 夾、skills pick 不碰帳的鎖檔）
+- B｜要改數字的只有 author（5＝滿→1 等）、三關檢查器、events（滿 3→1）；llmcall／budget 凍結介面零衝突；不做共用錯誤函式庫
