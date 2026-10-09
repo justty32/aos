@@ -2,7 +2,7 @@
 
 ← [proto7-2 README](../README.md)「測試」一節（從 README 拆出，內容原樣）；怎麼跑見那裡。
 
-離線、純標準庫，556 項約 300 秒（10-09 下午 I2 收尾在 a1be11b4 實跑 ×3 全過，292～305 秒；之後的 V2 等隊另加測試、由 I3 重數；含 events、author 兩包；`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；要逐條規則都命中用 `_matrix.Fault.check_rules()`，T8-07）。核心測試在 `tests/core/`，模組包的在 `modules/<包>/tests/`，上層任務包的在 `packs/<包>/tests/`，counter／歷史 module 的在 `modules/tests/`；共用工具（`base.py`、`_matrix.py`、`_proc.py`、測試鉤子 `_hooks.py`）留在 `tests/`。各資料夾的測試檔名要唯一。每個測試類別的 docstring 開頭標類別：`〔core〕`、`〔<包名>〕`（control、subd、once_retry、diag、tools、observe）或 `〔misuse M-<契約卡號>〕`（誤用造成的，照[組件契約藍圖](../notes/component-contracts.md)，之後隨精簡刪掉）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
+離線、純標準庫，618 項約 300 秒（10-09 第三段 I3 收尾在 41fc7f11 實跑 ×3 全過，290～310 秒；比 I2 的 556 多 V2 5、V1 9、B2 13、G1 35；含 events、author、llmcall 三包；`test_matrix*.py` 是 A2／A3 回歸矩陣，每個故障注入案例都斷言故障確實命中；要逐條規則都命中用 `_matrix.Fault.check_rules()`，T8-07）。核心測試在 `tests/core/`，模組包的在 `modules/<包>/tests/`，上層任務包的在 `packs/<包>/tests/`，counter／歷史 module 的在 `modules/tests/`；共用工具（`base.py`、`_matrix.py`、`_proc.py`、測試鉤子 `_hooks.py`）留在 `tests/`。各資料夾的測試檔名要唯一。每個測試類別的 docstring 開頭標類別：`〔core〕`、`〔<包名>〕`（control、subd、once_retry、diag、tools、observe）或 `〔misuse M-<契約卡號>〕`（誤用造成的，照[組件契約藍圖](../notes/component-contracts.md)，之後隨精簡刪掉）。測試起的子程序一律**先收程序、再刪空間**（`tests/_proc.py` 的 `track`／`reap`，`tests/base.py` 收尾時再掃一次環境變數 `AOS7_ROOT` 是暫存根的程序）；暫存根在 `/tmp/aos72-test-*`，跑完會刪。
 
 | 檔 | 測什麼 |
 |---|---|
@@ -17,9 +17,11 @@
 | `packs/step/tests/test_step.py` | **step 任務包**：步驟表直譯器、槽外結果檔、檢查器；直譯器各中斷點接回不多派、unknown 不誤報、耐性、pause、wake、restart_on_end、close；loop7 S：run 步 `unknown_codes`（A8-10(b)）、過期 intent 走 on_unknown（R8-13）、重送額度記 request 層 `resends`（R8-14）、補加只准同回合（R8-22）、啟動清死暫存檔（C8-03）、三個 crash 點先驗 exit -9（T8-02） |
 | `packs/adapt/tests/test_adapt_unit.py`、`test_adapt_flow.py` | **adapt 任務包**：轉換鏈與誤差界、三組流速、來源 pause／重開／重建、壞來源檔、dst pause、任務被殺接回、門檻邊界、step `num` 條件吃暫存器、300 回合檔數不長；數值精確度（A8：精確十進位鏈、發布不失真、門檻精確比、超出 float 範圍 out_of_range） |
 | `packs/budget/tests/test_budget_ledger.py`、`test_budget_step.py` | **budget 任務包**：grant／帳／入口，競爭、各持久點真 SIGKILL、效期與時鐘、獨立核帳（可用＋在途＋已用＝初始）、接 step 的同 request 不重扣；loop7 B：payload／重播回條讀不到退 3（A8-08）、加權成本（D6）、`gateway/` 死暫存檔（C8-03）、fakeapi 開 `unknown_codes [3]` 重送同 request（A8-10）、崩潰核帳在重起前快照（T8-04） |
-| `modules/events/tests/test_events_store.py` | **事件保存包** 保存端與取樣器：鎖內 append、恢復、輪替與清段、ack、四個保存窗口真 SIGKILL 各 ×3、300 回合檔數 ≤12、keep 上限 4、astra E1 審查回歸 |
+| `packs/budget/tests/test_budget_partial.py` | budget **部分結算**（B2，blueprint-llm2 §4）：U<R／U=R／U=0 與重播、壞 used、usage 缺留 pending、U>R 結算 R 記 overrun（含舊帳）、證據綁定、cancel 只對自己入口的 intent、兩件搶最後額度（reserve／call 各一）、fakeapi 行為不變；獨立重放 ledger 核帳 |
+| `modules/events/tests/test_events_store.py` | **事件保存包** 保存端與取樣器：鎖內 append、恢復、輪替與清段、ack、四個保存窗口真 SIGKILL 各 ×3、300 回合檔數 ≤12、keep 上限 4、astra E1 審查回歸；V2：status 去重跨重起只記一筆（`status_last`，含整行已寫、未存就被殺）、截半行前後被殺 torn 不少記不重記（`torn_cut`，壞值不覆寫） |
 | `modules/events/tests/test_events_read.py` | 事件保存包 讀者與發布：手寫 fixture 驗無鎖讀、壞尾不算、洞先重列再判淘汰（只認 `dropped_upto`）、游標不跨未證明的洞、`--ack`；發布 CLI 退出碼、示範發布者被殺不推進進度 |
 | `packs/author/tests/test_author.py` | **author 任務包**（LLM 作者第一刀，假候選）：需求同文重送／異文衝突、七份候選恰一合法、三層驗證與確定性編譯、symlink 與路徑逃逸、發布三個中斷點各殺三次不重複登記、合併保留別項、同需求最多兩版、answer／close 與有界清理 |
+| `packs/author/tests/test_author_events.py` | author 任務包 **必讀通道收單**（V1，`send`／`intake`）：回條寫成後 ack 前被殺 ×3 不重做、回條前被殺重讀同一筆、must 滿不算送出、同 rid 異文 conflict 與壞 payload 照樣 ack 不卡後續、讀到 unknown 不算消費、回條暫存檔清掃 |
 | `packs/llmcall/tests/test_llmcall.py` | **llmcall 任務包**（LLM 單次呼叫閘道，假傳輸）：八個崩潰點同 call 各殺三次後重跑 sends≤1、一 reserve 至多一 settle（F-01／F-02）、token 計量 U=R／缺 usage pending／搶最後額度（F-03）、逾時與睡眠中殺整組、adopt 遲到回覆（F-04）、固定請求衝突不寫檔、壞輸入退出 2、部分結算 1000／300／120、overrun 帳頂累計、budget cancel 對 llm.fake intent 退 3 |
 | `modules/audit/tests/test_audit_wrapper.py`、`test_audit_allow_threads.py` | 稽核包：包裝過的任務寫檔有紀錄；`AOS7_AUDIT_ALLOW` 只放寬自己 node 內的巢狀邊界、每次重讀（N-66／D9）；多 thread 同時寫不漏記（R8-25） |
 | `modules/control/tests/test_control.py` | 控制包：restart（同槽新 run、state 接得上、加掛帶過去）、reload 與拒絕、壞表不 kill、req_id 去重、請求端／tick／tock 在交接點被殺只重起一次 |
