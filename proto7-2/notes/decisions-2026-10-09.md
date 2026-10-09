@@ -250,3 +250,5 @@
 - C｜一鍵入口小修：「起好了」那幾行印出時被 Ctrl-C 不再誤報；dispatch lessons 第 13 條（別用 pgrep -fc 數全套份數）
 - B｜跨信記憶意圖卡 [brain-memory](intents/brain-memory.md)：信結案時回信全文存 `notes/done/<id>.md`、INDEX 一行一件（最多 50 行）；每回合固定附 INDEX，信提到前件才附那一份（≤3000 字）；AI 可回「要檔案：<id>」下回合附上；不用向量檢索、不給工具
 - B｜本機挑技能意圖卡 [skills-local-pick](intents/skills-local-pick.md)：L 的 17 筆裡 15 筆正解是「不挑」，變準的關鍵是**敢說 none**；技能可寫 `triggers:`／`not_for:`，沒命中就不挑；有帳且拿不準才問 AI
+- C｜心跳可設定：`aos7-up <node> --interval 秒 --early／--fixed`，存進 up.json、重跑沿用；預設仍 1 秒固定；只寫在 ADVANCED（新手面不加概念）
+- 待修｜重跑 aos7-up 會整份重寫 up.json，人手加的 progress_every／stall／max_steps／compact 會被洗掉；`test_call_interrupt_kills_grandchild` 讀 /proc 時程序剛好被收走的時序問題（偶發）→ 排下一個 up 小修
