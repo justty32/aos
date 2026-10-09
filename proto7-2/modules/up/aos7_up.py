@@ -130,13 +130,14 @@ def up(node, model, detached):
                     raise UpError(3, f'不確定：15 秒內沒看到 {node.name} 被叫醒，已裝的檔案留著。照原樣再跑 aos7-up {node} 會接續')
                 time.sleep(.05)
         ai = f'AI：{settings["model"]}' if settings['model'] else '假 AI'
-        print(f'{node.name} 起好了：工作簿 ✓ 信箱 ✓ 技能 {skill_count(node)} 本 ✓ {ai}', flush=True)
-        print(f"另開一個終端機問它：aos7-up ask {node} '一句話'", flush=True)
-        print(f'看狀態：aos7-up status {node}　停：' + (f'aos7-up stop {node}' if detached else 'Ctrl-C'), flush=True)
+        # 心跳已起、node 已醒：先記交棒，三行 print 中途被中斷也照交棒後收尾
         handed = True
-        if detached:
-            return 0
         try:
+            print(f'{node.name} 起好了：工作簿 ✓ 信箱 ✓ 技能 {skill_count(node)} 本 ✓ {ai}', flush=True)
+            print(f"另開一個終端機問它：aos7-up ask {node} '一句話'", flush=True)
+            print(f'看狀態：aos7-up status {node}　停：' + (f'aos7-up stop {node}' if detached else 'Ctrl-C'), flush=True)
+            if detached:
+                return 0
             watch(node, daemon)
         except KeyboardInterrupt:
             pass
