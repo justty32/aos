@@ -1,0 +1,135 @@
+{
+ "contract": "wf-table/1",
+ "source": "team-model.md 二、三節的暫定列",
+ "extracted": "2026-10-09",
+ "method": "同一份唯讀審查任務（英文、≤5 條、附行號與修法）：/tmp 複本只放 proto7-2/lib/aos7_proc.py 與 aos7_fs.py（main 510dd134），不給答案。主判準＝藍圖 blueprint-loop7-items.json 的 R8-11（is_runner 任一參數尾綴即當 runner）、R8-12（stat 文字嚴格解碼漏出 UnicodeDecodeError）；副判準再加同檔已知的 R8-29（kill_node 打裸 pgid）、K-04（送訊號前一次快照、清場中新開的群組漏收）。每模型一次、不重試。",
+ "caveats": "只一題、各一次，樣本極小；codex 9 個同時並行跑（預設推理強度，codex-cli 0.161.0，`codex exec -m <slug> -s read-only --skip-git-repo-check -C <複本> --color never -o <out> - < task.md`），秒數含排隊；Claude 端 tokens 是 Agent 子代理總量（含系統提示與工具），不能直接跟 codex 的 tokens used 比。",
+ "columns": [
+  "side",
+  "model",
+  "secs",
+  "tokens",
+  "hits_r8_11_12",
+  "hits_known4",
+  "note"
+ ],
+ "rows": [
+  {
+   "side": "codex",
+   "model": "gpt-6.1-sol",
+   "secs": 63,
+   "tokens": 22009,
+   "hits_r8_11_12": "2/2",
+   "hits_known4": "4/4",
+   "note": "四條已知全中（R8-11、R8-12、R8-29、K-04），另一條 daemon 同群組排除後回成功也合理；修法具體"
+  },
+  {
+   "side": "codex",
+   "model": "gpt-6-astra",
+   "secs": 47,
+   "tokens": 17934,
+   "hits_r8_11_12": "2/2",
+   "hits_known4": "4/4",
+   "note": "四條全中，排序最貼近嚴重度，tokens 最省；與 6.1-sol 幾乎同一份答案"
+  },
+  {
+   "side": "codex",
+   "model": "gpt-6-sol",
+   "secs": 58,
+   "tokens": 18316,
+   "hits_r8_11_12": "1/2",
+   "hits_known4": "2/4",
+   "note": "中 R8-11、R8-29；漏 R8-12。另提 group_is_task 任一成員即接受（可議）"
+  },
+  {
+   "side": "codex",
+   "model": "gpt-6-luna",
+   "secs": 18,
+   "tokens": 19866,
+   "hits_r8_11_12": "0/2",
+   "hits_known4": "0/4",
+   "note": "只交 2 條，都是 pid／pgid 重用的競態推測，已知項全漏；最快"
+  },
+  {
+   "side": "codex",
+   "model": "gpt-5.6-sol",
+   "secs": 162,
+   "tokens": 26594,
+   "hits_r8_11_12": "2/2",
+   "hits_known4": "3/4",
+   "note": "中 R8-11、R8-12、R8-29，漏 K-04；慢（約 6.1-sol 的 2.5 倍）"
+  },
+  {
+   "side": "codex",
+   "model": "gpt-5.6-terra",
+   "secs": 178,
+   "tokens": 21429,
+   "hits_r8_11_12": "2/2",
+   "hits_known4": "3/4",
+   "note": "中 R8-11、R8-12、R8-29，只交 3 條、修法附可用程式碼；最慢"
+  },
+  {
+   "side": "codex",
+   "model": "gpt-5.6-luna",
+   "secs": 31,
+   "tokens": 21483,
+   "hits_r8_11_12": "1/2",
+   "hits_known4": "2/4",
+   "note": "中 R8-11、R8-29；另指出 `g not in me` 拿 pgid 比 pid（Sonnet 也提）；行號偏 1"
+  },
+  {
+   "side": "codex",
+   "model": "gpt-reserve",
+   "secs": 41,
+   "tokens": 19985,
+   "hits_r8_11_12": "1/2",
+   "hits_known4": "2/4",
+   "note": "中 R8-11、R8-29；漏 R8-12"
+  },
+  {
+   "side": "codex",
+   "model": "gpt-5.5",
+   "secs": 61,
+   "tokens": 35447,
+   "hits_r8_11_12": "1/2",
+   "hits_known4": "1/4",
+   "note": "中 R8-12；另提 kill_node 的 Unknown 退路又掃 /proc 等於沒送訊號（Opus 也提，可信）；tokens 最多"
+  },
+  {
+   "side": "claude",
+   "model": "claude-haiku-5-5（Agent model=haiku）",
+   "secs": 42,
+   "tokens": 53946,
+   "hits_r8_11_12": "1/2",
+   "hits_known4": "2/4",
+   "note": "中 R8-11、R8-29；漏 R8-12；自己標出第 4 條只是加固，分寸好"
+  },
+  {
+   "side": "claude",
+   "model": "claude-sonnet-5-5（Agent model=sonnet）",
+   "secs": 49,
+   "tokens": 51178,
+   "hits_r8_11_12": "1/2",
+   "hits_known4": "2/4",
+   "note": "中 R8-12（排第一、說明最完整）、R8-29；漏 R8-11"
+  },
+  {
+   "side": "claude",
+   "model": "claude-opus-5-5（Agent model=opus）",
+   "secs": 50,
+   "tokens": 49901,
+   "hits_r8_11_12": "1/2",
+   "hits_known4": "3/4",
+   "note": "中 R8-12、K-04、R8-29；漏 R8-11；另抓 kill_node 退路沒送訊號"
+  },
+  {
+   "side": "claude",
+   "model": "claude-fable-5-1（Agent model=fable）",
+   "secs": 276,
+   "tokens": 64752,
+   "hits_r8_11_12": "1/2",
+   "hits_known4": "2/4",
+   "note": "中 R8-12、R8-29；漏 R8-11；另提三條沒人提的邊角（SIGKILL 後只等 50 ms、pid≥2^31 的 OverflowError、hidepid 下 EPERM 卻回 N），未核；最慢"
+  }
+ ]
+}
