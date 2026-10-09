@@ -1,0 +1,21 @@
+{
+ "id": "carol-20261009T232446-0e1f5335e83d",
+ "replies": [
+  {
+   "to": "carol",
+   "status": "BLOCKED",
+   "title": "已檢查樣本",
+   "body": "",
+   "re_id": "carol-20261009T232446-0e1f5335e83d",
+   "ident": "re-carol-20261009T232446-0e1f5335e83d-BLOCKED"
+  },
+  {
+   "to": "dave",
+   "status": "BLOCKED",
+   "title": "已檢查樣本",
+   "body": "",
+   "re_id": "carol-20261009T232446-0e1f5335e83d",
+   "ident": "re-carol-20261009T232446-0e1f5335e83d-BLOCKED"
+  }
+ ]
+}

@@ -1,0 +1,48 @@
+{
+ "v": 1,
+ "rid": "mailsent5",
+ "kind": "aos-tool",
+ "name": "mailsent",
+ "task": "新增 aos7-mailsent 唯讀郵局工具",
+ "goal": "讀郵局資料夾，彙總成一行 JSON。",
+ "scope": {
+  "only": [
+   "packs/mailsent/",
+   "INDEX.md 一列"
+  ],
+  "not": [
+   "modules/",
+   "lib/",
+   "別的包",
+   "修改輸入"
+  ],
+  "max_files": 8
+ },
+ "tools": [
+  {
+   "tool": "python3 proto7-2/tests/run_all.py packs/mailsent/tests",
+   "use": "實質測試"
+  },
+  {
+   "tool": "python3 check_answer.py <proto7-2> fixture",
+   "use": "獨立核對與唯讀"
+  }
+ ],
+ "work": [
+  "新增 README.md（## 第一次跑）、bin/aos7-mailsent（Python，≤12 行）、aos7_mailsent.py 與 tests/test_mailsent.py（實質測試），交 files、INDEX row 與 report。",
+  "CLI：aos7-mailsent <郵局資料夾>；成功退 0，stdout 恰一行 JSON；資料夾不存在或是檔案退 2、stdout 空；不讀系統時鐘。",
+  "唯讀：不得建立（__pycache__ 除外）、刪除或改動位元組、權限；自行解析，不匯入或呼叫 aos 寫入／復原／鎖定路徑。輸入可能唯讀；型別、大小、權限、mtime_ns 與內容須不變。",
+  "郵局資料夾 R 是 aos mail 模組的資料：每個人一個信箱 R/<名字>/inbox/，信是裡面的 .md 檔。每封信開頭是信頭：第一行 `---`，到下一個獨立的 `---` 行為止，每行 `鍵: 值`（第一個 `: ` 前是鍵），欄位有 from、to、status、at、reply-to、id、re（re 可能是空的）。",
+  "輸出 {\"v\":1,\"senders\":{\"<from>\":int}}；依信頭 from 數每個寄件者寄出的信（全郵局所有人的信），鍵升冪。鍵集合要完全一樣，v 是整數 1。"
+ ],
+ "deliver": "一份候選，REPORT 寫 report，末尾必有「以後交接書該點名的工具」。",
+ "accept": [
+  "三關全過，check 退出 0。",
+  "stdout 一行，鍵集合、型別、排序與退出碼完全依 work；bool 不算整數。",
+  "輸入與父目錄的資料、權限和 metadata 不變，固定答案與邊界核對 ok true。"
+ ],
+ "answer": {
+  "checker": "check_answer.py",
+  "fixture": "fixture"
+ }
+}

@@ -35,6 +35,10 @@ python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
 
 kind 為 `aos-tool`／`aos-module`：學徒交新增檔案、索引列與 REPORT，三關過後由人發布。原文存 `author/aos/<rid>/`，可用 `--out` 改。
 
+`propose --format text` 改交每檔一段的文字候選（預設仍是 JSON），模型原文存成 `.txt`；升級鏈也沿用格式。
+每段用獨立一行 `=== 完整路徑 ===` 開頭，另必有 `=== row ===`、`=== report ===`；名字不能有空白或重複，前面不加說明或 Markdown 圍欄。
+身分 v／rid／kind／name 由需求帶入，不用寫；`--format` 只用於 propose。
+
 - 學徒：`--llm` 指定寫候選的模型（不給＝上面的升級鏈），提示帶需求與工具卡。
 - 技能：`propose --skills NODE` 從 NODE 的 skills/ 挑一本學徒先前留下的技能書，全文帶進提示；挑不到或書超過 8192 bytes 就略過，升級也用同一本。
 - 審查人：`--review-llm` 指定讀碼模型，與學徒一樣經 llmcall 使用 budget。只因真錯誤（照需求寫明的行為在真實資料上答錯／當掉）、唯讀違規、越界改動退件；需求沒寫明的極端邊角列進 reasons 當「建議：」、不擋（只列建議的 reject 照 accept 算）。標準在檢查器的 `REVIEW_CRITERIA`，llmcall 與 astra 審查共用。第一關 size 會寫明哪個檔、實際 bytes、上限。
@@ -108,6 +112,7 @@ propose 固定候選快照，兩次檢查與審查提示使用相同 bytes；pub
 ## 三關 aos7-gates
 
 入口是 `bin/aos7-gates`，成功只印 stdout（brief 是 BRIEF，check／publish 是單行 JSON），失敗另印 stderr 一行。
+第一關也收文字候選：去掉開頭空白後以 `{` 開始就按原 JSON 解析，其餘按段頭拆解，再走相同三關。
 
 | 指令 | 用法 |
 |---|---|
