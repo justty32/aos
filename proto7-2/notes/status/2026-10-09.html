@@ -43,7 +43,7 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
 
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:6px">
-    <span class="stamp">2026-10-09（五）· 最後更新 13:40 · 家裡 Manjaro</span>
+    <span class="stamp">2026-10-09（五）· 最後更新 13:50 · 家裡 Manjaro</span>
     <h1>aos 今日戰況</h1>
     <p class="lead">一句話：上午把 loop7 修補全部做完、測試全綠；下午在做「事件保存」第一版。沒有卡在你身上的事。</p>
   </header>
@@ -54,9 +54,9 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
     <svg viewBox="0 0 640 120" role="img" aria-label="今天時間軸，10:45 到 18:00，目前約 12:30">
       <rect x="20" y="50" width="600" height="14" rx="7" fill="var(--line)"/>
       <!-- 10:45..18:00 = 435 分鐘 → 600px；12:30 = 105 分 → 145px -->
-      <rect x="20" y="50" width="241" height="14" rx="7" fill="var(--accent)"/>
-      <circle cx="261" cy="57" r="9" fill="var(--panel)" stroke="var(--accent)" stroke-width="4"/>
-      <text x="245" y="35" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent)">現在 13:40</text>
+      <rect x="20" y="50" width="255" height="14" rx="7" fill="var(--accent)"/>
+      <circle cx="275" cy="57" r="9" fill="var(--panel)" stroke="var(--accent)" stroke-width="4"/>
+      <text x="258" y="35" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent)">現在 13:50</text>
       <text x="20" y="92" font-size="12" fill="var(--mute)">10:45 開工</text>
       <text x="62" y="112" font-size="12" fill="var(--mute)">上午：loop7 修補（已完成）</text>
       <text x="400" y="92" text-anchor="middle" font-size="12" fill="var(--mute)">下午：事件保存</text>
@@ -93,7 +93,7 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
     <h2>測試越來越多，而且全綠</h2>
     <div class="kpis">
       <div class="kpi"><span class="small">早上開工</span><span class="big" style="color:var(--mute)">376</span></div>
-      <div class="kpi"><span class="small">現在</span><span class="big">556</span></div>
+      <div class="kpi"><span class="small">現在</span><span class="big">561</span></div>
       <div class="kpi"><span class="small">失敗</span><span class="big" style="color:var(--done)">0</span></div>
     </div>
     <div class="fig">
@@ -110,7 +110,7 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
       <rect x="100" y="52" width="452" height="20" rx="3" fill="var(--accent-soft)"/><text x="558" y="67" font-size="12" fill="var(--ink)">437</text>
       <rect x="100" y="84" width="477" height="20" rx="3" fill="var(--accent-soft)"/><text x="583" y="99" font-size="12" fill="var(--ink)">459</text>
       <rect x="100" y="116" width="494" height="20" rx="3" fill="var(--accent-soft)"/><text x="600" y="131" font-size="12" fill="var(--ink)">475</text>
-      <rect x="100" y="148" width="530" height="20" rx="3" fill="var(--accent)"/><text x="600" y="143" font-size="12" fill="var(--ink)"></text><text x="560" y="163" font-size="12" font-weight="700" fill="var(--panel)">556</text>
+      <rect x="100" y="148" width="530" height="20" rx="3" fill="var(--accent)"/><text x="600" y="143" font-size="12" fill="var(--ink)"></text><text x="560" y="163" font-size="12" font-weight="700" fill="var(--panel)">561</text>
     </svg>
     </div>
     <p class="small">日誌的「寫」那一半做好了：故意在四個最危險的時間點把程式砍掉各 3 次，紀錄不丟也不重複；連跑 300 回合，資料夾始終不超過 12 個檔。「讀」那一半也好了：讀到一半斷掉，下次能從原處接著讀，不漏也不重複。</p>
@@ -169,7 +169,7 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
       <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mute)"/></marker></defs>
     </svg>
     </div>
-    <div class="chips"><span class="chip done">已完成 22 隊</span><span class="chip run">進行中 1 隊</span><span class="chip">14:00 後再排一段</span></div>
+    <div class="chips"><span class="chip done">已完成 25 隊</span><span class="chip run">進行中 4 隊</span><span class="chip">第三段進行中</span></div>
   </section>
 
   <section>
@@ -193,12 +193,37 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
   </section>
 
   <section>
+    <h2>第三段：讓學徒真的「叫 AI 一次」（先用假 AI）</h2>
+    <p>叫 AI 要花錢（token）。所以每次呼叫像去自助餐：先押一筆錢、吃完照實際份量結帳，多退少記。中途斷電的話，沒確定的帳先不退，等人來對。</p>
+    <div class="fig">
+    <svg viewBox="0 0 640 140" role="img" aria-label="LLM 呼叫流程：預留、呼叫、存回覆、結算、回條">
+      <g font-size="12">
+        <rect x="6" y="40" width="108" height="56" rx="8" fill="var(--accent-soft)"/><text x="60" y="64" text-anchor="middle" font-weight="700" fill="var(--accent)">① 先押錢</text><text x="60" y="82" text-anchor="middle" fill="var(--ink)">預留 1000</text>
+        <line x1="114" y1="68" x2="136" y2="68" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar3)"/>
+        <rect x="140" y="40" width="108" height="56" rx="8" fill="var(--run-soft)"/><text x="194" y="64" text-anchor="middle" font-weight="700" fill="var(--run)">② 叫一次 AI</text><text x="194" y="82" text-anchor="middle" fill="var(--ink)">今天是假 AI</text>
+        <line x1="248" y1="68" x2="270" y2="68" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar3)"/>
+        <rect x="274" y="40" width="108" height="56" rx="8" fill="var(--accent-soft)"/><text x="328" y="64" text-anchor="middle" font-weight="700" fill="var(--accent)">③ 先存回覆</text><text x="328" y="82" text-anchor="middle" fill="var(--ink)">斷電也不丟</text>
+        <line x1="382" y1="68" x2="404" y2="68" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar3)"/>
+        <rect x="408" y="40" width="108" height="56" rx="8" fill="var(--accent-soft)"/><text x="462" y="64" text-anchor="middle" font-weight="700" fill="var(--accent)">④ 照實結帳</text><text x="462" y="82" text-anchor="middle" fill="var(--ink)">用了 623</text>
+        <line x1="516" y1="68" x2="538" y2="68" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar3)"/>
+        <rect x="542" y="40" width="92" height="56" rx="8" fill="var(--done-soft)"/><text x="588" y="64" text-anchor="middle" font-weight="700" fill="var(--done)">⑤ 收據</text><text x="588" y="82" text-anchor="middle" fill="var(--ink)">退 377</text>
+        <text x="194" y="122" text-anchor="middle" fill="var(--warn)">斷線不知道結果？→ 不重送、錢先押著，等人接回</text>
+      </g>
+      <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mute)"/></marker></defs>
+    </svg>
+    </div>
+    <div class="chips"><span class="chip done">✓ 設計圖（G0）</span><span class="chip done">✓ 日誌小修（V2）</span><span class="chip done">✓ 86 條壞連結修好（W1）</span><span class="chip run">● 帳本會照實結（B2）</span><span class="chip run">● 假 AI 呼叫（G1）</span><span class="chip run">● 學徒從必讀抽屜收單（V1）</span><span class="chip run">● 總整理＋白話報告（I2）</span></div>
+    <p class="small">真的 AI 要等你看過設計圖才接。</p>
+  </section>
+
+  <section>
     <h2>我替你做的大決定</h2>
     <ul>
       <li>寫程式改交給 codex 新模型 <b>gpt-6.1-sol</b>，審查交給 <b>gpt-6-astra</b>；隊長仍是 Opus 逐行看。</li>
       <li>工頭（daemon）要趕人前先寫進 <code>nodes.json</code>，不另開新檔。</li>
       <li>日誌櫃分兩個抽屜，總共最多 12 個檔（比字面的 7 個多，因為兩個抽屜丟東西的規則不同）。</li>
       <li>舊的歷史紀錄檔升級時改名封存，不丟資料。</li>
+      <li>AI 用量超過預留時，只照實記「超支」，不自動停止接新呼叫（想改成自動停很好改）。</li>
       <li>LLM 作者第一步：讓 AI 寫「處理 CSV 的小流程」，只准用可信工具拼，寫好要人按一下才上線。</li>
     </ul>
     <p class="small">全部 40 多條（含小的）在 <code>proto7-2/notes/decisions-2026-10-09.md</code>，每條都寫了怎麼改回來。</p>
