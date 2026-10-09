@@ -288,3 +288,5 @@
 - C｜KE1：範例 node 叫 bob 不用 `.`；kill 後範例縮短 deadline 讓卡住信收尾；codex 試跑用 bypass sandbox（sandbox 擋 systemd-run）
 - 未過但收｜ST3：卡住信改一句指 ADVANCED（維護指令改寫到 `brain/stuck/<call>/how.md`）、「回了」不算卡住那封、統一「約 1 分鐘」、STATE 行白話、QUICKSTART 去框圖（3326 B）。新手 Haiku 6／6／6、luna 7／7／8，五題兩人全對。頂層判斷：Haiku 九輪都 6 分、每輪換一批理由且含錯讀，分數已不隨文件變動 → 合併、QUICKSTART 停止追 Haiku 分數；之後新手門檻改「五題全對＋較差者 ≥6 且 luna ≥7」，待使用者翻案
 - C｜ST3 遺留：信件模板的固定段（產出／沒做到／需要決定：無）與 `status: BLOCKED` 兩位新手都看不懂 → 屬 mail 模組，跟 KF 的通知信白話化一起排下一隊
+- C｜MT：信件正文白話化進 main——信頭與檔名不動、正文加「狀態：辦好了／卡住了…」一行、不再自動補「產出／沒做到／需要決定：無」空段；讀信多一個 `plain` 欄位；mail 外只改 `aos7_up_ask.py` 的 show_body（事後補報，照收）。新手 Haiku 6、luna 9、兩人都答對，一輪過
+- C｜頂層：信頭 `---` 之間不加「給程式讀的」說明句（多一句就多一個概念）；卡住信內文用語（假 AI、系統不會自己重問、ADVANCED 路徑）歸 up，排進下一隊
