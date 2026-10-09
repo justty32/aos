@@ -39,7 +39,7 @@
 - **token**：receipt.used（缺 receipt 用 gateway done.used）、request.reserve、未結呼叫數與其預留；usage 拆 prompt／completion／reasoning／cached。`--overhead N` 另算代理前置總量及自己的 prompt；缺欄為 0。
 - **並行呼叫數**：區間 [start,end)，start 依 intent.at、raw.at−elapsed、reserve.at；end 依 done.at、raw.at，僅 intent 則無限；同刻先結束再開始，無 start 計 window_unknown。
 - **收單→結案秒數**：最早收單 event／呼叫開始／預留至最晚 done／settle／closed frame／results；author 須 receipt.closed=true，未結為 null，四捨五入 3 位。
-- **重試次數**：reask=max(呼叫數−1,0)＋resends 值總和＋extra_tries=Σmax(tries−1,0)＋adopted 次數。
+- **重試次數**：reask=Σmax(同一 slot 的呼叫數−1,0)＋resends 值總和＋extra_tries=Σmax(tries−1,0)＋adopted 次數。slot 是原 request.logical（沒標的照舊用 `call:<call_id>`），brain 則是 call id 本身，所以同信多回合不算重試；author 主單／審查／學習各自算 n−1，再加總到同件。
 
 ### 名詞對照（只跟 `--json`／`--detail`、程式有關）
-單＝件（`flow`，按 request 的 logical 分，沒標的呼叫自成 `call:<call_id>`）；呼叫＝llmcall 的一個 call 資料夾；區間＝呼叫開始至完成，用來算並行；scope＝每個 PATH，多 PATH 合計相加件數，並行重新算所有呼叫的峰值。
+單＝件（`flow`，按 request 的 logical 分，brain 每封信一件，`author-review/<rid>`／`author-learn/<rid>` 併進 `author/<rid>`，沒標的呼叫自成 `call:<call_id>`）；重問（reask）按 slot 算，brain 同信多回合不算重試。brain 信件鍵依 aos7_up_brain.call_id/cid_of：截斷形 call id 取前 47 字，其他在去尾後的第 1 回合 call id 也在時才去掉尾端 `-s數字`（信 id 本身以 `-s數字` 結尾不會拆件），再取前 47 字；前 47 字相同的兩封信會被併成一件（已知限制）。呼叫＝llmcall 的一個 call 資料夾；區間＝呼叫開始至完成，用來算並行；scope＝每個 PATH，多 PATH 合計相加件數，並行重新算所有呼叫的峰值。

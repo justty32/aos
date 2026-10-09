@@ -46,7 +46,7 @@
 | `modules/routines/tests/test_routines.py` | **事務包**：兩張表 300 回合真 keep 取樣、秒與時鐘倒退、認領後被殺與原子寫、unknown 與壞列、舊快照與超大逾時、CLI 與錯誤路徑、`ls --run` 鎖忙＝不知道、免 daemon 跑到期 |
 | `modules/skills/tests/test_skills.py` | **skill 包**：索引混合好壞本、symlink 與必用表、缺 skills、假 AI pick 重用回條、沒帳本機挑、日誌留最新 50、llmcall 忙＝不確定、llmcall 退出碼與回條錯 |
 | `modules/wfnode/tests/test_wfnode.py`、`test_wfnode_alignment.py`、`test_wfnode_recovery.py`、`test_wfnode_unit.py` | **node 工作流包**：init 各口味、重跑不動位元組與 mtime、check open／壞連結／佔位、state 追加與 NEXT；W0 預設骨架與 strict 殘留；首次導入被打斷復原（標記最後發布、舊暫存丟棄）、導入判斷只改已知段；填寫、原子發佈、並發 state 不掉行 |
-| `modules/metrics/tests/test_metrics.py` | **效率量測包**：固定證據、唯讀、可重跑、R1 基線（`baseline/r1/`）、CLI 與一行錯誤、白話輸出、巢狀形狀、秒數溢位、gateway done／pending、子資料夾範圍、壞 jsonl 行 |
+| `modules/metrics/tests/test_metrics.py` | **效率量測包**：固定證據、唯讀、可重跑、R1 基線（`baseline/r1/`）、CLI 與一行錯誤、白話輸出、巢狀形狀、秒數溢位、gateway done／pending、子資料夾範圍、壞 jsonl 行、brain 一信一件與 author 審查／學習併件（`tests/fixture_brain/`） |
 | `modules/compact/tests/test_compact.py` | **記憶整理包**：open 原文、封存與最近 N 則、forget 被殺只重試一次、寫鎖等待不丟追加、unicode open 實體行、每個換檔故障點、帳任務整合（40 案例） |
 | `modules/mail/tests/test_mail_deliver_1.py`、`test_mail_deliver_2.py`、`test_mail_review_1.py`～`_3.py`、`test_mail_errors_effects.py` | **信箱包**：並行投遞、audit 進度與終局、done 被殺恢復、副作用只一次、events 連續 ack、事件失敗信照留；團隊／roster／wfnode 版面；三輪審查回歸（歸檔不蓋、分鐘檔名撞名重試、交付鎖共用、壞標題不毒日誌、團隊原子發布）；ER-mail 可選提醒、自身鎖、單次 ack 停在未證明的洞、一行錯誤 |
 | `modules/llmdiag/tests/test_llmdiag_scan.py` | **LLM 待辦診斷包**：三張表排序且唯讀、非資料夾退 2 |

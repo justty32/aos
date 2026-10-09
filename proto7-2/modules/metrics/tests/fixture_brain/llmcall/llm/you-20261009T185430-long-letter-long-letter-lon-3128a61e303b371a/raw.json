@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "call_id": "you-20261009T185430-long-letter-long-letter-lon-3128a61e303b371a",
+  "source": "transport",
+  "at": "2026-10-09T00:00:12",
+  "reply": {
+    "elapsed": 2,
+    "usage": {
+      "prompt_tokens": 20,
+      "completion_tokens": 10,
+      "total_tokens": 30
+    }
+  }
+}

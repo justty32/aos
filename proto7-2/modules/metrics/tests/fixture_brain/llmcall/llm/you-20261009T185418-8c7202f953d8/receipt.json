@@ -1,0 +1,17 @@
+{
+  "v": 1,
+  "call_id": "you-20261009T185418-8c7202f953d8",
+  "logical": "up/brain",
+  "reserve": 100,
+  "used": 30,
+  "usage": {
+    "prompt_tokens": 20,
+    "completion_tokens": 10,
+    "total_tokens": 30
+  },
+  "outcome": "answered",
+  "billing": "final",
+  "settle": {
+    "at": "2026-10-09T00:00:02"
+  }
+}

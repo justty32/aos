@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "call_id": "author-r9-2",
+  "source": "transport",
+  "at": "2026-10-09T00:00:16",
+  "reply": {
+    "elapsed": 2,
+    "usage": {
+      "prompt_tokens": 20,
+      "completion_tokens": 10,
+      "total_tokens": 30
+    }
+  }
+}

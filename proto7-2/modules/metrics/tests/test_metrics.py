@@ -324,5 +324,33 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(metrics.parallel([(a,b), (a,None)]), 1)
         c = metrics.stamp('2026-10-09T00:00:01+00:00')
         self.assertEqual(metrics.parallel([(a,c), (c,None)]), 1)
+    def test_brain_letters_and_author_slots(self):
+        s = metrics.scan(HERE / 'fixture_brain')
+        flows = {f['flow']: f for f in s['flows']}
+        brain = [f for key, f in flows.items() if key.startswith('up/brain/')]
+        self.assertEqual(len(brain), 4)
+        self.assertEqual(sorted(f['calls'] for f in brain), [1, 2, 2, 3])
+        self.assertEqual(sum(f['calls'] for f in brain), 8)
+        self.assertEqual(flows['up/brain/bob-20261009T185440-s2']['calls'], 2)  # 信 id 本身以 -s2 結尾也不拆件
+        self.assertTrue(all(f['retries']['reask'] == 0 for f in brain))
+        self.assertEqual(flows['up/brain/you-20261009T185418-8c7202f953d8']['calls'], 3)
+        author = flows['author/r9']
+        self.assertEqual((author['calls'], author['retries']['reask']), (5, 2))  # 主單 2→1、審查 2→1、學習 1→0
+        self.assertFalse(any(key.startswith(('author-review/', 'author-learn/')) for key in flows))
+        self.assertEqual(author['jobs'], ['r9_12345678'])
+        self.assertEqual((author['start'], author['end'], author['seconds']),
+                         ('2026-10-09T00:00:11', '2026-10-09T00:00:20', 9))
+        self.assertEqual((author['tokens']['used'], author['tokens']['prompt']), (150, 100))
+        self.assertEqual((len(flows), s['calls'], s['retries']['total']), (5, 13, 2))
+        for length in (47, 48, 62, 63, 64):
+            ident = 'x' * length
+            cid2 = ident + '-s2' if length + 3 <= 64 else ident[:47] + '-' + 'a' * 16
+            with self.subTest(length=length):
+                self.assertEqual(metrics.letter_key(ident), metrics.letter_key(cid2))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(metrics.main(['job', str(HERE / 'fixture_brain')]), 0)
+        self.assertIn('5 件工作', out.getvalue())
+        self.assertIn('重試 2 次', out.getvalue())
 if __name__ == '__main__':
     unittest.main()

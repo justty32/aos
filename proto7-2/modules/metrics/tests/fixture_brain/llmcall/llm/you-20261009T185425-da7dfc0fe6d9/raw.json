@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "call_id": "you-20261009T185425-da7dfc0fe6d9",
+  "source": "transport",
+  "at": "2026-10-09T00:00:08",
+  "reply": {
+    "elapsed": 2,
+    "usage": {
+      "prompt_tokens": 20,
+      "completion_tokens": 10,
+      "total_tokens": 30
+    }
+  }
+}
