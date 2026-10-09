@@ -1,0 +1,54 @@
+{
+ "v": 1,
+ "rid": "diag1",
+ "kind": "aos-module",
+ "name": "llmdiag",
+ "task": "新增 aos7-llmdiag 列出 pending、halted 與 inflight",
+ "goal": "讀取既有 node 的檔案協定，讓人看見尚未完成與帳差。工具唯讀，不替人修復。",
+ "scope": {
+  "only": [
+   "modules/llmdiag/",
+   "modules/README.md 一列"
+  ],
+  "not": [
+   "lib/",
+   "別的包",
+   "修改或刪除 node 檔案"
+  ],
+  "max_files": 12
+ },
+ "tools": [
+  {
+   "tool": "python3 proto7-2/tests/run_all.py modules/llmdiag/tests",
+   "use": "跑新包的實質測試"
+  },
+  {
+   "tool": "bash wf/tools/wf-lint.sh proto7-2/modules/llmdiag",
+   "use": "檢查文件相對連結"
+  },
+  {
+   "tool": "python3 check_answer.py <proto7-2> fixture",
+   "use": "獨立核對答案與唯讀"
+  }
+ ],
+ "work": [
+  "新增薄入口、唯讀程式與 README。",
+  "遵守下面固定驗收與檔案協定。",
+  "交出 files、row 與 REPORT。",
+  "aos7-llmdiag <node>：掃 llmcall/<budget>/<call>/request.json；pending 為 request.json 是合法 JSON 物件且沒 receipt.json（receipt.json 只看存在）；stage 有同資料夾 raw.json 為 raw 否則 request，raw.json 內容不解析，壞 raw 的 pending 仍列 stage raw。",
+  "halted 掃 jobs/<job>/frame.json，只列 frame.json 的 phase=halted 且 author/req/<rid>/ 存在的 job；job 後綴必須恰為 _<8 位 hex>（大小寫 hex 皆可），rid=job 去掉此後綴，kind／why 取 frame.json 的 halt.kind／halt.why。",
+  "budget_inflight 掃 budget/<budget>/ledger.json，列 ledger.json 的 inflight 是整數（不含 bool）且 >0；request.json、frame.json、ledger.json 壞 JSON 或非物件略過；輸出 v、llmcall_pending（budget,call_id,stage）、author_halted（job,rid,kind,why）、budget_inflight（budget,inflight）；pending 依 (budget,call_id,stage)、halted 依 job、inflight 依 budget 排序。"
+ ],
+ "deliver": "一份候選 JSON；REPORT 直接寫入 report 欄，末尾必有「以後交接書該點名的工具」。",
+ "accept": [
+  "三關全過，check 退出 0。",
+  "node 不是資料夾時退出 2。",
+  "stdout 恰一行 JSON，正常退出 0，fixture 目錄、檔案位元組與權限位不變。",
+  "獨立答案檢查 ok true，所有表按規定排序。",
+  "固定 fixture 三表完全吻合：pending 依 (budget,call_id,stage)、halted 依 job、inflight 依 budget 排序；壞 raw 的 pending 仍列 stage raw；非 8 位 hex job 不列。"
+ ],
+ "answer": {
+  "checker": "check_answer.py",
+  "fixture": "fixture"
+ }
+}

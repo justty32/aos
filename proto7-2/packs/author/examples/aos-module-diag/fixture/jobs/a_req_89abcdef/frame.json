@@ -1,0 +1,9 @@
+{
+ "v": 1,
+ "job": "a_req_89abcdef",
+ "phase": "halted",
+ "halt": {
+  "kind": "unknown",
+  "why": "pending llmcall"
+ }
+}

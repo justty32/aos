@@ -1,0 +1,9 @@
+{
+ "v": 1,
+ "job": "ended_1234abcd",
+ "phase": "ended",
+ "halt": {
+  "kind": "unknown",
+  "why": "pending llmcall"
+ }
+}

@@ -1,0 +1,58 @@
+{
+ "v": 1,
+ "kind": "aos-tool",
+ "note": "新增一個自帶測試的唯讀命令列工具包。",
+ "root": "packs/{name}",
+ "required": [
+  "README.md",
+  "bin/aos7-{name}",
+  "aos7_{name}.py"
+ ],
+ "entry": "bin/aos7-{name}",
+ "entry_max_lines": 12,
+ "tests": "tests/test_*.py",
+ "row": {
+  "file": "INDEX.md",
+  "prefix": "| `packs/{name}/` |"
+ },
+ "readme_must": [
+  "## 第一次跑"
+ ],
+ "limits": {
+  "max_file_bytes": 8192,
+  "max_files": 12,
+  "max_candidate_bytes": 65536
+ },
+ "review_rules": [
+  {
+   "re": "shell\\s*=\\s*True",
+   "why": "不經 shell"
+  },
+  {
+   "re": "os\\.system\\(",
+   "why": "不經 shell"
+  },
+  {
+   "re": "^\\s*(import|from)\\s+(socket|urllib|http|requests)\\b",
+   "why": "不連網"
+  },
+  {
+   "re": "\\b(eval|exec)\\(",
+   "why": "不執行動態碼"
+  }
+ ],
+ "request_fields": {
+  "v": "格式版本，固定為整數 1。",
+  "rid": "這張需求單的識別字，英數或底線 1～23 字。",
+  "kind": "選用 aos-tool 或 aos-module 工具卡。",
+  "name": "新包名稱，小寫英數 2～16 字且以字母開頭。",
+  "task": "用動詞開頭的一句任務。",
+  "goal": "兩三句背景與唯一目標。",
+  "scope": "用 only／not 排除法寫死範圍，max_files 是件數 gate。",
+  "tools": "必用工具表，每項寫 tool 命令與 use 用途。",
+  "work": "照順序列出要做的工作。",
+  "deliver": "交付一份候選 JSON，REPORT 直接寫入 report 欄。",
+  "accept": "固定 N 條可機械判定的驗收，做完就停。",
+  "answer": "獨立答案檢查器與 fixture，路徑相對需求單。"
+ }
+}

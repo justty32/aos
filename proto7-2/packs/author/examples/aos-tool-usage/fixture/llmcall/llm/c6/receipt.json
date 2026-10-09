@@ -1,0 +1,28 @@
+{
+ "v": 1,
+ "call_id": "c6",
+ "logical": "c6",
+ "kid": "fixture-c6",
+ "key": [
+  "llm",
+  "author",
+  "c6"
+ ],
+ "req_sha": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+ "meter": "fake.total_tokens/1",
+ "bound": "soft",
+ "reserve": 700,
+ "outcome": "answered",
+ "usage": {
+  "total_tokens": 7
+ },
+ "used": 7,
+ "overrun": 0,
+ "billing": "final",
+ "raw_sha": "fixture",
+ "text": "OK",
+ "settle": {
+  "used": 7,
+  "overrun": 0
+ }
+}

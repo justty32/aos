@@ -1,0 +1,12 @@
+{
+ "v": 1,
+ "call_id": "pendingreq",
+ "logical": "pendingreq",
+ "budget": "llm",
+ "holder": "author",
+ "req_sha": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+ "reserve": 700,
+ "meter": "fake.total_tokens/1",
+ "endpoint": "fake",
+ "request": {}
+}

@@ -1,0 +1,15 @@
+{
+ "v": 1,
+ "call_id": "c3",
+ "req_sha": "dbd8ca106ad29d61372fc6b85b02d4dd76a9d07541d123c139c0b431e11bae1d",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "OK",
+  "usage": {
+   "total_tokens": 60
+  }
+ },
+ "at": 1791456300.0
+}

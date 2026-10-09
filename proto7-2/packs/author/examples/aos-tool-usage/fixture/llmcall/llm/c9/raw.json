@@ -1,0 +1,15 @@
+{
+ "v": 1,
+ "call_id": "c9",
+ "req_sha": "e679a3d31fa7aa9068574bb6cec9bf6214c52a85fb84ac45761fa92e6d32f415",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "OK",
+  "usage": {
+   "total_tokens": 0
+  }
+ },
+ "at": 1791459900.0
+}

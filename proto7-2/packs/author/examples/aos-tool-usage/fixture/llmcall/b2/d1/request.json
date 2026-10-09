@@ -1,0 +1,14 @@
+{
+ "v": 1,
+ "call_id": "d1",
+ "logical": "d1",
+ "budget": "b2",
+ "holder": "author",
+ "req_sha": "e679a3d31fa7aa9068574bb6cec9bf6214c52a85fb84ac45761fa92e6d32f415",
+ "reserve": 700,
+ "meter": "fake.total_tokens/1",
+ "endpoint": "fake",
+ "request": {
+  "model": "chatgpt-gpt-6-sol"
+ }
+}
