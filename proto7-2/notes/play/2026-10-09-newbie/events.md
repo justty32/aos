@@ -62,4 +62,12 @@
 
 **總判：三輪用完，按「取較差」未過（最後一輪 Haiku 6.7、概念 8）。** 分鐘、指令已過；luna 三輪都 ≥8.4、概念 5。Haiku 的分數在 6.6～7.2 之間浮動，概念多數的是 README 已併入五詞的細分（obs、must 分開算，next_cursor、node、退出碼另算）；剩下的扣分點是第一次跑以後的進階段（工具、檔案與檔數、契約卡）讓頁面顯長。下一步若要再壓：把進階段搬到另一頁（README 只留五詞＋第一次跑＋一句連結），這要動契約卡的放置慣例，交頂層定。
 
-全套測試（rebase main 後）：823 項 OK。
+第 4 輪（頂層拍板改慣例後）：README 只留五詞＋第一次跑＋一行連結，進階段與契約卡搬到同夾 [ADVANCED.md](../../../modules/events/ADVANCED.md)；第一次跑第一行 `cd "$(git rev-parse --show-toplevel)"`。
+
+| 輪 | 改了什麼 | Haiku | luna | 分鐘 | 指令 | 概念（取多） | 過 |
+|---|---|---|---|---|---|---|---|
+| 4 | README 拆出 ADVANCED.md、先 cd 到 repo 根 | 7.4（概念 9） | 8.8（概念 5） | 0.3 | 2 | 9 | 分數過；概念照 Haiku 不過 |
+
+分數按「取較差」第一次過門檻（7.4）。概念數兩位差很大：luna 照五詞表數 5；Haiku 把 obs、must 拆開，另加 next_cursor、dup、node，數到 9（node 是 README 明說「不用管」的自動值，dup 是 event_id 的結果）。Haiku 剩下兩個卡點都在介面上、沒改：`read --ack`（ack 放在 read 底下）、不帶子命令的 `aos7-events --help` 先印取樣器選項。前者是既有 CLI 介面，不能改語意，只能另加別名；後者可以把 `--help` 開頭改成先講 pub／read。兩條都交頂層定。
+
+全套測試：第 3 輪後 823 項 OK；第 4 輪後（rebase main）826 項 OK。
