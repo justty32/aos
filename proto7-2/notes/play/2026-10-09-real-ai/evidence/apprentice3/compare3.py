@@ -35,7 +35,8 @@ def main():
     ap.add_argument('--overhead', type=int, default=1644)
     a = ap.parse_args()
     fl = flows(a.node, a.overhead) if a.node else {}
-    tok = lambda kind, rid: ((fl.get(f'{kind}/{rid}') or {}).get('tokens') or {}).get('used')
+    # metrics 自 10-09 LT3 起把審查／學習併進 author/<rid> 那件，分項在 parts（按原 logical）
+    tok = lambda kind, rid: (((fl.get(f'author/{rid}') or {}).get('parts') or {}).get(f'{kind}/{rid}') or {}).get('used')
     runs = [json.loads(p.read_text()) for p in sorted(Path(a.evdir).glob('*/summary.json'))]
     invalid = []
     print('| 組 | rep | 題 | rid | 過 | 輪 | 重問 | 學徒 token | 審查 token | learn token | 秒 | 擋下（關:規則） |')

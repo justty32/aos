@@ -123,6 +123,7 @@ def _scan(path, overhead):
         logical = obj(c.get('request')).get('logical')
         flow = logical if isinstance(logical, str) else 'call:' + c['id']
         c['slot'] = c['id'] if logical == 'up/brain' else flow
+        c['logical'] = flow  # 併件前的原 logical，給 --json 的 parts 分項
         if logical == 'up/brain':
             flow = 'up/brain/' + letter_key(c['id'], brain_ids)
         elif flow.startswith(('author-review/', 'author-learn/')):
@@ -131,7 +132,7 @@ def _scan(path, overhead):
     flows, all_windows = [], []
     for logical, group in sorted(grouped.items()):
         token = dict.fromkeys(('used', 'reserve', 'pending', 'pending_reserve', 'prompt', 'completion', 'reasoning', 'cached'), 0)
-        windows, starts, ends, usage_count = [], [events.get(logical)], [], 0
+        windows, starts, ends, usage_count, parts = [], [events.get(logical)], [], 0, {}
         for c in group:
             req, raw, rec, gate, op = (obj(c.get(k)) for k in ('request', 'raw', 'receipt', 'gateway', 'ledger'))
             reply = obj(raw.get('reply'))
@@ -157,6 +158,9 @@ def _scan(path, overhead):
             reserve = number(req.get('reserve'))
             pending = final.get('billing') == 'pending' or gate.get('stage') == 'intent' or bool(op and op.get('stage') != 'settled')
             token['used'] += number(final.get('used'))
+            part = parts.setdefault(c['logical'], dict(calls=0, used=0))
+            part['calls'] += 1
+            part['used'] += number(final.get('used'))
             token['reserve'] += reserve
             token['pending'] += int(pending)
             token['pending_reserve'] += reserve if pending else 0
@@ -202,7 +206,7 @@ def _scan(path, overhead):
                        extra_tries=sum(max(0, number(v)-1) for f in frames for v in obj(f.get('tries')).values()),
                        adopted=sum(obj(c.get('raw')).get('source') == 'adopted' for c in group))
         retries['total'] = sum(retries.values())
-        flows.append(dict(flow=logical, calls=len(group), call_ids=sorted(c['id'] for c in group), jobs=sorted(owned), tokens=token,
+        flows.append(dict(flow=logical, calls=len(group), call_ids=sorted(c['id'] for c in group), jobs=sorted(owned), tokens=token, parts=parts,
                           max_parallel=parallel(windows), start=start[1] if start else None, end=end[1] if end else None,
                           seconds=round((end[0]-start[0]).total_seconds(), 3) if start and end else None, open=end is None, retries=retries))
         all_windows.extend(windows)
