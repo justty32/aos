@@ -366,9 +366,15 @@ with (work / 'write.lock').open('a') as lock:
         self.assertIn('已造好', reply.stdout)
         self.assertIn('220 則，open 20，會摘掉 200 則', reply.stdout)
         self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），102580 → 4013 bytes', reply.stdout)
+        # 第一次跑不用 --force：計畫行與結果行印同一個原因（新手回改）。
+        self.assertNotIn('--force', shell)
+        self.assertEqual(reply.stdout.count('（原因：大小超過 16384）'), 2)
         self.assertLessEqual(len(readme.encode()), 8192)
-        concepts = readme.split('## 五個概念')[1].split('node 沒有')[0]
-        self.assertEqual(len(re.findall(r'^\d\. ', concepts, re.M)), 5)
+        concepts = readme.split('## 四個概念')[1].split('## 進階')[0]
+        self.assertEqual(len(re.findall(r'^\d\. ', concepts, re.M)), 4)
+        advanced = readme.split('## 進階')[1]
+        self.assertIn('llmcall', advanced)
+        self.assertNotIn('llmcall', readme.split('## 進階')[0].split('## 第一次跑')[1])
 
     def test_size_and_dry_run_tree(self):
         path, *_ = self.fixture()

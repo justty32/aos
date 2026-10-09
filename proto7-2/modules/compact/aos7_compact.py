@@ -348,14 +348,20 @@ def human_result(p, entry, archive, parts, target):
     action = "摘掉" if p["kind"] == "compact.done" else "忘掉"
     print(f'{p["file"]}：{before} 則 → {after} 則（{action} {entry["count"]}、open {entry["open"]} '
           f'{"全留" if p["kind"] == "compact.done" else "依指定範圍"}），'
-          f'{entry["before_bytes"]} → {entry["after_bytes"]} bytes，原文在 compact/archive/{archive.name}')
+          f'{entry["before_bytes"]} → {entry["after_bytes"]} bytes，原文在 compact/archive/{archive.name}'
+          + (f'（原因：{trigger_reason(p["trigger"], p.get("max_bytes"))}）' if p["trigger"] in ("max_bytes", "force") else ""))
+
+
+def trigger_reason(trigger, max_bytes):
+    """dry-run 計畫行與實跑結果行共用同一句原因。"""
+    return {"max_bytes": f'大小超過 {max_bytes}', "force": "強制整理（--force）", "stage_change": "段落切換"}[trigger]
 
 
 def human_plan(plan, cfg):
     if not plan["count"]:
         print(f'{plan["file"]}：不需要整理')
         return
-    reason = {"max_bytes": f'大小超過 {cfg["max_bytes"]}', "force": "強制整理", "stage_change": "段落切換"}[plan["trigger"]]
+    reason = trigger_reason(plan["trigger"], cfg["max_bytes"])
     if plan["trigger"] == "stage_change":
         reason = stage_reason(plan["evidence"])
     print(f'{plan["file"]}：{plan["records"]} 則，open {plan["open"]}，會摘掉 {plan["count"]} 則（原因：{reason}）')
@@ -366,7 +372,8 @@ def pending(work, rel, text, indices, trigger, cfg, kind="compact.done", forget_
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
     job = "c" + stamp + "-" + hashlib.sha256((rel + sha + str(indices)).encode()).hexdigest()[:8]
     p = dict(job=job, file=rel, sha256=sha, original=text, indices=indices, new_sha=None, call_id=job,
-             trigger=trigger, kind=kind, at=now(), llm=cfg["llm"], summary_max_chars=cfg["summary_max_chars"])
+             trigger=trigger, kind=kind, at=now(), llm=cfg["llm"], summary_max_chars=cfg["summary_max_chars"],
+             max_bytes=cfg["max_bytes"])
     if evidence is not None:
         p["evidence"] = evidence
     if forget_range is not None:
@@ -448,21 +455,22 @@ class Parser(argparse.ArgumentParser):
 
 def main(argv=None):
     """命令列入口；最後一行固定 JSON，watch 每回合鎖住自己的 node。"""
-    ap = Parser(prog="aos7-compact")
-    commands = ap.add_subparsers(dest="command", required=True, parser_class=Parser)
-    a = commands.add_parser("now")
-    a.add_argument("node")
-    a.add_argument("--dry-run", action="store_true")
-    a.add_argument("--force", action="store_true")
-    a = commands.add_parser("forget")
-    a.add_argument("node")
-    a.add_argument("--file", required=True)
-    a.add_argument("--from", dest="start", type=int, required=True)
-    a.add_argument("--to", dest="end", type=int, required=True)
-    a.add_argument("--dry-run", action="store_true")
-    a.add_argument("--include-open", action="store_true")
-    a = commands.add_parser("watch")
-    a.add_argument("--rounds", type=int, default=0)
+    ap = Parser(prog="aos7-compact", description="把 node（一個工作資料夾）裡太長的記憶檔整理成摘要；原文先存進 <node>/compact/archive/，未完成（open）與最近 10 則留下。",
+                epilog="第一次用：now <node> --dry-run 看計畫，再 now <node> 實際整理。")
+    commands = ap.add_subparsers(dest="command", required=True, parser_class=Parser, metavar="{now,forget,watch}")
+    a = commands.add_parser("now", help="現在檢查一次，需要就整理", description="檢查一次 node 的記憶檔；需要時（例如檔超過 16384 bytes）才整理。")
+    a.add_argument("node", help="node 資料夾路徑")
+    a.add_argument("--dry-run", action="store_true", help="只印計畫，不寫任何檔")
+    a.add_argument("--force", action="store_true", help="不管檔大小，強制整理")
+    a = commands.add_parser("forget", help="人手刪掉指定的幾則（原文仍存進 archive）", description="刪掉某個記憶檔的第 A 到 B 則（1 起算、含頭尾）；原文另存 archive。")
+    a.add_argument("node", help="node 資料夾路徑")
+    a.add_argument("--file", required=True, help="記憶檔，相對 node 的路徑，例如 notes/journal.jsonl")
+    a.add_argument("--from", dest="start", type=int, required=True, metavar="A", help="第幾則開始（1 起算）")
+    a.add_argument("--to", dest="end", type=int, required=True, metavar="B", help="到第幾則（含）")
+    a.add_argument("--dry-run", action="store_true", help="只印會刪哪幾則（每則前 80 字），不寫")
+    a.add_argument("--include-open", action="store_true", help="範圍含未完成（open）項時，明確同意一起刪")
+    a = commands.add_parser("watch", help="常駐：由 aos 每回合叫醒檢查（進階，第一次不用）", description="作為 aos keep 任務常駐，每回合檢查一次；手動試用請改用 now。")
+    a.add_argument("--rounds", type=int, default=0, metavar="N", help="跑 N 回合就停；不給就一直跑")
     try:
         args = ap.parse_args(argv)
         try:
