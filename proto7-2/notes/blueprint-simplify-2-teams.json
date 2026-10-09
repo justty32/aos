@@ -1,0 +1,64 @@
+{
+  "contract": "wf-table/1",
+  "source": "blueprint-simplify-2.md",
+  "extracted": "2026-10-09",
+  "note": "RV 回頭審第二輪分線（Opus）。三線領地互不重疊，避開 B5／EF2／EF3／S3／I5／MC。每線：該包測試綠、tests/error_path.json 該列不 skip、README 三行頭格式、移除的東西 git mv 進 proto7-2/archive/ 不刪歷史、舊指令名留一行轉址至少一輪；modules/README／INDEX／code-map 由 I5 改（交棒信寫明）。工人不 commit，隊長逐行審後 commit。",
+  "columns": [
+    "team",
+    "wave",
+    "lead",
+    "workers",
+    "intent",
+    "items",
+    "territory",
+    "excluded",
+    "deps",
+    "gates",
+    "done",
+    "handoff"
+  ],
+  "rows": [
+    {
+      "team": "RV-fix-A（量尺合一：usage 併入 metrics）",
+      "wave": "1",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋測試；gpt-6-astra read-only 審",
+      "intent": "metrics 卡①不變（量尺）；頂層先在 metrics 卡③把「不是帳的彙總」改成「帳差只對照、不修帳」",
+      "items": "①metrics `job` 加 `--by model|holder|day|hour`（只影響 --json／--detail；分組讀真 llmcall 檔形：request.litellm.model、ISO at）；②--detail 加帳差（ledger used − 回條合計）與缺口數；③packs/usage git mv 到 proto7-2/archive/usage/，原處留 bin/aos7-usage 薄 stub：stderr 一行「aos7-usage: 已併入 aos7-metrics。改用 aos7-metrics job PATH --by model --json」退 1；README 一行轉址；④測試用 modules/metrics/baseline/r1/ 真資料與 usage 舊測試的情境（轉成 metrics 測試）",
+      "territory": "modules/metrics/**、packs/usage/**、proto7-2/archive/usage/（新）",
+      "excluded": "不碰 lib/；不改凍結介面（llmcall 0～4、budget、events store）；不碰 modules/up/**（B5／EF2／U3）、packs/author/aos7_author.py（EF2）、aos7_author_llm.py（EF3）、packs/author/examples/aos-tool-*（S3）、modules/README.md／INDEX.md／tests/README.md（I5）、aos7_llmcall_litellm.py（MC）；不改 packs/author/examples/aos-tool-usage（學徒題庫照舊）",
+      "deps": "RV 進 main；頂層代定 §6-1",
+      "gates": "每線 diff >400 行停下回報；交棒前全套 1 份（錯開，≤3 份同時）；error_path 清單該列不 skip",
+      "done": "真 baseline 上 `--by model` 分組正確、帳差 0；`job` 預設白話行逐字不變（S3／EF 拿它量）；metrics 測試＋error_path 綠；stub 印轉址退 1；人類面：metrics README 不增指令",
+      "handoff": "交棒信給 I5：modules/README 刪 usage 列（packs 結構表也刪）、INDEX、code-map 同步；給 S3：量測照用 job 預設輸出"
+    },
+    {
+      "team": "RV-fix-B（診斷合一：llmdiag 併入 diag）",
+      "wave": "1",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1；gpt-6-astra read-only 審",
+      "intent": "diag 沒有意圖卡（核心期包）；頂層先寫一張 ≤1.5 KiB diag 卡（①唯讀診斷：核心槽＋LLM 待辦 ②不寫檔 ③不修 ④無）再開線",
+      "items": "①`aos7-diag --llm NODE`：輸出與 aos7_llmdiag.diagnose 逐字相同的一行 JSON；`aos7-diag <root> [node-id]` 不變；②錯誤照統一格式（stderr 一行、用法錯退 2、--help 退 0）；③llmdiag git mv 到 proto7-2/archive/llmdiag/，原處留 aos7-llmdiag stub 轉址退 1；④tests/error_path.json 加 diag 一列（不 skip，含一個不確定案或寫明豁免理由）",
+      "territory": "modules/diag/**、modules/llmdiag/**、proto7-2/archive/llmdiag/（新）、tests/error_path.json（只加 diag 一列）",
+      "excluded": "不碰 lib/；不改凍結介面（llmcall 0～4、budget、events store）；不碰 modules/up/**（B5／EF2／U3）、packs/author/aos7_author.py（EF2）、aos7_author_llm.py（EF3）、packs/author/examples/aos-tool-*（S3）、modules/README.md／INDEX.md／tests/README.md（I5）、aos7_llmcall_litellm.py（MC）；不改 packs/author/examples/aos-module-diag",
+      "deps": "RV 進 main；頂層代定 §6-2、diag 卡",
+      "gates": "每線 diff >400 行停下回報；交棒前全套 1 份（錯開，≤3 份同時）；error_path 清單該列不 skip",
+      "done": "舊 llmdiag 測試情境搬成 diag 測試全綠；error_path diag 列綠；diag README 新手段一行講 --llm",
+      "handoff": "交棒信給 I5：modules/README 刪 llmdiag 列、diag 列補 --llm；code-map 同步"
+    },
+    {
+      "team": "RV-fix-C（must 通道收口）",
+      "wave": "1",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1；gpt-6-astra read-only 審（專看重啟與混合事件）",
+      "intent": "動手前對 events、mail、author 三張卡；頂層代定 §6-3 後在 author 卡④補一條「intake 遇外來 kind 停、不 ack」",
+      "items": "①author intake（aos7_author_pub.py）遇非 author.request 的 must 事件：停下、不 ack、stderr 一行說哪個 kind 擋住（照 §6-3 定案）；②author send 對沒有 events/ 的 node 退 1「對方沒開 events，請用 aos7-up 起 node 或 aos7-events pub --create」，不建夾；③events `read --ack` 照做但 stderr 加一行轉址到 `aos7-events ack`（stdout JSON 不變）；④更新 mail/INTERNALS.md 與 author examples/events-request/README.md 改用 ack；⑤新測試：同一 node 混 mail.request 與 author.request，兩邊各跑、重啟一次，誰都不替對方 ack",
+      "territory": "packs/author/aos7_author_pub.py、packs/author/tests/（新案檔）、modules/events/aos7_events_read.py、modules/events/tests/test_events_read.py、modules/events/ADVANCED.md、modules/mail/INTERNALS.md、packs/author/examples/events-request/README.md",
+      "excluded": "不碰 lib/；不改凍結介面（llmcall 0～4、budget、events store）；不碰 modules/up/**（B5／EF2／U3）、packs/author/aos7_author.py（EF2）、aos7_author_llm.py（EF3）、packs/author/examples/aos-tool-*（S3）、modules/README.md／INDEX.md／tests/README.md（I5）、aos7_llmcall_litellm.py（MC）；不改 events store 與 mail 程式",
+      "deps": "RV 進 main；頂層代定 §6-3；EF2 不碰 aos7_author_pub.py（已核）",
+      "gates": "每線 diff >400 行停下回報；交棒前全套 1 份（錯開，≤3 份同時）；error_path 清單該列不 skip",
+      "done": "混合事件測試綠；author send 不再建別人的 events/；read --ack 有轉址行、舊測試照綠；author／events／mail error_path 列綠",
+      "handoff": "r5 待辦：移除 read --ack（寫進代定清單）；交棒信給 B5：brain 若要用 must，先看本線規則"
+    }
+  ]
+}
