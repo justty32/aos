@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import shlex
+import time
 import sys
 TOP = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(TOP / 'lib'), str(TOP / 'modules/tools')]
@@ -24,6 +26,8 @@ class Trouble(ValueError):
         super().__init__(trouble(why, fix))
 class Later(Exception):
     """同一封信與同一筆 AI 請求留到下一次處理。"""
+    def __init__(self, unsure=True):
+        self.unsure = unsure
 
 
 class AIReply(str):
@@ -45,6 +49,8 @@ def mail(node, *args):
     return checked(MAIL, *args, '--root', node.parent, node=node)
 def is_fake(cfg):
     return cfg.get('model') in (None, 'fake', '')
+def ai_deadline(cfg):
+    return float(cfg.get('deadline', 60 if is_fake(cfg) else 600))
 def cid_of(ident):
     cid = re.sub(r'[^A-Za-z0-9_-]', '-', ident)
     return cid if len(cid) <= 64 else cid[:47] + '-' + hashlib.sha1(ident.encode()).hexdigest()[:16]
@@ -133,13 +139,15 @@ def request(node, letter, cid, cfg):
     if is_fake(cfg):
         chars = sum(len(m['content']) for m in obj['litellm']['messages'])
         obj = {'fake': dict(mode='ok', usage=chars // 3 + 20, text=fake_text(letter, step))}
+        if cfg.get('fake_delay', 0) > 0:
+            obj['fake'].update(mode='late', delay=cfg['fake_delay'])
     else:
         obj['litellm']['model'] = cfg['model']
     write_json(str(req), obj)
     return req
 def ask_ai(node, letter, cid, cfg):
     req = request(node, letter, cid, cfg)
-    deadline = cfg.get('deadline', 60 if is_fake(cfg) else 600)
+    deadline = ai_deadline(cfg)
     env = os.environ.copy()
     env.pop('AOS7_LITELLM_URL', None)
     if not is_fake(cfg) and cfg.get('litellm_url'):
@@ -150,7 +158,8 @@ def ask_ai(node, letter, cid, cfg):
                 '--request', req, '--reserve', cfg.get('reserve', 1000000), '--deadline', deadline,
                 node=node, env=env, timeout=float(deadline) + 15)
         if p.returncode == 3:
-            raise Later()
+            raw = node / 'llmcall' / Path(cfg.get('budget', 'budget/llm')).name / cid / 'raw.json'
+            raise Later(unsure=not raw.exists())
         if p.returncode not in (0, 4):
             raise ValueError()
         receipt = json.loads(p.stdout.splitlines()[-1])
@@ -161,6 +170,7 @@ def ask_ai(node, letter, cid, cfg):
         raise
     except Exception:
         raise Trouble('AI 沒回應', AI_FIX) from None
+    (node / 'brain/unsure.json').unlink(missing_ok=True)
     test_point('up-brain-after-llm')
     return AIReply(text, usage_pending=p.returncode == 4)
 def state_count(node, line):
@@ -177,6 +187,10 @@ def locked(node, edit):
         edit()
 def open_line(node, ident, line=None):
     """SESSION-LOG 第一段裡這封信的 open 一行：給 line 就寫（換掉舊的），不給就刪；ident 為 None＝刪掉全部 brain 行。"""
+    if line:
+        line = line.replace('已完成', '已做好').replace('已結案', '已收').replace('已收線', '已收')
+        line = re.sub(r'（完成）|✅|✔|~~', '', line)
+        line = re.sub(r'DONE|\(done\)|\[done\]', 'done', line)
     path = node / 'wf/SESSION-LOG.md'
     mark = f'- [brain] 信 {ident}：' if ident else '- [brain] 信 '
     def edit():
@@ -235,7 +249,7 @@ def progress(node, letter, step, title, body):
     path.unlink()
 def drop_task(node, ident):
     open_line(node, ident)
-    for name in ('task.json', 'last.md', 'progress.md'):
+    for name in ('task.json', 'last.md', 'progress.md', 'unsure.json'):
         (node / 'brain' / name).unlink(missing_ok=True)
 def finish(node, pending, personal):
     if any(l['id'] == pending['id'] for l in personal):
@@ -278,6 +292,56 @@ def step_on(node, letter, text, cfg):
                trail=(task['trail'] + [f'第 {step} 回合：{line}｜成果：{flat(result)[:200]}'])[-8:]))
     note = '，整理了記憶' if compact_if_big(node, cfg) else ''
     return f'第 {step} 回合做完，下回合接著做{note}', None
+def stuck_reply(node, cid, step, waited, cfg):
+    """留下人工接回條用的證據；brain 不替人重送或放掉預留。"""
+    budget, holder = cfg.get('budget', 'budget/llm'), cfg.get('holder', 'brain')
+    tool = TOP / 'packs/llmcall/bin/aos7-llmcall'
+    def command(*args):
+        return ' '.join(shlex.quote(str(a)) for a in ('python3', tool, *args))
+    status_cmd = command('status', budget, '--holder', holder, '--call', cid)
+    saved = read_json(str(node / 'llmcall' / Path(budget).name / cid / 'request.json'))
+    reserve = '帳上沒有這筆的預留'
+    how = '① 要重做：再寄一次這封信（會重新問 AI，可能多付一次錢）。'
+    status = None
+    if saved:
+        reserve = '預留多少不確定，跑 ' + status_cmd + ' 看'
+        try:
+            p = run(tool, 'status', budget, '--holder', holder, '--call', cid, node=node)
+            got = json.loads(p.stdout)
+            ledger = got['ledger']
+            if p.returncode == 0 and 'error' not in ledger:
+                status = got
+                reserve = (f"帳上預留 {ledger['ledger']['amount']}" if ledger.get('stage') == 'reserved'
+                           else '帳上沒有這筆的預留')
+        except (ValueError, KeyError, TypeError, OSError, subprocess.TimeoutExpired):
+            pass
+    if status and (status.get('gateway') or {}).get('stage') == 'intent':
+        work = node / 'brain/stuck' / cid
+        work.mkdir(parents=True, exist_ok=True)
+        write_json(str(work / 'request.json'), saved['request'])
+        write_json(str(work / 'reply.json'), dict(call_id=cid, req_sha=saved['req_sha'],
+                   reply=dict(status='reject', billed=False, body='')))
+        rel = 'brain/stuck/' + cid
+        how += ('\n② 要放掉預留（心跳要開著）：在 node 資料夾裡跑這一行：\n' +
+                'cd ' + shlex.quote(str(node)) + ' && ' +
+                command('adopt', budget, '--holder', holder, '--call', cid, '--raw', rel + '/reply.json') + ' && ' +
+                command('call', budget, '--holder', holder, '--call', cid, '--request', rel + '/request.json',
+                        '--reserve', saved['reserve']) + '\n' +
+                'reply.json 預設當作「這筆沒扣費」（記 0）。若從 LiteLLM 後台查到實際用量 N，' +
+                '把 reply.json 裡的 reply 改成 {"status":"error","billed":true,"body":"","usage":{"total_tokens":N}} 再跑。\n' +
+                '第二段退 1 是正常的（這筆記成沒答成），預留就放掉了。')
+    elif status and status.get('gateway') is None and status['ledger'].get('stage') == 'reserved':
+        budget_tool = TOP / 'packs/budget/bin/aos7-budget'
+        def budget_command(op):
+            return ' '.join(shlex.quote(str(a)) for a in
+                            ('python3', budget_tool, op, budget, '--holder', holder, '--request', cid))
+        how += ('\n這筆還沒送出給 AI。\n② 要放掉預留（心跳要開著）：在 node 資料夾裡跑這一行：\n' +
+                'cd ' + shlex.quote(str(node)) + ' && ' + budget_command('cancel') + ' && ' +
+                budget_command('settle'))
+    title = '問 AI 那筆一直不確定，這封先停下'
+    body = (f'第 {step} 回合問 AI 的 call {cid} 一直不確定回沒回，已等 {waited:.0f} 秒。\n'
+            '系統不會自動重送（重送可能多付一次錢）。\n' + reserve + '。\n怎麼辦：\n' + how)
+    return title, body, f'卡住：問 AI 那筆一直不確定（call {cid}）', '看回信：要重做就再寄一次；要放掉預留照信裡的一行指令'
 def once(node, rnd):
     work = node / 'brain'
     work.mkdir(exist_ok=True)
@@ -286,7 +350,7 @@ def once(node, rnd):
     if pending:
         finish(node, pending, personal)
         if pending['status'] != 'DONE':
-            print(f'回合 {rnd}：' + trouble(pending['line'], pending['body'].split('怎麼辦：')[-1]), flush=True)
+            print(f'回合 {rnd}：' + trouble(pending['line'], pending.get('fix') or pending['body'].split('怎麼辦：')[-1]), flush=True)
         elif pending.get('usage_pending'):
             print(f'回合 {rnd}：已回信（AI 用量還沒對清，之後自己會對）', flush=True)
         return
@@ -298,7 +362,11 @@ def once(node, rnd):
             mail(node, 'done', node.name, letter['id'])
     task = task_of(node)
     if not task or not any(l['id'] == task['id'] for l in requests):
-        drop_task(node, None)   # 沒有進行中的任務（或信已被別人辦掉）：清掉殘留的 open 行與暫存
+        if task or not requests:
+            drop_task(node, None)
+        else:
+            open_line(node, None)
+        # 沒有進行中的任務（或信已被別人辦掉）：清掉殘留的 open 行與暫存
         task = None
     if not requests: return
     letter = next(l for l in requests if l['id'] == task['id']) if task else min(requests, key=fifo)
@@ -311,7 +379,8 @@ def once(node, rnd):
                 raise ValueError()
         except Exception:
             raise Trouble('設定檔 .aos/up.json 壞了', '刪掉它再跑 aos7-up <node>') from None
-        text = ask_ai(node, letter, call_id(ident, task['step'] if task else 1), cfg)
+        cid = call_id(ident, task['step'] if task else 1)
+        text = ask_ai(node, letter, cid, cfg)
         usage_pending = getattr(text, 'usage_pending', False)
         kind = kind_of(text)
         if kind == '繼續：':
@@ -326,14 +395,27 @@ def once(node, rnd):
             status, fix = 'NEEDS-USER', '照回信補資料或決定，再寄一次'
         else:
             reply, title, line = parse(text, ident)
-    except Later:
-        print(f'回合 {rnd}：AI 還沒確定回沒回，下回合再看同一筆', flush=True)
-        return
+    except Later as e:
+        path = work / 'unsure.json'
+        if not e.unsure:
+            path.unlink(missing_ok=True)
+            print(f'回合 {rnd}：AI 回了、帳還沒對上，下回合再看同一筆', flush=True)
+            return
+        unsure = read_json(str(path), {}) or {}
+        if unsure.get('call') != cid:
+            unsure = dict(call=cid, id=ident, since=time.time())
+            write_json(str(path), unsure)
+        waited, limit = time.time() - unsure['since'], ai_deadline(cfg)
+        if waited < limit:
+            print(f'回合 {rnd}：AI 還沒確定回沒回（已等 {waited:.0f} 秒，滿 {limit:g} 秒就回信說卡住），下回合再看同一筆', flush=True)
+            return
+        status = 'BLOCKED'
+        title, reply, line, fix = stuck_reply(node, cid, task['step'] if task else 1, waited, cfg)
     except Exception as e:
         status = 'BLOCKED'
         title, fix = (e.why, e.fix) if isinstance(e, Trouble) else ('讀寫沒完成', CHECK_FIX)
         reply, line = '原因：' + title + '\n怎麼辦：' + fix, '卡住：' + title
-    pending = dict(id=ident, status=status, title=title, body=reply, line=line, state_count=state_count(node, line), usage_pending=usage_pending)
+    pending = dict(id=ident, status=status, title=title, body=reply, line=line, state_count=state_count(node, line), usage_pending=usage_pending, fix=fix)
     write_json(str(work / 'pending.json'), pending)
     test_point('up-brain-after-pending')
     finish(node, pending, personal)

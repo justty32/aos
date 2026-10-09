@@ -51,6 +51,7 @@
 | `modules/mail/tests/test_mail_deliver_1.py`、`test_mail_deliver_2.py`、`test_mail_review_1.py`～`_3.py`、`test_mail_errors_effects.py` | **信箱包**：並行投遞、audit 進度與終局、done 被殺恢復、副作用只一次、events 連續 ack、事件失敗信照留；團隊／roster／wfnode 版面；三輪審查回歸（歸檔不蓋、分鐘檔名撞名重試、交付鎖共用、壞標題不毒日誌、團隊原子發布）；ER-mail 可選提醒、自身鎖、單次 ack 停在未證明的洞、一行錯誤 |
 | `modules/llmdiag/tests/test_llmdiag_scan.py` | **LLM 待辦診斷包**：三張表排序且唯讀、非資料夾退 2 |
 | `modules/up/tests/test_brain.py`、`test_brain_errors.py`、`test_brain_recovery.py`、`test_brain_review.py` | **up brain**：真 daemon＋mail＋ledger 一圈、LLM 後被殺重用同請求、FIFO 一回合一封、十封信健康、AI 失敗換下一封、ask 逾時、不確定重試同信同 call；啟動錯誤白話無 traceback、假 AI 只送假請求；mail／state 之間與刪 pending 前 SIGKILL；第二輪回歸（擋住的 pending 被殺不叫 AI、長信尾段、設定與渲染錯） |
+| `modules/up/tests/test_brain_stuck.py` | **up brain 卡住**：brain＋llmcall 在 intent 後／reserve 後一起被殺，不確定滿 deadline 回 BLOCKED、不重送、下一封照辦；回信那一行指令真能放掉預留；status 信那行計數與卡住那行、唯讀；open 行不讓體檢誤判 |
 | `packs/author/tests/test_author_aos.py`、`test_author_aos_cli.py` | author **aos 學徒路徑**：三關可抽換、固定候選、git plumbing、沙箱擋寫 host、領地變體、publish／brief／answer 唯讀；CLI 經本地 HTTP 真 llmcall：三關、審查拒收／接受、rules 先擋不叫 LLM、重問與 learn |
 | `packs/budget/tests/test_budget_errors.py` | budget 進門唯讀拒絕與 stderr 一行契約：無在跑 call 與 settle、status 缺／壞／IO、壞參數與 help、不確定與終局失敗 |
 | `packs/llmcall/tests/test_llmcall_errors.py`、`test_llmcall_http.py` | llmcall 錯誤路徑（進門不寫檔、沒 ledger 照回放回條、忙＝不確定、鎖探測 IO 與 fd 關閉）；真 HTTP 故障矩陣七種 ×3（逾時保留預留、5xx、壞 JSON、缺 usage、截斷、受理後斷線、遲到人工接回）＋背景成功不落檔、本機不走代理 |

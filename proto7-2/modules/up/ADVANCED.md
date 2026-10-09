@@ -88,7 +88,7 @@ register 後最多等 15 秒（節拍超過 1 秒時多等那一拍；心跳已�
 子指令獨立 process group；中斷送整組 SIGTERM，等 5 秒再 SIGKILL，不留孫程序。
 所有 Python 子程序使用 -B，不在程式目錄留 __pycache__。
 
-status 六行唯讀；體檢 OK 只報 OK，有問題附 check 指令。AI 行的「讀寫約 N 字」是 budget status 的 used（token 數，對中文約等於字數），讀不到印「讀寫字數不明」。
+status 唯讀，平常六行；體檢 OK 只報 OK，有問題附 check 指令。信那行先說 node 收到幾封要辦的信（REQUEST，含已辦完的）、辦完幾封、正在辦、排隊幾封，再說人的信箱（`you/inbox`）有幾封回信沒看、其中幾封要你決定、幾封說卡住了。brain 正在等一筆不確定的 AI 回覆時，信那行下面多一行「卡住了：正在辦的信「…」…已等 X 秒；滿 L 秒就回信…」，這時共七行。AI 行的「讀寫約 N 字」是 budget status 的 used（token 數，對中文約等於字數），讀不到印「讀寫字數不明」。
 
 給人看的輸出不出現英文狀態詞：ask 的回信 DONE 不標、BLOCKED 標「卡住了」、NEEDS-USER 標「要你決定」、FAILED 標「沒辦成」；JSON 與信件欄位照舊是英文。
 
@@ -113,7 +113,15 @@ task.json 壞掉就刪掉從第 1 回合重播（每回合的 call 已有回條�
 
 停在哪連續 `stall`（預設 3）回合沒變，或做到 `max_steps`（預設 40）回合還沒完，回 NEEDS-USER 結案。一次只做一封信，做完才換下一封（FIFO）。假 AI 照信的標題演：含「N 回合」就分 N 回合做完，含「沒進展」就一直停在同一處，含「要你決定」就一回合要你決定（測試用）。範例 [examples/multiround/](examples/multiround/README.md)。
 
-brain 對 llmcall 的退出：0 回信；4 也回信，回合行註「AI 用量還沒對清」；3 不回信、不寫 pending、信留在 inbox，下回合用同一個 call 接續；1、2 與其他回 BLOCKED。
+brain 對 llmcall 的退出：0 回信；4 也回信，回合行註「AI 用量還沒對清」；3 不回信、不寫 pending、信留在 inbox，下回合用同一個 call 接續（見下段的期限）；1、2 與其他回 BLOCKED。
+
+**不確定的期限**（2026-10-09 頂層定，問題見[長任務實跑](../../notes/play/2026-10-09-longtask/README.md)問題 1）：退 3 而那筆沒有 raw（AI 回沒回不確定，例如 brain 連同 llmcall 在傳輸中被殺）時，brain 在 `brain/unsure.json` 記下這筆 call 第一次不確定的時間；連續不確定滿 up.json 的 `deadline` 秒（沒設：假 AI 60、真 AI 600）就**不重送**，把這封信回 BLOCKED 結案，接著照 FIFO 辦下一封。期限用 deadline 是因為傳輸本身最多等 deadline 秒：被殺前已送出的孤兒 llmcall 到那時一定已經回來或放棄。傳輸逾時造成的不確定，從逾時那刻起再等一個 deadline，最多約兩倍。退 3 但 raw 已在（AI 回了、帳沒回）不計時，照舊下回合再看。
+
+卡住的回信寫：哪一筆（call id、第幾回合）、等了幾秒、帳上預留多少，以及怎麼辦：①再寄一次這封信＝重問（可能多付一次錢）；②要放掉預留，在 node 裡照信跑兩行：`aos7-llmcall adopt …--raw brain/stuck/<call>/reply.json` 再 `aos7-llmcall call …--request brain/stuck/<call>/request.json --reserve R`（心跳要開著；reply.json 預設記「沒扣費」，後台查到實際用量就改成 `{"status":"error","billed":true,"body":"","usage":{"total_tokens":N}}`；第二行退 1 是正常的）。`aos7-budget cancel` 對 llm 的 intent 退 3、放不掉，所以不用它。
+
+SESSION-LOG 的 brain 行會把 AI 寫的「停在哪」裡會讓 `aos7-wfnode check` 誤判成「做完沒刪」的字（已完成、DONE、✅ 等）換成中性字，進行中的行不讓體檢變「有問題」。
+
+`up.json` 的 `fake_delay`（秒，只對假 AI）讓假 AI 每次回覆前等這麼久，給測試與 [longtask](examples/longtask/README.md) 重現「傳輸中被殺」用。
 觀看直接掃信件，包含 you/inbox/done 回信，不更新 mail 的讀取快照。
 
 ## 錯誤與退出
@@ -139,7 +147,7 @@ up.json 壞了時刪掉該檔再 up。未知結果不清檔、不重送。
 | `aos7_up.py` | 冪等安裝、起停、起動證據與回收 |
 | `aos7_up_cli.py` | 參數、錯誤與 ask／brain 分派 |
 | `aos7_up_brain.py`、`aos7_up_ask.py`、`prompts/`、`examples/` | brain 一回合（一封信可跨回合）與 ask（測試 `tests/test_brain*.py`、`tests/test_up_brain_multi.py`） |
-| `aos7_up_status.py` | 六行狀態、觀看、設定驗證、子指令與 atomic |
+| `aos7_up_status.py` | 六（卡住時七）行狀態、觀看、設定驗證、子指令與 atomic |
 | `tests/test_up.py` | 起停、信與已花預算 SIGKILL 重接、唯讀摘要 |
 | `tests/test_up_model.py` | 模型、端點保存、拒絕 gateway 變更、經 up 的 ask 假 AI 一圈 |
 | `tests/test_up_beat.py` | 節拍生效、沿用、壞值退 2 |
