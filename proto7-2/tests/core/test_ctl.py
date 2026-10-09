@@ -233,6 +233,35 @@ def test_point(name):
             self.assertEqual(aos7_proc.kill_node([self.root], known_pgids=[123]), (1, False))
             kill.assert_called_once_with({123})
 
+    def test_k1_node_rejected_pgid_not_readded_on_unknown(self):
+        """已確定是外人的 pgid，後面掃描不完整也不打。"""
+        from aos7_fs import Unknown
+        with patch.object(aos7_proc, "group_is_node", side_effect=lambda g, n: g != 123), \
+                patch.object(aos7_proc, "env_procs", side_effect=Unknown("test", kind="proc")), \
+                patch.object(aos7_proc, "kill_groups", return_value=True) as kill:
+            self.assertEqual(aos7_proc.kill_node([self.root], known_pgids=[123, 456]), (1, False))
+            kill.assert_called_once_with({456})
+
+    def test_k1_rescan_kill_failure_not_clean(self):
+        """補收那輪 SIGKILL 後確認不了，下一輪掃空也不能回乾淨。"""
+        scans = iter([[123], []])
+        with patch.object(aos7_proc, "env_procs", side_effect=lambda *a, **k: next(scans)), \
+                patch.object(aos7_proc, "groups_of", return_value={123}), \
+                patch.object(aos7_proc, "kill_groups", return_value=False):
+            self.assertFalse(aos7_proc._kill_remaining(self.root, "s", 1))
+
+    def test_k1_runner_alive_but_task_found_is_killed(self):
+        """沒 pid.json、runner 還在，但相符的任務已經起來（例如 pid.json 寫不進去）：照常收，不永遠留請求。"""
+        node = self.mknode("a")
+        sd = self.slot(node, "s")
+        with patch.object(aos7_proc, "KILL_GRACE", 0), \
+                patch.object(aos7_proc, "same_process", return_value=aos7_proc.ALIVE), \
+                patch.object(aos7_proc, "env_procs", return_value=[123]), \
+                patch.object(aos7_proc, "kill_identity", return_value=(True, "killed 1 group(s)")) as kill:
+            v = aos7_task.View(state=aos7_task.LIVE, run=1, birth={"runner": {"pid": 9, "starttime": 1}})
+            self.assertEqual(aos7_task.kill_run(sd, node, "s", v), (True, "killed 1 group(s)"))
+            kill.assert_called_once()
+
 
 class TestKillRange(CoreCase):
     """〔core〕"""

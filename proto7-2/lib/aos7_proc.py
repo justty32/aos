@@ -219,12 +219,13 @@ def groups_of(pids):
 
 def _kill_remaining(nodes, tid=None, run=None):
     """清場後再身分掃描，最多補收三輪；最後掃空才算收斂。"""
+    ok = True
     for _ in range(3):
         pids = env_procs(nodes, tid, run, skip=me_and_ancestors())
         if not pids:
-            return True
-        kill_groups(groups_of(pids))
-    return not env_procs(nodes, tid, run, skip=me_and_ancestors())
+            return ok
+        ok = kill_groups(groups_of(pids)) and ok
+    return ok and not env_procs(nodes, tid, run, skip=me_and_ancestors())
 
 
 def kill_identity(node, tid, run, pgid=None, task=None):
@@ -254,18 +255,19 @@ def kill_identity(node, tid, run, pgid=None, task=None):
 
 
 def kill_node(nodes, known_pgids=()):
-    """收一個或幾個 node 上的任務（node 消失、取消登記、stop 帶 kill 的最後補掃）：記著的 pgid，加上環境 AOS7_NODE 是它們、
+    """收一個或幾個 node 上的任務（node 消失、取消登記、stop 帶 kill 的最後補掃）：記著的 pgid（先重驗，有活成員卻都不屬這些
+    node 的不打，防群組號重用），加上環境 AOS7_NODE 是它們、
     有 AOS7_TID 的程序（aos7-run 不殺，任務死了它自己寫 exit.json）。回 (群組數, 乾不乾淨)。
     掃描不完整時照樣打記著的群組，回 clean=False。"""
-    known = {g for g in known_pgids if is_int(g) and g > 1}
-    groups = known.copy()
+    groups = {g for g in known_pgids if is_int(g) and g > 1}
     try:
-        groups = {g for g in known if group_is_node(g, nodes)}
+        for g in list(groups):
+            if not group_is_node(g, nodes):
+                groups.discard(g)   # 確定是外人的群組：之後掃描不完整也不打
         groups |= groups_of(env_procs(nodes, skip=me_and_ancestors()))
         clean = kill_groups(groups) if groups else True
         return len(groups), _kill_remaining(nodes) and clean
     except Unknown:
-        groups |= known   # 掃描不能重驗時，仍照 spec 2.6 打記著的群組
         try:
             if groups:
                 kill_groups(groups)
