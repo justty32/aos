@@ -34,7 +34,10 @@ def publish(events_dir, kind, event_id, payload, *, must=False, source=None, nod
         return usage("缺少有效 node")
     src.setdefault("node", node)
     rec = {"kind": kind, "capture": "published", "event_id": event_id, "source": src, "payload": payload}
-    return store.append(events_dir, "must" if must else "obs", rec, node=node, config=config)
+    try:
+        return store.append(events_dir, "must" if must else "obs", rec, node=node, config=config)
+    except ValueError as e:   # store 判定的呼叫錯（例如 config 不合）：沒寫
+        return usage(str(e))
 
 
 def exit_code(result):
