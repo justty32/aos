@@ -1,0 +1,7 @@
+test_ended_once_replay_finish_tock_seen_round (test_matrix_docs.TestLastRoundJson.test_ended_once_replay_finish_tock_seen_round)
+T8-06：已結束 once 重播必須收尾；tock-summary＝總結寫完、尚未補 seen_round； ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.055s
+
+OK

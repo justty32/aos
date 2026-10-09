@@ -1,0 +1,40 @@
+{
+ "findings": [
+  {
+   "id": "NEW-core3-1",
+   "classification": "B",
+   "severity": "低",
+   "title": "重起 daemon 後尚未完成的 node 回收顯示 idle，未保留 missing",
+   "contract": [
+    "proto7-2/spec.md:95",
+    "proto7-2/spec.md:97",
+    "proto7-2/notes/component-contracts.md §2.1"
+   ],
+   "reproduction": "python3 proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/new_core3_1.py",
+   "steps": [
+    "真 daemon 起 keep 任務，ready 且 timeline running",
+    "對該任務 /proc/<pid>/stat 注入 EIO；搬走 node 並放同 id 新目錄",
+    "確認 missing 與持久化 reaping 後 SIGKILL daemon",
+    "同 root 重起並維持 EIO；40 次連續樣本全為 idle，reaping 仍在、旧任務仍活、無新 round",
+    "撤 EIO，確認舊任務已死才新任務 ready"
+   ],
+   "observed": "初次邊角案＋三次獨立確認均成立；各確認 40/40 為 idle",
+   "impact": "status 使用者將回收阻塞看成閒置；實測未雙開、無漏收，故障撤除後恢復正常",
+   "cause": "load_state 只恢復 reaping，未恢復 missing；check_nodes 遇 reaping 直接 continue；write_status 無時間線且不在 missing 就報 idle",
+   "implementation": [
+    "proto7-2/lib/aos7_daemon.py:142",
+    "proto7-2/lib/aos7_daemon.py:516",
+    "proto7-2/lib/aos7_daemon.py:639"
+   ],
+   "suggestion": "由已登記且仍有 reaping 義務的狀態推導 missing，直到確認收乾淨才解除",
+   "known_limit_relation": "不是 daemon 停機時才替換 node 的已知限制：替換及 missing/reaping 均在舊 daemon 活著時已確認",
+   "evidence": [
+    "edge-restart-unknown.json",
+    "new-core3-1-confirm-1.json",
+    "new-core3-1-confirm-2.json",
+    "new-core3-1-confirm-3.json"
+   ],
+   "fixed": false
+  }
+ ]
+}

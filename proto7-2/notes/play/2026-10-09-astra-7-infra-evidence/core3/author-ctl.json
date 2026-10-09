@@ -1,0 +1,41 @@
+{
+ "scenario": "author-ctl",
+ "root": "/tmp/astra7-core3-author-ctl-t9n_mo2x",
+ "injection": {},
+ "assertions": [
+  {
+   "assertion": "author comparison suite exit",
+   "actual": 0,
+   "expected": 0,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "command": [
+  "/usr/bin/python3",
+  "-m",
+  "unittest",
+  "-v",
+  "test_ctl"
+ ],
+ "log": "test_bad_ctl_gets_failed_receipt (test_ctl.TestCtl.test_bad_ctl_gets_failed_receipt)\n〔core〕 ... ok\ntest_k1_birth_read_failure_keeps_run_number (test_ctl.TestCtl.test_k1_birth_read_failure_keeps_run_number)\nbirth 讀失敗的 exit 仍帶環境的整數 run。 ... ok\ntest_k1_inherited_aos_environment_is_cleared (test_ctl.TestCtl.test_k1_inherited_aos_environment_is_cleared)\n上一層的 AOS7_* 不傳給任務，核心身分照樣傳。 ... ok\ntest_k1_late_setsid_child_is_collected (test_ctl.TestCtl.test_k1_late_setsid_child_is_collected)\nSIGTERM 才出生的新 session 子程序也收乾淨，keep 不雙活。 ... ok\ntest_k1_node_known_pgid_is_revalidated (test_ctl.TestCtl.test_k1_node_known_pgid_is_revalidated)\n裸 pgid 不能殺外人的群組；同 node 群組照樣收。 ... ok\ntest_k1_node_rejected_pgid_not_readded_on_unknown (test_ctl.TestCtl.test_k1_node_rejected_pgid_not_readded_on_unknown)\n已確定是外人的 pgid，後面掃描不完整也不打。 ... ok\ntest_k1_node_unknown_still_uses_known_groups (test_ctl.TestCtl.test_k1_node_unknown_still_uses_known_groups)\n掃描不能重驗時照原契約打記著的群組，但不聲稱乾淨。 ... ok\ntest_k1_rescan_has_three_round_limit (test_ctl.TestCtl.test_k1_rescan_has_three_round_limit)\n持續冒出相符程序不能回成功，run 與 node 都最多補收三輪。 ... ok\ntest_k1_rescan_kill_failure_not_clean (test_ctl.TestCtl.test_k1_rescan_kill_failure_not_clean)\n補收那輪 SIGKILL 後確認不了，下一輪掃空也不能回乾淨。 ... ok\ntest_k1_runner_alive_but_task_found_is_killed (test_ctl.TestCtl.test_k1_runner_alive_but_task_found_is_killed)\n沒 pid.json、runner 還在，但相符的任務已經起來（例如 pid.json 寫不進去）：照常收，不永遠留請求。 ... ok\ntest_k1_runner_starting_keeps_kill_request (test_ctl.TestCtl.test_k1_runner_starting_keeps_kill_request)\n交接中的 runner 不能先回成功；放行後同一請求再收。 ... ok\ntest_k1_starting_runner_unknown_does_not_scan (test_ctl.TestCtl.test_k1_starting_runner_unknown_does_not_scan)\nrunner 未記上或認不出時，只留請求，不掃描、不殺。 ... ok\ntest_k1_stat_non_utf8_comm (test_ctl.TestCtl.test_k1_stat_non_utf8_comm)\nstat 的 comm 不是 UTF-8 也能解析、掃描。 ... ok\ntest_k1_task_argument_is_not_runner (test_ctl.TestCtl.test_k1_task_argument_is_not_runner)\nargv[2] 以後的 aos7-run 字樣不影響任務身分。 ... ok\ntest_kill_at_tock_reported_by_ctl (test_ctl.TestCtl.test_kill_at_tock_reported_by_ctl)\n〔core〕 ... ok\ntest_kill_with_stale_run_refused (test_ctl.TestCtl.test_kill_with_stale_run_refused)\n〔core〕 ... ok\ntest_lost_kills_leftover_before_keep_restarts (test_ctl.TestIdentityScan.test_lost_kills_leftover_before_keep_restarts)\nrunner 與任務主程序都被 kill -9，setsid 的孫程序還在：lost 判定前先身分掃描收掉它，keep 不雙開。 ... ok\ntest_no_runner_young_birth_is_live_old_is_lost (test_ctl.TestIdentityScan.test_no_runner_young_birth_is_live_old_is_lost) ... ok\ntest_old_run_leftover_not_taken_as_new_run (test_ctl.TestIdentityScan.test_old_run_leftover_not_taken_as_new_run)\n同一個槽上一個 run 留下的孫程序：不算這次的活任務、kill 這次也不打到它。 ... ok\ntest_runner_died_without_pid_json_is_lost (test_ctl.TestIdentityScan.test_runner_died_without_pid_json_is_lost) ... ok\ntest_forged_pgid_not_killed (test_ctl.TestKillRange.test_forged_pgid_not_killed) ... ok\ntest_inst_kill_reaches_other_session (test_ctl.TestKillRange.test_inst_kill_reaches_other_session) ... ok\ntest_kill_reaches_setsid_grandchild (test_ctl.TestKillRange.test_kill_reaches_setsid_grandchild) ... ok\ntest_mount_request_served (test_ctl.TestMounts.test_mount_request_served)\n執行中加掛：下一個 tick 審核、寫回條、建 mnt、在 birth 標 dyn；換 run 時照宣告重建（加掛的不帶過去，要帶用控制包 restart）。 ... ok\ntest_mounts_made_and_rebuilt_per_run (test_ctl.TestMounts.test_mounts_made_and_rebuilt_per_run) ... ok\n\n----------------------------------------------------------------------\nRan 25 tests in 7.876s\n\nOK\n",
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "author-ctl.tar.gz",
+ "archive_bytes": 1843,
+ "pass": true
+}

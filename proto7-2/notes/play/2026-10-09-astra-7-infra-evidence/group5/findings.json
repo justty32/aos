@@ -1,0 +1,37 @@
+[
+  {
+    "id": "NEW-group5-1",
+    "class": "G",
+    "severity": "中",
+    "title": "history 升級後舊檔混入另一 node 的新紀錄",
+    "contract": [
+      "proto7-2/modules/README.md:28 每個來源的歷史追加到自己的地方",
+      "proto7-2/modules/history.py:10 編碼 id 的輸出檔",
+      "proto7-2/notes/decisions-2026-10-09.md:53 舊檔名不變"
+    ],
+    "known_limit_extension": "M 舊檔名不變代定的延伸：除了同一 node 新舊分檔，還會跨 node 混檔。",
+    "reproduce": "執行 probe_docs_edges.py：git 510dd134 的 history.once 為 a+b 寫 round 1；保留輸出及 state，以 HEAD history.once 繼續 a+b round 2 並新增 a/b round 1。",
+    "actual": "a+b.jsonl 同時含 plus-only#1 及 slash-only#1；a%2Bb.jsonl 只有 plus-only#2。兩個來源可有相同 round，JSON 原格式沒有來源標識。",
+    "impact": "升級後只讀新編碼會漏舊歷史，讀舊檔又可能混來源；max-lines 輪替可進一步擠掉舊來源記錄。後者未另實測。",
+    "fix": "寫明升級封存／搬移流程，舊編碼有歧義時拒絕自動混寫，要求使用者辨認來源。",
+    "evidence": "docs-edges.json history-upgrade；docs-edges-snapshots.tar.gz；probe_docs_edges.py"
+  },
+  {
+    "id": "NEW-group5-2",
+    "class": "B",
+    "severity": "低",
+    "title": "超長 ASCII 陣列索引逸出 ValueError，aos-exec 回 1 而非 125",
+    "contract": [
+      "proto6/spec/inst.md:37 解析驗證失敗應回125且stderr代號:白話",
+      "proto6/spec/inst.md:47 DirectiveError 包成 InstError",
+      "proto5/spec/directives/ref.md:48 走不到回 ReferencePointerInvalid",
+      "proto7-2/lib/aos_inst.py:3 指向以上規範"
+    ],
+    "reproduce": "執行 probe_docs_edges.py：inst argv 為 {\"$ref\":\"#/array/\"+\"9\"*5000}，array=[0]；真 aos-exec 執行該 JSON。",
+    "actual": "4300 digits 為 DirectiveError；4301/5000 digits 為 ValueError；CLI rc=1、stderr traceback。",
+    "impact": "畸形指示詞越過結構化錯誤邊界，呼叫端把執行器解析失敗辨認為通用碼1；沒有啟動子任務。",
+    "origin": "510dd134 與 ad1dfa25 同樣失敗；既存邊界，非 loop7 新引入。",
+    "fix": "轉 int 前比索引長度／範圍，或捕捉 ValueError 轉 ReferencePointerInvalid。",
+    "evidence": "docs-edges.json giant-pointer；giant-pointer-cli.json；error-loop.json pointer-origin；probe_error_loop.py"
+  }
+]

@@ -1,0 +1,7 @@
+test_retry_lost_value_false (test_once_retry.TestRetryLost.test_retry_lost_value_false)
+T8-08：先有真正的 lost，再驗證只有布林 true 才產生候選並執行一次。［false］ ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.039s
+
+OK

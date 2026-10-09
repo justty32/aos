@@ -1,0 +1,1 @@
+{"root":"/tmp/astra7-longrun-step-gsy6nkus","owned_before":[{"pid":352977,"starttime":"1268554","cmd":["/usr/bin/python3","/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-daemon","/tmp/astra7-longrun-step-gsy6nkus"]}],"signalled":[],"daemon_rc":0,"remaining":[],"root_removed":true}

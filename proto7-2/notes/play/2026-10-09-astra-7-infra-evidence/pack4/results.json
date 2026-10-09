@@ -1,0 +1,1859 @@
+[
+ {
+  "scenario": "unknown-recover",
+  "pass_": true,
+  "data": {
+   "injection": [
+    "open\tEIO\t/tmp/astra7-pack4-probe-9iv0b_9d/unknown-recover/n/budget/demo/backend.json"
+   ],
+   "before": {
+    "v": 1,
+    "job": "j",
+    "inst": "f096c768",
+    "table": "62471de2a1ee",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "f096c768-call-1": 2
+    },
+    "resends": {
+     "f096c768-call-1": 1
+    },
+    "pending": {
+     "step": "call",
+     "request": "f096c768-call-1",
+     "attempt": "f096c768-call-1-a2",
+     "n": 2,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/f096c768-call-1-a2.json",
+     "state": "queued",
+     "intent_round": 2,
+     "since": 2
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": 2,
+    "rev": 8,
+    "tock": 2,
+    "at": "2026-10-09T11:50:16.369"
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "f096c768",
+    "table": "62471de2a1ee",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "f096c768-call-1",
+      "attempt": "f096c768-call-1-a2",
+      "ok": true,
+      "run": "step-j-call#3",
+      "code": 0
+     }
+    },
+    "tries": {
+     "f096c768-call-1": 2
+    },
+    "resends": {
+     "f096c768-call-1": 1
+    },
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 3,
+    "seen": 3,
+    "rev": 9,
+    "tock": 3,
+    "at": "2026-10-09T11:50:16.530"
+   },
+   "ledger": {
+    "used": 1,
+    "inflight": 0,
+    "available": 9
+   },
+   "backend_accepted": 1,
+   "assertions": "same request; rc3; automatic cap; manual reset; settled exactly once",
+   "evidence": "cases/unknown-recover"
+  },
+  "seconds": 0.527
+ },
+ {
+  "scenario": "unknown-exhaust",
+  "pass_": true,
+  "data": {
+   "injection": [
+    "open\tEIO\t/tmp/astra7-pack4-probe-9iv0b_9d/unknown-exhaust/n/budget/demo/backend.json",
+    "open\tEIO\t/tmp/astra7-pack4-probe-9iv0b_9d/unknown-exhaust/n/budget/demo/backend.json"
+   ],
+   "before": {
+    "v": 1,
+    "job": "j",
+    "inst": "1797ca39",
+    "table": "e81280863ef2",
+    "pc": "call",
+    "phase": "halted",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "1797ca39-call-1": 2
+    },
+    "resends": {
+     "1797ca39-call-1": 1
+    },
+    "pending": {
+     "step": "call",
+     "request": "1797ca39-call-1",
+     "attempt": "1797ca39-call-1-a2",
+     "n": 2,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/1797ca39-call-1-a2.json",
+     "state": "queued",
+     "intent_round": 3,
+     "since": 3
+    },
+    "halt": {
+     "kind": "unknown",
+     "why": "退出碼 3：未交付終局結果",
+     "step": "call",
+     "round": 4,
+     "at": "2026-10-09T11:50:17.419"
+    },
+    "end": null,
+    "since": 1,
+    "seen": 4,
+    "rev": 10,
+    "tock": 4,
+    "at": "2026-10-09T11:50:17.419"
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "1797ca39",
+    "table": "e81280863ef2",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "1797ca39-call-1",
+      "attempt": "1797ca39-call-1-a3",
+      "ok": true,
+      "run": "step-j-call#9",
+      "code": 0
+     }
+    },
+    "tries": {
+     "1797ca39-call-1": 3
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 9,
+    "seen": 9,
+    "rev": 18,
+    "tock": 9,
+    "at": "2026-10-09T11:50:18.164"
+   },
+   "ledger": {
+    "used": 1,
+    "inflight": 0,
+    "available": 9
+   },
+   "backend_accepted": 1,
+   "assertions": "same request; rc3; automatic cap; manual reset; settled exactly once",
+   "evidence": "cases/unknown-exhaust"
+  },
+  "seconds": 1.417
+ },
+ {
+  "scenario": "unknown-default",
+  "pass_": true,
+  "data": {
+   "injection": [
+    "open\tEIO\t/tmp/astra7-pack4-probe-9iv0b_9d/unknown-default/n/budget/demo/backend.json"
+   ],
+   "before": {
+    "v": 1,
+    "job": "j",
+    "inst": "a7065779",
+    "table": "ff755f61cbec",
+    "pc": "call",
+    "phase": "halted",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "a7065779-call-1",
+      "attempt": "a7065779-call-1-a1",
+      "ok": false,
+      "run": "step-j-call#2",
+      "code": 3
+     }
+    },
+    "tries": {
+     "a7065779-call-1": 1
+    },
+    "resends": {},
+    "pending": null,
+    "halt": {
+     "kind": "failed",
+     "why": "call 的結果 ok: false（code 3），表上沒寫 fail",
+     "step": "call",
+     "round": 2,
+     "at": "2026-10-09T11:50:18.758"
+    },
+    "end": null,
+    "since": 1,
+    "seen": 2,
+    "rev": 6,
+    "tock": 2,
+    "at": "2026-10-09T11:50:18.758"
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "a7065779",
+    "table": "ff755f61cbec",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "a7065779-call-1",
+      "attempt": "a7065779-call-1-a2",
+      "ok": true,
+      "run": "step-j-call#7",
+      "code": 0
+     }
+    },
+    "tries": {
+     "a7065779-call-1": 2
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 7,
+    "seen": 7,
+    "rev": 14,
+    "tock": 7,
+    "at": "2026-10-09T11:50:19.544"
+   },
+   "ledger": {
+    "used": 1,
+    "inflight": 0,
+    "available": 9
+   },
+   "backend_accepted": 1,
+   "assertions": "same request; rc3; automatic cap; manual reset; settled exactly once",
+   "evidence": "cases/unknown-default"
+  },
+  "seconds": 1.156
+ },
+ {
+  "scenario": "payload",
+  "pass_": true,
+  "data": {
+   "injection": [
+    "open\tEIO\t/tmp/astra7-pack4-probe-9iv0b_9d/payload/n/payload.json"
+   ],
+   "fault": {
+    "rc": 3,
+    "stdout": "{\"kid\": \"0fa575657512a72b3d4f\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"eio\"}, \"outcome\": \"unknown\", \"stage\": \"payload\", \"why\": \"payload 讀不到：payload.json 讀不到：OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')\"}\n",
+    "stderr": "",
+    "obj": {
+     "kid": "0fa575657512a72b3d4f",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "eio"
+     },
+     "outcome": "unknown",
+     "stage": "payload",
+     "why": "payload 讀不到：payload.json 讀不到：OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')"
+    }
+   },
+   "controls": [
+    {
+     "rc": 2,
+     "stdout": "",
+     "stderr": "aos7-budget: payload 讀不到：None\n",
+     "obj": null
+    },
+    {
+     "rc": 2,
+     "stdout": "",
+     "stderr": "aos7-budget: payload 讀不到：bad.json 不是 JSON（半寫或寫壞）\n",
+     "obj": null
+    }
+   ],
+   "assertions": "payload EIO rc3 single unknown JSON, stage payload; missing/bad rc2; no request",
+   "evidence": "cases/payload"
+  },
+  "seconds": 0.119
+ },
+ {
+  "scenario": "weighted",
+  "pass_": true,
+  "data": {
+   "injection": "none; real CLI amount 2 + default 1",
+   "calls": [
+    {
+     "rc": 0,
+     "stdout": "{\"kid\": \"08b6b59683751af26e08\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r1\"}, \"outcome\": \"accepted\", \"used\": 2, \"response\": {\"ok\": true, \"echo\": null}, \"settle\": {\"seq\": 2, \"used\": 2, \"outcome\": \"accepted\", \"evidence\": \"ac69a10cf9a793b577dce4a069ab83f19ecb8bb7bd066cbbf400ee5a450f2cc8\", \"at\": \"2026-10-09T11:50:20.598\"}}\n",
+     "stderr": "",
+     "obj": {
+      "kid": "08b6b59683751af26e08",
+      "key": {
+       "budget": "demo",
+       "holder": "api",
+       "request": "r1"
+      },
+      "outcome": "accepted",
+      "used": 2,
+      "response": {
+       "ok": true,
+       "echo": null
+      },
+      "settle": {
+       "seq": 2,
+       "used": 2,
+       "outcome": "accepted",
+       "evidence": "ac69a10cf9a793b577dce4a069ab83f19ecb8bb7bd066cbbf400ee5a450f2cc8",
+       "at": "2026-10-09T11:50:20.598"
+      }
+     }
+    },
+    {
+     "rc": 0,
+     "stdout": "{\"kid\": \"9b246b1e25ed1ecfd038\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r2\"}, \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"settle\": {\"seq\": 4, \"used\": 1, \"outcome\": \"accepted\", \"evidence\": \"9481718c748ad5034fa52fb842ae6f83ce82f8ee79f35093d2bb6d71c217ef55\", \"at\": \"2026-10-09T11:50:20.659\"}}\n",
+     "stderr": "",
+     "obj": {
+      "kid": "9b246b1e25ed1ecfd038",
+      "key": {
+       "budget": "demo",
+       "holder": "api",
+       "request": "r2"
+      },
+      "outcome": "accepted",
+      "used": 1,
+      "response": {
+       "ok": true,
+       "echo": null
+      },
+      "settle": {
+       "seq": 4,
+       "used": 1,
+       "outcome": "accepted",
+       "evidence": "9481718c748ad5034fa52fb842ae6f83ce82f8ee79f35093d2bb6d71c217ef55",
+       "at": "2026-10-09T11:50:20.659"
+      }
+     }
+    }
+   ],
+   "used": 3,
+   "available": 7,
+   "accepted": 2,
+   "assertions": "weighted cost 3; two requests; initial 10 available 7",
+   "evidence": "cases/weighted"
+  },
+  "seconds": 0.172
+ },
+ {
+  "scenario": "intent-receipt",
+  "pass_": true,
+  "data": {
+   "injection": {
+    "crash_point": "after-intent",
+    "exit": {
+     "run": 1,
+     "code": -9,
+     "at": "2026-10-09T11:50:20.969",
+     "round": 1
+    },
+    "round": 1,
+    "table_after_crash": {
+     "tasks": [
+      {
+       "name": "interp",
+       "mode": "keep",
+       "argv": [
+        "/usr/bin/python3",
+        "/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/packs/step/bin/aos7-step",
+        "run",
+        "jobs/j"
+       ]
+      }
+     ]
+    }
+   },
+   "before": {
+    "v": 1,
+    "job": "j",
+    "inst": "16b07f93",
+    "table": "d1996afc0025",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "16b07f93-call-1": 1
+    },
+    "resends": {},
+    "pending": {
+     "step": "call",
+     "request": "16b07f93-call-1",
+     "attempt": "16b07f93-call-1-a1",
+     "n": 1,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/16b07f93-call-1-a1.json",
+     "state": "intent",
+     "intent_round": 1,
+     "since": 1
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": null,
+    "rev": 2,
+    "at": "2026-10-09T11:50:20.969"
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "16b07f93",
+    "table": "d1996afc0025",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "16b07f93-call-1",
+      "attempt": "16b07f93-call-1-a1",
+      "ok": true,
+      "receipt": true
+     }
+    },
+    "tries": {
+     "16b07f93-call-1": 1
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 2,
+    "seen": 2,
+    "rev": 3,
+    "at": "2026-10-09T11:50:21.083",
+    "tock": null
+   },
+   "final": {
+    "v": 1,
+    "job": "j",
+    "inst": "16b07f93",
+    "table": "d1996afc0025",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "16b07f93-call-1",
+      "attempt": "16b07f93-call-1-a1",
+      "ok": true,
+      "receipt": true
+     }
+    },
+    "tries": {
+     "16b07f93-call-1": 1
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 2,
+    "seen": 2,
+    "rev": 3,
+    "at": "2026-10-09T11:50:21.083",
+    "tock": null
+   },
+   "ran": [],
+   "assertions": "expired intent policy / same-round readd identity and execution count",
+   "evidence": "cases/intent-receipt"
+  },
+  "seconds": 0.287
+ },
+ {
+  "scenario": "intent-resend",
+  "pass_": true,
+  "data": {
+   "injection": {
+    "crash_point": "after-intent",
+    "exit": {
+     "run": 1,
+     "code": -9,
+     "at": "2026-10-09T11:50:21.479",
+     "round": 1
+    },
+    "round": 1,
+    "table_after_crash": {
+     "tasks": [
+      {
+       "name": "interp",
+       "mode": "keep",
+       "argv": [
+        "/usr/bin/python3",
+        "/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/packs/step/bin/aos7-step",
+        "run",
+        "jobs/j"
+       ]
+      }
+     ]
+    }
+   },
+   "before": {
+    "v": 1,
+    "job": "j",
+    "inst": "30b68ffa",
+    "table": "b1f6222d9195",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "30b68ffa-call-1": 1
+    },
+    "resends": {},
+    "pending": {
+     "step": "call",
+     "request": "30b68ffa-call-1",
+     "attempt": "30b68ffa-call-1-a1",
+     "n": 1,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/30b68ffa-call-1-a1.json",
+     "state": "intent",
+     "intent_round": 1,
+     "since": 1
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": null,
+    "rev": 2,
+    "at": "2026-10-09T11:50:21.479"
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "30b68ffa",
+    "table": "b1f6222d9195",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "30b68ffa-call-1",
+      "attempt": "30b68ffa-call-1-a2",
+      "ok": true,
+      "run": "step-j-call#3",
+      "code": 0
+     }
+    },
+    "tries": {
+     "30b68ffa-call-1": 2
+    },
+    "resends": {
+     "30b68ffa-call-1": 1
+    },
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 3,
+    "seen": 3,
+    "rev": 7,
+    "at": "2026-10-09T11:50:21.856",
+    "tock": 3
+   },
+   "final": {
+    "v": 1,
+    "job": "j",
+    "inst": "30b68ffa",
+    "table": "b1f6222d9195",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "30b68ffa-call-1",
+      "attempt": "30b68ffa-call-1-a2",
+      "ok": true,
+      "run": "step-j-call#3",
+      "code": 0
+     }
+    },
+    "tries": {
+     "30b68ffa-call-1": 2
+    },
+    "resends": {
+     "30b68ffa-call-1": 1
+    },
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 3,
+    "seen": 3,
+    "rev": 7,
+    "at": "2026-10-09T11:50:21.856",
+    "tock": 3
+   },
+   "ran": [
+    "{\"request\": \"30b68ffa-call-1\", \"attempt\": \"30b68ffa-call-1-a2\", \"pid\": 386932, \"run\": \"3\"}"
+   ],
+   "assertions": "expired intent policy / same-round readd identity and execution count",
+   "evidence": "cases/intent-resend"
+  },
+  "seconds": 0.457
+ },
+ {
+  "scenario": "intent-stop",
+  "pass_": true,
+  "data": {
+   "injection": {
+    "crash_point": "after-intent",
+    "exit": {
+     "run": 1,
+     "code": -9,
+     "at": "2026-10-09T11:50:22.160",
+     "round": 1
+    },
+    "round": 1,
+    "table_after_crash": {
+     "tasks": [
+      {
+       "name": "interp",
+       "mode": "keep",
+       "argv": [
+        "/usr/bin/python3",
+        "/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/packs/step/bin/aos7-step",
+        "run",
+        "jobs/j"
+       ]
+      }
+     ]
+    }
+   },
+   "before": {
+    "v": 1,
+    "job": "j",
+    "inst": "f6c1d36c",
+    "table": "92adbe9a2fee",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "f6c1d36c-call-1": 1
+    },
+    "resends": {},
+    "pending": {
+     "step": "call",
+     "request": "f6c1d36c-call-1",
+     "attempt": "f6c1d36c-call-1-a1",
+     "n": 1,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/f6c1d36c-call-1-a1.json",
+     "state": "intent",
+     "intent_round": 1,
+     "since": 1
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": null,
+    "rev": 2,
+    "at": "2026-10-09T11:50:22.160"
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "f6c1d36c",
+    "table": "92adbe9a2fee",
+    "pc": "call",
+    "phase": "halted",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "f6c1d36c-call-1": 1
+    },
+    "resends": {},
+    "pending": {
+     "step": "call",
+     "request": "f6c1d36c-call-1",
+     "attempt": "f6c1d36c-call-1-a1",
+     "n": 1,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/f6c1d36c-call-1-a1.json",
+     "state": "intent",
+     "intent_round": 1,
+     "since": 1
+    },
+    "halt": {
+     "kind": "unknown",
+     "why": "派工意圖寫了、表上沒有這項、槽也沒有（回合 2，意圖在 1）：說不清加上過沒有",
+     "step": "call",
+     "round": 2,
+     "at": "2026-10-09T11:50:22.276"
+    },
+    "end": null,
+    "since": 1,
+    "seen": 2,
+    "rev": 4,
+    "at": "2026-10-09T11:50:22.417",
+    "tock": 2
+   },
+   "final": {
+    "v": 1,
+    "job": "j",
+    "inst": "f6c1d36c",
+    "table": "92adbe9a2fee",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "f6c1d36c-call-1",
+      "attempt": "f6c1d36c-call-1-a2",
+      "ok": true,
+      "run": "step-j-call#4",
+      "code": 0
+     }
+    },
+    "tries": {
+     "f6c1d36c-call-1": 2
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 4,
+    "seen": 4,
+    "rev": 9,
+    "at": "2026-10-09T11:50:22.760",
+    "tock": 4
+   },
+   "ran": [
+    "{\"request\": \"f6c1d36c-call-1\", \"attempt\": \"f6c1d36c-call-1-a2\", \"pid\": 386994, \"run\": \"4\"}"
+   ],
+   "assertions": "expired intent policy / same-round readd identity and execution count",
+   "evidence": "cases/intent-stop"
+  },
+  "seconds": 0.677
+ },
+ {
+  "scenario": "intent-same-round",
+  "pass_": true,
+  "data": {
+   "injection": {
+    "crash_point": "after-intent",
+    "exit": {
+     "run": 1,
+     "code": -9,
+     "at": "2026-10-09T11:50:23.062",
+     "round": 1
+    },
+    "round": 1,
+    "table_after_crash": {
+     "tasks": [
+      {
+       "name": "interp",
+       "mode": "keep",
+       "argv": [
+        "/usr/bin/python3",
+        "/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/packs/step/bin/aos7-step",
+        "run",
+        "jobs/j"
+       ]
+      }
+     ]
+    }
+   },
+   "before": {
+    "v": 1,
+    "job": "j",
+    "inst": "f4722e5d",
+    "table": "92adbe9a2fee",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "f4722e5d-call-1": 1
+    },
+    "resends": {},
+    "pending": {
+     "step": "call",
+     "request": "f4722e5d-call-1",
+     "attempt": "f4722e5d-call-1-a1",
+     "n": 1,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/f4722e5d-call-1-a1.json",
+     "state": "intent",
+     "intent_round": 1,
+     "since": 1
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": null,
+    "rev": 2,
+    "at": "2026-10-09T11:50:23.061"
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "f4722e5d",
+    "table": "92adbe9a2fee",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "f4722e5d-call-1",
+      "attempt": "f4722e5d-call-1-a1",
+      "ok": true,
+      "run": "step-j-call#2",
+      "code": 0
+     }
+    },
+    "tries": {
+     "f4722e5d-call-1": 1
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 2,
+    "seen": 2,
+    "rev": 5,
+    "at": "2026-10-09T11:50:23.364",
+    "tock": 2
+   },
+   "final": {
+    "v": 1,
+    "job": "j",
+    "inst": "f4722e5d",
+    "table": "92adbe9a2fee",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "f4722e5d-call-1",
+      "attempt": "f4722e5d-call-1-a1",
+      "ok": true,
+      "run": "step-j-call#2",
+      "code": 0
+     }
+    },
+    "tries": {
+     "f4722e5d-call-1": 1
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 2,
+    "seen": 2,
+    "rev": 5,
+    "at": "2026-10-09T11:50:23.364",
+    "tock": 2
+   },
+   "ran": [
+    "{\"request\": \"f4722e5d-call-1\", \"attempt\": \"f4722e5d-call-1-a1\", \"pid\": 387049, \"run\": \"2\"}"
+   ],
+   "assertions": "expired intent policy / same-round readd identity and execution count",
+   "evidence": "cases/intent-same-round"
+  },
+  "seconds": 0.383
+ },
+ {
+  "scenario": "resend-open-fail",
+  "pass_": true,
+  "data": {
+   "injection": [
+    "open\tEIO\t/tmp/astra7-pack4-probe-9iv0b_9d/resend-open-fail/n/.aos/tasks.json",
+    "open\tEIO\t/tmp/astra7-pack4-probe-9iv0b_9d/resend-open-fail/n/.aos/tasks.json"
+   ],
+   "first": {
+    "v": 1,
+    "job": "j",
+    "inst": "e506480b",
+    "table": "92018fdd9532",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "e506480b-call-1": 1
+    },
+    "resends": {},
+    "pending": {
+     "step": "call",
+     "request": "e506480b-call-1",
+     "attempt": "e506480b-call-1-a1",
+     "n": 1,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/e506480b-call-1-a1.json",
+     "state": "queued",
+     "intent_round": 1,
+     "since": 1
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": 2,
+    "rev": 6,
+    "tock": 2,
+    "at": "2026-10-09T11:50:23.934"
+   },
+   "table_write_failed": {
+    "v": 1,
+    "job": "j",
+    "inst": "e506480b",
+    "table": "92018fdd9532",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "e506480b-call-1": 2
+    },
+    "resends": {
+     "e506480b-call-1": 1
+    },
+    "pending": null,
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": 2,
+    "rev": 8,
+    "tock": 2,
+    "at": "2026-10-09T11:50:24.116"
+   },
+   "second_actual_run": {
+    "v": 1,
+    "job": "j",
+    "inst": "e506480b",
+    "table": "92018fdd9532",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "e506480b-call-1": 3
+    },
+    "resends": {
+     "e506480b-call-1": 1
+    },
+    "pending": {
+     "step": "call",
+     "request": "e506480b-call-1",
+     "attempt": "e506480b-call-1-a3",
+     "n": 3,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/e506480b-call-1-a3.json",
+     "state": "queued",
+     "intent_round": 4,
+     "since": 4
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": 5,
+    "rev": 12,
+    "tock": 5,
+    "at": "2026-10-09T11:50:24.418"
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "e506480b",
+    "table": "92018fdd9532",
+    "pc": "call",
+    "phase": "halted",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "e506480b-call-1": 3
+    },
+    "resends": {
+     "e506480b-call-1": 1
+    },
+    "pending": {
+     "step": "call",
+     "request": "e506480b-call-1",
+     "attempt": "e506480b-call-1-a3",
+     "n": 3,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/e506480b-call-1-a3.json",
+     "state": "queued",
+     "intent_round": 4,
+     "since": 4
+    },
+    "halt": {
+     "kind": "unknown",
+     "why": "子工作 step-j-call#5 結束了（code -15）卻沒有結果檔",
+     "step": "call",
+     "round": 6,
+     "at": "2026-10-09T11:50:24.619"
+    },
+    "end": null,
+    "since": 1,
+    "seen": 6,
+    "rev": 13,
+    "tock": 6,
+    "at": "2026-10-09T11:50:24.620"
+   },
+   "ran": [
+    "{\"request\": \"e506480b-call-1\", \"attempt\": \"e506480b-call-1-a1\", \"pid\": 387096, \"run\": \"2\"}",
+    "{\"request\": \"e506480b-call-1\", \"attempt\": \"e506480b-call-1-a3\", \"pid\": 387132, \"run\": \"5\"}"
+   ],
+   "assertions": "max_resends request budget survives failed dispatch; only two executions; halt unknown (failed dispatch still consumes attempt number)",
+   "evidence": "cases/resend-open-fail"
+  },
+  "seconds": 1.453
+ },
+ {
+  "scenario": "resend-write-fail",
+  "pass_": false,
+  "data": {
+   "injection": [
+    "write\tEIO\t/tmp/astra7-pack4-probe-9iv0b_9d/resend-write-fail/n/.aos/tasks.json"
+   ],
+   "first": {
+    "v": 1,
+    "job": "j",
+    "inst": "6c7fa000",
+    "table": "92018fdd9532",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "6c7fa000-call-1": 1
+    },
+    "resends": {},
+    "pending": {
+     "step": "call",
+     "request": "6c7fa000-call-1",
+     "attempt": "6c7fa000-call-1-a1",
+     "n": 1,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/6c7fa000-call-1-a1.json",
+     "state": "queued",
+     "intent_round": 1,
+     "since": 1
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": 2,
+    "rev": 6,
+    "tock": 2,
+    "at": "2026-10-09T11:50:25.614"
+   },
+   "table_write_failed": {
+    "v": 1,
+    "job": "j",
+    "inst": "6c7fa000",
+    "table": "92018fdd9532",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "6c7fa000-call-1": 2
+    },
+    "resends": {
+     "6c7fa000-call-1": 1
+    },
+    "pending": {
+     "step": "call",
+     "request": "6c7fa000-call-1",
+     "attempt": "6c7fa000-call-1-a2",
+     "n": 2,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/6c7fa000-call-1-a2.json",
+     "state": "intent",
+     "intent_round": 3,
+     "since": 3
+    },
+    "halt": null,
+    "end": null,
+    "since": 1,
+    "seen": 2,
+    "rev": 7,
+    "tock": 2,
+    "at": "2026-10-09T11:50:25.795"
+   },
+   "error": {
+    "kind": "os",
+    "where": "pass",
+    "why": "OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')",
+    "at": "2026-10-09T11:50:25.795",
+    "round": 3,
+    "tock": 3
+   },
+   "after": {
+    "v": 1,
+    "job": "j",
+    "inst": "6c7fa000",
+    "table": "92018fdd9532",
+    "pc": "call",
+    "phase": "halted",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "6c7fa000-call-1": 2
+    },
+    "resends": {
+     "6c7fa000-call-1": 1
+    },
+    "pending": {
+     "step": "call",
+     "request": "6c7fa000-call-1",
+     "attempt": "6c7fa000-call-1-a2",
+     "n": 2,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/6c7fa000-call-1-a2.json",
+     "state": "intent",
+     "intent_round": 3,
+     "since": 3
+    },
+    "halt": {
+     "kind": "unknown",
+     "why": "派工意圖寫了、表上沒有這項、槽也沒有（回合 4，意圖在 3）：說不清加上過沒有",
+     "step": "call",
+     "round": 4,
+     "at": "2026-10-09T11:50:25.956"
+    },
+    "end": null,
+    "since": 1,
+    "seen": 4,
+    "rev": 8,
+    "tock": 4,
+    "at": "2026-10-09T11:50:25.956"
+   },
+   "ran": [
+    "{\"request\": \"6c7fa000-call-1\", \"attempt\": \"6c7fa000-call-1-a1\", \"pid\": 387204, \"run\": \"2\"}"
+   ],
+   "expected_ran": 2,
+   "actual_ran": 1,
+   "assertions": "request resend counter survives; write EIO leaves intent; next round stops before second execution",
+   "acceptance_pass": false,
+   "manual_resume": {
+    "v": 1,
+    "job": "j",
+    "inst": "6c7fa000",
+    "table": "92018fdd9532",
+    "pc": "call",
+    "phase": "running",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "6c7fa000-call-1": 2
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": null,
+    "since": 7,
+    "seen": 7,
+    "rev": 12,
+    "tock": 7,
+    "at": "2026-10-09T11:50:26.442"
+   },
+   "manual_final": {
+    "v": 1,
+    "job": "j",
+    "inst": "6c7fa000",
+    "table": "92018fdd9532",
+    "pc": "done",
+    "phase": "ended",
+    "counts": {},
+    "visits": {
+     "call": 1,
+     "done": 1
+    },
+    "accepted": {
+     "call": {
+      "request": "6c7fa000-call-1",
+      "attempt": "6c7fa000-call-1-a3",
+      "ok": true,
+      "run": "step-j-call#9",
+      "code": 0
+     }
+    },
+    "tries": {
+     "6c7fa000-call-1": 3
+    },
+    "resends": {},
+    "pending": null,
+    "halt": null,
+    "end": "ok",
+    "since": 9,
+    "seen": 9,
+    "rev": 16,
+    "tock": 9,
+    "at": "2026-10-09T11:50:26.742"
+   },
+   "manual_final_ran": [
+    "{\"request\": \"6c7fa000-call-1\", \"attempt\": \"6c7fa000-call-1-a1\", \"pid\": 387204, \"run\": \"2\"}",
+    "{\"request\": \"6c7fa000-call-1\", \"attempt\": \"6c7fa000-call-1-a3\", \"pid\": 387281, \"run\": \"9\"}"
+   ],
+   "evidence": "cases/resend-write-fail"
+  },
+  "seconds": 1.468
+ },
+ {
+  "scenario": "validation",
+  "pass_": true,
+  "data": {
+   "injection": "invalid/valid authored steps files before execution",
+   "assertions": "18 run values + 3 non-run types validated without traceback",
+   "rows": [
+    {
+     "value": [],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      3,
+      3
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      0
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      256
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      -1
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      true
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      1.5
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      "3"
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      {}
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      [
+       3
+      ]
+     ],
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": null,
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": 3,
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": {},
+     "expected_valid": false,
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"unknown_codes 要是非空、互異的整數陣列（1～255）\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "unknown_codes 要是非空、互異的整數陣列（1～255）"
+       }
+      ]
+     }
+    },
+    {
+     "value": [
+      1
+     ],
+     "expected_valid": true,
+     "result": {
+      "rc": 0,
+      "stdout": "[]\n",
+      "stderr": "",
+      "obj": []
+     }
+    },
+    {
+     "value": [
+      2
+     ],
+     "expected_valid": true,
+     "result": {
+      "rc": 0,
+      "stdout": "[]\n",
+      "stderr": "",
+      "obj": []
+     }
+    },
+    {
+     "value": [
+      3
+     ],
+     "expected_valid": true,
+     "result": {
+      "rc": 0,
+      "stdout": "[]\n",
+      "stderr": "",
+      "obj": []
+     }
+    },
+    {
+     "value": [
+      255
+     ],
+     "expected_valid": true,
+     "result": {
+      "rc": 0,
+      "stdout": "[]\n",
+      "stderr": "",
+      "obj": []
+     }
+    },
+    {
+     "value": [
+      1,
+      2,
+      3,
+      255
+     ],
+     "expected_valid": true,
+     "result": {
+      "rc": 0,
+      "stdout": "[]\n",
+      "stderr": "",
+      "obj": []
+     }
+    },
+    {
+     "non_run": "wait",
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"wait 步不認得的欄 'unknown_codes'\"\n },\n {\n  \"level\": \"warn\",\n  \"step\": \"call\",\n  \"rule\": \"R1\",\n  \"why\": \"wait 沒有 patience：條件不成立就一直等\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "wait 步不認得的欄 'unknown_codes'"
+       },
+       {
+        "level": "warn",
+        "step": "call",
+        "rule": "R1",
+        "why": "wait 沒有 patience：條件不成立就一直等"
+       }
+      ]
+     }
+    },
+    {
+     "non_run": "count",
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"count 步不認得的欄 'unknown_codes'\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "count 步不認得的欄 'unknown_codes'"
+       }
+      ]
+     }
+    },
+    {
+     "non_run": "end",
+     "result": {
+      "rc": 1,
+      "stdout": "[\n {\n  \"level\": \"error\",\n  \"step\": \"call\",\n  \"rule\": \"struct\",\n  \"why\": \"end 步不認得的欄 'unknown_codes'\"\n },\n {\n  \"level\": \"warn\",\n  \"step\": \"done\",\n  \"rule\": \"struct\",\n  \"why\": \"從 start 走不到\"\n }\n]\n",
+      "stderr": "",
+      "obj": [
+       {
+        "level": "error",
+        "step": "call",
+        "rule": "struct",
+        "why": "end 步不認得的欄 'unknown_codes'"
+       },
+       {
+        "level": "warn",
+        "step": "done",
+        "rule": "struct",
+        "why": "從 start 走不到"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "seconds": 0.632
+ },
+ {
+  "scenario": "misuse-code-1",
+  "pass_": true,
+  "data": {
+   "classification": "M",
+   "injection": "non-idempotent append falsely declared idempotent, code listed as unknown",
+   "assertions": "false idempotence declaration repeats effects; finite resend cap holds",
+   "frame": {
+    "v": 1,
+    "job": "j",
+    "inst": "33e39452",
+    "table": "89898cfd4768",
+    "pc": "call",
+    "phase": "halted",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "33e39452-call-1": 2
+    },
+    "resends": {
+     "33e39452-call-1": 1
+    },
+    "pending": {
+     "step": "call",
+     "request": "33e39452-call-1",
+     "attempt": "33e39452-call-1-a2",
+     "n": 2,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/33e39452-call-1-a2.json",
+     "state": "queued",
+     "intent_round": 2,
+     "since": 2
+    },
+    "halt": {
+     "kind": "unknown",
+     "why": "退出碼 1：未交付終局結果",
+     "step": "call",
+     "round": 3,
+     "at": "2026-10-09T11:50:28.303"
+    },
+    "end": null,
+    "since": 1,
+    "seen": 3,
+    "rev": 9,
+    "tock": 3,
+    "at": "2026-10-09T11:50:28.303"
+   },
+   "ran": [
+    "{\"request\": \"33e39452-call-1\", \"attempt\": \"33e39452-call-1-a1\", \"pid\": 387387, \"run\": \"2\"}",
+    "{\"request\": \"33e39452-call-1\", \"attempt\": \"33e39452-call-1-a2\", \"pid\": 387399, \"run\": \"3\"}"
+   ],
+   "evidence": "cases/misuse-code-1"
+  },
+  "seconds": 0.475
+ },
+ {
+  "scenario": "misuse-code-2",
+  "pass_": true,
+  "data": {
+   "classification": "M",
+   "injection": "non-idempotent append falsely declared idempotent, code listed as unknown",
+   "assertions": "false idempotence declaration repeats effects; finite resend cap holds",
+   "frame": {
+    "v": 1,
+    "job": "j",
+    "inst": "14a812d7",
+    "table": "8d296536320c",
+    "pc": "call",
+    "phase": "halted",
+    "counts": {},
+    "visits": {
+     "call": 1
+    },
+    "accepted": {},
+    "tries": {
+     "14a812d7-call-1": 2
+    },
+    "resends": {
+     "14a812d7-call-1": 1
+    },
+    "pending": {
+     "step": "call",
+     "request": "14a812d7-call-1",
+     "attempt": "14a812d7-call-1-a2",
+     "n": 2,
+     "task": "step-j-call",
+     "result": "jobs/j/results/call/14a812d7-call-1-a2.json",
+     "state": "queued",
+     "intent_round": 2,
+     "since": 2
+    },
+    "halt": {
+     "kind": "unknown",
+     "why": "退出碼 2：未交付終局結果",
+     "step": "call",
+     "round": 3,
+     "at": "2026-10-09T11:50:29.004"
+    },
+    "end": null,
+    "since": 1,
+    "seen": 3,
+    "rev": 9,
+    "tock": 3,
+    "at": "2026-10-09T11:50:29.004"
+   },
+   "ran": [
+    "{\"request\": \"14a812d7-call-1\", \"attempt\": \"14a812d7-call-1-a1\", \"pid\": 387432, \"run\": \"2\"}",
+    "{\"request\": \"14a812d7-call-1\", \"attempt\": \"14a812d7-call-1-a2\", \"pid\": 387445, \"run\": \"3\"}"
+   ],
+   "evidence": "cases/misuse-code-2"
+  },
+  "seconds": 0.474
+ },
+ {
+  "scenario": "replay",
+  "pass_": true,
+  "data": {
+   "injection": [
+    "open\tEIO\t/tmp/astra7-pack4-probe-z0d0r29r/replay/n/budget/demo/gateway/519457d6f54d32335539.json"
+   ],
+   "fault": {
+    "rc": 3,
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"unknown\", \"stage\": \"replay\", \"why\": \"入口紀錄讀不到：519457d6f54d32335539.json 讀不到：OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')\"}\n",
+    "stderr": "",
+    "obj": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "unknown",
+     "stage": "replay",
+     "why": "入口紀錄讀不到：519457d6f54d32335539.json 讀不到：OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')"
+    }
+   },
+   "before_sha256": "1564c451b42ef484953be5f8a730ec7a542e7482c6c23293898f5c31185c7e48",
+   "after_sha256": "1564c451b42ef484953be5f8a730ec7a542e7482c6c23293898f5c31185c7e48",
+   "recovered": {
+    "rc": 0,
+    "stdout": "{\"kid\": \"519457d6f54d32335539\", \"key\": {\"budget\": \"demo\", \"holder\": \"api\", \"request\": \"r\"}, \"outcome\": \"accepted\", \"used\": 1, \"response\": {\"ok\": true, \"echo\": null}, \"settle\": {\"seq\": 2, \"used\": 1, \"outcome\": \"accepted\", \"evidence\": \"d73b82ee38ff389812c70aa36c09882e59fcbd22331b89e245fb156865fc30ef\", \"at\": \"2026-10-09T11:52:07.916\"}}\n",
+    "stderr": "",
+    "obj": {
+     "kid": "519457d6f54d32335539",
+     "key": {
+      "budget": "demo",
+      "holder": "api",
+      "request": "r"
+     },
+     "outcome": "accepted",
+     "used": 1,
+     "response": {
+      "ok": true,
+      "echo": null
+     },
+     "settle": {
+      "seq": 2,
+      "used": 1,
+      "outcome": "accepted",
+      "evidence": "d73b82ee38ff389812c70aa36c09882e59fcbd22331b89e245fb156865fc30ef",
+      "at": "2026-10-09T11:52:07.916"
+     }
+    }
+   },
+   "assertions": "gateway replay EIO rc3; output bytes unchanged; restored replay delivers response, one effect",
+   "evidence": "cases/replay"
+  },
+  "seconds": 0.201
+ }
+]

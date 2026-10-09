@@ -1,0 +1,467 @@
+    PID    PPID    PGID                  STARTED COMMAND
+      1       0       1 Fri Oct  9 08:13:36 2026 /sbin/init splash
+      2       0       0 Fri Oct  9 08:13:36 2026 [kthreadd]
+      3       2       0 Fri Oct  9 08:13:36 2026 [pool_workqueue_release]
+      4       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-rcu_gp]
+      5       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-sync_wq]
+      6       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-kvfree_rcu_reclaim]
+      7       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-slub_flushwq]
+      8       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-netns]
+     11       2       0 Fri Oct  9 08:13:36 2026 [kworker/0:0H-events_highpri]
+     14       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-mm_percpu_wq]
+     15       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/0]
+     16       2       0 Fri Oct  9 08:13:36 2026 [rcu_preempt]
+     17       2       0 Fri Oct  9 08:13:36 2026 [rcub/0]
+     18       2       0 Fri Oct  9 08:13:36 2026 [rcu_exp_par_gp_kthread_worker/0]
+     19       2       0 Fri Oct  9 08:13:36 2026 [rcu_exp_gp_kthread_worker]
+     20       2       0 Fri Oct  9 08:13:36 2026 [migration/0]
+     21       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/0]
+     22       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/0]
+     23       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/1]
+     24       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/1]
+     25       2       0 Fri Oct  9 08:13:36 2026 [migration/1]
+     26       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/1]
+     28       2       0 Fri Oct  9 08:13:36 2026 [kworker/1:0H-events_highpri]
+     29       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/2]
+     30       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/2]
+     31       2       0 Fri Oct  9 08:13:36 2026 [migration/2]
+     32       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/2]
+     34       2       0 Fri Oct  9 08:13:36 2026 [kworker/2:0H-events_highpri]
+     35       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/3]
+     36       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/3]
+     37       2       0 Fri Oct  9 08:13:36 2026 [migration/3]
+     38       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/3]
+     40       2       0 Fri Oct  9 08:13:36 2026 [kworker/3:0H-events_highpri]
+     41       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/4]
+     42       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/4]
+     43       2       0 Fri Oct  9 08:13:36 2026 [migration/4]
+     44       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/4]
+     46       2       0 Fri Oct  9 08:13:36 2026 [kworker/4:0H-events_highpri]
+     47       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/5]
+     48       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/5]
+     49       2       0 Fri Oct  9 08:13:36 2026 [migration/5]
+     50       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/5]
+     52       2       0 Fri Oct  9 08:13:36 2026 [kworker/5:0H-events_highpri]
+     53       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/6]
+     54       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/6]
+     55       2       0 Fri Oct  9 08:13:36 2026 [migration/6]
+     56       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/6]
+     58       2       0 Fri Oct  9 08:13:36 2026 [kworker/6:0H-events_highpri]
+     59       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/7]
+     60       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/7]
+     61       2       0 Fri Oct  9 08:13:36 2026 [migration/7]
+     62       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/7]
+     64       2       0 Fri Oct  9 08:13:36 2026 [kworker/7:0H-events_highpri]
+     65       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/8]
+     66       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/8]
+     67       2       0 Fri Oct  9 08:13:36 2026 [migration/8]
+     68       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/8]
+     70       2       0 Fri Oct  9 08:13:36 2026 [kworker/8:0H-events_highpri]
+     71       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/9]
+     72       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/9]
+     73       2       0 Fri Oct  9 08:13:36 2026 [migration/9]
+     74       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/9]
+     75       2       0 Fri Oct  9 08:13:36 2026 [kworker/9:0-cgroup_offline]
+     76       2       0 Fri Oct  9 08:13:36 2026 [kworker/9:0H-events_highpri]
+     77       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/10]
+     78       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/10]
+     79       2       0 Fri Oct  9 08:13:36 2026 [migration/10]
+     80       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/10]
+     82       2       0 Fri Oct  9 08:13:36 2026 [kworker/10:0H-events_highpri]
+     83       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/11]
+     84       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/11]
+     85       2       0 Fri Oct  9 08:13:36 2026 [migration/11]
+     86       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/11]
+     88       2       0 Fri Oct  9 08:13:36 2026 [kworker/11:0H-events_highpri]
+     89       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/12]
+     90       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/12]
+     91       2       0 Fri Oct  9 08:13:36 2026 [migration/12]
+     92       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/12]
+     94       2       0 Fri Oct  9 08:13:36 2026 [kworker/12:0H-events_highpri]
+     95       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/13]
+     96       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/13]
+     97       2       0 Fri Oct  9 08:13:36 2026 [migration/13]
+     98       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/13]
+    100       2       0 Fri Oct  9 08:13:36 2026 [kworker/13:0H-events_highpri]
+    101       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/14]
+    102       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/14]
+    103       2       0 Fri Oct  9 08:13:36 2026 [migration/14]
+    104       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/14]
+    106       2       0 Fri Oct  9 08:13:36 2026 [kworker/14:0H-events_highpri]
+    107       2       0 Fri Oct  9 08:13:36 2026 [cpuhp/15]
+    108       2       0 Fri Oct  9 08:13:36 2026 [idle_inject/15]
+    109       2       0 Fri Oct  9 08:13:36 2026 [migration/15]
+    110       2       0 Fri Oct  9 08:13:36 2026 [ksoftirqd/15]
+    112       2       0 Fri Oct  9 08:13:36 2026 [kworker/15:0H-events_highpri]
+    113       2       0 Fri Oct  9 08:13:36 2026 [kdevtmpfs]
+    114       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-inet_frag_wq]
+    115       2       0 Fri Oct  9 08:13:36 2026 [rcu_tasks_kthread]
+    116       2       0 Fri Oct  9 08:13:36 2026 [rcu_tasks_rude_kthread]
+    117       2       0 Fri Oct  9 08:13:36 2026 [rcu_tasks_trace_kthread]
+    118       2       0 Fri Oct  9 08:13:36 2026 [kauditd]
+    119       2       0 Fri Oct  9 08:13:36 2026 [khungtaskd]
+    121       2       0 Fri Oct  9 08:13:36 2026 [oom_reaper]
+    122       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-writeback]
+    123       2       0 Fri Oct  9 08:13:36 2026 [kcompactd0]
+    124       2       0 Fri Oct  9 08:13:36 2026 [ksmd]
+    125       2       0 Fri Oct  9 08:13:36 2026 [khugepaged]
+    126       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-kblockd]
+    127       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-blkcg_punt_bio]
+    128       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-kintegrityd]
+    129       2       0 Fri Oct  9 08:13:36 2026 [kworker/8:1-cgroup_offline]
+    130       2       0 Fri Oct  9 08:13:36 2026 [irq/9-acpi]
+    133       2       0 Fri Oct  9 08:13:36 2026 [kworker/3:1-events]
+    134       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-tpm_dev_wq]
+    135       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-ata_sff]
+    136       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-edac-poller]
+    137       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-devfreq_wq]
+    138       2       0 Fri Oct  9 08:13:36 2026 [watchdogd]
+    139       2       0 Fri Oct  9 08:13:36 2026 [kworker/1:1-events]
+    140       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-quota_events_unbound]
+    141       2       0 Fri Oct  9 08:13:36 2026 [kworker/11:1-events]
+    142       2       0 Fri Oct  9 08:13:36 2026 [kworker/11:1H-kblockd]
+    143       2       0 Fri Oct  9 08:13:36 2026 [irq/26-AMD-Vi]
+    144       2       0 Fri Oct  9 08:13:36 2026 [kswapd0]
+    145       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-kthrotld]
+    146       2       0 Fri Oct  9 08:13:36 2026 [kworker/u65:0-ttm]
+    147       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-acpi_thermal_pm]
+    149       2       0 Fri Oct  9 08:13:36 2026 [scsi_eh_0]
+    150       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-scsi_tmf_0]
+    151       2       0 Fri Oct  9 08:13:36 2026 [scsi_eh_1]
+    152       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-scsi_tmf_1]
+    153       2       0 Fri Oct  9 08:13:36 2026 [scsi_eh_2]
+    154       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-scsi_tmf_2]
+    155       2       0 Fri Oct  9 08:13:36 2026 [scsi_eh_3]
+    156       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-scsi_tmf_3]
+    157       2       0 Fri Oct  9 08:13:36 2026 [scsi_eh_4]
+    158       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-scsi_tmf_4]
+    159       2       0 Fri Oct  9 08:13:36 2026 [scsi_eh_5]
+    160       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-scsi_tmf_5]
+    168       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-mld]
+    169       2       0 Fri Oct  9 08:13:36 2026 [kworker/2:1H-kblockd]
+    170       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-ipv6_addrconf]
+    171       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-kstrp]
+    173       2       0 Fri Oct  9 08:13:36 2026 [kworker/7:1-cgroup_free]
+    174       2       0 Fri Oct  9 08:13:36 2026 [kworker/15:1-events]
+    176       2       0 Fri Oct  9 08:13:36 2026 [kworker/12:1-events]
+    180       2       0 Fri Oct  9 08:13:36 2026 [kworker/R-zswap-shrink]
+    181       2       0 Fri Oct  9 08:13:36 2026 [kworker/0:1H-kblockd]
+    216       2       0 Fri Oct  9 08:13:37 2026 [kworker/15:1H-kblockd]
+    220       2       0 Fri Oct  9 08:13:37 2026 [kworker/6:1H-kblockd]
+    229       2       0 Fri Oct  9 08:13:37 2026 [kworker/10:1H-kblockd]
+    233       2       0 Fri Oct  9 08:13:37 2026 [kworker/13:1H-kblockd]
+    279       2       0 Fri Oct  9 08:13:37 2026 [kworker/4:1H-kblockd]
+    280       2       0 Fri Oct  9 08:13:37 2026 [kworker/3:1H-kblockd]
+    281       2       0 Fri Oct  9 08:13:37 2026 [kworker/1:1H-kblockd]
+    282       2       0 Fri Oct  9 08:13:37 2026 [kworker/5:1H-kblockd]
+    284       2       0 Fri Oct  9 08:13:37 2026 [kworker/9:1H-kblockd]
+    285       2       0 Fri Oct  9 08:13:37 2026 [kworker/8:1H-kblockd]
+    286       2       0 Fri Oct  9 08:13:37 2026 [kworker/12:1H-kblockd]
+    287       2       0 Fri Oct  9 08:13:37 2026 [kworker/14:1H-kblockd]
+    288       2       0 Fri Oct  9 08:13:37 2026 [kworker/7:1H-kblockd]
+    290       2       0 Fri Oct  9 08:13:37 2026 [kworker/R-nvme-wq]
+    291       2       0 Fri Oct  9 08:13:37 2026 [kworker/R-nvme-reset-wq]
+    292       2       0 Fri Oct  9 08:13:37 2026 [kworker/R-nvme-delete-wq]
+    293       2       0 Fri Oct  9 08:13:37 2026 [kworker/R-nvme-auth-wq]
+    294       2       0 Fri Oct  9 08:13:37 2026 [kworker/R-uas]
+    295       2       0 Fri Oct  9 08:13:37 2026 [scsi_eh_6]
+    296       2       0 Fri Oct  9 08:13:37 2026 [kworker/R-scsi_tmf_6]
+    298       2       0 Fri Oct  9 08:13:38 2026 [scsi_eh_7]
+    299       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-scsi_tmf_7]
+    300       2       0 Fri Oct  9 08:13:38 2026 [usb-storage]
+    301       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-amdgpu-reset-dev]
+    302       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-ttm]
+    303       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    304       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    305       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    306       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-dm_vblank_control_workqueue]
+    307       2       0 Fri Oct  9 08:13:38 2026 [card1-crtc0]
+    308       2       0 Fri Oct  9 08:13:38 2026 [card1-crtc1]
+    309       2       0 Fri Oct  9 08:13:38 2026 [card1-crtc2]
+    310       2       0 Fri Oct  9 08:13:38 2026 [card1-crtc3]
+    311       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-gfx_0.0.0]
+    312       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-gfx_0.1.0]
+    313       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-comp_1.0.0]
+    314       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-comp_1.1.0]
+    315       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-comp_1.2.0]
+    316       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-comp_1.3.0]
+    317       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-comp_1.0.1]
+    318       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-comp_1.1.1]
+    319       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-comp_1.2.1]
+    320       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-comp_1.3.1]
+    321       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-sdma0]
+    322       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-vcn_dec_0]
+    323       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-vcn_enc_0.0]
+    324       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-vcn_enc_0.1]
+    325       2       0 Fri Oct  9 08:13:38 2026 [kworker/R-jpeg_dec]
+    381       2       0 Fri Oct  9 08:13:39 2026 [jbd2/nvme0n1p5-8]
+    382       2       0 Fri Oct  9 08:13:39 2026 [kworker/R-ext4-rsv-conversion]
+    437       1     437 Fri Oct  9 08:13:40 2026 /usr/lib/systemd/systemd-journald
+    454       1     454 Fri Oct  9 08:13:40 2026 /usr/lib/systemd/systemd-userdbd
+    472       2       0 Fri Oct  9 08:13:40 2026 [nv_queue]
+    473       2       0 Fri Oct  9 08:13:40 2026 [nv_mem_pool_scrubber_queue]
+    474       2       0 Fri Oct  9 08:13:40 2026 [nv_mem_pool_scrubber_queue]
+    475       2       0 Fri Oct  9 08:13:40 2026 [nv_mem_pool_scrubber_queue]
+    476       2       0 Fri Oct  9 08:13:40 2026 [nv_queue]
+    477       2       0 Fri Oct  9 08:13:40 2026 [nv_open_q]
+    484       2       0 Fri Oct  9 08:13:41 2026 [psimon]
+    489       1     489 Fri Oct  9 08:13:41 2026 /usr/lib/systemd/systemd-timesyncd
+    494       1     494 Fri Oct  9 08:13:41 2026 /usr/lib/systemd/systemd-udevd
+    496       2       0 Fri Oct  9 08:13:41 2026 [psimon]
+    576       2       0 Fri Oct  9 08:13:41 2026 [UVM global queue]
+    577       2       0 Fri Oct  9 08:13:41 2026 [UVM deferred release queue]
+    578       2       0 Fri Oct  9 08:13:41 2026 [UVM Tools Event Queue]
+    618       2       0 Fri Oct  9 08:13:42 2026 [nvidia-modeset/kthread_q]
+    619       2       0 Fri Oct  9 08:13:42 2026 [nvidia-modeset/deferred_close_kthread_q]
+    628       2       0 Fri Oct  9 08:13:42 2026 [kworker/R-cfg80211]
+    630       2       0 Fri Oct  9 08:13:42 2026 [irq/98-nvidia]
+    631       2       0 Fri Oct  9 08:13:42 2026 [irq/99-nvidia]
+    632       2       0 Fri Oct  9 08:13:42 2026 [irq/100-nvidia]
+    633       2       0 Fri Oct  9 08:13:42 2026 [irq/101-nvidia]
+    634       2       0 Fri Oct  9 08:13:42 2026 [irq/102-nvidia]
+    635       2       0 Fri Oct  9 08:13:42 2026 [irq/103-nvidia]
+    636       2       0 Fri Oct  9 08:13:42 2026 [irq/104-nvidia]
+    637       2       0 Fri Oct  9 08:13:42 2026 [irq/105-nvidia]
+    638       2       0 Fri Oct  9 08:13:42 2026 [kworker/R-led_workqueue]
+    639       2       0 Fri Oct  9 08:13:42 2026 [nvidia]
+    640       2       0 Fri Oct  9 08:13:42 2026 [nv_queue]
+    651       2       0 Fri Oct  9 08:13:42 2026 [kworker/u65:2-ttm]
+    676       2       0 Fri Oct  9 08:13:42 2026 [napi/phy0-0]
+    677       2       0 Fri Oct  9 08:13:42 2026 [napi/phy0-0]
+    678       2       0 Fri Oct  9 08:13:42 2026 [napi/phy0-0]
+    707       2       0 Fri Oct  9 08:13:43 2026 [mt76-tx phy0]
+    718       2       0 Fri Oct  9 08:13:43 2026 [jbd2/nvme0n1p2-8]
+    719       2       0 Fri Oct  9 08:13:43 2026 [kworker/R-ext4-rsv-conversion]
+    749       1     749 Fri Oct  9 08:13:44 2026 /usr/bin/dbus-broker-launch --scope system --audit
+    750     749     749 Fri Oct  9 08:13:44 2026 dbus-broker --log 10 --controller 9 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 536870912 --max-fds 4096 --max-matches 131072 --audit
+    751       1     751 Fri Oct  9 08:13:44 2026 /usr/bin/NetworkManager --no-daemon
+    753       1     753 Fri Oct  9 08:13:44 2026 /usr/lib/bluetooth/bluetoothd
+    754       1     754 Fri Oct  9 08:13:44 2026 /usr/lib/polkit-1/polkitd --no-debug --log-level=notice
+    755       1     755 Fri Oct  9 08:13:44 2026 /usr/lib/systemd/systemd-logind
+    818       1     818 Fri Oct  9 08:13:44 2026 /usr/bin/ModemManager
+    826       2       0 Fri Oct  9 08:13:44 2026 [psimon]
+    833       1     833 Fri Oct  9 08:13:45 2026 /usr/bin/cupsd -l
+    836       1     836 Fri Oct  9 08:13:45 2026 /usr/sbin/crond -n
+    839       1     839 Fri Oct  9 08:13:45 2026 /usr/lib/systemd/systemd --user
+    842     839     839 Fri Oct  9 08:13:45 2026 (sd-pam)
+    850     839     850 Fri Oct  9 08:13:45 2026 /usr/bin/mongod --dbpath /home/lorkhan/data/mongodb --bind_ip 127.0.0.1 --port 27017 --nounixsocket
+    851     839     851 Fri Oct  9 08:13:45 2026 /usr/bin/sbcl --noinform --disable-debugger --load /home/lorkhan/.config/common-lisp/swank-server.lisp
+    926       1     926 Fri Oct  9 08:13:47 2026 /usr/lib/power-profiles-daemon
+    927       1     927 Fri Oct  9 08:13:47 2026 /usr/bin/sddm
+    935     927     935 Fri Oct  9 08:13:47 2026 /usr/lib/Xorg -nolisten tcp -background none -seat seat0 vt2 -auth /run/sddm/xauth_Xeyurv -noreset -displayfd 16
+    944       2       0 Fri Oct  9 08:13:49 2026 [nvidia-drm/timeline-f2]
+    950     927     927 Fri Oct  9 08:13:49 2026 /usr/lib/sddm/sddm-helper --socket /tmp/sddm-auth-95f7869a-8ff8-46f7-a82b-35849a85d8aa --id 1 --start /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland --user lorkhan --autologin
+    952     950     952 Fri Oct  9 08:13:49 2026 /usr/bin/startplasma-wayland
+    998     839     998 Fri Oct  9 08:13:50 2026 /usr/bin/dbus-broker-launch --scope user
+    999     998     998 Fri Oct  9 08:13:50 2026 dbus-broker --log 11 --controller 10 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 100000000000000 --max-fds 25000000000000 --max-matches 5000000000
+   1007     839    1007 Fri Oct  9 08:13:50 2026 /usr/bin/kwin_wayland_wrapper --xwayland
+   1013    1007    1007 Fri Oct  9 08:13:50 2026 /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-0 --xwayland-fd 8 --xwayland-fd 9 --xwayland-display :1 --xwayland-xauthority /run/user/1000/xauth_ZycoFX --xwayland
+   1022       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-f3]
+   1025       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-100]
+   1028       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-101]
+   1031       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-102]
+   1032       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-103]
+   1033       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-104]
+   1034       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-105]
+   1035       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-106]
+   1036       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-107]
+   1065       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-132]
+   1066       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-133]
+   1067     839    1067 Fri Oct  9 08:13:50 2026 /usr/bin/pipewire
+   1068     839    1068 Fri Oct  9 08:13:50 2026 /usr/bin/wireplumber
+   1072    1013    1007 Fri Oct  9 08:13:50 2026 /usr/lib/fcitx5-wayland-launcher --reopen
+   1074       1    1074 Fri Oct  9 08:13:50 2026 /usr/lib/rtkit-daemon
+   1078     839    1078 Fri Oct  9 08:13:50 2026 /usr/bin/fcitx5
+   1095    1013    1007 Fri Oct  9 08:13:50 2026 /usr/bin/Xwayland :1 -auth /run/user/1000/xauth_ZycoFX -listenfd 8 -listenfd 9 -displayfd 132 -wm 136 -rootless
+   1101       2       0 Fri Oct  9 08:13:50 2026 [nvidia-drm/timeline-134]
+   1116     839    1116 Fri Oct  9 08:13:51 2026 /usr/lib/at-spi-bus-launcher
+   1127    1116    1116 Fri Oct  9 08:13:51 2026 /usr/bin/dbus-broker-launch --config-file=/usr/share/defaults/at-spi2/accessibility.conf --scope user
+   1132    1127    1116 Fri Oct  9 08:13:51 2026 dbus-broker --log 10 --controller 9 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 100000000000000 --max-fds 6400000 --max-matches 5000000000
+   1135     839    1135 Fri Oct  9 08:13:51 2026 /usr/lib/at-spi2-registryd --use-gnome-session
+   1146       2       0 Fri Oct  9 08:13:51 2026 [krfcommd]
+   1152     839    1152 Fri Oct  9 08:13:51 2026 /usr/bin/ksmserver
+   1154     839    1154 Fri Oct  9 08:13:51 2026 /usr/bin/kded6
+   1161     839    1161 Fri Oct  9 08:13:51 2026 /usr/bin/plasmashell --no-respawn
+   1169     839    1169 Fri Oct  9 08:13:51 2026 /usr/lib/dconf-service
+   1181     839    1181 Fri Oct  9 08:13:51 2026 /usr/lib/kactivitymanagerd
+   1188     839    1188 Fri Oct  9 08:13:51 2026 /usr/bin/gmenudbusmenuproxy
+   1189     839    1189 Fri Oct  9 08:13:51 2026 /usr/bin/kaccess
+   1190     839    1190 Fri Oct  9 08:13:51 2026 /usr/lib/polkit-kde-authentication-agent-1
+   1191     839    1191 Fri Oct  9 08:13:51 2026 /usr/lib/org_kde_powerdevil
+   1192     839    1192 Fri Oct  9 08:13:51 2026 /usr/bin/xembedsniproxy
+   1225       1    1225 Fri Oct  9 08:13:51 2026 /usr/lib/upowerd
+   1235     839    1235 Fri Oct  9 08:13:51 2026 /usr/bin/pipewire-pulse
+   1245       1    1245 Fri Oct  9 08:13:51 2026 /usr/lib/udisks2/udisksd
+   1317     839    1316 Fri Oct  9 08:13:51 2026 /usr/bin/xsettingsd
+   1322       2       0 Fri Oct  9 08:13:51 2026 [nvidia-drm/timeline-13f]
+   1337     839    1337 Fri Oct  9 08:13:52 2026 /usr/bin/kdeconnectd
+   1400     839    1400 Fri Oct  9 08:13:53 2026 /usr/bin/msm_kde_notifier
+   1415     839    1415 Fri Oct  9 08:13:53 2026 /usr/lib/xdg-desktop-portal
+   1421     839    1421 Fri Oct  9 08:13:53 2026 /usr/bin/pamac-tray-plasma
+   1436     839    1436 Fri Oct  9 08:13:53 2026 /usr/lib/xdg-permission-store
+   1447     839    1447 Fri Oct  9 08:13:53 2026 /usr/lib/xdg-document-portal
+   1453    1447    1453 Fri Oct  9 08:13:53 2026 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+   1459     839    1459 Fri Oct  9 08:13:53 2026 /usr/lib/xdg-desktop-portal-gtk
+   1480     839    1480 Fri Oct  9 08:13:53 2026 /usr/lib/xdg-desktop-portal-kde
+   1537     839    1537 Fri Oct  9 08:16:59 2026 bash /home/lorkhan/.local/share/Steam/steam.sh -srt-logger-opened
+   1557     839    1556 Fri Oct  9 08:16:59 2026 /home/lorkhan/.local/share/Steam/ubuntu12_32/steam-runtime/usr/libexec/steam-runtime-tools-0/srt-logger --sh-syntax --rotate=8388608 --log-directory /home/lorkhan/.local/share/Steam/logs --filename console-linux.txt --log-fd=7 --journal-fd=5 --parse-level-prefix
+   1649    1537    1537 Fri Oct  9 08:16:59 2026 /home/lorkhan/.local/share/Steam/ubuntu12_32/steam -srt-logger-opened
+   1657       2       0 Fri Oct  9 08:17:00 2026 [nvidia-drm/timeline-14b]
+   1664    1649    1664 Fri Oct  9 08:17:00 2026 /home/lorkhan/.local/share/Steam/steamrt64/pv-runtime/steam-runtime-steamrt/pressure-vessel/libexec/steam-runtime-tools-0/srt-bwrap --args 26 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1649 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   1676     839    1675 Fri Oct  9 08:17:00 2026 /home/lorkhan/.local/share/Steam/ubuntu12_32/steam-runtime/usr/libexec/steam-runtime-tools-0/srt-logger --sh-syntax --rotate=8388608 --log-directory /home/lorkhan/.steam/steam/logs --filename webhelper-linux.txt --log-fd=7 --journal-fd=5 --parse-level-prefix --journal-level=info
+   1756    1664    1756 Fri Oct  9 08:17:00 2026 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1649 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   1820    1649    1537 Fri Oct  9 08:17:01 2026 steam-runtime-launcher-service --alongside-steam
+   1856    1756    1756 Fri Oct  9 08:17:01 2026 ./steamwebhelper -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1649 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   1859    1756    1858 Fri Oct  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --monitor-self-annotation=ptype=crashpad-handler --type=crashpad-handler --max-uploads=5 --max-db-size=20 --max-db-age=5 --database=/tmp/dumps --url=https://crash.steampowered.com/submit --annotation=lsb-release=Steam Runtime 3c (steamrt3c) --annotation=platform=linux64 --annotation=product=cefwebhelper --annotation=version=1788652215 --initial-client-fd=7 --shared-client-connection
+   1864    1856    1756 Fri Oct  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1865    1856    1756 Fri Oct  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1867    1865    1756 Fri Oct  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1882    1864    1756 Fri Oct  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1887       2       0 Fri Oct  9 08:17:01 2026 [nvidia-drm/timeline-165]
+   1894    1882    1756 Fri Oct  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1905    1856    1756 Fri Oct  9 08:17:02 2026 /proc/self/exe --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4 --shared-files --field-trial-handle=3,i,5279840934855968819,18330483610971779226,262144 --enable-features=PlatformHEVCDecoderSupport --disable-features=BlockPromptsIfIgnoredOften,DcheckIsFatal,SpareRendererForSitePerProcess,ValveFFmpegAllowLowDelayHEVC,WebUsbDeviceDetection,WinRetrieveSuggestionsOnlyOnDemand --variations-seed-version --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt
+   1923    1867    1756 Fri Oct  9 08:17:02 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1960    1867    1756 Fri Oct  9 08:17:02 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1993       2       0 Fri Oct  9 08:17:03 2026 [nvidia-drm/timeline-18d]
+   2064       2       0 Fri Oct  9 08:17:06 2026 [nvidia-drm/timeline-19d]
+   2678       1    2678 Fri Oct  9 08:18:57 2026 /usr/lib/accounts-daemon
+   3639    1867    1756 Fri Oct  9 08:57:18 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   3942     839    3942 Fri Oct  9 09:07:42 2026 /opt/google/chrome/chrome --ozone-platform=x11
+   3947    3942    3942 Fri Oct  9 09:07:42 2026 cat
+   3948    3942    3942 Fri Oct  9 09:07:42 2026 cat
+   3950     839    3949 Fri Oct  9 09:07:42 2026 /opt/google/chrome/chrome_crashpad_handler --monitor-self --monitor-self-annotation=ptype=crashpad-handler --database=/home/lorkhan/.config/google-chrome/Crash Reports --url=https://clients2.google.com/cr/report --annotation=channel= --annotation=lsb-release=Manjaro Linux --annotation=plat=Linux --annotation=prod=Chrome_Linux --annotation=ver=154.0.8037.97 --initial-client-fd=5 --shared-client-connection
+   3952     839    3951 Fri Oct  9 09:07:42 2026 /opt/google/chrome/chrome_crashpad_handler --no-periodic-tasks --monitor-self-annotation=ptype=crashpad-handler --database=/home/lorkhan/.config/google-chrome/Crash Reports --url=https://clients2.google.com/cr/report --annotation=channel= --annotation=lsb-release=Manjaro Linux --annotation=plat=Linux --annotation=prod=Chrome_Linux --annotation=ver=154.0.8037.97 --initial-client-fd=4 --shared-client-connection
+   3958    3942    3942 Fri Oct  9 09:07:42 2026 /opt/google/chrome/chrome --type=zygote --no-zygote-sandbox --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable
+   3959    3942    3942 Fri Oct  9 09:07:42 2026 /opt/google/chrome/chrome --type=zygote --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable
+   3961    3959    3942 Fri Oct  9 09:07:42 2026 /opt/google/chrome/chrome --type=zygote --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable
+   3987    3958    3942 Fri Oct  9 09:07:42 2026 /opt/google/chrome/chrome --type=gpu-process --gpu-recent-crash-count=0 --ozone-platform=x11 --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --gpu-preferences=YAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAASAAAAAAAAAABAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAAAEAAAAAAAAACAAAAAAAAAAMAAAAAQAAAAAAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files --metrics-shmem-handle=4,i,2875865804876506914,11010543807260103251,262144 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190708988185955192
+   3990    3942    3942 Fri Oct  9 09:07:42 2026 /opt/google/chrome/chrome --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,14716065166085876045,8957180517854631282,524288 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190708989122997041
+   4002       2       0 Fri Oct  9 09:07:43 2026 [nvidia-drm/timeline-297]
+   4003    3961    3942 Fri Oct  9 09:07:43 2026 /opt/google/chrome/chrome --type=utility --utility-sub-type=storage.mojom.StorageService --lang=en-US --service-sandbox-type=utility --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,4900182252579518244,12112792482432634361,524288 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190708990060038890
+   4019    3987    3942 Fri Oct  9 09:07:43 2026 /opt/google/chrome/chrome --type=broker
+   4041    3961    3942 Fri Oct  9 09:07:43 2026 /opt/google/chrome/chrome --type=renderer --top-chrome-webui --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=5 --launch-time-ticks=3247172246 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,310761863067029415,12085467831150020369,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190708990997080739
+   4126    3961    3942 Fri Oct  9 09:07:43 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=10 --launch-time-ticks=3247226377 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,11301834802627982774,2745085851258699623,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190708995682289984
+   4134    3961    3942 Fri Oct  9 09:07:43 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=11 --launch-time-ticks=3247227048 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,17157167405791232968,96497454399290490,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190708996619331833
+   4139    3961    3942 Fri Oct  9 09:07:43 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=12 --launch-time-ticks=3247227725 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,7647544858658896208,3490980982759939862,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190708997556373682
+   4240    3961    3942 Fri Oct  9 09:07:43 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=15 --launch-time-ticks=3247347904 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,1924244130816711794,14392187428950483311,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190709000367499229
+   4266    3942    3942 Fri Oct  9 09:07:43 2026 /usr/bin/plasma-browser-integration-host chrome-extension://cimiefiiaegbelhefglklhhakcgmhkai/
+   4282    3942    3942 Fri Oct  9 09:07:43 2026 /home/lorkhan/.local/bin/claude --chrome-native-host
+   4340    3942    3942 Fri Oct  9 09:07:43 2026 /opt/google/chrome/chrome --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,6191505423317137673,8534026724300574261,524288 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190709004115666625
+   5567    3961    3942 Fri Oct  9 09:10:00 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=47 --launch-time-ticks=3384437700 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,15127279891057964840,4668268740796479413,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190709030352838397
+   6460       2       0 Fri Oct  9 09:12:56 2026 [kworker/u64:5-kvfree_rcu_reclaim]
+  13152    3961    3942 Fri Oct  9 10:08:06 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=123 --launch-time-ticks=6870324600 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,14752282823174785907,1145318791065000047,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190709101568018921
+  19498     839   19498 Fri Oct  9 10:31:10 2026 /usr/bin/ghostty --gtk-single-instance=true --initial-window=false
+  19515       2       0 Fri Oct  9 10:31:11 2026 [nvidia-drm/timeline-487]
+  20862   19498   20862 Fri Oct  9 10:32:27 2026 /usr/bin/zsh
+  21665   20862   21665 Fri Oct  9 10:32:39 2026 claude --dangerously-skip-permissions --remote-control
+  21762   21665   21665 Fri Oct  9 10:32:39 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+  21763   21665   21665 Fri Oct  9 10:32:39 2026 python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+  26155     839   26155 Fri Oct  9 10:36:10 2026 /home/lorkhan/.codex/packages/app-server-daemon/releases/0.162.0-x86_64-unknown-linux-musl/bin/codex app-server daemon pid-update-loop
+  28523   26155   28523 Fri Oct  9 10:41:28 2026 /home/lorkhan/.codex/packages/app-server-daemon/releases/0.162.0-x86_64-unknown-linux-musl/bin/codex app-server --listen unix:// --analytics-default-enabled --managed-daemon
+  30349   21665   30349 Fri Oct  9 10:44:20 2026 /home/lorkhan/.local/bin/claude daemon run --origin transient --spawned-by {"label":"claude","cwd":"/home/lorkhan/repo/simple_tools/aos","pid":21665}
+  30361   30349   30361 Fri Oct  9 10:44:20 2026 claude bg-pty-host --bg-pty-host /tmp/cc-daemon-1000/33fb32ee/spare/7f518c13.pty.sock 200 50 -- /home/lorkhan/.local/share/claude/versions/2.1.295 --bg-spare /tmp/cc-daemon-1000/33fb32ee/spare/7f518c13.claim.sock
+  30362   30349   30362 Fri Oct  9 10:44:20 2026 claude bg-pty-host --bg-pty-host /tmp/cc-daemon-1000/33fb32ee/pty/6543a9ae.sock 191 47 -- /home/lorkhan/.local/share/claude/versions/2.1.295 --session-id 6543a9ae-50af-4d7e-b248-eb93ff758b3e --fork-session --resume /home/lorkhan/.claude/projects/-home-lorkhan-repo-simple-tools-aos/b8b407fc-3f63-40f7-9035-94a84f538b80.jsonl --permission-mode bypassPermissions
+  30363   30349   30363 Fri Oct  9 10:44:20 2026 claude bg-pty-host --bg-pty-host /tmp/cc-daemon-1000/33fb32ee/pty/52d4d7be.sock 191 47 -- /home/lorkhan/.local/share/claude/versions/2.1.295 --session-id 52d4d7be-0585-47d6-91c2-d9e3eb5f72cb --agent claude --inherit-permission-mode bypassPermissions
+  30379   30361   30361 Fri Oct  9 10:44:20 2026 claude bg-spare --bg-spare /tmp/cc-daemon-1000/33fb32ee/spare/7f518c13.claim.sock
+  30380   30362   30380 Fri Oct  9 10:44:20 2026 /home/lorkhan/.local/share/claude/versions/2.1.295 --session-id 6543a9ae-50af-4d7e-b248-eb93ff758b3e --fork-session --resume /home/lorkhan/.claude/projects/-home-lorkhan-repo-simple-tools-aos/b8b407fc-3f63-40f7-9035-94a84f538b80.jsonl --permission-mode bypassPermissions
+  30381   30363   30381 Fri Oct  9 10:44:20 2026 /home/lorkhan/.local/share/claude/versions/2.1.295 --session-id 52d4d7be-0585-47d6-91c2-d9e3eb5f72cb --agent claude --inherit-permission-mode bypassPermissions
+  30562   30381   30381 Fri Oct  9 10:44:21 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+  30563   30381   30381 Fri Oct  9 10:44:21 2026 python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+  30610   30380   30380 Fri Oct  9 10:44:21 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+  30611   30380   30380 Fri Oct  9 10:44:21 2026 python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+ 100178       2       0 Fri Oct  9 10:53:09 2026 [kworker/13:1-events]
+ 100599       2       0 Fri Oct  9 10:53:12 2026 [kworker/6:0-mm_percpu_wq]
+ 124417       2       0 Fri Oct  9 10:57:19 2026 [kworker/14:3-mm_percpu_wq]
+ 126554       2       0 Fri Oct  9 10:57:48 2026 [kworker/2:3-mm_percpu_wq]
+ 132466       2       0 Fri Oct  9 10:58:52 2026 [kworker/8:2-events]
+ 133268       2       0 Fri Oct  9 10:59:04 2026 [kworker/4:1-events]
+ 133531       2       0 Fri Oct  9 10:59:10 2026 [kworker/5:2-events]
+ 139431       2       0 Fri Oct  9 11:00:07 2026 [kworker/6:2-mm_percpu_wq]
+ 149579       2       0 Fri Oct  9 11:01:31 2026 [kworker/9:2-events]
+ 172461       2       0 Fri Oct  9 11:05:13 2026 [kworker/u64:9-kvfree_rcu_reclaim]
+ 174505     839  174505 Fri Oct  9 11:05:22 2026 /home/lorkhan/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/pressure-vessel/libexec/steam-runtime-tools-0/srt-bwrap --args 26 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/steamapps/common/Proton 9.0 (Beta)/proton waitforexitandrun /home/lorkhan/games/mod-organizer-2-skyrimspecialedition/modorganizer2/ModOrganizer.exe
+ 174621  174505  174621 Fri Oct  9 11:05:23 2026 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/steamapps/common/Proton 9.0 (Beta)/proton waitforexitandrun /home/lorkhan/games/mod-organizer-2-skyrimspecialedition/modorganizer2/ModOrganizer.exe
+ 174660  174621  174621 Fri Oct  9 11:05:23 2026 python3 /home/lorkhan/.local/share/Steam/steamapps/common/Proton 9.0 (Beta)/proton waitforexitandrun /home/lorkhan/games/mod-organizer-2-skyrimspecialedition/modorganizer2/ModOrganizer.exe
+ 174667  174660  174621 Fri Oct  9 11:05:23 2026 c:\windows\system32\steam.exe /home/lorkhan/games/mod-organizer-2-skyrimspecialedition/modorganizer2/ModOrganizer.exe
+ 174669  174621  174669 Fri Oct  9 11:05:23 2026 /home/lorkhan/.local/share/Steam/steamapps/common/Proton 9.0 (Beta)/files/bin/wineserver
+ 174677  174621  174677 Fri Oct  9 11:05:23 2026 C:\windows\system32\services.exe
+ 174680  174621  174680 Fri Oct  9 11:05:23 2026 C:\windows\system32\winedevice.exe
+ 174690  174621  174690 Fri Oct  9 11:05:23 2026 C:\windows\system32\winedevice.exe
+ 174731  174621  174731 Fri Oct  9 11:05:23 2026 C:\windows\system32\plugplay.exe
+ 174737       2       0 Fri Oct  9 11:05:23 2026 [kworker/0:3-events]
+ 174743  174621  174743 Fri Oct  9 11:05:23 2026 C:\windows\system32\svchost.exe -k LocalServiceNetworkRestricted
+ 174757  174621  174757 Fri Oct  9 11:05:23 2026 C:\windows\system32\explorer.exe /desktop
+ 174798  174621  174798 Fri Oct  9 11:05:23 2026 C:\windows\system32\rpcss.exe
+ 174809  174621  174809 Fri Oct  9 11:05:23 2026 C:\windows\system32\tabtip.exe
+ 174812  174621  174812 Fri Oct  9 11:05:23 2026 \\?\Z:\home\lorkhan\.local\share\Steam\steamapps\common\Proton 9.0 (Beta)\files\share\wine/../xalia/xalia.exe
+ 174819  174621  174819 Fri Oct  9 11:05:23 2026 Z:\home\lorkhan\games\mod-organizer-2-skyrimspecialedition\modorganizer2\ModOrganizer.exe
+ 174875       2       0 Fri Oct  9 11:05:23 2026 [nvidia-drm/timeline-c77]
+ 175131       2       0 Fri Oct  9 11:05:25 2026 [vidmem lazy free]
+ 175136       2       0 Fri Oct  9 11:05:25 2026 [UVM GPU1 BH]
+ 175137       2       0 Fri Oct  9 11:05:25 2026 [UVM GPU1 KC]
+ 175205       2       0 Fri Oct  9 11:05:26 2026 [nvidia-drm/timeline-ca6]
+ 175214       2       0 Fri Oct  9 11:05:26 2026 [nvidia-drm/timeline-ca7]
+ 175218       2       0 Fri Oct  9 11:05:26 2026 [nvidia-drm/timeline-ca8]
+ 175220       2       0 Fri Oct  9 11:05:26 2026 [nvidia-drm/timeline-ca9]
+ 175222       2       0 Fri Oct  9 11:05:26 2026 [nvidia-drm/timeline-caa]
+ 180040       2       0 Fri Oct  9 11:06:07 2026 [kworker/5:3-events]
+ 190042       2       0 Fri Oct  9 11:07:24 2026 [kworker/10:0-mm_percpu_wq]
+ 198826       2       0 Fri Oct  9 11:07:45 2026 [kworker/2:0-events]
+ 228326       2       0 Fri Oct  9 11:13:56 2026 [kworker/1:0]
+ 231121       2       0 Fri Oct  9 11:15:34 2026 [kworker/u64:0-kvfree_rcu_reclaim]
+ 231798   30380  231798 Fri Oct  9 11:15:58 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'mkdir -p /home/lorkhan/repo/simple_tools/aos-wt/M/.mteam && cd /home/lorkhan/repo/simple_tools/aos-wt/M/.mteam && cat > common.txt <<'"'"'EOF'"'"' ## 共同規則（必守） - 工作目錄＝這個 git worktree（/home/lorkhan/repo/simple_tools/aos-wt/M）。只改下面「你的檔」列出的檔；其他檔一律不寫（尤其 proto7-2/lib/、tests/_proc.py、modules/control|diag|tools、別的工人的檔）。不要 git commit、不要 git add。 - 測試一律包在 systemd scope 裡跑（在 worktree 根）：   `systemd-run --user --scope -q -p TasksMax=800 -p RuntimeMaxSec=1200 python3 proto7-2/tests/run_all.py <資料夾 相對 proto7-2> [-k 樣式]` - 文件與註解用繁體中文、口吻同現有檔；測試照現有測試檔的寫法（base.py 的 CoreCase／DaemonCase／MatrixCase 等，先讀 proto7-2/tests/base.py）。 - 每條修正都要有一個測試案例；先寫測試確認它在舊碼上會紅（記下來），再修讓它綠。若某條「待核」的問題實際驗不出來，不要硬修：在對應 README 的界線節寫一句說明，報告裡講清楚怎麼驗的。 - 背景知識：核心 commit 235172da 起，任務環境只帶核心六個 AOS7_*（ROOT/NODE/NODE_ID/TASK/TID/RUN；AOS7_TEST_* 測試鉤子另計），其他繼承的 AOS7_*（如 AOS7_SUBROOT、AOS7_AUDIT、AOS7_AUDIT_ALLOW）不會傳給任務。 - 結束時在 -o 報告裡寫：改了哪些檔、每條的測試案例名、哪些案例在舊碼上確認是紅的、最後一次測試的指令與結果（Ran N、OK/FAILED）、沒做的與原因。 EOF cat > wA.md <<'"'"'EOF'"'"' # 工人 A：audit 模組（N-66 audit＋subd、R8-25）  你的檔：proto7-2/modules/audit/audit_site/sitecustomize.py、proto7-2/modules/audit/README.md、proto7-2/modules/audit/tests/（可新增 test 檔）。  ## N-66 audit＋subd（決策 D9：通用 env，兩模組不互認） 問題：audit 包住 subd 時（`aos7-audit -- python3 <proto7-2>/modules/subd/aos7-subd a/sub -- sh -c "exec aos7-daemon $AOS7_SUBROOT"`），子根 `a/sub/.aosd/*` 的寫入（subd 自己寫的 subd-life.json、stop-guard.json、owner.json，與子 daemon 程序寫的 status.json 等）被 `nested()` 當成巢狀 daemon 根，記成 ok:false。 已做（隊長已改 modules/subd/aos7-subd，不要動它）：subd 檢查通過後設 `os.environ["AOS7_AUDIT_ALLOW"]`＝原值與子根絕對路徑以 os.pathsep 串接；所以 subd 自己與它起的 argv（子 daemon 及其 tick/tock）環境裡都有這個變數。 要做：sitecustomize 支援通用 `AOS7_AUDIT_ALLOW`（不提 subd、不讀 AOS7_SUBROOT）： - 值＝os.pathsep 分隔的絕對路徑；**每次判定時讀 os.environ**（subd 是在 hook 裝好之後才設的）；每項 realpath。 - 只承認落在自己 node（node_r）底下的項目（等於 node 本身也行，但沒意義）；node 外的項目忽略——這變數只能「豁免巢狀邊界」，不能把 node 外變合法。 - 寫入的 real 落在某個承認的項目底下 → ok:true（不做 nested 判定）。 - 模組 docstring 與 README（規則節＋契約卡保證）各補一句：AOS7_AUDIT_ALLOW 的語意、誰會設（例如 subd 包設子根）、只在自己 node 內有效。 測試（新增於 modules/audit/tests/，DaemonCase）：lab node `a`，tasks.json 一項 `{"name":"s","mode":"keep","argv":[sys.executable, AUDIT, "--", sys.executable, SUBD, "a/sub", "--", "sh", "-c", "exec aos7-daemon \"$AOS7_SUBROOT\""]}`（SUBD＝MODULES/subd/aos7-subd；aos7-daemon 在任務 PATH 上，可參考 modules/subd/tests/test_subd_ownership.py 的寫法），父 daemon 起來、等子根 `a/sub/.aosd/status.json` 出現，讀槽 s 的 writes.jsonl：子根 .aosd/ 底下的紀錄要存在且全部 ok:true；另外驗不設變數時（例如直接寫個小 python 任務往 `a/sub2/.aosd/x` 寫）仍是 ok:false；再驗 AOS7_AUDIT_ALLOW 指到 node 外的路徑不生效（可在 argv 用 `env AOS7_AUDIT_ALLOW=<node 外路徑> python3 -c ...`，或 sh -c 設）。測試最後要收乾淨（停父 daemon 並確認子 daemon 也走了，照 subd 測試的收法）。  ## R8-25（待核）：全域 busy 旗標漏掉其他 thread 的寫入 `sitecustomize.py:45` 的 `busy = []` 是全程序共用；thread A 在 hook 裡（record 做 I/O 會放 GIL）時，thread B 的寫入事件看到 busy 就被跳過。 先驗：寫一個測試，包起來的 Python 任務開 8 個 thread、各寫 50 個不同檔（open '"'"'w'"'"'），等全部 join 後結束；斷言 writes.jsonl 裡 400 個路徑都在。舊碼上跑幾次看會不會紅（記錄次數）。 成立就修：busy 改 threading.local（hook 裡用 getattr(local, "on", False) 判斷、try/finally 還原）；不成立就照共同規則寫 README 一句、不修。 EOF cat > wB.md <<'"'"'EOF'"'"' # 工人 B：subd 模組（R8-24、T8-03、N-66 subroot 三層測試）  你的檔：proto7-2/modules/subd/aos7-subd、proto7-2/modules/subd/README.md、proto7-2/modules/subd/tests/（可新增 test 檔）。 注意：隊長已在 aos7-subd main() 加了 D9 的 3 行（設 AOS7_AUDIT_ALLOW），保留它，README 規則節「通過後寫」附近補一句：包會把子根絕對路徑加進 `AOS7_AUDIT_ALLOW`（通用寫入紀錄豁免，os.pathsep 分隔；這包不認識 audit）。  ## R8-24（待核）：別名路徑漏過「包住父 node」檢查 `aos7-subd` 的 check()：容器檢查用 realpath（real），「不能包住父 daemon 已登記的 node」用宣告值 sp 比字串。用 symlink 別名（例如 node a 底下 `a/alias -> a/real`，而 `a/real/n2` 是父 daemon 已登記的 node，subroot 宣告成 `a/alias`）可漏過。也考慮反過來：登記的 node id 本身經過連結。 先寫測試驗（啟動應被拒、退出碼 1、out.log 有原因、子根沒起 daemon），確認舊碼上是紅的；修法：包住判定一律比 canonical 路徑——每個已登記 node 取 realpath(root/n)，等於 real 或在 real 底下就拒（訊息列出 node id）。  ## T8-03：subd 測試用「至少死一個」驗「全部收完」 `modules/subd/tests/test_subd_recover.py:156` 附近 `all(alive)==False`，[F,T,T] 也過；`:160` 第三代補收掩蓋。改成：`alive_old=[x for x in old if <仍是同一個程序>]`，應該全收的分支 assertEqual([], alive_old)，應該留著的分支 assertTrue 全在；身分用 aos7_proc.same_process(pid, starttime)（helper leftover_gen／ready_pids 順便記 starttime，約 5 行）。掃一遍同檔與 test_subd_keep.py 有沒有同型的弱斷言，同樣改。改完若有案例翻紅：**不要改回斷言**，在報告裡列出（那是生產碼 bug），並說明你看到的現象。  ## N-66 subroot 三層測試 核心已改（任務環境只帶核心 AOS7_*），舊問題：AOS7_SUBROOT 隔代繼承，第二層 subd 的 argv 裡 `$AOS7_SUBROOT` 指回上一層。新增測試（DaemonCase，systemd scope 跑）： - 父 daemon D0 在空間根；node `a` 一項 keep：`aos7-subd a/S1 -- sh -c '"'"'aos7-ctl daemon "$AOS7_SUBROOT" register n1 && exec aos7-daemon "$AOS7_SUBROOT"'"'"'`（照 README 用法節）。 - 在 `a/S1/n1/.aos/tasks.json` 放一項 keep：`aos7-subd n1/sub -- sh -c '"'"'aos7-ctl daemon "$AOS7_SUBROOT" register m && exec aos7-daemon "$AOS7_SUBROOT"'"'"'`（子空間根是 a/S1，空間路徑相對它）。 - 在 `a/S1/n1/sub/m/.aos/tasks.json` 放一項 keep：一個把自己 /proc/self/environ 或 os.environ 中 AOS7_* 寫到 node 內檔案的小 python 任務。 - 斷言：第三層 daemon 的 `.aosd/` 出現在 `a/S1/n1/sub/.aosd/`（status.json 有）；第二層（a/S1）的 daemon.lock 仍由第二層 daemon 拿著、沒有第二個 daemon 搶它（例如 a/S1 的 status/pid 沒變、out.log 沒有拿不到鎖的錯誤）；孫任務環境沒有 AOS7_SUBROOT（也沒有 AOS7_AUDIT_ALLOW）。 - 收尾要確定三層全收乾淨（停 D0、確認各層 daemon 與任務程序都不在；必要時照現有 subd 測試的 helper 收）。 EOF cat > wC.md <<'"'"'EOF'"'"' # 工人 C：history（R8-17、R8-21）與 once_retry（R8-26、T8-08）  你的檔：proto7-2/modules/history.py、proto7-2/modules/tests/test_modules_history.py（或同資料夾新增 test 檔）、proto7-2/modules/once_retry/retry_lost.py、proto7-2/modules/once_retry/README.md、proto7-2/modules/once_retry/tests/test_once_retry.py。  ## R8-21：history.py:19 未使用的 `import json` 刪掉（確認真的沒用到）。  ## R8-17：history 檔名編碼會碰撞 `history.py:72` `nid.replace("/", "+")` 不可逆（node `a/b` 與 `a+b` 撞名），且 node id `daemon-events` 會跟 `--status` 的 `daemon-events.jsonl` 撞名（:85）。 修法（隊長已定，保持向後相容：不含 `%`、`+` 的 node id 檔名不變；daemon-events.jsonl 檔名不變）： - 新增小函式 `hist_name(nid)`：先 `%`→`%25`、`+`→`%2B`，再 `/`→`+`；結果若正好是 `daemon-events` 就換成 `daemon%2Devents`。可逆（解碼：`+`→`/` 後做 %XX 解碼）。 - 模組 docstring 第 10 行附近「`<id 換成 +>`」改寫成新規則一句。 測試：兩個會撞名的 node id（`a/b` 與 `a+b`）同時 --src，歷史檔各自分開不互蓋；node id `daemon-events` 搭配 `--status` 不與事件檔混寫。照 test_modules_history.py 現有寫法（可直接呼叫 history.once() 單元測，或跑成任務，選穩定的）。先確認舊碼上紅。  ## R8-26（待核）：once_retry 用舊 birth 加回已重試過的工作 `retry_lost.py` 的 scan 把加不回的候選連同當時的 birth 存在 pending，下一次 tock 再試時不重讀 birth；若期間那個槽已被重用（例如 lost 後 tasks.json 改成 keep 同名項重用同槽，槽的 birth.run 換了），還是照舊 birth 加回一項 once。 修法：requeue 的 edit_json 回呼（拿著表鎖）內重讀 `<node>/.aos/tasks/<slot>/birth.json`，`run` 不等於 rid 的 run（`rid.rpartition("#")[2]`）、或不再是 once＋retry_lost true → 不加（回 None），並且這筆算處理完（不留 pending）；birth 讀不到（fact 非 OK 也非 N）→ 丟 Unknown 留 pending。 測試：照 `test_once_retry.py` 的 lost_once helper 做出 lost 候選，讓第一次 requeue 失敗（例如 tasks.json 暫時壞掉或表鎖被別人拿著）而留在 pending，再把槽改成被 keep 同名項重用（birth.run 換了），之後 scan(pending) 不得加回；先確認舊碼上紅。若驗不出（例如槽無法被重用），照共同規則寫 README 一句、不修。  ## T8-08：once_retry「非 true 忽略」沒有候選資料 `test_once_retry.py:64～72` 只 tick 就要 candidates()==[]，根本沒產生 lost。改成用既有 `lost_once(x={"retry_lost": v})`，v∈{True, False, "yes", 1, None}：True → 有候選、加回、跑 1 次；其餘 → 確認真的有 lost（last-round.json 的 ended 有該 run 的 lost＋never_started）、candidates==[]、tasks.json 沒加回、沒跑。可用 subTest 或拆案例（每個 v 要獨立空間就拆）。保留原案例對「舊欄位被拒」那段的斷言。 EOF for w in wA wB wC; do cat $w.md common.txt > $w.task.md; done; ls' && pwd -P >| /tmp/claude-ee55-cwd
+ 231814  231798  231798 Fri Oct  9 11:15:58 2026 eza --icons --git
+ 243452       2       0 Fri Oct  9 11:19:54 2026 [kworker/12:2-cgwb_release]
+ 248530       2       0 Fri Oct  9 11:21:07 2026 [kworker/13:0-events]
+ 249593   19498  249593 Fri Oct  9 11:21:31 2026 /usr/bin/zsh
+ 249762       2       0 Fri Oct  9 11:21:33 2026 [kworker/10:2]
+ 251510       2       0 Fri Oct  9 11:22:34 2026 [kworker/14:1]
+ 255966       2       0 Fri Oct  9 11:24:10 2026 [kworker/7:0-events]
+ 256615       2       0 Fri Oct  9 11:24:17 2026 [kworker/0:0-events]
+ 258157       2       0 Fri Oct  9 11:24:44 2026 [kworker/4:2-inet_frag_wq]
+ 259041  249593  259041 Fri Oct  9 11:24:51 2026 claude --dangerously-skip-permissions --remote-control --resume
+ 259269  259041  259041 Fri Oct  9 11:24:53 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+ 259270  259041  259041 Fri Oct  9 11:24:53 2026 python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+ 262149       2       0 Fri Oct  9 11:25:54 2026 [kworker/15:2-events]
+ 267469       2       0 Fri Oct  9 11:27:08 2026 [kworker/u64:2-flush-259:0]
+ 274923    3961    3942 Fri Oct  9 11:28:45 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=279 --launch-time-ticks=11709214968 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,10688265122530761276,9963514964911368258,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190709247746547365
+ 275417       2       0 Fri Oct  9 11:28:48 2026 [kworker/11:0]
+ 275783    3961    3942 Fri Oct  9 11:28:55 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=281 --launch-time-ticks=11719134206 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,2847517997450952118,7115934357806001136,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190709249620631063
+ 276744       2       0 Fri Oct  9 11:29:34 2026 [kworker/8:0-cgroup_bpf_destroy]
+ 278108       2       0 Fri Oct  9 11:30:53 2026 [kworker/3:0]
+ 285652       2       0 Fri Oct  9 11:34:46 2026 [kworker/u64:3-mt76]
+ 285748     454     454 Fri Oct  9 11:35:00 2026 systemd-userwork: waiting...
+ 286370     454     454 Fri Oct  9 11:35:50 2026 systemd-userwork: waiting...
+ 292626     454     454 Fri Oct  9 11:36:41 2026 systemd-userwork: waiting...
+ 292709    3961    3942 Fri Oct  9 11:36:44 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=296 --launch-time-ticks=12188473386 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,17557810536976933205,6125458328891836963,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190709263676258798
+ 293009    3961    3942 Fri Oct  9 11:36:54 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=3950 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=298 --launch-time-ticks=12198092824 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,5278609585573015779,17296265801001077783,1572864 --field-trial-handle=3,i,9779582509718078827,4193381103514822487,262144 --variations-seed-version=20261008-090048.879000-production --pseudonymization-salt-handle=7,i,9651169616389463439,2842752382356090241,4 --trace-process-track-uuid=3190709265550342496
+ 295286   30380  295286 Fri Oct  9 11:37:33 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/tasks && cat > common.md <<'"'"'EOF'"'"' # astra-7 QA 共同規則（每條子線任務書都附這段）  你是 aos 專案 proto7-2 第七輪回歸（astra-7）的一條 QA 子線。受測 repo＝本 worktree（`/home/lorkhan/repo/simple_tools/aos-wt/R`，detached HEAD ad1dfa25，loop7 八條線全進）。日期 2026-10-09，家機 Manjaro 16 核。  **禁止**：修改任何既有 tracked 檔（程式、測試、文件）；git commit／push／checkout／stash；呼叫任何 LLM；刪除或清空他人目錄；殺不是你自己起的程序（另一隊同時在別的目錄跑全套測試，`/tmp/aos72-test-*` 不是你的就別碰）。 **唯一可寫**：`proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/<你的線>/` 與你自己的 `/tmp/astra7-<你的線>-*`。  **保護（必守）**：每個會起程序的指令（測試、探針、長跑）一律包在 `systemd-run --user --scope -q -p TasksMax=800 -p RuntimeMaxSec=1800 <cmd>` 裡跑（從 repo 根，即本 worktree 根）。單跑測試用 `python3 proto7-2/tests/run_all.py ...` 或 `python3 -m unittest`，照 `proto7-2/README.md`「測試」節的方法。  **證據規則**：不收自我宣告。每個結論要有 1. 可重跑的探針腳本（放你的 evidence 目錄、只用 Python 標準庫、從 repo 根 `python3 <path>` 可跑、在 docstring 寫一行重跑指令）； 2. 精簡 JSON 原始結果（每案：情境、注入是否命中的證據、斷言、實測值、pass/fail）；大量快照 tar.gz，單檔不超過 ~300 KB； 3. `summary.md`：每條驗收一行「通過／不通過／部分＋證據路徑」，以及新發現。 起跑前 `ps -eo pid,ppid,pgid,lstart,args > ps-before.txt`，收尾 `ps-final.txt` 並核對沒有你的殘留程序，/tmp 自建根清除，寫 `cleanup.json`。 **優先用產品真程序**（真 aos7-daemon、真 tick/tock、真 aos7-run、真 budget/step CLI）與檔案協定、核心已有測試鉤子（`AOS7_TEST_FAULT`、`AOS7_TEST_HANG`、`inject("write")`、`test_point(...)` 等，見 `proto7-2/tests/_hooks.py`、`proto7-2/lib/aos7_fs.py`），不要拿作者測試「綠了」當驗收——作者測試可以順手跑一次當對照，但驗收要你自己的獨立探針。  **分類**：新發現編號由隊長統一，你先用 `NEW-<線>-n` 暫編，分 B（組件 bug：違反 spec／契約卡／README 明文）／G（契約缺口：沒寫清楚導致合理使用出事）／M（誤用，不算 bug）／X（外部故障、環境界線，正常處理）。每條要有：契約條文出處（檔:行或節）、最小重現、影響、嚴重度（高／中／低）、建議修法一行。**只記不修**。 **已知限制不要當新發現**：先讀 `proto7-2/notes/decisions-2026-10-09.md` 的「已知限制」與各隊代定（例如 K2：N-06 回合已關 steps 未存之間當機會多跑一回合、daemon 停機時 node 被換掉偵測不到；M：once_retry R8-26 窗口、node id 太長；K1：任務環境改白名單 AOS7_AUDIT／AOS7_SUBROOT 不傳；S：R8-22 縮窗代價）。若你實測發現已知限制的實際後果比文件寫的嚴重，可記，但標明「已知限制的延伸」。 **背景**：`proto7-2/notes/blueprint-loop7.md`（§1～§4 設計、§7 驗收）、`proto7-2/notes/blueprint-loop7-items.json`（每條 root_cause／test 欄）、`proto7-2/spec.md`、`proto7-2/notes/component-contracts.md`、各包 README／spec、`git log --oneline 510dd134..HEAD`。上一輪格式參考 `proto7-2/notes/play/2026-10-04-astra-6-infra.md` 與其 evidence。  時間：目標 2.5 小時內交。做不完的項目在 summary.md 明說「未做＋原因」，不湊。 最後的回覆（-o 檔）＝summary.md 的內容。 EOF cat > core3.md <<'"'"'EOF'"'"' # 子線 core3：blueprint-loop7 §7 第 3 組（kill／回收時序）驗收＋deep-play C8-01／C8-02／K-04 壓力重現  你的線名 `core3`，evidence 目錄 `proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/`。  驗收逐條（§7 第 3 組原文）——每條寫獨立探針： 1. R8-01：runner 停在 Popen 前（`AOS7_TEST_HANG=runner-before-pid` 或等效）時 kill 回 `ok:false`、msg 以 unknown 開頭、請求留著；放行後下一次 kill 成功、任務真的死（PID＋starttime 核）。各 3 次。 2. R8-03 前半：nodes.json 寫失敗（D3 `inject("write")`，或 chmod）時 register／unregister 回 ok:false、不變更；重送後記憶體（status）＝磁碟 nodes.json。 3. C8-01：unregister 成功回條後、寬限內 SIGKILL daemon（任務忽略 SIGTERM，keep 單任務）→ 同 root 重起 daemon → 舊 PID 已被收（PID＋starttime＋非殭屍核）。**3／3 中斷＋3 正常對照**。檢查 nodes.json 的 `reaping` 鍵前後狀態。 4. C8-02：node 目錄替換（任務 ready、時間線 running 後 mv 舊目錄、放新目錄同 id）→ 回收中 SIGKILL daemon → 重起：新舊任務不得同時存活（連續快照 ≥30 次，記觀測跨度）；新任務只有在舊任務確認收乾淨後才起。**3／3 中斷＋3 對照**。另做一組「回收未確認乾淨」（`AOS7_TEST_FAULT` 規則檔讓 /proc stat EIO）：node 保持 missing、不開新回合、舊任務仍活；撤規則後才開線且舊任務已收。 5. K-04：keep＋inst 長睡眠、stdin FIFO 讓 aos-exec 停在 Popen 前、殺 runner、tock 走到 resolve、TERM 前放行 FIFO：下一代起來後該 node/tid 的程序只剩一代。**壓力：至少 10 次**（照 blueprint-loop7-items.json K-04 test 欄）。 6. R8-29：node 級回收打記著的 pgid 前做身分重驗——用真程序做「pgid 被不相干程序佔用」情境（例如記錄 pgid 後讓原群組死光、再起一個 setsid 程序且盡可能讓它拿到同號；拿不到同號就改用 mock 層級，照 items json 的做法，並明說是 mock）：不得 killpg 外人。 7. 順手：kill／回收相關作者測試 `tests/core/test_ctl.py`、`test_daemon.py` 各單跑一次當對照（不算驗收）。  另外自由挖：K1／K2 改動（`git diff 510dd134..HEAD -- proto7-2/lib/aos7_task.py proto7-2/lib/aos7_proc.py proto7-2/lib/aos7_run.py proto7-2/lib/aos7_daemon.py`）可能新引入的邊角，例如 reaping 鍵在 nodes.json 半寫／壞型別時、重複 unregister／re-register 同 id 撞 reaping、daemon 連續被殺兩次、stop --kill 時有 reaping 項。每個邊角至少一案，分類照共同規則。 EOF cat > pack4.md <<'"'"'EOF'"'"' # 子線 pack4：blueprint-loop7 §7 第 4 組（budget unknown 與 step 交接）驗收＋astra-5 50 案／audit.py 不退化  你的線名 `pack4`，evidence 目錄 `proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/pack4/`。相關：`proto7-2/packs/budget/`、`proto7-2/packs/step/`（README、spec、程式），上一輪探針在 `proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/`（可以複製到你的目錄改，不要改原檔）。  驗收逐條（§7 第 4 組原文）： 1. EIO 讓 budget call 回 3（`AOS7_TEST_FAULT=open:*/backend.json:EIO` 之類）→ step run 步開 `unknown_codes:[3]` 時：a2 同 request、`backend.accepted==1`、`frame.resends[req]` 正確；持續故障超過 `max_resends` 才 halted unknown。用真 step 直譯器＋真 daemon 或真 tick/tock。 2. 不開 `unknown_codes` 時 halted failed，且可 `resume --resend` 接續、結算一次。 3. payload EIO → rc 3（stdout 一行 unknown JSON、stage payload、stderr 無 traceback）；payload 不存在／壞 JSON 仍 rc 2。 4. 重播回條（gateway/<K>.json）EIO 時 rc 3、`--out` 檔 bytes 前後不變（sha256）。 5. 過期 intent（R8-13）走 on_unknown 的三型：receipt／resend／stop 各一案，核 frame 欄位。 6. R8-14：max_resends=1，a1 被殺→a2 派工前表寫入失敗（tasks.json 寫壞或 inject）→修好→殺 a2：`halt.kind unknown`、`ran==2`（不得出現 a3）。 7. R8-22 縮窗（S 隊代定：補加只准同回合）：在 intent 存後、加項前被殺、重開已是下一回合 → 走 on_unknown（預設 stop 停在 unknown，可 `resume --resend`）；同回合被殺則補加且 `ran==1`。 8. 單位＝加權成本（D6）：兩個 request 其一 `--amount 2` → used==3、accepted==2、available 相符。 9. 不退化：astra-5／astra-6 的 budget crash 50 案原樣重跑（找 `2026-10-04-astra-*-infra-evidence/budget/crash/` 的探針）＋獨立核帳器 `audit_all.py`（或 astra-6 `audit.py`）對本輪新快照重算守恆並跑負對照。 10. C8-03 份：同一 job／K 在原子寫 rename 前連殺 writer 6 次，恢復後槽外 tmp 數 ≤1（step 工作資料夾／results、budget gateway/），活 writer 的 tmp 不被清。 11. 文件一致性抽查：budget README／spec 的退出碼表（0／1／2／3）三處一致、單位定義；step spec 有 `unknown_codes`、過期 intent、重送額度歸 request 的描述，且與實測行為一致。  自由挖：`unknown_codes` 參數驗證邊界（空、重複、0、256、非整數、非 run 步）、`resume --resend` 與 `frame.resends` 歸零、unknown_codes 列了 1 或 2 時的語意（把失敗當 unknown 是否會造成重複效果——若是使用者誤用請分 M 而不是 B）。 EOF cat > group5.md <<'"'"'EOF'"'"' # 子線 group5：blueprint-loop7 §7 第 5 組（數值、遷移漏接與模組）＋第 6 組 T8 抽驗＋文件項  你的線名 `group5`，evidence 目錄 `proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/group5/`。  1. 第 5 組每條一案，照 `proto7-2/notes/blueprint-loop7-items.json` group==5 各列 `test` 欄寫**獨立探針**（不只是跑作者測試）：A8-11＋R8-20（含 interval 10**309、負巨數、改回合法值下一回合生效；同 daemon 另一 node 不受影響）、R8-05、N-06、A8-07＋R8-09、N-66 subroot（三層 subd：D2 的 .aosd 落在正確位置、D1 daemon.lock 沒被搶、孫任務 env 無父層 SUBROOT）、N-66 audit＋subd（D9 `AOS7_AUDIT_ALLOW`）、N-86、R8-04、R8-06（100 圈 CPU 不忙轉、n 大不炸）、R8-07（fd 不長）、R8-10、R8-11、R8-12、R8-28、R8-17、R8-18（連續恢復 50 次 recovering.json 有界）、R8-24、R8-25、R8-26。不排的 R8-30 跳過。C8-03 由 pack4 線做，你跳過。 2. 確認 proto7-1 的 `test_interval_huge_int` 已搬回 proto7-2（找出在哪個檔、單跑一次）。 3. 第 6 組 T8-01～08：§7 要求「拿掉故障注入就轉紅」各手動驗一次。你**不能改 tracked 檔**，做法：把該測試檔複製到 /tmp 自己的副本（或在 /tmp 建一份 worktree 外的完整 proto7-2 複本 `cp -a`），在副本裡拿掉注入，跑該案，記錄確實轉紅（失敗訊息摘要）；再跑原版確認綠。8 條各一次。 4. 文件項（§7 文件）抽查，每項記「有／無＋檔:行」：spec §2.3／§2.6／§4.3／§5.5／§6 各一句（對應 loop7 改動）；契約卡 2.1（`proto7-2/notes/component-contracts.md`）；`proto7-2/notes/problems.md` 有 A8-05～A8-11、C8-01～03 列（I 隊可能還在補，若沒有就記「未見，HEAD=…」不要當 bug）。 5. 自由挖：K3／K4／M 改動（`git diff 510dd134..HEAD -- proto7-2/lib/aos7_daemon_timeline.py proto7-2/lib/aos7_mount.py proto7-2/lib/aos7_tick.py proto7-2/lib/aos7_fs.py proto7-2/lib/aos7_tock.py proto7-2/lib/aos_directives.py proto7-2/modules/`）的新邊角：interval 上限一年的邊界值、多個 timeline 欄位同時非法、`AOS7_AUDIT_ALLOW` 含空段／相對路徑／node 外路徑、history 新編碼與舊檔名共存（同 node 新舊兩個檔？）、mount 讀連結出錯留請求是否會永遠重試。 EOF cat > longrun.md <<'"'"'EOF'"'"' # 子線 longrun：全套一次＋step 450 回合＋adapt 320 回合長跑＋核心行數＋lib 歷史  你的線名 `longrun`，evidence 目錄 `proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/longrun/`。上一輪同類探針在 `proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/regression/`（run_suites.py、step/）與 `.../adapt/`（long320），可複製到你的目錄改用，不要改原檔。  **注意負載**：另一隊同時在主 repo 跑全套 ×3。你這條線**一次只跑一樣重東西**（全套、step 長跑、adapt 長跑循序，不並行）。  1. 全套一次：`systemd-run --user --scope -q -p TasksMax=800 -p RuntimeMaxSec=1800 python3 proto7-2/tests/run_all.py -v`，記測試總數（unittest 尾端 Ran N）、rc、耗時、失敗／錯誤／skip 清單與原文。若有紅：單跑該案 3 次判斷是否時序不穩（decisions 檔已記 `test_diag.test_unsure_listed`、subd `test_allow_stop_writes_stopped_and_parent_does_not_restart` 在負載下偶紅——再出現就照實記次數）。§7 說預期約 400 項，記實際數。 2. step 長跑：真 daemon、step 包 CSV convert→stats→end（或等效）`restart_on_end:true`，跑到 round≥450 已關；核每個完成快照正確、attempt=1、halt／error=0、槽與工作資料夾檔名集合不長（含隱藏檔、含 tmp）、`frame.resends` 等新欄不累積。順便抽 daemon RSS／fd 數頭尾比。 3. adapt 長跑：真核心 tick/tock（或真 daemon）從 r1 再跑 320 回合，每回合核暫存器與檔名集合不變。 4. 核心行數：跑 `tests/core/test_budget.py`（D7 後只印不擋）記印出的總行／程式行；與 astra-6 的 2757／2123 比，列各 lib 檔行數變化（`git diff --stat 510dd134..HEAD -- proto7-2/lib`）。 5. 長跑額外觀察：nodes.json 是否殘留 `reaping` 鍵、paused.json 是否多出 `steps` 欄且長跑後狀態合理、`.aosd/` 檔案集合不長。 EOF ls' && pwd -P >| /tmp/claude-f019-cwd
+ 295297  295286  295286 Fri Oct  9 11:37:33 2026 eza --icons --git
+ 306360       2       0 Fri Oct  9 11:39:29 2026 [kworker/6:1]
+ 306370   30380  306370 Fri Oct  9 11:39:32 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'grep -E '"'"'^(Ran|OK|FAILED|EXIT|FAIL:|ERROR:)'"'"' /tmp/i7/run1.log; cd /home/lorkhan/repo/simple_tools/aos && (systemd-run --user --scope -q -p TasksMax=800 -p RuntimeMaxSec=1200 python3 proto7-2/tests/run_all.py > /tmp/i7/run2.log 2>&1; echo "EXIT $?" >> /tmp/i7/run2.log)' < /dev/null && pwd -P >| /tmp/claude-5802-cwd
+ 306372  306370  306370 Fri Oct  9 11:39:32 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'grep -E '"'"'^(Ran|OK|FAILED|EXIT|FAIL:|ERROR:)'"'"' /tmp/i7/run1.log; cd /home/lorkhan/repo/simple_tools/aos && (systemd-run --user --scope -q -p TasksMax=800 -p RuntimeMaxSec=1200 python3 proto7-2/tests/run_all.py > /tmp/i7/run2.log 2>&1; echo "EXIT $?" >> /tmp/i7/run2.log)' < /dev/null && pwd -P >| /tmp/claude-5802-cwd
+ 306373  306372  306370 Fri Oct  9 11:39:32 2026 /usr/bin/python3 proto7-2/tests/run_all.py
+ 306470   30380  306470 Fri Oct  9 11:39:38 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'until grep -q '"'"'^EXIT'"'"' /tmp/i7/run2.log; do sleep 2; done; grep -E '"'"'^(Ran|OK|FAILED|EXIT|FAIL:|ERROR:)'"'"' /tmp/i7/run2.log' < /dev/null && pwd -P >| /tmp/claude-1859-cwd
+ 306758   30380  306758 Fri Oct  9 11:39:44 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'E=/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence; W=/home/lorkhan/repo/simple_tools/aos-wt/R; codex exec -m gpt-6-astra -c model_reasoning_effort="high" --skip-git-repo-check -C $W -o $E/core3/codex-out.md - < $E/tasks/full-core3.md > /tmp/astra7-core3-codex.log 2>&1' && pwd -P >| /tmp/claude-b9eb-cwd
+ 306759  306758  306758 Fri Oct  9 11:39:44 2026 codex exec -m gpt-6-astra -c model_reasoning_effort=high --skip-git-repo-check -C /home/lorkhan/repo/simple_tools/aos-wt/R -o /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/codex-out.md -
+ 306952  306759  306952 Fri Oct  9 11:39:45 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+ 307015   30380  307015 Fri Oct  9 11:39:45 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'E=/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence; W=/home/lorkhan/repo/simple_tools/aos-wt/R; codex exec -m gpt-6-astra -c model_reasoning_effort="high" --skip-git-repo-check -C $W -o $E/pack4/codex-out.md - < $E/tasks/full-pack4.md > /tmp/astra7-pack4-codex.log 2>&1' && pwd -P >| /tmp/claude-1584-cwd
+ 307016  307015  307015 Fri Oct  9 11:39:45 2026 codex exec -m gpt-6-astra -c model_reasoning_effort=high --skip-git-repo-check -C /home/lorkhan/repo/simple_tools/aos-wt/R -o /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/pack4/codex-out.md -
+ 307210  307016  307210 Fri Oct  9 11:39:45 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+ 307293   30380  307293 Fri Oct  9 11:39:47 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'E=/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence; W=/home/lorkhan/repo/simple_tools/aos-wt/R; codex exec -m gpt-6-astra -c model_reasoning_effort="high" --skip-git-repo-check -C $W -o $E/group5/codex-out.md - < $E/tasks/full-group5.md > /tmp/astra7-group5-codex.log 2>&1' && pwd -P >| /tmp/claude-68df-cwd
+ 307294  307293  307293 Fri Oct  9 11:39:47 2026 codex exec -m gpt-6-astra -c model_reasoning_effort=high --skip-git-repo-check -C /home/lorkhan/repo/simple_tools/aos-wt/R -o /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/group5/codex-out.md -
+ 307490  307294  307490 Fri Oct  9 11:39:47 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+ 307564   30380  307564 Fri Oct  9 11:39:48 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'E=/home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence; W=/home/lorkhan/repo/simple_tools/aos-wt/R; codex exec -m gpt-6-astra -c model_reasoning_effort="high" --skip-git-repo-check -C $W -o $E/longrun/codex-out.md - < $E/tasks/full-longrun.md > /tmp/astra7-longrun-codex.log 2>&1' && pwd -P >| /tmp/claude-3f8d-cwd
+ 307565  307564  307564 Fri Oct  9 11:39:48 2026 codex exec -m gpt-6-astra -c model_reasoning_effort=high --skip-git-repo-check -C /home/lorkhan/repo/simple_tools/aos-wt/R -o /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/longrun/codex-out.md -
+ 307757  307565  307757 Fri Oct  9 11:39:48 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+ 308296  307016  308296 Fri Oct  9 11:39:54 2026 /opt/openai-codex/bin/codex-code-mode-host
+ 313814       2       0 Fri Oct  9 11:39:54 2026 [kworker/u64:1-kvfree_rcu_reclaim]
+ 321624  306759  321624 Fri Oct  9 11:39:55 2026 /opt/openai-codex/bin/codex-code-mode-host
+ 332300  307294  332300 Fri Oct  9 11:39:56 2026 /opt/openai-codex/bin/codex-code-mode-host
+ 332340  306470  306470 Fri Oct  9 11:39:58 2026 sleep 2
+ 332341       2       0 Fri Oct  9 11:39:59 2026 [kworker/u64:4-kvfree_rcu_reclaim]
+ 332345  306373  332345 Fri Oct  9 11:39:59 2026 /usr/bin/python3 /home/lorkhan/repo/simple_tools/aos/proto7-2/bin/aos7-daemon /tmp/aos72-test-tqvi5jgv
+ 332350  307565  332350 Fri Oct  9 11:39:59 2026 /opt/openai-codex/bin/codex-code-mode-host
+ 332372       2       0 Fri Oct  9 11:39:59 2026 [kworker/8:3-events]
+ 332382  307016  332382 Fri Oct  9 11:40:00 2026 /usr/bin/bash -c mkdir -p proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/pack4; ps -eo pid,ppid,pgid,lstart,args > proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/pack4/ps-before.txt; cat wf/workflows/testing.md wf/workflows/common/user.md proto7-2/notes/decisions-2026-10-09.md; rg --files proto7-2/packs/budget proto7-2/packs/step proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget; git status --short; git log --oneline 510dd134..HEAD
+ 332384  332382  332382 Fri Oct  9 11:40:00 2026 ps -eo pid,ppid,pgid,lstart,args

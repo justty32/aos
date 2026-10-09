@@ -1,0 +1,227 @@
+{
+ "scenario": "k04-05",
+ "root": "/tmp/astra7-core3-k04-05-egmxv35w",
+ "injection": {
+  "runner_identity": {
+   "pid": 352871,
+   "starttime": 1268431
+  },
+  "runner_after": {
+   "pid": 352871,
+   "starttime": 1268431,
+   "state": "Z",
+   "ppid": 351914,
+   "pgid": 352871
+  },
+  "executor": {
+   "pid": 352873,
+   "starttime": 1268433,
+   "state": "R",
+   "ppid": 351914,
+   "pgid": 352873,
+   "run": "1",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos-exec /tmp/astra7-core3-k04-05-egmxv35w/a/inst.json "
+  },
+  "wchan": "wait_for_partner",
+  "pid_json_absent": true,
+  "ready_absent": true,
+  "signal_snapshot": {
+   "groups": [
+    352873
+   ],
+   "at": 12684.398898003
+  },
+  "late_child": {
+   "pid": 352878,
+   "starttime": 1268440,
+   "state": "S",
+   "ppid": 352873,
+   "pgid": 352878
+  },
+  "late_ready": {
+   "pid": 352878,
+   "starttime": 1268440,
+   "state": "R",
+   "run": "1",
+   "monotonic": 12684.41204859,
+   "prior": null
+  }
+ },
+ "assertions": [
+  {
+   "assertion": "child absent at completed descendant snapshot",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "late child born in different session after snapshot",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "late child old run matches",
+   "actual": "1",
+   "expected": "1",
+   "pass": true
+  },
+  {
+   "assertion": "real tock exits successfully",
+   "actual": 0,
+   "expected": 0,
+   "pass": true
+  },
+  {
+   "assertion": "late old child collected",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "no run1 process survives tock",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "only one node/tid generation remains",
+   "actual": [
+    "2"
+   ],
+   "expected": [
+    "2"
+   ],
+   "pass": true
+  },
+  {
+   "assertion": "next generation is alive",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "commands": [
+  {
+   "program": "aos7-tick",
+   "args": [
+    "/tmp/astra7-core3-k04-05-egmxv35w",
+    "a"
+   ],
+   "returncode": 0,
+   "stdout": "{\"round\": 1, \"started\": [\"s#1\"], \"tasks_rev\": \"eaf2bd006f3e\"}\n",
+   "stderr": ""
+  },
+  {
+   "program": "aos7-tick",
+   "args": [
+    "/tmp/astra7-core3-k04-05-egmxv35w",
+    "a"
+   ],
+   "returncode": 0,
+   "stdout": "{\"round\": 2, \"started\": [\"s#2\"], \"tasks_rev\": \"eaf2bd006f3e\"}\n",
+   "stderr": ""
+  }
+ ],
+ "exit_before_restart": {
+  "run": 1,
+  "code": null,
+  "lost": true,
+  "at": "2026-10-09T11:45:01.024",
+  "round": 1,
+  "note": "lost 前收掉相符的殘留程序：killed 1 group(s)",
+  "seen_round": 1
+ },
+ "next_tick": {
+  "round": 2,
+  "started": [
+   "s#2"
+  ],
+  "tasks_rev": "eaf2bd006f3e"
+ },
+ "new_task": {
+  "pid": 352986,
+  "starttime": 1268561,
+  "state": "R",
+  "run": "2",
+  "monotonic": 12685.623199522,
+  "prior": null
+ },
+ "processes_after": [
+  {
+   "pid": 352980,
+   "starttime": 1268556,
+   "state": "S",
+   "ppid": 351914,
+   "pgid": 352980,
+   "run": "2",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-k04-05-egmxv35w/a/.aos/tasks/s 5 "
+  },
+  {
+   "pid": 352983,
+   "starttime": 1268558,
+   "state": "S",
+   "ppid": 352980,
+   "pgid": 352983,
+   "run": "2",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos-exec /tmp/astra7-core3-k04-05-egmxv35w/a/inst.json "
+  },
+  {
+   "pid": 352986,
+   "starttime": 1268561,
+   "state": "S",
+   "ppid": 352983,
+   "pgid": 352986,
+   "run": "2",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-k04-05-egmxv35w/old.ready /tmp/astra7-core3-k04-05-egmxv35w/old.term null "
+  }
+ ],
+ "cleanup": {
+  "killed": [
+   {
+    "pid": 352980,
+    "starttime": 1268556,
+    "state": "S",
+    "ppid": 351914,
+    "pgid": 352980,
+    "run": "2",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-k04-05-egmxv35w/a/.aos/tasks/s 5 "
+   },
+   {
+    "pid": 352983,
+    "starttime": 1268558,
+    "state": "S",
+    "ppid": 352980,
+    "pgid": 352983,
+    "run": "2",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos-exec /tmp/astra7-core3-k04-05-egmxv35w/a/inst.json "
+   },
+   {
+    "pid": 352986,
+    "starttime": 1268561,
+    "state": "S",
+    "ppid": 352983,
+    "pgid": 352986,
+    "run": "2",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-k04-05-egmxv35w/old.ready /tmp/astra7-core3-k04-05-egmxv35w/old.term null "
+   }
+  ],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "k04-05.tar.gz",
+ "archive_bytes": 2017,
+ "pass": true
+}

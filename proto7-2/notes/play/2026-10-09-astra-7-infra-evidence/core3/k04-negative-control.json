@@ -1,0 +1,242 @@
+{
+ "scenario": "k04-negative-control",
+ "root": "/tmp/astra7-core3-k04-negative-control-zcus5u86",
+ "injection": {
+  "runner_identity": {
+   "pid": 382040,
+   "starttime": 1281652
+  },
+  "runner_after": {
+   "pid": 382040,
+   "starttime": 1281652,
+   "state": "Z",
+   "ppid": 382032,
+   "pgid": 382040
+  },
+  "executor": {
+   "pid": 382043,
+   "starttime": 1281654,
+   "state": "R",
+   "ppid": 382032,
+   "pgid": 382043,
+   "run": "1",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos-exec /tmp/astra7-core3-k04-negative-control-zcus5u86/a/inst.json "
+  },
+  "wchan": "wait_for_partner",
+  "pid_json_absent": true,
+  "ready_absent": true,
+  "signal_snapshot": {
+   "groups": [
+    382043
+   ],
+   "at": 12816.616075008
+  },
+  "late_child": {
+   "pid": 382058,
+   "starttime": 1281661,
+   "state": "S",
+   "ppid": 382043,
+   "pgid": 382058
+  },
+  "late_ready": {
+   "pid": 382058,
+   "starttime": 1281661,
+   "state": "R",
+   "run": "1",
+   "monotonic": 12816.628835115,
+   "prior": null
+  }
+ },
+ "assertions": [
+  {
+   "assertion": "child absent at completed descendant snapshot",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "late child born in different session after snapshot",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "late child old run matches",
+   "actual": "1",
+   "expected": "1",
+   "pass": true
+  },
+  {
+   "assertion": "real tock exits successfully",
+   "actual": 0,
+   "expected": 0,
+   "pass": true
+  },
+  {
+   "assertion": "oracle calibration: disabling rescan leaves late child",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "generation oracle sees expected live runs",
+   "actual": [
+    "1",
+    "2"
+   ],
+   "expected": [
+    "1",
+    "2"
+   ],
+   "pass": true
+  },
+  {
+   "assertion": "next generation is alive",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "commands": [
+  {
+   "program": "aos7-tick",
+   "args": [
+    "/tmp/astra7-core3-k04-negative-control-zcus5u86",
+    "a"
+   ],
+   "returncode": 0,
+   "stdout": "{\"round\": 1, \"started\": [\"s#1\"], \"tasks_rev\": \"eaf2bd006f3e\"}\n",
+   "stderr": ""
+  },
+  {
+   "program": "aos7-tick",
+   "args": [
+    "/tmp/astra7-core3-k04-negative-control-zcus5u86",
+    "a"
+   ],
+   "returncode": 0,
+   "stdout": "{\"round\": 2, \"started\": [\"s#2\"], \"tasks_rev\": \"eaf2bd006f3e\"}\n",
+   "stderr": ""
+  }
+ ],
+ "exit_before_restart": {
+  "run": 1,
+  "code": null,
+  "lost": true,
+  "at": "2026-10-09T11:47:13.241",
+  "round": 1,
+  "note": "lost 前收掉相符的殘留程序：killed 1 group(s)",
+  "seen_round": 1
+ },
+ "negative_control": "in-memory _kill_remaining bypass only; deliberately old behavior, not product finding",
+ "next_tick": {
+  "round": 2,
+  "started": [
+   "s#2"
+  ],
+  "tasks_rev": "eaf2bd006f3e"
+ },
+ "new_task": {
+  "pid": 382071,
+  "starttime": 1281671,
+  "state": "R",
+  "run": "2",
+  "monotonic": 12816.729096338,
+  "prior": null
+ },
+ "processes_after": [
+  {
+   "pid": 382058,
+   "starttime": 1281661,
+   "state": "S",
+   "ppid": 382032,
+   "pgid": 382058,
+   "run": "1",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-k04-negative-control-zcus5u86/old.ready /tmp/astra7-core3-k04-negative-control-zcus5u86/old.te"
+  },
+  {
+   "pid": 382066,
+   "starttime": 1281667,
+   "state": "S",
+   "ppid": 382032,
+   "pgid": 382066,
+   "run": "2",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-k04-negative-control-zcus5u86/a/.aos/tasks/s 5 "
+  },
+  {
+   "pid": 382068,
+   "starttime": 1281669,
+   "state": "S",
+   "ppid": 382066,
+   "pgid": 382068,
+   "run": "2",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos-exec /tmp/astra7-core3-k04-negative-control-zcus5u86/a/inst.json "
+  },
+  {
+   "pid": 382071,
+   "starttime": 1281671,
+   "state": "S",
+   "ppid": 382068,
+   "pgid": 382071,
+   "run": "2",
+   "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-k04-negative-control-zcus5u86/old.ready /tmp/astra7-core3-k04-negative-control-zcus5u86/old.te"
+  }
+ ],
+ "cleanup": {
+  "killed": [
+   {
+    "pid": 382058,
+    "starttime": 1281661,
+    "state": "S",
+    "ppid": 382032,
+    "pgid": 382058,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-k04-negative-control-zcus5u86/old.ready /tmp/astra7-core3-k04-negative-control-zcus5u86/old.te"
+   },
+   {
+    "pid": 382066,
+    "starttime": 1281667,
+    "state": "S",
+    "ppid": 382032,
+    "pgid": 382066,
+    "run": "2",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-k04-negative-control-zcus5u86/a/.aos/tasks/s 5 "
+   },
+   {
+    "pid": 382068,
+    "starttime": 1281669,
+    "state": "S",
+    "ppid": 382066,
+    "pgid": 382068,
+    "run": "2",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos-exec /tmp/astra7-core3-k04-negative-control-zcus5u86/a/inst.json "
+   },
+   {
+    "pid": 382071,
+    "starttime": 1281671,
+    "state": "S",
+    "ppid": 382068,
+    "pgid": 382071,
+    "run": "2",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-k04-negative-control-zcus5u86/old.ready /tmp/astra7-core3-k04-negative-control-zcus5u86/old.te"
+   }
+  ],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "k04-negative-control.tar.gz",
+ "archive_bytes": 2010,
+ "pass": true
+}

@@ -1,0 +1,159 @@
+{
+ "scenario": "c801-crash-2",
+ "root": "/tmp/astra7-core3-c801-crash-2-qd_gcrd2",
+ "injection": {
+  "crash": true,
+  "term": {
+   "pid": 345421,
+   "monotonic": 12599.514416248
+  },
+  "task_alive_at_receipt": true,
+  "pending": {
+   "nodes": {},
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:36.134",
+     "why": "unregister-kill"
+    }
+   }
+  },
+  "kill_after_term_s": 0.0007934060013212729,
+  "daemon_returncode": -9,
+  "task_alive_after_daemon_kill": true,
+  "durable_after_kill": {
+   "nodes": {},
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:36.134",
+     "why": "unregister-kill"
+    }
+   }
+  }
+ },
+ "assertions": [
+  {
+   "assertion": "unregister accepted",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "registry removes id before receipt",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "durable reaping at receipt",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "TERM-resistant task still live in grace",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "SIGKILL within one second grace",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "daemon terminated by SIGKILL",
+   "actual": -9,
+   "expected": -9,
+   "pass": true
+  },
+  {
+   "assertion": "task survives daemon SIGKILL",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "old PID/starttime no longer non-zombie live",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "reaping cleared only after collection",
+   "actual": {},
+   "expected": {},
+   "pass": true
+  },
+  {
+   "assertion": "unregistered node not relaunched",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:43:36.073",
+    "queued_at": "2026-10-09T11:43:36.055"
+   }
+  },
+  {
+   "op": "unregister",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "unregistered a（活任務會被收掉）",
+    "at": "2026-10-09T11:43:36.135",
+    "queued_at": "2026-10-09T11:43:36.126"
+   }
+  }
+ ],
+ "before": {
+  "nodes": {
+   "a": {
+    "by": "astra7-core3",
+    "at": "2026-10-09T11:43:36.073"
+   }
+  }
+ },
+ "task_before": {
+  "pid": 345421,
+  "starttime": 1259948,
+  "state": "R",
+  "run": "1",
+  "monotonic": 12599.493249655,
+  "prior": null
+ },
+ "task_after": null,
+ "after": {
+  "nodes": {}
+ },
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "c801-crash-2.tar.gz",
+ "archive_bytes": 2200,
+ "pass": true
+}

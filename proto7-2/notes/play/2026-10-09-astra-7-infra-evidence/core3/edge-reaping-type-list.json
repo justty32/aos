@@ -1,0 +1,50 @@
+{
+ "scenario": "edge-reaping-type-list",
+ "root": "/tmp/astra7-core3-edge-reaping-type-list-9h2_thxa",
+ "injection": {
+  "nodes_raw": "{\"nodes\": {}, \"reaping\": []}",
+  "exit": 3,
+  "source": "explicit simulated disk corruption; no live state edited"
+ },
+ "assertions": [
+  {
+   "assertion": "corrupt durable state refuses startup",
+   "actual": 3,
+   "expected": 3,
+   "pass": true
+  },
+  {
+   "assertion": "corrupt state not overwritten",
+   "actual": "{\"nodes\": {}, \"reaping\": []}",
+   "expected": "{\"nodes\": {}, \"reaping\": []}",
+   "pass": true
+  },
+  {
+   "assertion": "no status pretending startup succeeded",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "classification": "X: fault refused safely",
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "edge-reaping-type-list.tar.gz",
+ "archive_bytes": 550,
+ "pass": true
+}

@@ -1,0 +1,23 @@
+test_killed_after_reaped_before_new_gen (test_subd_recover.TestInterrupted.test_killed_after_reaped_before_new_gen) ... ERROR
+
+======================================================================
+ERROR: test_killed_after_reaped_before_new_gen (test_subd_recover.TestInterrupted.test_killed_after_reaped_before_new_gen)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-03/proto7-2/modules/subd/tests/test_subd_recover.py", line 201, in test_killed_after_reaped_before_new_gen
+    self.crash_then_resume("subd-reaped", False)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-03/proto7-2/modules/subd/tests/test_subd_recover.py", line 181, in crash_then_resume
+    self.assertEqual(p2.wait(15), -signal.SIGKILL, self.err(p2))
+                     ~~~~~~~^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 1279, in wait
+    return self._wait(timeout=timeout)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 2076, in _wait
+    raise TimeoutExpired(self.args, timeout)
+subprocess.TimeoutExpired: Command '['/usr/bin/python3', '/tmp/astra7-group5-t8-nk5b59za/T8-03/proto7-2/modules/subd/aos7-subd', 'a/sub', '--', 'sh', '-c', 'aos7-ctl daemon "$AOS7_SUBROOT" register n1 --by boot > /dev/null && exec aos7-daemon "$AOS7_SUBROOT"']' timed out after 15 seconds
+
+----------------------------------------------------------------------
+Ran 1 test in 19.466s
+
+FAILED (errors=1)

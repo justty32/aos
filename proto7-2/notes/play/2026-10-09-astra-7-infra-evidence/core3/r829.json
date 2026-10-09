@@ -1,0 +1,174 @@
+{
+ "scenario": "r829",
+ "root": "/tmp/astra7-core3-r829-n32za2s6",
+ "injection": {
+  "original_identity": {
+   "pid": 351933,
+   "starttime": 1267706,
+   "state": "R",
+   "ppid": 351915,
+   "pgid": 351933
+  },
+  "setsid_attempts": [
+   {
+    "pid": 351934,
+    "starttime": 1267706,
+    "state": "R",
+    "ppid": 351915,
+    "pgid": 351934
+   },
+   {
+    "pid": 351935,
+    "starttime": 1267706,
+    "state": "R",
+    "ppid": 351915,
+    "pgid": 351935
+   },
+   {
+    "pid": 351938,
+    "starttime": 1267706,
+    "state": "R",
+    "ppid": 351915,
+    "pgid": 351938
+   },
+   {
+    "pid": 351939,
+    "starttime": 1267706,
+    "state": "R",
+    "ppid": 351915,
+    "pgid": 351939
+   },
+   {
+    "pid": 351940,
+    "starttime": 1267707,
+    "state": "R",
+    "ppid": 351915,
+    "pgid": 351940
+   },
+   {
+    "pid": 351942,
+    "starttime": 1267707,
+    "state": "R",
+    "ppid": 351915,
+    "pgid": 351942
+   },
+   {
+    "pid": 351943,
+    "starttime": 1267707,
+    "state": "R",
+    "ppid": 351915,
+    "pgid": 351943
+   },
+   {
+    "pid": 351944,
+    "starttime": 1267707,
+    "state": "R",
+    "ppid": 351915,
+    "pgid": 351944
+   }
+  ],
+  "same_number_obtained": false,
+  "fallback": "mock of remembered pgid ledger only; /proc and signalling real",
+  "foreign": {
+   "pid": 351944,
+   "starttime": 1267707,
+   "state": "R",
+   "ppid": 351915,
+   "pgid": 351944
+  },
+  "owned": {
+   "pid": 351945,
+   "starttime": 1267707,
+   "state": "R",
+   "ppid": 351915,
+   "pgid": 351945
+  },
+  "signal_calls": [
+   {
+    "groups": [
+     351945
+    ],
+    "signal": 15
+   }
+  ],
+  "kill_node_result": [
+   1,
+   true
+  ]
+ },
+ "assertions": [
+  {
+   "assertion": "unrelated live group excluded from signals",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "foreign PID/starttime survives",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "owned control group was really signalled",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "owned control collected",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "collection returns clean",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "blueprint mock never calls signal",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "blueprint_mock": {
+  "table": {
+   "12345678": [
+    "S",
+    1,
+    12345678
+   ]
+  },
+  "environment": [
+   "OTHER=foreign"
+  ],
+  "signals": [],
+  "result": [
+   0,
+   true
+  ]
+ },
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "r829.tar.gz",
+ "archive_bytes": 432,
+ "pass": true
+}

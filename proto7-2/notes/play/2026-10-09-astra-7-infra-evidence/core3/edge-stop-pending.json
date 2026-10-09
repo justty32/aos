@@ -1,0 +1,110 @@
+{
+ "scenario": "edge-stop-pending",
+ "root": "/tmp/astra7-core3-edge-stop-pending-6g99jutf",
+ "injection": {},
+ "assertions": [
+  {
+   "assertion": "stop setup has unregistered reaping obligation",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "stop --kill accepted",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "daemon finishes stop",
+   "actual": 0,
+   "expected": 0,
+   "pass": true
+  },
+  {
+   "assertion": "healthy stop kills old task",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:46:14.697",
+    "queued_at": "2026-10-09T11:46:14.681"
+   }
+  },
+  {
+   "op": "unregister",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "unregistered a（活任務會被收掉）",
+    "at": "2026-10-09T11:46:14.759",
+    "queued_at": "2026-10-09T11:46:14.751"
+   }
+  },
+  {
+   "op": "stop",
+   "by": "astra7-core3",
+   "kill": true,
+   "result": {
+    "ok": true,
+    "msg": "stopping with kill",
+    "at": "2026-10-09T11:46:14.779",
+    "queued_at": "2026-10-09T11:46:14.762"
+   }
+  }
+ ],
+ "stopped": {
+  "nodes": {
+   "nodes": {}
+  },
+  "status": {
+   "pid": 357228,
+   "root": "/tmp/astra7-core3-edge-stop-pending-6g99jutf",
+   "at": "2026-10-09T11:46:15.915",
+   "poll_s": 0.02,
+   "gen": 1,
+   "io_errors": 0,
+   "stopping": true,
+   "stopped": true,
+   "last_event": {
+    "at": "2026-10-09T11:46:15.915",
+    "ev": "stop-sweep",
+    "groups": 0,
+    "ok": true
+   },
+   "nodes": {}
+  },
+  "old": null
+ },
+ "classification": "normal stop collected",
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "edge-stop-pending.tar.gz",
+ "archive_bytes": 2426,
+ "pass": true
+}

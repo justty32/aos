@@ -1,0 +1,3 @@
+{"case": "new-core3-1-confirm-1", "pass": false, "failed": [{"assertion": "pending reaping remains missing after restart", "actual": false, "expected": true, "pass": false}], "error": null}
+{"case": "new-core3-1-confirm-2", "pass": false, "failed": [{"assertion": "pending reaping remains missing after restart", "actual": false, "expected": true, "pass": false}], "error": null}
+{"case": "new-core3-1-confirm-3", "pass": false, "failed": [{"assertion": "pending reaping remains missing after restart", "actual": false, "expected": true, "pass": false}], "error": null}

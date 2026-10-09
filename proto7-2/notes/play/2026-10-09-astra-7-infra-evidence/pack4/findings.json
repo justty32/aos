@@ -1,0 +1,35 @@
+[
+ {
+  "id": "NEW-pack4-1",
+  "classification": "X",
+  "severity": "低",
+  "known_limit_extension": "R8-22（S 隊縮窗）",
+  "title": "原子寫 tasks.json 的 EIO 也會留下 intent；不需直譯器當機就提早停 unknown",
+  "contract_sources": [
+   "proto7-2/packs/step/spec.md:83（表讀不到／壞時撤 pending，attempt 號照加）",
+   "proto7-2/packs/step/spec.md:84（僅同回合補加）",
+   "proto7-2/packs/step/spec.md:88（request 重送額度不重設）",
+   "proto7-2/notes/decisions-2026-10-09.md:41（已知縮窗代價）",
+   "proto7-2/notes/blueprint-loop7.md:70（R8-14 ran==2 驗收）"
+  ],
+  "minimal_reproduction": "python3 proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/pack4/probe.py resend-write-fail",
+  "steps": [
+   "真 tick 起 step 直譯器與 gate 子工作 a1；max_resends=1、on_unknown=resend",
+   "讓直譯器的注入規則只對 write:*/tasks.json:EIO 生效；真 ctl kill a1",
+   "等 write 注入命中，讀到 frame.pending.state=intent、attempt=a2、resends[req]=1",
+   "撤故障、推下一個真 tick/tock；halt.kind=unknown，ran=1；再推 3 回合仍不重跑",
+   "resume --resend 清 request 額度；同 request 以新 attempt 完成，總 ran=2"
+  ],
+  "measured": "主案及另外 3 次重現：自動階段 ran=1、tries=2、resends=1；人工續送後 ended ok、總 ran=2。與 open EIO 對照不同：後者 pending=null，實跑 a1/a3，ran=2，再殺後 halted unknown。",
+  "impact": "瞬時實體寫入錯誤比讀表拒寫更早要求人工介入；未見重送額度歸零或多跑。此案是 step 派工探針，不涉及 budget 帳本。",
+  "classification_reason": "runtime 對 OSError 保留派工意圖、次回合依既定 R8-22 保守停住，符合 unknown 與有限重送原則；沒有足夠契約依據升格 B／G。第 6 項的泛稱「寫入失敗」涵蓋了不同行為，故驗收列部分。",
+  "implementation_evidence": "proto7-2/packs/step/aos7_step.py:524 只對 Unknown 撤 pending；OSError 在 run_pass 記 error 後留下 intent。",
+  "suggested_fix": "文件與驗收分開說明「讀表拒寫後重派」及「實體寫入錯誤可能保留 intent、次回合需人工續送」；暫不把所有 OSError 當確知未提交而盲重派。",
+  "evidence": [
+   "results.json:resend-write-fail",
+   "results.json:resend-open-fail",
+   "repeat-write-results.json",
+   "cases.tar.gz:cases/resend-write-fail*"
+  ]
+ }
+]

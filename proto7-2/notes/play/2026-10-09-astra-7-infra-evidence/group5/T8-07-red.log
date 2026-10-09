@@ -1,0 +1,19 @@
+test_unsure_listed (test_diag.TestDiag.test_unsure_listed)
+starttime 讀不到的任務：tock 總結的 errors 留 unsure（核心），diag 按需重算也列在 uncertain、給恢復步驟。 ... FAIL
+
+======================================================================
+FAIL: test_unsure_listed (test_diag.TestDiag.test_unsure_listed)
+starttime 讀不到的任務：tock 總結的 errors 留 unsure（核心），diag 按需重算也列在 uncertain、給恢復步驟。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-07/proto7-2/modules/diag/tests/test_diag.py", line 70, in test_unsure_listed
+    f.check_rules()   # task 與 runner 兩條 proc-stat 各自要中（T8-07）
+    ~~~~~~~~~~~~~^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-07/proto7-2/tests/_matrix.py", line 130, in check_rules
+    raise AssertionError("故障注入沒打中%s：規則 %s 命中 0 次（全部命中 %r）" % (where, "、".join(miss), recs))
+AssertionError: 故障注入沒打中：規則 proc-stat:/proc/353408/stat:EIO 命中 0 次（全部命中 [('proc-stat', 'EIO', '/proc/353409/stat')]）
+
+----------------------------------------------------------------------
+Ran 1 test in 0.109s
+
+FAILED (failures=1)

@@ -1,0 +1,7 @@
+test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once)
+先驗 SIGKILL 與死亡快照，再恢復；過期 intent 要人手重送。 ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 1.457s
+
+OK

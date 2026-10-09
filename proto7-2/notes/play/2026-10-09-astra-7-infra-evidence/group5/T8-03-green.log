@@ -1,0 +1,6 @@
+test_killed_after_reaped_before_new_gen (test_subd_recover.TestInterrupted.test_killed_after_reaped_before_new_gen) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 5.792s
+
+OK

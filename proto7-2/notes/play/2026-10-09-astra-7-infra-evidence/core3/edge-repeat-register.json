@@ -1,0 +1,237 @@
+{
+ "scenario": "edge-repeat-register",
+ "root": "/tmp/astra7-core3-edge-repeat-register-f9ib7kh2",
+ "injection": {
+  "hits": [
+   "proc-stat\tEIO\t/proc/356617/stat",
+   "proc-stat\tEIO\t/proc/356617/stat",
+   "proc-stat\tEIO\t/proc/356617/stat",
+   "proc-stat\tEIO\t/proc/356617/stat",
+   "proc-stat\tEIO\t/proc/356617/stat",
+   "proc-stat\tEIO\t/proc/356617/stat",
+   "proc-stat\tEIO\t/proc/356617/stat",
+   "proc-stat\tEIO\t/proc/356617/stat",
+   "proc-stat\tEIO\t/proc/356617/stat"
+  ]
+ },
+ "assertions": [
+  {
+   "assertion": "first unregister accepted",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "duplicate unregister accepted",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "register same id while reaping accepted",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "duplicate register accepted",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "registry and obligation coexist",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "re-registration cannot launch through obligation",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "old task preserved while scan unknown",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "reregistered generation starts after old dead",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no observed overlap",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "same slot moves to generation 2",
+   "actual": "2",
+   "expected": "2",
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:46:08.656",
+    "queued_at": "2026-10-09T11:46:08.637"
+   }
+  },
+  {
+   "op": "unregister",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "unregistered a（活任務會被收掉）",
+    "at": "2026-10-09T11:46:08.718",
+    "queued_at": "2026-10-09T11:46:08.708"
+   }
+  },
+  {
+   "op": "unregister",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "a 沒有登記",
+    "at": "2026-10-09T11:46:08.738",
+    "queued_at": "2026-10-09T11:46:08.718"
+   }
+  },
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:46:08.759",
+    "queued_at": "2026-10-09T11:46:08.739"
+   }
+  },
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "a 已登記",
+    "at": "2026-10-09T11:46:08.779",
+    "queued_at": "2026-10-09T11:46:08.759"
+   }
+  }
+ ],
+ "during": {
+  "nodes": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:46:08.759"
+    }
+   },
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:46:08.717",
+     "why": "unregister-kill"
+    }
+   }
+  },
+  "status": {
+   "pid": 356604,
+   "root": "/tmp/astra7-core3-edge-repeat-register-f9ib7kh2",
+   "at": "2026-10-09T11:46:09.285",
+   "poll_s": 0.02,
+   "gen": 1,
+   "io_errors": 0,
+   "stopping": false,
+   "stopped": false,
+   "last_event": {
+    "at": "2026-10-09T11:46:09.225",
+    "ev": "kill",
+    "node": "a",
+    "run": "s#1",
+    "ok": false,
+    "msg": "unknown：/proc 讀不完整，不知道有沒有收乾淨（讀不到 /proc/356617/stat：OSError(5, 'Input/output error（AOS7_TEST_FAULT 注入）')）"
+   },
+   "nodes": {
+    "a": {
+     "round": 1,
+     "round_open": false,
+     "recovery_pending": false,
+     "paused_by": [],
+     "pause_pending": false,
+     "interval_ms": 1000,
+     "early_tock": false,
+     "live": [
+      "s#1"
+     ],
+     "phase": "unregistering"
+    }
+   }
+  },
+  "old": {
+   "pid": 356617,
+   "starttime": 1275206,
+   "state": "S",
+   "ppid": 356615,
+   "pgid": 356617
+  }
+ },
+ "classification": "X: repeat requests/reaping recover safely",
+ "observation": {
+  "samples": 143,
+  "span_s": 2.86662,
+  "overlap_samples": 0
+ },
+ "cleanup": {
+  "killed": [
+   {
+    "pid": 356852,
+    "starttime": 1275429,
+    "state": "S",
+    "ppid": 356477,
+    "pgid": 356852,
+    "run": "2",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-edge-repeat-register-f9ib7kh2/a/.aos/tasks/s 5 "
+   },
+   {
+    "pid": 356854,
+    "starttime": 1275431,
+    "state": "S",
+    "ppid": 356852,
+    "pgid": 356854,
+    "run": "2",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-edge-repeat-register-f9ib7kh2/new.ready /tmp/astra7-core3-edge-repeat-register-f9ib7kh2/new.te"
+   }
+  ],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "edge-repeat-register.tar.gz",
+ "archive_bytes": 4634,
+ "pass": true
+}

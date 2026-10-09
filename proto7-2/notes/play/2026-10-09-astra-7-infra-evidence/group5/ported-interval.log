@@ -1,0 +1,6 @@
+test_interval_huge_int (test_errors.TestTimelineConfig.test_interval_huge_int) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.006s
+
+OK

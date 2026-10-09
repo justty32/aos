@@ -1,0 +1,18 @@
+test_core_line_budget (test_budget.TestBudget.test_core_line_budget) ... 
+［只印不擋，D7］核心超過行數預算（總行 2952／2800、實際程式 2305／2200）：
+  aos7_daemon.py             總行  749  實際程式  632
+  aos7_daemon_timeline.py    總行  325  實際程式  262
+  aos7_fs.py                 總行  349  實際程式  227
+  aos7_mount.py              總行  181  實際程式  143
+  aos7_proc.py               總行  276  實際程式  198
+  aos7_run.py                總行  116  實際程式   90
+  aos7_task.py               總行  344  實際程式  259
+  aos7_tick.py               總行  414  實際程式  331
+  aos7_tock.py               總行  198  實際程式  163
+新功能預設進模組（proto7-2/README.md「進核心的三問」）；真要加預算，先在 notes/problems.md 寫理由、經使用者同意再改 tests/core/test_budget.py。
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.041s
+
+OK

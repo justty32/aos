@@ -1,0 +1,394 @@
+{
+ "head": "ad1dfa259015a94a465634023b42b177ec048331",
+ "cases": [
+  {
+   "scenario": "author-ctl",
+   "pass": true,
+   "result": "author-ctl.json",
+   "snapshot": "author-ctl.tar.gz",
+   "assertions": 3,
+   "failed": []
+  },
+  {
+   "scenario": "author-daemon",
+   "pass": true,
+   "result": "author-daemon.json",
+   "snapshot": "author-daemon.tar.gz",
+   "assertions": 3,
+   "failed": []
+  },
+  {
+   "scenario": "c801-control-1",
+   "pass": true,
+   "result": "c801-control-1.json",
+   "snapshot": "c801-control-1.tar.gz",
+   "assertions": 9,
+   "failed": []
+  },
+  {
+   "scenario": "c801-control-2",
+   "pass": true,
+   "result": "c801-control-2.json",
+   "snapshot": "c801-control-2.tar.gz",
+   "assertions": 9,
+   "failed": []
+  },
+  {
+   "scenario": "c801-control-3",
+   "pass": true,
+   "result": "c801-control-3.json",
+   "snapshot": "c801-control-3.tar.gz",
+   "assertions": 9,
+   "failed": []
+  },
+  {
+   "scenario": "c801-crash-1",
+   "pass": true,
+   "result": "c801-crash-1.json",
+   "snapshot": "c801-crash-1.tar.gz",
+   "assertions": 12,
+   "failed": []
+  },
+  {
+   "scenario": "c801-crash-2",
+   "pass": true,
+   "result": "c801-crash-2.json",
+   "snapshot": "c801-crash-2.tar.gz",
+   "assertions": 12,
+   "failed": []
+  },
+  {
+   "scenario": "c801-crash-3",
+   "pass": true,
+   "result": "c801-crash-3.json",
+   "snapshot": "c801-crash-3.tar.gz",
+   "assertions": 12,
+   "failed": []
+  },
+  {
+   "scenario": "c802-control-1",
+   "pass": true,
+   "result": "c802-control-1.json",
+   "snapshot": "c802-control-1.tar.gz",
+   "assertions": 8,
+   "failed": [],
+   "observation": {
+    "samples": 98,
+    "span_s": 1.95771,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "c802-control-2",
+   "pass": true,
+   "result": "c802-control-2.json",
+   "snapshot": "c802-control-2.tar.gz",
+   "assertions": 8,
+   "failed": [],
+   "observation": {
+    "samples": 99,
+    "span_s": 1.9777600000000002,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "c802-control-3",
+   "pass": true,
+   "result": "c802-control-3.json",
+   "snapshot": "c802-control-3.tar.gz",
+   "assertions": 8,
+   "failed": [],
+   "observation": {
+    "samples": 98,
+    "span_s": 1.96058,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "c802-crash-1",
+   "pass": true,
+   "result": "c802-crash-1.json",
+   "snapshot": "c802-crash-1.tar.gz",
+   "assertions": 10,
+   "failed": [],
+   "observation": {
+    "samples": 100,
+    "span_s": 1.99864,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "c802-crash-2",
+   "pass": true,
+   "result": "c802-crash-2.json",
+   "snapshot": "c802-crash-2.tar.gz",
+   "assertions": 10,
+   "failed": [],
+   "observation": {
+    "samples": 100,
+    "span_s": 1.99893,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "c802-crash-3",
+   "pass": true,
+   "result": "c802-crash-3.json",
+   "snapshot": "c802-crash-3.tar.gz",
+   "assertions": 10,
+   "failed": [],
+   "observation": {
+    "samples": 100,
+    "span_s": 1.99956,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "c802-eio",
+   "pass": true,
+   "result": "c802-eio.json",
+   "snapshot": "c802-eio.tar.gz",
+   "assertions": 11,
+   "failed": [],
+   "observation": {
+    "samples": 199,
+    "span_s": 3.99596,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "edge-double-crash",
+   "pass": true,
+   "result": "edge-double-crash.json",
+   "snapshot": "edge-double-crash.tar.gz",
+   "assertions": 11,
+   "failed": [],
+   "observation": {
+    "samples": 96,
+    "span_s": 1.91711,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "edge-reaping-type-list",
+   "pass": true,
+   "result": "edge-reaping-type-list.json",
+   "snapshot": "edge-reaping-type-list.tar.gz",
+   "assertions": 5,
+   "failed": []
+  },
+  {
+   "scenario": "edge-reaping-type-null",
+   "pass": true,
+   "result": "edge-reaping-type-null.json",
+   "snapshot": "edge-reaping-type-null.tar.gz",
+   "assertions": 5,
+   "failed": []
+  },
+  {
+   "scenario": "edge-repeat-register",
+   "pass": true,
+   "result": "edge-repeat-register.json",
+   "snapshot": "edge-repeat-register.tar.gz",
+   "assertions": 12,
+   "failed": [],
+   "observation": {
+    "samples": 143,
+    "span_s": 2.86662,
+    "overlap_samples": 0
+   }
+  },
+  {
+   "scenario": "edge-restart-unknown",
+   "pass": false,
+   "result": "edge-restart-unknown.json",
+   "snapshot": "edge-restart-unknown.tar.gz",
+   "assertions": 6,
+   "failed": [
+    "pending reaping remains missing after restart"
+   ]
+  },
+  {
+   "scenario": "edge-stop-pending-eio",
+   "pass": true,
+   "result": "edge-stop-pending-eio.json",
+   "snapshot": "edge-stop-pending-eio.tar.gz",
+   "assertions": 7,
+   "failed": []
+  },
+  {
+   "scenario": "edge-stop-pending",
+   "pass": true,
+   "result": "edge-stop-pending.json",
+   "snapshot": "edge-stop-pending.tar.gz",
+   "assertions": 6,
+   "failed": []
+  },
+  {
+   "scenario": "edge-truncated",
+   "pass": true,
+   "result": "edge-truncated.json",
+   "snapshot": "edge-truncated.tar.gz",
+   "assertions": 5,
+   "failed": []
+  },
+  {
+   "scenario": "k04-01",
+   "pass": true,
+   "result": "k04-01.json",
+   "snapshot": "k04-01.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-02",
+   "pass": true,
+   "result": "k04-02.json",
+   "snapshot": "k04-02.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-03",
+   "pass": true,
+   "result": "k04-03.json",
+   "snapshot": "k04-03.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-04",
+   "pass": true,
+   "result": "k04-04.json",
+   "snapshot": "k04-04.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-05",
+   "pass": true,
+   "result": "k04-05.json",
+   "snapshot": "k04-05.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-06",
+   "pass": true,
+   "result": "k04-06.json",
+   "snapshot": "k04-06.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-07",
+   "pass": true,
+   "result": "k04-07.json",
+   "snapshot": "k04-07.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-08",
+   "pass": true,
+   "result": "k04-08.json",
+   "snapshot": "k04-08.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-09",
+   "pass": true,
+   "result": "k04-09.json",
+   "snapshot": "k04-09.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-10",
+   "pass": true,
+   "result": "k04-10.json",
+   "snapshot": "k04-10.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "k04-negative-control",
+   "pass": true,
+   "result": "k04-negative-control.json",
+   "snapshot": "k04-negative-control.tar.gz",
+   "assertions": 9,
+   "failed": []
+  },
+  {
+   "scenario": "new-core3-1-confirm-1",
+   "pass": false,
+   "result": "new-core3-1-confirm-1.json",
+   "snapshot": "new-core3-1-confirm-1.tar.gz",
+   "assertions": 6,
+   "failed": [
+    "pending reaping remains missing after restart"
+   ]
+  },
+  {
+   "scenario": "new-core3-1-confirm-2",
+   "pass": false,
+   "result": "new-core3-1-confirm-2.json",
+   "snapshot": "new-core3-1-confirm-2.tar.gz",
+   "assertions": 6,
+   "failed": [
+    "pending reaping remains missing after restart"
+   ]
+  },
+  {
+   "scenario": "new-core3-1-confirm-3",
+   "pass": false,
+   "result": "new-core3-1-confirm-3.json",
+   "snapshot": "new-core3-1-confirm-3.tar.gz",
+   "assertions": 6,
+   "failed": [
+    "pending reaping remains missing after restart"
+   ]
+  },
+  {
+   "scenario": "r801-1",
+   "pass": true,
+   "result": "r801-1.json",
+   "snapshot": "r801-1.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "r801-2",
+   "pass": true,
+   "result": "r801-2.json",
+   "snapshot": "r801-2.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "r801-3",
+   "pass": true,
+   "result": "r801-3.json",
+   "snapshot": "r801-3.tar.gz",
+   "assertions": 10,
+   "failed": []
+  },
+  {
+   "scenario": "r803",
+   "pass": true,
+   "result": "r803.json",
+   "snapshot": "r803.tar.gz",
+   "assertions": 15,
+   "failed": []
+  },
+  {
+   "scenario": "r829",
+   "pass": true,
+   "result": "r829.json",
+   "snapshot": "r829.tar.gz",
+   "assertions": 8,
+   "failed": []
+  }
+ ]
+}

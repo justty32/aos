@@ -1,0 +1,530 @@
+{
+ "scenario": "new-core3-1-confirm-1",
+ "root": "/tmp/astra7-core3-new-core3-1-confirm-1-dg4wajkx",
+ "injection": {
+  "hits": [
+   "proc-stat\tEIO\t/proc/388964/stat"
+  ],
+  "daemon_crashed": true
+ },
+ "assertions": [
+  {
+   "assertion": "pending reaping remains missing after restart",
+   "actual": false,
+   "expected": true,
+   "pass": false
+  },
+  {
+   "assertion": "restart with unknown scan does not start rounds",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "unknown restart keeps old alive",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "withdrawal recovers safely",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:52:05.971",
+    "queued_at": "2026-10-09T11:52:05.954"
+   }
+  }
+ ],
+ "restart_samples": [
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "phase": "idle",
+   "old_alive": true,
+   "round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:52:06.033",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  }
+ ],
+ "cleanup": {
+  "killed": [
+   {
+    "pid": 388995,
+    "starttime": 1311156,
+    "state": "S",
+    "ppid": 388959,
+    "pgid": 388995,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-new-core3-1-confirm-1-dg4wajkx/a/.aos/tasks/s 5 "
+   },
+   {
+    "pid": 388996,
+    "starttime": 1311157,
+    "state": "S",
+    "ppid": 388995,
+    "pgid": 388996,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-new-core3-1-confirm-1-dg4wajkx/new.ready /tmp/astra7-core3-new-core3-1-confirm-1-dg4wajkx/new."
+   }
+  ],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "new-core3-1-confirm-1.tar.gz",
+ "archive_bytes": 2946,
+ "pass": false
+}

@@ -1,0 +1,12 @@
+{
+ "killed": [],
+ "remaining": [],
+ "root": "/tmp/astra7-pack4-probe-z0d0r29r",
+ "direct_children": [
+  {
+   "pid": 388989,
+   "rc": -9
+  }
+ ],
+ "root_removed": true
+}

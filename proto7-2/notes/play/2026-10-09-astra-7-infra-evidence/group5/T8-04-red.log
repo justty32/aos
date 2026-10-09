@@ -1,0 +1,72 @@
+test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) ... 
+  test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) (point='reserve-before-commit') ... ERROR
+  test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) (point='reserve-after-commit') ... FAIL
+  test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) (point='settle-before-commit') ... FAIL
+  test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) (point='settle-after-commit') ... FAIL
+
+======================================================================
+ERROR: test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) (point='reserve-before-commit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/test_budget_ledger.py", line 201, in test_ledger_points
+    self.restart_ledger(check)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/test_budget_ledger.py", line 99, in restart_ledger
+    self.assertEqual(self.lp.wait(10), KILLED, "帳任務沒在鉤子點被殺")
+                     ~~~~~~~~~~~~^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 1279, in wait
+    return self._wait(timeout=timeout)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 2076, in _wait
+    raise TimeoutExpired(self.args, timeout)
+subprocess.TimeoutExpired: Command '['/usr/bin/python3', '/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/bin/aos7-budget', 'ledger', 'budget/demo']' timed out after 10 seconds
+
+======================================================================
+FAIL: test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) (point='reserve-after-commit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/test_budget_ledger.py", line 181, in test_ledger_points
+    bd = self.up()
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/test_budget_ledger.py", line 94, in up
+    self.bd = self.setup_budget(self.node, g, clock=clock)
+              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/budgetcase.py", line 52, in setup_budget
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : {"ok": false, "why": "ledger.json 已存在（或讀不到），不重開"}
+
+
+======================================================================
+FAIL: test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) (point='settle-before-commit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/test_budget_ledger.py", line 181, in test_ledger_points
+    bd = self.up()
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/test_budget_ledger.py", line 94, in up
+    self.bd = self.setup_budget(self.node, g, clock=clock)
+              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/budgetcase.py", line 52, in setup_budget
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : {"ok": false, "why": "ledger.json 已存在（或讀不到），不重開"}
+
+
+======================================================================
+FAIL: test_ledger_points (test_budget_ledger.TestCrash.test_ledger_points) (point='settle-after-commit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/test_budget_ledger.py", line 181, in test_ledger_points
+    bd = self.up()
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/test_budget_ledger.py", line 94, in up
+    self.bd = self.setup_budget(self.node, g, clock=clock)
+              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-5hgu4rto/T8-04/proto7-2/packs/budget/tests/budgetcase.py", line 52, in setup_budget
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0 : {"ok": false, "why": "ledger.json 已存在（或讀不到），不重開"}
+
+
+----------------------------------------------------------------------
+Ran 1 test in 10.124s
+
+FAILED (failures=3, errors=1)

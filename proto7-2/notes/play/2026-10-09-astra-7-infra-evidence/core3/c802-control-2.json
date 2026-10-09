@@ -1,0 +1,187 @@
+{
+ "scenario": "c802-control-2",
+ "root": "/tmp/astra7-core3-c802-control-2-xl38nkwg",
+ "injection": {
+  "crash": false,
+  "fault": false,
+  "pending": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:43:45.818"
+    }
+   },
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:46.182",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  "term": {
+   "pid": 346326,
+   "monotonic": 12609.560517923
+  }
+ },
+ "assertions": [
+  {
+   "assertion": "old is live within grace",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "new worker directly observes old absent/dead/reused",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "old no longer live after restart",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "new worker is live",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "at least 30 consecutive observations",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no observed overlap",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:43:45.818",
+    "queued_at": "2026-10-09T11:43:45.800"
+   }
+  }
+ ],
+ "before": {
+  "nodes": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:43:45.818"
+    }
+   }
+  },
+  "status": {
+   "pid": 346316,
+   "root": "/tmp/astra7-core3-c802-control-2-xl38nkwg",
+   "at": "2026-10-09T11:43:46.162",
+   "poll_s": 0.02,
+   "gen": 1,
+   "io_errors": 0,
+   "stopping": false,
+   "stopped": false,
+   "last_event": {
+    "at": "2026-10-09T11:43:45.818",
+    "ev": "node+",
+    "node": "a",
+    "round": 0
+   },
+   "nodes": {
+    "a": {
+     "round": 1,
+     "round_open": true,
+     "recovery_pending": false,
+     "paused_by": [],
+     "pause_pending": false,
+     "interval_ms": 1000,
+     "early_tock": false,
+     "live": [
+      "s#1"
+     ],
+     "phase": "running"
+    }
+   }
+  },
+  "old": {
+   "pid": 346326,
+   "starttime": 1260922,
+   "state": "R",
+   "run": "1",
+   "monotonic": 12609.237013052,
+   "prior": null
+  }
+ },
+ "new": {
+  "pid": 346459,
+  "starttime": 1261070,
+  "state": "R",
+  "run": "1",
+  "monotonic": 12610.712661108,
+  "prior": null
+ },
+ "old_after": null,
+ "after": {
+  "nodes": {
+   "a": {
+    "by": "astra7-core3",
+    "at": "2026-10-09T11:43:45.818"
+   }
+  }
+ },
+ "observation": {
+  "samples": 99,
+  "span_s": 1.9777600000000002,
+  "overlap_samples": 0
+ },
+ "cleanup": {
+  "killed": [
+   {
+    "pid": 346458,
+    "starttime": 1261068,
+    "state": "S",
+    "ppid": 345269,
+    "pgid": 346458,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-c802-control-2-xl38nkwg/a/.aos/tasks/s 5 "
+   },
+   {
+    "pid": 346459,
+    "starttime": 1261070,
+    "state": "S",
+    "ppid": 346458,
+    "pgid": 346459,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-c802-control-2-xl38nkwg/new.ready /tmp/astra7-core3-c802-control-2-xl38nkwg/new.term {\"pid\": 3"
+   }
+  ],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "c802-control-2.tar.gz",
+ "archive_bytes": 3972,
+ "pass": true
+}

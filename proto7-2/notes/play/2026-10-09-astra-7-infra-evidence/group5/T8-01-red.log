@@ -1,0 +1,24 @@
+test_once_runner_before_exit (test_matrix_once.TestLaunchCrash.test_once_runner_before_exit)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［runner-before-exit］ ... FAIL
+
+======================================================================
+FAIL: test_once_runner_before_exit (test_matrix_once.TestLaunchCrash.test_once_runner_before_exit)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［runner-before-exit］
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-01/proto7-2/tests/_matrix.py", line 44, in t
+    return body(self, *_a)
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-01/proto7-2/tests/core/test_matrix_once.py", line 71, in _once
+    extra = self.interrupt_tick(point, node, "o")
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-01/proto7-2/tests/core/test_matrix_once.py", line 47, in interrupt_tick
+    self.death_snapshot(node, slot)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-01/proto7-2/tests/core/test_matrix_once.py", line 59, in death_snapshot
+    self.assertIsNone(self.exit_raw(node, slot), "死亡快照：runner 應該在寫 exit.json 前被殺，卻有 exit.json")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'run': 1, 'code': 0, 'at': '2026-10-09T11:44:10.389', 'round': 1} is not None : 死亡快照：runner 應該在寫 exit.json 前被殺，卻有 exit.json
+
+----------------------------------------------------------------------
+Ran 1 test in 0.055s
+
+FAILED (failures=1)

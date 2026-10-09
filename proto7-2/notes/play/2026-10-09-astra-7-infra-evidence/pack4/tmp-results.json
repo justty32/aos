@@ -1,0 +1,413 @@
+[
+ {
+  "scenario": "job-folder",
+  "pass_": true,
+  "data": {
+   "injection": [
+    {
+     "pid": 355392,
+     "rc": -9,
+     "tmp": [
+      ".frame.json.tmp.355392"
+     ],
+     "sha256": "580b0453bbbb715a73456faf2f5377f9ecb20fb518f3c1f7d30bd7f76dadc0ac",
+     "content": {
+      "v": 1,
+      "job": "j",
+      "inst": "2423672b",
+      "table": "661d1175345b",
+      "pc": "wait",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+       "wait": 1
+      },
+      "accepted": {},
+      "tries": {},
+      "resends": {},
+      "pending": null,
+      "halt": null,
+      "end": null,
+      "since": 5,
+      "seen": null,
+      "rev": 1,
+      "at": "2026-10-09T11:45:43.960"
+     }
+    },
+    {
+     "pid": 355394,
+     "rc": -9,
+     "tmp": [
+      ".frame.json.tmp.355394"
+     ],
+     "sha256": "aa3a6a9b43da663e390075f024e72eaaa26dc1fb5de3c1261e774ac1f42976eb",
+     "content": {
+      "v": 1,
+      "job": "j",
+      "inst": "82943c93",
+      "table": "661d1175345b",
+      "pc": "wait",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+       "wait": 1
+      },
+      "accepted": {},
+      "tries": {},
+      "resends": {},
+      "pending": null,
+      "halt": null,
+      "end": null,
+      "since": 5,
+      "seen": null,
+      "rev": 1,
+      "at": "2026-10-09T11:45:43.993"
+     }
+    },
+    {
+     "pid": 355395,
+     "rc": -9,
+     "tmp": [
+      ".frame.json.tmp.355395"
+     ],
+     "sha256": "c007d861bc4e132c3f5a57a1df5edb45a86be21ade55ffc08058e93c0e594d57",
+     "content": {
+      "v": 1,
+      "job": "j",
+      "inst": "ca7b1b42",
+      "table": "661d1175345b",
+      "pc": "wait",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+       "wait": 1
+      },
+      "accepted": {},
+      "tries": {},
+      "resends": {},
+      "pending": null,
+      "halt": null,
+      "end": null,
+      "since": 5,
+      "seen": null,
+      "rev": 1,
+      "at": "2026-10-09T11:45:44.029"
+     }
+    },
+    {
+     "pid": 355400,
+     "rc": -9,
+     "tmp": [
+      ".frame.json.tmp.355400"
+     ],
+     "sha256": "f03ae473225506b3b961e5903e223256465fb200135db952f6bee5fa17bdb774",
+     "content": {
+      "v": 1,
+      "job": "j",
+      "inst": "39cdc980",
+      "table": "661d1175345b",
+      "pc": "wait",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+       "wait": 1
+      },
+      "accepted": {},
+      "tries": {},
+      "resends": {},
+      "pending": null,
+      "halt": null,
+      "end": null,
+      "since": 5,
+      "seen": null,
+      "rev": 1,
+      "at": "2026-10-09T11:45:44.088"
+     }
+    },
+    {
+     "pid": 355402,
+     "rc": -9,
+     "tmp": [
+      ".frame.json.tmp.355402"
+     ],
+     "sha256": "d5db9ae6ab9bdc7aa54341b47de121b4c5ca308988f54b09b6d7ca0e5e3c4c2d",
+     "content": {
+      "v": 1,
+      "job": "j",
+      "inst": "332aaac2",
+      "table": "661d1175345b",
+      "pc": "wait",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+       "wait": 1
+      },
+      "accepted": {},
+      "tries": {},
+      "resends": {},
+      "pending": null,
+      "halt": null,
+      "end": null,
+      "since": 5,
+      "seen": null,
+      "rev": 1,
+      "at": "2026-10-09T11:45:44.119"
+     }
+    },
+    {
+     "pid": 355408,
+     "rc": -9,
+     "tmp": [
+      ".frame.json.tmp.355408"
+     ],
+     "sha256": "30374a2209603fc84680b7655dbd931e514ede5a0c3ad70cc23cffb726241ee1",
+     "content": {
+      "v": 1,
+      "job": "j",
+      "inst": "078ccccc",
+      "table": "661d1175345b",
+      "pc": "wait",
+      "phase": "running",
+      "counts": {},
+      "visits": {
+       "wait": 1
+      },
+      "accepted": {},
+      "tries": {},
+      "resends": {},
+      "pending": null,
+      "halt": null,
+      "end": null,
+      "since": 5,
+      "seen": null,
+      "rev": 1,
+      "at": "2026-10-09T11:45:44.151"
+     }
+    }
+   ],
+   "assertions": "six real frame pre-rename kills; <=1 temp; live budget output writer preserved by interpreter sweep",
+   "live_writer": {
+    "pid": 355417,
+    "before_sha": "7acc1453c909ce48c026c1fa5fa46e3b3976fe4164eeef68460f69289fa03a6c",
+    "preserved_sha": "7acc1453c909ce48c026c1fa5fa46e3b3976fe4164eeef68460f69289fa03a6c",
+    "remaining_during_live": [
+     ".live.json.tmp.355417"
+    ]
+   },
+   "recovered_tmp_count": 0,
+   "evidence": "cases/tmp-frame"
+  }
+ },
+ {
+  "scenario": "results-folder",
+  "pass_": true,
+  "data": {
+   "injection": [
+    {
+     "pid": 355436,
+     "src": "jobs/j/results/call/.fixed.json.tmp.355436",
+     "dst": "jobs/j/results/call/fixed.json",
+     "point": "before-os.link",
+     "rc": -9,
+     "tmp_count": 1
+    },
+    {
+     "pid": 355438,
+     "src": "jobs/j/results/call/.fixed.json.tmp.355438",
+     "dst": "jobs/j/results/call/fixed.json",
+     "point": "before-os.link",
+     "rc": -9,
+     "tmp_count": 2
+    },
+    {
+     "pid": 355442,
+     "src": "jobs/j/results/call/.fixed.json.tmp.355442",
+     "dst": "jobs/j/results/call/fixed.json",
+     "point": "before-os.link",
+     "rc": -9,
+     "tmp_count": 3
+    },
+    {
+     "pid": 355446,
+     "src": "jobs/j/results/call/.fixed.json.tmp.355446",
+     "dst": "jobs/j/results/call/fixed.json",
+     "point": "before-os.link",
+     "rc": -9,
+     "tmp_count": 4
+    },
+    {
+     "pid": 355448,
+     "src": "jobs/j/results/call/.fixed.json.tmp.355448",
+     "dst": "jobs/j/results/call/fixed.json",
+     "point": "before-os.link",
+     "rc": -9,
+     "tmp_count": 5
+    },
+    {
+     "pid": 355450,
+     "src": "jobs/j/results/call/.fixed.json.tmp.355450",
+     "dst": "jobs/j/results/call/fixed.json",
+     "point": "before-os.link",
+     "rc": -9,
+     "tmp_count": 6
+    }
+   ],
+   "assertions": "six pre-hardlink publication kills on same result; restart sweeps dead writers, preserves live writer; release publishes once",
+   "live_writer": {
+    "pid": 355453,
+    "src": "jobs/j/results/call/.fixed.json.tmp.355453",
+    "dst": "jobs/j/results/call/fixed.json",
+    "point": "before-os.link",
+    "before_sha": "45a24a052dce430d5ca9114529f26209d9eb3c13e4238230a31a4b92945db934",
+    "remaining_during_live": [
+     ".fixed.json.tmp.355453"
+    ],
+    "rc": 0
+   },
+   "recovered_tmp_count": 0,
+   "result": {
+    "job": "j",
+    "inst": "fixed",
+    "step": "call",
+    "request": "fixed-r",
+    "attempt": "fixed-r-a1",
+    "run": null,
+    "slot": null,
+    "code": 0,
+    "ok": true,
+    "artifacts": {},
+    "missing": [],
+    "at": "2026-10-09T11:45:44.884"
+   },
+   "evidence": "cases/tmp-results"
+  }
+ },
+ {
+  "scenario": "gateway-folder",
+  "pass_": true,
+  "data": {
+   "injection": [
+    {
+     "pid": 355477,
+     "rc": -9,
+     "tmp": ".519457d6f54d32335539.json.tmp.355477",
+     "sha256": "c6af62a58d41389bd12174d086918699920b0c9721a0167947c54b01e6efbddf",
+     "content": {
+      "stage": "intent",
+      "kid": "519457d6f54d32335539",
+      "key": {
+       "budget": "demo",
+       "holder": "api",
+       "request": "r"
+      },
+      "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+      "admitted_tock": 5,
+      "at": "2026-10-09T11:45:45.294"
+     }
+    },
+    {
+     "pid": 355481,
+     "rc": -9,
+     "tmp": ".519457d6f54d32335539.json.tmp.355481",
+     "sha256": "eda1d8297811117ef6aa4f5d42befcdf050d9b24c91668d96d9026673dc3abb5",
+     "content": {
+      "stage": "intent",
+      "kid": "519457d6f54d32335539",
+      "key": {
+       "budget": "demo",
+       "holder": "api",
+       "request": "r"
+      },
+      "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+      "admitted_tock": 5,
+      "at": "2026-10-09T11:45:45.357"
+     }
+    },
+    {
+     "pid": 355484,
+     "rc": -9,
+     "tmp": ".519457d6f54d32335539.json.tmp.355484",
+     "sha256": "2e64935385cf1622ab119c8536c1e8932a8c8f45eb00c932324ae09031a6463f",
+     "content": {
+      "stage": "intent",
+      "kid": "519457d6f54d32335539",
+      "key": {
+       "budget": "demo",
+       "holder": "api",
+       "request": "r"
+      },
+      "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+      "admitted_tock": 5,
+      "at": "2026-10-09T11:45:45.420"
+     }
+    },
+    {
+     "pid": 355486,
+     "rc": -9,
+     "tmp": ".519457d6f54d32335539.json.tmp.355486",
+     "sha256": "1e319df1a62f10496bac96084191b7f7cae4b5b476008e427eb2c926ad2e9af6",
+     "content": {
+      "stage": "intent",
+      "kid": "519457d6f54d32335539",
+      "key": {
+       "budget": "demo",
+       "holder": "api",
+       "request": "r"
+      },
+      "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+      "admitted_tock": 5,
+      "at": "2026-10-09T11:45:45.484"
+     }
+    },
+    {
+     "pid": 355490,
+     "rc": -9,
+     "tmp": ".519457d6f54d32335539.json.tmp.355490",
+     "sha256": "6b572dcab97edb41089c4b5e53618d62b17052f005d13c40cf561bdcd5b36780",
+     "content": {
+      "stage": "intent",
+      "kid": "519457d6f54d32335539",
+      "key": {
+       "budget": "demo",
+       "holder": "api",
+       "request": "r"
+      },
+      "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+      "admitted_tock": 5,
+      "at": "2026-10-09T11:45:45.547"
+     }
+    },
+    {
+     "pid": 355492,
+     "rc": -9,
+     "tmp": ".519457d6f54d32335539.json.tmp.355492",
+     "sha256": "9523ee9f4e3bc1aff71eddcb95c76f92cdbfa1a0d0abec78ecf3734661be6c6f",
+     "content": {
+      "stage": "intent",
+      "kid": "519457d6f54d32335539",
+      "key": {
+       "budget": "demo",
+       "holder": "api",
+       "request": "r"
+      },
+      "digest": "03c78ea1cf1c121c7d1281afdd26691876fc11bd59e68bf9e1ad823ba4bca002",
+      "admitted_tock": 5,
+      "at": "2026-10-09T11:45:45.611"
+     }
+    }
+   ],
+   "assertions": "six same-K gateway pre-rename kills; restart preserves only live tmp; recovery one backend effect",
+   "live_writer": {
+    "pid": 355494,
+    "before_sha": "2ff613f96a46bd20f5009c410f64ce6e53e69fb188a73782e81b2aa69d9133de",
+    "remaining_during_live": [
+     ".519457d6f54d32335539.json.tmp.355494"
+    ]
+   },
+   "recovered_tmp_count": 0,
+   "used": 1,
+   "accepted": 1,
+   "evidence": "cases/tmp-gateway"
+  }
+ }
+]
