@@ -43,9 +43,9 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
 
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:6px">
-    <span class="stamp">2026-10-09（五）· 最後更新 14:50 · 家裡 Manjaro</span>
+    <span class="stamp">2026-10-09（五）· 最後更新 17:10 · 家裡 Manjaro</span>
     <h1>aos 今日戰況</h1>
-    <p class="lead">一句話：今天原訂的全部做完（643 項測試全綠）；<b>真 AI 已接上</b>；現在照你給的三個目標在做「AI 用 wf 管自己＋會壓縮／記憶／技能＋能自己做工具」。沒有卡在你身上的事。</p>
+    <p class="lead">一句話：三個目標的零件都做出來了；新手試用全軍覆沒後回頭改，8 個模組全部過關；<b>一鍵入口 aos7-up 已能用</b>；AI 學徒自己寫出 2 個新元件並合進來。現在在統一錯誤處理、讓新人從零上手。</p>
   </header>
 
   <section>
@@ -267,6 +267,42 @@ ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
     </svg>
     </div>
     <p class="small">每樣給人用的東西都要過：第一次跑 ≤10 分鐘、指令 ≤3 個、新概念 ≤5 個，最後找「新手」實際試、打分。效率另有一隊在量（E1）。做完一波就回頭審：OK／修改／重造。</p>
+  </section>
+
+  <section>
+    <h2>回頭審：新手全軍覆沒 → 回頭修 → 全部過關</h2>
+    <p>找最笨的兩位 AI（Haiku、luna）當新手，只給說明書。第一次 10 個模組全部沒過；各隊回頭改，再找同兩位試，直到 7 分以上。</p>
+    <div class="fig">
+    <svg viewBox="0 0 640 230" role="img" aria-label="各模組新手分數，改前與改後">
+      <!-- 分數 0..10 → 0..300px, x0=120; 門檻 7 在 x=330 -->
+      <line x1="330" y1="8" x2="330" y2="222" stroke="var(--warn)" stroke-dasharray="4 3"/>
+      <text x="334" y="18" font-size="11" fill="var(--warn)">門檻 7</text>
+      <g font-size="12">
+      <text x="112" y="38" text-anchor="end" fill="var(--ink)">routines</text><rect x="120" y="28" width="186" height="8" rx="2" fill="var(--line)"/><rect x="120" y="37" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="45" font-size="11" fill="var(--ink)">6.2→7.4</text><text x="112" y="62" text-anchor="end" fill="var(--ink)">prompt</text><rect x="120" y="52" width="204" height="8" rx="2" fill="var(--line)"/><rect x="120" y="61" width="234" height="8" rx="2" fill="var(--done)"/><text x="360" y="69" font-size="11" fill="var(--ink)">6.8→7.8</text><text x="112" y="86" text-anchor="end" fill="var(--ink)">compact</text><rect x="120" y="76" width="198" height="8" rx="2" fill="var(--line)"/><rect x="120" y="85" width="228" height="8" rx="2" fill="var(--done)"/><text x="354" y="93" font-size="11" fill="var(--ink)">6.6→7.6</text><text x="112" y="110" text-anchor="end" fill="var(--ink)">skills</text><rect x="120" y="100" width="162" height="8" rx="2" fill="var(--line)"/><rect x="120" y="109" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="117" font-size="11" fill="var(--ink)">5.4→7.4</text><text x="112" y="134" text-anchor="end" fill="var(--ink)">metrics</text><rect x="120" y="124" width="186" height="8" rx="2" fill="var(--line)"/><rect x="120" y="133" width="228" height="8" rx="2" fill="var(--done)"/><text x="354" y="141" font-size="11" fill="var(--ink)">6.2→7.6</text><text x="112" y="158" text-anchor="end" fill="var(--ink)">wfnode</text><rect x="120" y="148" width="204" height="8" rx="2" fill="var(--line)"/><rect x="120" y="157" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="165" font-size="11" fill="var(--ink)">6.8→7.4</text><text x="112" y="182" text-anchor="end" fill="var(--ink)">events</text><rect x="120" y="172" width="156" height="8" rx="2" fill="var(--line)"/><rect x="120" y="181" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="189" font-size="11" fill="var(--ink)">5.2→7.4</text><text x="112" y="206" text-anchor="end" fill="var(--ink)">mail</text><rect x="120" y="196" width="168" height="8" rx="2" fill="var(--line)"/><rect x="120" y="205" width="252" height="8" rx="2" fill="var(--done)"/><text x="378" y="213" font-size="11" fill="var(--ink)">5.6→8.4</text>
+      </g>
+    </svg>
+    </div>
+    <p class="small">灰＝第一次，綠＝改完。共同病根是「第一次跑就要懂底層」，所以另外做了一鍵入口 aos7-up，把底層全藏起來。</p>
+  </section>
+
+  <section>
+    <h2>一鍵入口 aos7-up：新人只要記 3 行</h2>
+    <pre style="overflow-x:auto;font-family:var(--mono);font-size:.85rem;background:var(--accent-soft);padding:10px;border-radius:6px;margin:0">aos7-up /tmp/aos/bob          # 起一個 AI，每秒印「心跳 N」
+aos7-up ask /tmp/aos/bob '…'  # 交代它做事，等它回信
+aos7-up status /tmp/aos/bob   # 看它現在怎樣</pre>
+    <p class="small">只要懂 5 個詞：node（AI 住的資料夾）、心跳、工作簿、信、技能。預設假 AI 不花錢，加 --model 才接真 AI。真 AI 一圈：1 回合回信、約 3000 token、4 秒。</p>
+  </section>
+
+  <section>
+    <h2>AI 自己做元件：第一個實證</h2>
+    <p>真 AI 學徒寫出 2 個新東西，過三關（規格、沙盒跑測試、astra 審）後合進來：看 token 用量的工具、診斷 AI 線路的模組。16 份草稿被擋 10 份。人工只修 1 次。</p>
+    <p class="small">「越做越好」這次證據不足；另外發現經 proxy 叫 sol-high 時常只回一句開場白卻照算 token，正在查。</p>
+  </section>
+
+  <section>
+    <h2>統一錯誤：全 aos 只剩 5 種結果</h2>
+    <div class="chips"><span class="chip done">0 做到了</span><span class="chip wait">1 做不到（知道為什麼）</span><span class="chip wait">2 你給的不對</span><span class="chip run">3 不知道（再跑會接續）</span><span class="chip">4 做到但帳沒清</span></div>
+    <p class="small">錯誤都是一行白話「哪個指令: 發生什麼。怎麼辦」。各模組多做的副作用也在拿掉（例如不再替別人建資料夾）。已完成：wfnode、mail、prompt、metrics；進行中：routines、llmcall、compact、events、author。</p>
   </section>
 
   <section>
