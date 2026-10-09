@@ -16,7 +16,7 @@ proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-to
 {"ok": true, "rid": "usage1", "name": "usage", "job": "usage1_9ebf9840", "candidate_sha": "9ebf98401f87e860c4f71e0c495b9b4d550ec34dfdcbdc54cd078c56cc28ee8f", "failed_gate": null, "gates": {"1": {"ok": true, "issues": []}, "2": {"ok": true, "issues": []}, "3": {"ok": true, "issues": []}}}
 ```
 
-想讓真的 AI 來寫：`aos7-author propose … --llm 模型名` 會花錢，一次最多先扣 100 萬 token 的額度（用 `--reserve` 改小）。
+想讓真的 AI 來寫：`aos7-author propose … --llm 模型名`（例如 `gpt-6-luna`，要先有 aos7-up 起好的 node） 會花錢，一次最多先扣 100 萬 token 的額度（用 `--reserve` 改小）。
 
 想再試「過了就建一條分支」：照 [checkers/README.md](checkers/README.md) 的發布練習（建在臨時 clone，不碰你的 repo）。
 
