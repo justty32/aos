@@ -21,10 +21,12 @@
 ```sh
 S="$(git rev-parse --show-toplevel)/proto7-2/modules/skills"
 N="$(mktemp -d /tmp/skills-demo.XXXXXX)"; mkdir "$N/skills"
-ln -s "$S"/library/* "$N/skills/"                       # 放三本現成的說明書進抽屜
-python3 "$S/aos7-skills" index "$N"                       # ① 抄目錄
-python3 "$S/aos7-skills" pick "$N" "看看信箱，把別的 agent 寄來的信辦掉"   # ② 挑一本
+ln -s "$S"/library/* "$N/skills/"
+python3 "$S/aos7-skills" index "$N"
+python3 "$S/aos7-skills" pick "$N" "看看信箱，把別的 agent 寄來的信辦掉"
 ```
+
+逐行在做什麼：① `$S` 是工具所在處；② 開一個空資料夾 `$N` 當 node、在裡面放空抽屜 `skills/`；③ 把工具附的三本說明書（放在 `library/`）連進抽屜；④ `index` 抄目錄；⑤ `pick` 照題目挑一本。
 
 看到這些就跑通了：
 
@@ -35,6 +37,6 @@ python3 "$S/aos7-skills" pick "$N" "看看信箱，把別的 agent 寄來的信�
 /tmp/skills-demo.XXXXXX/skills/aos-inbox/SKILL.md
 ```
 
-最後一行就是挑到的那本說明書，打開照著做。這裡沒問 AI，是照題目和簡介的字比對著挑；一本都對不上時印 `none`，下面多一行說怎麼辦。資料都在 `$N`，不要了 `rm -rf "$N"`。
+最後一行就是挑到的那本說明書，打開照著做。這裡沒問 AI：它數題目和每本簡介有幾個字相同，挑相同最多的那本；一本都對不上時印 `none`，下面多一行說怎麼辦。資料都在 `$N`，不要了 `rm -rf "$N"`。
 
 **第一次跑到這裡就夠了。** 讓 AI 挑、借給 aos 任務、出錯時各種情況，見 [ADVANCED.md](ADVANCED.md)。

@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from aos7_fs import N, OK, Unknown, edit_json, fact, now, write_json
+from aos7_fs import N, OK, U, Unknown, edit_json, fact, locked, now, write_json
 
 TOP = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(TOP / "packs/budget")]
@@ -135,7 +135,7 @@ LLMCALL_SAYS = {  # llmcall 沒留 stderr 時的備用句
 def show(node, result, answer, log):
     """印挑到的路徑或 none；回 (退出碼, stderr 那句)。"""
     if answer == "none":
-        print("none")
+        print("none", flush=True)
         return 1, NONE
     log["picked"] = answer
     print((node / result["skills"][answer]["path"]).absolute())
@@ -146,7 +146,11 @@ def ask_ai(node, args, result, log):
     """經 llmcall 問一次 AI；回 (退出碼, stderr 那句)。llmcall 的 1／2／3 與它那句照傳。"""
     lines = "\n".join(result["lines"])
     log["call"] = "pick-" + hashlib.sha256((args.question + "\n" + lines + "\n" + args.model).encode()).hexdigest()[:16]
+    if args.reserve <= 0 or args.deadline <= 0:
+        raise ValueError("--reserve、--deadline 要正數。例：--reserve 20000 --deadline 600")
     state, grant = fact(node / args.budget / "grant.json")
+    if state == U:
+        raise Unknown(grant)
     if state != OK or not isinstance(grant, dict) or not isinstance(grant.get("holder"), str) or not grant["holder"]:
         raise ValueError('grant 讀不到或缺 holder。給可讀的 grant.json 與非空 holder，例："holder": "skills"')
     prompt = f"清單：\n{lines}\n\n題目：{args.question}"
@@ -161,7 +165,7 @@ def ask_ai(node, args, result, log):
     bud = aos7_budget.Bud(node / args.budget)
     if not aos7_budget.ledger_running(bud):          # 只讀試鎖，不在帳夾裡建檔
         return 1, aos7_budget.not_running(bud)
-    path = node / "skills" / ".pick" / (log["call"] + ".json")
+    path = node / "skills" / ".pick" / f'{log["call"]}.{os.getpid()}.json'   # 同題並行各用各的，不互刪
     write_json(str(path), request)
     try:                                              # llmcall 會把請求抄進自己的證據夾，這份用完即刪
         proc = subprocess.run([sys.executable, str(TOP / "packs/llmcall/bin/aos7-llmcall"), "call", args.budget,
@@ -181,21 +185,22 @@ def ask_ai(node, args, result, log):
         raise TypeError("回條 text 不是字串")
     try:
         answer = parse_answer(log["answer"], result["skills"])
+        rc, message = show(node, result, answer, log)
     except ValueError as e:
-        return 1, str(e) + "。跑 index 看有哪些名字，換個說法再挑"
-    rc, message = show(node, result, answer, log)
-    if proc.returncode == 4 and rc == 0:              # 已交付、帳沒清：照用，轉述 llmcall 那句
-        message = said or "已交付但帳沒清。用 aos7-llmcall status 看證據並對帳"
+        rc, message = 1, str(e) + "。跑 index 看有哪些名字，換個說法再挑"
+    if proc.returncode == 4:                          # 已交付、帳沒清：照用，轉述 llmcall 那句（挑不到也要提醒）
+        unsettled = said or "已交付但帳沒清。用 aos7-llmcall status 看證據並對帳"
+        message = message + "。另外：" + unsettled if message else unsettled
     return rc, message
 
 
 def keep_last(path, obj, n=50):
-    """log.jsonl 加一行、只留最近 n 行（寫暫存再換名）。"""
-    rows = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
-    tmp.write_text("\n".join(rows[-(n - 1):] + [json.dumps(obj, ensure_ascii=False)]) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
+    """log.jsonl 加一行、只留最近 n 行（持 log.jsonl.lock，寫暫存再換名；並行不丟行）。"""
+    with locked(str(path)):
+        rows = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+        tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+        tmp.write_text("\n".join(rows[-(n - 1):] + [json.dumps(obj, ensure_ascii=False)]) + "\n", encoding="utf-8")
+        os.replace(tmp, path)
 
 
 def pick(node, args):
