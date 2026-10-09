@@ -118,7 +118,7 @@ brain 對 llmcall 的退出：0 回信；4 也回信，回合行註「AI 用量�
 
 **不確定的期限**（2026-10-09 頂層定，問題見[長任務實跑](../../notes/play/2026-10-09-longtask/README.md)問題 1）：退 3 而那筆沒有 raw（AI 回沒回不確定，例如 brain 連同 llmcall 在傳輸中被殺）時，brain 在 `brain/unsure.json` 記下這筆 call 第一次不確定的時間；連續不確定滿 up.json 的 `deadline` 秒（沒設：假 AI 60、真 AI 600）就**不重送**，把這封信回 BLOCKED 結案，接著照 FIFO 辦下一封。期限用 deadline 是因為傳輸本身最多等 deadline 秒：被殺前已送出的孤兒 llmcall 到那時一定已經回來或放棄。傳輸逾時造成的不確定，從逾時那刻起再等一個 deadline，最多約兩倍。退 3 但 raw 已在（AI 回了、帳沒回）不計時，照舊下回合再看。
 
-卡住的回信寫：哪一筆（call id、第幾回合）、等了幾秒、帳上預留多少，以及怎麼辦：①再寄一次這封信＝重問（可能多付一次錢）；②要放掉預留，在 node 裡照信跑兩行：`aos7-llmcall adopt …--raw brain/stuck/<call>/reply.json` 再 `aos7-llmcall call …--request brain/stuck/<call>/request.json --reserve R`（心跳要開著；reply.json 預設記「沒扣費」，後台查到實際用量就改成 `{"status":"error","billed":true,"body":"","usage":{"total_tokens":N}}`；第二行退 1 是正常的）。`aos7-budget cancel` 對 llm 的 intent 退 3、放不掉，所以不用它。
+卡住的回信用白話寫：哪封信、問 AI 時被打斷、不知道它回了沒，以及兩條路：①什麼都不做（這封停著，不影響別的信）；②再寄一次這封信＝從頭重問（假 AI 不花錢；真 AI 若上次其實回了，可能多付一次）。正文不露 call id 與回合。信尾「進階（給維護者）」一段才寫哪一筆（call id、第幾回合）、帳上預留多少，以及要放掉預留時在 node 裡照信跑的一行：`aos7-llmcall adopt …--raw brain/stuck/<call>/reply.json && aos7-llmcall call …--request brain/stuck/<call>/request.json --reserve R`（心跳要開著；reply.json 預設記「沒扣費」，後台查到實際用量就改成 `{"status":"error","billed":true,"body":"","usage":{"total_tokens":N}}`；第二段退 1 是正常的）；還沒送出給 AI 的那種則是 `aos7-budget cancel … && aos7-budget settle …`。已送出（llm 有 intent）時 `aos7-budget cancel` 退 3、放不掉，所以不用它。
 
 SESSION-LOG 的 brain 行會把 AI 寫的「停在哪」裡會讓 `aos7-wfnode check` 誤判成「做完沒刪」的字（已完成、DONE、✅ 等）換成中性字，進行中的行不讓體檢變「有問題」。
 

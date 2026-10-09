@@ -78,6 +78,14 @@ class BrainStuckTests(DaemonCase):
         self.assertEqual([l['status'] for l in replies], ['BLOCKED'])
         body = replies[0]['body']
         self.assertIn(cid, body)
+        plain = body.split('進階（給維護者')[0]
+        for word in (cid, '回合', 'adopt', '預留', 'LiteLLM', 'reply.json'):
+            self.assertNotIn(word, plain)
+        self.assertIn('什麼都不做', plain)
+        self.assertIn('再寄一次這封信', plain)
+        self.assertIn('假 AI，不花錢', plain)
+        self.assertNotIn('多付', plain)
+        self.assertNotIn(cid, replies[0]['title'])
         self.assertIn('帳上預留 1000000', body)
         self.assertIn('--reserve', body)
         self.assertEqual(body.count('怎麼辦：'), 1)
@@ -156,6 +164,19 @@ class BrainStuckTests(DaemonCase):
         sends_after = read_json(str(self.node / 'llmcall/fake-remote.json'), {}).get('sends', {})
         self.assertEqual(sends_after, sends_before)
         self.assertNotIn(cid, sends_after)
+
+    def test_stuck_wording_real_ai(self):
+        cfg = dict(read_json(str(self.node / '.aos/up.json')), model='chatgpt-x')
+        title, body, _, fix = brain.stuck_reply(self.node, 'some-call', 2, 700, cfg, '幫我寫一首短詩')
+        plain = body.split('進階（給維護者')[0]
+        self.assertIn('「幫我寫一首短詩」', title)
+        self.assertIn('「幫我寫一首短詩」', plain)
+        self.assertIn('真 AI', plain)
+        self.assertIn('多付一次', plain)
+        self.assertNotIn('不花錢', plain)
+        for word in ('some-call', '回合', '預留'):
+            self.assertNotIn(word, plain + title + fix)
+        self.assertIn('some-call', body.split('進階（給維護者')[1])
 
     def test_saved_request_without_usable_status(self):
         cid = 'saved-but-not-sent'
