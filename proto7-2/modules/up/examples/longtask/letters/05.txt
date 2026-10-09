@@ -1,0 +1,10 @@
+# 檢查報告文檔的壞連結與佔位
+下面是報告草稿裡的 5 個連結和兩段文字，以及實際存在的檔案清單。請指出哪些連結是壞的、哪裡有佔位字沒填，各一行。
+連結：
+1. [計畫](plan-r4.md)
+2. [意圖卡](intents/longtask.md)
+3. [舊報告](play/2026-10-08/README.md#結論)
+4. [指標](metrics/README.md)
+5. [清單](worktree-cleanup.md)
+實際存在的檔案：plan-r4.md、intents/longtask.md、metrics/README.md、play/2026-10-08/README.md（裡面的標題只有「## 摘要」「## 數字」）。
+文字：「本週新手分數為 TODO，詳見附錄 X。」「交件隊數 9，未交 4。」
