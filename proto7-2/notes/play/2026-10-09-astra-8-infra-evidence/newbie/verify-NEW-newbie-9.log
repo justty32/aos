@@ -1,0 +1,33 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-9.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-first-XXXX)
+export PYTHONDONTWRITEBYTECODE=1
+AOS7_WF_HOME="$T/no-template" \
+  python3 -B proto7-2/modules/up/aos7-up "$T/bob"
+echo "rc=$?"
+rg -n 'alias|node|心跳|工作簿|技能|練習用' proto7-2/QUICKSTART.md
+rm -rf "$T"
+# 輸出(前40行):
+aos7-up: 缺工作流模板。git clone git@github.com:justty32/workflows.git ~/repo/workflows 或設 AOS7_WF_HOME
+rc=1
+5:node 每次被叫醒就：看信 → 問 AI → 回信給你 → 記進工作簿。
+9:| node | AI 住的資料夾（不是程式）；下面的 `bob` 就是一個 node（名字你取） |
+10:| 心跳 | 指令 1 開著時，每秒叫醒 node 一次（視窗 1 的數字＝第幾次） |
+11:| 工作簿 | node 的 `wf/`：AI 記做到哪、下一步；指令 3 的「最後記下」＝最近一筆 |
+13:| 技能 | node 的 `skills/`：一本本做事說明，AI 自己挑來看 |
+14:| 練習用的 AI | 預設的 AI：不連網、不花錢，照抄你的信回你 |
+18:每開一個視窗，先 `cd` 進 aos 資料夾（git clone 下來、有 `AGENTS.md` 的那個）再打：`alias aos7-up="python3 $PWD/proto7-2/modules/up/aos7-up"`
+31:bob 起好了：工作簿 ✓ 信箱 ✓ 技能 3 本 ✓ 練習用的 AI
+34:心跳 4
+35:心跳 5 收到 1 封信
+36:心跳 6 → 問 AI → 已回信
+37:心跳停了；檔案都留著，再跑 aos7-up /tmp/aos/bob 就接上
+43:bob 回信：（練習用的 AI）收到你的信：用一句話介紹你自己
+49:心跳：活著
+51:工作簿：最後記下：回了「用一句話介紹你自己」
+52:技能：3 本（AI 自己挑來用）
+53:AI：練習用的 AI（不連網、不花錢，照抄你的信回你）；bob 一共問過 AI 1 次
+54:要收掉：先在視窗 1 按 Ctrl-C 停心跳，再刪掉整個資料夾：rm -r /tmp/aos
+66:約 1 分鐘內 bob 寄一封說卡住的信給你（`cat /tmp/aos/you/inbox/*.md` 看），「信」那行變「回了 1 封、1 封卡住（已寄信說明）」，接著辦下一封。看完信二選一：不管它，或用指令 2 把同一句再寄一次（練習用的 AI 不花錢）。
+72:改 AI 每次讀什麼 [prompt](packs/prompt/README.md)｜信箱進階 [mail](modules/mail/README.md)｜定時做事 [routines](modules/routines/README.md)｜整理變厚的工作簿 [compact](modules/compact/README.md)｜加技能 [skills](modules/skills/README.md)｜看發生過什麼 [events](modules/events/README.md)｜量 AI 用量 [metrics](modules/metrics/README.md)｜讓 AI 寫小工具 [author](packs/author/README.md)

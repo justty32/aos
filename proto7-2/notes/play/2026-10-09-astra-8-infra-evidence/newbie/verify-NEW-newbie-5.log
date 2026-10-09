@@ -1,0 +1,22 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-5.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-bad-XXXX)
+export PYTHONDONTWRITEBYTECODE=1
+mkdir "$T/node"
+python3 -B proto7-2/modules/compact/aos7-compact \
+  forget "$T/node" --file notes/missing.jsonl --from 1 --to 1
+echo "compact rc=$?"
+python3 -B proto7-2/modules/mail/aos7-mail \
+  --root "$T/post" done bob 1 '做完了'
+echo "mail rc=$?"
+find "$T" -type f -printf '%P\n' | sort
+rm -rf "$T"
+# 輸出(前40行):
+aos7-compact: forget 的檔案不存在。請給存在的記憶檔；例：--file notes/journal.jsonl
+{"ok": false, "error": "forget 的檔案不存在"}
+compact rc=2
+aos7-mail: 序號 1 不在最近一次 read 的清單裡。請先 read bob 再用它列的序號（序號只認你看過的清單，避免辦到剛到、還沒看過的信）
+mail rc=2
+node/compact/lock
+post/bob/inbox/.handle.lock

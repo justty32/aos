@@ -1,0 +1,34 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-llm-6.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-llm-XXXX)
+python3 -B - "$T" <<'PY'
+import fcntl, json, subprocess, sys
+from pathlib import Path
+
+root = Path.cwd()
+t = Path(sys.argv[1])
+(t / ".aos").mkdir()
+(t / ".aos/round.json").write_text('{"round":0,"open":false}')
+bud = t / "budget/demo"
+bud.mkdir(parents=True)
+with (bud / "ledger.lock").open("w") as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    p = subprocess.run([
+        sys.executable, "-B", str(root / "proto7-2/packs/budget/bin/aos7-budget"),
+        "call", str(bud), "--holder", "api", "--request", "r1",
+        "--amount", "0", "--patience", "0"
+    ], capture_output=True, text=True, timeout=5)
+print("exit =", p.returncode)
+print(p.stderr.strip())
+files = list((bud / "inbox").glob("*.json"))
+print("inbox files =", len(files))
+for path in files:
+    print("amount =", json.loads(path.read_text())["content"]["amount"])
+PY
+rm -rf "$T"
+# 輸出(前40行):
+exit = 3
+aos7-budget: 不確定：預留沒有確定結果（等了 0 回合帳沒回條（請求留著，帳之後照樣處理）），請求與證據留著。照原樣再跑一次會接續；先用 status 看證據
+inbox files = 1
+amount = 0

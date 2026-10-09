@@ -1,0 +1,12 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-llm-8.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+python3 -B proto7-2/packs/usage/bin/aos7-usage --help
+printf 'usage exit=%s\n' "$?"
+python3 -B proto7-2/modules/llmdiag/aos7-llmdiag --help
+printf 'llmdiag exit=%s\n' "$?"
+# 輸出(前40行):
+aos7-usage: 這個工具已停用，功能併進 aos7-metrics。看每個模型用多少，從 repo 根跑：python3 proto7-2/modules/metrics/aos7-metrics job PATH --by model（說明見 proto7-2/modules/metrics/README.md）
+usage exit=1
+aos7-llmdiag 已併入 aos7-diag：改用 aos7-diag --llm <node>（r5 移除本入口）
+llmdiag exit=0

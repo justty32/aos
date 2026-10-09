@@ -1,0 +1,27 @@
+[
+ {
+  "id": "NEW-xmod-1",
+  "result": "重現",
+  "note": "KEY_PASS=False，AOS7_LITELLM_KEY 在啟動環境被丟掉"
+ },
+ {
+  "id": "NEW-xmod-2",
+  "result": "重現",
+  "note": "兩次皆 rc 3、pending 仍在、日誌未變（llmcall 退 4 被拒收）"
+ },
+ {
+  "id": "NEW-xmod-3",
+  "result": "重現",
+  "note": "ctl bad rc=1 兩行、ctl unknown rc=1、adapt rc=2 但兩行 usage、usage --help rc=1"
+ },
+ {
+  "id": "NEW-xmod-4",
+  "result": "重現",
+  "note": "help_cwd 與 bad_home 的 issues 皆 []，unexpected-write 實際寫出於 HOME 與工作目錄"
+ },
+ {
+  "id": "NEW-xmod-5",
+  "result": "重現",
+  "note": "tabledb 現狀欄仍為 3conflict/4unknown/5full、mail 2 含 OSError、up（設計中）；程式已是新碼"
+ }
+]

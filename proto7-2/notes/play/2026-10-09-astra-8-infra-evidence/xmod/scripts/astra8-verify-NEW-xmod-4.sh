@@ -1,0 +1,42 @@
+T=$(mktemp -d /tmp/astra8-xmod-checker-XXXX)
+export T
+PYTHONDONTWRITEBYTECODE=1 python3 -B - <<'PY'
+import os, sys, tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path("proto7-2/tests/core").resolve()))
+import test_error_path as ep
+
+root = Path(os.environ["T"])
+home = root / "home"
+home.mkdir()
+os.environ["HOME"] = str(home)
+tempfile.tempdir = str(root)
+
+source = '''
+import os, sys
+from pathlib import Path
+mode = MODE
+if "--help" in sys.argv:
+    if mode == "help_cwd":
+        Path("unexpected-write").write_text("help wrote")
+    print("aos7-probe 用法")
+    sys.exit(0)
+if mode == "bad_home":
+    (Path(os.environ["HOME"]) / "unexpected-write").write_text("bad wrote")
+print("aos7-probe: 參數錯。例：--help", file=sys.stderr)
+sys.exit(2)
+'''
+for mode in ("help_cwd", "bad_home"):
+    entry = root / (mode + ".py")
+    entry.write_text(source.replace("MODE", repr(mode)))
+    row = {"name": "aos7-probe", "entry": str(entry),
+           "exempt": {"unsure": "此探針只測副作用"}}
+    # 保留檢查器的暫存目錄供觀察；最後由 bash 刪除整個 T。
+    with patch.object(ep.shutil, "rmtree"):
+        print(mode, "issues =", ep.problems(row, ep.TOP))
+print("writes =", sorted(str(p.relative_to(root))
+                         for p in root.rglob("unexpected-write")))
+PY
+rm -rf "$T"

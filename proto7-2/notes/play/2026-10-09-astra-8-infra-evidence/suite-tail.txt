@@ -1,0 +1,7 @@
+.
+----------------------------------------------------------------------
+Ran 1216 tests in 680.912s
+
+OK
+systemd-run --user --scope -q --unit=astra8-suite -p TasksMax=800 -p   -B   380.73s user 60.57s system 64% cpu 11:21.29 total
+rc=0

@@ -1,0 +1,20 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-llm-1.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+python3 -B - <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, "proto7-2/modules/metrics")
+import aos7_metrics as m
+
+root = Path("proto7-2/modules/metrics/baseline/r1")
+whole = m.scan(root)
+parts = [m.scan(p) for p in root.iterdir() if p.is_dir()]
+print("上層:", len(whole["flows"]), whole["calls"], whole["retries"]["total"])
+print("逐夾:", sum(len(p["flows"]) for p in parts),
+      sum(p["calls"] for p in parts),
+      sum(p["retries"]["total"] for p in parts))
+PY
+# 輸出(前40行):
+上層: 2 13 11
+逐夾: 13 13 0

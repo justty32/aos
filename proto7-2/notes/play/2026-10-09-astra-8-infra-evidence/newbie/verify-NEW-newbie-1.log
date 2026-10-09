@@ -1,0 +1,32 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-1.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-config-XXXX)
+export T PYTHONDONTWRITEBYTECODE=1
+python3 -B - <<'PY'
+import json, os, sys
+from pathlib import Path
+from unittest.mock import patch
+sys.path.insert(0, 'proto7-2/modules/up')
+import aos7_up as u
+
+n = Path(os.environ['T']) / 'bob'
+(n / '.aos').mkdir(parents=True)
+(n / 'AGENTS.md').write_text('已導入的 node\n')
+cfg = dict(v=1, node=str(n), house=str(n.parent), name='bob',
+           you='you', mail_root=str(n.parent), model=None,
+           litellm_url='http://localhost:4000/v1',
+           budget='budget/llm', holder='brain', gateway='llm.fake')
+custom = dict(deadline=12, max_steps=7, progress_every=2,
+              compact=False, max_prompt_chars=20000)
+p = n / '.aos/up.json'
+p.write_text(json.dumps(cfg | custom))
+with patch.object(u, 'run', return_value=''), \
+     patch.object(u, 'alive', return_value=False):
+    u.prepare(n, None)
+after = json.loads(p.read_text())
+print({k: after.get(k, 'MISSING') for k in custom})
+PY
+rm -rf "$T"
+# 輸出(前40行):
+{'deadline': 'MISSING', 'max_steps': 'MISSING', 'progress_every': 'MISSING', 'compact': 'MISSING', 'max_prompt_chars': 'MISSING'}

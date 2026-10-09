@@ -1,0 +1,29 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-2.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-replay-XXXX)
+export T PYTHONDONTWRITEBYTECODE=1
+python3 -B - <<'PY'
+import collections, json, os, sys
+from pathlib import Path
+sys.path.insert(0, 'proto7-2/modules/up')
+import aos7_up_brain as b
+
+n = Path(os.environ['T'])
+(n / 'brain').mkdir()
+for step in range(1, 26):
+    b.journal(n, 'letter1', step, f'做完第 {step} 步')
+(n / 'brain/task.json').write_text('{')
+print('恢復後 task:', b.task_of(n))
+# 第三步已不在最後 20 行，模擬重播到第三步。
+b.journal(n, 'letter1', 3, '做完第 3 步')
+rows = [json.loads(s) for s in (n / 'notes/journal.jsonl').read_text().splitlines()]
+counts = collections.Counter((r['re'], r['step']) for r in rows)
+print('第三步筆數:', counts[('letter1', 3)])
+print('總筆數:', len(rows))
+PY
+rm -rf "$T"
+# 輸出(前40行):
+恢復後 task: None
+第三步筆數: 2
+總筆數: 26

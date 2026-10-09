@@ -1,0 +1,37 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-llm-3.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-llm-XXXX)
+python3 -B - "$T" <<'PY'
+import json, sys
+from pathlib import Path
+sys.path[:0] = ["proto7-2/packs/llmcall", "proto7-2/modules/metrics"]
+import aos7_llmcall as l
+import aos7_metrics as m
+
+t = Path(sys.argv[1])
+request = {"fake": {"usage": 100}}
+key = l.bg.make_key("llm", "h", "c1")
+kid = l.bg.kid_of(key)
+req = dict(v=1, call_id="c1", logical="demo", budget="llm", holder="h",
+           req_sha=l.bg.sha(request), reserve=10,
+           meter=l.METER, endpoint="fake", request=request)
+raw = dict(v=1, call_id="c1", req_sha=req["req_sha"], source="transport",
+           at="2026-10-09T00:00:01+00:00",
+           reply=dict(status="ok", billed=True, body="ok",
+                      usage=dict(total_tokens=100, prompt_tokens=70,
+                                 completion_tokens=30), elapsed=1))
+done = l.done_from(raw, key, kid, "probe", 10)
+receipt = l.receipt_from(req, key, kid, done, raw,
+                        dict(used=10, overrun=90, at=raw["at"]))
+cd = t / "llmcall/llm/c1"
+cd.mkdir(parents=True)
+for name, value in [("request", req), ("raw", raw), ("receipt", receipt)]:
+    (cd / (name + ".json")).write_text(json.dumps(value))
+print("回條:", receipt["usage"], receipt["used"], receipt["overrun"])
+print(m.plain(m.scan(t)))
+PY
+rm -rf "$T"
+# 輸出(前40行):
+回條: {'total_tokens': 100, 'prompt_tokens': 70, 'completion_tokens': 30} 10 90
+astra8-llm-5UJ2：1 件工作｜每件用 10 token｜同時最多 1 個在問模型｜花 1.0 秒｜重試 0 次

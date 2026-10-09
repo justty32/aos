@@ -1,0 +1,30 @@
+T=$(mktemp -d /tmp/astra8-xmod-key-XXXX)
+export T
+PYTHONDONTWRITEBYTECODE=1 python3 -B - <<'PY'
+import os, sys
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path("proto7-2/lib").resolve()))
+import aos7_task as task
+
+root = Path(os.environ["T"])
+node = root / "n"
+node.mkdir()
+ctx = SimpleNamespace(root=str(root), node=str(node), fnode=str(node),
+                      round=1, node_id="n")
+incoming = {
+    "PATH": os.environ["PATH"],
+    "AOS7_LITELLM_KEY": "astra8-test-only",
+    "AOS7_LITELLM_URL": "http://example.invalid/v1",
+}
+with patch.object(task, "env_with_bin", return_value=incoming), \
+     patch.object(task.subprocess, "Popen") as launch, \
+     patch.object(task, "read_json", return_value=None):
+    task.start_in_slot(ctx, {"name": "brain", "mode": "once",
+                            "argv": ["true"]}, "brain", 1)
+    env = launch.call_args.kwargs["env"]
+    print("KEY_PASS =", "AOS7_LITELLM_KEY" in env)
+PY
+rm -rf "$T"

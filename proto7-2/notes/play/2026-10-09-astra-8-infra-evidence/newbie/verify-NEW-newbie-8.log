@@ -1,0 +1,26 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-8.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-help-XXXX)
+for m in compact routines skills; do
+  env -u PYTHONDONTWRITEBYTECODE PYTHONPYCACHEPREFIX="$T/cache" \
+    python3 "proto7-2/modules/$m/aos7-$m" --help >/dev/null
+done
+find "$T/cache" -type f -path '*/proto7-2/*' -name '*.pyc' | sort
+rm -rf "$T"
+# 輸出(前40行):
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos7_fs.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos7_mount.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_directives_base.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_directives.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_directives_options.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_dirname.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_exec.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_exec_run.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_exec_wait.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_inst.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/compact/aos7_compact.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/routines/aos7_routines.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/skills/aos7_skills.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/tools/aos7_taskside.cpython-314.pyc
+/tmp/astra8-newbie-help-vKxE/cache/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/packs/budget/aos7_budget.cpython-314.pyc

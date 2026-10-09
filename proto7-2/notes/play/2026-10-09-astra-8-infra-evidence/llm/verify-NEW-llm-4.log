@@ -1,0 +1,40 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-llm-4.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-llm-XXXX)
+R="$PWD"
+mkdir -p "$T/author/req/csv1" "$T/author/author.lock"
+cp proto7-2/packs/author/examples/csv-request/request.json \
+   "$T/author/req/csv1/request.json"
+cp proto7-2/packs/author/examples/csv-request/valid.json "$T/candidate.json"
+(
+  cd "$T"
+  python3 -B "$R/proto7-2/packs/author/bin/aos7-author" \
+    propose csv1 --candidate candidate.json
+  printf 'exit=%s\n' "$?"
+)
+rm -rf "$T"
+# 輸出(前40行):
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/packs/author/bin/aos7-author", line 8, in <module>
+    sys.exit(aos7_author.main())
+             ~~~~~~~~~~~~~~~~^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/packs/author/aos7_author.py", line 999, in main
+    r = propose(nd, a.arg, candidate_path=a.candidate, auto=a.auto)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/packs/author/aos7_author.py", line 646, in propose
+    with nd.lock():
+         ~~~~~~~^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/packs/author/aos7_author.py", line 130, in lock
+    stack.enter_context(locked(os.path.join(self.dir, "author"), LOCK_TIMEOUT))
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 530, in enter_context
+    result = _enter(cm)
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos7_fs.py", line 199, in locked
+    with open(path + ".lock", "a") as lk:
+         ~~~~^^^^^^^^^^^^^^^^^^^^^
+IsADirectoryError: [Errno 21] Is a directory: '/tmp/astra8-llm-0nz3/author/author.lock'
+exit=1

@@ -1,0 +1,47 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-llm-5.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-llm-XXXX)
+TMPDIR="$T" PYTHONDONTWRITEBYTECODE=1 python3 -B - "$T" <<'PY'
+import json, os, shutil, subprocess, sys
+from pathlib import Path
+from unittest.mock import patch
+
+root = Path.cwd()
+sys.path.insert(0, str(root / "proto7-2/packs/author"))
+import aos7_author as a
+import aos7_author_llm as llm
+
+t = Path(sys.argv[1])
+dest = t / "author/req/csv1/request.json"
+dest.parent.mkdir(parents=True)
+shutil.copyfile(root / "proto7-2/packs/author/examples/csv-request/request.json", dest)
+os.chdir(t)
+reply = dict(outcome="rejected", billing="final", used=0, text=None)
+fake = subprocess.CompletedProcess([], 1, json.dumps(reply) + "\n",
+                                   "aos7-llmcall: 模型拒絕，已結帳。\n")
+with patch.object(llm.subprocess, "run", return_value=fake):
+    code = a.main(["propose", "csv1", "--llm", "demo",
+                   "--budget", "budget/llm"])
+print("exit =", code)
+PY
+rm -rf "$T"
+# 輸出(前40行):
+aos7-author: 這次未完成。給符合需求的檔案與選項，例如 aos7-author propose csv1 --candidate candidate.json；用法看 aos7-author --help
+{
+ "rid": "csv1",
+ "llm": {
+  "model": "demo",
+  "call_id": "csv1-demo-6ff2a046",
+  "exit": 1,
+  "outcome": "rejected",
+  "usage": null,
+  "used": 0,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": null
+ },
+ "ok": false,
+ "why": "invalid"
+}
+exit = 2

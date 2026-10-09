@@ -1,0 +1,27 @@
+[
+ {
+  "id": "NEW-core-1",
+  "result": "重現",
+  "note": "實跑 first_round=2、磁碟仍 k=2 無 owe、重起 final_round=4"
+ },
+ {
+  "id": "NEW-core-2",
+  "result": "重現",
+  "note": "4301 個 0 的 $at 索引使 aos-exec traceback ValueError，rc=1"
+ },
+ {
+  "id": "NEW-core-3",
+  "result": "重現",
+  "note": "壞參數 rc=1；注入 EIO 後 OSError 逸出 traceback，rc=1"
+ },
+ {
+  "id": "NEW-core-4",
+  "result": "重現",
+  "note": "注入讀取 EIO：file_unreadable 在 errors，rc=0、無 stderr（另多 seq_hole）"
+ },
+ {
+  "id": "NEW-core-5",
+  "result": "重現",
+  "note": "rc=2 why=too_large，但留下 state.json 與 state.json.lock"
+ }
+]

@@ -1,0 +1,43 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-core-3.sh
+# 腳本:
+T=$(mktemp -d /tmp/astra8-core-XXXX)
+export T PYTHONDONTWRITEBYTECODE=1
+
+python3 -B proto7-2/bin/aos7-ctl --not-an-option
+printf 'bad-args rc=%s\n' "$?"
+
+# 對真 CLI main 的寫入邊界注入 EIO；不依賴 chmod 或執行者權限。
+python3 -B - <<'PY'
+import errno, os, sys
+from unittest.mock import patch
+sys.path[:0] = [
+    "proto7-2/modules/tools", "proto7-2/modules/control", "proto7-2/lib"
+]
+import aos7_ctl
+with patch.object(aos7_ctl, "write_json",
+                  side_effect=OSError(errno.EIO, "astra8 write failure")):
+    sys.exit(aos7_ctl.main(["daemon", os.environ["T"], "register", "n"]))
+PY
+printf 'write-error rc=%s\n' "$?"
+rm -rf "$T"
+# 輸出(前40行):
+usage: aos7-ctl [-h] {daemon,task,add} ...
+aos7-ctl: error: the following arguments are required: what
+bad-args rc=1
+Traceback (most recent call last):
+  File "<stdin>", line 9, in <module>
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/tools/aos7_ctl.py", line 167, in main
+    path = daemon_ctl(a.root, a.op, a.node, a.kill, a.by, a.rounds, a.owner, a.all, a.why)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/tools/aos7_ctl.py", line 94, in daemon_ctl
+    write_json(path, obj)
+    ~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1176, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1180, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/unittest/mock.py", line 1241, in _execute_mock_call
+    raise effect
+OSError: [Errno 5] astra8 write failure
+write-error rc=1

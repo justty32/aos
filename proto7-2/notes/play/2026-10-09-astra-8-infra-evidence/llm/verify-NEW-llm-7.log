@@ -1,0 +1,17 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-llm-7.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-llm-XXXX)
+python3 -B proto7-2/packs/step/bin/aos7-step --no-such-option
+printf 'bad exit=%s\n' "$?"
+mkdir -p "$T/jobs/demo"
+printf '{broken\n' > "$T/jobs/demo/frame.json"
+python3 -B proto7-2/packs/step/bin/aos7-step status "$T/jobs/demo"
+printf 'status exit=%s\n' "$?"
+rm -rf "$T"
+# 輸出(前40行):
+usage: aos7-step [-h] [--resend] {run,check,status,resume,close} path
+aos7-step: error: the following arguments are required: cmd, path
+bad exit=2
+aos7-step: frame.json frame.json 不是 JSON（半寫或寫壞）；不前進，等人修好或刪掉重來
+status exit=3
