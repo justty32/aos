@@ -85,12 +85,12 @@ reserve.content.gateway、intent／done 依傳輸；request.json 保存該 meter
 |---|---|---|
 | 200 合法 JSON 且有 choices[0] | ok／true | message.content 是字串才保存；usage dict 原樣，其他 null |
 | 200 壞 JSON／缺 choices | error／true | content 若可得；usage dict 若可得，否則 null |
-| 400–499（除 429） | reject／false | 原文字串截 64 KiB；usage null |
-| 429／5xx | error／true | usage dict 原樣，沒有就 null |
+| 400–499（除 408、429）且回應無 usage | reject／false | 原文字串截 64 KiB；usage null |
+| 其他 4xx（408、429 或帶 usage）、3xx（不跟重新導向）、5xx | error／true | usage dict 原樣，沒有就 null（pending） |
 | ConnectionRefusedError（含 URLError.reason） | reject／false |「連線被拒，未送達」；usage null |
 | 其他例外（逾時／中斷／DNS 等） | 丟出 | 閘道 unknown、留 intent、退出 3 |
 
-reply 另保存 model、finish_reason、http（狀態碼）、elapsed（秒 float，四捨五入至三位小數）、response（完整 JSON 原樣；解析不了保存原文字串截 64 KiB）。失敗仍依既有 usage 規則結帳：已知 U→final／overrun；未知→pending、留 R、退出 4。
+reply 另保存 model、finish_reason、http（狀態碼）、elapsed（秒 float，四捨五入至三位小數）、response（完整 JSON 原樣；解析不了保存原文字串截 64 KiB）。整份 reply 的孤立 surrogate 換成 U+FFFD，確保 raw 能存。失敗仍依既有 usage 規則結帳：已知 U→final／overrun；未知→pending、留 R、退出 4。
 
 ## 6. status 與 adopt
 

@@ -25,7 +25,7 @@ class TestLlmcallLiteLLM(LlmcallCase):
 
     def setUp(self):
         super().setUp()
-        self.bodies, self.headers = [], []
+        self.bodies, self.headers, self.followed = [], [], []
         self.code, self.delay = 200, 0
         self.usage = {"total_tokens": 120, "prompt_tokens": 100, "completion_tokens": 20,
                       "prompt_tokens_details": {"cached_tokens": 17}}
@@ -44,11 +44,17 @@ class TestLlmcallLiteLLM(LlmcallCase):
                 self.send_response(code)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(data)))
+                if 300 <= code < 400:
+                    self.send_header("Location", "/elsewhere")
                 self.end_headers()
                 try:
                     self.wfile.write(data)
                 except (BrokenPipeError, ConnectionResetError):
                     pass
+
+            def do_GET(self):
+                case.followed.append(self.path)
+                self.send_error(404)
 
             def log_message(self, *args):
                 pass
@@ -121,7 +127,11 @@ class TestLlmcallLiteLLM(LlmcallCase):
                  (429, {"usage": self.usage}, 1, "failed", "final"),
                  (500, {"usage": self.usage}, 1, "failed", "final"),
                  (200, b"{broken", 4, "failed", "pending"),
-                 (200, {"usage": self.usage}, 1, "failed", "final")]
+                 (200, {"usage": self.usage}, 1, "failed", "final"),
+                 (400, {"error": "after work", "usage": self.usage}, 1, "failed", "final"),
+                 (408, {"error": "timeout"}, 4, "failed", "pending"),
+                 (302, {"moved": True}, 4, "failed", "pending"),
+                 (307, {"moved": True}, 4, "failed", "pending")]
         for i, (self.code, self.reply, rc, outcome, billing) in enumerate(cases):
             with self.subTest(code=self.code, reply=self.reply):
                 c = "error%d" % i
@@ -134,6 +144,15 @@ class TestLlmcallLiteLLM(LlmcallCase):
                 if isinstance(self.reply, bytes):
                     self.assertEqual(read_json(str(self.cd(c) / "raw.json"))["reply"]["response"], "{broken")
         self.assertEqual(len(self.bodies), len(cases))
+        self.assertEqual(self.followed, [])
+        self.audit()
+
+    def test_lone_surrogate_reply_still_saved(self):
+        self.reply = json.dumps(dict(self.reply, extra="\ud800")).encode()
+        obj = self.assert_receipt(self.call())
+        self.assertEqual((obj["text"], obj["used"]), ("OK", 120))
+        raw = read_json(str(self.cd() / "raw.json"))["reply"]
+        self.assertEqual(raw["response"]["extra"], "\ufffd")
         self.audit()
 
     def test_timeout_keeps_intent_without_resending(self):
