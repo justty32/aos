@@ -1,0 +1,52 @@
+{
+ "v": 1,
+ "rid": "audit3",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "task": "新增 aos7-mailtodo 唯讀彙總工具",
+ "goal": "讀 node 檔案，彙總成一行 JSON；不修復資料。三題同形，用來量踩坑筆記的效果。",
+ "scope": {
+  "only": [
+   "packs/mailtodo/",
+   "INDEX.md 一列"
+  ],
+  "not": [
+   "modules/",
+   "lib/",
+   "別的包",
+   "修改 node"
+  ],
+  "max_files": 12
+ },
+ "tools": [
+  {
+   "tool": "python3 proto7-2/tests/run_all.py packs/mailtodo/tests",
+   "use": "實質測試"
+  },
+  {
+   "tool": "python3 check_answer.py <proto7-2> fixture",
+   "use": "獨立核對與唯讀"
+  }
+ ],
+ "work": [
+  "Add README.md (## 第一次跑), bin/aos7-mailtodo (Python script, <=12 lines; checker runs it as python3 bin/aos7-mailtodo), aos7_mailtodo.py and tests/test_mailtodo.py with real tests; deliver files, INDEX row and report.",
+  "CLI: aos7-mailtodo <folder> --now ISO; success exits 0, stdout exactly one JSON line; nonexistent/file input exits 2 with empty stdout; missing/invalid/naive --now exits 2 with empty stdout; never read system clock. --now must be parseable by datetime.fromisoformat and have tzinfo. Interpret every naive data timestamp using --now.tzinfo.",
+  "Read only: no creation (except __pycache__), deletion, byte or permission changes; parse files yourself, never import/call existing aos write/recovery/lock paths; paths are input-relative POSIX. Input folders may be read-only. Metadata (type,size,mode,mtime_ns) and contents must remain unchanged.",
+  "Output keys exactly {v,open,boxes,bad}, v true integer 1; inspect only root/<non-dot name>/inbox/*.md and root/<non-dot name>/inbox/done/*.md non-dot regular nonsymlink files, no recursion; ignore all others.",
+  "Frontmatter: first line exactly ---; ends at next exactly --- line. Each line split on first \": \"; ignore lines without it; value unchanged (no stripping); last duplicate key wins. Missing delimiters -> no_frontmatter; missing/empty id/from/to/status or unparsable at -> no_field; then bad_name, then dup_id. Exclude invalid letters entirely; first valid id by relative file lexical order wins. re: with a trailing space has empty value = no target.",
+  "Filename starts YYYYmmddTHHMM immediately followed by - or _; date/minute must parse, else bad_name. status/from/to/id/at come from frontmatter; to need not equal mailbox folder. re optional empty/missing means no target.",
+  "open array exactly {id:string,from:string,to:string,where:\"inbox\"|\"done\",age_min:integer} for valid REQUEST lacking any valid letter anywhere with re=its id and status DONE/BLOCKED/NEEDS-USER/FAILED; PROGRESS does not resolve; to is frontmatter to, age_min=floor((now-frontmatter at)/60), negative allowed; sorted (to,id).",
+  "boxes object includes every name having inbox directory (even empty), keys ascending; values exactly {inbox:{STATUS:integer count},done:integer count}; inbox includes only occurring statuses, done counts all valid archived letters.",
+  "bad array exactly {file:input-relative POSIX string,why:string}, sorted (file,why); why only no_frontmatter/no_field/bad_name/dup_id."
+ ],
+ "deliver": "一份候選 JSON，REPORT 寫 report，末尾必有「以後交接書該點名的工具」。",
+ "accept": [
+  "三關全過，check 退出 0。",
+  "stdout 一行，鍵集合與所有型別、null、排序、bad 原因和退出碼完全依 work；壞 JSON 整筆不彙總，bool 不算整數。",
+  "fixture 的目錄、位元組與權限不變，固定答案與缺檔、壞資料核對 ok true。"
+ ],
+ "answer": {
+  "checker": "check_answer.py",
+  "fixture": "fixture"
+ }
+}

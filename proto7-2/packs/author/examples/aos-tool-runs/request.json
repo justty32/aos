@@ -1,0 +1,54 @@
+{
+ "v": 1,
+ "rid": "runs3",
+ "kind": "aos-tool",
+ "name": "runs",
+ "task": "新增 aos7-runs 唯讀彙總工具",
+ "goal": "讀 node 檔案，彙總成一行 JSON；不修復資料。三題同形，用來量踩坑筆記的效果。",
+ "scope": {
+  "only": [
+   "packs/runs/",
+   "INDEX.md 一列"
+  ],
+  "not": [
+   "modules/",
+   "lib/",
+   "別的包",
+   "修改 node"
+  ],
+  "max_files": 12
+ },
+ "tools": [
+  {
+   "tool": "python3 proto7-2/tests/run_all.py packs/runs/tests",
+   "use": "實質測試"
+  },
+  {
+   "tool": "python3 check_answer.py <proto7-2> fixture",
+   "use": "獨立核對與唯讀"
+  }
+ ],
+ "work": [
+  "Add README.md (## 第一次跑), bin/aos7-runs (Python script, <=12 lines; checker runs it as python3 bin/aos7-runs), aos7_runs.py and tests/test_runs.py with real tests; deliver files, INDEX row and report.",
+  "CLI: aos7-runs <folder> --now ISO; success exits 0, stdout exactly one JSON line; nonexistent/file input exits 2 with empty stdout; missing/invalid/naive --now exits 2 with empty stdout; never read system clock. --now must be parseable by datetime.fromisoformat and have tzinfo. Interpret every naive data timestamp using --now.tzinfo.",
+  "Read only: no creation (except __pycache__), deletion, byte or permission changes; parse files yourself, never import/call existing aos write/recovery/lock paths; paths are input-relative POSIX. Input folders may be read-only. Metadata (type,size,mode,mtime_ns) and contents must remain unchanged.",
+  "Output keys exactly {v,routines,schedule,counts,bad}; v true integer 1; arrays sorted by name; counts object {routines:{running,never,failed,overdue,ok},schedule:{interrupted,due,pending}}, all integer counts including zeros.",
+  "Read wf/routines.json and wf/schedule.json: absent -> empty array; invalid JSON (NaN/Infinity included)/nonobject/contract != \"wf-table/1\"/columns not array of strings/rows not array -> empty table plus bad={table:\"routines\"|\"schedule\",row:null,why:\"bad_table\"}.",
+  "Rows must be objects with all values strings and required keys routines(name,every,last_time,last_code), schedule(name,at,claimed), else excluded as bad_row; missing != null != empty; other string keys allowed.",
+  "Row validation: first track each nonempty string name in each table, even if that row is invalid; every second or later occurrence is dup_name (priority over bad_row). All other invalid rows are bad_row: nonobject, nonstring value, missing required field, empty name, invalid every/time/code. bad={table:\"routines\"|\"schedule\",row:0-based integer,why}; exclude invalid rows.",
+  "Timestamps use datetime.fromisoformat; no timezone in data means --now.tzinfo. last_time empty -> null, otherwise copied unchanged; at must parse and is copied unchanged.",
+  "routines rows exactly {name:string,every:string,last_time:string|null,last_code:integer|\"running\"|null,state:string,next:string|null}; every matches [1-9][0-9]*[rsmhd], s/m/h/d=1/60/3600/86400 sec, r round based; last_code empty -> null, running unchanged, signed decimal integer string -> integer, otherwise bad_row.",
+  "State priority running(code running), never(time empty), failed(integer code !=0), overdue(seconds every and now>=time+every), ok; next=time+every for seconds with time else null, UTC YYYY-MM-DDTHH:MM:SSZ (fraction dropped only in rendering); r never overdue and next null.",
+  "schedule rows exactly {name:string,at:string,state:string}; state interrupted(claimed nonempty), due(at<=now), pending; bad sorted (table,row null as -1,why), why only bad_table/bad_row/dup_name."
+ ],
+ "deliver": "一份候選 JSON，REPORT 寫 report，末尾必有「以後交接書該點名的工具」。",
+ "accept": [
+  "三關全過，check 退出 0。",
+  "stdout 一行，鍵集合與所有型別、null、排序、bad 原因和退出碼完全依 work；壞 JSON 整筆不彙總，bool 不算整數。",
+  "fixture 的目錄、位元組與權限不變，固定答案與缺檔、壞資料核對 ok true。"
+ ],
+ "answer": {
+  "checker": "check_answer.py",
+  "fixture": "fixture"
+ }
+}

@@ -1,0 +1,113 @@
+{
+  "contract": "wf-table/1",
+  "source": "workflows/routines.md",
+  "extracted": "2026-10-09",
+  "columns": [
+    "name",
+    "every",
+    "inst",
+    "last_round",
+    "last_time",
+    "last_code",
+    "timeout"
+  ],
+  "rows": [
+    {
+      "name": "a-ok",
+      "every": "1h",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "2026-10-09T18:29:48.683846+08:00",
+      "last_code": "0",
+      "timeout": "600"
+    },
+    {
+      "name": "b-failed",
+      "every": "2m",
+      "inst": "fail.sh",
+      "last_round": "",
+      "last_time": "2026-10-09T18:29:48.683846+08:00",
+      "last_code": "7",
+      "timeout": "600"
+    },
+    {
+      "name": "c-round",
+      "every": "3r",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "",
+      "last_code": "",
+      "timeout": "600"
+    },
+    {
+      "name": "d-day",
+      "every": "1d",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "2026-10-09T18:29:48.683846+08:00",
+      "last_code": "0",
+      "timeout": "600"
+    },
+    {
+      "name": "e-seconds",
+      "every": "30s",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "2026-10-09T18:29:48.683846+08:00",
+      "last_code": "0",
+      "timeout": "600"
+    },
+    {
+      "name": "f-minutes",
+      "every": "5m",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "2026-10-09T18:29:48.683846+08:00",
+      "last_code": "0",
+      "timeout": "600"
+    },
+    {
+      "name": "g-never",
+      "every": "1h",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "",
+      "last_code": "",
+      "timeout": "600"
+    },
+    {
+      "name": "h-never",
+      "every": "1h",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "",
+      "last_code": "",
+      "timeout": "600"
+    },
+    {
+      "name": "i-never",
+      "every": "1h",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "",
+      "last_code": "",
+      "timeout": "600"
+    },
+    {
+      "name": "z-bad",
+      "every": "wrong",
+      "inst": "ok.sh",
+      "last_time": "",
+      "last_code": ""
+    },
+    {
+      "name": "a-ok",
+      "every": "1h",
+      "inst": "ok.sh",
+      "last_round": "",
+      "last_time": "2026-10-09T18:29:48.683846+08:00",
+      "last_code": "0",
+      "timeout": "600"
+    }
+  ]
+}

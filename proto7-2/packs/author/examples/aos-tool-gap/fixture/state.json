@@ -1,0 +1,38 @@
+{
+ "v": 1,
+ "node": "n1",
+ "config": {
+  "keep_segments": 4,
+  "segment_bytes": 900,
+  "max_record_bytes": 65536
+ },
+ "channels": {
+  "obs": {
+   "next_seq": 13,
+   "active_first": 11,
+   "active_bytes": 386,
+   "segments": [
+    1,
+    6
+   ],
+   "dropped_upto": 0,
+   "torn": 0
+  },
+  "must": {
+   "next_seq": 13,
+   "active_first": 11,
+   "active_bytes": 390,
+   "segments": [
+    1,
+    6
+   ],
+   "dropped_upto": 0,
+   "torn": 0,
+   "acked_upto": 5,
+   "refused": 0
+  }
+ },
+ "sample": {},
+ "daemon_log": null,
+ "status_last": null
+}

@@ -1,0 +1,2 @@
+{"v": 1, "stream": "n1/must", "seq": 11, "kind": "fixture.sample", "capture": "published", "event_id": "must/11", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.342", "payload": {"n": 11}}
+{"v": 1, "stream": "n1/must", "seq": 12, "kind": "fixture.sample", "capture": "published", "event_id": "must/12", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.371", "payload": {"n": 12}}
