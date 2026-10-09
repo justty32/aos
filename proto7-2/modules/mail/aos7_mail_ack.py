@@ -4,6 +4,17 @@ from pathlib import Path
 import subprocess
 import sys
 from aos7_mail import HERE, inbox, load, letters, letter, events_read, write_json, test_point
+from aos7_events_store import load_state
+
+
+def acked_upto(events):
+    """events 目前確認到哪（唯讀不鎖）；讀不到或格式不合回 0＝不讓過任何別人事件。"""
+    st = load_state(str(events))
+    try:
+        upto = st['channels']['must']['acked_upto']
+    except (TypeError, KeyError):
+        return 0
+    return upto if type(upto) is int and upto > 0 else 0
 
 
 def ack(root, me):
@@ -14,6 +25,7 @@ def ack(root, me):
     marker = box / '.acked'
     local = load(marker, 0)
     upto, cursor, unsure = local, local + 1, False
+    others_acked = 0
     ended = {l['id'] for p in letters(box / 'done')
              if (l := letter(p))['status'] == 'REQUEST'}
     while True:
@@ -34,6 +46,14 @@ def ack(root, me):
                 gap = next((g for g in gaps if g['from'] <= cursor <= g['to']), None)
                 if gap:
                     upto, cursor = gap['to'], gap['to'] + 1
+            if rec['seq'] == cursor and rec.get('kind') != 'mail.request':
+                if rec['seq'] > others_acked:
+                    others_acked = acked_upto(events)  # 別人可能剛確認；遇到才重讀
+                if rec['seq'] <= others_acked:  # 別人的事件已被它的主人確認：讓過
+                    upto, cursor = rec['seq'], rec['seq'] + 1
+                    continue
+                stopped = True  # 別人還沒確認：停下，不替它確認
+                break
             if rec['seq'] != cursor or rec.get('kind') != 'mail.request' or rec.get('payload', {}).get('id') not in ended:
                 stopped = True
                 break

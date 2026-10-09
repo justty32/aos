@@ -68,6 +68,20 @@ with open(sys.argv[1], 'a') as f:
                 confirm.assert_called_once_with(self.root / 'bob/events', 0)
                 self.assertEqual(mail.load(marker, 0), 0)
 
+    def test_ack_passes_foreign_only_after_owner_acked(self):
+        """must：other(1) mail(2)。別人沒確認就停、不替它確認；主人確認 1 後 mail 讓過、清掉 2。"""
+        events = self.root / 'bob/events'
+        events.mkdir(parents=True)
+        self.assertTrue(publish(str(events), 'other.request', 'x/1', {}, must=True, node='bob')['ok'])
+        sent = self.send()
+        mail.done(self.root, 'bob', sent['id'], 'DONE', '完成')
+        self.assertEqual((self.acked('bob'), mail.load(self.box('bob') / '.acked', 0)), (0, 0))
+        from aos7_events_store import ack as owner_ack
+        self.assertEqual(owner_ack(str(events), 1), 1)
+        with mail.poll(self.root, 'bob'):
+            pass
+        self.assertEqual((self.acked('bob'), mail.load(self.box('bob') / '.acked', 0)), (2, 2))
+
     def test_error_usage_format_and_help(self):
         for args in (('send',), ('read', '../bad'), ('sned',), ('--root',)):
             with self.subTest(args=args):

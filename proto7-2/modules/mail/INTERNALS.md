@@ -36,7 +36,7 @@ read 遇到已有日誌的頂層信會補做 2–4，並印 `復原`；搬移後
 
 - 不 fsync，抗程序 SIGKILL，不承諾斷電；send 若在信落地與 events publish 之間被殺，可能缺提醒，信仍是權威。
 - send 被殺可能留下 `.tmp/` 完整或未完整暫存，收件輪詢不看暫存；正常投遞後會清空。
-- 依契約卡「must 通道獨佔」，mail／author 建議分 node。共用 must 時誰都不替對方確認（author intake 遇沒確認的 mail.request 會停，10-09 RV-fix-C）；但 mail 目前遇到任何非 mail 事件就停，連別人已確認的也不越過，所以排在 author 事件後面的 mail 提醒不會被 mail 確認（待修，見代定清單）。
+- 依契約卡「must 通道獨佔」，mail／author 建議分 node。共用 must 時誰都不替對方確認（author intake 遇沒確認的 mail.request 會停，10-09 RV-fix-C）；mail 遇到非 mail 事件時讀 events 目前確認到哪（`load_state` 的 acked_upto）：別人已確認的讓過、接著確認排在後面的自己的提醒；別人還沒確認的就停下，不替它確認（10-09 MLfix）。
 - 收件者名／寄件者名不驗真偽，audit 的 re 是合作式證據，不是不可偽造的憑證。
 - 團隊信是共讀廣播，只收 PROGRESS／終局，send 團隊 REQUEST 退出 2；done／handle 只處理個人 inbox。需要指定人辦的 REQUEST 請直接寄給該人。
 - 掃描信與去重是線性搜尋，seen／seen-team、handled 與歷史不自動縮減；不含重試提醒、跨郵局 reply-to 或團隊增刪成員。

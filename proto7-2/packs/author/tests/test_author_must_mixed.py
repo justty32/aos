@@ -27,6 +27,7 @@ class TestAuthorMustMixed(TestAuthorHelpers):
         self.assertEqual(len(p.stderr.splitlines()), 1, p.stderr)
         for word in ("aos7-author: ", kind, "aos7-events ack"):
             self.assertIn(word, p.stderr)
+        self.assertNotIn("換一份候選", p.stderr)                                # 對症的第二句，不接通用尾巴
 
     @property
     def author_bin(self):
@@ -43,6 +44,8 @@ class TestAuthorMustMixed(TestAuthorHelpers):
         self.assertEqual(p.returncode, 1, (p.stdout, p.stderr))
         self.assertEqual(len(p.stderr.splitlines()), 1, p.stderr)
         self.assertIn("aos7-events pub --create", p.stderr)
+        self.assertNotIn("換一份候選", p.stderr)
+        self.assertEqual(r["missing_events"], events)
         self.assertFalse(os.path.lexists(events))
         self.assertFalse(Path(node, "author").exists())
 
@@ -61,7 +64,7 @@ class TestAuthorMustMixed(TestAuthorHelpers):
         self.assertEqual((got["handled"], got["acked_upto"]), ([dict(seq=2, rid="csv1", result="registered")], 2))
 
     def test_mail_and_author_share_node(self):
-        """mail(1) author(2) mail(3)：兩邊各跑、author 重啟（含回條後被殺），誰都不替對方 ack。"""
+        """mail(1) author(2) mail(3)：兩邊各跑、author 重啟（含回條後被殺），誰都不替對方 ack；別人確認過的各自讓過。"""
         root = Path(self.root, "post")
         node = str(root / "bob")
         self.mknode(root=str(root), nid="bob")
@@ -98,6 +101,9 @@ class TestAuthorMustMixed(TestAuthorHelpers):
             self.assertEqual((got["handled"], got["blocked"]["seq"]), (handled, 3))
             self.assertEqual(self.acked(events), 2, "author 不替 mail(3) ack")
         self.assertTrue(Path(node, "inbox", Path(third["sent"]).name).exists())
+        mail("read", "bob")
+        mail("done", "bob", Path(third["sent"]).name, "辦完第三封")             # 排在 author 已確認的 2 後面
+        self.assertEqual(self.acked(events), 3, "mail 讓過 author 已確認的 2，清掉自己的 3")
 
     def test_author_first_kill_after_receipt(self):
         """author(1) mail(2) author(3)：回條後 ack 前被殺、恢復補 ack 前再被殺兩次，都不越過 mail(2)。"""

@@ -189,8 +189,8 @@ def send_request(node, request_path, events_dir):
         try:
             os.stat(events_dir)
         except FileNotFoundError:                    # 不替別人的 node 建 events 夾（跨包副作用歸 up）
-            raise Refuse("conflict", "對方沒開 events（%s 不存在），作者不替別人建夾；請用 aos7-up 起 node，"
-                         "或 aos7-events pub --create 先建" % events_dir)
+            raise Refuse("conflict", "對方沒開 events（%s 不存在），作者不替別人建夾。先用 aos7-up 起對方的 node，"
+                         "或 aos7-events pub --create 建好 events，再 send 一次" % events_dir, missing_events=events_dir)
         pub, reader, _ = _events()
         sent = pub.publish(events_dir, "author.request", "author/" + rid, payload,
                            must=True, node=os.path.basename(nd.node))
@@ -205,7 +205,7 @@ def send_request(node, request_path, events_dir):
                     return result(False, "conflict", rid=rid, seq=sent["seq"])
         return result(True, seq=sent["seq"], dup=sent["dup"])
     except Refuse as r:
-        return result(False, r.why, error=r.msg)
+        return result(False, r.why, error=r.msg, **r.extra)
     except (ValueError, UnicodeError) as e:
         return result(False, "invalid", error=str(e))
     except (Unknown, OSError) as e:
@@ -295,7 +295,7 @@ def intake(node, events_dir, limit=20):
                     if upto is None:
                         blocked = dict(seq=rec["seq"], kind=rec.get("kind"), event_id=rec.get("event_id"))
                         return result(False, "conflict", handled=handled, cursor=cursor, acked_upto=acked, blocked=blocked,
-                                      error="must 第 %d 筆是別人的事件 %s（%s），作者不替它確認、停在這裡；"
+                                      error="must 第 %d 筆是別人的事件 %s（%s），作者不替它確認、停在這裡。"
                                             "等它的主人處理並確認後再 intake（mail 的信用 aos7-mail 辦完；確定沒人要用 "
                                             "aos7-events ack --events %s %d）"
                                             % (rec["seq"], rec.get("kind"), rec.get("event_id"), events_dir, rec["seq"]))
