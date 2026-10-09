@@ -56,7 +56,13 @@ def build(node):
                 raise ValueError("name 不合法或不等於目錄名")
             if description in ("|", ">", "|-", ">-", "|+", ">+") or len(description) > 1024 or "\n" in description or "\r" in description:
                 raise ValueError("description 超過 1024 字元或含換行")
-            skills[name] = {"description": description, "path": f"skills/{name}/SKILL.md",
+            phrases = {}
+            for key in ("triggers", "not_for"):
+                items = [s.strip() for s in re.split("[、,，]", fields.get(key, "")) if s.strip()]
+                if len(items) > 32 or any(len(s) > 64 for s in items):
+                    raise ValueError("triggers／not_for 每項 ≤64 字、最多 32 項")
+                phrases[key] = items
+            skills[name] = {**phrases, "description": description, "path": f"skills/{name}/SKILL.md",
                             "scripts": (entry / "scripts").is_dir()}
         except (OSError, UnicodeError, ValueError) as e:
             rejected[entry.name] = "SKILL.md 不合：" + str(e).replace("\n", " ")
@@ -122,6 +128,41 @@ def keyword_guess(question, skills):
     scores = [(len(words(question) & words(n + " " + v["description"])), n) for n, v in skills.items()]
     score, guess = min(scores, key=lambda x: (-x[0], x[1])) if scores else (0, "none")
     return guess if score else "none"
+
+
+def hit(phrase, question):
+    if re.search(r"[A-Za-z0-9]", phrase):
+        return bool(re.search(r"(?<![A-Za-z0-9])" + re.escape(phrase) + r"(?![A-Za-z0-9])", question, re.I))
+    return phrase in question
+
+
+def local_pick(question, skills):
+    """觸發詞優先；舊書至少重疊兩詞，平手不猜。"""
+    triggered, fallback, excluded = [], [], []
+    qw = words(question)
+    for name, book in skills.items():
+        blocked = [p for p in book.get("not_for", []) if hit(p, question)]
+        if blocked:
+            excluded.append(name + " 不適用（" + "、".join(blocked) + "）")
+            continue
+        phrases = book.get("triggers", [])
+        if phrases:
+            matches = list(dict.fromkeys(p for p in phrases if hit(p, question)))
+            if matches:
+                triggered.append((len(matches), name, "觸發詞：" + "、".join(matches)))
+        else:
+            score = len(qw & words(book["description"])) + len(qw & words(name.replace("-", " ")))
+            fallback.append((score, name, f"簡介重疊 {score} 詞"))
+    scores = triggered or fallback
+    score = max((s[0] for s in scores), default=0)
+    winners = [s for s in scores if s[0] == score]
+    enough = score >= (1 if triggered else 2)
+    tie = enough and len(winners) > 1
+    answer = winners[0][1] if enough and not tie else "none"
+    why = ("平手：" + "、".join(s[1] for s in winners) if tie else winners[0][2]) if enough else "沒有觸發詞命中，簡介重疊不到 2 詞"
+    if excluded:
+        why += "；" + "；".join(excluded)
+    return dict(answer=answer, score=score, why=why, tie=tie)
 
 
 NONE = "目錄裡沒有一本合這個題目。換個說法再挑，或跑 index 看有哪幾本"
@@ -205,17 +246,23 @@ def keep_last(path, obj, n=50):
 
 def pick(node, args):
     start = time.monotonic()
-    log = dict(at=now(), via="llmcall", call=None, q=args.question, answer=None, picked=None, used=None, rc=2)
+    log = dict(at=now(), via="llmcall", call=None, q=args.question, answer=None, picked=None, used=None, rc=2, score=0, why="尚未挑選")
     message = None
     try:
         result = build(node)
-        if args.budget is None and not (node / DEFAULT_BUDGET).exists():
-            # 沒開帳就走本機挑選：不問 AI、不記帳；第一次跑走這條。call 仍按題目＋目錄取，供重試統計辨認。
+        local = local_pick(args.question, result["skills"])
+        log.update(score=local["score"], why=local["why"])
+        has_ledger = args.budget is not None or (node / DEFAULT_BUDGET).exists()
+        explicit = re.search(r"(?<!不)(?<!別)(?<!不要)用\s*(技能|skill)(?![A-Za-z])|(?<![A-Za-z])use\s+(a\s+)?skills?(?![A-Za-z])",
+                             args.question, re.I)        # 明說用技能；「不要用技能」「cause skill」不算
+        if not (has_ledger and (local["tie"] or explicit)):
+            # 本機路徑不讀 grant、不碰帳；call 仍按題目＋目錄取，供重試統計辨認。
             log["call"] = "local-" + hashlib.sha256(
                 (args.question + "\n" + "\n".join(result["lines"])).encode()).hexdigest()[:16]
-            log.update(via="local", answer=keyword_guess(args.question, result["skills"]))
+            log.update(via="local", answer=local["answer"])
             log["rc"], message = show(node, result, log["answer"], log)
         else:
+            log["why"] = ("平手，問 AI；" if local["tie"] else "題目明說用技能，問 AI；") + log["why"]
             args.budget = args.budget or DEFAULT_BUDGET
             log["rc"], message = ask_ai(node, args, result, log)
     except (OSError, Unknown, KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
@@ -280,7 +327,7 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True, metavar="{index,pick,mount}")
     helps = {
         "index": ("把書名和一句簡介抄成目錄，stdout 一本一行", "退出碼與契約見 ADVANCED.md"),
-        "pick": ("照題目挑一本，印 SKILL.md 路徑；挑不到印 none", "沒帳就用本機關鍵字挑；有帳就問 AI。退出碼與契約見 ADVANCED.md"),
+        "pick": ("照題目挑一本，印 SKILL.md 路徑；挑不到印 none", "沒帳就用本機關鍵字挑；有帳且平手或明說用技能才問 AI。退出碼與契約見 ADVANCED.md"),
         "mount": ("把一本 skill 掛給 aos 空間裡的任務", "退出碼與契約見 ADVANCED.md"),
     }
     for cmd, (short, more) in helps.items():
