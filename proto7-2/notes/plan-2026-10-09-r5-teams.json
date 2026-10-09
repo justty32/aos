@@ -1,0 +1,68 @@
+{
+  "contract": "wf-table/1",
+  "source": "intents/brain-memory.md、intents/skills-local-pick.md（r5 分線）",
+  "extracted": "2026-10-09",
+  "columns": ["team", "goal", "wave", "lead", "workers", "intent", "items", "territory", "excluded", "deps", "gates", "done", "handoff"],
+  "rows": [
+    {
+      "team": "SK1（本機挑技能變準）",
+      "goal": "2（skill）",
+      "wave": "1（現在可開）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋測試；gpt-6-luna ×1 跑題庫；gpt-6-astra read-only 審",
+      "intent": "intents/skills-local-pick.md（Fable 已寫）",
+      "items": "SKILL.md frontmatter 可選 `triggers:`／`not_for:`，index 多兩欄；本機挑：只算觸發詞命中（整詞／整句），0 命中或平手＝none，description 只當第二證據；沒 triggers 的舊 skill 用舊算法但門檻 ≥2 詞；紀錄加 score／why；問 AI 條件：有帳且（平手或信明說用技能），同題快取、每信一次；題庫：L 跑 2 的 17 筆＋原 10 題做固定測試（期望 06→aos-test、07→wf-lint、其餘 none）；library 三本補 triggers；ADVANCED 補一段",
+      "territory": "modules/skills/aos7_skills.py、modules/skills/library/*/SKILL.md、modules/skills/tests/、modules/skills/ADVANCED.md、modules/skills/examples/bank/（題庫）",
+      "excluded": "不碰 modules/up/（brain 第 1 回合重挑兩次歸 M1）；不碰 llmcall、budget；README 第一次跑不動",
+      "deps": "無（避開 LT1～3、uphb、upfix、RV-fix-A／C、S3、EF3 的檔：都不在 modules/skills）",
+      "gates": "件數 1 線。diff >300 行停下回報。真 AI ≤10 次（只驗「何時問 AI」）；交棒前全套 1 份",
+      "done": "固定題庫 17＋10：本機 ≥16／17（L 題）且原 10 題不退步、0 筆挑錯本、0 次 AI 呼叫；開帳時 AI 被問 ≤2 次；既有 skills 測試全過；error_path 列不 skip；人類面：README 不變、新手不需知道 triggers",
+      "handoff": "正確答案表寫在題庫檔旁的 README（一行一題）；none 當對；紀錄格式向後相容"
+    },
+    {
+      "team": "M1（brain 跨信記憶）",
+      "goal": "1＋2（memory）",
+      "wave": "2（LT1 進 main 後——brain 檔同檔）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×2（甲：done 檔與 INDEX、附檔規則、`max_prompt_chars`；乙：測試、SIGKILL 點、longtask 11 號信案）；gpt-6-astra（high）read-only 審",
+      "intent": "intents/brain-memory.md（Fable 已寫）",
+      "items": "新檔 `modules/up/aos7_up_memory.py`：結案寫 `notes/done/<id>.md`＋INDEX 一行（50 行輪替到 INDEX-old.md）；挑附檔（標題關鍵詞／「前面、你交的」對 INDEX）一份 ≤3000 字；第四種回覆「要檔案：<id>」下回合附；`max_prompt_chars` 預設 12000，超過先砍軌跡再砍技能全文；brain 只加鉤：request() 附 INDEX／附檔、finish() 寫 done；順手修 request()／step_on() 第 1 回合重挑技能兩次；prompts/brain.json 加段與第四種格式；ADVANCED 補；假 AI 也要能走「要檔案」",
+      "territory": "modules/up/aos7_up_memory.py（新）、modules/up/aos7_up_brain.py（只動 request()／finish()／pick_skill 呼叫處）、modules/up/prompts/brain.json、modules/up/tests/test_up_memory.py（新）、modules/up/ADVANCED.md 一段",
+      "excluded": "不碰 aos7_up.py（uphb／upfix）、aos7_up_status.py（LT 的 status 修）、compact／prompt／skills 程式；不改 QUICKSTART／README",
+      "deps": "LT1（brain 卡住結案）進 main 後 rebase 再開；SK1 不必等",
+      "gates": "件數 1 線。diff >500 行停下回報。真 AI ≤40 次（只驗 11 號信與一次 12 封）；交棒前全套 1 份",
+      "done": "假 AI：12 封後 notes/done 12 檔、INDEX 12 行；51 封後 INDEX 50 行＋old；11 號信附 01 的 done 檔；「要檔案」一回合後附上；寫 done 與寄 DONE 之間 SIGKILL ×3 不重寫不重寄；真 AI：11 號回 DONE 且命中第 5 節關鍵詞 ≥2；人類面：QUICKSTART 零新概念",
+      "handoff": "brain 現有 request() 把技能、軌跡、信寫進 brain/now.md 再 render（aos7_up_brain.py:107～139），記憶段接在技能段後、軌跡前；finish() 在 :240"
+    },
+    {
+      "team": "LM（長任務重跑：記憶與挑技能驗收）",
+      "goal": "驗收",
+      "wave": "3（M1、SK1、LT1～3 進 main 後）",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 改驅動腳本與分析；gpt-6-luna ×1 跑；真 AI node（sol-high）",
+      "intent": "實跑，免卡",
+      "items": "用 modules/up/examples/longtask 原 12 封重跑真 AI 一次（不殺）＋假 AI 一次；新增判準：11 號 DONE 且命中第 5 節關鍵詞 ≥2、pick log 每信一筆且 17 筆對 ≥16、prompt 長度曲線 ≤ 上限、token 相對 L 跑 2 的差；`aos7-metrics`（若 LT3 已修多回合就用它）；寫 play/2026-10-09-longtask/README 的「r5 重跑」一節",
+      "territory": "modules/up/examples/longtask/（run.py／analyze.py 的新判準）、notes/play/2026-10-09-longtask/run4-memory/（新）＋ README 一節",
+      "excluded": "不改任何模組（發現 bug 回報頂層）",
+      "deps": "M1、SK1 進 main；LT1～3 進 main",
+      "gates": "真 AI ≤40 次；systemd scope",
+      "done": "兩張卡的驗收條逐條燈號；report 一節；人類面：Haiku 旁觀者看 notes/done/INDEX.md 能說出 bob 做過哪幾件",
+      "handoff": "L 跑 2 的數字當基線：29 次呼叫、平均 4166 token、146.6 秒"
+    },
+    {
+      "team": "U5（新手重試：skills）",
+      "goal": "人類面",
+      "wave": "2（SK1 進 main 後）",
+      "lead": "Opus",
+      "workers": "Haiku ×1、gpt-6-luna（low）×1；gpt-6.1-sol 計時",
+      "intent": "試用，免卡",
+      "items": "skills README 第一次跑（triggers 不該出現在新手路徑）；若 M1 動了 up ADVANCED 以外的新手文件也試 QUICKSTART",
+      "territory": "notes/play/2026-10-10-newbie-r5/（新）、play/README 一列",
+      "excluded": "不改程式與 README",
+      "deps": "SK1 進 main",
+      "gates": "每模組 ≤30 分鐘",
+      "done": "skills ≥7 且概念數不增；QUICKSTART 仍 5 詞 3 指令",
+      "handoff": "規則同 2026-10-09-newbie/README"
+    }
+  ]
+}
