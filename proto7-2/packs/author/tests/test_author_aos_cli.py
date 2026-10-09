@@ -1,7 +1,9 @@
 """LLM 來源用本地 HTTP 走真 llmcall，不打真網路。"""
 import argparse
+from contextlib import redirect_stderr, redirect_stdout
 import fcntl
 import hashlib
+import io
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -450,6 +452,12 @@ class TestAuthorAosCLI(DaemonCase):
         self.assertEqual(Path(self.node, 'none.json').read_bytes(), Path(self.node, 'plain.json').read_bytes())
         self.assertEqual(Path(self.node, 'plain.json').read_bytes(), prompt_request(REQUEST, MODEL))
 
+    def test_prompt_bytes_match_before_skills_commit(self):
+        # git show 0800082f^:proto7-2/packs/author/aos7_author_aos.py
+        # 的 prompt_request(REQUEST, MODEL)：5203 bytes。
+        self.assertEqual(hashlib.sha256(prompt_request(REQUEST, MODEL)).hexdigest(),
+                         'd09ce34ba8cf7a86c9979cdddecc85da111ff2dad1c35c14dc82e52aa257e359')
+
     def test_skills_bad_node_stops_before_writes(self):
         out = self.checked(self.apprentice('--skills', Path(self.root, 'absent'),
                            '--prompt-out', 'must-not-exist.json'), 2)
@@ -510,6 +518,117 @@ class TestAuthorAosCLI(DaemonCase):
         user = json.loads(self.bodies[0]['messages'][1]['content'])
         self.assertEqual(user['existing'], '')
         self.assertNotIn('candidate', user)
+
+    def skill_learn_in_process(self, node, *extra):
+        history = Path(self.node, 'skill-history.json')
+        history.write_text('{"gates":{}}')
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            code = author.main(['learn', str(REQUEST), '--llm', MODEL,
+                                '--budget', str(self.bd), '--history', str(history),
+                                '--skill-into', str(node), '--skill', 'apprentice', *map(str, extra)])
+        return self.checked(subprocess.CompletedProcess([], code, stdout.getvalue(), stderr.getvalue()), code), code
+
+    def test_skill_learn_index_exit_mapping_preserves_receipt(self):
+        node, book = self.skill_node()
+        before = book.read_bytes()
+        info = {'call_id': 'ln-test', 'exit': 0, 'outcome': 'answered', 'used': 220}
+        for status, why, code in ((1, 'invalid', 1), (3, 'unknown', 3),
+                                  (-9, 'unknown', 3), (2, 'unknown', 3), (9, 'unknown', 3)):
+            with self.subTest(status=status), mock.patch('aos7_author_aos.delivery',
+                    return_value=(self.skill_book(), info, None)), mock.patch(
+                    'aos7_author_aos.subprocess.run', return_value=
+                    subprocess.CompletedProcess([], status, b'', b'index failed')):
+                out, actual = self.skill_learn_in_process(node)
+            self.assertEqual(actual, code)
+            self.assertEqual(out['why'], why)
+            self.assertEqual(out['llm'], info)
+            self.assertIn('index failed', out['error'])
+            self.assertEqual(book.read_bytes(), before)
+
+    def test_skill_learn_candidate_path_invalid_before_model(self):
+        node, book = self.skill_node()
+        before = book.read_bytes()
+        for candidate in (Path(self.node, 'missing.json'), Path(self.node)):
+            out = self.checked(self.skill_learn(node, '--candidate', candidate), 2)
+            self.assertEqual(out['why'], 'invalid')
+            self.assertEqual(book.read_bytes(), before)
+        self.assertEqual(self.bodies, [])
+
+    def test_skill_learn_candidate_io_fault_before_model(self):
+        node, book = self.skill_node()
+        candidate = Path(self.node, 'unreadable.json')
+        candidate.write_text('{}')
+        before = book.read_bytes()
+        read_text = Path.read_text
+        def read(path, *args, **kwargs):
+            if path == candidate:
+                raise PermissionError('candidate read denied')
+            return read_text(path, *args, **kwargs)
+        with mock.patch.object(Path, 'read_text', read), mock.patch('aos7_author_aos.delivery') as delivery:
+            out, code = self.skill_learn_in_process(node, '--candidate', candidate)
+        self.assertEqual(code, 3)
+        self.assertEqual(out['why'], 'unknown')
+        self.assertIn('candidate read denied', out['error'])
+        delivery.assert_not_called()
+        self.assertEqual(book.read_bytes(), before)
+        self.assertEqual(self.bodies, [])
+
+    def test_old_learn_candidate_rejected_before_model(self):
+        into = Path(self.node, 'GOTCHAS.md')
+        into.write_text('# 踩坑\n')
+        history = Path(self.node, 'history.json')
+        history.write_text('{"gates":{}}')
+        p = self.aos('--llm', MODEL, '--budget', self.bd, '--history', history,
+                     '--into', into, '--candidate', USAGE / 'valid.json', cmd='learn')
+        self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
+        self.assertEqual(into.read_text(), '# 踩坑\n')
+        self.assertEqual(self.bodies, [])
+
+    def test_skill_learn_interleaved_writers_conflict(self):
+        for initially_present in (True, False):
+            with self.subTest(initially_present=initially_present):
+                node, book = self.skill_node()
+                if not initially_present:
+                    book.unlink()
+                started, release = threading.Event(), threading.Event()
+                results = {}
+                winner = self.skill_book() + '\n第二個寫者的新知\n'
+                def deliver(*args, **kwargs):
+                    user = json.loads(json.loads(args[3])['litellm']['messages'][1]['content'])
+                    self.assertEqual(user['existing'], self.skill_book() if initially_present else '')
+                    if threading.current_thread().name == 'first-learner':
+                        started.set()
+                        if not release.wait(10):
+                            raise RuntimeError('second writer did not finish')
+                        return self.skill_book() + '\n第一個寫者的新知\n', {'call_id': 'first'}, None
+                    return winner, {'call_id': 'second'}, None
+                a = argparse.Namespace(arg=str(REQUEST), cmd='learn', llm=MODEL,
+                                       skill_into=str(node), skill='apprentice', history=[], candidate=None)
+                def first():
+                    results['first'] = main_aos(a)
+                with mock.patch('aos7_author_aos.delivery', side_effect=deliver):
+                    thread = threading.Thread(target=first, name='first-learner')
+                    thread.start()
+                    try:
+                        self.assertTrue(started.wait(10))
+                        results['second'] = main_aos(a)
+                    finally:
+                        release.set()
+                        thread.join(10)
+                self.assertFalse(thread.is_alive())
+                self.assertTrue(results['second']['ok'], results)
+                out = results['first']
+                self.assertFalse(out['ok'])
+                self.assertEqual(out['why'], 'conflict')
+                self.assertEqual(out['error'], '技能書在學習期間被改過，重跑 learn')
+                self.assertEqual(out['llm'], {'call_id': 'first'})
+                self.assertEqual(book.read_text(), winner)
+                with mock.patch('aos7_author_aos.main_aos', return_value=out):
+                    result, code = self.skill_learn_in_process(node)
+                self.assertEqual(code, 1)
+                self.assertEqual(result['why'], 'conflict')
+                self.assertEqual(list(book.parent.glob('.SKILL-*')), [])
 
     def test_skill_learn_invalid_never_replaces(self):
         node, book = self.skill_node()

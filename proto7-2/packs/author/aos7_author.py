@@ -937,7 +937,7 @@ def main(argv=None):
         ap = copy.deepcopy(ap)
         ap._positionals._group_actions[0].choices += ('learn',)
         if positionals[0] == 'learn':
-            # 學習的 candidate 是骨架來源，可與模型一起給。
+            # 技能學習的 candidate 是骨架來源；解析後再拒絕舊 --into 模式。
             for group in ap._mutually_exclusive_groups:
                 group._group_actions[:] = [x for x in group._group_actions if x.dest != 'candidate']
         for flag in aos_flags:
@@ -971,6 +971,8 @@ def main(argv=None):
         if (a.skill_into or a.skill) and a.cmd != 'learn':
             ap.error('--skill-into／--skill 只用於 learn')
         if a.cmd == 'learn':
+            if a.candidate and not a.skill_into:
+                ap.error('--candidate 與 --llm 共存只用於 learn --skill-into')
             if not (a.llm and a.budget and a.history) or bool(a.into) == bool(a.skill_into):
                 ap.error('learn 要 --llm、--budget、--history，且 --into／--skill-into 恰給一個')
             if a.skill_into and (not a.skill or not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', a.skill)):
