@@ -19,3 +19,8 @@
 | [budget](budget.md) | 0 | — |
 | [up](up.md) | 設計中 | 統一負責跨包副作用 |
 | [diag](diag.md) | 3（併入 llmdiag） | 一輪轉址 1、保留 2 |
+| [brain-multiround](brain-multiround.md) | 3（r4 新） | 保留 2、可選 1 |
+| [apprentice-3x](apprentice-3x.md) | 3（r4 新） | 保留 2、可選 1 |
+| [longtask](longtask.md) | 2（r4 新） | 保留 1、可選 1 |
+| [brain-memory](brain-memory.md) | 3（r5 新） | 保留 3 |
+| [skills-local-pick](skills-local-pick.md) | 2（r5 新） | 保留 1、可選 1 |
