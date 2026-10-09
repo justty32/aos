@@ -4,14 +4,14 @@
 
 內容＝`{"v": 1, "seq": n, "round": 這個 tock 的回合, "value": {"t_dc": 整數十分之一度}, "at"}`，用核心 write_json（原子
 rename）寫。`t_dc` 從 node 的 `feed.json`（`{"t_dc": 801}`，給測試與人手調）讀；沒有就用一個確定性的鋸齒波。
-`seq` 存在槽內 state.json，換 run 接著數（node 重建、槽被刪才從 1 起）。
+`seq` 存在槽內 state.json，換 run 接著數（node 重建、槽被刪才從 1 起）。啟動時對 `out/` 跑 `sweep_tmp`（C8-03）。
 """
 import os
 import sys
 
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
-from aos7_fs import OK, fact, is_int, now, write_json  # noqa: E402
+from aos7_fs import OK, fact, is_int, now, sweep_tmp, write_json  # noqa: E402
 from aos7_taskside import task_env, wait_tock  # noqa: E402
 
 
@@ -24,6 +24,7 @@ def reading(rnd):
 
 def main():
     me = task_env()
+    sweep_tmp("out")                               # out/ 在槽外，自己寫的自己清（C8-03）
     state = os.path.join(me["task"], "state.json")
     st, s = fact(state)
     seq = s["seq"] if st == OK and isinstance(s, dict) and is_int(s.get("seq")) else 0

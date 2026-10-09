@@ -181,6 +181,37 @@ class TestNumeric(unittest.TestCase):
         self.assertEqual(A.fact(ad.frame_path)[1], frame)
         self.assertTrue(any("boom" in m for m in logs), logs)
 
+    def test_c8_03_init_sweeps_only_in_dead_writer(self):
+        """C8-03：啟動只清 in/ 裡死亡寫者的暫存檔；活寫者與 node 根的檔保留。"""
+        import shutil
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix="aos72-adapt-sweep-")
+        self.addCleanup(shutil.rmtree, tmp)
+        node, slot = os.path.join(tmp, "dst"), os.path.join(tmp, "slot")
+        A.write_json(os.path.join(node, "adapt", "temp.json"), example())
+        A.write_json(os.path.join(node, ".aos", "round.json"), {"round": 1, "open": False})
+        indir = os.path.join(node, "in")
+        os.makedirs(indir)
+        p = subprocess.Popen(["true"])
+        self.assertEqual(p.wait(10), 0)
+        dead = os.path.join(indir, ".temp.json.tmp.%d" % p.pid)
+        live = os.path.join(indir, ".live.json.tmp.%d" % os.getpid())
+        outside = os.path.join(node, ".other.json.tmp.%d" % p.pid)
+        for path in (dead, live, outside):
+            with open(path, "w") as f:
+                f.write("{}")
+        ad = A.Adapter("adapt/temp.json", node, slot, lambda path: os.path.join(tmp, path))
+        logs = []
+        ad.log = logs.append
+        ad.init()
+        self.assertFalse(os.path.exists(dead), "in/ 死亡寫者的暫存檔沒掃")
+        self.assertTrue(os.path.exists(live), "活寫者的暫存檔不該掃")
+        self.assertTrue(os.path.exists(outside), "node 根不屬於 adapt 的清理範圍")
+        self.assertEqual(len(logs), 1, logs)
+        self.assertIn(os.path.basename(dead), logs[0])
+        ad.init()
+        self.assertEqual(len(logs), 1, "沒有清掉檔案時不該記清理訊息")
+
     def test_a8_02_integer_exact(self):
         """A8-02：整數取整後不強轉 float；2^53+1 原樣發布，誤差不突破宣告。"""
         for sc in ({"mul": 1, "q": 0.5, "round": 0, "as": "c"}, {"mul": 1, "q": 0, "as": "c"}):

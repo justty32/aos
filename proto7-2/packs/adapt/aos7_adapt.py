@@ -19,7 +19,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = os.path.dirname(os.path.dirname(HERE))           # proto7-2/
 sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
-from aos7_fs import BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, fact, is_int, now, read_round, write_json  # noqa: E402
+from aos7_fs import BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, fact, is_int, now, read_round, sweep_tmp, write_json  # noqa: E402
 
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 AS_RE = re.compile(r"^[A-Za-z0-9_]{1,32}$")
@@ -451,6 +451,9 @@ class Adapter:
 
     def init(self):
         """啟動：框架不存在就建（since＝現在的回合）。宣告壞、回合不知道就留給第一圈。"""
+        removed = sweep_tmp(os.path.join(self.node, "in"))
+        if removed:
+            self.log("清掉 in/ 暫存檔：%s" % ", ".join(removed))
         d, ch, issue = self.load_decl()
         rnd = self.own_round()
         if issue or rnd is None:
