@@ -30,6 +30,8 @@ node 改成登記、不再掃資料夾；tock 預設照固定 interval，提前 
 
 10-09 第三段（仍不動核心）：LLM 單次呼叫閘道任務包 [packs/llmcall/](packs/llmcall/README.md)（假傳輸 `llm.fake`、不接真模型，藍圖 [blueprint-llm2](notes/blueprint-llm2.md)）；budget 改成部分結算（用多少扣多少）；author 加經事件必讀通道收單（`send`／`intake`）；事件保存兩條已知限制修掉。
 
+10-09 晚（上一輪 r3，仍不動核心）：一次備好 node 的 [`aos7-up`](modules/up/README.md)（含收信回信的 brain）與它用到的模組包 [wfnode](modules/wfnode/README.md)、[skills](modules/skills/README.md)、[routines](modules/routines/README.md)、[compact](modules/compact/README.md)、[mail](modules/mail/README.md)、[metrics](modules/metrics/README.md)，任務包 [prompt](packs/prompt/README.md)；A5 真 AI 學徒寫的 [usage](packs/usage/README.md)、[llmdiag](modules/llmdiag/README.md)；各包統一錯誤路徑（退出碼 0～4，[tests/error_path.json](tests/error_path.json)）。每包一列見 [INDEX](INDEX.md)。
+
 ## 怎麼跑
 
 ```sh

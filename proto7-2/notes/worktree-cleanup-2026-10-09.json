@@ -1,0 +1,610 @@
+{
+ "contract": "wf-table/1",
+ "source": "worktree-cleanup-2026-10-09.md",
+ "extracted": "2026-10-09",
+ "columns": [
+  "worktree",
+  "branch",
+  "in_main",
+  "ahead_of_main",
+  "untracked",
+  "action",
+  "cmd"
+ ],
+ "rows": [
+  {
+   "worktree": "",
+   "branch": "_check_main",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "等使用者（刪分支不可逆）",
+   "cmd": "git branch -d _check_main"
+  },
+  {
+   "worktree": "",
+   "branch": "apprentice/diag1_af24a314",
+   "in_main": "no",
+   "ahead_of_main": "1",
+   "untracked": "",
+   "action": "等使用者（刪分支不可逆）",
+   "cmd": "git branch -D apprentice/diag1_af24a314"
+  },
+  {
+   "worktree": "",
+   "branch": "apprentice/diag1_c029ed61",
+   "in_main": "no",
+   "ahead_of_main": "1",
+   "untracked": "",
+   "action": "等使用者（刪分支不可逆）",
+   "cmd": "git branch -D apprentice/diag1_c029ed61"
+  },
+  {
+   "worktree": "",
+   "branch": "apprentice/diag1_e8800ec9",
+   "in_main": "no",
+   "ahead_of_main": "1",
+   "untracked": "",
+   "action": "等使用者（刪分支不可逆）",
+   "cmd": "git branch -D apprentice/diag1_e8800ec9"
+  },
+  {
+   "worktree": "",
+   "branch": "apprentice/usage1_05263eae",
+   "in_main": "no",
+   "ahead_of_main": "1",
+   "untracked": "",
+   "action": "等使用者（刪分支不可逆）",
+   "cmd": "git branch -D apprentice/usage1_05263eae"
+  },
+  {
+   "worktree": "",
+   "branch": "apprentice/usage1_b8891b81",
+   "in_main": "no",
+   "ahead_of_main": "1",
+   "untracked": "",
+   "action": "等使用者（刪分支不可逆）",
+   "cmd": "git branch -D apprentice/usage1_b8891b81"
+  },
+  {
+   "worktree": "aos-wt/ER0",
+   "branch": "loop10/ER0",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER0 && git branch -d loop10/ER0"
+  },
+  {
+   "worktree": "aos-wt/ER-author",
+   "branch": "loop10/author",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-author && git branch -d loop10/author"
+  },
+  {
+   "worktree": "aos-wt/ER-compact",
+   "branch": "loop10/compact",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-compact && git branch -d loop10/compact"
+  },
+  {
+   "worktree": "aos-wt/ER-events",
+   "branch": "loop10/events",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-events && git branch -d loop10/events"
+  },
+  {
+   "worktree": "aos-wt/ER-llmcall",
+   "branch": "loop10/llmcall",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-llmcall && git branch -d loop10/llmcall"
+  },
+  {
+   "worktree": "aos-wt/ER-mail",
+   "branch": "loop10/mail",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-mail && git branch -d loop10/mail"
+  },
+  {
+   "worktree": "aos-wt/MC",
+   "branch": "loop10/mc",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/MC && git branch -d loop10/mc"
+  },
+  {
+   "worktree": "aos-wt/ER-pm",
+   "branch": "loop10/prompt-metrics",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-pm && git branch -d loop10/prompt-metrics"
+  },
+  {
+   "worktree": "aos-wt/ER-routines",
+   "branch": "loop10/routines",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-routines && git branch -d loop10/routines"
+  },
+  {
+   "worktree": "aos-wt/ER-skills",
+   "branch": "loop10/skills",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-skills && git branch -d loop10/skills"
+  },
+  {
+   "worktree": "aos-wt/ER-up",
+   "branch": "loop10/up",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-up && git branch -d loop10/up"
+  },
+  {
+   "worktree": "aos-wt/WFfix",
+   "branch": "loop10/wffix",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/WFfix && git branch -d loop10/wffix"
+  },
+  {
+   "worktree": "aos-wt/ER-wfnode",
+   "branch": "loop10/wfnode",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/ER-wfnode && git branch -d loop10/wfnode"
+  },
+  {
+   "worktree": "aos-wt/FL",
+   "branch": "loop11/FL",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "留（r4 FL 隊本輪現役；交件後下一輪再刪）",
+   "cmd": ""
+  },
+  {
+   "worktree": "aos-wt/A",
+   "branch": "loop7/A",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/A && git branch -d loop7/A"
+  },
+  {
+   "worktree": "aos-wt/A1",
+   "branch": "loop7/A1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/A1 && git branch -d loop7/A1"
+  },
+  {
+   "worktree": "aos-wt/B",
+   "branch": "loop7/B",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": ".loop7/",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove --force ../aos-wt/B && git branch -d loop7/B"
+  },
+  {
+   "worktree": "aos-wt/B2",
+   "branch": "loop7/B2",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/B2 && git branch -d loop7/B2"
+  },
+  {
+   "worktree": "aos-wt/E1",
+   "branch": "loop7/E1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/E1 && git branch -d loop7/E1"
+  },
+  {
+   "worktree": "aos-wt/E2",
+   "branch": "loop7/E2",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/E2 && git branch -d loop7/E2"
+  },
+  {
+   "worktree": "aos-wt/E3",
+   "branch": "loop7/E3",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/E3 && git branch -d loop7/E3"
+  },
+  {
+   "worktree": "aos-wt/G1",
+   "branch": "loop7/G1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/G1 && git branch -d loop7/G1"
+  },
+  {
+   "worktree": "aos-wt/K1",
+   "branch": "loop7/K1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": ".k1/",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove --force ../aos-wt/K1 && git branch -d loop7/K1"
+  },
+  {
+   "worktree": "aos-wt/K2",
+   "branch": "loop7/K2",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/K2 && git branch -d loop7/K2"
+  },
+  {
+   "worktree": "aos-wt/K3",
+   "branch": "loop7/K3",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/K3 && git branch -d loop7/K3"
+  },
+  {
+   "worktree": "aos-wt/K4",
+   "branch": "loop7/K4",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": ".k4/",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove --force ../aos-wt/K4 && git branch -d loop7/K4"
+  },
+  {
+   "worktree": "aos-wt/L1",
+   "branch": "loop7/L1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/L1 && git branch -d loop7/L1"
+  },
+  {
+   "worktree": "aos-wt/L3",
+   "branch": "loop7/L3",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/L3 && git branch -d loop7/L3"
+  },
+  {
+   "worktree": "aos-wt/L4",
+   "branch": "loop7/L4",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/L4 && git branch -d loop7/L4"
+  },
+  {
+   "worktree": "aos-wt/M",
+   "branch": "loop7/M",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": ".mteam/",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove --force ../aos-wt/M && git branch -d loop7/M"
+  },
+  {
+   "worktree": "aos-wt/R1",
+   "branch": "loop7/R1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/R1 && git branch -d loop7/R1"
+  },
+  {
+   "worktree": "aos-wt/S",
+   "branch": "loop7/S",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": ".codex-S/",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove --force ../aos-wt/S && git branch -d loop7/S"
+  },
+  {
+   "worktree": "aos-wt/T",
+   "branch": "loop7/T",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/T && git branch -d loop7/T"
+  },
+  {
+   "worktree": "aos-wt/V1",
+   "branch": "loop7/V1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/V1 && git branch -d loop7/V1"
+  },
+  {
+   "worktree": "aos-wt/V2",
+   "branch": "loop7/V2",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/V2 && git branch -d loop7/V2"
+  },
+  {
+   "worktree": "aos-wt/W1",
+   "branch": "loop7/W1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/W1 && git branch -d loop7/W1"
+  },
+  {
+   "worktree": "aos-wt/A4",
+   "branch": "loop8/A4",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": ".a4/",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove --force ../aos-wt/A4 && git branch -d loop8/A4"
+  },
+  {
+   "worktree": "aos-wt/A5",
+   "branch": "loop8/A5",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/A5 && git branch -d loop8/A5"
+  },
+  {
+   "worktree": "aos-wt/B3",
+   "branch": "loop8/B3",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/B3 && git branch -d loop8/B3"
+  },
+  {
+   "worktree": "aos-wt/C2",
+   "branch": "loop8/C2",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/C2 && git branch -d loop8/C2"
+  },
+  {
+   "worktree": "aos-wt/E1m",
+   "branch": "loop8/E1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/E1m && git branch -d loop8/E1"
+  },
+  {
+   "worktree": "aos-wt/H1",
+   "branch": "loop8/H1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/H1 && git branch -d loop8/H1"
+  },
+  {
+   "worktree": "aos-wt/NP",
+   "branch": "loop8/NP",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/NP && git branch -d loop8/NP"
+  },
+  {
+   "worktree": "aos-wt/P1",
+   "branch": "loop8/P1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/P1 && git branch -d loop8/P1"
+  },
+  {
+   "worktree": "aos-wt/S1",
+   "branch": "loop8/S1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/S1 && git branch -d loop8/S1"
+  },
+  {
+   "worktree": "aos-wt/T9",
+   "branch": "loop8/T9",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/T9 && git branch -d loop8/T9"
+  },
+  {
+   "worktree": "aos-wt/W1n",
+   "branch": "loop8/W1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/W1n && git branch -d loop8/W1"
+  },
+  {
+   "worktree": "aos-wt/X1",
+   "branch": "loop8/X1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/X1 && git branch -d loop8/X1"
+  },
+  {
+   "worktree": "aos-wt/F1",
+   "branch": "loop9/F1",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/F1 && git branch -d loop9/F1"
+  },
+  {
+   "worktree": "aos-wt/F2",
+   "branch": "loop9/F2",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/F2 && git branch -d loop9/F2"
+  },
+  {
+   "worktree": "aos-wt/RW-compact",
+   "branch": "loop9/compact",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/RW-compact && git branch -d loop9/compact"
+  },
+  {
+   "worktree": "aos-wt/RW-events",
+   "branch": "loop9/events",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/RW-events && git branch -d loop9/events"
+  },
+  {
+   "worktree": "aos-wt/RW-mail",
+   "branch": "loop9/mail",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/RW-mail && git branch -d loop9/mail"
+  },
+  {
+   "worktree": "aos-wt/RW-metrics",
+   "branch": "loop9/metrics",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/RW-metrics && git branch -d loop9/metrics"
+  },
+  {
+   "worktree": "aos-wt/RW-prompt",
+   "branch": "loop9/prompt",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/RW-prompt && git branch -d loop9/prompt"
+  },
+  {
+   "worktree": "aos-wt/RW-routines",
+   "branch": "loop9/routines",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/RW-routines && git branch -d loop9/routines"
+  },
+  {
+   "worktree": "aos-wt/RW-skills",
+   "branch": "loop9/skills",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/RW-skills && git branch -d loop9/skills"
+  },
+  {
+   "worktree": "aos-wt/RW-wfnode",
+   "branch": "loop9/wfnode",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "刪（已在 main）",
+   "cmd": "git worktree remove ../aos-wt/RW-wfnode && git branch -d loop9/wfnode"
+  },
+  {
+   "worktree": "",
+   "branch": "main-ref",
+   "in_main": "yes",
+   "ahead_of_main": "0",
+   "untracked": "",
+   "action": "不在本輪範圍，不動（roadmap-run 未進 main、已凍結；main-ref 舊參照）",
+   "cmd": ""
+  },
+  {
+   "worktree": "",
+   "branch": "roadmap-run",
+   "in_main": "no",
+   "ahead_of_main": "46",
+   "untracked": "",
+   "action": "不在本輪範圍，不動（roadmap-run 未進 main、已凍結；main-ref 舊參照）",
+   "cmd": ""
+  }
+ ]
+}

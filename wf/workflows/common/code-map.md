@@ -47,7 +47,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 **新增或刪除一個原始碼／測試檔（或某個檔的職責變了）時，那一列去哪裡加**：
 檔案在 `common/`／`app/`／`cmake/` 底下或是建置設定檔（含新增小專案要加的那行 `add_subdirectory()`）→ `code-map/build.md`。
 `core/exec`、`core/wire`、`core/loop`、`core/tick` 的逐檔表格放在小專案自己的 `README.md`，不另立分冊；`core/tool`、`core/llm`、`core/agent` 的逐檔表格在 `code-map/tool.md`、`code-map/llm.md`、`code-map/agent.md`，proto5/lib 逐模組一句在 `code-map/proto5-lib.md`。
-`proto7-2/`（Python 原型，現役）的逐檔表不另立分冊：核心 `lib/`、模組包、任務包一位置一列在 [proto7-2/INDEX.md](../../../proto7-2/INDEX.md)，測試一檔一列在 [proto7-2/tests/README.md](../../../proto7-2/tests/README.md)；改 proto7-2 的檔就同步這兩份（2026-10-09 loop7 起；同日下午新增的事件保存模組 `modules/events/`、LLM 作者任務包 `packs/author/` 也各在 INDEX 一列；第三段新增 LLM 單次呼叫閘道任務包 `packs/llmcall/`，budget 部分結算、author `send`／`intake`、events `status_last`／`torn_cut` 的職責變動也已寫進各自那列）。
+`proto7-2/`（Python 原型，現役）的逐檔表不另立分冊：核心 `lib/`、模組包、任務包一位置一列在 [proto7-2/INDEX.md](../../../proto7-2/INDEX.md)，測試一檔一列在 [proto7-2/tests/README.md](../../../proto7-2/tests/README.md)；改 proto7-2 的檔就同步這兩份（2026-10-09 loop7 起；同日下午新增的事件保存模組 `modules/events/`、LLM 作者任務包 `packs/author/` 也各在 INDEX 一列；第三段新增 LLM 單次呼叫閘道任務包 `packs/llmcall/`，budget 部分結算、author `send`／`intake`、events `status_last`／`torn_cut` 的職責變動也已寫進各自那列；10-09 r4 波 0 I5 補齊 r3 新增的 routines、skills、wfnode、metrics、compact、mail、llmdiag 七個模組包，prompt、usage 兩個任務包，up 的 brain／ask、author 的三關 checkers 與 toolcards、llmcall 兩種傳輸，測試導引補 28 個新測試檔）。
 未來多一個小專案，就在 `code-map/` 多一冊，並在 [code-map/README.md](code-map/README.md) 的完整對照表加一列。**這一步跟程式碼改動同一個 commit**（AGENTS.md 的「改了程式碼就要同步 code map」）。
 
 ---
