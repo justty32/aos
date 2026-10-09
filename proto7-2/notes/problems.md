@@ -254,7 +254,21 @@
 | E2 發布＋讀者 | 合作來源逐件發布、留存窗口去重、游標讀取與缺口回報（`8efedc44`、`0f10e115`） |
 | E3 整合 | [README](../modules/events/README.md)、`aos7-events read／pub` 子命令、真 daemon 300 回合長跑（數字見包 README「長跑」） |
 
+| V2 限制小修（第三段） | E1 列的兩條已知限制修掉：`--status` 去重鍵存 state.json `status_last`，重起不重記同一事件；截半行前先把 torn 與 `torn_cut` 同存 state、截後清標記，計數不再少 1（`fcf44fe4`、`eb78ea82`）。測試 `test_events_store` 的 `test_status_dedup_across_restarts`、`test_torn_and_tmp` |
+
 已知限制（不修）：見 [events README「已知限制」](../modules/events/README.md#已知限制)。
+
+## LLM 第二刀：llmcall 閘道與 budget 部分結算（10-09 第三段）
+
+依 [blueprint-llm2](blueprint-llm2.md)與[代定清單](decisions-2026-10-09.md)「第三段」；全程假傳輸，核心零改動。
+
+| 線 | 處理 |
+|---|---|
+| B2 budget 部分結算 | settle 收 0≤used≤預留，差額退回；usage 缺＝pending、預留不退；used>預留時結算預留額並記 overrun、不偽裝成功、**不自動停新預留**；cancel 遇別的入口的非終局紀錄回 unknown（`f8d71660`）。測試 `packs/budget/tests/test_budget_partial.py` |
+| G1 llmcall 閘道 | 新包 [packs/llmcall/](../packs/llmcall/README.md)：固定 call ID＋請求雜湊、預留→intent→假傳輸→存回覆與 usage→結算→回條；intent 後不明＝unknown 不重送；遲到回覆只能人手 `adopt`；退出碼 4＝內容已交付但帳未清（`712ea526`）。測試 `packs/llmcall/tests/test_llmcall.py`（F-01～F-04） |
+| V1 作者收單 | author 經事件必讀通道收需求（`send`／`intake`），回條是**收單回條**、寫成後才 ack；收單只登記不自動發布（`57a59b00`）。測試 `packs/author/tests/test_author_events.py` |
+
+已知限制：budget `cancel` 在 intent 寫入前取消時，取消紀錄缺 gateway／call_id 等欄（llmcall 會補預設值仍可用），要改 budget，留下一輪。
 
 ## 核心精簡：刪掉的誤用保護（10-04）
 

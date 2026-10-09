@@ -26,6 +26,8 @@ node 改成登記、不再掃資料夾；tock 預設照固定 interval，提前 
 
 10-09 下午新增（兩者都不動核心）：事件保存模組 [modules/events/](modules/events/README.md)（每 node 固定檔數存事件，藍圖 [blueprint-ev1](notes/blueprint-ev1.md)）、LLM 作者第一刀任務包 [packs/author/](packs/author/README.md)（假候選、不接真模型，藍圖 [blueprint-llm1](notes/blueprint-llm1.md)）。
 
+10-09 第三段（仍不動核心）：LLM 單次呼叫閘道任務包 [packs/llmcall/](packs/llmcall/README.md)（假傳輸 `llm.fake`、不接真模型，藍圖 [blueprint-llm2](notes/blueprint-llm2.md)）；budget 改成部分結算（用多少扣多少）；author 加經事件必讀通道收單（`send`／`intake`）；事件保存兩條已知限制修掉。
+
 ## 怎麼跑
 
 ```sh
