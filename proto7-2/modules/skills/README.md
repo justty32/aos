@@ -70,7 +70,7 @@ sed -e 's/"author"/"skills"/' -e 's/: 1000,/: 100000,/' "$P/packs/llmcall/exampl
     kill $L; } )
 ```
 
-印 `{"ok": true, "why": null}`（開帳成功）和同一個 `aos-inbox/SKILL.md` 路徑就對了。換真 AI：grant 的 `gateway` 改 `llm.litellm`，模型用 `--model`（預設 `chatgpt-gpt-6-sol-high`）。同題同目錄同模型再問一次不會重問，只重印上次的結果。
+印 `{"ok": true, "why": null}`（開帳成功）和同一個 `aos-inbox/SKILL.md` 路徑就對了。換真 AI：另開一個新 node（開過的帳不能改），grant 的 `gateway` 寫 `llm.litellm`，模型用 `--model`（預設 `chatgpt-gpt-6-sol-high`）；或直接跑題庫 `bank.py --gateway llm.litellm`（見下）。同題同目錄同模型再問一次不會重問，只重印上次的結果。
 
 ## 進階：必用表
 
