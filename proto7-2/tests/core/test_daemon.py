@@ -759,6 +759,41 @@ class TestDaemonDurableRecovery(DaemonCase):
         d.round_done("a")
         self.assertEqual(read_json(os.path.join(self.root, ".aosd", "paused.json"))["steps"], {"a": {"k": 1}})
 
+    def test_slot_kill_unknown_is_not_clean(self):
+        """逐槽 kill 回 unknown（K1：runner 還在啟動、任務還沒起）＝未確認乾淨：unregister 的意圖留著、隔一陣再逐槽收，
+        確定了才清；stop 收尾時仍不確定的寫進 reaping（stop-kill）留給重開。"""
+        node = self.mknode("a", [self.KEEP])
+        self.tick()
+        self.ready_task(node)
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.reaping = {"a": {"why": "unregister-kill"}}
+        d.save_nodes()
+        unknown = (False, "unknown：runner 仍在啟動、還沒寫 pid.json，請求留著下次再試")
+        with mock.patch.object(aos7_proc, "kill_node", return_value=(0, True)), \
+                mock.patch.object(aos7_task, "kill_run", side_effect=[unknown, (True, "killed 1 group(s)")]) as kr:
+            d.check_nodes()
+            d.reapers["a"].join(10)
+            self.assertEqual(kr.call_count, 1)
+            self.assertIn("a", d._kill_unsure)
+            d.check_nodes()
+            self.assertIn("a", self.nodes_state()["reaping"], "槽級 unknown 就當收乾淨")
+            d._reap_mem["a"]["at"] -= aos7_daemon.REAP_RETRY_S
+            d.check_nodes()
+            d.reapers["a"].join(10)
+            self.assertEqual(kr.call_count, 2)
+            d.check_nodes()
+        self.assertNotIn("reaping", self.nodes_state())
+        self.assertNotIn("a", d._kill_unsure)
+        d2 = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d2.rfd)
+        d2.registry = {"a": {}}
+        d2._kill_unsure = {"a"}
+        with mock.patch.object(aos7_proc, "kill_node", return_value=(0, True)), \
+                mock.patch.object(aos7_task, "kill_run", return_value=unknown):
+            d2.sweep_leftovers()
+        self.assertEqual(self.nodes_state()["reaping"]["a"]["why"], "stop-kill")
+
     def test_stop_sweep_includes_unregistered_reaping_intents(self):
         d = aos7_daemon.Daemon(self.root)
         self.addCleanup(os.close, d.rfd)

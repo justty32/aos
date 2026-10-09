@@ -22,6 +22,7 @@ CTL_BUDGET_S = 0.05  # 一圈處理控制檔最多花幾秒（跟 CTL_BATCH 取�
 LIVE_EVERY = 0.25    # status 的 live 與記著的 pgid 多久重算一次（秒）
 SWEEP_EVERY = 1.0    # 多久清一次 .aosd／ctl／ctl-done 裡寫者已死的暫存檔（秒）
 REAP_RETRY_S = 1.0   # 未確認收乾淨的 node，兩次起收至少隔幾秒
+SLOT_KILL = ("unregister-kill", "stop-kill")   # 這兩種回收意圖也逐槽收（node 還是同一個，槽裡的任務該收）
 
 
 def norm_id(node):
@@ -61,6 +62,7 @@ class Daemon:
         self.node_errors = {}        # {id: last_error}：沒有時間線時的錯誤（看不到…）
         self.reapers = {}            # {id: thread}：node 消失時在背景收程序；收完才重開時間線
         self.retiring = {}           # {id: (Timeline, kill)}：unregister 中
+        self._kill_unsure = set()    # 槽級 kill 回過 unknown 的 id（runner 還沒起任務）：再逐槽收一次確定了才算乾淨
         self.gone_tls = {}           # {id: Timeline}：node 消失後還沒結束的舊時間線（結束後再掃一次才算收乾淨）
         self.stopping = False
         self.stopping_since = None
@@ -535,6 +537,8 @@ class Daemon:
         def work():
             test_point("reap-before-kill")
             n, clean = aos7_proc.kill_node(node, known)
+            if nid in self._kill_unsure or ((self.reaping.get(nid) or {}).get("why") in SLOT_KILL and os.path.isdir(node)):
+                clean = self.kill_live(nid, node) and clean   # 逐槽再收：runner 還在啟動的槽確定了才算乾淨
             self._reap_mem[nid]["clean"] = clean
             self.log(ev=ev, node=nid, groups=n, ok=clean, **({"why": why} if why else {}))
         th = threading.Thread(target=work, name="reap:" + nid, daemon=True)
@@ -542,20 +546,29 @@ class Daemon:
         th.start()
 
     def kill_live(self, nid, node):
-        """stop／unregister 帶 kill 時：逐槽收活任務，再掃一次 Q1 範圍。一個槽出事只記它。"""
+        """stop／unregister 帶 kill 時：逐槽收活任務，再掃一次 Q1 範圍。一個槽出事只記它。回 True＝確認收乾淨；
+        有槽的 kill 回不成（例：runner 還沒起任務）或出錯＝不確定，記進 _kill_unsure，由回收重試。"""
         if nid in self.reaping:
             test_point("reap-before-kill")  # 退休時間線可能早於 reaper 收任務，也要能重現這個中斷窗口
         slots, _ = aos7_task.list_slots(node)
+        sure = True
         for slot in slots:
             fslot = aos7_task.slot_dir(node, slot)
             try:
                 v = aos7_task.judge(fslot, node, slot, None)
                 if v.state in (aos7_task.LIVE, aos7_task.SUSPECT) and v.run is not None:
                     ok, msg = aos7_task.kill_run(fslot, node, slot, v)
+                    sure = sure and ok
                     self.log(ev="kill", node=nid, run=aos7_task.run_id(slot, v.run), ok=ok, msg=msg)
             except Exception as e:   # noqa: BLE001
+                sure = False
                 self.log(ev="kill-error", node=nid, slot=slot, err=repr(e)[:200])
-        aos7_proc.kill_node(node, self._pgids.get(nid, ()))
+        _n, clean = aos7_proc.kill_node(node, self._pgids.get(nid, ()))
+        if sure:
+            self._kill_unsure.discard(nid)
+        else:
+            self._kill_unsure.add(nid)
+        return sure and clean
 
     def live_of(self, nid, tl):
         """status 的 live（每 LIVE_EVERY 秒重算），順便記下活任務的 pgid（node 消失時收）。只讀不殺。
@@ -589,10 +602,20 @@ class Daemon:
 
     def sweep_leftovers(self):
         """stop 帶 kill 的最後收尾：照環境身分再掃一次所有已登記 node 的殘留（spec §2.7）。"""
+        # 時間線逐槽收時不確定的再收一次；仍不確定＝意圖落盤，重開後續收
+        held = [nid for nid in sorted(self._kill_unsure) if not self.kill_live(nid, node_path(self.root, nid))]
+        for nid in held:
+            self.reaping.setdefault(nid, {"since": now(), "why": "stop-kill"})
         nodes = [node_path(self.root, n) for n in set(self.registry) | set(self.reaping)]
         if nodes:
             n, clean = aos7_proc.kill_node(nodes)
             self.log(ev="stop-sweep", groups=n, ok=clean)
+            if held:
+                clean = False
+                try:
+                    self.save_nodes()
+                except OSError as e:
+                    self.log(ev="nodes-save-error", err=repr(e)[:300])
             if clean:
                 try:
                     self.save_nodes(reaping={})
