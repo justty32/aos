@@ -38,3 +38,4 @@
 - **已知限制（未修）**：參考實作的檔名是編碼後的 node id 加 `.jsonl`，編碼後超過約 249 bytes（一般檔案系統單一檔名上限 255 bytes；開 `--max-lines` 時暫存檔名再多 5 bytes，約 244）就寫不出來，追加丟例外、整個歷史任務退出（keep 再起又退），同一個任務的其他來源也跟著記不到；很長的 node id 先縮短，或改用自己的命名。
 - **daemon 事件**：任務只能從 status 的 `last_event` 取樣，可能漏。要完整的流水帳，放一個空檔 `<root>/.aosd/log.on`（核心的事件出口），daemon 就把事件追加到 `.aosd/log.jsonl`，不清、不輪替，開的人自己管大小（例如讓歷史 module 定期截斷）。
 - 不選「核心提供每回合鉤子」：鉤子要在 tock 裡同步呼叫外部程式，失敗、逾時、它自己的歷史都會變成核心的邊緣狀況。
+| [llmdiag](llmdiag/README.md) | 唯讀列出 node 的 pending、halted 與 budget inflight |
