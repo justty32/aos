@@ -212,7 +212,7 @@ def local_summary(old, limit, suffix=".jsonl"):
 
 
 def _local_summary(old, limit, suffix):
-    """本機摘要：按信（或「其他」）分段，每段列出做了什麼；放不下就縮短每項、再省略中段。"""
+    """本機摘要：按每件事（信 id 或 re 欄，沒有就「其他」）分段，每段列出做了什麼；放不下就縮短每項、再省略中段。"""
     items = [item(p, suffix) for p in old]
     earlier = "；".join(i["summary"] for i in items if "summary" in i)
     groups = {}
@@ -244,7 +244,7 @@ def _local_summary(old, limit, suffix):
                 whats = whats[:1] + [f"…略 {len(whats) - 1 - tail} 項…"] + whats[-tail:]
             steps = [r["step"] for r in rows if r["step"] is not None]
             short = re.sub(r"-\d{8}T\d{6}-", "-…", key) if key else None  # 信 id 留寄件人與尾碼，夠對得回去
-            head = (f"信 {short}" if key else "其他") + (f" {len(rows)} 則" if len(rows) > 1 else "")
+            head = (short if key else "其他") + (f" {len(rows)} 則" if len(rows) > 1 else "")
             if steps:
                 head += f"（第 {min(steps)}～{max(steps)} 回合）" if min(steps) != max(steps) else f"（第 {steps[0]} 回合）"
             segs.append(head + "：" + " → ".join(w if w.startswith("…略 ") else clip(w, width) for w in whats))
