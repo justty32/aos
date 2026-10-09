@@ -6,7 +6,7 @@
 
 **②必要的副作用**：寫 `<node>/author/req/<rid>/…`、`<node>/jobs/<job>/`；`publish` 把自己那一項合進 `.aos/tasks.json`（發布＝掛任務）；`--llm` 經 llmcall（花錢）；三關檢查器 `check` 起 bwrap 沙盒（斷網、唯暫存可寫）跑學徒的測試；三關 `publish` 只新建 `apprentice/<rid>_<sha8>` 分支，不碰 HEAD／工作樹。
 
-**③不做**：不幫學徒改碼、不自動合進 main、不跳關。
+**③不做**：不幫學徒改碼、不自動合進 main、不跳關（任務型候選走「兩層檢查＋發布後驗答案」是設計，不是少一關）。
 
 **④多出來的（現狀）**
 - 三關 `--reviewer` 預設 `astra`：第一次跑就呼叫 codex 花錢 → **改成可選**：預設 `rules`（離線），`astra` 明示才用。

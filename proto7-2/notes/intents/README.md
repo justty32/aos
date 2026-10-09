@@ -18,3 +18,4 @@
 | [author](author.md) | 4 | 可選 2、保留 2 |
 | [budget](budget.md) | 0 | — |
 | [up](up.md) | 設計中 | 統一負責跨包副作用 |
+| [diag](diag.md) | 3（併入 llmdiag） | 一輪轉址 1、保留 2 |
