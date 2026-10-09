@@ -1,4 +1,4 @@
-# author 包 spec（第一刀：CSV 固定工具作者，假候選）
+# author 包 spec（CSV 固定工具作者，檔案／LLM 候選）
 
 ← [author 包](README.md)｜[藍圖 llm1](../../notes/blueprint-llm1.md)｜[step spec](../step/spec.md)｜[核心 spec](../../spec.md) §4.1／§4.3
 
@@ -98,11 +98,11 @@ step 不改：表項起 `aos7-step run jobs/<job>`（keep、`max_live:1`、`rest
 
 ## 8. 退出碼與錯誤
 
-CLI 印 JSON `{ok, why, ...}`。`0` 成功（含 dup）、`2` invalid（候選、需求、驗證、`payload_changed`）、`3` conflict（rid 異內容、同名表項改過／disabled、job 撞名、已結案、close 條件不足）、`4` unknown（帳或表讀不到／壞、鎖逾時、只有 intent）、`5` full（版本上限）。事件收件見 §10；不接模型、無自動 JSON 修復。
+CLI 印 JSON `{ok, why, ...}`。`0` 成功（含 dup）、`2` invalid（候選、需求、驗證、`payload_changed`）、`3` conflict（rid 異內容、同名表項改過／disabled、job 撞名、已結案、close 條件不足）、`4` unknown（帳或表讀不到／壞、鎖逾時、只有 intent）、`5` full（版本上限）。事件收件見 §10；無自動 JSON 修復。
 
 ## 9. 明確不管
 
-人手改 `author/` 帳、不拿表鎖改 tasks.json、同 node 兩套作者帳、執行中換版、自動 retire 舊版、真模型與 token 帳（第二刀）。
+人手改 `author/` 帳、不拿表鎖改 tasks.json、同 node 兩套作者帳、執行中換版、自動 retire 舊版。
 
 ## 10. 事件收件（ev1 must）
 
@@ -115,3 +115,12 @@ CLI 印 JSON `{ok, why, ...}`。`0` 成功（含 dup）、`2` invalid（候選�
 - 開頭在鎖內清作者夾的死暫存（回條寫到一半被殺不累積）；需求驗證中的編碼／值錯誤（如路徑含孤立代理字元）＝invalid，不當 unknown。
 - 回條前被殺重讀同筆；回條後被殺只補 ack、不重做。成功回 `{ok:true,why:null,handled:[{seq,rid,result}],cursor,acked_upto}`，unknown 回 `{ok:false,why:"unknown",handled,error}`。
 - 明確不管：多消費者、自動發布、obs 通道、窗口外去重；其他界線見 §9。
+
+## 11. LLM 來源（--llm）
+
+- `propose <rid> --llm MODEL --budget DIR [--call C] [--reserve 1000000] [--deadline D] [--patience 5] [--auto]`；與 `--candidate` 互斥，`--llm` 必須帶 budget。`--prompt-out f` 只寫請求，成功退出 0，不呼叫、不記候選。
+- author 鎖外讀登記需求與白名單卡。system 要求只輸出一個 JSON 物件、只能組卡、不宣告執行屬性；user 含需求原文、卡的 argv／params／artifacts、候選 schema、§3／§4 展開與限制，不放 valid.json。排序鍵、固定分隔、UTF-8 序列化，內容與模型相同即同 bytes。
+- 請求＝`{"litellm":{"model":MODEL,"messages":[system,user]}}`，不設 max_tokens／temperature。預設 call_id＝`<rid>-<model 只留 [A-Za-z0-9_-]>-<請求 sha256 前8>`；前兩段合起來截至 55 字，尾端 `-<雜湊前8>` 一定保留（不同請求不撞 call_id）。重跑由 llmcall 重印回條；新生成由呼叫者明給新 `--call`。
+- 請求暫存檔交 `python3 <llmcall_bin> call DIR --holder author --call C --logical author/<rid> --request TMP --reserve R [--deadline D] --patience P`（cwd=node），用完刪除；讀 stdout 最後一行 JSON。
+- llmcall 退出 0／4、outcome 是 answered 且 text 是字串：UTF-8 bytes 原樣交既有 propose，不剝圍欄、不修復，三層驗證與作者帳語意不變。加 `llm` 回值：model、call_id、exit、outcome、usage、used、billing、reserve、receipt_path（llmcall receipt 絕對路徑，不存在則 null）。pending／overrun 照 llmcall 原值記錄。
+- 退出 3＝author unknown；1／2、其他未交付、text 非字串或讀不到回條＝invalid，不碰候選帳。傳輸、去重、token 帳由 llmcall／budget 負責，不在 author 重做。

@@ -7,7 +7,7 @@
     aos7-author answer <rid> [--sha S]
     aos7-author status|close <rid>
 
-命令都在 node 目錄（cwd）下跑。第一刀不接模型：候選由 --candidate 注入（第二刀換 gateway、介面不變）。
+命令都在 node 目錄（cwd）下跑。候選由 --candidate 注入或 --llm 經 llmcall 產生。
 帳只在 `<node>/author/`：共用鎖 `author.lock`，每需求 `req/<rid>/` 固定五檔
 （request／candidate／verdict／intent／receipt），版本以 candidate_sha 為鍵放在檔內，不隨候選或回合增檔。
 退出碼：0 成功、2 invalid、3 conflict、4 unknown、5 full。
@@ -811,10 +811,18 @@ def intake(node, events_dir, limit=20):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-author", description="author 任務包：CSV 固定工具作者（第一刀，假候選）")
+    ap = argparse.ArgumentParser(prog="aos7-author", description="author 任務包：CSV 固定工具作者（檔案／LLM 候選）")
     ap.add_argument("cmd", choices=("register", "propose", "publish", "answer", "status", "close", "send", "intake"))
     ap.add_argument("arg", nargs="?", help="register 給需求檔；其餘給 rid")
-    ap.add_argument("--candidate", help="propose：候選檔")
+    source = ap.add_mutually_exclusive_group()
+    source.add_argument("--candidate", help="propose：候選檔")
+    source.add_argument("--llm", help="propose：模型名（經 llmcall）")
+    ap.add_argument("--budget", help="propose --llm：budget 目錄")
+    ap.add_argument("--call", help="固定 call_id；新生成請明給新 ID")
+    ap.add_argument("--reserve", type=int, default=1000000)
+    ap.add_argument("--deadline", type=float)
+    ap.add_argument("--patience", type=int, default=5)
+    ap.add_argument("--prompt-out", help="只輸出 llmcall 請求、不呼叫")
     ap.add_argument("--auto", action="store_true", help="propose：固定試驗，過了直接發布")
     ap.add_argument("--sha", help="publish／answer：指定版本（預設 active）")
     ap.add_argument("--resend", action="store_true", help="publish：結果 unknown 的版本由人負責重走首次發布")
@@ -823,15 +831,25 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if a.cmd != "intake" and a.arg is None:
         ap.error("此命令需要需求檔或 rid")
+    if a.llm and not a.budget:
+        ap.error("--llm 必須帶 --budget")
+    if a.prompt_out and not a.llm:
+        ap.error("--prompt-out 必須帶 --llm")
     nd = Node()
     if a.cmd in ("send", "intake"):
         r = send_request(nd, a.arg, a.events) if a.cmd == "send" else intake(nd, a.events, a.limit)
     elif a.cmd == "register":
         r = register_request(nd, a.arg)
     elif a.cmd == "propose":
-        if not a.candidate:
-            ap.error("propose 要 --candidate")
-        r = propose(nd, a.arg, candidate_path=a.candidate, auto=a.auto)
+        if a.llm:
+            from aos7_author_llm import propose_llm
+            r = propose_llm(nd, a.arg, model=a.llm, budget=a.budget, call=a.call,
+                            reserve=a.reserve, deadline=a.deadline, patience=a.patience,
+                            prompt_out=a.prompt_out, auto=a.auto)
+        else:
+            if not a.candidate:
+                ap.error("propose 要 --candidate 或 --llm")
+            r = propose(nd, a.arg, candidate_path=a.candidate, auto=a.auto)
     elif a.cmd == "publish":
         import aos7_author_pub
         r = aos7_author_pub.publish(nd, a.arg, candidate_sha=a.sha, resend=a.resend)

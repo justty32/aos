@@ -1,0 +1,11 @@
+{
+ "rid": "csv1",
+ "candidate_sha": "11bc2761c37c2a0a248f4c39c28d5154c5c5105583759da76a8fc24e0e40d67e",
+ "answer": {
+  "ok": true,
+  "issues": [],
+  "checker_sha256": "e383c9151da84550ded7875aa433d992726c075bfd733a81797c334efae67db6"
+ },
+ "ok": true,
+ "why": null
+}

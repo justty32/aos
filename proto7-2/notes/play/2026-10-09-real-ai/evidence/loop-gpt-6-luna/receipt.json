@@ -1,0 +1,40 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-luna-b200ca02",
+ "logical": "author/csv1",
+ "kid": "6b030e14f3b57e1788a5",
+ "key": {
+  "budget": "llm",
+  "holder": "author",
+  "request": "csv1-chatgpt-gpt-6-luna-b200ca02"
+ },
+ "req_sha": "b48294436dd9f9fcc2160f0d14ea195b1f5e431c869ee66a00e9bbb9db4c3942",
+ "meter": "litellm.total_tokens/1",
+ "bound": "soft",
+ "reserve": 1000000,
+ "outcome": "answered",
+ "usage": {
+  "completion_tokens": 186,
+  "prompt_tokens": 2365,
+  "total_tokens": 2551,
+  "completion_tokens_details": {
+   "reasoning_tokens": 35
+  },
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "used": 2551,
+ "overrun": 0,
+ "billing": "final",
+ "raw_sha": "fb37202b0474578e9f1a3075694c74c562977fbc1bc39106464f0ddbc43e302d",
+ "text": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"將 CSV 轉換為 JSON，統計每個部門的筆數、總額與平均，並輸出報告。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+ "settle": {
+  "seq": 2,
+  "used": 2551,
+  "overrun": 0,
+  "outcome": "answered",
+  "evidence": "81609fde43ae982be1b87e5604bb3ff085c98f0ee4f135a746e93f8ec4fc1f19",
+  "at": "2026-10-09T14:35:23.267"
+ }
+}

@@ -1,0 +1,63 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-sol-9adca337",
+ "req_sha": "579d7f4b7427aa13cd4bea0aa7e0aff0d254ba99c7b9a78972196010e14600c6",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"依部門統計 data.csv 的筆數、總額與平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"error\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"done\",\"fail\":\"error\"}],\"ends\":{\"done\":\"ok\",\"error\":\"failed\"}}",
+  "usage": {
+   "completion_tokens": 262,
+   "prompt_tokens": 2365,
+   "total_tokens": 2627,
+   "completion_tokens_details": {
+    "reasoning_tokens": 125
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "model": "chatgpt-gpt-6-sol",
+  "finish_reason": "stop",
+  "http": 200,
+  "elapsed": 6.809,
+  "response": {
+   "id": "chatcmpl-8d09f2a4-ab65-4233-907e-b26627c1b05f",
+   "created": 1791527747,
+   "model": "chatgpt-gpt-6-sol",
+   "object": "chat.completion",
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "message": {
+      "content": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"依部門統計 data.csv 的筆數、總額與平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"error\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"done\",\"fail\":\"error\"}],\"ends\":{\"done\":\"ok\",\"error\":\"failed\"}}",
+      "role": "assistant",
+      "reasoning_content": "",
+      "reasoning_items": [
+       {
+        "type": "reasoning",
+        "id": "rs_0de5e4e75384780c016ac88b492bb48191a9754533b834ec05",
+        "encrypted_content": "gAAAAABqyItJViIkKi4cg8sQlX4iWxH6AgZzDaOtsknt1WLAz-FLaFSJrF0j3v59I_N4vAXaAHmU0KEqUUB3dEjSOW1-uEgsgmzs4fsS5xmsMiMbM2lRooitbu6DFfQ2cY0q4oCe_BXrHmqWe3EwKB5p9gFw58eTrSQV2We6MMA55yMCFE5U_a3G4XwIHBtqiaKx0hWmk9QHccgrYFete6hKNfpskINmmDRVCOWQ12nGEunznr4l4IwwWsMV99M9VcjZQQrQ84pl_Em8XaQtcKe2350rP0HiZ4xTCMkdXxVXGwrnNnNq7An2Q677XkgAwTaBVxrR9Pgn9lOSDD2XM6rTejU_3wtKm0eB4No-p0ldpbIQxoY8tadYuy5TgUnd1edoaHD6tyukPw39TTzlncH-qpZti7LAH1yhVQZHVYv9h4Hc6yu6ji37k3K4LKpBfUdqISD8rDpUhMGh050VdIV2x1eOsq7txkrWyxCPLsK2hBxflGr5-0kkvyIrDpNIb-X-FdF05sj6Sq-ykjyDYl1Z4zGegmo9zFs3SKpT0v__wOv31wgE8aVOslyfR6RbjMmD3oj0f3Jz14Ui-txrrjisAcQDXSC8-76a8A7JPlgdLa_qw5VXEgLzPW2E0qOc0i3lxQnKV8CpjTBqnoxBdjRPbtkvdrWrooZMlYEwWl0siw8Eri2SS9E1_4SidMGykEcVOVhegMuD7YD9ZzMsuwoJ9q_GFqlNWs7EBQgvZsRe-yQ5Hk6rh3dqKO94AvFS3sXEiQuNKpC8GDeLoc2cNxIQTqx8ImzbcACap-JqEyvsZR1Y4e7FYwbDySC3abx0R_ihvul29sFmNvzCgEv8Z_2S-QQXPNAmTmz0eda5nBMI84cFW9kIKL58aNO2QHV3TQ-qf_nK8zktCWwlvMteAu_-ghpLvGnueYKu0nMUjUSExBnxFGfqXurMdV8kBKD0vg319tSb-SydWec_C8codzHvZFDW5YsTC1LHiejjOCWxX5kRTsZ-EyNDJ0akUPMMo3uidxwpwnE_Jk0EXqCY1NyFsc4fNiRbk-rSMK0YJf-QqbZJT103R8wD6Wyys_qiyxi3w06AZkN4bymhdP7ucWGqEBwyq-r1khhPX288cEXvaD-ebW-4hXsTyoPC7FbGAaeK9Ua4IyQJk6dkTXTN2-GrWNqJ9Sl1-1opQLTodqJhJLINzhLKGjtybI7absL9UsY-IZBBQD1ePVLAkB8o6voU_bzCjleZ06FoNCnk7PRKBj0J4QXVn8oU8ic_V6cd-dFIi7lD3038vzzUp7KcldnXAp4AgYHi069P9MJJGG1igoB_0T9n7AWYNt0Cs6qqLPtugGejmOqDFiDm3KECKzz2EXAOL-ULCtCBKxQga8D3icMKNQZZJnyt9iwpJrEwM4UUOUX7IXqp33cyHzOMakInnHKpBlxmGt3O8Ky3YfU6pAhlB6_v93c_z6gLqtGgwn5nn0RvhSJNYhNjENXye1v86eO2Is2f99PatThJnLmE_rEuNHqS0p7X1181ENxh7SOPbxbIiAhYz5mBWWy7Lq2jD1RfEhGuSIdWelthHK577Zn84jGRb7KSyjZSVjbHUp9nmxN5yE08gZdoLUMKeU0ppxxpe8uEGTbm4UranClPJaGwF61JQN_Tf48FI8cnkc4MAS4fOl0uXnBULV3FR4pp6wTd3nwBMwr0Q0cYlEMskL9X7zCBSp6eMeLzAOQm7npIajx_0z-Qs5kAZoqLLfNgW2mjCugmYpUlugs_S5dljtDzHfSzOnLw48tk2SJhV4IM0pCYHzaDbWSyV89PxeVj2wG0UGEgG1BjKXtoYc6ihDGAIfId7dCUz0Do_pDQ5vySHcQ2SMdb4DxJx1Pkp43nKeKc-cHZoMMl6mIwudB4F62-I_JQ1ldAOEq2Hjb6AxWyDKy6HfTVtVDpvsVDWUW6CSpJfe1GQRnVymw2J4iYnwwLlV9651rH0BXC8z_78ECrIQDV0i49FKlQDg2AEmkERV72iqxF-w==",
+        "summary": []
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "completion_tokens": 262,
+    "prompt_tokens": 2365,
+    "total_tokens": 2627,
+    "completion_tokens_details": {
+     "reasoning_tokens": 125
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  }
+ },
+ "at": "2026-10-09T14:35:54.678"
+}

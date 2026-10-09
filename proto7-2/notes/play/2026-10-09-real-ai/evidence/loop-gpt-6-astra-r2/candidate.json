@@ -1,0 +1,10 @@
+{
+ "v": 1,
+ "active": "ebf3710e7b8b23d8b2a824767634c7ea7f59bf0ed19d011cc039b9f815de2c0d",
+ "versions": {
+  "ebf3710e7b8b23d8b2a824767634c7ea7f59bf0ed19d011cc039b9f815de2c0d": {
+   "size": 461,
+   "raw": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"部門統計：計算每個部門的筆數、總額與平均。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"done\",\"fail\":\"failed\"}],\"ends\":{\"done\":\"ok\",\"failed\":\"failed\"}}"
+  }
+ }
+}
