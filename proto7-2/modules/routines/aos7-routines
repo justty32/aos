@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""人用 add／ls／rm；無子命令時當普通 keep 任務。"""
+from aos7_routines import main
+
+if __name__ == "__main__":
+    raise SystemExit(main())
