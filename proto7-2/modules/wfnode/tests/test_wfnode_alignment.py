@@ -93,7 +93,7 @@ class AlignmentTests(unittest.TestCase):
             result = run('init', node)
             self.assertEqual(result.returncode, 0, result.stdout)
             self.assertEqual(path.read_bytes(), before)
-            self.assertIn('待人決定 1 段', result.stdout)
+            self.assertIn('要你決定：1 段', result.stdout)
             self.assertIn(f'wf/workflows/schedule.md:{number}', result.stdout)
             result = run('check', node)
             self.assertEqual(result.returncode, 1, result.stdout)

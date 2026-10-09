@@ -123,8 +123,7 @@ def init(node, flavor=None):
                 import sys
                 print(result.stderr, end='', file=sys.stderr)
                 return 1
-            for handled in resolve(staged / 'wf'):
-                print(f'已處理導入判斷：{handled}')
+            resolve(staged / 'wf')  # 模板原文的預設段由工具自動照 aos node 事實改好，不必讓人看
             fill_node(staged, node.name)
             supplement(staged)
             for item in sorted(staged.iterdir(), key=lambda p: (p.name == 'AGENTS.md', p.name)):
@@ -136,36 +135,49 @@ def init(node, flavor=None):
     unknown = sum(line.count('（未定：') for _, _, line in scan(node, '（未定：'))
     decisions = scan(node, '〔導入判斷〕')
     residue = scan(node, '{{')
-    print(f'node：{node}\n{{{{ 剩 {sum(line.count("{{") for _, _, line in residue)}；未定 {unknown} 處')
-    print(f'待人決定 {len(decisions)} 段')
-    for path, number, _ in decisions:
-        print(f'{path}:{number}')
+    print(f'裝好了：{node}（AI 開場讀 AGENTS.md；人不必讀）')
+    left = sum(line.count('{{') for _, _, line in residue)
+    if left:
+        print(f'還有 {left} 處 {{{{ 沒填好：再跑一次 init 會補')
+    print(f'空格：{unknown} 處寫著「（未定：…）」＝工具查不到、之後由你或 AI 慢慢補；'
+          '不影響使用，check 也不檢查它')
+    if decisions:
+        print(f'要你決定：{len(decisions)} 段（標著〔導入判斷〕；改好或刪掉標記前 check 不會過）')
+        for path, number, _ in decisions:
+            print(f'{path}:{number}')
     print(f'下一步：aos7-wfnode check {shlex.quote(str(node))}')
     return int(bool(residue))
 
 
 def check(node):
     if not (node / 'wf/tools/wf-lint.sh').is_file():
-        print('還沒 init')
+        print('還沒 init，先跑：aos7-wfnode init <node>')
         return 2
     failed = lint(node)
+    counts = []
     for name in ('SESSION-LOG.md', 'WAIT_USER.md'):
         path = node / 'wf' / name
         lines = path.read_text(encoding='utf-8').splitlines() if path.exists() else []
         entries = [(i, line) for i, line in enumerate(lines, 1) if re.match(r'^- \[', line)]
-        print(f'{name}：open 項 {len(entries)}')
+        counts.append(len(entries))
         for number, line in entries:
             if re.search(r'^- \[[xX✓✔]\]|✅|✔|~~|已完成|已結案|已收線|（完成）|\(done\)|\[done\]|DONE', line):
                 print(f'{name}:{number}: {line}\n做完就刪掉這行（歷史在 git log）')
                 failed = True
-    for marker in ('{{', '〔導入判斷〕', '〔模板說明〕'):
+    for marker, why in (('{{', '沒填的模板空格，再跑一次 init 會補'),
+                        ('〔導入判斷〕', '要你決定的段落：改好後刪掉這個標記'),
+                        ('〔模板說明〕', '模板說明：讀完刪掉這段')):
         found = scan(node, marker)
-        print(f'{marker}：剩 {sum(line.count(marker) for _, _, line in found)} 處')
+        if found:
+            print(f'{marker}：剩 {sum(line.count(marker) for _, _, line in found)} 處（{why}）')
         for path, number, line in found:
             print(f'{path}:{number}: {line}')
             failed = True
+    print(f'待辦清單：AI 手上 {counts[0]} 件（wf/SESSION-LOG.md）、等人做 {counts[1]} 件（wf/WAIT_USER.md）')
     if not failed:
-        print('OK：連結、活狀態與佔位檢查通過')
+        unknown = sum(line.count('（未定：') for _, _, line in scan(node, '（未定：'))
+        print(f'OK：資料夾沒壞（連結都通、清單沒有做完沒刪的、模板記號都處理了）。'
+              f'「（未定：…）」空格 {unknown} 處不在檢查範圍')
     return int(failed)
 
 

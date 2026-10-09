@@ -25,10 +25,25 @@ def _after_open():
     """首次開檔窗口的測試 hook（呼叫時仍持有 handoffs 鎖）。"""
 
 
-def state(node, line):
+def show(node):
+    text = (node / 'wf/handoffs/NEXT-SESSION.md').read_text(encoding='utf-8') \
+        if (node / 'wf/handoffs/NEXT-SESSION.md').exists() else ''
+    found = re.search(r'^> 最新：\[([^\]]+)\]', text, re.M)
+    path = node / 'wf/handoffs' / found.group(1) if found else None
+    if path is None or not path.is_file():
+        print('還沒記過。用法：aos7-wfnode state <node> \'停在哪、下一步做什麼\'')
+        return 0
+    print(f'最新續行點（wf/handoffs/{found.group(1)}）：')
+    print(path.read_text(encoding='utf-8'), end='')
+    return 0
+
+
+def state(node, line=None):
     if not (node / 'wf/tools/wf-lint.sh').is_file():
-        print('還沒 init')
+        print('還沒 init，先跑：aos7-wfnode init <node>')
         return 2
+    if line is None:
+        return show(node)
     if not line.strip() or '\n' in line or '\r' in line:
         print('請給一行非空的進度')
         return 2
@@ -71,5 +86,5 @@ def state(node, line):
     finally:
         fcntl.flock(lock, fcntl.LOCK_UN)
         os.close(lock)
-    print(f'已記到 wf/handoffs/{day}/STATE.md')
+    print(f'已記到 wf/handoffs/{day}/STATE.md（AI 下次開場從這裡接）')
     return 0

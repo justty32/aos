@@ -10,16 +10,21 @@ import aos7_wfnode as wfnode
 
 
 def main():
-    parser = argparse.ArgumentParser(description='建立 node 工作流、檢查活狀態、記下一行進度')
-    commands = parser.add_subparsers(dest='command', required=True, help='要做的事')
-    setup = commands.add_parser('init', help='導入工作流；重跑只補缺檔')
-    setup.add_argument('node', help='node 資料夾路徑')
-    setup.add_argument('--flavor', help='選用的模板包，以逗號分隔')
-    inspect = commands.add_parser('check', help='檢查連結、假 open 與殘留佔位')
-    inspect.add_argument('node', help='已導入的 node 資料夾')
-    record = commands.add_parser('state', help='追加一行進度，更新最新續行點')
-    record.add_argument('node', help='已導入的 node 資料夾')
-    record.add_argument('line', help='一行非空的進度文字')
+    parser = argparse.ArgumentParser(
+        description='替 AI 準備一個「工作筆記資料夾」(node)，並記下每次停在哪。',
+        epilog="例：aos7-wfnode init /tmp/mynode；aos7-wfnode state /tmp/mynode '寫完第一版，下一步跑測試'；"
+               'aos7-wfnode check /tmp/mynode',
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = parser.add_subparsers(dest='command', required=True, metavar='{init,state,check}',
+                                     help='要做的事')
+    setup = commands.add_parser('init', help='裝好資料夾（新 node 跑一次；重跑安全，只補缺的）')
+    setup.add_argument('node', help='資料夾路徑，不存在會自動建')
+    setup.add_argument('--flavor', help='進階：要裝哪些模板包，逗號分隔；不給＝aos node 標準配備')
+    record = commands.add_parser('state', help="記一行「停在哪、下一步」；不給句子＝印出最新那份")
+    record.add_argument('node', help='init 過的資料夾')
+    record.add_argument('line', nargs='?', help="一行文字，例：'寫完第一版，下一步跑測試'")
+    inspect = commands.add_parser('check', help='體檢：印 OK（退出碼 0）＝資料夾沒壞')
+    inspect.add_argument('node', help='init 過的資料夾')
     args = parser.parse_args()
     node = Path(os.path.abspath(args.node))
     try:
