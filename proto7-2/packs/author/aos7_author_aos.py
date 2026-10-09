@@ -133,6 +133,8 @@ def gates(a, cmd, candidate, reviewer):
         return {'ok': False, 'unknown': '檢查器 stdout 不是單行 JSON'}, 'unknown'
     why = {0: None, 1: ('conflict' if out.get('branch') and out.get('failed_gate') is None else 'invalid'),
            2: 'invalid', 3: 'unknown'}.get(proc.returncode, 'unknown')
+    if proc.returncode == 1 and why == 'invalid':
+        out['_rejected'] = True      # 某關沒過＝被拒（退 1）；why 照舊 invalid，main 印 JSON 前拿掉
     message = proc.stderr.decode('utf-8', 'replace').strip()
     if message and 'error' not in out:
         out['error'] = message.removeprefix('aos7-gates: ')
@@ -162,10 +164,10 @@ def learn(a, req, out):
     text, info, why = delivery(a, req, a.llm, raw, 'ln-')
     out.update(into=str(into), added=[], llm=info)
     if why:
-        return dict(out, why=why)
+        return dict(out, why=why, _rejected=why == 'invalid')
     lines = text.splitlines()
     if not 1 <= len(lines) <= 8 or any(not x.startswith('- ') or not x[2:].strip() or len(x) > 200 for x in lines) or len(set(lines)) != len(lines):
-        return dict(out, why='invalid', error='踩坑條目格式不合或重複')
+        return dict(out, why='invalid', error='踩坑條目格式不合或重複', _rejected=True)
     try:
         fd = os.open(into, os.O_RDWR | os.O_APPEND)
     except FileNotFoundError:
@@ -182,7 +184,7 @@ def learn(a, req, out):
         # 不使用等待模型之前的內容驗重；鎖住後重讀最新版本。
         latest = stream.read().decode('utf-8')
         if any(x in latest.splitlines() for x in lines):
-            return dict(out, why='invalid', error='踩坑條目重複')
+            return dict(out, why='invalid', error='踩坑條目重複', _rejected=True)
         stream.write(('\n## %s（%s）\n' % (req['rid'], a.llm) + '\n'.join(lines) + '\n').encode('utf-8'))
     return dict(out, ok=True, why=None, added=lines)
 
@@ -195,6 +197,10 @@ def close_aos(a, req, out):
             path = nd.path(req['rid'], 'receipt.json')
             st, doc = fact(path)
             rsha = sha(Path(a.arg).read_bytes())
+            if fact(nd.path(req['rid'], 'request.json'))[0] != N:
+                return dict(out, close_skipped='同 rid 已有 CSV 需求帳，不寫結案標記')
+            if st not in (N, OK):
+                raise Unknown('結案標記讀不到：%s' % doc)
             if st != N:
                 valid = (st == OK and isinstance(doc, dict) and doc.get('v') == 1
                          and doc.get('rid') == req['rid'] and doc.get('request_sha') == rsha
@@ -246,7 +252,7 @@ def main_aos(a):
             text, info, why = delivery(a, req, a.llm, raw)
             out['llm'] = info
             if why:
-                return dict(out, why=why)
+                return dict(out, why=why, _rejected=why == 'invalid')
             candidate = Path(a.out).resolve() if a.out else Path.cwd() / 'author/aos' / req['rid'] / (info['call_id'] + '.json')
             candidate.parent.mkdir(parents=True, exist_ok=True)
             candidate.write_bytes(text.encode('utf-8'))
@@ -285,7 +291,7 @@ def propose_checks(a, req, out, candidate, snapshot, data):
             text, info, why = delivery(a, req, a.review_llm, raw, 'rv-', explicit=False)
             out['review'] = {'llm': info, 'path': None}
             if why:
-                return dict(out, why=why)
+                return dict(out, why=why, _rejected=why == 'invalid')
             path = candidate.parent / ('review-' + info['call_id'] + '.json')
             path.write_bytes(text.encode('utf-8'))
             out['review']['path'] = str(path)
@@ -297,4 +303,6 @@ def propose_checks(a, req, out, candidate, snapshot, data):
         return dict(out, ok=False, why='invalid', error='candidate_sha 與快照不符')
     if check.get('error') and 'error' not in out:
         out['error'] = check['error']
+    if a.llm and why == 'invalid':
+        out['_rejected'] = True      # 模型交的候選連形狀都不對＝被拒（退 1），不是使用者給錯
     return dict(out, ok=bool(check.get('ok')) and why is None, why=why)

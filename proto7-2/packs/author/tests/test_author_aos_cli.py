@@ -140,7 +140,7 @@ class TestAuthorAosCLI(DaemonCase):
         self.assertIsNone(out['review'])
         self.checked(self.cli('--candidate', USAGE / 'valid.json', 'propose',
                               '--no-scope', '--ref', baseline_ref('packs/usage'), REQUEST))
-        bad = self.checked(self.aos('--candidate', USAGE / 'bad-link.json'), 2)
+        bad = self.checked(self.aos('--candidate', USAGE / 'bad-link.json'), 1)
         self.assertEqual(bad['why'], 'invalid')
         self.assertEqual(bad['check']['failed_gate'], 1)
         diag = self.checked(self.aos('--candidate', DIAG / 'valid.json', req=DIAG / 'request.json'))
@@ -172,7 +172,7 @@ class TestAuthorAosCLI(DaemonCase):
         self.assertEqual(again, out)
 
     def test_review_llm_reject_and_accept(self):
-        for verdict, code in [('reject', 2), ('accept', 0)]:
+        for verdict, code in [('reject', 1), ('accept', 0)]:
             self.review_content = json.dumps({'verdict': verdict, 'reasons': ['x']})
             # 明示新候選呼叫，審查模型也變更，讓每次審查是獨立請求。
             out = self.checked(self.apprentice('--call', verdict,
@@ -191,14 +191,14 @@ class TestAuthorAosCLI(DaemonCase):
 
     def test_rules_stop_before_llm_review(self):
         out = self.checked(self.aos('--candidate', USAGE / 'bad-review.json',
-                           '--review-llm', MODEL, '--budget', self.bd), 2)
+                           '--review-llm', MODEL, '--budget', self.bd), 1)
         self.assertEqual(out['check']['failed_gate'], 3)
         self.assertEqual(self.bodies, [])
 
     def test_file_reviewer_and_astra_rejected(self):
         path = Path(self.node, 'review.json')
         path.write_text('{"verdict":"reject","reasons":["x"]}')
-        out = self.checked(self.aos('--candidate', USAGE / 'valid.json', '--reviewer', 'file:' + str(path)), 2)
+        out = self.checked(self.aos('--candidate', USAGE / 'valid.json', '--reviewer', 'file:' + str(path)), 1)
         self.assertTrue(out['rules_check']['ok'])
         self.assertEqual(out['check']['failed_gate'], 3)
         p = self.aos('--candidate', USAGE / 'valid.json', '--reviewer', 'astra')
@@ -209,7 +209,7 @@ class TestAuthorAosCLI(DaemonCase):
         gotchas = Path(self.node, 'GOTCHAS.md')
         gotchas.write_text('# 踩坑\n- 先看工具卡。\n')
         feedback = Path(self.node, 'feedback.json')
-        failed = self.checked(self.aos('--candidate', USAGE / 'bad-link.json'), 2)
+        failed = self.checked(self.aos('--candidate', USAGE / 'bad-link.json'), 1)
         feedback.write_text(json.dumps(failed))
         context = PACK / 'README.md'
         opts = ['--llm', MODEL, '--budget', self.bd, '--previous', USAGE / 'bad-link.json',
@@ -253,7 +253,7 @@ class TestAuthorAosCLI(DaemonCase):
         initial = '# 踩坑\n- 原有條目。\n'
         into.write_text(initial)
         history = Path(self.node, 'history.json')
-        failed = self.checked(self.aos('--candidate', USAGE / 'bad-link.json'), 2)
+        failed = self.checked(self.aos('--candidate', USAGE / 'bad-link.json'), 1)
         history.write_text(json.dumps(failed))
         self.content = '- 相對連結從文件位置算。\n- 先跑測試再交付。'
         opts = ['--llm', MODEL, '--budget', self.bd, '--history', history, '--into', into]
@@ -268,7 +268,7 @@ class TestAuthorAosCLI(DaemonCase):
         self.assertTrue(user['history'][0]['gates']['1']['issues'])
         before = into.read_bytes()
         self.content = '- 一條\n這行不合格'
-        self.checked(self.aos(*opts, '--call', 'learn-bad', cmd='learn'), 2)
+        self.checked(self.aos(*opts, '--call', 'learn-bad', cmd='learn'), 1)
         self.assertEqual(into.read_bytes(), before)
         into_missing = Path(self.node, 'absent.md')
         self.checked(self.aos('--llm', MODEL, '--budget', self.bd, '--history', history,
@@ -278,11 +278,11 @@ class TestAuthorAosCLI(DaemonCase):
     def test_fences_and_failed_http_are_not_delivery(self):
         self.content = '```json\n' + (USAGE / 'valid.json').read_text() + '\n```'
         p = self.aos('--llm', MODEL, '--budget', self.bd, '--out', 'fenced.json')
-        out = self.checked(p, 2)
+        out = self.checked(p, 1)
         self.assertEqual(Path(out['candidate_path']).read_bytes(), self.content.encode())
         self.assertEqual(out['check']['failed_gate'], 1)
         self.code = 400
-        out = self.checked(self.aos('--llm', MODEL, '--budget', self.bd, '--call', 'rejected', '--out', 'no.json'), 2)
+        out = self.checked(self.aos('--llm', MODEL, '--budget', self.bd, '--call', 'rejected', '--out', 'no.json'), 1)
         self.assertEqual(out['llm']['outcome'], 'rejected')
         self.assertFalse(Path(self.node, 'no.json').exists())
 
@@ -347,7 +347,7 @@ class TestAuthorAosCLI(DaemonCase):
         review.write_text(self.review_content)
         before = subprocess.check_output(['git', '-C', str(repo), 'show-ref'])
         out = self.checked(self.aos('--candidate', USAGE / 'bad-review.json',
-                           '--reviewer', 'file:' + str(review), '--repo', repo, cmd='publish'), 2)
+                           '--reviewer', 'file:' + str(review), '--repo', repo, cmd='publish'), 1)
         self.assertEqual(out['failed_gate'], 3)
         self.assertEqual(out['why'], 'invalid')
         self.assertEqual(subprocess.check_output(['git', '-C', str(repo), 'show-ref']), before)

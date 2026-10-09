@@ -18,4 +18,6 @@ proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-to
 
 想讓真的 AI 來寫：`aos7-author propose … --llm 模型名` 會花錢，一次最多先扣 100 萬 token 的額度（用 `--reserve` 改小）。
 
+想再試「過了就建一條分支」：照 [checkers/README.md](checkers/README.md) 的發布練習（建在臨時 clone，不碰你的 repo）。
+
 **第一次用，到這裡就完成了。** 進階、契約卡、規則 → [ADVANCED.md](ADVANCED.md)（給維護者，不用讀）

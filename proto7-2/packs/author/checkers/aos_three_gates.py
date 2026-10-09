@@ -1,5 +1,6 @@
 """BRIEF、三關驗證與只新增 apprentice 分支的發布器（標準庫）。"""
 import argparse
+import errno
 import hashlib
 import io
 import json
@@ -322,7 +323,7 @@ def one_line(value, limit=180):
 
 class ArgumentParser(argparse.ArgumentParser):
     def error(self, message):
-        self.exit(2, 'aos7-gates: ' + one_line(message) + '。給需求與候選檔，例如 aos7-gates check request.json candidate.json\n')
+        self.exit(2, 'aos7-gates: ' + one_line(message) + '。給需求與候選檔，例如 aos7-gates check request.json candidate.json；用法看 aos7-gates --help\n')
 
     def format_help(self):
         return ('aos7-gates：驗候選，過三關才發布\n'
@@ -374,7 +375,7 @@ def main(argv=None):
             raise Unknown('git toplevel 不在')
         repo = Path(source.stdout.decode().strip())
         if a.cmd == 'publish' and a.repo is None:
-            message = f"publish 要用 --repo 指定分支建在哪個 git repo。這次會建在 {repo} 的 apprentice/{out['job']}；確定就加 --repo {repo}"
+            message = f"publish 要用 --repo 指定分支建在哪個 git repo，沒給就不建。練習請建在臨時 clone（照 checkers/README.md）；要建在這個 repo 就加 --repo {repo}（分支 apprentice/{out['job']}）"
             out['gates']['1'] = result([{'rule': 'repo', 'why': message}])
             print(json.dumps(out, ensure_ascii=False))
             print('aos7-gates: ' + message, file=sys.stderr)
@@ -386,6 +387,15 @@ def main(argv=None):
             ctx['entry'] = ctx['root'] + '/' + card['entry'].format(name=req['name'])
             out = run_gates(ctx)
             code = publish(ctx, out) if out['ok'] and a.cmd == 'publish' else (0 if out['ok'] else 1)
+    except OSError as exc:
+        if exc.errno in (errno.ENOENT, errno.ENOTDIR, errno.EISDIR):
+            out['ok'] = False
+            out['gates']['1'] = result([{'rule': 'schema', 'why': str(exc)}])
+            code = 2
+        else:
+            out = ctx.get('out', out)
+            out.update(ok=False, unknown=str(exc))
+            code = 3
     except Unknown as exc:
         out = ctx.get('out', out)
         out.update(ok=False, unknown=str(exc))

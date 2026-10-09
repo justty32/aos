@@ -360,7 +360,7 @@ class TestAuthorCore(TestAuthorHelpers):
                 target = candidate["steps"][0] if field == "tool" else candidate
                 target[field] = []
                 path = self.source("list-field.json", candidate)
-                r = self.cli(node, "propose", "csv1", "--candidate", path, rc=2)
+                r = self.cli(node, "propose", "csv1", "--candidate", path, rc=1, why="invalid")
                 self.assertIn("schema", {i["rule"] for i in r["issues"]})
                 self.assertFalse(Path(node, "jobs", "csv1_" + digest(path.read_bytes())[:8]).exists())
 
