@@ -42,8 +42,24 @@
 
 ## 回改
 
-狀態：未改（交頂層轉該隊）。改完由 U 隊用同樣兩位新手再試一次。
+狀態：已改（回改隊 loop9/routines），重試 1 輪過，見下「重試」。
 
-- [ ] 修 out.log 預期行數（實跑 6）或說明行數隨 sleep 時間變
-- [ ] 第一次跑裡 daemon 那三行（起、等、停）各加一句白話註解（為什麼背景、為什麼 sleep 3）
-- [ ] 一句話說「r＝回合＝daemon 每醒一次」，不用新手去讀契約卡
+- [x] 修 out.log 預期行數（實跑 6）或說明行數隨 sleep 時間變
+- [x] 第一次跑裡 daemon 那三行（起、等、停）各加一句白話註解（為什麼背景、為什麼 sleep 3）
+- [x] 一句話說「r＝回合＝daemon 每醒一次」，不用新手去讀契約卡
+
+## 重試
+
+### 第 1 輪（2026-10-09，回改隊）
+
+改法：第一次跑整段改成**不開 daemon**——`add` 兩件（`--every 1m`、`--at +1s`）後 `ls --run` 立刻把到期的做掉、再列清單，第二次 `ls --run` 顯示沒有到期的；daemon、回合、`3r` 移到「讓它自己定時跑（可選）」一節並逐行註解（為什麼 `&`、`sleep 3`、interval_ms、out.log 在哪、行數看機器快慢）；契約卡與表格式收到「維護者細節」分隔線後。介面：`ls --run`（不增子指令）；輸出拿掉 tock／keep 字樣、時間到秒、重名／找不到印原因、`rm` 印 removed；`--help` 每個參數有中文說明。原始回報：[raw/routines-haiku-retry1.md](raw/routines-haiku-retry1.md)、[raw/routines-luna-retry1.md](raw/routines-luna-retry1.md)。
+
+| 項目 | 值 | 門檻 | 過 |
+|---|---|---|---|
+| 第一次跑（人類估計分鐘） | 6.3（開頭＋第一次跑約 1400 字 3.5＋指令 7 行 1.75＋卡點 1） | ≤10 | 是 |
+| 對外指令 | 3（add／ls〔含 --run〕／rm；第一次跑不碰 aos7-daemon／aos7-ctl） | ≤3 | 是 |
+| 新概念（兩位取多） | 4（Haiku：node、routine、schedule、inst；luna：node、routine、schedule、ls --run） | ≤5 | 是 |
+| 分數（兩位取差） | 7.4（Haiku 8／6／8／7／8；luna 8.8） | ≥7 | 是 |
+| **總判** | **過** | | |
+
+兩位都跑通，輸出與 README 一致。Haiku 剩下的小卡點（node 沒定義、`--every`／`--at` 寫法只靠範例、新加的 routine 為何馬上跑、`<proto7-2>` 要自己算）已在 README 第一次跑段各補一句（未再重試）。兩位仍說「ELI5 之後還複雜：要自動定時就得懂 daemon／回合」——這是可選的下一步，第一次跑已不需要。
