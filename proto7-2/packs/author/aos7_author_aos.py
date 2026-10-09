@@ -227,13 +227,23 @@ def learn_skill(a, req, out):
     out.update(skill=a.skill, into=str(into), bytes=0, llm=None)
     if not node.is_dir():
         return dict(out, why='invalid', error='--skill-into 必須是既有資料夾')
+    try:
+        original = into.read_bytes()
+    except FileNotFoundError:
+        original = None
+    candidate = None
+    if a.candidate:
+        try:
+            candidate = Path(a.candidate).read_text(encoding='utf-8')[:24000]
+        except (FileNotFoundError, IsADirectoryError, NotADirectoryError) as exc:
+            return dict(out, why='invalid', error='--candidate 必須是既有檔案：' + str(exc))
     user = {'brief': brief(req), 'history': [history_summary(p) for p in a.history],
-            'existing': into.read_text(encoding='utf-8') if into.exists() else '',
+            'existing': original.decode('utf-8') if original is not None else '',
             'rules': f'''回整本 SKILL.md，改寫既有內容而不是只追加，不寫這題特有的答案細節；全文 ≤8192 bytes UTF-8。
 frontmatter 必須是 ---、name: {a.skill}、description: 一行（≤300 字）、triggers: 用「、」分隔且必含 {req['kind']}、---。
 正文兩節：## 踩過的坑（每條：症狀→下次怎麼做）；## 驗過的骨架（從 candidate 裡過了關的寫法摘出入口、模組匯入、測試匯入與 discover、README 必要章節、索引列、report 結尾等，用程式碼圍欄）。'''}
     if a.candidate:
-        user['candidate'] = Path(a.candidate).read_text(encoding='utf-8')[:24000]
+        user['candidate'] = candidate
     raw = prompt(a.llm, '你是 aos 的學徒工程師，只回整本 SKILL.md，不加說明或外層 Markdown 圍欄。' + NO_TOOLS.format('-'), user)
     text, info, why = delivery(a, req, a.llm, raw, 'ln-')
     out['llm'] = info
@@ -248,16 +258,27 @@ frontmatter 必須是 ---、name: {a.skill}、description: 一行（≤300 字�
             book.parent.mkdir(parents=True)
             book.write_bytes(data)
             proc = subprocess.run(['python3', str(SKILLS), 'index', tmp], capture_output=True, timeout=900)
-            if proc.returncode != 0:
+            if proc.returncode == 1:
                 raise ValueError('技能書格式不合：' + proc.stderr.decode('utf-8', 'replace').strip())
+            if proc.returncode != 0:
+                return dict(out, why='unknown', error='skills index 未完成（退出碼 %s）：%s' %
+                            (proc.returncode, proc.stderr.decode('utf-8', 'replace').strip()))
             indexed = strict(Path(tmp, 'skills/index.json').read_bytes())['skills'][a.skill]
             if req['kind'] not in indexed['triggers']:
                 raise ValueError('triggers 缺需求 kind：' + req['kind'])
     except (ValueError, UnicodeError, KeyError) as exc:
         return dict(out, why='invalid', error=str(exc), _rejected=True)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return dict(out, why='unknown', error=str(exc))
     into.parent.mkdir(parents=True, exist_ok=True)
     with (into.parent / '.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            latest = into.read_bytes()
+        except FileNotFoundError:
+            latest = None
+        if latest != original:
+            return dict(out, why='conflict', error='技能書在學習期間被改過，重跑 learn')
         path = None
         try:
             with tempfile.NamedTemporaryFile(dir=into.parent, prefix='.SKILL-', delete=False) as stream:
