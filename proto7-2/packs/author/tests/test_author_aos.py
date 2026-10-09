@@ -17,6 +17,18 @@ HEAD = subprocess.check_output(['git','-C',str(REPO),'rev-parse','HEAD']).decode
 PREFIX = A.parents[1].relative_to(REPO).as_posix()
 
 
+def baseline_ref(root, repo=REPO):
+    """以題目 root 首次加入前的版本，驗證新增包。"""
+    path = '/'.join(part for part in (PREFIX, root) if part)
+    git = ['git', '-C', str(repo)]
+    if subprocess.run(git + ['cat-file', '-e', 'HEAD:' + path],
+                      capture_output=True, check=False).returncode:
+        return subprocess.check_output(git + ['rev-parse', 'HEAD']).decode().strip()
+    commits = subprocess.check_output(git + ['log', '--diff-filter=A', '--format=%H',
+                                              '--', path + '/README.md']).decode().splitlines()
+    return subprocess.check_output(git + ['rev-parse', commits[-1] + '^']).decode().strip()
+
+
 def dump(path, obj):
     path.write_text(json.dumps(obj,ensure_ascii=False,indent=1)+'\n',encoding='utf-8')
 
@@ -27,7 +39,7 @@ def snap(path):
 
 class TestAuthorAos(unittest.TestCase):
     def cli(self, candidate='valid.json', folder=USAGE, cmd='check', extra=(), disabled=None):
-        argv = [cmd,str(folder/'request.json'),str(folder/candidate),'--reviewer','rules','--no-scope',*map(str,extra)]
+        argv = [cmd,str(folder/'request.json'),str(folder/candidate),'--reviewer','rules','--no-scope','--ref',baseline_ref('modules/llmdiag' if folder == DIAG else 'packs/usage'),*map(str,extra)]
         if disabled:
             script = "import sys;sys.path.insert(0,sys.argv.pop(1));import aos_three_gates as g;g.GATES[%d]=lambda ctx:{'ok':True,'issues':[]};raise SystemExit(g.main(sys.argv[1:]))" % disabled
             args = [sys.executable,'-c',script,str(CLI.parent),*argv]
@@ -115,10 +127,12 @@ class TestAuthorAos(unittest.TestCase):
             worktree = sorted(p.name for p in repo.iterdir())
             index = repo/'.git/index'
             index_before = index.read_bytes() if index.exists() else None
-            opts = ['--repo',repo,'--ref',HEAD]
+            ref = baseline_ref('packs/usage', repo)
+            opts = ['--repo',repo,'--ref',ref]
             code,out = self.cli(cmd='publish',extra=opts)
             self.assertEqual(code,0,out)
             branch = out['branch']
+            self.assertEqual(git(repo,'rev-parse',branch+'^').decode().strip(),ref)
             self.assertEqual(branch,'apprentice/'+out['job'])
             self.assertEqual(git(repo,'rev-parse',branch).decode().strip(),out['commit'])
             entry = PREFIX+'/packs/usage/bin/aos7-usage'
@@ -126,7 +140,7 @@ class TestAuthorAos(unittest.TestCase):
             candidate = json.loads((USAGE/'valid.json').read_text())
             for path,text in candidate['files'].items():
                 self.assertEqual(git(repo,'show',branch+':'+PREFIX+'/'+path),text.encode())
-            original = git(repo,'show',HEAD+':'+PREFIX+'/INDEX.md')
+            original = git(repo,'show',ref+':'+PREFIX+'/INDEX.md')
             expected = original + (b'' if original.endswith(b'\n') else b'\n') + candidate['row'].encode()+b'\n'
             self.assertEqual(git(repo,'show',branch+':'+PREFIX+'/INDEX.md'),expected)
             self.assertIn(b'candidate_sha: '+out['candidate_sha'].encode(),git(repo,'show','-s','--format=%B',branch))
@@ -320,9 +334,9 @@ class TestAuthorAos(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)/'repo'
             subprocess.run(['git','clone','-q','--shared','--no-checkout',str(REPO),str(repo)],check=True,capture_output=True)
-            code,out = self.candidate_check(candidate,cmd='publish',extra=['--repo',repo,'--ref',HEAD])
+            code,out = self.candidate_check(candidate,cmd='publish',extra=['--repo',repo,'--ref',baseline_ref('packs/usage', repo)])
             self.assertEqual(code,0,out)
-            original = subprocess.check_output(['git','-C',str(repo),'show',HEAD+':'+PREFIX+'/INDEX.md'])
+            original = subprocess.check_output(['git','-C',str(repo),'show',baseline_ref('packs/usage', repo)+':'+PREFIX+'/INDEX.md'])
             actual = subprocess.check_output(['git','-C',str(repo),'show',out['branch']+':'+PREFIX+'/INDEX.md'])
             expected = original+(b'' if original.endswith(b'\n') else b'\n')+candidate['row'].encode()+b'\n'
             self.assertEqual(actual,expected)
@@ -336,7 +350,7 @@ class TestAuthorAos(unittest.TestCase):
             data = (USAGE/'valid.json').read_bytes()
             job = 'usage1_'+hashlib.sha256(data).hexdigest()[:8]
             subprocess.run(['git','-C',str(repo),'symbolic-ref','refs/heads/apprentice/'+job,'refs/heads/zzz'],check=True)
-            code,out = self.cli(cmd='publish',extra=['--repo',repo,'--ref',HEAD])
+            code,out = self.cli(cmd='publish',extra=['--repo',repo,'--ref',baseline_ref('packs/usage', repo)])
             self.assertEqual(code,3,out)
             self.assertNotEqual(subprocess.run(['git','-C',str(repo),'show-ref','--verify','refs/heads/zzz'],capture_output=True).returncode,0)
             target = subprocess.check_output(['git','-C',str(repo),'symbolic-ref','refs/heads/apprentice/'+job]).decode().strip()

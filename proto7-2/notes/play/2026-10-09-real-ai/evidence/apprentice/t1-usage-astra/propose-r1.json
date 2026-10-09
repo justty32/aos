@@ -1,0 +1,99 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-astra-high",
+  "call_id": "usage-astra-r1-1791532095",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6368,
+   "prompt_tokens": 4673,
+   "total_tokens": 11041,
+   "completion_tokens_details": {
+    "reasoning_tokens": 909
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 11041,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/usage-astra-r1-1791532095/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-usage1-chatgpt-gpt-6-astra-high-1732f632",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 439,
+    "prompt_tokens": 8819,
+    "total_tokens": 9258,
+    "completion_tokens_details": {
+     "reasoning_tokens": 228
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 9258,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-usage1-chatgpt-gpt-6-astra-high-1732f632/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t1-usage-astra/review-rv-usage1-chatgpt-gpt-6-astra-high-1732f632.json"
+ },
+ "rid": "usage1",
+ "kind": "aos-tool",
+ "name": "usage",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t1-usage-astra/cand-r1.json",
+ "candidate_sha": "05263eaefee33b00de1f97bd245035081ad3d28a0f99da8d388d3d756c6d6ece",
+ "job": "usage1_05263eae",
+ "rules_check": {
+  "ok": true,
+  "rid": "usage1",
+  "name": "usage",
+  "job": "usage1_05263eae",
+  "candidate_sha": "05263eaefee33b00de1f97bd245035081ad3d28a0f99da8d388d3d756c6d6ece",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "usage1",
+  "name": "usage",
+  "job": "usage1_05263eae",
+  "candidate_sha": "05263eaefee33b00de1f97bd245035081ad3d28a0f99da8d388d3d756c6d6ece",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}

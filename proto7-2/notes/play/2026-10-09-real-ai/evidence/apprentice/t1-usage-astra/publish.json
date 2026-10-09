@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": null,
+ "review": null,
+ "rid": "usage1",
+ "kind": "aos-tool",
+ "name": "usage",
+ "job": "usage1_05263eae",
+ "candidate_sha": "05263eaefee33b00de1f97bd245035081ad3d28a0f99da8d388d3d756c6d6ece",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ },
+ "branch": "apprentice/usage1_05263eae",
+ "commit": "90b5e7e21adcea1a710db7d6ece56d81166f301b",
+ "dup": false
+}

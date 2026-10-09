@@ -1,0 +1,25 @@
+{
+ "ok": false,
+ "rid": "diag1",
+ "name": "llmdiag",
+ "job": "diag1_c470bd47",
+ "candidate_sha": "c470bd47ac38098758172aaaac2ba0c1a5e3165f21bf36a4d8531adf9cf8800a",
+ "failed_gate": 1,
+ "gates": {
+  "1": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "size",
+     "why": "檔數或 bytes 超標"
+    }
+   ]
+  },
+  "2": {
+   "ok": null
+  },
+  "3": {
+   "ok": null
+  }
+ }
+}

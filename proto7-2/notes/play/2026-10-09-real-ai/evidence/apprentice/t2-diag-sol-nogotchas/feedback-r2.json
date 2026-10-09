@@ -1,0 +1,25 @@
+{
+ "ok": false,
+ "failed_gate": 1,
+ "gates": {
+  "1": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "json",
+     "why": "Expecting value: line 1 column 1 (char 0)"
+    }
+   ]
+  },
+  "2": {
+   "ok": null
+  },
+  "3": {
+   "ok": null
+  }
+ },
+ "rid": "diag1",
+ "name": "llmdiag",
+ "candidate_sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+ "job": "diag1_e3b0c442"
+}

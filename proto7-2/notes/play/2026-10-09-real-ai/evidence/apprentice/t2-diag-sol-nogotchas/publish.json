@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": null,
+ "review": null,
+ "rid": "diag1",
+ "kind": "aos-module",
+ "name": "llmdiag",
+ "job": "diag1_af24a314",
+ "candidate_sha": "af24a314c78ca258689c6198acb71805735fc483a0d82cd1afe4700256719ffc",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ },
+ "branch": "apprentice/diag1_af24a314",
+ "commit": "f23330c45a17815563d8b4c88fe0f0401131355c",
+ "dup": false
+}

@@ -1,6 +1,6 @@
 # 2026-10-09 真 AI 第一圈：消耗報告（R1 隊）
 
-← [proto7-2 notes](../../)｜傳輸：[llmcall](../../../packs/llmcall/README.md)（`llm.litellm`）｜學徒：[author](../../../packs/author/README.md)（`propose --llm`）｜逐次數據：[evidence/calls.csv](evidence/calls.csv)
+← [proto7-2 notes](../../)｜傳輸：[llmcall](../../../packs/llmcall/README.md)（`llm.litellm`）｜學徒：[author](../../../packs/author/README.md)（`propose --llm`）｜逐次數據：[evidence/calls.csv](evidence/calls.csv)｜學徒寫 aos 包（A5）：[apprentice-aos](apprentice-aos.md)
 
 使用者 14:20 准許接真 AI（LiteLLM `localhost:4000/v1`，gpt 系，不用 `lm-*`／`ollama-*`，上限拉滿，跑完再訂限制）。本報告就是「跑完一個大段落」的實際消耗，給之後訂限制用。
 

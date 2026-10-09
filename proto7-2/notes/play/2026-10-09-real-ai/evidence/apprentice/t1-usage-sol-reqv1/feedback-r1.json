@@ -1,0 +1,30 @@
+{
+ "ok": false,
+ "rid": "usage1",
+ "name": "usage",
+ "job": "usage1_a16950ed",
+ "candidate_sha": "a16950ed629564a7c74ec6e97646b2af11a3f2cbf7bf4555c6c126f9678e787a",
+ "failed_gate": 2,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "answer",
+     "why": [
+      "day 答案、型別或退出碼不合：{\"v\":1,\"by\":\"day\",\"groups\":[{\"model\":\"chatgpt-gpt-6-astra\",\"holder\":\"planner\",\"period\":\"2026-10-08\",\"calls\":1,\"used\":50,\"overrun\":10},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"-\",\"calls\":4,\"used\":34,\"overrun\":0},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"2026-10-08\",\"calls\":4,\"used\":673,\"overrun\":0},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"2026-10-09\",\"calls\":1,\"used\":100,\"overrun\":0},{\"model\":\"fake\",\"holder\":\"author\",\"period\":\"-\",\"calls\":1,\"used\":7,\"overrun\":0}],\"budgets\":[{\"budget\":\"b2\",\"receipts_used\":5,\"ledger_used\":null,\"diff\":null},{\"budget\":\"bbool\",\"receipts_used\":3,\"ledger_used\":null,\"diff\":null},{\"budget\":\"bneg\",\"receipts_used\":17,\"ledger_used\":5,\"diff\":-12},{\"budget\":\"btext\",\"receipts_used\":9,\"ledger_used\":null,\"diff\":null},{\"budget\":\"llm\",\"receipts_used\":2828,\"ledger_used\":900,\"diff\":-1928}],\"gaps\":[{\"budget\":\"llm\",\"call_id\":\"c10\",\"why\":\"bad_json\"},{\"budget\":\"llm\",\"call_id\":\"c11\",\"why\":\"bad_json\"},{\"budget\":\"llm\",\"call_id\":\"c3\",\"why\":\"overrun\"},{\"budget\":\"llm\",\"call_id\":\"c4\",\"why\":\"no_receipt\"},{\"budget\":\"llm\",\"call_id\":\"c5\",\"why\":\"bad_json\"}]}\n",
+      "day 答案、型別或退出碼不合：{\"v\":1,\"by\":\"day\",\"groups\":[{\"model\":\"chatgpt-gpt-6-astra\",\"holder\":\"planner\",\"period\":\"2026-10-08\",\"calls\":1,\"used\":50,\"overrun\":10},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"-\",\"calls\":4,\"used\":34,\"overrun\":0},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"2026-10-08\",\"calls\":4,\"used\":673,\"overrun\":0},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"2026-10-09\",\"calls\":1,\"used\":100,\"overrun\":0},{\"model\":\"fake\",\"holder\":\"author\",\"period\":\"-\",\"calls\":1,\"used\":7,\"overrun\":0}],\"budgets\":[{\"budget\":\"b2\",\"receipts_used\":5,\"ledger_used\":null,\"diff\":null},{\"budget\":\"bbool\",\"receipts_used\":3,\"ledger_used\":null,\"diff\":null},{\"budget\":\"bneg\",\"receipts_used\":17,\"ledger_used\":5,\"diff\":-12},{\"budget\":\"btext\",\"receipts_used\":9,\"ledger_used\":null,\"diff\":null},{\"budget\":\"llm\",\"receipts_used\":2828,\"ledger_used\":900,\"diff\":-1928}],\"gaps\":[{\"budget\":\"llm\",\"call_id\":\"c10\",\"why\":\"bad_json\"},{\"budget\":\"llm\",\"call_id\":\"c11\",\"why\":\"bad_json\"},{\"budget\":\"llm\",\"call_id\":\"c3\",\"why\":\"overrun\"},{\"budget\":\"llm\",\"call_id\":\"c4\",\"why\":\"no_receipt\"},{\"budget\":\"llm\",\"call_id\":\"c5\",\"why\":\"bad_json\"}]}\n",
+      "hour 答案、型別或退出碼不合：{\"v\":1,\"by\":\"hour\",\"groups\":[{\"model\":\"chatgpt-gpt-6-astra\",\"holder\":\"planner\",\"period\":\"2026-10-08T10\",\"calls\":1,\"used\":50,\"overrun\":10},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"-\",\"calls\":4,\"used\":34,\"overrun\":0},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"2026-10-08T10\",\"calls\":2,\"used\":643,\"overrun\":0},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"2026-10-08T11\",\"calls\":2,\"used\":30,\"overrun\":0},{\"model\":\"chatgpt-gpt-6-sol\",\"holder\":\"author\",\"period\":\"2026-10-09T03\",\"calls\":1,\"used\":100,\"overrun\":0},{\"model\":\"fake\",\"holder\":\"author\",\"period\":\"-\",\"calls\":1,\"used\":7,\"overrun\":0}],\"budgets\":[{\"budget\":\"b2\",\"receipts_used\":5,\"ledger_used\":null,\"diff\":null},{\"budget\":\"bbool\",\"receipts_used\":3,\"ledger_used\":null,\"diff\":null},{\"budget\":\"bneg\",\"receipts_used\":17,\"ledger_used\":5,\"diff\":-12},{\"budget\":\"btext\",\"receipts_used\":9,\"ledger_used\":null,\"diff\":null},{\"budget\":\"llm\",\"receipts_used\":2828,\"ledger_used\":900,\"diff\":-1928}],\"gaps\":[{\"budget\":\"llm\",\"call_id\":\"c10\",\"why\":\"bad_json\"},{\"budget\":\"llm\",\"call_id\":\"c11\",\"why\":\"bad_json\"},{\"budget\":\"llm\",\"call_id\":\"c3\",\"why\":\"overrun\"},{\"budget\":\"llm\",\"call_id\":\"c4\",\"why\":\"no_receipt\"},{\"budget\":\"llm\",\"call_id\":\"c5\",\"why\":\"bad_json\"}]}\n"
+     ]
+    }
+   ]
+  },
+  "3": {
+   "ok": null
+  }
+ }
+}

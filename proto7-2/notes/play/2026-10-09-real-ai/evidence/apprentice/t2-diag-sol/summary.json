@@ -1,0 +1,44 @@
+{
+ "task": "diag",
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "gotchas": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/wf/workflows/common/gotchas.md",
+ "rows": [
+  {
+   "round": 1,
+   "exit": 2,
+   "ok": false,
+   "failed_gate": 1,
+   "rules_failed": 1,
+   "tokens": 10421,
+   "review_tokens": null,
+   "secs": 111.1,
+   "job": "diag1_3eecab8c",
+   "issues": [
+    {
+     "rule": "json",
+     "why": "Expecting value: line 1 column 1 (char 0)"
+    }
+   ]
+  },
+  {
+   "round": 2,
+   "exit": 0,
+   "ok": true,
+   "failed_gate": null,
+   "rules_failed": null,
+   "tokens": 10073,
+   "review_tokens": 6729,
+   "secs": 131.8,
+   "job": "diag1_e8800ec9",
+   "issues": []
+  },
+  {
+   "publish_exit": 0,
+   "branch": "apprentice/diag1_e8800ec9",
+   "commit": "43f8663c3273eb383d9a480e828b662fc96c3873",
+   "dup": false,
+   "secs": 0.9
+  }
+ ]
+}

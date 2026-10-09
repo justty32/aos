@@ -73,7 +73,7 @@ python3 "$A/bin/aos7-author" learn request.json --llm MODEL --budget ../llm/budg
 `$REVIEW` 是 propose 回覆的 review.path，`$REPO`／`$REF` 指向要發布的 repo 與基準版本；離線檔案驗證可用 `--candidate` 與預設 `--reviewer rules`，模型審查不用 astra 旗標。
 propose 固定候選快照，兩次檢查與審查提示使用相同 bytes；publish 使用 `file:` 審查前仍先通過 rules，且不接受 `--review-llm`。learn 在寫入時鎖住既有檔案、重讀驗重，檔案消失就拒絕。
 
-三關細節見 [checkers/README.md](checkers/README.md)。
+三關細節見 [checkers/README.md](checkers/README.md)。整題「學徒→三關→不過帶 feedback 重問（≤2 次）→publish」的實跑腳本與兩題真 AI 結果見 [apprentice-aos 報告](../../notes/play/2026-10-09-real-ai/apprentice-aos.md)。
 
 ## 五個組件（契約卡，細節在 spec.md）
 

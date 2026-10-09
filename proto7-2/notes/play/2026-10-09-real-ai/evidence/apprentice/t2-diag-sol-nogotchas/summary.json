@@ -1,0 +1,61 @@
+{
+ "task": "diag",
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "gotchas": null,
+ "rows": [
+  {
+   "round": 1,
+   "exit": 2,
+   "ok": false,
+   "failed_gate": 1,
+   "rules_failed": 1,
+   "tokens": 4594,
+   "review_tokens": null,
+   "secs": 10.7,
+   "job": "diag1_2d890b64",
+   "issues": [
+    {
+     "rule": "json",
+     "why": "Expecting value: line 1 column 1 (char 0)"
+    }
+   ]
+  },
+  {
+   "round": 2,
+   "exit": 2,
+   "ok": false,
+   "failed_gate": 1,
+   "rules_failed": 1,
+   "tokens": 9772,
+   "review_tokens": null,
+   "secs": 77.4,
+   "job": "diag1_e3b0c442",
+   "issues": [
+    {
+     "rule": "json",
+     "why": "Expecting value: line 1 column 1 (char 0)"
+    }
+   ]
+  },
+  {
+   "round": 3,
+   "exit": 0,
+   "ok": true,
+   "failed_gate": null,
+   "rules_failed": null,
+   "tokens": 9862,
+   "review_tokens": 6356,
+   "secs": 114.9,
+   "job": "diag1_af24a314",
+   "issues": []
+  },
+  {
+   "publish_exit": 0,
+   "branch": "apprentice/diag1_af24a314",
+   "commit": "f23330c45a17815563d8b4c88fe0f0401131355c",
+   "dup": false,
+   "secs": 1.0
+  }
+ ]
+}

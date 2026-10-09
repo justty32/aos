@@ -1,0 +1,106 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-astra-high",
+  "call_id": "diag-astra-r1-1791532841",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5163,
+   "prompt_tokens": 4785,
+   "total_tokens": 9948,
+   "completion_tokens_details": {
+    "reasoning_tokens": 410
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 9948,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/diag-astra-r1-1791532841/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-diag1-chatgpt-gpt-6-astra-high-fdca8714",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 393,
+    "prompt_tokens": 7529,
+    "total_tokens": 7922,
+    "completion_tokens_details": {
+     "reasoning_tokens": 202
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 7922,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-diag1-chatgpt-gpt-6-astra-high-fdca8714/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t2-diag-astra/review-rv-diag1-chatgpt-gpt-6-astra-high-fdca8714.json"
+ },
+ "rid": "diag1",
+ "kind": "aos-module",
+ "name": "llmdiag",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t2-diag-astra/cand-r1.json",
+ "candidate_sha": "d03e3e5074bd9a8890df67a74be9483d9805337f7a7d98c1a2efdb70a9a26bc0",
+ "job": "diag1_d03e3e50",
+ "rules_check": {
+  "ok": true,
+  "rid": "diag1",
+  "name": "llmdiag",
+  "job": "diag1_d03e3e50",
+  "candidate_sha": "d03e3e5074bd9a8890df67a74be9483d9805337f7a7d98c1a2efdb70a9a26bc0",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "diag1",
+  "name": "llmdiag",
+  "job": "diag1_d03e3e50",
+  "candidate_sha": "d03e3e5074bd9a8890df67a74be9483d9805337f7a7d98c1a2efdb70a9a26bc0",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "modules/llmdiag/aos7_llmdiag.py：合法 JSON 的數值溢位會使正常掃描崩潰。例如 jobs/r_12345678/frame.json 為 {\"phase\":\"halted\",\"halt\":{\"kind\":\"test\",\"why\":1e400}} 且 author/req/r/ 存在時，json.load 會將 1e400 解析為浮點 infinity（parse_constant 不會攔截此合法數值），而 main 的 json.dumps(..., allow_nan=False) 會拋出 ValueError，導致退出 1、stdout 無 JSON，違反正常退出 0 且輸出恰一行 JSON 的要求。應避免合法 JSON 數值經解析溢位後破壞輸出，並加入回歸測試。"
+      ]
+     }
+    ]
+   }
+  }
+ }
+}

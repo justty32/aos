@@ -1,0 +1,25 @@
+{
+ "ok": false,
+ "failed_gate": 1,
+ "gates": {
+  "1": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "json",
+     "why": "Expecting value: line 1 column 1 (char 0)"
+    }
+   ]
+  },
+  "2": {
+   "ok": null
+  },
+  "3": {
+   "ok": null
+  }
+ },
+ "rid": "usage1",
+ "name": "usage",
+ "candidate_sha": "468c901387da9b8190d1fc92bc3c0d5864ed5d2f58ccbec00bbce09017ab3cc6",
+ "job": "usage1_468c9013"
+}

@@ -1,0 +1,82 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-astra-high",
+  "call_id": "diag-astra-r2-1791532989",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6207,
+   "prompt_tokens": 10040,
+   "total_tokens": 16247,
+   "completion_tokens_details": {
+    "reasoning_tokens": 234
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 16247,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/diag-astra-r2-1791532989/receipt.json"
+ },
+ "review": null,
+ "rid": "diag1",
+ "kind": "aos-module",
+ "name": "llmdiag",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t2-diag-astra/cand-r2.json",
+ "candidate_sha": "c470bd47ac38098758172aaaac2ba0c1a5e3165f21bf36a4d8531adf9cf8800a",
+ "job": "diag1_c470bd47",
+ "rules_check": {
+  "ok": false,
+  "rid": "diag1",
+  "name": "llmdiag",
+  "job": "diag1_c470bd47",
+  "candidate_sha": "c470bd47ac38098758172aaaac2ba0c1a5e3165f21bf36a4d8531adf9cf8800a",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "檔數或 bytes 超標"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "diag1",
+  "name": "llmdiag",
+  "job": "diag1_c470bd47",
+  "candidate_sha": "c470bd47ac38098758172aaaac2ba0c1a5e3165f21bf36a4d8531adf9cf8800a",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "檔數或 bytes 超標"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  }
+ }
+}

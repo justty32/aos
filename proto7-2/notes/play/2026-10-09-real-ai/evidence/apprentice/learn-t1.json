@@ -1,0 +1,33 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "usage1",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/wf/workflows/common/gotchas.md",
+ "added": [
+  "- 下次寫 aos 工具前，先核對輸出型別：budgets 必須是以 budget 名稱為鍵的物件，不是陣列；數值算對仍過不了答案檢查。",
+  "- receipts_used 只能加總會計入 groups 的完整合法回條；壞 JSON 或欄位不合法的整筆都要排除，否則帳差會錯。",
+  "- receipt 的 used、overrun 缺欄位不等於 JSON null；只有明確的 null 可當 0，缺欄位須列 bad_json。",
+  "- 交付候選答案前先確認 JSON 可解析；曾因輸出不是有效 JSON，連第一關都無法進入核對。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "learn-usage1-sol-1",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 394,
+   "prompt_tokens": 5720,
+   "total_tokens": 6114,
+   "completion_tokens_details": {
+    "reasoning_tokens": 228
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 6114,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/learn-usage1-sol-1/receipt.json"
+ }
+}
