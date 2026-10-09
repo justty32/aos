@@ -1,0 +1,26 @@
+{
+ "snapshots": 99,
+ "passed": 99,
+ "transitions": 276,
+ "negative_controls": 5,
+ "negative_detected": 5,
+ "auditor_sha256": "7182a4c49b345407b4843912905653c4db2cad5a18b97dc0c049c993b1093392",
+ "batches": {
+  "verified": {
+   "snapshots": 72,
+   "passed": 72
+  },
+  "extra": {
+   "snapshots": 16,
+   "passed": 16
+  },
+  "new": {
+   "snapshots": 9,
+   "passed": 9
+  },
+  "tmp": {
+   "snapshots": 2,
+   "passed": 2
+  }
+ }
+}

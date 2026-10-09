@@ -1,0 +1,7 @@
+test_unsure_listed (test_diag.TestDiag.test_unsure_listed)
+starttime 讀不到的任務：tock 總結的 errors 留 unsure（核心），diag 按需重算也列在 uncertain、給恢復步驟。 ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.109s
+
+OK

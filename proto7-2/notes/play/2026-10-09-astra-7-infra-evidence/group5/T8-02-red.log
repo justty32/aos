@@ -1,0 +1,61 @@
+test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once)
+先驗 SIGKILL 與死亡快照，再恢復；過期 intent 要人手重送。 ... 
+  test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once) (point='after-intent')
+先驗 SIGKILL 與死亡快照，再恢復；過期 intent 要人手重送。 ... FAIL
+  test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once) (point='after-add')
+先驗 SIGKILL 與死亡快照，再恢復；過期 intent 要人手重送。 ... FAIL
+  test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once) (point='before-accept')
+先驗 SIGKILL 與死亡快照，再恢復；過期 intent 要人手重送。 ... FAIL
+
+======================================================================
+FAIL: test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once) (point='after-intent')
+先驗 SIGKILL 與死亡快照，再恢復；過期 intent 要人手重送。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/packs/step/tests/test_step.py", line 486, in test_crash_points_advance_once
+    self.wait_ended(node, "step-" + job, b["run"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/tests/base.py", line 193, in wait_ended
+    self.wait_for(ok, timeout, "槽 %s 一直沒結束" % s)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/tests/base.py", line 187, in wait_for
+    self.fail(msg)
+    ~~~~~~~~~^^^^^
+AssertionError: 槽 step-afterintent 一直沒結束
+
+======================================================================
+FAIL: test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once) (point='after-add')
+先驗 SIGKILL 與死亡快照，再恢復；過期 intent 要人手重送。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/packs/step/tests/test_step.py", line 486, in test_crash_points_advance_once
+    self.wait_ended(node, "step-" + job, b["run"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/tests/base.py", line 193, in wait_ended
+    self.wait_for(ok, timeout, "槽 %s 一直沒結束" % s)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/tests/base.py", line 187, in wait_for
+    self.fail(msg)
+    ~~~~~~~~~^^^^^
+AssertionError: 槽 step-afteradd 一直沒結束
+
+======================================================================
+FAIL: test_crash_points_advance_once (test_step.TestStepProbes.test_crash_points_advance_once) (point='before-accept')
+先驗 SIGKILL 與死亡快照，再恢復；過期 intent 要人手重送。
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/packs/step/tests/test_step.py", line 486, in test_crash_points_advance_once
+    self.wait_ended(node, "step-" + job, b["run"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/tests/base.py", line 193, in wait_ended
+    self.wait_for(ok, timeout, "槽 %s 一直沒結束" % s)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-02/proto7-2/tests/base.py", line 187, in wait_for
+    self.fail(msg)
+    ~~~~~~~~~^^^^^
+AssertionError: 槽 step-beforeaccept 一直沒結束
+
+----------------------------------------------------------------------
+Ran 1 test in 30.499s
+
+FAILED (failures=3)

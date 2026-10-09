@@ -1,0 +1,19 @@
+{
+ "scenario_count": 42,
+ "head": "ad1dfa259015a94a465634023b42b177ec048331",
+ "owned_root_count": 42,
+ "remaining_owned_processes": [],
+ "remaining_core3_tmp_roots": [],
+ "unowned_namespace_paths_preserved": [
+  "/tmp/astra7-core3-codex.log"
+ ],
+ "every_case_cleanup_clean": true,
+ "tracked_diff_exit_code": 0,
+ "tracked_diff": "",
+ "process_scan_scope": "AOS7_ROOT exact or beneath every recorded own root; inaccessible other-user environ skipped",
+ "other_user_environ_unreadable_count": 316,
+ "ps_before": "ps-before.txt",
+ "ps_final": "ps-final.txt",
+ "snapshot_excludes_as_residue": "current finalizer and its systemd-run scope exit after this audit",
+ "pass": true
+}

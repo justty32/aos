@@ -1,0 +1,7 @@
+test_once_runner_before_exit (test_matrix_once.TestLaunchCrash.test_once_runner_before_exit)
+once 任務的起動交接在 point 被 SIGKILL：不重起、不漏起（after-birth 例外：0 次、報一次 lost）。［runner-before-exit］ ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.084s
+
+OK

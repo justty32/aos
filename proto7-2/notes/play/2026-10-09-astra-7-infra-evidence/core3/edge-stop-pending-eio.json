@@ -1,0 +1,149 @@
+{
+ "scenario": "edge-stop-pending-eio",
+ "root": "/tmp/astra7-core3-edge-stop-pending-eio-wpi7snxd",
+ "injection": {
+  "hits": [
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat",
+   "proc-stat\tEIO\t/proc/357416/stat"
+  ]
+ },
+ "assertions": [
+  {
+   "assertion": "stop setup has unregistered reaping obligation",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "stop --kill accepted",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "daemon finishes stop",
+   "actual": 0,
+   "expected": 0,
+   "pass": true
+  },
+  {
+   "assertion": "unknown scan preserves obligation across stop",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "fault really blocked collection",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:46:16.459",
+    "queued_at": "2026-10-09T11:46:16.442"
+   }
+  },
+  {
+   "op": "unregister",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "unregistered a（活任務會被收掉）",
+    "at": "2026-10-09T11:46:16.521",
+    "queued_at": "2026-10-09T11:46:16.512"
+   }
+  },
+  {
+   "op": "stop",
+   "by": "astra7-core3",
+   "kill": true,
+   "result": {
+    "ok": true,
+    "msg": "stopping with kill",
+    "at": "2026-10-09T11:46:16.541",
+    "queued_at": "2026-10-09T11:46:16.523"
+   }
+  }
+ ],
+ "stopped": {
+  "nodes": {
+   "nodes": {},
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:46:16.520",
+     "why": "unregister-kill"
+    }
+   }
+  },
+  "status": {
+   "pid": 357403,
+   "root": "/tmp/astra7-core3-edge-stop-pending-eio-wpi7snxd",
+   "at": "2026-10-09T11:46:18.113",
+   "poll_s": 0.02,
+   "gen": 1,
+   "io_errors": 0,
+   "stopping": true,
+   "stopped": true,
+   "last_event": {
+    "at": "2026-10-09T11:46:18.113",
+    "ev": "stop-sweep",
+    "groups": 0,
+    "ok": false
+   },
+   "nodes": {}
+  },
+  "old": {
+   "pid": 357416,
+   "starttime": 1275986,
+   "state": "S",
+   "ppid": 357415,
+   "pgid": 357416
+  }
+ },
+ "classification": "X: stop preserves unknown obligation and resumes safely",
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "edge-stop-pending-eio.tar.gz",
+ "archive_bytes": 2794,
+ "pass": true
+}

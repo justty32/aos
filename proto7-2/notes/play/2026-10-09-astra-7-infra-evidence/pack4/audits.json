@@ -1,0 +1,1487 @@
+[
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/concurrent-same-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/concurrent-different-final",
+  "transitions": 34,
+  "keys": 17,
+  "accepted": 17,
+  "balances": [
+   0,
+   0,
+   17
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/concurrent-conflict-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/concurrent-cancel-final",
+  "transitions": 80,
+  "keys": 40,
+  "accepted": 5,
+  "balances": [
+   95,
+   0,
+   5
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-reserve-before-commit-interrupted",
+  "transitions": 0,
+  "keys": 0,
+  "accepted": 0,
+  "balances": [
+   100,
+   0,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-reserve-before-commit-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-reserve-after-commit-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-reserve-after-commit-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-settle-before-commit-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-settle-before-commit-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-settle-after-commit-interrupted",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-settle-after-commit-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-call-after-reserve-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-call-after-reserve-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-gateway-after-intent-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-gateway-after-intent-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-backend-after-effect-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-backend-after-effect-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-gateway-after-receipt-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-gateway-after-receipt-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-call-after-settle-interrupted",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/hook-call-after-settle-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-ledger-reserve-before-interrupted",
+  "transitions": 0,
+  "keys": 0,
+  "accepted": 0,
+  "balances": [
+   100,
+   0,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-ledger-reserve-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-ledger-reserve-after-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-ledger-reserve-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-ledger-settle-before-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-ledger-settle-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-ledger-settle-after-interrupted",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-ledger-settle-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-gateway-intent-before-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-gateway-intent-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-gateway-intent-after-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-gateway-intent-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-backend-before-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-backend-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-backend-after-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-backend-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-gateway-done-before-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-gateway-done-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-gateway-done-after-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-gateway-done-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-receipt-reserve-before-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-receipt-reserve-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-receipt-reserve-after-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-receipt-reserve-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-receipt-settle-before-interrupted",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-receipt-settle-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-receipt-settle-after-interrupted",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-receipt-settle-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-inbox-reserve-before-interrupted",
+  "transitions": 0,
+  "keys": 0,
+  "accepted": 0,
+  "balances": [
+   100,
+   0,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-inbox-reserve-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-inbox-reserve-after-interrupted",
+  "transitions": 0,
+  "keys": 0,
+  "accepted": 0,
+  "balances": [
+   100,
+   0,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-inbox-reserve-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-inbox-settle-before-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-inbox-settle-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-inbox-settle-after-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-inbox-settle-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-output-before-interrupted",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-output-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-output-after-interrupted",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/window-output-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/cancel-call-after-reserve-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   100,
+   0,
+   0
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/cancel-gateway-after-intent-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   100,
+   0,
+   0
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/cancel-backend-after-effect-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/unknown-gateway-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/ledger-missing-recovered",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/ledger-malformed-recovered",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/eio-ledger.json-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/eio-ledger.json-final",
+  "transitions": 4,
+  "keys": 2,
+  "accepted": 2,
+  "balances": [
+   98,
+   0,
+   2
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/eio-backend.json-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/verified/snapshots/eio-backend.json-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "verified"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/eio-grant.json-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/eio-grant.json-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/eio-gateway_519457d6f54d32335539.json-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/eio-gateway_519457d6f54d32335539.json-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/eacces-backend-interrupted",
+  "transitions": 3,
+  "keys": 2,
+  "accepted": 1,
+  "balances": [
+   98,
+   1,
+   1
+  ],
+  "final": false,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/eacces-backend-final",
+  "transitions": 4,
+  "keys": 2,
+  "accepted": 2,
+  "balances": [
+   98,
+   0,
+   2
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/cancel-window-before-gateway-after-intent-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/cancel-window-before-gateway-after-intent-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   100,
+   0,
+   0
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/cancel-window-before-backend-after-effect-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/cancel-window-before-backend-after-effect-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/init-before-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   4,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/cancel-window-after-gateway-after-intent-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/cancel-window-after-gateway-after-intent-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   100,
+   0,
+   0
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/cancel-window-after-backend-after-effect-interrupted",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/cancel-window-after-backend-after-effect-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   99,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "crash/extra/snapshots/init-after-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   4,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "extra"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/unknown-recover-fault",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   9,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/unknown-recover-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   9,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/unknown-exhaust-fault",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   9,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/unknown-exhaust-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   9,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/unknown-default-fault",
+  "transitions": 1,
+  "keys": 1,
+  "accepted": 0,
+  "balances": [
+   9,
+   1,
+   0
+  ],
+  "final": false,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/unknown-default-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   9,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/payload-final",
+  "transitions": 0,
+  "keys": 0,
+  "accepted": 0,
+  "balances": [
+   10,
+   0,
+   0
+  ],
+  "final": true,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/weighted-final",
+  "transitions": 4,
+  "keys": 2,
+  "accepted": 2,
+  "balances": [
+   7,
+   0,
+   3
+  ],
+  "final": true,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "snapshots/replay-final",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   9,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "new"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "cases/tmp-frame/budget/demo",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   9,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "tmp"
+ },
+ {
+  "ok": true,
+  "errors": [],
+  "path": "cases/tmp-gateway/budget/demo",
+  "transitions": 2,
+  "keys": 1,
+  "accepted": 1,
+  "balances": [
+   9,
+   0,
+   1
+  ],
+  "final": true,
+  "batch": "tmp"
+ }
+]

@@ -1,0 +1,27 @@
+[
+ {
+  "file": "snapshots.tar.gz",
+  "bytes": 5453,
+  "sha256": "5ea7c32d4c428275edb186485b97311548876453fb6513004d7eb78401eb11a1"
+ },
+ {
+  "file": "cases.tar.gz",
+  "bytes": 49321,
+  "sha256": "7807be827b96320b54ef60ac5b57ac05115be6ba0b0755c4d91c61fb809c0392"
+ },
+ {
+  "file": "harness-initial.tar.gz",
+  "bytes": 39203,
+  "sha256": "ff9c2cfc7fa608a6d0d28e1f23e85e9ea590b1e0c4a9b61a98d128f3f4df27ea"
+ },
+ {
+  "file": "crash/verified/snapshots.tar.gz",
+  "bytes": 50655,
+  "sha256": "262788317811987a98c33ea17c64e3ca6ce69e518026224a004836146f54789a"
+ },
+ {
+  "file": "crash/extra/snapshots.tar.gz",
+  "bytes": 8544,
+  "sha256": "28289364e39cea39ed8d27ee69efe228e2977abc9ad7aff6a521dc11198ce2e8"
+ }
+]

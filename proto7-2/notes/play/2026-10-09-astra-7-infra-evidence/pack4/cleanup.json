@@ -1,0 +1,40 @@
+{
+ "roots": [
+  {
+   "path": "/tmp/astra7-pack4-audit-oxixjr_v",
+   "exists": false
+  },
+  {
+   "path": "/tmp/astra7-pack4-crash-bobm39or",
+   "exists": false
+  },
+  {
+   "path": "/tmp/astra7-pack4-crash-f2yw7c4n",
+   "exists": false
+  },
+  {
+   "path": "/tmp/astra7-pack4-probe-z0d0r29r",
+   "exists": false
+  },
+  {
+   "path": "/tmp/astra7-pack4-repeat-_pnstxw_",
+   "exists": false
+  },
+  {
+   "path": "/tmp/astra7-pack4-tmp-khtexm4a",
+   "exists": false
+  }
+ ],
+ "own_tmp_leftovers": [],
+ "own_aos_processes": [],
+ "tracked_pid_count": 525,
+ "tracked_pids_still_exist": [],
+ "launcher_files_not_created_or_modified_by_probe": [
+  "/tmp/astra7-pack4-codex.log"
+ ],
+ "tracked_changes": [],
+ "oversized_files": [],
+ "ps_before": "ps-before.txt",
+ "ps_final": "ps-final.txt",
+ "pass_": true
+}

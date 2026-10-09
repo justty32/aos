@@ -1,0 +1,216 @@
+{
+ "scenario": "c802-crash-2",
+ "root": "/tmp/astra7-core3-c802-crash-2-zer6uwyr",
+ "injection": {
+  "crash": true,
+  "fault": false,
+  "pending": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:43:37.205"
+    }
+   },
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:37.569",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  "term": {
+   "pid": 345513,
+   "monotonic": 12600.94776101
+  },
+  "kill_after_term_s": 0.0003088079993176507,
+  "daemon_returncode": -9,
+  "old_alive_after_kill": true,
+  "persisted_after_kill": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:43:37.205"
+    }
+   },
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:37.569",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  }
+ },
+ "assertions": [
+  {
+   "assertion": "old is live within grace",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "crash inside grace",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "daemon SIGKILL hit",
+   "actual": -9,
+   "expected": -9,
+   "pass": true
+  },
+  {
+   "assertion": "new worker directly observes old absent/dead/reused",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "old no longer live after restart",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "new worker is live",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "at least 30 consecutive observations",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no observed overlap",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:43:37.205",
+    "queued_at": "2026-10-09T11:43:37.188"
+   }
+  }
+ ],
+ "before": {
+  "nodes": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:43:37.205"
+    }
+   }
+  },
+  "status": {
+   "pid": 345504,
+   "root": "/tmp/astra7-core3-c802-crash-2-zer6uwyr",
+   "at": "2026-10-09T11:43:37.548",
+   "poll_s": 0.02,
+   "gen": 1,
+   "io_errors": 0,
+   "stopping": false,
+   "stopped": false,
+   "last_event": {
+    "at": "2026-10-09T11:43:37.205",
+    "ev": "node+",
+    "node": "a",
+    "round": 0
+   },
+   "nodes": {
+    "a": {
+     "round": 1,
+     "round_open": true,
+     "recovery_pending": false,
+     "paused_by": [],
+     "pause_pending": false,
+     "interval_ms": 1000,
+     "early_tock": false,
+     "live": [
+      "s#1"
+     ],
+     "phase": "running"
+    }
+   }
+  },
+  "old": {
+   "pid": 345513,
+   "starttime": 1260061,
+   "state": "R",
+   "run": "1",
+   "monotonic": 12600.625051549,
+   "prior": null
+  }
+ },
+ "new": {
+  "pid": 345625,
+  "starttime": 1260211,
+  "state": "R",
+  "run": "1",
+  "monotonic": 12602.12142643,
+  "prior": null
+ },
+ "old_after": null,
+ "after": {
+  "nodes": {
+   "a": {
+    "by": "astra7-core3",
+    "at": "2026-10-09T11:43:37.205"
+   }
+  }
+ },
+ "observation": {
+  "samples": 100,
+  "span_s": 1.99893,
+  "overlap_samples": 0
+ },
+ "cleanup": {
+  "killed": [
+   {
+    "pid": 345622,
+    "starttime": 1260209,
+    "state": "S",
+    "ppid": 345269,
+    "pgid": 345622,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-c802-crash-2-zer6uwyr/a/.aos/tasks/s 5 "
+   },
+   {
+    "pid": 345625,
+    "starttime": 1260211,
+    "state": "S",
+    "ppid": 345622,
+    "pgid": 345625,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-c802-crash-2-zer6uwyr/new.ready /tmp/astra7-core3-c802-crash-2-zer6uwyr/new.term {\"pid\": 34551"
+   }
+  ],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "c802-crash-2.tar.gz",
+ "archive_bytes": 3972,
+ "pass": true
+}

@@ -1,0 +1,8 @@
+35f21912 loop7 K2：接 K1——逐槽 kill 回 unknown（runner 還在啟動）＝未確認乾淨，unregister 保留 reaping 重試、stop 收尾仍不確定寫 stop-kill 意圖；spec §2.6 補 R8-29 pgid 重驗身分句
+0b68b3a0 loop7 K2：第二眼修正——舊時間線結束後再掃一次才算收乾淨；round_done 寫 paused.json 失敗不往外丟（避免重試重扣）；寫檔失敗測試改用 D3 inject("write")
+7ac33100 loop7 K2：daemon 回收意圖落盤（R8-02／R8-03／C8-01／C8-02）、R8-04、N-06
+235172da loop7 K1 審查修正（astra）：node 級已確定外人的 pgid 掃描不完整時也不打；補收輪 SIGKILL 確認不了不算乾淨；runner 還在但相符任務已起（pid.json 寫不進）照常收、不永遠留請求；test_ctl +3 案
+915f53e6 loop7 K1：kill 啟動交接回 unknown 留請求（R8-01/D1）、清場後身分複查最多 3 輪（K-04）、node 級 pgid 重驗（R8-29）、runner 先用 AOS7_RUN（R8-10）、is_runner 只看 argv[0..1]（R8-11）、stat 用 bytes 解析（R8-12）、任務環境只帶核心 AOS7_*（N-66 subroot）；spec §6；test_ctl +10 案
+f6aa2a8d loop7 K4：A8-07＋R8-09 動態加掛中斷冪等恢復、N-86 once 改排程不重跑、R8-07 fact fd 不漏、R8-28 指示詞兩處、spec §4.3／§5.5（C8-03）
+9c9cfa5f loop7 K3：timeline 數值三條（A8-11＋R8-20、R8-05、R8-06）
+68e3a5f0 loop7 K4 D3 測試注入點：write_json 加 inject("write", path)、tock _finish 補 seen_round 後加 test_point("tock-seen-round")

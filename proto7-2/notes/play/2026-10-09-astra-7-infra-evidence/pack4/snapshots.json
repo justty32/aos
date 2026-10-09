@@ -1,0 +1,38 @@
+[
+ {
+  "name": "unknown-recover-fault",
+  "final": false
+ },
+ {
+  "name": "unknown-recover-final",
+  "final": true
+ },
+ {
+  "name": "unknown-exhaust-fault",
+  "final": false
+ },
+ {
+  "name": "unknown-exhaust-final",
+  "final": true
+ },
+ {
+  "name": "unknown-default-fault",
+  "final": false
+ },
+ {
+  "name": "unknown-default-final",
+  "final": true
+ },
+ {
+  "name": "payload-final",
+  "final": true
+ },
+ {
+  "name": "weighted-final",
+  "final": true
+ },
+ {
+  "name": "replay-final",
+  "final": true
+ }
+]

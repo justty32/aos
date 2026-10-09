@@ -1,0 +1,19 @@
+test_ended_once_replay_finish_tock_seen_round (test_matrix_docs.TestLastRoundJson.test_ended_once_replay_finish_tock_seen_round)
+T8-06：已結束 once 重播必須收尾；tock-summary＝總結寫完、尚未補 seen_round； ... FAIL
+
+======================================================================
+FAIL: test_ended_once_replay_finish_tock_seen_round (test_matrix_docs.TestLastRoundJson.test_ended_once_replay_finish_tock_seen_round)
+T8-06：已結束 once 重播必須收尾；tock-summary＝總結寫完、尚未補 seen_round；
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-06/proto7-2/tests/_matrix.py", line 44, in t
+    return body(self, *_a)
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-06/proto7-2/tests/core/test_matrix_docs.py", line 153, in _ended_once_replay_finish
+    self.assertIs(self.round_json(node)["open"], True)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not True
+
+----------------------------------------------------------------------
+Ran 1 test in 0.056s
+
+FAILED (failures=1)

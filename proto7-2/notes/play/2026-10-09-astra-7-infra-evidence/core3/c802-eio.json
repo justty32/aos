@@ -1,0 +1,869 @@
+{
+ "scenario": "c802-eio",
+ "root": "/tmp/astra7-core3-c802-eio-gwvsa4tw",
+ "injection": {
+  "crash": false,
+  "fault": true,
+  "pending": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:43:51.528"
+    }
+   },
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  "hits": [
+   "proc-stat\tEIO\t/proc/346887/stat",
+   "proc-stat\tEIO\t/proc/346887/stat",
+   "proc-stat\tEIO\t/proc/346887/stat",
+   "proc-stat\tEIO\t/proc/346887/stat"
+  ]
+ },
+ "assertions": [
+  {
+   "assertion": "EIO keeps old task alive",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "EIO holds missing",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "EIO prohibits new rounds",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "proc-stat EIO really hit",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "new worker directly observes old absent/dead/reused",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "old no longer live after restart",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "new worker is live",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "at least 30 consecutive observations",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no observed overlap",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:43:51.528",
+    "queued_at": "2026-10-09T11:43:51.510"
+   }
+  }
+ ],
+ "before": {
+  "nodes": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:43:51.528"
+    }
+   }
+  },
+  "status": {
+   "pid": 346870,
+   "root": "/tmp/astra7-core3-c802-eio-gwvsa4tw",
+   "at": "2026-10-09T11:43:51.872",
+   "poll_s": 0.02,
+   "gen": 1,
+   "io_errors": 0,
+   "stopping": false,
+   "stopped": false,
+   "last_event": {
+    "at": "2026-10-09T11:43:51.528",
+    "ev": "node+",
+    "node": "a",
+    "round": 0
+   },
+   "nodes": {
+    "a": {
+     "round": 1,
+     "round_open": true,
+     "recovery_pending": false,
+     "paused_by": [],
+     "pause_pending": false,
+     "interval_ms": 1000,
+     "early_tock": false,
+     "live": [
+      "s#1"
+     ],
+     "phase": "running"
+    }
+   }
+  },
+  "old": {
+   "pid": 346887,
+   "starttime": 1261493,
+   "state": "R",
+   "run": "1",
+   "monotonic": 12614.948557616,
+   "prior": null
+  }
+ },
+ "blocked_samples": [
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  },
+  {
+   "old_live": true,
+   "phase": "missing",
+   "new_round_exists": false,
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:51.893",
+     "why": "inode 換了（被搬走或換成別的資料夾）"
+    }
+   }
+  }
+ ],
+ "new": {
+  "pid": 347283,
+  "starttime": 1261843,
+  "state": "R",
+  "run": "1",
+  "monotonic": 12618.449577982,
+  "prior": null
+ },
+ "old_after": null,
+ "after": {
+  "nodes": {
+   "a": {
+    "by": "astra7-core3",
+    "at": "2026-10-09T11:43:51.528"
+   }
+  }
+ },
+ "observation": {
+  "samples": 199,
+  "span_s": 3.99596,
+  "overlap_samples": 0
+ },
+ "cleanup": {
+  "killed": [
+   {
+    "pid": 347279,
+    "starttime": 1261842,
+    "state": "S",
+    "ppid": 345269,
+    "pgid": 347279,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-c802-eio-gwvsa4tw/a/.aos/tasks/s 5 "
+   },
+   {
+    "pid": 347283,
+    "starttime": 1261843,
+    "state": "S",
+    "ppid": 347279,
+    "pgid": 347283,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-c802-eio-gwvsa4tw/new.ready /tmp/astra7-core3-c802-eio-gwvsa4tw/new.term {\"pid\": 346887, \"star"
+   }
+  ],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "c802-eio.tar.gz",
+ "archive_bytes": 4725,
+ "pass": true
+}

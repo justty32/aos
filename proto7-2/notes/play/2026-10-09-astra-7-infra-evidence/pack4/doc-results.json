@@ -1,0 +1,295 @@
+{
+ "scenario": "documentation consistency",
+ "injection": "none; read-only source parsing",
+ "pass_": true,
+ "assertions": "0/1/2/3 tables semantically agree at all three locations; README/spec exact normalized equality; weighted units and step rules present",
+ "budget_tables": [
+  {
+   "source": "proto7-2/packs/budget/README.md",
+   "table": {
+    "0": "後端受理成功，已結算，終局結果已交付（stdout最後一行＋有指定時的--out）。",
+    "1": "已有終局但不成功：後端failed／rejected、入口denied／cancelled已結算，或reserve被拒（denied／conflict／bad）、入口conflict。",
+    "2": "壞輸入：參數不合、payload不存在或不是JSON；沒送任何請求。",
+    "3": "本次呼叫未完整交付終局結果：可能還沒預留、在途（預留或intent留著），或已結算但--out寫入失敗。先aos7-budgetstatusA--holderH--requestR查K，再同K重送call（冪等，不重扣）。"
+   },
+   "assertions": {
+    "0": true,
+    "1": true,
+    "2": true,
+    "3": true
+   },
+   "references": [
+    {
+     "file": "proto7-2/packs/budget/README.md",
+     "sha256": "bf65e6d1f8407923b5443d4c43bb20af765a0a9e9b71cb53bb73f9f990817f92",
+     "matches": [
+      {
+       "line": 64,
+       "text": "- 0＝後端受理成功，已結算，終局結果已交付（stdout 最後一行＋有指定時的 `--out`）。"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/README.md",
+     "sha256": "bf65e6d1f8407923b5443d4c43bb20af765a0a9e9b71cb53bb73f9f990817f92",
+     "matches": [
+      {
+       "line": 65,
+       "text": "- 1＝已有終局但不成功：後端 failed／rejected、入口 denied／cancelled 已結算，或 reserve 被拒（denied／conflict／bad）、入口 conflict。"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/README.md",
+     "sha256": "bf65e6d1f8407923b5443d4c43bb20af765a0a9e9b71cb53bb73f9f990817f92",
+     "matches": [
+      {
+       "line": 66,
+       "text": "- 2＝壞輸入：參數不合、payload 不存在或不是 JSON；沒送任何請求。"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/README.md",
+     "sha256": "bf65e6d1f8407923b5443d4c43bb20af765a0a9e9b71cb53bb73f9f990817f92",
+     "matches": [
+      {
+       "line": 14,
+       "text": "| 接法 | ① 帳：普通 keep 任務 `{\"name\": \"budget-<id>\", \"mode\": \"keep\", \"argv\": [\"python3\", \"<proto7-2>/packs/budget/bin/aos7-budget\", \"ledger\", \"budget/<id>\"]}`（`max_live` 預設 1）<br>② 使用：step 的普通 `run` 步呼叫 `aos7-budget call budget/<id> --holder H --request ${request}`（包裝程式內部 reserve → run → settle）<br>holder 由部署者寫死在 steps.json 的 argv（合作式；真偽不是 budget 的事，見 gateway 卡前置條件）<br>call 對同 K 冪等：步可標 `idempotent: true`。step 拿不到結果（包裝程式被殺、槽被收、結果沒發布）＝step 的 unknown，走步的 `on_unknown`；`resend` 時同 request 新 attempt，受 `max_resends` 限，冪等所以不重扣。拿到退出碼 3＝step 拿到結果（`ok:false`），**預設走 `fail`**；要讓 3 也走 `on_unknown`，在步上開 `unknown_codes: [3]`（step 包選項，預設空；見 [step spec](../step/spec.md)）。不開時，人手先 `status` 查 K，再 `aos7-step resume --resend` 或直接同 K 重跑 `call`。 |"
+      },
+      {
+       "line": 67,
+       "text": "- 3＝**本次呼叫未完整交付終局結果**：可能還沒預留、在途（預留或 intent 留著），或已結算但 `--out` 寫入失敗。先 `aos7-budget status A --holder H --request R` 查 K，再同 K 重送 `call`（冪等，不重扣）。"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "source": "proto7-2/packs/budget/spec.md",
+   "table": {
+    "0": "後端受理成功，已結算，終局結果已交付（stdout最後一行＋有指定時的--out）。",
+    "1": "已有終局但不成功：後端failed／rejected、入口denied／cancelled已結算，或reserve被拒（denied／conflict／bad）、入口conflict。",
+    "2": "壞輸入：參數不合、payload不存在或不是JSON；沒送任何請求。",
+    "3": "本次呼叫未完整交付終局結果：可能還沒預留、在途（預留或intent留著），或已結算但--out寫入失敗。先aos7-budgetstatusA--holderH--requestR查K，再同K重送call（冪等，不重扣）。"
+   },
+   "assertions": {
+    "0": true,
+    "1": true,
+    "2": true,
+    "3": true
+   },
+   "references": [
+    {
+     "file": "proto7-2/packs/budget/spec.md",
+     "sha256": "0d233a523957ca35e58efb6506e8c91307811eebbbba4800cb48b06b0750b152",
+     "matches": [
+      {
+       "line": 81,
+       "text": "- 0＝後端受理成功，已結算，終局結果已交付（stdout 最後一行＋有指定時的 `--out`）。"
+      },
+      {
+       "line": 89,
+       "text": "- **共同故障邊界**：`call`、`cancel`、`settle` 途中任何讀寫不到（核心 `Unknown`、帳／後端讀不到、`OSError`）＝未知：stdout 印一行 `{\"outcome\": \"unknown\", \"stage\", \"why\"}`、退出 3、不留 traceback，不推定帳與入口的階段（可能尚未預留、在途，或已結算但 `--out` 寫入失敗）。`cancel` 退出碼：0＝取消了、1＝已有別的終局（取消不成）、3＝未知。不重試、不動帳。"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/spec.md",
+     "sha256": "0d233a523957ca35e58efb6506e8c91307811eebbbba4800cb48b06b0750b152",
+     "matches": [
+      {
+       "line": 82,
+       "text": "- 1＝已有終局但不成功：後端 failed／rejected、入口 denied／cancelled 已結算，或 reserve 被拒（denied／conflict／bad）、入口 conflict。"
+      },
+      {
+       "line": 89,
+       "text": "- **共同故障邊界**：`call`、`cancel`、`settle` 途中任何讀寫不到（核心 `Unknown`、帳／後端讀不到、`OSError`）＝未知：stdout 印一行 `{\"outcome\": \"unknown\", \"stage\", \"why\"}`、退出 3、不留 traceback，不推定帳與入口的階段（可能尚未預留、在途，或已結算但 `--out` 寫入失敗）。`cancel` 退出碼：0＝取消了、1＝已有別的終局（取消不成）、3＝未知。不重試、不動帳。"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/spec.md",
+     "sha256": "0d233a523957ca35e58efb6506e8c91307811eebbbba4800cb48b06b0750b152",
+     "matches": [
+      {
+       "line": 83,
+       "text": "- 2＝壞輸入：參數不合、payload 不存在或不是 JSON；沒送任何請求。"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/spec.md",
+     "sha256": "0d233a523957ca35e58efb6506e8c91307811eebbbba4800cb48b06b0750b152",
+     "matches": [
+      {
+       "line": 84,
+       "text": "- 3＝**本次呼叫未完整交付終局結果**：可能還沒預留、在途（預留或 intent 留著），或已結算但 `--out` 寫入失敗。先 `aos7-budget status A --holder H --request R` 查 K，再同 K 重送 `call`（冪等，不重扣）。"
+      },
+      {
+       "line": 89,
+       "text": "- **共同故障邊界**：`call`、`cancel`、`settle` 途中任何讀寫不到（核心 `Unknown`、帳／後端讀不到、`OSError`）＝未知：stdout 印一行 `{\"outcome\": \"unknown\", \"stage\", \"why\"}`、退出 3、不留 traceback，不推定帳與入口的階段（可能尚未預留、在途，或已結算但 `--out` 寫入失敗）。`cancel` 退出碼：0＝取消了、1＝已有別的終局（取消不成）、3＝未知。不重試、不動帳。"
+      },
+      {
+       "line": 90,
+       "text": "- 對同 K 冪等：重跑只把沒做完的做完。step 步可標 `idempotent: true`。step 拿不到結果（包裝程式被殺、槽被收、結果沒發布）＝step 的 unknown，走步的 `on_unknown`；`resend` 時同 request 新 attempt，受 `max_resends` 限，冪等所以不重扣。拿到退出碼 3＝step 拿到結果（`ok:false`），**預設走 `fail`**；要讓 3 也走 `on_unknown`，在步上開 `unknown_codes: [3]`（step 包選項，預設空；見 [step spec](../step/spec.md)）。不開時，人手先 `status` 查 K，再 `aos7-step resume --resend` 或直接同 K 重跑 `call`。step 的 `ok:false` 不代表退款，退款只看入口回條。"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "source": "proto7-2/packs/budget/aos7_budget_gate.py",
+   "table": {
+    "0": "後端受理成功，已結算，終局結果已交付（stdout最後一行＋有指定時的--out）。",
+    "1": "已有終局但不成功：後端failed／rejected、入口denied／cancelled已結算，或reserve被拒（denied／conflict／bad）、入口conflict。",
+    "2": "壞輸入：參數不合、payload不存在或不是JSON；沒送任何請求。",
+    "3": "本次呼叫未完整交付終局結果：可能還沒預留、在途（預留或intent留著），或已結算但--out寫入失敗。先status--holderH--requestR查K，再同K重送call（冪等，不重扣）。"
+   },
+   "assertions": {
+    "0": true,
+    "1": true,
+    "2": true,
+    "3": true
+   },
+   "references": [
+    {
+     "file": "proto7-2/packs/budget/aos7_budget_gate.py",
+     "sha256": "4c8140104142310edfa4dd0d7f9ca68f1624b5a5bd3cf73876fb2d25f1b1fc90",
+     "matches": [
+      {
+       "line": 164,
+       "text": "    0＝後端受理成功，已結算，終局結果已交付（stdout 最後一行＋有指定時的 --out）。"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/aos7_budget_gate.py",
+     "sha256": "4c8140104142310edfa4dd0d7f9ca68f1624b5a5bd3cf73876fb2d25f1b1fc90",
+     "matches": [
+      {
+       "line": 165,
+       "text": "    1＝已有終局但不成功：後端 failed／rejected、入口 denied／cancelled 已結算，"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/aos7_budget_gate.py",
+     "sha256": "4c8140104142310edfa4dd0d7f9ca68f1624b5a5bd3cf73876fb2d25f1b1fc90",
+     "matches": [
+      {
+       "line": 167,
+       "text": "    2＝壞輸入：參數不合、payload 不存在或不是 JSON；沒送任何請求。"
+      }
+     ]
+    },
+    {
+     "file": "proto7-2/packs/budget/aos7_budget_gate.py",
+     "sha256": "4c8140104142310edfa4dd0d7f9ca68f1624b5a5bd3cf73876fb2d25f1b1fc90",
+     "matches": [
+      {
+       "line": 168,
+       "text": "    3＝本次呼叫未完整交付終局結果：可能還沒預留、在途（預留或 intent 留著），"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "unit_references": [
+  {
+   "file": "proto7-2/packs/budget/README.md",
+   "sha256": "bf65e6d1f8407923b5443d4c43bb20af765a0a9e9b71cb53bb73f9f990817f92",
+   "matches": [
+    {
+     "line": 13,
+     "text": "| 示範資源 | **假 API 加權成本**（`fakeapi.calls`）：每個業務請求預留 `--amount` 單位（預設 1）；帳的 `used`／`available` 是加權成本單位，`backend.json` 的 `accepted` 才是受理次數；明確拒絕計 0，已受理後失敗仍計 amount |"
+    }
+   ]
+  },
+  {
+   "file": "proto7-2/packs/budget/spec.md",
+   "sha256": "0d233a523957ca35e58efb6506e8c91307811eebbbba4800cb48b06b0750b152",
+   "matches": [
+    {
+     "line": 70,
+     "text": "`backend.json` 用 `edit_json` 一次寫入「`effects[kid]` ＋ `accepted` 計數」。同 kid 已有效果＝回原效果、不再計數。每個業務請求預留 `--amount` 單位（預設 1）；帳的 `used`／`available` 是加權成本，`accepted` 才是受理次數。payload 的 `mode`：`ok`（預設，受理、成本計 amount）、`fail`（受理後處理失敗、成本仍計 amount、outcome `failed`）、`reject`（明確拒絕、成本計 0）；ok／fail 的受理次數各加 1，reject 不加。`query(kid)` 只讀。"
+    }
+   ]
+  }
+ ],
+ "step_references": [
+  {
+   "file": "proto7-2/packs/step/spec.md",
+   "sha256": "6e06f6acc53ad0a3a7d38ad1559776049e619aaef5e0ab5578f09c618b705336",
+   "matches": [
+    {
+     "line": 35,
+     "text": "  - **`run`**（字串陣列）：派一個子工作。欄：`ok`（必填）、`fail`、`finite`、`idempotent`（預設 false）、`patience`、`on_timeout`、`on_unknown`、`max_resends`（非負整數，預設 1）、`unknown_codes`、`wake`、`receipt`（條件）、`expect`（產物路徑陣列）。"
+    },
+    {
+     "line": 39,
+     "text": "- `unknown_codes`：只給 run，提供時要是非空、互異的整數陣列（1～255，bool 不收）；不給當空。結果退出碼在清單中＝未交付終局結果，走 on_unknown。"
+    },
+    {
+     "line": 88,
+     "text": "6. **unknown**：步拿不到結果（槽結束沒結果、過期 intent），或拿到 `unknown_codes` 裡的退出碼，都走此路。`on_unknown: stop`（預設）＝`halt` unknown，等人。`resend` 只准冪等步（檢查器與執行時都擋），同一 request 新 attempt，最多 `max_resends` 次（步內欄，預設 1；0＝不自動重送），之後仍 unknown 就停；額度屬於 request，表寫失敗不重設；人手 `resume --resend` 把該 request 的額度歸零。有 `receipt` 的先查，成立就當 ok。"
+    },
+    {
+     "line": 89,
+     "text": "7. 結果 `ok: false` 且退出碼不在 `unknown_codes`：走 `fail`；沒寫 `fail`＝`halt` failed。預設空時非零退出碼一律是失敗結果；code 0 但 missing 產物也仍是失敗。"
+    }
+   ]
+  },
+  {
+   "file": "proto7-2/packs/step/spec.md",
+   "sha256": "6e06f6acc53ad0a3a7d38ad1559776049e619aaef5e0ab5578f09c618b705336",
+   "matches": [
+    {
+     "line": 88,
+     "text": "6. **unknown**：步拿不到結果（槽結束沒結果、過期 intent），或拿到 `unknown_codes` 裡的退出碼，都走此路。`on_unknown: stop`（預設）＝`halt` unknown，等人。`resend` 只准冪等步（檢查器與執行時都擋），同一 request 新 attempt，最多 `max_resends` 次（步內欄，預設 1；0＝不自動重送），之後仍 unknown 就停；額度屬於 request，表寫失敗不重設；人手 `resume --resend` 把該 request 的額度歸零。有 `receipt` 的先查，成立就當 ok。"
+    }
+   ]
+  },
+  {
+   "file": "proto7-2/packs/step/spec.md",
+   "sha256": "6e06f6acc53ad0a3a7d38ad1559776049e619aaef5e0ab5578f09c618b705336",
+   "matches": [
+    {
+     "line": 88,
+     "text": "6. **unknown**：步拿不到結果（槽結束沒結果、過期 intent），或拿到 `unknown_codes` 裡的退出碼，都走此路。`on_unknown: stop`（預設）＝`halt` unknown，等人。`resend` 只准冪等步（檢查器與執行時都擋），同一 request 新 attempt，最多 `max_resends` 次（步內欄，預設 1；0＝不自動重送），之後仍 unknown 就停；額度屬於 request，表寫失敗不重設；人手 `resume --resend` 把該 request 的額度歸零。有 `receipt` 的先查，成立就當 ok。"
+    }
+   ]
+  },
+  {
+   "file": "proto7-2/packs/step/spec.md",
+   "sha256": "6e06f6acc53ad0a3a7d38ad1559776049e619aaef5e0ab5578f09c618b705336",
+   "matches": [
+    {
+     "line": 88,
+     "text": "6. **unknown**：步拿不到結果（槽結束沒結果、過期 intent），或拿到 `unknown_codes` 裡的退出碼，都走此路。`on_unknown: stop`（預設）＝`halt` unknown，等人。`resend` 只准冪等步（檢查器與執行時都擋），同一 request 新 attempt，最多 `max_resends` 次（步內欄，預設 1；0＝不自動重送），之後仍 unknown 就停；額度屬於 request，表寫失敗不重設；人手 `resume --resend` 把該 request 的額度歸零。有 `receipt` 的先查，成立就當 ok。"
+    }
+   ]
+  },
+  {
+   "file": "proto7-2/packs/step/spec.md",
+   "sha256": "6e06f6acc53ad0a3a7d38ad1559776049e619aaef5e0ab5578f09c618b705336",
+   "matches": [
+    {
+     "line": 83,
+     "text": "   - `run` 沒有 `pending`：有 `receipt` 且成立→當 ok、不派。否則**先存意圖**（`pending.state=intent`、`intent_round`＝現在的回合），再拿表鎖加 once 項（表上已有同 attempt 的不加），再寫 `state=queued`。表鎖拿不到、表讀不到或壞＝**拒寫**：撤掉 `pending`、記 `error.json`，下一圈重來（attempt 號照加）。`wake: true` 時再寫 daemon 的 wake。"
+    }
+   ]
+  }
+ ],
+ "behavior_evidence": {
+  "unknown_codes": "results.json: unknown-recover, unknown-exhaust, unknown-default, validation",
+  "expired_intent": "results.json: intent-receipt/resend/stop/same-round",
+  "resends": "results.json: resend-open-fail, unknown-exhaust",
+  "units": "results.json: weighted"
+ },
+ "caveats": [
+  "User task says no a3, but step spec §5.4 explicitly increments attempt number after refused table write: actual a1+a3 executions, ran=2.",
+  "Physical pre-write EIO retains intent; covered separately as an extension of R8-22, results.json:resend-write-fail."
+ ]
+}

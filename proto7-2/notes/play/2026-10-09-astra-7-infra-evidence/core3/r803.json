@@ -1,0 +1,259 @@
+{
+ "scenario": "r803",
+ "root": "/tmp/astra7-core3-r803-9kd254pp",
+ "injection": {
+  "rules": "write:*/.aosd/nodes.json:EIO",
+  "hits": [
+   "write\tEIO\t/proc/self/fd/3/.aosd/nodes.json",
+   "write\tEIO\t/proc/self/fd/3/.aosd/nodes.json"
+  ]
+ },
+ "assertions": [
+  {
+   "assertion": "failed register returns false",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "failed register leaves disk unchanged",
+   "actual": {
+    "nodes": {}
+   },
+   "expected": {
+    "nodes": {}
+   },
+   "pass": true
+  },
+  {
+   "assertion": "failed register absent from status",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "register retry succeeds",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "register retry status ids equal disk ids",
+   "actual": [
+    "a"
+   ],
+   "expected": [
+    "a"
+   ],
+   "pass": true
+  },
+  {
+   "assertion": "failed unregister returns false",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "failed unregister leaves disk unchanged",
+   "actual": {
+    "nodes": {
+     "a": {
+      "by": "astra7-core3",
+      "at": "2026-10-09T11:43:34.445"
+     }
+    }
+   },
+   "expected": {
+    "nodes": {
+     "a": {
+      "by": "astra7-core3",
+      "at": "2026-10-09T11:43:34.445"
+     }
+    }
+   },
+   "pass": true
+  },
+  {
+   "assertion": "failed unregister preserves timeline",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "failed unregister does not retire",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "unregister retry succeeds",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "unregister retry status ids equal disk ids",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "restart registry matches disk",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "both write failures actually injected",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": false,
+    "msg": "nodes.json 寫不進去（[Errno 5] Input/output error（AOS7_TEST_FAULT 注入）: '/proc/self/fd/3/.aosd/nodes.json'），登記沒有改；請重送",
+    "at": "2026-10-09T11:43:34.324",
+    "queued_at": "2026-10-09T11:43:34.306"
+   }
+  },
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:43:34.445",
+    "queued_at": "2026-10-09T11:43:34.427"
+   }
+  },
+  {
+   "op": "unregister",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": false,
+    "msg": "nodes.json 寫不進去（[Errno 5] Input/output error（AOS7_TEST_FAULT 注入）: '/proc/self/fd/3/.aosd/nodes.json'），登記沒有改；請重送",
+    "at": "2026-10-09T11:43:34.507",
+    "queued_at": "2026-10-09T11:43:34.488"
+   }
+  },
+  {
+   "op": "unregister",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "unregistered a（活任務會被收掉）",
+    "at": "2026-10-09T11:43:34.628",
+    "queued_at": "2026-10-09T11:43:34.608"
+   }
+  },
+  {
+   "op": "stop",
+   "by": "astra7-core3",
+   "kill": true,
+   "result": {
+    "ok": true,
+    "msg": "stopping with kill",
+    "at": "2026-10-09T11:43:34.730",
+    "queued_at": "2026-10-09T11:43:34.720"
+   }
+  }
+ ],
+ "register_failed": {
+  "nodes": {
+   "nodes": {}
+  },
+  "status": {
+   "pid": 345273,
+   "root": "/tmp/astra7-core3-r803-9kd254pp",
+   "at": "2026-10-09T11:43:34.425",
+   "poll_s": 0.02,
+   "gen": 1,
+   "io_errors": 0,
+   "stopping": false,
+   "stopped": false,
+   "last_event": {
+    "at": "2026-10-09T11:43:34.324",
+    "ev": "ctl",
+    "file": "core3-0001.json",
+    "op": "register",
+    "node": "a",
+    "by": "astra7-core3",
+    "ok": false,
+    "msg": "nodes.json 寫不進去（[Errno 5] Input/output error（AOS7_TEST_FAULT 注入）: '/proc/self/fd/3/.aosd/nodes.json'），登記沒有改；請重送"
+   },
+   "nodes": {}
+  }
+ },
+ "unregister_failed": {
+  "nodes": {
+   "nodes": {
+    "a": {
+     "by": "astra7-core3",
+     "at": "2026-10-09T11:43:34.445"
+    }
+   }
+  },
+  "status": {
+   "pid": 345273,
+   "root": "/tmp/astra7-core3-r803-9kd254pp",
+   "at": "2026-10-09T11:43:34.608",
+   "poll_s": 0.02,
+   "gen": 1,
+   "io_errors": 0,
+   "stopping": false,
+   "stopped": false,
+   "last_event": {
+    "at": "2026-10-09T11:43:34.507",
+    "ev": "ctl",
+    "file": "core3-0003.json",
+    "op": "unregister",
+    "node": "a",
+    "by": "astra7-core3",
+    "ok": false,
+    "msg": "nodes.json 寫不進去（[Errno 5] Input/output error（AOS7_TEST_FAULT 注入）: '/proc/self/fd/3/.aosd/nodes.json'），登記沒有改；請重送"
+   },
+   "nodes": {
+    "a": {
+     "round": 1,
+     "round_open": true,
+     "recovery_pending": false,
+     "paused_by": [],
+     "pause_pending": false,
+     "interval_ms": 1000,
+     "early_tock": false,
+     "live": [],
+     "phase": "running"
+    }
+   }
+  }
+ },
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "r803.tar.gz",
+ "archive_bytes": 2118,
+ "pass": true
+}

@@ -1,0 +1,129 @@
+{
+ "scenario": "c801-control-2",
+ "root": "/tmp/astra7-core3-c801-control-2-kwb3mkqv",
+ "injection": {
+  "crash": false,
+  "term": {
+   "pid": 345897,
+   "monotonic": 12604.75738007
+  },
+  "task_alive_at_receipt": true,
+  "pending": {
+   "nodes": {},
+   "reaping": {
+    "a": {
+     "since": "2026-10-09T11:43:41.378",
+     "why": "unregister-kill"
+    }
+   }
+  }
+ },
+ "assertions": [
+  {
+   "assertion": "unregister accepted",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "registry removes id before receipt",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "durable reaping at receipt",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "TERM-resistant task still live in grace",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "old PID/starttime no longer non-zombie live",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "reaping cleared only after collection",
+   "actual": {},
+   "expected": {},
+   "pass": true
+  },
+  {
+   "assertion": "unregistered node not relaunched",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:43:41.297",
+    "queued_at": "2026-10-09T11:43:41.278"
+   }
+  },
+  {
+   "op": "unregister",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "unregistered a（活任務會被收掉）",
+    "at": "2026-10-09T11:43:41.379",
+    "queued_at": "2026-10-09T11:43:41.359"
+   }
+  }
+ ],
+ "before": {
+  "nodes": {
+   "a": {
+    "by": "astra7-core3",
+    "at": "2026-10-09T11:43:41.296"
+   }
+  }
+ },
+ "task_before": {
+  "pid": 345897,
+  "starttime": 1260470,
+  "state": "R",
+  "run": "1",
+  "monotonic": 12604.719821536,
+  "prior": null
+ },
+ "task_after": null,
+ "after": {
+  "nodes": {}
+ },
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "c801-control-2.tar.gz",
+ "archive_bytes": 2264,
+ "pass": true
+}

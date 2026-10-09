@@ -1,0 +1,55 @@
+[
+ {
+  "scenario": "double-backend-count",
+  "injection": "mutated independent snapshot copy",
+  "assertion": "auditor rejects corruption",
+  "pass_": true,
+  "errors": [
+   "backend accepted != positive effects: possible repeated K",
+   "backend effect ordinals are not unique contiguous"
+  ]
+ },
+ {
+  "scenario": "bad-log-balance",
+  "injection": "mutated independent snapshot copy",
+  "assertion": "auditor rejects corruption",
+  "pass_": true,
+  "errors": [
+   "log 1: replay balances"
+  ]
+ },
+ {
+  "scenario": "duplicate-reserve",
+  "injection": "mutated independent snapshot copy",
+  "assertion": "auditor rejects corruption",
+  "pass_": true,
+  "errors": [
+   "log 5: sequence",
+   "08b6b59683751af26e08: duplicate reserve",
+   "log 5: replay balances",
+   "final replay balances",
+   "final seq",
+   "08b6b59683751af26e08: op stage",
+   "final inflight != 0"
+  ]
+ },
+ {
+  "scenario": "wrong-evidence-hash",
+  "injection": "mutated independent snapshot copy",
+  "assertion": "auditor rejects corruption",
+  "pass_": true,
+  "errors": [
+   "08b6b59683751af26e08: gateway receipt hash"
+  ]
+ },
+ {
+  "scenario": "missing-op",
+  "injection": "mutated independent snapshot copy",
+  "assertion": "auditor rejects corruption",
+  "pass_": true,
+  "errors": [
+   "ops/log key set differs",
+   "08b6b59683751af26e08: backend key differs"
+  ]
+ }
+]

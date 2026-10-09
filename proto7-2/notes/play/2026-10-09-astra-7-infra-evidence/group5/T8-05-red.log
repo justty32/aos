@@ -1,0 +1,19 @@
+test_last_round_readback_U (test_matrix_faults.TestFileUnknown.test_last_round_readback_U)
+T8-05：第 2 次讀才注入，避開讀舊總結，證明寫後整份讀回失敗時不關回合、不收尾，解除後重播。［U］ ... FAIL
+
+======================================================================
+FAIL: test_last_round_readback_U (test_matrix_faults.TestFileUnknown.test_last_round_readback_U)
+T8-05：第 2 次讀才注入，避開讀舊總結，證明寫後整份讀回失敗時不關回合、不收尾，解除後重播。［U］
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-05/proto7-2/tests/_matrix.py", line 44, in t
+    return body(self, *_a)
+  File "/tmp/astra7-group5-t8-nk5b59za/T8-05/proto7-2/tests/core/test_matrix_faults.py", line 317, in _last_round_readback
+    with self.assertRaises(aos7_tock.Unknown) as raised:
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: Unknown not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.049s
+
+FAILED (failures=1)

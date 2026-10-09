@@ -1,0 +1,312 @@
+{
+  "scenario": "D7 core line count and lib history",
+  "injection": {
+    "kind": "none; static evidence"
+  },
+  "head": "ad1dfa259015a94a465634023b42b177ec048331",
+  "budget_rc": 0,
+  "totals": {
+    "total": 2952,
+    "code": 2305
+  },
+  "astra6_reported": {
+    "total": 2757,
+    "code": 2123
+  },
+  "vs_astra6": {
+    "total": 195,
+    "code": 182
+  },
+  "rows": [
+    {
+      "file": "proto7-2/lib/aos7_daemon.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 630,
+        "code": 518
+      },
+      "head": {
+        "total": 749,
+        "code": 632
+      },
+      "delta": {
+        "total": 119,
+        "code": 114
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos7_daemon_timeline.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 309,
+        "code": 247
+      },
+      "head": {
+        "total": 325,
+        "code": 262
+      },
+      "delta": {
+        "total": 16,
+        "code": 15
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos7_fs.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 343,
+        "code": 221
+      },
+      "head": {
+        "total": 349,
+        "code": 227
+      },
+      "delta": {
+        "total": 6,
+        "code": 6
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos7_mount.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 168,
+        "code": 130
+      },
+      "head": {
+        "total": 181,
+        "code": 143
+      },
+      "delta": {
+        "total": 13,
+        "code": 13
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos7_proc.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 249,
+        "code": 178
+      },
+      "head": {
+        "total": 276,
+        "code": 198
+      },
+      "delta": {
+        "total": 27,
+        "code": 20
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos7_run.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 113,
+        "code": 87
+      },
+      "head": {
+        "total": 116,
+        "code": 90
+      },
+      "delta": {
+        "total": 3,
+        "code": 3
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos7_task.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 334,
+        "code": 249
+      },
+      "head": {
+        "total": 344,
+        "code": 259
+      },
+      "delta": {
+        "total": 10,
+        "code": 10
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos7_tick.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 414,
+        "code": 331
+      },
+      "head": {
+        "total": 414,
+        "code": 331
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos7_tock.py",
+      "in_core_budget": true,
+      "baseline_510dd134": {
+        "total": 197,
+        "code": 162
+      },
+      "head": {
+        "total": 198,
+        "code": 163
+      },
+      "delta": {
+        "total": 1,
+        "code": 1
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_directives.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 228,
+        "code": 137
+      },
+      "head": {
+        "total": 230,
+        "code": 139
+      },
+      "delta": {
+        "total": 2,
+        "code": 2
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_directives_base.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 111,
+        "code": 55
+      },
+      "head": {
+        "total": 111,
+        "code": 55
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_directives_options.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 73,
+        "code": 41
+      },
+      "head": {
+        "total": 73,
+        "code": 41
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_dirname.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 30,
+        "code": 11
+      },
+      "head": {
+        "total": 30,
+        "code": 11
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_exec.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 270,
+        "code": 146
+      },
+      "head": {
+        "total": 270,
+        "code": 146
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_exec_run.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 227,
+        "code": 168
+      },
+      "head": {
+        "total": 227,
+        "code": 168
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_exec_spawn.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 117,
+        "code": 84
+      },
+      "head": {
+        "total": 117,
+        "code": 84
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_exec_wait.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 124,
+        "code": 94
+      },
+      "head": {
+        "total": 124,
+        "code": 94
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    },
+    {
+      "file": "proto7-2/lib/aos_inst.py",
+      "in_core_budget": false,
+      "baseline_510dd134": {
+        "total": 252,
+        "code": 147
+      },
+      "head": {
+        "total": 252,
+        "code": 147
+      },
+      "delta": {
+        "total": 0,
+        "code": 0
+      }
+    }
+  ],
+  "assertion": "budget CLI rc0; printed counts agree with independent measurement; no enforcement under D7",
+  "pass": true
+}

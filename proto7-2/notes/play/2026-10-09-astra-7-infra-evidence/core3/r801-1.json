@@ -1,0 +1,160 @@
+{
+ "scenario": "r801-1",
+ "root": "/tmp/astra7-core3-r801-1-jk807g10",
+ "injection": {
+  "point": "runner-before-popen",
+  "entered": true,
+  "runner": {
+   "pid": 344804,
+   "starttime": 1258602,
+   "state": "S",
+   "ppid": 344787,
+   "pgid": 344804
+  },
+  "pid_json_absent": true,
+  "matching_processes": [
+   {
+    "pid": 344804,
+    "starttime": 1258602,
+    "state": "S",
+    "ppid": 344787,
+    "pgid": 344804,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-r801-1-jk807g10/a/.aos/tasks/s 5 "
+   }
+  ]
+ },
+ "assertions": [
+  {
+   "assertion": "pre-Popen kill ok:false",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "pre-Popen message begins unknown",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "pre-Popen request retained",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "runner remains same live process",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "released kill succeeds",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "request removed after successful kill",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "PID + starttime is no longer non-zombie live",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "no same-run task remains",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "commands": [
+  {
+   "program": "aos7-tick",
+   "args": [
+    "/tmp/astra7-core3-r801-1-jk807g10",
+    "a"
+   ],
+   "returncode": 0,
+   "stdout": "{\"round\": 1, \"started\": [\"s#1\"], \"tasks_rev\": \"9d9ea9f462d1\"}\n",
+   "stderr": ""
+  },
+  {
+   "program": "aos7-tock",
+   "args": [
+    "/tmp/astra7-core3-r801-1-jk807g10",
+    "a"
+   ],
+   "returncode": 0,
+   "stdout": "{\"round\": 1, \"tick_at\": \"2026-10-09T11:43:22.654\", \"tock_at\": \"2026-10-09T11:43:22.713\", \"early\": null, \"started\": [\"s#1\"], \"alive\": [\"s#1\"], \"ended\": [], \"skipped\": [], \"ctl\": [{\"slot\": \"s\", \"run\": \"s#1\", \"op\": \"kill\", \"ok\": false}], \"mounts\": [], \"tasks_error\": [], \"errors\": [], \"tasks_rev\": \"9d9ea9f462d1\"}\n",
+   "stderr": ""
+  },
+  {
+   "program": "aos7-tick",
+   "args": [
+    "/tmp/astra7-core3-r801-1-jk807g10",
+    "a"
+   ],
+   "returncode": 0,
+   "stdout": "{\"round\": 2, \"started\": [], \"tasks_rev\": \"9d9ea9f462d1\"}\n",
+   "stderr": ""
+  },
+  {
+   "program": "aos7-tock",
+   "args": [
+    "/tmp/astra7-core3-r801-1-jk807g10",
+    "a"
+   ],
+   "returncode": 0,
+   "stdout": "{\"round\": 2, \"tick_at\": \"2026-10-09T11:43:23.750\", \"tock_at\": \"2026-10-09T11:43:24.809\", \"early\": null, \"started\": [], \"alive\": [], \"ended\": [{\"run\": \"s#1\", \"code\": -9, \"by_ctl\": {\"op\": \"kill\", \"by\": \"core3\"}}], \"skipped\": [], \"ctl\": [{\"slot\": \"s\", \"run\": \"s#1\", \"op\": \"kill\", \"ok\": false}, {\"slot\": \"s\", \"run\": \"s#1\", \"op\": \"kill\", \"ok\": true}], \"mounts\": [], \"tasks_error\": [], \"errors\": [], \"tasks_rev\": \"9d9ea9f462d1\"}\n",
+   "stderr": ""
+  }
+ ],
+ "first_receipt": {
+  "ok": false,
+  "msg": "unknown：runner 仍在啟動、還沒寫 pid.json，請求留著下次再試",
+  "at": "2026-10-09T11:43:23.721",
+  "run": "s#1"
+ },
+ "second_receipt": {
+  "ok": true,
+  "msg": "killed 1 group(s)",
+  "at": "2026-10-09T11:43:25.882",
+  "run": "s#1"
+ },
+ "task_before": {
+  "pid": 345025,
+  "starttime": 1258813,
+  "state": "R",
+  "run": "1",
+  "monotonic": 12588.144655026,
+  "prior": null
+ },
+ "task_after": null,
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "r801-1.tar.gz",
+ "archive_bytes": 2053,
+ "pass": true
+}

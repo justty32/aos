@@ -1,0 +1,7 @@
+test_last_round_readback_U (test_matrix_faults.TestFileUnknown.test_last_round_readback_U)
+T8-05：第 2 次讀才注入，避開讀舊總結，證明寫後整份讀回失敗時不關回合、不收尾，解除後重播。［U］ ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.104s
+
+OK

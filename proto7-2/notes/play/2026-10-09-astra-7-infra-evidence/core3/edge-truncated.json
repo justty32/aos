@@ -1,0 +1,50 @@
+{
+ "scenario": "edge-truncated",
+ "root": "/tmp/astra7-core3-edge-truncated-puccu11o",
+ "injection": {
+  "nodes_raw": "{\"nodes\":{},\"reaping\":{\"a\":",
+  "exit": 3,
+  "source": "explicit simulated disk corruption; no live state edited"
+ },
+ "assertions": [
+  {
+   "assertion": "corrupt durable state refuses startup",
+   "actual": 3,
+   "expected": 3,
+   "pass": true
+  },
+  {
+   "assertion": "corrupt state not overwritten",
+   "actual": "{\"nodes\":{},\"reaping\":{\"a\":",
+   "expected": "{\"nodes\":{},\"reaping\":{\"a\":",
+   "pass": true
+  },
+  {
+   "assertion": "no status pretending startup succeeded",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "classification": "X: fault refused safely",
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "edge-truncated.tar.gz",
+ "archive_bytes": 573,
+ "pass": true
+}

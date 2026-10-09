@@ -1,0 +1,25 @@
+[
+  {
+    "source": "proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/run_probes.py",
+    "copy": "proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/pack4/crash/run_probes.py",
+    "source_sha256": "40613c6b03de2be43c84b1448df706cef02d0a1ba9c1738160bec56eeba4e89e",
+    "changes": "docstring rerun command; temp prefix only"
+  },
+  {
+    "source": "proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/run_extra.py",
+    "copy": "proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/pack4/crash/run_extra.py",
+    "source_sha256": "fe2e5aa2b2fb08d9ebb9fa9018167d787c894f1bb9eb2fa407ddd71d9fe4923c",
+    "changes": "docstring rerun command only"
+  },
+  {
+    "source": "proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/crash/sitecustomize.py",
+    "copy": "proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/pack4/crash/sitecustomize.py",
+    "source_sha256": "393e2a9f66f3102d70c61912b7481e0465d1d9fdc85f0f4d14ff1bbc7adc1d13",
+    "changes": "byte identical"
+  },
+  {
+    "source": "proto7-2/notes/play/2026-10-04-astra-6-infra-evidence/budget/integration/audit.py",
+    "source_sha256": "7182a4c49b345407b4843912905653c4db2cad5a18b97dc0c049c993b1093392",
+    "changes": "byte identical auditor"
+  }
+]

@@ -1,0 +1,160 @@
+{
+  "checks": [
+    {
+      "scenario": "snapshot replay",
+      "injection": {
+        "kind": "none; post-run evidence analysis"
+      },
+      "assertion": "completed job filename set stable after replacing only instance id",
+      "actual": {
+        "snapshots": 150,
+        "first": [
+          "convert.py",
+          "data.csv",
+          "frame.json",
+          "frame.json.lock",
+          "out/data.json",
+          "out/report.json",
+          "results/convert/<inst>-convert-1-a1.json",
+          "results/stats/<inst>-stats-1-a1.json",
+          "stats.py",
+          "steps.json"
+        ],
+        "variants": 1
+      },
+      "pass": true
+    },
+    {
+      "scenario": "snapshot replay",
+      "injection": {
+        "kind": "none; post-run evidence analysis"
+      },
+      "assertion": "no previous instance result file at any completion",
+      "actual": {
+        "checked": 150,
+        "leftover": []
+      },
+      "pass": true
+    },
+    {
+      "scenario": "snapshot replay",
+      "injection": {
+        "kind": "none; post-run evidence analysis"
+      },
+      "assertion": "final ended instance included in completed snapshots",
+      "actual": {
+        "phase": "ended",
+        "inst": "bb03ac6d",
+        "captured": true
+      },
+      "pass": true
+    },
+    {
+      "scenario": "snapshot replay",
+      "injection": {
+        "kind": "none; post-run evidence analysis"
+      },
+      "assertion": "observed names stay within finite reused product layout",
+      "actual": {
+        "normalized_union": {
+          "job": [
+            ".frame.json.tmp.<pid>",
+            "convert.py",
+            "data.csv",
+            "frame.json",
+            "frame.json.lock",
+            "out/data.json",
+            "out/report.json",
+            "results/convert/<inst>-convert-1-a1.json",
+            "results/stats/<inst>-stats-1-a1.json",
+            "stats.py",
+            "steps.json"
+          ],
+          "slots": [
+            "step-csv-convert/birth.json",
+            "step-csv-convert/exit.json",
+            "step-csv-convert/out.log",
+            "step-csv-convert/pid.json",
+            "step-csv-stats/birth.json",
+            "step-csv-stats/exit.json",
+            "step-csv-stats/out.log",
+            "step-csv-stats/pid.json",
+            "step-csv/birth.json",
+            "step-csv/out.log",
+            "step-csv/pid.json",
+            "step-csv/tock.json"
+          ],
+          "aosd": [
+            ".paused.json.tmp.<pid>",
+            ".status.json.tmp.<pid>",
+            "ctl-done/cli.register.a.json",
+            "ctl-done/cli.resume.a@qa.json",
+            "daemon.lock",
+            "gen.json",
+            "nodes.json",
+            "paused.json",
+            "paused.json.lock",
+            "status.json"
+          ]
+        },
+        "counts": {
+          "job": 11,
+          "slots": 12,
+          "aosd": 10
+        }
+      },
+      "pass": true
+    },
+    {
+      "scenario": "snapshot replay",
+      "injection": {
+        "kind": "none; post-run evidence analysis"
+      },
+      "assertion": "independent completion checker accepts observed snapshots and rejects three corruptions",
+      "actual": {
+        "observed": 150,
+        "negative_controls": [
+          {
+            "mutation": "resends",
+            "rejected": true
+          },
+          {
+            "mutation": "attempt",
+            "rejected": true
+          },
+          {
+            "mutation": "request",
+            "rejected": true
+          }
+        ]
+      },
+      "pass": true
+    },
+    {
+      "scenario": "snapshot replay",
+      "injection": {
+        "kind": "none; post-run evidence analysis"
+      },
+      "assertion": "independent adapt replay accepts 321 rounds and rejects three corruptions",
+      "actual": {
+        "rounds": 321,
+        "negative_controls": [
+          {
+            "mutation": "value",
+            "rejected": true
+          },
+          {
+            "mutation": "basis",
+            "rejected": true
+          },
+          {
+            "mutation": "round",
+            "rejected": true
+          }
+        ]
+      },
+      "pass": true
+    }
+  ],
+  "pass": true
+}

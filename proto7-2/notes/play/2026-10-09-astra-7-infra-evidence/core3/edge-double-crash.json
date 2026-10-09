@@ -1,0 +1,162 @@
+{
+ "scenario": "edge-double-crash",
+ "root": "/tmp/astra7-core3-edge-double-crash-rhubfwvm",
+ "injection": {
+  "crashes": [
+   {
+    "daemon": 356970,
+    "returncode": -9,
+    "after_TERM_s": 0.005316590999427717,
+    "old_alive": true,
+    "nodes": {
+     "nodes": {
+      "a": {
+       "by": "astra7-core3",
+       "at": "2026-10-09T11:46:12.188"
+      }
+     },
+     "reaping": {
+      "a": {
+       "since": "2026-10-09T11:46:12.250",
+       "why": "inode 換了（被搬走或換成別的資料夾）"
+      }
+     }
+    }
+   },
+   {
+    "daemon": 356990,
+    "returncode": -9,
+    "after_TERM_s": 0.0064958580005622935,
+    "old_alive": true,
+    "nodes": {
+     "nodes": {
+      "a": {
+       "by": "astra7-core3",
+       "at": "2026-10-09T11:46:12.188"
+      }
+     },
+     "reaping": {
+      "a": {
+       "since": "2026-10-09T11:46:12.250",
+       "why": "inode 換了（被搬走或換成別的資料夾）"
+      }
+     }
+    }
+   }
+  ]
+ },
+ "assertions": [
+  {
+   "assertion": "crash1 inside grace",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "crash1 retains obligation",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "crash1 old still live",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "crash2 inside grace",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "crash2 retains obligation",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "crash2 old still live",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "third daemon collects old",
+   "actual": false,
+   "expected": false,
+   "pass": true
+  },
+  {
+   "assertion": "third daemon starts new",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "continuous observations never overlap",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "receipts": [
+  {
+   "op": "register",
+   "by": "astra7-core3",
+   "node": "a",
+   "result": {
+    "ok": true,
+    "msg": "registered a",
+    "at": "2026-10-09T11:46:12.188",
+    "queued_at": "2026-10-09T11:46:12.171"
+   }
+  }
+ ],
+ "classification": "X: repeated crash recovers safely",
+ "observation": {
+  "samples": 96,
+  "span_s": 1.91711,
+  "overlap_samples": 0
+ },
+ "cleanup": {
+  "killed": [
+   {
+    "pid": 357107,
+    "starttime": 1275679,
+    "state": "S",
+    "ppid": 356477,
+    "pgid": 357107,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/bin/aos7-run /tmp/astra7-core3-edge-double-crash-rhubfwvm/a/.aos/tasks/s 5 "
+   },
+   {
+    "pid": 357109,
+    "starttime": 1275681,
+    "state": "S",
+    "ppid": 357107,
+    "pgid": 357109,
+    "run": "1",
+    "cmd": "/usr/bin/python3 /home/lorkhan/repo/simple_tools/aos-wt/R/proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/core3/worker.py /tmp/astra7-core3-edge-double-crash-rhubfwvm/new.ready /tmp/astra7-core3-edge-double-crash-rhubfwvm/new.term {\"p"
+   }
+  ],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "edge-double-crash.tar.gz",
+ "archive_bytes": 3989,
+ "pass": true
+}

@@ -1,0 +1,41 @@
+{
+ "scenario": "author-daemon",
+ "root": "/tmp/astra7-core3-author-daemon-dpwvam12",
+ "injection": {},
+ "assertions": [
+  {
+   "assertion": "author comparison suite exit",
+   "actual": 0,
+   "expected": 0,
+   "pass": true
+  },
+  {
+   "assertion": "no owned live process after cleanup",
+   "actual": [],
+   "expected": [],
+   "pass": true
+  },
+  {
+   "assertion": "archive <= 300 KB",
+   "actual": true,
+   "expected": true,
+   "pass": true
+  }
+ ],
+ "command": [
+  "/usr/bin/python3",
+  "-m",
+  "unittest",
+  "-v",
+  "test_daemon"
+ ],
+ "log": "test_bad_files_get_receipts (test_daemon.TestCtlFiles.test_bad_files_get_receipts) ... ok\ntest_flood_budget_and_status_moves (test_daemon.TestCtlFiles.test_flood_budget_and_status_moves) ... ok\ntest_log_on_switch (test_daemon.TestCtlFiles.test_log_on_switch) ... ok\ntest_receipt_failure_drops_request_and_stop_still_works (test_daemon.TestCtlFiles.test_receipt_failure_drops_request_and_stop_still_works)\n回條寫不進去（處理丟例外）：效果可能已生效，不重做——請求刪掉、記 last_ctl_error；同圈的 stop 照樣生效。 ... ok\ntest_receipt_overwritten_same_name (test_daemon.TestCtlFiles.test_receipt_overwritten_same_name) ... ok\ntest_kill9_daemon_new_daemon_recovers_round_no_double (test_daemon.TestDaemonDeath.test_kill9_daemon_new_daemon_recovers_round_no_double) ... ok\ntest_new_daemon_reaps_old_holder (test_daemon.TestDaemonDeath.test_new_daemon_reaps_old_holder) ... ok\ntest_unverified_holder_not_killed (test_daemon.TestDaemonDeath.test_unverified_holder_not_killed) ... ok\ntest_clean_reap_waits_for_intent_removal_write (test_daemon.TestDaemonDurableRecovery.test_clean_reap_waits_for_intent_removal_write) ... ok\ntest_gone_timeline_must_end_before_final_clean_scan (test_daemon.TestDaemonDurableRecovery.test_gone_timeline_must_end_before_final_clean_scan)\n舊時間線在 node 消失後還活著：reaper 判乾淨也不清意圖、不開新線；舊線結束後再掃一次才清（sol 第二眼 2）。 ... ok\ntest_incomplete_reap_holds_missing_until_scan_recovers (test_daemon.TestDaemonDurableRecovery.test_incomplete_reap_holds_missing_until_scan_recovers) ... ok\ntest_invalid_reaping_state_refuses_start (test_daemon.TestDaemonDurableRecovery.test_invalid_reaping_state_refuses_start) ... ok\ntest_live_pid_read_failure_retains_known_pgid (test_daemon.TestDaemonDurableRecovery.test_live_pid_read_failure_retains_known_pgid) ... ok\ntest_load_filters_reaping_and_steps_entries (test_daemon.TestDaemonDurableRecovery.test_load_filters_reaping_and_steps_entries) ... ok\ntest_reap_dirty_write_retries_and_preserves_known_groups (test_daemon.TestDaemonDurableRecovery.test_reap_dirty_write_retries_and_preserves_known_groups) ... ok\ntest_register_write_failure_is_retryable (test_daemon.TestDaemonDurableRecovery.test_register_write_failure_is_retryable) ... ok\ntest_replaced_node_crash_reaps_before_new_birth (test_daemon.TestDaemonDurableRecovery.test_replaced_node_crash_reaps_before_new_birth) ... ok\ntest_round_done_save_failure_does_not_raise_or_double_count (test_daemon.TestDaemonDurableRecovery.test_round_done_save_failure_does_not_raise_or_double_count)\npaused.json 寫不進去：round_done 不往外丟（時間線重試會再扣一次），記憶體照扣、下次寫成功補上。 ... ok\ntest_slot_kill_unknown_is_not_clean (test_daemon.TestDaemonDurableRecovery.test_slot_kill_unknown_is_not_clean)\n逐槽 kill 回 unknown（K1：runner 還在啟動、任務還沒起）＝未確認乾淨：unregister 的意圖留著、隔一陣再逐槽收， ... ok\ntest_steps_resume_remaining_rounds_after_sigkill (test_daemon.TestDaemonDurableRecovery.test_steps_resume_remaining_rounds_after_sigkill) ... ok\ntest_stop_sweep_includes_unregistered_reaping_intents (test_daemon.TestDaemonDurableRecovery.test_stop_sweep_includes_unregistered_reaping_intents) ... ok\ntest_stop_without_kill_keeps_intent_for_restart (test_daemon.TestDaemonDurableRecovery.test_stop_without_kill_keeps_intent_for_restart) ... ok\ntest_unregister_crash_before_kill_resumes (test_daemon.TestDaemonDurableRecovery.test_unregister_crash_before_kill_resumes) ... ok\ntest_unregister_external_sigkill_resumes (test_daemon.TestDaemonDurableRecovery.test_unregister_external_sigkill_resumes) ... ok\ntest_unregister_write_failure_is_retryable (test_daemon.TestDaemonDurableRecovery.test_unregister_write_failure_is_retryable) ... ok\ntest_default_fixed_interval (test_daemon.TestEarlyTock.test_default_fixed_interval) ... ok\ntest_early_tock_when_all_ended (test_daemon.TestEarlyTock.test_early_tock_when_all_ended) ... ok\ntest_move_kills_old_new_place_needs_register (test_daemon.TestNodeGone.test_move_kills_old_new_place_needs_register) ... ok\ntest_replaced_by_other_dir_is_new_timeline (test_daemon.TestNodeGone.test_replaced_by_other_dir_is_new_timeline) ... ok\ntest_rm_rf_kills_and_stays_registered (test_daemon.TestNodeGone.test_rm_rf_kills_and_stays_registered) ... ok\ntest_unreadable_node_is_unknown_not_gone (test_daemon.TestNodeGone.test_unreadable_node_is_unknown_not_gone) ... ok\ntest_owner_pause_not_released_by_other (test_daemon.TestPause.test_owner_pause_not_released_by_other) ... ok\ntest_resume_all_and_no_owner_slot (test_daemon.TestPause.test_resume_all_and_no_owner_slot) ... ok\ntest_resume_rounds_then_pauses_with_same_owner (test_daemon.TestPause.test_resume_rounds_then_pauses_with_same_owner) ... ok\ntest_resume_wakes_immediately (test_daemon.TestPause.test_resume_wakes_immediately) ... ok\ntest_wake (test_daemon.TestPause.test_wake) ... ok\ntest_register_absent_dir_then_appears (test_daemon.TestRegister.test_register_absent_dir_then_appears) ... ok\ntest_register_checks (test_daemon.TestRegister.test_register_checks) ... ok\ntest_register_runs_only_registered (test_daemon.TestRegister.test_register_runs_only_registered) ... ok\ntest_registered_before_daemon_starts (test_daemon.TestRegister.test_registered_before_daemon_starts)\n寫給停著的 daemon 的控制檔留在 ctl/，起來才做（子 daemon 起來前先登記就靠這個）。 ... ok\ntest_restart_daemon_follows_nodes_json (test_daemon.TestRegister.test_restart_daemon_follows_nodes_json) ... ok\ntest_unregister_kills_by_default (test_daemon.TestRegister.test_unregister_kills_by_default) ... ok\ntest_unregister_no_kill_leaves_task (test_daemon.TestRegister.test_unregister_no_kill_leaves_task) ... ok\ntest_root_moved_stops_with_kill (test_daemon.TestStop.test_root_moved_stops_with_kill) ... ok\ntest_second_daemon_refused (test_daemon.TestStop.test_second_daemon_refused) ... ok\ntest_stop_kill_and_sigterm (test_daemon.TestStop.test_stop_kill_and_sigterm) ... ok\ntest_stop_without_kill_leaves_tasks (test_daemon.TestStop.test_stop_without_kill_leaves_tasks) ... ok\ntest_stop_not_blocked_by_stuck_tick (test_daemon.TestStuckActions.test_stop_not_blocked_by_stuck_tick) ... ok\ntest_stuck_tick_cut_and_round_marked (test_daemon.TestStuckActions.test_stuck_tick_cut_and_round_marked) ... ok\ntest_tock_killed_after_summary_is_replayed_once (test_daemon.TestStuckActions.test_tock_killed_after_summary_is_replayed_once) ... ok\ntest_unreadable_round_json_holds_timeline (test_daemon.TestStuckActions.test_unreadable_round_json_holds_timeline) ... ok\n\n----------------------------------------------------------------------\nRan 51 tests in 41.781s\n\nOK\n",
+ "cleanup": {
+  "killed": [],
+  "remaining": [],
+  "tmp_removed": true
+ },
+ "snapshot_archive": "author-daemon.tar.gz",
+ "archive_bytes": 2093,
+ "pass": true
+}
