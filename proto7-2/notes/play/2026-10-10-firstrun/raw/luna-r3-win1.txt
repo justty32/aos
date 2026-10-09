@@ -1,0 +1,17 @@
+bob 起好了：工作簿 ✓ 信箱 ✓ 技能 3 本 ✓ 假 AI
+另開一個終端機問它：aos7-up ask /tmp/u2-firstrun/luna/3/aos/bob '一句話'
+看狀態：aos7-up status /tmp/u2-firstrun/luna/3/aos/bob　停：Ctrl-C
+心跳 1
+心跳 2
+心跳 3
+心跳 4
+心跳 5 收到 1 封信
+心跳 6 → 問 AI → 已回信
+心跳 7
+心跳 8
+心跳 9
+心跳 10
+心跳 11
+心跳 12
+心跳 13
+心跳停了；檔案都留著，再跑 aos7-up /tmp/u2-firstrun/luna/3/aos/bob 就接上

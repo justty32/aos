@@ -32,6 +32,8 @@ QUICKSTART 改成：三段都貼實跑輸出、補「收掉」一節（`rm -r /t
 | 1 | luna | 部分 | 6 | 4（含 stop） | 5 | 7.8 | 否 | [raw/luna-r1.md](raw/luna-r1.md) |
 | 2 | Haiku | 成功 | 7 | 3 | 8 | **7.6** | 否 | [raw/haiku-r2.md](raw/haiku-r2.md) |
 | 2 | luna | 成功 | 6 | 3 | 5 | 8.6 | 否 | [raw/luna-r2.md](raw/luna-r2.md) |
+| 3（ER-up 改接口後） | Haiku | 成功 | 6 | 3 | 8（QUICKSTART 列的 5） | **7.0** | 是 | [raw/haiku-r3.md](raw/haiku-r3.md) |
+| 3（ER-up 改接口後） | luna | 成功 | 5 | 3 | 5 | 8.8 | 否 | [raw/luna-r3.md](raw/luna-r3.md) |
 
 **第 2 輪過**：取差 7.6 ≥ 7，兩位都答「ELI5 後不複雜」，指令 3、分鐘 ≤10。**概念數 Haiku 數到 8**（五詞＋假 AI、DONE、token），超過藍圖 H2 的 5；這三個詞是程式輸出帶出來的，文件已一句帶過，再壓要改輸出（見下「交頂層」）。
 
@@ -54,3 +56,12 @@ QUICKSTART 改成：三段都貼實跑輸出、補「收掉」一節（`rm -r /t
 3. **`aos7-up --help` 露出進階與禁用詞**：最後一行「退出：0 做到了、1 做不到、2 參數不對、3 不確定」（退出碼在 QUICKSTART 規定零出現），另列 `-d`、`stop`；兩位都去讀了 `--help`，第 1 輪 Haiku 因此卡 2 分、luna 因此多記一個指令。建議 `--help` 只留三指令，退出碼與 `-d`／`stop` 放 ADVANCED。
 4. **`--model` 要填什麼沒處講**：up README 也沒寫，第一次用不到，但起好那行就提示它。可把提示改成「要真的 AI 見 up 的 ADVANCED」或乾脆不在第一行提。
 5. 藍圖 U2 列寫要在 [play 索引](../README.md) 加一列；本隊領地只到本資料夾，留給頂層加。
+
+## 第 3 輪（ER-up 改完上面 1～4 後重試）
+
+ER-up（分支 `loop10/up`）把交頂層 1～4 改進 up 包：`--help` 只列三指令（`-d`、`stop`、`--model`、退出碼搬 [ADVANCED](../../../modules/up/ADVANCED.md)）；ask 回信不印 DONE；status 用量改「讀寫約 N 字」；全清提示改成 `檔案：都在 /tmp/aos（bob、you、.aosd）；全清：先停心跳，再 rm -r /tmp/aos`（房子有雜物或別的 node 時只列安全可刪的）；起好那行只寫「假 AI」，ADVANCED 寫模型名從 LiteLLM 來。QUICKSTART 三段換新實跑（[raw/r3-real-*.txt](raw/r3-real-status.txt)），拿掉「DONE＝／token＝」那句，3040 B。題目同第 2 輪，只把概念數限定為「QUICKSTART、工具輸出、--help 裡出現的」。
+
+- 兩位都成功、0～1 分鐘卡點，取差 **7.0 ≥ 7 過**；指令 3。
+- 概念：luna 5；Haiku 自列 8＝五詞＋假 AI、aos 資料夾、.aosd。照「只算 QUICKSTART 列的」是 5；DONE／token 已從它的清單消失。
+- Haiku 仍答「ELI5 後複雜」，理由是要記心跳／工作簿／信箱各是什麼、要先知道在哪個資料夾跑。唯一卡點是「cd 進 aos 資料夾（有 AGENTS.md 那層）」不知道實際在哪——新手若是 clone 下來的人應該知道；留給頂層判斷要不要在 QUICKSTART 寫「git clone 下來的那個資料夾」。
+- Haiku 子代理寫報告檔被工具擋下，報告照它的最終回覆抄進 raw。試完兩個工作目錄已刪、無殘留程序。
