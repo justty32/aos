@@ -200,3 +200,5 @@
 - B｜頂層：開 ER-up 隊，照 QS 回報改 aos7-up 的輸出：status 全清提示改成刪整個房子；DONE／token 換成中文白話；`--help` 只列 3 個指令（退出碼、-d、stop 搬到 ADVANCED）；`--model` 提示指向 ADVANCED
 - C｜ER-events：新增 `aos7-events ack`；`--help` 只列 pub／read／ack；ack 不再對沒 state 的夾建鎖檔；`pub` 不再自動建 events 夾（要 `--create`）；滿了改退 1、不確定改退 3、read 拼錯路徑改退 1（原本假裝空帳本）。新手 Haiku 7／luna 8
 - C｜ER-author：三關檢查器指令名定為 `aos7-gates`；三關預設離線規則審（要 astra 審得明講，不自動花錢）；`publish` 沒給 `--repo` 不建分支、只說會建在哪；索引列改插進表格內；學徒／審查／learn 三種 AI 呼叫分開標記；被拒的候選退 1。新手 Haiku 7／luna 9
+- C｜ER-llmcall-budget：帳任務沒在跑時，llmcall／budget 1 秒內退 1、什麼都不寫（原本會一直等）；錯誤訊息直接附可複製的起帳指令；回條與 JSON 一個欄位都沒改。新手 Haiku 7／8／7、luna 10／10／9
+- 觀察｜up 模組兩個計時測試在全套負載下偶發失敗一次、單跑全過；和 llmcall `test_in_process_drip` 同類，再出現就一起查
