@@ -147,3 +147,5 @@
 - 結果｜S1：真 AI（chatgpt-gpt-6-sol-high）題庫 10 題選對 10；每題約 2576 token、3.2 秒；同 node 重跑 0 次新呼叫。Sonnet 新手試用約 3 分鐘上手，打分 7～9
 - 使用者 15:00：**Sonnet 不夠笨**，當新手試用者不準 → 頂層改派最笨的：Claude 端用 Haiku、codex 端用 `gpt-6-luna`（推理 low）；S1 的 Sonnet 新手打分不算數，U 隊重試
 - C｜W1：`modules/wfnode/`（init／state／check）；預設 flavor dev,heartbeat,multi-agent；模板 multi-agent 把 inbox/、tools/ 放 node 根，照模板不搬（頂層核可，F2 以模板為準）；模板中沒有已知事實的佔位寫成「（未定：原文）」不亂猜；init 自動處理 5 段已知的導入決策（只在首次導入且原文完全相同時）
+- C｜T9：真傳輸 7 種故障（逾時／5xx／壞 JSON／usage 缺／截斷／斷線／遲到）各 ≥3 個變形全過，llmcall 程式沒找到 bug；假 LiteLLM 伺服器放在 `packs/llmcall/tests/`；「回覆比期限晚幾毫秒仍被收下」視為排程誤差，不改
+- C｜頂層：llmcall 連 `localhost` 時應繞過系統 proxy 設定（T9 發現：設了 http_proxy 的機器可能把本機呼叫送進 proxy）→ 排進下一波小修
