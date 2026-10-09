@@ -190,3 +190,5 @@
 - C｜A5：學徒的 3 個沒合進來的 `apprentice/` 比較分支留著，刪不刪等你（刪分支算不可逆）
 - C｜ER-wfnode：照統一錯誤規則改完，一致性檢查真的跑在 wfnode 上並通過；lint 沒跑完、讀寫出錯改退 3（不知道），`--flavor` 打錯改退 2；README 只留新手部分。新手重試 7.4／9.2
 - C｜ER-mail：寄請求只在對方已有 events/ 時才發必讀提醒（不替別人建夾）；read 不再掃整個郵局、不拿別人的鎖（看自己寄出未辦完的改用 `audit <我>`）；讀寫錯誤改退 3、撞名被拒改退 1；新信箱提示仍印在 stderr（防打錯名）。新手重試 8.4／9.0
+- B｜F1：一鍵入口 `aos7-up` 進 main——一行起 node、每秒印「心跳 N」、Ctrl-C 收乾淨；`status` 六行；假 AI 一圈 1 秒回信、1104 token。up 自己裝 routines 任務與 events 夾（跨包副作用歸 up）；假 AI 也要開帳（llmcall 需要）；已建好的 node 不准在假／真 AI 間切換（要換就另起一個）；`stop` 停整間房子的心跳、不刪檔。新手 Haiku 7／8／6、luna 8／9／8
+- 發現｜F1：重跑 `wfnode init` 會把信裡的 `{{user}}` 改成「（未定：user）」→ 交 wfnode 修
