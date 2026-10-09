@@ -277,3 +277,4 @@
 - C｜LT2：compact 摘要改成人看得懂（按信分組、列每回合做了什麼）；預設整理範圍加入 `STATE.md`（跟 wfnode 用同一把鎖）；門檻 16384→2048 bytes、保留最近 5 則。長任務裡會觸發 3 次，STATE.md 與 journal 各縮約一半；新手標準題 Haiku 7.2／luna 8.6
 - 待 brain｜LT2 發現：腦的提示裡根本沒帶 STATE.md 和 journal，所以壓縮沒省到 token；brain 的 `compact_if_big` 仍寫死舊門檻；STATE 去重靠數文字，壓縮後可能重寫一行 → M1 補丁之後開 brain 小修
 - C｜M1 補丁：「卡住」回信改白話——正文只講哪封信、被打斷、兩條路（什麼都不做／再寄一次），真假 AI 分開說要不要錢；call id、預留、指令移到信尾「進階（給維護者）」
+- C｜BR2：腦的提示每回合附上壓縮後的 STATE（最多 1200 字，超上限時排在技能全文之後被砍）；`compact_if_big` 改成每回合直接叫 `aos7-compact now`（用 compact 新預設）；STATE 去重改用 id 記在 `brain/state.json`（壓縮後不會重寫）。假 AI 長任務：每回合提示多約 170 token（約 +16%，真 AI 中文估 +10%，待真 AI 重跑確認），壓縮後每回合省約 9%
