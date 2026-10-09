@@ -256,3 +256,4 @@
 - 待修｜mail 標已處理時遇到 author 已標過的事件也不越過 → 排在後面的 mail 提醒永遠清不掉（信照樣辦得完）→ 開小修；下一輪移除 `read --ack` 時，mail 測試輔助 `_mailcase.acked()` 要一起改
 - 結果｜S3 學徒三連題（目標 3「自我改進」）：A 組帶踩坑筆記 vs B 組不帶，各跑 3 次、74 次真 AI 呼叫、proxy 問題 0 次（MC 修補有效）。**照事先定的判準：沒有證明自我改進**——第 2 題 6 次全敗、審查太嚴（15／26 次擋下是規格沒要求的極端邊角）、「超標」訊息沒說哪個檔超多少（A 的筆記只學到「寫小一點」）。第 3 題 A 少重問 1 次、少 13% token，但小於雜訊 → [apprentice-3x](play/2026-10-09-real-ai/apprentice-3x.md)
 - B｜頂層：先修 author 兩處（審查只擋真錯誤、唯讀違規與越界，邊角改列建議；超標訊息寫明哪個檔、多大、上限多少），再用同題每組 ≥5 次重跑
+- C｜RV-fix-A：usage 併進 `aos7-metrics job --by model|holder|day|hour`（讀真資料，舊 usage 讀不了的問題消失）、`--detail` 加帳差；`job` 預設那行逐位元組不變；usage 程式 git mv 到 `archive/usage/`、舊指令留轉址。新手 Haiku 7／luna 8
