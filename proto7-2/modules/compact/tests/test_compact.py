@@ -387,7 +387,7 @@ with (work / 'write.lock').open('a') as lock:
         self.assertEqual(reply.returncode, 0, reply.stdout + reply.stderr)
         self.assertIn('已造好', reply.stdout)
         self.assertIn('220 則，open 20，會摘掉 200 則', reply.stdout)
-        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），129712 → 2752 bytes', reply.stdout)
+        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），125650 → 2437 bytes', reply.stdout)
         # 第一次跑不用 --force：計畫行與結果行印同一個原因（新手回改）。
         self.assertNotIn('--force', shell)
         self.assertEqual(reply.stdout.count('（原因：大小超過 2048）'), 2)
