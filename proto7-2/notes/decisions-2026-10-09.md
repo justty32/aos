@@ -248,3 +248,5 @@
 - B｜頂層：其餘發現開修補——status 要看得出卡住／總件數／幾封等你決定；compact 摘要要有內容且把 STATE.md 納入整理範圍、預設門檻配合長任務；metrics 認得 brain 多回合；本機挑技能太不準要改善；**跨信記憶**是新功能，先請 Fable 寫意圖卡
 - C｜EF3 補丁：學徒 aos 工具／模組題升級鏈從 sol-high 起跳；learn（寫踩坑筆記）仍用 luna-nothink
 - C｜一鍵入口小修：「起好了」那幾行印出時被 Ctrl-C 不再誤報；dispatch lessons 第 13 條（別用 pgrep -fc 數全套份數）
+- B｜跨信記憶意圖卡 [brain-memory](intents/brain-memory.md)：信結案時回信全文存 `notes/done/<id>.md`、INDEX 一行一件（最多 50 行）；每回合固定附 INDEX，信提到前件才附那一份（≤3000 字）；AI 可回「要檔案：<id>」下回合附上；不用向量檢索、不給工具
+- B｜本機挑技能意圖卡 [skills-local-pick](intents/skills-local-pick.md)：L 的 17 筆裡 15 筆正解是「不挑」，變準的關鍵是**敢說 none**；技能可寫 `triggers:`／`not_for:`，沒命中就不挑；有帳且拿不準才問 AI
