@@ -12,6 +12,7 @@ from pathlib import Path
 from aos7_fs import N, OK, Unknown, append_jsonl, edit_json, fact, now, write_json
 
 TOP = Path(__file__).resolve().parents[2]
+DEFAULT_BUDGET = "budget/llm"
 SYSTEM = "你是 skill 選擇器。從清單挑一個最適合題目的 skill，只回它的 name，不要其他字；都不適合回 none。"
 
 
@@ -126,11 +127,33 @@ def ledger_alive(lock, wait=2.0):
         time.sleep(0.1)
 
 
+def keyword_guess(question, skills):
+    """關鍵字重疊最多的那本；一個字都沒對上回 none。本機挑選與假 AI 共用。"""
+    scores = [(len(words(question) & words(n + " " + v["description"])), n) for n, v in skills.items()]
+    score, guess = min(scores, key=lambda x: (-x[0], x[1])) if scores else (0, "none")
+    return guess if score else "none"
+
+
+def show(node, result, answer, log):
+    if answer == "none":
+        print("none")
+        return
+    log.update(picked=answer, rc=0)
+    print((node / result["skills"][answer]["path"]).absolute())
+
+
 def pick(node, args):
     start = time.monotonic()
-    log = dict(at=now(), call=None, q=args.question, answer=None, picked=None, used=None, rc=2)
+    log = dict(at=now(), via="llmcall", call=None, q=args.question, answer=None, picked=None, used=None, rc=2)
     try:
         result = build(node)
+        if args.budget is None and not (node / DEFAULT_BUDGET).exists():
+            # 沒開帳就走本機挑選：不問 AI、不記帳；第一次跑走這條。
+            log.update(via="local", answer=keyword_guess(args.question, result["skills"]), rc=1)
+            error("本機挑選（關鍵字比對，沒問 AI、不記帳）；要讓 AI 挑，見 README「進階：讓 AI 挑」")
+            show(node, result, log["answer"], log)
+            return log["rc"]
+        args.budget = args.budget or DEFAULT_BUDGET
         lines = "\n".join(result["lines"])
         log["call"] = "pick-" + hashlib.sha256(
             (args.question + "\n" + lines + "\n" + args.model).encode()).hexdigest()[:16]
@@ -139,11 +162,8 @@ def pick(node, args):
             raise ValueError("grant 讀不到或缺 holder")
         prompt = f"清單：\n{lines}\n\n題目：{args.question}"
         if grant.get("gateway") == "llm.fake":
-            scores = [(len(words(args.question) & words(n + " " + v["description"])), n)
-                      for n, v in result["skills"].items()]
-            score, guess = min(scores, key=lambda x: (-x[0], x[1])) if scores else (0, "none")
             request = {"fake": {"mode": "ok", "usage": (len(SYSTEM) + len(prompt)) // 3 + 1,
-                                "text": guess if score else "none"}}
+                                "text": keyword_guess(args.question, result["skills"])}}
         elif grant.get("gateway") == "llm.litellm":
             request = {"litellm": {"model": args.model, "messages": [
                 {"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]}}
@@ -168,12 +188,7 @@ def pick(node, args):
                 error("已交付但帳未清（usage 未知或超出預留），見 aos7-llmcall status")
             receipt = json.loads(last[0])
             log.update(answer=receipt["text"], used=receipt["used"], rc=1)
-            answer = parse_answer(log["answer"], result["skills"])
-            if answer == "none":
-                print("none")
-            else:
-                log.update(picked=answer, rc=0)
-                print((node / result["skills"][answer]["path"]).absolute())
+            show(node, result, parse_answer(log["answer"], result["skills"]), log)
     except ValueError as e:
         error(str(e))
     except (OSError, Unknown, KeyError, IndexError, TypeError) as e:
@@ -218,20 +233,32 @@ def error(message):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-skills")
-    sub = ap.add_subparsers(dest="cmd", required=True)
-    for cmd in ("index", "pick", "mount"):
-        p = sub.add_parser(cmd)
-        p.add_argument("node")
+    ap = argparse.ArgumentParser(
+        prog="aos7-skills", description="給 AI 挑工具說明書（skill）：index 抄目錄、pick 挑一本、mount 借給任務。",
+        epilog="<node> 就是一個裝著 skills/ 子資料夾的資料夾。第一次跑：index 再 pick，不必開帳。")
+    sub = ap.add_subparsers(dest="cmd", required=True, metavar="{index,pick,mount}")
+    helps = {
+        "index": ("把 <node>/skills/*/SKILL.md 的名字＋一句簡介抄成目錄（stdout 一本一行）",
+                  "退出碼：0 全收、1 有拒收（stderr 說原因）、2 沒有 skills/。"),
+        "pick": ("照題目挑一本，印那本 SKILL.md 的路徑；挑不到印 none",
+                 "預設：node 沒有 budget/llm/ 就本機關鍵字挑選（不問 AI、不記帳）；"
+                 "有 budget/llm/（或給了 --budget）就經 llmcall 問 AI 並記帳，要先開帳、起帳任務。"
+                 "退出碼：0 挑到、1 none、2 設定不對、3 帳任務沒在跑或 llmcall 沒交付。"),
+        "mount": ("把一本 skill 掛到 .aos/tasks.json 某個任務的 mnt/skill-<名>（進階，要在 aos 空間裡）",
+                  "退出碼：0 已掛、2 找不到空間根／skill／任務、3 tasks.json 讀不到。"),
+    }
+    for cmd, (short, more) in helps.items():
+        p = sub.add_parser(cmd, help=short, description=short + "。", epilog=more)
+        p.add_argument("node", help="node 資料夾（裡面要有 skills/）")
         if cmd == "pick":
-            p.add_argument("question")
-            p.add_argument("--budget", default="budget/llm")
-            p.add_argument("--model", default="chatgpt-gpt-6-sol-high")
-            p.add_argument("--reserve", type=int, default=20000)
-            p.add_argument("--deadline", type=float, default=600)
+            p.add_argument("question", help="題目，一句話說你要做什麼")
+            p.add_argument("--budget", default=None, help="進階：帳的資料夾（相對 node），預設 budget/llm；有它才問 AI")
+            p.add_argument("--model", default="chatgpt-gpt-6-sol-high", help="進階：問真 AI 時的模型")
+            p.add_argument("--reserve", type=int, default=20000, help="進階：每次預留的 token 數")
+            p.add_argument("--deadline", type=float, default=600, help="進階：llmcall 最長等幾秒")
         if cmd == "mount":
-            p.add_argument("skill")
-            p.add_argument("task")
+            p.add_argument("skill", help="skill 名字（index 印的那個）")
+            p.add_argument("task", help=".aos/tasks.json 裡的任務名")
     args = ap.parse_args(argv)
     node = Path(args.node).absolute()
     try:
