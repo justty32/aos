@@ -146,3 +146,4 @@
 - C｜S1：技能包 `modules/skills/`——對外 3 指令（index／pick／mount）；pick 一律走 llmcall（所以第一次跑要先開帳）；外部 skill 只能讀、不掛進任務（不複製外部 skill 進 repo）；llmcall 退出 4 時仍採用答案
 - 結果｜S1：真 AI（chatgpt-gpt-6-sol-high）題庫 10 題選對 10；每題約 2576 token、3.2 秒；同 node 重跑 0 次新呼叫。Sonnet 新手試用約 3 分鐘上手，打分 7～9
 - 使用者 15:00：**Sonnet 不夠笨**，當新手試用者不準 → 頂層改派最笨的：Claude 端用 Haiku、codex 端用 `gpt-6-luna`（推理 low）；S1 的 Sonnet 新手打分不算數，U 隊重試
+- C｜W1：`modules/wfnode/`（init／state／check）；預設 flavor dev,heartbeat,multi-agent；模板 multi-agent 把 inbox/、tools/ 放 node 根，照模板不搬（頂層核可，F2 以模板為準）；模板中沒有已知事實的佔位寫成「（未定：原文）」不亂猜；init 自動處理 5 段已知的導入決策（只在首次導入且原文完全相同時）
