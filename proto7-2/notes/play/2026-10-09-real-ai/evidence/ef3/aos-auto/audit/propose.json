@@ -1,0 +1,110 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "audit-auto-1791541363-r1",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6123,
+   "prompt_tokens": 4233,
+   "total_tokens": 10356,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2059
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 10356,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-ef3-hoxdc3vw/llm/llmcall/llm/audit-auto-1791541363-r1/receipt.json"
+ },
+ "review": null,
+ "rid": "audit3",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "candidate_path": "/tmp/aos7-ef3-hoxdc3vw/work/author/aos/audit3/audit-auto-1791541363-r1.json",
+ "candidate_sha": "4db8ca1581698c986754cbc416d94f82375e6fee984f05baaf9b1bac9ab64abf",
+ "job": "audit3_4db8ca15",
+ "rules_check": {
+  "ok": true,
+  "rid": "audit3",
+  "name": "mailtodo",
+  "job": "audit3_4db8ca15",
+  "candidate_sha": "4db8ca1581698c986754cbc416d94f82375e6fee984f05baaf9b1bac9ab64abf",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "audit3",
+  "name": "mailtodo",
+  "job": "audit3_4db8ca15",
+  "candidate_sha": "4db8ca1581698c986754cbc416d94f82375e6fee984f05baaf9b1bac9ab64abf",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "rounds": [
+  {
+   "model": "chatgpt-gpt-6-luna-nothink",
+   "call_id": "audit-auto-1791541363",
+   "why": "invalid",
+   "usage": {
+    "completion_tokens": 67,
+    "prompt_tokens": 4095,
+    "total_tokens": 4162,
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "model": "chatgpt-gpt-6-sol-high",
+   "call_id": "audit-auto-1791541363-r1",
+   "why": null,
+   "usage": {
+    "completion_tokens": 6123,
+    "prompt_tokens": 4233,
+    "total_tokens": 10356,
+    "completion_tokens_details": {
+     "reasoning_tokens": 2059
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  }
+ ]
+}

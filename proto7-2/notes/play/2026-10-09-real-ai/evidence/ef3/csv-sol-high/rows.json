@@ -1,0 +1,35 @@
+[
+ {
+  "i": 1,
+  "exit": 0,
+  "models": [
+   "chatgpt-gpt-6-sol-high"
+  ],
+  "tokens": 2631,
+  "secs": 5.619,
+  "answer_ok": true,
+  "closed": true
+ },
+ {
+  "i": 2,
+  "exit": 0,
+  "models": [
+   "chatgpt-gpt-6-sol-high"
+  ],
+  "tokens": 2644,
+  "secs": 5.058,
+  "answer_ok": true,
+  "closed": true
+ },
+ {
+  "i": 3,
+  "exit": 0,
+  "models": [
+   "chatgpt-gpt-6-sol-high"
+  ],
+  "tokens": 2650,
+  "secs": 6.348,
+  "answer_ok": true,
+  "closed": true
+ }
+]

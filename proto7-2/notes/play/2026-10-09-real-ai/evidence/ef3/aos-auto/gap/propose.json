@@ -1,0 +1,110 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "gap-auto-1791541044-r1",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5667,
+   "prompt_tokens": 4417,
+   "total_tokens": 10084,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2184
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 10084,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-ef3-7u8uk5wh/llm/llmcall/llm/gap-auto-1791541044-r1/receipt.json"
+ },
+ "review": null,
+ "rid": "gap3",
+ "kind": "aos-tool",
+ "name": "evgap",
+ "candidate_path": "/tmp/aos7-ef3-7u8uk5wh/work/author/aos/gap3/gap-auto-1791541044-r1.json",
+ "candidate_sha": "8fc71dbd322d278029971dbc760e54656b7ed56ebc91f4bf9169d989927c3f59",
+ "job": "gap3_8fc71dbd",
+ "rules_check": {
+  "ok": true,
+  "rid": "gap3",
+  "name": "evgap",
+  "job": "gap3_8fc71dbd",
+  "candidate_sha": "8fc71dbd322d278029971dbc760e54656b7ed56ebc91f4bf9169d989927c3f59",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "gap3",
+  "name": "evgap",
+  "job": "gap3_8fc71dbd",
+  "candidate_sha": "8fc71dbd322d278029971dbc760e54656b7ed56ebc91f4bf9169d989927c3f59",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "rounds": [
+  {
+   "model": "chatgpt-gpt-6-luna-nothink",
+   "call_id": "gap-auto-1791541044",
+   "why": "invalid",
+   "usage": {
+    "completion_tokens": 251,
+    "prompt_tokens": 4042,
+    "total_tokens": 4293,
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "model": "chatgpt-gpt-6-sol-high",
+   "call_id": "gap-auto-1791541044-r1",
+   "why": null,
+   "usage": {
+    "completion_tokens": 5667,
+    "prompt_tokens": 4417,
+    "total_tokens": 10084,
+    "completion_tokens_details": {
+     "reasoning_tokens": 2184
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  }
+ ]
+}

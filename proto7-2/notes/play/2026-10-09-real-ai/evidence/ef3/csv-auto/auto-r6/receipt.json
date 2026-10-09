@@ -1,0 +1,40 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-luna-nothink-23dc37de",
+ "logical": "author/csv1",
+ "kid": "587e44540a2cf4bc42d1",
+ "key": {
+  "budget": "llm",
+  "holder": "author",
+  "request": "csv1-chatgpt-gpt-6-luna-nothink-23dc37de"
+ },
+ "req_sha": "48650facb929b31045d5cd7a3fc2dd94a9f136863be4b9b44491f6ccb80db209",
+ "meter": "litellm.total_tokens/1",
+ "bound": "soft",
+ "reserve": 1000000,
+ "outcome": "answered",
+ "usage": {
+  "completion_tokens": 134,
+  "prompt_tokens": 2409,
+  "total_tokens": 2543,
+  "completion_tokens_details": {
+   "reasoning_tokens": 0
+  },
+  "prompt_tokens_details": {
+   "cached_tokens": 1792
+  }
+ },
+ "used": 2543,
+ "overrun": 0,
+ "billing": "final",
+ "raw_sha": "a2b5834f0b51983432182ace74be5c14e521a9226865dc3956ff0a8f1cba8336",
+ "text": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"計算每個部門的筆數、總額與平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+ "settle": {
+  "seq": 2,
+  "used": 2543,
+  "overrun": 0,
+  "outcome": "answered",
+  "evidence": "5feba667f6861855a3a7cff682c2341d31a2efcccad690bd4d10bd3981eca5e4",
+  "at": "2026-10-09T18:10:32.590"
+ }
+}

@@ -1,0 +1,126 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-astra-high",
+  "call_id": "runs-auto-1791541140-r2",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5257,
+   "prompt_tokens": 9844,
+   "total_tokens": 15101,
+   "completion_tokens_details": {
+    "reasoning_tokens": 136
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 15101,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-ef3-4bsukeh5/llm/llmcall/llm/runs-auto-1791541140-r2/receipt.json"
+ },
+ "review": null,
+ "rid": "runs3",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/tmp/aos7-ef3-4bsukeh5/work/author/aos/runs3/runs-auto-1791541140-r2.json",
+ "candidate_sha": "db227dbce8bb5014f5a12ab00973077df0319696720711ac2c3485156eb279bd",
+ "job": "runs3_db227dbc",
+ "rules_check": {
+  "ok": true,
+  "rid": "runs3",
+  "name": "runs",
+  "job": "runs3_db227dbc",
+  "candidate_sha": "db227dbce8bb5014f5a12ab00973077df0319696720711ac2c3485156eb279bd",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "runs3",
+  "name": "runs",
+  "job": "runs3_db227dbc",
+  "candidate_sha": "db227dbce8bb5014f5a12ab00973077df0319696720711ac2c3485156eb279bd",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "rounds": [
+  {
+   "model": "chatgpt-gpt-6-luna-nothink",
+   "call_id": "runs-auto-1791541140",
+   "why": "invalid",
+   "usage": {
+    "completion_tokens": 179,
+    "prompt_tokens": 4225,
+    "total_tokens": 4404,
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "model": "chatgpt-gpt-6-sol-high",
+   "call_id": "runs-auto-1791541140-r1",
+   "why": "invalid",
+   "usage": {
+    "completion_tokens": 6687,
+    "prompt_tokens": 4527,
+    "total_tokens": 11214,
+    "completion_tokens_details": {
+     "reasoning_tokens": 2285
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 1408
+    }
+   }
+  },
+  {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "runs-auto-1791541140-r2",
+   "why": null,
+   "usage": {
+    "completion_tokens": 5257,
+    "prompt_tokens": 9844,
+    "total_tokens": 15101,
+    "completion_tokens_details": {
+     "reasoning_tokens": 136
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  }
+ ]
+}

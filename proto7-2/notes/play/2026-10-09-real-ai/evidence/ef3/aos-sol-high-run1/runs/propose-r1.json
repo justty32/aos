@@ -1,0 +1,76 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runs-fixed-r1-1791540829",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6886,
+   "prompt_tokens": 4225,
+   "total_tokens": 11111,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2368
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 11111,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-ef3-w_mw35bg/llm/llmcall/llm/runs-fixed-r1-1791540829/receipt.json"
+ },
+ "review": null,
+ "rid": "runs3",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/tmp/aos7-ef3-w_mw35bg/work/aos-sol-high/runs/cand-r1.json",
+ "candidate_sha": "399e9981ea22e8b0363cbbf77db38c6e3528ae1edb741085084a811a77584c2d",
+ "job": "runs3_399e9981",
+ "rules_check": {
+  "ok": true,
+  "rid": "runs3",
+  "name": "runs",
+  "job": "runs3_399e9981",
+  "candidate_sha": "399e9981ea22e8b0363cbbf77db38c6e3528ae1edb741085084a811a77584c2d",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "runs3",
+  "name": "runs",
+  "job": "runs3_399e9981",
+  "candidate_sha": "399e9981ea22e8b0363cbbf77db38c6e3528ae1edb741085084a811a77584c2d",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}
