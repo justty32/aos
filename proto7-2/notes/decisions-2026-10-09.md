@@ -143,3 +143,5 @@
 - C｜H1：定時例行 `modules/routines/`——最多一次（被殺那期不重跑）；錯過很久只跑 1 次不補跑；`add` 會自動在 node 裝一個 `routines` keep 任務；對外指令 3 個（add／ls／rm）
 - C｜頂層：routines 在 wf/ 留兩個固定 `.lock` 檔可接受（數量固定、不隨回合增加，不違反「垃圾要能清」）
 - C｜P1：組提示包 `packs/prompt/`——對外 2 指令（render／expand）；讀檔用 `$opt` 的 file／tail／latest（latest 依檔名排序、結果固定）；大段折成 `ref://` 可逆；渲染不出整份就退出 3、不輸出半份；diff 777 行（程式 239）照收
+- C｜S1：技能包 `modules/skills/`——對外 3 指令（index／pick／mount）；pick 一律走 llmcall（所以第一次跑要先開帳）；外部 skill 只能讀、不掛進任務（不複製外部 skill 進 repo）；llmcall 退出 4 時仍採用答案
+- 結果｜S1：真 AI（chatgpt-gpt-6-sol-high）題庫 10 題選對 10；每題約 2576 token、3.2 秒；同 node 重跑 0 次新呼叫。Sonnet 新手試用約 3 分鐘上手，打分 7～9
