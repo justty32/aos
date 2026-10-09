@@ -183,3 +183,4 @@
 - C｜F2：AI 的「腦」brain 進 main——每回合讀一封信→組提示→問 AI→回信→記續行點；`brain/` 只留 3 個檔、不累積紀錄；`model` 為空或 "fake" 都當假 AI。假 AI 1 回合回信約 800 token；真 AI（chatgpt-gpt-6-sol-high）1 回合回 DONE、2952 token、4 秒
 - C｜F2：真 AI 一開始以為自己有工具（回「我先確認工作區…」），提示詞加「你沒有工具，資料都附在下面，直接回答」後正常
 - C｜ER0：統一錯誤規則的一致性測試 `tests/core/test_error_path.py`＋清單 `tests/error_path.json` 進 main；各包改完在清單自己那列拿掉 skip、補一個「不確定」案；核心 tick 用法錯退 1 視為相容；prompt 的 JSON 回條留在 stderr 照藍圖
+- C｜ER-prompt-metrics：prompt 出錯時 stderr 第一行照舊是 JSON、第二行加一句人話；metrics 錯誤改統一一行格式；兩包 README 只留新手部分、其餘搬 ADVANCED.md。新手重試 prompt 7.4／8.8、metrics 8.0／8.8
