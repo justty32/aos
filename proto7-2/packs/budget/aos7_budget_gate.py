@@ -129,8 +129,19 @@ def cancel(bud, key):
                 rec = done_from(eff, kid, key, digest)
                 write_json(path, rec)
                 return rec
-        rec = {"stage": "done", "kid": kid, "key": key, "digest": digest, "outcome": "cancelled", "used": 0,
-               "at": now()}
+        gateway = rec.get("gateway") if st == OK else None
+        if gateway is None:
+            try:
+                L, _ = bg.read_ledger(bud)
+            except (Unknown, bg.LedgerDown, OSError):
+                L = None
+            op = L["ops"].get(kid) if L is not None else None
+            content = op.get("content") if isinstance(op, dict) else None
+            candidate = content.get("gateway") if isinstance(content, dict) else None
+            gateway = candidate if isinstance(candidate, str) else GATEWAY
+        rec = {"stage": "done", "kid": kid, "key": key, "digest": digest, "gateway": gateway,
+               "call_id": key["request"], "outcome": "cancelled", "used": 0, "usage": None, "overrun": 0,
+               "billing": "final", "raw_sha": None, "at": now()}
         write_json(path, rec)
         return rec
 

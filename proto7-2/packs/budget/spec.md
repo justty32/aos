@@ -63,6 +63,7 @@
 4. 呼叫假後端 `accept(K, payload)`（§5，以 K 去重），寫終局 `{"stage": "done", "outcome": accepted|failed|rejected, "used", "response"}`。後端讀寫不到（`backend.json` 讀不到、鎖拿不到）＝回非終局 `{"outcome": "unknown", "stage": "intent"}`、不寫終局，intent 留著（同 K 重送時再問後端）。
 
 `cancel(K)`（同一把鎖）：已終局＝回原回條（不是 cancelled 就表示取消不成）；`intent`＝向後端查 K：有效果就寫成那個終局（取消不成），沒有就寫 `cancelled`（後端呼叫只在鎖內發生，所以持鎖時查不到＝沒發生，這只對可查回的假後端成立）；沒紀錄＝寫 `cancelled`。`cancelled`、`denied`、`rejected` 的 `used` 是 0；`accepted`、`failed` 是 amount。
+取消成功新寫出的 `cancelled` 終局帶齊凍結欄（blueprint-llm2 §4）：`gateway`、`call_id`＝K.request、`usage: null`、`overrun: 0`、`billing: "final"`、`raw_sha: null`；`digest` 沿用 intent 的值，沒紀錄＝null。`gateway` 取 intent 的欄，缺則取帳上 `ops[kid].content.gateway`（字串），帳讀不到／沒 K／沒欄＝`fakeapi`，不因此變 unknown。
 
 **cancel 的前置條件**：後端對 K 可查回（有沒有效果查得到確定答案）。intent 帶 `gateway` 欄且不是 `fakeapi`（如 `llm.fake`）＝`unknown`，不查後端、不寫檔，CLI 退出 3；不可查回入口的終局只來自後端證據（§9 第 1 條）。
 
