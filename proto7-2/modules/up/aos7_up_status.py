@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 import re
 import signal
+import shlex
 import subprocess
 import sys
 import time
@@ -35,10 +36,8 @@ class UpError(Exception):
 
 def config(node):
     path = node / '.aos/up.json'
-    if not path.exists():
-        return {}
     try:
-        data = read(path)
+        data = json.loads(path.read_text())
         strings = ('node', 'house', 'name', 'you', 'mail_root', 'litellm_url',
                    'budget', 'holder', 'gateway')
         if (not isinstance(data, dict) or data.get('v') != 1 or
@@ -47,6 +46,10 @@ def config(node):
             (data['model'] is not None and not isinstance(data['model'], str))):
             raise ValueError()
         return data
+    except FileNotFoundError:
+        return {}
+    except OSError:
+        raise UpError(3, f'不確定：讀不到 {path}，什麼都沒改。確認讀得到後照原樣再跑一次') from None
     except (ValueError, TypeError):
         raise UpError(2, f'{path} 壞了。刪掉它再跑 aos7-up {node}') from None
 
@@ -125,6 +128,26 @@ def state(node):
     return '（還沒記）'
 
 
+def cleanup_hint(node):
+    """只在房子全屬 up 時建議整屋清理；共用檔案留給其他 node。"""
+    house = node.parent
+    entries = sorted(house.iterdir(), key=lambda p: p.name)
+    nodes = [p for p in entries if p.is_dir() and (p / '.aos/up.json').is_file()]
+    known = set(nodes) | {house / 'you', house / '.aosd'}
+    if all(p in known for p in entries):
+        names = [p.name for p in nodes]
+        names += [name for name in ('you', '.aosd') if house / name in entries]
+        return (f'檔案：都在 {house}（' + '、'.join(names) +
+                f'）；全清：先停心跳，再 rm -r {shlex.quote(str(house))}')
+    targets = [node]
+    # 有 .aos/ 的都算 node（不論是不是 up 起的）：別的 node 還在用 you 與 .aosd
+    if not any(p != node and (p / '.aos').is_dir() for p in entries):
+        targets += [house / 'you', house / '.aosd']
+    command = ' '.join(shlex.quote(str(p)) for p in targets)
+    return (f'檔案：{node}、{house}/you、{house}/.aosd；'
+            f'全清：先停心跳，再 rm -r {command}')
+
+
 def status(node):
     if not node.is_dir() or not (node / '.aos/up.json').is_file():
         print(f'aos7-up: 這裡還沒有 node。先跑 aos7-up {node}', file=sys.stderr)
@@ -150,8 +173,9 @@ def status(node):
         used = json.loads(budget.stdout).get('used', '—') if budget.returncode == 0 else '—'
     except ValueError:
         used = '—'
-    print(f'AI：{settings.get("model") or "假 AI"}；問過 {calls} 次，用了 {used} token')
-    print(f'檔案：{node}、{node.parent}/you（全清：先停心跳，再刪這兩個資料夾）')
+    usage = f'讀寫約 {used} 字' if isinstance(used, (int, float)) else '讀寫字數不明'
+    print(f'AI：{settings.get("model") or "假 AI"}；問過 {calls} 次，{usage}')
+    print(cleanup_hint(node))
     return 0
 
 
@@ -173,7 +197,7 @@ def watch(node, daemon):
             reply = next((r for r in replies.values() if r.get('re') == value.get('id')), {})
             outcome = reply.get('status')
             pending.append('→ 問 AI → 已回信' if outcome == 'DONE' else
-                           '→ AI 沒回成，已回 BLOCKED' if outcome in ('BLOCKED', 'FAILED') else '→ 已回信')
+                           '→ AI 沒回成，已回信說卡住了' if outcome in ('BLOCKED', 'FAILED') else '→ 已回信')
         seen.update(incoming)
         done.update(completed)
         n = number(node)

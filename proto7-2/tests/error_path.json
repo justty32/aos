@@ -257,8 +257,30 @@
    "team": "ER-up",
    "name": "aos7-up",
    "entry": "modules/up/aos7-up",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-up）"
+   "unsure": {
+     "argv": [
+       "status",
+       "n"
+     ],
+     "files": {
+       "n/.aos/up.json": {
+         "v": 1,
+         "node": "n",
+         "house": ".",
+         "name": "n",
+         "you": "you",
+         "mail_root": ".",
+         "model": null,
+         "litellm_url": "http://localhost:4000/v1",
+         "budget": "budget/llm",
+         "holder": "brain",
+         "gateway": "llm.fake"
+       }
+     },
+     "chmod": {
+       "n/.aos/up.json": "0o000"
+     }
+   }
   }
  ]
 }

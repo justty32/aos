@@ -35,7 +35,7 @@ class BrainReviewTests(DaemonCase):
         self.wait_round(2, 'bob')
         ident = self.post()['id']
         cfg = read_json(str(self.node / '.aos/up.json'))
-        cfg['deadline'] = 0.05
+        cfg['deadline'] = 5
         write_json(str(self.node / '.aos/up.json'), cfg)
         code = '''import sys
 from pathlib import Path
@@ -44,7 +44,7 @@ import aos7_up_brain as b
 node = Path(sys.argv[2])
 def req(node, letter, cid, cfg):
     p = node / 'brain/req.json'
-    b.write_json(str(p), {'fake': {'mode': 'late', 'delay': 10, 'usage': 10}})
+    b.write_json(str(p), {'fake': {'mode': 'fail', 'usage': 10}})
     return p
 b.request = req
 b.once(node, 1)

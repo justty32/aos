@@ -5,9 +5,22 @@
 Python 3.11+、純標準庫；在 repo 根跑。缺工作流模板時先裝
 `git clone git@github.com:justty32/workflows.git ~/repo/workflows`，或設 `AOS7_WF_HOME`。
 
+`--help` 只列三個指令（起、ask、status）；下面這些照樣能用，只是不列：
+
 - `aos7-up /tmp/aos/bob -d`：背景跑，確認 bob 被叫醒後印三行離開。
 - `aos7-up stop /tmp/aos/bob`：停整個房子的心跳與它起的全部任務，包含其他 node；不刪任何檔。
-- `aos7-up /tmp/aos/real --model chatgpt-gpt-6-luna -d`：真 AI；先起 LiteLLM。認證見 [llmcall](../../packs/llmcall/README.md)。
+- `aos7-up /tmp/aos/real --model chatgpt-gpt-6-sol-high -d`：真 AI。
+- `brain`：心跳替 node 起的任務入口（argv 見下），人不直接跑。
+
+### 真 AI：`--model` 填什麼
+
+不給 `--model` 就是假 AI（不連網、不花錢、照抄你的信）。要真 AI：
+
+先起你自己的 LiteLLM（OpenAI 相容端點，預設 `http://localhost:4000/v1`；別處設 `AOS7_LITELLM_URL`，要金鑰設 `AOS7_LITELLM_KEY`，見 [llmcall](../../packs/llmcall/README.md)）。
+
+`--model` 填 **LiteLLM 設定裡的模型名**（它對外的 `model_name`），不是廠商原名；查有哪些：`curl -s http://localhost:4000/v1/models`。本機 2026-10-09 實測用過 `chatgpt-gpt-6-sol`、`chatgpt-gpt-6-sol-high`、`chatgpt-gpt-6-luna`、`chatgpt-gpt-6-astra`（[試玩紀錄](../../notes/play/2026-10-09-real-ai/README.md)）。
+
+假 AI 起過的 node 不能改成真 AI（退 2），另起一個名字，例如 `aos7-up /tmp/aos/real --model chatgpt-gpt-6-sol-high`；真 AI 之間可換模型。
 - 已有心跳只接上看；Ctrl-C 只停觀看，停心跳用 stop。入口自己起的前景心跳在 Ctrl-C／SIGTERM 後收掉。
 - `ask`／`brain` 交給同目錄 `aos7_up_brain.main([子命令, …])`（ask 在 `aos7_up_ask.py`，回信邏輯與 prompt 在 `prompts/`）。
 
@@ -26,7 +39,7 @@ compact 在工作簿變厚時自動整理。routines 只裝它的 keep 任務、
 - `<房子>/.aosd/`：心跳的鎖、紀錄、狀態與 `up-daemon.log`。
 - 常駐程式：心跳一個，node 上 `budget-llm`、`brain`、`compact`、`routines` 四個 keep 任務（brain 的 argv 凍結為 `python3 <proto7-2>/modules/up/aos7-up brain <node>`）。
 
-stop 收掉心跳與它起的全部任務，不刪任何檔。全清先 stop，再刪 node 與 you；房子沒別的 node 時也可刪 `.aosd/`。
+stop 收掉心跳與它起的全部任務，不刪任何檔。全清先停心跳再刪：房子裡只有 up 的 node、`you/`、`.aosd/` 時，status 與 stop 叫你 `rm -r <房子>`（括號列出會刪的每一項）；房子裡有別的東西時只列 `rm -r <node>`，房子裡沒別的 node（有 `.aos/` 的資料夾，不論是不是 up 起的）才加 `<房子>/you <房子>/.aosd`。
 
 ## 設定與重接
 
@@ -55,7 +68,11 @@ register 後最多等 15 秒，必須看到 node 的 round.json 回合號 ≥1 �
 子指令獨立 process group；中斷送整組 SIGTERM，等 5 秒再 SIGKILL，不留孫程序。
 所有 Python 子程序使用 -B，不在程式目錄留 __pycache__。
 
-status 六行唯讀；體檢 OK 只報 OK，有問題附 check 指令。用量取 budget status 的 used，讀不到顯示 —。
+status 六行唯讀；體檢 OK 只報 OK，有問題附 check 指令。AI 行的「讀寫約 N 字」是 budget status 的 used（token 數，對中文約等於字數），讀不到印「讀寫字數不明」。
+
+給人看的輸出不出現英文狀態詞：ask 的回信 DONE 不標、BLOCKED 標「卡住了」、NEEDS-USER 標「要你決定」、FAILED 標「沒辦成」；JSON 與信件欄位照舊是英文。
+
+brain 對 llmcall 的退出：0 回信；4 也回信，回合行註「AI 用量還沒對清」；3 不回信、不寫 pending、信留在 inbox，下回合用同一個 call 接續；1、2 與其他回 BLOCKED。
 觀看直接掃信件，包含 you/inbox/done 回信，不更新 mail 的讀取快照。
 
 ## 錯誤與退出
@@ -67,7 +84,9 @@ status 六行唯讀；體檢 OK 只報 OK，有問題附 check 指令。用量�
 | 0 | 做到了；前景正常停也算 |
 | 1 | 做不到：缺模板、子指令確定失敗（附 stderr 最後一行）、心跳起不來（附 log）；照訊息處理 |
 | 2 | 參數不對：名字、換假／真 AI、up.json 形狀錯、status 沒 node；修正再跑 |
-| 3 | 不確定：準備中斷、子指令退 3、讀寫故障、停不下來或沒看到 node 醒來；檔案留著，照原樣再跑會接續 |
+| 3 | 不確定：準備中斷、子指令退 3、讀寫故障（含讀不到 up.json）、ask 寄信或讀信半路出錯、停不下來或沒看到 node 醒來；檔案留著，照原樣再跑會接續 |
+
+`ask` 等滿 60 秒還沒回信退 0（等過了算做到），stdout 說「還沒回」與用 status 再看。
 
 up.json 壞了時刪掉該檔再 up。未知結果不清檔、不重送。
 

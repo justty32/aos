@@ -63,6 +63,8 @@ class BrainTests(DaemonCase):
         output, errors = p.communicate(timeout=35)
         self.assertEqual(p.returncode, 0, errors)
         self.assertIn('假 AI', output)
+        self.assertNotIn('DONE', output)
+        self.assertEqual(errors, '')
         self.assertLessEqual(after - before, 3, f'假 AI 一圈 {after - before} 回合')
         self.wait_for(lambda: len(self.rows()) == 1 and not (self.node / 'brain/pending.json').exists())
         entry = self.rows()[0]
@@ -148,6 +150,59 @@ class BrainTests(DaemonCase):
         self.wait_for(lambda: not (work / 'pending.json').exists())
         self.assertEqual(self.state_text().count('接回續行點'), 1)
 
+    def test_uncertain_llm_retries_same_letter_and_call(self):
+        from unittest.mock import patch
+        import contextlib
+        import io
+        self.set_tasks(str(self.node), [t for t in self.tasks(str(self.node)) if t['name'] != 'brain'])
+        self.start()
+        ident = self.send('接續同一筆')
+        original = next((self.node / 'inbox').glob('*.md')).read_bytes()
+        calls = []
+        real_run = brain.run
+        def fake_run(tool, *args, **kwargs):
+            if Path(tool).name != 'aos7-llmcall':
+                return real_run(tool, *args, **kwargs)
+            calls.append(args[args.index('--call') + 1])
+            req = json.loads(Path(args[args.index('--request') + 1]).read_text())
+            if len(calls) == 1:
+                saved = self.node / 'llmcall/llm' / calls[-1] / 'request.json'
+                write_json(str(saved), {'request': req})
+                return subprocess.CompletedProcess([], 3, '', '不確定')
+            self.assertEqual(req, json.loads((self.node / 'llmcall/llm' / calls[-1] / 'request.json').read_text())['request'])
+            return subprocess.CompletedProcess([], 0, '{"text":"回信：收到\\n停在哪：已回覆"}\n', '')
+        with patch.object(brain, 'run', side_effect=fake_run), contextlib.redirect_stdout(io.StringIO()) as out:
+            brain.once(self.node, 1)
+            self.assertIn('下回合再看同一筆', out.getvalue())
+            self.assertFalse((self.node / 'brain/pending.json').exists())
+            self.assertEqual(self.replies(), [])
+            self.assertEqual(next((self.node / 'inbox').glob('*.md')).read_bytes(), original)
+            with patch.object(brain, 'request', wraps=brain.request):
+                brain.once(self.node, 2)
+        self.assertEqual(calls, [brain.cid_of(ident)] * 2)
+        self.assertEqual(self.replies()[0]['status'], 'DONE')
+        self.assertEqual(list((self.node / 'inbox').glob('*.md')), [])
+        self.assertFalse((self.node / 'brain/pending.json').exists())
+
+    def test_delivered_with_unsettled_usage_replies(self):
+        from unittest.mock import patch
+        import contextlib
+        import io
+        self.set_tasks(str(self.node), [t for t in self.tasks(str(self.node)) if t['name'] != 'brain'])
+        self.start()
+        self.send('用量稍後對')
+        real_run = brain.run
+        def fake_run(tool, *args, **kwargs):
+            if Path(tool).name == 'aos7-llmcall':
+                return subprocess.CompletedProcess([], 4, '{"text":"收到"}\n', '')
+            return real_run(tool, *args, **kwargs)
+        with patch.object(brain, 'run', side_effect=fake_run), contextlib.redirect_stdout(io.StringIO()) as out:
+            brain.once(self.node, 1)
+        self.assertEqual(self.replies()[0]['status'], 'DONE')
+        self.assertIn('用量還沒對清', out.getvalue())
+        self.assertFalse((self.node / 'brain/pending.json').exists())
+
+
 
 class BrainParseTests(unittest.TestCase):
     def test_parse_and_cid(self):
@@ -163,4 +218,5 @@ class BrainParseTests(unittest.TestCase):
         p = subprocess.run([sys.executable, str(TOP / 'modules/up/aos7_up_brain.py'),
                             'ask', '/tmp/not-existing-up-node', '你好'], capture_output=True, text=True, timeout=10)
         self.assertEqual(p.returncode, 2)
-        self.assertIn('找不到 node', p.stdout)
+        self.assertIn('找不到 node', p.stderr)
+        self.assertEqual(p.stdout, '')

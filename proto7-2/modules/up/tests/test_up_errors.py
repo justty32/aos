@@ -1,6 +1,8 @@
 """統一錯誤的一行訊息與退出碼。"""
 import contextlib
 import io
+import json
+import sys
 from pathlib import Path
 import subprocess
 import tempfile
@@ -52,3 +54,109 @@ class UpErrors(unittest.TestCase):
                     self.assertEqual(cli.main([str(node), '-d']), 2)
                 self.assertFalse(node.exists())
                 self.assertEqual(len(err.getvalue().splitlines()), 1)
+
+
+class InterfaceTests(unittest.TestCase):
+    def invoke(self, args):
+        return subprocess.run([sys.executable, '-B', str(cases.UP), *args],
+                              capture_output=True, text=True, timeout=10)
+
+    def test_help_everywhere(self):
+        expected = """用法：
+  aos7-up <node>                起 node；開著別關，停＝按 Ctrl-C
+  aos7-up ask <node> '一句話'    另開視窗寄信給它，等回信（最多 60 秒）
+  aos7-up status <node>         看它現在怎樣
+例：aos7-up /tmp/aos/bob
+更多（真 AI、背景跑、停）見 proto7-2/modules/up/ADVANCED.md
+"""
+        for args in (['--help'], ['-h'], ['ask', '--help'], ['status', '--help'],
+                     ['stop', '--help'], ['brain', '--help'],
+                     ['ask', '/missing', 'test', '--bad', '-h']):
+            with self.subTest(args=args):
+                p = self.invoke(args)
+                self.assertEqual((p.returncode, p.stdout, p.stderr), (0, expected, ''))
+                self.assertLessEqual(len(p.stdout.splitlines()), 8)
+                for word in ('stop', '-d', '--model', '退出', 'DONE', 'BLOCKED', 'token',
+                             '帳', '回合', '預留', 'ack', 'daemon', 'tick'):
+                    self.assertNotIn(word, p.stdout)
+
+    def test_bad_arguments_all_commands(self):
+        for args in ([], ['--bad'], ['ask'], ['ask', 'bob', 'test', '--wait', 'bad'],
+                     ['brain'], ['brain', 'bob', '--bad'], ['status'], ['stop']):
+            with self.subTest(args=args):
+                p = self.invoke(args)
+                self.assertEqual(p.returncode, 2)
+                self.assertEqual(p.stdout, '')
+                self.assertEqual(len(p.stderr.splitlines()), 1)
+                self.assertTrue(p.stderr.startswith('aos7-up: '))
+                self.assertIn('。例如 aos7-up', p.stderr)
+                self.assertNotIn('usage:', p.stderr)
+                self.assertNotIn('Traceback', p.stderr)
+
+    def test_cleanup_shared_and_mixed_house(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            house = Path(tmp)
+            node = house / 'bob'
+            (node / '.aos').mkdir(parents=True)
+            (node / '.aos/up.json').write_text('{}')
+            (house / 'you').mkdir()
+            (house / '.aosd').mkdir()
+            self.assertEqual(view.cleanup_hint(node),
+                f'檔案：都在 {house}（bob、you、.aosd）；全清：先停心跳，再 rm -r {house}')
+            (house / 'other.txt').write_text('保留')
+            hint = view.cleanup_hint(node)
+            self.assertEqual(hint.split('rm -r ')[1], f'{node} {house}/you {house}/.aosd')
+            second = house / 'alice'
+            (second / '.aos').mkdir(parents=True)
+            (second / '.aos/up.json').write_text('{}')
+            self.assertEqual(view.cleanup_hint(node).split('rm -r ')[1], str(node))
+            (house / 'other.txt').unlink()
+            self.assertEqual(view.cleanup_hint(node),
+                f'檔案：都在 {house}（alice、bob、you、.aosd）；全清：先停心跳，再 rm -r {house}')
+            # 不是 up 起的 node（只有 .aos/、沒有 up.json）也在用 you 與 .aosd：不整屋、也不刪共用
+            (second / '.aos/up.json').unlink()
+            self.assertEqual(view.cleanup_hint(node).split('rm -r ')[1], str(node))
+
+    def test_config_read_failure_before_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            node = Path(tmp) / 'bob'
+            (node / '.aos').mkdir(parents=True)
+            (node / '.aos/up.json').write_text('{}')
+            before = sorted(node.rglob('*'))
+            for args in (['status', str(node)], [str(node)]):
+                with patch.object(Path, 'read_text', side_effect=PermissionError('private')), \
+                     contextlib.redirect_stderr(io.StringIO()) as err, \
+                     contextlib.redirect_stdout(io.StringIO()) as out:
+                    self.assertEqual(cli.main(args), 3)
+                self.assertEqual(out.getvalue(), '')
+                self.assertEqual(err.getvalue(), f'aos7-up: 不確定：讀不到 {node}/.aos/up.json，什麼都沒改。確認讀得到後照原樣再跑一次\n')
+                self.assertEqual(before, sorted(node.rglob('*')))
+
+    def test_status_unknown_usage_and_readonly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            node = Path(tmp) / 'bob'
+            (node / '.aos').mkdir(parents=True)
+            cfg = dict(v=1, node=str(node), house=tmp, name='bob', you='you', mail_root=tmp,
+                       model=None, litellm_url='', budget='budget/llm', holder='brain', gateway='llm.fake')
+            (node / '.aos/up.json').write_text(json.dumps(cfg))
+            before = {p: p.read_bytes() for p in node.rglob('*') if p.is_file()}
+            for rc, content, wanted in ((3, '', '讀寫字數不明'), (0, '{}', '讀寫字數不明'),
+                                         (0, 'bad', '讀寫字數不明'),
+                                         (0, '{"used":1104}', '讀寫約 1104 字')):
+                with patch.object(view, 'call', return_value=subprocess.CompletedProcess([], rc, content)), \
+                     contextlib.redirect_stdout(io.StringIO()) as out:
+                    self.assertEqual(view.status(node), 0)
+                self.assertIn(wanted, out.getvalue())
+                self.assertNotIn('token', out.getvalue())
+                self.assertEqual(out.getvalue().splitlines()[-1], view.cleanup_hint(node))
+            self.assertEqual(before, {p: p.read_bytes() for p in node.rglob('*') if p.is_file()})
+            self.assertFalse((node.parent / '.aosd').exists())
+
+    def test_stop_uses_same_hint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            node = Path(tmp) / 'bob'
+            (node / '.aos').mkdir(parents=True)
+            (node / '.aos/up.json').write_text('{}')
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(up.stop(node), 0)
+            self.assertEqual(out.getvalue().splitlines()[-1], view.cleanup_hint(node))

@@ -8,14 +8,14 @@ import signal
 import subprocess
 import time
 
-from aos7_up_status import P, alive, call, read, skill_count, watch, atomic, config, UpError
+from aos7_up_status import P, alive, call, read, skill_count, watch, atomic, config, UpError, cleanup_hint
 
 
 def run(path, *args, cwd=None):
     result = call(path, *args, cwd=cwd)
     if result.returncode:
         summary = (result.stderr or result.stdout).strip().splitlines()
-        detail = summary[-1] if summary else f'退出 {result.returncode}'
+        detail = summary[-1] if summary else '工具沒完成'
         code = 3 if result.returncode == 3 else 1
         prefix = '不確定：' if code == 3 else ''
         raise UpError(code, f'{prefix}{path} 沒完成（{detail}）。已裝的留著，照原樣再跑一次會接續')
@@ -30,7 +30,7 @@ def preflight(node, model):
     grant = read(grant_path)
     if grant is not None and grant.get('gateway') != gateway:
         old = '假 AI' if grant.get('gateway') == 'llm.fake' else '真 AI'
-        raise UpError(2, f'這個 node 已經用{old}開過帳，不能換。要換請另起一個 node，例如 aos7-up /tmp/aos/new')
+        raise UpError(2, f'這個 node 已經用{old}起過，不能換。要換請另起一個 node，例如 aos7-up /tmp/aos/new')
     return previous, model, gateway, grant_path, grant
 
 
@@ -83,7 +83,7 @@ def stop(node):
     else:
         _halt(node)
     if node.is_dir():
-        print(f'檔案都留著；要全清：rm -r {node} {node.parent}/you（{node.parent}/.aosd 是心跳的紀錄，房子裡沒別的 node 也可刪）')
+        print(cleanup_hint(node))
     return 0
 
 
@@ -129,7 +129,7 @@ def up(node, model, detached):
                 if time.monotonic() >= end:
                     raise UpError(3, f'不確定：15 秒內沒看到 {node.name} 被叫醒，已裝的檔案留著。照原樣再跑 aos7-up {node} 會接續')
                 time.sleep(.05)
-        ai = f'AI：{settings["model"]}' if settings['model'] else '假 AI（要真的加 --model）'
+        ai = f'AI：{settings["model"]}' if settings['model'] else '假 AI'
         print(f'{node.name} 起好了：工作簿 ✓ 信箱 ✓ 技能 {skill_count(node)} 本 ✓ {ai}', flush=True)
         print(f"另開一個終端機問它：aos7-up ask {node} '一句話'", flush=True)
         print(f'看狀態：aos7-up status {node}　停：' + (f'aos7-up stop {node}' if detached else 'Ctrl-C'), flush=True)
