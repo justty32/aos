@@ -12,6 +12,7 @@ OLD = 'notes/done/INDEX-old.md'
 KEEP = 50
 INDEX_MAX = 2000
 FILE_MAX = 3000
+STATE_MAX = 1200
 PROMPT_MAX = 12000
 HEADER = '# 做完的件（新的在下面）\n'
 OLD_HEADER = '# 做完的件（舊）\n'
@@ -83,6 +84,51 @@ def index_text(node):
     return '\n'.join(reversed(rows))
 
 
+def state_text(node):
+    handoffs = Path(node) / 'wf/handoffs'
+    latest = re.search(r'^> 最新：\[([^\]]+)\]', _read(handoffs / 'NEXT-SESSION.md'), re.M)
+    path = handoffs / latest[1] if latest else None
+    if path is None or not path.is_file():
+        paths = sorted(handoffs.glob('*/STATE.md'))
+        if not paths:
+            return ''
+        path = paths[-1]
+    rel = path.relative_to(handoffs).as_posix()
+    rows = [s for s in _read(path).splitlines() if s.startswith('- ')]
+    if not rows:
+        return ''
+    if len('\n'.join(rows)) > STATE_MAX:
+        selected = {}
+        def render():
+            result, previous = [], -1
+            for i in sorted(selected):
+                if i > previous + 1:
+                    result.append(f'- （中間 {i - previous - 1} 行略，全文在 wf/handoffs/{rel}）')
+                result.append(selected[i])
+                previous = i
+            if previous < len(rows) - 1:
+                result.append(f'- （中間 {len(rows) - previous - 1} 行略，全文在 wf/handoffs/{rel}）')
+            return '\n'.join(result)
+        # 摘要先占位，再由尾端補最近的原文；省略標記也算在上限內。
+        for i, row in enumerate(rows):
+            if row.startswith('- （摘要 '):
+                selected[i] = row if len(row) <= 600 else row[:599] + '…'
+                if len(render()) > STATE_MAX:
+                    del selected[i]
+                    break
+        for i in range(len(rows) - 1, -1, -1):
+            if i in selected or rows[i].startswith('- （摘要 '):
+                continue
+            selected[i] = rows[i]
+            if len(render()) > STATE_MAX:
+                del selected[i]
+                break
+        text = render()
+    else:
+        text = '\n'.join(rows)
+    return f'續行點（wf/handoffs/{rel}，最近的在下面）：\n{text}\n\n'
+
+
 def _words(text):
     words = set(re.findall(r'[a-z0-9]{2,}', text.lower()))
     for run in re.findall(r'[\u3400-\u4dbf\u4e00-\u9fff]+', text):
@@ -149,11 +195,12 @@ def section(node, ref, got):
 
 def fit(parts, size, limit):
     parts = dict(parts)
-    for key in ('trail', 'skill'):
+    for key in ('trail', 'skill', 'state'):
         if size <= limit:
             break
-        size -= len(parts[key])
-        parts[key] = ''
+        size -= len(parts.get(key, ''))
+        if key in parts:
+            parts[key] = ''
     if size > limit and parts['attach']:
         original = parts['attach']
         room = max(0, len(original) - (size - limit))

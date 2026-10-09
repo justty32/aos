@@ -118,7 +118,7 @@ b.once(node, 2)
         first = self.post()
         brain.once(self.node, 1)
         work = self.node / 'brain'
-        self.assertEqual({p.name for p in work.iterdir()}, {'now.md', 'req.json', 'reply.md'})
+        self.assertEqual({p.name for p in work.iterdir()}, {'now.md', 'req.json', 'reply.md', 'state.json'})  # state.json：STATE 去重記的 id，最多 50 個（BR2）
         original = json.loads((work / 'req.json').read_text())
         (work / 'req.json').write_text('{}')
         (self.node / 'AGENTS.md').unlink()

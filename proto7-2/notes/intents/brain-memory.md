@@ -13,5 +13,6 @@
 **③不做**：不做向量檢索、不給工具、不整份成果塞提示、不跨 node、不改 compact／prompt 包、QUICKSTART 零新概念。
 
 **④對照現狀多出來的**：`notes/done/` 隨信累積 → **保留**（可選：超過 200 封打包）；「要檔案」格式、INDEX 輪替 → **保留**。
+- BR2（2026-10-09）：LT2 發現提示沒帶 STATE，壓縮沒省到 token、AI 也看不到壓縮後的記憶 → **改成每回合附最新一份 STATE**（壓縮後的樣子，最多 1500 字，太長留摘要行＋最近幾行），超過 `max_prompt_chars` 時在技能全文之後、截前件之前砍掉；journal **不進提示**，壓縮它只為檔案變小（寫進 up ADVANCED）。記憶觸發改成每回合直接跑 `aos7-compact now`（照 compact 預設，沒事不寫）；STATE 去重改看 `brain/state.json` 記的 id，不再數 STATE 文字。
 
 **驗收**：重跑 L 的 12 封：11 號回 DONE 且命中 01 號第 5 節關鍵詞 ≥2、不再 NEEDS-USER；每回合 prompt ≤ 上限；token 不比 L 跑 2 多 15%；寫 done 與寄 DONE 之間 SIGKILL ×3 不重寫不重寄。
