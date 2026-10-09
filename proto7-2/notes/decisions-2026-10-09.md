@@ -283,3 +283,4 @@
 - C｜KC1：kernel 骨架進 main——真 daemon 下當 keep 任務跑、kill 綁原 run、核心重起後記成功；規則輸出壞就整份不送；四個崩潰點各殺 3 次不重送不漏；300 回合 state 不長；對外 `run`／`status` 兩指令；有 `mail` 設定才寄信（信 id＝決定 id，不重寄）。diff 約 1795 行超 700 gate（約 1080 行是測試）照收
 - C｜KC1：藍圖裡 brain 進度路徑寫錯，實際是 `<node>/brain/task.json`、run 取自槽的 birth.json → KE1 順手改藍圖
 - C｜頂層：kernel 不另加 init 指令，維持兩個指令（run 第一次跑會自己初始化；state 不見但決定紀錄還在就退 1 不重建）
+- 未過｜ST2：status 再白話（心跳只說活著、假 AI 不印字數、卡住倒數秒數）、QUICKSTART 補「bob 就是 node」與「卡住時」一節（3582 B）；新手三輪較差者都 6 分。剩：卡住信「進階」段嚇人、卡住那封被算進「回了」、範例秒數對不上、STATE 那行用語 → 開 ST3（brain＋status 一起改）
