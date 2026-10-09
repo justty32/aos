@@ -132,7 +132,7 @@ class TestAuthorAosCLI(DaemonCase):
         for flag, value in [('--review-llm', MODEL), ('--reviewer', 'rules'), ('--ref', 'HEAD')]:
             p = self.cli('propose', 'csv1', '--candidate', EXAMPLE / 'valid.json', flag, value)
             self.assertEqual(p.returncode, 2)
-            self.assertIn('error:', p.stderr)
+            self.assertTrue(p.stderr.startswith('aos7-author: '), p.stderr)
 
     def test_candidate_dispatch_and_bad_link(self):
         out = self.checked(self.aos('--candidate', USAGE / 'valid.json'))
@@ -156,6 +156,7 @@ class TestAuthorAosCLI(DaemonCase):
         self.assertTrue(out['check']['ok'])
         self.assertEqual(info['used'], 220)
         self.assertTrue(Path(info['receipt_path']).is_file())
+        self.assertEqual(json.loads(Path(info['receipt_path']).with_name('request.json').read_bytes())['logical'], 'author/usage1')
         body = self.bodies[0]
         self.assertNotIn('max_tokens', body)
         self.assertNotIn('temperature', body)
@@ -181,6 +182,7 @@ class TestAuthorAosCLI(DaemonCase):
             path = Path(out['review']['path'])
             self.assertEqual(path.read_text(), self.review_content)
             self.assertTrue(out['review']['llm']['call_id'].startswith('rv-'))
+            self.assertEqual(json.loads(Path(out['review']['llm']['receipt_path']).with_name('request.json').read_bytes())['logical'], 'author-review/usage1')
             body = self.bodies[-1]
             self.assertIn('審查人', body['messages'][0]['content'])
             user = json.loads(body['messages'][1]['content'])
@@ -201,7 +203,7 @@ class TestAuthorAosCLI(DaemonCase):
         self.assertEqual(out['check']['failed_gate'], 3)
         p = self.aos('--candidate', USAGE / 'valid.json', '--reviewer', 'astra')
         self.assertEqual(p.returncode, 2)
-        self.assertIn('error:', p.stderr)
+        self.assertTrue(p.stderr.startswith('aos7-author: '), p.stderr)
 
     def test_retry_gotchas_context_and_prompt_preview(self):
         gotchas = Path(self.node, 'GOTCHAS.md')
@@ -240,8 +242,11 @@ class TestAuthorAosCLI(DaemonCase):
         self.assertEqual(subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD']).decode().strip(), head)
         dup = self.checked(self.aos(*opts, cmd='publish'))
         self.assertTrue(dup['dup'])
+        receipt = json.loads(Path(self.node, 'author/req/usage1/receipt.json').read_bytes())
+        self.assertTrue(receipt['closed'])
+        self.assertEqual(receipt['versions'][out['candidate_sha']]['commit'], out['commit'])
         subprocess.run(['git', '-C', str(repo), 'update-ref', 'refs/heads/' + out['branch'], head], check=True)
-        self.assertEqual(self.checked(self.aos(*opts, cmd='publish'), 3)['why'], 'conflict')
+        self.assertEqual(self.checked(self.aos(*opts, cmd='publish'), 1)['why'], 'conflict')
 
     def test_learn_appends_and_rejects_bad_format(self):
         into = Path(self.node, 'GOTCHAS.md')
@@ -255,6 +260,7 @@ class TestAuthorAosCLI(DaemonCase):
         out = self.checked(self.aos(*opts, cmd='learn'))
         self.assertEqual(out['added'], self.content.splitlines())
         self.assertTrue(out['llm']['call_id'].startswith('ln-'))
+        self.assertEqual(json.loads(Path(out['llm']['receipt_path']).with_name('request.json').read_bytes())['logical'], 'author-learn/usage1')
         self.assertEqual(into.read_text(), initial + '\n## usage1（test/model）\n' + self.content + '\n')
         user = json.loads(self.bodies[0]['messages'][1]['content'])
         self.assertEqual(user['existing'], initial)
@@ -290,7 +296,7 @@ class TestAuthorAosCLI(DaemonCase):
         bad.write_text('{"kind":"aos-tool","kind":"aos-tool"}')
         p = self.aos('--candidate', USAGE / 'valid.json', req=bad)
         self.assertEqual(p.returncode, 2)
-        self.assertIn('error:', p.stderr)
+        self.assertTrue(p.stderr.startswith('aos7-author: '), p.stderr)
 
     def assert_no_answer_leak(self, messages):
         source = (USAGE / 'check_answer.py').read_text()
@@ -330,7 +336,7 @@ class TestAuthorAosCLI(DaemonCase):
         p = self.aos('--candidate', USAGE / 'bad-link.json', '--review-llm', MODEL,
                      '--budget', self.bd, cmd='publish')
         self.assertEqual(p.returncode, 2)
-        self.assertIn('error:', p.stderr)
+        self.assertTrue(p.stderr.startswith('aos7-author: '), p.stderr)
         self.assertEqual(self.bodies, [])
 
     def test_publish_file_accept_still_requires_rules(self):

@@ -1,5 +1,5 @@
 """author 任務包（LLM 作者第一刀）：需求、工具卡、候選三層驗證與確定性編譯、答案驗收、close（spec 見 spec.md；
-契約卡在 README.md）。發布與恢復在 aos7_author_pub.py。
+契約卡在 ADVANCED.md）。發布與恢復在 aos7_author_pub.py。
 
     aos7-author register <request.json>
     aos7-author propose <rid> --candidate <file> [--auto]
@@ -10,7 +10,7 @@
 命令都在 node 目錄（cwd）下跑。候選由 --candidate 注入或 --llm 經 llmcall 產生。
 帳只在 `<node>/author/`：共用鎖 `author.lock`，每需求 `req/<rid>/` 固定五檔
 （request／candidate／verdict／intent／receipt），版本以 candidate_sha 為鍵放在檔內，不隨候選或回合增檔。
-退出碼：0 成功、2 invalid、3 conflict、4 unknown、5 full。
+退出碼照 ../../notes/blueprint-errors.md §2。
 """
 import argparse
 import contextlib
@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PACKS = os.path.dirname(HERE)
 TOP = os.path.dirname(PACKS)                                   # proto7-2/
 sys.path[:0] = [os.path.join(TOP, "lib"), os.path.join(PACKS, "step")]
-from aos7_fs import N, OK, Unknown, fact, locked, sweep_tmp, test_point, write_json  # noqa: E402
+from aos7_fs import N, OK, Unknown, LockTimeout, fact, locked, sweep_tmp, test_point, write_json  # noqa: E402
 import aos7_step  # noqa: E402  （只讀：用它的檢查器與 table_rev，不改 step）
 from aos7_tick import check_item  # noqa: E402  （只讀：核心任務項契約）
 
@@ -50,7 +50,7 @@ CAND_KEYS = {"v", "mode", "intent", "start", "steps", "ends"}
 STEP_KEYS = {"id", "tool", "args", "ok", "fail"}
 ATTR_KEYS = {"finite", "idempotent", "argv", "run", "expect", "patience", "on_unknown", "on_timeout",
              "max_resends", "unknown_codes", "receipt", "wake", "options", "max_live", "enabled"}
-CODES = {None: 0, "invalid": 2, "conflict": 3, "unknown": 4, "full": 5}
+CODES = {None: 0, "invalid": 2, "conflict": 1, "unknown": 3, "full": 1}
 
 
 class Refuse(Exception):
@@ -123,8 +123,14 @@ class Node:
         self.node = os.path.realpath(node or os.getcwd())
         self.dir = os.path.join(self.node, "author")
 
+    @contextlib.contextmanager
     def lock(self):
-        return locked(os.path.join(self.dir, "author"), LOCK_TIMEOUT)      # 共用鎖：author/author.lock
+        with contextlib.ExitStack() as stack:
+            try:
+                stack.enter_context(locked(os.path.join(self.dir, "author"), LOCK_TIMEOUT))
+            except LockTimeout:
+                raise Unknown("author 帳被另一個指令鎖著（等了 %g 秒）；等它跑完" % LOCK_TIMEOUT) from None
+            yield      # 共用鎖：author/author.lock
 
     def rdir(self, rid):
         return os.path.join(self.dir, "req", rid)
@@ -810,8 +816,45 @@ def intake(node, events_dir, limit=20):
     return aos7_author_pub.intake(node, events_dir, limit)
 
 
+def one_line(value, limit=180):
+    text = ' '.join(str(value).split())
+    return text if len(text) <= limit else text[:limit - 1] + '…'
+
+
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.exit(2, 'aos7-author: ' + one_line(message) + '。給需求檔或 rid 與所需選項，例如 aos7-author propose csv1 --candidate candidate.json；其他選項見 ADVANCED.md\n')
+
+    def format_help(self):
+        return ("aos7-author：把需求與候選驗過，再發布\n"
+                "  register request.json  登記 CSV 需求\n"
+                "  propose RID --candidate candidate.json  驗候選\n"
+                "  publish RID  發布已驗候選\n"
+                "  answer RID  驗答案\n"
+                "  status RID  看進度\n"
+                "  close RID  結案\n"
+                "  aos 需求檔：propose／publish／learn request.json（選項見 ADVANCED.md）\n"
+                "其他選項見 ADVANCED.md\n")
+
+
+def error_line(r):
+    detail = r.get('error') or r.get('unknown')
+    if not detail:
+        check = r.get('check') or r.get('publish') or r
+        detail = check.get('error') or check.get('unknown') or check.get('issues') or check.get('gates') or '這次未完成'
+    detail = one_line(detail)
+    why = r.get('why')
+    if why == 'unknown':
+        body = '不確定：' + detail + '。已有證據留著；照原樣再跑一次會接續'
+    elif why == 'invalid':
+        body = detail + '。給符合需求的檔案與選項，例如 aos7-author propose csv1 --candidate candidate.json'
+    else:
+        body = detail + '。先完成 close 的前置工作或換候選，再跑一次'
+    return 'aos7-author: ' + body
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-author", description="author 任務包：CSV 固定工具作者（檔案／LLM 候選）")
+    ap = ArgumentParser(prog="aos7-author", description="author 任務包：CSV 固定工具作者（檔案／LLM 候選）")
     ap.add_argument("cmd", choices=("register", "propose", "publish", "answer", "status", "close", "send", "intake"))
     ap.add_argument("arg", nargs="?", help="register 給需求檔；其餘給 rid")
     source = ap.add_mutually_exclusive_group()
@@ -868,6 +911,9 @@ def main(argv=None):
             if flag == 'no_scope':
                 kw = {'action': 'store_true', 'default': None}
             ap.add_argument('--' + flag.replace('_', '-'), **kw)
+    for action in ap._actions:
+        if action.option_strings and action.dest != "help":
+            action.help = argparse.SUPPRESS
     a = ap.parse_args(args)
     if a.cmd != "intake" and a.arg is None:
         ap.error("此命令需要需求檔或 rid")
@@ -916,7 +962,10 @@ def main(argv=None):
         else:
             r = status(nd, a.arg)
     print(json.dumps(r, ensure_ascii=False, indent=1))
-    return CODES.get(r.get("why"), 1) if not r.get("ok") or r.get("why") else 0
+    if not r.get("ok") or r.get("why"):
+        print(error_line(r), file=sys.stderr)
+        return CODES.get(r.get("why"), 1) or 1
+    return 0
 
 
 if __name__ == "__main__":

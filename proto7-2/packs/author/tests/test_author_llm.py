@@ -156,7 +156,7 @@ class TestAuthorLLM(DaemonCase):
                                       '--candidate', str(EXAMPLE / 'valid.json'))):
             p = self.cli('propose', 'csv1', *args)
             self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
-            self.assertIn('error:', p.stderr)
+            self.assertTrue(p.stderr.startswith('aos7-author: '), p.stderr)
         self.assertEqual(self.bodies, [])
 
     def test_failed_reply_with_text_is_not_a_candidate(self):
