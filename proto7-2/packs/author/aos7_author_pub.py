@@ -8,7 +8,7 @@ import os
 import aos7_author
 from aos7_author import (MAX_VERSIONS, OK, N, Node, Refuse, Unknown, check_rid, fact, published, recompute_payload, result,
                          sha256, read_bytes, test_point, aos7_step)
-from aos7_fs import edit_json
+from aos7_fs import edit_json, write_json
 
 TABLE_TIMEOUT = 2.0
 MISSING = object()
@@ -167,3 +167,127 @@ def _positive(nd, intent):
             and fr.get("job") == intent["job"] and fr.get("table") == aos7_step.table_rev(raw):
         return "frame"
     return None
+
+
+def _events():
+    """只在事件接線時載入；舊命令不依賴 events。"""
+    import sys
+    sys.path.insert(0, os.path.join(aos7_author.TOP, "modules", "events"))
+    import aos7_events_pub, aos7_events_read, aos7_events_store
+    return aos7_events_pub, aos7_events_read, aos7_events_store
+
+
+def send_request(node, request_path, events_dir):
+    """輕驗需求原文後送 must；保存端只按識別碼去重，重送另比原文雜湊。"""
+    nd = node if isinstance(node, Node) else Node(node)
+    try:
+        raw = read_bytes(request_path)
+        req = aos7_author.strict_json(raw) if raw is not None else None
+        rid = req.get("rid") if isinstance(req, dict) else None
+        check_rid(rid)
+        payload = dict(v=1, rid=rid, request_sha=sha256(raw), request=raw.decode("utf-8"))
+        pub, reader, _ = _events()
+        sent = pub.publish(events_dir, "author.request", "author/" + rid, payload,
+                           must=True, node=os.path.basename(nd.node))
+        if not sent["ok"]:
+            return result(False, {"usage": "invalid", "too_large": "invalid"}.get(sent["why"], sent["why"]))
+        if sent["dup"]:
+            found = reader.read(events_dir, "must", cursor=sent["seq"], limit=1)
+            if found["errors"]:
+                raise Unknown("重送事件讀取有錯：%s" % found["errors"])
+            for rec in found["records"]:
+                if rec["seq"] == sent["seq"] and (not isinstance(rec.get("payload"), dict) or rec["payload"].get("request_sha") != payload["request_sha"]):
+                    return result(False, "conflict", rid=rid, seq=sent["seq"])
+        return result(True, seq=sent["seq"], dup=sent["dup"])
+    except Refuse as r:
+        return result(False, r.why, error=r.msg)
+    except (ValueError, UnicodeError) as e:
+        return result(False, "invalid", error=str(e))
+    except (Unknown, OSError) as e:
+        return result(False, "unknown", error=str(e))
+
+
+def _intake_record(nd, rec):
+    """壞事件是確定答案；登記的 I/O 未知則保留事件重試。"""
+    p = rec.get("payload")
+    rid = p.get("rid") if isinstance(p, dict) and isinstance(p.get("rid"), str) else None
+    rsha = p.get("request_sha") if isinstance(p, dict) and isinstance(p.get("request_sha"), str) else None
+    if rec.get("kind") != "author.request":
+        return rid, rsha, "ignored", "外來 kind"
+    try:
+        check_rid(rid)
+        if not (type(p.get("v")) is int and p["v"] == 1 and isinstance(p.get("request"), str)
+                and rec.get("event_id") == "author/" + rid):
+            raise ValueError("payload 格式不合")
+        raw = p["request"].encode("utf-8")
+        req = aos7_author.strict_json(raw)
+        if sha256(raw) != rsha or not isinstance(req, dict) or req.get("rid") != rid:
+            raise ValueError("需求識別或雜湊不合")
+    except (Refuse, ValueError, UnicodeError) as e:
+        return rid, rsha, "invalid", str(e)
+    r = aos7_author._register_raw(nd, raw)
+    return rid, rsha, ("dup" if r.get("dup") else "registered") if r["ok"] else r["why"], r.get("error")
+
+
+def intake(node, events_dir, limit=20):
+    """唯一 must 消費者：登記 → 固定回條 → ack；重起先補上次 ack。"""
+    nd = node if isinstance(node, Node) else Node(node)
+    handled = []
+    cursor, acked = None, 0
+    if type(limit) is not int or limit < 1:
+        return result(False, "invalid", error="limit 須為正整數")
+    try:
+        _, reader, store = _events()
+        events = os.path.realpath(events_dir)
+        path = os.path.join(nd.dir, "events.json")
+        with nd.lock():
+            aos7_author.sweep_tmp(nd.dir)   # 回條寫到一半被殺留下的 .events.json.tmp.<pid>
+            status, doc = fact(path)
+            if status == N:
+                st = store.load_state(events)
+                if st is None and any(e.get("kind") == "state_unreadable"
+                                      for e in reader.read(events, "must", limit=1)["errors"]):
+                    raise Unknown("events state 讀不到")
+                acked = st["channels"]["must"]["acked_upto"] if st else 0
+                if type(acked) is not int or acked < 0:
+                    raise Unknown("events 確認進度格式不合")
+                cursor = acked + 1
+            else:
+                if status != OK or not isinstance(doc, dict) or type(doc.get("v")) is not int or doc["v"] != 1 \
+                        or not isinstance(doc.get("events"), str) or type(doc.get("cursor")) is not int \
+                        or doc["cursor"] < 1 or "last" not in doc or not (doc["last"] is None or isinstance(doc["last"], dict)):
+                    raise Unknown("作者事件帳讀不到或格式不合")
+                last = doc["last"]
+                if last is not None and (not all(k in last for k in ("seq", "event_id", "rid", "result", "request_sha"))
+                        or type(last["seq"]) is not int or last["seq"] != doc["cursor"] - 1
+                        or last["result"] not in ("registered", "dup", "invalid", "conflict", "ignored")):
+                    raise Unknown("作者事件帳讀不到或格式不合")
+                if doc["events"] != events:
+                    return result(False, "conflict", error="事件目錄與作者游標不符")
+                cursor = doc["cursor"]
+            if cursor > 1:
+                test_point("author:intake-after-receipt")  # 恢復仍在同一個回條與 ack 窗口，可連續殺死
+                acked = store.ack(events, cursor - 1)
+            for _ in range(limit):
+                got = reader.read(events, "must", cursor=cursor, limit=1)
+                if got["errors"]:
+                    raise Unknown("事件讀取有錯：%s" % got["errors"])
+                if not got["records"]:
+                    break
+                rec = got["records"][0]
+                rid, rsha, answer, error = _intake_record(nd, rec)
+                if answer == "unknown":
+                    raise Unknown(error or "登記結果不明")
+                seq = rec["seq"]
+                last = dict(seq=seq, event_id=rec.get("event_id"), rid=rid, result=answer, request_sha=rsha)
+                if error:
+                    last["error"] = error
+                test_point("author:intake-before-receipt")
+                write_json(path, dict(v=1, events=events, cursor=seq + 1, last=last))
+                cursor = seq + 1
+                handled.append(dict(seq=seq, rid=rid, result=answer))
+                test_point("author:intake-after-receipt")
+                acked = store.ack(events, seq)
+        return result(True, handled=handled, cursor=cursor, acked_upto=acked)
+    except (Unknown, OSError, ValueError, KeyError, TypeError) as e:
+        return result(False, "unknown", handled=handled, error=str(e))

@@ -7,14 +7,14 @@
 | 項目 | 內容 |
 |---|---|
 | 分類 | 上層任務包（LLM 層，第一刀不接模型），單 node |
-| 接法 | 人手 CLI（node 目錄下跑）；發布的表項是 `{"name": "author-<job>", "mode": "keep", "max_live": 1, "argv": ["python3", "<proto7-2>/packs/step/bin/aos7-step", "run", "jobs/<job>"], "x": {"author": {...}}}` |
+| 接法 | `send`／`intake` 接 events must（§10）；人手 CLI（node 目錄下跑）；發布的表項是 `{"name": "author-<job>", "mode": "keep", "max_live": 1, "argv": ["python3", "<proto7-2>/packs/step/bin/aos7-step", "run", "jobs/<job>"], "x": {"author": {...}}}` |
 | 預設 | `propose` 只產可審查候選、不發布；人另跑 `publish`。`--auto` 只給固定試驗與測試 |
-| 保存 | `<node>/author/`：共用 `author.lock`＋每需求 `req/<rid>/` ≤5 檔；`close` 後只剩 `request.json`＋`receipt.json`（檔數隨需求數、不隨回合／候選數） |
+| 保存 | `<node>/author/`：共用 `author.lock`＋常數 `events.json` 收件帳＋每需求 `req/<rid>/` ≤5 檔；`close` 後只剩 `request.json`＋`receipt.json`（檔數隨需求數、不隨回合／候選數） |
 | 依賴 | 核心 `aos7_fs`（`fact`、`write_json`、`edit_json`、`locked`、`test_point`、`sweep_tmp`）、`aos7_tick.check_item`（唯讀）；step 的 `check`／`table_rev`（唯讀） |
-| 程式 | `aos7_author.py`（需求、工具卡、候選驗證與編譯、answer、close、CLI）、`aos7_author_pub.py`（發布與恢復）、`bin/aos7-author` |
+| 程式 | `aos7_author.py`（需求、工具卡、候選驗證與編譯、answer、close、send／intake 入口、CLI）、`aos7_author_pub.py`（發布、恢復、send／intake）、`bin/aos7-author` |
 | 工具卡 | `toolcards/csv.json`：`csv.convert`、`csv.stats`（腳本原樣取自 [step CSV 範例](../step/examples/csv/)、記 SHA-256） |
-| 範例 | `examples/csv-request/`：`request.json`（rid `csv1`）、七份候選（`valid.json` 一份合法；`bad-json`／`bad-params`／`bad-dependency`／`bad-mode`／`bad-idempotent`／`bad-path` 六份壞）、`check_answer.py` |
-| 測試 | `tests/`（`python3 proto7-2/tests/run_all.py packs/author/tests`；全套預設就收） |
+| 範例 | [events-request](examples/events-request/README.md)（must 收件實跑）；`examples/csv-request/`：`request.json`（rid `csv1`）、七份候選（`valid.json` 一份合法；`bad-json`／`bad-params`／`bad-dependency`／`bad-mode`／`bad-idempotent`／`bad-path` 六份壞）、`check_answer.py` |
+| 測試 | `tests/test_author.py`（既有驗收）、`tests/test_author_events.py`（must 收件與 crash）；`tests/`（`python3 proto7-2/tests/run_all.py packs/author/tests`；全套預設就收） |
 
 ## 第一次跑（已實跑）
 
@@ -39,13 +39,13 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
 
 job 名＝`<rid>_<候選 sha256 前 8 碼>`，候選 bytes 不變時就是上面的 `csv1_32ac171d`。報表在 `jobs/csv1_32ac171d/out/report.json`：eng `{n:2,sum:200,avg:100}`、ops `{n:2,sum:120,avg:60}`、sales `{n:1,sum:200,avg:200}`、rows 5。close 不移除表項：ended 的工作再被 keep 起來會立刻退出；要收掉表項由人 `aos7-ctl rm`。
 
-## 四個組件（契約卡，細節在 spec.md）
+## 五個組件（契約卡，細節在 spec.md）
 
 **需求 `register`（`author/req/<rid>/request.json`）**
 - 職責：嚴格讀需求、驗欄位與輸入雜湊、保存原文；`request_sha`＝原文雜湊，後續帳都記它。
 - 前置條件：需求寫者給 rid（英數與 `_`、≤23 字）；輸入檔在 node 裡、是一般檔。
 - 保證：同 rid 同 bytes＝dup、不增檔；不同內容＝conflict、不覆寫；輸入雜湊不符、路徑型 rid＝invalid。
-- 明確不管：需求本身合不合理（人審）；本刀不發 events（之後經 ev1 must 接，見藍圖 §6）。
+- 明確不管：需求本身合不合理（人審）；事件收件由 send／intake 負責（spec §10）。
 
 **候選與驗證 `propose`（`candidate.json`、`verdict.json`、`jobs/<job>/`）**
 - 職責：保存候選原文（壞 JSON 也存、可審查），前兩層驗證（格式與展開、工具卡契約＋step 檢查器），過了確定性編譯出 `jobs/<job>/` 的固定來源與 payload 雜湊。
@@ -65,6 +65,12 @@ job 名＝`<rid>_<候選 sha256 前 8 碼>`，候選 bytes 不變時就是上面
 - 保證：未解意圖＝unknown、一檔不刪；中途被殺可重送接著清；close 後每需求恰 2 檔。
 - 明確不管：retire／kill／刪 `jobs/<job>/`、改表項。
 
+**收件 `send`／`intake`（`author/events.json`）**
+- 職責：send 保存原文到 must；intake 登記需求、寫最後一筆回條，再 ack。
+- 前置條件：node 名一致、作者獨佔該 must 消費游標；send 的寫者不必有 node 輸入檔。
+- 保證：full 不算送出；同 rid 異文衝突；回條前重讀、回條後只補 ack；invalid／conflict 不阻塞後續；unknown 留待重試。
+- 明確不管：多消費者、窗口外去重、obs、自動 propose／publish（細節見 spec §10）。
+
 ## 錯誤與退出碼
 
 CLI 印 JSON `{ok, why, ...}`：`0` 成功（含 dup）、`2` invalid、`3` conflict、`4` unknown、`5` full。
@@ -74,7 +80,7 @@ CLI 印 JSON `{ok, why, ...}`：`0` 成功（含 dup）、`2` invalid、`3` conf
 | invalid | 需求欄位／rid／輸入雜湊不合；候選沒過驗證（`issues` 的 `rule`：size／json／schema／attr／nul／mode／tool／param／path／graph／dep／step／task／source）；`payload_changed`；`--resend` 用在沒有 unknown 的版本 |
 | conflict | 同 rid 異內容；表上同名項改過或 disabled；job 前 8 碼撞名或 `jobs/<job>/` 有不同內容；已結案；close 條件不足（step 未 close、答案未驗、還有待審的合法候選）；已有回條還 `--resend` |
 | unknown | 作者帳或 tasks.json 讀不到／壞、鎖逾時、只有意圖沒有登記證據、有結果不明的版本時再 propose／close |
-| full | 已發布 2 版還 propose（先 close） |
+| full | must 滿、不算送出；已發布 2 版還 propose（先 close） |
 
 ## 界線
 
