@@ -1,12 +1,10 @@
 """檔案是權威的郵局；events must 只作提醒。"""
 import datetime
-from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
 import re
 import secrets
-import subprocess
 import sys
 import tempfile
 
@@ -16,6 +14,10 @@ from aos7_fs import locked, write_json, test_point
 from aos7_events_pub import publish
 from aos7_events_read import read as events_read
 
+class Refused(ValueError):
+    """做不到（撞名、前提不在）：CLI 退 1；其他 ValueError 是用法錯退 2。"""
+
+
 TERMINAL = {'DONE', 'BLOCKED', 'NEEDS-USER', 'FAILED'}
 STATUSES = TERMINAL | {'REQUEST', 'PROGRESS'}
 HEADINGS = ('做了什麼', '產出（檔案路徑 / commit / 分支）', '沒做到、或證據不足的部分', '需要對方或使用者決定的事')
@@ -23,7 +25,7 @@ HEADINGS = ('做了什麼', '產出（檔案路徑 / commit / 分支）', '沒�
 
 def name(value):
     if not re.fullmatch(r'[A-Za-z0-9._-]+', value) or value in ('.', '..', 'teams'):
-        raise ValueError(f'名字 {value!r} 不行：只准英數字、點、底線、短橫線，且不能是 . .. teams')
+        raise ValueError(f'名字 {value!r} 不行。只准英數字、點、底線、短橫線，且不能是 . .. teams，例：alice')
     return value
 
 
@@ -49,7 +51,7 @@ def letter(path):
     text = Path(path).read_text(encoding='utf-8')
     parts = re.split(r'^---\r?$', text, maxsplit=2, flags=re.M)
     if len(parts) != 3 or parts[0].strip():
-        raise ValueError('信件缺少 frontmatter')
+        raise ValueError('信件缺少 frontmatter。信檔要照 ADVANCED.md〈完整指令〉的格式，請用 send 寄，不要手寫')
     data = dict(line.split(': ', 1) for line in parts[1].strip().splitlines() if ': ' in line)
     name(data['from'])
     name(data['id'])
@@ -66,7 +68,7 @@ def team_of(root, me):
         if me in members:
             found.append((p.parent.name, members[0]))
     if len(found) > 1:
-        raise ValueError('同一人不能屬於兩個團隊')
+        raise ValueError('同一人出現在兩個團隊的 members。請把多的那份 teams/<隊>/members 改掉')
     return found[0] if found else None
 
 
@@ -79,7 +81,7 @@ def upstream(root, me):
     match = re.search(r'^### `' + re.escape(me) + r'`\n(.*?)(?=^### |^## |\Z)', text, re.M | re.S)
     up = re.search(r'^- \*\*上游\*\*：(.*)$', match[1], re.M) if match else None
     if not up or not up[1].strip():
-        raise ValueError('找不到團隊領導或 ROSTER 上游')
+        raise Refused('找不到你的上游：你不在團隊裡，ROSTER 也沒寫上游。先用 roster 寫上游，或直接寫收件人名字')
     return name(up[1].strip().strip('`'))
 
 
@@ -92,9 +94,9 @@ def body_text(body):
 
 def validate_reply(status, title, body):
     if status not in STATUSES:
-        raise ValueError(f'STATUS {status} 不認得；只能是 REQUEST、PROGRESS、DONE、BLOCKED、NEEDS-USER、FAILED')
+        raise ValueError(f'STATUS {status} 不認得。只能是 REQUEST、PROGRESS、DONE、BLOCKED、NEEDS-USER、FAILED')
     if not isinstance(title, str) or not title.strip() or '\n' in title or '\r' in title:
-        raise ValueError('結論必須是非空的一行')
+        raise ValueError('結論必須是非空的一行。例：\'檢查完了\'')
     body_text(body).encode('utf-8')
     title.encode('utf-8')
 
@@ -102,18 +104,14 @@ def validate_reply(status, title, body):
 def send(root, me, to, status, title, body='', re_id='', ident=None):
     name(me)
     validate_reply(status, title, body)
-    if status not in STATUSES:
-        raise ValueError('STATUS 不在白名單')
-    if not title.strip() or '\n' in title or '\r' in title:
-        raise ValueError('結論必須是非空的一行')
     if re_id:
         name(re_id)
     to = upstream(root, me) if to == '--up' else to
     if to.startswith('team:') and status == 'REQUEST':
-        raise ValueError('團隊信箱只收廣播（PROGRESS／終局）；要人辦事請直接寄給成員')
+        raise ValueError('團隊信箱只收廣播（PROGRESS／終局）。要人辦事請直接寄給成員')
     box = inbox(root, to)
     if to.startswith('team:') and (not team_of(root, me) or team_of(root, me)[0] != to[5:]):
-        raise ValueError('只有團隊成員可以投團隊信箱')
+        raise Refused('只有團隊成員可以投團隊信箱。請直接寄給個人')
     stamp = datetime.datetime.now().astimezone()
     ts = stamp.strftime('%Y%m%dT%H%M')
     ident = name(ident or f"{me}-{stamp.strftime('%Y%m%dT%H%M%S')}-{secrets.token_hex(6)}")
@@ -121,7 +119,7 @@ def send(root, me, to, status, title, body='', re_id='', ident=None):
             'reply-to': str(inbox(root, me)), 'id': ident, 're': re_id}
     text = '---\n' + ''.join(f'{k}: {v}\n' for k, v in data.items()) + '---\n# ' + title + '\n\n' + body_text(body)
     if not to.startswith('team:') and not (Path(root) / to).exists():
-        print(f'注意：{to} 是新信箱（第一次收信）', file=sys.stderr)
+        print(f'aos7-mail: 注意：{to} 是新信箱（第一次收信）。確認名字沒打錯；沒錯就不用管', file=sys.stderr)
     inbox(root, me).mkdir(parents=True, exist_ok=True)  # 寄件者也算有信箱：回信時不再提示「新信箱」
     tmpdir = box / '.tmp'
     tmpdir.mkdir(parents=True, exist_ok=True)
@@ -148,14 +146,14 @@ def send(root, me, to, status, title, body='', re_id='', ident=None):
                     n += 1
         finally:
             tmp.unlink(missing_ok=True)
-    if status == 'REQUEST':
+    if status == 'REQUEST' and (Path(root) / to / 'events').is_dir():
         try:
             result = publish((box.parent if to.startswith('team:') else Path(root) / to) / 'events', kind='mail.request', event_id=ident,
                              payload={'id': ident, 'from': me, 'to': to, 'file': str(final)}, must=True, node=to)
             if not result['ok']:
-                print('必達提醒未保存：' + str(result.get('why')), file=sys.stderr)
+                print('aos7-mail: 必達提醒未保存（' + ' '.join(str(result.get('why')).splitlines()) + '），信已寄出。信是權威，下次 read 或 done 會再試', file=sys.stderr)
         except Exception as e:
-            print('必達提醒未保存：' + str(e).replace('\n', ' '), file=sys.stderr)
+            print('aos7-mail: 必達提醒未保存（' + ' '.join(str(e).splitlines()) + '），信已寄出。信是權威，下次 read 或 done 會再試', file=sys.stderr)
     return {'sent': str(final), 'id': ident}
 
 
@@ -173,186 +171,5 @@ def audit(root, me=None):
             and (me is None or me in (l['from'], l['to']))]
 
 
-def ack(root, me):
-    box = inbox(root, me)
-    events = Path(root) / me / 'events'
-    if not events.exists():
-        return
-    marker = box / '.acked'
-    actual = event_ack(events, 0)
-    if actual is None:
-        return
-    upto = actual
-    write_json(str(marker), upto)
-    cursor = upto + 1
-    ended = {l['id'] for p in letters(box / 'done')
-             if (l := letter(p))['status'] == 'REQUEST'}
-    while True:
-        result = events_read(events, 'must', cursor=cursor)
-        records = result['records']
-        for rec in records:
-            if rec['seq'] != cursor or rec.get('kind') != 'mail.request' or rec.get('payload', {}).get('id') not in ended:
-                records = []
-                break
-            upto, cursor = rec['seq'], rec['seq'] + 1
-        if not records or len(records) < 100 or result['errors']:
-            break
-    if upto > load(marker, 0):
-        confirmed = event_ack(events, upto)
-        if confirmed is not None:
-            test_point('mail.after_event_ack')
-            write_json(str(marker), confirmed)
-
-
-def event_ack(events, upto):
-    p = subprocess.run([sys.executable, str(HERE.parent / 'events/aos7-events'), 'read',
-                        '--events', str(events), '--channel', 'must', '--ack', str(upto)], capture_output=True, text=True)
-    if p.returncode == 0:
-        return json.loads(p.stdout)['acked_upto']
-    print('必達提醒確認失敗：' + p.stdout.strip(), file=sys.stderr)
-    return None
-
-
-def finish(root, me, path, journal):
-    for reply in journal['replies']:
-        send(root, me, **reply)
-    test_point('mail.after_reply')
-    with locked(str(path.parent / '.delivery')):
-        target = path.parent / 'done' / path.name
-        target.parent.mkdir(exist_ok=True)
-        if path.exists():
-            n = 0
-            while True:
-                try:
-                    os.link(path, target)
-                    break
-                except FileExistsError:
-                    if letter(target)['id'] == journal['id']:
-                        break
-                    n += 1
-                    stamp, _, tail = path.name.partition('-')
-                    target = target.parent / f"{stamp.split('_')[0]}_{n}-{tail}"
-            path.unlink()
-    ack(root, me)
-
-
-def complete(root, me, path, status=None, title=None, body='', handler=None):
-    if status is not None and status not in TERMINAL:
-        raise ValueError('辦結 STATUS 必須是終局狀態')
-    l = letter(path)
-    jp = path.parent / '.handled' / (l['id'] + '.json')
-    journal = load(jp)
-    if journal is None:
-        if handler:
-            status, title, body = handler(l)
-        replies = []
-        if l['status'] == 'REQUEST':
-            if status not in TERMINAL or not title:
-                raise ValueError(f"這封是請求（REQUEST），辦完要給一句結論回給寄件人，例：done {me} <序號> '做完了'")
-            validate_reply(status, title, body)
-            reply_to = l.get('reply-to') or l['from']
-            to = l['from'] if '/' not in reply_to else Path(reply_to).parent.name
-            name(to)
-            destinations = [to]
-            team = team_of(root, me)
-            if team and team[1] != to:
-                destinations.append(team[1])
-            replies = [dict(to=d, status=status, title=title, body=body, re_id=l['id'],
-                            ident=f"re-{l['id']}-{status}") for d in destinations]
-        journal = {'id': l['id'], 'replies': replies}
-        write_json(str(jp), journal)
-        test_point('mail.after_journal')
-    finish(root, me, path, journal)
-
-
-def done(root, me, filename, status=None, title=None, body=''):
-    name(me)
-    box = inbox(root, me)
-    with locked(str(box / '.handle')):
-        if filename.isdecimal():
-            snapshot = load(box / '.numbers.json', {})
-            ident = snapshot.get(str(int(filename)))
-            if ident is None:
-                raise ValueError(f'序號 {filename} 不在最近一次 read 的清單裡，請先 read {me} 再用它列的序號'
-                                 '（序號只認你看過的清單，避免辦到剛到、還沒看過的信）')
-            path = next((p for p in letters(box, True) if letter(p)['id'] == ident), None)
-            if path is None:
-                raise ValueError('找不到這封信')
-        else:
-            path = next((p for p in letters(box, True)
-                         if p.name == filename or letter(p)['id'] == filename), None)
-            if path is None:
-                raise ValueError('找不到這封信')
-        l = letter(path)
-        if path.parent == box:
-            complete(root, me, path, status, title, body)
-        else:
-            ack(root, me)
-        journal = load(box / '.handled' / (l['id'] + '.json'), {})
-        return {'file': path.name, 'already': path.parent != box, 'to': [r['to'] for r in journal.get('replies', [])],
-                'status': next((r['status'] for r in journal.get('replies', [])), None)}
-
-
-def handle(root, me, handler):
-    name(me)
-    box = inbox(root, me)
-    with locked(str(box / '.handle')):
-        for path in letters(box):
-            complete(root, me, path, handler=handler)
-        ack(root, me)
-
-
-@contextmanager
-def poll(root, me, quiet=False):
-    name(me)
-    box = inbox(root, me)
-    output, updates = [], {}
-    with locked(str(box / '.handle')):
-        seen_mail = set(load(box / '.seen', []))
-        number = 0
-        for path in letters(box):
-            l = letter(path)
-            jp = box / '.handled' / (l['id'] + '.json')
-            journal = load(jp)
-            if journal is not None:
-                finish(root, me, path, journal)
-                output.append({'type': 'recovered', 'file': str(path), 'title': l['title']})
-            else:
-                number += 1
-                if not quiet or l['id'] not in seen_mail:
-                    output.append(dict(l, type='mail', number=number))
-                seen_mail.add(l['id'])
-        updates[box / '.numbers.json'] = {str(l['number']): l['id'] for l in output if l['type'] == 'mail'}
-        updates[box / '.seen'] = sorted(seen_mail)
-        ack(root, me)
-        team = team_of(root, me)
-        seenpath = box / '.seen-team'
-        seen = set(load(seenpath, []))
-        if team:
-            for path in letters(inbox(root, 'team:' + team[0])):
-                l = letter(path)
-                if l['id'] not in seen:
-                    output.append(dict(l, type='team'))
-                    seen.add(l['id'])
-            updates[seenpath] = sorted(seen)
-        orders = box / 'orders' / f'{me}.md'
-        if orders.exists():
-            data = orders.read_bytes()
-            offset = load(box / '.orders-offset', 0)
-            if offset > len(data):
-                raise ValueError('orders 被截短，請恢復 append-only 檔案')
-            if len(data) > offset:
-                for part in re.split(r'(?m)(?=^## )', data[offset:].decode('utf-8')):
-                    if part.strip():
-                        output.append({'type': 'orders', 'file': str(orders), 'title': part.strip()})
-                updates[box / '.orders-offset'] = len(data)
-        waiting = audit(root, me)
-        if not quiet:
-            output.extend(l for l in waiting if l['from'] == me)
-        yield output
-        test_point('mail.before_seen_commit')
-        for path, value in updates.items():
-            write_json(str(path), value)
-
-
 from aos7_mail_setup import roster, team
+from aos7_mail_box import ack, event_ack, finish, complete, done, handle, poll

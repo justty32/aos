@@ -30,12 +30,12 @@ export AOS_MAIL_ROOT=$(mktemp -d)
 會看到（路徑、時間、id 每次不同）：
 
 ```text
-注意：bob 是新信箱（第一次收信）
-{"sent": "/tmp/tmp.qYffPObHzl/bob/inbox/20261009T1536-alice-REQUEST.md", "id": "alice-20261009T153659-385fa96d43e8"}
-1  20261009T1536-alice-REQUEST.md  請 bob 檢查範例
-已辦結 20261009T1536-alice-REQUEST.md，已回 DONE 給 alice
-1  20261009T1536-bob-DONE.md  檢查完了，沒問題
-已歸檔 20261009T1536-bob-DONE.md
+aos7-mail: 注意：bob 是新信箱（第一次收信）。確認名字沒打錯；沒錯就不用管
+{"sent": "/tmp/tmp.XsBHbYyg6A/bob/inbox/20261009T1617-alice-REQUEST.md", "id": "alice-20261009T161753-d64ac66c2b4e"}
+1  20261009T1617-alice-REQUEST.md  請 bob 檢查範例
+已辦結 20261009T1617-alice-REQUEST.md，已回 DONE 給 alice
+1  20261009T1617-bob-DONE.md  檢查完了，沒問題
+已歸檔 20261009T1617-bob-DONE.md
 （沒有新信）
 ```
 
@@ -54,7 +54,7 @@ export AOS_MAIL_ROOT=$(mktemp -d)
 - `export` 只在目前這個終端機有效；開新終端機要再 export 一次（或改用 `--root`）。
 - **done 前先 read**：done 的號碼＝你最近一次 read 畫面上的號碼。中間又來新信也不會改號，所以不會辦到你沒看過的信。沒 read 過會提示「請先 read」。
 - 忘了用法：`aos7-mail --help`、`aos7-mail <指令> --help`（不用先設郵局資料夾）。
-- 出錯時退出碼 2，stderr 一行白話說明怎麼改。
+- 出錯時 stderr 一行白話說明怎麼辦。
 
 ## 想做更多
 
