@@ -519,7 +519,8 @@ def compile_steps(cand, cards, job):
                           "expect": list(card["artifacts"]), "ok": s["ok"], "fail": s["fail"]}
     for e, v in cand["ends"].items():
         steps[e] = {"end": v}
-    table = {"job": job, "start": cand["start"], "options": {"wake": False, "restart_on_end": False}, "steps": steps}
+    # EF2 量測：派工後 wake 讓下一回合馬上開，省掉等滿 1 秒 interval。
+    table = {"job": job, "start": cand["start"], "options": {"wake": True, "restart_on_end": False}, "steps": steps}
     return table, (json.dumps(table, ensure_ascii=False, sort_keys=True, indent=1) + "\n").encode("utf-8")
 
 

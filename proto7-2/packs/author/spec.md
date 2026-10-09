@@ -48,7 +48,7 @@
 **第一層（格式與展開）**，issue 的 `rule`：
 `size`、`json`（不是嚴格 JSON）、`schema`（缺欄、多欄、型別、id 重複）、`attr`（宣告 finite／idempotent／argv 等）、`nul`、`mode`（只收 keep；each／once 拒）、`tool`（不在卡或需求白名單）、`param`（多餘、缺少、型別、值不等）、`path`（寫路徑不在這一版 `${out}`：絕對、`..`、空段、其他展開、已存在段經 symlink 逃出 `jobs/<job>/out`；`<dst>` 與 `<dst>.tmp` 都查）、`graph`（start／跳轉目標不存在、走不到的步）、`dep`（跳轉成環；`${req:X}` 在某條可達路徑上 X 還沒成功採用，或 X 不是指定工具的步）。
 
-**第二層（工具卡契約）**：套卡生成 step 步驟表（`options.wake=false`、`restart_on_end=false`），交 `aos7_step.check` 檢查（`rule: step`），表項交核心 `check_item`（`rule: task`）；腳本與輸入雜湊不符＝`rule: source`。
+**第二層（工具卡契約）**：套卡生成 step 步驟表（`options.wake=true`、`restart_on_end=false`），交 `aos7_step.check` 檢查（`rule: step`），表項交核心 `check_item`（`rule: task`）；腳本與輸入雜湊不符＝`rule: source`。派工後 wake（核心 spec §2.3）：固定 interval（預設 1000 ms）時提前結束這回合，子工作下一回合馬上起；`early_tock` 的回合中不起作用。wake 作用在整個 node，同 node 其他任務也跟著多一個回合（EF2，[量測](../../notes/play/2026-10-09-real-ai/ef2.md)）。
 
 **第三層（實際成果）**：發布後 step 跑完、close 之前由 `answer` 驗（§7）。發布前不假稱已驗答案（`answer: "pending"`）。
 
