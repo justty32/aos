@@ -872,7 +872,7 @@ def main(argv=None):
     ap.add_argument("arg", nargs="?", help="register 給需求檔；其餘給 rid")
     source = ap.add_mutually_exclusive_group()
     source.add_argument("--candidate", help="propose：候選檔")
-    source.add_argument("--llm", help="propose：模型名（經 llmcall）")
+    source.add_argument("--llm", nargs="?", const="auto", help="propose：模型名（經 llmcall）；不給＝先便宜後升級")
     ap.add_argument("--budget", help="propose --llm：budget 目錄")
     ap.add_argument("--call", help="固定 call_id；新生成請明給新 ID")
     ap.add_argument("--reserve", type=int, default=1000000)
@@ -902,6 +902,8 @@ def main(argv=None):
             matches = [name for name in options if name.startswith(flag)]
             action = options.get(matches[0]) if len(matches) == 1 else None
             takes_value = action.nargs != 0 if action is not None else flag != '--no-scope'
+            if action is not None and action.nargs == '?' and (i + 1 >= len(args) or args[i + 1].startswith('-')):
+                takes_value = False
             i += 2 if takes_value and '=' not in token else 1
         else:
             positionals.append(token)

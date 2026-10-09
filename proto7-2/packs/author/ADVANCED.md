@@ -14,7 +14,7 @@
 | 程式 | aos7_author.py（驗證／CLI）、aos7_author_pub.py（發布／events）、aos7_author_llm.py（CSV LLM）、aos7_author_aos.py（aos 學徒／審查／learn）；bin/aos7-author、bin/aos7-gates |
 | 工具卡 | toolcards/csv.json、aos-tool.json、aos-module.json |
 | 範例 | examples/csv-request（合法與六份壞候選）、[LLM](examples/llm-request/README.md)、[events](examples/events-request/README.md) |
-| 測試 | tests/test_author*.py；repo 根 scope 內跑 tests/run_all.py packs/author/tests |
+| 測試 | tests/test_author*.py（升級鏈在 test_author_ladder.py）；repo 根 scope 內跑 tests/run_all.py packs/author/tests |
 
 ## 真 AI 產候選
 
@@ -25,6 +25,8 @@ python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
 python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
 ```
 
+**升級鏈（`--llm` 不給模型）**：先 `chatgpt-gpt-6-luna-nothink`；模型有答（llmcall 退 0／4）但候選被拒（`why=invalid`）才升 `chatgpt-gpt-6-sol-high`，再拒才 `chatgpt-gpt-6-astra-high`，三級都拒就照最後一級回報。沒答成（HTTP 錯、逾時、unknown）、conflict、full 一律立刻停、不升級。回覆多一個 `rounds`：每級的 model、call_id、why、usage；`--call X` 時各級是 `X`、`X-r1`、`X-r2`。aos 學徒升級時把上一級的候選與檢查結果當 `previous`／`feedback` 交下一級（CSV 沒有重問欄，下一級拿同一份提示）；`--prompt-out` 只寫第一級；`learn` 用第一級。給了模型名就只用那一個，回覆不帶 `rounds`。實測：[ef3](../../notes/play/2026-10-09-real-ai/ef3.md)。
+
 `--prompt-out` 只寫請求。提示只含需求、白名單卡、schema 與限制，不含答案、不設 max_tokens／temperature。call_id 按請求雜湊固定，重跑回原條；新生成用 `--call NEW_ID`。原文不剝圍欄、不修 JSON；預設另跑 publish。
 
 [LLM 實跑](examples/llm-request/README.md)由人啟動 LiteLLM 後執行，不進測試套。
@@ -33,7 +35,7 @@ python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
 
 kind 為 `aos-tool`／`aos-module`：學徒交新增檔案、索引列與 REPORT，三關過後由人發布。原文存 `author/aos/<rid>/`，可用 `--out` 改。
 
-- 學徒：`--llm` 指定寫候選的模型，提示帶需求與工具卡。
+- 學徒：`--llm` 指定寫候選的模型（不給＝上面的升級鏈），提示帶需求與工具卡。
 - 審查人：`--review-llm` 指定讀碼模型，與學徒一樣經 llmcall 使用 budget。
 - 重問：用 `--previous`、`--feedback` 與 `--gotchas` 把上一份候選、檢查結果和踩坑交回學徒。
 - 發布：重跑三關後只新增 apprentice 分支，合併由人處理。

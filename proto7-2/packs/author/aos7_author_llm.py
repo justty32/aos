@@ -26,6 +26,25 @@ SCHEMA = {'v': 1, 'mode': 'keep', 'intent': 'str', 'start': '步id',
           'steps': [{'id': '步id', 'tool': '工具名', 'args': {'參數': '值'},
                      'ok': '步id或end名', 'fail': '步id或end名'}],
           'ends': {'end名': 'ok|failed'}}
+# --llm 不給模型＝先便宜後升級：被拒才換下一級（實測見 notes/play/2026-10-09-real-ai/ef3.md）
+AUTO = 'auto'
+LADDER = ('chatgpt-gpt-6-luna-nothink', 'chatgpt-gpt-6-sol-high', 'chatgpt-gpt-6-astra-high')
+
+
+def rung_call(call, i):
+    return call if call is None or i == 0 else '%s-r%d' % (call, i)
+
+
+def climb(attempt):
+    """attempt(model, i) 回 propose 結果；模型答了但候選被拒（invalid）才升級，其餘立刻停。"""
+    rounds = []
+    for i, model in enumerate(LADDER):
+        r = attempt(model, i)
+        info = r.get('llm') or {}
+        rounds.append(dict(model=model, call_id=info.get('call_id'), why=r.get('why'), usage=info.get('usage')))
+        if r.get('why') != 'invalid' or info.get('exit') not in (0, 4):
+            break
+    return dict(r, rounds=rounds)
 
 
 def prompt_request(node, rid, model):
@@ -41,7 +60,13 @@ def prompt_request(node, rid, model):
         {'role': 'system', 'content': SYSTEM}, {'role': 'user', 'content': user}]}})
 
 
-def propose_llm(node, rid, *, model, budget, call=None, reserve=1000000,
+def propose_llm(node, rid, *, model, call=None, **kw):
+    if model != AUTO:
+        return propose_one(node, rid, model=model, call=call, **kw)
+    return climb(lambda m, i: propose_one(node, rid, model=m, call=rung_call(call, i), **kw))
+
+
+def propose_one(node, rid, *, model, budget, call=None, reserve=1000000,
                 deadline=None, patience=5, llmcall_bin=LLMCALL_BIN, env=None,
                 prompt_out=None, auto=False):
     nd = node if isinstance(node, Node) else Node(node)
