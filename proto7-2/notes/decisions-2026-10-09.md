@@ -259,3 +259,4 @@
 - C｜RV-fix-A：usage 併進 `aos7-metrics job --by model|holder|day|hour`（讀真資料，舊 usage 讀不了的問題消失）、`--detail` 加帳差；`job` 預設那行逐位元組不變；usage 程式 git mv 到 `archive/usage/`、舊指令留轉址。新手 Haiku 7／luna 8
 - C｜SK1：本機挑技能改用觸發詞（技能可寫 `triggers:`／`not_for:`），0 命中或平手就不挑；有帳也只在平手或信裡明說「用技能」才問 AI。長任務 17 筆 5/17→**17/17**、挑錯本 12→0、AI 呼叫 0；原 10 題維持 8/10
 - C｜頂層：aos-test 技能書裡的「數全套份數」改成 ps 的數法（lessons 第 13 條）
+- C｜信箱小修：mail 遇到主人已確認的別人事件就越過、繼續清自己的提醒（主人還沒確認仍停下）；學徒兩種錯誤訊息改成對症的下一步
