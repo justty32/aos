@@ -16,9 +16,9 @@
 
 ### 修改檔案
 
-- proto4-3：[README.md](/home/lorkhan/repo/simple_tools/aos/proto4-3/README.md)、[aos_kernel_add.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/aos_kernel_add.py)、[aos_kernel_syscall.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/aos_kernel_syscall.py)、[aos_kernel_status.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/aos_kernel_status.py)、[kernel.md](/home/lorkhan/repo/simple_tools/aos/proto4-3/docs/kernel.md)、[files.md](/home/lorkhan/repo/simple_tools/aos/proto4-3/docs/files.md)、[test_kernel.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/test/test_kernel.py)、[test_kernel_fix_r6.py](/home/lorkhan/repo/simple_tools/aos/proto4-3/test/test_kernel_fix_r6.py)
-- proto4-6：[README.md](/home/lorkhan/repo/simple_tools/aos/proto4-6/README.md)、三支執行器及三份對應測試
-- proto4-7：[README.md](/home/lorkhan/repo/simple_tools/aos/proto4-7/README.md)、`aos_agent_cli.py`、`aos_user_cli.py`、`mailbox.py`、`state_machine.py`、兩份測試
+- proto4-3：[README.md](../../../proto4-3/README.md)、[aos_kernel_add.py](../../../proto4-3/aos_kernel_add.py)、[aos_kernel_syscall.py](../../../proto4-3/aos_kernel_syscall.py)、[aos_kernel_status.py](../../../proto4-3/aos_kernel_status.py)、[kernel.md](../../../proto4-3/docs/kernel.md)、[files.md](../../../proto4-3/docs/files.md)、test_kernel.py（已不存在，拆成 [proto4-3/test/](../../../proto4-3/test/) 的 _kernel_base.py 與 test_kernel_init／exit／daemon）、[test_kernel_fix_r6.py](../../../proto4-3/test/test_kernel_fix_r6.py)
+- proto4-6：[README.md](../../../proto4-6/README.md)、三支執行器及三份對應測試
+- proto4-7：[README.md](../../../proto4-7/README.md)、`aos_agent_cli.py`、`aos_user_cli.py`、`mailbox.py`、`state_machine.py`、兩份測試
 
 ### 測試
 
