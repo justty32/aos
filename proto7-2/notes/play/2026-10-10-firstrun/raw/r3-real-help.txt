@@ -1,0 +1,6 @@
+用法：
+  aos7-up <node>                起 node；開著別關，停＝按 Ctrl-C
+  aos7-up ask <node> '一句話'    另開視窗寄信給它，等回信（最多 60 秒）
+  aos7-up status <node>         看它現在怎樣
+例：aos7-up /tmp/aos/bob
+更多（真 AI、背景跑、停）見 proto7-2/modules/up/ADVANCED.md
