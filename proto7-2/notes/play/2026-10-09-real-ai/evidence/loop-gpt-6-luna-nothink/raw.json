@@ -1,0 +1,54 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-luna-nothink-9c56bc22",
+ "req_sha": "e714f9dd5efed2207cde99aab5cb6774eb640a2d97685256390f811dcbf3414a",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"計算每個部門的筆數、總額與平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+  "usage": {
+   "completion_tokens": 134,
+   "prompt_tokens": 2365,
+   "total_tokens": 2499,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "model": "chatgpt-gpt-6-luna-nothink",
+  "finish_reason": "stop",
+  "http": 200,
+  "elapsed": 2.399,
+  "response": {
+   "id": "chatcmpl-00ed4c15-df19-4175-97ae-cd1e0f9fdd41",
+   "created": 1791527719,
+   "model": "chatgpt-gpt-6-luna-nothink",
+   "object": "chat.completion",
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "message": {
+      "content": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"計算每個部門的筆數、總額與平均\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+      "role": "assistant"
+     }
+    }
+   ],
+   "usage": {
+    "completion_tokens": 134,
+    "prompt_tokens": 2365,
+    "total_tokens": 2499,
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  }
+ },
+ "at": "2026-10-09T14:35:22.106"
+}

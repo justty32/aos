@@ -1,0 +1,17 @@
+{
+ "rid": "csv1",
+ "receipt": {
+  "v": 1,
+  "rid": "csv1",
+  "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+  "candidate_sha": "ee7ae074f2f0d6d581fe3c8dc46eb24fd30efee11344338623442238cb4bfa13",
+  "payload_sha": "f3e3c2fcc31e6d923daf8098ef451afaec4d5c415faba17be9d86ed617670ea7",
+  "job": "csv1_ee7ae074",
+  "task_name": "author-csv1_ee7ae074",
+  "registered": true,
+  "evidence": "table",
+  "closed": false
+ },
+ "ok": true,
+ "why": null
+}

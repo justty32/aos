@@ -1,0 +1,13 @@
+run,model,call_id,prompt_tokens,completion_tokens,reasoning_tokens,cached_tokens,total_tokens,used,reserve,billing,http_seconds,propose_seconds,three_gates,issues,step_end,answer_ok,closed,job
+loop-gpt-6-astra,chatgpt-gpt-6-astra,csv1-chatgpt-gpt-6-astra-94e0888b,2365,139,0,1408,2504,2504,1000000,final,4.332,4.466,True,,ok,True,True,csv1_93587364
+loop-gpt-6-astra-max,chatgpt-gpt-6-astra-max,csv1-chatgpt-gpt-6-astra-max-62b51073,2365,323,184,0,2688,2688,1000000,final,10.891,11.028,True,,ok,True,True,csv1_e3ef51d8
+loop-gpt-6-astra-r2,chatgpt-gpt-6-astra,csv1-chatgpt-gpt-6-astra-94e0888b,2365,140,0,1408,2505,2505,1000000,final,4.725,4.882,True,,ok,True,True,csv1_ebf3710e
+loop-gpt-6-astra-r3,chatgpt-gpt-6-astra,csv1-chatgpt-gpt-6-astra-94e0888b,2365,137,0,1408,2502,2502,1000000,final,5.242,5.395,True,,ok,True,True,csv1_e3ef51d8
+loop-gpt-6-luna,chatgpt-gpt-6-luna,csv1-chatgpt-gpt-6-luna-b200ca02,2365,186,35,0,2551,2551,1000000,final,3.553,3.69,True,,ok,True,True,csv1_c00f6b88
+loop-gpt-6-luna-nothink,chatgpt-gpt-6-luna-nothink,csv1-chatgpt-gpt-6-luna-nothink-9c56bc22,2365,134,0,0,2499,2499,1000000,final,2.399,2.535,True,,ok,True,True,csv1_e26688e0
+loop-gpt-6-luna-r2,chatgpt-gpt-6-luna,csv1-chatgpt-gpt-6-luna-b200ca02,2365,193,45,0,2558,2558,1000000,final,2.865,3.021,True,,ok,True,True,csv1_885effb1
+loop-gpt-6-luna-r3,chatgpt-gpt-6-luna,csv1-chatgpt-gpt-6-luna-b200ca02,2365,201,54,0,2566,2566,1000000,final,3.772,3.932,True,,ok,True,True,csv1_07edf9c2
+loop-gpt-6-sol,chatgpt-gpt-6-sol,csv1-chatgpt-gpt-6-sol-9adca337,2365,225,91,0,2590,2590,1000000,final,7.095,7.264,True,,ok,True,True,csv1_d59d9ac4
+loop-gpt-6-sol-high,chatgpt-gpt-6-sol-high,csv1-chatgpt-gpt-6-sol-high-8c348af4,2365,201,62,0,2566,2566,1000000,final,6.407,6.538,True,,ok,True,True,csv1_11bc2761
+loop-gpt-6-sol-r2,chatgpt-gpt-6-sol,csv1-chatgpt-gpt-6-sol-9adca337,2365,262,125,0,2627,2627,1000000,final,6.809,6.96,True,,ok,True,True,csv1_ee7ae074
+loop-gpt-6-sol-r3,chatgpt-gpt-6-sol,csv1-chatgpt-gpt-6-sol-9adca337,2365,218,79,0,2583,2583,1000000,final,5.673,5.823,True,,ok,True,True,csv1_79238143

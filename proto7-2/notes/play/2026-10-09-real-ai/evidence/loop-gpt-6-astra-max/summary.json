@@ -1,0 +1,14 @@
+{
+  "model": "chatgpt-gpt-6-astra-max",
+  "call_id": "csv1-chatgpt-gpt-6-astra-max-62b51073",
+  "prompt_tokens": 2365,
+  "completion_tokens": 323,
+  "total_tokens": 2688,
+  "llm_seconds": 11.028,
+  "propose_ok": true,
+  "issues_rules": [],
+  "published": true,
+  "step_end": "ok",
+  "answer_ok": true,
+  "closed": true
+}

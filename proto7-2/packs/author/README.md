@@ -1,20 +1,20 @@
-# author 任務包（LLM 作者第一刀：CSV 固定工具作者，假候選）
+# author 任務包（CSV 固定工具作者，檔案／LLM 候選）
 
 ← [proto7-2](../../README.md)｜[核心 spec](../../spec.md)｜細部規則：[spec.md](spec.md)｜依據：[藍圖 llm1](../../notes/blueprint-llm1.md)、[llm-author 報告](../../notes/reviews/2026-10-05/llm-author.md)｜執行：[step 包](../step/README.md)
 
-**需求＋候選（第一刀由檔案注入，第二刀換 gateway、介面不變）經三層驗證、確定性編譯成一個獨立版本的 step 工作，以「意圖 → 表鎖內只合併自己那一項 → 回條」發布；step 執行，獨立檢查器驗 CSV 答案。** 模型不進排程迴圈、不碰核心；核心、step、budget、adapt、history.py 零改動。
+**需求＋候選（檔案注入或 `propose --llm` 經 llmcall 真傳輸產生）經三層驗證、確定性編譯成一個獨立版本的 step 工作，以「意圖 → 表鎖內只合併自己那一項 → 回條」發布；step 執行，獨立檢查器驗 CSV 答案。** 模型不進排程迴圈、不碰核心；核心、step、budget、adapt、history.py 零改動。
 
 | 項目 | 內容 |
 |---|---|
-| 分類 | 上層任務包（LLM 層，第一刀不接模型），單 node |
-| 接法 | `send`／`intake` 接 events must（§10）；人手 CLI（node 目錄下跑）；發布的表項是 `{"name": "author-<job>", "mode": "keep", "max_live": 1, "argv": ["python3", "<proto7-2>/packs/step/bin/aos7-step", "run", "jobs/<job>"], "x": {"author": {...}}}` |
+| 分類 | 上層任務包（LLM 層，第二刀已接 llmcall 真傳輸），單 node |
+| 接法 | `propose --llm MODEL --budget DIR` 接 llmcall；`send`／`intake` 接 events must（§10）；人手 CLI（node 目錄下跑）；發布的表項是 `{"name": "author-<job>", "mode": "keep", "max_live": 1, "argv": ["python3", "<proto7-2>/packs/step/bin/aos7-step", "run", "jobs/<job>"], "x": {"author": {...}}}` |
 | 預設 | `propose` 只產可審查候選、不發布；人另跑 `publish`。`--auto` 只給固定試驗與測試 |
 | 保存 | `<node>/author/`：共用 `author.lock`＋常數 `events.json` 收件帳＋每需求 `req/<rid>/` ≤5 檔；`close` 後只剩 `request.json`＋`receipt.json`（檔數隨需求數、不隨回合／候選數） |
 | 依賴 | 核心 `aos7_fs`（`fact`、`write_json`、`edit_json`、`locked`、`test_point`、`sweep_tmp`）、`aos7_tick.check_item`（唯讀）；step 的 `check`／`table_rev`（唯讀） |
-| 程式 | `aos7_author.py`（需求、工具卡、候選驗證與編譯、answer、close、send／intake 入口、CLI）、`aos7_author_pub.py`（發布、恢復、send／intake）、`bin/aos7-author` |
+| 程式 | `aos7_author.py`（需求、工具卡、候選驗證與編譯、answer、close、send／intake 入口、CLI）、`aos7_author_pub.py`（發布、恢復、send／intake）、`aos7_author_llm.py`（`--llm` 提示與交付原文）、`bin/aos7-author` |
 | 工具卡 | `toolcards/csv.json`：`csv.convert`、`csv.stats`（腳本原樣取自 [step CSV 範例](../step/examples/csv/)、記 SHA-256） |
-| 範例 | [events-request](examples/events-request/README.md)（must 收件實跑）；`examples/csv-request/`：`request.json`（rid `csv1`）、七份候選（`valid.json` 一份合法；`bad-json`／`bad-params`／`bad-dependency`／`bad-mode`／`bad-idempotent`／`bad-path` 六份壞）、`check_answer.py` |
-| 測試 | `tests/test_author.py`（既有驗收）、`tests/test_author_events.py`（must 收件與 crash）；`tests/`（`python3 proto7-2/tests/run_all.py packs/author/tests`；全套預設就收） |
+| 範例 | [llm-request](examples/llm-request/README.md)（`--llm` 一整圈實跑）；[events-request](examples/events-request/README.md)（must 收件實跑）；`examples/csv-request/`：`request.json`（rid `csv1`）、七份候選（`valid.json` 一份合法；`bad-json`／`bad-params`／`bad-dependency`／`bad-mode`／`bad-idempotent`／`bad-path` 六份壞）、`check_answer.py` |
+| 測試 | `tests/test_author_llm.py`（`--llm` 本地 HTTP、原文驗證、重跑與 CLI）；`tests/test_author.py`（既有驗收）、`tests/test_author_events.py`（must 收件與 crash）；`tests/`（`python3 proto7-2/tests/run_all.py packs/author/tests`；全套預設就收） |
 
 ## 第一次跑（已實跑）
 
@@ -38,6 +38,19 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
 ```
 
 job 名＝`<rid>_<候選 sha256 前 8 碼>`，候選 bytes 不變時就是上面的 `csv1_32ac171d`。報表在 `jobs/csv1_32ac171d/out/report.json`：eng `{n:2,sum:200,avg:100}`、ops `{n:2,sum:120,avg:60}`、sales `{n:1,sum:200,avg:200}`、rows 5。close 不移除表項：ended 的工作再被 keep 起來會立刻退出；要收掉表項由人 `aos7-ctl rm`。
+
+## 真 AI 產候選
+
+先登記需求，再在 node 內執行（budget 可在另一個 node）：
+
+```sh
+python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm --prompt-out prompt.json
+python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
+```
+
+`--prompt-out` 只寫 llmcall 請求供人審查。提示只含需求、白名單工具卡、候選 schema 與限制，不含標準答案；不設 max_tokens／temperature。預設 call_id 按請求雜湊固定，重跑重印 llmcall 回條、不重送；要新生成請明給 `--call NEW_ID`。模型原文不剝圍欄、不修 JSON，照原有三層驗證；`--auto` 可配但預設仍另行 publish。
+
+完整實跑與證據收集見 [examples/llm-request/](examples/llm-request/README.md)：`bash proto7-2/packs/author/examples/llm-request/run.sh MODEL [OUTDIR]`。這支腳本不進測試套，由人啟動自己的 LiteLLM 後跑。
 
 ## 五個組件（契約卡，細節在 spec.md）
 
@@ -84,6 +97,6 @@ CLI 印 JSON `{ok, why, ...}`：`0` 成功（含 dup）、`2` invalid、`3` conf
 
 ## 界線
 
-- 第一刀沒有模型、gateway、token 帳、adapt-llm；第二刀以 gateway 取代 `--candidate` 來源，接收與驗證介面不變。
+- 第二刀已接 llmcall 真傳輸（`--llm`）與 budget token 帳；仍可用 `--candidate` 注入，接收與驗證介面不變；adapt-llm 尚未接。
 - 回條只證明「登記過」，不證明 CSV 正確；答案由 `answer` 另驗。
 - 作者帳是單 node、合作式：同 node 只有一套作者帳，人不手改 `author/`。

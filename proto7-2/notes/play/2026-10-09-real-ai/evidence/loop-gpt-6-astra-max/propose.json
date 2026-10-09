@@ -1,0 +1,30 @@
+{
+ "rid": "csv1",
+ "candidate_sha": "e3ef51d809c3cf129d19e6c2bff4e2a3f42f8a38d56f309b39bd131b2d3837c2",
+ "job": "csv1_e3ef51d8",
+ "payload_sha": "cf4c3bd962024232441e76cbea95a056fefd37502c304102ffd440b0fddcb920",
+ "issues": [],
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-astra-max",
+  "call_id": "csv1-chatgpt-gpt-6-astra-max-62b51073",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 323,
+   "prompt_tokens": 2365,
+   "total_tokens": 2688,
+   "completion_tokens_details": {
+    "reasoning_tokens": 184
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 2688,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-author-llm.B61EDj/llm/llmcall/llm/csv1-chatgpt-gpt-6-astra-max-62b51073/receipt.json"
+ }
+}

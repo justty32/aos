@@ -1,0 +1,14 @@
+{
+  "model": "chatgpt-gpt-6-luna",
+  "call_id": "csv1-chatgpt-gpt-6-luna-b200ca02",
+  "prompt_tokens": 2365,
+  "completion_tokens": 201,
+  "total_tokens": 2566,
+  "llm_seconds": 3.932,
+  "propose_ok": true,
+  "issues_rules": [],
+  "published": true,
+  "step_end": "ok",
+  "answer_ok": true,
+  "closed": true
+}

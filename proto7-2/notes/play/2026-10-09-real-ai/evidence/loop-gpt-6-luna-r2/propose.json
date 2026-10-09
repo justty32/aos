@@ -1,0 +1,30 @@
+{
+ "rid": "csv1",
+ "candidate_sha": "885effb154a2d8c5ae4c6ad8143346484aceff91d11ba2034477f480a7f022fc",
+ "job": "csv1_885effb1",
+ "payload_sha": "1987e9d627169a75dd00e4d209d088f73656ce75800413d84f492be7fc6a67bf",
+ "issues": [],
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-luna",
+  "call_id": "csv1-chatgpt-gpt-6-luna-b200ca02",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 193,
+   "prompt_tokens": 2365,
+   "total_tokens": 2558,
+   "completion_tokens_details": {
+    "reasoning_tokens": 45
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 2558,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-author-llm.alrrcc/llm/llmcall/llm/csv1-chatgpt-gpt-6-luna-b200ca02/receipt.json"
+ }
+}

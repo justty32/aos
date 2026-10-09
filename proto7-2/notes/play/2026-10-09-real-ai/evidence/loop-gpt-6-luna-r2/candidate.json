@@ -1,0 +1,10 @@
+{
+ "v": 1,
+ "active": "885effb154a2d8c5ae4c6ad8143346484aceff91d11ba2034477f480a7f022fc",
+ "versions": {
+  "885effb154a2d8c5ae4c6ad8143346484aceff91d11ba2034477f480a7f022fc": {
+   "size": 483,
+   "raw": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"將部門統計需求轉換為 JSON，再統計每個部門的筆數、總額與平均。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}"
+  }
+ }
+}

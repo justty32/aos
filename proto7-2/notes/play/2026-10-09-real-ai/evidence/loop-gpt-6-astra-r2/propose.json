@@ -1,0 +1,30 @@
+{
+ "rid": "csv1",
+ "candidate_sha": "ebf3710e7b8b23d8b2a824767634c7ea7f59bf0ed19d011cc039b9f815de2c0d",
+ "job": "csv1_ebf3710e",
+ "payload_sha": "b645155c134daca4a900582bf199dbf9261ca72cc09a08c4e521f04f7450b189",
+ "issues": [],
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-astra",
+  "call_id": "csv1-chatgpt-gpt-6-astra-94e0888b",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 140,
+   "prompt_tokens": 2365,
+   "total_tokens": 2505,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 2505,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/tmp/aos7-author-llm.CIdYMv/llm/llmcall/llm/csv1-chatgpt-gpt-6-astra-94e0888b/receipt.json"
+ }
+}
