@@ -218,3 +218,4 @@
 - C｜學徒三連題固定 sol-high、不合進 main；proxy 修好前不跑。效率：不動你的 LiteLLM 設定、只用核心既有 wake、模型升級鏈只寫在 ADVANCED
 - C｜真 AI 呼叫上限：學徒三連題 ≤200、長任務 ≤100、效率各 ≤60、回歸 ≤200
 - 待你決定｜舊 worktree：loop7～10 已合進 main 的由頂層照整合隊清單刪；`apprentice/*` 分支與 `_check_main` 等你（刪分支不可逆）
+- C｜MC：llmcall 與 C++ 核心 llm client 改取「最後一個非空的 choice」；學徒／審查／learn／brain 提示補「不要開場白，第一個字就是…」。真 AI 重放 6 次全部拿到完整答案（修前同樣請求只拿到開場白）。choice 數與略過的開場白只記在 raw.json（回條凍結不加欄）；第一個 choice 為 null 但後面有答案改判答到
