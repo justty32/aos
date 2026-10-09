@@ -57,3 +57,4 @@
 - C｜I：wf code map 不另開 proto7-2 分冊，總圖加一句指向 `proto7-2/INDEX.md` 與 `tests/README.md`
 - C｜I：契約卡除 2.1 外也照 spec 同步 2.2／2.3／2.5／2.6（2.5 舊句「AOS7_* 原樣傳給任務」與 K1 白名單衝突）
 - 結果｜整合後全套 ×3：458 項全過，各約 230 秒；核心行數現為總行 2952、程式 2305（D7 不擋）
+- C｜A：adapt `Adapter.init()` 啟動時對整個 `in/` 跑 `sweep_tmp`（只刪寫者已死的暫存檔，多任務共用安全）；範例 sensor／fan 啟動時清自己的 `out/`
