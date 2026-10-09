@@ -29,6 +29,7 @@ SCHEMA = {'v': 1, 'mode': 'keep', 'intent': 'str', 'start': '步id',
 # --llm 不給模型＝先便宜後升級：被拒才換下一級（實測見 notes/play/2026-10-09-real-ai/ef3.md）
 AUTO = '\0auto'      # --llm 沒給值（命令列給不出 NUL，不會撞到真模型名）
 LADDER = ('chatgpt-gpt-6-luna-nothink', 'chatgpt-gpt-6-sol-high', 'chatgpt-gpt-6-astra-high')
+APPRENTICE_LADDER = LADDER[1:]   # aos-tool／aos-module：luna-nothink 實測 3/3 拒答，從 sol-high 起（ef3.md）
 
 
 def rung_call(call, i):
@@ -38,10 +39,10 @@ def rung_call(call, i):
     return call + suffix if len(call + suffix) <= 64 else '%s-%s%s' % (call[:50], sha256(call.encode())[:8], suffix)
 
 
-def climb(attempt, rejected):
+def climb(attempt, rejected, ladder=LADDER):
     """attempt(model, i) 回 propose 結果；rejected(r)＝模型答了、候選確實被拒，才升級，其餘立刻停。"""
     rounds = []
-    for i, model in enumerate(LADDER):
+    for i, model in enumerate(ladder):
         r = attempt(model, i)
         info = r.get('llm') or {}
         rounds.append(dict(model=model, call_id=info.get('call_id'), why=r.get('why'), usage=info.get('usage')))
