@@ -71,7 +71,7 @@
       "lead": "Opus",
       "workers": "gpt-6.1-sol ×2（甲：任務狀態與回合迴圈；乙：PROGRESS／NEEDS-USER／compact／skills 接線與測試）；gpt-6-astra（high）read-only 審",
       "intent": "intents/brain-multiround.md（Fable 已寫）",
-      "items": "brain 一封信可跨回合：`brain/task.json`（rid、步驟、進度、上一回合摘要）＋ STATE.md 一行＋ SESSION-LOG open 一行（做完即刪）；每回合 prompt 經 packs/prompt `$ref` 帶 STATE、SESSION-LOG 尾、技能索引、上一回合結果（折疊）；AI 回 `{"next":…}` 續跑或 `{"done":…}` 回信；每 N（預設 5）回合寄 PROGRESS，連續 3 回合沒進展寄 NEEDS-USER 並停；記憶檔超門檻呼叫 `aos7-compact now`；需要技能時 `aos7-skills pick`（本機）；SIGKILL 任一回合重起從 task.json 接續不重問；假 AI 也要能走完多回合（測試用）；ADVANCED 補一段，README／QUICKSTART 不動",
+      "items": "brain 一封信可跨回合：`brain/task.json`（rid、步驟、進度、上一回合摘要）＋ STATE.md 一行＋ SESSION-LOG open 一行（做完即刪）；每回合 prompt 經 packs/prompt `$ref` 帶 STATE、SESSION-LOG 尾、技能索引、上一回合結果（折疊）；AI 回 `{next:…}` 續跑或 `{done:…}` 回信；每 N（預設 5）回合寄 PROGRESS，連續 3 回合沒進展寄 NEEDS-USER 並停；記憶檔超門檻呼叫 `aos7-compact now`；需要技能時 `aos7-skills pick`（本機）；SIGKILL 任一回合重起從 task.json 接續不重問；假 AI 也要能走完多回合（測試用）；ADVANCED 補一段，README／QUICKSTART 不動",
       "territory": "modules/up/aos7_up_brain.py、modules/up/prompts/brain.json（可加 brain-step.json）、modules/up/ADVANCED.md、modules/up/tests/test_up_brain_multi.py（新）、modules/up/examples/multiround/",
       "excluded": "不改 aos7_up.py／ask／status／cli（EF2、U3 會碰）；不改 prompt／compact／skills 程式（只呼叫）；不改 QUICKSTART",
       "deps": "MC 進 main（要 JSON 回覆穩定）",
