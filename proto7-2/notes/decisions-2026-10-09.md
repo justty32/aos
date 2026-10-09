@@ -123,3 +123,12 @@
 - 使用者 14:50：`~/repo/workflows` 就是我們的 `wf/`（wf/ 是它的實例）；另一套成熟的 workflows 體系在 `~/repo/moddings/skyrim`（含 agentctl）可參考；計畫回來後頂層直接開隊、不用等他
 - 使用者 14:55：整體架構與給人用的接口／工具，必須考慮**人類易用性、上手速度、理解難易度**（ELI5 之後是不是仍複雜）；內部細節不要求
 - 使用者 14:57：token 消耗量、並行呼叫數量、任務完成時間等也是可以優化的目標
+
+## 續推：使用者三目標（照 [plan-2026-10-09-next](plan-2026-10-09-next.md) §4，Fable 代定）
+
+- A｜目標 1 落法：每個 aos 上的 agent node 有自己的 `wf/`（照 workflows 模板原樣），prompt 每回合從這棵樹組、只讀要的那層；aos 補上 workflows 沒有的引擎（tick＝heartbeat、events 必讀＝必達信、學徒 job＝交接書）；向 skyrim/agentctl 借 ROSTER、BRIEF、handoffs 等
+- A｜目標 2：記憶＝node 上的檔不是模型視窗；prompt 用 aos_directives 組裝；compact＝摘要替換舊段、open 項永不摘；skill＝SKILL.md 資料夾＋一行索引給模型挑
+- A｜目標 3：學徒擴到寫 aos 工具包／模組包，三關改為 lint＋大小＋領地、跑測試、astra 審；只發布到 `apprentice/` 分支，merge 永遠是人／頂層；學徒不准寫 lib/ 與別的包
+- B｜人類面門檻：第一次跑 ≤10 分鐘、對外指令 ≤3、新概念 ≤5；新手試用者打分 <7 要回改
+- B｜真 AI 只用 LiteLLM 的 `chatgpt-gpt-6-sol/-astra/-luna/gpt-reserve`（沒有 6.1-sol），預設 `chatgpt-gpt-6-sol-high`，一律走 llmcall；效率四指標由 `aos7-metrics` 量，本輪只排優化項
+- C｜移到之後候選：adapt-llm 第三刀、消耗事件、回合身分、budget hold、kernel 任務包
