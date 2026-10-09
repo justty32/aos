@@ -66,6 +66,33 @@ class TestAuthorAos(unittest.TestCase):
                         for n in range(gate+1,4):
                             self.assertEqual(out['gates'][str(n)],{'ok':None})
 
+    def test_aos_size_message_names_file(self):
+        # 超標訊息要寫明哪個檔、實際 bytes、上限（S3：只說「超標」學徒改不對）。
+        code,out = self.cli('bad-size.json')
+        self.assertEqual(code,1,out)
+        whys = [x['why'] for x in out['gates']['1']['issues'] if x['rule'] == 'size']
+        self.assertEqual(len(whys),1,out)
+        self.assertIn('packs/usage/README.md',whys[0])
+        n = len(json.loads((USAGE/'bad-size.json').read_text())['files']['packs/usage/README.md'].encode('utf-8'))
+        self.assertIn('有 %d bytes' % n,whys[0])
+        self.assertIn('8192 bytes',whys[0])
+
+    def test_aos_review_suggestions_only_accepts(self):
+        # 審查只列「建議：」＝沒有能退件的理由，第三關照過；有一條非建議就擋。
+        with tempfile.TemporaryDirectory() as tmp:
+            for reasons, gate in [(['建議：4301 位數整數字串','建議：西元 1 年'],None),(['建議：x','錯誤：fixture 答錯'],3),([],3)]:
+                with self.subTest(reasons=reasons):
+                    path = Path(tmp)/'review.json'
+                    dump(path,{'verdict':'reject','reasons':reasons})
+                    code,out = self.cli(extra=('--reviewer','file:'+str(path)))
+                    self.assertEqual(code,0 if gate is None else 1,out)
+                    self.assertEqual(out['failed_gate'],gate,out)
+
+    def test_aos_review_prompt_criteria(self):
+        import aos_three_gates as g
+        for must in ('真錯誤','唯讀違規','越界改動','建議：','不是退件理由'):
+            self.assertIn(must,g.REVIEW_CRITERIA)
+
     def test_aos_remove_gate_passes(self):
         for gate, filenames in [(1,['bad-territory.json','bad-size.json','bad-link.json']),(2,['bad-red.json']),(3,['bad-review.json'])]:
             for filename in filenames:
