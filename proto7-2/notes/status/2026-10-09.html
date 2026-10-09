@@ -1,7 +1,7 @@
 <title>aos 今日戰況</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* layout: 一欄手機優先的「工地看板」：每段一張圖＋兩三句白話 */
+/* layout: 手機優先一欄「工地看板」：先一句話＋要你決定的，再用圖講每一段 */
 :root{
   --bg:#f3f5f2; --panel:#ffffff; --ink:#1d2622; --mute:#5f6b65; --line:#d5dcd7;
   --accent:#0f7b6c; --accent-soft:#d6efe9; --warn:#b5651d; --warn-soft:#f6e6d4;
@@ -18,8 +18,8 @@
   --run:#8aa4f2; --run-soft:#1d2744; --done:#6fcf8f; --done-soft:#17321f; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.7}
 .wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:22px}
-h1{font-size:1.7rem;font-weight:900;margin:0;text-wrap:balance;line-height:1.3}
-h2{font-size:1.2rem;font-weight:700;margin:0 0 6px;text-wrap:balance}
+h1{font-size:1.7rem;font-weight:900;margin:0;line-height:1.3;text-wrap:balance}
+h2{font-size:1.2rem;font-weight:700;margin:0;text-wrap:balance}
 p{margin:0}
 .stamp{font-family:var(--mono);font-size:.8rem;color:var(--mute);letter-spacing:.04em}
 .lead{color:var(--mute)}
@@ -33,296 +33,172 @@ svg text{font-family:var(--sans)}
 .chip.done{background:var(--done-soft);color:var(--done);border-color:transparent}
 .chip.run{background:var(--run-soft);color:var(--run);border-color:transparent}
 .chip.wait{background:var(--warn-soft);color:var(--warn);border-color:transparent}
-ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
-.big{font-size:2.2rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:var(--accent)}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.kpi{display:flex;flex-direction:column;gap:4px}
-@media (max-width:420px){.kpis{grid-template-columns:1fr 1fr}}
+ul,ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:480px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{display:flex;flex-direction:column;gap:2px}
+.big{font-size:2rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1;color:var(--accent)}
 .you{border-left:4px solid var(--warn)}
+pre{overflow-x:auto;font-family:var(--mono);font-size:.84rem;background:var(--accent-soft);padding:10px;border-radius:6px;margin:0}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:500}
+.tbl{overflow-x:auto}
 </style>
 
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:6px">
-    <span class="stamp">2026-10-09（五）· 最後更新 16:50 · 家裡 Manjaro</span>
+    <span class="stamp">2026-10-09（五）· 最後更新 18:45 · 家裡 Manjaro</span>
     <h1>aos 今日戰況</h1>
-    <p class="lead">一句話：三個目標的零件都做出來了；新手試用全軍覆沒後回頭改，8 個模組全部過關；<b>一鍵入口 aos7-up 已能用</b>；AI 學徒自己寫出 2 個新元件並合進來。現在在統一錯誤處理、讓新人從零上手。</p>
+    <p class="lead">一句話：你給的三個目標，零件都做出來並接上真 AI 了；新人只要記 3 個指令就能起一個會自己管工作的 AI。現在在做「真的長任務實跑」和「學徒越做越好的證據」。</p>
   </header>
 
   <section>
-    <h2>今天走到哪了</h2>
-    <div class="fig">
-    <svg viewBox="0 0 640 120" role="img" aria-label="今天時間軸，10:45 到 18:00，目前約 12:30">
-      <rect x="20" y="50" width="600" height="14" rx="7" fill="var(--line)"/>
-      <!-- 10:45..18:00 = 435 分鐘 → 600px；12:30 = 105 分 → 145px -->
-      <rect x="20" y="50" width="255" height="14" rx="7" fill="var(--accent)"/>
-      <circle cx="275" cy="57" r="9" fill="var(--panel)" stroke="var(--accent)" stroke-width="4"/>
-      <text x="258" y="35" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent)">現在 13:50</text>
-      <text x="20" y="92" font-size="12" fill="var(--mute)">10:45 開工</text>
-      <text x="62" y="112" font-size="12" fill="var(--mute)">上午：loop7 修補（已完成）</text>
-      <text x="400" y="92" text-anchor="middle" font-size="12" fill="var(--mute)">下午：事件保存</text>
-      <text x="620" y="92" text-anchor="end" font-size="12" fill="var(--mute)">18:00 收</text>
-      <line x1="537" y1="45" x2="537" y2="70" stroke="var(--warn)" stroke-width="2"/>
-      <text x="537" y="35" text-anchor="middle" font-size="12" fill="var(--warn)">17:30 總整理</text>
-    </svg>
-    </div>
-    <p class="small">原本排到 15:30 才做完的修補，11:30 前就全部進主線了，所以下午提早開新工作。</p>
-  </section>
-
-  <section>
-    <h2>上午：把工廠的漏洞補起來（loop7）</h2>
-    <p>想像 aos 是一間工廠：<b>daemon</b> 是工頭、<b>任務</b>是工人、每「回合」是一個班次。上午九組人各修一塊，修好的都有測試守著。</p>
-    <div class="fig">
-    <svg viewBox="0 0 640 210" role="img" aria-label="九組修補全部完成">
-      <g font-size="13">
-        <g transform="translate(10,10)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 工人被叫停</text><text x="12" y="44" fill="var(--ink)" font-size="12">還在換衣服就被叫停→先說「不確定」</text></g>
-        <g transform="translate(220,10)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 工頭先記帳</text><text x="12" y="44" fill="var(--ink)" font-size="12">要趕人先寫進本子，昏倒醒來還記得</text></g>
-        <g transform="translate(430,10)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 班表數字</text><text x="12" y="44" fill="var(--ink)" font-size="12">離譜的間隔不再吞掉、倒數不少扣</text></g>
-        <g transform="translate(10,76)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 掛載中斷</text><text x="12" y="44" fill="var(--ink)" font-size="12">做一半被殺，回來能接著做完</text></g>
-        <g transform="translate(220,76)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ step 包</text><text x="12" y="44" fill="var(--ink)" font-size="12">同一步不會被重複做兩次</text></g>
-        <g transform="translate(430,76)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ budget 包</text><text x="12" y="44" fill="var(--ink)" font-size="12">「不確定」統一用退出碼 3 說</text></g>
-        <g transform="translate(10,142)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 模組＋subd</text><text x="12" y="44" fill="var(--ink)" font-size="12">4 個 bug 重現後修掉</text></g>
-        <g transform="translate(220,142)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 假綠測試</text><text x="12" y="44" fill="var(--ink)" font-size="12">壞了卻顯示通過的 8 個，修成會紅</text></g>
-        <g transform="translate(430,142)"><rect width="200" height="56" rx="8" fill="var(--done-soft)"/><text x="12" y="24" font-weight="700" fill="var(--done)">✓ 小修三隊</text><text x="12" y="44" fill="var(--ink)" font-size="12">回歸檢查找到的 5 個小問題</text></g>
-      </g>
-    </svg>
-    </div>
-    <p class="small">之後 astra 當「驗收員」整個重驗一遍：大致通過，長跑 450 回合檔案數不會變多。</p>
-  </section>
-
-  <section>
-    <h2>測試越來越多，而且全綠</h2>
     <div class="kpis">
-      <div class="kpi"><span class="small">早上開工</span><span class="big" style="color:var(--mute)">376</span></div>
-      <div class="kpi"><span class="small">現在</span><span class="big">561</span></div>
-      <div class="kpi"><span class="small">失敗</span><span class="big" style="color:var(--done)">0</span></div>
+      <div class="kpi"><span class="small">今天 commit</span><span class="big">251</span></div>
+      <div class="kpi"><span class="small">測試（全綠）</span><span class="big">1006</span></div>
+      <div class="kpi"><span class="small">開過的隊</span><span class="big">90+</span></div>
+      <div class="kpi"><span class="small">卡在你身上</span><span class="big" style="color:var(--done)">0</span></div>
     </div>
-    <div class="fig">
-    <svg viewBox="0 0 640 182" role="img" aria-label="測試數由 376 增加到 510">
-      <!-- 刻度 0..500 → 0..520px，起點 x=100 -->
-      <g font-size="12" fill="var(--mute)">
-        <text x="90" y="34" text-anchor="end">10:45</text>
-        <text x="90" y="66" text-anchor="end">11:30</text>
-        <text x="90" y="98" text-anchor="end">11:55</text>
-        <text x="90" y="130" text-anchor="end">12:25</text>
-        <text x="90" y="162" text-anchor="end">12:40</text>
-      </g>
-      <rect x="100" y="20" width="391" height="20" rx="3" fill="var(--line)"/><text x="497" y="35" font-size="12" fill="var(--ink)">376</text>
-      <rect x="100" y="52" width="452" height="20" rx="3" fill="var(--accent-soft)"/><text x="558" y="67" font-size="12" fill="var(--ink)">437</text>
-      <rect x="100" y="84" width="477" height="20" rx="3" fill="var(--accent-soft)"/><text x="583" y="99" font-size="12" fill="var(--ink)">459</text>
-      <rect x="100" y="116" width="494" height="20" rx="3" fill="var(--accent-soft)"/><text x="600" y="131" font-size="12" fill="var(--ink)">475</text>
-      <rect x="100" y="148" width="530" height="20" rx="3" fill="var(--accent)"/><text x="600" y="143" font-size="12" fill="var(--ink)"></text><text x="560" y="163" font-size="12" font-weight="700" fill="var(--panel)">561</text>
-    </svg>
-    </div>
-    <p class="small">日誌的「寫」那一半做好了：故意在四個最危險的時間點把程式砍掉各 3 次，紀錄不丟也不重複；連跑 300 回合，資料夾始終不超過 12 個檔。「讀」那一半也好了：讀到一半斷掉，下次能從原處接著讀，不漏也不重複。</p>
-    <p class="small">早上有兩個「大家一起跑才會紅」的測試，查到了：一個是 Python 舊快取作怪，一個是測試讀檔太早。都不是程式本身的 bug。</p>
+    <p class="small">早上開工時測試 376 項，全部都已 push。「卡在你身上」＝沒有任何一隊停下來等你；下面「有空看」那幾件都不急。</p>
+  </section>
+
+  <section class="you">
+    <h2>有空看就好（都不急，也都還沒動）</h2>
+    <ol>
+      <li><b>LiteLLM 設定</b>：proxy 每次偷偷加 1644 字的「你是 Codex」說明，占每單 63%。設 <code>CHATGPT_DEFAULT_INSTRUCTIONS</code> 換成一句話，預估每單從約 2600 降到約 1000 token。說明在 <code>notes/play/2026-10-09-real-ai/proxy-overhead.md</code>。</li>
+      <li><b>心跳要不要更快</b>：AI 回答後要等 2.7 秒；改 0.5 秒＋做完提早進下一回合可降到 1.4 秒。你說過有人要固定節拍，所以沒改。</li>
+      <li><b>新模型等級</b>：gpt-6.1-sol、gpt-6-astra 暫定 A 級。</li>
+      <li><b>要不要刪</b>：學徒的 5 條比較分支、6 個留有暫存筆記的舊資料夾（已合進主線的 51 個已清掉）。</li>
+      <li><b>user-advice.md</b>：寫完記得 commit（有 3 份文件連到它）。</li>
+    </ol>
   </section>
 
   <section>
-    <h2>下午：事件保存＝工廠的「值班日誌」 ✓ 做完了</h2>
-    <p>以後發生過的事會寫進日誌，事後可以翻、別的程式也能接著讀。照你說的「不要一堆垃圾檔」，日誌櫃有固定大小：</p>
+    <h2>今天怎麼走過來的</h2>
     <div class="fig">
-    <svg viewBox="0 0 640 230" role="img" aria-label="每個 node 一個事件資料夾，兩個抽屜各最多五本">
-      <rect x="10" y="10" width="620" height="210" rx="10" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="6 5"/>
-      <text x="26" y="34" font-size="13" font-weight="700" fill="var(--mute)">每個 node 只有一個 events/ 資料夾</text>
-      <!-- 抽屜 1 -->
-      <text x="26" y="66" font-size="14" font-weight="700" fill="var(--ink)">觀測抽屜</text>
-      <text x="26" y="84" font-size="12" fill="var(--mute)">看看就好，滿了丟最舊的</text>
-      <g transform="translate(200,50)">
-        <rect width="64" height="44" rx="5" fill="var(--accent)"/><text x="32" y="27" text-anchor="middle" font-size="12" fill="var(--panel)" font-weight="700">正在寫</text>
-        <rect x="74" width="64" height="44" rx="5" fill="var(--accent-soft)"/><text x="106" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 1</text>
-        <rect x="148" width="64" height="44" rx="5" fill="var(--accent-soft)"/><text x="180" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 2</text>
-        <rect x="222" width="64" height="44" rx="5" fill="var(--accent-soft)"/><text x="254" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 3</text>
-        <rect x="296" width="64" height="44" rx="5" fill="var(--accent-soft)"/><text x="328" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 4</text>
-        <text x="380" y="28" font-size="20" fill="var(--warn)">→ 🗑</text>
-      </g>
-      <!-- 抽屜 2 -->
-      <text x="26" y="136" font-size="14" font-weight="700" fill="var(--ink)">必讀抽屜</text>
-      <text x="26" y="154" font-size="12" fill="var(--mute)">一定要有人處理，處理完才丟</text>
-      <g transform="translate(200,120)">
-        <rect width="64" height="44" rx="5" fill="var(--warn)"/><text x="32" y="27" text-anchor="middle" font-size="12" fill="var(--panel)" font-weight="700">正在寫</text>
-        <rect x="74" width="64" height="44" rx="5" fill="var(--warn-soft)"/><text x="106" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 1</text>
-        <rect x="148" width="64" height="44" rx="5" fill="var(--warn-soft)"/><text x="180" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 2</text>
-        <rect x="222" width="64" height="44" rx="5" fill="var(--warn-soft)"/><text x="254" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 3</text>
-        <rect x="296" width="64" height="44" rx="5" fill="var(--warn-soft)"/><text x="328" y="27" text-anchor="middle" font-size="12" fill="var(--ink)">舊 4</text>
-        <text x="380" y="28" font-size="13" fill="var(--warn)">滿了→暫停收</text>
-      </g>
-      <text x="26" y="204" font-size="12" fill="var(--mute)">＋ 一張進度表、一把鎖 ＝ 最多 12 個檔。真 daemon 跑 300 回合實測：有人讀時最多 9 個檔</text>
-    </svg>
-    </div>
-  </section>
-
-  <section>
-    <h2>現在誰在做什麼</h2>
-    <div class="fig">
-    <svg viewBox="0 0 640 170" role="img" aria-label="下午的隊伍流程">
-      <g font-size="13">
-        <rect x="10" y="20" width="130" height="50" rx="8" fill="var(--done-soft)"/><text x="75" y="42" text-anchor="middle" font-weight="700" fill="var(--done)">✓ 設計圖</text><text x="75" y="60" text-anchor="middle" font-size="11" fill="var(--ink)">E0 已交</text>
-        <line x1="140" y1="45" x2="180" y2="45" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar)"/>
-        <rect x="184" y="0" width="150" height="44" rx="8" fill="var(--done-soft)"/><text x="259" y="20" text-anchor="middle" font-weight="700" fill="var(--done)">✓ 寫日誌的手</text><text x="259" y="36" text-anchor="middle" font-size="11" fill="var(--ink)">E1 完成</text>
-        <rect x="184" y="52" width="150" height="44" rx="8" fill="var(--done-soft)"/><text x="259" y="72" text-anchor="middle" font-weight="700" fill="var(--done)">✓ 讀日誌的眼</text><text x="259" y="88" text-anchor="middle" font-size="11" fill="var(--ink)">E2 完成</text>
-        <line x1="334" y1="45" x2="374" y2="45" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar)"/>
-        <rect x="378" y="20" width="120" height="50" rx="8" fill="var(--done-soft)"/><text x="438" y="42" text-anchor="middle" font-weight="700" fill="var(--done)">✓ 長跑＋說明</text><text x="438" y="60" text-anchor="middle" font-size="11" fill="var(--ink)">E3 完成</text>
-        <line x1="498" y1="45" x2="530" y2="45" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar)"/>
-        <rect x="534" y="20" width="96" height="50" rx="8" fill="var(--run-soft)"/><text x="582" y="42" text-anchor="middle" font-weight="700" fill="var(--run)">● 總整理</text><text x="582" y="60" text-anchor="middle" font-size="11" fill="var(--ink)">I2 提早開</text>
-        <rect x="10" y="118" width="200" height="44" rx="8" fill="var(--done-soft)"/><text x="110" y="138" text-anchor="middle" font-weight="700" fill="var(--done)">✓ LLM 作者設計圖</text><text x="110" y="154" text-anchor="middle" font-size="11" fill="var(--ink)">A0 完成</text><line x1="210" y1="140" x2="250" y2="140" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar)"/><rect x="254" y="118" width="230" height="44" rx="8" fill="var(--done-soft)"/><text x="369" y="138" text-anchor="middle" font-weight="700" fill="var(--done)">✓ 第一刀：AI 寫 CSV 小流程</text><text x="369" y="154" text-anchor="middle" font-size="11" fill="var(--ink)">A1 完成（假答案、不接真模型）</text>
-      </g>
-      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mute)"/></marker></defs>
-    </svg>
-    </div>
-    <div class="chips"><span class="chip done">已完成 25 隊</span><span class="chip run">進行中 4 隊</span><span class="chip">第三段進行中</span></div>
-  </section>
-
-  <section>
-    <h2>LLM 作者第一刀：AI 當「寫流程的學徒」</h2>
-    <p>學徒交上來一份「怎麼處理 CSV」的流程草稿。師傅（程式）先檢查三關，合格才放進工廠的班表；而且要有人按一下「發布」才會上線。今天的學徒是假的（寫好的 7 份草稿），還沒接真的 AI。</p>
-    <div class="fig">
-    <svg viewBox="0 0 640 150" role="img" aria-label="候選草稿經過檢查，合格的才進班表">
-      <g font-size="13">
-        <rect x="10" y="40" width="120" height="60" rx="8" fill="var(--run-soft)"/><text x="70" y="66" text-anchor="middle" font-weight="700" fill="var(--run)">7 份草稿</text><text x="70" y="86" text-anchor="middle" font-size="11" fill="var(--ink)">1 份好、6 份壞</text>
-        <line x1="130" y1="70" x2="170" y2="70" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar2)"/>
-        <rect x="174" y="30" width="150" height="80" rx="8" fill="var(--accent-soft)"/><text x="249" y="58" text-anchor="middle" font-weight="700" fill="var(--accent)">三關檢查</text><text x="249" y="78" text-anchor="middle" font-size="11" fill="var(--ink)">格式・只用可信工具</text><text x="249" y="94" text-anchor="middle" font-size="11" fill="var(--ink)">・不准寫到外面</text>
-        <line x1="324" y1="55" x2="380" y2="30" stroke="var(--done)" stroke-width="2" marker-end="url(#ar2)"/>
-        <line x1="324" y1="85" x2="380" y2="115" stroke="var(--warn)" stroke-width="2" marker-end="url(#ar2)"/>
-        <rect x="384" y="8" width="246" height="44" rx="8" fill="var(--done-soft)"/><text x="507" y="28" text-anchor="middle" font-weight="700" fill="var(--done)">1 份合格 → 按發布 → 跑完答案對</text><text x="507" y="44" text-anchor="middle" font-size="11" fill="var(--ink)">每一步只跑 1 次</text>
-        <rect x="384" y="92" width="246" height="44" rx="8" fill="var(--warn-soft)"/><text x="507" y="112" text-anchor="middle" font-weight="700" fill="var(--warn)">6 份全擋下</text><text x="507" y="128" text-anchor="middle" font-size="11" fill="var(--ink)">班表一個字都沒被動到</text>
-      </g>
-      <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mute)"/></marker></defs>
-    </svg>
-    </div>
-    <p class="small">處理 100 份需求後，資料夾剛好 201 個檔（每份需求 2 個＋1 把鎖），不會因為跑很多回合而變多。</p>
-  </section>
-
-  <section>
-    <h2>第三段：讓學徒真的「叫 AI 一次」（先用假 AI）</h2>
-    <p>叫 AI 要花錢（token）。所以每次呼叫像去自助餐：先押一筆錢、吃完照實際份量結帳，多退少記。中途斷電的話，沒確定的帳先不退，等人來對。</p>
-    <div class="fig">
-    <svg viewBox="0 0 640 140" role="img" aria-label="LLM 呼叫流程：預留、呼叫、存回覆、結算、回條">
+    <svg viewBox="0 0 640 150" role="img" aria-label="今天五個階段的時間軸">
+      <rect x="20" y="40" width="600" height="12" rx="6" fill="var(--line)"/>
+      <rect x="20" y="40" width="582" height="12" rx="6" fill="var(--accent)"/>
+      <g font-size="11" fill="var(--mute)"><text x="20" y="30">10:45</text><text x="196" y="30" text-anchor="middle">13:10</text><text x="300" y="30" text-anchor="middle">14:30</text><text x="473" y="30" text-anchor="middle">16:50</text><text x="620" y="30" text-anchor="end">19:00</text></g>
       <g font-size="12">
-        <rect x="6" y="40" width="108" height="56" rx="8" fill="var(--accent-soft)"/><text x="60" y="64" text-anchor="middle" font-weight="700" fill="var(--accent)">① 先押錢</text><text x="60" y="82" text-anchor="middle" fill="var(--ink)">預留 1000</text>
-        <line x1="114" y1="68" x2="136" y2="68" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar3)"/>
-        <rect x="140" y="40" width="108" height="56" rx="8" fill="var(--run-soft)"/><text x="194" y="64" text-anchor="middle" font-weight="700" fill="var(--run)">② 叫一次 AI</text><text x="194" y="82" text-anchor="middle" fill="var(--ink)">今天是假 AI</text>
-        <line x1="248" y1="68" x2="270" y2="68" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar3)"/>
-        <rect x="274" y="40" width="108" height="56" rx="8" fill="var(--accent-soft)"/><text x="328" y="64" text-anchor="middle" font-weight="700" fill="var(--accent)">③ 先存回覆</text><text x="328" y="82" text-anchor="middle" fill="var(--ink)">斷電也不丟</text>
-        <line x1="382" y1="68" x2="404" y2="68" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar3)"/>
-        <rect x="408" y="40" width="108" height="56" rx="8" fill="var(--accent-soft)"/><text x="462" y="64" text-anchor="middle" font-weight="700" fill="var(--accent)">④ 照實結帳</text><text x="462" y="82" text-anchor="middle" fill="var(--ink)">用了 623</text>
-        <line x1="516" y1="68" x2="538" y2="68" stroke="var(--mute)" stroke-width="2" marker-end="url(#ar3)"/>
-        <rect x="542" y="40" width="92" height="56" rx="8" fill="var(--done-soft)"/><text x="588" y="64" text-anchor="middle" font-weight="700" fill="var(--done)">⑤ 收據</text><text x="588" y="82" text-anchor="middle" fill="var(--ink)">退 377</text>
-        <text x="194" y="122" text-anchor="middle" fill="var(--warn)">斷線不知道結果？→ 不重送、錢先押著，等人接回</text>
-      </g>
-      <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mute)"/></marker></defs>
-    </svg>
-    </div>
-    <div class="chips"><span class="chip done">✓ 設計圖（G0）</span><span class="chip done">✓ 日誌小修（V2）</span><span class="chip done">✓ 86 條壞連結修好（W1）</span><span class="chip run">● 帳本會照實結（B2）</span><span class="chip run">● 假 AI 呼叫（G1）</span><span class="chip run">● 學徒從必讀抽屜收單（V1）</span><span class="chip run">● 總整理＋白話報告（I2）</span></div>
-    <p class="small">真的 AI 要等你看過設計圖才接。</p>
-  </section>
-
-  <section>
-    <h2>真 AI 接上了：學徒跑了 12 圈</h2>
-    <p>學徒用 6 種 gpt 模型各跑一到三次「寫 CSV 小流程」，12 次全部過關、答案全對。</p>
-    <div class="fig">
-    <svg viewBox="0 0 640 170" role="img" aria-label="每次呼叫約 2500 到 2700 token，其中約 1600 是 proxy 自帶">
-      <!-- 0..3000 token → 0..480px, x0=140 -->
-      <g font-size="12" fill="var(--mute)"><text x="130" y="38" text-anchor="end">一次呼叫</text><text x="130" y="78" text-anchor="end">其中 proxy 自帶</text><text x="130" y="118" text-anchor="end">我們的提示</text><text x="130" y="158" text-anchor="end">AI 回答</text></g>
-      <rect x="140" y="24" width="416" height="20" rx="3" fill="var(--accent)"/><text x="562" y="39" font-size="12" fill="var(--ink)">≈2600</text>
-      <rect x="140" y="64" width="256" height="20" rx="3" fill="var(--warn-soft)"/><text x="402" y="79" font-size="12" fill="var(--ink)">≈1600</text>
-      <rect x="140" y="104" width="115" height="20" rx="3" fill="var(--accent-soft)"/><text x="261" y="119" font-size="12" fill="var(--ink)">≈720</text>
-      <rect x="140" y="144" width="37" height="20" rx="3" fill="var(--run-soft)"/><text x="183" y="159" font-size="12" fill="var(--ink)">130～320</text>
-    </svg>
-    </div>
-    <p class="small">12 圈一共 30,739 token，每次 2～11 秒。這題太簡單，比不出模型差異；之後換難題再比。限制先不設，等跑完大段落再依實際用量定。</p>
-  </section>
-
-  <section>
-    <h2>現在：你給的三個目標</h2>
-    <div class="fig">
-    <svg viewBox="0 0 640 250" role="img" aria-label="三個目標與負責的隊">
-      <g font-size="12">
-        <rect x="6" y="10" width="200" height="230" rx="10" fill="var(--accent-soft)"/>
-        <text x="106" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent)">① AI 用 wf 管自己</text>
-        <text x="20" y="62" fill="var(--ink)">每個 AI 有自己的 wf/</text>
-        <text x="20" y="80" fill="var(--ink)">tick 當心跳叫醒它</text>
-        <text x="20" y="98" fill="var(--ink)">必達信、例行事務</text>
-        <text x="20" y="130" fill="var(--done)">✓ 設計圖（W0）</text>
-        <text x="20" y="150" fill="var(--done)">✓ 例行事務（H1）</text>
-        <text x="20" y="170" fill="var(--run)">● 建 wf（W1）</text>
-        <text x="20" y="190" fill="var(--run)">● 信箱（X1）</text>
-        <rect x="220" y="10" width="200" height="230" rx="10" fill="var(--run-soft)"/>
-        <text x="320" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="var(--run)">② 壓縮・記憶・技能</text>
-        <text x="234" y="62" fill="var(--ink)">記憶寫在檔案，不靠模型</text>
-        <text x="234" y="80" fill="var(--ink)">太長就摘要舊的，</text>
-        <text x="234" y="98" fill="var(--ink)">沒做完的事一條不丟</text>
-        <text x="234" y="130" fill="var(--run)">● 組提示（P1）</text>
-        <text x="234" y="150" fill="var(--run)">● 壓縮（C2）</text>
-        <text x="234" y="170" fill="var(--run)">● 技能（S1）</text>
-        <rect x="434" y="10" width="200" height="230" rx="10" fill="var(--warn-soft)"/>
-        <text x="534" y="34" text-anchor="middle" font-size="14" font-weight="700" fill="var(--warn)">③ AI 自己做工具</text>
-        <text x="448" y="62" fill="var(--ink)">學徒從 CSV 進階到</text>
-        <text x="448" y="80" fill="var(--ink)">寫 aos 的工具／模組</text>
-        <text x="448" y="98" fill="var(--ink)">做好放分支，人來合併</text>
-        <text x="448" y="130" fill="var(--done)">✓ 接真 AI（R1）</text>
-        <text x="448" y="150" fill="var(--run)">● 新工具卡（A4）</text>
-        <text x="448" y="170" fill="var(--run)">● 故障測試（T9）</text>
-        <text x="448" y="190" fill="var(--mute)">○ 學徒實戰（A5）</text>
+        <rect x="20" y="66" width="110" height="64" rx="8" fill="var(--done-soft)"/><text x="75" y="88" text-anchor="middle" font-weight="700" fill="var(--done)">修補 loop7</text><text x="75" y="106" text-anchor="middle" fill="var(--ink)" font-size="11">工廠漏洞</text><text x="75" y="121" text-anchor="middle" fill="var(--ink)" font-size="11">九隊全修完</text>
+        <rect x="136" y="66" width="110" height="64" rx="8" fill="var(--done-soft)"/><text x="191" y="88" text-anchor="middle" font-weight="700" fill="var(--done)">值班日誌</text><text x="191" y="106" text-anchor="middle" fill="var(--ink)" font-size="11">事件保存</text><text x="191" y="121" text-anchor="middle" fill="var(--ink)" font-size="11">＋LLM 作者</text>
+        <rect x="252" y="66" width="110" height="64" rx="8" fill="var(--done-soft)"/><text x="307" y="88" text-anchor="middle" font-weight="700" fill="var(--done)">接真 AI</text><text x="307" y="106" text-anchor="middle" fill="var(--ink)" font-size="11">你准許後</text><text x="307" y="121" text-anchor="middle" fill="var(--ink)" font-size="11">學徒跑 12 圈</text>
+        <rect x="368" y="66" width="120" height="64" rx="8" fill="var(--done-soft)"/><text x="428" y="88" text-anchor="middle" font-weight="700" fill="var(--done)">三個目標</text><text x="428" y="106" text-anchor="middle" fill="var(--ink)" font-size="11">wf／記憶／技能</text><text x="428" y="121" text-anchor="middle" fill="var(--ink)" font-size="11">＋新手回頭改</text>
+        <rect x="494" y="66" width="126" height="64" rx="8" fill="var(--run-soft)"/><text x="557" y="88" text-anchor="middle" font-weight="700" fill="var(--run)">● 回頭審 r4</text><text x="557" y="106" text-anchor="middle" fill="var(--ink)" font-size="11">簡化、長任務</text><text x="557" y="121" text-anchor="middle" fill="var(--ink)" font-size="11">自我改進證據</text>
       </g>
     </svg>
     </div>
-    <p class="small">每樣給人用的東西都要過：第一次跑 ≤10 分鐘、指令 ≤3 個、新概念 ≤5 個，最後找「新手」實際試、打分。效率另有一隊在量（E1）。做完一波就回頭審：OK／修改／重造。</p>
+    <p class="small">你中途給的要求都照做了：三個目標、ELI5 易用、效率也是目標、做完回頭看修或重造、新手用最笨的 AI、架構簡潔錯誤統一副作用少、新東西先寫意圖卡。</p>
+  </section>
+
+  <section>
+    <h2>新人看到的 aos：5 個詞、3 個指令</h2>
+    <p>一鍵入口 <b>aos7-up</b> 把底層（帳、回合、退出碼…）全藏起來，新人只要懂這張圖。</p>
+    <div class="fig">
+    <svg viewBox="0 0 640 225" role="img" aria-label="你寄信給 node，心跳叫醒它，它讀工作簿和技能，做完回信">
+      <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--mute)"/></marker></defs>
+      <g font-size="13">
+        <rect x="10" y="80" width="90" height="56" rx="10" fill="var(--warn-soft)"/><text x="55" y="105" text-anchor="middle" font-weight="700" fill="var(--warn)">你</text><text x="55" y="123" text-anchor="middle" font-size="11" fill="var(--ink)">寄一封信</text>
+        <line x1="100" y1="100" x2="170" y2="100" stroke="var(--mute)" stroke-width="2" marker-end="url(#a1)"/><text x="135" y="92" text-anchor="middle" font-size="11" fill="var(--mute)">信</text>
+        <rect x="174" y="40" width="300" height="140" rx="12" fill="var(--accent-soft)"/>
+        <text x="324" y="62" text-anchor="middle" font-weight="700" fill="var(--accent)">node（AI 住的資料夾）</text>
+        <rect x="190" y="76" width="130" height="44" rx="8" fill="var(--panel)"/><text x="255" y="96" text-anchor="middle" font-weight="700" fill="var(--ink)">工作簿</text><text x="255" y="112" text-anchor="middle" font-size="11" fill="var(--mute)">做到哪、下一步</text>
+        <rect x="330" y="76" width="130" height="44" rx="8" fill="var(--panel)"/><text x="395" y="96" text-anchor="middle" font-weight="700" fill="var(--ink)">技能</text><text x="395" y="112" text-anchor="middle" font-size="11" fill="var(--mute)">抽屜，AI 自己挑</text>
+        <rect x="190" y="128" width="270" height="40" rx="8" fill="var(--panel)"/><text x="325" y="153" text-anchor="middle" fill="var(--ink)">腦：讀信→想→做一回合→記進工作簿</text>
+        <rect x="246" y="190" width="156" height="30" rx="15" fill="var(--run-soft)"/><text x="324" y="210" text-anchor="middle" fill="var(--run)">心跳：每秒叫醒一次</text>
+        <line x1="474" y1="120" x2="540" y2="120" stroke="var(--mute)" stroke-width="2" marker-end="url(#a1)"/><text x="507" y="112" text-anchor="middle" font-size="11" fill="var(--mute)">回信</text>
+        <rect x="544" y="92" width="90" height="56" rx="10" fill="var(--done-soft)"/><text x="589" y="116" text-anchor="middle" font-weight="700" fill="var(--done)">辦完了</text><text x="589" y="134" text-anchor="middle" font-size="11" fill="var(--ink)">或「要你決定」</text>
+      </g>
+    </svg>
+    </div>
+<pre>aos7-up /tmp/aos/bob          # 起一個 AI
+aos7-up ask /tmp/aos/bob '…'  # 交代它做事
+aos7-up status /tmp/aos/bob   # 看它現在怎樣</pre>
+    <p class="small">最笨的兩位新手（Haiku、luna）只看一頁 QUICKSTART 從零試：7.0 分與 8.8 分，約 6～10 分鐘上手。預設假 AI 不花錢，加 --model 才接真 AI。</p>
+  </section>
+
+  <section>
+    <h2>你的三個目標，各走到哪</h2>
+    <div class="tbl"><table>
+      <tr><th>目標</th><th>已做到</th><th>正在驗</th></tr>
+      <tr><td><b>① AI 用 wf 管自己</b></td><td>每個 AI 有自己的 wf；心跳、信箱、例行事務；一件事跨多回合做，會發進度信、會停下問你、被砍能接回</td><td>12 封信長任務真跑</td></tr>
+      <tr><td><b>② 壓縮・記憶・技能</b></td><td>記憶在檔案不在模型；太長自動摘要、沒做完的一條不丟（真 AI 壓掉 73%）；技能題庫 10 題挑對 10</td><td>看長任務裡實際用到幾次</td></tr>
+      <tr><td><b>③ AI 自己做元件</b></td><td>學徒用真 AI 寫出 2 個新元件，過三關合進來（16 份草稿擋下 10 份）</td><td>連做 3 題同類，看第 3 題是不是比第 1 題順</td></tr>
+    </table></div>
   </section>
 
   <section>
     <h2>回頭審：新手全軍覆沒 → 回頭修 → 全部過關</h2>
-    <p>找最笨的兩位 AI（Haiku、luna）當新手，只給說明書。第一次 10 個模組全部沒過；各隊回頭改，再找同兩位試，直到 7 分以上。</p>
+    <p>第一次找最笨的兩位 AI 只看說明書試用，10 個模組全部沒過。各隊回頭改，再找同兩位試，到 7 分以上才算。</p>
     <div class="fig">
     <svg viewBox="0 0 640 230" role="img" aria-label="各模組新手分數，改前與改後">
-      <!-- 分數 0..10 → 0..300px, x0=120; 門檻 7 在 x=330 -->
       <line x1="330" y1="8" x2="330" y2="222" stroke="var(--warn)" stroke-dasharray="4 3"/>
       <text x="334" y="18" font-size="11" fill="var(--warn)">門檻 7</text>
       <g font-size="12">
-      <text x="112" y="38" text-anchor="end" fill="var(--ink)">routines</text><rect x="120" y="28" width="186" height="8" rx="2" fill="var(--line)"/><rect x="120" y="37" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="45" font-size="11" fill="var(--ink)">6.2→7.4</text><text x="112" y="62" text-anchor="end" fill="var(--ink)">prompt</text><rect x="120" y="52" width="204" height="8" rx="2" fill="var(--line)"/><rect x="120" y="61" width="234" height="8" rx="2" fill="var(--done)"/><text x="360" y="69" font-size="11" fill="var(--ink)">6.8→7.8</text><text x="112" y="86" text-anchor="end" fill="var(--ink)">compact</text><rect x="120" y="76" width="198" height="8" rx="2" fill="var(--line)"/><rect x="120" y="85" width="228" height="8" rx="2" fill="var(--done)"/><text x="354" y="93" font-size="11" fill="var(--ink)">6.6→7.6</text><text x="112" y="110" text-anchor="end" fill="var(--ink)">skills</text><rect x="120" y="100" width="162" height="8" rx="2" fill="var(--line)"/><rect x="120" y="109" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="117" font-size="11" fill="var(--ink)">5.4→7.4</text><text x="112" y="134" text-anchor="end" fill="var(--ink)">metrics</text><rect x="120" y="124" width="186" height="8" rx="2" fill="var(--line)"/><rect x="120" y="133" width="228" height="8" rx="2" fill="var(--done)"/><text x="354" y="141" font-size="11" fill="var(--ink)">6.2→7.6</text><text x="112" y="158" text-anchor="end" fill="var(--ink)">wfnode</text><rect x="120" y="148" width="204" height="8" rx="2" fill="var(--line)"/><rect x="120" y="157" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="165" font-size="11" fill="var(--ink)">6.8→7.4</text><text x="112" y="182" text-anchor="end" fill="var(--ink)">events</text><rect x="120" y="172" width="156" height="8" rx="2" fill="var(--line)"/><rect x="120" y="181" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="189" font-size="11" fill="var(--ink)">5.2→7.4</text><text x="112" y="206" text-anchor="end" fill="var(--ink)">mail</text><rect x="120" y="196" width="168" height="8" rx="2" fill="var(--line)"/><rect x="120" y="205" width="252" height="8" rx="2" fill="var(--done)"/><text x="378" y="213" font-size="11" fill="var(--ink)">5.6→8.4</text>
+      <text x="112" y="38" text-anchor="end" fill="var(--ink)">routines</text><rect x="120" y="28" width="186" height="8" rx="2" fill="var(--line)"/><rect x="120" y="37" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="45" font-size="11" fill="var(--ink)">6.2→7.4</text>
+      <text x="112" y="62" text-anchor="end" fill="var(--ink)">prompt</text><rect x="120" y="52" width="204" height="8" rx="2" fill="var(--line)"/><rect x="120" y="61" width="234" height="8" rx="2" fill="var(--done)"/><text x="360" y="69" font-size="11" fill="var(--ink)">6.8→7.8</text>
+      <text x="112" y="86" text-anchor="end" fill="var(--ink)">compact</text><rect x="120" y="76" width="198" height="8" rx="2" fill="var(--line)"/><rect x="120" y="85" width="228" height="8" rx="2" fill="var(--done)"/><text x="354" y="93" font-size="11" fill="var(--ink)">6.6→7.6</text>
+      <text x="112" y="110" text-anchor="end" fill="var(--ink)">skills</text><rect x="120" y="100" width="162" height="8" rx="2" fill="var(--line)"/><rect x="120" y="109" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="117" font-size="11" fill="var(--ink)">5.4→7.4</text>
+      <text x="112" y="134" text-anchor="end" fill="var(--ink)">metrics</text><rect x="120" y="124" width="186" height="8" rx="2" fill="var(--line)"/><rect x="120" y="133" width="228" height="8" rx="2" fill="var(--done)"/><text x="354" y="141" font-size="11" fill="var(--ink)">6.2→7.6</text>
+      <text x="112" y="158" text-anchor="end" fill="var(--ink)">wfnode</text><rect x="120" y="148" width="204" height="8" rx="2" fill="var(--line)"/><rect x="120" y="157" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="165" font-size="11" fill="var(--ink)">6.8→7.4</text>
+      <text x="112" y="182" text-anchor="end" fill="var(--ink)">events</text><rect x="120" y="172" width="156" height="8" rx="2" fill="var(--line)"/><rect x="120" y="181" width="222" height="8" rx="2" fill="var(--done)"/><text x="348" y="189" font-size="11" fill="var(--ink)">5.2→7.4</text>
+      <text x="112" y="206" text-anchor="end" fill="var(--ink)">mail</text><rect x="120" y="196" width="168" height="8" rx="2" fill="var(--line)"/><rect x="120" y="205" width="252" height="8" rx="2" fill="var(--done)"/><text x="378" y="213" font-size="11" fill="var(--ink)">5.6→8.4</text>
       </g>
     </svg>
     </div>
-    <p class="small">灰＝第一次，綠＝改完。共同病根是「第一次跑就要懂底層」，所以另外做了一鍵入口 aos7-up，把底層全藏起來。</p>
+    <p class="small">灰＝第一次，綠＝改完（取兩位新手中較低的分數）。共同病根是「第一次跑就要懂底層」，所以做了一鍵入口，並把每份說明書改成「只給新手看的一頁＋進階另一頁」。</p>
   </section>
 
   <section>
-    <h2>一鍵入口 aos7-up：新人只要記 3 行</h2>
-    <pre style="overflow-x:auto;font-family:var(--mono);font-size:.85rem;background:var(--accent-soft);padding:10px;border-radius:6px;margin:0">aos7-up /tmp/aos/bob          # 起一個 AI，每秒印「心跳 N」
-aos7-up ask /tmp/aos/bob '…'  # 交代它做事，等它回信
-aos7-up status /tmp/aos/bob   # 看它現在怎樣</pre>
-    <p class="small">只要懂 5 個詞：node（AI 住的資料夾）、心跳、工作簿、信、技能。預設假 AI 不花錢，加 --model 才接真 AI。真 AI 一圈：1 回合回信、約 3000 token、4 秒。</p>
-  </section>
-
-  <section>
-    <h2>AI 自己做元件：第一個實證</h2>
-    <p>真 AI 學徒寫出 2 個新東西，過三關（規格、沙盒跑測試、astra 審）後合進來：看 token 用量的工具、診斷 AI 線路的模組。16 份草稿被擋 10 份。人工只修 1 次。</p>
-    <p class="small">「越做越好」這次證據不足；另外發現經 proxy 叫 sol-high 時常只回一句開場白卻照算 token，正在查。</p>
-  </section>
-
-  <section>
-    <h2>統一錯誤：全 aos 只剩 5 種結果</h2>
+    <h2>架構簡潔：錯誤只剩 5 種、重複的合併</h2>
     <div class="chips"><span class="chip done">0 做到了</span><span class="chip wait">1 做不到（知道為什麼）</span><span class="chip wait">2 你給的不對</span><span class="chip run">3 不知道（再跑會接續）</span><span class="chip">4 做到但帳沒清</span></div>
-    <p class="small">錯誤都是一行白話「哪個指令: 發生什麼。怎麼辦」。各模組多做的副作用也在拿掉（例如不再替別人建資料夾）。已完成：wfnode、mail、prompt、metrics；進行中：routines、llmcall、compact、events、author。</p>
+    <ul>
+      <li>12 個模組全照改完，錯誤都是一行白話「哪個指令: 發生什麼。怎麼辦」，有自動測試守著。</li>
+      <li>每個模組都有一張<b>意圖卡</b>（要解決什麼、哪些副作用非留不可、明確不做什麼），多做的副作用拿掉了一批，例如不再替別人建資料夾、不再偷改任務表。</li>
+      <li>第二輪回頭審找到重複：看 token 的工具 vs 效率量測、兩個診斷工具 → 正在合併。還抓到學徒和信箱會互相誤標「已處理」→ 正在修。</li>
+    </ul>
   </section>
 
   <section>
-    <h2>我替你做的大決定</h2>
+    <h2>真 AI 與省錢</h2>
+    <div class="fig">
+    <svg viewBox="0 0 640 146" role="img" aria-label="每次呼叫約 2600 token，其中 1644 是 proxy 自帶">
+      <g font-size="12" fill="var(--mute)"><text x="130" y="30" text-anchor="end">一次呼叫</text><text x="130" y="64" text-anchor="end">proxy 自帶</text><text x="130" y="98" text-anchor="end">我們的提示</text><text x="130" y="132" text-anchor="end">AI 回答</text></g>
+      <rect x="140" y="16" width="416" height="20" rx="3" fill="var(--accent)"/><text x="562" y="31" font-size="12" fill="var(--ink)">≈2600</text>
+      <rect x="140" y="50" width="263" height="20" rx="3" fill="var(--warn-soft)"/><text x="409" y="65" font-size="12" fill="var(--ink)">1644（63%）</text>
+      <rect x="140" y="84" width="122" height="20" rx="3" fill="var(--accent-soft)"/><text x="268" y="99" font-size="12" fill="var(--ink)">≈765</text>
+      <rect x="140" y="118" width="32" height="20" rx="3" fill="var(--run-soft)"/><text x="178" y="133" font-size="12" fill="var(--ink)">≈200</text>
+    </svg>
+    </div>
     <ul>
-      <li>寫程式改交給 codex 新模型 <b>gpt-6.1-sol</b>，審查交給 <b>gpt-6-astra</b>；隊長仍是 Opus 逐行看。</li>
-      <li>工頭（daemon）要趕人前先寫進 <code>nodes.json</code>，不另開新檔。</li>
-      <li>日誌櫃分兩個抽屜，總共最多 12 個檔（比字面的 7 個多，因為兩個抽屜丟東西的規則不同）。</li>
-      <li>舊的歷史紀錄檔升級時改名封存，不丟資料。</li>
-      <li>AI 用量超過預留時，只照實記「超支」，不自動停止接新呼叫（想改成自動停很好改）。</li>
-      <li>LLM 作者第一步：讓 AI 寫「處理 CSV 的小流程」，只准用可信工具拼，寫好要人按一下才上線。</li>
+      <li><b>抓到並修好一個大坑</b>：sol 的回答被拆成「開場白」和「答案」兩段，aos 只讀了第一段，所以常常只拿到「我先看一下…」。改成讀最後一段後，重放全部拿到完整答案。</li>
+      <li>效率：AI 回答後的空等 3.3 → 2.7 秒；依難度挑模型（先便宜後升級）正在量。</li>
     </ul>
-    <p class="small">全部 40 多條（含小的）在 <code>proto7-2/notes/decisions-2026-10-09.md</code>，每條都寫了怎麼改回來。</p>
   </section>
 
-  <section class="you">
-    <h2>有空再看就好</h2>
-    <ul>
-      <li>新模型的等級我先「暫定」：6.1-sol、astra 暫定 A 級，其他依序往下。只測了一題，要不要照這個算你決定。</li>
-      <li>你的 <code>user-advice.md</code> 我沒動，只拿來確保日誌設計不跟你的意見打架。</li>
+  <section>
+    <h2>現在在跑</h2>
+    <div class="chips">
+      <span class="chip run">● 長任務實跑：12 封信、中途砍一次</span>
+      <span class="chip run">● 學徒三連題：自我改進證據</span>
+      <span class="chip run">● 依難度挑模型</span>
+      <span class="chip run">● 合併重複量尺</span>
+      <span class="chip run">● 合併診斷工具</span>
+      <span class="chip run">● 必讀通道互踩修補</span>
+      <span class="chip run">● 一鍵入口 Ctrl-C 小修</span>
+    </div>
+    <p class="small">接下來：新手再試一次 → astra 全日回歸（三目標逐條打燈號）→ 整合、全套連跑三次 → 給你一份白話報告。</p>
+  </section>
+
+  <section>
+    <h2>去哪看細節</h2>
+    <ul class="small">
+      <li>我替你做的每個決定（含怎麼改回來）：<code>proto7-2/notes/decisions-2026-10-09.md</code></li>
+      <li>新人入口：<code>proto7-2/QUICKSTART.md</code></li>
+      <li>白話報告草稿：<code>proto7-2/notes/report-2026-10-09.md</code></li>
+      <li>各模組意圖卡：<code>proto7-2/notes/intents/</code></li>
     </ul>
   </section>
 </div>
