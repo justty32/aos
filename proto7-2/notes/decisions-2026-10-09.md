@@ -153,3 +153,5 @@
 - 待你決定｜優化第 1 名是砍掉或快取 litellm proxy 每次自帶的 1644 token（省最多 64%），要改你的 LiteLLM 設定，我沒動
 - C｜C2：壓縮包 `modules/compact/`（now／forget／watch）——open 項逐字保留、檔長降 ≥60%；段落切換用字元相似度 <0.2 判斷（不另花 AI 呼叫，門檻暫定）；SESSION-LOG 的現役段不摘，實際主要整理 `notes/journal.jsonl`；diff 超 gate 照收
 - 結果｜C2 真 AI 一次：65 則→6 則、8968→2149 bytes（降 76%）、open 5 條全留、5429 token、約 12 秒
+- B｜A4：學徒寫 aos 工具／模組的三關檢查器 `packs/author/checkers/`（brief／check／publish）——第 1 關：領地、有測試、每檔 ≤8 KiB、連結不壞；第 2 關：在 bwrap 沙盒（無網路、無 /home、只有暫存樹可寫）跑學徒自己的測試；第 3 關：astra 審。publish 只建 `apprentice/<rid>_<sha8>` 分支，不碰 HEAD 與工作樹
+- C｜A4：題 1 做成新包 `packs/usage/`、題 2 做成新模組 `modules/llmdiag/`（學徒不准改別的包）；答案檢查用固定答案（隱藏或隨機題目留下一輪）
