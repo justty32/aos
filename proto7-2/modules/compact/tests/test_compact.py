@@ -387,7 +387,7 @@ with (work / 'write.lock').open('a') as lock:
         self.assertEqual(reply.returncode, 0, reply.stdout + reply.stderr)
         self.assertIn('已造好', reply.stdout)
         self.assertIn('220 則，open 20，會摘掉 200 則', reply.stdout)
-        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），102580 → 2023 bytes', reply.stdout)
+        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），138526 → 3233 bytes', reply.stdout)
         # 第一次跑不用 --force：計畫行與結果行印同一個原因（新手回改）。
         self.assertNotIn('--force', shell)
         self.assertEqual(reply.stdout.count('（原因：大小超過 2048）'), 2)
@@ -465,6 +465,40 @@ with (work / 'write.lock').open('a') as lock:
         out, err = p.communicate(timeout=20)
         self.assertEqual(p.returncode, 0, out + err)
         self.assertTrue(state.read_text().endswith('- 19:00 鎖內追加的一行\n'))
+
+    def test_summary_many_letters_and_odd_input(self):
+        """12 封信擠不下時第一段與最近幾段照列、中間標「另 N 段略」；寄件人名帶 -／數字也認得；孤立 surrogate 不讓整理卡住。"""
+        spec = importlib.util.spec_from_file_location('aos7_compact_t', CLI.with_name('aos7_compact.py'))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        rows = [dict(text=json.dumps(dict(re=f'team-{k}-20261009T1854{k:02d}-4f20668237{k:02d}', step=1,
+                                          text=f'第 {k} 封做完｜' + '長' * 50), ensure_ascii=False) + '\n')
+                for k in range(1, 13)]
+        text = mod.local_summary(rows, 200)
+        self.assertLessEqual(len(text), 200)
+        self.assertIn('信 team-1-…4f2066823701', text)
+        self.assertIn('第 12 封做完', text)
+        self.assertRegex(text, r'…另 \d+ 段略…')
+        self.assertEqual(mod.local_summary(rows, 1), '本')
+        self.config(files=['journal.jsonl'], keep_recent=0)
+        (self.node / 'journal.jsonl').write_text('{"text": "' + chr(92) + 'ud800 壞字"}' + chr(10) + '{"text": "好"}' + chr(10))
+        self.now('--force')
+        self.assertIn(chr(92) * 2 + 'ud800 壞字', (self.node / 'journal.jsonl').read_text())
+
+    def test_state_lock_symlink_refused_and_dup_paths(self):
+        """.state.lock 是 symlink 就不跟（退 3、pending 留著）；明列與樣式指到同一檔只整理一次。"""
+        _, _, state, _, _ = self.brain_node()
+        outside = Path(self.root) / 'outside.lock'
+        (self.node / 'wf/handoffs/.state.lock').symlink_to(outside)
+        self.config(files=['wf/SESSION-LOG.md', 'wf/handoffs/*/STATE.md', 'wf/handoffs/2026-10-09/STATE.md'], keep_recent=5, max_bytes=2048)
+        plan = self.now('--dry-run').stdout
+        self.assertEqual(plan.count('STATE.md：'), 1)
+        self.now(rc=3)
+        self.assertFalse(outside.exists())
+        self.assertTrue((self.node / 'compact/pending.json').exists())
+        (self.node / 'wf/handoffs/.state.lock').unlink()
+        self.now()
+        self.assertIn('- （摘要 ', state.read_text())
 
     def test_small_old_part_waits(self):
         """超過門檻但可摘的舊則不到門檻一半：先不摘（免得每回合整理）。"""

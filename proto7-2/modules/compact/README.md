@@ -28,12 +28,18 @@ python3 "$P/modules/compact/aos7-compact" now "$N"
 ```text
 已造好 <node>/notes/journal.jsonl：200 則舊紀錄＋20 則 open
 notes/journal.jsonl：220 則，open 20，會摘掉 200 則（原因：大小超過 2048）
-notes/journal.jsonl：220 則 → 21 則（摘掉 200、open 20 全留），102580 → 2023 bytes，原文在 compact/archive/<job>.jsonl（原因：大小超過 2048）
+notes/journal.jsonl：220 則 → 21 則（摘掉 200、open 20 全留），138526 → 3233 bytes，原文在 compact/archive/<job>.jsonl（原因：大小超過 2048）
 ```
 
 dry-run 和實跑印的是同一個原因：示範檔超過 2048 bytes，所以 `now` 自己就會整理（門檻可改，見 ADVANCED.md）。再跑一次 `now` 會說「不需要整理」。舊原文一字不缺在 `$N/compact/archive/`。
 
-21 則＝20 則 open 原樣留著＋1 則新摘要（最近 5 則剛好都是 open）。看摘要：`head -c 300 "$N/notes/journal.jsonl"`。`<job>` 是這次整理的編號，也就是 archive 的檔名。
+21 則＝20 則 open 原樣留著＋1 則新摘要（最近 5 則剛好都是 open）。示範檔仿四封信各做 50 回合；`head -c 400 "$N/notes/journal.jsonl"` 看那則摘要，會像：
+
+```text
+{"compact": "summary", "job": "<job>", "count": 200, "text": "本機摘要 200 則（09:01～12:20）｜信 you-…5d1c0a7f3e21 50 則（第 1～50 回合）：週報第 1 段寫好；下一步寫第 2 段 → …略 41 項… → 週報第 43 段寫好；…｜信 you-…8b42e6c19d07 50 則…", "ref": "ref://compact/<job>"}
+```
+
+意思是：哪封信、做了幾回合、每回合做到哪（太長就省略中段）；`ref` 指回 archive 裡那份原文。`<job>` 是這次整理的編號，也就是 archive 的檔名。
 
 ## 想做更多
 
