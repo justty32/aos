@@ -122,6 +122,7 @@ def write_json(path, obj):
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
+    inject("write", path)
     tmp = os.path.join(d, ".%s.tmp.%d" % (os.path.basename(path), os.getpid()))
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=1)
