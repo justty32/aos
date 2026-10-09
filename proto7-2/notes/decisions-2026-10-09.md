@@ -85,3 +85,6 @@
 ## 下午後段（13:00 起，頂層代定）
 
 - A｜下午計畫 13:00 就做完，剩餘時間開 A1 隊照 [blueprint-llm1](blueprint-llm1.md) §9 實作 LLM 作者第一刀（`packs/author/`，用假候選、不接真模型）；另開小隊把 events spec 壓回 8 KiB 並補子命令；I2 收尾整合延到 A1 交件後
+- C｜A1：需求 `inputs` 路徑相對 node；新增子命令 `aos7-author answer <rid>`（step close 前跑檢查器、結果記 verdict，author close 要求答案已驗）；退出碼多 `5`＝已發布滿 2 版
+- C｜A1：新候選直接取代沒登記的舊待審候選；還有待審候選時 close 回 conflict；close 不移除表項（由人收）；表項「整項完全相等」才算相符
+- 結果｜A1 第一刀 §4 六條驗收全過；100 份需求結案後 `author/` 恰 201 檔（每需求 2 檔＋1 把鎖），不隨回合增加；全套 556 項全綠
