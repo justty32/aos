@@ -38,7 +38,7 @@
 
 ### 工人
 
-依任務難度／內容，加上**使用者給的 headcount**，開不同聰明程度的 agent。gpt-sol、gpt-terra、gpt-luna 這類便宜 AI **通常在這層大量使用**；本專案現況（09-24 起 codex 只剩 `gpt-6-astra`、09-30 起碰程式碼一律 Opus）見 [dispatch/aos-teams](dispatch/aos-teams.md)，工人**不 commit**。gpt-sol 自己再開 terra／luna **我們管不著**——它在那一層就是領導，這不算「領導不建議 gpt-sol」的例外；我們只告訴它**那邊能用多少資源**，頂多建議它開兩三個當助手。
+依任務難度／內容，加上**使用者給的 headcount**，開不同聰明程度的 agent。gpt-sol、gpt-terra、gpt-luna 這類便宜 AI **通常在這層大量使用**；本專案現況（10-09 起寫碼 gpt-6.1-sol、審查 astra、跑驗證 gpt-6-luna）見 [dispatch/aos-teams](dispatch/aos-teams.md)，工人**不 commit**。gpt-sol 自己再開 terra／luna **我們管不著**——它在那一層就是領導，這不算「領導不建議 gpt-sol」的例外；我們只告訴它**那邊能用多少資源**，頂多建議它開兩三個當助手。
 
 ## 二、聰明度分級（總分）
 
@@ -48,11 +48,17 @@
 |---|---|---|
 | S | Fable | 目前唯一一個 S；細分待補 |
 | A | Opus | **軟體工程層面**；其餘用途見 B 列 |
-| A | gpt-sol（codex `gpt-5.6-sol`）| 各方面；**軟體工程算 B+** |
+| A | gpt-sol（`gpt-5.6-sol`）| 各方面；**軟體工程算 B+** |
 | B | Opus | 軟體工程之外 |
-| C | gpt-terra、Sonnet | 待細分 |
-| D | gpt-luna | 待細分 |
+| C | gpt-terra（`gpt-5.6-terra`）、Sonnet | 待細分 |
+| D | gpt-luna（`gpt-5.6-luna`）| 待細分 |
 | E、F… | （預留）| 之後 DeepSeek 之類可以更低 |
+| A？ | `gpt-6.1-sol`、`gpt-6-astra` | **暫定、待使用者確認**（10-09）；試水溫唯二全中 |
+| B？ | `gpt-6-sol` | 同上 |
+| C？ | `gpt-reserve`、`gpt-5.5` | 同上 |
+| D？ | Haiku、`gpt-6-luna` | 同上 |
+
+10-09 版本：Fable 5.1、Opus 5.5、Sonnet 5.5，級別沿用。暫定列依據 [probe](team-model/probe-2026-10-09.json)（一題一次）。
 
 新增用途欄（調查、寫作、實機操作…）時**只加欄、不改既有級別**——級別是使用者定的。
 
@@ -69,6 +75,8 @@
 |---|---|---|---|
 | gpt-sol | A | C（A 下移兩級）| **性價比之神；工人層主力** |
 | gpt-terra、gpt-luna | C／D | E／F（同規則下移兩級）| 便宜到掉出 Claude 的表 |
+| 6.1-sol、astra／6-sol／reserve、5.5／6-luna | A？／B？／C？／D？ | C／D／E／F（**暫定**）| 6.1-sol、astra 接 gpt-sol 的位子 |
+| Haiku | D？ | D（**暫定**）| — |
 | Fable／Opus／Sonnet | 見上表 | 與聰明度同級 | — |
 
 ## 四、選人判準（按序看這六項）
@@ -82,7 +90,7 @@
 
 ## 五、方案與時間軸
 
-隨帳單與錢包變動，替代表與連帶效果拆到 [plans](team-model/plans.md)。現況（2026-08-30）：Claude 與 GPT 各買一個月 200 美元方案，**大約 9 月初退掉 GPT**；屆時工人層的 gpt-sol／terra／luna 消失，便宜的活改 Sonnet、A 級的活改 Opus，整體會更貴，到時再重新規劃。
+隨帳單與錢包變動，替代表與連帶效果拆到 [plans](team-model/plans.md)。2026-08-30 原計畫 9 月初退 GPT；實際沒退，10-09 實測 codex 9 個 slug 可用，工人層恢復 codex。
 
 ## 六、context 管理
 

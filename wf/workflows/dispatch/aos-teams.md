@@ -1,4 +1,4 @@
-# aos 的隊形（2026-08-28 改制，2026-09-30 現況）
+# aos 的隊形（2026-08-28 改制，2026-10-09 現況）
 
 ← [dispatch](README.md)｜選人判準 [team-model](../team-model.md)
 
@@ -8,9 +8,9 @@
 
 <!-- wf-nav -->
 - **我（Fable，頂層）只當調度者**，不親自做內容，只親手做最難的那件。使用者 2026-08-30 說「頂層不要做太多事」，**09-24 再講更嚴**「你不要自己做事，盡量交給 agent」。頂層在主 repo 親手做的**只剩 `git merge --ff-only`＋`git push`**；重跑驗證、解 rebase 衝突、改 SESSION-LOG／WAIT_USER、清 backlog、報告存檔全派出去。收線＝讀隊長附的證據逐條對，不重跑；真要獨立驗證就派一條便宜的線去跑。想「順手」做小事時先問：能不能一句話交給別人？這條不看頂層跑哪顆模型，頂層是 Opus 也一樣。
-- **碰程式碼一律派 Opus**（09-30：派 Sonnet 去把 proto5 aos-exec 複製進 proto6 時，他說「不要 sonnet」「就 opus」）——就算只是複製＋小改也一樣。**Sonnet 只做純文字小事**（記 notes、改文件、補日誌）。
+- **碰程式碼：Opus 隊長＋codex 工人**（10-09 起）：寫碼與寫測試派 `gpt-6.1-sol`（核心難件用 astra high），審查 `gpt-6-astra` read-only high，跑驗證 `gpt-6-luna`；隊長 Opus 寫任務書、審 diff、commit。Claude 端碰程式碼**仍不派 Sonnet**（09-30 他說「不要 sonnet」「就 opus」），**Sonnet 只做純文字小事**。09-30～10-08 codex 只剩 astra 時碰程式碼一律 Opus。
 - 一個團隊＝一個 **Opus 隊長**，隊長可以自己再派 Opus／Sonnet 下去；人數沒有上限（09-05 起）。隊長寫任務書、審 diff、跑測試、commit。
-- **codex 只剩 `gpt-6-astra` 能用**：09-24 實測 gpt-sol／terra／luna 都回「不支援此模型」；09-30 他點名 `gpt-sol-6.1` 也回「not supported when using Codex with a ChatGPT account」。他點名別的型號時先試一下，不行就說明並問要不要改 astra。codex **不 commit**，常用來當唯讀審查（隊長自己跑 astra 唯讀審）。
+- **codex 可用 slug（10-09 家機實測 9 個都可用，codex-cli 0.161.0）**：`gpt-6.1-sol`（coding 主力）、`gpt-6-astra`、`gpt-6-sol`、`gpt-6-luna`、`gpt-5.6-sol`／`-terra`／`-luna`、`gpt-reserve`、`gpt-5.5`。級別暫定見 [team-model](../team-model.md)，試水溫結果見 [probe](../team-model/probe-2026-10-09.json)。slug 寫錯（如 `gpt-sol-6.1`、裸 `gpt-sol`）會回「not supported」；他點名的型號先試，不行再問。codex **不 commit**。
 - 開隊前**先把打算怎麼做講給他聽**，等他回應或糾正再派；他可能在手機上、回得慢，問題與選項照發、附預設建議。
 
 ## 指令與沙箱
@@ -23,17 +23,21 @@
 
 ### codex 呼叫與沙箱
 
-`codex exec -m gpt-6-astra -C <路徑> -o <out.md> - < <task.md>`（任務書從 stdin 餵、要自給自足；`-o` 收最後一則回報）。背景跑時也要餵 stdin（見 [driving-cli-agents](driving-cli-agents.md)）。
+- 寫碼：`codex exec -m gpt-6.1-sol -C <worktree> -o <out.md> - < task.md`
+- 審查：`codex exec -m gpt-6-astra -c model_reasoning_effort="high" -s read-only -C <worktree> -o <review.md> - < task.md`
+- 推理強度 `-c model_reasoning_effort="<low…max>"`，sol／astra 另有 `ultra`；`-C` 指向不在 trusted 清單的目錄（scratchpad 複本）要加 `--skip-git-repo-check`；非互動輸出加 `--color never`。
+
+任務書從 stdin 餵、要自給自足；`-o` 收最後一則回報。背景跑時也要餵 stdin（見 [driving-cli-agents](driving-cli-agents.md)）。
 
 純審查用 `-s read-only`。唯讀沙箱沒有可寫暫存目錄，**測試跑不起來**，必修的驗證由派它的 agent 在主 repo 補跑。
-要寫檔到 scratchpad（例如試玩）：`-s read-only` 寫不了、`-s workspace-write` 沒網路連不到 LiteLLM，只能用 `~/.codex/config.toml` 的 `danger-full-access`，`-C` 指 scratchpad、不進 repo。
-要兩份獨立 codex 意見時，第二份只能是 astra 調高推理另開對話，綜合時要打折（兩份同源）。
+要寫檔：`-s read-only` 寫不了、`-s workspace-write` 沒網路連不到 LiteLLM；**家機 `~/.codex/config.toml` 已設 `danger-full-access`**，不帶 `-s` 即可寫。
+要兩份獨立 codex 意見時，優先換不同 slug（如 astra＋6.1-sol）；同一 slug 另開對話的兩份同源，綜合時要打折。
 
-公司那台（WSL）的 `~/.codex/config.toml` 沒設 `danger-full-access`，預設模型還寫著已不能用的 gpt-sol：所以**一律帶 `-m gpt-6-astra`**，要寫檔／開子進程時改用單次旗標 `--dangerously-bypass-approvals-and-sandbox`（2026-09-22 在那台驗過，codex-cli 0.155）。背景跑用 Bash `run_in_background`，log 導到 scratchpad。
+公司那台（WSL）的 `~/.codex/config.toml` 沒設 `danger-full-access`、預設模型可能還是不能用的舊名：所以**一律明帶 `-m <slug>`**，要寫檔／開子進程時仍用單次旗標 `--dangerously-bypass-approvals-and-sandbox`（2026-09-22 驗過，codex-cli 0.155；10-09 的 slug 名單是家機測的，公司那台未測）。背景跑用 Bash `run_in_background`，log 導到 scratchpad。
 
 **任務書開頭一定寫「可以開自己的 subagent 平行做事」**，不管派哪種 codex（使用者 2026-09-22：「不管開哪種 codex，都要允許他開自己的 subagent」）。codex 的 `multi_agent` 已開、每個 session 最多 8 條。要限人數就在同一句寫上限，別不寫——[driving-cli-agents](driving-cli-agents.md) 說過不寫它會自己開一堆。
 
-**Claude API 不穩時改派 astra**：2026-09-22 Opus 連續四次被 500／529（伺服器過載）打斷，使用者說「claude api 目前狀況不好，改派 codex astra」。這時的分工是 astra 做調查、我做精簡總結、決策、寫規範——他接受這樣切。
+**Claude API 不穩時改派 astra**（codex 被限流則反過來：工人改 Sonnet 做純文字、Opus 做程式）：2026-09-22 Opus 連續四次被 500／529（伺服器過載）打斷，使用者說「claude api 目前狀況不好，改派 codex astra」。這時的分工是 astra 做調查、我做精簡總結、決策、寫規範——他接受這樣切。
 
 ## 每段做完派人試玩（2026-09-13 起）
 
