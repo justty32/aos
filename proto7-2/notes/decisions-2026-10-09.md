@@ -76,3 +76,5 @@
 - 已知限制｜L1：回合中途才下 `resume --rounds` 時正好當機、或 daemon 被殺時舊 tick 已拿鎖還沒寫 round.json，仍可能多跑一回合（要給每回合落身分標記才能修）
 - A｜A0：LLM 作者藍圖 [blueprint-llm1](blueprint-llm1.md)——第一刀是 CSV 固定工具作者（新包 `packs/author/`），只准組合可信工具、預設產出候選要人跑 `publish` 才上線；12 題照 llm-author 報告 §十預設，前 4 題第一刀照做、後 8 題等第二／三刀再核
 - C｜A0：job 名改 `<rid>_<sha8>`（符合 step 命名規則）；砍在「已記意圖、還沒合併」一律回 unknown 要人手 `publish --resend`；同需求已發布版本最多 2 個
+- C｜E1：保存端加公開 `store.recover()`（三個定死介面不變）；`keep_segments` 上限 4 守住 12 檔；必讀通道加 `dropped_upto`，刪段時推進；壞輸入丟 ValueError；diff 1045 行超 500 gate，照 D7 接受
+- 已知限制｜E1：每個 events/ 只能有一個取樣者；剛修掉半行就被殺時壞行計數可能少 1（紀錄不受影響）；`--status` 去重只在記憶體，重起可能記兩次同一事件
