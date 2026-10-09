@@ -5,6 +5,8 @@ from types import SimpleNamespace  # noqa: E402
 from unittest.mock import Mock, patch  # noqa: E402
 
 from base import CoreCase  # noqa: E402
+import aos7_daemon
+from aos7_fs import read_json, write_json
 import aos7_daemon_timeline as timeline  # noqa: E402
 
 class TestTimelineRounds(CoreCase):
@@ -40,6 +42,69 @@ class TestTimelineRounds(CoreCase):
                     self.assertEqual(tl.phase, "paused")
                     self.assertEqual(tl.round, rnd)
                     self.assertIsNone(tl.owe_round)
+
+    def test_owe_base_unchanged_clears_without_debit(self):
+        node = self.mknode("a", interval_ms=0)
+        write_json(os.path.join(node, ".aos", "round.json"), {"round": 4, "open": False})
+        path = os.path.join(self.root, ".aosd", "paused.json")
+        write_json(path, {"paused": {}, "steps": {"a": {"k": 2}}, "owe": {"a": 4}})
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.load_state()
+        tl = timeline.Timeline(d, "a", None)
+        original = d.round_done
+
+        def settled(nid, debit=True):
+            original(nid, debit=debit)
+            d.stopping = True
+
+        with patch.object(d, "round_done", side_effect=settled) as done, patch.object(tl, "prog") as prog:
+            tl._loop()
+        done.assert_called_once_with("a", debit=False)
+        prog.assert_not_called()
+        self.assertEqual(read_json(path), {"paused": {}, "steps": {"a": {"k": 2}}})
+        self.assertEqual(d.owe, {})
+
+    def test_failed_tick_clears_durable_owe_before_backoff(self):
+        tl = self.make_timeline()
+        tl.d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, tl.d.rfd)
+        tl.d.steps = {"a": {"k": 2}}
+        with patch.object(tl, "prog", return_value=(1, None, "failed")), \
+                patch.object(tl, "backoff", side_effect=lambda: setattr(tl.d, "stopping", True)):
+            tl._loop()
+            self.assertEqual(read_json(os.path.join(tl.d.aosd, "paused.json")),
+                             {"paused": {}, "steps": {"a": {"k": 2}}})
+
+    def test_control_discards_stale_owe_before_timeline_settlement(self):
+        tl = self.make_timeline()
+        write_json(os.path.join(tl.node, ".aos", "round.json"), {"round": 5, "open": False})
+        tl.d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, tl.d.rfd)
+        for op in (tl.d.op_pause, tl.d.op_resume):
+            tl.d.owe, tl.owe_base = {"a": 4}, 4
+            self.assertTrue(op("a", {"owner": "k", "rounds": 2})[0])
+            self.assertNotIn("owe", read_json(os.path.join(tl.d.aosd, "paused.json")))
+        with patch.object(tl, "prog", return_value=(0, {"stale": True}, "")), \
+                patch.object(tl.d, "round_done", wraps=tl.d.round_done) as done:
+            tl._loop()
+            done.assert_not_called()
+        self.assertEqual(tl.d.steps, {"a": {"k": 2}})
+
+    def test_checked_round_drives_settlement_and_mark_owe(self):
+        for base in (None, 4):
+            tl = self.make_timeline()
+            tl.owe_base, tl.d.owe = base, {"a": base}
+            tl.d.mark_owe = Mock()
+            tl.d.round_done.side_effect = lambda *a, **kw: setattr(tl.d, "stopping", True)
+            with patch.object(timeline, "read_round", return_value=(timeline.ROUND_CLOSED, {"round": 4}, None)), \
+                    patch.object(tl, "disk_round", return_value=99), \
+                    patch.object(tl, "prog", return_value=(0, {"stale": True}, "")):
+                tl._loop()
+            if base is None:
+                tl.d.mark_owe.assert_called_once_with("a", 4)
+            else:
+                tl.d.round_done.assert_called_once_with("a", debit=False)
 
     def test_backoff_clears_wake_and_caps_exponent(self):
         for fails in (0, 10 ** 4):   # 分別抓忙轉與大指數溢位
