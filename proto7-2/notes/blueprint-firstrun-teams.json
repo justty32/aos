@@ -1,0 +1,86 @@
+{
+  "contract": "wf-table/1",
+  "source": "blueprint-firstrun.md",
+  "extracted": "2026-10-09",
+  "note": "領地互不重疊，也不碰八個 README 回改隊（wfnode、prompt、compact、skills、routines、metrics、events、mail 各自的 README／examples）、A5 學徒隊（apprentice/ 分支、packs/usage/、modules/llmdiag/、學徒 node）與 llmcall 小修隊（packs/llmcall/）的檔。F1／F2／F3 可同時開；RH 等八個回改隊進 main；U2 等 F1～F3 進 main。",
+  "columns": [
+    "team",
+    "wave",
+    "lead",
+    "workers",
+    "items",
+    "territory",
+    "excluded",
+    "deps",
+    "gates",
+    "done",
+    "handoff"
+  ],
+  "rows": [
+    {
+      "team": "F1（aos7-up 入口：up／status／stop）",
+      "wave": "1",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼與測試；gpt-6-astra read-only high 審一次",
+      "items": "新模組 modules/up/：薄入口 aos7-up＋aos7_up.py。①`aos7-up <node> [--model M] [-d]` 冪等：wfnode init → 建 budget/llm grant（1000 萬 token、holder brain、入口依 --model 選 llm.fake／llm.litellm，litellm URL 讀 AOS7_LITELLM_URL 預設 http://localhost:4000/v1）→ skills/ 連 library 三本＋index → 用 aos7-ctl add 裝四個 keep 任務（budget-llm ledger、brain、compact watch、routines）→ routines.json 預設一列每 300 秒 wfnode check → 建人的信箱 <房子>/you/ → aos7-ctl register → 起 daemon（前景預設，Ctrl-C 收乾淨；-d 背景）→ 印三行＋每秒一行「回合 N」（有事才加「收到 n 封信 → 問 AI → 已回信」）；設定落 <node>/.aos/up.json。②`aos7-up status <node>` 五行（心跳／信／工作簿／技能／AI 用量，讀 .aosd/status.json、mail read --json、wfnode check、budget status）。③`aos7-up stop <node>`（背景模式用，呼叫 aos7-ctl daemon stop --kill）。④tests/：重跑三次冪等、daemon SIGKILL 後再 up 接回且信與帳不丟、--model 寫對 grant。⑤modules/up/README.md 照藍圖 §5 三行頭寫，第一次跑只有三個指令。",
+      "territory": "proto7-2/modules/up/{aos7-up,aos7_up.py,README.md,tests/}；proto7-2/modules/README.md 只加一列（up 包）",
+      "excluded": "不改 lib/、bin/；不改任何既有包的程式與 README；brain 任務本體歸 F2（F1 只裝 tasks.json 那一行，argv 固定為 [python3, <proto7-2>/modules/up/aos7-up, brain, <node>]）；prompts/ 歸 F2",
+      "deps": "無（既有包都在 main）；與 F2 以 `aos7-up brain <node>` 這條 argv 與 up.json 欄位（model、litellm_url、budget=budget/llm、holder=brain）為凍結介面",
+      "gates": "每檔 ≤8 KiB；wf-lint 0 BROKEN；systemd-run --user --scope python3 proto7-2/tests/run_all.py modules/up/tests 全綠；程式對外子命令只有 up（預設）／ask（F2）／status／stop，--help 一屏",
+      "done": "藍圖 §6 S1 綠；從 repo 根 `proto7-2/modules/up/aos7-up /tmp/aos/bob` 一行起得來、Ctrl-C 收乾淨、`status` 五行；人類面：README 第一次跑段落 ≤400 字、不出現帳／回合／預留／ack／退出碼五個詞",
+      "handoff": "素材：blueprint-firstrun.md §3～§4、§8；modules/wfnode/README（init 介面）、packs/budget/README（grant 欄位、ledger 接法）、packs/llmcall/examples/fake/grant.json 與 examples/litellm/、modules/skills/README（index、library）、modules/compact/README（watch 接法）、modules/routines/README（add 自動裝 keep 任務）、modules/mail/README（root 與信箱佈局 <root>/<名>/inbox）、proto7-2/README「怎麼跑」（register／daemon／stop）、modules/tools/README（aos7-ctl add）"
+    },
+    {
+      "team": "F2（brain 一回合＋ask）",
+      "wave": "1",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼與測試；gpt-6-astra read-only high 審一次；gpt-6-luna 跑真 AI 一圈",
+      "items": "modules/up/aos7_up_brain.py＋prompts/brain.json。①`aos7-up brain <node>` keep 任務：每回合（用工具包 wait_tock）`mail read <node> --json`，取最舊一封未辦 REQUEST（一回合最多一封，D4）→ `aos7-prompt render` 用 prompts/brain.json（$opt file：AGENTS.md、wf/SESSION-LOG.md、wf/handoffs/NEXT-SESSION.md、skills/INDEX 行、這封信；max_chars 沿 prompt 預設）→ `aos7-llmcall call budget/llm --holder brain --call <信id 去非法字元> --request …`（同信重跑接續本地證據）→ 回信 `mail done <node> <序號> DONE '<第一行結論>' <正文檔>` → `wfnode state '<AI 回的「停在哪」一行>'`；llmcall 退出非 0／逾時 → `done … BLOCKED '<原因>'`，不重試。②`aos7-up ask <node> '一句話' [--wait 秒]`：`mail send you <node> REQUEST`，輪詢 <房子>/you/inbox 等 DONE／BLOCKED（預設 60 秒），印正文；逾時印一句並退出 0；收到後自動 `mail done you <序號>` 歸檔。③prompts/brain.json 要求 AI 回兩段：`回信：…` 與 `停在哪：…`（一行），解析不到就整段當回信、state 寫「回了 <信id>」。④tests/：假 AI 一圈 ≤3 回合回信；SIGKILL brain 中途再起不重問（llmcall 證據）；10 封信後 SESSION-LOG 只剩 open（wfnode check 0）。⑤examples/real.sh：--model 真 AI 一圈（luna 跑），證據存 examples/real-evidence/（≤3 檔）。",
+      "territory": "proto7-2/modules/up/{aos7_up_brain.py,prompts/,tests/test_brain*.py,examples/}",
+      "excluded": "不改 lib/、bin/；不改 prompt／llmcall／mail／skills／wfnode／compact／budget 的程式與 README（有缺口寫進 problems 或回報頂層，不自己補）；aos7-up 的 up／status／stop 歸 F1",
+      "deps": "與 F1 共用凍結介面（argv、up.json 欄位）；真 AI 一圈要本機 LiteLLM 在線，模型名只用 chatgpt-gpt-6-sol-high／-astra／-luna",
+      "gates": "每檔 ≤8 KiB；單元測試全綠；真 AI 呼叫 ≤20 次；一回合內 brain 不超過一次 llmcall",
+      "done": "藍圖 §6 S2、S3 綠；`aos7-up ask` 在 F1 起的 node 上假 AI 回信可印出；真 AI 一圈 token 與秒數記在 examples/real-evidence/README 一行",
+      "handoff": "素材：blueprint-firstrun.md §4 brain 段、§8 D4；packs/prompt/README 與 examples/node/prompts/inbox.json（讀信範例）、packs/llmcall/README（call_id 規則：英數／_／-、≤64）、modules/mail/README（read --json 欄位、done 的終局與正文檔）、modules/wfnode/README（state）、modules/tools/README（任務端 wait_tock）、proto7-2/notes/play/2026-10-09-real-ai/README（真 AI 基線）"
+    },
+    {
+      "team": "F3（QUICKSTART 與三行頭模板）",
+      "wave": "1",
+      "lead": "Opus",
+      "workers": "Sonnet ×1 寫文字（純文字不碰程式）；gpt-6-luna read-only 照稿試讀一次挑詞",
+      "items": "①proto7-2/QUICKSTART.md（≤3 KiB）：藍圖 §2 圖原樣、§3 五詞三指令、預期輸出三段、「想多做一件事→去哪個包」8 列表（改 AI 讀什麼→prompt；信箱進階→mail；定時→routines；整理工作簿→compact；加技能→skills；看發生過什麼→events；量用量→metrics；讓 AI 寫包→author），每列一句、連到該包 README。零出現：帳、回合、預留、ack、退出碼、daemon、tick（D3）。②proto7-2/modules/README-head.md：三行頭模板（這是什麼／一行跑起來／看到什麼）＋「第一次可以停在這裡」句＋三條規則（不含代號、不另起 daemon／帳、一行跑在 aos7-up 起的 node 上），附一個填好的範例（用 up 包自己）。③proto7-2/README.md「入口」第一條前加一行「第一次用 → QUICKSTART.md」（只加這一行）。④QUICKSTART 的指令行先用 F1／F2 的介面寫，F1／F2 進 main 後由 F3 隊長實跑一次校對輸出文字。",
+      "territory": "proto7-2/QUICKSTART.md（新）、proto7-2/modules/README-head.md（新）、proto7-2/README.md 只加一行",
+      "excluded": "不改任何包的 README（RH 才套頭）；不改程式；不改 notes/play",
+      "deps": "指令介面照藍圖 §3／§4 先寫；實跑校對等 F1、F2 進 main",
+      "gates": "QUICKSTART ≤3 KiB、wf-lint 0 BROKEN；luna 試讀後列出看不懂的詞 ≤2 個且已改掉",
+      "done": "QUICKSTART 從第一行到預期輸出 ≤400 字；三行頭模板與範例各 ≤10 行；README 入口那一行有連結",
+      "handoff": "素材：blueprint-firstrun.md §2、§3、§5；proto7-2/notes/play/2026-10-09-newbie/README（共通卡點五條、ELI5 9 框）；~/repo/moddings/skyrim/agentctl/README（「AI 到底能做什麼」表格式）；wf/workflows/dispatch/aos-teams.md「每段做完派人試玩」五條標準"
+    },
+    {
+      "team": "RH（十個包 README 套三行頭）",
+      "wave": "2",
+      "lead": "Opus",
+      "workers": "Sonnet ×1 改字；gpt-6-luna 照每包第二行實跑一次",
+      "items": "八個回改隊都進 main 後，把 modules/README-head.md 的三行頭套到十個包（wfnode、prompt、compact、skills、routines、metrics、events、mail、llmcall、author）README 最上面；原內容整段不動，只在三行之後加「第一次可以停在這裡；下面是進階與規則」。每包第二行「一行跑起來」都要在 `aos7-up /tmp/aos/bob` 起好的 node 上實跑通（不另起 daemon、不另開帳），輸出抄成第三行。",
+      "territory": "十個包的 README.md 最上面三行＋一句（只加不改）",
+      "excluded": "不改各包程式、examples、spec；不碰 README 三行頭以下的任何字；不碰 A5／llmcall 小修隊還沒進 main 的 README（等進了再套）",
+      "deps": "F1、F2、F3 進 main；八個 README 回改隊全部進 main（看代定清單「回改」結果段）",
+      "gates": "wf-lint 0 BROKEN；每包 README 仍 ≤8 KiB（超了就把進階段拆到 spec 或 notes，由該包回改隊長定，RH 只回報）",
+      "done": "藍圖 §6 S4 綠：十個包三行頭齊、第二行全部在同一個 aos7-up node 上實跑過（luna 證據一張表進 notes/play/2026-10-10-firstrun/readme-heads.md）",
+      "handoff": "素材：modules/README-head.md、QUICKSTART.md、各包 README 現況與回改隊的改動（git log）"
+    },
+    {
+      "team": "U2（第一次體驗新手試用）",
+      "wave": "2",
+      "lead": "Opus",
+      "workers": "Claude Haiku（Agent 工具）×1、codex gpt-6-luna（model_reasoning_effort=low）×1 當新手；組長只計時與打分，不提示",
+      "items": "兩位新手只准讀 proto7-2/QUICKSTART.md（及它直接連到的 modules/up/README.md），在 /tmp/u2-firstrun/<試用者>/ 從零跑三指令（假 AI），之後各加做一件事（從「想多做一件事」表挑一列照該包三行頭跑）。量：分鐘（U 隊估法）、指令數、概念數、五條打分、「ELI5 之後仍複雜？」一題。報告 notes/play/2026-10-10-firstrun/{README,haiku,luna}.md，README 表一列一位，回改單在「回改」段交頂層。",
+      "territory": "proto7-2/notes/play/2026-10-10-firstrun/（新）＋ notes/play/README.md 加一列",
+      "excluded": "不改 QUICKSTART、up 包、任何 README；試完 git status 乾淨、/tmp 自清",
+      "deps": "F1、F2、F3 進 main（RH 不必等，加做一件事那題若該包還沒套頭就記「未套」）",
+      "gates": "兩位各只試一次、不重試；報告每份 ≤8 KiB",
+      "done": "藍圖 §6 H1～H3：≤10 分鐘、指令 ≤3、概念 ≤5、兩位取差 ≥7、兩位都答「不複雜」；不過就把回改單交頂層開 F1′／F2′／F3′",
+      "handoff": "素材：notes/play/2026-10-09-newbie/raw/task-template.md（題目模板，把「README」換成「QUICKSTART」）、newbie/README「怎麼試」與估分鐘的算法"
+    }
+  ]
+}
