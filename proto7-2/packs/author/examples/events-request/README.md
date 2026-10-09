@@ -29,4 +29,4 @@ python3 $A/bin/aos7-author publish csv1
 {"rid": "csv1", "receipt": {"v": 1, "rid": "csv1", "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be", "candidate_sha": "32ac171d8cb870db672da20829e0300f19b33b033e44ff40b031493a8900b76c", "payload_sha": "1ccea2a285404289dd107f18f30852c5a3308407af0b5f5103c854073f322b43", "job": "csv1_32ac171d", "task_name": "author-csv1_32ac171d", "registered": true, "evidence": "table", "closed": false}, "ok": true, "why": null}
 ```
 
-intake 已 ack；read 的 `--ack 1` 是同值重送，可看確認值，不另推進。再 intake 的 handled 空，回條仍是第一次 registered。propose／publish 之後的執行、answer／close 照 [原流程](../../README.md)。full（退出 5）不算送出；unknown（退出 4）照同 rid 重送。
+intake 已 ack；read 的 `--ack 1` 是同值重送，可看確認值，不另推進。再 intake 的 handled 空，回條仍是第一次 registered。propose／publish 之後的執行、answer／close 照 [進階流程](../../ADVANCED.md)。full（退出 1）不算送出；unknown（退出 3）照同 rid 重送。

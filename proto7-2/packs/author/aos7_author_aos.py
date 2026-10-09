@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 
 HERE = Path(__file__).resolve().parent
 TOP = HERE.parents[1]
@@ -105,7 +106,7 @@ def llmcall(node, budget, call_id, logical, raw, reserve, deadline, patience, en
 
 def delivery(a, req, model, raw, prefix='', explicit=True):
     info = call_info(model, req['rid'], raw, a.call if explicit else None, prefix, a.reserve)
-    receipt, info = llmcall(Path.cwd(), a.budget, info['call_id'], 'author/' + req['rid'], raw,
+    receipt, info = llmcall(Path.cwd(), a.budget, info['call_id'], ({'rv-': 'author-review/', 'ln-': 'author-learn/'}.get(prefix, 'author/')) + req['rid'], raw,
                             a.reserve, a.deadline, a.patience, None, model)
     why = None
     if info['exit'] not in (0, 4) or receipt.get('outcome') != 'answered' or not isinstance(receipt.get('text'), str):
@@ -130,7 +131,11 @@ def gates(a, cmd, candidate, reviewer):
             raise ValueError('檢查器輸出不是物件')
     except (ValueError, UnicodeError):
         return {'ok': False, 'unknown': '檢查器 stdout 不是單行 JSON'}, 'unknown'
-    why = {0: None, 2: 'invalid', 3: 'conflict', 4: 'unknown'}.get(proc.returncode, 'unknown')
+    why = {0: None, 1: ('conflict' if out.get('branch') and out.get('failed_gate') is None else 'invalid'),
+           2: 'invalid', 3: 'unknown'}.get(proc.returncode, 'unknown')
+    message = proc.stderr.decode('utf-8', 'replace').strip()
+    if message and 'error' not in out:
+        out['error'] = message.removeprefix('aos7-gates: ')
     return out, why
 
 
@@ -182,6 +187,32 @@ def learn(a, req, out):
     return dict(out, ok=True, why=None, added=lines)
 
 
+def close_aos(a, req, out):
+    from aos7_author import Node, Unknown, fact, N, OK, write_json
+    nd = Node()
+    try:
+        with nd.lock():
+            path = nd.path(req['rid'], 'receipt.json')
+            st, doc = fact(path)
+            rsha = sha(Path(a.arg).read_bytes())
+            if st != N:
+                valid = (st == OK and isinstance(doc, dict) and doc.get('v') == 1
+                         and doc.get('rid') == req['rid'] and doc.get('request_sha') == rsha
+                         and doc.get('closed') is True and doc.get('kind') == req['kind']
+                         and isinstance(doc.get('closed_at'), str) and isinstance(doc.get('versions'), dict)
+                         and all(isinstance(v, dict) and set(v) == {'job', 'branch', 'commit'} for v in doc['versions'].values()))
+                if not valid:
+                    return dict(out, close_skipped='既有 receipt 不是此需求的 aos 結案標記，保留原樣')
+            else:
+                doc = dict(v=1, rid=req['rid'], request_sha=rsha, closed=True, kind=req['kind'],
+                           closed_at=datetime.now(timezone.utc).isoformat(timespec='seconds'), versions={})
+            doc['versions'][out['candidate_sha']] = {k: out[k] for k in ('job', 'branch', 'commit')}
+            write_json(path, doc)
+        return out
+    except (Unknown, OSError) as exc:
+        return dict(out, ok=False, why='unknown', error='分支 %s 已建（%s），結案標記未完成：%s' % (out['branch'], out['commit'], exc))
+
+
 def main_aos(a):
     out = dict(ok=False, why=None, llm=None, review=None)
     try:
@@ -194,12 +225,15 @@ def main_aos(a):
             return learn(a, req, dict(ok=False, why=None, rid=req['rid'],
                                       into=str(Path(a.into).resolve()), added=[], llm=None))
         if a.cmd == 'publish':
-            if (a.reviewer or 'rules').startswith('file:'):
+            if a.repo and (a.reviewer or 'rules').startswith('file:'):
                 check, why = gates(a, 'check', a.candidate, 'rules')
                 if why is not None or not check.get('ok'):
                     return {**out, **check, 'why': why or 'invalid'}
             check, why = gates(a, 'publish', a.candidate, a.reviewer or 'rules')
-            return {**out, **check, 'why': why}
+            out = {**out, **check, 'why': why}
+            if out.get('ok') and why is None:
+                return close_aos(a, req, out)
+            return out
         candidate = Path(a.candidate).resolve() if a.candidate else None
         if a.llm:
             raw = prompt_request(a.arg, a.llm, a.context, a.gotchas, a.previous, a.feedback)
@@ -261,4 +295,6 @@ def propose_checks(a, req, out, candidate, snapshot, data):
             out['check'] = check
     if any(result.get('candidate_sha') != sha(data) for result in (out['rules_check'], out['check'])):
         return dict(out, ok=False, why='invalid', error='candidate_sha 與快照不符')
+    if check.get('error') and 'error' not in out:
+        out['error'] = check['error']
     return dict(out, ok=bool(check.get('ok')) and why is None, why=why)

@@ -60,7 +60,7 @@ class TestAuthorHelpers(CoreCase):
         self.assertEqual(r["why"], why, r)
         return r
 
-    def cli(self, node, *args, rc=0, crash=None):
+    def cli(self, node, *args, rc=0, crash=None, why=None):
         env = dict(os.environ)
         env.pop("AOS7_TEST_CRASH", None)
         if crash:
@@ -72,7 +72,7 @@ class TestAuthorHelpers(CoreCase):
             return None
         r = json.loads(p.stdout)
         self.assertEqual(r["ok"], rc == 0, r)
-        self.assertEqual(r["why"], {0: None, 2: "invalid", 3: "conflict", 4: "unknown", 5: "full"}[rc], r)
+        self.assertEqual(r["why"], why or {0: None, 1: "conflict", 2: "invalid", 3: "unknown"}[rc], r)
         return r
 
     def propose(self, node, rid="csv1", candidate=None, auto=False):
@@ -152,7 +152,7 @@ class TestAuthorCore(TestAuthorHelpers):
         self.assertEqual(before, regular_files(Path(node, "author")))
         doc = json.loads(path.read_bytes())
         doc["goal"] += "另文"
-        self.cli(node, "register", self.source("changed.json", doc), rc=3)
+        self.cli(node, "register", self.source("changed.json", doc), rc=1)
         self.assertEqual(Path(node, "author/req/csv1/request.json").read_bytes(), stored)
         self.propose(node)
         self.good(pub.publish(node, "csv1"))
@@ -289,7 +289,7 @@ class TestAuthorCore(TestAuthorHelpers):
                 if changed:
                     (job / "data.csv").write_bytes((job / "data.csv").read_bytes() + b"\n")
                 before = self.table_path(node).read_bytes()
-                r = self.cli(node, "publish", "csv1", rc=4 if changed else 0)
+                r = self.cli(node, "publish", "csv1", rc=3 if changed else 0)
                 self.assertEqual(self.table_path(node).read_bytes(), before)
                 self.assertEqual(self.tasks(node), [])
                 if changed:
@@ -321,7 +321,7 @@ class TestAuthorCore(TestAuthorHelpers):
                   lambda d: dict(d, versions={k: v for k, v in d["versions"].items()
                                               if k != old["candidate_sha"]}))
         self.assertTrue(Path(node, "jobs", old["job"]).exists())
-        self.cli(node, "close", "csv1", rc=3)
+        self.cli(node, "close", "csv1", rc=1)
         candidate = json.loads((EXAMPLE / "valid.json").read_bytes())
         candidate["intent"] = "換待審候選"
         new = self.propose(node, candidate=candidate)
@@ -346,7 +346,7 @@ class TestAuthorCore(TestAuthorHelpers):
                   lambda d: dict(d, versions={k: x for k, x in d["versions"].items() if k != v2["candidate_sha"]}))
         folder = Path(node, "author/req/csv1")
         before = {p.name: p.read_bytes() for p in folder.iterdir()}
-        r = self.cli(node, "close", "csv1", rc=3)
+        r = self.cli(node, "close", "csv1", rc=1)
         self.assertIn("待審", r["error"])
         self.assertEqual({p.name: p.read_bytes() for p in folder.iterdir()}, before)
 
@@ -382,7 +382,7 @@ class TestAuthorCore(TestAuthorHelpers):
         write_json(str(folder / "verdict.json"), vdoc)
         before = {p.name: p.read_bytes() for p in folder.iterdir()}
         steps = Path(node, "jobs", old["job"], "steps.json").read_bytes()
-        self.cli(node, "propose", "csv1", "--candidate", path, rc=3)
+        self.cli(node, "propose", "csv1", "--candidate", path, rc=1)
         self.assertEqual({p.name: p.read_bytes() for p in folder.iterdir()}, before)
         self.assertEqual(Path(node, "jobs", old["job"], "steps.json").read_bytes(), steps)
 
@@ -455,7 +455,7 @@ class TestAuthorCore(TestAuthorHelpers):
                     self.crash_publish(node, "csv1", point)
                     if point == "after-intent":
                         before = self.table_path(node).read_bytes()
-                        self.cli(node, "publish", "csv1", rc=4)
+                        self.cli(node, "publish", "csv1", rc=3)
                         self.assertEqual(self.tasks(node), [])
                         self.assertEqual(self.table_path(node).read_bytes(), before)
                         self.assertIsNone(self.doc(node, "csv1", "receipt"))
@@ -474,7 +474,7 @@ class TestAuthorCore(TestAuthorHelpers):
         task = self.tasks(node)[0]
         self.remove_task(node, task["name"])
         before = self.table_path(node).read_bytes()
-        self.cli(node, "publish", "csv1", rc=4)
+        self.cli(node, "publish", "csv1", rc=3)
         self.assertEqual(self.table_path(node).read_bytes(), before)
         self.assertIsNone(self.doc(node, "csv1", "receipt"))
         birth = {k: task[k] for k in ("name", "argv", "x")}
@@ -498,7 +498,7 @@ class TestAuthorCore(TestAuthorHelpers):
                     return t
                 edit_json(str(self.table_path(node)), change)
                 before = self.table_path(node).read_bytes()
-                self.cli(node, "publish", "csv1", rc=3)
+                self.cli(node, "publish", "csv1", rc=1)
                 self.assertEqual(self.table_path(node).read_bytes(), before)
                 self.assertIsNone(self.doc(node, "csv1", "receipt"))
 
@@ -539,7 +539,7 @@ class TestAuthorCore(TestAuthorHelpers):
         node, _ = self.prepared()
         raw = b'{"tasks": [broken\n'
         self.table_path(node).write_bytes(raw)
-        self.cli(node, "publish", "csv1", rc=4)
+        self.cli(node, "publish", "csv1", rc=3)
         self.assertEqual(self.table_path(node).read_bytes(), raw)
         self.refused(pub.recover(node, "csv1"), "unknown")
         self.assertEqual(self.table_path(node).read_bytes(), raw)
@@ -548,7 +548,7 @@ class TestAuthorCore(TestAuthorHelpers):
         """JSON null 不代表空任務表；發布回 unknown 並保留 bytes。"""
         node, _ = self.prepared()
         self.table_path(node).write_bytes(b"null")
-        self.cli(node, "publish", "csv1", rc=4)
+        self.cli(node, "publish", "csv1", rc=3)
         self.assertEqual(self.table_path(node).read_bytes(), b"null")
         self.assertIsNone(self.doc(node, "csv1", "receipt"))
 
@@ -574,7 +574,7 @@ class TestAuthorCore(TestAuthorHelpers):
         self.assertEqual(len(self.doc(node, "csv1", "receipt")["versions"]), 2)
         candidate["intent"] = "第三版"
         before = self.table_path(node).read_bytes()
-        self.cli(node, "propose", "csv1", "--candidate", self.source("third.json", candidate), rc=5)
+        self.cli(node, "propose", "csv1", "--candidate", self.source("third.json", candidate), rc=1, why="full")
         self.assertEqual(self.table_path(node).read_bytes(), before)
         for v in (v1, v2):
             self.assertEqual(Path(node, "jobs", v["job"], "out/probe").read_text(), v["candidate_sha"])
@@ -585,7 +585,7 @@ class TestAuthorCore(TestAuthorHelpers):
         self.crash_publish(node, "csv1", "after-intent")
         folder = Path(node, "author/req/csv1")
         before = {p.name: p.read_bytes() for p in folder.iterdir()}
-        self.cli(node, "close", "csv1", rc=4)
+        self.cli(node, "close", "csv1", rc=3)
         self.assertEqual({p.name: p.read_bytes() for p in folder.iterdir()}, before)
 
 
@@ -616,7 +616,7 @@ class TestAuthorDaemon(TestAuthorHelpers, DaemonCase):
         self.wait_job(node, v["job"])
         job = Path(node, "jobs", v["job"])
         frame = self.frame(node, v["job"])
-        self.cli(node, "close", "csv1", rc=3)
+        self.cli(node, "close", "csv1", rc=1)
         for step in ("c", "s"):
             self.assertEqual(len(list((job / "results" / step).glob("*.json"))), 1)
         self.cli(node, "answer", "csv1")
@@ -704,7 +704,7 @@ class TestAuthorDaemon(TestAuthorHelpers, DaemonCase):
         self.step_close(node, v["job"])
         folder = Path(node, "author/req/pending")
         before = {p.name: p.read_bytes() for p in folder.iterdir()}
-        self.cli(node, "close", "pending", rc=3)
+        self.cli(node, "close", "pending", rc=1)
         self.assertEqual({p.name: p.read_bytes() for p in folder.iterdir()}, before)
 
     def test_closed_publish_returns_receipt(self):

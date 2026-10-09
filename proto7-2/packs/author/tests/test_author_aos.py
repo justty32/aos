@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "checkers"))
 
 A = Path(__file__).resolve().parents[1]
 CLI = A / 'checkers/aos_three_gates.py'
@@ -55,7 +56,7 @@ class TestAuthorAos(unittest.TestCase):
             for filename, gate, rule in rows:
                 with self.subTest(folder=folder.name,candidate=filename):
                     code,out = self.cli(filename,folder)
-                    self.assertEqual(code,0 if gate is None else 2,out)
+                    self.assertEqual(code,0 if gate is None else 1,out)
                     self.assertEqual(out['failed_gate'],gate)
                     self.assertEqual(out['ok'],gate is None)
                     if gate:
@@ -85,7 +86,7 @@ class TestAuthorAos(unittest.TestCase):
             path = Path(tmp)/'wrong.json'
             dump(path,candidate)
             code,out = self.cli(str(path))
-        self.assertEqual(code,2,out)
+        self.assertEqual(code,1,out)
         self.assertEqual(out['failed_gate'],2)
         self.assertEqual([x['rule'] for x in out['gates']['2']['issues']],['answer'])
 
@@ -113,7 +114,7 @@ class TestAuthorAos(unittest.TestCase):
                 path = Path(tmp)/'c.json'
                 dump(path,candidate)
                 code,out = self.cli(str(path))
-                self.assertEqual(code,2,out)
+                self.assertEqual(code,1,out)
                 self.assertIn('territory',{x['rule'] for x in out['gates']['1']['issues']},out)
 
     def test_aos_publish(self):
@@ -141,7 +142,8 @@ class TestAuthorAos(unittest.TestCase):
             for path,text in candidate['files'].items():
                 self.assertEqual(git(repo,'show',branch+':'+PREFIX+'/'+path),text.encode())
             original = git(repo,'show',ref+':'+PREFIX+'/INDEX.md')
-            expected = original + (b'' if original.endswith(b'\n') else b'\n') + candidate['row'].encode()+b'\n'
+            import aos_three_gates as g
+            expected = g.insert_row(original.decode(), candidate['row'], '| `packs/{name}/').encode()
             self.assertEqual(git(repo,'show',branch+':'+PREFIX+'/INDEX.md'),expected)
             self.assertIn(b'candidate_sha: '+out['candidate_sha'].encode(),git(repo,'show','-s','--format=%B',branch))
             self.assertEqual(git(repo,'show','-s','--format=%an <%ae>|%cn <%ce>',branch).strip(),b'aos-apprentice <apprentice@aos.local>|aos-apprentice <apprentice@aos.local>')
@@ -150,7 +152,7 @@ class TestAuthorAos(unittest.TestCase):
             self.assertIs(dup['dup'],True)
             self.assertEqual(dup['commit'],out['commit'])
             code,bad = self.cli('bad-red.json',cmd='publish',extra=opts)
-            self.assertEqual(code,2,bad)
+            self.assertEqual(code,1,bad)
             self.assertNotEqual(subprocess.run(['git','-C',str(repo),'show-ref','--verify','refs/heads/apprentice/'+bad['job']],capture_output=True).returncode,0)
             changed = Path(tmp)/'changed.json'
             candidate['report'] += '新'
@@ -166,7 +168,7 @@ class TestAuthorAos(unittest.TestCase):
             # 同名已有分支但樹不同，禁止覆蓋。
             git(repo,'update-ref','refs/heads/'+branch,HEAD)
             code,conflict = self.cli(cmd='publish',extra=opts)
-            self.assertEqual(code,3,conflict)
+            self.assertEqual(code,1,conflict)
             self.assertIs(conflict['dup'],False)
             self.assertEqual(git(repo,'rev-parse',branch).decode().strip(),HEAD)
 
@@ -219,15 +221,15 @@ class TestAuthorAos(unittest.TestCase):
                 with self.subTest(review=content):
                     review.write_text(content,encoding='utf-8')
                     code,out = self.cli(extra=['--reviewer','file:'+str(review)])
-                    self.assertEqual(code,0 if accepted else 2,out)
+                    self.assertEqual(code,0 if accepted else 1,out)
                     self.assertEqual(out['failed_gate'],None if accepted else 3)
                     if not accepted and content != reviews[-1][0]:
                         self.assertIn('審查回覆格式不合',out['gates']['3']['issues'][0]['why'])
             code,out = self.cli(extra=['--ref','does-not-exist'])
-            self.assertEqual(code,4,out)
+            self.assertEqual(code,3,out)
 
     def assert_failure(self, code, out, gate, rule):
-        self.assertEqual(code,2,out)
+        self.assertEqual(code,1,out)
         self.assertEqual(out['failed_gate'],gate,out)
         self.assertEqual({x['rule'] for x in out['gates'][str(gate)]['issues']},{rule},out)
 
@@ -338,7 +340,8 @@ class TestAuthorAos(unittest.TestCase):
             self.assertEqual(code,0,out)
             original = subprocess.check_output(['git','-C',str(repo),'show',baseline_ref('packs/usage', repo)+':'+PREFIX+'/INDEX.md'])
             actual = subprocess.check_output(['git','-C',str(repo),'show',out['branch']+':'+PREFIX+'/INDEX.md'])
-            expected = original+(b'' if original.endswith(b'\n') else b'\n')+candidate['row'].encode()+b'\n'
+            import aos_three_gates as g
+            expected = g.insert_row(original.decode(), candidate['row'], '| `packs/{name}/').encode()
             self.assertEqual(actual,expected)
             self.assertNotIn(b'TAMPER',actual)
             self.assertEqual(len(actual.splitlines()),len(original.splitlines())+1)
@@ -351,7 +354,7 @@ class TestAuthorAos(unittest.TestCase):
             job = 'usage1_'+hashlib.sha256(data).hexdigest()[:8]
             subprocess.run(['git','-C',str(repo),'symbolic-ref','refs/heads/apprentice/'+job,'refs/heads/zzz'],check=True)
             code,out = self.cli(cmd='publish',extra=['--repo',repo,'--ref',baseline_ref('packs/usage', repo)])
-            self.assertEqual(code,3,out)
+            self.assertEqual(code,1,out)
             self.assertNotEqual(subprocess.run(['git','-C',str(repo),'show-ref','--verify','refs/heads/zzz'],capture_output=True).returncode,0)
             target = subprocess.check_output(['git','-C',str(repo),'symbolic-ref','refs/heads/apprentice/'+job]).decode().strip()
             self.assertEqual(target,'refs/heads/zzz')

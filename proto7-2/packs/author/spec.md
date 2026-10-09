@@ -98,7 +98,7 @@ step 不改：表項起 `aos7-step run jobs/<job>`（keep、`max_live:1`、`rest
 
 ## 8. 退出碼與錯誤
 
-CLI 印 JSON `{ok, why, ...}`。`0` 成功（含 dup）、`2` invalid（候選、需求、驗證、`payload_changed`）、`3` conflict（rid 異內容、同名表項改過／disabled、job 撞名、已結案、close 條件不足）、`4` unknown（帳或表讀不到／壞、鎖逾時、只有 intent）、`5` full（版本上限）。事件收件見 §10；無自動 JSON 修復。
+退出碼照 [藍圖](../../notes/blueprint-errors.md) §2。CLI 印 JSON `{ok, why, ...}`，不成功時 stderr 另印一行白話。`0` 成功（含 dup）、`2` invalid（候選、需求、驗證、`payload_changed`）、`1` conflict（rid 異內容、同名表項改過／disabled、job 撞名、已結案、close 條件不足）、`3` unknown（帳或表讀不到／壞、鎖逾時、只有 intent）、`1` full（版本上限）。事件收件見 §10；無自動 JSON 修復。
 
 ## 9. 明確不管
 
@@ -107,7 +107,7 @@ CLI 印 JSON `{ok, why, ...}`。`0` 成功（含 dup）、`2` invalid（候選�
 ## 10. 事件收件（ev1 must）
 
 - `send <request.json> [--events events]`：嚴格 UTF-8 JSON、只驗 rid；送 `author.request`、`author/<rid>`，payload＝`{v:1,rid,request_sha,request}`（原文字串與原 bytes SHA-256），node 取 node 目錄名。完整欄位與輸入雜湊留到收件驗。
-- 保存成功含 dup 回 `seq`／`dup`；dup 讀回同 seq 比 request_sha，異文＝conflict，已淘汰則照成功。full 不算送出（退出 5）；unknown 照同 rid 重送；usage／too_large＝invalid。退出碼沿用 §8。
+- 保存成功含 dup 回 `seq`／`dup`；dup 讀回同 seq 比 request_sha，異文＝conflict，已淘汰則照成功。full 不算送出（退出 1）；unknown 照同 rid 重送；usage／too_large＝invalid。退出碼沿用 §8。
 - `intake [--events events] [--limit 20]`：作者是該 must 通道唯一消費者，全程共用 author.lock；只登記需求，不自動 propose／publish。
 - `author/events.json`＝`{v:1,events:<realpath>,cursor:N,last:{seq,event_id,rid,result,request_sha,error?}|null}`；cursor 是下一 seq，last 只留最後一筆收件回條（含拒絕原因）。不存在從 events 的 acked_upto＋1 起；壞／不可讀＝unknown；events 路徑不同＝conflict。
 - 順序：先補 `ack(cursor-1)` → 逐筆 read → 驗 payload 型別、版本、識別與原文雜湊 → 共用 register 驗證 → `intake-before-receipt` → 原子寫游標與回條 → `intake-after-receipt` → ack。恢復補 ack 前也觸發 after-receipt，供連續 SIGKILL 驗收。

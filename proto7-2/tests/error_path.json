@@ -63,16 +63,96 @@
    "team": "ER-author",
    "name": "aos7-author",
    "entry": "packs/author/bin/aos7-author",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-author）"
+   "unsure": {
+    "argv": [
+     "close",
+     "x"
+    ],
+    "files": {
+     "author/author.lock": ""
+    },
+    "lock": [
+     "author/author.lock"
+    ]
+   }
   },
   {
    "pack": "author 三關",
    "team": "ER-author",
-   "name": "aos_three_gates",
-   "entry": "packs/author/checkers/aos_three_gates.py",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-author）"
+   "name": "aos7-gates",
+   "entry": "packs/author/bin/aos7-gates",
+   "unsure": {
+    "argv": [
+     "check",
+     "req.json",
+     "cand.json"
+    ],
+    "files": {
+     "req.json": {
+      "v": 1,
+      "rid": "usage1",
+      "kind": "aos-tool",
+      "name": "usage",
+      "task": "新增 aos7-usage 彙總 llmcall 用量與缺口",
+      "goal": "讀取既有 node 的檔案協定，讓人看見尚未完成與帳差。工具唯讀，不替人修復。",
+      "scope": {
+       "only": [
+        "packs/usage/",
+        "INDEX.md 一列"
+       ],
+       "not": [
+        "lib/",
+        "別的包",
+        "修改或刪除 node 檔案"
+       ],
+       "max_files": 12
+      },
+      "tools": [
+       {
+        "tool": "python3 proto7-2/tests/run_all.py packs/usage/tests",
+        "use": "跑新包的實質測試"
+       },
+       {
+        "tool": "bash wf/tools/wf-lint.sh proto7-2/packs/usage",
+        "use": "檢查文件相對連結"
+       },
+       {
+        "tool": "python3 check_answer.py <proto7-2> fixture",
+        "use": "獨立核對答案與唯讀"
+       }
+      ],
+      "work": [
+       "新增薄入口、唯讀程式與 README。",
+       "遵守下面固定驗收與檔案協定。",
+       "交出 files、row 與 REPORT。",
+       "aos7-usage <node> [--by day|hour]：period 取 raw.json 的 at（epoch 秒），UTC，day=YYYY-MM-DD、hour=YYYY-MM-DDTHH；不給 --by 預設 day；沒 raw 為 \"-\"；model=request.model 字串否則 endpoint；holder=request.holder。",
+       "掃 llmcall/<budget>/<call> 中有 request.json 的資料夾；receipt 整數 used／overrun，null 當 0；groups 依 (model,holder,period) 排序，raw 缺省 period=\"-\"。",
+       "budgets 是以 budget 名為鍵的物件，值恰為 {receipts_used, ledger_used, diff}；receipts_used 只加整筆合法（會計入 groups）的那些回條的 used，ledger_used 讀 budget/<budget>/ledger.json 的整數 used（bool 不算），缺或壞為 null；diff=ledger_used−receipts_used，null 傳遞。",
+       "gaps 列 no_receipt／bad_json／overrun；request／receipt／raw 壞 JSON 的整筆不計 groups；按 (budget,call_id,why) 排序。輸出 v、by、groups（model,holder,period,calls,used,overrun）、budgets、gaps。"
+      ],
+      "deliver": "一份候選 JSON；REPORT 直接寫入 report 欄，末尾必有「以後交接書該點名的工具」。",
+      "accept": [
+       "三關全過，check 退出 0。",
+       "node 不是資料夾時退出 2。",
+       "stdout 恰一行 JSON，正常退出 0，fixture 目錄、檔案位元組與權限位不變。",
+       "獨立答案檢查 ok true，所有表按規定排序。",
+       "period 取 raw.json.at 的 epoch 秒，UTC；day=YYYY-MM-DD、hour=YYYY-MM-DDTHH，預設 day，没 raw 為 \"-\"；固定 fixture 同組加總、day 合組與 hour 拆組、null 回條當 0、壞 JSON 缺口及 ledger 正負差額全部吻合。"
+      ],
+      "answer": {
+       "checker": "check_answer.py",
+       "fixture": "fixture"
+      }
+     },
+     "cand.json": {},
+     "bin/git": "#!/bin/sh\nexit 128\n"
+    },
+    "chmod": {
+     "bin/git": "0o755"
+    },
+    "env": {
+     "PATH": "{tmp}/bin:/usr/bin:/bin"
+    }
+   }
   },
   {
    "pack": "events",

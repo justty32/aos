@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import sys
 
 HERE = Path(__file__).resolve().parent
 
@@ -91,6 +92,19 @@ def result(issues):
     return {'ok': not issues, 'issues': issues}
 
 
+def insert_row(text, row, prefix):
+    """在最後一個相符表格內插列；沒有相符列才附加檔尾。"""
+    lines = text.splitlines(keepends=True)
+    matches = [i for i, line in enumerate(lines) if line.startswith(prefix.split('{name}', 1)[0])]
+    end = len(lines)
+    if matches:
+        end = matches[-1] + 1
+        while end < len(lines) and lines[end].startswith('|'):
+            end += 1
+    before = ''.join(lines[:end])
+    return before + ('' if not before or before.endswith('\n') else '\n') + row + '\n' + ''.join(lines[end:])
+
+
 def materialize(ctx):
     if 'top' in ctx:
         return
@@ -110,8 +124,8 @@ def materialize(ctx):
     rowfile = top / ctx['card']['row']['file']
     if not rowfile.resolve().is_relative_to(top.resolve()):
         raise ValueError('row 穿越 symlink')
-    text = rowfile.read_text(encoding='utf-8')
-    rowfile.write_text(text + ('' if text.endswith('\n') else '\n') + ctx['candidate'].get('row', '') + '\n', encoding='utf-8')
+    text = rowfile.read_bytes().decode('utf-8')
+    rowfile.write_bytes(insert_row(text, ctx['candidate'].get('row', ''), ctx['card']['row']['prefix']).encode('utf-8'))
 
 
 def gate_static(ctx):
@@ -271,7 +285,7 @@ def publish(ctx, out):
     contents = {p: s.encode('utf-8') for p, s in ctx['candidate']['files'].items()}
     rowfile = ctx['card']['row']['file']
     original = git(ctx, 'show', parent + ':' + ctx['prefix'] + '/' + rowfile)
-    contents[rowfile] = original + (b'' if original.endswith(b'\n') else b'\n') + ctx['candidate']['row'].encode('utf-8') + b'\n'
+    contents[rowfile] = insert_row(original.decode('utf-8'), ctx['candidate']['row'], ctx['card']['row']['prefix']).encode('utf-8')
     for path, data in contents.items():
         oid = git(ctx, 'hash-object', '-w', '--stdin', input=data).decode().strip()
         mode = '100755' if path == ctx['entry'] else '100644'
@@ -282,13 +296,13 @@ def publish(ctx, out):
     out.update(branch=branch, commit=None, dup=False)
     if command(['git', '-C', str(ctx['repo']), 'symbolic-ref', '-q', ref]).returncode == 0:
         out['ok'] = False
-        return 3
+        return 1
     old = command(['git', '-C', str(ctx['repo']), 'rev-parse', '--verify', ref])
     if old.returncode == 0:
         out['commit'] = old.stdout.decode().strip()
         out['dup'] = git(ctx, 'rev-parse', ref + '^{tree}').decode().strip() == tree
         out['ok'] = out['dup']
-        return 0 if out['dup'] else 3
+        return 0 if out['dup'] else 1
     msg = f"apprentice {ctx['request']['rid']}: {ctx['request']['task']}\n\n{ctx['candidate']['report']}\n\ncandidate_sha: {out['candidate_sha']}\n"
     commit = git(ctx, 'commit-tree', tree, '-p', parent, input=msg.encode(), env=env).decode().strip()
     p = command(['git', '-C', str(ctx['repo']), 'update-ref', '--no-deref', ref, commit, '0' * len(commit)])
@@ -301,12 +315,44 @@ def publish(ctx, out):
     return 0
 
 
+def one_line(value, limit=180):
+    text = ' '.join(str(value).split())
+    return text if len(text) <= limit else text[:limit - 1] + '…'
+
+
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.exit(2, 'aos7-gates: ' + one_line(message) + '。給需求與候選檔，例如 aos7-gates check request.json candidate.json\n')
+
+    def format_help(self):
+        return ('aos7-gates：驗候選，過三關才發布\n'
+                '  brief request.json  印任務說明\n'
+                '  check request.json candidate.json  離線驗三關\n'
+                '  publish request.json candidate.json --repo REPO  建分支\n'
+                '  --ref REF  指定基準（預設 HEAD）\n'
+                '  --reviewer rules|astra|file:PATH  預設 rules\n'
+                '其他選項見 ../ADVANCED.md\n')
+
+
+def error_line(out, code):
+    if code == 3:
+        evidence = '分支可能已建，分支與候選證據留著' if out.get('branch') else '候選證據留著，沒建分支'
+        return 'aos7-gates: 不確定：' + one_line(out.get('unknown') or '檢查未跑完') + '。' + evidence + '；照原樣再跑一次'
+    if code == 1 and out.get('branch') and out.get('failed_gate') is None:
+        return 'aos7-gates: 分支 ' + out['branch'] + ' 已存在且內容不同或是 symbolic ref。換候選或由人刪舊分支'
+    n = out.get('failed_gate') or 1
+    issue = (out.get('gates', {}).get(str(n), {}).get('issues') or [{}])[0]
+    if code == 1:
+        return f"aos7-gates: 第 {n} 關沒過（{issue.get('rule')}：{one_line(issue.get('why', ''), 80)}）。照 stdout JSON 的 gates 修正候選再跑"
+    return 'aos7-gates: ' + one_line(issue.get('why') or '輸入不合') + '。給需求與候選檔，例如 aos7-gates check request.json candidate.json'
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser()
+    ap = ArgumentParser(prog='aos7-gates')
     ap.add_argument('cmd', choices=['brief', 'check', 'publish'])
     ap.add_argument('request', type=Path)
     ap.add_argument('candidate', nargs='?', type=Path)
-    ap.add_argument('--reviewer', default='astra')
+    ap.add_argument('--reviewer', default='rules')
     ap.add_argument('--no-scope', action='store_true')
     ap.add_argument('--repo', type=Path)
     ap.add_argument('--ref', default='HEAD')
@@ -327,22 +373,30 @@ def main(argv=None):
         if source.returncode:
             raise Unknown('git toplevel 不在')
         repo = Path(source.stdout.decode().strip())
+        if a.cmd == 'publish' and a.repo is None:
+            message = f"publish 要用 --repo 指定分支建在哪個 git repo。這次會建在 {repo} 的 apprentice/{out['job']}；確定就加 --repo {repo}"
+            out['gates']['1'] = result([{'rule': 'repo', 'why': message}])
+            print(json.dumps(out, ensure_ascii=False))
+            print('aos7-gates: ' + message, file=sys.stderr)
+            return 2
         prefix = HERE.parents[2].relative_to(repo).as_posix()
         with tempfile.TemporaryDirectory(prefix='aos-three-') as tmp:
             ctx = dict(source_repo=repo, request=req, card=card, candidate=candidate, bytes=data, repo=(a.repo or repo).resolve(), prefix=prefix, ref=a.ref, tmp=tmp, reqdir=a.request.resolve().parent, reviewer=a.reviewer, no_scope=a.no_scope, root=card['root'].format(name=req['name']))
             ctx['ref'] = git(ctx, 'rev-parse', ctx['ref'] + '^{commit}').decode().strip()
             ctx['entry'] = ctx['root'] + '/' + card['entry'].format(name=req['name'])
             out = run_gates(ctx)
-            code = publish(ctx, out) if out['ok'] and a.cmd == 'publish' else (0 if out['ok'] else 2)
+            code = publish(ctx, out) if out['ok'] and a.cmd == 'publish' else (0 if out['ok'] else 1)
     except Unknown as exc:
         out = ctx.get('out', out)
         out.update(ok=False, unknown=str(exc))
-        code = 4
+        code = 3
     except (ValueError, UnicodeError, OSError, TypeError, KeyError, tarfile.TarError) as exc:
         out['ok'] = False
         out['gates']['1'] = result([{'rule': 'json' if isinstance(exc, (ValueError, UnicodeError)) else 'schema', 'why': str(exc)}])
         code = 2
     print(json.dumps(out, ensure_ascii=False))
+    if code:
+        print(error_line(out, code), file=sys.stderr)
     return code
 
 

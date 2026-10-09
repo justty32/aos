@@ -68,7 +68,7 @@ class TestAuthorEvents(TestAuthorHelpers):
                            node=os.path.basename(node), config=dict(keep_segments=1, segment_bytes=1))
             self.assertEqual(r["why"], "full" if n == 2 else None)
         self.refused(pub.send_request(node, str(path), events), "full")
-        self.cli(node, "send", path, rc=5)
+        self.cli(node, "send", path, rc=1, why="full")
         self.assertFalse(Path(node, "author").exists())
         self.assertEqual(len(self.good(pub.intake(node, events))["handled"]), 2)
         self.assertEqual(regular_files(Path(node, "author")), ["author.lock", "events.json"])
