@@ -16,6 +16,8 @@
 | `error.json` | 直譯器 | 最近一筆錯誤 `{"kind","where","why","at","round"}`，覆寫 |
 | `out/`、其他 | 子工作 | 產物；本包不刪 |
 
+直譯器啟動時清工作資料夾與 `results/<步>/` 裡寫者已不在的暫存檔（核心只清自己的資料夾）。
+
 ## 2. 步驟表
 
 ```json
@@ -30,10 +32,11 @@
 ```
 
 - 步名、`job`：英數與 `_`，最多 32 字。每步恰好一個種類鍵：
-  - **`run`**（字串陣列）：派一個子工作。欄：`ok`（必填）、`fail`、`finite`、`idempotent`（預設 false）、`patience`、`on_timeout`、`on_unknown`、`max_resends`（非負整數，預設 1）、`wake`、`receipt`（條件）、`expect`（產物路徑陣列）。
+  - **`run`**（字串陣列）：派一個子工作。欄：`ok`（必填）、`fail`、`finite`、`idempotent`（預設 false）、`patience`、`on_timeout`、`on_unknown`、`max_resends`（非負整數，預設 1）、`unknown_codes`、`wake`、`receipt`（條件）、`expect`（產物路徑陣列）。
   - **`wait`**（條件）：每回合看一次，成立走 `then`。欄：`patience`、`on_timeout`（`unknown`／`fail`）、`fail`。
   - **`count`**（非負整數 N）：框架裡這步的計數 +1，≤N 走 `then`，否則走 `exhausted`。
   - **`end`**（字串）：工作結束，狀態寫進框架。
+- `unknown_codes`：只給 run，提供時要是非空、互異的整數陣列（1～255，bool 不收）；不給當空。結果退出碼在清單中＝未交付終局結果，走 on_unknown。
 - **條件**只准四種：`{"exists": 路徑}`、`{"glob": 樣式}`（至少一個符合）、`{"result.ok": 步名}`（該步最近採用的結果 `ok`）、`{"num": 路徑, "key": "a.b", "op": "<|<=|==|!=|>=|>", "value": 數字}`（JSON 檔裡一個數字比一次）。不開運算式。
 - **展開**（只在 argv、`expect`、條件路徑裡）：`${job}`、`${out}`＝`${job}/out`、`${step}`、`${request}`、`${attempt}`、`${result}`（這次嘗試的結果檔）、`${req:<步>}`（該步最近採用結果的 request id）。展開不了＝那一步停（`halt`）。
 - **選項**（`options`）：`wake`（false）、`restart_on_end`（false）、`on_timeout`（`unknown`）、`on_unknown`（`stop`）。可在步內用同名欄逐步覆蓋的只有 `wake`（`run` 步）、`on_timeout`（`run`／`wait`）、`on_unknown`（`run`）；`restart_on_end` 是工作級，只能寫在 `options`。檢查器對**套預設後的有效值**查限制：全域 `on_timeout: kill` 時，每個 `wait` 步都要在步內改回 `unknown`／`fail`。
@@ -46,11 +49,12 @@
  "counts": {}, "visits": {"convert": 1, "stats": 1}, "accepted": {"convert": {"request", "attempt", "ok", "run"}},
  "pending": {"step": "stats", "request": "9f3a1c2b-stats-1", "attempt": "9f3a1c2b-stats-1-a1", "n": 1,
              "task": "step-csv-stats", "result": "jobs/csv/results/stats/9f3a1c2b-stats-1-a1.json",
-             "state": "intent|queued", "intent_round": 7, "since": 7, "resends": 0},
- "tries": {"9f3a1c2b-convert-1": 1, "9f3a1c2b-stats-1": 1}, "since": 7,
+             "state": "intent|queued", "intent_round": 7, "since": 7},
+ "tries": {"9f3a1c2b-convert-1": 1, "9f3a1c2b-stats-1": 1}, "resends": {}, "since": 7,
  "halt": null, "end": null, "seen": 8, "tock": 8, "rev": 12, "at": "..."}
 ```
 
+- `resends`：每個 request 已自動重送的次數；表寫失敗不重設，舊框架缺欄當空。
 - `tries`：每個 request 派過幾個 attempt；`since`：走到現在這步的回合（`wait` 的耐性起點；新工作＝建框架那圈的回合，那時回合不知道就在第一次知道時補上）；`seen`／`tock`：最近一圈看到的本地回合與叫醒它的 tock（啟動那圈 `tock` 是 null）；`rev`：寫入次數，人手指令改過框架時直譯器那一圈放棄寫入、下一圈重讀。
 
 - **識別**：`job`（表上的名）；`inst`（這一次工作，隨機）；`step_id`；`request`＝`<inst>-<step>-<第幾次走到這步>`，跨重送保持；`attempt`＝`<request>-a<k>`，每次派工一個；核心的 `slot#run` 由包裝程式從環境取，寫進結果，不預猜。
@@ -77,12 +81,12 @@
 3. `halted`：只更新 `seen`，不前進（遲到的結果照樣留在 `results/`，`resume` 後採用）。
 4. 照 `pc` 前進，一圈內可走多步，但**最多登記一個 once**：
    - `run` 沒有 `pending`：有 `receipt` 且成立→當 ok、不派。否則**先存意圖**（`pending.state=intent`、`intent_round`＝現在的回合），再拿表鎖加 once 項（表上已有同 attempt 的不加），再寫 `state=queued`。表鎖拿不到、表讀不到或壞＝**拒寫**：撤掉 `pending`、記 `error.json`，下一圈重來（attempt 號照加）。`wake: true` 時再寫 daemon 的 wake。
-   - `run` 有 `pending`：照順序看證據——結果檔（識別相符）→採用、推進；表上有同 attempt 項→還沒起，等；槽 `birth.json` 的 `x.step.attempt` 相符→有 `exit.json` 就重讀一次結果檔，仍沒有＝**unknown**；沒結束就等。都沒有：`intent` 且現在回合 ≤ `intent_round`+1（once 槽最早在加項後第三個 tock 才刪）＝確定沒加上→補加；其餘＝**unknown**。
-     - 「第三個 tock」不是核心直接承諾的數字，是本包從核心兩條保證推出的：(a) once 項從表上拿掉時，該槽 `birth.json` 已寫好（[核心 spec](../../spec.md) §4.4）；(b) 已結束的槽最早在**報結束的下一個 tock** 才刪（核心 spec §5.1）。所以加項後到第三個 tock 之前，「表上有」或「槽裡有」至少一邊看得到這個 attempt。
+   - `run` 有 `pending`：照順序看證據——結果檔（識別相符）→採用、推進；表上有同 attempt 項→還沒起，等；槽 `birth.json` 的 `x.step.attempt` 相符→有 `exit.json` 就重讀一次結果檔，仍沒有＝**unknown**；沒結束就等。都沒有：`intent` 且現在回合 == `intent_round`＝確定沒加上→補加；其餘＝**unknown**。
+     - 直譯器讀回合時，tick 可能已開回合 r、還沒讀表；加項可能在 r 就起，tock r 報結束、tock r+1 刪槽，因此 r+1 已說不清。同回合內槽最早到下一個 tock 才刪；tick 先寫 birth 再刪表項，先讀表再讀槽至少一邊看得到。代價：存意圖後、加項前被殺，下一回合重開就走 on_unknown（receipt／resend／stop），不再自動補加。
    - `wait`：條件成立走 `then`；不成立看耐性。`count`、`end` 見 §2。
 5. **耐性**：`patience` 是本 node 的回合數，起點 `since` 寫在框架；`現在回合 − since > patience` 才算到期。pause 時沒有回合，耐性不走。到期照 `on_timeout`：`unknown`（停，`halt.kind=timeout`）、`fail`（走 `fail`）、`kill`（只給 `run`：對槽寫帶 run 的 kill，再停住——`halt.kind=timeout`，處理同 unknown，等人 `resume`；不抹掉之後到的結果）。
-6. **unknown**：`on_unknown: stop`（預設）＝`halt` unknown，等人。`resend` 只准冪等步（檢查器與執行時都擋），同一 request 新 attempt，最多 `max_resends` 次（步內欄，預設 1；0＝不自動重送），之後仍 unknown 就停；人手 `resume --resend` 重派之後，自動重送次數從 0 重算。有 `receipt` 的先查，成立就當 ok。
-7. 結果 `ok: false`：走 `fail`；沒寫 `fail`＝`halt` failed。
+6. **unknown**：步拿不到結果（槽結束沒結果、過期 intent），或拿到 `unknown_codes` 裡的退出碼，都走此路。`on_unknown: stop`（預設）＝`halt` unknown，等人。`resend` 只准冪等步（檢查器與執行時都擋），同一 request 新 attempt，最多 `max_resends` 次（步內欄，預設 1；0＝不自動重送），之後仍 unknown 就停；額度屬於 request，表寫失敗不重設；人手 `resume --resend` 把該 request 的額度歸零。有 `receipt` 的先查，成立就當 ok。
+7. 結果 `ok: false` 且退出碼不在 `unknown_codes`：走 `fail`；沒寫 `fail`＝`halt` failed。預設空時非零退出碼一律是失敗結果；code 0 但 missing 產物也仍是失敗。
 8. 每圈結束寫 `seen`＝這圈看到的回合。
 
 ## 6. 檢查器（`aos7-step check`）

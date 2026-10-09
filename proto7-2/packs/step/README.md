@@ -37,7 +37,7 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
 **直譯器 `aos7-step run <工作資料夾>`**
 - 職責：啟動時先推進一圈，之後每觀察到新的 tock 再推進一圈（spec §5）：讀框架、查槽外結果、推進 `pc`；一次最多登記一個子工作的 `once`。框架 `frame.json` 只放接續狀態與把手。
 - 前置條件：自己是 `max_live: 1` 的 keep（同一工作同時只有一個直譯器，核心保證 keep 不雙開）；步驟表過了檢查器；`frame.json`、`results/` 只有本包寫；改 tasks.json 的人都拿表鎖。
-- 保證：同一嘗試不派第二次；同一結果只推進一次；證據不足停在 `unknown`，不自動重送（除非步宣告冪等且選了 `on_unknown: resend`，最多 `max_resends` 次、預設 1）；壞表拒寫；框架壞了不前進、記錯、等人；耐性用本地回合（pause 時不走）：`wait` 從進入該步的 `frame.since` 起算，`run` 從當次 `pending.since` 起算，建立新嘗試或人手 `resume` 時重設相應起點——不是整個步驟不可重設的總期限；工作進行中步驟表被改＝停（版本固定）。
+- 保證：同一嘗試不派第二次；同一結果只推進一次；步拿不到結果（槽結束沒結果、過期 intent）與拿到 `unknown_codes` 裡的退出碼都走 `on_unknown`；預設空時退出碼非 0 一律是失敗結果；證據不足停在 `unknown`，不自動重送（除非步宣告冪等且選了 `on_unknown: resend`，最多 `max_resends` 次、預設 1）；壞表拒寫；框架壞了不前進、記錯、等人；耐性用本地回合（pause 時不走）：`wait` 從進入該步的 `frame.since` 起算，`run` 從當次 `pending.since` 起算，建立新嘗試或人手 `resume` 時重設相應起點——不是整個步驟不可重設的總期限；工作進行中步驟表被改＝停（版本固定）。
 - 明確不管：子工作做的事對不對、外部效果（只看結果檔與它宣告的產物）；人手改 `frame.json`／`results/`；派工以外的資源、帳、鄰居。
 
 **子工作包裝程式 `aos7-step-result`**
@@ -60,4 +60,4 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
 
 - 框架與 tasks.json 不是同一筆交易（派工與中斷恢復順序見 spec §5 第 4 步）；第一版不做交易，跨回合說不清的一律 `unknown`。
 - 回合耐性是「這個 node 的回合」，不是牆鐘；`until_round` 是啟動准入，不是完成期限，本包不用它。
-- 核心只保證 once 最多一次、once 槽報完再留一回合。已發布的結果檔在槽外，不受槽刪除影響；但派工中斷後能不能補加，仍依賴 tasks.json、槽 birth 證據與它的保留窗口（spec §5 第 4 步）。
+- 核心只保證 once 最多一次、once 槽報完再留一回合。已發布的結果檔在槽外，不受槽刪除影響；但派工中斷後能不能補加，仍依賴 tasks.json、槽 birth 證據；補加只准同回合，下一回合走 on_unknown（spec §5 第 4 步）。
