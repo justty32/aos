@@ -78,7 +78,7 @@
 
 - `.aosd/paused.json`＝`{"paused": {"team/agents/bob": ["budget", "human"]}}`，**清單空了才開回合**；daemon 起來就寫一份。沒寫 `owner` 用 `""`。
 - `resume` 只拿掉自己的 owner；`"all": true` 全清（含所有倒數）。
-- **核心選項 `rounds`**：`resume` 帶 `"rounds": N`＝再跑 N 回合（回合確知關上才算）就以同一個 owner 再 pause；倒數按 owner 各記一份（A2-06），同一 owner 再 pause／resume 時清掉。status 的 `steps_left`＝`{owner: 剩幾回合}`。paused.json 同時存 `steps: {node: {owner: 剩幾回合}}`，每次倒數寫回，重開照它接續。
+- **核心選項 `rounds`**：`resume` 帶 `"rounds": N`＝再跑 N 回合（回合確知關上才算）就以同一個 owner 再 pause；倒數按 owner 各記一份（A2-06），同一 owner 再 pause／resume 時清掉。status 的 `steps_left`＝`{owner: 剩幾回合}`。paused.json 同時存 `steps: {node: {owner: 剩幾回合}}`，每次倒數寫回，重開照它接續。開回合前若有倒數，先在 paused.json 記 `owe: {node: 開回合前的回合號}`，回合確知關上後扣倒數與清 owe 同一次寫入；重開時回合號已前進就補扣、沒前進只清（N-06）。
 - 回合中途下 pause：本回合照常收完才停。status 的 `paused_by` 列清單，`pause_pending`＝已要求、本回合還沒收完。
 
 ### 2.5 世代、動作鎖、逾時（S-06）
@@ -94,7 +94,7 @@
 
 - 確定不在、不是資料夾了（含換成符號連結）、inode 跟時間線開始時的不同 → kill 那個 node 的活任務、時間線停下、`phase: missing`，**登記保留**；資料夾回來，確認舊任務收乾淨才重開時間線。
 - 看不到（EIO、ESTALE、EACCES…）＝不知道 → 保留時間線與記著的程序，記 `last_error`（`kind` 是 errno 名）。
-- 回收前先把意圖寫進 nodes.json 的 `reaping`（`{id: {since, why}}`，空時省略），確認收乾淨才拿掉；在 `reaping` 裡的 node 不開時間線。收不乾淨（掃描不完整）保留 missing，約每秒重試。
+- 回收前先把意圖寫進 nodes.json 的 `reaping`（`{id: {since, why}}`，空時省略），確認收乾淨才拿掉；在 `reaping` 裡的 node 不開時間線。收不乾淨（掃描不完整）保留 missing（daemon 重開後也一樣），約每秒重試。
 - 搬家＝舊 id 的任務全死；新位置要另外 register（W1）。想暫停但保留任務用 pause。
 - **收程序的範圍**（Q1 (a)）：daemon 記著的各 node 活任務 pgid（跟 `live` 每 0.25 秒更新；判不出的沿用，不清空），加上環境 `AOS7_NODE` 是那個 node、有 `AOS7_TID` 的程序。掃描不完整時照樣打記著的群組，事件記 `ok: false`。記著的 pgid 在殺之前盡可能重驗身分：群組還有活成員、卻沒有一個的環境屬於這些 node＝號碼已被重用，不打（之後掃描不完整也不打）（R8-29）。
 - unregister／stop 帶 kill 逐槽收時，有槽回 unknown（例：runner 還在啟動、任務還沒起）＝未確認乾淨：unregister 照上面保留 `reaping` 約每秒重試；stop 收尾時仍不確定的寫進 `reaping`（`why: stop-kill`），重開後續收。

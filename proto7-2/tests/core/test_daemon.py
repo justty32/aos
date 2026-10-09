@@ -647,6 +647,106 @@ class TestDaemonDurableRecovery(DaemonCase):
         time.sleep(0.2)
         self.assertEqual(self.node_round(), before + 3)
 
+    def test_steps_closed_before_save_three_crashes(self):
+        node = self.mknode("a", interval_ms=50, early=True)
+        self.round_trip()
+        before = self.round_json(node)["round"]
+        path = os.path.join(self.root, ".aosd", "paused.json")
+        write_json(path, {"paused": {"a": ["k"]}, "steps": {}})
+        p = self.start_daemon(env={"AOS7_TEST_CRASH": "round-closed-before-steps"}, register=["a"])
+        self.wait_for(lambda: self.nstat().get("phase") == "paused")
+        self.wait_receipt(self.ctl("resume", "a", "--owner", "k", "--rounds", "3"))
+        for i in range(3):
+            with self.subTest(crash=i + 1):
+                self.assertEqual(p.wait(10), -signal.SIGKILL)
+                self.assertFalse(self.round_json(node)["open"])
+                self.assertEqual(self.round_json(node)["round"], before + i + 1)
+                state = read_json(path)
+                self.assertEqual(state["steps"], {"a": {"k": 3 - i}})
+                self.assertEqual(state["owe"], {"a": before + i})
+                p = self.start_daemon(env={"AOS7_TEST_CRASH": "round-closed-before-steps"} if i < 2 else {})
+        self.wait_for(lambda: self.nstat().get("phase") == "paused", 10)
+        self.assertEqual(self.nstat()["paused_by"], ["k"])
+        self.assertEqual(read_json(path), {"paused": {"a": ["k"]}, "steps": {}})
+        time.sleep(0.2)
+        self.assertEqual(self.round_json(node)["round"], before + 3)
+
+    def test_steps_open_round_recovery_debits_once(self):
+        node = self.mknode("a", interval_ms=50)
+        self.tick()   # 模擬 daemon 在 tick 開回合後死亡的磁碟狀態
+        path = os.path.join(self.root, ".aosd", "paused.json")
+        write_json(path, {"paused": {}, "steps": {"a": {"k": 1}}, "owe": {"a": 0}})
+        self.start_daemon(register=["a"])
+        self.wait_for(lambda: self.nstat().get("phase") == "paused", 10)
+        self.assertFalse(self.round_json(node)["open"])
+        self.assertEqual(self.nstat()["paused_by"], ["k"])
+        self.assertEqual(read_json(path), {"paused": {"a": ["k"]}, "steps": {}})
+        time.sleep(0.2)
+        self.assertEqual(self.round_json(node)["round"], 1)
+
+    def test_mark_owe_save_failure_retries_same_base(self):
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.steps = {"a": {"k": 2}}
+        with mock.patch.object(d, "save_paused", side_effect=[OSError("disk unavailable"), None]) as save:
+            d.mark_owe("a", 4)
+            self.assertEqual(d.owe, {})
+            d.mark_owe("a", 4)
+        self.assertEqual(save.call_count, 2)
+
+    def test_reaping_node_stat_eio_is_missing(self):
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.registry, d.reaping = {"a": {}}, {"a": {"since": "saved"}}
+        with mock.patch.object(d, "reap"), mock.patch.object(aos7_daemon, "inject", side_effect=OSError(5, "EIO")) as fault:
+            d.check_nodes()
+        fault.assert_called_once_with("stat", os.path.join(self.root, "a"))
+        self.assertEqual(d.missing.get("a", {}).get("since"), "saved")
+
+    def test_load_filters_owe_entries(self):
+        path = os.path.join(self.root, ".aosd", "paused.json")
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        for owe in ({"a": 0, "b": 2, "../bad": 1, "a/": 1, "bool": True,
+                     "neg": -1, "float": 1.5, "str": "2"}, None, [], "bad"):
+            with self.subTest(owe=owe):
+                write_json(path, {"paused": {}, "owe": owe})
+                d.load_state()
+                self.assertEqual(d.owe, {"a": 0, "b": 2} if isinstance(owe, dict) else {})
+
+    def test_reaping_restart_stays_missing_with_proc_stat_eio(self):
+        node = self.mknode("a", [self.KEEP])
+        rules = os.path.join(self.root, "fault-rules.txt")
+        fault = Fault("@" + rules, ops={"proc-stat"})
+        self.addCleanup(fault.close)
+        p = self.start_daemon(env=fault.env, register=["a"])
+        identity = self.ready_task(node)
+        with open(rules, "w") as fh:
+            fh.write("proc-stat:/proc/%d/stat:EIO\n" % identity["pid"])
+        os.rename(node, os.path.join(self.root, "old"))
+        self.mknode("a", [self.KEEP])
+        self.wait_for(lambda: self.nstat().get("phase") == "missing")
+        self.wait_for(lambda: "a" in self.nodes_state().get("reaping", {}))
+        self.wait_for(lambda: fault.hits("proc-stat") > 0)
+        os.kill(p.pid, signal.SIGKILL)
+        self.assertEqual(p.wait(10), -signal.SIGKILL)
+        old_gen = self.status()["gen"]
+        self.start_daemon(env=fault.env)
+        self.wait_for(lambda: self.status().get("gen", old_gen) > old_gen)
+        end = time.monotonic() + 2.2
+        while time.monotonic() < end:
+            self.assertEqual(self.nstat().get("phase"), "missing")
+            self.assertFalse(os.path.exists(os.path.join(node, ".aos", "round.json")))
+            self.assertIn("a", self.nodes_state()["reaping"])
+            self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
+            time.sleep(0.05)
+        fault.check(where="（重起後回收未知保留 missing）")
+        os.remove(rules)
+        self.wait_reaped(identity)
+        fresh = self.ready_task(node)
+        self.assertEqual(self.task_state(fresh), aos7_proc.ALIVE)
+        self.wait_round(1)
+
     def test_invalid_reaping_state_refuses_start(self):
         for invalid in ([], None, "a", 1):
             with self.subTest(reaping=invalid):

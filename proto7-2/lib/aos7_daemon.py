@@ -69,6 +69,7 @@ class Daemon:
         self.kill_on_stop = False
         self._lock = threading.Lock()
         self.paused = {}             # {id: [owner...]}（2.4）
+        self.owe = {}                # {id: 開回合前的回合號}：落盤的待結算
         self.steps = {}              # {id: {owner: left}}：resume 帶 rounds，按 owner 各記一份
         self._live = {}              # {id: (monotonic, [run id])}
         self._pgids = {}             # {id: {pgid}}：活任務的程序群組，node 消失時收（2.6）
@@ -108,7 +109,10 @@ class Daemon:
         讓讀—改—寫的外部工具有一致的約定。"""
         path = os.path.join(self.aosd, "paused.json")
         with locked(path, timeout=1.0):
-            write_json(path, {"paused": {k: v for k, v in sorted(self.paused.items()) if v}, "steps": self.steps})
+            value = {"paused": {k: v for k, v in sorted(self.paused.items()) if v}, "steps": self.steps}
+            if self.owe:
+                value["owe"] = self.owe
+            write_json(path, value)
 
     def _save_paused_quiet(self):
         """node 退出後同步倒數；寫失敗只記一筆，不擋其他 node 的檢查。"""
@@ -148,20 +152,39 @@ class Daemon:
             self.steps = {k: {o: n for o, n in v.items() if isinstance(o, str) and is_int(n) and n > 0}
                           for k, v in steps.items() if isinstance(k, str) and isinstance(v, dict)}
             self.steps = {k: v for k, v in self.steps.items() if v}
+        owe = pj.get("owe", {}) if pj else {}
+        self.owe = {k: v for k, v in owe.items()
+                    if isinstance(k, str) and norm_id(k) == k and is_int(v) and v >= 0} if isinstance(owe, dict) else {}
         return gj["gen"] if gj else 0
 
     def is_paused(self, nid):
         """nid 有沒有人 pause（清單空了才開回合）。"""
         return bool(self.paused.get(nid))
 
-    def round_done(self, nid):
+    def mark_owe(self, nid, base):
+        """有倒數的回合在 tick 前先記待結算；寫失敗沿用原行為，只記錯。"""
+        try:
+            with self._lock:
+                if self.steps.get(nid) and self.owe.get(nid) != base:
+                    self.owe[nid] = base
+                    try:
+                        self.save_paused()
+                    except (OSError, Unknown):
+                        self.owe.pop(nid, None)   # 沒落盤就不算記了：下一回合再試
+                        raise
+        except (OSError, Unknown) as e:
+            self.log(ev="paused-save-error", node=nid, err=repr(e)[:300])
+
+    def round_done(self, nid, debit=True):
         """時間線確認關上一回合後呼叫：nid 每個 owner 的 rounds 倒數各扣一，到零的以那個 owner 再 pause（spec §2.4）。"""
         with self._lock:
+            had = self.owe.pop(nid, None) is not None
             s = self.steps.get(nid) or {}
-            if not s:
+            if not s and not had:
                 return
-            for owner in s:
-                s[owner] -= 1
+            if debit:
+                for owner in s:
+                    s[owner] -= 1
             done = [o for o, left in s.items() if left <= 0]
             for owner in done:
                 self._drop_steps(nid, owner)
@@ -247,6 +270,7 @@ class Daemon:
         self.missing.pop(nid, None)
         with self._lock:
             self.steps.pop(nid, None)
+            self.owe.pop(nid, None)
         self._save_paused_quiet()
         if tl and tl.is_alive():
             tl.retire, tl.retire_kill = True, kill
@@ -263,6 +287,7 @@ class Daemon:
             if owner not in lst:
                 lst.append(owner)
             self._drop_steps(nid, owner)
+            self._drop_stale_owe(nid)
             self.save_paused()
         return True, "pause %s（owner %r；現在：%s）%s" % (nid, owner, self.paused[nid], self._note(nid))
 
@@ -284,6 +309,7 @@ class Daemon:
             if rounds is not None:
                 # 倒數按 owner 各記一份：B 的 rounds 不會蓋掉 A 的
                 self.steps.setdefault(nid, {})[owner] = rounds
+            self._drop_stale_owe(nid)
             self.save_paused()
             left = list(lst)
         if not left and was:
@@ -293,6 +319,11 @@ class Daemon:
             nid, owner, "，all" if ctl.get("all") is True else "", "，rounds=%d" % rounds if rounds else "",
             "還有 %s 在 pause" % left if left else ("沒人 pause 了，馬上開回合" if was else "本來就沒人 pause"),
             self._note(nid))
+
+    def _drop_stale_owe(self, nid):
+        """還沒有時間線（重開後、結算前）就改倒數：落盤的待結算屬於舊倒數，不扣到新的上。呼叫的人拿著 _lock。"""
+        if nid not in self.timelines:
+            self.owe.pop(nid, None)
 
     def _drop_steps(self, nid, owner):
         """拿掉 nid 上 owner 的 rounds 倒數。呼叫的人拿著 _lock。"""
@@ -479,6 +510,9 @@ class Daemon:
         for nid in sorted(self.registry):
             path = node_path(self.root, nid)
             tl = self.timelines.get(nid)
+            if tl is None and nid in self.reaping:   # 重開後也一樣：回收還沒確認乾淨就是 missing（A9-01）
+                self.missing.setdefault(nid, {"since": (self.reaping[nid] or {}).get("since") or now(),
+                                             "why": "回收還沒確認乾淨（reaping）"})
             try:
                 inject("stat", path)
                 st = os.lstat(path)
@@ -505,6 +539,7 @@ class Daemon:
                     self.gone_tls[nid] = tl
                     with self._lock:
                         self.steps.pop(nid, None)
+                        self.owe.pop(nid, None)
                     self._save_paused_quiet()
                     self._live.pop(nid, None)
                     self.reap(nid, path, "node-gone-kill", why=gone)

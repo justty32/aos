@@ -13,7 +13,7 @@ import time
 
 import aos7_task
 from aos7_fs import (BIN, N, OK, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, env_with_bin, fact, hold, is_int, node_path, now,
-                     read_json, read_round, reap_stale_owner)
+                     read_json, read_round, reap_stale_owner, test_point)
 
 POLL = 0.02
 DEFAULT_INTERVAL_MS = 1000
@@ -107,7 +107,9 @@ class Timeline(threading.Thread):
         self.wake = threading.Event()
         self.kick = None                     # wake／resume 的 monotonic 時刻（分辨回合中、回合後送來的）
         self.round_why = None                # check_round 判不出時的原因
+        self.checked_round = 0               # check_round 同一次讀到的回合號
         self.recover_fails = 0
+        self.owe_base = getattr(daemon, "owe", {}).get(node_id)
         self.owe_round = None                # 待結算回合號：確知關上才扣 rounds 倒數
         self.unverified = None               # 上一次認不出的鎖持有者原因（事件去重）
 
@@ -162,8 +164,9 @@ class Timeline(threading.Thread):
 
     def check_round(self):
         """不變條件一（spec §2.2）：回 True＝明確開著、False＝明確關了或新空間、None＝不知道（原因放 round_why，只能退避）。"""
-        st, _r, why = read_round(os.path.join(self.node, ".aos", "round.json"))
+        st, r, why = read_round(os.path.join(self.node, ".aos", "round.json"))
         self.round_why = why
+        self.checked_round = r["round"] if r else 0   # 同一次讀到的回合號（倒數結算用，不用顯示快取）
         self.round_open = True if st == ROUND_OPEN else False if st in (ROUND_CLOSED, ROUND_NONE) else None
         return self.round_open
 
@@ -203,6 +206,13 @@ class Timeline(threading.Thread):
                 self.d.round_done(self.node_id)
                 self.owe_round = None
                 continue   # 補扣後回頂端重看 pause
+            if self.owe_base is not None and getattr(self.d, "owe", {}).get(self.node_id) != self.owe_base:
+                self.owe_base = None   # 落盤的待結算已被控制檔清掉（屬於舊倒數）
+            if ro is False and self.owe_base is not None and self.owe_round is None:
+                debit = self.checked_round > self.owe_base   # 回合號前進＝tick 開過回合（N-06）
+                self.owe_base = None
+                self.d.round_done(self.node_id, debit=debit)
+                continue
             if ro:
                 self.recovery_pending = True
                 self.phase = "tock"
@@ -217,9 +227,11 @@ class Timeline(threading.Thread):
                 self.recovery_pending = False
                 self.recover_fails = 0
                 self.event("round-recovered", round=self.disk_round())
-                if self.owe_round is not None:   # 回合確知關上才扣 rounds 倒數
-                    self.owe_round = None
+                if self.owe_round is not None or self.owe_base is not None:
+                    self.owe_round = self.owe_base = None
                     self.d.round_done(self.node_id)
+                else:   # G2：tick 失敗的半回合只清待結算
+                    self.d.round_done(self.node_id, debit=False)
                 continue   # 回到頂端重新看 pause 與倒數
             self.recover_fails = 0
             # 2. pause
@@ -228,6 +240,9 @@ class Timeline(threading.Thread):
                 self.wake.wait(POLL)
                 self.wake.clear()
                 continue
+            mark_owe = getattr(self.d, "mark_owe", None)
+            if mark_owe:
+                mark_owe(self.node_id, self.checked_round)
             # 3. tick（間隔照 monotonic 算，牆鐘校時不影響）
             self.interval_ms, self.early_tock = ms, early
             t0 = time.monotonic()
@@ -245,6 +260,7 @@ class Timeline(threading.Thread):
             if rc and not tick_cut:
                 # 不知道（3）或失敗（例外、退出碼 1）都不是一個回合：退避後回頂端（tick 若已開了回合，頂端先 tock 收掉），
                 # 不扣 rounds 倒數（G2）。被逾時收掉的 tick 照常往下 tock，總結標 incomplete。
+                self.d.round_done(self.node_id, debit=False)   # 先清落盤的待結算：當機重開也不把這個半回合算進去
                 self.backoff()
                 continue
             started = (out or {}).get("started") or []
@@ -279,6 +295,7 @@ class Timeline(threading.Thread):
                 self.event("round-unclosed", round=self.round, rc=rc)
                 continue
             closed_at = time.monotonic()
+            test_point("round-closed-before-steps")
             self.d.round_done(self.node_id)
             if woke:
                 self.event("woke", round=self.round)   # 被 wake 提前結束的回合不等剩下的 interval
