@@ -1,4 +1,4 @@
-"""固定答案與隔離變體；不跑重造腳本、不匯入候選。"""
+"""主樣本自檢與隔離變體；不跑重造腳本、不匯入候選。"""
 import json
 import os
 from pathlib import Path
@@ -12,6 +12,55 @@ NAME = 'mailsent'
 MAIN = {'v': 1, 'senders': {'alice': 3, 'bob': 6, 'carol': 4, 'dave': 2}}
 EMPTY = {'v': 1, 'senders': {}}
 OPEN_ID = 'dave-20261009T232446-4a6808235433'
+
+
+def reference(root):
+    """按個人信箱慣例讀信，供自檢與答案會變的測資使用。"""
+    people, records = {}, []
+    for box in sorted(Path(root).iterdir()):
+        inbox = box / 'inbox'
+        if (box.name.startswith('.') or box.name == 'teams' or
+                not box.is_dir() or box.is_symlink() or
+                not inbox.is_dir() or inbox.is_symlink()):
+            continue
+        letters = []
+        for folder in (inbox, inbox / 'done'):
+            if not folder.is_dir() or folder.is_symlink():
+                continue
+            for path in sorted(folder.glob('*.md')):
+                if path.name.startswith('.') or not path.is_file() or path.is_symlink():
+                    continue
+                lines = path.read_text(encoding='utf-8').splitlines()
+                if not lines or lines[0] != '---' or '---' not in lines[1:]:
+                    continue
+                end = lines.index('---', 1)
+                letters.append(dict(line.split(': ', 1) for line in lines[1:end] if ': ' in line))
+        people[box.name] = {'letters': len(letters),
+                            'requests': sum(r.get('status') == 'REQUEST' for r in letters)}
+        records.extend(letters)
+    senders = {}
+    for record in records:
+        sender = record['from']
+        senders[sender] = senders.get(sender, 0) + 1
+    return {'v': 1, 'senders': dict(sorted(senders.items()))}
+
+
+def change_letters(root):
+    """只改隔離複本：兩封終局回信、一封新請求、減一封進度信。"""
+    additions = (
+        ('alice/inbox/variant-needs-user.md', 'bob', 'alice', 'NEEDS-USER', 'variant-needs-user', OPEN_ID),
+        ('bob/inbox/variant-request.md', 'erin', 'bob', 'REQUEST', 'variant-erin-request', ''),
+        ('carol/inbox/done/variant-failed.md', 'alice', 'carol', 'FAILED', 'variant-failed', 'bob-20261009T232446-f716842f110d'),
+    )
+    for relative, sender, recipient, status, ident, reply in additions:
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('---\nfrom: ' + sender + '\nto: ' + recipient +
+                        '\nstatus: ' + status + '\nat: 2026-10-09T00:00:00+08:00' +
+                        '\nreply-to: ' + sender + '/inbox\nid: ' + ident +
+                        '\nre: ' + reply + '\n---\n# 增減測資\n', encoding='utf-8')
+    (root / 'dave/inbox/20261009T2324-carol-PROGRESS.md').unlink()
+    (root / 'frank/inbox').mkdir(parents=True)
 
 
 def partial_reply():
@@ -78,9 +127,14 @@ def readonly(node):
 
 
 def check_answer(top, fixture):
+    try:
+        if reference(fixture) != MAIN:
+            return dict(ok=False, issues=['檢查器自檢失敗'])
+    except (OSError, ValueError, KeyError):
+        return dict(ok=False, issues=['檢查器自檢失敗'])
     issues = []
     entry = Path(top).resolve() / ('packs/' + NAME + '/bin/aos7-' + NAME)
-    def run(node, expected=None, code=0, label='case'):
+    def run(node, expected=None, code=0, label='case', reveal_expected=True):
         # 父目錄快照也涵蓋不存在／檔案輸入與旁邊的副作用。
         before = snapshot(node.parent)
         try:
@@ -98,7 +152,10 @@ def check_answer(top, fixture):
                 except ValueError:
                     actual = None
                 if not exact(actual, expected) or not sorted_keys(actual):
-                    issues.append(label + '：答案不合：得到 ' + p.stdout.decode('utf-8', 'replace')[:300] + '；應為 ' + json.dumps(expected, ensure_ascii=False))
+                    issue = label + '：答案不合：得到 ' + p.stdout.decode('utf-8', 'replace')[:300]
+                    if reveal_expected:
+                        issue += '；應為 ' + json.dumps(expected, ensure_ascii=False)
+                    issues.append(issue)
         except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
             issues.append(label + ': ' + str(exc))
         finally:
@@ -112,7 +169,7 @@ def check_answer(top, fixture):
     run(original, MAIN, label='主樣本（真郵局）')
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for variant in range(3):
+        for variant in range(4):
             node = root / str(variant)
             shutil.copytree(original, node, symlinks=True)
             if variant == 0:
@@ -135,13 +192,17 @@ def check_answer(top, fixture):
                 (staging / 'tmpvariant').write_text(partial)
                 (inbox / '.draft.md').write_text(partial)
                 label = '暫存：再放一份 <人>/inbox/.tmp/ 寫到一半的信和一個 .draft.md（. 開頭的檔與資料夾都不是信）'
-            else:
+            elif variant == 2:
                 inbox = node / 'teams/ops/inbox'
                 inbox.mkdir(parents=True)
                 for i, status in enumerate(('PROGRESS', 'DONE', 'FAILED')):
                     (inbox / ('broadcast' + str(i) + '.md')).write_text('---\nfrom: ops\nto: team:ops\nstatus: ' + status + '\nid: broadcast-' + str(i) + '\nre: ' + OPEN_ID + '\n---\n# 廣播\n')
                 label = '團隊：再加一個 R/teams/ops/inbox/ 團隊信箱和幾封廣播（teams/ 是團隊資料夾，不是人；團隊信不算）'
-            run(node, MAIN, label=label)
+            else:
+                change_letters(node)
+                label = '增減：加減幾封信、加一個空信箱（答案會變，不能背主樣本）'
+            run(node, reference(node) if variant == 3 else MAIN, label=label,
+                reveal_expected=variant != 3)
         ro = root / 'readonly'
         shutil.copytree(original, ro, symlinks=True)
         modes = readonly(ro)
