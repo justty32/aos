@@ -96,7 +96,8 @@
 - 看不到（EIO、ESTALE、EACCES…）＝不知道 → 保留時間線與記著的程序，記 `last_error`（`kind` 是 errno 名）。
 - 回收前先把意圖寫進 nodes.json 的 `reaping`（`{id: {since, why}}`，空時省略），確認收乾淨才拿掉；在 `reaping` 裡的 node 不開時間線。收不乾淨（掃描不完整）保留 missing，約每秒重試。
 - 搬家＝舊 id 的任務全死；新位置要另外 register（W1）。想暫停但保留任務用 pause。
-- **收程序的範圍**（Q1 (a)）：daemon 記著的各 node 活任務 pgid（跟 `live` 每 0.25 秒更新；判不出的沿用，不清空），加上環境 `AOS7_NODE` 是那個 node、有 `AOS7_TID` 的程序。掃描不完整時照樣打記著的群組，事件記 `ok: false`。
+- **收程序的範圍**（Q1 (a)）：daemon 記著的各 node 活任務 pgid（跟 `live` 每 0.25 秒更新；判不出的沿用，不清空），加上環境 `AOS7_NODE` 是那個 node、有 `AOS7_TID` 的程序。掃描不完整時照樣打記著的群組，事件記 `ok: false`。記著的 pgid 在殺之前盡可能重驗身分：群組還有活成員、卻沒有一個的環境屬於這些 node＝號碼已被重用，不打（之後掃描不完整也不打）（R8-29）。
+- unregister／stop 帶 kill 逐槽收時，有槽回 unknown（例：runner 還在啟動、任務還沒起）＝未確認乾淨：unregister 照上面保留 `reaping` 約每秒重試；stop 收尾時仍不確定的寫進 `reaping`（`why: stop-kill`），重開後續收。
 
 ### 2.7 stop 與守門檔（S-21）
 
