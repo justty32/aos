@@ -298,3 +298,5 @@
 - 未過但收｜UW：up 用語白話——「假 AI」→「練習用的 AI」、卡住信改寫（拿掉 ADVANCED 路徑、寫明重寄方式）、進度一律叫「步」、「回合」只指心跳。新手兩輪都答對，Haiku 4／5、luna 7／7；Haiku 扣分多在 status 詞與信頭（領地外），照「不追分」收
 - C｜頂層：「假 AI」殘留（README-head、kernel ADVANCED／範例、skills、compact、INDEX、tests README、longtask 範例信）與 KF 的 E5、藍圖 C10 註記一起歸最後整合隊 I2
 - C｜I2：最後整合進 main——INDEX／README／modules README／tests README（1216 項）／code map 對齊；今天造成的壞連結 44→0（剩 2 條舊的指向未入版控的 user-advice.md）；RV-fix-A 信補完並歸檔 inbox/done；「假 AI」統一（skills 留 AP5）；kernel 進 error_path.json；藍圖補 C10 註記；play 索引補 3 列。llmcall README 一處「假 AI」頂層順手改
+- 使用者｜scaffold 藍圖 §9 方向題（22:5x 回覆）：① 選單**現在就讓聰明模型（astra）寫**給笨模型用（翻掉 Fable 預設 a）；② 連錯三次停下回報、不換模型；③ brain 四選一先不動、只認定為一層選單；④ A／B 沿用 AP4 三題；⑤ 工具目錄先放 packs/menu/tools.json（未問，用預設）。使用者另提：各用途盡量給專用工具、少依賴 shell（已併入 scaffold 意圖卡）
+- 未完｜AP5：交件格式 `=== 路徑 ===` 文字段＋4 道「藏慣例」郵局題做好、author 子集 166 綠；A／B 只跑完第 1 題第 1 輪（四組都撞到藏的慣例、文字格式 4／4 過第 1 關）。分支 loop13/AP5（e6b68dc1）未 rebase、未跑全套、未 merge，接手看 aos-wt/AP5/HANDOFF-AP5.md。題目檢查器約 1100 行算題材不算程式，頂層照收
