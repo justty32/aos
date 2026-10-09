@@ -159,3 +159,4 @@
 - 結果｜U 隊：10 個模組新手試用**全部沒過**（Haiku／luna 只看 README，取較差分數 5.2～6.8，門檻 7）；兩位都判「ELI5 後仍複雜」→ [newbie 總表](play/2026-10-09-newbie/README.md)
 - B｜頂層：照「做完回頭審→修或重造」開回改隊：README 改就能過的（compact、prompt、wfnode、metrics、mail）與要改第一次跑流程的（skills、routines、events；llmcall 等小修隊、author 等 A5 交件後再改）；每隊改完用同兩位新手重試到 ≥7 才算完成
 - B｜頂層：另開一隊「整體第一次體驗」設計：新手第一次跑就要碰 daemon、帳（budget）、回合等底層概念是共同病根，研究能否給一個共用的「一鍵起 node」入口把這些藏起來
+- C｜NP：llmcall 打 localhost／127.0.0.1／::1 時一律直連、不走環境 proxy（其他主機照舊）
