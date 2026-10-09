@@ -28,9 +28,9 @@ for n in range(20):
         self.assertEqual(len({l['id'] for l in rows}), 160)
         for p in paths:
             text = p.read_text()
-            self.assertTrue(text.endswith('無\n'))
-            self.assertIn('完整正文' * 100, text)
-            self.assertEqual(text.count('\n## '), 4)
+            self.assertTrue(text.endswith('完整正文' * 100 + '\n'))
+            self.assertIn('狀態：還在辦，這是進度\n\n', text)
+            self.assertEqual(text.count('\n## '), 0)
         self.assertEqual(list((self.box('bob') / '.tmp').iterdir()), [])
 
 

@@ -6,7 +6,7 @@
 
 只解析非點開頭的 `.md` 一般檔案；忽略 `.gitkeep`、隱藏 `.md`、其他副檔名與目錄，頂層／done／團隊信箱共用此規則。
 
-信格式照 inbox PROTOCOL：frontmatter 是 `from to status at reply-to id re`，正文固定「做了什麼／產出／沒做到／需要決定」四段。信 id 使用寄件者＋秒級時間＋隨機值。
+機器欄位只在信頭，frontmatter 仍是 `from to status at reply-to id re`；結論下方附白話狀態（請求信不附），讀信時不算進 body，另以 `plain` 回傳白話狀態。正文原樣使用；四段協定正文的空段不印、不補「無」。信 id 使用寄件者＋秒級時間＋隨機值。
 
 node 信箱的未辦信、`done/`、`.tmp/`、`.handled/`、`.seen` 等都在 `R/<名字>/inbox/`；events 仍在 `R/<名字>/events/`。團隊仍用 `R/teams/<團隊>/members`（首行領導）與 `R/teams/<團隊>/inbox/`。
 

@@ -81,7 +81,7 @@ class BrainStuckTests(DaemonCase):
         # 回信只有白話：不露 call、帳、給維護者的指令；細節只指去 ADVANCED
         for word in (cid, '回合', 'adopt', '預留', 'LiteLLM', 'reply.json', 'call', '進階', '秒'):
             self.assertNotIn(word, plain)
-        self.assertIn('不花錢。\n\n細節見 `modules/up/ADVANCED.md` 的〈卡住的回信〉。\n', body)
+        self.assertIn('不花錢。\n\n細節見 `modules/up/ADVANCED.md` 的〈卡住的回信〉。', body)
         self.assertIn('等了約 1 分鐘', body)
         self.assertIn('〈卡住的回信〉', (TOP / 'modules/up/ADVANCED.md').read_text())
         how = (self.node / 'brain/stuck' / cid / 'how.md').read_text()

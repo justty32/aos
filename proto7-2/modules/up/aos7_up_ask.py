@@ -12,6 +12,10 @@ def show_body(text, title):
     headings = ('做了什麼', '產出（檔案路徑 / commit / 分支）',
                 '沒做到、或證據不足的部分', '需要對方或使用者決定的事')
     parts = re.split(r'(?m)^## (' + '|'.join(map(re.escape, headings)) + r')[ \t]*\r?\n', text)
+    if len(parts) == 1:
+        if text.strip() and text.strip() != title:
+            print(text.strip('\n'))
+        return
     for heading, body in zip(parts[1::2], parts[2::2]):
         body = body.strip('\n')
         if heading == '做了什麼':

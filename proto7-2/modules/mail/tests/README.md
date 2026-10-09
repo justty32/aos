@@ -11,7 +11,7 @@ systemd-run --user --scope -p TasksMax=300 python3 -B proto7-2/tests/run_all.py 
 sh proto7-2/modules/mail/examples/two_nodes.sh
 ```
 
-35 項測試全綠，範例印 OK，第一次跑整段已在真實檔案系統執行，最後 audit 退出 0。
+43 項測試全綠，範例印 OK，第一次跑整段已在真實檔案系統執行，最後 audit 退出 0。
 測試 import base 啟用 SIGKILL 鉤子；既有 10 項保留，新增審查 1–7 各一項與人類介面一項。
 新增分鐘信名／歸檔避撞與模板 ROSTER 段內追加兩項；另確認讀信及終局回信後、原信歸檔前皆不 ack。
 涵蓋 160 封固定同分鐘並行投遞、辦結中斷與 handler 一次、連續 must ack，以及輸出 flush 前／後中斷、flush／讀檔失敗、真的 retention gap、並行送／辦／audit。
@@ -50,7 +50,7 @@ sh proto7-2/modules/mail/examples/two_nodes.sh
 
 ## 現行測試分檔
 
-`_mailcase.py` 共用 setUp／CLI；`test_mail_deliver_1/2.py` 為投遞、復原、團隊與整合測試；`test_mail_review_1/2/3.py` 為前輪審查、人類介面與快照原子性；`test_mail_errors_effects.py` 為本輪 6 項（四類需求加缺口／錯誤保護）。既有 29 個測試名稱保留，另加 6 個，共 35 項。patch 投遞用 aos7_mail，辦結／輪詢用 aos7_mail_box，ack 內部用 aos7_mail_ack。
+`_mailcase.py` 共用 setUp／CLI；`test_mail_deliver_1/2.py` 為投遞、復原、團隊與整合測試；`test_mail_review_1/2/3.py` 為前輪審查、人類介面與快照原子性；`test_mail_errors_effects.py` 為本輪 6 項（四類需求加缺口／錯誤保護）。原有 36 項測試保留，新增白話回信 7 項，共 43 項。`test_mail_plain.py` 涵蓋白話狀態、信頭不變、JSON body／plain、空段省略、一般正文與舊信解析。patch 投遞用 aos7_mail，辦結／輪詢用 aos7_mail_box，ack 內部用 aos7_mail_ack。
 
 10-09 ER-mail（副作用與錯誤路徑）每條拿掉修法用 `python3 -B` 實跑 `-k <測試>` 都退出 1，還原後全套 35 項綠：
 

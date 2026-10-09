@@ -144,6 +144,14 @@ b.once(node, 2)
 
 
 class BrainReviewUnitTests(unittest.TestCase):
+    def test_ask_plain_body(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            show_body('\n    第一行\n## 備註\n原文\n\n', '結論')
+            show_body(' \n結論\n ', '結論')
+            show_body(' \n\t', '結論')
+        self.assertEqual(out.getvalue(), '    第一行\n## 備註\n原文\n')
+
     def test_ask_preserves_subheading_and_none(self):
         text = '## 做了什麼\n答案\n## 失敗\n無\n\n## 產出（檔案路徑 / commit / 分支）\n無\n'
         out = io.StringIO()

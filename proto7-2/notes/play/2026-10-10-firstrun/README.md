@@ -107,3 +107,15 @@ ER-up（分支 `loop10/up`）把交頂層 1～4 改進 up 包：`--help` 只列�
 - 兩位都還提：「工作簿」像試算表、`wf/` 對新手沒意義；技能具體是什麼；正在辦與卡住是不是同一件事。
 - 信件（不計分）：mail 的回信模板固定附「產出（檔案路徑 / commit / 分支）：無」等三段，與信頭 `status: BLOCKED`、`reply-to`，兩位都說看不懂；這在 mail，不在 up。
 - Haiku r3 第 5 步的 stop＋rm 被權限擋下，隊長代收。
+
+## MT（回信白話化，2026-10-09）
+
+分支 `loop13/MT`，意圖卡 [mail-plain](../../intents/mail-plain.md)。mail 回信：信頭（`---` 之間）一字不動、程式照舊讀；結論下多一行白話狀態「狀態：辦好了／卡住了，下面寫了怎麼辦／要你決定…／做不到…／還在辦…」（讀信時不算進 body）；不再自動補「產出／沒做到／需要決定：無」，只給一段話就只印那段話，四段協定正文只印有內容的段。`up ask` 的 show_body 跟著認沒有標題的正文。
+
+題目 [raw/mt-task-template.md](raw/mt-task-template.md)：給一封真實「辦好了」回信、一封卡住回信（[raw/mt-make_letters.sh](raw/mt-make_letters.sh) 用真 mail 產生，卡住內文取自 brain），問「這封信要你做什麼？」打 1～10 分。改前／改後信件在 [raw/mt-letters/](raw/mt-letters/)。
+
+| 輪 | Haiku | luna | 兩人答對？ | 過？（Haiku ≥6、luna ≥7） |
+|---|---|---|---|---|
+| 1 | 6 | 9 | 是（第一封不用做事；第二封二選一：不做或重寄） | 是 |
+
+原文：[Haiku r1](raw/mt-haiku-r1.md)、[luna r1](raw/mt-luna-r1.md)。一輪就過，沒跑第 2 輪。剩下的扣分：信頭 `status: DONE／BLOCKED`、`id`、`reply-to` 兩人仍提（信頭是給程式的，這輪刻意不動）；卡住信內文「假 AI」「系統不會自己重問」「細節見 `modules/up/ADVANCED.md`」屬 brain 的 stuck_reply（modules/up），不在 mail。
