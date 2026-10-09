@@ -151,9 +151,9 @@ def send(root, me, to, status, title, body='', re_id='', ident=None):
             result = publish((box.parent if to.startswith('team:') else Path(root) / to) / 'events', kind='mail.request', event_id=ident,
                              payload={'id': ident, 'from': me, 'to': to, 'file': str(final)}, must=True, node=to)
             if not result['ok']:
-                print('aos7-mail: 必達提醒未保存（' + ' '.join(str(result.get('why')).splitlines()) + '），信已寄出。信是權威，下次 read 或 done 會再試', file=sys.stderr)
+                print('aos7-mail: 必達提醒沒存下（' + ' '.join(str(result.get('why')).splitlines()) + '），信已寄出。不用重寄，對方照常 read 就看得到', file=sys.stderr)
         except Exception as e:
-            print('aos7-mail: 必達提醒未保存（' + ' '.join(str(e).splitlines()) + '），信已寄出。信是權威，下次 read 或 done 會再試', file=sys.stderr)
+            print('aos7-mail: 必達提醒沒存下（' + ' '.join(str(e).splitlines()) + '），信已寄出。不用重寄，對方照常 read 就看得到', file=sys.stderr)
     return {'sent': str(final), 'id': ident}
 
 
@@ -171,5 +171,12 @@ def audit(root, me=None):
             and (me is None or me in (l['from'], l['to']))]
 
 
-from aos7_mail_setup import roster, team
-from aos7_mail_box import ack, event_ack, finish, complete, done, handle, poll
+_LATER = {'roster': 'aos7_mail_setup', 'team': 'aos7_mail_setup', 'ack': 'aos7_mail_ack', 'event_ack': 'aos7_mail_ack',
+          **dict.fromkeys(('finish', 'complete', 'done', 'handle', 'poll'), 'aos7_mail_box')}
+
+
+def __getattr__(attr):  # 延後載入舊 API，免循環 import
+    if attr not in _LATER:
+        raise AttributeError(attr)
+    import importlib
+    return getattr(importlib.import_module(_LATER[attr]), attr)

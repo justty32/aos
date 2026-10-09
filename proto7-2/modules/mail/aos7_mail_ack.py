@@ -13,15 +13,14 @@ def ack(root, me):
         return
     marker = box / '.acked'
     local = load(marker, 0)
-    upto, cursor = local, local + 1
+    upto, cursor, unsure = local, local + 1, False
     ended = {l['id'] for p in letters(box / 'done')
              if (l := letter(p))['status'] == 'REQUEST'}
     while True:
         result = events_read(events, 'must', cursor=cursor)
-        if result['errors']:
-            break
         gaps = result['gaps']
-        if any(g.get('kind') != 'retention' for g in gaps):
+        if result['errors'] or any(g.get('kind') != 'retention' for g in gaps):
+            unsure = True  # 讀不清（可能 events 半路中斷待復原）：不越過
             break
         # retention 只會淘汰 events 已 ack 的段；本地可能落後。
         gap = next((g for g in gaps if g['from'] <= cursor <= g['to']), None)
@@ -41,7 +40,7 @@ def ack(root, me):
             upto, cursor = rec['seq'], rec['seq'] + 1
         if stopped or len(records) < 100:
             break
-    if upto > local:
+    if upto > local or unsure:  # 讀不清時以原值 ack 一次：讓 events 自行復原、拿回真值，仍不越過
         confirmed = event_ack(events, upto)
         if confirmed is not None:
             test_point('mail.after_event_ack')

@@ -28,7 +28,6 @@ def finish(root, me, path, journal):
                     stamp, _, tail = path.name.partition('-')
                     target = target.parent / f"{stamp.split('_')[0]}_{n}-{tail}"
             path.unlink()
-    ack(root, me)
 
 
 def complete(root, me, path, status=None, title=None, body='', handler=None):
@@ -81,8 +80,7 @@ def done(root, me, filename, status=None, title=None, body=''):
         l = letter(path)
         if path.parent == box:
             complete(root, me, path, status, title, body)
-        else:
-            ack(root, me)
+        ack(root, me)  # finish 不 ack；一批做完才確認一次
         journal = load(box / '.handled' / (l['id'] + '.json'), {})
         return {'file': path.name, 'already': path.parent != box, 'to': [r['to'] for r in journal.get('replies', [])],
                 'status': next((r['status'] for r in journal.get('replies', [])), None)}
