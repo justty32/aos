@@ -130,16 +130,27 @@ def read(events_dir, channel, cursor=None, *, kind=None, source=None, round=None
     return _scan(*args, True)[0] if hole else result
 
 
+READ_EPILOG = """例子：
+  aos7-events read --events /tmp/demo/events --text
+  aos7-events read --events /tmp/demo/events --channel must --text
+  aos7-events read --events /tmp/demo/events --channel must --ack 1   # 印 {"acked_upto": 1}
+
+讀到不算處理完；must 本子要 --ack 才算，沒 ack 的會一直留著，滿了 pub --must 會被拒。"""
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--events", required=True)
-    ap.add_argument("--channel", choices=("obs", "must"), default="obs")
-    for name in ("cursor", "round", "run", "ack"):
-        ap.add_argument("--" + name, type=int)
-    for name in ("kind", "source"):
-        ap.add_argument("--" + name)
-    ap.add_argument("--limit", type=int, default=100)
-    ap.add_argument("--text", action="store_true")
+    ap = argparse.ArgumentParser(prog="aos7-events read", description="讀 events 夾裡的事件；預設印一行 JSON，加 --text 一筆一行。",
+                                 epilog=READ_EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--events", required=True, help="events 夾路徑")
+    ap.add_argument("--channel", choices=("obs", "must"), default="obs", help="讀哪本：obs（預設）或 must")
+    ap.add_argument("--cursor", type=int, help="從這個 seq 開始讀；把上次的 next_cursor 帶回來就接著讀")
+    ap.add_argument("--round", type=int, help="只看這個回合的事件")
+    ap.add_argument("--run", type=int, help="只看這個 run 的事件")
+    ap.add_argument("--ack", type=int, help="（要搭 --channel must）確認 seq ≤ 這個數的都處理完了；只做確認、不讀")
+    ap.add_argument("--kind", help="只看這種 kind")
+    ap.add_argument("--source", help="只看這個來源 node")
+    ap.add_argument("--limit", type=int, default=100, help="最多幾筆（預設 100）")
+    ap.add_argument("--text", action="store_true", help="一筆一行：seq kind node payload，最後一行 # next_cursor")
     a = ap.parse_args(argv)
     if a.ack is not None:
         if a.channel != "must" or a.ack < 0:

@@ -303,5 +303,51 @@ class TestEventsPublish(Fixtures):
                         self.assertEqual(f.read(), "item %d: ok\n" % i)
 
 
+class TestNewbieCli(Fixtures):
+    """第一次跑不靠 daemon：pub 不給 --event-id／--node 也能寫；--help 講清 obs／must。"""
+    def run_cli(self, *args):
+        return subprocess.run([sys.executable, os.path.join(EVENTS, "aos7-events"), *args],
+                              capture_output=True, text=True, timeout=20)
+
+    def test_pub_defaults_without_daemon(self):
+        events = os.path.join(self.dir, "n1", "events")
+        outs = []
+        for _ in range(2):
+            p = self.run_cli("pub", "--events", events, "--kind", "hello", "--payload", '{"msg": "hi"}')
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            outs.append(json.loads(p.stdout))
+        self.assertEqual([o["seq"] for o in outs], [1, 2])
+        self.assertTrue(all(o["event_id"].startswith("auto/") for o in outs))
+        self.assertNotEqual(outs[0]["event_id"], outs[1]["event_id"])
+        import aos7_events_store as store
+        self.assertEqual(store.load_state(events)["node"], "n1")   # 新建時 node＝上一層資料夾名
+        recs = reader.read(events, "obs")["records"]
+        self.assertEqual([(r["source"]["node"], r["payload"]) for r in recs], [("n1", {"msg": "hi"})] * 2)
+        p = self.run_cli("pub", "--events", events, "--kind", "x", "--payload", "{}", "--event-id", "x/1")
+        self.assertNotIn("event_id", json.loads(p.stdout))   # 自己給 id 時輸出格式不變
+        p = self.run_cli("read", "--events", events, "--text")
+        self.assertIn('1 hello n1 {"msg": "hi"}', p.stdout)
+
+    def test_existing_state_node_wins_and_bad_state_stays_usage(self):
+        events = os.path.join(self.dir, "n1", "events")
+        import aos7_events_pub as pub
+        self.assertTrue(pub.publish(events, "k", "e1", {}, node="other")["ok"])
+        p = self.run_cli("pub", "--events", events, "--kind", "k", "--payload", "{}")
+        self.assertEqual(p.returncode, 0, p.stdout)
+        self.assertEqual(reader.read(events, "obs", 2)["records"][0]["source"]["node"], "other")
+        with open(os.path.join(events, "state.json"), "w") as f:
+            f.write("broken")
+        p = self.run_cli("pub", "--events", events, "--kind", "k", "--payload", "{}")
+        self.assertEqual((p.returncode, json.loads(p.stdout)["why"]), (2, "usage"))
+
+    def test_help_explains(self):
+        top = self.run_cli("--help").stdout
+        self.assertIn("aos7-events pub --help", top)
+        pub_help = self.run_cli("pub", "--help").stdout
+        for text in ("must＝", "ack", "--event-id", "不存在會自動建"):
+            self.assertIn(text, pub_help)
+        self.assertIn("--channel must --ack", self.run_cli("read", "--help").stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

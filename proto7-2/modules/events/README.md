@@ -1,63 +1,82 @@
 # events 事件保存包（第一版）
 
-← [modules](../README.md)｜細部規則：[spec.md](spec.md)｜藍圖：[blueprint-ev1](../../notes/blueprint-ev1.md)
+← [modules](../README.md)
 
-**每 node 一個 `events/` 夾，以固定檔數保存事件：取樣核心觀測＋合作來源逐件發布，垃圾由寫的人清；核心零改動。**
+**一個 `events/` 夾就是一本帳：`pub` 寫一筆、`read` 讀出來。檔數固定，舊的自己清。**
+
+## 先懂這五個詞
+
+1. **events 夾**：放事件的資料夾，`pub` 第一次寫時自動建。
+2. **obs／must**：夾裡兩本帳。obs＝一般紀錄，滿了丟最舊的；must＝一定要有人讀完並 ack 的，沒 ack 而滿了會拒收新的。`pub` 預設寫 obs，加 `--must` 寫 must。
+3. **seq／next_cursor**：每筆的編號（1、2、3…）；`read` 最後印的 `next_cursor` 帶回 `--cursor` 就從下一筆接著讀。
+4. **ack**：對 must 說「seq 到這裡都處理完了」。讀到不算，ack 了才算。
+5. **event_id**：一件事的身分；同 id 再 pub 一次不會多一筆（回 `dup true`），所以可以放心重送。不給就自動產生（不防重複）。
+
+## 第一次跑（不用 daemon，約 1 分鐘）
+
+在 repo 根貼上就能跑（`P`、`E` 自動帶好，不用改）：
+
+```sh
+P=$PWD/proto7-2; E=$(mktemp -d)/n1/events
+EV=$P/modules/events/aos7-events
+$EV pub  --events $E --kind hello --payload '{"msg": "hi"}'            # 寫一筆到 obs
+$EV read --events $E --text                                             # 讀出來
+$EV pub  --events $E --kind job.done --payload '{"id": 7}' --event-id job/7 --must
+$EV pub  --events $E --kind job.done --payload '{"id": 7}' --event-id job/7 --must   # 重送：dup true，不多一筆
+$EV read --events $E --channel must --text
+$EV read --events $E --channel must --ack 1                             # 處理完了，ack
+ls $E
+```
+
+實跑輸出（10-09；`auto/…` 每次不同）：
+
+```text
+{"ok": true, "seq": 1, "dup": false, "why": null, "event_id": "auto/3f0c…"}
+1 hello n1 {"msg": "hi"}                       # seq kind node payload（node＝events 夾上一層的資料夾名）
+# next_cursor 2                                # 下次 --cursor 2 接著讀
+{"ok": true, "seq": 1, "dup": false, "why": null}
+{"ok": true, "seq": 1, "dup": true, "why": null}   # 同 event_id：同 seq、沒多寫
+1 job.done n1 {"id": 7}
+# next_cursor 2
+{"acked_upto": 1}
+must.active.jsonl  obs.active.jsonl  state.json  state.json.lock
+```
+
+看到兩本帳各一筆、重送 `dup true`、`acked_upto 1` 就成功了。各指令的完整說明：`$EV pub --help`、`$EV read --help`。
+
+## 讓 daemon 自動記（選讀）
+
+不用自己 pub，讓 aos daemon 每回合把「這個 node 跑到第幾回合」記進 obs。這要先懂 aos 的 daemon／node／keep 任務（見 [modules](../README.md) 與 `aos7-ctl --help`）；只用 pub／read 可以跳過。在 repo 根貼上：
+
+```sh
+P=$PWD/proto7-2; R=$(mktemp -d); EV=$P/modules/events/aos7-events
+python3 $P/bin/aos7-ctl daemon $R register n1
+python3 $P/bin/aos7-ctl add $R/n1 '{"name": "events", "mode": "keep", "argv": ["python3", "'$EV'", "--status"]}'
+python3 $P/bin/aos7-daemon $R &
+sleep 3; $EV read --events $R/n1/events --text --limit 5
+python3 $P/bin/aos7-ctl daemon $R stop --kill
+```
+
+`read` 會看到 `1 round.observed n1 {"last_round": {...}}` 這類紀錄。取樣器加 `--daemon-log` 會連 daemon 流水帳 `.aosd/log.jsonl` 一起記；daemon 只在 `$R/.aosd/log.on` 這個空檔存在時才寫流水帳，所以要 `touch $R/.aosd/log.on`。要看發布者怎麼「保存確認後才推進」，裝 `examples/demo_pub.tasks.json`（`<路徑>` 換掉）當 once 任務。
+
+## 一覽
 
 | 項目 | 內容 |
 |---|---|
-| 分類 | 事件保存模組，單 node |
-| 接法 | A keep 任務 `aos7-events`；C 工具 `aos7-events pub`、`aos7-events read`，函式 `aos7_events_pub.publish`、`aos7_events_read.read` |
+| 分類 | 事件保存模組，單 node；細部規則 [spec.md](spec.md)、藍圖 [blueprint-ev1](../../notes/blueprint-ev1.md) |
+| 接法 | C 工具 `aos7-events pub`、`aos7-events read`，函式 `aos7_events_pub.publish`、`aos7_events_read.read`；A keep 任務 `aos7-events`（取樣器） |
 | 預設 | 關，不裝就不存在 |
 | 依賴 | 工具包任務端函式、核心 `aos7_fs` |
 | 程式 | `aos7-events`、`aos7_events_store.py`、`aos7_events_pub.py`、`aos7_events_read.py` |
 | 範例 | `examples/demo_pub.py`＋`demo_pub.tasks.json`（once）；`examples/longrun/`（長跑，見下） |
 | 測試 | `python3 proto7-2/tests/run_all.py modules/events/tests` |
 
-## 第一次跑（已實跑）
-
-`<proto7-2>` 換成絕對路徑（JSON 也換），`<root>` 換成空資料夾路徑。
-
-```sh
-P=<proto7-2>; R=<root>          # R 是空資料夾
-python3 $P/bin/aos7-ctl daemon $R register n1
-mkdir -p $R/n1/.aos && echo '{"interval_ms": 200}' > $R/n1/.aos/timeline.json   # 可省（預設 1 秒一回合）
-touch $R/.aosd/log.on                                                          # 要收 daemon 流水帳才放
-python3 $P/bin/aos7-ctl add $R/n1 '{"name": "events", "mode": "keep", "argv": ["python3", "<proto7-2>/modules/events/aos7-events", "--status", "--daemon-log"]}'
-python3 $P/bin/aos7-daemon $R &
-sleep 3; ls $R/n1/events                     # obs.active.jsonl  state.json  state.json.lock
-python3 $P/modules/events/aos7-events read --events $R/n1/events --text --limit 5
-python3 $P/modules/events/aos7-events pub --events $R/n1/events --kind demo.hello --event-id n1/hello/1 --payload '{"msg": "hi"}' --must
-python3 $P/modules/events/aos7-events pub --events $R/n1/events --kind demo.hello --event-id n1/hello/1 --payload '{"msg": "hi"}' --must   # 重送：dup true、同 seq
-python3 $P/modules/events/aos7-events read --events $R/n1/events --channel must --text
-python3 $P/modules/events/aos7-events read --events $R/n1/events --channel must --ack 1          # {"acked_upto": 1}
-python3 $P/bin/aos7-ctl daemon $R stop --kill
-```
-
-實跑輸出（10-09，interval 200 ms；回合內容與時間每次不同）：
-
-```text
-{"wrote": ".../.aosd/ctl/cli.register.n1.json"}            # register、add、stop 都只印寫了哪個檔
-obs.active.jsonl  state.json  state.json.lock               # 取樣器第一回合就建好 events/
-1 round.observed n1 {"last_round": {"round": 1, ...}}       # read --text：seq kind 來源node payload
-2 daemon.status .aosd {"last_event": {"ev": "node+", ...}}
-3 daemon.log None {"ev": "start", ...}                      # daemon 流水帳沒有 source.node，印 None
-# next_cursor 6                                             # 下次 --cursor 6 接著讀
-{"ok": true, "seq": 1, "dup": false, "why": null}           # pub，退出 0
-{"ok": true, "seq": 1, "dup": true, "why": null}            # 同 event_id 重送：同 seq、不多寫，退出 0
-1 demo.hello n1 {"msg": "hi"}                               # read must
-# next_cursor 2
-{"acked_upto": 1}                                           # ack 才算消費確認；讀到不算
-```
-
-停掉後 `events/` 多一個 `must.active.jsonl`，共四檔。要看發布者怎麼「保存確認後才推進」，裝 `examples/demo_pub.tasks.json`（`<路徑>` 換掉）當 once 任務。
-
 ## 工具
 
 `aos7-events read …`／`aos7-events pub …` 是子命令，選項與 `python3 aos7_events_read.py`／`python3 aos7_events_pub.py` 完全相同：
 
 - read：`--events`、`--channel obs|must`、`--cursor`、`--kind`、`--source`、`--round`、`--run`、`--limit`、`--text`、`--ack`。
-- pub：`--events`、`--kind`、`--event-id`、`--payload`（必填）、`--must`、`--source`、`--node`；payload／source 用 JSON，預設 obs。
+- pub：`--events`、`--kind`、`--payload`（必填）、`--event-id`、`--must`、`--source`、`--node`；payload／source 用 JSON，預設 obs。`--event-id` 不給就自動產生（結果多印 `event_id`，不防重複）；events 夾還沒建 state 時，`--node` 不給就用夾的上一層資料夾名。
 - pub 退出碼：0 成功（含重送 dup）／2 用法（含超限）／3 full（must 滿了被拒）／4 unknown（可能已保存，照同 event_id 重送）。
 - read `--ack` 要搭 `--channel must`：0 成功／4 unknown（照同值重送）；用法錯退出 2。
 
@@ -111,7 +130,6 @@ obs.active.jsonl  state.json  state.json.lock               # 取樣器第一回
 - log 同 inode 截短又長回舊 offset 認不出。
 - 不 fsync，只抗程序 SIGKILL、不抗斷電。
 - 不做集中收集、多消費者、跨 node 查詢、三包接線、history 合併或核心出口。
-- `aos7-events pub` 在 state 未建時須給 `--node`，否則回 usage（source 未帶 node）。
 
 ## 長跑
 
