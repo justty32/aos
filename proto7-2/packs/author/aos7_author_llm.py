@@ -27,22 +27,25 @@ SCHEMA = {'v': 1, 'mode': 'keep', 'intent': 'str', 'start': '步id',
                      'ok': '步id或end名', 'fail': '步id或end名'}],
           'ends': {'end名': 'ok|failed'}}
 # --llm 不給模型＝先便宜後升級：被拒才換下一級（實測見 notes/play/2026-10-09-real-ai/ef3.md）
-AUTO = 'auto'
+AUTO = '\0auto'      # --llm 沒給值（命令列給不出 NUL，不會撞到真模型名）
 LADDER = ('chatgpt-gpt-6-luna-nothink', 'chatgpt-gpt-6-sol-high', 'chatgpt-gpt-6-astra-high')
 
 
 def rung_call(call, i):
-    return call if call is None or i == 0 else '%s-r%d' % (call, i)
+    if call is None or i == 0:
+        return call
+    suffix = '-r%d' % i
+    return call + suffix if len(call + suffix) <= 64 else '%s-%s%s' % (call[:50], sha256(call.encode())[:8], suffix)
 
 
-def climb(attempt):
-    """attempt(model, i) 回 propose 結果；模型答了但候選被拒（invalid）才升級，其餘立刻停。"""
+def climb(attempt, rejected):
+    """attempt(model, i) 回 propose 結果；rejected(r)＝模型答了、候選確實被拒，才升級，其餘立刻停。"""
     rounds = []
     for i, model in enumerate(LADDER):
         r = attempt(model, i)
         info = r.get('llm') or {}
         rounds.append(dict(model=model, call_id=info.get('call_id'), why=r.get('why'), usage=info.get('usage')))
-        if r.get('why') != 'invalid' or info.get('exit') not in (0, 4):
+        if r.get('why') != 'invalid' or info.get('outcome') != 'answered' or not rejected(r):
             break
     return dict(r, rounds=rounds)
 
@@ -63,7 +66,8 @@ def prompt_request(node, rid, model):
 def propose_llm(node, rid, *, model, call=None, **kw):
     if model != AUTO:
         return propose_one(node, rid, model=model, call=call, **kw)
-    return climb(lambda m, i: propose_one(node, rid, model=m, call=rung_call(call, i), **kw))
+    return climb(lambda m, i: propose_one(node, rid, model=m, call=rung_call(call, i), **kw),
+                 lambda r: bool(r.get('_rejected')))
 
 
 def propose_one(node, rid, *, model, budget, call=None, reserve=1000000,

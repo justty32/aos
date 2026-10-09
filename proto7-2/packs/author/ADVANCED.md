@@ -25,7 +25,7 @@ python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
 python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
 ```
 
-**升級鏈（`--llm` 不給模型）**：先 `chatgpt-gpt-6-luna-nothink`；模型有答（llmcall 退 0／4）但候選被拒（`why=invalid`）才升 `chatgpt-gpt-6-sol-high`，再拒才 `chatgpt-gpt-6-astra-high`，三級都拒就照最後一級回報。沒答成（HTTP 錯、逾時、unknown）、conflict、full 一律立刻停、不升級。回覆多一個 `rounds`：每級的 model、call_id、why、usage；`--call X` 時各級是 `X`、`X-r1`、`X-r2`。aos 學徒升級時把上一級的候選與檢查結果當 `previous`／`feedback` 交下一級（CSV 沒有重問欄，下一級拿同一份提示）；`--prompt-out` 只寫第一級；`learn` 用第一級。給了模型名就只用那一個，回覆不帶 `rounds`。實測：[ef3](../../notes/play/2026-10-09-real-ai/ef3.md)。
+**升級鏈（`--llm` 不給模型）**：先 `chatgpt-gpt-6-luna-nothink`；模型答了（outcome answered）且候選確實被擋（CSV 前兩層驗證、aos 三關含審查有 failed_gate）才升 `chatgpt-gpt-6-sol-high`，再擋才 `chatgpt-gpt-6-astra-high`，三級都擋就照最後一級回報。沒答成（HTTP 錯、逾時、unknown、審查模型沒答成）、conflict、full 一律立刻停、不升級。回覆多一個 `rounds`：每級的 model、call_id、why、usage；`--call X` 時各級是 `X`、`X-r1`、`X-r2`（超過 64 字改成截短加雜湊）。aos 學徒升級時把上一級的候選與檢查結果當 `previous`／`feedback` 交下一級（CSV 沒有重問欄，下一級拿同一份提示）；給了 `--out a.json` 時各級分寫 `a.json`、`a-r1.json`、`a-r2.json`；`--prompt-out` 只寫第一級；`learn` 用第一級。`propose --llm csv1` 這種寫法 csv1 仍當 rid。給了模型名（含字面 `auto`）就只用那一個，回覆不帶 `rounds`。實測：[ef3](../../notes/play/2026-10-09-real-ai/ef3.md)。
 
 `--prompt-out` 只寫請求。提示只含需求、白名單卡、schema 與限制，不含答案、不設 max_tokens／temperature。call_id 按請求雜湊固定，重跑回原條；新生成用 `--call NEW_ID`。原文不剝圍欄、不修 JSON；預設另跑 publish。
 

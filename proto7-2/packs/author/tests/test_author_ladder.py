@@ -14,7 +14,7 @@ USAGE = PACK / 'examples/aos-tool-usage'
 
 
 class Replies:
-    """依請求的模型給回覆；沒列的模型回預設（合法候選）。"""
+    """依請求的模型給回覆與 HTTP 碼；沒列的模型回預設（合法候選、setUp 的碼）。"""
     replies = {}
 
     @property
@@ -24,6 +24,16 @@ class Replies:
     @content.setter
     def content(self, value):
         self.default = value
+
+    codes = {}
+
+    @property
+    def code(self):
+        return self.codes.get(self.bodies[-1]['model'], self.default_code) if self.bodies else self.default_code
+
+    @code.setter
+    def code(self, value):
+        self.default_code = value
 
     def models(self):
         return [b['model'] for b in self.bodies]
@@ -77,6 +87,29 @@ class TestLadderCSV(Replies, csv_case.TestAuthorLLM):
         self.assertEqual(self.models(), [LADDER[0]])
         self.assertEqual(len(out['rounds']), 1)
 
+    def test_failed_reply_with_text_does_not_climb(self):
+        self.code, self.usage = 500, None
+        out = self.propose(code=2)
+        self.assertEqual((out['llm']['exit'], out['llm']['outcome']), (4, 'failed'))
+        self.assertEqual(self.models(), [LADDER[0]])
+
+    def test_flag_before_rid_and_long_call(self):
+        self.replies = {LADDER[0]: (CSV / 'bad-params.json').read_text()}
+        call = 'x' * 64
+        p = self.cli('propose', '--llm', 'csv1', '--budget', '../llm/budget/llm', '--call', call)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        out = json.loads(p.stdout)
+        self.assertEqual(self.models(), list(LADDER[:2]))
+        self.assertEqual(out['rounds'][0]['call_id'], call)
+        self.assertLessEqual(len(out['rounds'][1]['call_id']), 64)
+        self.assertTrue(out['rounds'][1]['call_id'].endswith('-r1'))
+
+    def test_literal_auto_is_a_model_name(self):
+        p = self.cli('propose', 'csv1', '--llm', 'auto', '--budget', '../llm/budget/llm')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertNotIn('rounds', json.loads(p.stdout))
+        self.assertEqual(self.models(), ['auto'])
+
     def test_named_model_unchanged(self):
         self.content = (CSV / 'bad-params.json').read_text()
         p = self.cli('propose', 'csv1', '--llm', 'test/model', '--budget', '../llm/budget/llm')
@@ -101,3 +134,14 @@ class TestLadderAos(Replies, aos_case.TestAuthorAosCLI):
         self.assertEqual(user['previous_candidate'], (USAGE / 'bad-link.json').read_text())
         self.assertEqual(user['feedback']['failed_gate'], 1)
         self.assertNotIn('previous_candidate', json.loads(self.bodies[0]['messages'][1]['content']))
+
+    def test_out_per_rung_and_unanswered_review_does_not_climb(self):
+        self.replies = {LADDER[0]: (USAGE / 'bad-link.json').read_text()}
+        self.content = (USAGE / 'valid.json').read_text()
+        self.codes = {'test/review': 400}
+        out = self.checked(self.aos('--budget', self.bd, '--out', 'cand.json', '--review-llm', 'test/review', '--llm'), 1)
+        self.assertEqual(Path(self.node, 'cand.json').read_text(), (USAGE / 'bad-link.json').read_text())
+        self.assertEqual(Path(self.node, 'cand-r1.json').read_text(), self.content)
+        self.assertEqual(out['candidate_path'], str(Path(self.node, 'cand-r1.json').resolve()))
+        self.assertEqual(self.models(), [LADDER[0], LADDER[1], 'test/review'])
+        self.assertEqual([r['model'] for r in out['rounds']], list(LADDER[:2]))
