@@ -77,7 +77,7 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(p.returncode, 0)
         self.assertIn('代理 1644＋自己 721', p.stdout)
         p = subprocess.run(cli, capture_output=True, text=True)
-        self.assertEqual((p.returncode, p.stdout), (0, 'loop-gpt-6-sol：1 件工作（問模型 1 次）｜每件用 2590 token｜同時最多 1 個呼叫｜花 11.486 秒｜重試 0 次\n'))
+        self.assertEqual((p.returncode, p.stdout), (0, 'loop-gpt-6-sol：1 件工作｜每件用 2590 token｜同時最多 1 個在問模型｜花 11.486 秒｜重試 0 次\n'))
         p = subprocess.run(cli[:2] + ['--help'], capture_output=True, text=True)
         self.assertEqual(p.returncode, 0)
         for word in ('PATH', '--overhead', '--detail', '--json', 'max_parallel'):
@@ -87,7 +87,7 @@ class TestMetrics(unittest.TestCase):
             self.assertEqual(len(err.getvalue().splitlines()), 1)
     def test_plain(self):
         s = metrics.scan(HERE / 'fixture')
-        self.assertEqual(metrics.plain(s), 'fixture：2 件工作（問模型 3 次）｜平均每件用 40 token｜同時最多 3 個呼叫｜平均花 10.0 秒（最長 10.0 秒），另有 1 件還沒結束｜重試 4 次｜1 次呼叫還沒結帳｜1 個檔讀不了已跳過')
+        self.assertEqual(metrics.plain(s), 'fixture：2 件工作｜平均每件用 40 token｜同時最多 3 個在問模型｜平均花 10.0 秒（最長 10.0 秒），另有 1 件還沒結束｜重試 4 次｜1 次還沒結帳｜1 個檔讀不了已跳過')
         with tempfile.TemporaryDirectory() as tmp:
             self.assertIn('沒找到 AI 工作紀錄', metrics.plain(metrics.scan(tmp)))
             out = io.StringIO()

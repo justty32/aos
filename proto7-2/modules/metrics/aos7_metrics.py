@@ -183,9 +183,9 @@ def line(scope_dict, overhead):
     duration = f"{sec['mean']} 秒" if count == 1 and sec['mean'] is not None else f"平均 {sec['mean']} 秒、最長 {sec['max']} 秒" if sec['mean'] is not None else '未結案'
     if sec['open']:
         duration += f"、未結案 {sec['open']}"
-    return (f"{s['scope']}：{count} 單、{s['calls']} 次呼叫｜每單 token {int(t['used']/count) if count else 0}"
+    return (f"{s['scope']}：{count} 件、{s['calls']} 次呼叫｜每件 token {int(t['used']/count) if count else 0}"
             f"（prompt {t['prompt']}{own}、completion {t['completion']}、推理 {t['reasoning']}、cached {t['cached']}；"
-            f"預留 {t['reserve']}、未結 {t['pending']}）｜並行最多 {s['max_parallel']}｜收單→結案 {duration}｜重試 {s['retries']['total']}")
+            f"預留 {t['reserve']}、未結 {t['pending']}）｜並行最多 {s['max_parallel']}｜收到→做完 {duration}｜重試 {s['retries']['total']}")
 def plain(scope_dict):
     """給人看的預設一行：每格都有白話標籤與單位。"""
     s, t = scope_dict, scope_dict['tokens']
@@ -202,10 +202,10 @@ def plain(scope_dict):
             took = f"花 {sec['mean']} 秒"
         if sec['open'] and sec['mean'] is not None:
             took += f"，另有 {sec['open']} 件還沒結束"
-        text = (f"{s['scope']}：{count} 件工作（問模型 {s['calls']} 次）｜{avg}每件用 {int(t['used']/count)} token"
-                f"｜同時最多 {s['max_parallel']} 個呼叫｜{took}｜重試 {s['retries']['total']} 次")
+        text = (f"{s['scope']}：{count} 件工作｜{avg}每件用 {int(t['used']/count)} token"
+                f"｜同時最多 {s['max_parallel']} 個在問模型｜{took}｜重試 {s['retries']['total']} 次")
         if t['pending']:
-            text += f"｜{t['pending']} 次呼叫還沒結帳"
+            text += f"｜{t['pending']} 次還沒結帳"
     if s.get('unreadable'):
         text += f"｜{len(s['unreadable'])} 個檔讀不了已跳過"
     return text
@@ -219,13 +219,13 @@ EPILOG = """PATH 要量哪個資料夾：
   給多個 PATH 時每個印一行，最後多一行「合計」。
 
 預設輸出（一行，每格白話）：
-  名稱：N 件工作（問模型 M 次）｜每件用 X token｜同時最多 P 個呼叫｜花 S 秒｜重試 R 次
-  件＝一件 AI 工作（例如一張需求）；呼叫＝問模型一次。
+  名稱：N 件工作｜每件用 X token｜同時最多 P 個在問模型｜花 S 秒｜重試 R 次
+  件＝一件 AI 工作（例如一張需求）。
 
 --detail 把 token 拆開：prompt（送出）、completion（回答）、推理、cached（命中快取）、
-  預留（事先保留的上限）、未結（還沒結帳的呼叫數）。
+  預留（呼叫前先保留的 token 上限，不是真的用掉）、未結（還沒算完帳的呼叫數，正常 0）。
 --overhead N 每次呼叫被代理（例如 LiteLLM）自動加進 prompt 的 token 數；只影響 --detail 和 --json，
-  不知道就不用給（預設 0）。量法：送一個空 prompt，回報的 prompt token 數就是 N。
+  不知道就不用給（預設 0）。量法：經代理送一個空 prompt，--detail 看到的 prompt 數就是 N。
 --json 印一行 JSON：{v, overhead, scopes:[每個 PATH], total:合計}；每個 scope 有
   scope、flows（每件明細）、calls、tokens、max_parallel、window_unknown、seconds{mean,max,open}、retries、unreadable。
 
