@@ -16,6 +16,7 @@
 - [notes/reviews/2026-10-05/](notes/reviews/2026-10-05/README.md)：10-05 的 15 份 astra 審查／調查報告索引與交叉問題，等使用者挑要修哪些。
 - **[notes/next-steps.md](notes/next-steps.md)**：接下來可以做的方向（10-05 報告引出的 loop7 修補候選、事件保存／LLM 作者／kernel 任務包的待決題、整理類、卡在使用者的），只列選項與預設建議。
 - **[notes/core-slimming.md](notes/core-slimming.md)**：核心精簡方案——盤點、核心最小集、錯誤四分支、擴充點與模組包、kernel 任務包；已照頂層定案做完（kernel 任務包、aos7-pack 還沒做）。
+- **退出碼與錯誤訊息全 aos 共用一套**（0 做到／1 做不到／2 你給的不對／3 不知道／4 交付但帳未清），見 [blueprint-errors](notes/blueprint-errors.md)。
 - [notes/component-contracts.md](notes/component-contracts.md)：組件契約藍圖（Fable；各組件的職責／前置條件／保證／明確不管，錯誤四類 M 誤用／X 外部故障／B 組件 bug／G 契約缺口，A2/A3 試分類）。
 - [notes/layer-interfaces.md](notes/layer-interfaces.md)：四層（daemon、tick-tock、kernel、agent）之間的交接點調查——誰寫誰讀、延遲、通用 vs 只為 agent／LLM、proto7-1 的 kernel／agent 接上來會怎樣、缺口清單。
 

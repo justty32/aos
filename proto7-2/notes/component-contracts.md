@@ -165,3 +165,17 @@ flowchart TD
 ## 4. 拍板題
 
 三題已在 [core-slimming](core-slimming.md)「頂層定案」定案（第 2、3、4 條）；A2／A3 的試分類與當時的建議見 git 歷史與 [problems](problems.md)。
+
+## 5. 錯誤路徑（全 aos 共用）
+
+細節與各包改法在 [blueprint-errors](blueprint-errors.md)；驗收是 `tests/core/test_error_path.py`（清單 `tests/error_path.json`）。
+
+| 碼 | 意思 |
+|---|---|
+| 0 | 做到了 |
+| 1 | 做不到（知道為什麼） |
+| 2 | 你給的不對，什麼都沒動 |
+| 3 | 不知道，證據留著，照原樣再跑會接續 |
+| 4 | 交付了但帳沒清（只有 llmcall） |
+
+人看的一行在 stderr：`aos7-xxx: 發生什麼。怎麼辦`；退 3 寫成 `aos7-xxx: 不確定：…`。JSON 照舊在 stdout，成功時 stderr 不印。

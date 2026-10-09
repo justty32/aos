@@ -29,6 +29,7 @@
 | `tests/core/test_errors.py`、`test_exits.py` | 錯誤四分支（G1 寫表三態、G2 tick 失敗不算回合、不是一般檔＝不知道）；timeline 壞設定（巨大整數 interval 等）用預設並記錯、node 照開回合（A8-11＋R8-20）；核心給模組的出口（`x` 照抄、`never_started`、stop-guard.json）；超長陣列索引回 125、前導零索引照舊（A9-03） |
 | `modules/diag/tests/test_diag.py` | 診斷包：aos7-diag 照抄 last_error 並給恢復步驟、按需列出判不出的槽、唯讀（跑前後檔案不變）；proc-stat 兩條用 `Fault.check_rules()` 逐條規則驗命中（T8-07） |
 | `tests/core/test_timeline_rounds.py` | loop7 K3：tock 後確認讀取不知道、下圈讀到已關只補扣一次 rounds（R8-05 `owe_round`）；退避指數上限、wait 後清 wake（R8-06）；loop7 L1：回合號沒前進只清 owe、tick 失敗先清 owe、控制請求丟舊 owe、結算用 check_round 同次讀數 |
+| `tests/core/test_error_path.py` | **錯誤路徑一致性**（[blueprint-errors](../notes/blueprint-errors.md)，ER0）：照 `tests/error_path.json` 每包一列驗 `--help` 退 0 一屏、壞參數退 2 且 stderr 恰一行 `aos7-xxx: …。…` 不留檔、自報的不確定案退 3 以「不確定：」開頭；還沒照藍圖改的包標 `skip` 並印出；另有檢查器自測（假入口逐項弄壞要抓得到） |
 | `tests/core/test_budget.py` | **防再胖**：核心 `lib/aos7_*.py` 總行 ≤ 2800、實際程式 ≤ 2200；10-09 起只印不擋（D7，`ENFORCE = False`），超過時逐檔表印到 stderr |
 | `modules/tests/test_modules_history.py` | counter 示範、歷史 module、history 事件也截行；來源檔名可逆編碼、不占 daemon 事件檔名（R8-17）；升級時舊編碼檔一次封存 `.v1`、`.names-v2` 標記後不再封存（A9-02） |
 | `tests/core/test_matrix_faults.py` | **A2 回歸矩陣：讀不到＝不知道**——/proc（list／stat／environ／cmdline）× EIO／ESTALE／EACCES × 情境（健康、孤兒、兩者都死、birth 壞）；birth／exit／pid／round／last-round 開檔與列槽讀不到；daemon 看 node 讀不到；last-round 寫後讀回不符＝回合不關（T8-05） |
