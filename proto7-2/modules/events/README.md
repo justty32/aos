@@ -7,8 +7,8 @@
 ## 先懂這五個詞（照第一次跑出現的順序）
 
 1. **events 夾**：放事件的資料夾，`pub` 第一次寫時自動建。
-2. **seq**：每筆的編號（1、2、3…）。`read --text` 最後一行 `# next_cursor 2` 是「下一個要讀的 seq」，想接著讀時帶給 `--cursor`，不接著讀就不用管。
-3. **obs／must**：夾裡兩本帳。obs＝一般紀錄，滿了丟最舊的（預設寫這本）；must＝一定要有人處理完的，用 `--must` 寫、`--channel must` 讀。
+2. **seq**：每筆的編號（1、2、3…）。`read --text` 最後一行 `# next_cursor 2` 就是「下一個要讀的 seq」，不是新東西，想接著讀時帶給 `--cursor`，不接著讀就不用管。
+3. **obs／must**（一個概念：哪一本帳）：夾裡兩本帳。obs＝一般紀錄，滿了丟最舊的（預設寫這本）；must＝一定要有人處理完的，用 `--must` 寫、`--channel must` 讀。
 4. **ack**：對 must 說「seq 到這裡都處理完了」。讀到不算，ack 了才算；沒 ack 的一直留著，滿了 must 就拒收新的。
 5. **event_id**：一件事的身分。同 id 再 pub 一次不會多一筆（回 `dup true`），所以失敗了可以放心重送。不給 `--event-id` 就自動產生一個（印在結果裡，這種不防重複）。
 
@@ -26,7 +26,7 @@ $EV read --events $E --text
 
 ```text
 {"ok": true, "seq": 1, "dup": false, "why": null, "event_id": "auto/3f0c…"}   # 存好了，編號 1；event_id 是自動給的（每次不同）
-1 hello n1 {"msg": "hi"}      # seq kind 誰寫的 內容（「誰寫的」n1 取自路徑，不用管）
+1 hello n1 {"msg": "hi"}      # 編號 種類 n1 內容（n1 只是路徑裡的資料夾名，自動帶，不用管）
 # next_cursor 2               # 下一個要讀的 seq
 ```
 
@@ -46,7 +46,7 @@ ls $E
 1 job.done n1 {"id": 7}
 # next_cursor 2
 {"acked_upto": 1}                                  # 1 號處理完了
-must.active.jsonl  obs.active.jsonl  state.json  state.json.lock
+must.active.jsonl  obs.active.jsonl  state.json  state.json.lock   # 兩本帳＋帳本自己的進度檔與鎖（別動）
 ```
 
 看到兩本帳各一筆、重送 `dup true`、`acked_upto 1` 就成功了（10-09 實跑）。完整選項：`$EV pub --help`、`$EV read --help`。
