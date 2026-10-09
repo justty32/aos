@@ -1,0 +1,32 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-4.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-ack-XXXX)
+export PYTHONDONTWRITEBYTECODE=1
+mkdir -p "$T/bob/inbox" "$T/bob/events"
+printf '[]\n' > "$T/bob/inbox/.acked"
+python3 -B proto7-2/modules/mail/aos7-mail --root "$T" read bob
+echo "rc=$?"
+cat "$T/bob/inbox/.acked"
+rm -rf "$T"
+# 輸出(前40行):
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/mail/aos7-mail", line 5, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/mail/aos7_mail_cli.py", line 132, in main
+    return _main(argv)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/mail/aos7_mail_cli.py", line 102, in _main
+    with poll(root, a.me, a.quiet) as rows:
+         ~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/mail/aos7_mail_box.py", line 120, in poll
+    ack(root, me)
+    ~~~^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/modules/mail/aos7_mail_ack.py", line 27, in ack
+    upto, cursor, unsure = local, local + 1, False
+                                  ~~~~~~^~~
+TypeError: can only concatenate list (not "int") to list
+rc=1
+[]

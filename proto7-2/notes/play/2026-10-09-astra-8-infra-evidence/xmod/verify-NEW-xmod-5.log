@@ -1,0 +1,42 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-xmod-5.sh
+# 腳本:
+PYTHONDONTWRITEBYTECODE=1 python3 -B wf/tools/tabledb.py \
+  proto7-2/notes/blueprint-errors-items.json find pack=author
+PYTHONDONTWRITEBYTECODE=1 python3 -B wf/tools/tabledb.py \
+  proto7-2/notes/blueprint-errors-items.json find pack=mail
+rg -n 'CODES =|return 3|up（設計中）' \
+  proto7-2/packs/author/aos7_author.py \
+  proto7-2/modules/mail/aos7_mail_cli.py \
+  proto7-2/notes/blueprint-errors-items.json
+# 輸出(前40行):
+[
+ {
+  "index": 4,
+  "pack": "author",
+  "c0": "ok",
+  "c1": "其他",
+  "c2": "invalid",
+  "c3": "conflict",
+  "c4": "unknown",
+  "c5": "full",
+  "message_now": "stdout 多行 JSON `ok/why/error`",
+  "change": "3 conflict→1、4 unknown→3、5 full→1；`why` 欄位不變（細節仍看得到）；補 stderr 一行"
+ }
+]
+[
+ {
+  "index": 12,
+  "pack": "mail",
+  "c0": "ok",
+  "c1": "audit 有未結",
+  "c2": "用法**與** OSError 全包",
+  "c3": "—",
+  "c4": "—",
+  "c5": "—",
+  "message_now": "stderr 純文字一行",
+  "change": "ValueError／用法留 2；OSError→3；`audit` 有未結留 1；補前綴"
+ }
+]
+proto7-2/notes/blueprint-errors-items.json:162:   "pack": "up（設計中）",
+proto7-2/modules/mail/aos7_mail_cli.py:140:        return 3
+proto7-2/packs/author/aos7_author.py:53:CODES = {None: 0, "invalid": 2, "conflict": 1, "unknown": 3, "full": 1}

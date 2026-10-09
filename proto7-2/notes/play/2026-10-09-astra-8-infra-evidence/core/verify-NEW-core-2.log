@@ -1,0 +1,53 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-core-2.sh
+# 腳本:
+T=$(mktemp -d /tmp/astra8-core-XXXX)
+export T PYTHONDONTWRITEBYTECODE=1
+python3 -B - <<'PY'
+import json, os, pathlib
+p = pathlib.Path(os.environ["T"]) / "inst.json"
+p.write_text(json.dumps({
+    "arr": ["/bin/true"],
+    "argv": [{"$ref": "", "$at": "/arr/" + "0" * 4301}]
+}))
+PY
+PYTHONINTMAXSTRDIGITS=4300 \
+  python3 -B proto7-2/bin/aos-exec "$T/inst.json"
+printf 'rc=%s\n' "$?"
+rm -rf "$T"
+# 輸出(前40行):
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/bin/aos-exec", line 12, in <module>
+    sys.exit(aos_exec.main())
+             ~~~~~~~~~~~~~^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_exec.py", line 264, in main
+    code, kind = run_target(a.xxx, a.timeout_ms, stderr=a.stderr,
+                 ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                            args=child_args)
+                            ^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_exec.py", line 167, in run_target
+    return _run_inst(p, os.path.dirname(p), timeout_ms, on_spawn, stderr)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_exec.py", line 222, in _run_inst
+    inst = aos_inst.load(target, base)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_inst.py", line 86, in load
+    return _load(obj, Context(Document(path, obj), base_dir=base, env=env), base)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_inst.py", line 132, in _load
+    inst["argv"] = _argv(obj.get("argv"), ctx, top.position + ["argv"])
+                   ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_inst.py", line 196, in _argv
+    out = [_str(resolve(x, loc.ctx, loc.position + [str(i)]), loc.position + [str(i)], "argv[%d]" % i)
+                ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_directives.py", line 52, in resolve
+    return resolve_located(value, ctx, position).value
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_directives.py", line 70, in resolve_located
+    value, ctx, position = _apply(value, ctx, position)
+                           ~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_directives.py", line 94, in _apply
+    return _ref(val, d.get("$at"), ctx, position)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_directives.py", line 175, in _ref
+    value = _walk(doc, target, where)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/R2/proto7-2/lib/aos_directives.py", line 223, in _walk
+    or len(tok.lstrip("0")) > len(str(len(cur))) or int(tok) >= len(cur)):
+                                                    ~~~^^^^^
+ValueError: Exceeds the limit (4300 digits) for integer string conversion: value has 4301 digits; use sys.set_int_max_str_digits() to increase the limit
+rc=1

@@ -1,0 +1,18 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-6.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-unit-XXXX)
+export PYTHONDONTWRITEBYTECODE=1
+python3 -B - <<'PY'
+import sys
+sys.path.insert(0, 'proto7-2/modules/compact')
+import aos7_compact as c
+ident = 'you-20261009T010000-012345abcdef'
+for unit in ('回合', '步'):
+    row = {'text': f'- 12:00 第 7 {unit} {ident}：做完大綱\n'}
+    print(unit, c.item(row, '.md'))
+PY
+rm -rf "$T"
+# 輸出(前40行):
+回合 {'key': 'you-20261009T010000-012345abcdef', 'step': 7, 'at': '12:00', 'what': '做完大綱'}
+步 {'key': 'you-20261009T010000-012345abcdef', 'step': None, 'at': '12:00', 'what': '第 7 步 ：做完大綱'}

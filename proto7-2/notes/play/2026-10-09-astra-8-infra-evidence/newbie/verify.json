@@ -1,0 +1,47 @@
+[
+ {
+  "id": "NEW-newbie-1",
+  "result": "重現",
+  "note": "up.json 五個自訂值全變 MISSING"
+ },
+ {
+  "id": "NEW-newbie-2",
+  "result": "重現",
+  "note": "第三步筆數 2、總 26"
+ },
+ {
+  "id": "NEW-newbie-3",
+  "result": "重現",
+  "note": "只印「算完了」，前言漏印"
+ },
+ {
+  "id": "NEW-newbie-4",
+  "result": "重現",
+  "note": "退 1 TypeError traceback，.acked 保留"
+ },
+ {
+  "id": "NEW-newbie-5",
+  "result": "重現",
+  "note": "退 2 但留下 node/compact/lock 與 post/bob/inbox/.handle.lock"
+ },
+ {
+  "id": "NEW-newbie-6",
+  "result": "重現",
+  "note": "回合 step=7、步 step=None"
+ },
+ {
+  "id": "NEW-newbie-7",
+  "result": "重現",
+  "note": "up 進入啟動 rc0；ask 退 2"
+ },
+ {
+  "id": "NEW-newbie-8",
+  "result": "重現",
+  "note": "help 產生 compact/routines/skills 的 .pyc（尚有 lib 等）"
+ },
+ {
+  "id": "NEW-newbie-9",
+  "result": "重現",
+  "note": "缺模板退 1，訊息引入 git clone SSH／AOS7_WF_HOME"
+ }
+]

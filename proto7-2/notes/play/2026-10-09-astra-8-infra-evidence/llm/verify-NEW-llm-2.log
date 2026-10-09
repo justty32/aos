@@ -1,0 +1,40 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-llm-2.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-llm-XXXX)
+python3 -B - "$T" <<'PY'
+import json, sys
+from pathlib import Path
+sys.path[:0] = ["proto7-2/packs/budget", "proto7-2/modules/metrics"]
+import aos7_budget as b
+import aos7_budget_gate as g
+import aos7_metrics as m
+
+t = Path(sys.argv[1])
+def put(rel, value):
+    p = t / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(value))
+
+put(".aos/round.json", {"round": 0, "open": False})
+put("budget/demo/grant.json", {
+    "v": 1, "grant": "g", "budget": "demo", "holder": "api",
+    "resource": "fakeapi.calls", "gateway": "fakeapi", "amount": 20,
+    "clock": "completed_tock", "from": 0, "until": 100, "delegate": False
+})
+bud = b.Bud(t / "budget/demo")
+assert b.init(bud)[0]
+key = b.make_key("demo", "api", "r1")
+content = dict(resource="fakeapi.calls", gateway="fakeapi",
+               amount=7, payload_sha=b.sha({}))
+assert b.handle(bud, dict(op="reserve", key=key, content=content))["result"] == "reserved"
+assert g.run(bud, key, content, {})["used"] == 7
+assert b.handle(bud, dict(op="settle", key=key))["result"] == "settled"
+s = m.scan(t)
+print("calls =", s["calls"], "tokens.used =", s["tokens"]["used"])
+print("ledger =", s["ledger"])
+PY
+rm -rf "$T"
+# 輸出(前40行):
+calls = 1 tokens.used = 0
+ledger = {'used': 7, 'receipts': 0, 'diff': 7, 'gaps': 0, 'bad': 0, 'unbooked': 0, 'unbooked_used': 0}

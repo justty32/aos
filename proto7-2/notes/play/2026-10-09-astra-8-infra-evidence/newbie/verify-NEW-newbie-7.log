@@ -1,0 +1,24 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-7.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-name-XXXX)
+export T PYTHONDONTWRITEBYTECODE=1
+mkdir "$T/teams"
+python3 -B - <<'PY'
+import os, sys
+from pathlib import Path
+from unittest.mock import patch
+sys.path.insert(0, 'proto7-2/modules/up')
+import aos7_up_cli as cli
+import aos7_up_ask as ask
+
+node = str(Path(os.environ['T']) / 'teams')
+with patch.object(cli, 'up', return_value=0) as start:
+    print('up rc:', cli.main([node]), '進入啟動:', start.called)
+print('ask rc:', ask.main(['ask', node, '你好', '--wait', '0']))
+PY
+rm -rf "$T"
+# 輸出(前40行):
+aos7-up: 找不到 node /tmp/astra8-newbie-name-xrKO/teams。先跑 aos7-up /tmp/astra8-newbie-name-xrKO/teams 起它
+up rc: 0 進入啟動: True
+ask rc: 2

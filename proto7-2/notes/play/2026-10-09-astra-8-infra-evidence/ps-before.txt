@@ -1,0 +1,469 @@
+    PID    PPID    PGID                  STARTED COMMAND
+      1       0       1 五 10月  9 08:13:36 2026 /sbin/init splash
+      2       0       0 五 10月  9 08:13:36 2026 [kthreadd]
+      3       2       0 五 10月  9 08:13:36 2026 [pool_workqueue_release]
+      4       2       0 五 10月  9 08:13:36 2026 [kworker/R-rcu_gp]
+      5       2       0 五 10月  9 08:13:36 2026 [kworker/R-sync_wq]
+      6       2       0 五 10月  9 08:13:36 2026 [kworker/R-kvfree_rcu_reclaim]
+      7       2       0 五 10月  9 08:13:36 2026 [kworker/R-slub_flushwq]
+      8       2       0 五 10月  9 08:13:36 2026 [kworker/R-netns]
+     11       2       0 五 10月  9 08:13:36 2026 [kworker/0:0H-events_highpri]
+     14       2       0 五 10月  9 08:13:36 2026 [kworker/R-mm_percpu_wq]
+     15       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/0]
+     16       2       0 五 10月  9 08:13:36 2026 [rcu_preempt]
+     17       2       0 五 10月  9 08:13:36 2026 [rcub/0]
+     18       2       0 五 10月  9 08:13:36 2026 [rcu_exp_par_gp_kthread_worker/0]
+     19       2       0 五 10月  9 08:13:36 2026 [rcu_exp_gp_kthread_worker]
+     20       2       0 五 10月  9 08:13:36 2026 [migration/0]
+     21       2       0 五 10月  9 08:13:36 2026 [idle_inject/0]
+     22       2       0 五 10月  9 08:13:36 2026 [cpuhp/0]
+     23       2       0 五 10月  9 08:13:36 2026 [cpuhp/1]
+     24       2       0 五 10月  9 08:13:36 2026 [idle_inject/1]
+     25       2       0 五 10月  9 08:13:36 2026 [migration/1]
+     26       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/1]
+     28       2       0 五 10月  9 08:13:36 2026 [kworker/1:0H-events_highpri]
+     29       2       0 五 10月  9 08:13:36 2026 [cpuhp/2]
+     30       2       0 五 10月  9 08:13:36 2026 [idle_inject/2]
+     31       2       0 五 10月  9 08:13:36 2026 [migration/2]
+     32       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/2]
+     34       2       0 五 10月  9 08:13:36 2026 [kworker/2:0H-events_highpri]
+     35       2       0 五 10月  9 08:13:36 2026 [cpuhp/3]
+     36       2       0 五 10月  9 08:13:36 2026 [idle_inject/3]
+     37       2       0 五 10月  9 08:13:36 2026 [migration/3]
+     38       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/3]
+     40       2       0 五 10月  9 08:13:36 2026 [kworker/3:0H-events_highpri]
+     41       2       0 五 10月  9 08:13:36 2026 [cpuhp/4]
+     42       2       0 五 10月  9 08:13:36 2026 [idle_inject/4]
+     43       2       0 五 10月  9 08:13:36 2026 [migration/4]
+     44       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/4]
+     46       2       0 五 10月  9 08:13:36 2026 [kworker/4:0H-events_highpri]
+     47       2       0 五 10月  9 08:13:36 2026 [cpuhp/5]
+     48       2       0 五 10月  9 08:13:36 2026 [idle_inject/5]
+     49       2       0 五 10月  9 08:13:36 2026 [migration/5]
+     50       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/5]
+     52       2       0 五 10月  9 08:13:36 2026 [kworker/5:0H-events_highpri]
+     53       2       0 五 10月  9 08:13:36 2026 [cpuhp/6]
+     54       2       0 五 10月  9 08:13:36 2026 [idle_inject/6]
+     55       2       0 五 10月  9 08:13:36 2026 [migration/6]
+     56       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/6]
+     58       2       0 五 10月  9 08:13:36 2026 [kworker/6:0H-events_highpri]
+     59       2       0 五 10月  9 08:13:36 2026 [cpuhp/7]
+     60       2       0 五 10月  9 08:13:36 2026 [idle_inject/7]
+     61       2       0 五 10月  9 08:13:36 2026 [migration/7]
+     62       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/7]
+     64       2       0 五 10月  9 08:13:36 2026 [kworker/7:0H-events_highpri]
+     65       2       0 五 10月  9 08:13:36 2026 [cpuhp/8]
+     66       2       0 五 10月  9 08:13:36 2026 [idle_inject/8]
+     67       2       0 五 10月  9 08:13:36 2026 [migration/8]
+     68       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/8]
+     70       2       0 五 10月  9 08:13:36 2026 [kworker/8:0H-events_highpri]
+     71       2       0 五 10月  9 08:13:36 2026 [cpuhp/9]
+     72       2       0 五 10月  9 08:13:36 2026 [idle_inject/9]
+     73       2       0 五 10月  9 08:13:36 2026 [migration/9]
+     74       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/9]
+     76       2       0 五 10月  9 08:13:36 2026 [kworker/9:0H-events_highpri]
+     77       2       0 五 10月  9 08:13:36 2026 [cpuhp/10]
+     78       2       0 五 10月  9 08:13:36 2026 [idle_inject/10]
+     79       2       0 五 10月  9 08:13:36 2026 [migration/10]
+     80       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/10]
+     82       2       0 五 10月  9 08:13:36 2026 [kworker/10:0H-events_highpri]
+     83       2       0 五 10月  9 08:13:36 2026 [cpuhp/11]
+     84       2       0 五 10月  9 08:13:36 2026 [idle_inject/11]
+     85       2       0 五 10月  9 08:13:36 2026 [migration/11]
+     86       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/11]
+     88       2       0 五 10月  9 08:13:36 2026 [kworker/11:0H-events_highpri]
+     89       2       0 五 10月  9 08:13:36 2026 [cpuhp/12]
+     90       2       0 五 10月  9 08:13:36 2026 [idle_inject/12]
+     91       2       0 五 10月  9 08:13:36 2026 [migration/12]
+     92       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/12]
+     94       2       0 五 10月  9 08:13:36 2026 [kworker/12:0H-events_highpri]
+     95       2       0 五 10月  9 08:13:36 2026 [cpuhp/13]
+     96       2       0 五 10月  9 08:13:36 2026 [idle_inject/13]
+     97       2       0 五 10月  9 08:13:36 2026 [migration/13]
+     98       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/13]
+    100       2       0 五 10月  9 08:13:36 2026 [kworker/13:0H-events_highpri]
+    101       2       0 五 10月  9 08:13:36 2026 [cpuhp/14]
+    102       2       0 五 10月  9 08:13:36 2026 [idle_inject/14]
+    103       2       0 五 10月  9 08:13:36 2026 [migration/14]
+    104       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/14]
+    106       2       0 五 10月  9 08:13:36 2026 [kworker/14:0H-events_highpri]
+    107       2       0 五 10月  9 08:13:36 2026 [cpuhp/15]
+    108       2       0 五 10月  9 08:13:36 2026 [idle_inject/15]
+    109       2       0 五 10月  9 08:13:36 2026 [migration/15]
+    110       2       0 五 10月  9 08:13:36 2026 [ksoftirqd/15]
+    112       2       0 五 10月  9 08:13:36 2026 [kworker/15:0H-events_highpri]
+    113       2       0 五 10月  9 08:13:36 2026 [kdevtmpfs]
+    114       2       0 五 10月  9 08:13:36 2026 [kworker/R-inet_frag_wq]
+    115       2       0 五 10月  9 08:13:36 2026 [rcu_tasks_kthread]
+    116       2       0 五 10月  9 08:13:36 2026 [rcu_tasks_rude_kthread]
+    117       2       0 五 10月  9 08:13:36 2026 [rcu_tasks_trace_kthread]
+    118       2       0 五 10月  9 08:13:36 2026 [kauditd]
+    119       2       0 五 10月  9 08:13:36 2026 [khungtaskd]
+    121       2       0 五 10月  9 08:13:36 2026 [oom_reaper]
+    122       2       0 五 10月  9 08:13:36 2026 [kworker/R-writeback]
+    123       2       0 五 10月  9 08:13:36 2026 [kcompactd0]
+    124       2       0 五 10月  9 08:13:36 2026 [ksmd]
+    125       2       0 五 10月  9 08:13:36 2026 [khugepaged]
+    126       2       0 五 10月  9 08:13:36 2026 [kworker/R-kblockd]
+    127       2       0 五 10月  9 08:13:36 2026 [kworker/R-blkcg_punt_bio]
+    128       2       0 五 10月  9 08:13:36 2026 [kworker/R-kintegrityd]
+    130       2       0 五 10月  9 08:13:36 2026 [irq/9-acpi]
+    134       2       0 五 10月  9 08:13:36 2026 [kworker/R-tpm_dev_wq]
+    135       2       0 五 10月  9 08:13:36 2026 [kworker/R-ata_sff]
+    136       2       0 五 10月  9 08:13:36 2026 [kworker/R-edac-poller]
+    137       2       0 五 10月  9 08:13:36 2026 [kworker/R-devfreq_wq]
+    138       2       0 五 10月  9 08:13:36 2026 [watchdogd]
+    140       2       0 五 10月  9 08:13:36 2026 [kworker/R-quota_events_unbound]
+    142       2       0 五 10月  9 08:13:36 2026 [kworker/11:1H-kblockd]
+    143       2       0 五 10月  9 08:13:36 2026 [irq/26-AMD-Vi]
+    144       2       0 五 10月  9 08:13:36 2026 [kswapd0]
+    145       2       0 五 10月  9 08:13:36 2026 [kworker/R-kthrotld]
+    146       2       0 五 10月  9 08:13:36 2026 [kworker/u65:0-ttm]
+    147       2       0 五 10月  9 08:13:36 2026 [kworker/R-acpi_thermal_pm]
+    149       2       0 五 10月  9 08:13:36 2026 [scsi_eh_0]
+    150       2       0 五 10月  9 08:13:36 2026 [kworker/R-scsi_tmf_0]
+    151       2       0 五 10月  9 08:13:36 2026 [scsi_eh_1]
+    152       2       0 五 10月  9 08:13:36 2026 [kworker/R-scsi_tmf_1]
+    153       2       0 五 10月  9 08:13:36 2026 [scsi_eh_2]
+    154       2       0 五 10月  9 08:13:36 2026 [kworker/R-scsi_tmf_2]
+    155       2       0 五 10月  9 08:13:36 2026 [scsi_eh_3]
+    156       2       0 五 10月  9 08:13:36 2026 [kworker/R-scsi_tmf_3]
+    157       2       0 五 10月  9 08:13:36 2026 [scsi_eh_4]
+    158       2       0 五 10月  9 08:13:36 2026 [kworker/R-scsi_tmf_4]
+    159       2       0 五 10月  9 08:13:36 2026 [scsi_eh_5]
+    160       2       0 五 10月  9 08:13:36 2026 [kworker/R-scsi_tmf_5]
+    168       2       0 五 10月  9 08:13:36 2026 [kworker/R-mld]
+    169       2       0 五 10月  9 08:13:36 2026 [kworker/2:1H-kblockd]
+    170       2       0 五 10月  9 08:13:36 2026 [kworker/R-ipv6_addrconf]
+    171       2       0 五 10月  9 08:13:36 2026 [kworker/R-kstrp]
+    180       2       0 五 10月  9 08:13:36 2026 [kworker/R-zswap-shrink]
+    181       2       0 五 10月  9 08:13:36 2026 [kworker/0:1H-kblockd]
+    216       2       0 五 10月  9 08:13:37 2026 [kworker/15:1H-kblockd]
+    220       2       0 五 10月  9 08:13:37 2026 [kworker/6:1H-kblockd]
+    229       2       0 五 10月  9 08:13:37 2026 [kworker/10:1H-kblockd]
+    233       2       0 五 10月  9 08:13:37 2026 [kworker/13:1H-kblockd]
+    279       2       0 五 10月  9 08:13:37 2026 [kworker/4:1H-kblockd]
+    280       2       0 五 10月  9 08:13:37 2026 [kworker/3:1H-kblockd]
+    281       2       0 五 10月  9 08:13:37 2026 [kworker/1:1H-kblockd]
+    282       2       0 五 10月  9 08:13:37 2026 [kworker/5:1H-kblockd]
+    284       2       0 五 10月  9 08:13:37 2026 [kworker/9:1H-kblockd]
+    285       2       0 五 10月  9 08:13:37 2026 [kworker/8:1H-kblockd]
+    286       2       0 五 10月  9 08:13:37 2026 [kworker/12:1H-kblockd]
+    287       2       0 五 10月  9 08:13:37 2026 [kworker/14:1H-kblockd]
+    288       2       0 五 10月  9 08:13:37 2026 [kworker/7:1H-kblockd]
+    290       2       0 五 10月  9 08:13:37 2026 [kworker/R-nvme-wq]
+    291       2       0 五 10月  9 08:13:37 2026 [kworker/R-nvme-reset-wq]
+    292       2       0 五 10月  9 08:13:37 2026 [kworker/R-nvme-delete-wq]
+    293       2       0 五 10月  9 08:13:37 2026 [kworker/R-nvme-auth-wq]
+    294       2       0 五 10月  9 08:13:37 2026 [kworker/R-uas]
+    295       2       0 五 10月  9 08:13:37 2026 [scsi_eh_6]
+    296       2       0 五 10月  9 08:13:37 2026 [kworker/R-scsi_tmf_6]
+    298       2       0 五 10月  9 08:13:38 2026 [scsi_eh_7]
+    299       2       0 五 10月  9 08:13:38 2026 [kworker/R-scsi_tmf_7]
+    300       2       0 五 10月  9 08:13:38 2026 [usb-storage]
+    301       2       0 五 10月  9 08:13:38 2026 [kworker/R-amdgpu-reset-dev]
+    302       2       0 五 10月  9 08:13:38 2026 [kworker/R-ttm]
+    303       2       0 五 10月  9 08:13:38 2026 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    304       2       0 五 10月  9 08:13:38 2026 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    305       2       0 五 10月  9 08:13:38 2026 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    306       2       0 五 10月  9 08:13:38 2026 [kworker/R-dm_vblank_control_workqueue]
+    307       2       0 五 10月  9 08:13:38 2026 [card1-crtc0]
+    308       2       0 五 10月  9 08:13:38 2026 [card1-crtc1]
+    309       2       0 五 10月  9 08:13:38 2026 [card1-crtc2]
+    310       2       0 五 10月  9 08:13:38 2026 [card1-crtc3]
+    311       2       0 五 10月  9 08:13:38 2026 [kworker/R-gfx_0.0.0]
+    312       2       0 五 10月  9 08:13:38 2026 [kworker/R-gfx_0.1.0]
+    313       2       0 五 10月  9 08:13:38 2026 [kworker/R-comp_1.0.0]
+    314       2       0 五 10月  9 08:13:38 2026 [kworker/R-comp_1.1.0]
+    315       2       0 五 10月  9 08:13:38 2026 [kworker/R-comp_1.2.0]
+    316       2       0 五 10月  9 08:13:38 2026 [kworker/R-comp_1.3.0]
+    317       2       0 五 10月  9 08:13:38 2026 [kworker/R-comp_1.0.1]
+    318       2       0 五 10月  9 08:13:38 2026 [kworker/R-comp_1.1.1]
+    319       2       0 五 10月  9 08:13:38 2026 [kworker/R-comp_1.2.1]
+    320       2       0 五 10月  9 08:13:38 2026 [kworker/R-comp_1.3.1]
+    321       2       0 五 10月  9 08:13:38 2026 [kworker/R-sdma0]
+    322       2       0 五 10月  9 08:13:38 2026 [kworker/R-vcn_dec_0]
+    323       2       0 五 10月  9 08:13:38 2026 [kworker/R-vcn_enc_0.0]
+    324       2       0 五 10月  9 08:13:38 2026 [kworker/R-vcn_enc_0.1]
+    325       2       0 五 10月  9 08:13:38 2026 [kworker/R-jpeg_dec]
+    381       2       0 五 10月  9 08:13:39 2026 [jbd2/nvme0n1p5-8]
+    382       2       0 五 10月  9 08:13:39 2026 [kworker/R-ext4-rsv-conversion]
+    437       1     437 五 10月  9 08:13:40 2026 /usr/lib/systemd/systemd-journald
+    454       1     454 五 10月  9 08:13:40 2026 /usr/lib/systemd/systemd-userdbd
+    472       2       0 五 10月  9 08:13:40 2026 [nv_queue]
+    473       2       0 五 10月  9 08:13:40 2026 [nv_mem_pool_scrubber_queue]
+    474       2       0 五 10月  9 08:13:40 2026 [nv_mem_pool_scrubber_queue]
+    475       2       0 五 10月  9 08:13:40 2026 [nv_mem_pool_scrubber_queue]
+    476       2       0 五 10月  9 08:13:40 2026 [nv_queue]
+    477       2       0 五 10月  9 08:13:40 2026 [nv_open_q]
+    484       2       0 五 10月  9 08:13:41 2026 [psimon]
+    489       1     489 五 10月  9 08:13:41 2026 /usr/lib/systemd/systemd-timesyncd
+    494       1     494 五 10月  9 08:13:41 2026 /usr/lib/systemd/systemd-udevd
+    496       2       0 五 10月  9 08:13:41 2026 [psimon]
+    576       2       0 五 10月  9 08:13:41 2026 [UVM global queue]
+    577       2       0 五 10月  9 08:13:41 2026 [UVM deferred release queue]
+    578       2       0 五 10月  9 08:13:41 2026 [UVM Tools Event Queue]
+    618       2       0 五 10月  9 08:13:42 2026 [nvidia-modeset/kthread_q]
+    619       2       0 五 10月  9 08:13:42 2026 [nvidia-modeset/deferred_close_kthread_q]
+    628       2       0 五 10月  9 08:13:42 2026 [kworker/R-cfg80211]
+    630       2       0 五 10月  9 08:13:42 2026 [irq/98-nvidia]
+    631       2       0 五 10月  9 08:13:42 2026 [irq/99-nvidia]
+    632       2       0 五 10月  9 08:13:42 2026 [irq/100-nvidia]
+    633       2       0 五 10月  9 08:13:42 2026 [irq/101-nvidia]
+    634       2       0 五 10月  9 08:13:42 2026 [irq/102-nvidia]
+    635       2       0 五 10月  9 08:13:42 2026 [irq/103-nvidia]
+    636       2       0 五 10月  9 08:13:42 2026 [irq/104-nvidia]
+    637       2       0 五 10月  9 08:13:42 2026 [irq/105-nvidia]
+    638       2       0 五 10月  9 08:13:42 2026 [kworker/R-led_workqueue]
+    639       2       0 五 10月  9 08:13:42 2026 [nvidia]
+    640       2       0 五 10月  9 08:13:42 2026 [nv_queue]
+    651       2       0 五 10月  9 08:13:42 2026 [kworker/u65:2-ttm]
+    676       2       0 五 10月  9 08:13:42 2026 [napi/phy0-0]
+    677       2       0 五 10月  9 08:13:42 2026 [napi/phy0-0]
+    678       2       0 五 10月  9 08:13:42 2026 [napi/phy0-0]
+    707       2       0 五 10月  9 08:13:43 2026 [mt76-tx phy0]
+    718       2       0 五 10月  9 08:13:43 2026 [jbd2/nvme0n1p2-8]
+    719       2       0 五 10月  9 08:13:43 2026 [kworker/R-ext4-rsv-conversion]
+    749       1     749 五 10月  9 08:13:44 2026 /usr/bin/dbus-broker-launch --scope system --audit
+    750     749     749 五 10月  9 08:13:44 2026 dbus-broker --log 10 --controller 9 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 536870912 --max-fds 4096 --max-matches 131072 --audit
+    751       1     751 五 10月  9 08:13:44 2026 /usr/bin/NetworkManager --no-daemon
+    753       1     753 五 10月  9 08:13:44 2026 /usr/lib/bluetooth/bluetoothd
+    754       1     754 五 10月  9 08:13:44 2026 /usr/lib/polkit-1/polkitd --no-debug --log-level=notice
+    755       1     755 五 10月  9 08:13:44 2026 /usr/lib/systemd/systemd-logind
+    818       1     818 五 10月  9 08:13:44 2026 /usr/bin/ModemManager
+    826       2       0 五 10月  9 08:13:44 2026 [psimon]
+    833       1     833 五 10月  9 08:13:45 2026 /usr/bin/cupsd -l
+    836       1     836 五 10月  9 08:13:45 2026 /usr/sbin/crond -n
+    839       1     839 五 10月  9 08:13:45 2026 /usr/lib/systemd/systemd --user
+    842     839     839 五 10月  9 08:13:45 2026 (sd-pam)
+    850     839     850 五 10月  9 08:13:45 2026 /usr/bin/mongod --dbpath /home/lorkhan/data/mongodb --bind_ip 127.0.0.1 --port 27017 --nounixsocket
+    851     839     851 五 10月  9 08:13:45 2026 /usr/bin/sbcl --noinform --disable-debugger --load /home/lorkhan/.config/common-lisp/swank-server.lisp
+    926       1     926 五 10月  9 08:13:47 2026 /usr/lib/power-profiles-daemon
+    927       1     927 五 10月  9 08:13:47 2026 /usr/bin/sddm
+    935     927     935 五 10月  9 08:13:47 2026 /usr/lib/Xorg -nolisten tcp -background none -seat seat0 vt2 -auth /run/sddm/xauth_Xeyurv -noreset -displayfd 16
+    944       2       0 五 10月  9 08:13:49 2026 [nvidia-drm/timeline-f2]
+    950     927     927 五 10月  9 08:13:49 2026 /usr/lib/sddm/sddm-helper --socket /tmp/sddm-auth-95f7869a-8ff8-46f7-a82b-35849a85d8aa --id 1 --start /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland --user lorkhan --autologin
+    952     950     952 五 10月  9 08:13:49 2026 /usr/bin/startplasma-wayland
+    998     839     998 五 10月  9 08:13:50 2026 /usr/bin/dbus-broker-launch --scope user
+    999     998     998 五 10月  9 08:13:50 2026 dbus-broker --log 11 --controller 10 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 100000000000000 --max-fds 25000000000000 --max-matches 5000000000
+   1007     839    1007 五 10月  9 08:13:50 2026 /usr/bin/kwin_wayland_wrapper --xwayland
+   1013    1007    1007 五 10月  9 08:13:50 2026 /usr/bin/kwin_wayland --wayland-fd 7 --socket wayland-0 --xwayland-fd 8 --xwayland-fd 9 --xwayland-display :1 --xwayland-xauthority /run/user/1000/xauth_ZycoFX --xwayland
+   1022       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-f3]
+   1025       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-100]
+   1028       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-101]
+   1031       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-102]
+   1032       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-103]
+   1033       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-104]
+   1034       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-105]
+   1035       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-106]
+   1036       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-107]
+   1065       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-132]
+   1066       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-133]
+   1067     839    1067 五 10月  9 08:13:50 2026 /usr/bin/pipewire
+   1068     839    1068 五 10月  9 08:13:50 2026 /usr/bin/wireplumber
+   1072    1013    1007 五 10月  9 08:13:50 2026 /usr/lib/fcitx5-wayland-launcher --reopen
+   1074       1    1074 五 10月  9 08:13:50 2026 /usr/lib/rtkit-daemon
+   1078     839    1078 五 10月  9 08:13:50 2026 /usr/bin/fcitx5
+   1095    1013    1007 五 10月  9 08:13:50 2026 /usr/bin/Xwayland :1 -auth /run/user/1000/xauth_ZycoFX -listenfd 8 -listenfd 9 -displayfd 132 -wm 136 -rootless
+   1101       2       0 五 10月  9 08:13:50 2026 [nvidia-drm/timeline-134]
+   1116     839    1116 五 10月  9 08:13:51 2026 /usr/lib/at-spi-bus-launcher
+   1127    1116    1116 五 10月  9 08:13:51 2026 /usr/bin/dbus-broker-launch --config-file=/usr/share/defaults/at-spi2/accessibility.conf --scope user
+   1132    1127    1116 五 10月  9 08:13:51 2026 dbus-broker --log 10 --controller 9 --machine-id 52cdbd89b11347edb0c900e5fe4d0e7a --max-bytes 100000000000000 --max-fds 6400000 --max-matches 5000000000
+   1135     839    1135 五 10月  9 08:13:51 2026 /usr/lib/at-spi2-registryd --use-gnome-session
+   1146       2       0 五 10月  9 08:13:51 2026 [krfcommd]
+   1152     839    1152 五 10月  9 08:13:51 2026 /usr/bin/ksmserver
+   1154     839    1154 五 10月  9 08:13:51 2026 /usr/bin/kded6
+   1161     839    1161 五 10月  9 08:13:51 2026 /usr/bin/plasmashell --no-respawn
+   1169     839    1169 五 10月  9 08:13:51 2026 /usr/lib/dconf-service
+   1181     839    1181 五 10月  9 08:13:51 2026 /usr/lib/kactivitymanagerd
+   1188     839    1188 五 10月  9 08:13:51 2026 /usr/bin/gmenudbusmenuproxy
+   1189     839    1189 五 10月  9 08:13:51 2026 /usr/bin/kaccess
+   1190     839    1190 五 10月  9 08:13:51 2026 /usr/lib/polkit-kde-authentication-agent-1
+   1191     839    1191 五 10月  9 08:13:51 2026 /usr/lib/org_kde_powerdevil
+   1192     839    1192 五 10月  9 08:13:51 2026 /usr/bin/xembedsniproxy
+   1225       1    1225 五 10月  9 08:13:51 2026 /usr/lib/upowerd
+   1235     839    1235 五 10月  9 08:13:51 2026 /usr/bin/pipewire-pulse
+   1245       1    1245 五 10月  9 08:13:51 2026 /usr/lib/udisks2/udisksd
+   1317     839    1316 五 10月  9 08:13:51 2026 /usr/bin/xsettingsd
+   1322       2       0 五 10月  9 08:13:51 2026 [nvidia-drm/timeline-13f]
+   1337     839    1337 五 10月  9 08:13:52 2026 /usr/bin/kdeconnectd
+   1400     839    1400 五 10月  9 08:13:53 2026 /usr/bin/msm_kde_notifier
+   1415     839    1415 五 10月  9 08:13:53 2026 /usr/lib/xdg-desktop-portal
+   1421     839    1421 五 10月  9 08:13:53 2026 /usr/bin/pamac-tray-plasma
+   1436     839    1436 五 10月  9 08:13:53 2026 /usr/lib/xdg-permission-store
+   1447     839    1447 五 10月  9 08:13:53 2026 /usr/lib/xdg-document-portal
+   1453    1447    1453 五 10月  9 08:13:53 2026 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+   1459     839    1459 五 10月  9 08:13:53 2026 /usr/lib/xdg-desktop-portal-gtk
+   1480     839    1480 五 10月  9 08:13:53 2026 /usr/lib/xdg-desktop-portal-kde
+   1537     839    1537 五 10月  9 08:16:59 2026 bash /home/lorkhan/.local/share/Steam/steam.sh -srt-logger-opened
+   1557     839    1556 五 10月  9 08:16:59 2026 /home/lorkhan/.local/share/Steam/ubuntu12_32/steam-runtime/usr/libexec/steam-runtime-tools-0/srt-logger --sh-syntax --rotate=8388608 --log-directory /home/lorkhan/.local/share/Steam/logs --filename console-linux.txt --log-fd=7 --journal-fd=5 --parse-level-prefix
+   1649    1537    1537 五 10月  9 08:16:59 2026 /home/lorkhan/.local/share/Steam/ubuntu12_32/steam -srt-logger-opened
+   1657       2       0 五 10月  9 08:17:00 2026 [nvidia-drm/timeline-14b]
+   1664    1649    1664 五 10月  9 08:17:00 2026 /home/lorkhan/.local/share/Steam/steamrt64/pv-runtime/steam-runtime-steamrt/pressure-vessel/libexec/steam-runtime-tools-0/srt-bwrap --args 26 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1649 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   1676     839    1675 五 10月  9 08:17:00 2026 /home/lorkhan/.local/share/Steam/ubuntu12_32/steam-runtime/usr/libexec/steam-runtime-tools-0/srt-logger --sh-syntax --rotate=8388608 --log-directory /home/lorkhan/.steam/steam/logs --filename webhelper-linux.txt --log-fd=7 --journal-fd=5 --parse-level-prefix --journal-level=info
+   1756    1664    1756 五 10月  9 08:17:00 2026 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper_sniper_wrap.sh -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1649 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   1820    1649    1537 五 10月  9 08:17:01 2026 steam-runtime-launcher-service --alongside-steam
+   1856    1756    1756 五 10月  9 08:17:01 2026 ./steamwebhelper -nocrashdialog -lang=zh_TW -cachedir=/home/lorkhan/.local/share/Steam/config/htmlcache -steampid=1649 -buildid=1788652215 -steamid=0 -logdir=/home/lorkhan/.local/share/Steam/logs -uimode=7 -startcount=0 -steamuniverse=Public -realm=Global -clientui=/home/lorkhan/.local/share/Steam/clientui -steampath=/home/lorkhan/.local/share/Steam/ubuntu12_32/steam -launcher=0 --valve-initial-threadpool-size=4 --valve-enable-site-isolation --enable-smooth-scrolling --password-store=basic --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt --disable-quick-menu --disable-component-update --gaia-url=http://disabled.invalid --enable-features=PlatformHEVCDecoderSupport --disable-features=WinRetrieveSuggestionsOnlyOnDemand,SpareRendererForSitePerProcess,DcheckIsFatal,BlockPromptsIfIgnoredOften,WebUsbDeviceDetection,ValveFFmpegAllowLowDelayHEVC
+   1859    1756    1858 五 10月  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --monitor-self-annotation=ptype=crashpad-handler --type=crashpad-handler --max-uploads=5 --max-db-size=20 --max-db-age=5 --database=/tmp/dumps --url=https://crash.steampowered.com/submit --annotation=lsb-release=Steam Runtime 3c (steamrt3c) --annotation=platform=linux64 --annotation=product=cefwebhelper --annotation=version=1788652215 --initial-client-fd=7 --shared-client-connection
+   1864    1856    1756 五 10月  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1865    1856    1756 五 10月  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1867    1865    1756 五 10月  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1882    1864    1756 五 10月  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1887       2       0 五 10月  9 08:17:01 2026 [nvidia-drm/timeline-165]
+   1894    1882    1756 五 10月  9 08:17:01 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --no-zygote-sandbox --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1905    1856    1756 五 10月  9 08:17:02 2026 /proc/self/exe --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4 --shared-files --field-trial-handle=3,i,5279840934855968819,18330483610971779226,262144 --enable-features=PlatformHEVCDecoderSupport --disable-features=BlockPromptsIfIgnoredOften,DcheckIsFatal,SpareRendererForSitePerProcess,ValveFFmpegAllowLowDelayHEVC,WebUsbDeviceDetection,WinRetrieveSuggestionsOnlyOnDemand --variations-seed-version --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt
+   1923    1867    1756 五 10月  9 08:17:02 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1960    1867    1756 五 10月  9 08:17:02 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+   1993       2       0 五 10月  9 08:17:03 2026 [nvidia-drm/timeline-18d]
+   2064       2       0 五 10月  9 08:17:06 2026 [nvidia-drm/timeline-19d]
+   2678       1    2678 五 10月  9 08:18:57 2026 /usr/lib/accounts-daemon
+  19498     839   19498 五 10月  9 10:31:10 2026 /usr/bin/ghostty --gtk-single-instance=true --initial-window=false
+  19515       2       0 五 10月  9 10:31:11 2026 [nvidia-drm/timeline-487]
+  20862   19498   20862 五 10月  9 10:32:27 2026 /usr/bin/zsh
+  21665   20862   21665 五 10月  9 10:32:39 2026 claude --dangerously-skip-permissions --remote-control
+  21762   21665   21665 五 10月  9 10:32:39 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+  21763   21665   21665 五 10月  9 10:32:39 2026 python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+  26155     839   26155 五 10月  9 10:36:10 2026 /home/lorkhan/.codex/packages/app-server-daemon/releases/0.162.0-x86_64-unknown-linux-musl/bin/codex app-server daemon pid-update-loop
+  28523   26155   28523 五 10月  9 10:41:28 2026 /home/lorkhan/.codex/packages/app-server-daemon/releases/0.162.0-x86_64-unknown-linux-musl/bin/codex app-server --listen unix:// --analytics-default-enabled --managed-daemon
+  30349   21665   30349 五 10月  9 10:44:20 2026 /home/lorkhan/.local/bin/claude daemon run --origin transient --spawned-by {"label":"claude","cwd":"/home/lorkhan/repo/simple_tools/aos","pid":21665}
+  30361   30349   30361 五 10月  9 10:44:20 2026 claude bg-pty-host --bg-pty-host /tmp/cc-daemon-1000/33fb32ee/spare/7f518c13.pty.sock 200 50 -- /home/lorkhan/.local/share/claude/versions/2.1.295 --bg-spare /tmp/cc-daemon-1000/33fb32ee/spare/7f518c13.claim.sock
+  30362   30349   30362 五 10月  9 10:44:20 2026 claude bg-pty-host --bg-pty-host /tmp/cc-daemon-1000/33fb32ee/pty/6543a9ae.sock 191 47 -- /home/lorkhan/.local/share/claude/versions/2.1.295 --session-id 6543a9ae-50af-4d7e-b248-eb93ff758b3e --fork-session --resume /home/lorkhan/.claude/projects/-home-lorkhan-repo-simple-tools-aos/b8b407fc-3f63-40f7-9035-94a84f538b80.jsonl --permission-mode bypassPermissions
+  30379   30361   30361 五 10月  9 10:44:20 2026 claude bg-spare --bg-spare /tmp/cc-daemon-1000/33fb32ee/spare/7f518c13.claim.sock
+  30380   30362   30380 五 10月  9 10:44:20 2026 /home/lorkhan/.local/share/claude/versions/2.1.295 --session-id 6543a9ae-50af-4d7e-b248-eb93ff758b3e --fork-session --resume /home/lorkhan/.claude/projects/-home-lorkhan-repo-simple-tools-aos/b8b407fc-3f63-40f7-9035-94a84f538b80.jsonl --permission-mode bypassPermissions
+  30610   30380   30380 五 10月  9 10:44:21 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+  30611   30380   30380 五 10月  9 10:44:21 2026 python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+ 145417       2       0 五 10月  9 18:54:21 2026 [nvidia-drm/timeline-247b]
+ 192774 4150940 4150919 五 10月  9 20:45:22 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=361 --launch-time-ticks=45106957443 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,8355855248644694819,4790792985288980183,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709324583978983
+ 199960 4150940 4150919 五 10月  9 20:48:26 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=376 --launch-time-ticks=45290361914 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,13739401954255912493,3755378856355128271,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709338639606718
+ 329813       2       0 五 10月  9 20:53:46 2026 [kworker/4:0-events]
+ 473315       2       0 五 10月  9 21:04:04 2026 [kworker/3:2-events]
+ 479592 4150940 4150919 五 10月  9 21:04:55 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=429 --launch-time-ticks=46279725223 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,6033686672902283463,7051984085791877584,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709388302824715
+ 480774       2       0 五 10月  9 21:04:59 2026 [kworker/7:0-mm_percpu_wq]
+ 616247    1856    1756 五 10月  9 12:48:57 2026 /proc/self/exe --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4 --shared-files --field-trial-handle=3,i,5279840934855968819,18330483610971779226,262144 --enable-features=PlatformHEVCDecoderSupport --disable-features=BlockPromptsIfIgnoredOften,DcheckIsFatal,SpareRendererForSitePerProcess,ValveFFmpegAllowLowDelayHEVC,WebUsbDeviceDetection,WinRetrieveSuggestionsOnlyOnDemand --variations-seed-version --log-file=/home/lorkhan/.local/share/Steam/logs/cef_log.txt
+ 920949 4150940 4150919 五 10月  9 21:31:36 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=476 --launch-time-ticks=47880752774 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,852652076223168070,18285657250655241149,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709432343791618
+ 922505 4150940 4150919 五 10月  9 21:32:02 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=479 --launch-time-ticks=47906964046 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,1575314519273156804,14313436203320729377,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709435154917165
+1092387 4150940 4150919 五 10月  9 21:35:15 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=491 --launch-time-ticks=48099499922 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,8274664904035762968,6169108115284023468,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709446399419353
+1092487 4150940 4150919 五 10月  9 21:35:16 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=492 --launch-time-ticks=48100420186 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,4372904149864704150,12414924848906528503,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709447336461202
+1100004   19498 1100004 五 10月  9 14:12:23 2026 /usr/bin/zsh
+1100227 1100004 1100227 五 10月  9 14:12:31 2026 uv run --no-project --with litellm[proxy]==1.87.5 litellm --config ./litellm.yaml --port 4000
+1100382 1100227 1100227 五 10月  9 14:12:37 2026 /home/lorkhan/.cache/uv/builds-v0/.tmpaGsJMg/bin/python /home/lorkhan/.cache/uv/builds-v0/.tmpaGsJMg/bin/litellm --config ./litellm.yaml --port 4000
+1534951       2       0 五 10月  9 21:48:52 2026 [kworker/u64:2-kvfree_rcu_reclaim]
+1803126   19498 1803126 五 10月  9 22:12:25 2026 /usr/bin/zsh
+1804807 1803126 1804807 五 10月  9 22:12:39 2026 claude --dangerously-skip-permissions --remote-control
+1804913 1804807 1804807 五 10月  9 22:12:40 2026 /home/lorkhan/tools/housecarl/server/housecarl-mcp
+1804914 1804807 1804807 五 10月  9 22:12:40 2026 python3 /home/lorkhan/repo/moddings/skyrim/projects/agent-bridge/client/qa_mcp.py
+1875199     839   30380 五 10月  9 22:15:41 2026 wl-copy
+1927376    1867    1756 五 10月  9 22:16:26 2026 /home/lorkhan/.local/share/Steam/ubuntu12_64/steamwebhelper --type=zygote --crashpad-handler-pid=1859 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --enable-chrome-runtime --user-data-dir=/home/lorkhan/.local/share/Steam/config/htmlcache --user-agent-product=Valve Steam Client --buildid=1788652215 --steamid=0 --valve-initial-threadpool-size=4
+1945774     839 1945774 五 10月  9 22:20:02 2026 /home/lorkhan/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/pressure-vessel/libexec/steam-runtime-tools-0/srt-bwrap --args 26 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/steamapps/common/Proton 9.0 (Beta)/proton waitforexitandrun /home/lorkhan/games/mod-organizer-2-skyrimspecialedition/modorganizer2/ModOrganizer.exe
+1945847 1945774 1945847 五 10月  9 22:20:02 2026 /usr/lib/pressure-vessel/from-host/libexec/steam-runtime-tools-0/pv-adverb --prefix=/usr/lib/pressure-vessel/from-host --generate-locales --fd 11 --regenerate-ld.so-cache /var/pressure-vessel/ldso --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu --add-ld.so-path /usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu --set-ld-library-path /usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu/aliases:/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu/aliases --overrides-path /usr/lib/pressure-vessel/overrides --assign-fd=1=3 --assign-fd=2=4 -- /home/lorkhan/.local/share/Steam/steamapps/common/Proton 9.0 (Beta)/proton waitforexitandrun /home/lorkhan/games/mod-organizer-2-skyrimspecialedition/modorganizer2/ModOrganizer.exe
+1945883 1945847 1945847 五 10月  9 22:20:02 2026 python3 /home/lorkhan/.local/share/Steam/steamapps/common/Proton 9.0 (Beta)/proton waitforexitandrun /home/lorkhan/games/mod-organizer-2-skyrimspecialedition/modorganizer2/ModOrganizer.exe
+1945890 1945883 1945847 五 10月  9 22:20:02 2026 c:\windows\system32\steam.exe /home/lorkhan/games/mod-organizer-2-skyrimspecialedition/modorganizer2/ModOrganizer.exe
+1945892 1945847 1945892 五 10月  9 22:20:02 2026 /home/lorkhan/.local/share/Steam/steamapps/common/Proton 9.0 (Beta)/files/bin/wineserver
+1945896 1945847 1945896 五 10月  9 22:20:02 2026 C:\windows\system32\services.exe
+1945899 1945847 1945899 五 10月  9 22:20:02 2026 C:\windows\system32\winedevice.exe
+1945908 1945847 1945908 五 10月  9 22:20:02 2026 C:\windows\system32\winedevice.exe
+1945928 1945847 1945928 五 10月  9 22:20:02 2026 C:\windows\system32\plugplay.exe
+1945934 1945847 1945934 五 10月  9 22:20:02 2026 C:\windows\system32\svchost.exe -k LocalServiceNetworkRestricted
+1945945 1945847 1945945 五 10月  9 22:20:02 2026 C:\windows\system32\explorer.exe /desktop
+1945960 1945847 1945960 五 10月  9 22:20:03 2026 C:\windows\system32\rpcss.exe
+1945970 1945847 1945970 五 10月  9 22:20:03 2026 C:\windows\system32\tabtip.exe
+1945974 1945847 1945974 五 10月  9 22:20:03 2026 \\?\Z:\home\lorkhan\.local\share\Steam\steamapps\common\Proton 9.0 (Beta)\files\share\wine/../xalia/xalia.exe
+1945982 1945847 1945982 五 10月  9 22:20:03 2026 Z:\home\lorkhan\games\mod-organizer-2-skyrimspecialedition\modorganizer2\ModOrganizer.exe
+1946017       2       0 五 10月  9 22:20:03 2026 [nvidia-drm/timeline-3243]
+1946165       2       0 五 10月  9 22:20:05 2026 [vidmem lazy free]
+1946167       2       0 五 10月  9 22:20:05 2026 [UVM GPU1 BH]
+1946168       2       0 五 10月  9 22:20:05 2026 [UVM GPU1 KC]
+1946231       2       0 五 10月  9 22:20:06 2026 [nvidia-drm/timeline-3272]
+1946234       2       0 五 10月  9 22:20:06 2026 [nvidia-drm/timeline-3273]
+1946237       2       0 五 10月  9 22:20:06 2026 [nvidia-drm/timeline-3274]
+1946238       2       0 五 10月  9 22:20:06 2026 [nvidia-drm/timeline-3275]
+1946239       2       0 五 10月  9 22:20:06 2026 [nvidia-drm/timeline-3276]
+1946740 1945847 1946724 五 10月  9 22:20:14 2026 Z:\home\lorkhan\.local\share\Steam\steamapps\common\Skyrim Special Edition\\SkyrimSE.exe
+1948306       2       0 五 10月  9 22:21:20 2026 [nvidia-drm/timeline-32a0]
+1948316       2       0 五 10月  9 22:21:20 2026 [nvidia-drm/timeline-32a1]
+1948319       2       0 五 10月  9 22:21:20 2026 [nvidia-drm/timeline-32a2]
+1948320       2       0 五 10月  9 22:21:20 2026 [nvidia-drm/timeline-32a3]
+1948321       2       0 五 10月  9 22:21:20 2026 [nvidia-drm/timeline-32a4]
+1948485       2       0 五 10月  9 22:21:23 2026 [nvidia-drm/timeline-32aa]
+1950455 4150940 4150919 五 10月  9 22:24:10 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=559 --launch-time-ticks=51034884959 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,15574231658685536572,3571345012164577137,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709510118265085
+2331190 4150940 4150919 五 10月  9 22:38:14 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=578 --launch-time-ticks=51878688354 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,8455415360817128387,7412205182309093858,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709527922060216
+2453373       2       0 五 10月  9 22:41:57 2026 [kworker/6:2-events]
+2479693       2       0 五 10月  9 22:42:43 2026 [kworker/2:2-mm_percpu_wq]
+2506009       2       0 五 10月  9 22:43:10 2026 [kworker/9:2-events]
+2545550 4150940 4150919 五 10月  9 19:48:36 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=151 --launch-time-ticks=41700235298 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,6540993629749485123,5319339724811420107,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709127805190693
+2546189       2       0 五 10月  9 19:48:49 2026 [kworker/0:1-events]
+2885132       2       0 五 10月  9 22:53:26 2026 [kworker/u64:3-events_unbound]
+2981590       2       0 五 10月  9 22:54:54 2026 [kworker/12:2-events]
+2983781       2       0 五 10月  9 22:54:56 2026 [kworker/5:0-mm_percpu_wq]
+3104350       2       0 五 10月  9 23:01:34 2026 [kworker/14:1-mm_percpu_wq]
+3481134 4150940 4150919 五 10月  9 20:18:29 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=309 --launch-time-ticks=43493566046 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,2834496571609197031,3296150821876967479,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709275857802835
+3608088       2       0 五 10月  9 23:12:06 2026 [kworker/u64:5-flush-259:0]
+3661128       2       0 五 10月  9 23:13:05 2026 [kworker/8:0-events]
+3668667       2       0 五 10月  9 23:13:08 2026 [kworker/3:1-events]
+3678506       2       0 五 10月  9 23:13:30 2026 [kworker/1:0-events]
+3689689       2       0 五 10月  9 23:14:24 2026 [kworker/10:2-events]
+3720418       2       0 五 10月  9 23:20:16 2026 [kworker/11:0-events]
+3737913   30380 3737913 五 10月  9 23:24:15 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /tmp/ap5-node && python3 /home/lorkhan/repo/simple_tools/aos-wt/AP5/proto7-2/packs/budget/bin/aos7-budget ledger budget/llm > /tmp/ap5-node/ledger.log 2>&1' < /dev/null && pwd -P >| /tmp/claude-91f0-cwd
+3737914 3737913 3737913 五 10月  9 23:24:15 2026 python3 /home/lorkhan/repo/simple_tools/aos-wt/AP5/proto7-2/packs/budget/bin/aos7-budget ledger budget/llm
+3738481       2       0 五 10月  9 23:24:44 2026 [kworker/u64:0-kvfree_rcu_reclaim]
+3746946       2       0 五 10月  9 23:26:17 2026 [kworker/14:0-events]
+3748177       2       0 五 10月  9 23:26:22 2026 [kworker/2:0-events]
+3749778       2       0 五 10月  9 23:26:32 2026 [kworker/15:1-mm_percpu_wq]
+3750957       2       0 五 10月  9 23:26:40 2026 [kworker/7:2-events]
+3752444       2       0 五 10月  9 23:27:04 2026 [kworker/4:1-events]
+3757250       2       0 五 10月  9 23:27:11 2026 [kworker/9:1-events]
+3757518       2       0 五 10月  9 23:27:12 2026 [kworker/6:1-events]
+3759453       2       0 五 10月  9 23:27:28 2026 [kworker/10:1-events]
+3759584       2       0 五 10月  9 23:27:30 2026 [kworker/1:2-events]
+3771959       2       0 五 10月  9 23:28:31 2026 [kworker/3:0-events]
+3779413       2       0 五 10月  9 23:28:39 2026 [kworker/12:1-events]
+3796351       2       0 五 10月  9 23:28:54 2026 [kworker/5:2-events]
+3802841       2       0 五 10月  9 23:29:00 2026 [kworker/u64:4-kvfree_rcu_reclaim]
+3887314       2       0 五 10月  9 20:32:30 2026 [kworker/13:3-events]
+3904509       2       0 五 10月  9 23:31:46 2026 [kworker/8:2-events]
+3904983       2       0 五 10月  9 23:31:47 2026 [kworker/11:1-events]
+3906889       2       0 五 10月  9 23:31:56 2026 [kworker/0:2-events]
+3910209       2       0 五 10月  9 23:32:21 2026 [kworker/15:0-events]
+3912748       2       0 五 10月  9 23:32:32 2026 [kworker/13:0-rcu_gp]
+3914178     454     454 五 10月  9 23:32:48 2026 systemd-userwork: waiting...
+3917060       2       0 五 10月  9 23:33:32 2026 [kworker/6:0-rcu_gp]
+3917064       2       0 五 10月  9 23:33:32 2026 [kworker/14:2-events]
+3917084       2       0 五 10月  9 23:33:32 2026 [kworker/1:1-events]
+3917159       2       0 五 10月  9 23:33:33 2026 [kworker/10:0-events]
+3917181       2       0 五 10月  9 23:33:33 2026 [kworker/9:0-mm_percpu_wq]
+3918652       2       0 五 10月  9 23:33:44 2026 [kworker/4:2-events]
+3919616     454     454 五 10月  9 23:34:03 2026 systemd-userwork: waiting...
+3920360       2       0 五 10月  9 23:34:22 2026 [kworker/7:1-events]
+3920462       2       0 五 10月  9 23:34:23 2026 [kworker/5:1-events]
+3921317       2       0 五 10月  9 23:34:43 2026 [kworker/12:0-events]
+3921386       2       0 五 10月  9 23:34:43 2026 [kworker/2:1-events]
+3928208     454     454 五 10月  9 23:35:37 2026 systemd-userwork: waiting...
+3951542   30380 3951542 五 10月  9 23:37:25 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /tmp/ap5-runs; sleep 3; touch done.log; tail -n0 -F done.log */drive.log 2>/dev/null | grep --line-buffered -E '"'"'exit|"round"|Traceback|Error'"'"' | sed -u -E '"'"'s/.*"rid": "([^"]+)".*"round": ([0-9]+).*"ok": ([a-z]+).*"failed_gate": ([a-z0-9]+).*"rules": (\[[^]]*\]).*/\1 r\2 ok=\3 gate=\4 \5/'"'"'' < /dev/null && pwd -P >| /tmp/claude-0548-cwd
+3951570 3951542 3951542 五 10月  9 23:37:28 2026 tail -n0 -F done.log luna-A1/drive.log luna-B1/drive.log sol-A1/drive.log sol-B1/drive.log
+3951571 3951542 3951542 五 10月  9 23:37:28 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /tmp/ap5-runs; sleep 3; touch done.log; tail -n0 -F done.log */drive.log 2>/dev/null | grep --line-buffered -E '"'"'exit|"round"|Traceback|Error'"'"' | sed -u -E '"'"'s/.*"rid": "([^"]+)".*"round": ([0-9]+).*"ok": ([a-z]+).*"failed_gate": ([a-z0-9]+).*"rules": (\[[^]]*\]).*/\1 r\2 ok=\3 gate=\4 \5/'"'"'' < /dev/null && pwd -P >| /tmp/claude-0548-cwd
+3951572 3951542 3951542 五 10月  9 23:37:28 2026 sed -u -E s/.*"rid": "([^"]+)".*"round": ([0-9]+).*"ok": ([a-z]+).*"failed_gate": ([a-z0-9]+).*"rules": (\[[^]]*\]).*/\1 r\2 ok=\3 gate=\4 \5/
+3951573 3951571 3951542 五 10月  9 23:37:28 2026 ugrep -G --ignore-files --hidden -I --exclude-dir=.git --exclude-dir=.svn --exclude-dir=.hg --exclude-dir=.bzr --exclude-dir=.jj --exclude-dir=.sl --line-buffered -E exit|"round"|Traceback|Error
+3951891   30380 3951891 五 10月  9 23:37:54 2026 /usr/bin/zsh -c source /home/lorkhan/.claude/shell-snapshots/snapshot-zsh-1791513869422-7nbyfy.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /home/lorkhan/repo/simple_tools/aos-wt/R2 && E=proto7-2/notes/play/2026-10-09-astra-8-infra-evidence && mkdir -p $E/tasks $E/core $E/newbie $E/llm $E/xmod && ps -eo pid,ppid,pgid,lstart,args > $E/ps-before.txt && wc -l $E/ps-before.txt && ls /tmp | grep -i astra8 ; cat proto7-2/INDEX.md | head -60' < /dev/null && pwd -P >| /tmp/claude-dd99-cwd
+3951893 3951891 3951891 五 10月  9 23:37:54 2026 ps -eo pid,ppid,pgid,lstart,args
+4079549       2       0 五 10月  9 20:38:30 2026 [kworker/u64:9-kvfree_rcu_reclaim]
+4150919     839 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --ozone-platform=x11 https://claude.ai/artifact/7EYfkiF2J2A5gR5najZ1Je
+4150925 4150919 4150919 五 10月  9 18:44:09 2026 cat
+4150926 4150919 4150919 五 10月  9 18:44:09 2026 cat
+4150928     839 4150927 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome_crashpad_handler --monitor-self --monitor-self-annotation=ptype=crashpad-handler --database=/home/lorkhan/.config/google-chrome/Crash Reports --url=https://clients2.google.com/cr/report --annotation=channel= --annotation=lsb-release=Manjaro Linux --annotation=plat=Linux --annotation=prod=Chrome_Linux --annotation=ver=154.0.8037.97 --initial-client-fd=5 --shared-client-connection
+4150930     839 4150929 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome_crashpad_handler --no-periodic-tasks --monitor-self-annotation=ptype=crashpad-handler --database=/home/lorkhan/.config/google-chrome/Crash Reports --url=https://clients2.google.com/cr/report --annotation=channel= --annotation=lsb-release=Manjaro Linux --annotation=plat=Linux --annotation=prod=Chrome_Linux --annotation=ver=154.0.8037.97 --initial-client-fd=4 --shared-client-connection
+4150936 4150919 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=zygote --no-zygote-sandbox --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable
+4150937 4150919 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=zygote --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable
+4150940 4150937 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=zygote --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable
+4150974 4150936 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=gpu-process --gpu-recent-crash-count=0 --ozone-platform=x11 --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --gpu-preferences=YAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAASAAAAAAAAAABAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAAAEAAAAAAAAACAAAAAAAAAAMAAAAAQAAAAAAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files --metrics-shmem-handle=4,i,10663058664766276191,6518605750216260160,262144 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190708988185955192
+4150976 4150919 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,11407914011491822779,8844505853155656421,524288 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190708989122997041
+4150989 4150940 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=utility --utility-sub-type=storage.mojom.StorageService --lang=en-US --service-sandbox-type=utility --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,4111631804713839129,3211510497263841940,524288 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190708990060038890
+4151011       2       0 五 10月  9 18:44:09 2026 [nvidia-drm/timeline-2376]
+4151021 4150940 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=renderer --top-chrome-webui --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=5 --launch-time-ticks=37833597706 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,6625943528038312476,14347341678683673302,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190708990997080739
+4151032 4150974 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=broker
+4151068 4150940 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=9 --launch-time-ticks=37833626728 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,8522167055411833414,7639569689361546092,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190708994745248135
+4151071 4150940 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=10 --launch-time-ticks=37833627680 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,5273730934946059582,3472172697653682441,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190708995682289984
+4151087 4150940 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=11 --launch-time-ticks=37833628677 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,11659819823657695055,12020324160209517573,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190708996619331833
+4151227 4150940 4150919 五 10月  9 18:44:09 2026 /opt/google/chrome/chrome --type=renderer --crashpad-handler-pid=4150928 --enable-crash-reporter=, --extension-process --change-stack-guard-on-fork=enable --ozone-platform=x11 --lang=en-US --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=14 --launch-time-ticks=37833723217 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,1551118236998750680,5112460941910926937,1572864 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190708999430457380
+4151254 4150919 4150919 五 10月  9 18:44:09 2026 /usr/bin/plasma-browser-integration-host chrome-extension://cimiefiiaegbelhefglklhhakcgmhkai/
+4151271 4150919 4150919 五 10月  9 18:44:09 2026 /home/lorkhan/.local/bin/claude --chrome-native-host
+4165377 4150919 4150919 五 10月  9 18:44:56 2026 /opt/google/chrome/chrome --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=4150928 --enable-crash-reporter=, --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,4587526516528833351,9135616329945920700,524288 --field-trial-handle=3,i,15243057790625748732,16557352517509245448,262144 --variations-seed-version=20261008-170056.213000-production --pseudonymization-salt-handle=7,i,11510853095627446202,224102139640845597,4 --trace-process-track-uuid=3190709020982419907

@@ -1,0 +1,31 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-xmod-3.sh
+# 腳本:
+T=$(mktemp -d /tmp/astra8-xmod-entry-XXXX)
+P="$PWD/proto7-2"
+export PYTHONDONTWRITEBYTECODE=1
+mkdir -p "$T/home" "$T/slot"
+printf '{' > "$T/slot/birth.json"
+(
+  cd "$T"
+  export HOME="$T/home"
+  python3 -B "$P/bin/aos7-ctl" --no-such-option
+  printf 'ctl bad rc=%s\n' "$?"
+  python3 -B "$P/bin/aos7-ctl" task "$T/slot" kill
+  printf 'ctl unknown rc=%s\n' "$?"
+  python3 -B "$P/packs/adapt/bin/aos7-adapt" --no-such-option
+  printf 'adapt bad rc=%s\n' "$?"
+  python3 -B "$P/packs/usage/bin/aos7-usage" --help
+  printf 'usage help rc=%s\n' "$?"
+)
+rm -rf "$T"
+# 輸出(前40行):
+usage: aos7-ctl [-h] {daemon,task,add} ...
+aos7-ctl: error: the following arguments are required: what
+ctl bad rc=1
+aos7-ctl: birth.json birth.json 不是 JSON（半寫或寫壞），不知道現在是哪個 run；用 --run 指定
+ctl unknown rc=1
+usage: aos7-adapt [-h] {run,check,status} decl
+aos7-adapt: error: the following arguments are required: cmd, decl
+adapt bad rc=2
+aos7-usage: 這個工具已停用，功能併進 aos7-metrics。看每個模型用多少，從 repo 根跑：python3 proto7-2/modules/metrics/aos7-metrics job PATH --by model（說明見 proto7-2/modules/metrics/README.md）
+usage help rc=1

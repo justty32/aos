@@ -1,0 +1,14 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-newbie-3.sh
+# 腳本:
+cd /home/lorkhan/repo/simple_tools/aos-wt/R2
+T=$(mktemp -d /tmp/astra8-newbie-body-XXXX)
+export PYTHONDONTWRITEBYTECODE=1
+python3 -B - <<'PY'
+import sys
+sys.path.insert(0, 'proto7-2/modules/up')
+from aos7_up_ask import show_body
+show_body('關鍵答案：42\n\n## 做了什麼\n算完了\n', '計算結果')
+PY
+rm -rf "$T"
+# 輸出(前40行):
+算完了

@@ -1,0 +1,25 @@
+# 指令: systemd-run --user --scope -q -p TasksMax=200 -p RuntimeMaxSec=120 bash /tmp/astra8-verify-NEW-core-5.sh
+# 腳本:
+T=$(mktemp -d /tmp/astra8-core-XXXX)
+export T PYTHONDONTWRITEBYTECODE=1
+python3 -B - <<'PY'
+import json, os, pathlib, subprocess, sys
+events = pathlib.Path(os.environ["T"]) / "events"
+p = subprocess.run([
+    sys.executable, "-B", "proto7-2/modules/events/aos7-events",
+    "pub", "--events", str(events), "--create", "--node", "n",
+    "--kind", "big", "--event-id", "big-1",
+    "--payload", json.dumps("x" * 65536)
+], capture_output=True, text=True)
+print("rc =", p.returncode)
+print(p.stdout.strip())
+print(p.stderr.strip())
+print("files =", sorted(x.name for x in events.iterdir())
+      if events.exists() else [])
+PY
+rm -rf "$T"
+# 輸出(前40行):
+rc = 2
+{"ok": false, "seq": null, "dup": false, "why": "too_large"}
+aos7-events: 事件太大。縮小 payload；例：aos7-events pub --events DIR --kind hello --payload '{}'
+files = ['state.json', 'state.json.lock']

@@ -1,0 +1,42 @@
+[
+ {
+  "id": "NEW-llm-1",
+  "result": "重現",
+  "note": "上層 2/13/11、逐夾 13/13/0"
+ },
+ {
+  "id": "NEW-llm-2",
+  "result": "重現",
+  "note": "calls=1 tokens.used=0 ledger.used=7 diff=7"
+ },
+ {
+  "id": "NEW-llm-3",
+  "result": "重現",
+  "note": "回條 used=10 overrun=90，輸出只顯示每件用 10 token"
+ },
+ {
+  "id": "NEW-llm-4",
+  "result": "重現",
+  "note": "IsADirectoryError traceback，exit=1"
+ },
+ {
+  "id": "NEW-llm-5",
+  "result": "重現",
+  "note": "llm.exit=1 rejected，author exit=2"
+ },
+ {
+  "id": "NEW-llm-6",
+  "result": "重現",
+  "note": "exit=3，inbox 留 1 份 amount=0"
+ },
+ {
+  "id": "NEW-llm-7",
+  "result": "重現",
+  "note": "壞參數退 2 但 usage+error 兩行；壞 frame 退 3 但無「不確定：」前綴"
+ },
+ {
+  "id": "NEW-llm-8",
+  "result": "重現",
+  "note": "usage --help 退 1，llmdiag 退 0"
+ }
+]
