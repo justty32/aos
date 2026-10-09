@@ -1,8 +1,8 @@
 # prompt 包（把檔案拼成給 AI 的對話）
 
-← [proto7-2](../../README.md)｜細部規則：[spec.md](spec.md)｜下游：[llmcall](../llmcall/README.md)
+← [proto7-2](../../README.md)｜下游：[llmcall](../llmcall/README.md)
 
-**一句話**：node＝一個 AI 的資料夾（裡面有它的 `wf/` 等檔，本例是 `$D`）。寫一份 `prompt.json` 說「這次要給 AI 看哪些檔」，`aos7-prompt render` 每回合照它現讀現拼，產出 llmcall 直接能送的請求；太長的段落自動收起來，要原文再 `expand`。
+**一句話**：你寫一張清單 `prompt.json`，說「這次要給 AI 看哪些檔」；`aos7-prompt render` 照清單現讀現拼，產出一份請求檔，交給 llmcall 送出。太長的檔會自動收起來（只留編號和開頭 200 字），省 token；要看原文用 `aos7-prompt expand`。
 
 ## 第一次跑（約 1 分鐘）
 
@@ -10,40 +10,77 @@
 
 ```sh
 D=$(mktemp -d) && cp -r proto7-2/packs/prompt/examples/node/. "$D"
-python3 proto7-2/packs/prompt/bin/aos7-prompt render "$D" "$D/prompts/inbox.json" --max-chars 300 --out "$D/req.json"
+python3 proto7-2/packs/prompt/bin/aos7-prompt render "$D" "$D/prompts/first.json" --out "$D/req.json"
 python3 proto7-2/packs/prompt/bin/aos7-prompt expand "$D" "$D/req.json"
 ```
 
-- 第 2 行印一行回條：`"outcome": "rendered"`、`tokens_est`（收起來之後約多少 token）、`tokens_est_full`（不收約多少）、`folded`（收起來的段）。`$D/req.json` 就是要交給 `aos7-llmcall call --request` 的檔。
-- 打開 `$D/req.json` 會看到長段變成 `ref://… 已折疊 N 字，預覽：` 加 200 字；原文存在 `$D/refs/`。
-- 第 3 行把收起來的段全部換回原文印出來。
+做了什麼：第 1 行把範例資料夾複製到暫存目錄 `$D`。範例清單 `first.json` 要 AI 摘要一份約 7800 字的週報 `docs/weekly.md`。
 
-## 五個概念
+**你應該看到**：
+
+- 第 2 行印一行回條，重點是 `"outcome": "rendered"`（成功），以及
+  `"tokens_est": 106`（收起來後約 106 token）對 `"tokens_est_full": 2606`（不收約 2606 token）——週報被收起來，省了九成多。
+- 打開 `$D/req.json`：週報那段變成 `ref://<一長串編號> 已折疊 7785 字，預覽：` 加開頭 200 字。原文存在 `$D/refs/`。
+- 第 3 行把收起來的段換回原文，印出完整的請求（很長，捲一下就看到週報全文）。
+
+（短檔不會收：一段超過 6000 字才收。所以清單裡都是短檔時，兩個數字會差不多，這是正常的。）
+
+## 三個概念
 
 | 概念 | 白話 |
 |---|---|
-| `prompt.json` | 一張清單：每則訊息寫 `role`（system／user／assistant）和 `content`。 |
-| 讀檔寫法 | `content` 寫 `{"$opt": "file", "$val": "wf/AGENTS.md"}` 就是「渲染時讀這個檔」；`tail` 讀最後 `n` 行、`latest` 讀資料夾頂層檔名最大的 `n` 個 `.md`（信件檔名以時間開頭，所以就是最新 `n` 封）。 |
-| 取值寫法 | `{"$ref": "a.json#/x"}` 拿別的 JSON 某處的值、`{"$fmt": {"$val": "你好 ${who}", "who": "小明"}}` 填空、`{"$env": "HOME"}` 讀環境變數；`{"$opt": "append", "$val": {"$ref": "prompts/b.json#/messages"}}` 把別份清單的訊息接進來。 |
-| 折疊 `ref://` | 一段超過 `max_chars`（預設 6000 字）就把原文存進 `<node>/refs/`，對話裡只留編號＋前 200 字。 |
-| token 估值 | 字數 ÷ 3，看每回合有沒有越長越大用的，不是帳。 |
+| node | 給一個 AI 用的資料夾（上面的 `$D`）。清單裡、命令列上的相對路徑都從它算起。 |
+| `prompt.json` | 清單：一串訊息，每則寫 `role`（`system`／`user`／`assistant`）和 `content`（一段字，或多段的陣列）。 |
+| 讀檔 | `content` 裡寫 `{"$opt": "file", "$val": "docs/weekly.md"}`＝「拼的時候把這個檔讀進來」。 |
 
-路徑都從 node 算起（包括命令列的 prompt.json 與 `--out`；給絕對路徑也行）。內容可以是一段，也可以是陣列（多段，中間空一行）。
+「收起來（`ref://`）」不用你寫，自動發生；要原文就 `expand`。
+
+## 自己寫第一份清單
+
+照 `examples/node/prompts/first.json` 改檔名就好：
+
+```json
+{
+ "messages": [
+  {"role": "system", "content": "你是幫忙讀文件的助理，回答要短。"},
+  {"role": "user", "content": ["請摘要這份檔：", {"$opt": "file", "$val": "你的檔.md"}]}
+ ]
+}
+```
 
 ## 指令（兩個）
 
-- `aos7-prompt render <node> <prompt.json> [--out 檔] [--max-chars N]`：拼出請求。有 `--out` 就寫檔、回條印在螢幕；沒有就把請求印在螢幕、回條印到 stderr。`--max-chars 0`＝不收。
-- `aos7-prompt expand <node> <ref://編號 或 請求檔>`：印原文。
+- `aos7-prompt render <node> <prompt.json> [--out 檔]`：拼出請求。有 `--out` 就寫檔、回條印在螢幕；沒有就把請求印在螢幕。
+- `aos7-prompt expand <node> <請求檔 或 ref://編號>`：印原文。
 
-退出碼：0 成功；2 prompt.json 寫錯（看回條的 `why`）；3 有檔讀不到或繞圈（`$ref` 指回自己）。**失敗時只印一行失敗回條，不輸出請求、`--out` 的檔不動**，不會拼出半份。
+失敗時印一行 `"outcome"` 不是 `rendered` 的回條，`why` 說哪裡錯；不會拼出半份、`--out` 的檔不動。`--help` 看全部選項。
 
-## 範例（`examples/node/`）
+---
 
-一個最小的 node：`wf/AGENTS.md`（入口）、`wf/SESSION-LOG.md`（只列 open）、`wf/inbox/`（六封信）。三份 prompt 在 `prompts/`：
+**第一次用到這裡就夠了。** 以下是進階，需要時再看。
 
-1. `entry.json`：AGENTS 入口＋一句問題。
+## 進階
+
+**更多讀法**（寫在 `content` 裡）：
+
+- `{"$opt": "tail", "$val": "檔", "n": 20}`：只讀最後 20 行。
+- `{"$opt": "latest", "$val": "資料夾", "n": 5}`：讀資料夾頂層檔名最大的 5 個 `.md`（檔名以時間開頭時＝最新 5 封）。
+- `{"$opt": "append", "$val": {"$ref": "prompts/b.json#/messages"}}`：放在 `messages` 裡，把別份清單的訊息接進來。
+- `{"$ref": "a.json#/x"}` 拿別的 JSON 某處的值；`{"$fmt": {"$val": "你好 ${who}", "who": "小明"}}` 填空；`{"$env": "HOME"}` 讀環境變數。
+
+**收起來的門檻**：預設一段超過 6000 字收；`--max-chars N` 或清單頂層 `"max_chars": N` 改，`0`＝不收。
+
+**回條其他欄位**：`chars`／`chars_full` 是字數；token 估值＝字數 ÷ 3，用來看每回合有沒有越拼越大，不是帳。`folded` 是收起來的編號。
+
+**退出碼**：0 成功；2 清單寫錯；3 有檔讀不到或繞圈（`$ref` 指回自己）。
+
+**另外三份範例**（`examples/node/prompts/`）：node 裡的 `wf/`（`AGENTS.md` 入口、`SESSION-LOG.md`、`wf/inbox/` 信）是 [wfnode](../../modules/wfnode/README.md) 裝出來的資料夾樣子，本包只讀它、不管它的規矩。
+
+1. `entry.json`：讀 AGENTS 入口＋一句問題。
 2. `session.json`：入口＋SESSION-LOG 尾 20 行，user 那句用 `$fmt` 填 `note`。
 3. `inbox.json`：接上範例 2，再加最新 5 封信。
+
+細部規則：[spec.md](spec.md)。
 
 ## 給維護者
 

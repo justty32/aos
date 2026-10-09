@@ -190,13 +190,16 @@ def expand_request(node, request_dict):
 
 def main(argv=None):
     """執行 render／expand，錯誤回 2 或 3。"""
-    ap = argparse.ArgumentParser(prog="aos7-prompt")
-    sub = ap.add_subparsers(dest="cmd", required=True)
-    p = sub.add_parser("render")
-    p.add_argument("node"); p.add_argument("prompt")
-    p.add_argument("--out"); p.add_argument("--max-chars", type=int)
-    p = sub.add_parser("expand")
-    p.add_argument("node"); p.add_argument("source")
+    ap = argparse.ArgumentParser(prog="aos7-prompt", description="照 prompt.json 把檔案拼成給 AI 的請求；太長的段落收成 ref://，要原文用 expand。")
+    sub = ap.add_subparsers(dest="cmd", required=True, metavar="{render,expand}")
+    p = sub.add_parser("render", help="照清單拼出請求", description="照 prompt.json 讀檔、拼出請求。回條的 tokens_est＝收起來後約多少 token，tokens_est_full＝不收約多少。")
+    p.add_argument("node", help="AI 的資料夾；其他相對路徑都從這裡算")
+    p.add_argument("prompt", help="清單檔 prompt.json")
+    p.add_argument("--out", help="請求寫到這個檔（回條印在螢幕）；不給就把請求印在螢幕")
+    p.add_argument("--max-chars", type=int, help="一段超過幾個字就收起來（預設 6000；0＝不收）")
+    p = sub.add_parser("expand", help="把收起來的段換回原文印出", description="把 ref:// 換回原文印出。")
+    p.add_argument("node", help="AI 的資料夾（原文存在它的 refs/）")
+    p.add_argument("source", help="render 寫出的請求檔，或一個 ref://編號")
     try:
         a = ap.parse_args(argv)
     except SystemExit as e:
