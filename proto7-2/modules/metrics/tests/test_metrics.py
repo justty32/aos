@@ -72,12 +72,28 @@ class TestMetrics(unittest.TestCase):
             used += s['tokens']['used']
         self.assertEqual(used, 30739)
     def test_cli(self):
-        p = subprocess.run([sys.executable, str(PACKAGE/'aos7-metrics'), 'job', str(BASELINE/'loop-gpt-6-sol'), '--overhead', '1644'], capture_output=True, text=True)
+        cli = [sys.executable, str(PACKAGE/'aos7-metrics'), 'job', str(BASELINE/'loop-gpt-6-sol')]
+        p = subprocess.run(cli + ['--detail', '--overhead', '1644'], capture_output=True, text=True)
         self.assertEqual(p.returncode, 0)
         self.assertIn('代理 1644＋自己 721', p.stdout)
+        p = subprocess.run(cli, capture_output=True, text=True)
+        self.assertEqual((p.returncode, p.stdout), (0, 'loop-gpt-6-sol：1 件工作（問模型 1 次）｜每件用 2590 token｜同時最多 1 個呼叫｜花 11.486 秒｜重試 0 次\n'))
+        p = subprocess.run(cli[:2] + ['--help'], capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0)
+        for word in ('PATH', '--overhead', '--detail', '--json', 'max_parallel'):
+            self.assertIn(word, p.stdout)
         with tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err:
             self.assertEqual(metrics.main(['job', tmp+'/missing']), 2)
             self.assertEqual(len(err.getvalue().splitlines()), 1)
+    def test_plain(self):
+        s = metrics.scan(HERE / 'fixture')
+        self.assertEqual(metrics.plain(s), 'fixture：2 件工作（問模型 3 次）｜平均每件用 40 token｜同時最多 3 個呼叫｜平均花 10.0 秒（最長 10.0 秒），另有 1 件還沒結束｜重試 4 次｜1 次呼叫還沒結帳｜1 個檔讀不了已跳過')
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIn('沒找到 AI 工作紀錄', metrics.plain(metrics.scan(tmp)))
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(metrics.main(['job', tmp, tmp]), 0)
+            self.assertEqual(len(out.getvalue().splitlines()), 3)
     def evidence(self, root, files):
         for name, data in files.items():
             p = root / name; p.parent.mkdir(parents=True, exist_ok=True)
