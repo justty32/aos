@@ -137,3 +137,6 @@
 - C｜B3：budget cancel 寫的取消紀錄補齊凍結欄位；看不出是哪個入口時記 `fakeapi`（保持 cancel 原退出碼）；cancel 遇到既有結果寫的 accepted／failed 紀錄仍是舊形狀（不在這次範圍）
 - B｜W0／頂層核可：[blueprint-wfnode](blueprint-wfnode.md) 凍結 F1～F10（node 骨架用 wf-init 照模板原樣產、根只留 AGENTS.md／CLAUDE.md／.claude/、信名與終局照 PROTOCOL、routines 機器表走 wf-table json、大輸出 ref:// 可逆折疊、學徒只發布 apprentice/）
 - C｜W0：信件狀態照模板 PROTOCOL 的六種（計畫寫「五狀態」是誤記）；mail 與學徒先分 node 各自獨佔必讀通道；prompt token「曲線平」＝頭尾 30 回合平均差 ≤5%
+- B｜R1：真 AI 接上（llmcall 第二種傳輸 `llm.litellm`，依請求內容挑傳輸）；預設上限拉滿（不設 max_tokens、逾時 24 小時、學徒每次預留 100 萬 token）；模型輸出原樣使用不修 JSON
+- 結果｜R1：學徒用真 AI 跑 12 圈（sol／astra／luna 各型）全過三關、答案全對；每次約 2.5～2.7k token（其中 proxy 自帶約 1.6k）、2.4～10.9 秒；12 圈共 30,739 token → [real-ai 報告](play/2026-10-09-real-ai/README.md)。CSV 題太簡單比不出模型差異
+- 建議限制（**未生效**，等跑完大段落再定）：每次預留約 8000 token、逾時 120 秒、每單 5 萬 token、仍不設 max_tokens
