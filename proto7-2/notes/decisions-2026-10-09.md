@@ -44,3 +44,8 @@
 - C｜B：重播時入口回條拿不到一律退 3（gate 自判）；退出碼 3 文字只承諾到 `--out` 寫入失敗，不承諾 stdout → `packs/budget/`
 - C｜B：不做 A8-10 (c)（fakeapi call 步保留 `fail: failed`；開了 unknown_codes 後 3 本不走 fail，改了會破三個測試）
 - C｜B：帳任務只在啟動時掃一次 `gateway/` 死暫存檔（非每回合）
+- B｜K2：回收意圖落在 nodes.json 頂層 `reaping` 鍵（`{id:{since,why}}`），不另開檔、不在 node 條目加 `retiring`（藍圖 c2 的變形，避免重新登記撞鍵）→ `aos7_daemon.py`
+- B｜K2：磁碟上不記 pgid，重起後只靠身分掃描回收（避免殺到被重用的群組號）
+- B｜K2：意圖寫檔失敗仍照殺、每圈重試寫檔（不殺不會讓當機後更好）
+- C｜K2：register／unregister 寫檔失敗回 `ok:false`、不變更、可重送；paused.json 存失敗只記 log 不丟例外；讀不到的槽不算「不確定」（免得 node 永遠卡住）
+- 已知限制｜K2：N-06「回合已關、steps 還沒存」之間當機，重起後多跑一回合（要動 K3 timeline 才能修）；daemon 停機時 node 被換掉偵測不到（以前就如此）
