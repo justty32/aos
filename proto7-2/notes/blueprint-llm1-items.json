@@ -1,0 +1,159 @@
+{
+ "contract": "wf-table/1",
+ "source": "blueprint-llm1.md",
+ "extracted": "2026-10-09",
+ "columns": [
+  "id",
+  "cut",
+  "title",
+  "files",
+  "how",
+  "test"
+ ],
+ "rows": [
+  {
+   "id": "A1-1",
+   "cut": "1",
+   "title": "需求、穩定 rid 與有界帳",
+   "files": "新 packs/author/aos7_author.py、bin/aos7-author、examples/csv-request/request.json、spec.md",
+   "how": "新 register_request(node, request_path) -> {ok,rid,request_sha,why}：嚴格讀 UTF-8 JSON，欄位恰為 v=1、rid、goal、inputs:[{path,sha256}]、tools:[csv.convert,csv.stats]；驗型別、非空 ID、輸入一般檔與 SHA-256。rid 禁路徑分隔、NUL、..；長度配合 A1-4 命名裁決。request_sha 算原始檔位元組；保存原文，不回填雜湊造成自指。author/req/<rid>/request.json 已有相同 bytes 回 dup；不同回 conflict，不覆寫。回傳及後續 verdict／intent／receipt 記 request_sha。新 API 共用回值 {ok,why,...}，why 用 invalid／conflict／unknown，驗證加 issues；CLI 印 JSON，0 成功、2 invalid、3 conflict、4 unknown。作者寫者以 author/ 下單一共用鎖串行，不每 rid 新鎖；五個固定檔內以 candidate_sha 索引版本，active 指目前待審版本，receipt 留各版歷史，不每回合／候選增加帳檔。每 rid 同時一個待審候選、已發布版本上限 max_versions=2（隊長代定 ④），超過回 full；同一 rid 換候選不等於換需求。共用鎖＝author/author.lock。rid 限英數與 _、≤23 字。",
+   "test": "同 rid 同 bytes 重送不增檔、不同內容 conflict；inputs 雜湊不符拒絕；路徑型 rid 拒絕；作者夾每需求至多五個正式檔，無每需求 sidecar 鎖。README 記所有新錯誤與退出碼；本刀不發 events。"
+  },
+  {
+   "id": "A1-2",
+   "cut": "1",
+   "title": "固定 CSV 工具卡",
+   "files": "新 packs/author/toolcards/csv.json、aos7_author.py、spec.md",
+   "how": "新 load_toolcards(path) -> cards；卡 v=1、tools 以工具 ID 索引，每項含 argv、params（型別、允許值／路徑角色）、finite、idempotent、writes、artifacts、script_sha256。csv.convert.argv=[python3,${job}/convert.py,{src},{dst},{request}]；params src=${job}/data.csv、dst=${out}/data.json、request=${request}，皆字串。csv.stats.argv=[python3,${job}/stats.py,{src},{request},{dst}]；src=${out}/data.json、request=${req:convert}、dst=${out}/report.json。兩卡 finite=true、idempotent=true；writes 僅 ${out}，含工具用的同目錄 .tmp；artifacts 分別 data.json、report.json。argv 是陣列，不經 shell。屬性只由卡決定；候選多加 finite／idempotent 或與卡衝突都 invalid，不採信。腳本直接取 [CSV](../packs/step/examples/csv/)，原樣複製並記完整 SHA-256。",
+   "test": "卡與腳本內容相符；錯參數型別、多餘參數、未知工具、候選假冪等均 invalid；不改現有 convert.py／stats.py。展開寫路徑須在該版 out，含 ..、絕對逃逸與 symlink 逃逸均拒。"
+  },
+  {
+   "id": "A1-3",
+   "cut": "1",
+   "title": "候選注入、審查與固定試驗",
+   "files": "新 packs/author/aos7_author.py、bin/aos7-author、examples/csv-request/（7 份新候選 fixture）、README.md",
+   "how": "新 propose(node,rid,*,candidate_path,auto=False) -> {ok,rid,candidate_sha,issues,why}；CLI aos7-author propose <rid> --candidate <file> [--auto]。固定候選頂層 v、mode、intent、start、steps:[{id,tool,args,ok,fail}]、ends；完整合法值見 [藍圖 §3](blueprint-llm1.md)。candidate_sha 算輸入原始 bytes；候選保存於固定 candidate.json 的版本索引（保留原文，壞 JSON 也能審查）。預設只產可審查候選與驗證／編譯結果，不發布；人另跑 publish <rid>。只有測試或 --auto 明示固定試驗可接發布；模式與權限不由候選決定。新 fixture 建議名：valid.json、bad-json.json、bad-params.json、bad-dependency.json、bad-mode.json、bad-idempotent.json、bad-path.json；壞 JSON fixture 故意不可解析。每類的其他變體由 tests 在記憶體生成，不再增 fixture。第二刀以 gateway 取代候選來源，沿用接收候選與驗證介面；--candidate 仍可離線注入，第一刀無網路呼叫。",
+   "test": "七 fixture 恰一份合法、六份拒絕；預設 propose 完成後 tasks.json 位元組不變；--auto 固定試驗才可發布。壞 mode each／once、依賴未先採用／成環、參數型別／額外鍵各有子案例。自動 JSON 修復次數為 0。"
+  },
+  {
+   "id": "A1-4",
+   "cut": "1",
+   "title": "三層驗證、payload 與確定性編譯",
+   "files": "新 packs/author/aos7_author.py、spec.md、tests/test_author.py",
+   "how": "新 validate_compile(node,rid,candidate_sha) -> {ok,job,payload_sha,issues,why}。第一層嚴格 schema、工具白名單、參數、NUL、大小、輸出路徑；每個 ${req:前一步} 在所有可達路徑上必先成功採用，拒環、缺目標，成功／失敗皆有終點。第一刀未知或 timeout 停住，不暗中重派。第二層套工具卡生成 run／finite／idempotent／expect，options.restart_on_end=false，交現有 aos7_step.check(table) 檢查；展開 argv 亦須符合核心任務契約。第三層實際成果由 A1-7 執行後驗，不假稱發布前已驗答案。前兩層在記憶體完成，失敗回 invalid、verdict 記 issues，不建立 jobs、不碰 tasks。job=<rid>_<candidate_sha前8碼>、rid≤23 字（隊長代定 ②；合 [step spec §2](../packs/step/spec.md) 英數底線 ≤32 字），不改 step。短雜湊碰撞須用完整 candidate_sha 核對，不符 conflict、絕不覆蓋。\n新 payload 描述採排序鍵、固定分隔、UTF-8 的確定性 JSON：包含 steps.json／convert.py／stats.py／data.csv 的路徑與 SHA-256、工具卡內容與雜湊、request_sha、candidate_sha、tasks 項目（算 hash 時 x.author 尚不放 payload_sha，避免循環）。整體 SHA-256＝payload_sha；在 verdict.json 內存 manifest、steps_sha256、validated=true、answer=pending，不另建第六個 manifest 檔。tasks 項 name=author-<job>、mode=keep、max_live=1、argv=[python3,<既有 step/bin/aos7-step 絕對路徑>,run,jobs/<job>]、x.author={owner:author,rid,candidate_sha,payload_sha}。資料夾和表內 job 同一映射，每版 out 分離。腳本／輸入原文複製；既有版同 hash 可重用、異 hash 拒。只固定來源，frame／results／error／out 仍可寫。",
+   "test": "六壞全拒且 tasks 原始 bytes 不變、沒有該 job 目錄；相同輸入重編 steps bytes 與 payload hash 相同；verdict steps_sha256 等於交付檔。改 steps／腳本／輸入／卡／task 任一發布內容會改 payload hash。新舊版並存，out 不互蓋；前8碼撞名必 conflict。job 名過 step 檢查器。"
+  },
+  {
+   "id": "A1-5",
+   "cut": "1",
+   "title": "發布與恢復五列",
+   "files": "新 packs/author/aos7_author_pub.py、bin/aos7-author、spec.md、tests/test_author.py",
+   "how": "新 publish(node,rid,*,candidate_sha=None)／recover(node,rid,*,candidate_sha=None) -> {ok,why,receipt}；省略 sha 取 active，恢復後才准切換 active；固定五檔以 sha 區分 publication。先在作者共用鎖內、表鎖外重算 payload，與 verdict 不同回 invalid（payload_changed）。保存 intent.json 每版 {v,rid,request_sha,candidate_sha,owner,job,payload_sha,task}；aos7_fs.test_point(\"author:after-intent\")。僅本次新建 intent 的首次發布可繼續初次合併；重啟看到舊 intent 一律走證據恢復，不因相同 rid 自動補加。拿 tasks.json.lock 重讀：缺檔可起空表；壞／不可讀拒寫回 unknown。只比自己的 name、宣告、x.author；相符不追加；同名異內容或 enabled=false 回 conflict；其他 tasks、launch、mount_allow 等頂層設定完整保留，不比整份表 hash。原子寫表後 test_point(\"author:after-merge\")，寫 receipt.json 同版唯一回條 {v,rid,request_sha,candidate_sha,payload_sha,job,task_name,registered:true,evidence,closed:false} 後 test_point(\"author:after-receipt\")。模型與驗證不持表鎖。\n恢復五列依 [llm-author §4.3](reviews/2026-10-05/llm-author.md)：已有成功 receipt→原回條，不補表；完全相符表項→補回條；表項不在但相符 birth.x.author／可綁本版 frame→補曾登記回條，表仍不存在；只有 intent→unknown，不補加；同名修改／disabled→conflict，保持現況。已有成功回條優先，不能拿新 disabled 覆蓋歷史成功。frame 單獨只有 job 名不足以綁 payload；須核 intent 的固定來源雜湊與 frame.table，否則不算正證據。OSError／鎖逾時回 unknown，保留證據。--resend：只接受 unknown 的版本，人明示後丟舊 intent、重新走首次發布（人負責，仿 step resume --resend）。receipt 只證明登記過，不證明 CSV 正確。",
+   "test": "三點各子程序 SIGKILL ×3，以 AOS7_TEST_HOOKS／AOS7_TEST_CRASH 直接呼叫作者（不經會剝除 AOS7_TEST_* 的 aos7-run）。after-merge／after-receipt 重送後同版表項、回條各1；after-intent 無正證據回 unknown、表0、不補；人手 publish <rid> --resend 後表項、回條各1（隊長代定 ③）。回條前刪表且無 birth→unknown；相符 birth→補回條但表0；disabled／修改→conflict。另並行改其他 task／launch，發布保留其內容；壞表不覆蓋；驗證後換 steps 拒發布；重送回既有 receipt 不復活已移除工作。"
+  },
+  {
+   "id": "A1-6",
+   "cut": "1",
+   "title": "沿用 step 執行與識別",
+   "files": "新 packs/author/aos7_author.py、README.md、tests/test_author.py；既有 packs/step/ 僅讀",
+   "how": "新第一刀整合流程：複製 [CSV 範例](../packs/step/examples/csv/) 的 convert.py、stats.py、data.csv 原文到各版 job；記來源與拷貝雜湊。作者編出 steps，現有 aos7-step run jobs/<job> 由 keep 起，max_live=1、restart_on_end=false。convert 用 ${request} 標產物，stats 用 ${req:convert} 核採用版本。rid 是作者需求；step inst／request／attempt、核心 slot#run 各按現有語意，作者 receipt 與工具效果帳分開，不以 attempt 當新需求或新效果。frame／results／out 不拿 payload 固定來源雜湊涵蓋。README 寫明命令在 node cwd 執行、step 入口用已查到的絕對路徑，作者新 bin 亦以 python3 呼叫。",
+   "test": "固定試驗真跑現有 step，phase=ended、end=ok；convert／stats 各只派一次。keep 再起仍讀 ended、不得新開 inst。兩版同時存在，各用自己的 job／out；舊 child timeout fail 後晚寫只留舊版。不得修改 step／budget／adapt／history.py／核心。"
+  },
+  {
+   "id": "A1-7",
+   "cut": "1",
+   "title": "獨立答案檢查器與整合文件",
+   "files": "新 packs/author/examples/csv-request/check_answer.py、tests/test_author.py、README.md、spec.md；既有 proto7-2/INDEX.md 新增包清單一列",
+   "how": "新 check_answer(job_dir, input_csv) -> {ok,issues}／CLI 接 job 與原始 CSV；自行讀 csv、把 amount 轉數值、按 dept 算 n／sum／round(avg,2)，比 report.json 的 rows、by_dept 全欄位，不呼叫 stats.py 重算，也不用它的中間 data.json 當答案。核 report.from 與 frame.accepted.convert.request；讀 results/convert、results/stats 各一個合法 attempt 結果，識別 job／inst／step／request／attempt 與 frame.accepted 相符，ok=true、code=0、artifact hash 對交付；frame.tries 對應 request=1、無 resend。核 steps hash 等 verdict.manifest，close 前完成。無結果或缺欄回驗收失敗，不能用產物存在冒充完成。新 README／spec 寫契約卡、CLI、三層、發布五列、有界清理、§4 驗收與不做；包清單實際在 [INDEX](../INDEX.md)，只加該處一列，不改 modules/README。依 [step README](../packs/step/README.md) 與 [run_all.py](../tests/run_all.py)，新 tests/test_author.py 會自動收集，名稱不得撞其他 test 模組，不改 runner／共用工具。",
+   "test": "合法例 by_dept 為 eng:{n:2,sum:200,avg:100}、ops:{n:2,sum:120,avg:60}、sales:{n:1,sum:200,avg:200}，rows=5。改報表、錯來源 request、少／多 attempt、產物 hash 不符均失敗。完成全 §4 測試；文檔可照做。開發單檔用 systemd-run --user --scope -q -p TasksMax=300 -p RuntimeMaxSec=1200 python3 proto7-2/tests/run_all.py packs/author/tests，全套一份另排 TasksMax=800；今天只寫藍圖不跑這些程式測試。"
+  },
+  {
+   "id": "A1-8",
+   "cut": "1",
+   "title": "close、保帳與檔數",
+   "files": "新 packs/author/aos7_author.py、bin/aos7-author、spec.md、tests/test_author.py",
+   "how": "新 close_request(node,rid) -> {ok,why}；CLI aos7-author close <rid>。僅處理人明示結案、所有版本均有發布回條且 step 工作已 close 的需求；未完成回 conflict，未解 intent／結果不明回 unknown 且不刪。先在固定 receipt.json 記各版本 hashes、登記證據、檢查器結果與 closed；再清 candidate.json、verdict.json、已納回條的 intent.json，剩 request.json＋receipt.json。step close 清 results 是既有 step 職責，作者不冒充也不改 step；答案驗收須先做。ended 不是所有 child 已死，作者 close 不自動 retire、kill、刪 job／out 或啟用停止的表項。共用作者鎖下清自己的原子寫殘留暫存，不產生每 rid lock 或時間戳檔；計數包括暫存和 sidecar，穩態常數僅共用鎖。jobs 每個明示版本一夾、無回合夾；同 rid 已發布版本上限 2（max_versions），故 jobs 夾數 ≤2×需求數。",
+   "test": "100 份需求各跑完、驗答案、step close、author close：author/ 所有一般檔恰200＋共用常數，每 rid 僅2檔、無 tmp／逐回合檔。close 可重送；刪候選後／刪 intent 前死亡可由 closed receipt 繼續清，不丟帳；未解 intent 一檔不刪。已有 receipt 的重送不因候選被清而重新發布。"
+  },
+  {
+   "id": "F-01",
+   "cut": "2",
+   "title": "呼叫提交",
+   "files": "第二刀新 gateway 與測試（檔名待開隊）",
+   "how": "依 [llm-author §九故障矩陣](reviews/2026-10-05/llm-author.md)：用假傳輸在 reserve 前後、intent 前後、遠端已受理但本地未存回覆時中斷；固定 call ID 與請求雜湊重啟。",
+   "test": "恢復不另造 call；intent 後無查回正證據留 unknown，不自動重送、不釋放可能已用的預留。request／attempt／效果帳不混為一個 ID。"
+  },
+  {
+   "id": "F-02",
+   "cut": "2",
+   "title": "回覆恢復",
+   "files": "第二刀新 gateway 與測試（檔名待開隊）",
+   "how": "假傳輸原始回覆及 usage 已存、解析前 SIGKILL；部分結算已完成、回條未寫時 SIGKILL；同 call 再啟動。",
+   "test": "從原始回覆重做解析，不再問模型；以原結算鍵補回條，不重扣、不重退；結果帳不依 worker 槽存活。"
+  },
+  {
+   "id": "F-03",
+   "cut": "2",
+   "title": "token",
+   "files": "第二刀 budget 部分結算擴充與新 gateway 測試（第一刀不改 budget）",
+   "how": "注入 U<R、usage 缺失、U>R、兩件同時搶最後額度；R 是預留、U 是實際用量，一端點一種計量；另測預留僅估算。",
+   "test": "已知 U≤R 正確結算 U、退 R−U；usage 未知保留 R、billing pending；超額明報且不偽裝成功／硬上界；併發不超配、不雙扣。估算不能宣稱硬預算。"
+  },
+  {
+   "id": "F-04",
+   "cut": "2",
+   "title": "取消",
+   "files": "第二刀新 gateway 與測試（檔名待開隊）",
+   "how": "已有 intent、尚無回覆時 kill／cancel，本地程序停止，遠端可繼續完成；再收到遲到回覆。",
+   "test": "不宣稱遠端未執行，不因本地 cancel 退款或換 call；留 unknown 及預留，遲到回覆依同 call 恢復。"
+  },
+  {
+   "id": "F-05",
+   "cut": "1",
+   "title": "step 接口",
+   "files": "新 packs/author/tests/test_author.py（既有 step 唯讀）",
+   "how": "以測試探針正常回 rc3、整個程序群組 SIGKILL、產物已存在但結果檔未寫；比較預設 unknown_codes 與明列3的測試步。探針不進作者可信工具白名單。",
+   "test": "預設正常 rc3 是 failed；明列 unknown_codes:[3] 才按業務 unknown；整組被殺／僅產物無結果是缺結果 unknown，不拿產物存在當成功。同 request 重送才是新 attempt，不改效果識別。"
+  },
+  {
+   "id": "F-06",
+   "cut": "1",
+   "title": "作者發布",
+   "files": "新 packs/author/aos7_author_pub.py、tests/test_author.py",
+   "how": "after-intent（merge 前）、after-merge、after-receipt 各 SIGKILL×3；回條前刪表項、disabled、修改同名內容；另外保留相符 birth 的刪表案例。",
+   "test": "依 A1-5 五列，不重加、不恢復他人停止工作。有正證據只補唯一回條；僅 intent 留 unknown。指定「三點表項均恰1」與 after-intent 恢復規則矛盾，須隊長核；不得用補加把測試做綠。"
+  },
+  {
+   "id": "F-07",
+   "cut": "1",
+   "title": "版本",
+   "files": "新 packs/author/tests/test_author.py、aos7_author.py",
+   "how": "驗證後替換 steps／腳本／輸入；同 rid 新舊候選同時存在；測試探針 timeout fail 後舊 child 晚寫。另構造候選 sha 前8碼碰撞。",
+   "test": "發布前重算 payload，異於 verdict 拒；各版 job 與 out 獨立，不交付未驗版本、不污染新版，不用 ended 判完全停工；撞名 conflict 不覆蓋。step job 含連字號衝突須先裁決。"
+  },
+  {
+   "id": "F-08",
+   "cut": "3",
+   "title": "adapt",
+   "files": "第三刀新 adapt-llm 與測試（檔名待開隊）",
+   "how": "A 在途時 B、C 抵達；回覆過期、來源換 epoch、dst pause；current_only／within_age 各跑快慢來源與模型，一筆未解 call＋一份最新待處理來源。",
+   "test": "不把 A 標成 C；固定 basis，依政策及年齡採用，來源重建可辨；驗證後發布，發布時序一致，不因 pause 把本地回合當牆鐘。"
+  },
+  {
+   "id": "F-09",
+   "cut": "3",
+   "title": "消費端",
+   "files": "第三刀新 adapt-llm 消費工具與測試（檔名待開隊）",
+   "how": "adapter 死亡或停更，而目的暫存器仍是 ok；來源持續變動，消費者繼續讀同一筆值。",
+   "test": "消費端自行核 basis／age／來源版本，不無限使用凍結舊值；超期拒用，不能只相信 ok。最新值走 obs／tock，不冒充 must 逐件消費。"
+  },
+  {
+   "id": "F-10",
+   "cut": "1+2",
+   "title": "清理",
+   "files": "第一刀新 packs/author/tests/test_author.py；第二刀新 gateway 清理測試",
+   "how": "worker 槽消失、step close、工作結束但帳未結；author close 各刪檔間中斷；跑100份需求；第二刀另存 usage 未知與未解預留案例。",
+   "test": "第一刀 request／receipt 在槽外可追查，未解 intent 不清；完成 close 後 author/＝2×100＋常數，無回合垃圾。第二刀原始回覆、回條、未解預留仍可追查；內容完成不等於帳已結，未結帳資料不清。"
+  }
+ ]
+}
