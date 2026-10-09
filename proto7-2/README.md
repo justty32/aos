@@ -30,7 +30,9 @@ node 改成登記、不再掃資料夾；tock 預設照固定 interval，提前 
 
 10-09 第三段（仍不動核心）：LLM 單次呼叫閘道任務包 [packs/llmcall/](packs/llmcall/README.md)（假傳輸 `llm.fake`、不接真模型，藍圖 [blueprint-llm2](notes/blueprint-llm2.md)）；budget 改成部分結算（用多少扣多少）；author 加經事件必讀通道收單（`send`／`intake`）；事件保存兩條已知限制修掉。
 
-10-09 晚（上一輪 r3，仍不動核心）：一次備好 node 的 [`aos7-up`](modules/up/README.md)（含收信回信的 brain）與它用到的模組包 [wfnode](modules/wfnode/README.md)、[skills](modules/skills/README.md)、[routines](modules/routines/README.md)、[compact](modules/compact/README.md)、[mail](modules/mail/README.md)、[metrics](modules/metrics/README.md)，任務包 [prompt](packs/prompt/README.md)；A5 真 AI 學徒寫的 [usage](packs/usage/README.md)、[llmdiag](modules/llmdiag/README.md)；各包統一錯誤路徑（退出碼 0～4，[tests/error_path.json](tests/error_path.json)）。每包一列見 [INDEX](INDEX.md)。
+10-09 晚（上一輪 r3，仍不動核心）：一次備好 node 的 [`aos7-up`](modules/up/README.md)（含收信回信的 brain）與它用到的模組包 [wfnode](modules/wfnode/README.md)、[skills](modules/skills/README.md)、[routines](modules/routines/README.md)、[compact](modules/compact/README.md)、[mail](modules/mail/README.md)、[metrics](modules/metrics/README.md)，任務包 [prompt](packs/prompt/README.md)；A5 真 AI 學徒寫的 usage、llmdiag（r4 回頭審後分別併進 metrics `job --by`、`aos7-diag --llm`，原程式搬到 [archive/usage](archive/usage/README.md)、[archive/llmdiag](archive/llmdiag/README.md)，原處留轉址 stub）；各包統一錯誤路徑（退出碼 0～4，[tests/error_path.json](tests/error_path.json)）。每包一列見 [INDEX](INDEX.md)。
+
+10-09 深夜（r4／r5，仍不動核心）：brain 一封信可跨多步（進度信、沒進展停下問你、被殺接回不重問）、卡住信白話化、用語統一（「練習用的 AI」、進度叫「步」）；kernel 任務包 [packs/kernel/](packs/kernel/README.md)（`aos7-kernel run／status`，第一條規則 supervise-brain：腦卡住先寄信、再 kill 那個 run，藍圖 [blueprint-kernel1](notes/blueprint-kernel1.md)）。
 
 ## 怎麼跑
 

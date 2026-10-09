@@ -16,7 +16,7 @@ sys.path[:0] = [str(TOP / "lib"), str(TOP / "modules/tools")]
 from aos7_fs import append_jsonl, now, read_json, sweep_tmp, test_point, write_json
 from aos7_taskside import task_env, wait_tock
 
-# 門檻依據（2026-10-09 長任務）：真 AI 29 回合 journal 6.5 KB、STATE 2.8 KB，假 AI 3.0／2.2 KB；
+# 門檻依據（2026-10-09 長任務）：真 AI 29 回合 journal 6.5 KB、STATE 2.8 KB，練習用的 AI 3.0／2.2 KB；
 # 2048 bytes 約 700 token，是 brain 一次提示（約 4100 token）的六分之一，長任務裡兩個檔都會觸發。
 DEFAULT = dict(files=["wf/SESSION-LOG.md", "wf/handoffs/*/STATE.md", "notes/journal.jsonl"], max_bytes=2048,
                keep_recent=5, on_stage_change=True, stage_similarity=0.2, summary_max_chars=1200, llm=None, events=False)

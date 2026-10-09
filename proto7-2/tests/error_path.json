@@ -299,6 +299,20 @@
    "bad": [],
    "bad_code": 1,
    "exempt": {"unsure": "轉址 stub 不讀任何檔；不確定案在 aos7-diag --llm"}
+  },
+  {
+   "pack": "kernel",
+   "team": "I2",
+   "name": "aos7-kernel",
+   "entry": "packs/kernel/bin/aos7-kernel",
+   "unsure": {
+    "argv": ["status", "n"],
+    "files": {
+     "n/kernel/kernel.json": {"v": 1, "sources": [], "targets": [], "rules": [{"name": "noop"}]},
+     "n/.aos/tasks.json": {"tasks": []}
+    },
+    "chmod": {"n/.aos/tasks.json": "0o000"}
+   }
   }
  ]
 }

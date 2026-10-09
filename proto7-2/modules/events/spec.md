@@ -60,6 +60,6 @@ append 前 active_bytes ≥ segment_bytes 才輪替，一筆可讓段超過門�
 
 測試點 `events:` 前綴：after-partial（半行 flush 後）、after-append（整行 flush 後、存 state 前）、after-rename（rename 後）、after-unlink（unlink 後）、after-torn-save（torn／torn_cut 已存、截檔前）、after-truncate（截檔後、清標記前）、sample-after-gap（gap 保存後）。state 沿用 `tmp:state.json`。
 
-限制與不做清單見 [README 已知限制](README.md#已知限制)；另：單取樣器是因進度在 recover 後離鎖使用。
+限制與不做清單見 [ADVANCED 已知限制](ADVANCED.md#已知限制)；另：單取樣器是因進度在 recover 後離鎖使用。
 
 測試：`TestCrash.test_after_partial`、`TestCrash.test_after_rename`、`TestTornCount`、`TestReviewRegressions.test_rotation_then_kill_does_not_reuse_seq`

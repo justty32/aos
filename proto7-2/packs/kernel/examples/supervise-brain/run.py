@@ -1,14 +1,14 @@
-"""監督 brain 範例：假 AI 卡住不回 → 監督者（kernel）先寄信給你、再 kill 那個 run → brain 重起從 task.json 接續。
+"""監督 brain 範例：練習用的 AI 卡住不回 → 監督者（kernel）先寄信給你、再 kill 那個 run → brain 重起從 task.json 接續。
 
 從 repo 根跑：python3 proto7-2/packs/kernel/examples/supervise-brain/run.py [--house DIR] [--keep]
 不連網、不花錢，約 1 分鐘。房子預設開在 /tmp/aos-kernel-demo.*，跑完停心跳並刪掉（--keep 留著看）。
 
 情境（照 blueprint-kernel1 §6，頂層 10-09 修正）：
-1. aos7-up 起 bob（假 AI），`aos7-ctl add` 裝 kernel keep 任務，設定照本資料夾 kernel.json（預設門檻 6／12 回合）。
-2. 寄「做 5 回合的整理」；bob 做到第 2 步後，把 up.json 的 fake_delay 調成 3600 秒——假 AI 不再回，
+1. aos7-up 起 bob（練習用的 AI），`aos7-ctl add` 裝 kernel keep 任務，設定照本資料夾 kernel.json（預設門檻 6／12 回合）。
+2. 寄「做 5 回合的整理」；bob 做到第 2 步後，把 up.json 的 fake_delay 調成 3600 秒——練習用的 AI 不再回，
    brain 卡在等 AI、不再寫 task.json（每回合都回「繼續」的 brain 不會停在同一步，它自己的「3 回合沒進展」也輪不到）。
 3. 監督者：停滿 6 回合寄一封 NEEDS-USER 給 you，停滿 12 回合 kill 綁當時的 run（回條 ok）。
-4. keep 重起 brain：它從 task.json 的同一步接續、不重問 AI（假 AI 受理次數仍是 1）。kill 後把 up.json 的
+4. keep 重起 brain：它從 task.json 的同一步接續、不重問 AI（練習用的 AI 受理次數仍是 1）。kill 後把 up.json 的
    deadline 調成 1 秒，示範 brain 不再等那筆不確定的 AI、回你「卡住」結案（不調就會等滿 600 秒，
    這段期間同信不再寄通知；再收掉前會等更久，同一步最多收掉 3 次）。
 5. 還原 up.json，SIGKILL 監督者一次（keep 重起它，brain 照常），再寄正常的「做 4 回合的介紹」：
@@ -66,7 +66,7 @@ def say(msg):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='監督 brain 範例（假 AI，不花錢）')
+    ap = argparse.ArgumentParser(description='監督 brain 範例（練習用的 AI，不花錢）')
     ap.add_argument('--house', help='房子資料夾（預設 /tmp/aos-kernel-demo.*，要是空的或不存在）')
     ap.add_argument('--keep', action='store_true', help='跑完不刪房子')
     a = ap.parse_args()
@@ -83,7 +83,7 @@ def main():
         if p.returncode:
             raise Fail('aos7-up 起不來：' + (p.stderr.strip() or p.stdout.strip()))
         started = True
-        say(f'1. bob 起好了（假 AI，不連網、不花錢）：{node}')
+        say(f'1. bob 起好了（練習用的 AI，不連網、不花錢）：{node}')
         code = check(house, node)
     except Fail as e:
         say(f'沒做到：{e}')
@@ -157,7 +157,7 @@ def check(house, node):
     task = wait('bob 做到第 2 步', lambda: (lambda t: t if t and t.get('id') == a and t.get('step', 0) >= 2 else None)(
         load(node / 'brain/task.json')))
     up_set(fake_delay=3600, deadline=600)
-    say(f'3. 寄「做 5 回合的整理」給 bob；做到第 {task["step"]} 步時，假 AI 故意不再回——bob 卡住了')
+    say(f'3. 寄「做 5 回合的整理」給 bob；做到第 {task["step"]} 步時，練習用的 AI 故意不再回——bob 卡住了')
 
     note = wait('監督者寄信', lambda: done('notify', 'sent'), 60)[0]
     say(f'4. 卡了 {note["basis"]["age"]} 回合：監督者寄一封信給你（要你決定）：「{note.get("text")}」')

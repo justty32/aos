@@ -26,7 +26,7 @@ Opus 10-09 18:30。astra-high ×2 唯讀（甲：13 包對卡逐條；乙：重�
 
 ## 3. 新手面概念與指令數
 
-甲數：QUICKSTART 只 1 個指令名、3 個操作、5 詞（達標）。現存 `aos7-*` 入口 27 個（sol 數）；甲按 README 詞表去重概念 87，其中底層 32 個來自 adapt、step、control、subd、audit、once_retry——新手不會碰。
+甲數：QUICKSTART 只 1 個指令名、3 個操作、5 詞（達標）。現存 `aos7-*` 入口 27 個（sol 數；RV-fix-A／B 後 usage、llmdiag 成轉址 stub，實作入口 −2，I2 補）；甲按 README 詞表去重概念 87，其中底層 32 個來自 adapt、step、control、subd、audit、once_retry——新手不會碰。
 - 線 A＋B 後：入口 27→25、概念 −2（帳差、inflight 搬進 ADVANCED）；`read --ack` 的操作 −1 在 r5 移除時才算。
 - 建議 I5（modules/README 是它的領地）：總覽表分「新手會用」（up、mail、metrics、diag）與「底層／給 AI 用」兩段，不改任何程式。
 

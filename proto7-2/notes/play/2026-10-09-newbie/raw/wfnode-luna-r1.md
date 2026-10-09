@@ -22,4 +22,4 @@ gpt-6-luna（新手）
 ## ELI5 之後還複雜嗎
 否，第一次使用只要照三條指令做，README 也說其他檔案是給 AI 讀的。
 
-報告已寫到 [out.md](/tmp/rw-newbie/wfnode/luna/out.md)。
+報告已寫到 `/tmp/rw-newbie/wfnode/luna/out.md`（試跑暫存檔，已不在）。

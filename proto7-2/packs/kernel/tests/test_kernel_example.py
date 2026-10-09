@@ -1,4 +1,4 @@
-"""〔kernel〕監督 brain 範例整圈（examples/supervise-brain/run.py，假 AI、真心跳）：卡住第 6 回合寄一封 NEEDS-USER、
+"""〔kernel〕監督 brain 範例整圈（examples/supervise-brain/run.py，練習用的 AI、真心跳）：卡住第 6 回合寄一封 NEEDS-USER、
 第 12 回合 kill 綁當時 run 回條 ok、brain 重起從 task.json 接續不重問 AI、監督者被 SIGKILL 後 brain 照辦（I01）、
 正常信零動作。房子開在測試暫存根，收尾照 CoreCase 收程序再刪。"""
 import json
