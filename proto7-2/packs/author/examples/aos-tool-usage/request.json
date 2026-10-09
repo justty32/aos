@@ -37,7 +37,7 @@
   "交出 files、row 與 REPORT。",
   "aos7-usage <node> [--by day|hour]：period 取 raw.json 的 at（epoch 秒），UTC，day=YYYY-MM-DD、hour=YYYY-MM-DDTHH；不給 --by 預設 day；沒 raw 為 \"-\"；model=request.model 字串否則 endpoint；holder=request.holder。",
   "掃 llmcall/<budget>/<call> 中有 request.json 的資料夾；receipt 整數 used／overrun，null 當 0；groups 依 (model,holder,period) 排序，raw 缺省 period=\"-\"。",
-  "budgets 的 receipts_used 是合法回條 used 加總，ledger_used 讀 budget/<budget>/ledger.json 的整數 used，缺或壞為 null；diff=ledger_used−receipts_used，null 傳遞。",
+  "budgets 是以 budget 名為鍵的物件，值恰為 {receipts_used, ledger_used, diff}；receipts_used 只加整筆合法（會計入 groups）的那些回條的 used，ledger_used 讀 budget/<budget>/ledger.json 的整數 used（bool 不算），缺或壞為 null；diff=ledger_used−receipts_used，null 傳遞。",
   "gaps 列 no_receipt／bad_json／overrun；request／receipt／raw 壞 JSON 的整筆不計 groups；按 (budget,call_id,why) 排序。輸出 v、by、groups（model,holder,period,calls,used,overrun）、budgets、gaps。"
  ],
  "deliver": "一份候選 JSON；REPORT 直接寫入 report 欄，末尾必有「以後交接書該點名的工具」。",
