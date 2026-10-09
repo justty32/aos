@@ -1,0 +1,1 @@
+{"name": "demo-pub", "mode": "once", "argv": ["python3", "<路徑>/proto7-2/modules/events/examples/demo_pub.py", "--n", "5"]}
