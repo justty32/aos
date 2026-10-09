@@ -2,14 +2,19 @@
 """aos7-diag：診斷包的唯讀工具——按需重算核心 status 不放的細節，並印出適用的恢復步驟（modules/diag/README.md）。
 
     aos7-diag <root> [node-id]
+    aos7-diag --llm <node>   （看 LLM 待辦，一行 JSON；模組 aos7_diag_llm.py，原 aos7-llmdiag）
 
 印一份 JSON：每個已登記 node 的 phase／round／round_open／last_error／paused_by／steps_left（照抄 status.json），
 加上 `uncertain`（重新判定每個槽：判不出的、保守當活的，各列槽、run、原因）與 `hints`（照錯誤類型對到 README 的恢復步驟）。
-唯讀：只用核心的判定（judge，不做 lost 前的身分掃描、不收程序），不寫任何檔。退出碼 0；root 不像空間根回 2。
+
+唯讀：只用核心的判定（judge，不做 lost 前的身分掃描、不收程序），不寫任何檔、不留 bytecode。退出碼見 ADVANCED.md（0／2／3）。
 """
+import sys
+sys.dont_write_bytecode = True
 import json
 import os
-import sys
+from pathlib import Path
+from aos7_diag_llm import diagnose, is_directory
 
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(TOP, "lib"))
@@ -70,16 +75,54 @@ def node_report(root, nid, row):
     return out
 
 
+USAGE = "用法：aos7-diag <root> [node-id] 或 aos7-diag --llm <node>"
+
+
+def shown(text):
+    """路徑與錯誤字串放進一行人話前跳脫換行與控制字元。"""
+    return json.dumps(str(text), ensure_ascii=False)[1:-1]
+
+
+def say(code, what, how):
+    print("aos7-diag: %s。%s" % (what, how), file=sys.stderr)
+    return code
+
+
+def unreadable(path, reason):
+    return say(3, "不確定：讀 %s 失敗（%s）" % (shown(path), shown(reason)), "什麼都沒寫；修好存取後照原樣再跑一次")
+
+
 def main(argv):
-    if not argv or len(argv) > 2:
-        print("用法: aos7-diag <root> [node-id]", file=sys.stderr)
-        return 1
+    if argv in (["--help"], ["-h"]):
+        print("用法：aos7-diag <root> [node-id]（看核心槽）\n      aos7-diag --llm <node>（看 LLM 待辦）")
+        return 0
+    if argv and argv[0] == "--llm":
+        if len(argv) != 2:
+            return say(2, "--llm 後面要恰好一個 node 資料夾（給了 %d 個）" % (len(argv) - 1), "例：aos7-diag --llm nodes/a")
+        node = Path(argv[1])
+        try:
+            if not is_directory(node):
+                return say(2, "%s 不是資料夾" % shown(node), "--llm 要給 node 資料夾，例：aos7-diag --llm nodes/a")
+            report = diagnose(node)
+        except OSError as error:
+            return unreadable(error.filename or node, error.strerror or error)
+        print(json.dumps(report, ensure_ascii=False, separators=(",", ":")))
+        return 0
+    if not argv:
+        return say(2, "沒給要看的地方", USAGE)
+    if argv[0].startswith("-"):
+        return say(2, "不認得的選項 %s" % shown(argv[0]), USAGE)
+    if len(argv) > 2:
+        return say(2, "參數太多（給了 %d 個）" % len(argv), USAGE)
     root = os.path.realpath(argv[0])
+    if not os.path.isdir(root):
+        return say(2, "%s 不是資料夾" % shown(argv[0]), "給 aos 空間根（有 .aosd/ 的資料夾），例：aos7-diag ~/aos-space")
     ns, nj = fact(os.path.join(root, ".aosd", "nodes.json"))
     if ns not in (OK, N):
-        print("aos7-diag: %s 的 .aosd/nodes.json %s" % (root, nj), file=sys.stderr)
-        return 2
+        return unreadable(os.path.join(root, ".aosd", "nodes.json"), nj)
     ss, status = fact(os.path.join(root, ".aosd", "status.json"))
+    if ss not in (OK, N):
+        return unreadable(os.path.join(root, ".aosd", "status.json"), status)
     rows = (status.get("nodes") or {}) if ss == OK and isinstance(status, dict) else {}
     nids = [argv[1]] if len(argv) == 2 else sorted(set(((nj or {}).get("nodes") or {}) if isinstance(nj, dict) else {})
                                                     | set(rows))

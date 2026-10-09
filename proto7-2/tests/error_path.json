@@ -283,6 +283,22 @@
        "n/.aos/up.json": "0o000"
      }
    }
+  },
+  {
+   "pack": "diag",
+   "team": "RV-fix-B",
+   "name": "aos7-diag",
+   "entry": "modules/diag/aos7-diag",
+   "unsure": {"argv": ["--llm", "node"], "files": {"node/llmcall/": ""}, "chmod": {"node/llmcall": "0o000"}}
+  },
+  {
+   "pack": "llmdiag（轉址 stub，r5 移除）",
+   "team": "RV-fix-B",
+   "name": "aos7-llmdiag",
+   "entry": "modules/llmdiag/aos7-llmdiag",
+   "bad": [],
+   "bad_code": 1,
+   "exempt": {"unsure": "轉址 stub 不讀任何檔；不確定案在 aos7-diag --llm"}
   }
  ]
 }
