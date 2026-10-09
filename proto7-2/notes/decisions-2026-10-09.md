@@ -297,3 +297,4 @@
 - C｜頂層：開 AP5——交件改「每個檔一段文字」去掉 JSON 手滑、題目換成知識型的坑（需求不寫、只能從檢查結果學的格式細節）；AP4 不發布 apprentice/ 分支照收
 - 未過但收｜UW：up 用語白話——「假 AI」→「練習用的 AI」、卡住信改寫（拿掉 ADVANCED 路徑、寫明重寄方式）、進度一律叫「步」、「回合」只指心跳。新手兩輪都答對，Haiku 4／5、luna 7／7；Haiku 扣分多在 status 詞與信頭（領地外），照「不追分」收
 - C｜頂層：「假 AI」殘留（README-head、kernel ADVANCED／範例、skills、compact、INDEX、tests README、longtask 範例信）與 KF 的 E5、藍圖 C10 註記一起歸最後整合隊 I2
+- C｜I2：最後整合進 main——INDEX／README／modules README／tests README（1216 項）／code map 對齊；今天造成的壞連結 44→0（剩 2 條舊的指向未入版控的 user-advice.md）；RV-fix-A 信補完並歸檔 inbox/done；「假 AI」統一（skills 留 AP5）；kernel 進 error_path.json；藍圖補 C10 註記；play 索引補 3 列。llmcall README 一處「假 AI」頂層順手改
