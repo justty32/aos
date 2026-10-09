@@ -236,7 +236,7 @@ class BrainStuckTests(DaemonCase):
         self.assertEqual(len(lines), 7)
         self.assertEqual(lines[1], expected)
         # 卡住那行：哪封信、被打斷、還要等多久就會寄信給你（不露已等秒數與時限）
-        self.assertEqual(lines[2], '卡住了：「卡住的標題」問 AI 時被打斷，不知道 AI 回了沒；不用動手，約 1 分鐘內 bob 會寄信給你')
+        self.assertEqual(lines[2], '卡住了：「卡住的標題」問 AI 時被打斷，bob 不知道 AI 回了沒；不用動手，約 1 分鐘內 bob 會寄信給你')
         self.assertEqual(before, {str(p): p.read_bytes() for p in Path(self.root).rglob('*') if p.is_file()})
         write_json(str(unsure), dict(call=brain.call_id(ident, 1), id=ident, since=time.time()-10))
         self.assertTrue(self.up_status()[2].endswith('不用動手，馬上 bob 會寄信給你'))
