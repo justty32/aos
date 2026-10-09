@@ -65,7 +65,8 @@ def check(root, node_id, sub):
     if st not in (OK, N):
         return None, "父 daemon 的 nodes.json %s，不知道子根有沒有包住已登記的 node，不起" % nj
     nodes = (nj or {}).get("nodes") if isinstance(nj, dict) else {}
-    inside = sorted(n for n in (nodes or {}) if n == sp or n.startswith(sp + "/"))
+    inside = sorted(n for n in (nodes or {})
+                    if (nr := os.path.realpath(os.path.join(root, n))) == real or nr.startswith(real + os.sep))
     if inside:
         return None, "subroot %s 包住了父 daemon 已登記的 node %s" % (sp, ", ".join(inside))
     return real, None
@@ -242,6 +243,11 @@ def main(argv):
     if why:
         print("aos7-subd: %s，沒起" % why, file=sys.stderr)
         return 1
+    # D9：子根整棵是這個任務合法寫的地方。通用 AOS7_AUDIT_ALLOW（os.pathsep 分隔的絕對路徑）自己與 argv 都帶著，
+    # 給寫入紀錄類模組看；這個包不認識 audit。子 daemon 起的任務拿不到（核心只傳自己的 AOS7_*）
+    # 路徑裡有分隔符就不加（拆開會豁免錯的地方）：寧可紀錄多報 ok:false
+    if os.pathsep not in sub:
+        e["AOS7_AUDIT_ALLOW"] = os.pathsep.join(x for x in (e.get("AOS7_AUDIT_ALLOW"), sub) if x)
     aosd = os.path.join(sub, ".aosd")
     os.makedirs(aosd, exist_ok=True)
     life_path = os.path.join(aosd, LIFE)

@@ -3,6 +3,7 @@
 
 - 只記空間根（AOS7_ROOT）底下的寫入；空間外（/dev/null、__pycache__ 等）不管。
 - ok＝寫入的實際位置落在自己的 node（不含裡面巢狀的別的 node／daemon 根）或某個掛載點的目標底下。
+- AOS7_AUDIT_ALLOW 是 os.pathsep 分隔的絕對路徑，每次判定重讀並 realpath；只在自己的 node 內豁免巢狀邊界，由包裝程式設定（例如 subd 包設子根）。
 - 只看得到 Python 程序（含 Python 起的 Python）；sh、C 程式的寫入看不到（problems.md M-3）。
 - 只記不擋。由包裝程式 `aos7-audit -- <argv>` 設 AOS7_AUDIT 並把這個資料夾放進任務的 PYTHONPATH。
 
@@ -13,6 +14,7 @@ import fcntl
 import json
 import os
 import sys
+import threading
 
 
 def _install():
@@ -42,7 +44,7 @@ def _install():
         return out
     targets = load_targets()
     log = os.path.join(task, "writes.jsonl")
-    busy = []
+    busy = threading.local()
     wflags = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_TRUNC
 
     def under(p, base):
@@ -94,7 +96,10 @@ def _install():
         real = rp(os.path.join(base_of(dir_fd), os.fsdecode(path)))
         if not under(real, root_r) or real == rp(log):
             return
-        ok = any(under(real, t) for t in targets) or (under(real, node_r) and not nested(real))
+        # 通用環境契約：hook 裝好後也可設定；相對路徑與 node 外的項目都不能放寬邊界。
+        allowed = [rp(p) for p in os.environ.get("AOS7_AUDIT_ALLOW", "").split(os.pathsep) if os.path.isabs(p)]
+        exempt = any(under(t, node_r) and under(real, t) for t in allowed)
+        ok = any(under(real, t) for t in targets) or (under(real, node_r) and (exempt or not nested(real)))
         if not ok:
             # spec §4.5：加掛由下一個 tick 更新 birth，快取未命中時重讀，避免把新授予的目標誤報。
             targets[:] = load_targets()
@@ -122,11 +127,11 @@ def _install():
 
     def hook(event, args):
         """接收 Python 的 event 與 args；挑寫入事件交 record，回傳 None（spec §4.5，P2-17）。
-        紀錄失敗一律略過；busy 阻止記錄自身觸發遞迴，避免觀察工具中斷任務。"""
-        if busy:
+        紀錄失敗一律略過；busy 只阻止同一 thread 的記錄遞迴，不略過其他 thread 的寫入。"""
+        if getattr(busy, "on", False):
             return
         try:
-            busy.append(1)
+            busy.on = True
             if event == "open":
                 path, mode, flags = (tuple(args) + (None, None))[:3]
                 w = (isinstance(flags, int) and flags & wflags) or (isinstance(mode, str) and any(c in mode for c in "wax+"))
@@ -149,7 +154,7 @@ def _install():
             # spec §4.5、§11：這是觀察紀錄，不是攔截器；紀錄失敗不能改變被觀察任務的行為（P2-17）。
             pass
         finally:
-            busy.clear()
+            busy.on = False
 
     sys.addaudithook(hook)
 

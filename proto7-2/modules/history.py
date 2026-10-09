@@ -7,7 +7,8 @@
 - `--src <node id>`：要記哪個 node 的 `.aos/last-round.json`（可多個；預設自己的 node）。先找掛載（resolve 空間路徑），
   沒掛就照 `$AOS7_ROOT/<id>` 讀——要守 S-10「只碰給的資料夾」的話，別的 node 請用 mounts 掛進來。
 - `--status`：另外記 daemon 的 `.aosd/status.json` 的 `last_event`（取樣，可能漏；要完整的用 `.aosd/log.on`）。
-- 寫到 `<自己的 node>/history/<id 換成 +>.jsonl`（`--out` 改資料夾）；`--max-lines N` 超過就只留最後 N 行（輪替是它自己的事），
+- 寫到 `<自己的 node>/history/<編碼 id>.jsonl`：先 `%`→`%25`、`+`→`%2B`，再 `/`→`+`；結果為 `daemon-events` 時改成 `daemon%2Devents`。
+  `--out` 改資料夾；`--max-lines N` 超過就只留最後 N 行（輪替是它自己的事），
   node 歷史與 `daemon-events.jsonl` 都套用（A2-10）。
 - 收到 tock 時 last-round.json 已經是那一回合的（tock 先提交總結才寫 tock.json；A2-12），不會讀到上一回合。
 - 它是取樣的：看到 `round` 跳號就記一行 `{"gap": [從, 到]}`，補不回來。已記到第幾回合存在槽裡的 state.json（換 run 接得上）。
@@ -16,7 +17,6 @@
 另讀／寫 state.json 保存取樣進度，追加 history/*.jsonl；保留期限屬 module，核心只留上一次（spec §0、§8）。
 """
 import argparse
-import json
 import os
 import sys
 
@@ -24,6 +24,12 @@ TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
 from aos7_fs import append_jsonl, now, read_json, write_json  # noqa: E402
 from aos7_taskside import resolver, task_env, wait_tock  # noqa: E402
+
+
+def hist_name(nid):
+    """node id 的可逆檔名：保留舊的斜線編碼，跳脫百分號、加號與事件檔名。"""
+    name = nid.replace("%", "%25").replace("+", "%2B").replace("/", "+")
+    return "daemon%2Devents" if name == "daemon-events" else name
 
 
 def src_path(me, resolve, nid, rel):
@@ -69,7 +75,7 @@ def once(me, args, resolve, st):
         prev = seen.get(nid)
         if prev is not None and lr["round"] <= prev:
             continue
-        out = os.path.join(args.out, nid.replace("/", "+") + ".jsonl")
+        out = os.path.join(args.out, hist_name(nid) + ".jsonl")
         if prev is not None and lr["round"] > prev + 1:
             # 核心只留上一次；缺號只能留下 gap，不把沒看見的回合捏成歷史。
             append_jsonl(out, {"gap": [prev + 1, lr["round"] - 1], "at": now()})

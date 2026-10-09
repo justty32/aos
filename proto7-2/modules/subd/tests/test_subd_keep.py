@@ -82,7 +82,7 @@ class TestReceiptLost(RecoverCase):
                                                                "err": "RuntimeError()"}))
         self.run_subd(run=2)
         self.new_daemon(sub, daemon)
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [], "沒 --allow-stop 的前代沒收")
+        self.assertEqual([], self.alive_old(old), "沒 --allow-stop 的前代沒收")
 
 
 class TestReattachInterrupted(RecoverCase):
@@ -118,7 +118,7 @@ class TestRecoveringRecord(RecoverCase):
         self.assertEqual(life["attempt"], 2)
         self.run_subd(run=4)
         self.new_daemon(sub, daemon)
-        self.assertEqual([x for x in old if aos7_proc.pid_alive(x)], [])
+        self.assertEqual([], self.alive_old(old))
 
 
 if __name__ == "__main__":

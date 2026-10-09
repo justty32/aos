@@ -1,5 +1,6 @@
 """〔subd〕子 daemon 包：包裝程式 aos7-subd 起子 daemon——所有權（stop-guard.json＋owner.json）、allow-stop、stopped.json、
 人手重開、子根位置檢查與重複認領（從 tests/test_subdaemon_modules.py 拆出；原本由核心 tick 做，現在由包裝程式做）。"""
+import fcntl
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tests"))  # tests/：base
@@ -103,6 +104,26 @@ class TestOwnership(SubCase):
 
 class TestSubrootChecks(SubCase):
     """〔subd〕subroot 位置檢查與重複認領（F50）：不合的由包裝程式擋下（退出碼 1、out.log 說明），不起 argv。"""
+    def alias_encloses_registered(self, declared, registered):
+        """R8-24：子根或 node id 經過連結，仍要擋包住父 node。"""
+        a = self.mknode("a", [{"name": "sub", "argv": subd(declared, *BOOT)}])
+        self.mknode("a/real/n2")
+        os.symlink("real", os.path.join(a, "alias"))
+        write_json(os.path.join(self.root, ".aosd", "nodes.json"), {"nodes": {"a": {}, registered: {}}})
+        self.tick()
+        self.assertEqual(self.wait_ended(a, "sub", timeout=3)["code"], 1)
+        self.assertIn("包住了父 daemon 已登記的 node " + registered, self.out_log(a, "sub"))
+        self.assertFalse(os.path.exists(os.path.join(a, "real", ".aosd")), "被拒的子根起了 daemon")
+
+    def test_alias_subroot_encloses_registered_node(self):
+        self.alias_encloses_registered("a/alias", "a/real/n2")
+
+    def test_alias_registered_node_inside_subroot(self):
+        self.alias_encloses_registered("a/real", "a/alias/n2")
+
+    def test_alias_subroot_equals_registered_node(self):
+        self.alias_encloses_registered("a/alias", "a/real")
+
     def test_subroot_rules(self):
         a = self.mknode("a", [{"name": "x", "argv": subd("a", *SLEEP)},
                               {"name": "y", "argv": subd("b", *SLEEP)},
@@ -129,6 +150,58 @@ class TestSubrootChecks(SubCase):
         with open("/proc/%d/environ" % kids[0], "rb") as f:
             env = f.read().split(b"\0")
         self.assertIn(("AOS7_SUBROOT=" + os.path.join(a, "s")).encode(), env)
+
+
+class TestNestedSubroot(SubCase):
+    def test_three_levels_keep_environment_and_cleanup(self):
+        """N-66：每層包只給自己的 argv 子根，孫任務不繼承包的 AOS7_*。"""
+        first = os.path.join(self.root, "a", "S1")
+        second = os.path.join(first, "n1", "sub")
+        dump = ("import json, os, time; "
+                "p=os.path.join(os.environ['AOS7_NODE'], 'env.json'); "
+                "f=open(p+'.tmp', 'w'); "
+                "json.dump({'pid':os.getpid(), 'env':{k:v for k,v in os.environ.items() if k.startswith('AOS7_')}}, f); "
+                "f.close(); os.replace(p+'.tmp', p); time.sleep(60)")
+        a = self.mknode("a", [{"name": "sub", "mode": "keep", "argv": subd("a/S1", *BOOT)}])
+        n1 = self.mknode("a/S1/n1")
+        m = self.mknode("a/S1/n1/sub/m", [{"name": "env", "mode": "keep", "argv": [sys.executable, "-c", dump]}])
+        d0 = self.start_daemon(register=["a"])
+        d1 = self.wait_for(lambda: self.status(first).get("pid"), 15, "第二層 daemon 沒起")
+        d1_start = aos7_proc.proc(d1)[1]
+        # 先記下第二層身分，再讓它起第三層，才能看出是否搶回上一層的根。
+        boot_m = ["sh", "-c", 'aos7-ctl daemon "$AOS7_SUBROOT" register m && exec aos7-daemon "$AOS7_SUBROOT"']
+        self.set_tasks(n1, [{"name": "sub", "mode": "keep", "argv": subd("n1/sub", *boot_m)}])
+        rec = self.wait_for(lambda: read_json(os.path.join(m, "env.json")), 20, "孫任務沒起（第三層子根可能指回上一層）")
+        d2 = self.wait_for(lambda: self.status(second).get("pid"), 10, "第三層 status.json 沒出現")
+        self.assertNotEqual(d1, d2)
+        self.assertEqual(self.status(first)["pid"], d1)
+        self.assertEqual(aos7_proc.same_process(d1, d1_start), aos7_proc.ALIVE)
+        with open(os.path.join(first, ".aosd", "daemon.lock"), "a") as lock:
+            with self.assertRaises(BlockingIOError):
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self.assertNotIn("已經有 daemon 在跑", self.out_log(n1, "sub"))
+        env = rec["env"]
+        self.assertNotIn("AOS7_SUBROOT", env)
+        self.assertNotIn("AOS7_AUDIT_ALLOW", env)
+        self.assertEqual(env["AOS7_ROOT"], second)
+        self.assertEqual(env["AOS7_NODE"], m)
+        # 記三層 daemon、兩層包與孫任務；停 D0 後必須全部是原程序已不在。
+        pids = [d0.pid, d1, d2, self.wait_pid(a, "sub")["pid"],
+                self.wait_pid(n1, "sub")["pid"], rec["pid"]]
+        # 一併記下子根 launcher／runner，不能只驗任務本體。
+        prefix = self.root.encode()
+        for pid in aos7_proc.all_pids():
+            env = aos7_proc.environ_of(pid) or []
+            if any(x.split(b"=", 1)[0] in (b"AOS7_ROOT", b"AOS7_NODE", b"AOS7_SUBROOT")
+                   and (x.split(b"=", 1)[1] == prefix or x.split(b"=", 1)[1].startswith(prefix + b"/")) for x in env):
+                if aos7_proc.pid_alive(pid):
+                    pids.append(pid)
+        identities = [(pid, aos7_proc.proc(pid)[1]) for pid in set(pids)]
+        self.stop_daemon(d0)
+        # 父 kill 只有一秒（核心 §6），三層收尾在寬限內收不完是已知界線（README 界線節）；這裡只驗測試收得乾淨。
+        self._reap_all()
+        self.wait_for(lambda: all(aos7_proc.same_process(pid, start) == aos7_proc.GONE
+                                 for pid, start in identities), 15, "補收後還留著 daemon 或任務")
 
 
 if __name__ == "__main__":

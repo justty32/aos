@@ -68,5 +68,36 @@ class TestHistoryMaxLines(MatrixCase):
         self.assertLessEqual(len(read_jsonl(os.path.join(out, "a.jsonl"))), 2)
 
 
+class TestHistoryNames(MatrixCase):
+    """〔observe〕來源檔名可逆編碼，且不占 daemon 事件檔名（R8-17）。"""
+
+    def sample(self, ids, status=False):
+        spec = importlib.util.spec_from_file_location("aos7_names_history", os.path.join(MODULES, "history.py"))
+        hist = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(hist)
+        rows = {}
+        for nid in ids:
+            node = self.mknode(nid)
+            rows[nid] = {"round": 1, "ended": [], "alive": [], "source": nid}
+            write_json(os.path.join(node, ".aos", "last-round.json"), rows[nid])
+        out = os.path.join(self.root, "history")
+        me = {"root": self.root, "node_id": ids[0]}
+        args = argparse.Namespace(src=ids, status=status, out=out, max_lines=0)
+        self.assertTrue(hist.once(me, args, lambda p: None, {}))
+        return out, rows
+
+    def test_slash_and_plus_sources_have_separate_histories(self):
+        out, rows = self.sample(["a/b", "a+b", "a%2Bb", "plain"])
+        for nid, name in [("a/b", "a+b"), ("a+b", "a%2Bb"), ("a%2Bb", "a%252Bb"), ("plain", "plain")]:
+            self.assertEqual(read_jsonl(os.path.join(out, name + ".jsonl")), [rows[nid]])
+
+    def test_daemon_events_source_does_not_mix_with_status(self):
+        event = {"ev": "register", "at": "1"}
+        write_json(os.path.join(self.root, ".aosd", "status.json"), {"last_event": event})
+        out, rows = self.sample(["daemon-events"], status=True)
+        self.assertEqual(read_jsonl(os.path.join(out, "daemon-events.jsonl")), [event])
+        self.assertEqual(read_jsonl(os.path.join(out, "daemon%2Devents.jsonl")), [rows["daemon-events"]])
+
+
 if __name__ == "__main__":
     unittest.main()
