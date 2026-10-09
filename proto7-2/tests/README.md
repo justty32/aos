@@ -20,6 +20,7 @@
 | `modules/events/tests/test_events_store.py` | **事件保存包** 保存端與取樣器：鎖內 append、恢復、輪替與清段、ack、四個保存窗口真 SIGKILL 各 ×3、300 回合檔數 ≤12、keep 上限 4、astra E1 審查回歸 |
 | `modules/events/tests/test_events_read.py` | 事件保存包 讀者與發布：手寫 fixture 驗無鎖讀、壞尾不算、洞先重列再判淘汰（只認 `dropped_upto`）、游標不跨未證明的洞、`--ack`；發布 CLI 退出碼、示範發布者被殺不推進進度 |
 | `packs/author/tests/test_author.py` | **author 任務包**（LLM 作者第一刀，假候選）：需求同文重送／異文衝突、七份候選恰一合法、三層驗證與確定性編譯、symlink 與路徑逃逸、發布三個中斷點各殺三次不重複登記、合併保留別項、同需求最多兩版、answer／close 與有界清理 |
+| `packs/llmcall/tests/test_llmcall.py` | **llmcall 任務包**（LLM 單次呼叫閘道，假傳輸）：八個崩潰點同 call 各殺三次後重跑 sends≤1、一 reserve 至多一 settle（F-01／F-02）、token 計量 U=R／缺 usage pending／搶最後額度（F-03）、逾時與睡眠中殺整組、adopt 遲到回覆（F-04）、固定請求衝突不寫檔、壞輸入退出 2、部分結算 1000／300／120、overrun 帳頂累計、budget cancel 對 llm.fake intent 退 3 |
 | `modules/audit/tests/test_audit_wrapper.py`、`test_audit_allow_threads.py` | 稽核包：包裝過的任務寫檔有紀錄；`AOS7_AUDIT_ALLOW` 只放寬自己 node 內的巢狀邊界、每次重讀（N-66／D9）；多 thread 同時寫不漏記（R8-25） |
 | `modules/control/tests/test_control.py` | 控制包：restart（同槽新 run、state 接得上、加掛帶過去）、reload 與拒絕、壞表不 kill、req_id 去重、請求端／tick／tock 在交接點被殺只重起一次 |
 | `modules/once_retry/tests/test_once_retry.py` | once 保證包：x.retry_lost 的 once 從沒起來過就加回跑一次、預設最多一次、舊欄位被拒、模組當 keep 任務跑；真 lost 候選（T8-08）、槽被 keep 重用／birth 讀不到／缺／撤回時的 pending 處理（R8-26） |
