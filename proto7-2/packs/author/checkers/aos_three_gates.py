@@ -145,8 +145,30 @@ def gate_static(ctx):
     if not isinstance(c, dict):
         return result([{'rule': 'schema', 'why': '候選須為物件'}])
     files = c.get('files', {})
-    if set(c) != {'v', 'rid', 'kind', 'name', 'files', 'row', 'report'} or type(c.get('v')) is not int or c.get('v') != 1 or any(c.get(k) != req[k] for k in ('rid', 'kind', 'name')) or not isinstance(files, dict) or not all(isinstance(v, str) for v in files.values()) or not isinstance(c.get('row'), str) or not isinstance(c.get('report'), str) or '以後交接書該點名的工具' not in c.get('report', ''):
-        add('schema', '候選欄位、識別或 REPORT 不合')
+    reasons = []
+    missing = {'v', 'rid', 'kind', 'name', 'files', 'row', 'report'} - set(c)
+    extra = set(c) - {'v', 'rid', 'kind', 'name', 'files', 'row', 'report'}
+    if missing:
+        reasons.append('缺 ' + '、'.join(sorted(missing)) + ' 欄' +
+                       ('（REPORT 要寫在頂層 report 字串，不是 files 裡的檔）' if 'report' in missing else ''))
+    if extra:
+        reasons.append('多 ' + '、'.join(sorted(extra)) + ' 欄')
+    if type(c.get('v')) is not int or c.get('v') != 1:
+        reasons.append('v 必須是整數 1')
+    for k in ('rid', 'kind', 'name'):
+        if c.get(k) != req[k]:
+            reasons.append(f'{k} 應為 {req[k]}')
+    if not isinstance(files, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in files.items()):
+        reasons.append('files 必須是「路徑→字串」物件')
+    if not isinstance(c.get('row'), str):
+        reasons.append('row 必須是字串')
+    if 'report' in c:
+        if not isinstance(c['report'], str):
+            reasons.append('report 必須是字串')
+        elif '以後交接書該點名的工具' not in c['report']:
+            reasons.append('report 缺「以後交接書該點名的工具」一節')
+    if reasons:
+        add('schema', '；'.join(reasons))
         return result(issues)
     root = ctx['root']
     paths = git(ctx, 'ls-tree', '-r', '--name-only', ctx['ref']).decode().splitlines()
@@ -154,15 +176,19 @@ def gate_static(ctx):
         add('territory', 'ref 已有 root，只准新增包')
     for p in files:
         if not safe(p) or not p.startswith(root + '/'):
-            add('territory', p)
+            add('territory', p + ('；索引列寫在頂層 row 欄，不放 files'
+                                  if Path(p).name.upper() == 'INDEX.MD' or p == card['row']['file'] else ''))
     row = c['row']
     if '\n' in row or '\r' in row or not row.startswith(card['row']['prefix'].format(name=req['name'])) or not row.endswith('|'):
         add('territory', 'row 必須為指定前綴的一列')
-    if any(root + '/' + p.format(name=req['name']) not in files for p in card['required']) or len(files.get(ctx['entry'], '').splitlines()) > card['entry_max_lines']:
-        add('layout', '缺必要檔或入口太長')
+    lack = [root + '/' + p.format(name=req['name']) for p in card['required'] if root + '/' + p.format(name=req['name']) not in files]
+    if lack:
+        add('layout', '缺必要檔：' + '、'.join(lack) + '（files 的鍵要寫完整路徑）')
+    if len(files.get(ctx['entry'], '').splitlines()) > card['entry_max_lines']:
+        add('layout', f"入口 {ctx['entry']} 超過 {card['entry_max_lines']} 行")
     tests = [p for p in files if re.fullmatch(re.escape(root) + r'/tests/test_[^/]+\.py', p)]
     if not tests or any(Path(p).name in {Path(x).name for x in paths if Path(x).match('test_*.py')} for p in tests):
-        add('tests', '缺測試或測試檔名撞名')
+        add('tests', f'缺測試（要有 {root}/tests/test_*.py）' if not tests else '測試檔名與原型既有測試撞名：' + '、'.join(Path(p).name for p in tests))
     # 超標要講清楚哪個檔、實際多大、上限多少，學徒才改得對（S3：只說「超標」時筆記只學到「要精簡」）。
     lim, max_files = card['limits'], min(card['limits']['max_files'], req['scope']['max_files'])
     if len(files) > max_files:
@@ -175,7 +201,7 @@ def gate_static(ctx):
             add('size', f"{p} 有 {n} bytes，超過每檔上限 {lim['max_file_bytes']} bytes（可拆成多個檔，檔數上限 {max_files}）")
     readme = re.sub(r'^\s*(```|~~~)[^\n]*\n.*?^\s*\1[^\n]*(?:\n|$)', '', files.get(root + '/README.md', ''), flags=re.M | re.S)
     if any(not re.search(r'^(?:- )?' + re.escape(s), readme, re.M) for s in card['readme_must']):
-        add('readme', 'README 缺指定章節')
+        add('readme', f'{root}/README.md 缺指定章節（行首、不在圍欄內）：' + '、'.join(card['readme_must']))
     materialize(ctx)
     lint = ctx['source_repo'] / 'wf/tools/wf-lint.sh'
     if not lint.is_file():
@@ -386,7 +412,12 @@ def main(argv=None):
             raise ValueError('候選或 reviewer 不合')
         data = a.candidate.read_bytes()
         out.update(rid=req['rid'], name=req['name'], candidate_sha=hashlib.sha256(data).hexdigest(), job=req['rid'] + '_' + hashlib.sha256(data).hexdigest()[:8])
-        candidate = strict(data)
+        try:
+            candidate = strict(data)
+        except json.JSONDecodeError as exc:
+            if exc.msg == 'Extra data':
+                raise ValueError(f'候選必須恰好是一個 JSON 物件：第 {exc.pos + 1} 字元起還有多餘內容 『{exc.doc[exc.pos:exc.pos + 80]}』') from exc
+            raise
         source = command(['git', '-C', str(HERE), 'rev-parse', '--show-toplevel'])
         if source.returncode:
             raise Unknown('git toplevel 不在')

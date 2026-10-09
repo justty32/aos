@@ -889,7 +889,8 @@ def main(argv=None):
     # 先看命令與需求檔；CSV 使用原 parser 與原縮寫集合。
     args = list(sys.argv[1:] if argv is None else argv)
     aos_flags = ('reviewer', 'review_llm', 'out', 'context', 'gotchas', 'previous',
-                 'feedback', 'history', 'into', 'repo', 'ref', 'no_scope')
+                 'feedback', 'history', 'into', 'repo', 'ref', 'no_scope',
+                 'skills', 'skill_into', 'skill')
     options = dict(ap._option_string_actions)
     options.update({'--' + flag.replace('_', '-'): None for flag in aos_flags})
 
@@ -935,6 +936,10 @@ def main(argv=None):
         import copy
         ap = copy.deepcopy(ap)
         ap._positionals._group_actions[0].choices += ('learn',)
+        if positionals[0] == 'learn':
+            # 學習的 candidate 是骨架來源，可與模型一起給。
+            for group in ap._mutually_exclusive_groups:
+                group._group_actions[:] = [x for x in group._group_actions if x.dest != 'candidate']
         for flag in aos_flags:
             kw = {'action': 'append'} if flag in ('context', 'history') else {}
             if flag == 'no_scope':
@@ -961,8 +966,17 @@ def main(argv=None):
             ap.error('propose 要 --candidate 或 --llm')
         if a.cmd == 'publish' and not a.candidate:
             ap.error('publish 要 --candidate')
-        if a.cmd == 'learn' and not (a.llm and a.budget and a.history and a.into):
-            ap.error('learn 要 --llm、--budget、--history 與 --into')
+        if a.skills and a.cmd != 'propose':
+            ap.error('--skills 只用於 propose')
+        if (a.skill_into or a.skill) and a.cmd != 'learn':
+            ap.error('--skill-into／--skill 只用於 learn')
+        if a.cmd == 'learn':
+            if not (a.llm and a.budget and a.history) or bool(a.into) == bool(a.skill_into):
+                ap.error('learn 要 --llm、--budget、--history，且 --into／--skill-into 恰給一個')
+            if a.skill_into and (not a.skill or not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', a.skill)):
+                ap.error('--skill-into 要合法的 --skill 名稱')
+            if a.skill and not a.skill_into:
+                ap.error('--skill 要帶 --skill-into')
         from aos7_author_aos import main_aos
         r = main_aos(a)
     else:

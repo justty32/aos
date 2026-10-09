@@ -36,9 +36,11 @@ python3 "$A/bin/aos7-author" propose csv1 --llm MODEL --budget ../llm/budget/llm
 kind 為 `aos-tool`／`aos-module`：學徒交新增檔案、索引列與 REPORT，三關過後由人發布。原文存 `author/aos/<rid>/`，可用 `--out` 改。
 
 - 學徒：`--llm` 指定寫候選的模型（不給＝上面的升級鏈），提示帶需求與工具卡。
+- 技能：`propose --skills NODE` 從 NODE 的 skills/ 挑一本學徒先前留下的技能書，全文帶進提示；挑不到或書超過 8192 bytes 就略過，升級也用同一本。
 - 審查人：`--review-llm` 指定讀碼模型，與學徒一樣經 llmcall 使用 budget。只因真錯誤（照需求寫明的行為在真實資料上答錯／當掉）、唯讀違規、越界改動退件；需求沒寫明的極端邊角列進 reasons 當「建議：」、不擋（只列建議的 reject 照 accept 算）。標準在檢查器的 `REVIEW_CRITERIA`，llmcall 與 astra 審查共用。第一關 size 會寫明哪個檔、實際 bytes、上限。
 - 重問：用 `--previous`、`--feedback` 與 `--gotchas` 把上一份候選、檢查結果和踩坑交回學徒。
 - 發布：重跑三關後只新增 apprentice 分支，合併由人處理。
+- 技能學習：`learn --skill-into NODE --skill NAME [--candidate PATH]` 把踩坑和驗過的骨架改寫成整本 SKILL.md；驗過格式與 kind 觸發詞才替換，可再用 `--skills` 讀回。與 `--into` 恰選一個。
 - 學習：`learn` 讀歷次檢查結果，把下次該知道的事追加到既有踩坑檔。
 
 `$A` 指 author 包；`$CANDIDATE`、`$REVIEW` 取 propose 回覆，`$REPO`／`$REF` 是發布位置與基準；先備好 history.json、GOTCHAS.md。

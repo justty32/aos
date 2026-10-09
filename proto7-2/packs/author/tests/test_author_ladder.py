@@ -134,8 +134,13 @@ class TestLadderAos(Replies, aos_case.TestAuthorAosCLI):
     def test_gate_reject_climbs_with_feedback(self):
         self.content = (USAGE / 'valid.json').read_text()
         self.replies = {APPRENTICE_LADDER[0]: (USAGE / 'bad-link.json').read_text()}
-        out = self.checked(self.aos('--budget', self.bd, '--llm'))
+        node, book = self.skill_node()
+        out = self.checked(self.aos('--budget', self.bd, '--skills', node, '--llm'))
         self.assertTrue(out['ok'], out)
+        self.assertEqual(out['skill']['picked'], 'apprentice')
+        for body in self.bodies:
+            self.assertEqual(json.loads(body['messages'][1]['content'])['skill'],
+                             {'name': 'apprentice', 'text': book.read_text()})
         self.assertEqual(self.models(), list(APPRENTICE_LADDER))
         self.assertEqual([(r['model'], r['why']) for r in out['rounds']],
                          [(APPRENTICE_LADDER[0], 'invalid'), (APPRENTICE_LADDER[1], None)])
