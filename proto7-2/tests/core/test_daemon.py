@@ -10,10 +10,15 @@ import subprocess
 import sys
 import time
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 
 from base import BIN, LIB, SLEEP, DaemonCase, kill_space_procs
+from _matrix import Fault
+import aos7_daemon
 import aos7_fs
 import aos7_proc
+import aos7_task
 from aos7_fs import read_json, write_json
 from aos7_taskside import read_jsonl
 
@@ -436,6 +441,323 @@ class TestDaemonDeath(DaemonCase):
         self.start_daemon(register=["a"])
         self.wait_for(lambda: "stale-holder-unverified" in (self.nstat().get("last_error") or {}).get("why", ""), 10)
         self.assertIsNone(holder.poll())
+
+
+class TestDaemonDurableRecovery(DaemonCase):
+    """〔core〕"""
+    KEEP = {"name": "s", "mode": "keep", "argv": [sys.executable, "-c",
+            "import os,signal,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);"
+            "open(os.path.join(os.environ['AOS7_TASK'],'ready'),'w').close();time.sleep(600)"]}
+
+    def nodes_state(self):
+        return read_json(os.path.join(self.root, ".aosd", "nodes.json"), {}) or {}
+
+    def ready_task(self, node):
+        self.wait_for(lambda: os.path.exists(os.path.join(self.slot(node, "s"), "ready")),
+                      msg="任務沒有裝好忽略 SIGTERM 的 handler")
+        identity = self.wait_pid(node, "s")
+        self.assertIsNotNone(identity.get("starttime"))
+        self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
+        return identity
+
+    def task_state(self, identity):
+        return aos7_proc.same_process(identity["pid"], identity["starttime"])
+
+    def wait_reaped(self, identity):
+        self.wait_for(lambda: self.task_state(identity) == aos7_proc.GONE, 15, "舊 pid＋starttime 仍活著")
+        self.wait_for(lambda: "reaping" not in self.nodes_state(), 10, "收乾淨後 reaping 沒清掉")
+
+    def readonly_aosd(self):
+        path = os.path.join(self.root, ".aosd")
+        self.addCleanup(os.chmod, path, 0o700)
+        os.chmod(path, 0o500)
+        # 先證明同一個目錄真的不能原子寫檔，避免故障沒有打中卻通過。
+        with self.assertRaises(PermissionError):
+            write_json(os.path.join(path, "write-probe.json"), {})
+        return path
+
+    @unittest.skipIf(os.geteuid() == 0, "root 不受 chmod 寫入限制")
+    def test_unregister_write_failure_is_retryable(self):
+        node = self.mknode("a", [self.KEEP])
+        self.start_daemon(register=["a"])
+        identity = self.ready_task(node)
+        self.wait_for(lambda: self.nstat().get("round"))
+        path = self.readonly_aosd()
+        result = self.wait_receipt(self.ctl("unregister", "a"))["result"]
+        self.assertFalse(result["ok"])
+        self.assertIn("nodes.json", result["msg"])
+        self.assertIn("a", self.nodes_state()["nodes"])
+        self.assertTrue(self.nstat().get("round"))
+        self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
+        before = self.status()["at"]
+        os.chmod(path, 0o700)
+        self.wait_for(lambda: self.status().get("at") != before)
+        self.assertTrue(self.nstat().get("round"), "恢復 status 寫入後時間線丟了")
+        self.assertNotEqual(self.nstat().get("phase"), "unregistering")
+        self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
+        self.assertTrue(self.wait_receipt(self.ctl("unregister", "a"))["result"]["ok"])
+        self.wait_reaped(identity)
+        self.assertNotIn("a", self.nodes_state()["nodes"])
+
+    @unittest.skipIf(os.geteuid() == 0, "root 不受 chmod 寫入限制")
+    def test_register_write_failure_is_retryable(self):
+        node = self.mknode("a")
+        self.start_daemon()
+        self.wait_for(lambda: self.status().get("pid"))
+        self.wait_receipt(self.ctl("wake", "a"))  # 先建好 ctl-done，chmod 只擋狀態檔覆寫
+        path = self.readonly_aosd()
+        result = self.wait_receipt(self.ctl("register", "a"))["result"]
+        self.assertFalse(result["ok"])
+        self.assertIn("nodes.json", result["msg"])
+        self.assertNotIn("a", self.nodes_state().get("nodes", {}))
+        self.assertNotIn("a", self.status()["nodes"])
+        before = self.status()["at"]
+        os.chmod(path, 0o700)
+        self.wait_for(lambda: self.status().get("at") != before)
+        self.assertNotIn("a", self.status()["nodes"])
+        self.assertFalse(os.path.exists(os.path.join(node, ".aos", "round.json")))
+        self.assertTrue(self.wait_receipt(self.ctl("register", "a"))["result"]["ok"])
+        self.wait_round(2)
+        self.assertIn("a", self.nodes_state()["nodes"])
+
+    def test_unregister_crash_before_kill_resumes(self):
+        node = self.mknode("a", [self.KEEP])
+        p = self.start_daemon(env={"AOS7_TEST_CRASH": "reap-before-kill"}, register=["a"])
+        identity = self.ready_task(node)
+        self.ctl("unregister", "a")
+        self.assertEqual(p.wait(10), -signal.SIGKILL, "回收測試點沒打中")
+        self.assertIn("a", self.nodes_state()["reaping"])
+        self.assertNotIn("a", self.nodes_state()["nodes"])
+        self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
+        self.start_daemon()
+        self.wait_reaped(identity)
+
+    def test_unregister_external_sigkill_resumes(self):
+        node = self.mknode("a", [self.KEEP])
+        p = self.start_daemon(register=["a"])
+        identity = self.ready_task(node)
+        self.assertTrue(self.wait_receipt(self.ctl("unregister", "a"))["result"]["ok"])
+        self.wait_for(lambda: "a" in self.nodes_state().get("reaping", {}))
+        os.kill(p.pid, signal.SIGKILL)
+        self.assertEqual(p.wait(10), -signal.SIGKILL)
+        self.assertEqual(self.task_state(identity), aos7_proc.ALIVE, "沒打在 TERM 寬限內")
+        self.assertIn("a", self.nodes_state()["reaping"])
+        self.start_daemon()
+        self.wait_reaped(identity)
+
+    def test_replaced_node_crash_reaps_before_new_birth(self):
+        node = self.mknode("a", [self.KEEP])
+        p = self.start_daemon(env={"AOS7_TEST_CRASH": "reap-before-kill"}, register=["a"])
+        identity = self.ready_task(node)
+        os.rename(node, os.path.join(self.root, "old"))
+        self.mknode("a", [self.KEEP])
+        self.assertEqual(p.wait(10), -signal.SIGKILL, "node 替換沒打中回收測試點")
+        self.assertIn("a", self.nodes_state()["reaping"])
+        self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
+        self.assertFalse(self.birth(node, "s"))
+        self.start_daemon()
+
+        def new_birth_after_old_died():
+            birth = self.birth(node, "s")
+            if birth:
+                self.assertEqual(self.task_state(identity), aos7_proc.GONE, "新 birth 出現時舊任務還活著")
+            return birth
+
+        self.wait_for(new_birth_after_old_died, 15, "舊任務收完後沒有新 birth")
+        fresh = self.ready_task(node)
+        self.assertNotEqual((fresh["pid"], fresh["starttime"]), (identity["pid"], identity["starttime"]))
+        self.wait_reaped(identity)
+        self.assertEqual(self.task_state(fresh), aos7_proc.ALIVE)
+
+    def test_incomplete_reap_holds_missing_until_scan_recovers(self):
+        node = self.mknode("a", [self.KEEP])
+        rules = os.path.join(self.root, "fault-rules.txt")
+        fault = Fault("@" + rules, ops={"proc-list"})
+        self.addCleanup(fault.close)
+        self.start_daemon(env=fault.env, register=["a"])
+        identity = self.ready_task(node)
+        self.assertEqual(fault.hits(), 0)
+        # 必須先開故障，再換 inode，否則第一次回收可能已經判乾淨。
+        with open(rules, "w") as fh:
+            fh.write("proc-list:/proc:EIO\n")
+        os.rename(node, os.path.join(self.root, "old"))
+        self.mknode("a", [self.KEEP])
+        self.wait_for(lambda: fault.hits("proc-list") > 0)
+        self.wait_for(lambda: self.nstat().get("phase") == "missing")
+        self.wait_for(lambda: "a" in self.nodes_state().get("reaping", {}))
+        end = time.monotonic() + 2.2
+        while time.monotonic() < end:
+            self.assertEqual(self.nstat().get("phase"), "missing")
+            self.assertFalse(os.path.exists(os.path.join(node, ".aos", "round.json")))
+            self.assertIn("a", self.nodes_state()["reaping"])
+            time.sleep(0.05)
+        fault.check(where="（收不乾淨不得重開時間線）")
+        os.remove(rules)
+        self.wait_reaped(identity)
+        fresh = self.ready_task(node)
+        self.assertEqual(self.task_state(fresh), aos7_proc.ALIVE)
+        self.wait_round(1)
+
+    def test_live_pid_read_failure_retains_known_pgid(self):
+        node = self.mknode("a", [self.KEEP])
+        self.tick()
+        identity = self.ready_task(node)
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        timeline = SimpleNamespace(node=node, round=1)
+        self.assertEqual(aos7_task.judge(self.slot(node, "s"), node, "s", 1).state, aos7_task.LIVE)
+        d.live_of("a", timeline)
+        self.assertIn(identity["pgid"], d._pgids["a"])
+        d._live.clear()
+        original = aos7_daemon.read_json
+        reads = []
+
+        def unreadable_pid(path, *args, **kwargs):
+            if path == os.path.join(self.slot(node, "s"), "pid.json"):
+                reads.append(path)
+                return None
+            return original(path, *args, **kwargs)
+
+        with mock.patch.object(aos7_daemon, "read_json", side_effect=unreadable_pid):
+            self.assertIn("s#1", d.live_of("a", timeline))
+        self.assertTrue(reads, "LIVE 之後的 pid.json 讀取故障沒有打中")
+        self.assertIn(identity["pgid"], d._pgids["a"])
+
+    def test_steps_resume_remaining_rounds_after_sigkill(self):
+        node = self.mknode("a", interval_ms=1500, early=True)
+        p = self.start_daemon(register=["a"])
+        self.wait_receipt(self.ctl("pause", "a", "--owner", "k"))
+        self.wait_for(lambda: self.nstat().get("phase") == "paused")
+        before = self.node_round()
+        self.assertTrue(self.wait_receipt(self.ctl("resume", "a", "--owner", "k", "--rounds", "3"))["result"]["ok"])
+        paused_path = os.path.join(self.root, ".aosd", "paused.json")
+
+        def remaining():
+            return ((read_json(paused_path) or {}).get("steps", {}).get("a") or {}).get("k")
+
+        self.wait_for(lambda: remaining() == 2, 10, "關上一回合後 steps=2 沒落盤")
+        self.assertFalse(self.round_json(node)["open"])
+        os.kill(p.pid, signal.SIGKILL)
+        self.assertEqual(p.wait(10), -signal.SIGKILL)
+        self.assertEqual(remaining(), 2)
+        self.assertEqual(self.last_round(node)["round"], before + 1)
+        self.start_daemon()
+        self.wait_for(lambda: self.nstat().get("phase") == "paused" and self.node_round() == before + 3,
+                      15, "重起後沒有只跑剩餘兩回合")
+        self.assertEqual(self.nstat()["paused_by"], ["k"])
+        self.assertNotIn("steps_left", self.nstat())
+        self.assertNotIn("a", (read_json(paused_path) or {}).get("steps", {}))
+        time.sleep(0.2)
+        self.assertEqual(self.node_round(), before + 3)
+
+    def test_invalid_reaping_state_refuses_start(self):
+        for invalid in ([], None, "a", 1):
+            with self.subTest(reaping=invalid):
+                state = {"nodes": {}, "reaping": invalid}
+                path = os.path.join(self.root, ".aosd", "nodes.json")
+                write_json(path, state)
+                p = self.start_daemon()
+                self.assertEqual(p.wait(10), 3)
+                self.assertEqual(read_json(path), state)
+
+    def test_load_filters_reaping_and_steps_entries(self):
+        write_json(os.path.join(self.root, ".aosd", "nodes.json"),
+                   {"nodes": {}, "reaping": {"a": None, "b": {"why": "kept"}, "../bad": {}, "a/": {}}})
+        write_json(os.path.join(self.root, ".aosd", "paused.json"),
+                   {"paused": {}, "steps": {"a": {"ok": 2, "zero": 0, "negative": -1, "bool": True,
+                                                     "float": 1.5, "string": "2"}, "bad": []}})
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.load_state()
+        self.assertEqual(d.reaping, {"a": {}, "b": {"why": "kept"}})
+        self.assertEqual(d.steps, {"a": {"ok": 2}})
+        for steps in (None, [], "bad"):
+            write_json(os.path.join(self.root, ".aosd", "paused.json"), {"paused": {}, "steps": steps})
+            d.load_state()
+            self.assertEqual(d.steps, {})
+
+    def test_reap_dirty_write_retries_and_preserves_known_groups(self):
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        node = os.path.join(self.root, "a")
+        d._pgids["a"] = {43210}
+        with mock.patch.object(aos7_proc, "kill_node", side_effect=[(1, False), (1, True)]) as kill:
+            with mock.patch.object(d, "save_nodes", side_effect=OSError("disk unavailable")) as save:
+                d.reap("a", node, "node-gone-kill")
+                d.reapers["a"].join(5)
+                save.assert_called_once()
+            self.assertFalse(d.reapers["a"].is_alive())
+            self.assertTrue(d._nodes_dirty)
+            self.assertFalse(d._reap_mem["a"]["clean"])
+            self.assertEqual(d._reap_mem["a"]["known"], {43210})
+            d.check_nodes()
+            self.assertFalse(d._nodes_dirty)
+            self.assertIn("a", self.nodes_state()["reaping"])
+            self.assertEqual(kill.call_count, 1, "未到重試間隔就又收一次")
+            d._reap_mem["a"]["at"] -= aos7_daemon.REAP_RETRY_S
+            d.check_nodes()
+            d.reapers["a"].join(5)
+            self.assertEqual(kill.call_count, 2)
+            kill.assert_called_with(node, {43210})
+            d.check_nodes()
+        self.assertNotIn("reaping", self.nodes_state())
+        self.assertNotIn("a", d._reap_mem)
+
+    def test_clean_reap_waits_for_intent_removal_write(self):
+        self.mknode("a")
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.registry = {"a": {}}
+        d.reaping = {"a": {"why": "node-gone-kill"}}
+        d._reap_mem["a"] = {"clean": True}
+        d.reapers["a"] = mock.Mock(is_alive=mock.Mock(return_value=False))
+        d.missing["a"] = {"why": "inode 換了"}
+        d.save_nodes()
+        with mock.patch.object(aos7_daemon, "Timeline") as timeline:
+            with mock.patch.object(d, "save_nodes", side_effect=OSError("disk unavailable")) as save:
+                d.check_nodes()
+                save.assert_called_once_with(reaping={})
+            timeline.assert_not_called()
+            self.assertIn("a", d.reaping)
+            self.assertIn("a", d.missing)
+            self.assertIn("a", self.nodes_state()["reaping"])
+            d.check_nodes()
+            timeline.return_value.start.assert_called_once()
+        self.assertNotIn("reaping", self.nodes_state())
+        self.assertNotIn("a", d.reaping)
+
+    def test_stop_sweep_includes_unregistered_reaping_intents(self):
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.registry = {"b": {}}
+        d.reaping = {"a": {}}
+        d.save_nodes()
+        with mock.patch.object(aos7_proc, "kill_node", return_value=(1, False)) as kill:
+            d.sweep_leftovers()
+            self.assertEqual(set(kill.call_args.args[0]), {os.path.join(self.root, "a"), os.path.join(self.root, "b")})
+            self.assertIn("a", self.nodes_state()["reaping"])
+            kill.return_value = (1, True)
+            with mock.patch.object(d, "save_nodes", side_effect=OSError("disk unavailable")) as save:
+                d.sweep_leftovers()
+                save.assert_called_once_with(reaping={})
+            self.assertIn("a", self.nodes_state()["reaping"])
+            d.sweep_leftovers()
+        self.assertNotIn("reaping", self.nodes_state())
+
+    def test_stop_without_kill_keeps_intent_for_restart(self):
+        node = self.mknode("a", [self.KEEP])
+        self.tick()
+        identity = self.ready_task(node)
+        state = {"nodes": {}, "reaping": {"a": {"why": "unregister-kill"}}}
+        write_json(os.path.join(self.root, ".aosd", "nodes.json"), state)
+        request = self.ctl("stop")  # 先排 stop，主迴圈不會先啟動回收
+        p = self.start_daemon()
+        self.assertEqual(p.wait(10), 0)
+        self.assertTrue(self.wait_receipt(request)["result"]["ok"])
+        self.assertEqual(self.nodes_state(), state)
+        self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
+        self.start_daemon()
+        self.wait_reaped(identity)
 
 
 if __name__ == "__main__":
