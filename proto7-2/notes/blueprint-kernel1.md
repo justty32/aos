@@ -28,7 +28,7 @@
 
 ## 6. supervise-brain 規則
 
-- 進度來源：`<brain 槽>/../../brain/task.json`（公開事實）：`{"id":信,"step","line","stall","run"}`；基準＝`(id, step)`。沒有 task.json＝閒置或已結案（含 LT1 的「卡住」結案）→不納入。`run` 與 birth 不合、讀不到＝unknown→不計老化、恢復後重建基準。
+- 進度來源：`<node>/brain/task.json`（公開事實）：`{"id":信,"step","line","stall",…}`，`run` 取自來源槽的 `birth.json`；基準＝`(id, step)`。沒有 task.json＝閒置或已結案（含 LT1 的「卡住」結案）→不納入。`run` 與 birth 不合、讀不到＝unknown→不計老化、恢復後重建基準。
 - 老化＝來源 completed_tock 距基準建立的回合數。≥`no_progress_rounds`→`notify` 一次（mail NEEDS-USER 給 `you`：「bob 的信〈標題〉第 N 回合起沒進展」；沒 mail 只寫 decisions.json）；≥`kill_after_rounds`→`kill` 綁當時 run，一個 run 最多一次。
 - 新信、新 step、新 run→重建基準並清通知旗標。brain 自己的「連續 3 回合沒進展→要你決定」會先觸發，所以預設 6／12 是它的保底；brain 真的壞死（程序活著但不寫 task.json）才會走到 kill。
 - 範例 `examples/supervise-brain/`：用 `aos7-up` 起假 AI node，寄一封標題含「沒進展」的信（假 AI 會一直回「卡住」），看 kernel 第 6 回合寄信、第 12 回合 kill、keep 重起後 brain 從 task.json 接續；再寄一封正常信證明不誤殺。
