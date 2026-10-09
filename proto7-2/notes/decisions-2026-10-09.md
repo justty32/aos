@@ -290,3 +290,6 @@
 - C｜ST3 遺留：信件模板的固定段（產出／沒做到／需要決定：無）與 `status: BLOCKED` 兩位新手都看不懂 → 屬 mail 模組，跟 KF 的通知信白話化一起排下一隊
 - C｜MT：信件正文白話化進 main——信頭與檔名不動、正文加「狀態：辦好了／卡住了…」一行、不再自動補「產出／沒做到／需要決定：無」空段；讀信多一個 `plain` 欄位；mail 外只改 `aos7_up_ask.py` 的 show_body（事後補報，照收）。新手 Haiku 6、luna 9、兩人都答對，一輪過
 - C｜頂層：信頭 `---` 之間不加「給程式讀的」說明句（多一句就多一個概念）；卡住信內文用語（假 AI、系統不會自己重問、ADVANCED 路徑）歸 up，排進下一隊
+- C｜KF：astra 審 kernel（play/2026-10-09-kernel-astra.md）＋修 C1～C9、E2～E4、S1、S3 進 main；通知信白話（標題「bob 卡住了：「…」已 6 回合沒進展」、無裸 JSON）、done 每筆記 basis、同信只通知一次、kill 退避 12／24／48 回合最多 3 次（`max_kills`）；sources ≤10、門檻設反退 2、status 雜湊不合退 1。新手第三輪 Haiku 7／luna 8 過；全套 1197 綠
+- C｜KF 留下：C10（不確定的 kill 進 done，現做法對、藍圖要改）、E1（run --rounds 中途失敗退 0，只影響測試模式）、E5（kernel 列進 tests/error_path.json）、S4（快照簡化）→ E5＋藍圖註記歸最後整合；「回信叫 brain 放棄」功能不做（卡住後 deadline 會自己收尾，多一個指令多一個概念）
+- C｜KF 留下：brain 進度句「第 1 回合，下一步第 2 回合」回合／步混用 → 交 UW 一起改
