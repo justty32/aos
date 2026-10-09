@@ -24,12 +24,13 @@ python3 "$P/modules/compact/aos7-compact" forget "$N" --file notes/journal.jsonl
 node 裡沒有 `compact.json` 就用這份預設；壞 JSON 或不合設定退出 2：
 
 ```json
-{"files":["wf/SESSION-LOG.md","notes/journal.jsonl"],"max_bytes":16384,"keep_recent":10,"on_stage_change":true,"stage_similarity":0.2,"summary_max_chars":1200,"llm":null,"events":false}
+{"files":["wf/SESSION-LOG.md","wf/handoffs/*/STATE.md","notes/journal.jsonl"],"max_bytes":2048,"keep_recent":5,"on_stage_change":true,"stage_similarity":0.2,"summary_max_chars":1200,"llm":null,"events":false}
 ```
 
-- `files`：要整理的記憶檔，不存在的略過。`keep_recent`：最後幾則原樣保留。`llm` 為 null 用本機摘要，給物件才經 llmcall 問模型（見下）。
+- `files`：要整理的記憶檔，不存在的略過；含 `*` 的樣式展開成 node 內現有的檔（STATE.md 每天一份）。`keep_recent`：最後幾則原樣保留。`llm` 為 null 用本機摘要，給物件才經 llmcall 問模型（見下）。
 - `events`：布林，預設關；開了才在整理完寫一筆 compact.done／compact.forget 到 `<node>/events/`。pending 已清才發布；寫不出只記在 compact/log.jsonl、不算整理失敗，stdout 結果加 `event: "ok"` 或 `"failed"`，主整理 log 欄位不變。
-- 觸發有三種，dry-run 與結果行都印出原因：檔超過 `max_bytes`（大小超過 N）、`--force`（強制整理）、段落切換。少於兩則可摘就不動。
+- 觸發有三種，dry-run 與結果行都印出原因：檔超過 `max_bytes`（大小超過 N）、`--force`（強制整理）、段落切換。少於兩則可摘就不動；大小觸發時，可摘的舊則合計不到 `max_bytes` 一半也先不動（免得每回合都整理，設了 llm 就是每回合花錢）。
+- 預設門檻的依據（2026-10-09 長任務，12 封信 29 回合）：journal 真 AI 長到 6.5 KB、假 AI 3.0 KB，STATE 2.8／2.2 KB；舊預設 16384 永遠不觸發。2048 bytes 約 700 token，約 brain 一次提示的六分之一，這種長度的任務兩個檔都會整理到。
 - 段落切換：現役段取 files 第一個 md 的第一個 `## ` 到下一個 `## `；清空只記結段；下次出現新則，以去空白、小寫的字元 bigram Jaccard 比較新舊原文，低於 `stage_similarity`（0～1）才讓全部記憶檔檢查，不看大小。state 保存 stage_last／stage_ended／stage_due，內容沒變就不寫（只有 jsonl、沒有現役段的 node 不會出現 state.json）；dry-run 只預覽、不寫 state。SESSION-LOG 的現役段是進行中的工作，不摘要。
 
 ## 細規則
@@ -112,6 +113,6 @@ bash proto7-2/modules/compact/examples/real_ai.sh ./compact-evidence
 
 - **職責**：單 node 持鎖選舊段、摘要／忘掉、封存原文、替換檔案與留下 log。
 - **前置條件**：node 可讀寫；檔案是 md／jsonl；watch 有任務環境；使用 llmcall 時帳任務已運行、grant 允許 holder 與 gateway。
-- **保證**：先 archive 再換檔；now 不摘 open、最近 N 則與 files 第一個 md 的現役段（第一個 `## ` 到下一個 `## `，進行中的工作）；pending 原子保存，SIGKILL 後沿同 call 接續，已有 summary 不再叫摘要。只保證持 write.lock 的追加者：最後讀檔到 rename 持共同短鎖，摘要／llmcall 期間不持有；追加尾巴接回，其他改寫則放棄 pending、下次重規劃；未完成的段落觸發留到全部檔成功。compact.json events 為 true 才發布 obs，發不出只記 log。
+- **保證**：先 archive 再換檔；now 不摘 open、最近 N 則與 files 第一個 md 的現役段（第一個 `## ` 到下一個 `## `，進行中的工作）；pending 原子保存，SIGKILL 後沿同 call 接續，已有 summary 不再叫摘要。STATE.md（`wf/handoffs/` 下）換檔時另持 `wf/handoffs/.state.lock`，跟 `aos7-wfnode state` 的追加互斥。只保證持 write.lock（STATE 為 .state.lock）的追加者：最後讀檔到 rename 持共同短鎖，摘要／llmcall 期間不持有；追加尾巴接回，其他改寫則放棄 pending、下次重規劃；未完成的段落觸發留到全部檔成功。compact.json events 為 true 才發布 obs，發不出只記 log。
 - **明確不管**：不拿 write.lock 的追加在換檔瞬間可能丟，明確不管；斷電保證、摘要的語意正確性、封存保留期限；refs/、agent 的 prompt 組裝、events store 都不由本包管理。
 

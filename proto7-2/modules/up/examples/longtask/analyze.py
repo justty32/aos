@@ -72,7 +72,9 @@ def main():
         state_lines=len(state), state_dup=dup,
         open_max=max(opens), open_end=opens[-1], open_curve=[(t['t'], t['open']) for t in tl if True][::1],
         journal_curve=[(t['t'], t['journal']) for t in tl],
-        compact=clog, picks=[dict(q=p['q'][:40], picked=p['picked'], via=p['via']) for p in picks],
+        compact=clog, memory_bytes={rel: (node / rel).stat().st_size for rel in
+                                    ['wf/SESSION-LOG.md', 'notes/journal.jsonl'] + sorted(str(q.relative_to(node)) for q in node.glob('wf/handoffs/*/STATE.md'))
+                                    if (node / rel).exists()}, picks=[dict(q=p['q'][:40], picked=p['picked'], via=p['via']) for p in picks],
         prompt_tokens=dict(min=min(prompts), max=max(prompts), mean=round(sum(prompts) / len(prompts)), l01=l01),
         tokens_total=sum(c['total'] or 0 for c in calls),
         kill=json.loads((out / 'kill.json').read_text()) if (out / 'kill.json').exists() else None,

@@ -4,8 +4,10 @@ import datetime
 import fcntl
 import hashlib
 import json
+import contextlib
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -14,8 +16,10 @@ sys.path[:0] = [str(TOP / "lib"), str(TOP / "modules/tools")]
 from aos7_fs import append_jsonl, now, read_json, sweep_tmp, test_point, write_json
 from aos7_taskside import task_env, wait_tock
 
-DEFAULT = dict(files=["wf/SESSION-LOG.md", "notes/journal.jsonl"], max_bytes=16384,
-               keep_recent=10, on_stage_change=True, stage_similarity=0.2, summary_max_chars=1200, llm=None, events=False)
+# 門檻依據（2026-10-09 長任務）：真 AI 29 回合 journal 6.5 KB、STATE 2.8 KB，假 AI 3.0／2.2 KB；
+# 2048 bytes 約 700 token，是 brain 一次提示（約 4100 token）的六分之一，長任務裡兩個檔都會觸發。
+DEFAULT = dict(files=["wf/SESSION-LOG.md", "wf/handoffs/*/STATE.md", "notes/journal.jsonl"], max_bytes=2048,
+               keep_recent=5, on_stage_change=True, stage_similarity=0.2, summary_max_chars=1200, llm=None, events=False)
 LLM_DEFAULT = dict(budget="budget/llm", holder="compact", reserve=4000, gateway="fake",
                    model="chatgpt-gpt-6-sol-high", deadline=600, patience=5)
 PROMPT = ("這是一個 agent 的工作紀錄。請將舊紀錄濃縮成一段繁體中文摘要，≤{n} 字。"
@@ -40,6 +44,21 @@ def load(path, default):
             raise Failure(f"compact/{path.name} 讀不懂（{e}），做到哪裡不確定，檔案原樣留著", 3,
                           hint=f"先看 compact/{path.name}；修好或移走後再跑一次") from e
         raise Failure(f"{path.name} 不是有效 JSON：{e}", hint='請修正 JSON；例：compact.json 可先用 {}') from e
+
+
+def expand(node, files):
+    """files 裡含 * 的樣式換成 node 內實際存在的檔（排序）；其餘原樣。"""
+    out = []
+    for rel in files:
+        if "*" not in rel:
+            out.append(rel)
+            continue
+        for path in sorted(node.glob(rel)):
+            found = path.relative_to(node).as_posix()
+            if path.is_file() and found not in out:
+                file_path(node, found)
+                out.append(found)
+    return out
 
 
 def file_path(node, rel):
@@ -143,12 +162,95 @@ def flat(text):
     return " ".join(text.split())
 
 
-def local_summary(old, limit):
-    return ("本機摘要：" + "；".join(flat(p["text"])[:60] for p in old))[:limit]
+LETTER = re.compile(r"[A-Za-z][\w.]*-\d{8}T\d{6}-[0-9a-f]{6,}")
+STEP = re.compile(r"^第\s*(\d+)\s*回合[\s：:，,]*")
+
+
+def item(part, suffix):
+    """一則舊紀錄 → 誰（信 id）、第幾回合、時間、做了什麼；舊摘要另標出來。"""
+    raw = flat(part["text"])
+    key = step = at = None
+    if suffix == ".jsonl":
+        try:
+            value = json.loads(raw)
+        except ValueError:
+            value = raw
+        if isinstance(value, dict):
+            if value.get("compact") == "summary":
+                return dict(summary=re.sub(r"^本機摘要\s*", "", flat(str(value.get("text", "")))))
+            key, step, at = value.get("re") or value.get("id"), value.get("step"), value.get("at") or value.get("day")
+            what = next((value[k] for k in ("text", "line", "msg", "title", "summary") if isinstance(value.get(k), str)), None)
+            if what is None:
+                what = "，".join(f"{k}={json.dumps(v, ensure_ascii=False)}" for k, v in value.items()
+                                if k not in ("by", "re", "id", "step", "at", "day", "open", "status"))
+        else:
+            what = raw if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+    else:
+        what = re.sub(r"^[-*]\s+", "", raw)
+        old = re.match(r"^（摘要 \S+，\d+ 則）(.*?)（原文 ref://compact/\S+）$", what)
+        if old:
+            return dict(summary=re.sub(r"^本機摘要\s*", "", old[1]))
+        clock = re.match(r"^(\d\d:\d\d)\s+", what)
+        if clock:
+            at, what = clock[1], what[clock.end():]
+    what = flat(str(what))
+    if not isinstance(key, str) or not key:
+        found = LETTER.search(what)
+        key = found[0] if found else None
+    if key:
+        what = what.replace(key, " ")
+    lead = STEP.match(flat(what))
+    if lead:
+        step = step if step is not None else int(lead[1])
+        what = flat(what)[lead.end():]
+    what = flat(what.split("｜")[0]).strip(" ：:，,；;")
+    return dict(key=key, step=step if type(step) is int else None, at=str(at) if at else None, what=what or "（空）")
+
+
+def local_summary(old, limit, suffix=".jsonl"):
+    """本機摘要：按信（或「其他」）分段，每段列出做了什麼；放不下就縮短每項、再省略中段。"""
+    items = [item(p, suffix) for p in old]
+    earlier = "；".join(i["summary"] for i in items if "summary" in i)
+    groups = {}
+    for i in items:
+        if "summary" not in i:
+            groups.setdefault(i["key"], []).append(i)
+    ats = sorted(i["at"] for i in items if i.get("at"))
+    when = [a.split("T", 1)[1][:5] if "T" in a else a for a in ats[:1] + ats[-1:]]
+    span = ("（" + when[0] + ("～" + when[1] if when[1] != when[0] else "") + "）") if ats else ""
+    budget = min(limit, max(200, sum(len(p["text"].encode("utf-8")) for p in old) // 6))
+
+    def clip(text, width):
+        return text if len(text) <= width else text[:max(1, width - 1)] + "…"
+
+    def render(width, tail):
+        segs = ["更早：" + clip(earlier, width * 4)] if earlier else []
+        for key, rows in groups.items():
+            whats = [r["what"] for k, r in enumerate(rows) if not k or r["what"] != rows[k - 1]["what"]]
+            if tail < 0 and len(whats) > 1:
+                whats = [f"…略 {len(whats) - 1} 項…", whats[-1]]
+            elif tail and len(whats) > tail + 2:
+                whats = whats[:1] + [f"…略 {len(whats) - 1 - tail} 項…"] + whats[-tail:]
+            steps = [r["step"] for r in rows if r["step"] is not None]
+            short = re.sub(r"-\d{8}T\d{6}-", "-…", key) if key else None  # 信 id 留寄件人與尾碼，夠對得回去
+            head = (f"信 {short}" if key else "其他") + (f" {len(rows)} 則" if len(rows) > 1 else "")
+            if steps:
+                head += f"（第 {min(steps)}～{max(steps)} 回合）" if min(steps) != max(steps) else f"（第 {steps[0]} 回合）"
+            segs.append(head + "：" + " → ".join(w if w.startswith("…略 ") else clip(w, width) for w in whats))
+        return f"本機摘要 {len(items)} 則{span}｜" + "｜".join(segs)
+
+    # 先每項都列（縮短每項），放不下才省略中段、只留第一項與最後幾項。
+    tries = ([(w, 0) for w in (40, 28, 20, 14)] + [(w, t) for w in (28, 20, 14) for t in (12, 8, 5, 3)]
+             + [(w, 1) for w in (20, 14, 10, 8)] + [(w, -1) for w in (14, 10)])
+    for width, tail in tries:
+        text = render(width, tail)
+        if len(text) <= budget:
+            return text
+    return clip(render(10, -1), budget)
 
 
 def stage_text(node, cfg):
-    rel = next((f for f in cfg["files"] if f.endswith(".md")), None)
+    rel = next((f for f in expand(node, cfg["files"]) if f.endswith(".md")), None)
     if rel is None or not file_path(node, rel).exists():
         return ""
     active, lines = False, []
@@ -239,7 +341,7 @@ def log_once(work, entry):
 
 def summarize(node, work, p):
     old = [r for r in records(p["original"], Path(p["file"]).suffix) if r["index"] in p["indices"]]
-    text = local_summary(old, p["summary_max_chars"])
+    text = local_summary(old, p["summary_max_chars"], Path(p["file"]).suffix)
     llm = p["llm"]
     if llm is None:
         return text
@@ -297,8 +399,14 @@ def resume(node, work, p, cfg=None):
         else:
             new.append(part["text"])  # open、最近 N 則與骨架留原位，一字不改。
     base = "".join(new)
-    with (work / "write.lock").open("a") as writer:
+    with contextlib.ExitStack() as locks:
+        writer = locks.enter_context((work / "write.lock").open("a"))
         fcntl.flock(writer, fcntl.LOCK_EX)
+        handoffs = node / "wf/handoffs"
+        if path.is_relative_to(handoffs):  # STATE.md 的寫者是 aos7-wfnode state，它持這把鎖追加。
+            state_lock = os.open(handoffs / ".state.lock", os.O_WRONLY | os.O_CREAT, 0o600)
+            locks.callback(os.close, state_lock)
+            fcntl.flock(state_lock, fcntl.LOCK_EX)
         current = read_text(path)
         replaced = (not current.startswith(p["original"]) and p.get("new_len") is not None and len(current) >= p["new_len"]
                     and p.get("new_sha") == digest(current[:p["new_len"]]))
@@ -427,16 +535,20 @@ def once(node, cfg, dry=False, force=False):
         # 舊 pending 只算它自己那一輪；接完後照樣重評同一檔，新觸發（stage_due）不被它吃掉。
         entries.append(resume(node, work, load(work / "pending.json", None), cfg))
     first = len(entries)
-    for rel in cfg["files"]:
+    files = expand(node, cfg["files"])
+    for rel in files:
         path = file_path(node, rel)
         if not path.exists():
             continue
         text = read_text(path)
         rec = [r for r in records(text, path.suffix) if r["index"] is not None]
         old = rec[:max(0, len(rec) - cfg["keep_recent"])]
-        live = active_indices(text) if rel == next((f for f in cfg["files"] if f.endswith(".md")), None) else set()
+        live = active_indices(text) if rel == next((f for f in files if f.endswith(".md")), None) else set()
         indices = [r["index"] for r in old if not r["open"] and r["valid"] and r["index"] not in live]
         trigger = "force" if force else "stage_change" if changed else "max_bytes" if len(text.encode("utf-8")) > cfg["max_bytes"] else "不需要"
+        picked = sum(len(r["text"].encode("utf-8")) for r in old if r["index"] in set(indices))
+        if trigger == "max_bytes" and picked < cfg["max_bytes"] // 2:
+            trigger = "不需要"  # 可摘的舊則不到門檻一半就先不摘，免得每回合都整理（設了 llm 就是每回合都花錢）。
         plan = dict(file=rel, records=len(rec), open=sum(r["open"] for r in rec),
                     count=len(indices) if trigger != "不需要" and len(indices) >= 2 else 0, trigger=trigger)
         if changed and evidence is not None:
@@ -494,10 +606,10 @@ class Parser(argparse.ArgumentParser):
 
 def main(argv=None):
     """命令列入口；最後一行固定 JSON，watch 每回合鎖住自己的 node。"""
-    ap = Parser(prog="aos7-compact", description="把 node（一個工作資料夾）裡太長的記憶檔整理成摘要；原文先存進 <node>/compact/archive/，未完成（open）與最近 10 則留下。",
-                epilog="第一次用：now <node> --dry-run 看計畫，再 now <node> 實際整理。記憶檔超過 16384 bytes 才會整理（門檻與常駐 watch 見 ADVANCED.md）。")
+    ap = Parser(prog="aos7-compact", description="把 node（一個工作資料夾）裡太長的記憶檔整理成摘要；原文先存進 <node>/compact/archive/，未完成（open）與最近 5 則留下。",
+                epilog="第一次用：now <node> --dry-run 看計畫，再 now <node> 實際整理。記憶檔超過 2048 bytes 才會整理（門檻與常駐 watch 見 ADVANCED.md）。")
     commands = ap.add_subparsers(dest="command", required=True, parser_class=Parser, metavar="{now,forget}")
-    a = commands.add_parser("now", help="現在檢查一次，需要就整理", description="檢查一次 node 的記憶檔；需要時（例如檔超過 16384 bytes）才整理。")
+    a = commands.add_parser("now", help="現在檢查一次，需要就整理", description="檢查一次 node 的記憶檔；需要時（例如檔超過 2048 bytes）才整理。")
     a.add_argument("node", help="node：一個工作資料夾的路徑")
     a.add_argument("--dry-run", action="store_true", help="只印計畫，不寫任何檔")
     a.add_argument("--force", action="store_true", help="不管檔大小，強制整理")
@@ -543,7 +655,7 @@ def main(argv=None):
                     raise Failure("同一 node 已有 compact 在做，這次沒動任何檔", 3, hint="等它做完再跑一次") from None
                 sweep_tmp(str(work))
                 sweep_tmp(str(work / "archive"))
-                rels = cfg["files"] + ([args.file] if args.command == "forget" else [])
+                rels = expand(node, cfg["files"]) + ([args.file] if args.command == "forget" else [])
                 if (work / "pending.json").exists():
                     rels.append(load(work / "pending.json", {})["file"])
                 for directory in {file_path(node, rel).parent for rel in rels} | {work / "archive"}:
