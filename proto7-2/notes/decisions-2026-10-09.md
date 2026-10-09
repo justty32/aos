@@ -286,3 +286,5 @@
 - 未過｜ST2：status 再白話（心跳只說活著、假 AI 不印字數、卡住倒數秒數）、QUICKSTART 補「bob 就是 node」與「卡住時」一節（3582 B）；新手三輪較差者都 6 分。剩：卡住信「進階」段嚇人、卡住那封被算進「回了」、範例秒數對不上、STATE 那行用語 → 開 ST3（brain＋status 一起改）
 - C｜KE1：kernel 範例（supervise-brain，約 30 秒、10/10 過、luna 5/5 無殘留）＋README／ADVANCED 進 main；新手第 1、2 輪過，第 3 輪 Haiku 6.6 是被 kernel 通知信本文拖低（「kernel kernel 的通知」、裸 JSON、NEEDS-USER 卻寫「需要決定：無」）→ README 不再叫人打開那封信；信本文、done 沒記基準、卡住時每個 run 重寄重殺 → 開 KF（astra 審＋修）
 - C｜KE1：範例 node 叫 bob 不用 `.`；kill 後範例縮短 deadline 讓卡住信收尾；codex 試跑用 bypass sandbox（sandbox 擋 systemd-run）
+- 未過但收｜ST3：卡住信改一句指 ADVANCED（維護指令改寫到 `brain/stuck/<call>/how.md`）、「回了」不算卡住那封、統一「約 1 分鐘」、STATE 行白話、QUICKSTART 去框圖（3326 B）。新手 Haiku 6／6／6、luna 7／7／8，五題兩人全對。頂層判斷：Haiku 九輪都 6 分、每輪換一批理由且含錯讀，分數已不隨文件變動 → 合併、QUICKSTART 停止追 Haiku 分數；之後新手門檻改「五題全對＋較差者 ≥6 且 luna ≥7」，待使用者翻案
+- C｜ST3 遺留：信件模板的固定段（產出／沒做到／需要決定：無）與 `status: BLOCKED` 兩位新手都看不懂 → 屬 mail 模組，跟 KF 的通知信白話化一起排下一隊
