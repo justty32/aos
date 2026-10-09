@@ -1,0 +1,28 @@
+{
+ "v": 1,
+ "call_id": "c3",
+ "logical": "c3",
+ "kid": "fixture-c3",
+ "key": [
+  "llm",
+  "planner",
+  "c3"
+ ],
+ "req_sha": "dbd8ca106ad29d61372fc6b85b02d4dd76a9d07541d123c139c0b431e11bae1d",
+ "meter": "fake.total_tokens/1",
+ "bound": "soft",
+ "reserve": 700,
+ "outcome": "answered",
+ "usage": {
+  "total_tokens": 60
+ },
+ "used": 50,
+ "overrun": 10,
+ "billing": "overrun",
+ "raw_sha": "fixture",
+ "text": "OK",
+ "settle": {
+  "used": 50,
+  "overrun": 10
+ }
+}

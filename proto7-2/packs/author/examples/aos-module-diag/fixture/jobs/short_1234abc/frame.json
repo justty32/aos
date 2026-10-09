@@ -1,0 +1,9 @@
+{
+ "v": 1,
+ "job": "short_1234abc",
+ "phase": "halted",
+ "halt": {
+  "kind": "unknown",
+  "why": "pending llmcall"
+ }
+}

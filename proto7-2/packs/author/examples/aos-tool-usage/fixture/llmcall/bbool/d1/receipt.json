@@ -1,0 +1,28 @@
+{
+ "v": 1,
+ "call_id": "d1",
+ "logical": "d1",
+ "kid": "fixture-d1",
+ "key": [
+  "bbool",
+  "author",
+  "d1"
+ ],
+ "req_sha": "e679a3d31fa7aa9068574bb6cec9bf6214c52a85fb84ac45761fa92e6d32f415",
+ "meter": "fake.total_tokens/1",
+ "bound": "soft",
+ "reserve": 700,
+ "outcome": "answered",
+ "usage": {
+  "total_tokens": 3
+ },
+ "used": 3,
+ "overrun": 0,
+ "billing": "final",
+ "raw_sha": "fixture",
+ "text": "OK",
+ "settle": {
+  "used": 3,
+  "overrun": 0
+ }
+}
