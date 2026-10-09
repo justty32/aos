@@ -1,0 +1,13 @@
+{
+ "v": 1,
+ "grant": "llm-demo",
+ "budget": "llm",
+ "holder": "author",
+ "resource": "llm.tokens",
+ "gateway": "llm.fake",
+ "amount": 1000,
+ "clock": "completed_tock",
+ "from": 0,
+ "until": 1000,
+ "delegate": false
+}
