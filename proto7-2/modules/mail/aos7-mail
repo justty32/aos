@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+from aos7_mail_cli import main
+raise SystemExit(main())
