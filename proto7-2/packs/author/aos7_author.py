@@ -13,6 +13,7 @@
 退出碼：0 成功、2 invalid、3 conflict、4 unknown、5 full。
 """
 import argparse
+import contextlib
 import base64
 import hashlib
 import json
@@ -265,15 +266,24 @@ def register_request(node, request_path):
         raw = read_bytes(request_path)
         if raw is None:
             raise Refuse("invalid", "需求檔不存在：%s" % request_path)
+    except Refuse as r:
+        return result(False, r.why, error=r.msg, **r.extra)
+    return _register_raw(nd, raw, nd.lock)
+
+
+def _register_raw(nd, raw, lock=None):
+    """驗證在鎖外；只有讀寫 request.json 在 lock() 內。lock=None＝呼叫者已持作者鎖（intake）。
+    驗證時的 ValueError（例如路徑含無法編碼的字元）＝invalid，不當 unknown（否則壞事件會卡住收件）。"""
+    try:
         try:
             req = strict_json(raw)
-        except ValueError as e:
-            raise Refuse("invalid", "需求不是嚴格 JSON：%s" % e)
-        issues = check_request(req, nd.node, load_toolcards())
+            issues = check_request(req, nd.node, load_toolcards())
+        except (ValueError, UnicodeError) as e:
+            raise Refuse("invalid", "需求不是嚴格 JSON 或無法驗證：%s" % e)
         if issues:
             raise Refuse("invalid", "需求不合", issues=issues)
         rid, rsha = req["rid"], sha256(raw)
-        with nd.lock():
+        with (lock() if lock else contextlib.nullcontext()):
             have = read_bytes(nd.path(rid, "request.json"))
             if have is not None:
                 if have != raw:
@@ -283,7 +293,7 @@ def register_request(node, request_path):
         return result(True, rid=rid, request_sha=rsha, dup=False)
     except Refuse as r:
         return result(False, r.why, error=r.msg, **r.extra)
-    except Unknown as e:
+    except (Unknown, OSError) as e:
         return result(False, "unknown", error=str(e))
 
 
@@ -788,17 +798,35 @@ def status(node, rid):
         return result(False, r.why, rid=rid, error=r.msg)
 
 
+def send_request(node, request_path, events_dir):
+    """事件送件入口；延遲載入接線。"""
+    import aos7_author_pub
+    return aos7_author_pub.send_request(node, request_path, events_dir)
+
+
+def intake(node, events_dir, limit=20):
+    """事件收件入口；與其他作者寫者共用鎖。"""
+    import aos7_author_pub
+    return aos7_author_pub.intake(node, events_dir, limit)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="aos7-author", description="author 任務包：CSV 固定工具作者（第一刀，假候選）")
-    ap.add_argument("cmd", choices=("register", "propose", "publish", "answer", "status", "close"))
-    ap.add_argument("arg", help="register 給需求檔；其餘給 rid")
+    ap.add_argument("cmd", choices=("register", "propose", "publish", "answer", "status", "close", "send", "intake"))
+    ap.add_argument("arg", nargs="?", help="register 給需求檔；其餘給 rid")
     ap.add_argument("--candidate", help="propose：候選檔")
     ap.add_argument("--auto", action="store_true", help="propose：固定試驗，過了直接發布")
     ap.add_argument("--sha", help="publish／answer：指定版本（預設 active）")
     ap.add_argument("--resend", action="store_true", help="publish：結果 unknown 的版本由人負責重走首次發布")
+    ap.add_argument("--events", default="events", help="send／intake：事件目錄")
+    ap.add_argument("--limit", type=int, default=20, help="intake：至多收件筆數")
     a = ap.parse_args(argv)
+    if a.cmd != "intake" and a.arg is None:
+        ap.error("此命令需要需求檔或 rid")
     nd = Node()
-    if a.cmd == "register":
+    if a.cmd in ("send", "intake"):
+        r = send_request(nd, a.arg, a.events) if a.cmd == "send" else intake(nd, a.events, a.limit)
+    elif a.cmd == "register":
         r = register_request(nd, a.arg)
     elif a.cmd == "propose":
         if not a.candidate:
