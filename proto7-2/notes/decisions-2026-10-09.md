@@ -236,3 +236,10 @@
 - 待 I5｜RV-fix-B 交棒：modules 總覽刪 llmdiag 列、diag 列補 `--llm`；INDEX、tests README、code map 同步
 - 結果｜EF3：依難度挑模型（先 luna-nothink→sol-high→astra-high，被三關擋才升級）：簡單題每單 token −3.6%、模型時間 −49%、收單到結案 −28%、12／12 過；**難題反而貴 83%**——luna-nothink 看到「你沒有工具」那句直接拒做 → [ef3](play/2026-10-09-real-ai/ef3.md)
 - C｜頂層：學徒寫 aos 工具／模組的題目，升級鏈改從 sol-high 起跳；CSV 這類簡單題仍從 luna-nothink 起跳（不改「沒有工具」那句，免得 sol 的開場白問題回來）
+
+## 使用者 19:00 回覆
+
+- 使用者：**新模型分級照暫定收下**（gpt-6.1-sol、gpt-6-astra A；gpt-6-sol B；gpt-reserve、gpt-5.5 C；Haiku、gpt-6-luna D）→ 已寫進 team-model 正式表
+- 使用者：**心跳節拍「有人要固定、有人不要，可以隨意設定」** → 頂層落法：預設維持 1 秒固定節拍，aos7-up 開放設定節拍與「做完提早進下一回合」（寫在 ADVANCED，新手看不到）
+- 使用者：舊分支與暫存資料夾**先留著**
+- 使用者問：不加 Codex 系統提示會不會被 OpenAI 封號？→ 頂層判斷：**不改**。理由：那條 proxy 走的是 ChatGPT 訂閱的 Codex 管道，後端預期收到 Codex 客戶端的樣子，換掉提示會讓流量不像官方 Codex，可能被拒或被標記；我們無法確定風險多大，而省的只是訂閱額度不是錢。改由 aos 這邊處理（已加「你沒有工具」那句）

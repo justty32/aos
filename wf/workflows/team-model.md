@@ -53,12 +53,12 @@
 | C | gpt-terra（`gpt-5.6-terra`）、Sonnet | 待細分 |
 | D | gpt-luna（`gpt-5.6-luna`）| 待細分 |
 | E、F… | （預留）| 之後 DeepSeek 之類可以更低 |
-| A？ | `gpt-6.1-sol`、`gpt-6-astra` | **暫定、待使用者確認**（10-09）；試水溫唯二全中 |
-| B？ | `gpt-6-sol` | 同上 |
-| C？ | `gpt-reserve`、`gpt-5.5` | 同上 |
-| D？ | Haiku、`gpt-6-luna` | 同上 |
+| A | `gpt-6.1-sol`、`gpt-6-astra` | 使用者 10-09 確認；試水溫唯二全中 |
+| B | `gpt-6-sol` | 使用者 10-09 確認 |
+| C | `gpt-reserve`、`gpt-5.5` | 使用者 10-09 確認 |
+| D | Haiku、`gpt-6-luna` | 使用者 10-09 確認 |
 
-10-09 版本：Fable 5.1、Opus 5.5、Sonnet 5.5，級別沿用。暫定列依據 [probe](team-model/probe-2026-10-09.json)（一題一次）。
+10-09 版本：Fable 5.1、Opus 5.5、Sonnet 5.5，級別沿用。10-09 新列（使用者確認）依據 [probe](team-model/probe-2026-10-09.json)（一題一次）。
 
 新增用途欄（調查、寫作、實機操作…）時**只加欄、不改既有級別**——級別是使用者定的。
 
@@ -75,8 +75,8 @@
 |---|---|---|---|
 | gpt-sol | A | C（A 下移兩級）| **性價比之神；工人層主力** |
 | gpt-terra、gpt-luna | C／D | E／F（同規則下移兩級）| 便宜到掉出 Claude 的表 |
-| 6.1-sol、astra／6-sol／reserve、5.5／6-luna | A？／B？／C？／D？ | C／D／E／F（**暫定**）| 6.1-sol、astra 接 gpt-sol 的位子 |
-| Haiku | D？ | D（**暫定**）| — |
+| 6.1-sol、astra／6-sol／reserve、5.5／6-luna | A／B／C／D | C／D／E／F | 6.1-sol、astra 接 gpt-sol 的位子 |
+| Haiku | D | D | — |
 | Fable／Opus／Sonnet | 見上表 | 與聰明度同級 | — |
 
 ## 四、選人判準（按序看這六項）
