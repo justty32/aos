@@ -369,7 +369,7 @@ class TestNewbieCli(Fixtures):
         pub_help = self.run_cli("pub", "--help").stdout
         for text in ("must＝", "ack", "--event-id", "第一次寫加 --create"):
             self.assertIn(text, pub_help)
-        self.assertIn("舊寫法，仍可用", self.run_cli("read", "--help").stdout)
+        self.assertIn("舊寫法，下一輪移除", self.run_cli("read", "--help").stdout)
 
 
 class TestErrorCli(unittest.TestCase):
@@ -423,7 +423,8 @@ class TestErrorCli(unittest.TestCase):
         self.assertEqual(self.pub('--must').returncode, 0)
         a = self.run_cli('ack', '--events', self.events, '1')
         b = self.run_cli('read', '--events', self.events, '--channel', 'must', '--ack', '1')
-        self.assertEqual((a.returncode, b.returncode, a.stderr, b.stderr), (0, 0, '', ''))
+        self.assertEqual((a.returncode, b.returncode, a.stderr), (0, 0, ''))
+        self.assertEqual(b.stderr, 'aos7-events: read --ack 是舊寫法，下一輪移除。改用 aos7-events ack --events %s 1\n' % self.events)
         self.assertEqual(json.loads(a.stdout), {'acked_upto': 1})
         self.assertEqual(a.stdout, b.stdout)
         with locked(os.path.join(self.events, 'state.json')):

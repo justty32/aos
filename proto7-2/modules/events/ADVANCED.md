@@ -36,7 +36,7 @@ python3 $P/bin/aos7-ctl daemon $R stop --kill
 
 `aos7-events read …`／`aos7-events pub …`／`aos7-events ack …` 是子命令，選項與 `python3 aos7_events_read.py`／`python3 aos7_events_pub.py` 相同；ack 入口在 `aos7_events_cli.py`：
 
-- read：`--events`、`--channel obs|must`、`--cursor`、`--kind`、`--source`、`--round`、`--run`、`--limit`、`--text`、`--ack`（舊寫法，仍可用；須搭 `--channel must`）。
+- read：`--events`、`--channel obs|must`、`--cursor`、`--kind`、`--source`、`--round`、`--run`、`--limit`、`--text`、`--ack`（舊寫法，下一輪移除；須搭 `--channel must`，成功時 stderr 多一行請改用 `aos7-events ack`）。
 - pub：`--events`、`--kind`、`--payload`（必填）、`--event-id`、`--must`、`--source`、`--node`、`--create`；payload／source 用 JSON，預設 obs。CLI 預設不建夾；第一次加 `--create` 才建，已有夾照舊寫。`--event-id` 不給就自動產生（結果多印 `event_id`，不防重複）；events 夾還沒建 state 時，`--node` 不給就用夾的上一層資料夾名。
 - ack：`--events DIR [--channel must] N`，N 是非負整數；例：`aos7-events ack --events /tmp/demo/events 1`。
 - `aos7-events --help` 看日常三個子命令；`--help-sampler` 看取樣器的完整選項（含 `--keep`、`--segment-bytes`）。
@@ -52,7 +52,7 @@ python3 $P/bin/aos7-ctl daemon $R stop --kill
 | ack | 累積確認完成 | 沒 events 夾，什麼都不建 | 用法錯、N 非非負整數、通道非 must | 沒 state 或 state.json 是壞連結（不建鎖）、鎖忙、讀寫錯 |
 | 取樣器 | 指定回合結束；未知回合跳過並留 stderr，下回合再試 | 未使用 | 選項錯、缺或壞 AOS7_ 任務環境，什麼都不建 | 未使用（keep 任務逐回合重試） |
 
-本包不用 4。pub unknown 用同 event_id 加 `--event-id` 照原樣再跑一次會接續；自動產生的 id 在結果裡。ack unknown 照同值重跑。
+本包不用 4。舊寫法 `read --ack` 成功時 stderr 多印一行「改用 aos7-events ack」（成功不印 stderr 的唯一例外，下一輪連同 --ack 移除）；失敗時仍只有那一行錯誤。pub unknown 用同 event_id 加 `--event-id` 照原樣再跑一次會接續；自動產生的 id 在結果裡。ack unknown 照同值重跑。
 
 游標＝下一個要讀的 seq；把 `next_cursor` 帶回 `--cursor` 接續。ack 是累積確認，處理完才送。
 
@@ -97,7 +97,7 @@ python3 $P/bin/aos7-ctl daemon $R stop --kill
 **讀者 `read`／`aos7-events read`**
 
 - **職責**：讀事件；CLI 的舊 --ack 與 ack 子命令共用確認流程。
-- **前置條件**：合法游標與 limit；must 單消費者，處理完才 ack。
+- **前置條件**：合法游標與 limit；處理完才 ack。must 只有一個累積確認值：同一通道多個消費者時，各自只確認自己的事件、遇別人沒確認的就停（author、mail 都照這條）。
 - **保證**：無鎖讀完整行，回 records、next_cursor、earliest_cursor、coverage、gaps、errors；不跨無法解釋的 seq 洞，不自動確認。
 - **明確不管**：修壞紀錄、補漏、存游標、判斷業務完成。
 

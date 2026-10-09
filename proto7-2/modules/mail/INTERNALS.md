@@ -19,9 +19,9 @@ node 信箱的未辦信、`done/`、`.tmp/`、`.handled/`、`.seen` 等都在 `R
 3. 在 delivery 鎖下 link 原信進 done，再 unlink 頂層；既有同 id 表示已發布，不同 id 則重試 `<YYYYmmddTHHMM>_<n>-<寄件者>-<STATUS>.md` 避撞，絕不覆蓋歷史。
 4. 從 must 最前面開始，僅確認連續 `kind=mail.request` 且 id 對到已辦 REQUEST 的事件；未辦或非 mail 事件擋住後續 ack。
 
-read 遇到已有日誌的頂層信會補做 2–4，並印 `復原`；搬移後被殺也會在下一次 read／done 補 ack。ack 從本地 `.acked`（無檔為 0）+1 用 in-process events read 掃描；retention 缺口表示已確認淘汰，跳到缺口後繼續，其他缺口或 errors 停止。有進展才起一次公開 CLI `read --channel must --ack N`，成功後寫回傳值到 `.acked`；無進展零個子程序。本地只寫 events 確認值，ack 後被殺可重掃已辦信，舊段淘汰也能繼續。保留 `.handled` 與所有鎖檔，不要人工清掉它們。
+read 遇到已有日誌的頂層信會補做 2–4，並印 `復原`；搬移後被殺也會在下一次 read／done 補 ack。ack 從本地 `.acked`（無檔為 0）+1 用 in-process events read 掃描；retention 缺口表示已確認淘汰，跳到缺口後繼續，其他缺口或 errors 停止。有進展才起一次公開 CLI `aos7-events ack --events DIR N`，成功後寫回傳值到 `.acked`；無進展零個子程序。本地只寫 events 確認值，ack 後被殺可重掃已辦信，舊段淘汰也能繼續。保留 `.handled` 與所有鎖檔，不要人工清掉它們。
 
-只在對方已有 events/ 資料夾時，REQUEST 的 must 以 `publish(..., kind="mail.request", event_id=信id, payload={id,from,to,file}, must=True, node=收件者)` 發布。full／unknown 或發布例外只印 stderr，send 仍退出 0；請求仍可由 inbox／audit 發現。ack 經 `aos7-events read --channel must --ack N` 子程序；本包不 import events store。確認失敗保留位置，下次重試。
+只在對方已有 events/ 資料夾時，REQUEST 的 must 以 `publish(..., kind="mail.request", event_id=信id, payload={id,from,to,file}, must=True, node=收件者)` 發布。full／unknown 或發布例外只印 stderr，send 仍退出 0；請求仍可由 inbox／audit 發現。ack 經 `aos7-events ack --events DIR N` 子程序；本包不 import events store。確認失敗保留位置，下次重試。
 
 ## 契約卡
 
@@ -36,7 +36,7 @@ read 遇到已有日誌的頂層信會補做 2–4，並印 `復原`；搬移後
 
 - 不 fsync，抗程序 SIGKILL，不承諾斷電；send 若在信落地與 events publish 之間被殺，可能缺提醒，信仍是權威。
 - send 被殺可能留下 `.tmp/` 完整或未完整暫存，收件輪詢不看暫存；正常投遞後會清空。
-- 依契約卡「must 通道獨佔」，mail／author 必須分 node；共用 must 時，非 mail 事件會阻住後續 mail ack，其他消費者也可能提前確認 mail 提醒。
+- 依契約卡「must 通道獨佔」，mail／author 建議分 node。共用 must 時誰都不替對方確認（author intake 遇沒確認的 mail.request 會停，10-09 RV-fix-C）；但 mail 目前遇到任何非 mail 事件就停，連別人已確認的也不越過，所以排在 author 事件後面的 mail 提醒不會被 mail 確認（待修，見代定清單）。
 - 收件者名／寄件者名不驗真偽，audit 的 re 是合作式證據，不是不可偽造的憑證。
 - 團隊信是共讀廣播，只收 PROGRESS／終局，send 團隊 REQUEST 退出 2；done／handle 只處理個人 inbox。需要指定人辦的 REQUEST 請直接寄給該人。
 - 掃描信與去重是線性搜尋，seen／seen-team、handled 與歷史不自動縮減；不含重試提醒、跨郵局 reply-to 或團隊增刪成員。

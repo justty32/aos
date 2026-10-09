@@ -81,8 +81,9 @@ propose 固定候選快照，兩次檢查與審查提示使用相同 bytes；pub
 
 **收件 `send`／`intake`（`author/events.json`）**
 - 職責：send 保存原文到 must；intake 登記需求、寫最後一筆回條，再 ack。
-- 前置條件：node 名一致、作者獨佔該 must 消費游標；send 的寫者不必有 node 輸入檔。
+- 前置條件：node 名一致；對方 node 已有 `events/`（send 不替別人建夾，沒有就退 1，叫你用 aos7-up 起 node 或 `aos7-events pub --create`）；send 的寫者不必有 node 輸入檔。
 - 保證：full 不算送出；同 rid 異文衝突；回條前重讀、回條後只補 ack；invalid／conflict 不阻塞後續；unknown 留待重試。
+- 共用 must：intake 只收 `author.request`。遇別人的事件（如 `mail.request`），events 已確認到它就讓過；還沒確認就停下、不替它 ack，回 `conflict`＋`blocked:{seq,kind,event_id}`、退 1，stderr 一行說哪一筆擋住；它的主人處理並確認後再 intake。
 - 明確不管：多消費者、窗口外去重、obs、自動 propose／publish（細節見 spec §10）。
 
 ## 錯誤與退出碼
