@@ -24,7 +24,7 @@
 | `modules/once_retry/` | [once 保證包](modules/once_retry/README.md)：`retry_lost.py`（keep 任務；加回前持表鎖重讀 birth，契約是至少一次） |
 | `modules/audit/` | [稽核包](modules/audit/README.md)：包裝程式 `aos7-audit`，可選的寫入紀錄；`AOS7_AUDIT_ALLOW` 豁免 node 內巢狀邊界（subd 設） |
 | `modules/diag/` | [診斷包](modules/diag/README.md)：唯讀工具 `aos7-diag`＋會停下等人的情況與恢復步驟 |
-| `modules/events/` | [事件保存包](modules/events/README.md)：每 node 一個 `events/`，觀測／必讀兩通道各 1 活躍段＋≤4 封存（上限 12 檔）；`aos7_events_store.py` 保存端、`aos7_events_pub.py` 發布、`aos7_events_read.py` 讀者、`aos7-events` 取樣器（子命令 read／pub；status 去重鍵與截半行記號存 state.json `status_last`／`torn_cut`）；[spec](modules/events/spec.md)＋[取樣器 spec](modules/events/spec-sampler.md)、`examples/`（demo_pub、真 daemon 300 回合 longrun） |
+| `modules/events/` | [事件保存包](modules/events/README.md)：每 node 一個 `events/`，觀測／必讀兩通道各 1 活躍段＋≤4 封存（上限 12 檔）；`aos7_events_store.py` 保存端、`aos7_events_pub.py` 發布、`aos7_events_read.py` 讀者、`aos7_events_cli.py` 一行錯誤訊息與 ack 子命令、`aos7-events` 取樣器（子命令 read／pub／ack；status 去重鍵與截半行記號存 state.json `status_last`／`torn_cut`）；[spec](modules/events/spec.md)＋[取樣器 spec](modules/events/spec-sampler.md)、`examples/`（demo_pub、真 daemon 300 回合 longrun） |
 | `modules/up/` | [up 起步入口](modules/up/README.md)／[進階契約](modules/up/ADVANCED.md)：備好工作簿、帳、技能、三個 keep 任務、人的信箱並起心跳（前景／`-d`）；`status` 六行唯讀、`stop` 留檔；`aos7_up.py` 安裝、起動證據與回收，`aos7_up_cli.py` 參數／錯誤／ask、brain exec 分派，`aos7_up_status.py` 狀態／觀看／子指令與設定驗證；設定 `.aos/up.json` |
 | `modules/counter.py`、`history.py` | 最小示範任務、歷史 module 的參考實作（觀測任務包的雛形；來源檔名可逆編碼 `hist_name`；升級時含 `+`／`%` 的舊檔與 `daemon-events.jsonl` 一次封存成 `.v1`，夾內放 `.names-v2`） |
 | **上層任務包** `packs/` | kernel 的任務包（工作語意；通用／agent／LLM 分層，原則 8）；每包一個資料夾，自帶 README（契約卡）、spec、`tests/` |

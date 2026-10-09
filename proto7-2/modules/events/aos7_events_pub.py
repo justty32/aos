@@ -7,6 +7,7 @@ import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [HERE, os.path.join(HERE, "..", "..", "lib")]
+from aos7_events_cli import Parser, missing, say
 import aos7_events_store as store  # noqa: E402
 
 
@@ -43,15 +44,25 @@ def publish(events_dir, kind, event_id, payload, *, must=False, source=None, nod
 
 def exit_code(result):
     """保存成功含重送回 0，其餘依原因分流。"""
-    return 0 if result["ok"] else {"full": 3, "unknown": 4}.get(result.get("why"), 2)
+    return 0 if result["ok"] else {"full": 1, "no_events": 1, "unknown": 3}.get(result.get("why"), 2)
 
 
-EPILOG = """例子（events 夾不存在會自動建）：
-  aos7-events pub --events /tmp/demo/events --kind hello --payload '{"msg": "hi"}'
+EPILOG = """例子（第一次寫加 --create 才建 events 夾）：
+  aos7-events pub --events /tmp/demo/events --create --kind hello --payload '{"msg": "hi"}'
   aos7-events pub --events /tmp/demo/events --kind job.done --payload '{"id": 7}' --event-id job/7 --must
 
-obs＝一般紀錄本，滿了丟最舊；must＝一定要有人讀完 ack 的本子，沒 ack 而滿了會拒收（退出碼 3）。
-退出碼：0 存好（含重送 dup）／2 用法錯／3 must 滿了被拒／4 不確定存了沒（用同 --event-id 重送）。"""
+obs＝一般紀錄本，滿了丟最舊；must＝一定要有人讀完 ack 的本子，沒 ack 而滿了會拒收。"""
+
+
+def failure_message(result, event_id):
+    why = result.get("why")
+    if why == "unknown":
+        return ("不確定：可能存了也可能沒，既有紀錄與恢復證據留著。用同 event_id %s（加 --event-id）照原樣再跑一次會接續" % event_id)
+    if why == "full":
+        return "must 滿了，這筆沒寫。先 read --channel must，處理完再 ack 後重送"
+    if why == "too_large":
+        return "事件太大。縮小 payload；例：aos7-events pub --events DIR --kind hello --payload '{}'"
+    return "%s。請給有效參數。例：aos7-events pub --events DIR --kind hello --payload '{}'" % result.get("detail", "參數不對")
 
 
 def default_node(events_dir):
@@ -61,9 +72,10 @@ def default_node(events_dir):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-events pub", description="寫一筆事件到 events 夾，印一行 JSON 結果（seq 是它的編號）。",
+    ap = Parser(prog="aos7-events pub", description="寫一筆事件到 events 夾，印一行 JSON 結果（seq 是它的編號）。",
                                  epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--events", required=True, help="events 夾路徑（不存在會自動建）")
+    ap.add_argument("--events", required=True, help="events 夾路徑（第一次寫加 --create 才建）")
+    ap.add_argument("--create", action="store_true", help="events 夾不存在時才建；已存在照舊寫")
     ap.add_argument("--kind", required=True, help="事件種類，任意非空字串，例如 hello、job.done")
     ap.add_argument("--payload", required=True, help="事件內容，一段 JSON，例如 '{\"msg\": \"hi\"}'")
     ap.add_argument("--event-id", help="這件事的身分；同 id 重送不會多一筆（回 dup true）。不給就自動產生一個（印在結果的 event_id），那就不防重複")
@@ -79,6 +91,10 @@ def main(argv=None):
     except ValueError:
         result = {"ok": False, "seq": None, "dup": False, "why": "usage", "detail": "JSON 格式錯誤"}
     else:
+        if not a.create and missing(a.events):   # 預設只對已有夾發，不新建整個夾
+            print(json.dumps({"ok": False, "seq": None, "dup": False, "why": "no_events"}))
+            say("沒有 events 夾 %s。第一次寫加 --create；或檢查路徑" % a.events)
+            return 1
         node = a.node
         if node is None and not (isinstance(source, dict) and "node" in source) \
                 and not os.path.lexists(os.path.join(a.events, "state.json")):
@@ -87,6 +103,8 @@ def main(argv=None):
         if auto_id and result.get("why") != "usage":   # 存好或 unknown 都印，unknown 才能照同 id 重送
             result["event_id"] = event_id
     print(json.dumps(result, ensure_ascii=False))
+    if not result["ok"]:
+        say(failure_message(result, event_id))
     return exit_code(result)
 
 if __name__ == "__main__":

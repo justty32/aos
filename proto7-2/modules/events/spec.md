@@ -48,7 +48,7 @@ append 前 active_bytes ≥ segment_bytes 才輪替，一筆可讓段超過門�
 
 可收才 rename 活躍段到段首 seq 封存名，絕不覆蓋。rename 後加入 segments，active_first=next_seq、active_bytes=0。obs 刪最舊到剩 keep_segments；must 清全部整段已確認者，含剛輪替段。unlink 後才移除清單、推 dropped_upto（**must 刪已確認段同樣推 dropped_upto**）。輪替與清段完成後先存一次 state 再寫新筆，恢復的大小快速路徑才不會把新活躍段誤認為舊的。垃圾由寫者清。
 
-保存確認＝append 成功（含 dup）；消費確認＝ack，讀到或 LLM 看過不算。`ack(events_dir, upto)` 須真整數，否則 ValueError；鎖內恢復，推 `max(acked_upto,min(upto,next_seq−1))`、保存、回新值，倒退忽略。state 不存在回 0、不建 state。ack 不刪段，下次輪替才清；壞 state、LockTimeout 往外丟 Unknown，OSError 包成 Unknown。
+保存確認＝append 成功（含 dup）；消費確認＝ack，讀到或 LLM 看過不算。`ack(events_dir, upto)` 須真整數，否則 ValueError；鎖內恢復，推 `max(acked_upto,min(upto,next_seq−1))`、保存、回新值，倒退忽略。state 不存在回 0、不建 state；夾已存在時不拿鎖、不建 state.json.lock（夾不存在沿用原行為）。CLI ack 與 pub 的前置條件、退出碼見 [ADVANCED](ADVANCED.md#退出碼)。ack 不刪段，下次輪替才清；壞 state、LockTimeout 往外丟 Unknown，OSError 包成 Unknown。
 
 測試：`TestRotation.test_must_full_ack`
 

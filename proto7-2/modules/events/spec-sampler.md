@@ -6,7 +6,7 @@
 
 ## 取樣 keep 任務
 
-aos7-events 是可執行 Python 腳本，使用 task_env、resolver(task)、wait_tock；首參數 `read`／`pub` 時改分派 aos7_events_read／aos7_events_pub 的 main，選項同原腳本（見 [README 工具](README.md#工具)）。`--src` 可重複、預設自身 node_id；來源先走掛載，否則 `<root>/<nid>/.aos/last-round.json`。`--status` 取最近 daemon 事件、`--daemon-log` 續讀 log；`--out` 預設 `<me.node>/events`；`--rounds N`（0 持續）；`--keep`、`--segment-bytes` 明確指定才傳 config。每次 tock 先 recover；None 則 stderr 一行、跳過。無自身落盤 state。
+aos7-events 是可執行 Python 腳本，使用 task_env、resolver(task)、wait_tock；首參數 `read`／`pub`／`ack` 時改分派 aos7_events_read／aos7_events_pub／aos7_events_cli 的 main，選項同原腳本（見 [ADVANCED 工具](ADVANCED.md#工具)）。`--src` 可重複、預設自身 node_id；來源先走掛載，否則 `<root>/<nid>/.aos/last-round.json`。`--status` 取最近 daemon 事件、`--daemon-log` 續讀 log；`--out` 預設 `<me.node>/events`；`--rounds N`（0 持續）；`--keep`、`--segment-bytes` 明確指定才傳 config。每次 tock 先 recover；None 則 stderr 一行、跳過。無自身落盤 state。
 
 來源 dict、round 真整數才收。未見則寫快照 round.observed／sample，source={node,round}、payload={last_round:來源}；同 round 不寫。跳號先寫 gap，source.round=r−1，payload={from:prev+1,to:r−1,why:round_skip}；倒退改 {from:prev,to:r,why:source_reset_unknown}。gap 成功後寫快照，重啟不重記 gap。快照 too_large 改 {last_round:{round:r},truncated:true} 再試。not ok 停此來源，下回合重試。
 

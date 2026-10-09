@@ -295,6 +295,9 @@ def ack(events_dir, upto):
     if not is_int(upto):
         raise ValueError("upto 必須是整數")
     try:
+        # 沒 state 的既有夾不拿鎖；不存在的夾沿用原行為。
+        if os.path.isdir(events_dir) and fact(os.path.join(events_dir, "state.json"))[0] == N:
+            return 0
         with locked(os.path.join(events_dir, "state.json"), timeout=LOCK_TIMEOUT):
             st = _state(events_dir, create=False)
             if st is None:

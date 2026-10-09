@@ -48,8 +48,8 @@ def ack(root, me):
 
 
 def event_ack(events, upto):
-    p = subprocess.run([sys.executable, str(HERE.parent / 'events/aos7-events'), 'read',
-                        '--events', str(events), '--channel', 'must', '--ack', str(upto)], capture_output=True, text=True)
+    p = subprocess.run([sys.executable, str(HERE.parent / 'events/aos7-events'), 'ack',
+                        '--events', str(events), str(upto)], capture_output=True, text=True)
     if p.returncode == 0:
         return json.loads(p.stdout)['acked_upto']
     print('aos7-mail: 必達提醒確認失敗（' + ' '.join(p.stdout.splitlines()) + '）。信是權威，下次 read 或 done 會再試', file=sys.stderr)

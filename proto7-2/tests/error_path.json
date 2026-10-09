@@ -79,8 +79,7 @@
    "team": "ER-events",
    "name": "aos7-events",
    "entry": "modules/events/aos7-events",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-events）"
+   "unsure": {"argv": ["ack", "--events", "ev", "1"], "files": {"ev/": ""}}
   },
   {
    "pack": "routines",
