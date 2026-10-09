@@ -59,18 +59,29 @@ def run_prog(name, root, node_id, extra_env=None, gen=None, timeout=None, abort=
 def read_config(node):
     """讀 timeline.json（可以沒有），回 (interval_ms, early_tock, timeout_s, 錯誤或 None)。這是別人寫的設定：讀不到（U）、
     讀不懂或數值不合（B）都用預設並回一句錯誤，修好下一回合生效。interval 0 合法（不等）。"""
-    st, t = fact(os.path.join(node, ".aos", "timeline.json"))
-    err = None
-    if st not in (OK, N) or (st == OK and not isinstance(t, dict)):
-        err = "timeline.json %s，先全用預設" % (t if st != OK else "不是物件")
-    t = t if st == OK and isinstance(t, dict) else {}
-    ms = t.get("interval_ms", DEFAULT_INTERVAL_MS)
-    if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not math.isfinite(ms) or ms < 0:
-        err = "interval_ms 要是有限非負數字，拿到 %r；先用 %d" % (ms, DEFAULT_INTERVAL_MS)
-        ms = DEFAULT_INTERVAL_MS
-    v = t.get("action_timeout_s")
-    tmo = float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and 0 < v < 1e6 else ACTION_TIMEOUT
-    return ms, t.get("early_tock", False) is True, tmo, err
+    try:
+        st, t = fact(os.path.join(node, ".aos", "timeline.json"))
+        err = None
+        if st not in (OK, N) or (st == OK and not isinstance(t, dict)):
+            err = "timeline.json %s，先全用預設" % (t if st != OK else "不是物件")
+        t = t if st == OK and isinstance(t, dict) else {}
+        ms = t.get("interval_ms", DEFAULT_INTERVAL_MS)
+        # 先型別、再範圍、最後 isfinite，避免巨大整數轉 float 溢位。
+        if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not (0 <= ms <= 86400000 * 365) \
+                or not math.isfinite(ms):
+            err = "interval_ms 要是不超過一年的非負數字，拿到 %.60r；先用 %d" % (ms, DEFAULT_INTERVAL_MS)
+            ms = DEFAULT_INTERVAL_MS
+        v = t.get("action_timeout_s", ACTION_TIMEOUT)
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not (0 < v < 1e6):
+            err = err or "action_timeout_s 要是 (0, 1e6) 的數字，拿到 %.60r；先用 %g" % (v, ACTION_TIMEOUT)
+            v = ACTION_TIMEOUT
+        early = t.get("early_tock", False)
+        if not isinstance(early, bool):
+            err = err or "early_tock 要是 true／false，拿到 %.60r；先用 false" % (early,)
+            early = False
+        return ms, early, float(v), err
+    except Exception as e:   # noqa: BLE001  驗證本身永不炸（A8-11）：任何意外都全用預設並記錯
+        return DEFAULT_INTERVAL_MS, False, ACTION_TIMEOUT, "timeline.json 驗證失敗（%.80r），先全用預設" % e
 
 
 class Timeline(threading.Thread):
@@ -97,7 +108,7 @@ class Timeline(threading.Thread):
         self.kick = None                     # wake／resume 的 monotonic 時刻（分辨回合中、回合後送來的）
         self.round_why = None                # check_round 判不出時的原因
         self.recover_fails = 0
-        self.owe_done = False                # 回合沒確知關上：rounds 倒數等恢復成功才扣
+        self.owe_round = None                # 待結算回合號：確知關上才扣 rounds 倒數
         self.unverified = None               # 上一次認不出的鎖持有者原因（事件去重）
 
     # ---------- 小工具 ----------
@@ -134,9 +145,10 @@ class Timeline(threading.Thread):
         """退避：0.5 秒起加倍、最多 8 秒；phase 記 error。停機或取消登記隨時打斷。"""
         self.recover_fails += 1
         self.phase = "error"
-        end = time.monotonic() + min(ERROR_BACKOFF * 2 ** (self.recover_fails - 1), RECOVER_BACKOFF_MAX)
+        end = time.monotonic() + min(ERROR_BACKOFF * 2 ** min(self.recover_fails - 1, 10), RECOVER_BACKOFF_MAX)
         while not self.leaving() and time.monotonic() < end:
             self.wake.wait(min(POLL * 5, end - time.monotonic()))
+            self.wake.clear()
 
     def prog(self, name, extra=None, timeout=None):
         """用現在的世代跑 tick 或 tock；非零退出碼記錯，逾時被收掉時試著接管舊世代的鎖持有者。"""
@@ -187,6 +199,10 @@ class Timeline(threading.Thread):
                          kind="round-unknown")
                 self.backoff()
                 continue
+            if ro is False and self.owe_round is not None:
+                self.d.round_done(self.node_id)
+                self.owe_round = None
+                continue   # 補扣後回頂端重看 pause
             if ro:
                 self.recovery_pending = True
                 self.phase = "tock"
@@ -201,8 +217,8 @@ class Timeline(threading.Thread):
                 self.recovery_pending = False
                 self.recover_fails = 0
                 self.event("round-recovered", round=self.disk_round())
-                if self.owe_done:   # 回合確知關上才扣 rounds 倒數
-                    self.owe_done = False
+                if self.owe_round is not None:   # 回合確知關上才扣 rounds 倒數
+                    self.owe_round = None
                     self.d.round_done(self.node_id)
                 continue   # 回到頂端重新看 pause 與倒數
             self.recover_fails = 0
@@ -259,7 +275,7 @@ class Timeline(threading.Thread):
                 self.prog("aos7-tock", {"AOS7_EARLY": "0", "AOS7_INCOMPLETE": "tock"})
             if self.check_round() is not False:
                 # 不知道也不算關上：倒數等恢復確實關上才扣，頂端走不變條件一
-                self.owe_done = True
+                self.owe_round = self.round
                 self.event("round-unclosed", round=self.round, rc=rc)
                 continue
             closed_at = time.monotonic()

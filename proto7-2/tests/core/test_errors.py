@@ -7,6 +7,7 @@ import json  # noqa: E402
 import subprocess  # noqa: E402
 import time  # noqa: E402
 import unittest  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
 from base import BIN, SLEEP, DaemonCase  # noqa: E402
 from _matrix import MatrixCase, alive, fault, gen  # noqa: E402
@@ -94,6 +95,48 @@ class TestNotRegularInput(MatrixCase):
         ms, early, tmo, err = aos7_daemon_timeline.read_config(node)
         self.assertEqual((ms, early), (aos7_daemon_timeline.DEFAULT_INTERVAL_MS, False))
         self.assertIn("不是一般檔", err or "")
+
+
+class TestTimelineConfig(DaemonCase):
+    """〔core〕壞設定用預設並記錯；時間線仍開回合，修好後繼續。"""
+
+    def test_interval_huge_int(self):
+        node = self.mknode("a")
+        for ms in (10 ** 309, -10 ** 309):
+            with self.subTest(ms=ms):
+                write_json(os.path.join(node, ".aos", "timeline.json"), {"interval_ms": ms})
+                actual, _, _, err = aos7_daemon_timeline.read_config(node)
+                self.assertEqual(actual, aos7_daemon_timeline.DEFAULT_INTERVAL_MS)
+                self.assertTrue(err)
+
+    def test_invalid_optional_config(self):
+        node = self.mknode("a")
+        for key, value in (("action_timeout_s", "x"), ("early_tock", "yes")):
+            with self.subTest(key=key):
+                write_json(os.path.join(node, ".aos", "timeline.json"), {key: value})
+                ms, early, tmo, err = aos7_daemon_timeline.read_config(node)
+                self.assertEqual((ms, early, tmo), (aos7_daemon_timeline.DEFAULT_INTERVAL_MS,
+                                                  False, aos7_daemon_timeline.ACTION_TIMEOUT))
+                self.assertIn(key, err or "")
+        with patch.object(aos7_daemon_timeline, "fact", side_effect=OverflowError):
+            ms, early, tmo, err = aos7_daemon_timeline.read_config(node)
+            self.assertEqual((ms, early, tmo), (1000, False, 30.0))
+            self.assertTrue(err)
+
+    def test_huge_interval_daemon_recovers(self):
+        node = self.mknode("a")
+        with open(os.path.join(node, ".aos", "timeline.json"), "w") as f:
+            json.dump({"interval_ms": 10 ** 309}, f)
+        self.mknode("b", interval_ms=50)
+        self.start_daemon(register=["a", "b"])
+        self.wait_round(2, "a")
+        self.wait_round(2, "b")
+        self.assertEqual((self.nstat("a").get("last_error") or {}).get("where"), "timeline")
+        self.assertEqual(self.nstat("a").get("interval_ms"), aos7_daemon_timeline.DEFAULT_INTERVAL_MS)
+        before = self.node_round("a")
+        write_json(os.path.join(node, ".aos", "timeline.json"), {"interval_ms": 50})
+        self.wait_round(before + 2, "a")
+        self.wait_for(lambda: self.nstat("a").get("interval_ms") == 50)
 
 
 @unittest.skipIf(os.geteuid() == 0, "root 不受權限限制")
