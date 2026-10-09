@@ -105,11 +105,12 @@ def once(me, args, resolve, st):
     if args.status:
         status = read_json(os.path.join(me["root"], ".aosd", "status.json"))
         ev = status.get("last_event") if isinstance(status, dict) else None
-        if isinstance(ev, dict) and ev != getattr(args, "_last_event", None):
+        # 去重鍵在 state.status_last（寫成功時 derive 推進），重起不重記同一事件。
+        if isinstance(ev, dict) and store.status_key(ev) != st.get("status_last"):
             rec = {"kind": "daemon.status", "capture": "sample", "source": {"node": ".aosd"},
                    "payload": {"last_event": ev}}
             if _send(me, args, st, rec)["ok"]:
-                args._last_event, changed = ev, True
+                changed = True
     if args.daemon_log:
         try:
             changed = _log(me, args, st) or changed

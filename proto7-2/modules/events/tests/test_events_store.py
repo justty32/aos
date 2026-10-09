@@ -301,6 +301,58 @@ class TestCrash(EventsCase):
         self.crash_cycles("events:after-rename", "must", ack=True)
 
 
+class TestTornCount(EventsCase):
+    """V2：剛修掉半行就被殺，torn 不少記也不多記（截前、截後兩個點各 ×3）。"""
+    def cycles(self, point):
+        active = os.path.join(self.d, "must.active.jsonl")
+        for k in range(1, 4):
+            self.assertTrue(self.append(k, ch="must")["ok"])
+            with open(active, "ab") as f:
+                f.write(b'{"seq": 99, "half')
+            code = "import sys; sys.path.insert(0, %r); import aos7_events_store as s; s.recover(%r, node='n')" % (EVENTS, self.d)
+            p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=20,
+                               env=dict(os.environ, AOS7_TEST_CRASH=point))
+            self.assertEqual(p.returncode, -9, p.stderr)
+            self.assertIsNotNone(store.recover(self.d, node="n"))
+            c = self.channel("must")
+            self.assertEqual(c["torn"], k)
+            self.assertNotIn("torn_cut", c)
+            self.assert_layout("must")
+        self.assertTrue(self.append(4, ch="must")["ok"])
+        self.assertEqual(self.channel("must")["torn"], 3)
+
+    def test_kill_before_truncate(self):
+        self.cycles("events:after-torn-save")
+
+    def test_kill_after_truncate(self):
+        self.cycles("events:after-truncate")
+
+    def test_stale_cut_not_reused(self):
+        """截後被殺留下截點標記；下一次寫入在同一點又撕裂被殺，仍要再記一次。"""
+        active = os.path.join(self.d, "must.active.jsonl")
+        self.append(1, ch="must")
+        with open(active, "ab") as f:
+            f.write(b'{"half')
+        rec = "{'kind': 't', 'capture': 'published', 'event_id': 'e2', 'source': {}, 'payload': {}}"
+        for point, code in (("events:after-truncate", "s.recover(%r, node='n')" % self.d),
+                            ("events:after-partial", "s.append(%r, 'must', %s, node='n')" % (self.d, rec))):
+            p = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, %r); "
+                                "import aos7_events_store as s; " % EVENTS + code],
+                               capture_output=True, text=True, timeout=20, env=dict(os.environ, AOS7_TEST_CRASH=point))
+            self.assertEqual(p.returncode, -9, p.stderr)
+        self.assertIsNotNone(store.recover(self.d, node="n"))
+        self.assertEqual(self.channel("must")["torn"], 2)
+        self.assertTrue(self.append(2, ch="must")["ok"])
+        self.assert_layout("must")
+
+    def test_bad_cut(self):
+        self.append()
+        st = read_json(os.path.join(self.d, "state.json"))
+        st["channels"]["obs"]["torn_cut"] = "x"
+        write_json(os.path.join(self.d, "state.json"), st)
+        self.assertIsNone(store.recover(self.d, node="n"))
+
+
 class TestReviewRegressions(EventsCase):
     """astra E1 審查的回歸：快速路徑重用 seq、清段先刪了目的檔、rename 後多一段、keep 上限。"""
 
@@ -416,9 +468,29 @@ class TestSampler(EventsCase):
         self.once()
         self.once()
         self.assertEqual(len(self.rows()), 1)
-        self.args._last_event = None  # 重啟只記憶體去重，可能再記一筆。
+        self.st = store.recover(self.d, node="n")  # 重起：去重鍵在 state.status_last，不再記一筆。
+        self.once()
+        self.assertEqual(len(self.rows()), 1)
+        write_json(path, {"last_event": {"ev": "stop"}})
         self.once()
         self.assertEqual(len(self.rows()), 2)
+
+    def test_status_dedup_across_restarts(self):
+        """V2：同一 status 事件跨真重起（子程序 ×3）、state 遺失重推、舊 state 缺欄位都只記一筆。"""
+        write_json(os.path.join(self.root, ".aosd", "status.json"), {"last_event": {"ev": "start", "n": 1}})
+        for _ in range(3):
+            self.assertEqual(self.run_sampler("", "--status").returncode, 0)
+        self.assertEqual([r["kind"] for r in self.rows()].count("daemon.status"), 1)
+        st = read_json(os.path.join(self.d, "state.json"))
+        del st["status_last"]   # 舊 state 缺欄位視為空：記一次後補上
+        write_json(os.path.join(self.d, "state.json"), st)
+        for _ in range(2):
+            self.assertEqual(self.run_sampler("", "--status").returncode, 0)
+        self.assertEqual([r["kind"] for r in self.rows()].count("daemon.status"), 2)
+        os.unlink(os.path.join(self.d, "state.json"))   # state 遺失：從留存紀錄推回
+        self.assertEqual(self.run_sampler("", "--status").returncode, 0)
+        self.assertEqual([r["kind"] for r in self.rows()].count("daemon.status"), 2)
+        self.assertEqual(store.load_state(self.d)["status_last"], store.status_key({"ev": "start", "n": 1}))
 
     def test_snapshot_truncated_and_retry(self):
         self.once(1, pad="漢" * 30000)

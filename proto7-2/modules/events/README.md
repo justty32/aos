@@ -105,7 +105,7 @@ obs.active.jsonl  state.json  state.json.lock               # 取樣器第一回
 
 - 一個 events/ 只能一個取樣器。
 - 取樣會漏，看得出缺號（gap）但補不回。
-- status 只記憶體去重，重起可能重記一筆。
+- status 去重只比最近一筆（A→B→A 記三筆）；保存失敗（如 too_large）的事件下回合重試。
 - event_id 去重只在留存窗口內，需掃描。
 - 單消費者。
 - log 同 inode 截短又長回舊 offset 認不出。

@@ -1,4 +1,5 @@
 """事件保存端：同鎖追加、恢復、輪替；完整換行是保存邊界（spec.md）。"""
+import hashlib
 import json
 import os
 import re
@@ -37,6 +38,8 @@ def _valid(st):
         return False
     if not isinstance(channels, dict) or not isinstance(st.get("sample"), dict) or "daemon_log" not in st:
         return False
+    if st.get("status_last") is not None and not isinstance(st["status_last"], str):
+        return False
     if not all(isinstance(k, str) and is_int(v) for k, v in st["sample"].items()):
         return False
     dl = st["daemon_log"]
@@ -47,6 +50,8 @@ def _valid(st):
         keys = ("next_seq", "active_first", "active_bytes", "dropped_upto", "torn")
         keys += ("acked_upto", "refused") if ch == "must" else ()
         if not isinstance(c, dict) or not all(is_int(c.get(k)) and c[k] >= 0 for k in keys):
+            return False
+        if c.get("torn_cut") is not None and not (is_int(c["torn_cut"]) and c["torn_cut"] >= 0):
             return False
         segs = c.get("segments")
         if c["next_seq"] < 1 or c["active_first"] < 1 or not isinstance(segs, list):
@@ -62,7 +67,7 @@ def _state(d, node=None, config=None, create=True):
     if status == N:
         if not create:
             return None
-        st = {"v": 1, "node": node, "config": _config(config), "channels": {}, "sample": {}, "daemon_log": None}
+        st = {"v": 1, "node": node, "config": _config(config), "channels": {}, "sample": {}, "daemon_log": None, "status_last": None}
         for ch in CHANNELS:
             st["channels"][ch] = {"next_seq": 1, "active_first": 1, "active_bytes": 0,
                                   "segments": [], "dropped_upto": 0, "torn": 0}
@@ -92,6 +97,11 @@ def _records(path):
                 yield obj
 
 
+def status_key(ev):
+    """daemon 最近事件的去重鍵（存 state.status_last，跨重起）。"""
+    return hashlib.sha256(json.dumps(ev, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
 def _derive(st, obj):
     """以已保存紀錄推回來源進度；gap 也有進度。"""
     src = obj.get("source")
@@ -101,6 +111,10 @@ def _derive(st, obj):
         st["sample"][src["node"]] = src["round"]
     if obj.get("capture") == "source_log" and all(is_int(src.get(k)) for k in ("log_dev", "log_ino", "off_to")):
         st["daemon_log"] = {"offset": src["off_to"], "dev": src["log_dev"], "ino": src["log_ino"]}
+    payload = obj.get("payload")
+    if (obj.get("kind") == "daemon.status" and obj.get("capture") == "sample" and src.get("node") == ".aosd"
+            and isinstance(payload, dict) and isinstance(payload.get("last_event"), dict)):
+        st["status_last"] = status_key(payload["last_event"])
 
 
 def _scan(st, c, path):
@@ -121,7 +135,7 @@ def _segment(d, ch, seq):
 
 def _recover(d, st):
     """持鎖恢復：清暫存、補段清單與尾端進度、裁半行。"""
-    names = os.listdir(d)
+    names, save = os.listdir(d), False
     for name in names:
         if name.startswith(".state.json.tmp."):
             os.unlink(os.path.join(d, name))
@@ -134,18 +148,28 @@ def _recover(d, st):
             _scan(st, c, _segment(d, ch, s))
         c["segments"] = files
         active = os.path.join(d, ch + ".active.jsonl")
+        pending = c.pop("torn_cut", None)
+        save = save or pending is not None
         try:
             size = os.stat(active).st_size
         except FileNotFoundError:
             c["active_first"], c["active_bytes"] = c["next_seq"], 0
         else:
-            if size != c["active_bytes"] or discovered:
+            if size != c["active_bytes"] or discovered or pending is not None:
                 with open(active, "rb") as f:
                     data = f.read()
                 if data and not data.endswith(b"\n"):
                     size = data.rfind(b"\n") + 1
+                    if size != pending:
+                        # torn 與截點同一次存，截檔前後被殺都不漏記、不重記（V2）。
+                        c["torn"] += 1
+                        c["torn_cut"] = size
+                        write_json(os.path.join(d, "state.json"), st)
+                        test_point("events:after-torn-save")
+                        del c["torn_cut"]
                     os.truncate(active, size)
-                    c["torn"] += 1
+                    test_point("events:after-truncate")
+                    save = True
                 first = _scan(st, c, active)
                 c["active_first"] = first if first is not None else c["next_seq"]
                 c["active_bytes"] = size
@@ -155,6 +179,9 @@ def _recover(d, st):
             # rename 後、清段前被殺會多一段：恢復當下補清，檔數不超過上限。
             while len(c["segments"]) > st["config"]["keep_segments"]:
                 _remove_first(d, ch, c)
+    if save:
+        # 截點標記不能留到之後的寫入：否則那時再撕裂、截在同一點會被當成已記過。
+        write_json(os.path.join(d, "state.json"), st)
 
 
 def _remove_first(d, ch, c):
