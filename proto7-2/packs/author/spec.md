@@ -66,7 +66,7 @@
 1. 已有該版回條＝回原回條（`dup`），**不補表**，不復活已被移除／disabled 的工作；結案後也一樣。
 2. 已有該版 intent（上次中斷）＝走恢復（下表），不重新登記。
 3. 驗證沒過＝invalid；達版本上限＝full。
-4. `jobs/<job>/out/` 裡有 symlink＝invalid（發布前再查一次逃逸）。從磁碟重算 payload（`jobs/<job>/` 固定來源＋目前工具卡＋需求），與 verdict 不同＝invalid（`payload_changed`）。
+4. `jobs/`、`jobs/<job>`、`out/` 本身或 `out/` 裡有 symlink＝invalid（發布前再查一次逃逸）。從磁碟重算 payload（`jobs/<job>/` 固定來源＋目前工具卡＋需求），與 verdict 不同＝invalid（`payload_changed`）。
 5. 寫 intent（`test_point author:after-intent`）。
 6. 拿 `tasks.json.lock`（2 秒）重讀：**只有檔不存在**才從空表起；讀不到／壞／內容是 `null`／不是 `{"tasks":[…]}`＝unknown、不寫。只比自己那一名：完全相符＝不追加；同名異內容或 `enabled:false`＝conflict、保留現況；不在＝追加。其他項、`launch`、`mount_allow` 等頂層原樣（不比整份表雜湊）。（`author:after-merge`）
 7. 寫回條 `{v,rid,request_sha,candidate_sha,payload_sha,job,task_name,registered:true,evidence,closed:false}`（`author:after-receipt`）。

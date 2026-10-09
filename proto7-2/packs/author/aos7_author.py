@@ -314,8 +314,9 @@ def out_path_ok(v, node, job):
 
 def out_links(nd, job):
     """這一版 out/ 裡的 symlink（發布前再查一次：寫路徑與工具暫存檔都不能經 symlink 逃出）。"""
-    found = []
-    for d, dirs, files in os.walk(os.path.join(nd.jd(job), "out")):
+    jd = nd.jd(job)
+    found = [p for p in (os.path.join(nd.node, "jobs"), jd, os.path.join(jd, "out")) if os.path.islink(p)]
+    for d, dirs, files in os.walk(os.path.join(jd, "out")):
         found += [os.path.join(d, n) for n in dirs + files if os.path.islink(os.path.join(d, n))]
     return found
 
