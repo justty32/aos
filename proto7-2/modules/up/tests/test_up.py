@@ -150,16 +150,16 @@ class UpTests(DaemonCase):
         lines = self.invoke('status', self.node).splitlines()
         self.assertEqual(len(lines), 6)
         self.assertEqual([s.split('：')[0] for s in lines], ['心跳', '信', '工作簿', '技能', 'AI', '檔案'])
-        self.assertIn('未讀 1 封（其中待回 0 封）', lines[1])
+        self.assertIn('未讀 1 封（要回 0 封）', lines[1])
         self.invoke('stop', self.node)
         self.assertIn('停了', self.invoke('status', self.node).splitlines()[0])
-        self.assertIn('心跳本來就沒在跑', self.invoke('stop', self.node))
+        self.assertIn('心跳已經停了', self.invoke('stop', self.node))
 
     def test_invalid_and_missing(self):
         for name in ('you', '.bob', 'bad name'):
             self.invoke(Path(self.root) / name, '-d', rc=2)
         self.invoke('status', self.node, rc=2)
-        self.assertIn('心跳本來就沒在跑', self.invoke('stop', self.node))
+        self.assertIn('心跳已經停了', self.invoke('stop', self.node))
 
 
 sys.path.insert(0, str(UP.parent))

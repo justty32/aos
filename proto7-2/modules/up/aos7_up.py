@@ -79,11 +79,11 @@ def prepare(node, model):
 
 def stop(node):
     if not alive(node.parent):
-        print('心跳本來就沒在跑')
+        print('心跳已經停了，不用再停')
     else:
         _halt(node)
     if node.is_dir():
-        print(f'檔案都留著：{node}、{node.parent}/you；要全清就刪這兩個資料夾（{node.parent}/.aosd 是心跳的紀錄，房子裡沒別的 node 也可刪）')
+        print(f'檔案都留著；要全清：rm -r {node} {node.parent}/you（{node.parent}/.aosd 是心跳的紀錄，房子裡沒別的 node 也可刪）')
     return 0
 
 
