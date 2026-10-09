@@ -11,7 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import aos7_budget as bg  # noqa: E402
 from aos7_budget import GATEWAY, kid_of  # noqa: E402
-from aos7_fs import N, OK, Unknown, edit_json, fact, locked, now, write_json  # noqa: E402
+from aos7_fs import N, OK, U, Unknown, edit_json, fact, locked, now, write_json  # noqa: E402
 
 MODES = {"ok": ("accepted", True), "fail": ("failed", True), "reject": ("rejected", False)}
 
@@ -159,20 +159,31 @@ def io_boundary(fn, kid, key):
 
 
 def call(bud, key, amount, resource, payload_path, out, patience):
-    """reserve → 入口 run → settle；拿到終局結算回條才退出。0＝受理成功、1＝已結算但不成功或被拒、3＝未知（預留留著）。"""
+    """reserve → 入口 run → settle。只有 0 與 1 保證有終局結果交付。
+
+    0＝後端受理成功，已結算，終局結果已交付（stdout 最後一行＋有指定時的 --out）。
+    1＝已有終局但不成功：後端 failed／rejected、入口 denied／cancelled 已結算，
+       或 reserve 被拒（denied／conflict／bad）、入口 conflict。
+    2＝壞輸入：參數不合、payload 不存在或不是 JSON；沒送任何請求。
+    3＝本次呼叫未完整交付終局結果：可能還沒預留、在途（預留或 intent 留著），
+       或已結算但 --out 寫入失敗。先 status --holder H --request R 查 K，
+       再同 K 重送 call（冪等，不重扣）。
+    """
     return io_boundary(lambda: _call(bud, key, amount, resource, payload_path, out, patience), kid_of(key), key)
 
 
 def _call(bud, key, amount, resource, payload_path, out, patience):
+    kid = kid_of(key)
     payload = None
     if payload_path:
         st, payload = fact(payload_path)
+        if st == U:
+            return pending(kid, key, "payload", {"why": "payload 讀不到：%s" % payload})
         if st != OK:
             print("aos7-budget: payload 讀不到：%s" % payload, file=sys.stderr)
             return 2
     content = {"resource": resource, "gateway": GATEWAY, "amount": amount,
                "payload_sha": bg.sha(payload) if payload is not None else None}
-    kid = kid_of(key)
     r = bg.ask(bud, "reserve", key, content, patience)
     res = r.get("result")
     if res in ("denied", "conflict", "bad"):
@@ -183,9 +194,10 @@ def _call(bud, key, amount, resource, payload_path, out, patience):
         return pending(kid, key, "reserve", r)
     bg.test_crash(bud, "call-after-reserve")
     if res == "settled":                         # 重播：帳已結過，只讀入口回條
-        gw, _ = bg.gateway_terminal(bud, kid)
-        return finish(bud, kid, key, gw or {"outcome": r["settle"].get("outcome"), "used": r["settle"]["used"]},
-                      r["settle"], out)
+        gw, why = bg.gateway_terminal(bud, kid)
+        if gw is None:
+            return pending(kid, key, "replay", {"why": why})
+        return finish(bud, kid, key, gw, r["settle"], out)
     gw = run(bud, key, content, payload)
     if gw.get("outcome") == "conflict":
         print(json.dumps({"kid": kid, "key": key, "outcome": "conflict", "stage": "run", "why": gw.get("why")},
