@@ -155,7 +155,7 @@ def check(house, node):
     say(f'4. 卡了 6 回合：監督者寄一封信給你（要你決定）：「{note.get("text")}」')
     kill = wait('監督者 kill', lambda: done('kill', 'ok'), 60)[0]
     up_set(deadline=1)
-    say(f'5. 卡了 12 回合：監督者把卡住的 bob 收掉，心跳會把它叫回來')
+    say(f'5. 卡了 12 回合：監督者把卡住的 bob 收掉，bob 會自己重新起來')
 
     wait('brain 重起', lambda: (lambda b: b if b and b.get('run') != kill['run'] else None)(load(bslot / 'birth.json')))
     again = load(node / 'brain/task.json')
@@ -187,7 +187,7 @@ def check(house, node):
         raise Fail(f'正常那封信回 {ok["status"]}：{ok["title"]}')
     if len(notes) != 1 or len(kills) != 1 or s['pending'] or s.get('last_error'):
         raise Fail(f'監督者多做了事：信 {len(notes)} 封、kill {len(kills)} 次、在途 {s["pending"]}、錯 {s.get("last_error")}')
-    say('7. 強制關掉監督者一次（心跳把它叫回來，bob 不受影響），再寄正常的「做 4 回合的介紹」：bob 照常回信，監督者什麼都沒做')
+    say('7. 強制關掉監督者一次（它會自己重新起來，bob 不受影響），再寄正常的「做 4 回合的介紹」：bob 照常回信，監督者什麼都沒做')
     say('   監督者現在：' + sh(KERNEL, 'status', node).stdout.strip())
     letters = next((l for l in sh(UP, 'status', node).stdout.splitlines() if l.startswith('信：')), '')
     say('   bob 的狀態：' + letters)
