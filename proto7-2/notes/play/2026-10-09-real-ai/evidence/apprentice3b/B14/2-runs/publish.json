@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": null,
+ "review": null,
+ "rid": "runsB14",
+ "kind": "aos-tool",
+ "name": "runs",
+ "job": "runsB14_aa76ddf0",
+ "candidate_sha": "aa76ddf0be36782446aa2911b4e070029b70b72626fd03ca7fb068e9ef1708e8",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ },
+ "branch": "apprentice/runsB14_aa76ddf0",
+ "commit": "6d16439b65884e01d03689e730c192c1e826fcf6",
+ "dup": false
+}

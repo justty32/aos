@@ -1,0 +1,87 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsA21-r1-1791547067",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6588,
+   "prompt_tokens": 6346,
+   "total_tokens": 12934,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2069
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 12934,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsA21-r1-1791547067/receipt.json"
+ },
+ "review": null,
+ "rid": "runsA21",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A21/2-runs/cand-r1.json",
+ "candidate_sha": "2fec1a50c776380ccc5c6fb69395f48f4a48cd62bb9cf855abb7fc2a83231d98",
+ "job": "runsA21_2fec1a50",
+ "rules_check": {
+  "ok": false,
+  "rid": "runsA21",
+  "name": "runs",
+  "job": "runsA21_2fec1a50",
+  "candidate_sha": "2fec1a50c776380ccc5c6fb69395f48f4a48cd62bb9cf855abb7fc2a83231d98",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "packs/runs/tests/test_runs.py 有 8230 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（size：packs/runs/tests/test_runs.py 有 8230 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12））。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "check": {
+  "ok": false,
+  "rid": "runsA21",
+  "name": "runs",
+  "job": "runsA21_2fec1a50",
+  "candidate_sha": "2fec1a50c776380ccc5c6fb69395f48f4a48cd62bb9cf855abb7fc2a83231d98",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "packs/runs/tests/test_runs.py 有 8230 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（size：packs/runs/tests/test_runs.py 有 8230 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12））。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 1 關沒過（size：packs/runs/tests/test_runs.py 有 8230 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12））。照 stdout JSON 的 gates 修正候選再跑"
+}

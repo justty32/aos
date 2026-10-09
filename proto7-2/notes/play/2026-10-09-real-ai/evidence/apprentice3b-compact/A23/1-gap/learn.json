@@ -1,0 +1,37 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "gapA23",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A23/gotchas.txt",
+ "added": [
+  "- 寫唯讀彙總工具前，先劃死可改範圍；不要為了方便而匯入既有寫入、修復或鎖定流程。",
+  "- 掃描 node 時只認指定的 regular 檔名；排序以段號數值為準，active 檔放最後，輸出路徑用輸入目錄的相對 POSIX 路徑。",
+  "- JSONL 要按 `b'\\n'` 切；最後一行沒換行先判 torn，不能用 `splitlines()` 誤切合法的內部 CR。",
+  "- 驗證 `seq`、`next_seq`、`acked_upto` 時要排除 bool；壞 JSON 整筆不彙總，NaN、Infinity 也不能放行。",
+  "- count 包含重複紀錄；missing 只算 first 到 last 之間的閉區間，dup 列出出現至少兩次的 seq。",
+  "- state 壞掉時要分清整份與單一 channel：前者兩邊欄位皆為 null，後者只清該 channel，且只加一筆 bad_state。",
+  "- 驗收唯讀不能只看 stdout；還要核對輸入目錄的檔案、位元組、權限與 metadata 未變，並測缺檔和壞資料的退出碼。",
+  "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/evgap/tests` 做實質測試，`python3 check_answer.py <proto7-2> fixture` 獨立核對唯讀。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-gapA23-chatgpt-gpt-6-sol-high-3f1ccb8f",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 531,
+   "prompt_tokens": 2967,
+   "total_tokens": 3498,
+   "completion_tokens_details": {
+    "reasoning_tokens": 157
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 3498,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-gapA23-chatgpt-gpt-6-sol-high-3f1ccb8f/receipt.json"
+ }
+}

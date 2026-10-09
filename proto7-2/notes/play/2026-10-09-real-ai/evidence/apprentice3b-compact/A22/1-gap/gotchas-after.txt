@@ -1,0 +1,31 @@
+# 共通踩坑（跨工作流）
+
+[common/README](README.md)
+
+不專屬任一工作流的坑記 / 查這裡；工作流專屬的坑記在該工作流自己的 `gotchas.md`（長出來後在下表加一列導流）。
+
+**何時用**：使用者說「記個踩坑」「上次也是這樣」；或動手前要查這個現象以前撞過沒。
+**何時不用**：坑專屬某個工作流、而那個工作流已有自己的 `gotchas.md` → 記在那裡；**只撞過一次**的意外 → 不記（門檻是第二次撞到）。
+
+## Done when
+
+- 下表對應的檔多一條坑（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
+
+## 哪類坑記哪裡
+
+| 坑的性質 | 記 / 查這裡 |
+|---------|------------|
+| 共通坑 | **本檔** |
+
+---
+
+（目前無）
+
+## gapA22（chatgpt-gpt-6-sol-high）
+- 下次寫 aos 唯讀工具前，先確認允許修改的路徑與件數 gate；這題只准動 `packs/evgap/` 和 `INDEX.md` 一列，不能改 node。
+- 解析 jsonl 要按位元組以 `b'\n'` 切行；未以換行結尾的最後一行先判 torn，內部 CR 不等於換行。
+- Python 的 `bool` 是 `int` 子類；驗證 `seq`、`next_seq` 和 `acked_upto` 時要用真整數判斷，不能靠轉型。
+- 壞紀錄不參與彙總；重複值仍計入 count，但 must 的 unacked 只計符合條件的不同 seq。
+- 狀態檔壞掉與單一 channel 壞掉的歸零範圍不同；不論有幾個欄位錯，`bad_state` 只加一筆。
+- 唯讀不只是不寫檔：也要核對輸入目錄、檔案位元組、權限與 metadata 不變；實測用 `run_all.py`，再用 `check_answer.py` 獨立核對。
+- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/evgap/tests`、`python3 check_answer.py <proto7-2> fixture`。

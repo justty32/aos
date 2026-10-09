@@ -1,0 +1,55 @@
+{
+ "ok": false,
+ "rid": "auditA21",
+ "name": "mailtodo",
+ "job": "auditA21_a336a4d3",
+ "candidate_sha": "a336a4d3bbcf12018bdd8c1366cc84632e958af9a6d4afcd2934815592b95666",
+ "failed_gate": 1,
+ "gates": {
+  "1": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "territory",
+     "why": "README.md"
+    },
+    {
+     "rule": "territory",
+     "why": "bin/aos7-mailtodo"
+    },
+    {
+     "rule": "territory",
+     "why": "aos7_mailtodo.py"
+    },
+    {
+     "rule": "territory",
+     "why": "tests/test_mailtodo.py"
+    },
+    {
+     "rule": "layout",
+     "why": "缺必要檔或入口太長"
+    },
+    {
+     "rule": "tests",
+     "why": "缺測試或測試檔名撞名"
+    },
+    {
+     "rule": "readme",
+     "why": "README 缺指定章節"
+    },
+    {
+     "rule": "lint",
+     "why": "row 壞連結：packs/mailtodo/README.md"
+    }
+   ]
+  },
+  "2": {
+   "ok": null
+  },
+  "3": {
+   "ok": null
+  }
+ },
+ "_rejected": true,
+ "error": "第 1 關沒過（territory：README.md）。照 stdout JSON 的 gates 修正候選再跑"
+}

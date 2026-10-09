@@ -1,0 +1,32 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA13",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A13/gotchas.txt",
+ "added": [
+  "- 下次寫 aos 工具前，先確認交付檔的完整路徑：`README.md`、入口、模組和測試都要放在 `packs/mailtodo/` 下；放在根目錄會同時觸發範圍與缺檔錯誤。",
+  "- 新增 `INDEX.md` 列時，連結要指向實際存在的 `packs/mailtodo/README.md`；檔案放錯位置也會讓連結檢查失敗。",
+  "- 交付前逐項核對版型：README 必有 `## 第一次跑`，入口不得超過 12 行，測試檔須存在且避免撞名；功能核對通過不代表版型關會過。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA13-chatgpt-gpt-6-sol-high-f68b81ca",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 315,
+   "prompt_tokens": 3915,
+   "total_tokens": 4230,
+   "completion_tokens_details": {
+    "reasoning_tokens": 141
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 4230,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA13-chatgpt-gpt-6-sol-high-f68b81ca/receipt.json"
+ }
+}

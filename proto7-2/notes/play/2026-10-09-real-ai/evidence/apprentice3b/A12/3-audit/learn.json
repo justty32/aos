@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA12",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A12/gotchas.txt",
+ "added": [
+  "- 掃描範圍只到各非點名信箱的 `inbox/*.md` 與 `inbox/done/*.md`；只收非點名的一般檔案，排除符號連結，別遞迴。",
+  "- frontmatter 必須以獨占一行的 `---` 開頭，並在下一個獨占一行的 `---` 結束；欄位只按第一個 `: ` 切，保留值的其餘空白，重複鍵以最後一筆為準。",
+  "- 無效信件要按 `no_frontmatter`、`no_field`、`bad_name`、`dup_id` 的優先序判定；只有前面檢查都通過的信件才占用 id，依相對路徑字典序保留第一筆。",
+  "- 檔名時間戳須能解析到分鐘，且後面緊接 `-` 或 `_`；不能只靠正則比對外形，讓不存在的日期混進彙總。",
+  "- REQUEST 是否未結案要跨所有信箱及 done 檔查有效回信；只有 `re` 指向其 id 且狀態為 DONE、BLOCKED、NEEDS-USER 或 FAILED 才算結案，PROGRESS 不算。",
+  "- `boxes` 要保留有 inbox 目錄但沒有有效信件的信箱；inbox 按實際出現的狀態計數，done 則計所有有效封存信件，不按狀態拆分。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA12-chatgpt-gpt-6-sol-high-25b9fa90",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 420,
+   "prompt_tokens": 3740,
+   "total_tokens": 4160,
+   "completion_tokens_details": {
+    "reasoning_tokens": 64
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 4160,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA12-chatgpt-gpt-6-sol-high-25b9fa90/receipt.json"
+ }
+}

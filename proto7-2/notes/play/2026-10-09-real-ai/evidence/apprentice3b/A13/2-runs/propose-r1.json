@@ -1,0 +1,99 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsA13-r1-1791546284",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6390,
+   "prompt_tokens": 6386,
+   "total_tokens": 12776,
+   "completion_tokens_details": {
+    "reasoning_tokens": 1764
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 12776,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsA13-r1-1791546284/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-runsA13-chatgpt-gpt-6-astra-high-4f72a40b",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 90,
+    "prompt_tokens": 8732,
+    "total_tokens": 8822,
+    "completion_tokens_details": {
+     "reasoning_tokens": 74
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 8822,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-runsA13-chatgpt-gpt-6-astra-high-4f72a40b/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A13/2-runs/review-rv-runsA13-chatgpt-gpt-6-astra-high-4f72a40b.json"
+ },
+ "rid": "runsA13",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A13/2-runs/cand-r1.json",
+ "candidate_sha": "976feb4ab66c0d430cac7d7b20c68bf3573944986f6b7c24df72a02ca8b1d501",
+ "job": "runsA13_976feb4a",
+ "rules_check": {
+  "ok": true,
+  "rid": "runsA13",
+  "name": "runs",
+  "job": "runsA13_976feb4a",
+  "candidate_sha": "976feb4ab66c0d430cac7d7b20c68bf3573944986f6b7c24df72a02ca8b1d501",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "runsA13",
+  "name": "runs",
+  "job": "runsA13_976feb4a",
+  "candidate_sha": "976feb4ab66c0d430cac7d7b20c68bf3573944986f6b7c24df72a02ca8b1d501",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}

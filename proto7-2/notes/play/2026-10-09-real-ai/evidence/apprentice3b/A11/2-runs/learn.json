@@ -1,0 +1,30 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA11",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A11/gotchas.txt",
+ "added": [
+  "- 測試檔也有每檔 8192 bytes 上限；這次 `test_runs.py` 達 9364 bytes，第一關因此失敗。下次用 `wc -c` 先查檔案大小，超限就拆檔，總檔數仍須 ≤12；以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA11-chatgpt-gpt-6-sol-high-e4976546",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 490,
+   "prompt_tokens": 3429,
+   "total_tokens": 3919,
+   "completion_tokens_details": {
+    "reasoning_tokens": 403
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 3919,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA11-chatgpt-gpt-6-sol-high-e4976546/receipt.json"
+ }
+}

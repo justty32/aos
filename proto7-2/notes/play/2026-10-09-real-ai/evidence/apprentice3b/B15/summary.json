@@ -1,0 +1,126 @@
+{
+ "variant": "B",
+ "rep": 15,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 94,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB15",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12999,
+   "review_tokens": 7510,
+   "secs": 104.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12999,
+     "review_tokens": 7510,
+     "secs": 102.5,
+     "job": "gapB15_c87d16a7",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapB15_c87d16a7",
+     "commit": "14dae2575777c51b5268757f1c67c57e728bf11b",
+     "dup": false,
+     "secs": 1.7
+    }
+   ],
+   "learn": null,
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsB15",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 11544,
+   "review_tokens": 8527,
+   "secs": 97.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 11544,
+     "review_tokens": 8527,
+     "secs": 94.3,
+     "job": "runsB15_5916728e",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsB15_5916728e",
+     "commit": "0f87657b531f691cdd08cf8b8429375fcb68b61a",
+     "dup": false,
+     "secs": 3.1
+    }
+   ],
+   "learn": null,
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditB15",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 11729,
+   "review_tokens": 7507,
+   "secs": 98.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 11729,
+     "review_tokens": 7507,
+     "secs": 94.7,
+     "job": "auditB15_9289a486",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditB15_9289a486",
+     "commit": "5c328f9860ab10163b2e316caadf1b099ee0291d",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": null,
+   "order": 3
+  }
+ ]
+}

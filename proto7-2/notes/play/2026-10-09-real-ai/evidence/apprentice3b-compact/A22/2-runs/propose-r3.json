@@ -1,0 +1,109 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsA22-r3-1791547313",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6135,
+   "prompt_tokens": 12697,
+   "total_tokens": 18832,
+   "completion_tokens_details": {
+    "reasoning_tokens": 760
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 18832,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsA22-r3-1791547313/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-runsA22-chatgpt-gpt-6-astra-high-7d712490",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 267,
+    "prompt_tokens": 9639,
+    "total_tokens": 9906,
+    "completion_tokens_details": {
+     "reasoning_tokens": 96
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 9906,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-runsA22-chatgpt-gpt-6-astra-high-7d712490/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A22/2-runs/review-rv-runsA22-chatgpt-gpt-6-astra-high-7d712490.json"
+ },
+ "rid": "runsA22",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A22/2-runs/cand-r3.json",
+ "candidate_sha": "9d61e19253eabb0d87b1b8353551ffbc4b0f0dede5d12fda58226f44e6b06f20",
+ "job": "runsA22_9d61e192",
+ "rules_check": {
+  "ok": true,
+  "rid": "runsA22",
+  "name": "runs",
+  "job": "runsA22_9d61e192",
+  "candidate_sha": "9d61e19253eabb0d87b1b8353551ffbc4b0f0dede5d12fda58226f44e6b06f20",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "runsA22",
+  "name": "runs",
+  "job": "runsA22_9d61e192",
+  "candidate_sha": "9d61e19253eabb0d87b1b8353551ffbc4b0f0dede5d12fda58226f44e6b06f20",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "唯讀：packs/runs/aos7_runs.py 的 read_table 在 O_NOATIME 因 EPERM 被拒絕時，會改用一般 O_RDONLY 讀取輸入檔。讀取其他使用者擁有但允許讀取的檔案即可觸發此分支；在 relatime 需要更新存取時間或 strictatime 的檔案系統上，會修改輸入檔的 atime，即使檔案權限是唯讀也一樣，違反 work 第 3 條要求 metadata 保持不變。test_noatime_permission_fallback 僅驗證成功讀取，未驗證此分支的 metadata 不變。"
+      ]
+     }
+    ]
+   }
+  },
+  "_rejected": true,
+  "error": "第 3 關沒過（review：['唯讀：packs/runs/aos7_runs.py 的 read_table 在 O_NOATIME 因 EPERM 被拒絕時，會改用一般 O_RDON…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 3 關沒過（review：['唯讀：packs/runs/aos7_runs.py 的 read_table 在 O_NOATIME 因 EPERM 被拒絕時，會改用一般 O_RDON…）。照 stdout JSON 的 gates 修正候選再跑"
+}

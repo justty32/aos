@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["錯誤：packs/runs/aos7_runs.py 的 read_table 無條件使用 O_NOATIME。在 Linux 上，若合法表格可讀但屬於其他使用者，且執行者沒有 CAP_FOWNER，os.open 會因 O_NOATIME 回報 EPERM；程式隨即將有效表格判為 bad_table，漏掉全部有效列。這會影響共用或由其他帳號部署的唯讀 node，違反正常讀取與彙總要求。現有測試只讀取自己建立的檔案，未涵蓋此情境；應在維持唯讀與 metadata 要求的前提下處理讀取權限，不能將此類開啟失敗誤判成資料損壞。"]}

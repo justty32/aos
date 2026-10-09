@@ -1,0 +1,2 @@
+gotchas.md：不需要整理
+{"ok": true, "dry_run": false, "files": [{"file": "gotchas.md", "records": 7, "open": 0, "count": 0, "trigger": "不需要"}]}

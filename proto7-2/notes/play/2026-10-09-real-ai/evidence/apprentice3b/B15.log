@@ -1,0 +1,4 @@
+{"rid": "gapB15", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 12999, "review_tokens": 7510, "secs": 102.5, "job": "gapB15_c87d16a7", "proxy_suspect": false, "issues": []}
+{"rid": "runsB15", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 11544, "review_tokens": 8527, "secs": 94.3, "job": "runsB15_5916728e", "proxy_suspect": false, "issues": []}
+{"rid": "auditB15", "round": 1, "exit": 0, "ok": true, "why": null, "failed_gate": null, "rules": [], "tokens": 11729, "review_tokens": 7507, "secs": 94.7, "job": "auditB15_9289a486", "proxy_suspect": false, "issues": []}
+{"variant": "B", "rep": 15, "stop": null, "passed": [true, true, true], "reasks": [0, 0, 0]}

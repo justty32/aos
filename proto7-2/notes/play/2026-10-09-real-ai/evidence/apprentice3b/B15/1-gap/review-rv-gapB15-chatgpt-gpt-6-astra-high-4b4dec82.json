@@ -1,0 +1,1 @@
+{"verdict":"accept","reasons":["建議：packs/evgap/aos7_evgap.py 的重複序號統計對每個 distinct 序號呼叫 ordered.count，時間複雜度最差為 O(n²)；可改用 collections.Counter 一次計數，再排序重複序號，維持輸出不變。"]}

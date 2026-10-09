@@ -1,0 +1,168 @@
+{
+ "variant": "B",
+ "rep": 12,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 46,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB12",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 13093,
+   "review_tokens": 7598,
+   "secs": 105.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13093,
+     "review_tokens": 7598,
+     "secs": 103.5,
+     "job": "gapB12_f1f28b3c",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapB12_f1f28b3c",
+     "commit": "b6aeae6b01ff38e866405b1eaa8ee1770225ac53",
+     "dup": false,
+     "secs": 1.6
+    }
+   ],
+   "learn": null,
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsB12",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 47214,
+   "review_tokens": 9037,
+   "secs": 228.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 12595,
+     "review_tokens": null,
+     "secs": 86.7,
+     "job": "runsB12_0a6a4dd7",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 8384 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 17480,
+     "review_tokens": null,
+     "secs": 58.6,
+     "job": "runsB12_b4c65e87",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "....F\n======================================================================\nFAIL: test_timezones_and_invalid_values (test_runs.RunsTests.test_timezones_and_invalid_values)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/aos-three-2y2bkjg_/proto7-2/packs/runs/tests/test_runs.py\", line 130, in test_timezones_and_invalid_values\n    self.assertEqual(out[\"routines\"][0][\"state\"], \"overdue\")\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 'ok' != 'overdue'\n- ok\n+ overdue\n\n\n----------------------------------------------------------------------\nRan 5 tests in 0.279s\n\nFAILED (failures=1)"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 17139,
+     "review_tokens": 9037,
+     "secs": 79.4,
+     "job": "runsB12_a9555f02",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsB12_a9555f02",
+     "commit": "655052126a5f7c3fdb3eba54091792df0a6fdcf7",
+     "dup": false,
+     "secs": 3.2
+    }
+   ],
+   "learn": null,
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditB12",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12089,
+   "review_tokens": 7707,
+   "secs": 115.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12089,
+     "review_tokens": 7707,
+     "secs": 112.0,
+     "job": "auditB12_7aa4c8e6",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditB12_7aa4c8e6",
+     "commit": "50ea4d90afa8ebdd9b638b3ef787f9f9bf04c7e5",
+     "dup": false,
+     "secs": 3.4
+    }
+   ],
+   "learn": null,
+   "order": 3
+  }
+ ]
+}

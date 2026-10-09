@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["唯讀：packs/runs/aos7_runs.py 的 read_table 在 O_NOATIME 因 EPERM 被拒絕時，會改用一般 O_RDONLY 讀取輸入檔。讀取其他使用者擁有但允許讀取的檔案即可觸發此分支；在 relatime 需要更新存取時間或 strictatime 的檔案系統上，會修改輸入檔的 atime，即使檔案權限是唯讀也一樣，違反 work 第 3 條要求 metadata 保持不變。test_noatime_permission_fallback 僅驗證成功讀取，未驗證此分支的 metadata 不變。"]}

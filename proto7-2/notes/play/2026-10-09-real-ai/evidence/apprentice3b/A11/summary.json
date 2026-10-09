@@ -1,0 +1,230 @@
+{
+ "variant": "A",
+ "rep": 11,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 54,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA11",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 30577,
+   "review_tokens": 7525,
+   "secs": 185.7,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "layout",
+      "lint",
+      "readme",
+      "territory",
+      "tests"
+     ],
+     "tokens": 15167,
+     "review_tokens": null,
+     "secs": 116.6,
+     "job": "gapA11_35bc78f7",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "territory",
+       "why": "README.md"
+      },
+      {
+       "rule": "territory",
+       "why": "bin/aos7-evgap"
+      },
+      {
+       "rule": "territory",
+       "why": "aos7_evgap.py"
+      },
+      {
+       "rule": "territory",
+       "why": "tests/test_evgap.py"
+      },
+      {
+       "rule": "layout",
+       "why": "缺必要檔或入口太長"
+      },
+      {
+       "rule": "tests",
+       "why": "缺測試或測試檔名撞名"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 15410,
+     "review_tokens": 7525,
+     "secs": 55.7,
+     "job": "gapA11_491b5c04",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA11_491b5c04",
+     "commit": "3206a7cb456a256a60c0c318011048c9a8c1b188",
+     "dup": false,
+     "secs": 1.7
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 新增 aos 工具前先對照範圍：README、入口、模組和測試都要放在 `packs/evgap/`；放在根目錄會先卡 territory 與 layout gate。",
+     "- 加 `INDEX.md` 導流列前，先確認目標 README 已存在、指定章節齊全；入口也要守住 12 行上限。",
+     "- 唯讀彙總不能只驗輸出：還要核對 fixture 的位元組、權限與目錄不變，並測缺檔、壞資料和退出碼。",
+     "- 驗收要點名 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+    ],
+    "secs": 11.8,
+    "tokens": 3680,
+    "bytes_before": 793,
+    "bytes_after": 1404
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA11",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 32034,
+   "review_tokens": 9788,
+   "secs": 212.3,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 13711,
+     "review_tokens": null,
+     "secs": 108.0,
+     "job": "runsA11_e108cae9",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 9364 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 18323,
+     "review_tokens": 9788,
+     "secs": 91.7,
+     "job": "runsA11_166a602f",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsA11_166a602f",
+     "commit": "2a2c40a9a072666c290dca807fcdec5cc1f90f09",
+     "dup": false,
+     "secs": 3.7
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 測試檔也有每檔 8192 bytes 上限；這次 `test_runs.py` 達 9364 bytes，第一關因此失敗。下次用 `wc -c` 先查檔案大小，超限就拆檔，總檔數仍須 ≤12；以後交接書該點名的工具"
+    ],
+    "secs": 8.9,
+    "tokens": 3919,
+    "bytes_before": 1404,
+    "bytes_after": 1666
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA11",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 15103,
+   "review_tokens": 8067,
+   "secs": 140.8,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 15103,
+     "review_tokens": 8067,
+     "secs": 127.5,
+     "job": "auditA11_02107e27",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA11_02107e27",
+     "commit": "ab218c5bb7bfd3ff1113dd73afed23f965672146",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫唯讀彙總前，先把掃描邊界寫死：只看非隱藏信箱的 `inbox/*.md` 與 `inbox/done/*.md`，不跟隨符號連結、不遞迴。",
+     "- 前言欄位只在第一行與後續獨立的 `---` 之間解析；按第一個 `: ` 切分、不修剪值，重複鍵以最後一筆為準。",
+     "- 驗證順序會改變 `bad.why`：先判前言與必填欄位，再判檔名，最後才判重複 id；只有有效信件能占用 id。",
+     "- `--now` 必須有時區且不可讀系統時鐘；資料中的無時區時間用 `--now.tzinfo` 解讀，分鐘差向下取整，負數也一樣。",
+     "- 判定 REQUEST 未結案時，要查所有有效信件的 `re` 與結案狀態；`PROGRESS` 不算結案，尾隨空格的 `re: ` 是空目標。",
+     "- 輸出前逐項核對型別與排序：`v` 必須是整數 1 而非 `true`；空 inbox 仍須列入 boxes，open 與 bad 各依指定鍵排序。"
+    ],
+    "secs": 10.0,
+    "tokens": 3750,
+    "bytes_before": 1666,
+    "bytes_after": 2592
+   },
+   "order": 3
+  }
+ ]
+}

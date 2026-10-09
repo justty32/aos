@@ -1,0 +1,208 @@
+{
+ "variant": "A",
+ "rep": 23,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": true,
+ "stop": null,
+ "calls_total": 124,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA23",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12486,
+   "review_tokens": 7343,
+   "secs": 117.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12486,
+     "review_tokens": 7343,
+     "secs": 104.5,
+     "job": "gapA23_c5bfbf56",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA23_c5bfbf56",
+     "commit": "2ec5df83ada20e6b746e866fffc2917ba1561d68",
+     "dup": false,
+     "secs": 1.6
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 寫唯讀彙總工具前，先劃死可改範圍；不要為了方便而匯入既有寫入、修復或鎖定流程。",
+     "- 掃描 node 時只認指定的 regular 檔名；排序以段號數值為準，active 檔放最後，輸出路徑用輸入目錄的相對 POSIX 路徑。",
+     "- JSONL 要按 `b'\\n'` 切；最後一行沒換行先判 torn，不能用 `splitlines()` 誤切合法的內部 CR。",
+     "- 驗證 `seq`、`next_seq`、`acked_upto` 時要排除 bool；壞 JSON 整筆不彙總，NaN、Infinity 也不能放行。",
+     "- count 包含重複紀錄；missing 只算 first 到 last 之間的閉區間，dup 列出出現至少兩次的 seq。",
+     "- state 壞掉時要分清整份與單一 channel：前者兩邊欄位皆為 null，後者只清該 channel，且只加一筆 bad_state。",
+     "- 驗收唯讀不能只看 stdout；還要核對輸入目錄的檔案、位元組、權限與 metadata 未變，並測缺檔和壞資料的退出碼。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/evgap/tests` 做實質測試，`python3 check_answer.py <proto7-2> fixture` 獨立核對唯讀。"
+    ],
+    "secs": 11.1,
+    "tokens": 3498,
+    "bytes_before": 793,
+    "bytes_after": 1935,
+    "compact": {
+     "exit": 0,
+     "bytes": 1935,
+     "over_2k": false
+    }
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA23",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 30370,
+   "review_tokens": 8577,
+   "secs": 182.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 13330,
+     "review_tokens": null,
+     "secs": 103.5,
+     "job": "runsA23_1ac184b0",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 8533 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 17040,
+     "review_tokens": 8577,
+     "secs": 65.9,
+     "job": "runsA23_59ae3351",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsA23_59ae3351",
+     "commit": "0c91d9a2148b428daa54fa7beb99638d5b731960",
+     "dup": false,
+     "secs": 3.4
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 寫 aos 工具前先量測單檔大小；測試檔即使內容正確，超過 8192 bytes 仍會卡關，應拆檔並守住 12 檔上限。",
+     "- 彙總表格時，壞表與壞列要分開處理；NaN、Infinity 不能當合法 JSON 值，壞表也不能繼續彙總其中的列。",
+     "- 驗證列時，先記下非空字串名稱；後續同名列即使另有欄位錯誤，也要判為 dup_name。",
+     "- 時間判斷須以帶時區的 `--now` 為準；資料時間沒有時區時沿用它的時區，不可偷讀系統時鐘。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/tests`、`python3 check_answer.py <proto7-2> fixture`。"
+    ],
+    "secs": 9.2,
+    "tokens": 3989,
+    "bytes_before": 1935,
+    "bytes_after": 2635,
+    "compact": {
+     "exit": 0,
+     "bytes": 2573,
+     "over_2k": true
+    }
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA23",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12726,
+   "review_tokens": 7502,
+   "secs": 110.8,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12726,
+     "review_tokens": 7502,
+     "secs": 95.4,
+     "job": "auditA23_309a3566",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA23_309a3566",
+     "commit": "2ac3acb927aea0ff9e45bfa9e85c52a360d5871c",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 掃描只收各 mailbox 的 `inbox/*.md` 與 `inbox/done/*.md`：排除點開頭、符號連結與非一般檔；有 `inbox` 的 mailbox 即使空的也要出現在 boxes。",
+     "- frontmatter 的界線必須是整行 `---`；欄位只按第一個 `: ` 切，值不 trim、重複鍵取最後一個，避免把空的 `re: ` 誤認成目標。",
+     "- 判壞信要依序查 no_frontmatter、no_field、bad_name、dup_id；只有有效信才佔用 id，並按相對路徑字典序決定誰先佔用。",
+     "- 檔名時間只用來驗證 `YYYYmmddTHHMM` 後緊接 `-` 或 `_`；age_min 要從 frontmatter 的 at 計算，負值也照整除向下取整。",
+     "- REQUEST 是否未結案要查所有有效信的 re 與結案 status，不限同一 mailbox 或 done；PROGRESS 不結案，to 也不必等於資料夾名。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/mailtodo/tests`、`python3 check_answer.py <proto7-2> fixture`。"
+    ],
+    "secs": 12.1,
+    "tokens": 4066,
+    "bytes_before": 2573,
+    "bytes_after": 3555,
+    "compact": {
+     "exit": 0,
+     "bytes": 2244,
+     "over_2k": true
+    }
+   },
+   "order": 3
+  }
+ ]
+}

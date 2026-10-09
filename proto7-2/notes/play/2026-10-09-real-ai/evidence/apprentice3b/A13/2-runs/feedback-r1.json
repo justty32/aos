@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "rid": "runsA13",
+ "name": "runs",
+ "job": "runsA13_976feb4a",
+ "candidate_sha": "976feb4ab66c0d430cac7d7b20c68bf3573944986f6b7c24df72a02ca8b1d501",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ }
+}

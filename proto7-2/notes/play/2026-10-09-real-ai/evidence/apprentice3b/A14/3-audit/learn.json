@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA14",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A14/gotchas.txt",
+ "added": [
+  "- 下次寫 aos 工具前，先把掃描範圍鎖在非點名 mailbox 的 inbox/*.md 與 inbox/done/*.md；略過符號連結、不遞迴，但空 inbox 仍要列入 boxes。",
+  "- 下次解析 mailtodo frontmatter 前，先確認首行及結束行都恰好是 ---；欄位只按第一個「: 」切，保留值原樣，重複鍵以最後一筆為準。",
+  "- 下次判定壞信前，先固定順序：no_frontmatter、no_field、bad_name、dup_id；只在有效信件間按相對路徑字典序決定哪個 id 先贏。",
+  "- 下次計算待辦前，先用 --now.tzinfo 解讀資料中的 naive 時間；跨 mailbox 查有效回信，只有 DONE、BLOCKED、NEEDS-USER、FAILED 能結束 REQUEST。",
+  "- 下次交付 mailtodo 前，先核對錯誤輸入退出碼 2 且 stdout 為空、成功輸出恰好一行 JSON，並確認輸入檔的內容與 metadata 均未變。",
+  "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/mailtodo/tests` 驗實質測試；`python3 check_answer.py <proto7-2> fixture` 核對答案與唯讀性。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA14-chatgpt-gpt-6-sol-high-890e4c46",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 447,
+   "prompt_tokens": 3537,
+   "total_tokens": 3984,
+   "completion_tokens_details": {
+    "reasoning_tokens": 116
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 3984,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA14-chatgpt-gpt-6-sol-high-890e4c46/receipt.json"
+ }
+}

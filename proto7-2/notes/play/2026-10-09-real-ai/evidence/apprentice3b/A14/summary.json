@@ -1,0 +1,210 @@
+{
+ "variant": "A",
+ "rep": 14,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 87,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA14",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12441,
+   "review_tokens": 7001,
+   "secs": 109.7,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12441,
+     "review_tokens": 7001,
+     "secs": 98.9,
+     "job": "gapA14_c66ae3d6",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA14_c66ae3d6",
+     "commit": "7726ae394b56927c543b0a30a8b27e0a13e86d00",
+     "dup": false,
+     "secs": 1.7
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 唯讀工具前，先把寫入路徑隔離：不要匯入既有修復、鎖定或寫檔程式；唯讀目錄也必須能跑。",
+     "- 解析 JSONL 要按位元組的 `b'\\n'` 切；末行沒換行先記 torn，壞 JSON 整筆排除，不能讓 `NaN` 或 `Infinity` 混入。",
+     "- Python 的 `bool` 是 `int` 子類；檢查 `seq`、`next_seq`、`acked_upto` 時要驗真整數，不能靠 `isinstance(x, int)` 或強制轉型。",
+     "- 狀態檔要分清整份無效與單一 channel 無效：只記一筆 `bad_state`，但只清空受影響 channel 的三個狀態欄位。",
+     "- 彙總時 `count` 包含重複紀錄，`unacked` 只算不同序號；輸出前確認缺號區間、重複序號與 `bad` 都依規定排序。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/evgap/tests` 驗實質測試，`python3 check_answer.py <proto7-2> fixture` 獨立核對答案與唯讀性。"
+    ],
+    "secs": 9.1,
+    "tokens": 3473,
+    "bytes_before": 793,
+    "bytes_after": 1744
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA14",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 49191,
+   "review_tokens": 9130,
+   "secs": 209.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 13516,
+     "review_tokens": null,
+     "secs": 84.9,
+     "job": "runsA14_86980979",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 8305 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 17634,
+     "review_tokens": null,
+     "secs": 47.0,
+     "job": "runsA14_c1adc972",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "First differing element 0:\n{'nam[75 chars]t_code': 0, 'state': 'ok', 'next': '2025-01-02T00:00:00Z'}\n{'nam[75 chars]t_code': 0, 'state': 'overdue', 'next': '2025-01-02T00:00:00Z'}\n\n  [{'every': '1s',\n    'last_code': 0,\n    'last_time': '2025-01-01T23:59:59.500000Z',\n    'name': 'edge',\n    'next': '2025-01-02T00:00:00Z',\n-   'state': 'ok'}]\n?              ^\n\n+   'state': 'overdue'}]\n?              ^^^^^^\n\n\n----------------------------------------------------------------------\nRan 5 tests in 0.361s\n\nFAILED (failures=1)"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 18041,
+     "review_tokens": 9130,
+     "secs": 66.1,
+     "job": "runsA14_b94b73c1",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsA14_b94b73c1",
+     "commit": "ad91636acd9adbd0fc27c19a909dd68f969ba4e7",
+     "dup": false,
+     "secs": 3.4
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 工具前，先查每檔大小上限；`tests/test_runs.py` 曾因 8305 bytes 超過 8192 bytes 卡在第一關，應拆檔而非刪掉實質測試。",
+     "- 下次寫排程判定前，先用完整精度的 datetime 比較；`next` 輸出雖要去掉小數秒，不能拿截斷後的時間判斷 overdue。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/tests` 驗實質測試；`python3 check_answer.py <proto7-2> fixture` 核對答案與唯讀性。"
+    ],
+    "secs": 8.0,
+    "tokens": 4155,
+    "bytes_before": 1744,
+    "bytes_after": 2284
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA14",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 14824,
+   "review_tokens": 8154,
+   "secs": 128.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 14824,
+     "review_tokens": 8154,
+     "secs": 117.0,
+     "job": "auditA14_ca809355",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA14_ca809355",
+     "commit": "0aac18962fca265232a81af7d5e1e8c6eda3e248",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 工具前，先把掃描範圍鎖在非點名 mailbox 的 inbox/*.md 與 inbox/done/*.md；略過符號連結、不遞迴，但空 inbox 仍要列入 boxes。",
+     "- 下次解析 mailtodo frontmatter 前，先確認首行及結束行都恰好是 ---；欄位只按第一個「: 」切，保留值原樣，重複鍵以最後一筆為準。",
+     "- 下次判定壞信前，先固定順序：no_frontmatter、no_field、bad_name、dup_id；只在有效信件間按相對路徑字典序決定哪個 id 先贏。",
+     "- 下次計算待辦前，先用 --now.tzinfo 解讀資料中的 naive 時間；跨 mailbox 查有效回信，只有 DONE、BLOCKED、NEEDS-USER、FAILED 能結束 REQUEST。",
+     "- 下次交付 mailtodo 前，先核對錯誤輸入退出碼 2 且 stdout 為空、成功輸出恰好一行 JSON，並確認輸入檔的內容與 metadata 均未變。",
+     "- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/mailtodo/tests` 驗實質測試；`python3 check_answer.py <proto7-2> fixture` 核對答案與唯讀性。"
+    ],
+    "secs": 8.1,
+    "tokens": 3984,
+    "bytes_before": 2284,
+    "bytes_after": 3367
+   },
+   "order": 3
+  }
+ ]
+}

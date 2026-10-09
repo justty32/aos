@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": null,
+ "review": null,
+ "rid": "gapA13",
+ "kind": "aos-tool",
+ "name": "evgap",
+ "job": "gapA13_7f4518a8",
+ "candidate_sha": "7f4518a82abe89d561a1296124232d0a5cb02192fdde5617a3be8e20ec963668",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ },
+ "branch": "apprentice/gapA13_7f4518a8",
+ "commit": "c731c0e52ecdfb08bad0b019a0a28b783091fb5b",
+ "dup": false
+}

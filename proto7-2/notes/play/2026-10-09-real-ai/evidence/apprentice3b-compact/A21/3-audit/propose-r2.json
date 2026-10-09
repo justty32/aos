@@ -1,0 +1,99 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "auditA21-r2-1791547320",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 4310,
+   "prompt_tokens": 11503,
+   "total_tokens": 15813,
+   "completion_tokens_details": {
+    "reasoning_tokens": 390
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 15813,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/auditA21-r2-1791547320/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-auditA21-chatgpt-gpt-6-astra-high-f2914bca",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 102,
+    "prompt_tokens": 7650,
+    "total_tokens": 7752,
+    "completion_tokens_details": {
+     "reasoning_tokens": 86
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 7752,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-auditA21-chatgpt-gpt-6-astra-high-f2914bca/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A21/3-audit/review-rv-auditA21-chatgpt-gpt-6-astra-high-f2914bca.json"
+ },
+ "rid": "auditA21",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A21/3-audit/cand-r2.json",
+ "candidate_sha": "f8ec678e011ad325090ffa5da6ea991904aaf057ef9c51a5de626ec6b44171fb",
+ "job": "auditA21_f8ec678e",
+ "rules_check": {
+  "ok": true,
+  "rid": "auditA21",
+  "name": "mailtodo",
+  "job": "auditA21_f8ec678e",
+  "candidate_sha": "f8ec678e011ad325090ffa5da6ea991904aaf057ef9c51a5de626ec6b44171fb",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "auditA21",
+  "name": "mailtodo",
+  "job": "auditA21_f8ec678e",
+  "candidate_sha": "f8ec678e011ad325090ffa5da6ea991904aaf057ef9c51a5de626ec6b44171fb",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}

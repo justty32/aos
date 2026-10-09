@@ -1,0 +1,249 @@
+{
+ "variant": "A",
+ "rep": 21,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": true,
+ "stop": null,
+ "calls_total": 124,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA21",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12456,
+   "review_tokens": 7585,
+   "secs": 90.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12456,
+     "review_tokens": 7585,
+     "secs": 79.2,
+     "job": "gapA21_0995a901",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA21_0995a901",
+     "commit": "1ad4a85ff8724e9b0b7f0576bba6058bbcbe7ac3",
+     "dup": false,
+     "secs": 2.3
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 寫唯讀彙總工具前先劃清範圍：只碰指定包與 INDEX 一列，不借用既有寫入、復原或鎖定路徑，也不修改 node。",
+     "- 讀 JSONL 要按位元組 `b'\\n'` 切；末行沒換行先判 torn，行內 CR 不可誤判，壞 JSON 整筆不計。",
+     "- 驗 `seq`、`next_seq`、`acked_upto` 要用真正的整數型別判斷；Python 的 `bool` 是 `int` 子類，不能用 `isinstance(x, int)` 放行。",
+     "- state 壞掉要分清整份與單一 channel：前者兩邊欄位歸 null，後者只影響該 channel；`bad_state` 只加一筆。",
+     "- 唯讀驗收不只看輸出：輸入目錄即使不可寫也要能跑，且檔案位元組、型別、大小、權限與 `mtime_ns` 都不能變。",
+     "- 交付前用 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 跑實測，再用 `python3 check_answer.py <proto7-2> fixture` 獨立核對輸出與唯讀性。以後交接書該點名的工具。"
+    ],
+    "secs": 9.4,
+    "tokens": 3395,
+    "bytes_before": 793,
+    "bytes_after": 1742,
+    "compact": {
+     "exit": 0,
+     "bytes": 1742,
+     "over_2k": false
+    }
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA21",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 30104,
+   "review_tokens": 8624,
+   "secs": 153.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 12934,
+     "review_tokens": null,
+     "secs": 79.0,
+     "job": "runsA21_2fec1a50",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 8230 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 17170,
+     "review_tokens": 8624,
+     "secs": 63.9,
+     "job": "runsA21_295d213d",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsA21_295d213d",
+     "commit": "2db4a9115bbdba9a5a45da5fe7aa91f331ab3a45",
+     "dup": false,
+     "secs": 3.4
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 寫測試前先算檔案大小：`test_runs.py` 曾因 8230 bytes 超過單檔 8192 bytes 卡關；可拆檔，但總檔數仍須 ≤12。",
+     "- 表格 JSON 要拒絕 `NaN`、`Infinity`；壞表整張歸空，不能從其中挑出看似有效的 rows。",
+     "- 每張表的非空名稱即使出現在無效 row 也要記錄；後續同名 row 判 `dup_name`，優先於 `bad_row`。",
+     "- 資料時間沒有時區時，套用 `--now` 的時區；計算後的 `next` 轉 UTC，僅輸出時去掉小數秒。",
+     "- CLI 錯誤須退出 2 且 stdout 為空；成功時只能輸出一行 JSON，不能混入診斷文字。",
+     "- 交付前留意獨立核對工具 `python3 check_answer.py <proto7-2> fixture`。以後交接書該點名的工具。"
+    ],
+    "secs": 7.6,
+    "tokens": 3905,
+    "bytes_before": 1742,
+    "bytes_after": 2505,
+    "compact": {
+     "exit": 0,
+     "bytes": 2364,
+     "over_2k": true
+    }
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA21",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 28559,
+   "review_tokens": 7752,
+   "secs": 160.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "layout",
+      "lint",
+      "readme",
+      "territory",
+      "tests"
+     ],
+     "tokens": 12746,
+     "review_tokens": null,
+     "secs": 99.4,
+     "job": "auditA21_a336a4d3",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "territory",
+       "why": "README.md"
+      },
+      {
+       "rule": "territory",
+       "why": "bin/aos7-mailtodo"
+      },
+      {
+       "rule": "territory",
+       "why": "aos7_mailtodo.py"
+      },
+      {
+       "rule": "territory",
+       "why": "tests/test_mailtodo.py"
+      },
+      {
+       "rule": "layout",
+       "why": "缺必要檔或入口太長"
+      },
+      {
+       "rule": "tests",
+       "why": "缺測試或測試檔名撞名"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 15813,
+     "review_tokens": 7752,
+     "secs": 50.6,
+     "job": "auditA21_f8ec678e",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA21_f8ec678e",
+     "commit": "13c448b9c1e524a7193b1307dd9e890254230968",
+     "dup": false,
+     "secs": 3.4
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 新增 mailtodo 時，README、入口、模組與測試都要放在 `packs/mailtodo/` 內；放在專案根目錄會同時踩到範圍與版面檢查。",
+     "- 先建好 `packs/mailtodo/README.md` 並寫入 `## 第一次跑`，再加 `INDEX.md` 那一列；連結指向尚不存在的檔案會被判壞連結。",
+     "- 入口 `bin/aos7-mailtodo` 要控制在 12 行內；實作移到模組，測試檔用指定的 `tests/test_mailtodo.py`，避免撞名或缺必要檔。"
+    ],
+    "secs": 7.5,
+    "tokens": 3979,
+    "bytes_before": 2364,
+    "bytes_after": 2869,
+    "compact": {
+     "exit": 0,
+     "bytes": 1929,
+     "over_2k": false
+    }
+   },
+   "order": 3
+  }
+ ]
+}

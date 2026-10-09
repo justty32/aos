@@ -1,0 +1,37 @@
+# 共通踩坑（跨工作流）
+
+[common/README](README.md)
+
+不專屬任一工作流的坑記 / 查這裡；工作流專屬的坑記在該工作流自己的 `gotchas.md`（長出來後在下表加一列導流）。
+
+**何時用**：使用者說「記個踩坑」「上次也是這樣」；或動手前要查這個現象以前撞過沒。
+**何時不用**：坑專屬某個工作流、而那個工作流已有自己的 `gotchas.md` → 記在那裡；**只撞過一次**的意外 → 不記（門檻是第二次撞到）。
+
+## Done when
+
+- 下表對應的檔多一條坑（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
+
+## 哪類坑記哪裡
+
+| 坑的性質 | 記 / 查這裡 |
+|---------|------------|
+| 共通坑 | **本檔** |
+
+---
+
+（目前無）
+
+## gapA15（chatgpt-gpt-6-sol-high）
+- 下次寫 aos 唯讀工具前，先把輸入目錄視為不可寫；除了允許的 `__pycache__`，不得建立、刪除或改動檔案，也別匯入既有的寫入、修復或鎖定路徑。
+- 解析 JSONL 要按 `b'\n'` 切位元組；沒有結尾換行的那筆先判 torn，不能用 `splitlines()`，否則可能誤判含 CR 的合法 JSON。
+- Python 的 `bool` 是 `int` 子類；檢查 `seq`、`next_seq`、`acked_upto` 時要用真正的整數型別判斷，且拒絕 `NaN`、`Infinity`。
+- 彙總前先排除無效紀錄；`count` 包含重複筆數，`dup` 列重複序號，`must.unacked` 則只算未確認的有效序號種類。
+- state 壞掉時只加一筆 `bad_state`；整份無效才清空兩個 channel 的狀態欄位，單一 channel 無效不要連帶清空另一個。
+- 以後交接書該點名的工具：用 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 跑實質測試，再用 `python3 check_answer.py <proto7-2> fixture` 獨立核對唯讀與固定答案。
+
+## runsA15（chatgpt-gpt-6-sol-high）
+- 下次寫 aos 彙總工具前，要把壞表與壞列分開處理：壞表整張視為空表並記 `bad_table`；壞列只排除該列，保留其他有效列。
+- 下次驗證列資料時，先記住非空字串名稱，再檢查其他欄位；即使首次出現的列無效，後續同名列仍須判為 `dup_name`，且優先於 `bad_row`。
+- 下次處理時間時，`--now` 必須有時區；資料時間若無時區才套用 `--now.tzinfo`。秒數週期的 `next` 轉 UTC 輸出，`r` 不算逾期。
+- 下次寫 CLI 前，先鎖定失敗契約：路徑或 `--now` 不合法時退出 2 且 stdout 為空；成功時 stdout 恰好一行 JSON。
+- 以後交接書該點名的工具：`python3 proto7-2/tests/run_all.py packs/runs/tests` 跑實質測試；`python3 check_answer.py <proto7-2> fixture` 獨立核對答案與唯讀。

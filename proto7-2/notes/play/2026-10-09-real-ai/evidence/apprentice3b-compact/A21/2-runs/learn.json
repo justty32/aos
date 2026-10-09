@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA21",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b-compact/A21/gotchas.txt",
+ "added": [
+  "- 寫測試前先算檔案大小：`test_runs.py` 曾因 8230 bytes 超過單檔 8192 bytes 卡關；可拆檔，但總檔數仍須 ≤12。",
+  "- 表格 JSON 要拒絕 `NaN`、`Infinity`；壞表整張歸空，不能從其中挑出看似有效的 rows。",
+  "- 每張表的非空名稱即使出現在無效 row 也要記錄；後續同名 row 判 `dup_name`，優先於 `bad_row`。",
+  "- 資料時間沒有時區時，套用 `--now` 的時區；計算後的 `next` 轉 UTC，僅輸出時去掉小數秒。",
+  "- CLI 錯誤須退出 2 且 stdout 為空；成功時只能輸出一行 JSON，不能混入診斷文字。",
+  "- 交付前留意獨立核對工具 `python3 check_answer.py <proto7-2> fixture`。以後交接書該點名的工具。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA21-chatgpt-gpt-6-sol-high-ae3938ac",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 346,
+   "prompt_tokens": 3559,
+   "total_tokens": 3905,
+   "completion_tokens_details": {
+    "reasoning_tokens": 96
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 3905,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA21-chatgpt-gpt-6-sol-high-ae3938ac/receipt.json"
+ }
+}

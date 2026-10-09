@@ -1,0 +1,37 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA12",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A12/gotchas.txt",
+ "added": [
+  "- 測試檔也受大小 gate 約束：`packs/runs/tests/test_runs.py` 曾因 8360 bytes 超過單檔 8192 bytes 而失敗；案例要及早拆檔，總數仍須 ≤12。",
+  "- 讀表時要拒絕 `NaN`、`Infinity`；JSON 能解析不代表符合 `wf-table/1`，表格結構不合格須整表清空並記 `bad_table`。",
+  "- 每張表的非空名稱即使出現在無效列也要記住；後續同名列報 `dup_name`，優先於 `bad_row`。",
+  "- `--now` 必須帶時區；資料時間若沒帶時區，採用 `--now.tzinfo`，不能拿系統時區補。",
+  "- routines 狀態依序判 `running`、`never`、`failed`、`overdue`、`ok`；`r` 週期永不逾期，`next` 為 null。",
+  "- 秒數週期的 `next` 要換成 UTC `YYYY-MM-DDTHH:MM:SSZ`；小數秒只在輸出時捨去，不可提前截斷影響逾期判定。",
+  "- schedule 的 `claimed` 只要非空就先判 `interrupted`，即使 `at` 已到期也不改判 `due`。",
+  "- runs 工作流必跑 `python3 proto7-2/tests/run_all.py packs/runs/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA12-chatgpt-gpt-6-sol-high-0f7cd770",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 549,
+   "prompt_tokens": 3559,
+   "total_tokens": 4108,
+   "completion_tokens_details": {
+    "reasoning_tokens": 176
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 4108,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA12-chatgpt-gpt-6-sol-high-0f7cd770/receipt.json"
+ }
+}

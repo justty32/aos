@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA13",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3b/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3b/A13/gotchas.txt",
+ "added": [
+  "- 寫 `aos7-runs` 前先把 `--now` 當必填輸入驗證：`datetime.fromisoformat` 能解析還不夠，還須有時區；任何錯誤都要退出 2 且 stdout 為空，不能偷讀系統時鐘。",
+  "- 讀兩張 wf table 時，缺檔與壞表不同：缺檔視為空陣列；JSON 無效（含 NaN、Infinity）或表格結構不合約，整張表清空並記一筆 `bad_table`。",
+  "- 驗證 row 前先記錄每個非空字串 name；即使該 row 另有錯誤，後續同名仍須判 `dup_name`，且優先於 `bad_row`。",
+  "- 時間比較前，無時區的資料時間要套用 `--now` 的時區；原字串照抄輸出，只有 `next` 轉為 UTC 秒精度並以 `Z` 結尾。",
+  "- 算 routines 狀態要照 `running → never → failed → overdue → ok` 排優先序；`r` 是回合而非秒數，永不 overdue，`next` 一律為 null。",
+  "- 交付前用 `python3 proto7-2/tests/run_all.py packs/runs/tests` 跑實質測試，再用 `python3 check_answer.py <proto7-2> fixture` 核對唯讀與固定答案；不要只憑自寫測試判定通過。以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA13-chatgpt-gpt-6-sol-high-cbed830d",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 424,
+   "prompt_tokens": 3521,
+   "total_tokens": 3945,
+   "completion_tokens_details": {
+    "reasoning_tokens": 61
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 3945,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA13-chatgpt-gpt-6-sol-high-cbed830d/receipt.json"
+ }
+}

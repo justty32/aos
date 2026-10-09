@@ -1,0 +1,147 @@
+{
+ "variant": "B",
+ "rep": 14,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 89,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB14",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 13832,
+   "review_tokens": 7416,
+   "secs": 127.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13832,
+     "review_tokens": 7416,
+     "secs": 125.7,
+     "job": "gapB14_2c29b3a0",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapB14_2c29b3a0",
+     "commit": "0c5404e6e12a484bfcc9481fafb4c1e5f5c8c94b",
+     "dup": false,
+     "secs": 1.7
+    }
+   ],
+   "learn": null,
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsB14",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 31008,
+   "review_tokens": 8400,
+   "secs": 208.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 14831,
+     "review_tokens": null,
+     "secs": 138.8,
+     "job": "runsB14_316ea136",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "packs/runs/tests/test_runs.py 有 8872 bytes，超過每檔上限 8192 bytes（可拆成多個檔，檔數上限 12）"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 16177,
+     "review_tokens": 8400,
+     "secs": 66.0,
+     "job": "runsB14_aa76ddf0",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/runsB14_aa76ddf0",
+     "commit": "6d16439b65884e01d03689e730c192c1e826fcf6",
+     "dup": false,
+     "secs": 3.2
+    }
+   ],
+   "learn": null,
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditB14",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 11651,
+   "review_tokens": 7167,
+   "secs": 107.0,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 11651,
+     "review_tokens": 7167,
+     "secs": 103.7,
+     "job": "auditB14_141e84d3",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditB14_141e84d3",
+     "commit": "47b33efb7cc92c92c03c4b48b23d44e717ebc7e5",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": null,
+   "order": 3
+  }
+ ]
+}
