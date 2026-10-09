@@ -80,7 +80,8 @@ class TestOwnership(SubCase):
         self.wait_for(lambda: os.path.exists(os.path.join(self.sub, ".aosd", "stopped.json")), 10, "沒寫 stopped.json")
         self.wait_for(lambda: any(e.get("code") == 1 for e in self.last_round(a).get("ended", [])
                                   if e.get("run", "").startswith("sub#")), 10, "父 keep 再起時包裝程式沒擋下")
-        self.assertIn("stop", self.out_log(a, "sub"))
+        # 父 keep 每回合再起它：每次先清槽（out.log 刪掉）再由包裝程式重寫，讀一次可能落在空窗（L3）——等檔案證據
+        self.wait_for(lambda: "stop" in self.out_log(a, "sub"), 10, "被擋時包裝程式沒在 out.log 說明")
         self.assertTrue(self.status(self.sub).get("stopped"), "被擋時子 daemon 起來了")
         os.remove(os.path.join(self.sub, ".aosd", "stopped.json"))
         self.wait_for(lambda: (self.status(self.sub).get("pid") or 0) not in (0, child_pid)
