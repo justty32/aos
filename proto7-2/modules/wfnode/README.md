@@ -6,7 +6,7 @@
 
 ## 第一次跑（約 3 分鐘）
 
-要有 Python 3、bash，和工作流模板 `~/repo/workflows`（沒有就先 `git clone git@github.com:justty32/workflows.git ~/repo/workflows`）。在 aos repo 根照抄這三行；全部只寫到 `/tmp/mynode`，不動 repo：
+要有 Python 3、bash，和工作流模板 `~/repo/workflows`（沒有就先 `git clone git@github.com:justty32/workflows.git ~/repo/workflows`）。先 `cd` 到 aos repo 根（看得到 `proto7-2/` 的那層），再照抄這三行；全部只寫到 `/tmp/mynode`，不動 repo：
 
 ```bash
 proto7-2/modules/wfnode/aos7-wfnode init  /tmp/mynode                              # 1. 裝好資料夾
