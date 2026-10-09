@@ -109,19 +109,19 @@ class InterfaceTests(unittest.TestCase):
             (node / '.aos/up.json').write_text('{}')
             (house / 'you').mkdir()
             (house / '.aosd').mkdir()
-            self.assertEqual(view.cleanup_hint(node), f'要收掉：rm -r {house}')
+            self.assertEqual(view.cleanup_hint(node), f'要收掉：刪掉整個資料夾：rm -r {house}')
             with patch.object(view, 'alive', return_value=True):
                 self.assertEqual(view.cleanup_hint(node),
-                                 f'要收掉：先在視窗 1 按 Ctrl-C 停心跳，再 rm -r {house}')
+                                 f'要收掉：先在視窗 1 按 Ctrl-C 停心跳，再刪掉整個資料夾：rm -r {house}')
             (house / 'other.txt').write_text('保留')
             hint = view.cleanup_hint(node)
             self.assertEqual(hint.split('rm -r ')[1], f'{node} {house}/you {house}/.aosd')
             second = house / 'alice'
             (second / '.aos').mkdir(parents=True)
             (second / '.aos/up.json').write_text('{}')
-            self.assertEqual(view.cleanup_hint(node).split('rm -r ')[1], str(node))
+            self.assertEqual(view.cleanup_hint(node), f'要收掉：刪掉這幾個資料夾：rm -r {node}')
             (house / 'other.txt').unlink()
-            self.assertEqual(view.cleanup_hint(node), f'要收掉：rm -r {house}')
+            self.assertEqual(view.cleanup_hint(node), f'要收掉：刪掉整個資料夾：rm -r {house}')
             # 不是 up 起的 node（只有 .aos/、沒有 up.json）也在用 you 與 .aosd：不整屋、也不刪共用
             (second / '.aos/up.json').unlink()
             self.assertEqual(view.cleanup_hint(node).split('rm -r ')[1], str(node))
@@ -152,10 +152,16 @@ class InterfaceTests(unittest.TestCase):
                      contextlib.redirect_stdout(io.StringIO()) as out:
                     self.assertEqual(view.status(node), 0)
                 lines = out.getvalue().splitlines()
-                self.assertEqual(lines[2], '工作簿：還有 0 件事沒做完；停在：還沒開始' +
+                self.assertEqual(lines[2], '工作簿：最後記下：還沒開始' +
                                  (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if rc else ''))
-                self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 0 次，讀寫字數不明')
+                self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 0 次，用量不明')
                 self.assertNotIn('體檢', out.getvalue())
+            (node / 'wf').mkdir()
+            (node / 'wf/SESSION-LOG.md').write_text('## open\n- 寫報告\n- 改錯字\n')
+            with patch.object(view, 'call', return_value=subprocess.CompletedProcess([], 0, '{}')), \
+                 contextlib.redirect_stdout(io.StringIO()) as out:
+                view.status(node)
+            self.assertEqual(out.getvalue().splitlines()[2], '工作簿：最後記下：還沒開始；還有 2 件事沒做完')
 
     def test_config_read_failure_before_writes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -180,9 +186,9 @@ class InterfaceTests(unittest.TestCase):
                        model=None, litellm_url='', budget='budget/llm', holder='brain', gateway='llm.fake')
             (node / '.aos/up.json').write_text(json.dumps(cfg))
             before = {p: p.read_bytes() for p in node.rglob('*') if p.is_file()}
-            for rc, content, wanted in ((3, '', '讀寫字數不明'), (0, '{}', '讀寫字數不明'),
-                                         (0, 'bad', '讀寫字數不明'),
-                                         (0, '{"used":1104}', '讀寫約 1104 字')):
+            for rc, content, wanted in ((3, '', '用量不明'), (0, '{}', '用量不明'),
+                                         (0, 'bad', '用量不明'),
+                                         (0, '{"used":1104}', '用量約 1104 字（讀加寫）')):
                 with patch.object(view, 'call', return_value=subprocess.CompletedProcess([], rc, content)), \
                      contextlib.redirect_stdout(io.StringIO()) as out:
                     self.assertEqual(view.status(node), 0)
