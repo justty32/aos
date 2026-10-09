@@ -1,4 +1,4 @@
-"""四道郵局學徒題：需求藏坑、真資料、壞候選與離線三關。"""
+"""四道郵局學徒題：需求藏坑、真資料、答案變動、壞候選與離線三關。"""
 import importlib.util
 import json
 from pathlib import Path
@@ -13,6 +13,17 @@ sys.path.insert(0, str(A / 'checkers'))
 import aos_three_gates as gates
 
 TASKS = ('mailcount', 'mailsent', 'mailopen', 'mailstatus')
+CHANGED = {
+    'mailcount': {'v': 1, 'people': {
+        'alice': {'letters': 5, 'requests': 2},
+        'bob': {'letters': 3, 'requests': 3},
+        'carol': {'letters': 4, 'requests': 2},
+        'dave': {'letters': 5, 'requests': 1},
+        'frank': {'letters': 0, 'requests': 0}}},
+    'mailsent': {'v': 1, 'senders': {'alice': 4, 'bob': 7, 'carol': 3, 'dave': 2, 'erin': 1}},
+    'mailopen': {'v': 1, 'open': ['bob-20261009T232446-de2a6e248217', 'variant-erin-request']},
+    'mailstatus': {'v': 1, 'statuses': {'BLOCKED': 2, 'DONE': 5, 'FAILED': 1, 'NEEDS-USER': 1, 'REQUEST': 8}},
+}
 
 
 def load_checker(folder):
@@ -131,7 +142,62 @@ class TestAuthorAosMail(unittest.TestCase):
             with self.subTest(name=name):
                 checker = load_checker(A / ('examples/aos-tool-' + name))
                 self.assertEqual(checker.MAIN, expected[name])
+                self.assertEqual(checker.reference(A / ('examples/aos-tool-' + name) / 'fixture'), checker.MAIN)
                 self.assertIs(type(checker.MAIN['v']), int)
+
+    def test_changed_fixture_answers(self):
+        for name in TASKS:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                folder = A / ('examples/aos-tool-' + name)
+                checker = load_checker(folder)
+                node = Path(tmp) / 'fixture'
+                shutil.copytree(folder / 'fixture', node)
+                checker.change_letters(node)
+                expected = checker.reference(node)
+                self.assertEqual(expected, CHANGED[name])
+                self.assertNotEqual(expected, checker.MAIN)
+                self.assertEqual(header(node / 'alice/inbox/variant-needs-user.md')['re'], checker.OPEN_ID)
+                failed = header(node / 'carol/inbox/done/variant-failed.md')
+                self.assertEqual(failed['status'], 'FAILED')
+                self.assertNotEqual(failed['re'], checker.OPEN_ID)
+                self.assertFalse(any((node / 'frank/inbox').iterdir()))
+                self.assertFalse((node / 'dave/inbox/20261009T2324-carol-PROGRESS.md').exists())
+
+    def test_fixed_main_rejected_at_changed_variant_without_expected_json(self):
+        for name in TASKS:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                folder = A / ('examples/aos-tool-' + name)
+                checker = load_checker(folder)
+                top = Path(tmp) / 'proto'
+                entry = top / ('packs/' + name + '/bin/aos7-' + name)
+                entry.parent.mkdir(parents=True)
+                # 完全不讀輸入，只印主樣本答案。
+                output = json.dumps(checker.MAIN, ensure_ascii=False)
+                entry.write_text('print(' + repr(output) + ')\n', encoding='utf-8')
+                node = Path(tmp) / 'fixture'
+                shutil.copytree(folder / 'fixture', node)
+                result = checker.check_answer(top, node)
+                self.assertIs(result['ok'], False)
+                self.assertTrue(result['issues'][0].startswith('增減：'), result)
+                changed_issues = [i for i in result['issues'] if i.startswith('增減：')]
+                self.assertEqual(len(changed_issues), 1, result)
+                self.assertEqual(changed_issues[0],
+                                 '增減：加減幾封信、加一個空信箱（答案會變，不能背主樣本）' +
+                                 '：答案不合：得到 ' + (output + '\n')[:300])
+                self.assertNotIn(json.dumps(CHANGED[name], ensure_ascii=False), changed_issues[0])
+                self.assertNotIn('；應為', changed_issues[0])
+
+    def test_checker_self_check_stops_before_candidate(self):
+        for name in TASKS:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                folder = A / ('examples/aos-tool-' + name)
+                checker = load_checker(folder)
+                node = Path(tmp) / 'fixture'
+                shutil.copytree(folder / 'fixture', node)
+                checker.change_letters(node)
+                # 故意沒有候選入口；應只回自檢失敗，不進入 subprocess。
+                self.assertEqual(checker.check_answer(Path(tmp) / 'missing', node),
+                                 {'ok': False, 'issues': ['檢查器自檢失敗']})
 
     def test_valid_answers_and_candidate_tests(self):
         for name in TASKS:

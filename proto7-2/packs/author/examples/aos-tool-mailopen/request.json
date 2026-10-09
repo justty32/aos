@@ -33,7 +33,7 @@
   "CLI：aos7-mailopen <郵局資料夾>；成功退 0，stdout 恰一行 JSON；資料夾不存在或是檔案退 2、stdout 空；不讀系統時鐘。",
   "唯讀：不得建立（__pycache__ 除外）、刪除或改動位元組、權限；自行解析，不匯入或呼叫 aos 寫入／復原／鎖定路徑。輸入可能唯讀；型別、大小、權限、mtime_ns 與內容須不變。",
   "郵局資料夾 R 是 aos mail 模組的資料：每個人一個信箱 R/<名字>/inbox/，信是裡面的 .md 檔。每封信開頭是信頭：第一行 `---`，到下一個獨立的 `---` 行為止，每行 `鍵: 值`（第一個 `: ` 前是鍵），欄位有 from、to、status、at、reply-to、id、re（re 可能是空的）。",
-  "輸出 {\"v\":1,\"open\":[\"<id>\",…]}；列還沒結案的 REQUEST 的 id，升冪；結案是郵局裡有任何一封信的 re 等於它的 id，且 status 是 DONE／BLOCKED／NEEDS-USER／FAILED；PROGRESS 不算。鍵集合要完全一樣，v 是整數 1。"
+  "輸出 {\"v\":1,\"open\":[\"<id>\",…]}；列還沒結案的 REQUEST 的 id，升冪；結案是所有人信箱裡有任何一封信的 re 等於它的 id，且 status 是 DONE／BLOCKED／NEEDS-USER／FAILED；PROGRESS 不算。鍵集合要完全一樣，v 是整數 1。"
  ],
  "deliver": "一份候選，REPORT 寫 report，末尾必有「以後交接書該點名的工具」。",
  "accept": [
