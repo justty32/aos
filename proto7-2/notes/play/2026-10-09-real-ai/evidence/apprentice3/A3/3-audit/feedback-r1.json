@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "rid": "auditA3",
+ "name": "mailtodo",
+ "job": "auditA3_c968471a",
+ "candidate_sha": "c968471a42cdc63e09fa083d1fa5016da4b838c087a03df14702b679656687ac",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ }
+}

@@ -1,0 +1,33 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA2",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A2/gotchas.md",
+ "added": [
+  "- 下次寫 aos 工具前，先測低年份時間：`strftime(\"%Y\")` 在 Linux 上可能把 `0001` 輸出成 `1`；`next` 必須保留四位年份。",
+  "- 下次解析無位數上限的整數欄位前，先處理 Python 3.11+ 的整數轉換與 JSON 序列化位數限制；合法長整數不能誤列為 bad_row。",
+  "- 下次交付前，先核對檔數與 bytes 限額；功能測試全過仍可能卡在 size gate。",
+  "- 下次驗收 runs 工具時，跑 `python3 proto7-2/tests/run_all.py packs/runs/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA2-chatgpt-gpt-6-sol-high-d1bcda3f",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 445,
+   "prompt_tokens": 3825,
+   "total_tokens": 4270,
+   "completion_tokens_details": {
+    "reasoning_tokens": 250
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 4270,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA2-chatgpt-gpt-6-sol-high-d1bcda3f/receipt.json"
+ }
+}

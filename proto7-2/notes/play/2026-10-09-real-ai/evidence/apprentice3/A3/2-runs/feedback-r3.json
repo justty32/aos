@@ -1,0 +1,31 @@
+{
+ "ok": false,
+ "rid": "runsA3",
+ "name": "runs",
+ "job": "runsA3_cef75bef",
+ "candidate_sha": "cef75bef8ee012c0f7906c9383b287f8453e6eba788ff815d81f3865a8e478c2",
+ "failed_gate": 3,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "review",
+     "why": [
+      "packs/runs/aos7_runs.py 的 routine() 先對 last_time 呼叫 astimezone(UTC)，仍會因中間運算越界而排除合法資料。例如 every=\"1h\"、last_time=\"0001-01-01T00:00:00+01:00\"、last_code=\"0\"，搭配 --now 2025-01-01T00:00:00+00:00，正確結果應為 state=\"overdue\"、next=\"0001-01-01T00:00:00Z\"；但目前在加上一小時前轉 UTC 即發生 OverflowError，被 summarize() 誤列為 bad_row，導致 routines 與 counts 錯誤。應避免中間時間越界影響可表示的最終結果，並補上年份下界回歸測試。"
+     ]
+    }
+   ]
+  }
+ },
+ "_rejected": true,
+ "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 routine() 先對 last_time 呼叫 astimezone(UTC)，仍會因中間運算越界…）。照 stdout JSON 的 gates 修正候選再跑"
+}

@@ -1,0 +1,109 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsA2-r2-1791543711",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 4734,
+   "prompt_tokens": 11774,
+   "total_tokens": 16508,
+   "completion_tokens_details": {
+    "reasoning_tokens": 147
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 16508,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsA2-r2-1791543711/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-runsA2-chatgpt-gpt-6-astra-high-b974c86a",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 618,
+    "prompt_tokens": 8414,
+    "total_tokens": 9032,
+    "completion_tokens_details": {
+     "reasoning_tokens": 436
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 9032,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-runsA2-chatgpt-gpt-6-astra-high-b974c86a/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A2/2-runs/review-rv-runsA2-chatgpt-gpt-6-astra-high-b974c86a.json"
+ },
+ "rid": "runsA2",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A2/2-runs/cand-r2.json",
+ "candidate_sha": "91fcef84c3139e35e6dcf8ed2249e79496efb321755c500e0170892bf0cf7701",
+ "job": "runsA2_91fcef84",
+ "rules_check": {
+  "ok": true,
+  "rid": "runsA2",
+  "name": "runs",
+  "job": "runsA2_91fcef84",
+  "candidate_sha": "91fcef84c3139e35e6dcf8ed2249e79496efb321755c500e0170892bf0cf7701",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "runsA2",
+  "name": "runs",
+  "job": "runsA2_91fcef84",
+  "candidate_sha": "91fcef84c3139e35e6dcf8ed2249e79496efb321755c500e0170892bf0cf7701",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "packs/runs/aos7_runs.py 的 summarize() 直接以 int(code) 解析 last_code；在 Python 3.11+ 預設的十進位轉換長度限制下，合法的 4301 位數整數字串會引發 ValueError，隨後被錯誤列為 bad_row 並排除。例如 name=\"x\"、every=\"1r\"、last_time=\"\"、last_code 為 4301 個 \"1\" 的列，依需求應保留、state=\"never\" 且 last_code 為整數。規格未限制整數位數；需要同時處理解析與 JSON 整數序列化的長度限制，並新增此案例的 CLI 回歸測試。"
+      ]
+     }
+    ]
+   }
+  },
+  "_rejected": true,
+  "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 summarize() 直接以 int(code) 解析 last_code；在 Python 3.1…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 summarize() 直接以 int(code) 解析 last_code；在 Python 3.1…）。照 stdout JSON 的 gates 修正候選再跑"
+}

@@ -1,0 +1,26 @@
+{
+ "ok": false,
+ "failed_gate": 1,
+ "gates": {
+  "1": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "json",
+     "why": "Extra data: line 1 column 15261 (char 15260)"
+    }
+   ]
+  },
+  "2": {
+   "ok": null
+  },
+  "3": {
+   "ok": null
+  }
+ },
+ "rid": "runsB1",
+ "name": "runs",
+ "candidate_sha": "7b1befd8207928c82357b9f5f84b05aef8395eea36e560a2f013dc7a9e061e93",
+ "job": "runsB1_7b1befd8",
+ "error": "Extra data: line 1 column 15261 (char 15260)。給需求與候選檔，例如 aos7-gates check request.json candidate.json"
+}

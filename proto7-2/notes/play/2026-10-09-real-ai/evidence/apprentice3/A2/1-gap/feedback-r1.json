@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "rid": "gapA2",
+ "name": "evgap",
+ "job": "gapA2_ac546d20",
+ "candidate_sha": "ac546d2066dc37e7868a5d63b95b41ebf45c0a19fddb027b71fdbefe32f8d172",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ }
+}

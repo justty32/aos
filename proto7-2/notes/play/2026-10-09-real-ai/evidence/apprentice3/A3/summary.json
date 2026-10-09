@@ -1,0 +1,218 @@
+{
+ "variant": "A",
+ "rep": 3,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 60,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA3",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12222,
+   "review_tokens": 7392,
+   "secs": 107.8,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12222,
+     "review_tokens": 7392,
+     "secs": 90.9,
+     "job": "gapA3_0fde27ef",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA3_0fde27ef",
+     "commit": "736765f16aae19ea4263309fe54003a1bc6d5266",
+     "dup": false,
+     "secs": 1.7
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫唯讀 aos 工具前，先隔離既有寫入、復原與鎖路徑；輸入目錄可能唯讀，檔案位元組、權限和時間戳都不能變。",
+     "- 解析 jsonl 要用 b'\\n' 切位元組：缺尾換行先判 torn；別用 splitlines 誤切 CR，也要拒絕 NaN、Infinity。",
+     "- Python 的 bool 是 int 子類；驗 seq、next_seq、acked_upto 要用 type(x) is int，不能靠 isinstance(x, int)。",
+     "- 壞紀錄不能進彙總；count 要包含重複紀錄，dup 列重複序號，unacked 則只數不同的有效序號。",
+     "- 狀態檔只讀必要欄位；整份無效才讓兩頻道狀態皆為 null，單頻道無效只影響自己，壞 state 只記一筆。",
+     "- CLI 要先守住錯路徑 exit 2 且 stdout 為空、成功恰一行 JSON；排序、null 和整數型別都是輸出契約。",
+     "- 驗收別只跑單元測試，還要做獨立唯讀核對：`python3 proto7-2/tests/run_all.py packs/evgap/tests`、`python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+    ],
+    "secs": 15.3,
+    "tokens": 3921,
+    "bytes_before": 793,
+    "bytes_after": 1831
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA3",
+   "passed": false,
+   "proposed": false,
+   "published": false,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 48037,
+   "review_tokens": 27397,
+   "secs": 278.5,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 13025,
+     "review_tokens": 8920,
+     "secs": 115.0,
+     "job": "runsA3_aef3024e",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 routine() 直接以 int(raw_code) 解析 last_code，受 Python 3.11+ 預設整數字串長度限制影響。例如 last_code 為 4301 個 ASCII 數字、every=\"1r\"、last_time=\"\" 的合法資料列，會因 ValueError 被排除並標記 bad_row；規格未限制 signed decimal integer string 的長度，此列應保留且 state=\"never\"。需處理合法長整數的解析與 JSON 輸出，並加入回歸測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 17317,
+     "review_tokens": 9344,
+     "secs": 87.3,
+     "job": "runsA3_982ff37a",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 routine() 先在原時區計算 stamp + timedelta，再轉 UTC，可能因本地日期溢位而將合法資料誤判為 bad_row。例如 --now=9999-12-31T22:00:00+00:00，資料為 {\"name\":\"edge\",\"every\":\"1s\",\"last_time\":\"9999-12-31T23:59:59+01:00\",\"last_code\":\"0\"}，正確結果應為 state=\"ok\"、next=\"9999-12-31T23:00:00Z\"；目前加法卻先跨入本地年份 10000，觸發 OverflowError，整列被排除。應避免這種中間運算溢位，例如先轉 UTC 再加秒數，並加入回歸測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 17695,
+     "review_tokens": 9133,
+     "secs": 64.1,
+     "job": "runsA3_cef75bef",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 routine() 先對 last_time 呼叫 astimezone(UTC)，仍會因中間運算越界而排除合法資料。例如 every=\"1h\"、last_time=\"0001-01-01T00:00:00+01:00\"、last_code=\"0\"，搭配 --now 2025-01-01T00:00:00+00:00，正確結果應為 state=\"overdue\"、next=\"0001-01-01T00:00:00Z\"；但目前在加上一小時前轉 UTC 即發生 OverflowError，被 summarize() 誤列為 bad_row，導致 routines 與 counts 錯誤。應避免中間時間越界影響可表示的最終結果，並補上年份下界回歸測試。"
+       ]
+      }
+     ]
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 工具前要知道：Python 3.11+ 的整數字串長度限制會讓合法的超長 last_code 在解析或輸出 JSON 時失敗；要測 4301 位數字仍能保留該列。",
+     "- 時區時間運算不能只看最終結果是否合法：先在原時區加秒數，或先轉 UTC，都可能在年份上下界溢位；要測中間越界、最終可表示的案例。",
+     "- 驗收 runs 工具要跑 `python3 proto7-2/tests/run_all.py packs/runs/tests` 和 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+    ],
+    "secs": 12.0,
+    "tokens": 4575,
+    "bytes_before": 1831,
+    "bytes_after": 2410
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA3",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 13710,
+   "review_tokens": 8390,
+   "secs": 158.3,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 13710,
+     "review_tokens": 8390,
+     "secs": 145.1,
+     "job": "auditA3_c968471a",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA3_c968471a",
+     "commit": "0963d40490985349f016aa96cc72f260c629e382",
+     "dup": false,
+     "secs": 3.4
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 工具前要先知道：只掃非點開頭信箱的 inbox/*.md 與 inbox/done/*.md；檔案也須是非點開頭、非符號連結的普通檔，不遞迴。",
+     "- 下次寫 aos 工具前要先知道：frontmatter 的界線必須是整行 ---，欄位只按第一個「: 」切開；值不去空白，重複鍵取最後一筆。",
+     "- 下次寫 aos 工具前要先知道：壞信件只記最先適用的原因，依序是 no_frontmatter、no_field、bad_name、dup_id；重複 id 由相對路徑字典序最前的有效信件取得。",
+     "- 下次寫 aos 工具前要先知道：REQUEST 是否未結案要跨所有有效信件查 re；只有 DONE、BLOCKED、NEEDS-USER、FAILED 能結案，PROGRESS 不能。",
+     "- 下次寫 aos 工具前要先知道：信箱即使沒有有效信件也要列入 boxes；done 計全部有效歸檔信件，inbox 只列實際出現的狀態。",
+     "- 下次寫 aos 工具前要先知道：資料裡無時區的 at 要套用 --now.tzinfo；分鐘差向下取整，未來時間可為負數，不能截成零。",
+     "- 下次寫 aos 工具前要先知道：驗收 mailtodo 除實質測試，還要跑 `python3 check_answer.py <proto7-2> fixture` 核對唯讀與固定答案；以後交接書該點名的工具。"
+    ],
+    "secs": 9.7,
+    "tokens": 4057,
+    "bytes_before": 2410,
+    "bytes_after": 3683
+   },
+   "order": 3
+  }
+ ]
+}

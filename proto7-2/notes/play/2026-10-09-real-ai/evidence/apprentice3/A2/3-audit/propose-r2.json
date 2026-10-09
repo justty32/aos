@@ -1,0 +1,87 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "auditA2-r2-1791543965",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5594,
+   "prompt_tokens": 11461,
+   "total_tokens": 17055,
+   "completion_tokens_details": {
+    "reasoning_tokens": 1133
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 17055,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/auditA2-r2-1791543965/receipt.json"
+ },
+ "review": null,
+ "rid": "auditA2",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A2/3-audit/cand-r2.json",
+ "candidate_sha": "0c217c63662f5cfcec0f7ecb16749f43fbeba80199c0825491229fe72ab9c718",
+ "job": "auditA2_0c217c63",
+ "rules_check": {
+  "ok": false,
+  "rid": "auditA2",
+  "name": "mailtodo",
+  "job": "auditA2_0c217c63",
+  "candidate_sha": "0c217c63662f5cfcec0f7ecb16749f43fbeba80199c0825491229fe72ab9c718",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "檔數或 bytes 超標"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "check": {
+  "ok": false,
+  "rid": "auditA2",
+  "name": "mailtodo",
+  "job": "auditA2_0c217c63",
+  "candidate_sha": "0c217c63662f5cfcec0f7ecb16749f43fbeba80199c0825491229fe72ab9c718",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "檔數或 bytes 超標"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+}

@@ -1,0 +1,238 @@
+{
+ "variant": "B",
+ "rep": 2,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 64,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB2",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 28946,
+   "review_tokens": 7473,
+   "secs": 167.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 13406,
+     "review_tokens": null,
+     "secs": 98.9,
+     "job": "gapB2_9ca10a5c",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n        {\"file\": \"obs.active.jsonl\", \"line\": number, \"why\": why}\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<2 lines>...\n        ) if number != 8\n        ^^^^^^^^^^^^^^^^\n    ])\n    ^^\nAssertionError: Lists differ: [{'fi[398 chars]json'}, {'file': 'obs.active.jsonl', 'line': 9, 'why': 'torn'}] != [{'fi[398 chars]json'}]\n\nFirst list contains 1 additional elements.\nFirst extra element 7:\n{'file': 'obs.active.jsonl', 'line': 9, 'why': 'torn'}\n\nDiff is 681 characters long. Set self.maxDiff to None to see it.\n\n----------------------------------------------------------------------\nRan 4 tests in 0.114s\n\nFAILED (failures=1)"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 15540,
+     "review_tokens": 7473,
+     "secs": 66.8,
+     "job": "gapB2_2ed7db28",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapB2_2ed7db28",
+     "commit": "46548a14e3b1198d707c33142bac3fbef34f1295",
+     "dup": false,
+     "secs": 1.5
+    }
+   ],
+   "learn": null,
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsB2",
+   "passed": false,
+   "proposed": false,
+   "published": false,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 47821,
+   "review_tokens": 18342,
+   "secs": 323.3,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 12294,
+     "review_tokens": 8714,
+     "secs": 124.9,
+     "job": "runsB2_00f10226",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 routine() 直接以 int(raw_code) 解析符合正規表示式的 last_code，會受 Python 3.11+ 預設的 4300 位十進位轉換限制影響。例如合法列 {\"name\":\"x\",\"every\":\"1r\",\"last_time\":\"\",\"last_code\":\"<4301 個連續的 0>\"} 應輸出 last_code=0、state=\"never\"，目前卻因 ValueError 被排除並記為 bad_row。需求未限制整數字串長度；需支援合法長整數字串並加入回歸測試，不能把執行環境的轉換限制當成資料無效。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 17113,
+     "review_tokens": 9628,
+     "secs": 111.5,
+     "job": "runsB2_60fd8b8b",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 read_table 使用 json.load 預設整數解析。在 Python 預設十進位轉換上限下，若某列的非字串值是 4301 位 JSON 整數，會拋出 ValueError，整表被判為 bad_table，連其他合法列也被丟棄。這是合法 JSON、但列值型別不符，依需求只能將該列列為 bad_row；應避免 JSON 整數解析上限改變表／列錯誤分類，並新增混合合法列的回歸測試。",
+        "packs/runs/aos7_runs.py 的 routine 先在原時區計算 stamp + timedelta，再轉 UTC，會把可正確輸出的合法列誤判為 bad_row。例如 last_time='9999-12-31T23:59:59+01:00'、every='1s'、last_code='0'、--now='9999-12-31T22:59:59Z'，預期 state='ok'、next='9999-12-31T23:00:00Z'；目前原時區加秒超出 datetime 年份上限而被排除。應避免中間時區運算溢位導致合法結果遺失，並補上邊界測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 18414,
+     "review_tokens": null,
+     "secs": 86.9,
+     "job": "runsB2_e045769b",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "檔數或 bytes 超標"
+      }
+     ]
+    }
+   ],
+   "learn": null,
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditB2",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 43817,
+   "review_tokens": 16805,
+   "secs": 270.1,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 12016,
+     "review_tokens": null,
+     "secs": 84.7,
+     "job": "auditB2_0071fd36",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Lists differ: [{'id[61 chars]in': 60}, {'id': 'a', 'from': 'alice', 'to': '[110 chars] -1}] != [{'id[61 chars]in': 57}, {'id': 'a', 'from': 'alice', 'to': '[110 chars] -1}]\n\nFirst differing element 0:\n{'id': 'd', 'from': 'alice', 'to': 'amy', 'where': 'done', 'age_min': 60}\n{'id': 'd', 'from': 'alice', 'to': 'amy', 'where': 'done', 'age_min': 57}\n\n- [{'age_min': 60, 'from': 'alice', 'id': 'd', 'to': 'amy', 'where': 'done'},\n?              ^^\n\n+ [{'age_min': 57, 'from': 'alice', 'id': 'd', 'to': 'amy', 'where': 'done'},\n?              ^^\n\n   {'age_min': 60, 'from': 'alice', 'id': 'a', 'to': 'bob', 'where': 'inbox'},\n   {'age_min': -1, 'from': 'alice', 'id': 'b', 'to': 'zed', 'where': 'inbox'}]\n\n----------------------------------------------------------------------\nRan 3 tests in 0.200s\n\nFAILED (failures=1)"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 16190,
+     "review_tokens": 8079,
+     "secs": 94.0,
+     "job": "auditB2_b13d297f",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把 U+2028、垂直定位字元等也視為換行，違反 frontmatter 欄位值必須保持不變的要求。例如單一實體行 `at: 2026-10-10 00:00:00+08:00` 的時間可由 datetime.fromisoformat 解析，卻會被此實作拆開並誤判為 no_field；from/to/id 中的同類字元也會導致值被截斷，甚至把值的一部分當成新欄位或結束分隔符。應僅按檔案換行切分，保留值內其他字元，並補上回歸測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 15611,
+     "review_tokens": 8726,
+     "secs": 84.9,
+     "job": "auditB2_b8edb8fc",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditB2_b8edb8fc",
+     "commit": "1f15b0ffabba259d4bc815f9f14eb8ac0d3b3554",
+     "dup": false,
+     "secs": 6.5
+    }
+   ],
+   "learn": null,
+   "order": 3
+  }
+ ]
+}

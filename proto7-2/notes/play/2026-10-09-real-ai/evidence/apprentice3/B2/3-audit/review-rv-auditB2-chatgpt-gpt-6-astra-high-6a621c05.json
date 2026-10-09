@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把 U+2028、垂直定位字元等也視為換行，違反 frontmatter 欄位值必須保持不變的要求。例如單一實體行 `at: 2026-10-10\u202800:00:00+08:00` 的時間可由 datetime.fromisoformat 解析，卻會被此實作拆開並誤判為 no_field；from/to/id 中的同類字元也會導致值被截斷，甚至把值的一部分當成新欄位或結束分隔符。應僅按檔案換行切分，保留值內其他字元，並補上回歸測試。"]}

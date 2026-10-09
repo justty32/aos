@@ -1,0 +1,31 @@
+{
+ "ok": false,
+ "rid": "auditB1",
+ "name": "mailtodo",
+ "job": "auditB1_76ba33b7",
+ "candidate_sha": "76ba33b7d9bb192a617fa9a0cfab256fdf629a44034c5877d93d72dd674da465",
+ "failed_gate": 3,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "review",
+     "why": [
+      "packs/mailtodo/aos7_mailtodo.py 的 frontmatter() 使用 str.splitlines()，會把換頁字元（\\f）、垂直定位字元（\\v）與 U+2028 等也當成換行，違反 frontmatter 值必須原樣保留的要求。例如實體行「id: a<換頁字元>b」應保留完整 id，實作卻得到「a」，導致錯誤的 open、dup_id 或回覆解析；同樣也可能將行內的 --- 誤認為結束分隔行。應只按檔案換行切分，保留值內其他字元，並補上對應測試。"
+     ]
+    }
+   ]
+  }
+ },
+ "_rejected": true,
+ "error": "第 3 關沒過（review：['packs/mailtodo/aos7_mailtodo.py 的 frontmatter() 使用 str.splitlines()，會把換頁字元（\\\\…）。照 stdout JSON 的 gates 修正候選再跑"
+}

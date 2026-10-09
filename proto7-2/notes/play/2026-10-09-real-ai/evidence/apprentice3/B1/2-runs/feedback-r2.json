@@ -1,0 +1,32 @@
+{
+ "ok": false,
+ "rid": "runsB1",
+ "name": "runs",
+ "job": "runsB1_9aaa761f",
+ "candidate_sha": "9aaa761fdb06685e27607ee20bf4fcbe87821e6c6c72838ee6bac4c224eb152c",
+ "failed_gate": 3,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "review",
+     "why": [
+      "packs/runs/aos7_runs.py 的 routine() 在原時區先做 last + timedelta，可能把合法列誤判為 bad_row。例如 --now=9999-12-31T21:00:00Z、last_time=9999-12-31T23:59:59+02:00、every=1s、last_code=0，正確結果應為 state=ok、next=9999-12-31T22:00:00Z；目前本地時間加法會溢位，summarize() 因而排除該列。應避免在 UTC 結果仍可表示時因本地時間溢位而拒絕資料，並補上測試。",
+      "packs/runs/aos7_runs.py 對 last_code 直接使用 int(raw_code)，未處理 Python 3.11+ 預設的十進位轉換長度限制。規格未限制 signed decimal integer string 的位數，但合法的 4301 位數代碼會觸發 ValueError，被誤列為 bad_row；大型整數的 JSON 輸出也受同一限制。需讓解析及輸出符合規格，而非把合法整數當成壞列。"
+     ]
+    }
+   ]
+  }
+ },
+ "_rejected": true,
+ "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 routine() 在原時區先做 last + timedelta，可能把合法列誤判為 bad_row…）。照 stdout JSON 的 gates 修正候選再跑"
+}

@@ -1,0 +1,194 @@
+{
+ "variant": "B",
+ "rep": 3,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 74,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB3",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 14798,
+   "review_tokens": 7615,
+   "secs": 154.8,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 14798,
+     "review_tokens": 7615,
+     "secs": 153.1,
+     "job": "gapB3_d076bc7b",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapB3_d076bc7b",
+     "commit": "2f46792b76c1d37ac3f3522a6ed65450cec48caa",
+     "dup": false,
+     "secs": 1.8
+    }
+   ],
+   "learn": null,
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsB3",
+   "passed": false,
+   "proposed": false,
+   "published": false,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 46601,
+   "review_tokens": 18404,
+   "secs": 287.2,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 12234,
+     "review_tokens": 8909,
+     "secs": 115.5,
+     "job": "runsB3_d8062229",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 routine() 用 strftime(\"%Y-%m-%dT%H:%M:%SZ\") 產生 next；在 Linux 上，%Y 不保證將小於 1000 的年份補足四位。例如 every=\"1s\"、last_time=\"0001-01-01T00:00:00Z\"、last_code=\"0\" 是有效資料，卻會輸出 \"1-01-01T00:00:01Z\"，違反要求的 \"0001-01-01T00:00:01Z\"。應明確將年份補足四位，並新增測試。",
+        "packs/runs/aos7_runs.py 直接以 int(raw_code) 解析 last_code；在 Python 3.11 以上的預設整數字串長度限制下，超過 4300 位的合法十進位整數字串會引發 ValueError，進而被排除為 bad_row。需求沒有設定整數字串長度上限，因此此處會錯誤排除有效資料；需同時確保解析及 JSON 輸出支援這類整數，並補測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 17218,
+     "review_tokens": null,
+     "secs": 71.1,
+     "job": "runsB3_3a61fb7d",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "檔數或 bytes 超標"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 17149,
+     "review_tokens": 9495,
+     "secs": 100.6,
+     "job": "runsB3_faa8ff10",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 main 使用 ensure_ascii=False 後直接 print，會讓符合資料列契約的字串造成整個 CLI 失敗。例如 schedule 的有效資料列 {\"name\":\"\\ud800\",\"at\":\"2025-01-01T00:00:00Z\",\"claimed\":\"\"}：JSON 解碼後 name 是非空字串，應納入彙總，但在一般 UTF-8 stdout 下輸出會觸發 UnicodeEncodeError，退出碼不是 0，也沒有完整的一行 JSON。應使用 ensure_ascii=True 或等效的安全 JSON 跳脫，並新增透過 CLI 驗證此輸入的測試。"
+       ]
+      }
+     ]
+    }
+   ],
+   "learn": null,
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditB3",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 30337,
+   "review_tokens": 8757,
+   "secs": 219.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 14097,
+     "review_tokens": null,
+     "secs": 122.3,
+     "job": "auditB3_379efe05",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "FAIL: test_summary_counts_resolution_order_and_ignored_paths (test_mailtodo.MailtodoTests.test_summary_counts_resolution_order_and_ignored_paths)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/aos-three-hbg_wkk7/proto7-2/packs/mailtodo/tests/test_mailtodo.py\", line 65, in test_summary_counts_resolution_order_and_ignored_paths\n    self.assertEqual(json.loads(result.stdout), {\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        \"v\": 1,\n        ^^^^^^^\n    ...<14 lines>...\n        ]\n        ^\n    })\n    ^^\nAssertionError: {'v':[47 chars]o': 't', 'where': 'inbox', 'age_min': 60}, {'i[471 chars]r'}]} != {'v':[47 chars]o': 'a', 'where': 'done', 'age_min': 50}, {'id[466 chars]r'}]}\nDiff is 1691 characters long. Set self.maxDiff to None to see it.\n\n----------------------------------------------------------------------\nRan 5 tests in 0.257s\n\nFAILED (failures=1)"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 16240,
+     "review_tokens": 8757,
+     "secs": 93.8,
+     "job": "auditB3_f6591349",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditB3_f6591349",
+     "commit": "6904c31339a1e67e91d47dcc7c7603a5243b56ce",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": null,
+   "order": 3
+  }
+ ]
+}

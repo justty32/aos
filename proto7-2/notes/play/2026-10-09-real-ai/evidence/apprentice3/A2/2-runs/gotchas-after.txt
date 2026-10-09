@@ -1,0 +1,35 @@
+# 共通踩坑（跨工作流）
+
+[common/README](README.md)
+
+不專屬任一工作流的坑記 / 查這裡；工作流專屬的坑記在該工作流自己的 `gotchas.md`（長出來後在下表加一列導流）。
+
+**何時用**：使用者說「記個踩坑」「上次也是這樣」；或動手前要查這個現象以前撞過沒。
+**何時不用**：坑專屬某個工作流、而那個工作流已有自己的 `gotchas.md` → 記在那裡；**只撞過一次**的意外 → 不記（門檻是第二次撞到）。
+
+## Done when
+
+- 下表對應的檔多一條坑（粗體標題＋一兩句現象與對策），或查到既有條目並照它處理。
+
+## 哪類坑記哪裡
+
+| 坑的性質 | 記 / 查這裡 |
+|---------|------------|
+| 共通坑 | **本檔** |
+
+---
+
+（目前無）
+
+## gapA2（chatgpt-gpt-6-sol-high）
+- 寫唯讀 aos 工具前，先劃清輸入邊界：只讀指定檔案，不匯入既有寫入、復原或鎖定路徑，也不改 node 的位元組、權限與時間。
+- 解析 JSONL 要以位元組 `b'\n'` 切行；缺結尾換行先判 torn，不能用 `splitlines()` 把合法的內部 CR 當成換行。
+- 驗證 `seq` 和 state 整數時要排除 bool；壞 JSON 整筆不彙總，壞 state 則按整份或單一 channel 的範圍設 null。
+- 彙總前先固定檔名篩選與排序規則；重複 seq 要計入 count，但 must.unacked 只計相異的有效 seq。
+- 驗收不能只看輸出：還要核對退出碼、空 stdout、fixture 的位元組與權限；`python3 proto7-2/tests/run_all.py packs/evgap/tests` 和 `python3 check_answer.py <proto7-2> fixture` 是以後交接書該點名的工具
+
+## runsA2（chatgpt-gpt-6-sol-high）
+- 下次寫 aos 工具前，先測低年份時間：`strftime("%Y")` 在 Linux 上可能把 `0001` 輸出成 `1`；`next` 必須保留四位年份。
+- 下次解析無位數上限的整數欄位前，先處理 Python 3.11+ 的整數轉換與 JSON 序列化位數限制；合法長整數不能誤列為 bad_row。
+- 下次交付前，先核對檔數與 bytes 限額；功能測試全過仍可能卡在 size gate。
+- 下次驗收 runs 工具時，跑 `python3 proto7-2/tests/run_all.py packs/runs/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具

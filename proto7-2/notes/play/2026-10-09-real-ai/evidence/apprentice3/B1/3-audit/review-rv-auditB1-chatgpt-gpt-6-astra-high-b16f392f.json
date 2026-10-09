@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["packs/mailtodo/aos7_mailtodo.py 的 frontmatter() 使用 str.splitlines()，會把換頁字元（\\f）、垂直定位字元（\\v）與 U+2028 等也當成換行，違反 frontmatter 值必須原樣保留的要求。例如實體行「id: a<換頁字元>b」應保留完整 id，實作卻得到「a」，導致錯誤的 open、dup_id 或回覆解析；同樣也可能將行內的 --- 誤認為結束分隔行。應只按檔案換行切分，保留值內其他字元，並補上對應測試。"]}

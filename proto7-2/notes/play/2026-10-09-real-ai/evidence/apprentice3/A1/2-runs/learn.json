@@ -1,0 +1,31 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA1",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A1/gotchas.md",
+ "added": [
+  "- 下次寫 aos 工具前，先核對交付範圍與大小限制：這題只准動 `packs/runs/` 和 `INDEX.md` 一列，總檔數不得超過 12；前三次都卡在檔數或 bytes 超標。",
+  "- 大小 gate 沒過時，先精簡候選交付內容，不要只重查功能或唯讀行為；以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA1-chatgpt-gpt-6-sol-high-2839438e",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 363,
+   "prompt_tokens": 3566,
+   "total_tokens": 3929,
+   "completion_tokens_details": {
+    "reasoning_tokens": 253
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 3929,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA1-chatgpt-gpt-6-sol-high-2839438e/receipt.json"
+ }
+}

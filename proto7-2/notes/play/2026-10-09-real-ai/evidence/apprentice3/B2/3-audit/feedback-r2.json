@@ -1,0 +1,31 @@
+{
+ "ok": false,
+ "rid": "auditB2",
+ "name": "mailtodo",
+ "job": "auditB2_b13d297f",
+ "candidate_sha": "b13d297f2bc30f5fd538f08708fac3c663ca39e4a61933ac069f7d7c9736265d",
+ "failed_gate": 3,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "review",
+     "why": [
+      "packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把 U+2028、垂直定位字元等也視為換行，違反 frontmatter 欄位值必須保持不變的要求。例如單一實體行 `at: 2026-10-10 00:00:00+08:00` 的時間可由 datetime.fromisoformat 解析，卻會被此實作拆開並誤判為 no_field；from/to/id 中的同類字元也會導致值被截斷，甚至把值的一部分當成新欄位或結束分隔符。應僅按檔案換行切分，保留值內其他字元，並補上回歸測試。"
+     ]
+    }
+   ]
+  }
+ },
+ "_rejected": true,
+ "error": "第 3 關沒過（review：['packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把 U+2028、垂…）。照 stdout JSON 的 gates 修正候選再跑"
+}

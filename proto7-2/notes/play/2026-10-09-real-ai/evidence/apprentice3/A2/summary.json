@@ -1,0 +1,255 @@
+{
+ "variant": "A",
+ "rep": 2,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 62,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapA2",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12513,
+   "review_tokens": 6867,
+   "secs": 108.6,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12513,
+     "review_tokens": 6867,
+     "secs": 98.3,
+     "job": "gapA2_ac546d20",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapA2_ac546d20",
+     "commit": "cbe574925dbb23356a50004fdd3bf73c6afa4428",
+     "dup": false,
+     "secs": 1.7
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 寫唯讀 aos 工具前，先劃清輸入邊界：只讀指定檔案，不匯入既有寫入、復原或鎖定路徑，也不改 node 的位元組、權限與時間。",
+     "- 解析 JSONL 要以位元組 `b'\\n'` 切行；缺結尾換行先判 torn，不能用 `splitlines()` 把合法的內部 CR 當成換行。",
+     "- 驗證 `seq` 和 state 整數時要排除 bool；壞 JSON 整筆不彙總，壞 state 則按整份或單一 channel 的範圍設 null。",
+     "- 彙總前先固定檔名篩選與排序規則；重複 seq 要計入 count，但 must.unacked 只計相異的有效 seq。",
+     "- 驗收不能只看輸出：還要核對退出碼、空 stdout、fixture 的位元組與權限；`python3 proto7-2/tests/run_all.py packs/evgap/tests` 和 `python3 check_answer.py <proto7-2> fixture` 是以後交接書該點名的工具"
+    ],
+    "secs": 8.6,
+    "tokens": 3434,
+    "bytes_before": 793,
+    "bytes_after": 1643
+   },
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsA2",
+   "passed": false,
+   "proposed": false,
+   "published": false,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 47065,
+   "review_tokens": 17551,
+   "secs": 259.4,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 12782,
+     "review_tokens": 8519,
+     "secs": 112.0,
+     "job": "runsA2_56b928de",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 使用 strftime(\"%Y-%m-%dT%H:%M:%SZ\") 產生 next，但 %Y 在 Linux 上不保證將小於 1000 的年份補滿四位。例如合法列 every=\"1s\"、last_time=\"0001-01-01T00:00:00+00:00\"、last_code=\"0\" 會輸出 next=\"1-01-01T00:00:01Z\"，而規格要求 \"0001-01-01T00:00:01Z\"。應使用保證四位年份的格式化方式，並新增低年份測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 16508,
+     "review_tokens": 9032,
+     "secs": 79.9,
+     "job": "runsA2_91fcef84",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 summarize() 直接以 int(code) 解析 last_code；在 Python 3.11+ 預設的十進位轉換長度限制下，合法的 4301 位數整數字串會引發 ValueError，隨後被錯誤列為 bad_row 並排除。例如 name=\"x\"、every=\"1r\"、last_time=\"\"、last_code 為 4301 個 \"1\" 的列，依需求應保留、state=\"never\" 且 last_code 為整數。規格未限制整數位數；需要同時處理解析與 JSON 整數序列化的長度限制，並新增此案例的 CLI 回歸測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 17775,
+     "review_tokens": null,
+     "secs": 59.1,
+     "job": "runsA2_cc8973b1",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "檔數或 bytes 超標"
+      }
+     ]
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 工具前，先測低年份時間：`strftime(\"%Y\")` 在 Linux 上可能把 `0001` 輸出成 `1`；`next` 必須保留四位年份。",
+     "- 下次解析無位數上限的整數欄位前，先處理 Python 3.11+ 的整數轉換與 JSON 序列化位數限制；合法長整數不能誤列為 bad_row。",
+     "- 下次交付前，先核對檔數與 bytes 限額；功能測試全過仍可能卡在 size gate。",
+     "- 下次驗收 runs 工具時，跑 `python3 proto7-2/tests/run_all.py packs/runs/tests` 與 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+    ],
+    "secs": 8.3,
+    "tokens": 4270,
+    "bytes_before": 1643,
+    "bytes_after": 2270
+   },
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditA2",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 45927,
+   "review_tokens": 16047,
+   "secs": 257.3,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 12733,
+     "review_tokens": 8037,
+     "secs": 106.2,
+     "job": "auditA2_d4aff613",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把值中的垂直定位字元（\\u000b）、換頁字元等也視為換行，違反 frontmatter value 必須原樣保留的要求。例如有效信件的一行為「to: receiver\\u000bother」，其 to 應保留完整的「receiver\\u000bother」，目前卻變成「receiver」，導致 open 的內容及排序錯誤。應只按實際檔案換行切分，並加入保留這類值的測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "size"
+     ],
+     "tokens": 17055,
+     "review_tokens": null,
+     "secs": 66.5,
+     "job": "auditA2_0c217c63",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "size",
+       "why": "檔數或 bytes 超標"
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 16139,
+     "review_tokens": 8010,
+     "secs": 73.4,
+     "job": "auditA2_c8f5bd7c",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditA2_c8f5bd7c",
+     "commit": "b78af842e98753cf87eacd770044d68e26b75b9c",
+     "dup": false,
+     "secs": 3.4
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "added": [
+     "- 下次寫 aos 工具前，解析 frontmatter 只能按檔案實際換行切分；`str.splitlines()` 會把值中的 `\\u000b`、換頁字元拆成新行，破壞原值及排序，測試要涵蓋這兩種字元。",
+     "- 下次寫信件彙總前，先按輸入相對路徑排序，再依 no_frontmatter、no_field、bad_name、dup_id 的順序判錯；只有第一封有效且未重複的 id 能進入彙總。",
+     "- 下次判定 REQUEST 是否未完成前，要查所有有效信件的 `re`，不能只查同一信箱；PROGRESS 不算解決，空白以外的 `re` 值也不能自行修剪。"
+    ],
+    "secs": 7.8,
+    "tokens": 4040,
+    "bytes_before": 2270,
+    "bytes_after": 2895
+   },
+   "order": 3
+  }
+ ]
+}

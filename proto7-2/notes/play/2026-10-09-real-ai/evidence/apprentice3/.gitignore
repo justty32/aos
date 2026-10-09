@@ -1,0 +1,6 @@
+# drive3 每題複製的題目（可由 packs/author/examples 重建）與暫存，不進 git
+*/*/req/
+valid-cand.json
+*.snapshot.json
+*.lock
+__pycache__/

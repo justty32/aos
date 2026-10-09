@@ -1,0 +1,109 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsA3-r2-1791543713",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5374,
+   "prompt_tokens": 11943,
+   "total_tokens": 17317,
+   "completion_tokens_details": {
+    "reasoning_tokens": 599
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 17317,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsA3-r2-1791543713/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-runsA3-chatgpt-gpt-6-astra-high-5d0949c3",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 611,
+    "prompt_tokens": 8733,
+    "total_tokens": 9344,
+    "completion_tokens_details": {
+     "reasoning_tokens": 406
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 9344,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-runsA3-chatgpt-gpt-6-astra-high-5d0949c3/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A3/2-runs/review-rv-runsA3-chatgpt-gpt-6-astra-high-5d0949c3.json"
+ },
+ "rid": "runsA3",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A3/2-runs/cand-r2.json",
+ "candidate_sha": "982ff37a0183c4a7c33b5d66a78bf52d46d8fa7ad319f356aec249f4e3e90d15",
+ "job": "runsA3_982ff37a",
+ "rules_check": {
+  "ok": true,
+  "rid": "runsA3",
+  "name": "runs",
+  "job": "runsA3_982ff37a",
+  "candidate_sha": "982ff37a0183c4a7c33b5d66a78bf52d46d8fa7ad319f356aec249f4e3e90d15",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "runsA3",
+  "name": "runs",
+  "job": "runsA3_982ff37a",
+  "candidate_sha": "982ff37a0183c4a7c33b5d66a78bf52d46d8fa7ad319f356aec249f4e3e90d15",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "packs/runs/aos7_runs.py 的 routine() 先在原時區計算 stamp + timedelta，再轉 UTC，可能因本地日期溢位而將合法資料誤判為 bad_row。例如 --now=9999-12-31T22:00:00+00:00，資料為 {\"name\":\"edge\",\"every\":\"1s\",\"last_time\":\"9999-12-31T23:59:59+01:00\",\"last_code\":\"0\"}，正確結果應為 state=\"ok\"、next=\"9999-12-31T23:00:00Z\"；目前加法卻先跨入本地年份 10000，觸發 OverflowError，整列被排除。應避免這種中間運算溢位，例如先轉 UTC 再加秒數，並加入回歸測試。"
+      ]
+     }
+    ]
+   }
+  },
+  "_rejected": true,
+  "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 routine() 先在原時區計算 stamp + timedelta，再轉 UTC，可能因本地日期溢…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 routine() 先在原時區計算 stamp + timedelta，再轉 UTC，可能因本地日期溢…）。照 stdout JSON 的 gates 修正候選再跑"
+}

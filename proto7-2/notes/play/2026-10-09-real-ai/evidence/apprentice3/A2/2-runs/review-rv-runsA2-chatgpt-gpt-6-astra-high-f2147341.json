@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["packs/runs/aos7_runs.py 使用 strftime(\"%Y-%m-%dT%H:%M:%SZ\") 產生 next，但 %Y 在 Linux 上不保證將小於 1000 的年份補滿四位。例如合法列 every=\"1s\"、last_time=\"0001-01-01T00:00:00+00:00\"、last_code=\"0\" 會輸出 next=\"1-01-01T00:00:01Z\"，而規格要求 \"0001-01-01T00:00:01Z\"。應使用保證四位年份的格式化方式，並新增低年份測試。"]}

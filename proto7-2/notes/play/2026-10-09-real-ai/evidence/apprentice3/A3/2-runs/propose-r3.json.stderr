@@ -1,0 +1,1 @@
+aos7-author: 候選沒過：第 3 關沒過（review：['packs/runs/aos7_runs.py 的 routine() 先對 last_time 呼叫 astimezone(UTC)，仍會因中間運算越界…）。照 stdout JSON 的 gates 修正候選再跑。照 stdout JSON 的 issues／gates 改候選，再 propose 一次

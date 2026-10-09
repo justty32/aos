@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "gapA1",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A1/gotchas.md",
+ "added": [
+  "- 下次寫唯讀 aos 工具前，先把輸入目錄視為可能唯讀；不得呼叫既有寫入、復原或鎖定流程，也不要為了「修好」資料改動 node。",
+  "- 解析 jsonl 要按位元組以 `b'\\n'` 切行：末行沒有換行先判 torn；不要用 `splitlines()`，它會把合法的行內 CR 當分隔。",
+  "- 驗證 `seq`、`next_seq`、`acked_upto` 時要排除 bool；Python 的 `bool` 是 `int` 子類，直接用 `isinstance(x, int)` 會誤收。",
+  "- state 壞掉與單一 channel 壞掉的影響範圍不同；先分層驗證，避免把另一個有效 channel 的三個 state 欄位也清成 null。",
+  "- 彙總前先排除壞行；`count` 包含重複紀錄，`unacked` 則只算不同 seq，兩者不能共用同一個計數結果。",
+  "- 驗收要分別跑實質測試 `python3 proto7-2/tests/run_all.py packs/evgap/tests` 與唯讀核對 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-gapA1-chatgpt-gpt-6-sol-high-3f1ccb8f",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 609,
+   "prompt_tokens": 2967,
+   "total_tokens": 3576,
+   "completion_tokens_details": {
+    "reasoning_tokens": 298
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 3576,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-gapA1-chatgpt-gpt-6-sol-high-3f1ccb8f/receipt.json"
+ }
+}

@@ -1,0 +1,109 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "auditB2-r2-1791544066",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5715,
+   "prompt_tokens": 10475,
+   "total_tokens": 16190,
+   "completion_tokens_details": {
+    "reasoning_tokens": 1604
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 16190,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/auditB2-r2-1791544066/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-auditB2-chatgpt-gpt-6-astra-high-6a621c05",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 430,
+    "prompt_tokens": 7649,
+    "total_tokens": 8079,
+    "completion_tokens_details": {
+     "reasoning_tokens": 238
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 8079,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-auditB2-chatgpt-gpt-6-astra-high-6a621c05/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/B2/3-audit/review-rv-auditB2-chatgpt-gpt-6-astra-high-6a621c05.json"
+ },
+ "rid": "auditB2",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/B2/3-audit/cand-r2.json",
+ "candidate_sha": "b13d297f2bc30f5fd538f08708fac3c663ca39e4a61933ac069f7d7c9736265d",
+ "job": "auditB2_b13d297f",
+ "rules_check": {
+  "ok": true,
+  "rid": "auditB2",
+  "name": "mailtodo",
+  "job": "auditB2_b13d297f",
+  "candidate_sha": "b13d297f2bc30f5fd538f08708fac3c663ca39e4a61933ac069f7d7c9736265d",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "auditB2",
+  "name": "mailtodo",
+  "job": "auditB2_b13d297f",
+  "candidate_sha": "b13d297f2bc30f5fd538f08708fac3c663ca39e4a61933ac069f7d7c9736265d",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把 U+2028、垂直定位字元等也視為換行，違反 frontmatter 欄位值必須保持不變的要求。例如單一實體行 `at: 2026-10-10 00:00:00+08:00` 的時間可由 datetime.fromisoformat 解析，卻會被此實作拆開並誤判為 no_field；from/to/id 中的同類字元也會導致值被截斷，甚至把值的一部分當成新欄位或結束分隔符。應僅按檔案換行切分，保留值內其他字元，並補上回歸測試。"
+      ]
+     }
+    ]
+   }
+  },
+  "_rejected": true,
+  "error": "第 3 關沒過（review：['packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把 U+2028、垂…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 3 關沒過（review：['packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把 U+2028、垂…）。照 stdout JSON 的 gates 修正候選再跑"
+}

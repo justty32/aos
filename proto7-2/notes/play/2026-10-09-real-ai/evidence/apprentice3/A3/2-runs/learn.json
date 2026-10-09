@@ -1,0 +1,32 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "runsA3",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A3/gotchas.md",
+ "added": [
+  "- 下次寫 aos 工具前要知道：Python 3.11+ 的整數字串長度限制會讓合法的超長 last_code 在解析或輸出 JSON 時失敗；要測 4301 位數字仍能保留該列。",
+  "- 時區時間運算不能只看最終結果是否合法：先在原時區加秒數，或先轉 UTC，都可能在年份上下界溢位；要測中間越界、最終可表示的案例。",
+  "- 驗收 runs 工具要跑 `python3 proto7-2/tests/run_all.py packs/runs/tests` 和 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-runsA3-chatgpt-gpt-6-sol-high-0f520e54",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 499,
+   "prompt_tokens": 4076,
+   "total_tokens": 4575,
+   "completion_tokens_details": {
+    "reasoning_tokens": 331
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 4575,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-runsA3-chatgpt-gpt-6-sol-high-0f520e54/receipt.json"
+ }
+}

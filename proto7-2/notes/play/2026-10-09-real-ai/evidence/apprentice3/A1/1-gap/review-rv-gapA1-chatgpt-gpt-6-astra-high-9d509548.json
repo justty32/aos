@@ -1,0 +1,1 @@
+{"verdict":"accept","reasons":["變更限於 packs/evgap/ 與交付的 INDEX.md 一列，檔案數及入口腳本行數符合限制，未引用既有 aos 寫入、修復或鎖定路徑。","靜態檢查符合紀錄篩選、以位元組換行切分、torn 優先、嚴格整數判定、壞 JSON 排除、缺口與重複彙總及 bad 排序要求。","狀態缺檔、整體無效與個別 channel 無效的處理，以及 next_seq、unacked、stale_next 的計算符合規格。","正式工具僅列目錄與讀檔，未見讀取系統時鐘或修改輸入內容、權限及指定 metadata 的操作；無效輸入退出 2 且不輸出 stdout。","已提供實質 CLI 測試、README、INDEX 列與 report；依提供資訊，①② 已通過，未發現需退回的靜態程式碼問題。"]}
