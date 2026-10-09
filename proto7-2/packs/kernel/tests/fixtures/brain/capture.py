@@ -1,4 +1,4 @@
-"""從真 brain 抽 fixture：起假 AI node（aos7-up -d），寄兩封信，中途連同 llmcall 一起 SIGKILL brain 一次，
+"""從真 brain 抽 fixture：起練習用的 AI node（aos7-up -d），寄兩封信，中途連同 llmcall 一起 SIGKILL brain 一次，
 每個來源回合記一筆 {completed_tock, run, task}（task＝brain/task.json 原文；沒有＝null；壞＝"bad"）。不花錢、不連網。
 
 從 repo 根跑：systemd-run --user --scope -p TasksMax=300 python3 -B proto7-2/packs/kernel/tests/fixtures/brain/capture.py OUT.jsonl

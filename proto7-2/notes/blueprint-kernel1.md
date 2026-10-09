@@ -16,6 +16,7 @@
 - 自己槽內 `state.json`（唯一恢復真相，一次 rename）：`{"v","config_sha","instance","rev","last_tock","rules":{...},"pending":[{"id","op":"kill","target","run","why","basis","sent":bool}],"done":[最近 20 筆]}`。`decisions.json` 只留上一次、只給人看。
 - 快照每項：`{"src","file","run","seq","completed_tock","read":"ok|absent|bad|unknown","value"}`；讀前後核對 run，不一致＝`unknown`；絕不折成空物件；不呼叫會收程序的判定（只讀公開檔，不用 `judge_resolved`）。
 - 控制：寫目標槽 `ctl.json`＝`{"op":"kill","run":int,"id","by":"kernel/<slot>","why"}`；回條 `ctl-done.json` 比 `id`＋`run`＋`op`，不符不認領；`ok:false` 且 msg 以 `unknown` 開頭＝請求仍在、下回合再核。
+  - 註（10-09 KF／C10，I2 補）：上句只適用 ctl 還在的時候。ctl 已被核心消耗、回條是相符的 unknown（結果不確定的 kill）時，實作把這筆移進 `done`（記 unknown）、**不重送**——這才是正確做法：請求已被消耗、kill 可能已經生效，結果不確定時不盲目補送（跟 llmcall「結果不明不重送」同一原則）；以實作與 `test_k17_consumed_unknown_never_resends` 為準。未解證據會隨 done 的 20 筆上限淘汰，見 [kernel-astra C10](play/2026-10-09-kernel-astra.md)。
 - tock：只收自己的；跳號處理最新、不補造；同 tock 重送不重提交；來源年齡用來源 `completed_tock`（關了取 round、開著取 round−1），來源鐘停＝不老化。
 
 ## 4. 規則介面（純函式）

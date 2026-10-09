@@ -30,7 +30,7 @@ node 裡沒有 `compact.json` 就用這份預設；壞 JSON 或不合設定退�
 - `files`：要整理的記憶檔，不存在的略過；含 `*` 的樣式展開成 node 內現有的檔（STATE.md 每天一份）。`keep_recent`：最後幾則原樣保留。`llm` 為 null 用本機摘要，給物件才經 llmcall 問模型（見下）。
 - `events`：布林，預設關；開了才在整理完寫一筆 compact.done／compact.forget 到 `<node>/events/`。pending 已清才發布；寫不出只記在 compact/log.jsonl、不算整理失敗，stdout 結果加 `event: "ok"` 或 `"failed"`，主整理 log 欄位不變。
 - 觸發有三種，dry-run 與結果行都印出原因：檔超過 `max_bytes`（大小超過 N）、`--force`（強制整理）、段落切換。少於兩則可摘就不動；大小觸發時，可摘的舊則合計不到 `max_bytes` 一半也先不動（免得每回合都整理，設了 llm 就是每回合花錢）。
-- 預設門檻的依據（2026-10-09 長任務，12 封信 29 回合）：journal 真 AI 長到 6.5 KB、假 AI 3.0 KB，STATE 2.8／2.2 KB；舊預設 16384 永遠不觸發。2048 bytes 約 700 token，約 brain 一次提示的六分之一，這種長度的任務兩個檔都會整理到。
+- 預設門檻的依據（2026-10-09 長任務，12 封信 29 回合）：journal 真 AI 長到 6.5 KB、練習用的 AI 3.0 KB，STATE 2.8／2.2 KB；舊預設 16384 永遠不觸發。2048 bytes 約 700 token，約 brain 一次提示的六分之一，這種長度的任務兩個檔都會整理到。
 - 段落切換：現役段取 files 第一個 md 的第一個 `## ` 到下一個 `## `；清空只記結段；下次出現新則，以去空白、小寫的字元 bigram Jaccard 比較新舊原文，低於 `stage_similarity`（0～1）才讓全部記憶檔檢查，不看大小。state 保存 stage_last／stage_ended／stage_due，內容沒變就不寫（只有 jsonl、沒有現役段的 node 不會出現 state.json）；dry-run 只預覽、不寫 state。SESSION-LOG 的現役段是進行中的工作，不摘要。
 
 ## 細規則

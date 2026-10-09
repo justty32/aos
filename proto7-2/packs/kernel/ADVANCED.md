@@ -56,10 +56,10 @@ keep 任務的 argv 要寫 aos7-kernel 的**完整路徑**（任務的工作目�
 
 `examples/supervise-brain/run.py`（門檻用預設 6／12，心跳 1 秒一回合，全程約 30 秒）：
 
-1. `aos7-up -d` 起 bob（假 AI），照上面兩行裝 kernel。
-2. 寄「做 5 回合的整理」；bob 做到第 2 步，把 `.aos/up.json` 的 `fake_delay` 設 3600——假 AI 不再回，brain 卡在等 AI。
+1. `aos7-up -d` 起 bob（練習用的 AI），照上面兩行裝 kernel。
+2. 寄「做 5 回合的整理」；bob 做到第 2 步，把 `.aos/up.json` 的 `fake_delay` 設 3600——練習用的 AI 不再回，brain 卡在等 AI。
 3. 停滿 6 回合，kernel 寄 NEEDS-USER 給 you；停滿 12 回合，kill brain 當時的 run，回條 ok。kill 收的是整個程序群組，正在等 AI 的 llmcall 子程序一起收掉。
-4. keep 重起 brain：從 task.json 的同一步接續，同一筆 call 不重送（`llmcall/fake-remote.json` 的受理次數仍是 1），只說「AI 還沒確定回沒回」。範例這時把 up.json 的 `deadline` 調成 1 秒，brain 就不再等、回你 BLOCKED 結案。不調的話 brain 會照 up 的規則等滿 `deadline`（假 AI 預設 60 秒、範例設 600），這段期間同信不重寄；下一次 kill 會等 24 回合，同一步最多收掉 3 次。
+4. keep 重起 brain：從 task.json 的同一步接續，同一筆 call 不重送（`llmcall/fake-remote.json` 的受理次數仍是 1），只說「AI 還沒確定回沒回」。範例這時把 up.json 的 `deadline` 調成 1 秒，brain 就不再等、回你 BLOCKED 結案。不調的話 brain 會照 up 的規則等滿 `deadline`（練習用的 AI 預設 60 秒、範例設 600），這段期間同信不重寄；下一次 kill 會等 24 回合，同一步最多收掉 3 次。
 5. 還原 up.json；SIGKILL kernel 一次（keep 重起它，brain 不受影響），再寄「做 4 回合的介紹」：一回合一步、回信 DONE，kernel 零動作。
 
 `--keep` 留下房子，可以看 `you/inbox/` 的三封信（kernel 的 NEEDS-USER、bob 的 BLOCKED 與 DONE）、`bob/.aos/tasks/kernel/state.json` 的 `done`。旁觀者不用懂 kernel：`aos7-up status` 的「信」那行會算到「1 封要你決定」。

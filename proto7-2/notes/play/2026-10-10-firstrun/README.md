@@ -119,3 +119,14 @@ ER-up（分支 `loop10/up`）把交頂層 1～4 改進 up 包：`--help` 只列�
 | 1 | 6 | 9 | 是（第一封不用做事；第二封二選一：不做或重寄） | 是 |
 
 原文：[Haiku r1](raw/mt-haiku-r1.md)、[luna r1](raw/mt-luna-r1.md)。一輪就過，沒跑第 2 輪。剩下的扣分：信頭 `status: DONE／BLOCKED`、`id`、`reply-to` 兩人仍提（信頭是給程式的，這輪刻意不動）；卡住信內文「假 AI」「系統不會自己重問」「細節見 `modules/up/ADVANCED.md`」屬 brain 的 stuck_reply（modules/up），不在 mail。
+
+## UW（up 用語白話，2026-10-09）
+
+分支 `loop13/UW`（44ca738b、e8442dd5）。up 給新手的字：「假 AI」全改「練習用的 AI」（up 與 QUICKSTART 一致）；卡住信改說 bob 不會自己再問、二選一（什麼都不做／用 ask 重寄），拿掉 ADVANCED 路徑；進度信與停下信的進度一律叫「步」，「回合」只指心跳一次。
+
+| 輪 | Haiku | luna | 兩人答對？ | 過？ |
+|---|---|---|---|---|
+| 1 | 4 | 7 | 是 | 否（照「不追分」收） |
+| 2 | 5 | 7 | 是 | 否（照「不追分」收） |
+
+結果抄自[頂層代定清單](../../decisions-2026-10-09.md)（UW 那條）；兩輪新手原文沒進版控。Haiku 扣分多在 status 用詞與信頭（不在 up 的領地）。殘留的「假 AI」（README-head、kernel、compact、INDEX、tests README、longtask 範例信）由 I2 統一。

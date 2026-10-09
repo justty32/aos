@@ -13,22 +13,23 @@
 | [subd](subd/README.md) 子 daemon 包 | 一個 node 的任務擁有子空間根：位置檢查、守門檔、owner、stopped.json；重開前回收前代（`subd-life.json`） | B | 關 | 核心守門檔 | `subd/aos7-subd` |
 | [once_retry](once_retry/README.md) once 保證包 | 從沒起來過就 lost 的 once 加回（至少一次） | A | 關 | 事實欄 `never_started`、`x` | `once_retry/retry_lost.py` |
 | [audit](audit/README.md) 稽核包 | Python 任務的寫入紀錄（只記不擋） | B | 關 | 無 | `audit/aos7-audit` |
-| [diag](diag/README.md) 診斷包 | 唯讀重算判不出的槽、對到恢復步驟；操作手冊 | C | 開（工具） | 核心的判定函式（只讀） | `diag/aos7-diag` |
+| [diag](diag/README.md) 診斷包 | 唯讀重算判不出的槽、對到恢復步驟；操作手冊；`--llm` 列 llmcall 沒回條的呼叫、author 停住的 job、budget 還在飛的預留（原 llmdiag） | C | 開（工具） | 核心的判定函式（只讀） | `diag/aos7-diag`（`--llm <node>`） |
 | [events](events/README.md) 事件保存包 | 一個 events/ 夾一本帳，固定檔數：pub 寫一筆、read 讀（不用 daemon）；選配取樣器記核心觀測 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs | `events/aos7-events`（子命令 read／pub） |
 | [routines](routines/README.md) 事務包 | 兩張表的例行／一次性到期事務，由 tick 喚醒、最多一次 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs／aos_exec | `routines/aos7-routines`（add／ls／rm；`ls --run` 免 daemon 立刻跑到期的） |
 | [skills](skills/README.md) skill 包 | node 的 `skills/<名>/SKILL.md`：產索引行（只 name＋description）與必用表、挑一本（預設本機關鍵字、不碰帳；開帳後經 llmcall 讓 AI 挑）、掛載給任務 | C | 開（工具） | 核心 aos7_fs（AI 挑時：llmcall、budget） | `skills/aos7-skills`（子命令 index／pick／mount） |
 | [wfnode](wfnode/README.md) node 工作流包 | 給 node 裝 workflows 工作流樹（填事實、不瞎猜）、記續行點、體檢 open 衛生；三個指令 init／state／check | C | 開（工具） | `~/repo/workflows`（`AOS7_WF_HOME`） | `wfnode/aos7-wfnode` |
-| [metrics](metrics/README.md) 效率量測包 | 唯讀量一個資料夾的 AI 工作：每件 token、同時幾個呼叫、花幾秒、重試幾次，預設印白話一行（`--detail`／`--json` 給細節），可重跑 | C | 開（工具） | 無（只讀別包的檔） | `metrics/aos7-metrics`（job） |
+| [metrics](metrics/README.md) 效率量測包 | 唯讀量一個資料夾的 AI 工作：每件 token、同時幾個呼叫、花幾秒、重試幾次，預設印白話一行（`--detail`／`--json` 給細節，含帳差），`--by model｜holder｜day｜hour` 分組（原 usage），可重跑 | C | 開（工具） | 無（只讀別包的檔） | `metrics/aos7-metrics`（job） |
 | [compact](compact/README.md) 記憶整理包 | 舊紀錄先封存再換摘要，open 項與最近 N 則留下 | A＋C | 關 | 標準庫、核心 aos7_fs、工具包任務端函式；選配 llmcall／events | `compact/aos7-compact`（子命令 now／forget／watch） |
 | [mail](mail/README.md) 信箱包 | 檔案寄信、輪詢、未結請求 audit 與日誌辦結復原 | C | 關 | events 包公開介面＋aos7_fs | `mail/aos7-mail`（send／read／done；進階 audit／roster／team 見 ADVANCED） |
-| [llmdiag](llmdiag/README.md) LLM 待辦診斷包 | 唯讀列出 llmcall 沒回條的呼叫、author 停住的 job、budget 還在飛的預留 | C | 開（工具） | 無（只讀別包的檔） | `llmdiag/aos7-llmdiag`（A5 真 AI 學徒寫） |
-| [up](up/README.md) 起步入口 | 一次備好 node、工作簿、信箱、技能與心跳；up／status／stop（ask 見 brain） | C | 關 | wfnode、budget、llmcall、skills、compact、mail、tools | `up/aos7-up` |
+| [up](up/README.md) 起步入口 | 一次備好 node、工作簿、信箱、技能與心跳；up／status／stop（ask 見 brain）；brain 一封信可跨多步、卡住回白話信 | C | 關 | wfnode、budget、llmcall、skills、compact、mail、tools | `up/aos7-up` |
 | `history.py` 歷史 module | 每個 tock 把「上一次」追加到自己的地方（見下） | A | 關 | 工具包的任務端函式 | `history.py` |
 | `counter.py` 示範任務 | 讀同槽上一次的 state、收 tock.json | A | — | 工具包的任務端函式 | `counter.py` |
 
 `history.py`、`counter.py` 是**觀測任務包（kernel 層）的雛形**，這輪不動；它們的測試在 `modules/tests/`。每個包的測試在 `<包>/tests/`，全套用 `python3 proto7-2/tests/run_all.py` 一起跑。
 
-**包的格式**（2026-10-09 改）：一個資料夾，有 `README.md`（**只給第一次用的人**：開頭三行＋第一次跑＋「第一次用，到這裡就完成了」，照 [README-head](README-head.md) 模板）、`ADVANCED.md`（接法、預設、依賴、**契約卡**（職責／前置條件／保證／明確不管，核心卡在[組件契約](../notes/component-contracts.md)）、規則、界線、測試位置）、程式、`tests/`。舊包的契約卡還在 README 的，陸續搬到 ADVANCED.md。可執行的包裝程式／工具放包的根目錄（`bin/` 會被 gitignore）。安裝工具 `aos7-pack`（方案第 10 節）尚未實作；上層任務包另放在 `packs/`，目前已有 step、budget、adapt、author、llmcall、prompt、usage，入口見 [INDEX](../INDEX.md) 的結構表。
+已移除的包（原樣放 [`../archive/`](../archive/usage/README.md)，原處留轉址 stub、r5 移除）：llmdiag → `aos7-diag --llm`（stub `llmdiag/aos7-llmdiag`）；usage 任務包 → `aos7-metrics job --by model`。
+
+**包的格式**（2026-10-09 改）：一個資料夾，有 `README.md`（**只給第一次用的人**：開頭三行＋第一次跑＋「第一次用，到這裡就完成了」，照 [README-head](README-head.md) 模板）、`ADVANCED.md`（接法、預設、依賴、**契約卡**（職責／前置條件／保證／明確不管，核心卡在[組件契約](../notes/component-contracts.md)）、規則、界線、測試位置）、程式、`tests/`。舊包的契約卡還在 README 的，陸續搬到 ADVANCED.md。可執行的包裝程式／工具放包的根目錄（`bin/` 會被 gitignore）。安裝工具 `aos7-pack`（方案第 10 節）尚未實作；上層任務包另放在 `packs/`，目前已有 step、budget、adapt、author、llmcall、prompt、kernel（`packs/usage/` 只剩轉址 stub），入口見 [INDEX](../INDEX.md) 的結構表。
 
 ## 歷史 module（從核心 spec 搬來）
 

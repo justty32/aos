@@ -2,21 +2,21 @@
 {"completed_tock": 1, "run": 1, "task": null}
 {"completed_tock": 2, "run": 1, "task": null}
 {"event": "SIGKILL brain", "pids": 2, "completed_tock": 2}
-{"completed_tock": 3, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（假 AI）第 1 回合做完"], "skill": null}}
-{"completed_tock": 4, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（假 AI）第 1 回合做完"], "skill": null}}
-{"completed_tock": 5, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（假 AI）第 1 回合做完"], "skill": null}}
-{"completed_tock": 6, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（假 AI）第 1 回合做完"], "skill": null}}
-{"completed_tock": 7, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（假 AI）第 1 回合做完"], "skill": null}}
-{"completed_tock": 8, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（假 AI）第 1 回合做完"], "skill": null}}
-{"completed_tock": 9, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（假 AI）第 1 回合做完"], "skill": null}}
-{"completed_tock": 10, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（假 AI）第 1 回合做完"], "skill": null}}
+{"completed_tock": 3, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（練習用的 AI）第 1 回合做完"], "skill": null}}
+{"completed_tock": 4, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（練習用的 AI）第 1 回合做完"], "skill": null}}
+{"completed_tock": 5, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（練習用的 AI）第 1 回合做完"], "skill": null}}
+{"completed_tock": 6, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（練習用的 AI）第 1 回合做完"], "skill": null}}
+{"completed_tock": 7, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（練習用的 AI）第 1 回合做完"], "skill": null}}
+{"completed_tock": 8, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（練習用的 AI）第 1 回合做完"], "skill": null}}
+{"completed_tock": 9, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（練習用的 AI）第 1 回合做完"], "skill": null}}
+{"completed_tock": 10, "run": 4, "task": {"id": "you-20261009T202632-488a4e5190c8", "step": 2, "line": "第 1 回合，下一步第 2 回合", "stall": 0, "trail": ["第 1 回合：第 1 回合，下一步第 2 回合｜成果：（練習用的 AI）第 1 回合做完"], "skill": null}}
 {"completed_tock": 11, "run": 4, "task": null}
 {"completed_tock": 12, "run": 4, "task": null}
-{"completed_tock": 13, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 2, "line": "卡在同一處", "stall": 0, "trail": ["第 1 回合：卡在同一處｜成果：（假 AI）第 1 回合還是卡住"], "skill": null}}
-{"completed_tock": 14, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 2, "line": "卡在同一處", "stall": 0, "trail": ["第 1 回合：卡在同一處｜成果：（假 AI）第 1 回合還是卡住"], "skill": null}}
-{"completed_tock": 15, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 3, "line": "卡在同一處", "stall": 1, "trail": ["第 1 回合：卡在同一處｜成果：（假 AI）第 1 回合還是卡住", "第 2 回合：卡在同一處｜成果：（假 AI）第 2 回合還是卡住"], "skill": null}}
-{"completed_tock": 16, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 4, "line": "卡在同一處", "stall": 2, "trail": ["第 1 回合：卡在同一處｜成果：（假 AI）第 1 回合還是卡住", "第 2 回合：卡在同一處｜成果：（假 AI）第 2 回合還是卡住", "第 3 回合：卡在同一處｜成果：（假 AI）第 3 回合還是卡住"], "skill": null}}
-{"completed_tock": 17, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 4, "line": "卡在同一處", "stall": 2, "trail": ["第 1 回合：卡在同一處｜成果：（假 AI）第 1 回合還是卡住", "第 2 回合：卡在同一處｜成果：（假 AI）第 2 回合還是卡住", "第 3 回合：卡在同一處｜成果：（假 AI）第 3 回合還是卡住"], "skill": null}}
+{"completed_tock": 13, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 2, "line": "卡在同一處", "stall": 0, "trail": ["第 1 回合：卡在同一處｜成果：（練習用的 AI）第 1 回合還是卡住"], "skill": null}}
+{"completed_tock": 14, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 2, "line": "卡在同一處", "stall": 0, "trail": ["第 1 回合：卡在同一處｜成果：（練習用的 AI）第 1 回合還是卡住"], "skill": null}}
+{"completed_tock": 15, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 3, "line": "卡在同一處", "stall": 1, "trail": ["第 1 回合：卡在同一處｜成果：（練習用的 AI）第 1 回合還是卡住", "第 2 回合：卡在同一處｜成果：（練習用的 AI）第 2 回合還是卡住"], "skill": null}}
+{"completed_tock": 16, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 4, "line": "卡在同一處", "stall": 2, "trail": ["第 1 回合：卡在同一處｜成果：（練習用的 AI）第 1 回合還是卡住", "第 2 回合：卡在同一處｜成果：（練習用的 AI）第 2 回合還是卡住", "第 3 回合：卡在同一處｜成果：（練習用的 AI）第 3 回合還是卡住"], "skill": null}}
+{"completed_tock": 17, "run": 4, "task": {"id": "you-20261009T202632-88ef69e0476f", "step": 4, "line": "卡在同一處", "stall": 2, "trail": ["第 1 回合：卡在同一處｜成果：（練習用的 AI）第 1 回合還是卡住", "第 2 回合：卡在同一處｜成果：（練習用的 AI）第 2 回合還是卡住", "第 3 回合：卡在同一處｜成果：（練習用的 AI）第 3 回合還是卡住"], "skill": null}}
 {"completed_tock": 18, "run": 4, "task": null}
 {"completed_tock": 19, "run": 4, "task": null}
 {"completed_tock": 20, "run": 4, "task": null}
