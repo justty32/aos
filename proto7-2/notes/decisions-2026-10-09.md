@@ -113,3 +113,10 @@
 - 使用者：**大決定都 OK**；**准許接真 AI**（本地 LiteLLM，不用 `lm-*`，盡量 gpt 系），token／輸出長度／context 全部拉到極限，跑完大段落再依消耗定限制；要持續往前推進
 - B｜頂層：真 AI 先接在 llmcall 當第二種傳輸（`llm.litellm`），再讓學徒（author）用真 AI 產候選，走完一整圈：真 AI 寫草稿 → 三關檢查 → 發布 → step 跑 → 答案檢查；每次呼叫的 token 用量都記帳，跑完出一份消耗報告
 - 使用者 14:30：持續推進＝定目標→依需求調整 kernel／agent 架構（擴充模組包／工具包／程式包）→持續改進；Claude 與 GPT 週額度明天下午重置，**全力衝刺、盡量多開**
+
+## 使用者 14:40 給的目標（下一輪主線）
+
+1. 以 `~/repo/workflows` 的架構（分層工作流：AGENTS.md 路由→WORKFLOWS／INDEX→各工作流；活狀態只列 open；膨脹即拆；kernel＋flavor 包）在 aos 上實現
+2. 做出現有 coding agent 常見的東西——compact、memory、skill 等——善用既有的 aos-directives 與先前各 proto 的想法
+3. 讓 AI 熟悉 aos 框架、能自我改進：自己做模組／工具／程式
+- 使用者另說：「持續推進／全力衝刺」看狀況決定，**不寫進偏好檔**（已撤回 user.md 那段）
