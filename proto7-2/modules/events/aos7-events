@@ -124,14 +124,20 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] in (["read"], ["pub"]):   # 讀者／發布 CLI 的子命令入口（E3），選項照原腳本
         return __import__({"read": "aos7_events_read", "pub": "aos7_events_pub"}[argv[0]]).main(argv[1:])
-    ap = argparse.ArgumentParser(prog="aos7-events")
-    ap.add_argument("--src", action="append")
-    ap.add_argument("--status", action="store_true")
-    ap.add_argument("--daemon-log", action="store_true")
-    ap.add_argument("--rounds", type=int, default=0)
-    ap.add_argument("--out")
-    ap.add_argument("--keep", type=int)
-    ap.add_argument("--segment-bytes", type=int)
+    ap = argparse.ArgumentParser(
+        prog="aos7-events", formatter_class=argparse.RawDescriptionHelpFormatter,
+        usage="aos7-events pub ...｜aos7-events read ...｜aos7-events [取樣器選項]（keep 任務）",
+        description="事件保存：寫一筆用 pub，讀用 read。\n"
+                    "  aos7-events pub --help    寫一筆事件\n"
+                    "  aos7-events read --help   讀事件、ack\n"
+                    "不帶子命令＝取樣器，只在 daemon 的 keep 任務裡跑（下面選項都屬於它）。")
+    ap.add_argument("--src", action="append", help="取樣哪個 node（可重複；預設自己）")
+    ap.add_argument("--status", action="store_true", help="也記 daemon 的 status 變化")
+    ap.add_argument("--daemon-log", action="store_true", help="也續讀 daemon 流水帳 .aosd/log.jsonl")
+    ap.add_argument("--rounds", type=int, default=0, help="跑幾回合就停（0＝一直跑）")
+    ap.add_argument("--out", help="events 夾（預設 <node>/events）")
+    ap.add_argument("--keep", type=int, help="每本封存段數（≤4，只在初建時生效）")
+    ap.add_argument("--segment-bytes", type=int, help="每段大小（預設 1 MiB，只在初建時生效）")
     args = ap.parse_args(argv)
     if args.rounds < 0 or any(v is not None and v <= 0 for v in (args.keep, args.segment_bytes)):
         ap.error("rounds 須非負，keep 與 segment-bytes 須為正")
