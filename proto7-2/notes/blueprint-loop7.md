@@ -46,6 +46,8 @@
 | D9 | audit＋subd：audit 讀 `AOS7_SUBROOT`（快）還是通用 `AOS7_AUDIT_ALLOW` 由 subd 設（兩模組不互認） | 通用 env |
 | D10 | R8-30 無呼叫者的 `run_target_full`／`run_inst`／`spawn_target`／`load_obj` 刪不刪 | 留，kernel 包可能用 |
 
+> **使用者 2026-10-09 早上已裁**：D1～D10 **全照預設建議**，唯 D7 改為「**行數上限全部放寬、這輪不設上限**」——開發階段不設上限，等成果整理階段再重構拆檔濃縮（`test_budget` 照此調整）。D8 因此直接落盤。T8 系列在家裡 Manjaro 可重試（加限時、限程序數保護；公司 WSL 仍不跑這批）。
+
 ## 6. 分線（領地不重疊；代號對應 json 的 `lane`）
 
 | 線 | 領地 | 內容 | 量 |
