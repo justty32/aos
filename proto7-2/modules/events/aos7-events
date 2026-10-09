@@ -120,6 +120,9 @@ def once(me, args, resolve, st):
 
 def main(argv=None):
     """解析選項，以 keep 任務等待 tock；未知 state 跳過本回合。"""
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] in (["read"], ["pub"]):   # 讀者／發布 CLI 的子命令入口（E3），選項照原腳本
+        return __import__({"read": "aos7_events_read", "pub": "aos7_events_pub"}[argv[0]]).main(argv[1:])
     ap = argparse.ArgumentParser(prog="aos7-events")
     ap.add_argument("--src", action="append")
     ap.add_argument("--status", action="store_true")

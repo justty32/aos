@@ -244,6 +244,18 @@
 | A9-04 tasks.json 實體寫入錯誤留下 intent，下一回合過期就停 unknown | step／X | 行為照「不知道就保守停」不改；step spec §5 把「讀表拒寫→撤意圖重派」和「寫入錯誤→留意圖、跨回合要人手續送」分開寫；blueprint-loop7 §7 R8-14 改成「不得有第三次實跑」 |
 | A9-05 把 1、2 列進 `unknown_codes` 又把不冪等工作當冪等，重複產生效果 | step＋budget／M | 誤用，不加檢查；step spec §2 `unknown_codes` 加一句只列「可能未完成、可同 K 重送」的碼 |
 
+## 事件保存第一版（10-09 下午）
+
+依 [事件保存藍圖 blueprint-ev1](blueprint-ev1.md)與[代定清單](decisions-2026-10-09.md)，每 node 一個 events/，核心零改動。
+
+| 線 | 處理 |
+|---|---|
+| E1 保存端＋取樣 | append／ack／recover、obs／must 輪替與取樣（`54da92fb`） |
+| E2 發布＋讀者 | 合作來源逐件發布、留存窗口去重、游標讀取與缺口回報（`8efedc44`、`0f10e115`） |
+| E3 整合 | [README](../modules/events/README.md)、`aos7-events read／pub` 子命令、真 daemon 300 回合長跑（數字見包 README「長跑」） |
+
+已知限制（不修）：見 [events README「已知限制」](../modules/events/README.md#已知限制)。
+
 ## 核心精簡：刪掉的誤用保護（10-04）
 
 照 [精簡方案](core-slimming.md)「頂層定案」第 2 條與[組件契約藍圖](component-contracts.md)：違反組件前置條件造成的問題（M 類）不歸組件管，保護刪掉，spec 只留界線一句（§11「其他誤用，不處理」）。順手偵測到的記一筆，不保證偵測到（定案第 4 條）。
