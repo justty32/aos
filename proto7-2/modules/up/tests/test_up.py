@@ -155,7 +155,7 @@ class UpTests(DaemonCase):
         self.assertIn('bob 還沒收到信', lines[1])
         # 心跳行只說活著／停了，不印像秒數的次數；假 AI 不印字數
         self.assertEqual(lines[0], '心跳：活著')
-        self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 0 次')
+        self.assertEqual(lines[4], 'AI：假 AI（不連網、不花錢，照抄你的信回你）；bob 問過它 0 次')
         self.invoke('stop', self.node)
         self.assertEqual(self.invoke('status', self.node).splitlines()[0],
                          f'心跳：停了；要再起：aos7-up {self.node}')

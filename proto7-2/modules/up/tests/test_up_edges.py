@@ -109,7 +109,7 @@ class UpEdges(DaemonCase):
         output = self.invoke('status', self.node)
         self.assertEqual(before, snapshot())
         self.assertIn('下一步測試', output)
-        self.assertIn('AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 1 次\n', output)
+        self.assertIn('AI：假 AI（不連網、不花錢，照抄你的信回你）；bob 問過它 1 次\n', output)
 
     def test_reup_preserves_letter(self):
         self.invoke(self.node, '-d')
