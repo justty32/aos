@@ -79,7 +79,7 @@ Unknown／bg.LedgerDown／OSError 印 unknown io／3、無 traceback；鎖忙 st
 
 reserve.content.gateway、intent／done 依傳輸；request.json 保存該 meter／endpoint。grant 由 budget judge 驗 llm.litellm；明給 deadline 驗 (0,86400]，HTTP timeout＝thread join。
 
-`TRANSPORT_LITELLM = aos7_llmcall_litellm.send`；POST `<base>/chat/completions`，body 是 request.litellm 原樣，**不加 max_tokens 或任何上限**，由呼叫者決定。只有 AOS7_LITELLM_KEY 非空才送 Authorization: Bearer；不寫計數檔、不重試。
+`TRANSPORT_LITELLM = aos7_llmcall_litellm.send`；POST `<base>/chat/completions`，body 是 request.litellm 原樣，**不加 max_tokens 或任何上限**，由呼叫者決定。只有 AOS7_LITELLM_KEY 非空才送 Authorization: Bearer；不寫計數檔、不重試。目標主機是 localhost／127.0.0.1／::1 時一律直連、不走環境 http_proxy／HTTP_PROXY；非本機目標照環境設定。
 
 | 回覆 | status／billed | body／usage |
 |---|---|---|

@@ -3,7 +3,8 @@ import json
 import os
 import time
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 GATEWAY = "llm.litellm"
 METER = "litellm.total_tokens/1"
@@ -20,10 +21,13 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 OPENER = build_opener(NoRedirect)
+DIRECT = build_opener(NoRedirect, ProxyHandler({}))   # 本機目標一律不走環境 proxy
+LOCAL = {"localhost", "127.0.0.1", "::1"}
 
 
 def urlopen(req, timeout):
-    return OPENER.open(req, timeout=timeout)
+    local = (urlsplit(req.full_url).hostname or "").lower() in LOCAL
+    return (DIRECT if local else OPENER).open(req, timeout=timeout)
 
 
 def clean(obj):
