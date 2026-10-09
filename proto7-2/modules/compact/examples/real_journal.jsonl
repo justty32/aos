@@ -1,0 +1,65 @@
+{"day": "2026-10-04", "step": 1, "text": "釐清 now 與 watch 共用一次整理流程，決定保留單 node 鎖避免雙寫。", "file": "aos7_compact.py"}
+{"day": "2026-10-04", "step": 2, "text": "將 files 路徑限制在 node 內，拒絕絕對路徑與 compact 工作資料。", "file": "tests/test_compact.py"}
+{"day": "2026-10-04", "step": 3, "text": "定義 jsonl 非空實體行為一則，壞 JSON 保留並不送進摘要。", "file": "README.md"}
+{"day": "2026-10-04", "step": 4, "text": "定義 md 的縮排續行附屬上一則，標題與表格維持原位置。", "file": "aos7_compact.py"}
+{"day": "2026-10-04", "step": 5, "text": "確認 open true 與 status open 都保護，巢狀字串的待辦標記也算 open。", "file": "tests/test_compact.py"}
+{"day": "2026-10-04", "step": 6, "text": "選擇 keep_recent=10，最近則與 open 項均不納入舊段。", "file": "README.md"}
+{"day": "2026-10-04", "step": 7, "text": "加入 summary_max_chars=1200，讓本機摘要的長度可調。", "file": "aos7_compact.py"}
+{"day": "2026-10-04", "step": 8, "text": "將舊段取樣改成每則前 60 字，保留基本事件線索。", "file": "tests/test_compact.py"}
+{"day": "2026-10-04", "step": 9, "text": "設計 archive 以 job ID 命名，保存被摘掉的原文。", "file": "README.md"}
+{"day": "2026-10-04", "step": 10, "text": "dry-run 比對整棵 node 檔案樹，確認沒有建立 lock 或 state。", "file": "aos7_compact.py"}
+{"day": "2026-10-04", "step": 11, "text": "設定錯誤統一回 2，鎖忙與摘要未交付回 3。", "file": "tests/test_compact.py"}
+{"day": "2026-10-04", "step": 12, "text": "整理 README 第一次跑範例，採用暫存 node 保留證據。", "file": "README.md"}
+{"day": "2026-10-05", "step": 13, "text": "為 pending.json 保存原檔 sha256、indices 與固定 call_id。", "file": "aos7_compact.py"}
+{"day": "2026-10-05", "step": 14, "text": "先寫 pending 再做摘要，SIGKILL 後可沿同一份計畫接續。", "file": "tests/test_compact.py"}
+{"day": "2026-10-05", "step": 15, "text": "摘要存入 pending 後設故障點，復原時不重叫摘要者。", "file": "README.md"}
+{"day": "2026-10-05", "step": 16, "text": "archive 在換檔之前落地，確認原文至少有一份可接回。", "file": "aos7_compact.py"}
+{"day": "2026-10-05", "step": 17, "text": "atomic_text 使用 flush 與 fsync 後 rename，避免半張摘要。", "file": "tests/test_compact.py"}
+{"day": "2026-10-05", "step": 18, "text": "為追加者提供 compact/write.lock，共用短鎖保護最後讀檔到替換。", "file": "README.md"}
+{"day": "2026-10-05", "step": 19, "text": "摘要期間不持 write.lock，避免模型延遲阻擋 journal 追加。", "file": "aos7_compact.py"}
+{"day": "2026-10-05", "step": 20, "text": "尾端追加時接回新增文字，測試兩則追加完全保留。", "file": "tests/test_compact.py"}
+{"day": "2026-10-05", "step": 21, "text": "其他改寫則 abandoned，不用舊摘要覆蓋新資料。", "file": "README.md"}
+{"day": "2026-10-05", "step": 22, "text": "替換後追加仍可依 new_sha 與 new_len 辨識已完成換檔。", "file": "aos7_compact.py"}
+{"day": "2026-10-05", "step": 23, "text": "log_once 以 job 與狀態去重，復原不增加重複紀錄。", "file": "tests/test_compact.py"}
+{"day": "2026-10-05", "step": 24, "text": "四個故障點各跑 3 次，對比基準摘要與 open 原文。", "file": "README.md"}
+{"day": "2026-10-06", "step": 25, "text": "新增 forget 的 1 起算含頭尾範圍，先提供 dry-run 預覽。", "file": "aos7_compact.py"}
+{"day": "2026-10-06", "step": 26, "text": "forget 遇 open 拒絕，只有 include-open 可以明確覆寫保護。", "file": "tests/test_compact.py"}
+{"day": "2026-10-06", "step": 27, "text": "將 forget archive 命名加上 -forget，與摘要保存可區分。", "file": "README.md"}
+{"day": "2026-10-06", "step": 28, "text": "同一 forget pending 恢復後直接回結果，避免範圍再刪一次。", "file": "aos7_compact.py"}
+{"day": "2026-10-06", "step": 29, "text": "若先接完其他 pending 回 3，要求重新查看範圍。", "file": "tests/test_compact.py"}
+{"day": "2026-10-06", "step": 30, "text": "接入 compact.done 與 compact.forget 事件，只有 events 目錄存在才發布。", "file": "README.md"}
+{"day": "2026-10-06", "step": 31, "text": "event_id 固定 compact/job，事件重送沿原 ID 去重。", "file": "aos7_compact.py"}
+{"day": "2026-10-06", "step": 32, "text": "將事件錯誤 why 與 stderr 帶回 CLI，讓失敗原因可查。", "file": "tests/test_compact.py"}
+{"day": "2026-10-06", "step": 33, "text": "測試長 node 名稱 96 字仍能發布合法事件。", "file": "README.md"}
+{"day": "2026-10-06", "step": 34, "text": "加入 CRLF 檢查，不透過通用換行轉換破壞原文。", "file": "aos7_compact.py"}
+{"day": "2026-10-06", "step": 35, "text": "Unicode U+2028 不當作新實體行，避免錯認 md 標題。", "file": "tests/test_compact.py"}
+{"day": "2026-10-06", "step": 36, "text": "清掃死程序 JSON 暫存與 compact-tmp，保留成功 archive。", "file": "README.md"}
+{"day": "2026-10-07", "step": 37, "text": "接入 llmcall 的 fake gateway，holder 指定 compact。", "file": "aos7_compact.py"}
+{"day": "2026-10-07", "step": 38, "text": "帳 grant 授權 llm.tokens，測試 amount=1000000 與 completed_tock 時鐘。", "file": "tests/test_compact.py"}
+{"day": "2026-10-07", "step": 39, "text": "將摘要 call_id 綁在 job，LLM 復原維持一次傳輸。", "file": "README.md"}
+{"day": "2026-10-07", "step": 40, "text": "摘要回條非 0 不拿文字換檔，失敗保留原檔與 pending。", "file": "aos7_compact.py"}
+{"day": "2026-10-07", "step": 41, "text": "使用 fake 回覆本機摘要，實測 inflight 結清為 0。", "file": "tests/test_compact.py"}
+{"day": "2026-10-07", "step": 42, "text": "明確使用 chatgpt-gpt-6-sol-high 作為預設模型名。", "file": "README.md"}
+{"day": "2026-10-07", "step": 43, "text": "LiteLLM 請求只帶 model 與 messages，不設 max_tokens。", "file": "aos7_compact.py"}
+{"day": "2026-10-07", "step": 44, "text": "system prompt 描述 agent 工作紀錄，要求一段繁體中文。", "file": "tests/test_compact.py"}
+{"day": "2026-10-07", "step": 45, "text": "提示保留決定、數字與檔名，未解問題也不能被壓掉。", "file": "README.md"}
+{"day": "2026-10-07", "step": 46, "text": "user 訊息前一行寫舊段則數，其餘逐字送出舊紀錄。", "file": "aos7_compact.py"}
+{"day": "2026-10-07", "step": 47, "text": "長摘要超過 1.5 倍門檻才截短，log 記 truncated true。", "file": "tests/test_compact.py"}
+{"day": "2026-10-07", "step": 48, "text": "本地 HTTP 回覆 content 要進摘要則，測試不連外部模型。", "file": "README.md"}
+{"day": "2026-10-08", "step": 49, "text": "依 D6 將清空視為結段證據，SESSION-LOG 空了不能立即整理。", "file": "aos7_compact.py"}
+{"day": "2026-10-08", "step": 50, "text": "state_last 改為 stage_last，保存最近一次非空現役段原文。", "file": "tests/test_compact.py"}
+{"day": "2026-10-08", "step": 51, "text": "以 stage_ended 保存清空觀察，下一段出現才做相似度比較。", "file": "README.md"}
+{"day": "2026-10-08", "step": 52, "text": "採去空白小寫字元 bigram Jaccard，預設 stage_similarity=0.2。", "file": "aos7_compact.py"}
+{"day": "2026-10-08", "step": 53, "text": "相似工作重新開段不觸發，完全不同性質才整理小 journal。", "file": "tests/test_compact.py"}
+{"day": "2026-10-08", "step": 54, "text": "將 ended、similarity、threshold 證據傳入 log 與事件 payload。", "file": "README.md"}
+{"day": "2026-10-08", "step": 55, "text": "確認 abandoned pending 後 stage_due 仍保留，下次可重新規劃。", "file": "aos7_compact.py"}
+{"day": "2026-10-08", "step": 56, "text": "依 F8 為 jsonl 摘要新增 ref://compact/job，md 行尾也提供參照。", "file": "tests/test_compact.py"}
+{"day": "2026-10-08", "step": 57, "text": "ref 解析到 archive 原副檔名，測試逐字取回被摘掉的舊段。", "file": "README.md"}
+{"day": "2026-10-08", "step": 58, "text": "舊段連續時替換摘要為 archive，可與原檔 bytes 完全相同。", "file": "aos7_compact.py"}
+{"day": "2026-10-08", "step": 59, "text": "將 README 保持 8 KiB 以下，細部契約搬到 spec.md。", "file": "tests/test_compact.py"}
+{"day": "2026-10-08", "step": 60, "text": "備妥 real_ai.sh 與固定 journal，真模型仍等使用者親自試跑。", "file": "README.md"}
+{"open": true, "text": "待真 LiteLLM 環境確認 URL 與 API key。"}
+{"open": true, "text": "待使用者閱讀第三次跑的真摘要品質。"}
+{"open": true, "text": "待確認 archive 保留期限，目前沒有自動清除。"}
+{"open": true, "text": "待大型 journal 實機觀察模型延遲。"}
+{"open": true, "text": "待確認中文摘要是否完整留下未解問題。"}

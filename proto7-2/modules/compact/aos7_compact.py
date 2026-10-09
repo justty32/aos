@@ -15,10 +15,11 @@ from aos7_fs import append_jsonl, now, read_json, sweep_tmp, test_point, write_j
 from aos7_taskside import task_env, wait_tock
 
 DEFAULT = dict(files=["wf/SESSION-LOG.md", "notes/journal.jsonl"], max_bytes=16384,
-               keep_recent=10, on_stage_change=True, summary_max_chars=1200, llm=None)
+               keep_recent=10, on_stage_change=True, stage_similarity=0.2, summary_max_chars=1200, llm=None)
 LLM_DEFAULT = dict(budget="budget/llm", holder="compact", reserve=4000, gateway="fake",
                    model="chatgpt-gpt-6-sol-high", deadline=600, patience=5)
-PROMPT = "用繁體中文寫摘要，≤{n} 字，保留決定、數字、檔名與未完成事項。"
+PROMPT = ("這是一個 agent 的工作紀錄。請將舊紀錄濃縮成一段繁體中文摘要，≤{n} 字。"
+          "保留決定、數字、檔名與未解問題；不要列已在 open 項裡的事。只輸出摘要本文。")
 
 
 class Failure(Exception):
@@ -65,6 +66,8 @@ def config(node):
             raise Failure(f"{key} 須是合法非負整數")
     if type(cfg["on_stage_change"]) is not bool:
         raise Failure("on_stage_change 須是布林值")
+    if type(cfg["stage_similarity"]) not in (int, float) or not 0 <= cfg["stage_similarity"] <= 1:
+        raise Failure("stage_similarity 須是 0～1 的數值")
     if cfg["llm"] is not None:
         if not isinstance(cfg["llm"], dict):
             raise Failure("llm 須是物件或 null")
@@ -138,10 +141,10 @@ def local_summary(old, limit):
     return ("本機摘要：" + "；".join(flat(p["text"])[:60] for p in old))[:limit]
 
 
-def stage_count(node, cfg):
+def stage_text(node, cfg):
     rel = next((f for f in cfg["files"] if f.endswith(".md")), None)
     if rel is None or not file_path(node, rel).exists():
-        return 0
+        return ""
     active, lines = False, []
     for line in physical_lines(read_text(file_path(node, rel))):
         if line.startswith("## "):
@@ -150,7 +153,54 @@ def stage_count(node, cfg):
             active = True
         elif active:
             lines.append(line)
-    return sum(p["index"] is not None for p in records("".join(lines), ".md"))
+    return "".join(p["text"] for p in records("".join(lines), ".md") if p["index"] is not None)
+
+
+def active_indices(text):
+    """現役段（第一個 `## ` 到下一個 `## `）裡的則索引：進行中的工作，不摘要（D6 的段落證據也靠它保持原文）。"""
+    out, active = set(), False
+    for part in records(text, ".md"):
+        if part["index"] is None and part["text"].startswith("## "):
+            if active:
+                break
+            active = True
+        elif active and part["index"] is not None:
+            out.add(part["index"])
+    return out
+
+
+def stage_count(node, cfg):
+    return sum(p["index"] is not None for p in records(stage_text(node, cfg), ".md"))
+
+
+def stage_jaccard(previous, current):
+    def bigrams(text):
+        text = "".join(text.lower().split())
+        return {text[i:i + 2] for i in range(len(text) - 1)}
+    a, b = bigrams(previous), bigrams(current)
+    return len(a & b) / len(a | b) if a | b else 1.0
+
+
+def observe_stage(node, cfg, state):
+    state = dict(state)
+    text = stage_text(node, cfg)
+    last, ended = state.get("stage_last", ""), state.get("stage_ended", False)
+    if text:
+        if ended and last and cfg["on_stage_change"]:
+            similarity = stage_jaccard(last, text)
+            if similarity < cfg["stage_similarity"]:
+                state["stage_due"] = True
+                state["stage_evidence"] = dict(ended=True, similarity=similarity, threshold=cfg["stage_similarity"])
+        state.update(stage_last=text, stage_ended=False)
+    else:
+        state.update(stage_last=last, stage_ended=bool(last))
+    state.setdefault("stage_due", False)
+    return state
+
+
+def stage_reason(evidence):
+    return (f'段落切換（上一段已清空，新段相似度 {evidence["similarity"]:.2f} '
+            f'< {evidence["threshold"]:g}）')
 
 
 def atomic_text(path, text):
@@ -193,7 +243,7 @@ def summarize(node, work, p):
         request = {"fake": dict(mode="ok", usage=len(raw) // 2 + 50, text=text)} if llm["gateway"] == "fake" else \
             {"litellm": dict(model=llm["model"], messages=[
                 dict(role="system", content=PROMPT.format(n=p["summary_max_chars"])),
-                dict(role="user", content=raw)], max_tokens=800)}
+                dict(role="user", content=f"以下是共 {len(old)} 則舊紀錄：\n" + raw)])}
         write_json(str(req), request)
     if llm["gateway"] == "litellm":
         if not (TOP / "packs/llmcall/aos7_llmcall_litellm.py").is_file():
@@ -209,6 +259,9 @@ def summarize(node, work, p):
     text = receipt.get("text") if isinstance(receipt, dict) else None
     if not isinstance(text, str) or not text.strip():
         raise Failure("摘要沒拿到：回條沒有非空 text", 3)
+    if len(text) > p["summary_max_chars"] * 1.5:
+        p["truncated"] = True
+        text = text[:p["summary_max_chars"]]
     return text
 
 
@@ -226,8 +279,8 @@ def resume(node, work, p):
     marker = ""
     if p["kind"] == "compact.done":
         summary = flat(p["summary"])
-        marker = (json.dumps(dict(compact="summary", job=p["job"], count=len(selected), text=summary), ensure_ascii=False)
-                  if path.suffix == ".jsonl" else f'- （摘要 {p["job"]}，{len(selected)} 則）{summary}') + "\n"
+        marker = (json.dumps(dict(compact="summary", job=p["job"], count=len(selected), text=summary, ref="ref://compact/" + p["job"]), ensure_ascii=False)
+                  if path.suffix == ".jsonl" else f'- （摘要 {p["job"]}，{len(selected)} 則）{summary}（原文 ref://compact/{p["job"]}）') + "\n"
     new, inserted = [], False
     for part in parts:
         if part["index"] in selected:
@@ -266,6 +319,10 @@ def resume(node, work, p):
     entry = dict(job=p["job"], file=p["file"], before_bytes=len(p["original"].encode("utf-8")),
                  after_bytes=p["after_bytes"], count=len(selected), open=sum(r["open"] for r in parts),
                  trigger=p["trigger"], at=p["at"])
+    entry["ref"] = "ref://compact/" + archive.stem
+    for key in ("evidence", "truncated"):
+        if key in p:
+            entry[key] = p[key]
     log_once(work, entry)
     if (node / "events").is_dir():
         ev = subprocess.run([sys.executable, str(TOP / "modules/events/aos7-events"), "pub",
@@ -286,6 +343,8 @@ def resume(node, work, p):
 def human_result(p, entry, archive, parts, target):
     before = sum(r["index"] is not None for r in parts)
     after = sum(r["index"] is not None for r in records(target, archive.suffix))
+    if p["trigger"] == "stage_change" and "evidence" in p:
+        print("原因：" + stage_reason(p["evidence"]))
     action = "摘掉" if p["kind"] == "compact.done" else "忘掉"
     print(f'{p["file"]}：{before} 則 → {after} 則（{action} {entry["count"]}、open {entry["open"]} '
           f'{"全留" if p["kind"] == "compact.done" else "依指定範圍"}），'
@@ -297,15 +356,19 @@ def human_plan(plan, cfg):
         print(f'{plan["file"]}：不需要整理')
         return
     reason = {"max_bytes": f'大小超過 {cfg["max_bytes"]}', "force": "強制整理", "stage_change": "段落切換"}[plan["trigger"]]
+    if plan["trigger"] == "stage_change":
+        reason = stage_reason(plan["evidence"])
     print(f'{plan["file"]}：{plan["records"]} 則，open {plan["open"]}，會摘掉 {plan["count"]} 則（原因：{reason}）')
 
 
-def pending(work, rel, text, indices, trigger, cfg, kind="compact.done", forget_range=None):
+def pending(work, rel, text, indices, trigger, cfg, kind="compact.done", forget_range=None, evidence=None):
     sha = digest(text)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
     job = "c" + stamp + "-" + hashlib.sha256((rel + sha + str(indices)).encode()).hexdigest()[:8]
     p = dict(job=job, file=rel, sha256=sha, original=text, indices=indices, new_sha=None, call_id=job,
              trigger=trigger, kind=kind, at=now(), llm=cfg["llm"], summary_max_chars=cfg["summary_max_chars"])
+    if evidence is not None:
+        p["evidence"] = evidence
     if forget_range is not None:
         p.update({"from": forget_range[0], "to": forget_range[1]})
     write_json(str(work / "pending.json"), p)
@@ -314,36 +377,42 @@ def pending(work, rel, text, indices, trigger, cfg, kind="compact.done", forget_
 
 
 def once(node, cfg, dry=False, force=False):
-    work, entries, skip = node / "compact", [], None
-    count = stage_count(node, cfg)
-    state = load(work / "state.json", {})
-    changed = state.get("stage_due", False) or (cfg["on_stage_change"] and state.get("stage_records", 0) >= 1 and count == 0)
+    work, entries = node / "compact", []
+    state = observe_stage(node, cfg, load(work / "state.json", {}))
+    changed = state["stage_due"]
+    evidence = state.get("stage_evidence")
     if not dry:
-        write_json(str(work / "state.json"), dict(stage_records=count, stage_due=changed))
+        write_json(str(work / "state.json"), state)
     if not dry and (work / "pending.json").exists():
-        p = load(work / "pending.json", None)
-        skip = p["file"]
-        entries.append(resume(node, work, p))
+        # 舊 pending 只算它自己那一輪；接完後照樣重評同一檔，新觸發（stage_due）不被它吃掉。
+        entries.append(resume(node, work, load(work / "pending.json", None)))
+    first = len(entries)
     for rel in cfg["files"]:
         path = file_path(node, rel)
-        if not path.exists() or rel == skip:
+        if not path.exists():
             continue
         text = read_text(path)
         rec = [r for r in records(text, path.suffix) if r["index"] is not None]
         old = rec[:max(0, len(rec) - cfg["keep_recent"])]
-        indices = [r["index"] for r in old if not r["open"] and r["valid"]]
+        live = active_indices(text) if rel == next((f for f in cfg["files"] if f.endswith(".md")), None) else set()
+        indices = [r["index"] for r in old if not r["open"] and r["valid"] and r["index"] not in live]
         trigger = "force" if force else "stage_change" if changed else "max_bytes" if len(text.encode("utf-8")) > cfg["max_bytes"] else "不需要"
         plan = dict(file=rel, records=len(rec), open=sum(r["open"] for r in rec),
                     count=len(indices) if trigger != "不需要" and len(indices) >= 2 else 0, trigger=trigger)
+        if changed and evidence is not None:
+            plan["evidence"] = evidence
         if not plan["count"]:
             plan["trigger"] = "不需要"
         if dry or not plan["count"]:
             human_plan(plan, cfg)
             entries.append(plan)
         else:
-            entries.append(resume(node, work, pending(work, rel, text, indices, trigger, cfg)))
+            entries.append(resume(node, work, pending(work, rel, text, indices, trigger, cfg, evidence=evidence if changed else None)))
     if not dry:
-        write_json(str(work / "state.json"), dict(stage_records=count, stage_due=changed and any(e.get("status") == "abandoned" for e in entries)))
+        state["stage_due"] = changed and any(e.get("status") == "abandoned" for e in entries[first:])
+        if not state["stage_due"]:
+            state.pop("stage_evidence", None)
+        write_json(str(work / "state.json"), state)
     return dict(ok=True, dry_run=dry, files=entries)
 
 
