@@ -47,14 +47,14 @@
 
 - **職責**：只跑 `nodes.json` 登記的 node，每個一條時間線；處理 `.aosd/ctl/`（2.6）；每圈寫 `status.json`；是空間根的守門人（S-07）。
 - **前置條件**：root 存在、可 stat、是真資料夾；同一個 root 同時只有一個 daemon（`daemon.lock`，拿不到退出碼 1，§2.5）；node 在 root 下、不包住別的 daemon 根，**node 本身不是符號連結**（中間段換成連結＝誤用，§11）；`.aosd/` 內部檔沒人手改；守門檔由包或人寫（§2.7）。
-- **保證**：回收意圖落盤（nodes.json `reaping`），被殺重開後續收；確認收乾淨才重開時間線；登記改動寫檔成功才生效。只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。
+- **保證**：回收意圖先落盤（nodes.json `reaping`），被殺重開後續收；在 `reaping` 的 node 確認收乾淨才重開時間線，收不乾淨保留 missing、約每秒重試；unregister／stop 帶 kill 逐槽回 unknown＝未確認乾淨，照樣留意圖（§2.6）。register／unregister 寫 nodes.json 成功才生效，失敗回條 `ok: false`、可重送（§2.3）。打記著的 pgid 前重驗身分，號碼已被外人重用不打（R8-29，§2.6）。`rounds` 倒數存 paused.json `steps`，重開接續（§2.4）。只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。
 - **明確不管**：手改 `nodes.json`／`paused.json`／`gen.json`／`status.json`；兩個 daemon 根重疊；控制成環（S-22）；誰有權寫控制檔；守門檔的語意（包的事）；斷電後檔案系統的持久化順序；不在管理範圍的程序（§11）。
 
 ### 2.2 時間線迴圈（daemon 內，每 node 一條）
 
 - **職責**：按 `timeline.json` 的節拍，照 §2.1 六步起 tick／tock 程序，處理 pause／wake／resume／rounds，把 tick／tock 的退出碼翻成 status。
-- **前置條件**：tick／tock 是本 repo `bin/` 的程式並守退出碼契約；`round.json` 只由 tick／tock 寫；`timeline.json` 數值不合＝用預設並記一筆（B，§1），不是故障。
-- **保證**：同一 node 不會同時跑兩個動作（動作鎖＋世代，§2.5）；舊回合確知已關才開下一回合，不知道＝停在 `error` 退避（§2.2）；tock 沒關上馬上補一次（§2.1）；**tick 退出碼非 0／3＝失敗：記 `last_error`、退避、不算回合、不扣 `rounds`**（§2.1）；動作逾時 SIGKILL 並記、舊世代持鎖者認得出才殺（§2.5）；pause 清單非空不開回合、`rounds` 倒數按 owner 各記（§2.4）；wake／resume 的提前結束照 §2.1 第 4、6 步；迴圈丟例外記 `last_error`、0.5 秒後續跑。
+- **前置條件**：tick／tock 是本 repo `bin/` 的程式並守退出碼契約；`round.json` 只由 tick／tock 寫；`timeline.json` 數值不合（型別、範圍、interval 超過一年、非有限值）＝用預設並記一筆（B，§1），讀設定不丟例外，不是故障。
+- **保證**：同一 node 不會同時跑兩個動作（動作鎖＋世代，§2.5）；舊回合確知已關才開下一回合，不知道＝停在 `error` 退避（§2.2）；tock 沒關上馬上補一次（§2.1）；**tick 退出碼非 0／3＝失敗：記 `last_error`、退避、不算回合、不扣 `rounds`**（§2.1）；動作逾時 SIGKILL 並記、舊世代持鎖者認得出才殺（§2.5）；pause 清單非空不開回合、`rounds` 倒數按 owner 各記（§2.4），tock 後確認讀取不知道、下圈才讀到已關＝補扣一次、同回合不重扣（R8-05）；退避指數有上限、不忙轉（R8-06）；wake／resume 的提前結束照 §2.1 第 4、6 步；迴圈丟例外記 `last_error`、0.5 秒後續跑。
 - **明確不管**：節拍準不準（S-08）；interval 0 的 CPU。
 
 ### 2.3 tick（`aos7-tick <root> <node-id>`）
@@ -65,8 +65,8 @@
   - 上一回合確知已關才開（§3）；不知道＝退出 3、什麼都不寫。
   - 一個槽一個 tick 最多起一次；只在「空」或「已結束」的槽起（§5.3、§5.4）；起之前把「已結束未報」的 run 記進 `reaped`（§4.2 第 5 步）。
   - 單項欄位錯只跳那項；表讀不到（U）＝這回合不起、表鎖 1 秒拿不到＝回合照開、不起，都記 `tasks_error`（§4.1、§4.2）。
-  - once 不重起、最多一次、不無痕消失（`launch` 標記，§4.4）；**(a) once 項從表上拿掉時，該槽 `birth.json` 已寫好**（§4.4）。被殺在任一點＝下一個 tick 靠 `launch`／birth／exit／pid 證據恢復，不多起。
-  - 加掛：請求與 birth 一律經檔判定（§0、§4.5）——請求讀不到（U）＝那一件留著、不寫回條、不改 birth，記一筆在 round.json／總結的 `mounts`；請求不是 JSON 物件（B）＝回 `ok: false` 回條；birth 不是讀到（OK）的物件＝不審、請求留著。
+  - once 不重起、最多一次、不無痕消失（`launch` 標記，§4.4）；**(a) once 項從表上拿掉時，該槽 `birth.json` 已寫好**（§4.4）；帶 `launch` 的 once 先比對槽的 run 再看排程欄，改排程不重跑（N-86，§4.3）。被殺在任一點＝下一個 tick 靠 `launch`／birth／exit／pid 證據恢復，不多起。
+  - 加掛：請求與 birth 一律經檔判定（§0、§4.5）——請求讀不到（U）＝那一件留著、不寫回條、不改 birth，記一筆在 round.json／總結的 `mounts`；請求不是 JSON 物件（B）＝回 `ok: false` 回條；birth 不是讀到（OK）的物件＝不審、請求留著；連結已建、birth 還沒記就被殺＝重播時連結指向同處視為已建、讀不到連結＝不知道留請求（A8-07），失敗紀錄不算已掛（R8-09）。
   - 不知道的槽不起、不判 lost、記 `errors`（§5.4）；tick 不刪槽（刪槽是 tock 的，§5.1）。
 - **明確不管**：任務跑什麼、跑多久、退出碼意義；不拿鎖編輯 `tasks.json` 被蓋（W8）；生命週期檔被手改或換成 FIFO／資料夾（§11，落到「不知道」照 §0 走）；交付物寫在槽內被刪（W7）；回合數被人手倒退（run 仍遞增，§5.2）。
 
@@ -86,7 +86,7 @@
 
 - **職責**：經 fd 讀 `birth.json`，把任務起在自己的程序群組，寫 `pid.json`（run、pid、pgid、starttime、runner_pid、at），等它，寫 `exit.json`；`out.log` 收 stdout＋stderr（§5.1 表、§5.3）。
 - **前置條件**：由 tick 以新 session、傳好 fd、cwd＝node 起；`birth.json` 已寫好；環境變數齊。人手直接跑、起任務途中搬 node 不在保證內（§11、K-06）。
-- **保證**：起程序前任何失敗→`exit.json` code 127；fd 無效退出碼 2，不回退字串路徑；活到任務結束才寫 exit；`AOS7_*` 原樣傳給任務（§5.3）。runner 被殺由 tick／tock 靠身分掃描與 pid.json 判定（§5.4），不是 runner 自己處理。
+- **保證**：起程序前任何失敗→`exit.json` code 127；fd 無效退出碼 2，不回退字串路徑；活到任務結束才寫 exit；run 先取環境 `AOS7_RUN`、birth 讀到再以它為準（R8-10）；任務環境只帶核心六個 `AOS7_*` 身分變數，上層繼承來的不傳（§5.3、§6）。runner 被殺由 tick／tock 靠身分掃描與 pid.json 判定（§5.4），不是 runner 自己處理。
 - **明確不管**：任務換 session／pgid、清 `AOS7_*`、換使用者身分、關 dumpable（§11）；`out.log` 大小（W10）；任務退出碼語意；任務自己的 state／usage。
 
 ### 2.6 控制檔處理（daemon 的 `.aosd/ctl/`＋槽 `ctl.json` 的 kill）
@@ -97,7 +97,8 @@
   - daemon ctl：每件要嘛回條（`ctl-done/`）、要嘛留著下一圈；回條 `ok` 只表示 daemon 接受、不表示已生效；一件丟例外不擋同圈其他件，效果可能已生效、不重做（刪請求、記 `last_ctl_error`，刪不掉就不再執行）（§2.3）。
   - **請求檔不是一般檔＝B 拒收**（搬成 `ctl-done/<名>.bad`、給失敗回條）：這是 §0 U 規則的例外，因為請求檔只可能是別人放的（§0、§2.3）。讀不到（I/O）＝留著。
   - 槽 kill：`run` 缺、不是整數、op 不是 kill＝回條 `ok: false`；`run` 不是槽現在的＝`ok: false`、不執行；帶 `run` 讓重播只對同一個 run（§6）。槽不知道、ctl.json 讀不到＝請求留著（§6）。
-  - kill 只在確知任務程序已不在時回 `ok: true`，否則 `ok: false`（msg 以 `unknown` 開頭）；範圍是 Q1，打 pgid 前防重用（§6）。
+  - kill 只在確知任務程序已不在時回 `ok: true`，否則 `ok: false`（msg 以 `unknown` 開頭）；範圍是 Q1，打 pgid 前防重用（§6）。runner 還在啟動交接（沒有同 run 的 pid.json／exit.json）＝回 unknown、**請求留著**下次再做；收完再身分掃描、最多補收 3 輪，掃描收斂才算成功（R8-01、K-04，§6）。
+  - daemon ctl 的 register／unregister 寫 nodes.json 失敗＝回條 `ok: false`、登記不變、可重送（§2.3）。
 - **明確不管**：誰有權寫；成環；不同寫者取同檔名互蓋；保留 mtime 複製還原請求檔（A3-05）。
 
 ### 2.7 模組（擴充點）

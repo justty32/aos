@@ -212,6 +212,24 @@
 | R8-18 subd recovering.prev 遞迴成長 | subd 包／品質 | 回收一再被打斷時 `prev` 沿用最初那份前代記錄、加 `attempt` 計次，記錄大小固定。測試 `test_subd_keep.TestRecoveringRecord` |
 | （順手）`test_reaped_before_new_daemon` 斷言 run＋1 | 測試 | 新 run＝起它的回合數（核心 `next_run`），父 kill 後隔一回合才重起時是 run＋2；改成比現役槽的 run、且大於被 kill 的 run。改前用 HEAD 的 aos7-subd 一樣紅，非本輪回歸 |
 
+## loop7（10-09）的處理
+
+依 [blueprint-loop7](blueprint-loop7.md) 第 3～6 組；頂層代定在 [decisions-2026-10-09](decisions-2026-10-09.md)。核心有改（D7：行數只印不擋）。A8-09 見上一節。
+
+| 編號 | 歸屬／類 | 處理 |
+|---|---|---|
+| A8-05（＝R8-03）登記持久化失敗後重送仍回成功、磁碟沒修好 | daemon／B | register／unregister 先寫候選 nodes.json，成功才換記憶體；失敗回條 `ok: false`、登記不變、可重送（spec §2.3）。K2 7ac33100；測試 `test_daemon.TestDaemonDurableRecovery` |
+| A8-06（＝R8-01）runner 已起、任務還沒 Popen 時 kill 回成功 | task／G→定 D1 | runner 還在、沒有同 run 的 pid.json／exit.json＝回 `ok: false`／`unknown`、請求留著下次再做；已掃到相符任務照殺（spec §6）。K1 915f53e6、235172da；daemon 逐槽收回 unknown 算未確認乾淨（K2 35f21912）。測試 `test_ctl` k1 系列 |
+| A8-07（＝R8-08）動態加掛連結已建、birth 未提交，中斷後不能冪等恢復 | mount／B | 建連結撞 EEXIST 且指向同處＝已建；讀不到連結＝不知道、請求留著；birth 失敗紀錄不算已掛（R8-09）。K4 f6aa2a8d；測試 `test_mount_dyn` |
+| A8-08（＝R8-15／R8-16）budget 共同 unknown 邊界漏兩條路徑 | budget／B | payload 讀不到、已結算重播時入口回條讀不到都退 3（不補欄、不寫 `--out`）；退出碼表 0／1／2／3 三處統一。B d8b5f267 |
+| A8-10 budget 的 rc 3 被 step 當一般失敗 | step＋budget／G | step run 步選項 `unknown_codes`（預設空）：列出的退出碼走 `on_unknown` 同 request 重送；重送額度記 request 層 `resends`（R8-14），過期 intent 也走 `on_unknown`（R8-13）；fakeapi 示範表開 `[3]`；文件分清兩種 unknown。(c) 不做（見代定清單）。S 135314e2、B 937001bf |
+| A8-11（＋R8-20）巨大整數 interval 讓設定驗證拋例外、node 不開回合 | timeline／B | `read_config` 先型別、再範圍（≤ 一年）、最後 isfinite，整段不丟例外；壞值用預設並記錯。K3 9c9cfa5f；測試 `test_errors.TestTimelineConfig`（proto7-1 案例搬回） |
+| C8-01（＝R8-03 同族）取消登記後 daemon 被殺，回收義務遺失 | daemon／B | 回收意圖先寫 nodes.json `reaping`（`{id: {since, why}}`），確認乾淨且清除寫成功才拿掉；重開續收（spec §2.6）。K2 7ac33100；測試 `test_unregister_crash_before_kill_resumes` 等 |
+| C8-02（＝R8-02）node 替換後中斷回收，新舊任務同活 | daemon／B | 在 `reaping` 的 node 不開時間線；收不乾淨保留 missing、約每秒重試；舊時間線結束後再掃一次才算乾淨（K2 0b68b3a0）。磁碟不記 pgid，重開只靠身分掃描 |
+| C8-03 任務包槽外暫存檔沒人回收 | 核心＋各包／G | 原則寫進 spec §5.5：核心只清自己的資料夾，槽外由寫的人跑 `sweep_tmp`；step 直譯器啟動清工作資料夾與 results、budget 帳任務起時清 `gateway/`；adapt 份未做 |
+
+已知限制（不修，記在代定清單）：N-06 回合已關、`steps` 還沒存之間當機，重開多跑一回合；daemon 停機時 node 被換掉偵測不到；once_retry R8-26 重讀 birth 到提交之間仍可能多補一次（契約是至少一次）；node id 很長（約 250 bytes）時 history 檔名太長。
+
 ## 核心精簡：刪掉的誤用保護（10-04）
 
 照 [精簡方案](core-slimming.md)「頂層定案」第 2 條與[組件契約藍圖](component-contracts.md)：違反組件前置條件造成的問題（M 類）不歸組件管，保護刪掉，spec 只留界線一句（§11「其他誤用，不處理」）。順手偵測到的記一筆，不保證偵測到（定案第 4 條）。
