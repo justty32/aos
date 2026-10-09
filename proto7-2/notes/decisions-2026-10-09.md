@@ -79,3 +79,5 @@
 - C｜E1：保存端加公開 `store.recover()`（三個定死介面不變）；`keep_segments` 上限 4 守住 12 檔；必讀通道加 `dropped_upto`，刪段時推進；壞輸入丟 ValueError；diff 1045 行超 500 gate，照 D7 接受
 - 已知限制｜E1：每個 events/ 只能有一個取樣者；剛修掉半行就被殺時壞行計數可能少 1（紀錄不受影響）；`--status` 去重只在記憶體，重起可能記兩次同一事件
 - C｜E2：`publish` 多 `node=`／`config=` 關鍵字；讀者遇壞行可抵一個缺號（store 在鎖內依序寫）；讀者 CLI 先是獨立腳本 `aos7_events_read.py`；demo 的 event_id 不含 run 號（重跑可去重）；diff 603 行超 400 gate，照 D7 接受
+- C｜E3：`aos7-events` 加 `read`／`pub` 子命令；長跑是範例腳本不進測試套（需真 daemon、約 40 秒）；長跑用 8 KiB 小段讓 300 回合內真的會輪替與刪段
+- 結果｜E3 真 daemon 300 回合：有讀者時 events/ 最多 9 檔、無讀者時 12 檔（存 state.json 時有 1 個暫存檔瞬間到 13，spec 已寫）；舊段有刪；記憶體與開檔數不長
