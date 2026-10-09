@@ -20,7 +20,7 @@
 
 ## 3 個指令
 
-每開一個視窗，先 `cd` 進 aos 資料夾（有 `AGENTS.md` 那層）再打：`alias aos7-up="python3 $PWD/proto7-2/modules/up/aos7-up"`
+每開一個視窗，先 `cd` 進 aos 資料夾（就是你 git clone 下來的那個，裡面有 `AGENTS.md`）再打：`alias aos7-up="python3 $PWD/proto7-2/modules/up/aos7-up"`
 
 ```sh
 aos7-up /tmp/aos/bob                          # 1. 起 bob；開著別關，停＝按 Ctrl-C
