@@ -265,6 +265,18 @@ class TestAuthorCore(TestAuthorHelpers):
         self.assertIsNone(self.doc(node, "csv1", "intent"))
         self.assertEqual(outside.read_bytes(), b"untouched")
 
+    def test_out_dir_symlink_at_publish(self):
+        """out/ 本身外連到 node 外：發布拒絕，表與外部目錄不變。"""
+        node, v = self.prepared()
+        outside = Path(self.root, "outside-dir")
+        outside.mkdir()
+        Path(node, "jobs", v["job"], "out").symlink_to(outside, target_is_directory=True)
+        before = self.table_path(node).read_bytes()
+        r = self.cli(node, "publish", "csv1", rc=2)
+        self.assertIn("symlink", r["error"])
+        self.assertEqual(self.table_path(node).read_bytes(), before)
+        self.assertEqual(list(outside.iterdir()), [])
+
     def test_frame_recovery_binds_fixed_sources(self):
         """相符 frame 可補回條，但資料快照改動使證據失效。"""
         for changed in (False, True):
@@ -318,6 +330,25 @@ class TestAuthorCore(TestAuthorHelpers):
         self.assertTrue(Path(node, "jobs", new["job"], "steps.json").exists())
         self.assertEqual(set(self.doc(node, "csv1", "candidate")["versions"]), {new["candidate_sha"]})
         self.assertEqual(set(self.doc(node, "csv1", "verdict")["versions"]), {new["candidate_sha"]})
+
+    def test_close_refuses_active_without_verdict(self):
+        """第一版已可結案，但第二版待審候選的 verdict 不見：close 必須 conflict、帳一檔不刪。"""
+        node, v1 = self.prepared()
+        self.good(pub.publish(node, "csv1"))
+        write_json(str(Path(node, "jobs", v1["job"], "frame.json")), {"v": 1, "job": v1["job"], "phase": "ended",
+                                                                      "end": "ok", "closed": True})
+        edit_json(str(Path(node, "author/req/csv1/verdict.json")),
+                  lambda d: (d["versions"][v1["candidate_sha"]].update(answer={"ok": True, "issues": []}), d)[1])
+        candidate = json.loads((EXAMPLE / "valid.json").read_bytes())
+        candidate["intent"] = "第二版"
+        v2 = self.propose(node, candidate=candidate)
+        edit_json(str(Path(node, "author/req/csv1/verdict.json")),
+                  lambda d: dict(d, versions={k: x for k, x in d["versions"].items() if k != v2["candidate_sha"]}))
+        folder = Path(node, "author/req/csv1")
+        before = {p.name: p.read_bytes() for p in folder.iterdir()}
+        r = self.cli(node, "close", "csv1", rc=3)
+        self.assertIn("待審", r["error"])
+        self.assertEqual({p.name: p.read_bytes() for p in folder.iterdir()}, before)
 
     def test_candidate_list_fields_are_schema_errors(self):
         """tool/start 陣列是 schema 錯誤，CLI 必須回 JSON 而非 traceback。"""
@@ -525,16 +556,21 @@ class TestAuthorCore(TestAuthorHelpers):
         """同需求兩版並存，第三版超額拒絕。"""
         node, v1 = self.prepared()
         self.good(pub.publish(node, "csv1"))
+        j1 = Path(node, "jobs", v1["job"])
+        (j1 / "out").mkdir()
+        (j1 / "out" / "probe").write_text(v1["candidate_sha"])     # 第二版編譯／發布之前就有第一版產物
+        snap = {p.name: p.read_bytes() for p in j1.iterdir() if p.is_file()}
         candidate = json.loads((EXAMPLE / "valid.json").read_bytes())
         candidate["intent"] = "第二版"
         v2 = self.propose(node, candidate=candidate)
+        self.assertEqual({p.name: p.read_bytes() for p in j1.iterdir() if p.is_file()}, snap)
         self.cli(node, "publish", "csv1", "--sha", v2["candidate_sha"])
+        self.assertEqual({p.name: p.read_bytes() for p in j1.iterdir() if p.is_file()}, snap)
         self.assertNotEqual(v1["job"], v2["job"])
         self.assertEqual({i["name"] for i in self.tasks(node)}, {"author-" + v["job"] for v in (v1, v2)})
-        for v in (v1, v2):
-            out = Path(node, "jobs", v["job"], "out")
-            out.mkdir()
-            (out / "probe").write_text(v["candidate_sha"])
+        out = Path(node, "jobs", v2["job"], "out")
+        out.mkdir()
+        (out / "probe").write_text(v2["candidate_sha"])
         self.assertEqual(len(self.doc(node, "csv1", "receipt")["versions"]), 2)
         candidate["intent"] = "第三版"
         before = self.table_path(node).read_bytes()
