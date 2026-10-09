@@ -92,14 +92,27 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertTrue((self.node / 'wf/ROSTER.md').exists())
 
-    def test_rerun_finishes_interrupted_fill(self):
+    def test_rerun_keeps_letters_byte_for_byte(self):
+        letter = self.node / 'inbox/20261009T1200-boss-REQUEST.md'
+        done = self.node / 'inbox/done/20261009T1100-boss-PROGRESS.md'
+        done.parent.mkdir(exist_ok=True)
+        content = ('---\nfrom: boss\nid: r1\n---\n# 改模板\n\n把 {{user}} 換成你的名字；'
+                   '{{專案名}} 也是，{{導入日期}} 照填。\n〔模板說明〕〔導入判斷〕\n').encode()
+        for path in (letter, done):
+            path.write_bytes(content)
+        before = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in (letter, done)}
+        self.ok(run('init', self.node))
+        self.assertEqual({p: (p.read_bytes(), p.stat().st_mtime_ns) for p in (letter, done)}, before)
+        self.ok(run('check', self.node))  # 信裡的記號不是模板殘留
+
+    def test_rerun_never_rewrites_existing_placeholder(self):
         agents = self.node / 'AGENTS.md'
         agents.write_text(agents.read_text().replace(self.node.name, '{{專案名}}', 1))
-        user = self.node / 'wf/workflows/common/user.md'
-        before = user.read_bytes(), user.stat().st_mtime_ns
-        self.ok(run('init', self.node))
-        self.assertNotIn('{{', agents.read_text())
-        self.assertEqual((user.read_bytes(), user.stat().st_mtime_ns), before)
+        before = agents.read_bytes(), agents.stat().st_mtime_ns
+        result = run('init', self.node)
+        self.assertIn('還有 1 處 {{ 沒填好', self.error(result, 1))
+        self.assertIn('AGENTS.md:', result.stdout)
+        self.assertEqual((agents.read_bytes(), agents.stat().st_mtime_ns), before)
 
     def test_check_open_and_finished(self):
         self.ok(run('check', self.node))

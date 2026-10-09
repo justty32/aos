@@ -39,7 +39,7 @@
 
 - **職責**：在 node 上導入並維持工作流樹；記續行點；機械檢查 open 衛生。
 - **前置條件**：`~/repo/workflows`（或 `AOS7_WF_HOME`）有 `tools/wf-init.sh`；bash。
-- **保證**：首次導入先在 `<node>/.wfnode-tmp/` 裡做完、再搬進 node，`AGENTS.md` 最後到（它在＝導入完成；中途被殺就重跑）；node 原有的檔不覆寫。重跑 `init` 只動還有 `{{`／〔模板說明〕的 md 與缺的三樣，其餘一個位元都不碰。`state` 在鎖內只追加當日 STATE 一行、只改 NEXT-SESSION 的「最新」那一行（原子替換）；同時跑幾個 `state` 也不丟行；不給句子的 `state` 與 `check` 唯讀。
+- **保證**：首次導入先在 `<node>/.wfnode-tmp/` 裡做完、再搬進 node，`AGENTS.md` 最後到（它在＝導入完成；中途被殺就重跑）；node 原有的檔不覆寫。重跑 `init` 只補缺的三樣（NEXT-SESSION、ROSTER、line-claims；有例行／排程時含 routines.json、schedule.json），已存在的檔一個位元都不碰（含 `inbox/` 裡的信）；node 根的 `inbox/` 是信件，`init`／`check` 都不掃。`state` 在鎖內只追加當日 STATE 一行、只改 NEXT-SESSION 的「最新」那一行（原子替換）；同時跑幾個 `state` 也不丟行；不給句子的 `state` 與 `check` 唯讀。
 - **明確不管**：不改 `~/repo/workflows` 本身（只呼叫它）；不決定〔導入判斷〕；不填 ROSTER／line-claims（mail 包）；不排程（routines 包）、不壓縮（compact 包）。
 
 ## 規則與界線

@@ -16,8 +16,9 @@ from wfnode_state import NEXT, atomic_write, fail, state
 
 
 def markdowns(node):
+    """模板管的 md；node 根的 inbox/ 是信件（別人寫的內容），不算。"""
     for root, dirs, files in os.walk(node):
-        dirs[:] = sorted(d for d in dirs if d != '.git')
+        dirs[:] = sorted(d for d in dirs if d != '.git' and not (root == str(node) and d == 'inbox'))
         for name in sorted(files):
             if name.endswith('.md'):
                 yield Path(root) / name
@@ -120,8 +121,7 @@ def init(node, flavor=None):
     node.mkdir(parents=True, exist_ok=True)
     if (node / 'AGENTS.md').exists():
         print('已導入過，只補缺檔')
-        fill_node(node, node.name)
-        supplement(node)
+        supplement(node)  # 已有的檔一個位元都不改（模板空格只在新裝的暫存區填）
     else:
         temp = node / '.wfnode-tmp'
         shutil.rmtree(temp, ignore_errors=True)
@@ -166,7 +166,9 @@ def init(node, flavor=None):
     print(f'裝好了：{node}（AI 開場讀 AGENTS.md；人不必讀）')
     left = sum(line.count('{{') for _, _, line in residue)
     if left:
-        print(f'還有 {left} 處 {{{{ 沒填好：再跑一次 init 會補')
+        print(f'還有 {left} 處 {{{{ 沒填好：init 不改已有的檔，請打開這幾處自己改掉')
+        for path, number, _ in residue:
+            print(f'{path}:{number}')
     print(f'空格：{unknown} 處寫著「（未定：…）」＝工具查不到、之後由你或 AI 慢慢補；'
           '不影響使用，check 也不檢查它')
     if decisions:
@@ -175,7 +177,7 @@ def init(node, flavor=None):
             print(f'{path}:{number}')
     print(f'下一步：aos7-wfnode check {shlex.quote(str(node))}')
     if left:
-        return fail(1, f'還有 {left} 處 {{{{ 沒填好', '再跑一次 init 會補')
+        return fail(1, f'還有 {left} 處 {{{{ 沒填好', '照上面列的位置改掉，再跑 check')
     return 0
 
 
@@ -194,7 +196,7 @@ def check(node):
             if re.search(r'^- \[[xX✓✔]\]|✅|✔|~~|已完成|已結案|已收線|（完成）|\(done\)|\[done\]|DONE', line):
                 print(f'{name}:{number}: {line}\n做完就刪掉這行（歷史在 git log）')
                 failed = True
-    for marker, why in (('{{', '沒填的模板空格，再跑一次 init 會補'),
+    for marker, why in (('{{', '沒填的模板空格：打開這幾處自己改掉'),
                         ('〔導入判斷〕', '要你決定的段落：改好後刪掉這個標記'),
                         ('〔模板說明〕', '模板說明：讀完刪掉這段')):
         found = scan(node, marker)
