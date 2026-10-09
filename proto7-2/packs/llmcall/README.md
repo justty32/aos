@@ -47,7 +47,7 @@ printf '資料保留於 %s\n' "$LLMCALL_DEMO"
 
 ## 真模型一次
 
-[examples/litellm/](examples/litellm/) 提供 grant、req 與 run.sh；從 repo 根執行 `bash proto7-2/packs/llmcall/examples/litellm/run.sh ./evidence`。先啟動自己的 LiteLLM，設定 `AOS7_LITELLM_URL`（預設 `http://localhost:4000/v1`），需要驗證才設 `AOS7_LITELLM_KEY`。腳本開暫存 node／帳任務，reserve 1000000，保存 stdout 回條、status、raw 到指定目錄並印路徑；不在測試套裡跑。
+[examples/litellm/](examples/litellm/) 提供 grant、req 與 run.sh；從 repo 根執行 `bash proto7-2/packs/llmcall/examples/litellm/run.sh ./evidence`。先啟動自己的 LiteLLM，設定 `AOS7_LITELLM_URL`（預設 `http://localhost:4000/v1`），需要驗證才設 `AOS7_LITELLM_KEY`。打本機（localhost／127.0.0.1／::1）一律直連、不經環境 proxy；非本機照 `http_proxy` 等設定。腳本開暫存 node／帳任務，reserve 1000000，保存 stdout 回條、status、raw 到指定目錄並印路徑；不在測試套裡跑。
 
 請求頂層 `litellm` 是 OpenAI chat completions body，含字串 model 與 list messages，禁止 stream true、不可與 fake 並存。body 原樣送出，範例不設 max_tokens，閘道也不加任何上限；grant gateway 必須 llm.litellm。完整 HTTP 對應見 [spec](spec.md#傳輸-llmlitellm)。
 

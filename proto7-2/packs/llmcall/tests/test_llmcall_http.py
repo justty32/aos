@@ -1,6 +1,7 @@
 """真 HTTP 故障矩陣：一次受理、保留未知預留、完整回覆才結算。"""
 import json
 import os
+import socket
 import threading
 import time
 from unittest.mock import patch
@@ -8,6 +9,7 @@ from unittest.mock import patch
 from llmcallcase import LlmcallCase, R, last_json, read_json, write_json, tree
 from fake_litellm import FakeLiteLLM, reply, truncate, close_no_length, drop, reset, late, drip, normal
 import aos7_llmcall as lc
+import aos7_llmcall_litellm as transport_mod
 
 DEADLINE = .5
 DELAY = .85
@@ -245,3 +247,43 @@ class TestLlmcallHTTP(LlmcallCase):
         self.received(1)
         self.assertEqual(tree(self.node), before)
         self.balances(0, 0)
+
+    def test_local_target_bypasses_proxy_本機不走代理(self):
+        """環境設了 http_proxy 且無 no_proxy：127.0.0.1／localhost 直連假 LiteLLM，proxy 零連線；
+        非本機目標仍照環境進 proxy（proxy 收下即斷，閘道 unknown）。拿掉修法，本機兩例會進 proxy。"""
+        proxy = socket.create_server(("127.0.0.1", 0))
+        self.addCleanup(proxy.close)
+        seen = []
+
+        def accept():
+            while True:
+                try:
+                    conn, _ = proxy.accept()
+                except OSError:
+                    return
+                with conn:
+                    conn.settimeout(2)
+                    try:
+                        seen.append(conn.recv(4096).split(b"\r\n", 1)[0])
+                    except OSError:
+                        seen.append(b"")
+
+        threading.Thread(target=accept, daemon=True).start()
+        url = "http://127.0.0.1:%d" % proxy.getsockname()[1]
+        env = dict(self.env, http_proxy=url, HTTP_PROXY=url, no_proxy="", NO_PROXY="")
+        port = self.fake.url.split(":")[2].split("/")[0]
+        for i, host in enumerate(("127.0.0.1", "localhost"), 1):
+            with self.subTest(目標=host):
+                c = "local%d" % i
+                p = self.cli(*self.args(c), env=dict(env, AOS7_LITELLM_URL="http://%s:%s/v1" % (host, port)))
+                self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+                self.received(i)
+                self.assertEqual(seen, [])
+        p = self.cli(*self.args("remote"), env=dict(env, AOS7_LITELLM_URL="http://llm.example.invalid:4000/v1"))
+        self.evidence("remote", p, 3, "unknown", stage="io")
+        self.assertEqual(seen, [b"POST http://llm.example.invalid:4000/v1/chat/completions HTTP/1.1"])
+        self.received(2)
+        picked = []
+        with patch.object(transport_mod, "DIRECT", type("O", (), {"open": lambda s, r, timeout: picked.append(r.host)})()):
+            transport_mod.urlopen(transport_mod.Request("http://[::1]:4000/v1"), 1)
+        self.assertEqual(picked, ["[::1]:4000"])
