@@ -27,7 +27,7 @@
 | 2 | 壞參數或 payload 不存在、不是 JSON，未送請求 |
 | 3 | 帳未回條、入口未終局、讀寫故障；status 帳讀不到也用 3，證據留著 |
 
-「帳任務沒在跑」＝`ledger.lock` 沒人持有：`ledger_running` 唯讀試鎖、不建檔；call／settle 不送 inbox 就退 1，文案 `NOT_RUNNING`。
+「帳任務沒在跑」＝`ledger.lock` 沒人持有：`ledger_running` 唯讀試鎖、不建檔；call／settle 不送 inbox 就退 1，文案 not_running(bud)。
 
 ## 三個組件（契約卡，細節在 spec.md）
 

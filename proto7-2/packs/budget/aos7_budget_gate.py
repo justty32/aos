@@ -177,7 +177,7 @@ def io_boundary(fn, kid, key):
         return pending(kid, key, "io", {"why": "讀寫不到：%r" % e})
 
 
-def call(bud, key, amount, resource, payload_path, out, patience, budget_arg=None):
+def call(bud, key, amount, resource, payload_path, out, patience):
     """reserve → 入口 run → settle。只有 0 與 1 保證有終局結果交付。
 
     0＝後端受理成功，已結算，終局結果已交付（stdout 最後一行＋有指定時的 --out）。
@@ -188,10 +188,10 @@ def call(bud, key, amount, resource, payload_path, out, patience, budget_arg=Non
        或已結算但 --out 寫入失敗。先 status --holder H --request R 查 K，
        再同 K 重送 call（冪等，不重扣）。
     """
-    return io_boundary(lambda: _call(bud, key, amount, resource, payload_path, out, patience, budget_arg), kid_of(key), key)
+    return io_boundary(lambda: _call(bud, key, amount, resource, payload_path, out, patience), kid_of(key), key)
 
 
-def _call(bud, key, amount, resource, payload_path, out, patience, budget_arg=None):
+def _call(bud, key, amount, resource, payload_path, out, patience):
     kid = kid_of(key)
     payload = None
     if payload_path:
@@ -202,7 +202,7 @@ def _call(bud, key, amount, resource, payload_path, out, patience, budget_arg=No
             bg.say("payload 不存在或不是 JSON。請給 JSON 檔，例：--payload payload.json")
             return 2
     if not bg.ledger_running(bud):
-        bg.say(bg.NOT_RUNNING % (budget_arg or os.path.relpath(bud.dir)))
+        bg.say(bg.not_running(bud))
         return 1
     content = {"resource": resource, "gateway": GATEWAY, "amount": amount,
                "payload_sha": bg.sha(payload) if payload is not None else None}

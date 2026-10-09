@@ -45,7 +45,7 @@
 | 3 | 未完整交付：busy、intent 無回覆、傳輸逾時／例外、帳未回、讀寫故障 |
 | 4 | 已交付但帳未清：usage 未知（pending）或超出預留（overrun） |
 
-「帳任務沒在跑」＝`ledger.lock` 沒人持有：進門用 `aos7_budget.ledger_running` 唯讀試鎖（不建檔，給剛起的帳 0.5 秒），沒有就退 1、什麼都不寫；已有 receipt 照重印。文案在 `aos7_budget.NOT_RUNNING`，別包照用。
+「帳任務沒在跑」＝`ledger.lock` 沒人持有：進門用 `aos7_budget.ledger_running` 唯讀試鎖（不建檔，給剛起的帳 0.5 秒），沒有就退 1、什麼都不寫；已有 receipt 照重印。文案用 `aos7_budget.not_running(bud)`（結尾附可直接複製的起帳指令），別包照用。
 
 usage 未知仍交 text，used／settle 為 null、不送 settle、不寫 receipt，R 留著。U>R 結算 R、另記 U−R overrun，軟預算不宣稱硬上限、不自動停准入。部分結算、overrun 帳累計及不可查回 intent 的 budget cancel 守門（llm.fake 的 intent 下 `aos7-budget cancel` 退出 3、不改入口）靠 budget 的 B2 新語意（`PARTIAL_SETTLE`）；本包只讀 import、不修改 budget。intent 無回覆時唯一的人手出路是 `adopt` 遲到回覆。
 
