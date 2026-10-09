@@ -278,3 +278,5 @@
 - 待 brain｜LT2 發現：腦的提示裡根本沒帶 STATE.md 和 journal，所以壓縮沒省到 token；brain 的 `compact_if_big` 仍寫死舊門檻；STATE 去重靠數文字，壓縮後可能重寫一行 → M1 補丁之後開 brain 小修
 - C｜M1 補丁：「卡住」回信改白話——正文只講哪封信、被打斷、兩條路（什麼都不做／再寄一次），真假 AI 分開說要不要錢；call id、預留、指令移到信尾「進階（給維護者）」
 - C｜BR2：腦的提示每回合附上壓縮後的 STATE（最多 1200 字，超上限時排在技能全文之後被砍）；`compact_if_big` 改成每回合直接叫 `aos7-compact now`（用 compact 新預設）；STATE 去重改用 id 記在 `brain/state.json`（壓縮後不會重寫）。假 AI 長任務：每回合提示多約 170 token（約 +16%，真 AI 中文估 +10%，待真 AI 重跑確認），壓縮後每回合省約 9%
+- C｜KR1：kernel 規則 supervise-brain＋noop 進 main；測試資料全從真實紀錄抽（長任務 run1 就是「腦活著卻不再寫進度」的真案例：第 6 回合寄信、第 12 回合 kill、同一次執行不重複）；行數 536 超 350 gate（多為真資料 fixture）照收
+- B｜頂層：KE1 範例改成「腦卡在等 AI 回覆、不再寫進度」的情境（拉長 deadline 或連子程序一起砍），**不改凍結的判斷基準 (信 id, step)**。理由：腦自己「連續 3 回合沒進展」會先處理一般的沒進展，kernel 只保底「腦真的壞死」
