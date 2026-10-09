@@ -21,10 +21,10 @@ TOP = HERE.parents[3]
 UP = TOP / 'modules/up/aos7-up'
 MAIL = TOP / 'modules/mail/aos7-mail'
 TERMINAL = ('DONE', 'BLOCKED', 'NEEDS-USER', 'FAILED')
-# 這次實跑的設定（寫進 node 的 compact.json）：預設 16384／保留 10 則在 30 回合內不會觸發，
-# 門檻降到 6000、只留最近 3 則（journal 每回合約 300 bytes），才量得到「整理一次、檔長降多少」。
-COMPACT = {"files": ["wf/SESSION-LOG.md", "notes/journal.jsonl"], "max_bytes": 6000, "keep_recent": 3,
-           "on_stage_change": True, "stage_similarity": 0.2, "summary_max_chars": 1200, "llm": None, "events": False}
+# --compact-old：照 2026-10-09 第一次實跑寫 compact.json（6000 bytes／留 3 則、不含 STATE），用來比前後；
+# 不給就用 compact 的預設（2048 bytes／留 5 則、含 wf/handoffs/*/STATE.md）。
+COMPACT_OLD = {"files": ["wf/SESSION-LOG.md", "notes/journal.jsonl"], "max_bytes": 6000, "keep_recent": 3,
+               "on_stage_change": True, "stage_similarity": 0.2, "summary_max_chars": 1200, "llm": None, "events": False}
 
 
 def sh(*args, **kw):
@@ -105,6 +105,7 @@ def main():
     ap.add_argument('--kill-mode', choices=['tree', 'brain', 'idle'], default='tree')
     ap.add_argument('--max-calls', type=int, default=90)
     ap.add_argument('--max-minutes', type=float, default=45)
+    ap.add_argument('--compact-old', action='store_true', help='用第一次實跑的 compact.json（比前後用）')
     ap.add_argument('--stuck-minutes', type=float, default=5, help='這麼久沒有任何變化就停')
     a = ap.parse_args()
     out = Path(a.out).resolve()
@@ -131,7 +132,8 @@ def main():
         if a.deadline is not None:
             cfg['deadline'] = a.deadline
         path.write_text(json.dumps(cfg, ensure_ascii=False))
-    (node / 'compact.json').write_text(json.dumps(COMPACT))
+    if a.compact_old:
+        (node / 'compact.json').write_text(json.dumps(COMPACT_OLD))
     t0 = time.time()
     sent = []
     first = None

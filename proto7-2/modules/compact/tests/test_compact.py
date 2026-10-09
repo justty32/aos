@@ -387,10 +387,10 @@ with (work / 'write.lock').open('a') as lock:
         self.assertEqual(reply.returncode, 0, reply.stdout + reply.stderr)
         self.assertIn('已造好', reply.stdout)
         self.assertIn('220 則，open 20，會摘掉 200 則', reply.stdout)
-        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），102580 → 4013 bytes', reply.stdout)
+        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），102580 → 2023 bytes', reply.stdout)
         # 第一次跑不用 --force：計畫行與結果行印同一個原因（新手回改）。
         self.assertNotIn('--force', shell)
-        self.assertEqual(reply.stdout.count('（原因：大小超過 16384）'), 2)
+        self.assertEqual(reply.stdout.count('（原因：大小超過 2048）'), 2)
         self.assertLessEqual(len(readme.encode()), 4096)
         concepts = readme.split('## 先懂這四個詞')[1].split('## 第一次跑')[0]
         self.assertEqual(len(re.findall(r'^\d\. ', concepts, re.M)), 4)
@@ -400,6 +400,82 @@ with (work / 'write.lock').open('a') as lock:
         for word in ['退出碼', '../../notes/blueprint-errors.md', 'events']:
             self.assertIn(word, advanced)
         self.assertLessEqual(len(advanced.encode()), 12288)
+
+    def brain_node(self, rounds=20):
+        """仿 brain：journal 每回合一則（re／step／text＝停在哪｜成果），STATE 每回合一行。"""
+        letter = 'you-20261009T185412-4f20668237ce'
+        journal = self.node / 'notes/journal.jsonl'
+        journal.parent.mkdir()
+        state = self.node / 'wf/handoffs/2026-10-09/STATE.md'
+        state.parent.mkdir(parents=True)
+        rows, lines = [], ['# 續行點 2026-10-09\n', '\n', '## 進度\n']
+        for k in range(1, rounds + 1):
+            rows.append(json.dumps(dict(by='brain', re=letter, step=k, at='2026-10-09T18:%02d:00' % k,
+                                        text=f'已寫第 {k} 節；下一回合寫第 {k + 1} 節｜' + '成果原文' * 40), ensure_ascii=False) + '\n')
+            lines.append(f'- 18:{k:02d} 第 {k} 回合 {letter}：已寫第 {k} 節；下一回合寫第 {k + 1} 節\n')
+        lines.insert(5, '- [ ] 等人補人數\n')
+        journal.write_text(''.join(rows))
+        state.write_text(''.join(lines))
+        return letter, journal, state, rows, lines
+
+    def test_default_includes_state_and_summary_says_what_was_done(self):
+        """預設 files 含 wf/handoffs/*/STATE.md；摘要按信列出每回合做了什麼；open 與最近 5 則原文留下。"""
+        letter, journal, state, rows, lines = self.brain_node()
+        plan = self.now('--dry-run').stdout
+        self.assertIn('wf/handoffs/2026-10-09/STATE.md：21 則，open 1，會摘掉 15 則（原因：大小超過 2048）', plan)
+        self.assertIn('notes/journal.jsonl：20 則，open 0，會摘掉 15 則（原因：大小超過 2048）', plan)
+        self.now()
+        text = journal.read_text().splitlines()
+        self.assertEqual(text[1:], [r.rstrip('\n') for r in rows[-5:]])
+        summary = json.loads(text[0])['text']
+        self.assertIn('信 you-…4f20668237ce 15 則（第 1～15 回合）：已寫第 1 節；下一回合寫第 2 節', summary)
+        self.assertIn('已寫第 15 節', summary)
+        self.assertNotIn('{"by"', summary)
+        self.assertNotIn('成果原文', summary)
+        after = state.read_text()
+        self.assertTrue(after.startswith('# 續行點 2026-10-09\n\n## 進度\n'))
+        self.assertIn('- [ ] 等人補人數\n', after)
+        self.assertTrue(after.endswith(''.join(lines[-5:])))
+        marker = next(s for s in after.splitlines() if s.startswith('- （摘要 '))
+        self.assertIn('信 you-…4f20668237ce 15 則（第 1～15 回合）：已寫第 1 節', marker)
+        self.assertLess(len(after.encode()), 0.6 * len(''.join(lines).encode()))
+        # 再長一輪後重摘：舊摘要併進「更早」，不丟。
+        with state.open('a') as f:
+            f.writelines(f'- 19:{k:02d} 第 {k} 回合 {letter}：已寫第 {k} 節\n' for k in range(21, 40))
+        self.now()
+        again = state.read_text()
+        self.assertIn('更早：', again)
+        self.assertIn('- [ ] 等人補人數\n', again)
+
+    def test_state_lock_waits_for_wfnode_writer(self):
+        """整理 STATE.md 換檔時持 wf/handoffs/.state.lock（aos7-wfnode state 追加時拿的鎖）。"""
+        _, _, state, _, _ = self.brain_node()
+        lock = os.open(self.node / 'wf/handoffs/.state.lock', os.O_WRONLY | os.O_CREAT, 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        p = subprocess.Popen([sys.executable, str(CLI), 'now', str(self.node)], cwd=self.node,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                p.wait(timeout=1.5)
+            with state.open('a') as f:
+                f.write('- 19:00 鎖內追加的一行\n')
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+            os.close(lock)
+        out, err = p.communicate(timeout=20)
+        self.assertEqual(p.returncode, 0, out + err)
+        self.assertTrue(state.read_text().endswith('- 19:00 鎖內追加的一行\n'))
+
+    def test_small_old_part_waits(self):
+        """超過門檻但可摘的舊則不到門檻一半：先不摘（免得每回合整理）。"""
+        self.config(max_bytes=1000, keep_recent=2)
+        path = self.node / 'journal.jsonl'
+        small, big = json.dumps({'text': 'x' * 100}) + '\n', json.dumps({'text': 'x' * 450}) + '\n'
+        path.write_text(small * 2 + big * 2)
+        self.assertIn('不需要整理', self.now('--dry-run').stdout)
+        self.assertIn('會摘掉 2 則', self.now('--dry-run', '--force').stdout)
+        path.write_text(big * 2 + big * 2)
+        self.assertIn('會摘掉 2 則（原因：大小超過 1000）', self.now('--dry-run').stdout)
 
     def test_size_and_dry_run_tree(self):
         path, *_ = self.fixture()
