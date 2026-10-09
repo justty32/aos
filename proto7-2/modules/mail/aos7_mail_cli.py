@@ -65,7 +65,9 @@ def main(argv=None):
             print(json.dumps(send(root, a.me, '--up' if a.to == '__up__' else a.to, a.status, a.title, body, a.re)))
         elif a.cmd == 'done':
             result = done(root, a.me, a.file, a.status, a.title, body)
-            if result['to']:
+            if result['already']:
+                print('已辦結過 ' + result['file'])
+            elif result['to']:
                 print(f"已辦結 {result['file']}，已回 {result['status']} 給 {', '.join(result['to'])}")
             else:
                 print('已歸檔 ' + result['file'])

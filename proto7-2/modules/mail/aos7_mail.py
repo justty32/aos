@@ -37,7 +37,7 @@ def load(path, default=None):
 def inbox(root, who):
     if who.startswith('team:'):
         return Path(root) / 'teams' / name(who[5:]) / 'inbox'
-    return Path(root) / name(who) / 'inbox'
+    return Path(root) / name(who) / 'wf/inbox'
 
 
 def letters(box, done=False):
@@ -74,9 +74,9 @@ def upstream(root, me):
     team = team_of(root, me)
     if team and team[1] != me:
         return team[1]
-    p = Path(root) / me / 'wf/ROSTER.md'
+    p = Path(root) / me / 'wf/workflows/inbox/ROSTER.md'
     text = p.read_text() if p.exists() else ''
-    match = re.search(r'^### `' + re.escape(me) + r'`\n(.*?)(?=^### |\Z)', text, re.M | re.S)
+    match = re.search(r'^### `' + re.escape(me) + r'`\n(.*?)(?=^### |^## |\Z)', text, re.M | re.S)
     up = re.search(r'^- \*\*上游\*\*：(.*)$', match[1], re.M) if match else None
     if not up or not up[1].strip():
         raise ValueError('找不到團隊領導或 ROSTER 上游')
@@ -109,17 +109,20 @@ def send(root, me, to, status, title, body='', re_id='', ident=None):
     if re_id:
         name(re_id)
     to = upstream(root, me) if to == '--up' else to
+    if to.startswith('team:') and status == 'REQUEST':
+        raise ValueError('團隊信箱只收廣播（PROGRESS／終局）；要人辦事請直接寄給成員')
     box = inbox(root, to)
     if to.startswith('team:') and (not team_of(root, me) or team_of(root, me)[0] != to[5:]):
         raise ValueError('只有團隊成員可以投團隊信箱')
     stamp = datetime.datetime.now().astimezone()
-    ts = stamp.strftime('%Y%m%dT%H%M%S')
-    ident = name(ident or f'{me}-{ts}-{secrets.token_hex(6)}')
+    ts = stamp.strftime('%Y%m%dT%H%M')
+    ident = name(ident or f"{me}-{stamp.strftime('%Y%m%dT%H%M%S')}-{secrets.token_hex(6)}")
     data = {'from': me, 'to': to, 'status': status, 'at': stamp.isoformat(),
             'reply-to': str(inbox(root, me)), 'id': ident, 're': re_id}
     text = '---\n' + ''.join(f'{k}: {v}\n' for k, v in data.items()) + '---\n# ' + title + '\n\n' + body_text(body)
-    if not to.startswith('team:') and not box.parent.exists():
+    if not to.startswith('team:') and not (Path(root) / to).exists():
         print(f'注意：{to} 是新信箱（第一次收信）', file=sys.stderr)
+    inbox(root, me).mkdir(parents=True, exist_ok=True)  # 寄件者也算有信箱：回信時不再提示「新信箱」
     tmpdir = box / '.tmp'
     tmpdir.mkdir(parents=True, exist_ok=True)
     # 回信的固定 id 去重；獨立 delivery 鎖不佔收件者的辦結鎖。
@@ -147,7 +150,7 @@ def send(root, me, to, status, title, body='', re_id='', ident=None):
             tmp.unlink(missing_ok=True)
     if status == 'REQUEST':
         try:
-            result = publish(box.parent / 'events', kind='mail.request', event_id=ident,
+            result = publish((box.parent if to.startswith('team:') else Path(root) / to) / 'events', kind='mail.request', event_id=ident,
                              payload={'id': ident, 'from': me, 'to': to, 'file': str(final)}, must=True, node=to)
             if not result['ok']:
                 print('必達提醒未保存：' + str(result.get('why')), file=sys.stderr)
@@ -159,7 +162,7 @@ def send(root, me, to, status, title, body='', re_id='', ident=None):
 def audit(root, me=None):
     if me is not None:
         name(me)
-    boxes = sorted(set(Path(root).glob('*/inbox')) | set(Path(root).glob('teams/*/inbox')))
+    boxes = sorted(set(Path(root).glob('*/wf/inbox')) | set(Path(root).glob('teams/*/inbox')))
     all_mail = []
     for box in boxes:
         with locked(str(box / '.delivery')):
@@ -172,7 +175,7 @@ def audit(root, me=None):
 
 def ack(root, me):
     box = inbox(root, me)
-    events = box.parent / 'events'
+    events = Path(root) / me / 'events'
     if not events.exists():
         return
     marker = box / '.acked'
@@ -227,7 +230,8 @@ def finish(root, me, path, journal):
                     if letter(target)['id'] == journal['id']:
                         break
                     n += 1
-                    target = target.parent / f'{path.stem}_archive{n}.md'
+                    stamp, _, tail = path.name.partition('-')
+                    target = target.parent / f"{stamp.split('_')[0]}_{n}-{tail}"
             path.unlink()
     ack(root, me)
 
@@ -247,7 +251,7 @@ def complete(root, me, path, status=None, title=None, body='', handler=None):
                 raise ValueError('REQUEST 辦結必須給終局 STATUS 與一句結論')
             validate_reply(status, title, body)
             reply_to = l.get('reply-to') or l['from']
-            to = l['from'] if '/' not in reply_to else Path(reply_to).parent.name
+            to = l['from'] if '/' not in reply_to else Path(reply_to).parents[1].name
             name(to)
             destinations = [to]
             team = team_of(root, me)
@@ -265,12 +269,14 @@ def done(root, me, filename, status=None, title=None, body=''):
     name(me)
     box = inbox(root, me)
     with locked(str(box / '.handle')):
-        pending = [p for p in letters(box) if not (box / '.handled' / (letter(p)['id'] + '.json')).exists()]
         if filename.isdecimal():
-            index = int(filename) - 1
-            if not 0 <= index < len(pending):
-                raise ValueError('找不到這個未辦信序號')
-            path = pending[index]
+            snapshot = load(box / '.numbers.json', {})
+            ident = snapshot.get(str(int(filename)))
+            if ident is None:
+                raise ValueError('請先 read')
+            path = next((p for p in letters(box, True) if letter(p)['id'] == ident), None)
+            if path is None:
+                raise ValueError('找不到這封信')
         else:
             path = next((p for p in letters(box, True)
                          if p.name == filename or letter(p)['id'] == filename), None)
@@ -282,7 +288,7 @@ def done(root, me, filename, status=None, title=None, body=''):
         else:
             ack(root, me)
         journal = load(box / '.handled' / (l['id'] + '.json'), {})
-        return {'file': path.name, 'to': [r['to'] for r in journal.get('replies', [])],
+        return {'file': path.name, 'already': path.parent != box, 'to': [r['to'] for r in journal.get('replies', [])],
                 'status': next((r['status'] for r in journal.get('replies', [])), None)}
 
 
@@ -315,6 +321,7 @@ def poll(root, me, quiet=False):
                 if not quiet or l['id'] not in seen_mail:
                     output.append(dict(l, type='mail', number=number))
                 seen_mail.add(l['id'])
+        updates[box / '.numbers.json'] = {str(l['number']): l['id'] for l in output if l['type'] == 'mail'}
         updates[box / '.seen'] = sorted(seen_mail)
         ack(root, me)
         team = team_of(root, me)
@@ -327,7 +334,7 @@ def poll(root, me, quiet=False):
                     output.append(dict(l, type='team'))
                     seen.add(l['id'])
             updates[seenpath] = sorted(seen)
-        orders = box.parent / 'orders.md'
+        orders = box / 'orders' / f'{me}.md'
         if orders.exists():
             data = orders.read_bytes()
             offset = load(box / '.orders-offset', 0)
@@ -347,36 +354,4 @@ def poll(root, me, quiet=False):
             write_json(str(path), value)
 
 
-def roster(root, me, who, up, territory, can, cannot, team=None):
-    name(me)
-    name(up)
-    if team:
-        name(team)
-    path = Path(root) / me / 'wf/ROSTER.md'
-    with locked(str(path)):
-        text = path.read_text() if path.exists() else '# ROSTER\n\n## 現役成員\n'
-        if f'### `{me}`' in text.splitlines():
-            raise ValueError('同名 ROSTER 格已存在')
-        fields = [('狀態', '現役'), ('我是誰', who), ('團隊', f'`teams/{team}`' if team else '無'),
-                  ('上游', up), ('領地', territory), ('答得出什麼', can), ('答不出什麼', cannot),
-                  ('怎麼找我', str(inbox(root, me))), ('訂閱主題', '無')]
-        if any('\n' in v or '\r' in v for _, v in fields):
-            raise ValueError('ROSTER 每欄必須是一行')
-        with path.open('a') as f:
-            if not path.stat().st_size:
-                f.write(text)
-            f.write(f'\n### `{me}`\n' + ''.join(f'- **{k}**：{v}\n' for k, v in fields))
-
-
-def team(root, group, leader, members):
-    name(group)
-    people = [name(p) for p in [leader, *members]]
-    with locked(str(Path(root) / 'teams/.membership')):
-        if len(set(people)) != len(people) or any(team_of(root, p) for p in people):
-            raise ValueError('成員重複或已在別的團隊')
-        folder = Path(root) / 'teams' / group
-        folder.mkdir()
-        (folder / 'inbox').mkdir()
-        (folder / 'members').write_text('\n'.join(people) + '\n')
-
-
+from aos7_mail_setup import roster, team
