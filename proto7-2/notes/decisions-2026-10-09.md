@@ -142,3 +142,4 @@
 - 建議限制（**未生效**，等跑完大段落再定）：每次預留約 8000 token、逾時 120 秒、每單 5 萬 token、仍不設 max_tokens
 - C｜H1：定時例行 `modules/routines/`——最多一次（被殺那期不重跑）；錯過很久只跑 1 次不補跑；`add` 會自動在 node 裝一個 `routines` keep 任務；對外指令 3 個（add／ls／rm）
 - C｜頂層：routines 在 wf/ 留兩個固定 `.lock` 檔可接受（數量固定、不隨回合增加，不違反「垃圾要能清」）
+- C｜P1：組提示包 `packs/prompt/`——對外 2 指令（render／expand）；讀檔用 `$opt` 的 file／tail／latest（latest 依檔名排序、結果固定）；大段折成 `ref://` 可逆；渲染不出整份就退出 3、不輸出半份；diff 777 行（程式 239）照收
