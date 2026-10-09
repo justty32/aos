@@ -11,6 +11,7 @@
 2. **last-round.json 壞**（round.json 是開著的第 N 回合）：內容 ∈ {`{`、`{"round": N}`（缺欄）、`{"round": "N"}`}
    → tock 重新產生完整總結（round＝N、有 ended／alive／tock_at、不是 replayed）、回合關上、之後 tick 開 N+1。
    對照：last-round.json 是完整的第 N 回合總結 → replayed。
+   T8-06：已結束 once 在 tock-summary／tock-after-finish／tock-seen-round 被殺 → 重播補收尾、保留本回合槽，下一回合不重報並刪槽。
 3. **birth.json 壞** 內容 ∈ {`{`、`[]`、`{"run": "x"}`} → UNKNOWN（單槽保留）：tick 不起、tock errors 有說明；人刪掉 birth.json 後
    下一回合照常起。不從其他證據（活程序、exit.json、pid.json）推回 run（那是誤用，已刪）。
 """
@@ -132,9 +133,49 @@ class TestLastRoundJson(MatrixCase):
         self.assertEqual(self.raw(lp), before)
         self.assertEqual(self.itick()["round"], 3)
 
+    def _ended_once_replay_finish(self, point):
+        """T8-06：已結束 once 重播必須收尾；tock-summary＝總結寫完、尚未補 seen_round；
+        tock-after-finish＝收尾完成、尚未關回合；tock-seen-round＝seen_round 寫完、收尾尚未完成。
+        once 表項在首次 tick 起動成功就刪；結果槽保留完整一回合，下一回合 tock 才刪。
+        """
+        node = self.mknode("a", [{"name": "j", "mode": "once", "argv": ["true"]}])
+        self.itick()
+        self.settle(node, "j")
+        self.crash("aos7-tock", point)
+        lp = os.path.join(node, ".aos", "last-round.json")
+        before = self.raw(lp)
+        ex0 = self.exit_raw(node, "j")
+        self.assertIsInstance(ex0, dict)
+        if point == "tock-summary":
+            self.assertNotIn("seen_round", ex0)
+        else:
+            self.assertEqual(ex0["seen_round"], 1)
+        self.assertIs(self.round_json(node)["open"], True)
+        self.assertEqual(self.tasks(node), [], "once 起動成功後應已刪除表項")
+
+        lr = self.itock()
+        self.assertTrue(lr.get("replayed"))
+        self.assertEqual(self.raw(lp), before, "重播不應改寫總結")
+        ended = self.ends_of([lr], "j")
+        self.assertEqual(len(ended), 1)
+        self.assertEqual(ended[0]["run"], "j#1")
+        self.assertEqual(ended[0]["code"], 0)
+        self.assertIs(self.round_json(node)["open"], False)
+        self.assertEqual(self.exit_raw(node, "j")["seen_round"], 1)
+        self.assertTrue(os.path.isdir(self.slot(node, "j")), "本回合才報過的結果槽必須保留")
+
+        self.assertEqual(self.itick()["round"], 2)
+        self.assertEqual(self.tasks(node), [])
+        lr2 = self.itock()
+        self.assertEqual(self.ends_of([lr2], "j"), [], "已報過的 once 不應重報")
+        self.assertFalse(os.path.isdir(self.slot(node, "j")), "下一回合應刪除已報過的 once 槽")
+
 
 gen(TestLastRoundJson, "bad_last_round", [("half", ("{",)), ("no_fields", ('{"round": 2}',)),
                                           ("round_str", ('{"round": "2"}',))], TestLastRoundJson._bad_last)
+gen(TestLastRoundJson, "ended_once_replay_finish", [(p, (p,)) for p in
+                                                 ("tock-summary", "tock-after-finish", "tock-seen-round")],
+    TestLastRoundJson._ended_once_replay_finish)
 
 
 class TestBrokenBirth(MatrixCase):

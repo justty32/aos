@@ -25,6 +25,7 @@
    tock errors 一筆；拿掉後恢復（lost 只報一次、重新起一個），回合不跳號。
    檔 ∈ {round.json（tick 3、tock 3，round.json 原樣）、last-round.json（tock 3）}、listdir `.aos/tasks`（tick 3、tock 3）× errno：
    什麼都沒寫；拿掉後恢復、回合連續。
+   T8-05：last-round.json 第 2 次讀（寫後讀回）注入 U／BAD／同 round 異內容：不關回合、不收尾，解除後重播。
 3. **daemon 看 node 的 stat 讀不到** × errno：時間線保留、不進 missing、不起 reaper，last_error 帶 errno 類型。
    另有一案真 daemon 用 `AOS7_TEST_FAULT=@規則檔` 中途開關（命中紀錄檔經環境傳給 daemon 子程序）。
 """
@@ -43,6 +44,7 @@ import aos7_fs
 import aos7_mount
 import aos7_proc
 import aos7_task
+import aos7_tock
 from aos7_fs import read_json, write_json
 
 PROC_OPS = ("proc-list", "proc-stat", "proc-environ", "proc-cmdline")
@@ -283,6 +285,55 @@ class TestFileUnknown(MatrixCase):
         self.assertFalse(lr.get("replayed"))
         self.assertEqual(self.itick()["round"], 3)
 
+    def _last_round_readback(self, status):
+        """T8-05：第 2 次讀才注入，避開讀舊總結，證明寫後整份讀回失敗時不關回合、不收尾，解除後重播。"""
+        node = self.mknode("a", [{"name": "j", "argv": ["true"]}])
+        self.itick()
+        self.settle(node, "j")
+        self.itock()
+        self.assertEqual(self.itick()["round"], 2)
+        self.settle(node, "j")
+        lpath = os.path.join(node, ".aos", "last-round.json")
+        orig = aos7_tock.fact
+        reads = 0
+
+        def fact(path, *args, **kwargs):
+            nonlocal reads
+            if str(path).endswith("/.aos/last-round.json"):
+                reads += 1
+                if reads == 2:
+                    st, back = orig(path, *args, **kwargs)
+                    self.assertEqual(st, aos7_fs.OK)
+                    self.assertEqual(back["round"], 2)
+                    if status == aos7_fs.OK:
+                        changed = dict(back, tock_at=back["tock_at"] + "（注入）")
+                        self.assertEqual(changed["round"], back["round"])
+                        self.assertNotEqual(changed, back)
+                        return status, changed
+                    return status, "注入"
+            return orig(path, *args, **kwargs)
+
+        with mock.patch.object(aos7_tock, "fact", side_effect=fact):
+            with self.assertRaises(aos7_tock.Unknown) as raised:
+                self.itock()
+            self.assertEqual(raised.exception.kind, "readback")
+            self.assertEqual(reads, 2, "沒有命中寫後讀回點")
+        self.assertIs(self.round_json(node)["open"], True)
+        notice = read_json(os.path.join(self.slot(node, "j"), "tock.json"))
+        self.assertNotEqual((notice or {}).get("round"), 2, "讀回失敗仍通知了第 2 回合")
+        ex = self.exit_raw(node, "j")
+        self.assertIsNotNone(ex, "已結束任務的結果被刪了")
+        self.assertNotEqual(ex.get("seen_round"), 2, "讀回失敗仍做了收尾")
+        committed = read_json(lpath)
+        self.assertEqual(committed["round"], 2)
+        self.assertTrue(aos7_fs.summary_ok(committed), "第 2 回合總結沒有完整落地")
+        lr = self.itock()
+        self.assertTrue(lr.get("replayed"))
+        self.assertEqual(lr["round"], 2)
+        self.assertIs(self.round_json(node)["open"], False)
+        self.assertEqual(self.exit_raw(node, "j")["seen_round"], 2)
+        self.assertEqual(self.itick()["round"], 3)
+
     def _listdir(self, e):
         """`.aos/tasks` 列不出來：tick 3、tock 3，什麼都沒寫；拿掉後恢復。"""
         node = self.mknode("a", [{"name": "j", "argv": ["true"]}])
@@ -309,6 +360,9 @@ gen(TestFileUnknown, "slotfile", [("%s_%s" % (f.split(".")[0], e), (f, e))
     TestFileUnknown._slot_file)
 gen(TestFileUnknown, "round_json", [(e, (e,)) for e in ERRNOS], TestFileUnknown._round_json)
 gen(TestFileUnknown, "last_round_json", [(e, (e,)) for e in ERRNOS], TestFileUnknown._last_round)
+gen(TestFileUnknown, "last_round_readback", [(name, (status,)) for name, status in
+    (("U", aos7_fs.U), ("BAD", aos7_fs.BAD), ("OK_same_round", aos7_fs.OK))],
+    TestFileUnknown._last_round_readback)
 gen(TestFileUnknown, "listdir_tasks", [(e, (e,)) for e in ERRNOS], TestFileUnknown._listdir)
 
 
