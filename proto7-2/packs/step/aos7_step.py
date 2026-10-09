@@ -21,14 +21,14 @@ import uuid
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = os.path.dirname(os.path.dirname(HERE))           # proto7-2/
 sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
-from aos7_fs import N, OK, U, Unknown, edit_json, fact, is_int, now, write_json  # noqa: E402
+from aos7_fs import N, OK, U, Unknown, edit_json, fact, is_int, now, sweep_tmp, write_json  # noqa: E402
 
 RESULT_BIN = os.path.join(HERE, "bin", "aos7-step-result")
 NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 KINDS = ("run", "wait", "count", "end")
 # 可逐步覆蓋的選項只有 wake（run）、on_timeout、on_unknown；restart_on_end 是工作級（spec §2）
 FIELDS = {"run": {"run", "ok", "fail", "finite", "idempotent", "patience", "on_timeout", "on_unknown", "max_resends",
-                  "receipt", "expect", "wake", "note"},
+                  "receipt", "expect", "wake", "unknown_codes", "note"},
           "wait": {"wait", "then", "patience", "on_timeout", "fail", "note"},
           "count": {"count", "then", "exhausted", "note"},
           "end": {"end", "note"}}
@@ -194,6 +194,11 @@ def check(table):
             if not (isinstance(a, list) and a and all(isinstance(x, str) for x in a)):
                 add("error", name, "struct", "run 要是非空字串陣列")
                 a = []
+            if "unknown_codes" in s:
+                codes = s["unknown_codes"]
+                if not (isinstance(codes, list) and codes
+                        and all(is_int(c) and 1 <= c <= 255 for c in codes) and len(set(codes)) == len(codes)):
+                    add("error", name, "struct", "unknown_codes 要是非空、互異的整數陣列（1～255）")
             ex = s.get("expect", [])
             if not (isinstance(ex, list) and all(isinstance(x, str) for x in ex)):
                 add("error", name, "struct", "expect 要是路徑字串陣列")
@@ -300,6 +305,7 @@ class Job:
         if st == OK and isinstance(fr, dict) and fr.get("v") == 1 and isinstance(fr.get("inst"), str) \
                 and fr.get("phase") in ("running", "halted", "ended") and isinstance(fr.get("rev"), int) \
                 and all(isinstance(fr.get(k), dict) for k in ("counts", "visits", "accepted", "tries")):
+            fr.setdefault("resends", {})
             return OK, fr
         raise Unknown("frame.json %s；不前進，等人修好或刪掉重來" % (fr if st != OK else "缺欄或型別不對"), kind="frame")
 
@@ -319,8 +325,12 @@ class Job:
 def new_frame(t, rev, rnd=None):
     """新工作：新 inst、pc=start、since＝現在的回合（spec §3；不知道就留 None，advance 開頭補）。rev=0 表示磁碟上還沒有框架。"""
     return {"v": 1, "job": t["job"], "inst": uuid.uuid4().hex[:8], "table": rev, "pc": t["start"],
-            "phase": "running", "counts": {}, "visits": {t["start"]: 1}, "accepted": {}, "tries": {},
+            "phase": "running", "counts": {}, "visits": {t["start"]: 1}, "accepted": {}, "tries": {}, "resends": {},
             "pending": None, "halt": None, "end": None, "since": rnd, "seen": None, "rev": 0}
+
+
+def request_of(fr, step):
+    return "%s-%s-%d" % (fr["inst"], step, fr["visits"].get(step, 1))
 
 
 # ---------- 讀核心公開的檔 ----------
@@ -460,13 +470,13 @@ class Interp:
 
     def new_pending(self, step):
         fr = self.fr
-        req = "%s-%s-%d" % (fr["inst"], step, fr["visits"].get(step, 1))
+        req = request_of(fr, step)
         k = fr["tries"].get(req, 0) + 1
         fr["tries"][req] = k
         att = "%s-a%d" % (req, k)
         return {"step": step, "request": req, "attempt": att, "n": k, "task": "step-%s-%s" % (fr["job"], step),
                 "result": self.job.p("results", step, att + ".json"), "state": "intent",
-                "intent_round": self.rnd, "since": self.rnd, "resends": 0}
+                "intent_round": self.rnd, "since": self.rnd}
 
     def item(self, s, p):
         v = self.vars(p["step"], p)
@@ -481,7 +491,7 @@ class Interp:
 
     def add_item(self, item, p, fresh_check=False):
         """拿表鎖加 once 項（表上已有同 attempt 就不加）。fresh_check：補加前在鎖內確認「確定沒加上過」
-        （槽裡沒有這個 attempt、回合 ≤ intent_round+1），不成立丟 Halt unknown。表壞、鎖拿不到丟 Unknown（拒寫）。"""
+        （槽裡沒有這個 attempt、回合 == intent_round），不成立丟 Halt unknown。表壞、鎖拿不到丟 Unknown（拒寫）。"""
         node = self.job.node
 
         def fn(t):
@@ -494,7 +504,7 @@ class Interp:
                 if slot_attempt(node, p["task"], p["attempt"]) is not None:
                     raise Halt("unknown", "派工意圖之後槽裡出現這個 attempt，表上卻沒有")
                 cur = node_round(node)
-                if cur is None or cur > p["intent_round"] + 1:
+                if cur is None or cur > p["intent_round"]:
                     raise Halt("unknown", "派工意圖寫了、表上沒有這項、槽也沒有（回合 %r，意圖在 %r）：說不清加上過沒有"
                                % (cur, p["intent_round"]))
             return dict(t, tasks=list(t.get("tasks", [])) + [item])
@@ -570,10 +580,11 @@ class Interp:
         if "receipt" in s and self.cond(s["receipt"], step):
             self.accept(step, s, {"request": p["request"], "attempt": p["attempt"], "ok": True, "receipt": True})
             return True
+        n = self.fr["resends"].get(p["request"], 0)
         if self.opt(s, "on_unknown") == "resend" and s.get("idempotent") is True \
-                and p.get("resends", 0) < s.get("max_resends", 1):
+                and n < s.get("max_resends", 1):
+            self.fr["resends"][p["request"]] = n + 1
             q = self.new_pending(step)
-            q["resends"] = p.get("resends", 0) + 1
             self.dispatch(step, s, q)
             return False
         self.halt("unknown", why)
@@ -636,10 +647,22 @@ class Interp:
             what, val = self.evidence(p)
             if what == "result":
                 test_crash(self.job, "before-accept")
+                if not val.get("ok") and val.get("code") in s.get("unknown_codes", ()):
+                    if self.on_unknown(step, s, p, "退出碼 %r：未交付終局結果" % val["code"]):
+                        continue
+                    break
                 self.accept(step, s, val)
                 continue
             if what == "readd":
-                self.add_item(self.item(s, p), p, fresh_check=True)
+                item = self.item(s, p)
+                try:
+                    self.add_item(item, p, fresh_check=True)
+                except Halt as h:
+                    if h.kind != "unknown":
+                        raise
+                    if self.on_unknown(step, s, p, str(h)):
+                        continue
+                    break
                 p["state"] = "queued"
                 break
             if what == "unknown":
@@ -698,6 +721,15 @@ def close(job, fr, reopen=None):
 
 def main_run(jd):
     from aos7_taskside import task_env, wait_tock
+    job = Job(jd)
+    sweep_tmp(job.a(jd))
+    results = job.a(job.p("results"))
+    try:
+        steps = os.listdir(results)
+    except OSError:
+        steps = []
+    for step in steps:
+        sweep_tmp(os.path.join(results, step))
     me = task_env()
     if run_pass(jd) == "exit":
         return 0
@@ -739,6 +771,9 @@ def main(argv=None):
             print("沒有停住（phase %s）" % fr["phase"])
             return 1
         fr.update(phase="running", halt=None, since=node_round(job.node, fr.get("seen")))
+        if a.resend:
+            req = fr["pending"]["request"] if fr.get("pending") else request_of(fr, fr["pc"])
+            fr["resends"].pop(req, None)
         if fr.get("pending"):
             if a.resend:
                 fr["pending"] = None          # 下一圈同一個 request、新 attempt
