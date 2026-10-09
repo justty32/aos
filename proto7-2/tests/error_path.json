@@ -50,8 +50,13 @@
    "team": "ER-prompt-metrics",
    "name": "aos7-prompt",
    "entry": "packs/prompt/bin/aos7-prompt",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-prompt-metrics）"
+   "unsure": {
+    "argv": [
+     "render",
+     ".",
+     "missing.json"
+    ]
+   }
   },
   {
    "pack": "author",
@@ -107,8 +112,7 @@
    "exempt": {
     "unsure": "藍圖 §4 唯一豁免：metrics 是量尺，讀不了的檔算 0、行尾報缺口"
    },
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-prompt-metrics）"
+   "unsure": null
   },
   {
    "pack": "compact",
