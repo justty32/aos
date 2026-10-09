@@ -18,6 +18,7 @@ sys.path.insert(0, PACK)
 
 from base import CoreCase  # noqa: E402
 import _proc  # noqa: E402
+import aos7_budget as bg  # noqa: E402
 from aos7_fs import read_json, write_json  # noqa: E402
 
 BUDGET = os.path.join(PACK, "bin", "aos7-budget")
@@ -74,7 +75,9 @@ class BudgetMixin:
         return p
 
     def start_ledger(self, node):
-        return self.popen(node, "ledger", "budget/demo")
+        p = self.popen(node, "ledger", "budget/demo")
+        self.wait_for(lambda: bg.ledger_running(bg.Bud(os.path.join(node, "budget", "demo")), wait=0), timeout=10)
+        return p
 
     def payload(self, node, name, **kw):
         path = os.path.join(node, name)

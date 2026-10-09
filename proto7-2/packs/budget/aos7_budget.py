@@ -1,4 +1,4 @@
-"""budget 任務包：grant 判定、時鐘、帳（ledger）與命令列（spec 見同資料夾的 spec.md；契約卡在 README.md）。
+"""budget 任務包：grant 判定、時鐘、帳（ledger）與命令列（spec 見同資料夾的 spec.md；契約卡在 ADVANCED.md）。
 
     aos7-budget init <預算>                         照 grant.json 開帳
     aos7-budget ledger <預算>                       帳任務（普通 keep，max_live 1）：處理 inbox/ 的請求
@@ -8,6 +8,7 @@
 預算資料夾＝`<node>/budget/<id>/`。只用核心公開的檔：round.json（completed_tock）；核心不知道這個包。
 """
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -20,7 +21,7 @@ import uuid
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = os.path.dirname(os.path.dirname(HERE))           # proto7-2/
 sys.path[:0] = [os.path.join(TOP, "lib")]
-from aos7_fs import (BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, U, fact, is_int, locked, now,  # noqa: E402
+from aos7_fs import (BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, U, Unknown, fact, is_int, locked, now,  # noqa: E402
                      read_round, sweep_tmp, write_json)
 
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
@@ -45,6 +46,42 @@ class Bud:
 
     def p(self, *a):
         return os.path.join(self.dir, *a)
+
+
+NOT_RUNNING = "帳任務沒在跑，沒送出。先在 node 目錄起帳任務：aos7-budget ledger %s（用 aos7-up 起的 node 會自動起好）"
+
+
+def say(msg):
+    print("aos7-budget: " + " ".join(str(msg).splitlines()), file=sys.stderr)
+
+
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        say(message.rstrip("。.") + "。用法看 aos7-budget --help")
+        self.exit(2)
+
+
+def ledger_running(bud, wait=0.5):
+    """唯讀試共享鎖；帳持獨占鎖才算運行，給剛起的帳 wait 秒。"""
+    end = time.monotonic() + wait
+    while True:
+        try:
+            fd = os.open(bud.p("ledger.lock"), os.O_RDONLY)
+        except FileNotFoundError:
+            pass
+        else:
+            try:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    return True
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            finally:
+                os.close(fd)
+        remaining = end - time.monotonic()
+        if remaining <= 0:
+            return False
+        time.sleep(min(0.05, remaining))
 
 
 def sha(obj):
@@ -371,7 +408,6 @@ def sweep_receipts(bud, seen, c):
 
 def serve(bud):
     """帳任務本體：拿 `ledger.lock`（防舊代殘留雙寫；拿不到就等），之後每 POLL 秒處理一次 inbox/；本 node 回合變了就掃一次孤兒回條。"""
-    import fcntl
     os.makedirs(bud.p("inbox"), exist_ok=True)
     with open(bud.p("ledger.lock"), "a") as lk:
         while True:
@@ -444,7 +480,7 @@ def status(bud, key=None):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-budget", description="budget 任務包：grant／帳／入口")
+    ap = ArgumentParser(prog="aos7-budget", description="先預留、再使用、最後結帳，讓每次花費都有紀錄。")
     ap.add_argument("cmd", choices=("init", "ledger", "call", "cancel", "settle", "status"))
     ap.add_argument("bud", help="預算資料夾（<node>/budget/<id>）")
     ap.add_argument("--holder")
@@ -457,11 +493,24 @@ def main(argv=None):
     a = ap.parse_args(argv)
     bud = Bud(a.bud)
     if a.cmd == "init":
-        ok, why = init(bud)
+        try:
+            ok, why = init(bud)
+        except (OSError, LedgerDown, Unknown) as e:
+            say("不確定：開帳讀寫故障：%s，現有檔案留著。修好讀寫後照原樣再跑一次" % e)
+            return 3
         print(json.dumps({"ok": ok, "why": why}, ensure_ascii=False))
+        if not ok and fact(bud.p("grant.json"))[0] == U:
+            say("不確定：grant.json 讀不到（%s），什麼都沒寫。修好讀寫後照原樣再跑一次" % why)
+            return 3
+        if not ok:
+            say("開帳做不到：%s。檢查 grant.json 與既有帳，再用 aos7-budget status %s 查看" % (why, a.bud))
         return 0 if ok else 1
     if a.cmd == "ledger":
-        serve(bud)
+        try:
+            serve(bud)
+        except OSError as e:
+            say("不確定：帳任務讀寫故障停下（%s），帳與請求留著。修好讀寫後再起一次帳任務" % e)
+            return 3
         return 0
     key = None
     if a.holder is not None or a.request is not None:
@@ -469,13 +518,21 @@ def main(argv=None):
             ap.error("--holder 與 --request 要一起給")
         key = make_key(bud.id, a.holder, a.request)
     if a.cmd == "status":
-        print(json.dumps(status(bud, key), ensure_ascii=False, indent=1))
+        st = fact(bud.p("ledger.json"))[0]
+        obj = status(bud, key)
+        print(json.dumps(obj, ensure_ascii=False, indent=1))
+        if "error" in obj:
+            if U in (st, fact(bud.p("ledger.json"))[0]):
+                say("不確定：帳讀不到：%s，現有帳與證據留著。修好讀寫後照原樣再跑一次" % obj["error"])
+                return 3
+            say("帳還沒開（或壞了）：%s。先 aos7-budget init %s；已有壞帳先檢查原檔" % (obj["error"], a.bud))
+            return 1
         return 0
     if key is None:
         ap.error("%s 要 --holder 與 --request" % a.cmd)
     import aos7_budget_gate as gate
     if a.cmd == "call":
-        return gate.call(bud, key, a.amount, a.resource, a.payload, a.out, a.patience)
+        return gate.call(bud, key, a.amount, a.resource, a.payload, a.out, a.patience, a.bud)
     kid = kid_of(key)
     if a.cmd == "cancel":
         def do_cancel():
@@ -483,13 +540,23 @@ def main(argv=None):
             if r.get("stage") != "done":                     # 非終局（入口紀錄或後端讀不到）＝未知
                 return gate.pending(kid, key, "cancel", r)
             print(json.dumps(r, ensure_ascii=False))
-            return 0 if r.get("outcome") == "cancelled" else 1
+            if r.get("outcome") != "cancelled":
+                say("取消不成，已有終局 %s。用 aos7-budget status %s 查看，再按原回條結帳" % (r.get("outcome"), a.bud))
+                return 1
+            return 0
         return gate.io_boundary(do_cancel, kid, key)
 
     def do_settle():
+        if not ledger_running(bud):
+            print(json.dumps({"result": "refused", "why": "帳任務沒在跑"}, ensure_ascii=False))
+            say(NOT_RUNNING % a.bud)
+            return 1
         r = ask(bud, "settle", key, patience=a.patience)
         print(json.dumps(r, ensure_ascii=False))
-        return 0 if r.get("result") == "settled" else 3
+        if r.get("result") != "settled":
+            say("不確定：帳沒回結算回條，請求與預留留著。用 status 看證據，照原樣再跑一次會接續")
+            return 3
+        return 0
     return gate.io_boundary(do_settle, kid, key)
 
 

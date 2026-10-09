@@ -154,12 +154,18 @@ def finish(bud, kid, key, gw, settle, out):
     if out:
         write_json(out, res)
     print(json.dumps(res, ensure_ascii=False))
-    return 0 if gw.get("outcome") == "accepted" else 1
+    if gw.get("outcome") != "accepted":
+        bg.say("後端沒做成（outcome %s），已結帳。原文與細節看 aos7-budget status %s --holder %s --request %s" %
+               (gw.get("outcome"), os.path.relpath(bud.dir), key["holder"], key["request"]))
+        return 1
+    return 0
 
 
 def pending(kid, key, stage, r):
     print(json.dumps({"kid": kid, "key": key, "outcome": "unknown", "stage": stage, "why": r.get("why")},
                      ensure_ascii=False))
+    what = {"reserve": "預留", "settle": "結算", "run": "入口", "replay": "重播", "cancel": "取消"}.get(stage, "讀寫")
+    bg.say("不確定：%s沒有確定結果（%s），請求與證據留著。照原樣再跑一次會接續；先用 status 看證據" % (what, r.get("why")))
     return 3
 
 
@@ -171,7 +177,7 @@ def io_boundary(fn, kid, key):
         return pending(kid, key, "io", {"why": "讀寫不到：%r" % e})
 
 
-def call(bud, key, amount, resource, payload_path, out, patience):
+def call(bud, key, amount, resource, payload_path, out, patience, budget_arg=None):
     """reserve → 入口 run → settle。只有 0 與 1 保證有終局結果交付。
 
     0＝後端受理成功，已結算，終局結果已交付（stdout 最後一行＋有指定時的 --out）。
@@ -182,10 +188,10 @@ def call(bud, key, amount, resource, payload_path, out, patience):
        或已結算但 --out 寫入失敗。先 status --holder H --request R 查 K，
        再同 K 重送 call（冪等，不重扣）。
     """
-    return io_boundary(lambda: _call(bud, key, amount, resource, payload_path, out, patience), kid_of(key), key)
+    return io_boundary(lambda: _call(bud, key, amount, resource, payload_path, out, patience, budget_arg), kid_of(key), key)
 
 
-def _call(bud, key, amount, resource, payload_path, out, patience):
+def _call(bud, key, amount, resource, payload_path, out, patience, budget_arg=None):
     kid = kid_of(key)
     payload = None
     if payload_path:
@@ -193,8 +199,12 @@ def _call(bud, key, amount, resource, payload_path, out, patience):
         if st == U:
             return pending(kid, key, "payload", {"why": "payload 讀不到：%s" % payload})
         if st != OK:
-            print("aos7-budget: payload 讀不到：%s" % payload, file=sys.stderr)
+            bg.say("payload 不存在或不是 JSON。請給 JSON 檔，例：--payload payload.json")
             return 2
+    if not bg.ledger_running(bud):
+        print(json.dumps({"kid": kid, "key": key, "outcome": "refused", "stage": "ledger", "why": "帳任務沒在跑"}, ensure_ascii=False))
+        bg.say(bg.NOT_RUNNING % (budget_arg or os.path.relpath(bud.dir)))
+        return 1
     content = {"resource": resource, "gateway": GATEWAY, "amount": amount,
                "payload_sha": bg.sha(payload) if payload is not None else None}
     r = bg.ask(bud, "reserve", key, content, patience)
@@ -202,6 +212,7 @@ def _call(bud, key, amount, resource, payload_path, out, patience):
     if res in ("denied", "conflict", "bad"):
         print(json.dumps({"kid": kid, "key": key, "outcome": res, "stage": "reserve", "why": r.get("why")},
                          ensure_ascii=False))
+        bg.say("預留被拒：%s。用 aos7-budget status 查看額度與請求，修正後再跑" % r.get("why"))
         return 1
     if res not in ("reserved", "settled"):
         return pending(kid, key, "reserve", r)
@@ -215,6 +226,7 @@ def _call(bud, key, amount, resource, payload_path, out, patience):
     if gw.get("outcome") == "conflict":
         print(json.dumps({"kid": kid, "key": key, "outcome": "conflict", "stage": "run", "why": gw.get("why")},
                          ensure_ascii=False))
+        bg.say("同一請求的入口內容不同：%s。沿用原內容，或給新 --request 再跑" % gw.get("why"))
         return 1
     if gw.get("stage") != "done":
         return pending(kid, key, "run", gw)

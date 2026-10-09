@@ -138,7 +138,11 @@ class TestLlmcallTokens(LlmcallCase):
         for p in ps:
             out, err = p.communicate(timeout=12)
             results.append((p.returncode, json.loads(out.strip().splitlines()[-1])))
-            self.assertEqual(err, "")
+            if p.returncode == 0:
+                self.assertEqual(err, "")
+            else:
+                self.assertEqual(len(err.splitlines()), 1)
+                self.assertTrue(err.startswith("aos7-llmcall: "))
         self.assertEqual(sorted(rc for rc, _ in results), [0, 1])
         denied = next(obj for rc, obj in results if rc == 1)
         self.assertEqual((denied["outcome"], denied["stage"]), ("denied", "reserve"))
@@ -410,7 +414,7 @@ class TestLlmcallIdentity(LlmcallCase):
         for exception in (Unknown("bad"), bg.LedgerDown("down"), OSError(errno.EIO, "io")):
             with patch("builtins.print") as printer:
                 self.assertEqual(lc.io_boundary(lambda: (_ for _ in ()).throw(exception)), 3)
-                obj = json.loads(printer.call_args.args[0])
+                obj = json.loads(next(c.args[0] for c in printer.call_args_list if "file" not in c.kwargs))
                 self.assertEqual((obj["outcome"], obj["stage"]), ("unknown", "io"))
 
     def test_transport_exception_intent_kept(self):
