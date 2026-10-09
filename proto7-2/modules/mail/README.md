@@ -4,18 +4,19 @@
 
 ← [modules](../README.md)｜進階（其他狀態、團隊、程式 API、內部設計）→ [ADVANCED.md](ADVANCED.md)
 
-## 四個概念
+## 四個概念（就這些）
 
-- **郵局資料夾**：所有信箱都放在這裡。用 `export AOS_MAIL_ROOT=<資料夾>` 指定一次（或每個指令加 `--root <資料夾>`）。
-- **請求（REQUEST）與完成（DONE）**：send 寄出的是請求；對方辦完，系統自動回一封 DONE 給你。日常只要懂這兩種。
-- **序號**：read 會在每封信前面編號 1、2、3…，done 用這個號碼指定要辦哪封。
-- **辦完（done）**：看過不等於辦完。done 把信收進已辦，是請求就順便回 DONE；audit 只看還沒 done 的請求。
+1. **郵局資料夾**：用 `export AOS_MAIL_ROOT=<資料夾>` 指定一次（或每個指令加 `--root <資料夾>`）。每個名字第一次收信時，裡面自動長出他的信箱，不用先建。
+2. **請求與完成**：send 寄出的一律是「請求」（檔名帶 REQUEST）；對方辦完，系統自動回一封「完成」（帶 DONE）給你。日常只有這一對。
+3. **序號**：read 在每封信前面編號 1、2、3…，done 用這個號碼指定要辦哪封。
+4. **辦完＝歸檔**：看過不等於辦完。done 把信收進已辦（歸檔）；是請求就順便回「完成」。audit 只看還沒 done 的請求。
 
 ## 第一次跑
 
-在 **repo 根目錄**整段貼上（`$(mktemp -d)` 開一個臨時郵局）：
+整段貼上（第一行先切到 repo 根目錄；`$(mktemp -d)` 開一個臨時郵局）：
 
 ```sh
+cd "$(git rev-parse --show-toplevel)"
 M=$PWD/proto7-2/modules/mail/aos7-mail
 export AOS_MAIL_ROOT=$(mktemp -d)
 "$M" send alice bob '請 bob 檢查範例'
@@ -51,12 +52,16 @@ export AOS_MAIL_ROOT=$(mktemp -d)
 | `audit` | 查整個郵局還有沒有沒辦完的請求：沒有就退出 0，有就列出並退出 1。 |
 
 - 名字只能用英文字母、數字、`.`、`_`、`-`。
-- **done 為什麼要先 read**：序號只認你最近一次 read 看到的清單。這樣就算中間又來了新信，`done bob 1` 也不會辦到你還沒看過的那封。沒 read 過會提示「請先 read」。
+- **done 前先 read**：done 的號碼＝你最近一次 read 畫面上的號碼。中間又來新信也不會改號，所以不會辦到你沒看過的信。沒 read 過會提示「請先 read」。
 - 忘了用法：`aos7-mail --help`、`aos7-mail <指令> --help`（不用先設郵局資料夾）。
 - 出錯時退出碼 2，stderr 一行白話說明怎麼改。
 
 ## 想做更多
 
-要回「卡住／失敗」等其他狀態、報進度、開團隊、找上游、用 Python 呼叫、了解檔案格式與當機復原，看 [ADVANCED.md](ADVANCED.md)。日常用不到。
+日常用不到；需要時看 [ADVANCED.md](ADVANCED.md)，裡面有：
+
+- **其他狀態**：回「進度／卡住／要使用者決定／失敗」，而不只是完成。
+- **團隊與上游**：一群人共讀的團隊信箱、`--up` 自動寄給上司。
+- **給程式用**：`--json`／`--quiet` 輸出、Python 函式、信檔格式、當機後怎麼自動補完。
 
 範例腳本 [examples/two_nodes.sh](examples/two_nodes.sh)（自己檢查後印 OK）；測試在 `tests/`，跑法見 ADVANCED.md〈驗證〉。
