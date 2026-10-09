@@ -18,7 +18,7 @@
 | [routines](routines/README.md) 事務包 | 兩張表的例行／一次性到期事務，由 tick 喚醒、最多一次 | A＋C | 關 | 工具包任務端函式、核心 aos7_fs／aos_exec | `routines/aos7-routines`（add／ls／rm；`ls --run` 免 daemon 立刻跑到期的） |
 | [skills](skills/README.md) skill 包 | node 的 `skills/<名>/SKILL.md`：產索引行（只 name＋description）與必用表、經 llmcall 讓 AI 挑一本、掛載給任務 | C | 開（工具） | llmcall、budget、核心 aos7_fs | `skills/aos7-skills`（子命令 index／pick／mount） |
 | [wfnode](wfnode/README.md) node 工作流包 | 給 node 裝 workflows 工作流樹（填事實、不瞎猜）、記續行點、體檢 open 衛生；三個指令 init／state／check | C | 開（工具） | `~/repo/workflows`（`AOS7_WF_HOME`） | `wfnode/aos7-wfnode` |
-| [metrics](metrics/README.md) 效率量測包 | 唯讀掃證據算四指標（每單 token、並行呼叫數、收單→結案秒數、重試次數），可重跑 | C | 開（工具） | 無（只讀別包的檔） | `metrics/aos7-metrics`（job） |
+| [metrics](metrics/README.md) 效率量測包 | 唯讀量一個資料夾的 AI 工作：每件 token、同時幾個呼叫、花幾秒、重試幾次，預設印白話一行（`--detail`／`--json` 給細節），可重跑 | C | 開（工具） | 無（只讀別包的檔） | `metrics/aos7-metrics`（job） |
 | [compact](compact/README.md) 記憶整理包 | 舊紀錄先封存再換摘要，open 項與最近 N 則留下 | A＋C | 關 | 標準庫、核心 aos7_fs、工具包任務端函式；選配 llmcall／events | `compact/aos7-compact`（子命令 now／forget／watch） |
 | [mail](mail/README.md) 信箱包 | 檔案寄信、輪詢、未結請求 audit 與日誌辦結復原 | C | 關 | events 包公開介面＋aos7_fs | `mail/aos7-mail`（send／read／done；進階 audit／roster／team 見 ADVANCED） |
 | `history.py` 歷史 module | 每個 tock 把「上一次」追加到自己的地方（見下） | A | 關 | 工具包的任務端函式 | `history.py` |

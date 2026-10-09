@@ -186,18 +186,65 @@ def line(scope_dict, overhead):
     return (f"{s['scope']}：{count} 單、{s['calls']} 次呼叫｜每單 token {int(t['used']/count) if count else 0}"
             f"（prompt {t['prompt']}{own}、completion {t['completion']}、推理 {t['reasoning']}、cached {t['cached']}；"
             f"預留 {t['reserve']}、未結 {t['pending']}）｜並行最多 {s['max_parallel']}｜收單→結案 {duration}｜重試 {s['retries']['total']}")
+def plain(scope_dict):
+    """給人看的預設一行：每格都有白話標籤與單位。"""
+    s, t = scope_dict, scope_dict['tokens']
+    count = len(s['flows']) if isinstance(s['flows'], list) else s['flows']
+    if not count:
+        text = f"{s['scope']}：沒找到 AI 工作紀錄（要指到含 llmcall/、budget/、author/ 的資料夾或它的上層）"
+    else:
+        sec, avg = s['seconds'], '平均' if count > 1 else ''
+        if sec['mean'] is None:
+            took = '還沒結束'
+        elif count > 1:
+            took = f"平均花 {sec['mean']} 秒（最長 {sec['max']} 秒）"
+        else:
+            took = f"花 {sec['mean']} 秒"
+        if sec['open'] and sec['mean'] is not None:
+            took += f"，另有 {sec['open']} 件還沒結束"
+        text = (f"{s['scope']}：{count} 件工作（問模型 {s['calls']} 次）｜{avg}每件用 {int(t['used']/count)} token"
+                f"｜同時最多 {s['max_parallel']} 個呼叫｜{took}｜重試 {s['retries']['total']} 次")
+        if t['pending']:
+            text += f"｜{t['pending']} 次呼叫還沒結帳"
+    if s.get('unreadable'):
+        text += f"｜{len(s['unreadable'])} 個檔讀不了已跳過"
+    return text
+HELP = """量一個資料夾裡 AI 工作用了多少：token、同時幾個呼叫、花幾秒、重試幾次。只讀不寫。
+
+例：aos7-metrics job proto7-2/modules/metrics/baseline/r1/loop-gpt-6-sol
+"""
+EPILOG = """PATH 要量哪個資料夾：
+  給資料夾（不是檔案）。工具會往下找所有子資料夾，所以指 node 資料夾或它的任何上層都行；
+  裡面要有別的工具留下的紀錄（llmcall/、budget/、author/、events/、jobs/）。找不到就印「沒找到 AI 工作紀錄」。
+  給多個 PATH 時每個印一行，最後多一行「合計」。
+
+預設輸出（一行，每格白話）：
+  名稱：N 件工作（問模型 M 次）｜每件用 X token｜同時最多 P 個呼叫｜花 S 秒｜重試 R 次
+  件＝一件 AI 工作（例如一張需求）；呼叫＝問模型一次。
+
+--detail 把 token 拆開：prompt（送出）、completion（回答）、推理、cached（命中快取）、
+  預留（事先保留的上限）、未結（還沒結帳的呼叫數）。
+--overhead N 每次呼叫被代理（例如 LiteLLM）自動加進 prompt 的 token 數；只影響 --detail 和 --json，
+  不知道就不用給（預設 0）。量法：送一個空 prompt，回報的 prompt token 數就是 N。
+--json 印一行 JSON：{v, overhead, scopes:[每個 PATH], total:合計}；每個 scope 有
+  scope、flows（每件明細）、calls、tokens、max_parallel、window_unknown、seconds{mean,max,open}、retries、unreadable。
+
+退出碼：0 成功（有讀不了的檔也算成功）；2 用法錯或 PATH 不是資料夾。
+"""
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog='aos7-metrics')
-    parser.add_argument('command', choices=['job'])
-    parser.add_argument('paths', nargs='+')
-    parser.add_argument('--overhead', type=int, default=0)
-    parser.add_argument('--json', action='store_true')
+    parser = argparse.ArgumentParser(prog='aos7-metrics', description=HELP, epilog=EPILOG,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('command', choices=['job'], help='唯一的子指令：量資料夾')
+    parser.add_argument('paths', nargs='+', metavar='PATH', help='要量的資料夾（可多個）')
+    parser.add_argument('--detail', action='store_true', help='改印細節行（token 拆項、預留、未結）')
+    parser.add_argument('--overhead', type=int, default=0, metavar='N', help='代理每次自動加的 prompt token 數，預設 0（見下）')
+    parser.add_argument('--json', action='store_true', help='印給程式讀的一行 JSON')
     args = parser.parse_args(argv)
     if args.overhead < 0:
         parser.error('--overhead 必須非負')
     for path in args.paths:
         if not Path(path).is_dir():
-            print(f'aos7-metrics：不是資料夾：{path}', file=sys.stderr)
+            print(f'aos7-metrics：不是資料夾：{path}（PATH 要給資料夾，見 --help）', file=sys.stderr)
             return 2
     scanned = [_scan(p, args.overhead) for p in sorted(args.paths)]
     scopes = [s for s, _ in scanned]
@@ -209,5 +256,5 @@ def main(argv=None):
         print(json.dumps(dict(v=1, overhead=args.overhead, scopes=scopes, total=total), ensure_ascii=False, sort_keys=True))
     else:
         for s in scopes + ([total] if len(scopes) > 1 else []):
-            print(line(s, args.overhead))
+            print(line(s, args.overhead) if args.detail else plain(s))
     return 0
