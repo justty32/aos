@@ -29,7 +29,7 @@
 | **上層任務包** `packs/` | kernel 的任務包（工作語意；通用／agent／LLM 分層，原則 8）；每包一個資料夾，自帶 README（契約卡）、spec、`tests/` |
 | `packs/step/` | [step 包](packs/step/README.md)：步驟表直譯器 `aos7-step`＋槽外結果檔＋檢查器（run 步 `unknown_codes`、重送額度記框架 `resends`、啟動清死暫存檔） |
 | `packs/budget/` | [budget 包](packs/budget/README.md)：grant／帳／入口（預留→執行→結算），示範資源＝假 API 受理次數；原名 account，為避免跟 Linux account 重疊改名；退出碼 0／1／2／3、單位＝加權成本、帳任務起時清 `gateway/` 死暫存檔；部分結算（settle 收 0≤used≤預留、usage 缺留 pending、超出記 overrun，blueprint-llm2 §4） |
-| `packs/llmcall/` | [llmcall 包](packs/llmcall/README.md)：LLM 單次呼叫閘道（假傳輸），固定請求→預留→intent→raw→done→結算→回條；本地證據恢復、遲到 adopt、軟 token 帳；退出碼 0～4 |
+| `packs/llmcall/` | [llmcall 包](packs/llmcall/README.md)：LLM 單次呼叫閘道（假傳輸＋真傳輸 llm.litellm），固定請求→預留→intent→raw→done→結算→回條；本地證據恢復、遲到 adopt、軟 token 帳；退出碼 0～4 |
 | `packs/adapt/` | [adapt 包](packs/adapt/README.md)：鄰居 node 的最新值轉接（固定版本、確定性鏈、依據 basis＋出處 src、三態暫存器），示範溫度感測→風扇 |
 | `packs/author/` | [author 包](packs/author/README.md)：LLM 作者第一刀（假候選）——需求＋候選經三層驗證、確定性編譯成獨立版本 step 工作，意圖→表鎖內合併自己那一項→回條；`close` 後每需求只留 request＋receipt；`send`／`intake` 經事件必讀通道收單（游標與收件回條在 `author/events.json`，回條寫成後才 ack）；退出碼 0／2／3／4／5 |
 | `tests/` | 核心測試 `tests/core/`、共用工具、`run_all.py`；測試導引見 [tests/README.md](tests/README.md) |
