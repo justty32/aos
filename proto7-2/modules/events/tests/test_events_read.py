@@ -339,6 +339,20 @@ class TestNewbieCli(Fixtures):
             f.write("broken")
         p = self.run_cli("pub", "--events", events, "--kind", "k", "--payload", "{}")
         self.assertEqual((p.returncode, json.loads(p.stdout)["why"]), (2, "usage"))
+        fresh = os.path.join(self.dir, "n2", "events")   # 明給壞 source.node 仍是用法錯，不被預設 node 蓋過
+        for bad in ('{"node": ""}', '{"node": 0}'):
+            p = self.run_cli("pub", "--events", fresh, "--kind", "k", "--payload", "{}", "--source", bad)
+            self.assertEqual(p.returncode, 2, p.stdout)
+        self.assertFalse(os.path.exists(fresh))
+
+    def test_auto_id_printed_on_unknown(self):
+        events = os.path.join(self.dir, "n1", "events")
+        self.assertEqual(self.run_cli("pub", "--events", events, "--kind", "k", "--payload", "{}").returncode, 0)
+        with locked(os.path.join(events, "state.json")):
+            p = self.run_cli("pub", "--events", events, "--kind", "k", "--payload", "{}")
+        out = json.loads(p.stdout)
+        self.assertEqual((p.returncode, out["why"]), (4, "unknown"))
+        self.assertTrue(out["event_id"].startswith("auto/"))
 
     def test_help_explains(self):
         top = self.run_cli("--help").stdout
