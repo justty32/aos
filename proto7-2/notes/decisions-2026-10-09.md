@@ -174,3 +174,4 @@
 - C｜events 回改：第一次跑不用 daemon、路徑自動帶；`pub` 可省 `--event-id`（自動產生）與 `--node`（取上一層資料夾名）；公開介面語意不變。新手三輪最後 Haiku 6.7／luna 8.6，**未過**
 - B｜頂層定（改慣例）：**README 只留「這是什麼＋第一次跑＋一行連結」，進階段與契約卡一律搬到同資料夾的 ADVANCED.md**（mail 已這樣做）。包格式規定「契約卡在 README」改為「契約卡在 ADVANCED.md，README 連過去」。events 先照這條再改一輪
 - C｜F3：QUICKSTART（2.7 KB，5 詞 3 指令，帳／回合／ack／退出碼零出現）與三行頭模板進 main；實跑等 aos7-up 進 main。前景每秒改印「心跳 N」（不印回合）。頂層把 modules/README「包的格式」改成新慣例
+- C｜skills 回改：沒開帳時 pick 自動改本機關鍵字挑（不問 AI、不花錢），印一行提示；有帳或給 `--budget` 才問 AI。新手第 1 輪過關 7.4（Haiku 7.4／luna 8.6）、約 3 分鐘、4 概念
