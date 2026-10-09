@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""事件取樣 keep 任務：來源最新回合與 daemon log 的進度在 events/state.json。"""
+import argparse
+import json
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+TOP = os.path.dirname(os.path.dirname(HERE))
+sys.path[:0] = [HERE, os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
+import aos7_events_store as store  # noqa: E402
+from aos7_fs import is_int, read_json, test_point  # noqa: E402
+from aos7_taskside import resolver, task_env, wait_tock  # noqa: E402
+
+
+def src_path(me, resolve, nid, rel):
+    """來源有掛載走掛載，否則照空間根讀。"""
+    space = (".aos/" if nid in (".", "") else nid.rstrip("/") + "/.aos/") + rel
+    return resolve(space) or os.path.join(me["root"], space)
+
+
+def _config(args):
+    """只傳明確指定的設定；已建 state 仍是權威。"""
+    return {k: v for k, v in (("keep_segments", getattr(args, "keep", None)),
+                              ("segment_bytes", getattr(args, "segment_bytes", None))) if v is not None}
+
+
+def _send(me, args, st, rec):
+    """寫成功才更新本回合的進度，未知交下回合恢復。"""
+    result = store.append(args.out, "obs", rec, node=me["node_id"], config=_config(args))
+    if result["ok"]:
+        store._derive(st, rec)
+    return result
+
+
+def _sample(me, args, resolve, st, nid):
+    """一個來源先補缺口再快照；任何保存失敗就停此來源。"""
+    lr = read_json(src_path(me, resolve, nid, "last-round.json"))
+    if not isinstance(lr, dict) or not is_int(lr.get("round")):
+        return False
+    r, prev = lr["round"], st["sample"].get(nid)
+    if r == prev:
+        return False
+    if prev is not None and (r > prev + 1 or r < prev):
+        payload = {"from": prev + 1, "to": r - 1, "why": "round_skip"} if r > prev else {
+            "from": prev, "to": r, "why": "source_reset_unknown"}
+        gap = {"kind": "gap", "capture": "sample", "source": {"node": nid, "round": r - 1}, "payload": payload}
+        if not _send(me, args, st, gap)["ok"]:
+            return False
+        test_point("events:sample-after-gap")
+    rec = {"kind": "round.observed", "capture": "sample", "source": {"node": nid, "round": r},
+           "payload": {"last_round": lr}}
+    result = _send(me, args, st, rec)
+    if result["why"] == "too_large":
+        rec["payload"] = {"last_round": {"round": r}, "truncated": True}
+        result = _send(me, args, st, rec)
+    return result["ok"]
+
+
+def _log(me, args, st):
+    """同一 fd 判來源身分與讀完整行；不改來源，失敗停在最後保存 offset。"""
+    changed = False
+    try:
+        f = open(os.path.join(me["root"], ".aosd", "log.jsonl"), "rb")
+    except OSError:
+        return False
+    with f:
+        stat = os.fstat(f.fileno())
+        dev, ino = stat.st_dev, stat.st_ino
+        dl = st["daemon_log"]
+        offset = dl["offset"] if dl is not None else 0
+        if dl is not None and ((dev, ino) != (dl["dev"], dl["ino"]) or stat.st_size < offset):
+            rec = {"kind": "gap", "capture": "source_log",
+                   "source": {"log_dev": dev, "log_ino": ino, "off_from": 0, "off_to": 0},
+                   "payload": {"from": offset, "to": 0, "why": "source_reset_unknown"}}
+            if not _send(me, args, st, rec)["ok"]:
+                return False
+            offset, changed = 0, True
+        f.seek(offset)
+        for line in f:
+            if not line.endswith(b"\n"):
+                break
+            end = offset + len(line)
+            try:
+                payload = json.loads(line)
+            except ValueError:
+                payload = {"unparsed": line.decode("utf-8", errors="replace")[:1000]}
+            rec = {"kind": "daemon.log", "capture": "source_log",
+                   "source": {"log_dev": dev, "log_ino": ino, "off_from": offset, "off_to": end}, "payload": payload}
+            result = _send(me, args, st, rec)
+            if result["why"] == "too_large":
+                rec["payload"] = {"too_large": True, "bytes": len(line)}
+                result = _send(me, args, st, rec)
+            if not result["ok"]:
+                break
+            offset, changed = end, True
+    return changed
+
+
+def once(me, args, resolve, st):
+    """取樣一次；st 是 recover 的權威進度，成功就原地推進，回有無保存。"""
+    changed = False
+    for nid in args.src or [me["node_id"]]:
+        changed = _sample(me, args, resolve, st, nid) or changed
+    if args.status:
+        status = read_json(os.path.join(me["root"], ".aosd", "status.json"))
+        ev = status.get("last_event") if isinstance(status, dict) else None
+        if isinstance(ev, dict) and ev != getattr(args, "_last_event", None):
+            rec = {"kind": "daemon.status", "capture": "sample", "source": {"node": ".aosd"},
+                   "payload": {"last_event": ev}}
+            if _send(me, args, st, rec)["ok"]:
+                args._last_event, changed = ev, True
+    if args.daemon_log:
+        try:
+            changed = _log(me, args, st) or changed
+        except OSError:
+            print("events: daemon log 讀不到，本回合停止續讀", file=sys.stderr)
+    return changed
+
+
+def main(argv=None):
+    """解析選項，以 keep 任務等待 tock；未知 state 跳過本回合。"""
+    ap = argparse.ArgumentParser(prog="aos7-events")
+    ap.add_argument("--src", action="append")
+    ap.add_argument("--status", action="store_true")
+    ap.add_argument("--daemon-log", action="store_true")
+    ap.add_argument("--rounds", type=int, default=0)
+    ap.add_argument("--out")
+    ap.add_argument("--keep", type=int)
+    ap.add_argument("--segment-bytes", type=int)
+    args = ap.parse_args(argv)
+    if args.rounds < 0 or any(v is not None and v <= 0 for v in (args.keep, args.segment_bytes)):
+        ap.error("rounds 須非負，keep 與 segment-bytes 須為正")
+    if args.keep is not None and args.keep > store.MAX_KEEP:
+        ap.error("keep 不得超過 %d（events/ 檔數上限 12）" % store.MAX_KEEP)
+    me = task_env()
+    args.out = args.out or os.path.join(me["node"], "events")
+    resolve = resolver(me["task"])
+    last, k = 0, 0
+    while not args.rounds or k < args.rounds:
+        last = wait_tock(me["task"], last)
+        k += 1
+        st = store.recover(args.out, node=me["node_id"], config=_config(args))
+        if st is None:
+            print("events: state 未知，本回合跳過", file=sys.stderr)
+            continue
+        once(me, args, resolve, st)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
