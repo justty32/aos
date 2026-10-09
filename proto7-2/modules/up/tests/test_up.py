@@ -40,11 +40,16 @@ class UpTests(DaemonCase):
 
     def names_once(self):
         counts = collections.Counter(t['name'] for t in self.data('.aos/tasks.json')['tasks'])
-        self.assertEqual(counts, dict.fromkeys(('budget-llm', 'brain', 'compact'), 1))
+        self.assertEqual(counts, dict.fromkeys(('budget-llm', 'brain', 'compact', 'routines'), 1))
+        tasks = {t['name']: t['argv'] for t in self.data('.aos/tasks.json')['tasks']}
+        self.assertEqual(tasks['brain'], ['python3', str(P / 'modules/up/aos7-up'), 'brain', str(self.node)])
+        for box in (self.node / 'events', self.node.parent / 'you/inbox', self.node.parent / 'you/events'):
+            self.assertTrue(box.is_dir(), box)
 
     def send(self):
+        # PROGRESS 不會被 brain 辦掉（它只辦 REQUEST），信才留在原地好比對
         p = subprocess.run([sys.executable, str(P / 'modules/mail/aos7-mail'), '--root', self.root,
-                            'send', 'you', 'bob', 'REQUEST', '測試信'], capture_output=True, text=True)
+                            'send', 'you', 'bob', 'PROGRESS', '測試信'], capture_output=True, text=True)
         self.assertEqual(p.returncode, 0, p.stderr)
         return json.loads(p.stdout)['id']
 
@@ -145,16 +150,16 @@ class UpTests(DaemonCase):
         lines = self.invoke('status', self.node).splitlines()
         self.assertEqual(len(lines), 6)
         self.assertEqual([s.split('：')[0] for s in lines], ['心跳', '信', '工作簿', '技能', 'AI', '檔案'])
-        self.assertIn('未讀 1 封（其中待回 1 封）', lines[1])
+        self.assertIn('未讀 1 封（其中待回 0 封）', lines[1])
         self.invoke('stop', self.node)
         self.assertIn('停了', self.invoke('status', self.node).splitlines()[0])
-        self.assertIn('心跳停了', self.invoke('stop', self.node))
+        self.assertIn('心跳本來就沒在跑', self.invoke('stop', self.node))
 
     def test_invalid_and_missing(self):
         for name in ('you', '.bob', 'bad name'):
             self.invoke(Path(self.root) / name, '-d', rc=2)
         self.invoke('status', self.node, rc=2)
-        self.assertIn('心跳停了', self.invoke('stop', self.node))
+        self.assertIn('心跳本來就沒在跑', self.invoke('stop', self.node))
 
 
 sys.path.insert(0, str(UP.parent))

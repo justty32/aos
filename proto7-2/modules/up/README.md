@@ -16,25 +16,27 @@ aos7-up status /tmp/aos/bob                   # 看 bob 現在怎樣
 
 工作簿＝bob 自己記『停在哪、下一步』的筆記（wf/），事做完就刪。
 
-第一個指令實跑輸出（假 AI 不連網、不花錢）：
+實跑輸出（2026-10-09，假 AI 不連網、不花錢）。第一個視窗：
 
 ```text
 bob 起好了：工作簿 ✓ 信箱 ✓ 技能 3 本 ✓ 假 AI（要真的加 --model）
 另開一個終端機問它：aos7-up ask /tmp/aos/bob '一句話'
 看狀態：aos7-up status /tmp/aos/bob　停：Ctrl-C
-心跳 7
-心跳 8
+心跳 4
+心跳 5 收到 1 封信
+心跳 6 → 問 AI → 已回信
 心跳停了；檔案都留著，再跑 aos7-up /tmp/aos/bob 就接上
 ```
 
-ask 目前還沒裝；裝好後印 bob 的回信全文（最多等 60 秒）。停下後 status 實跑六行：
+另一個視窗的 ask 與 status：
 
 ```text
-心跳：停了（最後第 8 下）；起它：aos7-up /tmp/aos/bob
+bob 回信（DONE）：（假 AI）收到你的信：用一句話介紹你自己
+心跳：活著，第 5 下
 信：未讀 0 封（其中待回 0 封）；你的信箱有 0 封回信
-工作簿：open 0 項；停在：（還沒記）；體檢 OK
+工作簿：open 0 項；停在：- 16:21 回了 you-20261009T162122-16c043c82df7；體檢 OK
 技能：3 本
-AI：假 AI；問過 0 次，用了 0 token
+AI：假 AI；問過 1 次，用了 1104 token
 檔案：/tmp/aos/bob、/tmp/aos/you（全清：先停心跳，再刪這兩個資料夾）
 ```
 

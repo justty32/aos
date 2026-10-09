@@ -9,22 +9,22 @@ Python 3.11+、純標準庫；在 repo 根跑。缺工作流模板時先裝
 - `aos7-up stop /tmp/aos/bob`：停整個房子的心跳與它起的全部任務，包含其他 node；不刪任何檔。
 - `aos7-up /tmp/aos/real --model chatgpt-gpt-6-luna -d`：真 AI；先起 LiteLLM。認證見 [llmcall](../../packs/llmcall/README.md)。
 - 已有心跳只接上看；Ctrl-C 只停觀看，停心跳用 stop。入口自己起的前景心跳在 Ctrl-C／SIGTERM 後收掉。
-- ask／brain 原樣 exec 同目錄的 `aos7_up_brain.py`；尚未安裝時退 1，brain 任務會重起。
+- `ask`／`brain` 交給同目錄 `aos7_up_brain.main([子命令, …])`（ask 在 `aos7_up_ask.py`，回信邏輯與 prompt 在 `prompts/`）。
 
 安裝只透過各包公開 CLI。brain 用 llmcall 必須有帳，因此保留 budget-llm。
-compact 在工作簿變厚時自動整理。up 不安裝 routines 或 wfcheck。
+compact 在工作簿變厚時自動整理。routines 只裝它的 keep 任務、不加任何例行列（表空就什麼都不做；之後 `aos7-routines add` 才有事）。跨包副作用一律由 up 做：各包自己不再裝任務、不替別人建 events/。
 
 ## 建了什麼、停了什麼
 
 - `<node>/AGENTS.md`、`CLAUDE.md`、`.claude/`、`wf/`：工作簿模板與入口。AGENTS.md 是導入完成的標記，已有它就不再 init。
-- `<node>/inbox/`、`tools/`：信箱與工作流工具。
+- `<node>/inbox/`、`tools/`：信箱與工作流工具；`<node>/events/`：信的提醒通道（mail 用）。
 - `<node>/skills/`：三本技能連結與 `index.json`；已有同名項（含壞連結）不改。
 - `<node>/budget/llm/`：grant、ledger 與帳的證據；假／真 AI 已開帳後不能互換，換名字另起。
 - `<node>/.aos/`：`tasks.json`、`up.json`、`up.lock` 與核心執行證據。
-- `<node>/llmcall/`、`compact/`：之後執行任務時產生。
-- `<房子>/you/inbox/`：人的回信箱。
+- `<node>/llmcall/`、`brain/`、`compact/`：之後執行任務時產生。
+- `<房子>/you/inbox/`、`you/events/`：人的回信箱與提醒通道。
 - `<房子>/.aosd/`：心跳的鎖、紀錄、狀態與 `up-daemon.log`。
-- 常駐程式：心跳一個，node 上 `budget-llm`、`brain`、`compact` 三個 keep 任務。
+- 常駐程式：心跳一個，node 上 `budget-llm`、`brain`、`compact`、`routines` 四個 keep 任務（brain 的 argv 凍結為 `python3 <proto7-2>/modules/up/aos7-up brain <node>`）。
 
 stop 收掉心跳與它起的全部任務，不刪任何檔。全清先 stop，再刪 node 與 you；房子沒別的 node 時也可刪 `.aosd/`。
 
@@ -78,9 +78,10 @@ up.json 壞了時刪掉該檔再 up。未知結果不清檔、不重送。
 | `aos7-up` | 薄入口 |
 | `aos7_up.py` | 冪等安裝、起停、起動證據與回收 |
 | `aos7_up_cli.py` | 參數、錯誤與 ask／brain 分派 |
+| `aos7_up_brain.py`、`aos7_up_ask.py`、`prompts/`、`examples/` | brain 一回合與 ask（另一份交接，測試 `tests/test_brain*.py`） |
 | `aos7_up_status.py` | 六行狀態、觀看、設定驗證、子指令與 atomic |
 | `tests/test_up.py` | 起停、信與已花預算 SIGKILL 重接、唯讀摘要 |
-| `tests/test_up_model.py` | 模型、端點保存與拒絕 gateway 變更 |
+| `tests/test_up_model.py` | 模型、端點保存、拒絕 gateway 變更、經 up 的 ask 假 AI 一圈 |
 | `tests/test_up_edges.py` | 重跑保信、壞設定、共享心跳、訊號、並行與唯讀 |
 | `tests/test_up_errors.py` | 子指令摘要、未知讀寫、stop 逾時、壞名字無副作用 |
 | `tests/test_up_dispatch.py` | 分派、真檔觀看事件、啟動／收尾逾時、中斷與程序組 |

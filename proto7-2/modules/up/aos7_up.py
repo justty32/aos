@@ -64,28 +64,37 @@ def prepare(node, model):
     names = {t['name'] for t in read(node / '.aos/tasks.json', {'tasks': []})['tasks']}
     commands = {
         'budget-llm': ['python3', '-B', str(P / 'packs/budget/bin/aos7-budget'), 'ledger', 'budget/llm'],
-        'brain': ['python3', '-B', str(P / 'modules/up/aos7-up'), 'brain', str(node)],
+        'brain': ['python3', str(P / 'modules/up/aos7-up'), 'brain', str(node)],  # 凍結 argv
         'compact': ['python3', '-B', str(P / 'modules/compact/aos7-compact'), 'watch'],
+        'routines': ['python3', '-B', str(P / 'modules/routines/aos7-routines')],
     }
     for name, argv in commands.items():
         if name not in names:
             run('bin/aos7-ctl', 'add', node, json.dumps(dict(name=name, mode='keep', argv=argv)))
-    (node.parent / 'you/inbox').mkdir(parents=True, exist_ok=True)
+    for box in (node / 'events', node.parent / 'you/inbox', node.parent / 'you/events'):
+        box.mkdir(parents=True, exist_ok=True)
     run('bin/aos7-ctl', 'daemon', node.parent, 'register', node.name)
     return settings
 
 
 def stop(node):
-    if alive(node.parent):
-        run('bin/aos7-ctl', 'daemon', node.parent, 'stop', '--kill')
-        end = time.monotonic() + 30
-        while alive(node.parent):
-            if time.monotonic() >= end:
-                raise UpError(3, f'不確定：心跳等了 30 秒還沒停，檔案都留著。請看 {node.parent}/.aosd/up-daemon.log 再重試 stop')
-            time.sleep(.1)
-    print('心跳停了')
-    print(f'檔案都留著：{node}、{node.parent}/you；要全清就刪這兩個資料夾（{node.parent}/.aosd 是心跳的紀錄，房子裡沒別的 node 也可刪）')
+    if not alive(node.parent):
+        print('心跳本來就沒在跑')
+    else:
+        _halt(node)
+    if node.is_dir():
+        print(f'檔案都留著：{node}、{node.parent}/you；要全清就刪這兩個資料夾（{node.parent}/.aosd 是心跳的紀錄，房子裡沒別的 node 也可刪）')
     return 0
+
+
+def _halt(node):
+    run('bin/aos7-ctl', 'daemon', node.parent, 'stop', '--kill')
+    end = time.monotonic() + 30
+    while alive(node.parent):
+        if time.monotonic() >= end:
+            raise UpError(3, f'不確定：心跳等了 30 秒還沒停，檔案都留著。請看 {node.parent}/.aosd/up-daemon.log 再重試 stop')
+        time.sleep(.1)
+    print('心跳停了')
 
 
 def node_round(node):
