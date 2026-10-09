@@ -238,7 +238,7 @@
 
 | 編號 | 歸屬／類 | 處理 |
 |---|---|---|
-| A9-01 node 回收還沒確認乾淨時 daemon 重起，status 顯示 idle 不是 missing | daemon／B | L1 隊修（重起時從 `reaping` 恢復 missing），見 L1 的提交 |
+| A9-01 node 回收還沒確認乾淨時 daemon 重起，status 顯示 idle 不是 missing | daemon／B | L1 隊修（重起時從 `reaping` 恢復 missing，含 node stat 看不到）。測試 `tests/core/test_daemon.py` 的 `test_reaping_*` |
 | A9-02 升級後舊編碼檔混進另一個 node 的新紀錄 | history／G | 輸出夾用標記檔 `.names-v2`；沒有標記時，檔名含 `+`／`%` 的舊 `*.jsonl` 與 `daemon-events.jsonl` 第一次寫入前改名成 `.v1` 封存、不再追加，其餘原地續寫。測試 `test_modules_history.TestHistoryNames` |
 | A9-03 超長陣列索引（≥4301 位）讓 aos-exec 漏 traceback、rc 1 | 指示詞解析／B | `_walk` 轉 int 前先比長度，走 `ReferencePointerInvalid`、rc 125。測試 `tests/core/test_exits.py` |
 | A9-04 tasks.json 實體寫入錯誤留下 intent，下一回合過期就停 unknown | step／X | 行為照「不知道就保守停」不改；step spec §5 把「讀表拒寫→撤意圖重派」和「寫入錯誤→留意圖、跨回合要人手續送」分開寫；blueprint-loop7 §7 R8-14 改成「不得有第三次實跑」 |
