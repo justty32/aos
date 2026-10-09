@@ -1,6 +1,8 @@
 ---
 name: aos-test
 description: Run the proto7-2 test suite (all tests, one folder, or tests whose name matches a pattern) inside a systemd scope and report the exit code. Use after changing proto7-2 code, before handing work over, or when asked to check that nothing broke. （跑測試、全套測試、確認沒壞）
+triggers: 跑測試、全套測試、測試、run_all.py、test suite
+not_for: 寫測試、測試報告
 ---
 
 # aos-test：跑 proto7-2 的測試

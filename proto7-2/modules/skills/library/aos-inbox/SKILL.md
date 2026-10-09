@@ -1,6 +1,8 @@
 ---
 name: aos-inbox
 description: Read and handle the agent mailbox in wf/inbox (letters other agents sent, such as REQUEST or REPORT), then move each letter to a final state. Use when asked to check the mailbox, when another agent says it sent mail, or at session start when wf/inbox has letters. （看信箱、收信、回信、辦信）
+triggers: 信箱、看信箱、收信、辦信、寄來的信、寄了一封、終局狀態、wf/inbox
+not_for: 寫信、寫回信
 ---
 
 # aos-inbox：看信箱

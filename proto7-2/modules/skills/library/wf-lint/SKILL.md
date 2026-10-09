@@ -1,6 +1,8 @@
 ---
 name: wf-lint
 description: Check the wf/ documentation tree for broken links, broken anchors, oversize files, big lists that belong in data files, and leftover placeholders. Use after editing, moving, or splitting markdown files under wf/, or before committing doc changes. （檢查文檔、壞連結、錨點、佔位）
+triggers: wf-lint、壞連結、錨點、佔位、超標檔、檢查文檔
+not_for: 寫文檔
 ---
 
 # wf-lint：檢查文檔
