@@ -1,0 +1,800 @@
+<title>proto7-2 現況圖解</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 版面：單欄長稿；左側窄欄是「層」標籤（核心／模組／任務包），像電路板的絲印；檔案樹與 JSON 用等寬、可收合 */
+:root{
+  --bg:#f2f4f3; --panel:#ffffff; --ink:#1a2220; --muted:#5a6663; --line:#d5dbd9;
+  --core:#2f4a8a; --core-soft:#e3e9f6;
+  --mod:#7a5a12; --mod-soft:#f4ecd8;
+  --pack:#226b52; --pack-soft:#dcefe6;
+  --warn:#a3471c; --warn-soft:#f6e4da;
+  --code-bg:#f7f8f7;
+  --f-display:"LXGW WenKai TC","Noto Serif TC",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121716; --panel:#1a201f; --ink:#e3e9e7; --muted:#9aa7a3; --line:#2c3533;
+  --core:#8fa8e6; --core-soft:#1f2940; --mod:#e0bd6c; --mod-soft:#3a3020;
+  --pack:#73c9a6; --pack-soft:#1b3329; --warn:#ec9a72; --warn-soft:#3b2519; --code-bg:#161b1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121716; --panel:#1a201f; --ink:#e3e9e7; --muted:#9aa7a3; --line:#2c3533;
+  --core:#8fa8e6; --core-soft:#1f2940; --mod:#e0bd6c; --mod-soft:#3a3020;
+  --pack:#73c9a6; --pack-soft:#1b3329; --warn:#ec9a72; --warn-soft:#3b2519; --code-bg:#161b1a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;padding-inline:16px;padding-block:0 72px}
+.wrap{max-width:940px;margin:0 auto}
+header{padding-block:40px 24px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,5.4vw,44px);line-height:1.2;margin:6px 0 10px;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:700;font-size:25px;line-height:1.3;margin:0 0 10px;text-wrap:balance}
+h3{font-size:16.5px;margin:22px 0 6px}
+p{margin:0 0 12px;max-width:70ch}
+.lede{color:var(--muted);font-size:17px}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:16px;font-size:14px}
+nav.toc a{color:var(--core);text-decoration:none;border-bottom:1px dotted var(--core)}
+section{display:grid;grid-template-columns:84px minmax(0,1fr);gap:18px;padding-block:32px;border-bottom:1px solid var(--line)}
+.lbl{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:8px;border-right:2px solid var(--line);padding-right:10px;text-align:right;letter-spacing:.04em}
+.lbl.core{color:var(--core);border-color:var(--core)} .lbl.mod{color:var(--mod);border-color:var(--mod)} .lbl.pack{color:var(--pack);border-color:var(--pack)}
+@media (max-width:600px){section{grid-template-columns:1fr;gap:6px}.lbl{border-right:0;text-align:left;padding:0}}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0 4px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.stat b{display:block;font-family:var(--f-mono);font-size:24px;font-variant-numeric:tabular-nums;line-height:1.3}
+.stat small{color:var(--muted);font-size:13px;line-height:1.5;display:block}
+.stat.core b{color:var(--core)} .stat.mod b{color:var(--mod)} .stat.pack b{color:var(--pack)}
+.bar{height:8px;background:var(--core-soft);border-radius:4px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--core)}
+.tbl{overflow-x:auto;margin:8px 0 14px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+.tbl.narrow table{min-width:0}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-weight:700;color:var(--muted);font-size:13px;letter-spacing:.03em}
+td.n,th.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+code{font-family:var(--f-mono);font-size:.86em;background:var(--code-bg);border:1px solid var(--line);padding:0 4px;border-radius:3px;overflow-wrap:anywhere}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;white-space:nowrap;line-height:1.6}
+.pill.core{background:var(--core-soft);color:var(--core)} .pill.mod{background:var(--mod-soft);color:var(--mod)}
+.pill.pack{background:var(--pack-soft);color:var(--pack)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+pre.mermaid{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;margin:10px 0 14px}
+.fig-cap{font-size:13.5px;color:var(--muted);margin:-6px 0 14px}
+pre.code{font-family:var(--f-mono);font-size:12.6px;line-height:1.55;background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:12px 14px;overflow-x:auto;margin:6px 0 10px;white-space:pre}
+.tree .c{color:var(--muted)} .tree .d{color:var(--core);font-weight:600} .tree .m{color:var(--mod);font-weight:600} .tree .p{color:var(--pack);font-weight:600} .tree .h{color:var(--warn);font-weight:600}
+details{border:1px solid var(--line);border-radius:6px;background:var(--panel);margin:8px 0}
+details>summary{cursor:pointer;padding:9px 14px;font-weight:600;list-style:none;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸";color:var(--muted);font-size:12px}
+details[open]>summary::before{content:"▾"}
+details>summary .who{font-weight:400;font-size:13px;color:var(--muted)}
+details .body{padding:0 14px 10px;min-width:0}
+details .body p{font-size:14.5px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.grid2>*{min-width:0}
+@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13.5px;color:var(--muted);margin:6px 0 8px}
+.note{border-left:3px solid var(--warn);padding:2px 0 2px 14px;margin:14px 0}
+.note b{display:block}
+ul{margin:0 0 12px;padding-left:1.3em;max-width:72ch} li{margin-bottom:6px}
+a{color:var(--core)}
+:focus-visible{outline:2px solid var(--core);outline-offset:2px}
+.foot{color:var(--muted);font-size:13px;padding-top:22px}
+/* 分數條：兩段（改前灰、改後綠），門檻 7 一條虛線 */
+.score{display:grid;grid-template-columns:76px minmax(0,1fr) 78px;gap:8px;align-items:center;font-size:13.5px;margin:4px 0}
+.score .track{position:relative;height:14px;background:var(--code-bg);border:1px solid var(--line);border-radius:3px}
+.score .b0{position:absolute;left:0;top:0;bottom:0;background:var(--line)}
+.score .b1{position:absolute;left:0;top:4px;bottom:4px;background:var(--pack);border-radius:2px}
+.score .gate{position:absolute;top:-3px;bottom:-3px;left:70%;border-left:2px dashed var(--warn)}
+.score .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.hbar{display:flex;height:26px;border-radius:4px;overflow:hidden;font-size:12px;font-family:var(--f-mono);margin:8px 0 4px}
+.hbar span{display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;overflow:hidden}
+.codes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.codes div{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:8px 10px;font-size:14px}
+.codes b{font-family:var(--f-mono);font-size:22px;display:block;line-height:1.2}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">aos · proto7-2 · 2026-10-09 20:00 更新（main 3c3e4809）</div>
+  <h1>proto7-2 現況圖解</h1>
+  <p class="lede">proto7-2 是照你的 user-advice 改出來的第二代：node 改用登記、只用 tasks.json、槽照名字重用、核心只留「上一次」。10-04 做完核心精簡和三個上層任務包，10-05 做審查，10-09 一天 289 個 commit：先修 loop7，再做事件保存、LLM 作者、真 AI 接線，最後做出新人一鍵入口 <code>aos7-up</code>，跑了真的長任務和學徒實驗。下面的 JSON 都是真檔案：大多取自 10-09 19:54 用 <code>aos7-up</code> 起一個假 AI node 的實跑，跑完已刪乾淨。</p>
+  <div class="stats">
+    <div class="stat core"><b>3004</b><small>核心總行（9 檔，實算）；10-06 時 2757。D7 你定了「開發階段不設行數上限」</small><div class="bar"><i style="width:100%"></i></div></div>
+    <div class="stat core"><b>1061</b><small>項測試（10-09 20:00 數的，沒有實跑）；I5 上一次全套實跑是 999 項、826 秒，全綠</small></div>
+    <div class="stat mod"><b>14</b><small>個模組包（另有 history／counter 兩個示範）</small></div>
+    <div class="stat pack"><b>6</b><small>個上層任務包：step、budget、adapt、llmcall、author、prompt</small></div>
+    <div class="stat"><b>5 詞 3 指令</b><small>新人入口 QUICKSTART；兩位新手 AI 試讀，最後一輪 7.0／8.8 分，過關</small></div>
+    <div class="stat"><b>2</b><small>件還等你：user-advice.md 還沒 commit、31 份超標的思想文件（見<a href="#wait">等你定</a>）</small></div>
+  </div>
+  <nav class="toc" aria-label="目錄">
+    <a href="#wait">等你定</a><a href="#journey">一路走來</a><a href="#layers">分層與各包</a><a href="#newbie">新人入口</a><a href="#house">房子佈局</a><a href="#repo">repo 佈局</a><a href="#json">JSON 格式</a><a href="#llm">真 AI 接法</a><a href="#errors">統一錯誤</a><a href="#longtask">長任務</a><a href="#apprentice">學徒</a><a href="#d1004">10-04／10-05</a><a href="#next">下一步</a>
+  </nav>
+</header>
+
+<section id="wait">
+  <div class="lbl">等你定</div>
+  <div>
+    <h2>現在真的還在等你的，只剩兩件</h2>
+    <p>10-05 那三組題（loop7 的 D1～D10、六個大問題、先修還是先想）10-09 都定完了。你 19:00 回覆的四件（LiteLLM 提示不改、模型分級照暫定收下、舊分支先留、心跳可以隨意設定）也都落地，不再列。</p>
+    <pre class="mermaid">
+flowchart LR
+  subgraph DONE["已定（不用再看）"]
+    direction TB
+    A1["loop7 D1～D10<br/>照預設；D7 不設上限"]
+    A2["六個大問題<br/>10-09 下午 A 級代定"]
+    A3["19:00 四件<br/>提示、分級、清理、心跳"]
+  end
+  subgraph OPEN["還開著"]
+    direction TB
+    W1["proto7/user-advice.md<br/>還沒 commit"]
+    W2["31 份 wf-lint 超標的思想文件<br/>等你在場時整理"]
+  end
+  DONE ~~~ OPEN
+    </pre>
+    <div class="tbl narrow"><table>
+      <thead><tr><th>件</th><th>為什麼要你</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill warn">1</span> <code>proto7/user-advice.md</code></td><td>還是 untracked。有 3 份文件連到它，在別的 clone 或 worktree 裡會變成壞連結。等你寫完自己 commit 就好</td></tr>
+        <tr><td><span class="pill warn">2</span> 31 份思想文件</td><td>ideas、spec 系列超過 wf-lint 的大小上限。頂層不動，留給你在場時整理（只清了壞連結）</td></tr>
+      </tbody>
+    </table></div>
+    <h3>你可能想翻案的頂層代定（都能改回）</h3>
+    <ul>
+      <li><b>AI 呼叫「不知道」就不重送</b>：同一筆超過 deadline（真 AI 600 秒）就把那封信回「卡住」、寄信告訴你兩種處理法，不自動重問，免得多付錢。</li>
+      <li><b>學徒寫 aos 工具時，升級鏈從 sol-high 起跳</b>，CSV 簡單題才從 luna-nothink 起跳。</li>
+      <li><b>心跳預設 1 秒固定節拍</b>：要快就用 <code>--interval 0.5 --early</code>（只寫在 ADVANCED，新手看不到）。</li>
+    </ul>
+    <p class="fig-cap">完整清單（每條附出處和怎麼改回）：<code>proto7-2/notes/decisions-2026-10-09.md</code>。</p>
+  </div>
+</section>
+
+<section id="journey">
+  <div class="lbl">時間軸</div>
+  <div>
+    <h2>一路走來：10-04 → 10-09</h2>
+    <pre class="mermaid">
+flowchart TB
+  D4["10-04（102 commits）<br/>核心精簡 4501→2791 行<br/>loop4～6，step／budget／adapt v1"]
+  D5["10-05（17 commits）<br/>15 份審查、loop7 藍圖<br/>D1～D10 待你定"]
+  M["10-09 上午<br/>你定 D1～D10<br/>loop7 九隊修完，458 項 ×3 全綠"]
+  P["10-09 下午<br/>事件保存 events<br/>LLM 作者 author＋llmcall（假模型）"]
+  R["10-09 傍晚<br/>接真 AI（LiteLLM）<br/>三個目標的零件"]
+  N["10-09 晚上<br/>新手全不過 → 回頭改<br/>aos7-up 一鍵入口、錯誤統一"]
+  L["10-09 19:00 後<br/>長任務實跑、學徒三連題<br/>卡住修好、量尺合一"]
+  D4 --> D5 --> M --> P --> R --> N --> L
+    </pre>
+    <p class="fig-cap">10-06～10-08 沒有 commit。10-09 一天 289 個 commit、開了 90 隊以上，你出門時大小決定都由頂層先代定並記帳。</p>
+    <div class="tbl"><table>
+      <thead><tr><th>你給的目標</th><th>做到了</th><th>還差</th></tr></thead>
+      <tbody>
+        <tr><td>① AI 用 wf 管自己</td><td>每個 AI 有自己的 wf；心跳、信箱、例行事務；一封信可以跨很多回合做完，會寄進度信、會停下問你，被砍了能接回</td><td>換一封信就忘了上一封（跨信記憶 M1 還沒進 main）</td></tr>
+        <tr><td>② 壓縮・記憶・技能</td><td>記憶放檔案不放模型；工作簿太長自動摘要；本機挑技能 17／17 對</td><td>長任務裡的 compact 摘要沒內容，只降 55%</td></tr>
+        <tr><td>③ AI 自己做元件</td><td>學徒用真 AI 寫出 2 個元件，過三關後合進來</td><td>三連題照事先定的判準，沒看到自我改進</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="layers">
+  <div class="lbl">分層</div>
+  <div>
+    <h2>三層：核心、模組包、任務包</h2>
+    <p>核心只做時間線、槽、啟動和最基礎的保護，不知道上面兩層存在。新功能預設放進模組或任務包，用「任務、argv 包裝程式、工具」三種接法掛上去。10-09 新加的東西全在上兩層，核心只修 bug。</p>
+    <pre class="mermaid">
+flowchart TB
+  UP["aos7-up（一鍵入口）<br/>新人只碰這個"]
+  subgraph P["上層任務包 packs/"]
+    direction LR
+    STEP["step"] --- BUD["budget"] --- ADA["adapt"]
+    LLM["llmcall"] --- AUT["author"] --- PR["prompt"]
+  end
+  subgraph M["模組包 modules/"]
+    direction LR
+    T["tools・control・subd<br/>once_retry・audit・diag"]
+    N["events・mail・routines<br/>skills・wfnode・compact<br/>metrics・up"]
+  end
+  subgraph C["核心 lib/aos7_*.py（9 檔 3004 行）"]
+    direction LR
+    D["daemon＋時間線"] --- TK["tick／tock"] --- RUN["task・proc・run<br/>fs・mount"]
+  end
+  UP --> P
+  UP --> M
+  P -->|只經檔案協定| M
+  P -->|tasks.json、ctl、掛載| C
+  M -->|任務／包裝／工具| C
+    </pre>
+    <p class="fig-cap">箭頭是「用到」：上層用下層，下層不知道上層。</p>
+    <div class="tbl"><table>
+      <thead><tr><th>核心檔</th><th class="n">行數</th><th>做什麼</th></tr></thead>
+      <tbody>
+        <tr><td><code>aos7_daemon.py</code></td><td class="n">784</td><td>登記、控制檔、status；回收意圖 <code>reaping</code>、倒數 <code>steps</code>／<code>owe</code></td></tr>
+        <tr><td><code>aos7_daemon_timeline.py</code></td><td class="n">342</td><td>每個 node 一條時間線</td></tr>
+        <tr><td><code>aos7_tick.py</code>／<code>aos7_tock.py</code></td><td class="n">414／198</td><td>開回合起任務／關回合寫總結、通知</td></tr>
+        <tr><td><code>aos7_task.py</code>／<code>aos7_proc.py</code></td><td class="n">344／276</td><td>槽、三態判定、kill、身分掃描</td></tr>
+        <tr><td><code>aos7_fs.py</code>／<code>aos7_mount.py</code>／<code>aos7_run.py</code></td><td class="n">349／181／116</td><td>讀檔四分支、原子寫、鎖；掛載；pid／exit</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>模組包（14 個）</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>包</th><th>一句話</th><th class="n">程式行</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill mod">up</span></td><td><b>一鍵入口</b>：一個指令備好房子、工作簿、信箱、技能、帳，起心跳；<code>ask</code> 寄信、<code>status</code> 看狀況；「腦」brain 每回合讀信、問 AI、回信</td><td class="n">1086</td></tr>
+        <tr><td><span class="pill mod">events</span></td><td>值班日誌：每個 node 一個 <code>events/</code>，「隨手記 obs」和「必讀 must」兩冊，總共最多 12 檔</td><td class="n">883</td></tr>
+        <tr><td><span class="pill mod">mail</span></td><td>信箱：send／read／done；信是檔案，必讀冊只當提醒</td><td class="n">651</td></tr>
+        <tr><td><span class="pill mod">compact</span></td><td>工作簿變厚就先封存、再換成摘要，沒做完的那條不丟</td><td class="n">592</td></tr>
+        <tr><td><span class="pill mod">wfnode</span></td><td>給 node 裝工作簿 <code>wf/</code>、記續行點、體檢</td><td class="n">584</td></tr>
+        <tr><td><span class="pill mod">skills</span></td><td>技能抽屜：本機看觸發詞挑一本，拿不準才問 AI</td><td class="n">493</td></tr>
+        <tr><td><span class="pill mod">metrics</span></td><td>唯讀量 AI 用量：每件 token、同時幾個、花幾秒、重試幾次；<code>--by</code> 分組（usage 已併入）</td><td class="n">343</td></tr>
+        <tr><td><span class="pill mod">subd</span></td><td>子 daemon：任務擁有一個子空間</td><td class="n">352</td></tr>
+        <tr><td><span class="pill mod">tools</span></td><td><code>aos7-ctl</code>、<code>aos7-wait-tock</code> 和任務端函式</td><td class="n">319</td></tr>
+        <tr><td><span class="pill mod">routines</span></td><td>例行和一次性的到期事務，心跳叫醒、最多跑一次</td><td class="n">264</td></tr>
+        <tr><td><span class="pill mod">diag</span></td><td>唯讀診斷；<code>--llm</code> 列出沒回條的呼叫（llmdiag 已併入）</td><td class="n">230</td></tr>
+        <tr><td><span class="pill mod">audit</span></td><td>寫入紀錄，只記不擋</td><td class="n">225</td></tr>
+        <tr><td><span class="pill mod">control</span></td><td>restart／reload 在請求端做</td><td class="n">137</td></tr>
+        <tr><td><span class="pill mod">once_retry</span></td><td>從沒起來過的 once 補一次（至少一次）</td><td class="n">84</td></tr>
+      </tbody>
+    </table></div>
+    <h3>上層任務包（6 個）</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>包</th><th>一句話</th><th class="n">程式行</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill pack">author</span></td><td>LLM 作者／學徒：AI 交草稿，過三關（靜態、沙箱測試＋答案、審查）才發布；會依難度先便宜後升級換模型</td><td class="n">1800</td></tr>
+        <tr><td><span class="pill pack">step</span></td><td>步驟表直譯器：一步一步派 once 子工作，結果寫在槽外</td><td class="n">875</td></tr>
+        <tr><td><span class="pill pack">budget</span></td><td>使用權、帳、入口：先押預留、做完照實際用量結帳</td><td class="n">813</td></tr>
+        <tr><td><span class="pill pack">adapt</span></td><td>把鄰居 node 的最新值轉過來（三態暫存器）</td><td class="n">563</td></tr>
+        <tr><td><span class="pill pack">llmcall</span></td><td>叫 AI 的唯一一道門：假傳輸＋真傳輸 <code>llm.litellm</code>；先押帳、留紀錄，結果不明就不重送</td><td class="n">481</td></tr>
+        <tr><td><span class="pill pack">prompt</span></td><td>照 <code>prompt.json</code> 拼出每次給 AI 的提示</td><td class="n">272</td></tr>
+      </tbody>
+    </table></div>
+    <p class="fig-cap">程式行＝各包資料夾裡的 .py 和入口檔，不含 tests／examples（author 也不含 checkers）。這是 10-09 20:00 實算的數字。<code>packs/usage</code> 和 <code>modules/llmdiag</code> 只剩轉址，本體搬到了 <code>archive/</code>。</p>
+  </div>
+</section>
+
+<section id="newbie">
+  <div class="lbl">新人</div>
+  <div>
+    <h2>新人入口：5 個詞、3 個指令</h2>
+    <p>第一次找最笨的兩位 AI（Haiku、luna）只看 README 試用，結果 10 個模組全部沒過。共同的病根是「第一次跑就得懂底層」，所以做了一鍵入口 <code>aos7-up</code>，把帳、回合、退出碼、daemon 全藏起來；每份 README 也拆成「新手一頁＋ADVANCED 一頁」。</p>
+<pre class="code"> 你 ─ask 寄信─▶ ┌ node：AI 住的資料夾 ───────────┐
+ 你 ◀─回信───── │ 工作簿 wf/：停在哪、下一步     │
+ 心跳：每秒 ──▶ │ 技能 skills/：AI 自己挑        │
+ 叫醒 node 一次 │ 醒來：看信→問 AI→回信→記簿子  │
+                └────────────────────────────────┘
+
+aos7-up /tmp/aos/bob                          # 1. 起 bob；停＝Ctrl-C
+aos7-up ask /tmp/aos/bob '用一句話介紹你自己'   # 2. 寄信，等回信
+aos7-up status /tmp/aos/bob                   # 3. 看 bob 現在怎樣</pre>
+    <p class="fig-cap">取自 <code>proto7-2/QUICKSTART.md</code>（一頁，約 3 KB）。5 個詞：node、心跳、工作簿、信、技能。預設是假 AI，不連網也不花錢；加 <code>--model</code> 才接真 AI。</p>
+    <h3>今晚實跑 status 長這樣</h3>
+<pre class="code">心跳：活著，第 5 下
+信：bob 收到 1 封要辦的信，辦完 1 封；你的信箱有 0 封回信沒看
+工作簿：還有 0 件事沒做完；停在：- 19:54 回了 you-20261009T195415-780c91b23446；體檢 OK
+技能：3 本
+AI：假 AI；問過 1 次，讀寫約 1161 字
+檔案：都在 /tmp/aosx（bob、you、.aosd）；全清：先停心跳，再 rm -r /tmp/aosx</pre>
+    <h3>新手分數：改前 → 改後（取兩位裡較低的那位）</h3>
+    <div class="legend"><span>灰＝第一次</span><span style="color:var(--pack)">綠＝改完重試</span><span style="color:var(--warn)">虛線＝門檻 7</span></div>
+    <div class="score"><span>mail</span><div class="track"><i class="b0" style="width:56%"></i><i class="b1" style="width:84%"></i><i class="gate"></i></div><span class="v">5.6→8.4</span></div>
+    <div class="score"><span>prompt</span><div class="track"><i class="b0" style="width:68%"></i><i class="b1" style="width:78%"></i><i class="gate"></i></div><span class="v">6.8→7.8</span></div>
+    <div class="score"><span>compact</span><div class="track"><i class="b0" style="width:66%"></i><i class="b1" style="width:76%"></i><i class="gate"></i></div><span class="v">6.6→7.6</span></div>
+    <div class="score"><span>metrics</span><div class="track"><i class="b0" style="width:62%"></i><i class="b1" style="width:76%"></i><i class="gate"></i></div><span class="v">6.2→7.6</span></div>
+    <div class="score"><span>routines</span><div class="track"><i class="b0" style="width:62%"></i><i class="b1" style="width:74%"></i><i class="gate"></i></div><span class="v">6.2→7.4</span></div>
+    <div class="score"><span>wfnode</span><div class="track"><i class="b0" style="width:68%"></i><i class="b1" style="width:74%"></i><i class="gate"></i></div><span class="v">6.8→7.4</span></div>
+    <div class="score"><span>skills</span><div class="track"><i class="b0" style="width:54%"></i><i class="b1" style="width:74%"></i><i class="gate"></i></div><span class="v">5.4→7.4</span></div>
+    <div class="score"><span>events</span><div class="track"><i class="b0" style="width:52%"></i><i class="b1" style="width:74%"></i><i class="gate"></i></div><span class="v">5.2→7.4</span></div>
+    <div class="score"><span>QUICKSTART</span><div class="track"><i class="b0" style="width:66%"></i><i class="b1" style="width:70%"></i><i class="gate"></i></div><span class="v">6.6→7.0</span></div>
+    <p class="fig-cap">QUICKSTART 試了三輪：Haiku 6.6 → 7.6 → 7.0（第 3 輪改了接口），luna 7.8 → 8.6 → 8.8。<b>還沒過的</b>：19:48 LT1 改完 status 後重試，luna 7、Haiku 5～6，扣分在「假 AI」「工作簿／回合」「體檢」「全清 rm」那幾行，已排 status 白話化回改。出處：<code>notes/play/2026-10-09-newbie/</code>、<code>2026-10-10-firstrun/</code>、decisions 末段。</p>
+  </div>
+</section>
+
+<section id="house">
+  <div class="lbl">佈局</div>
+  <div>
+    <h2>一間「房子」的資料夾（aos7-up 實跑）</h2>
+    <p><code>aos7-up /tmp/aosx/bob</code> 起的房子，寄一封信、收到回信後用 <code>find</code> 抄下來的（工作簿裡的模板樹太長，收起來了）。顏色代表誰寫：<span class="pill core">核心</span> <span class="pill mod">模組包</span> <span class="pill pack">任務包</span> <span class="pill warn">人／AI 內容</span>，灰字是說明。</p>
+<pre class="code tree">/tmp/aosx/                            <span class="c"># 房子＝daemon 的空間根</span>
+├── <span class="d">.aosd/</span>                            <span class="c"># 心跳（daemon）住的地方</span>
+│   ├── ctl/                          <span class="c"># 控制檔收件匣：&lt;by&gt;.&lt;op&gt;.&lt;node&gt;.json，處理完就搬走</span>
+│   ├── <span class="d">ctl-done/</span>                     <span class="c"># 回條＝請求原文＋result</span>
+│   ├── <span class="d">nodes.json</span>                    <span class="c"># 登記表（回收中的放 reaping）</span>
+│   ├── <span class="d">paused.json</span>                   <span class="c"># 誰 pause 了、還剩幾回合（steps／owe）</span>
+│   ├── <span class="d">gen.json  status.json</span>         <span class="c"># 世代號；每圈覆寫的總狀態</span>
+│   ├── daemon.lock                   <span class="c"># 一個房子一個 daemon</span>
+│   └── <span class="m">up-daemon.log</span>                 <span class="c"># up：心跳的輸出</span>
+├── bob/                              <span class="c"># node＝AI 住的資料夾</span>
+│   ├── <span class="m">AGENTS.md  CLAUDE.md</span>          <span class="c"># wfnode：給 AI 讀的入口</span>
+│   ├── .aos/
+│   │   ├── <span class="m">tasks.json</span>  (.lock)        <span class="c"># up 寫：四個 keep 任務</span>
+│   │   ├── <span class="m">timeline.json</span>             <span class="c"># 給過 --interval 才有</span>
+│   │   ├── <span class="m">up.json</span>  up.lock          <span class="c"># up：這間房子的設定</span>
+│   │   ├── <span class="d">round.json  last-round.json</span>   <span class="c"># 這回合／上一回合</span>
+│   │   ├── <span class="d">action.owner.json</span>  action.lock
+│   │   └── tasks/                    <span class="c"># 槽：brain、budget-llm、compact、routines</span>
+│   │       └── brain/  <span class="d">birth.json pid.json exit.json tock.json</span>  out.log
+│   ├── wf/                           <span class="c"># 工作簿（wfnode 裝）</span>
+│   │   ├── <span class="h">SESSION-LOG.md</span>            <span class="c"># 現在開著的事；做完歸零</span>
+│   │   ├── <span class="h">handoffs/&lt;日期&gt;/STATE.md</span>   <span class="c"># 續行點：每回合一行（有事做才出現）</span>
+│   │   ├── <span class="h">handoffs/NEXT-SESSION.md</span>   <span class="c"># 下一次從哪接</span>
+│   │   ├── <span class="m">routines.json  schedule.json</span>  <span class="c"># 例行／定時表</span>
+│   │   ├── INDEX.md  WORKFLOWS.md  STRUCTURE.md  ROSTER.md  WAIT_USER.md  line-claims.json
+│   │   └── workflows/  tools/        <span class="c"># 工作流模板與 wf 小工具</span>
+│   ├── inbox/                        <span class="c"># 信箱（mail）</span>
+│   │   ├── <span class="h">&lt;時間&gt;-&lt;寄件人&gt;-&lt;狀態&gt;.md</span>  <span class="c"># 新信；辦完搬進 done/</span>
+│   │   ├── <span class="m">done/  .handled/</span>          <span class="c"># 歸檔的信；辦結日誌（被殺不重回）</span>
+│   │   ├── orders/                   <span class="c"># 團隊指示（用到才有）</span>
+│   │   └── <span class="m">.seen .acked .numbers.json</span>  <span class="c"># 讀到哪、確認到哪、序號</span>
+│   ├── events/                       <span class="c"># 值班日誌（events）</span>
+│   │   ├── <span class="m">must.active.jsonl</span>         <span class="c"># 必讀冊（另有 obs.* 隨手記，有寫才出現）</span>
+│   │   └── <span class="m">state.json</span>                <span class="c"># 每冊寫到第幾號、確認到第幾號</span>
+│   ├── brain/                        <span class="c"># 腦：now.md、req.json、reply.md；多回合時加 task.json、last.md</span>
+│   ├── skills/                       <span class="c"># 技能抽屜：3 本（連結到 library）＋ index.json、.pick/log.jsonl</span>
+│   ├── budget/llm/                   <span class="c"># 帳：grant.json、ledger.json、gateway/&lt;kid&gt;.json</span>
+│   ├── llmcall/llm/&lt;call_id&gt;/        <span class="c"># 每次叫 AI：request.json、raw.json、receipt.json</span>
+│   ├── compact/                      <span class="c"># 記憶整理的鎖與封存</span>
+│   ├── notes/done/                   <span class="c"># 即將（M1 跨信記憶，還沒進 main）：每封結案信一份</span>
+│   └── tools/  .claude/commands/     <span class="c"># 給 AI 用的信箱腳本、wf-lint／wf-tick 指令</span>
+└── you/                              <span class="c"># 你的信箱（人也是一個收件人）</span>
+    ├── inbox/  done/  .handled/      <span class="c"># bob 的回信、進度信、要你決定的信</span>
+    └── events/</pre>
+    <ul>
+      <li><b>沒有每回合新開的資料夾</b>：槽照名字重用，核心只留 <code>last-round.json</code>；信、帳、日誌的檔數都有上限或會歸檔。</li>
+      <li><b>全清</b>：先停心跳，再 <code>rm -r</code> 整個房子（含 <code>.aosd</code>）。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="repo">
+  <div class="lbl">repo</div>
+  <div>
+    <h2>repo 裡的 proto7-2/</h2>
+<pre class="code tree">proto7-2/
+├── README.md  <span class="h">QUICKSTART.md</span>  INDEX.md  spec.md   <span class="c"># 入口、新人一頁、地圖、核心規則</span>
+├── bin/                     <span class="c"># 薄入口：aos7-daemon／tick／tock／run／ctl／wait-tock</span>
+├── <span class="d">lib/</span>                     <span class="c"># 核心 aos7_*.py 9 檔（另有搬來的 aos_* 執行器，不算核心）</span>
+├── <span class="m">modules/</span>                 <span class="c"># 模組包：每包一夾，README（新手）＋ADVANCED.md＋tests/</span>
+│   ├── up/  events/  mail/  routines/  skills/  wfnode/  compact/  metrics/
+│   ├── tools/  control/  subd/  once_retry/  audit/  diag/
+│   ├── llmdiag/             <span class="c"># 只剩轉址（併進 diag --llm）</span>
+│   └── history.py  counter.py  README.md  README-head.md
+├── <span class="p">packs/</span>                   <span class="c"># 上層任務包</span>
+│   ├── step/  budget/  adapt/  llmcall/  author/  prompt/
+│   └── usage/               <span class="c"># 只剩轉址（併進 metrics --by）</span>
+├── archive/                 <span class="c"># llmdiag、usage 的本體（git mv 過來）</span>
+├── tests/                   <span class="c"># 核心測試 core/、共用工具、run_all.py、error_path.json</span>
+└── notes/                   <span class="c"># 藍圖、代定清單、意圖卡 intents/、試玩 play/、狀況頁 status/</span></pre>
+    <p class="fig-cap">每個模組／任務包都有一張<b>意圖卡</b>（<code>notes/intents/</code>，18 張）：要解決什麼、哪些副作用非留不可、明確不做什麼。</p>
+  </div>
+</section>
+
+<section id="json">
+  <div class="lbl core">格式</div>
+  <div>
+    <h2>JSON 格式（真實樣本）</h2>
+    <p>沒特別標的，都是 10-09 19:54 <code>aos7-up</code> 假 AI 實跑當下的檔案原文；長路徑縮寫成 <code>$P7</code>（repo 的 proto7-2）。標「10-04」的取自原頁的示範，格式至今沒變。點開看。</p>
+
+    <h3>心跳（daemon）：<code>.aosd/</code></h3>
+    <details open><summary>nodes.json <span class="who">daemon 寫｜register／unregister 時變</span></summary><div class="body">
+<pre class="code">{"nodes": {
+  "bob": {"by": "cli", "at": "2026-10-09T19:54:11.706"}}}
+
+// 回收中的 node（spec 寫的格式；確認收乾淨才拿掉，空時省略）
+"reaping": {"&lt;id&gt;": {"since": "…", "why": "stop-kill"}}</pre>
+    <p>誰讀：daemon 自己、diag。在 <code>reaping</code> 裡的 node 不開時間線，daemon 被殺重開後會續收。</p></div></details>
+    <details><summary>paused.json <span class="who">daemon 寫｜pause／resume 時、每回合倒數時</span></summary><div class="body">
+<pre class="code">{"paused": {}, "steps": {}}                       // 剛起好
+
+// resume --owner human --rounds 3 之後一回合
+{"paused": {}, "steps": {"bob": {"human": 2}}}</pre>
+    <p>開回合前若有倒數，會先記 <code>owe: {node: 開回合前的回合號}</code>，回合關上時扣倒數與清 owe 同一次寫入（這個瞬間今晚沒抓到樣本）。</p></div></details>
+    <details><summary>ctl/ 請求 → ctl-done/ 回條 <span class="who">任何人寫請求｜daemon 寫回條</span></summary><div class="body">
+<pre class="code">// ctl-done/cli.register.bob.json
+{"op": "register", "by": "cli", "node": "bob",
+ "result": {"ok": true, "msg": "registered bob",
+            "at": "2026-10-09T19:54:11.706", "queued_at": "2026-10-09T19:54:11.683"}}
+
+// ctl-done/cli.resume.bob@human.json（帶 owner 時檔名加 @owner）
+{"op": "resume", "by": "cli", "node": "bob", "rounds": 3, "owner": "human",
+ "result": {"ok": true, "msg": "resume bob（owner 'human'，rounds=3）；沒人 pause 了，馬上開回合",
+            "at": "2026-10-09T19:54:53.998", "queued_at": "2026-10-09T19:54:53.988"}}</pre></div></details>
+    <details><summary>status.json、gen.json <span class="who">daemon 每圈（約 20 ms）覆寫</span></summary><div class="body">
+<pre class="code">{"pid": 2673787, "root": "/tmp/aosx", "at": "2026-10-09T19:54:22.541",
+ "poll_s": 0.02, "gen": 1, "io_errors": 0, "stopping": false, "stopped": false,
+ "last_event": {"at": "…11.706", "ev": "node+", "node": "bob", "round": 0},
+ "nodes": {"bob": {"round": 11, "round_open": true, "recovery_pending": false,
+   "paused_by": [], "pause_pending": false, "interval_ms": 1000, "early_tock": false,
+   "live": ["brain#1", "budget-llm#1", "compact#1", "routines#1"], "phase": "running"}}}
+
+// gen.json
+{"gen": 1, "pid": 2673787, "at": "2026-10-09T19:54:11.706"}</pre>
+    <p>誰讀：<code>aos7-up status</code>、diag、history 模組。</p></div></details>
+
+    <h3>node：<code>bob/.aos/</code></h3>
+    <details open><summary>tasks.json <span class="who">up 寫（人／包也可寫，一律拿 .lock）｜tick 讀</span></summary><div class="body">
+<pre class="code">{"tasks": [
+  {"name": "budget-llm", "mode": "keep",
+   "argv": ["python3", "-B", "$P7/packs/budget/bin/aos7-budget", "ledger", "budget/llm"]},
+  {"name": "brain", "mode": "keep",
+   "argv": ["python3", "$P7/modules/up/aos7-up", "brain", "/tmp/aosx/bob"]},
+  {"name": "compact", "mode": "keep",
+   "argv": ["python3", "-B", "$P7/modules/compact/aos7-compact", "watch"]},
+  {"name": "routines", "mode": "keep",
+   "argv": ["python3", "-B", "$P7/modules/routines/aos7-routines"]}]}</pre>
+    <p>四個常駐任務：帳、腦、記憶整理、例行事務。其他欄位：<code>max_live</code>、<code>x</code>（核心照抄進 birth）、<code>mounts</code>、<code>enabled</code>、<code>from_round</code>／<code>until_round</code>、once 的 <code>launch</code>。</p></div></details>
+    <details><summary>timeline.json <span class="who">up 寫（給過 --interval／--early 才寫）｜daemon 讀</span></summary><div class="body">
+<pre class="code">{"interval_ms": 2000, "early_tock": true}     // aos7-up … --interval 2 --early</pre>
+    <p>沒有這個檔＝核心預設 1 秒固定節拍。</p></div></details>
+    <details><summary>round.json <span class="who">tick 開、tock 關｜回合的唯一真相</span></summary><div class="body">
+<pre class="code">{"round": 11, "open": true,
+ "tick_at": "2026-10-09T19:54:21.998", "tock_at": null,
+ "started": [], "ctl": [], "mounts": [], "tasks_rev": "4f5823375c64",
+ "reaped": [], "skipped": []}</pre></div></details>
+    <details><summary>last-round.json <span class="who">tock 寫｜只留上一回合</span></summary><div class="body">
+<pre class="code">{"round": 10, "tick_at": "…20.966", "tock_at": "…21.971", "early": false,
+ "started": [], "alive": ["brain#1", "budget-llm#1", "compact#1", "routines#1"],
+ "ended": [], "skipped": [], "ctl": [], "mounts": [],
+ "tasks_error": [], "errors": [], "tasks_rev": "4f5823375c64"}</pre>
+    <p>lost 的任務在 <code>ended</code> 帶 <code>lost: true</code>；從沒起來過的再帶 <code>never_started: true</code>。</p></div></details>
+    <details><summary>up.json <span class="who">aos7-up 寫｜brain、status 讀</span></summary><div class="body">
+<pre class="code">{"v": 1, "node": "/tmp/aosx/bob", "house": "/tmp/aosx", "name": "bob", "you": "you",
+ "mail_root": "/tmp/aosx", "model": null, "litellm_url": "http://localhost:4000/v1",
+ "budget": "budget/llm", "holder": "brain", "gateway": "llm.fake"}</pre>
+    <p><code>model: null</code>＝假 AI。給過 <code>--interval</code>／<code>--early</code> 會多 <code>interval_ms</code>、<code>early_tock</code> 兩欄，重跑沿用。已知待修：重跑會整份重寫，人手加的欄位會被洗掉。</p></div></details>
+
+    <h3>槽：<code>bob/.aos/tasks/&lt;槽&gt;/</code></h3>
+    <div class="grid2">
+    <details open><summary>birth.json <span class="who">tick 寫｜起任務那一刻</span></summary><div class="body">
+<pre class="code">{"name": "brain", "slot": "brain",
+ "run": 1, "round": 1, "node": "bob",
+ "once": false,
+ "at": "2026-10-09T19:54:11.727",
+ "runner": {"pid": 2673934,
+            "starttime": 4203509},
+ "argv": ["python3",
+   "$P7/modules/up/aos7-up",
+   "brain", "/tmp/aosx/bob"],
+ "mounts": {}}</pre></div></details>
+    <details open><summary>pid／tock／exit <span class="who">aos7-run／tock</span></summary><div class="body">
+<pre class="code">// pid.json（aos7-run）
+{"run": 1, "pid": 2673992,
+ "pgid": 2673992, "starttime": 4203510,
+ "runner_pid": 2673934, "at": "…11.741"}
+
+// tock.json（tock，每回合覆寫）
+{"run": 1, "round": 10,
+ "at": "…21.971", "early": false}
+
+// exit.json（長任務跑 2，brain 被殺）
+{"run": 27, "code": -15,
+ "at": "2026-10-09T18:56:42.827",
+ "round": 146, "seen_round": 146}</pre></div></details>
+    </div>
+
+    <h3>叫 AI：llmcall＋budget（凍結介面）</h3>
+    <details open><summary>llmcall/llm/&lt;call_id&gt;/receipt.json <span class="who">llmcall 寫｜brain、metrics、diag 讀</span></summary><div class="body">
+<pre class="code">{"v": 1, "call_id": "you-20261009T195415-780c91b23446", "logical": "up/brain",
+ "kid": "07c2307167fd79129c7f",
+ "key": {"budget": "llm", "holder": "brain", "request": "you-20261009T195415-780c91b23446"},
+ "req_sha": "3f9704a0…", "meter": "fake.total_tokens/1", "bound": "soft",
+ "reserve": 1000000, "outcome": "answered",
+ "usage": {"total_tokens": 1161, "prompt_tokens": 774, "completion_tokens": 387},
+ "used": 1161, "overrun": 0, "billing": "final", "raw_sha": "6d7ba567…",
+ "text": "回信：（假 AI）收到你的信：用一句話介紹你自己\n停在哪：回了 you-20261009T195415-780c91b23446",
+ "settle": {"seq": 2, "used": 1161, "overrun": 0, "outcome": "answered",
+            "evidence": "041d9ee4…", "at": "2026-10-09T19:54:15.992"}}</pre>
+    <p>同一個資料夾還有 <code>request.json</code>（固定的請求，含 <code>endpoint</code>）和 <code>raw.json</code>（AI 原始回覆）。有回條就不重問：被殺重來直接讀回條。</p></div></details>
+    <div class="grid2">
+    <details><summary>budget/llm/grant.json <span class="who">up 寫（發行者）</span></summary><div class="body">
+<pre class="code">{"v": 1, "grant": "up-llm",
+ "budget": "llm", "holder": "brain",
+ "resource": "llm.tokens",
+ "gateway": "llm.fake",
+ "amount": 10000000,
+ "clock": "completed_tock",
+ "until": 1000000000,
+ "delegate": false, "from": 0}</pre></div></details>
+    <details><summary>budget/llm/ledger.json <span class="who">帳任務 budget-llm 寫</span></summary><div class="body">
+<pre class="code">{"v": 1, "budget": "llm",
+ "grant": "up-llm",
+ "initial": 10000000,
+ "available": 9998839,
+ "inflight": 0, "used": 1161,
+ "clock_hw": 4, "seq": 2,
+ "ops": {"07c23071…": {
+   "amount": 1000000,
+   "stage": "settled", …}},
+ "log": [
+  {"seq": 1, "op": "reserve",
+   "amount": 1000000,
+   "available": 9000000,
+   "inflight": 1000000, …},
+  {"seq": 2, "op": "settle",
+   "used": 1161,
+   "available": 9998839,
+   "inflight": 0, …}]}</pre>
+    <p>先押 100 萬，回來照實際 1161 結帳、多的退回。守恆：可用＋在途＋已用＝初始額度。</p></div></details>
+    </div>
+    <details><summary>budget/llm/gateway/&lt;kid&gt;.json <span class="who">入口寫｜終局回條</span></summary><div class="body">
+<pre class="code">{"stage": "done", "kid": "07c2307167fd79129c7f",
+ "key": {"budget": "llm", "holder": "brain", "request": "you-20261009T195415-780c91b23446"},
+ "gateway": "llm.fake", "call_id": "you-20261009T195415-780c91b23446",
+ "outcome": "answered", "used": 1161,
+ "usage": {"total_tokens": 1161, "prompt_tokens": 774, "completion_tokens": 387},
+ "overrun": 0, "billing": "final", "raw_sha": "6d7ba567…", "at": "2026-10-09T19:54:15.987"}</pre></div></details>
+
+    <h3>信與日誌：mail＋events</h3>
+    <details open><summary>一封信 inbox/20261009T1954-you-REQUEST.md <span class="who">寄件人寫｜收件人讀，辦完搬進 done/</span></summary><div class="body">
+<pre class="code">---
+from: you
+to: bob
+status: REQUEST
+at: 2026-10-09T19:54:15.041434+08:00
+reply-to: /tmp/aosx/you/inbox
+id: you-20261009T195415-780c91b23446
+re:
+---
+# 用一句話介紹你自己</pre>
+    <p>檔名＝<code>&lt;時間&gt;-&lt;寄件人&gt;-&lt;狀態&gt;.md</code>，同分鐘第二封加 <code>_1</code>。狀態有 REQUEST、DONE、PROGRESS、NEEDS-USER 等；回信的 <code>re:</code> 指回原信 id。</p></div></details>
+    <details><summary>inbox/.handled/&lt;id&gt;.json <span class="who">mail 寫｜辦結日誌，被殺重來不重回</span></summary><div class="body">
+<pre class="code">{"id": "you-20261009T195415-780c91b23446",
+ "replies": [{"to": "you", "status": "DONE",
+   "title": "（假 AI）收到你的信：用一句話介紹你自己",
+   "body": "（假 AI）收到你的信：用一句話介紹你自己\n",
+   "re_id": "you-20261009T195415-780c91b23446",
+   "ident": "re-you-20261009T195415-780c91b23446-DONE"}]}</pre></div></details>
+    <details><summary>events/must.active.jsonl 一筆 <span class="who">mail send 寫｜brain／author 讀，處理完 ack</span></summary><div class="body">
+<pre class="code">{"v": 1, "stream": "bob/must", "seq": 1, "kind": "mail.request", "capture": "published",
+ "event_id": "you-20261009T195415-780c91b23446", "source": {"node": "bob"},
+ "at": "2026-10-09T19:54:15.041",
+ "payload": {"id": "you-20261009T195415-780c91b23446", "from": "you", "to": "bob",
+             "file": "/tmp/aosx/bob/inbox/20261009T1954-you-REQUEST.md"}}</pre></div></details>
+    <details><summary>events/state.json <span class="who">events 保存端寫｜每寫一筆、每 ack 一次</span></summary><div class="body">
+<pre class="code">{"v": 1, "node": "bob",
+ "config": {"keep_segments": 4, "segment_bytes": 1048576, "max_record_bytes": 65536},
+ "channels": {
+  "obs":  {"next_seq": 1, "active_first": 1, "active_bytes": 0, "segments": [],
+           "dropped_upto": 0, "torn": 0},
+  "must": {"next_seq": 2, "active_first": 1, "active_bytes": 340, "segments": [],
+           "dropped_upto": 0, "torn": 0, "acked_upto": 1, "refused": 0}},
+ "sample": {}, "daemon_log": null, "status_last": null}</pre>
+    <p>每冊 1 個在寫的段＋最多 4 個舊段。必讀冊沒人 ack 過就絕不刪，滿了停收（<code>refused</code> 計數）。</p></div></details>
+
+    <h3>腦與工作簿：brain＋wfnode</h3>
+    <details><summary>brain/task.json <span class="who">brain 寫｜一封信跨多回合時才有</span></summary><div class="body">
+<pre class="code">// 長任務跑 1，週報做到第 7 回合（trail 只留最近幾回合，這裡截短）
+{"id": "you-20261009T185219-d3ce3a783357",
+ "step": 7,
+ "line": "已寫第 6 節「代理開銷」；下一回合寫第 7 節「記憶」。",
+ "stall": 0,
+ "trail": ["第 1 回合：已寫第 1 節；下一回合寫第 2 節「範圍」。｜成果：一、目標。…", …],
+ "skill": "aos-test"}</pre>
+    <p>AI 每回合回「回信：／繼續：／要你決定：」其中一種。<code>stall</code> 數連續沒進展的回合，滿 3 就停下問你。這封信結案後 task.json 會刪掉。</p></div></details>
+    <details><summary>wf/handoffs/&lt;日期&gt;/STATE.md <span class="who">brain 每回合加一行</span></summary><div class="body">
+<pre class="code"># 續行點 2026-10-09
+
+## 進度
+- 18:52 第 1 回合 you-20261009T185219-d3ce3a783357：已寫第 1 節；下一回合寫第 2 節「範圍」。
+- 18:52 第 2 回合 you-20261009T185219-d3ce3a783357：已寫第 2 節「範圍」；下一回合寫第 3 節「進度」。</pre></div></details>
+    <div class="grid2">
+    <details><summary>wf/routines.json <span class="who">wfnode／routines 寫</span></summary><div class="body">
+<pre class="code">{"contract": "wf-table/1",
+ "source": "workflows/routines.md",
+ "extracted": "2026-10-09",
+ "columns": ["name", "every", "inst",
+   "last_round", "last_time",
+   "last_code"],
+ "rows": []}</pre></div></details>
+    <details><summary>wf/schedule.json <span class="who">wfnode／routines 寫</span></summary><div class="body">
+<pre class="code">{"contract": "wf-table/1",
+ "source": "workflows/schedule.md",
+ "extracted": "2026-10-09",
+ "columns": ["name", "at",
+   "inst", "claimed"],
+ "rows": []}</pre></div></details>
+    </div>
+    <p class="fig-cap">兩張表由 <code>aos7-routines add</code> 加列；<code>routines</code> 任務每回合醒來，跑到期的那一列，最多跑一次。</p>
+    <details><summary>skills/index.json（截短） <span class="who">skills index 寫｜pick 讀</span></summary><div class="body">
+<pre class="code">{"v": 1, "skills": {
+  "aos-inbox": {
+   "triggers": ["信箱", "看信箱", "收信", "辦信", "寄來的信", "寄了一封", "終局狀態", "wf/inbox"],
+   "not_for": ["寫信", "寫回信"],
+   "description": "Read and handle the agent mailbox in wf/inbox …"}, …}}</pre>
+    <p>本機挑：命中 <code>triggers</code> 才挑；0 命中或平手就不挑，碰到 <code>not_for</code> 也不挑。</p></div></details>
+
+    <h3>10-04 示範：step、adapt（格式至今沒變）</h3>
+    <div class="grid2">
+    <details><summary>step：steps.json <span class="who">人／author 寫</span></summary><div class="body">
+<pre class="code">{"job": "csv", "start": "convert",
+ "steps": {
+  "convert": {"run": ["python3",
+     "${job}/convert.py", …],
+   "finite": true, "idempotent": true,
+   "expect": ["${out}/data.json"],
+   "ok": "stats", "fail": "failed"},
+  "stats": {…, "ok": "done"},
+  "done":   {"end": "ok"},
+  "failed": {"end": "failed"}}}</pre>
+    <p>author 編出來的表會加 <code>wake: true</code>：派完工就提早結束回合。</p></div></details>
+    <details><summary>adapt：in/temp.json <span class="who">adapt 寫｜消費者讀</span></summary><div class="body">
+<pre class="code">{"v": 1, "sense": "temp",
+ "state": "ok",
+ "value": {"c": 83.2, "hot": true},
+ "err": {"c": 0.05},
+ "basis": {"src": "src/out/temp.json",
+           "seq": 236, "src_round": 236, …},
+ "age_src_rounds": 0,
+ "src_state": "advancing",
+ "skipped": 1, "why": null,
+ "my_round": 237}</pre></div></details>
+    </div>
+  </div>
+</section>
+
+<section id="llm">
+  <div class="lbl pack">真 AI</div>
+  <div>
+    <h2>真 AI 怎麼接：一道門 llmcall</h2>
+    <p>所有 AI 呼叫都走 <code>llmcall</code>：先押預留、記下「要送了」，再送給本機 LiteLLM（<code>http://localhost:4000/v1</code>），回來照實際 token 結帳、寫回條。中途被殺的話，有回條就直接用；送了但不知道有沒有回，就<b>不重送</b>。</p>
+    <pre class="mermaid">
+sequenceDiagram
+  participant B as brain／author
+  participant L as llmcall
+  participant G as budget 帳
+  participant X as LiteLLM proxy
+  B->>L: request.json（固定請求）
+  L->>G: 押預留（reserve）
+  L->>L: 記 intent：要送了
+  L->>X: 送出
+  X-->>L: raw.json
+  L->>G: 照實際用量結帳（settle）
+  L-->>B: receipt.json（text＋usage）
+  Note over L,X: 送了沒回、又被殺 → 不重送<br/>超過 deadline → 信回「卡住」交給你
+    </pre>
+    <h3>一次呼叫的 token 去哪了（EF1 量的 R1 題，約 2600 token）</h3>
+    <div class="hbar" role="img" aria-label="proxy 自帶提示 1644，我們的提示約 765，AI 回答約 200">
+      <span style="flex:1644;background:#a3471c">proxy 自帶 1644（63%）</span>
+      <span style="flex:765;background:#2f4a8a">我們 ≈765</span>
+      <span style="flex:200;background:#226b52">答</span>
+    </div>
+    <p class="fig-cap">LiteLLM 那條 proxy 每次自帶「你是 Codex」的系統提示。你 19:00 定了<b>不改</b>（換掉可能讓流量不像官方 Codex），改由 aos 在提示裡加一句「你沒有工具、不要開場白」。</p>
+    <div class="tbl"><table>
+      <thead><tr><th>抓到並修好的</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>sol 的回答被 LiteLLM 拆成「開場白」和「答案」兩個 choice，aos 只讀第一個</td><td>改讀最後一個非空 choice，真 AI 重放 6 次都拿到完整答案</td></tr>
+        <tr><td>AI 回答後還要空等</td><td>author 的步驟表開 wake：3.34 → 2.71 秒（目標 1.5 秒沒達到）；要更快就調心跳，0.5 秒＋提早結束可到 1.43 秒</td></tr>
+        <tr><td>依難度挑模型（luna-nothink → sol-high → astra-high，被擋才升級）</td><td>簡單題：模型時間 −49%、12／12 過。難題反而貴 83%（luna 看到「你沒有工具」直接拒做），所以 aos 題改從 sol-high 起跳</td></tr>
+        <tr><td>模型分級（你 19:00 確認）</td><td>A：gpt-6.1-sol、gpt-6-astra｜B：gpt-6-sol｜C：gpt-reserve、gpt-5.5｜D：Haiku、gpt-6-luna</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="errors">
+  <div class="lbl">錯誤</div>
+  <div>
+    <h2>統一錯誤：只剩 5 種結果</h2>
+    <p>12 個包都照 <code>notes/blueprint-errors.md</code> 改完。出錯時 stderr 只印一行白話「<code>指令名: 發生什麼。怎麼辦</code>」，「不知道」那種一律以「不確定：」開頭。</p>
+    <div class="codes">
+      <div><b style="color:var(--pack)">0</b>做到了</div>
+      <div><b style="color:var(--warn)">1</b>做不到（知道為什麼）</div>
+      <div><b style="color:var(--mod)">2</b>你給的不對（不動任何檔）</div>
+      <div><b style="color:var(--core)">3</b>不知道（再跑會接續）</div>
+      <div><b>4</b>做到了，但帳沒清</div>
+    </div>
+    <pre class="mermaid">
+flowchart LR
+  E["指令結束"] --> Q{"做成了？"}
+  Q -->|是| A0["0"]
+  Q -->|是，但帳沒結| A4["4"]
+  Q -->|否，原因確定| Q2{"是你給錯？"}
+  Q2 -->|是| A2["2"]
+  Q2 -->|否| A1["1"]
+  Q -->|不確定| A3["3 不確定：…"]
+    </pre>
+    <p class="fig-cap">自動測試 <code>tests/core/test_error_path.py</code> 照 <code>tests/error_path.json</code> 每包一列檢查：<code>--help</code> 退 0、壞參數退 2 且只印一行、自報的不確定案退 3。回頭審同時拿掉一批多餘副作用，例如不再替別人建資料夾、不再偷改任務表；重複的工具也合併了（usage 併進 metrics、llmdiag 併進 diag）。</p>
+  </div>
+</section>
+
+<section id="longtask">
+  <div class="lbl">長任務</div>
+  <div>
+    <h2>長任務實跑：12 封信、29 回合</h2>
+    <p>真 AI（sol-high），12 封信一次寄出，其中一封是分 13 回合寫的 12 節週報。跑了三次，每次在不同的時間點 SIGKILL。</p>
+    <pre class="mermaid">
+flowchart TB
+  S["12 封信一次寄出"] --> R2["跑 2：只殺 brain<br/>3 秒接上，146.6 秒全辦完"]
+  S --> R3["跑 3：趁空檔殺<br/>照常接上，156.6 秒"]
+  S --> R1["跑 1：brain 連同問 AI 的子程序一起殺"]
+  R1 --> X["修前：那封信永遠卡住<br/>後面 11 封全被擋，status 看不出來"]
+  X --> F["LT1 修後：超過 deadline 回「卡住」<br/>寄信告訴你，接著辦下一封<br/>重現：8 秒回卡住，其他 11 封辦完"]
+    </pre>
+    <div class="tbl"><table>
+      <thead><tr><th>看什麼</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>12 封信</td><td>29 回合、29 次呼叫，約 2.5 分鐘全結案；DONE 10、PROGRESS 2、NEEDS-USER 2</td></tr>
+        <tr><td>工作簿</td><td>STATE 每回合一行、29 行、重複 0；SESSION-LOG 做完歸零</td></tr>
+        <tr><td>被殺接回</td><td>不重問（被殺那筆的 raw 只有 1 份）</td></tr>
+        <tr><td>本機挑技能</td><td>原本挑錯 12 次 → SK1 改成看觸發詞後 17／17 對，挑錯 0 次、AI 呼叫 0 次</td></tr>
+        <tr><td>metrics</td><td>LT3 後認得一封信＝一件：12 件、29 次呼叫、重試 0、每件平均 10606 token</td></tr>
+        <tr><td><span class="pill warn">還沒好</span></td><td>換信就忘了上一封（M1 跨信記憶在做）；compact 摘要沒內容、只降 55%；status 新手重試還沒過</td></tr>
+      </tbody>
+    </table></div>
+    <p class="fig-cap">出處：<code>notes/play/2026-10-09-longtask/README.md</code>、decisions 末段（LT1、LT3、SK1）。</p>
+  </div>
+</section>
+
+<section id="apprentice">
+  <div class="lbl pack">學徒</div>
+  <div>
+    <h2>學徒：讓 AI 自己寫 aos 元件</h2>
+    <pre class="mermaid">
+flowchart LR
+  REQ["需求單"] --> AP["學徒（真 AI）<br/>交候選"]
+  AP --> G1["① 靜態<br/>格式、大小"]
+  G1 --> G2["② 沙箱測試<br/>＋隱藏答案"]
+  G2 --> G3["③ 審查<br/>astra-high"]
+  G3 --> PUB["發布到 apprentice/ 分支"]
+  PUB --> HUM["隊長看過才合"]
+  G1 -. 擋下 .-> AP
+  G2 -. 擋下 .-> AP
+  G3 -. 擋下 .-> AP
+    </pre>
+    <div class="grid2">
+      <div>
+        <h3>第一次：兩題（apprentice-aos）</h3>
+        <ul>
+          <li>兩題都過三關、<b>都合進來了</b>：<code>packs/usage</code>、<code>modules/llmdiag</code>（後來併進 metrics、diag）。</li>
+          <li>16 份候選擋下 10 份；真 AI 呼叫 23 次、236 091 token。</li>
+          <li>合進來後人工只修 1 次（索引列落在表格外），程式本身零修改。</li>
+        </ul>
+      </div>
+      <div>
+        <h3>第二次：三連題（apprentice-3x）</h3>
+        <ul>
+          <li>A 組帶踩坑筆記、B 組不帶，各跑 3 次，共 74 次呼叫；proxy 問題 0 次。</li>
+          <li>照事先寫死的判準：<b>沒看到自我改進</b>。第 3 題 A 少重問 1 次、少 13% token，但都在雜訊範圍內。</li>
+          <li>卡點：審查太嚴（26 次裡 15 次擋的是規格沒要求的極端邊角），「超標」訊息沒說是哪個檔。</li>
+        </ul>
+      </div>
+    </div>
+    <p class="fig-cap">頂層定的下一步：審查只擋真錯誤、唯讀違規和越界，邊角改列成建議；超標訊息寫明檔名、大小和上限；之後每組至少跑 5 次重來。</p>
+  </div>
+</section>
+
+<section id="d1004">
+  <div class="lbl">過去</div>
+  <div>
+    <h2>10-04、10-05（縮短版）</h2>
+    <pre class="mermaid">
+flowchart LR
+  S["核心精簡<br/>4501→2791 行<br/>六個模組外移"] --> L4["loop4"] --> L5["loop5<br/>subd 回收<br/>budget v1"] --> L6["loop6<br/>adapt v1"]
+  L6 --> RV["10-05<br/>15 份審查<br/>核心穩"]
+  RV --> B7["loop7 藍圖<br/>43 列 5 組<br/>D1～D10"]
+  B7 --> F["第一批修補<br/>adapt 數值、subd 誤收"]
+    </pre>
+    <ul>
+      <li><b>10-04</b>：錯誤收成四條路（不存在／不知道／壞輸入／被中斷）；三輪「藍圖 → 修 → astra 回歸」；長出 step、budget、adapt 三個任務包，核心一行沒改。測試從 272 項加到 363 項。</li>
+      <li><b>10-05</b>（公司 WSL）：15 份審查的結論是「核心穩，問題集中在包和核心的交接處」；寫了 loop7 藍圖和追進度導讀 <code>catch-up.md</code>；修了第一批，全套 376 項。</li>
+      <li><b>10-09 上午</b>：你定了 D1～D10（D7 不設上限），loop7 九隊修完，整合後 458 項連跑三次全過。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="next">
+  <div class="lbl">下一步</div>
+  <div>
+    <h2>接下來排的</h2>
+    <pre class="mermaid">
+flowchart LR
+  M1["M1 跨信記憶<br/>notes/done＋INDEX"] --> LM["長任務重跑驗收"]
+  ST["status 白話化回改"] --> U5["新手再試"]
+  AU["author 審查放寬<br/>超標訊息寫清楚"] --> AP["學徒三連題<br/>每組 ≥5 次重跑"]
+  UPF["up 小修<br/>重跑不洗掉人手欄位"]
+  LM --> R["astra 全日回歸<br/>整合、全套連跑三次"]
+  U5 --> R
+  AP --> R
+  UPF --> R
+    </pre>
+    <p class="fig-cap">取自 r5 分線與 decisions 末段的「待修」。另有小尾巴：llmdiag／usage 搬到 archive 後留下幾條壞連結，最後整合時一起修；modules／INDEX 總表還列著 llmdiag、usage 兩列。</p>
+    <p class="foot">全部在 main，已 push。先讀：<code>proto7-2/QUICKSTART.md</code>（新人一頁）；代定清單：<code>proto7-2/notes/decisions-2026-10-09.md</code>；白話報告：<code>notes/report-2026-10-09.md</code>；意圖卡：<code>notes/intents/</code>；錯誤藍圖：<code>notes/blueprint-errors.md</code>；試玩：<code>notes/play/</code>；地圖：<code>proto7-2/INDEX.md</code>。架構怎麼運作請看另一頁：<a href="https://claude.ai/artifact/2xGg4szocuGaRrpQHpt2W5">aos 時空架構圖解</a>；更早的：<a href="https://claude.ai/artifact/BvrHKm6L33UDzaoThgnoSG">aos 10-05 晚間現況</a>、<a href="https://claude.ai/artifact/8KbqoRE1vhojNg4goMtNtv">proto7-1 試做現況</a>。</p>
+  </div>
+</section>
+</div>
