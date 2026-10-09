@@ -8,12 +8,14 @@ import re
 import subprocess
 import sys
 import tempfile
+from argparse import Namespace
 from datetime import datetime, timezone
 
 HERE = Path(__file__).resolve().parent
 TOP = HERE.parents[1]
 sys.path.insert(0, str(HERE / 'checkers'))
 from aos_three_gates import request, brief, strict
+from aos7_author_llm import AUTO, LADDER, climb, rung_call  # noqa: E402
 
 LLMCALL = HERE.parent / 'llmcall/bin/aos7-llmcall'
 # sol 經 LiteLLM 會先講開場白；這句重放 4/4 有效（notes/play/2026-10-09-real-ai/litellm-truncation.md）
@@ -62,7 +64,7 @@ def prompt_request(req_path, model, context=(), gotchas=None, previous=None, fee
         user['gotchas'] = Path(gotchas).read_text(encoding='utf-8')
     if previous and feedback:
         user['previous_candidate'] = Path(previous).read_text(encoding='utf-8')
-        check = strict(Path(feedback).read_bytes())
+        check = feedback if isinstance(feedback, dict) else strict(Path(feedback).read_bytes())
         if not isinstance(check, dict):
             raise ValueError('feedback 必須是檢查 JSON 物件')
         check = check.get('check', check)
@@ -229,6 +231,8 @@ def main_aos(a):
         except OSError as exc:
             return dict(out, why='invalid', error=str(exc))
         out.update(rid=req['rid'], kind=req['kind'], name=req['name'])
+        if a.llm == AUTO and a.cmd == 'learn':
+            a.llm = LADDER[0]
         if a.cmd == 'learn':
             return learn(a, req, dict(ok=False, why=None, rid=req['rid'],
                                       into=str(Path(a.into).resolve()), added=[], llm=None))
@@ -242,40 +246,55 @@ def main_aos(a):
             if out.get('ok') and why is None:
                 return close_aos(a, req, out)
             return out
-        candidate = Path(a.candidate).resolve() if a.candidate else None
-        if a.llm:
-            raw = prompt_request(a.arg, a.llm, a.context, a.gotchas, a.previous, a.feedback)
-            info = call_info(a.llm, req['rid'], raw, a.call, reserve=a.reserve)
-            out['llm'] = info
-            if a.prompt_out:
-                path = Path(a.prompt_out).resolve()
-                path.write_bytes(raw)
-                return dict(out, ok=True, prompt_out=str(path))
-            text, info, why = delivery(a, req, a.llm, raw)
-            out['llm'] = info
-            if why:
-                return dict(out, why=why, _rejected=why == 'invalid')
-            candidate = Path(a.out).resolve() if a.out else Path.cwd() / 'author/aos' / req['rid'] / (info['call_id'] + '.json')
-            candidate.parent.mkdir(parents=True, exist_ok=True)
-            candidate.write_bytes(text.encode('utf-8'))
-        try:
-            data = candidate.read_bytes()
-        except OSError as exc:
-            return dict(out, why='invalid', error=str(exc))
-        out.update(candidate_path=str(candidate), candidate_sha=sha(data), job=req['rid'] + '_' + sha(data)[:8])
-        # 唯一暫存路徑避免來源或同 sha 快照被其他呼叫覆寫。
-        with tempfile.NamedTemporaryFile(dir=candidate.parent, prefix=sha(data)[:8] + '-',
-                                         suffix='.snapshot.json', delete=False) as stream:
-            stream.write(data)
-            snapshot = Path(stream.name)
-        try:
-            return propose_checks(a, req, out, candidate, snapshot, data)
-        finally:
-            snapshot.unlink()
+        if a.llm != AUTO:
+            return propose_one(a, req, out)
+        prev = [a.previous, a.feedback]
+
+        def attempt(model, i):
+            # 升級時把上一級的候選與檢查結果當重問交下一級
+            r = propose_one(Namespace(**dict(vars(a), llm=model, call=rung_call(a.call, i),
+                                             previous=prev[0], feedback=prev[1])), req, dict(out))
+            if r.get('candidate_path') and isinstance(r.get('check'), dict):
+                prev[:] = [r['candidate_path'], r['check']]
+            return r
+        return climb(attempt)
     except (ValueError, UnicodeError, KeyError, TypeError) as exc:
         return dict(out, ok=False, why='invalid', error=str(exc))
     except (OSError, subprocess.TimeoutExpired) as exc:
         return dict(out, ok=False, why='unknown', error=str(exc))
+
+
+def propose_one(a, req, out):
+    candidate = Path(a.candidate).resolve() if a.candidate else None
+    if a.llm:
+        raw = prompt_request(a.arg, a.llm, a.context, a.gotchas, a.previous, a.feedback)
+        info = call_info(a.llm, req['rid'], raw, a.call, reserve=a.reserve)
+        out['llm'] = info
+        if a.prompt_out:
+            path = Path(a.prompt_out).resolve()
+            path.write_bytes(raw)
+            return dict(out, ok=True, prompt_out=str(path))
+        text, info, why = delivery(a, req, a.llm, raw)
+        out['llm'] = info
+        if why:
+            return dict(out, why=why, _rejected=why == 'invalid')
+        candidate = Path(a.out).resolve() if a.out else Path.cwd() / 'author/aos' / req['rid'] / (info['call_id'] + '.json')
+        candidate.parent.mkdir(parents=True, exist_ok=True)
+        candidate.write_bytes(text.encode('utf-8'))
+    try:
+        data = candidate.read_bytes()
+    except OSError as exc:
+        return dict(out, why='invalid', error=str(exc))
+    out.update(candidate_path=str(candidate), candidate_sha=sha(data), job=req['rid'] + '_' + sha(data)[:8])
+    # 唯一暫存路徑避免來源或同 sha 快照被其他呼叫覆寫。
+    with tempfile.NamedTemporaryFile(dir=candidate.parent, prefix=sha(data)[:8] + '-',
+                                     suffix='.snapshot.json', delete=False) as stream:
+        stream.write(data)
+        snapshot = Path(stream.name)
+    try:
+        return propose_checks(a, req, out, candidate, snapshot, data)
+    finally:
+        snapshot.unlink()
 
 
 def propose_checks(a, req, out, candidate, snapshot, data):
