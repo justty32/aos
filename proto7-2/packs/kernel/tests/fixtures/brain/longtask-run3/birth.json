@@ -1,0 +1,20 @@
+{
+ "name": "brain",
+ "slot": "brain",
+ "run": 44,
+ "round": 44,
+ "node": "bob",
+ "once": false,
+ "at": "2026-10-09T18:58:19.229",
+ "runner": {
+  "pid": 243206,
+  "starttime": 3868259
+ },
+ "argv": [
+  "python3",
+  "/home/lorkhan/repo/simple_tools/aos/proto7-2/modules/up/aos7-up",
+  "brain",
+  "/tmp/aos-longtask.avjslz2y/bob"
+ ],
+ "mounts": {}
+}

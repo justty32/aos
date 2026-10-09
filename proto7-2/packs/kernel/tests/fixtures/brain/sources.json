@@ -1,0 +1,5 @@
+{
+ "longtask-run1/": "proto7-2/notes/play/2026-10-09-longtask/run1-kill-inflight/house.tar.gz 的 house/bob/brain/task.json 與 house/bob/.aos/{round.json,tasks/brain/birth.json,exit.json,tock.json} 原檔（真 AI；brain run 25 從第 25 回合活到第 105 回合，task.json 停在第 7 回合）",
+ "longtask-run3/": "proto7-2/notes/play/2026-10-09-longtask/run3-kill-idle/house.tar.gz 的 house/bob/.aos/{round.json,tasks/brain/birth.json,tock.json} 原檔（12 封都結案、沒有 brain/task.json＝閒置）",
+ "capture-fake.jsonl": "capture.py 從假 AI node 逐來源回合抽（2026-10-09 跑；可重跑，id 與時間會不同）：01 封分 4 回合、第 2 回合連 llmcall 一起 SIGKILL→run 1 換 run 4、task.json 停在 step 2 八個回合後卡住結案；02 封標題含「沒進展」→brain 自己 stall 3 回合結案、task.json 消失"
+}
