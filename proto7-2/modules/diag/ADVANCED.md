@@ -7,7 +7,7 @@
 出錯時 stderr 印一行 `aos7-diag: <發生什麼>。<怎麼辦>`；stdout 空。退出碼意義全 aos 共用，見 [blueprint-errors §2](../../notes/blueprint-errors.md#2-統一退出碼表全-aos-共用只有五個)。
 
 - **0** 診斷完成，stdout 印 JSON；`--help` 印用法。
-- **2** 參數不對、`--llm` 的 node 或 `<root>` 不是資料夾；什麼都沒讀，訊息會說哪個參數錯並附例子。（`<root>` 是資料夾但還沒有 `.aosd/` 時照舊退 0、`nodes` 為空。）
+- **2** 參數不對、`--llm` 的 node 或 `<root>` 不是資料夾、`--llm` 給的資料夾底下沒有 `.aos`／`llmcall`／`budget`／`jobs`／`author` 任何一個（看起來不是 node；舊 llmdiag 這時印三張空表）；什麼都沒讀，訊息會說哪個參數錯並附例子。（`<root>` 是資料夾但還沒有 `.aosd/` 時照舊退 0、`nodes` 為空。）
 - **3** 不確定：讀取故障（權限、I/O、符號連結迴圈；`.aosd/nodes.json`／`status.json` 讀不到或壞了也算），什麼都沒寫；修好存取後照原樣再跑一次。
 
 舊入口 `modules/llmdiag/aos7-llmdiag` 是轉址 stub（r5 移除）：不管給什麼都只印一行「改用 aos7-diag --llm」並退 **1**（做不到：這個指令已不再做事）；`--help` 退 0。舊程式在 [archive/llmdiag](../../archive/llmdiag/README.md)。

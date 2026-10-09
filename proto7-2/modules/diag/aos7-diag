@@ -75,6 +75,7 @@ def node_report(root, nid, row):
     return out
 
 
+NODE_MARKS = (".aos", "llmcall", "budget", "jobs", "author")
 USAGE = "用法：aos7-diag <root> [node-id] 或 aos7-diag --llm <node>"
 
 
@@ -103,6 +104,9 @@ def main(argv):
         try:
             if not is_directory(node):
                 return say(2, "%s 不是資料夾" % shown(node), "--llm 要給 node 資料夾，例：aos7-diag --llm nodes/a")
+            if not any(is_directory(node / name) for name in NODE_MARKS):
+                return say(2, "%s 看起來不是 node 資料夾（底下沒有 %s）" % (shown(node), "、".join(NODE_MARKS)),
+                           "給 node 那一層，例：aos7-diag --llm nodes/a")
             report = diagnose(node)
         except OSError as error:
             return unreadable(error.filename or node, error.strerror or error)
