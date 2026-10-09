@@ -94,8 +94,13 @@ class UnitTests(unittest.TestCase):
         self.assertIn('- 15:30 second\n', text)
 
     def test_supplement_interrupted_publish(self):
+        workflows = self.node / 'wf/workflows'
+        workflows.mkdir()
+        for name in ('routines', 'schedule'):
+            (workflows / f'{name}.md').touch()
         real = wfnode.tempfile.NamedTemporaryFile
-        for rel in ('handoffs/NEXT-SESSION.md', 'ROSTER.md', 'line-claims.json'):
+        for rel in ('handoffs/NEXT-SESSION.md', 'ROSTER.md', 'line-claims.json',
+                    'routines.json', 'schedule.json'):
             with self.subTest(rel=rel):
                 wfnode.supplement(self.node)
                 dest = self.node / 'wf' / rel

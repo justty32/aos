@@ -22,9 +22,9 @@ proto7-2/modules/wfnode/aos7-wfnode check /tmp/mynode           # 3. 體檢，�
 |---|---|---|
 | `init <node> [--flavor heartbeat,multi-agent,dev]` | 裝工作流樹、填好知道的事實、跑檢查。**重跑安全**：已裝過就只補缺的檔、補填還留著 `{{` 的地方，你寫過的內容不動 | 新 node 一次 |
 | `state <node> '一行'` | 把「現在停在哪、下一步」記進今天的續行點 | 每次收工、被打斷前 |
-| `check <node>` | 連結沒壞、沒有 `{{` 沒填、清單裡沒有「做完卻沒刪」的項 | 隨時；退出碼 0＝健康 |
+| `check <node>` | 連結沒壞、沒有沒填的 `{{`／沒處理的模板標記、清單裡沒有「做完卻沒刪」的項 | 隨時；退出碼 0＝健康 |
 
-`--flavor` 不給＝只裝最小核心；要定期喚醒加 `heartbeat`、要跟別的 agent 收發信加 `multi-agent`、會寫程式加 `dev`。
+`--flavor` 不給＝裝 `dev,heartbeat,multi-agent`（aos node 的標準配備：會寫程式、被 tick 定期喚醒、跟別的 agent 收發信）；`--flavor ''` 只裝最小核心。
 
 ## 要懂的四個詞
 
@@ -35,9 +35,11 @@ proto7-2/modules/wfnode/aos7-wfnode check /tmp/mynode           # 3. 體檢，�
 
 ## init 填了什麼、沒填什麼
 
+- **裝在哪**：node 根只放 `AGENTS.md`、`CLAUDE.md`、`.claude/`，加上 multi-agent 的信箱 `inbox/` 與通訊腳本 `tools/`；其餘全在 `wf/`。
 - **填**（查得到的事實）：node 名、驗證指令（本 repo 的 `run_all.py`）、時區（本機）、分支慣例「不 commit main，開分支交人 merge」、`wf/INDEX.md` 的佈局列。
-- **不瞎猜**：其餘佔位寫成 `（未定：原本要填的東西）`，看得出還缺什麼；`〔導入判斷〕` 段留給人決定，init 會列出位置。`〔模板說明〕` 段讀完即刪。
-- **另建三樣**（缺才建）：`wf/handoffs/NEXT-SESSION.md`、`wf/ROSTER.md`（誰是誰，空表）、`wf/line-claims.json`（誰能寫哪裡，wf-table/1 空表）。格式借 agentctl；填寫工具歸 mail 包。
+- **不瞎猜**：其餘佔位寫成 `（未定：原本要填的東西）`，看得出還缺什麼。`〔模板說明〕` 段讀完即刪。
+- **〔導入判斷〕**：首次導入時，模板原文**一字不差**的那幾段照 aos node 事實處理（單機、沒有離線／CI 差異；喚醒靠 tick、沒有上下班時機；例行／一次性表的資料在 json）；文字有變、混了別的判斷、或重跑時才看到的，一律不動，留給人：init 列出位置、`check` 不給過。
+- **另建**（缺才建）：`wf/handoffs/NEXT-SESSION.md`；`wf/ROSTER.md`（導航到模板的 `workflows/inbox/ROSTER.md`；沒裝 multi-agent 時是空表）；`wf/line-claims.json`（誰能寫哪裡）；`wf/routines.json`、`wf/schedule.json`（routines 包讀寫）。後三者都是 wf-table/1 空表；ROSTER／line-claims 由 mail 包填。
 
 ## 契約卡
 
