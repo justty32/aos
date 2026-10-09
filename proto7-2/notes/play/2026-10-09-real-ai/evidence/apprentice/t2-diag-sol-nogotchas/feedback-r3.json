@@ -1,0 +1,22 @@
+{
+ "ok": true,
+ "rid": "diag1",
+ "name": "llmdiag",
+ "job": "diag1_af24a314",
+ "candidate_sha": "af24a314c78ca258689c6198acb71805735fc483a0d82cd1afe4700256719ffc",
+ "failed_gate": null,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": true,
+   "issues": []
+  },
+  "3": {
+   "ok": true,
+   "issues": []
+  }
+ }
+}

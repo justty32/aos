@@ -1,0 +1,99 @@
+{
+ "ok": true,
+ "why": null,
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "diag-sol-r2-1791532952",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5173,
+   "prompt_tokens": 4900,
+   "total_tokens": 10073,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2134
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 10073,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/diag-sol-r2-1791532952/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-diag1-chatgpt-gpt-6-astra-high-8b68dccc",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 696,
+    "prompt_tokens": 6033,
+    "total_tokens": 6729,
+    "completion_tokens_details": {
+     "reasoning_tokens": 437
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 6729,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-diag1-chatgpt-gpt-6-astra-high-8b68dccc/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t2-diag-sol/review-rv-diag1-chatgpt-gpt-6-astra-high-8b68dccc.json"
+ },
+ "rid": "diag1",
+ "kind": "aos-module",
+ "name": "llmdiag",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t2-diag-sol/cand-r2.json",
+ "candidate_sha": "e8800ec95f801c27ca01698607d7daeabe01a43313381daf0abfe0e5c49fedb4",
+ "job": "diag1_e8800ec9",
+ "rules_check": {
+  "ok": true,
+  "rid": "diag1",
+  "name": "llmdiag",
+  "job": "diag1_e8800ec9",
+  "candidate_sha": "e8800ec95f801c27ca01698607d7daeabe01a43313381daf0abfe0e5c49fedb4",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": true,
+  "rid": "diag1",
+  "name": "llmdiag",
+  "job": "diag1_e8800ec9",
+  "candidate_sha": "e8800ec95f801c27ca01698607d7daeabe01a43313381daf0abfe0e5c49fedb4",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ }
+}

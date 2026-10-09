@@ -1,0 +1,63 @@
+{
+ "task": "usage",
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "gotchas": null,
+ "rows": [
+  {
+   "round": 1,
+   "exit": 2,
+   "ok": false,
+   "failed_gate": 1,
+   "rules_failed": 1,
+   "tokens": 10819,
+   "review_tokens": null,
+   "secs": 110.4,
+   "job": "usage1_468c9013",
+   "issues": [
+    {
+     "rule": "json",
+     "why": "Expecting value: line 1 column 1 (char 0)"
+    }
+   ]
+  },
+  {
+   "round": 2,
+   "exit": 2,
+   "ok": false,
+   "failed_gate": 3,
+   "rules_failed": null,
+   "tokens": 10936,
+   "review_tokens": 7409,
+   "secs": 131.7,
+   "job": "usage1_8bcd99c6",
+   "issues": [
+    {
+     "rule": "review",
+     "why": [
+      "packs/usage/aos7_usage.py：receipt.get(\"used\") 與 receipt.get(\"overrun\") 將「缺少欄位」混同明確的 JSON null，再由 amount() 轉成 0。例如 receipt.json 為 {} 時，整筆仍會計入 groups，且不列 bad_json。協定只允許整數或 null，只有 null 可當 0；應檢查兩個欄位存在，缺欄位的回條須列 bad_json 並排除於 groups 與 receipts_used。現有測試未覆蓋此情況。"
+     ]
+    }
+   ]
+  },
+  {
+   "round": 3,
+   "exit": 0,
+   "ok": true,
+   "failed_gate": null,
+   "rules_failed": null,
+   "tokens": 13962,
+   "review_tokens": 7968,
+   "secs": 85.6,
+   "job": "usage1_b8891b81",
+   "issues": []
+  },
+  {
+   "publish_exit": 0,
+   "branch": "apprentice/usage1_b8891b81",
+   "commit": "e147afade0a39968d192238642f428a21bb9324b",
+   "dup": false,
+   "secs": 1.3
+  }
+ ]
+}

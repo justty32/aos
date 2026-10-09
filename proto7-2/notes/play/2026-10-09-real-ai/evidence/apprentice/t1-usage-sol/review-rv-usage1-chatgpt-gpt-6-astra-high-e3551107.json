@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["packs/usage/aos7_usage.py：receipt.get(\"used\") 與 receipt.get(\"overrun\") 將「缺少欄位」混同明確的 JSON null，再由 amount() 轉成 0。例如 receipt.json 為 {} 時，整筆仍會計入 groups，且不列 bad_json。協定只允許整數或 null，只有 null 可當 0；應檢查兩個欄位存在，缺欄位的回條須列 bad_json 並排除於 groups 與 receipts_used。現有測試未覆蓋此情況。"]}

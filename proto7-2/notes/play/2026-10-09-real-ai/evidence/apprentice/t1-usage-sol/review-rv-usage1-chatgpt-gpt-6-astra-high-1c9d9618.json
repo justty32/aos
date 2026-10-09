@@ -1,0 +1,1 @@
+{"verdict":"accept","reasons":["變更限於 packs/usage/ 的 4 個檔案及 INDEX.md 一列，未修改 lib、其他包或 node 檔案。","程式依 UTC epoch 秒產生 day／hour 分組，正確處理缺 raw、null 回條、整數檢查、合法回條合計及 ledger 差額，並依規定排序 groups、budgets 與 gaps。","薄入口與彙總程式未發現會改寫 node 的操作；正常路徑輸出一行 JSON，node 不是資料夾時由 argparse 退出 2。","依已提供的前兩關通過結果及本次靜態審查，未發現足以拒收的答案錯誤、唯讀破壞或越界問題；本次未另行執行命令。"]}

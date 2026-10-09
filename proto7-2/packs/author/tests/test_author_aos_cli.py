@@ -32,6 +32,22 @@ DIAG = PACK / 'examples/aos-module-diag'
 REQUEST = USAGE / 'request.json'
 
 
+REPO = Path(subprocess.check_output(['git', '-C', str(PACK), 'rev-parse', '--show-toplevel']).decode().strip())
+PREFIX = TOP.relative_to(REPO).as_posix()
+
+
+def baseline_ref(root, repo=REPO):
+    """以題目 root 首次加入前的版本，驗證新增包。"""
+    path = '/'.join(part for part in (PREFIX, root) if part)
+    git = ['git', '-C', str(repo)]
+    if subprocess.run(git + ['cat-file', '-e', 'HEAD:' + path],
+                      capture_output=True, check=False).returncode:
+        return subprocess.check_output(git + ['rev-parse', 'HEAD']).decode().strip()
+    commits = subprocess.check_output(git + ['log', '--diff-filter=A', '--format=%H',
+                                              '--', path + '/README.md']).decode().splitlines()
+    return subprocess.check_output(git + ['rev-parse', commits[-1] + '^']).decode().strip()
+
+
 class TestAuthorAosCLI(DaemonCase):
     """〔author aos CLI〕本地 HTTP 真 llmcall、三關、重問與學習。"""
     def setUp(self):
@@ -95,7 +111,9 @@ class TestAuthorAosCLI(DaemonCase):
                               env=self.env, capture_output=True, text=True, timeout=120)
 
     def aos(self, *args, cmd='propose', req=REQUEST):
-        return self.cli(cmd, req, *args, '--no-scope')
+        return self.cli(cmd, req, '--ref',
+                        baseline_ref('modules/llmdiag' if req == DIAG / 'request.json' else 'packs/usage'),
+                        *args, '--no-scope')
 
     def checked(self, p, code=0):
         self.assertEqual(p.returncode, code, p.stdout + p.stderr)
@@ -121,7 +139,7 @@ class TestAuthorAosCLI(DaemonCase):
         self.assertTrue(out['check']['ok'])
         self.assertIsNone(out['review'])
         self.checked(self.cli('--candidate', USAGE / 'valid.json', 'propose',
-                              '--no-scope', REQUEST))
+                              '--no-scope', '--ref', baseline_ref('packs/usage'), REQUEST))
         bad = self.checked(self.aos('--candidate', USAGE / 'bad-link.json'), 2)
         self.assertEqual(bad['why'], 'invalid')
         self.assertEqual(bad['check']['failed_gate'], 1)
@@ -213,9 +231,12 @@ class TestAuthorAosCLI(DaemonCase):
         source = subprocess.check_output(['git', '-C', str(PACK), 'rev-parse', '--show-toplevel']).decode().strip()
         subprocess.run(['git', 'clone', '-q', '--shared', '--no-checkout', source, str(repo)], check=True)
         head = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD']).decode().strip()
-        opts = ['--candidate', USAGE / 'valid.json', '--reviewer', 'rules', '--repo', repo, '--ref', head]
+        opts = ['--candidate', USAGE / 'valid.json', '--reviewer', 'rules', '--repo', repo, '--ref', baseline_ref('packs/usage', repo)]
         out = self.checked(self.aos(*opts, cmd='publish'))
         self.assertTrue(out['branch'].startswith('apprentice/usage1_'))
+        self.assertEqual(subprocess.check_output(['git', '-C', str(repo), 'rev-parse',
+                                                out['branch'] + '^']).decode().strip(),
+                         baseline_ref('packs/usage', repo))
         self.assertEqual(subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD']).decode().strip(), head)
         dup = self.checked(self.aos(*opts, cmd='publish'))
         self.assertTrue(dup['dup'])
@@ -388,7 +409,7 @@ class TestAuthorAosCLI(DaemonCase):
 
     def test_checker_unknown_mapping(self):
         import argparse
-        a = argparse.Namespace(arg=str(REQUEST), no_scope=True, repo=None, ref=None)
+        a = argparse.Namespace(arg=str(REQUEST), no_scope=True, repo=None, ref=baseline_ref('packs/usage'))
         with mock.patch('aos7_author_aos.subprocess.run', return_value=subprocess.CompletedProcess([], 4, b'{"ok":false,"unknown":"bwrap"}', b'')):
             out, why = gates(a, 'check', USAGE / 'valid.json', 'rules')
         self.assertEqual(why, 'unknown')

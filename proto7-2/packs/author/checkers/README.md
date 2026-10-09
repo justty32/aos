@@ -10,19 +10,19 @@
 
 ## 第一次跑（新手照抄，約 5 分鐘）
 
-在 repo 根目錄照抄；離線示範選 rules，shared clone 放在臨時目錄。
+在 repo 根目錄照抄；離線示範選 rules，shared clone 放在臨時目錄。練習題的答案已合進 main，所以要以合進來之前的版本當基準。
 
 ```sh
 A4_C=proto7-2/packs/author/checkers/aos_three_gates.py
 A4_E=proto7-2/packs/author/examples/aos-tool-usage
+A4_REF=$(if git cat-file -e HEAD:proto7-2/packs/usage 2>/dev/null; then git rev-parse "$(git log --diff-filter=A --format=%H -- proto7-2/packs/usage/README.md | tail -n 1)^"; else git rev-parse HEAD; fi)
 python3 "$A4_C" brief "$A4_E/request.json"
 echo "brief exit=$?"
-python3 "$A4_C" check "$A4_E/request.json" "$A4_E/bad-link.json" --reviewer rules
+python3 "$A4_C" check "$A4_E/request.json" "$A4_E/bad-link.json" --reviewer rules --ref "$A4_REF"
 echo "bad-link exit=$?"
-python3 "$A4_C" check "$A4_E/request.json" "$A4_E/valid.json" --reviewer rules
+python3 "$A4_C" check "$A4_E/request.json" "$A4_E/valid.json" --reviewer rules --ref "$A4_REF"
 echo "valid exit=$?"
 A4_TMP=$(mktemp -d)
-A4_REF=$(git rev-parse HEAD)
 git clone -q --shared --no-checkout . "$A4_TMP/repo"
 A4_RESULT=$(python3 "$A4_C" publish "$A4_E/request.json" "$A4_E/valid.json" --reviewer rules --repo "$A4_TMP/repo" --ref "$A4_REF")
 echo "publish exit=$?"
@@ -32,7 +32,7 @@ git -C "$A4_TMP/repo" log --stat -1 "$A4_BRANCH"
 echo "log exit=$?"
 ```
 
-第二輪已照抄實跑（10-09，含 scope 與白名單沙箱）：brief 退出 0；bad-link 退出 2，failed_gate=1 且 rule=lint；valid 退出 0，三關全過；publish 退出 0，dup=false；log 退出 0。job 是 `usage1_9ebf9840`，分支是 `apprentice/usage1_9ebf9840`；log 列出 INDEX.md 加一列與四個新增檔案。候選 bytes 不變，job 就不變。
+本次已照抄實跑（10-09，採答案合入前的基準，含 scope 與白名單沙箱）：brief 退出 0；bad-link 退出 2，failed_gate=1 且 rule=lint；valid 退出 0，三關全過；publish 退出 0，dup=false；log 退出 0。job 是 `usage1_9ebf9840`，分支是 `apprentice/usage1_9ebf9840`；log 列出 INDEX.md 加一列與四個新增檔案。候選 bytes 不變，job 就不變。
 
 ## 指令
 

@@ -1,0 +1,82 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "diag-solng-r2-1791532852",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5340,
+   "prompt_tokens": 4432,
+   "total_tokens": 9772,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2195
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 9772,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/diag-solng-r2-1791532852/receipt.json"
+ },
+ "review": null,
+ "rid": "diag1",
+ "kind": "aos-module",
+ "name": "llmdiag",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t2-diag-sol-nogotchas/cand-r2.json",
+ "candidate_sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+ "job": "diag1_e3b0c442",
+ "rules_check": {
+  "ok": false,
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "json",
+      "why": "Expecting value: line 1 column 1 (char 0)"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "rid": "diag1",
+  "name": "llmdiag",
+  "candidate_sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "job": "diag1_e3b0c442"
+ },
+ "check": {
+  "ok": false,
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "json",
+      "why": "Expecting value: line 1 column 1 (char 0)"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "rid": "diag1",
+  "name": "llmdiag",
+  "candidate_sha": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "job": "diag1_e3b0c442"
+ }
+}

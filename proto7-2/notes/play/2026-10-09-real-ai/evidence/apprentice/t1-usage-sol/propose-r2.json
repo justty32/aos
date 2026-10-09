@@ -1,0 +1,106 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "usage-sol-r2-1791532205",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6150,
+   "prompt_tokens": 4786,
+   "total_tokens": 10936,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2388
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 10936,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/usage-sol-r2-1791532205/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-usage1-chatgpt-gpt-6-astra-high-e3551107",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 421,
+    "prompt_tokens": 6988,
+    "total_tokens": 7409,
+    "completion_tokens_details": {
+     "reasoning_tokens": 273
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 7409,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-usage1-chatgpt-gpt-6-astra-high-e3551107/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t1-usage-sol/review-rv-usage1-chatgpt-gpt-6-astra-high-e3551107.json"
+ },
+ "rid": "usage1",
+ "kind": "aos-tool",
+ "name": "usage",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t1-usage-sol/cand-r2.json",
+ "candidate_sha": "8bcd99c66fc96cbd6614b0a165a8aed32cb640471252971a67887447ffb0be7b",
+ "job": "usage1_8bcd99c6",
+ "rules_check": {
+  "ok": true,
+  "rid": "usage1",
+  "name": "usage",
+  "job": "usage1_8bcd99c6",
+  "candidate_sha": "8bcd99c66fc96cbd6614b0a165a8aed32cb640471252971a67887447ffb0be7b",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "usage1",
+  "name": "usage",
+  "job": "usage1_8bcd99c6",
+  "candidate_sha": "8bcd99c66fc96cbd6614b0a165a8aed32cb640471252971a67887447ffb0be7b",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "packs/usage/aos7_usage.py：receipt.get(\"used\") 與 receipt.get(\"overrun\") 將「缺少欄位」混同明確的 JSON null，再由 amount() 轉成 0。例如 receipt.json 為 {} 時，整筆仍會計入 groups，且不列 bad_json。協定只允許整數或 null，只有 null 可當 0；應檢查兩個欄位存在，缺欄位的回條須列 bad_json 並排除於 groups 與 receipts_used。現有測試未覆蓋此情況。"
+      ]
+     }
+    ]
+   }
+  }
+ }
+}

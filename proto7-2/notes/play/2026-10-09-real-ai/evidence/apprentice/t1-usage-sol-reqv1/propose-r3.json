@@ -1,0 +1,82 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "usage-sol-r3-1791531623",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5126,
+   "prompt_tokens": 10351,
+   "total_tokens": 15477,
+   "completion_tokens_details": {
+    "reasoning_tokens": 1270
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 15477,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/usage-sol-r3-1791531623/receipt.json"
+ },
+ "review": null,
+ "rid": "usage1",
+ "kind": "aos-tool",
+ "name": "usage",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/A5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice/t1-usage-sol/cand-r3.json",
+ "candidate_sha": "aaafe889792d42c0c46f30e1dbcf9cf888c191ff14785fe7a360525fdb05fdd4",
+ "job": "usage1_aaafe889",
+ "rules_check": {
+  "ok": false,
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "json",
+      "why": "Expecting value: line 1 column 1 (char 0)"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "rid": "usage1",
+  "name": "usage",
+  "candidate_sha": "aaafe889792d42c0c46f30e1dbcf9cf888c191ff14785fe7a360525fdb05fdd4",
+  "job": "usage1_aaafe889"
+ },
+ "check": {
+  "ok": false,
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "json",
+      "why": "Expecting value: line 1 column 1 (char 0)"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "rid": "usage1",
+  "name": "usage",
+  "candidate_sha": "aaafe889792d42c0c46f30e1dbcf9cf888c191ff14785fe7a360525fdb05fdd4",
+  "job": "usage1_aaafe889"
+ }
+}

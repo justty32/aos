@@ -1,0 +1,27 @@
+{
+ "task": "usage",
+ "model": "chatgpt-gpt-6-astra-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "gotchas": null,
+ "rows": [
+  {
+   "round": 1,
+   "exit": 0,
+   "ok": true,
+   "failed_gate": null,
+   "rules_failed": null,
+   "tokens": 11041,
+   "review_tokens": 9258,
+   "secs": 177.6,
+   "job": "usage1_05263eae",
+   "issues": []
+  },
+  {
+   "publish_exit": 0,
+   "branch": "apprentice/usage1_05263eae",
+   "commit": "90b5e7e21adcea1a710db7d6ece56d81166f301b",
+   "dup": false,
+   "secs": 2.1
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "task": "diag",
+ "model": "chatgpt-gpt-6-astra-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "gotchas": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/wf/workflows/common/gotchas.md",
+ "rows": [
+  {
+   "round": 1,
+   "exit": 2,
+   "ok": false,
+   "failed_gate": 3,
+   "rules_failed": null,
+   "tokens": 9948,
+   "review_tokens": 7922,
+   "secs": 148.4,
+   "job": "diag1_d03e3e50",
+   "issues": [
+    {
+     "rule": "review",
+     "why": [
+      "modules/llmdiag/aos7_llmdiag.py：合法 JSON 的數值溢位會使正常掃描崩潰。例如 jobs/r_12345678/frame.json 為 {\"phase\":\"halted\",\"halt\":{\"kind\":\"test\",\"why\":1e400}} 且 author/req/r/ 存在時，json.load 會將 1e400 解析為浮點 infinity（parse_constant 不會攔截此合法數值），而 main 的 json.dumps(..., allow_nan=False) 會拋出 ValueError，導致退出 1、stdout 無 JSON，違反正常退出 0 且輸出恰一行 JSON 的要求。應避免合法 JSON 數值經解析溢位後破壞輸出，並加入回歸測試。"
+     ]
+    }
+   ]
+  },
+  {
+   "round": 2,
+   "exit": 2,
+   "ok": false,
+   "failed_gate": 1,
+   "rules_failed": 1,
+   "tokens": 16247,
+   "review_tokens": null,
+   "secs": 119.6,
+   "job": "diag1_c470bd47",
+   "issues": [
+    {
+     "rule": "size",
+     "why": "檔數或 bytes 超標"
+    }
+   ]
+  },
+  {
+   "round": 3,
+   "exit": 0,
+   "ok": true,
+   "failed_gate": null,
+   "rules_failed": null,
+   "tokens": 16055,
+   "review_tokens": 8043,
+   "secs": 131.8,
+   "job": "diag1_c029ed61",
+   "issues": []
+  },
+  {
+   "publish_exit": 0,
+   "branch": "apprentice/diag1_c029ed61",
+   "commit": "f4b2fdccb02196c16081d523af238edfb475d0a1",
+   "dup": false,
+   "secs": 1.9
+  }
+ ]
+}
