@@ -126,3 +126,13 @@ class TestAuthorErrorContract(unittest.TestCase):
             self.assertFalse(result['ok'])
             self.assertIn('分支 apprentice/usage1_12345678 已建', result['error'])
             self.assertEqual(path.read_bytes(), before)
+            # 讀不到的標記＝不確定（不當成別人的帳略過）
+            path.unlink()
+            path.mkdir()
+            result = aos.close_aos(a, req, out)
+            self.assertEqual((result['ok'], result['why']), (False, 'unknown'))
+            path.rmdir()
+            # 同 rid 已有 CSV 需求帳：不寫結案標記，免得 CSV close 被跳過
+            Path('author/req/usage1/request.json').write_text('{"v":1}')
+            self.assertIn('close_skipped', aos.close_aos(a, req, out))
+            self.assertFalse(path.exists())

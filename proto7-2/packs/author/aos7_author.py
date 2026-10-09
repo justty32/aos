@@ -646,6 +646,8 @@ def propose(node, rid, *, candidate_path, auto=False):
             v = _propose_locked(nd, rid, csha, raw)
         out = result(v["ok"], None if v["ok"] else "invalid", rid=rid, candidate_sha=csha, job=v["job"] if v["ok"] else None,
                      payload_sha=v["payload_sha"], issues=v["issues"])
+        if not v["ok"]:
+            out["_rejected"] = True       # 候選已收下並審過、被拒＝退 1；why 照舊 invalid（CLI 印前拿掉）
         if auto and v["ok"]:
             import aos7_author_pub
             out["publish"] = aos7_author_pub.publish(nd, rid, candidate_sha=csha)
@@ -823,7 +825,7 @@ def one_line(value, limit=180):
 
 class ArgumentParser(argparse.ArgumentParser):
     def error(self, message):
-        self.exit(2, 'aos7-author: ' + one_line(message) + '。給需求檔或 rid 與所需選項，例如 aos7-author propose csv1 --candidate candidate.json；其他選項見 ADVANCED.md\n')
+        self.exit(2, 'aos7-author: ' + one_line(message) + '。給需求檔或 rid 與所需選項，例如 aos7-author propose csv1 --candidate candidate.json；看 aos7-author --help；其他選項見 ADVANCED.md\n')
 
     def format_help(self):
         return ("aos7-author：把需求與候選驗過，再發布\n"
@@ -837,19 +839,29 @@ class ArgumentParser(argparse.ArgumentParser):
                 "其他選項見 ADVANCED.md\n")
 
 
-def error_line(r):
+def error_line(r, rejected=False):
     detail = r.get('error') or r.get('unknown')
     if not detail:
         check = r.get('check') or r.get('publish') or r
         detail = check.get('error') or check.get('unknown') or check.get('issues') or check.get('gates') or '這次未完成'
+    if isinstance(detail, dict) and 'issues' not in detail:
+        detail = next((g.get('issues') for g in detail.values() if isinstance(g, dict) and g.get('issues')), detail)
+    if isinstance(detail, list) and detail:
+        detail = detail[0]
+    if isinstance(detail, dict):
+        detail = '%s：%s' % (detail.get('rule'), detail.get('why'))
     detail = one_line(detail)
     why = r.get('why')
     if why == 'unknown':
         body = '不確定：' + detail + '。已有證據留著；照原樣再跑一次會接續'
+    elif why == 'invalid' and rejected:
+        body = '候選沒過：' + detail + '。照 stdout JSON 的 issues／gates 改候選，再 propose 一次'
     elif why == 'invalid':
-        body = detail + '。給符合需求的檔案與選項，例如 aos7-author propose csv1 --candidate candidate.json'
+        body = detail + '。給符合需求的檔案與選項，例如 aos7-author propose csv1 --candidate candidate.json；用法看 aos7-author --help'
+    elif why == 'full':
+        body = detail + '。先 close 這張需求，再發新版'
     else:
-        body = detail + '。先完成 close 的前置工作或換候選，再跑一次'
+        body = detail + '。照上面的原因處理（例如換一份候選、或先做完前一步）再跑'
     return 'aos7-author: ' + body
 
 
@@ -961,10 +973,11 @@ def main(argv=None):
             r = close_request(nd, a.arg)
         else:
             r = status(nd, a.arg)
+    rejected = any(d.pop("_rejected", False) for d in (r, r.get("check"), r.get("rules_check")) if isinstance(d, dict))
     print(json.dumps(r, ensure_ascii=False, indent=1))
     if not r.get("ok") or r.get("why"):
-        print(error_line(r), file=sys.stderr)
-        return CODES.get(r.get("why"), 1) or 1
+        print(error_line(r, rejected), file=sys.stderr)
+        return 1 if rejected and r.get("why") == "invalid" else CODES.get(r.get("why"), 1) or 1
     return 0
 
 

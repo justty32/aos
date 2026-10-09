@@ -98,7 +98,7 @@ step 不改：表項起 `aos7-step run jobs/<job>`（keep、`max_live:1`、`rest
 
 ## 8. 退出碼與錯誤
 
-退出碼照 [藍圖](../../notes/blueprint-errors.md) §2。CLI 印 JSON `{ok, why, ...}`，不成功時 stderr 另印一行白話。`0` 成功（含 dup）、`2` invalid（候選、需求、驗證、`payload_changed`）、`1` conflict（rid 異內容、同名表項改過／disabled、job 撞名、已結案、close 條件不足）、`3` unknown（帳或表讀不到／壞、鎖逾時、只有 intent）、`1` full（版本上限）。事件收件見 §10；無自動 JSON 修復。
+退出碼照 [藍圖](../../notes/blueprint-errors.md) §2。CLI 印 JSON `{ok, why, ...}`，不成功時 stderr 另印一行白話。`0` 成功（含 dup）、`2` invalid 的用法／需求／找不到檔、`1` invalid 的候選被拒（已收下、驗證沒過；why 仍是 invalid）、`1` conflict（rid 異內容、同名表項改過／disabled、job 撞名、已結案、close 條件不足）、`3` unknown（帳或表讀不到／壞、鎖逾時、只有 intent）、`1` full（版本上限）。事件收件見 §10；無自動 JSON 修復。
 
 ## 9. 明確不管
 
@@ -123,4 +123,4 @@ step 不改：表項起 `aos7-step run jobs/<job>`（keep、`max_live:1`、`rest
 - 請求＝`{"litellm":{"model":MODEL,"messages":[system,user]}}`，不設 max_tokens／temperature。預設 call_id＝`<rid>-<model 只留 [A-Za-z0-9_-]>-<請求 sha256 前8>`；前兩段合起來截至 55 字，尾端 `-<雜湊前8>` 一定保留（不同請求不撞 call_id）。重跑由 llmcall 重印回條；新生成由呼叫者明給新 `--call`。
 - 請求暫存檔交 `python3 <llmcall_bin> call DIR --holder author --call C --logical author/<rid> --request TMP --reserve R [--deadline D] --patience P`（cwd=node），用完刪除；讀 stdout 最後一行 JSON。
 - llmcall 退出 0／4、outcome 是 answered 且 text 是字串：UTF-8 bytes 原樣交既有 propose，不剝圍欄、不修復，三層驗證與作者帳語意不變。加 `llm` 回值：model、call_id、exit、outcome、usage、used、billing、reserve、receipt_path（llmcall receipt 絕對路徑，不存在則 null）。pending／overrun 照 llmcall 原值記錄。
-- 退出 3＝author unknown；1／2、其他未交付、text 非字串或讀不到回條＝invalid，不碰候選帳。傳輸、去重、token 帳由 llmcall／budget 負責，不在 author 重做。
+- 退出 3＝author unknown；1／2、其他未交付（CLI 退 1：模型回覆不能用）、text 非字串或讀不到回條＝invalid，不碰候選帳。傳輸、去重、token 帳由 llmcall／budget 負責，不在 author 重做。
