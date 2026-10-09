@@ -117,6 +117,8 @@ def cancel(bud, key):
             return {"outcome": "unknown", "why": "入口紀錄讀不到：%s" % rec}
         if st == OK and rec.get("stage") == "done":
             return rec
+        if st == OK and "gateway" in rec and rec["gateway"] != GATEWAY:     # 別的入口（如 llm.fake）的非終局
+            return {"outcome": "unknown", "why": "不可查回入口，intent 不能取消"}
         digest = rec.get("digest") if st == OK else None
         if st == OK:            # intent：後端呼叫只在鎖內發生，持鎖時查不到就是沒發生（只對假後端成立）
             try:

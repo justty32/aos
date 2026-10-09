@@ -25,7 +25,8 @@ from aos7_fs import (BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, U, fact, is_int, lock
 
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 CLOCK = "completed_tock"
-GATEWAY = "fakeapi"                 # v1 只有一個入口（假 API）
+GATEWAY = "fakeapi"                 # call 包裝程式的入口（假 API）
+PARTIAL_SETTLE = True
 RESOURCE = "fakeapi.calls"
 GRANT_FIELDS = ("grant", "budget", "holder", "resource", "gateway", "amount", "clock", "from", "until", "delegate")
 POLL = 0.02
@@ -205,7 +206,7 @@ def receipt_from(op, rec):
     return {"result": "settled", "kid": kid_of(rec["key"]), "amount": rec["amount"], "settle": rec["settle"]}
 
 
-def transition(L, op, kid, amount, used, c):
+def transition(L, op, kid, amount, used, c, overrun=None):
     """改餘額並記一筆 log（呼叫的人接著一次寫入整份帳）。"""
     if op == "reserve":
         L["available"] -= amount
@@ -218,6 +219,8 @@ def transition(L, op, kid, amount, used, c):
     L["log"].append({"seq": L["seq"], "op": op, "kid": kid, "amount": amount, "used": used,
                      "available": L["available"], "inflight": L["inflight"], "used_total": L["used"],
                      "tock": c, "at": now()})
+    if overrun is not None:
+        L["log"][-1]["overrun"] = overrun
     return L["seq"]
 
 
@@ -226,8 +229,12 @@ def gateway_terminal(bud, kid):
     st, r = fact(bud.p("gateway", kid + ".json"))
     if st != OK:
         return None, "入口沒有 K 的紀錄" if st == N else "入口紀錄讀不到：%s" % r
-    if not isinstance(r, dict) or r.get("stage") != "done" or not is_int(r.get("used")):
+    if not isinstance(r, dict) or r.get("stage") != "done":
         return None, "入口紀錄不是終局（stage %r）" % (r.get("stage") if isinstance(r, dict) else None)
+    if "billing" in r and r["billing"] not in ("final", "overrun"):
+        return None, "入口紀錄 billing pending（%r）" % r["billing"]
+    if not is_int(r.get("used")):
+        return None, "入口紀錄的 used 不是整數"
     return r, sha(r)
 
 
@@ -284,13 +291,23 @@ def handle(bud, req):
         g, ev = gateway_terminal(bud, kid)
         if g is None:
             return {"result": "unknown", "why": ev + "；預留留著"}
+        if g.get("key") != rec["key"]:
+            return {"result": "unknown", "why": "入口回條的 key 跟預留不同"}
+        if g.get("digest") != rec["digest"] and not (
+                g.get("outcome") == "cancelled" and g["used"] == 0 and "digest" in g and g["digest"] is None):
+            return {"result": "unknown", "why": "入口回條的 digest 跟預留不同"}
         used = g["used"]
-        if used not in (0, rec["amount"]):
+        if not 0 <= used <= rec["amount"]:
             return {"result": "unknown", "why": "入口回條的 used %r 跟預留 %r 對不上" % (used, rec["amount"])}
+        overrun = g.get("overrun", 0)
+        if not is_int(overrun) or overrun < 0:
+            return {"result": "unknown", "why": "入口回條的 overrun 要是非負整數"}
         test_crash(bud, "settle-before-commit")
         rec["stage"] = "settled"
-        rec["settle"] = {"seq": transition(L, "settle", kid, rec["amount"], used, None), "used": used,
+        rec["settle"] = {"seq": transition(L, "settle", kid, rec["amount"], used, None, overrun),
+                         "used": used, "overrun": overrun,
                          "outcome": g.get("outcome"), "evidence": ev, "at": now()}
+        L["overrun"] = L.get("overrun", 0) + overrun
         write_json(bud.p("ledger.json"), L)
         test_crash(bud, "settle-after-commit")
         return receipt_from(op, rec)
@@ -419,7 +436,7 @@ def status(bud, key=None):
         return {"error": why}
     if key is None:
         return {k: L.get(k) for k in ("budget", "grant", "initial", "available", "inflight", "used", "seq",
-                                      "clock_hw")} | {"keys": len(L["ops"])}
+                                      "clock_hw")} | {"keys": len(L["ops"]), "overrun": L.get("overrun", 0)}
     kid = kid_of(key)
     rec = L["ops"].get(kid)
     gw = fact(bud.p("gateway", kid + ".json"))[1]
