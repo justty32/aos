@@ -38,10 +38,12 @@ class TestRoutines(MatrixCase):
     def step(self, node, round, now=NOW):
         with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             routines.step(node, round, now)
-    def cli(self, *args, code=0):
-        p = subprocess.run([sys.executable, routines.ENTRY, *args], capture_output=True, text=True, timeout=10)
+    def cli_result(self, *args, code=0, env=None):
+        p = subprocess.run([sys.executable, "-B", routines.ENTRY, *args], capture_output=True, text=True, timeout=10, env=env)
         self.assertEqual(p.returncode, code, p.stderr)
-        return p.stdout
+        return p
+    def cli(self, *args, code=0):
+        return self.cli_result(*args, code=code).stdout
     def test_300_rounds(self):
         node = self.setup_node()
         self.put(node, "routines", [dict(name="r", every="10r", inst="hello.sh")])
@@ -127,9 +129,14 @@ class TestRoutines(MatrixCase):
         self.step(node, 1)
         self.assertEqual(self.count(node), 2)
     def test_cli(self):
-        node = self.setup_node()
-        self.cli("add", node, "r", "--every", "10r", "hello.sh")
-        self.assertEqual(self.tasks(node), [dict(name="routines", mode="keep", argv=["python3", routines.ENTRY])])
+        node = os.path.join(self.root, "plain")
+        os.mkdir(node)
+        with open(os.path.join(node, "hello.sh"), "w") as f:
+            f.write("#!/bin/sh\necho hello\n")
+        out = self.cli("add", node, "r", "--every", "10r", "hello.sh")
+        self.assertFalse(os.path.exists(os.path.join(node, ".aos")))
+        self.assertIn("要讓心跳自動跑", out)
+        self.assertEqual(len(out.splitlines()), 2)
         self.cli("add", node, "r", "--every", "10r", "hello.sh", code=1)
         self.cli("add", node, "s", "--at", "+90s", "hello.sh")
         delta = (routines.instant(self.rows(node, "schedule")[0]["at"]) - dt.datetime.now().astimezone()).total_seconds()
@@ -138,10 +145,55 @@ class TestRoutines(MatrixCase):
         self.cli("rm", node, "r")
         self.cli("rm", node, "s")
         self.cli("rm", node, "s", code=1)
-        self.cli("add", node, "--every", "10r", code=1)
+        self.cli("add", node, "--every", "10r", code=2)
+        self.cli("add", node, "x", "--every", "oops", "hello.sh", code=2)
         with open(os.path.join(node, "wf", "routines.json"), "w") as f:
             f.write("{")
-        self.cli("ls", node, code=3)
+        p = self.cli_result("ls", node, code=3)
+        self.assertTrue(p.stderr.startswith("aos7-routines: 不確定："))
+    def test_error_path(self):
+        help_result = self.cli_result("--help")
+        self.assertEqual(help_result.stderr, "")
+        self.assertLessEqual(len(help_result.stdout.splitlines()), 24)
+        node = os.path.join(self.root, "empty")
+        os.mkdir(node)
+        def one_line(p):
+            self.assertNotIn("\n", p.stderr.strip())
+            self.assertIn("aos7-routines: ", p.stderr)
+            self.assertIn("。", p.stderr)
+        for args in [("bogus",), ("add", node, "--every", "10r"),
+                     ("add", node, "x", "--every", "oops", "hello.sh"),
+                     ("add", node, "x", "--at", "oops", "hello.sh"),
+                     ("add", node, "x", "--every", "", "hello.sh"),
+                     ("add", node, "x", "--every", "1s", "hello.sh", "--timeout", "oops")]:
+            with self.subTest(args=args):
+                one_line(self.cli_result(*args, code=2))
+                self.assertEqual(os.listdir(node), [])
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS7_")}
+        one_line(self.cli_result(code=2, env=env))
+        env.update({"AOS7_" + k: "x" for k in ("ROOT", "NODE", "NODE_ID", "TASK", "TID", "RUN")})
+        one_line(self.cli_result(code=2, env=env))
+        p = self.cli_result("rm", node, "missing", code=1)
+        one_line(p)
+        self.assertIn("清單是空的，沒有 missing", p.stderr)
+        self.assertEqual(os.listdir(node), [])
+        self.put(node, "routines", [])
+        p = self.cli_result("rm", node, "missing", code=1)
+        one_line(p)
+        self.assertIn("清單裡沒有 missing", p.stderr)
+        self.assertFalse(os.path.exists(os.path.join(node, "wf", "schedule.json.lock")))
+    def test_ls_run_lock_busy_is_unknown(self):
+        """astra 審：ls --run 遇鎖忙不能退 0 說「沒有到期」，要退 3 一行「不確定：」。"""
+        import fcntl
+        node = self.setup_node()
+        self.put(node, "routines", [dict(name="r", every="1s", inst="hello.sh")])
+        with open(os.path.join(node, "wf", "routines.json.lock"), "a") as lk:
+            fcntl.flock(lk, fcntl.LOCK_EX)
+            p = self.cli_result("ls", node, "--run", code=3)
+        self.assertTrue(p.stderr.startswith("aos7-routines: 不確定："), p.stderr)
+        self.assertNotIn("\n", p.stderr.strip())
+        self.assertEqual(self.count(node), 0)
+
     def test_ls_run_without_daemon(self):
         """新手第一次跑：不開 daemon，ls --run 只照時間做（秒型、schedule），r 型留給 daemon；再跑一次沒有到期的。"""
         node = self.setup_node()
