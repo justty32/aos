@@ -2,7 +2,8 @@
 
 量法：總行＝檔案行數；實際程式＝去掉空行、註解、docstring 之後還有 token 的行（ast 找 docstring、tokenize 找其他 token）。
 不算：lib/aos_*.py（從 proto6／proto7-1 原樣搬來的 inst 執行器，方案說不算預算）、modules/（模組包）、tests/。
-超過就失敗。要加預算：先回答 README「進核心的三問」，在 notes/problems.md 寫一行理由並經使用者同意，再改這裡的數字。
+**2026-10-09 起只印不擋**（loop7 D7：開發階段不設行數上限，等成果整理階段再重構拆檔濃縮）：超過預算時把逐檔表印到
+stderr，測試照樣過。整理階段要恢復擋線時，把 ENFORCE 改回 True。
 """
 import os, sys  # noqa: E401
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base
@@ -16,6 +17,7 @@ from base import LIB  # noqa: E402
 
 TOTAL_MAX = 2800   # 總行
 CODE_MAX = 2200    # 實際程式（之後收到 2000）
+ENFORCE = False    # D7：開發階段只印不擋
 
 
 def count(path):
@@ -36,7 +38,7 @@ def count(path):
 
 
 class TestBudget(unittest.TestCase):
-    """〔core〕核心行數預算：總行 ≤ 2800、實際程式 ≤ 2200。"""
+    """〔core〕核心行數預算：總行 2800、實際程式 2200；目前只印不擋（D7）。"""
     def test_core_line_budget(self):
         rows = {os.path.basename(p): count(p) for p in sorted(glob.glob(os.path.join(LIB, "aos7_*.py")))}
         total, code = sum(t for t, _ in rows.values()), sum(c for _, c in rows.values())
@@ -45,6 +47,10 @@ class TestBudget(unittest.TestCase):
                "真要加預算，先在 notes/problems.md 寫理由、經使用者同意再改 tests/core/test_budget.py。"
                % (total, TOTAL_MAX, code, CODE_MAX, table))
         self.assertTrue(rows, "找不到 lib/aos7_*.py")
+        if not ENFORCE:
+            if total > TOTAL_MAX or code > CODE_MAX:
+                sys.stderr.write("\n［只印不擋，D7］" + msg + "\n")
+            return
         self.assertLessEqual(total, TOTAL_MAX, msg)
         self.assertLessEqual(code, CODE_MAX, msg)
 

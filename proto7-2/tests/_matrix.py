@@ -8,10 +8,13 @@
 所以 `fault()`／`Fault` 一律同時設 `AOS7_TEST_FAULT_HITS`（lib 的 aos7_fs.inject 真的丟出注入的 OSError 時在那個檔追加
 `op<TAB>errno<TAB>path`；子程序 tick／tock／daemon 繼承環境也會記），`fault()` 區塊正常結束時自動斷言「規則裡每個 op
 都命中 ≥1 次」；`MatrixCase.run_prog` 帶 AOS7_TEST_FAULT 時也一樣（跑完就斷言）。
+同 op 有多條規則（例如兩條 proc-stat 各指 task 與 runner）時用 `Fault.check_rules()`：每一條（op＋路徑＋errno）都要命中（T8-07）。
 
 這個檔不是測試（檔名不以 test 開頭，unittest discover 不收），只被 test_matrix_*.py import。
 """
 import contextlib
+import errno
+import fnmatch
 import os
 import signal
 import subprocess
@@ -45,14 +48,26 @@ def gen(cls, prefix, params, body, doc=None):
         setattr(cls, t.__name__, t)
 
 
-def rule_ops(spec):
-    """規則字串（`op:glob:ERRNO;…`，分號或換行分隔）裡出現的 op 集合（格式不對的規則略過，跟 aos7_fs.inject 一致）。"""
-    out = set()
+def rule_list(spec):
+    """規則字串（`op:glob:ERRNO;…`，分號或換行分隔；`@檔` 就讀那個檔，讀不到當空）解析成 [(op, glob, ERRNO 名), …]
+    （格式不對或 errno 名不存在的略過，跟 _hooks.inject 一致）。"""
+    if spec.startswith("@"):
+        try:
+            with open(spec[1:], encoding="utf-8") as f:
+                spec = f.read()
+        except OSError:
+            return []
+    out = []
     for rule in spec.replace("\n", ";").split(";"):
         parts = rule.strip().split(":")
-        if len(parts) == 3 and parts[0]:
-            out.add(parts[0])
+        if len(parts) == 3 and parts[0] and isinstance(getattr(errno, parts[2].strip(), None), int):
+            out.append((parts[0], parts[1], parts[2].strip()))
     return out
+
+
+def rule_ops(spec):
+    """規則字串裡出現的 op 集合。"""
+    return {r[0] for r in rule_list(spec)}
 
 
 class Fault:
@@ -70,21 +85,19 @@ class Fault:
         self.ops = set(ops) if ops is not None else self._parse()
 
     def _parse(self):
-        if not self.rules.startswith("@"):
-            return rule_ops(self.rules)
-        try:
-            with open(self.rules[1:], encoding="utf-8") as f:
-                return rule_ops(f.read())
-        except OSError:
-            return set()
+        return rule_ops(self.rules)
 
-    def records(self):
-        """命中紀錄 [(op, errno 名, 路徑), …]（檔讀不到當沒有）。"""
+    def records(self, since=0):
+        """命中紀錄 [(op, errno 名, 路徑), …]（檔讀不到當沒有）；since＝mark() 的回傳，只取那之後的。"""
         try:
             with open(self.path, encoding="utf-8") as f:
-                return [tuple(ln.rstrip("\n").split("\t", 2)) for ln in f if ln.strip()]
+                return [tuple(ln.rstrip("\n").split("\t", 2)) for ln in f if ln.strip()][since:]
         except OSError:
             return []
+
+    def mark(self):
+        """目前的命中筆數；之後 records(since=…)／check_rules(since=…) 只看這之後的（同一個 Fault 跑多次命令時用）。"""
+        return len(self.records())
 
     def hits(self, op=None):
         """命中次數；給 op 只算那個 op。"""
@@ -103,6 +116,18 @@ class Fault:
                 seen[r[0]] = seen.get(r[0], 0) + 1
             raise AssertionError("故障注入沒打中%s：op %s 命中 0 次（規則 %r；各 op 命中次數 %r）——這個案例沒測到指定的讀取失敗"
                                  % (where, "、".join(miss), self.rules, seen))
+
+    def check_rules(self, rules=None, since=0, where=""):
+        """比 check 嚴（T8-07）：規則（省略＝self.rules；`@規則檔` 在這時讀檔）**每一條** (op, glob, ERRNO) 都要有命中紀錄——同 op、路徑 fnmatch
+        那條 glob、同 errno。只比 op 的 check 會讓「兩條同 op 規則只中一條」也過。"""
+        want = rule_list(rules if rules is not None else self.rules)
+        if not want:
+            raise AssertionError("故障注入%s：規則 %r 解析不出任何規則，無法證明有打中" % (where, self.rules))
+        recs = self.records(since)
+        miss = [":".join(w) for w in want
+                if not any(r[0] == w[0] and len(r) == 3 and r[1] == w[2] and fnmatch.fnmatchcase(r[2], w[1]) for r in recs)]
+        if miss:
+            raise AssertionError("故障注入沒打中%s：規則 %s 命中 0 次（全部命中 %r）" % (where, "、".join(miss), recs))
 
     def close(self):
         try:
