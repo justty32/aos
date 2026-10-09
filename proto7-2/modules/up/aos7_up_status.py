@@ -1,6 +1,7 @@
 """唯讀狀態、公開指令呼叫與觀看用的小函式。"""
 import fcntl
 import json
+import math
 import os
 import tempfile
 from pathlib import Path
@@ -183,9 +184,7 @@ def status(node):
         print(f'aos7-up: 這裡還沒有 node。先跑 aos7-up {node}', file=sys.stderr)
         return 2
     settings = config(node)
-    n = number(node)
-    print(f'心跳：活著，已叫醒 {node.name} {n} 次' if alive(node.parent) else
-          f'心跳：停了（共叫醒 {node.name} {n} 次）；要再起：aos7-up {node}')
+    print('心跳：活著' if alive(node.parent) else f'心跳：停了；要再起：aos7-up {node}')
     inbox = letters(node / 'inbox')
     waiting = sum(v.get('status') == 'REQUEST' for v in inbox.values())
     finished = letters(node / 'inbox/done')
@@ -212,9 +211,10 @@ def status(node):
         letter = next((v for v in inbox.values() if v.get('id') == unsure['id']), None)
         if letter:
             limit = float(settings.get('deadline', 60 if settings.get('model') in (None, 'fake', '') else 600))
-            waited = time.time() - unsure['since']
-            print(f'卡住了：信「{short(letter.get("title", ""))}」問了 AI，不確定 AI 回了沒，已等 {waited:.0f} 秒；'
-                  f'你不用動手，滿 {limit:g} 秒 {node.name} 會寄信到你的信箱說怎麼辦，再接著辦下一封')
+            left = math.ceil(limit - (time.time() - unsure['since']))
+            when = f'約 {left} 秒後' if left > 0 else '馬上'
+            print(f'卡住了：「{short(letter.get("title", ""))}」問 AI 時被打斷，不知道 AI 回了沒；'
+                  f'不用動手，{when} {node.name} 會寄信給你')
     except (ValueError, OSError, TypeError, KeyError, AttributeError):
         pass
     count = sum(s.startswith('- ') for rel in ('SESSION-LOG.md', 'WAIT_USER.md')
@@ -224,13 +224,19 @@ def status(node):
           (f'；工作簿有地方寫壞了（看哪裡：aos7-wfnode check {node}）' if check.returncode else ''))
     print(f'技能：{skill_count(node)} 本（AI 自己挑來用）')
     calls = sum(p.is_file() for p in (node / 'llmcall/llm').glob('*/raw.json'))
-    budget = call('packs/budget/bin/aos7-budget', 'status', 'budget/llm', cwd=node)
-    try:
-        used = json.loads(budget.stdout).get('used', '—') if budget.returncode == 0 else '—'
-    except ValueError:
-        used = '—'
-    usage = f'來回共約 {used} 字' if isinstance(used, (int, float)) else '來回字數不明'
-    print(f'AI：{settings.get("model") or "假 AI（不連網、不花錢，照抄你的信回你）"}；問過 {calls} 次，{usage}')
+    model = settings.get('model')
+    if model in (None, '', 'fake'):
+        # 假 AI 不花錢，字數對新手沒意義，不印
+        print(f'AI：假 AI（不連網、不花錢，照抄你的信回你）；問過 {calls} 次')
+    else:
+        budget = call('packs/budget/bin/aos7-budget', 'status', 'budget/llm', cwd=node)
+        try:
+            used = json.loads(budget.stdout).get('used') if budget.returncode == 0 else None
+        except (ValueError, AttributeError):
+            used = None
+        usage = (f'AI 讀加寫共約 {used} 字（真 AI 照字數收錢）' if isinstance(used, (int, float))
+                 else '用了多少字不明')
+        print(f'AI：{model}；問過 {calls} 次，{usage}')
     print(cleanup_hint(node))
     return 0
 
