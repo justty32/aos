@@ -164,3 +164,4 @@
 - B｜firstrun：預設假 AI，真 AI 只靠 `--model`（不自動花錢）；帳、回合、預留、ack、退出碼在 QUICKSTART 與各包開頭三行一律不出現；brain 一回合最多處理一封信、AI 回不來回 BLOCKED 不重試；人的信箱名固定 `you`
 - C｜routines 回改：第一次跑改用 `ls --run`（不用開 daemon）；新手重試第 1 輪過關 7.4 分（Haiku 7.4／luna 8.8）、約 6 分鐘、3 指令、4 概念
 - C｜prompt 回改：新範例讓第一次跑就看得到「收起來」（省九成 token）；README 概念 11→3，其餘收進進階；新手第 2 輪過關（Haiku 7.8／luna 8.4）
+- C｜mail 回改：README 縮成一頁（3 指令、4 概念），其餘移到 ADVANCED.md；send 預設 REQUEST、done 預設 DONE；audit 移出日常。新手三輪最後 7.6 分、3 指令；概念數 Haiku 數 6（把請求／完成拆開又算了信箱）、luna 數 4。**頂層判過**：照 README 實際列的 4 個算，Haiku 前後兩輪自己也數過 4；剩下「已辦結／已歸檔／完成」三種字眼不一致，留給套三行頭時統一
