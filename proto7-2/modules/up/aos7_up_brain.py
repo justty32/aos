@@ -111,11 +111,11 @@ def fake_text(letter, step, ref=None, got=None, latest=None):
     title = flat(letter['title'])
     want = re.search(r'(\d+)\s*回合', title)
     if '要你決定' in title:
-        return f'要你決定：（練習用的 AI）缺資料，請補上\n停在哪：第 {step} 回合等你'
+        return f'要你決定：（練習用的 AI）缺資料，請補上\n停在哪：第 {step} 步等你'
     if '沒進展' in title:
-        return f'繼續：（練習用的 AI）第 {step} 回合還是卡住\n停在哪：卡在同一處'
+        return f'繼續：（練習用的 AI）第 {step} 步還是卡住\n停在哪：卡在同一處'
     if want and step < int(want[1]):
-        return f'繼續：（練習用的 AI）第 {step} 回合做完\n停在哪：第 {step} 回合，下一步第 {step + 1} 回合'
+        return f'繼續：（練習用的 AI）第 {step} 步做完\n停在哪：做完第 {step} 步，接著做第 {step + 1} 步'
     if '要檔案' in title and ref is None and latest:
         return '要檔案：' + latest
     attached = f'（附了前件 {ref}）' if got is not None else ''
@@ -324,7 +324,7 @@ def step_on(node, letter, text, cfg):
     step = task['step']
     match = re.search(r'繼續：(.*?)停在哪：([^\n]*)', text, re.S)
     result, line = (match[1].strip(), flat(match[2])) if match else (text.strip()[len('繼續：'):].strip(), '')
-    line = line or f'第 {step} 回合'
+    line = line or f'第 {step} 步'
     stall = task['stall'] + 1 if line == task['line'] else 0
     if stall >= cfg.get('stall', 3):
         return None, f'連續 {stall} 步沒進展，停在：{line}'
@@ -334,8 +334,8 @@ def step_on(node, letter, text, cfg):
     cut = result if len(result) <= LAST_MAX else result[:LAST_MAX] + f'\n（後面還有 {len(result) - LAST_MAX} 字沒附上）'
     (node / 'brain/last.md').write_text(f'上一回合（第 {step} 回合）的成果：\n{cut}\n', encoding='utf-8')
     journal(node, ident, step, line + '｜' + flat(result)[:300])
-    state_once(node, f'{ident}#s{step}', f'第 {step} 回合 {ident}：{line}')
-    open_line(node, ident, f'{line}（做完第 {step} 回合）→ 下回合接著做')
+    state_once(node, f'{ident}#s{step}', f'第 {step} 步 {ident}：{line}')
+    open_line(node, ident, f'{line}（做完第 {step} 步）→ 接著做第 {step + 1} 步')
     every = cfg.get('progress_every', 5)
     if every and step % every == 0:
         progress(node, letter, step, line, result)
@@ -343,7 +343,7 @@ def step_on(node, letter, text, cfg):
     write_json(str(node / 'brain/task.json'), dict(task, step=step + 1, line=line, stall=stall,
                trail=(task['trail'] + [f'第 {step} 回合：{line}｜成果：{flat(result)[:200]}'])[-8:]))
     note = '，整理了記憶' if compact_if_big(node, cfg) else ''
-    return f'第 {step} 回合做完，下回合接著做{note}', None
+    return f'第 {step} 步做完，下回合接著做第 {step + 1} 步{note}', None
 def minutes(seconds):
     """給人看的等待時間：一律說「約 N 分鐘」（不印秒數，免得跟範例對不上）。"""
     return f'約 {max(1, round(seconds / 60))} 分鐘'

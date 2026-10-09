@@ -234,7 +234,7 @@ class MemoryBrainTests(DaemonCase):
         self.assert_memory([first, second])
         self.calls(second, 2)
         state = self.state()
-        self.assertEqual(sum(f'第 1 回合 {second}：' in r for r in state.splitlines()), 1)
+        self.assertEqual(sum(f'第 1 步 {second}：' in r for r in state.splitlines()), 1)
         self.assertIn('要檔案 ' + memory.fid(first), state)
 
     def request_fixture(self, wanted=False):

@@ -100,7 +100,7 @@ AI 每回合回三種之一：`回信：`（做完，回 DONE）、`繼續：`�
 說「繼續」時，每回合記這些（重跑同一回合不重記），最後才寫 `brain/task.json`（信 id、下一回合、上回合停在哪、連續沒進展數、最近 8 回合的停在哪與成果前 200 字、挑到的技能）：
 
 - `brain/last.md`：這回合的成果（最多 4000 字），下回合放進提示。
-- `notes/journal.jsonl` 一行（`by`、`re`、`step`，拿 `compact/write.lock`）；STATE 一行「第 k 回合 <信 id>：<停在哪>」。
+- `notes/journal.jsonl` 一行（`by`、`re`、`step`，拿 `compact/write.lock`）；STATE 一行「第 k 步 <信 id>：<停在哪>」（信的進度一律叫「步」，「回合」只指心跳叫醒一次，與 kernel 通知信同一用法）。
 - SESSION-LOG 第一個 `## ` 段下一行 `- [brain] 信 <id>：…`，結案就刪。
 - 每 `progress_every` 回合（up.json，預設 5，0＝不寄）寄 PROGRESS 給寄件人（標題「第 k 步：…」，信裡回合一律說成「步」），同回合不重寄；停下時的 NEEDS-USER 也說「連續 N 步沒進展」「做了 N 步還沒做完」。
 - 每回合跑一次 `aos7-compact now`（要不要整理、門檻與檔案清單照 compact 自己的設定，預設含 STATE；沒事不寫；up.json `compact: false` 關）。
