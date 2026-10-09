@@ -141,3 +141,4 @@
 - 結果｜R1：學徒用真 AI 跑 12 圈（sol／astra／luna 各型）全過三關、答案全對；每次約 2.5～2.7k token（其中 proxy 自帶約 1.6k）、2.4～10.9 秒；12 圈共 30,739 token → [real-ai 報告](play/2026-10-09-real-ai/README.md)。CSV 題太簡單比不出模型差異
 - 建議限制（**未生效**，等跑完大段落再定）：每次預留約 8000 token、逾時 120 秒、每單 5 萬 token、仍不設 max_tokens
 - C｜H1：定時例行 `modules/routines/`——最多一次（被殺那期不重跑）；錯過很久只跑 1 次不補跑；`add` 會自動在 node 裝一個 `routines` keep 任務；對外指令 3 個（add／ls／rm）
+- C｜頂層：routines 在 wf/ 留兩個固定 `.lock` 檔可接受（數量固定、不隨回合增加，不違反「垃圾要能清」）
