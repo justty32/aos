@@ -116,6 +116,7 @@ class LlmdiagTests(unittest.TestCase):
         self.compare_archive(TOP / "packs/author/examples/aos-module-diag/fixture")
         with tempfile.TemporaryDirectory() as temporary:
             node = Path(temporary)
+            (node / ".aos").mkdir()
             self.compare_archive(node)
             put(node, "budget/only/ledger.json", '{"inflight":4}')
             self.compare_archive(node)
@@ -218,6 +219,8 @@ class LlmdiagTests(unittest.TestCase):
                 self.assertEqual(result.stderr, b"")
                 self.assertLessEqual(len(result.stdout.splitlines()), 15)
         with tempfile.TemporaryDirectory() as temporary:
+            self.assertEqual(self.run_entry(temporary).returncode, 2)
+            (Path(temporary) / ".aos").mkdir()
             self.assertEqual(self.run_entry(temporary).returncode, 0)
         self.assertEqual(caches(), before)
         for args, code in ((["x"], 1), (["--help"], 0)):
