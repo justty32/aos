@@ -164,6 +164,7 @@
 
 - tick 只在有 once 要處理時才改 tasks.json，一定拿鎖、整份 rename。一次加多項＝一次 `edit_json`（同一次 rename）。
 - 不拿鎖直接編輯 tasks.json 的人，跟別人同時寫會有一方被蓋掉（W8）。
+- 帶 `launch` 的 once 改了排程欄（`enabled`、`from_round`、`until_round`）也不會再跑：tick 先照 4.4 第一條比對、移項，才看排程（N-86）。還沒起成的，槽被同名 keep 重用也不影響：run 不同，照 4.4 第二條之後照常起。
 
 ### 4.4 once 不重起、最多一次、不無痕消失（N-86、K-03）
 
@@ -237,6 +238,7 @@ aos7-run 經 fd 讀 birth、開 out.log，把任務起在自己的程序群組�
 - 環境：`AOS7_ROOT`、`AOS7_NODE`（絕對路徑）、`AOS7_NODE_ID`、`AOS7_TASK`（槽的絕對路徑）、`AOS7_TID`、`AOS7_RUN`；`PATH` 前面加 `bin/`；cwd＝node。
 - 知道時間：輪詢 `$AOS7_TASK/tock.json`（S-11；工具包有 `aos7-wait-tock`）。漏掉的回合只看得到最新一個。
 - 只碰給的資料夾（S-10、S-23）：自己的 node（扣掉巢狀的別的 node 與 daemon 根）加上掛載目標。
+- 暫存檔 `.<名>.tmp.<pid>`（`write_json` 被殺在 rename 前留下）核心只清自己的資料夾（`.aos`、槽、`mount-req`／`mount-done`、`.aosd`）；任務或包寫在槽外的，由寫的人對自己的資料夾跑 `sweep_tmp`（C8-03）。
 
 ## 6. 任務控制（S-17）
 

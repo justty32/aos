@@ -89,6 +89,8 @@ def _apply(d, ctx, position):
                              % (_show(position), key, type(val).__name__))
     if key == "$env":
         return _env(val, ctx, position), ctx, position
+    if "$at" in d and d["$at"] is None:   # R8-28：$at 寫了 null 不當省略
+        raise DirectiveError("DirectiveValueTypeMismatch", "%s 的 $at 要是字串，不是 null" % _show(position))
     return _ref(val, d.get("$at"), ctx, position)
 
 
@@ -217,7 +219,7 @@ def _walk(doc, pos, where):
                                      "%s 要的位置 %s 在 %s 裡找不到 %r" % (where, shown, doc.ident, tok))
             cur = cur[tok]
         elif isinstance(cur, list):
-            if not tok.isdigit() or int(tok) >= len(cur):
+            if not (tok.isascii() and tok.isdigit()) or int(tok) >= len(cur):
                 raise DirectiveError("ReferencePointerInvalid",
                                      "%s 要的位置 %s 在 %s 裡索引不到 %r" % (where, shown, doc.ident, tok))
             cur = cur[int(tok)]

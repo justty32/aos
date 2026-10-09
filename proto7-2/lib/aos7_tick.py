@@ -147,6 +147,12 @@ def plan_round(ctx, items, views, rnd, p):
     order = [i for i in valid if i.get("mode") == "once"] + [i for i in valid if i.get("mode", "each") != "once"]
     for item in order:
         name, mode = item["name"], item.get("mode", "each")
+        la = launch_of(item) if mode == "once" else None
+        # 槽的 run 就是標記的 run＝交接已開始（可能沒跑成，但不能再起第二份）；排程欄改過也一樣，先於跳過判斷（N-86）
+        if la and view(la["slot"]).run == la["run"]:
+            p.drop.append(item)     # 已經起了（或起到一半，交給 5.4 判定）：刪掉這項，不重起
+            p.changed = True
+            continue
         if item.get("enabled", True) is False or rnd < item.get("from_round", 1):
             continue
         # until_round：回合數超過它就不再起新 run（已在跑的不殺；分配者掛了，使用權照樣到期）。項目與槽留著
@@ -155,16 +161,10 @@ def plan_round(ctx, items, views, rnd, p):
             continue
         slots = aos7_task.slot_names(name, item.get("max_live", 1))
         if mode == "once":
-            la = launch_of(item)
             if la:
                 v = view(la["slot"])
                 if v.state == UNKNOWN and v.run is None:
                     p.skipped.append({"name": name, "slot": la["slot"], "why": "unknown: %s" % v.get("why")})
-                    continue
-                # 槽的 run 就是標記的 run＝交接已開始（可能沒跑成，但不能再起第二份）
-                if v.run == la["run"]:
-                    p.drop.append(item)     # 已經起了（或起到一半，交給 5.4 判定）：刪掉這項，不重起
-                    p.changed = True
                     continue
                 if expired:
                     continue                # 上次沒起成、但已過 until_round：不再起（項目留著給人看）
