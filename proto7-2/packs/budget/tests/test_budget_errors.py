@@ -32,9 +32,7 @@ class TestBudgetErrors(BudgetCase):
                 p = self.cli(self.node, cmd, 'budget/demo', '--holder', 'api', '--request', 'r1')
                 self.assertLess(time.monotonic() - start, 2)
                 self.line(p, 1, 'aos7-budget: 帳任務沒在跑')
-                obj = json.loads(p.stdout)
-                self.assertEqual(obj['outcome' if cmd == 'call' else 'result'], 'refused')
-                self.assertEqual(list(obj), ['kid', 'key', 'outcome', 'stage', 'why'] if cmd == 'call' else ['result', 'why'])
+                self.assertEqual(p.stdout, '')
                 self.assertEqual(self.snapshot(), before)
 
     def test_status_missing_bad_and_io(self):

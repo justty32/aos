@@ -235,7 +235,6 @@ def call(bud, a):
     cd, key, kid, path = paths(bud, a.call, a.holder)
     have = lambda: os.path.exists(os.path.join(cd, "receipt.json"))  # noqa: E731  有回條就只重印，不需要帳
     if not have() and not bg.ledger_running(bud) and not have():
-        emit({"outcome": "refused", "stage": "ledger", "why": "帳任務沒在跑"})
         say(bg.NOT_RUNNING % a.bud)
         return 1
     rp = os.path.join(cd, "request.json")
