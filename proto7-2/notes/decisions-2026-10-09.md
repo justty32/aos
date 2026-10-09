@@ -234,3 +234,5 @@
 - C｜B5：為了讓 brain 本機挑技能，暫時從沒帳的暫存夾呼叫 pick；下一輪給 skills pick 加「只在本機挑」選項
 - C｜RV-fix-B：llmdiag 併進 `aos7-diag --llm`（77 個真 node 逐字相同），舊程式 git mv 到 `archive/llmdiag/`、舊指令留轉址、r5 移除；讀不到檔改退 3、給錯層退 2（舊版會默默給空表）。新手 Haiku 7／luna 8
 - 待 I5｜RV-fix-B 交棒：modules 總覽刪 llmdiag 列、diag 列補 `--llm`；INDEX、tests README、code map 同步
+- 結果｜EF3：依難度挑模型（先 luna-nothink→sol-high→astra-high，被三關擋才升級）：簡單題每單 token −3.6%、模型時間 −49%、收單到結案 −28%、12／12 過；**難題反而貴 83%**——luna-nothink 看到「你沒有工具」那句直接拒做 → [ef3](play/2026-10-09-real-ai/ef3.md)
+- C｜頂層：學徒寫 aos 工具／模組的題目，升級鏈改從 sol-high 起跳；CSV 這類簡單題仍從 luna-nothink 起跳（不改「沒有工具」那句，免得 sol 的開場白問題回來）
