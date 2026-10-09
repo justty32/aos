@@ -42,11 +42,11 @@ class LlmcallCase(CoreCase):
         self.bd = self.up()
         self.req = self.request("req.json")
 
-    def up(self, budget="llm", amount=10000, holder="author", until=1000):
+    def up(self, budget="llm", amount=10000, holder="author", until=1000, gateway="llm.fake"):
         write_json(str(self.node / ".aos" / "round.json"), {"round": 5, "open": False})
         bd = self.node / "budget" / budget
         write_json(str(bd / "grant.json"), {"v": 1, "grant": "g1", "budget": budget, "holder": holder,
-                   "resource": "llm.tokens", "gateway": "llm.fake", "amount": amount,
+                   "resource": "llm.tokens", "gateway": gateway, "amount": amount,
                    "clock": "completed_tock", "from": 0, "until": until, "delegate": False})
         p = self.cli("init", "budget/" + budget, binary=BUDGET)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)

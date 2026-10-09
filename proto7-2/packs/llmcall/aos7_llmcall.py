@@ -12,12 +12,15 @@ sys.path[:0] = [os.path.join(os.path.dirname(HERE), "budget"),
                 os.path.join(os.path.dirname(os.path.dirname(HERE)), "lib")]
 import aos7_budget as bg  # noqa: E402
 import aos7_llmcall_fake  # noqa: E402
+import aos7_llmcall_litellm  # noqa: E402
 from aos7_fs import N, OK, U, LockTimeout, Unknown, fact, is_int, locked, now, write_json  # noqa: E402
 
 TRANSPORT = aos7_llmcall_fake.send
+TRANSPORT_LITELLM = aos7_llmcall_litellm.send
 CALL_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 METER = "fake.total_tokens/1"
 GATEWAY = "llm.fake"
+ENDPOINT = "fake"
 MAX_DEADLINE = 86400                # 傳輸秒數上限（也擋 inf／nan：比較為假）
 
 
@@ -84,7 +87,8 @@ def send(node, call_id, request, deadline):
 
     def work():
         try:
-            result["reply"] = TRANSPORT(node, call_id, request, deadline)
+            transport = TRANSPORT_LITELLM if "litellm" in request else TRANSPORT
+            result["reply"] = transport(node, call_id, request, deadline)
         except Exception as e:
             result["error"] = e
     thread = threading.Thread(target=work, daemon=True)
@@ -100,7 +104,7 @@ def send(node, call_id, request, deadline):
     return result["reply"]
 
 
-def done_from(raw, key, kid, digest, reserve):
+def done_from(raw, key, kid, digest, reserve, gateway_name=GATEWAY):
     """由已存 raw 算終局；未知 usage 不寫 used，拒絕不看 usage。"""
     reply = raw["reply"] if isinstance(raw.get("reply"), dict) else {}
     status = reply.get("status")
@@ -114,7 +118,7 @@ def done_from(raw, key, kid, digest, reserve):
     u = usage.get("total_tokens") if usage else None
     known = status in ("ok", "error") if isinstance(status, str) else False
     known = known and is_int(u) and u >= 0
-    done = {"stage": "done", "kid": kid, "key": key, "digest": digest, "gateway": GATEWAY,
+    done = {"stage": "done", "kid": kid, "key": key, "digest": digest, "gateway": gateway_name,
             "call_id": raw["call_id"], "outcome": outcome}
     if rejected or known:
         done["used"] = 0 if rejected else min(u, reserve)
@@ -128,6 +132,7 @@ def done_from(raw, key, kid, digest, reserve):
 
 def gateway(bud, cd, req, key, kid, path, content, deadline):
     """持 K 鎖恢復本地證據，只有無入口紀錄時可首次傳輸。"""
+    gateway_name = content["gateway"]
     digest = bg.digest_of(key, content)
     with locked(path):
         raw = load(os.path.join(cd, "raw.json"))
@@ -137,7 +142,7 @@ def gateway(bud, cd, req, key, kid, path, content, deadline):
             return {"outcome": "conflict", "why": "同 K 的准入內容不同"}, None
         if raw is not None:
             if rec is None or rec.get("stage") != "done":
-                rec = done_from(raw, key, kid, digest, req["reserve"])
+                rec = done_from(raw, key, kid, digest, req["reserve"], gateway_name)
                 write_json(path, rec)
             return rec, raw
         if rec is not None:
@@ -149,9 +154,9 @@ def gateway(bud, cd, req, key, kid, path, content, deadline):
         ledger, why = bg.read_ledger(bud)
         if ledger is None:
             raise bg.LedgerDown(why)
-        verdict, why, c = bg.judge(bud, key["holder"], "llm.tokens", GATEWAY, ledger)
+        verdict, why, c = bg.judge(bud, key["holder"], "llm.tokens", gateway_name, ledger)
         if verdict == "denied":
-            rec = {"stage": "done", "kid": kid, "key": key, "digest": digest, "gateway": GATEWAY,
+            rec = {"stage": "done", "kid": kid, "key": key, "digest": digest, "gateway": gateway_name,
                    "call_id": req["call_id"], "outcome": "denied", "used": 0, "usage": None,
                    "overrun": 0, "billing": "final", "raw_sha": None, "at": now(), "why": why}
             write_json(path, rec)
@@ -163,7 +168,7 @@ def gateway(bud, cd, req, key, kid, path, content, deadline):
             return {"outcome": "unknown", "why": "帳上沒有 K 的在途預留"}, None
         if reserved.get("digest") != digest:
             return {"outcome": "conflict", "why": "帳上預留內容不同"}, None
-        write_json(path, {"stage": "intent", "kid": kid, "key": key, "digest": digest, "gateway": GATEWAY,
+        write_json(path, {"stage": "intent", "kid": kid, "key": key, "digest": digest, "gateway": gateway_name,
                           "call_id": req["call_id"], "admitted_tock": c, "at": now()})
         test_crash(bud.node, "after-intent")
         reply = send(bud.node, req["call_id"], req["request"], deadline)
@@ -172,7 +177,7 @@ def gateway(bud, cd, req, key, kid, path, content, deadline):
                "reply": reply, "at": now()}
         write_json(os.path.join(cd, "raw.json"), raw)
         test_crash(bud.node, "after-raw")
-        rec = done_from(raw, key, kid, digest, req["reserve"])
+        rec = done_from(raw, key, kid, digest, req["reserve"], gateway_name)
         write_json(path, rec)
         test_crash(bud.node, "after-done")
         return rec, raw
@@ -196,11 +201,21 @@ def call(bud, a):
     if st != OK or not isinstance(request, dict):
         print("aos7-llmcall: request 不存在、不是 JSON 或不是物件", file=sys.stderr)
         return 2
+    gateway_name, meter, endpoint = GATEWAY, METER, ENDPOINT
+    if "litellm" in request:
+        body = request["litellm"]
+        if "fake" in request or not isinstance(body, dict) or not isinstance(body.get("model"), str) \
+                or not isinstance(body.get("messages"), list) or body.get("stream") is True:
+            print("aos7-llmcall: litellm 請求不合", file=sys.stderr)
+            return 2
+        gateway_name, meter = aos7_llmcall_litellm.GATEWAY, aos7_llmcall_litellm.METER
+        endpoint = aos7_llmcall_litellm.base_url()
+    deadline = a.deadline if a.deadline is not None else (MAX_DEADLINE if "litellm" in request else 60)
     cd, key, kid, path = paths(bud, a.call, a.holder)
     rp = os.path.join(cd, "request.json")
     with locked(rp, timeout=0):
         want = {"v": 1, "call_id": a.call, "logical": a.logical, "budget": bud.id, "holder": a.holder,
-                "req_sha": bg.sha(request), "reserve": a.reserve, "meter": METER, "endpoint": "fake", "request": request}
+                "req_sha": bg.sha(request), "reserve": a.reserve, "meter": meter, "endpoint": endpoint, "request": request}
         req = load(rp)
         if req is None:
             write_json(rp, want)
@@ -212,14 +227,14 @@ def call(bud, a):
             emit(receipt, a.out)
             return exit_of(receipt)
         test_crash(bud.node, "after-request")
-        content = {"resource": "llm.tokens", "gateway": GATEWAY, "amount": req["reserve"], "payload_sha": req["req_sha"]}
+        content = {"resource": "llm.tokens", "gateway": gateway_name, "amount": req["reserve"], "payload_sha": req["req_sha"]}
         r = bg.ask(bud, "reserve", key, content, a.patience)
         if r.get("result") in ("denied", "conflict", "bad"):
             return problem(r["result"], "reserve", r.get("why"))
         if r.get("result") not in ("reserved", "settled"):
             return problem("unknown", "reserve", r.get("why"))
         test_crash(bud.node, "after-reserve")
-        done, raw = gateway(bud, cd, req, key, kid, path, content, a.deadline)
+        done, raw = gateway(bud, cd, req, key, kid, path, content, deadline)
         if done.get("stage") != "done":
             return problem(done["outcome"], done.get("stage", "gateway"), done.get("why"))
         settle = None
@@ -272,7 +287,7 @@ def adopt(bud, a):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-llmcall", description="LLM 單次呼叫閘道（假傳輸）")
+    ap = argparse.ArgumentParser(prog="aos7-llmcall", description="LLM 單次呼叫閘道（fake／LiteLLM 傳輸）")
     sub = ap.add_subparsers(dest="cmd", required=True)
     for cmd in ("call", "status", "adopt"):
         p = sub.add_parser(cmd)
@@ -283,14 +298,14 @@ def main(argv=None):
             p.add_argument("--request", required=True)
             p.add_argument("--reserve", required=True, type=int)
             p.add_argument("--logical")
-            p.add_argument("--deadline", type=float, default=60)
+            p.add_argument("--deadline", type=float, default=None)
             p.add_argument("--patience", type=int, default=5)
             p.add_argument("--out")
         if cmd == "adopt":
             p.add_argument("--raw", required=True)
     a = ap.parse_args(argv)
     if not CALL_RE.fullmatch(a.call) or not a.holder or (a.cmd == "call" and (
-            a.reserve <= 0 or not 0 < a.deadline <= MAX_DEADLINE or a.patience < 0)):
+            a.reserve <= 0 or (a.deadline is not None and not 0 < a.deadline <= MAX_DEADLINE) or a.patience < 0)):
         print("aos7-llmcall: call_id、holder 或 reserve 不合", file=sys.stderr)
         return 2
     bud = bg.Bud(a.bud)

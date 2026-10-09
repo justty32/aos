@@ -1,0 +1,1 @@
+{"litellm":{"model":"chatgpt-gpt-6-sol","messages":[{"role":"system","content":"請依使用者要求簡短回答。"},{"role":"user","content":"請只回 OK。"}]}}
