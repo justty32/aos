@@ -165,17 +165,159 @@ class NodeTests(unittest.TestCase):
     def test_missing_init_and_template(self):
         empty = Path(self.tmp.name) / 'empty'
         empty.mkdir()
-        self.assertIn('還沒 init', self.ok(run('check', empty), 2))
+        result = run('check', empty)
+        self.ok(result, 2)
+        self.assertIn('還沒 init', result.stderr)
         self.ok(run('state', empty, '未導入'), 2)
         result = run('init', empty, AOS7_WF_HOME=str(empty / 'missing'))
         self.ok(result, 2)
         self.assertIn('AOS7_WF_HOME', result.stderr)
 
+    def error(self, result, code):
+        self.ok(result, code)
+        lines = result.stderr.splitlines()
+        self.assertEqual(len(lines), 1, result.stderr)  # 人看的只有一行
+        last = lines[0]
+        self.assertTrue(last.startswith('aos7-wfnode: '), result.stderr)
+        self.assertIn('。', last)
+        if code == 3:
+            self.assertTrue(last.startswith('aos7-wfnode: 不確定：'), last)
+        return last
+
+    def test_error_missing_init(self):
+        node = Path(self.tmp.name) / 'not initialized'
+        for args in (('check', node), ('state', node, '進度')):
+            with self.subTest(command=args[0]):
+                last = self.error(run(*args), 2)
+                self.assertIn('還沒 init', last)
+                self.assertIn(f"init '{node}'", last)
+                self.assertFalse(node.exists())
+
+    def test_error_invalid_state_line(self):
+        before = sorted(p.relative_to(self.node) for p in self.node.rglob('*'))
+        for line in ('', '  ', '兩\n行', '兩\r行'):
+            with self.subTest(line=line):
+                self.assertIn('進度要一行非空文字', self.error(run('state', self.node, line), 2))
+        self.assertEqual(before, sorted(p.relative_to(self.node) for p in self.node.rglob('*')))
+
+    def test_error_invalid_now(self):
+        for now in ('yesterday', '2026-13-40T99:99', '2026-02-30T15:30'):
+            with self.subTest(now=now):
+                last = self.error(run('state', self.node, '進度', AOS7_WFNODE_NOW=now), 2)
+                self.assertIn('AOS7_WFNODE_NOW 格式不對', last)
+        self.assertFalse((self.node / 'wf/handoffs/.state.lock').exists())
+
+    def test_error_missing_template(self):
+        node = Path(self.tmp.name) / 'new'
+        last = self.error(run('init', node, AOS7_WF_HOME=str(node / 'missing')), 2)
+        self.assertIn('AOS7_WF_HOME', last)
+        self.assertFalse(node.exists())
+
+    def test_error_invalid_node_name(self):
+        node = Path(self.tmp.name) / 'bad[name]'
+        self.assertIn('node 名只能用一般字元', self.error(run('init', node), 2))
+        self.assertFalse(node.exists())
+
+    def test_error_check_failed(self):
+        (self.node / 'extra.md').write_text('{{沒填}}\n')
+        result = run('check', self.node)
+        self.assertIn('體檢沒過', self.error(result, 1))
+        self.assertIn('extra.md:1:', result.stdout)
+        self.assertNotIn('OK：', result.stdout)
+
+    def test_success_stderr_empty(self):
+        for args in (('init', self.node), ('state', self.node, '進度'), ('check', self.node)):
+            with self.subTest(command=args[0]):
+                result = run(*args)
+                self.ok(result)
+                self.assertEqual(result.stderr, '')
+
+    def test_error_lint_unknown(self):
+        (self.node / 'wf/tools/wf-lint.sh').write_text('echo boom; exit 2\n')
+        result = run('check', self.node)
+        self.error(result, 3)
+        self.assertIn('boom', result.stdout)
+        self.assertNotIn('OK：', result.stdout)
+
+    def test_error_known_failure_over_unknown(self):
+        (self.node / 'wf/tools/wf-lint.sh').write_text('echo boom; exit 2\n')
+        with (self.node / 'wf/SESSION-LOG.md').open('a') as stream:
+            stream.write('\n- [x] 做完没刪\n')
+        result = run('check', self.node)
+        self.assertIn('體檢沒過', self.error(result, 1))
+        self.assertIn('做完就刪掉這行', result.stdout)
+
+    @unittest.skipIf(os.geteuid() == 0, 'root 不受目錄寫入權限限制')
+    def test_error_oserror(self):
+        handoffs = self.node / 'wf/handoffs'
+        mode = handoffs.stat().st_mode & 0o777
+        handoffs.chmod(0o500)
+        try:
+            result = run('state', self.node, '進度')
+            self.assertTrue(result.stderr.startswith('aos7-wfnode: 不確定：'), result.stderr)
+            last = self.error(result, 3)
+            self.assertIn('讀寫檔案出錯', last)
+            self.assertIn('先跑 aos7-wfnode state', last)  # 可能已記上，先看再重記
+        finally:
+            handoffs.chmod(mode)
+
+    def test_error_invalid_utf8(self):
+        (self.node / 'extra.md').write_bytes(b'\xff')
+        self.assertIn('讀寫檔案出錯', self.error(run('check', self.node), 3))
+
+    def test_error_bad_flavor(self):
+        node = Path(self.tmp.name) / 'parent/fresh'
+        result = run('init', node, '--flavor', 'no-such-flavor')
+        self.assertIn('--flavor', self.error(result, 2))
+        self.assertFalse(node.exists())
+
+    def test_error_line_break_in_path(self):
+        node = Path(self.tmp.name) / 'a\nb'
+        self.assertIn('還沒 init', self.error(run('check', node), 2))
+
+    def test_error_bad_argument(self):
+        self.assertIn('init／state／check', self.error(run('bogus'), 2))
+
+    def test_error_init_script_failed(self):
+        home = Path(self.tmp.name) / 'template'
+        (home / 'tools').mkdir(parents=True)
+        (home / 'tools/wf-init.sh').write_text('printf script-error >&2; exit 7\n')
+        node = Path(self.tmp.name) / 'new'
+        result = run('init', node, AOS7_WF_HOME=str(home))
+        last = self.error(result, 1)
+        self.assertIn('退出碼 7', last)
+        self.assertIn('script-error', result.stdout)
+        self.assertFalse(node.exists())
+
+    def test_error_init_lint_verdicts(self):
+        tool = self.node / 'wf/tools/wf-lint.sh'
+        for script, code, message in (
+                ('echo boom; exit 2', 3, '檔案裝好了，但連結檢查沒跑完'),
+                ('echo BROKEN; echo "TOTAL broken=1"; exit 1', 1, '裝好了但有壞連結')):
+            with self.subTest(code=code):
+                tool.write_text(script + '\n')
+                self.assertIn(message, self.error(run('init', self.node), code))
+
+    def test_error_init_residue(self):
+        (self.node / 'extra.md').write_text('{{未關閉\n')
+        result = run('init', self.node)
+        self.assertIn('還有 1 處 {{ 沒填好', self.error(result, 1))
+        self.assertIn('還有 1 處 {{ 沒填好', result.stdout)
+
     def test_usage_errors(self):
-        self.ok(run(), 2)
-        self.ok(run('unknown'), 2)
-        self.ok(run('check', self.node, '--json'), 2)
+        self.error(run(), 2)
+        self.error(run('unknown'), 2)
+        self.error(run('check', self.node, '--json'), 2)
         self.ok(run('-h'))
+
+
+class SourceTests(unittest.TestCase):
+    def test_no_legacy_error_phrase(self):
+        phrase = ''.join(map(chr, (0x7121, 0x6cd5, 0x5b8c, 0x6210)))
+        sources = [MODULE / 'aos7-wfnode', *MODULE.rglob('*.py')]
+        for path in sources:
+            with self.subTest(path=path.name):
+                self.assertNotIn(phrase, path.read_text(encoding='utf-8'))
 
 
 if __name__ == '__main__':

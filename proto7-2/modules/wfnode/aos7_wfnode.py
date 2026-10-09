@@ -7,11 +7,12 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 
 from wfnode_fill import fill_text
 from wfnode_judge import resolve
-from wfnode_state import NEXT, atomic_write, state
+from wfnode_state import NEXT, atomic_write, fail, state
 
 
 def markdowns(node):
@@ -72,20 +73,31 @@ def supplement(node):
 
 
 def lint(node):
-    result = subprocess.run(['bash', str(node / 'wf/tools/wf-lint.sh'), str(node)],
-                            capture_output=True, text=True)
+    try:
+        result = subprocess.run(['bash', str(node / 'wf/tools/wf-lint.sh'), str(node)],
+                                capture_output=True, text=True)
+    except OSError as error:  # 起不了 lint＝不知道有沒有壞連結，其餘檢查照做
+        result = subprocess.CompletedProcess([], 127, '', f'wf-lint 起不來：{error}\n')
     output = result.stdout + result.stderr
     totals = re.findall(r'TOTAL broken=(\d+)', output)
-    failed = result.returncode != 0 or not totals or int(totals[-1]) > 0
-    if failed:
+    verdict = 'unknown'
+    if totals:
+        total = int(totals[-1])
+        if result.returncode == 0 and total == 0:
+            verdict = 'ok'
+        elif result.returncode == 1 and total > 0:
+            verdict = 'broken'
+    if verdict == 'broken':
         broken = [line for line in output.splitlines() if 'BROKEN' in line]
-        print('\n'.join(broken) if broken else output or '工作流檢查未完成')
+        print('\n'.join(broken) if broken else output)
+    elif verdict == 'unknown':
+        print(output or '（wf-lint 沒有輸出）', end='' if output.endswith('\n') else '\n')
     warnings = any(int(value) > 0 for value in re.findall(
         r'\b(?:oversize|biglist|biglist_links|querycmd)=(\d+)',
         '\n'.join(line for line in output.splitlines() if 'SUMMARY' in line)))
-    if not failed and warnings:
+    if verdict == 'ok' and warnings:
         print(output, end='' if output.endswith('\n') else '\n')
-    return failed
+    return verdict
 
 
 def scan(node, marker):
@@ -99,13 +111,12 @@ def init(node, flavor=None):
     home = Path(os.environ.get('AOS7_WF_HOME', '~/repo/workflows')).expanduser()
     script = home / 'tools/wf-init.sh'
     if not script.is_file():
-        import sys
-        print('找不到 workflows，請設 AOS7_WF_HOME 或 clone workflows。', file=sys.stderr)
-        return 2
+        return fail(2, f'找不到工作流模板 {script}',
+                    '先 git clone git@github.com:justty32/workflows.git ~/repo/workflows，或設 AOS7_WF_HOME=<模板路徑>')
     if re.search(r'[\[\]{}()<>|`*\\\r\n]', node.name):
-        import sys
-        print('node 名只能用一般字元', file=sys.stderr)
-        return 2
+        return fail(2, 'node 名只能用一般字元（不能有 []{}()<>| 等符號）',
+                    '換個名字，例：aos7-wfnode init /tmp/mynode')
+    created = not node.exists()
     node.mkdir(parents=True, exist_ok=True)
     if (node / 'AGENTS.md').exists():
         print('已導入過，只補缺檔')
@@ -115,23 +126,40 @@ def init(node, flavor=None):
         temp = node / '.wfnode-tmp'
         shutil.rmtree(temp, ignore_errors=True)
         staged = temp / node.name
+        failed = 0
         try:
             command = ['bash', str(script), '--target', str(staged), '--non-invasive', 'wf']
             command += ['--flavor', 'dev,heartbeat,multi-agent' if flavor is None else flavor]
             result = subprocess.run(command + ['--quiet'], capture_output=True, text=True)
             if result.returncode:
-                import sys
-                print(result.stderr, end='', file=sys.stderr)
-                return 1
-            resolve(staged / 'wf')  # 模板原文的預設段由工具自動照 aos node 事實改好，不必讓人看
-            fill_node(staged, node.name)
-            supplement(staged)
-            for item in sorted(staged.iterdir(), key=lambda p: (p.name == 'AGENTS.md', p.name)):
-                merge_missing(item, node / item.name)
+                failed = result.returncode
+            else:
+                resolve(staged / 'wf')  # 模板原文的預設段由工具自動照 aos node 事實改好，不必讓人看
+                fill_node(staged, node.name)
+                supplement(staged)
+                for item in sorted(staged.iterdir(), key=lambda p: (p.name == 'AGENTS.md', p.name)):
+                    merge_missing(item, node / item.name)
         finally:
             shutil.rmtree(temp, ignore_errors=True)
-    if lint(node):
-        return 1
+        if failed:
+            if created:
+                try:
+                    node.rmdir()  # 本次新建的空資料夾收回；不空就留著
+                except OSError:
+                    pass
+            output = (result.stdout + result.stderr).rstrip('\n')
+            if output:
+                print(output)  # 模板腳本的明細放 stdout；stderr 只留一行
+            if failed == 2:
+                return fail(2, '模板安裝腳本不收這些參數（多半是 --flavor 寫錯），node 沒動',
+                            '看上面明細改參數，例：aos7-wfnode init /tmp/mynode --flavor dev')
+            return fail(1, f'模板安裝腳本失敗（退出碼 {failed}），node 沒動', '照上面明細處理後再跑 init')
+    verdict = lint(node)
+    if verdict == 'broken':
+        return fail(1, '裝好了但有壞連結（見上面 BROKEN 行）',
+                    f'修好後跑 aos7-wfnode check {shlex.quote(str(node))}')
+    if verdict == 'unknown':
+        return fail(3, '不確定：檔案裝好了，但連結檢查沒跑完', '照原樣再跑一次 init（只補缺的）')
     unknown = sum(line.count('（未定：') for _, _, line in scan(node, '（未定：'))
     decisions = scan(node, '〔導入判斷〕')
     residue = scan(node, '{{')
@@ -146,14 +174,16 @@ def init(node, flavor=None):
         for path, number, _ in decisions:
             print(f'{path}:{number}')
     print(f'下一步：aos7-wfnode check {shlex.quote(str(node))}')
-    return int(bool(residue))
+    if left:
+        return fail(1, f'還有 {left} 處 {{{{ 沒填好', '再跑一次 init 會補')
+    return 0
 
 
 def check(node):
     if not (node / 'wf/tools/wf-lint.sh').is_file():
-        print('還沒 init，先跑：aos7-wfnode init <node>')
-        return 2
-    failed = lint(node)
+        return fail(2, f'{node} 還沒 init', f'先跑：aos7-wfnode init {shlex.quote(str(node))}')
+    verdict = lint(node)
+    failed = verdict == 'broken'
     counts = []
     for name in ('SESSION-LOG.md', 'WAIT_USER.md'):
         path = node / 'wf' / name
@@ -174,11 +204,16 @@ def check(node):
             print(f'{path}:{number}: {line}')
             failed = True
     print(f'待辦清單：AI 手上 {counts[0]} 件（wf/SESSION-LOG.md）、等人做 {counts[1]} 件（wf/WAIT_USER.md）')
-    if not failed:
+    if failed:
+        return fail(1, '體檢沒過', '照上面每行的提示改好，再跑 check')
+    if verdict == 'unknown':
+        return fail(3, '不確定：連結檢查（wf-lint）沒跑完，不知道有沒有壞連結；資料夾沒動',
+                    '照原樣再跑一次 check；還是一樣就看上面輸出')
+    if verdict == 'ok':
         unknown = sum(line.count('（未定：') for _, _, line in scan(node, '（未定：'))
         print(f'OK：資料夾沒壞（連結都通、清單沒有做完沒刪的、模板記號都處理了）。'
               f'「（未定：…）」空格 {unknown} 處不在檢查範圍')
-    return int(failed)
+    return 0
 
 
 def fill_node(node, name):

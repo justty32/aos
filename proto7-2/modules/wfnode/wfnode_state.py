@@ -3,7 +3,16 @@ import datetime as dt
 import fcntl
 import os
 import re
+import shlex
+import sys
 import tempfile
+
+
+def fail(code, what, how):
+    """錯誤一行：stderr 印「aos7-wfnode: 發生什麼。怎麼辦」，回傳退出碼。"""
+    message = f'aos7-wfnode: {what}。{how}'
+    print(message.replace('\r', '\\r').replace('\n', '\\n'), file=sys.stderr)
+    return code
 
 
 NEXT = '# NEXT-SESSION — 續行點\n\n下一次開場先讀最新一份 STATE；`aos7-wfnode state` 會更新本檔第一行連結\n\n（尚無）\n'
@@ -40,18 +49,19 @@ def show(node):
 
 def state(node, line=None):
     if not (node / 'wf/tools/wf-lint.sh').is_file():
-        print('還沒 init，先跑：aos7-wfnode init <node>')
-        return 2
+        return fail(2, f'{node} 還沒 init', f'先跑：aos7-wfnode init {shlex.quote(str(node))}')
     if line is None:
         return show(node)
     if not line.strip() or '\n' in line or '\r' in line:
-        print('請給一行非空的進度')
-        return 2
+        return fail(2, '進度要一行非空文字',
+                    f"例：aos7-wfnode state {shlex.quote(str(node))} '寫完第一版，下一步跑測試'")
     override = os.environ.get('AOS7_WFNODE_NOW')
-    if override and not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}', override):
-        print('AOS7_WFNODE_NOW 請用 YYYY-MM-DDTHH:MM')
-        return 2
-    now = dt.datetime.fromisoformat(override) if override else dt.datetime.now()
+    try:
+        if override and not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}', override):
+            raise ValueError('invalid timestamp')
+        now = dt.datetime.fromisoformat(override) if override else dt.datetime.now()
+    except ValueError:
+        return fail(2, 'AOS7_WFNODE_NOW 格式不對', '用 YYYY-MM-DDTHH:MM，例：2026-10-09T15:30')
     day, time = now.strftime('%Y-%m-%d'), now.strftime('%H:%M')
     handoffs = node / 'wf/handoffs'
     handoffs.mkdir(parents=True, exist_ok=True)
