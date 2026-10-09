@@ -16,5 +16,5 @@ bash $S/scripts/run.sh -k restart            # 只跑名字含 restart 的
 ```
 
 - 退出碼 0＝全綠、1＝有失敗；回報時給測試數與退出碼。
-- 全機同時最多 3 份全套：跑全套前先 `pgrep -fc run_all.py`，≥3 就等。
+- 全機同時最多 3 份全套：跑全套前先數 `ps -eo args | grep -c '^/usr/bin/python3 \(-B \)\?proto7-2/tests/run_all.py'`，≥3 就等（別用 `pgrep -fc`，會多算）。
 - 測試清單與慣例見 proto7-2/tests/README.md。
