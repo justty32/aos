@@ -1,0 +1,526 @@
+"""compact 的真 CLI、故障恢復與帳任務整合測試。"""
+import fcntl
+import importlib.util
+import json
+import os
+from pathlib import Path
+import re
+import signal
+import subprocess
+import sys
+import unittest
+from unittest import mock
+
+TOP = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(TOP / 'tests'))
+from base import CoreCase  # noqa: E402
+import _proc  # noqa: E402
+from aos7_fs import read_json, write_json  # noqa: E402
+
+CLI = TOP / 'modules/compact/aos7-compact'
+BUDGET = TOP / 'packs/budget/bin/aos7-budget'
+EVENTS = TOP / 'modules/events/aos7-events'
+
+
+def tree(node):
+    return {str(p.relative_to(node)): p.read_bytes() for p in node.rglob('*') if p.is_file()}
+
+
+def stable(text):
+    # 每個測試的 UTC job 不同，摘要本文與保留原文仍須完全一致。
+    return re.sub(r'c\d{14}-[0-9a-f]{8}', '<job>', text)
+
+
+class TestCompact(CoreCase):
+    """〔compact〕open 原文、整理界線與每個換檔故障點。"""
+
+    def setUp(self):
+        super().setUp()
+        self.node = Path(self.root) / 'n'
+        self.node.mkdir()
+
+    def cli(self, *args, rc=0, env=None, binary=CLI, node=None):
+        p = subprocess.run([sys.executable, str(binary), *map(str, args)], cwd=node or self.node,
+                           capture_output=True, text=True, timeout=20,
+                           env=dict(os.environ, **(env or {})))
+        self.assertEqual(p.returncode, rc, p.stdout + p.stderr)
+        if rc >= 0:
+            self.assertIsInstance(json.loads(p.stdout.strip().splitlines()[-1]), dict)
+        return p
+
+    def now(self, *args, **kw):
+        node = kw.pop('node', self.node)
+        return self.cli('now', node, *args, node=node, **kw)
+
+    def config(self, node=None, **kw):
+        node = node or self.node
+        cfg = dict(files=['journal.jsonl'], max_bytes=1000000, keep_recent=10,
+                   on_stage_change=True, summary_max_chars=1200, llm=None)
+        cfg.update(kw)
+        write_json(str(node / 'compact.json'), cfg)
+
+    def fixture(self, node=None, suffix='jsonl'):
+        node = node or self.node
+        name = 'journal.' + suffix
+        self.config(node, files=[name])
+        old, opened, recent, rows = [], [], [], []
+        for i in range(200):
+            text = '%03d 已完成，保留檔名 file-%03d.txt 與數字 %d。' % (i, i, i) + '原始長文' * 45
+            line = (json.dumps({'text': text}, ensure_ascii=False) + '\n' if suffix == 'jsonl'
+                    else '- ' + text + '\n  續行原文\n')
+            old.append(line)
+            rows.append(line)
+            if i % 10 == 0:
+                line = (json.dumps({'open': True, 'text': '待辦 %d 逐字保留' % i}, ensure_ascii=False) + '\n'
+                        if suffix == 'jsonl' else '- [ ] 待辦 %d 逐字保留\n  不可遺失的續行\n' % i)
+                opened.append(line)
+                rows.append(line)
+        for i in range(10):
+            line = (json.dumps({'recent': i}, ensure_ascii=False) + '\n' if suffix == 'jsonl'
+                    else '* 最近 %d\n  最近續行\n' % i)
+            recent.append(line)
+            rows.append(line)
+        if suffix == 'md':
+            rows.insert(0, '# 記憶\n\n段落骨架\n| 表 | 格 |\n')
+            rows.insert(101, '\n## 中段\n原地骨架\n\n')
+        path = node / name
+        path.write_text(''.join(rows), encoding='utf-8')
+        return path, old, opened, recent
+
+    def assert_compacted(self, path, old, opened, recent):
+        text = path.read_text()
+        for line in opened + recent:
+            self.assertEqual(text.count(line), 1)
+        self.assertEqual(sum(text.count(line) for line in opened), 20)
+        self.assertLessEqual(path.stat().st_size, len(''.join(old + opened + recent).encode()) * .4)
+        archives = list((path.parent / 'compact/archive').glob('*'))
+        self.assertEqual(len(archives), 1)
+        self.assertEqual(archives[0].read_text(), ''.join(old))
+        if path.suffix == '.jsonl':
+            summaries = [json.loads(line) for line in text.splitlines() if line.strip()]
+            self.assertEqual(sum(r.get('compact') == 'summary' for r in summaries), 1)
+        else:
+            self.assertEqual(text.count('（摘要 '), 1)
+            for skeleton in ['# 記憶\n\n段落骨架\n| 表 | 格 |\n', '\n## 中段\n原地骨架\n\n']:
+                self.assertIn(skeleton, text)
+
+    def test_open_archive_recent_jsonl_and_md(self):
+        for suffix in ['jsonl', 'md']:
+            with self.subTest(suffix=suffix):
+                node = self.node / suffix
+                node.mkdir()
+                path, old, opened, recent = self.fixture(node, suffix)
+                self.now('--force', node=node)
+                self.assert_compacted(path, old, opened, recent)
+
+    def module(self):
+        spec = importlib.util.spec_from_file_location('compact_review_test', CLI.with_name('aos7_compact.py'))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_forget_crash_retry_only_once(self):
+        for point in ['pending', 'summary', 'archive', 'replace']:
+            for first, last in [(1, 2), (5, 6), (1, 6)]:
+                with self.subTest(point=point, first=first, last=last):
+                    node = self.node / ('%s-%s-%s' % (point, first, last))
+                    node.mkdir()
+                    self.config(node)
+                    path = node / 'journal.jsonl'
+                    rows = [json.dumps({'n': i}) + '\n' for i in range(6)]
+                    path.write_text(''.join(rows))
+                    args = ('forget', node, '--file', path.name, '--from', first, '--to', last)
+                    self.cli(*args, rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-' + point})
+                    self.cli(*args)
+                    self.assertEqual(path.read_text(), ''.join(rows[:first - 1] + rows[last:]))
+                    self.assertEqual(len(list((node / 'compact/archive').glob('*'))), 1)
+                    self.assertEqual(len((node / 'compact/log.jsonl').read_text().splitlines()), 1)
+
+    def test_forget_other_pending_requires_review(self):
+        path, *_ = self.fixture()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-summary'})
+        reply = self.cli('forget', self.node, '--file', path.name, '--from', 1, '--to', 2, rc=3)
+        self.assertIn('請重看 --dry-run 再 forget', reply.stdout)
+        self.assertIn('"compact": "summary"', path.read_text())
+
+    def test_write_lock_waits_and_keeps_append(self):
+        path, *_ = self.fixture()
+        work = self.node / 'compact'
+        work.mkdir()
+        ready, release = work / 'ready', work / 'release'
+        writer = subprocess.Popen([sys.executable, '-c', """
+import fcntl, sys, time
+from pathlib import Path
+work, path = map(Path, sys.argv[1:])
+with (work / 'write.lock').open('a') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    (work / 'ready').touch()
+    while not (work / 'release').exists(): time.sleep(.01)
+    with path.open('a') as stream: stream.write('{"open":true,"added":1}\\n')
+""", str(work), str(path)], start_new_session=True)
+        _proc.track(self, writer, group=True)
+        self.wait_for(ready.exists)
+        process = subprocess.Popen([sys.executable, str(CLI), 'now', str(self.node), '--force'],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+        _proc.track(self, process, group=True)
+        self.wait_for(lambda: read_json(str(work / 'pending.json'), {}).get('summary') or process.poll() is not None)
+        self.assertIsNone(process.poll())
+        self.assertFalse((work / 'archive').exists())
+        release.touch()
+        self.assertEqual(writer.wait(timeout=5), 0)
+        out, err = process.communicate(timeout=10)
+        self.assertEqual(process.returncode, 0, out + err)
+        self.assertTrue(path.read_text().endswith('{"open":true,"added":1}\n'))
+
+    def test_unicode_open_physical_lines_and_stage(self):
+        module = self.module()
+        for suffix in ['jsonl', 'md']:
+            for char in ['\u2028', '\u0085']:
+                with self.subTest(suffix=suffix, char=char):
+                    path = self.node / ('journal.' + suffix)
+                    opened = (json.dumps({'open': True, 'text': 'first' + char + '- second'}, ensure_ascii=False)
+                              if suffix == 'jsonl' else '- [ ] first' + char + '- second') + '\r\n'
+                    old = ['{"n":0}\r\n', '{"n":1}\r\n'] if suffix == 'jsonl' else ['- zero\r\n', '- one\r\n']
+                    path.write_bytes((opened + ''.join(old)).encode())
+                    self.config(files=[path.name], keep_recent=0)
+                    rec = [r for r in module.records(opened, path.suffix) if r['index'] is not None]
+                    self.assertEqual(len(rec), 1)
+                    self.assertTrue(rec[0]['open'])
+                    self.cli('forget', self.node, '--file', path.name, '--from', 1, '--to', 1, rc=2)
+                    self.now('--force')
+                    self.assertIn(opened.encode(), path.read_bytes())
+        md = self.node / 'stage.md'
+        md.write_text('## active\ntext\u2028- fake record\n## next\n')
+        self.config(files=[md.name])
+        self.assertEqual(module.stage_count(self.node, module.config(self.node)), 0)
+        md.write_text('## active\n- one\u2028## 假標題\n- two\n')
+        self.assertEqual(module.stage_count(self.node, module.config(self.node)), 2)
+
+    def test_replace_crash_then_append_finishes_log_event(self):
+        path, *_ = self.fixture()
+        events = self.node / 'events'
+        events.mkdir()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-replace'})
+        pending = read_json(str(self.node / 'compact/pending.json'))
+        added = '{"open":true,"text":"新的一"}\n{"new":2}\n'
+        with path.open('a') as stream:
+            stream.write(added)
+        self.now()
+        log = [json.loads(s) for s in (self.node / 'compact/log.jsonl').read_text().splitlines()]
+        self.assertEqual([e['job'] for e in log], [pending['job']])
+        self.assertNotIn('abandoned', str(log))
+        self.assertTrue(path.read_text().endswith(added))
+        reply = self.cli('read', '--events', events, '--kind', 'compact.done', binary=EVENTS)
+        self.assertEqual(len(json.loads(reply.stdout.splitlines()[-1])['records']), 1)
+
+    def test_stage_due_survives_abandoned_pending(self):
+        md = self.node / 'stage.md'
+        md.write_text('## active\n- one\n- two\n- three\n')
+        path = self.node / 'journal.jsonl'
+        path.write_text(''.join(json.dumps({'n': n}) + '\n' for n in range(15)))
+        self.config(files=[md.name, path.name])
+        self.now()
+        md.write_text('## active\n')
+        self.now(rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-summary'})
+        rewritten = path.read_text().replace('"n": 0', '"n": 99')
+        path.write_text(rewritten)
+        self.now()
+        self.assertEqual(path.read_text(), rewritten)
+        self.assertTrue(read_json(str(self.node / 'compact/state.json'))['stage_due'])
+        self.now()
+        self.assertNotEqual(path.read_text(), rewritten)
+        self.assertFalse(read_json(str(self.node / 'compact/state.json'))['stage_due'])
+
+    def test_long_node_event_and_pub_failure_reason(self):
+        node = self.node / ('n' * 96)
+        node.mkdir()
+        self.fixture(node)
+        (node / 'events').mkdir()
+        self.now('--force', node=node)
+        log = json.loads((node / 'compact/log.jsonl').read_text())
+        reply = self.cli('read', '--events', node / 'events', binary=EVENTS)
+        self.assertEqual(json.loads(reply.stdout.splitlines()[-1])['records'][0]['event_id'], 'compact/' + log['job'])
+        module = self.module()
+        self.fixture()
+        (self.node / 'events').mkdir()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-replace'})
+        pending = read_json(str(self.node / 'compact/pending.json'))
+        failed = subprocess.CompletedProcess([], 2, 'progress\n{"why":"拒絕測試事件"}\n', 'stderr 診斷')
+        with mock.patch.object(module.subprocess, 'run', return_value=failed):
+            with self.assertRaises(module.Failure) as caught:
+                module.resume(self.node, self.node / 'compact', pending)
+        self.assertIn('拒絕測試事件', str(caught.exception))
+        self.assertIn('stderr 診斷', str(caught.exception))
+
+    def test_sweep_dead_json_and_compact_tmp(self):
+        path, *_ = self.fixture()
+        work = self.node / 'compact'
+        (work / 'archive').mkdir(parents=True)
+        leftovers = [work / '.pending.json.tmp.2147483647', work / 'archive/.old.jsonl.tmp.2147483647',
+                     path.with_name('.journal.jsonl.compact-tmp'), work / 'archive/.old.jsonl.compact-tmp']
+        for tmp in leftovers:
+            tmp.write_text('私人原文')
+        self.now()
+        self.assertFalse(any(tmp.exists() for tmp in leftovers))
+
+    def test_litellm_presence_selects_transport_without_source_scan(self):
+        module = self.module()
+        path, *_ = self.fixture()
+        self.config(llm={'gateway': 'litellm'})
+        work = self.node / 'compact'
+        work.mkdir()
+        cfg = module.config(self.node)
+        p = module.pending(work, path.name, path.read_text(), [0, 1], 'force', cfg)
+        real_is_file = Path.is_file
+        def present(path):
+            return path.name == 'aos7_llmcall_litellm.py' or real_is_file(path)
+        result = work / ('result-' + p['job'] + '.json')
+        write_json(str(result), {'text': '真傳輸摘要'})
+        with mock.patch.object(Path, 'is_file', present), mock.patch.object(module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
+            self.assertEqual(module.summarize(self.node, work, p), '真傳輸摘要')
+        with mock.patch.object(Path, 'is_file', return_value=False), mock.patch.object(module.subprocess, 'run', side_effect=AssertionError('缺傳輸不得呼叫')):
+            with self.assertRaises(module.Failure) as caught:
+                module.summarize(self.node, work, p)
+        self.assertEqual(caught.exception.code, 3)
+
+    def test_human_lines_before_json_for_each_file(self):
+        self.fixture()
+        md = self.node / 'other.md'
+        md.write_text('- one\n- two\n- three\n')
+        self.config(files=['journal.jsonl', md.name], keep_recent=0)
+        dry = self.now('--dry-run', '--force').stdout.splitlines()
+        self.assertRegex(dry[0], r'journal.jsonl：230 則，open 20，會摘掉 210 則')
+        self.assertIn('other.md：3 則', dry[1])
+        done = self.now('--force').stdout.splitlines()
+        self.assertRegex(done[0], r'journal.jsonl：230 則 → 21 則（摘掉 210、open 20 全留）')
+        self.assertIn('bytes，原文在 compact/archive/', done[1])
+        preview = self.cli('forget', self.node, '--file', md.name, '--from', 1, '--to', 1, '--dry-run')
+        self.assertIn('other.md：會忘掉 1 則，open 0', preview.stdout.splitlines()[0])
+        reply = self.cli('forget', self.node, '--file', md.name, '--from', 1, '--to', 1)
+        self.assertIn('other.md：1 則 → 0 則（忘掉 1', reply.stdout.splitlines()[0])
+        self.assertIn('不需要整理', self.now('--dry-run').stdout)
+
+    def test_readme_first_run_demo(self):
+        readme = CLI.with_name('README.md').read_text()
+        section = readme.split('## 第一次跑')[1].split('## 接著試')[0]
+        shell = section.split(chr(96) * 3 + 'sh')[1].split(chr(96) * 3)[0]
+        self.assertEqual(len([s for s in shell.splitlines() if s.startswith('python3 ')]), 3)
+        reply = subprocess.run(['sh', '-c', shell], cwd=TOP.parent, capture_output=True, text=True, timeout=20)
+        self.assertEqual(reply.returncode, 0, reply.stdout + reply.stderr)
+        self.assertIn('已造好', reply.stdout)
+        self.assertIn('220 則，open 20，會摘掉 200 則', reply.stdout)
+        self.assertIn('220 則 → 21 則（摘掉 200、open 20 全留），102580 → 3964 bytes', reply.stdout)
+        self.assertLessEqual(len(readme.encode()), 8192)
+        concepts = readme.split('## 五個概念')[1].split('node 沒有')[0]
+        self.assertEqual(len(re.findall(r'^\d\. ', concepts, re.M)), 5)
+
+    def test_size_and_dry_run_tree(self):
+        path, *_ = self.fixture()
+        before = tree(self.node)
+        self.now('--dry-run', '--force')
+        self.assertEqual(tree(self.node), before)
+        self.now()
+        self.assertEqual(path.read_bytes(), before[path.name])
+        self.config(max_bytes=path.stat().st_size)
+        self.now()
+        self.assertEqual(path.read_bytes(), before[path.name])
+        self.config(max_bytes=path.stat().st_size - 1)
+        self.now()
+        self.assertNotEqual(path.read_bytes(), before[path.name])
+
+    def test_stage_change_compacts_small_journal(self):
+        md = self.node / 'SESSION-LOG.md'
+        md.write_text('# 進度\n## 現役\n- 一\n- 二\n- 三\n## 下段\n- 不算現役\n')
+        journal = self.node / 'journal.jsonl'
+        journal.write_text(''.join(json.dumps({'n': n}) + '\n' for n in range(15)))
+        self.config(files=[md.name, journal.name])
+        old = journal.read_bytes()
+        self.now()
+        self.assertEqual(journal.read_bytes(), old)
+        md.write_text('# 進度\n## 現役\n## 下段\n- 不算現役\n')
+        self.now()
+        self.assertNotEqual(journal.read_bytes(), old)
+
+    def test_crash_each_point_three_times(self):
+        reference = self.node / 'reference'
+        reference.mkdir()
+        path, *_ = self.fixture(reference)
+        self.now('--force', node=reference)
+        want = stable(path.read_text())
+        for point in ['pending', 'summary', 'archive', 'replace']:
+            for repeat in range(3):
+                with self.subTest(point=point, repeat=repeat):
+                    node = self.node / ('%s-%d' % (point, repeat))
+                    node.mkdir()
+                    path, old, opened, recent = self.fixture(node)
+                    self.now('--force', node=node, rc=-signal.SIGKILL,
+                             env={'AOS7_TEST_CRASH': 'compact-after-' + point})
+                    self.now(node=node)
+                    self.assertEqual(stable(path.read_text()), want)
+                    self.assert_compacted(path, old, opened, recent)
+                    self.assertFalse((node / 'compact/pending.json').exists())
+
+    def test_append_during_summary_is_retained(self):
+        path, old, opened, recent = self.fixture()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-summary'})
+        added = '{"new":1}\n{"new":2}\n'
+        with path.open('a') as f:
+            f.write(added)
+        self.now()
+        self.assertTrue(path.read_text().endswith(added))
+        self.assert_compacted(path, old, opened, recent)
+
+    def test_rewrite_discards_pending_then_replans(self):
+        path, *_ = self.fixture()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-summary'})
+        rewritten = path.read_text().replace('已完成', '別人改寫', 1)
+        path.write_text(rewritten)
+        self.now()
+        self.assertEqual(path.read_text(), rewritten)
+        self.assertFalse((self.node / 'compact/pending.json').exists())
+        self.now('--force')
+        self.assertNotEqual(path.read_text(), rewritten)
+
+    def test_forget_range_open_refusal_and_override(self):
+        path = self.node / 'journal.jsonl'
+        lines = [json.dumps({'n': n, 'open': n == 6}) + '\n' for n in range(10)]
+        path.write_text(''.join(lines))
+        self.cli('forget', self.node, '--file', path.name, '--from', 1, '--to', 5, '--dry-run')
+        self.assertEqual(path.read_text(), ''.join(lines))
+        self.cli('forget', self.node, '--file', path.name, '--from', 1, '--to', 5)
+        self.assertEqual(path.read_text(), ''.join(lines[5:]))
+        self.assertEqual(next((self.node / 'compact/archive').glob('*')).read_text(), ''.join(lines[:5]))
+        before = tree(self.node)
+        self.cli('forget', self.node, '--file', path.name, '--from', 1, '--to', 2, rc=2)
+        self.assertEqual(tree(self.node), before)
+        self.cli('forget', self.node, '--file', path.name, '--from', 1, '--to', 2, '--include-open')
+        self.assertEqual(path.read_text(), ''.join(lines[7:]))
+        self.cli('forget', self.node, '--file', path.name, '--from', 0, '--to', 2, rc=2)
+
+    def test_bad_config_and_lock(self):
+        (self.node / 'compact.json').write_text('{壞JSON')
+        self.now(rc=2)
+        self.config()
+        directory = self.node / 'compact'
+        directory.mkdir(exist_ok=True)
+        with (directory / 'lock').open('w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.now(rc=3)
+
+    def test_watch_two_tocks(self):
+        path, *_ = self.fixture()
+        self.config(max_bytes=1)
+        task = self.node / '.aos/tasks/compact'
+        task.mkdir(parents=True)
+        env = dict(os.environ, AOS7_ROOT=self.root, AOS7_NODE=str(self.node), AOS7_NODE_ID='n',
+                   AOS7_TASK=str(task), AOS7_TID='compact', AOS7_RUN='1')
+        p = subprocess.Popen([sys.executable, str(CLI), 'watch', '--rounds', '2'], env=env,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+        _proc.track(self, p, group=True)
+        write_json(str(task / 'tock.json'), {'round': 1, 'run': 1})
+        self.wait_for(lambda: '摘要' in path.read_text(), msg='watch 沒有處理第一回合')
+        write_json(str(task / 'tock.json'), {'round': 2, 'run': 1})
+        out, err = p.communicate(timeout=10)
+        self.assertEqual(p.returncode, 0, out + err)
+        self.assertIsInstance(json.loads(out.strip().splitlines()[-1]), dict)
+
+    def test_watch_recovers_before_first_tock(self):
+        path, *_ = self.fixture()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-summary'})
+        task = self.node / '.aos/tasks/compact'
+        task.mkdir(parents=True)
+        env = dict(os.environ, AOS7_ROOT=self.root, AOS7_NODE=str(self.node), AOS7_NODE_ID='n',
+                   AOS7_TASK=str(task), AOS7_TID='compact', AOS7_RUN='1')
+        p = subprocess.Popen([sys.executable, str(CLI), 'watch', '--rounds', '1'], env=env,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+        _proc.track(self, p, group=True)
+        self.wait_for(lambda: not (self.node / 'compact/pending.json').exists(),
+                      msg='watch 啟動後未收到 tock，沒有先恢復 pending')
+        self.assertIn('摘要', path.read_text())
+        self.assertFalse((task / 'tock.json').exists())
+        self.assertIsNone(p.poll())
+        write_json(str(task / 'tock.json'), {'round': 1, 'run': 1})
+        out, err = p.communicate(timeout=10)
+        self.assertEqual(p.returncode, 0, out + err)
+        self.assertIsInstance(json.loads(out.strip().splitlines()[-1]), dict)
+
+    def test_events_same_job_is_one_record(self):
+        self.fixture()
+        events = self.node / 'events'
+        events.mkdir()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-replace'})
+        pending = read_json(str(self.node / 'compact/pending.json'))
+        self.now()
+        write_json(str(self.node / 'compact/pending.json'), pending)
+        self.now()
+        p = self.cli('read', '--events', events, '--kind', 'compact.done', binary=EVENTS)
+        records = json.loads(p.stdout.strip().splitlines()[-1])['records']
+        self.assertEqual(len(records), 1)
+        self.assertIn(pending['job'], records[0]['event_id'])
+
+    def ledger(self):
+        write_json(str(self.node / '.aos/round.json'), {'round': 5, 'open': False})
+        bd = self.node / 'budget/llm'
+        write_json(str(bd / 'grant.json'), {'v': 1, 'grant': 'g1', 'budget': 'llm', 'holder': 'compact',
+                   'resource': 'llm.tokens', 'gateway': 'llm.fake', 'amount': 1000000,
+                   'clock': 'completed_tock', 'from': 0, 'until': 1000, 'delegate': False})
+        self.cli('init', 'budget/llm', binary=BUDGET)
+        p = subprocess.Popen([sys.executable, str(BUDGET), 'ledger', 'budget/llm'], cwd=self.node,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+        _proc.track(self, p, group=True)
+        self.wait_for(lambda: (bd / 'ledger.lock').exists())
+        self.config(llm={'budget': 'budget/llm', 'holder': 'compact', 'reserve': 100000,
+                         'gateway': 'fake', 'model': 'chatgpt-gpt-6-sol-high', 'deadline': 10, 'patience': 2})
+
+    def test_llm_summary_resume_sends_once(self):
+        path, old, opened, recent = self.fixture()
+        self.ledger()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-summary'})
+        pending = read_json(str(self.node / 'compact/pending.json'))
+        spec = importlib.util.spec_from_file_location('compact_resume_test', CLI.with_name('aos7_compact.py'))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with mock.patch.object(module, 'summarize', side_effect=AssertionError('已有摘要不可重叫摘要者')):
+            module.resume(self.node, self.node / 'compact', pending)
+        self.now()
+        self.assertEqual(read_json(str(self.node / 'llmcall/fake-remote.json'))['sends'][pending['job']], 1)
+        self.assert_compacted(path, old, opened, recent)
+
+    def test_llm_fake_failure_keeps_pending_and_original(self):
+        path, *_ = self.fixture()
+        self.ledger()
+        before = path.read_bytes()
+        self.now('--force', rc=-signal.SIGKILL, env={'AOS7_TEST_CRASH': 'compact-after-pending'})
+        pending = read_json(str(self.node / 'compact/pending.json'))
+        write_json(str(self.node / ('compact/req-%s.json' % pending['job'])),
+                   {'fake': {'mode': 'fail', 'usage': 100, 'text': '不應拿到摘要'}})
+        self.now(rc=3)
+        self.assertEqual(path.read_bytes(), before)
+        self.assertTrue((self.node / 'compact/pending.json').exists())
+
+    def test_litellm_unsupported_is_pending_failure(self):
+        path, *_ = self.fixture()
+        before = path.read_bytes()
+        self.config(llm={'budget': 'budget/llm', 'holder': 'compact', 'reserve': 4000,
+                         'gateway': 'litellm', 'model': 'chatgpt-gpt-6-sol-high', 'deadline': 10, 'patience': 2})
+        self.now('--force', rc=3)
+        self.assertEqual(path.read_bytes(), before)
+        self.assertTrue((self.node / 'compact/pending.json').exists())
+
+    def test_jsonl_bad_line_and_open_string_recent_untouched(self):
+        path = self.node / 'journal.jsonl'
+        rows = ['{"n":0}\r\n', '{"n":1}\r\n', '壞 JSON 原樣\r\n',
+                '"含 - [ ] 未完成"\r\n', '{"status":"open"}\r\n',
+                '{"nested":{"text":"- [ ] 仍待辦"}}\r\n', '\r\n', '{"recent":true}\r\n']
+        path.write_bytes(''.join(rows).encode())
+        self.config(keep_recent=1)
+        self.now('--force')
+        content = path.read_bytes()
+        for row in rows[2:]:
+            self.assertIn(row.encode(), content)
+        self.assertIn(b'"compact":', content)
+
+
+
+if __name__ == '__main__':
+    unittest.main()

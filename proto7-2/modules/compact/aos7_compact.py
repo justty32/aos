@@ -1,0 +1,461 @@
+"""記憶整理包：舊段先封存再換摘要，open 項與最近 N 則留原文。"""
+import argparse
+import datetime
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+TOP = Path(__file__).resolve().parents[2]
+sys.path[:0] = [str(TOP / "lib"), str(TOP / "modules/tools")]
+from aos7_fs import append_jsonl, now, read_json, sweep_tmp, test_point, write_json
+from aos7_taskside import task_env, wait_tock
+
+DEFAULT = dict(files=["wf/SESSION-LOG.md", "notes/journal.jsonl"], max_bytes=16384,
+               keep_recent=10, on_stage_change=True, summary_max_chars=1200, llm=None)
+LLM_DEFAULT = dict(budget="budget/llm", holder="compact", reserve=4000, gateway="fake",
+                   model="chatgpt-gpt-6-sol-high", deadline=600, patience=5)
+PROMPT = "用繁體中文寫摘要，≤{n} 字，保留決定、數字、檔名與未完成事項。"
+
+
+class Failure(Exception):
+    """帶退出碼的輸入或交付失敗。"""
+    def __init__(self, message, code=2):
+        super().__init__(message)
+        self.code = code
+
+
+def load(path, default):
+    try:
+        return json.loads(read_text(path))
+    except FileNotFoundError:
+        return default
+    except (ValueError, UnicodeError) as e:
+        raise Failure(f"{path.name} 不是有效 JSON：{e}") from e
+
+
+def file_path(node, rel):
+    """只接受 node 內的 md／jsonl 記憶檔，避免設定跨出邊界。"""
+    if not isinstance(rel, str) or not rel or Path(rel).is_absolute():
+        raise Failure("記憶檔必須是相對 node 的路徑")
+    path = (node / rel).resolve()
+    if not path.is_relative_to(node) or path == node or path.suffix not in (".md", ".jsonl"):
+        raise Failure("記憶檔須在 node 內，副檔名為 .md 或 .jsonl")
+    if path.is_relative_to(node / "compact"):
+        raise Failure("compact/ 是工作資料，不能作為記憶檔")
+    return path
+
+
+def config(node):
+    obj = load(node / "compact.json", {})
+    if not isinstance(obj, dict):
+        raise Failure("compact.json 須是物件")
+    cfg = dict(DEFAULT, **obj)
+    if not isinstance(cfg["files"], list):
+        raise Failure("files 須是陣列")
+    for rel in cfg["files"]:
+        file_path(node, rel)
+    if len(set(cfg["files"])) != len(cfg["files"]):
+        raise Failure("files 不能重複")
+    for key in ("max_bytes", "keep_recent", "summary_max_chars"):
+        if type(cfg[key]) is not int or cfg[key] < (1 if key == "summary_max_chars" else 0):
+            raise Failure(f"{key} 須是合法非負整數")
+    if type(cfg["on_stage_change"]) is not bool:
+        raise Failure("on_stage_change 須是布林值")
+    if cfg["llm"] is not None:
+        if not isinstance(cfg["llm"], dict):
+            raise Failure("llm 須是物件或 null")
+        llm = cfg["llm"] = dict(LLM_DEFAULT, **cfg["llm"])
+        for key in ("budget", "holder", "model"):
+            if not isinstance(llm[key], str) or not llm[key]:
+                raise Failure(f"llm.{key} 須是非空字串")
+        if llm["gateway"] not in ("fake", "litellm"):
+            raise Failure("llm.gateway 須是 fake 或 litellm")
+        for key in ("reserve", "patience"):
+            if type(llm[key]) is not int or llm[key] < 0:
+                raise Failure(f"llm.{key} 須是非負整數")
+        if type(llm["deadline"]) not in (int, float) or not 0 < llm["deadline"] <= 86400:
+            raise Failure("llm.deadline 須介於 0 與 86400 秒之間")
+    return cfg
+
+
+def has_open(value):
+    """JSON 字串值中的未完成標記也算 open，包括巢狀值。"""
+    if isinstance(value, str):
+        return "- [ ]" in value
+    if isinstance(value, dict):
+        return any(has_open(v) for v in value.values())
+    return isinstance(value, list) and any(has_open(v) for v in value)
+
+
+def physical_lines(text):
+    """只按 LF 切實體行，CRLF 與 Unicode 字元原樣留下。"""
+    lines = text.split("\n")
+    return [line + "\n" for line in lines[:-1]] + ([lines[-1]] if lines[-1] else [])
+
+
+def records(text, suffix):
+    """回骨架／則的片段；則有索引、原文、open 與可摘要標記。"""
+    parts, idx = [], 0
+    for line in physical_lines(text):
+        if suffix == ".md" and line[:1].isspace() and line.strip() and parts and parts[-1]["index"] is not None:
+            parts[-1]["text"] += line
+            continue
+        record = bool(line.strip()) if suffix == ".jsonl" else line.startswith(("- ", "* "))
+        opened, valid = False, True
+        if record and suffix == ".md":
+            opened = line.startswith(("- [ ]", "* [ ]"))
+        elif record:
+            try:
+                value = json.loads(line)
+                opened = (isinstance(value, dict) and
+                          (value.get("open") is True or value.get("status") == "open")) or has_open(value)
+            except ValueError:
+                valid = False  # 壞行算則，但摘要時不把它弄丟。
+        parts.append(dict(text=line, index=idx if record else None, open=opened, valid=valid))
+        idx += int(record)
+    return parts
+
+
+def read_text(path):
+    """不轉換換行，保證 open 原文與整檔雜湊都是原始 bytes。"""
+    with path.open(encoding="utf-8", newline="") as stream:
+        return stream.read()
+
+
+def digest(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def flat(text):
+    return " ".join(text.split())
+
+
+def local_summary(old, limit):
+    return ("本機摘要：" + "；".join(flat(p["text"])[:60] for p in old))[:limit]
+
+
+def stage_count(node, cfg):
+    rel = next((f for f in cfg["files"] if f.endswith(".md")), None)
+    if rel is None or not file_path(node, rel).exists():
+        return 0
+    active, lines = False, []
+    for line in physical_lines(read_text(file_path(node, rel))):
+        if line.startswith("## "):
+            if active:
+                break
+            active = True
+        elif active:
+            lines.append(line)
+    return sum(p["index"] is not None for p in records("".join(lines), ".md"))
+
+
+def atomic_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name("." + path.name + ".compact-tmp")
+    with tmp.open("w", encoding="utf-8", newline="") as stream:
+        stream.write(text)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(tmp, path)
+
+
+def cleanup(work, p):
+    for name in ("pending.json", f'req-{p["job"]}.json', f'result-{p["job"]}.json'):
+        (work / name).unlink(missing_ok=True)
+
+
+def log_once(work, entry):
+    log = work / "log.jsonl"
+    if log.exists():
+        for line in log.read_text(encoding="utf-8").splitlines():
+            try:
+                old = json.loads(line)
+                if old.get("job") == entry["job"] and old.get("status") == entry.get("status"):
+                    return
+            except (ValueError, AttributeError):
+                pass
+    append_jsonl(str(log), entry)
+
+
+def summarize(node, work, p):
+    old = [r for r in records(p["original"], Path(p["file"]).suffix) if r["index"] in p["indices"]]
+    text = local_summary(old, p["summary_max_chars"])
+    llm = p["llm"]
+    if llm is None:
+        return text
+    req, result = work / f'req-{p["job"]}.json', work / f'result-{p["job"]}.json'
+    if not req.exists():
+        raw = "".join(r["text"] for r in old)
+        request = {"fake": dict(mode="ok", usage=len(raw) // 2 + 50, text=text)} if llm["gateway"] == "fake" else \
+            {"litellm": dict(model=llm["model"], messages=[
+                dict(role="system", content=PROMPT.format(n=p["summary_max_chars"])),
+                dict(role="user", content=raw)], max_tokens=800)}
+        write_json(str(req), request)
+    if llm["gateway"] == "litellm":
+        if not (TOP / "packs/llmcall/aos7_llmcall_litellm.py").is_file():
+            raise Failure("摘要沒拿到：現行 llmcall 尚未提供 litellm 傳輸", 3)
+    argv = [sys.executable, str(TOP / "packs/llmcall/bin/aos7-llmcall"), "call", llm["budget"],
+            "--holder", llm["holder"], "--call", p["call_id"], "--logical", "compact/" + p["file"],
+            "--request", str(req), "--reserve", str(llm["reserve"]), "--deadline", str(llm["deadline"]),
+            "--patience", str(llm["patience"]), "--out", str(result)]
+    reply = subprocess.run(argv, cwd=node, capture_output=True, text=True)
+    if reply.returncode:
+        raise Failure("摘要沒拿到：llmcall 退出 " + str(reply.returncode), 3)
+    receipt = read_json(str(result), {})
+    text = receipt.get("text") if isinstance(receipt, dict) else None
+    if not isinstance(text, str) or not text.strip():
+        raise Failure("摘要沒拿到：回條沒有非空 text", 3)
+    return text
+
+
+def resume(node, work, p):
+    """固定原內容與摘要證據；追加接回，改寫放棄，換檔後可重送事件。"""
+    path = file_path(node, p["file"])
+    if p["kind"] == "compact.done" and "summary" not in p:
+        p["summary"] = summarize(node, work, p)
+        write_json(str(work / "pending.json"), p)
+        test_point("compact-after-summary")
+    if p["kind"] == "compact.forget":
+        test_point("compact-after-summary")  # forget 跳過摘要後也可注入同一故障點。
+    parts = records(p["original"], path.suffix)
+    selected = set(p["indices"])
+    marker = ""
+    if p["kind"] == "compact.done":
+        summary = flat(p["summary"])
+        marker = (json.dumps(dict(compact="summary", job=p["job"], count=len(selected), text=summary), ensure_ascii=False)
+                  if path.suffix == ".jsonl" else f'- （摘要 {p["job"]}，{len(selected)} 則）{summary}') + "\n"
+    new, inserted = [], False
+    for part in parts:
+        if part["index"] in selected:
+            if not inserted:
+                new.append(marker)
+                inserted = True
+        else:
+            new.append(part["text"])  # open、最近 N 則與骨架留原位，一字不改。
+    base = "".join(new)
+    with (work / "write.lock").open("a") as writer:
+        fcntl.flock(writer, fcntl.LOCK_EX)
+        current = read_text(path)
+        replaced = (not current.startswith(p["original"]) and p.get("new_len") is not None and len(current) >= p["new_len"]
+                    and p.get("new_sha") == digest(current[:p["new_len"]]))
+        if not replaced:
+            if digest(current) == p["sha256"]:
+                target = base
+            elif current.startswith(p["original"]):
+                target = base + current[len(p["original"]):]
+            else:
+                log_once(work, dict(job=p["job"], file=p["file"], status="abandoned", at=now(), why="記憶檔被改寫"))
+                cleanup(work, p)
+                print(f'{p["file"]}：原文已被改寫，放棄上次整理，留待重新規劃')
+                return dict(job=p["job"], file=p["file"], status="abandoned")
+            p["new_sha"] = digest(target)
+            p["new_len"] = len(target)
+            p["after_bytes"] = len(target.encode("utf-8"))
+            write_json(str(work / "pending.json"), p)
+        archive = work / "archive" / (p["job"] + ("-forget" if p["kind"] == "compact.forget" else "") + path.suffix)
+        if not archive.exists():
+            atomic_text(archive, "".join(r["text"] for r in parts if r["index"] in selected))
+        test_point("compact-after-archive")
+        if not replaced:
+            atomic_text(path, target)
+            test_point("compact-after-replace")
+    entry = dict(job=p["job"], file=p["file"], before_bytes=len(p["original"].encode("utf-8")),
+                 after_bytes=p["after_bytes"], count=len(selected), open=sum(r["open"] for r in parts),
+                 trigger=p["trigger"], at=p["at"])
+    log_once(work, entry)
+    if (node / "events").is_dir():
+        ev = subprocess.run([sys.executable, str(TOP / "modules/events/aos7-events"), "pub",
+                             "--events", str(node / "events"), "--node", node.name, "--kind", p["kind"],
+                             "--event-id", "compact/" + p["job"],
+                             "--payload", json.dumps(entry, ensure_ascii=False)], capture_output=True, text=True)
+        if ev.returncode:
+            try:
+                why = json.loads(ev.stdout.strip().split("\n")[-1]).get("why", "")
+            except (ValueError, AttributeError):
+                why = ev.stdout.strip()
+            raise Failure("事件發布失敗，pending 留待重試：" + str(why) + " " + ev.stderr.strip(), 1)
+    cleanup(work, p)
+    human_result(p, entry, archive, parts, current if replaced else target)
+    return entry
+
+
+def human_result(p, entry, archive, parts, target):
+    before = sum(r["index"] is not None for r in parts)
+    after = sum(r["index"] is not None for r in records(target, archive.suffix))
+    action = "摘掉" if p["kind"] == "compact.done" else "忘掉"
+    print(f'{p["file"]}：{before} 則 → {after} 則（{action} {entry["count"]}、open {entry["open"]} '
+          f'{"全留" if p["kind"] == "compact.done" else "依指定範圍"}），'
+          f'{entry["before_bytes"]} → {entry["after_bytes"]} bytes，原文在 compact/archive/{archive.name}')
+
+
+def human_plan(plan, cfg):
+    if not plan["count"]:
+        print(f'{plan["file"]}：不需要整理')
+        return
+    reason = {"max_bytes": f'大小超過 {cfg["max_bytes"]}', "force": "強制整理", "stage_change": "段落切換"}[plan["trigger"]]
+    print(f'{plan["file"]}：{plan["records"]} 則，open {plan["open"]}，會摘掉 {plan["count"]} 則（原因：{reason}）')
+
+
+def pending(work, rel, text, indices, trigger, cfg, kind="compact.done", forget_range=None):
+    sha = digest(text)
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
+    job = "c" + stamp + "-" + hashlib.sha256((rel + sha + str(indices)).encode()).hexdigest()[:8]
+    p = dict(job=job, file=rel, sha256=sha, original=text, indices=indices, new_sha=None, call_id=job,
+             trigger=trigger, kind=kind, at=now(), llm=cfg["llm"], summary_max_chars=cfg["summary_max_chars"])
+    if forget_range is not None:
+        p.update({"from": forget_range[0], "to": forget_range[1]})
+    write_json(str(work / "pending.json"), p)
+    test_point("compact-after-pending")
+    return p
+
+
+def once(node, cfg, dry=False, force=False):
+    work, entries, skip = node / "compact", [], None
+    count = stage_count(node, cfg)
+    state = load(work / "state.json", {})
+    changed = state.get("stage_due", False) or (cfg["on_stage_change"] and state.get("stage_records", 0) >= 1 and count == 0)
+    if not dry:
+        write_json(str(work / "state.json"), dict(stage_records=count, stage_due=changed))
+    if not dry and (work / "pending.json").exists():
+        p = load(work / "pending.json", None)
+        skip = p["file"]
+        entries.append(resume(node, work, p))
+    for rel in cfg["files"]:
+        path = file_path(node, rel)
+        if not path.exists() or rel == skip:
+            continue
+        text = read_text(path)
+        rec = [r for r in records(text, path.suffix) if r["index"] is not None]
+        old = rec[:max(0, len(rec) - cfg["keep_recent"])]
+        indices = [r["index"] for r in old if not r["open"] and r["valid"]]
+        trigger = "force" if force else "stage_change" if changed else "max_bytes" if len(text.encode("utf-8")) > cfg["max_bytes"] else "不需要"
+        plan = dict(file=rel, records=len(rec), open=sum(r["open"] for r in rec),
+                    count=len(indices) if trigger != "不需要" and len(indices) >= 2 else 0, trigger=trigger)
+        if not plan["count"]:
+            plan["trigger"] = "不需要"
+        if dry or not plan["count"]:
+            human_plan(plan, cfg)
+            entries.append(plan)
+        else:
+            entries.append(resume(node, work, pending(work, rel, text, indices, trigger, cfg)))
+    if not dry:
+        write_json(str(work / "state.json"), dict(stage_records=count, stage_due=changed and any(e.get("status") == "abandoned" for e in entries)))
+    return dict(ok=True, dry_run=dry, files=entries)
+
+
+def forget(node, cfg, args):
+    work = node / "compact"
+    if not args.dry_run and (work / "pending.json").exists():
+        p = load(work / "pending.json", None)
+        result = resume(node, work, p)
+        if p["kind"] == "compact.forget" and p["file"] == args.file and [p.get("from"), p.get("to")] == [args.start, args.end]:
+            return dict(ok=True, forgotten=result)
+        raise Failure("已先接完上次沒做完的整理，檔已變；請重看 --dry-run 再 forget", 3)
+    path = file_path(node, args.file)
+    if not path.is_file():
+        raise Failure("forget 的檔案不存在")
+    text = read_text(path)
+    rec = [r for r in records(text, path.suffix) if r["index"] is not None]
+    if not 1 <= args.start <= args.end <= len(rec):
+        raise Failure("forget 範圍不合（1 起算，含頭尾）")
+    chosen = rec[args.start - 1:args.end]
+    if any(r["open"] for r in chosen) and not args.include_open:
+        raise Failure("範圍含 open 項；明確給 --include-open 才能忘掉")
+    if args.dry_run:
+        print(f"{args.file}：會忘掉 {len(chosen)} 則，open {sum(r['open'] for r in chosen)}")
+        return dict(ok=True, dry_run=True, previews=[r["text"][:80] for r in chosen])
+    p = pending(work, args.file, text, [r["index"] for r in chosen], "forget", cfg, "compact.forget", [args.start, args.end])
+    return dict(ok=True, forgotten=resume(node, work, p))
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        raise Failure(message)
+
+
+def main(argv=None):
+    """命令列入口；最後一行固定 JSON，watch 每回合鎖住自己的 node。"""
+    ap = Parser(prog="aos7-compact")
+    commands = ap.add_subparsers(dest="command", required=True, parser_class=Parser)
+    a = commands.add_parser("now")
+    a.add_argument("node")
+    a.add_argument("--dry-run", action="store_true")
+    a.add_argument("--force", action="store_true")
+    a = commands.add_parser("forget")
+    a.add_argument("node")
+    a.add_argument("--file", required=True)
+    a.add_argument("--from", dest="start", type=int, required=True)
+    a.add_argument("--to", dest="end", type=int, required=True)
+    a.add_argument("--dry-run", action="store_true")
+    a.add_argument("--include-open", action="store_true")
+    a = commands.add_parser("watch")
+    a.add_argument("--rounds", type=int, default=0)
+    try:
+        args = ap.parse_args(argv)
+        try:
+            me = task_env() if args.command == "watch" else None
+        except (KeyError, ValueError) as e:
+            raise Failure("watch 需要完整 keep 任務環境") from e
+        node = Path(me["node"] if me else args.node).resolve()
+        if not node.is_dir():
+            raise Failure("node 資料夾不存在")
+        if me and args.rounds < 0:
+            raise Failure("rounds 須是非負整數")
+        cfg = config(node)
+        def run(recover_only=False):
+            dry = getattr(args, "dry_run", False)
+            if dry:
+                lock = node / "compact/lock"
+                if lock.exists():
+                    with lock.open("rb") as lk:
+                        try:
+                            fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        except BlockingIOError:
+                            raise Failure("同一 node 已有 compact 在做，鎖拿不到", 3) from None
+                        return forget(node, cfg, args) if args.command == "forget" else once(node, cfg, True, args.force)
+                return forget(node, cfg, args) if args.command == "forget" else once(node, cfg, True, args.force)
+            work = node / "compact"
+            work.mkdir(exist_ok=True)
+            with (work / "lock").open("a") as lk:
+                try:
+                    fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    raise Failure("同一 node 已有 compact 在做，鎖拿不到", 3) from None
+                sweep_tmp(str(work))
+                sweep_tmp(str(work / "archive"))
+                rels = cfg["files"] + ([args.file] if args.command == "forget" else [])
+                if (work / "pending.json").exists():
+                    rels.append(load(work / "pending.json", {})["file"])
+                for directory in {file_path(node, rel).parent for rel in rels} | {work / "archive"}:
+                    for tmp in directory.glob(".*.compact-tmp"):
+                        tmp.unlink()
+                if recover_only:
+                    return resume(node, work, load(work / "pending.json", None))
+                return forget(node, cfg, args) if args.command == "forget" else once(node, cfg, force=getattr(args, "force", False))
+        result = None
+        if me:
+            if (node / "compact/pending.json").exists():
+                run(recover_only=True)
+            last, rounds = 0, 0
+            while not args.rounds or rounds < args.rounds:
+                last = wait_tock(me["task"], last)
+                cfg = config(node)
+                result = run()
+                rounds += 1
+            result["rounds"] = rounds
+        else:
+            result = run()
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+    except (Failure, OSError, ValueError, KeyError, TypeError) as error:
+        code = error.code if isinstance(error, Failure) else 1
+        print(json.dumps(dict(ok=False, error=str(error)), ensure_ascii=False))
+        return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

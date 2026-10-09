@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+"""記憶整理包的薄入口。"""
+from aos7_compact import main
+
+raise SystemExit(main())
