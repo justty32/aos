@@ -222,6 +222,47 @@ class TestSkills(CoreCase):
                 self.assertEqual(rc, expected)
                 self.assertEqual(len(err.getvalue().splitlines()), 1)
 
+    def test_review_fixes(self):
+        """審查補：帳未清也要提醒、bad 參數不動檔、grant 讀不到算不確定、同題並行請求檔不互刪、記錄並行不丟行。"""
+        self.skill("coding", "python tests")
+        bd = self.node / "budget/llm"
+        write_json(str(bd / "grant.json"), {"holder": "skills", "gateway": "llm.fake"})
+        for text, rc in (("none", 1), ("outside", 1)):
+            with self.subTest(text=text), patch("aos7_skills.aos7_budget.ledger_running", return_value=True), patch(
+                    "aos7_skills.subprocess.run", return_value=subprocess.CompletedProcess(
+                        [], 4, json.dumps({"text": text, "used": 4}), "aos7-llmcall: 帳沒清。對帳\n")):
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+                    self.assertEqual(main(["pick", str(self.node), "python tests"]), rc)
+                self.assertEqual(len(err.getvalue().splitlines()), 1)
+                self.assertIn("帳沒清。對帳", err.getvalue())
+        before = sorted(p.relative_to(self.node) for p in self.node.rglob("*"))
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main(["pick", str(self.node), "python tests", "--reserve", "0"]), 2)
+        self.assertEqual(sorted(p.relative_to(self.node) for p in self.node.rglob("*")), before)
+        (bd / "grant.json").unlink()
+        (bd / "grant.json").mkdir()
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(main(["pick", str(self.node), "python tests"]), 3)
+        self.assertTrue(err.getvalue().startswith("aos7-skills: 不確定："))
+        (bd / "grant.json").rmdir()
+        write_json(str(bd / "grant.json"), {"holder": "skills", "gateway": "llm.fake"})
+        seen = []
+        def run(argv, **kw):
+            seen.append(argv[argv.index("--request") + 1])
+            return subprocess.CompletedProcess([], 3, "", "")
+        with patch("aos7_skills.aos7_budget.ledger_running", return_value=True), patch(
+                "aos7_skills.subprocess.run", side_effect=run), contextlib.redirect_stderr(io.StringIO()):
+            main(["pick", str(self.node), "python tests"])
+        self.assertIn(str(os.getpid()), Path(seen[0]).name)
+        log = self.skills / ".pick/log.jsonl"
+        log.unlink(missing_ok=True)
+        ps = [subprocess.Popen([sys.executable, "-c", "import sys; sys.path[:0]=%r; from pathlib import Path; "
+                                "from aos7_skills import keep_last; [keep_last(Path(%r), {'i': i}) for i in range(20)]"
+                                % ([str(TOP / "modules/skills"), str(TOP / "lib")], str(log))]) for _ in range(2)]
+        for p in ps:
+            p.wait(20)
+        self.assertEqual(len(log.read_text().splitlines()), 40)
+
     def test_argparse_does_not_touch_files(self):
         self.skill("alpha")
         def snapshot():

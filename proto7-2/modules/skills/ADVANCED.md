@@ -14,10 +14,10 @@
 |---|---|---|---|---|
 | 0 | 做到了 | 全收 | 挑到；llmcall 退 4 仍交付並提醒對帳 | 已掛 |
 | 1 | 做不到 | 有拒收，其他照寫 | none、AI 回目錄外名字、帳任務沒在跑、llmcall 做不到 | — |
-| 2 | 你給的不對 | 沒有 skills/ 或參數不合 | grant 讀不到／缺 holder、不支援的 gateway、llmcall 參數不合 | 找不到空間根／skill／任務，或 skill 在空間外 |
-| 3 | 不確定 | 讀寫故障 | 鎖忙、llmcall 未確定、讀寫或回條解析失敗 | tasks.json 讀不到或格式不合、讀寫故障 |
+| 2 | 你給的不對 | 沒有 skills/ 或參數不合 | grant 不是 JSON／缺 holder、不支援的 gateway、`--reserve`／`--deadline` 不是正數、llmcall 參數不合 | 找不到空間根／skill／任務，或 skill 在空間外 |
+| 3 | 不確定 | 讀寫故障 | grant 讀不到（讀寫故障）、鎖忙、llmcall 未確定、回條解析失敗 | tasks.json 讀不到或格式不合、讀寫故障 |
 
-全 aos 共用語意見 [blueprint-errors](../../notes/blueprint-errors.md)。錯誤在 stderr 一行：`aos7-skills: 發生什麼。怎麼辦`；3 以「不確定：」開頭，照原樣再跑一次會接續。成功時 stderr 空；llmcall 退 4 的帳務提醒照傳，pick 退 0。
+全 aos 共用語意見 [blueprint-errors](../../notes/blueprint-errors.md)。錯誤在 stderr 一行：`aos7-skills: 發生什麼。怎麼辦`；3 以「不確定：」開頭，照原樣再跑一次會接續。成功時 stderr 空；llmcall 退 4（已交付、帳沒清）時那句提醒照傳：挑到退 0，挑不到退 1 並把提醒接在同一行。
 
 ## 進階：讓 AI 挑
 
@@ -55,8 +55,8 @@ mount 改 node 的 `.aos/tasks.json`，替任務加 `mounts["skill-<名>"]`。�
 | 前置 | 本機挑：無；AI 挑：已開的 budget 帳與帳任務；mount：node 在 aos 空間裡 |
 | 保證 | 只用 name＋description 挑；拒收不入索引；本機不碰帳或 llmcall；AI 同題同索引同模型是同 call；mount 持 tasks.json 鎖、讀不到不覆蓋 |
 | 不管 | skill 內容、腳本安全；不複製外部 skill；不自動更新 index.json |
-| 記錄 | `.pick/log.jsonl` 只留最近 50 行（在 skills/ 下）；欄位仍是 at、via、call、q、answer、picked、used、rc、elapsed；bank 用來算四指標 |
-| 請求 | `skills/.pick/<call>.json` 用完即刪，不論 llmcall 結果；重跑重建同內容，llmcall 自己保留請求、預留與證據 |
+| 記錄 | `.pick/log.jsonl` 只留最近 50 行（在 skills/ 下，寫時持 `log.jsonl.lock`、並行不丟行）；欄位仍是 at、via、call、q、answer、picked、used、rc、elapsed；bank 用來算四指標 |
+| 請求 | `skills/.pick/<call>.<pid>.json` 用完即刪（同題並行各用各的），不論 llmcall 結果；重跑重建同內容，llmcall 自己保留請求、預留與證據 |
 
 格式來源是 repo 外的 `~/repo/workflows/skills/README.md`。
 
