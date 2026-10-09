@@ -21,6 +21,7 @@
 | [metrics](metrics/README.md) 效率量測包 | 唯讀量一個資料夾的 AI 工作：每件 token、同時幾個呼叫、花幾秒、重試幾次，預設印白話一行（`--detail`／`--json` 給細節），可重跑 | C | 開（工具） | 無（只讀別包的檔） | `metrics/aos7-metrics`（job） |
 | [compact](compact/README.md) 記憶整理包 | 舊紀錄先封存再換摘要，open 項與最近 N 則留下 | A＋C | 關 | 標準庫、核心 aos7_fs、工具包任務端函式；選配 llmcall／events | `compact/aos7-compact`（子命令 now／forget／watch） |
 | [mail](mail/README.md) 信箱包 | 檔案寄信、輪詢、未結請求 audit 與日誌辦結復原 | C | 關 | events 包公開介面＋aos7_fs | `mail/aos7-mail`（send／read／done；進階 audit／roster／team 見 ADVANCED） |
+| [llmdiag](llmdiag/README.md) LLM 待辦診斷包 | 唯讀列出 llmcall 沒回條的呼叫、author 停住的 job、budget 還在飛的預留 | C | 開（工具） | 無（只讀別包的檔） | `llmdiag/aos7-llmdiag`（A5 真 AI 學徒寫） |
 | `history.py` 歷史 module | 每個 tock 把「上一次」追加到自己的地方（見下） | A | 關 | 工具包的任務端函式 | `history.py` |
 | `counter.py` 示範任務 | 讀同槽上一次的 state、收 tock.json | A | — | 工具包的任務端函式 | `counter.py` |
 
@@ -38,4 +39,3 @@
 - **已知限制（未修）**：參考實作的檔名是編碼後的 node id 加 `.jsonl`，編碼後超過約 249 bytes（一般檔案系統單一檔名上限 255 bytes；開 `--max-lines` 時暫存檔名再多 5 bytes，約 244）就寫不出來，追加丟例外、整個歷史任務退出（keep 再起又退），同一個任務的其他來源也跟著記不到；很長的 node id 先縮短，或改用自己的命名。
 - **daemon 事件**：任務只能從 status 的 `last_event` 取樣，可能漏。要完整的流水帳，放一個空檔 `<root>/.aosd/log.on`（核心的事件出口），daemon 就把事件追加到 `.aosd/log.jsonl`，不清、不輪替，開的人自己管大小（例如讓歷史 module 定期截斷）。
 - 不選「核心提供每回合鉤子」：鉤子要在 tock 裡同步呼叫外部程式，失敗、逾時、它自己的歷史都會變成核心的邊緣狀況。
-| [llmdiag](llmdiag/README.md) | 唯讀列出 node 的 pending、halted 與 budget inflight |
