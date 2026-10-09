@@ -293,3 +293,5 @@
 - C｜KF：astra 審 kernel（play/2026-10-09-kernel-astra.md）＋修 C1～C9、E2～E4、S1、S3 進 main；通知信白話（標題「bob 卡住了：「…」已 6 回合沒進展」、無裸 JSON）、done 每筆記 basis、同信只通知一次、kill 退避 12／24／48 回合最多 3 次（`max_kills`）；sources ≤10、門檻設反退 2、status 雜湊不合退 1。新手第三輪 Haiku 7／luna 8 過；全套 1197 綠
 - C｜KF 留下：C10（不確定的 kill 進 done，現做法對、藍圖要改）、E1（run --rounds 中途失敗退 0，只影響測試模式）、E5（kernel 列進 tests/error_path.json）、S4（快照簡化）→ E5＋藍圖註記歸最後整合；「回信叫 brain 放棄」功能不做（卡住後 deadline 會自己收尾，多一個指令多一個概念）
 - C｜KF 留下：brain 進度句「第 1 回合，下一步第 2 回合」回合／步混用 → 交 UW 一起改
+- 未證明但收｜AP4：學徒自我改進 A／B 對照（luna 5×2、sol-low 4×2，297 次真 AI、約 279 萬 token）→ 讀自己技能書的 B 組沒比 A 好、token 多 25～36%；唯一小訊號「測試匯入不到自己的模組」A 7 次 B 3 次。主因：luna 151 輪有 81 輪是 JSON 括號手滑、sol 第 1 題就過沒坑可省。機制收下：`propose --skills`（挑一本技能書放進提示，不給時提示一字不變）、`learn --skill-into`（學徒改寫整本 SKILL.md）、第 1 關錯誤訊息具體化
+- C｜頂層：開 AP5——交件改「每個檔一段文字」去掉 JSON 手滑、題目換成知識型的坑（需求不寫、只能從檢查結果學的格式細節）；AP4 不發布 apprentice/ 分支照收
