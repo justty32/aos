@@ -196,3 +196,5 @@
 - 觀察｜llmcall `test_in_process_drip` 在全套負載下偶發失敗一次、單跑全過；再出現就查
 - C｜ER-compact：不需整理時不再寫狀態檔；發事件改成可選（compact.json 的 `events`，預設關，發不出也不影響結果）；意外錯誤改退 3；README 只留新手部分。真 AI 壓縮 73%。新手 Haiku 7.6／luna 9.0
 - C｜wfnode 小修：重跑 init 不再改任何既有檔（含 inbox 信件）；init／check 不掃 inbox/；模板檔裡剩下的 `{{` 改成列出位置請人手補（不再自動補）
+- 結果｜QS 新人從零上手（只看 QUICKSTART）：第 2 輪過關，Haiku 7.6／luna 8.6，兩位都說「ELI5 之後不複雜」；每人約 6～10 分鐘、3 個指令。概念數 Haiku 數 8（輸出裡有英文 DONE、token 被算進去）→ [firstrun 試用](play/2026-10-10-firstrun/README.md)
+- B｜頂層：開 ER-up 隊，照 QS 回報改 aos7-up 的輸出：status 全清提示改成刪整個房子；DONE／token 換成中文白話；`--help` 只列 3 個指令（退出碼、-d、stop 搬到 ADVANCED）；`--model` 提示指向 ADVANCED
