@@ -24,3 +24,4 @@
 | [longtask](longtask.md) | 2（r4 新） | 保留 1、可選 1 |
 | [brain-memory](brain-memory.md) | 3（r5 新） | 保留 3 |
 | [skills-local-pick](skills-local-pick.md) | 2（r5 新） | 保留 1、可選 1 |
+| [kernel](kernel.md) | 3（r6 新，kernel 第一版） | 保留 1、可選 2 |
