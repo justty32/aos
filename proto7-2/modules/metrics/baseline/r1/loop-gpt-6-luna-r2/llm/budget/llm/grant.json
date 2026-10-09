@@ -1,0 +1,1 @@
+{"v": 1, "grant": "author-llm-demo", "budget": "llm", "holder": "author", "resource": "llm.tokens", "gateway": "llm.litellm", "amount": 100000000, "clock": "completed_tock", "from": 0, "until": 1000000, "delegate": false}

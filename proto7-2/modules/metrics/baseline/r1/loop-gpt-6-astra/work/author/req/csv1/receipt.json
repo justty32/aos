@@ -1,0 +1,36 @@
+{
+ "v": 1,
+ "rid": "csv1",
+ "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+ "closed": true,
+ "versions": {
+  "93587364314971532f6808147a8f6c9f1925634ecb38559948b6c97e1e91bdeb": {
+   "v": 1,
+   "rid": "csv1",
+   "request_sha": "57aa2b8c17356aa7f1cee15aa64f6c0b91e8bf1706ec7bc244d79d9aade1e2be",
+   "candidate_sha": "93587364314971532f6808147a8f6c9f1925634ecb38559948b6c97e1e91bdeb",
+   "payload_sha": "1e8c6ef607dee5cf65d113911efdbd65b0498185a19f7ad6af63a358715966fb",
+   "job": "csv1_93587364",
+   "task_name": "author-csv1_93587364",
+   "registered": true,
+   "evidence": "table",
+   "closed": true,
+   "answer": {
+    "ok": true,
+    "issues": [],
+    "checker_sha256": "e383c9151da84550ded7875aa433d992726c075bfd733a81797c334efae67db6"
+   },
+   "steps_sha256": "95f1c68205b18a86776781bfeaba472e23542934f597df5bb47550d645806c6e",
+   "files": {
+    "convert.py": "f5c03903a4e679a797d87eb8503316d6b89d5f2f90e5b4fb9a2dd14365b3b62e",
+    "stats.py": "75cb120eb82a52e84eeb41041ec5a0b5db17f1e5a329a6c156a3d5e25b132ed8",
+    "data.csv": "c01f0a65d56dd37512adc1c4b6cddb18605cce606b87467a13b3102c3481681b",
+    "steps.json": "95f1c68205b18a86776781bfeaba472e23542934f597df5bb47550d645806c6e"
+   },
+   "toolcards": {
+    "path": "toolcards/csv.json",
+    "sha256": "5f9812acc07fe123c25de5231b0b0bf8b7bf8a993e3a0662f4c39b557567e3ac"
+   }
+  }
+ }
+}

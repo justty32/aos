@@ -1,0 +1,1 @@
+{"used": 30, "billing": "final", "usage": {"prompt_tokens": 20, "completion_tokens": 10, "completion_tokens_details": {"reasoning_tokens": 3}, "prompt_tokens_details": {"cached_tokens": 4}}, "settle": {"at": "2026-10-09T12:00:06"}}

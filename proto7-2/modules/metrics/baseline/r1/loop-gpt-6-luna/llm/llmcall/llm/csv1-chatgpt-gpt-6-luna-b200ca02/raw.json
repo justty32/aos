@@ -1,0 +1,63 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-luna-b200ca02",
+ "req_sha": "b48294436dd9f9fcc2160f0d14ea195b1f5e431c869ee66a00e9bbb9db4c3942",
+ "source": "transport",
+ "reply": {
+  "status": "ok",
+  "billed": true,
+  "body": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"將 CSV 轉換為 JSON，統計每個部門的筆數、總額與平均，並輸出報告。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+  "usage": {
+   "completion_tokens": 186,
+   "prompt_tokens": 2365,
+   "total_tokens": 2551,
+   "completion_tokens_details": {
+    "reasoning_tokens": 35
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "model": "chatgpt-gpt-6-luna",
+  "finish_reason": "stop",
+  "http": 200,
+  "elapsed": 3.553,
+  "response": {
+   "id": "chatcmpl-4b91da38-4a24-48a4-a785-5f894d8fc65a",
+   "created": 1791527719,
+   "model": "chatgpt-gpt-6-luna",
+   "object": "chat.completion",
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "message": {
+      "content": "{\"v\":1,\"mode\":\"keep\",\"intent\":\"將 CSV 轉換為 JSON，統計每個部門的筆數、總額與平均，並輸出報告。\",\"start\":\"convert\",\"steps\":[{\"id\":\"convert\",\"tool\":\"csv.convert\",\"args\":{\"src\":\"${job}/data.csv\",\"dst\":\"${out}/data.json\",\"request\":\"${request}\"},\"ok\":\"stats\",\"fail\":\"failed\"},{\"id\":\"stats\",\"tool\":\"csv.stats\",\"args\":{\"src\":\"${out}/data.json\",\"request\":\"${req:convert}\",\"dst\":\"${out}/report.json\"},\"ok\":\"ok\",\"fail\":\"failed\"}],\"ends\":{\"ok\":\"ok\",\"failed\":\"failed\"}}",
+      "role": "assistant",
+      "reasoning_content": "",
+      "reasoning_items": [
+       {
+        "type": "reasoning",
+        "id": "rs_0cdc2bceba584821016ac88b2a070481918b7184064e5b7b6c",
+        "encrypted_content": "gAAAAABqyIsqi3DNDbWUtqX2n8r6ESxO4ouioRNj4pNTjk6s7drWntheTkOklrxdA-UEJbHBY7qURDU1gctt3zheJuIVugXo7trQsqiI-8AB2XXsWD2XhjhSPWMqMn2Yg0vrZGVfgZwq230g_1sZsfKpcXr-fhGKgfVPnJJuT_FA3afcHMxs11TgneBUFCKUjinSwb32lv2FlCM4z01Sb0MwoYOL22qs0h23AliJwL6-ADG27fotazTPs1PT_vWR_EdoCXq-3prymvWp05U6PuLHkwANZB7-6olMlsoanwJfzAaef6mFlnDpu6QnAt4k0pOzdf-KiemJkp1C_WQsBI_Z325Ce4wL-w3hCvDTaZQWGggElO1TcC-1r8kYYY-z9_QbPxFE-GnaVtdoxx_mKrfnzBH3MsBcXoW7V6z-CoeD00pcPJiwwWxfdd-a19hSWMRiMxPVazUIVyNpBx-81frtHe3t-tf-iK3hdGnghQX73xclBvfrijzAxr1p6C7VssVugWwDePsNBRSCsuZc2QT37dS18TMY86MeenTq9Z8HGJydtcpJ_ZKMsIivYcdfNVdvysTY15EKpq0mAV7NIxf0V38bZ-R_EFCHDpjFaDRpgvBrkA7jZWsqFgwlxmSwe8VklxtppK6KHmzHwoU0E_vBLDiMGvEyPequdn-6KAH0jI3vr53heV7l8xJEtMGaMtzVvXNWUy5ZJKUI0fzlnpLdrpoRYyiD2MBjX6NEA4AgYGjsCOTzGH2AaSPt-I5jnxV9UYEHa2t8GZKPajJsrWec3bV17mkCKoka6Kf5nLtSRiEVFnTaQO9Dzqw8HzqUQQ3-pBSnMGg5IcsHVUqZHz3qdOpek3mJYBLTS1aqXBF4Z_nhM0GZnzNmCDg-kJ52PeojmyeHaT03NQvx1yREhqAkUEJIViuRFgOpdPWRj4pQwhbdnBCcrmVTNdgJycAOF33iG1wOZBtn7sQkarop2QZbJUbgfedNLIBBYe2DWS0iSZvNEpuZtP8ZKLbXv1_rTZkKH5cVZzCVRyaf4pI5CoiBckzcRxaBGAIW7JDN8Xng3Iq7L6FJdjuUN4ndnWiG1Mi90iK7NrxHAPCIMm3IS5F8kXlkrpDOiNCSyepWomU7b2rVe81desqw7pyGdSYd5RleersECcDKUUbOOV3EmCxsSAyT7jX8Cb8aC4AE5FerF1o-LwuGMFG5Qx2DDcmPqujPg12HOFSzZIBHkWL-l7--VmtCwEfUyPn4tHDGiJqz6Zlk9IqZ5VOGblcrVxsBUktHEkaMcLLVOOYRcEyhcMtvQ_6KGwbbimEHpH-2K-183WeQH4qklElP2d6WxM5hCZfTZ_gLdKuhY8go0Yx-ZnsVP1gOTHPCRq14-7KCJ1rz6sfqui2tpZTMAdXaKTqEzwG1A6DBX80anECHxPqnGfR-KRVTDnN6b3dx0hyaLtYhBCpyVz7bWKGh3aNknj5q_gx52Xso5pvQ",
+        "summary": []
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "completion_tokens": 186,
+    "prompt_tokens": 2365,
+    "total_tokens": 2551,
+    "completion_tokens_details": {
+     "reasoning_tokens": 35
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  }
+ },
+ "at": "2026-10-09T14:35:23.258"
+}

@@ -1,0 +1,26 @@
+{
+ "v": 1,
+ "call_id": "demo-c1",
+ "logical": null,
+ "budget": "llm",
+ "holder": "author",
+ "req_sha": "02d81553dd9932cc789cec1a0125f29491cfc8037c2d210693dc482b1090d961",
+ "reserve": 1000000,
+ "meter": "litellm.total_tokens/1",
+ "endpoint": "http://localhost:4000/v1",
+ "request": {
+  "litellm": {
+   "model": "chatgpt-gpt-6-sol",
+   "messages": [
+    {
+     "role": "system",
+     "content": "請依使用者要求簡短回答。"
+    },
+    {
+     "role": "user",
+     "content": "請只回 OK。"
+    }
+   ]
+  }
+ }
+}

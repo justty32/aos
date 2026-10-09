@@ -1,0 +1,29 @@
+{
+ "stage": "done",
+ "kid": "486bf4f4a392810f86bd",
+ "key": {
+  "budget": "llm",
+  "holder": "author",
+  "request": "demo-c1"
+ },
+ "digest": "dce8b7a0933d0bd02d4ce5f9d08e32bb0454391128949754de6345ba1c4ecfab",
+ "gateway": "llm.litellm",
+ "call_id": "demo-c1",
+ "outcome": "answered",
+ "used": 1649,
+ "usage": {
+  "completion_tokens": 5,
+  "prompt_tokens": 1644,
+  "total_tokens": 1649,
+  "completion_tokens_details": {
+   "reasoning_tokens": 0
+  },
+  "prompt_tokens_details": {
+   "cached_tokens": 1408
+  }
+ },
+ "overrun": 0,
+ "billing": "final",
+ "raw_sha": "475a84daa5c3c80647807a15486ad548fc75d9cf2b9ee0b76c44ae0b3dc460e7",
+ "at": "2026-10-09T14:26:47.738"
+}

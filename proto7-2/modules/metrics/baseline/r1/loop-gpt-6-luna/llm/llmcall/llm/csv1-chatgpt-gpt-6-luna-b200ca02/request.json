@@ -1,0 +1,26 @@
+{
+ "v": 1,
+ "call_id": "csv1-chatgpt-gpt-6-luna-b200ca02",
+ "logical": "author/csv1",
+ "budget": "llm",
+ "holder": "author",
+ "req_sha": "b48294436dd9f9fcc2160f0d14ea195b1f5e431c869ee66a00e9bbb9db4c3942",
+ "reserve": 1000000,
+ "meter": "litellm.total_tokens/1",
+ "endpoint": "http://localhost:4000/v1",
+ "request": {
+  "litellm": {
+   "messages": [
+    {
+     "content": "你是 aos 的工作流作者。只輸出一個 JSON 物件，不加說明、不加 Markdown 圍欄。只能組合工具卡上的工具；不宣告 finite、idempotent、argv 或其他執行屬性。",
+     "role": "system"
+    },
+    {
+     "content": "{\"candidate_schema\":{\"ends\":{\"end名\":\"ok|failed\"},\"intent\":\"str\",\"mode\":\"keep\",\"start\":\"步id\",\"steps\":[{\"args\":{\"參數\":\"值\"},\"fail\":\"步id或end名\",\"id\":\"步id\",\"ok\":\"步id或end名\",\"tool\":\"工具名\"}],\"v\":1},\"request\":{\"goal\":\"部門統計：每個部門的筆數、總額、平均\",\"inputs\":[{\"path\":\"data.csv\",\"sha256\":\"c01f0a65d56dd37512adc1c4b6cddb18605cce606b87467a13b3102c3481681b\"}],\"rid\":\"csv1\",\"tools\":[\"csv.convert\",\"csv.stats\"],\"v\":1},\"rules\":\"候選恰含 v、mode、intent、start、steps、ends；v=1，只收 keep，最多 16 步、64 KiB。\\n每步恰含 id、tool、args、ok、fail；id 唯一，start 與跳轉目標必須存在，所有步可達、跳轉不可成環。\\nargs 必須符合工具卡：不得缺少或多餘參數，型別必須相符，有 value 的值完全相等。\\n${job}/<輸入檔名> 是需求輸入；輸入只在 ${job}/ 下，不讀 node 原檔。\\n${out}/… 是本版寫入或讀取產物；${request} 是本步 request；${req:<步id>} 取前一步成功採用的 request。\\nrole=req 的引用在每條可達路徑上都必須已成功，且引用步的工具必須符合卡的 tool。\\n寫入及同目錄 <dst>.tmp 都只能在 ${out}/ 下；禁止絕對路徑、..、空段、NUL、其他展開及 symlink 逃逸。\\n只能用需求 tools 白名單。finite、idempotent、expect、argv、run 等執行屬性由卡決定，不可在候選宣告。\\n輸出嚴格 UTF-8 JSON，不得重複鍵、NaN 或 Infinity；不會自動修復 JSON。\",\"toolcards\":{\"csv.convert\":{\"argv\":[\"python3\",\"${job}/convert.py\",\"{src}\",\"{dst}\",\"{request}\"],\"artifacts\":[\"${out}/data.json\"],\"params\":{\"dst\":{\"role\":\"write\",\"type\":\"string\",\"value\":\"${out}/data.json\"},\"request\":{\"role\":\"request\",\"type\":\"string\",\"value\":\"${request}\"},\"src\":{\"role\":\"input\",\"type\":\"string\",\"value\":\"${job}/data.csv\"}}},\"csv.stats\":{\"argv\":[\"python3\",\"${job}/stats.py\",\"{src}\",\"{request}\",\"{dst}\"],\"artifacts\":[\"${out}/report.json\"],\"params\":{\"dst\":{\"role\":\"write\",\"type\":\"string\",\"value\":\"${out}/report.json\"},\"request\":{\"role\":\"req\",\"tool\":\"csv.convert\",\"type\":\"string\"},\"src\":{\"role\":\"read\",\"type\":\"string\",\"value\":\"${out}/data.json\"}}}}}",
+     "role": "user"
+    }
+   ],
+   "model": "chatgpt-gpt-6-luna"
+  }
+ }
+}

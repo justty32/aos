@@ -1,0 +1,29 @@
+{
+ "stage": "done",
+ "kid": "eb68cca339847d179b09",
+ "key": {
+  "budget": "llm",
+  "holder": "author",
+  "request": "csv1-chatgpt-gpt-6-astra-94e0888b"
+ },
+ "digest": "3accb94dacfb28bd90cc4fe8838bf17afb0a12c33b9a65582cace345054e2825",
+ "gateway": "llm.litellm",
+ "call_id": "csv1-chatgpt-gpt-6-astra-94e0888b",
+ "outcome": "answered",
+ "used": 2504,
+ "usage": {
+  "completion_tokens": 139,
+  "prompt_tokens": 2365,
+  "total_tokens": 2504,
+  "completion_tokens_details": {
+   "reasoning_tokens": 0
+  },
+  "prompt_tokens_details": {
+   "cached_tokens": 1408
+  }
+ },
+ "overrun": 0,
+ "billing": "final",
+ "raw_sha": "7931bc4d1ed38e5a2b994c0651448c62972678a7f016550dea90619e52cdaead",
+ "at": "2026-10-09T14:35:24.031"
+}

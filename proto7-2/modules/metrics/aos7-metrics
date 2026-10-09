@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""唯讀效率量測入口。"""
+import sys
+sys.dont_write_bytecode = True
+from aos7_metrics import main
+
+if __name__ == '__main__':
+    raise SystemExit(main())

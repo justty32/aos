@@ -1,0 +1,1 @@
+{"ops": {"a": {"key": {"request": "a"}, "stage": "settled", "reserve": {"at": "2026-10-09T12:00:01"}}, "b": {"key": {"request": "b"}, "stage": "settled", "reserve": {"at": "2026-10-09T12:00:03"}}, "c": {"key": {"request": "c"}, "stage": "reserved", "reserve": {"at": "2026-10-09T12:00:04"}}}}
