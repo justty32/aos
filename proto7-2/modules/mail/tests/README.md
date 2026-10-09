@@ -63,3 +63,5 @@ sh proto7-2/modules/mail/examples/two_nodes.sh
 | OSError 退回 2 | `test_error_oserror_unknown`：`2 != 3` |
 | 用法錯誤去掉前綴與第二句 | `test_error_usage_format_and_help`：四個 subTest 紅 |
 | 撞名／被拒（`Refused`）退回 2 | `test_team_orders_quiet`、`test_round2_team_atomic_publish`：`2 != 1` |
+
+新手重試（10-09 ER-mail 後，只讀 README 與 `--help`，第一次跑＋自寄一封辦完）：Haiku 8.4、gpt-6-luna 9.0，指令 3、概念 5／4。
