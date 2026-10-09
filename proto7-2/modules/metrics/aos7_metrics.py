@@ -37,6 +37,7 @@ def summary(flows, windows):
 def _scan(path, overhead):
     root = Path(path).absolute()
     calls, authors, jobs, events, unreadable = {}, {}, {}, {}, []
+    books, ingredients, gaps = {}, [], 0
     def call(key):
         return calls.setdefault(key, {})
     # 只讀契約內的路徑；JSONL 壞行跳過，仍保留其他行。
@@ -68,6 +69,8 @@ def _scan(path, overhead):
                 raise ValueError('非物件')
         except (OSError, ValueError, UnicodeError):
             unreadable.append(rel)
+            if index == 1:
+                books[matches[1].groups()] = None  # 帳檔在卻讀不了：帳差不明，不當成沒帳
             continue
         m = matches[index]
         if index == 0:
@@ -75,6 +78,9 @@ def _scan(path, overhead):
             call((base, budget, cid))[kind] = data
         elif index == 1:
             base, budget = m.groups()
+            if 'used' in data:  # 沒 used 欄（如重建的 smoke 帳）當沒帳；有欄但不是整數算壞帳
+                used = data['used']
+                books[(base, budget)] = used if isinstance(used, int) and not isinstance(used, bool) else None
             for op in obj(data.get('ops')).values():
                 if not isinstance(op, dict):
                     continue
@@ -115,6 +121,23 @@ def _scan(path, overhead):
             reply = obj(raw.get('reply'))
             done = gate.get('stage') == 'done'
             final = rec if rec else gate if done else {}
+            overrun = number(final.get('overrun', obj(op.get('settle')).get('overrun')))
+            gaps += int('request' in c and 'receipt' not in c) + int(overrun > 0)
+            if 'request' in c:
+                nested = obj(req.get('request'))
+                model = next((v for v in (obj(nested.get('litellm')).get('model'), nested.get('model'), req.get('endpoint')) if isinstance(v, str)), '?')
+                holder = next((v for v in (req.get('holder'), obj(op.get('key')).get('holder')) if isinstance(v, str)), '?')
+                moment = None
+                for at in (raw.get('at'), gate.get('at') if done else None, obj(rec.get('settle')).get('at'),
+                           obj(op.get('settle')).get('at'), obj(op.get('reserve')).get('at')):
+                    try:
+                        moment = dt.datetime.fromisoformat(at)
+                        break
+                    except (TypeError, ValueError, OverflowError):
+                        pass
+                ingredients.append((model, holder, moment.strftime('%Y-%m-%d') if moment else '-',
+                                    moment.strftime('%Y-%m-%dT%H') if moment else '-', number(final.get('used')), overrun))
+            c['used'] = number(rec.get('used'))  # 帳差只比真回條，gateway done 不算回條
             reserve = number(req.get('reserve'))
             pending = final.get('billing') == 'pending' or gate.get('stage') == 'intent' or bool(op and op.get('stage') != 'settled')
             token['used'] += number(final.get('used'))
@@ -172,7 +195,23 @@ def _scan(path, overhead):
         result['tokens'] = dict.fromkeys(('used', 'reserve', 'pending', 'pending_reserve', 'prompt', 'completion', 'reasoning', 'cached'), 0)
         if overhead:
             result['tokens'].update(prompt_own=0, overhead_total=0)
-    return result, all_windows
+    # 帳差只比有帳的 budget：沒帳的呼叫（例如直連代理的 smoke）不拉低帳差。
+    bad = sum(v is None for v in books.values())
+    unbooked = [c.get('used', 0) for k, c in calls.items() if 'request' in c and k[:2] not in books]
+    result['ledger'] = ledger(sum(books.values()) if books and not bad else None, sum(c['used'] for k, c in calls.items() if k[:2] in books and 'used' in c),
+                              gaps, bad, len(unbooked), sum(unbooked))
+    return result, all_windows, ingredients
+def ledger(used, receipts, gaps, bad, unbooked, unbooked_used):
+    return dict(used=used, receipts=receipts, diff=used-receipts if used is not None else None, gaps=gaps, bad=bad,
+                unbooked=unbooked, unbooked_used=unbooked_used)
+def by(field, ingredients):
+    groups, index = {}, ('model', 'holder', 'day', 'hour').index(field)
+    for row in ingredients:
+        group = groups.setdefault(row[index], dict(key=row[index], calls=0, used=0, overrun=0))
+        group['calls'] += 1
+        group['used'] += row[4]
+        group['overrun'] += row[5]
+    return dict(field=field, groups=[groups[k] for k in sorted(groups)])
 def scan(path, overhead=0):
     return _scan(path, overhead)[0]
 def line(scope_dict, overhead):
@@ -183,9 +222,12 @@ def line(scope_dict, overhead):
     duration = f"{sec['mean']} 秒" if count == 1 and sec['mean'] is not None else f"平均 {sec['mean']} 秒、最長 {sec['max']} 秒" if sec['mean'] is not None else '未結案'
     if sec['open']:
         duration += f"、未結案 {sec['open']}"
+    book = s['ledger']
+    extra = f"；另 {book['unbooked']} 次呼叫沒帳、用 {book['unbooked_used']} token" if book['unbooked'] else ''
+    balance = f"{book['diff']}（帳 {book['used']}－回條 {book['receipts']}{extra}）" if book['used'] is not None else f"不明（{book['bad']} 個帳檔讀不了）" if book['bad'] else '無帳'
     return (f"{s['scope']}：{count} 件、{s['calls']} 次呼叫｜每件 token {int(t['used']/count) if count else 0}"
             f"（prompt {t['prompt']}{own}、completion {t['completion']}、推理 {t['reasoning']}、cached {t['cached']}；"
-            f"預留 {t['reserve']}、未結 {t['pending']}）｜並行最多 {s['max_parallel']}｜收到→做完 {duration}｜重試 {s['retries']['total']}")
+            f"預留 {t['reserve']}、未結 {t['pending']}）｜並行最多 {s['max_parallel']}｜收到→做完 {duration}｜重試 {s['retries']['total']}｜帳差 {balance}、缺口 {book['gaps']}")
 def plain(scope_dict):
     """給人看的預設一行：每格都有白話標籤與單位。"""
     s, t = scope_dict, scope_dict['tokens']
@@ -222,9 +264,8 @@ EPILOG = """PATH 要量哪個資料夾：
   名稱：N 件工作｜每件用 X token｜同時最多 P 個在問模型｜花 S 秒｜重試 R 次
   件＝一件 AI 工作：同一張需求的所有呼叫算一件；不屬於任何需求的單次呼叫自己算一件。
 
---detail 把 token 拆成 prompt／completion／推理／cached，另列預留（先保留的上限，不是真的用掉）與未結。
+--detail 把 token 拆成 prompt／completion／推理／cached，另列預留（先保留的上限，不是真的用掉）與未結，與帳差（帳上 used 減有帳呼叫的回條合計）、缺口。
 --json 欄位：{v, overhead, scopes, total}，scope 含 flows、tokens、max_parallel、seconds、retries 等；--overhead 量法與各欄算法見 ADVANCED.md。
-
 退出碼：0 成功（有讀不了的檔也算）；2 參數不對或 PATH 不是資料夾。
 """
 class ArgumentParser(argparse.ArgumentParser):
@@ -240,6 +281,7 @@ def main(argv=None):
     parser.add_argument('paths', nargs='+', metavar='PATH', help='要量的資料夾（可多個）')
     parser.add_argument('--detail', action='store_true', help='改印細節行（token 拆項、預留、未結）')
     parser.add_argument('--overhead', type=int, default=0, metavar='N', help='代理每次自動加的 prompt token 數，預設 0（見下）')
+    parser.add_argument('--by', choices=['model', 'holder', 'day', 'hour'], metavar='FIELD', help='FIELD 是 model／holder／day／hour：按模型／呼叫者／日／時分組（含 --detail）')
     parser.add_argument('--json', action='store_true', help='印給程式讀的一行 JSON')
     args = parser.parse_args(argv)
     if args.overhead < 0:
@@ -250,14 +292,24 @@ def main(argv=None):
             print(f'aos7-metrics: 不是資料夾：{shown}。PATH 要給資料夾，例：aos7-metrics job proto7-2/modules/metrics/baseline/r1/loop-gpt-6-sol', file=sys.stderr)
             return 2
     scanned = [_scan(p, args.overhead) for p in sorted(args.paths)]
-    scopes = [s for s, _ in scanned]
+    scopes = [s for s, _, _ in scanned]
     flows = [f for s in scopes for f in s['flows']]
-    total = dict(scope='合計', flows=len(flows), **summary(flows, [w for _, windows in scanned for w in windows]))
+    total = dict(scope='合計', flows=len(flows), **summary(flows, [w for _, windows, _ in scanned for w in windows]))
     if not flows:
         total['tokens'] = scopes[0]['tokens'].copy()
+    amounts = [s['ledger']['used'] for s in scopes if s['ledger']['used'] is not None]
+    bad = sum(s['ledger']['bad'] for s in scopes)
+    total['ledger'] = ledger(sum(amounts) if amounts and not bad else None, sum(s['ledger']['receipts'] for s in scopes), sum(s['ledger']['gaps'] for s in scopes), bad, *(sum(s['ledger'][k] for s in scopes) for k in ('unbooked', 'unbooked_used')))
+    if args.by:
+        for s, _, rows in scanned:
+            s['by'] = by(args.by, rows)
+        total['by'] = by(args.by, [row for _, _, rows in scanned for row in rows])
     if args.json:
         print(json.dumps(dict(v=1, overhead=args.overhead, scopes=scopes, total=total), ensure_ascii=False, sort_keys=True))
     else:
         for s in scopes + ([total] if len(scopes) > 1 else []):
-            print(line(s, args.overhead) if args.detail else plain(s))
+            print(line(s, args.overhead) if args.detail or args.by else plain(s))
+            if args.by:
+                for g in s['by']['groups']:
+                    print(f"　　{args.by} {g['key']}：{g['calls']} 次呼叫、用 {g['used']} token、超支 {g['overrun']}")
     return 0
