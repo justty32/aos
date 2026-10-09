@@ -98,8 +98,7 @@
    "team": "ER-wfnode",
    "name": "aos7-wfnode",
    "entry": "modules/wfnode/aos7-wfnode",
-   "unsure": null,
-   "skip": "尚未照藍圖改（ER-wfnode）"
+   "unsure": {"argv": ["check", "node"], "files": {"node/wf/tools/wf-lint.sh": "echo boom; exit 2\n"}}
   },
   {
    "pack": "metrics",
