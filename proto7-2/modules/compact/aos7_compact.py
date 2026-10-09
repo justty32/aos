@@ -15,7 +15,7 @@ from aos7_fs import append_jsonl, now, read_json, sweep_tmp, test_point, write_j
 from aos7_taskside import task_env, wait_tock
 
 DEFAULT = dict(files=["wf/SESSION-LOG.md", "notes/journal.jsonl"], max_bytes=16384,
-               keep_recent=10, on_stage_change=True, stage_similarity=0.2, summary_max_chars=1200, llm=None)
+               keep_recent=10, on_stage_change=True, stage_similarity=0.2, summary_max_chars=1200, llm=None, events=False)
 LLM_DEFAULT = dict(budget="budget/llm", holder="compact", reserve=4000, gateway="fake",
                    model="chatgpt-gpt-6-sol-high", deadline=600, patience=5)
 PROMPT = ("這是一個 agent 的工作紀錄。請將舊紀錄濃縮成一段繁體中文摘要，≤{n} 字。"
@@ -24,9 +24,10 @@ PROMPT = ("這是一個 agent 的工作紀錄。請將舊紀錄濃縮成一段�
 
 class Failure(Exception):
     """帶退出碼的輸入或交付失敗。"""
-    def __init__(self, message, code=2):
+    def __init__(self, message, code=2, hint=None):
         super().__init__(message)
         self.code = code
+        self.hint = hint
 
 
 def load(path, default):
@@ -35,53 +36,58 @@ def load(path, default):
     except FileNotFoundError:
         return default
     except (ValueError, UnicodeError) as e:
-        raise Failure(f"{path.name} 不是有效 JSON：{e}") from e
+        if path.name != "compact.json":  # 自己寫的 state／pending 壞了：做到哪裡不確定，證據留著。
+            raise Failure(f"compact/{path.name} 讀不懂（{e}），做到哪裡不確定，檔案原樣留著", 3,
+                          hint=f"先看 compact/{path.name}；修好或移走後再跑一次") from e
+        raise Failure(f"{path.name} 不是有效 JSON：{e}", hint='請修正 JSON；例：compact.json 可先用 {}') from e
 
 
 def file_path(node, rel):
     """只接受 node 內的 md／jsonl 記憶檔，避免設定跨出邊界。"""
     if not isinstance(rel, str) or not rel or Path(rel).is_absolute():
-        raise Failure("記憶檔必須是相對 node 的路徑")
+        raise Failure("記憶檔必須是相對 node 的路徑", hint='請給 node 內相對路徑；例：notes/journal.jsonl')
     path = (node / rel).resolve()
     if not path.is_relative_to(node) or path == node or path.suffix not in (".md", ".jsonl"):
-        raise Failure("記憶檔須在 node 內，副檔名為 .md 或 .jsonl")
+        raise Failure("記憶檔須在 node 內，副檔名為 .md 或 .jsonl", hint='請給 node 內 md／jsonl 路徑；例：notes/journal.jsonl')
     if path.is_relative_to(node / "compact"):
-        raise Failure("compact/ 是工作資料，不能作為記憶檔")
+        raise Failure("compact/ 是工作資料，不能作為記憶檔", hint='請指定工作資料以外的記憶檔；例：notes/journal.jsonl')
     return path
 
 
 def config(node):
     obj = load(node / "compact.json", {})
     if not isinstance(obj, dict):
-        raise Failure("compact.json 須是物件")
+        raise Failure("compact.json 須是物件", hint='請給 JSON 物件；例：{}')
     cfg = dict(DEFAULT, **obj)
     if not isinstance(cfg["files"], list):
-        raise Failure("files 須是陣列")
+        raise Failure("files 須是陣列", hint='請給路徑陣列；例："files": ["notes/journal.jsonl"]')
     for rel in cfg["files"]:
         file_path(node, rel)
     if len(set(cfg["files"])) != len(cfg["files"]):
-        raise Failure("files 不能重複")
+        raise Failure("files 不能重複", hint='請每個路徑只列一次；例："files": ["notes/journal.jsonl"]')
     for key in ("max_bytes", "keep_recent", "summary_max_chars"):
         if type(cfg[key]) is not int or cfg[key] < (1 if key == "summary_max_chars" else 0):
-            raise Failure(f"{key} 須是合法非負整數")
+            raise Failure(f"{key} 須是合法非負整數", hint='請給整數，summary_max_chars 至少 1；例："keep_recent": 10')
+    if type(cfg["events"]) is not bool:
+        raise Failure("events 須是布林值", hint='請給 true 或 false；例：compact.json 的 "events": false')
     if type(cfg["on_stage_change"]) is not bool:
-        raise Failure("on_stage_change 須是布林值")
+        raise Failure("on_stage_change 須是布林值", hint='請給布林值；例："on_stage_change": true')
     if type(cfg["stage_similarity"]) not in (int, float) or not 0 <= cfg["stage_similarity"] <= 1:
-        raise Failure("stage_similarity 須是 0～1 的數值")
+        raise Failure("stage_similarity 須是 0～1 的數值", hint='請給 0～1 數值；例："stage_similarity": 0.2')
     if cfg["llm"] is not None:
         if not isinstance(cfg["llm"], dict):
-            raise Failure("llm 須是物件或 null")
+            raise Failure("llm 須是物件或 null", hint='請給設定物件或 null；例："llm": null')
         llm = cfg["llm"] = dict(LLM_DEFAULT, **cfg["llm"])
         for key in ("budget", "holder", "model"):
             if not isinstance(llm[key], str) or not llm[key]:
-                raise Failure(f"llm.{key} 須是非空字串")
+                raise Failure(f"llm.{key} 須是非空字串", hint='請給非空字串；例："holder": "compact"')
         if llm["gateway"] not in ("fake", "litellm"):
-            raise Failure("llm.gateway 須是 fake 或 litellm")
+            raise Failure("llm.gateway 須是 fake 或 litellm", hint='請給 fake 或 litellm；例："gateway": "fake"')
         for key in ("reserve", "patience"):
             if type(llm[key]) is not int or llm[key] < 0:
-                raise Failure(f"llm.{key} 須是非負整數")
+                raise Failure(f"llm.{key} 須是非負整數", hint='請給非負整數；例："reserve": 4000')
         if type(llm["deadline"]) not in (int, float) or not 0 < llm["deadline"] <= 86400:
-            raise Failure("llm.deadline 須介於 0 與 86400 秒之間")
+            raise Failure("llm.deadline 須介於 0 與 86400 秒之間", hint='請給 0 到 86400 之間的秒數；例："deadline": 600')
     return cfg
 
 
@@ -247,26 +253,27 @@ def summarize(node, work, p):
         write_json(str(req), request)
     if llm["gateway"] == "litellm":
         if not (TOP / "packs/llmcall/aos7_llmcall_litellm.py").is_file():
-            raise Failure("摘要沒拿到：現行 llmcall 尚未提供 litellm 傳輸", 3)
+            raise Failure("摘要沒拿到：現行 llmcall 尚未提供 litellm 傳輸", 3, hint='pending 留著，照原樣再跑一次會接續')
     argv = [sys.executable, str(TOP / "packs/llmcall/bin/aos7-llmcall"), "call", llm["budget"],
             "--holder", llm["holder"], "--call", p["call_id"], "--logical", "compact/" + p["file"],
             "--request", str(req), "--reserve", str(llm["reserve"]), "--deadline", str(llm["deadline"]),
             "--patience", str(llm["patience"]), "--out", str(result)]
     reply = subprocess.run(argv, cwd=node, capture_output=True, text=True)
     if reply.returncode:
-        raise Failure("摘要沒拿到：llmcall 退出 " + str(reply.returncode), 3)
+        raise Failure("摘要沒拿到：llmcall 退出 " + str(reply.returncode), 3, hint='pending 留著，照原樣再跑一次會接續')
     receipt = read_json(str(result), {})
     text = receipt.get("text") if isinstance(receipt, dict) else None
     if not isinstance(text, str) or not text.strip():
-        raise Failure("摘要沒拿到：回條沒有非空 text", 3)
+        raise Failure("摘要沒拿到：回條沒有非空 text", 3, hint='pending 留著，照原樣再跑一次會接續')
     if len(text) > p["summary_max_chars"] * 1.5:
         p["truncated"] = True
         text = text[:p["summary_max_chars"]]
     return text
 
 
-def resume(node, work, p):
-    """固定原內容與摘要證據；追加接回，改寫放棄，換檔後可重送事件。"""
+def resume(node, work, p, cfg=None):
+    """固定原內容與摘要證據；追加接回，改寫放棄，完成後可選發布事件。"""
+    cfg = config(node) if cfg is None else cfg
     path = file_path(node, p["file"])
     if p["kind"] == "compact.done" and "summary" not in p:
         p["summary"] = summarize(node, work, p)
@@ -324,18 +331,29 @@ def resume(node, work, p):
         if key in p:
             entry[key] = p[key]
     log_once(work, entry)
-    if (node / "events").is_dir():
-        ev = subprocess.run([sys.executable, str(TOP / "modules/events/aos7-events"), "pub",
-                             "--events", str(node / "events"), "--node", node.name, "--kind", p["kind"],
-                             "--event-id", "compact/" + p["job"],
-                             "--payload", json.dumps(entry, ensure_ascii=False)], capture_output=True, text=True)
-        if ev.returncode:
-            try:
-                why = json.loads(ev.stdout.strip().split("\n")[-1]).get("why", "")
-            except (ValueError, AttributeError):
-                why = ev.stdout.strip()
-            raise Failure("事件發布失敗，pending 留待重試：" + str(why) + " " + ev.stderr.strip(), 1)
     cleanup(work, p)
+    if cfg["events"]:
+        why = None
+        try:
+            ev = subprocess.run([sys.executable, str(TOP / "modules/events/aos7-events"), "pub",
+                                 "--events", str(node / "events"), "--node", node.name, "--kind", p["kind"],
+                                 "--event-id", "compact/" + p["job"],
+                                 "--payload", json.dumps(entry, ensure_ascii=False)], capture_output=True, text=True)
+            if ev.returncode:
+                try:
+                    why = json.loads(ev.stdout.strip().splitlines()[-1]).get("why")
+                except (ValueError, AttributeError, IndexError):
+                    pass
+                why = why or flat(ev.stdout + " " + ev.stderr)[:500] or f"pub 退出 {ev.returncode}"
+        except Exception as error:
+            why = f"{type(error).__name__}: {flat(str(error))}"
+        if why is not None:
+            try:  # 事件是可選通知：連這行記不下也不讓整理算失敗。
+                append_jsonl(str(work / "log.jsonl"), dict(job=p["job"], file=p["file"],
+                             status="event_failed", why=why, at=now()))
+            except OSError:
+                pass
+        entry["event"] = "failed" if why is not None else "ok"
     human_result(p, entry, archive, parts, current if replaced else target)
     return entry
 
@@ -383,16 +401,31 @@ def pending(work, rel, text, indices, trigger, cfg, kind="compact.done", forget_
     return p
 
 
+def save_state(work, previous, current):
+    """預設假值與缺欄位等價；只寫真正改變的段落狀態。"""
+    def normalized(state):
+        state = dict(state)
+        for key, default in (("stage_last", ""), ("stage_ended", False), ("stage_due", False)):
+            if state.get(key, default) == default:
+                state.pop(key, None)
+        return state
+    if normalized(previous) != normalized(current):
+        write_json(str(work / "state.json"), current)
+        return dict(current)
+    return previous
+
+
 def once(node, cfg, dry=False, force=False):
     work, entries = node / "compact", []
-    state = observe_stage(node, cfg, load(work / "state.json", {}))
+    saved = load(work / "state.json", {})
+    state = observe_stage(node, cfg, saved)
     changed = state["stage_due"]
     evidence = state.get("stage_evidence")
     if not dry:
-        write_json(str(work / "state.json"), state)
+        saved = save_state(work, saved, state)
     if not dry and (work / "pending.json").exists():
         # 舊 pending 只算它自己那一輪；接完後照樣重評同一檔，新觸發（stage_due）不被它吃掉。
-        entries.append(resume(node, work, load(work / "pending.json", None)))
+        entries.append(resume(node, work, load(work / "pending.json", None), cfg))
     first = len(entries)
     for rel in cfg["files"]:
         path = file_path(node, rel)
@@ -414,12 +447,12 @@ def once(node, cfg, dry=False, force=False):
             human_plan(plan, cfg)
             entries.append(plan)
         else:
-            entries.append(resume(node, work, pending(work, rel, text, indices, trigger, cfg, evidence=evidence if changed else None)))
+            entries.append(resume(node, work, pending(work, rel, text, indices, trigger, cfg, evidence=evidence if changed else None), cfg))
     if not dry:
         state["stage_due"] = changed and any(e.get("status") == "abandoned" for e in entries[first:])
         if not state["stage_due"]:
             state.pop("stage_evidence", None)
-        write_json(str(work / "state.json"), state)
+        saved = save_state(work, saved, state)
     return dict(ok=True, dry_run=dry, files=entries)
 
 
@@ -427,61 +460,67 @@ def forget(node, cfg, args):
     work = node / "compact"
     if not args.dry_run and (work / "pending.json").exists():
         p = load(work / "pending.json", None)
-        result = resume(node, work, p)
+        result = resume(node, work, p, cfg)
         if p["kind"] == "compact.forget" and p["file"] == args.file and [p.get("from"), p.get("to")] == [args.start, args.end]:
             return dict(ok=True, forgotten=result)
-        raise Failure("已先接完上次沒做完的整理，檔已變；請重看 --dry-run 再 forget", 3)
+        raise Failure("已先接完上次沒做完的整理，檔已變，這次沒忘掉任何則", 1, hint="先用 --dry-run 重看再指定範圍")
     path = file_path(node, args.file)
     if not path.is_file():
-        raise Failure("forget 的檔案不存在")
+        raise Failure("forget 的檔案不存在", hint='請給存在的記憶檔；例：--file notes/journal.jsonl')
     text = read_text(path)
     rec = [r for r in records(text, path.suffix) if r["index"] is not None]
     if not 1 <= args.start <= args.end <= len(rec):
-        raise Failure("forget 範圍不合（1 起算，含頭尾）")
+        raise Failure("forget 範圍不合（1 起算，含頭尾）", hint='請給檔案內 1 起算且含頭尾的範圍；例：--from 1 --to 1')
     chosen = rec[args.start - 1:args.end]
     if any(r["open"] for r in chosen) and not args.include_open:
-        raise Failure("範圍含 open 項；明確給 --include-open 才能忘掉")
+        raise Failure("範圍含 open 項；明確給 --include-open 才能忘掉", hint='請確認要忘掉未完成項再明確加旗標；例：--from 1 --to 1 --include-open')
     if args.dry_run:
         print(f"{args.file}：會忘掉 {len(chosen)} 則，open {sum(r['open'] for r in chosen)}")
         return dict(ok=True, dry_run=True, previews=[r["text"][:80] for r in chosen])
     p = pending(work, args.file, text, [r["index"] for r in chosen], "forget", cfg, "compact.forget", [args.start, args.end])
-    return dict(ok=True, forgotten=resume(node, work, p))
+    return dict(ok=True, forgotten=resume(node, work, p, cfg))
 
 
 class Parser(argparse.ArgumentParser):
     def error(self, message):
-        raise Failure(message)
+        for en, zh in (("the following arguments are required:", "少了必要參數"), ("unrecognized arguments:", "看不懂的參數"),
+                       ("invalid choice:", "沒有這個子命令"), ("expected one argument", "後面少了值"),
+                       ("invalid int value:", "要給整數，收到"), ("choose from", "可用")):
+            message = message.replace(en, zh)
+        example = ("aos7-compact forget <node> --file notes/journal.jsonl --from 1 --to 1 --dry-run"
+                   if self.prog.endswith(" forget") else "aos7-compact now <node> --dry-run")
+        raise Failure(f"參數不對（{message}）", hint=f"例：{example}，<node> 是工作資料夾路徑；完整用法看 --help")
 
 
 def main(argv=None):
     """命令列入口；最後一行固定 JSON，watch 每回合鎖住自己的 node。"""
     ap = Parser(prog="aos7-compact", description="把 node（一個工作資料夾）裡太長的記憶檔整理成摘要；原文先存進 <node>/compact/archive/，未完成（open）與最近 10 則留下。",
-                epilog="第一次用：now <node> --dry-run 看計畫，再 now <node> 實際整理。")
-    commands = ap.add_subparsers(dest="command", required=True, parser_class=Parser, metavar="{now,forget,watch}")
+                epilog="第一次用：now <node> --dry-run 看計畫，再 now <node> 實際整理。記憶檔超過 16384 bytes 才會整理（門檻與常駐 watch 見 ADVANCED.md）。")
+    commands = ap.add_subparsers(dest="command", required=True, parser_class=Parser, metavar="{now,forget}")
     a = commands.add_parser("now", help="現在檢查一次，需要就整理", description="檢查一次 node 的記憶檔；需要時（例如檔超過 16384 bytes）才整理。")
-    a.add_argument("node", help="node 資料夾路徑")
+    a.add_argument("node", help="node：一個工作資料夾的路徑")
     a.add_argument("--dry-run", action="store_true", help="只印計畫，不寫任何檔")
     a.add_argument("--force", action="store_true", help="不管檔大小，強制整理")
     a = commands.add_parser("forget", help="人手刪掉指定的幾則（原文仍存進 archive）", description="刪掉某個記憶檔的第 A 到 B 則（1 起算、含頭尾）；原文另存 archive。")
-    a.add_argument("node", help="node 資料夾路徑")
+    a.add_argument("node", help="node：一個工作資料夾的路徑")
     a.add_argument("--file", required=True, help="記憶檔，相對 node 的路徑，例如 notes/journal.jsonl")
     a.add_argument("--from", dest="start", type=int, required=True, metavar="A", help="第幾則開始（1 起算）")
     a.add_argument("--to", dest="end", type=int, required=True, metavar="B", help="到第幾則（含）")
     a.add_argument("--dry-run", action="store_true", help="只印會刪哪幾則（每則前 80 字），不寫")
-    a.add_argument("--include-open", action="store_true", help="範圍含未完成（open）項時，明確同意一起刪")
-    a = commands.add_parser("watch", help="常駐：由 aos 每回合叫醒檢查（進階，第一次不用）", description="作為 aos keep 任務常駐，每回合檢查一次；手動試用請改用 now。")
+    a.add_argument("--include-open", action="store_true", help="now 永遠不摘 open（未完成）項；forget 是你親手刪，範圍含 open 項時要加這個表示確定")
+    a = commands.add_parser("watch", description="進階：讓 aos 每回合自動跑一次 now（aos keep 任務，設法見 ADVANCED.md）。手動試用請改用 now。")
     a.add_argument("--rounds", type=int, default=0, metavar="N", help="跑 N 回合就停；不給就一直跑")
     try:
         args = ap.parse_args(argv)
         try:
             me = task_env() if args.command == "watch" else None
         except (KeyError, ValueError) as e:
-            raise Failure("watch 需要完整 keep 任務環境") from e
+            raise Failure("watch 需要完整 keep 任務環境", hint='請用完整 aos keep 任務環境；手動例：aos7-compact now <node>') from e
         node = Path(me["node"] if me else args.node).resolve()
         if not node.is_dir():
-            raise Failure("node 資料夾不存在")
+            raise Failure("node 資料夾不存在", hint='請給存在的 node 資料夾；例：aos7-compact now ./node --dry-run')
         if me and args.rounds < 0:
-            raise Failure("rounds 須是非負整數")
+            raise Failure("rounds 須是非負整數", hint="請給非負整數；例：watch --rounds 1")
         cfg = config(node)
         def run(recover_only=False):
             dry = getattr(args, "dry_run", False)
@@ -492,7 +531,7 @@ def main(argv=None):
                         try:
                             fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
                         except BlockingIOError:
-                            raise Failure("同一 node 已有 compact 在做，鎖拿不到", 3) from None
+                            raise Failure("同一 node 已有 compact 在做，這次沒動任何檔", 3, hint="等它做完再跑一次") from None
                         return forget(node, cfg, args) if args.command == "forget" else once(node, cfg, True, args.force)
                 return forget(node, cfg, args) if args.command == "forget" else once(node, cfg, True, args.force)
             work = node / "compact"
@@ -501,7 +540,7 @@ def main(argv=None):
                 try:
                     fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError:
-                    raise Failure("同一 node 已有 compact 在做，鎖拿不到", 3) from None
+                    raise Failure("同一 node 已有 compact 在做，這次沒動任何檔", 3, hint="等它做完再跑一次") from None
                 sweep_tmp(str(work))
                 sweep_tmp(str(work / "archive"))
                 rels = cfg["files"] + ([args.file] if args.command == "forget" else [])
@@ -511,7 +550,7 @@ def main(argv=None):
                     for tmp in directory.glob(".*.compact-tmp"):
                         tmp.unlink()
                 if recover_only:
-                    return resume(node, work, load(work / "pending.json", None))
+                    return resume(node, work, load(work / "pending.json", None), cfg)
                 return forget(node, cfg, args) if args.command == "forget" else once(node, cfg, force=getattr(args, "force", False))
         result = None
         if me:
@@ -528,9 +567,19 @@ def main(argv=None):
             result = run()
         print(json.dumps(result, ensure_ascii=False))
         return 0
-    except (Failure, OSError, ValueError, KeyError, TypeError) as error:
-        code = error.code if isinstance(error, Failure) else 1
+    except Exception as error:
+        code = error.code if isinstance(error, Failure) else 3
         print(json.dumps(dict(ok=False, error=str(error)), ensure_ascii=False))
+        if isinstance(error, Failure):
+            fact = flat(str(error))
+            if code == 3:
+                fact = "不確定：" + fact
+            hint = error.hint or ("照原樣再跑一次會接續" if code == 3 else "依上述原因修正後再跑；例：aos7-compact now <node> --dry-run")
+        else:
+            fact = (f"不確定：{type(error).__name__}: {flat(str(error))}，做到哪裡不確定，"
+                    "已寫的 pending／archive 留著")
+            hint = "照原樣再跑一次會接續"
+        print(f"aos7-compact: {fact}。{hint}", file=sys.stderr)
         return code
 
 

@@ -1,13 +1,6 @@
 # compact 細部契約
 
-← [README](README.md)
-
-## 契約卡
-
-- **職責**：單 node 持鎖選舊段、摘要／忘掉、封存原文、替換檔案與留下 log。
-- **前置條件**：node 可讀寫；檔案是 md／jsonl；watch 有任務環境；使用 llmcall 時帳任務已運行、grant 允許 holder 與 gateway。
-- **保證**：先 archive 再換檔；now 不摘 open、最近 N 則與 files 第一個 md 的現役段（第一個 `## ` 到下一個 `## `，進行中的工作）；pending 原子保存，SIGKILL 後沿同 call 接續，已有 summary 不再叫摘要。只保證持 write.lock 的追加者：最後讀檔到 rename 持共同短鎖，摘要／llmcall 期間不持有；追加尾巴接回，其他改寫則放棄 pending、下次重規劃；未完成的段落觸發留到全部檔成功。events/ 已存在才發布 obs，沿同 event_id 重送。
-- **明確不管**：不拿 write.lock 的追加在換檔瞬間可能丟，明確不管；斷電保證、摘要的語意正確性、封存保留期限；refs/、agent 的 prompt 組裝、events store 都不由本包管理。
+← [ADVANCED.md（進階與契約卡）](ADVANCED.md)
 
 合作的追加者先建 compact/，拿同一把鎖再追加（NODE 是 node 絕對路徑）：
 
