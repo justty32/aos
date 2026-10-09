@@ -3,12 +3,32 @@ import json
 import os
 import time
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 GATEWAY = "llm.litellm"
 METER = "litellm.total_tokens/1"
 ENDPOINT = "http://localhost:4000/v1"
 MAX_TEXT = 64 * 1024
+NOT_BILLED = range(400, 500)        # 4xx 且回應沒帶 usage＝provider 拒絕未計費；408／429 除外
+
+
+class NoRedirect(HTTPRedirectHandler):
+    """不跟重新導向：第一端點可能已受理，3xx 一律當計費未知。"""
+
+    def redirect_request(self, *args, **kw):
+        return None
+
+
+OPENER = build_opener(NoRedirect)
+
+
+def urlopen(req, timeout):
+    return OPENER.open(req, timeout=timeout)
+
+
+def clean(obj):
+    """孤立 surrogate 換成 U+FFFD，保證 raw 能以 UTF-8 存下（其餘原樣）。"""
+    return json.loads(json.dumps(obj, ensure_ascii=False).encode("utf-16", "surrogatepass").decode("utf-16", "replace"))
 
 
 def base_url():
@@ -52,9 +72,9 @@ def send(node, call_id, request, deadline):
     choice = choices[0] if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
     message = choice.get("message") if choice else None
     body = message.get("content") if isinstance(message, dict) else None
-    reject = 400 <= code < 500 and code != 429
-    return {"status": "reject" if reject else "ok" if code == 200 and choice is not None else "error",
+    reject = code in NOT_BILLED and code not in (408, 429) and usage is None
+    return clean({"status": "reject" if reject else "ok" if code == 200 and choice is not None else "error",
             "billed": not reject, "body": data[:MAX_TEXT].decode("utf-8", errors="replace") if reject else
             body if isinstance(body, str) else None, "usage": None if reject else usage,
             "model": obj.get("model"), "finish_reason": choice.get("finish_reason") if choice else None,
-            "http": code, "elapsed": round(time.monotonic() - start, 3), "response": response}
+            "http": code, "elapsed": round(time.monotonic() - start, 3), "response": response})
