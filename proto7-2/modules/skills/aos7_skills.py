@@ -1,17 +1,20 @@
 """Skill 索引、經 llmcall 選擇與任務掛載。"""
 import argparse
-import fcntl
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-from aos7_fs import N, OK, Unknown, append_jsonl, edit_json, fact, now, write_json
+from aos7_fs import N, OK, Unknown, edit_json, fact, now, write_json
 
 TOP = Path(__file__).resolve().parents[2]
+sys.path[:0] = [str(TOP / "packs/budget")]
+import aos7_budget
+
 DEFAULT_BUDGET = "budget/llm"
 SYSTEM = "你是 skill 選擇器。從清單挑一個最適合題目的 skill，只回它的 name，不要其他字；都不適合回 none。"
 
@@ -27,7 +30,7 @@ def build(node):
     """只掃描，不寫檔；符號連結照目錄跟進去。"""
     directory = Path(node) / "skills"
     if not Path(node).is_dir() or not directory.is_dir():
-        raise ValueError("node 不存在或沒有 skills/ 目錄")
+        raise ValueError(f"找不到 {directory}/ 資料夾。給一個裡面有 skills/ 的資料夾，例：aos7-skills index ~/my-node")
     skills, rejected = {}, {}
     for entry in sorted(directory.iterdir()):
         if entry.name.startswith(".") or not entry.is_dir():
@@ -95,8 +98,9 @@ def index(node):
         (directory / "MUST.md").unlink(missing_ok=True)
     for line in result["lines"]:
         print(line)
-    for name, reason in result["rejected"].items():
-        error(f"拒收 {name}：{reason}")
+    if result["rejected"]:
+        details = "；".join(f"{name}（{reason}）" for name, reason in result["rejected"].items())
+        error(f"有 {len(result['rejected'])} 本不收：{details}。改好那幾本的 SKILL.md 再跑 index，其他已照寫")
     return int(bool(result["rejected"]))
 
 
@@ -113,20 +117,6 @@ def words(text):
     return set(re.findall(r"[a-z0-9]+|[\u3400-\u9fff]", text.lower()))
 
 
-def ledger_alive(lock, wait=2.0):
-    """帳任務常駐時持有 ledger.lock；剛起的給它 wait 秒拿鎖。"""
-    end = time.monotonic() + wait
-    while True:
-        with open(lock, "a") as lk:
-            try:
-                fcntl.flock(lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                return True
-        if time.monotonic() >= end:
-            return False
-        time.sleep(0.1)
-
-
 def keyword_guess(question, skills):
     """關鍵字重疊最多的那本；一個字都沒對上回 none。本機挑選與假 AI 共用。"""
     scores = [(len(words(question) & words(n + " " + v["description"])), n) for n, v in skills.items()]
@@ -134,93 +124,131 @@ def keyword_guess(question, skills):
     return guess if score else "none"
 
 
+NONE = "目錄裡沒有一本合這個題目。換個說法再挑，或跑 index 看有哪幾本"
+LLMCALL_SAYS = {  # llmcall 沒留 stderr 時的備用句
+    1: "llmcall 做不到，沒有交付。用 aos7-llmcall status 看原因後再挑",
+    2: "llmcall 的參數不合。給有效的預留與期限，例：--reserve 20000 --deadline 600",
+    3: "不確定：llmcall 沒有確定結果，證據留在 llmcall/。照原樣再跑一次會接續",
+}
+
+
 def show(node, result, answer, log):
+    """印挑到的路徑或 none；回 (退出碼, stderr 那句)。"""
     if answer == "none":
         print("none")
-        return
-    log.update(picked=answer, rc=0)
+        return 1, NONE
+    log["picked"] = answer
     print((node / result["skills"][answer]["path"]).absolute())
+    return 0, None
+
+
+def ask_ai(node, args, result, log):
+    """經 llmcall 問一次 AI；回 (退出碼, stderr 那句)。llmcall 的 1／2／3 與它那句照傳。"""
+    lines = "\n".join(result["lines"])
+    log["call"] = "pick-" + hashlib.sha256((args.question + "\n" + lines + "\n" + args.model).encode()).hexdigest()[:16]
+    state, grant = fact(node / args.budget / "grant.json")
+    if state != OK or not isinstance(grant, dict) or not isinstance(grant.get("holder"), str) or not grant["holder"]:
+        raise ValueError('grant 讀不到或缺 holder。給可讀的 grant.json 與非空 holder，例："holder": "skills"')
+    prompt = f"清單：\n{lines}\n\n題目：{args.question}"
+    if grant.get("gateway") == "llm.fake":
+        request = {"fake": {"mode": "ok", "usage": (len(SYSTEM) + len(prompt)) // 3 + 1,
+                            "text": keyword_guess(args.question, result["skills"])}}
+    elif grant.get("gateway") == "llm.litellm":
+        request = {"litellm": {"model": args.model, "messages": [
+            {"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]}}
+    else:
+        raise ValueError('不支援的 gateway。給 llm.fake 或 llm.litellm，例："gateway": "llm.fake"')
+    bud = aos7_budget.Bud(node / args.budget)
+    if not aos7_budget.ledger_running(bud):          # 只讀試鎖，不在帳夾裡建檔
+        return 1, aos7_budget.not_running(bud)
+    path = node / "skills" / ".pick" / (log["call"] + ".json")
+    write_json(str(path), request)
+    try:                                              # llmcall 會把請求抄進自己的證據夾，這份用完即刪
+        proc = subprocess.run([sys.executable, str(TOP / "packs/llmcall/bin/aos7-llmcall"), "call", args.budget,
+                               "--holder", grant["holder"], "--call", log["call"], "--logical", "skills/pick",
+                               "--request", str(path), "--reserve", str(args.reserve), "--deadline", str(args.deadline)],
+                              cwd=node, capture_output=True, text=True)
+    finally:
+        path.unlink(missing_ok=True)
+    said = [line for line in proc.stderr.splitlines() if line.strip()]
+    said = said[-1].strip().removeprefix("aos7-llmcall: ") if said else None
+    if proc.returncode not in (0, 4):
+        rc = proc.returncode if proc.returncode in LLMCALL_SAYS else 3
+        return rc, (said if rc == proc.returncode else None) or LLMCALL_SAYS[rc]
+    receipt = json.loads(proc.stdout.strip().splitlines()[-1])
+    log.update(answer=receipt["text"], used=receipt["used"])
+    if not isinstance(log["answer"], str):
+        raise TypeError("回條 text 不是字串")
+    try:
+        answer = parse_answer(log["answer"], result["skills"])
+    except ValueError as e:
+        return 1, str(e) + "。跑 index 看有哪些名字，換個說法再挑"
+    rc, message = show(node, result, answer, log)
+    if proc.returncode == 4 and rc == 0:              # 已交付、帳沒清：照用，轉述 llmcall 那句
+        message = said or "已交付但帳沒清。用 aos7-llmcall status 看證據並對帳"
+    return rc, message
+
+
+def keep_last(path, obj, n=50):
+    """log.jsonl 加一行、只留最近 n 行（寫暫存再換名）。"""
+    rows = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    tmp.write_text("\n".join(rows[-(n - 1):] + [json.dumps(obj, ensure_ascii=False)]) + "\n", encoding="utf-8")
+    os.replace(tmp, path)
 
 
 def pick(node, args):
     start = time.monotonic()
     log = dict(at=now(), via="llmcall", call=None, q=args.question, answer=None, picked=None, used=None, rc=2)
+    message = None
     try:
         result = build(node)
         if args.budget is None and not (node / DEFAULT_BUDGET).exists():
             # 沒開帳就走本機挑選：不問 AI、不記帳；第一次跑走這條。call 仍按題目＋目錄取，供重試統計辨認。
             log["call"] = "local-" + hashlib.sha256(
                 (args.question + "\n" + "\n".join(result["lines"])).encode()).hexdigest()[:16]
-            log.update(via="local", answer=keyword_guess(args.question, result["skills"]), rc=1)
-            error("本機挑選（關鍵字比對，沒問 AI、不記帳）；要讓 AI 挑，見 README「進階：讓 AI 挑」")
-            show(node, result, log["answer"], log)
-            return log["rc"]
-        args.budget = args.budget or DEFAULT_BUDGET
-        lines = "\n".join(result["lines"])
-        log["call"] = "pick-" + hashlib.sha256(
-            (args.question + "\n" + lines + "\n" + args.model).encode()).hexdigest()[:16]
-        state, grant = fact(node / args.budget / "grant.json")
-        if state != OK or not isinstance(grant, dict) or not isinstance(grant.get("holder"), str) or not grant["holder"]:
-            raise ValueError("grant 讀不到或缺 holder")
-        prompt = f"清單：\n{lines}\n\n題目：{args.question}"
-        if grant.get("gateway") == "llm.fake":
-            request = {"fake": {"mode": "ok", "usage": (len(SYSTEM) + len(prompt)) // 3 + 1,
-                                "text": keyword_guess(args.question, result["skills"])}}
-        elif grant.get("gateway") == "llm.litellm":
-            request = {"litellm": {"model": args.model, "messages": [
-                {"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]}}
+            log.update(via="local", answer=keyword_guess(args.question, result["skills"]))
+            log["rc"], message = show(node, result, log["answer"], log)
         else:
-            raise ValueError("不支援的 gateway")
-        if not ledger_alive(node / args.budget / "ledger.lock"):
-            log["rc"] = 3
-            raise ValueError("帳任務沒在跑：先在 node 裡起 aos7-budget ledger " + args.budget)
-        path = node / "skills" / ".pick" / (log["call"] + ".json")
-        write_json(str(path), request)
-        proc = subprocess.run(["python3", str(TOP / "packs/llmcall/bin/aos7-llmcall"), "call", args.budget,
-                               "--holder", grant["holder"], "--call", log["call"], "--logical", "skills/pick",
-                               "--request", str(path), "--reserve", str(args.reserve), "--deadline", str(args.deadline)],
-                              cwd=node, capture_output=True, text=True)
+            args.budget = args.budget or DEFAULT_BUDGET
+            log["rc"], message = ask_ai(node, args, result, log)
+    except (OSError, Unknown, KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
         log["rc"] = 3
-        last = proc.stdout.strip().splitlines()[-1:] or [""]
-        if proc.returncode not in (0, 4):
-            print(proc.stderr + last[0], file=sys.stderr)
-            error(f"llmcall 沒交付（退出碼 {proc.returncode}）")
-        else:
-            if proc.returncode == 4:
-                error("已交付但帳未清（usage 未知或超出預留），見 aos7-llmcall status")
-            receipt = json.loads(last[0])
-            log.update(answer=receipt["text"], used=receipt["used"], rc=1)
-            show(node, result, parse_answer(log["answer"], result["skills"]), log)
-    except ValueError as e:
-        error(str(e))
-    except (OSError, Unknown, KeyError, IndexError, TypeError) as e:
-        log["rc"] = 3
-        error(str(e))
+        message = f"不確定：挑選沒能確認（{e}），證據留在 llmcall/。照原樣再跑一次會接續"
+    except ValueError as e:                           # 你給的不對：不記錄、什麼都沒動
+        log["rc"], message = 2, str(e)
     finally:
         log["elapsed"] = round(time.monotonic() - start, 3)
-        if (node / "skills").is_dir():
-            append_jsonl(str(node / "skills/.pick/log.jsonl"), log)
+        if log["rc"] != 2 and (node / "skills").is_dir():
+            try:
+                keep_last(node / "skills/.pick/log.jsonl", log)
+            except (OSError, UnicodeError) as e:
+                log["rc"] = 3
+                message = f"不確定：挑選記錄沒寫完（{e}）。照原樣再跑一次會接續"
+        if message:
+            error(message)
     return log["rc"]
 
 
 def mount(node, skill, task):
     result = build(node)
     if skill not in result["skills"]:
-        raise ValueError("skill 不在索引")
+        raise ValueError("skill 不在索引。給 index 列出的名字，例：aos7-skills mount ~/my-node alpha work")
     root = next((p for p in (node, *node.parents) if (p / ".aosd").is_dir()), None)
     if root is None:
-        raise ValueError("找不到空間根（.aosd）")
+        raise ValueError("找不到空間根（.aosd）。給上層有 .aosd/ 的 node，例：aos7-skills mount ~/space/node alpha work")
     try:
         relative = (node / "skills" / skill).resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
-        raise ValueError("skill 在空間外，掛不進去；請直接讀 SKILL.md") from None
+        raise ValueError("skill 在空間外，掛不進去。給空間內的 skill 資料夾，例：~/space/node/skills/alpha；外面的請直接讀 SKILL.md") from None
     def update(obj):
         if not isinstance(obj, dict) or not isinstance(obj.get("tasks"), list) or not all(
                 isinstance(t, dict) for t in obj["tasks"]):
             raise Unknown("tasks.json 讀不到或格式不合")
         item = next((t for t in obj["tasks"] if t.get("name") == task), None)
         if item is None:
-            raise ValueError("找不到該 task")
+            raise ValueError("找不到該 task。給 tasks.json 裡的任務名，例：aos7-skills mount ~/my-node alpha work")
         if "mounts" in item and not isinstance(item["mounts"], dict):
             raise Unknown("tasks.json 的 mounts 格式不合")
         item.setdefault("mounts", {})["skill-" + skill] = relative
@@ -231,23 +259,24 @@ def mount(node, skill, task):
 
 
 def error(message):
-    print("aos7-skills: " + message, file=sys.stderr)
+    print("aos7-skills: " + " ".join(str(message).splitlines()), file=sys.stderr)
+
+
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        error(message.rstrip("。.") + "。用法看 aos7-skills --help")
+        self.exit(2)
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(
+    ap = ArgumentParser(
         prog="aos7-skills", description="給 AI 挑工具說明書（skill）：index 抄目錄、pick 挑一本、mount 借給任務。",
         epilog="<node> 就是一個裝著 skills/ 子資料夾的資料夾。第一次跑：index 再 pick，不必開帳。")
     sub = ap.add_subparsers(dest="cmd", required=True, metavar="{index,pick,mount}")
     helps = {
-        "index": ("把 <node>/skills/*/SKILL.md 的名字＋一句簡介抄成目錄（stdout 一本一行）",
-                  "退出碼：0 全收、1 有拒收（stderr 說原因）、2 沒有 skills/。"),
-        "pick": ("照題目挑一本，印那本 SKILL.md 的路徑；挑不到印 none",
-                 "預設：node 沒有 budget/llm/ 就本機關鍵字挑選（不問 AI、不記帳）；"
-                 "有 budget/llm/（或給了 --budget）就經 llmcall 問 AI 並記帳，要先開帳、起帳任務。"
-                 "退出碼：0 挑到、1 none、2 設定不對、3 帳任務沒在跑或 llmcall 沒交付。"),
-        "mount": ("把一本 skill 掛到 .aos/tasks.json 某個任務的 mnt/skill-<名>（進階，要在 aos 空間裡）",
-                  "退出碼：0 已掛、2 找不到空間根／skill／任務、3 tasks.json 讀不到。"),
+        "index": ("把書名和一句簡介抄成目錄，stdout 一本一行", "退出碼與契約見 ADVANCED.md"),
+        "pick": ("照題目挑一本，印 SKILL.md 路徑；挑不到印 none", "沒帳就用本機關鍵字挑；有帳就問 AI。退出碼與契約見 ADVANCED.md"),
+        "mount": ("把一本 skill 掛給 aos 空間裡的任務", "退出碼與契約見 ADVANCED.md"),
     }
     for cmd, (short, more) in helps.items():
         p = sub.add_parser(cmd, help=short, description=short + "。", epilog=more)
@@ -271,5 +300,5 @@ def main(argv=None):
         error(str(e))
         return 2
     except (OSError, Unknown) as e:
-        error(str(e))
+        error(f"不確定：{e}。修好那個檔或等別人寫完，再照原樣跑一次")
         return 3

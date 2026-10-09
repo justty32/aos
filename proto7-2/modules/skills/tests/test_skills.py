@@ -1,5 +1,12 @@
 """索引、選擇去重與掛載的端到端驗證。"""
+import contextlib
+import fcntl
+import hashlib
+import io
 import json
+import os
+import time
+from unittest.mock import patch
 import subprocess
 import sys
 import tempfile
@@ -9,8 +16,9 @@ TOP = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(TOP / "tests"), str(TOP / "modules/skills")]
 from base import CoreCase
 import _proc
+import bank
 from aos7_fs import read_json, write_json
-from aos7_skills import build, parse_answer
+from aos7_skills import build, parse_answer, main
 
 CLI = TOP / "modules/skills/aos7-skills"
 BUDGET = TOP / "packs/budget/bin/aos7-budget"
@@ -54,7 +62,9 @@ class TestSkills(CoreCase):
         self.assertEqual(obj, result)
         self.assertEqual(obj["lines"], out.splitlines())
         self.assertEqual(set(obj["rejected"]), {"bad-front", "bad-desc", "bad-name"})
-        self.assertEqual(err.count("拒收"), 3)
+        self.assertEqual(len(err.splitlines()), 1)
+        for name in ("bad-front", "bad-desc", "bad-name"):
+            self.assertIn(name, err)
         self.assertTrue(obj["skills"]["beta"]["scripts"])
         self.assertFalse(obj["skills"]["alpha"]["scripts"])
         good = Path(self.mknode("good"))
@@ -92,8 +102,16 @@ class TestSkills(CoreCase):
                    "resource": "llm.tokens", "gateway": "llm.fake", "amount": 100000,
                    "clock": "completed_tock", "from": 0, "until": 1000, "delegate": False})
         self.assertEqual(self.runcli("init", "budget/llm", binary=BUDGET, cwd=self.node)[0], 0)
+        before = os.listdir(bd)
+        start = time.monotonic()
         rc, out, err = self.runcli("pick", self.node, "python tests")
-        self.assertEqual((rc, out), (3, ""))
+        self.assertLess(time.monotonic() - start, 1)
+        self.assertEqual((rc, out), (1, ""))
+        self.assertEqual(len(err.splitlines()), 1)
+        self.assertIn("ledger", err)
+        self.assertEqual(os.listdir(bd), before)
+        self.assertFalse((bd / "ledger.lock").exists())
+        self.assertFalse(list((self.skills / ".pick").glob("*.json")))
         self.assertIn("帳任務沒在跑", err)
         self.assertFalse((self.node / "llmcall").exists())
         (self.skills / ".pick/log.jsonl").unlink()
@@ -112,8 +130,13 @@ class TestSkills(CoreCase):
         self.assertEqual(logs[0]["via"], "llmcall")
         self.assertGreater(logs[0]["used"], 0)
         self.assertEqual(logs[1]["picked"], "coding")
+        self.assertEqual(err, "")
+        self.assertFalse(list((self.skills / ".pick").glob("*.json")))
         self.assertGreater(logs[0]["elapsed"], 0)
-        self.assertEqual(self.runcli("pick", self.node, "zzzz")[0:2], (1, "none"))
+        rc, out, err = self.runcli("pick", self.node, "zzzz")
+        self.assertEqual((rc, out), (1, "none"))
+        self.assertEqual(len(err.splitlines()), 1)
+        self.assertIn("換個說法", err)
 
     def test_pick_local_without_budget(self):
         """第一次跑：沒有 budget/llm 就本機關鍵字挑，不碰帳與 llmcall；明給 --budget 仍要帳。"""
@@ -121,8 +144,11 @@ class TestSkills(CoreCase):
         self.skill("writing", "中文文章")
         rc, out, err = self.runcli("pick", self.node, "python tests")
         self.assertEqual((rc, out), (0, str(wanted.absolute())), err)
-        self.assertIn("本機挑選", err)
-        self.assertEqual(self.runcli("pick", self.node, "zzzz")[0:2], (1, "none"))
+        self.assertEqual(err, "")
+        rc, out, err = self.runcli("pick", self.node, "zzzz")
+        self.assertEqual((rc, out), (1, "none"))
+        self.assertEqual(len(err.splitlines()), 1)
+        self.assertIn("換個說法", err)
         self.assertFalse((self.node / "llmcall").exists())
         self.assertFalse((self.node / "budget").exists())
         logs = [json.loads(s) for s in (self.skills / ".pick/log.jsonl").read_text().splitlines()]
@@ -134,6 +160,101 @@ class TestSkills(CoreCase):
         self.assertIn("grant", err)
         (self.node / "budget/llm").mkdir(parents=True)
         self.assertEqual(self.runcli("pick", self.node, "python tests")[0], 2)
+
+    def test_log_keeps_latest_50(self):
+        self.skill("coding", "python tests")
+        path = self.skills / ".pick/log.jsonl"
+        path.parent.mkdir()
+        path.write_text("".join(json.dumps({"old": i}) + "\n" for i in range(60)))
+        self.assertEqual(self.runcli("pick", self.node, "python tests")[0], 0)
+        rows = [json.loads(line) for line in path.read_text().splitlines()]
+        self.assertEqual(len(rows), 50)
+        self.assertEqual(rows[0], {"old": 11})
+        self.assertEqual(rows[-1]["q"], "python tests")
+        self.assertEqual(rows[-1]["rc"], 0)
+
+    def test_llmcall_busy_is_unsure(self):
+        self.skill("coding", "python tests")
+        bd = self.node / "budget/llm"
+        write_json(str(bd / "grant.json"), {"holder": "skills", "gateway": "llm.fake"})
+        call = "pick-" + hashlib.sha256(
+            ("python tests\n" + "\n".join(build(self.node)["lines"]) + "\nchatgpt-gpt-6-sol-high").encode()).hexdigest()[:16]
+        lock = self.node / "llmcall/llm" / call / "request.json.lock"
+        lock.parent.mkdir(parents=True)
+        with (bd / "ledger.lock").open("w") as ledger, lock.open("w") as held:
+            fcntl.flock(ledger, fcntl.LOCK_EX)
+            fcntl.flock(held, fcntl.LOCK_EX)
+            rc, out, err = self.runcli("pick", self.node, "python tests")
+        self.assertEqual(rc, 3, err)
+        self.assertEqual(out, "")
+        self.assertEqual(len(err.splitlines()), 1)
+        self.assertTrue(err.startswith("aos7-skills: 不確定："), err)
+        self.assertIn("照原樣再跑一次會接續", err)
+        self.assertFalse(list((self.skills / ".pick").glob("*.json")))
+        self.assertFalse((lock.parent / "request.json").exists())
+
+    def test_llmcall_codes_and_receipt_errors(self):
+        self.skill("coding", "python tests")
+        bd = self.node / "budget/llm"
+        write_json(str(bd / "grant.json"), {"holder": "skills", "gateway": "llm.fake"})
+        for code in (1, 2, 3, 4):
+            for stderr in ("noise\naos7-llmcall: " + ("不確定：" if code == 3 else "") + "原因。處理\n", ""):
+                with self.subTest(code=code, stderr=stderr), patch("aos7_skills.aos7_budget.ledger_running", return_value=True), patch(
+                        "aos7_skills.subprocess.run", return_value=subprocess.CompletedProcess([], code,
+                        json.dumps({"text": "coding", "used": 4}), stderr)):
+                    out, err = io.StringIO(), io.StringIO()
+                    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                        rc = main(["pick", str(self.node), "python tests"])
+                    self.assertEqual(rc, 0 if code == 4 else code)
+                    self.assertEqual(len(err.getvalue().splitlines()), 1)
+                    self.assertTrue(err.getvalue().startswith("aos7-skills: " + ("不確定：" if code == 3 else "")))
+                    if stderr:
+                        self.assertIn("原因。處理", err.getvalue())
+                    self.assertNotIn("noise", err.getvalue())
+                    self.assertEqual(bool(out.getvalue()), code == 4)
+                    self.assertFalse(list((self.skills / ".pick").glob("*.json")))
+        for receipt, expected in (("broken", 3), ('{}', 3), ('{"text": null, "used": 0}', 3),
+                                  ('{"text":"outside", "used": 0}', 1)):
+            with self.subTest(receipt=receipt), patch("aos7_skills.aos7_budget.ledger_running", return_value=True), patch(
+                    "aos7_skills.subprocess.run", return_value=subprocess.CompletedProcess([], 0, receipt, "")):
+                with contextlib.redirect_stderr(io.StringIO()) as err:
+                    rc = main(["pick", str(self.node), "python tests"])
+                self.assertEqual(rc, expected)
+                self.assertEqual(len(err.getvalue().splitlines()), 1)
+
+    def test_argparse_does_not_touch_files(self):
+        self.skill("alpha")
+        def snapshot():
+            return sorted((str(p), p.stat().st_mtime_ns) for p in self.node.rglob("*"))
+        for args in (("--no-such-option",), ("pick", self.node), ("index", self.node, "--no-such-option")):
+            before = snapshot()
+            rc, out, err = self.runcli(*args)
+            self.assertEqual(rc, 2)
+            self.assertEqual(out, "")
+            self.assertEqual(len(err.splitlines()), 1)
+            self.assertIn("。用法看 aos7-skills --help", err)
+            self.assertEqual(snapshot(), before)
+        rc, out, err = self.runcli("--help")
+        self.assertEqual((rc, err), (0, ""))
+        self.assertLessEqual(len(out.splitlines()), 30)
+
+    def test_bank_cleans_temp_node_on_exception(self):
+        wf = Path(self.root) / "workflow-skills"
+        for name in json.loads((TOP / "modules/skills/examples/bank.json").read_text())["workflows"]:
+            self.skill(name, parent=wf)
+        for phase in ("setup", "pick"):
+            node = Path(self.root) / ("bank-" + phase)
+            node.mkdir()
+            with self.subTest(phase=phase), patch("bank.tempfile.mkdtemp", return_value=str(node)), patch(
+                    "bank.setup", side_effect=RuntimeError("setup failed") if phase == "setup" else None), patch(
+                    "bank.subprocess.Popen") as ledger, patch("bank.subprocess.run", side_effect=RuntimeError("pick failed")), patch(
+                    "aos7_budget.ledger_running", return_value=True):
+                with self.assertRaises(RuntimeError):
+                    bank.main(["--workflows", str(wf)])
+                self.assertFalse(node.exists())
+                if phase == "pick":
+                    ledger.return_value.terminate.assert_called_once()
+                    ledger.return_value.wait.assert_called_once()
 
     def test_parse_answer(self):
         for text in ('`ALPHA`', '"Alpha"', "'alpha'", "alpha\nbeta", "ALPHA extra", "```alpha```", " none "):
