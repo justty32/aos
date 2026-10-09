@@ -68,3 +68,6 @@
 - C｜once_retry R8-26 維持「至少一次」不修；astra-7 五條今天修（A9-05 只寫文件）
 - B｜E0／頂層核可：事件夾分「觀測」「必讀」兩條通道，各自 1 個在寫的檔＋最多 4 個舊檔，加 state.json 與鎖，**總上限 12 檔**（不是字面的 7 檔；兩通道清理規則不同，混在一起會誤刪必讀）→ [blueprint-ev1](blueprint-ev1.md)
 - C｜E0：預設每檔 1 MiB、單筆 64 KiB、等鎖 5 秒；寫一半的行直接截掉；去重只在還留著的紀錄內有效（超出即至少一次）
+- 結案｜L3：上午 `test_unsure_listed` 連紅是驗證時「改壞再還原」同秒同大小，Python 沿用舊快取（非負載）；subd `allow_stop` 測試是讀 log 的時機假設錯，已改成等檔案出現。教訓記 dispatch lessons
+- C｜L4：A9-02 history 升級時把含 `+`／`%` 的舊檔與 `daemon-events.jsonl` 一次改名成 `.v1` 封存、不再續寫（不丟資料、只斷連續性），夾內放 `.names-v2` 記號 → `modules/history.py`
+- C｜L4：A9-03 陣列索引先去前導零再檢長度，超長回 125；前導零索引維持舊行為（照收，雖然 RFC 6901 說無效）
