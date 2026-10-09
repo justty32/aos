@@ -1,0 +1,196 @@
+{
+ "variant": "B",
+ "rep": 1,
+ "model": "chatgpt-gpt-6-sol-high",
+ "review": "chatgpt-gpt-6-astra-high",
+ "offline": false,
+ "compact": false,
+ "stop": null,
+ "calls_total": 22,
+ "results": [
+  {
+   "task": "gap",
+   "rid": "gapB1",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 1,
+   "reasks": 0,
+   "tokens": 12459,
+   "review_tokens": 7367,
+   "secs": 105.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 12459,
+     "review_tokens": 7367,
+     "secs": 104.4,
+     "job": "gapB1_2499534a",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/gapB1_2499534a",
+     "commit": "95b24d1af83342ddaa577bc62bb7b68b67cca09d",
+     "dup": false,
+     "secs": 1.5
+    }
+   ],
+   "learn": null,
+   "order": 1
+  },
+  {
+   "task": "runs",
+   "rid": "runsB1",
+   "passed": false,
+   "proposed": false,
+   "published": false,
+   "rounds": 3,
+   "reasks": 2,
+   "tokens": 45535,
+   "review_tokens": 18245,
+   "secs": 254.1,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 1,
+     "rules": [
+      "json"
+     ],
+     "tokens": 12625,
+     "review_tokens": null,
+     "secs": 85.2,
+     "job": "runsB1_7b1befd8",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "json",
+       "why": "Extra data: line 1 column 15261 (char 15260)"
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 16178,
+     "review_tokens": 9151,
+     "secs": 89.3,
+     "job": "runsB1_9aaa761f",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 routine() 在原時區先做 last + timedelta，可能把合法列誤判為 bad_row。例如 --now=9999-12-31T21:00:00Z、last_time=9999-12-31T23:59:59+02:00、every=1s、last_code=0，正確結果應為 state=ok、next=9999-12-31T22:00:00Z；目前本地時間加法會溢位，summarize() 因而排除該列。應避免在 UTC 結果仍可表示時因本地時間溢位而拒絕資料，並補上測試。",
+        "packs/runs/aos7_runs.py 對 last_code 直接使用 int(raw_code)，未處理 Python 3.11+ 預設的十進位轉換長度限制。規格未限制 signed decimal integer string 的位數，但合法的 4301 位數代碼會觸發 ValueError，被誤列為 bad_row；大型整數的 JSON 輸出也受同一限制。需讓解析及輸出符合規格，而非把合法整數當成壞列。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 16732,
+     "review_tokens": 9094,
+     "secs": 79.6,
+     "job": "runsB1_c4361513",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/runs/aos7_runs.py 的 routine() 先執行 last.astimezone(timezone.utc) 再加週期，會因中間結果溢位而錯誤排除合法列。例如 --now=0001-01-01T00:00:00Z，列為 {\"name\":\"edge\",\"every\":\"1d\",\"last_time\":\"0001-01-01T00:00:00+02:00\",\"last_code\":\"0\"}，正確結果應為 state=\"ok\"、next=\"0001-01-01T22:00:00Z\"；但轉換 last 至 UTC 時落入西元 0 年，觸發 OverflowError，最終被記為 bad_row。應避免中間時間表示範圍造成誤判，並加入此下界回歸測試。"
+       ]
+      }
+     ]
+    }
+   ],
+   "learn": null,
+   "order": 2
+  },
+  {
+   "task": "audit",
+   "rid": "auditB1",
+   "passed": true,
+   "proposed": true,
+   "published": true,
+   "rounds": 2,
+   "reasks": 1,
+   "tokens": 26373,
+   "review_tokens": 15720,
+   "secs": 182.9,
+   "stop": null,
+   "rows": [
+    {
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 3,
+     "rules": [
+      "review"
+     ],
+     "tokens": 11319,
+     "review_tokens": 7607,
+     "secs": 93.9,
+     "job": "auditB1_76ba33b7",
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "review",
+       "why": [
+        "packs/mailtodo/aos7_mailtodo.py 的 frontmatter() 使用 str.splitlines()，會把換頁字元（\\f）、垂直定位字元（\\v）與 U+2028 等也當成換行，違反 frontmatter 值必須原樣保留的要求。例如實體行「id: a<換頁字元>b」應保留完整 id，實作卻得到「a」，導致錯誤的 open、dup_id 或回覆解析；同樣也可能將行內的 --- 誤認為結束分隔行。應只按檔案換行切分，保留值內其他字元，並補上對應測試。"
+       ]
+      }
+     ]
+    },
+    {
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 15054,
+     "review_tokens": 8113,
+     "secs": 85.7,
+     "job": "auditB1_3a3b1fe3",
+     "proxy_suspect": false,
+     "issues": []
+    },
+    {
+     "publish_exit": 0,
+     "branch": "apprentice/auditB1_3a3b1fe3",
+     "commit": "389c1a0a71a25fb26ae41cdc6dad4f79dbe08fed",
+     "dup": false,
+     "secs": 3.3
+    }
+   ],
+   "learn": null,
+   "order": 3
+  }
+ ]
+}

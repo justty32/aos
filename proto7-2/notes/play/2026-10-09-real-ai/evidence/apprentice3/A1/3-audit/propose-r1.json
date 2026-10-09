@@ -1,0 +1,109 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "auditA1-r1-1791543250",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5480,
+   "prompt_tokens": 6400,
+   "total_tokens": 11880,
+   "completion_tokens_details": {
+    "reasoning_tokens": 1914
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 11880,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/auditA1-r1-1791543250/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-auditA1-chatgpt-gpt-6-astra-high-faaf671b",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 988,
+    "prompt_tokens": 6972,
+    "total_tokens": 7960,
+    "completion_tokens_details": {
+     "reasoning_tokens": 824
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 1408
+    }
+   },
+   "used": 7960,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-auditA1-chatgpt-gpt-6-astra-high-faaf671b/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A1/3-audit/review-rv-auditA1-chatgpt-gpt-6-astra-high-faaf671b.json"
+ },
+ "rid": "auditA1",
+ "kind": "aos-tool",
+ "name": "mailtodo",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A1/3-audit/cand-r1.json",
+ "candidate_sha": "0afa380e90be44535f5b401d53993ae249e70643177878484f95d15d25dd6f15",
+ "job": "auditA1_0afa380e",
+ "rules_check": {
+  "ok": true,
+  "rid": "auditA1",
+  "name": "mailtodo",
+  "job": "auditA1_0afa380e",
+  "candidate_sha": "0afa380e90be44535f5b401d53993ae249e70643177878484f95d15d25dd6f15",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "auditA1",
+  "name": "mailtodo",
+  "job": "auditA1_0afa380e",
+  "candidate_sha": "0afa380e90be44535f5b401d53993ae249e70643177878484f95d15d25dd6f15",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "packs/mailtodo/aos7_mailtodo.py 的 summarize 額外排除了 mailbox、inbox 和 done 為符號連結的目錄，但需求只限定信件檔案必須是非符號連結，且 boxes 必須包含每個具有 inbox 目錄的非點開頭名稱。例如 root/alice/inbox 是指向空目錄的符號連結時，預期 boxes 包含 alice，實作卻完全省略；其中若有一般非符號連結信件，也會漏掉計數、待辦與回覆判定。應依需求區分目錄與信件檔案的篩選條件。"
+      ]
+     }
+    ]
+   }
+  },
+  "_rejected": true,
+  "error": "第 3 關沒過（review：['packs/mailtodo/aos7_mailtodo.py 的 summarize 額外排除了 mailbox、inbox 和 done 為符號連結的…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 3 關沒過（review：['packs/mailtodo/aos7_mailtodo.py 的 summarize 額外排除了 mailbox、inbox 和 done 為符號連結的…）。照 stdout JSON 的 gates 修正候選再跑"
+}

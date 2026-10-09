@@ -4,7 +4,7 @@
 用法（在學徒 node 下跑，cwd＝node；budget 帳任務要先開著）：
   drive3.py VARIANT OUTDIR [--rep N] [--tasks gap,runs,audit] [--model M] [--review M]
             [--max-calls 200] [--calls FILE] [--compact] [--offline]
-VARIANT：A＝帶踩坑（OUTDIR/gotchas.md 從 gotchas-before 起，每題後 learn 追加，題 2 起 --gotchas 帶上；題 1 與 B 條件相同）；B＝不帶、不 learn。
+VARIANT：A＝帶踩坑（OUTDIR/gotchas.txt 從 gotchas-before 起，每題後 learn 追加，題 2 起 --gotchas 帶上；題 1 與 B 條件相同）；B＝不帶、不 learn。
 --offline：不打 AI，用各題 valid.json 當候選跑三關①②（驗管線用）；不發布、不 learn。
 真 AI 呼叫數記在 --calls（預設 OUTDIR/../calls.jsonl，各組共用）：每次先持鎖預留（出題＋審查 2、learn 1）再呼叫，
 沒走到審查退回 1；預留超過 --max-calls 就停（stop=max-calls）。帳 ≥ 真實送出數。
@@ -149,7 +149,7 @@ def do_task(a, task, rid, out, gotchas, use_gotchas, streak):
                      bytes_before=before, bytes_after=gotchas.stat().st_size)
         if a.compact:
             learn['compact'] = compact(gotchas, out)
-        shutil.copyfile(gotchas, out / 'gotchas-after.md')
+        shutil.copyfile(gotchas, out / 'gotchas-after.txt')
     proposed = any(x.get('ok') for x in rows if 'round' in x)
     published = any(x.get('publish_exit') == 0 for x in rows)
     passed = proposed and (a.offline or published)
@@ -198,7 +198,7 @@ def main():
             return 2
     gotchas = None
     if a.variant == 'A':
-        gotchas = out / 'gotchas.md'
+        gotchas = out / 'gotchas.txt'
         shutil.copyfile(BASE_GOTCHAS, gotchas)
     results, stop, streak = [], None, [0]
     for i, task in enumerate(a.tasks.split(','), 1):

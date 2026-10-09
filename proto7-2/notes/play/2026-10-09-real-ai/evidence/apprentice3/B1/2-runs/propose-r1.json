@@ -1,0 +1,85 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsB1-r1-1791543011",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6907,
+   "prompt_tokens": 5718,
+   "total_tokens": 12625,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2450
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 12625,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsB1-r1-1791543011/receipt.json"
+ },
+ "review": null,
+ "rid": "runsB1",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/B1/2-runs/cand-r1.json",
+ "candidate_sha": "7b1befd8207928c82357b9f5f84b05aef8395eea36e560a2f013dc7a9e061e93",
+ "job": "runsB1_7b1befd8",
+ "rules_check": {
+  "ok": false,
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "json",
+      "why": "Extra data: line 1 column 15261 (char 15260)"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "rid": "runsB1",
+  "name": "runs",
+  "candidate_sha": "7b1befd8207928c82357b9f5f84b05aef8395eea36e560a2f013dc7a9e061e93",
+  "job": "runsB1_7b1befd8",
+  "error": "Extra data: line 1 column 15261 (char 15260)。給需求與候選檔，例如 aos7-gates check request.json candidate.json"
+ },
+ "check": {
+  "ok": false,
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "json",
+      "why": "Extra data: line 1 column 15261 (char 15260)"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "rid": "runsB1",
+  "name": "runs",
+  "candidate_sha": "7b1befd8207928c82357b9f5f84b05aef8395eea36e560a2f013dc7a9e061e93",
+  "job": "runsB1_7b1befd8",
+  "error": "Extra data: line 1 column 15261 (char 15260)。給需求與候選檔，例如 aos7-gates check request.json candidate.json"
+ },
+ "error": "Extra data: line 1 column 15261 (char 15260)。給需求與候選檔，例如 aos7-gates check request.json candidate.json"
+}

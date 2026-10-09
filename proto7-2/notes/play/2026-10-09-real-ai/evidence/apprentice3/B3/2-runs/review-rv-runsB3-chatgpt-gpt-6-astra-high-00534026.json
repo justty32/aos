@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["packs/runs/aos7_runs.py 的 main 使用 ensure_ascii=False 後直接 print，會讓符合資料列契約的字串造成整個 CLI 失敗。例如 schedule 的有效資料列 {\"name\":\"\\ud800\",\"at\":\"2025-01-01T00:00:00Z\",\"claimed\":\"\"}：JSON 解碼後 name 是非空字串，應納入彙總，但在一般 UTF-8 stdout 下輸出會觸發 UnicodeEncodeError，退出碼不是 0，也沒有完整的一行 JSON。應使用 ensure_ascii=True 或等效的安全 JSON 跳脫，並新增透過 CLI 驗證此輸入的測試。"]}

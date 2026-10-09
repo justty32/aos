@@ -1,0 +1,28 @@
+{
+ "ok": false,
+ "rid": "gapB2",
+ "name": "evgap",
+ "job": "gapB2_9ca10a5c",
+ "candidate_sha": "9ca10a5cc92b5372d67a5f3ee6826a694a66ff3b358e024f8a9a80e45f94f9b4",
+ "failed_gate": 2,
+ "gates": {
+  "1": {
+   "ok": true,
+   "issues": []
+  },
+  "2": {
+   "ok": false,
+   "issues": [
+    {
+     "rule": "test",
+     "why": "    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n        {\"file\": \"obs.active.jsonl\", \"line\": number, \"why\": why}\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<2 lines>...\n        ) if number != 8\n        ^^^^^^^^^^^^^^^^\n    ])\n    ^^\nAssertionError: Lists differ: [{'fi[398 chars]json'}, {'file': 'obs.active.jsonl', 'line': 9, 'why': 'torn'}] != [{'fi[398 chars]json'}]\n\nFirst list contains 1 additional elements.\nFirst extra element 7:\n{'file': 'obs.active.jsonl', 'line': 9, 'why': 'torn'}\n\nDiff is 681 characters long. Set self.maxDiff to None to see it.\n\n----------------------------------------------------------------------\nRan 4 tests in 0.114s\n\nFAILED (failures=1)"
+    }
+   ]
+  },
+  "3": {
+   "ok": null
+  }
+ },
+ "_rejected": true,
+ "error": "第 2 關沒過（test：~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^ {\"file\": \"obs.active.jsonl\", \"line\": number, …）。照 stdout JSON 的 gates 修正候選再跑"
+}

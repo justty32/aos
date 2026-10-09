@@ -1,0 +1,36 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA3",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A3/gotchas.md",
+ "added": [
+  "- 下次寫 aos 工具前要先知道：只掃非點開頭信箱的 inbox/*.md 與 inbox/done/*.md；檔案也須是非點開頭、非符號連結的普通檔，不遞迴。",
+  "- 下次寫 aos 工具前要先知道：frontmatter 的界線必須是整行 ---，欄位只按第一個「: 」切開；值不去空白，重複鍵取最後一筆。",
+  "- 下次寫 aos 工具前要先知道：壞信件只記最先適用的原因，依序是 no_frontmatter、no_field、bad_name、dup_id；重複 id 由相對路徑字典序最前的有效信件取得。",
+  "- 下次寫 aos 工具前要先知道：REQUEST 是否未結案要跨所有有效信件查 re；只有 DONE、BLOCKED、NEEDS-USER、FAILED 能結案，PROGRESS 不能。",
+  "- 下次寫 aos 工具前要先知道：信箱即使沒有有效信件也要列入 boxes；done 計全部有效歸檔信件，inbox 只列實際出現的狀態。",
+  "- 下次寫 aos 工具前要先知道：資料裡無時區的 at 要套用 --now.tzinfo；分鐘差向下取整，未來時間可為負數，不能截成零。",
+  "- 下次寫 aos 工具前要先知道：驗收 mailtodo 除實質測試，還要跑 `python3 check_answer.py <proto7-2> fixture` 核對唯讀與固定答案；以後交接書該點名的工具。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA3-chatgpt-gpt-6-sol-high-59a795a6",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 510,
+   "prompt_tokens": 3547,
+   "total_tokens": 4057,
+   "completion_tokens_details": {
+    "reasoning_tokens": 122
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 4057,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA3-chatgpt-gpt-6-sol-high-59a795a6/receipt.json"
+ }
+}

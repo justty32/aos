@@ -1,0 +1,109 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsA3-r1-1791543598",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6674,
+   "prompt_tokens": 6351,
+   "total_tokens": 13025,
+   "completion_tokens_details": {
+    "reasoning_tokens": 2304
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 13025,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsA3-r1-1791543598/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-runsA3-chatgpt-gpt-6-astra-high-a59ab03d",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 663,
+    "prompt_tokens": 8257,
+    "total_tokens": 8920,
+    "completion_tokens_details": {
+     "reasoning_tokens": 516
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 8920,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-runsA3-chatgpt-gpt-6-astra-high-a59ab03d/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A3/2-runs/review-rv-runsA3-chatgpt-gpt-6-astra-high-a59ab03d.json"
+ },
+ "rid": "runsA3",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A3/2-runs/cand-r1.json",
+ "candidate_sha": "aef3024e153e43ff213eb1202b4e8f2364144cda7c79d6166e6101f9a36cee4c",
+ "job": "runsA3_aef3024e",
+ "rules_check": {
+  "ok": true,
+  "rid": "runsA3",
+  "name": "runs",
+  "job": "runsA3_aef3024e",
+  "candidate_sha": "aef3024e153e43ff213eb1202b4e8f2364144cda7c79d6166e6101f9a36cee4c",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "runsA3",
+  "name": "runs",
+  "job": "runsA3_aef3024e",
+  "candidate_sha": "aef3024e153e43ff213eb1202b4e8f2364144cda7c79d6166e6101f9a36cee4c",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "packs/runs/aos7_runs.py 的 routine() 直接以 int(raw_code) 解析 last_code，受 Python 3.11+ 預設整數字串長度限制影響。例如 last_code 為 4301 個 ASCII 數字、every=\"1r\"、last_time=\"\" 的合法資料列，會因 ValueError 被排除並標記 bad_row；規格未限制 signed decimal integer string 的長度，此列應保留且 state=\"never\"。需處理合法長整數的解析與 JSON 輸出，並加入回歸測試。"
+      ]
+     }
+    ]
+   }
+  },
+  "_rejected": true,
+  "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 routine() 直接以 int(raw_code) 解析 last_code，受 Python 3…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 routine() 直接以 int(raw_code) 解析 last_code，受 Python 3…）。照 stdout JSON 的 gates 修正候選再跑"
+}

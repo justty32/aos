@@ -1,0 +1,1 @@
+aos7-author: 候選沒過：Extra data: line 1 column 15261 (char 15260)。給需求與候選檔，例如 aos7-gates check request.json candidate.json。照 stdout JSON 的 issues／gates 改候選，再 propose 一次

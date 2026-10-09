@@ -1,0 +1,87 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsB2-r3-1791543894",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 6532,
+   "prompt_tokens": 11882,
+   "total_tokens": 18414,
+   "completion_tokens_details": {
+    "reasoning_tokens": 1177
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 18414,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsB2-r3-1791543894/receipt.json"
+ },
+ "review": null,
+ "rid": "runsB2",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/B2/2-runs/cand-r3.json",
+ "candidate_sha": "e045769b7b4f0e7a3d0393b27b77da28dca147c8ceb908117c0b5abb82802454",
+ "job": "runsB2_e045769b",
+ "rules_check": {
+  "ok": false,
+  "rid": "runsB2",
+  "name": "runs",
+  "job": "runsB2_e045769b",
+  "candidate_sha": "e045769b7b4f0e7a3d0393b27b77da28dca147c8ceb908117c0b5abb82802454",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "檔數或 bytes 超標"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "check": {
+  "ok": false,
+  "rid": "runsB2",
+  "name": "runs",
+  "job": "runsB2_e045769b",
+  "candidate_sha": "e045769b7b4f0e7a3d0393b27b77da28dca147c8ceb908117c0b5abb82802454",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "檔數或 bytes 超標"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+}

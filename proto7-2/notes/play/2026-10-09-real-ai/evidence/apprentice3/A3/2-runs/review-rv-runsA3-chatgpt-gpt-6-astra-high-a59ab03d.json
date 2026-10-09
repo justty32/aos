@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["packs/runs/aos7_runs.py 的 routine() 直接以 int(raw_code) 解析 last_code，受 Python 3.11+ 預設整數字串長度限制影響。例如 last_code 為 4301 個 ASCII 數字、every=\"1r\"、last_time=\"\" 的合法資料列，會因 ValueError 被排除並標記 bad_row；規格未限制 signed decimal integer string 的長度，此列應保留且 state=\"never\"。需處理合法長整數的解析與 JSON 輸出，並加入回歸測試。"]}

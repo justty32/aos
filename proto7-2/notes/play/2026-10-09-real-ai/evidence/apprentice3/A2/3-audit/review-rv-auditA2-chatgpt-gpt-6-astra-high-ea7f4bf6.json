@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["packs/mailtodo/aos7_mailtodo.py 的 read_letter 使用 str.splitlines()，會把值中的垂直定位字元（\\u000b）、換頁字元等也視為換行，違反 frontmatter value 必須原樣保留的要求。例如有效信件的一行為「to: receiver\\u000bother」，其 to 應保留完整的「receiver\\u000bother」，目前卻變成「receiver」，導致 open 的內容及排序錯誤。應只按實際檔案換行切分，並加入保留這類值的測試。"]}

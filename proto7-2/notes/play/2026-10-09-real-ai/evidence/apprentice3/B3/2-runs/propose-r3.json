@@ -1,0 +1,109 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsB3-r3-1791544593",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5243,
+   "prompt_tokens": 11906,
+   "total_tokens": 17149,
+   "completion_tokens_details": {
+    "reasoning_tokens": 516
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 17149,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsB3-r3-1791544593/receipt.json"
+ },
+ "review": {
+  "llm": {
+   "model": "chatgpt-gpt-6-astra-high",
+   "call_id": "rv-runsB3-chatgpt-gpt-6-astra-high-00534026",
+   "exit": 0,
+   "outcome": "answered",
+   "usage": {
+    "completion_tokens": 853,
+    "prompt_tokens": 8642,
+    "total_tokens": 9495,
+    "completion_tokens_details": {
+     "reasoning_tokens": 687
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "used": 9495,
+   "billing": "final",
+   "reserve": 1000000,
+   "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/rv-runsB3-chatgpt-gpt-6-astra-high-00534026/receipt.json"
+  },
+  "path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/B3/2-runs/review-rv-runsB3-chatgpt-gpt-6-astra-high-00534026.json"
+ },
+ "rid": "runsB3",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/B3/2-runs/cand-r3.json",
+ "candidate_sha": "faa8ff10e51440cfdec36afa2524d1f2ac0b267ea75cf1e43b5c436f8503ec55",
+ "job": "runsB3_faa8ff10",
+ "rules_check": {
+  "ok": true,
+  "rid": "runsB3",
+  "name": "runs",
+  "job": "runsB3_faa8ff10",
+  "candidate_sha": "faa8ff10e51440cfdec36afa2524d1f2ac0b267ea75cf1e43b5c436f8503ec55",
+  "failed_gate": null,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": true,
+    "issues": []
+   }
+  }
+ },
+ "check": {
+  "ok": false,
+  "rid": "runsB3",
+  "name": "runs",
+  "job": "runsB3_faa8ff10",
+  "candidate_sha": "faa8ff10e51440cfdec36afa2524d1f2ac0b267ea75cf1e43b5c436f8503ec55",
+  "failed_gate": 3,
+  "gates": {
+   "1": {
+    "ok": true,
+    "issues": []
+   },
+   "2": {
+    "ok": true,
+    "issues": []
+   },
+   "3": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "review",
+      "why": [
+       "packs/runs/aos7_runs.py 的 main 使用 ensure_ascii=False 後直接 print，會讓符合資料列契約的字串造成整個 CLI 失敗。例如 schedule 的有效資料列 {\"name\":\"\\ud800\",\"at\":\"2025-01-01T00:00:00Z\",\"claimed\":\"\"}：JSON 解碼後 name 是非空字串，應納入彙總，但在一般 UTF-8 stdout 下輸出會觸發 UnicodeEncodeError，退出碼不是 0，也沒有完整的一行 JSON。應使用 ensure_ascii=True 或等效的安全 JSON 跳脫，並新增透過 CLI 驗證此輸入的測試。"
+      ]
+     }
+    ]
+   }
+  },
+  "_rejected": true,
+  "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 main 使用 ensure_ascii=False 後直接 print，會讓符合資料列契約的字串造成…）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 3 關沒過（review：['packs/runs/aos7_runs.py 的 main 使用 ensure_ascii=False 後直接 print，會讓符合資料列契約的字串造成…）。照 stdout JSON 的 gates 修正候選再跑"
+}

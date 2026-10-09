@@ -1,0 +1,32 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA2",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A2/gotchas.md",
+ "added": [
+  "- 下次寫 aos 工具前，解析 frontmatter 只能按檔案實際換行切分；`str.splitlines()` 會把值中的 `\\u000b`、換頁字元拆成新行，破壞原值及排序，測試要涵蓋這兩種字元。",
+  "- 下次寫信件彙總前，先按輸入相對路徑排序，再依 no_frontmatter、no_field、bad_name、dup_id 的順序判錯；只有第一封有效且未重複的 id 能進入彙總。",
+  "- 下次判定 REQUEST 是否未完成前，要查所有有效信件的 `re`，不能只查同一信箱；PROGRESS 不算解決，空白以外的 `re` 值也不能自行修剪。"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA2-chatgpt-gpt-6-sol-high-86debf02",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 309,
+   "prompt_tokens": 3731,
+   "total_tokens": 4040,
+   "completion_tokens_details": {
+    "reasoning_tokens": 121
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 4040,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA2-chatgpt-gpt-6-sol-high-86debf02/receipt.json"
+ }
+}

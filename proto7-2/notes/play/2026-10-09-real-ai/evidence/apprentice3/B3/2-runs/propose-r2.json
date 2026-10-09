@@ -1,0 +1,87 @@
+{
+ "ok": false,
+ "why": "invalid",
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "runsB3-r2-1791544521",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 5634,
+   "prompt_tokens": 11584,
+   "total_tokens": 17218,
+   "completion_tokens_details": {
+    "reasoning_tokens": 621
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "used": 17218,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/runsB3-r2-1791544521/receipt.json"
+ },
+ "review": null,
+ "rid": "runsB3",
+ "kind": "aos-tool",
+ "name": "runs",
+ "candidate_path": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/B3/2-runs/cand-r2.json",
+ "candidate_sha": "3a61fb7dfa520fe12e529ae975f27fad4602dac19e2138bc8ada3f722b69d84e",
+ "job": "runsB3_3a61fb7d",
+ "rules_check": {
+  "ok": false,
+  "rid": "runsB3",
+  "name": "runs",
+  "job": "runsB3_3a61fb7d",
+  "candidate_sha": "3a61fb7dfa520fe12e529ae975f27fad4602dac19e2138bc8ada3f722b69d84e",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "檔數或 bytes 超標"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "check": {
+  "ok": false,
+  "rid": "runsB3",
+  "name": "runs",
+  "job": "runsB3_3a61fb7d",
+  "candidate_sha": "3a61fb7dfa520fe12e529ae975f27fad4602dac19e2138bc8ada3f722b69d84e",
+  "failed_gate": 1,
+  "gates": {
+   "1": {
+    "ok": false,
+    "issues": [
+     {
+      "rule": "size",
+      "why": "檔數或 bytes 超標"
+     }
+    ]
+   },
+   "2": {
+    "ok": null
+   },
+   "3": {
+    "ok": null
+   }
+  },
+  "_rejected": true,
+  "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+ },
+ "error": "第 1 關沒過（size：檔數或 bytes 超標）。照 stdout JSON 的 gates 修正候選再跑"
+}

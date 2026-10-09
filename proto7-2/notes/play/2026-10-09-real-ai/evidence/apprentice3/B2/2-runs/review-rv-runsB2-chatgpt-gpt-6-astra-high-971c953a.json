@@ -1,0 +1,1 @@
+{"verdict":"reject","reasons":["packs/runs/aos7_runs.py 的 routine() 直接以 int(raw_code) 解析符合正規表示式的 last_code，會受 Python 3.11+ 預設的 4300 位十進位轉換限制影響。例如合法列 {\"name\":\"x\",\"every\":\"1r\",\"last_time\":\"\",\"last_code\":\"<4301 個連續的 0>\"} 應輸出 last_code=0、state=\"never\"，目前卻因 ValueError 被排除並記為 bad_row。需求未限制整數字串長度；需支援合法長整數字串並加入回歸測試，不能把執行環境的轉換限制當成資料無效。"]}

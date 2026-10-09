@@ -1,0 +1,32 @@
+{
+ "ok": true,
+ "why": null,
+ "rid": "auditA1",
+ "into": "/home/lorkhan/repo/simple_tools/aos-wt/S3/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice3/A1/gotchas.md",
+ "added": [
+  "- 下次寫 aos 工具前，要分開判斷目錄與信件的符號連結：規格只排除符號連結信件；`inbox` 即使是指向目錄的符號連結，也要列入 `boxes` 並掃描。",
+  "- 測試要涵蓋符號連結 `inbox` 指向空目錄及含一般信件的目錄，核對 `boxes`、`open` 與回覆判定。",
+  "- 驗收要跑 `python3 proto7-2/tests/run_all.py packs/mailtodo/tests` 和 `python3 check_answer.py <proto7-2> fixture`；以後交接書該點名的工具"
+ ],
+ "llm": {
+  "model": "chatgpt-gpt-6-sol-high",
+  "call_id": "ln-auditA1-chatgpt-gpt-6-sol-high-62a50e55",
+  "exit": 0,
+  "outcome": "answered",
+  "usage": {
+   "completion_tokens": 480,
+   "prompt_tokens": 3650,
+   "total_tokens": 4130,
+   "completion_tokens_details": {
+    "reasoning_tokens": 314
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 1408
+   }
+  },
+  "used": 4130,
+  "billing": "final",
+  "reserve": 1000000,
+  "receipt_path": "/home/lorkhan/repo/simple_tools/aos-wt/apprentice-node/llmcall/llm/ln-auditA1-chatgpt-gpt-6-sol-high-62a50e55/receipt.json"
+ }
+}

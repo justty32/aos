@@ -1,0 +1,58 @@
+{"rid": "gapA1", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791542905.5}
+{"rid": "gapB1", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791542905.5}
+{"rid": "runsB1", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543011.4}
+{"rid": "gapA1", "kind": "reserve-learn", "n": 1, "at": 1791543013.4}
+{"rid": "runsA1", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543025.5}
+{"rid": "runsB1", "kind": "release-review", "round": 1, "n": -1, "at": 1791543096.6}
+{"rid": "runsB1", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543096.6}
+{"rid": "runsA1", "kind": "release-review", "round": 1, "n": -1, "at": 1791543132.5}
+{"rid": "runsA1", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543132.5}
+{"rid": "runsB1", "kind": "reserve-propose+review", "round": 3, "n": 2, "at": 1791543186.0}
+{"rid": "runsA1", "kind": "release-review", "round": 2, "n": -1, "at": 1791543190.7}
+{"rid": "runsA1", "kind": "reserve-propose+review", "round": 3, "n": 2, "at": 1791543190.7}
+{"rid": "runsA1", "kind": "release-review", "round": 3, "n": -1, "at": 1791543240.4}
+{"rid": "runsA1", "kind": "reserve-learn", "n": 1, "at": 1791543240.4}
+{"rid": "auditA1", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543250.3}
+{"rid": "auditB1", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543265.5}
+{"rid": "auditB1", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543359.5}
+{"rid": "auditA1", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543366.4}
+{"rid": "auditA1", "kind": "reserve-learn", "n": 1, "at": 1791543452.5}
+{"rid": "gapA2", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543490.9}
+{"rid": "gapA3", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543490.9}
+{"rid": "gapB2", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543490.9}
+{"rid": "gapA3", "kind": "reserve-learn", "n": 1, "at": 1791543583.4}
+{"rid": "gapB2", "kind": "release-review", "round": 1, "n": -1, "at": 1791543589.8}
+{"rid": "gapB2", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543589.8}
+{"rid": "gapA2", "kind": "reserve-learn", "n": 1, "at": 1791543590.9}
+{"rid": "runsA3", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543598.7}
+{"rid": "runsA2", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543599.5}
+{"rid": "runsB2", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543658.1}
+{"rid": "runsA2", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543711.6}
+{"rid": "runsA3", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543713.7}
+{"rid": "runsB2", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543783.1}
+{"rid": "runsA2", "kind": "reserve-propose+review", "round": 3, "n": 2, "at": 1791543791.5}
+{"rid": "runsA3", "kind": "reserve-propose+review", "round": 3, "n": 2, "at": 1791543801.1}
+{"rid": "runsA2", "kind": "release-review", "round": 3, "n": -1, "at": 1791543850.6}
+{"rid": "runsA2", "kind": "reserve-learn", "n": 1, "at": 1791543850.6}
+{"rid": "auditA2", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543859.0}
+{"rid": "runsA3", "kind": "reserve-learn", "n": 1, "at": 1791543865.2}
+{"rid": "auditA3", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543877.2}
+{"rid": "runsB2", "kind": "reserve-propose+review", "round": 3, "n": 2, "at": 1791543894.6}
+{"rid": "auditA2", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791543965.1}
+{"rid": "runsB2", "kind": "release-review", "round": 3, "n": -1, "at": 1791543981.5}
+{"rid": "auditB2", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791543981.5}
+{"rid": "auditA3", "kind": "reserve-learn", "n": 1, "at": 1791544025.7}
+{"rid": "auditA2", "kind": "release-review", "round": 2, "n": -1, "at": 1791544031.6}
+{"rid": "auditA2", "kind": "reserve-propose+review", "round": 3, "n": 2, "at": 1791544031.6}
+{"rid": "auditB2", "kind": "release-review", "round": 1, "n": -1, "at": 1791544066.1}
+{"rid": "auditB2", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791544066.1}
+{"rid": "auditA2", "kind": "reserve-learn", "n": 1, "at": 1791544108.4}
+{"rid": "auditB2", "kind": "reserve-propose+review", "round": 3, "n": 2, "at": 1791544160.2}
+{"rid": "gapB3", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791544251.6}
+{"rid": "runsB3", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791544406.4}
+{"rid": "runsB3", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791544521.9}
+{"rid": "runsB3", "kind": "release-review", "round": 2, "n": -1, "at": 1791544593.0}
+{"rid": "runsB3", "kind": "reserve-propose+review", "round": 3, "n": 2, "at": 1791544593.0}
+{"rid": "auditB3", "kind": "reserve-propose+review", "round": 1, "n": 2, "at": 1791544693.6}
+{"rid": "auditB3", "kind": "release-review", "round": 1, "n": -1, "at": 1791544815.9}
+{"rid": "auditB3", "kind": "reserve-propose+review", "round": 2, "n": 2, "at": 1791544815.9}
