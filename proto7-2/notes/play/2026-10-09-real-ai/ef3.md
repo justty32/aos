@@ -51,6 +51,6 @@
 
 ## 給下一步的建議（使用者／頂層定）
 
-1. aos 學徒（`aos-tool`／`aos-module`）的鏈改從 sol-high 起（或先拿掉 nothink 那級），CSV 照現在。改法是 `LADDER` 依 kind 分兩條，約 5 行。
+1. ~~aos 學徒的鏈改從 sol-high 起~~ **已做**（頂層 10-09 定）：`APPRENTICE_LADDER`＝sol-high → astra-high，CSV 仍從 luna-nothink；「沒有工具」那句不改。
 2. 或者改提示詞讓 luna-nothink 不拒答（把「沒有工具」改成「不用工具，直接寫出完整檔案」），再量一次——動到 MC 的開場白對策，要重測 sol。
 3. 升級前的「拒」目前不分原因；若第一級是「拒答」（`files` 空）可直接跳級，省第 2 關沙箱時間（目前第 1 關就擋，代價小）。
