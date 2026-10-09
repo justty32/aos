@@ -1,9 +1,9 @@
 {"job": "fakeapi", "start": "call",
- "note": "呼叫假 API 一次：reserve → 入口 → settle 都在 aos7-budget call 裡。同一個 request 重跑不重扣，所以可標冪等、unknown 時重送。@BUDGET@ 裝的時候換成 packs/budget/bin/aos7-budget 的絕對路徑",
+ "note": "呼叫假 API 一次：reserve → 入口 → settle 都在 aos7-budget call 裡。同一個 request 重跑不重扣，所以可標冪等、unknown 時重送；unknown_codes [3] 讓 call 退出 3（未交付終局結果）也走 on_unknown 同 request 重送。@BUDGET@ 裝的時候換成 packs/budget/bin/aos7-budget 的絕對路徑",
  "steps": {
   "call": {"run": ["python3", "@BUDGET@", "call", "budget/demo", "--holder", "api", "--request", "${request}",
                    "--payload", "${job}/payload.json", "--out", "${out}/call.json"],
-           "finite": true, "idempotent": true, "on_unknown": "resend", "expect": ["${out}/call.json"],
+           "finite": true, "idempotent": true, "on_unknown": "resend", "unknown_codes": [3], "expect": ["${out}/call.json"],
            "ok": "done", "fail": "failed"},
   "done": {"end": "ok"},
   "failed": {"end": "failed"}}}

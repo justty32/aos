@@ -177,6 +177,51 @@ class TestBudgetStepProbes(StepBudgetCase):
                 kill_space_procs(self.root)
                 shutil.rmtree(node)
 
+    def test_rc3_unknown_codes_resend_same_request(self):
+        """A8-10：後端讀寫不到讓 call 退出 3；示範表開 unknown_codes [3] → step 走 on_unknown，同 request 自動重送 a2，
+        後端只受理一次、只扣一次；重送額度記在 frame.resends[request]。"""
+        node = self.mknode("a")
+        self.set_tasks(node, self.install(node))
+        bj = os.path.join(self.bd, "backend.json")
+        os.makedirs(bj)                                    # 讀寫 backend.json 都失敗＝入口回非終局、call 退出 3
+
+        def a2():
+            p = self.frame(node).get("pending") or {}
+            return str(p.get("attempt", "")).endswith("-a2")
+        self.run_until(node, a2, msg="沒自動重送 a2")
+        req = self.frame(node)["pending"]["request"]
+        r1 = read_json(self.jd(node, "api", "results", "call", req + "-a1.json")) or {}
+        self.assertEqual((r1.get("code"), r1.get("ok")), (3, False), "a1 沒拿到退出碼 3：%r" % r1)
+        os.rmdir(bj)
+        self.run_until(node, lambda: self.frame(node).get("phase") == "ended", msg="沒結束")
+        fr = self.frame(node)
+        req = fr["accepted"]["call"]["request"]
+        self.assertEqual((fr["end"], fr["accepted"]["call"]["attempt"]), ("ok", req + "-a2"), fr)
+        self.assertEqual((fr["resends"].get(req), fr["tries"][req]), (1, 2), fr)
+        L = self.audit(self.bd, final=True)
+        self.assertEqual((L["used"], len(L["ops"]), self.backend(self.bd)["accepted"]), (1, 1, 1))
+
+    def test_rc3_exhausted_halts_unknown_then_resume(self):
+        """A8-10：call 一直退出 3 → a2 用完 max_resends 才 halted unknown（不走 fail、不結案）；預留留著，
+        修好後 resume --resend 同 request 結算 1、後端只受理一次。"""
+        node = self.mknode("a")
+        self.set_tasks(node, self.install(node))
+        bj = os.path.join(self.bd, "backend.json")
+        os.makedirs(bj)
+        self.run_until(node, lambda: self.frame(node).get("phase") == "halted", msg="沒停在 unknown")
+        fr = self.frame(node)
+        req = fr["pending"]["request"]
+        self.assertEqual((fr["halt"]["kind"], fr["pending"]["attempt"], fr["tries"][req]), ("unknown", req + "-a2", 2), fr)
+        L = self.audit(self.bd)
+        self.assertEqual((len(L["ops"]), L["inflight"], L["used"]), (1, 1, 0))
+        os.rmdir(bj)
+        self.assertEqual(self.step_cli(node, "resume", "jobs/api", "--resend").returncode, 0)
+        self.run_until(node, lambda: self.frame(node).get("phase") == "ended", msg="沒結束")
+        fr = self.frame(node)
+        self.assertEqual((fr["end"], fr["accepted"]["call"]["request"]), ("ok", req), fr)
+        L = self.audit(self.bd, final=True)
+        self.assertEqual((L["used"], len(L["ops"]), self.backend(self.bd)["accepted"]), (1, 1, 1))
+
     def test_slot_gone_settle_without_step(self):
         """入口回條寫了、結算前被殺，step 停在 unknown（不自動重送）；once 槽刪掉後直接 settle 照入口證據結算 1；
         之後 resume --resend 只重播（結果未發布那段也不重扣）。"""
