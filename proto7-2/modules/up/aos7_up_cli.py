@@ -1,5 +1,6 @@
 """參數、錯誤與公開入口分派。"""
 import argparse
+import math
 import os
 from pathlib import Path
 import re
@@ -7,7 +8,7 @@ import signal
 import sys
 
 from aos7_up import up, stop
-from aos7_up_status import status, UpError
+from aos7_up_status import status, UpError, BEAT_MS
 
 HELP = """用法：
   aos7-up <node>                起 node；開著別關，停＝按 Ctrl-C
@@ -41,6 +42,26 @@ class Parser(argparse.ArgumentParser):
         self.exit(2, f'aos7-up: {why}。例如 {example}\n')
 
 
+def beat(args):
+    """--interval 秒、--early／--fixed → up.json 的節拍欄（沒給的不放，沿用舊值）。壞值退 2、什麼都沒動。"""
+    out = {}
+    if args.early and args.fixed:
+        raise UpError(2, '--early 和 --fixed 只能選一個。例如 aos7-up /tmp/aos/bob --early')
+    if args.early or args.fixed:
+        out['early_tock'] = bool(args.early)
+    if args.interval is not None:
+        try:
+            seconds = float(args.interval)
+        except ValueError:
+            seconds = None
+        if seconds is None or not math.isfinite(seconds) or \
+                not BEAT_MS[0] <= round(seconds * 1000) <= BEAT_MS[1]:
+            raise UpError(2, f'--interval 要是 0.01 到 86400 之間的秒數，拿到 {args.interval[:40]!r}。'
+                             '例如 aos7-up /tmp/aos/bob --interval 0.5')
+        out['interval_ms'] = round(seconds * 1000)
+    return out
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if show_help(argv):
@@ -54,6 +75,9 @@ def main(argv=None):
     if sub == 'up':
         parser.add_argument('--model', help=argparse.SUPPRESS)
         parser.add_argument('-d', action='store_true', help=argparse.SUPPRESS)
+        parser.add_argument('--interval', help=argparse.SUPPRESS)
+        parser.add_argument('--early', action='store_true', help=argparse.SUPPRESS)
+        parser.add_argument('--fixed', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     node = Path(os.path.abspath(args.node))
     def interrupt(signum, frame):
@@ -67,7 +91,7 @@ def main(argv=None):
             return status(node)
         if sub == 'stop':
             return stop(node)
-        return up(node, args.model, args.d)
+        return up(node, args.model, args.d, beat(args))
     except KeyboardInterrupt:
         print('aos7-up: 不確定：裝到一半被中斷，已裝的留著。照原樣再跑一次會接續', file=sys.stderr)
         return 3

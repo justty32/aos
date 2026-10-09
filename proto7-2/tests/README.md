@@ -40,7 +40,7 @@
 | `tests/core/test_matrix_a3.py` | **A3 回歸**：kill 帶 run 的重播（請求刪不掉、處理到一半被殺）只對同一個 run、生命週期檔換 FIFO、mount 子目錄暫存、重播通知失敗記錄（F47：不跨回合補送）、P2-01 wake 提前結束固定 interval 回合 |
 | `tests/core/test_options_a3.py` | `until_round` |
 | `tests/core/test_matrix_misc.py`、`test_matrix_daemon.py` | **A2 矩陣其餘**：node 本身換成符號連結（同 inode／指到 root 外）＝missing 且不寫出 root、rounds 按 owner、暫存檔清理、wake 不保留、tock.json 晚於總結 |
-| `modules/up/tests/test_up.py`、`test_up_model.py`、`test_up_edges.py`、`test_up_dispatch.py`、`test_up_errors.py` | **up 起步入口**：重跑三次保信、SIGKILL 重接保留已花預算與信／ledger 不雙開、端點保存、壞設定退 2、前景訊號／逾時、啟動失敗回收、醒來證據、程序組不留孫程序、六行唯讀、並行與共享心跳、分派及 you/inbox/done 觀看事件 |
+| `modules/up/tests/test_up.py`、`test_up_model.py`、`test_up_edges.py`、`test_up_beat.py`、`test_up_dispatch.py`、`test_up_errors.py` | **up 起步入口**：重跑三次保信、SIGKILL 重接保留已花預算與信／ledger 不雙開、端點保存、心跳節拍可設定並沿用、壞設定退 2、前景訊號／逾時、啟動失敗回收、醒來證據、程序組不留孫程序、六行唯讀、並行與共享心跳、分派及 you/inbox/done 觀看事件 |
 | `modules/tools/tests/test_tools_ctl.py` | 工具包：`aos7-ctl` 固定檔名無損編碼（非 ASCII owner 兩個 pause 都留，A2-13／A3-06）、`task` 子命令寫 ctl.json（F57） |
 | `modules/routines/tests/test_routines.py` | **事務包**：兩張表 300 回合真 keep 取樣、秒與時鐘倒退、認領後被殺與原子寫、unknown 與壞列、舊快照與超大逾時、CLI 與錯誤路徑、`ls --run` 鎖忙＝不知道、免 daemon 跑到期 |
 | `modules/skills/tests/test_skills.py` | **skill 包**：索引混合好壞本、symlink 與必用表、缺 skills、假 AI pick 重用回條、沒帳本機挑、日誌留最新 50、llmcall 忙＝不確定、llmcall 退出碼與回條錯 |
