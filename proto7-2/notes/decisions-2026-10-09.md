@@ -105,3 +105,5 @@
 - B｜V1：學徒改從事件必讀通道收單（`aos7-author send`／`intake`）。藍圖說的「回條」解讀為**收單回條**（不是發布回條）——等發布回條要等人按發布，會把單一消費者的必讀通道堵到滿
 - C｜V1：收單只登記、不自動提案或發布；壞單（`invalid`／`conflict`／`ignored`）照樣 ack 免得堵住後面；輸入檔還沒放到 node 上的單算 invalid
 - C｜B2：budget 部分結算（0≤用量≤預留）；cancel 遇到別的入口留下的任何非終局紀錄都回 unknown（比凍結介面的「intent」更嚴）；overrun 欄存在但 null 判 unknown；billing final 帶 overrun>0 照收
+- C｜G1：假傳輸閘道 `packs/llmcall/` 完成；遠端次數只按 call ID 算；adopt 被拒印 `refused` 退出 1；billing pending 不寫 receipt.json（每次重跑重算、退出 4）；deadline 限 0～86400 秒；diff 1152 行（全新檔）照 D7 接受
+- 已知限制｜G1：budget `cancel` 在 intent 寫入前取消時，寫出的取消紀錄缺 gateway／call_id 等欄（llmcall 會補預設值仍可用），要改 budget，留下一輪
