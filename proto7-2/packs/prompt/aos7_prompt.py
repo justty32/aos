@@ -188,9 +188,38 @@ def expand_request(node, request_dict):
         item["content"] = expand_text(node, item["content"])
     return result
 
+EXAMPLE = {"render": "例：aos7-prompt render <node> prompts/first.json --out req.json",
+           "expand": "例：aos7-prompt expand <node> req.json（req.json 是 render --out 寫出的檔）"}
+UNKNOWN_FIX = {"ReferenceCycle": "把繞回自己的 $ref／append 拿掉後再跑",
+               "EnvironmentVariableMissing": "設好那個環境變數後照原樣再跑一次",
+               "FileNotFoundError": "檢查路徑與檔名（相對路徑從 node 算起，要一字不差）後照原樣再跑一次",
+               "PermissionError": "檢查檔案與輸出資料夾的權限後照原樣再跑一次",
+               "ReferenceJsonInvalid": "把那份 JSON 的語法修好後再跑",
+               "UnicodeDecodeError": "把檔轉成 UTF-8 後照原樣再跑一次"}
+def human(cmd, error):
+    """失敗回條之外給人看的一行：發生什麼。怎麼辦。"""
+    why = " ".join(error.why.splitlines()).strip().rstrip("。") or error.code
+    if error.outcome == "bad":
+        fix = EXAMPLE[cmd] + ('，清單最小寫法 {"messages": [{"role": "user", "content": "你好"}]}' if cmd == "render" else "")
+        return f"aos7-prompt: 輸入不對：{why}。{fix}"
+    if cmd == "expand" and error.code in ("RefMismatch", "FileNotFoundError"):
+        fix = "確認請求檔路徑對；若是 refs/ 裡的原文被刪或被改，重新 render 一份再展開"
+    else:
+        fix = UNKNOWN_FIX.get(error.code, "確認檔案在、可讀、是 UTF-8 後照原樣再跑一次")
+    state = "這次沒拼成也沒寫出請求（--out 的檔沒動）" if cmd == "render" else "這次沒展開"
+    return f"aos7-prompt: 不確定：{why}，{state}。{fix}"
+class ArgumentParser(argparse.ArgumentParser):
+    """用法錯誤只印一行人話，不印 usage。"""
+    def error(self, message):
+        message = " ".join(message.splitlines()).strip().rstrip("。")
+        cmd = self.prog.split()[-1]
+        example = EXAMPLE.get(cmd, EXAMPLE["render"])
+        helpcmd = f"aos7-prompt {cmd} --help" if cmd in EXAMPLE else "aos7-prompt --help"
+        self.exit(2, f"aos7-prompt: 參數不對：{message}。{example}；全部選項看 {helpcmd}\n")
+
 def main(argv=None):
     """執行 render／expand，錯誤回 2 或 3。"""
-    ap = argparse.ArgumentParser(prog="aos7-prompt", description="照 prompt.json 把檔案拼成給 AI 的請求；太長的段落收成 ref://，要原文用 expand。")
+    ap = ArgumentParser(prog="aos7-prompt", description="照 prompt.json 把檔案拼成給 AI 的請求；太長的段落收成 ref://，要原文用 expand。")
     sub = ap.add_subparsers(dest="cmd", required=True, metavar="{render,expand}")
     p = sub.add_parser("render", help="照清單拼出請求", description="照 prompt.json 讀檔、拼出請求。回條的 tokens_est＝收起來後約多少 token，tokens_est_full＝不收約多少。")
     p.add_argument("node", help="AI 的資料夾；其他相對路徑都從這裡算")
@@ -231,4 +260,5 @@ def main(argv=None):
     except PromptError as e:
         error = e
     print(json.dumps(dict(v=1, outcome=error.outcome, code=error.code, why=error.why), ensure_ascii=False), file=sys.stderr)
+    print(human(a.cmd, error), file=sys.stderr)
     return 2 if error.outcome == "bad" else 3

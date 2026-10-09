@@ -66,7 +66,11 @@ C 解完後：
 - 檔案：讀 llmcall 請求（`litellm.model` 字串、每則訊息 role 非空字串、content 字串，否則 bad），把 `litellm.messages[*].content` 全部照 §4 展開，以 render 相同格式印到 stdout。
 - 失敗回條印到 stderr。
 
+- 失敗時 stderr 固定兩行：第一行 JSON 給程式（欄位與內容照舊），第二行人話給人，格式 `aos7-prompt: 發生什麼。怎麼辦`；人話不含換行。argparse 用法錯只有人話一行、沒有 JSON，退出 2；`--help` 照舊退出 0。
+
 ## 6. 退出碼
+
+全 aos 共用的退出碼意義見 [blueprint-errors §2](../../notes/blueprint-errors.md#2-統一退出碼表全-aos-共用只有五個)，本表只列本包哪些錯歸哪一碼。
 
 | 碼 | 意義 |
 |---|---|

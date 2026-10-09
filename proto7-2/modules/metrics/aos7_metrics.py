@@ -229,10 +229,16 @@ EPILOG = """PATH 要量哪個資料夾：
 --json 印一行 JSON：{v, overhead, scopes:[每個 PATH], total:合計}；每個 scope 有
   scope、flows（每件明細）、calls、tokens、max_parallel、window_unknown、seconds{mean,max,open}、retries、unreadable。
 
-退出碼：0 成功（有讀不了的檔也算成功）；2 用法錯或 PATH 不是資料夾。
+退出碼：0 成功（有讀不了的檔也算）；2 參數不對或 PATH 不是資料夾。全 aos 共用表見 proto7-2/notes/blueprint-errors.md §2。
 """
+class ArgumentParser(argparse.ArgumentParser):
+    """用法錯誤只印一行人話，不印 usage。"""
+    def error(self, message):
+        message = " ".join(message.splitlines()).rstrip("。")
+        self.exit(2, f'aos7-metrics: 參數不對：{message}。例：aos7-metrics job proto7-2/modules/metrics/baseline/r1/loop-gpt-6-sol；全部選項看 --help\n')
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog='aos7-metrics', description=HELP, epilog=EPILOG,
+    parser = ArgumentParser(prog='aos7-metrics', description=HELP, epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('command', choices=['job'], help='唯一的子指令：量資料夾')
     parser.add_argument('paths', nargs='+', metavar='PATH', help='要量的資料夾（可多個）')
@@ -244,7 +250,8 @@ def main(argv=None):
         parser.error('--overhead 必須非負')
     for path in args.paths:
         if not Path(path).is_dir():
-            print(f'aos7-metrics：不是資料夾：{path}（PATH 要給資料夾，見 --help）', file=sys.stderr)
+            shown = ' '.join(path.splitlines())
+            print(f'aos7-metrics: 不是資料夾：{shown}。PATH 要給資料夾，例：aos7-metrics job proto7-2/modules/metrics/baseline/r1/loop-gpt-6-sol', file=sys.stderr)
             return 2
     scanned = [_scan(p, args.overhead) for p in sorted(args.paths)]
     scopes = [s for s, _ in scanned]

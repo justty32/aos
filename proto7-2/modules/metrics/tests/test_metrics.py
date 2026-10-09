@@ -85,6 +85,25 @@ class TestMetrics(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, redirect_stderr(io.StringIO()) as err:
             self.assertEqual(metrics.main(['job', tmp+'/missing']), 2)
             self.assertEqual(len(err.getvalue().splitlines()), 1)
+    def test_error_lines(self):
+        """檔案 PATH 與 argparse 錯誤都只印一行接法。"""
+        cli = [sys.executable, str(PACKAGE / 'aos7-metrics')]
+        for args in (('job', __file__), ('job', HERE, '--overhead', '-1'),
+                     ('job', HERE, '--unknown'), ('job',),
+                     ('job', HERE, '--overhead', 'abc'), ('unknown', HERE)):
+            with self.subTest(args=args):
+                p = subprocess.run(cli + list(map(str, args)), capture_output=True, text=True)
+                lines = p.stderr.splitlines()
+                self.assertEqual(p.returncode, 2)
+                self.assertEqual(p.stdout, '')
+                self.assertEqual(len(lines), 1)
+                prefix = 'aos7-metrics: 不是資料夾：' if args[1:] == (__file__,) else 'aos7-metrics: 參數不對：'
+                self.assertTrue(lines[0].startswith(prefix), lines)
+                self.assertIn('。', lines[0])
+                self.assertIn('例：', lines[0])
+                self.assertNotIn('aos7-metrics：', lines[0])
+                self.assertNotIn('usage', lines[0])
+
     def test_plain(self):
         s = metrics.scan(HERE / 'fixture')
         self.assertEqual(metrics.plain(s), 'fixture：2 件工作｜平均每件用 40 token｜同時最多 3 個在問模型｜平均花 10.0 秒（最長 10.0 秒），另有 1 件還沒結束｜重試 4 次｜1 次還沒結帳｜1 個檔讀不了已跳過')
