@@ -35,3 +35,6 @@
 - B｜K4：N-86 once 先比對「槽的 run 是否等於 launch 的 run」再看排程；改排程後不重跑，也不讓沒起成的 once 佔槽（否則同名 keep 永遠起不來）→ `aos7_tick.py`
 - C｜K4：mount 讀連結出錯當「不知道」、請求留著下次再審（不刪請求）→ `aos7_mount.py`
 - C｜K4：spec §5.5 C8-03 只寫原則（核心只清自己資料夾的暫存檔，槽外由寫的人跑 `sweep_tmp`），各包資料夾由各隊處理
+- B｜K1：D1 落法——runner 還在起任務時 kill 回 `ok:false`／`unknown`，請求留著下次再試；若掃到對應任務已在跑則照殺，避免請求永遠卡住 → `aos7_task.py`
+- B｜K1：任務環境改白名單，只給核心六個 `AOS7_*`；副作用：`AOS7_AUDIT`／`AOS7_SUBROOT` 不再傳到子 daemon 起的任務 → `aos7_task.py`
+- C｜K1：R8-12 `/proc` stat 改讀原始位元組，不把怪名稱當「不知道」；K-04 清場後最多再掃 3 輪
