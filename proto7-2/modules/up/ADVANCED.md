@@ -72,6 +72,27 @@ status 六行唯讀；體檢 OK 只報 OK，有問題附 check 指令。AI 行�
 
 給人看的輸出不出現英文狀態詞：ask 的回信 DONE 不標、BLOCKED 標「卡住了」、NEEDS-USER 標「要你決定」、FAILED 標「沒辦成」；JSON 與信件欄位照舊是英文。
 
+### brain 一封信跨回合
+
+AI 每回合回三種之一：`回信：`（做完，回 DONE）、`繼續：`（這回合的成果，下回合接著做）、`要你決定：`（回 NEEDS-USER 結案）。一回合最多問一次 AI；第 k 回合的 call 是 `<信 id>-s<k>`（第 1 回合沿用信 id），被殺後重起照 llmcall 規則接同一個 call，不重問。
+
+說「繼續」時，每回合記這些（重跑同一回合不重記），最後才寫 `brain/task.json`（信 id、下一回合、上回合停在哪、連續沒進展數、最近 8 回合的停在哪與成果前 200 字、挑到的技能）：
+
+- `brain/last.md`：這回合的成果（最多 4000 字），下回合放進提示。
+- `notes/journal.jsonl` 一行（`by`、`re`、`step`，拿 `compact/write.lock`）；STATE 一行「第 k 回合 <信 id>：<停在哪>」。
+- SESSION-LOG 第一個 `## ` 段下一行 `- [brain] 信 <id>：…`，結案就刪。
+- 每 `progress_every` 回合（up.json，預設 5，0＝不寄）寄 PROGRESS 給寄件人，同回合不重寄。
+- 記憶檔超過 `compact.json` 的 `max_bytes` 就跑 `aos7-compact now`（up.json `compact: false` 關）。
+- 第 1 回合本機挑一本技能，之後每回合附上那本 SKILL.md。
+
+挑技能經沒帳的 `brain/.pick` 視角呼叫 `aos7-skills pick`，所以不問 AI、不花錢，紀錄照樣在 `skills/.pick/log.jsonl`。提示不用 `ref://` 折疊：AI 沒有工具展開，折起來等於看不到；每回合提示只多「最近 8 回合各一行＋上回合成果」，有上限，不隨回合數變長。
+
+task.json 壞掉就刪掉從第 1 回合重播（每回合的 call 已有回條，不重問、不重記）；讀不到就這回合不動。沒有進行中的任務時，殘留的 brain open 行與暫存一併清掉。
+
+每回合的配額是「最多處理一封請求、最多問一次 AI」；不是請求的信（DONE、PROGRESS 等回信）不問 AI，每回合讀到就直接歸檔，不算在配額裡。brain 只讀自己的信箱，不讀必讀通道（events），所以不會替別人標已處理。
+
+停在哪連續 `stall`（預設 3）回合沒變，或做到 `max_steps`（預設 40）回合還沒完，回 NEEDS-USER 結案。一次只做一封信，做完才換下一封（FIFO）。假 AI 照信的標題演：含「N 回合」就分 N 回合做完，含「沒進展」就一直停在同一處，含「要你決定」就一回合要你決定（測試用）。範例 [examples/multiround/](examples/multiround/README.md)。
+
 brain 對 llmcall 的退出：0 回信；4 也回信，回合行註「AI 用量還沒對清」；3 不回信、不寫 pending、信留在 inbox，下回合用同一個 call 接續；1、2 與其他回 BLOCKED。
 觀看直接掃信件，包含 you/inbox/done 回信，不更新 mail 的讀取快照。
 
@@ -97,7 +118,7 @@ up.json 壞了時刪掉該檔再 up。未知結果不清檔、不重送。
 | `aos7-up` | 薄入口 |
 | `aos7_up.py` | 冪等安裝、起停、起動證據與回收 |
 | `aos7_up_cli.py` | 參數、錯誤與 ask／brain 分派 |
-| `aos7_up_brain.py`、`aos7_up_ask.py`、`prompts/`、`examples/` | brain 一回合與 ask（另一份交接，測試 `tests/test_brain*.py`） |
+| `aos7_up_brain.py`、`aos7_up_ask.py`、`prompts/`、`examples/` | brain 一回合（一封信可跨回合）與 ask（測試 `tests/test_brain*.py`、`tests/test_up_brain_multi.py`） |
 | `aos7_up_status.py` | 六行狀態、觀看、設定驗證、子指令與 atomic |
 | `tests/test_up.py` | 起停、信與已花預算 SIGKILL 重接、唯讀摘要 |
 | `tests/test_up_model.py` | 模型、端點保存、拒絕 gateway 變更、經 up 的 ask 假 AI 一圈 |
