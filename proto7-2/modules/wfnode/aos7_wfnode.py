@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 
 from wfnode_fill import fill_text
+from wfnode_judge import resolve
 from wfnode_state import NEXT, atomic_write, state
 
 
@@ -49,8 +50,19 @@ def supplement(node):
     table = {'contract': 'wf-table/1', 'source': 'ROSTER.md',
              'extracted': dt.date.today().isoformat(),
              'columns': ['線名', '狀態', '持有', '唯讀禁區', '登記時間', '收線證據'], 'rows': []}
-    for rel, content in [('handoffs/NEXT-SESSION.md', NEXT), ('ROSTER.md', ROSTER),
-                         ('line-claims.json', json.dumps(table, indent=1, ensure_ascii=False) + '\n')]:
+    roster = ROSTER
+    if (node / 'wf/workflows/inbox/ROSTER.md').is_file():
+        roster = ('# ROSTER — 導航\n\n身份聲明的正本在 '
+                  '[workflows/inbox/ROSTER.md](workflows/inbox/ROSTER.md)；'
+                  '誰能寫哪裡是資料檔 line-claims.json（wf-table/1）。\n')
+    additions = []
+    for name, columns in (('routines', ['name', 'every', 'inst', 'last_round', 'last_time', 'last_code']),
+                          ('schedule', ['name', 'at', 'inst', 'claimed'])):
+        if (node / f'wf/workflows/{name}.md').is_file():
+            data = dict(table, source=f'workflows/{name}.md', columns=columns)
+            additions.append((f'{name}.json', json.dumps(data, indent=1, ensure_ascii=False) + '\n'))
+    for rel, content in [('handoffs/NEXT-SESSION.md', NEXT), ('ROSTER.md', roster),
+                         ('line-claims.json', json.dumps(table, indent=1, ensure_ascii=False) + '\n')] + additions:
         path = node / 'wf' / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -105,13 +117,14 @@ def init(node, flavor=None):
         staged = temp / node.name
         try:
             command = ['bash', str(script), '--target', str(staged), '--non-invasive', 'wf']
-            if flavor is not None:
-                command += ['--flavor', flavor]
+            command += ['--flavor', 'dev,heartbeat,multi-agent' if flavor is None else flavor]
             result = subprocess.run(command + ['--quiet'], capture_output=True, text=True)
             if result.returncode:
                 import sys
                 print(result.stderr, end='', file=sys.stderr)
                 return 1
+            for handled in resolve(staged / 'wf'):
+                print(f'已處理導入判斷：{handled}')
             fill_node(staged, node.name)
             supplement(staged)
             for item in sorted(staged.iterdir(), key=lambda p: (p.name == 'AGENTS.md', p.name)):
@@ -145,9 +158,12 @@ def check(node):
             if re.search(r'^- \[[xX✓✔]\]|✅|✔|~~|已完成|已結案|已收線|（完成）|\(done\)|\[done\]|DONE', line):
                 print(f'{name}:{number}: {line}\n做完就刪掉這行（歷史在 git log）')
                 failed = True
-    for path, number, line in scan(node, '{{'):
-        print(f'{path}:{number}: {line}')
-        failed = True
+    for marker in ('{{', '〔導入判斷〕', '〔模板說明〕'):
+        found = scan(node, marker)
+        print(f'{marker}：剩 {sum(line.count(marker) for _, _, line in found)} 處')
+        for path, number, line in found:
+            print(f'{path}:{number}: {line}')
+            failed = True
     if not failed:
         print('OK：連結、活狀態與佔位檢查通過')
     return int(failed)
