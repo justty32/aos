@@ -467,53 +467,50 @@ class TestDaemonDurableRecovery(DaemonCase):
         self.wait_for(lambda: self.task_state(identity) == aos7_proc.GONE, 15, "舊 pid＋starttime 仍活著")
         self.wait_for(lambda: "reaping" not in self.nodes_state(), 10, "收乾淨後 reaping 沒清掉")
 
-    def readonly_aosd(self):
-        path = os.path.join(self.root, ".aosd")
-        self.addCleanup(os.chmod, path, 0o700)
-        os.chmod(path, 0o500)
-        # 先證明同一個目錄真的不能原子寫檔，避免故障沒有打中卻通過。
-        with self.assertRaises(PermissionError):
-            write_json(os.path.join(path, "write-probe.json"), {})
-        return path
+    def nodes_write_fault(self):
+        """nodes.json 寫檔失敗（D3 的 inject("write")）：回 (Fault, 規則檔)；寫規則檔＝開、刪掉＝關。"""
+        rules = os.path.join(self.root, "fault-rules.txt")
+        fault = Fault("@" + rules, ops={"write"})
+        self.addCleanup(fault.close)
+        return fault, rules
 
-    @unittest.skipIf(os.geteuid() == 0, "root 不受 chmod 寫入限制")
     def test_unregister_write_failure_is_retryable(self):
         node = self.mknode("a", [self.KEEP])
-        self.start_daemon(register=["a"])
+        fault, rules = self.nodes_write_fault()
+        self.start_daemon(env=fault.env, register=["a"])
         identity = self.ready_task(node)
         self.wait_for(lambda: self.nstat().get("round"))
-        path = self.readonly_aosd()
+        with open(rules, "w") as fh:
+            fh.write("write:*/.aosd/nodes.json:EIO\n")
         result = self.wait_receipt(self.ctl("unregister", "a"))["result"]
+        fault.check_rules(where="（unregister 寫 nodes.json）")
         self.assertFalse(result["ok"])
         self.assertIn("nodes.json", result["msg"])
         self.assertIn("a", self.nodes_state()["nodes"])
-        self.assertTrue(self.nstat().get("round"))
-        self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
-        before = self.status()["at"]
-        os.chmod(path, 0o700)
-        self.wait_for(lambda: self.status().get("at") != before)
-        self.assertTrue(self.nstat().get("round"), "恢復 status 寫入後時間線丟了")
+        self.assertNotIn("reaping", self.nodes_state())
+        self.assertTrue(self.nstat().get("round"), "寫檔失敗後時間線丟了")
         self.assertNotEqual(self.nstat().get("phase"), "unregistering")
+        os.remove(rules)
+        time.sleep(0.3)
         self.assertEqual(self.task_state(identity), aos7_proc.ALIVE)
-        self.assertTrue(self.wait_receipt(self.ctl("unregister", "a"))["result"]["ok"])
+        self.assertTrue(self.wait_receipt(self.ctl("unregister", "a"))["result"]["ok"])   # 重送：不被記憶體短路
         self.wait_reaped(identity)
         self.assertNotIn("a", self.nodes_state()["nodes"])
 
-    @unittest.skipIf(os.geteuid() == 0, "root 不受 chmod 寫入限制")
     def test_register_write_failure_is_retryable(self):
         node = self.mknode("a")
-        self.start_daemon()
+        fault, rules = self.nodes_write_fault()
+        self.start_daemon(env=fault.env)
         self.wait_for(lambda: self.status().get("pid"))
-        self.wait_receipt(self.ctl("wake", "a"))  # 先建好 ctl-done，chmod 只擋狀態檔覆寫
-        path = self.readonly_aosd()
+        with open(rules, "w") as fh:
+            fh.write("write:*/.aosd/nodes.json:EIO\n")
         result = self.wait_receipt(self.ctl("register", "a"))["result"]
+        fault.check_rules(where="（register 寫 nodes.json）")
         self.assertFalse(result["ok"])
         self.assertIn("nodes.json", result["msg"])
         self.assertNotIn("a", self.nodes_state().get("nodes", {}))
-        self.assertNotIn("a", self.status()["nodes"])
-        before = self.status()["at"]
-        os.chmod(path, 0o700)
-        self.wait_for(lambda: self.status().get("at") != before)
+        os.remove(rules)
+        time.sleep(0.3)
         self.assertNotIn("a", self.status()["nodes"])
         self.assertFalse(os.path.exists(os.path.join(node, ".aos", "round.json")))
         self.assertTrue(self.wait_receipt(self.ctl("register", "a"))["result"]["ok"])
@@ -725,6 +722,42 @@ class TestDaemonDurableRecovery(DaemonCase):
             timeline.return_value.start.assert_called_once()
         self.assertNotIn("reaping", self.nodes_state())
         self.assertNotIn("a", d.reaping)
+
+    def test_gone_timeline_must_end_before_final_clean_scan(self):
+        """舊時間線在 node 消失後還活著：reaper 判乾淨也不清意圖、不開新線；舊線結束後再掃一次才清（sol 第二眼 2）。"""
+        self.mknode("a")
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.registry = {"a": {}}
+        old = mock.Mock(is_alive=mock.Mock(return_value=True))
+        d.gone_tls["a"] = old
+        with mock.patch.object(aos7_proc, "kill_node", return_value=(0, True)) as kill, \
+                mock.patch.object(aos7_daemon, "Timeline") as timeline:
+            d.reap("a", os.path.join(self.root, "a"), "node-gone-kill")
+            d.reapers["a"].join(5)
+            d.check_nodes()
+            self.assertIn("a", self.nodes_state()["reaping"], "舊線還活著就清掉回收意圖")
+            timeline.assert_not_called()
+            old.is_alive.return_value = False
+            d.check_nodes()                          # 看到舊線結束 → 起一次重掃
+            d.reapers["a"].join(5)
+            self.assertEqual(kill.call_count, 2, "舊線結束後沒有再掃一次")
+            timeline.assert_not_called()
+            d.check_nodes()                          # 重掃乾淨 → 清意圖、開線
+            timeline.return_value.start.assert_called_once()
+        self.assertNotIn("reaping", self.nodes_state())
+
+    def test_round_done_save_failure_does_not_raise_or_double_count(self):
+        """paused.json 寫不進去：round_done 不往外丟（時間線重試會再扣一次），記憶體照扣、下次寫成功補上。"""
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        d.steps = {"a": {"k": 3}}
+        with mock.patch.object(d, "save_paused", side_effect=OSError("disk unavailable")) as save:
+            d.round_done("a")
+            save.assert_called_once()
+        self.assertEqual(d.steps, {"a": {"k": 2}})
+        d.round_done("a")
+        self.assertEqual(read_json(os.path.join(self.root, ".aosd", "paused.json"))["steps"], {"a": {"k": 1}})
 
     def test_stop_sweep_includes_unregistered_reaping_intents(self):
         d = aos7_daemon.Daemon(self.root)

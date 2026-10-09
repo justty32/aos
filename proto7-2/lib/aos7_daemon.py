@@ -61,6 +61,7 @@ class Daemon:
         self.node_errors = {}        # {id: last_error}：沒有時間線時的錯誤（看不到…）
         self.reapers = {}            # {id: thread}：node 消失時在背景收程序；收完才重開時間線
         self.retiring = {}           # {id: (Timeline, kill)}：unregister 中
+        self.gone_tls = {}           # {id: Timeline}：node 消失後還沒結束的舊時間線（結束後再掃一次才算收乾淨）
         self.stopping = False
         self.stopping_since = None
         self.kill_on_stop = False
@@ -164,7 +165,13 @@ class Daemon:
                 self._drop_steps(nid, owner)
                 if owner not in self.paused.setdefault(nid, []):
                     self.paused[nid].append(owner)
-            self.save_paused()
+            try:
+                self.save_paused()
+                err = None
+            except (OSError, Unknown) as e:   # 不往外丟：時間線重試會把同一回合再扣一次；下次寫成功時補上
+                err = repr(e)[:300]
+        if err:
+            self.log(ev="paused-save-error", node=nid, err=err)
         for owner in done:
             self.log(ev="steps-done", node=nid, owner=owner)
 
@@ -438,12 +445,20 @@ class Daemon:
         for nid, (tl, kill) in list(self.retiring.items()):
             if not tl.is_alive():
                 del self.retiring[nid]
+        for nid, tl in list(self.gone_tls.items()):
+            if not tl.is_alive():
+                # 舊線在回收途中可能還起了任務：它結束後要再掃一次，那次乾淨才算
+                del self.gone_tls[nid]
+                if nid in self._reap_mem:
+                    self._reap_mem[nid]["rescan"] = True
         for nid in list(self.reaping):
             th = self.reapers.get(nid)
-            if nid in self.retiring or (th is not None and th.is_alive()):
+            if nid in self.retiring or nid in self.gone_tls or (th is not None and th.is_alive()):
                 continue
             mem = self._reap_mem.get(nid, {})
-            if mem.get("clean"):
+            if mem.get("clean") and mem.get("rescan"):
+                self.reap(nid, node_path(self.root, nid), "reap-rescan")
+            elif mem.get("clean"):
                 new = dict(self.reaping)
                 del new[nid]
                 try:
@@ -485,6 +500,7 @@ class Daemon:
                     self.timelines.pop(nid)
                     tl.gone = True
                     tl.wake.set()
+                    self.gone_tls[nid] = tl
                     with self._lock:
                         self.steps.pop(nid, None)
                     self._save_paused_quiet()
