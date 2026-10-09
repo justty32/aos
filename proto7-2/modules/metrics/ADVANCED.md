@@ -16,7 +16,7 @@
   # 　　model chatgpt-gpt-6-sol：1 次呼叫、用 2590 token、超支 0
   ```
 - 帳差（`--detail` 行尾、`--json` 的 `ledger:{used, receipts, diff, gaps, bad, unbooked, unbooked_used}`）：帳＝各 `budget/<b>/ledger.json` 的 used 加總；回條＝有帳的那些 budget 底下各呼叫 `receipt.json` 的 used 加總（只算真回條；沒帳的呼叫，例如直連代理的 smoke，不算進來）；帳差＝帳－回條，正常是 0；沒帳的呼叫數與它們的回條 token 記 unbooked、unbooked_used，行內寫「另 N 次呼叫沒帳、用 X token」。沒有帳檔（或帳檔沒有 used 欄）印「無帳」；帳檔在卻讀不了或 used 不是整數印「不明（N 個帳檔讀不了）」，bad＝N。缺口＝有請求沒 `receipt.json` 的呼叫數（只有 gateway done 也算，表示回條沒寫成）＋超支的呼叫數。只對照、不修帳。
-- `--json`：給程式讀，印一行排序 JSON：`{v, overhead, scopes:[每個 PATH], total:合計}`；每個 scope 有 scope、flows（每件明細）、calls、tokens、max_parallel、window_unknown、seconds{mean,max,open}、retries、unreadable、ledger（帳差，見上）；給 `--by` 才多 by。各欄算法見下面「給維護者」。
+- `--json`：給程式讀，印一行排序 JSON：`{v, overhead, scopes:[每個 PATH], total:合計}`；每個 scope 有 scope、flows（每件明細；每件的 `parts` 按併件前的原 logical 分項 `{calls, used}`，例如 `author/<rid>` 件裡的 `author-review/<rid>`）、calls、tokens、max_parallel、window_unknown、seconds{mean,max,open}、retries、unreadable、ledger（帳差，見上）；給 `--by` 才多 by。各欄算法見下面「給維護者」。
 
 ## 出錯與退出碼
 

@@ -337,6 +337,8 @@ class TestMetrics(unittest.TestCase):
         author = flows['author/r9']
         self.assertEqual((author['calls'], author['retries']['reask']), (5, 2))  # 主單 2→1、審查 2→1、學習 1→0
         self.assertFalse(any(key.startswith(('author-review/', 'author-learn/')) for key in flows))
+        self.assertEqual(author['parts'], {'author/r9': dict(calls=2, used=60), 'author-review/r9': dict(calls=2, used=60),
+                                           'author-learn/r9': dict(calls=1, used=30)})
         self.assertEqual(author['jobs'], ['r9_12345678'])
         self.assertEqual((author['start'], author['end'], author['seconds']),
                          ('2026-10-09T00:00:11', '2026-10-09T00:00:20', 9))
