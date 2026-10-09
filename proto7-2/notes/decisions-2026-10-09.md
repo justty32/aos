@@ -232,3 +232,5 @@
 - B｜B5：「腦」能把一封信跨多回合做完——AI 每回合回「回信：／繼續：／要你決定：」；每 5 回合發進度信、連續 3 回合沒進展或滿 40 回合就停下問你；記憶檔太大時自動 compact；第 1 回合本機挑技能；被殺接回不重問、不重寄。假 AI 8 回合、真 AI（sol）5 回合都順利結案
 - C｜B5：提示不用 `ref://` 折疊（AI 沒工具展開，等於看不到），改成上一回合成果最多 4000 字＋最近 8 回合各一行；非請求信直接歸檔、不佔一回合一封的配額；brain 不讀必讀通道
 - C｜B5：為了讓 brain 本機挑技能，暫時從沒帳的暫存夾呼叫 pick；下一輪給 skills pick 加「只在本機挑」選項
+- C｜RV-fix-B：llmdiag 併進 `aos7-diag --llm`（77 個真 node 逐字相同），舊程式 git mv 到 `archive/llmdiag/`、舊指令留轉址、r5 移除；讀不到檔改退 3、給錯層退 2（舊版會默默給空表）。新手 Haiku 7／luna 8
+- 待 I5｜RV-fix-B 交棒：modules 總覽刪 llmdiag 列、diag 列補 `--llm`；INDEX、tests README、code map 同步
