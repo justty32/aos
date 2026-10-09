@@ -1,5 +1,7 @@
 """kernel 包的設定、state 與快照（spec.md §2～§4）。只讀寫：kernel.json（讀）、自己槽的 state.json／decisions.json、
 來源的公開檔（birth.json、brain/task.json、round.json，只讀）。不呼叫核心會收程序的判定。"""
+import glob
+import stat
 import hashlib
 import json
 import os
@@ -59,6 +61,8 @@ def load_config(node, rule_names):
         why = "v 要是 1"
     elif not isinstance(cfg.get("sources"), list) or not all(_where(s) and s.get("kind") in KINDS for s in cfg["sources"]):
         why = "sources 每項要有 node、slot，kind 只有 brain"
+    elif len(cfg["sources"]) > 10:
+        why = "sources 最多 10 個"
     elif not isinstance(cfg.get("targets"), list) or not all(_where(t) for t in cfg["targets"]):
         why = "targets 每項要有 node、slot"
     elif any(not any(same_place(t, s) for s in cfg["sources"]) for t in cfg["targets"]):
@@ -72,11 +76,22 @@ def load_config(node, rule_names):
     elif cfg.get("events", False) is not False:
         why = "events 第一版只收 false"
     elif "mail" in cfg and not (isinstance(cfg["mail"], dict) and isinstance(cfg["mail"].get("root"), str)
-                                and NAME_RE.match(str(cfg["mail"].get("from", "kernel")))):
+                                and isinstance(cfg["mail"].get("from", "kernel"), str)
+                                and NAME_RE.match(cfg["mail"].get("from", "kernel"))):
         why = 'mail 要像 {"root": "..", "from": "kernel"}'
+    if not why:
+        for r in cfg['rules']:
+            if r['name'] == 'supervise-brain':
+                if any(k in r and not (is_int(r[k]) and r[k] > 0)
+                       for k in ('no_progress_rounds', 'kill_after_rounds', 'max_kills')):
+                    why = '監督門檻與 max_kills 要是正整數（bool 不算）'
+                elif r.get('kill_after_rounds', 12) <= r.get('no_progress_rounds', 6):
+                    why = 'kill_after_rounds 要大於 no_progress_rounds'
     if why:
         raise Stop(2, "kernel.json 不合：%s。改好再跑，%s" % (why, eg))
-    return cfg, sha_of(cfg)
+    sha = sha_of(cfg)
+    cfg = dict(cfg, **{k: [dict(x, node=norm_node(x['node'])) for x in cfg[k]] for k in ('sources', 'targets')})
+    return cfg, sha
 
 
 def same_place(a, b):
@@ -115,16 +130,51 @@ def decisions_path(task):
 def _state_ok(s):
     return isinstance(s, dict) and s.get("v") == V and isinstance(s.get("config_sha"), str) \
         and isinstance(s.get("instance"), str) and is_int(s.get("rev")) and is_int(s.get("last_tock")) \
-        and isinstance(s.get("rules"), dict) and isinstance(s.get("pending"), list) \
-        and all(_pending_ok(p) for p in s["pending"]) and isinstance(s.get("done"), list)
+        and isinstance(s.get("rules"), dict) and _rules_ok(s["rules"]) and isinstance(s.get("pending"), list) \
+        and all(_pending_ok(p) for p in s["pending"]) and isinstance(s.get("done"), list) \
+        and all(_done_ok(d) for d in s["done"])
+
+
+def _rules_ok(rules):
+    r = rules.get('supervise-brain', {})
+    if not isinstance(r, dict) or not all(isinstance(r.get(k, {}), dict)
+            for k in ('brains', 'killed', 'notified', 'retries', 'gaps')):
+        return False
+    for b in r.get('brains', {}).values():
+        if not (isinstance(b, dict) and isinstance(b.get('id'), str)
+                and all(is_int(b.get(k)) for k in ('step', 'run', 'since', 'last'))
+                and all(isinstance(b.get(k), bool) for k in ('notified', 'gap'))):
+            return False
+    for b in r.get('retries', {}).values():
+        if not (isinstance(b, dict) and isinstance(b.get('id'), str) and is_int(b.get('step'))
+                and is_int(b.get('count')) and b['count'] >= 0):
+            return False
+    return (all(is_int(v) for v in r.get('killed', {}).values())
+            and all(isinstance(v, str) for v in r.get('notified', {}).values())
+            and all(isinstance(v, bool) for v in r.get('gaps', {}).values()))
+
+
+def _entry_ok(p):
+    if not isinstance(p, dict) or not isinstance(p.get('id'), str) or not is_int(p.get('tock')):
+        return False
+    if 'wait' in p and not isinstance(p['wait'], str):
+        return False
+    if 'body' in p and not isinstance(p['body'], str):
+        return False
+    if 'basis' in p and not isinstance(p['basis'], (dict, list, str, int, float, bool, type(None))):
+        return False
+    if p.get('op') == 'kill':
+        return _where(p.get('target')) and is_int(p.get('run'))
+    return p.get('op') == 'notify' and isinstance(p.get('target'), str) and isinstance(p.get('text'), str)
+
+
+def _done_ok(p):
+    return _entry_ok(p) and all(isinstance(p.get(k), str) for k in ('result', 'msg', 'at'))
 
 
 def _pending_ok(p):
-    if not (isinstance(p, dict) and isinstance(p.get("id"), str)):
-        return False
-    if p.get("op") == "kill":
-        return _where(p.get("target")) and is_int(p.get("run"))
-    return p.get("op") == "notify" and isinstance(p.get("target"), str) and isinstance(p.get("text"), str)
+    return (_entry_ok(p) and isinstance(p.get('sent'), bool)
+            and (p.get('op') != 'kill' or isinstance(p.get('why'), str)))
 
 
 def load_state(task, sha, init=True):
@@ -183,6 +233,28 @@ def _birth_run(path):
     return r, (b.get("run") if r == "ok" and is_int(b.get("run")) else None), b
 
 
+def letter_title(node, ident):
+    """標題只作稱呼；缺信、壞信、讀不到都不影響 task 快照。"""
+    for box in ('inbox', 'inbox/done'):
+        try:
+            paths = glob.glob(os.path.join(node, box, '*.md'))
+        except OSError:
+            continue
+        for path in paths:
+            try:
+                if not stat.S_ISREG(os.stat(path).st_mode):
+                    continue
+                with open(path, encoding='utf-8') as f:
+                    parts = re.split(r'^---\r?$', f.read(), maxsplit=2, flags=re.M)
+                if len(parts) == 3 and not parts[0].strip():
+                    fields = dict(line.split(': ', 1) for line in parts[1].strip().splitlines() if ': ' in line)
+                    if fields.get('id') == ident:
+                        return next((line[2:] for line in parts[2].splitlines() if line.startswith('# ')), None)
+            except (OSError, UnicodeError, ValueError):
+                continue
+    return None
+
+
 def snapshot(env, cfg, resolve):
     """每個來源兩項（birth.json、brain/task.json），帶 run／seq／completed_tock／read（spec §4）。"""
     out = []
@@ -192,7 +264,7 @@ def snapshot(env, cfg, resolve):
         if node is None:
             for f in (".aos/tasks/%s/birth.json" % src["slot"], "brain/task.json"):
                 out.append({"src": src, "file": f, "run": None, "seq": None, "completed_tock": None,
-                            "read": "unknown", "value": None})
+                            "read": "unknown", "value": None, "title": None})
             continue
         bpath = os.path.join(node, ".aos", "tasks", src["slot"], "birth.json")
         clock = completed_tock(node)
@@ -208,5 +280,6 @@ def snapshot(env, cfg, resolve):
             tr, task = "unknown", None
         seq = task.get("step") if tr == "ok" and is_int(task.get("step")) else None
         out.append({"src": src, "file": "brain/task.json", "run": brun, "seq": seq, "completed_tock": clock,
-                    "read": tr, "value": task})
+                    "read": tr, "value": task, "node_path": os.path.abspath(node),
+                    "title": letter_title(node, task.get("id")) if tr == "ok" else None})
     return out

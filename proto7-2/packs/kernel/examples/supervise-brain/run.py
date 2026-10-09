@@ -5,12 +5,12 @@
 
 情境（照 blueprint-kernel1 §6，頂層 10-09 修正）：
 1. aos7-up 起 bob（假 AI），`aos7-ctl add` 裝 kernel keep 任務，設定照本資料夾 kernel.json（預設門檻 6／12 回合）。
-2. 寄「做 5 回合的整理」；bob 做到第 2 回合後，把 up.json 的 fake_delay 調成 3600 秒——假 AI 不再回，
+2. 寄「做 5 回合的整理」；bob 做到第 2 步後，把 up.json 的 fake_delay 調成 3600 秒——假 AI 不再回，
    brain 卡在等 AI、不再寫 task.json（每回合都回「繼續」的 brain 不會停在同一步，它自己的「3 回合沒進展」也輪不到）。
 3. 監督者：停滿 6 回合寄一封 NEEDS-USER 給 you，停滿 12 回合 kill 綁當時的 run（回條 ok）。
 4. keep 重起 brain：它從 task.json 的同一步接續、不重問 AI（假 AI 受理次數仍是 1）。kill 後把 up.json 的
    deadline 調成 1 秒，示範 brain 不再等那筆不確定的 AI、回你「卡住」結案（不調就會等滿 600 秒，
-   這段期間新 run 一樣沒進展，監督者會對新 run 再寄一封、再 kill 一次——每個 run 各一次）。
+   這段期間同信不再寄通知；再收掉前會等更久，同一步最多收掉 3 次）。
 5. 還原 up.json，SIGKILL 監督者一次（keep 重起它，brain 照常），再寄正常的「做 4 回合的介紹」：
    一回合一步、照常回信，監督者零動作。
 """
@@ -71,10 +71,12 @@ def main():
     ap.add_argument('--keep', action='store_true', help='跑完不刪房子')
     a = ap.parse_args()
     house = Path(a.house).resolve() if a.house else Path(tempfile.mkdtemp(prefix='aos-kernel-demo.'))
-    node = house / 'bob'
-    if node.exists():
-        print(f'run.py: {node} 已經在了。換一個 --house 或先刪掉它', file=sys.stderr)
+    existing = bool(a.house and house.exists())
+    if existing and (not house.is_dir() or any(house.iterdir())):
+        print(f'run.py: {house} 已存在且不是空目錄。請換一個 --house，原目錄保留', file=sys.stderr)
         return 2
+    house.mkdir(parents=True, exist_ok=True)
+    node = house / 'bob'
     started = False
     try:
         p = sh(UP, node, '-d')
@@ -91,8 +93,14 @@ def main():
             sh(UP, 'stop', node)
         if a.keep:
             say(f'房子留著：{house}')
-        elif started or not a.house:
+        elif not existing:
             shutil.rmtree(house, ignore_errors=True)
+        else:
+            for child in house.iterdir():
+                if child.is_dir() and not child.is_symlink():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
     return code
 
 
@@ -146,16 +154,16 @@ def check(house, node):
     say('2. 替 bob 裝好監督者：' + sh(KERNEL, 'status', node).stdout.strip())
 
     a = send('做 5 回合的整理')
-    task = wait('bob 做到第 2 回合', lambda: (lambda t: t if t and t.get('id') == a and t.get('step', 0) >= 2 else None)(
+    task = wait('bob 做到第 2 步', lambda: (lambda t: t if t and t.get('id') == a and t.get('step', 0) >= 2 else None)(
         load(node / 'brain/task.json')))
     up_set(fake_delay=3600, deadline=600)
-    say(f'3. 寄「做 5 回合的整理」給 bob；做到第 {task["step"]} 回合時，假 AI 故意不再回——bob 卡住了')
+    say(f'3. 寄「做 5 回合的整理」給 bob；做到第 {task["step"]} 步時，假 AI 故意不再回——bob 卡住了')
 
     note = wait('監督者寄信', lambda: done('notify', 'sent'), 60)[0]
-    say(f'4. 卡了 6 回合：監督者寄一封信給你（要你決定）：「{note.get("text")}」')
+    say(f'4. 卡了 {note["basis"]["age"]} 回合：監督者寄一封信給你（要你決定）：「{note.get("text")}」')
     kill = wait('監督者 kill', lambda: done('kill', 'ok'), 60)[0]
     up_set(deadline=1)
-    say(f'5. 卡了 12 回合：監督者把卡住的 bob 收掉，bob 會自己重新起來')
+    say(f'5. 卡了 {kill["basis"]["age"]} 回合：監督者把卡住的 bob 收掉，bob 會自己重新起來')
 
     wait('brain 重起', lambda: (lambda b: b if b and b.get('run') != kill['run'] else None)(load(bslot / 'birth.json')))
     again = load(node / 'brain/task.json')
@@ -166,8 +174,8 @@ def check(house, node):
     sends = (load(node / 'llmcall/fake-remote.json') or {}).get('sends', {})
     cid = a if step == 1 else f'{a}-s{step}'
     if sends.get(cid) != 1:
-        raise Fail(f'第 {step} 回合那筆 AI 被問了 {sends.get(cid)} 次（應該 1 次）')
-    say(f'6. bob 回來了：從第 {step} 回合接著做，沒有再問一次 AI；'
+        raise Fail(f'第 {step} 步那筆 AI 被問了 {sends.get(cid)} 次（應該 1 次）')
+    say(f'6. bob 回來了：從第 {step} 步接著做，沒有再問一次 AI；'
         f'等不到 AI，就回信跟你說「{blocked["title"]}」')
 
     up_set(fake_delay=None, deadline=None)
