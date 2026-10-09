@@ -329,7 +329,7 @@ def step_on(node, letter, text, cfg):
                trail=(task['trail'] + [f'第 {step} 回合：{line}｜成果：{flat(result)[:200]}'])[-8:]))
     note = '，整理了記憶' if compact_if_big(node, cfg) else ''
     return f'第 {step} 回合做完，下回合接著做{note}', None
-def stuck_reply(node, cid, step, waited, cfg):
+def stuck_reply(node, cid, step, waited, cfg, ask=''):
     """留下人工接回條用的證據；brain 不替人重送或放掉預留。"""
     budget, holder = cfg.get('budget', 'budget/llm'), cfg.get('holder', 'brain')
     tool = TOP / 'packs/llmcall/bin/aos7-llmcall'
@@ -338,7 +338,7 @@ def stuck_reply(node, cid, step, waited, cfg):
     status_cmd = command('status', budget, '--holder', holder, '--call', cid)
     saved = read_json(str(node / 'llmcall' / Path(budget).name / cid / 'request.json'))
     reserve = '帳上沒有這筆的預留'
-    how = '① 要重做：再寄一次這封信（會重新問 AI，可能多付一次錢）。'
+    how = ''
     status = None
     if saved:
         reserve = '預留多少不確定，跑 ' + status_cmd + ' 看'
@@ -359,7 +359,7 @@ def stuck_reply(node, cid, step, waited, cfg):
         write_json(str(work / 'reply.json'), dict(call_id=cid, req_sha=saved['req_sha'],
                    reply=dict(status='reject', billed=False, body='')))
         rel = 'brain/stuck/' + cid
-        how += ('\n② 要放掉預留（心跳要開著）：在 node 資料夾裡跑這一行：\n' +
+        how += ('要放掉預留（心跳要開著）：在 node 資料夾裡跑這一行：\n' +
                 'cd ' + shlex.quote(str(node)) + ' && ' +
                 command('adopt', budget, '--holder', holder, '--call', cid, '--raw', rel + '/reply.json') + ' && ' +
                 command('call', budget, '--holder', holder, '--call', cid, '--request', rel + '/request.json',
@@ -372,13 +372,20 @@ def stuck_reply(node, cid, step, waited, cfg):
         def budget_command(op):
             return ' '.join(shlex.quote(str(a)) for a in
                             ('python3', budget_tool, op, budget, '--holder', holder, '--request', cid))
-        how += ('\n這筆還沒送出給 AI。\n② 要放掉預留（心跳要開著）：在 node 資料夾裡跑這一行：\n' +
+        how += ('這筆還沒送出給 AI。\n要放掉預留（心跳要開著）：在 node 資料夾裡跑這一行：\n' +
                 'cd ' + shlex.quote(str(node)) + ' && ' + budget_command('cancel') + ' && ' +
                 budget_command('settle'))
-    title = '問 AI 那筆一直不確定，這封先停下'
-    body = (f'第 {step} 回合問 AI 的 call {cid} 一直不確定回沒回，已等 {waited:.0f} 秒。\n'
-            '系統不會自動重送（重送可能多付一次錢）。\n' + reserve + '。\n怎麼辦：\n' + how)
-    return title, body, f'卡住：問 AI 那筆一直不確定（call {cid}）', '看回信：要重做就再寄一次；要放掉預留照信裡的一行指令'
+    name = flat(ask)[:30] or '這封信'
+    again = ('現在用的是假 AI，不花錢。' if is_fake(cfg) else
+             '現在用的是真 AI：如果上次 AI 其實已經回了，可能會多付一次錢。')
+    title = f'「{name}」問 AI 時被打斷，先停下'
+    body = (f'這封信「{name}」辦到一半，問 AI 時被打斷（例如程式被關掉），等了 {waited:.0f} 秒還是不知道 AI 回了沒有，'
+            '所以先停下這封，後面的信照常辦。系統不會自己重問。\n'
+            '怎麼辦：\n① 什麼都不做：這封就停在這裡，不影響別的信。\n'
+            '② 再寄一次這封信：會從頭重新問 AI。' + again + '\n\n'
+            '進階（給維護者，平常不用看；說明見 modules/up/ADVANCED.md「不確定的期限」）：\n'
+            f'第 {step} 回合的 call {cid}；{reserve}。\n' + how).rstrip() + '\n'
+    return title, body, f'卡住：問 AI 那筆一直不確定（call {cid}）', '什麼都不做，或再寄一次這封信（細節看回信）'
 def once(node, rnd):
     work = node / 'brain'
     work.mkdir(exist_ok=True)
@@ -449,7 +456,7 @@ def once(node, rnd):
             print(f'回合 {rnd}：AI 還沒確定回沒回（已等 {waited:.0f} 秒，滿 {limit:g} 秒就回信說卡住），下回合再看同一筆', flush=True)
             return
         status = 'BLOCKED'
-        title, reply, line, fix = stuck_reply(node, cid, task['step'] if task else 1, waited, cfg)
+        title, reply, line, fix = stuck_reply(node, cid, task['step'] if task else 1, waited, cfg, letter['title'])
     except Exception as e:
         status = 'BLOCKED'
         title, fix = (e.why, e.fix) if isinstance(e, Trouble) else ('讀寫沒完成', CHECK_FIX)
