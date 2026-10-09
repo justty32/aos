@@ -1,0 +1,173 @@
+{
+ "contract": "wf-table/1",
+ "source": "blueprint-errors.md",
+ "extracted": "2026-10-09",
+ "note": "一包一列：現狀退出碼 0～5 各代表什麼、錯誤訊息現在印在哪／長怎樣、照 blueprint-errors §2～§4 要改什麼。改完的包把 change 清空、現狀欄改成新值。",
+ "columns": [
+  "pack",
+  "c0",
+  "c1",
+  "c2",
+  "c3",
+  "c4",
+  "c5",
+  "message_now",
+  "change"
+ ],
+ "rows": [
+  {
+   "pack": "核心 tick／tock／daemon",
+   "c0": "做了",
+   "c1": "失敗／鎖拿不到",
+   "c2": "run fd 壞",
+   "c3": "不知道",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stdout JSON",
+   "change": ""
+  },
+  {
+   "pack": "budget",
+   "c0": "成功",
+   "c1": "終局不成功／拒",
+   "c2": "壞輸入",
+   "c3": "未交付（unknown）",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stdout 一行 JSON `outcome/stage/why`；`status` 沒帳印 error 仍退 0",
+   "change": "`status` 沒帳：印到 stderr、退 1；`call` 帳任務沒在跑→進門先看 `ledger.lock`，沒人持有退 1（不再無限等）；其餘 0～3 不動"
+  },
+  {
+   "pack": "llmcall（凍結）",
+   "c0": "answered＋final",
+   "c1": "終局不成功",
+   "c2": "壞輸入",
+   "c3": "未交付",
+   "c4": "交付但帳未清",
+   "c5": "—",
+   "message_now": "stdout 一行 JSON；壞輸入 stderr `aos7-llmcall: …`",
+   "change": "同上「帳任務沒在跑」退 1（屬「終局不成功」，0～4 語意不變）；回條零改動"
+  },
+  {
+   "pack": "prompt",
+   "c0": "—",
+   "c1": "—",
+   "c2": "bad",
+   "c3": "unknown",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stderr 一行 JSON `outcome/code/why`",
+   "change": "退出碼已合；只補 stderr 人話一行（JSON 行保留）"
+  },
+  {
+   "pack": "author",
+   "c0": "ok",
+   "c1": "其他",
+   "c2": "invalid",
+   "c3": "conflict",
+   "c4": "unknown",
+   "c5": "full",
+   "message_now": "stdout 多行 JSON `ok/why/error`",
+   "change": "3 conflict→1、4 unknown→3、5 full→1；`why` 欄位不變（細節仍看得到）；補 stderr 一行"
+  },
+  {
+   "pack": "author 三關",
+   "c0": "過",
+   "c1": "—",
+   "c2": "輸入壞**或某關不過**",
+   "c3": "同名分支不同樹",
+   "c4": "unknown",
+   "c5": "—",
+   "message_now": "stdout 一行 JSON",
+   "change": "某關不過 2→1（輸入壞仍 2）；分支衝突 3→1；unknown 4→3；補 stderr 一行"
+  },
+  {
+   "pack": "events pub／read",
+   "c0": "ok",
+   "c1": "（traceback）",
+   "c2": "usage",
+   "c3": "must 滿",
+   "c4": "unknown",
+   "c5": "—",
+   "message_now": "stdout 一行 JSON `ok/why/detail`",
+   "change": "pub 滿 3→1、unknown 4→3；read unknown 4→3；keep 缺 `AOS7_*` 退 2 一行；加 `ack` 子命令（`read --ack` 照舊）"
+  },
+  {
+   "pack": "routines",
+   "c0": "ok",
+   "c1": "用法／重名／找不到",
+   "c2": "—",
+   "c3": "unknown",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stderr 純文字，無前綴",
+   "change": "用法 1→2；重名／找不到留 1；訊息加 `aos7-routines: ` 前綴、補怎麼辦；keep 缺環境→2"
+  },
+  {
+   "pack": "skills",
+   "c0": "ok",
+   "c1": "部分失敗／AI 答 none",
+   "c2": "設定／用法",
+   "c3": "執行時出事（含 unknown、帳沒在跑）",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stderr `aos7-skills: …`",
+   "change": "帳任務沒在跑 3→1；llmcall 退 3→3 照傳；OSError／Unknown→3；AI 答 none 留 1；訊息補怎麼辦"
+  },
+  {
+   "pack": "wfnode",
+   "c0": "ok",
+   "c1": "體檢沒過／殘留",
+   "c2": "用法／沒 init",
+   "c3": "—",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stderr `無法完成：…`；體檢結果 stdout",
+   "change": "體檢「未完成」1→3；`無法完成：`→`aos7-wfnode: `；OSError 1→3"
+  },
+  {
+   "pack": "metrics",
+   "c0": "ok",
+   "c1": "—",
+   "c2": "不是資料夾",
+   "c3": "—",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stderr `aos7-metrics：…`",
+   "change": "只換前綴成 `aos7-metrics: `（半形）"
+  },
+  {
+   "pack": "compact",
+   "c0": "ok",
+   "c1": "事件發不出／其他例外",
+   "c2": "用法",
+   "c3": "摘要沒拿到／鎖忙",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stdout 一行 JSON `ok/error`",
+   "change": "事件發不出 1→（事件改可選後）不影響退出碼；未分類例外 1→3；錯誤時 stdout JSON 照舊＋stderr 一行"
+  },
+  {
+   "pack": "mail",
+   "c0": "ok",
+   "c1": "audit 有未結",
+   "c2": "用法**與** OSError 全包",
+   "c3": "—",
+   "c4": "—",
+   "c5": "—",
+   "message_now": "stderr 純文字一行",
+   "change": "ValueError／用法留 2；OSError→3；`audit` 有未結留 1；補前綴"
+  },
+  {
+   "pack": "up（設計中）",
+   "c0": "",
+   "c1": "",
+   "c2": "",
+   "c3": "",
+   "c4": "",
+   "c5": "",
+   "message_now": "",
+   "change": "照本表；`ask` 逾時退 0 是藍圖代定（它「等過了」算做到），訊息說「還沒回，status 再看」"
+  }
+ ]
+}
