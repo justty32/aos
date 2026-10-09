@@ -226,7 +226,7 @@
 | A8-11（＋R8-20）巨大整數 interval 讓設定驗證拋例外、node 不開回合 | timeline／B | `read_config` 先型別、再範圍（≤ 一年）、最後 isfinite，整段不丟例外；壞值用預設並記錯。K3 9c9cfa5f；測試 `test_errors.TestTimelineConfig`（proto7-1 案例搬回） |
 | C8-01（＝R8-03 同族）取消登記後 daemon 被殺，回收義務遺失 | daemon／B | 回收意圖先寫 nodes.json `reaping`（`{id: {since, why}}`），確認乾淨且清除寫成功才拿掉；重開續收（spec §2.6）。K2 7ac33100；測試 `test_unregister_crash_before_kill_resumes` 等 |
 | C8-02（＝R8-02）node 替換後中斷回收，新舊任務同活 | daemon／B | 在 `reaping` 的 node 不開時間線；收不乾淨保留 missing、約每秒重試；舊時間線結束後再掃一次才算乾淨（K2 0b68b3a0）。磁碟不記 pgid，重開只靠身分掃描 |
-| C8-03 任務包槽外暫存檔沒人回收 | 核心＋各包／G | 原則寫進 spec §5.5：核心只清自己的資料夾，槽外由寫的人跑 `sweep_tmp`；step 直譯器啟動清工作資料夾與 results、budget 帳任務起時清 `gateway/`；adapt 份未做 |
+| C8-03 任務包槽外暫存檔沒人回收 | 核心＋各包／G | 原則寫進 spec §5.5：核心只清自己的資料夾，槽外由寫的人跑 `sweep_tmp`；step 直譯器啟動清工作資料夾與 results、budget 帳任務起時清 `gateway/`；adapt 份已做（`9d8767da`，`Adapter.init()` 啟動時清 `in/`）；三包都處理完 |
 
 已知限制（不修，記在代定清單）：N-06 回合已關、`steps` 還沒存之間當機，重開多跑一回合；daemon 停機時 node 被換掉偵測不到；once_retry R8-26 重讀 birth 到提交之間仍可能多補一次（契約是至少一次）；node id 很長（約 250 bytes）時 history 檔名太長。
 
