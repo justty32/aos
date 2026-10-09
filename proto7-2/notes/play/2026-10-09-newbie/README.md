@@ -15,7 +15,7 @@
 
 | 模組 | 分鐘 | 指令 | 概念 | 分數（Haiku／luna） | 過不過 | 報告 |
 |---|---|---|---|---|---|---|
-| modules/wfnode | 10 | 3 | 7 | **6.8**（6.8／8.4） | 不過：概念、分數 | [wfnode](wfnode.md) |
+| modules/wfnode | 10 | 3 | 7 | **6.8**（6.8／8.4） | 不過：概念、分數；重試第 1 輪：6／3／4／**7.4**（7.4／8.8）過 | [wfnode](wfnode.md) |
 | packs/prompt | 5 | 2 | 11 | **6.8**（6.8／8.0） | 不過：概念、分數 | [prompt](prompt.md) |
 | modules/compact | 6 | 3 | 5 | **6.6**（6.6／8.6） | 不過：分數 | [compact](compact.md) |
 | modules/skills | 9 | 5 | 10 | **5.4**（5.4／8.2） | 不過：指令、概念、分數 | [skills](skills.md) |
