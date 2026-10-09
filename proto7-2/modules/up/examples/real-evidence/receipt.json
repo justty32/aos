@@ -1,0 +1,40 @@
+{
+ "v": 1,
+ "call_id": "you-20261009T160921-c2712a9a9f1b",
+ "logical": "up/brain",
+ "kid": "6e83947cb3197acc8665",
+ "key": {
+  "budget": "llm",
+  "holder": "brain",
+  "request": "you-20261009T160921-c2712a9a9f1b"
+ },
+ "req_sha": "c63e2869ce9df0b5264f08ecbb09c6e16b82b2f5cf8584d2baa9a92850753b51",
+ "meter": "litellm.total_tokens/1",
+ "bound": "soft",
+ "reserve": 1000000,
+ "outcome": "answered",
+ "usage": {
+  "completion_tokens": 43,
+  "prompt_tokens": 2909,
+  "total_tokens": 2952,
+  "completion_tokens_details": {
+   "reasoning_tokens": 0
+  },
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "used": 2952,
+ "overrun": 0,
+ "billing": "final",
+ "raw_sha": "c1f8696d77932bf0398a09215e805a2962abf6b1783eb72c9e42bded5c59e43d",
+ "text": "回信：我是 aos node「bob」的 AI agent，工作簿在 `wf/`。\n停在哪：已回答身分與工作簿位置；無下一步。",
+ "settle": {
+  "seq": 2,
+  "used": 2952,
+  "overrun": 0,
+  "outcome": "answered",
+  "evidence": "67aa75ce7bb41a7d32b41298600936da6dcfcf5cefb11178cca2d46ca92270b1",
+  "at": "2026-10-09T16:09:24.373"
+ }
+}
