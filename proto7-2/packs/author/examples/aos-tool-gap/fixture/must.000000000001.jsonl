@@ -1,0 +1,5 @@
+{"v": 1, "stream": "n1/must", "seq": 1, "kind": "fixture.sample", "capture": "published", "event_id": "must/1", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.057", "payload": {"n": 1}}
+{"v": 1, "stream": "n1/must", "seq": 2, "kind": "fixture.sample", "capture": "published", "event_id": "must/2", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.085", "payload": {"n": 2}}
+{"v": 1, "stream": "n1/must", "seq": 3, "kind": "fixture.sample", "capture": "published", "event_id": "must/3", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.113", "payload": {"n": 3}}
+{"v": 1, "stream": "n1/must", "seq": 4, "kind": "fixture.sample", "capture": "published", "event_id": "must/4", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.142", "payload": {"n": 4}}
+{"v": 1, "stream": "n1/must", "seq": 5, "kind": "fixture.sample", "capture": "published", "event_id": "must/5", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.170", "payload": {"n": 5}}

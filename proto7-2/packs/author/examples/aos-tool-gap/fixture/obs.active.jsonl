@@ -1,0 +1,4 @@
+{"v": 1, "stream": "n1/obs", "seq": 11, "kind": "fixture.sample", "capture": "published", "event_id": "obs/11", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.000", "payload": {"n": 11}}
+{"v": 1, "stream": "n1/obs", "seq": 12, "kind": "fixture.sample", "capture": "published", "event_id": "obs/12", "source": {"node": "n1"}, "at": "2026-10-09T18:29:48.029", "payload": {"n": 12}}
+{bad json}
+{"seq":

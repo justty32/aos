@@ -1,0 +1,35 @@
+{
+ "contract": "wf-table/1",
+ "source": "workflows/schedule.md",
+ "extracted": "2026-10-09",
+ "columns": [
+  "name",
+  "at",
+  "inst",
+  "claimed",
+  "timeout"
+ ],
+ "rows": [
+  {
+   "name": "a-due",
+   "at": "2020-01-01T00:00:00+08:00",
+   "inst": "ok.sh",
+   "claimed": "",
+   "timeout": "600"
+  },
+  {
+   "name": "b-pending",
+   "at": "2099-01-01T00:00:00+08:00",
+   "inst": "ok.sh",
+   "claimed": "",
+   "timeout": "600"
+  },
+  {
+   "name": "c-local",
+   "at": "2099-01-02T00:00:00+08:00",
+   "inst": "ok.sh",
+   "claimed": "",
+   "timeout": "600"
+  }
+ ]
+}

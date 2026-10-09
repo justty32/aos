@@ -1,0 +1,52 @@
+{
+ "v": 1,
+ "rid": "gap3",
+ "kind": "aos-tool",
+ "name": "evgap",
+ "task": "新增 aos7-evgap 唯讀彙總工具",
+ "goal": "讀 node 檔案，彙總成一行 JSON；不修復資料。三題同形，用來量踩坑筆記的效果。",
+ "scope": {
+  "only": [
+   "packs/evgap/",
+   "INDEX.md 一列"
+  ],
+  "not": [
+   "modules/",
+   "lib/",
+   "別的包",
+   "修改 node"
+  ],
+  "max_files": 12
+ },
+ "tools": [
+  {
+   "tool": "python3 proto7-2/tests/run_all.py packs/evgap/tests",
+   "use": "實質測試"
+  },
+  {
+   "tool": "python3 check_answer.py <proto7-2> fixture",
+   "use": "獨立核對與唯讀"
+  }
+ ],
+ "work": [
+  "Add README.md (## 第一次跑), bin/aos7-evgap (Python script, <=12 lines; checker runs it as python3 bin/aos7-evgap), aos7_evgap.py and tests/test_evgap.py with real tests; deliver files, INDEX row and report.",
+  "CLI: aos7-evgap <folder>; success exits 0, stdout exactly one JSON line; nonexistent/file input exits 2 with empty stdout; never read system clock.",
+  "Read only: no creation (except __pycache__), deletion, byte or permission changes; parse files yourself, never import/call existing aos write/recovery/lock paths; paths are input-relative POSIX. Input folders may be read-only. Metadata (type,size,mode,mtime_ns) and contents must remain unchanged.",
+  "Output keys exactly {v,channels,bad}, v true integer 1; channels object has exactly obs,must, each {count,first,last,missing,dup,next_seq,unacked,stale_next}.",
+  "For each channel read only regular <ch>.<12 digits>.jsonl sorted numerically then <ch>.active.jsonl; ignore other filenames; each newline-terminated JSON object with true integer seq>=1 is one record (bool excluded). Split bytes by b'\\n', not splitlines; an interior CR is legal JSON whitespace. Read only needed state fields; ignore active_first/segments and other fields.",
+  "Invalid line excluded and bad={file:string,line:1-based integer,why:string}: no ending newline -> torn first; invalid JSON (including NaN/Infinity) -> bad_json; other non-object/missing/null/bool/noninteger/seq<1 -> no_seq.",
+  "count integer counts duplicates; first,last integer min/max or null if empty; missing sorted closed integer ranges [a,b] between first/last, merged; dup sorted integer seqs occurring >=2 times.",
+  "State absent: next_seq,unacked,stale_next null, no bad; JSON must be object with channels.obs/must objects: next_seq true integer, must also acked_upto true integer (no coercion, missing != null). Invalid whole state nulls both channels; invalid channel nulls only its three fields; any invalid state adds exactly one {file:\"state.json\",line:null,why:\"bad_state\"}.",
+  "Valid state: next_seq copied; obs.unacked always null, must.unacked integer count of distinct valid seq>acked_upto; stale_next boolean (next_seq != last+1) or null when last null; bad sorted (file,line null as 0,why)."
+ ],
+ "deliver": "一份候選 JSON，REPORT 寫 report，末尾必有「以後交接書該點名的工具」。",
+ "accept": [
+  "三關全過，check 退出 0。",
+  "stdout 一行，鍵集合與所有型別、null、排序、bad 原因和退出碼完全依 work；壞 JSON 整筆不彙總，bool 不算整數。",
+  "fixture 的目錄、位元組與權限不變，固定答案與缺檔、壞資料核對 ok true。"
+ ],
+ "answer": {
+  "checker": "check_answer.py",
+  "fixture": "fixture"
+ }
+}
