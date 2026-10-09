@@ -1,4 +1,5 @@
 import datetime
+import fcntl
 import hashlib
 import json
 import os
@@ -8,11 +9,12 @@ import subprocess
 import sys
 TOP = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(TOP / 'lib'), str(TOP / 'modules/tools')]
-from aos7_fs import read_json, test_point, write_json
+from aos7_fs import BAD, N, OK, fact, read_json, test_point, write_json
 from aos7_taskside import task_env, wait_tock
 MAIL = TOP / 'modules/mail/aos7-mail'
 WF = TOP / 'modules/wfnode/aos7-wfnode'
 CHECK_FIX = '跑 aos7-wfnode check <node> 看缺哪個'
+LAST_MAX = 4000
 AI_FIX = '等一下再 ask 一次；一直這樣就看 aos7-up status 的 AI 那行'
 def trouble(why, fix):
     return why + '。怎麼辦：' + fix
@@ -58,6 +60,50 @@ def fifo(letter):
     stamp = re.search(r'(\d{8}T\d{6})', letter['id'])
     seq = re.match(r'\d{8}T\d{4}(?:_(\d+))?-', Path(letter['file']).name)
     return at, stamp[1] if stamp else '', int(seq[1] or 0) if seq else 0, Path(letter['file']).name
+def task_of(node):
+    """讀不到（I/O）丟 OSError＝這回合不動；壞掉的 task.json 刪掉，從第 1 回合重播（llmcall 回條重用，不重問）。"""
+    path = node / 'brain/task.json'
+    st, task = fact(str(path))
+    if st == N:
+        return None
+    keys = dict(id=str, step=int, line=str, stall=int, trail=list)
+    if st == OK and isinstance(task, dict) and all(isinstance(task.get(k), t) for k, t in keys.items()):
+        return task
+    if st == BAD or st == OK:
+        path.unlink(missing_ok=True)
+        return None
+    raise OSError(task)
+def step_of(node, letter):
+    task = task_of(node)
+    return task if task and task.get('id') == letter['id'] else None
+def call_id(ident, step):
+    return cid_of(ident if step == 1 else f'{ident}-s{step}')
+def pick_skill(node, title):
+    """本機關鍵字挑技能：經 brain/.pick 視角呼叫 aos7-skills pick（視角沒有帳，所以不問 AI）。"""
+    if not (node / 'skills').is_dir():
+        return None
+    view = node / 'brain/.pick'
+    view.mkdir(exist_ok=True)
+    link = view / 'skills'
+    try:
+        if not link.is_symlink():
+            link.symlink_to(node / 'skills')
+        p = run(TOP / 'modules/skills/aos7-skills', 'pick', view, flat(title), node=node)
+        found = Path(p.stdout.strip()) if p.returncode == 0 and p.stdout.strip() else None
+        return found.parent.name if found else None
+    finally:
+        link.unlink(missing_ok=True)
+        view.rmdir()
+def fake_text(letter, step):
+    title = flat(letter['title'])
+    want = re.search(r'(\d+)\s*回合', title)
+    if '要你決定' in title:
+        return f'要你決定：（假 AI）缺資料，請補上\n停在哪：第 {step} 回合等你'
+    if '沒進展' in title:
+        return f'繼續：（假 AI）第 {step} 回合還是卡住\n停在哪：卡在同一處'
+    if want and step < int(want[1]):
+        return f'繼續：（假 AI）第 {step} 回合做完\n停在哪：第 {step} 回合，下一步第 {step + 1} 回合'
+    return '回信：（假 AI）收到你的信：' + title + '\n停在哪：回了 ' + letter['id']
 def request(node, letter, cid, cfg):
     work = node / 'brain'
     req = work / 'req.json'
@@ -65,20 +111,28 @@ def request(node, letter, cid, cfg):
     if saved.exists():
         write_json(str(req), json.loads(saved.read_text())['request'])
         return req
+    task = step_of(node, letter)
+    step = task['step'] if task else 1
     try:
         skills = read_json(str(node / 'skills/index.json'), {}) or {}
         lines = [f"{n}：{flat(v['description'])}" for n, v in skills.get('skills', {}).items()]
-        (work / 'now.md').write_text('技能：\n' + ('\n'.join(lines) or '（還沒有技能）') +
-                                    '\n\n收到的信：\n' + Path(letter['file']).read_text(), encoding='utf-8')
-        checked(TOP / 'packs/prompt/bin/aos7-prompt', 'render', node,
-                TOP / 'modules/up/prompts/brain.json', '--out', req, node=node)
+        text = '技能：\n' + ('\n'.join(lines) or '（還沒有技能）') + '\n\n'
+        skill = task.get('skill') if task else pick_skill(node, letter['title'])
+        if skill and (node / 'skills' / skill / 'SKILL.md').is_file():
+            text += f'挑到的技能 {skill}：\n' + (node / 'skills' / skill / 'SKILL.md').read_text()[:3000] + '\n\n'
+        if task:
+            text += f"這是第 {step} 回合（最多 {cfg.get('max_steps', 40)}）。前幾回合（最近 8 回合）：\n" + '\n'.join(task['trail']) + '\n\n'
+        (work / 'now.md').write_text(text + '收到的信：\n' + Path(letter['file']).read_text(), encoding='utf-8')
+        if not task:
+            (work / 'last.md').write_text('', encoding='utf-8')
+        checked(TOP / 'packs/prompt/bin/aos7-prompt', 'render', node, TOP / 'modules/up/prompts/brain.json',
+                '--out', req, node=node)
         obj = json.loads(req.read_text())
     except Exception:
         raise Trouble('讀不到工作簿的檔', CHECK_FIX) from None
     if is_fake(cfg):
         chars = sum(len(m['content']) for m in obj['litellm']['messages'])
-        obj = {'fake': dict(mode='ok', usage=chars // 3 + 20,
-                           text='回信：（假 AI）收到你的信：' + flat(letter['title']) + '\n停在哪：回了 ' + letter['id'])}
+        obj = {'fake': dict(mode='ok', usage=chars // 3 + 20, text=fake_text(letter, step))}
     else:
         obj['litellm']['model'] = cfg['model']
     write_json(str(req), obj)
@@ -112,6 +166,77 @@ def ask_ai(node, letter, cid, cfg):
 def state_count(node, line):
     return sum(s.endswith(' ' + line) for p in (node / 'wf/handoffs').glob('*/STATE.md')
                for s in p.read_text().splitlines())
+def state_once(node, line):
+    if not state_count(node, line):
+        checked(WF, 'state', node, line, node=node)
+def locked(node, edit):
+    """跟 compact 共用 write.lock 改記憶檔（compact spec 的合作追加者）。"""
+    (node / 'compact').mkdir(exist_ok=True)
+    with open(node / 'compact/write.lock', 'a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        edit()
+def open_line(node, ident, line=None):
+    """SESSION-LOG 第一段裡這封信的 open 一行：給 line 就寫（換掉舊的），不給就刪；ident 為 None＝刪掉全部 brain 行。"""
+    path = node / 'wf/SESSION-LOG.md'
+    mark = f'- [brain] 信 {ident}：' if ident else '- [brain] 信 '
+    def edit():
+        old = path.read_text().split('\n')
+        rows = [r for r in old if not r.startswith(mark)]
+        if line:
+            at = next((k + 1 for k, r in enumerate(rows) if r.startswith('## ')), len(rows))
+            rows.insert(at, mark + line)
+        if rows != old:
+            write_text(path, '\n'.join(rows))
+    if path.exists() and (line or mark in path.read_text()):
+        locked(node, edit)
+def write_text(path, text):
+    tmp = path.with_name(path.name + '.brain-tmp')
+    tmp.write_text(text, encoding='utf-8')
+    os.replace(tmp, path)
+def journal(node, ident, step, text):
+    path = node / 'notes/journal.jsonl'
+    def edit():
+        path.parent.mkdir(exist_ok=True)
+        old = path.read_text().splitlines()[-20:] if path.exists() else []
+        key = json.dumps(dict(by='brain', re=ident, step=step), ensure_ascii=False)[:-1]
+        if not any(r.startswith(key) for r in old):
+            with path.open('a', encoding='utf-8') as f:
+                f.write(key + ', ' + json.dumps(dict(at=datetime.datetime.now().isoformat(timespec='seconds'),
+                                                     text=text), ensure_ascii=False)[1:] + '\n')
+    locked(node, edit)
+def compact_if_big(node, cfg):
+    if cfg.get('compact', True) is False:
+        return False
+    conf = read_json(str(node / 'compact.json'), {}) or {}
+    limit = conf.get('max_bytes', 16384)
+    files = conf.get('files', ['wf/SESSION-LOG.md', 'notes/journal.jsonl'])
+    if not any((node / f).is_file() and (node / f).stat().st_size > limit for f in files):
+        return False
+    p = run(TOP / 'modules/compact/aos7-compact', 'now', node, node=node, timeout=float(cfg.get('deadline', 600)) + 30)
+    try:
+        return any('job' in f for f in json.loads(p.stdout.splitlines()[-1])['files'])
+    except Exception:
+        return False
+def progress(node, letter, step, title, body):
+    """寄 PROGRESS 給寄件人；同一回合的 PROGRESS 已在對方信箱就不再寄。"""
+    who = Path(letter.get('reply-to') or '').parent.name or letter['from']
+    head = f'# 第 {step} 回合：'
+    path = node / 'brain/progress.md'
+    for p in (node.parent / who / 'inbox').rglob('*.md'):
+        try:
+            text = p.read_text(errors='replace')
+        except FileNotFoundError:
+            text = ''
+        if f'\nre: {letter["id"]}\n' in text and '\nstatus: PROGRESS\n' in text and '\n' + head in text:
+            path.unlink(missing_ok=True)
+            return
+    path.write_text(body + '\n', encoding='utf-8')
+    mail(node, 'send', node.name, who, 'PROGRESS', head[2:] + title, path, '--re', letter['id'])
+    path.unlink()
+def drop_task(node, ident):
+    open_line(node, ident)
+    for name in ('task.json', 'last.md', 'progress.md'):
+        (node / 'brain' / name).unlink(missing_ok=True)
 def finish(node, pending, personal):
     if any(l['id'] == pending['id'] for l in personal):
         body = node / 'brain/reply.md'
@@ -121,7 +246,38 @@ def finish(node, pending, personal):
     if state_count(node, pending['line']) <= pending['state_count']:
         checked(WF, 'state', node, pending['line'], node=node)
     test_point('up-brain-after-state')
+    drop_task(node, pending['id'])
     (node / 'brain/pending.json').unlink()
+def kind_of(text):
+    head = text.lstrip()
+    return next((k for k in ('繼續：', '要你決定：') if head.startswith(k)), '回信：')
+def step_on(node, letter, text, cfg):
+    """AI 說繼續：記這一回合（每項重跑不重做），最後才寫 task.json 進下一回合。回 (回合行, 卡住句) 或 None＝要停。"""
+    task = step_of(node, letter) or dict(id=letter['id'], step=1, line='', stall=0, trail=[],
+                                         skill=pick_skill(node, letter['title']))
+    step = task['step']
+    match = re.search(r'繼續：(.*?)停在哪：([^\n]*)', text, re.S)
+    result, line = (match[1].strip(), flat(match[2])) if match else (text.strip()[len('繼續：'):].strip(), '')
+    line = line or f'第 {step} 回合'
+    stall = task['stall'] + 1 if line == task['line'] else 0
+    if stall >= cfg.get('stall', 3):
+        return None, f'連續 {stall} 回合沒進展，停在：{line}'
+    if step >= cfg.get('max_steps', 40):
+        return None, f'做了 {step} 回合還沒做完，停在：{line}'
+    ident = letter['id']
+    cut = result if len(result) <= LAST_MAX else result[:LAST_MAX] + f'\n（後面還有 {len(result) - LAST_MAX} 字沒附上）'
+    (node / 'brain/last.md').write_text(f'上一回合（第 {step} 回合）的成果：\n{cut}\n', encoding='utf-8')
+    journal(node, ident, step, line + '｜' + flat(result)[:300])
+    state_once(node, f'第 {step} 回合 {ident}：{line}')
+    open_line(node, ident, f'{line}（做完第 {step} 回合）→ 下回合接著做')
+    every = cfg.get('progress_every', 5)
+    if every and step % every == 0:
+        progress(node, letter, step, line, result)
+    test_point('up-brain-after-step')
+    write_json(str(node / 'brain/task.json'), dict(task, step=step + 1, line=line, stall=stall,
+               trail=(task['trail'] + [f'第 {step} 回合：{line}｜成果：{flat(result)[:200]}'])[-8:]))
+    note = '，整理了記憶' if compact_if_big(node, cfg) else ''
+    return f'第 {step} 回合做完，下回合接著做{note}', None
 def once(node, rnd):
     work = node / 'brain'
     work.mkdir(exist_ok=True)
@@ -129,7 +285,7 @@ def once(node, rnd):
     pending = read_json(str(work / 'pending.json'))
     if pending:
         finish(node, pending, personal)
-        if pending['status'] == 'BLOCKED':
+        if pending['status'] != 'DONE':
             print(f'回合 {rnd}：' + trouble(pending['line'], pending['body'].split('怎麼辦：')[-1]), flush=True)
         elif pending.get('usage_pending'):
             print(f'回合 {rnd}：已回信（AI 用量還沒對清，之後自己會對）', flush=True)
@@ -140,8 +296,12 @@ def once(node, rnd):
             requests.append(letter)
         else:
             mail(node, 'done', node.name, letter['id'])
+    task = task_of(node)
+    if not task or not any(l['id'] == task['id'] for l in requests):
+        drop_task(node, None)   # 沒有進行中的任務（或信已被別人辦掉）：清掉殘留的 open 行與暫存
+        task = None
     if not requests: return
-    letter = min(requests, key=fifo)
+    letter = next(l for l in requests if l['id'] == task['id']) if task else min(requests, key=fifo)
     ident, status, fix = letter['id'], 'DONE', ''
     usage_pending = False
     try:
@@ -151,9 +311,21 @@ def once(node, rnd):
                 raise ValueError()
         except Exception:
             raise Trouble('設定檔 .aos/up.json 壞了', '刪掉它再跑 aos7-up <node>') from None
-        text = ask_ai(node, letter, cid_of(ident), cfg)
-        reply, title, line = parse(text, ident)
+        text = ask_ai(node, letter, call_id(ident, task['step'] if task else 1), cfg)
         usage_pending = getattr(text, 'usage_pending', False)
+        kind = kind_of(text)
+        if kind == '繼續：':
+            note, stuck = step_on(node, letter, text, cfg)
+            if note:
+                print(f'回合 {rnd}：' + note, flush=True)
+                return
+            status, title, line = 'NEEDS-USER', stuck, '要你決定：' + stuck
+            reply, fix = '原因：' + stuck + '\n怎麼辦：回信補資料或說下一步，再寄一次', '回信補資料或說下一步，再寄一次'
+        elif kind == '要你決定：':
+            reply, title, line = parse(text.replace('要你決定：', '回信：', 1), ident)
+            status, fix = 'NEEDS-USER', '照回信補資料或決定，再寄一次'
+        else:
+            reply, title, line = parse(text, ident)
     except Later:
         print(f'回合 {rnd}：AI 還沒確定回沒回，下回合再看同一筆', flush=True)
         return
