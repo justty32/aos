@@ -225,15 +225,25 @@ class TestLlmcallHTTP(LlmcallCase):
                 self.balances(0, total_used)
 
     def test_in_process_drip_背景成功也不落檔(self):
-        """slow-drip 讓背景傳輸在 deadline 後真的拿到完整 ok；send 仍丟 Unknown，也不寫任何檔。"""
+        """slow-drip 讓背景傳輸在 deadline 後真的拿到完整 ok；send 仍丟 Unknown，也不寫任何檔。
+
+        判準是傳輸 thread 自己記下的證據（回覆內容、拿到完整回覆的時刻），不看伺服器 late_sent：
+        伺服器寫完最後一段才 append，客戶端可能已讀完、主 thread 先看，負載下會撲空（FL 查明）。
+        socket timeout 放寬到 SOCKET：段間隔 GAP 對 DEADLINE 只差 0.2 秒，負載下伺服器 thread 晚醒就變成
+        socket 逾時；本案要測的是外層 join(deadline) 擋住、背景成功也不落檔，不是 socket timeout。"""
+        SOCKET = 30
         self.fake.plan(drip(GAP, normal()))
         before = tree(self.node)
         finished, results = threading.Event(), []
         transport = lc.TRANSPORT_LITELLM
 
-        def observed(*args):
+        def observed(node, call_id, request, deadline):
             try:
-                results.append(transport(*args))
+                results.append(transport(node, call_id, request, max(deadline, SOCKET)))
+                results.append(time.monotonic())
+            except BaseException as e:
+                results.append(e)
+                raise
             finally:
                 finished.set()
 
@@ -241,8 +251,9 @@ class TestLlmcallHTTP(LlmcallCase):
             start = time.monotonic()
             with self.assertRaises(lc.Unknown):
                 lc.send(str(self.node), "direct", {"litellm": self.body}, DEADLINE)
-            self.assertTrue(finished.wait(5), "傳輸 thread 應完成")
-        self.assertGreater(self.fake.late_sent[0][1], start + DEADLINE)
+            self.assertTrue(finished.wait(SOCKET + 5), "傳輸 thread 應完成")
+        self.assertEqual(len(results), 2, results)
+        self.assertGreater(results[1], start + DEADLINE)
         self.assertEqual((results[0]["status"], results[0]["usage"]), ("ok", {"total_tokens": 120}))
         self.received(1)
         self.assertEqual(tree(self.node), before)
