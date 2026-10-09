@@ -15,12 +15,13 @@ import aos7_proc
 import aos7_task
 from aos7_daemon_timeline import POLL, Timeline
 from aos7_fs import (FD_PREFIX, GONE_ERRNO, N, OK, U, Unknown, append_jsonl, canonical_node, errname, fact, hold, inject,
-                     is_int, locked, node_path, now, read_json, sweep_tmp, write_json)
+                     is_int, locked, node_path, now, read_json, sweep_tmp, test_point, write_json)
 
 CTL_BATCH = 200      # 一圈最多處理幾個控制檔
 CTL_BUDGET_S = 0.05  # 一圈處理控制檔最多花幾秒（跟 CTL_BATCH 取先到的）：控制檔湧入時 node 檢查與 status 照樣前進
 LIVE_EVERY = 0.25    # status 的 live 與記著的 pgid 多久重算一次（秒）
 SWEEP_EVERY = 1.0    # 多久清一次 .aosd／ctl／ctl-done 裡寫者已死的暫存檔（秒）
+REAP_RETRY_S = 1.0   # 未確認收乾淨的 node，兩次起收至少隔幾秒
 
 
 def norm_id(node):
@@ -52,6 +53,9 @@ class Daemon:
         self.aosd = FD_PREFIX + str(self.rfd) + "/.aosd"
         self.root_gone = False
         self.registry = {}           # nodes.json 的內容 {id: {"by", "at"}}
+        self.reaping = {}            # nodes.json 的回收義務 {id: {"since", "why"}}
+        self._reap_mem = {}          # 本次 daemon 的回收結果、已知 pgid 與起收時刻
+        self._nodes_dirty = False    # 回收意圖還沒寫成功，主迴圈補寫
         self.timelines = {}          # {id: Timeline}
         self.missing = {}            # {id: {"since", "why"}}：已登記、資料夾不在
         self.node_errors = {}        # {id: last_error}：沒有時間線時的錯誤（看不到…）
@@ -87,16 +91,29 @@ class Daemon:
         except OSError:
             pass
 
-    def save_nodes(self):
-        """把登記表原子寫回 nodes.json。"""
-        write_json(os.path.join(self.aosd, "nodes.json"), {"nodes": self.registry})
+    def save_nodes(self, registry=None, reaping=None):
+        """把登記與回收義務原子寫回 nodes.json；候選表寫成功後才由呼叫者替換記憶體。"""
+        rp = self.reaping if reaping is None else reaping
+        value = {"nodes": self.registry if registry is None else registry}
+        if rp:
+            value["reaping"] = rp
+        write_json(os.path.join(self.aosd, "nodes.json"), value)
+        self._nodes_dirty = False
 
     def save_paused(self):
         """把 pause owner 清單原子寫回 paused.json。daemon 是唯一的寫者，仍照 spec §0 對 paused.json.lock 拿 flock，
         讓讀—改—寫的外部工具有一致的約定。"""
         path = os.path.join(self.aosd, "paused.json")
         with locked(path, timeout=1.0):
-            write_json(path, {"paused": {k: v for k, v in sorted(self.paused.items()) if v}})
+            write_json(path, {"paused": {k: v for k, v in sorted(self.paused.items()) if v}, "steps": self.steps})
+
+    def _save_paused_quiet(self):
+        """node 退出後同步倒數；寫失敗只記一筆，不擋其他 node 的檢查。"""
+        try:
+            with self._lock:
+                self.save_paused()
+        except (OSError, Unknown) as e:
+            self.log(ev="paused-save-error", err=repr(e)[:300])
 
     def load_state(self):
         """起來時讀 nodes.json、paused.json、gen.json，回舊世代。三份都只有 daemon 寫：不存在＝新空間；讀不到或壞掉＝
@@ -109,16 +126,25 @@ class Daemon:
                 return v
             raise Unknown("%s %s，不知道原本的內容，daemon 不起來；修好或確認後刪掉再起" % (
                 name, v if st != OK else "內容不合"), kind="state-unknown")
-        nj = load("nodes.json", lambda v: isinstance(v, dict) and isinstance(v.get("nodes"), dict))
+        nj = load("nodes.json", lambda v: isinstance(v, dict) and isinstance(v.get("nodes"), dict)
+                  and isinstance(v.get("reaping", {}), dict))
         pj = load("paused.json", lambda v: isinstance(v, dict) and isinstance(v.get("paused"), (dict, list)))
         gj = load("gen.json", lambda v: isinstance(v, dict) and is_int(v.get("gen")))
         if nj:
             self.registry = {k: (v if isinstance(v, dict) else {}) for k, v in nj["nodes"].items() if norm_id(k) == k}
+            self.reaping = {k: (v if isinstance(v, dict) else {}) for k, v in nj.get("reaping", {}).items()
+                            if norm_id(k) == k}
         pl = pj["paused"] if pj else {}
         if isinstance(pl, dict):
             self.paused = {k: [o for o in v if isinstance(o, str)] for k, v in pl.items() if isinstance(v, list)}
         else:   # proto7-1 的格式：一個 node 一個開關 → 不帶 owner 的那一格
             self.paused = {k: [""] for k in pl if isinstance(k, str)}
+        steps = pj.get("steps", {}) if pj else {}
+        self.steps = {}
+        if isinstance(steps, dict):
+            self.steps = {k: {o: n for o, n in v.items() if isinstance(o, str) and is_int(n) and n > 0}
+                          for k, v in steps.items() if isinstance(k, str) and isinstance(v, dict)}
+            self.steps = {k: v for k, v in self.steps.items() if v}
         return gj["gen"] if gj else 0
 
     def is_paused(self, nid):
@@ -129,6 +155,8 @@ class Daemon:
         """時間線確認關上一回合後呼叫：nid 每個 owner 的 rounds 倒數各扣一，到零的以那個 owner 再 pause（spec §2.4）。"""
         with self._lock:
             s = self.steps.get(nid) or {}
+            if not s:
+                return
             for owner in s:
                 s[owner] -= 1
             done = [o for o, left in s.items() if left <= 0]
@@ -136,8 +164,6 @@ class Daemon:
                 self._drop_steps(nid, owner)
                 if owner not in self.paused.setdefault(nid, []):
                     self.paused[nid].append(owner)
-            if not done:
-                return
             self.save_paused()
         for owner in done:
             self.log(ev="steps-done", node=nid, owner=owner)
@@ -183,8 +209,13 @@ class Daemon:
                                                     "不登記" if out else "請登記實際位置")
         if os.path.lexists(p) and not os.path.isdir(p):
             return False, "%s 不是資料夾，不登記" % nid
-        self.registry[nid] = {"by": ctl.get("by"), "at": now()}
-        self.save_nodes()
+        new = dict(self.registry)
+        new[nid] = {"by": ctl.get("by"), "at": now()}
+        try:
+            self.save_nodes(registry=new)
+        except OSError as e:
+            return False, "nodes.json 寫不進去（%s），登記沒有改；請重送" % e
+        self.registry = new
         self.log(ev="register", node=nid, by=ctl.get("by"))
         return True, "registered %s%s" % (nid, "" if os.path.isdir(p) else "（資料夾目前不在，出現時才開回合）")
 
@@ -194,17 +225,24 @@ class Daemon:
             return True, "%s 沒有登記" % nid
         kill = ctl.get("kill", True) is not False
         # 先寫回 nodes.json：死在收尾途中，重開也不會自動再跑它
-        del self.registry[nid]
-        self.save_nodes()
+        new_reg, new_rp = dict(self.registry), dict(self.reaping)
+        del new_reg[nid]
+        if kill:
+            new_rp.setdefault(nid, {"since": now(), "why": "unregister-kill"})
+        try:
+            self.save_nodes(new_reg, new_rp)
+        except OSError as e:
+            return False, "nodes.json 寫不進去（%s），登記沒有改；請重送" % e
+        self.registry, self.reaping = new_reg, new_rp
         tl = self.timelines.pop(nid, None)
         self.missing.pop(nid, None)
-        self.steps.pop(nid, None)
+        with self._lock:
+            self.steps.pop(nid, None)
+        self._save_paused_quiet()
         if tl and tl.is_alive():
             tl.retire, tl.retire_kill = True, kill
             tl.wake.set()
             self.retiring[nid] = (tl, kill)
-        elif kill:
-            self.reap(nid, node_path(self.root, nid), "unregister-kill")
         self.log(ev="unregister", node=nid, by=ctl.get("by"), kill=kill)
         return True, "unregistered %s（%s）" % (nid, "活任務會被收掉" if kill else "kill: false，任務留著、從此收不到 tock")
 
@@ -392,11 +430,35 @@ class Daemon:
         看不到（EIO…）＝不知道，保留現狀、記錯；資料夾回來了，等舊程序收完才重開時間線。"""
         if self.stopping:
             return
+        if self._nodes_dirty:
+            try:
+                self.save_nodes()
+            except OSError as e:
+                self.log(ev="nodes-save-error", err=repr(e)[:300])
         for nid, (tl, kill) in list(self.retiring.items()):
             if not tl.is_alive():
                 del self.retiring[nid]
-                if kill and nid not in self.registry:
-                    self.reap(nid, tl.node, "unregister-kill")
+        for nid in list(self.reaping):
+            th = self.reapers.get(nid)
+            if nid in self.retiring or (th is not None and th.is_alive()):
+                continue
+            mem = self._reap_mem.get(nid, {})
+            if mem.get("clean"):
+                new = dict(self.reaping)
+                del new[nid]
+                try:
+                    self.save_nodes(reaping=new)
+                except OSError as e:
+                    self.log(ev="nodes-save-error", node=nid, err=repr(e)[:300])
+                    continue
+                self.reaping = new
+                self._reap_mem.pop(nid, None)
+                self.reapers.pop(nid, None)
+                self.log(ev="reaped", node=nid)
+            elif th is None or time.monotonic() - mem.get("at", 0) >= REAP_RETRY_S:
+                why = (self.reaping[nid] or {}).get("why")
+                ev = "reap-retry" if th is not None else ("unregister-kill" if why == "unregister-kill" else "reap-resume")
+                self.reap(nid, node_path(self.root, nid), ev)
         for nid in sorted(self.registry):
             path = node_path(self.root, nid)
             tl = self.timelines.get(nid)
@@ -423,7 +485,9 @@ class Daemon:
                     self.timelines.pop(nid)
                     tl.gone = True
                     tl.wake.set()
-                    self.steps.pop(nid, None)
+                    with self._lock:
+                        self.steps.pop(nid, None)
+                    self._save_paused_quiet()
                     self._live.pop(nid, None)
                     self.reap(nid, path, "node-gone-kill", why=gone)
                 if nid not in self.missing:
@@ -431,10 +495,7 @@ class Daemon:
                 continue
             if tl:
                 continue
-            r = self.reapers.get(nid)
-            if r is not None and r.is_alive():
-                continue   # 收程序還沒做完：新時間線的任務會被一起收掉，等它
-            if any(t.node_id == nid for t, _ in self.retiring.values()):
+            if nid in self.reaping or nid in self.retiring:
                 continue
             self.missing.pop(nid, None)
             self.node_errors.pop(nid, None)
@@ -444,11 +505,21 @@ class Daemon:
             self.log(ev="node+", node=nid, round=tl.round, **({"paused": True} if self.is_paused(nid) else {}))
 
     def reap(self, nid, node, ev, why=None):
-        """在背景收 node 的任務（記著的 pgid＋環境身分掃描，Q1），不擋主迴圈；結果記事件。"""
-        known = self._pgids.pop(nid, set())
+        """先記回收義務，再背景收任務；未確認乾淨保留 pgid，重開只靠身分掃描。"""
+        known = self._pgids.pop(nid, set()) | self._reap_mem.get(nid, {}).get("known", set())
+        if nid not in self.reaping:
+            self.reaping[nid] = {"since": now(), "why": why or ev}
+            try:
+                self.save_nodes()
+            except OSError as e:
+                self._nodes_dirty = True
+                self.log(ev="nodes-save-error", node=nid, err=repr(e)[:300])
+        self._reap_mem[nid] = {"known": known, "clean": False, "at": time.monotonic()}
 
         def work():
+            test_point("reap-before-kill")
             n, clean = aos7_proc.kill_node(node, known)
+            self._reap_mem[nid]["clean"] = clean
             self.log(ev=ev, node=nid, groups=n, ok=clean, **({"why": why} if why else {}))
         th = threading.Thread(target=work, name="reap:" + nid, daemon=True)
         self.reapers[nid] = th
@@ -456,6 +527,8 @@ class Daemon:
 
     def kill_live(self, nid, node):
         """stop／unregister 帶 kill 時：逐槽收活任務，再掃一次 Q1 範圍。一個槽出事只記它。"""
+        if nid in self.reaping:
+            test_point("reap-before-kill")  # 退休時間線可能早於 reaper 收任務，也要能重現這個中斷窗口
         slots, _ = aos7_task.list_slots(node)
         for slot in slots:
             fslot = aos7_task.slot_dir(node, slot)
@@ -492,7 +565,7 @@ class Daemon:
                 pid = read_json(os.path.join(fslot, "pid.json"))
                 if isinstance(pid, dict) and is_int(pid.get("pgid")) and (v.run is None or pid.get("run") == v.run):
                     pgids.add(pid["pgid"])
-                elif v.state == aos7_task.UNKNOWN:
+                elif v.state == aos7_task.UNKNOWN or not isinstance(pid, dict):
                     pgids |= {g for g in self._pgids.get(nid, ()) if g}
         self._live[nid] = (time.monotonic(), live)
         self._pgids[nid] = pgids
@@ -500,10 +573,17 @@ class Daemon:
 
     def sweep_leftovers(self):
         """stop 帶 kill 的最後收尾：照環境身分再掃一次所有已登記 node 的殘留（spec §2.7）。"""
-        nodes = [node_path(self.root, n) for n in self.registry]
+        nodes = [node_path(self.root, n) for n in set(self.registry) | set(self.reaping)]
         if nodes:
             n, clean = aos7_proc.kill_node(nodes)
             self.log(ev="stop-sweep", groups=n, ok=clean)
+            if clean:
+                try:
+                    self.save_nodes(reaping={})
+                except OSError as e:
+                    self.log(ev="nodes-save-error", err=repr(e)[:300])
+                else:
+                    self.reaping.clear()
 
     # ---------- status ----------
 
@@ -527,7 +607,7 @@ class Daemon:
                            pause_pending=bool(by) and phase not in ("paused", "stopped", "error"),
                            interval_ms=tl.interval_ms, early_tock=tl.early_tock, live=self.live_of(nid, tl))
                 extra = {"last_error": tl.last_error, "last_event": tl.last_event}
-            # steps_left＝{owner: 剩幾回合}：daemon 記憶體裡的狀態，只能從這裡看
+            # steps_left＝{owner: 剩幾回合}，與 paused.json 的 steps 同步
             extra["steps_left"] = dict(self.steps[nid]) if nid in self.steps else None
             row.update({k: v for k, v in extra.items() if v})
             nodes[nid] = row

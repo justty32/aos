@@ -47,7 +47,7 @@
 
 - **職責**：只跑 `nodes.json` 登記的 node，每個一條時間線；處理 `.aosd/ctl/`（2.6）；每圈寫 `status.json`；是空間根的守門人（S-07）。
 - **前置條件**：root 存在、可 stat、是真資料夾；同一個 root 同時只有一個 daemon（`daemon.lock`，拿不到退出碼 1，§2.5）；node 在 root 下、不包住別的 daemon 根，**node 本身不是符號連結**（中間段換成連結＝誤用，§11）；`.aosd/` 內部檔沒人手改；守門檔由包或人寫（§2.7）。
-- **保證**：只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。
+- **保證**：回收意圖落盤（nodes.json `reaping`），被殺重開後續收；確認收乾淨才重開時間線；登記改動寫檔成功才生效。只跑登記的 node，一個 node 任一時刻最多一條時間線（§1、§2.1）；**絕不沿符號連結寫出 root**：登記時檢查整條路徑、tick／tock 以 `O_NOFOLLOW` 開 node（§1、§2.5）；node 不見、換掉＝missing，看不到（EIO、EACCES…）或 /proc 讀不到＝不知道：保留現狀、不殺、不清記著的 live／pgid（§0、§2.6）；SIGTERM＝stop＋kill，不看守門檔；守門檔存在而 `allow` 不是 true＝控制檔 stop 拒收（§2.7）；status 每圈更新，`stopped: true` 是最後一份（§2.8）；被殺重開照 `nodes.json` 接著跑、gen＋1，起來時自己的檔讀不到＝不起來（§2.5）；暫存檔只清寫者確定不在的（§0）。
 - **明確不管**：手改 `nodes.json`／`paused.json`／`gen.json`／`status.json`；兩個 daemon 根重疊；控制成環（S-22）；誰有權寫控制檔；守門檔的語意（包的事）；斷電後檔案系統的持久化順序；不在管理範圍的程序（§11）。
 
 ### 2.2 時間線迴圈（daemon 內，每 node 一條）

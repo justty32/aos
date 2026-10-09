@@ -59,12 +59,13 @@
 | op | 意思 |
 |---|---|
 | `register` | 登記 `node`（第 1 節的檢查） |
-| `unregister` | 馬上從 nodes.json 拿掉（P2-10），本回合照常收完、時間線結束。預設 kill 那個 node 的活任務（`"kill": false` 不殺；W2） |
+| `unregister` | 馬上從 nodes.json 拿掉（P2-10），本回合照常收完、時間線結束。預設 kill 那個 node 的活任務（`"kill": false` 不殺；W2）；kill 意圖先寫進 nodes.json 的 `reaping`，daemon 被殺重開後續收 |
 | `pause` | 帶 `owner`：該 node 不開新回合，跑著的任務不動（2.4） |
 | `resume` | 拿掉自己 `owner` 的 pause；可帶 `"rounds": N`、`"all": true`。node **因此**變成沒人 pause 時順便 wake |
 | `wake` | 等下一回合的馬上開；固定 interval 的回合中收到＝提前結束這回合；`early_tock` 的回合中不起作用 |
 | `stop` | 整個 daemon 結束；`"kill": true` 先 kill 所有活任務。帶 `node` 回 `ok: false`。有守門檔時照 2.7 |
 
+- `register`／`unregister` 寫 nodes.json 失敗＝回條 `ok: false`，登記不變，可重送。
 - 處理完原檔搬到 `ctl-done/<同名>.json`，加 `"result": {"ok", "msg", "at", "queued_at"}`，**同名舊回條直接蓋掉**。`ok` 只表示 daemon 接受了。
 - 檔名由寫的人取，建議固定（工具的編碼見[工具包](modules/tools/README.md)），回條就只留每件事的上一次（W3）。
 - 讀不到（I/O）的請求留著下一圈再看。不是 `.json` 結尾、不是一般檔（B）：回條 `ok: false`，原物試著留成 `ctl-done/<名>.bad`。一般檔但 JSON 讀不懂或不是物件：回條 `ok: false`，不保證保留原始內容。
@@ -77,7 +78,7 @@
 
 - `.aosd/paused.json`＝`{"paused": {"team/agents/bob": ["budget", "human"]}}`，**清單空了才開回合**；daemon 起來就寫一份。沒寫 `owner` 用 `""`。
 - `resume` 只拿掉自己的 owner；`"all": true` 全清（含所有倒數）。
-- **核心選項 `rounds`**：`resume` 帶 `"rounds": N`＝再跑 N 回合（回合確知關上才算）就以同一個 owner 再 pause；倒數按 owner 各記一份（A2-06），同一 owner 再 pause／resume 時清掉。status 的 `steps_left`＝`{owner: 剩幾回合}`。
+- **核心選項 `rounds`**：`resume` 帶 `"rounds": N`＝再跑 N 回合（回合確知關上才算）就以同一個 owner 再 pause；倒數按 owner 各記一份（A2-06），同一 owner 再 pause／resume 時清掉。status 的 `steps_left`＝`{owner: 剩幾回合}`。paused.json 同時存 `steps: {node: {owner: 剩幾回合}}`，每次倒數寫回，重開照它接續。
 - 回合中途下 pause：本回合照常收完才停。status 的 `paused_by` 列清單，`pause_pending`＝已要求、本回合還沒收完。
 
 ### 2.5 世代、動作鎖、逾時（S-06）
@@ -91,8 +92,9 @@
 
 ### 2.6 node 消失或搬走（Q4）
 
-- 確定不在、不是資料夾了（含換成符號連結）、inode 跟時間線開始時的不同 → kill 那個 node 的活任務、時間線停下、`phase: missing`，**登記保留**；資料夾回來就重開時間線。
+- 確定不在、不是資料夾了（含換成符號連結）、inode 跟時間線開始時的不同 → kill 那個 node 的活任務、時間線停下、`phase: missing`，**登記保留**；資料夾回來，確認舊任務收乾淨才重開時間線。
 - 看不到（EIO、ESTALE、EACCES…）＝不知道 → 保留時間線與記著的程序，記 `last_error`（`kind` 是 errno 名）。
+- 回收前先把意圖寫進 nodes.json 的 `reaping`（`{id: {since, why}}`，空時省略），確認收乾淨才拿掉；在 `reaping` 裡的 node 不開時間線。收不乾淨（掃描不完整）保留 missing，約每秒重試。
 - 搬家＝舊 id 的任務全死；新位置要另外 register（W1）。想暫停但保留任務用 pause。
 - **收程序的範圍**（Q1 (a)）：daemon 記著的各 node 活任務 pgid（跟 `live` 每 0.25 秒更新；判不出的沿用，不清空），加上環境 `AOS7_NODE` 是那個 node、有 `AOS7_TID` 的程序。掃描不完整時照樣打記著的群組，事件記 `ok: false`。
 
