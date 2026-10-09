@@ -81,7 +81,7 @@ class ReviewCase(unittest.TestCase):
             for path in paths:
                 self.assertRegex(path.name, r'^\d{8}T\d{4}(_\d+)?-alice-PROGRESS\.md$')
             self.assertEqual(len(paths), 3)
-            self.assertEqual(mail.letter(third['sent'])['reply-to'], str(self.root / 'alice/wf/inbox'))
+            self.assertEqual(mail.letter(third['sent'])['reply-to'], str(self.root / 'alice/inbox'))
 
     def test_roster_appends_inside_template_active_section(self):
         path = self.root / 'alice/wf/workflows/inbox/ROSTER.md'
@@ -109,13 +109,13 @@ class ReviewCase(unittest.TestCase):
         self.run_cli('team', 'dev', 'lead', 'bob')
         self.send(title='個人新信')
         self.send(sender='lead', to='team:dev', title='團隊新信')
-        orders = self.root / 'bob/wf/inbox/orders/bob.md'
+        orders = self.root / 'bob/inbox/orders/bob.md'
         orders.parent.mkdir(parents=True, exist_ok=True)
         orders.write_text('## 新指示\n正文\n')
         # 真 SIGKILL：print 已進 buffer，flush 前被殺，三種游標都不得提交。
         self.run_cli('read', 'bob', '--quiet', rc=-signal.SIGKILL,
                      env={'AOS7_TEST_CRASH': 'mail.before_output_flush'})
-        box = self.root / 'bob/wf/inbox'
+        box = self.root / 'bob/inbox'
         for marker in ('.seen', '.seen-team', '.orders-offset'):
             self.assertFalse((box / marker).exists(), 'flush 前不得保存 ' + marker)
         # stdout flush 失敗與後段 audit 失敗也不得消耗批次。
@@ -142,7 +142,7 @@ class ReviewCase(unittest.TestCase):
         publish(events, 'mail.request', 'seed', {'id': 'seed'}, must=True, node='bob',
                 config={'keep': 1, 'segment_bytes': 1})
         # 第一筆也已辦；讓 must seq1 能進位。
-        box = self.root / 'bob/wf/inbox'
+        box = self.root / 'bob/inbox'
         (box / 'done').mkdir(parents=True)
         seed = self.send(status='REQUEST', title='第一封')
         # 用寄出的 seq2 請求內容表示 seed 的已辦記錄。
@@ -198,7 +198,7 @@ class ReviewCase(unittest.TestCase):
         sent = self.send(status='REQUEST')
         for title in ('   ', '第一行\n第二行', '第一行\r第二行'):
             self.run_cli('done', 'bob', sent['id'], 'DONE', title, rc=2)
-            self.assertFalse((self.root / 'bob/wf/inbox/.handled' / (sent['id'] + '.json')).exists(),
+            self.assertFalse((self.root / 'bob/inbox/.handled' / (sent['id'] + '.json')).exists(),
                              '非法回信不得建立日誌')
         mail.done(self.root, 'bob', sent['id'], 'DONE', '正確結論')
         self.assertEqual(mail.audit(self.root), [])
