@@ -1,0 +1,99 @@
+{
+  "contract": "wf-table/1",
+  "source": "plan-2026-10-09-late.md",
+  "extracted": "2026-10-09",
+  "columns": ["team", "window", "lead", "workers", "items", "territory", "excluded", "deps", "gates", "done", "handoff"],
+  "rows": [
+    {
+      "team": "G0（LLM 作者第二刀藍圖）",
+      "window": "14:00–15:00",
+      "lead": "Opus（親定 §代定與凍結介面）",
+      "workers": "gpt-6-astra（high）×1 在 scratchpad 複本起草；gpt-6.1-sol ×1 read-only 核對 budget spec 引用行",
+      "items": "寫 notes/blueprint-llm2.md：①單次 LLM 閘道包（建議名 packs/llmcall/）：固定 call ID＋請求雜湊、reserve R → intent → 假傳輸 → 存原始回覆與 usage → settle U（部分結算）→ 回條；一端點一計量、非串流、無隱藏重試、intent 後不明＝unknown；②budget 要改的最小一塊：settle 接受 0≤U≤amount；usage 缺＝unknown 留預留；U>R＝結算 R 並記 overrun 不偽裝成功；③凍結介面（入口回條欄位 used／usage／overrun／billing）讓 G1、B2 並行；④F-01～F-04 故障矩陣抽 items json；⑤12 題中第 7／8／9／11 題寫成第二刀生效的代定；⑥不做：真模型、串流、多端點、adapt-llm",
+      "territory": "proto7-2/notes/blueprint-llm2.md（新）、blueprint-llm2-items.json（新）",
+      "excluded": "不碰程式；不碰 blueprint-llm1.md（只引用）",
+      "deps": "無；G1、B2 等它進 main",
+      "gates": "藍圖 ≤8 KiB；代定只用 llm-author §十預設；想改先回報頂層",
+      "done": "藍圖 commit；介面段有完整回條 JSON 例子；G1／B2 領地檔名互不重疊；驗收條寫死",
+      "handoff": "素材：reviews/2026-10-05/llm-author.md §九第二刀六條與故障矩陣、prior-art §9、packs/budget/spec.md §settle（used 現在只有 0 或 amount）、blueprint-llm1 §7"
+    },
+    {
+      "team": "V1（作者接 ev1 必讀通道）",
+      "window": "14:00–15:30",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋測試；gpt-6-astra read-only 審",
+      "items": "照 blueprint-llm1 §6：需求寫者經 events 發布者送 must（event_id author/<rid>、payload 帶 request 雜湊）；作者加從 must 通道讀需求的模式（游標在作者自己的 state）；回條寫成後才 store.ack；讀到不算消費；must 回 full 不算送出；示範一個小流程；README／spec 補一節",
+      "territory": "packs/author/aos7_author.py、aos7_author_pub.py、bin/aos7-author、spec.md、README.md、examples/events-request/（新）、tests/test_author_events.py（新）",
+      "excluded": "不碰 modules/events/（只呼叫它的 store.append／ack／讀者 API）；不碰 test_author.py 既有案例；不接真模型",
+      "deps": "無（events API 已凍結）；V2 同時改 events 內部不影響介面",
+      "gates": "件數 1 線。diff >400 行停下回報。交棒前全套 1 份（15:30）",
+      "done": "回條寫成與 ack 之間 SIGKILL ×3 重起不重做（同 rid 去重）；ack 前被殺重讀同一筆；full 時需求不算送出且作者不動；既有 test_author 全過；全套退出碼 0",
+      "handoff": "read 游標語意見 modules/events/README；作者 state 放 author/ 既有鎖內，不加新鎖"
+    },
+    {
+      "team": "V2（events 已知限制小修）",
+      "window": "14:00–15:00",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1；gpt-6-luna ×1 跑 test_events_store 10 次",
+      "items": "①--status 去重落 state.json（重起不重記同一事件）；②剛修掉半行就被殺時 torn 少 1：把 torn 推進與截檔同一次 state 寫入，或文件承認；③README 已知限制同步（保留「一個 events/ 只能一個取樣器」與「單消費者」）",
+      "territory": "modules/events/aos7_events_store.py、aos7-events、spec.md、spec-sampler.md、README.md 已知限制段、tests/test_events_store.py",
+      "excluded": "不改 store.append／ack／load_state／recover 介面與回傳形狀；不碰 pub／read／examples（V1 在用）",
+      "deps": "無",
+      "gates": "件數 3 條。diff >150 行停下回報。交棒前全套 1 份（15:00）",
+      "done": "①一案：同一 status 事件跨重起只記一筆；②一案或文件一句；既有四個 SIGKILL 點 ×3 仍過；全套退出碼 0",
+      "handoff": "state.json 欄位新增要寫進 spec §state；舊 state 缺欄位視為空"
+    },
+    {
+      "team": "W1（壞連結清理）",
+      "window": "14:00–15:30",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 改文件；gpt-6-luna ×1 跑 wf-lint 核對",
+      "items": "wf-lint 的 86 條 BROKEN（13 份檔，集中在 proto4／proto4-6／proto4-7 的 codex-out 與 fix-r 筆記、proto7-1 other-os-borrow、兩份 astra evidence summary、proto5-2 proto5-diffs、lang-fable）：目標已不存在→改純文字加「（已不存在／已搬到 X）」；相對路徑錯→修路徑；不改原文其他字",
+      "territory": "只有 wf-lint 列出的那 13 份檔",
+      "excluded": "不碰 OVERSIZE 的 31 份（wf/workflows/ideas、spec 系列是使用者的思想文件，留他在場時整理）；不碰 wf hub 檔；不刪檔",
+      "deps": "無",
+      "gates": "件數：BROKEN 歸零即止；每檔 diff 只在連結那幾行",
+      "done": "wf-lint BROKEN 0；一個 commit；不跑全套",
+      "handoff": "查目標去哪了用 git log --follow；查不到就標「已不存在」不猜"
+    },
+    {
+      "team": "B2（budget 部分結算）",
+      "window": "15:05–16:15",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋測試；gpt-6-astra read-only 審",
+      "items": "照 blueprint-llm2 §②：settle 以回條 used=U 結算（0≤U≤amount）；usage 缺＝unknown 留預留；U>amount＝結算 amount 並在帳與回條記 overrun；不變條件 available+inflight+used=initial 不破；fakeapi（used 0／amount）行為不變；spec／README 退出碼與單位段同步",
+      "territory": "packs/budget/ 全部（aos7_budget.py、aos7_budget_gate.py、spec.md、README.md、tests/）",
+      "excluded": "不碰 packs/step、packs/llmcall；回條欄位名照藍圖凍結，不自創",
+      "deps": "等 G0 進 main",
+      "gates": "件數 1 線。diff >300 行停下回報。交棒前全套 1 份（16:15）",
+      "done": "U<R、U=R、usage 缺、U>R、兩件搶最後額度各一案；獨立核帳快照全過；既有 budget 測試全過；全套退出碼 0",
+      "handoff": "結算不看時鐘；拒絕不入帳；重播同一結果"
+    },
+    {
+      "team": "G1（llmcall 閘道，假傳輸）",
+      "window": "15:05–16:30",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 寫碼＋測試；gpt-6-astra（high）read-only 審一次",
+      "items": "照 blueprint-llm2 §①：新包 packs/llmcall/（固定 call ID＋請求雜湊、reserve→intent→假傳輸→存回覆＋usage→settle U→回條；退出碼對齊 budget 0/1/2/3）；假傳輸可注入 usage 缺、U>R、受理後本地未存回覆、遲到回覆；F-01～F-04 矩陣測試；README 第一次跑；INDEX 一列",
+      "territory": "packs/llmcall/ 全部（新）、proto7-2/INDEX.md 一列",
+      "excluded": "不碰 packs/budget（B2）；不接真模型、不接 author／adapt；不碰 step",
+      "deps": "等 G0 進 main；settle 的 used 欄位等 B2 進 main 後 rebase 跑全套（之前用 used=amount 走舊路徑）",
+      "gates": "件數 1 線。diff >500 行停下回報。交棒前全套 1 份（16:30，B2 之後）",
+      "done": "F-01 reserve 前後／intent 前後／受理後未存回覆各 SIGKILL ×3 不另造 call；F-02 存回覆後解析前、結算後回條前被殺不再問、不重扣；F-03 U<R／缺／U>R／搶額度差額正確、未知不退款；F-04 取消不宣稱遠端未執行；全套退出碼 0",
+      "handoff": "bin/ 被 .gitignore 擋要 git add -f（同 step／author）；回條 JSON 照藍圖例子"
+    },
+    {
+      "team": "I3（第三段收尾）",
+      "window": "16:35–17:10",
+      "lead": "Opus",
+      "workers": "gpt-6.1-sol ×1 文件；Sonnet 5.5 ×1 把 report-2026-10-09.md 補第三段",
+      "items": "tests/README 測試數與新檔列（llmcall、author_events）；README／INDEX 包清單；wf code map 同步（鐵律 3）；problems.md 加 llmcall／部分結算節；play/README 一列；report 第三段（做了什麼、代定了什麼、明天：第三刀 adapt-llm 藍圖、真模型等使用者）；全套 ×3",
+      "territory": "proto7-2/README.md、INDEX.md、tests/README.md、notes/problems.md、notes/play/README.md、notes/report-2026-10-09.md、wf/workflows/common/code-map.md",
+      "excluded": "不改程式；SESSION-LOG／WAIT_USER／代定清單定稿由頂層 17:30",
+      "deps": "G1、B2、V1、V2、W1 全進 main",
+      "gates": "件數 7 條；17:10 交",
+      "done": "全套 ×3 退出碼 0；數字一致；code map 對得上；commit＋push",
+      "handoff": "report 第三段 ≤1.5 KiB 白話；A 級代定逐條、B／C 只給檔名"
+    }
+  ]
+}
