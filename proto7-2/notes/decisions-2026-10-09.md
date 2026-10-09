@@ -254,3 +254,5 @@
 - 待修｜重跑 aos7-up 會整份重寫 up.json，人手加的 progress_every／stall／max_steps／compact 會被洗掉；`test_call_interrupt_kills_grandchild` 讀 /proc 時程序剛好被收走的時序問題（偶發）→ 排下一個 up 小修
 - C｜RV-fix-C：author 收件遇到別人還沒標的事件就停下、不替它標（退 1、印一行說誰擋住）；寄件不再替別人建 events 夾；events `read --ack` 成功時提示改用 `ack`。同 node 混用 mail＋author 的殺點測試全過
 - 待修｜mail 標已處理時遇到 author 已標過的事件也不越過 → 排在後面的 mail 提醒永遠清不掉（信照樣辦得完）→ 開小修；下一輪移除 `read --ack` 時，mail 測試輔助 `_mailcase.acked()` 要一起改
+- 結果｜S3 學徒三連題（目標 3「自我改進」）：A 組帶踩坑筆記 vs B 組不帶，各跑 3 次、74 次真 AI 呼叫、proxy 問題 0 次（MC 修補有效）。**照事先定的判準：沒有證明自我改進**——第 2 題 6 次全敗、審查太嚴（15／26 次擋下是規格沒要求的極端邊角）、「超標」訊息沒說哪個檔超多少（A 的筆記只學到「寫小一點」）。第 3 題 A 少重問 1 次、少 13% token，但小於雜訊 → [apprentice-3x](play/2026-10-09-real-ai/apprentice-3x.md)
+- B｜頂層：先修 author 兩處（審查只擋真錯誤、唯讀違規與越界，邊角改列建議；超標訊息寫明哪個檔、多大、上限多少），再用同題每組 ≥5 次重跑
