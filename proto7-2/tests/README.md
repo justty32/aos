@@ -38,3 +38,4 @@
 | `tests/core/test_matrix_a3.py` | **A3 回歸**：kill 帶 run 的重播（請求刪不掉、處理到一半被殺）只對同一個 run、生命週期檔換 FIFO、mount 子目錄暫存、重播通知失敗記錄（F47：不跨回合補送）、P2-01 wake 提前結束固定 interval 回合 |
 | `tests/core/test_options_a3.py` | `until_round` |
 | `tests/core/test_matrix_misc.py`、`test_matrix_daemon.py` | **A2 矩陣其餘**：node 本身換成符號連結（同 inode／指到 root 外）＝missing 且不寫出 root、rounds 按 owner、暫存檔清理、wake 不保留、tock.json 晚於總結 |
+| `modules/up/tests/test_up.py`、`test_up_model.py`、`test_up_edges.py`、`test_up_dispatch.py`、`test_up_errors.py` | **up 起步入口**：重跑三次保信、SIGKILL 重接保留已花預算與信／ledger 不雙開、端點保存、壞設定退 2、前景訊號／逾時、啟動失敗回收、醒來證據、程序組不留孫程序、六行唯讀、並行與共享心跳、分派及 you/inbox/done 觀看事件 |
