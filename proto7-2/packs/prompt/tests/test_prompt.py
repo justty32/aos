@@ -1,5 +1,7 @@
 """依規格檢查 prompt 的黑箱行為。"""
 import hashlib
+import io
+from contextlib import redirect_stderr
 import json
 import math
 import os
@@ -12,7 +14,7 @@ import unittest
 from unittest.mock import patch
 PACK = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(PACK), str(PACK.parents[1] / 'lib')]
-from aos7_prompt import PromptError, expand_request, expand_text, located, render
+from aos7_prompt import main, PromptError, expand_request, expand_text, located, render
 def message(content, role='user'):
     return {'role': role, 'content': content}
 class PromptTests(unittest.TestCase):
@@ -112,7 +114,6 @@ class PromptTests(unittest.TestCase):
         """讀檔、環境與 JSON 失敗不輸出請求也不覆寫檔案。"""
         env = dict(os.environ)
         env.pop('AOS_PROMPT_MISSING', None)
-        self.write('broken.json', None).write_text('{', encoding='utf-8')
         cases = [{'messages': [message({'$opt': 'file', '$val': 'missing'})]},
                  {'messages': [message({'$env': 'AOS_PROMPT_MISSING'})]}, None]
         for value in cases:
@@ -124,7 +125,7 @@ class PromptTests(unittest.TestCase):
                 self.assertEqual(p.returncode, 3, p.stderr)
                 self.assertEqual(out.read_bytes(), b'KEEP\n')
                 self.assertEqual(p.stdout, b'')
-                self.assertEqual(json.loads(p.stderr)['outcome'], 'unknown')
+                self.assertEqual(json.loads(p.stderr.splitlines()[0])['outcome'], 'unknown')
     def test_bad_inputs(self):
         """未知鍵、選項與錯誤訊息形狀退出二。"""
         cases = [{'messages': [message('好')], 'extra': 1},
@@ -137,7 +138,7 @@ class PromptTests(unittest.TestCase):
                 p = self.cli('render', self.node, self.write('p.json', value))
                 self.assertEqual(p.returncode, 2, p.stderr)
                 self.assertEqual(p.stdout, b'')
-                self.assertEqual(json.loads(p.stderr)['outcome'], 'bad')
+                self.assertEqual(json.loads(p.stderr.splitlines()[0])['outcome'], 'bad')
     def test_folding_receipt_and_reuse(self):
         """逐段折疊、完整回條與既有參照檔不重寫。"""
         text = '長文🙂\n' * 70
@@ -191,7 +192,8 @@ class PromptTests(unittest.TestCase):
                 p = self.cli('expand', self.node, 'ref://' + sha)
                 self.assertEqual(p.returncode, 3, p.stderr)
                 self.assertEqual(p.stdout, b'')
-                self.assertEqual(json.loads(p.stderr)['outcome'], 'unknown')
+                self.assertEqual(json.loads(p.stderr.splitlines()[0])['outcome'], 'unknown')
+                self.assertIn('這次沒展開。確認請求檔路徑對；若是 refs/ 裡的原文被刪或被改，重新 render 一份再展開', p.stderr.decode().splitlines()[1])
     def test_no_recursive_expansion(self):
         """還原段內看似參照的文字保持原樣並繼續展開後段。"""
         text = '開頭 ref://' + 'a' * 64 + ' 已折疊 1 字，預覽：\nx' + '尾' * 250
@@ -206,7 +208,7 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertEqual(p.stdout, (json.dumps(req, ensure_ascii=False, indent=1) + '\n').encode())
         self.assertEqual(len(p.stderr.splitlines()), 1)
-        self.assertEqual(json.loads(p.stderr)['out'], None)
+        self.assertEqual(json.loads(p.stderr.splitlines()[0])['out'], None)
         out = self.node / 'out.json'
         p = self.cli('render', self.node, path, '--out', out)
         self.assertEqual(p.returncode, 0, p.stderr)
@@ -228,7 +230,7 @@ class PromptTests(unittest.TestCase):
         self.write('refs/' + ref.name, data)
         p = self.cli('expand', self.node, 'ref://' + sha)
         self.assertEqual(p.returncode, 3, p.stderr)
-        self.assertEqual(json.loads(p.stderr)['code'], 'RefMismatch')
+        self.assertEqual(json.loads(p.stderr.splitlines()[0])['code'], 'RefMismatch')
     def test_render_repairs_ref_metadata(self):
         """既有原文相同但字數壞掉或缺欄時必須重寫整份參照。"""
         text = '長文🙂' * 150
@@ -261,7 +263,7 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(p.returncode, 3, p.stderr)
         self.assertFalse((self.node / 'refs').exists())
     def test_cli_value_invalid(self):
-        """NUL 路徑與過長整數都給單行 bad/ValueInvalid 回條。"""
+        """NUL 路徑與過長整數都給 bad/ValueInvalid 回條與人話。"""
         path = self.prompt({'$opt': 'file', '$val': 'bad\x00path'})
         for value in ('nul', 'huge-int'):
             with self.subTest(value=value):
@@ -270,9 +272,9 @@ class PromptTests(unittest.TestCase):
                                     + '9' * 5000 + '}', encoding='utf-8')
                 p = self.cli('render', self.node, path)
                 self.assertEqual(p.returncode, 2, p.stderr)
-                self.assertEqual(len(p.stderr.splitlines()), 1)
+                self.assertEqual(len(p.stderr.splitlines()), 2)
                 self.assertNotIn(b'Traceback', p.stderr)
-                self.assertEqual((json.loads(p.stderr)['outcome'], json.loads(p.stderr)['code']),
+                self.assertEqual((json.loads(p.stderr.splitlines()[0])['outcome'], json.loads(p.stderr.splitlines()[0])['code']),
                                  ('bad', 'ValueInvalid'))
     def test_expand_bad_shapes(self):
         """請求陣列、非字串模型與布林 role 都是 bad。"""
@@ -281,4 +283,71 @@ class PromptTests(unittest.TestCase):
             with self.subTest(value=value):
                 p = self.cli('expand', self.node, self.write('request.json', value))
                 self.assertEqual(p.returncode, 2, p.stderr)
-                self.assertEqual(json.loads(p.stderr)['outcome'], 'bad')
+                self.assertEqual(json.loads(p.stderr.splitlines()[0])['outcome'], 'bad')
+
+    def test_error_lines(self):
+        """壞清單兩行、讀檔失敗說清狀態與接法。"""
+        for source, code, prefix in ((self.write('bad.json', {}), 2, 'aos7-prompt: 輸入不對：'),
+                                     ('missing.json', 3, 'aos7-prompt: 不確定：')):
+            with self.subTest(code=code):
+                p = self.cli('render', self.node, source)
+                lines = p.stderr.decode().splitlines()
+                self.assertEqual(p.returncode, code)
+                self.assertEqual(len(lines), 2)
+                self.assertEqual(set(json.loads(lines[0])), {'v', 'outcome', 'code', 'why'})
+                self.assertTrue(lines[1].startswith(prefix), lines)
+                self.assertIn('。', lines[1])
+                self.assertIn('例：' if code == 2 else '後照原樣再跑一次', lines[1])
+    def test_argument_errors(self):
+        """父 parser 與子 parser 的用法錯誤皆只印人話。"""
+        for args in (('render',), ('render', self.node, 'p.json', '--max-chars', 'abc'),
+                     ('nope',), ('--nope',)):
+            with self.subTest(args=args):
+                p = self.cli(*args)
+                lines = p.stderr.decode().splitlines()
+                self.assertEqual(p.returncode, 2)
+                self.assertEqual(p.stdout, b'')
+                self.assertEqual(len(lines), 1)
+                self.assertTrue(lines[0].startswith('aos7-prompt: 參數不對：'))
+                self.assertIn('。例：', lines[0])
+                self.assertIn('全部選項看 aos7-prompt', lines[0])
+                self.assertNotIn('usage', lines[0])
+    def test_help(self):
+        for args in (('--help',), ('render', '--help'), ('expand', '--help')):
+            with self.subTest(args=args):
+                p = self.cli(*args)
+                self.assertEqual(p.returncode, 0)
+                self.assertEqual(p.stderr, b'')
+
+    def test_human_why_and_recovery(self):
+        """why 換行與句尾只在人話整理，JSON 保留原值。"""
+        for outcome, code, fix in (
+                ('bad', 'InvalidShape', '例：'),
+                ('unknown', 'ReferenceCycle', '把繞回自己的 $ref／append 拿掉後再跑'),
+                ('unknown', 'EnvironmentVariableMissing', '設好那個環境變數後照原樣再跑一次')):
+            with self.subTest(code=code):
+                why = '第一行\n第二行。'
+                err = io.StringIO()
+                with patch('aos7_prompt.render', side_effect=PromptError(outcome, code, why)), redirect_stderr(err):
+                    result = main(['render', str(self.node), 'p.json'])
+                lines = err.getvalue().splitlines()
+                self.assertEqual(result, 2 if outcome == 'bad' else 3)
+                self.assertEqual(len(lines), 2)
+                self.assertEqual(json.loads(lines[0])['why'], why)
+                self.assertIn('第一行 第二行', lines[1])
+                self.assertNotIn('。。', lines[1])
+                self.assertIn(fix, lines[1])
+    def test_human_hints(self):
+        """常見失敗給對症的接法；expand 用法錯給 expand 的例子；空 why 有備援。"""
+        (self.node / 'broken.json').write_text('{', encoding='utf-8')
+        for args, hint in ((('render', self.node, 'missing.json'), '檢查路徑與檔名'),
+                           (('render', self.node, 'broken.json'), '把那份 JSON 的語法修好'),
+                           (('expand', self.node), '例：aos7-prompt expand')):
+            with self.subTest(args=args):
+                last = self.cli(*args).stderr.decode().splitlines()[-1]
+                self.assertIn(hint, last)
+        for why in ('', '\n', '。'):
+            err = io.StringIO()
+            with patch('aos7_prompt.render', side_effect=PromptError('bad', 'InvalidShape', why)), redirect_stderr(err):
+                main(['render', str(self.node), 'p.json'])
+            self.assertIn('輸入不對：InvalidShape。', err.getvalue().splitlines()[1])
