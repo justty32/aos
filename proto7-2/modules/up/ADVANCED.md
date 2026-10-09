@@ -89,7 +89,7 @@ register 後最多等 15 秒（節拍超過 1 秒時多等那一拍；心跳已�
 子指令獨立 process group；中斷送整組 SIGTERM，等 5 秒再 SIGKILL，不留孫程序。
 所有 Python 子程序使用 -B，不在程式目錄留 __pycache__。
 
-status 唯讀，平常六行，只用新手五個詞（node、心跳、工作簿、信、技能）與白話。心跳行只說「活著」，停了說「停了」與再起的指令（不印回合數：新手會看成秒數；回合數看 `<node>/.aos/round.json`）；技能行附「AI 自己挑來用」。工作簿那行「最後記下」是最後一筆 STATE 去掉時間、信／call 的 id 換成信的標題（找不到標題寫「一封信」）、「回合」說成「步」；SESSION-LOG／WAIT_USER 有 open 行才接「還有 N 件事沒做完」，`aos7-wfnode check` 沒過才在那行尾加「工作簿有地方寫壞了（看哪裡：…）」，過了不提。AI 行沒設模型時寫「假 AI（不連網、不花錢，照抄你的信回你）；bob 問過它 N 次」，不印字數。信那行先說 node 一共收到幾封（REQUEST，含已辦完的）、回了幾封（含說卡住的）、正在辦、排隊幾封，再說人的信箱（`you/inbox`）有幾封回信還沒看、其中幾封要你決定、幾封說卡住了（有這兩種時附信箱位置；有要你決定的寫「打開照信做」，只有說卡住的寫「打開看看就好」）。brain 正在等一筆不確定的 AI 回覆時，信那行下面多一行「卡住了：「…」問 AI 時被打斷，不知道 AI 回了沒；不用動手，約 S 秒後 bob 會寄信給你」（S＝期限 L 減已等秒數、無條件進位；已過期限寫「馬上」；L 是 up.json 的 `deadline`，預設假 AI 60、真 AI 600），這時共七行。真 AI 時 AI 行接「AI 讀加寫共約 N 字（真 AI 照字數收錢）」，N 是 budget status 的 used（token 數，對中文約等於字數），讀不到印「用了多少字不明」。
+status 唯讀，平常六行，只用新手五個詞（node、心跳、工作簿、信、技能）與白話。心跳行只說「活著」，停了說「停了」與再起的指令（不印回合數：新手會看成秒數；回合數看 `<node>/.aos/round.json`）；技能行附「AI 自己挑來用」。工作簿那行「最後記下」是最後一筆 STATE 去掉時間、信／call 的 id 換成信的標題（找不到標題寫「一封信」）、「回合」說成「步」；SESSION-LOG／WAIT_USER 有 open 行才接「還有 N 件事沒做完」，`aos7-wfnode check` 沒過才在那行尾加「工作簿有地方寫壞了（看哪裡：…）」，過了不提。AI 行沒設模型時寫「假 AI（不連網、不花錢，照抄你的信回你）；bob 問過它 N 次」，不印字數。信那行先說 node 一共收到幾封（REQUEST，含已辦完的）、回了幾封（不含說卡住的）、幾封卡住（已寄信說明；回信在 `you/inbox` 或 `you/inbox/done`、狀態 BLOCKED 的，才有這段）、正在辦、排隊幾封，再說人的信箱（`you/inbox`）有幾封回信還沒看、其中幾封要你決定、幾封說卡住了（有這兩種時附信箱位置；有要你決定的寫「打開照信做」，只有說卡住的寫「打開看看就好」）。brain 正在等一筆不確定的 AI 回覆時，信那行下面多一行「卡住了：「…」問 AI 時被打斷，不知道 AI 回了沒；不用動手，約 M 分鐘內 bob 會寄信給你」（M＝期限 L 減已等秒數換成分鐘、無條件進位、至少 1，跟 QUICKSTART 與卡住的信同一說法「約 1 分鐘」；已過期限寫「馬上」；L 是 up.json 的 `deadline`，預設假 AI 60、真 AI 600），這時共七行。真 AI 時 AI 行接「AI 讀加寫共約 N 字（真 AI 照字數收錢）」，N 是 budget status 的 used（token 數，對中文約等於字數），讀不到印「用了多少字不明」。
 
 給人看的輸出不出現英文狀態詞：ask 的回信 DONE 不標、BLOCKED 標「卡住了」、NEEDS-USER 標「要你決定」、FAILED 標「沒辦成」；JSON 與信件欄位照舊是英文。
 
@@ -118,12 +118,25 @@ brain 對 llmcall 的退出：0 回信；4 也回信，回合行註「AI 用量�
 
 **不確定的期限**（2026-10-09 頂層定，問題見[長任務實跑](../../notes/play/2026-10-09-longtask/README.md)問題 1）：退 3 而那筆沒有 raw（AI 回沒回不確定，例如 brain 連同 llmcall 在傳輸中被殺）時，brain 在 `brain/unsure.json` 記下這筆 call 第一次不確定的時間；連續不確定滿 up.json 的 `deadline` 秒（沒設：假 AI 60、真 AI 600）就**不重送**，把這封信回 BLOCKED 結案，接著照 FIFO 辦下一封。期限用 deadline 是因為傳輸本身最多等 deadline 秒：被殺前已送出的孤兒 llmcall 到那時一定已經回來或放棄。傳輸逾時造成的不確定，從逾時那刻起再等一個 deadline，最多約兩倍。退 3 但 raw 已在（AI 回了、帳沒回）不計時，照舊下回合再看。
 
-卡住的回信用白話寫：哪封信、問 AI 時被打斷、不知道它回了沒，以及兩條路：①什麼都不做（這封停著，不影響別的信）；②再寄一次這封信＝從頭重問（假 AI 不花錢；真 AI 若上次其實回了，可能多付一次）。正文不露 call id 與回合。信尾「進階（給維護者）」一段才寫哪一筆（call id、第幾回合）、帳上預留多少，以及要放掉預留時在 node 裡照信跑的一行：`aos7-llmcall adopt …--raw brain/stuck/<call>/reply.json && aos7-llmcall call …--request brain/stuck/<call>/request.json --reserve R`（心跳要開著；reply.json 預設記「沒扣費」，後台查到實際用量就改成 `{"status":"error","billed":true,"body":"","usage":{"total_tokens":N}}`；第二段退 1 是正常的）；還沒送出給 AI 的那種則是 `aos7-budget cancel … && aos7-budget settle …`。已送出（llm 有 intent）時 `aos7-budget cancel` 退 3、放不掉，所以不用它。
 
 SESSION-LOG 的 brain 行會把 AI 寫的「停在哪」裡會讓 `aos7-wfnode check` 誤判成「做完沒刪」的字（已完成、DONE、✅ 等）換成中性字，進行中的行不讓體檢變「有問題」。
 
 `up.json` 的 `fake_delay`（秒，只對假 AI）讓假 AI 每次回覆前等這麼久，給測試與 [longtask](examples/longtask/README.md) 重現「傳輸中被殺」用。
 觀看直接掃信件，包含 you/inbox/done 回信，不更新 mail 的讀取快照。
+
+### 卡住的回信
+
+上段的期限到了，brain 回一封 BLOCKED 給寄件人。**信裡只有白話**：哪封信、問 AI 時被打斷、等了約幾分鐘（`round(秒/60)`，至少 1；不印秒數，免得跟 QUICKSTART 與 status 對不上）還是不知道它回了沒，以及兩條路：①什麼都不做（這封停著，不影響別的信）；②再寄一次這封信＝從頭重問（假 AI 不花錢；真 AI 若上次其實回了，可能多付一次）。最後一句是「細節見 `modules/up/ADVANCED.md` 的〈卡住的回信〉。」——就是本節。信裡不露 call id、回合、帳與預留。
+
+工作簿（STATE）記一行「卡住：「<信標題前 30 字>」問 AI 時被打斷」，status「最後記下」照原樣顯示；不含 call id（STATE 去重靠 `brain/state.json` 的 `<信 id>#end`，不靠行文）。
+
+**給維護者**的東西寫在 `<node>/brain/stuck/<call>/how.md`（每筆卡住的 call 一個資料夾；call 是信 id，第 k>1 回合是 `<信 id>-s<k>`，信的 `re:` 就是信 id）：第幾回合的哪一筆、帳上預留多少，以及要放掉預留時在 node 裡跑的一行：
+
+- 已送出給 AI（llm 有 intent）：`aos7-llmcall adopt …--raw brain/stuck/<call>/reply.json && aos7-llmcall call …--request brain/stuck/<call>/request.json --reserve R`，兩個 json 由 brain 備好。心跳要開著；reply.json 預設記「沒扣費」，後台查到實際用量就改成 `{"status":"error","billed":true,"body":"","usage":{"total_tokens":N}}`；第二段退 1 是正常的（這筆記成沒答成），預留就放掉了。這時 `aos7-budget cancel` 退 3、放不掉，所以不用它。
+- 預留了但還沒送出：`aos7-budget cancel … && aos7-budget settle …`。
+- 查不到帳（沒預留或 status 讀不到）：只寫 call 與「帳上沒有這筆的預留」或叫你跑 `aos7-llmcall status … --call <call>` 看。
+
+brain 不替人重送、不替人放預留；`brain/stuck/` 不會自己清，處理完可刪。
 
 ### brain 跨信記憶
 
