@@ -3,6 +3,7 @@
 import json
 import errno
 import importlib.util
+from itertools import combinations
 import signal
 import os
 from pathlib import Path
@@ -16,6 +17,10 @@ _summary_spec = importlib.util.spec_from_file_location(
 _summary_module = importlib.util.module_from_spec(_summary_spec)
 _summary_spec.loader.exec_module(_summary_module)
 one_line, summary = _summary_module.one_line, _summary_module.summary
+_check_spec = importlib.util.spec_from_file_location(
+    '_aos_tool_menu_check', Path(__file__).resolve().parents[2] / 'aos7_menu_check.py')
+_check_module = importlib.util.module_from_spec(_check_spec)
+_check_spec.loader.exec_module(_check_module)
 
 AUTHOR = Path(__file__).resolve().parents[3] / 'author' / 'bin'
 TIMEOUT = 1100  # Registered menu-tool timeout is 1200 seconds.
@@ -172,20 +177,87 @@ def run_gates(reqpath, candidate, review):
     fallback = result.get('error') or stderr.decode('utf-8', 'replace').strip()
     return 1, gate, summary(check, fallback, gate)
 
+def reject_brief_headers(value, number=1):
+    if isinstance(value, str):
+        if any(re.fullmatch(r'=== .+ ===', line) for line in value.splitlines()):
+            raise Problem(2, f'需求第 {number} 條有一行長得像段頭（=== … ===），請改寫那一行')
+    elif isinstance(value, dict):
+        for item in value.values():
+            reject_brief_headers(item, number)
+    elif isinstance(value, list):
+        for index, item in enumerate(value, 1):
+            reject_brief_headers(item, index)
+
 def brief(req):
+    reject_brief_headers(req)
     try:
-        lines = ['任務：' + req['task'], '目標：' + req['goal'],
-                 '只准：' + '、'.join(req['scope']['only']),
-                 '不碰：' + '、'.join(req['scope']['not']), '工作：']
-        lines += ['- ' + s for s in req['work']]
-        lines += ['驗收：'] + ['- ' + s for s in req['accept']]
-        lines += ['工具：'] + ['- ' + t['tool'] + '：' + t['use'] for t in req['tools']]
-        text = '\n'.join(lines) + '\n'
+        maximum = req['scope'].get('max_files')
+        if maximum is not None and type(maximum) is not int:
+            raise TypeError('max_files 必須是整數')
+        head = '\n'.join(['任務：' + req['task'], '目標：' + req['goal'],
+                          '只准：' + '、'.join(req['scope']['only'])
+                          + (f'（最多 {maximum} 個檔）' if maximum is not None else ''),
+                          '不碰：' + '、'.join(req['scope']['not'])])
+        work = req['work']
+        if not isinstance(work, list) or any(not isinstance(item, str) for item in work):
+            raise TypeError('work 必須是字串清單')
+        accept = '\n'.join(['驗收：'] + ['- ' + item for item in req['accept']])
+        tools = '\n'.join(['工具：'] + ['- ' + t['tool'] + '：' + t['use'] for t in req['tools']])
+        if 'deliver' in req:
+            tools += '\n交付：' + req['deliver']
     except (KeyError, TypeError) as exc:
         raise Problem(2, '需求摘要欄位不合。請補 task／goal／scope／work／accept／tools') from exc
-    if len(text) > 1500:
-        raise Problem(2, '需求摘要超過 1500 字。請精簡需求後再跑')
-    print(text, end='')
+
+    too_long = '需求摘要切成 4 段仍有一段超過 1500 字。請把那條 work 寫短再跑'
+    selected = None
+    for count in range(1, min(4, max(1, len(work))) + 1):
+        best = None
+        for cuts in combinations(range(1, len(work)), count - 1):
+            bounds = (0,) + cuts + (len(work),)
+            parts = [work[bounds[i]:bounds[i + 1]] for i in range(count)]
+            texts = ['\n'.join([f'工作（第 {i}／{count} 段，共 {count} 段）：']
+                               + ['- ' + item for item in part])
+                     for i, part in enumerate(parts, 1)]
+            longest = max(len(text) for text in texts)
+            if len(head) + 1 + len(accept) + 1 + longest > 1500:
+                continue
+            if best is None or longest < best[0]:
+                best = (longest, parts, texts)
+        if best is not None:
+            _, parts, texts = best
+            selected = parts, texts
+            break
+    if selected is None:
+        raise Problem(2, too_long)
+    parts, texts = selected
+    count = len(parts)
+    for width in range(60, 14, -1):
+        toc = '\n'.join(['需求各段在講什麼：'] + [
+            f'第 {i} 段：' + '；'.join(
+                item[:width] + ('…' if len(item) > width else '') for item in part)
+            for i, part in enumerate(parts, 1)])
+        if len(head) + 1 + len(toc) <= 1500:
+            break
+    else:
+        raise Problem(2, '需求目錄加任務摘要超過 1500 字。請把需求條目寫短再跑')
+    if [item for part in parts for item in part] != work:
+        raise Problem(2, '需求摘要切段未保留原工作條目。請檢查切段程式')
+    sections = [('head', head), ('accept', accept), ('tools', tools)]
+    sections += [(f'work{i}', text) for i, text in enumerate(texts, 1)]
+    sections += [('toc', toc)]
+    if any(len(text) > 1500 for _, text in sections):
+        raise Problem(2, too_long)
+    output = ''.join(f'=== {name} ===\n{text}\n' for name, text in sections)
+    try:
+        parsed = _check_module.brief_sections(output)
+    except _check_module.MenuError as exc:
+        raise Problem(2, '需求摘要段頭不合。請檢查摘要產生程式') from exc
+    if (parsed is None or list(parsed) != [name for name, _ in sections]
+            or any(parsed[name] != text.strip('\r\n') for name, text in sections)
+            or any(item not in parsed[f'work{i}']
+                   for i, part in enumerate(parts, 1) for item in part)):
+        raise Problem(2, '需求摘要重新解析後未保留原工作條目。請檢查摘要產生程式')
+    print(output, end='')
 
 def main(argv):
     if argv == ['--help']:

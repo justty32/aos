@@ -81,12 +81,12 @@ class MenuAos(MenuCase):
         gates = [row for row in logs if row['kind'] == 'tool' and row['layer'] == 'gates']
         self.assertEqual([row['rc'] for row in gates], [1, 0])
         middle = logs[logs.index(gates[0]) + 1:logs.index(gates[1])]
-        self.assertTrue({'fix', 'fixcode'}.issubset({row['layer'] for row in middle}))
+        self.assertTrue({'fix', 'fixpart', 'fixcode'}.issubset({row['layer'] for row in middle}))
         run = self.node / 'menu/aos-tool'
         replies = read_json(str(EXAMPLE / 'practice.json'))['replies']
         names = [name.replace('{name}', 'mailcount') for name in read_json(str(MENU))['required']]
         expected = dict(zip(names + ['row', 'report'],
-                            [replies[i].split('格：', 1)[1] for i in (2, 4, 13, 8, 10, 11)]))
+                            [replies[i].split('格：', 1)[1] for i in (2, 4, 14, 8, 10, 11)]))
         self.assertEqual(set(state['done']), set(expected))
         for rel, content in expected.items():
             self.assertEqual((run / 'out' / rel).read_text(), content.rstrip() + '\n')
@@ -122,6 +122,8 @@ class MenuAos(MenuCase):
 
     def test_prompts_only_attach_the_selected_fix_content(self):
         menu, state = self.pair()
+        state['brief'] = self.build('brief', REQUEST).stdout
+        state['vars']['part'] = 'work1'
         directory = self.node / 'run'
         names = [name.replace('{name}', 'mailcount') for name in menu['required']] + ['row', 'report']
         contents = {name: 'UNIQUE_CONTENT_%d_SECRET' % i for i, name in enumerate(names)}
@@ -138,7 +140,7 @@ class MenuAos(MenuCase):
                 with self.subTest(layer=layer, file=chosen):
                     state['layer'], state['vars']['file'] = layer, chosen
                     text = prompt(menu, state, directory)
-                    attached = {'fixcode': chosen, 'fixdocw': chosen, 'fixrow': 'row', 'fixreport': 'report'}.get(layer)
+                    attached = {'code2': chosen, 'code3': chosen, 'code4': chosen, 'fixcode': chosen, 'fixdocw': chosen, 'fixrow': 'row', 'fixreport': 'report'}.get(layer)
                     self.assertEqual('目前的內容：' in text, attached is not None)
                     for name, content in contents.items():
                         self.assertEqual(content in text, name == attached)
@@ -262,9 +264,9 @@ class MenuAos(MenuCase):
         for reason in reasons:
             self.assertIn(reason, value['issues'])
 
-    def test_brief_contains_every_requested_clause_and_gap_is_too_long(self):
+    def test_brief_contains_every_requested_clause_and_gap_is_segmented(self):
         text = self.build('brief', REQUEST).stdout
-        self.assertLessEqual(len(text), 1500)
+        self.assertTrue(text.startswith('=== head ===\n'))
         req = read_json(str(REQUEST))
         for item in [req['task'], req['goal'], *req['scope']['only'], *req['scope']['not'],
                      *req['work'], *req['accept']]:
@@ -272,6 +274,6 @@ class MenuAos(MenuCase):
         for tool in req['tools']:
             self.assertIn(tool['tool'], text)
             self.assertIn(tool['use'], text)
-        p = self.build('brief', AUTHOR / 'examples/aos-tool-gap/request.json', rc=2)
-        self.assertEqual(p.stdout, '')
-        self.assertIn('1500', p.stderr)
+        p = self.build('brief', AUTHOR / 'examples/aos-tool-gap/request.json')
+        self.assertIn('=== work2 ===', p.stdout)
+        self.assertEqual(p.stderr, '')

@@ -51,8 +51,11 @@
         }
       ],
       "exit": {
-        "text": "需求摘要沒說這個工具做什麼，無法選擇要交的檔案"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head"
+      ]
     },
     "readme": {
       "ask": "請交出 {file} 的完整全文，UTF-8 不超過 8192 位元組。說明用途，必須獨立一行寫「## 第一次跑」，不可藏在程式碼圍欄裡；節內寫用法與需求中的參數，入口是 packs/{name}/bin/aos7-{name}，可用 python3 呼叫。相對連結從 README 所在資料夾算起，只指向確定存在或本次會交出的檔，例如 aos7_{name}.py、tests/test_{name}.py。依上面的需求摘要寫用途與用法，不需要看已交檔的內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
@@ -67,8 +70,12 @@
       },
       "next": "which",
       "exit": {
-        "text": "需求摘要缺少工具用途或命令列用法，無法寫使用說明"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head",
+        "work1"
+      ]
     },
     "bin": {
       "ask": "請交出 {file} 的完整全文：Python 入口，含空行最多 12 行，UTF-8 不超過 8192 位元組。首行用 #!/usr/bin/env python3；匯入 sys 與 pathlib.Path，用 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再用 from aos7_{name} import main 匯入主程式，最後 raise SystemExit(main())，把 main 回傳值當退出碼。這裡只轉交，不放功能實作。以上已給完整入口寫法，不需要看主程式內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
@@ -81,24 +88,92 @@
       },
       "next": "which",
       "exit": {
-        "text": "需求摘要與本層指定的主程式名稱或入口介面互相矛盾，無法寫入口"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head"
+      ]
     },
     "code": {
-      "ask": "請交出 {file} 的完整全文，UTF-8 不超過 8192 位元組。用 Python 標準庫實作需求中的唯讀命令列功能，不建立、修改或刪除輸入資料。提供 main(argv=None)，讓參數解析器接收 argv；省略時讀命令列參數，完成後回傳整數退出碼。輸出內容、格式與退出碼照需求；匯入模組時不要執行主程式。不經 shell，不用 shell=True 或 os.system；不連網，不匯入 socket、urllib、http、requests；不用 eval 或 exec。上面的需求摘要就是實作依據，不需要看其他已交檔；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "ask": "請交出 {file} 的完整全文，UTF-8 不超過 8192 位元組。用 Python 標準庫實作需求中的唯讀命令列功能，不建立、修改或刪除輸入資料。提供 main(argv=None)，讓參數解析器接收 argv；省略時讀命令列參數，完成後回傳整數退出碼。輸出內容、格式與退出碼照需求；匯入模組時不要執行主程式。不經 shell，不用 shell=True 或 os.system；不連網，不匯入 socket、urllib、http、requests；不用 eval 或 exec。需求共 K 段，K 見上面「第 1／K 段」的段頭；這層只附第 1 段。其他段的規則下一層才會給，沒看到的規則不算缺資訊。先把第 1 段寫到的做好，其餘先留好擴充位置（例如回傳空值或略過），不要因為缺後段規則選出口。只有一段時就是全部。上面的需求摘要就是實作依據，不需要看其他已交檔；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
       "slot": {
         "max_bytes": 8192
       },
       "do": {
         "write": "out/{file}"
       },
+      "next": "code2",
+      "exit": {
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head",
+        "accept",
+        "work1"
+      ]
+    },
+    "code2": {
+      "ask": "上面附的是需求第 2 段，下面是 {file} 目前的主程式（已照前面幾段寫好）。還沒給的後續段規則下一層才會給，沒看到的規則不算缺資訊，不要因此選出口；其餘先留好擴充位置（例如回傳空值或略過）。補上這段要求的行為且不弄壞既有的；交整份全文，UTF-8 不超過 8192 位元組。提供 main(argv=None)，接收參數並回傳整數退出碼；只用 Python 標準庫，唯讀，不建立、修改或刪除輸入資料，匯入時不執行主程式。不經 shell，不用 shell=True 或 os.system；不連網，不匯入 socket、urllib、http、requests；不用 eval 或 exec。資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "when": "brief:work2",
+      "show": "out/{file}",
+      "slot": {
+        "max_bytes": 8192
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "brief": [
+        "head",
+        "accept",
+        "work2"
+      ],
+      "next": "code3",
+      "exit": {
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      }
+    },
+    "code3": {
+      "ask": "上面附的是需求第 3 段，下面是 {file} 目前的主程式（已照前面幾段寫好）。還沒給的後續段規則下一層才會給，沒看到的規則不算缺資訊，不要因此選出口；其餘先留好擴充位置（例如回傳空值或略過）。補上這段要求的行為且不弄壞既有的；交整份全文，UTF-8 不超過 8192 位元組。提供 main(argv=None)，接收參數並回傳整數退出碼；只用 Python 標準庫，唯讀，不建立、修改或刪除輸入資料，匯入時不執行主程式。不經 shell，不用 shell=True 或 os.system；不連網，不匯入 socket、urllib、http、requests；不用 eval 或 exec。資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "when": "brief:work3",
+      "show": "out/{file}",
+      "slot": {
+        "max_bytes": 8192
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "brief": [
+        "head",
+        "accept",
+        "work3"
+      ],
+      "next": "code4",
+      "exit": {
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      }
+    },
+    "code4": {
+      "ask": "上面附的是需求第 4 段，下面是 {file} 目前的主程式（已照前面幾段寫好）。還沒給的後續段規則下一層才會給，沒看到的規則不算缺資訊，不要因此選出口；其餘先留好擴充位置（例如回傳空值或略過）。補上這段要求的行為且不弄壞既有的；交整份全文，UTF-8 不超過 8192 位元組。提供 main(argv=None)，接收參數並回傳整數退出碼；只用 Python 標準庫，唯讀，不建立、修改或刪除輸入資料，匯入時不執行主程式。不經 shell，不用 shell=True 或 os.system；不連網，不匯入 socket、urllib、http、requests；不用 eval 或 exec。資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "when": "brief:work4",
+      "show": "out/{file}",
+      "slot": {
+        "max_bytes": 8192
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "brief": [
+        "head",
+        "accept",
+        "work4"
+      ],
       "next": "which",
       "exit": {
-        "text": "需求摘要缺少輸入、預期輸出或錯誤處理規則，無法實作功能"
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
       }
     },
     "test": {
-      "ask": "請交出 {file}（packs/{name}/tests/test_{name}.py）的完整全文，UTF-8 不超過 8192 位元組。用 unittest.TestCase 與 test_ 開頭的方法，run_all.py 會自動找到 tests/test_*.py。匯入 sys 與 pathlib.Path，以 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再 from aos7_{name} import main；傳入參數清單呼叫 main，擷取輸出並斷言內容與退出碼，不猜其他內部函式。用 tempfile.TemporaryDirectory 自造資料，測需求中的正常與錯誤情況；要有實質斷言，不讀系統時鐘，需要時間時用固定值。只用標準庫，不經 shell、不連網、不用 eval 或 exec。依需求摘要與上述 main 介面測試，不需要看主程式內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "ask": "請交出 {file}（packs/{name}/tests/test_{name}.py）的完整全文，UTF-8 不超過 8192 位元組。用 unittest.TestCase 與 test_ 開頭的方法，run_all.py 會自動找到 tests/test_*.py。匯入 sys 與 pathlib.Path，以 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再 from aos7_{name} import main；傳入參數清單呼叫 main，擷取輸出並斷言內容與退出碼，不猜其他內部函式。用 tempfile.TemporaryDirectory 自造資料，測需求中的正常與錯誤情況；要有實質斷言，不讀系統時鐘，需要時間時用固定值。只用標準庫，不經 shell、不連網、不用 eval 或 exec。需求共 K 段，K 見上面「第 1／K 段」的段頭；這層只附第 1 段。其他段的規則下一層才會給，沒看到的規則不算缺資訊。先把第 1 段寫到的做好，其餘先留好擴充位置（例如回傳空值或略過），不要因為缺後段規則選出口。只有一段時就是全部。只測上面這段需求寫到的行為（CLI、退出碼、輸出形狀等），其他段的細節不用測。依需求摘要與上述 main 介面測試，不需要看主程式內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
       "slot": {
         "max_bytes": 8192
       },
@@ -107,8 +182,13 @@
       },
       "next": "which",
       "exit": {
-        "text": "需求摘要缺少可驗證的預期輸出或錯誤退出碼，無法寫測試斷言"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head",
+        "accept",
+        "work1"
+      ]
     },
     "row": {
       "ask": "請交出索引的一列，不加表頭或其他文字，格式為：| `packs/{name}/` | [說明](packs/{name}/README.md) |。把「說明」換成工具用途的短句，路徑保持原樣，整列以 | 結尾。工具用途直接取自上面的需求摘要，不需要看 README 內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
@@ -121,8 +201,11 @@
       },
       "next": "report",
       "exit": {
-        "text": "需求摘要沒說這個工具做什麼，無法填索引的用途短句"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head"
+      ]
     },
     "report": {
       "ask": "請交出 REPORT 的完整全文，UTF-8 不超過 8192 位元組。不需要看已交檔的內容，照上面的需求摘要與已交檔名就能寫。可直接套以下骨架，把括號提示換成需求中的名稱與用途：\n# REPORT\n新增 packs/{name}/README.md（用途與用法）、bin/aos7-{name}（啟動入口）、aos7_{name}.py（需求中的唯讀功能）、tests/test_{name}.py（正常與錯誤情況測試），並交出索引列。\n## 以後交接書該點名的工具\n- python3：執行入口與測試。\n- （需求摘要「工具：」裡列的命令）：（各自用途，逐項列出）。\n三關結果由後續流程檢查，這份只記交件內容，不必填通過結果。資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
@@ -137,8 +220,12 @@
       },
       "next": "gates",
       "exit": {
-        "text": "需求摘要沒說這個工具做什麼，無法寫 REPORT"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head",
+        "tools"
+      ]
     },
     "gates": {
       "do": {
@@ -157,14 +244,14 @@
       "options": [
         {
           "text": "aos7_{name}.py",
-          "next": "fixcode",
+          "next": "fixpart",
           "set": {
             "file": "packs/{name}/aos7_{name}.py"
           }
         },
         {
           "text": "tests/test_{name}.py",
-          "next": "fixcode",
+          "next": "fixpart",
           "set": {
             "file": "packs/{name}/tests/test_{name}.py"
           }
@@ -179,7 +266,54 @@
         }
       ],
       "exit": {
-        "text": "沒過的摘要未提供錯誤內容或審查理由，無法判斷要修哪個檔"
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head"
+      ]
+    },
+    "fixpart": {
+      "ask": "沒過的摘要：{issues}\n要改 {file}，這個問題跟需求哪一段最有關？選後會附上那一段需求與目前內容。依上面的需求各段目錄與錯誤摘要選一段。",
+      "brief": [
+        "head",
+        "toc"
+      ],
+      "options": [
+        {
+          "text": "需求第 1 段",
+          "when": "brief:work1",
+          "set": {
+            "part": "work1"
+          },
+          "next": "fixcode"
+        },
+        {
+          "text": "需求第 2 段",
+          "when": "brief:work2",
+          "set": {
+            "part": "work2"
+          },
+          "next": "fixcode"
+        },
+        {
+          "text": "需求第 3 段",
+          "when": "brief:work3",
+          "set": {
+            "part": "work3"
+          },
+          "next": "fixcode"
+        },
+        {
+          "text": "需求第 4 段",
+          "when": "brief:work4",
+          "set": {
+            "part": "work4"
+          },
+          "next": "fixcode"
+        }
+      ],
+      "exit": {
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
       }
     },
     "fixdoc": {
@@ -205,8 +339,11 @@
         }
       ],
       "exit": {
-        "text": "錯誤摘要要求的用法與需求摘要互相矛盾，無法決定 README 或入口怎麼修"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head"
+      ]
     },
     "fixtail": {
       "ask": "沒過的摘要：{issues}\n索引列與 REPORT 要改哪個？第 1 關若提 row 的前綴、單列格式或連結，選索引列；若提 report 缺節，選 REPORT。第 2 關多半是測試或主程式，第 3 關依審查理由判斷這兩項哪個要改。選後會附上目前內容。",
@@ -225,11 +362,14 @@
         }
       ],
       "exit": {
-        "text": "錯誤摘要要求的工具用途與需求摘要互相矛盾，無法修索引列或 REPORT"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head"
+      ]
     },
     "fixcode": {
-      "ask": "沒過的摘要：{issues}\n下面附的是 {file} 目前的內容。先對照 issues 裡的行號與錯誤種類，找出原因再改；交改好的整份全文，UTF-8 不超過 8192 位元組。主程式：用 main(argv=None) 接參數、回傳整數退出碼，唯讀且輸出照需求，匯入時不執行主程式。測試：用 unittest.TestCase 與 test_ 方法，匯入 sys 與 pathlib.Path，以 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再 from aos7_{name} import main；用參數清單呼叫並斷言輸出與退出碼，以 tempfile.TemporaryDirectory 自造資料、不讀系統時鐘，需要時間時用固定值。兩者只用標準庫，不經 shell、不用 shell=True 或 os.system；不連網、不匯入 socket、urllib、http、requests；不用 eval 或 exec。只交檔案全文，不加外層圍欄或附帶說明。",
+      "ask": "沒過的摘要：{issues}\n下面附的是 {file} 目前的內容。先對照 issues 裡的行號與錯誤種類，找出原因再改；「答案不合」只列出你的程式印出的內容（可能被截斷），不會給正確答案；請照上面這段需求逐項核對自己的輸出，找出不合的地方再改，不要因為沒給正確答案就選出口。交改好的整份全文，UTF-8 不超過 8192 位元組。主程式：用 main(argv=None) 接參數、回傳整數退出碼，唯讀且輸出照需求，匯入時不執行主程式。測試：用 unittest.TestCase 與 test_ 方法，匯入 sys 與 pathlib.Path，以 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再 from aos7_{name} import main；用參數清單呼叫並斷言輸出與退出碼，以 tempfile.TemporaryDirectory 自造資料、不讀系統時鐘，需要時間時用固定值。兩者只用標準庫，不經 shell、不用 shell=True 或 os.system；不連網、不匯入 socket、urllib、http、requests；不用 eval 或 exec。只交檔案全文，不加外層圍欄或附帶說明。",
       "show": "out/{file}",
       "slot": {
         "max_bytes": 8192
@@ -239,8 +379,13 @@
       },
       "next": "gates",
       "exit": {
-        "text": "錯誤摘要與需求摘要對預期輸出或退出碼的要求互相矛盾，無法修正程式或測試"
-      }
+        "text": "沒過的摘要是空的或看不懂，完全無法下手修改"
+      },
+      "brief": [
+        "head",
+        "accept",
+        "{part}"
+      ]
     },
     "fixdocw": {
       "ask": "沒過的摘要：{issues}\n下面附的是 {file} 目前的內容。請交改好的整份全文，UTF-8 不超過 8192 位元組。README：說明用途，獨立一行寫「## 第一次跑」，節內說明用法與需求中的參數；入口是 packs/{name}/bin/aos7-{name}，可用 python3 呼叫。相對連結從 README 所在資料夾算起，只指向確定存在或本次會交出的檔。Python 入口：含空行最多 12 行，首行 #!/usr/bin/env python3；匯入 sys 與 pathlib.Path，以 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再 from aos7_{name} import main，最後 raise SystemExit(main())；只轉交，不放功能實作。只交檔案全文，不加外層圍欄或附帶說明。",
@@ -253,8 +398,12 @@
       },
       "next": "gates",
       "exit": {
-        "text": "需求摘要與錯誤摘要對入口名稱或用法的要求互相矛盾，無法修正文件或入口"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head",
+        "work1"
+      ]
     },
     "fixrow": {
       "ask": "沒過的摘要：{issues}\n下面附的是索引列目前的內容。請交改好的一列完整全文，不是差異片段（diff），不加表頭；格式為 | `packs/{name}/` | [說明](packs/{name}/README.md) |，把「說明」換成工具用途的短句，路徑保持原樣，整列以 | 結尾。只交檔案全文，不加外層圍欄或附帶說明。",
@@ -268,8 +417,11 @@
       },
       "next": "gates",
       "exit": {
-        "text": "需求摘要沒說這個工具做什麼，無法修正索引的用途短句"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head"
+      ]
     },
     "fixreport": {
       "ask": "沒過的摘要：{issues}\n下面附的是 REPORT 目前的內容；依摘要修正，交完整全文，UTF-8 不超過 8192 位元組。不需要看已交檔的內容，照上面的需求摘要與已交檔名就能寫。可直接套以下骨架，把括號提示換成需求中的名稱與用途：\n# REPORT\n新增 packs/{name}/README.md（用途與用法）、bin/aos7-{name}（啟動入口）、aos7_{name}.py（需求中的唯讀功能）、tests/test_{name}.py（正常與錯誤情況測試），並交出索引列。\n## 以後交接書該點名的工具\n- python3：執行入口與測試。\n- （需求摘要「工具：」裡列的命令）：（各自用途，逐項列出）。\n三關結果由後續流程檢查，這份只記交件內容，不必填通過結果。資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
@@ -285,8 +437,12 @@
       },
       "next": "gates",
       "exit": {
-        "text": "需求摘要沒說這個工具做什麼，無法修正 REPORT"
-      }
+        "text": "這一層的問題或選項跟需求完全對不上，需要人來看"
+      },
+      "brief": [
+        "head",
+        "tools"
+      ]
     }
   }
 }
