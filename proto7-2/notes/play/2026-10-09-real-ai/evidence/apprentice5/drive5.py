@@ -82,7 +82,7 @@ def proxy_suspect(doc, chk, cand):
         size = len(Path(cand).read_text(encoding='utf-8').strip())
     except (OSError, UnicodeError):
         size = 0
-    return chk.get('failed_gate') == 1 and {'json', 'text'} & {i.get('rule') for i in issues_of(chk)} and size < 500
+    return bool(chk.get('failed_gate') == 1 and {'json', 'text'} & {i.get('rule') for i in issues_of(chk)} and size < 500)
 
 
 def do_task(a, task, rid, out, skillnode, use_skill, streak):
