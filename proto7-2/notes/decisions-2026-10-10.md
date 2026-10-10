@@ -20,3 +20,15 @@
 - C｜A10-11：照 10-09 L4 決定，前導零索引照收（4301 個 0＝索引 0），去前導零後仍超長才退 125
 - C｜B10-01：error_path.json 補齊 12 支入口（共 29 支現役入口全登記）；凍結核心 tock／daemon／run／wait-tock 與退出碼透傳的包裝器用 exempt 寫理由；新增防漏列檢查
 - C｜B10-02：error_path 檢查器把 HOME、XDG_*_HOME、TMPDIR 隔離到暫存區並納入不留檔快照，`--help` 也檢查不留檔；`__pycache__` 不例外（檢查器設 PYTHONDONTWRITEBYTECODE）
+
+## loop14 FX2（daemon 存檔失敗不推進，接 FX1 A10-02 盤點）
+
+- C｜`round_done` 改交易式：用複本算新 owe／steps／paused，paused.json 寫成功才換進記憶體；失敗記憶體全不動、回 False（磁碟留舊 owe，重開照 N-06 結算一次，不會雙扣）
+- C｜時間線：結算失敗記 `settle_pending`（記住該扣或不扣），回頂端先重試、落盤前不走 `mark_owe`／tick（否則新回合號蓋掉舊 owe＝少扣多跑）；tick 失敗的半回合恢復時沿用 pending 的「不扣」
+- C｜`mark_owe` 寫失敗改還原原值（以前一律 pop，會丟掉未結算的舊 owe）
+- C｜`op_pause`／`op_resume` 交易式：寫不進回條 ok:false「沒有改；請重送」、記憶體不動、resume 不 wake（以前丟例外→無回條、效果卻已在記憶體生效）；上一回合結算還沒落盤時也先拒（免得重試扣到新額度）
+- C｜`_save_paused_quiet`（unregister、node 消失拿掉倒數）失敗設 `_paused_dirty`，`check_nodes` 每圈補寫、停機前再補一次
+- C｜`reap`：回收意圖沒寫進 nodes.json（或還有待補寫）就不起收任務的 thread、記 `reap-deferred`，已知 pgid 保留；補寫成功後回收迴圈照起，舊時間線還沒結束也照起（舊線結束後照舊再掃一次）。停機帶 kill 仍照身分掃全部 node
+- C｜`sweep_leftovers`：held 意圖寫不進時每 0.1 秒重試、最多約 2 秒，仍失敗印一行 stderr＋事件後照常退出（不卡、不改退出碼）
+- 留著｜起動時 `save_paused`／`save_nodes`／`gen.json` 寫失敗仍是未捕捉例外（traceback、退 1）：要改就得定新退出碼，屬退出碼契約，不在本輪範圍
+- 留著｜停機時回收意圖重試 2 秒仍寫不進＝重開後不會續收（只剩 stderr 一行）；沒有別的落盤處可放，要不要「寫不進就不退出」是方向問題

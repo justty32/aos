@@ -111,6 +111,7 @@ class Timeline(threading.Thread):
         self.recover_fails = 0
         self.owe_base = getattr(daemon, "owe", {}).get(node_id)
         self.owe_round = None                # 待結算回合號：確知關上才扣 rounds 倒數
+        self.settle_pending = None           # True／False＝尚未落盤的結算；None＝沒有
         self.unverified = None               # 上一次認不出的鎖持有者原因（事件去重）
 
     # ---------- 小工具 ----------
@@ -151,6 +152,15 @@ class Timeline(threading.Thread):
         while not self.leaving() and time.monotonic() < end:
             self.wake.wait(min(POLL * 5, end - time.monotonic()))
             self.wake.clear()
+
+    def _settle(self, debit=True):
+        """結算先落盤才清時間線欠帳；失敗保留 debit，下一輪先重試、不開新回合。"""
+        done = self.d.round_done(self.node_id) if debit else self.d.round_done(self.node_id, debit=False)
+        if done:
+            self.settle_pending = self.owe_round = self.owe_base = None
+            return True
+        self.settle_pending = debit
+        return False
 
     def prog(self, name, extra=None, timeout=None):
         """用現在的世代跑 tick 或 tock；非零退出碼記錯，逾時被收掉時試著接管舊世代的鎖持有者。"""
@@ -202,16 +212,23 @@ class Timeline(threading.Thread):
                          kind="round-unknown")
                 self.backoff()
                 continue
+            if ro is False and self.settle_pending is not None:
+                if not self._settle(self.settle_pending):
+                    self.wake.wait(POLL)
+                    self.wake.clear()
+                continue   # 結算落盤前不能 mark_owe／tick；成功後重看 pause
             if ro is False and self.owe_round is not None:
-                self.d.round_done(self.node_id)
-                self.owe_round = None
+                if not self._settle(True):
+                    self.wake.wait(POLL)
+                    self.wake.clear()
                 continue   # 補扣後回頂端重看 pause
             if self.owe_base is not None and getattr(self.d, "owe", {}).get(self.node_id) != self.owe_base:
                 self.owe_base = None   # 落盤的待結算已被控制檔清掉（屬於舊倒數）
             if ro is False and self.owe_base is not None and self.owe_round is None:
                 debit = self.checked_round > self.owe_base   # 回合號前進＝tick 開過回合（N-06）
-                self.owe_base = None
-                self.d.round_done(self.node_id, debit=debit)
+                if not self._settle(debit):
+                    self.wake.wait(POLL)
+                    self.wake.clear()
                 continue
             if ro:
                 self.recovery_pending = True
@@ -227,11 +244,12 @@ class Timeline(threading.Thread):
                 self.recovery_pending = False
                 self.recover_fails = 0
                 self.event("round-recovered", round=self.disk_round())
-                if self.owe_round is not None or self.owe_base is not None:
-                    self.owe_round = self.owe_base = None
-                    self.d.round_done(self.node_id)
-                else:   # G2：tick 失敗的半回合只清待結算
-                    self.d.round_done(self.node_id, debit=False)
+                # G2：tick 失敗的半回合只清待結算；待存的 debit 不能在恢復時丟掉。
+                debit = (self.settle_pending if self.settle_pending is not None else
+                         self.owe_round is not None or self.owe_base is not None)
+                if not self._settle(debit):
+                    self.wake.wait(POLL)
+                    self.wake.clear()
                 continue   # 回到頂端重新看 pause 與倒數
             self.recover_fails = 0
             # 2. pause
@@ -262,7 +280,7 @@ class Timeline(threading.Thread):
             if rc and not tick_cut:
                 # 不知道（3）或失敗（例外、退出碼 1）都不是一個回合：退避後回頂端（tick 若已開了回合，頂端先 tock 收掉），
                 # 不扣 rounds 倒數（G2）。被逾時收掉的 tick 照常往下 tock，總結標 incomplete。
-                self.d.round_done(self.node_id, debit=False)   # 先清落盤的待結算：當機重開也不把這個半回合算進去
+                self._settle(False)   # 先清落盤的待結算：當機重開也不把這個半回合算進去
                 self.backoff()
                 continue
             started = (out or {}).get("started") or []
@@ -298,7 +316,10 @@ class Timeline(threading.Thread):
                 continue
             closed_at = time.monotonic()
             test_point("round-closed-before-steps")
-            self.d.round_done(self.node_id)
+            if not self._settle(True):
+                self.wake.wait(POLL)
+                self.wake.clear()
+                continue
             if woke:
                 self.event("woke", round=self.round)   # 被 wake 提前結束的回合不等剩下的 interval
                 continue
