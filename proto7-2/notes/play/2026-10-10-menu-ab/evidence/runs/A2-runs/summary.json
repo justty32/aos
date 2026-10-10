@@ -1,0 +1,56 @@
+{
+  "group": "A",
+  "task": "runs",
+  "rep": 2,
+  "rid": "runsA2",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 3,
+  "calls": 3,
+  "reasks": 2,
+  "fails": {
+    "1": 0,
+    "2": 2,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 26098,
+  "review_tokens": 6597,
+  "total_tokens": 32695,
+  "token_missing": [],
+  "secs": 138.467,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_runs (unittest.loader._FailedTest.test_runs)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_runs\\nTraceback (most",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"  File \\\"/tmp/aos-three-o6sc660o/proto7-2/packs/runs/tests/test_runs.py\\\", line 38, in test_routine_states_and_schedule_states\\n    self.assertEqual([item[\\\"state\\\"] for item in result[\\\"schedule\\\"]], [\\\"interrupted\\\", \\\"due\\\", \\\"pending\\\"])\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 3,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "group": "A",
+  "task": "runs",
+  "rep": 3,
+  "rid": "runsA3",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 2,
+  "calls": 2,
+  "reasks": 1,
+  "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 15218,
+  "review_tokens": 6328,
+  "total_tokens": 21546,
+  "token_missing": [],
+  "secs": 75.716,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_runs (unittest.loader._FailedTest.test_runs)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_runs\\nTraceback (most",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 2,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

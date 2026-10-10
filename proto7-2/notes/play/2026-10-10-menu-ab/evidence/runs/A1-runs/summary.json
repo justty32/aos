@@ -1,0 +1,88 @@
+{
+  "group": "A",
+  "task": "runs",
+  "rep": 1,
+  "rid": "runsA1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 6,
+  "calls": 6,
+  "reasks": 5,
+  "fails": {
+    "1": 0,
+    "2": 6,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 54998,
+  "review_tokens": 0,
+  "total_tokens": 54998,
+  "token_missing": [],
+  "secs": 212.502,
+  "exit": 1,
+  "stop": "max-rounds",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_runs (unittest.loader._FailedTest.test_runs)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_runs\\nTraceback (most",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"    ~~~~~~~~~~~~~~~~^\\n        [item[\\\"why\\\"] for item in data[\\\"bad\\\"]],\\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n        [\\\"bad_table\\\", \\\"bad_row\\\", \\\"dup_name\\\", \\\"bad_row\\\"],\\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n    )\\n    ^\\nAssertionErro",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "[{\"rule\": \"answer\", \"why\": [\"variant 9: 答案、型別或一行 stdout 不合：{\\\"v\\\":1,\\\"routines\\\":[{\\\"name\\\":\\\"a-ok\\\",\\\"every\\\":\\\"1h\\\",\\\"last_time\\\":\\\"2026-10-09T18:29:48.683846+08:00\\\",\\\"last_code\\\":0,\\\"state\\\":\\\"ok\\\",\\\"next\\\":\\\"2026-10-09T11:29:48Z\\\"},{\\\"name\\\":\\\"b-failed\\\",\\\"every\\\":\\\"2m\\\",\\\"last_time\\\":\\\"2026-10",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n    )\\n    ^\\nAssertionError: Lists differ: ['bad_row', 'dup_name', 'bad_row', 'bad_table'] != ['dup_name', 'bad_row', 'bad_row', 'bad_table']\\n\\nFirst differing element 0:\\n'bad_row'\\n'dup_name'\\n\\n- ['bad_row', 'du",
+      "round": 4,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n    )\\n    ^\\nAssertionError: Lists differ: ['bad_row', 'dup_name', 'bad_row', 'bad_table'] != ['dup_name', 'bad_row', 'bad_row', 'bad_table']\\n\\nFirst differing element 0:\\n'bad_row'\\n'dup_name'\\n\\n- ['bad_row', 'du",
+      "round": 5,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "[{\"rule\": \"answer\", \"why\": [\"case: 答案、型別或一行 stdout 不合：{\\\"v\\\":1,\\\"routines\\\":[{\\\"name\\\":\\\"a-ok\\\",\\\"every\\\":\\\"1h\\\",\\\"last_time\\\":\\\"2026-10-09T18:29:48.683846+08:00\\\",\\\"last_code\\\":0,\\\"state\\\":\\\"ok\\\",\\\"next\\\":\\\"2026-10-09T11:29:48Z\\\"},{\\\"name\\\":\\\"b-failed\\\",\\\"every\\\":\\\"2m\\\",\\\"last_time\\\":\\\"2026-10-09T1",
+      "round": 6,
+      "exit": 1,
+      "why": "invalid"
+    }
+  ]
+}

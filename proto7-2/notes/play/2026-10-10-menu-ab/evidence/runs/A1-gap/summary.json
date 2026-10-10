@@ -1,0 +1,80 @@
+{
+  "group": "A",
+  "task": "gap",
+  "rep": 1,
+  "rid": "gapA1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 5,
+  "calls": 5,
+  "reasks": 4,
+  "fails": {
+    "1": 0,
+    "2": 4,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 43966,
+  "review_tokens": 6129,
+  "total_tokens": 50095,
+  "token_missing": [],
+  "secs": 133.335,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_evgap (unittest.loader._FailedTest.test_evgap)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_evgap\\nTraceback (m",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_evgap (unittest.loader._FailedTest.test_evgap)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_evgap\\nTraceback (m",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_evgap (unittest.loader._FailedTest.test_evgap)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_evgap\\nTraceback (m",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"F...\\n======================================================================\\nFAIL: test_aggregates_records_and_state (test_evgap.EvGapTests.test_aggregates_records_and_state)\\n----------------------------------------------------------------------\\nTraceback (most recent ca",
+      "round": 4,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 5,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

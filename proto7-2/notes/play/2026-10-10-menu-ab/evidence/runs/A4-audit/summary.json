@@ -1,0 +1,76 @@
+{
+  "group": "A",
+  "task": "audit",
+  "rep": 4,
+  "rid": "auditA4",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 5,
+  "calls": 5,
+  "reasks": 4,
+  "fails": {
+    "1": 0,
+    "2": 2,
+    "3": 2
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 43638,
+  "review_tokens": 19395,
+  "total_tokens": 63033,
+  "token_missing": [],
+  "secs": 231.618,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_mailtodo (unittest.loader._FailedTest.test_mailtodo)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_mailtodo\\nTra",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"    args, argv = self.parse_known_args(args, namespace)\\n                 ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\\n  File \\\"/usr/lib/python3.14/argparse.py\\\", line 2018, in parse_known_args\\n    return self._parse_known_args2(args, namespace, intermixed=False)\\n           ~~",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 3,
+      "rules": [
+        "review"
+      ],
+      "issues": "[{\"rule\": \"review\", \"why\": [\"錯誤：packs/mailtodo/aos7_mailtodo.py 的 regular_candidates 在 inbox 是符號連結時略過 inbox，卻仍可能沿該連結產生 done 候選。若 root/alpha/inbox 指向含 done 目錄的資料夾，且 done 內有有效信件，collect 不會建立 boxes['alpha']，隨後執行 boxes[name]['done'] += 1 便觸發未捕捉的 KeyError，導致 CLI 當掉、退出 1 且沒有 JSON。應在 inbox 不符合目錄條件時一併略過其 do",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 3,
+      "rules": [
+        "review"
+      ],
+      "issues": "[{\"rule\": \"review\", \"why\": [\"錯誤：packs/mailtodo/aos7_mailtodo.py 的 collect 在建立 open 時以 where != \\\"inbox\\\" 排除所有歸檔信件。work 第 7 點要求所有尚無有效終結回覆的有效 REQUEST 都列入 open，且 where 明定可為 \\\"done\\\"。例如 inbox/done/20250101T1000-request.md 是有效 REQUEST、沒有任何有效回覆、at 為 2025-01-01T10:00:00+00:00，--now 為 2025-01-01T12:00:00+00",
+      "round": 4,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 5,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "group": "B",
+  "task": "audit",
+  "rep": 1,
+  "rid": "TauditB1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 2,
+  "calls": 19,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 2,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 52639,
+  "review_tokens": 0,
+  "total_tokens": 52639,
+  "token_missing": [],
+  "secs": 87.215,
+  "exit": 1,
+  "stop": "AI 選了出口：錯誤摘要與需求摘要對預期輸出或退出碼的要求互相矛盾，無法修正程式或測試。請換 --run 重走",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{\"DONE\":2,\"REQUEST\":1},\"done\":0},\"bob\":{\"inbox\":{\"REQUEST\":2},\"done\":2},\"carol\":{\"inbox\":{\"PROGRESS\":2,\"REQUEST\":1},\"done\":0}},\"bad\":[{\"file\":\"bob/inbox/99990101T0000-no-frontmatter.md\",\"why\":\"no_frontmatt",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/runs/B1-audit/raw/tool-1791611801086873780-d6f74622.stdout"
+    },
+    {
+      "round": 2,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{\"DONE\":2,\"REQUEST\":1},\"done\":0},\"bob\":{\"inbox\":{\"REQUEST\":2},\"done\":2},\"carol\":{\"inbox\":{\"PROGRESS\":2,\"REQUEST\":1},\"done\":0}},\"bad\":[{\"file\":\"bob/inbox/99990101T0000-no-frontmatter.md\",\"why\":\"no_frontmatt",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/runs/B1-audit/raw/tool-1791611818241381281-2e3a3e59.stdout"
+    },
+    {
+      "step": 49,
+      "layer": "fixcode",
+      "kind": "exit",
+      "gate": null,
+      "rules": [],
+      "issues": "AI 選了出口：錯誤摘要與需求摘要對預期輸出或退出碼的要求互相矛盾，無法修正程式或測試。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/node/menu/TauditB1"
+}

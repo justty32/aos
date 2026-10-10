@@ -1,0 +1,90 @@
+{
+  "group": "A",
+  "task": "gap",
+  "rep": 2,
+  "rid": "gapA2",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 6,
+  "calls": 6,
+  "reasks": 5,
+  "fails": {
+    "1": 0,
+    "2": 6,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 53211,
+  "review_tokens": 0,
+  "total_tokens": 53211,
+  "token_missing": [],
+  "secs": 151.063,
+  "exit": 1,
+  "stop": "max-rounds",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "[{\"rule\": \"answer\", \"why\": [\"variant 7: 答案、型別或一行 stdout 不合：{\\\"v\\\":1,\\\"channels\\\":{\\\"obs\\\":{\\\"count\\\":11,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[[2,2]],\\\"dup\\\":[],\\\"next_seq\\\":null,\\\"unacked\\\":null,\\\"stale_next\\\":null},\\\"must\\\":{\\\"count\\\":12,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[],\\\"dup\\\":[],\\\"next_seq\\\"",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"..F\\n======================================================================\\nFAIL: test_invalid_channel_isolated_from_other_channel (test_evgap.EvGapTests.test_invalid_channel_isolated_from_other_channel)\\n--------------------------------------------------------------------",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "[{\"rule\": \"answer\", \"why\": [\"case: 答案、型別或一行 stdout 不合：{\\\"v\\\":1,\\\"channels\\\":{\\\"obs\\\":{\\\"count\\\":11,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[[2,2]],\\\"dup\\\":[],\\\"next_seq\\\":13,\\\"unacked\\\":null,\\\"stale_next\\\":false},\\\"must\\\":{\\\"count\\\":12,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[],\\\"dup\\\":[],\\\"next_seq\\\":13,\\\"",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "[{\"rule\": \"answer\", \"why\": [\"case: 答案、型別或一行 stdout 不合：{\\\"v\\\":1,\\\"channels\\\":{\\\"obs\\\":{\\\"count\\\":11,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[[2,2]],\\\"dup\\\":[],\\\"next_seq\\\":13,\\\"unacked\\\":null,\\\"stale_next\\\":false},\\\"must\\\":{\\\"count\\\":12,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[],\\\"dup\\\":[],\\\"next_seq\\\":13,\\\"",
+      "round": 4,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"..F\\n======================================================================\\nFAIL: test_whole_and_channel_state_validation (test_evgap.EvGapTests.test_whole_and_channel_state_validation)\\n----------------------------------------------------------------------\\nTraceback (mos",
+      "round": 5,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "[{\"rule\": \"answer\", \"why\": [\"case: 答案、型別或一行 stdout 不合：{\\\"v\\\":1,\\\"channels\\\":{\\\"obs\\\":{\\\"count\\\":11,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[[2,2]],\\\"dup\\\":[],\\\"next_seq\\\":13,\\\"unacked\\\":null,\\\"stale_next\\\":false},\\\"must\\\":{\\\"count\\\":12,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[],\\\"dup\\\":[],\\\"next_seq\\\":13,\\\"",
+      "round": 6,
+      "exit": 1,
+      "why": "invalid"
+    }
+  ]
+}

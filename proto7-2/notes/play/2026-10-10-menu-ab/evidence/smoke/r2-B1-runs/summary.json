@@ -1,0 +1,69 @@
+{
+  "group": "B",
+  "task": "runs",
+  "rep": 1,
+  "rid": "TrunsB1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 3,
+  "calls": 22,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 3,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 65855,
+  "review_tokens": 0,
+  "total_tokens": 65855,
+  "token_missing": [],
+  "secs": 113.469,
+  "exit": 1,
+  "stop": "AI 選了出口：錯誤摘要與需求摘要對預期輸出或退出碼的要求互相矛盾，無法修正程式或測試。請換 --run 重走",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/runs/B1-runs/raw/tool-1791611804231872414-87e88fdf.stdout"
+    },
+    {
+      "round": 2,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/runs/B1-runs/raw/tool-1791611823399798807-e78b0ddd.stdout"
+    },
+    {
+      "round": 3,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/runs/B1-runs/raw/tool-1791611843140938498-7da7c442.stdout"
+    },
+    {
+      "step": 57,
+      "layer": "fixcode",
+      "kind": "exit",
+      "gate": null,
+      "rules": [],
+      "issues": "AI 選了出口：錯誤摘要與需求摘要對預期輸出或退出碼的要求互相矛盾，無法修正程式或測試。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/node/menu/TrunsB1"
+}

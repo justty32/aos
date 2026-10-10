@@ -1,0 +1,47 @@
+{
+  "group": "A",
+  "task": "audit",
+  "rep": 1,
+  "rid": "auditA1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 2,
+  "calls": 2,
+  "reasks": 1,
+  "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 16406,
+  "review_tokens": 5760,
+  "total_tokens": 22166,
+  "token_missing": [],
+  "secs": 71.994,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_mailtodo (unittest.loader._FailedTest.test_mailtodo)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_mailtodo\\nTra",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 2,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

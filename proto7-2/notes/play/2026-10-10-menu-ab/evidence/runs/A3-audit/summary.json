@@ -1,0 +1,91 @@
+{
+  "group": "A",
+  "task": "audit",
+  "rep": 3,
+  "rid": "auditA3",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 6,
+  "calls": 6,
+  "reasks": 5,
+  "fails": {
+    "1": 0,
+    "2": 6,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 53578,
+  "review_tokens": 0,
+  "total_tokens": 53578,
+  "token_missing": [],
+  "secs": 205.81,
+  "exit": 1,
+  "stop": "max-rounds",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"======================================================================\\nERROR: test_mailtodo (unittest.loader._FailedTest.test_mailtodo)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_mailtodo\\nTraceb",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_mailtodo (unittest.loader._FailedTest.test_mailtodo)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_mailtodo\\nTra",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n    }])\\n    ^^^\\nAssertionError: Lists differ: [] != [{'id': 'a', 'from': 'sender', 'to': 'targ[34 chars]120}]\\n\\nSecond list contains 1 additional elements.\\nFirst extra element 0:\\n{'id': 'a', 'from': 'sender', 'to': 'target', 'w",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n    }])\\n    ^^^\\nAssertionError: Lists differ: [] != [{'id': 'a', 'from': 'sender', 'to': 'targ[34 chars]120}]\\n\\nSecond list contains 1 additional elements.\\nFirst extra element 0:\\n{'id': 'a', 'from': 'sender', 'to': 'target', 'w",
+      "round": 4,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"\\nFirst differing element 0:\\n{'file': 'alpha/inbox/20250101T1101-b.md', 'why': 'dup_id'}\\n{'file': 'alpha/inbox/bad.md', 'why': 'no_frontmatter'}\\n\\n- [{'file': 'alpha/inbox/20250101T1101-b.md', 'why': 'dup_id'},\\n-  {'file': 'alpha/inbox/20251301T1100-d.md', 'why': 'bad_n",
+      "round": 5,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"    ~~~~~~~~~~~~~~~~^\\n        [item[\\\"id\\\"] for item in answer[\\\"open\\\"]],\\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n        [\\\"duplicate\\\", \\\"c\\\"],\\n        ^^^^^^^^^^^^^^^^^^^\\n    )\\n    ^\\nAssertionError: Lists differ: ['c', 'duplicate'] != ['duplicate', 'c']\\",
+      "round": 6,
+      "exit": 1,
+      "why": "invalid"
+    }
+  ]
+}

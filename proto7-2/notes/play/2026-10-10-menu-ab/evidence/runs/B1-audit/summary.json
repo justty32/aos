@@ -1,0 +1,80 @@
+{
+  "group": "B",
+  "task": "audit",
+  "rep": 1,
+  "rid": "auditB1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 4,
+  "calls": 25,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 4,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 73731,
+  "review_tokens": 0,
+  "total_tokens": 73731,
+  "token_missing": [],
+  "secs": 167.182,
+  "exit": 1,
+  "stop": "AI 選了出口：沒過的摘要是空的或看不懂，完全無法下手修改。請換 --run 重走",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"alice-20261009T182909-3b7477847ce0\",\"from\":\"alice\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"alice-20261009T182909-4c69ff321d",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B1-audit/raw/tool-1791612758971035578-53a4e087.stdout"
+    },
+    {
+      "round": 2,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：variant 12: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e3",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B1-audit/raw/tool-1791612772337629025-8cf4dede.stdout"
+    },
+    {
+      "round": 3,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：variant 12: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e3",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B1-audit/raw/tool-1791612809755848704-a44b7180.stdout"
+    },
+    {
+      "round": 4,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：variant 12: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e3",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B1-audit/raw/tool-1791612829511868337-b7d0a8cd.stdout"
+    },
+    {
+      "step": 65,
+      "layer": "fixcode",
+      "kind": "exit",
+      "gate": null,
+      "rules": [],
+      "issues": "AI 選了出口：沒過的摘要是空的或看不懂，完全無法下手修改。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/node/menu/auditB1"
+}

@@ -1,0 +1,92 @@
+{
+  "group": "B",
+  "task": "audit",
+  "rep": 2,
+  "rid": "auditB2",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 5,
+  "calls": 28,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 5,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 82731,
+  "review_tokens": 0,
+  "total_tokens": 82731,
+  "token_missing": [],
+  "secs": 163.203,
+  "exit": 1,
+  "stop": "層 gates max_rounds 輪數到上限。請換 --run 重走",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"alice-20261009T182909-3b7477847ce0\",\"from\":\"alice\",\"to\":\"bob\",\"where\":\"done\",\"age_min\":0},{\"id\":\"alice-20261009T182909-4c69ff321df",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B2-audit/raw/tool-1791612924347317290-ce3e1234.stdout"
+    },
+    {
+      "round": 2,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e380fe4d",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B2-audit/raw/tool-1791612961095972366-2d3f2689.stdout"
+    },
+    {
+      "round": 3,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e380fe4d",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B2-audit/raw/tool-1791612990467074836-79f9ed41.stdout"
+    },
+    {
+      "round": 4,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e380fe4d",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B2-audit/raw/tool-1791613019291569247-b314df78.stdout"
+    },
+    {
+      "round": 5,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e380fe4d",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B2-audit/raw/tool-1791613033040191927-a0f61711.stdout"
+    },
+    {
+      "step": 75,
+      "layer": "gates",
+      "kind": "stuck",
+      "gate": null,
+      "rules": [],
+      "issues": "層 gates max_rounds 輪數到上限。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/node/menu/auditB2"
+}

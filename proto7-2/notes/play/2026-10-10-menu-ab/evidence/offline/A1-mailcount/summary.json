@@ -1,0 +1,36 @@
+{
+  "group": "A",
+  "task": "mailcount",
+  "rep": 1,
+  "rid": "mailcountA1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": true,
+  "passed": true,
+  "rounds": 1,
+  "calls": 0,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 0,
+  "review_tokens": 0,
+  "total_tokens": 0,
+  "token_missing": [],
+  "secs": 0.905,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 1,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

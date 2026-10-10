@@ -1,0 +1,103 @@
+{
+  "group": "B",
+  "task": "runs",
+  "rep": 3,
+  "rid": "runsB3",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 5,
+  "calls": 30,
+  "reasks": 2,
+  "fails": {
+    "1": 0,
+    "2": 5,
+    "3": 0
+  },
+  "format_blocks": 2,
+  "apprentice_tokens": 101539,
+  "review_tokens": 0,
+  "total_tokens": 101539,
+  "token_missing": [],
+  "secs": 230.641,
+  "exit": 1,
+  "stop": "層 gates max_rounds 輪數到上限。請換 --run 重走",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":nul",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B3-runs/raw/tool-1791613161045364720-2322d7fe.stdout"
+    },
+    {
+      "round": 2,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B3-runs/raw/tool-1791613181370405516-0d1c2273.stdout"
+    },
+    {
+      "round": 3,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B3-runs/raw/tool-1791613214864762737-48302afe.stdout"
+    },
+    {
+      "round": 4,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B3-runs/raw/tool-1791613237029818490-db1f927b.stdout"
+    },
+    {
+      "round": 5,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/runs/B3-runs/raw/tool-1791613268752095733-702264fc.stdout"
+    },
+    {
+      "step": 15,
+      "layer": "code3",
+      "kind": "bad",
+      "gate": null,
+      "rules": [],
+      "issues": "第一行要回 選：編號"
+    },
+    {
+      "step": 67,
+      "layer": "fixcode",
+      "kind": "bad",
+      "gate": null,
+      "rules": [],
+      "issues": "第一行要回 選：編號"
+    },
+    {
+      "step": 79,
+      "layer": "gates",
+      "kind": "stuck",
+      "gate": null,
+      "rules": [],
+      "issues": "層 gates max_rounds 輪數到上限。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab/node/menu/runsB3"
+}

@@ -1,0 +1,37 @@
+{
+  "group": "B",
+  "task": "audit",
+  "rep": 1,
+  "rid": "UauditB1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 0,
+  "calls": 11,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 29133,
+  "review_tokens": 0,
+  "total_tokens": 29133,
+  "token_missing": [],
+  "secs": 68.771,
+  "exit": 1,
+  "stop": "AI 選了出口：需求摘要沒說這個工具做什麼，無法選擇要交的檔案。請換 --run 重走",
+  "rows": [
+    {
+      "step": 28,
+      "layer": "which",
+      "kind": "exit",
+      "gate": null,
+      "rules": [],
+      "issues": "AI 選了出口：需求摘要沒說這個工具做什麼，無法選擇要交的檔案。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/node/menu/UauditB1"
+}
