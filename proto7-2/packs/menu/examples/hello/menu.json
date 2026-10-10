@@ -1,0 +1,59 @@
+{
+  "v": 1,
+  "name": "hello",
+  "start": "who",
+  "required": [
+    "reply.txt"
+  ],
+  "layers": {
+    "who": {
+      "ask": "先回標為急件的那封信。小明：「急件：請確認收到開會通知。」小華：「不急：請確認收到照片。」先回誰？資訊足夠就選一位收件人。",
+      "options": [
+        {
+          "text": "小明",
+          "next": "line",
+          "set": {
+            "to": "小明",
+            "request": "請確認收到開會通知。"
+          }
+        },
+        {
+          "text": "小華",
+          "next": "line",
+          "set": {
+            "to": "小華",
+            "request": "請確認收到照片。"
+          }
+        }
+      ],
+      "exit": {
+        "text": "缺少判斷先回誰的必要資訊，請人補充"
+      }
+    },
+    "line": {
+      "ask": "{to} 的要求是「{request}」請寫一句可直接交出的回覆，確認已收到對方提到的內容；資訊足夠就交出回覆。",
+      "slot": {
+        "max_bytes": 200,
+        "max_lines": 1
+      },
+      "do": {
+        "write": "out/reply.txt"
+      },
+      "next": "send",
+      "exit": {
+        "text": "缺少回覆所需的必要資訊，請人補充"
+      }
+    },
+    "send": {
+      "do": {
+        "tool": "hello-send",
+        "args": {
+          "to": "{to}"
+        }
+      },
+      "ok": "end",
+      "fail": "line",
+      "max_rounds": 3
+    }
+  }
+}
