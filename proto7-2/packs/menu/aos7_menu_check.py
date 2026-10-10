@@ -7,11 +7,72 @@ import unicodedata
 
 NAME = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
 BUILTINS = {'run', 'node', 'run_dir'}
+BRIEF_HEADER = re.compile(r'^=== ([A-Za-z0-9_-]{1,40}) ===$')
 
 
 class MenuError(ValueError):
     """選單或模板不合，呼叫端以退出碼 2 回報。"""
     code = 2
+
+
+class BriefError(MenuError):
+    """需求選段或附量錯誤；接續時仍退 2，不誤認 state 毀損。"""
+
+
+def brief_sections(text):
+    """第一行是段頭才分段；保留段內文字，只去掉頭尾換行。"""
+    lines = text.splitlines(keepends=True)
+    if not lines or not BRIEF_HEADER.fullmatch(lines[0].rstrip('\r\n')):
+        return None
+    result, name, content = {}, None, []
+    for line in lines:
+        match = BRIEF_HEADER.fullmatch(line.rstrip('\r\n'))
+        if match:
+            if name is not None:
+                result[name] = ''.join(content).strip('\r\n')
+            name = match[1]
+            if name in result:
+                raise MenuError('需求摘要段名重複：' + name + '。每段請用不同名字')
+            content = []
+        else:
+            content.append(line)
+    result[name] = ''.join(content).strip('\r\n')
+    return result
+
+
+def selected_brief(layer, text, vars):
+    sections = brief_sections(text)
+    if sections is None:
+        return text
+    names = ([template(name, vars) for name in layer['brief']]
+             if 'brief' in layer else list(sections))
+    return '\n'.join(sections[name] for name in dict.fromkeys(names) if name in sections)
+
+
+def brief_limit(name, text):
+    if len(text) > 1500:
+        raise BriefError('層 %s 附的需求 %s 字，超過 1500。把需求切小或改這層的 brief' % (name, len(text)))
+
+
+def validate_brief(menu, text):
+    sections = brief_sections(text)
+    if sections is None:
+        if len(text) > 1500:
+            raise MenuError('需求摘要超過 1500 字。縮短 --brief 那個檔再跑')
+        return
+    if len(text) > 20000:
+        raise MenuError('分段需求摘要超過 20000 字。縮短 --brief 那個檔再跑')
+    for name, content in sections.items():
+        if len(content) > 1500:
+            raise MenuError('需求段 %s 有 %s 字，超過 1500。把需求切小再跑' % (name, len(content)))
+    for name, layer in menu['layers'].items():
+        if 'ask' in layer and not any('{' in value for value in layer.get('brief', [])):
+            brief_limit(name, selected_brief(layer, text, {}))
+
+
+def brief_when(when, text):
+    sections = brief_sections(text)
+    return sections is not None and bool(sections.get(when[6:]))
 
 
 def require(ok, why):
@@ -91,7 +152,16 @@ def validate(obj, tools):
     for name, layer in layers.items():
         require(isinstance(name, str) and bool(NAME.fullmatch(name)), '層名要是 1～40 個英數、底線或短橫')
         try:
-            keys(layer, ('ask', 'options', 'exit', 'slot', 'do', 'next', 'show', 'ok', 'fail', 'max_rounds'), '層 ' + name)
+            keys(layer, ('ask', 'options', 'exit', 'slot', 'do', 'next', 'show', 'ok', 'fail', 'max_rounds', 'brief', 'when'), '層 ' + name)
+            if 'brief' in layer:
+                require('ask' in layer, 'brief 只准用在有 ask 的層')
+                require(isinstance(layer['brief'], list) and 1 <= len(layer['brief']) <= 8 and
+                        all(isinstance(x, str) for x in layer['brief']), 'brief 要是 1～8 個字串的清單')
+            if 'when' in layer:
+                when = layer['when']
+                require(isinstance(when, str) and when.startswith('brief:') and
+                        bool(NAME.fullmatch(when[6:])), 'when 只收 brief:段名')
+                require('next' in layer and 'options' not in layer, 'when 只准用在有 next、沒有 options 的層')
             for key in ('next', 'ok', 'fail'):
                 if key in layer:
                     target(layer[key], key)
@@ -140,7 +210,8 @@ def validate(obj, tools):
                         values = option.get('set', {})
                         require(isinstance(values, dict) and all(isinstance(k, str) and NAME.fullmatch(k) and k not in BUILTINS and isinstance(v, str) for k, v in values.items()), 'options.set 要是變數到模板，不能蓋內建變數')
                         when = option.get('when')
-                        require(when is None or (isinstance(when, str) and (when in ('required_done', 'required_missing') or when.startswith('new:'))), 'options.when 只收 required_done、required_missing、new:路徑')
+                        require(when is None or (isinstance(when, str) and (when in ('required_done', 'required_missing') or when.startswith('new:') or
+                                when.startswith('brief:') and bool(NAME.fullmatch(when[6:])))), 'options.when 只收 required_done、required_missing、new:路徑、brief:段名')
                     if not any('when' in x for x in options or []):
                         count = (len(options) if options is not None else 1) + 1
                         require(2 <= count <= 5, 'options 含出口要 2～5 個，現在 %s 個' % count)

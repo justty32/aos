@@ -2,7 +2,8 @@
 import copy
 import secrets
 from aos7_menu_check import (BUILTINS, MenuError, check_slot, out_path,
-                             parse_reply, require, template, validate, normalize_out, at, expanded_slot)
+                             parse_reply, require, template, validate, normalize_out, at, expanded_slot,
+                             validate_brief, selected_brief, brief_limit, brief_when, BriefError)
 
 SYSTEM = '你在走一份選單。每次只回答這一層。所需資料都在下面，不用找檔案或工具。照回法回，不要多寫別的。'
 
@@ -12,12 +13,15 @@ def load(obj, tools):
 
 
 def new_state(menu, run, vars, brief, menu_sha):
+    validate_brief(menu, brief)
     values = copy.deepcopy(vars)
     values['run'] = run
-    return {'v': 1, 'menu': '', 'menu_sha': menu_sha, 'run': run,
+    state = {'v': 1, 'menu': '', 'menu_sha': menu_sha, 'run': run,
             'layer': menu['start'], 'vars': values, 'brief': brief, 'done': [],
             'tries': 0, 'step': 0, 'calls': [], 'gate_rounds': {},
             'var_owner': {}, 'nonce': secrets.token_hex(8), 'pending': None, 'status': 'walking', 'why': None}
+    _move(menu, state, menu['start'])
+    return state
 
 
 def options(menu, state):
@@ -44,6 +48,8 @@ def options(menu, state):
             if when and when.startswith('new:'):
                 path = at(label + 'options.when', out_path, when[4:], state['vars'])
                 enabled = normalize_out(path) not in done
+            if when and when.startswith('brief:'):
+                enabled = brief_when(when, state.get('brief', ''))
             if enabled:
                 result.append(option)
     require(2 <= len(result) + 1 <= 5, label + 'options 含出口要 2～5 個，現在 %s 個' % (len(result) + 1))
@@ -79,8 +85,13 @@ def render(menu, state, shown=None, reminder=None):
     reminder = reminder or (state['why'] if state['tries'] else None)
     if reminder:
         pieces.append('上一次不行：' + reminder + '。照回法重回一次')
-    if state.get('brief'):
-        pieces.append('需求：' + state['brief'])
+    try:
+        brief = at('層 ' + state['layer'] + ' brief', selected_brief, layer, state.get('brief', ''), state['vars'])
+    except MenuError as exc:
+        raise BriefError(str(exc)) from None
+    brief_limit(state['layer'], brief)
+    if brief:
+        pieces.append('需求：' + brief)
     if state['done']:
         pieces.append('已交：' + '、'.join(state['done']))
     pieces.append(at('層 ' + state['layer'] + ' ask', template, layer['ask'], state['vars']))
@@ -123,7 +134,16 @@ def _bad(state, why):
         _stop(state, '連 3 次回得不像（層 %s）：%s。請換 --run 重走' % (state['layer'], why))
 
 
-def _move(state, target):
+def _move(menu, state, target):
+    skipped = 0
+    while target != 'end':
+        layer = menu['layers'][target]
+        if 'when' not in layer or brief_when(layer['when'], state.get('brief', '')):
+            break
+        skipped += 1
+        if skipped > len(menu['layers']):
+            raise MenuError('層 ' + target + ' when 連跳超過層數。請改好 next，避免跳過的層繞圈')
+        target = layer['next']
     state.update(layer=target, tries=0, why=None, pending=None)
     if target == 'end':
         state['status'] = 'done'
@@ -171,7 +191,7 @@ def step(menu, state, reply):
         s['pending'] = pending
         s.update(tries=0, why=None)
     else:
-        _move(s, target)
+        _move(menu, s, target)
     return s, view(menu, s)
 
 
@@ -203,7 +223,7 @@ def after(menu, state, result):
             if 'act' in then:
                 s['pending'] = then
             else:
-                _move(s, then['next'])
+                _move(menu, s, then['next'])
     elif 'write' in act:
         if rc:
             return s, {'kind': 'stuck', 'code': 3, 'why': '不確定：寫檔沒有完成。照原樣再跑一次會接續'}
@@ -211,13 +231,13 @@ def after(menu, state, result):
         s['done'] = list(dict.fromkeys(normalize_out('out/' + x) for x in s['done']))
         if path not in s['done']:
             s['done'].append(path)
-        _move(s, pending['next'])
+        _move(menu, s, pending['next'])
     else:
         s['gate_rounds'][s['layer']] = s['gate_rounds'].get(s['layer'], 0) + 1
         target = pending.get('next') if rc == 0 else None
         target = target or layer.get('ok' if rc == 0 else 'fail')
         if target:
-            _move(s, target)
+            _move(menu, s, target)
         else:
             _stop(s, '層 ' + s['layer'] + ' fail 沒有分支，工具沒過。請換 --run 重走')
     return s, view(menu, s)

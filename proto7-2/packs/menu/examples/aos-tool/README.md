@@ -28,20 +28,24 @@ python3 -B packs/menu/bin/aos7-menu status "$MENU_NODE"
 選單 aos-tool：做完，寫了 out/packs/mailcount/README.md、out/packs/mailcount/bin/aos7-mailcount、out/packs/mailcount/aos7_mailcount.py、out/packs/mailcount/tests/test_mailcount.py、out/row、out/report
 ```
 
-練習腳本會故意回錯一句，讓選單重問；第一次主程式把版本號印成布林值，第二關會擋住。接著選主程式、交正確版，第二次三關全過。已交的檔會藏起，所以選項編號會變。
+練習腳本會故意回錯一句，讓選單重問；第一次主程式把版本號印成布林值，第二關會擋住。接著選主程式、在 fixpart 選需求第 1 段、交正確版，第二次三關全過。已交的檔會藏起，所以選項編號會變。
 
-`--var name=` 填工具名字；`request=` 填需求檔絕對路徑；`review=rules` 用離線規則審查。`build.py brief` 把需求壓成摘要，交給 `--brief`；超過 1500 字會退 2，請先把需求寫得更精簡。這些值第一次建立 run 就固定了；要換題或換模型，換 node 或加新的 `--run 名字`。
+`--var name=` 填工具名字；`request=` 填需求檔絕對路徑；`review=rules` 用離線規則審查。`build.py brief` 保留需求原文並自動產生分段摘要，交給 `--brief`；每層只附自己相關的幾段，每步仍以 1500 字為上限。`scope.max_files` 有提供時寫在「只准」那行，`deliver` 原文放在工具段的「交付」那行。工作條目按原順序切成最少的 1～4 段；切成四段仍有一段超過時退 2，請把那條 work 寫短再跑。多行條目保留完整原文；需求原文若有 `=== 名 ===` 形狀的段頭行則退 2，請改寫那一行，避免把需求誤切成另一段。輸出前也會用核心解析器重新核對段名與各條 work 原文。這些值第一次建立 run 就固定了；要換題或換模型，換 node 或加新的 `--run 名字`。
 
 | 層 | 在問什麼 |
 |---|---|
 | which | 下一個交哪個檔？交齊後才出現「都交齊了」。 |
 | readme／bin／code／test | 交選中檔的全文，寫進 out/。 |
+| code2～code4 | 需求有第 2～4 段才進入；附目前主程式，補上這段行為並交全文。 |
 | row／report | 交索引一列，再交 REPORT 全文。 |
 | gates | 自動組 candidate.txt，跑三關；這層不問 AI。 |
 | fix | 看失敗摘要，選主程式、測試、文件或交件尾段。 |
+| fixpart | 看失敗摘要與需求目錄，選問題最相關的段；只顯示存在的段。 |
 | fixdoc／fixtail | 選 README／入口，或索引列／REPORT；也可回上一層重選。 |
 | fixcode／fixdocw | 看選中程式／測試，或 README／入口的目前內容，交改好的全文，再跑三關。 |
 | fixrow／fixreport | 看索引列／REPORT 的目前內容，交改好的全文，再跑三關。 |
+
+code 與 test 先按第 1 段交件；後續段的規則等下一層補上，沒看到的規則不算缺資訊。code2～code4 逐段補齊，出口只在「這一層的問題或選項跟需求完全對不上」時用（改檔層是「摘要空的或看不懂」）；分段後笨模型容易把「這步沒看到」當成「需求缺」，所以出口字刻意不寫成「需求缺什麼」。
 
 候選在 `$MENU_NODE/menu/aos-tool/candidate.txt`，原始交件在同層 `out/`，每步記錄在 `log.jsonl`。每層出口都是最後一個編號；退出碼與接續方式見 [spec §1、§5](../../spec.md)。
 

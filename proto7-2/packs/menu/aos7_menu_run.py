@@ -9,7 +9,7 @@ import sys
 from aos7_menu_io import (PACK, Stop, action, ai, event, read, safe_path, save)
 from aos7_fs import N, OK, LockTimeout, Unknown, fact, locked, test_point
 from aos7_menu import MenuError, after, load, new_state, render, step, view
-from aos7_menu_check import template
+from aos7_menu_check import template, validate_brief, BriefError
 from aos7_menu_state import valid_state, pending_ok
 
 def state_error(directory):
@@ -132,8 +132,7 @@ def run(args):
             raise MenuError('--var 不合或用了內建變數。給例如 --var to=小明')
         values[k] = v
     brief = Path(args.brief).read_text(encoding='utf-8') if args.brief else ''
-    if len(brief) > 1500:
-        raise MenuError('需求摘要超過 1500 字。縮短 --brief 那個檔再跑')
+    validate_brief(menu, brief)
     sha = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
     directory = node / 'menu' / name
     directory.mkdir(parents=True, exist_ok=True)
@@ -167,6 +166,8 @@ def run(args):
                 nxt = view(menu, state)
                 if nxt['kind'] == 'ask':
                     prompt(menu, state, directory)
+            except BriefError:
+                raise
             except MenuError:
                 raise state_error(directory) from None
         return drive(node, path, menu, tools, directory, state, args)
@@ -212,6 +213,8 @@ def status(args):
                 else:
                     no_prompt = '；目前正在做事，沒有正在等回答的提示'
             print(summary(menu, state) + no_prompt + (f'；另有 {len(candidates) - 1} 個 run' if not args.run and len(candidates) > 1 else ''))
+    except BriefError:
+        raise
     except MenuError:
         raise state_error(path.parent) from None
     return 0
@@ -235,7 +238,7 @@ def main(argv=None):
     group.add_argument('--reply', help='把這個檔案全文當回答走一步，再印下一層提示。')
     p.add_argument('--run', help='這次紀錄的名字，預設用選單 name；換名字可從頭重走。')
     p.add_argument('--var', action='append', default=[], help='填一個模板變數 K=V，可重複給。')
-    p.add_argument('--brief', help='把這個檔案當需求摘要，每層附上，最多 1500 字。')
+    p.add_argument('--brief', help='需求摘要；可用 === 段名 === 分段，由層 brief 選段，每步最多 1500 字。')
     p = sub.add_parser('status', help='看走到哪裡')
     p.add_argument('node', help='要查看紀錄的工作資料夾。')
     p.add_argument('--run', help='要查看的紀錄名字，預設看最近更新的 run。')
