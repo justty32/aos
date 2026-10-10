@@ -9,7 +9,7 @@
 | `spec.md` | 核心 spec（只放規則） |
 | `bin/` | 薄入口：`aos7-daemon`、`aos7-tick`、`aos7-tock`、`aos7-run`、`aos7-ctl`、`aos7-wait-tock`（後兩個的本體在工具包），與搬來的 `aos-exec` |
 | **核心** `lib/aos7_*.py` | 受行數預算管（見 [README「防再胖」](README.md#防再胖新功能預設進模組)），共九檔： |
-| `lib/aos7_daemon.py`、`aos7_daemon_timeline.py` | daemon：登記（寫檔成功才生效）、控制檔、node 消失、status；回收意圖落 nodes.json `reaping`、確認收乾淨才開新時間線、paused.json 存 rounds 倒數 `steps` 與待結算 `owe`（開回合前記、關回合後扣倒數同次清）；reaping 未確認乾淨時重起 status 保留 missing；每個 node 一條時間線（`read_config` 不丟例外、壞值記錯用預設，`owe_round` 補扣）（spec 第 1、2 節）；`owe` 存不進就不開回合、等一下回頂端再試（FX1 A10-02） |
+| `lib/aos7_daemon.py`、`aos7_daemon_timeline.py` | daemon：登記（寫檔成功才生效）、控制檔、node 消失、status；回收意圖落 nodes.json `reaping`、確認收乾淨才開新時間線、paused.json 存 rounds 倒數 `steps` 與待結算 `owe`（開回合前記、關回合後扣倒數同次清）；reaping 未確認乾淨時重起 status 保留 missing；每個 node 一條時間線（`read_config` 不丟例外、壞值記錯用預設，`owe_round` 補扣）（spec 第 1、2 節）；`owe` 存不進就不開回合、等一下回頂端再試（FX1 A10-02）；paused.json／nodes.json 存不進一律不推進（FX2）：`round_done` 與 pause／resume 交易式（寫成功才換記憶體）、時間線 `settle_pending` 重試前不開回合、移除倒數 `_paused_dirty` 補寫、回收意圖沒落盤不收任務 |
 | `lib/aos7_tick.py`、`aos7_tock.py` | 開回合（tasks.json、once 的 launch 標記；帶 launch 的 once 先比對槽的 run 再看排程）／關回合（last-round.json、刪槽）（第 3、4、7 節） |
 | `lib/aos7_task.py` | 槽、三態判定、lost 前的身分掃描、kill（runner 還在啟動交接＝回 unknown、請求留著）；起任務的環境只帶核心六個 `AOS7_*`（第 5、6 節），繼承來的 `AOS7_*` 只明列放行 `AOS7_LITELLM_KEY`（金鑰只經環境、不落地，FX1 A10-01） |
 | `lib/aos7_proc.py` | 程序的事實（`proc`：不在／starttime／不知道）、同一個程序嗎、身分掃描、Q1 範圍的收程序（清場後身分複查最多補收 3 輪；node 級打記著的 pgid 前 `group_is_node` 重驗） |

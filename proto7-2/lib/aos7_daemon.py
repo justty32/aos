@@ -57,6 +57,7 @@ class Daemon:
         self.reaping = {}            # nodes.json 的回收義務 {id: {"since", "why"}}
         self._reap_mem = {}          # 本次 daemon 的回收結果、已知 pgid 與起收時刻
         self._nodes_dirty = False    # 回收意圖還沒寫成功，主迴圈補寫
+        self._paused_dirty = False   # 移除倒數還沒寫成功，主迴圈補寫
         self.timelines = {}          # {id: Timeline}
         self.missing = {}            # {id: {"since", "why"}}：已登記、資料夾不在
         self.node_errors = {}        # {id: last_error}：沒有時間線時的錯誤（看不到…）
@@ -104,23 +105,30 @@ class Daemon:
         write_json(os.path.join(self.aosd, "nodes.json"), value)
         self._nodes_dirty = False
 
-    def save_paused(self):
-        """把 pause owner 清單原子寫回 paused.json。daemon 是唯一的寫者，仍照 spec §0 對 paused.json.lock 拿 flock，
-        讓讀—改—寫的外部工具有一致的約定。"""
+    def save_paused(self, paused=None, steps=None, owe=None):
+        """把候選 pause／倒數／待結算原子寫回；成功後才由呼叫者替換記憶體。仍照 spec §0 拿 flock。"""
+        paused = self.paused if paused is None else paused
+        steps = self.steps if steps is None else steps
+        owe = self.owe if owe is None else owe
         path = os.path.join(self.aosd, "paused.json")
         with locked(path, timeout=1.0):
-            value = {"paused": {k: v for k, v in sorted(self.paused.items()) if v}, "steps": self.steps}
-            if self.owe:
-                value["owe"] = self.owe
+            value = {"paused": {k: v for k, v in sorted(paused.items()) if v}, "steps": steps}
+            if owe:
+                value["owe"] = owe
             write_json(path, value)
+        self._paused_dirty = False
 
     def _save_paused_quiet(self):
-        """node 退出後同步倒數；寫失敗只記一筆，不擋其他 node 的檢查。"""
-        try:
-            with self._lock:
+        """node 退出後同步倒數；寫失敗保留補寫義務，不擋其他 node 的檢查。"""
+        err = None
+        with self._lock:
+            try:
                 self.save_paused()
-        except (OSError, Unknown) as e:
-            self.log(ev="paused-save-error", err=repr(e)[:300])
+            except (OSError, Unknown) as e:
+                self._paused_dirty = True
+                err = repr(e)[:300]
+        if err:
+            self.log(ev="paused-save-error", err=err)
 
     def load_state(self):
         """起來時讀 nodes.json、paused.json、gen.json，回舊世代。三份都只有 daemon 寫：不存在＝新空間；讀不到或壞掉＝
@@ -166,11 +174,15 @@ class Daemon:
         try:
             with self._lock:
                 if self.steps.get(nid) and self.owe.get(nid) != base:
+                    previous = self.owe.get(nid)
                     self.owe[nid] = base
                     try:
                         self.save_paused()
                     except (OSError, Unknown):
-                        self.owe.pop(nid, None)   # 沒落盤就不算記了：重試成功前不開回合
+                        if previous is None:
+                            self.owe.pop(nid, None)
+                        else:
+                            self.owe[nid] = previous   # 舊結算不能因寫失敗丟掉
                         raise
         except (OSError, Unknown) as e:
             self.log(ev="paused-save-error", node=nid, err=repr(e)[:300])
@@ -178,29 +190,35 @@ class Daemon:
         return True
 
     def round_done(self, nid, debit=True):
-        """時間線確認關上一回合後呼叫：nid 每個 owner 的 rounds 倒數各扣一，到零的以那個 owner 再 pause（spec §2.4）。"""
+        """確知回合關上後交易式結算（spec §2.4）；落盤成功才扣倒數、pause 到零的 owner，回是否成功。"""
         with self._lock:
-            had = self.owe.pop(nid, None) is not None
-            s = self.steps.get(nid) or {}
-            if not s and not had:
-                return
+            if not self.steps.get(nid) and nid not in self.owe:
+                return True
+            paused = {k: list(v) for k, v in self.paused.items()}
+            steps = {k: dict(v) for k, v in self.steps.items()}
+            owe = dict(self.owe)
+            owe.pop(nid, None)
+            s = steps.get(nid) or {}
             if debit:
                 for owner in s:
                     s[owner] -= 1
             done = [o for o, left in s.items() if left <= 0]
             for owner in done:
-                self._drop_steps(nid, owner)
-                if owner not in self.paused.setdefault(nid, []):
-                    self.paused[nid].append(owner)
+                self._drop_steps(steps, nid, owner)
+                if owner not in paused.setdefault(nid, []):
+                    paused[nid].append(owner)
             try:
-                self.save_paused()
+                self.save_paused(paused, steps, owe)
+                self.paused, self.steps, self.owe = paused, steps, owe
                 err = None
-            except (OSError, Unknown) as e:   # 不往外丟：時間線重試會把同一回合再扣一次；下次寫成功時補上
+            except (OSError, Unknown) as e:
                 err = repr(e)[:300]
         if err:
             self.log(ev="paused-save-error", node=nid, err=err)
+            return False
         for owner in done:
             self.log(ev="steps-done", node=nid, owner=owner)
+        return True
 
     def other_root(self, nid):
         """nid 的路上有沒有別的 daemon 的根（帶 `.aosd/` 的資料夾，S-15）：有回它的 id，沒有回 None。"""
@@ -285,12 +303,21 @@ class Daemon:
         """把 owner 加進 nid 的 pause 清單、清掉同 owner 的倒數（spec §2.4）。本回合照常收完才停。"""
         owner = ctl.get("owner", "")
         with self._lock:
-            lst = self.paused.setdefault(nid, [])
+            if getattr(self.timelines.get(nid), "settle_pending", None) is not None:
+                return False, "%s 上一回合的倒數結算還沒寫進 paused.json，pause 沒有改；稍後重送" % nid
+            paused = {k: list(v) for k, v in self.paused.items()}
+            steps = {k: dict(v) for k, v in self.steps.items()}
+            owe = dict(self.owe)
+            lst = paused.setdefault(nid, [])
             if owner not in lst:
                 lst.append(owner)
-            self._drop_steps(nid, owner)
-            self._drop_stale_owe(nid)
-            self.save_paused()
+            self._drop_steps(steps, nid, owner)
+            self._drop_stale_owe(owe, nid)
+            try:
+                self.save_paused(paused, steps, owe)
+            except (OSError, Unknown) as e:
+                return False, "paused.json 寫不進去（%s），pause 沒有改；請重送" % e
+            self.paused, self.steps, self.owe = paused, steps, owe
         return True, "pause %s（owner %r；現在：%s）%s" % (nid, owner, self.paused[nid], self._note(nid))
 
     def op_resume(self, nid, ctl):
@@ -299,20 +326,29 @@ class Daemon:
         if rounds is not None and (not is_int(rounds) or rounds < 1):
             return False, "rounds 要是正整數"
         with self._lock:
-            lst = self.paused.setdefault(nid, [])
+            if getattr(self.timelines.get(nid), "settle_pending", None) is not None:
+                return False, "%s 上一回合的倒數結算還沒寫進 paused.json，resume 沒有改；稍後重送" % nid
+            paused = {k: list(v) for k, v in self.paused.items()}
+            steps = {k: dict(v) for k, v in self.steps.items()}
+            owe = dict(self.owe)
+            lst = paused.setdefault(nid, [])
             was = bool(lst)
             if ctl.get("all") is True:
                 lst.clear()
-                self.steps.pop(nid, None)
+                steps.pop(nid, None)
             else:
                 if owner in lst:
                     lst.remove(owner)
-                self._drop_steps(nid, owner)
+                self._drop_steps(steps, nid, owner)
             if rounds is not None:
                 # 倒數按 owner 各記一份：B 的 rounds 不會蓋掉 A 的
-                self.steps.setdefault(nid, {})[owner] = rounds
-            self._drop_stale_owe(nid)
-            self.save_paused()
+                steps.setdefault(nid, {})[owner] = rounds
+            self._drop_stale_owe(owe, nid)
+            try:
+                self.save_paused(paused, steps, owe)
+            except (OSError, Unknown) as e:
+                return False, "paused.json 寫不進去（%s），resume 沒有改；請重送" % e
+            self.paused, self.steps, self.owe = paused, steps, owe
             left = list(lst)
         if not left and was:
             # 本來就沒人 pause 的 resume 不 wake：wake 會提前結束固定 interval 的回合，沒作用的 resume 不該切掉它
@@ -322,17 +358,17 @@ class Daemon:
             "還有 %s 在 pause" % left if left else ("沒人 pause 了，馬上開回合" if was else "本來就沒人 pause"),
             self._note(nid))
 
-    def _drop_stale_owe(self, nid):
-        """還沒有時間線（重開後、結算前）就改倒數：落盤的待結算屬於舊倒數，不扣到新的上。呼叫的人拿著 _lock。"""
+    def _drop_stale_owe(self, owe, nid):
+        """沒有時間線就改倒數：候選表的舊待結算不扣到新倒數上。呼叫的人拿著 _lock。"""
         if nid not in self.timelines:
-            self.owe.pop(nid, None)
+            owe.pop(nid, None)
 
-    def _drop_steps(self, nid, owner):
-        """拿掉 nid 上 owner 的 rounds 倒數。呼叫的人拿著 _lock。"""
-        s = self.steps.get(nid, {})
+    def _drop_steps(self, steps, nid, owner):
+        """拿掉候選表中 nid 上 owner 的 rounds 倒數。呼叫的人拿著 _lock。"""
+        s = steps.get(nid, {})
         s.pop(owner, None)
         if not s:
-            self.steps.pop(nid, None)
+            steps.pop(nid, None)
 
     def op_wake(self, nid, ctl):
         """wake（spec §2.3）：等下一回合的馬上開；固定 interval 的回合中收到會提前結束這回合，early_tock 的回合中不起作用。"""
@@ -477,6 +513,8 @@ class Daemon:
                 self.save_nodes()
             except OSError as e:
                 self.log(ev="nodes-save-error", err=repr(e)[:300])
+        if self._paused_dirty:
+            self._save_paused_quiet()
         for nid, (tl, kill) in list(self.retiring.items()):
             if not tl.is_alive():
                 del self.retiring[nid]
@@ -488,9 +526,9 @@ class Daemon:
                     self._reap_mem[nid]["rescan"] = True
         for nid in list(self.reaping):
             th = self.reapers.get(nid)
-            if nid in self.retiring or nid in self.gone_tls or (th is not None and th.is_alive()):
-                continue
             mem = self._reap_mem.get(nid, {})
+            if nid in self.retiring or (th is not None and th.is_alive()) or (nid in self.gone_tls and not mem.get("deferred")):
+                continue
             if mem.get("clean") and mem.get("rescan"):
                 self.reap(nid, node_path(self.root, nid), "reap-rescan")
             elif mem.get("clean"):
@@ -562,14 +600,21 @@ class Daemon:
     def reap(self, nid, node, ev, why=None):
         """先記回收義務，再背景收任務；未確認乾淨保留 pgid，重開只靠身分掃描。"""
         known = self._pgids.pop(nid, set()) | self._reap_mem.get(nid, {}).get("known", set())
+        err = "回收意圖仍待補寫 nodes.json" if self._nodes_dirty else None
         if nid not in self.reaping:
             self.reaping[nid] = {"since": now(), "why": why or ev}
-            try:
-                self.save_nodes()
-            except OSError as e:
-                self._nodes_dirty = True
-                self.log(ev="nodes-save-error", node=nid, err=repr(e)[:300])
+            if err is None:
+                try:
+                    self.save_nodes()
+                except OSError as e:
+                    err = repr(e)[:300]
+                    self.log(ev="nodes-save-error", node=nid, err=err)
         self._reap_mem[nid] = {"known": known, "clean": False, "at": time.monotonic()}
+        if err is not None:
+            self._nodes_dirty = True
+            self._reap_mem[nid]["deferred"] = True
+            self.log(ev="reap-deferred", node=nid, err=err)
+            return
 
         def work():
             test_point("reap-before-kill")
@@ -649,10 +694,19 @@ class Daemon:
             self.log(ev="stop-sweep", groups=n, ok=clean)
             if held:
                 clean = False
-                try:
-                    self.save_nodes()
-                except OSError as e:
-                    self.log(ev="nodes-save-error", err=repr(e)[:300])
+                deadline = time.monotonic() + 2.0
+                while True:
+                    try:
+                        self.save_nodes()
+                        break
+                    except OSError as e:
+                        self._nodes_dirty = True
+                        if time.monotonic() >= deadline:
+                            self.log(ev="nodes-save-error", nodes=held, err=repr(e)[:300])
+                            print("aos7-daemon: 回收意圖寫不進 nodes.json（%s），重開後不會續收：%s" % (
+                                e, ", ".join(held)), file=sys.stderr, flush=True)
+                            break
+                        time.sleep(min(0.1, max(0.0, deadline - time.monotonic())))
             if clean:
                 try:
                     self.save_nodes(reaping={})
@@ -750,6 +804,8 @@ class Daemon:
         for th in list(self.reapers.values()):
             th.join(5)
         self._live.clear()
+        if self._paused_dirty:
+            self.guard(self._save_paused_quiet)
         self.guard(lambda: self.write_status(stopped=True))
         self.guard(lambda: self.log(ev="stop"))
         return 0

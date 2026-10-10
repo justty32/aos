@@ -106,6 +106,90 @@ class TestTimelineRounds(CoreCase):
             else:
                 tl.d.round_done.assert_called_once_with("a", debit=False)
 
+    def test_save_failure_retries_settlement_before_mark_owe(self):
+        # 每個入口先存失敗兩次；mark_owe／tick 都不能越過尚未落盤的結算。
+        for route in ("pending", "owe_round", "owe_base", "recovered", "tick_failed", "closed"):
+            with self.subTest(route=route):
+                tl = self.make_timeline()
+                tl.d.mark_owe = Mock(return_value=True)
+                tl.checked_round = 5
+                tl.d.owe = {"a": 4}
+                if route == "pending":
+                    tl.settle_pending = False
+                elif route == "owe_round":
+                    tl.owe_round = 5
+                elif route == "owe_base":
+                    tl.owe_base = 4
+                elif route == "recovered":
+                    tl.owe_round = 5
+                debit = route != "pending" and route != "tick_failed"
+                marks = 1 if route in ("tick_failed", "closed") else 0
+                attempts = []
+
+                def settle(_nid, debit=True):
+                    attempts.append(debit)
+                    self.assertEqual(tl.d.mark_owe.call_count, marks)
+                    self.assertEqual(prog.call_count, {"recovered": 1, "tick_failed": 1,
+                                                      "closed": 2}.get(route, 0))
+                    if len(attempts) < 3:
+                        if route in ("owe_round", "recovered"):
+                            self.assertEqual(tl.owe_round, 5)
+                        if route == "owe_base":
+                            self.assertEqual(tl.owe_base, 4)
+                        return False
+                    tl.d.stopping = True
+                    return True
+
+                reads = [True, False] if route == "recovered" else []
+                reads += [False] * 12
+                reply = (1, None, "failed") if route == "tick_failed" else (0, {"round": 5}, "")
+                with patch.object(tl.d, "round_done", side_effect=settle), \
+                        patch.object(tl, "check_round", side_effect=reads), \
+                        patch.object(tl, "prog", return_value=reply) as prog, \
+                        patch.object(tl, "backoff") as backoff, \
+                        patch.object(tl, "sleep_until") as sleep, \
+                        patch.object(tl.wake, "wait") as wait:
+                    tl._loop()
+                self.assertEqual(attempts, [debit] * 3)
+                self.assertIsNone(tl.settle_pending)
+                self.assertIsNone(tl.owe_round)
+                self.assertIsNone(tl.owe_base)
+                self.assertEqual(backoff.call_count, 1 if route == "tick_failed" else 0)
+                self.assertGreaterEqual(wait.call_count, 1)
+                sleep.assert_not_called()
+
+    def test_open_round_recovers_before_pending_settlement(self):
+        for owed in (None, "base", "round"):
+            with self.subTest(owed=owed):
+                tl = self.make_timeline()
+                tl.settle_pending = False
+                if owed == "base":
+                    tl.owe_base, tl.d.owe = 4, {"a": 4}
+                elif owed == "round":
+                    tl.owe_round = 5
+                tl.d.mark_owe = Mock(return_value=True)
+                actions = []
+
+                def prog(*args):
+                    actions.append("tock")
+                    return 0, {}, ""
+
+                def done(_nid, debit=True):
+                    actions.append("settle")
+                    self.assertFalse(debit)
+                    tl.d.stopping = True
+                    return True
+
+                with patch.object(tl, "check_round", side_effect=[True, False]), \
+                        patch.object(tl, "prog", side_effect=prog), \
+                        patch.object(tl.d, "round_done", side_effect=done):
+                    tl._loop()
+                self.assertEqual(actions, ["tock", "settle"])
+                self.assertIsNone(tl.settle_pending)
+                self.assertIsNone(tl.owe_base)
+                self.assertIsNone(tl.owe_round)
+                tl.d.mark_owe.assert_not_called()
+
     def test_backoff_clears_wake_and_caps_exponent(self):
         for fails in (0, 10 ** 4):   # 分別抓忙轉與大指數溢位
             with self.subTest(fails=fails):
