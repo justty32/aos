@@ -1,5 +1,4 @@
 """進門不寫檔、既有回條與一行錯誤契約。"""
-import json
 import os
 import time
 from pathlib import Path

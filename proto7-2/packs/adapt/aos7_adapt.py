@@ -8,18 +8,14 @@
 自己 node 的 round.json（框架起點）。核心不知道這個包。判定都走 aos7_fs.fact 的三態（N 不存在／OK／其餘不知道）。
 """
 import argparse
-import decimal
-import hashlib
 import json
-import math
 import os
-import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = os.path.dirname(os.path.dirname(HERE))           # proto7-2/
 sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "lib")]
-from aos7_fs import BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, fact, is_int, now, read_round, sweep_tmp, write_json  # noqa: E402
+from aos7_fs import BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, completed_round, fact, is_int, now, read_round, sweep_tmp, write_json  # noqa: E402
 
 from aos7_adapt_common import (
     NAME_RE, AS_RE, DECL_KEYS, REQUIRED, STEP_KINDS, CMP_KEYS, META, FRAME_KEYS, EXACT, FLOAT_MAX, dec,
@@ -38,12 +34,7 @@ from aos7_adapt_chain import (
 def completed_tock(path):
     """round.json 的 completed_tock：closed 取 round、open 取 round−1；其餘（不存在、讀不到、壞）＝None 不知道。
     （抄 budget 包同名函式；兩包共用時再搬進工具包。）"""
-    st, r, _ = read_round(path)
-    if st == ROUND_CLOSED:
-        return r["round"]
-    if st == ROUND_OPEN:
-        return r["round"] - 1
-    return None
+    return completed_round(path)
 
 
 # ---------- 框架與判定（spec §4、§5） ----------

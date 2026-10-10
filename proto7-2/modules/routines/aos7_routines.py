@@ -7,7 +7,7 @@ import re
 import sys
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path[:0] = [os.path.join(TOP, "lib"), os.path.join(TOP, "modules", "tools")]
-from aos7_fs import N, OK, LockTimeout, Unknown, edit_json, fact, test_point  # noqa: E402
+from aos7_fs import N, OK, LockTimeout, Unknown, edit_json, fact, say_line, test_point  # noqa: E402
 from aos7_taskside import task_env, wait_tock  # noqa: E402
 from aos_exec import run_target  # noqa: E402
 KINDS = ("routines", "schedule")
@@ -60,7 +60,7 @@ def due(row, kind, round, now):
     delta = round - int(last) if rounds and last else (now - instant(last)).total_seconds() if last else None
     return delta is None or delta < 0 or delta >= n
 def warn(why):
-    print("aos7-routines: " + " ".join(str(why).splitlines()), file=sys.stderr)
+    say_line("aos7-routines: ", why)
 def step(node, round, now, unknown=None):
     """unknown＝串列時（手動 ls --run）不印壞列（ls 會列）、把不確定收進去讓呼叫者決定退出碼。
     處理一回合；now 是 datetime 或 ISO 字串，不自行取時間，測試可直接傳假時間。

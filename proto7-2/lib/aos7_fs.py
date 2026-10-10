@@ -6,10 +6,12 @@ K 中斷＝不偵測，靠「先寫證據再動作」＋重做冪等＋清寫者
 import contextlib
 import datetime
 import errno
+import hashlib
 import json
 import os
 import re
 import stat
+import sys
 import time
 
 BIN = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin")
@@ -77,6 +79,17 @@ def test_point(name):
 def now():
     """給人看的時間字串（ISO 8601、毫秒）；邏輯不依賴牆鐘。"""
     return datetime.datetime.now().isoformat(timespec="milliseconds")
+
+
+def json_sha256(obj, separators=None):
+    """JSON 物件的 sha256 hex（sort_keys、ensure_ascii=False、UTF-8）；包拿來當內容指紋與去重鍵。"""
+    return hashlib.sha256(json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=separators)
+                          .encode("utf-8")).hexdigest()
+
+
+def say_line(prefix, msg):
+    """stderr 印一行：前綴＋訊息（多行併成一行），各包入口的錯誤訊息共用。"""
+    print(prefix + " ".join(str(msg).splitlines()), file=sys.stderr)
 
 
 # ---------- 讀寫檔（spec §0） ----------
@@ -224,6 +237,16 @@ def edit_json(path, fn, default=None, timeout=None):
 # ---------- 回合與總結（spec §2.2、§3、§7） ----------
 
 ROUND_OPEN, ROUND_CLOSED, ROUND_NONE = "open", "closed", "none"
+
+
+def completed_round(path, missing=None):
+    """round.json 判出「已完成的最後一回合」：已關＝round、開著＝round−1、不存在＝missing、不知道＝None。"""
+    st, r, _ = read_round(path)
+    if st == ROUND_CLOSED:
+        return r["round"]
+    if st == ROUND_OPEN:
+        return r["round"] - 1
+    return missing if st == ROUND_NONE else None
 
 
 def read_round(path):

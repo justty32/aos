@@ -7,7 +7,6 @@ import re
 import shlex
 import shutil
 import subprocess
-import sys
 import tempfile
 
 from wfnode_fill import fill_text

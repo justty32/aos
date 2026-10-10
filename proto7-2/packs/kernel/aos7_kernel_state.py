@@ -2,8 +2,6 @@
 來源的公開檔（birth.json、brain/task.json、round.json，只讀）。不呼叫核心會收程序的判定。"""
 import glob
 import stat
-import hashlib
-import json
 import os
 import re
 import sys
@@ -12,7 +10,7 @@ import uuid
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = os.path.dirname(os.path.dirname(HERE))           # proto7-2/
 sys.path[:0] = [os.path.join(TOP, "lib"), os.path.join(TOP, "modules", "tools")]
-from aos7_fs import BAD, N, OK, ROUND_CLOSED, ROUND_NONE, ROUND_OPEN, fact, is_int, read_round, write_json  # noqa: E402
+from aos7_fs import BAD, N, OK, completed_round, fact, is_int, json_sha256, write_json  # noqa: E402
 
 V = 1
 DONE_KEEP = 20
@@ -35,8 +33,7 @@ def config_path(node):
 
 
 def sha_of(cfg):
-    return hashlib.sha256(json.dumps(cfg, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-                          .encode("utf-8")).hexdigest()[:16]
+    return json_sha256(cfg, separators=(",", ":"))[:16]
 
 
 def _where(x):
@@ -212,12 +209,7 @@ def save_state(task, s):
 # ---------- 快照（§4） ----------
 
 def completed_tock(node):
-    st, r, _ = read_round(os.path.join(node, ".aos", "round.json"))
-    if st == ROUND_CLOSED:
-        return r["round"]
-    if st == ROUND_OPEN:
-        return r["round"] - 1
-    return 0 if st == ROUND_NONE else None
+    return completed_round(os.path.join(node, ".aos", "round.json"), missing=0)
 
 
 def _read(path):

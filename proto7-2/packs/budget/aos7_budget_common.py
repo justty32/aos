@@ -1,18 +1,14 @@
 """budget 共用路徑、業務鍵、grant 判定與本地回合鐘。"""
 import argparse
 import fcntl
-import hashlib
-import json
 import os
 import re
 import shlex
 import signal
-import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-from aos7_fs import (BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, U, Unknown, fact, is_int, locked, now,  # noqa: E402
-                     read_round, sweep_tmp, write_json)
+from aos7_fs import N, OK, completed_round, fact, is_int, json_sha256, say_line  # noqa: E402
 
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 CLOCK = "completed_tock"
@@ -46,7 +42,7 @@ def not_running(bud):
 
 
 def say(msg):
-    print("aos7-budget: " + " ".join(str(msg).splitlines()), file=sys.stderr)
+    say_line("aos7-budget: ", msg)
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -79,7 +75,7 @@ def ledger_running(bud, wait=0.5):
 
 
 def sha(obj):
-    return hashlib.sha256(json.dumps(obj, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+    return json_sha256(obj)
 
 
 def make_key(budget, holder, request):
@@ -118,12 +114,7 @@ def test_crash(bud, point):
 
 def completed_tock(node):
     """本 node 的 completed_tock：round.json closed 取 round、open 取 round−1；其餘（不存在、讀不到、壞）＝None 未知。"""
-    st, r, _ = read_round(os.path.join(node, ".aos", "round.json"))
-    if st == ROUND_CLOSED:
-        return r["round"]
-    if st == ROUND_OPEN:
-        return r["round"] - 1
-    return None
+    return completed_round(os.path.join(node, ".aos", "round.json"))
 
 
 def grant_issue(g, budget_id):
@@ -183,5 +174,4 @@ def judge(bud, holder, resource, gateway, ledger):
     if c >= g["until"]:
         return "denied", "已到期（c=%d ≥ until=%d）" % (c, g["until"]), c
     return "ok", None, c
-
 

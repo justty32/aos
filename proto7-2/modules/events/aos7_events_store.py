@@ -1,12 +1,11 @@
 """事件保存端：同鎖追加、恢復、輪替；完整換行是保存邊界（spec.md）。"""
-import hashlib
 import json
 import os
 import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "lib"))
-from aos7_fs import N, OK, Unknown, fact, is_int, locked, now, test_point, write_json  # noqa: E402
+from aos7_fs import N, OK, Unknown, fact, is_int, json_sha256, locked, now, test_point, write_json  # noqa: E402
 
 DEFAULTS = {"keep_segments": 4, "segment_bytes": 1048576, "max_record_bytes": 65536}
 CHANNELS = ("obs", "must")
@@ -99,7 +98,7 @@ def _records(path):
 
 def status_key(ev):
     """daemon 最近事件的去重鍵（存 state.status_last，跨重起）。"""
-    return hashlib.sha256(json.dumps(ev, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    return json_sha256(ev)
 
 
 def _derive(st, obj):

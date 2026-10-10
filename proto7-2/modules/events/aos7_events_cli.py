@@ -4,9 +4,12 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "lib"))
+from aos7_fs import say_line  # noqa: E402
+
 
 def say(msg):
-    print("aos7-events: " + " ".join(str(msg).splitlines()), file=sys.stderr)
+    say_line("aos7-events: ", msg)
 
 
 class Parser(argparse.ArgumentParser):
