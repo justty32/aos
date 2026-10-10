@@ -7,7 +7,7 @@
 ## 誰做什麼
 
 <!-- wf-nav -->
-- **我（Fable，頂層）只當調度者**，不親自做內容，只親手做最難的那件。使用者 2026-08-30 說「頂層不要做太多事」，**09-24 再講更嚴**「你不要自己做事，盡量交給 agent」。頂層在主 repo 親手做的**只剩 `git merge --ff-only`＋`git push`**；重跑驗證、解 rebase 衝突、改 SESSION-LOG／WAIT_USER、清 backlog、報告存檔全派出去。收線＝讀隊長附的證據逐條對，不重跑；真要獨立驗證就派一條便宜的線去跑。想「順手」做小事時先問：能不能一句話交給別人？這條不看頂層跑哪顆模型，頂層是 Opus 也一樣。
+- **頂層（早期是 Fable，10-09 起多為 Opus）只當調度者**，不親自做內容，只親手做最難的那件。使用者 2026-08-30 說「頂層不要做太多事」，**09-24 再講更嚴**「你不要自己做事，盡量交給 agent」。頂層在主 repo 親手做的**只剩 `git merge --ff-only`＋`git push`**；重跑驗證、解 rebase 衝突、改 SESSION-LOG／WAIT_USER、清 backlog、報告存檔全派出去。收線＝讀隊長附的證據逐條對，不重跑；真要獨立驗證就派一條便宜的線去跑。想「順手」做小事時先問：能不能一句話交給別人？這條不看頂層跑哪顆模型，頂層是 Opus 也一樣。
 - **碰程式碼：Opus 隊長＋codex 工人**（10-09 起）：寫碼與寫測試派 `gpt-6.1-sol`（核心難件用 astra high），審查 `gpt-6-astra` read-only high，跑驗證 `gpt-6-luna`；隊長 Opus 寫任務書、審 diff、commit。Claude 端碰程式碼**仍不派 Sonnet**（09-30 他說「不要 sonnet」「就 opus」），**Sonnet 只做純文字小事**。09-30～10-08 codex 只剩 astra 時碰程式碼一律 Opus。
 - 一個團隊＝一個 **Opus 隊長**，隊長可以自己再派 Opus／Sonnet 下去；人數沒有上限（09-05 起）。隊長寫任務書、審 diff、跑測試、commit。
 - **codex 可用 slug（10-09 家機實測 9 個都可用，codex-cli 0.161.0）**：`gpt-6.1-sol`（coding 主力）、`gpt-6-astra`、`gpt-6-sol`、`gpt-6-luna`、`gpt-5.6-sol`／`-terra`／`-luna`、`gpt-reserve`、`gpt-5.5`。級別暫定見 [team-model](../team-model.md)，試水溫結果見 [probe](../team-model/probe-2026-10-09.json)。slug 寫錯（如 `gpt-sol-6.1`、裸 `gpt-sol`）會回「not supported」；他點名的型號先試，不行再問。codex **不 commit**。
@@ -20,6 +20,8 @@
 - **審查／報告類產出一定要求寫進 repo 內的路徑**，不要只留在 scratchpad 或靠最後一則訊息——agent 的回報只有最後一輪會回到我手上，主篇曾因此遺失一次。
 - 別用 `TaskOutput` 讀 agent 任務（會倒整份 transcript 進 context）；等通知即可。
 - 實作層級的裁決我可以代裁並寫進交接書（多隊共用的契約由我先定，才能真並行）；**方向性的留給使用者**（鐵律 5），記 [WAIT_USER](../../WAIT_USER.md)。
+
+使用者 10-09 起指示：隊伍遇方向題不停線，回報頂層代定、記進 [decisions-日期](../../../proto7-2/notes/decisions-2026-10-10.md)。
 
 ### codex 呼叫與沙箱
 
