@@ -33,3 +33,19 @@
 - 留著｜起動時 `save_paused`／`save_nodes`／`gen.json` 寫失敗仍是未捕捉例外（traceback、退 1）：要改就得定新退出碼，屬退出碼契約，不在本輪範圍
 - 留著｜停機時回收意圖重試 2 秒仍寫不進＝重開後不會續收（只剩 stderr 一行）；沒有別的落盤處可放，要不要「寫不進就不退出」是方向問題
 - B｜頂層（使用者說「隨意」）：FX2 遺留兩題照頂層建議——① 啟動時存檔失敗不另立退出碼，維持退 1；② 關機前回收意圖重試約 2 秒仍寫不進就印一行照常退出（寧可下次漏收，不卡住）；pause 存不進回 ok:false 請重送（同 register）照收
+
+## loop14 MN1（選單核心＋玩具選單，blueprint-scaffold1 §7 第一線）
+
+- 結果｜新包 `packs/menu/`：`aos7-menu run <node> <menu.json> [--llm M|--reply F]`＋`status`；純函式 `step`／`after`、選單驗證、五種格子檢查、先存 state 再呼叫、工具目錄 `tools.json`（argv 不經 shell）；玩具 `examples/hello/` 由 astra 寫。真 AI：luna／luna-low 各 5 次走 hello 10/10 退 0、0 次重問、每次 2 呼叫約 3.5k token → `packs/menu/spec.md`
+- 結果｜hello 第一版（第一層只問「回給誰」、沒附來信）真 AI 10/10 都選出口；改成把兩封短信寫進該層 ask、第二層用 `set` 帶對方那句後 10/10 過。教訓：每次呼叫是單獨一問，選單作者要把「做這層決定所需的資訊」放進這層，不然笨模型照實選出口
+- C｜使用者「每層 2～5 個編號選項」解讀為**含出口**的顯示編號；沒有 `when` 的層靜態檢查，有 `when`／`from` 的層顯示時檢查。藍圖 §3 範例 `which` 層（5 檔＋出口＝6）會被擋，MN2 要改形（例：已交的檔用 `when: new:` 藏起、交齊再顯示「都交齊了」）
+- C｜只有格子、沒有 options 的層＝隱含選項「交出這一格」＋出口，仍走 `選：N`／`格：` 回法（藍圖 write 層沒寫出口，改為每個問的層都必有 exit）
+- C｜llmcall `--call` 名不能有 `/`：一律 `menu-`＋sha256(nonce + "\n" + call_id) 前 32 碼；log／state 仍記藍圖的 `menu/<run>/<層>/<第幾次>`
+- C｜`step` 不做 I/O：寫檔與工具由驅動做，結果經 `after()` 餵回；工具與寫檔先存 pending 再做，被殺重跑會再做一次（登記的工具要能重跑）
+- C｜練習用的 AI＝選單旁 `practice.json` 第 k 句（k＝本 run 第幾次呼叫，被殺重跑拿同一句）；grant gateway 是 llm.fake 時也送這句，測試可數真送次數
+- C｜為 MN2 先備的功能（MN2 不能改 aos7_menu.py）：`--var`／`--brief`／`--run`、選項 `when`（required_done／required_missing／`new:<模板>`）、`options: {"from":"done","only":[…]}`、層 `show`（改檔時附那檔）、做事層 `ok`／`fail`／`max_rounds`、工具退 0／1 都把一行 JSON 合進變數（只清 var_owner 仍歸該工具的鍵，set 覆寫移除歸屬、字串截 600 字）、`required`／slot prefix／sections 可用模板
+- C｜帳任務沒在跑＝退 1 但不記停下（起好照原樣再跑接續）；llmcall 退 1／2 記停下退 1（同 FX1 B10-11）；llmcall 退 4 記 journal、命令結束最多一行提醒
+- C｜寫檔安全：out/ 或任一段是符號連結拒寫退 2；暫存檔同資料夾隨機名 `O_EXCL|O_NOFOLLOW` 再 rename；run 鎖不等待，忙退 3
+- C｜state 多 `journal`（log.jsonl 每次照它重寫，被殺在 rename 後也不漏行）、`initial_vars`、`var_owner`（每鍵目前歸屬）、`nonce`（新 run 隨機 16 hex）、`fence`、`code`；journal 隨步數長，hello／aos-tool 量級（≤百步）不處理
+- C｜工具目錄範例登記 `gates-check`、`skills-pick`、`ctl-help`（aos7-ctl 沒有唯讀子命令，只登記 `daemon --help`）；格式是「名字→argv 模板＋參數＋輸出」，之後加抽屜／寄信這類標準工具只是多幾列，不擋
+- 待｜MN2 可開（AP5 已進 main，MN1 進 main 後）；MN3 等 MN2；MN4（README／ADVANCED／新手）MN1 進 main 後可與 MN2 並行

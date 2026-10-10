@@ -559,6 +559,21 @@
    "exempt": {
     "unsure": "轉址 stub 不讀寫狀態，不確定案在 aos7-metrics"
    }
+  },
+  {
+   "pack": "menu",
+   "team": "MN1",
+   "name": "aos7-menu",
+   "entry": "packs/menu/bin/aos7-menu",
+   "unsure": {
+    "argv": [
+     "status",
+     "n"
+    ],
+    "files": {
+     "n/menu/hello/state.json": "{壞掉"
+    }
+   }
   }
  ]
 }

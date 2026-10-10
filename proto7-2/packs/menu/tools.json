@@ -1,0 +1,6 @@
+{"v": 1, "tools": {
+  "hello-send": {"about": "把回覆交給收件人（玩具）", "argv": ["{py}", "{pack}/examples/hello/send.py", "{run_dir}", "{to}"], "args": ["to"], "out": "json-line", "timeout": 30},
+  "gates-check": {"about": "離線驗候選的三關", "argv": ["{py}", "{top}/packs/author/bin/aos7-gates", "check", "{request}", "{candidate}"], "args": ["request", "candidate"], "out": "code", "timeout": 300},
+  "skills-pick": {"about": "照題目挑一本技能", "argv": ["{py}", "{top}/modules/skills/aos7-skills", "pick", "{node}", "{question}"], "args": ["question"], "out": "code", "timeout": 300},
+  "ctl-help": {"about": "只看 daemon 控制指令的說明", "argv": ["{py}", "{top}/bin/aos7-ctl", "daemon", "--help"], "args": [], "out": "code", "timeout": 30}
+}}
