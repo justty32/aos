@@ -12,8 +12,9 @@ from pathlib import Path
 from aos7_fs import N, OK, U, Unknown, edit_json, fact, locked, now, write_json
 
 TOP = Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(TOP / "packs/budget")]
+sys.path[:0] = [str(TOP / "packs/budget"), str(TOP / "packs/llmcall")]
 import aos7_budget
+from aos7_llmcall_exit import answered, delivered, meaning
 
 DEFAULT_BUDGET = "budget/llm"
 SYSTEM = "你是 skill 選擇器。從清單挑一個最適合題目的 skill，只回它的 name，不要其他字；都不適合回 none。"
@@ -217,10 +218,14 @@ def ask_ai(node, args, result, log):
         path.unlink(missing_ok=True)
     said = [line for line in proc.stderr.splitlines() if line.strip()]
     said = said[-1].strip().removeprefix("aos7-llmcall: ") if said else None
-    if proc.returncode not in (0, 4):
+    if not delivered(proc.returncode):
         rc = proc.returncode if proc.returncode in LLMCALL_SAYS else 3
         return rc, (said if rc == proc.returncode else None) or LLMCALL_SAYS[rc]
     receipt = json.loads(proc.stdout.strip().splitlines()[-1])
+    if not answered(proc.returncode, receipt):
+        if isinstance(receipt, dict) and receipt.get("outcome") not in (None, "answered"):
+            return 1, LLMCALL_SAYS[1]
+        raise TypeError("回條沒有可確認的回答")
     log.update(answer=receipt["text"], used=receipt["used"])
     if not isinstance(log["answer"], str):
         raise TypeError("回條 text 不是字串")
@@ -229,7 +234,7 @@ def ask_ai(node, args, result, log):
         rc, message = show(node, result, answer, log)
     except ValueError as e:
         rc, message = 1, str(e) + "。跑 index 看有哪些名字，換個說法再挑"
-    if proc.returncode == 4:                          # 已交付、帳沒清：照用，轉述 llmcall 那句（挑不到也要提醒）
+    if meaning(proc.returncode) == 'delivered_unsettled':  # 已交付、帳沒清：照用，轉述 llmcall 那句（挑不到也要提醒）
         unsettled = said or "已交付但帳沒清。用 aos7-llmcall status 看證據並對帳"
         message = message + "。另外：" + unsettled if message else unsettled
     return rc, message

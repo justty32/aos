@@ -19,7 +19,7 @@ node 信箱的未辦信、`done/`、`.tmp/`、`.handled/`、`.seen` 等都在 `R
 3. 在 delivery 鎖下 link 原信進 done，再 unlink 頂層；既有同 id 表示已發布，不同 id 則重試 `<YYYYmmddTHHMM>_<n>-<寄件者>-<STATUS>.md` 避撞，絕不覆蓋歷史。
 4. 從 must 最前面開始，僅確認連續 `kind=mail.request` 且 id 對到已辦 REQUEST 的事件；未辦或非 mail 事件擋住後續 ack。
 
-read 遇到已有日誌的頂層信會補做 2–4，並印 `復原`；搬移後被殺也會在下一次 read／done 補 ack。ack 從本地 `.acked`（無檔為 0）+1 用 in-process events read 掃描；retention 缺口表示已確認淘汰，跳到缺口後繼續，其他缺口或 errors 停止。有進展才起一次公開 CLI `aos7-events ack --events DIR N`，成功後寫回傳值到 `.acked`；無進展零個子程序。本地只寫 events 確認值，ack 後被殺可重掃已辦信，舊段淘汰也能繼續。保留 `.handled` 與所有鎖檔，不要人工清掉它們。
+read 遇到已有日誌的頂層信會補做 2–4，並印 `復原`；搬移後被殺也會在下一次 read／done 補 ack。ack 從本地 `.acked`（無檔為 0）+1 用 in-process events read 掃描；`.acked` 必須是非負整數（布林值不算），壞 JSON 或型別錯誤保留原檔、不掃描也不確認提醒，CLI 退出 3 並用一行白話提示恢復原檔再試，函式 API 丟 `OSError`。retention 缺口表示已確認淘汰，跳到缺口後繼續，其他缺口或 errors 停止。有進展才起一次公開 CLI `aos7-events ack --events DIR N`，成功後寫回傳值到 `.acked`；無進展零個子程序。本地只寫 events 確認值，ack 後被殺可重掃已辦信，舊段淘汰也能繼續。保留 `.handled` 與所有鎖檔，不要人工清掉它們。
 
 只在對方已有 events/ 資料夾時，REQUEST 的 must 以 `publish(..., kind="mail.request", event_id=信id, payload={id,from,to,file}, must=True, node=收件者)` 發布。full／unknown 或發布例外只印 stderr，send 仍退出 0；請求仍可由 inbox／audit 發現。ack 經 `aos7-events ack --events DIR N` 子程序；本包不 import events store。確認失敗保留位置，下次重試。
 

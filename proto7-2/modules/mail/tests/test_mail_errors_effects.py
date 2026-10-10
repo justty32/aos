@@ -3,6 +3,31 @@ from _mailcase import *
 
 
 class Tests(MailCase):
+    def test_bad_ack_cursor_unknown_preserves_evidence(self):
+        """A10-08：壞游標不猜成 0、不 ack、不保存讀信快照；CLI 一行退 3。"""
+        events = self.root / 'bob/events'
+        events.mkdir(parents=True)
+        sent = self.send()
+        marker = self.box('bob') / '.acked'
+        for content in ('[]', '"1"', '{}', 'null', 'true', '-1', '1.5', '{bad'):
+            with self.subTest(content=content):
+                marker.write_text(content)
+                with patch.object(ackmod, 'events_read', return_value={'records': [], 'gaps': [], 'errors': []}) as scan, patch.object(ackmod, 'event_ack', return_value=None) as confirm:
+                    with self.assertRaises(OSError):
+                        mail.ack(self.root, 'bob')
+                    scan.assert_not_called()
+                    confirm.assert_not_called()
+                p = self.cli('read', 'bob', rc=3)
+                self.assertEqual(len(p.stderr.splitlines()), 1)
+                self.assertTrue(p.stderr.startswith('aos7-mail: 不確定：'))
+                self.assertIn('.acked', p.stderr)
+                self.assertNotIn('Traceback', p.stderr)
+                self.assertEqual(marker.read_text(), content)
+                self.assertTrue(Path(sent['sent']).exists())
+                self.assertFalse((self.box('bob') / '.numbers.json').exists())
+                self.assertFalse((self.box('bob') / '.seen').exists())
+                self.assertEqual(self.acked('bob'), 0)
+
     def test_request_events_opt_in(self):
         with patch.object(mail, 'publish', wraps=mail.publish) as pub:
             self.send()

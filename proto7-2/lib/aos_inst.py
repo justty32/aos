@@ -11,7 +11,7 @@ aos_directives.py（機制說明沿用 proto5/spec/directives/），這個檔只
 - 解完才驗型別（頂層要物件、`argv` 要非空字串陣列、路徑欄要字串、`envs` 要物件）。
 
 驗不過就丟 `InstError(code, msg)`，`str(e)` 是「代號: 白話」；指示詞機制丟的 `DirectiveError`
-在 `load()` 裡包成同形狀的 `InstError`（代號照 directives.md 第 6 節），呼叫者只要接一種。
+在 `load()`／`load_obj()` 裡包成同形狀的 `InstError`（代號照 directives.md 第 6 節），呼叫者只要接一種。
 
 `load(path, base)` 回一個執行者能直接用的 dict（路徑都是絕對的，""＝沒寫）：
 

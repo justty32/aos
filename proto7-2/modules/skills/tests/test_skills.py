@@ -253,7 +253,7 @@ class TestSkills(CoreCase):
             for stderr in ("noise\naos7-llmcall: " + ("不確定：" if code == 3 else "") + "原因。處理\n", ""):
                 with self.subTest(code=code, stderr=stderr), patch("aos7_skills.aos7_budget.ledger_running", return_value=True), patch(
                         "aos7_skills.subprocess.run", return_value=subprocess.CompletedProcess([], code,
-                        json.dumps({"text": "coding", "used": 4}), stderr)):
+                        json.dumps({"outcome": "answered", "text": "coding", "used": 4}), stderr)):
                     out, err = io.StringIO(), io.StringIO()
                     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
                         rc = main(["pick", str(self.node), "用技能：python tests"])
@@ -266,13 +266,35 @@ class TestSkills(CoreCase):
                     self.assertEqual(bool(out.getvalue()), code == 4)
                     self.assertFalse(list((self.skills / ".pick").glob("*.json")))
         for receipt, expected in (("broken", 3), ('{}', 3), ('{"text": null, "used": 0}', 3),
-                                  ('{"text":"outside", "used": 0}', 1)):
+                                  ('{"outcome":"answered", "text":"outside", "used": 0}', 1)):
             with self.subTest(receipt=receipt), patch("aos7_skills.aos7_budget.ledger_running", return_value=True), patch(
                     "aos7_skills.subprocess.run", return_value=subprocess.CompletedProcess([], 0, receipt, "")):
                 with contextlib.redirect_stderr(io.StringIO()) as err:
                     rc = main(["pick", str(self.node), "用技能：python tests"])
                 self.assertEqual(rc, expected)
                 self.assertEqual(len(err.getvalue().splitlines()), 1)
+
+    def test_llmcall_unsettled_failure_does_not_pick_skill(self):
+        self.skill("coding", "python tests")
+        bd = self.node / "budget/llm"
+        write_json(str(bd / "grant.json"), {"holder": "skills", "gateway": "llm.fake"})
+        for billing in ("pending", "overrun"):
+            with self.subTest(billing=billing):
+                receipt = dict(outcome="failed", billing=billing, text="coding", used=4)
+                proc = subprocess.CompletedProcess([], 4, json.dumps(receipt), "aos7-llmcall: 帳未清。查看回條\n")
+                out, err = io.StringIO(), io.StringIO()
+                with patch("aos7_skills.aos7_budget.ledger_running", return_value=True), \
+                        patch("aos7_skills.subprocess.run", return_value=proc), \
+                        contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    self.assertEqual(main(["pick", str(self.node), "用技能：python tests"]), 1)
+                self.assertEqual(out.getvalue(), "")
+                self.assertEqual(len(err.getvalue().splitlines()), 1)
+                self.assertTrue(err.getvalue().startswith("aos7-skills: "))
+                log = json.loads((self.skills / ".pick/log.jsonl").read_text().splitlines()[-1])
+                self.assertEqual(log["rc"], 1)
+                self.assertIsNone(log["picked"])
+                self.assertIsNone(log["answer"])
+                self.assertFalse(list((self.skills / ".pick").glob("*.json")))
 
     def test_review_fixes(self):
         """審查補：帳未清也要提醒、bad 參數不動檔、grant 讀不到算不確定、同題並行請求檔不互刪、記錄並行不丟行。"""
@@ -282,7 +304,7 @@ class TestSkills(CoreCase):
         for text, rc in (("none", 1), ("outside", 1)):
             with self.subTest(text=text), patch("aos7_skills.aos7_budget.ledger_running", return_value=True), patch(
                     "aos7_skills.subprocess.run", return_value=subprocess.CompletedProcess(
-                        [], 4, json.dumps({"text": text, "used": 4}), "aos7-llmcall: 帳沒清。對帳\n")):
+                        [], 4, json.dumps({"outcome": "answered", "text": text, "used": 4}), "aos7-llmcall: 帳沒清。對帳\n")):
                 with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
                     self.assertEqual(main(["pick", str(self.node), "用技能：python tests"]), rc)
                 self.assertEqual(len(err.getvalue().splitlines()), 1)

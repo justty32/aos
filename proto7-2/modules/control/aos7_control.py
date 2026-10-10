@@ -1,7 +1,7 @@
 """控制包：restart／reload 在請求端做——先在 tasks.json 加一項釘同槽的 once，再寫核心的 kill（帶 run）。
 spec 見同資料夾的 README.md。kernel 可以直接 import（把 proto7-2/modules/control、modules/tools 與 lib 加進 sys.path）。
 
-    restart(node, slot, why="", reload=False, req_id=None, by=None) → {"ok", "msg", "run", "req_id", "ctl", "once", "diff"?}
+    restart(node, slot, why="", reload=False, req_id=None, by=None) → {"ok", "msg", "run", "req_id", "ctl", "once", "diff"?, "outcome"?}
 
 核心只認得 kill；這裡只用核心公開的檔案：birth.json、tasks.json（拿表鎖、G1 三態）、槽的 ctl.json。
 """
@@ -23,10 +23,12 @@ def dyn_mounts(birth):
 
 def reload_item(node, birth):
     """reload：tasks.json 裡同名的第一個非 once 項，完整驗證過（核心 aos7_tick.check_item）才用，去掉排程欄位；
-    掛載＝項目宣告加上沒被宣告接管的執行中加掛。回 (定義, None) 或 (None, 說明)。"""
+    掛載＝項目宣告加上沒被宣告接管的執行中加掛。回 (定義, None) 或 (None, 說明)；讀取故障丟 Unknown。"""
     import aos7_tick
     st, t = fact(os.path.join(node, ".aos", "tasks.json"))
     if st != OK:
+        if st != N:
+            raise Unknown("tasks.json %s" % t, kind=st)
         return None, "tasks.json %s" % ("不存在" if st == N else t)
     items = t.get("tasks") if isinstance(t, dict) else None
     found = [i for i in items or [] if isinstance(i, dict) and i.get("name") == birth.get("name") and i.get("mode") != "once"]
@@ -69,7 +71,8 @@ def done(slot, birth, req_id):
 
 
 def restart(node, slot, why="", reload=False, req_id=None, by=None):
-    """重起 node 上 slot 現在的 run：同一個槽、新 run，任務自己寫的 state 接得上。回結果 dict（`ok` 是請求端做完了沒）。
+    """重起 node 上 slot 現在的 run：同一個槽、新 run，任務自己寫的 state 接得上。回結果 dict（`ok` 是請求端做完了沒；
+    `ok:false` 的 `outcome` 區分 unknown 與 refused，不改其他欄位的意義）。
 
     1. 讀 birth.json 拿 run 與定義（reload 改取 tasks.json 同名項）；讀不到、壞掉＝不做。
     2. 拿 tasks.json.lock 加一項 once：`slot` 釘同槽、`x.restart_of`＝原 run id、`x.req_id`＝這件請求的 id；表上已有同槽同 req_id
@@ -85,7 +88,8 @@ def restart(node, slot, why="", reload=False, req_id=None, by=None):
     st, birth = fact(os.path.join(fslot, "birth.json"))
     if not (st == OK and isinstance(birth, dict) and isinstance(birth.get("run"), int) and birth.get("name")):
         return {"ok": False, "msg": "槽 %s 的 birth.json %s，不知道要重起哪一次，沒做" % (
-            slot, birth if st not in (OK, N) else ("不存在" if st == N else "內容不合")), "req_id": req_id}
+            slot, birth if st not in (OK, N) else ("不存在" if st == N else "內容不合")), "req_id": req_id,
+            "outcome": "refused" if st == N else "unknown"}
     run = birth["run"]
     rid = "%s#%d" % (slot, run)
     if (birth.get("x") or {}).get("req_id") == req_id:
@@ -93,9 +97,14 @@ def restart(node, slot, why="", reload=False, req_id=None, by=None):
         return done(slot, birth, req_id)
     diff = None
     if reload:
-        item, why_not = reload_item(node, birth)
+        try:
+            item, why_not = reload_item(node, birth)
+        except Unknown as e:
+            return {"ok": False, "msg": "%s；沒做（沒 kill）" % e, "run": rid, "req_id": req_id,
+                    "outcome": "unknown"}
         if item is None:
-            return {"ok": False, "msg": "%s；沒做（沒 kill）" % why_not, "run": rid, "req_id": req_id}
+            return {"ok": False, "msg": "%s；沒做（沒 kill）" % why_not, "run": rid, "req_id": req_id,
+                    "outcome": "refused"}
         diff = def_diff(birth, item)
     else:
         item = {k: birth[k] for k in DEF_KEYS if k in birth}
@@ -125,7 +134,7 @@ def restart(node, slot, why="", reload=False, req_id=None, by=None):
         return done(slot, e.birth, req_id)
     except Unknown as e:
         return {"ok": False, "msg": "%s；沒做（沒 kill）" % ("tasks.json.lock 一秒內拿不到" if e.kind == "lock" else e),
-                "run": rid, "req_id": req_id}
+                "run": rid, "req_id": req_id, "outcome": "unknown"}
     test_point("restart-after-append")
     ctl = os.path.join(fslot, "ctl.json")
     write_json(ctl, {"op": "kill", "run": run, "by": by or "control", "why": why or "restart", "id": req_id})

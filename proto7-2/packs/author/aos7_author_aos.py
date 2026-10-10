@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 TOP = HERE.parents[1]
 sys.path.insert(0, str(HERE / 'checkers'))
 from aos_three_gates import REVIEW_CRITERIA, request, brief, strict
-from aos7_author_llm import APPRENTICE_LADDER, AUTO, LADDER, climb, rung_call  # noqa: E402
+from aos7_author_llm import APPRENTICE_LADDER, AUTO, LADDER, climb, delivery_problem, rung_call  # noqa: E402
 
 SKILLS = TOP / 'modules/skills/aos7-skills'
 LLMCALL = HERE.parent / 'llmcall/bin/aos7-llmcall'
@@ -129,9 +129,9 @@ def delivery(a, req, model, raw, prefix='', explicit=True):
     info = call_info(model, req['rid'], raw, a.call if explicit else None, prefix, a.reserve)
     receipt, info = llmcall(Path.cwd(), a.budget, info['call_id'], ({'rv-': 'author-review/', 'ln-': 'author-learn/'}.get(prefix, 'author/')) + req['rid'], raw,
                             a.reserve, a.deadline, a.patience, None, model)
-    why = None
-    if info['exit'] not in (0, 4) or receipt.get('outcome') != 'answered' or not isinstance(receipt.get('text'), str):
-        why = 'unknown' if info['exit'] == 3 else 'invalid'
+    why, error = delivery_problem(info['exit'], receipt)
+    if why:
+        info['_delivery_error'] = error
     return receipt.get('text'), info, why
 
 
@@ -185,7 +185,7 @@ def learn(a, req, out):
     text, info, why = delivery(a, req, a.llm, raw, 'ln-')
     out.update(into=str(into), added=[], llm=info)
     if why:
-        return dict(out, why=why, _rejected=why == 'invalid')
+        return dict(out, why=why, error=info.pop('_delivery_error', None), _rejected=why == 'invalid')
     lines = text.splitlines()
     if not 1 <= len(lines) <= 8 or any(not x.startswith('- ') or not x[2:].strip() or len(x) > 200 for x in lines) or len(set(lines)) != len(lines):
         return dict(out, why='invalid', error='踩坑條目格式不合或重複', _rejected=True)
@@ -261,7 +261,7 @@ frontmatter 必須是 ---、name: {a.skill}、description: 一行（≤300 字�
     text, info, why = delivery(a, req, a.llm, raw, 'ln-')
     out['llm'] = info
     if why:
-        return dict(out, why=why, _rejected=why == 'invalid')
+        return dict(out, why=why, error=info.pop('_delivery_error', None), _rejected=why == 'invalid')
     try:
         data = text.encode('utf-8')
         if len(data) > 8192:
@@ -406,7 +406,7 @@ def propose_one(a, req, out):
         text, info, why = delivery(a, req, a.llm, raw)
         out['llm'] = info
         if why:
-            return dict(out, why=why, _rejected=why == 'invalid')
+            return dict(out, why=why, error=info.pop('_delivery_error', None), _rejected=why == 'invalid')
         candidate = Path(a.out).resolve() if a.out else Path.cwd() / 'author/aos' / req['rid'] / (info['call_id'] + suffix)
         candidate.parent.mkdir(parents=True, exist_ok=True)
         candidate.write_bytes(text.encode('utf-8'))
@@ -441,7 +441,7 @@ def propose_checks(a, req, out, candidate, snapshot, data):
             text, info, why = delivery(a, req, a.review_llm, raw, 'rv-', explicit=False)
             out['review'] = {'llm': info, 'path': None}
             if why:
-                return dict(out, why=why, _rejected=why == 'invalid')
+                return dict(out, why=why, error=info.pop('_delivery_error', None), _rejected=why == 'invalid')
             path = candidate.parent / ('review-' + info['call_id'] + '.json')
             path.write_bytes(text.encode('utf-8'))
             out['review']['path'] = str(path)

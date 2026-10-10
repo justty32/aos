@@ -436,7 +436,7 @@ stateDiagram-v2
 <div class="tbl"><table>
 <tr><th>欄位</th><th>意思</th></tr>
 <tr><td><code>name</code>／<code>mode</code></td><td>槽名；<code>each</code>（預設）／<code>keep</code>／<code>once</code></td></tr>
-<tr><td><code>argv</code> 或 <code>inst</code></td><td>直接跑，或交給 aos-exec 跑 inst JSON。起任務的環境只帶核心的六個 <code>AOS7_*</code> 變數，不帶繼承來的</td></tr>
+<tr><td><code>argv</code> 或 <code>inst</code></td><td>直接跑，或交給 aos-exec 跑 inst JSON。起任務的環境只帶核心的六個 <code>AOS7_*</code> 變數，不帶繼承來的（唯一例外：明列放行 <code>AOS7_LITELLM_KEY</code>，金鑰只經環境、不落地）</td></tr>
 <tr><td><code>from_round</code>／<code>until_round</code>／<code>max_live</code></td><td>從第幾回合起、到第幾回合停、同名最多同時跑幾個</td></tr>
 <tr><td><code>mounts</code>／<code>enabled</code>／<code>x</code></td><td>掛別人的資料夾；開關；<code>x</code> 欄核心不看，原樣抄進 birth.json</td></tr>
 </table></div>

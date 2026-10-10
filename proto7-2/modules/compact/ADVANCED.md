@@ -42,11 +42,13 @@ jsonl 每個 LF 分隔的非空行算一則；open 是物件 `open: true`／`sta
 ## 退出碼與出錯時
 
 - 0 做到（含不需要）。
-- 1 做不到（目前只有 forget 撞上未完成的舊整理，接完後這次沒忘掉任何則）。
+- 1 做不到（forget 撞上未完成的舊整理，接完後這次沒忘掉任何則；或 llmcall 確定失敗／拒絕生成的請求）。
 - 2 你給的不對（參數、設定或範圍不合；什麼都沒動）。
-- 3 不確定（鎖忙、摘要沒拿到、讀寫故障或未預期錯誤；已有 pending 留著，照原樣再跑一次會接續）。鎖忙時等目前的整理完成再跑。
+- 3 不確定（鎖忙、摘要是否交付不確定、回條缺摘要、讀寫故障或未預期錯誤；已有 pending 留著，照原樣再跑一次會接續）。鎖忙時等目前的整理完成再跑。
 
 出錯時 stdout 仍有一行 JSON，stderr 一行人話：`aos7-compact: <發生什麼>。<怎麼辦>`；退 3 以 `aos7-compact: 不確定：` 開頭。成功時 stderr 為空。共通規則見 [blueprint-errors](../../notes/blueprint-errors.md)。
+
+llmcall 退出 0 或 4 時，compact 仍須確認回條 outcome 為 answered、text 是非空字串，才收摘要並完成整理；4 只表示帳仍 pending／overrun，答沒答成要看 outcome，結帳留給 llmcall 與帳任務處理。回條明確未答成（例如 failed／rejected）或 llmcall 退出 1／2 時 compact 退出 1：模型那邊確定失敗或 compact 生成的請求被拒，pending 已寫，所以不是使用者用法錯的退出 2；先看回條與請求、修正原因再跑。llmcall 退出 3 或未知碼、回條缺可確認的回答時 compact 退出 3。這些未答成或未確認情況都保留 pending 與原文。
 
 整理中斷會留 pending，下次 `now`／`watch` 先接完；forget 同指令重跑會回報上次結果，不再刪一次，若接完的是別的 pending 則退出 1，先用 --dry-run 重看再指定範圍。
 
@@ -96,11 +98,11 @@ PY
 )
 ```
 
-預期成功，30 則變 6 則，帳 inflight 回 0；fake 回本機摘要文字。每次沿 pending 的 call_id 重跑，非 0 不拿半張回條替換原文；未成功的 pending 留待下次 now／watch 接續。
+預期成功，30 則變 6 則，帳 inflight 回 0；fake 回本機摘要文字。每次沿 pending 的 call_id 重跑；llmcall 退出 0／4 且回條 outcome 為 answered、text 是非空字串才取摘要，未答成或未確認的 pending 留待下次 now／watch 接續。
 
 ## 用真 AI 摘要
 
-先開自己的 LiteLLM，設定 `AOS7_LITELLM_URL`（例如 `http://localhost:4000/v1`）；需要驗證才設 `AOS7_LITELLM_KEY`。從 repo 根執行：
+先開自己的 LiteLLM，設定 `AOS7_LITELLM_URL`（例如 `http://localhost:4000/v1`）；需要驗證才設 `AOS7_LITELLM_KEY`。金鑰只經環境傳、不寫設定或執行證據；經核心任務執行時，須在起 daemon 的環境設定，已在跑的 daemon 沿用起動時的環境。從 repo 根執行：
 
 ```sh
 bash proto7-2/modules/compact/examples/real_ai.sh ./compact-evidence
@@ -115,4 +117,3 @@ bash proto7-2/modules/compact/examples/real_ai.sh ./compact-evidence
 - **前置條件**：node 可讀寫；檔案是 md／jsonl；watch 有任務環境；使用 llmcall 時帳任務已運行、grant 允許 holder 與 gateway。
 - **保證**：先 archive 再換檔；now 不摘 open、最近 N 則與 files 第一個 md 的現役段（第一個 `## ` 到下一個 `## `，進行中的工作）；pending 原子保存，SIGKILL 後沿同 call 接續，已有 summary 不再叫摘要。STATE.md（`wf/handoffs/` 下）換檔時另持 `wf/handoffs/.state.lock`，跟 `aos7-wfnode state` 的追加互斥。只保證持 write.lock（STATE 為 .state.lock）的追加者：最後讀檔到 rename 持共同短鎖，摘要／llmcall 期間不持有；追加尾巴接回，其他改寫則放棄 pending、下次重規劃；未完成的段落觸發留到全部檔成功。compact.json events 為 true 才發布 obs，發不出只記 log。
 - **明確不管**：不拿 write.lock 的追加在換檔瞬間可能丟，明確不管；斷電保證、摘要的語意正確性、封存保留期限；refs/、agent 的 prompt 組裝、events store 都不由本包管理。
-

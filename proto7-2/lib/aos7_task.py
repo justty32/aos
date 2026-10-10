@@ -16,6 +16,9 @@ from aos7_fs import (BIN, N, OK, U, Unknown, env_with_bin, fact, inject, is_gone
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 SLOT_RE = re.compile(r"^([A-Za-z0-9_-]+)(?:\.([1-9][0-9]*))?$")
 
+# 秘密不能落地到 up.json；只從起 daemon 的環境傳給任務，其餘繼承的 AOS7_* 仍隔離。
+TASK_ENV_ALLOW = frozenset({"AOS7_LITELLM_KEY"})
+
 # 換 run 時清掉的基礎設施檔；任務自己寫的檔（state、usage…）與 ctl.json／ctl-done.json 留著（回條要活過新 run 起來那一刻）
 INFRA_FILES = ("birth.json", "pid.json", "out.log", "exit.json", "tock.json", "writes.jsonl")
 INFRA_DIRS = ("mnt", "mount-req", "mount-done")
@@ -314,7 +317,8 @@ def start_in_slot(ctx, item, slot, run):
     bpath = os.path.join(fslot, "birth.json")
     write_json(bpath, birth)
     test_point("after-birth")
-    env = {k: v for k, v in env_with_bin().items() if not k.startswith("AOS7_") or k.startswith("AOS7_TEST_")}
+    env = {k: v for k, v in env_with_bin().items()
+           if not k.startswith("AOS7_") or k.startswith("AOS7_TEST_") or k in TASK_ENV_ALLOW}
     # 固定測試控制不傳給 runner，其餘測試鉤子由 runner 交給任務前移除。
     for k in ("AOS7_TEST_CRASH", "AOS7_TEST_HANG", "AOS7_TEST_FAULT", "AOS7_TEST_FAULT_HITS"):
         env.pop(k, None)

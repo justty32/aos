@@ -3,10 +3,14 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 from aos7_author import (Node, PACKS, Refuse, Unknown, canon, check_rid,
                          load_toolcards, propose, result, sha256)
+
+sys.path.insert(0, os.path.join(PACKS, 'llmcall'))
+from aos7_llmcall_exit import answered, delivered, meaning  # noqa: E402
 
 LLMCALL_BIN = os.path.join(PACKS, 'llmcall', 'bin', 'aos7-llmcall')
 SYSTEM = ('你是 aos 的工作流作者。只輸出一個 JSON 物件，不加說明、不加 Markdown 圍欄。'
@@ -30,6 +34,21 @@ SCHEMA = {'v': 1, 'mode': 'keep', 'intent': 'str', 'start': '步id',
 AUTO = '\0auto'      # --llm 沒給值（命令列給不出 NUL，不會撞到真模型名）
 LADDER = ('chatgpt-gpt-6-luna-nothink', 'chatgpt-gpt-6-sol-high', 'chatgpt-gpt-6-astra-high')
 APPRENTICE_LADDER = LADDER[1:]   # aos-tool／aos-module：luna-nothink 實測 3/3 拒答，從 sol-high 起（ef3.md）
+
+
+def delivery_problem(rc, receipt):
+    """生成的請求被拒是作者這邊沒做成；本地用法錯仍由入口處理。"""
+    status = meaning(rc)
+    if status in ('unsure', 'unknown'):
+        return 'unknown', 'llmcall 沒有確定交付，請保留原 call 再查'
+    if not delivered(rc):
+        detail = '模型那邊確定沒做成' if status == 'failed' else '作者產生的模型請求被拒，請檢查 llmcall 的用法與設定'
+        return 'invalid', detail
+    if not receipt:
+        return 'unknown', '讀不到 llmcall 的有效回條，交付內容未確認'
+    if not answered(rc, receipt):
+        return 'invalid', '模型回覆不能用，沒有可驗證的候選內容'
+    return None, None
 
 
 def rung_call(call, i):
@@ -110,9 +129,9 @@ def propose_one(node, rid, *, model, budget, call=None, reserve=1000000,
             path = os.path.join(os.path.dirname(os.path.dirname(bd)), 'llmcall', os.path.basename(bd), call_id, 'receipt.json')
             if os.path.isfile(path):
                 llm['receipt_path'] = path
-            if proc.returncode not in (0, 4) or receipt.get('outcome') != 'answered' \
-                    or not isinstance(receipt.get('text'), str):
-                return result(False, 'unknown' if proc.returncode == 3 else 'invalid', rid=rid, llm=llm)
+            why, error = delivery_problem(proc.returncode, receipt)
+            if why:
+                return result(False, why, rid=rid, llm=llm, error=error, _rejected=why == 'invalid')
             candidate_path = os.path.join(tmp, 'candidate.json')
             with open(candidate_path, 'wb') as stream:
                 stream.write(receipt['text'].encode('utf-8'))

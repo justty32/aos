@@ -1,5 +1,6 @@
 """本地 HTTP 假 LiteLLM 的整合測試，不連外部模型。"""
 import json
+import io
 import os
 import signal
 import socket
@@ -7,10 +8,11 @@ import subprocess
 import sys
 import threading
 import time
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from contextlib import redirect_stdout, redirect_stderr
 
 from llmcallcase import LlmcallCase, LLMCALL, R, last_json, tree, read_json, write_json, _proc
 import aos7_llmcall as lc
@@ -220,6 +222,66 @@ class TestLlmcallLiteLLM(LlmcallCase):
         self.assert_receipt(self.call())
         self.assertEqual(self.headers[0]["Authorization"], "Bearer test-secret")
 
+    def test_invalid_key_never_sent_or_saved(self):
+        """非法 header 金鑰確定未送達、退款；CLI 與任何證據都不能含金鑰。"""
+        keys = ["fx1-test-key\nheader-injection", "fx1-test-key\r", "fx1-test-key\t",
+                "fx1-test-key space", "fx1-test-key\x01", "fx1-test-key\x7f", "fx1-test-key中文"]
+        for i, key in enumerate(keys):
+            with self.subTest(變體=i):
+                c = "invalidkey%d" % i
+                self.env["AOS7_LITELLM_KEY"] = key
+                p = self.call(c)
+                obj = self.assert_receipt(p, 1)
+                self.assertEqual((obj["outcome"], obj["billing"], obj["used"]),
+                                 ("rejected", "final", 0))
+                self.assertIn("格式不合", obj["text"])
+                self.assertIn("未送請求", obj["text"])
+                self.assertEqual(self.bodies, [])
+                self.assert_key_absent(p, key)
+                # 終局可重印；有效 key 也不讓同 call 重送。
+                self.env["AOS7_LITELLM_KEY"] = "fx1-test-key"
+                self.assertEqual(self.call(c).stdout, p.stdout)
+                self.assertEqual(self.bodies, [])
+                ledger = self.audit()
+                self.assertEqual((ledger["inflight"], ledger["used"]), (0, 0))
+
+    def assert_key_absent(self, p, key):
+        """連 escaped key 與換行前的識別片段都不容許落在輸出／證據。"""
+        values = [p.stdout.encode(), p.stderr.encode(), *tree(self.node).values()]
+        for value in values:
+            for needle in (key.encode(), json.dumps(key)[1:-1].encode(), b"fx1-test-key"):
+                self.assertNotIn(needle, value)
+
+    def test_transport_exception_key_never_saved(self):
+        """Request、open 與 HTTPError read 例外的原訊息不能進 why；仍 unknown 留 intent。"""
+        key = "fx1-test-key"
+        unreadable = HTTPError(self.env["AOS7_LITELLM_URL"], 500, "error", {}, io.BytesIO())
+        unreadable.read = Mock(side_effect=OSError("Authorization: Bearer " + key))
+        failures = [("Request", ValueError("Authorization: Bearer " + key)),
+                    ("urlopen", URLError("Authorization: Bearer " + key)),
+                    ("urlopen", TimeoutError("Authorization: Bearer " + key)),
+                    ("urlopen", unreadable)]
+        for i, (name, error) in enumerate(failures):
+            with self.subTest(位置=name, 變體=i):
+                c = "keyerror%d" % i
+                args = self.args(c)
+                args[1] = str(self.node / args[1])
+                out, err = io.StringIO(), io.StringIO()
+                with patch.dict(os.environ, dict(self.env, AOS7_LITELLM_KEY=key)), \
+                        patch.object(transport, name, side_effect=error), \
+                        redirect_stdout(out), redirect_stderr(err):
+                    rc = lc.main(args)
+                p = subprocess.CompletedProcess(args, rc, out.getvalue(), err.getvalue())
+                self.assertEqual(rc, 3)
+                self.assertEqual((last_json(p)["outcome"], last_json(p)["stage"]), ("unknown", "io"))
+                self.assertRegex(last_json(p)["why"], r"^LiteLLM 傳輸故障（[A-Za-z_/]+），intent 留著$")
+                self.assertEqual(self.gw(c)["stage"], "intent")
+                self.assertFalse((self.cd(c) / "raw.json").exists())
+                self.assertFalse((self.cd(c) / "receipt.json").exists())
+                self.assertEqual(self.bodies, [])
+                self.assert_key_absent(p, key)
+        self.assertEqual(self.audit()["inflight"], R * len(failures))
+
     def test_default_deadlines(self):
         # 首次准入真的走 send；攔下 thread 呼叫以觀察 CLI 選定的 timeout。
         for c, request, expected, attr in (("real", {"litellm": self.body}, 86400, "TRANSPORT_LITELLM"),
@@ -287,7 +349,7 @@ class TestLlmcallLiteLLM(LlmcallCase):
     def test_other_connection_errors_are_unknown(self):
         for error in (URLError("DNS failure"), TimeoutError("timeout"), ConnectionResetError("reset")):
             with self.subTest(error=error), patch.object(transport, "urlopen", side_effect=error):
-                with self.assertRaises(type(error)):
+                with self.assertRaises(lc.Unknown):
                     transport.send(str(self.node), "c", {"litellm": self.body}, 1)
                 with patch.object(lc, "TRANSPORT_LITELLM", transport.send):
                     with self.assertRaises((lc.Unknown, OSError)):

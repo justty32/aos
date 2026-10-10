@@ -61,3 +61,5 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
 - 框架與 tasks.json 不是同一筆交易（派工與中斷恢復順序見 spec §5 第 4 步）；第一版不做交易，跨回合說不清的一律 `unknown`。
 - 回合耐性是「這個 node 的回合」，不是牆鐘；`until_round` 是啟動准入，不是完成期限，本包不用它。
 - 核心只保證 once 最多一次、once 槽報完再留一回合。已發布的結果檔在槽外，不受槽刪除影響；但派工中斷後能不能補加，仍依賴 tasks.json、槽 birth 證據；補加只准同回合，下一回合走 on_unknown（spec §5 第 4 步）。
+
+`aos7-step --help` 與 `aos7-step-result --help` 看各自用法；參數不合時用一行說明並附例子。人手指令讀不到框架時保留證據、說明下一步；子工作包裝程式仍照命令回傳退出碼。

@@ -14,7 +14,7 @@
 | 依賴 | Python 3 標準庫、events 包公開 publish/read/CLI、核心 aos7_fs |
 | 程式 | `aos7-mail`→`_cli`（參數、白話輸出）；`aos7_mail.py` 解析、投遞、路由、audit；`_box` 辦結與輪詢；`_ack` 提醒確認；`_help` 說明文字；`_setup` ROSTER 與 team |
 | 範例 | [examples/two_nodes.sh](examples/two_nodes.sh)，自己檢查後印 OK |
-| 測試 | [tests/README.md](tests/README.md)，35 項測試 |
+| 測試 | [tests/README.md](tests/README.md)，44 項測試 |
 
 ## 全部狀態
 
@@ -63,7 +63,7 @@ REQUEST 的 done 必須給結論（STATUS 省略時為 DONE）；自動回給 re
 - **0**：做到；提醒失敗不改 send 成功。
 - **1**：做不到：audit 找到未結 REQUEST；或撞名／被拒（團隊同名不同名單、成員已在別隊、同名 ROSTER 格、非成員投團隊信箱、`--up` 找不到上游）。
 - **2**：參數、名字、序號或信件欄位不對，照 stderr 的用法與例子改。
-- **3**：I/O、鎖或 stdout flush 出錯，無法確定做了多少，已寫下的信與狀態留著，照原樣重跑接續。
+- **3**：I/O、鎖或 stdout flush 出錯，無法確定做了多少，已寫下的信與狀態留著，照原樣重跑接續；`.acked` 游標壞掉或不是非負整數時也保留原檔、不確認提醒，請恢復原檔再試。
 
 不用 4。stderr 一行 `aos7-mail: <發生什麼>。<怎麼辦>`，3 以「不確定：」開頭；無參數印說明退 2，help 退 0；JSON 欄位不變。
 

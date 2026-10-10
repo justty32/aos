@@ -353,7 +353,7 @@ with (work / 'write.lock').open('a') as lock:
         def present(path):
             return path.name == 'aos7_llmcall_litellm.py' or real_is_file(path)
         result = work / ('result-' + p['job'] + '.json')
-        write_json(str(result), {'text': '真傳輸摘要'})
+        write_json(str(result), {'outcome': 'answered', 'text': '真傳輸摘要'})
         with mock.patch.object(Path, 'is_file', present), mock.patch.object(module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
             self.assertEqual(module.summarize(self.node, work, p), '真傳輸摘要')
         with mock.patch.object(Path, 'is_file', return_value=False), mock.patch.object(module.subprocess, 'run', side_effect=AssertionError('缺傳輸不得呼叫')):
@@ -845,6 +845,91 @@ with (work / 'write.lock').open('a') as lock:
         self.config(llm={'budget': 'budget/llm', 'holder': 'compact', 'reserve': 100000,
                          'gateway': gateway, 'model': 'chatgpt-gpt-6-sol-high', 'deadline': 10, 'patience': 2})
 
+    def test_llm_delivered_unsettled_finishes_pending_once(self):
+        module = self.module()
+        for billing in ['pending', 'overrun']:
+            with self.subTest(billing=billing):
+                node = self.node / billing
+                node.mkdir()
+                path, old, opened, recent = self.fixture(node)
+                self.config(node, llm={'gateway': 'fake'})
+
+                def delivered_reply(argv, **kwargs):
+                    receipt = dict(outcome='answered', billing=billing, text='已交付完整摘要')
+                    body = json.dumps(receipt, ensure_ascii=False)
+                    Path(argv[argv.index('--out') + 1]).write_text(body)
+                    return subprocess.CompletedProcess(argv, 4, body, '')
+
+                out, err = io.StringIO(), io.StringIO()
+                with mock.patch.object(module.subprocess, 'run', side_effect=delivered_reply) as call, \
+                        contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    self.assertEqual(module.main(['now', str(node), '--force']), 0, out.getvalue() + err.getvalue())
+                    self.assert_compacted(path, old, opened, recent)
+                    self.assertIn('已交付完整摘要', path.read_text())
+                    self.assertFalse((node / 'compact/pending.json').exists())
+                    self.assertEqual(len((node / 'compact/log.jsonl').read_text().splitlines()), 1)
+                    self.assertEqual(module.main(['now', str(node)]), 0)
+                    self.assertEqual(call.call_count, 1)
+                self.assertEqual(err.getvalue(), '')
+
+    def test_llm_unsettled_failure_keeps_pending_and_original(self):
+        module = self.module()
+        for outcome, billing in [('failed', 'pending'), ('failed', 'overrun'), ('rejected', 'pending')]:
+            with self.subTest(outcome=outcome, billing=billing):
+                node = self.node / (outcome + '-' + billing)
+                node.mkdir()
+                self.config(node, keep_recent=1, llm={'gateway': 'fake'})
+                path = node / 'journal.jsonl'
+                original = ''.join(json.dumps({'text': f'完成工作 {i}'}) + '\n' for i in range(3))
+                path.write_text(original)
+
+                def failed_reply(argv, **kwargs):
+                    body = json.dumps(dict(outcome=outcome, billing=billing, text='不可收下的失敗文字'))
+                    Path(argv[argv.index('--out') + 1]).write_text(body)
+                    return subprocess.CompletedProcess(argv, 4, body, 'aos7-llmcall: 帳未清。查看回條\n')
+
+                out, err = io.StringIO(), io.StringIO()
+                with mock.patch.object(module.subprocess, 'run', side_effect=failed_reply), \
+                        contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    self.assertEqual(module.main(['now', str(node), '--force']), 1)
+                self.assertFalse(json.loads(out.getvalue())['ok'])
+                self.assertEqual(path.read_text(), original)
+                pending = read_json(str(node / 'compact/pending.json'))
+                self.assertEqual(pending['original'], original)
+                self.assertNotIn('summary', pending)
+                self.assertFalse((node / 'compact/archive').exists())
+                self.assertFalse((node / 'compact/log.jsonl').exists())
+                self.assertEqual(len(err.getvalue().splitlines()), 1)
+                self.assertTrue(err.getvalue().startswith('aos7-compact: '))
+                self.assertNotIn('不確定：', err.getvalue())
+
+    def test_llm_exit_failure_keeps_pending_and_original(self):
+        module = self.module()
+        for llm_rc, expected in [(1, 1), (2, 1), (3, 3), (-signal.SIGKILL, 3), (5, 3)]:
+            with self.subTest(llm_rc=llm_rc):
+                node = self.node / str(llm_rc)
+                node.mkdir()
+                self.config(node, keep_recent=1, llm={'gateway': 'fake'})
+                path = node / 'journal.jsonl'
+                original = ''.join(json.dumps({'text': f'完成工作 {i}'}) + '\n' for i in range(3))
+                path.write_text(original)
+                reply = subprocess.CompletedProcess([], llm_rc, '{"text":"不可收下"}', '')
+                out, err = io.StringIO(), io.StringIO()
+                with mock.patch.object(module.subprocess, 'run', return_value=reply), \
+                        contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    self.assertEqual(module.main(['now', str(node), '--force']), expected)
+                self.assertFalse(json.loads(out.getvalue())['ok'])
+                self.assertEqual(path.read_text(), original)
+                pending = read_json(str(node / 'compact/pending.json'))
+                self.assertEqual(pending['original'], original)
+                self.assertNotIn('summary', pending)
+                self.assertFalse((node / 'compact/archive').exists())
+                self.assertFalse((node / 'compact/log.jsonl').exists())
+                self.assertEqual(len(err.getvalue().splitlines()), 1)
+                self.assertNotIn('Traceback', err.getvalue())
+                self.assertTrue(err.getvalue().startswith('aos7-compact: '))
+                self.assertEqual('不確定：' in err.getvalue(), expected == 3)
+
     def test_llm_summary_resume_sends_once(self):
         path, old, opened, recent = self.fixture()
         self.ledger()
@@ -867,7 +952,7 @@ with (work / 'write.lock').open('a') as lock:
         pending = read_json(str(self.node / 'compact/pending.json'))
         write_json(str(self.node / ('compact/req-%s.json' % pending['job'])),
                    {'fake': {'mode': 'fail', 'usage': 100, 'text': '不應拿到摘要'}})
-        self.now(rc=3)
+        self.now(rc=1)
         self.assertEqual(path.read_bytes(), before)
         self.assertTrue((self.node / 'compact/pending.json').exists())
 

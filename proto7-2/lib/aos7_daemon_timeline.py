@@ -241,8 +241,10 @@ class Timeline(threading.Thread):
                 self.wake.clear()
                 continue
             mark_owe = getattr(self.d, "mark_owe", None)
-            if mark_owe:
-                mark_owe(self.node_id, self.checked_round)
+            if mark_owe and not mark_owe(self.node_id, self.checked_round):
+                self.wake.wait(POLL)
+                self.wake.clear()
+                continue   # 倒數的待結算沒落盤，不 tick；回頂端重看狀態再試存
             # 3. tick（間隔照 monotonic 算，牆鐘校時不影響）
             self.interval_ms, self.early_tock = ms, early
             t0 = time.monotonic()

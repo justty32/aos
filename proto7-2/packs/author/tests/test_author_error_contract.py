@@ -1,7 +1,9 @@
 """錯誤路徑、索引表格與 aos 結案標記。"""
 import argparse
+import contextlib
 import fcntl
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -16,6 +18,7 @@ sys.path[:0] = [str(PACK), str(PACK / 'checkers')]
 import aos_three_gates as gates
 import aos7_author as author
 import aos7_author_aos as aos
+import aos7_author_llm as llm
 from test_author_aos import baseline_ref, REPO
 
 REQ = PACK / 'examples/aos-tool-usage/request.json'
@@ -23,6 +26,82 @@ CAND = REQ.parent / 'valid.json'
 
 
 class TestAuthorErrorContract(unittest.TestCase):
+    @contextlib.contextmanager
+    def csv_node(self):
+        with tempfile.TemporaryDirectory(prefix='fx1-b-author-') as tmp:
+            path = Path(tmp, 'author/req/csv1/request.json')
+            path.parent.mkdir(parents=True)
+            path.write_bytes((PACK / 'examples/csv-request/request.json').read_bytes())
+            old = os.getcwd()
+            os.chdir(tmp)
+            try:
+                yield Path(tmp)
+            finally:
+                os.chdir(old)
+
+    def captured_main(self, args):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = author.main(args)
+        return code, json.loads(stdout.getvalue()), stderr.getvalue()
+
+    def test_csv_propose_io_error_contract(self):
+        for failure in ('lock', 'write'):
+            with self.subTest(failure=failure), self.csv_node() as node:
+                args = ['propose', 'csv1', '--candidate', str(PACK / 'examples/csv-request/valid.json')]
+                if failure == 'lock':
+                    (node / 'author/author.lock').mkdir()
+                    p = self.run_cli('aos7-author', *args, cwd=node)
+                    code, out, stderr = p.returncode, json.loads(p.stdout), p.stderr
+                else:
+                    with mock.patch.object(author, 'write_json', side_effect=OSError('write unavailable')):
+                        code, out, stderr = self.captured_main(args)
+                self.assertEqual((code, out['ok'], out['why']), (3, False, 'unknown'))
+                self.assertNotIn('Traceback', stderr)
+                self.assertEqual(len(stderr.splitlines()), 1)
+                self.assertTrue(stderr.startswith('aos7-author: 不確定：'))
+                self.assertIn('照原樣再跑一次會接續', stderr)
+                self.assertTrue((node / 'author/req/csv1/request.json').exists())
+
+    def test_csv_llm_terminal_failure_exit(self):
+        for rc, outcome in [(1, 'failed'), (1, 'rejected'), (1, 'denied'), (1, 'cancelled'), (2, None)]:
+            with self.subTest(rc=rc, outcome=outcome), self.csv_node() as node:
+                before = sorted(p.relative_to(node) for p in node.rglob('*'))
+                reply = dict(outcome=outcome, text=None, billing='final', used=0)
+                proc = subprocess.CompletedProcess([], rc, json.dumps(reply), '')
+                with mock.patch.object(llm.subprocess, 'run', return_value=proc):
+                    code, out, stderr = self.captured_main(['propose', 'csv1', '--llm', 'demo', '--budget', 'budget/llm'])
+                self.assertEqual((code, out['why'], out['llm']['exit']), (1, 'invalid', rc))
+                self.assertEqual(len(stderr.splitlines()), 1)
+                self.assertNotIn('給符合需求的檔案與選項', stderr)
+                self.assertIn('模型這邊沒做成：', stderr)
+                self.assertNotIn('issues／gates 改候選', stderr)
+                self.assertNotIn('_rejected', out)
+                self.assertEqual(sorted(p.relative_to(node) for p in node.rglob('*')), before)
+
+    def test_aos_and_csv_llm_uncertain_receipt(self):
+        for rc, stdout in [(3, '{}'), (99, '{}'), (-9, '{}'), (0, 'broken'), (4, 'broken')]:
+            for kind, arg in [('csv', 'csv1'), ('aos', str(REQ))]:
+                with self.subTest(rc=rc, kind=kind), self.csv_node() as node:
+                    proc = subprocess.CompletedProcess([], rc, stdout, '')
+                    with mock.patch.object(llm.subprocess, 'run', return_value=proc):
+                        code, out, stderr = self.captured_main(['propose', arg, '--llm', 'demo', '--budget', 'budget/llm'])
+                    self.assertEqual((code, out['why']), (3, 'unknown'))
+                    self.assertEqual(len(stderr.splitlines()), 1)
+                    self.assertTrue(stderr.startswith('aos7-author: 不確定：'))
+                    self.assertFalse((node / 'author/req/csv1/candidate.json').exists())
+                    self.assertFalse((node / 'author/aos').exists())
+
+    def test_aos_llm_terminal_failure_exit(self):
+        for rc in (1, 2):
+            with self.subTest(rc=rc), self.csv_node() as node:
+                proc = subprocess.CompletedProcess([], rc, json.dumps(dict(outcome='rejected', text=None)), '')
+                with mock.patch.object(llm.subprocess, 'run', return_value=proc):
+                    code, out, stderr = self.captured_main(['propose', str(REQ), '--llm', 'demo', '--budget', 'budget/llm'])
+                self.assertEqual((code, out['why']), (1, 'invalid'))
+                self.assertIn('模型' if rc == 1 else '作者產生', stderr)
+                self.assertFalse((node / 'author/aos').exists())
+
     def run_cli(self, entry, *args, **kw):
         return subprocess.run([str(PACK / 'bin' / entry), *map(str, args)], capture_output=True,
                               text=True, timeout=30, **kw)

@@ -162,7 +162,7 @@ class Daemon:
         return bool(self.paused.get(nid))
 
     def mark_owe(self, nid, base):
-        """有倒數的回合在 tick 前先記待結算；寫失敗沿用原行為，只記錯。"""
+        """有倒數的回合在 tick 前先記待結算；回是否已落盤（不用記也算成功），寫失敗不開回合。"""
         try:
             with self._lock:
                 if self.steps.get(nid) and self.owe.get(nid) != base:
@@ -170,10 +170,12 @@ class Daemon:
                     try:
                         self.save_paused()
                     except (OSError, Unknown):
-                        self.owe.pop(nid, None)   # 沒落盤就不算記了：下一回合再試
+                        self.owe.pop(nid, None)   # 沒落盤就不算記了：重試成功前不開回合
                         raise
         except (OSError, Unknown) as e:
             self.log(ev="paused-save-error", node=nid, err=repr(e)[:300])
+            return False
+        return True
 
     def round_done(self, nid, debit=True):
         """時間線確認關上一回合後呼叫：nid 每個 owner 的 rounds 倒數各扣一，到零的以那個 owner 再 pause（spec §2.4）。"""

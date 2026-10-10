@@ -28,8 +28,9 @@
 - `aos7-ctl daemon <root> <op> [node] [--kill] [--rounds N] [--owner X] [--all]`：寫 `<root>/.aosd/ctl/<by>.<op>.<node>.json`；帶 `--owner` 時是 `<by>.<op>.<node>@<owner>.json`。固定名，回條只留最近一份。`<root>` 也可以是掛進來的 `.aosd`。
 - **檔名編碼**：by／node／owner 每段編碼——`/`→`+`；其他不是英數、`_`、`-` 的字元（含 `.`、`@`、`+`、`%`、非 ASCII）把 UTF-8 位元組寫成 `%XX`；一段編碼後超過 64 字就取前 40 字＋`~`＋原字串 sha1 前 16 碼。沒截短的段是可逆、不撞名的；截短的段靠 64-bit 雜湊尾碼區分，只是實務上不撞，不是無損。
 - `aos7-ctl task <槽> kill [why] [--run N]`：寫 ctl.json `{"op": "kill", "run"}`；沒給 `--run` 就讀槽的 birth.json 帶現在的 run（讀不到＝報錯、不寫）。
-- `aos7-ctl task <槽> restart [why] [--reload] [--id ID]`：呼叫控制包的 `restart`（先加 once 再寫 kill），stdout 印它的結果（加上 `wrote`）；沒給 `--id` 就自動產生新的請求 id，重送同一件才沿用原 id。`ok: false` 時退出碼 1。
+- `aos7-ctl task <槽> restart [why] [--reload] [--id ID]`：呼叫控制包的 `restart`（先加 once 再寫 kill），stdout 印它的結果（加上 `wrote`）；沒給 `--id` 就自動產生新的請求 id，重送同一件才沿用原 id。`ok: false` 時依新增的 `outcome` 區分不確定與確定拒絕；鎖忙、birth／tasks 讀取故障會報不確定，保留檔案並提示用同一個請求 id 接續。
 - `aos7-ctl add <node> '<項目 JSON>'...`：拿 `tasks.json.lock` 把一或多項加進 tasks.json（一次 rename）。
+- 用法給錯時會附一行例子且不寫檔；讀寫失敗或無法判定時保留已有請求與檔案、提示先查控制檔與回條，不印 traceback。
 - 都可加 `--by WHO`（預設：在任務裡是 `<node-id>:<tid>`，否則 `cli`）；stdout 印 `{"wrote": 路徑}`。印出路徑只表示寫好了，接受與執行看 daemon／tick／tock 的回條。
 
 ## aos7-wait-tock

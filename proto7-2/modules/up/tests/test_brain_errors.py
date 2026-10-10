@@ -110,8 +110,8 @@ class BrainErrorTests(unittest.TestCase):
         for rc in (0, 1, 2, 3, 4, 5, -9):
             with self.subTest(rc=rc), \
                  patch.object(brain, 'request', return_value=Path('/tmp/req')), \
-                 patch.object(brain, 'run', return_value=subprocess.CompletedProcess([], rc, '{"text":"收到"}\n', '')):
-                if rc == 3:
+                 patch.object(brain, 'run', return_value=subprocess.CompletedProcess([], rc, '{"outcome":"answered","text":"收到"}\n', '')):
+                if rc in (3, 5, -9):
                     with self.assertRaises(brain.Later):
                         brain.ask_ai(Path('/tmp'), {}, 'cid', {})
                 elif rc in (0, 4):

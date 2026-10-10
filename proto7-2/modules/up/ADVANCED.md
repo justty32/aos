@@ -35,7 +35,7 @@ aos7-up /tmp/aos/bob --fixed                  # 改回固定，間隔沿用 0.5
 
 不給 `--model` 就是練習用的 AI（不連網、不花錢、照抄你的信）。要真 AI：
 
-先起你自己的 LiteLLM（OpenAI 相容端點，預設 `http://localhost:4000/v1`；別處設 `AOS7_LITELLM_URL`，要金鑰設 `AOS7_LITELLM_KEY`，見 [llmcall](../../packs/llmcall/README.md)）。
+先起你自己的 LiteLLM（OpenAI 相容端點，預設 `http://localhost:4000/v1`；別處設 `AOS7_LITELLM_URL`，要金鑰設 `AOS7_LITELLM_KEY`，見 [llmcall](../../packs/llmcall/README.md)）。金鑰要設在起心跳 daemon 的那個環境（由 up 起心跳時，就是起 up 的環境），只經環境傳給 brain／llmcall，不寫進 `up.json` 或執行證據。接上已在跑的心跳時，金鑰沿用它起動時的環境；要換金鑰先 stop，再從新環境起心跳。
 
 `--model` 填 **LiteLLM 設定裡的模型名**（它對外的 `model_name`），不是廠商原名；查有哪些：`curl -s http://localhost:4000/v1/models`。本機 2026-10-09 實測用過 `chatgpt-gpt-6-sol`、`chatgpt-gpt-6-sol-high`、`chatgpt-gpt-6-luna`、`chatgpt-gpt-6-astra`（[試玩紀錄](../../notes/play/2026-10-09-real-ai/README.md)）。
 

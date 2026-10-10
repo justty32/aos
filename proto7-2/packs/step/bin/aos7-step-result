@@ -2,7 +2,13 @@
 """aos7-step-result 的命令列入口——本體在 ../aos7_step_result.py（step 任務包的子工作包裝程式）。"""
 import os
 import sys
+sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import aos7_step_result  # noqa: E402
 if __name__ == "__main__":
-    sys.exit(aos7_step_result.main())
+    try:
+        code = aos7_step_result.main()
+    except Exception:
+        print("aos7-step-result: 不確定：入口遇到未預期錯誤，無法確認是否完成。證據留著，先檢查後再跑", file=sys.stderr)
+        code = 3
+    sys.exit(code)

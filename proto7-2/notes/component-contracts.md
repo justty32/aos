@@ -86,7 +86,7 @@
 
 - **職責**：經 fd 讀 `birth.json`，把任務起在自己的程序群組，寫 `pid.json`（run、pid、pgid、starttime、runner_pid、at），等它，寫 `exit.json`；`out.log` 收 stdout＋stderr（§5.1 表、§5.3）。
 - **前置條件**：由 tick 以新 session、傳好 fd、cwd＝node 起；`birth.json` 已寫好；環境變數齊。人手直接跑、起任務途中搬 node 不在保證內（§11、K-06）。
-- **保證**：起程序前任何失敗→`exit.json` code 127；fd 無效退出碼 2，不回退字串路徑；活到任務結束才寫 exit；run 先取環境 `AOS7_RUN`、birth 讀到再以它為準（R8-10）；任務環境只帶核心六個 `AOS7_*` 身分變數，上層繼承來的不傳（§5.3、§6）。runner 被殺由 tick／tock 靠身分掃描與 pid.json 判定（§5.4），不是 runner 自己處理。
+- **保證**：起程序前任何失敗→`exit.json` code 127；fd 無效退出碼 2，不回退字串路徑；活到任務結束才寫 exit；run 先取環境 `AOS7_RUN`、birth 讀到再以它為準（R8-10）；任務環境帶核心六個 `AOS7_*` 身分變數，上層繼承來的不傳，唯一明列例外 `AOS7_LITELLM_KEY` 只從起 daemon 的環境傳，不落地到設定或執行證據（§5.3、§6）。runner 被殺由 tick／tock 靠身分掃描與 pid.json 判定（§5.4），不是 runner 自己處理。
 - **明確不管**：任務換 session／pgid、清 `AOS7_*`、換使用者身分、關 dumpable（§11）；`out.log` 大小（W10）；任務退出碼語意；任務自己的 state／usage。
 
 ### 2.6 控制檔處理（daemon 的 `.aosd/ctl/`＋槽 `ctl.json` 的 kill）

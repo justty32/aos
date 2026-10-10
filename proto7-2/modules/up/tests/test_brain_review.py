@@ -170,7 +170,7 @@ class BrainReviewUnitTests(unittest.TestCase):
         for cfg in ({}, {'model': None}, {'model': 'fake'}, {'model': ''}):
             with (self.subTest(cfg=cfg), patch.object(brain, 'request', return_value=Path('/tmp/req')),
                   patch.object(brain, 'run') as run):
-                run.return_value = subprocess.CompletedProcess([], 0, '{"text":"收到"}\n')
+                run.return_value = subprocess.CompletedProcess([], 0, '{"outcome":"answered","text":"收到"}\n')
                 with patch.dict(os.environ, AOS7_LITELLM_URL='http://do-not-connect'):
                     brain.ask_ai(Path('/tmp'), {}, 'cid', dict(cfg, litellm_url='http://do-not-connect'))
                 args, kw = run.call_args

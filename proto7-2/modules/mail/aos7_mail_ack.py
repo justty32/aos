@@ -23,7 +23,12 @@ def ack(root, me):
     if not events.is_dir():
         return
     marker = box / '.acked'
-    local = load(marker, 0)
+    try:
+        local = load(marker, 0)
+    except ValueError as e:
+        raise OSError('必達提醒游標 .acked 壞了，請恢復原檔再試') from e
+    if type(local) is not int or local < 0:
+        raise OSError('必達提醒游標 .acked 要是非負整數，請恢復原檔再試')
     upto, cursor, unsure = local, local + 1, False
     others_acked = 0
     ended = {l['id'] for p in letters(box / 'done')

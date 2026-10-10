@@ -170,7 +170,7 @@ class BrainTests(DaemonCase):
                 write_json(str(saved), {'request': req})
                 return subprocess.CompletedProcess([], 3, '', '不確定')
             self.assertEqual(req, json.loads((self.node / 'llmcall/llm' / calls[-1] / 'request.json').read_text())['request'])
-            return subprocess.CompletedProcess([], 0, '{"text":"回信：收到\\n停在哪：已回覆"}\n', '')
+            return subprocess.CompletedProcess([], 0, '{"outcome":"answered","text":"回信：收到\\n停在哪：已回覆"}\n', '')
         with patch.object(brain, 'run', side_effect=fake_run), contextlib.redirect_stdout(io.StringIO()) as out:
             brain.once(self.node, 1)
             self.assertIn('下回合再看同一筆', out.getvalue())
@@ -194,7 +194,7 @@ class BrainTests(DaemonCase):
         real_run = brain.run
         def fake_run(tool, *args, **kwargs):
             if Path(tool).name == 'aos7-llmcall':
-                return subprocess.CompletedProcess([], 4, '{"text":"收到"}\n', '')
+                return subprocess.CompletedProcess([], 4, '{"outcome":"answered","text":"收到"}\n', '')
             return real_run(tool, *args, **kwargs)
         with patch.object(brain, 'run', side_effect=fake_run), contextlib.redirect_stdout(io.StringIO()) as out:
             brain.once(self.node, 1)
