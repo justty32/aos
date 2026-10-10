@@ -49,3 +49,11 @@
 - C｜state 多 `journal`（log.jsonl 每次照它重寫，被殺在 rename 後也不漏行）、`initial_vars`、`var_owner`（每鍵目前歸屬）、`nonce`（新 run 隨機 16 hex）、`fence`、`code`；journal 隨步數長，hello／aos-tool 量級（≤百步）不處理
 - C｜工具目錄範例登記 `gates-check`、`skills-pick`、`ctl-help`（aos7-ctl 沒有唯讀子命令，只登記 `daemon --help`）；格式是「名字→argv 模板＋參數＋輸出」，之後加抽屜／寄信這類標準工具只是多幾列，不擋
 - 待｜MN2 可開（AP5 已進 main，MN1 進 main 後）；MN3 等 MN2；MN4（README／ADVANCED／新手）MN1 進 main 後可與 MN2 並行
+
+## loop14 MN4（menu 包文件＋新手試用，blueprint-scaffold1 §7）
+
+- 結果｜`packs/menu/README.md`（新手：4 詞、2 指令跑 hello、沒跑成／停下／重走）與 `ADVANCED.md`（寫選單的人：契約卡、menu.json 三種層、2～5 編號含出口、「這層決定要的資訊放這層」、格子五種、回法、practice.json、`--reply`／`status --prompt`、tools.json 登記、status、中斷重跑、`--llm` 經 aos7-up 起真 AI node、退出碼）；INDEX 那列改連兩份、code map 補一句 → [play 總表](play/2026-10-10-menu/README.md)
+- 結果｜新手三輪：luna 8.6／8.6／8.8、Haiku 5.4／5.6／6.4，五題兩人每輪全對、2 指令、README 列 4 概念；第 3 輪過「五題全對＋較差者 ≥6 且 luna ≥7」
+- C｜真 AI 的 README 外路徑寫成「`aos7-up <node> --model M -d` 起 node（帳一起裝好）→ `aos7-menu run <node> … --llm M` → `aos7-up stop`」；隊長實跑 luna 一次 2 呼叫約 3.5k token 退 0
+- C｜README 統一稱「出口」（字由選單作者定）；「node」只在 README 註明＝工作資料夾，不改訊息
+- 待｜程式面 5 條只記不修（JSON 壞的訊息說「不在或」且無行號、缺出口訊息範例字與 hello 不同、`run --help` 無說明、停下的 status 退 0、選項數／next 錯沒說實際值），交頂層排；MN2 合進 main 後若 menu.json／tools.json 格式有變，ADVANCED 要對齊
