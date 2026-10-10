@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/home/lorkhan/repo/simple_tools/aos-wt/AP5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice5/drive5.py", line 202, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/lorkhan/repo/simple_tools/aos-wt/AP5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice5/drive5.py", line 187, in main
+    res = do_task(a, task, f'{a.tag}{task}{a.variant}{a.rep}', out / f'{i}-{task}', skillnode, use, streak)
+  File "/home/lorkhan/repo/simple_tools/aos-wt/AP5/proto7-2/notes/play/2026-10-09-real-ai/evidence/apprentice5/drive5.py", line 128, in do_task
+    print(json.dumps(dict(rid=rid, **row), ensure_ascii=False)[:700], flush=True)
+          ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/json/__init__.py", line 242, in dumps
+    **kw).encode(obj)
+          ~~~~~~^^^^^
+  File "/usr/lib/python3.14/json/encoder.py", line 202, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+  File "/usr/lib/python3.14/json/encoder.py", line 263, in iterencode
+    return _iterencode(o, 0)
+  File "/usr/lib/python3.14/json/encoder.py", line 182, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+                    f'is not JSON serializable')
+TypeError: Object of type set is not JSON serializable
+when serializing dict item 'proxy_suspect'

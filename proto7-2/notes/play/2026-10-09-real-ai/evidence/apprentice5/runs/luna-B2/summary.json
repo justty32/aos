@@ -1,0 +1,224 @@
+{
+ "variant": "B",
+ "rep": 2,
+ "model": "chatgpt-gpt-6-luna",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 5,
+ "offline": false,
+ "stop": null,
+ "calls_total": 140,
+ "results": [
+  {
+   "task": "mailcount",
+   "rid": "LmailcountB2",
+   "passed": true,
+   "rounds": 2,
+   "reasks": 1,
+   "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+   },
+   "hidden": {
+    "done": 1,
+    "dot": 1,
+    "teams": 1
+   },
+   "tokens": 15036,
+   "review_tokens": 4746,
+   "secs": 58.5,
+   "stop": null,
+   "rows": [
+    {
+     "hidden": [
+      "done",
+      "dot",
+      "teams"
+     ],
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 5998,
+     "review_tokens": null,
+     "secs": 33.8,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_mailcount_basic (unittest.loader._FailedTest.test_mailcount_basic)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_mailcount_basic\nTraceback (mo"
+      },
+      {
+       "rule": "answer",
+       "why": "['主樣本（真郵局）：答案不合：得到 {\"v\":1,\"people\":{\"alice\":{\"letters\":3,\"requests\":0},\"bob\":{\"letters\":0,\"requests\":0},\"carol\":{\"letters\":2,\"requests\":0},\"dave\":{\"letters\":5,\"requests\":0}}}\\n；應為 {\"v\": 1, \"people\": {\"alice\": {\"letters\": 4, \"requests\": 2}, \"bob\": {\"letters\": 2, \"requests\": 2}, \"carol\": {\"letters\": 3"
+      }
+     ]
+    },
+    {
+     "hidden": [],
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 9038,
+     "review_tokens": 4746,
+     "secs": 17.3,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": {
+    "exit": 0,
+    "ok": true,
+    "why": null,
+    "error": null,
+    "secs": 7.4,
+    "tokens": 6544,
+    "bytes": 2728
+   },
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "mailsent",
+   "rid": "LmailsentB2",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "hidden": {
+    "done": 0,
+    "dot": 0,
+    "teams": 0
+   },
+   "tokens": 6906,
+   "review_tokens": 4651,
+   "secs": 23.8,
+   "stop": null,
+   "rows": [
+    {
+     "hidden": [],
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 6906,
+     "review_tokens": 4651,
+     "secs": 23.8,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 2,
+   "skill_in_prompt": true
+  },
+  {
+   "task": "mailopen",
+   "rid": "LmailopenB2",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "hidden": {
+    "done": 0,
+    "dot": 0,
+    "teams": 0
+   },
+   "tokens": 7074,
+   "review_tokens": 5051,
+   "secs": 24.0,
+   "stop": null,
+   "rows": [
+    {
+     "hidden": [],
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 7074,
+     "review_tokens": 5051,
+     "secs": 24.0,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 3,
+   "skill_in_prompt": true
+  },
+  {
+   "task": "mailstatus",
+   "rid": "LmailstatusB2",
+   "passed": true,
+   "rounds": 1,
+   "reasks": 0,
+   "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+   },
+   "hidden": {
+    "done": 0,
+    "dot": 0,
+    "teams": 0
+   },
+   "tokens": 6657,
+   "review_tokens": 4324,
+   "secs": 35.2,
+   "stop": null,
+   "rows": [
+    {
+     "hidden": [],
+     "round": 1,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 6657,
+     "review_tokens": 4324,
+     "secs": 35.2,
+     "skill": {
+      "picked": "aos-tool-apprentice",
+      "why": "已挑到技能書並放入提示"
+     },
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 4,
+   "skill_in_prompt": true
+  }
+ ]
+}

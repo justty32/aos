@@ -1,0 +1,332 @@
+{
+ "variant": "A",
+ "rep": 2,
+ "model": "chatgpt-gpt-6-luna",
+ "review": "chatgpt-gpt-6-astra-high",
+ "rounds": 5,
+ "offline": false,
+ "stop": null,
+ "calls_total": 164,
+ "results": [
+  {
+   "task": "mailcount",
+   "rid": "LmailcountA2",
+   "passed": true,
+   "rounds": 2,
+   "reasks": 1,
+   "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+   },
+   "hidden": {
+    "done": 1,
+    "dot": 1,
+    "teams": 1
+   },
+   "tokens": 14770,
+   "review_tokens": 4958,
+   "secs": 33.4,
+   "stop": null,
+   "rows": [
+    {
+     "hidden": [
+      "done",
+      "dot",
+      "teams"
+     ],
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer"
+     ],
+     "tokens": 5976,
+     "review_tokens": null,
+     "secs": 12.8,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "answer",
+       "why": "['主樣本（真郵局）：答案不合：得到 {\"v\":1,\"people\":{\"alice\":{\"letters\":3,\"requests\":2},\"bob\":{\"letters\":0,\"requests\":0},\"carol\":{\"letters\":2,\"requests\":1},\"dave\":{\"letters\":5,\"requests\":1}}}\\n；應為 {\"v\": 1, \"people\": {\"alice\": {\"letters\": 4, \"requests\": 2}, \"bob\": {\"letters\": 2, \"requests\": 2}, \"carol\": {\"letters\": 3"
+      }
+     ]
+    },
+    {
+     "hidden": [],
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 8794,
+     "review_tokens": 4958,
+     "secs": 20.5,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 1,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "mailsent",
+   "rid": "LmailsentA2",
+   "passed": true,
+   "rounds": 4,
+   "reasks": 3,
+   "fails": {
+    "1": 0,
+    "2": 3,
+    "3": 0
+   },
+   "hidden": {
+    "done": 0,
+    "dot": 1,
+    "teams": 0
+   },
+   "tokens": 29332,
+   "review_tokens": 4689,
+   "secs": 70.6,
+   "stop": null,
+   "rows": [
+    {
+     "hidden": [
+      "dot"
+     ],
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 5899,
+     "review_tokens": null,
+     "secs": 12.5,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "======================================================================\nERROR: test_mailsent (unittest.loader._FailedTest.test_mailsent)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_mailsent\nTraceback (most recent call last):\n "
+      },
+      {
+       "rule": "answer",
+       "why": "['暫存：再放一份 <人>/inbox/.tmp/ 寫到一半的信和一個 .draft.md（. 開頭的檔與資料夾都不是信）：答案不合：得到 {\"v\":1,\"senders\":{\"alice\":3,\"bob\":6,\"carol\":5,\"dave\":2}}\\n；應為 {\"v\": 1, \"senders\": {\"alice\": 3, \"bob\": 6, \"carol\": 4, \"dave\": 2}}']"
+      }
+     ]
+    },
+    {
+     "hidden": [],
+     "round": 2,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 7802,
+     "review_tokens": null,
+     "secs": 12.3,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "======================================================================\nERROR: test_mailsent (unittest.loader._FailedTest.test_mailsent)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_mailsent\nTraceback (most recent call last):\n "
+      }
+     ]
+    },
+    {
+     "hidden": [],
+     "round": 3,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "test"
+     ],
+     "tokens": 7757,
+     "review_tokens": null,
+     "secs": 30.0,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": "E\n======================================================================\nERROR: test_mailsent (unittest.loader._FailedTest.test_mailsent)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_mailsent\nTraceback (most recent call last):"
+      }
+     ]
+    },
+    {
+     "hidden": [],
+     "round": 4,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 7874,
+     "review_tokens": 4689,
+     "secs": 15.7,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 2,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "mailopen",
+   "rid": "LmailopenA2",
+   "passed": true,
+   "rounds": 2,
+   "reasks": 1,
+   "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+   },
+   "hidden": {
+    "done": 1,
+    "dot": 1,
+    "teams": 1
+   },
+   "tokens": 15063,
+   "review_tokens": 5118,
+   "secs": 61.2,
+   "stop": null,
+   "rows": [
+    {
+     "hidden": [
+      "done",
+      "dot",
+      "teams"
+     ],
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer"
+     ],
+     "tokens": 6027,
+     "review_tokens": null,
+     "secs": 14.2,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "answer",
+       "why": "['主樣本（真郵局）：答案不合：得到 {\"v\":1,\"open\":[\"bob-20261009T232446-de2a6e248217\",\"bob-20261009T232446-f716842f110d\",\"dave-20261009T232446-4a6808235433\",\"dave-20261009T232736-88ee59277e55\"]}\\n；應為 {\"v\": 1, \"open\": [\"bob-20261009T232446-de2a6e248217\", \"bob-20261009T232446-f716842f110d\", \"dave-20261009T232446-4a680"
+      }
+     ]
+    },
+    {
+     "hidden": [],
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 9036,
+     "review_tokens": 5118,
+     "secs": 47.0,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 3,
+   "skill_in_prompt": false
+  },
+  {
+   "task": "mailstatus",
+   "rid": "LmailstatusA2",
+   "passed": true,
+   "rounds": 2,
+   "reasks": 1,
+   "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+   },
+   "hidden": {
+    "done": 1,
+    "dot": 1,
+    "teams": 1
+   },
+   "tokens": 14682,
+   "review_tokens": 5016,
+   "secs": 31.4,
+   "stop": null,
+   "rows": [
+    {
+     "hidden": [
+      "done",
+      "dot",
+      "teams"
+     ],
+     "round": 1,
+     "exit": 1,
+     "ok": false,
+     "why": "invalid",
+     "failed_gate": 2,
+     "rules": [
+      "answer",
+      "test"
+     ],
+     "tokens": 5926,
+     "review_tokens": null,
+     "secs": 12.5,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": [
+      {
+       "rule": "test",
+       "why": ".F.\n======================================================================\nFAIL: test_header_must_have_closing_delimiter_and_status (test_mailstatus.MailstatusTests.test_header_must_have_closing_delimiter_and_status)\n----------------------------------------------------------------------\nTraceback (m"
+      },
+      {
+       "rule": "answer",
+       "why": "['主樣本（真郵局）：答案不合：得到 {\"v\":1,\"statuses\":{\"BLOCKED\":2,\"DONE\":3,\"PROGRESS\":1,\"REQUEST\":4}}\\n；應為 {\"v\": 1, \"statuses\": {\"BLOCKED\": 2, \"DONE\": 5, \"PROGRESS\": 1, \"REQUEST\": 7}}', '已辦結：把每個人 inbox/ 頂層的信全搬進同一人的 inbox/done/（辦結的信歸檔在 <人>/inbox/done/，仍是那個人的信）：答案不合：得到 {\"v\":1,\"statuses\":{}}\\n；應為 {\"v\": 1, \"statuses\": "
+      }
+     ]
+    },
+    {
+     "hidden": [],
+     "round": 2,
+     "exit": 0,
+     "ok": true,
+     "why": null,
+     "failed_gate": null,
+     "rules": [],
+     "tokens": 8756,
+     "review_tokens": 5016,
+     "secs": 19.0,
+     "skill": null,
+     "proxy_suspect": false,
+     "issues": []
+    }
+   ],
+   "learn": null,
+   "order": 4,
+   "skill_in_prompt": false
+  }
+ ]
+}
