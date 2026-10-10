@@ -129,9 +129,37 @@ def add_items(node, items):
     return path
 
 
+class UsageError(ValueError):
+    """命令列用法錯；解析完成之前不寫檔。"""
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        raise UsageError(message)
+
+
 def main(argv=None):
-    """解析 argv（None 用命令列），寫指定控制檔並印路徑；成功／說明回 0，參數錯誤回 1。"""
-    ap = argparse.ArgumentParser(prog="aos7-ctl", description="寫 aos7 控制檔")
+    """解析 argv 並寫控制檔；成功／說明 0、用法錯 2、不確定 3；restart 的拒收仍回 1。"""
+    try:
+        return _main(argv)
+    except UsageError as e:
+        detail = " ".join(str(e).splitlines())
+        print("aos7-ctl: %s。例：aos7-ctl daemon /tmp/aos register n1；其他用法看 aos7-ctl --help" % detail,
+              file=sys.stderr)
+        return 2
+    except (Unknown, OSError) as e:
+        detail = " ".join(str(e).splitlines())
+        print("aos7-ctl: 不確定：%s，已有檔案與請求留著。先查看控制檔與回條、確認讀寫正常後再依原請求接續" % detail,
+              file=sys.stderr)
+        return 3
+    except Exception as e:
+        print("aos7-ctl: 不確定：處理控制請求時遇到 %s，已有檔案與請求留著。先查看控制檔與回條再依原請求接續" %
+              type(e).__name__, file=sys.stderr)
+        return 3
+
+
+def _main(argv):
+    ap = Parser(prog="aos7-ctl", description="寫 aos7 控制檔")
     sub = ap.add_subparsers(dest="what", required=True)
     d = sub.add_parser("daemon")
     d.add_argument("root", help="daemon 根，或掛進來的 .aosd／.aosd/ctl")
@@ -159,16 +187,14 @@ def main(argv=None):
     try:
         a = ap.parse_args(sys.argv[1:] if argv is None else argv)
     except SystemExit as e:
-        return 0 if e.code == 0 else 1
+        return 0 if e.code == 0 else 2
     if a.what == "daemon":
         if a.op not in ("stop",) and not a.node:
-            print("aos7-ctl: %s 要給 node" % a.op, file=sys.stderr)
-            return 1
+            ap.error("%s 要給 node" % a.op)
         path = daemon_ctl(a.root, a.op, a.node, a.kill, a.by, a.rounds, a.owner, a.all, a.why)
     elif a.what == "task":
         if (a.reload or a.id) and a.op != "restart":
-            print("aos7-ctl: --reload／--id 只給 restart", file=sys.stderr)
-            return 1
+            ap.error("--reload／--id 只給 restart")
         if a.op == "restart":
             import aos7_control   # 控制包（工具包依賴它）
             sd = os.path.abspath(a.slot_dir)
@@ -176,26 +202,21 @@ def main(argv=None):
                                      a.why, a.reload, a.id, a.by or default_by())
             print(json.dumps(dict(r, wrote=r.get("ctl")), ensure_ascii=False))
             if not r["ok"]:
-                print("aos7-ctl: %s" % r["msg"], file=sys.stderr)
+                detail = " ".join(str(r["msg"]).splitlines())
+                if r.get("outcome") == "unknown":
+                    print("aos7-ctl: 不確定：%s，已有檔案與請求留著。先查看控制檔與回條、確認讀寫正常後用同一個請求 id 接續" % detail,
+                          file=sys.stderr)
+                    return 3
+                print("aos7-ctl: %s。確認槽的 birth 與 reload 定義後再試" % detail, file=sys.stderr)
             return 0 if r["ok"] else 1
-        try:
-            path = task_ctl(a.slot_dir, a.why, a.by, a.run)
-        except Unknown as e:
-            print("aos7-ctl: %s" % e, file=sys.stderr)
-            return 1
+        path = task_ctl(a.slot_dir, a.why, a.by, a.run)
     else:
         try:
             items = [json.loads(x) for x in a.items]
         except ValueError as e:
-            print("aos7-ctl: 項目不是 JSON：%s" % e, file=sys.stderr)
-            return 1
+            ap.error("項目不是 JSON：%s" % e)
         if not all(isinstance(i, dict) for i in items):
-            print("aos7-ctl: 每個項目要是 JSON 物件", file=sys.stderr)
-            return 1
-        try:
-            path = add_items(a.node, items)
-        except Unknown as e:
-            print("aos7-ctl: %s" % e, file=sys.stderr)
-            return 1
+            ap.error("每個項目要是 JSON 物件")
+        path = add_items(a.node, items)
     print(json.dumps({"wrote": path}, ensure_ascii=False))
     return 0

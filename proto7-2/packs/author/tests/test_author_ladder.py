@@ -83,13 +83,13 @@ class TestLadderCSV(Replies, csv_case.TestAuthorLLM):
 
     def test_failed_delivery_does_not_climb(self):
         self.code = 400
-        out = self.propose(code=2)
+        out = self.propose(code=1)
         self.assertEqual(self.models(), [LADDER[0]])
         self.assertEqual(len(out['rounds']), 1)
 
     def test_failed_reply_with_text_does_not_climb(self):
         self.code, self.usage = 500, None
-        out = self.propose(code=2)
+        out = self.propose(code=1)
         self.assertEqual((out['llm']['exit'], out['llm']['outcome']), (4, 'failed'))
         self.assertEqual(self.models(), [LADDER[0]])
 

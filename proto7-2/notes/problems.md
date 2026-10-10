@@ -311,7 +311,7 @@
 
 | 變化 | 以前 | 現在 | 類 |
 |---|---|---|---|
-| G1：寫 tasks.json 的人讀舊內容 | `edit_json` 用寬鬆讀，壞掉／讀不到／FIFO 一律當空表，寫回只剩新項（實驗重現過） | 讀不到、不是一般檔、壞掉＝不知道，丟 Unknown、不寫；`aos7-ctl add` 退出碼 1、restart 回條 ok:false 不 kill、tick 記 tasks_error、retry_lost 當不知道 | 真 bug（B） |
+| G1：寫 tasks.json 的人讀舊內容 | `edit_json` 用寬鬆讀，壞掉／讀不到／FIFO 一律當空表，寫回只剩新項（實驗重現過） | 讀不到、不是一般檔、壞掉＝不知道，丟 Unknown、不寫；`aos7-ctl add` 退出碼 1（10-10 FX1 A10-09 起改退 3＝不確定）、restart 回條 ok:false 不 kill、tick 記 tasks_error、retry_lost 當不知道 | 真 bug（B） |
 | tick 在表鎖內重讀 tasks.json（寫 launch 標記） | 讀不到時以空表為基底寫回 | 丟 Unknown：這回合一個都不起（once 不能沒標記就起）、記 tasks_error | 同 G1 |
 | G2：tick 非 3 的失敗（例外、退出碼 1） | 照常往下 tock（印 skipped），被當成一回合，扣 `resume --rounds` 倒數 | 退出碼只看 0／3／其他：其他＝失敗退避、回頂端，不算回合、不扣倒數；tick 被逾時收掉照舊標 `incomplete: tick` | 真 bug（B） |
 | 存在但不是一般檔（頂層定案 3） | 生命週期檔＝不知道，其他檔（tasks.json、timeline.json…）＝不存在 | 一律＝不知道（U）。tasks.json：這回合不起、tock 不刪槽；timeline.json：用預設並記一筆；daemon 控制檔不是一般檔照舊回條 ok:false（B：請求本身不合） | U |

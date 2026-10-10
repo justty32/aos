@@ -20,6 +20,7 @@ from _matrix import MatrixCase, alive, env, gen, rec_argv  # noqa: E402
 import aos7_control  # noqa: E402
 import aos7_task  # noqa: E402
 from aos7_fs import read_json, write_json  # noqa: E402
+from aos7_fs import U  # noqa: E402
 
 
 def restart_items(case, node):
@@ -30,6 +31,41 @@ class TestRestart(CoreCase):
     """〔control〕restart／reload（F39）。"""
     def done(self, node, slot):
         return read_json(os.path.join(self.slot(node, slot), "ctl-done.json"))
+
+    def test_a10_09_restart_locked_birth_unknown(self):
+        """鎖內重讀 birth 故障仍回 unknown；不加 once、不寫 kill。"""
+        node = self.mknode("a", [])
+        slot = self.slot(node, "w")
+        write_json(os.path.join(slot, "birth.json"), {"run": 1, "name": "w", "argv": ["true"]})
+        before = self.tasks(node)
+        real_fact, reads = aos7_control.fact, []
+
+        def fail_second_read(path):
+            reads.append(path)
+            return (U, "birth.json 讀不到：EIO") if len(reads) == 2 else real_fact(path)
+
+        with mock.patch.object(aos7_control, "fact", side_effect=fail_second_read):
+            result = aos7_control.restart(node, "w", req_id="fx1-restart")
+        self.assertEqual(len(reads), 2)
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["outcome"], "unknown")
+        self.assertEqual(self.tasks(node), before)
+        self.assertFalse(os.path.exists(os.path.join(slot, "ctl.json")))
+
+    def test_a10_09_restart_bad_birth_unknown(self):
+        """核心寫的 birth 壞掉或缺 run 不能當成確定拒絕。"""
+        node = self.mknode("a", [])
+        slot = self.slot(node, "w")
+        os.makedirs(slot, exist_ok=True)
+        for content in ("{", '{"name":"w"}'):
+            with self.subTest(content=content):
+                with open(os.path.join(slot, "birth.json"), "w") as f:
+                    f.write(content)
+                result = aos7_control.restart(node, "w", req_id="fx1-restart")
+                self.assertFalse(result["ok"])
+                self.assertEqual(result["outcome"], "unknown")
+                self.assertEqual(self.tasks(node), [])
+                self.assertFalse(os.path.exists(os.path.join(slot, "ctl.json")))
 
     def test_restart_same_slot_new_run_keeps_state(self):
         node = self.mknode("a", [{"name": "w", "argv": ["sh", "-c", 'echo $AOS7_RUN >> "$AOS7_TASK/runs.txt"; sleep 60'],

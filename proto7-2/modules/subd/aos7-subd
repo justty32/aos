@@ -32,6 +32,7 @@ import os
 import signal
 import subprocess
 import sys
+sys.dont_write_bytecode = True
 import time
 
 TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -228,16 +229,19 @@ def finish_stop(aosd, life_path, me):
 
 
 def main(argv):
+    if argv in (["--help"], ["-h"]):
+        print("用法：aos7-subd <subroot> [--allow-stop] -- <argv...>")
+        return 0
     allow = "--allow-stop" in argv[:argv.index("--")] if "--" in argv else False
     head = [a for a in (argv[:argv.index("--")] if "--" in argv else argv) if a != "--allow-stop"]
     cmd = argv[argv.index("--") + 1:] if "--" in argv else []
     if len(head) != 1 or not cmd:
-        print("用法: aos7-subd <subroot> [--allow-stop] -- <argv...>", file=sys.stderr)
+        print("aos7-subd: 參數不合，要給 aos7-subd <subroot> [--allow-stop] -- <argv...>。例：aos7-subd a/sub -- aos7-daemon a/sub", file=sys.stderr)
         return 2
     e = os.environ
     root, node_id, tid = e.get("AOS7_ROOT"), e.get("AOS7_NODE_ID"), e.get("AOS7_TID")
     if not (root and node_id and tid):
-        print("aos7-subd: 要以任務身分起（缺 AOS7_ROOT／AOS7_NODE_ID／AOS7_TID）", file=sys.stderr)
+        print("aos7-subd: 要以任務身分起（缺 AOS7_ROOT／AOS7_NODE_ID／AOS7_TID）。在 tasks.json 登記，例如 argv=[\"aos7-subd\", \"a/sub\", \"--\", \"aos7-daemon\", \"a/sub\"]", file=sys.stderr)
         return 2
     sub, why = check(root, node_id, head[0])
     if why:
@@ -349,4 +353,9 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    try:
+        code = main(sys.argv[1:])
+    except Exception:
+        print("aos7-subd: 不確定：入口遇到未預期錯誤，無法確認是否完成。證據留著，先檢查後再跑", file=sys.stderr)
+        code = 3
+    sys.exit(code)

@@ -12,8 +12,9 @@ import subprocess
 import sys
 
 TOP = Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(TOP / "lib"), str(TOP / "modules/tools")]
+sys.path[:0] = [str(TOP / "lib"), str(TOP / "modules/tools"), str(TOP / "packs/llmcall")]
 from aos7_fs import append_jsonl, now, read_json, sweep_tmp, test_point, write_json
+from aos7_llmcall_exit import answered, delivered, meaning
 from aos7_taskside import task_env, wait_tock
 
 # 門檻依據（2026-10-09 長任務）：真 AI 29 回合 journal 6.5 KB、STATE 2.8 KB，練習用的 AI 3.0／2.2 KB；
@@ -373,9 +374,17 @@ def summarize(node, work, p):
             "--request", str(req), "--reserve", str(llm["reserve"]), "--deadline", str(llm["deadline"]),
             "--patience", str(llm["patience"]), "--out", str(result)]
     reply = subprocess.run(argv, cwd=node, capture_output=True, text=True)
-    if reply.returncode:
-        raise Failure("摘要沒拿到：llmcall 退出 " + str(reply.returncode), 3, hint='pending 留著，照原樣再跑一次會接續')
+    if not delivered(reply.returncode):
+        code = 1 if meaning(reply.returncode) in ("failed", "bad_request") else 3
+        hint = ('pending 留著，先查看 llmcall 回條與請求，修正失敗原因後再跑一次'
+                if code == 1 else 'pending 留著，照原樣再跑一次會接續')
+        raise Failure("摘要沒拿到：llmcall 退出 " + str(reply.returncode), code, hint=hint)
     receipt = read_json(str(result), {})
+    if not answered(reply.returncode, receipt):
+        if isinstance(receipt, dict) and receipt.get("outcome") not in (None, "answered"):
+            raise Failure("摘要沒拿到：模型那邊確定沒答成", 1,
+                          hint='pending 留著，先查看 llmcall 回條與請求，修正失敗原因後再跑一次')
+        raise Failure("摘要沒拿到：回條沒有可確認的回答", 3, hint='pending 留著，照原樣再跑一次會接續')
     text = receipt.get("text") if isinstance(receipt, dict) else None
     if not isinstance(text, str) or not text.strip():
         raise Failure("摘要沒拿到：回條沒有非空 text", 3, hint='pending 留著，照原樣再跑一次會接續')

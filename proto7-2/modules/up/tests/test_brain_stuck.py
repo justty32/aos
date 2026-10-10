@@ -294,7 +294,7 @@ class BrainStuckTests(DaemonCase):
                 brain.ask_ai(self.node, letter, cid, cfg)
             self.assertFalse(caught.exception.unsure)
             (work / 'unsure.json').write_text('{}')
-            run.return_value = subprocess.CompletedProcess([], 0, '{"text":"回信：好"}', '')
+            run.return_value = subprocess.CompletedProcess([], 0, '{"outcome":"answered","text":"回信：好"}', '')
             self.assertEqual(brain.ask_ai(self.node, letter, cid, cfg), '回信：好')
             self.assertFalse((work / 'unsure.json').exists())
 

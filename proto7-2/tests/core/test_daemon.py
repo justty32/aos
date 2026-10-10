@@ -689,10 +689,57 @@ class TestDaemonDurableRecovery(DaemonCase):
         self.addCleanup(os.close, d.rfd)
         d.steps = {"a": {"k": 2}}
         with mock.patch.object(d, "save_paused", side_effect=[OSError("disk unavailable"), None]) as save:
-            d.mark_owe("a", 4)
+            self.assertFalse(d.mark_owe("a", 4))
             self.assertEqual(d.owe, {})
-            d.mark_owe("a", 4)
+            self.assertTrue(d.mark_owe("a", 4))
         self.assertEqual(save.call_count, 2)
+
+    def test_mark_owe_without_pending_write_succeeds(self):
+        d = aos7_daemon.Daemon(self.root)
+        self.addCleanup(os.close, d.rfd)
+        for steps, owe in (({}, {}), ({"a": {"k": 2}}, {"a": 4})):
+            with self.subTest(steps=steps, owe=owe):
+                d.steps, d.owe = steps, owe
+                with mock.patch.object(d, "save_paused") as save:
+                    self.assertTrue(d.mark_owe("a", 4))
+                    save.assert_not_called()
+
+    def test_steps_owe_write_failure_holds_round_until_recovery(self):
+        """待結算寫不進去不 tick；恢復後只跑原額度，沒有倒數的 node 照跑。"""
+        node = self.mknode("a", interval_ms=50, early=True)
+        self.mknode("b", interval_ms=50, early=True)
+        os.makedirs(os.path.join(self.root, ".aosd"))
+        path = os.path.join(self.root, ".aosd", "paused.json")
+        initial = {"paused": {}, "steps": {"a": {"k": 2}}}
+        write_json(path, initial)
+        with open(os.path.join(self.root, ".aosd", "log.on"), "w"):
+            pass
+        rules = os.path.join(self.root, "fault-rules.txt")
+        fault = Fault("@" + rules, ops={"write"})
+        self.addCleanup(fault.close)
+        self.start_daemon(env=fault.env)
+        self.wait_for(lambda: self.status().get("pid"))   # 啟動的首份 paused.json 先成功落盤
+        with open(rules, "w") as fh:
+            fh.write("write:*/.aosd/paused.json:EIO\n")
+        self.assertTrue(self.wait_receipt(self.ctl("register", "a"))["result"]["ok"])
+        self.assertTrue(self.wait_receipt(self.ctl("register", "b"))["result"]["ok"])
+        self.wait_for(lambda: fault.hits("write") >= 3, msg="沒有重試保存 owe")
+        fault.check_rules(where="（開回合前保存 owe）")
+        end = time.monotonic() + 0.2
+        while time.monotonic() < end:
+            self.assertEqual(self.round_json(node).get("round", 0), 0, "owe 沒落盤卻開了回合")
+            self.assertEqual(read_json(path), initial, "保存失敗改了磁碟上的倒數")
+            time.sleep(0.02)
+        self.wait_round(2, "b")   # steps 空的 node 不受 paused.json 故障擋住
+        events = read_jsonl(os.path.join(self.root, ".aosd", "log.jsonl"))
+        self.assertTrue(any(e.get("ev") == "paused-save-error" and e.get("node") == "a" for e in events))
+        os.remove(rules)
+        self.wait_for(lambda: self.nstat().get("phase") == "paused", 10, "寫入恢復後倒數沒有跑完")
+        self.assertEqual(self.round_json(node)["round"], 2)
+        self.assertFalse(self.round_json(node)["open"])
+        self.assertEqual(read_json(path), {"paused": {"a": ["k"]}, "steps": {}})
+        time.sleep(0.1)
+        self.assertEqual(self.round_json(node)["round"], 2)
 
     def test_reaping_node_stat_eio_is_missing(self):
         d = aos7_daemon.Daemon(self.root)

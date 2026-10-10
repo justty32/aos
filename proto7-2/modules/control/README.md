@@ -33,7 +33,9 @@
    - 表讀不到、不是一般檔、壞掉＝不知道原本有什麼，拒寫（G1），不做第 3 步。
 3. 寫槽的 `ctl.json`＝`{"op": "kill", "run": 原 run, "by", "why", "id": req_id}`。tick／tock 收掉原 run 後，下一個 tick 先處理 once、在同一個槽起新 run（任務自己寫的 state 接得上）；新 birth 帶 `x.restart_of`、`x.req_id`。
 
-回 `{"ok", "msg", "run", "req_id", "ctl", "once": "added"|"dup"|"done", "diff"?}`；`ok` 只表示請求端這兩步做完了，真的重起看 ctl-done.json 與下一回合的總結。
+回 `{"ok", "msg", "run", "req_id", "ctl", "once": "added"|"dup"|"done", "diff"?, "outcome"?}`；`ok` 只表示請求端這兩步做完了，真的重起看 ctl-done.json 與下一回合的總結。
+
+`ok: false` 時新增 `outcome` 分類，其他欄位的意義不變：`unknown` 表示鎖忙、birth／tasks 讀取故障或不能信任其內容；保留檔案，確認讀寫正常後用同一個 `req_id` 接續。`refused` 表示確定缺 birth、reload 表不存在、找不到同名定義或定義不合格；確認前提後再試。成功回傳不加這個欄位。
 
 ## 被打斷時（方案 6.1 第 1 點）
 

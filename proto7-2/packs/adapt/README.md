@@ -58,3 +58,5 @@ python3 $P/bin/aos7-ctl daemon <root> stop --kill
 
 - `aos7-adapt check <宣告>`：欄位型別、步種類、`need` 在產出裡、`max_age`／`patience`／`stall` 是非負整數或 null；不執行；有錯退出碼 1。
 - `aos7-adapt status <宣告>`（cwd＝node）：印暫存器摘要（`state`、`value`、`why`、`age_src_rounds`、`src_state`、`my_round`）。
+
+`aos7-adapt --help` 看用法；參數不合時用一行說明並附可照抄的例子。讀取狀態不確定時不改檔，依訊息修好宣告或等心跳後再看。

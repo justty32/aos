@@ -656,7 +656,7 @@ def propose(node, rid, *, candidate_path, auto=False):
         return out
     except Refuse as r:
         return result(False, r.why, rid=rid, error=r.msg, **r.extra)
-    except Unknown as e:
+    except (Unknown, OSError) as e:
         return result(False, "unknown", rid=rid, error=str(e))
 
 
@@ -855,6 +855,10 @@ def error_line(r, rejected=False):
     why = r.get('why')
     if why == 'unknown':
         body = '不確定：' + detail + '。已有證據留著；照原樣再跑一次會接續'
+    elif why == 'invalid' and rejected and (
+            (r.get('llm') and not r.get('candidate_sha')) or
+            (r.get('review') and r['review'].get('llm') and r['review'].get('path') is None)):
+        body = '模型這邊沒做成：' + detail + '。看 stdout JSON 的 llm／review 查原因，再決定是否換模型或新的 --call'
     elif why == 'invalid' and rejected:
         body = '候選沒過：' + detail + '。照 stdout JSON 的 issues／gates 改候選，再 propose 一次'
     elif why == 'invalid':

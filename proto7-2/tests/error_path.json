@@ -2,7 +2,7 @@
  "contract": "wf-table/1",
  "source": "../notes/blueprint-errors.md",
  "extracted": "2026-10-09",
- "note": "錯誤路徑一致性清單，tests/core/test_error_path.py 讀。欄位：name＝指令名（人話行前綴 `name: `）；entry＝入口（相對 proto7-2/，.py 用 python 跑）；help＝argv（缺省 [\"--help\"]）；bad＝argv 或案例物件（缺省 [\"--no-such-option\"]，跑完暫存夾不能有任何變動）；bad_code＝壞參數預期碼（缺省 2）；unsure＝自報退 3 的案 {argv, files, chmod, lock, env}：路徑相對暫存 cwd、`{tmp}` 換成它、不准逃出；files 鍵以 / 結尾是資料夾；lock＝執行期間測試持 flock 的檔；exempt＝{help|format|unsure: 理由}；skip＝非空就整列跳過。stderr 以 `{` 開頭的 JSON 行不算人話行。包照藍圖改完：拿掉 skip、填 unsure。",
+ "note": "錯誤路徑一致性清單，tests/core/test_error_path.py 讀。欄位：name＝指令名（人話行前綴 `name: `）；entry＝入口（相對 proto7-2/，.py 用 python 跑）；help＝argv（缺省 [\"--help\"]）；bad＝argv 或案例物件（缺省 [\"--no-such-option\"]，跑完暫存夾不能有任何變動）；bad_code＝壞參數預期碼（缺省 2）；unsure＝自報退 3 的案 {argv, files, chmod, lock, env}：路徑相對暫存 cwd、`{tmp}` 換成它、不准逃出；files 鍵以 / 結尾是資料夾；lock＝執行期間測試持 flock 的檔；exempt＝{help|format|unsure: 理由}；skip＝非空就整列跳過。stderr 以 `{` 開頭的 JSON 行不算人話行。包照藍圖改完：拿掉 skip、填 unsure。 現役入口由檢查器防漏列；exempt／skip 需非空理由。bad 與 help 均不得改 cwd 或隔離 HOME／XDG_*_HOME／TMPDIR；測試設 PYTHONDONTWRITEBYTECODE=1，快照不排除 __pycache__。 python＝true 時明確用本次測試的 Python 執行無副檔名入口（step 原檔為 100644），不改入口權限；.py 自動用 Python。",
  "columns": [
   "pack",
   "team",
@@ -13,7 +13,8 @@
   "bad_code",
   "unsure",
   "exempt",
-  "skip"
+  "skip",
+  "python"
  ],
  "rows": [
   {
@@ -200,14 +201,42 @@
    "team": "ER-events",
    "name": "aos7-events",
    "entry": "modules/events/aos7-events",
-   "unsure": {"argv": ["ack", "--events", "ev", "1"], "files": {"ev/": ""}}
+   "unsure": {
+    "argv": [
+     "ack",
+     "--events",
+     "ev",
+     "1"
+    ],
+    "files": {
+     "ev/": ""
+    }
+   }
   },
   {
    "pack": "routines",
    "team": "ER-routines",
    "name": "aos7-routines",
    "entry": "modules/routines/aos7-routines",
-   "unsure": {"argv": ["rm", "n", "x"], "files": {"n/wf/routines.json": {"contract": "wf-table/1", "columns": ["name"], "rows": []}}, "lock": ["n/wf/routines.json.lock"]}
+   "unsure": {
+    "argv": [
+     "rm",
+     "n",
+     "x"
+    ],
+    "files": {
+     "n/wf/routines.json": {
+      "contract": "wf-table/1",
+      "columns": [
+       "name"
+      ],
+      "rows": []
+     }
+    },
+    "lock": [
+     "n/wf/routines.json.lock"
+    ]
+   }
   },
   {
    "pack": "skills",
@@ -215,8 +244,17 @@
    "name": "aos7-skills",
    "entry": "modules/skills/aos7-skills",
    "unsure": {
-    "argv": ["mount", "node/skills/..", "alpha", "work"],
-    "files": {"node/.aosd/": "", "node/skills/alpha/SKILL.md": "---\nname: alpha\ndescription: x\n---\n", "node/.aos/tasks.json": "[]"}
+    "argv": [
+     "mount",
+     "node/skills/..",
+     "alpha",
+     "work"
+    ],
+    "files": {
+     "node/.aosd/": "",
+     "node/skills/alpha/SKILL.md": "---\nname: alpha\ndescription: x\n---\n",
+     "node/.aos/tasks.json": "[]"
+    }
    }
   },
   {
@@ -224,7 +262,15 @@
    "team": "ER-wfnode",
    "name": "aos7-wfnode",
    "entry": "modules/wfnode/aos7-wfnode",
-   "unsure": {"argv": ["check", "node"], "files": {"node/wf/tools/wf-lint.sh": "echo boom; exit 2\n"}}
+   "unsure": {
+    "argv": [
+     "check",
+     "node"
+    ],
+    "files": {
+     "node/wf/tools/wf-lint.sh": "echo boom; exit 2\n"
+    }
+   }
   },
   {
    "pack": "metrics",
@@ -242,9 +288,16 @@
    "name": "aos7-compact",
    "entry": "modules/compact/aos7-compact",
    "unsure": {
-    "argv": ["now", "{tmp}/n"],
-    "files": {"n/compact/": ""},
-    "lock": ["n/compact/lock"]
+    "argv": [
+     "now",
+     "{tmp}/n"
+    ],
+    "files": {
+     "n/compact/": ""
+    },
+    "lock": [
+     "n/compact/lock"
+    ]
    }
   },
   {
@@ -252,7 +305,22 @@
    "team": "ER-mail",
    "name": "aos7-mail",
    "entry": "modules/mail/aos7-mail",
-   "unsure": {"argv": ["--root", "{tmp}/post", "send", "alice", "bob", "收件信箱不可寫"], "files": {"post/bob/inbox/": ""}, "chmod": {"post/bob/inbox": "0o500"}}
+   "unsure": {
+    "argv": [
+     "--root",
+     "{tmp}/post",
+     "send",
+     "alice",
+     "bob",
+     "收件信箱不可寫"
+    ],
+    "files": {
+     "post/bob/inbox/": ""
+    },
+    "chmod": {
+     "post/bob/inbox": "0o500"
+    }
+   }
   },
   {
    "pack": "up",
@@ -260,28 +328,28 @@
    "name": "aos7-up",
    "entry": "modules/up/aos7-up",
    "unsure": {
-     "argv": [
-       "status",
-       "n"
-     ],
-     "files": {
-       "n/.aos/up.json": {
-         "v": 1,
-         "node": "n",
-         "house": ".",
-         "name": "n",
-         "you": "you",
-         "mail_root": ".",
-         "model": null,
-         "litellm_url": "http://localhost:4000/v1",
-         "budget": "budget/llm",
-         "holder": "brain",
-         "gateway": "llm.fake"
-       }
-     },
-     "chmod": {
-       "n/.aos/up.json": "0o000"
+    "argv": [
+     "status",
+     "n"
+    ],
+    "files": {
+     "n/.aos/up.json": {
+      "v": 1,
+      "node": "n",
+      "house": ".",
+      "name": "n",
+      "you": "you",
+      "mail_root": ".",
+      "model": null,
+      "litellm_url": "http://localhost:4000/v1",
+      "budget": "budget/llm",
+      "holder": "brain",
+      "gateway": "llm.fake"
      }
+    },
+    "chmod": {
+     "n/.aos/up.json": "0o000"
+    }
    }
   },
   {
@@ -289,7 +357,18 @@
    "team": "RV-fix-B",
    "name": "aos7-diag",
    "entry": "modules/diag/aos7-diag",
-   "unsure": {"argv": ["--llm", "node"], "files": {"node/llmcall/": ""}, "chmod": {"node/llmcall": "0o000"}}
+   "unsure": {
+    "argv": [
+     "--llm",
+     "node"
+    ],
+    "files": {
+     "node/llmcall/": ""
+    },
+    "chmod": {
+     "node/llmcall": "0o000"
+    }
+   }
   },
   {
    "pack": "llmdiag（轉址 stub，r5 移除）",
@@ -298,7 +377,9 @@
    "entry": "modules/llmdiag/aos7-llmdiag",
    "bad": [],
    "bad_code": 1,
-   "exempt": {"unsure": "轉址 stub 不讀任何檔；不確定案在 aos7-diag --llm"}
+   "exempt": {
+    "unsure": "轉址 stub 不讀任何檔；不確定案在 aos7-diag --llm"
+   }
   },
   {
    "pack": "kernel",
@@ -306,12 +387,177 @@
    "name": "aos7-kernel",
    "entry": "packs/kernel/bin/aos7-kernel",
    "unsure": {
-    "argv": ["status", "n"],
+    "argv": [
+     "status",
+     "n"
+    ],
     "files": {
-     "n/kernel/kernel.json": {"v": 1, "sources": [], "targets": [], "rules": [{"name": "noop"}]},
-     "n/.aos/tasks.json": {"tasks": []}
+     "n/kernel/kernel.json": {
+      "v": 1,
+      "sources": [],
+      "targets": [],
+      "rules": [
+       {
+        "name": "noop"
+       }
+      ]
+     },
+     "n/.aos/tasks.json": {
+      "tasks": []
+     }
     },
-    "chmod": {"n/.aos/tasks.json": "0o000"}
+    "chmod": {
+     "n/.aos/tasks.json": "0o000"
+    }
+   }
+  },
+  {
+   "pack": "aos7-tock",
+   "team": "FX1-C",
+   "name": "aos7-tock",
+   "entry": "bin/aos7-tock",
+   "bad": [],
+   "bad_code": 1,
+   "exempt": {
+    "help": "凍結核心沿用既有 CLI；wait-tock 的 --help 由原 argparse 提供",
+    "format": "凍結核心沿用既有用法行與退出碼，不改入口",
+    "unsure": "凍結核心的未知／等待需真實 node 與控制 fd，由核心矩陣測試覆蓋"
+   }
+  },
+  {
+   "pack": "aos7-daemon",
+   "team": "FX1-C",
+   "name": "aos7-daemon",
+   "entry": "bin/aos7-daemon",
+   "bad": [],
+   "bad_code": 1,
+   "exempt": {
+    "help": "凍結核心沿用既有 CLI；wait-tock 的 --help 由原 argparse 提供",
+    "format": "凍結核心沿用既有用法行與退出碼，不改入口",
+    "unsure": "凍結核心的未知／等待需真實 node 與控制 fd，由核心矩陣測試覆蓋"
+   }
+  },
+  {
+   "pack": "aos7-run",
+   "team": "FX1-C",
+   "name": "aos7-run",
+   "entry": "bin/aos7-run",
+   "bad": [],
+   "bad_code": 1,
+   "exempt": {
+    "help": "凍結核心沿用既有 CLI；wait-tock 的 --help 由原 argparse 提供",
+    "format": "凍結核心沿用既有用法行與退出碼，不改入口",
+    "unsure": "凍結核心的未知／等待需真實 node 與控制 fd，由核心矩陣測試覆蓋"
+   }
+  },
+  {
+   "pack": "aos7-wait-tock",
+   "team": "FX1-C",
+   "name": "aos7-wait-tock",
+   "entry": "bin/aos7-wait-tock",
+   "bad": [],
+   "bad_code": 2,
+   "exempt": {
+    "help": "凍結核心沿用既有 CLI；wait-tock 的 --help 由原 argparse 提供",
+    "format": "凍結核心沿用既有用法行與退出碼，不改入口",
+    "unsure": "凍結核心的未知／等待需真實 node 與控制 fd，由核心矩陣測試覆蓋"
+   }
+  },
+  {
+   "pack": "aos-exec",
+   "team": "FX1-C",
+   "name": "aos-exec",
+   "entry": "bin/aos-exec",
+   "bad": [
+    "missing-plain"
+   ],
+   "bad_code": 1,
+   "exempt": {
+    "format": "inst 執行包裝器沿用 usage=1、aos=125、child 原碼的凍結契約與訊息",
+    "unsure": "子程序退出碼透傳，3 可為 child 結果；aos 自己失敗用 125，不映射統一不確定碼"
+   }
+  },
+  {
+   "pack": "aos7-ctl",
+   "team": "FX1-C",
+   "name": "aos7-ctl",
+   "entry": "bin/aos7-ctl",
+   "unsure": {
+    "argv": [
+     "task",
+     "{tmp}/slot",
+     "kill"
+    ],
+    "files": {
+     "slot/birth.json": "{"
+    }
+   }
+  },
+  {
+   "pack": "aos7-adapt",
+   "team": "FX1-C",
+   "name": "aos7-adapt",
+   "entry": "packs/adapt/bin/aos7-adapt",
+   "unsure": {
+    "argv": [
+     "status",
+     "missing.json"
+    ]
+   }
+  },
+  {
+   "pack": "aos7-step",
+   "team": "FX1-C",
+   "name": "aos7-step",
+   "entry": "packs/step/bin/aos7-step",
+   "unsure": {
+    "argv": [
+     "status",
+     "job"
+    ],
+    "files": {
+     "job/frame.json": "[]"
+    }
+   },
+   "python": true
+  },
+  {
+   "pack": "aos7-step-result",
+   "team": "FX1-C",
+   "name": "aos7-step-result",
+   "entry": "packs/step/bin/aos7-step-result",
+   "exempt": {
+    "unsure": "子工作包裝器正常退出碼照命令透傳，結果檔保留原命令 code；未預期入口例外另退 3，由 step CLI 注入測試覆蓋"
+   },
+   "python": true
+  },
+  {
+   "pack": "aos7-audit",
+   "team": "FX1-C",
+   "name": "aos7-audit",
+   "entry": "modules/audit/aos7-audit",
+   "exempt": {
+    "unsure": "exec argv 退出碼照子命令；起不了命令保留 127；未預期入口例外另退 3，由 audit CLI 注入測試覆蓋"
+   }
+  },
+  {
+   "pack": "aos7-subd",
+   "team": "FX1-C",
+   "name": "aos7-subd",
+   "entry": "modules/subd/aos7-subd",
+   "exempt": {
+    "unsure": "正常退出碼照 argv／訊號透傳；既有鎖忙、回收不完整等安全拒起維持 1，不改子 daemon 生命週期；未預期入口例外另退 3，由 subd CLI 注入測試覆蓋"
+   }
+  },
+  {
+   "pack": "aos7-usage",
+   "team": "FX1-C",
+   "name": "aos7-usage",
+   "entry": "packs/usage/bin/aos7-usage",
+   "bad": [],
+   "bad_code": 1,
+   "exempt": {
+    "unsure": "轉址 stub 不讀寫狀態，不確定案在 aos7-metrics"
    }
   }
  ]

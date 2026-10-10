@@ -1,9 +1,16 @@
-"""〔error-path〕錯誤路徑一致性（notes/blueprint-errors.md）；清單與欄位見 ../error_path.json。"""
+"""〔error-path〕錯誤路徑一致性（notes/blueprint-errors.md）；清單見 ../error_path.json。
+
+bad／help 比對 cwd、隔離 HOME／XDG_*_HOME／TMPDIR 的內容、權限與時間。
+PYTHONDONTWRITEBYTECODE=1 防止 import 在 repo 留 pyc，快照不排除 __pycache__。
+這是副作用檢查而非 OS 沙箱：入口硬編的其他絕對路徑不在快照範圍。
+"""
 import contextlib
 import fcntl
+import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -12,13 +19,32 @@ from pathlib import Path
 
 TOP = str(Path(__file__).resolve().parents[2])
 
+def coverage_problems(rows, top):
+    """現役入口皆須登記；封存不在這三個入口層內。"""
+    root = Path(top)
+    entries = {p.relative_to(root).as_posix()
+               for pattern in ("bin/*", "modules/*/aos7-*", "packs/*/bin/*")
+               for p in root.glob(pattern) if p.is_file()}
+    listed = [r["entry"] for r in rows]
+    out = ["未列入口：" + e for e in sorted(entries - set(listed))]
+    for entry in sorted(set(listed)):
+        if listed.count(entry) != 1:
+            out.append("重複入口：" + entry)
+    for row in rows:
+        reasons = list(row.get("exempt", {}).values())
+        if "skip" in row:
+            reasons.append(row["skip"])
+        if any(not isinstance(reason, str) or not reason.strip() for reason in reasons):
+            out.append("豁免缺理由：" + row["entry"])
+    return out
+
 def problems(row, top):
     out, exempt = [], row.get("exempt", {})
     entry = os.path.join(top, row["entry"])
-    cmd = [sys.executable, entry] if entry.endswith(".py") else [entry]
+    cmd = [sys.executable, entry] if entry.endswith(".py") or row.get("python") else [entry]
 
     def run(tag, c):
-        tmp = os.path.realpath(tempfile.mkdtemp(prefix="aos72-test-errpath-"))
+        tmp = os.path.realpath(tempfile.mkdtemp(prefix="fx1-c-error-path-"))
         modes, p = [], None
         expand = lambda v: v.replace("{tmp}", tmp)
 
@@ -27,11 +53,36 @@ def problems(row, top):
             if not d.is_relative_to(tmp):
                 raise ValueError(v + " 逃出暫存夾")
             return d
-        snap = lambda: sorted((d, f, os.lstat(os.path.join(d, f)).st_mtime_ns)
-                              for d, ds, fs in os.walk(tmp) for f in ds + fs)
+        def snap():
+            result = []
+            for d, ds, fs in os.walk(tmp):
+                for f in ds + fs:
+                    p = Path(d) / f
+                    s = p.lstat()
+                    content = None
+                    if stat.S_ISLNK(s.st_mode):
+                        content = os.readlink(p)
+                    elif stat.S_ISREG(s.st_mode):
+                        try:
+                            content = hashlib.sha256(p.read_bytes()).hexdigest()
+                        except OSError:
+                            content = "unreadable"
+                    result.append((str(p.relative_to(tmp)), s.st_mode, s.st_size,
+                                   s.st_mtime_ns, content))
+            return sorted(result)
         try:
             env = {k: v for k, v in os.environ.items() if not k.startswith("AOS")}
             env.update({k: expand(v) for k, v in c.get("env", {}).items()})
+            # HOME／XDG／TMPDIR 寫入納入快照；不沿用本機 HOME。
+            homes = {"HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME",
+                     "XDG_STATE_HOME", "TMPDIR"}
+            homes.update(k for k in env if k.startswith("XDG_") and k.endswith("_HOME"))
+            for key in sorted(homes):
+                dest = path(".sandbox/" + key.lower())
+                dest.mkdir(parents=True)
+                env[key] = str(dest)
+            # B10-08 另隊處理入口本身；此處阻止 import 在 repo 寫 pyc。
+            env["PYTHONDONTWRITEBYTECODE"] = "1"
             for key, val in c.get("files", {}).items():
                 d = path(key)
                 (d if key[-1] == "/" else d.parent).mkdir(parents=True, exist_ok=True)
@@ -49,8 +100,8 @@ def problems(row, top):
                                      stdin=-3, stdout=-1, stderr=-1, text=True, start_new_session=True)
                 o, e = p.communicate(timeout=20)
                 r = (p.returncode, o, e)
-            if tag == "bad" and snap() != before:
-                out.append("bad: 動了檔案")
+            if tag in ("bad", "help") and snap() != before:
+                out.append(f"{tag}: 動了檔案")
             return r
         except (OSError, ValueError, subprocess.TimeoutExpired) as e:
             out.append(f"{tag}: 失敗：{e}")
@@ -104,6 +155,9 @@ def problems(row, top):
 class TestErrorPath(unittest.TestCase):
     """〔error-path〕逐包檢查。"""
 
+    def test_entry_coverage(self):
+        self.assertEqual([], coverage_problems(ROWS, TOP))
+
 with open(os.path.join(TOP, "tests", "error_path.json"), encoding="utf-8") as fh:
     ROWS = json.load(fh)["rows"]
 SKIPPED = [r["pack"] for r in ROWS if r.get("skip")]
@@ -122,6 +176,8 @@ for n, row in enumerate(ROWS, 1):
 FAKE = '''import fcntl, os, stat, sys
 mode = VARIANT
 if "--help" in sys.argv:
+    if mode == "help_cwd":
+        open("unexpected-write", "w").write("help wrote")
     print("aos7-fake\\n用法說明")
     if mode == "help_err":
         print("x", file=sys.stderr)
@@ -142,6 +198,15 @@ if "--unsure" in sys.argv:
     sys.exit(1 if mode == "unsure_code" else 3)
 if mode == "bad_touch":
     open("touched", "w").close()
+if mode in ("bad_home", "bad_xdg", "bad_tmp"):
+    key = {"bad_home": "HOME", "bad_xdg": "XDG_CONFIG_HOME", "bad_tmp": "TMPDIR"}[mode]
+    open(os.path.join(os.environ[key], "unexpected-write"), "w").write("bad wrote")
+if mode == "bad_content":
+    s = os.stat("existing")
+    open("existing", "w").write("new")
+    os.utime("existing", ns=(s.st_atime_ns, s.st_mtime_ns))
+if mode == "bad_mode":
+    os.chmod("existing", 0o600)
 msg = {"bad_prefix": "aos7-fakx: 錯。例：-h", "bad_period": "aos7-fake: 錯，例：-h",
        "bad_what": "aos7-fake: 。例：-h"}.get(mode, "aos7-fake: 錯。例：-h")
 print(msg, file=sys.stderr)
@@ -154,7 +219,7 @@ class TestErrorPathSelf(unittest.TestCase):
     """〔error-path〕檢查器自測：假入口逐項弄壞要抓得到。"""
 
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="aos72-test-errpath-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="fx1-c-error-path-self-"))
         self.addCleanup(shutil.rmtree, self.tmp)
 
     def row(self, mode="good"):
@@ -164,6 +229,14 @@ class TestErrorPathSelf(unittest.TestCase):
 
     def test_good(self):
         self.assertEqual([], problems(self.row(), TOP))
+
+    def test_explicit_python_entry(self):
+        row = self.row()
+        src = Path(row["entry"])
+        entry = src.with_suffix("")
+        src.rename(entry)
+        row.update(entry=str(entry), python=True)
+        self.assertEqual([], problems(row, TOP))
 
     def test_variants(self):
         for mode in ("help_err", "bad_code", "bad_lines", "bad_prefix", "bad_period", "bad_what",
@@ -185,6 +258,36 @@ class TestErrorPathSelf(unittest.TestCase):
         for bad in ({"lock": ["d/held", "{tmp}/d/held"]}, {"lock": ["d/held", "../aos72-test-errpath-esc"]}):
             with self.subTest(bad=bad):
                 self.assertTrue(problems(dict(row, unsure=dict(u, **bad)), TOP))
+
+    def test_home_and_help_writes(self):
+        # NEW-xmod-4 的兩個故意違規入口，另涵蓋 XDG 與 TMPDIR。
+        for mode in ("help_cwd", "bad_home", "bad_xdg", "bad_tmp"):
+            with self.subTest(mode=mode):
+                tag = "help" if mode == "help_cwd" else "bad"
+                self.assertIn(tag + ": 動了檔案", problems(self.row(mode), TOP))
+
+    def test_content_and_mode_writes(self):
+        for mode in ("bad_content", "bad_mode"):
+            with self.subTest(mode=mode):
+                row = self.row(mode)
+                row["bad"] = {"argv": [], "files": {"existing": "old"},
+                              "chmod": {"existing": "0o600" if mode == "bad_content" else "0o400"}}
+                self.assertIn("bad: 動了檔案", problems(row, TOP))
+
+    def test_coverage_detects_missing_entry(self):
+        for entry in ("bin/aos-exec", "modules/mail/aos7-mail", "packs/step/bin/aos7-step"):
+            p = self.tmp / entry
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.touch()
+        archived = self.tmp / "archive/old/bin/aos7-old"
+        archived.parent.mkdir(parents=True)
+        archived.touch()
+        rows = [{"entry": p, "skip": "測試入口"} for p in
+                ("bin/aos-exec", "modules/mail/aos7-mail", "packs/step/bin/aos7-step")]
+        self.assertEqual([], coverage_problems(rows, self.tmp))
+        self.assertEqual(["未列入口：bin/aos-exec"], coverage_problems(rows[1:], self.tmp))
+        self.assertEqual(["豁免缺理由：bin/aos-exec"],
+                         coverage_problems([dict(rows[0], skip="")] + rows[1:], self.tmp))
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,13 +8,17 @@
 """
 import os
 import sys
+sys.dont_write_bytecode = True
 
 SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit_site")
 
 
 def main(argv):
+    if argv in (["--help"], ["-h"]):
+        print("用法：aos7-audit -- <argv...>")
+        return 0
     if len(argv) < 2 or argv[0] != "--":
-        print("用法: aos7-audit -- <argv...>", file=sys.stderr)
+        print("aos7-audit: 參數不合，要給 aos7-audit -- <argv...>。例：aos7-audit -- python3 job.py", file=sys.stderr)
         return 2
     env = dict(os.environ, AOS7_AUDIT="1")
     paths = [p for p in env.get("PYTHONPATH", "").split(os.pathsep) if p and p != SITE]
@@ -27,4 +31,9 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    try:
+        code = main(sys.argv[1:])
+    except Exception:
+        print("aos7-audit: 不確定：入口遇到未預期錯誤，無法確認是否完成。證據留著，先檢查後再跑", file=sys.stderr)
+        code = 3
+    sys.exit(code)

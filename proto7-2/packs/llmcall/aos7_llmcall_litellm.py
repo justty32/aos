@@ -6,6 +6,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
+from aos7_fs import Unknown
+
 GATEWAY = "llm.litellm"
 METER = "litellm.total_tokens/1"
 ENDPOINT = "http://localhost:4000/v1"
@@ -60,9 +62,27 @@ def base_url():
 
 def send(node, call_id, request, deadline):
     """只有確定拒絕或未送達才退款；其他連線例外交給閘道保留 intent。"""
+    key = os.environ.get("AOS7_LITELLM_KEY")
+    if key and any(not "!" <= c <= "~" for c in key):
+        # 確定尚未送達；沿用 reject／未計費，讓閘道退回預留並退出 1。
+        return {"status": "reject", "billed": False,
+                "body": "AOS7_LITELLM_KEY 格式不合：只允許無空白的可見 ASCII，未送請求",
+                "usage": None, "model": None, "finish_reason": None, "http": None,
+                "elapsed": 0.0, "response": None, "choices_n": 0, "skipped": []}
+    try:
+        return _send(node, call_id, request, deadline, key)
+    except Exception as e:
+        # Request、header、open／read 的例外都可能帶 Authorization；不讓原訊息進 why，只留型別名供診斷。
+        kind = type(e).__name__
+        reason = getattr(e, "reason", None)
+        if isinstance(reason, BaseException):
+            kind += "/" + type(reason).__name__
+        raise Unknown("LiteLLM 傳輸故障（%s），intent 留著" % kind) from None
+
+
+def _send(node, call_id, request, deadline, key):
     start = time.monotonic()
     headers = {"Content-Type": "application/json"}
-    key = os.environ.get("AOS7_LITELLM_KEY")
     if key:
         headers["Authorization"] = "Bearer " + key
     req = Request(base_url().rstrip("/") + "/chat/completions",

@@ -187,7 +187,7 @@ class TestAuthorLLM(DaemonCase):
 
     def test_no_delivery_does_not_write_candidate(self):
         for rc, stdout, why in ((3, '{}', 'unknown'), (2, '{}', 'invalid'),
-                                (0, 'broken', 'invalid'), (4, '{"text":null}', 'invalid')):
+                                (0, 'broken', 'unknown'), (4, '{"text":null}', 'invalid')):
             with self.subTest(rc=rc, stdout=stdout), mock.patch('aos7_author_llm.subprocess.run',
                     return_value=subprocess.CompletedProcess([], rc, stdout, '')):
                 r = self.invoke()

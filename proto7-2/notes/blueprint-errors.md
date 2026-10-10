@@ -50,6 +50,8 @@
 - llmcall 0～4、回條欄位、入口終局：**零衝突**，表 §2 就是它。
 - budget 0～3：零衝突；只加 `status` 的 1 與 `call` 的「帳沒在跑」1（原本是等到天荒地老，不算改語意）。
 - 核心 tick／tock 的「0／3／其他」：零衝突（其他＝1 或 2）。
+- 凍結核心入口 `tick／tock／daemon／run／wait-tock` 逐支登記於 error_path 清單，沿用既有用法與退出碼；不為套檢查器改核心。
+- `aos-exec` 沿用 inst 執行器契約（usage＝1、aos 自己失敗＝125、child 原碼），不把子程序的 3 解讀成統一不確定。`audit／subd／step-result` 同樣保留子程序退出碼透傳；入口壞參數與 help 仍依本表檢查，subd 既有安全拒起路徑保持原碼。
 - 唯一會破既有測試的是 author（3→1、4→3、5→1）與 events（3→1、4→3）：測試只改數字；`why` 欄位保留所以呼叫方（mail 讀 events 的 `why`、A5 學徒讀三關 JSON）不受影響——但 **A5 交件後**再改 author。
 
 ## 7. 不做

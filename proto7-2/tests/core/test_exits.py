@@ -11,23 +11,51 @@ from aos7_fs import write_json  # noqa: E402
 
 
 class TestGiantReferenceIndex(DaemonCase):
-    """〔core〕A9-03：超長陣列索引回 125 與指示詞錯誤，不漏 traceback；4300 位數作對照。"""
+    """〔core〕A9-03／A10-11：超長非零索引回 125；前導零正規化後照收，不漏 traceback。"""
 
     def test_giant_index_reports_pointer_error(self):
         path = os.path.join(self.root, "inst.json")
-        for digits in (5000, 4300):
+        for digits in (5000, 4301, 4300):
             with self.subTest(digits=digits):
                 write_json(path, {"array": [0], "argv": [{"$ref": "#/array/" + "9" * digits}]})
-                p = subprocess.run([os.path.join(BIN, "aos-exec"), path],
+                p = subprocess.run([sys.executable, '-B', os.path.join(BIN, "aos-exec"), path],
+                                   env=dict(os.environ, PYTHONINTMAXSTRDIGITS='4300'),
                                    capture_output=True, text=True, timeout=10)
                 self.assertEqual(p.returncode, 125, p.stderr)
                 self.assertIn("ReferencePointerInvalid", p.stderr)
                 self.assertNotIn("Traceback", p.stderr)
+                self.assertEqual(len(p.stderr.splitlines()), 1, p.stderr)
 
     def test_leading_zero_index_still_resolves(self):
         import aos_directives as d
         ctx = d.Context(d.Document(None, {"a": [7, 8]}))
         self.assertEqual(d.resolve({"$ref": "#/a/0001"}, ctx, ["v"]), 8)
+
+    def test_giant_leading_zero_index_executes(self):
+        """A10-11：超長前導零仍是合法索引，應解析後成功執行。"""
+        path = os.path.join(self.root, 'inst.json')
+        for digits in ('0' * 4301, '0' * 4301 + '1', '0000'):
+            with self.subTest(digits=len(digits)):
+                write_json(path, {'array': ['/bin/true', '/bin/true'], 'argv': [
+                    {'$ref': '', '$at': '/array/' + digits}]})
+                p = subprocess.run([sys.executable, '-B', os.path.join(BIN, 'aos-exec'), path],
+                                   env=dict(os.environ, PYTHONINTMAXSTRDIGITS='4300'),
+                                   capture_output=True, text=True, timeout=10)
+                self.assertEqual(p.returncode, 0, p.stderr)
+                self.assertEqual(p.stderr, '')
+
+    def test_giant_leading_zero_index_load_obj_resolves(self):
+        import aos_inst
+        old_limit = sys.get_int_max_str_digits()
+        self.addCleanup(sys.set_int_max_str_digits, old_limit)
+        sys.set_int_max_str_digits(4300)
+        for digits, expected in (('0' * 4301, '/bin/true'),
+                                 ('0' * 4301 + '1', '/bin/false'),
+                                 ('0000', '/bin/true'), ('0001', '/bin/false')):
+            with self.subTest(digits=len(digits), expected=expected):
+                self.assertEqual(aos_inst.load_obj({
+                    'array': ['/bin/true', '/bin/false'], 'argv': [
+                        {'$ref': '', '$at': '/array/' + digits}]}, self.root)['argv'], [expected])
 
 
 class TestX(MatrixCase):

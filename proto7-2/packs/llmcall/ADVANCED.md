@@ -15,13 +15,15 @@
 | 識別 | `K = (budget_id, holder, call_id)`；call_id 英數／`_`／`-`、1～64 字；logical 只記錄，attempt 不進 K |
 | 保存 | `<node>/llmcall/<budget>/<call_id>/` 的 request／raw／receipt 與 call 鎖；入口證據沿用 budget/gateway；保存到預算退役，未結算不清 |
 | 依賴 | 標準庫、核心 `aos7_fs`、只讀 import `aos7_budget`；不需要 daemon／step／author |
-| 程式 | `aos7_llmcall.py`（閘道＋CLI）、`aos7_llmcall_fake.py`（假傳輸）、`aos7_llmcall_litellm.py`（標準庫 HTTP 傳輸）、`bin/aos7-llmcall`（薄入口） |
+| 程式 | `aos7_llmcall.py`（閘道＋CLI）、`aos7_llmcall_fake.py`（假傳輸）、`aos7_llmcall_litellm.py`（標準庫 HTTP 傳輸）、`aos7_llmcall_exit.py`（呼叫方共用退出碼意義）、`bin/aos7-llmcall`（薄入口） |
 | 範例 | `examples/fake/` 的 grant.json 與 req-ok.json |
-| 測試 | `tests/test_llmcall.py`（F01～F04、固定請求、adopt、故障邊界）、`tests/test_llmcall_litellm.py`（本地 HTTP、SIGKILL、真傳輸計量）、`tests/llmcallcase.py`（子程序、人工時鐘、獨立核帳） |
+| 測試 | `tests/test_llmcall.py`（F01～F04、固定請求、adopt、故障邊界）、`tests/test_llmcall_litellm.py`（本地 HTTP、SIGKILL、真傳輸計量）、`tests/test_llmcall_exit.py`（0～4 與未知碼判讀）、`tests/llmcallcase.py`（子程序、人工時鐘、獨立核帳） |
 
 ## 真模型一次
 
 [examples/litellm/](examples/litellm/) 提供 grant、req 與 run.sh；從 repo 根執行 `bash proto7-2/packs/llmcall/examples/litellm/run.sh ./evidence`。先啟動自己的 LiteLLM，設定 `AOS7_LITELLM_URL`（預設 `http://localhost:4000/v1`），需要驗證才設 `AOS7_LITELLM_KEY`。打本機（localhost／127.0.0.1／::1）一律直連、不經環境 proxy；非本機照 `http_proxy` 等設定。腳本開暫存 node／帳任務，reserve 1000000，保存 stdout 回條、status、raw 到指定目錄並印路徑；不在測試套裡跑。
+
+金鑰只從環境取，不寫進 request／raw／receipt 等證據；非空金鑰只允許無空白的可見 ASCII。格式不合法時不送請求，以固定文字拒絕、退 1 並歸還預留；傳輸例外也不輸出原始例外訊息。經核心任務執行時，要在起 daemon 的環境設 `AOS7_LITELLM_KEY`，已在跑的 daemon 沿用起動時的環境。
 
 請求頂層 `litellm` 是 OpenAI chat completions body，含字串 model 與 list messages，禁止 stream true、不可與 fake 並存。body 原樣送出，範例不設 max_tokens，閘道也不加任何上限；grant gateway 必須 llm.litellm。完整 HTTP 對應見 [spec](spec.md#傳輸-llmlitellm)。
 
@@ -43,7 +45,9 @@
 | 1 | 終局 failed／rejected／denied／cancelled＋final，或 reserve 拒絕、conflict、adopt 不合；帳任務沒在跑＝1 |
 | 2 | 壞輸入，未送請求 |
 | 3 | 未完整交付：busy、intent 無回覆、傳輸逾時／例外、帳未回、讀寫故障 |
-| 4 | 已交付但帳未清：usage 未知（pending）或超出預留（overrun） |
+| 4 | 帳未清：usage 未知（pending）或超出預留（overrun）；是否答成看回條 outcome |
+
+呼叫方共用 `aos7_llmcall_exit.meaning(rc)`（`delivered`／`failed`／`bad_request`／`unsure`／`delivered_unsettled`／`unknown`）分類退出碼，並用 `answered(rc, receipt)` 確認答成：退出碼為 0／4、回條 `outcome == "answered"` 且 text 是字串。4 只表示帳未清，failed 等 outcome 也可能退 4，不能只看 `delivered(rc)` 就採用文字；未知碼保守視為不確定，`status`／`adopt` 仍按各自的成功契約判斷。
 
 「帳任務沒在跑」＝`ledger.lock` 沒人持有：進門用 `aos7_budget.ledger_running` 唯讀試鎖（不建檔，給剛起的帳 0.5 秒），沒有就退 1、什麼都不寫；已有 receipt 照重印。文案用 `aos7_budget.not_running(bud)`（結尾附可直接複製的起帳指令），別包照用。
 

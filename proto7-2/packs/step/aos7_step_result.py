@@ -45,8 +45,14 @@ def publish(path, obj):
         os.unlink(tmp)
 
 
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        message = " ".join(message.splitlines())
+        self.exit(2, "aos7-step-result: 參數不合：%s。例：aos7-step-result --result r.json --job demo --inst i1 --step s1 --request r1 --attempt a1 -- true\n" % message)
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-step-result")
+    ap = Parser(prog="aos7-step-result")
     for k in ("result", "job", "inst", "step", "request", "attempt"):
         ap.add_argument("--" + k, required=True)
     ap.add_argument("--expect", action="append", default=[])
@@ -54,7 +60,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     cmd = a.cmd[1:] if a.cmd[:1] == ["--"] else a.cmd
     if not cmd:
-        print("aos7-step-result: 要在 -- 後面給命令", file=sys.stderr)
+        print("aos7-step-result: 要在 -- 後面給命令。例：aos7-step-result --result r.json --job demo --inst i --step s --request r --attempt a -- true", file=sys.stderr)
         return 2
     if os.path.lexists(a.result):
         # 同一個 attempt 只該跑一次；已有結果＝不碰它（不覆寫已交付的事實）

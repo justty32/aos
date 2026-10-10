@@ -83,6 +83,8 @@ reserve.content.gateway、intent／done 依傳輸；request.json 保存該 meter
 
 `TRANSPORT_LITELLM = aos7_llmcall_litellm.send`；POST `<base>/chat/completions`，body 是 request.litellm 原樣，**不加 max_tokens 或任何上限**，由呼叫者決定。只有 AOS7_LITELLM_KEY 非空才送 Authorization: Bearer；不寫計數檔、不重試。目標主機是 localhost／127.0.0.1／::1 時一律直連、不走環境 http_proxy／HTTP_PROXY；非本機目標照環境設定。
 
+金鑰送前須為無空白的可見 ASCII（`!`～`~`）；不合就固定訊息 reject／未計費、退出 1（確定未送達，退回預留）。傳輸例外只回固定 unknown 訊息、退出 3 並留 intent，不保存或輸出可能含金鑰的原例外。
+
 | 回覆 | status／billed | body／usage |
 |---|---|---|
 | 200 合法 JSON 且有 choice 可用（有非空 content 的 choice，或 choices[0] 是物件） | ok／true | 取**最後一個 content 是非空字串的 choice**（LiteLLM 會把 sol 的開場白與答案拆成多個 choice），全空才用 choices[0]；message.content 是字串才保存；usage dict 原樣，其他 null |

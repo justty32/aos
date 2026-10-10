@@ -2,6 +2,7 @@
 import os, sys  # noqa: E401
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tests/：base、_matrix
 import os
+import hashlib
 import signal
 import subprocess
 from unittest.mock import patch
@@ -152,15 +153,24 @@ def test_point(name):
         self.assertFalse(aos7_proc.pid_alive(pj["pid"]))
 
     def test_k1_inherited_aos_environment_is_cleared(self):
-        """上一層的 AOS7_* 不傳給任務，核心身分照樣傳。"""
-        node = self.mknode("a", [{"name": "s", "argv": ["sh", "-c", 'env > "$AOS7_TASK/env.txt"']}])
-        self.tick(env={"AOS7_SUBROOT": "/nope", "AOS7_FOO": "1"})
+        """繼承的 AOS7_* 只放行 LiteLLM 金鑰，核心身分照樣傳；測試不落地金鑰。"""
+        probe = '''import hashlib, json, os
+from pathlib import Path
+key = os.environ.get("AOS7_LITELLM_KEY", "")
+result = {"key_sha": hashlib.sha256(key.encode()).hexdigest(),
+          "names": sorted(k for k in os.environ if k.startswith("AOS7_")),
+          "run": os.environ["AOS7_RUN"]}
+Path(os.environ["AOS7_TASK"], "env.json").write_text(json.dumps(result))
+'''
+        node = self.mknode("a", [{"name": "s", "argv": [sys.executable, "-B", "-c", probe]}])
+        self.tick(env={"AOS7_SUBROOT": "/nope", "AOS7_FOO": "1", "AOS7_LITELLM_KEY": "fx1-test-key",
+                       "AOS7_LITELLM_URL": "http://example.invalid/v1", "AOS7_TEST_PROBE": "1"})
         self.wait_ended(node, "s", 1)
-        with open(os.path.join(self.slot(node, "s"), "env.txt")) as f:
-            env = dict(line.rstrip("\n").split("=", 1) for line in f if "=" in line)
-        self.assertFalse("AOS7_SUBROOT" in env, "繼承了 AOS7_SUBROOT")
-        self.assertFalse("AOS7_FOO" in env, "繼承了 AOS7_FOO")
-        self.assertEqual(env["AOS7_RUN"], "1")
+        env = read_json(os.path.join(self.slot(node, "s"), "env.json"))
+        self.assertEqual(env["key_sha"], hashlib.sha256(b"fx1-test-key").hexdigest())
+        self.assertEqual(set(env["names"]), {"AOS7_ROOT", "AOS7_NODE", "AOS7_NODE_ID", "AOS7_TASK",
+                                            "AOS7_TID", "AOS7_RUN", "AOS7_LITELLM_KEY"})
+        self.assertEqual(env["run"], "1")
 
     def test_k1_birth_read_failure_keeps_run_number(self):
         """birth 讀失敗的 exit 仍帶環境的整數 run。"""

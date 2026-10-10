@@ -252,7 +252,7 @@ aos7-run 經 fd 讀 birth、開 out.log，把任務起在自己的程序群組�
 - **kill 回成功的條件**：沒有同 run 的 pid.json、exit.json，而 runner 還在（或認不出、birth 還沒記 runner）＝仍在啟動交接，回 `ok: false`（msg 以 `unknown` 開頭），**請求留著**下次再做。收完再身分掃描，快照後出生的相符程序再收，最多補收 3 輪，掃描收斂才算成功。最後確認 pid.json 記的任務程序已經不在；還活著或認不出 → `ok: false`（msg 以 `unknown` 開頭）。
 - restart／reload 不在核心，見[控制包](modules/control/README.md)（請求端先加釘同槽的 once，再寫 kill；tick 先處理 once，所以它先佔住槽）。
 
-任務環境只帶核心自己的六個 `AOS7_*` 身分變數；上一層繼承來的 `AOS7_*`（例如模組變數）不傳。
+任務環境帶核心自己的六個 `AOS7_*` 身分變數；上一層繼承來的 `AOS7_*`（例如模組變數）不傳，唯一明列例外是 `AOS7_LITELLM_KEY`：金鑰只能從起 daemon 的環境傳給任務，不落地到設定或執行證據。
 
 ## 7. tock（S-08、S-11）
 

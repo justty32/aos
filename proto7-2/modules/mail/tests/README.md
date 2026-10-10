@@ -65,3 +65,5 @@ sh proto7-2/modules/mail/examples/two_nodes.sh
 | 撞名／被拒（`Refused`）退回 2 | `test_team_orders_quiet`、`test_round2_team_atomic_publish`：`2 != 1` |
 
 新手重試（10-09 ER-mail 後，只讀 README 與 `--help`，第一次跑＋自寄一封辦完）：Haiku 8.4、gpt-6-luna 9.0，指令 3、概念 5／4。
+
+10-10 A10-08：`test_mail_errors_effects.py` 新增 `test_bad_ack_cursor_unknown_preserves_evidence`，驗證 `.acked` 的 list／字串／物件／null／布林值／負數／小數／壞 JSON 都保留原檔、信件及未確認提醒，不掃描、不保存 read 快照，CLI 一行 `aos7-mail: 不確定：…` 退出 3。暫時移除游標驗證用 `python3 -B proto7-2/tests/run_all.py modules/mail/tests -k bad_ack_cursor` 實跑退出 1，還原並 touch 後同指令退出 0；完整 `modules/mail/tests` 共 44 項全綠。

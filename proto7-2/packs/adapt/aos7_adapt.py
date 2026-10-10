@@ -525,8 +525,14 @@ def main_run(decl_path):
         ad.pass_(last)
 
 
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        message = " ".join(message.splitlines())
+        self.exit(2, "aos7-adapt: 參數不合：%s。例：aos7-adapt check adapt/temp.json\n" % message)
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-adapt", description="adapt 任務包：最新值轉接")
+    ap = Parser(prog="aos7-adapt", description="adapt 任務包：最新值轉接")
     ap.add_argument("cmd", choices=("run", "check", "status"))
     ap.add_argument("decl", help="鏈宣告（相對 node，例如 adapt/temp.json）")
     a = ap.parse_args(argv)
@@ -539,12 +545,16 @@ def main(argv=None):
         print(json.dumps(issues, ensure_ascii=False, indent=1))
         return 1 if issues else 0
     if st != OK or not isinstance(d, dict) or not isinstance(d.get("sense"), str):
-        print("aos7-adapt: 宣告讀不到", file=sys.stderr)
+        print("aos7-adapt: 不確定：宣告讀不到或格式不合，沒有改檔。修好宣告後照原樣再跑", file=sys.stderr)
         return 3
     rst, r = fact(os.path.join("in", d["sense"] + ".json"))
     if rst != OK or not isinstance(r, dict):
-        print("aos7-adapt: 暫存器 in/%s.json %s" % (d["sense"], "還沒有" if rst == N else "讀不到"), file=sys.stderr)
-        return 1 if rst == N else 3
+        if rst == N:
+            print("aos7-adapt: 暫存器 in/%s.json 還沒有" % d["sense"], file=sys.stderr)
+            return 1
+        print("aos7-adapt: 不確定：暫存器 in/%s.json 讀不到或格式不合。沒有改檔，確認暫存器後再看" %
+              " ".join(d["sense"].splitlines()), file=sys.stderr)
+        return 3
     print(json.dumps({k: r.get(k) for k in ("sense", "state", "value", "why", "age_src_rounds", "src_state",
                                             "skipped", "held", "my_round")}
                      | {"basis": r.get("basis")}, ensure_ascii=False, indent=1))

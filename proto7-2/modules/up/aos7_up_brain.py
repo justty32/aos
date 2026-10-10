@@ -10,7 +10,9 @@ import shlex
 import time
 import sys
 TOP = Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(Path(__file__).resolve().parent), str(TOP / 'lib'), str(TOP / 'modules/tools')]
+sys.path[:0] = [str(Path(__file__).resolve().parent), str(TOP / 'lib'), str(TOP / 'modules/tools'),
+                str(TOP / 'packs/llmcall')]
+from aos7_llmcall_exit import answered, delivered, meaning
 import aos7_up_memory as memory
 _PICKED = {}
 from aos7_fs import BAD, N, OK, fact, read_json, test_point, write_json
@@ -193,12 +195,14 @@ def ask_ai(node, letter, cid, cfg):
                 '--holder', cfg.get('holder', 'brain'), '--call', cid, '--logical', 'up/brain',
                 '--request', req, '--reserve', cfg.get('reserve', 1000000), '--deadline', deadline,
                 node=node, env=env, timeout=float(deadline) + 15)
-        if p.returncode == 3:
+        if meaning(p.returncode) in ('unsure', 'unknown'):
             raw = node / 'llmcall' / Path(cfg.get('budget', 'budget/llm')).name / cid / 'raw.json'
             raise Later(unsure=not raw.exists())
-        if p.returncode not in (0, 4):
+        if not delivered(p.returncode):
             raise ValueError()
         receipt = json.loads(p.stdout.splitlines()[-1])
+        if not answered(p.returncode, receipt):
+            raise ValueError()
         text = receipt.get('text')
         if not isinstance(text, str) or not text.strip():
             raise ValueError()
@@ -208,7 +212,7 @@ def ask_ai(node, letter, cid, cfg):
         raise Trouble('AI 沒回應', AI_FIX) from None
     (node / 'brain/unsure.json').unlink(missing_ok=True)
     test_point('up-brain-after-llm')
-    return AIReply(text, usage_pending=p.returncode == 4)
+    return AIReply(text, usage_pending=meaning(p.returncode) == 'delivered_unsettled')
 def state_count(node, line):
     return sum(s.endswith(' ' + line) for p in (node / 'wf/handoffs').glob('*/STATE.md')
                for s in p.read_text().splitlines())

@@ -3,6 +3,7 @@
 # 由人或任務呼叫，委派寫 daemon／任務控制檔與 tasks.json（spec §10，S-01）。任務的 PATH 只加 proto7-2/bin，所以入口留在這裡。
 import os
 import sys
+sys.dont_write_bytecode = True
 TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path[:0] = [os.path.join(TOP, "modules", "tools"), os.path.join(TOP, "modules", "control"), os.path.join(TOP, "lib")]
 import aos7_ctl  # noqa: E402

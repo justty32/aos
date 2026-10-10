@@ -740,8 +740,14 @@ def main_run(jd):
             return 0
 
 
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        message = " ".join(message.splitlines())
+        self.exit(2, "aos7-step: 參數不合：%s。例：aos7-step check jobs/demo/steps.json\n" % message)
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos7-step", description="step 任務包：步驟表直譯器")
+    ap = Parser(prog="aos7-step", description="step 任務包：步驟表直譯器")
     ap.add_argument("cmd", choices=("run", "check", "status", "resume", "close"))
     ap.add_argument("path", help="工作資料夾（check 給 steps.json）")
     ap.add_argument("--resend", action="store_true", help="resume 時用同一個 request、新 attempt 重派（人負責）")
@@ -782,7 +788,7 @@ def main(argv=None):
         job.save(fr)
         return 0
     except Unknown as e:
-        print("aos7-step: %s" % e, file=sys.stderr)
+        print("aos7-step: 不確定：%s。證據留著，確認檔案後照原樣再跑" % " ".join(str(e).splitlines()), file=sys.stderr)
         return 3
 
 

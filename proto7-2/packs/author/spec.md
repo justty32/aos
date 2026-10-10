@@ -125,4 +125,4 @@ step 不改：表項起 `aos7-step run jobs/<job>`（keep、`max_live:1`、`rest
 - 請求＝`{"litellm":{"model":MODEL,"messages":[system,user]}}`，不設 max_tokens／temperature。預設 call_id＝`<rid>-<model 只留 [A-Za-z0-9_-]>-<請求 sha256 前8>`；前兩段合起來截至 55 字，尾端 `-<雜湊前8>` 一定保留（不同請求不撞 call_id）。重跑由 llmcall 重印回條；新生成由呼叫者明給新 `--call`。
 - 請求暫存檔交 `python3 <llmcall_bin> call DIR --holder author --call C --logical author/<rid> --request TMP --reserve R [--deadline D] --patience P`（cwd=node），用完刪除；讀 stdout 最後一行 JSON。
 - llmcall 退出 0／4、outcome 是 answered 且 text 是字串：UTF-8 bytes 原樣交既有 propose，不剝圍欄、不修復，三層驗證與作者帳語意不變。加 `llm` 回值：model、call_id、exit、outcome、usage、used、billing、reserve、receipt_path（llmcall receipt 絕對路徑，不存在則 null）。pending／overrun 照 llmcall 原值記錄。
-- 退出 3＝author unknown；1／2、其他未交付（CLI 退 1：模型回覆不能用）、text 非字串或讀不到回條＝invalid，不碰候選帳。傳輸、去重、token 帳由 llmcall／budget 負責，不在 author 重做。
+- 退出碼用 `llmcall/aos7_llmcall_exit.py` 判讀，CSV 與 aos 學徒、審查、學習共用 `aos7_author_llm.delivery_problem`：llmcall 1＝模型那邊確定沒做成；2＝作者組出的模型請求被拒，兩者均 `why:invalid`、author 退 1，不當使用者本地用法錯。0／4 的非 answered／非字串內容亦退 1。3、未識別退出碼或讀不到有效回條＝unknown、退 3；都不碰候選帳。本地參數／需求／路徑錯仍退 2。傳輸、去重、token 帳由 llmcall／budget 負責，不在 author 重做。

@@ -219,11 +219,13 @@ def _walk(doc, pos, where):
                                      "%s 要的位置 %s 在 %s 裡找不到 %r" % (where, shown, doc.ident, tok))
             cur = cur[tok]
         elif isinstance(cur, list):
-            if (not (tok.isascii() and tok.isdigit())
-                    or len(tok.lstrip("0")) > len(str(len(cur))) or int(tok) >= len(cur)):
+            digits = tok.lstrip("0") or "0"
+            index = (int(digits) if tok.isascii() and tok.isdigit()
+                     and len(digits) <= len(str(len(cur))) else None)
+            if index is None or index >= len(cur):
                 raise DirectiveError("ReferencePointerInvalid",
                                      "%s 要的位置 %s 在 %s 裡索引不到 %r" % (where, shown, doc.ident, tok))
-            cur = cur[int(tok)]
+            cur = cur[index]
         else:
             raise DirectiveError("ReferencePointerInvalid",
                                  "%s 要的位置 %s 在 %s 裡走到 %s 就走不下去了"
