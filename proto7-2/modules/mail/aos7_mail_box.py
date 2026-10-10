@@ -5,7 +5,7 @@ import os
 import re
 from aos7_mail import (inbox, name, load, letters, letter, send, team_of,
                        validate_reply, TERMINAL, locked, write_json, test_point)
-from aos7_mail_ack import ack, event_ack
+from aos7_mail_ack import ack
 
 
 def finish(root, me, path, journal):

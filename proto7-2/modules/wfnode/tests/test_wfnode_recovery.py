@@ -1,5 +1,4 @@
 """首次導入復原、名稱與 CLI 引用的端到端測試。"""
-import os
 from pathlib import Path
 import shlex
 import shutil

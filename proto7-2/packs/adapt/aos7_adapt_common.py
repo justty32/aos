@@ -1,11 +1,13 @@
 """adapt 共用宣告欄位與精確十進位數值工具。"""
 import decimal
-import hashlib
-import json
 import math
 import os
 import re
 import sys
+
+TOP = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path[:0] = [os.path.join(TOP, "lib")]
+from aos7_fs import json_sha256  # noqa: E402
 
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 AS_RE = re.compile(r"^[A-Za-z0-9_]{1,32}$")
@@ -57,7 +59,7 @@ def publish(x, e=None):
 
 def sha(obj):
     """正規 JSON（鍵排序）的 sha256：依據版本與鏈版本都用它。"""
-    return hashlib.sha256(json.dumps(obj, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+    return json_sha256(obj)
 
 
 def is_num(v):

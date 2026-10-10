@@ -13,7 +13,7 @@ sys.path[:0] = [os.path.join(os.path.dirname(HERE), "budget"),
 import aos7_budget as bg  # noqa: E402
 import aos7_llmcall_fake  # noqa: E402
 import aos7_llmcall_litellm  # noqa: E402
-from aos7_fs import N, OK, U, LockTimeout, Unknown, fact, is_int, locked, now, write_json  # noqa: E402
+from aos7_fs import N, OK, U, LockTimeout, Unknown, fact, is_int, locked, now, say_line, write_json  # noqa: E402
 
 TRANSPORT = aos7_llmcall_fake.send
 TRANSPORT_LITELLM = aos7_llmcall_litellm.send
@@ -54,7 +54,7 @@ def emit(obj, out=None):
 
 
 def say(msg):
-    print("aos7-llmcall: " + " ".join(str(msg).splitlines()), file=sys.stderr)
+    say_line("aos7-llmcall: ", msg)
 
 
 class ArgumentParser(argparse.ArgumentParser):

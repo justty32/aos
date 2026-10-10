@@ -14,7 +14,7 @@
 | `lib/aos7_task.py` | 槽、三態判定、lost 前的身分掃描、kill（runner 還在啟動交接＝回 unknown、請求留著）；起任務的環境只帶核心六個 `AOS7_*`（第 5、6 節），繼承來的 `AOS7_*` 只明列放行 `AOS7_LITELLM_KEY`（金鑰只經環境、不落地，FX1 A10-01） |
 | `lib/aos7_proc.py` | 程序的事實（`proc`：不在／starttime／不知道）、同一個程序嗎、身分掃描、Q1 範圍的收程序（清場後身分複查最多補收 3 輪；node 級打記著的 pgid 前 `group_is_node` 重驗） |
 | `lib/aos7_run.py` | 任務的包裝：pid.json、exit.json（帶 run；run 先取環境 `AOS7_RUN`，birth 讀到再以它為準） |
-| `lib/aos7_fs.py` | 錯誤四分支的入口（讀檔 `fact`、紀錄 `hold`、例外 `Unknown`）、原子寫、flock、動作鎖與世代、測試鉤子的轉接（`AOS7_TEST_HOOKS` 有設才載入 `tests/_hooks.py`；`write_json` 有 `inject("write")`） |
+| `lib/aos7_fs.py` | 錯誤四分支的入口（讀檔 `fact`、紀錄 `hold`、例外 `Unknown`）、原子寫、flock、動作鎖與世代、測試鉤子的轉接（`AOS7_TEST_HOOKS` 有設才載入 `tests/_hooks.py`；`write_json` 有 `inject("write")`）；包共用的小工具 `json_sha256`（內容指紋）、`completed_round`（已完成回合）、`say_line`（stderr 一行訊息），loop15 TD1 從 budget／adapt／kernel／events／llmcall／routines／skills 收斂進來 |
 | `lib/aos7_mount.py` | 掛載（4.5）：tick 建掛載、審核執行中加掛（連結已建、birth 未記時被殺可冪等恢復） |
 | `lib/aos_*.py` | 搬來的 inst 執行器（不算核心預算） |
 | **模組** `modules/` | [總覽](modules/README.md)；每包一個資料夾，自帶 README 與 `tests/` |

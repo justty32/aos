@@ -92,3 +92,14 @@
 - C｜過時說法加日期註、不改原文：README（kernel 任務包已做、10-10 一段、catch-up／next-steps 標 10-05 快照）、core-slimming、catch-up 與名詞表、next-steps 兩份、layer-interfaces、drawers-and-mail 種子卡；status/ 兩張 HTML 快照頂端加一行註（1061→1308 項、M1 已進 main、usage／llmdiag 只剩轉址說明），新增 [status 索引](status/README.md)
 - C｜沒做：>1 KB 條列轉 json（命中的多半是規格條文與給人讀的決策紀錄，轉了反而難讀）；problems.md 標題「kernel 還沒做」的那段（kernel 用量以 run 為單位）有沒有被 packs/kernel 做到拿不準，留原樣；packs/menu、packs/author 與 32 份思想文件沒動
 - 結果｜壞連結：主 repo 的 proto7-2 前後都是 0（worktree 裡顯示 2 條，都是指向沒進版控的 `proto7/user-advice.md`）；`wf-lint wf .claude/commands` 前後 broken=0
+
+## loop15 TD1（程式拆檔與 tidy，頭腦風暴前；行為不變）
+
+- 結果｜拆檔：核心 `aos7_daemon.py` 842→571＋`aos7_daemon_control.py` 287（控制請求、回條、停止要求成 `DaemonControl` mixin）；step 796→587＋`aos7_step_check.py` 220；adapt 565→325＋`_common` 78／`_check` 100／`_chain` 90；budget 568→164（請求端與 CLI）＋`_common` 177／`_ledger` 251。八個大測試檔（test_daemon、test_matrix_faults、test_step、test_budget_ledger、test_kernel_core、test_llmcall、test_events_store、test_events_read）按 TestCase 分檔、共用 fixture 放 `_*.py`；全庫「類別.方法」1444 項前後逐一相同
+- 結果｜收斂：核心 `aos7_fs.py` 加 `json_sha256`、`completed_round`、`say_line`，budget／adapt／events／kernel 的雜湊、budget／adapt／kernel 的 `completed_tock`、budget／llmcall／events／routines／skills 的 stderr 一行訊息改成轉呼叫（原函式名留著）；刪 51 個沒用到的 import（含拆檔後剩下的）。核心總行 3089→3128、實際程式 2434→2457（預算仍只印不擋）；proto7-2 範圍內 .py 總行約 36.8k→37.1k
+- C｜拆出去的名字一律由原模組照舊匯出（`aos7_step.check`、`bg.ledger_running`…照用）。代價：測試若替換**舊模組**的屬性（如 `aos7_budget.fact`、`aos7_step._type_issues`），搬到新檔的函式看不到——現有測試沒有這種用法；以後要替換請對新檔。核心 daemon 例外：mixin 裡的 aos7_fs 函式（fact、write_json、now…）經 `aos7_daemon.<名字>` 取用，替換 `aos7_daemon.X` 照樣生效（astra 審查指出後補）
+- C｜不收的重複（astra 唯讀盤點逐處比過）：原子寫、flock、tmp 清理、JSON／JSONL 讀取、名稱編碼、時間字串——各處 tmp 命名（`.compact-tmp`、`.brain-tmp`、隨機 mkstemp）、權限、fsync、錯誤語意都不同，換成核心版會改檔名或錯誤行為；metrics 的 `is_int` 寫法也不換（metrics 沒 import 核心，不為一行加依賴）；kernel 的 flat／error 帶 flush 不收
+- C｜沒拆：compact（727，直接載檔＋測試 monkeypatch 邊界）、up brain（525，同理）、tick（414，單一開回合流程）、test_compact（1042，單一 TestCase 共用整圈 fixture）
+- C｜轉址 stub 全留：`modules/llmdiag/aos7-llmdiag` 寫「r5 移除」已到期，但 `packs/author/examples/aos-module-diag` 的答案檢查器與 diag 測試、error_path.json 都還指著它，author 是 MN3 的範圍；`packs/usage/bin/aos7-usage` 決策沒寫期限；events `read --ack`（10-09「下一輪移除」）要連 mail 測試輔助 `_mailcase.acked()` 一起改、還會改 CLI——三者都留給頂層排一條線
+- C｜沒改名：`wfnode_fill.py`／`wfnode_judge.py`／`wfnode_state.py`、`skills/bank.py`、`once_retry/retry_lost.py`、`tools/aos7_ctl.py`／`aos7_taskside.py` 不照 `aos7_<包>_<部分>.py`，但改名會動到 README 裡的 argv、任務設定與跨包 import；包內同義 helper（atomic／atomic_write／atomic_text／_write）實作本來就不同，不統一名字
+- 待｜盤點附帶發現：既有跨包 import 不少（compact／skills／up → llmcall，llmcall → budget，kernel → mail，tools → control，十多個包 → tools 的 taskside），與「包之間只經檔案協定」的原則不合，沒動；`modules/mail/INTERNALS.md:24` 說「本包不 import events store」但 `aos7_mail_ack.py` 已 import `load_state`；`notes/play/2026-10-09-astra-7-infra-evidence/group5/probe_t8.py` 指名的舊測試檔名已拆走（歷史證據不改）

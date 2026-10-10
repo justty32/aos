@@ -7,14 +7,8 @@
 
 預算資料夾＝`<node>/budget/<id>/`。只用核心公開的檔：round.json（completed_tock）；核心不知道這個包。
 """
-import argparse
-import fcntl
-import hashlib
 import json
 import os
-import re
-import shlex
-import signal
 import sys
 import time
 import uuid
@@ -22,8 +16,7 @@ import uuid
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = os.path.dirname(os.path.dirname(HERE))           # proto7-2/
 sys.path[:0] = [os.path.join(TOP, "lib")]
-from aos7_fs import (BAD, N, OK, ROUND_CLOSED, ROUND_OPEN, U, Unknown, fact, is_int, locked, now,  # noqa: E402
-                     read_round, sweep_tmp, write_json)
+from aos7_fs import OK, U, Unknown, fact, now, write_json  # noqa: E402
 
 from aos7_budget_common import (
     ID_RE, CLOCK, GATEWAY, PARTIAL_SETTLE, RESOURCE, GRANT_FIELDS, POLL, ORPHAN_ROUNDS, Bud, not_running, say,

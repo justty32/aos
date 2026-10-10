@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from aos7_fs import N, OK, U, Unknown, edit_json, fact, locked, now, write_json
+from aos7_fs import N, OK, U, Unknown, edit_json, fact, locked, now, say_line, write_json
 
 TOP = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(TOP / "packs/budget"), str(TOP / "packs/llmcall")]
@@ -316,7 +316,7 @@ def mount(node, skill, task):
 
 
 def error(message):
-    print("aos7-skills: " + " ".join(str(message).splitlines()), file=sys.stderr)
+    say_line("aos7-skills: ", message)
 
 
 class ArgumentParser(argparse.ArgumentParser):

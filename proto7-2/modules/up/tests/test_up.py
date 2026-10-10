@@ -3,7 +3,6 @@ import collections
 import json
 import os
 from pathlib import Path
-import selectors
 import signal
 import subprocess
 import sys

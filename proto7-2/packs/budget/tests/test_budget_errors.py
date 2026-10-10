@@ -4,7 +4,7 @@ import os
 import time
 from pathlib import Path
 
-from budgetcase import BudgetCase, bg
+from budgetcase import BudgetCase
 
 
 class TestBudgetErrors(BudgetCase):
