@@ -37,7 +37,7 @@ not_for: 寫測試、測試報告
 
 node 沒有 `budget/llm/` 就只用上面的本機挑，不問 AI、不記帳。有該資料夾或給了 `--budget` 時，**仍先本機挑**；只有本機平手，或題目明說「用技能」（`用技能`、`用 skill`、`use skill`）才經 [llmcall](../../packs/llmcall/README.md) 問 AI，同題同目錄同模型是同一個 call，重跑不重問。問 AI 需先開帳並起帳任務，詳見 [budget](../../packs/budget/README.md)。skills 不自己開帳或起帳任務；帳沒在跑時，錯誤訊息最後會附可直接複製的起帳指令，另開終端讓它一直跑著。
 
-接著 README 的 `$S`、`$N`，照抄假 AI 範例（不花錢）：
+接著 README 的 `$S`、`$N`，照抄練習用的 AI 範例（不花錢）：
 
 ```sh
 P="$(git rev-parse --show-toplevel)/proto7-2"; B="$P/packs/budget/bin/aos7-budget"
@@ -86,7 +86,7 @@ systemd-run --user --scope -q -p TasksMax=300 python3 proto7-2/tests/run_all.py 
 
 固定題庫 27 題：`examples/bank.json` 原 10 題，加 [examples/bank/](examples/bank/README.md) 的 L 長任務 17 筆（正確答案一行一題，none 當對）。候選 11 本（library 3＋workflows 8），需 `~/repo/workflows/skills`，可用 `--workflows` 指定。印分數、四指標（每題 token、並行、每題秒數、重試；L 有 5 題重複，重試會多算 5）與 ai_calls、wrong_book（挑錯本）。退出碼 0＝L ≥16、原 10 題 ≥8、挑錯本 0。
 
-2026-10-09 觸發詞版：`--local` 與開帳（假 AI、真 AI）都是 L 17／17、原 10 題 8／10、挑錯本 0、問 AI 0 次（原 10 題錯的兩題回 none）。改版前本機 L 只對 5／17、挑錯 12。[真 AI 全問](examples/bank-real-2026-10-09.json) 原 10 題為 10／10。
+2026-10-09 觸發詞版：`--local` 與開帳（練習用的 AI、真 AI）都是 L 17／17、原 10 題 8／10、挑錯本 0、問 AI 0 次（原 10 題錯的兩題回 none）。改版前本機 L 只對 5／17、挑錯 12。[真 AI 全問](examples/bank-real-2026-10-09.json) 原 10 題為 10／10。
 
 ```sh
 python3 proto7-2/modules/skills/bank.py --local
