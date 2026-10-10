@@ -1,0 +1,175 @@
+=== packs/mailcount/README.md ===
+# aos7-mailcount
+
+`aos7-mailcount` 是唯讀郵局工具，讀取 aos mail 郵局資料夾，彙總每個人的信件數與 `REQUEST` 信件數，並在標準輸出輸出一行 JSON。工具不修改郵局資料，也不讀取系統時鐘。
+
+郵局資料夾中，每個人的信箱位於 `<名字>/inbox/`，信件是其中的 `.md` 檔。輸出包含每人的 `letters`（信件數）及 `requests`（`status` 為 `REQUEST` 的信件數）。
+
+## 第一次跑
+
+需求：Python 3。入口是 `bin/aos7-mailcount`，可用 Python 3 呼叫：
+
+```sh
+python3 bin/aos7-mailcount <郵局資料夾>
+```
+
+成功時以退出碼 `0` 輸出一行 JSON；郵局資料夾不存在或指定路徑是檔案時，以退出碼 `2` 結束且不輸出內容。
+
+實作：[aos7_mailcount.py](aos7_mailcount.py)。測試：[tests/test_mailcount.py](tests/test_mailcount.py)。
+=== packs/mailcount/aos7_mailcount.py ===
+import json
+import os
+import sys
+
+
+def _header_status(path):
+    with open(path, "rb") as mail:
+        lines = mail.read().splitlines()
+    if not lines or lines[0] != b"---":
+        return None
+    for line in lines[1:]:
+        if line == b"---":
+            return None
+        if line.startswith(b"status: "):
+            return line.split(b": ", 1)[1].decode("utf-8")
+    return None
+
+
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    if len(args) != 1 or not os.path.isdir(args[0]):
+        return 2
+    try:
+        people = {}
+        for name in sorted(os.listdir(args[0])):
+            if name == "teams" or name.startswith("."):
+                continue
+            inbox = os.path.join(args[0], name, "inbox")
+            if not os.path.isdir(inbox):
+                continue
+            letters = requests = 0
+            for current, dirs, files in os.walk(inbox):
+                dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+                for filename in files:
+                    if filename.startswith(".") or not filename.endswith(".md"):
+                        continue
+                    letters += 1
+                    if _header_status(os.path.join(current, filename)) == "REQUEST":
+                        requests += 1
+            people[name] = {"letters": letters, "requests": requests}
+        print(json.dumps({"v": 1, "people": people}, ensure_ascii=False,
+                         separators=(",", ":")))
+        return 0
+    except (OSError, UnicodeError, ValueError):
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+=== packs/mailcount/bin/aos7-mailcount ===
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from aos7_mailcount import main
+
+raise SystemExit(main())
+=== packs/mailcount/tests/test_mailcount.py ===
+import contextlib
+import io
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from aos7_mailcount import main
+
+
+class MailcountTests(unittest.TestCase):
+    def run_main(self, args):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = main(args)
+        return code, output.getvalue()
+
+    def test_counts_letters_and_requests_in_sorted_people(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for person in ("zoe", "amy"):
+                inbox = root / person / "inbox"
+                inbox.mkdir(parents=True)
+            (root / "zoe" / "inbox" / "one.md").write_text(
+                "---\nfrom: sender\nstatus: REQUEST\nat: 2024-01-02T03:04:05Z\n---\nBody\n",
+                encoding="utf-8",
+            )
+            (root / "zoe" / "inbox" / "two.md").write_text(
+                "---\nfrom: sender\nstatus: READ\nat: 2024-01-02T03:04:05Z\n---\nBody\n",
+                encoding="utf-8",
+            )
+            (root / "amy" / "inbox" / "request.md").write_text(
+                "---\nfrom: sender\nstatus: REQUEST\nat: fixed\nreply-to: sender\nid: x\nre: \n---\n",
+                encoding="utf-8",
+            )
+            code, output = self.run_main([str(root)])
+            self.assertEqual(code, 0)
+            self.assertEqual(output.count("\n"), 1)
+            result = json.loads(output)
+            self.assertEqual(set(result), {"v", "people"})
+            self.assertIs(type(result["v"]), int)
+            self.assertEqual(result["v"], 1)
+            self.assertEqual(list(result["people"]), ["amy", "zoe"])
+            self.assertEqual(
+                result["people"],
+                {"amy": {"letters": 1, "requests": 1},
+                 "zoe": {"letters": 2, "requests": 1}},
+            )
+            for counts in result["people"].values():
+                self.assertEqual(set(counts), {"letters", "requests"})
+                self.assertIs(type(counts["letters"]), int)
+                self.assertIs(type(counts["requests"]), int)
+
+    def test_empty_mailboxes_and_ignores_non_markdown_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            inbox = root / "empty" / "inbox"
+            inbox.mkdir(parents=True)
+            (inbox / "note.txt").write_text("not a letter", encoding="utf-8")
+            code, output = self.run_main([str(root)])
+            self.assertEqual(code, 0)
+            self.assertEqual(output.count("\n"), 1)
+            self.assertEqual(
+                json.loads(output),
+                {"v": 1, "people": {"empty": {"letters": 0, "requests": 0}}},
+            )
+
+    def test_missing_directory_returns_two_without_stdout(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            missing = Path(temporary) / "missing"
+            code, output = self.run_main([str(missing)])
+            self.assertEqual(code, 2)
+            self.assertEqual(output, "")
+
+    def test_file_argument_returns_two_without_stdout(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            file_path = Path(temporary) / "mailbox"
+            file_path.write_text("not a directory", encoding="utf-8")
+            code, output = self.run_main([str(file_path)])
+            self.assertEqual(code, 2)
+            self.assertEqual(output, "")
+
+
+if __name__ == "__main__":
+    unittest.main()
+=== row ===
+| `packs/mailcount/` | 彙總郵局資料夾中的信件與請求數 |
+=== report ===
+# REPORT
+新增 `packs/mailcount/README.md`（說明用途與用法）、`packs/mailcount/bin/aos7-mailcount`（啟動入口）、`packs/mailcount/aos7_mailcount.py`（唯讀解析郵局資料並輸出彙總 JSON）、`packs/mailcount/tests/test_mailcount.py`（正常與錯誤情況測試），並交出 INDEX 索引列。
+
+## 以後交接書該點名的工具
+- `python3`：執行入口與測試。
+- `python3 proto7-2/tests/run_all.py packs/mailcount/tests`：執行 mailcount 實質測試。
+- `python3 check_answer.py <proto7-2> fixture`：獨立核對答案與唯讀性。

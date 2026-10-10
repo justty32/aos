@@ -31,7 +31,17 @@ def read(path, own=False):
     if st != OK:
         if own or st not in (N, 'bad'):
             raise Stop(3, f'不確定：{path} 讀不到或壞掉，原檔留著。請人看過，再照原樣跑一次')
-        raise MenuError(f'{path} 不在或 JSON 不合。給可讀的 JSON 檔，例如 hello/menu.json')
+        if st == N:
+            raise MenuError(f'{path} 不在。給存在的 JSON 檔，例如 hello/menu.json')
+        # fact 已確認是可讀的一般檔；重讀只為拿 JSON 的行、字位置。
+        try:
+            return json.loads(Path(path).read_text(encoding='utf-8'))
+        except json.JSONDecodeError as e:
+            raise MenuError(f'{path} 第 {e.lineno} 行第 {e.colno} 字不是合法 JSON。改好 JSON 再跑') from None
+        except UnicodeDecodeError as e:
+            before = e.object[:e.start].decode('utf-8')
+            line, column = before.count('\n') + 1, len(before.rsplit('\n', 1)[-1]) + 1
+            raise MenuError(f'{path} 第 {line} 行第 {column} 字不是合法 JSON。存成 UTF-8 的 JSON 再跑') from None
     return obj
 
 

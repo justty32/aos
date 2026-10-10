@@ -203,7 +203,15 @@ def status(args):
         if args.prompt and state['status'] == 'walking' and view(menu, state)['kind'] == 'ask':
             print(prompt(menu, state, path.parent))
         else:
-            print(summary(menu, state) + (f'；另有 {len(candidates) - 1} 個 run' if not args.run and len(candidates) > 1 else ''))
+            no_prompt = ''
+            if args.prompt:
+                if state['status'] == 'stuck':
+                    no_prompt = '；這個 run 已停下，沒有正在等回答的提示'
+                elif state['status'] == 'done':
+                    no_prompt = '；這個 run 已做完，沒有正在等回答的提示'
+                else:
+                    no_prompt = '；目前正在做事，沒有正在等回答的提示'
+            print(summary(menu, state) + no_prompt + (f'；另有 {len(candidates) - 1} 個 run' if not args.run and len(candidates) > 1 else ''))
     except MenuError:
         raise state_error(path.parent) from None
     return 0
@@ -220,18 +228,18 @@ def main(argv=None):
     ap = Parser(prog='aos7-menu', description='一次看一層選單，照編號走到寫檔或登記工具。')
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('run', help='開始或接續選單')
-    p.add_argument('node')
-    p.add_argument('menu')
+    p.add_argument('node', help='已存在的工作資料夾，紀錄與輸出放在這裡。')
+    p.add_argument('menu', help='要開始或接續的選單 JSON 檔。')
     group = p.add_mutually_exclusive_group()
-    group.add_argument('--llm')
-    group.add_argument('--reply')
-    p.add_argument('--run')
-    p.add_argument('--var', action='append', default=[])
-    p.add_argument('--brief')
+    group.add_argument('--llm', help='用這個模型回答，經工作資料夾的 budget/llm 帳呼叫。')
+    group.add_argument('--reply', help='把這個檔案全文當回答走一步，再印下一層提示。')
+    p.add_argument('--run', help='這次紀錄的名字，預設用選單 name；換名字可從頭重走。')
+    p.add_argument('--var', action='append', default=[], help='填一個模板變數 K=V，可重複給。')
+    p.add_argument('--brief', help='把這個檔案當需求摘要，每層附上，最多 1500 字。')
     p = sub.add_parser('status', help='看走到哪裡')
-    p.add_argument('node')
-    p.add_argument('--run')
-    p.add_argument('--prompt', action='store_true')
+    p.add_argument('node', help='要查看紀錄的工作資料夾。')
+    p.add_argument('--run', help='要查看的紀錄名字，預設看最近更新的 run。')
+    p.add_argument('--prompt', action='store_true', help='印正在等回答的完整提示，沒有時說明原因。')
     args = ap.parse_args(argv)
     args.unsettled = False
     why = None

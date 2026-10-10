@@ -141,7 +141,7 @@ class MenuCoreReview(unittest.TestCase):
         del obj['layers']['one']['exit']
         with self.assertRaises(MenuError) as got:
             load(obj, TOOLS)
-        self.assertIn('層 one 缺出口 exit。每個問的層都要有，例 "exit": {"text": "都不是，要你決定"}', str(got.exception))
+        self.assertIn('層 one 缺出口 exit。每個問的層都要有，出口字由你定，例如 "exit": {"text": "缺少判斷先回誰的必要資訊，請人補充"}', str(got.exception))
 
     def test_r15_invalid_fields_name_layer_and_field(self):
         changes = [('ask', 1, 'ask'), ('show', 1, 'show'), ('max_rounds', 0, 'max_rounds'),

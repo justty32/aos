@@ -46,7 +46,7 @@ def options(menu, state):
                 enabled = normalize_out(path) not in done
             if enabled:
                 result.append(option)
-    require(2 <= len(result) + 1 <= 5, label + 'options 含出口要 2～5 個')
+    require(2 <= len(result) + 1 <= 5, label + 'options 含出口要 2～5 個，現在 %s 個' % (len(result) + 1))
     return result
 
 
@@ -94,7 +94,20 @@ def render(menu, state, shown=None, reminder=None):
     pieces.append('回法：第一行 選：N')
     if 'slot' in layer:
         slot = at('層 ' + state['layer'] + ' slot', expanded_slot, layer['slot'], state['vars'])
-        pieces.append('下一行 格：內容；這格限制：' + '、'.join('%s=%s' % (k, v) for k, v in slot.items()))
+        pieces.append('第二行起：先寫「格：」，後面（同一行或下一行起）到結尾放全文，原樣、不加 ``` 圍欄，全文後面不要再寫任何字')
+        limits = []
+        for key, value in slot.items():
+            if key == 'max_bytes':
+                limits.append('最多 %s bytes' % value)
+            elif key == 'max_lines':
+                limits.append('最多 %s 行' % value)
+            elif key == 'prefix':
+                limits.append('第一行以「%s」開頭' % value)
+            elif key == 'sections':
+                limits.extend('要有一行以「%s」開頭' % section for section in value)
+            elif key == 'tool':
+                limits.append('會再用工具檢查')
+        pieces.append('這格的限制（只是說明，不要抄進格子）：' + '、'.join(limits))
     return '\n'.join(pieces)
 
 
