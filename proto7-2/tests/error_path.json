@@ -574,6 +574,36 @@
      "n/menu/hello/state.json": "{壞掉"
     }
    }
+  },
+  {
+   "pack": "menu",
+   "team": "MN2",
+   "name": "aos-tool-gates",
+   "entry": "packs/menu/examples/aos-tool/build.py",
+   "help": [
+    "--help"
+   ],
+   "unsure": {
+    "argv": [
+     "check",
+     "run",
+     "request.json"
+    ],
+    "env": {
+     "AOS7_AOS_TOOL_GATES": "{tmp}/fake_gates.py"
+    },
+    "files": {
+     "run/out/row": "| `packs/mailcount/` | 測試 |",
+     "run/out/report": "## 以後交接書該點名的工具\n測試\n",
+     "request.json": {
+      "v": 1,
+      "rid": "mailcount5",
+      "kind": "aos-tool",
+      "name": "mailcount"
+     },
+     "fake_gates.py": "print('not-json')\n"
+    }
+   }
   }
  ]
 }

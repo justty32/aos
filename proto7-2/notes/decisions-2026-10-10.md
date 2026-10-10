@@ -57,3 +57,17 @@
 - C｜真 AI 的 README 外路徑寫成「`aos7-up <node> --model M -d` 起 node（帳一起裝好）→ `aos7-menu run <node> … --llm M` → `aos7-up stop`」；隊長實跑 luna 一次 2 呼叫約 3.5k token 退 0
 - C｜README 統一稱「出口」（字由選單作者定）；「node」只在 README 註明＝工作資料夾，不改訊息
 - 待｜程式面 5 條只記不修（JSON 壞的訊息說「不在或」且無行號、缺出口訊息範例字與 hello 不同、`run --help` 無說明、停下的 status 退 0、選項數／next 錯沒說實際值），交頂層排；MN2 合進 main 後若 menu.json／tools.json 格式有變，ADVANCED 要對齊
+
+## loop14 MN2（學徒 aos-tool 選單，blueprint-scaffold1 §7 第三線）
+
+- 結果｜`packs/menu/examples/aos-tool/`：`menu.json`（astra 寫問句）逐檔交件→索引列→REPORT→葉子工具三關→沒過按問題改檔（三關最多 5 輪）；`build.py`＋`summary.py` 登記成 `tools.json` 的 `aos-tool-gates`：把 out/ 組成 AP5 `=== 路徑 ===` 文字候選、跑 `aos7-gates check`（`--var review=rules`）或 `aos7-author propose --candidate … --review-llm M`，輸出 `{ok,gate,issues}` 一行；`build.py brief` 產生 ≤1500 字需求摘要；`practice.json` 離線走 mailcount（含一次重問、一次第 2 關失敗→改主程式→過）
+- 結果｜真 AI 冒煙（luna 學徒、astra-high 審查、mailcount）三輪 0/3→1/3→3/3；第 3 輪每次 2 輪三關、13～14 呼叫、約 4.2 萬 token，0 次死在格式；三輪合計 140 次呼叫、408,967 token → [play 總表](play/2026-10-10-menu-aos/README.md)
+- 結果｜每步提示平均約 1,650 字（練習整圈 1,599），AP4 gap 第一輪單次提示 9,558 字（重問 15,791）、AP5 mailcount 5,767 字，都用目前程式 `propose --prompt-out` 重建、不呼叫 AI；達「≤AP4 單輪 1/2」
+- C｜`which` 層 2～5 含出口：已交的檔用 `when: new:` 藏起，四檔交齊才顯示「都交齊了」（開頭 4 檔＋出口＝5，交齊時 1＋出口＝2）；寫檔分 readme／bin／code／test 四層（各自格子限制），fix 用分組：fix（主程式／測試／README 或入口／索引列或 REPORT）→ fixdoc、fixtail 再選（各帶「回上一層重選」）→ fixcode（主程式、測試）／fixdocw（README、入口）／fixrow／fixreport，只附那一檔的目前內容
+- C｜葉子工具退出碼：三關沒過＝1（menu 走 fix）；子程序退 2＝2；子程序退 3、逾時、輸出讀不懂、審查模型沒交回（rules 已過但 review 沒成）＝3（停在 gates，照原樣再跑重驗）。逾時收掉自己起的子程序群組
+- C｜issues 摘要 ≤580 字、按 issue 分配：答案檢查器每條保留「變體名（慣例說明）：答案不合」、只給第一條的得到／應為；traceback 按 FAIL／ERROR 分段留最後的例外行；審查退件理由先於「建議：」
+- C｜真 AI 要審查時 grant holder 一定是 `author`（menu 照 grant holder 送、author 寫死 holder author，共用一本帳），amount ≥100 萬（author 審查預設預留 100 萬）；寫進 aos-tool README
+- C｜核心小修（頂層授權順手修）：render 回法改三行（第二行講「格：」後到結尾放全文、不加圍欄、後面不寫字；第三行「這格的限制（只是說明，不要抄進格子）」用人話列）；圍欄剝除多收「尾行 ``` 後接誤抄的『這格…』說明」，其他照原樣；MN4 五條（JSON 壞報行字、出口字可自訂、`--help` 說明、status 退出碼寫進 spec、選項數報目前幾個、next 報名字、停下的 `status --prompt` 一行說明）；README／ADVANCED／spec 對齊
+- 待｜MN3（A／B）前要使用者定：AP4 三題（gap／runs／audit）需求摘要 2,900～3,600 字，超過 brief 1500 上限——放寬上限、把 work 拆進各寫檔層，或 A／B 改用 AP5 mail 四題
+- 待｜astra 二審輕微一條沒做：fixcode 仍同時附主程式與測試兩類規則（未拆四層）；MN3 若看到修錯檔再拆
+- 待｜MN4 寫的真 AI 路徑（`aos7-up … --model M -d` 裝帳）要確認 grant holder 能讓 aos-tool 選單的審查（holder author）用同一本帳

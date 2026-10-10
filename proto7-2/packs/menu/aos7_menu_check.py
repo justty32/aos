@@ -3,6 +3,7 @@ import copy
 import posixpath
 import re
 import string
+import unicodedata
 
 NAME = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
 BUILTINS = {'run', 'node', 'run_dir'}
@@ -81,7 +82,7 @@ def validate(obj, tools):
         for arg in entry['argv']:
             template(arg, dict.fromkeys(entry['args'] + ['py', 'top', 'pack', 'node', 'run_dir'], ''))
     def target(value, label='start'):
-        require(isinstance(value, str) and (value == 'end' or value in layers), label + ' 指不到層')
+        require(isinstance(value, str) and (value == 'end' or value in layers), label + ' 指不到層：' + str(value))
     def tool(name, args):
         require(isinstance(name, str) and name in registry, '工具沒登記：' + str(name))
         require(isinstance(args, dict) and set(args) == set(registry[name].get('args', [])), '工具 ' + name + ' 的參數鍵與登記不一致')
@@ -119,7 +120,7 @@ def validate(obj, tools):
                     at('do.tool／args', tool, do.get('tool'), do.get('args', {}))
             if 'ask' in layer:
                 require(isinstance(layer['ask'], str), 'ask 要是字串')
-                require('exit' in layer, '缺出口 exit。每個問的層都要有，例 \"exit\": {\"text\": \"都不是，要你決定\"}')
+                require('exit' in layer, '缺出口 exit。每個問的層都要有，出口字由你定，例如 \"exit\": {\"text\": \"缺少判斷先回誰的必要資訊，請人補充\"}')
                 keys(layer.get('exit'), ('text',), 'exit')
                 require(isinstance(layer['exit'].get('text'), str), 'exit 要有 text')
                 options = layer.get('options')
@@ -141,7 +142,8 @@ def validate(obj, tools):
                         when = option.get('when')
                         require(when is None or (isinstance(when, str) and (when in ('required_done', 'required_missing') or when.startswith('new:'))), 'options.when 只收 required_done、required_missing、new:路徑')
                     if not any('when' in x for x in options or []):
-                        require(2 <= (len(options) if options is not None else 1) + 1 <= 5, 'options 含出口要 2～5 個')
+                        count = (len(options) if options is not None else 1) + 1
+                        require(2 <= count <= 5, 'options 含出口要 2～5 個，現在 %s 個' % count)
             else:
                 require('do' in layer and 'tool' in layer['do'] and 'ok' in layer, '做事層要有 do.tool 與 ok')
         except MenuError as exc:
@@ -166,7 +168,13 @@ def parse_reply(reply, slot=False):
         text = ''
     text += ''.join(lines[2:])
     text = text.rstrip() + '\n'
-    fence = re.fullmatch(r'```[^\n]*\n(.*?)\n```\n', text, re.S)
+    fence = re.fullmatch(r'```[^\n]*\n(.*?)\n```([^\n]*)\n', text, re.S)
+    if fence:
+        tail = fence[2]
+        while tail and (tail[0].isspace() or unicodedata.category(tail[0]).startswith('P')):
+            tail = tail[1:]
+        if fence[2].strip() and not tail.startswith('這格'):
+            fence = None
     if fence:
         text = fence[1].rstrip() + '\n'
     return number, text, bool(fence), None

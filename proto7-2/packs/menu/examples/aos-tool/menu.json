@@ -1,0 +1,292 @@
+{
+  "v": 1,
+  "name": "aos-tool",
+  "start": "which",
+  "required": [
+    "packs/{name}/README.md",
+    "packs/{name}/bin/aos7-{name}",
+    "packs/{name}/aos7_{name}.py",
+    "packs/{name}/tests/test_{name}.py"
+  ],
+  "layers": {
+    "which": {
+      "ask": "這層選下一個要交的檔，四個檔都交齊才會出現「都交齊了」。README.md 說明用途與第一次怎麼用；bin/aos7-{name} 是轉交主程式的短入口；aos7_{name}.py 實作需求中的唯讀功能；tests/test_{name}.py 用自造資料驗證結果。接下來交哪個？需求資訊足夠就選一個。",
+      "options": [
+        {
+          "text": "README.md",
+          "next": "readme",
+          "set": {
+            "file": "packs/{name}/README.md"
+          },
+          "when": "new:packs/{name}/README.md"
+        },
+        {
+          "text": "bin/aos7-{name}",
+          "next": "bin",
+          "set": {
+            "file": "packs/{name}/bin/aos7-{name}"
+          },
+          "when": "new:packs/{name}/bin/aos7-{name}"
+        },
+        {
+          "text": "aos7_{name}.py",
+          "next": "code",
+          "set": {
+            "file": "packs/{name}/aos7_{name}.py"
+          },
+          "when": "new:packs/{name}/aos7_{name}.py"
+        },
+        {
+          "text": "tests/test_{name}.py",
+          "next": "test",
+          "set": {
+            "file": "packs/{name}/tests/test_{name}.py"
+          },
+          "when": "new:packs/{name}/tests/test_{name}.py"
+        },
+        {
+          "text": "都交齊了",
+          "next": "row",
+          "when": "required_done"
+        }
+      ],
+      "exit": {
+        "text": "需求摘要沒說這個工具做什麼，無法選擇要交的檔案"
+      }
+    },
+    "readme": {
+      "ask": "請交出 {file} 的完整全文，UTF-8 不超過 8192 位元組。說明用途，必須獨立一行寫「## 第一次跑」，不可藏在程式碼圍欄裡；節內寫用法與需求中的參數，入口是 packs/{name}/bin/aos7-{name}，可用 python3 呼叫。相對連結從 README 所在資料夾算起，只指向確定存在或本次會交出的檔，例如 aos7_{name}.py、tests/test_{name}.py。依上面的需求摘要寫用途與用法，不需要看已交檔的內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "slot": {
+        "max_bytes": 8192,
+        "sections": [
+          "## 第一次跑"
+        ]
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "next": "which",
+      "exit": {
+        "text": "需求摘要缺少工具用途或命令列用法，無法寫使用說明"
+      }
+    },
+    "bin": {
+      "ask": "請交出 {file} 的完整全文：Python 入口，含空行最多 12 行，UTF-8 不超過 8192 位元組。首行用 #!/usr/bin/env python3；匯入 sys 與 pathlib.Path，用 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再用 from aos7_{name} import main 匯入主程式，最後 raise SystemExit(main())，把 main 回傳值當退出碼。這裡只轉交，不放功能實作。以上已給完整入口寫法，不需要看主程式內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "slot": {
+        "max_bytes": 8192,
+        "max_lines": 12
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "next": "which",
+      "exit": {
+        "text": "需求摘要與本層指定的主程式名稱或入口介面互相矛盾，無法寫入口"
+      }
+    },
+    "code": {
+      "ask": "請交出 {file} 的完整全文，UTF-8 不超過 8192 位元組。用 Python 標準庫實作需求中的唯讀命令列功能，不建立、修改或刪除輸入資料。提供 main(argv=None)，讓參數解析器接收 argv；省略時讀命令列參數，完成後回傳整數退出碼。輸出內容、格式與退出碼照需求；匯入模組時不要執行主程式。不經 shell，不用 shell=True 或 os.system；不連網，不匯入 socket、urllib、http、requests；不用 eval 或 exec。上面的需求摘要就是實作依據，不需要看其他已交檔；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "slot": {
+        "max_bytes": 8192
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "next": "which",
+      "exit": {
+        "text": "需求摘要缺少輸入、預期輸出或錯誤處理規則，無法實作功能"
+      }
+    },
+    "test": {
+      "ask": "請交出 {file}（packs/{name}/tests/test_{name}.py）的完整全文，UTF-8 不超過 8192 位元組。用 unittest.TestCase 與 test_ 開頭的方法，run_all.py 會自動找到 tests/test_*.py。匯入 sys 與 pathlib.Path，以 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再 from aos7_{name} import main；傳入參數清單呼叫 main，擷取輸出並斷言內容與退出碼，不猜其他內部函式。用 tempfile.TemporaryDirectory 自造資料，測需求中的正常與錯誤情況；要有實質斷言，不讀系統時鐘，需要時間時用固定值。只用標準庫，不經 shell、不連網、不用 eval 或 exec。依需求摘要與上述 main 介面測試，不需要看主程式內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "slot": {
+        "max_bytes": 8192
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "next": "which",
+      "exit": {
+        "text": "需求摘要缺少可驗證的預期輸出或錯誤退出碼，無法寫測試斷言"
+      }
+    },
+    "row": {
+      "ask": "請交出索引的一列，不加表頭或其他文字，格式為：| `packs/{name}/` | [說明](packs/{name}/README.md) |。把「說明」換成工具用途的短句，路徑保持原樣，整列以 | 結尾。工具用途直接取自上面的需求摘要，不需要看 README 內容；資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "slot": {
+        "prefix": "| `packs/{name}/` |",
+        "max_lines": 1
+      },
+      "do": {
+        "write": "out/row"
+      },
+      "next": "report",
+      "exit": {
+        "text": "需求摘要沒說這個工具做什麼，無法填索引的用途短句"
+      }
+    },
+    "report": {
+      "ask": "請交出 REPORT 的完整全文，UTF-8 不超過 8192 位元組。不需要看已交檔的內容，照上面的需求摘要與已交檔名就能寫。可直接套以下骨架，把括號提示換成需求中的名稱與用途：\n# REPORT\n新增 packs/{name}/README.md（用途與用法）、bin/aos7-{name}（啟動入口）、aos7_{name}.py（需求中的唯讀功能）、tests/test_{name}.py（正常與錯誤情況測試），並交出索引列。\n## 以後交接書該點名的工具\n- python3：執行入口與測試。\n- （需求摘要「工具：」裡列的命令）：（各自用途，逐項列出）。\n三關結果由後續流程檢查，這份只記交件內容，不必填通過結果。資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "slot": {
+        "max_bytes": 8192,
+        "sections": [
+          "## 以後交接書該點名的工具"
+        ]
+      },
+      "do": {
+        "write": "out/report"
+      },
+      "next": "gates",
+      "exit": {
+        "text": "需求摘要沒說這個工具做什麼，無法寫 REPORT"
+      }
+    },
+    "gates": {
+      "do": {
+        "tool": "aos-tool-gates",
+        "args": {
+          "request": "{request}",
+          "review": "{review}"
+        }
+      },
+      "ok": "end",
+      "fail": "fix",
+      "max_rounds": 5
+    },
+    "fix": {
+      "ask": "沒過的摘要：{issues}\n要改哪個？第 1 關多半是格式、README、入口或索引列；第 2 關先看錯誤實際所在的檔案與行號。測試匯入失敗時，若 ImportError／SyntaxError 出在被匯入的模組，多半是主程式壞，選主程式，不要因測試啟動失敗就改測試；答案錯通常也改主程式。只有訊息指向測試檔本身的斷言或語法時才改測試。第 3 關照審查理由選檔。一次選一個，選後會附上目前內容。",
+      "options": [
+        {
+          "text": "aos7_{name}.py",
+          "next": "fixcode",
+          "set": {
+            "file": "packs/{name}/aos7_{name}.py"
+          }
+        },
+        {
+          "text": "tests/test_{name}.py",
+          "next": "fixcode",
+          "set": {
+            "file": "packs/{name}/tests/test_{name}.py"
+          }
+        },
+        {
+          "text": "README.md 或 bin/aos7-{name}",
+          "next": "fixdoc"
+        },
+        {
+          "text": "索引列或 REPORT",
+          "next": "fixtail"
+        }
+      ],
+      "exit": {
+        "text": "沒過的摘要未提供錯誤內容或審查理由，無法判斷要修哪個檔"
+      }
+    },
+    "fixdoc": {
+      "ask": "沒過的摘要：{issues}\nREADME 與入口要改哪個？第 1 關若提章節、用法或文件連結，選 README；提入口行數，選 bin。第 2 關若提匯入或啟動錯誤，對照訊息是否指向入口；第 3 關依審查理由選檔。選後會附上目前內容。",
+      "options": [
+        {
+          "text": "README.md",
+          "next": "fixdocw",
+          "set": {
+            "file": "packs/{name}/README.md"
+          }
+        },
+        {
+          "text": "bin/aos7-{name}",
+          "next": "fixdocw",
+          "set": {
+            "file": "packs/{name}/bin/aos7-{name}"
+          }
+        },
+        {
+          "text": "都不是，回上一層重選",
+          "next": "fix"
+        }
+      ],
+      "exit": {
+        "text": "錯誤摘要要求的用法與需求摘要互相矛盾，無法決定 README 或入口怎麼修"
+      }
+    },
+    "fixtail": {
+      "ask": "沒過的摘要：{issues}\n索引列與 REPORT 要改哪個？第 1 關若提 row 的前綴、單列格式或連結，選索引列；若提 report 缺節，選 REPORT。第 2 關多半是測試或主程式，第 3 關依審查理由判斷這兩項哪個要改。選後會附上目前內容。",
+      "options": [
+        {
+          "text": "索引列",
+          "next": "fixrow"
+        },
+        {
+          "text": "REPORT",
+          "next": "fixreport"
+        },
+        {
+          "text": "都不是，回上一層重選",
+          "next": "fix"
+        }
+      ],
+      "exit": {
+        "text": "錯誤摘要要求的工具用途與需求摘要互相矛盾，無法修索引列或 REPORT"
+      }
+    },
+    "fixcode": {
+      "ask": "沒過的摘要：{issues}\n下面附的是 {file} 目前的內容。先對照 issues 裡的行號與錯誤種類，找出原因再改；交改好的整份全文，UTF-8 不超過 8192 位元組。主程式：用 main(argv=None) 接參數、回傳整數退出碼，唯讀且輸出照需求，匯入時不執行主程式。測試：用 unittest.TestCase 與 test_ 方法，匯入 sys 與 pathlib.Path，以 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再 from aos7_{name} import main；用參數清單呼叫並斷言輸出與退出碼，以 tempfile.TemporaryDirectory 自造資料、不讀系統時鐘，需要時間時用固定值。兩者只用標準庫，不經 shell、不用 shell=True 或 os.system；不連網、不匯入 socket、urllib、http、requests；不用 eval 或 exec。只交檔案全文，不加外層圍欄或附帶說明。",
+      "show": "out/{file}",
+      "slot": {
+        "max_bytes": 8192
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "next": "gates",
+      "exit": {
+        "text": "錯誤摘要與需求摘要對預期輸出或退出碼的要求互相矛盾，無法修正程式或測試"
+      }
+    },
+    "fixdocw": {
+      "ask": "沒過的摘要：{issues}\n下面附的是 {file} 目前的內容。請交改好的整份全文，UTF-8 不超過 8192 位元組。README：說明用途，獨立一行寫「## 第一次跑」，節內說明用法與需求中的參數；入口是 packs/{name}/bin/aos7-{name}，可用 python3 呼叫。相對連結從 README 所在資料夾算起，只指向確定存在或本次會交出的檔。Python 入口：含空行最多 12 行，首行 #!/usr/bin/env python3；匯入 sys 與 pathlib.Path，以 sys.path.insert(0, str(Path(__file__).resolve().parents[1])) 加入包根，再 from aos7_{name} import main，最後 raise SystemExit(main())；只轉交，不放功能實作。只交檔案全文，不加外層圍欄或附帶說明。",
+      "show": "out/{file}",
+      "slot": {
+        "max_bytes": 8192
+      },
+      "do": {
+        "write": "out/{file}"
+      },
+      "next": "gates",
+      "exit": {
+        "text": "需求摘要與錯誤摘要對入口名稱或用法的要求互相矛盾，無法修正文件或入口"
+      }
+    },
+    "fixrow": {
+      "ask": "沒過的摘要：{issues}\n下面附的是索引列目前的內容。請交改好的一列完整全文，不是差異片段（diff），不加表頭；格式為 | `packs/{name}/` | [說明](packs/{name}/README.md) |，把「說明」換成工具用途的短句，路徑保持原樣，整列以 | 結尾。只交檔案全文，不加外層圍欄或附帶說明。",
+      "show": "out/row",
+      "slot": {
+        "prefix": "| `packs/{name}/` |",
+        "max_lines": 1
+      },
+      "do": {
+        "write": "out/row"
+      },
+      "next": "gates",
+      "exit": {
+        "text": "需求摘要沒說這個工具做什麼，無法修正索引的用途短句"
+      }
+    },
+    "fixreport": {
+      "ask": "沒過的摘要：{issues}\n下面附的是 REPORT 目前的內容；依摘要修正，交完整全文，UTF-8 不超過 8192 位元組。不需要看已交檔的內容，照上面的需求摘要與已交檔名就能寫。可直接套以下骨架，把括號提示換成需求中的名稱與用途：\n# REPORT\n新增 packs/{name}/README.md（用途與用法）、bin/aos7-{name}（啟動入口）、aos7_{name}.py（需求中的唯讀功能）、tests/test_{name}.py（正常與錯誤情況測試），並交出索引列。\n## 以後交接書該點名的工具\n- python3：執行入口與測試。\n- （需求摘要「工具：」裡列的命令）：（各自用途，逐項列出）。\n三關結果由後續流程檢查，這份只記交件內容，不必填通過結果。資訊已足夠，選 1 交出。只交檔案全文，不加外層圍欄或附帶說明。",
+      "show": "out/report",
+      "slot": {
+        "max_bytes": 8192,
+        "sections": [
+          "## 以後交接書該點名的工具"
+        ]
+      },
+      "do": {
+        "write": "out/report"
+      },
+      "next": "gates",
+      "exit": {
+        "text": "需求摘要沒說這個工具做什麼，無法修正 REPORT"
+      }
+    }
+  }
+}
