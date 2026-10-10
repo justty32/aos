@@ -124,7 +124,7 @@ def words(text):
 
 
 def keyword_guess(question, skills):
-    """關鍵字重疊最多的那本；一個字都沒對上回 none。本機挑選與假 AI 共用。"""
+    """關鍵字重疊最多的那本；一個字都沒對上回 none。本機挑選與練習用的 AI 共用。"""
     scores = [(len(words(question) & words(n + " " + v["description"])), n) for n, v in skills.items()]
     score, guess = min(scores, key=lambda x: (-x[0], x[1])) if scores else (0, "none")
     return guess if score else "none"
