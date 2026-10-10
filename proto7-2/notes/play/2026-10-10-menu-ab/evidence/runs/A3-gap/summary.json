@@ -1,0 +1,78 @@
+{
+  "group": "A",
+  "task": "gap",
+  "rep": 3,
+  "rid": "gapA3",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 5,
+  "calls": 5,
+  "reasks": 4,
+  "fails": {
+    "1": 0,
+    "2": 4,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 41086,
+  "review_tokens": 5923,
+  "total_tokens": 47009,
+  "token_missing": [],
+  "secs": 122.476,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_evgap (unittest.loader._FailedTest.test_evgap)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_evgap\\nTraceback (m",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"  File \\\"/tmp/aos-three-cu1qrmmp/proto7-2/packs/evgap/tests/test_evgap.py\\\", line 50, in test_invalid_state_nulls_both_channels\\n    self.assertEqual(result[\\\"bad\\\"], [\\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\\n        {\\\"file\\\": \\\"state.json\\\", \\\"line\\\": None, \\\"why\\\": \\\"bad",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "[{\"rule\": \"answer\", \"why\": [\"variant 7: 答案、型別或一行 stdout 不合：{\\\"v\\\":1,\\\"channels\\\":{\\\"obs\\\":{\\\"count\\\":11,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[[2,2]],\\\"dup\\\":[],\\\"next_seq\\\":null,\\\"unacked\\\":null,\\\"stale_next\\\":null},\\\"must\\\":{\\\"count\\\":12,\\\"first\\\":1,\\\"last\\\":12,\\\"missing\\\":[],\\\"dup\\\":[],\\\"next_seq\\\"",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"F..\\n======================================================================\\nFAIL: test_aggregates_records_and_channel_state_independently (test_evgap.EvGapTests.test_aggregates_records_and_channel_state_independently)\\n------------------------------------------------------",
+      "round": 4,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 5,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

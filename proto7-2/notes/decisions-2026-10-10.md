@@ -71,3 +71,14 @@
 - 待｜MN3（A／B）前要使用者定：AP4 三題（gap／runs／audit）需求摘要 2,900～3,600 字，超過 brief 1500 上限——放寬上限、把 work 拆進各寫檔層，或 A／B 改用 AP5 mail 四題
 - 待｜astra 二審輕微一條沒做：fixcode 仍同時附主程式與測試兩類規則（未拆四層）；MN3 若看到修錯檔再拆
 - 待｜MN4 寫的真 AI 路徑（`aos7-up … --model M -d` 裝帳）要確認 grant holder 能讓 aos-tool 選單的審查（holder author）用同一本帳
+
+## loop14 MN3（需求切段＋選單 A／B，blueprint-scaffold1 §4）
+
+- 結果｜使用者定「維持每步 1500 字、把長題目切小」：menu 核心加分段需求摘要（`--brief` 用 `=== 段名 ===` 分段、問層 `brief` 選段、每步實際附量 ≤1500、選項與層 `when: brief:<段>`）；aos-tool `build.py brief` 通用切段（head／accept／tools／work1～4／toc，原文保真）、選單加 code2～4 逐段補主程式與 fixpart 選段改檔。gap／runs／audit 切 2／3／3 段，每步最多 1,490 字 → `packs/menu/spec.md`、`ADVANCED.md`
+- 結果｜A／B（luna、各 5 次）：A 12/15、B 2/15，B token 1.81 倍，格式型被擋 A 0、B 4；三條全紅＝「機制收下、不往 brain 推」；約 235 萬 token → [menu-ab](play/2026-10-10-menu-ab/README.md)
+- C｜A 組不給 `--context`（AP4 有），兩組都只看需求；A 最多 6 輪、B 三關 5 輪照藍圖（A 的通過都在 5 輪內，不影響結論）
+- C｜格式型被擋 A 只算格式類 rule（text／json／schema／size），B 算第 1 關擋下＋選單重問（對 B 較嚴）
+- C｜冒煙發現 luna 會把「這步沒看到的需求」當「需求缺」選出口：code／test 問句講明後段下一層才給、code2～4 講明以目前程式為準；全部出口字改成不吸引的說法（「跟需求完全對不上，需要人來看」「摘要空的或看不懂」「這段需求是空的或亂碼」），改檔層加「答案不合只列你的輸出、不給正確答案」。正式開跑後 B1 在 code2 出口，停掉 B、改字、B1 重跑（A 不受影響照用）
+- C｜正式跑到一半 LiteLLM 約 10 分鐘瞬間失敗、帳上留 516 萬未結預留；該段 15 次在新帳本整批重跑，舊的不算
+- C｜沒加 sol-low：結論清楚、預算留著
+- 待｜選單在「笨模型＋長需求」這組上輸給「一次交整包＋文字格式」；要不要換方向（例如只把選單用在改檔導航、或只在格式型失敗多的題上用）由使用者定

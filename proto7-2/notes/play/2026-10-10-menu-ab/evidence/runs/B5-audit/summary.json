@@ -1,0 +1,87 @@
+{
+  "group": "B",
+  "task": "audit",
+  "rep": 5,
+  "rid": "auditB5",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 5,
+  "calls": 28,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 5,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 84809,
+  "review_tokens": 0,
+  "total_tokens": 84809,
+  "token_missing": [],
+  "secs": 191.289,
+  "exit": 1,
+  "stop": "AI 選了出口：沒過的摘要是空的或看不懂，完全無法下手修改。請換 --run 重走",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：variant 12: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e3",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B5-audit/raw/tool-1791613972675806470-bd7a5965.stdout"
+    },
+    {
+      "round": 2,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[],\"boxes\":{\"alice\":{\"inbox\":{},\"done\":0},\"bob\":{\"inbox\":{},\"done\":0},\"carol\":{\"inbox\":{},\"done\":0}},\"bad\":[{\"file\":\"alice/inbox/20261009T1829-bob-DONE.md\",\"why\":\"bad_name\"},{\"file\":\"alice/inbox/20261009T1829-bob-REQUEST.md\",\"why\":\"ba",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B5-audit/raw/tool-1791613985343313808-9d6cec37.stdout"
+    },
+    {
+      "round": 3,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：variant 12: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e3",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B5-audit/raw/tool-1791614001036370853-34edb411.stdout"
+    },
+    {
+      "round": 4,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：variant 12: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e3",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B5-audit/raw/tool-1791614013827900809-fadaa5bf.stdout"
+    },
+    {
+      "round": 5,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：variant 12: 答案、型別或一行 stdout 不合：{\"v\":1,\"open\":[{\"id\":\"bob-20261009T182909-0e11821ea302\",\"from\":\"bob\",\"to\":\"alice\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-cbcbce88ed99\",\"from\":\"carol\",\"to\":\"bob\",\"where\":\"inbox\",\"age_min\":0},{\"id\":\"carol-20261009T182909-f2e3",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B5-audit/raw/tool-1791614047424189067-541cede4.stdout"
+    },
+    {
+      "step": 73,
+      "layer": "fixcode",
+      "kind": "exit",
+      "gate": null,
+      "rules": [],
+      "issues": "AI 選了出口：沒過的摘要是空的或看不懂，完全無法下手修改。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/node/menu/auditB5"
+}

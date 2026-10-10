@@ -1,0 +1,92 @@
+{
+  "group": "B",
+  "task": "runs",
+  "rep": 4,
+  "rid": "runsB4",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 5,
+  "calls": 28,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 5,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 88223,
+  "review_tokens": 0,
+  "total_tokens": 88223,
+  "token_missing": [],
+  "secs": 199.843,
+  "exit": 1,
+  "stop": "層 gates max_rounds 輪數到上限。請換 --run 重走",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T19:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B4-runs/raw/tool-1791613639907466164-3a881c35.stdout"
+    },
+    {
+      "round": 2,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T19:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B4-runs/raw/tool-1791613674103154960-90d08cb8.stdout"
+    },
+    {
+      "round": 3,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T19:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B4-runs/raw/tool-1791613694773733685-9a82a161.stdout"
+    },
+    {
+      "round": 4,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T19:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B4-runs/raw/tool-1791613729055002682-3c92a76a.stdout"
+    },
+    {
+      "round": 5,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T19:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T18:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B4-runs/raw/tool-1791613763917151434-0b7bbec4.stdout"
+    },
+    {
+      "step": 75,
+      "layer": "gates",
+      "kind": "stuck",
+      "gate": null,
+      "rules": [],
+      "issues": "層 gates max_rounds 輪數到上限。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/node/menu/runsB4"
+}

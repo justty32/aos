@@ -1,0 +1,56 @@
+{
+  "group": "A",
+  "task": "gap",
+  "rep": 4,
+  "rid": "gapA4",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 3,
+  "calls": 3,
+  "reasks": 2,
+  "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 1
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 23983,
+  "review_tokens": 12060,
+  "total_tokens": 36043,
+  "token_missing": [],
+  "secs": 141.908,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_evgap (unittest.loader._FailedTest.test_evgap)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_evgap\\nTraceback (m",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 3,
+      "rules": [
+        "review"
+      ],
+      "issues": "[{\"rule\": \"review\", \"why\": [\"錯誤：packs/evgap/aos7_evgap.py 的 read_state 使用 state_channels[name]，缺少單一通道時會觸發 KeyError，進入整份 state 無效的處理並清空另一個有效通道。例如 state.json 為 {\\\"channels\\\":{\\\"obs\\\":{\\\"next_seq\\\":2}}} 時，obs.next_seq 也被設為 null；依 work 第 8 條，無效通道只能清空自己的三個狀態欄位，obs.next_seq 應保留 2，並只新增一筆 bad_state。應在各通道內處理",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 3,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

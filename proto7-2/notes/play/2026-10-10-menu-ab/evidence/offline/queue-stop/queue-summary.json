@@ -1,0 +1,10 @@
+{
+  "offline": true,
+  "queued": 2,
+  "started": 0,
+  "completed": [],
+  "remaining": 2,
+  "peak_active": 0,
+  "stop": "token-cap",
+  "last_used": 11
+}

@@ -1,0 +1,37 @@
+{
+  "group": "B",
+  "task": "audit",
+  "rep": 1,
+  "rid": "SauditB1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 0,
+  "calls": 6,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 13173,
+  "review_tokens": 0,
+  "total_tokens": 13173,
+  "token_missing": [],
+  "secs": 15.046,
+  "exit": 1,
+  "stop": "AI 選了出口：需求摘要缺少輸入、預期輸出或錯誤處理規則，無法實作功能。請換 --run 重走",
+  "rows": [
+    {
+      "step": 14,
+      "layer": "code",
+      "kind": "exit",
+      "gate": null,
+      "rules": [],
+      "issues": "AI 選了出口：需求摘要缺少輸入、預期輸出或錯誤處理規則，無法實作功能。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/node/menu/SauditB1"
+}

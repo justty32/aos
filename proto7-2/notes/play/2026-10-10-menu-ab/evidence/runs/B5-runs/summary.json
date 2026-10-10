@@ -1,0 +1,48 @@
+{
+  "group": "B",
+  "task": "runs",
+  "rep": 5,
+  "rid": "runsB5",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 1,
+  "calls": 16,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 1,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 44651,
+  "review_tokens": 0,
+  "total_tokens": 44651,
+  "token_missing": [],
+  "secs": 85.692,
+  "exit": 1,
+  "stop": "AI 選了出口：沒過的摘要是空的或看不懂，完全無法下手修改。請換 --run 重走",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 答案、型別或一行 stdout 不合：{\"v\":1,\"routines\":[{\"name\":\"a-ok\",\"every\":\"1h\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":0,\"state\":\"ok\",\"next\":\"2026-10-09T11:29:48Z\"},{\"name\":\"b-failed\",\"every\":\"2m\",\"last_time\":\"2026-10-09T10:29:48Z\",\"last_code\":7,\"state\":\"failed\",\"next\":\"20",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/runs/B5-runs/raw/tool-1791613901602091061-ff718525.stdout"
+    },
+    {
+      "step": 41,
+      "layer": "fixcode",
+      "kind": "exit",
+      "gate": null,
+      "rules": [],
+      "issues": "AI 選了出口：沒過的摘要是空的或看不懂，完全無法下手修改。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/node/menu/runsB5"
+}

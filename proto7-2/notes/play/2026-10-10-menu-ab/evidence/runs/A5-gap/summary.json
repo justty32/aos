@@ -1,0 +1,67 @@
+{
+  "group": "A",
+  "task": "gap",
+  "rep": 5,
+  "rid": "gapA5",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 4,
+  "calls": 4,
+  "reasks": 3,
+  "fails": {
+    "1": 0,
+    "2": 3,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 30716,
+  "review_tokens": 5571,
+  "total_tokens": 36287,
+  "token_missing": [],
+  "secs": 68.918,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_evgap (unittest.loader._FailedTest.test_evgap)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_evgap\\nTraceback (m",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"..F\\n======================================================================\\nFAIL: test_torn_record_and_invalid_state (test_evgap.EvGapTests.test_torn_record_and_invalid_state)\\n----------------------------------------------------------------------\\nTraceback (most recent c",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"..F\\n======================================================================\\nFAIL: test_torn_record_and_invalid_state (test_evgap.EvGapTests.test_torn_record_and_invalid_state)\\n----------------------------------------------------------------------\\nTraceback (most recent c",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 4,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

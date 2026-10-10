@@ -1,0 +1,66 @@
+{
+  "group": "B",
+  "task": "gap",
+  "rep": 1,
+  "rid": "SgapB1",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 3,
+  "calls": 19,
+  "reasks": 1,
+  "fails": {
+    "1": 0,
+    "2": 2,
+    "3": 0
+  },
+  "format_blocks": 1,
+  "apprentice_tokens": 56905,
+  "review_tokens": 6522,
+  "total_tokens": 63427,
+  "token_missing": [],
+  "secs": 96.886,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "round": 1,
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "第2關：answer check_answer.py：case: 退出碼不合：1；case: 答案、型別或一行 stdout 不合：；variant 0: 答案、型別或一行 stdout 不合：{\"v\":1,\"channels\":{\"obs\":{\"count\":11,\"first\":1,\"last\":12,\"missing\":[[2,2]],\"dup\":[],\"next_seq\":null,\"unacked\":null,\"stale_next\":null},\"must\":{\"count\":12,\"first\":1,\"last\":12,\"missing\":[],\"dup\":[],\"next_se",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/runs/B1-gap/raw/tool-1791610000397741666-8b3ef6e0.stdout"
+    },
+    {
+      "round": 2,
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "第2關：answer check_answer.py：variant 6: 答案、型別或一行 stdout 不合：{\"v\":1,\"channels\":{\"obs\":{\"count\":11,\"first\":1,\"last\":12,\"missing\":[[2,2]],\"dup\":[],\"next_seq\":null,\"unacked\":null,\"stale_next\":null},\"must\":{\"count\":12,\"first\":1,\"last\":12,\"missing\":[],\"dup\":[],\"next_seq\":null,\"unacked\":null,\"stale_next\":null",
+      "exit": 1,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/runs/B1-gap/raw/tool-1791610015125054888-2cb426ec.stdout"
+    },
+    {
+      "round": 3,
+      "gate": null,
+      "rules": [],
+      "issues": "",
+      "exit": 0,
+      "raw": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/runs/B1-gap/raw/tool-1791610042178195842-b3f079aa.stdout"
+    },
+    {
+      "step": 46,
+      "layer": "fixcode",
+      "kind": "bad",
+      "gate": null,
+      "rules": [],
+      "issues": "第一行要回 選：編號"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.smoke/node/menu/SgapB1"
+}

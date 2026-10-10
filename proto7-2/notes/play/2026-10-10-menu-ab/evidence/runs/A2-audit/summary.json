@@ -1,0 +1,76 @@
+{
+  "group": "A",
+  "task": "audit",
+  "rep": 2,
+  "rid": "auditA2",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 5,
+  "calls": 5,
+  "reasks": 4,
+  "fails": {
+    "1": 0,
+    "2": 3,
+    "3": 1
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 40943,
+  "review_tokens": 12198,
+  "total_tokens": 53141,
+  "token_missing": [],
+  "secs": 164.549,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n                                     \\\"where\\\": \\\"inbox\\\", \\\"age_min\\\": 60}])\\n                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAssertionError: Lists differ: [{'id': 'r1",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "answer"
+      ],
+      "issues": "[{\"rule\": \"answer\", \"why\": [\"variant 14: 答案、型別或一行 stdout 不合：{\\\"v\\\":1,\\\"open\\\":[{\\\"id\\\":\\\"bob-20261009T182909-0e11821ea302\\\",\\\"from\\\":\\\"bob\\\",\\\"to\\\":\\\"alice\\\",\\\"where\\\":\\\"inbox\\\",\\\"age_min\\\":90},{\\\"id\\\":\\\"carol-20261009T182909-cbcbce88ed99\\\",\\\"from\\\":\\\"carol\\\",\\\"to\\\":\\\"bob\\\",\\\"where\\\":\\\"inbox\\\",\\\"age",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n    }])\\n    ^^^\\nAssertionError: Lists differ: [{'id': 'r1', 'from': 'alice', 'to': 'team', 'where': 'inbox', 'age_min': 1500}] != [{'id': 'r1', 'from': 'alice', 'to': 'team', 'where': 'inbox', 'age_min': 60}]\\n\\nFirst differing el",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 3,
+      "rules": [
+        "review"
+      ],
+      "issues": "[{\"rule\": \"review\", \"why\": [\"錯誤：packs/mailtodo/aos7_mailtodo.py 的 open 彙總額外要求 where == \\\"inbox\\\"，會漏掉 done 內未被有效回覆解決的 REQUEST。work 7 要求彙總所有符合條件的有效 REQUEST，且 where 明確允許 \\\"done\\\"；例如 done 中唯一一封有效 REQUEST、全資料夾沒有解決它的回覆時，目前 open 為空，應包含該封信。\", \"錯誤：packs/mailtodo/aos7_mailtodo.py 未遵守 bad 原因的優先序。當必要欄位皆非空，但 at ",
+      "round": 4,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 5,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "group": "B",
+  "task": "gap",
+  "rep": 5,
+  "rid": "gapB5",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": false,
+  "rounds": 0,
+  "calls": 10,
+  "reasks": 0,
+  "fails": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 26250,
+  "review_tokens": 0,
+  "total_tokens": 26250,
+  "token_missing": [],
+  "secs": 48.115,
+  "exit": 1,
+  "stop": "AI 選了出口：這一層的問題或選項跟需求完全對不上，需要人來看。請換 --run 重走",
+  "rows": [
+    {
+      "step": 25,
+      "layer": "which",
+      "kind": "exit",
+      "gate": null,
+      "rules": [],
+      "issues": "AI 選了出口：這一層的問題或選項跟需求完全對不上，需要人來看。請換 --run 重走"
+    }
+  ],
+  "menu_run": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.ab2/node/menu/gapB5"
+}

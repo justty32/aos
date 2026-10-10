@@ -1,0 +1,67 @@
+{
+  "group": "A",
+  "task": "runs",
+  "rep": 5,
+  "rid": "runsA5",
+  "model": "chatgpt-gpt-6-luna",
+  "review": "chatgpt-gpt-6-astra-high",
+  "offline": false,
+  "passed": true,
+  "rounds": 4,
+  "calls": 4,
+  "reasks": 3,
+  "fails": {
+    "1": 0,
+    "2": 3,
+    "3": 0
+  },
+  "format_blocks": 0,
+  "apprentice_tokens": 33794,
+  "review_tokens": 6352,
+  "total_tokens": 40146,
+  "token_missing": [],
+  "secs": 141.172,
+  "exit": 0,
+  "stop": "passed",
+  "rows": [
+    {
+      "gate": 2,
+      "rules": [
+        "answer",
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"E\\n======================================================================\\nERROR: test_runs (unittest.loader._FailedTest.test_runs)\\n----------------------------------------------------------------------\\nImportError: Failed to import test module: test_runs\\nTraceback (most",
+      "round": 1,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"F...\\n======================================================================\\nFAIL: test_aggregation_sorting_counts_and_naive_data_time (test_runs.RunsTests.test_aggregation_sorting_counts_and_naive_data_time)\\n---------------------------------------------------------------",
+      "round": 2,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": 2,
+      "rules": [
+        "test"
+      ],
+      "issues": "[{\"rule\": \"test\", \"why\": \"F...\\n======================================================================\\nFAIL: test_aggregation_sorting_counts_and_naive_data_time (test_runs.RunsTests.test_aggregation_sorting_counts_and_naive_data_time)\\n---------------------------------------------------------------",
+      "round": 3,
+      "exit": 1,
+      "why": "invalid"
+    },
+    {
+      "gate": null,
+      "rules": [],
+      "issues": "[]",
+      "round": 4,
+      "exit": 0,
+      "why": null
+    }
+  ]
+}

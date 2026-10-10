@@ -1,0 +1,25 @@
+{
+  "offline": true,
+  "queued": 2,
+  "started": 2,
+  "completed": [
+    {
+      "group": "A",
+      "task": "mailcount",
+      "rep": 2,
+      "exit": 0,
+      "outdir": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.tmp/driver/queue-integrated/runs/A2-mailcount"
+    },
+    {
+      "group": "B",
+      "task": "mailcount",
+      "rep": 2,
+      "exit": 0,
+      "outdir": "/home/lorkhan/repo/simple_tools/aos-wt/MN3.tmp/driver/queue-integrated/runs/B2-mailcount"
+    }
+  ],
+  "remaining": 0,
+  "peak_active": 2,
+  "stop": null,
+  "last_used": 0
+}
