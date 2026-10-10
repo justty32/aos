@@ -94,7 +94,7 @@
 
 | 檔案 | 內容 |
 |------|------|
-| [aos-teams.md](aos-teams.md) | 本專案的隊形：Fable 只調度、碰程式碼派 Opus、codex 只剩 astra；開隊指令、codex 沙箱、每段試玩 |
+| [aos-teams.md](aos-teams.md) | 本專案的隊形：頂層只調度、碰程式碼 Opus 隊長＋codex 工人（10-09 起 9 個 slug 可用）；開隊指令、codex 沙箱、每段試玩 |
 | [driving-cli-agents.md](driving-cli-agents.md) | 怎麼啟動、驅動、監看一條外部 CLI agent 線，以及收線七步 |
 | [lessons.md](lessons.md) | 派線踩過的坑：預掃範圍、線推翻交接書、交接書自相矛盾、整檔改寫、合併後才刪分支、worktree 起點舊、任務書 checklist、舊東西怎麼用 |
 

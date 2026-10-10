@@ -56,12 +56,14 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
 | 名稱 | 用途 | 怎麼取得 / 設定 |
 |------|------|----------------|
 | vcpkg（`~/dev/vcpkg`）| C++ 相依（nlohmann、curl…）| 見上面流程第 1 步；`VCPKG_ROOT` 可選 |
-| codex CLI（`/usr/bin/codex`）| 只剩 `gpt-6-astra` 能用（09-24 起）；呼叫與沙箱見 [aos-teams](dispatch/aos-teams.md) | 已裝；需要的登入由使用者做 |
-| LiteLLM 代理（`localhost:4000/v1`）| 真模型實測的預設端點，見下方「模型端點」| 使用者自己開；不用 api_key |
+| codex CLI（`/usr/bin/codex`）| 10-09 家機實測 9 個 slug 可用（09-24～10-08 曾只剩 `gpt-6-astra`）；清單、呼叫與沙箱見 [aos-teams](dispatch/aos-teams.md) | 已裝；需要的登入由使用者做 |
+| LiteLLM 代理（`localhost:4000/v1`）| 真模型實測的預設端點，見下方「模型端點」| 家機已架好（使用者自己的 `~/repo/llm_proxy`，`litellm --config ./litellm.yaml --port 4000`，10-10 確認在跑）；公司那台未確認；不用 api_key |
 | LM Studio（`localhost:1234`）| 本機真模型（吃 GPU）| 使用者開著才在；換模型前先 unload 舊的；並行實測取鎖見 [resources](resources.md) |
 | 外部 LLM 帳號（Claude OAuth 等）| T5 agent loop 真模型實測 | 要使用者登入 → [WAIT_USER](../WAIT_USER.md)；金鑰不進 repo |
 
-## 模型端點（2026-09-25 現況）
+## 模型端點（2026-09-25 定，10-10 核對）
+
+家機的 LiteLLM 已架好、跑在 `localhost:4000`（見上表），開工前仍先 `curl localhost:4000/v1/models` 看當下名單。
 
 
 **只走 LiteLLM `http://localhost:4000/v1`**。使用者 09-25 原話：「只許使用這個，想要啥模型都可以用，額度無上限，可以的話盡量用 codex／gpt 系；就是不能碰 LM Studio」。用之前先 `curl localhost:4000/v1/models` 看當下有哪些名字，強模型優先挑 gpt／codex 系。LiteLLM 沒開時才直連 `https://api.deepseek.com/v1`，金鑰只從環境變數 `DEEPSEEK_API_KEY` 讀，不印、不寫進檔。
