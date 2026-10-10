@@ -1,6 +1,6 @@
 # LLM 作者第二刀藍圖（llm2）：單次呼叫閘道＋token 部分結算（假傳輸）
 
-依據：[llm-author][a] §6／§7／§9／§10、[llm1 藍圖](blueprint-llm1.md) §5／§7、[budget spec](../packs/budget/spec.md) §3／§4、[第三段計畫](plan-2026-10-09-late.md) §4、[代定清單](decisions-2026-10-09.md) 第三段。G0 隊 10-09。細項與驗收走 [items json](blueprint-llm2-items.json)。
+依據：[llm-author][a] §6／§7／§9／§10、[llm1 藍圖](blueprint-llm1.md) §5／§7、[budget spec](../packs/budget/spec.md) §3／§4、第三段計畫（plan-2026-10-09-late，已封存） §4、[代定清單](decisions-2026-10-09.md) 第三段。G0 隊 10-09。細項與驗收走 [items json](blueprint-llm2-items.json)。
 
 ## 1. 一句話
 

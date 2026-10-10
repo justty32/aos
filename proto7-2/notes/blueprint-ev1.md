@@ -1,6 +1,6 @@
 # 事件保存第一版藍圖（ev1）：每 node 一個 `events/`、兩條通道、檔數固定
 
-依據：[event-store 報告](reviews/2026-10-05/event-store.md) §6.1／§7／§11、[prior-art](reviews/2026-10-05/prior-art.md) §11.4／§11.5、[r5 統整](../../proto7/notes/thinking/2026-10-04-r5-synthesis.md)第 1 題、[下午計畫](plan-2026-10-09-pm.md) §4、[代定清單](decisions-2026-10-09.md)。接法仿 [history.py](../modules/history.py)（不改）。E0 隊 10-09。
+依據：[event-store 報告](reviews/2026-10-05/event-store.md) §6.1／§7／§11、[prior-art](reviews/2026-10-05/prior-art.md) §11.4／§11.5、[r5 統整](../../proto7/notes/thinking/2026-10-04-r5-synthesis.md)第 1 題、下午計畫（plan-2026-10-09-pm，已封存） §4、[代定清單](decisions-2026-10-09.md)。接法仿 [history.py](../modules/history.py)（不改）。E0 隊 10-09。
 
 逐件工作項已抽到 [blueprint-ev1-items.json](blueprint-ev1-items.json)（欄位 id、lane、title、files、how、test）。
 
@@ -52,7 +52,7 @@
 - **讀者**（E2）回 `records`、`next_cursor`、`earliest_cursor`、`coverage`、`gaps`、`errors`（§7.3）。游標＝下一個要讀的 seq（每通道各自）。游標早於最早仍保留者 → `gaps` 記 `retention`；取樣 gap、`source_reset_unknown` 一併列；壞 JSON 行與無法解釋的 seq 洞進 `errors`，游標不跨洞；無換行尾端不算。
 - **兩種確認分開**：`append` 回成功＝保存確認（只抗程序 SIGKILL）；must 通道的**消費確認**＝`ack(events_dir, upto)` 推 `acked_upto`（第一版一個消費者）。讀到或 LLM 看過不算。
 
-## 5. 五題代定（照 [pm](plan-2026-10-09-pm.md) §4；翻案位置＝改哪裡）
+## 5. 五題代定（照 pm（plan-2026-10-09-pm，已封存）§4；翻案位置＝改哪裡）
 
 1. **保到哪**：合作來源逐件（`published`）＋明示取樣（`sample`／`source_log`），不承諾全系統每件都有。翻案：§3 `capture` 與 E1 取樣器範圍。
 2. **用途**：obs＝回看，有界保留；must＝必讀，確認前保留；LLM 看過不算完成。翻案：§4 確認一節與 `ack`。

@@ -1,6 +1,6 @@
 # LLM 作者第一版藍圖（llm1）：先用假候選走通 CSV 固定工具作者
 
-依據：[llm-author][a] §三／§四／§九／§十、[prior-art](reviews/2026-10-05/prior-art.md) §9、[blueprint-ev1](blueprint-ev1.md)、[pm 計畫](plan-2026-10-09-pm.md)、[代定清單](decisions-2026-10-09.md) 下午節、[CSV 範例](../packs/step/examples/csv/)。A0 隊 10-09；今天只到藍圖。細項走 [items json](blueprint-llm1-items.json)（作者檔／介面皆新）。
+依據：[llm-author][a] §三／§四／§九／§十、[prior-art](reviews/2026-10-05/prior-art.md) §9、[blueprint-ev1](blueprint-ev1.md)、pm 計畫（plan-2026-10-09-pm，已封存）、[代定清單](decisions-2026-10-09.md) 下午節、[CSV 範例](../packs/step/examples/csv/)。A0 隊 10-09；今天只到藍圖。細項走 [items json](blueprint-llm1-items.json)（作者檔／介面皆新）。
 
 ## 1. 一句話
 

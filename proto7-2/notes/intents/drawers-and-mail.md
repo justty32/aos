@@ -2,7 +2,7 @@
 
 ← [intents](README.md)｜相關 [scaffold](scaffold.md)、[brain-memory](brain-memory.md)、[skills-local-pick](skills-local-pick.md)
 
-使用者 10-10 凌晨提的想法，**還沒發想、沒定案**。明天交給 Fable 擬意圖卡與藍圖。
+使用者 10-10 凌晨提的想法，**還沒發想、沒定案**。明天交給 Fable 擬意圖卡與藍圖。（10-10 註：Fable 的發想已寫在 [drawers-and-mail-ideas](drawers-and-mail-ideas.md)，使用者已答方向題、見該檔末段；還沒開隊。）
 
 **① 信件就是 agent 之間的通道**：`ask` 等於寄一封信，跟 wf/inbox 的協議同類；真人也是一個 agent，只是權限最高。要回答的問題：
 - 多 agent 合作是否都走信？同級之間能不能寄？還是只能上級寄給下級？

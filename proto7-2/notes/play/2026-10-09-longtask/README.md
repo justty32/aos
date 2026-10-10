@@ -1,6 +1,6 @@
 # 長任務實跑（r4 L 隊）：AI 用 wf 管自己，12 封信、中途 SIGKILL
 
-← [play](../README.md)｜意圖卡 [longtask](../../intents/longtask.md)｜計畫 [r4 §2](../../plan-2026-10-09-r4.md)｜場景與腳本 [up/examples/longtask](../../../modules/up/examples/longtask/README.md)
+← [play](../README.md)｜意圖卡 [longtask](../../intents/longtask.md)｜計畫 r4 §2（plan-2026-10-09-r4，已封存）｜場景與腳本 [up/examples/longtask](../../../modules/up/examples/longtask/README.md)
 
 2026-10-09 18:52～19:00，L 隊（Opus）寫。用的是 B5 進 main 後的版本（35c368ea），真 AI `chatgpt-gpt-6-sol-high`，所有呼叫都經 llmcall，三次實跑合計 **65 次呼叫**（上限 100）。程式一行都沒改。
 

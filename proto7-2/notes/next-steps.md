@@ -4,6 +4,8 @@
 
 10-05 整理自 15 份 astra 報告、[SESSION-LOG](../../wf/SESSION-LOG.md)、[WAIT_USER](../../wf/WAIT_USER.md)。**只整理選項與報告的預設建議，方向由使用者決定**（AGENTS 鐵律 5）；第五節是頂層建議。
 
+> 2026-10-10 註：這是 10-05 的快照。第一節第 1、2 組（adapt、subd）10-05 已另修，第 3～6 組進了 [blueprint-loop7](blueprint-loop7.md)（10-09 落地）；事件保存、LLM 作者、kernel 任務包後來都做了（`modules/events/`、`packs/author/`、`packs/llmcall/`、`packs/kernel/`），最新決定看 [notes 索引](README.md) 的決策紀錄。
+
 類別沿用[組件契約藍圖](component-contracts.md)：**B** 組件 bug、**G** 契約缺口、**M** 誤用、**X** 外部故障。code-quality 的 R8 系列只給嚴重度、沒分類，表裡記「未分類」。
 
 ## 一、報告引出的修補（loop7 候選）

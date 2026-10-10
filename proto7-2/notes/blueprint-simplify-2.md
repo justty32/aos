@@ -1,6 +1,6 @@
 # 回頭審第二輪：重複、殘留副作用、重造（r4 RV）
 
-← [r4 計畫](plan-2026-10-09-r4.md)｜[意圖卡](intents/README.md)｜[錯誤藍圖](blueprint-errors.md)｜分線 [blueprint-simplify-2-teams.json](blueprint-simplify-2-teams.json)
+← r4 計畫（plan-2026-10-09-r4，已封存）｜[意圖卡](intents/README.md)｜[錯誤藍圖](blueprint-errors.md)｜分線 [blueprint-simplify-2-teams.json](blueprint-simplify-2-teams.json)
 
 Opus 10-09 18:30。astra-high ×2 唯讀（甲：13 包對卡逐條；乙：重複與副作用）、sol 核引用。路徑相對 `proto7-2/`。**只審不改**；改卡由頂層。
 

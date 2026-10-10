@@ -82,3 +82,13 @@
 - C｜正式跑到一半 LiteLLM 約 10 分鐘瞬間失敗、帳上留 516 萬未結預留；該段 15 次在新帳本整批重跑，舊的不算
 - C｜沒加 sol-low：結論清楚、預算留著
 - 待｜選單在「笨模型＋長需求」這組上輸給「一次交整包＋文字格式」；要不要換方向（例如只把選單用在改檔導航、或只在格式型失敗多的題上用）由使用者定
+
+## loop15 TD2（proto7-2 文件整理，頭腦風暴前）
+
+- C｜新增 [notes 索引](README.md)：notes/ 頂層平放 53 個檔（整理後 43 個），按「現行設計依據／藍圖／計畫報告決策／子資料夾」分組，每份標現行／已落地／歷史；thinking-catalog 原本沒人連，現在從索引進得去。proto7-2 README 與 INDEX 的 notes 列改指這份
+- C｜[intents 索引](intents/README.md) 補 6 張漏列的卡：mail-plain、apprentice-4、apprentice-5、scaffold、drawers-and-mail、drawers-and-mail-ideas
+- C｜封存到 [notes/archive/](archive/README.md)：10-09 的四份派隊計畫（上午、下午、第三段、r4）與各自的 teams.json、r5 分線表、r4 的 worktree 清單（共 11 檔，`git mv`）。活文件裡指向它們的 16 處連結改成純文字（多數加註「已封存」，標題裡的三處只留檔名）。plan-2026-10-09-next 仍被 wfnode 與藍圖當「三目標與門檻」的出處引用，沒封存
+- C｜拆 decisions-2026-10-09（303 行、62 KB）：照 `##` 拆成 [四份](decisions-2026-10-09.md)（上午／下午到 14:40／續推／r4 與 19:00），內容逐字搬、只重算相對連結；原檔留前言＋分檔目錄，並列原行號對照，別處引用的「decisions-2026-10-09.md:行號」照表找得到
+- C｜過時說法加日期註、不改原文：README（kernel 任務包已做、10-10 一段、catch-up／next-steps 標 10-05 快照）、core-slimming、catch-up 與名詞表、next-steps 兩份、layer-interfaces、drawers-and-mail 種子卡；status/ 兩張 HTML 快照頂端加一行註（1061→1308 項、M1 已進 main、usage／llmdiag 只剩轉址說明），新增 [status 索引](status/README.md)
+- C｜沒做：>1 KB 條列轉 json（命中的多半是規格條文與給人讀的決策紀錄，轉了反而難讀）；problems.md 標題「kernel 還沒做」的那段（kernel 用量以 run 為單位）有沒有被 packs/kernel 做到拿不準，留原樣；packs/menu、packs/author 與 32 份思想文件沒動
+- 結果｜壞連結：主 repo 的 proto7-2 前後都是 0（worktree 裡顯示 2 條，都是指向沒進版控的 `proto7/user-advice.md`）；`wf-lint wf .claude/commands` 前後 broken=0

@@ -1,6 +1,6 @@
 # 長任務實跑 意圖卡（r4，L 隊）
 
-← [intents](README.md)｜[brain 多回合卡](brain-multiround.md)｜計畫 [plan-2026-10-09-r4](../plan-2026-10-09-r4.md)
+← [intents](README.md)｜[brain 多回合卡](brain-multiround.md)｜計畫 plan-2026-10-09-r4（已封存）
 
 **①解決什麼**：目標 1 與 2 的燈號都還是「各模組單獨過」，沒有一次「aos 上的 AI 真的用 wf 管自己跑一段長任務」的實證：多回合、會 compact、會用 skill、會收發信、被殺能接回。這一隊只做實跑與量測，不寫新功能。
 

@@ -4,6 +4,8 @@
 
 [next-steps](next-steps.md) 第二節的展開。SESSION-LOG 10-04 傍晚記的順序是事件保存 → agent／LLM 作者與 adapt-llm；kernel 任務包是 [core-slimming](core-slimming.md) 裡還沒做的一塊。三份報告都是唯讀提案，**待決題與預設建議都只是供選擇**。
 
+> 2026-10-10 註：這是 10-05 的快照；文中的三塊（事件保存、LLM 作者、kernel 任務包）後來都做了，藍圖見 [notes 索引](README.md)。
+
 ## 事件保存（event-store）
 
 [報告](reviews/2026-10-05/event-store.md)。結論：核心零改動可存快照、daemon 追加事件與任務主動發布的事件；要所有底層事件不漏須補來源端交接契約。

@@ -2,20 +2,21 @@
 
 ← [proto7](../proto7/README.md)｜要合的：[核心 spec](../proto7/spec/core.md)（條號 S-）｜上一次試做：[proto7-1](../proto7-1/README.md)
 
-**proto7-1 之後的第二次試做：照使用者 10-04 的建議（[user-advice](../proto7/user-advice.md)）重做 daemon 與 tick。10-04 照 spec 做完基礎設施（Python 3.11+ 純標準庫）；kernel／agent 這次不做。**
+**proto7-1 之後的第二次試做：照使用者 10-04 的建議（[user-advice](../proto7/user-advice.md)）重做 daemon 與 tick。10-04 照 spec 做完基礎設施（Python 3.11+ 純標準庫）；kernel／agent 這次不做。**（10-04 當時的打算；kernel 任務包後來在 10-09 做了，見下面「一句話看改了什麼」。）
 
 ## 入口
 
 - **第一次用 → [QUICKSTART.md](QUICKSTART.md)**（一頁、三個指令起一個會收信回信的 AI node）。
-- **沒跟上進度？先讀 [notes/catch-up.md](notes/catch-up.md)**（10-04 早 → 10-05 下午的追進度導讀：現在是什麼、怎麼來的、注意力該放哪；名詞表 [catch-up-glossary.md](notes/catch-up-glossary.md)）。
+- **沒跟上進度？先讀 [notes/catch-up.md](notes/catch-up.md)**（10-04 早 → 10-05 下午的追進度導讀：現在是什麼、怎麼來的、注意力該放哪；名詞表 [catch-up-glossary.md](notes/catch-up-glossary.md)）。寫於 10-05，之後的事看下面 notes 索引裡的決策紀錄。
+- **[notes/README.md](notes/README.md)**：notes 的索引——設計依據、藍圖、決策紀錄、計畫與報告、子資料夾，各標現行／已落地／歷史。
 - **[spec.md](spec.md)**：核心 spec，只放規則，每條引 S- 條號或核心選項；條目上的 P2-／A2-／A3- 只是編號，由來寫在 problems。
 - **[modules/README.md](modules/README.md)**：模組包總覽（每包做什麼、接法、預設、依賴、入口檔），各包的規則在各包 README；會停下等人的情況與恢復步驟在[診斷包](modules/diag/recovery.md)。
 - **[notes/problems.md](notes/problems.md)**：照 spec 做的時候碰到的問題與各條的由來（沒有待你決定的），含 astra 第一輪 A2、第二輪 A3 的處理，與核心精簡刪掉的誤用保護、搬出核心的設計。
 - [notes/changes-from-7-1.md](notes/changes-from-7-1.md)：跟 proto7-1 的對照表，最後是 W1～W12（程式照推薦做）。
 - [notes/play/](notes/play/README.md)：astra 回歸與試玩紀錄（一輪一列）。
-- [notes/reviews/2026-10-05/](notes/reviews/2026-10-05/README.md)：10-05 的 15 份 astra 審查／調查報告索引與交叉問題，等使用者挑要修哪些。
-- **[notes/next-steps.md](notes/next-steps.md)**：接下來可以做的方向（10-05 報告引出的 loop7 修補候選、事件保存／LLM 作者／kernel 任務包的待決題、整理類、卡在使用者的），只列選項與預設建議。
-- **[notes/core-slimming.md](notes/core-slimming.md)**：核心精簡方案——盤點、核心最小集、錯誤四分支、擴充點與模組包、kernel 任務包；已照頂層定案做完（kernel 任務包、aos7-pack 還沒做）。
+- [notes/reviews/2026-10-05/](notes/reviews/2026-10-05/README.md)：10-05 的 15 份 astra 審查／調查報告索引與交叉問題，等使用者挑要修哪些（後續修補見 [blueprint-loop7](notes/blueprint-loop7.md)）。
+- **[notes/next-steps.md](notes/next-steps.md)**：接下來可以做的方向（10-05 報告引出的 loop7 修補候選、事件保存／LLM 作者／kernel 任務包的待決題、整理類、卡在使用者的），只列選項與預設建議（10-05 寫的；事件保存、LLM 作者、kernel 任務包與 loop7 修補後來都做了）。
+- **[notes/core-slimming.md](notes/core-slimming.md)**：核心精簡方案——盤點、核心最小集、錯誤四分支、擴充點與模組包、kernel 任務包；已照頂層定案做完（kernel 任務包、aos7-pack 還沒做）。（2026-10-10 註：kernel 任務包 10-09 已做成 [packs/kernel/](packs/kernel/README.md)；aos7-pack 仍未做。）
 - **退出碼與錯誤訊息全 aos 共用一套**（0 做到／1 做不到／2 你給的不對／3 不知道／4 交付但帳未清），見 [blueprint-errors](notes/blueprint-errors.md)。
 - [notes/component-contracts.md](notes/component-contracts.md)：組件契約藍圖（Fable；各組件的職責／前置條件／保證／明確不管，錯誤四類 M 誤用／X 外部故障／B 組件 bug／G 契約缺口，A2/A3 試分類）。
 - [notes/layer-interfaces.md](notes/layer-interfaces.md)：四層（daemon、tick-tock、kernel、agent）之間的交接點調查——誰寫誰讀、延遲、通用 vs 只為 agent／LLM、proto7-1 的 kernel／agent 接上來會怎樣、缺口清單。
@@ -33,6 +34,8 @@ node 改成登記、不再掃資料夾；tock 預設照固定 interval，提前 
 10-09 晚（上一輪 r3，仍不動核心）：一次備好 node 的 [`aos7-up`](modules/up/README.md)（含收信回信的 brain）與它用到的模組包 [wfnode](modules/wfnode/README.md)、[skills](modules/skills/README.md)、[routines](modules/routines/README.md)、[compact](modules/compact/README.md)、[mail](modules/mail/README.md)、[metrics](modules/metrics/README.md)，任務包 [prompt](packs/prompt/README.md)；A5 真 AI 學徒寫的 usage、llmdiag（r4 回頭審後分別併進 metrics `job --by`、`aos7-diag --llm`，原程式搬到 [archive/usage](archive/usage/README.md)、[archive/llmdiag](archive/llmdiag/README.md)，原處留轉址 stub）；各包統一錯誤路徑（退出碼 0～4，[tests/error_path.json](tests/error_path.json)）。每包一列見 [INDEX](INDEX.md)。
 
 10-09 深夜（r4／r5，仍不動核心）：brain 一封信可跨多步（進度信、沒進展停下問你、被殺接回不重問）、卡住信白話化、用語統一（「練習用的 AI」、進度叫「步」）；kernel 任務包 [packs/kernel/](packs/kernel/README.md)（`aos7-kernel run／status`，第一條規則 supervise-brain：腦卡住先寄信、再 kill 那個 run，藍圖 [blueprint-kernel1](notes/blueprint-kernel1.md)）。
+
+10-10：選單包 [packs/menu/](packs/menu/README.md)（AI 一次只看一層、回一個編號，需要時再填一格；學徒改成一層一層交件，藍圖 [blueprint-scaffold1](notes/blueprint-scaffold1.md)）；astra-8 回歸的前四項修補（FX1）與 daemon 存檔失敗不推進（FX2）；學徒讀自己的技能書，證明有效（AP5）。代定與結果見 [decisions-2026-10-10](notes/decisions-2026-10-10.md)。
 
 ## 怎麼跑
 
