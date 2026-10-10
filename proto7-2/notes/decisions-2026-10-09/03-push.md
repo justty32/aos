@@ -1,0 +1,89 @@
+# 2026-10-09 頂層代定清單：續推：使用者三目標
+
+← [10-09 代定清單](../decisions-2026-10-09.md)｜上一份 [下午到 14:40](02-afternoon.md)｜下一份 [r4 與使用者 19:00 回覆](04-r4.md)
+
+## 續推：使用者三目標（照 [plan-2026-10-09-next](../plan-2026-10-09-next.md) §4，Fable 代定）
+
+- A｜目標 1 落法：每個 aos 上的 agent node 有自己的 `wf/`（照 workflows 模板原樣），prompt 每回合從這棵樹組、只讀要的那層；aos 補上 workflows 沒有的引擎（tick＝heartbeat、events 必讀＝必達信、學徒 job＝交接書）；向 skyrim/agentctl 借 ROSTER、BRIEF、handoffs 等
+- A｜目標 2：記憶＝node 上的檔不是模型視窗；prompt 用 aos_directives 組裝；compact＝摘要替換舊段、open 項永不摘；skill＝SKILL.md 資料夾＋一行索引給模型挑
+- A｜目標 3：學徒擴到寫 aos 工具包／模組包，三關改為 lint＋大小＋領地、跑測試、astra 審；只發布到 `apprentice/` 分支，merge 永遠是人／頂層；學徒不准寫 lib/ 與別的包
+- B｜人類面門檻：第一次跑 ≤10 分鐘、對外指令 ≤3、新概念 ≤5；新手試用者打分 <7 要回改
+- B｜真 AI 只用 LiteLLM 的 `chatgpt-gpt-6-sol/-astra/-luna/gpt-reserve`（沒有 6.1-sol），預設 `chatgpt-gpt-6-sol-high`，一律走 llmcall；效率四指標由 `aos7-metrics` 量，本輪只排優化項
+- C｜移到之後候選：adapt-llm 第三刀、消耗事件、回合身分、budget hold、kernel 任務包
+- 使用者 15:10：「持續改進」＝做一做 → 回頭看做好的東西 OK 不 OK → 回頭修改，或乾脆重造
+- B｜頂層落法：每一波進 main 後排一輪「回頭審」（astra 審設計＋新手試用者實際上手），結論分三種：OK／修改／重造；重造不算浪費，照常開隊
+- C｜B3：budget cancel 寫的取消紀錄補齊凍結欄位；看不出是哪個入口時記 `fakeapi`（保持 cancel 原退出碼）；cancel 遇到既有結果寫的 accepted／failed 紀錄仍是舊形狀（不在這次範圍）
+- B｜W0／頂層核可：[blueprint-wfnode](../blueprint-wfnode.md) 凍結 F1～F10（node 骨架用 wf-init 照模板原樣產、根只留 AGENTS.md／CLAUDE.md／.claude/、信名與終局照 PROTOCOL、routines 機器表走 wf-table json、大輸出 ref:// 可逆折疊、學徒只發布 apprentice/）
+- C｜W0：信件狀態照模板 PROTOCOL 的六種（計畫寫「五狀態」是誤記）；mail 與學徒先分 node 各自獨佔必讀通道；prompt token「曲線平」＝頭尾 30 回合平均差 ≤5%
+- B｜R1：真 AI 接上（llmcall 第二種傳輸 `llm.litellm`，依請求內容挑傳輸）；預設上限拉滿（不設 max_tokens、逾時 24 小時、學徒每次預留 100 萬 token）；模型輸出原樣使用不修 JSON
+- 結果｜R1：學徒用真 AI 跑 12 圈（sol／astra／luna 各型）全過三關、答案全對；每次約 2.5～2.7k token（其中 proxy 自帶約 1.6k）、2.4～10.9 秒；12 圈共 30,739 token → [real-ai 報告](../play/2026-10-09-real-ai/README.md)。CSV 題太簡單比不出模型差異
+- 建議限制（**未生效**，等跑完大段落再定）：每次預留約 8000 token、逾時 120 秒、每單 5 萬 token、仍不設 max_tokens
+- C｜H1：定時例行 `modules/routines/`——最多一次（被殺那期不重跑）；錯過很久只跑 1 次不補跑；`add` 會自動在 node 裝一個 `routines` keep 任務；對外指令 3 個（add／ls／rm）
+- C｜頂層：routines 在 wf/ 留兩個固定 `.lock` 檔可接受（數量固定、不隨回合增加，不違反「垃圾要能清」）
+- C｜P1：組提示包 `packs/prompt/`——對外 2 指令（render／expand）；讀檔用 `$opt` 的 file／tail／latest（latest 依檔名排序、結果固定）；大段折成 `ref://` 可逆；渲染不出整份就退出 3、不輸出半份；diff 777 行（程式 239）照收
+- C｜S1：技能包 `modules/skills/`——對外 3 指令（index／pick／mount）；pick 一律走 llmcall（所以第一次跑要先開帳）；外部 skill 只能讀、不掛進任務（不複製外部 skill 進 repo）；llmcall 退出 4 時仍採用答案
+- 結果｜S1：真 AI（chatgpt-gpt-6-sol-high）題庫 10 題選對 10；每題約 2576 token、3.2 秒；同 node 重跑 0 次新呼叫。Sonnet 新手試用約 3 分鐘上手，打分 7～9
+- 使用者 15:00：**Sonnet 不夠笨**，當新手試用者不準 → 頂層改派最笨的：Claude 端用 Haiku、codex 端用 `gpt-6-luna`（推理 low）；S1 的 Sonnet 新手打分不算數，U 隊重試
+- C｜W1：`modules/wfnode/`（init／state／check）；預設 flavor dev,heartbeat,multi-agent；模板 multi-agent 把 inbox/、tools/ 放 node 根，照模板不搬（頂層核可，F2 以模板為準）；模板中沒有已知事實的佔位寫成「（未定：原文）」不亂猜；init 自動處理 5 段已知的導入決策（只在首次導入且原文完全相同時）
+- C｜T9：真傳輸 7 種故障（逾時／5xx／壞 JSON／usage 缺／截斷／斷線／遲到）各 ≥3 個變形全過，llmcall 程式沒找到 bug；假 LiteLLM 伺服器放在 `packs/llmcall/tests/`；「回覆比期限晚幾毫秒仍被收下」視為排程誤差，不改
+- C｜頂層：llmcall 連 `localhost` 時應繞過系統 proxy 設定（T9 發現：設了 http_proxy 的機器可能把本機呼叫送進 proxy）→ 排進下一波小修
+- 結果｜E1：`aos7-metrics job <資料夾>` 一個指令量四指標；R1 基線每單平均 2562 token（proxy 自帶 1644＝64%、我們的提示 721、模型回答 197）、收單到完成平均 9.5 秒（模型 5.3 秒、之後等下一回合 4.1 秒）、重試 0 → [metrics-baseline](../play/2026-10-09-real-ai/metrics-baseline.md)
+- 待你決定｜優化第 1 名是砍掉或快取 litellm proxy 每次自帶的 1644 token（省最多 64%），要改你的 LiteLLM 設定，我沒動
+- C｜C2：壓縮包 `modules/compact/`（now／forget／watch）——open 項逐字保留、檔長降 ≥60%；段落切換用字元相似度 <0.2 判斷（不另花 AI 呼叫，門檻暫定）；SESSION-LOG 的現役段不摘，實際主要整理 `notes/journal.jsonl`；diff 超 gate 照收
+- 結果｜C2 真 AI 一次：65 則→6 則、8968→2149 bytes（降 76%）、open 5 條全留、5429 token、約 12 秒
+- B｜A4：學徒寫 aos 工具／模組的三關檢查器 `packs/author/checkers/`（brief／check／publish）——第 1 關：領地、有測試、每檔 ≤8 KiB、連結不壞；第 2 關：在 bwrap 沙盒（無網路、無 /home、只有暫存樹可寫）跑學徒自己的測試；第 3 關：astra 審。publish 只建 `apprentice/<rid>_<sha8>` 分支，不碰 HEAD 與工作樹
+- C｜A4：題 1 做成新包 `packs/usage/`、題 2 做成新模組 `modules/llmdiag/`（學徒不准改別的包）；答案檢查用固定答案（隱藏或隨機題目留下一輪）
+- B｜X1：信箱 `modules/mail/`——日常 3 指令（send／read／done），另 3 個進階（audit／roster／team）暫不算入「≤3」，交新手試用判斷是否仍複雜；同分鐘同名信不拒收、改加序號（拒收會掉信）；發給團隊信箱的 REQUEST 暫不收（沒人負責確認）
+- 結果｜U 隊：10 個模組新手試用**全部沒過**（Haiku／luna 只看 README，取較差分數 5.2～6.8，門檻 7）；兩位都判「ELI5 後仍複雜」→ [newbie 總表](../play/2026-10-09-newbie/README.md)
+- B｜頂層：照「做完回頭審→修或重造」開回改隊：README 改就能過的（compact、prompt、wfnode、metrics、mail）與要改第一次跑流程的（skills、routines、events；llmcall 等小修隊、author 等 A5 交件後再改）；每隊改完用同兩位新手重試到 ≥7 才算完成
+- B｜頂層：另開一隊「整體第一次體驗」設計：新手第一次跑就要碰 daemon、帳（budget）、回合等底層概念是共同病根，研究能否給一個共用的「一鍵起 node」入口把這些藏起來
+- C｜NP：llmcall 打 localhost／127.0.0.1／::1 時一律直連、不走環境 proxy（其他主機照舊）
+- A｜第一次體驗設計 [blueprint-firstrun](../blueprint-firstrun.md)：加共用入口 `aos7-up`（新模組 `modules/up/`，核心不動），一行起 node 並自動裝好工作簿、帳、技能、例行與 daemon；前景跑、每秒印一行、Ctrl-C 收乾淨。新人只學 5 個詞（node、心跳、工作簿、信、技能）與 3 個指令（`aos7-up <node>`、`ask`、`status`）
+- B｜firstrun：預設假 AI，真 AI 只靠 `--model`（不自動花錢）；帳、回合、預留、ack、退出碼在 QUICKSTART 與各包開頭三行一律不出現；brain 一回合最多處理一封信、AI 回不來回 BLOCKED 不重試；人的信箱名固定 `you`
+- C｜routines 回改：第一次跑改用 `ls --run`（不用開 daemon）；新手重試第 1 輪過關 7.4 分（Haiku 7.4／luna 8.8）、約 6 分鐘、3 指令、4 概念
+- C｜prompt 回改：新範例讓第一次跑就看得到「收起來」（省九成 token）；README 概念 11→3，其餘收進進階；新手第 2 輪過關（Haiku 7.8／luna 8.4）
+- C｜mail 回改：README 縮成一頁（3 指令、4 概念），其餘移到 ADVANCED.md；send 預設 REQUEST、done 預設 DONE；audit 移出日常。新手三輪最後 7.6 分、3 指令；概念數 Haiku 數 6（把請求／完成拆開又算了信箱）、luna 數 4。**頂層判過**：照 README 實際列的 4 個算，Haiku 前後兩輪自己也數過 4；剩下「已辦結／已歸檔／完成」三種字眼不一致，留給套三行頭時統一
+- C｜metrics 回改：預設輸出改成一行白話（每格有標籤和單位），細節移到 `--detail`；`--overhead` 預設 0。新手三輪分數都 ≥7（最後 7.6），1 指令、約 6 分鐘
+- B｜頂層定「概念數」怎麼算（通則）：**只算第一次跑需要懂的**（README 分隔線「第一次用到這裡就夠了」以上）。新手讀進進階段或把每個輸出欄位各算一個，不計入。據此 metrics、mail 判過。要讓新手不讀到分隔線以下，交給 F3 的三行頭模板處理
+- 使用者 16:10 建議：**架構保持簡潔；錯誤路徑要統合；副作用與外部影響盡量少、只留必要的**；新模組或功能先讓 Fable 擬定「意圖」再開始
+- B｜頂層落法：①之後每個新模組／功能先由 Fable 寫一張意圖卡（要解決什麼、必要的副作用、明確不做什麼）再開隊；②開一隊 Fable 回頭審今天所有新模組：逐個補意圖卡、列出多餘的副作用（例如 routines `add` 會自動改 tasks.json、skills pick 要先開帳）、提出統一的錯誤路徑（各包退出碼與錯誤訊息格式目前各說各話），再依結果開修改隊
+- C｜wfnode 回改：init 只印「裝好了／有幾處空格／下一步」；check 成功說「資料夾沒壞」並寫明不管空格；state 不給句子就印最新續行點。新手第 1 輪過關 7.4（Haiku 7.4／luna 8.8）、3 指令、4 概念
+- C｜compact 回改：第一次跑不用 `--force`（示範檔本來就超過門檻）；預覽與實跑印同一句原因；README 概念 5→4，其餘移到進階。新手第 1 輪過關 7.6（Haiku 7.6／luna 8.4）
+- C｜events 回改：第一次跑不用 daemon、路徑自動帶；`pub` 可省 `--event-id`（自動產生）與 `--node`（取上一層資料夾名）；公開介面語意不變。新手三輪最後 Haiku 6.7／luna 8.6，**未過**
+- B｜頂層定（改慣例）：**README 只留「這是什麼＋第一次跑＋一行連結」，進階段與契約卡一律搬到同資料夾的 ADVANCED.md**（mail 已這樣做）。包格式規定「契約卡在 README」改為「契約卡在 ADVANCED.md，README 連過去」。events 先照這條再改一輪
+- C｜F3：QUICKSTART（2.7 KB，5 詞 3 指令，帳／回合／ack／退出碼零出現）與三行頭模板進 main；實跑等 aos7-up 進 main。前景每秒改印「心跳 N」（不印回合）。頂層把 modules/README「包的格式」改成新慣例
+- C｜skills 回改：沒開帳時 pick 自動改本機關鍵字挑（不問 AI、不花錢），印一行提示；有帳或給 `--budget` 才問 AI。新手第 1 輪過關 7.4（Haiku 7.4／luna 8.6）、約 3 分鐘、4 概念
+- C｜events 第 4 輪：README 照新慣例只留五個詞＋第一次跑，其餘搬 ADVANCED.md；Haiku 7.4／luna 8.8 分數過。概念數照「只算 README 列的」為 5，**頂層判過**（Haiku 數 9 是把輸出欄位和自動帶的值都算進去）
+- C｜頂層：events 剩兩個介面卡點要修，排進架構回頭審的第二波：加 `aos7-events ack` 子命令（`read --ack` 照舊可用）、不帶子命令的 `--help` 只列給人用的指令（取樣器選項移到進階）
+- A｜架構回頭審（Fable）：12 張意圖卡 [intents/](../intents/README.md)；**全 aos 統一退出碼只留 5 個**：0 做到了／1 做不到（知道為什麼）／2 你給的不對／3 不知道（證據留著、再跑會接續）／4 做到了但帳沒清（只 llmcall 用）；錯誤訊息一律 stderr 一行「指令名: 發生什麼。怎麼辦」，機器看的 JSON 欄位一個不改 → [blueprint-errors](../blueprint-errors.md)
+- A｜**跨包副作用一律歸 aos7-up**：各包不再順手動別包的檔（routines add 不再改 tasks.json、mail send 不在對方 node 建 events 夾、skills pick 不碰帳的鎖檔）
+- B｜要改數字的只有 author（5＝滿→1 等）、三關檢查器、events（滿 3→1）；llmcall／budget 凍結介面零衝突；不做共用錯誤函式庫
+- C｜F2：AI 的「腦」brain 進 main——每回合讀一封信→組提示→問 AI→回信→記續行點；`brain/` 只留 3 個檔、不累積紀錄；`model` 為空或 "fake" 都當假 AI。假 AI 1 回合回信約 800 token；真 AI（chatgpt-gpt-6-sol-high）1 回合回 DONE、2952 token、4 秒
+- C｜F2：真 AI 一開始以為自己有工具（回「我先確認工作區…」），提示詞加「你沒有工具，資料都附在下面，直接回答」後正常
+- C｜ER0：統一錯誤規則的一致性測試 `tests/core/test_error_path.py`＋清單 `tests/error_path.json` 進 main；各包改完在清單自己那列拿掉 skip、補一個「不確定」案；核心 tick 用法錯退 1 視為相容；prompt 的 JSON 回條留在 stderr 照藍圖
+- C｜ER-prompt-metrics：prompt 出錯時 stderr 第一行照舊是 JSON、第二行加一句人話；metrics 錯誤改統一一行格式；兩包 README 只留新手部分、其餘搬 ADVANCED.md。新手重試 prompt 7.4／8.8、metrics 8.0／8.8
+- 結果｜A5 學徒（目標 3 第一個實證）：真 AI 學徒寫出 **2 個 aos 新元件並過三關合進來**——工具包 `packs/usage/`（看 token 用量）、模組 `modules/llmdiag/`（診斷 LLM 線路）；人工只修 1 次（把索引列搬進表格）。23 次真 AI 呼叫、23.6 萬 token；16 份候選有 10 份被三關擋下
+- 結果｜A5 自我改進：題 2 帶踩坑筆記比不帶少重問 1 次、少 15% token，但失敗原因都是 proxy 問題、筆記擋不住，**判定沒有足夠證據算「自我改進」**
+- 發現｜A5：經 LiteLLM 時 `chatgpt-gpt-6-sol-high` 11 次有 4 次只回一行開場白、卻計費 5～6 千輸出 token（astra 沒這問題）→ 下一輪查
+- C｜A5：學徒的 3 個沒合進來的 `apprentice/` 比較分支留著，刪不刪等你（刪分支算不可逆）
+- C｜ER-wfnode：照統一錯誤規則改完，一致性檢查真的跑在 wfnode 上並通過；lint 沒跑完、讀寫出錯改退 3（不知道），`--flavor` 打錯改退 2；README 只留新手部分。新手重試 7.4／9.2
+- C｜ER-mail：寄請求只在對方已有 events/ 時才發必讀提醒（不替別人建夾）；read 不再掃整個郵局、不拿別人的鎖（看自己寄出未辦完的改用 `audit <我>`）；讀寫錯誤改退 3、撞名被拒改退 1；新信箱提示仍印在 stderr（防打錯名）。新手重試 8.4／9.0
+- B｜F1：一鍵入口 `aos7-up` 進 main——一行起 node、每秒印「心跳 N」、Ctrl-C 收乾淨；`status` 六行；假 AI 一圈 1 秒回信、1104 token。up 自己裝 routines 任務與 events 夾（跨包副作用歸 up）；假 AI 也要開帳（llmcall 需要）；已建好的 node 不准在假／真 AI 間切換（要換就另起一個）；`stop` 停整間房子的心跳、不刪檔。新手 Haiku 7／8／6、luna 8／9／8
+- 發現｜F1：重跑 `wfnode init` 會把信裡的 `{{user}}` 改成「（未定：user）」→ 交 wfnode 修
+- C｜ER-routines：`add` 不再改 tasks.json（aos7-up 已自己裝 routines 任務）；`rm` 遇到沒清單的 node 不再建資料夾；格式錯改退 2、`ls --run` 遇鎖忙改退 3。新手 Haiku 7／luna 8
+- 觀察｜llmcall `test_in_process_drip` 在全套負載下偶發失敗一次、單跑全過；再出現就查
+- C｜ER-compact：不需整理時不再寫狀態檔；發事件改成可選（compact.json 的 `events`，預設關，發不出也不影響結果）；意外錯誤改退 3；README 只留新手部分。真 AI 壓縮 73%。新手 Haiku 7.6／luna 9.0
+- C｜wfnode 小修：重跑 init 不再改任何既有檔（含 inbox 信件）；init／check 不掃 inbox/；模板檔裡剩下的 `{{` 改成列出位置請人手補（不再自動補）
+- 結果｜QS 新人從零上手（只看 QUICKSTART）：第 2 輪過關，Haiku 7.6／luna 8.6，兩位都說「ELI5 之後不複雜」；每人約 6～10 分鐘、3 個指令。概念數 Haiku 數 8（輸出裡有英文 DONE、token 被算進去）→ [firstrun 試用](../play/2026-10-10-firstrun/README.md)
+- B｜頂層：開 ER-up 隊，照 QS 回報改 aos7-up 的輸出：status 全清提示改成刪整個房子；DONE／token 換成中文白話；`--help` 只列 3 個指令（退出碼、-d、stop 搬到 ADVANCED）；`--model` 提示指向 ADVANCED
+- C｜ER-events：新增 `aos7-events ack`；`--help` 只列 pub／read／ack；ack 不再對沒 state 的夾建鎖檔；`pub` 不再自動建 events 夾（要 `--create`）；滿了改退 1、不確定改退 3、read 拼錯路徑改退 1（原本假裝空帳本）。新手 Haiku 7／luna 8
+- C｜ER-author：三關檢查器指令名定為 `aos7-gates`；三關預設離線規則審（要 astra 審得明講，不自動花錢）；`publish` 沒給 `--repo` 不建分支、只說會建在哪；索引列改插進表格內；學徒／審查／learn 三種 AI 呼叫分開標記；被拒的候選退 1。新手 Haiku 7／luna 9
+- C｜ER-llmcall-budget：帳任務沒在跑時，llmcall／budget 1 秒內退 1、什麼都不寫（原本會一直等）；錯誤訊息直接附可複製的起帳指令；回條與 JSON 一個欄位都沒改。新手 Haiku 7／8／7、luna 10／10／9
+- 觀察｜up 模組兩個計時測試在全套負載下偶發失敗一次、單跑全過；和 llmcall `test_in_process_drip` 同類，再出現就一起查
+- 發現｜proxy 截斷根因查到 → [litellm-truncation](../play/2026-10-09-real-ai/litellm-truncation.md)：sol 的回答其實都有回來，但後端把「開場白」和「答案」拆成兩段，LiteLLM 轉成兩個 choice，**aos 只讀第一個**（`packs/llmcall/aos7_llmcall_litellm.py` 與 `core/llm/src/llm.cpp`）。另外 proxy 每次自帶的 1.6k 是寫死的 Codex 系統提示，讓模型以為自己在 Codex 裡、想先看檔
+- B｜頂層：開修補隊——讀「最後一個非空的 choice」並在收據記 choice 數；所有要 JSON 的呼叫在提示尾端固定加「你沒有任何工具，不要開場白，第一個字元就是 {」（重放 4/4 有效）
+- 待你決定｜LiteLLM 設定：啟動 proxy 前設 `CHATGPT_DEFAULT_INSTRUCTIONS` 換掉 Codex 系統提示（每次省約 1.4k token、模型不再誤以為在 Codex 裡；風險是後端可能擋、astra 的快取會失效）。這是你的設定，我沒動
+- C｜ER-up：status／stop 的全清提示改成列出房子裡每樣東西（有別的 node 時不叫人刪整間）；ask 回信不再帶英文 DONE、用量改「讀寫約 N 字」；`--help` 只列 3 個指令；起好時不再提 `--model`（ADVANCED 寫清模型名從哪查）。新人從零（只看 QUICKSTART）第 3 輪 Haiku 7.0／luna 8.8，概念 5、指令 3
+- C｜頂層：QUICKSTART 的「aos 資料夾」補一句「就是你 git clone 下來的那個」（Haiku 最後的卡點）
+- C｜ER-skills：pick 不再在帳夾建鎖檔（只讀試鎖）；帳沒在跑退 1 並附起帳指令；`.pick/log.jsonl` 只留 50 行、請求檔用完即刪；bank.py 暫存夾必清。新手 Haiku 7／luna 9。**統一錯誤規則全部 12 個模組完成**
+- C｜頂層：保留「沒開帳時本機關鍵字挑」，意圖卡改成這個說法（原卡寫「不用 AI 就不挑」，與已上線行為相衝）

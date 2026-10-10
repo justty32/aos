@@ -46,7 +46,7 @@
 | `packs/menu/` | [menu 包](packs/menu/README.md)／[進階（寫選單的人）](packs/menu/ADVANCED.md)／[契約](packs/menu/spec.md)（scaffold1 MN1、MN4）：選單——人或聰明模型先搭好一棵選擇樹（`menu.json`），AI 每次只看一層、只回 `選：N`（頂多再填一格 `格：`），葉子只寫 run 的 `out/` 或叫 `tools.json` 登記過的專用工具（argv 不經 shell）；`aos7_menu.py` 純函式（load／view／render／step／after），`aos7_menu_check.py` 選單驗證（每層含出口 2～5 個編號、必有出口、next 指得到、只認 write／tool、五種格子檢查）、模板與回法解析（三行回法、人話限制、尾圍欄殘字剝除並記 fence），`aos7_menu_state.py` 驗 state 必要欄位與凍結 pending（不再展開 vars、純工具層禁止 next），`aos7_menu_run.py` 驅動與 `aos7-menu run`／`status`（state.json 先存再呼叫、call_id `menu/<run>/<層>/<第幾次>`、連 3 次不像停下退 1），`aos7_menu_io.py` 存檔／log／llmcall／工具執行（call 名雜湊含每次新 run 的 nonce），工具輸出用 var_owner 記每鍵目前歸屬；練習用的 AI 照選單旁 `practice.json`；玩具選單 `examples/hello/`（選要回誰→寫一句→叫 `hello-send`，選單內容由 astra 寫）；學徒選單 `examples/aos-tool/`（逐檔交件→三關→按問題改檔，`build.py`（摘要在 `summary.py`，登記為 `aos-tool-gates`）組 AP5 文字候選、跑三關並把沒過的問題摘成 ≤580 字，另以通用演算法自動切段產生需求摘要（保留 max_files／deliver、拒絕原文段頭行、輸出前重新解析核對保真），每層用 `brief` 只附相關段（每步 ≤1500 字）、`when: brief:` 按段存在與否顯示選項或跳層；`code2`～`code4` 逐段補主程式、`fixpart` 選要修的需求段，`practice.json` 離線 mailcount 練習） |
 | `archive/` | 已移除的包原樣存放（`git mv`，不跑測試、不維護）：[usage/](archive/usage/README.md)（併入 metrics `job --by`）、[llmdiag/](archive/llmdiag/README.md)（併入 `aos7-diag --llm`）；原處只留轉址 stub |
 | `tests/` | 核心測試 `tests/core/`、共用工具、`run_all.py`；測試導引見 [tests/README.md](tests/README.md) |
-| `notes/` | problems.md、core-slimming.md、component-contracts.md、layer-interfaces/、changes-from-7-1.md、play/ |
+| `notes/` | 設計依據、藍圖、決策紀錄、試玩與審查；分類與現行／歷史見 [notes 索引](notes/README.md) |
 
 ## 來源（複製進來，不 import 外部路徑）
 

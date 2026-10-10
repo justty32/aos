@@ -1,6 +1,6 @@
 # daemon／tick-tock 核心精簡方案（只出方案，沒改程式）
 
-**已照頂層定案執行（commit 範圍 1e94ba09～本次），F47 與 kernel 任務包、aos7-pack 未做。**
+**已照頂層定案執行（commit 範圍 1e94ba09～本次），F47 與 kernel 任務包、aos7-pack 未做。**（2026-10-10 註：kernel 任務包 10-09 已做成 [packs/kernel/](../packs/kernel/README.md)；aos7-pack 仍未做。）
 
 ← [proto7-2](../README.md)｜[spec](../spec.md)｜[problems](problems.md)｜照的原則：[principles](../../proto7/notes/principles.md) 第 1、2、4、5、7～10 條｜核心要求：[core.md](../../proto7/spec/core.md)（S- 條）
 
