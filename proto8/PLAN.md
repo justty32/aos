@@ -16,7 +16,7 @@ proto8 ＝ **一棵資料夾樹。每個資料夾是一個計算任務（一條 
 | 資源＝有限的處理能力，也是行程 | `llm/`、`human/` 兩個資料夾，標籤 `capacity` |
 | 排序＝誰先給誰，也是行程 | `scheduler/` 資料夾，輸出寫 `.aos/order.json` |
 | 一切都是計算任務 | 核心只認一種東西：有 `task.json` 的資料夾 |
-| 九軸＋人格化標籤 | `task.json` 的 `axes`、`traits` 兩段 |
+| 九軸＋人類隨意附加的特性 | `task.json` 的 `axes`、`traits` 兩段 |
 | 全是 JSON、模型可生成排序 | 排序器第二版讓模型照同一批檔案寫 |
 | 空間＝資料夾、時間＝tick | `.aos/tick.json` 記第幾回合 |
 | tick 停下來就能打包 | `.aos/snapshots/<回合>.zip` |
