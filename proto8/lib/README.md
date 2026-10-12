@@ -39,5 +39,5 @@ python3 proto8/lib/aos_inst.py TARGET
 - `cwd` 沒寫＝呼叫 aos_inst 時的 cwd；`stdin`／`stdout`／`stderr`／`exit` 的相對路徑從解出來的 `cwd` 算。
 - key：`argv`（必填）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`、`timeout_ms`、`timeout_grace_ms`（時間到 SIGTERM，過了 grace 再 SIGKILL；grace 預設 2000、0＝直接 SIGKILL），加上布林的 `cwd_mkdir`、`envs_clear`、`*_inherit`、`*_append`、`*_mkdir`、`stderr_merge`。完整說明在檔頭。
 - 兩條路分工：**子程式的結束碼只寫進 `exit` 檔**（十進位＋換行、fsync；只有它自己結束才寫，被訊號停掉或沒起來都不寫，aos 不代寫）；**命令列退出碼只說 aos_inst 自己**：0＝子程式跑完了、1＝aos_inst 自己出錯、子程式沒跑（stderr 一行「代號: 白話」）。exit 寫不進去不管。
-- API：`load(target)`、`parse(doc, base_dir)`、`run(inst)`。
+- API：`load(target)`、`parse(doc, base_dir)`、`run(inst)`（不回東西，出錯丟 `InstError`）。
 
