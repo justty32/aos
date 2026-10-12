@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 import aos_inst
 from aos_inst import InstError, load, parse, run
@@ -198,6 +199,32 @@ class TestExit(Base):
     def test_exit_type(self):
         self.fails("FieldType", {"argv": ["a"], "exit": 1})
         self.fails("FieldType", {"argv": ["a"], "exit_append": 1})
+
+
+class TestTimeout(Base):
+    def setUp(self):
+        super().setUp()
+        old = os.getcwd()
+        os.chdir(self.d)
+        self.addCleanup(os.chdir, old)
+
+    def test_timeout_sigterm(self):
+        self.assertEqual(run(parse({"argv": ["sleep", "5"], "timeout_ms": 100, "exit": "x.txt"}, self.d)), 143)
+        self.assertEqual(self.read("x.txt"), "143\n")
+
+    def test_timeout_sigkill_after_grace(self):
+        with mock.patch.object(aos_inst, "_GRACE_S", 0.2):
+            code = run(parse({"argv": ["sh", "-c", "trap '' TERM; sleep 5"], "timeout_ms": 100}, self.d))
+        self.assertEqual(code, 137)
+
+    def test_no_timeout_when_fast_or_zero(self):
+        self.assertEqual(run(parse({"argv": ["sh", "-c", "exit 2"], "timeout_ms": 5000}, self.d)), 2)
+        self.assertEqual(run(parse({"argv": ["sh", "-c", "exit 2"], "timeout_ms": 0}, self.d)), 2)
+
+    def test_timeout_type(self):
+        for t in (-1, 1.5, "100", True, None):
+            with self.subTest(t=t):
+                self.fails("FieldType", {"argv": ["a"], "timeout_ms": t})
 
 
 class TestCli(Base):
