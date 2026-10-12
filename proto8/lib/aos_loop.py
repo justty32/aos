@@ -41,8 +41,9 @@ ctl.json（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣�
 
 次數跑完（runs ≥ times）就結束、退出（有 ctl 也一樣）；想再跑就重新起。
 
-state.json（選填）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`pid`、`times`、`interval_ms`、
-`interval_mode`、`runs`、`skipped`、`last_code`、`last_error`、`ctl_mtime`（上次套用的 ctl.json 的 mtime；沒有＝null）。
+state.json（選填；骨架跟 daemon 共用，見 lib README）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、
+`pid`、`runs`、`times`、`interval_ms`、`interval_mode`、`ctl_mtime`（上次套用的 ctl.json 的 mtime；沒有＝null）、`last_error`；
+loop 自己多 `skipped`、`last_code`。
 先寫 `.名字.tmp` 再改名；寫不了印一次、不算錯。
 
 收到 SIGINT／SIGTERM／SIGHUP（只在主執行緒接）：收掉正在跑的那次（整群 SIGTERM，過 grace_ms 整群 SIGKILL）、不再起新的。
@@ -67,8 +68,8 @@ import time
 import aos_inst
 from aos_directives import DirectiveError, resolve
 
-__all__ = ["CtlFile", "LoopError", "StateFile", "load_config", "parse_ctl", "read_state", "run", "state_doc", "want",
-           "write_json"]
+__all__ = ["CtlFile", "LoopError", "STATES", "StateFile", "load_config", "parse_ctl", "read_state", "run", "state_doc",
+           "want", "write_json"]
 
 AOS_INST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_inst.py")
 DEFAULTS = {"times": 1, "interval_ms": 0, "interval_mode": "after", "grace_ms": 5000, "ctl": None,
@@ -224,12 +225,15 @@ def write_json(path, doc):
 
 # ---- state.json（loop 和 daemon 共用：欄位、讀、寫都只在這裡）----
 
-def state_doc(ident, state, w, ctl, **extra):
-    """一份狀態物件。共同欄位：id、state、pid、times、interval_ms（daemon 沒有 interval_mode）、ctl_mtime；
-    其他（loop：interval_mode、runs、skipped、last_code、last_error；daemon：runs、loops）放 extra。"""
-    st = {"id": ident, "state": state, "pid": os.getpid(), "times": w["times"], "interval_ms": w["interval_ms"]}
-    if "interval_mode" in w:
-        st["interval_mode"] = w["interval_mode"]
+STATES = ("starting", "waiting", "running", "paused", "done", "stopping", "stopped")   # loop、daemon 共用，各取子集
+
+
+def state_doc(ident, state, w, ctl, runs, last_error, **extra):
+    """一份狀態物件。共同骨架：id、state（STATES 之一）、pid、runs、times、interval_ms、interval_mode、ctl_mtime、
+    last_error；各層擴充放 extra（loop：skipped、last_code；daemon：skipped、loops＝個數）。"""
+    assert state in STATES, state
+    st = {"id": ident, "state": state, "pid": os.getpid(), "runs": runs, "times": w["times"],
+          "interval_ms": w["interval_ms"], "interval_mode": w["interval_mode"], "last_error": last_error}
     st.update(extra)
     st["ctl_mtime"] = ctl.mtime if ctl else None
     return st
@@ -399,8 +403,8 @@ class _Loop:
             state = "done"
         else:
             state = "waiting"
-        return state_doc(self.id, state, w, self.ctl, runs=self.runs, skipped=self.skipped,
-                         last_code=self.last_code, last_error=self.last_error)
+        return state_doc(self.id, state, w, self.ctl, self.runs, self.last_error, skipped=self.skipped,
+                         last_code=self.last_code)
 
     def write_state(self, st):
         self.state_file.write(st)
