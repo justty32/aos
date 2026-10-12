@@ -21,9 +21,7 @@ SEQ = os.path.join(LIB, "aos_seq.py")
 PAR = os.path.join(LIB, "aos_par.py")
 IF = os.path.join(LIB, "aos_if.py")
 NOT = os.path.join(LIB, "aos_not.py")
-sys.path.insert(0, os.path.join(HERE, "..", "proto8", "lib"))
-
-from aos_loop import Loop  # noqa: E402
+LOOP = os.path.join(HERE, "..", "proto8", "lib", "aos_loop.py")
 
 
 def alive(pid):
@@ -46,11 +44,11 @@ class Tasks(unittest.TestCase):
         with open(self.p(name)) as f:
             return f.read()
 
-    def inst(self, name, argv):
-        """寫 NAME/inst.json（cwd＝暫存資料夾），回資料夾的絕對路徑。"""
+    def inst(self, name, argv, **keys):
+        """寫 NAME/inst.json（cwd＝暫存資料夾、exit＝NAME.exit），回資料夾的絕對路徑。"""
         os.makedirs(self.p(name))
         with open(self.p(name, "inst.json"), "w") as f:
-            json.dump({"argv": argv, "cwd": self.tmp}, f)
+            json.dump(dict({"argv": argv, "cwd": self.tmp, "exit": name + ".exit"}, **keys), f)
         return self.p(name)
 
     def sh(self, name, sh):
@@ -83,6 +81,18 @@ class Tasks(unittest.TestCase):
             self.assertEqual(r.returncode, 125)
             self.assertTrue(r.stderr.startswith("ReadFailed"))
             self.assertEqual(self.cli(prog).returncode, 125)
+        self.assertFalse(os.path.exists(self.p("log")))
+
+    def test_inst_without_exit_runs_nothing(self):
+        a = self.sh("a", "true")
+        b = self.inst("b", ["true"])
+        os.remove(self.p("b", "inst.json"))
+        with open(self.p("b", "inst.json"), "w") as f:
+            json.dump({"argv": ["true"]}, f)
+        for prog in (SEQ, PAR, NOT):
+            r = self.cli(prog, *([b] if prog == NOT else [a, b]))
+            self.assertEqual(r.returncode, 125)
+            self.assertTrue(r.stderr.startswith("NoExit"))
         self.assertFalse(os.path.exists(self.p("log")))
 
     def test_launch_error(self):
@@ -160,16 +170,20 @@ class Tasks(unittest.TestCase):
         self.until(lambda: os.path.exists(self.p("s2.pid")))
         self.until(lambda: not alive(int(self.read("s2.pid"))))
 
-    def test_loop_remove_clears_children(self):
-        # daemon 那邊整群收：aos-seq 的子程式沒開 new_session，跟著一起收掉
+    def test_loop_stop_now_clears_children(self):
+        # aos-loop 收掉這次（ctl 的 stop now）：aos-seq 的子程式沒開新 session，跟著整群一起收掉
         s1 = self.inst("s1", ["sh", "-c", "echo $$ > s1.pid; exec sleep 30"])
         top = self.inst("top", [os.path.join(BIN, "aos-seq"), s1])
-        loop = Loop(stop_poll_ms=10)
-        self.addCleanup(loop.shutdown)
-        loop.add(top, {})
+        with open(self.p("l.json"), "w") as f:
+            json.dump({"inst": {"$ref": top + "/inst.json"}, "ctl": "l.ctl.json", "ctl_poll_ms": 20}, f)
+        proc = subprocess.Popen([sys.executable, LOOP, "l.json"], cwd=self.tmp)
+        self.addCleanup(lambda: proc.poll() is None and proc.kill())
         self.until(lambda: os.path.exists(self.p("s1.pid")))
         pid = int(self.read("s1.pid"))
-        loop.remove(top + "/inst.json", False)    # False＝當場收掉這次
+        with open(self.p(".l.ctl.json"), "w") as f:
+            json.dump({"stop": {"val": True, "now": True}}, f)
+        os.replace(self.p(".l.ctl.json"), self.p("l.ctl.json"))
+        self.assertEqual(proc.wait(10), 0)
         self.until(lambda: not alive(pid))
 
 

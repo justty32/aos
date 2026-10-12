@@ -16,7 +16,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DAEMON = os.path.join(HERE, "..", "lib", "aos_daemon.py")
-ONCE, TICK = os.path.join(HERE, "once"), os.path.join(HERE, "tick")
+ONCE, TICK = os.path.join(HERE, "once", "loop.json"), os.path.join(HERE, "tick", "loop.json")
 T0 = time.monotonic()
 
 
@@ -71,11 +71,11 @@ def main():
     say("daemon 起來了，pid %d" % daemon.pid)
     n = iter(range(1, 100))
     try:
-        say("== add：once 跑一次；tick 跑 5 次、每次隔 1 秒")
+        say("== add：once 跑一次；tick 跑 5 次、每次隔 1 秒（次數、間隔寫在 tick/loop.json）")
         send(ctl, next(n), {"op": "add", "id": ONCE})
-        send(ctl, next(n), {"op": "add", "id": TICK, "how": {"times": 5, "interval_ms": 1000}})
+        send(ctl, next(n), {"op": "add", "id": TICK})
         time.sleep(1.5)
-        say("== list：once 已經 done，tick 剩幾次")
+        say("== list：once 已經 done，tick 跑了幾次")
         send(ctl, next(n), {"op": "list"})
         send(ctl, next(n), {"op": "state", "id": TICK})
         say("== pause tick，等 2.5 秒，tick.out 不該再長")
@@ -89,7 +89,7 @@ def main():
         send(ctl, next(n), {"op": "resume", "id": TICK})
         time.sleep(2.5)
         send(ctl, next(n), {"op": "get", "id": TICK})
-        say("== remove tick，之後再問它就找不到")
+        say("== remove tick（等它這次跑完、行程結束才回），之後再問它就找不到")
         send(ctl, next(n), {"op": "remove", "id": TICK})
         time.sleep(0.3)
         send(ctl, next(n), {"op": "state", "id": TICK})

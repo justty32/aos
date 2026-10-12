@@ -18,7 +18,8 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIN = os.path.realpath(os.path.join(HERE, "..", "bin"))
 DAEMON = os.path.realpath(os.path.join(HERE, "..", "..", "proto8", "lib", "aos_daemon.py"))
-OK, FAIL, BROKEN = (os.path.join(HERE, x) for x in ("pipeline", "pipeline-fail", "pipeline-broken"))
+TOPS = ("pipeline", "pipeline-fail", "pipeline-broken")
+OK, FAIL, BROKEN = (os.path.join(HERE, x, "loop.json") for x in TOPS)
 TASKS = ("aos_seq.py", "aos_par.py", "aos_if.py", "aos_not.py")
 T0 = time.monotonic()
 
@@ -133,14 +134,20 @@ def run_one(ctl, n, work, log, id_, title):
 def main():
     tmp = tempfile.mkdtemp(prefix="aos-demo-")
     ctl, work, log = os.path.join(tmp, "ctl"), os.path.join(tmp, "work"), os.path.join(tmp, "log")
+    run = os.path.join(tmp, "run")
     os.makedirs(ctl)
     os.makedirs(work)
+    os.makedirs(run)
+    # daemon 的 cwd＝run/，裡面放指回本資料夾的捷徑：tasks 的相對 TARGET 照樣找得到，
+    # 沒寫 cwd 的 inst 的 exit 檔落在 run/，repo 裡不留東西
+    for top in TOPS:
+        os.symlink(os.path.join(HERE, top), os.path.join(run, top))
     # inst.json 用 {"$env": ...} 讀這三個；PATH 前面加 bin，argv 才能直接寫 "aos-seq"
     env = dict(os.environ, DEMO_CTL=ctl, DEMO_WORK=work, DEMO_LOG=log, PYTHONDONTWRITEBYTECODE="1",
                PATH=BIN + os.pathsep + os.environ.get("PATH", ""))
     say("暫存資料夾 %s（ctl/ 放指令、work/ 放步驟間傳的檔、log 收 stderr）" % tmp)
-    daemon = subprocess.Popen([sys.executable, DAEMON, "daemon.json"], cwd=HERE, env=env)
-    say("daemon 起來了，pid %d（cwd＝demo 資料夾，tasks 的相對 TARGET 從這裡算）" % daemon.pid)
+    daemon = subprocess.Popen([sys.executable, DAEMON, os.path.join(HERE, "daemon.json")], cwd=run, env=env)
+    say("daemon 起來了，pid %d（cwd＝run/，tasks 的相對 TARGET 從這裡算）" % daemon.pid)
     n = iter(range(1, 1000))
     try:
         run_one(ctl, n, work, log, OK,

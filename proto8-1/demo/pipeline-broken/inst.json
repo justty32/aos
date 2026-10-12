@@ -1,6 +1,13 @@
 {
-  "argv": {"$ref": "pipeline/inst.json#/argv"},
-  "envs": {"MAX_TRIES": "4"},
-  "stderr": {"$env": "DEMO_LOG"},
-  "stderr_append": true
+  "argv": {
+    "$ref": "pipeline/inst.json#/argv"
+  },
+  "envs": {
+    "MAX_TRIES": "4"
+  },
+  "stderr": {
+    "$env": "DEMO_LOG"
+  },
+  "stderr_append": true,
+  "exit": "pipeline-broken.exit"
 }

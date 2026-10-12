@@ -4,5 +4,6 @@
     "pipeline/report",
     "pipeline/notify"
   ],
-  "stderr_inherit": true
+  "stderr_inherit": true,
+  "exit": "pipeline-work.exit"
 }

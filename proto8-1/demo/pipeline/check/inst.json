@@ -12,5 +12,6 @@
     "$env": "DEMO_WORK"
   },
   "stdout": "probe.out",
-  "stderr_inherit": true
+  "stderr_inherit": true,
+  "exit": "pipeline-check.exit"
 }

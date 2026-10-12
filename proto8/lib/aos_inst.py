@@ -17,33 +17,36 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
     stderr_merge    true＝stderr 併進 stdout
     exit            子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔；
                     exit_append 改附加一行、exit_mkdir 先建上層資料夾
+    timeout_ms      最多跑幾毫秒（正整數；沒寫或 null＝不限），到了就收掉
+    grace_ms        收掉＝先 SIGTERM，過 grace_ms 還沒結束再 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
 
 沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
 
 JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼承：子程式留在 aos_inst 的行程群組與 session，
 終端機的 Ctrl-C、`timeout` 指令這類整群送的訊號，子程式和 aos_inst 一起收到。
-要限時、要清孫程式，由啟動 aos_inst 的人決定（例如 `timeout -k 2 5 aos_inst.py x`，或起在新群組裡整群砍）。
-Python 呼叫者沒辦法從外面砍，所以 `run()` 只留非在裡面做不可的開關（見 `run()`）；
-其中 `new_session` 是給 daemon 用的：子程式自成一個 session／群組，收掉時連孫程式一起收。命令列不開。
+監工的事 aos_inst 不管：要從外面停它、要連孫程式一起清，由啟動 aos_inst 的人做——把 aos_inst 起在新的 session，
+送 SIGTERM 給 aos_inst（它轉給子程式），過一段時間整群 SIGKILL（aos_loop 就這樣做）。
 
-子程式的結束碼：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
-`run()` 回它、`exit` 檔寫它、命令列的退出碼也是它（aos_inst 跑起來就「變成」子程式）。
-根本沒起來就不寫 exit。exit 寫不進去不管，不算錯。
-aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）：`run()` 丟 `InstError`；命令列照 Unix 包裝程式
-（env、timeout）的慣例回 127＝找不到程式、126＝不能執行、125＝其他（`exit_code()`），stderr 印一行「代號: 白話」。
-所以子程式自己最好只用 1～123（124 以上都有慣例意思：124 timeout、125～127 如上、128＋N 訊號）。
-命令列收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit。
+結束碼分兩條線：
+- 子程式的碼只寫進 `exit` 檔：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
+  根本沒起來就不寫。寫不進去不管，不算錯。json 沒寫 `exit` 就沒人記。
+- aos_inst 自己的碼＝命令列退出碼／`run()` 有沒有丟例外：0＝正常做完（子程式回幾號、被限時收掉都算正常做完）；
+  非 0＝aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…），`run()` 丟 `InstError`，命令列 stderr 印一行
+  「代號: 白話」。數字只供參考，照 Unix 包裝程式（env、timeout）的慣例：127＝找不到程式、126＝不能執行、125＝其他（`exit_code()`）。
+命令列（和在主執行緒呼叫的 `run()`）收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit；
+轉過去之後過 grace_ms 還沒結束就 SIGKILL。
 """
 import json
 import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 
 from aos_directives import DirectiveError, resolve
 
-__all__ = ["InstError", "exit_code", "find", "load", "parse", "run"]
+__all__ = ["InstError", "exit_code", "find", "load", "parse", "read_exit", "run"]
 
 _BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
           "stdout_append", "stdout_mkdir", "stdout_inherit",
@@ -63,6 +66,17 @@ class InstError(Exception):
 def exit_code(err):
     """InstError → 命令列退出碼：CommandNotFound＝127、CommandNotExecutable＝126、其他＝125。"""
     return {"CommandNotFound": 127, "CommandNotExecutable": 126}.get(err.code, 125)
+
+
+def read_exit(path):
+    """讀 exit 檔最後一行的結束碼（exit_append 時每次附加一行，所以看最後一行）。
+    檔不在、讀不了、內容不是整數都回 None。給要看子程式結果的人（loop、tasks）用。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().split()
+        return int(lines[-1]) if lines else None
+    except (OSError, ValueError):
+        return None
 
 
 def find(target):
@@ -122,6 +136,14 @@ def parse(doc, base_dir, ident="<input>"):
         else:
             inst[k] = None if v is None else os.path.join(inst["cwd"], v)
 
+    t = doc.get("timeout_ms")
+    if not (t is None or _int(t) and t > 0):
+        raise InstError("FieldType", "timeout_ms 要是正整數或 null，不是 %r" % (t,))
+    g = doc.get("grace_ms", 2000)
+    if not (_int(g) and g >= 0):
+        raise InstError("FieldType", "grace_ms 要是非負整數，不是 %r" % (g,))
+    inst["timeout_ms"], inst["grace_ms"] = t, g
+
     for k in ("stdin", "stdout", "stderr"):
         if inst[k + "_inherit"] and inst[k] is not None:
             raise InstError("Conflict", "%s 跟 %s_inherit 只能二選一" % (k, k))
@@ -140,47 +162,44 @@ def _bool(doc, k):
 _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
-def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None, stop_poll_ms=50, new_session=False):
-    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔，回結束碼（自己結束＝它的碼，被訊號停掉＝128＋訊號號碼）。
-    aos_inst 自己出錯丟 `InstError`。
+def run(target):
+    """跟命令列 `aos_inst.py TARGET` 一模一樣：讀 TARGET、解好、起那個 posix 呼叫、等它結束，
+    把子程式的結束碼寫進 exit 檔（自己結束＝它的碼，被訊號停掉＝128＋訊號號碼）。
+    回傳只說 aos_inst 自己有沒有出錯：正常做完回 None；單子有問題、起不來丟 `InstError`。
+    子程式回幾號不關 run() 的事，去看 exit 檔。限時到了被收掉也算正常做完（碼照樣進 exit 檔）。
 
-    開關只留非在 run() 裡做不可的（只有 run() 手上有子程式）：
-      timeout_ms       最多等幾毫秒（正整數；None＝不限），時間到就收掉子程式
-      grace_ms         收掉＝先 SIGTERM，過了 grace_ms 還沒結束再 SIGKILL（非負整數；0＝直接 SIGKILL）
-      forward_signals  True＝跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者，轉給子程式（只能在主執行緒）
-      stop             停止鈕（例如 threading.Event，有 is_set() 就行）；別的執行緒按下去，就收掉子程式
-      stop_poll_ms     有 stop 時幾毫秒看一次（正整數）
-      new_session      True＝子程式自成一個 session（也是新群組），訊號一律整群送：收掉＝整群 SIGTERM、過 grace 整群 SIGKILL；
-                       子程式自己結束了也對整群補一次 SIGKILL，清掉留下的孫程式。子程式結束後先不收屍，
-                       整群清完才收，群組號碼不會先被別人拿走。孫程式自己 setsid 出去的清不到。
-                       子程式沒有控制終端（讀 /dev/tty 會失敗），終端機的 Ctrl-C 也打不到它——給 daemon 用，命令列不開。
-    等的時候被打斷（例外穿過來）：先收掉子程式、寫 exit，再把原本的例外丟出去。"""
-    if not (timeout_ms is None or _int(timeout_ms) and timeout_ms > 0):
-        raise ValueError("timeout_ms 要是正整數或 None，不是 %r" % (timeout_ms,))
-    if not (_int(grace_ms) and grace_ms >= 0):
-        raise ValueError("grace_ms 要是非負整數，不是 %r" % (grace_ms,))
-    if not (_int(stop_poll_ms) and stop_poll_ms > 0):
-        raise ValueError("stop_poll_ms 要是正整數，不是 %r" % (stop_poll_ms,))
+    在主執行緒呼叫時，跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者，轉給子程式；
+    轉過去之後再等 grace_ms，還沒結束就 SIGKILL。不在主執行緒就不轉（Python 只准主執行緒接訊號）。"""
+    _run(load(target))
+
+
+def _run(inst):
+    """照 `parse()` 的結果跑一次，回結束碼（給 run() 和測試用）。"""
+    timeout_ms, grace_ms = inst["timeout_ms"], inst["grace_ms"]
     child = None
     pending = []
+    killed_at = []      # 第一次轉訊號之後的 SIGKILL 期限
 
     def forward(signum, frame):
+        if not killed_at:
+            killed_at.append(time.monotonic() + grace_ms / 1000)
         if child is None:
             pending.append(signum)      # 還沒起來，起來再補送
         else:
-            _send(child, new_session, signum)
+            child.send_signal(signum)
 
-    old = {sig: signal.signal(sig, forward) for sig in _FORWARDED} if forward_signals else {}
+    main = threading.current_thread() is threading.main_thread()
+    old = {sig: signal.signal(sig, forward) for sig in _FORWARDED} if main else {}
     try:
-        child = _start(inst, new_session)
+        child = _start(inst)
         for sig in pending:
-            _send(child, new_session, sig)
+            child.send_signal(sig)
         interrupted = None
         try:
-            code = _wait(child, new_session, timeout_ms, grace_ms, stop, stop_poll_ms)
+            code = _wait(child, timeout_ms, grace_ms, killed_at)
         except BaseException as e:
             interrupted = e
-            code = _stop(child, new_session, grace_ms)
+            code = _stop(child, grace_ms)
         code = code if code >= 0 else 128 - code
         if inst["exit"] is not None:
             try:
@@ -199,7 +218,7 @@ def _int(v):
     return isinstance(v, int) and not isinstance(v, bool)
 
 
-def _start(inst, new_session):
+def _start(inst):
     """建 cwd、開串流、起子程式，回 Popen。"""
     try:
         if inst["cwd_mkdir"]:
@@ -219,7 +238,7 @@ def _start(inst, new_session):
             raise InstError("OpenFailed", "串流開不了：%s" % e)
         try:
             return subprocess.Popen(inst["argv"], cwd=inst["cwd"], env=env,
-                                    stdin=stdin, stdout=stdout, stderr=stderr, start_new_session=new_session)
+                                    stdin=stdin, stdout=stdout, stderr=stderr)
         except FileNotFoundError:
             raise InstError("CommandNotFound", "找不到要跑的程式 %s" % inst["argv"][0])
         except PermissionError:
@@ -231,71 +250,37 @@ def _start(inst, new_session):
             f.close()
 
 
-def _wait(child, group, timeout_ms, grace_ms, stop, poll_ms):
-    """等子程式結束（timeout_ms＝None 不限時）；超時或 stop 被按下就 `_stop`。
-    有 stop 時每 poll_ms 毫秒看一次。回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
+def _wait(child, timeout_ms, grace_ms, killed_at):
+    """等子程式結束；超過 timeout_ms（None＝不限）就 `_stop`；轉過訊號（killed_at 有期限）、過了期限還沒結束就 SIGKILL。
+    回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
     deadline = None if timeout_ms is None else time.monotonic() + timeout_ms / 1000
     while True:
-        step = None if stop is None else poll_ms / 1000
-        if deadline is not None:
-            left = deadline - time.monotonic()
-            if left <= 0:
-                return _stop(child, group, grace_ms)
-            step = left if step is None else min(step, left)
-        if _exited(child, group, step):
-            return _reap(child, group)
-        if stop is not None and stop.is_set():
-            return _stop(child, group, grace_ms)
-
-
-def _stop(child, group, grace_ms):
-    """SIGTERM，等 grace_ms 還沒結束就 SIGKILL（grace_ms＝0 直接 SIGKILL）。回 returncode。
-    收的途中再被打斷就不等 grace，直接 SIGKILL。group＝整群送。"""
-    if grace_ms:
-        _send(child, group, signal.SIGTERM)
         try:
-            _exited(child, group, grace_ms / 1000)
+            return child.wait(0.05)
+        except subprocess.TimeoutExpired:
+            pass
+        now = time.monotonic()
+        if killed_at and now >= killed_at[0]:
+            child.kill()
+        elif deadline is not None and now >= deadline:
+            return _stop(child, grace_ms)
+
+
+def _stop(child, grace_ms):
+    """SIGTERM，等 grace_ms 還沒結束就 SIGKILL（grace_ms＝0 直接 SIGKILL）。回 returncode。
+    收的途中再被打斷就不等 grace，直接 SIGKILL。"""
+    if grace_ms:
+        child.send_signal(signal.SIGTERM)
+        try:
+            return child.wait(grace_ms / 1000)
         except BaseException:
             pass
-    _send(child, group, signal.SIGKILL)
+    child.kill()
     while True:
         try:
-            return _reap(child, group)
+            return child.wait()
         except BaseException:
             pass
-
-
-def _send(child, group, sig):
-    if not group:
-        child.send_signal(sig)      # 已經收過屍就不送
-        return
-    try:
-        os.killpg(child.pid, sig)   # 子程式還沒收屍，群組號碼還是它的
-    except ProcessLookupError:
-        pass
-
-
-def _exited(child, group, timeout):
-    """等子程式結束，最多 timeout 秒（None＝不限），回結束了沒。group 時只看不收屍（`_reap` 才收）。"""
-    if not group:
-        try:
-            child.wait(timeout)
-            return True
-        except subprocess.TimeoutExpired:
-            return False
-    deadline = None if timeout is None else time.monotonic() + timeout
-    while os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is None:
-        if deadline is not None and time.monotonic() >= deadline:
-            return False
-        time.sleep(0.01 if deadline is None else max(0, min(0.01, deadline - time.monotonic())))
-    return True
-
-
-def _reap(child, group):
-    """收屍，回 returncode。group 時先對整群補一次 SIGKILL，清掉留下的孫程式。"""
-    if group:
-        _send(child, group, signal.SIGKILL)
-    return child.wait()
 
 
 def _write_exit(path, code, append, mkdir):
@@ -327,7 +312,8 @@ def main(argv=None):
         print("用法：aos_inst.py TARGET", file=sys.stderr)
         return 125
     try:
-        return run(load(args[0]), forward_signals=True)
+        run(args[0])
+        return 0
     except InstError as e:
         print(e, file=sys.stderr)
         return exit_code(e)
