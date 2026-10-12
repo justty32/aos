@@ -15,7 +15,7 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
     stdin           從哪個檔讀；stdin_inherit: true 改接呼叫者的
     stdout/stderr   寫到哪個檔（覆寫）；*_append 改附加、*_mkdir 先建上層資料夾、*_inherit 改接呼叫者的
     stderr_merge    true＝stderr 併進 stdout
-    exit            子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔，並確實存到磁碟；
+    exit            子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔；
                     exit_append 改附加一行、exit_mkdir 先建上層資料夾
 
 沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
@@ -38,6 +38,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 
 from aos_directives import DirectiveError, resolve
 
@@ -130,15 +131,17 @@ def _bool(doc, k):
 
 
 _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+_POLL = 0.05
 
 
-def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False):
+def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None):
     """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔。不回東西；aos_inst 自己出錯丟 `InstError`。
 
     開關只留非在 run() 裡做不可的（只有 run() 手上有子程式）：
       timeout_ms       最多等幾毫秒（正整數；None＝不限），時間到就收掉子程式
       grace_ms         收掉＝先 SIGTERM，過了 grace_ms 還沒結束再 SIGKILL（非負整數；0＝直接 SIGKILL）
       forward_signals  True＝跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者，轉給子程式（只能在主執行緒）
+      stop             停止鈕（例如 threading.Event，有 is_set() 就行）；別的執行緒按下去，就收掉子程式
     等的時候被打斷（例外穿過來）：先收掉子程式、寫 exit，再把原本的例外丟出去。"""
     if not (timeout_ms is None or _int(timeout_ms) and timeout_ms > 0):
         raise ValueError("timeout_ms 要是正整數或 None，不是 %r" % (timeout_ms,))
@@ -160,7 +163,7 @@ def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False):
             child.send_signal(sig)
         interrupted = None
         try:
-            code = _wait(child, timeout_ms, grace_ms)
+            code = _wait(child, timeout_ms, grace_ms, stop)
         except BaseException as e:
             interrupted = e
             code = _stop(child, grace_ms)
@@ -212,12 +215,22 @@ def _start(inst):
             f.close()
 
 
-def _wait(child, timeout_ms, grace_ms):
-    """等子程式結束（timeout_ms＝None 不限時）；超時就 `_stop`。回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
-    try:
-        return child.wait(None if timeout_ms is None else timeout_ms / 1000)
-    except subprocess.TimeoutExpired:
-        return _stop(child, grace_ms)
+def _wait(child, timeout_ms, grace_ms, stop):
+    """等子程式結束（timeout_ms＝None 不限時）；超時或 stop 被按下就 `_stop`。
+    有 stop 時每 _POLL 秒看一次。回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
+    deadline = None if timeout_ms is None else time.monotonic() + timeout_ms / 1000
+    while True:
+        step = None if stop is None else _POLL
+        if deadline is not None:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                return _stop(child, grace_ms)
+            step = left if step is None else min(step, left)
+        try:
+            return child.wait(step)
+        except subprocess.TimeoutExpired:
+            if stop is not None and stop.is_set():
+                return _stop(child, grace_ms)
 
 
 def _stop(child, grace_ms):
@@ -238,21 +251,11 @@ def _stop(child, grace_ms):
 
 
 def _write_exit(path, code, append, mkdir):
-    """結束碼寫成「十進位＋換行」，檔案與上層資料夾都 fsync，確定存到磁碟才算數。"""
-    parent = os.path.dirname(path)
+    """結束碼寫成「十進位＋換行」。"""
     if mkdir:
-        os.makedirs(parent, exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | (os.O_APPEND if append else os.O_TRUNC), 0o644)
-    try:
-        os.write(fd, b"%d\n" % code)
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-    dfd = os.open(parent, os.O_RDONLY)
-    try:
-        os.fsync(dfd)
-    finally:
-        os.close(dfd)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a" if append else "w") as f:
+        f.write("%d\n" % code)
 
 
 def _stream(inst, k, opened):
