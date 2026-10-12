@@ -11,6 +11,7 @@
 ```python
 from aos_directives import resolve, DirectiveError
 out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔名的基準路徑
+                               # 選填 ident＝doc 從哪來（檔案的 realpath），錯誤訊息用它指出是哪份檔
 ```
 
 整份 JSON 一層層全部解掉，回一份新的（原本那份不動）。`base_dir` 整趟都用它，進了別的檔也不換。
@@ -42,7 +43,7 @@ python3 proto8/lib/aos_inst.py TARGET
 - `run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None, stop_poll_ms=50, new_session=False)`：只有非在 run() 裡做不可的事才當參數——限時、停止鈕（`stop`，例如 threading.Event，別的執行緒按下去就收掉子程式；`stop_poll_ms` 幾毫秒看一次）、把收到的訊號轉給子程式。收掉＝SIGTERM，過 grace 再 SIGKILL。命令列就是 `run(..., forward_signals=True)`：收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit。`new_session=True`（kill_leftover，給 daemon 用）：子程式自成一個 session／群組，訊號整群送，收掉或自己結束都對整群補 SIGKILL，孫程式一起清（自己 setsid 出去的清不到）；子程式沒有控制終端，所以命令列不開。
 - 結束碼：自己結束＝子程式的碼，被訊號停掉＝128＋訊號號碼。`run()` 回它、`exit` 檔寫它（十進位＋換行；沒起來不寫；寫不進去不管）、**命令列的退出碼也是它**（aos_inst 變成子程式）。
 - aos_inst 自己出錯、子程式沒跑：`run()` 丟 `InstError`；命令列照 Unix 包裝程式（env、timeout）的慣例回 **127＝找不到程式、126＝不能執行、125＝其他**（`exit_code(err)`），stderr 一行「代號: 白話」。所以子程式自己最好只用 1～123：124 以上都有慣例意思（124＝timeout 指令的時間到、125～127 如上、128＋N＝被訊號 N 停掉、255＝超出範圍）。
-- API：`load(target)`、`parse(doc, base_dir)`、`run(inst, ...)`（回子程式的結束碼，同 exit 檔那個數；出錯丟 `InstError`）、`exit_code(err)`。
+- API：`load(target)`、`parse(doc, base_dir, ident="<input>")`（ident＝錯誤訊息裡的檔名，load 給 inst.json 的 realpath）、`run(inst, ...)`（回子程式的結束碼，同 exit 檔那個數；出錯丟 `InstError`）、`exit_code(err)`。
 
 
 ## loop（`aos_loop.py`）
