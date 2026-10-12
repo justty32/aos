@@ -4,11 +4,11 @@
 
 2026-10-11 開。起因：使用者看完 proto7-2 之後說「整個都不對，太繁複」，又回頭看了八月到十月的沿革，結論是**做得太快**——像遙控飛機，兩次操作之間已經飛了好長一段。方向其實一直在他手上，只是目標一直在變；這兩個月的程式當探針有價值，但不是成品。
 
-**程式**在 [lib/](lib/README.md)（Python）：指示詞 lib、inst。圖解版兩頁：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。**現在以 [CONCEPTS.md](CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-43、兩個例子的邊緣、16 條還沒接起來的；只收使用者說過的）。實作上的想法在 [restart §3g](thinking/2026-10-11-restart.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環），還沒變成程式。[PLAN.md](PLAN.md) 是實作層提案，10-11 擱置（高度錯，見 [診斷](thinking/2026-10-11-why-wrong.md)）。
+**程式**在 [lib/](lib/README.md)（Python）：指示詞 lib、inst、loop、daemon。圖解版兩頁：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。**現在以 [CONCEPTS.md](CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-43、兩個例子的邊緣、16 條還沒接起來的；只收使用者說過的）。實作上的想法在 [restart §3g](thinking/2026-10-11-restart.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環），還沒變成程式。[PLAN.md](PLAN.md) 是實作層提案，10-11 擱置（高度錯，見 [診斷](thinking/2026-10-11-why-wrong.md)）。
 
 ## 入口
 
-- **[lib/](lib/README.md)**：函式庫：指示詞 lib、inst。
+- **[lib/](lib/README.md)**：函式庫：指示詞 lib、inst、loop、daemon。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 [proto7 核心 spec](../proto7/spec/core.md) 與 [設計原則](../proto7/notes/principles.md)。
 - 使用者自己的草稿：[thinking/（repo 頂層）](../thinking/)（2026-09-19～24）。
