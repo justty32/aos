@@ -8,7 +8,7 @@
 
 ## 入口
 
-- **[lib/](lib/README.md)**：函式庫（目前只有指示詞 lib），測試在 `tests/`，`python3 -B proto8/tests/run.py`。
+- **[lib/](lib/README.md)**：函式庫：指示詞 lib、inst。目前沒有測試。
 
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 [proto7 核心 spec](../proto7/spec/core.md) 與 [設計原則](../proto7/notes/principles.md)。
