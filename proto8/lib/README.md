@@ -40,8 +40,8 @@ python3 proto8/lib/aos_inst.py TARGET
 - key：`argv`（必填）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`，加上布林的 `cwd_mkdir`、`envs_clear`、`*_inherit`、`*_append`、`*_mkdir`、`stderr_merge`。完整說明在檔頭。
 - 理念：aos_inst 跑起來就「變成」那個子程式。JSON 只寫跟呼叫者不一樣的地方，其他從 aos_inst 繼承——子程式留在 aos_inst 的行程群組與 session。限時、清孫程式由啟動 aos_inst 的人決定（例如 `timeout -k 2 5 aos_inst.py x`）。
 - `run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None, stop_poll_ms=50, new_session=False)`：只有非在 run() 裡做不可的事才當參數——限時、停止鈕（`stop`，例如 threading.Event，別的執行緒按下去就收掉子程式；`stop_poll_ms` 幾毫秒看一次）、把收到的訊號轉給子程式。收掉＝SIGTERM，過 grace 再 SIGKILL。命令列就是 `run(..., forward_signals=True)`：收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit。`new_session=True`（kill_leftover，給 daemon 用）：子程式自成一個 session／群組，訊號整群送，收掉或自己結束都對整群補 SIGKILL，孫程式一起清（自己 setsid 出去的清不到）；子程式沒有控制終端，所以命令列不開。
-- 兩條路分工：**子程式的結束碼只寫進 `exit` 檔**（十進位＋換行；自己結束＝它的碼，被訊號停掉＝128＋訊號號碼，沒起來不寫）；**命令列退出碼只說 aos_inst 自己**：0＝子程式跑完了、1＝aos_inst 自己出錯、子程式沒跑（stderr 一行「代號: 白話」）。exit 寫不進去不管。
-- API：`load(target)`、`parse(doc, base_dir)`、`run(inst, ...)`（不回東西，出錯丟 `InstError`）。
+- 兩條路分工：**子程式的結束碼寫進 `exit` 檔**（`run()` 也回它）（十進位＋換行；自己結束＝它的碼，被訊號停掉＝128＋訊號號碼，沒起來不寫）；**命令列退出碼只說 aos_inst 自己**：0＝子程式跑完了、1＝aos_inst 自己出錯、子程式沒跑（stderr 一行「代號: 白話」）。exit 寫不進去不管。
+- API：`load(target)`、`parse(doc, base_dir)`、`run(inst, ...)`（回子程式的結束碼，同 exit 檔那個數；出錯丟 `InstError`）。
 
 
 ## loop（`aos_loop.py`）

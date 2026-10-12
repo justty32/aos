@@ -26,9 +26,9 @@ JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼�
 Python 呼叫者沒辦法從外面砍，所以 `run()` 只留非在裡面做不可的開關（見 `run()`）；
 其中 `new_session` 是給 daemon 用的：子程式自成一個 session／群組，收掉時連孫程式一起收。命令列不開。
 
-子程式的結束碼只走 `exit` 檔：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
+子程式的結束碼在命令列只走 `exit` 檔（`run()` 也回它）：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
 根本沒起來就不寫。exit 寫不進去不管，不算錯。
-`run()` 不回東西；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
+`run()` 回子程式的結束碼（跟寫進 exit 的同一個數）；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
 
 命令列的退出碼只說 aos_inst 自己的狀況：0＝子程式跑完了（不管它成功失敗）；
 1＝aos_inst 自己出錯、子程式沒跑（stderr 印一行「代號: 白話」）。
@@ -135,7 +135,8 @@ _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
 def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None, stop_poll_ms=50, new_session=False):
-    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔。不回東西；aos_inst 自己出錯丟 `InstError`。
+    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔，回結束碼（自己結束＝它的碼，被訊號停掉＝128＋訊號號碼）。
+    aos_inst 自己出錯丟 `InstError`。
 
     開關只留非在 run() 裡做不可的（只有 run() 手上有子程式）：
       timeout_ms       最多等幾毫秒（正整數；None＝不限），時間到就收掉子程式
@@ -174,13 +175,15 @@ def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None, 
         except BaseException as e:
             interrupted = e
             code = _stop(child, new_session, grace_ms)
+        code = code if code >= 0 else 128 - code
         if inst["exit"] is not None:
             try:
-                _write_exit(inst["exit"], code if code >= 0 else 128 - code, inst["exit_append"], inst["exit_mkdir"])
+                _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
             except OSError:
                 pass        # 寫不進去不管
         if interrupted is not None:
             raise interrupted
+        return code
     finally:
         for sig, handler in old.items():
             signal.signal(sig, handler)
