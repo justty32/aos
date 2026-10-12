@@ -59,13 +59,13 @@ class InstError(Exception):
 
 
 def find(target):
-    """TARGET → inst.json 的路徑。"""
+    """TARGET → inst.json 的路徑（realpath：絕對、沒有 . 與 ..、捷徑都解開；同一份檔永遠得到同一個字串）。"""
     if os.path.isdir(target):
         for p in (os.path.join(target, ".aos", "inst.json"), os.path.join(target, "inst.json")):
             if os.path.isfile(p):
-                return p
+                return os.path.realpath(p)
         raise InstError("NotFound", "%s 裡沒有 .aos/inst.json 也沒有 inst.json" % target)
-    return target
+    return os.path.realpath(target)
 
 
 def load(target):
