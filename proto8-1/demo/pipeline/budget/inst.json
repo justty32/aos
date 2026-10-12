@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "sh",
+    "-c",
+    "n=$(cat tries); if [ $n -ge \"$1\" ]; then echo \"  budget：試了 $n 次（上限 $1），放棄\" >&2; exit 3; fi",
+    "budget",
+    {
+      "$env": "MAX_TRIES"
+    }
+  ],
+  "cwd": {
+    "$env": "DEMO_WORK"
+  },
+  "stderr_inherit": true
+}

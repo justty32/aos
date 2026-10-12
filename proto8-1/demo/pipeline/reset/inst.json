@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "sh",
+    "-c",
+    "echo 0 > tries; rm -f probe.out report.txt notify.txt summary.txt"
+  ],
+  "cwd": {
+    "$env": "DEMO_WORK"
+  },
+  "stderr_inherit": true
+}

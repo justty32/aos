@@ -25,6 +25,7 @@ daemon ──跑──> top/inst.json    argv: ["aos-seq", "a", "inner"]
 | `lib/aos_tasks.py` | 共用：找 proto8/lib、一次讀好全部 inst、接訊號 |
 | `bin/aos-seq`、`bin/aos-par`、`bin/aos-if`、`bin/aos-not` | 薄入口（sh，`exec python3 ../lib/aos_*.py`）；放進 PATH 就能在 argv 寫 `"aos-seq"` |
 | `tests/test_tasks.py` | unittest |
+| `demo/` | 用 daemon 跑一棵 tasks 樹（檢查→重試→並行→收尾），`python3 proto8-1/demo/run.py`；寫起來的發現見 [demo/README.md](demo/README.md) |
 
 共同規矩（細節在各檔檔頭）：
 

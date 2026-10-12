@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "sh",
+    "-c",
+    "cat report.txt notify.txt; echo \"共試了 $(cat tries) 次\""
+  ],
+  "cwd": {
+    "$env": "DEMO_WORK"
+  },
+  "stdout": "summary.txt",
+  "stderr_inherit": true
+}
