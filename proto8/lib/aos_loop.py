@@ -14,7 +14,9 @@
 狀態（get／list 回的 dict）：`id`、`state`（waiting／running／paused／done／removing）、剩餘 `times`、
 跑過幾次 `runs`、其他執行方式、`last_error`（上一次 aos_inst 自己出的錯，或沒料到的錯〔Internal〕；沒有＝None）。
 被收掉的那次也算跑過一次。次數跑完的實例留在表上（done），add_times 加次數就再跑。
-remove／pause 的 `wait`：True＝等這次跑完，False＝當場收掉（按 run() 的 stop）。
+remove／pause 的 `wait`：True＝等這次跑完，False＝當場收掉（按 run() 的 stop）。兩者都馬上回一個函式 `ready()`：
+子程式還沒停回 None，停了回狀態物件（pause＝停下來後的狀態；remove＝最後的狀態，state＝"removed"）。
+set／resume／add_times 回改完的狀態物件。
 run() 一律 new_session=True：每次跑自成一群，收掉或跑完都連孫程式一起清。
 
 存檔用（檔案由呼叫者自己讀寫，daemon 的 save／load）：`snapshot()` 回目前的表（不含 removing 的），每筆
@@ -92,6 +94,7 @@ class _Inst:
         self.running = False
         self.runs = 0
         self.last_error = None
+        self.final = None
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self._loop, name=ident, daemon=True)
 
@@ -105,7 +108,7 @@ class _Inst:
         return "done" if self.how["times"] == 0 else "waiting"
 
     def status(self):
-        return dict(self.how, id=self.id, state=self.state(), runs=self.runs, last_error=self.last_error)
+        return dict({"id": self.id, "state": self.state()}, **self.how, runs=self.runs, last_error=self.last_error)
 
     def _loop(self):
         cond = self.loop.cond
@@ -131,6 +134,7 @@ class _Inst:
                 deadline = time.monotonic() + self.how["interval_ms"] / 1000
                 while not self.removing and self.how["times"] != 0 and time.monotonic() < deadline:
                     cond.wait(deadline - time.monotonic())
+            self.final = dict(self.status(), state="removed")
             del self.loop.insts[self.id]
             cond.notify_all()
 
@@ -211,8 +215,10 @@ class Loop:
             inst = self._get(ident)
             inst.how = _how(how, inst.how)
             self.cond.notify_all()
+            return inst.status()
 
     def remove(self, ident, wait=True):
+        """回 ready()：還沒收完回 None，收完回最後的狀態（state＝"removed"）。"""
         with self.cond:
             inst = self._get(ident)
             inst.removing = True
@@ -220,17 +226,32 @@ class Loop:
                 inst.stop.set()
             self.cond.notify_all()
 
+        def ready():
+            with self.cond:
+                return inst.final
+        return ready
+
     def pause(self, ident, wait=True):
+        """回 ready()：這次還在跑回 None，停了（或已經被 resume）回目前的狀態。"""
         with self.cond:
             inst = self._get(ident)
             inst.paused = True
             if not _wait_arg(wait) and inst.running:
                 inst.stop.set()
 
+        def ready():
+            with self.cond:
+                if inst.final is not None:
+                    return inst.final
+                return None if inst.running and inst.paused else inst.status()
+        return ready
+
     def resume(self, ident):
         with self.cond:
-            self._get(ident).paused = False
+            inst = self._get(ident)
+            inst.paused = False
             self.cond.notify_all()
+            return inst.status()
 
     def add_times(self, ident, delta):
         """剩餘次數加減 delta，最少減到 0。"""
@@ -242,6 +263,7 @@ class Loop:
                 raise LoopError("Conflict", "%s 是不限次數，不能加減" % inst.id)
             inst.how["times"] = max(0, inst.how["times"] + delta)
             self.cond.notify_all()
+            return inst.status()
 
     def state(self, ident):
         """只回狀態字串：waiting／running／paused／done／removing。"""

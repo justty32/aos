@@ -12,29 +12,31 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
     save             收到 SIGTERM 結束時先 save 到這個檔（選填；SIGINT 不存；可以跟 load 同一個檔）
 
 指令：往控制資料夾放一個 `名字.json`。daemon 每輪把裡面的 `*.json` 照檔名順序讀進來處理，處理完改成 `名字.json.done`，
-內容換成一問一答：
+內容換成一問一答（pause／remove 等子程式真的停了才回，見下）：
 
     {"request": 原指令, "ok": true,  "result": 結果}
     {"request": 原指令, "ok": false, "error": {"code": "NotFound", "msg": "白話"}}
 
 讀到不合法的 JSON 也一樣當場變成 `.done`（`request` 是讀到的原文字串，error.code＝BadCommand）。
-怎麼寫不規定；`.` 開頭的檔不讀。同名的後蓋前；`.done` 由讀回覆的人自己清。兩邊都不 fsync。
+怎麼寫不規定，但寫到一半被讀到＝不合法 JSON＝BadCommand，寫的人自己負責（例如別處寫好再搬進來）；`.` 開頭的檔不讀。同名的後蓋前；`.done` 由讀回覆的人自己清。兩邊都不 fsync。
 
 指令一律 {"op", "id", ...參數}。`id` 什麼寫法都行（資料夾、inst.json、相對路徑），daemon 一律轉成 inst.json 的 realpath：
 
     {"op": "add",       "id": ID, "how": {...}}   新增實例                         → result＝realpath
-    {"op": "set",       "id": ID, "how": {...}}   改執行方式（只改有寫的），下一次起生效
+    {"op": "set",       "id": ID, "how": {...}}   改執行方式（只改有寫的），下一次起生效 → result＝狀態物件
     {"op": "remove",    "id": ID, "wait": B}      移除；wait＝true 等這次跑完，false 當場收掉（預設 true）
-    {"op": "pause",     "id": ID, "wait": B}      暫停；wait 同上
-    {"op": "resume",    "id": ID}                 繼續
-    {"op": "add_times", "id": ID, "delta": N}     剩餘次數加減 N（最少到 0）
+                                                  → 收完才回，result＝最後的狀態物件（state＝"removed"）
+    {"op": "pause",     "id": ID, "wait": B}      暫停；wait 同上 → 子程式停了才回，result＝狀態物件
+    {"op": "resume",    "id": ID}                 繼續                               → result＝狀態物件
+    {"op": "add_times", "id": ID, "delta": N}     剩餘次數加減 N（最少到 0）         → result＝狀態物件
     {"op": "state",     "id": ID}                 → result＝"waiting"／"running"／"paused"／"done"／"removing"
     {"op": "get",       "id": ID}                 → result＝狀態物件
     {"op": "list"}                                → result＝[狀態物件, ...]
     {"op": "save",      "path": P}                現有實例存成一份 JSON（整份重寫）    → result＝存了幾個
     {"op": "load",      "path": P}                從 save 存的檔一次載入、開始跑       → result＝[id, ...]
 
-沒有特別寫 result 的，result＝null。`how` 的欄位（times、interval_ms、timeout_ms、grace_ms）與狀態物件見 aos_loop。
+沒有特別寫 result 的，result＝null。pause／remove 還沒停的這段時間，指令檔留在原地（不重讀），
+停了才寫 .done；daemon 結束時所有實例收掉，還沒回的照樣補回。`how` 的欄位（times、interval_ms、timeout_ms、grace_ms）與狀態物件見 aos_loop。
 error.code：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、ReadFailed、JsonSyntax、WriteFailed、Internal。
 相對路徑（id、path、inst.json 裡的）基準都是 daemon 啟動時的 cwd。
 實例表只在記憶體裡，daemon 起來時是空的、結束就沒了；要留就 save，要接回來就 load。
@@ -99,13 +101,25 @@ def load_config(path):
 
 
 def handle(loop, cmd):
-    """一條指令 → 對 loop 的呼叫，回 {"ok", "result"} 或 {"ok", "error": {"code", "msg"}}。"""
+    """一條指令 → 對 loop 的呼叫，回 {"ok", "result"} 或 {"ok", "error": {"code", "msg"}}；
+    pause／remove 成功時回一個函式 ready()：還沒停回 None，停了回 {"ok", "result"}。"""
     try:
-        return {"ok": True, "result": _dispatch(loop, cmd)}
+        r = _dispatch(loop, cmd)
     except (DaemonError, LoopError) as e:
         return _error(e.code, e.msg)
     except Exception as e:
         return _error("Internal", "%s: %s" % (type(e).__name__, e))
+    if callable(r):
+        return lambda: _ready(r)
+    return {"ok": True, "result": r}
+
+
+def _ready(r):
+    try:
+        v = r()
+    except Exception as e:
+        return _error("Internal", "%s: %s" % (type(e).__name__, e))
+    return None if v is None else {"ok": True, "result": v}
 
 
 def _error(code, msg):
@@ -185,16 +199,26 @@ def _say(said, key, msg):
         print(msg, file=sys.stderr)
 
 
-def _scan(loop, d, said, given_up):
+def _flush(pending, said, given_up):
+    """還沒回的 pause／remove：停了就寫回覆。"""
+    for name, (path, cmd, ready) in list(pending.items()):
+        r = ready()
+        if r is not None:
+            del pending[name]
+            _reply(path, {"request": cmd, **r}, said, given_up)
+
+
+def _scan(loop, d, said, given_up, pending):
     """處理一輪。出意外不往上丟：印到 stderr，下一輪照常。"""
     try:
         names = sorted(os.listdir(d))
     except OSError as e:
         _say(said, "list", "ScanFailed: 看不了控制資料夾 %s：%s" % (d, e))
+        _flush(pending, said, given_up)
         return
     said.pop("list", None)
     for name in names:
-        if name.startswith(".") or not name.endswith(".json") or name in given_up:
+        if name.startswith(".") or not name.endswith(".json") or name in given_up or name in pending:
             continue
         path = os.path.join(d, name)
         raw = None
@@ -205,8 +229,13 @@ def _scan(loop, d, said, given_up):
         except (OSError, ValueError) as e:
             reply = {"request": raw, **_error("BadCommand", "讀不了 %s：%s" % (name, e))}
         else:
-            reply = {"request": cmd, **handle(loop, cmd)}
+            r = handle(loop, cmd)
+            if callable(r):
+                pending[name] = (path, cmd, r)
+                continue
+            reply = {"request": cmd, **r}
         _reply(path, reply, said, given_up)
+    _flush(pending, said, given_up)
 
 
 def _reply(path, reply, said, given_up):
@@ -251,10 +280,10 @@ def serve(cfg, quit, save=lambda: False):
             _load(loop, cfg["load"])
         except LoopError as e:
             raise DaemonError(e.code, e.msg)
-    said, given_up = {}, set()
+    said, given_up, pending = {}, set(), {}
     try:
         while not quit():
-            _scan(loop, d, said, given_up)
+            _scan(loop, d, said, given_up, pending)
             time.sleep(cfg["control_poll_ms"] / 1000)
     finally:
         try:
@@ -262,6 +291,7 @@ def serve(cfg, quit, save=lambda: False):
                 _save(loop, cfg["save"])
         finally:
             loop.shutdown()
+            _flush(pending, said, given_up)
 
 
 def main(argv=None):
