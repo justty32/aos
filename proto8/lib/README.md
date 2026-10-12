@@ -34,7 +34,7 @@ out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔�
 python3 proto8/lib/aos_inst.py TARGET
 ```
 
-- TARGET：`.json` 檔，或資料夾（找 `.aos/inst.json`，沒有再找 `inst.json`）。
+- TARGET：`.json` 檔，或資料夾（找 `.aos/inst.json`，沒有再找 `inst.json`）。`find()` 回 realpath，同一份檔永遠得到同一個字串（daemon 拿它當 id）。
 - 基準一律是呼叫者的 cwd：指示詞的檔名、`cwd` 這個 key 從這裡算。
 - `cwd` 沒寫＝呼叫 aos_inst 時的 cwd；`stdin`／`stdout`／`stderr`／`exit` 的相對路徑從解出來的 `cwd` 算。
 - key：`argv`（必填）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`，加上布林的 `cwd_mkdir`、`envs_clear`、`*_inherit`、`*_append`、`*_mkdir`、`stderr_merge`。完整說明在檔頭。
