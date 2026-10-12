@@ -191,11 +191,9 @@ class TestExit(Base):
         run(parse({"argv": ["sh", "-c", "kill -15 $$"], "exit": "x.txt"}, self.d))
         self.assertEqual(self.read("x.txt"), "143\n")
 
-    def test_exit_write_failed(self):
-        with self.assertRaises(InstError) as cm:
-            self.go(4, exit="no/such/dir/x.txt")
-        self.assertEqual(cm.exception.code, "ExitWriteFailed")
-        self.assertIn("結束碼 4", cm.exception.msg)
+    def test_exit_write_failed_ignored(self):
+        """exit 寫不進去不管：照樣回子程式的碼，不丟錯。"""
+        self.assertEqual(self.go(4, exit="no/such/dir/x.txt"), 4)
 
     def test_exit_type(self):
         self.fails("FieldType", {"argv": ["a"], "exit": 1})
