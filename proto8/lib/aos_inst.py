@@ -169,7 +169,7 @@ def run(inst):
         try:
             _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
         except OSError:
-            pass        # 寫不進去不管（使用者 10-12 定）
+            pass        # 寫不進去不管
     return code
 
 
