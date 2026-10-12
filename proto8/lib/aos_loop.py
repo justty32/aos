@@ -7,7 +7,7 @@
 
 loop.json（先用指示詞 lib 解，基準＝呼叫者的 cwd；外層的 key 只在起來時讀一次）：
 
-    inst           一份 inst 格式（必填）；要指向現成的就寫 {"$ref": "job/inst.json"}。每次起之前重讀
+    inst           一份 inst 格式（必填）；要指向現成的就寫 {"$ref": "job/inst.json"}
     times          總共跑幾次（非負整數；null＝不限；沒寫＝1）
     interval_ms    間隔（非負整數；沒寫＝0）
     interval_mode  "after"＝跑完再隔 interval_ms（預設）；"fixed"＝固定週期，每 interval_ms 到點起一次，
@@ -19,11 +19,13 @@ loop.json（先用指示詞 lib 解，基準＝呼叫者的 cwd；外層的 key 
     error_wait_ms  aos_inst 自己出錯的那次之後，下一次至少隔多久（非負整數；沒寫＝1000）
 
 ctl、state 的相對路徑從呼叫者的 cwd 算。id＝loop.json 的 realpath。
+loop.json（含 `inst` 那格和裡面的指示詞）只在起來時讀一次、解一次，之後每次都用記憶體裡那份；跑的途中要改只能走 ctl.json。
+`inst` 不對（解不開、型別錯）＝起不來，退出碼沿用 aos_inst 的（參考 125）。
 
-每一次：重讀 `inst` 那格 → 起子程序 `aos_inst.py`（自成一個 session）→ 等它結束 → 整群補 SIGKILL 清掉孫程式 → 收屍。
+每一次：起子程序 `aos_inst.py`（自成一個 session）→ 等它結束 → 整群補 SIGKILL 清掉孫程式 → 收屍。
 aos_inst 的退出碼只說它自己：0＝子程式跑完，`last_code` 讀 inst 的 exit 檔最後一行（沒寫 exit＝null）；
 非 0＝aos_inst 自己出錯，`last_error`＝它 stderr 的最後一行。被收掉的那次也算跑過一次。
-`inst` 那格交給 aos_inst 的方式：在暫存資料夾放一份 `{"$ref": "<loop.json 的 realpath>#/inst"}`，結束時刪掉。
+`inst` 交給 aos_inst 的方式：起來時把解好的 inst 寫成暫存資料夾裡的一份 inst.json，每次都把它的路徑給 aos_inst，結束時刪掉。
 
 ctl.json（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣」，loop 只讀不寫，每 ctl_poll_ms 看一次，
 (inode, mtime, 大小) 變了才重讀。認的欄位（都選填；不認的忽略）：
@@ -33,7 +35,7 @@ ctl.json（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣�
                    stop 是終點：讀到一次就算數，改回 false 也不會復活
     times、interval_ms、interval_mode   蓋過 loop.json 外層的值
 
-`true`＝`{"val": true, "now": false}`。沒寫的欄位＝loop.json 的初始值（不是上一版 ctl 的值；集中在 `want()`）。
+`true`＝`{"val": true, "now": false}`。兩個都寫了 stop 壓過 paused（收不收當場看 stop 的 now）。沒寫的欄位＝loop.json 的初始值（不是上一版 ctl 的值；集中在 `want()`）。
 壞 JSON、不是物件、型別不對：整份不採用，維持上一次的好狀態，stderr 印一行（同一件事印一次）。
 檔不見了：維持上一次的狀態、印一次；起來時就不在＝還沒有控制（之後出現了照樣讀）。
 
@@ -65,7 +67,8 @@ import time
 import aos_inst
 from aos_directives import DirectiveError, resolve
 
-__all__ = ["CtlFile", "LoopError", "load_config", "parse_ctl", "run", "want", "write_json"]
+__all__ = ["CtlFile", "LoopError", "StateFile", "load_config", "parse_ctl", "read_state", "run", "state_doc", "want",
+           "write_json"]
 
 AOS_INST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_inst.py")
 DEFAULTS = {"times": 1, "interval_ms": 0, "interval_mode": "after", "grace_ms": 5000, "ctl": None,
@@ -101,8 +104,8 @@ def _read_json(path, err=LoopError):
 
 
 def load_config(path, defaults=DEFAULTS, need_inst=True, err=LoopError):
-    """讀 loop.json 的外層（`inst` 那格不解，留給 aos_inst 每次重讀），驗型別、填預設，回 (realpath, cfg)。
-    daemon.json 也用這個（`defaults` 換成 daemon 的、`need_inst=False`）。"""
+    """讀 loop.json、整份解好（含 `inst` 那格），驗外層型別、填預設，回 (realpath, cfg)；cfg["inst"]＝解好的 inst。
+    只在起來時讀這一次。daemon.json 也用這個（`defaults` 換成 daemon 的、`need_inst=False`）。"""
     ident = os.path.realpath(path)
     doc = _read_json(ident, err)
     if not isinstance(doc, dict):
@@ -110,10 +113,10 @@ def load_config(path, defaults=DEFAULTS, need_inst=True, err=LoopError):
     if need_inst and "inst" not in doc:
         raise err("FieldType", "%s 沒有 inst" % ident)
     try:
-        outer = resolve({k: v for k, v in doc.items() if k != "inst"}, os.getcwd(), ident)
+        outer = resolve(doc, os.getcwd(), ident)
     except DirectiveError as e:
         raise err(e.code, e.msg)
-    cfg = {}
+    cfg = {"inst": outer.get("inst")} if need_inst else {}
     for k, default in defaults.items():
         v = outer.get(k, default)
         ok = {"times": v is None or _int(v), "interval_mode": v in _MODES, "ctl_poll_ms": _int(v, 1),
@@ -219,6 +222,49 @@ def write_json(path, doc):
         raise
 
 
+# ---- state.json（loop 和 daemon 共用：欄位、讀、寫都只在這裡）----
+
+def state_doc(ident, state, w, ctl, **extra):
+    """一份狀態物件。共同欄位：id、state、pid、times、interval_ms（daemon 沒有 interval_mode）、ctl_mtime；
+    其他（loop：interval_mode、runs、skipped、last_code、last_error；daemon：runs、loops）放 extra。"""
+    st = {"id": ident, "state": state, "pid": os.getpid(), "times": w["times"], "interval_ms": w["interval_ms"]}
+    if "interval_mode" in w:
+        st["interval_mode"] = w["interval_mode"]
+    st.update(extra)
+    st["ctl_mtime"] = ctl.mtime if ctl else None
+    return st
+
+
+def read_state(path):
+    """讀一份 state.json，回 dict；不在、讀不了、不是物件回 None。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            st = json.loads(f.read())
+    except (OSError, ValueError):
+        return None
+    return st if isinstance(st, dict) else None
+
+
+class StateFile:
+    """state.json 的寫者：內容有變才寫（暫存再改名），寫不了印一次、不算錯。path＝None 就什麼都不做。"""
+
+    def __init__(self, path, name):
+        self.path, self.name = path, name
+        self.written = self.said = None
+
+    def write(self, st):
+        if self.path is None or st == self.written:
+            return
+        try:
+            write_json(self.path, st)
+            self.written = st
+        except OSError as e:
+            msg = "%s: StateWriteFailed: 寫不了 state.json %s：%s" % (self.name, self.path, e)
+            if self.said != msg:
+                self.said = msg
+                print(msg, file=sys.stderr)
+
+
 # ---- 子程序 ----
 
 def _exited(pid, timeout):
@@ -274,19 +320,23 @@ class _Loop:
     def __init__(self, path):
         self.id, self.cfg = load_config(path)
         c = self.cfg
+        try:
+            self.exit_path = aos_inst.parse(c["inst"], os.getcwd(), self.id)["exit"]
+        except aos_inst.InstError as e:
+            raise LoopError(e.code, e.msg, aos_inst.exit_code(e))
         self.initial = {"paused": (False, False), "stop": (False, False), "times": c["times"],
                         "interval_ms": c["interval_ms"], "interval_mode": c["interval_mode"]}
         self.ctl = CtlFile(c["ctl"]) if c["ctl"] else None
         self.runs = self.skipped = 0
         self.last_code = self.last_error = None
         self.inst_exit = 0          # 最後一次是 aos_inst 自己出錯＝它的退出碼，否則 0
-        self.proc = self.tail = self.exit_path = None
+        self.proc = self.tail = None
         self.stopping = False       # stop 讀到過一次就算數
         self.last_end = None        # 上一次結束的時間（monotonic）；None＝還沒跑過
         self.last_err = False
         self.anchor = None          # fixed：第 0 拍的時間
         self.tick = -1              # fixed：上一次起在第幾拍
-        self.written = None
+        self.state_file = StateFile(c["state"], "loop")
         self.said = None
 
     def _say(self, msg):
@@ -316,13 +366,6 @@ class _Loop:
             self.tick = n
         else:
             self.anchor, self.tick = None, -1
-        try:
-            inst = aos_inst.load(self.wrapper)      # 先驗一次，順便拿到 exit 檔在哪
-        except aos_inst.InstError as e:
-            print(e, file=sys.stderr)
-            self.record(None, str(e), aos_inst.exit_code(e))
-            return
-        self.exit_path = inst["exit"]
         self.proc = subprocess.Popen([sys.executable, AOS_INST, self.wrapper],
                                      start_new_session=True, stderr=subprocess.PIPE)
         self.tail = _Tail(self.proc.stderr)
@@ -356,19 +399,11 @@ class _Loop:
             state = "done"
         else:
             state = "waiting"
-        return {"id": self.id, "state": state, "pid": os.getpid(), "times": w["times"],
-                "interval_ms": w["interval_ms"], "interval_mode": w["interval_mode"], "runs": self.runs,
-                "skipped": self.skipped, "last_code": self.last_code, "last_error": self.last_error,
-                "ctl_mtime": self.ctl.mtime if self.ctl else None}
+        return state_doc(self.id, state, w, self.ctl, runs=self.runs, skipped=self.skipped,
+                         last_code=self.last_code, last_error=self.last_error)
 
     def write_state(self, st):
-        if self.cfg["state"] is None or st == self.written:
-            return
-        try:
-            write_json(self.cfg["state"], st)
-            self.written = st
-        except OSError as e:
-            self._say("StateWriteFailed: 寫不了 state.json %s：%s" % (self.cfg["state"], e))
+        self.state_file.write(st)
 
     def serve(self, got):
         c = self.cfg
@@ -390,7 +425,7 @@ class _Loop:
             if self.proc:
                 if _exited(self.proc.pid, 0):
                     self.finish(reap(self.proc))
-                elif (self.stopping and w["stop"][1]) or (w["paused"][0] and w["paused"][1]):
+                elif w["stop"][1] if self.stopping else w["paused"][0] and w["paused"][1]:   # stop 壓過 paused
                     self.finish(kill(self.proc, c["grace_ms"]))
             if not self.proc:
                 done = w["times"] is not None and self.runs >= w["times"]
@@ -413,7 +448,7 @@ class _Loop:
         tmp = tempfile.mkdtemp(prefix="aos-loop-")
         self.wrapper = os.path.join(tmp, "inst.json")
         try:
-            write_json(self.wrapper, {"$ref": self.id + "#/inst"})
+            write_json(self.wrapper, self.cfg["inst"])      # 起來時解好的那份，每次都用它
             self.serve(got)
         finally:
             if self.proc:
