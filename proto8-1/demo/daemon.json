@@ -1,0 +1,4 @@
+{
+  "control_dir": {"$env": "DEMO_CTL"},
+  "control_poll_ms": 100
+}

@@ -1,0 +1,8 @@
+{
+  "argv": [
+    "aos-if",
+    "pipeline/not-check",
+    "pipeline/again"
+  ],
+  "stderr_inherit": true
+}
