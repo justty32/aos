@@ -109,6 +109,10 @@ class Inst(Tmp):
             aos_inst.find(self.p("empty"))
         self.assertEqual(c.exception.code, "NotFound")
 
+    def test_returns_code(self):
+        self.assertEqual(aos_inst.run(aos_inst.load(self.inst("r", "exit 7"))), 7)
+        self.assertEqual(aos_inst.run(aos_inst.load(self.inst("r2", "sleep 5")), timeout_ms=100), 143)
+
     def test_exit_and_streams(self):
         self.assertEqual(self.run_inst("a", "echo hi; echo err >&2; exit 3",
                                        keys={"stdout": "a.out", "stderr_merge": True}), "3\n")
