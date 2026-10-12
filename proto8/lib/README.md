@@ -26,7 +26,7 @@ out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔�
 取回來的東西裡如果還有指示詞，照它所在的那份檔、那個位置接著解。繞回自己（指到正在解的位置或它的上層）＝`ReferenceCycle`。
 錯了一律丟 `DirectiveError`，代號七種，寫在檔頭。
 
-**沿革**：2026-10-12 從 proto7-2 拿來，同日照使用者要求精簡：刪 `$opt`／`$val`、`$fmt`；入口從「解一格 `resolve(value, ctx, position)`」改成「解整份 `resolve(doc, base_dir)`」；三檔併一檔（233＋111＋73 行 → 161 行）。原本的完整規則在 [proto5/spec/directives/](../../proto5/spec/directives/README.md)，`$ref`／`$at`／`$env` 那幾節仍適用；選項、`$fmt` 兩節不再適用。
+**沿革**：2026-10-12 從 proto7-2 拿來，同日照使用者要求精簡：刪 `$opt`／`$val`、`$fmt`；入口從「解一格 `resolve(value, ctx, position)`」改成「解整份 `resolve(doc, base_dir)`」；三檔併一檔（233＋111＋73 行 → 161 行）。
 
 ## inst（`aos_inst.py`）
 
