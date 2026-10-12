@@ -4,25 +4,26 @@
 
 只用 Python 標準庫，沒有命令列。測試在 [../tests/](../tests/)，跑法：`python3 -B proto8/tests/run.py`（哪裡跑都行）。
 
-## 指示詞 lib（2026-10-12 從 proto7-2 拿來）
+## 指示詞 lib（`aos_directives.py`）
 
-讓 JSON 裡某一格的值「從別處來」。這個 lib 只管「這一格是不是指示詞、怎麼解成真的值」；哪些格要解、解完該是什麼型別，由用它的人（宿主，例如 inst）決定。
+讓 JSON 裡某一格的值「從別處來」。一個檔、一個入口：
 
-| 檔 | 管什麼 |
-|---|---|
-| `aos_directives.py` | 解析本體：`resolve()`、`resolve_located()`；對外只要 import 這一個 |
-| `aos_directives_base.py` | 底層型別：`DirectiveError`、`Document`、`Context`、`load_document()` |
-| `aos_directives_options.py` | 選項物件 `$opt`：`split_option()`、`option_names()`、`parse_options()` |
-
-四種指示詞（同一個物件裡有好幾個，只看優先最高的那個）：`$opt` > `$ref` > `$fmt` > `$env`。
-
-```jsonc
-{"$env": "HOME"}                                   // 讀環境變數
-{"$fmt": {"$val": "${who}-log.txt", "who": "bob"}} // 拼字串，${名字} 只查旁邊的表
-{"$ref": "other.json#/a/0"}                        // 讀另一份 JSON 的某一格；"" 是自己這份
-{"$opt": ["append"], "$val": "out.txt"}            // 選項物件：lib 不解，原樣交給宿主
+```python
+from aos_directives import resolve, DirectiveError
+out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔名的基準路徑
 ```
 
-錯了一律丟 `DirectiveError`，帶規範裡的代號（`ReferenceCycle`、`ReferencePointerInvalid`、`UnknownOption`…，共 10 種）。
+整份 JSON 一層層全部解掉，回一份新的（原本那份不動）。`base_dir` 整趟都用它，進了別的檔也不換。
 
-完整規則在 [proto5/spec/directives/](../../proto5/spec/directives/README.md)（機制本身沒變過）。來源：proto7-2/lib 的最新版，比 proto6 多兩處修正（陣列索引邊緣、`$at` 寫 null）；測試是 proto6 的 101 條＋補那兩處的 4 條（[test_directives_edges.py](../tests/test_directives_edges.py)）。
+兩種指示詞（兩個都寫了只看 `$ref`，其餘 key 忽略）：
+
+```jsonc
+{"$ref": "other.json#/a/0"}          // 讀一份 JSON 的某一格；"" 是目前這份；位置也可寫成 "$at": "/a/0"
+{"$ref": "#../x"}                    // ./ ../ 從這個指示詞所在的位置算
+{"$env": "HOME"}                     // 讀環境變數
+```
+
+取回來的東西裡如果還有指示詞，照它所在的那份檔、那個位置接著解。繞回自己（指到正在解的位置或它的上層）＝`ReferenceCycle`。
+錯了一律丟 `DirectiveError`，代號七種，寫在檔頭。
+
+**沿革**：2026-10-12 從 proto7-2 拿來，同日照使用者要求精簡：刪 `$opt`／`$val`、`$fmt`；入口從「解一格 `resolve(value, ctx, position)`」改成「解整份 `resolve(doc, base_dir)`」；三檔併一檔（233＋111＋73 行 → 161 行）。原本的完整規則在 [proto5/spec/directives/](../../proto5/spec/directives/README.md)，`$ref`／`$at`／`$env` 那幾節仍適用；選項、`$fmt` 兩節不再適用。測試：[test_directives.py](../tests/test_directives.py) 38 條。
