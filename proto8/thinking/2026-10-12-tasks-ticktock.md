@@ -48,6 +48,8 @@ AI 攤了三條：甲＝只是時鐘（daemon 定時跑一支把數字加一的�
 ### 先前 AI 列的兩題（選甲後已回答）
 
 - tick、tock 各做什麼：tick＝回合數加一（aos-tick），tock 不另外做。
+- 訂閱長什麼樣（AI 提規格、使用者說「做吧」）：抬頭讀時鐘檔就是訂閱，不需要名單；mtime＝這回合從什麼時候開始。要不要「等到第 N 回合」的小程式，等真的有 node 要用再說。
+- aos-tick 規格（同上）：`aos-tick FILE`，讀 n 寫 n＋1（十進位＋換行），先寫暫存再改名；節奏、停、只走 N 回合交給 daemon（interval_ms、pause／resume、times）；tock 不另外做。
 - 中間任務失敗那回合算什麼、tock 要不要一定跑（需不需要 finally）：甲不包任務，這題不存在；finally 不做。
 
 ## 4. 規範比實作重要（使用者，10-12 傍晚）
