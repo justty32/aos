@@ -55,7 +55,7 @@ ident = loop.add("some/folder", times=3, interval_ms=1000)   # id＝inst.json �
 loop.pause(ident, wait=False)                                 # wait=False＝當場收掉這次
 ```
 
-- 方法：`add(target, **執行方式)`、`set(id, **執行方式)`、`remove(id, wait)`、`pause(id, wait)`、`resume(id)`、`times(id, delta)`、`get(id)`、`list()`、`shutdown()`；出錯丟 `LoopError`。
+- 方法：`add(target, **執行方式)`、`set(id, **執行方式)`、`remove(id, wait)`、`pause(id, wait)`、`resume(id)`、`times(id, delta)`、`state(id)`、`get(id)`、`list()`、`shutdown()`；出錯丟 `LoopError`。
 - 執行方式：`times`（預設 1，None＝不限）、`interval_ms`（預設 0）、`timeout_ms`（預設不限）、`grace_ms`（預設 2000）。
 - 狀態：`state`（waiting／running／paused／done／removing）、剩餘 `times`、`runs`、`last_error`。被收掉的那次也算一次；次數跑完留在表上（done），加次數再跑。
 
@@ -67,7 +67,7 @@ python3 proto8/lib/aos_daemon.py CONFIG
 
 - CONFIG（JSON，先解指示詞，基準＝啟動時的 cwd）：`control_dir`（必填）、`control_poll_ms`（預設 200）、`stop_poll_ms`（預設 50）。
 - 控制：往 `control_dir` 放 `名字.json`；daemon 每輪照檔名順序讀進來、交給 loop，處理完改成 `名字.done`、內容換成回覆。不合法的 JSON 也當場變 `.done`（回 `BadCommand`），所以寫的人先寫成 `.` 開頭的名字、寫完再改名。兩邊都不 fsync；`.done` 由讀回覆的人清。
-- 指令：`add`（target＋執行方式）、`set`、`remove`／`pause`（`wait` 預設 true）、`resume`、`times`（`delta`）、`get`、`list`。
+- 指令：`add`（target＋執行方式）、`set`、`remove`／`pause`（`wait` 預設 true）、`resume`、`times`（`delta`）、`state`（只回狀態字串）、`get`、`list`。
 - 實例表只在記憶體；收到 SIGINT／SIGTERM 就把所有實例當場收掉再結束。
 
 ## 多執行緒的規矩
