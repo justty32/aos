@@ -2,16 +2,6 @@
 
 ← [AGENTS.md](../AGENTS.md)｜[INDEX](INDEX.md)
 
-> **一眼看（2026-10-10 整理，題目一題都沒結，結不結由你決定）**：A 區 71 題＝**建議結案 28 題｜真正要答 43 題**，逐題理由與預設建議在 [digest-2026-10-05](wait-user/digest-2026-10-05.md)。
->
-> - **建議結案 28 題**（已決、已做或已被取代）：6、8、18、21～39、56、59、62、63、74、75 → [digest 第一節](wait-user/digest-2026-10-05.md#一可以直接結掉28-題)；其中 33、35、39 夾著尾項，結之前先看 [第三節](wait-user/digest-2026-10-05.md#三不能弄丟的尾項結掉對應編號前先保留)。
-> - **真正要答 43 題**：
->   - 會卡下一步 10 題：50、72、60、40、41、73、66、69、61、57 → [2.1](wait-user/digest-2026-10-05.md#21-會卡下一步10-題先答這些)
->   - 只要點頭「維持現況」20 題：42～49、51～55、58、64、65、67、68、70、71 → [2.2](wait-user/digest-2026-10-05.md#22-只要點頭維持現況20-題)
->   - 不卡工的舊技術題 13 題（可整批回「全照預設」或「擱置」）：3、4、5、10～17、19、20 → [2.3](wait-user/digest-2026-10-05.md#23-不卡工的舊技術題13-題可整批答全照預設或擱置)
-> - 10-09／10-10 決策紀錄（[10-09](../proto7-2/notes/decisions-2026-10-09.md)、[10-10](../proto7-2/notes/decisions-2026-10-10.md)）裡你親口答的題（loop7 D1～D10、模型分級、心跳、scaffold §9 等）都不是本檔的編號題，所以本檔沒有因此移除任何一題。
-> - digest 第四節「先修帳號手冊」已過時：手冊 10-05 已校正，B 區那條可直接照跑。
-
 需要**使用者親自做 / 驗證 / 拍板**才能繼續的事——例如：實機/實環境測試、外部服務登入、環境變數設定、權限操作、需要帳號的下載、**催/開/fork 另一個 agent 處理急件**（見 [inbox](workflows/inbox/README.md)：寄了信但很急、對方可能沒開）。Claude 能做結構性驗證＋打包到極限；跨不過去的那一關記這裡等使用者。
 
 **設計裁決也算**——照 [AGENTS 鐵律 5](../AGENTS.md)「大方向是使用者的」，需要你一句話才動得了工的，
@@ -23,38 +13,6 @@
 
 ## 待使用者項
 
-### A. 等你一句話（其餘我都做得下去，卡的只有這幾條）
+- （無）
 
-> 編號是固定的（別處用「WAIT_USER 第 N 條」引用），拍掉的號碼不回收，所以會跳號（1、2、7 已結；9 移到 C）。**編號固定不回收**——已按類別搬進 [`wait-user/`](wait-user/README.md)，本檔只留導航表。
-
-> **15 分鐘拍完清單**（2026-10-05，71 題裡 28 題建議直接結掉、43 題真正要答）：[wait-user/digest-2026-10-05.md](wait-user/digest-2026-10-05.md)
-
-| 類別 | open | 清單 |
-|------|------|------|
-| proto2（辯論場／hackathon／proto2 舊題） | 9 | [wait-user/proto2.md](wait-user/proto2.md)（3、4、5、6、8、10、11、12、13） |
-| proto5 重架構＋kernel（daemon 崩潰窗口／endpoint 換手／kernel 排隊／once／proto5-2 六題／C-7、C-8） | 7 | [wait-user/proto5-kernel.md](wait-user/proto5-kernel.md)（14～20） |
-| 已裁決／代裁紀錄（09-24，只為翻案回頭查，非待答） | 19 | [wait-user/decided-2026-09-24.md](wait-user/decided-2026-09-24.md)（21～39） |
-| 公司／市場（財務／製造／圖書館／品管／HR／總裁／組織設計） | 36 | [wait-user/company-market.md](wait-user/company-market.md)（40～75；74、75 經理人 09-25 晚已裁決並實作（`9261eae0`），哪些題可直接結見 [digest](wait-user/digest-2026-10-05.md)） |
-
-### B. 要你親自做的（環境／帳號，我跨不過去）
-
-- **proto6 帳號模組真 root 手動驗收**（10-01）：在可丟棄的機器上照 [操作手冊](../proto6/notes/2026-10-01-account-manual.md) 跑，驗完照手冊第 5 節回報。自動測試只能用 unshare 假 root，真 `sudo`、真帳號、開起來後 `userdel` 只能手動驗。手冊已於 10-05 依現行程式校正（mq 多扇門、ctl socket 等）。
-
-### C. 你已明說先不決定的（不催，只記「什麼時候會被迫要答」）
-
-放這裡是為了**別再拿它們去煩你**，不是待辦：
-
-- **proto5-2 規模三題**（kernel 帳本仍整份讀寫、aos-agent 每格偷看整份帳本、一顆 cpu＝一支 Python 程序）——09-24 使用者說「規模這塊先不動」；什麼時候會被迫要答：proto5-2 要實作，或 cpu 上千顆時。→ [proto5 納入報告](../proto5/notes/2026-09-24-fold-in/README.md)「沒做的」一節（proto5-2/notes/2026-09-24-impl/decisions.md 的 Q1～Q3）
-  - **多一條同類的**：閒著的 agent 每格還是被叫醒看一眼（J 隊 priority-and-shared-cpu 挖到，見 [報告](../proto5/notes/2026-09-24-priority-and-shared-cpu/README.md) §「要使用者拍的」題 2-3）；K 隊提的「等模型的 agent 不空轉」已實作（`c56044de`）；kernel 帳本也已改只寫變更（`fd6b68e2`），這兩處已部分失效，見 [digest](wait-user/digest-2026-10-05.md)。
-
-- **pi 當介面層**（2026-08-30「先擱置」）——接法與代價在 [pi-interface](../core/agent/docs/pi-interface.md)，要投資時從那裡起。
-
-- **B12 判準／loop 分支的形式／版面知識放哪**（2026-08-30 三題都「先不決定」）——
-  會撞上的時機：要動 `exec_loop` 時（分支）、要寫第一支 CLI 小程式時（版面 lib）。
-  → verdicts B12、core-layering
-- **workshop 那四個設計選擇**（World 抽象、`kernel.json` 分層合成、子行程拓樸、親緣綁
-  路徑還是 UUID）——你明講「窩不想看惹」，方向是**用實測取代拍板**，所以不列 A 區。
-- **top-down-cli 的 14 條**——已裁「實作時順便解決」。
-- （原 A.9）**proto2：拍板題 T-01～T-77 全照建議做了（使用者 09-06 說「都 OK」）**；要翻案就回編號。→ [notes/tools/README.md](../proto2/notes/tools/README.md)
-
-> 設計上還沒答完、但不卡你的細節不放這裡——記在 [`roadmap`](workflows/roadmap.md) 與各 idea 文件的開放問題。
+> 2026-10-12 使用者清帳：「舊帳可以清掉」「proto6 已經是老黃曆了，不管」——A 區 71 題、B 區 proto6 帳號真 root 驗收、C 區「先不決定」各項全部結案不再追。原 `wait-user/` 分類檔已封存（見 common/archive 索引），編號不回收。
