@@ -8,7 +8,7 @@
 python3 proto8-1/demo/run.py
 ```
 
-從哪裡跑都行，約 3.5 秒。只用 Python 標準庫和 `sh`、`cat`、`sleep`；看行程數那段讀 `/proc`，所以要 Linux。
+從哪裡跑都行，約 4.5 秒。只用 Python 標準庫和 `sh`、`cat`、`sleep`；看行程數那段讀 `/proc`，所以要 Linux。
 
 ## 場景
 
@@ -40,15 +40,16 @@ work     = par  report  notify              ← 兩件事一起做
 
 ## 檔案
 
-- `run.py`：mktemp 開暫存資料夾（`ctl/` 控制資料夾、`work/` 步驟間傳的檔、`log` 收 stderr），起 daemon（cwd＝本資料夾、PATH 前面加 `../bin`），一個個 `add`、每 0.2 秒 `get` 等到 done，印 `last_code`、log、work 裡的檔；旁邊一條執行緒每 50ms 數一次活著的 tasks 程式。最後 SIGTERM daemon、等它結束，再刪暫存資料夾。
+- `run.py`：mktemp 開暫存資料夾（`ctl/` 控制資料夾、`work/` 步驟間傳的檔、`log` 收 stderr、`run/` 當 daemon 的 cwd，裡面放指回本資料夾三個 pipeline 的捷徑，tasks 的相對 TARGET 照樣找得到、沒寫 cwd 的 inst 的 exit 檔落在這裡），起 daemon（PATH 前面加 `../bin`），一個個 `add` loop.json、每 0.2 秒 `get` 等到 done，印 `last_code`、log、work 裡的檔；旁邊一條執行緒每 50ms 數一次活著的 tasks 程式。最後 SIGTERM daemon、等它結束，再刪暫存資料夾。
 - `daemon.json`：`control_dir` 寫成 `{"$env": "DEMO_CTL"}`。
-- `pipeline/inst.json`（最上層）和 `pipeline/*/inst.json`（11 個步驟，一個資料夾一個）、`pipeline-fail/inst.json`、`pipeline-broken/inst.json`。
+- `pipeline/loop.json`、`pipeline-fail/loop.json`、`pipeline-broken/loop.json`：daemon `add` 的就是這三個，`inst` 用 `$ref` 指同資料夾的 inst.json（跑 1 次）。
+- `pipeline/inst.json`（最上層）和 `pipeline/*/inst.json`（11 個步驟，一個資料夾一個）、`pipeline-fail/inst.json`、`pipeline-broken/inst.json`。每個都寫了 `exit`（tasks 讀它判斷子程式的結果，沒寫會被擋下來）。
 
 ## 會看到什麼
 
 ```
-[ 0.1s] → 01-add.json  {"op": "add", "id": "pipeline"}
-[ 1.8s]      ok   {"id": "pipeline/inst.json", "state": "done", ..., "runs": 1, "last_code": 0, "last_error": null}
+[ 0.1s] → 01-add.json  {"op": "add", "id": "pipeline/loop.json"}
+[ 1.8s]      ok   {"id": "pipeline/loop.json", "state": "done", ..., "runs": 1, ..., "last_code": 0, "last_error": null, ...}
 [ 1.8s]    取樣看到最多 7 支 tasks 程式同時活著：aos-seq → aos-if → aos-seq → aos-if → aos-seq → aos-if → aos-not
 [ 1.8s]                   check 第 1 次：還沒好
 [ 1.8s]                   check 第 2 次：還沒好
@@ -75,7 +76,7 @@ work     = par  report  notify              ← 兩件事一起做
 1. **`if (not X) Y` 沒寫 ELSE，X 起不來會被當成「成功」。** `retry = aos-if not-check again`：check 起不來時，aos-not 印錯、回 125（不反過來），aos-if 只看到「條件非 0」＝不成立，沒 ELSE 就回 0。也就是**檢查根本沒跑，retry 卻回成功**，流程繼續往下。demo 的 `pipeline-broken` 就是這樣：錯在 check，`last_code` 125 是後面 `report` 開不了 `probe.out` 才「碰巧」攔下來的；要是 work 不讀 probe.out，整條會回 0。根源：「自己出錯 127／126／125」只在**那一層**算數，往上一層就只是一個非 0 的碼，if 分不出「條件不成立」和「條件那支程式壞了」。安全寫法是 `aos-if check ok again`，但得多一個 `["true"]` 的空步驟。
 2. **失敗的那次會把上一次好的 stdout 蓋掉。** stdout 是跑之前就開檔（覆寫），check 每試一次就清空一次 `probe.out`。`pipeline-fail` 跑完 `probe.out` 是空的。這個 demo 剛好是「最後一次成功才往下走」所以沒出事，但如果想「沒過就沿用上一次的值」就做不到；要嘛 append（就得自己找最後一行），要嘛 check 寫暫存檔、成功才改名（又要 shell）。
 3. **重試（一個概念）要 5 個 inst 檔＋一個計數檔＋一個 reset 步驟。** retry、not-check、again、budget、pause 各一個資料夾；次數只能用 `tries` 檔＋ sh 算術；pipeline 開頭還得有 reset 把它歸零（不然 daemon 重跑或另一個實例會接著上次的數）。整棵樹 12 個 inst 檔，換成 sh 大概 10 行。
-4. **每重試一次，行程樹深兩層，而且都是 Python。** 自己指自己是真的遞迴，不是迴圈：試到第 3 次時同時活著 7 支 tasks 程式（seq → if → seq → if → seq → if → not），每支一個 Python 直譯器。MAX_TRIES 寫 100 就是 200 層；忘了 budget 就是無限長下去，直到資源用完。`pipeline` 的 sleep 加起來 1.1 秒，跑完要 1.7 秒，多出來的大多是起 Python。
+4. **每重試一次，行程樹深兩層，而且都是 Python。** 自己指自己是真的遞迴，不是迴圈：試到第 3 次時同時活著 7 支 tasks 程式（seq → if → seq → if → seq → if → not），每支一個 Python 直譯器（10-12 夜 tasks 改成用子程序 `aos_inst.py` 跑每一步之後，每一層再多一支 aos_inst 的 Python）。MAX_TRIES 寫 100 就是 200 層；忘了 budget 就是無限長下去，直到資源用完。`pipeline` 的 sleep 加起來 1.1 秒，跑完要 1.7 秒，多出來的大多是起 Python。
 5. **最上層 `last_code` 看不出是哪一步、什麼原因。** fail 回 3 是 budget 的碼；check 自己是 1，但被 budget 蓋掉了，「真正的失敗原因」丟了。broken 回 125，可能是任何一層的「自己出錯」，也可能是某個子程式自己回 125。只能去翻 stderr。daemon 的 `get` 也沒有「哪一步」的資訊。
 6. **沒有 finally。** 想要「不管成敗都收尾、但保留原本的碼」：`if main finish (seq finish false)` 會把碼變成 1；seq／if／not 這三支只會把碼壓成「0／非 0」或「第一個非 0」，原本的碼帶不過去。demo 只好讓 finish 只在成功時跑（`pipeline-fail` 沒有 summary）。
 7. **（已修，10-12：`resolve()`／`parse()` 加 `ident`，load 給 inst.json 的 realpath）錯誤訊息不講是哪個檔。** `EnvironmentVariableMissing: <input>:/argv/4 的 $env 找不到變數 READY_AT`——14 個 inst 檔裡哪一個？是 aos_inst 的 `parse()` 用 `resolve(doc, base_dir)` 解，指示詞 lib 只知道 `<input>`。巢狀起來就要自己猜（這裡是 check 的，得從 `argv/4` 和變數名自己推；log 裡也沒寫是哪支 tasks 程式印的）。

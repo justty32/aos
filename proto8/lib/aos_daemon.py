@@ -32,9 +32,11 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd）：
 讀到不合法的 JSON 也一樣當場變成 `.done`（`request` 是讀到的原文字串，error.code＝BadCommand）。
 寫到一半被讀到＝BadCommand，寫的人自己負責（先寫 `.` 開頭的檔再改名）；`.` 開頭的檔不讀。`.done` 由丟指令的人清。不 fsync。
 
-指令一律 {"op", "id", ...參數}。`id` 要是 loop.json 的絕對路徑（相對＝FieldType），daemon 轉成 realpath：
+指令一律 {"op", "id", ...參數}。`id` 要是 loop.json（或 inst.json）的絕對路徑（相對＝FieldType），daemon 轉成 realpath：
 
     {"op": "add",       "id": ID}                 起一個 loop                                  → result＝realpath
+                                                  ID 也可以是 inst.json（頂層沒有 "inst"、有 "argv"）：當成只跑一次的 loop，
+                                                  包裝檔 {"inst": {"$ref": 它}, "times": 1}；id 照樣是那份 inst.json 的 realpath
     {"op": "set",       "id": ID, "how": {...}}   改 times／interval_ms／interval_mode（寫進它的 ctl.json）
     {"op": "pause",     "id": ID, "wait": B}      暫停；wait＝true 等這次跑完，false 當場收掉（預設 true）
     {"op": "resume",    "id": ID}                 繼續
@@ -72,8 +74,9 @@ import sys
 import threading
 import time
 
+import aos_inst
 import aos_loop
-from aos_loop import CtlFile, kill, load_config as _load_cfg, parse_ctl, reap, want, write_json
+from aos_loop import CtlFile, StateFile, load_config as _load_cfg, parse_ctl, read_state, reap, state_doc, want, write_json
 
 __all__ = ["DaemonError", "load_config", "run"]
 
@@ -134,8 +137,8 @@ class _Entry:
         return self.proc.returncode is not None
 
     def status(self):
-        st = _read(self.state)
-        if not isinstance(st, dict) or st.get("pid") != self.proc.pid:
+        st = read_state(self.state)
+        if st is None or st.get("pid") != self.proc.pid:
             st = {"id": self.id, "state": "stopped" if self.exited() else "starting"}
         st = dict(st, id=self.id)
         if self.exited():
@@ -188,14 +191,22 @@ class Table:
         return e
 
     def _prepare(self, path):
-        """驗一個 loop.json、決定 ctl／state 放哪，回 (_Entry, 起的時候用的 loop.json 內容或 None)。不動檔案。"""
+        """驗一個 loop.json（或 inst.json）、決定 ctl／state 放哪，回 (_Entry, 包裝檔的內容或 None)。不動檔案。
+        頂層沒有 "inst"、有 "argv" 的當 inst.json：包成只跑一次的 loop {"inst": {"$ref": 它}, "times": 1}。"""
         ident = self._id(path)
         if not os.path.isfile(ident):
             raise DaemonError("NotFound", "%s 不存在" % ident)
         if ident in self.entries:
             raise DaemonError("Exists", "loop %s 已經在了" % ident)
-        _, lcfg = _load_cfg(ident, err=DaemonError)
         raw = _read(ident)
+        if isinstance(raw, dict) and "inst" not in raw and "argv" in raw:
+            try:
+                aos_inst.load(ident)
+            except aos_inst.InstError as err:
+                raise DaemonError(err.code, err.msg)
+            lcfg = dict(aos_loop.DEFAULTS, times=1)
+            return _Entry(ident, lcfg, None, None, None), {"inst": {"$ref": ident}, "times": 1}
+        _, lcfg = _load_cfg(ident, err=DaemonError)
         wrap = None
         if lcfg["ctl"] is None or lcfg["state"] is None:
             wrap = {k: {"$ref": "%s#/%s" % (ident, _esc(k))} for k in raw}
@@ -312,8 +323,8 @@ class Table:
         if len({e.id for (e, _), _ in todo}) != len(todo):
             raise DaemonError("Exists", "表裡有重複的 loop")
         for (e, _), _ in todo:
-            st = _read(e.state) if e.state else None
-            if isinstance(st, dict) and isinstance(st.get("pid"), int) and _alive(st["pid"]):
+            st = read_state(e.state) if e.state else None
+            if st is not None and isinstance(st.get("pid"), int) and _alive(st["pid"]):
                 raise DaemonError("Exists", "%s 的 state.json 說 pid %d 還在跑" % (e.id, st["pid"]))
         for (e, wrap), ctl in todo:
             try:
@@ -501,7 +512,8 @@ def serve(ident, cfg, got):
         _load(table, cfg["load"])
     ctl = CtlFile(cfg["ctl"], "daemon") if cfg["ctl"] else None
     initial = {"paused": (False, False), "stop": (False, False), "times": cfg["times"], "interval_ms": cfg["interval_ms"]}
-    runs, next_poll, next_scan, written = 0, 0, 0, None
+    runs, next_poll, next_scan = 0, 0, 0
+    sf = StateFile(cfg["state"], "daemon")
     w = want(initial, {})
     save, now_ = False, True
     try:
@@ -525,33 +537,20 @@ def serve(ident, cfg, got):
                 folder.scan(table)
                 runs += 1
                 next_scan = time.monotonic() + w["interval_ms"] / 1000
-            written = _write_state(cfg, ident, w, runs, ctl, len(table.entries), written)
+            sf.write(state_doc(ident, "paused" if w["paused"][0] else "waiting", w, ctl, runs=runs,
+                               loops=len(table.entries)))
             time.sleep(0.02)
     finally:
         try:
             if save and cfg["save"]:
                 _save(table, cfg["save"])
         finally:
-            _write_state(cfg, ident, w, runs, ctl, len(table.entries), written, "stopping")
+            sf.write(state_doc(ident, "stopping", w, ctl, runs=runs, loops=len(table.entries)))
             table.shutdown(now_, cfg["grace_ms"], got)
             folder.flush()
             for e in list(table.entries.values()):
                 table.drop(e)
-            _write_state(cfg, ident, w, runs, ctl, 0, None, "stopped")
-
-
-def _write_state(cfg, ident, w, runs, ctl, n, written, final=None):
-    if cfg["state"] is None:
-        return written
-    st = {"id": ident, "state": final or ("paused" if w["paused"][0] else "waiting"), "pid": os.getpid(),
-          "times": w["times"], "interval_ms": w["interval_ms"], "runs": runs,
-          "ctl_mtime": ctl.mtime if ctl else None, "loops": n}
-    if st != written:
-        try:
-            write_json(cfg["state"], st)
-        except OSError:
-            pass
-    return st
+            sf.write(state_doc(ident, "stopped", w, ctl, runs=runs, loops=0))
 
 
 def run(path):

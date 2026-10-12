@@ -224,6 +224,27 @@ class LoopTest(Tmp):
         self.assertIsNone(aos_loop.run(path))
         self.assertEqual(self.read("j.out"), "y\ny\n")
 
+    def test_read_once_at_start(self):
+        # loop.json（含 inst）只在起來時解一次：跑到一半改檔不影響；要改只能走 ctl.json
+        self.inst("job", "echo a >> j.out")
+        path = self.loop(inst={"$ref": "job/inst.json"}, times=None, interval_ms=50, ctl="l.ctl.json")
+        self.ctl({})
+        proc = self.start(path)
+        self.until(lambda: os.path.exists(self.p("j.out")))
+        self.inst("job2", "echo b >> j.out")
+        os.replace(self.p("job2/inst.json"), self.p("job/inst.json"))
+        self.write("l.loop.json", {"inst": {"argv": ["false"]}})
+        time.sleep(0.3)
+        self.ctl({"stop": True})
+        self.assertEqual(proc.wait(5), 0)
+        self.assertEqual(set(self.read("j.out").split()), {"a"})
+
+    def test_bad_inst_fails_start(self):
+        r = self.cli(self.loop(inst={"argv": [{"$env": "AOS_TEST_NOPE"}]}))
+        self.assertEqual(r.returncode, 125)
+        self.assertIn("EnvironmentVariableMissing", r.stderr)
+        self.assertEqual(self.cli(self.loop(inst={"argv": []})).returncode, 125)
+
     def test_no_exit_last_code_null(self):
         self.loop(inst={"argv": ["true"]}, state="l.state.json")
         self.assertEqual(self.cli(self.p("l.loop.json")).returncode, 0)
@@ -418,6 +439,19 @@ class Daemon(Tmp):
         self.assertEqual(json.loads(self.read("loops/1/ctl.json")), {"times": 3})
         self.ok({"op": "set", "id": a, "how": {"times": None}})
         self.assertEqual(self.err({"op": "add_times", "id": a, "delta": 1}), "Conflict")
+
+    def test_add_inst_json_runs_once(self):
+        self.start()
+        d = self.inst("a", "echo x >> a.out", exit="a.exit")
+        ident = self.ok({"op": "add", "id": d + "/inst.json"})
+        self.assertEqual(ident, os.path.realpath(d + "/inst.json"))
+        self.until(lambda: self.ok({"op": "get", "id": ident}).get("state") == "done")
+        st = self.ok({"op": "add_times", "id": ident, "delta": 1})
+        self.assertEqual(st["times"], 2)
+        self.until(lambda: self.ok({"op": "get", "id": ident}).get("runs") == 2)
+        self.assertEqual(self.read("a.out"), "x\nx\n")
+        self.write("bad.json", {"argv": []})
+        self.assertEqual(self.err({"op": "add", "id": self.p("bad.json")}), "FieldType")
 
     def test_own_ctl_state_used(self):
         self.start()
