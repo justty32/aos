@@ -52,8 +52,8 @@ class TestFindAndBase(Base):
 
     def test_base_inst_is_folder_even_for_dot_aos(self):
         """給資料夾時家是資料夾本身，不是 .aos/。"""
-        self.write(".aos/inst.json", {"argv": ["x"], "stdout": "out.txt"})
-        self.assertEqual(load(self.d)["stdout"], os.path.join(self.d, "out.txt"))
+        self.write(".aos/inst.json", {"argv": ["x"], "cwd": "."})
+        self.assertEqual(os.path.normpath(load(self.d)["cwd"]), self.d)
 
     def test_base_inst_for_file_is_its_folder(self):
         p = self.write("sub/i.json", {"argv": ["x"], "v": {"$ref": "data.json"}, "cwd": "w"})
@@ -87,13 +87,27 @@ class TestFindAndBase(Base):
 class TestParse(Base):
     def test_defaults_and_unknown_keys_ignored(self):
         inst = parse({"argv": ["a"], "whatever": {"x": 1}, "traits": []}, self.d)
-        self.assertEqual(inst["cwd"], self.d)
+        self.assertEqual(inst["cwd"], os.getcwd())
         self.assertEqual(inst["envs"], {})
         self.assertIsNone(inst["stdout"])
         self.assertFalse(any(inst[k] for k in aos_inst._BOOLS))
 
     def test_directive_errors_keep_code(self):
         self.fails("ReferencePointerInvalid", {"argv": ["a"], "x": {"$ref": "#/nope"}})
+
+    def test_no_cwd_inherits_callers_and_streams_follow_it(self):
+        """沒寫 cwd＝呼叫者的 cwd（不是基準）；串流從 cwd 算。"""
+        old = os.getcwd()
+        os.chdir(self.write("caller/x", "", raw=True) and os.path.join(self.d, "caller"))
+        self.addCleanup(os.chdir, old)
+        inst = parse({"argv": ["a"], "stdout": "o.txt"}, os.path.join(self.d, "home"))
+        self.assertEqual((inst["cwd"], inst["stdout"]),
+                         (os.path.join(self.d, "caller"), os.path.join(self.d, "caller", "o.txt")))
+
+    def test_cwd_from_base_streams_from_cwd(self):
+        inst = parse({"argv": ["a"], "cwd": "w", "stdin": "i", "stderr": "../e"}, self.d)
+        self.assertEqual((inst["cwd"], inst["stdin"], inst["stderr"]),
+                         (os.path.join(self.d, "w"), os.path.join(self.d, "w", "i"), os.path.join(self.d, "w", "../e")))
 
     def test_absolute_paths_kept(self):
         self.assertEqual(parse({"argv": ["a"], "stdout": "/tmp/o"}, self.d)["stdout"], "/tmp/o")
@@ -112,6 +126,12 @@ class TestParse(Base):
 
 
 class TestRun(Base):
+    def setUp(self):
+        super().setUp()
+        old = os.getcwd()
+        os.chdir(self.d)      # 沒寫 cwd 的就在暫存資料夾跑
+        self.addCleanup(os.chdir, old)
+
     def go(self, **kw):
         return run(parse(dict({"argv": ["sh", "-c", "echo out; echo err >&2; exit 3"]}, **kw), self.d))
 
@@ -127,12 +147,12 @@ class TestRun(Base):
         self.assertEqual(self.read("deep/er/o.txt"), "out\n")
 
     def test_stdin_cwd_envs(self):
-        """路徑都從基準算，不從 cwd 算：cwd 是 w/，stdout 照樣落在基準底下。"""
-        self.write("in.txt", "hello", raw=True)
+        """cwd 從基準算；stdin／stdout 從 cwd 算，所以落在 w/ 底下。"""
+        self.write("w/in.txt", "hello", raw=True)
         code = run(parse({"argv": ["sh", "-c", 'cat; pwd; echo "$K-$HOME"'], "stdin": "in.txt", "stdout": "o.txt",
                           "cwd": "w", "cwd_mkdir": True, "envs": {"K": "k"}}, self.d))
         self.assertEqual(code, 0)
-        self.assertEqual(self.read("o.txt"), "hello%s\nk-%s\n" % (os.path.join(self.d, "w"), os.environ.get("HOME", "")))
+        self.assertEqual(self.read("w/o.txt"), "hello%s\nk-%s\n" % (os.path.join(self.d, "w"), os.environ.get("HOME", "")))
 
     def test_envs_clear(self):
         run(parse({"argv": ["/bin/sh", "-c", 'echo "[$HOME][$K]"'], "stdout": "o.txt",

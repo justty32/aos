@@ -5,12 +5,13 @@
 
 TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒有再找 `<資料夾>/inst.json`）。
 `--base` 選相對路徑的基準：`inst`（預設）＝inst 的家（給資料夾就是那個資料夾，給檔案就是檔案所在的資料夾）；
-`cwd`＝呼叫者現在的工作目錄。指示詞的相對檔名、`cwd`、`stdin`／`stdout`／`stderr` 的相對路徑全部從這裡算。
+`cwd`＝呼叫者現在的工作目錄。指示詞的相對檔名、`cwd` 這個 key 的相對路徑從這裡算；
+`stdin`／`stdout`／`stderr` 的相對路徑從解出來的 `cwd` 算。
 
 認得的 key（其他一律忽略）：
 
     argv            非空字串陣列（必填）
-    cwd             在哪跑（沒寫＝基準）；cwd_mkdir: true 先建好
+    cwd             在哪跑（沒寫＝呼叫 aos_inst 時的 cwd）；cwd_mkdir: true 先建好
     envs            {名字: 字串}，疊在現有環境上；envs_clear: true 改成從空的開始
     stdin           從哪個檔讀；stdin_inherit: true 改接呼叫者的
     stdout/stderr   寫到哪個檔（覆寫）；*_append 改附加、*_mkdir 先建上層資料夾、*_inherit 改接呼叫者的
@@ -92,13 +93,15 @@ def parse(doc, base_dir):
         raise InstError("FieldType", "envs 要是 {名字: 字串}，不是 %r" % (envs,))
     inst["envs"] = envs
 
+    # cwd 從基準算，沒寫＝呼叫者現在的 cwd；三個串流從解出來的 cwd 算
     for k in ("cwd", "stdin", "stdout", "stderr"):
         v = doc.get(k)
         if v is not None and not isinstance(v, str):
             raise InstError("FieldType", "%s 要是字串路徑，不是 %r" % (k, v))
-        inst[k] = None if v is None else os.path.join(base_dir, v)
-    if inst["cwd"] is None:
-        inst["cwd"] = base_dir
+        if k == "cwd":
+            inst[k] = os.getcwd() if v is None else os.path.join(base_dir, v)
+        else:
+            inst[k] = None if v is None else os.path.join(inst["cwd"], v)
 
     for k in ("stdin", "stdout", "stderr"):
         if inst[k + "_inherit"] and inst[k] is not None:
