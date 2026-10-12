@@ -82,7 +82,7 @@ python3 proto8/lib/aos_daemon.py CONFIG
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，約 3 秒。四個檔各一組，daemon 那組起真的 daemon 行程、走控制資料夾；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，約 3 秒。一個檔 `test_lib.py` 分四組，daemon 那組起真的 daemon 行程、走控制資料夾；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
 
 ## 多執行緒的規矩
 
