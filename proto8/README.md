@@ -8,6 +8,7 @@
 
 ## 入口
 
+- **[NORMS.md](NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；語法糖符合規範但不強制。
 - **[lib/](lib/README.md)**：函式庫：指示詞 lib、inst、loop、daemon。
 - **[proto8-1](../proto8-1/README.md)**：tasks——在 aos_inst 之上的小程式（aos-seq、aos-par、aos-if、aos-not），用這裡的 lib。
 - **[demo/](demo/README.md)**：`python3 proto8/demo/run.py`，daemon 從起到收走一遍、每條指令和回覆都印出來。
