@@ -17,6 +17,8 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
     stderr_merge    true＝stderr 併進 stdout
     exit            子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔，並確實存到磁碟；
                     exit_append 改附加一行、exit_mkdir 先建上層資料夾
+    timeout_ms      最多跑幾毫秒（非負整數；沒寫或 0＝不限）。時間到先送 SIGTERM，
+                    2 秒後還沒結束再送 SIGKILL；結束碼照樣是 128+N（143 或 137）
 
 沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
 
@@ -97,6 +99,11 @@ def parse(doc, base_dir):
         raise InstError("FieldType", "envs 要是 {名字: 字串}，不是 %r" % (envs,))
     inst["envs"] = envs
 
+    t = doc.get("timeout_ms", 0)
+    if not (isinstance(t, int) and not isinstance(t, bool) and t >= 0):
+        raise InstError("FieldType", "timeout_ms 要是非負整數，不是 %r" % (t,))
+    inst["timeout_ms"] = t
+
     # cwd 從基準算，沒寫＝呼叫者現在的 cwd；三個串流與 exit 從解出來的 cwd 算
     for k in ("cwd", "stdin", "stdout", "stderr", "exit"):
         v = doc.get(k)
@@ -141,8 +148,8 @@ def run(inst):
         except OSError as e:
             raise InstError("OpenFailed", "串流開不了：%s" % e)
         try:
-            code = subprocess.run(inst["argv"], cwd=inst["cwd"], env=env,
-                                  stdin=stdin, stdout=stdout, stderr=stderr).returncode
+            child = subprocess.Popen(inst["argv"], cwd=inst["cwd"], env=env,
+                                     stdin=stdin, stdout=stdout, stderr=stderr)
         except FileNotFoundError:
             raise InstError("CommandNotFound", "找不到要跑的程式 %s" % inst["argv"][0])
         except PermissionError:
@@ -152,6 +159,7 @@ def run(inst):
     finally:
         for f in opened:
             f.close()
+    code = _wait(child, inst["timeout_ms"])
     code = 128 - code if code < 0 else code
     if inst["exit"] is not None:
         try:
@@ -159,6 +167,22 @@ def run(inst):
         except OSError:
             pass        # 寫不進去不管（使用者 10-12 定）
     return code
+
+
+def _wait(child, timeout_ms):
+    """等子程式結束；超時先 SIGTERM，再等 2 秒還沒結束就 SIGKILL。回 returncode（訊號是負數）。"""
+    try:
+        return child.wait(timeout_ms / 1000 if timeout_ms else None)
+    except subprocess.TimeoutExpired:
+        child.terminate()
+    try:
+        return child.wait(_GRACE_S)
+    except subprocess.TimeoutExpired:
+        child.kill()
+        return child.wait()
+
+
+_GRACE_S = 2
 
 
 def _write_exit(path, code, append, mkdir):
