@@ -1,4 +1,4 @@
-← [五家真跑](README.md)｜規則：[spec/team/market.md §3](../../../spec/team/market.md)｜待裁：[company-market 第 74、75 題](../../../../wf/wait-user/company-market.md)
+← [五家真跑](README.md)｜規則：[spec/team/market.md §3](../../../spec/team/market.md)｜待裁：company-market 第 74、75 題
 
 # 五家三輪用新公式重算（第 74、75 題）
 
