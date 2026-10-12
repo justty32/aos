@@ -143,6 +143,12 @@ class Inst(Tmp):
                 aos_inst.run(aos_inst.parse(keys, self.tmp))
             self.assertEqual(c.exception.code, code)
 
+    def test_error_names_file(self):
+        self.write("e.json", {"argv": ["x", {"$env": "AOS_TEST_NOPE"}]})
+        with self.assertRaises(aos_inst.InstError) as c:
+            aos_inst.load(self.p("e.json"))
+        self.assertIn(os.path.realpath(self.p("e.json")) + ":/argv/1", c.exception.msg)
+
     def test_cli(self):
         d = self.inst("c", "exit 5", exit="c.exit")
         r = subprocess.run([sys.executable, os.path.join(LIB, "aos_inst.py"), d], capture_output=True)

@@ -60,7 +60,7 @@ work     = par  report  notify              ← 兩件事一起做
 [ 2.7s]                   budget：試了 2 次（上限 2），放棄
 [ 2.7s]    probe.out                               ← 空的：失敗那次把它蓋掉了
 [ 3.3s]    last_code ＝ 125                        ← pipeline-broken
-[ 3.3s]                 EnvironmentVariableMissing: <input>:/argv/4 的 $env 找不到變數 READY_AT
+[ 3.3s]                 EnvironmentVariableMissing: …/proto8-1/demo/pipeline/check/inst.json:/argv/4 的 $env 找不到變數 READY_AT
 [ 3.3s]                 OpenFailed: 串流開不了：[Errno 2] No such file or directory: '/tmp/aos-demo-…/work/probe.out'
 [ 3.3s]                 OpenFailed: 串流開不了：[Errno 2] No such file or directory: '/tmp/aos-demo-…/work/probe.out'
 [ 3.5s] daemon 結束，退出碼 0
@@ -78,7 +78,7 @@ work     = par  report  notify              ← 兩件事一起做
 4. **每重試一次，行程樹深兩層，而且都是 Python。** 自己指自己是真的遞迴，不是迴圈：試到第 3 次時同時活著 7 支 tasks 程式（seq → if → seq → if → seq → if → not），每支一個 Python 直譯器。MAX_TRIES 寫 100 就是 200 層；忘了 budget 就是無限長下去，直到資源用完。`pipeline` 的 sleep 加起來 1.1 秒，跑完要 1.7 秒，多出來的大多是起 Python。
 5. **最上層 `last_code` 看不出是哪一步、什麼原因。** fail 回 3 是 budget 的碼；check 自己是 1，但被 budget 蓋掉了，「真正的失敗原因」丟了。broken 回 125，可能是任何一層的「自己出錯」，也可能是某個子程式自己回 125。只能去翻 stderr。daemon 的 `get` 也沒有「哪一步」的資訊。
 6. **沒有 finally。** 想要「不管成敗都收尾、但保留原本的碼」：`if main finish (seq finish false)` 會把碼變成 1；seq／if／not 這三支只會把碼壓成「0／非 0」或「第一個非 0」，原本的碼帶不過去。demo 只好讓 finish 只在成功時跑（`pipeline-fail` 沒有 summary）。
-7. **錯誤訊息不講是哪個檔。** `EnvironmentVariableMissing: <input>:/argv/4 的 $env 找不到變數 READY_AT`——14 個 inst 檔裡哪一個？是 aos_inst 的 `parse()` 用 `resolve(doc, base_dir)` 解，指示詞 lib 只知道 `<input>`。巢狀起來就要自己猜（這裡是 check 的，得從 `argv/4` 和變數名自己推；log 裡也沒寫是哪支 tasks 程式印的）。
+7. **（已修，10-12：`resolve()`／`parse()` 加 `ident`，load 給 inst.json 的 realpath）錯誤訊息不講是哪個檔。** `EnvironmentVariableMissing: <input>:/argv/4 的 $env 找不到變數 READY_AT`——14 個 inst 檔裡哪一個？是 aos_inst 的 `parse()` 用 `resolve(doc, base_dir)` 解，指示詞 lib 只知道 `<input>`。巢狀起來就要自己猜（這裡是 check 的，得從 `argv/4` 和變數名自己推；log 裡也沒寫是哪支 tasks 程式印的）。
 8. **stderr 預設接 /dev/null，每一層都要寫 `stderr_inherit: true`。** 11 個步驟寫了 10 次（pause 沒寫）。中間有一層漏了，下面所有的錯（包括 tasks 自己的「代號: 白話」）就全部無聲消失。最上層還得指定一個檔，daemon 本身不收子程式的輸出。
 9. **相對路徑全部從「呼叫者的 cwd」算，不是從 inst.json 所在的資料夾。** tasks 的 TARGET、`$ref` 的檔名、`cwd` key 都是。所以 daemon 的 cwd 一定要是 demo 資料夾，每個 tasks 的 argv 都要寫 `pipeline/xxx`；整棵樹改個名字就得改 5 個檔（再加兩個變體的 `$ref`），換個 cwd 起 daemon 就全部 `NotFound`。而 leaf 想在別處（work）跑，又只能靠 `{"$env": ...}` 把 cwd 拉走。
 10. **指示詞沒有字串拼接。** 想在 envs 寫 `PATH = <bin>:$PATH` 做不到（`$env` 只能拿整個值）；想把 log 寫到 `$DEMO_WORK/log` 也做不到。只好讓 run.py 從外面把 PATH、`DEMO_LOG` 整條準備好塞給 daemon。用絕對路徑寫 argv[0] 則 inst.json 就綁死在這台機器的 repo 位置。
@@ -88,4 +88,6 @@ work     = par  report  notify              ← 兩件事一起做
 14. **daemon 的 `times` 不能當重試用。** `times: 4` 是「固定跑 4 次」，第 1 次成功了照樣再跑；沒有「失敗才再跑」。所以重試只能做在 tasks 樹裡（第 3、4 條）。daemon 這邊要知道跑完了，也只能自己每 0.2 秒 `get` 一次，沒有等待或通知。
 15. **小地方**：重試之間要等，只能多一個 `sleep` 步驟；`add` 一個資料夾 id，回覆和 `get` 都變成 `…/inst.json`（比對 id 要先轉）。
 
-沒發現 proto8/lib 或 proto8-1/lib 的程式 bug：上面都是照文件寫的行為，只是寫起來的後果。第 7 條（錯誤訊息只寫 `<input>`）比較像缺陷，要不要補由使用者決定。
+沒發現 proto8/lib 或 proto8-1/lib 的程式 bug：上面都是照文件寫的行為，只是寫起來的後果。
+
+**處理（10-12）**：第 7 條已修。第 1、2、6 條（if 吃掉「條件壞了」、tock／收尾一定要跑）留到 tick-tock 一起想。第 3、4、14 條算「要 while／retry」的證據，原語先不加。第 8、9 條碰 inst 的基本規則（沒寫的串流接 /dev/null、基準是呼叫者 cwd），第 10、11 條是指示詞（不做字串拼接），維持現狀。

@@ -1,7 +1,8 @@
 """aos 指示詞：讓 JSON 裡某一格的值「從別處來」。純函式庫，只用標準庫。
 
-入口只有一個：`resolve(doc, base_dir)`——把整份 JSON 裡的指示詞全部解掉，回一份新的 JSON（不動原本那份）。
+入口只有一個：`resolve(doc, base_dir, ident="<input>")`——把整份 JSON 裡的指示詞全部解掉，回一份新的 JSON（不動原本那份）。
 `base_dir` 是相對檔名的基準路徑，整趟都用它，進了別的檔也不換。
+`ident` 是 doc 從哪來（讀檔來的就給那個檔的 realpath），錯誤訊息裡用它指出是哪份檔；`$ref` 指回同一個檔也算同一份。
 
 兩種指示詞。一個物件只要有 `$` 開頭的 key 就算指示詞物件；兩種都寫了只看 `$ref`，其餘 key 一律忽略：
 
@@ -32,13 +33,14 @@ class DirectiveError(Exception):
         self.msg = msg
 
 
-def resolve(doc, base_dir):
-    """把 `doc`（已經 parse 好的 JSON 值）裡的指示詞全部解掉，回新的值。`base_dir`＝相對檔名的基準路徑。"""
-    return _Resolver(os.path.abspath(base_dir)).node(doc, _Doc("<input>", doc), (), ())
+def resolve(doc, base_dir, ident="<input>"):
+    """把 `doc`（已經 parse 好的 JSON 值）裡的指示詞全部解掉，回新的值。`base_dir`＝相對檔名的基準路徑；
+    `ident`＝doc 從哪來（檔案的 realpath；不是讀檔來的就用預設）。"""
+    return _Resolver(os.path.abspath(base_dir)).node(doc, _Doc(ident, doc), (), ())
 
 
 class _Doc:
-    """一份文件：`ident`（檔案＝realpath；傳進來的那份＝"<input>"）＋ `root`。"""
+    """一份文件：`ident`（檔案＝realpath；傳進來的那份＝resolve 的 ident）＋ `root`。"""
 
     def __init__(self, ident, root):
         self.ident = ident

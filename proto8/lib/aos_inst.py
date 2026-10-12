@@ -87,14 +87,15 @@ def load(target):
         doc = json.loads(raw)
     except ValueError as e:
         raise InstError("JsonSyntax", "%s 不是合法 JSON：%s" % (path, e))
-    return parse(doc, os.getcwd())
+    return parse(doc, os.getcwd(), path)
 
 
-def parse(doc, base_dir):
-    """解指示詞、驗認得的 key，回一個欄位都填好的 dict（路徑都是絕對的，None＝沒寫）。"""
+def parse(doc, base_dir, ident="<input>"):
+    """解指示詞、驗認得的 key，回一個欄位都填好的 dict（路徑都是絕對的，None＝沒寫）。
+    `ident`＝doc 從哪來（`load()` 給 inst.json 的 realpath），指示詞的錯誤訊息用它指出是哪份檔。"""
     base_dir = os.path.abspath(base_dir)
     try:
-        doc = resolve(doc, base_dir)
+        doc = resolve(doc, base_dir, ident)
     except DirectiveError as e:
         raise InstError(e.code, e.msg)
     if not isinstance(doc, dict):
