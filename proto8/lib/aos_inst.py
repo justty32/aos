@@ -5,7 +5,7 @@
 
 TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒有再找 `<資料夾>/inst.json`）。
 相對路徑的基準一律是呼叫者現在的工作目錄：指示詞的相對檔名、`cwd` 這個 key 從這裡算；
-`stdin`／`stdout`／`stderr` 的相對路徑從解出來的 `cwd` 算。
+`stdin`／`stdout`／`stderr`／`exit` 的相對路徑從解出來的 `cwd` 算。
 
 認得的 key（其他一律忽略）：
 
@@ -15,11 +15,17 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
     stdin           從哪個檔讀；stdin_inherit: true 改接呼叫者的
     stdout/stderr   寫到哪個檔（覆寫）；*_append 改附加、*_mkdir 先建上層資料夾、*_inherit 改接呼叫者的
     stderr_merge    true＝stderr 併進 stdout
+    exit            子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔，並確實存到磁碟；
+                    exit_append 改附加一行、exit_mkdir 先建上層資料夾
 
 沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
 
-`run()` 回子程式的結束碼（被訊號殺掉＝128+N；找不到程式＝127、不能執行＝126）。
-命令列：inst 自己出錯（讀不到、格式不對、指示詞解不開）印一行到 stderr、退出碼 125。
+子程式的結束碼（被訊號殺掉＝128+N）只走 `exit` 檔；子程式根本沒起來就不寫 `exit`。
+`run()` 回子程式的結束碼給 Python 呼叫者；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開、
+exit 寫不進去…）丟 `InstError`。
+
+命令列的退出碼只說 aos_inst 自己的狀況：0＝子程式跑完了（不管它成功失敗）；
+125＝aos_inst 自己出錯（stderr 印一行「代號: 白話」），子程式可能沒跑，也可能跑了但 exit 沒寫成。
 """
 import json
 import os
@@ -32,7 +38,8 @@ __all__ = ["InstError", "find", "load", "parse", "run"]
 
 _BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
           "stdout_append", "stdout_mkdir", "stdout_inherit",
-          "stderr_append", "stderr_mkdir", "stderr_inherit", "stderr_merge")
+          "stderr_append", "stderr_mkdir", "stderr_inherit", "stderr_merge",
+          "exit_append", "exit_mkdir")
 
 
 class InstError(Exception):
@@ -90,8 +97,8 @@ def parse(doc, base_dir):
         raise InstError("FieldType", "envs 要是 {名字: 字串}，不是 %r" % (envs,))
     inst["envs"] = envs
 
-    # cwd 從基準算，沒寫＝呼叫者現在的 cwd；三個串流從解出來的 cwd 算
-    for k in ("cwd", "stdin", "stdout", "stderr"):
+    # cwd 從基準算，沒寫＝呼叫者現在的 cwd；三個串流與 exit 從解出來的 cwd 算
+    for k in ("cwd", "stdin", "stdout", "stderr", "exit"):
         v = doc.get(k)
         if v is not None and not isinstance(v, str):
             raise InstError("FieldType", "%s 要是字串路徑，不是 %r" % (k, v))
@@ -116,26 +123,61 @@ def _bool(doc, k):
 
 
 def run(inst):
-    """照 `parse()` 的結果跑一次，等它結束，回結束碼。"""
-    if inst["cwd_mkdir"]:
-        os.makedirs(inst["cwd"], exist_ok=True)
+    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔，回子程式的結束碼。aos_inst 自己出錯丟 `InstError`。"""
+    try:
+        if inst["cwd_mkdir"]:
+            os.makedirs(inst["cwd"], exist_ok=True)
+    except OSError as e:
+        raise InstError("MkdirFailed", "建不了 cwd %s：%s" % (inst["cwd"], e))
+    if not os.path.isdir(inst["cwd"]):
+        raise InstError("CwdMissing", "cwd %s 不是資料夾" % inst["cwd"])
     env = dict(inst["envs"]) if inst["envs_clear"] else dict(os.environ, **inst["envs"])
     opened = []
     try:
-        stdin = _stream(inst, "stdin", opened)
-        stdout = _stream(inst, "stdout", opened)
-        stderr = subprocess.STDOUT if inst["stderr_merge"] else _stream(inst, "stderr", opened)
+        try:
+            stdin = _stream(inst, "stdin", opened)
+            stdout = _stream(inst, "stdout", opened)
+            stderr = subprocess.STDOUT if inst["stderr_merge"] else _stream(inst, "stderr", opened)
+        except OSError as e:
+            raise InstError("OpenFailed", "串流開不了：%s" % e)
         try:
             code = subprocess.run(inst["argv"], cwd=inst["cwd"], env=env,
                                   stdin=stdin, stdout=stdout, stderr=stderr).returncode
         except FileNotFoundError:
-            return 127
+            raise InstError("CommandNotFound", "找不到要跑的程式 %s" % inst["argv"][0])
         except PermissionError:
-            return 126
-        return 128 - code if code < 0 else code
+            raise InstError("CommandNotExecutable", "%s 不能執行" % inst["argv"][0])
+        except OSError as e:
+            raise InstError("LaunchFailed", "起不了 %s：%s" % (inst["argv"][0], e))
     finally:
         for f in opened:
             f.close()
+    code = 128 - code if code < 0 else code
+    if inst["exit"] is not None:
+        try:
+            _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
+        except OSError as e:
+            raise InstError("ExitWriteFailed", "子程式跑完了（結束碼 %d），但 exit 寫不進 %s：%s"
+                            % (code, inst["exit"], e))
+    return code
+
+
+def _write_exit(path, code, append, mkdir):
+    """結束碼寫成「十進位＋換行」，檔案與上層資料夾都 fsync，確定存到磁碟才算數。"""
+    parent = os.path.dirname(path)
+    if mkdir:
+        os.makedirs(parent, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | (os.O_APPEND if append else os.O_TRUNC), 0o644)
+    try:
+        os.write(fd, b"%d\n" % code)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    dfd = os.open(parent, os.O_RDONLY)
+    try:
+        os.fsync(dfd)
+    finally:
+        os.close(dfd)
 
 
 def _stream(inst, k, opened):
@@ -159,12 +201,10 @@ def main(argv=None):
         print("用法：aos_inst.py TARGET", file=sys.stderr)
         return 125
     try:
-        return run(load(args[0]))
+        run(load(args[0]))
+        return 0
     except InstError as e:
         print(e, file=sys.stderr)
-        return 125
-    except OSError as e:
-        print("OpenFailed: %s" % e, file=sys.stderr)
         return 125
 
 
