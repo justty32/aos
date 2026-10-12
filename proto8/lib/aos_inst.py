@@ -131,10 +131,9 @@ def _bool(doc, k):
 
 
 _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-_POLL = 0.05
 
 
-def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None):
+def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None, stop_poll_ms=50):
     """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔。不回東西；aos_inst 自己出錯丟 `InstError`。
 
     開關只留非在 run() 裡做不可的（只有 run() 手上有子程式）：
@@ -142,11 +141,14 @@ def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None):
       grace_ms         收掉＝先 SIGTERM，過了 grace_ms 還沒結束再 SIGKILL（非負整數；0＝直接 SIGKILL）
       forward_signals  True＝跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者，轉給子程式（只能在主執行緒）
       stop             停止鈕（例如 threading.Event，有 is_set() 就行）；別的執行緒按下去，就收掉子程式
+      stop_poll_ms     有 stop 時幾毫秒看一次（正整數）
     等的時候被打斷（例外穿過來）：先收掉子程式、寫 exit，再把原本的例外丟出去。"""
     if not (timeout_ms is None or _int(timeout_ms) and timeout_ms > 0):
         raise ValueError("timeout_ms 要是正整數或 None，不是 %r" % (timeout_ms,))
     if not (_int(grace_ms) and grace_ms >= 0):
         raise ValueError("grace_ms 要是非負整數，不是 %r" % (grace_ms,))
+    if not (_int(stop_poll_ms) and stop_poll_ms > 0):
+        raise ValueError("stop_poll_ms 要是正整數，不是 %r" % (stop_poll_ms,))
     child = None
     pending = []
 
@@ -163,7 +165,7 @@ def run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None):
             child.send_signal(sig)
         interrupted = None
         try:
-            code = _wait(child, timeout_ms, grace_ms, stop)
+            code = _wait(child, timeout_ms, grace_ms, stop, stop_poll_ms)
         except BaseException as e:
             interrupted = e
             code = _stop(child, grace_ms)
@@ -215,12 +217,12 @@ def _start(inst):
             f.close()
 
 
-def _wait(child, timeout_ms, grace_ms, stop):
+def _wait(child, timeout_ms, grace_ms, stop, poll_ms):
     """等子程式結束（timeout_ms＝None 不限時）；超時或 stop 被按下就 `_stop`。
-    有 stop 時每 _POLL 秒看一次。回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
+    有 stop 時每 poll_ms 毫秒看一次。回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
     deadline = None if timeout_ms is None else time.monotonic() + timeout_ms / 1000
     while True:
-        step = None if stop is None else _POLL
+        step = None if stop is None else poll_ms / 1000
         if deadline is not None:
             left = deadline - time.monotonic()
             if left <= 0:
