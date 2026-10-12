@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """inst：讀一份 JSON、用指示詞 lib 解好、挑認得的 key、跑一次。純標準庫。
 
-    python3 aos_inst.py TARGET [--base inst|cwd]
+    python3 aos_inst.py TARGET
 
 TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒有再找 `<資料夾>/inst.json`）。
-`--base` 選相對路徑的基準：`inst`（預設）＝inst 的家（給資料夾就是那個資料夾，給檔案就是檔案所在的資料夾）；
-`cwd`＝呼叫者現在的工作目錄。指示詞的相對檔名、`cwd` 這個 key 的相對路徑從這裡算；
+相對路徑的基準一律是呼叫者現在的工作目錄：指示詞的相對檔名、`cwd` 這個 key 從這裡算；
 `stdin`／`stdout`／`stderr` 的相對路徑從解出來的 `cwd` 算。
 
 認得的 key（其他一律忽略）：
@@ -46,20 +45,18 @@ class InstError(Exception):
 
 
 def find(target):
-    """TARGET → (inst.json 的路徑, inst 的家)。"""
+    """TARGET → inst.json 的路徑。"""
     if os.path.isdir(target):
         for p in (os.path.join(target, ".aos", "inst.json"), os.path.join(target, "inst.json")):
             if os.path.isfile(p):
-                return p, os.path.abspath(target)
+                return p
         raise InstError("NotFound", "%s 裡沒有 .aos/inst.json 也沒有 inst.json" % target)
-    return target, os.path.dirname(os.path.abspath(target))
+    return target
 
 
-def load(target, base="inst"):
-    """讀 TARGET 的 inst，回 `parse()` 的結果。`base`＝"inst" 或 "cwd"。"""
-    if base not in ("inst", "cwd"):
-        raise InstError("BadBase", "base 只能是 inst 或 cwd，不是 %r" % (base,))
-    path, home = find(target)
+def load(target):
+    """讀 TARGET 的 inst，以呼叫者現在的 cwd 為基準，回 `parse()` 的結果。"""
+    path = find(target)
     try:
         with open(path, encoding="utf-8") as f:
             raw = f.read()
@@ -69,7 +66,7 @@ def load(target, base="inst"):
         doc = json.loads(raw)
     except ValueError as e:
         raise InstError("JsonSyntax", "%s 不是合法 JSON：%s" % (path, e))
-    return parse(doc, home if base == "inst" else os.getcwd())
+    return parse(doc, os.getcwd())
 
 
 def parse(doc, base_dir):
@@ -158,14 +155,11 @@ def _stream(inst, k, opened):
 
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
-    base = "inst"
-    if len(args) == 3 and args[1] == "--base":
-        args, base = args[:1], args[2]
     if len(args) != 1:
-        print("用法：aos_inst.py TARGET [--base inst|cwd]", file=sys.stderr)
+        print("用法：aos_inst.py TARGET", file=sys.stderr)
         return 125
     try:
-        return run(load(args[0], base))
+        return run(load(args[0]))
     except InstError as e:
         print(e, file=sys.stderr)
         return 125

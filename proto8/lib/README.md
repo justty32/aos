@@ -33,14 +33,14 @@ out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔�
 讀一份 JSON → 用指示詞 lib 解好 → 挑認得的 key（其他忽略）→ 跑一次。
 
 ```
-python3 proto8/lib/aos_inst.py TARGET [--base inst|cwd]
+python3 proto8/lib/aos_inst.py TARGET
 ```
 
 - TARGET：`.json` 檔，或資料夾（找 `.aos/inst.json`，沒有再找 `inst.json`）。
-- `--base`：相對路徑的基準，`inst`（預設）＝inst 的家，`cwd`＝呼叫者的工作目錄。指示詞的檔名、`cwd` 這個 key 從這裡算。
+- 基準一律是呼叫者的 cwd：指示詞的檔名、`cwd` 這個 key 從這裡算。
 - `cwd` 沒寫＝呼叫 aos_inst 時的 cwd；`stdin`／`stdout`／`stderr` 的相對路徑從解出來的 `cwd` 算（使用者 10-12 改）。
 - key：`argv`（必填）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`，加上布林的 `cwd_mkdir`、`envs_clear`、`*_inherit`、`*_append`、`*_mkdir`、`stderr_merge`。完整說明在檔頭。
 - 退出碼：子程式的碼（訊號＝128+N、找不到＝127、不能執行＝126）；inst 自己出錯＝125。
-- API：`load(target, base)`、`parse(doc, base_dir)`、`run(inst)`。
+- API：`load(target)`、`parse(doc, base_dir)`、`run(inst)`。
 
-**沿革**：2026-10-12 照使用者決定重寫，不是搬：原本的 `$opt` 選項改成平的布林 key；基準由 `--base` 選（指示詞與 `cwd` 用它），串流跟著 `cwd`，`cwd` 沒寫就繼承呼叫者的；跑法先最小（直接起、等它結束），逾時、process group、exit 檔等還沒做。測試：[test_inst.py](../tests/test_inst.py)。
+**沿革**：2026-10-12 照使用者決定重寫，不是搬：原本的 `$opt` 選項改成平的布林 key；基準一律是呼叫者的 cwd（同日先做了 `--base inst|cwd`，使用者說拿掉），串流跟著 `cwd`，`cwd` 沒寫就繼承呼叫者的；跑法先最小（直接起、等它結束），逾時、process group、exit 檔等還沒做。測試：[test_inst.py](../tests/test_inst.py)。
