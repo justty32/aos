@@ -21,11 +21,11 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
 沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
 
 子程式的結束碼（被訊號殺掉＝128+N）只走 `exit` 檔；子程式根本沒起來就不寫 `exit`。
-`run()` 回子程式的結束碼給 Python 呼叫者；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開、
-exit 寫不進去…）丟 `InstError`。
+exit 寫不進去不管，不算錯。
+`run()` 回子程式的結束碼給 Python 呼叫者；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
 
 命令列的退出碼只說 aos_inst 自己的狀況：0＝子程式跑完了（不管它成功失敗）；
-125＝aos_inst 自己出錯（stderr 印一行「代號: 白話」），子程式可能沒跑，也可能跑了但 exit 沒寫成。
+125＝aos_inst 自己出錯、子程式沒跑（stderr 印一行「代號: 白話」）。
 """
 import json
 import os
@@ -156,9 +156,8 @@ def run(inst):
     if inst["exit"] is not None:
         try:
             _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
-        except OSError as e:
-            raise InstError("ExitWriteFailed", "子程式跑完了（結束碼 %d），但 exit 寫不進 %s：%s"
-                            % (code, inst["exit"], e))
+        except OSError:
+            pass        # 寫不進去不管（使用者 10-12 定）
     return code
 
 
