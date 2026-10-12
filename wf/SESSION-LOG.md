@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **proto8（主線）**：10-11 使用者三輪口述已記進 [restart](../proto8/thinking/2026-10-11-restart.md)（§3c～§3h、§3g.1～3g.14），定下的進 [CONCEPTS](../proto8/CONCEPTS.md)；圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。PLAN 擱置（[診斷](../proto8/thinking/2026-10-11-why-wrong.md)）。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。10-12 使用者說 AI 問的四題沒用，questions.md 已刪，不再追。10-12 照使用者選的「先看懂現有 code」做了一頁現況導覽（daemon／tick-tock／C++ loop，只描述不提改法）：https://claude.ai/artifact/LueXKAUcH7bAhYNjCKfwvz ，使用者看完說「就這樣」。10-12 使用者說 proto8 開工、用 Python：指示詞 lib 已從 proto7-2 拿進 [proto8/lib](../proto8/lib/README.md)，105 條測試綠；下一步等使用者說。
+- **proto8（主線）**：10-11 使用者三輪口述已記進 [restart](../proto8/thinking/2026-10-11-restart.md)（§3c～§3h、§3g.1～3g.14），定下的進 [CONCEPTS](../proto8/CONCEPTS.md)；圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。PLAN 擱置（[診斷](../proto8/thinking/2026-10-11-why-wrong.md)）。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。10-12 使用者說 AI 問的四題沒用，questions.md 已刪，不再追。10-12 照使用者選的「先看懂現有 code」做了一頁現況導覽（daemon／tick-tock／C++ loop，只描述不提改法）：https://claude.ai/artifact/LueXKAUcH7bAhYNjCKfwvz ，使用者看完說「就這樣」。10-12 使用者說 proto8 開工、用 Python：指示詞 lib 已從 proto7-2 拿進 [proto8/lib](../proto8/lib/README.md)，同日照使用者要求精簡成一檔：只留 $ref／$at／$env，入口 `resolve(doc, base_dir)` 解整份，38 條測試綠；下一步等使用者說。
 - 10-12 清帳（使用者說）：proto7-2 頭腦風暴題（抽屜／選單／32 份文件）忽略、不再追；WAIT_USER 舊帳全清；proto6 不管。10-10 留下的待辦候選（astra-8 剩項、包間互相 import、轉址 stub 等）屬 proto7-2，一併不追，原文見 [10-12 封存](session_logs/2026-10/2026-10-12.md)。
 - 10-09 留下的約定（全文 [→](session_logs/2026-10/2026-10-09.md#2026-10-09)）：合併用 `../aos-wt/merge.sh <分支>`；對使用者一律 ELI5、少用隊名代號；`proto7/user-advice.md` 不碰。
 
