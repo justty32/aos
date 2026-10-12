@@ -20,6 +20,7 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
     {"op": "pause", "id": ID, "wait": B}      暫停；wait 同上
     {"op": "resume", "id": ID}                繼續
     {"op": "times", "id": ID, "delta": N}     剩餘次數加減 N
+    {"op": "state", "id": ID}                 看一個的狀況 → {"state": "waiting／running／paused／done／removing"}
     {"op": "get", "id": ID}                   查一個 → {"inst": 狀態}
     {"op": "list"}                            查全部 → {"insts": [狀態, ...]}
 
@@ -97,6 +98,8 @@ def handle(loop, cmd):
             loop.resume(ident)
         elif op == "times":
             loop.times(ident, cmd.get("delta"))
+        elif op == "state":
+            return {"ok": True, "state": loop.state(ident)}
         elif op == "get":
             return {"ok": True, "inst": loop.get(ident)}
         else:

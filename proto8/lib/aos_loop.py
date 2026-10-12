@@ -192,6 +192,11 @@ class Loop:
             inst.how["times"] = max(0, inst.how["times"] + delta)
             self.cond.notify_all()
 
+    def state(self, ident):
+        """只回狀態字串：waiting／running／paused／done／removing。"""
+        with self.cond:
+            return self._get(ident).state()
+
     def get(self, ident):
         with self.cond:
             return self._get(ident).status()
