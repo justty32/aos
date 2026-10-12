@@ -16,6 +16,9 @@
 被收掉的那次也算跑過一次。次數跑完的實例留在表上（done），add_times 加次數就再跑。
 remove／pause 的 `wait`：True＝等這次跑完，False＝當場收掉（按 run() 的 stop）。
 
+存檔用（檔案由呼叫者自己讀寫，daemon 的 save／load）：`snapshot()` 回目前的表（不含 removing 的），每筆
+{"id", "how", "paused", "runs", "last_error"}；`restore(items)` 把這樣的表放回來、開始跑。
+
 方法都可以從任何執行緒呼叫；出錯丟 `LoopError`。
 """
 import os
@@ -159,12 +162,44 @@ class Loop:
         if not os.path.isfile(ident):
             raise LoopError("NotFound", "%s 不存在" % ident)
         with self.cond:
-            if ident in self.insts:
-                raise LoopError("Exists", "實例 %s 已經在了" % ident)
-            inst = _Inst(self, ident, _how(how or {}, HOW))
-            self.insts[ident] = inst
-            inst.thread.start()
+            self._put(ident, _how(how or {}, HOW))
         return ident
+
+    def _put(self, ident, how, paused=False, runs=0, last_error=None):
+        if ident in self.insts:
+            raise LoopError("Exists", "實例 %s 已經在了" % ident)
+        inst = _Inst(self, ident, how)
+        inst.paused, inst.runs, inst.last_error = paused, runs, last_error
+        self.insts[ident] = inst
+        inst.thread.start()
+
+    def snapshot(self):
+        """目前的表（不含 removing 的），存檔用。"""
+        with self.cond:
+            return [{"id": i.id, "how": dict(i.how), "paused": i.paused, "runs": i.runs, "last_error": i.last_error}
+                    for i in self.insts.values() if not i.removing]
+
+    def restore(self, items):
+        """把 snapshot() 的表放回來、開始跑。先全部驗過才放；inst.json 不在了也照放（跑的時候記進 last_error）。"""
+        if not isinstance(items, list):
+            raise LoopError("FieldType", "表要是陣列")
+        todo = []
+        for it in items:
+            if not isinstance(it, dict) or set(it) != {"id", "how", "paused", "runs", "last_error"}:
+                raise LoopError("FieldType", "表裡每筆要是 {id, how, paused, runs, last_error}：%r" % (it,))
+            ok = (isinstance(it["id"], str) and os.path.isabs(it["id"]) and isinstance(it["paused"], bool)
+                  and _int(it["runs"]) and it["runs"] >= 0 and (it["last_error"] is None or isinstance(it["last_error"], str)))
+            if not ok:
+                raise LoopError("FieldType", "表裡這筆的值不對：%r" % (it,))
+            todo.append((it["id"], _how(it["how"], HOW), it["paused"], it["runs"], it["last_error"]))
+        if len({t[0] for t in todo}) != len(todo):
+            raise LoopError("Exists", "表裡有重複的 id")
+        with self.cond:
+            for t in todo:
+                if t[0] in self.insts:
+                    raise LoopError("Exists", "實例 %s 已經在了" % t[0])
+            for t in todo:
+                self._put(*t)
 
     def set(self, ident, how):
         with self.cond:

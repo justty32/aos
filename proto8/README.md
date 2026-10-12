@@ -9,6 +9,7 @@
 ## 入口
 
 - **[lib/](lib/README.md)**：函式庫：指示詞 lib、inst、loop、daemon。
+- **[demo/](demo/README.md)**：`python3 proto8/demo/run.py`，daemon 從起到收走一遍、每條指令和回覆都印出來。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 [proto7 核心 spec](../proto7/spec/core.md) 與 [設計原則](../proto7/notes/principles.md)。
 - 使用者自己的草稿：[thinking/（repo 頂層）](../thinking/)（2026-09-19～24）。
