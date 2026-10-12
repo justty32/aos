@@ -37,7 +37,7 @@ python3 proto8/demo/run.py
 [ 0.2s]      ok   "tick/inst.json"
 [ 1.8s] → 03-list.json  {"op": "list"}
 [ 1.8s]      ok   {... "id": "once/inst.json", "state": "done", "runs": 1, ...}
-[ 1.8s]      ok   {"times": 3, ... "id": "tick/inst.json", "state": "waiting", "runs": 2, ...}
+[ 1.8s]      ok   {"id": "tick/inst.json", "state": "waiting", "times": 3, ..., "runs": 2, ...}
 [ 4.5s]    tick.out：暫停時 2 行，2.5 秒後 2 行
 [ 8.0s] → 12-jump.json  {"op": "jump", "id": "once"}
 [ 8.0s]      錯   UnknownOp: 不認得的 op 'jump'
