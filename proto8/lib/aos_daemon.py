@@ -14,10 +14,13 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd）：
     grace_ms       收工時等底下的 loop 多久，過了整群 SIGKILL（非負整數；沒寫＝10000；要比 loop 的 grace_ms 長）
     times          掃幾圈就收工（非負整數；null＝不限，預設）
     interval_ms    每圈隔多久（非負整數；沒寫＝200）
+    interval_mode  "after"＝掃完再隔 interval_ms（預設）；"fixed"＝固定週期，掃超過一拍就跳拍（state 的 skipped），同 loop
     ctl            daemon 自己的 ctl.json（選填；不能放在 control_dir 裡）：paused＝不掃資料夾（指令堆著、loop 照跑）、
-                   stop＝收工（now＝底下的 loop 當場收掉；沒 now＝等它們這次跑完）、times、interval_ms
+                   stop＝收工（now＝底下的 loop 當場收掉；沒 now＝等它們這次跑完）、times、interval_ms、interval_mode
     ctl_poll_ms    多久看一次 ctl.json（正整數；沒寫＝1000）
-    state          daemon 自己的 state.json（選填）：id、state、pid、times、interval_ms、runs（掃了幾圈）、ctl_mtime、loops（表上幾個）
+    state          daemon 自己的 state.json（選填）：骨架跟 loop 同一份（id、state、pid、runs＝掃了幾圈、times、interval_ms、
+                   interval_mode、ctl_mtime、last_error＝最近一圈印到 stderr 的最後一行錯，沒有＝null），
+                   加上 skipped、loops（表上幾個；要細節用 list／get／state 指令查）
 
 表上每個 loop 是一支子程序 `aos_loop.py LOOP.json`（自成一個 session），daemon 跟它之間只靠兩個檔：寫它的 ctl.json、
 讀它的 state.json。loop.json 有寫 ctl／state 就用它寫的；沒寫的，daemon 在 `work_dir/<編號>/` 生一份包裝檔
@@ -67,6 +70,7 @@ SIGINT 同樣收、不存。ctl 的 stop／times 跑完：先 save；now＝同 S
 """
 import itertools
 import json
+import math
 import os
 import shutil
 import signal
@@ -83,7 +87,7 @@ __all__ = ["DaemonError", "load_config", "run"]
 
 AOS_LOOP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_loop.py")
 DEFAULTS = {"control_dir": None, "load": None, "save": None, "work_dir": None, "grace_ms": 10000,
-            "times": None, "interval_ms": 200, "ctl": None, "ctl_poll_ms": 1000, "state": None}
+            "times": None, "interval_ms": 200, "interval_mode": "after", "ctl": None, "ctl_poll_ms": 1000, "state": None}
 _CAUGHT = (signal.SIGINT, signal.SIGTERM)
 
 
@@ -437,9 +441,12 @@ class _Folder:
     def __init__(self, d):
         self.d = d
         self.said, self.given_up, self.pending = {}, set(), {}
+        self.last_error = None      # 最近一圈出的最後一個錯（state 的 last_error）；那圈沒錯＝None
+        self.errors = []
 
     def say(self, key, msg):
-        """同一件事只往 stderr 印一次；key 的訊息變了才再印。"""
+        """同一件事只往 stderr 印一次；key 的訊息變了才再印。不管印沒印，都記成這圈的 last_error。"""
+        self.errors.append(msg)
         if self.said.get(key) != msg:
             self.said[key] = msg
             print(msg, file=sys.stderr)
@@ -453,6 +460,13 @@ class _Folder:
 
     def scan(self, table):
         """處理一圈。出意外不往上丟：印到 stderr，下一圈照常。"""
+        self.errors = []
+        try:
+            self._scan(table)
+        finally:
+            self.last_error = self.errors[-1] if self.errors else None
+
+    def _scan(self, table):
         try:
             names = sorted(os.listdir(self.d))
         except OSError as e:
@@ -512,10 +526,15 @@ def serve(ident, cfg, got):
     if cfg["load"]:
         _load(table, cfg["load"])
     ctl = CtlFile(cfg["ctl"], "daemon") if cfg["ctl"] else None
-    initial = {"paused": (False, False), "stop": (False, False), "times": cfg["times"], "interval_ms": cfg["interval_ms"]}
-    runs, next_poll, next_scan = 0, 0, 0
+    initial = {"paused": (False, False), "stop": (False, False), "times": cfg["times"], "interval_ms": cfg["interval_ms"],
+               "interval_mode": cfg["interval_mode"]}
+    runs, skipped, next_poll, next_scan = 0, 0, 0, 0
+    anchor, tick = None, -1         # fixed：第 0 拍的時間、這一圈在第幾拍（同 loop）
     sf = StateFile(cfg["state"], "daemon")
     w = want(initial, {})
+
+    def doc(state):
+        return state_doc(ident, state, w, ctl, runs, folder.last_error, skipped=skipped, loops=len(table.entries))
     save, now_ = False, True
     try:
         while True:
@@ -535,23 +554,32 @@ def serve(ident, cfg, got):
                 save, now_ = True, False
                 break
             if not w["paused"][0] and t >= next_scan:
+                iv = w["interval_ms"] / 1000
+                if w["interval_mode"] == "fixed" and iv:
+                    if anchor is None:
+                        anchor, tick = t, 0
+                    else:
+                        n = max(tick + 1, math.floor((t - anchor) / iv))
+                        skipped += n - tick - 1
+                        tick = n
+                else:
+                    anchor, tick = None, -1
                 folder.scan(table)
                 runs += 1
-                next_scan = time.monotonic() + w["interval_ms"] / 1000
-            sf.write(state_doc(ident, "paused" if w["paused"][0] else "waiting", w, ctl, runs=runs,
-                               loops=len(table.entries)))
+                next_scan = anchor + (tick + 1) * iv if anchor is not None else time.monotonic() + iv
+            sf.write(doc("paused" if w["paused"][0] else "waiting"))
             time.sleep(0.02)
     finally:
         try:
             if save and cfg["save"]:
                 _save(table, cfg["save"])
         finally:
-            sf.write(state_doc(ident, "stopping", w, ctl, runs=runs, loops=len(table.entries)))
+            sf.write(doc("stopping"))
             table.shutdown(now_, cfg["grace_ms"], got)
             folder.flush()
             for e in list(table.entries.values()):
                 table.drop(e)
-            sf.write(state_doc(ident, "stopped", w, ctl, runs=runs, loops=0))
+            sf.write(doc("stopped"))
 
 
 def run(path):

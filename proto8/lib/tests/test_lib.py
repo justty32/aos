@@ -546,8 +546,48 @@ class Daemon(Tmp):
         self.assertEqual(self.d.wait(10), 0)
         self.assertTrue(json.loads(self.read("ctl/001.json.done"))["ok"])
 
+    def test_state_skeleton_shared_with_loop(self):
+        """daemon 的 state.json 跟 loop 同一份骨架：interval_mode 回音、last_error、loops＝個數、狀態值在 STATES 裡。"""
+        self.start(state=self.p("d.state.json"), interval_mode="fixed", ctl=self.p("d.ctl.json"))
+        a = self.loop("a", times=None, interval_ms=100000, state=self.p("a.state.json"), ctl=self.p("a.ctl.json"))
+        self.ok({"op": "add", "id": a})
+        st = self.until(lambda: (lambda d: d if d and d.get("loops") else None)(self.dstate()))
+        self.assertEqual(st["loops"], 1)
+        self.assertEqual(st["interval_mode"], "fixed")
+        self.assertIsNone(st["last_error"])
+        self.assertIn("skipped", st)
+        la = self.until(lambda: self.ok({"op": "get", "id": a}).get("runs") == 1 and self.ok({"op": "get", "id": a}))
+        common = {"id", "state", "pid", "runs", "times", "interval_ms", "interval_mode", "ctl_mtime", "last_error"}
+        self.assertLessEqual(common, set(st))
+        self.assertLessEqual(common, set(la))
+        self.write("d.ctl.json", {"interval_mode": "after"})
+        self.until(lambda: self.dstate()["interval_mode"] == "after")
+        self.assertEqual(self.stop(), 0)
+        st = self.dstate()
+        self.assertEqual((st["state"], st["loops"]), ("stopped", 0))
+        for v in (st["state"], la["state"]):
+            self.assertIn(v, aos_loop.STATES)
+
+    def test_state_last_error_scan_failed(self):
+        self.start(state=self.p("d.state.json"))
+        self.until(lambda: self.dstate())
+        os.chmod(self.ctl, 0)
+        self.addCleanup(os.chmod, self.ctl, 0o755)
+        if os.access(self.ctl, os.R_OK):
+            self.skipTest("root 不受權限限制")
+        self.until(lambda: (self.dstate()["last_error"] or "").startswith("ScanFailed"))
+        os.chmod(self.ctl, 0o755)
+        self.until(lambda: self.dstate()["last_error"] is None)
+
+    def dstate(self):
+        try:
+            return json.loads(self.read("d.state.json"))
+        except (OSError, ValueError):
+            return None
+
     def test_bad_config(self):
-        for doc in ({"interval_ms": 10}, {"control_dir": "c", "ctl": "c/x.json"}):
+        for doc in ({"interval_ms": 10}, {"control_dir": "c", "ctl": "c/x.json"},
+                    {"control_dir": "c", "interval_mode": "x"}):
             self.write("c.json", doc)
             with self.subTest(doc=doc), self.assertRaises(aos_daemon.DaemonError):
                 aos_daemon.load_config(self.p("c.json"))

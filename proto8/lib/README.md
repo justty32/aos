@@ -71,9 +71,9 @@ python3 proto8/lib/aos_loop.py LOOP.json
 - 結果：aos_inst 回 0 → `last_code`＝exit 檔最後一行（沒寫 exit＝null）；非 0 → `last_error`＝它 stderr 的最後一行。
 - **ctl.json**（宣告式，NORMS N-06～）：`paused`、`stop`（`true` 或 `{"val": true, "now": true}`；now＝當場收掉正在跑的）、`times`、`interval_ms`、`interval_mode`。沒寫的欄位＝loop.json 的初始值（只在 `want()` 一處）。stop 是終點。壞檔、型別錯、不見了＝維持上一次、印一次。(inode, mtime, 大小) 變了才重讀。
 - 次數跑完（runs ≥ times）就結束、退出，有 ctl 也一樣；想再跑就重新起。
-- **state.json**（選填）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`pid`、`times`、`interval_ms`、`interval_mode`、`runs`、`skipped`、`last_code`、`last_error`、`ctl_mtime`（上次套用的 ctl.json 的 mtime，寫 ctl 的人拿來確認被讀到了）。暫存再改名。
+- **state.json**（選填）：共同骨架（見[下面](#ctl-與-state-的慣例)）加上 `skipped`、`last_code`；`last_error`＝aos_inst 自己出錯時它 stderr 的最後一行。暫存再改名。
 - 退出碼只說 loop 自己：0＝正常結束（子程式回非 0 不算）；最後一次是 aos_inst 自己出錯＝沿用它的碼；被訊號停掉＝128＋N；loop.json 不對＝125。`run(path)` 正常回 None，否則丟 `LoopError`（`exit` 屬性＝退出碼）。
-- 給 daemon 共用的：`load_config()`、ctl 那組（`parse_ctl()`、`want()`、`CtlFile`）、state 那組（`state_doc()`、`read_state()`、`StateFile`：欄位、讀、寫只在這裡）、`write_json()`、`kill()`／`reap()`。
+- 給 daemon 共用的：`load_config()`、ctl 那組（`parse_ctl()`、`want()`、`CtlFile`）、state 那組（`STATES`、`state_doc()`、`read_state()`、`StateFile`：欄位、狀態值、讀、寫只在這裡）、`write_json()`、`kill()`／`reap()`。
 
 ## daemon（`aos_daemon.py`）
 
@@ -83,7 +83,8 @@ python3 proto8/lib/aos_loop.py LOOP.json
 python3 proto8/lib/aos_daemon.py DAEMON.json
 ```
 
-- daemon.json 只在起來時讀一次：`control_dir`（必填）、`load`、`save`、`work_dir`（沒寫＝control_dir 旁的 `loops/`）、`grace_ms`（10000）；比照 loop：`times`（null）、`interval_ms`（200）、`ctl`（不能在 control_dir 裡）、`ctl_poll_ms`、`state`。
+- daemon.json 只在起來時讀一次：`control_dir`（必填）、`load`、`save`、`work_dir`（沒寫＝control_dir 旁的 `loops/`）、`grace_ms`（10000）；比照 loop：`times`（null）、`interval_ms`（200）、`interval_mode`（after；fixed＝固定週期、掃超過一拍就跳拍）、`ctl`（不能在 control_dir 裡）、`ctl_poll_ms`、`state`。
+- 自己的 state.json：共同骨架加上 `skipped`、`loops`（表上幾個，只寫個數；要細節用控制指令 `list`／`get`／`state` 查）；`last_error`＝最近一圈印到 stderr 的最後一行錯（ScanFailed、ReplyFailed），那圈沒錯＝null。
 - 自己的 ctl.json：paused＝不掃（指令堆著、loop 照跑）；stop＝收工（先 save；now＝底下 loop 當場收掉，沒 now＝替它們寫 stop、等它們跑完）；times 跑完同 stop（不帶 now）。
 - 表上每個 loop 是一支子程序 `aos_loop.py`（自成 session）。daemon 只靠兩個檔控制它：寫它的 ctl.json、讀它的 state.json。loop.json 沒寫 ctl／state 的，在 `work_dir/<編號>/` 生包裝檔（每個 key `$ref` 回原檔、補上 ctl／state），移除或收工時刪掉。
 - 控制資料夾（NORMS N-10）：放 `名字.json`，處理完變 `名字.json.done`，內容 `{"request", "ok", "result"|"error": {"code", "msg"}}`；`.` 開頭不讀；`.done` 由丟的人清。指令 `{"op", "id", ...}`，id＝loop.json 的絕對路徑（`add` 也收 inst.json：頂層沒有 `inst`、有 `argv` 的，包成只跑一次的 loop `{"inst": {"$ref": 它}, "times": 1}`，id 是那份 inst.json 的 realpath）：`add`、`set`（`how`：times／interval_ms／interval_mode）、`pause`／`remove`（`wait` 預設 true）、`resume`、`add_times`（`delta`）、`state`、`get`、`list`、`save`／`load`（`path`）。
@@ -92,13 +93,62 @@ python3 proto8/lib/aos_daemon.py DAEMON.json
 - 收工：SIGTERM＝先 save、對每個 loop 的 session 送 SIGTERM、等 grace_ms、整群 SIGKILL；SIGINT 一樣但不存。巢狀 grace：inst（2000）＜ loop（5000）＜ daemon（10000）。
 - 出意外不結束、stderr 印一次：ScanFailed、ReplyFailed、Internal。退出碼 0＝正常、1＝起不來或 save 失敗。
 
+## ctl 與 state 的慣例
+
+NORMS N-11 的骨架是「設定檔讀一次 → ctl 蓋過 → state 回報」；下面是 lib 照著做的慣例，不是規範。
+
+| 層 | 設定檔 | ctl | state |
+|---|---|---|---|
+| inst | inst.json | 沒有（跑一次，沒東西可改；要停用訊號） | **就是 exit 檔**：一個數（十進位＋換行），不是 json、不另開 state.json |
+| loop | loop.json | ctl.json | state.json |
+| daemon | daemon.json | ctl.json | state.json |
+
+key 分四組，每組落在哪幾個檔是固定的：
+
+| 組 | key | 設定檔 | ctl | state |
+|---|---|---|---|---|
+| 節奏 | `times`、`interval_ms`、`interval_mode` | 初始值 | 期望值（可蓋） | 生效中的值 |
+| 旗子 | `paused`、`stop` | — | `{val, now}` | 併進 `state` 那格 |
+| 位置／身體／收尾 | `ctl`、`ctl_poll_ms`、`state`、`inst`、`grace_ms`、`error_wait_ms`、`control_dir`、`load`、`save`、`work_dir` | 有 | 不能蓋 | 不回報 |
+| 回報 | 見下面 state 骨架 | — | — | 有 |
+
+**ctl.json**（loop、daemon 同一份）：`paused`、`stop`、`times`、`interval_ms`、`interval_mode`，規矩照 N-06～N-08。
+
+**state.json 共同骨架**（loop、daemon 都有）：
+
+```jsonc
+{
+  "id": "/abs/x.json",         // 設定檔的 realpath
+  "state": "running",          // 七個狀態值之一，見下表
+  "pid": 12345,                // 自己的 pid
+  "runs": 2,                   // 身體跑了幾次（loop：inst；daemon：掃幾圈）
+  "times": 5, "interval_ms": 1000, "interval_mode": "after",   // 節奏組＝生效中的值
+  "ctl_mtime": 1760280000.123, // 上次套用的 ctl.json 的 mtime；沒有＝null
+  "last_error": null           // 最後一次自己出錯的那行；沒有＝null
+}
+```
+
+各層擴充：loop 加 `skipped`（fixed 跳拍數）、`last_code`（exit 檔最後一行）；daemon 加 `skipped`、`loops`（表上幾個，只寫個數；要細節用控制指令查）。
+
+**狀態值**：一套七個（`aos_loop.STATES`），意思固定，各層用得到哪幾個不限。
+
+| 值 | 意思 | 誰會寫 |
+|---|---|---|
+| `starting` | 行程起了、第一份 state 還沒寫出來 | daemon 替底下的 loop 答 |
+| `waiting` | 等下一次（間隔中） | loop、daemon |
+| `running` | 身體正在跑 | loop（daemon 掃一下就完，看不到） |
+| `paused` | 期望 paused、身體沒在跑 | loop、daemon |
+| `done` | 次數跑完（runs ≥ times），最後一份 | loop（daemon 次數到＝收工，寫 stopped） |
+| `stopping` | 讀到 stop 或收到訊號，收尾中 | loop、daemon |
+| `stopped` | 結束，最後一份 | loop、daemon；daemon 看到底下 loop 行程沒了也這樣答 |
+
 ## 測試（`tests/`）
 
 ```
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，39 個、約 11 秒。一個檔 `test_lib.py` 分四組（指示詞、inst、loop、daemon），loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，41 個、約 12 秒。一個檔 `test_lib.py` 分四組（指示詞、inst、loop、daemon），loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 
