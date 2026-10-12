@@ -50,29 +50,16 @@ class TestFindAndBase(Base):
             load(self.d)
         self.assertEqual(cm.exception.code, "NotFound")
 
-    def test_base_inst_is_folder_even_for_dot_aos(self):
-        """給資料夾時家是資料夾本身，不是 .aos/。"""
-        self.write(".aos/inst.json", {"argv": ["x"], "cwd": "."})
-        self.assertEqual(os.path.normpath(load(self.d)["cwd"]), self.d)
-
-    def test_base_inst_for_file_is_its_folder(self):
-        p = self.write("sub/i.json", {"argv": ["x"], "v": {"$ref": "data.json"}, "cwd": "w"})
-        self.write("sub/data.json", 1)
-        self.assertEqual(load(p)["cwd"], os.path.join(self.d, "sub", "w"))
-
-    def test_base_cwd(self):
+    def test_base_is_callers_cwd(self):
+        """指示詞的相對檔名、cwd 這個 key 都從呼叫者的 cwd 算，不從 inst 所在處算。"""
         p = self.write("sub/i.json", {"argv": ["x"], "cwd": "w", "envs": {"K": {"$ref": "v.json"}}})
         self.write("v.json", "from-cwd")
+        self.write("sub/v.json", "from-inst-home")
         old = os.getcwd()
         os.chdir(self.d)
         self.addCleanup(os.chdir, old)
-        inst = load(p, base="cwd")
+        inst = load(p)
         self.assertEqual((inst["cwd"], inst["envs"]), (os.path.join(self.d, "w"), {"K": "from-cwd"}))
-
-    def test_bad_base(self):
-        with self.assertRaises(InstError) as cm:
-            load(self.d, base="here")
-        self.assertEqual(cm.exception.code, "BadBase")
 
     def test_read_failed_and_json_syntax(self):
         with self.assertRaises(InstError) as cm:
@@ -183,8 +170,9 @@ class TestCli(Base):
 
     def test_usage_and_open_failed(self):
         self.assertEqual(self.cli().returncode, 125)
+        self.assertEqual(self.cli(self.d, "--base", "inst").returncode, 125)
         p = self.write("i.json", {"argv": ["true"], "stdin": "missing.txt"})
-        r = self.cli(p, "--base", "inst")
+        r = self.cli(p)
         self.assertEqual(r.returncode, 125)
         self.assertTrue(r.stderr.startswith("OpenFailed: "))
 
