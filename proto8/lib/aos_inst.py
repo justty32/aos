@@ -26,7 +26,7 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
 子程式的結束碼只走 `exit` 檔，而且只有它自己結束時才寫：被訊號停掉（含逾時被停）、
 或根本沒起來，都不寫 `exit`——aos 不替它代寫。
 exit 寫不進去不管，不算錯。
-`run()` 回子程式的結束碼給 Python 呼叫者；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
+`run()` 不回東西；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
 
 命令列的退出碼只說 aos_inst 自己的狀況：0＝子程式跑完了（不管它成功失敗）；
 1＝aos_inst 自己出錯、子程式沒跑（stderr 印一行「代號: 白話」）。
@@ -133,9 +133,7 @@ def _bool(doc, k):
 
 
 def run(inst):
-    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔。aos_inst 自己出錯丟 `InstError`。
-
-    回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼（例如 -9），這時不寫 exit。"""
+    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔（被訊號停掉不寫）。aos_inst 自己出錯丟 `InstError`。"""
     try:
         if inst["cwd_mkdir"]:
             os.makedirs(inst["cwd"], exist_ok=True)
@@ -170,7 +168,6 @@ def run(inst):
             _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
         except OSError:
             pass        # 寫不進去不管
-    return code
 
 
 def _wait(child, timeout_ms, grace_ms):
