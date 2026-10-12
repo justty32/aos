@@ -15,6 +15,7 @@
 跑過幾次 `runs`、其他執行方式、`last_error`（上一次 aos_inst 自己出的錯，或沒料到的錯〔Internal〕；沒有＝None）。
 被收掉的那次也算跑過一次。次數跑完的實例留在表上（done），add_times 加次數就再跑。
 remove／pause 的 `wait`：True＝等這次跑完，False＝當場收掉（按 run() 的 stop）。
+run() 一律 new_session=True：每次跑自成一群，收掉或跑完都連孫程式一起清。
 
 存檔用（檔案由呼叫者自己讀寫，daemon 的 save／load）：`snapshot()` 回目前的表（不含 removing 的），每筆
 {"id", "how", "paused", "runs", "last_error"}；`restore(items)` 把這樣的表放回來、開始跑。
@@ -136,7 +137,7 @@ class _Inst:
     def _once(self, how):
         try:
             aos_inst.run(aos_inst.load(self.id), timeout_ms=how["timeout_ms"], grace_ms=how["grace_ms"],
-                         stop=self.stop, stop_poll_ms=self.loop.stop_poll_ms)
+                         stop=self.stop, stop_poll_ms=self.loop.stop_poll_ms, new_session=True)
             return None
         except aos_inst.InstError as e:
             return str(e)
