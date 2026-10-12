@@ -5,14 +5,14 @@
 
 CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）：
 
-    control_dir      控制資料夾（必填）；底下 in/ 收指令、out/ 放回覆，沒有就建
-    control_poll_ms  幾毫秒看一次 in/（正整數；預設 200）
+    control_dir      控制資料夾（必填），沒有就建
+    control_poll_ms  幾毫秒看一次控制資料夾（正整數；預設 200）
     stop_poll_ms     交給 run() 的 stop_poll_ms（正整數；預設 50）
 
-指令：往 in/ 放一個 `名字.json`。daemon 每輪把 in/ 裡的 `*.json` 照檔名順序讀進來處理、刪掉；
-讀到不合法的 JSON 當場回 BadCommand 並刪掉，所以寫的人要先寫成 `.` 開頭的名字（不讀），寫完再改名成 `名字.json`。
-回覆寫到 out/名字.json（也是先寫暫存再改名）：成功 {"ok": true, ...}，失敗 {"ok": false, "error": "代號: 白話"}。
-同名的指令／回覆後蓋前；out/ 由讀回覆的人自己清。兩邊都不 fsync。
+指令：往控制資料夾放一個 `名字.json`。daemon 每輪把裡面的 `*.json` 照檔名順序讀進來處理，處理完改成 `名字.done`，
+內容換成回覆：成功 {"ok": true, ...}，失敗 {"ok": false, "error": "代號: 白話"}。
+讀到不合法的 JSON 也一樣當場變成 `.done`（回 BadCommand），所以寫的人要先寫成 `.` 開頭的名字（不讀），寫完再改名成 `名字.json`。
+同名的後蓋前；`.done` 由讀回覆的人自己清。兩邊都不 fsync。
 
     {"op": "add", "target": T, ...執行方式}   新增實例 → {"id": ID}；T 是 inst.json 或資料夾
     {"op": "set", "id": ID, ...執行方式}      改執行方式，下一次起生效
@@ -106,11 +106,11 @@ def handle(loop, cmd):
         return {"ok": False, "error": str(e)}
 
 
-def _scan(loop, in_dir, out_dir):
-    for name in sorted(os.listdir(in_dir)):
+def _scan(loop, d):
+    for name in sorted(os.listdir(d)):
         if name.startswith(".") or not name.endswith(".json"):
             continue
-        path = os.path.join(in_dir, name)
+        path = os.path.join(d, name)
         try:
             with open(path, encoding="utf-8") as f:
                 cmd = json.loads(f.read())
@@ -118,29 +118,28 @@ def _scan(loop, in_dir, out_dir):
             reply = {"ok": False, "error": "BadCommand: 讀不了 %s：%s" % (name, e)}
         else:
             reply = handle(loop, cmd)
+        done = name[:-len(".json")] + ".done"
+        tmp = os.path.join(d, "." + done + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(reply, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, os.path.join(d, done))
         try:
             os.remove(path)
         except OSError:
             pass
-        tmp = os.path.join(out_dir, "." + name + ".tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(reply, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, os.path.join(out_dir, name))
 
 
 def serve(cfg, quit):
-    """照 config 開 loop，每 control_poll_ms 看一次 in/，直到 quit() 為真；然後收掉所有實例。"""
-    in_dir = os.path.join(cfg["control_dir"], "in")
-    out_dir = os.path.join(cfg["control_dir"], "out")
+    """照 config 開 loop，每 control_poll_ms 看一次控制資料夾，直到 quit() 為真；然後收掉所有實例。"""
+    d = cfg["control_dir"]
     try:
-        os.makedirs(in_dir, exist_ok=True)
-        os.makedirs(out_dir, exist_ok=True)
+        os.makedirs(d, exist_ok=True)
     except OSError as e:
         raise DaemonError("MkdirFailed", "建不了控制資料夾：%s" % e)
     loop = Loop(cfg["stop_poll_ms"])
     try:
         while not quit():
-            _scan(loop, in_dir, out_dir)
+            _scan(loop, d)
             time.sleep(cfg["control_poll_ms"] / 1000)
     finally:
         loop.shutdown()
