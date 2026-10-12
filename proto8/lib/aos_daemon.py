@@ -40,7 +40,7 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
 error.code：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、ReadFailed、JsonSyntax、WriteFailed、Internal。
 相對路徑（path、inst.json 裡的）基準都是 daemon 啟動時的 cwd；id 不收相對路徑。
 實例表只在記憶體裡，daemon 起來時是空的、結束就沒了；要留就 save，要接回來就 load。
-save 存每個實例的 id、how（含剩餘 times）、paused、runs、last_error（removing 的不存；跑到一半的那次不算，
+save 存每個實例的 id、how（含剩餘 times）、paused、runs、last_code、last_error（removing 的不存；跑到一半的那次不算，
 load 回來會重跑）；先寫 `.名字.tmp` 再改名，不 fsync。load 是全有全無：有任何一點不對——某個 inst.json 不在（NotFound）、
 某個 id 已經在表上或檔裡重複（Exists）、內容格式不對（FieldType）——就回 error，一個都不載。
 daemon 收到 SIGINT／SIGTERM：所有實例當場收掉，然後結束。SIGTERM 且 config 有 save＝收掉前先 save

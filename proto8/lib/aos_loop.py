@@ -12,7 +12,8 @@
     grace_ms     收掉時 SIGTERM 之後等多久才 SIGKILL（非負整數；預設 2000）
 
 狀態（get／list 回的 dict）：`id`、`state`（waiting／running／paused／done／removing）、剩餘 `times`、
-跑過幾次 `runs`、其他執行方式、`last_error`（上一次 aos_inst 自己出的錯，或沒料到的錯〔Internal〕；沒有＝None）。
+跑過幾次 `runs`、其他執行方式、`last_code`（上一次子程式的結束碼，被訊號停掉＝128＋N；還沒跑過或子程式沒跑＝None）、
+`last_error`（上一次 aos_inst 自己出的錯，或沒料到的錯〔Internal〕；沒有＝None）。
 被收掉的那次也算跑過一次。次數跑完的實例留在表上（done），add_times 加次數就再跑。
 remove／pause 的 `wait`：True＝等這次跑完，False＝當場收掉（按 run() 的 stop）。兩者都馬上回一個函式 `ready()`：
 子程式還沒停回 None，停了回狀態物件（pause＝停下來後的狀態；remove＝最後的狀態，state＝"removed"）。
@@ -22,7 +23,7 @@ run() 一律 new_session=True：每次跑自成一群，收掉或跑完都連孫
 免得 inst.json 壞掉又不限次數時空轉吃滿 CPU。
 
 存檔用（檔案由呼叫者自己讀寫，daemon 的 save／load）：`snapshot()` 回目前的表（不含 removing 的），每筆
-{"id", "how", "paused", "runs", "last_error"}；`restore(items)` 把這樣的表放回來、開始跑。
+{"id", "how", "paused", "runs", "last_code", "last_error"}；`restore(items)` 把這樣的表放回來、開始跑。
 
 方法都可以從任何執行緒呼叫；出錯丟 `LoopError`。
 """
@@ -35,6 +36,7 @@ import aos_inst
 __all__ = ["HOW", "Loop", "LoopError"]
 
 HOW = {"times": 1, "interval_ms": 0, "timeout_ms": None, "grace_ms": 2000}
+_ITEM = {"id", "how", "paused", "runs", "last_code", "last_error"}
 
 
 class LoopError(Exception):
@@ -95,6 +97,7 @@ class _Inst:
         self.removing = False
         self.running = False
         self.runs = 0
+        self.last_code = None
         self.last_error = None
         self.final = None
         self.stop = threading.Event()
@@ -110,7 +113,8 @@ class _Inst:
         return "done" if self.how["times"] == 0 else "waiting"
 
     def status(self):
-        return dict({"id": self.id, "state": self.state()}, **self.how, runs=self.runs, last_error=self.last_error)
+        return dict({"id": self.id, "state": self.state()}, **self.how, runs=self.runs,
+                    last_code=self.last_code, last_error=self.last_error)
 
     def _loop(self):
         cond = self.loop.cond
@@ -125,12 +129,12 @@ class _Inst:
                 how = dict(self.how)
                 cond.release()
                 try:
-                    err = self._once(how)
+                    code, err = self._once(how)
                 finally:
                     cond.acquire()
                 self.running = False
                 self.runs += 1
-                self.last_error = err
+                self.last_code, self.last_error = code, err
                 if self.how["times"]:
                     self.how["times"] -= 1
                 wait_ms = self.how["interval_ms"]
@@ -144,14 +148,14 @@ class _Inst:
             cond.notify_all()
 
     def _once(self, how):
+        """跑一次，回 (結束碼, None) 或 (None, 錯誤字串)。"""
         try:
-            aos_inst.run(aos_inst.load(self.id), timeout_ms=how["timeout_ms"], grace_ms=how["grace_ms"],
-                         stop=self.stop, stop_poll_ms=self.loop.stop_poll_ms, new_session=True)
-            return None
+            return aos_inst.run(aos_inst.load(self.id), timeout_ms=how["timeout_ms"], grace_ms=how["grace_ms"],
+                         stop=self.stop, stop_poll_ms=self.loop.stop_poll_ms, new_session=True), None
         except aos_inst.InstError as e:
-            return str(e)
+            return None, str(e)
         except Exception as e:
-            return "Internal: %s: %s" % (type(e).__name__, e)
+            return None, "Internal: %s: %s" % (type(e).__name__, e)
 
 
 class Loop:
@@ -176,18 +180,19 @@ class Loop:
             self._put(ident, _how(how or {}, HOW))
         return ident
 
-    def _put(self, ident, how, paused=False, runs=0, last_error=None):
+    def _put(self, ident, how, paused=False, runs=0, last_code=None, last_error=None):
         if ident in self.insts:
             raise LoopError("Exists", "實例 %s 已經在了" % ident)
         inst = _Inst(self, ident, how)
-        inst.paused, inst.runs, inst.last_error = paused, runs, last_error
+        inst.paused, inst.runs, inst.last_code, inst.last_error = paused, runs, last_code, last_error
         self.insts[ident] = inst
         inst.thread.start()
 
     def snapshot(self):
         """目前的表（不含 removing 的），存檔用。"""
         with self.cond:
-            return [{"id": i.id, "how": dict(i.how), "paused": i.paused, "runs": i.runs, "last_error": i.last_error}
+            return [{"id": i.id, "how": dict(i.how), "paused": i.paused, "runs": i.runs,
+                     "last_code": i.last_code, "last_error": i.last_error}
                     for i in self.insts.values() if not i.removing]
 
     def restore(self, items):
@@ -197,13 +202,14 @@ class Loop:
             raise LoopError("FieldType", "表要是陣列")
         todo = []
         for it in items:
-            if not isinstance(it, dict) or set(it) != {"id", "how", "paused", "runs", "last_error"}:
-                raise LoopError("FieldType", "表裡每筆要是 {id, how, paused, runs, last_error}：%r" % (it,))
+            if not isinstance(it, dict) or set(it) != _ITEM:
+                raise LoopError("FieldType", "表裡每筆要是 {id, how, paused, runs, last_code, last_error}：%r" % (it,))
             ok = (isinstance(it["id"], str) and os.path.isabs(it["id"]) and isinstance(it["paused"], bool)
-                  and _int(it["runs"]) and it["runs"] >= 0 and (it["last_error"] is None or isinstance(it["last_error"], str)))
+                  and _int(it["runs"]) and it["runs"] >= 0
+                  and (it["last_code"] is None or _int(it["last_code"]) and it["last_code"] >= 0) and (it["last_error"] is None or isinstance(it["last_error"], str)))
             if not ok:
                 raise LoopError("FieldType", "表裡這筆的值不對：%r" % (it,))
-            todo.append((it["id"], _how(it["how"], HOW), it["paused"], it["runs"], it["last_error"]))
+            todo.append((it["id"], _how(it["how"], HOW), it["paused"], it["runs"], it["last_code"], it["last_error"]))
         for t in todo:
             if not os.path.isfile(t[0]):
                 raise LoopError("NotFound", "%s 不存在" % t[0])

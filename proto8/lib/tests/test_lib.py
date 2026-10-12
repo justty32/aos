@@ -146,11 +146,15 @@ class Inst(Tmp):
     def test_cli(self):
         d = self.inst("c", "exit 5", exit="c.exit")
         r = subprocess.run([sys.executable, os.path.join(LIB, "aos_inst.py"), d], capture_output=True)
-        self.assertEqual((r.returncode, self.read("c.exit")), (0, "5\n"))
-        r = subprocess.run([sys.executable, os.path.join(LIB, "aos_inst.py"), self.p("nope.json")],
-                           capture_output=True, text=True)
-        self.assertEqual(r.returncode, 1)
-        self.assertTrue(r.stderr.startswith("ReadFailed"))
+        self.assertEqual((r.returncode, self.read("c.exit")), (5, "5\n"))
+        self.write("x.json", "#!/bin/sh\n")
+        self.write("nf.json", {"argv": ["/no/such/prog"]})
+        self.write("nx.json", {"argv": [self.p("x.json")]})
+        for target, code, err in (("nope.json", 125, "ReadFailed"), ("nf.json", 127, "CommandNotFound"),
+                                  ("nx.json", 126, "CommandNotExecutable")):
+            r = subprocess.run([sys.executable, os.path.join(LIB, "aos_inst.py"), self.p(target)],
+                               capture_output=True, text=True)
+            self.assertEqual((r.returncode, r.stderr.split(":")[0]), (code, err))
 
 
 class LoopTest(Tmp):
@@ -234,7 +238,7 @@ class LoopTest(Tmp):
     def test_restore_all_or_nothing(self):
         a = self.inst("a", "true")
         ident = aos_inst.find(a)
-        good = {"id": ident, "how": {"times": 0}, "paused": False, "runs": 0, "last_error": None}
+        good = {"id": ident, "how": {"times": 0}, "paused": False, "runs": 0, "last_code": None, "last_error": None}
         missing = dict(good, id=self.p("nope/inst.json"))
         self.assertEqual(self.code(self.loop.restore, [good, missing]), "NotFound")
         self.assertEqual(self.code(self.loop.restore, [good, good]), "Exists")
@@ -249,7 +253,15 @@ class LoopTest(Tmp):
         self.write("a/inst.json", {"argv": ["/no/such/prog"]})
         self.loop.add(d)
         self.until(lambda: self.loop.state(d) == "done")
-        self.assertTrue(self.loop.get(d)["last_error"].startswith("CommandNotFound"))
+        st = self.loop.get(d)
+        self.assertTrue(st["last_error"].startswith("CommandNotFound"))
+        self.assertIsNone(st["last_code"])
+
+    def test_last_code(self):
+        d = self.inst("a", "exit 3")
+        self.loop.add(d)
+        self.until(lambda: self.loop.state(d) == "done")
+        self.assertEqual(self.loop.get(d)["last_code"], 3)
 
     def test_error_wait(self):
         # aos_inst 自己出錯又不限次數：不空轉，隔 error_wait_ms 才再試；remove 不用等它
@@ -359,7 +371,7 @@ class Daemon(Tmp):
     def test_config_load_save(self):
         a = self.inst("a", "true")
         self.write("t.json", [{"id": aos_inst.find(a), "how": {"times": 0}, "paused": True, "runs": 4,
-                               "last_error": None}])
+                               "last_code": None, "last_error": None}])
         self.start(load=self.p("t.json"), save=self.p("t.json"))
         self.assertEqual(self.ok({"op": "get", "id": a})["runs"], 4)
         self.ok({"op": "add_times", "id": a, "delta": 2})
@@ -374,7 +386,7 @@ class Daemon(Tmp):
 
     def test_bad_load_fails_start(self):
         self.write("t.json", [{"id": self.p("nope/inst.json"), "how": {}, "paused": False, "runs": 0,
-                               "last_error": None}])
+                               "last_code": None, "last_error": None}])
         self.start(load=self.p("t.json"))
         self.assertEqual(self.d.wait(10), 1)
         self.assertTrue(self.d.stderr.read().startswith("NotFound"))

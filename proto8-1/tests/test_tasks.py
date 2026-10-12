@@ -80,19 +80,19 @@ class Tasks(unittest.TestCase):
         a = self.sh("a", "true")
         for prog in (SEQ, PAR):
             r = self.cli(prog, a, self.p("nope.json"))
-            self.assertEqual(r.returncode, 1)
+            self.assertEqual(r.returncode, 125)
             self.assertTrue(r.stderr.startswith("ReadFailed"))
-            self.assertEqual(self.cli(prog).returncode, 1)
+            self.assertEqual(self.cli(prog).returncode, 125)
         self.assertFalse(os.path.exists(self.p("log")))
 
     def test_launch_error(self):
         a, bad, c = self.sh("a", "true"), self.inst("bad", ["/no/such/prog"]), self.sh("c", "true")
         r = self.cli(SEQ, a, bad, c)
-        self.assertEqual((r.returncode, self.read("log")), (1, "a\n"))
+        self.assertEqual((r.returncode, self.read("log")), (127, "a\n"))
         self.assertTrue(r.stderr.startswith("CommandNotFound"))
         os.remove(self.p("log"))
         r = self.cli(PAR, a, bad, c)
-        self.assertEqual((r.returncode, sorted(self.read("log").split())), (1, ["a", "c"]))
+        self.assertEqual((r.returncode, sorted(self.read("log").split())), (127, ["a", "c"]))
 
     def test_par_concurrent_and_first_failure_in_order(self):
         a, b, c = self.sh("a", "sleep 0.5; exit 4"), self.sh("b", "exit 5"), self.sh("c", "sleep 0.5")
@@ -117,13 +117,16 @@ class Tasks(unittest.TestCase):
                 self.assertEqual(self.read("log").split(), log.split())
                 os.remove(self.p("log"))
         for args in ((ok,), (ok, t, e, e)):
-            self.assertEqual(self.cli(IF, *args).returncode, 1)
+            self.assertEqual(self.cli(IF, *args).returncode, 125)
+        self.assertFalse(os.path.exists(self.p("log")))
+        bad = self.inst("bad", ["/no/such/prog"])
+        self.assertEqual(self.cli(IF, bad, t, e).returncode, 127)      # 條件起不來不跑 ELSE
         self.assertFalse(os.path.exists(self.p("log")))
 
     def test_not(self):
         ok, ng, bad = self.sh("ok", "true"), self.sh("ng", "exit 2"), self.inst("bad", ["/no/such/prog"])
-        self.assertEqual([self.cli(NOT, x).returncode for x in (ok, ng, bad)], [1, 0, 1])
-        self.assertEqual(self.cli(NOT, ok, ng).returncode, 1)
+        self.assertEqual([self.cli(NOT, x).returncode for x in (ok, ng, bad)], [1, 0, 127])
+        self.assertEqual(self.cli(NOT, ok, ng).returncode, 125)
 
     def test_if_signal_skips_branch(self):
         c = self.inst("c", ["sh", "-c", "echo $$ > c.pid; exec sleep 30"])

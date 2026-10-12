@@ -40,8 +40,9 @@ python3 proto8/lib/aos_inst.py TARGET
 - key：`argv`（必填）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`，加上布林的 `cwd_mkdir`、`envs_clear`、`*_inherit`、`*_append`、`*_mkdir`、`stderr_merge`。完整說明在檔頭。
 - 理念：aos_inst 跑起來就「變成」那個子程式。JSON 只寫跟呼叫者不一樣的地方，其他從 aos_inst 繼承——子程式留在 aos_inst 的行程群組與 session。限時、清孫程式由啟動 aos_inst 的人決定（例如 `timeout -k 2 5 aos_inst.py x`）。
 - `run(inst, timeout_ms=None, grace_ms=2000, forward_signals=False, stop=None, stop_poll_ms=50, new_session=False)`：只有非在 run() 裡做不可的事才當參數——限時、停止鈕（`stop`，例如 threading.Event，別的執行緒按下去就收掉子程式；`stop_poll_ms` 幾毫秒看一次）、把收到的訊號轉給子程式。收掉＝SIGTERM，過 grace 再 SIGKILL。命令列就是 `run(..., forward_signals=True)`：收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit。`new_session=True`（kill_leftover，給 daemon 用）：子程式自成一個 session／群組，訊號整群送，收掉或自己結束都對整群補 SIGKILL，孫程式一起清（自己 setsid 出去的清不到）；子程式沒有控制終端，所以命令列不開。
-- 兩條路分工：**子程式的結束碼寫進 `exit` 檔**（`run()` 也回它）（十進位＋換行；自己結束＝它的碼，被訊號停掉＝128＋訊號號碼，沒起來不寫）；**命令列退出碼只說 aos_inst 自己**：0＝子程式跑完了、1＝aos_inst 自己出錯、子程式沒跑（stderr 一行「代號: 白話」）。exit 寫不進去不管。
-- API：`load(target)`、`parse(doc, base_dir)`、`run(inst, ...)`（回子程式的結束碼，同 exit 檔那個數；出錯丟 `InstError`）。
+- 結束碼：自己結束＝子程式的碼，被訊號停掉＝128＋訊號號碼。`run()` 回它、`exit` 檔寫它（十進位＋換行；沒起來不寫；寫不進去不管）、**命令列的退出碼也是它**（aos_inst 變成子程式）。
+- aos_inst 自己出錯、子程式沒跑：`run()` 丟 `InstError`；命令列照 Unix 包裝程式（env、timeout）的慣例回 **127＝找不到程式、126＝不能執行、125＝其他**（`exit_code(err)`），stderr 一行「代號: 白話」。所以子程式自己最好只用 1～123：124 以上都有慣例意思（124＝timeout 指令的時間到、125～127 如上、128＋N＝被訊號 N 停掉、255＝超出範圍）。
+- API：`load(target)`、`parse(doc, base_dir)`、`run(inst, ...)`（回子程式的結束碼，同 exit 檔那個數；出錯丟 `InstError`）、`exit_code(err)`。
 
 
 ## loop（`aos_loop.py`）
@@ -60,7 +61,7 @@ loop.pause("/srv/job/inst.json", wait=False)                 # id 要是絕對�
 - run() 一律 `new_session=True`：每次跑自成一群，收掉或跑完都連孫程式一起清。
 - aos_inst 自己出錯（子程式沒跑，記進 `last_error`）的那次，下一次至少隔 `error_wait_ms`（`Loop(stop_poll_ms=50, error_wait_ms=1000)`），免得 inst.json 壞了又不限次數時空轉。
 - set／resume／add_times 回改完的狀態物件；pause／remove 回 `ready()`：還沒停回 None，停了回狀態物件。
-- 狀態：`state`（waiting／running／paused／done／removing）、剩餘 `times`、`runs`、`last_error`。被收掉的那次也算一次；次數跑完留在表上（done），加次數再跑。
+- 狀態：`state`（waiting／running／paused／done／removing）、剩餘 `times`、`runs`、`last_code`（上一次子程式的結束碼；還沒跑過或子程式沒跑＝null）、`last_error`。被收掉的那次也算一次；次數跑完留在表上（done），加次數再跑。
 
 ## daemon（`aos_daemon.py`）
 
@@ -71,7 +72,7 @@ python3 proto8/lib/aos_daemon.py CONFIG
 - CONFIG（JSON，先解指示詞，基準＝啟動時的 cwd）：`control_dir`（必填）、`control_poll_ms`（預設 200）、`stop_poll_ms`（預設 50）、`load`（選填：起來後先 load 這個檔，失敗＝起不來）、`save`（選填：收到 SIGTERM 結束前先 save 到這個檔，SIGINT 不存；存不了退出碼 1）。
 - 控制：往 `control_dir` 放 `名字.json`；daemon 每輪照檔名順序讀進來、交給 loop，處理完改成 `名字.json.done`，內容是一問一答：`{"request": 原指令, "ok": true, "result": …}` 或 `{"request": …, "ok": false, "error": {"code", "msg"}}`。不合法的 JSON 也當場變 `.done`（回 `BadCommand`）。怎麼寫不規定，但寫到一半被讀到＝BadCommand，寫的人自己負責；`.` 開頭的檔不讀。兩邊都不 fsync；`.done` 由讀回覆的人清。
 - 指令一律 `{"op", "id", ...}`，`id` 要是絕對路徑：`add`（result＝id）／`set`（`how`）、`remove`／`pause`（`wait` 預設 true）、`resume`、`add_times`（`delta`）、`state`（result＝狀態字串）、`get`、`list`（result＝陣列）、`save`／`load`（`path`）；set／remove／pause／resume／add_times／get 的 result＝狀態物件。**pause／remove 等子程式真的停了才回**（remove 回最後的狀態，state＝`removed`）；這段時間指令檔留在原地，回了之後再 add 同一個 id 不會撞到 Exists。
-- 實例表只在記憶體，起來時是空的。`save` 把現有實例（id、how 含剩餘次數、paused、runs、last_error）存成一份 JSON；`load` 從這種檔一次載入、開始跑，全有全無（某個 inst.json 不在、某個 id 已在表上、格式不對……任何一點不對就回 error，一個都不載）。跑到一半的那次不存，load 回來會重跑。收到 SIGINT／SIGTERM 就把所有實例當場收掉再結束（SIGTERM 且有 config `save` 才先存）。
+- 實例表只在記憶體，起來時是空的。`save` 把現有實例（id、how 含剩餘次數、paused、runs、last_code、last_error）存成一份 JSON；`load` 從這種檔一次載入、開始跑，全有全無（某個 inst.json 不在、某個 id 已在表上、格式不對……任何一點不對就回 error，一個都不載）。跑到一半的那次不存，load 回來會重跑。收到 SIGINT／SIGTERM 就把所有實例當場收掉再結束（SIGTERM 且有 config `save` 才先存）。
 - 跑起來之後出意外不結束，往 stderr 印一行（同一件事印一次）：控制資料夾看不了（`ScanFailed`，不建回來）、回覆寫不了（`ReplyFailed`：改把指令改名成 `.done`；改名也不行就放著不管、之後不再讀它）、指令處理出了沒料到的錯（error.code＝`Internal`）。實例那邊沒料到的錯記進 `last_error`，照常繼續。
 
 ## 測試（`tests/`）
