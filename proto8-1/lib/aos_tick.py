@@ -11,8 +11,9 @@
   Usage＝參數不是剛好一個。
 
 tick-tock 就是一個時鐘（CONCEPTS C-44）：不包任務、不保證什麼，大家要看就去讀 FILE。打包是規範，之後由 kernel 做。
-節奏、停、只走 N 回合交給 daemon：`add` 一個 argv 是 aos-tick 的 inst，how 給 times／interval_ms，停＝pause、繼續＝resume。
-同一個 FILE 同時有兩個人在 tick 不管（daemon 同一實例本來就不會重疊）。
+節奏、停、只走 N 回合交給 loop：寫一份 loop.json，`inst` 那格的 argv 是 aos-tick，外層給 times／interval_ms
+（要準時就 interval_mode "fixed"），停＝把它的 ctl.json 改成 {"paused": true}、繼續＝改回來。有沒有 daemon 都行。
+同一個 FILE 同時有兩個人在 tick 不管（同一個 loop 本來就不會重疊）。
 """
 import os
 import re

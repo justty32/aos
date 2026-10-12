@@ -8,5 +8,6 @@
     "$env": "DEMO_WORK"
   },
   "stdout": "summary.txt",
-  "stderr_inherit": true
+  "stderr_inherit": true,
+  "exit": "pipeline-finish.exit"
 }

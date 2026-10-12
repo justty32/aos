@@ -9,5 +9,6 @@
   },
   "stdin": "probe.out",
   "stdout": "notify.txt",
-  "stderr_inherit": true
+  "stderr_inherit": true,
+  "exit": "pipeline-notify.exit"
 }

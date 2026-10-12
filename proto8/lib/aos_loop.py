@@ -1,303 +1,451 @@
-"""loop：一張實例表，每個實例照執行方式一次次呼叫 aos_inst.run()。daemon 的 lib，不碰檔案；純標準庫。
+#!/usr/bin/env python3
+"""loop：包一個 inst，跑幾次、隔多久，一邊讀一個 ctl.json。純標準庫。
 
-實例的 id＝inst.json 的 realpath。方法收的 `id` 要是絕對路徑（inst.json 或它所在的資料夾；相對路徑＝FieldType），
-一律先用 `aos_inst.find()` 轉成 realpath 再查表。每個實例自己一條執行緒：
-等暫停解除 → 重讀 inst.json、run() 一次 → 剩餘次數減一 → 等 interval_ms → 再來。
+    python3 aos_loop.py LOOP.json
 
-執行方式 `how`（dict；add 沒給的用預設，set 只改有給的）：
+`run(path)` 跟命令列一模一樣，只收 loop.json 的路徑。
 
-    times        還要跑幾次（非負整數；None＝不限；預設 1）
-    interval_ms  一次跑完到下一次開始隔多久（非負整數；預設 0）
-    timeout_ms   每次最多跑多久（正整數；None＝不限；預設 None）
-    grace_ms     收掉時 SIGTERM 之後等多久才 SIGKILL（非負整數；預設 2000）
+loop.json（先用指示詞 lib 解，基準＝呼叫者的 cwd；外層的 key 只在起來時讀一次）：
 
-狀態（get／list 回的 dict）：`id`、`state`（waiting／running／paused／done／removing）、剩餘 `times`、
-跑過幾次 `runs`、其他執行方式、`last_code`（上一次子程式的結束碼，被訊號停掉＝128＋N；還沒跑過或子程式沒跑＝None）、
-`last_error`（上一次 aos_inst 自己出的錯，或沒料到的錯〔Internal〕；沒有＝None）。
-被收掉的那次也算跑過一次。次數跑完的實例留在表上（done），add_times 加次數就再跑。
-remove／pause 的 `wait`：True＝等這次跑完，False＝當場收掉（按 run() 的 stop）。兩者都馬上回一個函式 `ready()`：
-子程式還沒停回 None，停了回狀態物件（pause＝停下來後的狀態；remove＝最後的狀態，state＝"removed"）。
-set／resume／add_times 回改完的狀態物件。
-run() 一律 new_session=True：每次跑自成一群，收掉或跑完都連孫程式一起清。
-這次是 aos_inst 自己出錯（last_error 不是 None，子程式沒跑）＝下一次至少隔 `error_wait_ms`（Loop 的參數，預設 1000），
-免得 inst.json 壞掉又不限次數時空轉吃滿 CPU。
+    inst           一份 inst 格式（必填）；要指向現成的就寫 {"$ref": "job/inst.json"}。每次起之前重讀
+    times          總共跑幾次（非負整數；null＝不限；沒寫＝1）
+    interval_ms    間隔（非負整數；沒寫＝0）
+    interval_mode  "after"＝跑完再隔 interval_ms（預設）；"fixed"＝固定週期，每 interval_ms 到點起一次，
+                   跑超過週期就跳過錯過的拍、對齊下一拍（不補跑、不重疊），跳過幾拍記在 state 的 skipped
+    grace_ms       收掉正在跑的那次時，SIGTERM 之後等多久整群 SIGKILL（非負整數；沒寫＝5000；要比 inst 裡的 grace_ms 長）
+    ctl            ctl.json 的路徑（選填；沒寫＝沒有控制，只能用訊號停）
+    ctl_poll_ms    多久看一次 ctl.json（正整數；沒寫＝1000）
+    state          state.json 的路徑（選填；狀態有變就整份寫過去）
+    error_wait_ms  aos_inst 自己出錯的那次之後，下一次至少隔多久（非負整數；沒寫＝1000）
 
-存檔用（檔案由呼叫者自己讀寫，daemon 的 save／load）：`snapshot()` 回目前的表（不含 removing 的），每筆
-{"id", "how", "paused", "runs", "last_code", "last_error"}；`restore(items)` 把這樣的表放回來、開始跑。
+ctl、state 的相對路徑從呼叫者的 cwd 算。id＝loop.json 的 realpath。
 
-方法都可以從任何執行緒呼叫；出錯丟 `LoopError`。
+每一次：重讀 `inst` 那格 → 起子程序 `aos_inst.py`（自成一個 session）→ 等它結束 → 整群補 SIGKILL 清掉孫程式 → 收屍。
+aos_inst 的退出碼只說它自己：0＝子程式跑完，`last_code` 讀 inst 的 exit 檔最後一行（沒寫 exit＝null）；
+非 0＝aos_inst 自己出錯，`last_error`＝它 stderr 的最後一行。被收掉的那次也算跑過一次。
+`inst` 那格交給 aos_inst 的方式：在暫存資料夾放一份 `{"$ref": "<loop.json 的 realpath>#/inst"}`，結束時刪掉。
+
+ctl.json（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣」，loop 只讀不寫，每 ctl_poll_ms 看一次，
+(inode, mtime, 大小) 變了才重讀。認的欄位（都選填；不認的忽略）：
+
+    paused         true＝不再起新的一次；{"val": true, "now": true}＝當場收掉正在跑的那次
+    stop           true＝不再起新的一次，正在跑的那次結束後 loop 結束；{"val": true, "now": true}＝當場收掉再結束。
+                   stop 是終點：讀到一次就算數，改回 false 也不會復活
+    times、interval_ms、interval_mode   蓋過 loop.json 外層的值
+
+`true`＝`{"val": true, "now": false}`。沒寫的欄位＝loop.json 的初始值（不是上一版 ctl 的值；集中在 `want()`）。
+壞 JSON、不是物件、型別不對：整份不採用，維持上一次的好狀態，stderr 印一行（同一件事印一次）。
+檔不見了：維持上一次的狀態、印一次；起來時就不在＝還沒有控制（之後出現了照樣讀）。
+
+次數跑完（runs ≥ times）：沒有 ctl 就結束；有 ctl 就留著等（times 改大再跑，stop 才結束）。
+
+state.json（選填）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`pid`、`times`、`interval_ms`、
+`interval_mode`、`runs`、`skipped`、`last_code`、`last_error`、`ctl_mtime`（上次套用的 ctl.json 的 mtime；沒有＝null）。
+先寫 `.名字.tmp` 再改名；寫不了印一次、不算錯。
+
+收到 SIGINT／SIGTERM／SIGHUP（只在主執行緒接）：收掉正在跑的那次（整群 SIGTERM，過 grace_ms 整群 SIGKILL）、不再起新的。
+
+退出碼只說 loop 自己（數字只供參考）：
+- 0＝正常結束（次數跑完、stop）；子程式回非 0 不算錯（在 exit 檔、last_code）。
+- 看最後一次：最後一次是 aos_inst 自己出錯＝沿用 aos_inst 的退出碼；中途出錯後來好了不算。
+- 被訊號停掉＝128＋訊號號碼；loop.json 本身不對、用法不對＝125。
+`run()` 正常回 None，其餘丟 `LoopError`（`exit` 屬性＝上面的退出碼）。
 """
+import json
+import math
 import os
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
 import threading
 import time
 
 import aos_inst
+from aos_directives import DirectiveError, resolve
 
-__all__ = ["HOW", "Loop", "LoopError"]
+__all__ = ["CtlFile", "LoopError", "load_config", "parse_ctl", "run", "want", "write_json"]
 
-HOW = {"times": 1, "interval_ms": 0, "timeout_ms": None, "grace_ms": 2000}
-_ITEM = {"id", "how", "paused", "runs", "last_code", "last_error"}
+AOS_INST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_inst.py")
+DEFAULTS = {"times": 1, "interval_ms": 0, "interval_mode": "after", "grace_ms": 5000, "ctl": None,
+            "ctl_poll_ms": 1000, "state": None, "error_wait_ms": 1000}
+_MODES = ("after", "fixed")
+_CAUGHT = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
 class LoopError(Exception):
-    """操作被拒。`code`＝錯誤代號，`msg`＝白話，`str(e)`＝「代號: 白話」。"""
+    """loop 自己出錯。`code`＝錯誤代號，`msg`＝白話，`exit`＝命令列退出碼，`str(e)`＝「代號: 白話」。"""
 
-    def __init__(self, code, msg):
+    def __init__(self, code, msg, exit=125):
         super().__init__("%s: %s" % (code, msg))
         self.code = code
         self.msg = msg
+        self.exit = exit
 
 
-def _int(v):
-    return isinstance(v, int) and not isinstance(v, bool)
+def _int(v, least=0):
+    return isinstance(v, int) and not isinstance(v, bool) and v >= least
 
 
-def _id(path):
-    """絕對路徑（inst.json 或它所在的資料夾）轉成 inst.json 的 realpath。"""
-    if not isinstance(path, str) or not os.path.isabs(path):
-        raise LoopError("FieldType", "id 要是絕對路徑，不是 %r" % (path,))
+def _read_json(path, err=LoopError):
     try:
-        return aos_inst.find(path)
-    except aos_inst.InstError as e:
-        raise LoopError(e.code, e.msg)
+        with open(path, encoding="utf-8") as f:
+            raw = f.read()
+    except OSError as e:
+        raise err("ReadFailed", "讀不到 %s：%s" % (path, e))
+    try:
+        return json.loads(raw)
+    except ValueError as e:
+        raise err("JsonSyntax", "%s 不是合法 JSON：%s" % (path, e))
 
 
-def _how(given, base):
-    """把 given 裡的執行方式蓋在 base 上，驗型別。"""
-    if not isinstance(given, dict):
-        raise LoopError("FieldType", "how 要是物件，不是 %r" % (given,))
-    for k in given:
-        if k not in HOW:
-            raise LoopError("FieldType", "不認得的執行方式 %r" % (k,))
-    how = dict(base, **given)
-    ok = {"times": how["times"] is None or _int(how["times"]) and how["times"] >= 0,
-          "interval_ms": _int(how["interval_ms"]) and how["interval_ms"] >= 0,
-          "timeout_ms": how["timeout_ms"] is None or _int(how["timeout_ms"]) and how["timeout_ms"] > 0,
-          "grace_ms": _int(how["grace_ms"]) and how["grace_ms"] >= 0}
-    for k, good in ok.items():
-        if not good:
-            raise LoopError("FieldType", "%s 的值不對：%r" % (k, how[k]))
-    return how
+def load_config(path, defaults=DEFAULTS, need_inst=True, err=LoopError):
+    """讀 loop.json 的外層（`inst` 那格不解，留給 aos_inst 每次重讀），驗型別、填預設，回 (realpath, cfg)。
+    daemon.json 也用這個（`defaults` 換成 daemon 的、`need_inst=False`）。"""
+    ident = os.path.realpath(path)
+    doc = _read_json(ident, err)
+    if not isinstance(doc, dict):
+        raise err("FieldType", "%s 要是物件" % ident)
+    if need_inst and "inst" not in doc:
+        raise err("FieldType", "%s 沒有 inst" % ident)
+    try:
+        outer = resolve({k: v for k, v in doc.items() if k != "inst"}, os.getcwd(), ident)
+    except DirectiveError as e:
+        raise err(e.code, e.msg)
+    cfg = {}
+    for k, default in defaults.items():
+        v = outer.get(k, default)
+        ok = {"times": v is None or _int(v), "interval_mode": v in _MODES, "ctl_poll_ms": _int(v, 1),
+              "ctl": v is None or isinstance(v, str) and v, "state": v is None or isinstance(v, str) and v,
+              "load": v is None or isinstance(v, str) and v, "save": v is None or isinstance(v, str) and v,
+              "work_dir": v is None or isinstance(v, str) and v, "control_dir": isinstance(v, str) and v,
+              }.get(k, _int(v))
+        if not ok:
+            raise err("FieldType", "%s 的 %s 值不對：%r" % (ident, k, v))
+        cfg[k] = os.path.abspath(v) if isinstance(v, str) and k not in ("interval_mode",) else v
+    return ident, cfg
 
 
-def _wait_arg(wait):
-    if not isinstance(wait, bool):
-        raise LoopError("FieldType", "wait 要是 True／False，不是 %r" % (wait,))
-    return wait
+# ---- ctl.json ----
+
+def _flag(v):
+    """paused／stop 的值 → (val, now)。`true`＝(True, False)。不對回 None。"""
+    if isinstance(v, bool):
+        return (v, False)
+    if isinstance(v, dict) and isinstance(v.get("val"), bool) and isinstance(v.get("now", False), bool):
+        return (v["val"], v.get("now", False))
+    return None
 
 
-class _Inst:
-    """一個實例。欄位都在 loop 的 cond 底下改。"""
+def parse_ctl(doc):
+    """驗 ctl.json 的內容，回只含有寫的欄位的 dict（paused／stop 變成 (val, now)）；不對丟 ValueError。"""
+    if not isinstance(doc, dict):
+        raise ValueError("ctl 要是物件")
+    out = {}
+    for k in ("paused", "stop"):
+        if k in doc:
+            out[k] = _flag(doc[k])
+            if out[k] is None:
+                raise ValueError("%s 要是 true／false 或 {\"val\": 布林, \"now\": 布林}，不是 %r" % (k, doc[k]))
+    for k, ok in (("times", lambda v: v is None or _int(v)), ("interval_ms", _int),
+                  ("interval_mode", lambda v: v in _MODES)):
+        if k in doc:
+            if not ok(doc[k]):
+                raise ValueError("%s 的值不對：%r" % (k, doc[k]))
+            out[k] = doc[k]
+    return out
 
-    def __init__(self, loop, ident, how):
-        self.loop = loop
-        self.id = ident
-        self.how = how
-        self.paused = False
-        self.removing = False
-        self.running = False
-        self.runs = 0
-        self.last_code = None
-        self.last_error = None
-        self.final = None
-        self.stop = threading.Event()
-        self.thread = threading.Thread(target=self._loop, name=ident, daemon=True)
 
-    def state(self):
-        if self.removing:
-            return "removing"
-        if self.running:
-            return "running"
-        if self.paused:
-            return "paused"
-        return "done" if self.how["times"] == 0 else "waiting"
+def want(initial, ctl):
+    """期望狀態＝初始值（loop.json）蓋上 ctl.json 有寫的欄位。ctl 沒寫的欄位回到初始值——這條規矩只在這裡。"""
+    return dict(initial, **ctl)
 
-    def status(self):
-        return dict({"id": self.id, "state": self.state()}, **self.how, runs=self.runs,
-                    last_code=self.last_code, last_error=self.last_error)
 
-    def _loop(self):
-        cond = self.loop.cond
-        with cond:
-            while True:
-                while not self.removing and (self.paused or self.how["times"] == 0):
-                    cond.wait()
-                if self.removing:
-                    break
-                self.running = True
-                self.stop.clear()
-                how = dict(self.how)
-                cond.release()
-                try:
-                    code, err = self._once(how)
-                finally:
-                    cond.acquire()
-                self.running = False
-                self.runs += 1
-                self.last_code, self.last_error = code, err
-                if self.how["times"]:
-                    self.how["times"] -= 1
-                wait_ms = self.how["interval_ms"]
-                if err is not None:
-                    wait_ms = max(wait_ms, self.loop.error_wait_ms)
-                deadline = time.monotonic() + wait_ms / 1000
-                while not self.removing and self.how["times"] != 0 and time.monotonic() < deadline:
-                    cond.wait(deadline - time.monotonic())
-            self.final = dict(self.status(), state="removed")
-            del self.loop.insts[self.id]
-            cond.notify_all()
+class CtlFile:
+    """一個 ctl.json：`poll()` 看有沒有變、變了就讀、驗、採用；`good`＝上一次採用的內容（parse_ctl 的結果）。"""
 
-    def _once(self, how):
-        """跑一次，回 (結束碼, None) 或 (None, 錯誤字串)。"""
+    def __init__(self, path, name="loop"):
+        self.path = path
+        self.name = name
+        self.key = None
+        self.good = {}
+        self.mtime = None
+        self.said = None
+
+    def _say(self, msg):
+        if self.said != msg:
+            self.said = msg
+            print("%s: %s" % (self.name, msg), file=sys.stderr)
+
+    def poll(self):
         try:
-            return aos_inst.run(aos_inst.load(self.id), timeout_ms=how["timeout_ms"], grace_ms=how["grace_ms"],
-                         stop=self.stop, stop_poll_ms=self.loop.stop_poll_ms, new_session=True), None
+            st = os.stat(self.path)
+        except FileNotFoundError:
+            if self.key is not None:
+                self._say("CtlMissing: ctl.json %s 不見了，維持上一次的狀態" % self.path)
+            return
+        except OSError as e:
+            self._say("CtlReadFailed: 看不了 ctl.json %s：%s" % (self.path, e))
+            return
+        key = (st.st_ino, st.st_mtime_ns, st.st_size)
+        if key == self.key:
+            return
+        self.key = key
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                doc = json.loads(f.read())
+            self.good = parse_ctl(doc)
+        except (OSError, ValueError) as e:
+            self._say("CtlBad: ctl.json %s 整份不採用（%s），維持上一次的狀態" % (self.path, e))
+            return
+        self.mtime = st.st_mtime
+        self.said = None
+
+
+def write_json(path, doc):
+    """先寫同資料夾的 `.名字.tmp` 再改名蓋過去。失敗丟 OSError（暫存檔清掉）。"""
+    d, name = os.path.split(path)
+    tmp = os.path.join(d, "." + name + ".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except OSError:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
+# ---- 子程序 ----
+
+def _exited(pid, timeout):
+    """等 pid 結束、不收屍，最多 timeout 秒，回結束了沒。"""
+    end = time.monotonic() + timeout
+    while os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is None:
+        if time.monotonic() >= end:
+            return False
+        time.sleep(0.01)
+    return True
+
+
+def _killpg(pid, sig):
+    try:
+        os.killpg(pid, sig)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
+def reap(proc):
+    """proc 已經結束（還沒收屍）：對整群補 SIGKILL 清掉孫程式，再收屍，回 returncode。群組號碼收屍前不會被拿走。"""
+    _killpg(proc.pid, signal.SIGKILL)
+    return proc.wait()
+
+
+def kill(proc, grace_ms):
+    """整群 SIGTERM，等 grace_ms 還沒結束就整群 SIGKILL，收屍，回 returncode。"""
+    _killpg(proc.pid, signal.SIGTERM)
+    _exited(proc.pid, grace_ms / 1000)
+    return reap(proc)
+
+
+class _Tail:
+    """把 aos_inst 的 stderr 原樣轉到自己的 stderr，記住最後一行。"""
+
+    def __init__(self, pipe):
+        self.last = None
+        self.thread = threading.Thread(target=self._read, args=(pipe,), daemon=True)
+        self.thread.start()
+
+    def _read(self, pipe):
+        for line in pipe:
+            sys.stderr.write(line.decode("utf-8", "replace"))
+            sys.stderr.flush()
+            if line.strip():
+                self.last = line.decode("utf-8", "replace").strip()
+        pipe.close()
+
+
+# ---- 主迴圈 ----
+
+class _Loop:
+    def __init__(self, path):
+        self.id, self.cfg = load_config(path)
+        c = self.cfg
+        self.initial = {"paused": (False, False), "stop": (False, False), "times": c["times"],
+                        "interval_ms": c["interval_ms"], "interval_mode": c["interval_mode"]}
+        self.ctl = CtlFile(c["ctl"]) if c["ctl"] else None
+        self.runs = self.skipped = 0
+        self.last_code = self.last_error = None
+        self.inst_exit = 0          # 最後一次是 aos_inst 自己出錯＝它的退出碼，否則 0
+        self.proc = self.tail = self.exit_path = None
+        self.stopping = False       # stop 讀到過一次就算數
+        self.last_end = None        # 上一次結束的時間（monotonic）；None＝還沒跑過
+        self.last_err = False
+        self.anchor = None          # fixed：第 0 拍的時間
+        self.tick = -1              # fixed：上一次起在第幾拍
+        self.written = None
+        self.said = None
+
+    def _say(self, msg):
+        if self.said != msg:
+            self.said = msg
+            print("loop: %s" % msg, file=sys.stderr)
+
+    def due(self, w):
+        """下一次最早什麼時候起（monotonic）。"""
+        if self.last_end is None:
+            return -math.inf
+        earliest = self.last_end + (self.cfg["error_wait_ms"] / 1000 if self.last_err else 0)
+        iv = w["interval_ms"] / 1000
+        if w["interval_mode"] == "after" or iv == 0 or self.anchor is None:
+            return max(earliest, self.last_end + iv)
+        n = max(self.tick + 1, math.ceil((earliest - self.anchor) / iv))
+        return self.anchor + n * iv
+
+    def start(self, w, now):
+        if w["interval_mode"] == "fixed" and w["interval_ms"]:
+            iv = w["interval_ms"] / 1000
+            if self.anchor is None:
+                self.anchor, n = now, 0
+            else:
+                n = max(self.tick + 1, math.floor((now - self.anchor) / iv))
+                self.skipped += n - self.tick - 1
+            self.tick = n
+        else:
+            self.anchor, self.tick = None, -1
+        try:
+            inst = aos_inst.load(self.wrapper)      # 先驗一次，順便拿到 exit 檔在哪
         except aos_inst.InstError as e:
-            return None, str(e)
-        except Exception as e:
-            return None, "Internal: %s: %s" % (type(e).__name__, e)
+            print(e, file=sys.stderr)
+            self.record(None, str(e), aos_inst.exit_code(e))
+            return
+        self.exit_path = inst["exit"]
+        self.proc = subprocess.Popen([sys.executable, AOS_INST, self.wrapper],
+                                     start_new_session=True, stderr=subprocess.PIPE)
+        self.tail = _Tail(self.proc.stderr)
+
+    def finish(self, rc):
+        self.tail.thread.join(1)
+        if rc == 0:
+            code = None if self.exit_path is None else aos_inst.read_exit(self.exit_path)
+            self.record(code, None, 0)
+        elif rc > 0:
+            self.record(None, self.tail.last or "aos_inst 退出碼 %d" % rc, rc)
+        else:
+            self.record(None, None, 0)      # aos_inst 被整群收掉了
+        self.proc = self.tail = None
+
+    def record(self, code, error, inst_exit):
+        self.runs += 1
+        self.last_code, self.last_error, self.inst_exit = code, error, inst_exit
+        self.last_end, self.last_err = time.monotonic(), error is not None
+
+    def status(self, w, final=None):
+        if final:
+            state = final
+        elif self.stopping:
+            state = "stopping"
+        elif self.proc:
+            state = "running"
+        elif w["paused"][0]:
+            state = "paused"
+        elif w["times"] is not None and self.runs >= w["times"]:
+            state = "done"
+        else:
+            state = "waiting"
+        return {"id": self.id, "state": state, "pid": os.getpid(), "times": w["times"],
+                "interval_ms": w["interval_ms"], "interval_mode": w["interval_mode"], "runs": self.runs,
+                "skipped": self.skipped, "last_code": self.last_code, "last_error": self.last_error,
+                "ctl_mtime": self.ctl.mtime if self.ctl else None}
+
+    def write_state(self, st):
+        if self.cfg["state"] is None or st == self.written:
+            return
+        try:
+            write_json(self.cfg["state"], st)
+            self.written = st
+        except OSError as e:
+            self._say("StateWriteFailed: 寫不了 state.json %s：%s" % (self.cfg["state"], e))
+
+    def serve(self, got):
+        c = self.cfg
+        next_poll = 0
+        final = None
+        while True:
+            now = time.monotonic()
+            if self.ctl and now >= next_poll:
+                self.ctl.poll()
+                next_poll = now + c["ctl_poll_ms"] / 1000
+            w = want(self.initial, self.ctl.good if self.ctl else {})
+            if w["stop"][0]:
+                self.stopping = True
+            if got:
+                if self.proc:
+                    self.finish(kill(self.proc, c["grace_ms"]))
+                final = "stopped"
+                break
+            if self.proc:
+                if _exited(self.proc.pid, 0):
+                    self.finish(reap(self.proc))
+                elif (self.stopping and w["stop"][1]) or (w["paused"][0] and w["paused"][1]):
+                    self.finish(kill(self.proc, c["grace_ms"]))
+            if not self.proc:
+                done = w["times"] is not None and self.runs >= w["times"]
+                if self.stopping:
+                    final = "stopped"
+                    break
+                if done and not self.ctl:
+                    final = "done"
+                    break
+                if not w["paused"][0] and not done and now >= self.due(w):
+                    self.start(w, now)
+            self.write_state(self.status(w))
+            time.sleep(0.01 if self.proc else 0.02)
+        self.write_state(self.status(w, final))
+
+    def run(self):
+        main = threading.current_thread() is threading.main_thread()
+        got = []
+        old = {s: signal.signal(s, lambda signum, frame: got.append(signum)) for s in _CAUGHT} if main else {}
+        tmp = tempfile.mkdtemp(prefix="aos-loop-")
+        self.wrapper = os.path.join(tmp, "inst.json")
+        try:
+            write_json(self.wrapper, {"$ref": self.id + "#/inst"})
+            self.serve(got)
+        finally:
+            if self.proc:
+                kill(self.proc, self.cfg["grace_ms"])
+            shutil.rmtree(tmp, ignore_errors=True)
+            for s, h in old.items():
+                signal.signal(s, h)
+        if got:
+            raise LoopError("Signaled", "收到訊號 %d" % got[0], 128 + got[0])
+        if self.inst_exit:
+            code = (self.last_error or "InstError").split(":")[0]
+            raise LoopError(code, "最後一次 aos_inst 自己出錯：%s" % self.last_error, self.inst_exit)
 
 
-class Loop:
-    def __init__(self, stop_poll_ms=50, error_wait_ms=1000):
-        self.stop_poll_ms = stop_poll_ms
-        self.error_wait_ms = error_wait_ms
-        self.cond = threading.Condition()
-        self.insts = {}
+def run(path):
+    """跟命令列 `aos_loop.py LOOP.json` 一模一樣。正常結束回 None；loop 自己出錯丟 `LoopError`。"""
+    _Loop(path).run()
 
-    def _get(self, path):
-        ident = _id(path)
-        if ident not in self.insts:
-            raise LoopError("NotFound", "沒有實例 %s" % ident)
-        return self.insts[ident]
 
-    def add(self, path, how=None):
-        """新增實例並開始跑，回 id（realpath）。"""
-        ident = _id(path)
-        if not os.path.isfile(ident):
-            raise LoopError("NotFound", "%s 不存在" % ident)
-        with self.cond:
-            self._put(ident, _how(how or {}, HOW))
-        return ident
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    if len(args) != 1:
+        print("用法：aos_loop.py LOOP.json", file=sys.stderr)
+        return 125
+    try:
+        run(args[0])
+        return 0
+    except LoopError as e:
+        if e.code not in ("Signaled",) and not e.msg.startswith("最後一次"):
+            print(e, file=sys.stderr)
+        return e.exit
 
-    def _put(self, ident, how, paused=False, runs=0, last_code=None, last_error=None):
-        if ident in self.insts:
-            raise LoopError("Exists", "實例 %s 已經在了" % ident)
-        inst = _Inst(self, ident, how)
-        inst.paused, inst.runs, inst.last_code, inst.last_error = paused, runs, last_code, last_error
-        self.insts[ident] = inst
-        inst.thread.start()
 
-    def snapshot(self):
-        """目前的表（不含 removing 的），存檔用。"""
-        with self.cond:
-            return [{"id": i.id, "how": dict(i.how), "paused": i.paused, "runs": i.runs,
-                     "last_code": i.last_code, "last_error": i.last_error}
-                    for i in self.insts.values() if not i.removing]
-
-    def restore(self, items):
-        """把 snapshot() 的表放回來、開始跑。全有全無：先全部驗過（含 inst.json 在不在、id 有沒有重複或已在表上），
-        有一筆不對就丟錯、一個都不放。"""
-        if not isinstance(items, list):
-            raise LoopError("FieldType", "表要是陣列")
-        todo = []
-        for it in items:
-            if not isinstance(it, dict) or set(it) != _ITEM:
-                raise LoopError("FieldType", "表裡每筆要是 {id, how, paused, runs, last_code, last_error}：%r" % (it,))
-            ok = (isinstance(it["id"], str) and os.path.isabs(it["id"]) and isinstance(it["paused"], bool)
-                  and _int(it["runs"]) and it["runs"] >= 0
-                  and (it["last_code"] is None or _int(it["last_code"]) and it["last_code"] >= 0) and (it["last_error"] is None or isinstance(it["last_error"], str)))
-            if not ok:
-                raise LoopError("FieldType", "表裡這筆的值不對：%r" % (it,))
-            todo.append((it["id"], _how(it["how"], HOW), it["paused"], it["runs"], it["last_code"], it["last_error"]))
-        for t in todo:
-            if not os.path.isfile(t[0]):
-                raise LoopError("NotFound", "%s 不存在" % t[0])
-        if len({t[0] for t in todo}) != len(todo):
-            raise LoopError("Exists", "表裡有重複的 id")
-        with self.cond:
-            for t in todo:
-                if t[0] in self.insts:
-                    raise LoopError("Exists", "實例 %s 已經在了" % t[0])
-            for t in todo:
-                self._put(*t)
-
-    def set(self, ident, how):
-        with self.cond:
-            inst = self._get(ident)
-            inst.how = _how(how, inst.how)
-            self.cond.notify_all()
-            return inst.status()
-
-    def remove(self, ident, wait=True):
-        """回 ready()：還沒收完回 None，收完回最後的狀態（state＝"removed"）。"""
-        with self.cond:
-            inst = self._get(ident)
-            inst.removing = True
-            if not _wait_arg(wait):
-                inst.stop.set()
-            self.cond.notify_all()
-
-        def ready():
-            with self.cond:
-                return inst.final
-        return ready
-
-    def pause(self, ident, wait=True):
-        """回 ready()：這次還在跑回 None，停了（或已經被 resume）回目前的狀態。"""
-        with self.cond:
-            inst = self._get(ident)
-            inst.paused = True
-            if not _wait_arg(wait) and inst.running:
-                inst.stop.set()
-
-        def ready():
-            with self.cond:
-                if inst.final is not None:
-                    return inst.final
-                return None if inst.running and inst.paused else inst.status()
-        return ready
-
-    def resume(self, ident):
-        with self.cond:
-            inst = self._get(ident)
-            inst.paused = False
-            self.cond.notify_all()
-            return inst.status()
-
-    def add_times(self, ident, delta):
-        """剩餘次數加減 delta，最少減到 0。"""
-        if not _int(delta):
-            raise LoopError("FieldType", "delta 要是整數，不是 %r" % (delta,))
-        with self.cond:
-            inst = self._get(ident)
-            if inst.how["times"] is None:
-                raise LoopError("Conflict", "%s 是不限次數，不能加減" % inst.id)
-            inst.how["times"] = max(0, inst.how["times"] + delta)
-            self.cond.notify_all()
-            return inst.status()
-
-    def state(self, ident):
-        """只回狀態字串：waiting／running／paused／done／removing。"""
-        with self.cond:
-            return self._get(ident).state()
-
-    def get(self, ident):
-        with self.cond:
-            return self._get(ident).status()
-
-    def list(self):
-        with self.cond:
-            return [i.status() for i in self.insts.values()]
-
-    def shutdown(self):
-        """所有實例當場收掉，等它們的執行緒都結束。"""
-        with self.cond:
-            threads = []
-            for inst in self.insts.values():
-                inst.removing = True
-                inst.stop.set()
-                threads.append(inst.thread)
-            self.cond.notify_all()
-        for t in threads:
-            t.join()
+if __name__ == "__main__":
+    sys.exit(main())

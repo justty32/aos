@@ -3,43 +3,28 @@
 
     python3 aos_par.py TARGET...
 
-- 先把全部 TARGET 讀好、驗過（同 aos_inst 的 load），有一個不對就印「代號: 白話」、退出碼 125，一個都不跑。
-- 一個失敗不影響其他的，照樣等全部結束。全部是 0 退出碼 0；否則照參數順序取第一個不是 0 的結束碼。
-- 某個 inst 起不來（aos_inst 自己出錯）：照參數順序印「代號: 白話」，那一個算 127／126／125（同 aos_inst 命令列）。
-- 收到 SIGINT／SIGTERM／SIGHUP：全部收掉（SIGTERM，過 2 秒再 SIGKILL），退出碼＝128＋訊號號碼。
-- 子程式留在自己的行程群組（不開 new_session），外面整群收時一起收到。
+- 先把全部 TARGET 讀好、驗過（同 aos_inst 的 load，另外每個都要寫 exit），有一個不對就印「代號: 白話」、退出碼 125，一個都不跑。
+- 每個用 `aos_inst.py` 跑，一起起來；一個失敗不影響其他的，照樣等全部結束。
+  然後照參數順序讀各自的 exit 檔：全部是 0 退出碼 0；否則取第一個不是 0 的碼。
+- 某個 inst 起不來（aos_inst 自己出錯）：它自己印一行，那一個算 aos_inst 的退出碼（127／126／125）。
+- 收到 SIGINT／SIGTERM／SIGHUP：轉給全部（aos_inst 再轉給子程式，過它的 grace_ms 再 SIGKILL），退出碼＝128＋訊號號碼。
+- 子程式留在自己的行程群組（不開 new session），外面整群收時一起收到。
 """
 import sys
-import threading
 
-from aos_tasks import InstError, Signals, exit_code, load_all
-from aos_inst import run
+from aos_tasks import Signals, load_all, result, start
 
 
 def main(argv=None):
-    insts = load_all(sys.argv[1:] if argv is None else argv, "aos_par.py TARGET...")
-    if insts is None:
+    items = load_all(sys.argv[1:] if argv is None else argv, "aos_par.py TARGET...")
+    if items is None:
         return 125
-    codes = [None] * len(insts)
     with Signals() as sig:
-        def one(i):
-            try:
-                codes[i] = run(insts[i], stop=sig.stop)
-            except InstError as e:
-                codes[i] = e
-        threads = [threading.Thread(target=one, args=(i,)) for i in range(len(insts))]
-        for t in threads:
-            t.start()
-        for t in threads:
-            while t.is_alive():
-                t.join(0.05)    # 不用無限 join，主執行緒才接得到訊號
-    for c in codes:
-        if isinstance(c, InstError):
-            print(c, file=sys.stderr)
+        procs = [start(item, sig) for item in items]
+        codes = [result(p, item)[0] for p, item in zip(procs, items)]
     if sig.got:
         return 128 + sig.got
     for c in codes:
-        c = exit_code(c) if isinstance(c, InstError) else c
         if c:
             return c
     return 0

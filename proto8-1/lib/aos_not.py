@@ -3,27 +3,24 @@
 
     python3 aos_not.py TARGET
 
-- 結束碼 0 → 退出碼 1；不是 0 → 退出碼 0。
-- TARGET 不對＝退出碼 125；起不來（aos_inst 自己出錯）＝127／126／125（同 aos_inst 命令列）。都印「代號: 白話」、不反過來。
-- 收到 SIGINT／SIGTERM／SIGHUP：收掉它（SIGTERM，過 2 秒再 SIGKILL），退出碼＝128＋訊號號碼（不反過來）。
-- 子程式留在自己的行程群組（不開 new_session），外面整群收時一起收到。
+- 用 `aos_inst.py` 跑，讀它的 exit 檔：0 → 退出碼 1；不是 0 → 退出碼 0。
+- TARGET 不對（含沒寫 exit）＝退出碼 125；起不來（aos_inst 自己出錯）＝沿用 aos_inst 的退出碼（127／126／125）；都不反過來。
+- 收到 SIGINT／SIGTERM／SIGHUP：轉給它（aos_inst 再轉給子程式，過它的 grace_ms 再 SIGKILL），退出碼＝128＋訊號號碼（不反過來）。
+- 子程式留在自己的行程群組（不開 new session），外面整群收時一起收到。
 """
 import sys
 
-from aos_tasks import InstError, Signals, exit_code, load_all
-from aos_inst import run
+from aos_tasks import Signals, load_all, result, start
 
 
 def main(argv=None):
-    insts = load_all(sys.argv[1:] if argv is None else argv, "aos_not.py TARGET", 1, 1)
-    if insts is None:
+    items = load_all(sys.argv[1:] if argv is None else argv, "aos_not.py TARGET", 1, 1)
+    if items is None:
         return 125
     with Signals() as sig:
-        try:
-            code = 0 if run(insts[0], stop=sig.stop) else 1
-        except InstError as e:
-            print(e, file=sys.stderr)
-            code = exit_code(e)
+        code, ran = result(start(items[0], sig), items[0])
+        if ran:
+            code = 0 if code else 1
     return 128 + sig.got if sig.got else code
 
 

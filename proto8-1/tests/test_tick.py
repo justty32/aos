@@ -10,14 +10,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import unittest
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TICK = os.path.join(HERE, "bin", "aos-tick")
-sys.path.insert(0, os.path.join(HERE, "..", "proto8", "lib"))
-
-from aos_loop import Loop  # noqa: E402
+LOOP = os.path.join(HERE, "..", "proto8", "lib", "aos_loop.py")
 
 
 class Tick(unittest.TestCase):
@@ -87,18 +84,14 @@ class Tick(unittest.TestCase):
         self.assertEqual(os.listdir(self.tmp), [])
 
     def test_loop_times_3(self):
-        d = os.path.join(self.tmp, "tick")
-        os.mkdir(d)
-        with open(os.path.join(d, "inst.json"), "w") as f:
-            json.dump({"argv": [TICK, self.file], "cwd": self.tmp}, f)
-        loop = Loop(stop_poll_ms=10)
-        self.addCleanup(loop.shutdown)
-        ident = loop.add(d, {"times": 3, "interval_ms": 10})
-        end = time.monotonic() + 5
-        while loop.get(ident)["state"] != "done":
-            self.assertLess(time.monotonic(), end, "等不到")
-            time.sleep(0.02)
-        self.assertEqual(loop.get(ident)["last_code"], 0)
+        loop = os.path.join(self.tmp, "tick.loop.json")
+        with open(loop, "w") as f:
+            json.dump({"inst": {"argv": [TICK, self.file], "cwd": self.tmp, "exit": "tick.exit", "exit_append": True},
+                       "times": 3, "interval_ms": 10}, f)
+        r = subprocess.run([sys.executable, LOOP, loop], cwd=self.tmp, timeout=10)
+        self.assertEqual(r.returncode, 0)
+        with open(os.path.join(self.tmp, "tick.exit")) as f:
+            self.assertEqual(f.read(), "0\n0\n0\n")
         self.assertEqual(self.read(), "3\n")
 
 
