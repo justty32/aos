@@ -146,21 +146,73 @@ class TestRun(Base):
                    "envs": {"K": "k"}, "envs_clear": True}, self.d))
         self.assertEqual(self.read("o.txt"), "[][k]\n")
 
-    def test_signal_not_found_not_executable(self):
+    def test_signal_code(self):
         self.assertEqual(run(parse({"argv": ["sh", "-c", "kill -9 $$"]}, self.d)), 137)
-        self.assertEqual(run(parse({"argv": ["no-such-program-xyz"]}, self.d)), 127)
+
+    def test_launch_failures_raise(self):
         p = self.write("noexec.sh", "echo hi", raw=True)
-        self.assertEqual(run(parse({"argv": [p]}, self.d)), 126)
+        for doc, code in (({"argv": ["no-such-program-xyz"]}, "CommandNotFound"),
+                          ({"argv": [p]}, "CommandNotExecutable"),
+                          ({"argv": ["true"], "cwd": "nope"}, "CwdMissing"),
+                          ({"argv": ["true"], "stdin": "missing.txt"}, "OpenFailed")):
+            with self.subTest(code=code):
+                with self.assertRaises(InstError) as cm:
+                    run(parse(dict(doc, exit="x.txt"), self.d))
+                self.assertEqual(cm.exception.code, code)
+                self.assertFalse(os.path.exists(os.path.join(self.d, "x.txt")), "沒起來就不寫 exit")
+
+
+class TestExit(Base):
+    def setUp(self):
+        super().setUp()
+        old = os.getcwd()
+        os.chdir(self.d)
+        self.addCleanup(os.chdir, old)
+
+    def go(self, code, **kw):
+        return run(parse(dict({"argv": ["sh", "-c", "exit %d" % code]}, **kw), self.d))
+
+    def test_exit_file(self):
+        self.assertEqual(self.go(3, exit="x.txt"), 3)
+        self.assertEqual(self.read("x.txt"), "3\n")
+        self.go(0, exit="x.txt")
+        self.assertEqual(self.read("x.txt"), "0\n")
+
+    def test_exit_append_and_mkdir(self):
+        self.go(1, exit="a/b/x.txt", exit_mkdir=True)
+        self.go(2, exit="a/b/x.txt", exit_append=True)
+        self.assertEqual(self.read("a/b/x.txt"), "1\n2\n")
+
+    def test_exit_follows_cwd(self):
+        self.go(5, cwd="w", cwd_mkdir=True, exit="x.txt")
+        self.assertEqual(self.read("w/x.txt"), "5\n")
+
+    def test_exit_signal(self):
+        run(parse({"argv": ["sh", "-c", "kill -15 $$"], "exit": "x.txt"}, self.d))
+        self.assertEqual(self.read("x.txt"), "143\n")
+
+    def test_exit_write_failed(self):
+        with self.assertRaises(InstError) as cm:
+            self.go(4, exit="no/such/dir/x.txt")
+        self.assertEqual(cm.exception.code, "ExitWriteFailed")
+        self.assertIn("結束碼 4", cm.exception.msg)
+
+    def test_exit_type(self):
+        self.fails("FieldType", {"argv": ["a"], "exit": 1})
+        self.fails("FieldType", {"argv": ["a"], "exit_append": 1})
 
 
 class TestCli(Base):
     def cli(self, *args):
         return subprocess.run([sys.executable, "-B", os.path.join(LIB, "aos_inst.py")] + list(args),
-                              capture_output=True, text=True, timeout=10)
+                              capture_output=True, text=True, timeout=10, cwd=self.d)
 
-    def test_runs_folder(self):
-        self.write(".aos/inst.json", {"argv": ["sh", "-c", "exit 4"]})
-        self.assertEqual(self.cli(self.d).returncode, 4)
+    def test_child_code_not_returned(self):
+        """子程式回 4，命令列照樣 0；4 只在 exit 檔裡。"""
+        self.write(".aos/inst.json", {"argv": ["sh", "-c", "exit 4"], "exit": "x.txt"})
+        r = self.cli(self.d)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.read("x.txt"), "4\n")
 
     def test_inst_error_is_125_one_line(self):
         p = self.cli(self.d)
@@ -168,13 +220,15 @@ class TestCli(Base):
         self.assertTrue(p.stderr.startswith("NotFound: "))
         self.assertEqual(len(p.stderr.splitlines()), 1)
 
-    def test_usage_and_open_failed(self):
+    def test_usage_and_launch_failures_are_125(self):
         self.assertEqual(self.cli().returncode, 125)
-        self.assertEqual(self.cli(self.d, "--base", "inst").returncode, 125)
-        p = self.write("i.json", {"argv": ["true"], "stdin": "missing.txt"})
-        r = self.cli(p)
-        self.assertEqual(r.returncode, 125)
-        self.assertTrue(r.stderr.startswith("OpenFailed: "))
+        self.assertEqual(self.cli(self.d, "extra").returncode, 125)
+        for doc, code in (({"argv": ["true"], "stdin": "missing.txt"}, "OpenFailed"),
+                          ({"argv": ["no-such-program-xyz"]}, "CommandNotFound")):
+            with self.subTest(code=code):
+                r = self.cli(self.write("i.json", doc))
+                self.assertEqual(r.returncode, 125)
+                self.assertTrue(r.stderr.startswith(code + ": "), r.stderr)
 
 
 if __name__ == "__main__":
