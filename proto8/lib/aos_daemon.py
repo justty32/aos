@@ -40,10 +40,11 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd）：
     {"op": "set",       "id": ID, "how": {...}}   改 times／interval_ms／interval_mode（寫進它的 ctl.json）
     {"op": "pause",     "id": ID, "wait": B}      暫停；wait＝true 等這次跑完，false 當場收掉（預設 true）
     {"op": "resume",    "id": ID}                 繼續
-    {"op": "add_times", "id": ID, "delta": N}     總次數加減 N（最少到 0；不限次數＝Conflict）
+    {"op": "add_times", "id": ID, "delta": N}     總次數加減 N（最少到 0；不限次數＝Conflict；loop 已經退出就沒作用）
     {"op": "remove",    "id": ID, "wait": B}      停掉它（ctl 的 stop）、等行程結束、從表上拿掉 → result＝最後的狀態物件
     {"op": "state",     "id": ID}                 → result＝狀態字串（loop 還沒寫 state.json＝"starting"）
-    {"op": "get",       "id": ID}                 → result＝狀態物件（就是它的 state.json；行程已結束＝state "stopped"）
+    {"op": "get",       "id": ID}                 → result＝狀態物件（就是它的 state.json；次數跑完的 loop 會自己退出，
+                                                  留在表上、state "done"；其他原因結束的＝"stopped"）
     {"op": "list"}                                → result＝[狀態物件, ...]
     {"op": "save",      "path": P}                表存成一份 JSON（整份重寫）                → result＝存了幾個
     {"op": "load",      "path": P}                從 save 存的檔一次起回來                    → result＝[id, ...]
@@ -141,7 +142,7 @@ class _Entry:
         if st is None or st.get("pid") != self.proc.pid:
             st = {"id": self.id, "state": "stopped" if self.exited() else "starting"}
         st = dict(st, id=self.id)
-        if self.exited():
+        if self.exited() and st["state"] not in ("done", "stopped"):
             st["state"] = "stopped"
         return st
 

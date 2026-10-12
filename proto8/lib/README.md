@@ -70,7 +70,7 @@ python3 proto8/lib/aos_loop.py LOOP.json
 - 每一次：起子程序 `aos_inst.py`（自成一個 session）→ 等它結束 → 整群補 SIGKILL 清孫程式 → 收屍。解好的 inst 在起來時寫成暫存資料夾裡的一份 inst.json，每次都把它的路徑交給 aos_inst，結束刪掉。
 - 結果：aos_inst 回 0 → `last_code`＝exit 檔最後一行（沒寫 exit＝null）；非 0 → `last_error`＝它 stderr 的最後一行。
 - **ctl.json**（宣告式，NORMS N-06～）：`paused`、`stop`（`true` 或 `{"val": true, "now": true}`；now＝當場收掉正在跑的）、`times`、`interval_ms`、`interval_mode`。沒寫的欄位＝loop.json 的初始值（只在 `want()` 一處）。stop 是終點。壞檔、型別錯、不見了＝維持上一次、印一次。(inode, mtime, 大小) 變了才重讀。
-- 次數跑完：沒有 ctl 就結束；有 ctl 就留著（times 改大再跑，stop 才結束）。
+- 次數跑完（runs ≥ times）就結束、退出，有 ctl 也一樣；想再跑就重新起。
 - **state.json**（選填）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`pid`、`times`、`interval_ms`、`interval_mode`、`runs`、`skipped`、`last_code`、`last_error`、`ctl_mtime`（上次套用的 ctl.json 的 mtime，寫 ctl 的人拿來確認被讀到了）。暫存再改名。
 - 退出碼只說 loop 自己：0＝正常結束（子程式回非 0 不算）；最後一次是 aos_inst 自己出錯＝沿用它的碼；被訊號停掉＝128＋N；loop.json 不對＝125。`run(path)` 正常回 None，否則丟 `LoopError`（`exit` 屬性＝退出碼）。
 - 給 daemon 共用的：`load_config()`、ctl 那組（`parse_ctl()`、`want()`、`CtlFile`）、state 那組（`state_doc()`、`read_state()`、`StateFile`：欄位、讀、寫只在這裡）、`write_json()`、`kill()`／`reap()`。
@@ -87,7 +87,7 @@ python3 proto8/lib/aos_daemon.py DAEMON.json
 - 自己的 ctl.json：paused＝不掃（指令堆著、loop 照跑）；stop＝收工（先 save；now＝底下 loop 當場收掉，沒 now＝替它們寫 stop、等它們跑完）；times 跑完同 stop（不帶 now）。
 - 表上每個 loop 是一支子程序 `aos_loop.py`（自成 session）。daemon 只靠兩個檔控制它：寫它的 ctl.json、讀它的 state.json。loop.json 沒寫 ctl／state 的，在 `work_dir/<編號>/` 生包裝檔（每個 key `$ref` 回原檔、補上 ctl／state），移除或收工時刪掉。
 - 控制資料夾（NORMS N-10）：放 `名字.json`，處理完變 `名字.json.done`，內容 `{"request", "ok", "result"|"error": {"code", "msg"}}`；`.` 開頭不讀；`.done` 由丟的人清。指令 `{"op", "id", ...}`，id＝loop.json 的絕對路徑（`add` 也收 inst.json：頂層沒有 `inst`、有 `argv` 的，包成只跑一次的 loop `{"inst": {"$ref": 它}, "times": 1}`，id 是那份 inst.json 的 realpath）：`add`、`set`（`how`：times／interval_ms／interval_mode）、`pause`／`remove`（`wait` 預設 true）、`resume`、`add_times`（`delta`）、`state`、`get`、`list`、`save`／`load`（`path`）。
-- set／pause／resume／add_times 等 loop 讀到了才回（state.json 的 ctl_mtime 趕上），pause 還要等真的停了，remove 等行程結束；等的期間指令檔留在原地。
+- 次數跑完的 loop 自己退出，留在表上（state `done`），要再跑就 remove 再 add。set／pause／resume／add_times 等 loop 讀到了才回（state.json 的 ctl_mtime 趕上），pause 還要等真的停了，remove 等行程結束；等的期間指令檔留在原地。
 - save 存 `[{"loop": realpath, "ctl": 當下 ctl.json}]`；runs 不存。load 全有全無（不在＝NotFound、重複或 state.json 的 pid 還活著＝Exists、格式不對＝FieldType），會把 ctl 內容寫回各 loop 的 ctl.json 再起。
 - 收工：SIGTERM＝先 save、對每個 loop 的 session 送 SIGTERM、等 grace_ms、整群 SIGKILL；SIGINT 一樣但不存。巢狀 grace：inst（2000）＜ loop（5000）＜ daemon（10000）。
 - 出意外不結束、stderr 印一次：ScanFailed、ReplyFailed、Internal。退出碼 0＝正常、1＝起不來或 save 失敗。
@@ -98,7 +98,7 @@ python3 proto8/lib/aos_daemon.py DAEMON.json
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，39 個、約 9 秒。一個檔 `test_lib.py` 分四組（指示詞、inst、loop、daemon），loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，39 個、約 11 秒。一個檔 `test_lib.py` 分四組（指示詞、inst、loop、daemon），loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 
