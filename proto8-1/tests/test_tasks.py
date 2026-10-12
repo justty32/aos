@@ -1,4 +1,4 @@
-"""proto8-1 的自動測試（aos-seq、aos-par）。只用標準庫：
+"""proto8-1 的自動測試（aos-seq、aos-par、aos-if、aos-not）。只用標準庫：
 
     python3 -m unittest discover -s proto8-1/tests
 
@@ -19,6 +19,8 @@ LIB = os.path.join(HERE, "lib")
 BIN = os.path.join(HERE, "bin")
 SEQ = os.path.join(LIB, "aos_seq.py")
 PAR = os.path.join(LIB, "aos_par.py")
+IF = os.path.join(LIB, "aos_if.py")
+NOT = os.path.join(LIB, "aos_not.py")
 sys.path.insert(0, os.path.join(HERE, "..", "proto8", "lib"))
 
 from aos_loop import Loop  # noqa: E402
@@ -106,6 +108,33 @@ class Tasks(unittest.TestCase):
         self.assertEqual(self.cli(SEQ, a, inner, z).returncode, 0)
         log = self.read("log").split()
         self.assertEqual((log[0], sorted(log[1:3]), log[3]), ("a", ["x", "y"], "z"))
+
+    def test_if(self):
+        ok, ng, t, e = self.sh("ok", "true"), self.sh("ng", "exit 2"), self.sh("t", "exit 3"), self.sh("e", "exit 4")
+        for args, code, log in (((ok, t, e), 3, "ok t"), ((ng, t, e), 4, "ng e"), ((ng, t), 0, "ng"), ((ok, t), 3, "ok t")):
+            with self.subTest(args=args):
+                self.assertEqual(self.cli(IF, *args).returncode, code)
+                self.assertEqual(self.read("log").split(), log.split())
+                os.remove(self.p("log"))
+        for args in ((ok,), (ok, t, e, e)):
+            self.assertEqual(self.cli(IF, *args).returncode, 1)
+        self.assertFalse(os.path.exists(self.p("log")))
+
+    def test_not(self):
+        ok, ng, bad = self.sh("ok", "true"), self.sh("ng", "exit 2"), self.inst("bad", ["/no/such/prog"])
+        self.assertEqual([self.cli(NOT, x).returncode for x in (ok, ng, bad)], [1, 0, 1])
+        self.assertEqual(self.cli(NOT, ok, ng).returncode, 1)
+
+    def test_if_signal_skips_branch(self):
+        c = self.inst("c", ["sh", "-c", "echo $$ > c.pid; exec sleep 30"])
+        t = self.sh("t", "true")
+        proc = subprocess.Popen([sys.executable, IF, c, t, t], cwd=self.tmp)
+        self.addCleanup(lambda: proc.poll() is None and proc.kill())
+        self.until(lambda: os.path.exists(self.p("c.pid")))
+        time.sleep(0.1)
+        proc.send_signal(signal.SIGINT)
+        self.assertEqual(proc.wait(5), 128 + signal.SIGINT)
+        self.assertFalse(os.path.exists(self.p("log")))
 
     def signal_test(self, prog):
         s1 = self.inst("s1", ["sh", "-c", "echo $$ > s1.pid; exec sleep 30"])

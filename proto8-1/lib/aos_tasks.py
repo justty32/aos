@@ -1,4 +1,4 @@
-"""aos-seq、aos-par 共用的部分：找到 proto8/lib、一次讀好全部 inst、接訊號。純標準庫。
+"""tasks 小程式共用的部分：找到 proto8/lib、一次讀好全部 inst、接訊號。純標準庫。
 
 tasks 是一組小程式，每支做一件事，跟 aos_inst 一樣是獨立的命令列程式，寫在 inst.json 的 argv 裡被跑。
 參數一律是 inst 的 TARGET（`.json` 檔或資料夾，同 aos_inst），相對路徑從自己的 cwd 算。
@@ -18,10 +18,11 @@ __all__ = ["InstError", "load_all", "Signals"]
 _CAUGHT = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
-def load_all(targets, usage):
-    """全部 TARGET 先讀好、驗過，回 inst 的 list；有任何一個不對就印「代號: 白話」回 None（一個都不跑）。"""
-    if not targets:
-        print("用法：%s TARGET..." % usage, file=sys.stderr)
+def load_all(targets, usage, least=1, most=None):
+    """全部 TARGET 先讀好、驗過，回 inst 的 list；個數不在 least～most（None＝不限）印用法、
+    有任何一個不對就印「代號: 白話」，都回 None（一個都不跑）。"""
+    if len(targets) < least or most is not None and len(targets) > most:
+        print("用法：%s" % usage, file=sys.stderr)
         return None
     insts = []
     for t in targets:

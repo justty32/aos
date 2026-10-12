@@ -17,7 +17,7 @@ from aos_inst import run
 
 
 def main(argv=None):
-    insts = load_all(sys.argv[1:] if argv is None else argv, "aos_par.py")
+    insts = load_all(sys.argv[1:] if argv is None else argv, "aos_par.py TARGET...")
     if insts is None:
         return 1
     codes = [None] * len(insts)
