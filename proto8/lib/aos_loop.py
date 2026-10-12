@@ -39,7 +39,7 @@ ctl.json（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣�
 壞 JSON、不是物件、型別不對：整份不採用，維持上一次的好狀態，stderr 印一行（同一件事印一次）。
 檔不見了：維持上一次的狀態、印一次；起來時就不在＝還沒有控制（之後出現了照樣讀）。
 
-次數跑完（runs ≥ times）：沒有 ctl 就結束；有 ctl 就留著等（times 改大再跑，stop 才結束）。
+次數跑完（runs ≥ times）就結束、退出（有 ctl 也一樣）；想再跑就重新起。
 
 state.json（選填）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`pid`、`times`、`interval_ms`、
 `interval_mode`、`runs`、`skipped`、`last_code`、`last_error`、`ctl_mtime`（上次套用的 ctl.json 的 mtime；沒有＝null）。
@@ -432,7 +432,7 @@ class _Loop:
                 if self.stopping:
                     final = "stopped"
                     break
-                if done and not self.ctl:
+                if done:
                     final = "done"
                     break
                 if not w["paused"][0] and not done and now >= self.due(w):

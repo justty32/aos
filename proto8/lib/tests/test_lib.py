@@ -280,7 +280,7 @@ class LoopTest(Tmp):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 aos_loop.parse_ctl(bad)
 
-    def test_ctl_pause_resume_times_stop(self):
+    def test_ctl_pause_then_times_exits_when_done(self):
         self.ctl({"paused": True})
         path = self.loop(sh="echo x >> l.out", times=None, interval_ms=20, ctl="l.ctl.json", state="l.state.json")
         proc = self.start(path)
@@ -288,15 +288,11 @@ class LoopTest(Tmp):
         time.sleep(0.2)
         self.assertFalse(os.path.exists(self.p("l.out")))
         self.ctl({"times": 2})                          # paused 沒寫＝回到初始值（false）
-        self.until(lambda: (self.state() or {}).get("state") == "done")
+        self.assertEqual(proc.wait(5), 0)               # 次數跑完就退出，有 ctl 也一樣
         self.assertEqual(self.read("l.out"), "x\nx\n")
-        self.ctl({"times": 3})                          # done 不是終點，改大再跑
-        self.until(lambda: (self.state() or {}).get("runs") == 3)
         st = self.state()
+        self.assertEqual((st["state"], st["runs"]), ("done", 2))
         self.assertEqual(st["ctl_mtime"], os.stat(self.p("l.ctl.json")).st_mtime)
-        self.ctl({"times": 3, "stop": True})
-        self.assertEqual(proc.wait(5), 0)
-        self.assertEqual(self.state()["state"], "stopped")
 
     def test_ctl_now_kills_current(self):
         self.ctl({})
@@ -408,12 +404,17 @@ class Daemon(Tmp):
 
     def test_commands(self):
         self.start()
-        a = self.loop("a", times=0)
+        a = self.loop("a", times=None, interval_ms=100000)
         ident = self.ok({"op": "add", "id": a})
         self.assertEqual(ident, os.path.realpath(a))
-        self.until(lambda: self.ok({"op": "state", "id": a}) == "done")
-        st = self.ok({"op": "set", "id": a, "how": {"interval_ms": 5}})
-        self.assertEqual((list(st)[:2], st["interval_ms"]), (["id", "state"], 5))
+        self.until(lambda: self.ok({"op": "get", "id": a}).get("runs") == 1)
+        self.assertEqual(self.ok({"op": "state", "id": a}), "waiting")
+        st = self.ok({"op": "set", "id": a, "how": {"interval_ms": 50000}})
+        self.assertEqual((list(st)[:2], st["interval_ms"]), (["id", "state"], 50000))
+        z = self.loop("z", times=0)                     # 次數跑完的 loop 自己退出，留在表上、state done
+        self.ok({"op": "add", "id": z})
+        self.until(lambda: self.ok({"op": "state", "id": z}) == "done")
+        self.ok({"op": "remove", "id": z})
         self.assertEqual([s["id"] for s in self.ok({"op": "list"})], [ident])
         self.assertEqual(self.err({"op": "add", "id": a}), "Exists")
         self.assertEqual(self.err({"op": "add", "id": "a.loop.json"}), "FieldType")
@@ -431,10 +432,10 @@ class Daemon(Tmp):
 
     def test_add_times_and_wrapper(self):
         self.start()
-        a = self.loop("a", "echo x >> a.out", times=1)
+        a = self.loop("a", "sleep 0.3; echo x >> a.out", times=1)
         self.ok({"op": "add", "id": a})
-        self.until(lambda: self.ok({"op": "get", "id": a}).get("runs") == 1)
-        self.assertEqual(self.ok({"op": "add_times", "id": a, "delta": 2})["times"], 3)
+        self.until(lambda: self.ok({"op": "state", "id": a}) == "running")
+        self.assertEqual(self.ok({"op": "add_times", "id": a, "delta": 2})["times"], 3)    # 跑完之前加
         self.until(lambda: self.ok({"op": "get", "id": a}).get("state") == "done" and self.read("a.out") == "x\n" * 3)
         self.assertEqual(json.loads(self.read("loops/1/ctl.json")), {"times": 3})
         self.ok({"op": "set", "id": a, "how": {"times": None}})
@@ -442,20 +443,19 @@ class Daemon(Tmp):
 
     def test_add_inst_json_runs_once(self):
         self.start()
-        d = self.inst("a", "echo x >> a.out", exit="a.exit")
+        d = self.inst("a", "sleep 1.5; echo x >> a.out", exit="a.exit")   # 包裝檔的 ctl_poll_ms 是預設 1000
         ident = self.ok({"op": "add", "id": d + "/inst.json"})
         self.assertEqual(ident, os.path.realpath(d + "/inst.json"))
-        self.until(lambda: self.ok({"op": "get", "id": ident}).get("state") == "done")
-        st = self.ok({"op": "add_times", "id": ident, "delta": 1})
-        self.assertEqual(st["times"], 2)
-        self.until(lambda: self.ok({"op": "get", "id": ident}).get("runs") == 2)
-        self.assertEqual(self.read("a.out"), "x\nx\n")
+        self.until(lambda: self.ok({"op": "state", "id": ident}) == "running")
+        self.assertEqual(self.ok({"op": "add_times", "id": ident, "delta": 1})["times"], 2)
+        self.until(lambda: self.ok({"op": "get", "id": ident}).get("state") == "done", 10)
+        self.assertEqual((self.read("a.out"), self.read("a.exit")), ("x\nx\n", "0\n"))
         self.write("bad.json", {"argv": []})
         self.assertEqual(self.err({"op": "add", "id": self.p("bad.json")}), "FieldType")
 
     def test_own_ctl_state_used(self):
         self.start()
-        a = self.loop("a", times=0, ctl="a.ctl.json", state="a.state.json")
+        a = self.loop("a", times=None, interval_ms=100000, ctl="a.ctl.json", state="a.state.json")
         self.ok({"op": "add", "id": a})
         self.ok({"op": "pause", "id": a})
         self.assertEqual(json.loads(self.read("a.ctl.json")), {"paused": {"val": True, "now": False}})
@@ -485,7 +485,7 @@ class Daemon(Tmp):
 
     def test_save_load(self):
         self.start()
-        a, b = self.loop("a", times=0), self.loop("b", times=0, interval_ms=9)
+        a, b = self.loop("a", times=None, interval_ms=100000), self.loop("b", times=None, interval_ms=100000)
         self.ok({"op": "add", "id": a})
         self.ok({"op": "add", "id": b})
         self.ok({"op": "pause", "id": b})
