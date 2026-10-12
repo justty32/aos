@@ -39,8 +39,8 @@ error.code：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict�
 相對路徑（id、path、inst.json 裡的）基準都是 daemon 啟動時的 cwd。
 實例表只在記憶體裡，daemon 起來時是空的、結束就沒了；要留就 save，要接回來就 load。
 save 存每個實例的 id、how（含剩餘 times）、paused、runs、last_error（removing 的不存；跑到一半的那次不算，
-load 回來會重跑）；先寫 `.名字.tmp` 再改名，不 fsync。load 是全有全無：檔裡有任何一個 id 已經在表上（Exists）
-或內容不對（FieldType），一個都不載；inst.json 不在了也照載（跑的時候記進 last_error）。
+load 回來會重跑）；先寫 `.名字.tmp` 再改名，不 fsync。load 是全有全無：有任何一點不對——某個 inst.json 不在（NotFound）、
+某個 id 已經在表上或檔裡重複（Exists）、內容格式不對（FieldType）——就回 error，一個都不載。
 daemon 收到 SIGINT／SIGTERM：所有實例當場收掉，然後結束。SIGTERM 且 config 有 save＝收掉前先 save
 （存不了＝stderr 一行 WriteFailed、退出碼 1）。
 跑起來之後出意外不結束，只往 stderr 印一行（同一件事印一次）：控制資料夾看不了（ScanFailed）、
