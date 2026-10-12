@@ -43,3 +43,29 @@ python3 proto8/lib/aos_inst.py TARGET
 - 兩條路分工：**子程式的結束碼只寫進 `exit` 檔**（十進位＋換行；自己結束＝它的碼，被訊號停掉＝128＋訊號號碼，沒起來不寫）；**命令列退出碼只說 aos_inst 自己**：0＝子程式跑完了、1＝aos_inst 自己出錯、子程式沒跑（stderr 一行「代號: 白話」）。exit 寫不進去不管。
 - API：`load(target)`、`parse(doc, base_dir)`、`run(inst, ...)`（不回東西，出錯丟 `InstError`）。
 
+
+## loop（`aos_loop.py`）
+
+daemon 的 lib，不碰檔案。一張實例表，每個實例自己一條執行緒，照執行方式一次次呼叫 `aos_inst.run()`：等暫停解除 → 重讀 inst.json、跑一次 → 剩餘次數減一 → 等間隔 → 再來。
+
+```python
+from aos_loop import Loop, LoopError
+loop = Loop(stop_poll_ms=50)
+ident = loop.add("some/folder", times=3, interval_ms=1000)   # id＝inst.json 的 realpath
+loop.pause(ident, wait=False)                                 # wait=False＝當場收掉這次
+```
+
+- 方法：`add(target, **執行方式)`、`set(id, **執行方式)`、`remove(id, wait)`、`pause(id, wait)`、`resume(id)`、`times(id, delta)`、`get(id)`、`list()`、`shutdown()`；出錯丟 `LoopError`。
+- 執行方式：`times`（預設 1，None＝不限）、`interval_ms`（預設 0）、`timeout_ms`（預設不限）、`grace_ms`（預設 2000）。
+- 狀態：`state`（waiting／running／paused／done／removing）、剩餘 `times`、`runs`、`last_error`。被收掉的那次也算一次；次數跑完留在表上（done），加次數再跑。
+
+## daemon（`aos_daemon.py`）
+
+```
+python3 proto8/lib/aos_daemon.py CONFIG
+```
+
+- CONFIG（JSON，先解指示詞，基準＝啟動時的 cwd）：`control_dir`（必填）、`control_poll_ms`（預設 200）、`stop_poll_ms`（預設 50）。
+- 控制：往 `control_dir/in/` 放 `名字.json`；daemon 每輪照檔名順序讀進來、交給 loop、刪掉，回覆寫到 `out/名字.json`。不合法的 JSON 當場回 `BadCommand` 並刪掉，所以寫的人先寫成 `.` 開頭的名字、寫完再改名。兩邊都不 fsync；`out/` 由讀回覆的人清。
+- 指令：`add`（target＋執行方式）、`set`、`remove`／`pause`（`wait` 預設 true）、`resume`、`times`（`delta`）、`get`、`list`。
+- 實例表只在記憶體；收到 SIGINT／SIGTERM 就把所有實例當場收掉再結束。
