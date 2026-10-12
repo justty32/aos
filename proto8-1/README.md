@@ -14,6 +14,8 @@ daemon ──跑──> top/inst.json    argv: ["aos-seq", "a", "inner"]
 
 原語只做最精簡的四個：seq、par、if、not（使用者 10-12 定；or 可以用 if＋not 拼）。要數字參數的（retry、timeout）和 while 不做。
 
+另外放了 **aos-tick**：tick-tock 就是一個時鐘（[CONCEPTS C-44](../proto8/CONCEPTS.md)），不包任務、不保證什麼；每跑一次把 FILE 裡的回合數加一。節奏、停、只走 N 回合交給 daemon（argv 寫 aos-tick 的 inst，how 給 times／interval_ms，停＝pause）；打包是規範，之後由 kernel 做。
+
 ## 程式
 
 | 位置 | 是什麼 |
@@ -22,12 +24,13 @@ daemon ──跑──> top/inst.json    argv: ["aos-seq", "a", "inner"]
 | `lib/aos_par.py` | 一起跑、等全部結束：全 0 回 0，否則照參數順序第一個非 0 的碼 |
 | `lib/aos_if.py` | `aos-if COND THEN [ELSE]`：條件回 0 跑 THEN、否則跑 ELSE；退出碼取跑到的那支，沒 ELSE 又不成立＝0 |
 | `lib/aos_not.py` | `aos-not TARGET`：0 變 1、非 0 變 0（自己出錯和被訊號停掉不反過來） |
+| `lib/aos_tick.py` | `aos-tick FILE`：讀出回合數 n、寫回 n＋1（不在＝0，先寫 `.名字.tmp` 再改名）；內容不對／讀寫不了／用法不對印「代號: 白話」、退出碼 1、FILE 不動 |
 | `lib/aos_tasks.py` | 共用：找 proto8/lib、一次讀好全部 inst、接訊號 |
-| `bin/aos-seq`、`bin/aos-par`、`bin/aos-if`、`bin/aos-not` | 薄入口（sh，`exec python3 ../lib/aos_*.py`）；放進 PATH 就能在 argv 寫 `"aos-seq"` |
-| `tests/test_tasks.py` | unittest |
+| `bin/aos-seq`、`bin/aos-par`、`bin/aos-if`、`bin/aos-not`、`bin/aos-tick` | 薄入口（sh，`exec python3 ../lib/aos_*.py`）；放進 PATH 就能在 argv 寫 `"aos-seq"` |
+| `tests/test_tasks.py`、`tests/test_tick.py` | unittest |
 | `demo/` | 用 daemon 跑一棵 tasks 樹（檢查→重試→並行→收尾），`python3 proto8-1/demo/run.py`；寫起來的發現見 [demo/README.md](demo/README.md) |
 
-共同規矩（細節在各檔檔頭）：
+tasks 的共同規矩（aos-tick 不跑 inst，不適用；細節在各檔檔頭）：
 
 - 參數是 inst 的 TARGET（同 aos_inst：`.json` 或資料夾），相對路徑從自己的 cwd 算。
 - **先全部讀好、驗過才開始**；有一個不對就印「代號: 白話」、退出碼 125，一個都不跑。個數不對也是 125。
@@ -42,4 +45,4 @@ daemon ──跑──> top/inst.json    argv: ["aos-seq", "a", "inner"]
 python3 -m unittest discover -s proto8-1/tests
 ```
 
-只用標準庫，11 個、約 2 秒；最後一個用 proto8 的 `aos_loop` 起 aos-seq，remove 後確認孫程式被收掉。
+只用標準庫，18 個（tasks 11、tick 7）、約 2 秒；用 proto8 的 `aos_loop` 的兩個：起 aos-seq、remove 後確認孫程式被收掉；跑 aos-tick 三次、FILE＝3。
