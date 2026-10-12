@@ -66,7 +66,7 @@ python3 proto8/lib/aos_daemon.py CONFIG
 ```
 
 - CONFIG（JSON，先解指示詞，基準＝啟動時的 cwd）：`control_dir`（必填）、`control_poll_ms`（預設 200）、`stop_poll_ms`（預設 50）。
-- 控制：往 `control_dir` 放 `名字.json`；daemon 每輪照檔名順序讀進來、交給 loop，處理完改成 `名字.done`、內容換成回覆。不合法的 JSON 也當場變 `.done`（回 `BadCommand`），所以寫的人先寫成 `.` 開頭的名字、寫完再改名。兩邊都不 fsync；`.done` 由讀回覆的人清。
+- 控制：往 `control_dir` 放 `名字.json`；daemon 每輪照檔名順序讀進來、交給 loop，處理完改成 `名字.json.done`、內容換成回覆。不合法的 JSON 也當場變 `.done`（回 `BadCommand`），所以寫的人先寫成 `.` 開頭的名字、寫完再改名。兩邊都不 fsync；`.done` 由讀回覆的人清。
 - 指令：`add`（target＋執行方式）、`set`、`remove`／`pause`（`wait` 預設 true）、`resume`、`times`（`delta`）、`state`（只回狀態字串）、`get`、`list`。
 - 實例表只在記憶體；收到 SIGINT／SIGTERM 就把所有實例當場收掉再結束。
 
