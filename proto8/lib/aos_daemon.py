@@ -26,6 +26,8 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
 
 執行方式、狀態的意思見 aos_loop。相對路徑（target、inst.json 裡的）基準都是 daemon 啟動時的 cwd。
 實例表只在記憶體裡，daemon 結束就沒了。daemon 收到 SIGINT／SIGTERM：所有實例當場收掉，然後結束。
+跑起來之後出意外不結束，只往 stderr 印一行（同一件事印一次）：控制資料夾看不了（ScanFailed）、
+回覆寫不了（ReplyFailed：改把指令改名成 .done；改名也不行就放著不管）、指令處理出了沒料到的錯（回 Internal）。
 命令列退出碼：0＝正常結束；1＝起不來（stderr 印一行「代號: 白話」）。
 """
 import json
@@ -107,11 +109,27 @@ def handle(loop, cmd):
         return {"ok": True}
     except (DaemonError, LoopError) as e:
         return {"ok": False, "error": str(e)}
+    except Exception as e:
+        return {"ok": False, "error": "Internal: %s: %s" % (type(e).__name__, e)}
 
 
-def _scan(loop, d):
-    for name in sorted(os.listdir(d)):
-        if name.startswith(".") or not name.endswith(".json"):
+def _say(said, key, msg):
+    """同一件事只往 stderr 印一次；key 的訊息變了才再印。"""
+    if said.get(key) != msg:
+        said[key] = msg
+        print(msg, file=sys.stderr)
+
+
+def _scan(loop, d, said, given_up):
+    """處理一輪。出意外不往上丟：印到 stderr，下一輪照常。"""
+    try:
+        names = sorted(os.listdir(d))
+    except OSError as e:
+        _say(said, "list", "ScanFailed: 看不了控制資料夾 %s：%s" % (d, e))
+        return
+    said.pop("list", None)
+    for name in names:
+        if name.startswith(".") or not name.endswith(".json") or name in given_up:
             continue
         path = os.path.join(d, name)
         try:
@@ -121,28 +139,49 @@ def _scan(loop, d):
             reply = {"ok": False, "error": "BadCommand: 讀不了 %s：%s" % (name, e)}
         else:
             reply = handle(loop, cmd)
-        done = name + ".done"
-        tmp = os.path.join(d, "." + done + ".tmp")
+        _reply(path, reply, said, given_up)
+
+
+def _reply(path, reply, said, given_up):
+    """回覆寫成 名字.json.done、刪掉指令。寫不了就把指令本身改名成 .done；改名也不行就放著不管（之後也不再讀它）。"""
+    d, name = os.path.split(path)
+    done = os.path.join(d, name + ".done")
+    tmp = os.path.join(d, "." + name + ".done.tmp")
+    try:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(reply, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, os.path.join(d, done))
+        os.replace(tmp, done)
+    except OSError as e:
         try:
-            os.remove(path)
+            os.remove(tmp)
         except OSError:
             pass
+        try:
+            os.replace(path, done)
+            _say(said, name, "ReplyFailed: 寫不了 %s 的回覆（%s），把指令改名成 .done" % (name, e))
+        except OSError as e2:
+            given_up.add(name)
+            _say(said, name, "ReplyFailed: 寫不了 %s 的回覆（%s），改名也不行（%s），放著不管" % (name, e, e2))
+        return
+    try:
+        os.remove(path)
+    except OSError:
+        pass
 
 
 def serve(cfg, quit):
-    """照 config 開 loop，每 control_poll_ms 看一次控制資料夾，直到 quit() 為真；然後收掉所有實例。"""
+    """照 config 開 loop，每 control_poll_ms 看一次控制資料夾，直到 quit() 為真；然後收掉所有實例。
+    控制資料夾開頭沒有就建；之後不見了只往 stderr 印一次，不建回來、不結束。"""
     d = cfg["control_dir"]
     try:
         os.makedirs(d, exist_ok=True)
     except OSError as e:
         raise DaemonError("MkdirFailed", "建不了控制資料夾：%s" % e)
     loop = Loop(cfg["stop_poll_ms"])
+    said, given_up = {}, set()
     try:
         while not quit():
-            _scan(loop, d)
+            _scan(loop, d, said, given_up)
             time.sleep(cfg["control_poll_ms"] / 1000)
     finally:
         loop.shutdown()

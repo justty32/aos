@@ -69,6 +69,7 @@ python3 proto8/lib/aos_daemon.py CONFIG
 - 控制：往 `control_dir` 放 `名字.json`；daemon 每輪照檔名順序讀進來、交給 loop，處理完改成 `名字.json.done`、內容換成回覆。不合法的 JSON 也當場變 `.done`（回 `BadCommand`）。怎麼寫不規定；`.` 開頭的檔不讀。兩邊都不 fsync；`.done` 由讀回覆的人清。
 - 指令：`add`（target＋執行方式）、`set`、`remove`／`pause`（`wait` 預設 true）、`resume`、`times`（`delta`）、`state`（只回狀態字串）、`get`、`list`。
 - 實例表只在記憶體；收到 SIGINT／SIGTERM 就把所有實例當場收掉再結束。
+- 跑起來之後出意外不結束，往 stderr 印一行（同一件事印一次）：控制資料夾看不了（`ScanFailed`，不建回來）、回覆寫不了（`ReplyFailed`：改把指令改名成 `.done`；改名也不行就放著不管、之後不再讀它）、指令處理出了沒料到的錯（回 `Internal`）。實例那邊沒料到的錯記進 `last_error`，照常繼續。
 
 ## 多執行緒的規矩
 

@@ -11,7 +11,7 @@
     grace_ms     收掉時 SIGTERM 之後等多久才 SIGKILL（非負整數；預設 2000）
 
 狀態（get／list 回的 dict）：`id`、`state`（waiting／running／paused／done／removing）、剩餘 `times`、
-跑過幾次 `runs`、其他執行方式、`last_error`（上一次 aos_inst 自己出的錯；沒有＝None）。
+跑過幾次 `runs`、其他執行方式、`last_error`（上一次 aos_inst 自己出的錯，或沒料到的錯〔Internal〕；沒有＝None）。
 被收掉的那次也算跑過一次。次數跑完的實例留在表上（done），加次數就再跑。
 remove／pause 的 `wait`：True＝等這次跑完，False＝當場收掉（按 run() 的 stop）。
 
@@ -124,6 +124,8 @@ class _Inst:
             return None
         except aos_inst.InstError as e:
             return str(e)
+        except Exception as e:
+            return "Internal: %s: %s" % (type(e).__name__, e)
 
 
 class Loop:
