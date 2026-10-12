@@ -26,12 +26,12 @@ JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼�
 Python 呼叫者沒辦法從外面砍，所以 `run()` 只留非在裡面做不可的開關（見 `run()`）；
 其中 `new_session` 是給 daemon 用的：子程式自成一個 session／群組，收掉時連孫程式一起收。命令列不開。
 
-子程式的結束碼在命令列只走 `exit` 檔（`run()` 也回它）：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
-根本沒起來就不寫。exit 寫不進去不管，不算錯。
-`run()` 回子程式的結束碼（跟寫進 exit 的同一個數）；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
-
-命令列的退出碼只說 aos_inst 自己的狀況：0＝子程式跑完了（不管它成功失敗）；
-1＝aos_inst 自己出錯、子程式沒跑（stderr 印一行「代號: 白話」）。
+子程式的結束碼：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
+`run()` 回它、`exit` 檔寫它、命令列的退出碼也是它（aos_inst 跑起來就「變成」子程式）。
+根本沒起來就不寫 exit。exit 寫不進去不管，不算錯。
+aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）：`run()` 丟 `InstError`；命令列照 Unix 包裝程式
+（env、timeout）的慣例回 127＝找不到程式、126＝不能執行、125＝其他（`exit_code()`），stderr 印一行「代號: 白話」。
+所以子程式自己最好只用 1～123（124 以上都有慣例意思：124 timeout、125～127 如上、128＋N 訊號）。
 命令列收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit。
 """
 import json
@@ -43,7 +43,7 @@ import time
 
 from aos_directives import DirectiveError, resolve
 
-__all__ = ["InstError", "find", "load", "parse", "run"]
+__all__ = ["InstError", "exit_code", "find", "load", "parse", "run"]
 
 _BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
           "stdout_append", "stdout_mkdir", "stdout_inherit",
@@ -58,6 +58,11 @@ class InstError(Exception):
         super().__init__("%s: %s" % (code, msg))
         self.code = code
         self.msg = msg
+
+
+def exit_code(err):
+    """InstError → 命令列退出碼：CommandNotFound＝127、CommandNotExecutable＝126、其他＝125。"""
+    return {"CommandNotFound": 127, "CommandNotExecutable": 126}.get(err.code, 125)
 
 
 def find(target):
@@ -319,13 +324,12 @@ def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 1:
         print("用法：aos_inst.py TARGET", file=sys.stderr)
-        return 1
+        return 125
     try:
-        run(load(args[0]), forward_signals=True)
-        return 0
+        return run(load(args[0]), forward_signals=True)
     except InstError as e:
         print(e, file=sys.stderr)
-        return 1
+        return exit_code(e)
 
 
 if __name__ == "__main__":

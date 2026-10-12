@@ -2,6 +2,7 @@
 
 tasks 是一組小程式，每支做一件事，跟 aos_inst 一樣是獨立的命令列程式，寫在 inst.json 的 argv 裡被跑。
 參數一律是 inst 的 TARGET（`.json` 檔或資料夾，同 aos_inst），相對路徑從自己的 cwd 算。
+自己出錯的退出碼同 aos_inst 命令列：127＝找不到程式、126＝不能執行、125＝其他（用法不對、TARGET 不對…）。
 要巢狀就讓某個 inst.json 的 argv 再寫一支 tasks 程式。
 """
 import os
@@ -11,9 +12,9 @@ import threading
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "proto8", "lib"))
 
-from aos_inst import InstError, load  # noqa: E402
+from aos_inst import InstError, exit_code, load  # noqa: E402
 
-__all__ = ["InstError", "load_all", "Signals"]
+__all__ = ["InstError", "exit_code", "load_all", "Signals"]
 
 _CAUGHT = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
