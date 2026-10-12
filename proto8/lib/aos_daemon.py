@@ -9,8 +9,10 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
     control_poll_ms  幾毫秒看一次 in/（正整數；預設 200）
     stop_poll_ms     交給 run() 的 stop_poll_ms（正整數；預設 50）
 
-指令：往 in/ 放一個 `名字.json`（先寫成 `.名字.tmp` 再改名，免得被讀到一半；`.` 開頭的不讀）。
-daemon 依檔名順序處理、刪掉，回覆寫到 out/名字.json：成功 {"ok": true, ...}，失敗 {"ok": false, "error": "代號: 白話"}。
+指令：往 in/ 放一個 `名字.json`。daemon 每輪把 in/ 裡的 `*.json` 照檔名順序讀進來處理、刪掉；
+讀到不合法的 JSON 當場回 BadCommand 並刪掉，所以寫的人要先寫成 `.` 開頭的名字（不讀），寫完再改名成 `名字.json`。
+回覆寫到 out/名字.json（也是先寫暫存再改名）：成功 {"ok": true, ...}，失敗 {"ok": false, "error": "代號: 白話"}。
+同名的指令／回覆後蓋前；out/ 由讀回覆的人自己清。兩邊都不 fsync。
 
     {"op": "add", "target": T, ...執行方式}   新增實例 → {"id": ID}；T 是 inst.json 或資料夾
     {"op": "set", "id": ID, ...執行方式}      改執行方式，下一次起生效
