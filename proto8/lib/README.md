@@ -69,3 +69,12 @@ python3 proto8/lib/aos_daemon.py CONFIG
 - 控制：往 `control_dir` 放 `名字.json`；daemon 每輪照檔名順序讀進來、交給 loop，處理完改成 `名字.done`、內容換成回覆。不合法的 JSON 也當場變 `.done`（回 `BadCommand`），所以寫的人先寫成 `.` 開頭的名字、寫完再改名。兩邊都不 fsync；`.done` 由讀回覆的人清。
 - 指令：`add`（target＋執行方式）、`set`、`remove`／`pause`（`wait` 預設 true）、`resume`、`times`（`delta`）、`get`、`list`。
 - 實例表只在記憶體；收到 SIGINT／SIGTERM 就把所有實例當場收掉再結束。
+
+## 多執行緒的規矩
+
+loop 一個實例一條執行緒，子程式都從這些執行緒裡起。fork 只複製呼叫它的那條執行緒，別條握著的鎖在子行程裡永遠打不開——只要 fork 到 exec 之間不跑 Python 程式碼就沒事。所以：
+
+1. 起子程式只用 `subprocess.Popen`，不用 `os.fork()`。
+2. 不用 `preexec_fn`（它在 fork 與 exec 之間跑 Python）。
+3. daemon 裡不 `chdir`、不改 `os.environ`（整個行程共用）；cwd、環境變數一律經 `Popen(cwd=, env=)` 只給子程式。
+4. 換使用者身分用 Popen 的 `user=`、`group=`、`extra_groups=`，不在 `preexec_fn` 裡 `setuid`。
