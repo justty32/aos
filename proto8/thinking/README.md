@@ -2,22 +2,14 @@
 
 ← [proto8](../README.md)
 
-一天一份。使用者說的照原意記；AI 提的想法標「AI」。還沒定的就寫「還沒定」。
+一天一份。只留三種內容：使用者原文（照原意整理）、決定（含使用者說「照建議」採納的 AI 建議）、跟 AI 討論後的結論；還沒定的列「未決」。AI 的分析過程、利弊表、被推翻的方案不留（規矩見 [user.md](../../wf/workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改)）。
+
+> **10-12 夜使用者定**：thinking 只留「使用者原文整理、決策結果、跟 AI 討論後的結論、未決」，其餘 AI 產出拿掉（「今天 10/12 產出的那些 thinking 也是，留結論」）。整份是 AI 產出的 13 份已刪（10-11 的六份審查／探針打撈、綜合、Fable 獨立抽概念、診斷、隊長想的、壓力測試、「件」與格、一天日記草稿）；其餘五份都已精簡。舊版：10-11 的與 tasks-ticktock 在 git（commit 22285099）；loop-daemon、inst-json、ctl-norms 三份**沒進過 git**，精簡前的原版要另外保存。
 
 | 日期 | 一句話 |
 |---|---|
-| [2026-10-11](2026-10-11-restart.md) | 為什麼重來：太繁複、做太快；兩個月沿革；河堤邊的思考 2.1～2.20；晚上三輪口述：§3f 從 daemon 重講概念、§3g 實作想法（inst→daemon→tick-tock→kernel→agent→閉環）、§3h 空間存狀態／處理＝變化／求值＝看變化；§4 還沒談的 |
-| [2026-10-12](2026-10-12-tasks-ticktock.md) | tasks＝像 lisp 基礎函數的獨立程式（seq／par／if／not，proto8-1）、結束碼；tick-tock 過去的作用、剝掉跑任務後剩什麼與會懸空的（AI 調查） |
-| [2026-10-11 一天](2026-10-11-a-day.md) | 使用情境日記（AI 草稿，待使用者改）；程式只准做日記裡出現過的事 |
-| [2026-10-11 綜合](2026-10-11-synthesis.md) | 六份審查的共識、分歧（五題要拍板）、從打撈帶走的十條 → PLAN 第二版 |
-| [審：astra](2026-10-11-review-astra.md) | 排錯層、數節點太草、冪等偷換成入場條件；tick 十個沒提的決定 |
-| [審：找洞](2026-10-11-review-holes.md) | 核心偷認 in/out、tock 回流、§5 問錯題；tick ≤150 行的 15 個決定 |
-| [審：另一條路](2026-10-11-review-alt.md) | 未看 PLAN 的獨立設計：資源＝格數、每資源一個排序器、狀態用檔案推、核心 110 行 |
-| [審：九軸](2026-10-11-review-axes.md) | tick 零軸、排序器讀三鍵、traits 自由、可預測性住觀察者家、steps.json 兩種節點 |
-| [審：排序器實驗](2026-10-11-review-sched.md) | 三個畫家世界＋7 行 goal＋diff 判勝負，離線、2～3.5 萬 token，建議第一步做 |
-| [審：打撈](2026-10-11-review-probes.md) | 七代探針探到的 39 條（模型行為、行程與檔案、daemon/tick、工作流）＋五條沒探到的 |
-| [概念：Fable 獨立抽](2026-10-11-concepts-fable-a.md) | 未看 PLAN，只照使用者的話：28 名詞、23 規則、20 空白；四題問錯＝高空 vs 地面 |
-| [診斷：為什麼問錯](2026-10-11-why-wrong.md) | (b)～(e) 主詞全是 AI 造物、把「沒想完」當「有空格」；PLAN 15 處同類錯；給 AI 的高度／主詞／形式建議 |
-| [隊長想的](2026-10-11-think-lead.md) | 從 3c～3e 往下：任務像一棵樹、格占的是根、有限有兩種、目標是輸入還是本身 |
-| [壓力測試](2026-10-11-stretch.md) | 31 個離譜例子套三定義：撐得住的＝一節點一 tick 一數一對一；裂在格跟 tick、任務跟資源之間 |
-| [「件」與格](2026-10-11-piece.md) | 三張時序圖：格貼行程只有 scanf 通；貼「件」三張都通；2.11「這件事」、2.9「偏現代」都偏向件 |
+| [2026-10-11](2026-10-11-restart.md) | 為什麼重來：太繁複、做太快；河堤邊的思考 2.1～2.20；3b 對 PLAN §5 的回覆；晚上三輪口述：§3f 從 daemon 重講概念、§3g 實作想法（inst→daemon→tick-tock→kernel→agent→閉環）、§3h 空間存狀態／處理＝變化／求值＝看變化；§4 未決 |
+| [2026-10-12](2026-10-12-tasks-ticktock.md) | tasks＝像 lisp 基礎函數的獨立程式（seq／par／if／not，proto8-1）；tick-tock 選甲＝只是時鐘（aos-tick 規格），打包是規範、在 kernel 做；規範比實作重要 |
+| [2026-10-12 loop／daemon](2026-10-12-loop-daemon.md) | loop＝包一個 inst（次數、間隔），ctl 是一個宣告式 ctl.json；daemon＝管多個 loop 的表、ctl 是資料夾、自己也是 loop；三個 json 一個手感（`aos-zzz x.json`，loop.json＝外層 key＋`inst` 格、daemon.json 比照）；loop 的退出碼表；daemon 底下的 loop 用子程序（包裝檔、改 ctl／讀 state、SIGTERM 收尾、save／load）；遷移步驟 |
+| [2026-10-12 inst 進 json](2026-10-12-inst-json.md) | 結束碼只有 0／非 0 是慣例；inst 只回自己的碼、子程式的碼進 exit 檔；`run(path)` 只收路徑、跟命令列一樣；`timeout_ms`、`grace_ms` 進 inst.json；遷移項；未決三題（監工參數去哪等）；代理人＝一個 loop 跑切狀態機的 inst |
+| [2026-10-12 ctl 規範](2026-10-12-ctl-norms.md) | NORMS N-05～N-10 背後的細節：宣告式 ctl.json（`paused`／`stop` 各帶 `{"val","now"}`、沒寫的回初始值、讀的人壞檔維持上一次、state.json 格式）與指令式控制資料夾（`.done`、`ok` 唯一要看、丟的人清）；各條分規範／慣例 |
