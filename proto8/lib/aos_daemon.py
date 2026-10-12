@@ -9,7 +9,7 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
     control_poll_ms  幾毫秒看一次控制資料夾（正整數；預設 200）
     stop_poll_ms     交給 run() 的 stop_poll_ms（正整數；預設 50）
 
-指令：往控制資料夾放一個 `名字.json`。daemon 每輪把裡面的 `*.json` 照檔名順序讀進來處理，處理完改成 `名字.done`，
+指令：往控制資料夾放一個 `名字.json`。daemon 每輪把裡面的 `*.json` 照檔名順序讀進來處理，處理完改成 `名字.json.done`，
 內容換成回覆：成功 {"ok": true, ...}，失敗 {"ok": false, "error": "代號: 白話"}。
 讀到不合法的 JSON 也一樣當場變成 `.done`（回 BadCommand），所以寫的人要先寫成 `.` 開頭的名字（不讀），寫完再改名成 `名字.json`。
 同名的後蓋前；`.done` 由讀回覆的人自己清。兩邊都不 fsync。
@@ -121,7 +121,7 @@ def _scan(loop, d):
             reply = {"ok": False, "error": "BadCommand: 讀不了 %s：%s" % (name, e)}
         else:
             reply = handle(loop, cmd)
-        done = name[:-len(".json")] + ".done"
+        done = name + ".done"
         tmp = os.path.join(d, "." + done + ".tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(reply, f, ensure_ascii=False, indent=2)
