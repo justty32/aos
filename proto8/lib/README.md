@@ -26,8 +26,6 @@ out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔�
 取回來的東西裡如果還有指示詞，照它所在的那份檔、那個位置接著解。繞回自己（指到正在解的位置或它的上層）＝`ReferenceCycle`。
 錯了一律丟 `DirectiveError`，代號七種，寫在檔頭。
 
-**沿革**：2026-10-12 從 proto7-2 拿來，同日照使用者要求精簡：刪 `$opt`／`$val`、`$fmt`；入口從「解一格 `resolve(value, ctx, position)`」改成「解整份 `resolve(doc, base_dir)`」；三檔併一檔（233＋111＋73 行 → 161 行）。
-
 ## inst（`aos_inst.py`）
 
 讀一份 JSON → 用指示詞 lib 解好 → 挑認得的 key（其他忽略）→ 跑一次。
@@ -43,4 +41,3 @@ python3 proto8/lib/aos_inst.py TARGET
 - 兩條路分工（使用者 10-12 定）：**子程式的結束碼只寫進 `exit` 檔**（十進位＋換行、fsync；只有它自己結束才寫，被訊號停掉或沒起來都不寫，aos 不代寫）；**命令列退出碼只說 aos_inst 自己**：0＝子程式跑完了、1＝aos_inst 自己出錯、子程式沒跑（stderr 一行「代號: 白話」）。exit 寫不進去不管。
 - API：`load(target)`、`parse(doc, base_dir)`、`run(inst)`。
 
-**沿革**：2026-10-12 照使用者決定重寫，不是搬：原本的 `$opt` 選項改成平的布林 key；基準一律是呼叫者的 cwd（同日先做了 `--base inst|cwd`，使用者說拿掉），串流跟著 `cwd`，`cwd` 沒寫就繼承呼叫者的；跑法先最小（直接起、等它結束），process group 等還沒做；`exit`、`timeout_ms`、`timeout_grace_ms` 同日補上。
