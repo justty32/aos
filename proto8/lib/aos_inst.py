@@ -17,28 +17,34 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
     stderr_merge    true＝stderr 併進 stdout
     exit            子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔，並確實存到磁碟；
                     exit_append 改附加一行、exit_mkdir 先建上層資料夾
-    timeout_ms      最多跑幾毫秒（非負整數；沒寫或 0＝不限）。時間到先送 SIGTERM，
-                    過了 timeout_grace_ms 還沒結束再送 SIGKILL
-    timeout_grace_ms  SIGTERM 之後等幾毫秒才 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
+    timeout_grace_ms  要收掉子程式時，SIGTERM 之後等幾毫秒才 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
+    kill_leftover   子程式結束後，把它留下的孫程式整群 SIGKILL（沒寫＝true）
 
-沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
+沒寫的串流一律接 /dev/null。其他布林 key 沒寫＝false。
 
-子程式的結束碼只走 `exit` 檔，而且只有它自己結束時才寫：被訊號停掉（含逾時被停）、
-或根本沒起來，都不寫 `exit`——aos 不替它代寫。
-exit 寫不進去不管，不算錯。
-`run()` 不回東西；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
+最多跑多久不在 JSON 裡，由 Python 呼叫者決定：`run(inst)` 不限時，`run_with_timeout(inst, timeout_ms)`
+時間到就收掉子程式。命令列一律不限時。
+
+子程式自成一個行程群組（新 session，脫離終端機），它開的孫程式都在同一群。
+收掉＝整群 SIGTERM，過了 timeout_grace_ms 還沒結束再整群 SIGKILL。逾時、或 aos_inst 被 Ctrl-C、SIGTERM、
+SIGHUP 打斷，都這樣收。
+
+子程式的結束碼只走 `exit` 檔：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
+根本沒起來就不寫。exit 寫不進去不管，不算錯。
+`run()`／`run_with_timeout()` 不回東西；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
 
 命令列的退出碼只說 aos_inst 自己的狀況：0＝子程式跑完了（不管它成功失敗）；
-1＝aos_inst 自己出錯、子程式沒跑（stderr 印一行「代號: 白話」）。
+1＝aos_inst 自己出錯、子程式沒跑，或 aos_inst 被訊號打斷（stderr 印一行「代號: 白話」）。
 """
 import json
 import os
+import signal
 import subprocess
 import sys
 
 from aos_directives import DirectiveError, resolve
 
-__all__ = ["InstError", "find", "load", "parse", "run"]
+__all__ = ["InstError", "find", "load", "parse", "run", "run_with_timeout"]
 
 _BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
           "stdout_append", "stdout_mkdir", "stdout_inherit",
@@ -89,7 +95,8 @@ def parse(doc, base_dir):
         raise InstError(e.code, e.msg)
     if not isinstance(doc, dict):
         raise InstError("FieldType", "inst 要是物件，不是 %s" % type(doc).__name__)
-    inst = {k: _bool(doc, k) for k in _BOOLS}
+    inst = {k: _bool(doc, k, False) for k in _BOOLS}
+    inst["kill_leftover"] = _bool(doc, "kill_leftover", True)
 
     argv = doc.get("argv")
     if not (isinstance(argv, list) and argv and all(isinstance(a, str) for a in argv)):
@@ -101,11 +108,10 @@ def parse(doc, base_dir):
         raise InstError("FieldType", "envs 要是 {名字: 字串}，不是 %r" % (envs,))
     inst["envs"] = envs
 
-    for k, default in (("timeout_ms", 0), ("timeout_grace_ms", 2000)):
-        t = doc.get(k, default)
-        if not (isinstance(t, int) and not isinstance(t, bool) and t >= 0):
-            raise InstError("FieldType", "%s 要是非負整數，不是 %r" % (k, t))
-        inst[k] = t
+    t = doc.get("timeout_grace_ms", 2000)
+    if not (isinstance(t, int) and not isinstance(t, bool) and t >= 0):
+        raise InstError("FieldType", "timeout_grace_ms 要是非負整數，不是 %r" % (t,))
+    inst["timeout_grace_ms"] = t
 
     # cwd 從基準算，沒寫＝呼叫者現在的 cwd；三個串流與 exit 從解出來的 cwd 算
     for k in ("cwd", "stdin", "stdout", "stderr", "exit"):
@@ -125,15 +131,28 @@ def parse(doc, base_dir):
     return inst
 
 
-def _bool(doc, k):
-    v = doc.get(k, False)
+def _bool(doc, k, default):
+    v = doc.get(k, default)
     if not isinstance(v, bool):
         raise InstError("FieldType", "%s 要是 true／false，不是 %r" % (k, v))
     return v
 
 
 def run(inst):
-    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔（被訊號停掉不寫）。aos_inst 自己出錯丟 `InstError`。"""
+    """照 `parse()` 的結果跑一次，不限時等它結束，寫 exit 檔。aos_inst 自己出錯丟 `InstError`。
+
+    等的時候被打斷（例外穿過來）：先把整群收掉、寫 exit，再把原本的例外丟出去。"""
+    _run(inst, None)
+
+
+def run_with_timeout(inst, timeout_ms):
+    """同 `run`，但最多等 `timeout_ms` 毫秒（正整數），時間到就把整群收掉。"""
+    if not (isinstance(timeout_ms, int) and not isinstance(timeout_ms, bool) and timeout_ms > 0):
+        raise ValueError("timeout_ms 要是正整數，不是 %r" % (timeout_ms,))
+    _run(inst, timeout_ms)
+
+
+def _run(inst, timeout_ms):
     try:
         if inst["cwd_mkdir"]:
             os.makedirs(inst["cwd"], exist_ok=True)
@@ -152,7 +171,7 @@ def run(inst):
             raise InstError("OpenFailed", "串流開不了：%s" % e)
         try:
             child = subprocess.Popen(inst["argv"], cwd=inst["cwd"], env=env,
-                                     stdin=stdin, stdout=stdout, stderr=stderr)
+                                     stdin=stdin, stdout=stdout, stderr=stderr, start_new_session=True)
         except FileNotFoundError:
             raise InstError("CommandNotFound", "找不到要跑的程式 %s" % inst["argv"][0])
         except PermissionError:
@@ -162,29 +181,53 @@ def run(inst):
     finally:
         for f in opened:
             f.close()
-    code = _wait(child, inst["timeout_ms"], inst["timeout_grace_ms"])
-    if inst["exit"] is not None and code >= 0:
+    interrupted = None
+    try:
+        code = _wait(child, timeout_ms, inst["timeout_grace_ms"])
+    except BaseException as e:
+        interrupted = e
+        code = _stop(child, inst["timeout_grace_ms"])
+    if inst["kill_leftover"]:
+        _killpg(child, signal.SIGKILL)
+    if inst["exit"] is not None:
         try:
-            _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
+            _write_exit(inst["exit"], code if code >= 0 else 128 - code, inst["exit_append"], inst["exit_mkdir"])
         except OSError:
             pass        # 寫不進去不管
+    if interrupted is not None:
+        raise interrupted
 
 
 def _wait(child, timeout_ms, grace_ms):
-    """等子程式結束；超時先 SIGTERM，再等 grace_ms 還沒結束就 SIGKILL（grace_ms＝0 直接 SIGKILL）。
-    回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
+    """等子程式結束（timeout_ms＝None 不限時）；超時就 `_stop`。回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
     try:
-        return child.wait(timeout_ms / 1000 if timeout_ms else None)
+        return child.wait(None if timeout_ms is None else timeout_ms / 1000)
     except subprocess.TimeoutExpired:
-        pass
+        return _stop(child, grace_ms)
+
+
+def _stop(child, grace_ms):
+    """整群送 SIGTERM，等 grace_ms 還沒結束就整群 SIGKILL（grace_ms＝0 直接 SIGKILL）。回 returncode。
+    收的途中再被打斷就不等 grace，直接 SIGKILL。"""
     if grace_ms:
-        child.terminate()
+        _killpg(child, signal.SIGTERM)
         try:
             return child.wait(grace_ms / 1000)
-        except subprocess.TimeoutExpired:
+        except BaseException:
             pass
-    child.kill()
-    return child.wait()
+    _killpg(child, signal.SIGKILL)
+    while True:
+        try:
+            return child.wait()
+        except BaseException:
+            pass
+
+
+def _killpg(child, sig):
+    try:
+        os.killpg(child.pid, sig)
+    except ProcessLookupError:
+        pass        # 整群都已經不在了
 
 
 def _write_exit(path, code, append, mkdir):
@@ -220,16 +263,31 @@ def _stream(inst, k, opened):
     return f
 
 
+class _Signaled(BaseException):
+    def __init__(self, signum):
+        super().__init__(signum)
+        self.signum = signum
+
+
+def _raise(signum, frame):
+    raise _Signaled(signum)
+
+
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 1:
         print("用法：aos_inst.py TARGET", file=sys.stderr)
         return 1
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, _raise)
     try:
         run(load(args[0]))
         return 0
     except InstError as e:
         print(e, file=sys.stderr)
+        return 1
+    except _Signaled as e:
+        print("Interrupted: 收到訊號 %s" % signal.Signals(e.signum).name, file=sys.stderr)
         return 1
 
 
