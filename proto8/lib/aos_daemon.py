@@ -8,6 +8,8 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
     control_dir      控制資料夾（必填），沒有就建
     control_poll_ms  幾毫秒看一次控制資料夾（正整數；預設 200）
     stop_poll_ms     交給 run() 的 stop_poll_ms（正整數；預設 50）
+    load             起來後先 load 這個檔（選填；跟丟一條 load 指令一樣，但失敗＝起不來）
+    save             收到 SIGTERM 結束時先 save 到這個檔（選填；SIGINT 不存；可以跟 load 同一個檔）
 
 指令：往控制資料夾放一個 `名字.json`。daemon 每輪把裡面的 `*.json` 照檔名順序讀進來處理，處理完改成 `名字.json.done`，
 內容換成一問一答：
@@ -29,14 +31,21 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
     {"op": "state",     "id": ID}                 → result＝"waiting"／"running"／"paused"／"done"／"removing"
     {"op": "get",       "id": ID}                 → result＝狀態物件
     {"op": "list"}                                → result＝[狀態物件, ...]
+    {"op": "save",      "path": P}                現有實例存成一份 JSON（整份重寫）    → result＝存了幾個
+    {"op": "load",      "path": P}                從 save 存的檔一次載入、開始跑       → result＝[id, ...]
 
 沒有特別寫 result 的，result＝null。`how` 的欄位（times、interval_ms、timeout_ms、grace_ms）與狀態物件見 aos_loop。
-error.code：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、Internal。
-相對路徑（id、inst.json 裡的）基準都是 daemon 啟動時的 cwd。
-實例表只在記憶體裡，daemon 結束就沒了。daemon 收到 SIGINT／SIGTERM：所有實例當場收掉，然後結束。
+error.code：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、ReadFailed、JsonSyntax、WriteFailed、Internal。
+相對路徑（id、path、inst.json 裡的）基準都是 daemon 啟動時的 cwd。
+實例表只在記憶體裡，daemon 起來時是空的、結束就沒了；要留就 save，要接回來就 load。
+save 存每個實例的 id、how（含剩餘 times）、paused、runs、last_error（removing 的不存；跑到一半的那次不算，
+load 回來會重跑）；先寫 `.名字.tmp` 再改名，不 fsync。load 是全有全無：檔裡有任何一個 id 已經在表上（Exists）
+或內容不對（FieldType），一個都不載；inst.json 不在了也照載（跑的時候記進 last_error）。
+daemon 收到 SIGINT／SIGTERM：所有實例當場收掉，然後結束。SIGTERM 且 config 有 save＝收掉前先 save
+（存不了＝stderr 一行 WriteFailed、退出碼 1）。
 跑起來之後出意外不結束，只往 stderr 印一行（同一件事印一次）：控制資料夾看不了（ScanFailed）、
 回覆寫不了（ReplyFailed：改把指令改名成 .done；改名也不行就放著不管）、指令處理出了沒料到的錯（回 Internal）。
-命令列退出碼：0＝正常結束；1＝起不來（stderr 印一行「代號: 白話」）。
+命令列退出碼：0＝正常結束；1＝起不來，或結束時 save 失敗（stderr 印一行「代號: 白話」）。
 """
 import json
 import os
@@ -77,7 +86,10 @@ def load_config(path):
     d = doc.get("control_dir")
     if not isinstance(d, str):
         raise DaemonError("FieldType", "control_dir 要是字串路徑，不是 %r" % (d,))
-    cfg = {"control_dir": os.path.abspath(d)}
+    cfg = {"control_dir": os.path.abspath(d), "load": None, "save": None}
+    for k in ("load", "save"):
+        if doc.get(k) is not None:
+            cfg[k] = _path(doc[k], k)
     for k, default in (("control_poll_ms", 200), ("stop_poll_ms", 50)):
         v = doc.get(k, default)
         if not (isinstance(v, int) and not isinstance(v, bool) and v > 0):
@@ -122,7 +134,48 @@ def _dispatch(loop, cmd):
         return loop.get(ident)
     if op == "list":
         return loop.list()
+    if op == "save":
+        return _save(loop, _path(cmd.get("path")))
+    if op == "load":
+        return _load(loop, _path(cmd.get("path")))
     raise DaemonError("UnknownOp", "不認得的 op %r" % (op,))
+
+
+def _path(p, key="path"):
+    if not isinstance(p, str) or not p:
+        raise DaemonError("FieldType", "%s 要是字串路徑，不是 %r" % (key, p))
+    return os.path.abspath(p)
+
+
+def _save(loop, path):
+    snap = loop.snapshot()
+    d, name = os.path.split(path)
+    tmp = os.path.join(d, "." + name + ".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(snap, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except OSError as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise DaemonError("WriteFailed", "寫不了 %s：%s" % (path, e))
+    return len(snap)
+
+
+def _load(loop, path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = f.read()
+    except OSError as e:
+        raise DaemonError("ReadFailed", "讀不到 %s：%s" % (path, e))
+    try:
+        items = json.loads(raw)
+    except ValueError as e:
+        raise DaemonError("JsonSyntax", "%s 不是合法 JSON：%s" % (path, e))
+    loop.restore(items)
+    return [it["id"] for it in items]
 
 
 def _say(said, key, msg):
@@ -183,8 +236,9 @@ def _reply(path, reply, said, given_up):
         pass
 
 
-def serve(cfg, quit):
+def serve(cfg, quit, save=lambda: False):
     """照 config 開 loop，每 control_poll_ms 看一次控制資料夾，直到 quit() 為真；然後收掉所有實例。
+    結束時 config 有 save 而且 save() 為真：收掉前先存（失敗丟 DaemonError，實例照樣收掉）。
     控制資料夾開頭沒有就建；之後不見了只往 stderr 印一次，不建回來、不結束。"""
     d = cfg["control_dir"]
     try:
@@ -192,13 +246,22 @@ def serve(cfg, quit):
     except OSError as e:
         raise DaemonError("MkdirFailed", "建不了控制資料夾：%s" % e)
     loop = Loop(cfg["stop_poll_ms"])
+    if cfg["load"]:
+        try:
+            _load(loop, cfg["load"])
+        except LoopError as e:
+            raise DaemonError(e.code, e.msg)
     said, given_up = {}, set()
     try:
         while not quit():
             _scan(loop, d, said, given_up)
             time.sleep(cfg["control_poll_ms"] / 1000)
     finally:
-        loop.shutdown()
+        try:
+            if cfg["save"] and save():
+                _save(loop, cfg["save"])
+        finally:
+            loop.shutdown()
 
 
 def main(argv=None):
@@ -210,7 +273,7 @@ def main(argv=None):
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, lambda signum, frame: got.append(signum))
     try:
-        serve(load_config(args[0]), lambda: got)
+        serve(load_config(args[0]), lambda: got, lambda: signal.SIGTERM in got)
         return 0
     except DaemonError as e:
         print(e, file=sys.stderr)

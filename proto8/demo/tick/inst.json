@@ -1,0 +1,8 @@
+{
+  "argv": ["sh", "-c", "date +%H:%M:%S"],
+  "cwd": {"$env": "DEMO_OUT"},
+  "stdout": "tick.out",
+  "stdout_append": true,
+  "exit": "tick.exit",
+  "exit_append": true
+}
