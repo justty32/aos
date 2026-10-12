@@ -27,7 +27,7 @@ exit 寫不進去不管，不算錯。
 `run()` 回子程式的結束碼給 Python 呼叫者；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
 
 命令列的退出碼只說 aos_inst 自己的狀況：0＝子程式跑完了（不管它成功失敗）；
-125＝aos_inst 自己出錯、子程式沒跑（stderr 印一行「代號: 白話」）。
+1＝aos_inst 自己出錯、子程式沒跑（stderr 印一行「代號: 白話」）。
 """
 import json
 import os
@@ -222,13 +222,13 @@ def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 1:
         print("用法：aos_inst.py TARGET", file=sys.stderr)
-        return 125
+        return 1
     try:
         run(load(args[0]))
         return 0
     except InstError as e:
         print(e, file=sys.stderr)
-        return 125
+        return 1
 
 
 if __name__ == "__main__":

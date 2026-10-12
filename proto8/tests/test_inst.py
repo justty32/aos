@@ -239,20 +239,20 @@ class TestCli(Base):
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(self.read("x.txt"), "4\n")
 
-    def test_inst_error_is_125_one_line(self):
+    def test_inst_error_is_1_one_line(self):
         p = self.cli(self.d)
-        self.assertEqual(p.returncode, 125)
+        self.assertEqual(p.returncode, 1)
         self.assertTrue(p.stderr.startswith("NotFound: "))
         self.assertEqual(len(p.stderr.splitlines()), 1)
 
-    def test_usage_and_launch_failures_are_125(self):
-        self.assertEqual(self.cli().returncode, 125)
-        self.assertEqual(self.cli(self.d, "extra").returncode, 125)
+    def test_usage_and_launch_failures_are_1(self):
+        self.assertEqual(self.cli().returncode, 1)
+        self.assertEqual(self.cli(self.d, "extra").returncode, 1)
         for doc, code in (({"argv": ["true"], "stdin": "missing.txt"}, "OpenFailed"),
                           ({"argv": ["no-such-program-xyz"]}, "CommandNotFound")):
             with self.subTest(code=code):
                 r = self.cli(self.write("i.json", doc))
-                self.assertEqual(r.returncode, 125)
+                self.assertEqual(r.returncode, 1)
                 self.assertTrue(r.stderr.startswith(code + ": "), r.stderr)
 
 

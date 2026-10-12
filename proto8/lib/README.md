@@ -40,7 +40,7 @@ python3 proto8/lib/aos_inst.py TARGET
 - 基準一律是呼叫者的 cwd：指示詞的檔名、`cwd` 這個 key 從這裡算。
 - `cwd` 沒寫＝呼叫 aos_inst 時的 cwd；`stdin`／`stdout`／`stderr`／`exit` 的相對路徑從解出來的 `cwd` 算（使用者 10-12 改）。
 - key：`argv`（必填）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`、`timeout_ms`（時間到 SIGTERM，2 秒後 SIGKILL），加上布林的 `cwd_mkdir`、`envs_clear`、`*_inherit`、`*_append`、`*_mkdir`、`stderr_merge`。完整說明在檔頭。
-- 兩條路分工（使用者 10-12 定）：**子程式的結束碼只寫進 `exit` 檔**（十進位＋換行、fsync；訊號＝128+N；沒起來就不寫）；**命令列退出碼只說 aos_inst 自己**：0＝子程式跑完了、125＝aos_inst 自己出錯、子程式沒跑（stderr 一行「代號: 白話」）。exit 寫不進去不管。
+- 兩條路分工（使用者 10-12 定）：**子程式的結束碼只寫進 `exit` 檔**（十進位＋換行、fsync；訊號＝128+N；沒起來就不寫）；**命令列退出碼只說 aos_inst 自己**：0＝子程式跑完了、1＝aos_inst 自己出錯、子程式沒跑（stderr 一行「代號: 白話」）。exit 寫不進去不管。
 - API：`load(target)`、`parse(doc, base_dir)`、`run(inst)`。
 
 **沿革**：2026-10-12 照使用者決定重寫，不是搬：原本的 `$opt` 選項改成平的布林 key；基準一律是呼叫者的 cwd（同日先做了 `--base inst|cwd`，使用者說拿掉），串流跟著 `cwd`，`cwd` 沒寫就繼承呼叫者的；跑法先最小（直接起、等它結束），process group 等還沒做；`exit`、`timeout_ms` 同日補上。測試：[test_inst.py](../tests/test_inst.py)。
