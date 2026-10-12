@@ -6,7 +6,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest import mock
 
 import aos_inst
 from aos_inst import InstError, load, parse, run
@@ -147,8 +146,8 @@ class TestRun(Base):
                    "envs": {"K": "k"}, "envs_clear": True}, self.d))
         self.assertEqual(self.read("o.txt"), "[][k]\n")
 
-    def test_signal_code(self):
-        self.assertEqual(run(parse({"argv": ["sh", "-c", "kill -9 $$"]}, self.d)), 137)
+    def test_signal_returns_negative(self):
+        self.assertEqual(run(parse({"argv": ["sh", "-c", "kill -9 $$"]}, self.d)), -9)
 
     def test_launch_failures_raise(self):
         p = self.write("noexec.sh", "echo hi", raw=True)
@@ -188,9 +187,11 @@ class TestExit(Base):
         self.go(5, cwd="w", cwd_mkdir=True, exit="x.txt")
         self.assertEqual(self.read("w/x.txt"), "5\n")
 
-    def test_exit_signal(self):
-        run(parse({"argv": ["sh", "-c", "kill -15 $$"], "exit": "x.txt"}, self.d))
-        self.assertEqual(self.read("x.txt"), "143\n")
+    def test_exit_not_written_when_signaled(self):
+        """被訊號停掉不代寫 exit；舊的內容原封不動。"""
+        self.write("x.txt", "old\n", raw=True)
+        self.assertEqual(run(parse({"argv": ["sh", "-c", "kill -15 $$"], "exit": "x.txt"}, self.d)), -15)
+        self.assertEqual(self.read("x.txt"), "old\n")
 
     def test_exit_write_failed_ignored(self):
         """exit 寫不進去不管：照樣回子程式的碼，不丟錯。"""
@@ -208,23 +209,37 @@ class TestTimeout(Base):
         os.chdir(self.d)
         self.addCleanup(os.chdir, old)
 
-    def test_timeout_sigterm(self):
-        self.assertEqual(run(parse({"argv": ["sleep", "5"], "timeout_ms": 100, "exit": "x.txt"}, self.d)), 143)
-        self.assertEqual(self.read("x.txt"), "143\n")
+    def test_timeout_sigterm_no_exit(self):
+        self.assertEqual(run(parse({"argv": ["sleep", "5"], "timeout_ms": 100, "exit": "x.txt"}, self.d)), -15)
+        self.assertFalse(os.path.exists(os.path.join(self.d, "x.txt")))
 
     def test_timeout_sigkill_after_grace(self):
-        with mock.patch.object(aos_inst, "_GRACE_S", 0.2):
-            code = run(parse({"argv": ["sh", "-c", "trap '' TERM; sleep 5"], "timeout_ms": 100}, self.d))
-        self.assertEqual(code, 137)
+        code = run(parse({"argv": ["sh", "-c", "trap '' TERM; sleep 5"],
+                          "timeout_ms": 100, "timeout_grace_ms": 200}, self.d))
+        self.assertEqual(code, -9)
+
+    def test_grace_zero_kills_directly(self):
+        """grace 0＝不送 SIGTERM，直接 SIGKILL（擋 TERM 的程式也是 -9，而且不用等）。"""
+        code = run(parse({"argv": ["sh", "-c", "trap 'exit 7' TERM; sleep 5"],
+                          "timeout_ms": 100, "timeout_grace_ms": 0}, self.d))
+        self.assertEqual(code, -9)
+
+    def test_term_handler_exit_code_is_written(self):
+        """收到 SIGTERM 自己收工、自己回碼＝自己結束，照樣寫 exit。"""
+        code = run(parse({"argv": ["sh", "-c", "trap 'exit 7' TERM; sleep 5 & wait"],
+                          "timeout_ms": 100, "exit": "x.txt"}, self.d))
+        self.assertEqual(code, 7)
+        self.assertEqual(self.read("x.txt"), "7\n")
 
     def test_no_timeout_when_fast_or_zero(self):
         self.assertEqual(run(parse({"argv": ["sh", "-c", "exit 2"], "timeout_ms": 5000}, self.d)), 2)
         self.assertEqual(run(parse({"argv": ["sh", "-c", "exit 2"], "timeout_ms": 0}, self.d)), 2)
 
     def test_timeout_type(self):
-        for t in (-1, 1.5, "100", True, None):
-            with self.subTest(t=t):
-                self.fails("FieldType", {"argv": ["a"], "timeout_ms": t})
+        for k in ("timeout_ms", "timeout_grace_ms"):
+            for t in (-1, 1.5, "100", True, None):
+                with self.subTest(k=k, t=t):
+                    self.fails("FieldType", {"argv": ["a"], k: t})
 
 
 class TestCli(Base):

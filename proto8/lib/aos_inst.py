@@ -18,11 +18,13 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
     exit            子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔，並確實存到磁碟；
                     exit_append 改附加一行、exit_mkdir 先建上層資料夾
     timeout_ms      最多跑幾毫秒（非負整數；沒寫或 0＝不限）。時間到先送 SIGTERM，
-                    2 秒後還沒結束再送 SIGKILL；結束碼照樣是 128+N（143 或 137）
+                    過了 timeout_grace_ms 還沒結束再送 SIGKILL
+    timeout_grace_ms  SIGTERM 之後等幾毫秒才 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
 
 沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
 
-子程式的結束碼（被訊號殺掉＝128+N）只走 `exit` 檔；子程式根本沒起來就不寫 `exit`。
+子程式的結束碼只走 `exit` 檔，而且只有它自己結束時才寫：被訊號停掉（含逾時被停）、
+或根本沒起來，都不寫 `exit`——aos 不替它代寫。
 exit 寫不進去不管，不算錯。
 `run()` 回子程式的結束碼給 Python 呼叫者；aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…）丟 `InstError`。
 
@@ -99,10 +101,11 @@ def parse(doc, base_dir):
         raise InstError("FieldType", "envs 要是 {名字: 字串}，不是 %r" % (envs,))
     inst["envs"] = envs
 
-    t = doc.get("timeout_ms", 0)
-    if not (isinstance(t, int) and not isinstance(t, bool) and t >= 0):
-        raise InstError("FieldType", "timeout_ms 要是非負整數，不是 %r" % (t,))
-    inst["timeout_ms"] = t
+    for k, default in (("timeout_ms", 0), ("timeout_grace_ms", 2000)):
+        t = doc.get(k, default)
+        if not (isinstance(t, int) and not isinstance(t, bool) and t >= 0):
+            raise InstError("FieldType", "%s 要是非負整數，不是 %r" % (k, t))
+        inst[k] = t
 
     # cwd 從基準算，沒寫＝呼叫者現在的 cwd；三個串流與 exit 從解出來的 cwd 算
     for k in ("cwd", "stdin", "stdout", "stderr", "exit"):
@@ -130,7 +133,9 @@ def _bool(doc, k):
 
 
 def run(inst):
-    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔，回子程式的結束碼。aos_inst 自己出錯丟 `InstError`。"""
+    """照 `parse()` 的結果跑一次，等它結束，寫 exit 檔。aos_inst 自己出錯丟 `InstError`。
+
+    回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼（例如 -9），這時不寫 exit。"""
     try:
         if inst["cwd_mkdir"]:
             os.makedirs(inst["cwd"], exist_ok=True)
@@ -159,9 +164,8 @@ def run(inst):
     finally:
         for f in opened:
             f.close()
-    code = _wait(child, inst["timeout_ms"])
-    code = 128 - code if code < 0 else code
-    if inst["exit"] is not None:
+    code = _wait(child, inst["timeout_ms"], inst["timeout_grace_ms"])
+    if inst["exit"] is not None and code >= 0:
         try:
             _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
         except OSError:
@@ -169,20 +173,21 @@ def run(inst):
     return code
 
 
-def _wait(child, timeout_ms):
-    """等子程式結束；超時先 SIGTERM，再等 2 秒還沒結束就 SIGKILL。回 returncode（訊號是負數）。"""
+def _wait(child, timeout_ms, grace_ms):
+    """等子程式結束；超時先 SIGTERM，再等 grace_ms 還沒結束就 SIGKILL（grace_ms＝0 直接 SIGKILL）。
+    回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
     try:
         return child.wait(timeout_ms / 1000 if timeout_ms else None)
     except subprocess.TimeoutExpired:
+        pass
+    if grace_ms:
         child.terminate()
-    try:
-        return child.wait(_GRACE_S)
-    except subprocess.TimeoutExpired:
-        child.kill()
-        return child.wait()
-
-
-_GRACE_S = 2
+        try:
+            return child.wait(grace_ms / 1000)
+        except subprocess.TimeoutExpired:
+            pass
+    child.kill()
+    return child.wait()
 
 
 def _write_exit(path, code, append, mkdir):
