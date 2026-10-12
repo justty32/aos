@@ -11,7 +11,7 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
 
 指令：往控制資料夾放一個 `名字.json`。daemon 每輪把裡面的 `*.json` 照檔名順序讀進來處理，處理完改成 `名字.json.done`，
 內容換成回覆：成功 {"ok": true, ...}，失敗 {"ok": false, "error": "代號: 白話"}。
-讀到不合法的 JSON 也一樣當場變成 `.done`（回 BadCommand），所以寫的人要先寫成 `.` 開頭的名字（不讀），寫完再改名成 `名字.json`。
+讀到不合法的 JSON 也一樣當場變成 `.done`（回 BadCommand）。怎麼寫不規定；`.` 開頭的檔不讀。
 同名的後蓋前；`.done` 由讀回覆的人自己清。兩邊都不 fsync。
 
     {"op": "add", "target": T, ...執行方式}   新增實例 → {"id": ID}；T 是 inst.json 或資料夾
