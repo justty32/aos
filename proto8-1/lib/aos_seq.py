@@ -16,7 +16,7 @@ from aos_inst import run
 
 
 def main(argv=None):
-    insts = load_all(sys.argv[1:] if argv is None else argv, "aos_seq.py")
+    insts = load_all(sys.argv[1:] if argv is None else argv, "aos_seq.py TARGET...")
     if insts is None:
         return 1
     code = 0

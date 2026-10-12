@@ -9,7 +9,7 @@
 ## 入口
 
 - **[lib/](lib/README.md)**：函式庫：指示詞 lib、inst、loop、daemon。
-- **[proto8-1](../proto8-1/README.md)**：tasks——在 aos_inst 之上的小程式（aos-seq、aos-par），用這裡的 lib。
+- **[proto8-1](../proto8-1/README.md)**：tasks——在 aos_inst 之上的小程式（aos-seq、aos-par、aos-if、aos-not），用這裡的 lib。
 - **[demo/](demo/README.md)**：`python3 proto8/demo/run.py`，daemon 從起到收走一遍、每條指令和回覆都印出來。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 [proto7 核心 spec](../proto7/spec/core.md) 與 [設計原則](../proto7/notes/principles.md)。
