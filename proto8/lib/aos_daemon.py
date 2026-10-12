@@ -10,21 +10,29 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
     stop_poll_ms     交給 run() 的 stop_poll_ms（正整數；預設 50）
 
 指令：往控制資料夾放一個 `名字.json`。daemon 每輪把裡面的 `*.json` 照檔名順序讀進來處理，處理完改成 `名字.json.done`，
-內容換成回覆：成功 {"ok": true, ...}，失敗 {"ok": false, "error": "代號: 白話"}。
-讀到不合法的 JSON 也一樣當場變成 `.done`（回 BadCommand）。怎麼寫不規定；`.` 開頭的檔不讀。
-同名的後蓋前；`.done` 由讀回覆的人自己清。兩邊都不 fsync。
+內容換成一問一答：
 
-    {"op": "add", "target": T, ...執行方式}   新增實例 → {"id": ID}；T 是 inst.json 或資料夾
-    {"op": "set", "id": ID, ...執行方式}      改執行方式，下一次起生效
-    {"op": "remove", "id": ID, "wait": B}     移除；wait＝true 等這次跑完，false 當場收掉（預設 true）
-    {"op": "pause", "id": ID, "wait": B}      暫停；wait 同上
-    {"op": "resume", "id": ID}                繼續
-    {"op": "times", "id": ID, "delta": N}     剩餘次數加減 N
-    {"op": "state", "id": ID}                 看一個的狀況 → {"state": "waiting／running／paused／done／removing"}
-    {"op": "get", "id": ID}                   查一個 → {"inst": 狀態}
-    {"op": "list"}                            查全部 → {"insts": [狀態, ...]}
+    {"request": 原指令, "ok": true,  "result": 結果}
+    {"request": 原指令, "ok": false, "error": {"code": "NotFound", "msg": "白話"}}
 
-執行方式、狀態的意思見 aos_loop。相對路徑（target、inst.json 裡的）基準都是 daemon 啟動時的 cwd。
+讀到不合法的 JSON 也一樣當場變成 `.done`（`request` 是讀到的原文字串，error.code＝BadCommand）。
+怎麼寫不規定；`.` 開頭的檔不讀。同名的後蓋前；`.done` 由讀回覆的人自己清。兩邊都不 fsync。
+
+指令一律 {"op", "id", ...參數}。`id` 什麼寫法都行（資料夾、inst.json、相對路徑），daemon 一律轉成 inst.json 的 realpath：
+
+    {"op": "add",       "id": ID, "how": {...}}   新增實例                         → result＝realpath
+    {"op": "set",       "id": ID, "how": {...}}   改執行方式（只改有寫的），下一次起生效
+    {"op": "remove",    "id": ID, "wait": B}      移除；wait＝true 等這次跑完，false 當場收掉（預設 true）
+    {"op": "pause",     "id": ID, "wait": B}      暫停；wait 同上
+    {"op": "resume",    "id": ID}                 繼續
+    {"op": "add_times", "id": ID, "delta": N}     剩餘次數加減 N（最少到 0）
+    {"op": "state",     "id": ID}                 → result＝"waiting"／"running"／"paused"／"done"／"removing"
+    {"op": "get",       "id": ID}                 → result＝狀態物件
+    {"op": "list"}                                → result＝[狀態物件, ...]
+
+沒有特別寫 result 的，result＝null。`how` 的欄位（times、interval_ms、timeout_ms、grace_ms）與狀態物件見 aos_loop。
+error.code：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、Internal。
+相對路徑（id、inst.json 裡的）基準都是 daemon 啟動時的 cwd。
 實例表只在記憶體裡，daemon 結束就沒了。daemon 收到 SIGINT／SIGTERM：所有實例當場收掉，然後結束。
 跑起來之後出意外不結束，只往 stderr 印一行（同一件事印一次）：控制資料夾看不了（ScanFailed）、
 回覆寫不了（ReplyFailed：改把指令改名成 .done；改名也不行就放著不管）、指令處理出了沒料到的錯（回 Internal）。
@@ -37,7 +45,7 @@ import sys
 import time
 
 from aos_directives import DirectiveError, resolve
-from aos_loop import HOW, Loop, LoopError
+from aos_loop import Loop, LoopError
 
 __all__ = ["DaemonError", "handle", "load_config", "serve"]
 
@@ -79,38 +87,42 @@ def load_config(path):
 
 
 def handle(loop, cmd):
-    """一條指令 → 對 loop 的呼叫，回覆的 dict。"""
+    """一條指令 → 對 loop 的呼叫，回 {"ok", "result"} 或 {"ok", "error": {"code", "msg"}}。"""
     try:
-        if not isinstance(cmd, dict):
-            raise DaemonError("BadCommand", "指令要是物件")
-        op = cmd.get("op")
-        how = {k: cmd[k] for k in HOW if k in cmd}
-        if op == "add":
-            return {"ok": True, "id": loop.add(cmd.get("target"), **how)}
-        if op == "list":
-            return {"ok": True, "insts": loop.list()}
-        ident = cmd.get("id")
-        if op == "set":
-            loop.set(ident, **how)
-        elif op == "remove":
-            loop.remove(ident, cmd.get("wait", True))
-        elif op == "pause":
-            loop.pause(ident, cmd.get("wait", True))
-        elif op == "resume":
-            loop.resume(ident)
-        elif op == "times":
-            loop.times(ident, cmd.get("delta"))
-        elif op == "state":
-            return {"ok": True, "state": loop.state(ident)}
-        elif op == "get":
-            return {"ok": True, "inst": loop.get(ident)}
-        else:
-            raise DaemonError("UnknownOp", "不認得的 op %r" % (op,))
-        return {"ok": True}
+        return {"ok": True, "result": _dispatch(loop, cmd)}
     except (DaemonError, LoopError) as e:
-        return {"ok": False, "error": str(e)}
+        return _error(e.code, e.msg)
     except Exception as e:
-        return {"ok": False, "error": "Internal: %s: %s" % (type(e).__name__, e)}
+        return _error("Internal", "%s: %s" % (type(e).__name__, e))
+
+
+def _error(code, msg):
+    return {"ok": False, "error": {"code": code, "msg": msg}}
+
+
+def _dispatch(loop, cmd):
+    if not isinstance(cmd, dict):
+        raise DaemonError("BadCommand", "指令要是物件")
+    op, ident = cmd.get("op"), cmd.get("id")
+    if op == "add":
+        return loop.add(ident, cmd.get("how", {}))
+    if op == "set":
+        return loop.set(ident, cmd.get("how", {}))
+    if op == "remove":
+        return loop.remove(ident, cmd.get("wait", True))
+    if op == "pause":
+        return loop.pause(ident, cmd.get("wait", True))
+    if op == "resume":
+        return loop.resume(ident)
+    if op == "add_times":
+        return loop.add_times(ident, cmd.get("delta"))
+    if op == "state":
+        return loop.state(ident)
+    if op == "get":
+        return loop.get(ident)
+    if op == "list":
+        return loop.list()
+    raise DaemonError("UnknownOp", "不認得的 op %r" % (op,))
 
 
 def _say(said, key, msg):
@@ -132,13 +144,15 @@ def _scan(loop, d, said, given_up):
         if name.startswith(".") or not name.endswith(".json") or name in given_up:
             continue
         path = os.path.join(d, name)
+        raw = None
         try:
             with open(path, encoding="utf-8") as f:
-                cmd = json.loads(f.read())
+                raw = f.read()
+            cmd = json.loads(raw)
         except (OSError, ValueError) as e:
-            reply = {"ok": False, "error": "BadCommand: 讀不了 %s：%s" % (name, e)}
+            reply = {"request": raw, **_error("BadCommand", "讀不了 %s：%s" % (name, e))}
         else:
-            reply = handle(loop, cmd)
+            reply = {"request": cmd, **handle(loop, cmd)}
         _reply(path, reply, said, given_up)
 
 
