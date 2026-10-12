@@ -180,7 +180,8 @@ class Loop:
                     for i in self.insts.values() if not i.removing]
 
     def restore(self, items):
-        """把 snapshot() 的表放回來、開始跑。先全部驗過才放；inst.json 不在了也照放（跑的時候記進 last_error）。"""
+        """把 snapshot() 的表放回來、開始跑。全有全無：先全部驗過（含 inst.json 在不在、id 有沒有重複或已在表上），
+        有一筆不對就丟錯、一個都不放。"""
         if not isinstance(items, list):
             raise LoopError("FieldType", "表要是陣列")
         todo = []
@@ -192,6 +193,9 @@ class Loop:
             if not ok:
                 raise LoopError("FieldType", "表裡這筆的值不對：%r" % (it,))
             todo.append((it["id"], _how(it["how"], HOW), it["paused"], it["runs"], it["last_error"]))
+        for t in todo:
+            if not os.path.isfile(t[0]):
+                raise LoopError("NotFound", "%s 不存在" % t[0])
         if len({t[0] for t in todo}) != len(todo):
             raise LoopError("Exists", "表裡有重複的 id")
         with self.cond:
