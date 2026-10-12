@@ -1,6 +1,6 @@
 """loop：一張實例表，每個實例照執行方式一次次呼叫 aos_inst.run()。daemon 的 lib，不碰檔案；純標準庫。
 
-實例的 id＝inst.json 的 realpath。方法收的 `id` 什麼寫法都行（資料夾、inst.json、相對路徑），
+實例的 id＝inst.json 的 realpath。方法收的 `id` 要是絕對路徑（inst.json 或它所在的資料夾；相對路徑＝FieldType），
 一律先用 `aos_inst.find()` 轉成 realpath 再查表。每個實例自己一條執行緒：
 等暫停解除 → 重讀 inst.json、run() 一次 → 剩餘次數減一 → 等 interval_ms → 再來。
 
@@ -18,6 +18,8 @@ remove／pause 的 `wait`：True＝等這次跑完，False＝當場收掉（按 
 子程式還沒停回 None，停了回狀態物件（pause＝停下來後的狀態；remove＝最後的狀態，state＝"removed"）。
 set／resume／add_times 回改完的狀態物件。
 run() 一律 new_session=True：每次跑自成一群，收掉或跑完都連孫程式一起清。
+這次是 aos_inst 自己出錯（last_error 不是 None，子程式沒跑）＝下一次至少隔 `error_wait_ms`（Loop 的參數，預設 1000），
+免得 inst.json 壞掉又不限次數時空轉吃滿 CPU。
 
 存檔用（檔案由呼叫者自己讀寫，daemon 的 save／load）：`snapshot()` 回目前的表（不含 removing 的），每筆
 {"id", "how", "paused", "runs", "last_error"}；`restore(items)` 把這樣的表放回來、開始跑。
@@ -49,9 +51,9 @@ def _int(v):
 
 
 def _id(path):
-    """什麼寫法的路徑都轉成 inst.json 的 realpath。"""
-    if not isinstance(path, str):
-        raise LoopError("FieldType", "id 要是字串路徑，不是 %r" % (path,))
+    """絕對路徑（inst.json 或它所在的資料夾）轉成 inst.json 的 realpath。"""
+    if not isinstance(path, str) or not os.path.isabs(path):
+        raise LoopError("FieldType", "id 要是絕對路徑，不是 %r" % (path,))
     try:
         return aos_inst.find(path)
     except aos_inst.InstError as e:
@@ -131,7 +133,10 @@ class _Inst:
                 self.last_error = err
                 if self.how["times"]:
                     self.how["times"] -= 1
-                deadline = time.monotonic() + self.how["interval_ms"] / 1000
+                wait_ms = self.how["interval_ms"]
+                if err is not None:
+                    wait_ms = max(wait_ms, self.loop.error_wait_ms)
+                deadline = time.monotonic() + wait_ms / 1000
                 while not self.removing and self.how["times"] != 0 and time.monotonic() < deadline:
                     cond.wait(deadline - time.monotonic())
             self.final = dict(self.status(), state="removed")
@@ -150,8 +155,9 @@ class _Inst:
 
 
 class Loop:
-    def __init__(self, stop_poll_ms=50):
+    def __init__(self, stop_poll_ms=50, error_wait_ms=1000):
         self.stop_poll_ms = stop_poll_ms
+        self.error_wait_ms = error_wait_ms
         self.cond = threading.Condition()
         self.insts = {}
 

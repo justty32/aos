@@ -15,7 +15,7 @@ python3 proto8/demo/run.py
 - `once/inst.json`：跑一次就結束，印一行、結束碼 3。
 - `tick/inst.json`：每跑一次往 `tick.out` 追加一行時間、往 `tick.exit` 追加一行結束碼。
 - `daemon.json`：daemon 的 config。`control_dir` 寫成 `{"$env": "DEMO_CTL"}`。
-- `run.py`：用 mktemp 建一個暫存資料夾，裡面 `ctl/` 當控制資料夾、`out/` 放子程式的輸出（inst.json 的 `cwd` 寫成 `{"$env": "DEMO_OUT"}`）。daemon 的 cwd 是本資料夾，所以指令裡 `id` 寫 `"tick"` 就行。跑完整個暫存資料夾刪掉，repo 裡不留東西。
+- `run.py`：用 mktemp 建一個暫存資料夾，裡面 `ctl/` 當控制資料夾、`out/` 放子程式的輸出（inst.json 的 `cwd` 寫成 `{"$env": "DEMO_OUT"}`）。指令裡的 `id` 寫絕對路徑（印的時候把本資料夾的路徑省掉）。跑完整個暫存資料夾刪掉，repo 裡不留東西。
 
 ## 它做了什麼
 

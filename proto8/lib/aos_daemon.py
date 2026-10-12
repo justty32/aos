@@ -20,7 +20,7 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
 讀到不合法的 JSON 也一樣當場變成 `.done`（`request` 是讀到的原文字串，error.code＝BadCommand）。
 怎麼寫不規定，但寫到一半被讀到＝不合法 JSON＝BadCommand，寫的人自己負責（例如別處寫好再搬進來）；`.` 開頭的檔不讀。同名的後蓋前；`.done` 由讀回覆的人自己清。兩邊都不 fsync。
 
-指令一律 {"op", "id", ...參數}。`id` 什麼寫法都行（資料夾、inst.json、相對路徑），daemon 一律轉成 inst.json 的 realpath：
+指令一律 {"op", "id", ...參數}。`id` 要是絕對路徑（inst.json 或它所在的資料夾；相對＝FieldType），daemon 一律轉成 inst.json 的 realpath：
 
     {"op": "add",       "id": ID, "how": {...}}   新增實例                         → result＝realpath
     {"op": "set",       "id": ID, "how": {...}}   改執行方式（只改有寫的），下一次起生效 → result＝狀態物件
@@ -38,7 +38,7 @@ CONFIG 是 JSON，先用指示詞 lib 解（基準＝daemon 啟動時的 cwd）�
 沒有特別寫 result 的，result＝null。pause／remove 還沒停的這段時間，指令檔留在原地（不重讀），
 停了才寫 .done；daemon 結束時所有實例收掉，還沒回的照樣補回。`how` 的欄位（times、interval_ms、timeout_ms、grace_ms）與狀態物件見 aos_loop。
 error.code：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、ReadFailed、JsonSyntax、WriteFailed、Internal。
-相對路徑（id、path、inst.json 裡的）基準都是 daemon 啟動時的 cwd。
+相對路徑（path、inst.json 裡的）基準都是 daemon 啟動時的 cwd；id 不收相對路徑。
 實例表只在記憶體裡，daemon 起來時是空的、結束就沒了；要留就 save，要接回來就 load。
 save 存每個實例的 id、how（含剩餘 times）、paused、runs、last_error（removing 的不存；跑到一半的那次不算，
 load 回來會重跑）；先寫 `.名字.tmp` 再改名，不 fsync。load 是全有全無：有任何一點不對——某個 inst.json 不在（NotFound）、
