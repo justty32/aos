@@ -1,7 +1,7 @@
 # DOORMAN — 門房第一級的原型
 
 核心在 `proto/aosp/doorman.py`，並接成 `aos doorman` 子命令；`proto/doorman.py` 只留一行
-相容薄殼。它照 [spec 13](../wf/workflows/spec/13-doorman-l1.md) 做「門房第一級」：
+相容薄殼。它照 spec 13 做「門房第一級」：
 站在資料夾樹前面看檔案動靜，**只看不擋**。它盯著一個根目錄底下的地
 （＝裡面有 `.aos/layout.json` 的資料夾）出生跟死亡，出事就在本子記一筆、順手把
 `$AOS_HOME/.aos/registry.json` 那一筆改對，然後**什麼都不做**。
