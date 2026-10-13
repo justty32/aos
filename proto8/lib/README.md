@@ -32,7 +32,7 @@ out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔�
 三支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`，命令列都只有一個引數，Python 的 `run(path)` 也一樣；相對路徑一律從呼叫者的 cwd 算。
 
 **`檔#/位置`**（10-13 D1）：TARGET（含 `run(path)`、daemon 指令的 `id`）後面可以接 `#/位置`，只用那份檔裡那一格；`#` 後面是 JSON pointer，寫法同 `$ref`。
-- 遇到第一個 `#` 就切，檔名含 `#` 的不支援。位置只認 `/` 開頭（不是＝`ReferencePointerInvalid`）；空的或只有 `/`＝整份。
+- 遇到第一個 `#` 就切，檔名含 `#` 的不支援。位置只認 `/` 開頭（不是＝`ReferencePointerInvalid`）；空的或只有 `/`＝整份。位置像檔案系統：`/` 是根、空段落忽略（`/a/`＝`/a`），`$ref` 也一樣（10-13 使用者定甲）；所以名字是空字串的 key 指不到。
 - id＝realpath ＋ `#` ＋ 位置（正規化過：`.`／`..` 消掉、`~0`／`~1` 重新轉義）；沒位置或 `#/`＝純 realpath。同一份檔兩個位置＝兩個 id。
 - 指到的值不是物件＝`FieldType`；走不到＝`ReferencePointerInvalid`。錯誤訊息帶路徑。
 - 那一格是整份檔的視窗、不是切下來：裡面 `$ref` 的位置照整份檔算（`#/` 是檔的根、`../` 可以摸到旁邊）。

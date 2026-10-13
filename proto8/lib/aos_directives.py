@@ -8,9 +8,10 @@
 
 - `{"$ref": "file.json#/a/0"}`：讀一份 JSON 的某個位置。
   - `#` 前面是檔名：相對檔名從 `base_dir` 起算；空字串＝目前這份文件（不重讀）。
-  - `#` 後面是位置；也可以另寫 `"$at": "/a/0"`，有 `$at` 就以 `$at` 為準。都沒寫＝整份。
+  - `#` 後面是位置；也可以另寫 `"$at": "/a/0"`，有 `$at` 就以 `$at` 為準。都沒寫或空的＝整份。
   - 位置開頭 `/`＝從那份文件的根算；`./`、`../`＝從「目前位置」算：目前文件是這個指示詞所在的位置，
-    別的檔是那份檔的根。段落照 JSON pointer：`~1`→`/`、`~0`→`~`，陣列用十進位索引。
+    別的檔是那份檔的根。段落照 JSON pointer：`~1`→`/`、`~0`→`~`，陣列用十進位索引；
+    但像檔案系統一樣空段落忽略（`/`＝根、`/a/`＝`/a`），名字是空字串的 key 指不到。
   - 取回來的值會接著解：裡面的指示詞以「它所在的那份文件、那個位置」為準。
 - `{"$env": "NAME"}`：讀環境變數 `NAME`。不存在＝錯誤；存在但空＝空字串。
 
@@ -20,7 +21,7 @@
 
 命令列 TARGET 的 `檔#/位置`（aos_inst、aos_loop、aos_daemon 共用，位置的寫法同 `$ref`）：
 - `split_target(target)` → (檔, 位置)：遇到第一個 `#` 就切（檔名含 `#` 的不支援）；位置只收 `/` 開頭，
-  空的或只有 `/`＝整份（`()`）；段落規矩同 `$ref`（`~1`、`~0`、`.`、`..`）。不對＝`ReferencePointerInvalid`。
+  段落規矩同 `$ref`（見上）。不對＝`ReferencePointerInvalid`。
 - `target_id(realpath, 位置)` → id：整份＝純 realpath；否則 realpath ＋ `#` ＋ 位置（正規化過的 JSON pointer）。
 - `locate(root, 位置, ident)` → 那一格的原值（不解指示詞）；走不到＝`ReferencePointerInvalid`。
 - `resolve(..., at=位置)` 只解那一格：是整份檔的一個視窗，裡面的 `$ref` 位置照整份檔算（`#/` 是檔的根、`../` 可以往外摸）。
@@ -49,11 +50,9 @@ def resolve(doc, base_dir, ident="<input>", at=()):
 
 
 def split_target(target):
-    """命令列 TARGET → (檔, 位置 tuple)。遇到第一個 `#` 就切；位置只收 `/` 開頭，空的或只有 `/`＝整份 `()`。"""
+    """命令列 TARGET → (檔, 位置 tuple)。遇到第一個 `#` 就切；位置只收 `/` 開頭；空的或 `/`＝整份 `()`。"""
     file, _, frag = target.partition("#")
-    if frag in ("", "/"):
-        return file, ()
-    if not frag.startswith("/"):
+    if frag and not frag.startswith("/"):
         raise DirectiveError("ReferencePointerInvalid", "%s 的位置 %r 要以 / 開頭" % (target, frag))
     return file, _at(frag, (), target)
 
@@ -148,8 +147,9 @@ def _load(path):
 
 
 def _at(at, here, where):
-    """位置字串 → 絕對位置（token 的 tuple）。`None`＝整份。"""
-    if at is None:
+    """位置字串 → 絕對位置（token 的 tuple）。`None`、空字串＝整份。
+    像檔案系統：`/` 是根，空段落忽略（`/a/`＝`/a`、`/a//b`＝`/a/b`），所以名字是空字串的 key 指不到。"""
+    if not at:
         return ()
     if at.startswith("/"):
         pos, segs = [], at[1:].split("/")
@@ -158,7 +158,7 @@ def _at(at, here, where):
     else:
         raise DirectiveError("ReferencePointerInvalid", "%s 的位置 %r 要以 /、./ 或 ../ 開頭" % (where, at))
     for seg in segs:
-        if seg == ".":
+        if seg in ("", "."):
             continue
         if seg == "..":
             if not pos:
