@@ -5,7 +5,7 @@
 新增／修改 aos 功能的工作流：加一個功能、修一個 bug，從動手到 commit。這是本工作流的**入口**：先讀本檔，再往下深入。always-on 鐵律見 [AGENTS.md](../../../AGENTS.md)；碰原始碼前先讀 [common/conventions](../common/conventions.md)（程式碼慣例 + code map 維護鏈）與 [common/code-map](../common/code-map.md)；要整理結構時參考 [STRUCTURE](../../STRUCTURE.md)（被動）。
 
 **何時用**：使用者說「我想開發／修改某個功能」「這裡壞了，修一下」——**修 bug 也走這條**，產出一樣是「行為改變＋驗證綠燈」。
-**何時不用**：只是要查清楚原因、還不動碼 → [investigation](../investigation.md)；行為不變、只重排結構 → [refactor](../refactor/README.md)；還在討論要不要做、方案長怎樣 → [planning](../planning.md)（ideas／roadmap）；動工前先過 [roadmap](../roadmap.md) 看這階段要先裁什麼。
+**何時不用**：只是要查清楚原因、還不動碼 → [investigation](../investigation.md)；行為不變、只重排結構 → [refactor](../refactor/README.md)；還在討論要不要做、方案長怎樣 → [planning](../planning.md)（ideas／roadmap）；動工前先過 roadmap 看這階段要先裁什麼。
 
 ## Done when
 
@@ -37,7 +37,7 @@
   | 頂層結構（多／少了目錄）| [INDEX](../../INDEX.md)、根 `README.md` |
 
   **文件裡寫的每一條指令與輸出都要真的跑過再寫上去**，不要照推論寫。
-- 實作中被迫下的新裁決＝正式裁決：記回 ideas 對應檔 ＋ verdicts（[roadmap](../roadmap.md) 常備規則 2）。
+- 實作中被迫下的新裁決＝正式裁決：記回 ideas 對應檔 ＋ verdicts（roadmap 常備規則 2）。
 - 跨 session 時在本工作流 `session-log.md` 補一行 `[功能名] 文檔/code map 待同步`，下個 session 不會誤判已同步。
 
 ## 內容

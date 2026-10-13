@@ -15,7 +15,7 @@
    **改法：** 入口只列已完成、暫緩、未完成；已完成細節標歷史，不再當驗收正本。
 
 3. **roadmap 與進度表還派發已完成的工作。**  
-   [roadmap:11](../../../../wf/workflows/roadmap.md) 與 [SESSION-LOG:22](../../../../wf/SESSION-LOG.md) 都說下一件是更新 plan 的分工；但 [plan:7](../../../../proto6/plan/README.md) 已更新。SESSION-LOG 第 20 行也混留已撤回的 mq 介面與大量完成紀錄。  
+   roadmap:11 與 [SESSION-LOG:22](../../../../wf/SESSION-LOG.md) 都說下一件是更新 plan 的分工；但 [plan:7](../../../../proto6/plan/README.md) 已更新。SESSION-LOG 第 20 行也混留已撤回的 mq 介面與大量完成紀錄。  
    **改法：** 移除完成項，只保留真正 open 的一行狀態與連結。
 
 4. **指示詞展開規則仍有互相矛盾的版本。**  

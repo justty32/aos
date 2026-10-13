@@ -38,7 +38,7 @@
 
 資料包通常是：對應那場的 `records/*.md` ＋ 該題的 `background/*.md` ＋
 [PROTOCOL](../dispatch/proto/PROTOCOL.md)（規格唯一真源）＋
-[`roadmap`](../roadmap.md)。
+`roadmap`。
 
 
 ## 細節在哪（從本檔拆出去的）

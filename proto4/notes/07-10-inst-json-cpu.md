@@ -102,7 +102,7 @@
 
 ### 10.1 inst.json 的格式＝凍結分支 `roadmap-run` 的 `core/inst`（SPEC §C-3～§C-6）
 
-那套已經被 ctest 和攻擊腳本打過（見 [wf/salvage/01](../../wf/salvage/01-已驗證的規格結論.md)），直接搬進 proto4-2 的 Python cpu，不重新發明。原文在 `git show frozen/roadmap-run-2026-08:docs/SPEC.md`（§C-3 欄位表、§C-4 指示詞、§C-5 未知 key、§C-6 拒絕表）與 `core/inst/docs/format.md`、`exec.md`、`resolve.md`。
+那套已經被 ctest 和攻擊腳本打過（見 wf/salvage/01），直接搬進 proto4-2 的 Python cpu，不重新發明。原文在 `git show frozen/roadmap-run-2026-08:docs/SPEC.md`（§C-3 欄位表、§C-4 指示詞、§C-5 未知 key、§C-6 拒絕表）與 `core/inst/docs/format.md`、`exec.md`、`resolve.md`。
 
 搬過來之後 inst.json 長這樣（一個物件，八個欄位，只有 `argv` 必填）：
 
