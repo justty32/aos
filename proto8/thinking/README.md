@@ -13,3 +13,4 @@
 | [2026-10-12 loop／daemon](2026-10-12-loop-daemon.md) | loop＝包一個 inst（次數、間隔），ctl 是一個宣告式 ctl.json；daemon＝管多個 loop 的表、ctl 是資料夾、自己也是 loop；三個 json 一個手感（`aos-zzz x.json`，loop.json＝外層 key＋`inst` 格、daemon.json 比照）；loop 的退出碼表；daemon 底下的 loop 用子程序（包裝檔、改 ctl／讀 state、SIGTERM 收尾、save／load）；遷移步驟 |
 | [2026-10-12 inst 進 json](2026-10-12-inst-json.md) | 結束碼只有 0／非 0 是慣例；inst 只回自己的碼、子程式的碼進 exit 檔；`run(path)` 只收路徑、跟命令列一樣；`timeout_ms`、`grace_ms` 進 inst.json；遷移項；未決三題（監工參數去哪等）；代理人＝一個 loop 跑切狀態機的 inst |
 | [2026-10-12 ctl 規範](2026-10-12-ctl-norms.md) | NORMS N-05～N-10 背後的細節：宣告式 ctl.json（`paused`／`stop` 各帶 `{"val","now"}`、沒寫的回初始值、讀的人壞檔維持上一次、state.json 格式）與指令式控制資料夾（`.done`、`ok` 唯一要看、丟的人清）；各條分規範／慣例 |
+| [2026-10-13 JSON 路徑](2026-10-13-json-path.md) | JSON 也是檔案系統：命令列 TARGET 吃 `檔#/位置`（決定做，還沒動工）；loop.json 排法不動；不做 AOS_INST_SELF；單檔自指是套娃、定兩個檔 |
