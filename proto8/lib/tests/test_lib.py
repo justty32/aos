@@ -23,7 +23,7 @@ sys.path.insert(0, LIB)
 
 import aos_daemon  # noqa: E402
 import aos_inst  # noqa: E402
-from aos_directives import DirectiveError, resolve  # noqa: E402
+from aos_directives import DirectiveError, resolve, split_target, target_id  # noqa: E402
 import aos_loop  # noqa: E402
 
 
@@ -94,6 +94,30 @@ class Directives(Tmp):
         self.assertEqual(self.code({"a": {"$ref": "#/a"}}), "ReferenceCycle")
         self.assertEqual(self.code({"a": {"b": {"$ref": "#/a"}}}), "ReferenceCycle")
 
+
+    def test_split_target_and_window(self):
+        # 檔#/位置：遇第一個 # 就切；空的或只有 / ＝整份；位置只認 / 開頭；id 用正規化過的位置
+        self.assertEqual(split_target("a.json"), ("a.json", ()))
+        self.assertEqual(split_target("a.json#"), ("a.json", ()))
+        self.assertEqual(split_target("a.json#/"), ("a.json", ()))
+        self.assertEqual(split_target("a#/b#c"), ("a", ("b#c",)))       # 第一個 # 之後的 # 是位置的一部分
+        self.assertEqual(split_target("a.json#/x~1y/0"), ("a.json", ("x/y", "0")))
+        self.assertEqual(target_id("/r.json", split_target("a.json#/x/./z/../y")[1]), "/r.json#/x/y")
+        self.assertEqual(target_id("/r.json", ()), "/r.json")
+        for bad in ("a.json#x", "a.json#./x", "a.json#/..", "a#b.json"):
+            with self.subTest(bad=bad), self.assertRaises(DirectiveError) as c:
+                split_target(bad)
+            self.assertEqual(c.exception.code, "ReferencePointerInvalid")
+        # 視窗：裡面的 $ref 照整份檔的位置算（../ 摸到旁邊、#/ 是檔的根），不是切下來
+        doc = {"a": {"b": {"$ref": "#../../c"}, "d": {"$ref": "#/c"}}, "c": 1}
+        self.assertEqual(resolve(doc, self.tmp, "<x>", ("a",)), {"b": 1, "d": 1})
+        self.assertEqual(self.code_at({"a": {"b": {"$ref": "#/a"}}}, ("a",)), "ReferenceCycle")
+        self.assertEqual(self.code_at({"a": {}}, ("nope",)), "ReferencePointerInvalid")
+
+    def code_at(self, doc, at):
+        with self.assertRaises(DirectiveError) as c:
+            resolve(doc, self.tmp, "<x>", at)
+        return c.exception.code
 
 class Inst(Tmp):
     def run_inst(self, name, sh, **keys):
@@ -181,6 +205,45 @@ class Inst(Tmp):
         self.assertEqual(self.read("s.exit"), "137\n")
 
 
+    def node(self, name="node.json"):
+        """一份 JSON 放好幾格：clock 是 inst（argv 用 ../ 摸旁邊的 shared）、x 不是物件。"""
+        return self.write(name, {"shared": {"sh": "echo hi >> c.out"},
+                                 "clock": {"argv": ["sh", "-c", {"$ref": "#../../../shared/sh"}], "cwd": self.tmp,
+                                           "exit": "c.exit", "exit_append": True},
+                                 "x": 5})
+
+    def test_target_pointer(self):
+        path = self.node()
+        real = os.path.realpath(path)
+        self.assertIsNone(aos_inst.run(path + "#/clock"))              # 視窗：$ref 的 ../ 照整份檔算
+        self.assertEqual((self.read("c.out"), self.read("c.exit")), ("hi\n", "0\n"))
+        self.assertEqual(aos_inst.find(path + "#/clock"), real + "#/clock")
+        self.assertEqual(aos_inst.find(path + "#/clock/../clock"), real + "#/clock")
+        for whole in (path, path + "#", path + "#/"):                  # 沒 pointer 或 #/ ＝純 realpath
+            self.assertEqual(aos_inst.find(whole), real)
+        for target, code in ((path + "#/x", "FieldType"), (path + "#/nope", "ReferencePointerInvalid"),
+                             (path + "#clock", "ReferencePointerInvalid"), (path + "#/", "FieldType")):
+            with self.subTest(target=target), self.assertRaises(aos_inst.InstError) as c:
+                aos_inst.run(target)
+            self.assertEqual(c.exception.code, code)
+        with self.assertRaises(aos_inst.InstError) as c:
+            aos_inst.run(path + "#/x")
+        self.assertIn(real + "#/x", c.exception.msg)                   # 錯誤訊息帶路徑
+        r = self.cli(path + "#/clock")
+        self.assertEqual((r.returncode, self.read("c.out")), (0, "hi\nhi\n"), r.stderr)
+
+    def test_target_pointer_dir_and_first_hash(self):
+        # 資料夾：先照現有規矩找 inst.json 再套位置
+        self.node("d/inst.json")
+        self.assertEqual(aos_inst.find(self.p("d") + "#/clock"), os.path.realpath(self.p("d/inst.json")) + "#/clock")
+        self.assertIsNone(aos_inst.run(self.p("d") + "#/clock"))
+        self.assertEqual(self.read("c.out"), "hi\n")
+        # 檔名含 # 不支援：遇第一個 # 就切，後面 b.json 當位置、不是 / 開頭
+        self.write("a#b.json", {"argv": ["true"]})
+        with self.assertRaises(aos_inst.InstError) as c:
+            aos_inst.run(self.p("a#b.json"))
+        self.assertEqual(c.exception.code, "ReferencePointerInvalid")
+
 class LoopTest(Tmp):
     def loop(self, name="l", sh="true", **outer):
         """寫 NAME.loop.json（inst 內嵌：在暫存資料夾用 sh 跑 SH、exit 附加到 NAME.exit），回路徑。"""
@@ -244,6 +307,21 @@ class LoopTest(Tmp):
         self.assertEqual(r.returncode, 125)
         self.assertIn("EnvironmentVariableMissing", r.stderr)
         self.assertEqual(self.cli(self.loop(inst={"argv": []})).returncode, 125)
+
+    def test_target_pointer(self):
+        # loop.json 的一格當 loop 本體；inst 裡的 ../ 照整份檔算；id＝realpath#/位置
+        path = self.write("node.json", {"cmd": "echo z >> n.out",
+                                        "job": {"inst": {"argv": ["sh", "-c", {"$ref": "#../../../../cmd"}], "cwd": self.tmp},
+                                                "times": 2, "state": "n.state.json"},
+                                        "x": [1]})
+        r = self.cli(path + "#/job")
+        self.assertEqual((r.returncode, self.read("n.out")), (0, "z\nz\n"), r.stderr)
+        self.assertEqual(self.state("n.state.json")["id"], os.path.realpath(path) + "#/job")
+        r = self.cli(path + "#/x")                                      # 指到的不是物件
+        self.assertEqual((r.returncode, r.stderr.split(":")[0]), (125, "FieldType"))
+        self.assertIn(os.path.realpath(path) + "#/x", r.stderr)
+        r = self.cli(path + "#job")
+        self.assertEqual((r.returncode, r.stderr.split(":")[0]), (125, "ReferencePointerInvalid"))
 
     def test_no_exit_last_code_null(self):
         self.loop(inst={"argv": ["true"]}, state="l.state.json")
@@ -499,6 +577,38 @@ class Daemon(Tmp):
         self.assertEqual(len(self.ok({"op": "list"})), 1)
         self.ok({"op": "remove", "id": b})
         self.assertEqual(len(self.ok({"op": "load", "path": self.p("t.json")})), 2)
+        self.until(lambda: self.ok({"op": "state", "id": b}) == "paused")
+
+    def test_target_pointer(self):
+        # 一份檔放好幾格：同一份檔兩個位置＝兩個 loop；inst 那格包成只跑一次；save／load 帶著 #/位置
+        self.start()
+        path = self.write("node.json", {
+            "a": {"inst": {"argv": ["sh", "-c", "echo a >> a.out"], "cwd": self.tmp}, "times": None,
+                  "interval_ms": 100000, "ctl_poll_ms": 20},
+            "b": {"inst": {"argv": ["true"]}, "times": None, "interval_ms": 100000, "ctl_poll_ms": 20},
+            "c": {"argv": ["sh", "-c", {"$ref": "#../../../a/inst/argv/2"}], "cwd": self.tmp, "exit": "c.exit"},
+            "x": 1})
+        real = os.path.realpath(path)
+        a = self.ok({"op": "add", "id": path + "#/a"})
+        b = self.ok({"op": "add", "id": path + "#/./b"})
+        self.assertEqual((a, b), (real + "#/a", real + "#/b"))
+        self.until(lambda: self.ok({"op": "get", "id": a}).get("runs") == 1)
+        self.assertEqual(self.ok({"op": "get", "id": a})["id"], a)
+        self.assertEqual(self.err({"op": "add", "id": path + "#/b/../b"}), "Exists")
+        c = self.ok({"op": "add", "id": path + "#/c"})
+        self.until(lambda: self.ok({"op": "state", "id": c}) == "done")
+        self.assertEqual((self.read("a.out"), self.read("c.exit")), ("a\na\n", "0\n"))
+        self.assertEqual(self.err({"op": "add", "id": path + "#/x"}), "FieldType")
+        self.assertEqual(self.err({"op": "add", "id": path + "#/nope"}), "ReferencePointerInvalid")
+        self.assertEqual(self.err({"op": "add", "id": path + "#a"}), "ReferencePointerInvalid")
+        self.assertEqual(self.err({"op": "add", "id": "node.json#/a"}), "FieldType")
+        self.ok({"op": "remove", "id": c})
+        self.ok({"op": "pause", "id": b})
+        self.ok({"op": "save", "path": self.p("t.json")})
+        self.assertEqual([it["loop"] for it in json.loads(self.read("t.json"))], [a, b])
+        self.ok({"op": "remove", "id": a})
+        self.ok({"op": "remove", "id": b})
+        self.assertEqual(self.ok({"op": "load", "path": self.p("t.json")}), [a, b])
         self.until(lambda: self.ok({"op": "state", "id": b}) == "paused")
 
     def test_load_rejects_live_pid(self):

@@ -27,7 +27,16 @@ out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔�
 取回來的東西裡如果還有指示詞，照它所在的那份檔、那個位置接著解。繞回自己（指到正在解的位置或它的上層）＝`ReferenceCycle`。
 錯了一律丟 `DirectiveError`，代號七種，寫在檔頭。
 
-三支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`，命令列都只有一個引數，Python 的 `run(path)` 也一樣；相對路徑一律從呼叫者的 cwd 算。退出碼／`run()` 只說自己有沒有出錯（只有 0／非 0 是確定的，其他數字只供參考）；子程式的碼只寫進 inst.json 的 `exit` 檔。
+命令列 TARGET 的 `檔#/位置` 也在這裡（三支程式共用）：`split_target(target)` → (檔, 位置)、`target_id(realpath, 位置)` → id、`locate(root, 位置, ident)` → 那一格的原值；`resolve(..., at=位置)` 只解那一格。
+
+三支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`，命令列都只有一個引數，Python 的 `run(path)` 也一樣；相對路徑一律從呼叫者的 cwd 算。
+
+**`檔#/位置`**（10-13 D1）：TARGET（含 `run(path)`、daemon 指令的 `id`）後面可以接 `#/位置`，只用那份檔裡那一格；`#` 後面是 JSON pointer，寫法同 `$ref`。
+- 遇到第一個 `#` 就切，檔名含 `#` 的不支援。位置只認 `/` 開頭（不是＝`ReferencePointerInvalid`）；空的或只有 `/`＝整份。
+- id＝realpath ＋ `#` ＋ 位置（正規化過：`.`／`..` 消掉、`~0`／`~1` 重新轉義）；沒位置或 `#/`＝純 realpath。同一份檔兩個位置＝兩個 id。
+- 指到的值不是物件＝`FieldType`；走不到＝`ReferencePointerInvalid`。錯誤訊息帶路徑。
+- 那一格是整份檔的視窗、不是切下來：裡面 `$ref` 的位置照整份檔算（`#/` 是檔的根、`../` 可以摸到旁邊）。
+- inst 的 TARGET 是資料夾：先照現有規矩找 inst.json 再套位置。退出碼／`run()` 只說自己有沒有出錯（只有 0／非 0 是確定的，其他數字只供參考）；子程式的碼只寫進 inst.json 的 `exit` 檔。
 
 ## inst（`aos_inst.py`）
 
@@ -37,13 +46,13 @@ out = resolve(doc, base_dir)   # doc＝parse 好的 JSON；base_dir＝相對檔�
 python3 proto8/lib/aos_inst.py TARGET
 ```
 
-- TARGET：`.json` 檔，或資料夾（找 `.aos/inst.json`，沒有再找 `inst.json`）。`find()` 回 realpath。
+- TARGET：`.json` 檔，或資料夾（找 `.aos/inst.json`，沒有再找 `inst.json`），後面可接 `#/位置`（見上）。`find()` 回 id（realpath，有位置就接 `#/位置`）。
 - 基準一律是呼叫者的 cwd：指示詞的檔名、`cwd` 這個 key 從這裡算。`cwd` 沒寫＝呼叫者的 cwd；`stdin`／`stdout`／`stderr`／`exit` 的相對路徑從解出來的 `cwd` 算。
 - key：`argv`（必填）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`、`timeout_ms`（沒寫＝不限）、`grace_ms`（沒寫＝2000），加上布林的 `cwd_mkdir`、`envs_clear`、`*_inherit`、`*_append`、`*_mkdir`、`stderr_merge`。完整說明在檔頭。
 - `run(target)`：跟命令列一模一樣。正常做完回 None（命令列 0），子程式回幾號、被限時收掉都算正常做完；aos_inst 自己出錯丟 `InstError`（命令列印「代號: 白話」，參考 127＝找不到程式、126＝不能執行、125＝其他，`exit_code(err)`）。
 - 子程式的碼只寫進 `exit` 檔：自己結束＝它的碼，被訊號停掉＝128＋N；沒起來不寫；寫不進去不管。`read_exit(path)` 讀最後一行（給 loop、tasks 用）。
 - 子程式留在 aos_inst 的行程群組。在主執行緒（命令列就是）收到 SIGINT／SIGTERM／SIGHUP 不死、轉給子程式，過 `grace_ms` 還沒結束就 SIGKILL，照樣寫 exit。要從外面停它、連孫程式一起清，是啟動它的人的事（aos_loop 把它起在新 session、整群收）。
-- API：`find(target)`、`load(target)`、`parse(doc, base_dir, ident)`、`run(target)`、`read_exit(path)`、`exit_code(err)`。
+- API：`find(target)`、`load(target)`、`parse(doc, base_dir, ident, at=())`、`run(target)`、`read_exit(path)`、`exit_code(err)`。
 
 ## loop（`aos_loop.py`）
 
@@ -66,6 +75,7 @@ python3 proto8/lib/aos_loop.py LOOP.json
 }
 ```
 
+- `LOOP.json` 可接 `#/位置`（見上）：loop 本體是那一格，id（state 的 `id`）＝realpath#/位置。
 - loop.json（含 `inst` 那格與裡面的指示詞）**只在起來時讀一次、解一次**；`inst` 不對＝起不來（沿用 aos_inst 的碼，參考 125）。跑的途中要改只能走 ctl.json。
 - 每一次：起子程序 `aos_inst.py`（自成一個 session）→ 等它結束 → 整群補 SIGKILL 清孫程式 → 收屍。解好的 inst 在起來時寫成暫存資料夾裡的一份 inst.json，每次都把它的路徑交給 aos_inst，結束刪掉。
 - 結果：aos_inst 回 0 → `last_code`＝exit 檔最後一行（沒寫 exit＝null）；非 0 → `last_error`＝它 stderr 的最後一行。
@@ -87,7 +97,7 @@ python3 proto8/lib/aos_daemon.py DAEMON.json
 - 自己的 state.json：共同骨架加上 `skipped`、`loops`（表上幾個，只寫個數；要細節用控制指令 `list`／`get`／`state` 查）；`last_error`＝最近一圈印到 stderr 的最後一行錯（ScanFailed、ReplyFailed），那圈沒錯＝null。
 - 自己的 ctl.json：paused＝不掃（指令堆著、loop 照跑）；stop＝收工（先 save；now＝底下 loop 當場收掉，沒 now＝替它們寫 stop、等它們跑完）；times 跑完同 stop（不帶 now）。
 - 表上每個 loop 是一支子程序 `aos_loop.py`（自成 session）。daemon 只靠兩個檔控制它：寫它的 ctl.json、讀它的 state.json。loop.json 沒寫 ctl／state 的，在 `work_dir/<編號>/` 生包裝檔（每個 key `$ref` 回原檔、補上 ctl／state），移除或收工時刪掉。
-- 控制資料夾（NORMS N-10）：放 `名字.json`，處理完變 `名字.json.done`，內容 `{"request", "ok", "result"|"error": {"code", "msg"}}`；`.` 開頭不讀；`.done` 由丟的人清。指令 `{"op", "id", ...}`，id＝loop.json 的絕對路徑（`add` 也收 inst.json：頂層沒有 `inst`、有 `argv` 的，包成只跑一次的 loop `{"inst": {"$ref": 它}, "times": 1}`，id 是那份 inst.json 的 realpath）：`add`、`set`（`how`：times／interval_ms／interval_mode）、`pause`／`remove`（`wait` 預設 true）、`resume`、`add_times`（`delta`）、`state`、`get`、`list`、`save`／`load`（`path`）。
+- 控制資料夾（NORMS N-10）：放 `名字.json`，處理完變 `名字.json.done`，內容 `{"request", "ok", "result"|"error": {"code", "msg"}}`；`.` 開頭不讀；`.done` 由丟的人清。指令 `{"op", "id", ...}`，id＝loop.json 的絕對路徑，可接 `#/位置`（見上；save 存的、load 帶的 id 也一樣）（`add` 也收 inst.json：頂層沒有 `inst`、有 `argv` 的，包成只跑一次的 loop `{"inst": {"$ref": 它}, "times": 1}`，id 是那份 inst.json 的 realpath）：`add`、`set`（`how`：times／interval_ms／interval_mode）、`pause`／`remove`（`wait` 預設 true）、`resume`、`add_times`（`delta`）、`state`、`get`、`list`、`save`／`load`（`path`）。
 - 次數跑完的 loop 自己退出，留在表上（state `done`），要再跑就 remove 再 add。set／pause／resume／add_times 等 loop 讀到了才回（state.json 的 ctl_mtime 趕上），pause 還要等真的停了，remove 等行程結束；等的期間指令檔留在原地。
 - save 存 `[{"loop": realpath, "ctl": 當下 ctl.json}]`；runs 不存。load 全有全無（不在＝NotFound、重複或 state.json 的 pid 還活著＝Exists、格式不對＝FieldType），會把 ctl 內容寫回各 loop 的 ctl.json 再起。
 - 收工：SIGTERM＝先 save、對每個 loop 的 session 送 SIGTERM、等 grace_ms、整群 SIGKILL；SIGINT 一樣但不存。巢狀 grace：inst（2000）＜ loop（5000）＜ daemon（10000）。
@@ -148,7 +158,7 @@ key 分四組，每組落在哪幾個檔是固定的：
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，41 個、約 12 秒。一個檔 `test_lib.py` 分四組（指示詞、inst、loop、daemon），loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，46 個、約 12 秒。一個檔 `test_lib.py` 分四組（指示詞、inst、loop、daemon），loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 
