@@ -64,23 +64,13 @@
 
 ### multi-agent flavor
 
-| 觸發（你說…）| 工作流 | 入口檔（先讀這個）|
-|--------------|--------|-------------------|
-| 「看看信箱」「處理 inbox」 | **inbox（收信）** | [workflows/inbox/README.md](workflows/inbox/README.md) |
-| 「寄信給 X」「請別資料夾的 agent 做 Y」「回報做完了 / 卡住了」 | **inbox（寄信）** | [workflows/inbox/README.md](workflows/inbox/README.md)（格式與 STATUS 見 [PROTOCOL](workflows/inbox/PROTOCOL.md)）|
-| 「把這件事切成幾條線派出去」「開一隊去做」「寫交接書」「收線」 | **dispatch** | [workflows/dispatch/README.md](workflows/dispatch/README.md) |
-| 「要開團隊」「這層派哪級模型」「怎麼分角色」 | **team-model** | [workflows/team-model.md](workflows/team-model.md) |
-| 「我要用螢幕 / 鍵鼠」「誰在佔著主工作樹」「誰在佔資源」 | **resources** | [workflows/resources.md](workflows/resources.md) |
-
-> workshop／hackathon 本身就是派線：它們各自的入口檔管**題目與紀錄**，怎麼開隊、派哪級模型、怎麼收線一律照 dispatch／team-model。
+multi-agent flavor 的派發表在 [WORKFLOWS/01-multi-agent-flavor.md](WORKFLOWS/01-multi-agent-flavor.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
 
 **都不符 → 看 [INDEX.md](INDEX.md)**（repo 頂層結構地圖）。新開工作流 → 複製 [workflows/TEMPLATE.workflow.md](workflows/TEMPLATE.workflow.md) 從單檔長起，並在上表加一列；不要預先建空檔。
 
 ## 工作流的統一形式（規範）
 
-- **檔名規範**：**README** = 初入一個資料夾**先讀的入口／導引**；**INDEX** = **描述該資料夾頂層結構**的索引。小資料夾兩者可合一；大到結構複雜時才分出獨立 INDEX。
-- **入口檔段落**固定照 [TEMPLATE.workflow.md](workflows/TEMPLATE.workflow.md)：何時用 ↔ 何時不用 / `Done when:`（只准三類可觀察條件：檔案存在、指令回傳、表格填滿）/ 流程 / 交接。既有工作流的入口檔在下次動到時再補齊這些段，不為了補而改。
-- **資料夾型**：入口 `README.md` ＋視需要的 `archive/`（過時文檔封存，規則見 [STRUCTURE](STRUCTURE.md)）、`gotchas.md`、`session-log.md`；**單檔型**：一個 `.md` 同時是入口與內容。撐大了就照 [STRUCTURE](STRUCTURE.md) 的四級成長軌跡升級成資料夾型；到底有哪些工作流看上面的派發表即可。
+檔名規範、入口檔段落、資料夾型／單檔型的規範在 [WORKFLOWS/02-統一形式.md](WORKFLOWS/02-統一形式.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
 
 ## 跨工作流的活狀態（只列 open，完成即刪）
 
