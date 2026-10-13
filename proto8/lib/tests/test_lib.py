@@ -94,12 +94,22 @@ class Directives(Tmp):
         self.assertEqual(self.code({"a": {"$ref": "#/a"}}), "ReferenceCycle")
         self.assertEqual(self.code({"a": {"b": {"$ref": "#/a"}}}), "ReferenceCycle")
 
+    def test_ref_path_like_filesystem(self):
+        self.write("x.json", {"k": 1})
+        # $ref 跟命令列同一套：# 、#/ ＝整份，結尾 / 忽略，空字串 key 指不到（10-13 使用者定甲）
+        self.assertEqual(resolve({"a": {"$ref": "x.json#"}, "b": {"$ref": "x.json#/"}}, self.tmp),
+                         {"a": {"k": 1}, "b": {"k": 1}})
+        self.assertEqual(resolve({"a": {"$ref": "x.json#/k/"}}, self.tmp), {"a": 1})
+        self.assertEqual(self.code({"": 1, "a": {"$ref": "#/"}}), "ReferenceCycle")
+
 
     def test_split_target_and_window(self):
         # 檔#/位置：遇第一個 # 就切；空的或只有 / ＝整份；位置只認 / 開頭；id 用正規化過的位置
         self.assertEqual(split_target("a.json"), ("a.json", ()))
         self.assertEqual(split_target("a.json#"), ("a.json", ()))
         self.assertEqual(split_target("a.json#/"), ("a.json", ()))
+        self.assertEqual(split_target("a.json#/x/"), ("a.json", ("x",)))     # 像檔案系統：結尾 / 、空段落忽略
+        self.assertEqual(split_target("a.json#/x//y"), ("a.json", ("x", "y")))
         self.assertEqual(split_target("a#/b#c"), ("a", ("b#c",)))       # 第一個 # 之後的 # 是位置的一部分
         self.assertEqual(split_target("a.json#/x~1y/0"), ("a.json", ("x/y", "0")))
         self.assertEqual(target_id("/r.json", split_target("a.json#/x/./z/../y")[1]), "/r.json#/x/y")
