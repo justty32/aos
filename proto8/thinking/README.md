@@ -14,4 +14,4 @@
 | [2026-10-12 inst 進 json](2026-10-12-inst-json.md) | 結束碼只有 0／非 0 是慣例；inst 只回自己的碼、子程式的碼進 exit 檔；`run(path)` 只收路徑、跟命令列一樣；`timeout_ms`、`grace_ms` 進 inst.json；遷移項；未決三題（監工參數去哪等）；代理人＝一個 loop 跑切狀態機的 inst |
 | [2026-10-12 ctl 規範](2026-10-12-ctl-norms.md) | NORMS N-05～N-10 背後的細節：宣告式 ctl.json（`paused`／`stop` 各帶 `{"val","now"}`、沒寫的回初始值、讀的人壞檔維持上一次、state.json 格式）與指令式控制資料夾（`.done`、`ok` 唯一要看、丟的人清）；各條分規範／慣例 |
 | [2026-10-13 JSON 路徑](2026-10-13-json-path.md) | JSON 也是檔案系統：命令列 TARGET 吃 `檔#/位置`（決定做，還沒動工）；loop.json 排法不動；不做 AOS_INST_SELF；單檔自指是套娃、定兩個檔；`_metainfo`＝inst 跑下去的特性（九軸、資源），inst 忽略、給 kernel 參考（還沒動工） |
-| [2026-10-13 kernel／agent](2026-10-13-kernel-agent.md) | kernel 不是一層：能管任務的 inst 就是 kernel（daemon 就是）；agent＝持續跑的 inst＋loop＋狀態機變換程式；agent 可基於 loop（指令交給別的 daemon）或基於 daemon（自己就是 kernel） |
+| [2026-10-13 kernel／agent](2026-10-13-kernel-agent.md) | kernel＝能操控東西被執行的就算（標準規範：基於 daemon、決定跑哪些 inst）；任務屬性＝隱性行程／檔案屬性＋九軸，決定演算法隨便；agent＝記憶＋思考中心＋工具的狀態機，自我改進用 loop＋狀態切換（一步落檔、zip／git）；標準版三態等待／思考／工具；工具↔inst、agent 細節待規劃 agent 時再說 |
