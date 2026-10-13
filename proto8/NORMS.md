@@ -44,5 +44,6 @@
   - 錯誤寫 stderr。
 - **kernel 公告**：公告欄在哪、格式、看到的人要做什麼、「逾時不候」之後 kernel 怎麼處理沒存好的。
 - **時鐘**：回合數怎麼讀（aos-tick 的檔＝十進位＋換行）算不算規範，還是只是 aos-tick 這個語法糖的格式。
+- **路徑寫法 `檔#/位置`**（JSON pointer）要不要列成大家都遵守的規範——出處 [thinking 10-13](thinking/2026-10-13-json-path.md)。
 - ~~**ctl 格式**~~（**已定**，10-12 夜＝N-05～N-10；細節與慣例在 [thinking 10-12 ctl 規範](thinking/2026-10-12-ctl-norms.md)，出處 [thinking 10-12 loop／daemon](thinking/2026-10-12-loop-daemon.md)。兩種都算規範：宣告式 ctl.json N-06～N-09、指令式資料夾 N-10；「什麼時候用哪一種」沒定成規範。）
 - ~~**巢狀 grace**~~（**已定：只當慣例，不進規範**，使用者 10-12 夜。NORMS 沒有放慣例的段落，慣例就記在這：`grace_ms` 建議值（也是程式的預設）inst 2000、loop 5000、daemon 10000；外層宜大於內層；設錯自己負責。不加進 argv[0] 規矩。）
