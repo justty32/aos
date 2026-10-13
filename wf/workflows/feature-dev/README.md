@@ -5,7 +5,7 @@
 新增／修改 aos 功能的工作流：加一個功能、修一個 bug，從動手到 commit。這是本工作流的**入口**：先讀本檔，再往下深入。always-on 鐵律見 [AGENTS.md](../../../AGENTS.md)；碰原始碼前先讀 [common/conventions](../common/conventions.md)（程式碼慣例 + code map 維護鏈）與 [common/code-map](../common/code-map.md)；要整理結構時參考 [STRUCTURE](../../STRUCTURE.md)（被動）。
 
 **何時用**：使用者說「我想開發／修改某個功能」「這裡壞了，修一下」——**修 bug 也走這條**，產出一樣是「行為改變＋驗證綠燈」。
-**何時不用**：只是要查清楚原因、還不動碼 → [investigation](../investigation.md)；行為不變、只重排結構 → [refactor](../refactor/README.md)；還在討論要不要做、方案長怎樣 → [planning](../planning.md)（ideas／roadmap）；動工前先過 roadmap 看這階段要先裁什麼。
+**何時不用**：只是要查清楚原因、還不動碼 → [investigation](../investigation.md)；行為不變、只重排結構 → [refactor](../refactor/README.md)；還在討論要不要做、方案長怎樣 → [planning](../planning.md)（proto8/thinking／SESSION-LOG）；動工前先看 thinking 的決定與 NORMS。
 
 ## Done when
 
@@ -33,11 +33,11 @@
   | 某個小專案的內部行為 | 該小專案的 `docs/`（如 `core/inst/docs/`）＋ [code map](../common/code-map.md) |
   | 建置骨架、CMake 函式、相依管理 | [`docs/build.md`](../../../docs/build.md)、[`docs/subprojects.md`](../../../docs/subprojects.md)、[add-subproject 工作流](../add-subproject.md) |
   | 公開 API、子命令、退出碼 | [`docs/usage.md`](../../../docs/usage.md)、[use-aos 工作流](../use-aos.md) |
-  | `.aos` 版面、回合模型、交接協定 | [PROTOCOL](../dispatch/proto/PROTOCOL.md)（唯一真源）＋ 對應的 ideas 檔與 verdicts |
+  | `.aos` 版面、回合模型、交接協定 | [PROTOCOL](../dispatch/proto/PROTOCOL.md)（唯一真源）＋ proto8 的 CONCEPTS／NORMS |
   | 頂層結構（多／少了目錄）| [INDEX](../../INDEX.md)、根 `README.md` |
 
   **文件裡寫的每一條指令與輸出都要真的跑過再寫上去**，不要照推論寫。
-- 實作中被迫下的新裁決＝正式裁決：記回 ideas 對應檔 ＋ verdicts（roadmap 常備規則 2）。
+- 實作中被迫下的新裁決＝正式裁決：記回那次討論的 thinking 檔「決定」段（見 [decisions](../decisions.md)）。
 - 跨 session 時在本工作流 `session-log.md` 補一行 `[功能名] 文檔/code map 待同步`，下個 session 不會誤判已同步。
 
 ## 內容
@@ -54,4 +54,4 @@
 ## 交接
 
 - 驗證怎麼跑 → [testing](../testing.md)；改到一半發現該先整理結構 → [refactor](../refactor/README.md)。
-- 為什麼選這個做法 → [decisions](../decisions.md)（verdicts）；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。
+- 為什麼選這個做法 → [decisions](../decisions.md)（thinking 的決定）；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。

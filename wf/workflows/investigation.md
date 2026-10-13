@@ -10,14 +10,14 @@
 ## Done when
 
 - `investigations/<主題>.md` 存在（本資料夾底下，第一份出現時才建 `investigations/`），且下列五段非空。
-- 結論是「要動手」→ roadmap 或 [ideas](ideas/README.md) 有接手列。
+- 結論是「要動手」→ [SESSION-LOG](../SESSION-LOG.md) 有接手列。
 
 ## 流程
 
 1. **收集事實**：只讀不改，一條一則，附出處。
-2. **對照現有能力**：這件事現在能不能做、靠什麼做（先查 [code map](common/code-map.md) 與 verdicts，別重查已裁決的）。
+2. **對照現有能力**：這件事現在能不能做、靠什麼做（先查 [code map](common/code-map.md) 與 proto8 thinking 的決定，別重查已裁決的）。
 3. **分類**：可直接做／有缺口／不值得做／需使用者驗證。
-4. **產出 finding**：照下方筆記模板寫成一份可歸檔的筆記；缺口進 [planning](planning.md)（ideas／roadmap），踩到的坑進 [common/gotchas](common/gotchas.md)，需使用者驗證的進 [WAIT_USER](../WAIT_USER.md)。
+4. **產出 finding**：照下方筆記模板寫成一份可歸檔的筆記；缺口進 [planning](planning.md)（proto8/thinking／SESSION-LOG），踩到的坑進 [common/gotchas](common/gotchas.md)，需使用者驗證的進 [WAIT_USER](../WAIT_USER.md)。
 
 **不把未驗證的猜測寫成結論**——不確定就寫「缺什麼證據」，不要補完。
 
