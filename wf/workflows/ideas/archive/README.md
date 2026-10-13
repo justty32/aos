@@ -88,3 +88,5 @@
 | `turn-based-folder/usage-and-agent-loop.md` | 2026-09-05 | wf/workflows/ideas/README.md（新版構想集） |
 | `usability-target.md` | 2026-09-05 | wf/workflows/ideas/README.md（新版構想集） |
 | `verdicts.md` | 2026-09-05 | wf/workflows/ideas/README.md（新版構想集） |
+| `01-what-and-goals.md`～`13-holes-and-play.md`（13 章新構想集） | 2026-10-13 | 無直接取代者：使用者 10-13 決定封存；現行概念在 proto8/CONCEPTS.md |
+| `reflections.md` | 2026-10-13 | 同上 |

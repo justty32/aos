@@ -1,6 +1,6 @@
 # 2026-09-06 構想（ideas 13 章）對 proto2：哪裡像、哪裡差、還缺啥
 
-← [proto2/README](../README.md)｜構想入口 [ideas/README](../../wf/workflows/ideas/README.md)｜反思 [reflections](../../wf/workflows/ideas/reflections.md)｜今天原話 [world-clock-agent](2026-09-06-world-clock-agent.md)
+← [proto2/README](../README.md)｜構想入口 [ideas/README](../../wf/workflows/ideas/README.md)｜反思 reflections｜今天原話 [world-clock-agent](2026-09-06-world-clock-agent.md)
 
 ## 一句話結論
 

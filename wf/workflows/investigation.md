@@ -10,7 +10,7 @@
 ## Done when
 
 - `investigations/<主題>.md` 存在（本資料夾底下，第一份出現時才建 `investigations/`），且下列五段非空。
-- 結論是「要動手」→ [roadmap](roadmap.md) 或 [ideas](ideas/README.md) 有接手列。
+- 結論是「要動手」→ roadmap 或 [ideas](ideas/README.md) 有接手列。
 
 ## 流程
 
