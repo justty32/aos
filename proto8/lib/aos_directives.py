@@ -17,11 +17,18 @@
 錯了一律丟 `DirectiveError`，`code` 是下面七種之一：
 `UnknownDirective`、`DirectiveValueTypeMismatch`、`EnvironmentVariableMissing`、
 `ReferenceReadFailed`、`ReferenceJsonInvalid`、`ReferencePointerInvalid`、`ReferenceCycle`。
+
+命令列 TARGET 的 `檔#/位置`（aos_inst、aos_loop、aos_daemon 共用，位置的寫法同 `$ref`）：
+- `split_target(target)` → (檔, 位置)：遇到第一個 `#` 就切（檔名含 `#` 的不支援）；位置只收 `/` 開頭，
+  空的或只有 `/`＝整份（`()`）；段落規矩同 `$ref`（`~1`、`~0`、`.`、`..`）。不對＝`ReferencePointerInvalid`。
+- `target_id(realpath, 位置)` → id：整份＝純 realpath；否則 realpath ＋ `#` ＋ 位置（正規化過的 JSON pointer）。
+- `locate(root, 位置, ident)` → 那一格的原值（不解指示詞）；走不到＝`ReferencePointerInvalid`。
+- `resolve(..., at=位置)` 只解那一格：是整份檔的一個視窗，裡面的 `$ref` 位置照整份檔算（`#/` 是檔的根、`../` 可以往外摸）。
 """
 import json
 import os
 
-__all__ = ["DirectiveError", "resolve"]
+__all__ = ["DirectiveError", "locate", "resolve", "split_target", "target_id"]
 
 
 class DirectiveError(Exception):
@@ -33,10 +40,32 @@ class DirectiveError(Exception):
         self.msg = msg
 
 
-def resolve(doc, base_dir, ident="<input>"):
+def resolve(doc, base_dir, ident="<input>", at=()):
     """把 `doc`（已經 parse 好的 JSON 值）裡的指示詞全部解掉，回新的值。`base_dir`＝相對檔名的基準路徑；
-    `ident`＝doc 從哪來（檔案的 realpath；不是讀檔來的就用預設）。"""
-    return _Resolver(os.path.abspath(base_dir)).node(doc, _Doc(ident, doc), (), ())
+    `ident`＝doc 從哪來（檔案的 realpath；不是讀檔來的就用預設）。
+    `at`＝只解 doc 裡這一格（位置 tuple，`split_target()` 給的）；裡面的指示詞照它在整份 doc 裡的位置解。"""
+    d = _Doc(ident, doc)
+    return _Resolver(os.path.abspath(base_dir)).node(_walk(d, at, ident), d, at, ())
+
+
+def split_target(target):
+    """命令列 TARGET → (檔, 位置 tuple)。遇到第一個 `#` 就切；位置只收 `/` 開頭，空的或只有 `/`＝整份 `()`。"""
+    file, _, frag = target.partition("#")
+    if frag in ("", "/"):
+        return file, ()
+    if not frag.startswith("/"):
+        raise DirectiveError("ReferencePointerInvalid", "%s 的位置 %r 要以 / 開頭" % (target, frag))
+    return file, _at(frag, (), target)
+
+
+def target_id(path, pos):
+    """id：整份＝`path`（realpath）；否則 `path#位置`（位置正規化成 JSON pointer）。"""
+    return path + "#" + _show(pos) if pos else path
+
+
+def locate(root, pos, ident):
+    """`root` 照位置走下去的原值（不解指示詞）；走不到＝`ReferencePointerInvalid`。"""
+    return _walk(_Doc(ident, root), pos, ident)
 
 
 class _Doc:

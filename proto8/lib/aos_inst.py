@@ -4,6 +4,8 @@
     python3 aos_inst.py TARGET
 
 TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒有再找 `<資料夾>/inst.json`）。
+後面可以接 `#/位置`（JSON pointer，寫法同指示詞 `$ref`）：只跑那份檔裡那一格（要是物件）。遇到第一個 `#` 就切，
+檔名含 `#` 的不支援；資料夾先照上面找到 inst.json 再套位置。那一格是整份檔的視窗：裡面 `$ref` 的位置照整份檔算。
 相對路徑的基準一律是呼叫者現在的工作目錄：指示詞的相對檔名、`cwd` 這個 key 從這裡算；
 `stdin`／`stdout`／`stderr`／`exit` 的相對路徑從解出來的 `cwd` 算。
 
@@ -44,7 +46,7 @@ import sys
 import threading
 import time
 
-from aos_directives import DirectiveError, resolve
+from aos_directives import DirectiveError, resolve, split_target, target_id
 
 __all__ = ["InstError", "exit_code", "find", "load", "parse", "read_exit", "run"]
 
@@ -80,18 +82,28 @@ def read_exit(path):
 
 
 def find(target):
-    """TARGET → inst.json 的路徑（realpath：絕對、沒有 . 與 ..、捷徑都解開；同一份檔永遠得到同一個字串）。"""
-    if os.path.isdir(target):
-        for p in (os.path.join(target, ".aos", "inst.json"), os.path.join(target, "inst.json")):
+    """TARGET → id：inst.json 的路徑（realpath：絕對、沒有 . 與 ..、捷徑都解開；同一份檔永遠得到同一個字串），
+    TARGET 有 `#/位置` 就再接上 `#` 與正規化過的位置（同一份檔兩個位置＝兩個 id）。"""
+    return target_id(*_find(target))
+
+
+def _find(target):
+    """TARGET → (inst.json 的 realpath, 位置 tuple)。"""
+    try:
+        file, pos = split_target(target)
+    except DirectiveError as e:
+        raise InstError(e.code, e.msg)
+    if os.path.isdir(file):
+        for p in (os.path.join(file, ".aos", "inst.json"), os.path.join(file, "inst.json")):
             if os.path.isfile(p):
-                return os.path.realpath(p)
-        raise InstError("NotFound", "%s 裡沒有 .aos/inst.json 也沒有 inst.json" % target)
-    return os.path.realpath(target)
+                return os.path.realpath(p), pos
+        raise InstError("NotFound", "%s 裡沒有 .aos/inst.json 也沒有 inst.json" % file)
+    return os.path.realpath(file), pos
 
 
 def load(target):
     """讀 TARGET 的 inst，以呼叫者現在的 cwd 為基準，回 `parse()` 的結果。"""
-    path = find(target)
+    path, pos = _find(target)
     try:
         with open(path, encoding="utf-8") as f:
             raw = f.read()
@@ -101,19 +113,20 @@ def load(target):
         doc = json.loads(raw)
     except ValueError as e:
         raise InstError("JsonSyntax", "%s 不是合法 JSON：%s" % (path, e))
-    return parse(doc, os.getcwd(), path)
+    return parse(doc, os.getcwd(), path, pos)
 
 
-def parse(doc, base_dir, ident="<input>"):
+def parse(doc, base_dir, ident="<input>", at=()):
     """解指示詞、驗認得的 key，回一個欄位都填好的 dict（路徑都是絕對的，None＝沒寫）。
-    `ident`＝doc 從哪來（`load()` 給 inst.json 的 realpath），指示詞的錯誤訊息用它指出是哪份檔。"""
+    `ident`＝doc 從哪來（`load()` 給 inst.json 的 realpath），指示詞的錯誤訊息用它指出是哪份檔。
+    `at`＝inst 在 doc 裡的位置（TARGET 的 `#/位置`；`()`＝整份），指到的那一格要是物件。"""
     base_dir = os.path.abspath(base_dir)
     try:
-        doc = resolve(doc, base_dir, ident)
+        doc = resolve(doc, base_dir, ident, at)
     except DirectiveError as e:
         raise InstError(e.code, e.msg)
     if not isinstance(doc, dict):
-        raise InstError("FieldType", "inst 要是物件，不是 %s" % type(doc).__name__)
+        raise InstError("FieldType", "inst %s 要是物件，不是 %s" % (target_id(ident, at), type(doc).__name__))
     inst = {k: _bool(doc, k) for k in _BOOLS}
 
     argv = doc.get("argv")

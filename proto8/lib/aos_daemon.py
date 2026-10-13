@@ -35,7 +35,8 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd）：
 讀到不合法的 JSON 也一樣當場變成 `.done`（`request` 是讀到的原文字串，error.code＝BadCommand）。
 寫到一半被讀到＝BadCommand，寫的人自己負責（先寫 `.` 開頭的檔再改名）；`.` 開頭的檔不讀。`.done` 由丟指令的人清。不 fsync。
 
-指令一律 {"op", "id", ...參數}。`id` 要是 loop.json（或 inst.json）的絕對路徑（相對＝FieldType），daemon 轉成 realpath：
+指令一律 {"op", "id", ...參數}。`id` 要是 loop.json（或 inst.json）的絕對路徑（相對＝FieldType），daemon 轉成 realpath；
+後面可以接 `#/位置`（同 aos_inst 的 TARGET：那份檔裡那一格），id＝realpath ＋ `#` ＋ 正規化過的位置（同一份檔兩個位置＝兩個 loop）：
 
     {"op": "add",       "id": ID}                 起一個 loop                                  → result＝realpath
                                                   ID 也可以是 inst.json（頂層沒有 "inst"、有 "argv"）：當成只跑一次的 loop，
@@ -81,6 +82,7 @@ import time
 
 import aos_inst
 import aos_loop
+from aos_directives import DirectiveError, locate, split_target, target_id
 from aos_loop import CtlFile, StateFile, load_config as _load_cfg, parse_ctl, read_state, reap, state_doc, want, write_json
 
 __all__ = ["DaemonError", "load_config", "run"]
@@ -174,22 +176,26 @@ class _Entry:
         return ready
 
 
-def _esc(k):
-    return k.replace("~", "~0").replace("/", "~1")
-
-
 class Table:
     def __init__(self, cfg):
         self.cfg = cfg
         self.entries = {}
 
     def _id(self, path):
-        if not isinstance(path, str) or not os.path.isabs(path):
+        """指令的 id → (id, 檔的 realpath, 位置 tuple)。"""
+        if not isinstance(path, str):
             raise DaemonError("FieldType", "id 要是 loop.json 的絕對路徑，不是 %r" % (path,))
-        return os.path.realpath(path)
+        try:
+            file, pos = split_target(path)
+        except DirectiveError as e:
+            raise DaemonError(e.code, e.msg)
+        if not os.path.isabs(file):
+            raise DaemonError("FieldType", "id 要是 loop.json 的絕對路徑，不是 %r" % (path,))
+        real = os.path.realpath(file)
+        return target_id(real, pos), real, pos
 
     def _get(self, path):
-        ident = self._id(path)
+        ident = self._id(path)[0]
         e = self.entries.get(ident)
         if e is None or e.removing:
             raise DaemonError("NotFound", "沒有 loop %s" % ident)
@@ -198,12 +204,15 @@ class Table:
     def _prepare(self, path):
         """驗一個 loop.json（或 inst.json）、決定 ctl／state 放哪，回 (_Entry, 包裝檔的內容或 None)。不動檔案。
         頂層沒有 "inst"、有 "argv" 的當 inst.json：包成只跑一次的 loop {"inst": {"$ref": 它}, "times": 1}。"""
-        ident = self._id(path)
-        if not os.path.isfile(ident):
-            raise DaemonError("NotFound", "%s 不存在" % ident)
+        ident, real, pos = self._id(path)
+        if not os.path.isfile(real):
+            raise DaemonError("NotFound", "%s 不存在" % real)
         if ident in self.entries:
             raise DaemonError("Exists", "loop %s 已經在了" % ident)
-        raw = _read(ident)
+        try:
+            raw = locate(_read(real), pos, real)
+        except DirectiveError:
+            raw = None      # 讀不了、走不到：交給下面的 _load_cfg 報錯
         if isinstance(raw, dict) and "inst" not in raw and "argv" in raw:
             try:
                 aos_inst.load(ident)
@@ -214,7 +223,7 @@ class Table:
         _, lcfg = _load_cfg(ident, err=DaemonError)
         wrap = None
         if lcfg["ctl"] is None or lcfg["state"] is None:
-            wrap = {k: {"$ref": "%s#/%s" % (ident, _esc(k))} for k in raw}
+            wrap = {k: {"$ref": target_id(real, pos + (k,))} for k in raw}
         return _Entry(ident, lcfg, lcfg["ctl"], lcfg["state"], None), wrap
 
     def _start(self, e, wrap, ctl=None):

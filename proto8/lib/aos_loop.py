@@ -3,7 +3,8 @@
 
     python3 aos_loop.py LOOP.json
 
-`run(path)` 跟命令列一模一樣，只收 loop.json 的路徑。
+`run(path)` 跟命令列一模一樣，只收 loop.json 的路徑。路徑後面可以接 `#/位置`（同 aos_inst 的 TARGET）：
+loop 本體是那份檔裡那一格（要是物件），裡面 `$ref` 的位置照整份檔算；id＝realpath ＋ `#` ＋ 位置。
 
 loop.json（先用指示詞 lib 解，基準＝呼叫者的 cwd；外層的 key 只在起來時讀一次）：
 
@@ -18,7 +19,7 @@ loop.json（先用指示詞 lib 解，基準＝呼叫者的 cwd；外層的 key 
     state          state.json 的路徑（選填；狀態有變就整份寫過去）
     error_wait_ms  aos_inst 自己出錯的那次之後，下一次至少隔多久（非負整數；沒寫＝1000）
 
-ctl、state 的相對路徑從呼叫者的 cwd 算。id＝loop.json 的 realpath。
+ctl、state 的相對路徑從呼叫者的 cwd 算。id＝loop.json 的 realpath（有 `#/位置` 就接在後面）。
 loop.json（含 `inst` 那格和裡面的指示詞）只在起來時讀一次、解一次，之後每次都用記憶體裡那份；跑的途中要改只能走 ctl.json。
 `inst` 不對（解不開、型別錯）＝起不來，退出碼沿用 aos_inst 的（參考 125）。
 
@@ -66,7 +67,7 @@ import threading
 import time
 
 import aos_inst
-from aos_directives import DirectiveError, resolve
+from aos_directives import DirectiveError, locate, resolve, split_target, target_id
 
 __all__ = ["CtlFile", "LoopError", "STATES", "StateFile", "load_config", "parse_ctl", "read_state", "run", "state_doc",
            "want", "write_json"]
@@ -106,15 +107,22 @@ def _read_json(path, err=LoopError):
 
 def load_config(path, defaults=DEFAULTS, need_inst=True, err=LoopError):
     """讀 loop.json、整份解好（含 `inst` 那格），驗外層型別、填預設，回 (realpath, cfg)；cfg["inst"]＝解好的 inst。
-    只在起來時讀這一次。daemon.json 也用這個（`defaults` 換成 daemon 的、`need_inst=False`）。"""
-    ident = os.path.realpath(path)
-    doc = _read_json(ident, err)
-    if not isinstance(doc, dict):
-        raise err("FieldType", "%s 要是物件" % ident)
-    if need_inst and "inst" not in doc:
-        raise err("FieldType", "%s 沒有 inst" % ident)
+    只在起來時讀這一次。daemon.json 也用這個（`defaults` 換成 daemon 的、`need_inst=False`）。
+    `path` 可以接 `#/位置`：只讀那一格（整份檔的視窗），realpath 那格回的是 id（realpath ＋ `#` ＋ 位置）。"""
     try:
-        outer = resolve(doc, os.getcwd(), ident)
+        file, pos = split_target(path)
+    except DirectiveError as e:
+        raise err(e.code, e.msg)
+    real = os.path.realpath(file)
+    ident = target_id(real, pos)
+    root = _read_json(real, err)
+    try:
+        doc = locate(root, pos, real)
+        if not isinstance(doc, dict):
+            raise err("FieldType", "%s 要是物件" % ident)
+        if need_inst and "inst" not in doc:
+            raise err("FieldType", "%s 沒有 inst" % ident)
+        outer = resolve(root, os.getcwd(), real, pos)
     except DirectiveError as e:
         raise err(e.code, e.msg)
     cfg = {"inst": outer.get("inst")} if need_inst else {}
