@@ -142,7 +142,7 @@ inst 失敗會讓整次 run 最後回 1。SIGINT／SIGTERM 會向尚未收線的
 把 state phase 寫成 `interrupted`、印出中斷訊息並回 130。兩支子命令的 `-h`／`--help`
 都把完整用法印到 stdout 並回 0；deliver 的 `--` 之後不再把 `--help` 當自身選項。
 
-CMake（`PUBLIC_DEPS` 不是 `PRIVATE_DEPS`，理由見 `wf/salvage/05-程式碼哪些值得抄.md` §六）：
+CMake（`PUBLIC_DEPS` 不是 `PRIVATE_DEPS`，理由見 `wf/salvage/archive/05-程式碼哪些值得抄.md` §六）：
 
 ```cmake
 aos_add_subproject(loop

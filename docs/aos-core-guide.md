@@ -431,7 +431,7 @@ file-created
 ## 7. 目前還沒做的／已知限制
 
 - **平台：** POSIX only；Windows 原生 configure 直接失敗。macOS 雖未被擋，但主要實作與測試使用 Linux/POSIX API。
-- **沒有 loop 崩潰恢復：** SIGKILL、斷電或 crash 可能留下已搬到 `insts/`、尚未產生 `out/` 的回合；下次不會自動補跑。沒有 `recover`、`check` 或 loop 層 `status` 子命令。`wf/workflows/roadmap.md` 提過這些名稱，但目前完整 17 指令表中不存在。
+- **沒有 loop 崩潰恢復：** SIGKILL、斷電或 crash 可能留下已搬到 `insts/`、尚未產生 `out/` 的回合；下次不會自動補跑。沒有 `recover`、`check` 或 loop 層 `status` 子命令。已封存的 `wf/workflows/common/archive/roadmap.md` 提過這些名稱，但目前完整 17 指令表中不存在。
 - **沒有 `fsync`：** 多數檔案採 `.tmp + rename` 保證名稱發布原子性，不保證斷電耐久。
 - **instruction 無 sandbox／大小上限：** 可執行任意程式；stdout/stderr 整份讀入 RAM，超大輸出可耗盡記憶體。timeout 直接 `SIGKILL` process group；自行脫離群組的孫行程不一定殺得到。
 - **壞 instruction 與 id 衝突：** inbox/every JSON 解析失敗會留在 `insts/`、只在 stderr 報錯，沒有 outcome；相同 id 的 deliver 直接覆寫。wire 對未知 key 寬鬆忽略。
