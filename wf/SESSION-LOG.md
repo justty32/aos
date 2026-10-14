@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **10-14 aos-llm／aos-agent 規劃（公司 WSL）**：只規劃、不實作。使用者坦承很多題憑感覺選，已做 [ELI5 解說頁](https://claude.ai/artifact/DKBifn39yRtYDGjwGEAzC5)並重寫兩份規劃頁。討論決定 [json-entry](../proto8/thinking/2026-10-14-json-entry.md)；NORMS N-12～N-17 草稿。**下一步：等使用者看完頁，回應 7 題重選與 a～f 拍板，見 [11-下班前待辦](../proto8/thinking/2026-10-14-json-entry/11-下班前待辦.md)；之後才動工。**
+- **10-14 aos-llm／aos-agent 規劃（公司 WSL）**：只規劃、不實作。討論決定 [json-entry](../proto8/thinking/2026-10-14-json-entry.md)；NORMS N-12～N-20 草稿（夜：7 題已回→[12](../proto8/thinking/2026-10-14-json-entry/12-七題回覆.md)；a～f 暫定在 [NORMS 待定](../proto8/NORMS/04-待定.md)）。三份網頁（ELI5 解說、兩份重寫規劃頁）還沒照 N-18～N-20 改。**下一步：動工基礎實作（N-18）重做 inst／loop／daemon＋aos-fsm，等使用者說開始；12 §34 兩題待他拍板。**
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。使用者說之後／不做：指定時間跑、Linux 權限、AOS_DIR、非同步啟動、retry／timeout／while／race。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。
 - **proto8 10-12 夜 inst／loop／daemon 重做**：已 commit、測試全綠，見 [loop-daemon](../proto8/thinking/2026-10-12-loop-daemon.md)、[inst-json](../proto8/thinking/2026-10-12-inst-json.md)、[ctl-norms](../proto8/thinking/2026-10-12-ctl-norms.md)。代理人想法記在 inst-json 稿，demo 今晚不做。**下一步等使用者開口。**
 - **proto8 thinking 精簡**：10-12 夜使用者要求 thinking 只留原文整理、決策、結論、未決（規矩見 [user.md](workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改)）。已刪 13 份 AI 產出、精簡其餘五份（[索引](../proto8/thinking/README.md)）；舊版見 git 22285099。

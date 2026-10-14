@@ -4,7 +4,7 @@
 
 ## 12. 樹、一拍、巢狀
 
-### 12.1 資料夾樹（預設表＝非同步 think，thinking 格是一個子 fsm 資料夾）
+### 12.1 資料夾樹（此例畫的是非同步 think：thinking 格是一個子 fsm 資料夾；基礎實作先做阻塞版，見 [12](12-七題回覆.md)）
 
 ```
 /…/lib/agents/std/          ← 預設表資料夾：可被引用的範本，不是父類
@@ -29,7 +29,7 @@ painter/                    ← 一個 agent＝一個物件
 └── state.json  agent-ctl.json  agent.lock/  history.json  in/  tools/  work/
 ```
 
-換成同步版：把 `"thinking": "think/"` 改成 `"thinking": "/…/std/inst-think-sync.json"`，其他不動。
+阻塞版（基礎實作先做的）：把 `"thinking": "think/"` 改成 `"thinking": "/…/std/inst-think-sync.json"`，其他不動。
 
 ### 12.2 一拍（外層 phase＝thinking，內層 phase＝ask）
 
@@ -51,4 +51,4 @@ loop 按 aos_inst 起外層 `aos_fsm.py`（stdin＝agent.json）→ mkdir `agent
 2. **子 fsm 鎖**：不開，沿用外層那把。
 3. **子 fsm 不讀外層給的 stdin**：照 D-3 從自己的 TARGET 拿設定；要外層的東西就 `$ref`。
 
-另（[09](09-daemon套fsm.md)、[10](10-lisp組合子.md) 拍板）：沒吐 `next` 時改為「看表上靜態 next、表也沒有才留原狀態」；巢狀出口的兩次 rename 之間當掉會重發請求，**接受重跑**（各格自己冪等：先看 `work/N` 有沒有舊結果）。
+另（[09](09-daemon套fsm.md)、[10](10-lisp組合子.md) 拍板）：沒吐 `next` 時改為「看表上靜態 next、表也沒有才留原狀態」；巢狀出口的兩次 rename 之間當掉會重發請求，**接受重跑**；各格冪等性不保證、不在規範範圍內（N-20），要顧的格自己先看 `work/N` 有沒有舊結果。
