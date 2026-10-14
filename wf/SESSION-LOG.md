@@ -2,17 +2,17 @@
 
 ← [AGENTS.md](../AGENTS.md)｜[INDEX](INDEX.md)
 
-**只放「還沒完成」的活狀態**（in-flight / open）。完成的不留這裡——過程細節交給 git log（若有「已落地功能目錄」則濃縮一句進去）。待**使用者**親自驗證／做的另見 [WAIT_USER.md](WAIT_USER.md)。
+**只放「還沒完成」的活狀態**（in-flight / open）。完成的不留這裡，細節看 git log。待**使用者**親自驗證／做的另見 [WAIT_USER.md](WAIT_USER.md)。
 
-> **膨脹就拆**：本檔若過大，就在 repo 頂層新立 **`session_logs/`** 資料夾，按工作流／類別**拆檔 + 一個 index 導航**（照 [STRUCTURE「結構整理原則」](STRUCTURE.md)）。
+> **膨脹就拆**：本檔過大就拆進 **`session_logs/`**，按類別拆檔＋index（照 [STRUCTURE「結構整理原則」](STRUCTURE.md)）。
 
-本檔同時 ① 連到各工作流自己的 session-log（若該工作流已長出自己的），② 收**不屬任何工作流**的進度。
+本檔 ① 連各工作流自己的 session-log，② 收**不屬任何工作流**的進度。
 
-> **條目格式**：每條只留**一行 open 狀態 + 指向細節的連結**（設計決策/修了什麼落到該工作流的文件、待使用者驗的進 [WAIT_USER](WAIT_USER.md)）。完成即整條刪除。
+> **條目格式**：每條只留**一行 open 狀態＋細節連結**（決策落到該工作流文件、待使用者驗的進 [WAIT_USER](WAIT_USER.md)）。完成即刪。
 
 ## 最新進度
 
-- **10-14 aos-llm／aos-agent 規劃（公司 WSL）**：只規劃、不實作、不打 LLM；tasks／tick 忽略。兩份參考網頁皆 AI 建議、未拍板：[規劃](https://claude.ai/artifact/K2aQ7KCad1u3dFTfDvArda)、[ctl／state 與工具轉接研究](https://claude.ai/artifact/HvrESfVs7MAM7t6hXBFFYu)。使用者提醒：ctl／state 最好統一規範。**下一步：等使用者看完網頁回拍板題；後續照 NORMS N-12 重做 aos-inst／loop／daemon（使用者說是後續）。**
+- **10-14 aos-llm／aos-agent 規劃（公司 WSL）**：只規劃、不實作、不打 LLM；tasks／tick 忽略。兩份參考網頁皆 AI 建議、未拍板：[規劃](https://claude.ai/artifact/K2aQ7KCad1u3dFTfDvArda)、[ctl／state 與工具轉接研究](https://claude.ai/artifact/HvrESfVs7MAM7t6hXBFFYu)。使用者提醒：ctl／state 最好統一規範。**下一步：等使用者看完網頁回拍板題。** 另：inst／loop／daemon 重做規劃網頁 [重做規劃](https://claude.ai/artifact/HGkzKJKAsEAwhv1dQPQX8d)（使用者說會先看這頁）；aos 版 IPC 研究進行中（Fable）；當天概念討論 [json-entry](../proto8/thinking/2026-10-14-json-entry.md)；NORMS 新增 N-12／N-13 草稿。
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。使用者說之後／不做：指定時間跑、Linux 權限、AOS_DIR、非同步啟動、retry／timeout／while／race。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。
 - **proto8 10-12 夜 inst／loop／daemon 重做**：已 commit、測試全綠，見 [loop-daemon](../proto8/thinking/2026-10-12-loop-daemon.md)、[inst-json](../proto8/thinking/2026-10-12-inst-json.md)、[ctl-norms](../proto8/thinking/2026-10-12-ctl-norms.md)。代理人想法記在 inst-json 稿，demo 今晚不做。**下一步等使用者開口。**
 - **proto8 thinking 精簡**：10-12 夜使用者要求 thinking 只留原文整理、決策、結論、未決（規矩見 [user.md](workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改)）。已刪 13 份 AI 產出、精簡其餘五份（[索引](../proto8/thinking/README.md)）；舊版見 git 22285099。
