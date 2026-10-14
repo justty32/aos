@@ -11,6 +11,7 @@
 ### 4.1 argv 衍生的新題（全部使用者拍板）
 
 - **D-1 argv 角色＝鏡射＋覆蓋**：設定 JSON 每個頂層 key 有同名旗標（`--cwd`、`--timeout-ms`、`--stdout-append`…），機械對應、不另發明欄位；旗標蓋過 JSON；JSON 一字不改；aos-inst／loop／daemon 同一條規則。旗標只准鏡射既有 key；daemon／loop 起子程式仍一律走 stdin JSON。
+  - 範圍補充（使用者隨後拍板）：aos-loop／aos-daemon 的命令列同樣有同名旗標（如 `--times`、`--interval-ms`、`--ctl`、`--state`、`--work-dir`、`--load`、`--save`），同一條規則。**只鏡射最外層 key**；loop.json 裡包的那份 inst 設定（巢狀欄位，如內層 cwd）不鏡射，要改就改檔或用 `$ref`。這是已定，不是未決。
 - **D-2 `--` 做，可與 JSON 併用**：`aos-inst [旗標] [TARGET] -- cmd args…`，`--` 後整段蓋過 JSON 的 argv。
 - **D-3 優先序**：旗標 > JSON；TARGET 檔與 stdin 二選一（給 TARGET 就不讀 stdin，讀 stdin 寫 `-`）。
 - **D-4 run()**：`run(x)` 收路徑或 dict；dict＝命令列合成好的那份設定。loop 改直接起子程序灌 stdin，run() 主要給 tasks 和人。
