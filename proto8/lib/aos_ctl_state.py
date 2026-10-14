@@ -17,7 +17,7 @@ import time
 
 from aos_cli import warn
 
-__all__ = ["BEAT_MS", "CtlFile", "STATES", "StateFile", "parse_ctl", "read_state", "require", "state_doc", "want",
+__all__ = ["BEAT_MS", "CtlFile", "STATES", "StateFile", "parse_ctl", "proc_started", "read_state", "require", "state_doc", "want",
            "write_json"]
 
 BEAT_MS = 1000      # 心跳：state 內容沒變也每隔這麼久碰一次（N-17；預設值未定，暫定 1 秒）
@@ -69,8 +69,7 @@ class CtlFile:
 
     不用 (ino, mtime, size) 判斷有沒有變：ext4 的 mtime 粒度約 4 ms、改名蓋過去的 inode 會交替重用，
     4 ms 內的等長改動會撞同一把 key 而漏掉。ctl.json 很小，直接讀內容比和 stat 差不多便宜。
-    `seq`（state 的 ctl_seq 回音）＝上一次採用的內容裡的 `seq`（沒寫＝None），`good` 裡不放 seq。
-    `mtime`（state 的 ctl_mtime 回音，daemon 重做前還在用）＝最近一次讀到好內容時那個檔的 mtime；內容沒變、檔被重寫也會跟上。"""
+    `seq`（state 的 ctl_seq 回音，N-14）＝上一次採用的內容裡的 `seq`（沒寫＝None），`good` 裡不放 seq。"""
 
     def __init__(self, path, name="loop"):
         self.path = path
@@ -80,7 +79,6 @@ class CtlFile:
         self.err = None       # raw 是壞的時的原因
         self.good = {}
         self.seq = None
-        self.mtime = None
         self.said = None
 
     def _say(self, code, msg):
@@ -91,7 +89,6 @@ class CtlFile:
     def poll(self):
         try:
             with open(self.path, "rb") as f:
-                st = os.fstat(f.fileno())
                 raw = f.read()
         except FileNotFoundError:
             if self.raw is not None:
@@ -111,7 +108,6 @@ class CtlFile:
             return
         self.good = {k: v for k, v in self.parsed.items() if k != "seq"}
         self.seq = self.parsed.get("seq")
-        self.mtime = st.st_mtime
         self.said = None
 
 
@@ -136,13 +132,19 @@ def write_json(path, doc):
 STATES = ("starting", "waiting", "running", "paused", "done", "stopping", "stopped")   # loop、daemon 共用，各取子集
 
 
-def _proc():
-    """(這個行程的啟動時間（/proc/self/stat 第 22 欄，clock ticks）, 開機 id)；讀不到＝None（非 Linux）。"""
+def proc_started(pid="self"):
+    """一個行程的啟動時間（/proc/<pid>/stat 第 22 欄，clock ticks）；行程不在、讀不到＝None（非 Linux）。
+    pid＋啟動時間對得上＝同一個行程（N-15、N-17）。"""
     try:
-        with open("/proc/self/stat") as f:
-            started = int(f.read().rsplit(")", 1)[1].split()[19])
+        with open("/proc/%s/stat" % pid) as f:
+            return int(f.read().rsplit(")", 1)[1].split()[19])
     except (OSError, ValueError, IndexError):
-        started = None
+        return None
+
+
+def _proc():
+    """(這個行程的啟動時間, 開機 id)；讀不到＝None。"""
+    started = proc_started()
     try:
         with open("/proc/sys/kernel/random/boot_id") as f:
             boot = f.read().strip()
@@ -153,14 +155,13 @@ def _proc():
 
 def state_doc(ident, state, w, ctl, runs, last_error, **extra):
     """一份狀態物件。共同骨架：id、state（STATES 之一）、pid、started、boot_id、runs、times、interval_ms、interval_mode、
-    last_error、ctl_seq、ctl_mtime；各層擴充放 extra（loop：skipped、last_code；daemon：skipped、loops＝個數）。"""
+    last_error、ctl_seq；各層擴充放 extra（loop：skipped、last_code；daemon：skipped、loops＝個數）。"""
     assert state in STATES, state
     started, boot = _proc()
     st = {"id": ident, "state": state, "pid": os.getpid(), "started": started, "boot_id": boot, "runs": runs,
           "times": w["times"], "interval_ms": w["interval_ms"], "interval_mode": w["interval_mode"], "last_error": last_error}
     st.update(extra)
     st["ctl_seq"] = ctl.seq if ctl else None
-    st["ctl_mtime"] = ctl.mtime if ctl else None
     return st
 
 

@@ -144,9 +144,11 @@ def main():
         os.symlink(os.path.join(HERE, top), os.path.join(run, top))
     # inst.json 用 {"$env": ...} 讀這三個；PATH 前面加 bin，argv 才能直接寫 "aos-seq"
     env = dict(os.environ, DEMO_CTL=ctl, DEMO_WORK=work, DEMO_LOG=log, PYTHONDONTWRITEBYTECODE="1",
-               PATH=BIN + os.pathsep + os.environ.get("PATH", ""))
+               PATH=BIN + os.pathsep + os.environ.get("PATH", ""),
+               DEMO_DAEMON_CTL=os.path.join(tmp, "daemon.ctl.json"), DEMO_DAEMON_STATE=os.path.join(tmp, "daemon.state.json"))
     say("暫存資料夾 %s（ctl/ 放指令、work/ 放步驟間傳的檔、log 收 stderr）" % tmp)
-    daemon = subprocess.Popen([sys.executable, DAEMON, os.path.join(HERE, "daemon.json")], cwd=run, env=env)
+    daemon = subprocess.Popen([sys.executable, DAEMON, os.path.join(HERE, "daemon.json")], cwd=run, env=env,
+                              stdout=open(os.path.join(tmp, "daemon.out"), "w"))      # 每拍一份 {run, code, ms}
     say("daemon 起來了，pid %d（cwd＝run/，tasks 的相對 TARGET 從這裡算）" % daemon.pid)
     n = iter(range(1, 1000))
     try:
