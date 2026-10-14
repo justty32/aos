@@ -38,9 +38,22 @@
 - stdin／stdout／stderr 未來作用不大：以後是成千上萬個 POSIX 呼叫在跑，只有少數會讓人在終端機上看到、互動，其他由 agent 或其他函數處理。
 - 進而想到：若不需要 stdin／out／err，inst 格式也未必需要，搞不好最後全面退守到 C 語言的 `system("...")`（想法，未定）。
 
+## 1d. 使用者續說（同天）
+
+脈絡（AI 列的）：退守 `system()` 會失去限時與收尾、cwd／環境、exit 紀錄、訊號轉送，且 inst 是 kernel 能讀的資料而 system 字串是黑箱。
+
+原話：「看起來不能全面退守，這樣損失太大。但可以記下來當作以後的一個方向。 所以就是換成把stdin作為參數，stdout/err作為結果，exit作為輔助」
+
+要點：
+- 不能全面退守，損失太大；但記下來當作以後的一個方向。
+- 改成：stdin 作為參數，stdout／stderr 作為結果，exit 作為輔助。
+
+## 3. 決定（10-14）
+
+- 不全面退守 `system("...")`，損失太大；記為以後的一個方向。
+- 可供呼叫的程式：stdin 作為參數，stdout／stderr 作為結果，exit 作為輔助。（細節如參數是否必為 JSON、stdout 格式，待確認。）
+
 ## 2. 未決
 
-- 入口 JSON 走 argv[1]（傾向）還是 stdin（使用者傾向 stdio 不重要）。
-- 回傳走 stdout／stderr 還是 argv[2]。
 - 手動打命令列的方便怎麼補。
-- inst 格式是否還需要；是否退守到 `system("...")`（使用者 10-14 想法）。
+- stdin 參數是否規定為 JSON、stdout 結果是否規定為 JSON；結果寫完的判定靠 exit 檔。
