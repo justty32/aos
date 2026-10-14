@@ -147,8 +147,8 @@ def main():
                PATH=BIN + os.pathsep + os.environ.get("PATH", ""),
                DEMO_DAEMON_CTL=os.path.join(tmp, "daemon.ctl.json"), DEMO_DAEMON_STATE=os.path.join(tmp, "daemon.state.json"))
     say("暫存資料夾 %s（ctl/ 放指令、work/ 放步驟間傳的檔、log 收 stderr）" % tmp)
-    daemon = subprocess.Popen([sys.executable, DAEMON, os.path.join(HERE, "daemon.json")], cwd=run, env=env,
-                              stdout=open(os.path.join(tmp, "daemon.out"), "w"))      # 每拍一份 {run, code, ms}
+    # daemon 沒 inst：stdout 只在收工時吐一份總結，直接印出來
+    daemon = subprocess.Popen([sys.executable, DAEMON, os.path.join(HERE, "daemon.json")], cwd=run, env=env)
     say("daemon 起來了，pid %d（cwd＝run/，tasks 的相對 TARGET 從這裡算）" % daemon.pid)
     n = iter(range(1, 1000))
     try:

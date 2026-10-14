@@ -26,13 +26,18 @@ class Tick(unittest.TestCase):
     def run_tick(self, *args):
         return subprocess.run([TICK] + list(args), capture_output=True, text=True, cwd=self.tmp)
 
+    def err(self, r):
+        """stderr 那份錯誤 JSON（N-12，同 aos_cli）的 code；要剛好一行。"""
+        self.assertEqual(r.stderr.count("\n"), 1, r.stderr)
+        return json.loads(r.stderr)["error"]["code"]
+
     def read(self):
         with open(self.file) as f:
             return f.read()
 
     def test_first_writes_1_then_2(self):
         r = self.run_tick("clock")                  # 相對路徑從 cwd 算
-        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
         self.assertEqual(self.read(), "1\n")
         self.assertEqual(self.run_tick(self.file).returncode, 0)
         self.assertEqual(self.read(), "2\n")
@@ -50,8 +55,7 @@ class Tick(unittest.TestCase):
                 f.write(bad)
             r = self.run_tick(self.file)
             self.assertEqual(r.returncode, 1, bad)
-            self.assertTrue(r.stderr.startswith("BadContent: "), r.stderr)
-            self.assertEqual(r.stderr.count("\n"), 1)
+            self.assertEqual(self.err(r), "BadContent")
             self.assertEqual(self.read(), bad)
         self.assertEqual(os.listdir(self.tmp), ["clock"])
 
@@ -59,7 +63,7 @@ class Tick(unittest.TestCase):
         os.mkdir(self.file)                         # 是資料夾，讀不了
         r = self.run_tick(self.file)
         self.assertEqual(r.returncode, 1)
-        self.assertTrue(r.stderr.startswith("ReadFailed: "), r.stderr)
+        self.assertEqual(self.err(r), "ReadFailed")
 
     @unittest.skipIf(os.geteuid() == 0, "root 寫得進唯讀資料夾")
     def test_write_failed(self):
@@ -72,7 +76,7 @@ class Tick(unittest.TestCase):
         self.addCleanup(os.chmod, d, 0o700)
         r = self.run_tick(path)
         self.assertEqual(r.returncode, 1)
-        self.assertTrue(r.stderr.startswith("WriteFailed: "), r.stderr)
+        self.assertEqual(self.err(r), "WriteFailed")
         with open(path) as f:
             self.assertEqual(f.read(), "5\n")
 
@@ -80,7 +84,7 @@ class Tick(unittest.TestCase):
         for args in [(), ("a", "b")]:
             r = self.run_tick(*args)
             self.assertEqual(r.returncode, 1)
-            self.assertTrue(r.stderr.startswith("Usage: "), r.stderr)
+            self.assertEqual(self.err(r), "Usage")
         self.assertEqual(os.listdir(self.tmp), [])
 
     def test_loop_times_3(self):

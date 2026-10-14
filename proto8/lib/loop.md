@@ -28,7 +28,7 @@ python3 proto8/lib/aos_loop.py [--key 值 ...] [LOOP.json | -]
 - 設定（含 `inst` 那格與裡面的指示詞）**只在起來時讀一次、解一次**；`inst` 不對＝起不來（沿用 aos_inst 的碼，參考 125；寫了 `stdin_inherit` 也是，因為 inst 從 stdin 灌，D-5）。跑的途中要改只能走 ctl 窗。
 - 每一次：起子程序 `aos_inst.py -`（自成一個 session），把解好的 inst 從 stdin 灌進去 → 等它結束 → 整群補 SIGKILL 清孫程式 → 收屍。不再寫暫存 inst.json。
 - 結果：aos_inst 回 0 → `last_code`＝它 stdout 那份結果的 `code`（不必寫 exit 檔）；非 0 → `last_error`＝它 stderr 最後一份錯誤，寫成「代號: 白話」。
-- **stdout**（JSON 串流）：每一次一份 `{"run", "code", "ms"}`，結束時一份 `{"end": "done"|"stopped", "runs", "skipped", "last_code"}`。stderr：aos_inst 的錯誤原樣轉過來，自己的錯誤、警告也是 JSON。
+- **stdout**（JSON 串流）：每一次一份 `{"run", "code", "ms"}`（只在真的跑了 inst 時吐；loop 一定有 inst，daemon 沒 inst 就不吐），結束時一份 `{"end": "done"|"stopped", "runs", "skipped", "last_code"}`。stderr：aos_inst 的錯誤原樣轉過來，自己的錯誤、警告也是 JSON。
 - **ctl 窗**（宣告式，NORMS N-06～）：`paused`、`stop`（`true` 或 `{"val": true, "now": true}`；now＝當場收掉正在跑的）、`times`、`interval_ms`、`interval_mode`、`seq`（流水號）。沒寫的欄位＝loop.json 的初始值（只在 `want()` 一處）。stop 是終點。壞檔、型別錯、不見了＝維持上一次、警告一次。每次讀整份、內容跟上次不同才重驗。
 - 次數跑完（runs ≥ times）就結束、退出，有 ctl 也一樣；想再跑就重新起。
 - **state 窗**：共同骨架（見 [ctl-state](ctl-state.md)，含 `ctl_seq` 與心跳欄位）加上 `skipped`、`last_code`。暫存再改名；內容沒變也每秒碰一次。

@@ -49,7 +49,7 @@ id＝loop.json（或 inst.json）的絕對路徑，可接 `#/位置`：
 set／pause／resume／add_times 等 loop 讀到了才回；等的期間指令檔留在原地。
 error.code（只供參考）：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、ReadFailed、JsonSyntax、WriteFailed、Internal。
 
-stdout 同 loop：每拍一份 {run, code, ms}、結束一份總結。state 窗：共同骨架加 skipped、last_code、loops（表上幾個）；
+stdout 同 loop：跑了 inst 的拍一份 {run, code, ms}（沒 inst＝不吐）、結束一份總結。state 窗：共同骨架加 skipped、last_code、loops（表上幾個）；
 last_error＝inst 自己出錯那行，沒有就是最近一圈掃資料夾的錯（ScanFailed、ReplyFailed），都沒有＝null。
 跑起來之後出意外不結束，stderr 吐一份警告（同一件事一次）。退出碼：0＝正常收工（含收到 SIGTERM／SIGINT）；
 1＝起不來；最後一拍 inst 自己出錯＝沿用它的碼（同 loop）。

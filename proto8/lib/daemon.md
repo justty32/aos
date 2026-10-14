@@ -13,7 +13,7 @@ python3 proto8/lib/aos_daemon.py [--key 值 ...] [DAEMON.json | -]
 - 設定從哪來同 loop（`aos_cli`）：DAEMON.json、`-`＝stdin、外層純量 key 有同名旗標；`--` 不收。
 - **跟 loop 同名的 key 同義**：`inst`（daemon 自己每拍跑一次的身體，**選填**；跑法同 loop，阻塞到它結束）、`ctl`、`state`（**必填**，N-19；ctl 不能在 control_dir 裡）、`times`（預設 null＝不限，跟 loop 的 1 不同）、`interval_ms`（200）、`interval_mode`、`ctl_poll_ms`、`error_wait_ms`、`grace_ms`（10000）、`id`。
 - **daemon 多的**：`children`（初始表，每項＝一個 loop 設定的 TARGET：路徑、`檔#/位置` 或內嵌物件；起來時等同逐個 add）、`policies`（`{"child_exit": inst TARGET}`）、`control_dir`（**選填**，沒給＝不掃資料夾）、`table`（table 窗，選填）、`load`（true＝起來時讀 table 窗接回）、`work_dir`（沒寫＝state 窗旁的 `loops/`）。
-- **每拍**：掃控制資料夾 → 跑 `inst`（有的話）；收屍、退避到點的重起每一圈都做。`runs`＝拍數。stdout 同 loop：每拍一份 `{run, code, ms}`、結束一份總結。
+- **每拍**：掃控制資料夾 → 跑 `inst`（有的話）；收屍、退避到點的重起每一圈都做。`runs`＝拍數。stdout 同 loop：跑了 `inst` 的拍一份 `{run, code, ms}`（沒 inst 的拍不吐，純監工的 daemon 只在收工時吐一份總結）、結束一份總結。
 - 自己的 ctl 窗：paused＝不拍（指令堆著、子項照跑）；stop＝收工（now＝子項當場收掉；沒 now＝替它們寫 stop、等它們跑完）；times 跑完同 stop（不帶 now）。state 窗：共同骨架加 `skipped`、`last_code`、`loops`（表上幾個）；`last_error`＝inst 出錯那行，沒有就是最近一圈掃資料夾的錯（ScanFailed、ReplyFailed）。
 - **子項**：一支子程序 `aos_loop.py -`（自成 session），設定從 stdin 灌（`id`＝原 TARGET 的 id）。每個子項一格 `work_dir/N/`：沒寫 ctl／state 的放這裡，子 loop 的 stdout／stderr 落 `ret.json`、`err.json`（`times: null` 時會一直長，見 NORMS 待定）。daemon 只靠兩個窗控制它：寫它的 ctl（帶流水號 `seq`）、讀它的 state（`ctl_seq` 趕上＝讀到了）。
 - **子項六態** `phase`：starting／running／exited／backoff／stopping／removed，寫在 **table 窗** `{"kind": "aos-daemon-table", "children": [{id, target, times, work_dir, ctl, state, pid, started, phase, exits, last_code}]}`；先寫表、再 Popen。table 窗就是存檔（暫定 d）。

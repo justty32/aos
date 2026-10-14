@@ -198,6 +198,14 @@ class Daemon(Tmp):
         out = [json.loads(x) for x in r.stdout.splitlines()]
         self.assertEqual(out[-1], {"end": "done", "runs": 2, "skipped": 0, "last_code": 0})
 
+    def test_no_inst_only_summary(self):
+        # 沒 inst 的拍不吐每拍那份，stdout 只有結束總結
+        path = self.write("d.json", {"times": 3, "interval_ms": 10, "ctl": "d.ctl.json", "state": "d.state.json"})
+        r = subprocess.run([sys.executable, DAEMON, path], cwd=self.tmp, capture_output=True, text=True, timeout=10)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        out = [json.loads(x) for x in r.stdout.splitlines()]
+        self.assertEqual(out, [{"end": "done", "runs": 3, "skipped": 0, "last_code": None}])
+
     def test_target_pointer(self):
         # 一份檔放好幾格：同一份檔兩個位置＝兩個 loop；inst 那格包成只跑一次
         self.start()
