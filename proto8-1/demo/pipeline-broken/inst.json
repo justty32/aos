@@ -8,6 +8,5 @@
   "stderr": {
     "$env": "DEMO_LOG"
   },
-  "stderr_append": true,
-  "exit": "pipeline-broken.exit"
+  "stderr_append": true
 }

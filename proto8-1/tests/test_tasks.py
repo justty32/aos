@@ -45,10 +45,10 @@ class Tasks(unittest.TestCase):
             return f.read()
 
     def inst(self, name, argv, **keys):
-        """寫 NAME/inst.json（cwd＝暫存資料夾、exit＝NAME.exit），回資料夾的絕對路徑。"""
+        """寫 NAME/inst.json（cwd＝暫存資料夾，不寫 exit：tasks 讀 aos_inst 的 stdout 結果），回資料夾的絕對路徑。"""
         os.makedirs(self.p(name))
         with open(self.p(name, "inst.json"), "w") as f:
-            json.dump(dict({"argv": argv, "cwd": self.tmp, "exit": name + ".exit"}, **keys), f)
+            json.dump(dict({"argv": argv, "cwd": self.tmp}, **keys), f)
         return self.p(name)
 
     def sh(self, name, sh):
@@ -88,17 +88,24 @@ class Tasks(unittest.TestCase):
             self.assertEqual((r.returncode, self.errors(r)), (125, ["Usage"]))
         self.assertFalse(os.path.exists(self.p("log")))
 
-    def test_inst_without_exit_runs_nothing(self):
-        a = self.sh("a", "true")
-        b = self.inst("b", ["true"])
-        os.remove(self.p("b", "inst.json"))
-        with open(self.p("b", "inst.json"), "w") as f:
-            json.dump({"argv": ["true"]}, f)
-        for prog in (SEQ, PAR, NOT):
-            r = self.cli(prog, *([b] if prog == NOT else [a, b]))
-            self.assertEqual(r.returncode, 125)
-            self.assertEqual(self.errors(r), ["NoExit"])
-        self.assertFalse(os.path.exists(self.p("log")))
+    def test_code_from_inst_stdout_not_exit_file(self):
+        # inst 沒寫 exit 也能用（碼從 aos_inst 的 stdout 結果來）；寫了 exit 但寫不進去也不影響
+        a, b = self.sh("a", "true"), self.sh("b", "exit 2")
+        self.assertFalse(any(n.endswith(".exit") for n in os.listdir(self.tmp)))
+        for prog, args, code in ((SEQ, (a, b), 2), (PAR, (b, a), 2), (IF, (b, a, b), 2), (NOT, (a,), 1), (NOT, (b,), 0)):
+            with self.subTest(prog=os.path.basename(prog), args=args):
+                self.assertEqual(self.cli(prog, *args).returncode, code)
+        self.assertFalse(any(n.endswith(".exit") for n in os.listdir(self.tmp)))
+        os.mkdir(self.p("c.exit"))                                      # exit 檔寫不進去
+        c = self.inst("c", ["sh", "-c", "exit 4"], exit="c.exit")
+        r = self.cli(SEQ, c)
+        self.assertEqual((r.returncode, r.stdout, r.stderr), (4, "", ""))
+
+    def test_inherited_stdout_does_not_confuse_result(self):
+        # 寫了 stdout_inherit：子程式自己的輸出（甚至長得像結果）混在 aos_inst 的 stdout 前面，碼照樣取最後那份結果
+        a = self.inst("a", ["sh", "-c", "echo '{\"code\": 0}'; echo hi; exit 6"], stdout_inherit=True)
+        r = self.cli(SEQ, a)
+        self.assertEqual((r.returncode, r.stdout, r.stderr), (6, "", ""))
 
     def test_launch_error(self):
         a, bad, c = self.sh("a", "true"), self.inst("bad", ["/no/such/prog"]), self.sh("c", "true")
@@ -121,10 +128,6 @@ class Tasks(unittest.TestCase):
                 self.assertEqual((r.returncode, r.stdout, r.stderr), (code, "", ""))
         r = self.cli(SEQ, self.p("nope"))
         self.assertEqual((r.stdout, self.errors(r)), ("", ["ReadFailed"]))
-        os.remove(self.p("b.exit"))
-        os.mkdir(self.p("b.exit"))                                      # exit 檔寫不進去 → 讀不到
-        r = self.cli(SEQ, b)
-        self.assertEqual((r.returncode, self.errors(r)), (125, ["ExitUnreadable"]))
 
     def test_par_concurrent_and_first_failure_in_order(self):
         a, b, c = self.sh("a", "sleep 0.5; exit 4"), self.sh("b", "exit 5"), self.sh("c", "sleep 0.5")

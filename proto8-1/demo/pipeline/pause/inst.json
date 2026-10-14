@@ -2,6 +2,5 @@
   "argv": [
     "sleep",
     "0.3"
-  ],
-  "exit": "pipeline-pause.exit"
+  ]
 }

@@ -160,6 +160,7 @@ class Table:
                    state=doc.get("state") or os.path.join(d, "state.json"))
         try:
             _, cfg = check_config(ident, doc, err=DaemonError)
+            _check_inst(ident, cfg)
         except DaemonError:
             shutil.rmtree(d, ignore_errors=True)
             raise
@@ -363,6 +364,15 @@ class Table:
                     e.code = reap(e.proc)
                 e.phase = "exited"
         self.write()
+
+
+def _check_inst(ident, cfg):
+    """子 loop 的 inst 先在 daemon 這邊驗一次（同子 loop 起來時那樣：從 stdin 灌，piped），錯就丟 DaemonError、
+    在 add 當下回在 `.done` 裡，不用等子 loop 起來才落在 err.json。基準＝daemon 的 cwd（子 loop 也從這裡起）。"""
+    try:
+        aos_inst.parse(cfg["inst"], os.getcwd(), ident, piped=True)
+    except aos_inst.InstError as e:
+        raise DaemonError(e.code, e.msg)
 
 
 def _split(target):

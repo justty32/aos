@@ -4,6 +4,5 @@
     "pipeline/not-check",
     "pipeline/again"
   ],
-  "stderr_inherit": true,
-  "exit": "pipeline-retry.exit"
+  "stderr_inherit": true
 }

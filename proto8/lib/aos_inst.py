@@ -21,7 +21,7 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
     stdin           從哪個檔讀；stdin_inherit: true 改接呼叫者的
     stdout/stderr   寫到哪個檔（覆寫）；*_append 改附加、*_mkdir 先建上層資料夾、*_inherit 改接呼叫者的
     stderr_merge    true＝stderr 併進 stdout
-    exit            子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔；
+    exit            選填：子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔（要碼讀 stdout 的結果就好，N-30）；
                     exit_append 改附加一行、exit_mkdir 先建上層資料夾
     timeout_ms      最多跑幾毫秒（正整數；沒寫或 null＝不限），到了就收掉
     grace_ms        收掉＝先 SIGTERM，過 grace_ms 還沒結束再 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
@@ -38,7 +38,7 @@ JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼�
     {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file"}
 code＝子程式的碼（被訊號停掉＝128＋訊號號碼，同 exit 檔）、signal＝訊號號碼或 null、timed_out＝被 timeout_ms 收掉、
 pid＝子程式的 pid、ms＝跑了幾毫秒、exit_file＝exit 檔的路徑或 null。`run()` 回同一份 dict。
-- `exit` 檔照寫（與舊時代的橋樑，暫定 e）：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
+- `exit` 選填，寫了就照寫（與舊時代的橋樑，暫定 e；要子程式的碼讀上面那份結果的 code）：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
   根本沒起來就不寫。寫不進去不管，不算錯。
 - aos_inst 自己的碼＝命令列退出碼／`run()` 有沒有丟例外：0＝正常做完（子程式回幾號、被限時收掉都算正常做完）；
   非 0＝aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…），`run()` 丟 `InstError`，命令列 stderr 吐一份
@@ -80,7 +80,7 @@ def exit_code(err):
 
 def read_exit(path):
     """讀 exit 檔最後一行的結束碼（exit_append 時每次附加一行，所以看最後一行）。
-    檔不在、讀不了、內容不是整數都回 None。給要看子程式結果的人（loop、tasks）用。"""
+    檔不在、讀不了、內容不是整數都回 None。過渡用：loop、tasks 都改讀 stdout 那份結果的 code 了。"""
     try:
         with open(path, encoding="utf-8") as f:
             lines = f.read().split()

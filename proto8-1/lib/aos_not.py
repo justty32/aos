@@ -3,8 +3,8 @@
 
     python3 aos_not.py TARGET
 
-- 用 `aos_inst.py` 跑，讀它的 exit 檔：0 → 退出碼 1；不是 0 → 退出碼 0。
-- TARGET 不對（含沒寫 exit）＝退出碼 125；起不來（aos_inst 自己出錯）＝沿用 aos_inst 的退出碼（127／126／125）；都不反過來。
+- 用 `aos_inst.py` 跑，讀它 stdout 那份結果的 `code`：0 → 退出碼 1；不是 0 → 退出碼 0。
+- TARGET 不對＝退出碼 125；起不來（aos_inst 自己出錯）＝沿用 aos_inst 的退出碼（127／126／125）；都不反過來。
 - 收到 SIGINT／SIGTERM／SIGHUP：轉給它（aos_inst 再轉給子程式，過它的 grace_ms 再 SIGKILL），退出碼＝128＋訊號號碼（不反過來）。
 - 子程式留在自己的行程群組（不開 new session），外面整群收時一起收到。
 """

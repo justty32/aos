@@ -11,6 +11,5 @@
   "cwd": {
     "$env": "DEMO_WORK"
   },
-  "stderr_inherit": true,
-  "exit": "pipeline-budget.exit"
+  "stderr_inherit": true
 }

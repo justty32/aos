@@ -7,6 +7,5 @@
   "cwd": {
     "$env": "DEMO_WORK"
   },
-  "stderr_inherit": true,
-  "exit": "pipeline-reset.exit"
+  "stderr_inherit": true
 }

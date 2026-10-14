@@ -138,8 +138,8 @@ def main():
     os.makedirs(ctl)
     os.makedirs(work)
     os.makedirs(run)
-    # daemon 的 cwd＝run/，裡面放指回本資料夾的捷徑：tasks 的相對 TARGET 照樣找得到，
-    # 沒寫 cwd 的 inst 的 exit 檔落在 run/，repo 裡不留東西
+    # daemon 的 cwd＝run/，裡面放指回本資料夾的捷徑：tasks 的相對 TARGET 照樣找得到，repo 裡不留東西
+    # （inst 不寫 exit：tasks 讀子 aos_inst 的 stdout 結果拿碼）
     for top in TOPS:
         os.symlink(os.path.join(HERE, top), os.path.join(run, top))
     # inst.json 用 {"$env": ...} 讀這三個；PATH 前面加 bin，argv 才能直接寫 "aos-seq"

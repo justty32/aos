@@ -9,6 +9,5 @@
   },
   "stdin": "probe.out",
   "stdout": "report.txt",
-  "stderr_inherit": true,
-  "exit": "pipeline-report.exit"
+  "stderr_inherit": true
 }
