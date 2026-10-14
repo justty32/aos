@@ -49,7 +49,7 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
 
 兩台輪流開發：家裡 Manjaro Linux（repo 在 `~/repo/simple_tools/aos`）、公司 WSL2 Ubuntu（repo 在 `~/projs/aos`，見下方「公司那台」；2026-10-01 使用者確認仍在用）。沒有 CI 差異，全部驗證都由 agent 跑。[SESSION-LOG](../SESSION-LOG.md) 裡「repo 在 `/mnt/c`」那條已過期。
 
-**公司那台**（2026-09-07 他開場說的，10-01 從那台的舊記憶搬來）：公司 WSL（Ubuntu），repo 在 `~/projs/aos`，codex 在 `~/.local/bin/codex`。區網 **`192.168.1.146`** 有 ollama（當時有 qwen2.5:14b、qwen3:32b、deepseek-r1:8b、gemma3:1b）；142 那台沒開 ollama 的口（他一開始說錯）。兩台都可能是當下這台，所以**開場先確認在哪台、LLM 走哪個端點**；146 跟下面「模型端點」（09-25 定的「只走 LiteLLM」）哪個優先沒講清楚，在公司要用 146 先問他一句。
+**公司那台**（2026-09-07 他開場說的，10-01 從那台的舊記憶搬來）：公司 WSL（Ubuntu），repo 在 `~/projs/aos`，codex 在 `~/.local/bin/codex`。區網 **`192.168.1.146`** 有 ollama（當時有 qwen2.5:14b、qwen3:32b、deepseek-r1:8b、gemma3:1b）；142 那台沒開 ollama 的口（他一開始說錯）。兩台都可能是當下這台，所以**開場先確認在哪台、LLM 走哪個端點**；使用者 2026-10-14 定，**公司這台不要用 146**（ollama 仍在，但不准用）；公司這台 LiteLLM（localhost:4000）10-14 查過沒開。
 
 ## 外部工具與 env var
 
