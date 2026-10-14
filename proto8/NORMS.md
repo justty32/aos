@@ -36,7 +36,11 @@
 
 ### 呼叫程式的 stdio（來自 [thinking 10-14 JSON 入口](thinking/2026-10-14-json-entry.md)）
 
-- **N-12**（10-14 定，草稿）可供呼叫的程式回歸 POSIX 原始本意：stdin＝參數，stdout／stderr＝結果，exit＝輔助。在 aos 規範中三者都是 JSON 串流（放寬：一串 JSON 值接著一串，每份可單行或跨行；只有一份就是普通 JSON）。stdin 有多份時，整串是一次呼叫，意思由程式自己解讀、寫在它的說明裡，規範只管格式。跑完的判定＝exit 檔出現。JSON 串流視為省略最外層 `[]` 的陣列，`檔#/位置` 照陣列索引指。inst.json 格式不變（作為與舊時代的橋樑）；規範管的是 inst 所呼叫的 argv[0] 程式。aos-inst／loop／daemon 之後也照本條重做（10-14 使用者定，還沒動工）。（10-14）
+- **N-12**（10-14 定，草稿）可供呼叫的程式回歸 POSIX 原始本意：stdin＝參數，stdout／stderr＝結果，exit＝輔助。在 aos 規範中三者都是 JSON 串流（放寬：一串 JSON 值接著一串，每份可單行或跨行；只有一份就是普通 JSON）。stdin 有多份時，整串是一次呼叫，意思由程式自己解讀、寫在它的說明裡，規範只管格式。跑完的判定＝exit 檔出現。JSON 串流視為省略最外層 `[]` 的陣列，`檔#/位置` 照陣列索引指。inst.json 格式不變（作為與舊時代的橋樑）；規範管的是 inst 所呼叫的 argv[0] 程式。以函數來看：stdin＝args，exit＋stdout＝返回值，stderr＝途中拋出的錯誤與警告；stdout 可一份一份吐出（像 yield），不強制。aos-inst／loop／daemon 之後也照本條重做（10-14 使用者定，還沒動工）。（10-14）
+
+### 內部狀態的外顯（來自 [thinking 10-14 JSON 入口](thinking/2026-10-14-json-entry.md) §1i～§1k）
+
+- **N-13**（10-14 定，草稿）state／ctl＝程式內部狀態的外顯（程式願意分享給大家的，像 Plan 9／FUSE），跟 stdin／stdout／stderr 完全無關。外顯位置由 stdin 參數指定；名字統一為 `state`、`ctl`；參數沒指定＝不外顯、stderr 吐一句警告。外顯後程式自己每隔固定時間同步（讀 ctl、寫 state）。ctl／state 的格式與語意照 N-05～N-11，本條只補位置、命名與警告。FUSE 可選、以後再說；daemon 的控制資料夾（N-10）先不管。（10-14）
 
 ## 待定（AI 整理的候選，使用者還沒定）
 
