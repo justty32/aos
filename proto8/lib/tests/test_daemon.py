@@ -21,9 +21,10 @@ class Daemon(Tmp):
     def start(self, **cfg):
         self.ctl = self.p("ctl")
         self.write("daemon.json", dict({"control_dir": self.ctl, "interval_ms": 20, "ctl_poll_ms": 20,
-                                        "grace_ms": 3000}, **cfg))
+                                        "grace_ms": 3000, "ctl": self.p("d.ctl.json"), "state": self.p("d.state.json")},
+                                       **cfg))
         self.d = subprocess.Popen([sys.executable, DAEMON, self.p("daemon.json")],
-                                  cwd=self.tmp, stderr=subprocess.PIPE, text=True)
+                                  cwd=self.tmp, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL, text=True)
         self.addCleanup(self.stop, signal.SIGKILL)
         self.n = 0
 
@@ -88,13 +89,12 @@ class Daemon(Tmp):
         self.assertEqual(self.err({"op": "set", "id": a, "how": {"timeout_ms": 5}}), "FieldType")
         self.assertEqual(self.err({"op": "jump"}), "UnknownOp")
         self.assertEqual(self.err({"op": "add_times", "id": a, "delta": "x"}), "FieldType")
-        self.assertEqual(self.err({"op": "save", "path": self.p("no/such/dir/x.json")}), "WriteFailed")
-        self.assertEqual(self.err({"op": "load", "path": self.p("nope.json")}), "ReadFailed")
+        self.assertEqual(self.err({"op": "save", "path": self.p("x.json")}), "UnknownOp")     # save／load 併進 table 窗
         self.write("ctl/bad.json", "{")
         r = self.get(self.p("ctl/bad.json.done"))
         self.assertEqual((r["request"], r["error"]["code"]), ("{", "BadCommand"))
         self.assertEqual(self.stop(), 0)
-        self.assertEqual(os.listdir(self.p("loops")), [])          # 包裝檔收工時刪掉
+        self.assertEqual(os.listdir(self.p("loops")), ["1"])        # remove 刪那格；收工留著（給下次接回）
 
     def test_add_times_and_wrapper(self):
         self.start()
@@ -103,7 +103,7 @@ class Daemon(Tmp):
         self.until(lambda: self.ok({"op": "state", "id": a}) == "running")
         self.assertEqual(self.ok({"op": "add_times", "id": a, "delta": 2})["times"], 3)    # 跑完之前加
         self.until(lambda: self.ok({"op": "get", "id": a}).get("state") == "done" and self.read("a.out") == "x\n" * 3)
-        self.assertEqual(json.loads(self.read("loops/1/ctl.json")), {"times": 3})
+        self.assertEqual(json.loads(self.read("loops/1/ctl.json"))["times"], 3)
         self.ok({"op": "set", "id": a, "how": {"times": None}})
         self.assertEqual(self.err({"op": "add_times", "id": a, "delta": 1}), "Conflict")
 
@@ -124,9 +124,10 @@ class Daemon(Tmp):
         a = self.loop("a", times=None, interval_ms=100000, ctl="a.ctl.json", state="a.state.json")
         self.ok({"op": "add", "id": a})
         self.ok({"op": "pause", "id": a})
-        self.assertEqual(json.loads(self.read("a.ctl.json")), {"paused": {"val": True, "now": False}})
-        self.assertEqual(json.loads(self.read("a.state.json"))["state"], "paused")
-        self.assertFalse(os.path.exists(self.p("loops")))
+        self.assertEqual(json.loads(self.read("a.ctl.json")), {"seq": 1, "paused": {"val": True, "now": False}})
+        st = json.loads(self.read("a.state.json"))
+        self.assertEqual((st["state"], st["ctl_seq"]), ("paused", 1))      # 回音以 seq 為準
+        self.assertFalse(os.path.exists(self.p("loops/1/ctl.json")))
 
     def test_pause_now_and_remove_wait(self):
         self.start()
@@ -149,26 +150,56 @@ class Daemon(Tmp):
         self.assertEqual(self.err({"op": "get", "id": b}), "NotFound")
         self.ok({"op": "add", "id": b})
 
-    def test_save_load(self):
-        self.start()
-        a, b = self.loop("a", times=None, interval_ms=100000), self.loop("b", times=None, interval_ms=100000)
+    def test_table_window_and_load(self):
+        # table 窗：子項六態；收工後 load: true 接回——行程還活著的認領、不重起
+        self.start(table=self.p("t.json"))
+        a = self.loop("a", "echo x >> a.out", times=None, interval_ms=100000)
         self.ok({"op": "add", "id": a})
-        self.ok({"op": "add", "id": b})
-        self.ok({"op": "pause", "id": b})
-        self.assertEqual(self.ok({"op": "save", "path": self.p("t.json")}), 2)
-        saved = json.loads(self.read("t.json"))
-        self.assertEqual(saved, [{"loop": os.path.realpath(a), "ctl": {}},
-                                 {"loop": os.path.realpath(b), "ctl": {"paused": {"val": True, "now": False}}}])
-        self.assertEqual(self.err({"op": "load", "path": self.p("t.json")}), "Exists")
-        self.ok({"op": "remove", "id": a})
-        self.assertEqual(self.err({"op": "load", "path": self.p("t.json")}), "Exists")
-        self.assertEqual(len(self.ok({"op": "list"})), 1)
-        self.ok({"op": "remove", "id": b})
-        self.assertEqual(len(self.ok({"op": "load", "path": self.p("t.json")})), 2)
-        self.until(lambda: self.ok({"op": "state", "id": b}) == "paused")
+        self.ok({"op": "pause", "id": a})
+        t = json.loads(self.read("t.json"))
+        self.assertEqual(t["kind"], "aos-daemon-table")
+        row = t["children"][0]
+        self.assertEqual((row["id"], row["phase"], row["exits"]), (os.path.realpath(a), "running", 0))
+        self.assertTrue(row["pid"] and row["started"])
+        self.d.send_signal(signal.SIGKILL)                  # daemon 死掉，子項變孤兒
+        self.d.wait(5)
+        self.d.stderr.close()
+        self.start(table=self.p("t.json"), load=True)
+        st = self.ok({"op": "get", "id": a})
+        self.assertEqual((st["pid"], st["phase"], st["state"]), (row["pid"], "running", "paused"))
+        self.assertEqual(self.read("a.out"), "x\n")         # 沒重起
+        self.ok({"op": "remove", "id": a, "wait": False})
+        self.until(lambda: not alive(row["pid"]))
+        self.assertEqual(json.loads(self.read("t.json"))["children"], [])
+
+    def test_children_policy_inst_body(self):
+        # 候選 g：children 當初始表、policies.child_exit 策略格、inst＝daemon 每拍的身體；control_dir 選填
+        a = self.loop("a", "echo x >> a.out", times=1)
+        self.write("pol.json", {"argv": ["sh", "-c", 'n=$(grep -o \'"exits": [0-9]*\' | grep -o "[0-9]*"); '
+                                                  '[ "$n" -lt 3 ] && echo \'{"action": "restart", "after_ms": 10}\' '
+                                                  '|| echo \'{"action": "remove"}\'']})
+        self.start(control_dir=None, children=[a], policies={"child_exit": self.p("pol.json")}, table=self.p("t.json"),
+                   inst={"argv": ["sh", "-c", "echo b >> body.out"], "cwd": self.tmp}, times=None, interval_ms=50)
+        self.until(lambda: os.path.exists(self.p("a.out")) and self.read("a.out") == "x\n" * 3
+                   and json.loads(self.read("t.json"))["children"] == [])
+        self.until(lambda: len(self.read("body.out").split()) >= 2)
+        self.assertFalse(os.path.exists(self.ctl))
+        self.assertEqual(self.stop(), 0)
+        out = [json.loads(x) for x in open(self.p("loops", "1", "ret.json")).read().split("\n") if x] \
+            if os.path.exists(self.p("loops", "1")) else None
+        self.assertIsNone(out)                              # remove 掉了，那格刪掉
+
+    def test_loop_json_runs_as_daemon(self):
+        # 嚴格超集：一份合法的 loop.json 丟給 aos-daemon 也能跑（inst＝每拍的身體）
+        path = self.loop("l", "echo y >> l.out", times=2, ctl="l.ctl.json", state="l.state.json")
+        r = subprocess.run([sys.executable, DAEMON, path], cwd=self.tmp, capture_output=True, text=True, timeout=10)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("l.out"), "y\ny\n")
+        out = [json.loads(x) for x in r.stdout.splitlines()]
+        self.assertEqual(out[-1], {"end": "done", "runs": 2, "skipped": 0, "last_code": 0})
 
     def test_target_pointer(self):
-        # 一份檔放好幾格：同一份檔兩個位置＝兩個 loop；inst 那格包成只跑一次；save／load 帶著 #/位置
+        # 一份檔放好幾格：同一份檔兩個位置＝兩個 loop；inst 那格包成只跑一次
         self.start()
         path = self.write("node.json", {
             "a": {"inst": {"argv": ["sh", "-c", "echo a >> a.out"], "cwd": self.tmp}, "times": None,
@@ -191,41 +222,26 @@ class Daemon(Tmp):
         self.assertEqual(self.err({"op": "add", "id": path + "#a"}), "ReferencePointerInvalid")
         self.assertEqual(self.err({"op": "add", "id": "node.json#/a"}), "FieldType")
         self.ok({"op": "remove", "id": c})
-        self.ok({"op": "pause", "id": b})
-        self.ok({"op": "save", "path": self.p("t.json")})
-        self.assertEqual([it["loop"] for it in json.loads(self.read("t.json"))], [a, b])
-        self.ok({"op": "remove", "id": a})
-        self.ok({"op": "remove", "id": b})
-        self.assertEqual(self.ok({"op": "load", "path": self.p("t.json")}), [a, b])
-        self.until(lambda: self.ok({"op": "state", "id": b}) == "paused")
 
-    def test_load_rejects_live_pid(self):
-        a = self.loop("a", times=0, state="a.state.json")
-        self.write("a.state.json", {"pid": os.getpid()})
-        self.write("t.json", [{"loop": os.path.realpath(a), "ctl": {}}])
-        self.start(load=self.p("t.json"))
-        self.assertEqual(self.d.wait(10), 1)
-        self.assertTrue(self.d.stderr.read().startswith("Exists"))
-
-    def test_sigterm_saves_and_clears_loops(self):
+    def test_sigterm_clears_loops(self):
         a = self.loop("a", "echo $$ > a.pid; exec sleep 30", times=None)
-        self.write("t.json", [{"loop": os.path.realpath(a), "ctl": {"times": None}}])
-        self.start(load=self.p("t.json"), save=self.p("t.json"))
+        self.start(children=[a])
         self.until(lambda: os.path.exists(self.p("a.pid")))
         pid = int(self.read("a.pid"))
         self.assertEqual(self.stop(signal.SIGTERM), 0)
         self.assertFalse(alive(pid))
-        self.assertEqual(json.loads(self.read("t.json")), [{"loop": os.path.realpath(a), "ctl": {"times": None}}])
 
-    def test_sigint_does_not_save(self):
-        self.start(save=self.p("t.json"))
-        self.ok({"op": "list"})
-        self.assertEqual(self.stop(signal.SIGINT), 0)
-        self.assertFalse(os.path.exists(self.p("t.json")))
+    def test_windows_required(self):
+        for cfg in ({"state": None}, {"ctl": None}):
+            with self.subTest(cfg=cfg):
+                self.start(**cfg)
+                self.assertEqual(self.d.wait(10), 1)
+                self.assertIn("WindowMissing", self.d.stderr.read())
+                self.d.stderr.close()
 
     def test_own_ctl_pause_and_stop(self):
         self.write("d.ctl.json", {"paused": True})
-        self.start(ctl=self.p("d.ctl.json"), state=self.p("d.state.json"), save=self.p("t.json"))
+        self.start(table=self.p("t.json"))
         self.until(lambda: os.path.exists(self.p("d.state.json")))
         done = self.put({"op": "list"})
         time.sleep(0.2)
@@ -234,7 +250,7 @@ class Daemon(Tmp):
         self.get(done)
         self.write("d.ctl.json", {"stop": True})
         self.assertEqual(self.d.wait(10), 0)
-        self.assertEqual(json.loads(self.read("t.json")), [])
+        self.assertEqual(json.loads(self.read("t.json"))["children"], [])
         self.assertEqual(json.loads(self.read("d.state.json"))["state"], "stopped")
 
     def test_times_one_shot(self):
@@ -246,7 +262,7 @@ class Daemon(Tmp):
 
     def test_state_skeleton_shared_with_loop(self):
         """daemon 的 state.json 跟 loop 同一份骨架：interval_mode 回音、last_error、loops＝個數、狀態值在 STATES 裡。"""
-        self.start(state=self.p("d.state.json"), interval_mode="fixed", ctl=self.p("d.ctl.json"))
+        self.start(interval_mode="fixed")
         a = self.loop("a", times=None, interval_ms=100000, state=self.p("a.state.json"), ctl=self.p("a.ctl.json"))
         self.ok({"op": "add", "id": a})
         st = self.until(lambda: (lambda d: d if d and d.get("loops") else None)(self.dstate()))
@@ -255,19 +271,20 @@ class Daemon(Tmp):
         self.assertIsNone(st["last_error"])
         self.assertIn("skipped", st)
         la = self.until(lambda: self.ok({"op": "get", "id": a}).get("runs") == 1 and self.ok({"op": "get", "id": a}))
-        common = {"id", "state", "pid", "runs", "times", "interval_ms", "interval_mode", "ctl_mtime", "last_error"}
+        common = {"id", "state", "pid", "started", "boot_id", "beat", "runs", "times", "interval_ms", "interval_mode",
+                  "ctl_seq", "last_error"}
         self.assertLessEqual(common, set(st))
         self.assertLessEqual(common, set(la))
         self.write("d.ctl.json", {"interval_mode": "after"})
         self.until(lambda: self.dstate()["interval_mode"] == "after")
         self.assertEqual(self.stop(), 0)
         st = self.dstate()
-        self.assertEqual((st["state"], st["loops"]), ("stopped", 0))
+        self.assertEqual((st["state"], st["loops"]), ("stopped", 1))     # 收工表留著（給下次接回）
         for v in (st["state"], la["state"]):
             self.assertIn(v, aos_loop.STATES)
 
     def test_state_last_error_scan_failed(self):
-        self.start(state=self.p("d.state.json"))
+        self.start()
         self.until(lambda: self.dstate())
         os.chmod(self.ctl, 0)
         self.addCleanup(os.chmod, self.ctl, 0o755)
@@ -284,8 +301,10 @@ class Daemon(Tmp):
             return None
 
     def test_bad_config(self):
-        for doc in ({"interval_ms": 10}, {"control_dir": "c", "ctl": "c/x.json"},
-                    {"control_dir": "c", "interval_mode": "x"}):
+        w = {"ctl": "x.json", "state": "s.json"}
+        for doc in (dict(w, interval_ms=-1), {"control_dir": "c", "ctl": "c/x.json", "state": "s.json"},
+                    dict(w, interval_mode="x"), dict(w, load=True), dict(w, children={}),
+                    dict(w, policies={"child_exit": 3})):
             self.write("c.json", doc)
             with self.subTest(doc=doc), self.assertRaises(aos_daemon.DaemonError):
                 aos_daemon.load_config(self.p("c.json"))

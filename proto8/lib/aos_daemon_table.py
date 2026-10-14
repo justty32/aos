@@ -1,8 +1,12 @@
-"""daemon 的表：表上每個 loop 是一支子程序 `aos_loop.py`，daemon 只靠寫它的 ctl.json、讀它的 state.json 控制它。純標準庫。
+"""daemon 的表：每個子項是一支長壽的子程序 `aos_loop.py -`，daemon 只靠寫它的 ctl 窗、讀它的 state 窗控制它。純標準庫。
 
-`Table` 一個方法對一條指令（add／set／pause／resume／add_times／remove／state／get／list），加上 save／load 用的
-`snapshot()`／`restore()`、收工用的 `shutdown()`。要等 loop 讀到才回的，回一個 ready()：還沒好回 None。
-`DaemonError` 也在這裡（表、指令、config 共用）。規矩的白話說明在 aos_daemon 的檔頭。
+子項六態（`phase`，09 §19）：starting／running／exited／backoff／stopping／removed。表落在 `table` 窗（N-14 一種，只有 daemon 寫）：
+`{"kind": "aos-daemon-table", "children": [列, ...]}`，每列 {id, target, times, work_dir, ctl, state, pid, started, phase,
+exits, last_code}；先寫表、再 Popen。table 窗就是存檔（暫定 d）：`load: true` 起來時讀它接回。
+
+`Table` 一個方法對一條指令（add／set／pause／resume／add_times／remove／state／get／list），加上每圈的 `tick()`
+（收屍、套策略格、退避到點重起、寫表）、`load()`、`shutdown()`。要等 loop 讀到才回的，回一個 ready()：還沒好回 None。
+`DaemonError` 也在這裡。規矩的白話說明在 aos_daemon 的檔頭。
 """
 import itertools
 import json
@@ -13,23 +17,22 @@ import subprocess
 import sys
 import time
 
+import aos_cli
 import aos_inst
 import aos_loop
-from aos_directives import DirectiveError, locate, split_target, target_id
-from aos_loop import load_config as _load_cfg, parse_ctl, read_state, reap, write_json
+from aos_cli import CliError
+from aos_ctl_state import proc_started
+from aos_directives import DirectiveError, split_target, target_id
+from aos_loop import check_config, parse_ctl, read_state, reap, write_json
 
 __all__ = ["DaemonError", "Table"]
 
 AOS_LOOP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_loop.py")
+MAX_EXITS = 5       # 崩潰迴圈的上限：exits ≥ 5 強制 leave，不問策略格
 
 
-class DaemonError(Exception):
+class DaemonError(CliError):
     """config 或指令被拒。`code`＝錯誤代號，`msg`＝白話，`str(e)`＝「代號: 白話」。"""
-
-    def __init__(self, code, msg):
-        super().__init__("%s: %s" % (code, msg))
-        self.code = code
-        self.msg = msg
 
 
 def _read(path):
@@ -40,34 +43,39 @@ def _read(path):
         return None
 
 
-def _alive(pid):
-    try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-
-
-# ---- 表 ----
+# ---- 表上一個子項 ----
 
 class _Entry:
-    """表上一個 loop：子程序＋它的 ctl.json、state.json 在哪。"""
+    """表上一個 loop：子程序（或接回的孤兒：只有 pid＋啟動時間）＋它的 ctl、state 窗在哪。"""
 
-    def __init__(self, ident, lcfg, ctl, state, workdir):
-        self.id, self.lcfg, self.ctl, self.state, self.workdir = ident, lcfg, ctl, state, workdir
-        self.proc = None
-        self.removing = False
+    def __init__(self, ident, target, times, workdir, ctl, state):
+        self.id, self.target, self.times, self.workdir, self.ctl, self.state = ident, target, times, workdir, ctl, state
+        self.cfg = None             # 灌給 aos_loop 的設定；接回的孤兒沒有（要重起時再讀 target）
+        self.proc = self.pid = self.started = self.code = self.retry_at = None
+        self.phase, self.exits, self.removing = "starting", 0, False
+
+    def row(self):
+        return {"id": self.id, "target": self.target, "times": self.times, "work_dir": self.workdir, "ctl": self.ctl,
+                "state": self.state, "pid": self.pid, "started": self.started, "phase": self.phase,
+                "exits": self.exits, "last_code": self.code}
 
     def exited(self):
-        return self.proc.returncode is not None
+        return self.phase not in ("starting", "running", "stopping")
+
+    def gone(self):
+        """行程結束了沒（結束了就收屍、記碼）。接回的孤兒看 pid＋啟動時間。"""
+        if self.proc is not None:
+            if os.waitid(os.P_PID, self.proc.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is None:
+                return False
+            self.code = reap(self.proc)
+            return True
+        return self.pid is None or proc_started(self.pid) != self.started
 
     def status(self):
         st = read_state(self.state)
-        if st is None or st.get("pid") != self.proc.pid:
+        if st is None or st.get("pid") != self.pid:
             st = {"id": self.id, "state": "stopped" if self.exited() else "starting"}
-        st = dict(st, id=self.id)
+        st = dict(st, id=self.id, phase=self.phase)
         if self.exited() and st["state"] not in ("done", "stopped"):
             st["state"] = "stopped"
         return st
@@ -77,105 +85,193 @@ class _Entry:
         return doc if isinstance(doc, dict) else {}
 
     def update_ctl(self, **fields):
-        """讀現在的 ctl.json、改幾格、整份寫回（暫存再改名），回寫完的 mtime。"""
-        doc = dict(self.ctl_doc(), **fields)
+        """讀現在的 ctl、改幾格、流水號 seq 加一、整份寫回（暫存再改名），回這次的 seq（N-14 回音以序號為準）。"""
+        doc = self.ctl_doc()
+        seq = (doc.get("seq") if aos_loop._int(doc.get("seq")) else 0) + 1
         try:
-            write_json(self.ctl, doc)
-            return os.stat(self.ctl).st_mtime
+            write_json(self.ctl, dict(doc, seq=seq, **fields))
         except OSError as e:
             raise DaemonError("WriteFailed", "寫不了 %s：%s" % (self.ctl, e))
+        return seq
 
-    def acked(self, mtime, settled=lambda st: True):
-        """回 ready()：loop 讀到 mtime 那份 ctl（而且 settled）就回狀態物件，還沒回 None；行程結束了直接回。"""
+    def acked(self, seq, settled=lambda st: True):
+        """回 ready()：loop 讀到 seq 那份 ctl（state 的 ctl_seq 趕上，而且 settled）就回狀態物件；行程結束了直接回。"""
         def ready():
             st = self.status()
             if self.exited():
                 return st
-            m = st.get("ctl_mtime")
-            return st if isinstance(m, (int, float)) and m >= mtime and settled(st) else None
+            s = st.get("ctl_seq")
+            return st if aos_loop._int(s) and s >= seq and settled(st) else None
         return ready
 
 
+# ---- 表 ----
+
 class Table:
-    def __init__(self, cfg):
-        self.cfg = cfg
+    def __init__(self, cfg, daemon_id):
+        self.cfg, self.daemon_id = cfg, daemon_id
         self.entries = {}
+        self.closing = False
+        self.written = None
+        self.said = None
 
-    def _id(self, path):
-        """指令的 id → (id, 檔的 realpath, 位置 tuple)。"""
-        if not isinstance(path, str):
-            raise DaemonError("FieldType", "id 要是 loop.json 的絕對路徑，不是 %r" % (path,))
-        try:
-            file, pos = split_target(path)
-        except DirectiveError as e:
-            raise DaemonError(e.code, e.msg)
-        if not os.path.isabs(file):
-            raise DaemonError("FieldType", "id 要是 loop.json 的絕對路徑，不是 %r" % (path,))
-        real = os.path.realpath(file)
-        return target_id(real, pos), real, pos
+    def _say(self, code, msg):
+        if self.said != (code, msg):
+            self.said = (code, msg)
+            aos_cli.warn(code, msg)
 
-    def _get(self, path):
-        ident = self._id(path)[0]
-        e = self.entries.get(ident)
-        if e is None or e.removing:
-            raise DaemonError("NotFound", "沒有 loop %s" % ident)
-        return e
+    # ---- 起子項 ----
 
-    def _prepare(self, path):
-        """驗一個 loop.json（或 inst.json）、決定 ctl／state 放哪，回 (_Entry, 包裝檔的內容或 None)。不動檔案。
-        頂層沒有 "inst"、有 "argv" 的當 inst.json：包成只跑一次的 loop {"inst": {"$ref": 它}, "times": 1}。"""
-        ident, real, pos = self._id(path)
-        if not os.path.isfile(real):
-            raise DaemonError("NotFound", "%s 不存在" % real)
+    def _config(self, target, i=None):
+        """TARGET（絕對路徑，可接 `#/位置`；或內嵌物件）→ (id, 解好的 loop 設定)。inst.json 包成只跑一次的 loop。"""
+        if isinstance(target, dict):
+            doc, ident = target, target.get("id") or "%s#/children/%d" % (self.daemon_id, i)
+        else:
+            file = _split(target)[0]
+            if not os.path.isabs(file):
+                raise DaemonError("FieldType", "id 要是 loop.json 的絕對路徑，不是 %r" % (target,))
+            if not os.path.isfile(file):
+                raise DaemonError("NotFound", "%s 不存在" % file)
+            try:
+                doc, ident = aos_cli.load_target(target)
+            except CliError as e:
+                raise DaemonError(e.code, e.msg)
+        if "inst" not in doc and "argv" in doc:
+            try:
+                aos_inst.parse(doc, os.getcwd(), ident)
+            except aos_inst.InstError as e:
+                raise DaemonError(e.code, e.msg)
+            doc = {"inst": doc, "times": 1}
+        return ident, doc
+
+    def add(self, target, i=None):
+        ident, doc = self._config(target, i)
         if ident in self.entries:
             raise DaemonError("Exists", "loop %s 已經在了" % ident)
-        try:
-            raw = locate(_read(real), pos, real)
-        except DirectiveError:
-            raw = None      # 讀不了、走不到：交給下面的 _load_cfg 報錯
-        if isinstance(raw, dict) and "inst" not in raw and "argv" in raw:
+        os.makedirs(self.cfg["work_dir"], exist_ok=True)
+        for n in itertools.count(1):
+            d = os.path.join(self.cfg["work_dir"], str(n))
             try:
-                aos_inst.load(ident)
-            except aos_inst.InstError as err:
-                raise DaemonError(err.code, err.msg)
-            lcfg = dict(aos_loop.DEFAULTS, times=1)
-            return _Entry(ident, lcfg, None, None, None), {"inst": {"$ref": ident}, "times": 1}
-        _, lcfg = _load_cfg(ident, err=DaemonError)
-        wrap = None
-        if lcfg["ctl"] is None or lcfg["state"] is None:
-            wrap = {k: {"$ref": target_id(real, pos + (k,))} for k in raw}
-        return _Entry(ident, lcfg, lcfg["ctl"], lcfg["state"], None), wrap
-
-    def _start(self, e, wrap, ctl=None):
-        start = e.id
-        if wrap is not None:
-            os.makedirs(self.cfg["work_dir"], exist_ok=True)
-            for n in itertools.count(1):
-                d = os.path.join(self.cfg["work_dir"], str(n))
-                try:
-                    os.mkdir(d)
-                    break
-                except FileExistsError:
-                    continue
-            e.workdir = d
-            e.ctl = e.ctl or os.path.join(d, "ctl.json")
-            e.state = e.state or os.path.join(d, "state.json")
-            start = os.path.join(d, "loop.json")
-            write_json(start, dict(wrap, ctl=e.ctl, state=e.state))
-            if ctl is None and not os.path.exists(e.ctl):
-                ctl = {}
-        if ctl is not None:
-            write_json(e.ctl, ctl)
-        e.proc = subprocess.Popen([sys.executable, AOS_LOOP, start], start_new_session=True)
-        self.entries[e.id] = e
-
-    def add(self, path, ctl=None):
-        e, wrap = self._prepare(path)
+                os.mkdir(d)
+                break
+            except FileExistsError:
+                continue
+        doc = dict(doc, id=ident, ctl=doc.get("ctl") or os.path.join(d, "ctl.json"),
+                   state=doc.get("state") or os.path.join(d, "state.json"))
         try:
-            self._start(e, wrap, ctl)
+            _, cfg = check_config(ident, doc, err=DaemonError)
+        except DaemonError:
+            shutil.rmtree(d, ignore_errors=True)
+            raise
+        e = _Entry(ident, target, cfg["times"], d, cfg["ctl"], cfg["state"])
+        e.cfg = cfg
+        if not os.path.exists(e.ctl):
+            write_json(e.ctl, {})
+        self.entries[ident] = e
+        self._spawn(e)
+        return ident
+
+    def _spawn(self, e):
+        """先寫表（starting）、再 Popen；子 loop 的 stdout／stderr 落 work_dir/N/ret.json、err.json。"""
+        if e.cfg is None:                   # 接回的孤兒要重起：重讀 target
+            ident, doc = self._config(e.target)
+            e.cfg = check_config(e.id, dict(doc, id=e.id, ctl=e.ctl, state=e.state), err=DaemonError)[1]
+        e.phase, e.proc, e.pid, e.started = "starting", None, None, None
+        self.write()
+        with open(os.path.join(e.workdir, "ret.json"), "ab") as out, open(os.path.join(e.workdir, "err.json"), "ab") as err:
+            e.proc = subprocess.Popen([sys.executable, AOS_LOOP, "-"], start_new_session=True,
+                                      stdin=subprocess.PIPE, stdout=out, stderr=err)
+        try:
+            e.proc.stdin.write(json.dumps(e.cfg).encode("utf-8"))
+            e.proc.stdin.close()
+        except OSError:
+            pass
+        e.pid, e.started, e.phase = e.proc.pid, proc_started(e.proc.pid), "running"
+        self.write()
+
+    # ---- 每圈 ----
+
+    def tick(self):
+        """收屍、套策略格、退避到點的重起、寫表。"""
+        now = time.monotonic()
+        for e in list(self.entries.values()):
+            if not e.exited() and e.gone():
+                e.exits += 1
+                e.phase = "removed" if e.removing else "exited"
+                if not e.removing and not self.closing:
+                    self._exit_policy(e, now)
+            elif e.phase == "backoff" and not self.closing and now >= e.retry_at:
+                try:
+                    self._spawn(e)
+                except (DaemonError, OSError) as err:
+                    e.phase = "exited"
+                    self._say("RestartFailed", "%s 重起不了：%s" % (e.id, err))
+        self.write()
+
+    def _exit_policy(self, e, now):
+        """子項結束：問 `policies.child_exit`（inst TARGET；stdin {id, code, exits, last_state} → stdout
+        {action, after_ms}）。沒設、exits ≥ MAX_EXITS、格出錯＝leave。"""
+        target = self.cfg["policies"].get("child_exit")
+        if target is None or e.exits >= MAX_EXITS:
+            return
+        act = {"action": "leave"}
+        try:
+            doc = target if isinstance(target, dict) else aos_cli.load_target(target, aos_inst._file)[0]
+            fin, fout = os.path.join(e.workdir, "policy.in.json"), os.path.join(e.workdir, "policy.out.json")
+            write_json(fin, {"id": e.id, "code": e.code, "exits": e.exits, "last_state": read_state(e.state)})
+            subprocess.run([sys.executable, aos_loop.AOS_INST, "-"], input=json.dumps(dict(doc, stdin=fin, stdout=fout)),
+                           text=True, stdout=subprocess.DEVNULL)
+            with open(fout, encoding="utf-8") as f:
+                outs = [o for o in aos_cli.read_stream(f.read()) if isinstance(o, dict)]
+            act = outs[-1]
+            if act.get("action") not in ("restart", "leave", "remove") or not aos_loop._int(act.get("after_ms", 0)):
+                raise ValueError("策略格回的不對：%r" % (act,))
+        except (CliError, OSError, ValueError, IndexError) as err:
+            self._say("PolicyFailed", "%s 的 child_exit 策略格出錯（%s），當成 leave" % (e.id, err))
+            act = {"action": "leave"}
+        if act["action"] == "restart":
+            e.phase, e.retry_at = "backoff", now + act.get("after_ms", 0) / 1000
+        elif act["action"] == "remove":
+            self.drop(e)
+
+    def write(self):
+        """表有變才寫 table 窗（沒設 table＝不寫）。"""
+        doc = {"kind": "aos-daemon-table", "children": [e.row() for e in self.entries.values()]}
+        if self.cfg["table"] is None or doc == self.written:
+            return
+        try:
+            write_json(self.cfg["table"], doc)
+            self.written = doc
         except OSError as err:
-            raise DaemonError("WriteFailed", "起不了 %s：%s" % (e.id, err))
-        return e.id
+            self._say("TableWriteFailed", "寫不了 table 窗 %s：%s" % (self.cfg["table"], err))
+
+    def load(self):
+        """讀 table 窗接回：pid＋啟動時間對得上＝認領（不重起）；對不上下一圈當 exited 走策略格；backoff 的馬上重起。"""
+        doc = _read(self.cfg["table"])
+        if doc is None:
+            return
+        rows = doc.get("children") if isinstance(doc, dict) else None
+        if not isinstance(rows, list):
+            raise DaemonError("FieldType", "table 窗 %s 的 children 要是陣列" % self.cfg["table"])
+        for r in rows:
+            try:
+                e = _Entry(r["id"], r["target"], r["times"], r["work_dir"], r["ctl"], r["state"])
+                e.pid, e.started, e.exits, e.code = r["pid"], r["started"], r["exits"], r["last_code"]
+                e.phase = {"exited": "exited", "backoff": "backoff"}.get(r["phase"], "running")
+            except (KeyError, TypeError) as err:
+                raise DaemonError("FieldType", "table 窗 %s 有一列不對：%r（%s）" % (self.cfg["table"], r, err))
+            e.retry_at = time.monotonic()
+            os.makedirs(e.workdir, exist_ok=True)
+            self.entries[e.id] = e
+
+    # ---- 指令 ----
+
+    def _get(self, target):
+        file, pos = _split(target)
+        e = self.entries.get(target_id(os.path.realpath(file), pos)) or self.entries.get(target)
+        if e is None or e.removing:
+            raise DaemonError("NotFound", "沒有 loop %s" % target)
+        return e
 
     def set(self, path, how):
         e = self._get(path)
@@ -201,17 +297,19 @@ class Table:
             raise DaemonError("FieldType", "delta 要是整數，不是 %r" % (delta,))
         e = self._get(path)
         doc = e.ctl_doc()
-        times = doc["times"] if "times" in doc else e.lcfg["times"]
+        times = doc["times"] if "times" in doc else e.times
         if times is None:
             raise DaemonError("Conflict", "%s 是不限次數，不能加減" % e.id)
         if not aos_loop._int(times):
-            raise DaemonError("Conflict", "%s 的 ctl.json 裡 times 不對：%r" % (e.id, times))
+            raise DaemonError("Conflict", "%s 的 ctl 裡 times 不對：%r" % (e.id, times))
         return e.acked(e.update_ctl(times=max(0, times + delta)))
 
     def remove(self, path, wait=True):
         e = self._get(path)
         _bool(wait)
-        e.update_ctl(stop={"val": True, "now": not wait})
+        if not e.exited():
+            e.update_ctl(stop={"val": True, "now": not wait})
+            e.phase = "stopping"
         e.removing = True
 
         def ready():
@@ -226,6 +324,7 @@ class Table:
         self.entries.pop(e.id, None)
         if e.workdir:
             shutil.rmtree(e.workdir, ignore_errors=True)
+        self.write()
 
     def state(self, path):
         return self._get(path).status()["state"]
@@ -236,59 +335,43 @@ class Table:
     def list(self):
         return [e.status() for e in self.entries.values() if not e.removing]
 
-    def reap(self):
-        """行程結束了的：整群補 SIGKILL、收屍。"""
-        for e in self.entries.values():
-            if not e.exited() and os.waitid(os.P_PID, e.proc.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT):
-                reap(e.proc)
-
-    def snapshot(self):
-        return [{"loop": e.id, "ctl": e.ctl_doc()} for e in self.entries.values() if not e.removing]
-
-    def restore(self, items):
-        """全有全無：先全部驗過，有一筆不對就丟錯、一個都不起。"""
-        if not isinstance(items, list):
-            raise DaemonError("FieldType", "表要是陣列")
-        todo = []
-        for it in items:
-            if not (isinstance(it, dict) and set(it) == {"loop", "ctl"} and isinstance(it["ctl"], dict)):
-                raise DaemonError("FieldType", "表裡每筆要是 {loop, ctl}：%r" % (it,))
-            todo.append((self._prepare(it["loop"]), it["ctl"]))
-        if len({e.id for (e, _), _ in todo}) != len(todo):
-            raise DaemonError("Exists", "表裡有重複的 loop")
-        for (e, _), _ in todo:
-            st = read_state(e.state) if e.state else None
-            if st is not None and isinstance(st.get("pid"), int) and _alive(st["pid"]):
-                raise DaemonError("Exists", "%s 的 state.json 說 pid %d 還在跑" % (e.id, st["pid"]))
-        for (e, wrap), ctl in todo:
-            try:
-                self._start(e, wrap, ctl)
-            except OSError as err:
-                raise DaemonError("WriteFailed", "起不了 %s：%s" % (e.id, err))
-        return [e.id for (e, _), _ in todo]
-
     def shutdown(self, now, grace_ms, got):
-        """收掉全部。now＝整群 SIGTERM、等 grace_ms、整群 SIGKILL；否則替每個寫 stop、等它們自己結束（中途收到訊號改成 now）。"""
+        """收掉全部（表留著，給下次 load 接回）。now＝整群 SIGTERM、等 grace_ms、整群 SIGKILL；
+        否則替每個寫 stop、等它們自己結束（中途收到訊號改成 now）。"""
+        self.closing = True
         live = [e for e in self.entries.values() if not e.exited()]
         if not now:
             for e in live:
                 try:
                     e.update_ctl(stop=True)
                 except DaemonError as err:
-                    print(err, file=sys.stderr)
+                    aos_cli.warn(err.code, err.msg)
             while not got and any(not e.exited() for e in live):
-                self.reap()
+                self.tick()
                 time.sleep(0.02)
         for e in live:
-            if not e.exited():
-                aos_loop._killpg(e.proc.pid, signal.SIGTERM)
+            if not e.exited() and e.pid:
+                aos_loop._killpg(e.pid, signal.SIGTERM)
         end = time.monotonic() + grace_ms / 1000
         while time.monotonic() < end and any(not e.exited() for e in live):
-            self.reap()
+            self.tick()
             time.sleep(0.02)
         for e in live:
-            if not e.exited():
-                reap(e.proc)
+            if not e.exited() and e.pid:
+                aos_loop._killpg(e.pid, signal.SIGKILL)
+                if e.proc:
+                    e.code = reap(e.proc)
+                e.phase = "exited"
+        self.write()
+
+
+def _split(target):
+    if not isinstance(target, str):
+        raise DaemonError("FieldType", "id 要是 loop.json 的絕對路徑，不是 %r" % (target,))
+    try:
+        return split_target(target)
+    except DirectiveError as e:
+        raise DaemonError(e.code, e.msg)
 
 
 def _bool(v):

@@ -1,12 +1,12 @@
 """daemon 的指令與控制資料夾：一條指令 → 一問一答（`handle()`），控制資料夾每圈掃一次（`_Folder`）。純標準庫。
 
-指令格式、回覆格式、error.code、save／load 的規矩見 aos_daemon 的檔頭；這裡只放實作。
+指令格式、回覆格式、error.code 的規矩見 aos_daemon 的檔頭；這裡只放實作。
 出意外不往上丟：印到 stderr（同一件事印一次），記成這圈的 last_error。
 """
 import json
 import os
-import sys
 
+from aos_cli import warn
 from aos_daemon_table import DaemonError
 from aos_loop import write_json
 
@@ -46,39 +46,10 @@ def _dispatch(table, cmd):
            "pause": lambda: table.pause(ident, cmd.get("wait", True)), "resume": lambda: table.resume(ident),
            "add_times": lambda: table.add_times(ident, cmd.get("delta")),
            "remove": lambda: table.remove(ident, cmd.get("wait", True)),
-           "state": lambda: table.state(ident), "get": lambda: table.get(ident), "list": table.list,
-           "save": lambda: _save(table, _path(cmd.get("path"))), "load": lambda: _load(table, _path(cmd.get("path")))}
+           "state": lambda: table.state(ident), "get": lambda: table.get(ident), "list": table.list}
     if op not in ops:
         raise DaemonError("UnknownOp", "不認得的 op %r" % (op,))
     return ops[op]()
-
-
-def _path(p, key="path"):
-    if not isinstance(p, str) or not p:
-        raise DaemonError("FieldType", "%s 要是字串路徑，不是 %r" % (key, p))
-    return os.path.abspath(p)
-
-
-def _save(table, path):
-    snap = table.snapshot()
-    try:
-        write_json(path, snap)
-    except OSError as e:
-        raise DaemonError("WriteFailed", "寫不了 %s：%s" % (path, e))
-    return len(snap)
-
-
-def _load(table, path):
-    try:
-        with open(path, encoding="utf-8") as f:
-            raw = f.read()
-    except OSError as e:
-        raise DaemonError("ReadFailed", "讀不到 %s：%s" % (path, e))
-    try:
-        items = json.loads(raw)
-    except ValueError as e:
-        raise DaemonError("JsonSyntax", "%s 不是合法 JSON：%s" % (path, e))
-    return table.restore(items)
 
 
 # ---- 控制資料夾 ----
@@ -95,7 +66,7 @@ class _Folder:
         self.errors.append(msg)
         if self.said.get(key) != msg:
             self.said[key] = msg
-            print(msg, file=sys.stderr)
+            warn(msg.split(":")[0], msg.split(": ", 1)[1])
 
     def flush(self):
         for name, (path, cmd, ready) in list(self.pending.items()):

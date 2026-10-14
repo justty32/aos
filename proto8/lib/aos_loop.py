@@ -46,7 +46,7 @@ ctl 窗（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣�
 次數跑完（runs ≥ times）就結束、退出（有 ctl 也一樣）；想再跑就重新起。
 
 state 窗（骨架跟 daemon 共用，見 lib ctl-state.md）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、
-`pid`、`started`、`boot_id`、`runs`、`times`、`interval_ms`、`interval_mode`、`last_error`、`ctl_seq`、`ctl_mtime`、`beat`；
+`pid`、`started`、`boot_id`、`runs`、`times`、`interval_ms`、`interval_mode`、`last_error`、`ctl_seq`、`beat`；
 loop 自己多 `skipped`、`last_code`。內容沒變也每秒碰一次（心跳）。先寫 `.名字.tmp` 再改名；寫不了警告一次、不算錯。
 
 收到 SIGINT／SIGTERM／SIGHUP（只在主執行緒接）：收掉正在跑的那次（整群 SIGTERM，過 grace_ms 整群 SIGKILL）、不再起新的。
@@ -84,7 +84,7 @@ AOS_INST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_inst.py
 DEFAULTS = {"id": None, "times": 1, "interval_ms": 0, "interval_mode": "after", "grace_ms": 5000, "ctl": None,
             "ctl_poll_ms": 1000, "state": None, "error_wait_ms": 1000}
 _CAUGHT = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-_PATHS = ("ctl", "state", "load", "save", "work_dir", "control_dir")
+_PATHS = ("ctl", "state", "table", "work_dir", "control_dir")
 
 
 class LoopError(CliError):
@@ -96,12 +96,11 @@ class LoopError(CliError):
 
 
 def _ok(k, v):
-    if k == "control_dir":
-        return isinstance(v, str) and v
     if k in _PATHS:
         return v is None or isinstance(v, str) and v
     return {"id": v is None or isinstance(v, str), "times": v is None or _int(v), "interval_mode": v in _MODES,
-            "ctl_poll_ms": _int(v, 1)}.get(k, _int(v))
+            "ctl_poll_ms": _int(v, 1), "load": isinstance(v, bool), "children": isinstance(v, list),
+            "policies": isinstance(v, dict)}.get(k, _int(v))
 
 
 def check_config(ident, doc, defaults=DEFAULTS, need_inst=True, err=LoopError):
@@ -208,6 +207,10 @@ class Loop:
     def extra(self):
         return {"skipped": self.skipped, "last_code": self.last_code}
 
+    def error_now(self):
+        """state 的 last_error。"""
+        return self.last_error
+
     def finish_up(self, final, now, got):
         """結束前（daemon：存檔、收子項）。final＝"done"／"stopped"，now＝要不要當場收。"""
 
@@ -280,7 +283,7 @@ class Loop:
             state = "done"
         else:
             state = "waiting"
-        return state_doc(self.id, state, w, self.ctl, self.runs, self.last_error, **self.extra())
+        return state_doc(self.id, state, w, self.ctl, self.runs, self.error_now(), **self.extra())
 
     def serve(self, got):
         c = self.cfg

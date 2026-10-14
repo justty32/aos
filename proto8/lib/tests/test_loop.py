@@ -32,7 +32,8 @@ class LoopTest(Tmp):
         return subprocess.run([sys.executable, LOOP, path], capture_output=True, text=True, cwd=self.tmp, timeout=timeout)
 
     def start(self, path):
-        proc = subprocess.Popen([sys.executable, LOOP, path], cwd=self.tmp, stderr=subprocess.PIPE, text=True)
+        proc = subprocess.Popen([sys.executable, LOOP, path], cwd=self.tmp, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                                text=True)
         self.addCleanup(lambda: proc.poll() is None and proc.kill() or proc.stderr.close())
         return proc
 
@@ -161,7 +162,7 @@ class LoopTest(Tmp):
                 aos_loop.parse_ctl(bad)
 
     def test_ctl_same_stat_change_detected(self):
-        """4 ms 內等長改名蓋過：ino／mtime／size 全撞（ext4 實測會發生），第二次仍要讀到；壞檔維持上一次、回音照寫。"""
+        """4 ms 內等長改名蓋過：ino／mtime／size 全撞（ext4 實測會發生），第二次仍要讀到；壞檔維持上一次。"""
         ctl = aos_loop.CtlFile(self.p("c.json"))
         aos_loop.write_json(self.p("c.json"), {"times": 5})
         fixed = os.stat(self.p("c.json"))
@@ -178,11 +179,6 @@ class LoopTest(Tmp):
                 f.write("{")
             ctl.poll()
             self.assertEqual(ctl.good, {"paused": (True, False)})
-        self.assertEqual(ctl.mtime, fixed.st_mtime)
-        aos_loop.write_json(self.p("c.json"), {"paused": True})       # 內容同上一份好的、檔是新的：回音跟上
-        os.utime(self.p("c.json"), ns=(fixed.st_mtime_ns + 10**9,) * 2)
-        ctl.poll()
-        self.assertEqual(ctl.mtime, os.stat(self.p("c.json")).st_mtime)
 
     def test_ctl_seq_and_heartbeat(self):
         """ctl 帶流水號 seq，回報 ctl_seq（不進 good）；state 帶心跳欄位，內容沒變也每 beat_ms 碰一次。"""
@@ -212,12 +208,12 @@ class LoopTest(Tmp):
         self.until(lambda: (self.state() or {}).get("state") == "paused")
         time.sleep(0.2)
         self.assertFalse(os.path.exists(self.p("l.out")))
-        self.ctl({"times": 2})                          # paused 沒寫＝回到初始值（false）
+        self.ctl({"times": 2, "seq": 3})                # paused 沒寫＝回到初始值（false）
         self.assertEqual(proc.wait(5), 0)               # 次數跑完就退出，有 ctl 也一樣
         self.assertEqual(self.read("l.out"), "x\nx\n")
         st = self.state()
         self.assertEqual((st["state"], st["runs"]), ("done", 2))
-        self.assertEqual(st["ctl_mtime"], os.stat(self.p("l.ctl.json")).st_mtime)
+        self.assertEqual(st["ctl_seq"], 3)
 
     def test_ctl_now_kills_current(self):
         self.ctl({})

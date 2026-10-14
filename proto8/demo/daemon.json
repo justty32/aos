@@ -1,4 +1,12 @@
 {
-  "control_dir": {"$env": "DEMO_CTL"},
-  "interval_ms": 100
+  "control_dir": {
+    "$env": "DEMO_CTL"
+  },
+  "interval_ms": 100,
+  "ctl": {
+    "$env": "DEMO_DAEMON_CTL"
+  },
+  "state": {
+    "$env": "DEMO_DAEMON_STATE"
+  }
 }

@@ -1,194 +1,176 @@
 #!/usr/bin/env python3
-"""daemon：管很多個 loop 的表；自己也是一個 loop（每一圈＝掃一次控制資料夾）。純標準庫。
+"""daemon：一個 loop（同一個拍引擎），每拍多做「收屍、掃控制資料夾、套策略格」，同時顧著一群長壽的子 loop。純標準庫。
+照 NORMS N-12 重做、候選 g 拍板（10-14）：daemon.json＝loop.json 的超集，一份合法的 loop.json 丟給 aos-daemon 也能跑。
 
-    python3 aos_daemon.py DAEMON.json
+    python3 aos_daemon.py [--key 值 ...] [DAEMON.json | -]
 
-`run(path)` 跟命令列一模一樣。
+設定從哪來照 aos_cli（同 aos_loop）：DAEMON.json（可接 `#/位置`）、`-`＝stdin、外層純量 key 有同名旗標；`--` 不收。
+`run(x)` 跟命令列一樣，x＝路徑或一份設定 dict。
 
-daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd）：
+daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd；只在起來時讀一次）。跟 loop.json 同名的 key 同義：
 
-    control_dir    控制資料夾（必填），沒有就建
-    load           起來後先 load 這個檔（選填；跟丟一條 load 指令一樣，但失敗＝起不來）
-    save           收工時先 save 到這個檔（選填；SIGTERM、ctl 的 stop、times 跑完才存，SIGINT 不存）
-    work_dir       替 loop 生包裝檔的地方（選填；沒寫＝control_dir 旁邊的 loops/）
-    grace_ms       收工時等底下的 loop 多久，過了整群 SIGKILL（非負整數；沒寫＝10000；要比 loop 的 grace_ms 長）
-    times          掃幾圈就收工（非負整數；null＝不限，預設）
-    interval_ms    每圈隔多久（非負整數；沒寫＝200）
-    interval_mode  "after"＝掃完再隔 interval_ms（預設）；"fixed"＝固定週期，掃超過一拍就跳拍（state 的 skipped），同 loop
-    ctl            daemon 自己的 ctl.json（選填；不能放在 control_dir 裡）：paused＝不掃資料夾（指令堆著、loop 照跑）、
-                   stop＝收工（now＝底下的 loop 當場收掉；沒 now＝等它們這次跑完）、times、interval_ms、interval_mode
-    ctl_poll_ms    多久看一次 ctl.json（正整數；沒寫＝1000）
-    state          daemon 自己的 state.json（選填）：骨架跟 loop 同一份（id、state、pid、runs＝掃了幾圈、times、interval_ms、
-                   interval_mode、ctl_mtime、last_error＝最近一圈印到 stderr 的最後一行錯，沒有＝null），
-                   加上 skipped、loops（表上幾個；要細節用 list／get／state 指令查）
+    inst           daemon 自己每拍跑一次的身體（選填；跑法同 loop：阻塞到它結束，記 last_code／last_error）
+    ctl、state     自己的 ctl 窗、state 窗（必填，N-19）；ctl 不能放在 control_dir 裡
+    times          跑幾拍就收工（非負整數；null＝不限，預設——跟 loop 的預設 1 不同）
+    interval_ms    每拍隔多久（非負整數；沒寫＝200）
+    interval_mode、ctl_poll_ms、error_wait_ms、id   同 loop
+    grace_ms       收工時等底下的 loop 多久，過了整群 SIGKILL（非負整數；沒寫＝10000）
+  daemon 多的：
+    children       初始表（陣列）：每項＝一個 aos-loop 設定的 TARGET（路徑、`檔#/位置`，或內嵌物件）；起來時等同逐個 add
+    policies       {"child_exit": inst TARGET}：子項結束時問它怎麼辦（見下）；沒設＝leave
+    control_dir    控制資料夾（選填；沒給＝不掃資料夾，N-13）
+    table          table 窗的路徑（選填）：子項六態的表，有變就整份寫；也是存檔
+    load           true＝起來時讀 table 窗接回（預設 false）
+    work_dir       每個子項一格 `work_dir/N/`（選填；沒寫＝state 窗旁邊的 loops/）
 
-表上每個 loop 是一支子程序 `aos_loop.py LOOP.json`（自成一個 session），daemon 跟它之間只靠兩個檔：寫它的 ctl.json、
-讀它的 state.json。loop.json 有寫 ctl／state 就用它寫的；沒寫的，daemon 在 `work_dir/<編號>/` 生一份包裝檔
-`loop.json`（每個 key 用 `$ref` 指回原檔，補上 ctl、state 指到同一個資料夾）、起的是包裝檔；移除或收工時刪掉那個資料夾。
+每拍：收屍（每圈都做）→ 掃控制資料夾 → 跑 inst（有的話）。runs＝拍數。paused＝不拍（指令堆著、子項照跑）；
+stop＝收工（now＝子項當場收掉；沒 now＝替它們寫 stop、等它們跑完）；times 跑完同 stop（不帶 now）。
 
-指令：往控制資料夾放一個 `名字.json`。daemon 每圈把裡面的 `*.json` 照檔名順序讀進來處理，處理完改成 `名字.json.done`，
-內容換成一問一答：
+子項：一支子程序 `aos_loop.py -`（自成 session），設定從 stdin 灌進去（`id`＝原 TARGET 的 id）。loop 設定沒寫 ctl／state 的，
+放在 `work_dir/N/ctl.json`、`state.json`；子 loop 的 stdout、stderr 落 `work_dir/N/ret.json`、`err.json`。
+daemon 只靠兩個窗控制它：寫它的 ctl（帶流水號 seq）、讀它的 state（ctl_seq 趕上＝讀到了）。
+子項六態 phase：starting／running／exited／backoff／stopping／removed，寫在 table 窗（先寫表、再 Popen）。
+子項結束（不是 remove、不是收工）：有 `policies.child_exit` 就跑那格 inst，stdin＝{id, code, exits, last_state}，
+stdout 最後一份＝{action: restart|leave|remove, after_ms}；restart＝退避 after_ms 再起。exits ≥ 5 強制 leave。
+`load: true`：讀 table 窗，pid＋啟動時間（/proc）對得上的認領、不重起；對不上的當 exited 走策略格；backoff 的馬上重起。
+收工時表留著（work_dir/N 也留著，給下次接回）；remove 才刪那格。
 
-    {"request": 原指令, "ok": true,  "result": 結果}
-    {"request": 原指令, "ok": false, "error": {"code": "NotFound", "msg": "白話"}}
+指令（N-10）：往控制資料夾放 `名字.json`，處理完變 `名字.json.done`，內容一問一答
+`{"request", "ok", "result"|"error": {"code", "msg"}}`；`.` 開頭不讀；`.done` 由丟的人清。指令一律 {"op", "id", ...}，
+id＝loop.json（或 inst.json）的絕對路徑，可接 `#/位置`：
 
-讀到不合法的 JSON 也一樣當場變成 `.done`（`request` 是讀到的原文字串，error.code＝BadCommand）。
-寫到一半被讀到＝BadCommand，寫的人自己負責（先寫 `.` 開頭的檔再改名）；`.` 開頭的檔不讀。`.done` 由丟指令的人清。不 fsync。
+    add        起一個（inst.json：頂層沒有 inst、有 argv 的，包成只跑一次的 loop）     → result＝id
+    set        {"how": {times／interval_ms／interval_mode}}               → 改完的狀態物件
+    pause      {"wait": B}（預設 true；false＝當場收掉）                    → 狀態物件（等真的停了）
+    resume、add_times {"delta": N}                                          → 狀態物件
+    remove     {"wait": B}  停掉、等行程結束、從表上拿掉、刪 work_dir/N     → 最後的狀態物件
+    state      → 狀態字串；get → 狀態物件（它的 state 窗＋phase）；list → [狀態物件, ...]
 
-指令一律 {"op", "id", ...參數}。`id` 要是 loop.json（或 inst.json）的絕對路徑（相對＝FieldType），daemon 轉成 realpath；
-後面可以接 `#/位置`（同 aos_inst 的 TARGET：那份檔裡那一格），id＝realpath ＋ `#` ＋ 正規化過的位置（同一份檔兩個位置＝兩個 loop）：
+set／pause／resume／add_times 等 loop 讀到了才回；等的期間指令檔留在原地。
+error.code（只供參考）：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、ReadFailed、JsonSyntax、WriteFailed、Internal。
 
-    {"op": "add",       "id": ID}                 起一個 loop                                  → result＝realpath
-                                                  ID 也可以是 inst.json（頂層沒有 "inst"、有 "argv"）：當成只跑一次的 loop，
-                                                  包裝檔 {"inst": {"$ref": 它}, "times": 1}；id 照樣是那份 inst.json 的 realpath
-    {"op": "set",       "id": ID, "how": {...}}   改 times／interval_ms／interval_mode（寫進它的 ctl.json）
-    {"op": "pause",     "id": ID, "wait": B}      暫停；wait＝true 等這次跑完，false 當場收掉（預設 true）
-    {"op": "resume",    "id": ID}                 繼續
-    {"op": "add_times", "id": ID, "delta": N}     總次數加減 N（最少到 0；不限次數＝Conflict；loop 已經退出就沒作用）
-    {"op": "remove",    "id": ID, "wait": B}      停掉它（ctl 的 stop）、等行程結束、從表上拿掉 → result＝最後的狀態物件
-    {"op": "state",     "id": ID}                 → result＝狀態字串（loop 還沒寫 state.json＝"starting"）
-    {"op": "get",       "id": ID}                 → result＝狀態物件（就是它的 state.json；次數跑完的 loop 會自己退出，
-                                                  留在表上、state "done"；其他原因結束的＝"stopped"）
-    {"op": "list"}                                → result＝[狀態物件, ...]
-    {"op": "save",      "path": P}                表存成一份 JSON（整份重寫）                → result＝存了幾個
-    {"op": "load",      "path": P}                從 save 存的檔一次起回來                    → result＝[id, ...]
-
-set／pause／resume／add_times 回改完的狀態物件，**等 loop 讀到了才回**（它的 state.json 的 ctl_mtime 趕上 daemon 寫的那份）；
-pause 還要等這次真的停了；remove 等行程結束。等的期間指令檔留在原地。loop 行程已經結束的，馬上回當下的狀態。
-error.code（只供參考，看 ok 就好）：BadCommand、UnknownOp、FieldType、NotFound、Exists、Conflict、ReadFailed、JsonSyntax、
-WriteFailed、Internal。
-
-save 存每個 loop 的 {"loop": loop.json 的 realpath, "ctl": 當下 ctl.json 的內容}；runs 在 loop 行程裡、不存，
-load 回來從 0 數。先寫 `.名字.tmp` 再改名。load 全有全無：某個 loop.json 不在（NotFound）、已經在表上或檔裡重複、
-它自己的 state.json 裡的 pid 還活著（Exists）、格式不對（FieldType）——任何一點不對就回 error，一個都不起。
-load 會把存下來的 ctl 內容寫回各 loop 的 ctl.json 再起它。
-
-收工：SIGTERM＝先 save（config 有 save）、對每個 loop 的 session 送 SIGTERM、等 grace_ms、沒走的整群 SIGKILL。
-SIGINT 同樣收、不存。ctl 的 stop／times 跑完：先 save；now＝同 SIGTERM，沒 now＝替每個 loop 的 ctl.json 寫 stop、等它們自己結束。
-跑起來之後出意外不結束，只往 stderr 印一行（同一件事印一次）：控制資料夾看不了（ScanFailed）、回覆寫不了
-（ReplyFailed：改把指令改名成 .done；改名也不行就放著不管）、指令處理出了沒料到的錯（回 Internal）。
-命令列退出碼：0＝正常結束；1＝起不來，或收工時 save 失敗（stderr 印一行「代號: 白話」）。
+stdout 同 loop：每拍一份 {run, code, ms}、結束一份總結。state 窗：共同骨架加 skipped、last_code、loops（表上幾個）；
+last_error＝inst 自己出錯那行，沒有就是最近一圈掃資料夾的錯（ScanFailed、ReplyFailed），都沒有＝null。
+跑起來之後出意外不結束，stderr 吐一份警告（同一件事一次）。退出碼：0＝正常收工（含收到 SIGTERM／SIGINT）；
+1＝起不來；最後一拍 inst 自己出錯＝沿用它的碼（同 loop）。
 """
-import math
 import os
-import signal
 import sys
-import threading
-import time
 
-from aos_loop import CtlFile, StateFile, load_config as _load_cfg, state_doc, want
-# 表在 aos_daemon_table，指令與控制資料夾在 aos_daemon_folder；這裡 re-export，既有的 import 照用
-from aos_daemon_folder import _Folder, _load, _save, handle
+import aos_cli
+from aos_cli import CliError
+from aos_loop import DEFAULTS as _LOOP, Loop, LoopError, check_config
+# 表在 aos_daemon_table，指令與控制資料夾在 aos_daemon_folder；這裡 re-export
+from aos_daemon_folder import _Folder, handle
 from aos_daemon_table import AOS_LOOP, DaemonError, Table
 
-__all__ = ["DaemonError", "load_config", "run"]
+__all__ = ["Daemon", "DaemonError", "handle", "load_config", "run"]
 
-DEFAULTS = {"control_dir": None, "load": None, "save": None, "work_dir": None, "grace_ms": 10000,
-            "times": None, "interval_ms": 200, "interval_mode": "after", "ctl": None, "ctl_poll_ms": 1000, "state": None}
-_CAUGHT = (signal.SIGINT, signal.SIGTERM)
+DEFAULTS = dict(_LOOP, times=None, interval_ms=200, grace_ms=10000, control_dir=None, work_dir=None, table=None,
+                load=False, children=[], policies={})
 
 
-def load_config(path):
-    """讀 daemon.json，回 (realpath, 填好預設值的 dict)。"""
-    ident, cfg = _load_cfg(path, DEFAULTS, need_inst=False, err=DaemonError)
-    if cfg["work_dir"] is None:
-        cfg["work_dir"] = os.path.join(os.path.dirname(cfg["control_dir"]), "loops")
-    if cfg["ctl"] and os.path.commonpath([cfg["ctl"], cfg["control_dir"]]) == cfg["control_dir"]:
+def check(ident, doc):
+    """驗 daemon.json（解好的），回 (id, cfg)。"""
+    ident, cfg = check_config(ident, doc, DEFAULTS, need_inst=False, err=DaemonError)
+    if cfg["work_dir"] is None and cfg["state"]:
+        cfg["work_dir"] = os.path.join(os.path.dirname(cfg["state"]), "loops")
+    d = cfg["control_dir"]
+    if d and cfg["ctl"] and os.path.commonpath([cfg["ctl"], d]) == d:
         raise DaemonError("Conflict", "ctl %s 不能放在 control_dir 裡（會被當成指令讀）" % cfg["ctl"])
+    if not (cfg["policies"].get("child_exit") is None or isinstance(cfg["policies"]["child_exit"], (str, dict))):
+        raise DaemonError("FieldType", "policies.child_exit 要是 inst TARGET")
+    if cfg["load"] and not cfg["table"]:
+        raise DaemonError("FieldType", "load: true 要有 table 窗")
     return ident, cfg
 
 
-# ---- 主迴圈：daemon 自己也是一個 loop ----
-
-def serve(ident, cfg, got):
-    """跑到收工。got＝收到的訊號（list，訊號處理函式往裡面放）。save 失敗丟 DaemonError（loop 們照樣收掉）。"""
+def load_config(path):
+    """讀 daemon.json，回 (id, 填好預設值的 dict)。"""
     try:
-        os.makedirs(cfg["control_dir"], exist_ok=True)
-    except OSError as e:
-        raise DaemonError("MkdirFailed", "建不了控制資料夾：%s" % e)
-    table = Table(cfg)
-    folder = _Folder(cfg["control_dir"])
-    if cfg["load"]:
-        _load(table, cfg["load"])
-    ctl = CtlFile(cfg["ctl"], "daemon") if cfg["ctl"] else None
-    initial = {"paused": (False, False), "stop": (False, False), "times": cfg["times"], "interval_ms": cfg["interval_ms"],
-               "interval_mode": cfg["interval_mode"]}
-    runs, skipped, next_poll, next_scan = 0, 0, 0, 0
-    anchor, tick = None, -1         # fixed：第 0 拍的時間、這一圈在第幾拍（同 loop）
-    sf = StateFile(cfg["state"], "daemon")
-    w = want(initial, {})
+        doc, ident = aos_cli.load_target(path)
+    except CliError as e:
+        raise DaemonError(e.code, e.msg)
+    return check(ident, doc)
 
-    def doc(state):
-        return state_doc(ident, state, w, ctl, runs, folder.last_error, skipped=skipped, loops=len(table.entries))
-    save, now_ = False, True
-    try:
-        while True:
-            t = time.monotonic()
-            if ctl and t >= next_poll:
-                ctl.poll()
-                next_poll = t + cfg["ctl_poll_ms"] / 1000
-            w = want(initial, ctl.good if ctl else {})
-            table.reap()
-            if got:
-                save = signal.SIGTERM in got
-                break
-            if w["stop"][0]:
-                save, now_ = True, w["stop"][1]
-                break
-            if w["times"] is not None and runs >= w["times"]:
-                save, now_ = True, False
-                break
-            if not w["paused"][0] and t >= next_scan:
-                iv = w["interval_ms"] / 1000
-                if w["interval_mode"] == "fixed" and iv:
-                    if anchor is None:
-                        anchor, tick = t, 0
-                    else:
-                        n = max(tick + 1, math.floor((t - anchor) / iv))
-                        skipped += n - tick - 1
-                        tick = n
-                else:
-                    anchor, tick = None, -1
-                folder.scan(table)
-                runs += 1
-                next_scan = anchor + (tick + 1) * iv if anchor is not None else time.monotonic() + iv
-            sf.write(doc("paused" if w["paused"][0] else "waiting"))
-            time.sleep(0.02)
-    finally:
+
+class Daemon(Loop):
+    name = "daemon"
+
+    def __init__(self, ident, cfg):
+        super().__init__(ident, cfg)
+        self.table = Table(cfg, ident)
+        self.folder = None
+        if cfg["control_dir"]:
+            try:
+                os.makedirs(cfg["control_dir"], exist_ok=True)
+            except OSError as e:
+                raise DaemonError("MkdirFailed", "建不了控制資料夾：%s" % e)
+            self.folder = _Folder(cfg["control_dir"])
+
+    def start_table(self):
+        """接回 table 窗、起 children（失敗＝起不來；已經起的收掉）。"""
         try:
-            if save and cfg["save"]:
-                _save(table, cfg["save"])
-        finally:
-            sf.write(doc("stopping"))
-            table.shutdown(now_, cfg["grace_ms"], got)
-            folder.flush()
-            for e in list(table.entries.values()):
-                table.drop(e)
-            sf.write(doc("stopped"))
+            if self.cfg["load"]:
+                self.table.load()
+            for i, t in enumerate(self.cfg["children"]):
+                if isinstance(t, str) and not os.path.isabs(t):
+                    t = os.path.abspath(t)
+                if isinstance(t, dict) or self.table._config(t, i)[0] not in self.table.entries:
+                    self.table.add(t, i)
+        except BaseException:
+            self.table.shutdown(True, self.cfg["grace_ms"], [])
+            raise
+
+    def beat(self, w, now):
+        if self.folder:
+            self.folder.scan(self.table)
+        super().beat(w, now)
+
+    def idle(self, w):
+        self.table.tick()
+        if self.folder:
+            self.folder.flush()
+
+    def extra(self):
+        return {"skipped": self.skipped, "last_code": self.last_code, "loops": len(self.table.entries)}
+
+    def error_now(self):
+        return self.last_error or (self.folder.last_error if self.folder else None)
+
+    def finish_up(self, final, now, got):
+        self.table.shutdown(now, self.cfg["grace_ms"], got)
+        if self.folder:
+            self.folder.flush()
+
+    def run(self):
+        self.start_table()
+        try:
+            super().run()
+        except LoopError as e:
+            if e.code != "Signaled":
+                raise
 
 
-def run(path):
-    """跟命令列 `aos_daemon.py DAEMON.json` 一模一樣。正常收工回 None；起不來或 save 失敗丟 DaemonError。"""
-    main = threading.current_thread() is threading.main_thread()
-    got = []
-    old = {s: signal.signal(s, lambda signum, frame: got.append(signum)) for s in _CAUGHT} if main else {}
-    try:
-        serve(*load_config(path), got)
-    finally:
-        for s, h in old.items():
-            signal.signal(s, h)
+def run(x):
+    """跟命令列一樣：x＝DAEMON.json 的路徑或一份設定 dict。正常收工回 None；起不來丟 DaemonError／LoopError。"""
+    Daemon(*(check(None, x) if isinstance(x, dict) else load_config(x))).run()
 
 
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
-    if len(args) != 1:
-        print("用法：aos_daemon.py DAEMON.json", file=sys.stderr)
-        return 1
     try:
-        run(args[0])
+        doc, ident, piped, rest = aos_cli.config(args, tuple(k for k in DEFAULTS if k not in ("children", "policies")))
+        if rest is not None:
+            raise DaemonError("Usage", "aos_daemon 不收 --")
+        Daemon(*check(ident, doc)).run()
         return 0
-    except DaemonError as e:
-        print(e, file=sys.stderr)
+    except LoopError as e:
+        if not e.msg.startswith("最後一次"):
+            aos_cli.error(e.code, e.msg)
+        return e.exit if e.msg.startswith("最後一次") else 1
+    except CliError as e:
+        aos_cli.error(e.code, e.msg)
         return 1
 
 

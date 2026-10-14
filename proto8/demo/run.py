@@ -64,10 +64,12 @@ def main():
     ctl, out = os.path.join(tmp, "ctl"), os.path.join(tmp, "out")
     os.makedirs(ctl)
     os.makedirs(out)
-    # daemon.json、inst.json 用 {"$env": ...} 讀這兩個變數；id 要寫絕對路徑
-    env = dict(os.environ, DEMO_CTL=ctl, DEMO_OUT=out, PYTHONDONTWRITEBYTECODE="1")
+    # daemon.json、inst.json 用 {"$env": ...} 讀這幾個變數（daemon 自己的 ctl／state 窗必填）；id 要寫絕對路徑
+    env = dict(os.environ, DEMO_CTL=ctl, DEMO_OUT=out, PYTHONDONTWRITEBYTECODE="1",
+               DEMO_DAEMON_CTL=os.path.join(tmp, "daemon.ctl.json"), DEMO_DAEMON_STATE=os.path.join(tmp, "daemon.state.json"))
     say("暫存資料夾 %s（ctl/ 放指令、out/ 放子程式的輸出）" % tmp)
-    daemon = subprocess.Popen([sys.executable, DAEMON, "daemon.json"], cwd=HERE, env=env)
+    daemon = subprocess.Popen([sys.executable, DAEMON, "daemon.json"], cwd=HERE, env=env,
+                              stdout=open(os.path.join(tmp, "daemon.out"), "w"))      # 每拍一份 {run, code, ms}
     say("daemon 起來了，pid %d" % daemon.pid)
     n = iter(range(1, 100))
     try:
