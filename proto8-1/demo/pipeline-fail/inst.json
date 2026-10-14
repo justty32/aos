@@ -9,6 +9,5 @@
   "stderr": {
     "$env": "DEMO_LOG"
   },
-  "stderr_append": true,
-  "exit": "pipeline-fail.exit"
+  "stderr_append": true
 }

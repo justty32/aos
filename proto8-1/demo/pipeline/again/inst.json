@@ -5,6 +5,5 @@
     "pipeline/pause",
     "pipeline/retry"
   ],
-  "stderr_inherit": true,
-  "exit": "pipeline-again.exit"
+  "stderr_inherit": true
 }

@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **10-14 夜重做 inst／loop／daemon（§38 第 1～6 步已做，基礎實作）**：新 `aos_cli`、三支照 N-12 重做、候選 g 已拍板落成 [N-28](../proto8/NORMS/05-命令列與daemon-N21至N28.md)、D-1～D-6＝N-21～N-27；代理人自定的點在 [NORMS 待定 h](../proto8/NORMS/04-待定.md)，等使用者看（深夜補修兩個小毛病：tasks 的 stdout 不再混進子 inst 的結果、錯誤改 JSON＝h16；daemon 沒 inst 不吐每拍紀錄＝h6 改）。**下一步等使用者開口**（aos-fsm 不在這輪）。
+- **10-14 夜重做 inst／loop／daemon（§38 第 1～6 步已做，基礎實作）**：新 `aos_cli`、三支照 N-12 重做、候選 g＝[N-28](../proto8/NORMS/05-命令列與daemon-N21至N28.md)、D-1～D-6＝N-21～N-27；動工自定點 h 深夜使用者「全照建議」拍板＝[N-29～N-34](../proto8/NORMS/06-實作細則-N29至N34.md)＋lib daemon.md（h15 改 add 先驗 inst、h16 改 tasks 讀 stdout、exit 選填；[thinking 14](../proto8/thinking/2026-10-14-json-entry/14-h拍板.md)，N-12「exit 檔出現＝跑完」措辭與 exit 選填的張力留給使用者看）。**下一步等使用者開口**（aos-fsm 不在這輪）。
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。使用者說之後／不做：指定時間跑、Linux 權限、AOS_DIR、非同步啟動、retry／timeout／while／race。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。
 - **proto8 thinking 精簡**：10-12 夜使用者要求 thinking 只留原文整理、決策、結論、未決（規矩見 [user.md](workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改)）。已刪 13 份 AI 產出、精簡其餘五份（[索引](../proto8/thinking/README.md)）；舊版見 git 22285099。
 - **proto8 10-13**：`檔#/位置` 已做（D1；`#/` 統一照檔案系統 D1a）；`_metainfo` 格式自由、inst 的可選 key、通用寫法之後在規範定（D4、D5）；見 [json-path](../proto8/thinking/2026-10-13-json-path.md)。晚上重構拆檔＋tidy，報告 [tidy 10-13](workflows/tidy/reports/2026-10-13-proto8-wf.md)。之後改語音輸入（字可能聽錯，意思不明就確認）。kernel／agent 概念見 [kernel-agent](../proto8/thinking/2026-10-13-kernel-agent.md)，細節等規劃 agent 時說。**下一步等使用者開口。**

@@ -119,6 +119,22 @@ class Daemon(Tmp):
         self.write("bad.json", {"argv": []})
         self.assertEqual(self.err({"op": "add", "id": self.p("bad.json")}), "FieldType")
 
+    def test_add_checks_inst_up_front(self):
+        # 子項的 inst 寫錯：add 當下就回錯在 .done 裡（daemon 端先驗一次，同子 loop 從 stdin 收的那樣），不起子 loop
+        self.start()
+        bad = {"argv": ["sh", "-c", "true"], "cwd": self.tmp}
+        for name, inst, code in (("e", dict(bad, argv=[]), "FieldType"),
+                                 ("t", dict(bad, timeout_ms=-1), "FieldType"),
+                                 ("i", dict(bad, stdin_inherit=True), "Conflict"),         # 子 loop 從 stdin 灌 inst
+                                 ("v", dict(bad, envs={"X": {"$env": "AOS_NO_SUCH_VAR"}}), "EnvironmentVariableMissing")):
+            with self.subTest(name=name):
+                path = self.write(name + ".loop.json", {"inst": inst})
+                self.assertEqual(self.err({"op": "add", "id": path}), code)
+        self.write("si.json", dict(bad, stdin_inherit=True))                   # inst.json 包成 loop 也一樣
+        self.assertEqual(self.err({"op": "add", "id": self.p("si.json")}), "Conflict")
+        self.assertEqual(self.ok({"op": "list"}), [])
+        self.assertFalse(os.path.exists(self.p("loops")) and os.listdir(self.p("loops")))   # 格子收回
+
     def test_own_ctl_state_used(self):
         self.start()
         a = self.loop("a", times=None, interval_ms=100000, ctl="a.ctl.json", state="a.state.json")

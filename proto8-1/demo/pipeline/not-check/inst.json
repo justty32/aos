@@ -3,6 +3,5 @@
     "aos-not",
     "pipeline/check"
   ],
-  "stderr_inherit": true,
-  "exit": "pipeline-not-check.exit"
+  "stderr_inherit": true
 }

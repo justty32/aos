@@ -3,8 +3,8 @@
 
     python3 aos_if.py COND THEN [ELSE]
 
-- 先把全部 TARGET 讀好、驗過（同 aos_inst 的 load，另外每個都要寫 exit），有一個不對就在 stderr 吐一份 `{"error": {"code", "msg"}}`、退出碼 125，一個都不跑。
-- 每個用 `aos_inst.py` 跑，結果讀它的 exit 檔。退出碼＝跑到的那支的碼；條件不是 0 又沒寫 ELSE＝0（同 sh 的 if）。
+- 先把全部 TARGET 讀好、驗過（同 aos_inst 的 load；不必寫 exit），有一個不對就在 stderr 吐一份 `{"error": {"code", "msg"}}`、退出碼 125，一個都不跑。
+- 每個用 `aos_inst.py` 跑，結果讀它 stdout 那份結果的 `code`。退出碼＝跑到的那支的碼；條件不是 0 又沒寫 ELSE＝0（同 sh 的 if）。
 - 條件或分支起不來（aos_inst 自己出錯）：它在 stderr 吐一份錯誤，退出碼沿用 aos_inst 的（127／126／125），不再往下跑。
   條件「跑了、回非 0」才算不成立；條件起不來不會跑 ELSE。
 - 收到 SIGINT／SIGTERM／SIGHUP：轉給正在跑的（aos_inst 再轉給子程式，過它的 grace_ms 再 SIGKILL）、分支不跑，退出碼＝128＋訊號號碼。
