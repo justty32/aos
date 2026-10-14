@@ -175,8 +175,9 @@ class Tasks(unittest.TestCase):
         s1 = self.inst("s1", ["sh", "-c", "echo $$ > s1.pid; exec sleep 30"])
         top = self.inst("top", [os.path.join(BIN, "aos-seq"), s1])
         with open(self.p("l.json"), "w") as f:
-            json.dump({"inst": {"$ref": top + "/inst.json"}, "ctl": "l.ctl.json", "ctl_poll_ms": 20}, f)
-        proc = subprocess.Popen([sys.executable, LOOP, "l.json"], cwd=self.tmp)
+            json.dump({"inst": {"$ref": top + "/inst.json"}, "ctl": "l.ctl.json", "state": "l.state.json",
+                       "ctl_poll_ms": 20}, f)
+        proc = subprocess.Popen([sys.executable, LOOP, "l.json"], cwd=self.tmp, stdout=subprocess.DEVNULL)
         self.addCleanup(lambda: proc.poll() is None and proc.kill())
         self.until(lambda: os.path.exists(self.p("s1.pid")))
         pid = int(self.read("s1.pid"))
