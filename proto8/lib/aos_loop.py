@@ -242,7 +242,8 @@ class Loop:
         self.runs += 1
         self.last_code, self.last_error, self.inst_exit = code, error, inst_exit
         self.last_end, self.last_err = time.monotonic(), error is not None
-        aos_cli.emit({"run": self.runs, "code": code, "ms": round((self.last_end - self.t0) * 1000)})
+        if self.inst is not None:       # 每拍那份只在真的跑了 inst 時吐（daemon 沒 inst＝只吐結束總結）
+            aos_cli.emit({"run": self.runs, "code": code, "ms": round((self.last_end - self.t0) * 1000)})
 
     # ---- 節奏 ----
 

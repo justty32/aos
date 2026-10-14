@@ -58,6 +58,10 @@ class Tasks(unittest.TestCase):
     def cli(self, prog, *targets):
         return subprocess.run([sys.executable, prog] + list(targets), capture_output=True, text=True, cwd=self.tmp)
 
+    def errors(self, r):
+        """stderr 是 JSON 串流（N-12）：每行一份，回 error 的 code 清單。"""
+        return [json.loads(x)["error"]["code"] for x in r.stderr.splitlines()]
+
     def until(self, cond, timeout=5):
         end = time.monotonic() + timeout
         while time.monotonic() < end:
@@ -79,8 +83,9 @@ class Tasks(unittest.TestCase):
         for prog in (SEQ, PAR):
             r = self.cli(prog, a, self.p("nope.json"))
             self.assertEqual(r.returncode, 125)
-            self.assertTrue(r.stderr.startswith("ReadFailed"))
-            self.assertEqual(self.cli(prog).returncode, 125)
+            self.assertEqual(self.errors(r), ["ReadFailed"])
+            r = self.cli(prog)
+            self.assertEqual((r.returncode, self.errors(r)), (125, ["Usage"]))
         self.assertFalse(os.path.exists(self.p("log")))
 
     def test_inst_without_exit_runs_nothing(self):
@@ -92,17 +97,34 @@ class Tasks(unittest.TestCase):
         for prog in (SEQ, PAR, NOT):
             r = self.cli(prog, *([b] if prog == NOT else [a, b]))
             self.assertEqual(r.returncode, 125)
-            self.assertTrue(r.stderr.startswith("NoExit"))
+            self.assertEqual(self.errors(r), ["NoExit"])
         self.assertFalse(os.path.exists(self.p("log")))
 
     def test_launch_error(self):
         a, bad, c = self.sh("a", "true"), self.inst("bad", ["/no/such/prog"]), self.sh("c", "true")
         r = self.cli(SEQ, a, bad, c)
         self.assertEqual((r.returncode, self.read("log")), (127, "a\n"))
-        self.assertIn('"CommandNotFound"', r.stderr)                 # aos_inst 的 stderr 是 JSON（N-12）
+        self.assertEqual(self.errors(r), ["CommandNotFound"])          # aos_inst 的 stderr 原樣流過來，也是 JSON
+        self.assertEqual(r.stdout, "")                                  # aos_inst 的結果 JSON 不漏出來
         os.remove(self.p("log"))
         r = self.cli(PAR, a, bad, c)
         self.assertEqual((r.returncode, sorted(self.read("log").split())), (127, ["a", "c"]))
+
+    def test_stdout_stays_clean(self):
+        # 子 inst 的結果 JSON 不漏到 tasks 的 stdout；tasks 自己也不吐（空的 JSON 串流，結果在退出碼）
+        a, b = self.sh("a", "true"), self.sh("b", "exit 2")
+        inner = self.inst("inner", [os.path.join(BIN, "aos-par"), a, b])
+        for prog, args, code in ((SEQ, (a, b), 2), (PAR, (a, b), 2), (IF, (b, a), 0), (NOT, (b,), 0),
+                                 (SEQ, (a, inner), 2)):
+            with self.subTest(prog=os.path.basename(prog)):
+                r = self.cli(prog, *args)
+                self.assertEqual((r.returncode, r.stdout, r.stderr), (code, "", ""))
+        r = self.cli(SEQ, self.p("nope"))
+        self.assertEqual((r.stdout, self.errors(r)), ("", ["ReadFailed"]))
+        os.remove(self.p("b.exit"))
+        os.mkdir(self.p("b.exit"))                                      # exit 檔寫不進去 → 讀不到
+        r = self.cli(SEQ, b)
+        self.assertEqual((r.returncode, self.errors(r)), (125, ["ExitUnreadable"]))
 
     def test_par_concurrent_and_first_failure_in_order(self):
         a, b, c = self.sh("a", "sleep 0.5; exit 4"), self.sh("b", "exit 5"), self.sh("c", "sleep 0.5")

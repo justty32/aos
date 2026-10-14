@@ -3,9 +3,12 @@
 tasks 是一組小程式，每支做一件事，跟 aos_inst 一樣是獨立的命令列程式，寫在 inst.json 的 argv 裡被跑。
 參數一律是 inst 的 TARGET（`.json` 檔或資料夾，同 aos_inst），相對路徑從自己的 cwd 算。
 每個 inst 都要寫 `exit`：子程式的碼只寫進 exit 檔（aos_inst 不傳出來），tasks 跑完去讀它來判斷。
-每個 inst 用子程序 `aos_inst.py TARGET` 跑，留在自己的行程群組裡（不開新 session）。
-自己出錯的退出碼（數字只供參考）：125＝用法不對、TARGET 不對、沒寫 exit、exit 檔讀不到；
-aos_inst 自己出錯時沿用它的退出碼（127＝找不到程式、126＝不能執行、125＝其他），它自己會在 stderr 印一行。
+每個 inst 用子程序 `aos_inst.py TARGET` 跑，留在自己的行程群組裡（不開新 session）；它 stdout 那份結果 JSON 丟掉
+（接 /dev/null，不漏進 tasks 自己的 stdout），它的 stderr 原樣流過來。
+三扇門（N-12）：tasks 自己的 stdout 不吐東西（空的 JSON 串流，結果就是退出碼）；自己的錯誤照 aos_cli 吐
+`{"error": {"code", "msg"}}` 到 stderr。
+自己出錯的退出碼（數字只供參考）：125＝用法不對（Usage）、TARGET 不對、沒寫 exit（NoExit）、exit 檔讀不到（ExitUnreadable）；
+aos_inst 自己出錯時沿用它的退出碼（127＝找不到程式、126＝不能執行、125＝其他），它自己會在 stderr 吐一份錯誤。
 要巢狀就讓某個 inst.json 的 argv 再寫一支 tasks 程式。
 """
 import os
@@ -16,6 +19,7 @@ import sys
 LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "proto8", "lib")
 sys.path.insert(0, LIB)
 
+from aos_cli import error  # noqa: E402
 from aos_inst import InstError, find, load, read_exit  # noqa: E402
 
 __all__ = ["Signals", "load_all", "result", "start"]
@@ -25,20 +29,20 @@ _CAUGHT = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
 def load_all(targets, usage, least=1, most=None):
-    """全部 TARGET 先讀好、驗過，回 [(inst.json 的 realpath, inst), ...]；個數不在 least～most（None＝不限）印用法、
-    有任何一個不對（含沒寫 exit）就印「代號: 白話」，都回 None（一個都不跑）。"""
+    """全部 TARGET 先讀好、驗過，回 [(inst.json 的 realpath, inst), ...]；個數不在 least～most（None＝不限）吐 Usage 錯誤、
+    有任何一個不對（含沒寫 exit）就在 stderr 吐一份錯誤，都回 None（一個都不跑）。"""
     if len(targets) < least or most is not None and len(targets) > most:
-        print("用法：%s" % usage, file=sys.stderr)
+        error("Usage", "用法：%s" % usage)
         return None
     out = []
     for t in targets:
         try:
             inst = load(t)
         except InstError as e:
-            print(e, file=sys.stderr)
+            error(e.code, e.msg)
             return None
         if inst["exit"] is None:
-            print("NoExit: %s 沒寫 exit，拿不到子程式的結束碼" % find(t), file=sys.stderr)
+            error("NoExit", "%s 沒寫 exit，拿不到子程式的結束碼" % find(t))
             return None
         out.append((find(t), inst))
     return out
@@ -46,7 +50,7 @@ def load_all(targets, usage, least=1, most=None):
 
 def start(item, sig):
     """起 `aos_inst.py` 跑一個 inst（同一個行程群組），登記給 sig 轉訊號，回 Popen。"""
-    proc = subprocess.Popen([sys.executable, AOS_INST, item[0]])
+    proc = subprocess.Popen([sys.executable, AOS_INST, item[0]], stdout=subprocess.DEVNULL)
     sig.procs.append(proc)
     if sig.got:
         proc.send_signal(sig.got)       # 起來的途中剛好收到訊號
@@ -55,13 +59,13 @@ def start(item, sig):
 
 def result(proc, item):
     """等 proc 結束，回 (碼, 子程式有沒有跑完)。跑完＝aos_inst 正常做完、exit 檔讀得到，碼＝exit 檔最後一行；
-    否則是 tasks 自己這邊的錯：aos_inst 自己出錯＝它的退出碼（被訊號殺掉＝128＋N）；exit 檔讀不到＝印一行、125。"""
+    否則是 tasks 自己這邊的錯：aos_inst 自己出錯＝它的退出碼（被訊號殺掉＝128＋N）；exit 檔讀不到＝吐一份錯誤、125。"""
     rc = proc.wait()
     if rc:
         return (rc if rc > 0 else 128 - rc), False
     code = read_exit(item[1]["exit"])
     if code is None:
-        print("ExitUnreadable: 讀不到 %s 的 exit 檔 %s" % (item[0], item[1]["exit"]), file=sys.stderr)
+        error("ExitUnreadable", "讀不到 %s 的 exit 檔 %s" % (item[0], item[1]["exit"]))
         return 125, False
     return code, True
 

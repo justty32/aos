@@ -68,8 +68,8 @@ def main():
     env = dict(os.environ, DEMO_CTL=ctl, DEMO_OUT=out, PYTHONDONTWRITEBYTECODE="1",
                DEMO_DAEMON_CTL=os.path.join(tmp, "daemon.ctl.json"), DEMO_DAEMON_STATE=os.path.join(tmp, "daemon.state.json"))
     say("暫存資料夾 %s（ctl/ 放指令、out/ 放子程式的輸出）" % tmp)
-    daemon = subprocess.Popen([sys.executable, DAEMON, "daemon.json"], cwd=HERE, env=env,
-                              stdout=open(os.path.join(tmp, "daemon.out"), "w"))      # 每拍一份 {run, code, ms}
+    # daemon 沒 inst：stdout 只在收工時吐一份總結，直接印出來
+    daemon = subprocess.Popen([sys.executable, DAEMON, "daemon.json"], cwd=HERE, env=env)
     say("daemon 起來了，pid %d" % daemon.pid)
     n = iter(range(1, 100))
     try:

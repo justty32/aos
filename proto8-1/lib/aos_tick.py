@@ -6,7 +6,8 @@
 - FILE 裡是回合數（十進位＋換行，同 aos_inst 的 exit 檔）。讀出 n、寫回 n＋1 就結束，退出碼 0。
   FILE 不在＝0，所以第一次寫 1。寫進 n＋1 就代表第 n 回合結束、第 n＋1 回合開始（tock 不另外做）。
 - 先寫同資料夾的 `.名字.tmp` 再用 os.replace 蓋過去，讀的人不會看到寫一半的。不 fsync。
-- 出錯一律 stderr 印一行「代號: 白話」、退出碼 1，FILE 不動：
+- stdout 不吐東西（N-12：結果就是 FILE 本身與退出碼）。出錯一律在 stderr 吐一份 `{"error": {"code", "msg"}}`
+  （同 proto8 的 aos_cli）、退出碼 1，FILE 不動：
   BadContent＝內容不是 `\\d+` 加可有可無的一個換行（空檔也算）；ReadFailed／WriteFailed＝讀／寫不了；
   Usage＝參數不是剛好一個。
 
@@ -19,11 +20,14 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "proto8", "lib"))
+from aos_cli import error  # noqa: E402
+
 
 class TickError(Exception):
     def __init__(self, code, msg):
         super().__init__("%s: %s" % (code, msg))
-        self.code = code
+        self.code, self.msg = code, msg
 
 
 def tick(path):
@@ -55,12 +59,12 @@ def tick(path):
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 1:
-        print("Usage: 參數要剛好一個：aos-tick FILE", file=sys.stderr)
+        error("Usage", "參數要剛好一個：aos-tick FILE")
         return 1
     try:
         tick(os.path.abspath(args[0]))
     except TickError as e:
-        print(e, file=sys.stderr)
+        error(e.code, e.msg)
         return 1
     return 0
 
