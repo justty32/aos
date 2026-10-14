@@ -99,7 +99,7 @@ class Tasks(unittest.TestCase):
         a, bad, c = self.sh("a", "true"), self.inst("bad", ["/no/such/prog"]), self.sh("c", "true")
         r = self.cli(SEQ, a, bad, c)
         self.assertEqual((r.returncode, self.read("log")), (127, "a\n"))
-        self.assertTrue(r.stderr.startswith("CommandNotFound"))
+        self.assertIn('"CommandNotFound"', r.stderr)                 # aos_inst 的 stderr 是 JSON（N-12）
         os.remove(self.p("log"))
         r = self.cli(PAR, a, bad, c)
         self.assertEqual((r.returncode, sorted(self.read("log").split())), (127, ["a", "c"]))
