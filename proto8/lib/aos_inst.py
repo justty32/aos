@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """inst：讀一份 JSON、用指示詞 lib 解好、挑認得的 key、跑一次。純標準庫。
 
-    python3 aos_inst.py TARGET
+    python3 aos_inst.py [--key 值 ...] [TARGET | -] [-- argv...]
+
+設定從哪來照 aos_cli（NORMS N-12、D-1～D-3）：TARGET 檔、`-`＝stdin（JSON 串流只看第一份）、都沒給＝`{}`；
+純量 key 都有同名旗標（`--timeout-ms 100`、`--cwd-mkdir true`…），蓋過檔或 stdin；`--` 後面整段蓋過 `argv`。
+設定從 stdin 來時 `stdin_inherit` ＝Conflict（stdin 已經被設定用掉了，D-5）。
 
 TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒有再找 `<資料夾>/inst.json`）。
 後面可以接 `#/位置`（JSON pointer，寫法同指示詞 `$ref`）：只跑那份檔裡那一格（要是物件）。遇到第一個 `#` 就切，
@@ -21,6 +25,7 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒�
                     exit_append 改附加一行、exit_mkdir 先建上層資料夾
     timeout_ms      最多跑幾毫秒（正整數；沒寫或 null＝不限），到了就收掉
     grace_ms        收掉＝先 SIGTERM，過 grace_ms 還沒結束再 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
+    id              選填字串，原樣放進結果（沒寫＝TARGET 的 id；從 stdin 來又沒寫＝null）
 
 沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
 
@@ -29,16 +34,19 @@ JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼�
 監工的事 aos_inst 不管：要從外面停它、要連孫程式一起清，由啟動 aos_inst 的人做——把 aos_inst 起在新的 session，
 送 SIGTERM 給 aos_inst（它轉給子程式），過一段時間整群 SIGKILL（aos_loop 就這樣做）。
 
-結束碼分兩條線：
-- 子程式的碼只寫進 `exit` 檔：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
-  根本沒起來就不寫。寫不進去不管，不算錯。json 沒寫 `exit` 就沒人記。
+結果（N-12：stdout＝返回值）：跑完往 stdout 吐一份 JSON
+    {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file"}
+code＝子程式的碼（被訊號停掉＝128＋訊號號碼，同 exit 檔）、signal＝訊號號碼或 null、timed_out＝被 timeout_ms 收掉、
+pid＝子程式的 pid、ms＝跑了幾毫秒、exit_file＝exit 檔的路徑或 null。`run()` 回同一份 dict。
+- `exit` 檔照寫（與舊時代的橋樑，暫定 e）：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
+  根本沒起來就不寫。寫不進去不管，不算錯。
 - aos_inst 自己的碼＝命令列退出碼／`run()` 有沒有丟例外：0＝正常做完（子程式回幾號、被限時收掉都算正常做完）；
-  非 0＝aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…），`run()` 丟 `InstError`，命令列 stderr 印一行
-  「代號: 白話」。數字只供參考，照 Unix 包裝程式（env、timeout）的慣例：127＝找不到程式、126＝不能執行、125＝其他（`exit_code()`）。
+  非 0＝aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…），`run()` 丟 `InstError`，命令列 stderr 吐一份
+  `{"error": {"code", "msg"}}`。數字只供參考，照 Unix 包裝程式（env、timeout）的慣例：127＝找不到程式、126＝不能執行、
+  125＝其他（`exit_code()`）。
 命令列（和在主執行緒呼叫的 `run()`）收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit；
 轉過去之後過 grace_ms 還沒結束就 SIGKILL。
 """
-import json
 import os
 import signal
 import subprocess
@@ -46,9 +54,11 @@ import sys
 import threading
 import time
 
+import aos_cli
+from aos_cli import CliError
 from aos_directives import DirectiveError, resolve, split_target, target_id
 
-__all__ = ["InstError", "exit_code", "find", "load", "parse", "read_exit", "run"]
+__all__ = ["FLAGS", "InstError", "exit_code", "find", "load", "main", "parse", "read_exit", "run"]
 
 _BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
           "stdout_append", "stdout_mkdir", "stdout_inherit",
@@ -56,13 +66,11 @@ _BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
           "exit_append", "exit_mkdir")
 
 
-class InstError(Exception):
+class InstError(CliError):
     """這份 inst 被拒。`code`＝錯誤代號，`msg`＝白話，`str(e)`＝「代號: 白話」。指示詞的錯照原代號包進來。"""
 
-    def __init__(self, code, msg):
-        super().__init__("%s: %s" % (code, msg))
-        self.code = code
-        self.msg = msg
+
+FLAGS = ("id", "cwd", "stdin", "stdout", "stderr", "exit", "timeout_ms", "grace_ms") + _BOOLS     # 鏡射成旗標的 key
 
 
 def exit_code(err):
@@ -93,33 +101,33 @@ def _find(target):
         file, pos = split_target(target)
     except DirectiveError as e:
         raise InstError(e.code, e.msg)
+    return _file(file), pos
+
+
+def _file(file):
+    """TARGET 的檔那一段 → inst.json 的 realpath（資料夾：先找 .aos/inst.json 再找 inst.json）。"""
     if os.path.isdir(file):
         for p in (os.path.join(file, ".aos", "inst.json"), os.path.join(file, "inst.json")):
             if os.path.isfile(p):
-                return os.path.realpath(p), pos
+                return os.path.realpath(p)
         raise InstError("NotFound", "%s 裡沒有 .aos/inst.json 也沒有 inst.json" % file)
-    return os.path.realpath(file), pos
+    return os.path.realpath(file)
 
 
 def load(target):
     """讀 TARGET 的 inst，以呼叫者現在的 cwd 為基準，回 `parse()` 的結果。"""
-    path, pos = _find(target)
     try:
-        with open(path, encoding="utf-8") as f:
-            raw = f.read()
-    except OSError as e:
-        raise InstError("ReadFailed", "讀不到 %s：%s" % (path, e))
-    try:
-        doc = json.loads(raw)
-    except ValueError as e:
-        raise InstError("JsonSyntax", "%s 不是合法 JSON：%s" % (path, e))
-    return parse(doc, os.getcwd(), path, pos)
+        doc, ident = aos_cli.load_target(target, _file)
+    except CliError as e:
+        raise InstError(e.code, e.msg)
+    return parse(doc, os.getcwd(), ident)
 
 
-def parse(doc, base_dir, ident="<input>", at=()):
+def parse(doc, base_dir, ident="<input>", at=(), piped=False):
     """解指示詞、驗認得的 key，回一個欄位都填好的 dict（路徑都是絕對的，None＝沒寫）。
     `ident`＝doc 從哪來（`load()` 給 inst.json 的 realpath），指示詞的錯誤訊息用它指出是哪份檔。
-    `at`＝inst 在 doc 裡的位置（TARGET 的 `#/位置`；`()`＝整份），指到的那一格要是物件。"""
+    `at`＝inst 在 doc 裡的位置（TARGET 的 `#/位置`；`()`＝整份），指到的那一格要是物件。
+    `piped`＝設定是從 stdin 讀的：`stdin_inherit` 就是 Conflict（D-5）。"""
     base_dir = os.path.abspath(base_dir)
     try:
         doc = resolve(doc, base_dir, ident, at)
@@ -128,6 +136,10 @@ def parse(doc, base_dir, ident="<input>", at=()):
     if not isinstance(doc, dict):
         raise InstError("FieldType", "inst %s 要是物件，不是 %s" % (target_id(ident, at), type(doc).__name__))
     inst = {k: _bool(doc, k) for k in _BOOLS}
+    i = doc.get("id", ident if ident not in ("<input>", "<stdin>") else None)
+    if not (i is None or isinstance(i, str)):
+        raise InstError("FieldType", "id 要是字串或 null，不是 %r" % (i,))
+    inst["id"] = i
 
     argv = doc.get("argv")
     if not (isinstance(argv, list) and argv and all(isinstance(a, str) for a in argv)):
@@ -162,6 +174,8 @@ def parse(doc, base_dir, ident="<input>", at=()):
             raise InstError("Conflict", "%s 跟 %s_inherit 只能二選一" % (k, k))
     if inst["stderr_merge"] and (inst["stderr"] is not None or inst["stderr_inherit"]):
         raise InstError("Conflict", "stderr_merge 不能再寫 stderr 或 stderr_inherit")
+    if piped and inst["stdin_inherit"]:
+        raise InstError("Conflict", "設定從 stdin 來，stdin_inherit 接不到東西")
     return inst
 
 
@@ -175,19 +189,18 @@ def _bool(doc, k):
 _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
-def run(target):
-    """跟命令列 `aos_inst.py TARGET` 一模一樣：讀 TARGET、解好、起那個 posix 呼叫、等它結束，
-    把子程式的結束碼寫進 exit 檔（自己結束＝它的碼，被訊號停掉＝128＋訊號號碼）。
-    回傳只說 aos_inst 自己有沒有出錯：正常做完回 None；單子有問題、起不來丟 `InstError`。
-    子程式回幾號不關 run() 的事，去看 exit 檔。限時到了被收掉也算正常做完（碼照樣進 exit 檔）。
+def run(x):
+    """跟命令列一樣跑一次：x＝TARGET（路徑，可接 `#/位置`）或一份設定 dict（D-4；基準＝呼叫者的 cwd）。
+    起那個 posix 呼叫、等它結束，把子程式的結束碼寫進 exit 檔（自己結束＝它的碼，被訊號停掉＝128＋訊號號碼）。
+    回結果 dict（同命令列的 stdout）；單子有問題、起不來丟 `InstError`。子程式回幾號、被限時收掉都算正常做完。
 
     在主執行緒呼叫時，跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者，轉給子程式；
     轉過去之後再等 grace_ms，還沒結束就 SIGKILL。不在主執行緒就不轉（Python 只准主執行緒接訊號）。"""
-    _run(load(target))
+    return _run(parse(x, os.getcwd()) if isinstance(x, dict) else load(x))
 
 
 def _run(inst):
-    """照 `parse()` 的結果跑一次，回結束碼（給 run() 和測試用）。"""
+    """照 `parse()` 的結果跑一次，回結果 dict。"""
     timeout_ms, grace_ms = inst["timeout_ms"], inst["grace_ms"]
     child = None
     pending = []
@@ -204,16 +217,17 @@ def _run(inst):
     main = threading.current_thread() is threading.main_thread()
     old = {sig: signal.signal(sig, forward) for sig in _FORWARDED} if main else {}
     try:
+        t0 = time.monotonic()
         child = _start(inst)
         for sig in pending:
             child.send_signal(sig)
-        interrupted = None
+        interrupted, timed_out = None, False
         try:
-            code = _wait(child, timeout_ms, grace_ms, killed_at)
+            rc, timed_out = _wait(child, timeout_ms, grace_ms, killed_at)
         except BaseException as e:
             interrupted = e
-            code = _stop(child, grace_ms)
-        code = code if code >= 0 else 128 - code
+            rc = _stop(child, grace_ms)
+        code = rc if rc >= 0 else 128 - rc
         if inst["exit"] is not None:
             try:
                 _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
@@ -221,7 +235,8 @@ def _run(inst):
                 pass        # 寫不進去不管
         if interrupted is not None:
             raise interrupted
-        return code
+        return {"id": inst["id"], "code": code, "signal": -rc if rc < 0 else None, "timed_out": timed_out,
+                "pid": child.pid, "ms": round((time.monotonic() - t0) * 1000), "exit_file": inst["exit"]}
     finally:
         for sig, handler in old.items():
             signal.signal(sig, handler)
@@ -265,18 +280,18 @@ def _start(inst):
 
 def _wait(child, timeout_ms, grace_ms, killed_at):
     """等子程式結束；超過 timeout_ms（None＝不限）就 `_stop`；轉過訊號（killed_at 有期限）、過了期限還沒結束就 SIGKILL。
-    回 returncode：自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
+    回 (returncode, 是不是限時到了收掉的)：returncode 自己結束＝它的碼，被訊號停掉＝負的訊號號碼。"""
     deadline = None if timeout_ms is None else time.monotonic() + timeout_ms / 1000
     while True:
         try:
-            return child.wait(0.05)
+            return child.wait(0.05), False
         except subprocess.TimeoutExpired:
             pass
         now = time.monotonic()
         if killed_at and now >= killed_at[0]:
             child.kill()
         elif deadline is not None and now >= deadline:
-            return _stop(child, grace_ms)
+            return _stop(child, grace_ms), True
 
 
 def _stop(child, grace_ms):
@@ -321,14 +336,14 @@ def _stream(inst, k, opened):
 
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
-    if len(args) != 1:
-        print("用法：aos_inst.py TARGET", file=sys.stderr)
-        return 125
     try:
-        run(args[0])
+        doc, ident, piped, rest = aos_cli.config(args, FLAGS, _file)
+        if rest is not None:
+            doc["argv"] = rest
+        aos_cli.emit(_run(parse(doc, os.getcwd(), ident or ("<stdin>" if piped else "<input>"), piped=piped)))
         return 0
-    except InstError as e:
-        print(e, file=sys.stderr)
+    except CliError as e:
+        aos_cli.error(e.code, e.msg)
         return exit_code(e)
 
 

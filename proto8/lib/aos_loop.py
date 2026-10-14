@@ -152,8 +152,17 @@ class _Tail:
             sys.stderr.write(line.decode("utf-8", "replace"))
             sys.stderr.flush()
             if line.strip():
-                self.last = line.decode("utf-8", "replace").strip()
+                self.last = _err_line(line.decode("utf-8", "replace").strip())
         pipe.close()
+
+
+def _err_line(line):
+    """aos_inst 的 stderr 一行：`{"error": {"code", "msg"}}` → 「代號: 白話」；其他原樣。"""
+    try:
+        e = json.loads(line)["error"]
+        return "%s: %s" % (e["code"], e["msg"])
+    except (ValueError, KeyError, TypeError):
+        return line
 
 
 # ---- 主迴圈 ----

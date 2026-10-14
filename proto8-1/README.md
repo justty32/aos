@@ -34,8 +34,8 @@ tasks 的共同規矩（aos-tick 不跑 inst，不適用；細節在各檔檔頭
 
 - 參數是 inst 的 TARGET（同 aos_inst：`.json` 或資料夾），相對路徑從自己的 cwd 算。
 - **先全部讀好、驗過才開始**；有一個不對（含**沒寫 `exit`**）就印「代號: 白話」、退出碼 125，一個都不跑。個數不對也是 125。
-- 每個 inst 用子程序 `aos_inst.py TARGET` 跑；**子程式的結束碼讀它的 exit 檔最後一行**（aos_inst 的退出碼只說它自己，不傳子程式的碼）。exit 檔讀不到＝印 `ExitUnreadable`、算 125。
-- 跑的途中 aos_inst 自己出錯：它自己印「代號: 白話」，那一個沿用 aos_inst 的退出碼（參考 127／126／125；seq 就停在那裡、if 的條件起不來不跑 ELSE）。
+- 每個 inst 用子程序 `aos_inst.py TARGET` 跑；**子程式的結束碼讀它的 exit 檔最後一行**（aos_inst 的退出碼只說它自己，不傳子程式的碼）。exit 檔讀不到＝印 `ExitUnreadable`、算 125。aos_inst 的 stdout（一份結果 JSON，N-12）tasks 不接，原樣流到自己的 stdout。
+- 跑的途中 aos_inst 自己出錯：它自己在 stderr 吐一份 `{"error": {"code", "msg"}}`（N-12），那一個沿用 aos_inst 的退出碼（參考 127／126／125；seq 就停在那裡、if 的條件起不來不跑 ELSE）。
 - 收到 SIGINT／SIGTERM／SIGHUP：轉給正在跑的 aos_inst（它再轉給子程式、過 inst 的 `grace_ms` 再 SIGKILL）、不再起新的，退出碼＝128＋訊號號碼。
 - **子程式不開新 session**，留在自己的群組裡：loop 整群收的時候一起收到，不會變孤兒。
 - 結束碼數字只有 0／非 0 是確定的，其他供參考。
