@@ -102,10 +102,26 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 
 原文：「外顯之後，程式本身會固定一段時間抓外顯的狀態進行同步。參數不指定位置時，就是stdout吐出一句警告。窗的名字要統一，state或status都可以。daemon的控制資料夾先不管。fuse是可選，用了會更舒服，以後再說。然後stdin/out/err他是程式本身的標準對外窗口，代表輸入輸出錯誤，而state/ctl則是程式內部的東西，程式願意分享給大家，兩者完全沒關係」
 
+## 1k. 使用者續說（同天）
+
+脈絡：回應 AI 在 §3 列的三條待確認（警告走 stdout 還是 stderr、統一名 `state` 還是 `status`、loop／daemon 的 stdout 每回合吐狀態 JSON 是否保留）。
+
+原文：「三件事都按照建議。」（照建議＝警告走 stderr；統一名用 `state`；拿掉「loop／daemon 的 stdout 每回合吐一份狀態 JSON」，stdout 吐什麼另議。）
+
+原文：「然後我說的這些，其意義是這樣的：我用一串json丟給loop，跟他說，請你用這個參數啟動，也就是函數的args，然後函數的返回值ret就是exit+stdout，途中出錯拋出來的東西，就是stderr」
+
+## 1l. 使用者續說（同天）
+
+使用者：「返回值這塊，你知道async, yield嗎？」
+
+AI 說明（一句帶過）：stdout 的 JSON 串流像 yield、exit 像最後的 return、async＝不等 exit、await＝等 exit 檔出現。
+
+使用者：「stdout可以承擔這份職責」「但沒有那麼死」。
+
 ## 2. 決定（10-14）
 
 - 不全面退守 `system("...")`，損失太大；記為以後的一個方向。
-- 可供呼叫的程式：stdin 作為參數，stdout／stderr 作為結果，exit 作為輔助。（細節如參數是否必為 JSON、stdout 格式，待確認。）
+- 可供呼叫的程式：stdin 作為參數，stdout／stderr 作為結果，exit 作為輔助。（細節如參數是否必為 JSON、stdout 格式，待確認；後來以函數看法細分，見本節末。）
 - 回歸 POSIX 原始本意。
 - aos 規範中 stdin／stdout／stderr 都是 **JSON 串流**（POSIX 本身不要求），採放寬寫法：一串 JSON 值接著一串，每份可單行（即 JSONL）或排版跨行；只有一份就是普通 JSON（使用者 10-14「放寬」）。取代先前「stdio 必須是 JSON」的寫法。
 - 結果寫完的判定＝exit 檔出現（AI 提議、使用者認可）；串流沒有「整份寫完」的時刻，所以仍以 exit 檔為準。
@@ -115,15 +131,17 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 - 後續以 N-12 重做 aos-inst／loop／daemon（還沒動工）。
 - 三支程式改從 stdin 收設定後，要指 `檔#/位置` 時 stdin 內容寫 `{"$ref": "x.json#/clock"}`，用現成指示詞，不發明新東西（使用者 10-14「都按照建議」）。
 - 寬鬆：人手動打 `aos-inst x.json`（argv[1] 給路徑）保留，stdin 與 argv[1] 兩種都收（同上）。
-- loop／daemon 長時間跑時，stdout 串流每回合吐一份狀態 JSON（同上）。
+- 先前「loop／daemon 長時間跑時，stdout 串流每回合吐一份狀態 JSON」這條拿掉（使用者 10-14「三件事都按照建議」）；stdio 與 state／ctl 無關，loop／daemon 的 stdout 吐什麼另議（見 §3）。
 - aos-inst 自己的 stdio 與它所呼叫程式的 stdio（inst.json 的 stdin／stdout／stderr key 指定的檔）分開，不是同一回事（同上）。
 - state.json／ctl.json＝程式內部狀態的外顯（像 Plan 9／FUSE）；位置由 stdin 參數指定（使用者 10-14）
 - 外顯之後，程式自己每隔一段固定時間跟外顯的狀態同步（讀 ctl、寫 state）（使用者 10-14）。
-- 參數沒指定外顯位置時：不外顯，stdout 吐一句警告（同上）。
-- 窗的名字要統一，`state` 或 `status` 都可以（擇一待定）；ctl 是別人寫、程式讀的可寫面，state 是唯讀面（同上）。
+- 參數沒指定外顯位置時：不外顯，stderr 吐一句警告（使用者 10-14 先說 stdout，後「按照建議」改 stderr：stdout 是結果、警告屬途中拋出）。
+- 窗的名字統一為 `state`、`ctl`（使用者 10-14「按照建議」；現有程式已用 state.json）；ctl 是別人寫、程式讀的可寫面，state 是唯讀面（同上）。
 - daemon 的控制資料夾先不管（同上）。
 - FUSE 可選，用了更舒服，以後再說（同上）。
 - stdin／stdout／stderr＝程式本身的標準對外窗口（輸入、輸出、錯誤）；state／ctl＝程式內部的東西、程式願意分享給大家；兩者完全沒關係（同上）。
+- 以函數來看：stdin（一串 JSON）＝args；返回值 ret＝exit＋stdout；途中拋出來的東西（錯誤、警告）＝stderr（使用者 10-14）。
+- stdout 可以承擔 yield 的職責（一份一份吐出），但不強制（使用者 10-14：「沒有那麼死」）。
 
 ## 3. 未決
 
@@ -133,6 +151,6 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 - 串流還沒跑完時，指到的位置可能還不存在（AI 補）。
 - 最後半份壞掉時，要不要算進陣列（AI 補）。
 - 巢狀串流先不碰。
-- 待確認：使用者說 stdio 與 state／ctl 完全沒關係，那先前決定「loop／daemon 的 stdout 每回合吐一份狀態 JSON」是否仍保留（stdout 吐什麼另議）（AI 提）。
-- 待確認：沒指定位置的警告走 stdout 還是 stderr（stdout 是結果、stderr 是錯誤，警告可能較屬 stderr）（AI 提）。
-- 待確認：統一名用 `state` 還是 `status`（現有程式用 state.json）（AI 提）。
+- loop／daemon 的 stdout（ret）要吐什麼（AI 提）。
+- stdin 是否也像產生器的 `send()` 那樣持續流入、一來一回（AI 提）。
+- 輸出落成檔案時沒有管子的煞車（AI 提）。
