@@ -27,7 +27,7 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd；只�
 stop＝收工（now＝子項當場收掉；沒 now＝替它們寫 stop、等它們跑完）；times 跑完同 stop（不帶 now）。
 
 子項：一支子程序 `aos_loop.py -`（自成 session），設定從 stdin 灌進去（`id`＝原 TARGET 的 id）。loop 設定沒寫 ctl／state 的，
-放在 `work_dir/N/ctl.json`、`state.json`；子 loop 的 stdout、stderr 落 `work_dir/N/ret.json`、`err.json`。
+放在 `work_dir/N/ctl.json`、`state.json`；子 loop 的 stdout 丟掉（結果從 state 窗讀）、stderr 落 `work_dir/N/err.json`（只在出錯時長）。
 daemon 只靠兩個窗控制它：寫它的 ctl（帶流水號 seq）、讀它的 state（ctl_seq 趕上＝讀到了）。
 子項六態 phase：starting／running／exited／backoff／stopping／removed，寫在 table 窗（先寫表、再 Popen）。
 子項結束（不是 remove、不是收工）：有 `policies.child_exit` 就跑那格 inst，stdin＝{id, code, exits, last_state}，

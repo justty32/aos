@@ -173,15 +173,16 @@ class Table:
         return ident
 
     def _spawn(self, e):
-        """先寫表（starting）、再 Popen；子 loop 的 stdout／stderr 落 work_dir/N/ret.json、err.json。"""
+        """先寫表（starting）、再 Popen；子 loop 的 stdout 丟 /dev/null（結果一律從 state 窗讀），
+        stderr append 到 work_dir/N/err.json（只在出錯時長）。"""
         if e.cfg is None:                   # 接回的孤兒要重起：重讀 target
             ident, doc = self._config(e.target)
             e.cfg = check_config(e.id, dict(doc, id=e.id, ctl=e.ctl, state=e.state), err=DaemonError)[1]
         e.phase, e.proc, e.pid, e.started = "starting", None, None, None
         self.write()
-        with open(os.path.join(e.workdir, "ret.json"), "ab") as out, open(os.path.join(e.workdir, "err.json"), "ab") as err:
+        with open(os.path.join(e.workdir, "err.json"), "ab") as err:
             e.proc = subprocess.Popen([sys.executable, AOS_LOOP, "-"], start_new_session=True,
-                                      stdin=subprocess.PIPE, stdout=out, stderr=err)
+                                      stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=err)
         try:
             e.proc.stdin.write(json.dumps(e.cfg).encode("utf-8"))
             e.proc.stdin.close()

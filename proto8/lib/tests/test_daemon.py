@@ -201,9 +201,7 @@ class Daemon(Tmp):
         self.until(lambda: len(self.read("body.out").split()) >= 2)
         self.assertFalse(os.path.exists(self.ctl))
         self.assertEqual(self.stop(), 0)
-        out = [json.loads(x) for x in open(self.p("loops", "1", "ret.json")).read().split("\n") if x] \
-            if os.path.exists(self.p("loops", "1")) else None
-        self.assertIsNone(out)                              # remove 掉了，那格刪掉
+        self.assertFalse(os.path.exists(self.p("loops", "1")))   # remove 掉了，那格刪掉
 
     def test_loop_json_runs_as_daemon(self):
         # 嚴格超集：一份合法的 loop.json 丟給 aos-daemon 也能跑（inst＝每拍的身體）

@@ -107,6 +107,16 @@ class Tasks(unittest.TestCase):
         r = self.cli(SEQ, a)
         self.assertEqual((r.returncode, r.stdout, r.stderr), (6, "", ""))
 
+    def test_half_json_ignored(self):
+        # 被殺時最後一份只寫一半：解析不了就忽略，只認完整的；因此找不到結果＝沒有結果（ResultUnreadable）
+        sys.path.insert(0, LIB)
+        try:
+            import aos_tasks
+        finally:
+            sys.path.remove(LIB)
+        self.assertEqual(aos_tasks._code('{"id": "a", "code": 3}\n{"id": "b", "co'), 3)
+        self.assertIsNone(aos_tasks._code('{"id": "a", "co'))
+
     def test_launch_error(self):
         a, bad, c = self.sh("a", "true"), self.inst("bad", ["/no/such/prog"]), self.sh("c", "true")
         r = self.cli(SEQ, a, bad, c)

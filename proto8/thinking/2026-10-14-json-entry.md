@@ -21,3 +21,4 @@
 | [12-七題回覆](2026-10-14-json-entry/12-七題回覆.md) | 31～34 夜：使用者回 7 題（基礎／標準實作兩級 N-18、loop／daemon 窗必填 N-19、巢狀重跑不保證冪等 N-20、think 同步／非同步規範中立、繼承不進規範、agent.json 或資料夾皆可）、a～f 暫定預設、仍待拍板 |
 | [13-動工前拍板](2026-10-14-json-entry/13-動工前拍板.md) | 35～38 夜末：fsm state 窗必填（N-19 擴到 fsm）、拍板動工重做 inst／loop／daemon、「daemon.json 放 inst」結論（候選 g，等拍板）、給下一個 agent 的施工清單 |
 | [14-h拍板](2026-10-14-json-entry/14-h拍板.md) | 40～41 深夜：動工自定點 h1～h16「全照建議」拍板（h15 add 先驗 inst、h16 tasks 讀 stdout 改）、落點、N-12 措辭的張力（已結：跑完＝stdout 吐出結果＋行程結束，有 exit 檔則出現也算） |
+| [15-ret與半份JSON](2026-10-14-json-entry/15-ret與半份JSON.md) | 42～44 深夜收尾：ret／err 無限增長採方案 B（子 loop stdout 丟掉、結果讀 state 窗）、被殺時半份 JSON 不算（N-12 附註）、今晚交接（已完成／未決／新發現的不一致／下一步候選） |

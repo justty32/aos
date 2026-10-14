@@ -14,7 +14,7 @@ python3 proto8/demo/run.py
 
 - `once/inst.json`：跑一次就結束，印一行、結束碼 3。`once/loop.json` 用 `$ref` 指它（跑 1 次）。
 - `tick/inst.json`：每跑一次往 `tick.out` 追加一行時間、往 `tick.exit` 追加一行結束碼。`tick/loop.json` 用 `$ref` 指它，外層寫 5 次、每次隔 1 秒。
-- `daemon.json`：daemon 的 config。`control_dir` 寫成 `{"$env": "DEMO_CTL"}`，自己的 ctl／state 窗（必填，N-19）也用 `$env` 指到暫存資料夾；daemon 替兩個 loop 放的 ctl、state 窗與它們的 stdout／stderr（`ret.json`、`err.json`）在暫存資料夾的 `loops/N/` 底下；daemon 沒 inst，自己的 stdout 只在收工時吐一份總結（直接印在畫面上）。
+- `daemon.json`：daemon 的 config。`control_dir` 寫成 `{"$env": "DEMO_CTL"}`，自己的 ctl／state 窗（必填，N-19）也用 `$env` 指到暫存資料夾；daemon 替兩個 loop 放的 ctl、state 窗與它們的 stderr（`err.json`；stdout 丟掉，結果看 state 窗）在暫存資料夾的 `loops/N/` 底下；daemon 沒 inst，自己的 stdout 只在收工時吐一份總結（直接印在畫面上）。
 - `run.py`：用 mktemp 建一個暫存資料夾，裡面 `ctl/` 當控制資料夾、`out/` 放子程式的輸出（inst.json 的 `cwd` 寫成 `{"$env": "DEMO_OUT"}`）。指令裡的 `id` 寫絕對路徑（印的時候把本資料夾的路徑省掉）。跑完整個暫存資料夾刪掉，repo 裡不留東西。
 
 ## 它做了什麼
