@@ -86,6 +86,8 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 - 規範管的是 inst 所呼叫的 argv[0] 程式：stdin／stdout／stderr 都是 JSONL，具體怎麼處理自己弄、寬鬆。
 - 後續要以這個方式重做 aos-inst／loop／daemon；使用者認為應該沒啥問題。
 
+後來使用者對 AI 挖的四條邊緣回：「都按照建議。」（照建議＝決定，見 §2）
+
 ## 2. 決定（10-14）
 
 - 不全面退守 `system("...")`，損失太大；記為以後的一個方向。
@@ -97,6 +99,10 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 - stdin 多份＝整串一次呼叫，程式自己解讀（使用者 10-14 選項題）；規範只管格式不管意思。
 - 已寫進 NORMS N-12 草稿（使用者 10-14 選項題）。
 - 後續以 N-12 重做 aos-inst／loop／daemon（還沒動工）。
+- 三支程式改從 stdin 收設定後，要指 `檔#/位置` 時 stdin 內容寫 `{"$ref": "x.json#/clock"}`，用現成指示詞，不發明新東西（使用者 10-14「都按照建議」）。
+- 寬鬆：人手動打 `aos-inst x.json`（argv[1] 給路徑）保留，stdin 與 argv[1] 兩種都收（同上）。
+- loop／daemon 長時間跑時，stdout 串流每回合吐一份狀態 JSON（同上）。
+- aos-inst 自己的 stdio 與它所呼叫程式的 stdio（inst.json 的 stdin／stdout／stderr key 指定的檔）分開，不是同一回事（同上）。
 
 ## 3. 未決
 
@@ -106,7 +112,4 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 - 串流還沒跑完時，指到的位置可能還不存在（AI 補）。
 - 最後半份壞掉時，要不要算進陣列（AI 補）。
 - 巢狀串流先不碰。
-- 三支程式改從 stdin 收設定後，`檔#/位置` 的 TARGET 怎麼給（AI 補；例如 stdin 內容寫 `{"$ref": "x.json#/clock"}`）。
-- 人手動打 `aos-inst x.json` 的寫法要不要保留（寬鬆，AI 補）。
-- loop／daemon 長時間跑，stdout 串流要吐什麼（每回合一份狀態？）、跟 state.json／ctl.json／控制資料夾的關係（AI 補）。
-- aos-inst 自己的 stdio 與子程式的 stdio（inst.json 的 stdin／stdout key）要分清（AI 補）。
+- loop／daemon 每回合吐的狀態 JSON，跟 state.json／ctl.json／控制資料夾的關係（AI 補；可能接 10-14 上午的 ctl／state 研究）。
