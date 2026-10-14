@@ -88,6 +88,14 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 
 後來使用者對 AI 挖的四條邊緣回：「都按照建議。」（照建議＝決定，見 §2）
 
+## 1i. 使用者續說（同天）
+
+原文：「state.json/ctl.json這塊，我會覺得，它本質上是程式內部狀態的外顯，有點plan 9 fuse的感覺，會在參數(stdin)中指定其狀態外顯，要放在哪裡。」
+
+要點：
+- state.json／ctl.json 本質上是程式內部狀態的外顯，像 Plan 9／FUSE。
+- 外顯放在哪裡，由參數（stdin）指定。
+
 ## 2. 決定（10-14）
 
 - 不全面退守 `system("...")`，損失太大；記為以後的一個方向。
@@ -103,6 +111,7 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 - 寬鬆：人手動打 `aos-inst x.json`（argv[1] 給路徑）保留，stdin 與 argv[1] 兩種都收（同上）。
 - loop／daemon 長時間跑時，stdout 串流每回合吐一份狀態 JSON（同上）。
 - aos-inst 自己的 stdio 與它所呼叫程式的 stdio（inst.json 的 stdin／stdout／stderr key 指定的檔）分開，不是同一回事（同上）。
+- state.json／ctl.json＝程式內部狀態的外顯（像 Plan 9／FUSE）；位置由 stdin 參數指定（使用者 10-14）
 
 ## 3. 未決
 
@@ -112,4 +121,10 @@ AI 補充連帶意義（使用者沒反對）：stdio 全改 JSON 串流後，�
 - 串流還沒跑完時，指到的位置可能還不存在（AI 補）。
 - 最後半份壞掉時，要不要算進陣列（AI 補）。
 - 巢狀串流先不碰。
-- loop／daemon 每回合吐的狀態 JSON，跟 state.json／ctl.json／控制資料夾的關係（AI 補；可能接 10-14 上午的 ctl／state 研究）。
+- 狀態外顯的待想項（AI 提）：
+  - (a) stdout 每回合的狀態串流＝歷史紀錄、state.json＝當下的快照，兩者是否這樣分工。
+  - (b) 參數沒指定位置時＝不外顯，還是有預設位置。
+  - (c) 外顯的 key 名是否規範統一（例如 stdin 參數裡一律叫 `state`、`ctl`），讓任何 argv[0] 程式都能被同一套工具看與控。
+  - (d) ctl 是「可寫的那一面」（別人寫、程式讀），state 是「唯讀的那一面」，是否照 Plan 9 的 ctl／status 檔來想。
+  - (e) 控制資料夾（daemon 的指令式控制）在這個看法下的位置。
+  - (f) 以後是否真的用 FUSE 讓讀檔當下就拿到即時狀態（現在是程式定期寫檔）。
