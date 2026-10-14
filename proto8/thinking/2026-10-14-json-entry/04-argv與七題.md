@@ -46,4 +46,4 @@ NORMS 已照縫一～三改（N-06、N-07、N-09、N-11、N-13）；argv 旗標�
 
 ## 6. 本節新增未決
 
-- daemon 底下 loop 的 `ret.json`／`err.json` 在 `times: null` 時無限增長（第 6 題的代價）。
+- daemon 底下 loop 的 `ret.json`／`err.json` 在 `times: null` 時無限增長（第 6 題的代價）。（**已結**，10-14 深夜方案 B：stdout 丟掉、不再有 ret.json，見 [15](15-ret與半份JSON.md)。）
