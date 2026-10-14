@@ -1,6 +1,6 @@
 # 2026-10-14 JSON 入口：argv 空出來（下午）與重做七題拍板
 
-← [JSON 入口](../2026-10-14-json-entry.md)｜上一份：[03-決定未決](03-決定未決.md)
+← [JSON 入口](../2026-10-14-json-entry.md)｜上一份：[03-決定未決](03-決定未決.md)｜下一份：[05-aos-llm-agent題](05-aos-llm-agent題.md)
 
 ## 4. argv 空出來（下午）
 
@@ -11,7 +11,7 @@
 ### 4.1 argv 衍生的新題（全部使用者拍板）
 
 - **D-1 argv 角色＝鏡射＋覆蓋**：設定 JSON 每個頂層 key 有同名旗標（`--cwd`、`--timeout-ms`、`--stdout-append`…），機械對應、不另發明欄位；旗標蓋過 JSON；JSON 一字不改；aos-inst／loop／daemon 同一條規則。旗標只准鏡射既有 key；daemon／loop 起子程式仍一律走 stdin JSON。
-  - 範圍補充（使用者隨後拍板）：aos-loop／aos-daemon 的命令列同樣有同名旗標（如 `--times`、`--interval-ms`、`--ctl`、`--state`、`--work-dir`、`--load`、`--save`），同一條規則。**只鏡射最外層 key**；loop.json 裡包的那份 inst 設定（巢狀欄位，如內層 cwd）不鏡射，要改就改檔或用 `$ref`。這是已定，不是未決。
+  - 範圍補充（使用者隨後拍板）：aos-loop／aos-daemon 的命令列同樣有同名旗標（如 `--times`、`--interval-ms`、`--ctl`、`--state`、`--work-dir`、`--load`、`--save`），同一條規則。**只鏡射最外層 key**；loop.json 裡包的那份 inst 設定（巢狀欄位，如內層 cwd）不鏡射，要改就改檔或用 `$ref`。這是已定，不是未決。（**後放寬**：Q10 使用者說同名旗標是為方便、非硬規則，物件型除非很小很少不鏡射，見 [05](05-aos-llm-agent題.md)。）
 - **D-2 `--` 做，可與 JSON 併用**：`aos-inst [旗標] [TARGET] -- cmd args…`，`--` 後整段蓋過 JSON 的 argv。
 - **D-3 優先序**：旗標 > JSON；TARGET 檔與 stdin 二選一（給 TARGET 就不讀 stdin，讀 stdin 寫 `-`）。
 - **D-4 run()**：`run(x)` 收路徑或 dict；dict＝命令列合成好的那份設定。loop 改直接起子程序灌 stdin，run() 主要給 tasks 和人。
@@ -39,7 +39,7 @@
 - **第 6 題 daemon 底下 loop 的門**：落 `work_dir/N/ret.json`、`err.json`。`times` 為 null 時會一直長，記為未決。
 - **第 8 題 共用檔**：抽一個（如 `aos_cli.py`），連 argv 一起：TARGET／`-`／旗標合成設定＋三扇門 JSON 串流；當符合 N-12 程式的範本。
 - **第 9 題縫一**：改 N-11 一個定義：「設定檔」＝程式啟動時合成、只讀一次的那份設定，不管來自檔、stdin 還是 argv 旗標；其餘不動。
-- **第 9 題縫二**：N-09 維持選填；N-13 的警告定性為提醒、不算錯，exit 仍 0。
+- **第 9 題縫二**：N-09 維持選填；N-13 的警告定性為提醒、不算錯，exit 仍 0。（**後被推翻**：稍晚 Q9 連提醒都拿掉，見 [05](05-aos-llm-agent題.md)。）
 - **第 9 題縫三**：旗子通用、節奏不通用：開了 ctl 窗的程式都認 `paused`／`stop`；`times` 等節奏 key 只有反覆跑的程式認。
 
 NORMS 已照縫一～三改（N-06、N-07、N-09、N-11、N-13）；argv 旗標細則（D-1～D-6）還沒寫成 N 條文，見 [NORMS 待定](../../NORMS/03-待定.md)。
