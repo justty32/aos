@@ -155,6 +155,27 @@ class LoopTest(Tmp):
         ctl.poll()
         self.assertEqual(ctl.mtime, os.stat(self.p("c.json")).st_mtime)
 
+    def test_ctl_seq_and_heartbeat(self):
+        """ctl 帶流水號 seq，回報 ctl_seq（不進 good）；state 帶心跳欄位，內容沒變也每 beat_ms 碰一次。"""
+        ctl = aos_loop.CtlFile(self.p("c.json"))
+        aos_loop.write_json(self.p("c.json"), {"times": 5, "seq": 7})
+        ctl.poll()
+        self.assertEqual((ctl.good, ctl.seq), ({"times": 5}, 7))
+        with self.assertRaises(ValueError):
+            aos_loop.parse_ctl({"seq": "7"})
+        w = {"times": 1, "interval_ms": 0, "interval_mode": "after"}
+        st = aos_loop.state_doc("x", "waiting", w, ctl, 0, None)
+        self.assertEqual((st["ctl_seq"], st["pid"]), (7, os.getpid()))
+        self.assertTrue(isinstance(st["started"], int) and st["boot_id"])
+        sf = aos_loop.StateFile(self.p("s.json"), "t", beat_ms=50)
+        sf.write(st)
+        b1 = self.state("s.json")["beat"]
+        sf.write(st)
+        self.assertEqual(self.state("s.json")["beat"], b1)       # 沒到時間、內容沒變：不寫
+        time.sleep(0.06)
+        sf.write(st)
+        self.assertGreater(self.state("s.json")["beat"], b1)     # 心跳
+
     def test_ctl_pause_then_times_exits_when_done(self):
         self.ctl({"paused": True})
         path = self.loop(sh="echo x >> l.out", times=None, interval_ms=20, ctl="l.ctl.json", state="l.state.json")
