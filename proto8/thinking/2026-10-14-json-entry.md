@@ -137,6 +137,17 @@ AI 說明（一句帶過）：stdout 的 JSON 串流像 yield、exit 像最後�
 - 盡量用 Linux 本來就有的東西（鎖、號誌）；原子操作用改名配合 fsync。
 - 已派 Fable 研究、做網頁。
 
+## 1o. 使用者續說（同天）
+
+脈絡：回應重做規劃頁 https://claude.ai/artifact/HGkzKJKAsEAwhv1dQPQX8d 的第 3、7 題。
+
+原文：「daemon可以不只收工時吐一份，其實stdout這塊，想吐啥就吐啥，沒人規定你的函數返回值要怎麼設計，yield也好，亂回東西也好，所以因為daemon繼承於loop，所以建議也可以。子程式的結束碼只寫進exit檔，這個確實可以放寬」
+
+要點：
+- stdout（返回值）怎麼設計由程式自己決定，yield 也好、亂回也好。
+- daemon 繼承於 loop，所以照 loop 的建議也可以，不只收工時吐一份。
+- 子程式結束碼只寫進 exit 檔這條可放寬。
+
 ## 2. 決定（10-14）
 
 - 不全面退守 `system("...")`，損失太大；記為以後的一個方向。
@@ -162,6 +173,9 @@ AI 說明（一句帶過）：stdout 的 JSON 串流像 yield、exit 像最後�
 - 以函數來看：stdin（一串 JSON）＝args；返回值 ret＝exit＋stdout；途中拋出來的東西（錯誤、警告）＝stderr（使用者 10-14）。
 - stdout 可以承擔 yield 的職責（一份一份吐出），但不強制（使用者 10-14：「沒有那麼死」）。
 - aos 版 IPC 走狀態外顯側，盡量不碰 stdio（必要時可合）；盡量用 Linux 原生機制，原子性靠 rename＋fsync（使用者 10-14）。
+- stdout（返回值）怎麼設計由程式自己決定，想吐什麼就吐什麼（yield 也好、亂回也好），規範不管（使用者 10-14）。
+- daemon 繼承於 loop，所以 daemon 的 stdout 也照 loop 的建議（每回合一份結果＋最後一份總結），不只收工時一份（同上）。
+- 放寬 10-12「子程式的結束碼只寫進 exit 檔」：exit 檔照寫，aos-inst 的返回值（stdout）也可以帶子程式的碼（同上）。
 
 ## 3. 未決
 
@@ -171,7 +185,7 @@ AI 說明（一句帶過）：stdout 的 JSON 串流像 yield、exit 像最後�
 - 串流還沒跑完時，指到的位置可能還不存在（AI 補）。
 - 最後半份壞掉時，要不要算進陣列（AI 補）。
 - 巢狀串流先不碰。
-- loop／daemon 的 stdout（ret）要吐什麼（AI 提）。
+- aos-inst／loop 的 stdout 具體欄位照重做規劃頁建議，等使用者看完確認。
 - stdin 是否也像產生器的 `send()` 那樣持續流入、一來一回（AI 提）。
 - 輸出落成檔案時沒有管子的煞車（AI 提）。
 - 規範要不要定 aos 版的 IPC（行程間溝通）方式、定哪些（使用者 10-14 提出方向，還沒展開；研究中（Fable，10-14））。
