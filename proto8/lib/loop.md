@@ -25,7 +25,7 @@ python3 proto8/lib/aos_loop.py LOOP.json
 - loop.json（含 `inst` 那格與裡面的指示詞）**只在起來時讀一次、解一次**；`inst` 不對＝起不來（沿用 aos_inst 的碼，參考 125）。跑的途中要改只能走 ctl.json。
 - 每一次：起子程序 `aos_inst.py`（自成一個 session）→ 等它結束 → 整群補 SIGKILL 清孫程式 → 收屍。解好的 inst 在起來時寫成暫存資料夾裡的一份 inst.json，每次都把它的路徑交給 aos_inst，結束刪掉。
 - 結果：aos_inst 回 0 → `last_code`＝exit 檔最後一行（沒寫 exit＝null）；非 0 → `last_error`＝它 stderr 的最後一行。
-- **ctl.json**（宣告式，NORMS N-06～）：`paused`、`stop`（`true` 或 `{"val": true, "now": true}`；now＝當場收掉正在跑的）、`times`、`interval_ms`、`interval_mode`。沒寫的欄位＝loop.json 的初始值（只在 `want()` 一處）。stop 是終點。壞檔、型別錯、不見了＝維持上一次、印一次。(inode, mtime, 大小) 變了才重讀。
+- **ctl.json**（宣告式，NORMS N-06～）：`paused`、`stop`（`true` 或 `{"val": true, "now": true}`；now＝當場收掉正在跑的）、`times`、`interval_ms`、`interval_mode`。沒寫的欄位＝loop.json 的初始值（只在 `want()` 一處）。stop 是終點。壞檔、型別錯、不見了＝維持上一次、印一次。每次讀整份、內容跟上次不同才重驗（不靠 inode／mtime：ext4 上 4 ms 內的等長改動會撞）。
 - 次數跑完（runs ≥ times）就結束、退出，有 ctl 也一樣；想再跑就重新起。
 - **state.json**（選填）：共同骨架（見 [ctl-state](ctl-state.md)）加上 `skipped`、`last_code`；`last_error`＝aos_inst 自己出錯時它 stderr 的最後一行。暫存再改名。
 - 退出碼只說 loop 自己：0＝正常結束（子程式回非 0 不算）；最後一次是 aos_inst 自己出錯＝沿用它的碼；被訊號停掉＝128＋N；loop.json 不對＝125。`run(path)` 正常回 None，否則丟 `LoopError`（`exit` 屬性＝退出碼）。
