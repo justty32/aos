@@ -15,3 +15,4 @@
 | [2026-10-12 ctl 規範](2026-10-12-ctl-norms.md) | NORMS N-05～N-10 背後的細節：宣告式 ctl.json（`paused`／`stop` 各帶 `{"val","now"}`、沒寫的回初始值、讀的人壞檔維持上一次、state.json 格式）與指令式控制資料夾（`.done`、`ok` 唯一要看、丟的人清）；各條分規範／慣例 |
 | [2026-10-13 JSON 路徑](2026-10-13-json-path.md) | JSON 也是檔案系統：命令列 TARGET 吃 `檔#/位置`（決定做，還沒動工）；loop.json 排法不動；不做 AOS_INST_SELF；單檔自指是套娃、定兩個檔；`_metainfo`＝inst 跑下去的特性（九軸、資源），inst 忽略、給 kernel 參考（還沒動工） |
 | [2026-10-13 kernel／agent](2026-10-13-kernel-agent.md) | kernel＝能操控東西被執行的就算（標準規範：基於 daemon、決定跑哪些 inst）；任務屬性＝隱性行程／檔案屬性＋九軸，決定演算法隨便；agent＝記憶＋思考中心＋工具的狀態機，自我改進用 loop＋狀態切換（一步落檔、zip／git）；標準版三態等待／思考／工具；工具↔inst、agent 細節待規劃 agent 時再說 |
+| [2026-10-14 JSON 統一入口](2026-10-14-json-entry.md) | 使用者想法：POSIX 的 argv 與 LISP 的 list 都是函數的統一入口但跟 JSON 脫節；想把統一入口的參數統一成 JSON，直接對接 LLM 工具、腳本語言、檔案系統；當年資源不足只能 list／array，現在可以用 map |
