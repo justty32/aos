@@ -23,7 +23,7 @@
 - **一格可以是一個資料夾＝一個子物件**（使用者定）：`"thinking": "think/"`，think/ 裡有自己的 inst.json；若是巢狀 fsm，think/ 裡就是子 fsm 的設定、子表、子 state 窗。
 - **aos-fsm 可以巢狀**（使用者定，像階層式狀態機）：某格的 inst 本身是另一個 aos-fsm，例：外層 `thinking` → think/inst.json 的 argv 是 `aos_fsm.py`，內層表 `ask → waiting → …`。接法見 [07 §12.3](07-fsm樹與一拍.md)（AI 建議、待確認）。
 - 呼叫一格＝工具呼叫同一機制：fsm 寫 `work/N-args.json`（`{"state","step","prev","cfg"}`，cfg＝agent.json 合成後整份），把那張 inst 蓋上 stdin／stdout／stderr／exit（D-4 `run(dict)`），跑完取 stdout 最後一份（N-12）。
-- 下一狀態：inst 回傳與結束碼概念上都正當；aos-fsm 採 stdout 最後一份的 `next`，沒吐＝留原狀態。`data` 由 fsm 存進 state 窗、下一拍當 `prev` 給下一格。
+- 下一狀態：inst 回傳與結束碼概念上都正當；aos-fsm 採 stdout 最後一份的 `next`，沒吐＝看表上靜態 next，表也沒有才留原狀態（10-14 晚改，見 [10](10-lisp組合子.md)）。`data` 由 fsm 存進 state 窗、下一拍當 `prev` 給下一格。
 - 出錯：方法 exit≠0、或查不到那格＝錯：表有 `error` 格就跳去（args 帶原狀態與錯），沒有就留原狀態＋`last_error`；上一拍沒留 ret（被殺一半）＝重進同狀態、`prev.interrupted: true`，由方法自己決定。
 - 現在狀態記在 state 窗（`phase`＋`data`），fsm 開頭讀回；沒開 state 窗＝每拍從 `start` 起。
 - 窗：state／ctl（只認 paused／stop、帶 seq）／lock 都是 fsm 的；心跳可選（設定 key）。鎖同時擋「表裡指回自己資料夾」的遞迴。
