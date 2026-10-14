@@ -16,7 +16,7 @@
 
 > 然後 aos fsm 他所要呼叫的 inst.json，也不一定要指定 .json 單檔案，也可以指定資料夾，那就是走 aos inst 那套
 
-## 11. 架構（已照 [08](08-fsm拍板與改寫.md) 的十題修正）
+## 11. 架構（已照 [08](08-fsm拍板與改寫.md) 的十題修正；第 7 題 10-14 夜再改，見 [12](12-七題回覆.md)）
 
 - **aos-fsm**（`aos_fsm.py`）是通用程式：讀一份 JSON（`start`＋`states` 表＋窗），每拍查表、呼叫一格、換狀態。**aos_agent.py 不存在**；agent＝aos-fsm＋一個預設表資料夾（範本：幾張 inst、幾支方法程式）。
 - 表＝vtable：`states` 一定明寫在 agent.json。**每格的值＝一個 aos-inst TARGET**：`.json` 檔、資料夾（先找 `<資料夾>/.aos/inst.json`、再 `<資料夾>/inst.json`）、可接 `#/位置`；fsm 不另訂找法，直接用 aos-inst 的 `find()`／`load()`。也收一張內嵌 inst 單子（含 `$ref` 解出來的）。不靠慣例檔名、不做繼承（沒有 extends、沒有搜尋路徑）；想沿用範本就一格一格寫範本的路徑或 `$ref`。預設表資料夾只是可被引用的範本，不是父類。
@@ -28,6 +28,6 @@
 - 現在狀態記在 state 窗（`phase`＋`data`），fsm 開頭讀回；沒開 state 窗＝每拍從 `start` 起。
 - 窗：state／ctl（只認 paused／stop、帶 seq）／lock 都是 fsm 的；心跳可選（設定 key）。鎖同時擋「表裡指回自己資料夾」的遞迴。
 - 方法間資料：大的放檔（history.json 只有方法寫）、小的走 `data`；state 窗只有 fsm 寫（N-09）。
-- **think 兩種實作同等地位、換一格即可**（使用者定）：(甲) 同步——inst 起來就叫 aos-llm、等回覆、處理完才結束；(乙) 非同步——inst 把請求寫成檔丟進某個請求資料夾（N-16 Maildir／JSONL 皆可）就結束、回 `{"next":"waiting"}`，「想著有人會處理」：處理者不綁定（worker loop、常駐服務、daemon 底下的東西、甚至人）；`waiting` 格下一拍去看回覆有沒有到。**預設表放 (乙)**（第 7 題）。兩者都不自己 setsid／fork 背景行程。之所以可互換，正是因為一格可以是單一程式，也可以是一個子 fsm。
+- **think 兩種實作同等地位、換一格即可**（使用者定）：(甲) 同步——inst 起來就叫 aos-llm、等回覆、處理完才結束；(乙) 非同步——inst 把請求寫成檔丟進某個請求資料夾（N-16 Maildir／JSONL 皆可）就結束、回 `{"next":"waiting"}`，「想著有人會處理」：處理者不綁定（worker loop、常駐服務、daemon 底下的東西、甚至人）；`waiting` 格下一拍去看回覆有沒有到。**規範中立，兩種都合規；基礎實作先做 (甲) 阻塞版**（第 7 題，10-14 夜改，見 [12](12-七題回覆.md)），(乙) 留在預設表資料夾裡當可換的一格。兩者都不自己 setsid／fork 背景行程。之所以可互換，正是因為一格可以是單一程式，也可以是一個子 fsm。
 - 共同核心＝方法表 lib `aos_methods.py`：載表、呼叫一格、取 stdout 最後一份；不含繼承。相依 `aos_directives ← aos_inst ← aos_methods ← aos_fsm`。
 - 不套的：inst（它就是函數指標，不加 pre／post／on_timeout）、loop（不加鉤子，要鉤子就讓 loop 拍一個 fsm）、aos-llm 與工具（葉子）。daemon 的策略格（`child_exit`）重做 daemon 時再接，預設維持現行為。

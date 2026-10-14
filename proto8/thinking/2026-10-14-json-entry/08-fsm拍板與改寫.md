@@ -10,7 +10,7 @@
 4. ★ 下一狀態：「inst 回傳和結束碼都可以。aos fsm 用 inst 回傳」→ 兩種概念上都正當；aos-fsm 採 stdout 最後一份的 `next`。（10-14 晚改：沒吐＝看表上靜態 next，表也沒有才留原狀態，見 [10](10-lisp組合子.md)。）
 5. 出錯：有 `error` 格就跳去（帶原狀態與錯），沒有就留原狀態＋`last_error`；沒 ret（被殺一半）重進同狀態、標 `prev.interrupted`。
 6. 現在狀態記在 state 窗（phase＋data）；沒開 state 窗＝每拍從 `start` 起。
-7. ★ 預設 think 非同步：把請求丟進請求資料夾、處理者不限，下一拍看結果，合 C-25；同步版同等地位，換一格即可；都不自己 setsid／fork。這解掉 aos-llm／agent 規劃頁的 Q1。
+7. think 同步／非同步：規範只說走到 think 就跑那格 inst，阻塞等回覆或丟請求下一拍再看**兩種都合規**；換一格即可；都不自己 setsid／fork。**基礎實作先做阻塞版**（10-14 夜改，見 [12](12-七題回覆.md)；原「預設非同步」的說法作廢）。這解掉 aos-llm／agent 規劃頁的 Q1。
 8. loop 不加鉤子。
 9. daemon 策略格（child_exit）重做 daemon 時再接，預設維持現行為。
 10. inst 不加 pre／post／on_timeout。
@@ -22,7 +22,7 @@
 - 規劃頁 §3／§4 agent.json 加 `start`、`states`（值＝TARGET）、選填 `end`；aos_agent.py 改為通用 aos_fsm.py＋預設表資料夾。
 - §7 四態從寫死變成預設表；思考拆成子 fsm（ask → waiting），加選填 `error` 格。
 - §4 steps.jsonl 每行改成 fsm 通用的 `{step, from, to, code, ms}`＋方法 ret 的 `data`。
-- Q1 已解：預設非同步；C-25 不再被違背。
+- Q1 已解：規範中立、換一格即可；基礎實作阻塞版（C-25 由非同步那格解，不是預設）。
 - Q5 保險絲拆家：10 分鐘掛在 aos-llm 單子的 `timeout_ms`＋waiting 格自己的期限；loop 單子的 `timeout_ms` 變外層（≥ 最長方法）；`max_steps` 歸 fsm（自上次回 `start` 起算）；retries 歸 ask／waiting 方法；8000 字歸 tool 方法。
 - Q4 問模型＝通用規則的特例：fsm 偵測沒 ret 就以 `prev.interrupted` 重進，tool 方法再決定問模型。
 - Q8 agent-ctl.json、Q11 agent.lock/、Q12 心跳可選：上移為 fsm 的窗與設定 key。
@@ -37,12 +37,12 @@
 
 - 每拍多兩層行程（loop → inst → fsm → inst → 方法），巢狀再加兩層；空拍約 3～5 次 Python 啟動 ≈ 0.1～0.3 s，1 s 間隔可接受，百毫秒級不行。
 - 除錯要看兩層 state 窗（外層 phase、think/state.json 的子 phase）；steps 每行記 from／to，`work/N-args.json`、`N-ret.json` 留每格的進出可重播。
-- 方法要冪等：寫到一半被殺（history 寫了、ret 沒出）下一拍會重進同狀態。
+- 寫到一半被殺（history 寫了、ret 沒出）下一拍會重進同狀態；方法冪等與否規範不保證（N-20），方法自己顧。
 - 相對路徑：範本 inst 以 agent 資料夾（或 inst.json 的 `cwd`）跑，`argv[0]` 與檔名寫絕對路徑或靠 PATH。
-- 乙版要先有人在處理請求資料夾（worker loop、服務或人），demo 多一個前置動作；沒人處理＝waiting 一直等到期限。
+- 乙版要先有人在處理請求資料夾（worker loop、服務或人），多一個前置動作；沒人處理＝waiting 一直等到期限。（基礎實作先做甲版，所以第一個 demo 沒這個前置。）
 
 ## 16. 新增未決
 
 - ~~巢狀三題~~（**已定**，全照推薦，見 [07 §12.4](07-fsm樹與一拍.md)）。
 - 請求資料夾的 key 名、誰負責處理（第一版 demo 用一個 worker loop？）、waiting 期限數字。
-- aos-fsm 哪些進規範、哪些只是程式說明，等動工時定（[NORMS 待定](../../NORMS/03-待定.md)）。
+- aos-fsm 哪些進規範、哪些只是程式說明，等動工時定（[NORMS 待定](../../NORMS/04-待定.md)）。
