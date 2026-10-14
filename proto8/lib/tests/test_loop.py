@@ -19,9 +19,14 @@ import aos_loop  # noqa: E402
 
 class LoopTest(Tmp):
     def loop(self, name="l", sh="true", **outer):
-        """寫 NAME.loop.json（inst 內嵌：在暫存資料夾用 sh 跑 SH、exit 附加到 NAME.exit），回路徑。"""
+        """寫 NAME.loop.json（inst 內嵌：在暫存資料夾用 sh 跑 SH、exit 附加到 NAME.exit；窗 NAME.ctl.json、NAME.state.json），回路徑。"""
         inst = outer.pop("inst", {"argv": ["sh", "-c", sh], "cwd": self.tmp, "exit": name + ".exit", "exit_append": True})
-        return self.write(name + ".loop.json", dict({"inst": inst, "ctl_poll_ms": 20}, **outer))
+        return self.write(name + ".loop.json", dict({"inst": inst, "ctl_poll_ms": 20, "ctl": name + ".ctl.json",
+                                                     "state": name + ".state.json"}, **outer))
+
+    def err(self, r):
+        """stderr 最後一份錯誤的代號（N-12：{"error": {"code", "msg"}}）。"""
+        return json.loads(r.stderr.splitlines()[-1])["error"]["code"]
 
     def cli(self, path, timeout=10):
         return subprocess.run([sys.executable, LOOP, path], capture_output=True, text=True, cwd=self.tmp, timeout=timeout)
@@ -85,24 +90,47 @@ class LoopTest(Tmp):
         # loop.json 的一格當 loop 本體；inst 裡的 ../ 照整份檔算；id＝realpath#/位置
         path = self.write("node.json", {"cmd": "echo z >> n.out",
                                         "job": {"inst": {"argv": ["sh", "-c", {"$ref": "#../../../../cmd"}], "cwd": self.tmp},
-                                                "times": 2, "state": "n.state.json"},
+                                                "times": 2, "state": "n.state.json", "ctl": "n.ctl.json"},
                                         "x": [1]})
         r = self.cli(path + "#/job")
         self.assertEqual((r.returncode, self.read("n.out")), (0, "z\nz\n"), r.stderr)
         self.assertEqual(self.state("n.state.json")["id"], os.path.realpath(path) + "#/job")
         r = self.cli(path + "#/x")                                      # 指到的不是物件
-        self.assertEqual((r.returncode, r.stderr.split(":")[0]), (125, "FieldType"))
+        self.assertEqual((r.returncode, self.err(r)), (125, "FieldType"))
         self.assertIn(os.path.realpath(path) + "#/x", r.stderr)
         r = self.cli(path + "#job")
-        self.assertEqual((r.returncode, r.stderr.split(":")[0]), (125, "ReferencePointerInvalid"))
+        self.assertEqual((r.returncode, self.err(r)), (125, "ReferencePointerInvalid"))
 
-    def test_no_exit_last_code_null(self):
-        self.loop(inst={"argv": ["true"]}, state="l.state.json")
+    def test_last_code_from_inst_stdout(self):
+        # 沒寫 exit 也拿得到碼：aos_inst 的 stdout 結果（N-12）
+        self.loop(inst={"argv": ["sh", "-c", "exit 4"]})
         self.assertEqual(self.cli(self.p("l.loop.json")).returncode, 0)
-        self.assertIsNone(self.state()["last_code"])
+        self.assertEqual(self.state()["last_code"], 4)
+
+    def test_windows_required(self):
+        # N-19：ctl／state 缺 key 或 null＝WindowMissing、不執行
+        for outer in ({"ctl": None}, {"state": None}):
+            with self.subTest(outer=outer):
+                path = self.loop(sh="echo x >> w.out", **outer)
+                r = self.cli(path)
+                self.assertEqual((r.returncode, self.err(r)), (125, "WindowMissing"))
+        self.assertFalse(os.path.exists(self.p("w.out")))
+
+    def test_stdout_stream_stdin_flags(self):
+        # stdout：每次一份 {run, code, ms}＋總結；設定從 stdin、旗標蓋過；id
+        doc = {"inst": {"argv": ["sh", "-c", "exit 3"]}, "times": 5, "ctl": "s.ctl.json", "state": "s.state.json", "id": "me"}
+        r = subprocess.run([sys.executable, LOOP, "--times", "2", "-"], input=json.dumps(doc), capture_output=True,
+                           text=True, cwd=self.tmp, timeout=10)
+        out = [json.loads(x) for x in r.stdout.splitlines()]
+        self.assertEqual([(o["run"], o["code"]) for o in out[:2]], [(1, 3), (2, 3)])
+        self.assertEqual(out[2], {"end": "done", "runs": 2, "skipped": 0, "last_code": 3})
+        self.assertEqual(self.state("s.state.json")["id"], "me")
+        doc["inst"]["stdin_inherit"] = True                         # D-5：inst 從 stdin 灌，stdin_inherit 不行
+        r = subprocess.run([sys.executable, LOOP, "-"], input=json.dumps(doc), capture_output=True, text=True, cwd=self.tmp)
+        self.assertEqual((r.returncode, self.err(r)), (125, "Conflict"))
 
     def test_inst_error_inherited(self):
-        path = self.loop(inst={"argv": ["/no/such/prog"]}, times=2, error_wait_ms=50, state="l.state.json")
+        path = self.loop(inst={"argv": ["/no/such/prog"]}, times=2, error_wait_ms=50)
         r = self.cli(path)
         self.assertEqual(r.returncode, 127)
         self.assertIn("CommandNotFound", r.stderr)
@@ -114,8 +142,9 @@ class LoopTest(Tmp):
         self.assertEqual(self.cli(self.p("m.loop.json")).returncode, 0)
 
     def test_bad_loop_json(self):
-        for doc in ({"times": 1}, {"inst": {"argv": ["true"]}, "times": -1},
-                    {"inst": {}, "interval_mode": "x"}, "{"):
+        w = {"ctl": "c.json", "state": "s.json"}
+        for doc in (dict(w, times=1), dict(w, inst={"argv": ["true"]}, times=-1),
+                    dict(w, inst={}, interval_mode="x"), "{"):
             with self.subTest(doc=doc):
                 r = self.cli(self.write("bad.json", doc))
                 self.assertEqual(r.returncode, 125)

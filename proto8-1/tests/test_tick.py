@@ -87,8 +87,8 @@ class Tick(unittest.TestCase):
         loop = os.path.join(self.tmp, "tick.loop.json")
         with open(loop, "w") as f:
             json.dump({"inst": {"argv": [TICK, self.file], "cwd": self.tmp, "exit": "tick.exit", "exit_append": True},
-                       "times": 3, "interval_ms": 10}, f)
-        r = subprocess.run([sys.executable, LOOP, loop], cwd=self.tmp, timeout=10)
+                       "times": 3, "interval_ms": 10, "ctl": "tick.ctl.json", "state": "tick.state.json"}, f)
+        r = subprocess.run([sys.executable, LOOP, loop], cwd=self.tmp, timeout=10, stdout=subprocess.DEVNULL)
         self.assertEqual(r.returncode, 0)
         with open(os.path.join(self.tmp, "tick.exit")) as f:
             self.assertEqual(f.read(), "0\n0\n0\n")

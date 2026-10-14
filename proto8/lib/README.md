@@ -4,7 +4,7 @@
 
 只用 Python 標準庫。
 
-三支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`；相對路徑一律從呼叫者的 cwd 算。TARGET 都可以接 `檔#/位置`（見[指示詞](directives.md)）。inst 照 NORMS N-12 重做（10-14）：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`，`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 還沒重做，命令列仍只收一個 TARGET。
+三支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`；相對路徑一律從呼叫者的 cwd 算。TARGET 都可以接 `檔#/位置`（見[指示詞](directives.md)）。inst、loop 照 NORMS N-12 重做（10-14）：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`，`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。daemon 還沒重做，命令列仍只收一個 TARGET。
 
 ## 細節（各一份）
 
@@ -24,7 +24,7 @@
 | `aos_directives.py` | 指示詞 lib；命令列 TARGET 的 `檔#/位置`（三支程式共用） |
 | `aos_cli.py` | 命令列與 stdio（`config()`、`parse_argv()`、`load_target()`、`read_stream()`、`emit()`／`error()`／`warn()`、`CliError`）；inst、loop 共用，N-12 的程式範本 |
 | `aos_inst.py` | inst：設定從 TARGET／stdin／旗標來、解好、挑認得的 key、跑一次、stdout 吐一份結果（命令列＋`run()`） |
-| `aos_loop.py` | loop：包一個 inst，跑幾次、隔多久、讀 ctl.json（命令列＋`run()`＋`load_config()`）；re-export 下面兩檔的名字 |
+| `aos_loop.py` | loop：包一個 inst，跑幾次、隔多久、讀 ctl 窗、寫 state 窗、stdout 每次一份結果（命令列＋`run()`＋拍引擎 `Loop`＋`check_config()`／`load_config()`）；re-export 下面兩檔的名字 |
 | `aos_ctl_state.py` | ctl.json（`parse_ctl`、`want`、`CtlFile`）、state.json（`STATES`、`state_doc`、`read_state`、`StateFile`）、`write_json`；loop、daemon 共用 |
 | `aos_proc.py` | 子程序的行程群組：等結束、整群送訊號、收屍（`kill`、`reap`）；loop、daemon 共用 |
 | `aos_daemon.py` | daemon：命令列＋`run()`、daemon.json、主迴圈；re-export 下面兩檔的名字 |
@@ -44,7 +44,7 @@
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，53 個、約 12 秒。按受測的程式分五個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，57 個、約 12 秒。按受測的程式分五個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 
