@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 import unittest
+from unittest import mock
 
 from helpers import LOOP, Tmp, alive
 import aos_loop  # noqa: E402
@@ -129,6 +130,30 @@ class LoopTest(Tmp):
         for bad in ([], {"stop": "yes"}, {"paused": {"now": True}}, {"times": "5"}, {"interval_mode": "x"}):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 aos_loop.parse_ctl(bad)
+
+    def test_ctl_same_stat_change_detected(self):
+        """4 ms 內等長改名蓋過：ino／mtime／size 全撞（ext4 實測會發生），第二次仍要讀到；壞檔維持上一次、回音照寫。"""
+        ctl = aos_loop.CtlFile(self.p("c.json"))
+        aos_loop.write_json(self.p("c.json"), {"times": 5})
+        fixed = os.stat(self.p("c.json"))
+        with mock.patch("os.stat", return_value=fixed), mock.patch("os.fstat", return_value=fixed):
+            ctl.poll()
+            self.assertEqual(ctl.good, {"times": 5})
+            aos_loop.write_json(self.p("c.json"), {"times": 6})     # 等長
+            ctl.poll()
+            self.assertEqual(ctl.good, {"times": 6})
+            aos_loop.write_json(self.p("c.json"), {"paused": True})
+            ctl.poll()
+            self.assertEqual(ctl.good, {"paused": (True, False)})
+            with open(self.p("c.json"), "w") as f:                    # 壞檔：維持上一次
+                f.write("{")
+            ctl.poll()
+            self.assertEqual(ctl.good, {"paused": (True, False)})
+        self.assertEqual(ctl.mtime, fixed.st_mtime)
+        aos_loop.write_json(self.p("c.json"), {"paused": True})       # 內容同上一份好的、檔是新的：回音跟上
+        os.utime(self.p("c.json"), ns=(fixed.st_mtime_ns + 10**9,) * 2)
+        ctl.poll()
+        self.assertEqual(ctl.mtime, os.stat(self.p("c.json")).st_mtime)
 
     def test_ctl_pause_then_times_exits_when_done(self):
         self.ctl({"paused": True})

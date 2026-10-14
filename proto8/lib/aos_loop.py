@@ -29,7 +29,7 @@ aos_inst 的退出碼只說它自己：0＝子程式跑完，`last_code` 讀 ins
 `inst` 交給 aos_inst 的方式：起來時把解好的 inst 寫成暫存資料夾裡的一份 inst.json，每次都把它的路徑給 aos_inst，結束時刪掉。
 
 ctl.json（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣」，loop 只讀不寫，每 ctl_poll_ms 看一次，
-(inode, mtime, 大小) 變了才重讀。認的欄位（都選填；不認的忽略）：
+每次讀整份、內容跟上次不同才重驗（不靠 mtime，4 ms 內的等長改動也看得到）。認的欄位（都選填；不認的忽略）：
 
     paused         true＝不再起新的一次；{"val": true, "now": true}＝當場收掉正在跑的那次
     stop           true＝不再起新的一次，正在跑的那次結束後 loop 結束；{"val": true, "now": true}＝當場收掉再結束。

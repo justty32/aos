@@ -1,7 +1,7 @@
 """ctl.json 與 state.json：loop、daemon 共用的那一層（NORMS N-11「設定檔讀一次 → ctl 蓋過 → state 回報」的後兩段）。純標準庫。
 
 - ctl.json（宣告式；N-06～N-08）：`parse_ctl()` 驗內容、`want()` 算期望狀態（ctl 沒寫的欄位回到初始值，規矩只在這裡）、
-  `CtlFile` 看有沒有變、變了才讀（壞檔維持上一次、印一次）。
+  `CtlFile` 每次讀、內容變了才採用（壞檔維持上一次、印一次）。
 - state.json：`STATES`（七個狀態值）、`state_doc()`（共同骨架）、`read_state()`、`StateFile`（內容有變才寫）；
   欄位、狀態值、讀、寫都只在這裡。
 - `write_json()`：先寫 `.名字.tmp` 再改名。
@@ -57,12 +57,18 @@ def want(initial, ctl):
 
 
 class CtlFile:
-    """一個 ctl.json：`poll()` 看有沒有變、變了就讀、驗、採用；`good`＝上一次採用的內容（parse_ctl 的結果）。"""
+    """一個 ctl.json：`poll()` 每次讀整份、跟上一次讀到的 bytes 比，變了才驗、採用；`good`＝上一次採用的內容（parse_ctl 的結果）。
+
+    不用 (ino, mtime, size) 判斷有沒有變：ext4 的 mtime 粒度約 4 ms、改名蓋過去的 inode 會交替重用，
+    4 ms 內的等長改動會撞同一把 key 而漏掉。ctl.json 很小，直接讀內容比和 stat 差不多便宜。
+    `mtime`（state 的 ctl_mtime 回音）＝最近一次讀到好內容時那個檔的 mtime；內容沒變、檔被重寫也會跟上。"""
 
     def __init__(self, path, name="loop"):
         self.path = path
         self.name = name
-        self.key = None
+        self.raw = None       # 上一次讀到的 bytes；None＝還沒讀到過
+        self.parsed = None    # raw 的 parse_ctl 結果；raw 是壞的＝None
+        self.err = None       # raw 是壞的時的原因
         self.good = {}
         self.mtime = None
         self.said = None
@@ -74,25 +80,26 @@ class CtlFile:
 
     def poll(self):
         try:
-            st = os.stat(self.path)
+            with open(self.path, "rb") as f:
+                st = os.fstat(f.fileno())
+                raw = f.read()
         except FileNotFoundError:
-            if self.key is not None:
+            if self.raw is not None:
                 self._say("CtlMissing: ctl.json %s 不見了，維持上一次的狀態" % self.path)
             return
         except OSError as e:
             self._say("CtlReadFailed: 看不了 ctl.json %s：%s" % (self.path, e))
             return
-        key = (st.st_ino, st.st_mtime_ns, st.st_size)
-        if key == self.key:
+        if raw != self.raw:
+            self.raw = raw
+            try:
+                self.parsed, self.err = parse_ctl(json.loads(raw.decode("utf-8"))), None
+            except ValueError as e:
+                self.parsed, self.err = None, e
+        if self.parsed is None:
+            self._say("CtlBad: ctl.json %s 整份不採用（%s），維持上一次的狀態" % (self.path, self.err))
             return
-        self.key = key
-        try:
-            with open(self.path, encoding="utf-8") as f:
-                doc = json.loads(f.read())
-            self.good = parse_ctl(doc)
-        except (OSError, ValueError) as e:
-            self._say("CtlBad: ctl.json %s 整份不採用（%s），維持上一次的狀態" % (self.path, e))
-            return
+        self.good = self.parsed
         self.mtime = st.st_mtime
         self.said = None
 
