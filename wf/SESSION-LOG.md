@@ -12,9 +12,8 @@
 
 ## 最新進度
 
-- **10-14 重做 inst／loop／daemon（已拍板動工，還沒寫程式）**：決定在 [json-entry](../proto8/thinking/2026-10-14-json-entry.md)、NORMS N-12～N-20 草稿、a～f 暫定在 [NORMS 待定](../proto8/NORMS/04-待定.md)。**下一步：下一個 agent 照 [13 §38 施工清單](../proto8/thinking/2026-10-14-json-entry/13-動工前拍板.md) 動工（基礎實作，aos-fsm 不在這輪）；候選 g（daemon.json 放 inst）等使用者拍板，先留縫。** 三份網頁使用者說先不管。
+- **10-14 夜重做 inst／loop／daemon（§38 第 1～6 步已做，基礎實作）**：新 `aos_cli`、三支照 N-12 重做、候選 g 已拍板落成 [N-28](../proto8/NORMS/05-命令列與daemon-N21至N28.md)、D-1～D-6＝N-21～N-27；代理人自定的點在 [NORMS 待定 h](../proto8/NORMS/04-待定.md)，等使用者看。**下一步等使用者開口**（aos-fsm 不在這輪）。
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。使用者說之後／不做：指定時間跑、Linux 權限、AOS_DIR、非同步啟動、retry／timeout／while／race。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。
-- **proto8 10-12 夜 inst／loop／daemon 重做**：已 commit、測試全綠，見 [loop-daemon](../proto8/thinking/2026-10-12-loop-daemon.md)、[inst-json](../proto8/thinking/2026-10-12-inst-json.md)、[ctl-norms](../proto8/thinking/2026-10-12-ctl-norms.md)。代理人想法記在 inst-json 稿，demo 今晚不做。**下一步等使用者開口。**
 - **proto8 thinking 精簡**：10-12 夜使用者要求 thinking 只留原文整理、決策、結論、未決（規矩見 [user.md](workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改)）。已刪 13 份 AI 產出、精簡其餘五份（[索引](../proto8/thinking/README.md)）；舊版見 git 22285099。
 - **proto8 10-13**：`檔#/位置` 已做（D1；`#/` 統一照檔案系統 D1a）；`_metainfo` 格式自由、inst 的可選 key、通用寫法之後在規範定（D4、D5）；見 [json-path](../proto8/thinking/2026-10-13-json-path.md)。晚上重構拆檔＋tidy，報告 [tidy 10-13](workflows/tidy/reports/2026-10-13-proto8-wf.md)。之後改語音輸入（字可能聽錯，意思不明就確認）。kernel／agent 概念見 [kernel-agent](../proto8/thinking/2026-10-13-kernel-agent.md)，細節等規劃 agent 時說。**下一步等使用者開口。**
 - 10-12 清帳（使用者說）：proto7-2 頭腦風暴題（抽屜／選單／32 份文件）忽略、不再追；WAIT_USER 舊帳全清；proto6 不管。10-10 留下的待辦候選屬 proto7-2，不追，原文見 [10-12 封存](session_logs/2026-10/2026-10-12.md)。
