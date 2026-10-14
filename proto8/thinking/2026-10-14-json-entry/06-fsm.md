@@ -25,7 +25,7 @@
 - 呼叫一格＝工具呼叫同一機制：fsm 寫 `work/N-args.json`（`{"state","step","prev","cfg"}`，cfg＝agent.json 合成後整份），把那張 inst 蓋上 stdin／stdout／stderr／exit（D-4 `run(dict)`），跑完取 stdout 最後一份（N-12）。
 - 下一狀態：inst 回傳與結束碼概念上都正當；aos-fsm 採 stdout 最後一份的 `next`，沒吐＝看表上靜態 next，表也沒有才留原狀態（10-14 晚改，見 [10](10-lisp組合子.md)）。`data` 由 fsm 存進 state 窗、下一拍當 `prev` 給下一格。
 - 出錯：方法 exit≠0、或查不到那格＝錯：表有 `error` 格就跳去（args 帶原狀態與錯），沒有就留原狀態＋`last_error`；上一拍沒留 ret（被殺一半）＝重進同狀態、`prev.interrupted: true`，由方法自己決定。
-- 現在狀態記在 state 窗（`phase`＋`data`），fsm 開頭讀回；沒開 state 窗＝每拍從 `start` 起。
+- 現在狀態記在 state 窗（`phase`＋`data`），fsm 開頭讀回。**state 窗必填**（10-14 夜使用者定，N-19 擴到 fsm）：缺 key 或 `null` 報錯不執行；巢狀內層也要有自己的 state 窗。ctl 窗選填（內層不另開）。
 - 窗：state／ctl（只認 paused／stop、帶 seq）／lock 都是 fsm 的；心跳可選（設定 key）。鎖同時擋「表裡指回自己資料夾」的遞迴。
 - 方法間資料：大的放檔（history.json 只有方法寫）、小的走 `data`；state 窗只有 fsm 寫（N-09）。
 - **think 兩種實作同等地位、換一格即可**（使用者定）：(甲) 同步——inst 起來就叫 aos-llm、等回覆、處理完才結束；(乙) 非同步——inst 把請求寫成檔丟進某個請求資料夾（N-16 Maildir／JSONL 皆可）就結束、回 `{"next":"waiting"}`，「想著有人會處理」：處理者不綁定（worker loop、常駐服務、daemon 底下的東西、甚至人）；`waiting` 格下一拍去看回覆有沒有到。**規範中立，兩種都合規；基礎實作先做 (甲) 阻塞版**（第 7 題，10-14 夜改，見 [12](12-七題回覆.md)），(乙) 留在預設表資料夾裡當可換的一格。兩者都不自己 setsid／fork 背景行程。之所以可互換，正是因為一格可以是單一程式，也可以是一個子 fsm。

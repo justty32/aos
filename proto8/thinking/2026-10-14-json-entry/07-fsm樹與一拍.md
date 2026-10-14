@@ -41,7 +41,7 @@ loop 按 aos_inst 起外層 `aos_fsm.py`（stdin＝agent.json）→ mkdir `agent
 - 內層每拍只跑一步就結束（它被外層當一張 inst 按，壽命就是一拍）。
 - 內層沒到終點：stdout 最後一份沒有 `next`（就是它平常的 steps 那行）→ 外層留在原格。
 - 內層到終點：設定裡明寫 **`end` 出口名單**；方法回的 `next` 不在自己表裡、但在 `end` 裡＝交給上層——fsm 把那份 ret 原樣當自己這拍 stdout 的最後一份（帶 `next`、`data`），子 phase 歸位到 `start`。不在表裡也不在 `end` 裡＝錯（第 2、5 題）。沒上層的 fsm 不給 `end` 就好。
-- 內層有自己的 state 窗（記子狀態）；**鎖不另開**，沿用外層那把（外層已拿鎖、拍內序列化）；要單獨手動跑內層時再給它 lock。ctl 也不另開。
+- 內層有自己的 state 窗（記子狀態；必填，N-19）；**鎖不另開**，沿用外層那把（外層已拿鎖、拍內序列化）；要單獨手動跑內層時再給它 lock。ctl 也不另開。
 - 內層不吃外層的 args：它用 TARGET（`fsm.json`）拿設定，照 D-3 不讀 stdin；要外層的東西就 `$ref` 外層檔（`../agent.json#/llm`）或直接讀共用檔（`../history.json`）。
 - 請求檔的內容（乙版）：建議就是那張 aos-llm 的 inst 單子本身（絕對路徑），處理者只要會 `aos-inst 它` 就行，結果落在單子說的地方（painter/work/），所以處理者是誰都無所謂。
 

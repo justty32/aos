@@ -9,7 +9,7 @@
 3. ★ 不做繼承：沒有 extends、沒有搜尋路徑；每個 agent 寫整張表，想沿用就一格一格寫範本路徑或 `$ref`；範本資料夾不是父類。
 4. ★ 下一狀態：「inst 回傳和結束碼都可以。aos fsm 用 inst 回傳」→ 兩種概念上都正當；aos-fsm 採 stdout 最後一份的 `next`。（10-14 晚改：沒吐＝看表上靜態 next，表也沒有才留原狀態，見 [10](10-lisp組合子.md)。）
 5. 出錯：有 `error` 格就跳去（帶原狀態與錯），沒有就留原狀態＋`last_error`；沒 ret（被殺一半）重進同狀態、標 `prev.interrupted`。
-6. 現在狀態記在 state 窗（phase＋data）；沒開 state 窗＝每拍從 `start` 起。
+6. 現在狀態記在 state 窗（phase＋data）。state 窗**必填**，缺 key 或 `null` 報錯不執行（10-14 夜使用者定，比照 N-19，見 [13](13-動工前拍板.md)；原「沒開＝每拍從 `start` 起」作廢）。
 7. think 同步／非同步：規範只說走到 think 就跑那格 inst，阻塞等回覆或丟請求下一拍再看**兩種都合規**；換一格即可；都不自己 setsid／fork。**基礎實作先做阻塞版**（10-14 夜改，見 [12](12-七題回覆.md)；原「預設非同步」的說法作廢）。這解掉 aos-llm／agent 規劃頁的 Q1。
 8. loop 不加鉤子。
 9. daemon 策略格（child_exit）重做 daemon 時再接，預設維持現行為。
@@ -30,7 +30,7 @@
 - D-5：方法 inst 寫 `stdin_inherit`＝Conflict（fsm 一定蓋 stdin）。D-1：`--start`、`--max-steps` 鏡射，`states` 不鏡射（Q10）。
 - N-11：表屬身體類、不走 ctl 改；但每拍是一次啟動，改表或方法檔下一拍生效（自我改進入口，Q3「改壞靠 git」照用）。
 - 候選 argv[0] 規矩「不自己 setsid」順便定案：想非同步就丟請求資料夾，不背景 fork。
-- lib：ctl-state.md 加一列 fsm（state 窗七值照舊，FSM 狀態名放 `phase`）；README 相依鏈與 code map 加 `aos_methods.py`、`aos_fsm.py`。
+- lib：ctl-state.md 加一列 fsm（state 窗必填、七值照舊，FSM 狀態名放 `phase`）；README 相依鏈與 code map 加 `aos_methods.py`、`aos_fsm.py`。
 - 10-12 inst-json §5「那個 inst 是狀態機切換程式」仍成立，切換程式變通用；規劃頁 §9 巢狀（畫家用畫筆）不變，而且「一格＝資料夾＝子物件」跟它同一個道理。
 
 ## 15. 風險
