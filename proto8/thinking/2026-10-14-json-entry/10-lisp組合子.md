@@ -38,3 +38,5 @@
 | wait／until | 等某檔出現（非同步 think 的 wait 格就是它） |
 | foreach | 對資料夾每個檔套同一張 inst |
 | while | 依身體回傳停（可能只是 loop 多一個 key） |
+
+→ 下一份：[11-下班前待辦](11-下班前待辦.md)
