@@ -48,12 +48,24 @@
 - 不能全面退守，損失太大；但記下來當作以後的一個方向。
 - 改成：stdin 作為參數，stdout／stderr 作為結果，exit 作為輔助。
 
-## 3. 決定（10-14）
+## 1e. 使用者續說（同天）
+
+原文：「也就是回歸posix的最原始本意。stdin/out/err都不一定要是json，但是在我們的規範中，必須是json。exit檔案是否出現確實是一個好的判斷標準」
+
+要點：
+- 回歸 POSIX 最原始本意：stdin＝參數，stdout／stderr＝結果。
+- POSIX 本身 stdin／stdout／stderr 不一定要是 JSON，但在 aos 規範中必須是 JSON。
+- exit 檔是否出現，是判斷結果寫完的好標準（AI 提議，使用者認可）。
+
+## 2. 決定（10-14）
 
 - 不全面退守 `system("...")`，損失太大；記為以後的一個方向。
 - 可供呼叫的程式：stdin 作為參數，stdout／stderr 作為結果，exit 作為輔助。（細節如參數是否必為 JSON、stdout 格式，待確認。）
+- 回歸 POSIX 原始本意。
+- aos 規範中 stdin／stdout／stderr 必須是 JSON（POSIX 本身不要求）。
+- 結果寫完的判定＝exit 檔出現（AI 提議、使用者認可）。
 
-## 2. 未決
+## 3. 未決
 
 - 手動打命令列的方便怎麼補。
-- stdin 參數是否規定為 JSON、stdout 結果是否規定為 JSON；結果寫完的判定靠 exit 檔。
+- stderr 必須是 JSON 時的形狀（一份 JSON 還是一行一個 JSON）；是否寫進 NORMS。
