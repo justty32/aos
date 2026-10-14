@@ -34,6 +34,10 @@
 - **N-10** 指令式控制＝往資料夾放 `名字.json`，一個檔一條指令；處理完變成 `名字.json.done`，內容是一問一答 `{"request", "ok", "result"|"error": {"code", "msg"}}`；`.done` 只在終局才出現；`ok` 是唯一要看的，`code` 只供參考；`.done` 由丟指令的人清。（10-12）
 - **N-11** 設定檔、ctl、state 是同一條線：設定檔（inst.json／loop.json／daemon.json）整份只在起來時讀一次（含 loop.json 裡的 `inst`），跑的途中要改只能走 ctl.json，ctl 蓋過設定檔，state 回報實際生效的值。三者裡節奏類的 key（跑幾次、隔多久、間隔怎麼算）同名；ctl 能蓋的只有這一類，位置、身體、收尾類的 key（`ctl`、`state`、`inst`、`grace_ms`…）不能從 ctl 改，要改就停了重起。state 的欄位、狀態值是慣例，見 [lib README](lib/README.md#ctl-與-state-的慣例)。（使用者 10-12 夜）
 
+### 呼叫程式的 stdio（來自 [thinking 10-14 JSON 入口](thinking/2026-10-14-json-entry.md)）
+
+- **N-12**（10-14 定，草稿）可供呼叫的程式回歸 POSIX 原始本意：stdin＝參數，stdout／stderr＝結果，exit＝輔助。在 aos 規範中三者都是 JSON 串流（放寬：一串 JSON 值接著一串，每份可單行或跨行；只有一份就是普通 JSON）。stdin 有多份時，整串是一次呼叫，意思由程式自己解讀、寫在它的說明裡，規範只管格式。跑完的判定＝exit 檔出現。JSON 串流視為省略最外層 `[]` 的陣列，`檔#/位置` 照陣列索引指。inst 格式不變（作為與舊時代的橋樑），現有三支程式的入口不受影響。（10-14）
+
 ## 待定（AI 整理的候選，使用者還沒定）
 
 - **資料夾別亂弄的細則**：能不能動別人的資料夾、哪些檔是誰的。（「寫檔要不要先寫暫存再改名」已定＝N-05。）
