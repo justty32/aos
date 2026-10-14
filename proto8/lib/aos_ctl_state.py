@@ -1,18 +1,26 @@
 """ctl.json 與 state.json：loop、daemon 共用的那一層（NORMS N-11「設定檔讀一次 → ctl 蓋過 → state 回報」的後兩段）。純標準庫。
 
 - ctl.json（宣告式；N-06～N-08）：`parse_ctl()` 驗內容、`want()` 算期望狀態（ctl 沒寫的欄位回到初始值，規矩只在這裡）、
-  `CtlFile` 每次讀、內容變了才採用（壞檔維持上一次、印一次）。
-- state.json：`STATES`（七個狀態值）、`state_doc()`（共同骨架）、`read_state()`、`StateFile`（內容有變才寫）；
-  欄位、狀態值、讀、寫都只在這裡。
+  `CtlFile` 每次讀、內容變了才採用（壞檔維持上一次、印一次）。寫的人可以帶流水號 `seq`（非負整數），
+  讀的人在 state 回報 `ctl_seq`＝上次採用的那份的 seq（N-14 回音以序號為準；暫定 c）。
+- state.json：`STATES`（七個狀態值）、`state_doc()`（共同骨架）、`read_state()`、`StateFile`（內容有變才寫，
+  沒變也每 `BEAT_MS` 碰一次）；欄位、狀態值、讀、寫都只在這裡。心跳（N-17）：骨架帶 `pid`、`started`（/proc 的啟動時間，
+  clock ticks）、`boot_id`，寫的時候蓋上 `beat`（寫的那一刻，epoch 秒）。
+- `require()`：窗必填（N-19：loop／daemon 的 `state`、`ctl` 缺 key 或 null＝報錯不執行）。
 - `write_json()`：先寫 `.名字.tmp` 再改名。
 
 規矩的白話說明在 aos_loop、aos_daemon 的檔頭與 lib README；這裡只放實作。
 """
 import json
 import os
-import sys
+import time
 
-__all__ = ["CtlFile", "STATES", "StateFile", "parse_ctl", "read_state", "state_doc", "want", "write_json"]
+from aos_cli import warn
+
+__all__ = ["BEAT_MS", "CtlFile", "STATES", "StateFile", "parse_ctl", "read_state", "require", "state_doc", "want",
+           "write_json"]
+
+BEAT_MS = 1000      # 心跳：state 內容沒變也每隔這麼久碰一次（N-17；預設值未定，暫定 1 秒）
 
 _MODES = ("after", "fixed")
 
@@ -43,7 +51,7 @@ def parse_ctl(doc):
             if out[k] is None:
                 raise ValueError("%s 要是 true／false 或 {\"val\": 布林, \"now\": 布林}，不是 %r" % (k, doc[k]))
     for k, ok in (("times", lambda v: v is None or _int(v)), ("interval_ms", _int),
-                  ("interval_mode", lambda v: v in _MODES)):
+                  ("interval_mode", lambda v: v in _MODES), ("seq", _int)):
         if k in doc:
             if not ok(doc[k]):
                 raise ValueError("%s 的值不對：%r" % (k, doc[k]))
@@ -61,7 +69,8 @@ class CtlFile:
 
     不用 (ino, mtime, size) 判斷有沒有變：ext4 的 mtime 粒度約 4 ms、改名蓋過去的 inode 會交替重用，
     4 ms 內的等長改動會撞同一把 key 而漏掉。ctl.json 很小，直接讀內容比和 stat 差不多便宜。
-    `mtime`（state 的 ctl_mtime 回音）＝最近一次讀到好內容時那個檔的 mtime；內容沒變、檔被重寫也會跟上。"""
+    `seq`（state 的 ctl_seq 回音）＝上一次採用的內容裡的 `seq`（沒寫＝None），`good` 裡不放 seq。
+    `mtime`（state 的 ctl_mtime 回音，daemon 重做前還在用）＝最近一次讀到好內容時那個檔的 mtime；內容沒變、檔被重寫也會跟上。"""
 
     def __init__(self, path, name="loop"):
         self.path = path
@@ -70,13 +79,14 @@ class CtlFile:
         self.parsed = None    # raw 的 parse_ctl 結果；raw 是壞的＝None
         self.err = None       # raw 是壞的時的原因
         self.good = {}
+        self.seq = None
         self.mtime = None
         self.said = None
 
-    def _say(self, msg):
-        if self.said != msg:
-            self.said = msg
-            print("%s: %s" % (self.name, msg), file=sys.stderr)
+    def _say(self, code, msg):
+        if self.said != (code, msg):
+            self.said = (code, msg)
+            warn(code, "%s: %s" % (self.name, msg))
 
     def poll(self):
         try:
@@ -85,10 +95,10 @@ class CtlFile:
                 raw = f.read()
         except FileNotFoundError:
             if self.raw is not None:
-                self._say("CtlMissing: ctl.json %s 不見了，維持上一次的狀態" % self.path)
+                self._say("CtlMissing", "ctl.json %s 不見了，維持上一次的狀態" % self.path)
             return
         except OSError as e:
-            self._say("CtlReadFailed: 看不了 ctl.json %s：%s" % (self.path, e))
+            self._say("CtlReadFailed", "看不了 ctl.json %s：%s" % (self.path, e))
             return
         if raw != self.raw:
             self.raw = raw
@@ -97,9 +107,10 @@ class CtlFile:
             except ValueError as e:
                 self.parsed, self.err = None, e
         if self.parsed is None:
-            self._say("CtlBad: ctl.json %s 整份不採用（%s），維持上一次的狀態" % (self.path, self.err))
+            self._say("CtlBad", "ctl.json %s 整份不採用（%s），維持上一次的狀態" % (self.path, self.err))
             return
-        self.good = self.parsed
+        self.good = {k: v for k, v in self.parsed.items() if k != "seq"}
+        self.seq = self.parsed.get("seq")
         self.mtime = st.st_mtime
         self.said = None
 
@@ -125,15 +136,39 @@ def write_json(path, doc):
 STATES = ("starting", "waiting", "running", "paused", "done", "stopping", "stopped")   # loop、daemon 共用，各取子集
 
 
+def _proc():
+    """(這個行程的啟動時間（/proc/self/stat 第 22 欄，clock ticks）, 開機 id)；讀不到＝None（非 Linux）。"""
+    try:
+        with open("/proc/self/stat") as f:
+            started = int(f.read().rsplit(")", 1)[1].split()[19])
+    except (OSError, ValueError, IndexError):
+        started = None
+    try:
+        with open("/proc/sys/kernel/random/boot_id") as f:
+            boot = f.read().strip()
+    except OSError:
+        boot = None
+    return started, boot
+
+
 def state_doc(ident, state, w, ctl, runs, last_error, **extra):
-    """一份狀態物件。共同骨架：id、state（STATES 之一）、pid、runs、times、interval_ms、interval_mode、ctl_mtime、
-    last_error；各層擴充放 extra（loop：skipped、last_code；daemon：skipped、loops＝個數）。"""
+    """一份狀態物件。共同骨架：id、state（STATES 之一）、pid、started、boot_id、runs、times、interval_ms、interval_mode、
+    last_error、ctl_seq、ctl_mtime；各層擴充放 extra（loop：skipped、last_code；daemon：skipped、loops＝個數）。"""
     assert state in STATES, state
-    st = {"id": ident, "state": state, "pid": os.getpid(), "runs": runs, "times": w["times"],
-          "interval_ms": w["interval_ms"], "interval_mode": w["interval_mode"], "last_error": last_error}
+    started, boot = _proc()
+    st = {"id": ident, "state": state, "pid": os.getpid(), "started": started, "boot_id": boot, "runs": runs,
+          "times": w["times"], "interval_ms": w["interval_ms"], "interval_mode": w["interval_mode"], "last_error": last_error}
     st.update(extra)
+    st["ctl_seq"] = ctl.seq if ctl else None
     st["ctl_mtime"] = ctl.mtime if ctl else None
     return st
+
+
+def require(cfg, keys, err):
+    """窗必填（N-19）：keys 裡哪個缺 key 或是 null 就丟 err("WindowMissing", ...)。"""
+    for k in keys:
+        if cfg.get(k) is None:
+            raise err("WindowMissing", "%s 必填（N-19：會反覆跑的程式一定要開 %s 窗）" % (k, k))
 
 
 def read_state(path):
@@ -147,20 +182,23 @@ def read_state(path):
 
 
 class StateFile:
-    """state.json 的寫者：內容有變才寫（暫存再改名），寫不了印一次、不算錯。path＝None 就什麼都不做。"""
+    """state.json 的寫者：內容有變才寫（暫存再改名），沒變也每 beat_ms 碰一次（心跳，蓋上 `beat`）；
+    寫不了印一次、不算錯。path＝None 就什麼都不做。"""
 
-    def __init__(self, path, name):
-        self.path, self.name = path, name
+    def __init__(self, path, name, beat_ms=BEAT_MS):
+        self.path, self.name, self.beat_ms = path, name, beat_ms
         self.written = self.said = None
+        self.beat = 0
 
     def write(self, st):
-        if self.path is None or st == self.written:
+        now = time.time()
+        if self.path is None or st == self.written and now - self.beat < self.beat_ms / 1000:
             return
         try:
-            write_json(self.path, st)
-            self.written = st
+            write_json(self.path, dict(st, beat=round(now, 3)))
+            self.written, self.beat = st, now
         except OSError as e:
-            msg = "%s: StateWriteFailed: 寫不了 state.json %s：%s" % (self.name, self.path, e)
+            msg = "%s: 寫不了 state.json %s：%s" % (self.name, self.path, e)
             if self.said != msg:
                 self.said = msg
-                print(msg, file=sys.stderr)
+                warn("StateWriteFailed", msg)
