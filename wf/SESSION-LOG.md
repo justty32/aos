@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **10-14 aos-llm／aos-agent 規劃（公司 WSL）**：只規劃、不實作。網頁：[規劃](https://claude.ai/artifact/K2aQ7KCad1u3dFTfDvArda)、[ctl／state 與工具轉接](https://claude.ai/artifact/HvrESfVs7MAM7t6hXBFFYu)、[重做規劃](https://claude.ai/artifact/HGkzKJKAsEAwhv1dQPQX8d)、[IPC 研究頁](https://claude.ai/artifact/7QcbQjrK2h7U9LPcApwpvH)。討論與決定 [json-entry](../proto8/thinking/2026-10-14-json-entry.md)（04～05 argv／14 題、06～08 aos-fsm、09 daemon、10 Lisp 組合子）；NORMS N-12～N-17 草稿。夜：巢狀三題已定、09 daemon 借 fsm、10 靜態 next。**下一步：等使用者說動工；未決：daemon save 與 table 窗合一。**
+- **10-14 aos-llm／aos-agent 規劃（公司 WSL）**：只規劃、不實作。使用者坦承很多題憑感覺選，已做 [ELI5 解說頁](https://claude.ai/artifact/DKBifn39yRtYDGjwGEAzC5)並重寫兩份規劃頁。討論決定 [json-entry](../proto8/thinking/2026-10-14-json-entry.md)；NORMS N-12～N-17 草稿。**下一步：等使用者看完頁，回應 7 題重選與 a～f 拍板，見 [11-下班前待辦](../proto8/thinking/2026-10-14-json-entry/11-下班前待辦.md)；之後才動工。**
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。使用者說之後／不做：指定時間跑、Linux 權限、AOS_DIR、非同步啟動、retry／timeout／while／race。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。
 - **proto8 10-12 夜 inst／loop／daemon 重做**：已 commit、測試全綠，見 [loop-daemon](../proto8/thinking/2026-10-12-loop-daemon.md)、[inst-json](../proto8/thinking/2026-10-12-inst-json.md)、[ctl-norms](../proto8/thinking/2026-10-12-ctl-norms.md)。代理人想法記在 inst-json 稿，demo 今晚不做。**下一步等使用者開口。**
 - **proto8 thinking 精簡**：10-12 夜使用者要求 thinking 只留原文整理、決策、結論、未決（規矩見 [user.md](workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改)）。已刪 13 份 AI 產出、精簡其餘五份（[索引](../proto8/thinking/README.md)）；舊版見 git 22285099。
