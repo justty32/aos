@@ -10,6 +10,8 @@ python3 proto8/demo/run.py
 
 從哪裡跑都行，約 8 秒。只用 Python 標準庫和 `sh`、`date`。
 
+另一個 demo：**fsm**（aos-loop 拍 aos-fsm，像個小 agent：idle → thinking（內層 fsm：ask → review）→ tool → …，ask 是假的同步 LLM）——`python3 proto8/demo/run.py fsm`，說明在 [fsm/README.md](fsm/README.md)。
+
 ## 裡面有什麼
 
 - `once/inst.json`：跑一次就結束，印一行、結束碼 3。`once/loop.json` 用 `$ref` 指它（跑 1 次）。

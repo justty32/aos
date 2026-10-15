@@ -1,0 +1,11 @@
+{
+  "start": "idle",
+  "states": {
+    "idle": "cells/idle.json",
+    "thinking": "think/",
+    "tool": "cells/tool.json"
+  },
+  "state": {"$env": "DEMO_STATE"},
+  "lock": {"$env": "DEMO_LOCK"},
+  "max_steps": 10
+}
