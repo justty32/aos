@@ -59,7 +59,7 @@ python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 ## 一拍
 
 1. `cur/` 還有信＝上一拍被收掉（kernel 重起）→ 回 `KernelRestarted`、不重跑（N-20）。
-2. 反覆：收跑完的（回信、放格）→ 讀 `new/`（過期 `DeadlineMissed`、資源不認得、`llm` 額度見底 `BudgetExhausted`、便宜的直接起跑）→ **局面變了才決定**（排隊的名單、在跑的名單、空格數跟上次一樣＝不問，沿用；只有一封且有空格＝直接跑；否則問判官）→ 照決定認領（new/→cur/）、起跑。
+2. 反覆：收跑完的（回信、放格）→ 讀 `new/`（過期 `DeadlineMissed`、資源不認得、`llm` 額度見底 `BudgetExhausted`、便宜的直接起跑）→ **局面變了才決定**（排隊的名單、在跑的名單、空格數跟上次一樣＝不問，沿用；**排隊的信沒有任何一種資源有空格＝這拍什麼也起不了，也不問**，格一放才問；只有一封且有空格＝直接跑；否則問判官）→ 照決定認領（new/→cur/）、起跑。
 3. 沒有在跑的、這輪也沒起新的＝這拍結束。所以一拍可能很長（例：等人回信），期間新來的信照樣被收、被排。
 
 stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback, direct, skipped, fails, on_rules}}`；設定不對＝stderr 錯誤、退出 125。
@@ -70,4 +70,4 @@ stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback,
 
 ## 測試
 
-`tests/test_kernel.py`（21 個）：判官的答案照辦、stdin＝state 窗子集（只有四個 key）、沒點名＝defer 但空格補位、全 defer 仍跑、判官點一封＋規則補另一格、reject 不補位、沒空格不補、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯到 `max_fails` 停在規則＋人歸零後再問、局面沒變不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。
+`tests/test_kernel.py`（23 個）：判官的答案照辦、stdin＝state 窗子集（只有四個 key）、沒點名＝defer 但空格補位、全 defer 仍跑、判官點一封＋規則補另一格、reject 不補位、沒空格不補、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯到 `max_fails` 停在規則＋人歸零後再問、局面沒變（有空格）不問、格全滿來新信不問＋格放了才問、0 格從不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。
