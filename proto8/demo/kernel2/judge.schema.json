@@ -1,0 +1,26 @@
+{
+  "stdin": {"type": "object", "properties": {"queue": {"type": "object"}, "slots": {"type": "object"}}},
+  "stdout": {
+    "type": "object",
+    "properties": {
+      "run": {"type": "array", "items": {"type": "string"}},
+      "defer": {"type": "array", "items": {"type": "string"}},
+      "reject": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string"},
+            "error": {
+              "type": "object",
+              "properties": {"code": {"type": "string"}, "msg": {"type": "string"}},
+              "required": ["code"]
+            }
+          },
+          "required": ["id", "error"]
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+}

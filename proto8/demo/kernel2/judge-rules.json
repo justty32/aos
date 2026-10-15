@@ -1,1 +1,1 @@
-{"argv": ["python3", "../../lib/judge_rules.py"], "timeout_ms": 5000}
+{"argv": ["python3", "../../lib/judge_rules.py"], "timeout_ms": 5000, "_schema": "judge.schema.json"}
