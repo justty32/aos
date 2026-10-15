@@ -36,18 +36,16 @@
 - (d) 值的雙形在 schema 裡就是 `oneOf: [純值, 物件]`，`priority`、fsm 的格都能這樣寫。
 - (e) 驗證選用：基礎實作不驗（只處理認得的 key，C-48）；標準實作或某張 inst 想驗再開。
 
-## 未決（≤7）
+## 決定（10-15 使用者「都照建議」，原 7 個未決）
 
-1. **內嵌那張的身分**：有外層 id 時已經接 `#/位置`（aos_methods），完全從 stdin 來的樹才是 null；log／lock／state 窗要穩定名字。建議預設：有路徑就接位置，沒有就用內容雜湊，不留 null。
-2. **內嵌子樹裡的相對路徑算誰的**：N-35 說窗不是切下來，建議預設：一律從**那份檔所在的資料夾**算（agent 前端已照 bob/ 算）；從 stdin 來的從呼叫者 cwd 算。
-3. **把名字攤成物件時碰到循環**（a 指 b、b 指 a）：建議預設：攤平工具記走過的 realpath，重複就停、留名字不攤、回警告。
-4. **樹太大**：daemon 底下全攤開會很長。建議預設：攤平只到使用者指定的深度，其餘留名字；id 照 1。
-5. **一個物件何時算「資料」何時算「要跑的 inst」**：建議預設：只看位置（`inst`／`target`／格／`brain`／`tools`／`children` 才跑），不看形狀；要把 inst 當資料傳就放別的 key。
-6. **schema 放哪**：建議預設：inst 上加私有 key `_schema: {"stdin": …, "stdout": …}`（值可以是 `$ref` 拆檔）；`_tool.parameters` 不動（它是給腦看的 OpenAI 形狀），等於 `_schema.stdin` 的特例，兩邊都寫時以 `_tool` 為準。
-7. **schema 的 `allOf`／`$ref` 像繼承，跟「不做繼承」（[thinking 08 第 3 題](2026-10-14-json-entry/08-fsm拍板與改寫.md)）怎麼調和**：建議預設：方法表仍不繼承（每張 agent 寫整張）；schema 可以用 `$ref` 拼（那是拆檔，C-48 允許），`allOf` 不禁止但自家 schema 先不用——interface 只講「符合」，不講「是誰的子類」。
+1. **內嵌的身分**：有路徑就接 `#/位置`，沒有就內容雜湊（`sha256:…`），不留 null。（10-15 使用者「都照建議」）
+2. **內嵌子樹裡的相對路徑**：找子 inst 的名字一律從那份檔所在的資料夾算；從 stdin／dict 來的從呼叫者 cwd 算。葉子自己的 argv／cwd 不動（照 aos_inst 是執行時 cwd）。（同上）
+3. **循環**：攤平記走過的 realpath，重複就停、留名字、stderr 回警告。（同上）
+4. **樹太大**：攤平只到指定深度（預設 16），其餘留名字；id 照 1。（同上）
+5. **資料或要跑的 inst**：只看位置（`inst`／`target`／格／`brain`／`tools`／`judge`／`children`），不看形狀；要當資料傳就放別的 key。（同上）
+6. **schema 放哪**：inst 上私有 key `_schema`（`{"stdin", "stdout"}`，值可以是普通路徑拆檔）；`_tool.parameters` 不動，兩邊都寫以 `_tool` 為準。（同上）
+7. **`allOf`／`$ref` 與不做繼承**：方法表仍不繼承；schema 可用 `$ref` 拼，`allOf` 不禁止但自家先不用。（同上）
 
-## 最輕下一步
+## 動工（10-15）
 
-- 一支 `aos_tree.py`：`print`（畫成一行 S 式）、`inline`（名字攤成物件，記循環、限深度）、`outline`（物件攤成資料夾）。先只做 print 與 inline，拿 demo 的 agent 樹試。
-- 寫法跟 aos_cli 一樣收 TARGET（可接 `#/位置`）；不改任何執行期程式。
-- schema 先只做一件：給判官回話寫一份 `_schema.stdout`，用現成的 jsonschema 套件在判官測試裡驗，執行期不驗。
+[aos_tree.py](../lib/aos_tree.py)（`print`／`inline`，不跑任何東西）與 [test_tree.py](../lib/tests/test_tree.py) 做好了；`outline`（物件攤成資料夾）還沒做。判官 schema 放 [judge.schema.json](../demo/kernel2/judge.schema.json)，`judge-rules.json` 用普通路徑 key `_schema` 指它；測試用手寫最小驗證器驗 `judge_rules.py` 的輸出，執行期不驗。

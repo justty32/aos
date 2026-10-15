@@ -44,6 +44,7 @@
 | `aos_gate_kernel.py` | LLM kernel 的身體（每拍一次，給 aos-loop 拍）：cur/ 殘信回錯、過期／額度見底回錯、排序挑 `slots` 封、`aos_inst.run()` 跑、回信；state 窗記拍數、aging、額度 |
 | `aos_kernel.py` | 通用 kernel 的身體（N-42 第二種，給 aos-loop 拍；一拍＝一段忙碌期）：每種資源各幾格、局面變了才問判官、照決定起跑（一封一條執行緒）、格在子程式結束時放；state 窗就是判官的 stdin |
 | `aos_kernel_judge.py` | 通用 kernel 的判官那一半：跑判官 inst（拿掉自己的 `AOS_KERNEL`）、驗 `{run, defer, reject}`、判官錯時的確定規則 |
+| `aos_tree.py` | inst 樹工具（同像性，10-15）：`print TARGET` 畫樹（每行 `位置: 種類 id`）、`inline TARGET` 把路徑參照全攤成一份 JSON（循環／深度限制留名字＋stderr warning）；只看位置認 inst，不跑任何東西；`build()`／`render()`／`slots()` |
 | `judge_rules.py` | 規則判官（假判官）：human 先、再級數、再先來後到，每種資源補滿空格 |
 | `tests/` | unittest，見[下面](#測試tests) |
 
@@ -59,7 +60,7 @@
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，143 個、約 40 秒。按受測的程式分九個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm 含報時員 clerk、agent 當函數／當工具、兩顆真腦對本機假伺服器）、`test_gate.py`（LLM kernel）、`test_kernel.py`（通用 kernel）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉；刪前查漏網的 aos_loop／aos_daemon，有＝失敗（`helpers.leftovers()`）。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，151 個、約 55 秒。按受測的程式分十個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm 含報時員 clerk、agent 當函數／當工具、兩顆真腦對本機假伺服器）、`test_gate.py`（LLM kernel）、`test_kernel.py`（通用 kernel）、`test_tree.py`（aos_tree、判官回話的 schema 用手寫最小驗證器驗）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉；刪前查漏網的 aos_loop／aos_daemon，有＝失敗（`helpers.leftovers()`）。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 
