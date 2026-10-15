@@ -38,7 +38,7 @@ python3 aos_kernel_general.py [--key 值 ...] [KERNEL.json | -]
  "running": {"<信名>": {"resource": "human", "since": 1792...}},
  "slots":   {"llm": {"total": 1, "used": 1}, "cpu": {"total": 2, "used": 0}},
  "budget":  {"limit": null, "used": 0, "day": "2026-10-15"},
- "served": 12, "seen": {"<信名>": 5}, "judge_error": null, "last_sig": [...]}
+ "served": 12, "seen": {"<信名>": 5}, "judge_error": null, "judge_asked": [...]}
 ```
 
 不給信的 stdin 內容；要讓判官知道是什麼活，作者在 `_metainfo.summary` 寫一句。
@@ -65,7 +65,7 @@ stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback,
 
 ## agent 判官（換一行 TARGET）
 
-`demo/kernels/general/judge-agent.json`＝`aos-demo kernels/general/judge/ask_judge.py [定義資料夾]`：開一個暫存 frame（`env.json` 指回定義資料夾，沒給＝`judge/`；要換腦就另開一個資料夾放 `brain.json`＋`env.json` 指回 `judge/`、把它當引數給，10-15 使用者「都按照推薦」）、`args.json`＝`{"question": 判官的 stdin（state 窗子集）}`），在裡面跑 `aos loop judge/loop.json`（agent 當函數，[agent-frame.md](agent-frame.md)），讀 `ret.json`，拿 reply 裡的 JSON 物件印出來；ret.json 是錯、沒有、不是 JSON＝退出 1（kernel 退回規則）。`judge/system.md` 開頭 `/no_think`（不靠模型思考，見 [agent-lib.md](agent-lib.md#邊緣狀況使用者-10-15-定)）、說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
+`demo/kernels/general/judge-agent.json`＝`aos-demo kernels/general/judge/ask_judge.py [定義資料夾]`：開一個暫存 frame（`frame.json` 指回定義資料夾，沒給＝`judge/`；要換腦就另開一個資料夾放 `brain.json`＋`frame.json` 指回 `judge/`、把它當引數給，10-15 使用者「都按照推薦」）、`args.json`＝`{"question": 判官的 stdin（state 窗子集）}`），在裡面跑 `aos loop judge/loop.json`（agent 當函數，[agent-frame.md](agent-frame.md)），讀 `ret.json`，拿 reply 裡的 JSON 物件印出來；ret.json 是錯、沒有、不是 JSON＝退出 1（kernel 退回規則）。`judge/system.md` 開頭 `/no_think`（不靠模型思考，見 [agent-lib.md](agent-lib.md#邊緣狀況使用者-10-15-定)）、說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
 
 ## 測試
 

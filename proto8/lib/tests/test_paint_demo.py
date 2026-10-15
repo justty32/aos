@@ -20,7 +20,7 @@ _spec.loader.exec_module(paint_run)
 
 class PaintDemoTest(Tmp):
     def call(self, frame, q):
-        self.write(frame + "/env.json", {"parent": PAINTER})
+        self.write(frame + "/frame.json", {"parent": PAINTER})
         self.write(frame + "/args.json", {"question": q})
         rc = subprocess.run(["aos", "loop", os.path.join(PAINTER, "loop.json")], cwd=self.p(frame), env=ENV,
                             stdout=subprocess.DEVNULL, timeout=60).returncode
@@ -32,10 +32,10 @@ class PaintDemoTest(Tmp):
         r1 = self.call("A", "幫我畫一隻貓")
         self.assertIn("第 1 幅", r1)
         self.assertIn("橘、白、黑", r1)
-        # 畫筆的 frame＝畫家的 work/1/（env.json 指回 brush/）；調色盤在畫筆的 work/1/ 跑
-        self.assertEqual(json.loads(self.read("A/work/1/env.json")), {"parent": os.path.join(PAINT, "brush")})
+        # 畫筆的 frame＝畫家的 work/1/（frame.json 指回 brush/）；調色盤在畫筆的 work/1/ 跑
+        self.assertEqual(json.loads(self.read("A/work/1/frame.json")), {"parent": os.path.join(PAINT, "brush")})
         self.assertEqual(json.loads(self.read("A/work/1/work/1/args.json")), {"subject": "一隻貓"})
-        self.assertEqual(json.loads(self.read("A/loop-state.json"))["state"], "done")       # stop_on_end
+        self.assertEqual(json.loads(self.read("A/loop/state.json"))["state"], "done")       # stop_on_end
         # 同一個 frame 續聊：history 接下去，畫筆開新的 work/2/
         r2 = self.call("A", "再畫一隻狗")
         self.assertIn("第 2 幅", r2)
@@ -45,7 +45,7 @@ class PaintDemoTest(Tmp):
         self.assertEqual(paint_run.tree_hash(PAINT), before)
 
     def test_brain_binding_only_reaches_own_frame(self):
-        # 只放 brain.json：畫家換腦，畫筆（frame 在 work/1/，env.json 指 brush/）照用定義的腦
+        # 只放 brain.json：畫家換腦，畫筆（frame 在 work/1/，frame.json 指 brush/）照用定義的腦
         alt = os.path.join(PAINT, "brain", "fake-alt.json")
         self.write("B/brain.json", self.read_abs(alt))
         r = self.call("B", "幫我畫一片海")

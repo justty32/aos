@@ -14,7 +14,7 @@
 
 **fsm**：`aos_fsm.py`（只管狀態→格，state 窗只有 phase）＋方法表 `aos_methods.py`。
 
-**agent**：現成格庫 `aos_agent_lib.py`——think／tool（一拍內照順序跑完全部 tool_calls，每個在 `work/<n>/` 跑、寫 `args.json`）／route／intake（args.json 接進 history、接完改名 `args.taken.json`，也刪上一輪 ret.json）／done（寫 ret.json，不碰 ctl），外加給 loop.json 用的 `fsm`（照 lookup 找 fsm.json 跑一拍）；設定＝格 inst 自己的 stdin＋frame 裡 `lookup()`；`system` 選填＝系統提示檔，不進 history。frame 查找（cwd → `env.json` parent 鏈）在 `aos_frame.py`（格庫 re-export）。agent 當函數／當工具不另寫程式（`aos_agent_call.py` 10-15 退場）：定義資料夾＋frame、工具 inst 用 `sh -c` 三步。
+**agent**：現成格庫 `aos_agent_lib.py`——think／tool（一拍內照順序跑完全部 tool_calls，每個在 `work/<n>/` 跑、寫 `args.json`）／route／intake（args.json 接進 history、接完改名 `args.taken.json`，也刪上一輪 ret.json）／done（寫 ret.json，不碰 ctl），外加給 loop.json 用的 `fsm`（照 lookup 找 fsm.json 跑一拍）；設定＝格 inst 自己的 stdin＋frame 裡 `lookup()`；`system` 選填＝系統提示檔，不進 history。frame 查找（cwd → `frame.json` parent 鏈）在 `aos_frame.py`（格庫 re-export）。agent 當函數／當工具不另寫程式（`aos_agent_call.py` 10-15 退場）：定義資料夾＋frame、工具 inst 用 `sh -c` 三步。
 
 **真的腦**：`aos_brain_openai.py`（OpenAI 相容）與 `aos_brain_ollama.py`（ollama 原生 `/api/chat`，能設 num_ctx）；兩顆都在 assistant 訊息頂層帶 `usage` 給 kernel 記額度。
 
@@ -38,7 +38,7 @@
 
 **LLM kernel**（`demo/kernels/llm/`）：daemon／loop／kernel 設定由 `run.py` 寫成完整檔、閘門 `gate.json`／`gate-fake.json`、假腦 `brain.py`、腦包閘門的 agent 定義資料夾 `boss/`（工具 `tools/clerk.json` 借 `demo/fsm/clerk/` 並在它的 frame 綁 boss 的腦）。
 
-**通用 kernel**（`demo/kernels/general/`）：設定由 `run.py` 寫成完整檔、活 `job.py`（llm／cpu／human）、閘門 `gate-*.json`、判官 `judge-rules.json`（`_schema`→`judge.schema.json`）／`judge-broken.json`／`judge-agent.json`＋agent 判官定義資料夾 `judge/`（入口 `ask_judge.py [定義資料夾]`：暫存 frame（env.json 指引數給的資料夾，預設 judge/）跑 `judge/loop.json`、讀 ret.json）。
+**通用 kernel**（`demo/kernels/general/`）：設定由 `run.py` 寫成完整檔、活 `job.py`（llm／cpu／human）、閘門 `gate-*.json`、判官 `judge-rules.json`（`_schema`→`judge.schema.json`）／`judge-broken.json`／`judge-agent.json`＋agent 判官定義資料夾 `judge/`（入口 `ask_judge.py [定義資料夾]`：暫存 frame（frame.json 指引數給的資料夾，預設 judge/）跑 `judge/loop.json`、讀 ret.json）。
 
 **畫家 demo**（[`demo/paint/`](../../../../proto8/demo/paint/README.md)）：兩個 agent 定義資料夾 `painter/`（工具 `tools/brush.json`＝`sh -c` 三步叫畫筆）、`brush/`（工具 `tools/palette.*` 調色盤），假腦 `brain/fake.py`（看帶哪個工具當畫家或畫筆）＋`brain/fake-alt.json`（換腦用），`run.py`＝三段展示＋`bind_brain()`（frame 放 brain.json＋改寫 tools/brush.json 讓畫筆也換）；測試 `tests/test_paint_demo.py`。
 

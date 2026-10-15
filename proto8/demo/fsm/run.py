@@ -5,7 +5,7 @@
     python3 proto8/demo/run.py fsm                          （或直接 python3 proto8/demo/fsm/run.py）
     python3 proto8/demo/fsm/run.py brain/lmstudio.json      （換腦＝在 frame 放一份 brain.json 蓋過定義的，C-46 綁定）
 
-frame（暫存資料夾）裡：`env.json` {"parent": demo/fsm}（找名字往上一層）、inbox/、history、窗、work/、steps.jsonl、ret.json；
+frame（暫存資料夾）裡：`frame.json` {"parent": demo/fsm}（找名字往上一層）、inbox/、history、窗、work/、steps.jsonl、ret.json；
 定義資料夾 demo/fsm 一個字都不寫。PATH 前面接 proto8/bin（`aos`）與 demo/bin（`aos-demo`）。跑完整個 frame 刪掉。
 """
 import json
@@ -46,8 +46,8 @@ def write(path, doc):
 
 
 def frame(tmp, brain=None):
-    """把 tmp 準備成這個 agent 的 frame：env.json 指回定義資料夾；給了 brain＝把那份腦放進 frame（綁定，蓋過定義的）。"""
-    write(os.path.join(tmp, "env.json"), {"parent": HERE})
+    """把 tmp 準備成這個 agent 的 frame：frame.json 指回定義資料夾；給了 brain＝把那份腦放進 frame（綁定，蓋過定義的）。"""
+    write(os.path.join(tmp, "frame.json"), {"parent": HERE})
     if brain:
         shutil.copy(os.path.join(HERE, brain), os.path.join(tmp, "brain.json"))
     os.makedirs(os.path.join(tmp, "inbox"), exist_ok=True)
@@ -60,9 +60,9 @@ def main():
     for name, text in (("01.txt", "你好"), ("02.txt", "現在幾點？")):
         with open(os.path.join(tmp, "inbox", name), "w", encoding="utf-8") as f:
             f.write(text)
-    w = {k: os.path.join(tmp, v) for k, v in (("outer", "fsm-state.json"), ("inner", "think-state.json"))}
+    w = {k: os.path.join(tmp, v) for k, v in (("outer", "fsm/state.json"), ("inner", "fsm/think_state.json"))}
     say("frame（暫存資料夾）%s；inbox 放了兩封信：「你好」「現在幾點？」" % tmp)
-    say("cd frame && aos loop demo/fsm/loop.json：每 100 ms 拍一次 `aos agent fsm`（照 env.json 找到 demo/fsm/fsm.json），最多 20 次")
+    say("cd frame && aos loop demo/fsm/loop.json：每 100 ms 拍一次 `aos agent fsm`（照 frame.json 找到 demo/fsm/fsm.json），最多 20 次")
     say("腦：%s；thinking 格是內層 fsm（ask → review）；外層的工具只有 clerk（報時員＝另一個 agent，定義在 clerk/）" %
         (brain or "定義的 brain.json（假的腦，睡 0.4 秒）"))
     loop = subprocess.Popen(["aos", "loop", os.path.join(HERE, "loop.json")], cwd=tmp, env=env(),
@@ -76,7 +76,7 @@ def main():
                 seen = now
                 say("外層 phase=%-8s │ 內層 phase=%-6s" % (st["phase"], sub.get("phase", "-")))
             time.sleep(0.02)
-        say("aos-loop 結束，退出碼 %d（%s）" % (loop.returncode, (read(os.path.join(tmp, "loop-state.json")) or {}).get("state")))
+        say("aos-loop 結束，退出碼 %d（%s）" % (loop.returncode, (read(os.path.join(tmp, "loop/state.json")) or {}).get("state")))
         say("== steps.jsonl（外層 fsm 每拍吐的那行；結束那拍多一份交出去的結果）")
         with open(os.path.join(tmp, "steps.jsonl"), encoding="utf-8") as f:
             for line in f:

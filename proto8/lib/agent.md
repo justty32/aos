@@ -62,4 +62,4 @@ frame/（＝cwd）
 
 ## agent 當函數／當工具
 
-→ [agent-frame.md](agent-frame.md)：定義資料夾、frame（`env.json`／`args.json`／`ret.json`、同名檔＝綁定）、直接叫、當工具（`sh -c` 三步）。
+→ [agent-frame.md](agent-frame.md)：定義資料夾、frame（`frame.json`／`args.json`／`ret.json`、同名檔＝綁定）、直接叫、當工具（`sh -c` 三步）。

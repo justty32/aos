@@ -1,6 +1,6 @@
 {
   "start": "intake",
-  "state": "fsm-state.json",
+  "state": "fsm/state.json",
   "end": ["done", "halted"],
   "states": {
     "intake": {"val": "cells/intake.json", "next": "thinking"},

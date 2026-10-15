@@ -18,7 +18,7 @@ python3 proto8/lib/aos_fsm.py [--key 值 ...] [FSM.json | -]
     "done": {"val": "done.json", "next": "idle"}                  //   帶表上靜態 next
   },
   "end": ["done", "out"],                   // 選填：名字可以在表裡（跑完那格就結束）也可以不在（回這個 next 就結束）
-  "state": "fsm-state.json"                 // 必填（N-19）；從 cwd 算
+  "state": "fsm/state.json"                 // 必填（N-19）；從 cwd 算
 }
 ```
 

@@ -25,7 +25,7 @@
    "abbr": "fsm",
    "full": "finite state machine",
    "meaning": "狀態機組合子",
-   "example": "fsm.json、aos-fsm、fsm-state.json"
+   "example": "fsm.json、aos-fsm、fsm/state.json"
   },
   {
    "abbr": "cfg",

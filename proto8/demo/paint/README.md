@@ -26,7 +26,7 @@ paint/
     cells/*.json      每一格就是一張 inst（aos agent intake／think／route／tool／done）
     brain.json        腦＝一張 inst（預設假腦）
     system.md         系統提示：先叫 brush 備顏料，再畫
-    tools/brush.json  工具「畫筆」＝sh 三步：寫 env.json 指 brush/ → 跑 brush 的 loop → 印 ret.json
+    tools/brush.json  工具「畫筆」＝sh 三步：寫 frame.json 指 brush/ → 跑 brush 的 loop → 印 ret.json
   brush/              ← 畫筆的定義資料夾（同樣的表與格）
     tools/palette.*   工具「調色盤」：要畫貓 → 橘白黑（寫死的表）
   brain/fake.py       假腦：請求帶 brush 工具就當畫家、帶 palette 就當畫筆
@@ -36,7 +36,7 @@ paint/
 
 ## 會看到什麼（假腦）
 
-1. **叫畫家**：暫存資料夾開 frame A，放 `env.json`（`{"parent": painter/}`）和 `args.json`（「幫我畫一隻貓」），在 A 裡跑 `aos loop painter/loop.json`。畫家想 → 叫 brush → 畫筆在 A 的 `work/1/` 裡跑（那裡就是畫筆的 frame，`env.json` 指 `brush/`）→ 畫筆叫 palette（在 `work/1/work/1/` 跑）→ 回「備好了：橘、白、黑。」→ 畫家畫一隻 ASCII 貓，寫進 A 的 `ret.json`。會印出 frame 的資料夾樹，看得到三層巢狀。
+1. **叫畫家**：暫存資料夾開 frame A，放 `frame.json`（`{"parent": painter/}`）和 `args.json`（「幫我畫一隻貓」），在 A 裡跑 `aos loop painter/loop.json`。畫家想 → 叫 brush → 畫筆在 A 的 `work/1/` 裡跑（那裡就是畫筆的 frame，`frame.json` 指 `brush/`）→ 畫筆叫 palette（在 `work/1/work/1/` 跑）→ 回「備好了：橘、白、黑。」→ 畫家畫一隻 ASCII 貓，寫進 A 的 `ret.json`。會印出 frame 的資料夾樹，看得到三層巢狀。
 2. **同一個 frame 續聊**：在 A 再寫一份 `args.json`（「再畫一隻狗」）、再跑一次 loop。畫家接著原本的 history（回「第 2 幅」，history 8 則）；畫筆在新的 `work/2/`，是全新的對話。
 3. **換腦（綁定）**：frame B 放一份同名 `brain.json`（fake-alt），蓋過畫家定義裡的。回覆變成「〔換過的假腦〕…」。
 
@@ -48,7 +48,7 @@ paint/
          ( o.o )
           > ^ <
         畫筆說：備好了：橘、白、黑。
-[ 2.4s]   work/1/env.json {"parent": "brush"}｜args.taken.json {"question": "我要畫一隻貓，請備顏料"}
+[ 2.4s]   work/1/frame.json {"parent": "brush"}｜args.taken.json {"question": "我要畫一隻貓，請備顏料"}
 [ 4.8s] ← ret.json：這是這個 frame 的第 2 幅：一隻狗 …
 [ 7.1s] ← ret.json：〔換過的假腦〕這是這個 frame 的第 1 幅：一片海 … 畫筆說：〔換過的假腦〕備好了：藍、白。
 [ 7.1s] == 定義資料夾 painter/、brush/ 有沒有被動到：沒有（雜湊一樣）
@@ -56,14 +56,14 @@ paint/
 
 ## 換腦：為什麼畫筆也要另外綁
 
-frame 裡放 `brain.json` 只蓋到**這個 frame 的 agent**。畫筆的 frame 是 `work/<n>/`，它的 `env.json` 指回 `brush/`，往上找不會經過畫家的 frame，所以只放 `brain.json` 的話畫筆還是用自己定義的腦（測試 `test_brain_binding_only_reaches_own_frame` 驗這件事）。
+frame 裡放 `brain.json` 只蓋到**這個 frame 的 agent**。畫筆的 frame 是 `work/<n>/`，它的 `frame.json` 指回 `brush/`，往上找不會經過畫家的 frame，所以只放 `brain.json` 的話畫筆還是用自己定義的腦（測試 `test_brain_binding_only_reaches_own_frame` 驗這件事）。
 
 要兩個都換，`run.py` 的 `bind_brain()` 多做一件事：在 frame 放一份同名的 `tools/brush.json`（蓋過定義的工具），內容是原本的三步前面多一步 `cp <腦設定> brain.json`——叫畫筆時順手把腦放進畫筆的 frame。這也是一種綁定（工具同名蓋過）。
 
 ## 展示到的機制
 
 - fsm 只管「狀態 → 哪一張 inst」，`end` 寫 done／halted（halted 不在 states：think 連錯自己寫好 ret.json 的錯）；走到 end 那拍 loop 看 `stop_on_end` 就停。
-- agent＝定義資料夾（fsm.json＋cells 各格 inst＋brain.json＋tools）；呼叫＝frame 資料夾當 cwd（env.json／args.json／ret.json）。
+- agent＝定義資料夾（fsm.json＋cells 各格 inst＋brain.json＋tools）；呼叫＝frame 資料夾當 cwd（frame.json／args.json／ret.json）。
 - 工具＝inst；agent 當工具＝工具 inst 用 sh 三步叫另一個 agent，frame 是 tool 格開的 `work/<n>/`。
 - 腦＝OpenAI chat completions 形狀的 inst；frame 放同名檔＝綁定。
 - 沒展示到：`AOS_DIRNAME`（資料夾當 inst 的 TARGET 才用得到，這裡的 inst 都是 .json 檔）。

@@ -1,6 +1,6 @@
 {
   "start": "idle",
-  "state": "fsm-state.json",
+  "state": "fsm/state.json",
   "end": ["done", "halted"],
   "states": {
     "idle": "cells/idle.json",

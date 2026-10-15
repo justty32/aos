@@ -1,6 +1,6 @@
 {
   "start": "ask",
-  "state": "think-state.json",
+  "state": "fsm/think_state.json",
   "end": ["tool", "idle", "halted"],
   "states": {
     "ask": {"val": "ask.json", "next": "review"},

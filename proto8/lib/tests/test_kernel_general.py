@@ -201,7 +201,7 @@ class KernelTest(Tmp):
     def test_skip_judge_when_unchanged(self):
         a, b = self.send("a"), self.send("b")
         cfg = self.cfg("print(json.dumps({'defer': q}))")            # 有空格：局面一樣（名單、在跑、空格）就不問
-        self.write("k.state.json", {"last_sig": [sorted([a, b]), [], [["llm", 1]]]})   # 上次問的就是這個局面
+        self.write("k.state.json", {"judge_asked": [sorted([a, b]), [], [["llm", 1]]]})   # 上次問的就是這個局面
         out = K.tick(cfg)
         self.assertEqual((self.calls(), out["judge"]["skipped"]), (0, 1))
         self.send("c")                                                # 名單變了：問

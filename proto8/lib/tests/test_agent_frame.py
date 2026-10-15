@@ -16,7 +16,7 @@ AGENT = os.path.join(LIB, "aos_agent_lib.py")
 
 
 class AgentFrameTest(Tmp):
-    """10-15 收工後的 frame：lookup()（frame → env.json parent 鏈）、intake、done（C-46）。"""
+    """10-15 收工後的 frame：lookup()（frame → frame.json parent 鏈）、intake、done（C-46）。"""
 
     def run_cell(self, cmd, cwd, *extra):
         return subprocess.run([sys.executable, AGENT, cmd] + list(extra), cwd=cwd, capture_output=True, text=True,
@@ -27,7 +27,7 @@ class AgentFrameTest(Tmp):
         self.write("def/brain.json", {"argv": ["x"]})
         self.write("def/tools/clock.json", {"argv": ["c"]})
         self.write("def/tools/t.json", {"argv": ["t0"]})
-        self.write("fr/env.json", {"parent": "../def"})
+        self.write("fr/frame.json", {"parent": "../def"})
         self.write("fr/tools/t.json", {"argv": ["t1"]})                      # 同名蓋過
         self.write("fr/tools/extra.json", {"argv": ["e"]})                   # 追加
         fr = self.p("fr")
@@ -37,7 +37,7 @@ class AgentFrameTest(Tmp):
         tools = aos_agent_lib.lookup_dir("tools", fr)
         self.assertEqual(sorted(tools), ["clock.json", "extra.json", "t.json"])
         self.assertTrue(tools["t.json"].startswith(os.path.realpath(fr)))
-        self.write("def/env.json", {"parent": "../fr"})                       # 繞圈：停
+        self.write("def/frame.json", {"parent": "../fr"})                       # 繞圈：停
         self.assertEqual(len(aos_agent_lib.chain(fr)), 2)
 
     def test_intake_think_route_done_in_frame(self):
@@ -45,7 +45,7 @@ class AgentFrameTest(Tmp):
                    "print(json.dumps({'role': 'assistant', 'content': 'n=%d' % len(req['messages'])}))\n")
         self.write("def/brain.json", {"argv": [sys.executable, self.p("def", "brain.py")]})
         self.write("def/system.md", "簡短")
-        self.write("fr/env.json", {"parent": "../def"})
+        self.write("fr/frame.json", {"parent": "../def"})
         self.write("fr/args.json", {"question": "幾點"})
         fr = self.p("fr")
         r = self.run_cell("intake", fr)
@@ -59,16 +59,16 @@ class AgentFrameTest(Tmp):
         r = self.run_cell("done", fr)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(self.read("fr/ret.json")), {"reply": "n=2"})
-        self.assertFalse(os.path.exists(self.p("fr", "ctl.json")))           # done 不碰 ctl
-        self.write("fr/work/think-fails.json", {"val": 3, "error": {"code": "BrainFailed", "msg": "x"}})
+        self.assertFalse(os.path.exists(self.p("fr", "loop", "ctl.json")))           # done 不碰 ctl
+        self.write("fr/work/think.json", {"val": 3, "error": {"code": "BrainFailed", "msg": "x"}})
         self.run_cell("done", fr)                                            # done 不讀 think 的私檔（盤點第 8 條）
         self.assertEqual(json.loads(self.read("fr/ret.json")), {"reply": "n=2"})
 
     def test_fsm_subcommand_looks_up_table(self):
-        # aos agent fsm：照 env.json 的 parent 鏈找 fsm.json，格名字從它所在的資料夾算、state 窗從 frame 算
+        # aos agent fsm：照 frame.json 的 parent 鏈找 fsm.json，格名字從它所在的資料夾算、state 窗從 frame 算
         self.write("def/fsm.json", {"start": "a", "state": "st.json", "states": {"a": "cells/a.json"}})
         self.write("def/cells/a.json", {"argv": ["sh", "-c", "echo '{\"data\": 1}'"]})
-        self.write("fr/env.json", {"parent": "../def"})
+        self.write("fr/frame.json", {"parent": "../def"})
         r = subprocess.run(["aos", "agent", "fsm"], cwd=self.p("fr"), env=ENV, capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(self.read("fr/st.json")), {"phase": "a"})
@@ -125,7 +125,7 @@ print(json.dumps(out))
 
 
 class AgentCallTest(Tmp):
-    """agent 當函數（C-46／C-50）：定義資料夾 bob/ 不動；frame＝被叫者的 cwd（env.json 指回 bob/、args.json、ret.json）；
+    """agent 當函數（C-46／C-50）：定義資料夾 bob/ 不動；frame＝被叫者的 cwd（frame.json 指回 bob/、args.json、ret.json）；
     在 frame 放同名檔＝綁定（腦、追加工具）；agent 當工具＝工具 inst 用 sh 三步叫另一個 agent。"""
 
     def setUp(self):
@@ -133,7 +133,7 @@ class AgentCallTest(Tmp):
         self.write("bob/brain.py", BRAIN_PY)
         self.write("bob/brain.json", {"argv": [sys.executable, self.p("bob", "brain.py")]})
         self.write("bob/tools/t.json", {"argv": ["sh", "-c", "cat; echo"], "_tool": {"description": "回聲"}})
-        self.write("bob/fsm.json", {"start": "intake", "state": "fsm-state.json", "end": ["done", "halted"], "states": {
+        self.write("bob/fsm.json", {"start": "intake", "state": "fsm/state.json", "end": ["done", "halted"], "states": {
             "intake": {"val": "cells/intake.json", "next": "thinking"},
             "thinking": {"val": "cells/think.json", "next": "route"},
             "route": "cells/route.json", "tool": {"val": "cells/tool.json", "next": "thinking"},
@@ -142,11 +142,11 @@ class AgentCallTest(Tmp):
                         ("tool", ["tool"]), ("done", ["done"])):
             self.write("bob/cells/%s.json" % k, {"argv": ["aos", "agent"] + argv})
         self.write("bob/loop.json", {"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "stop_on_end": True,
-                                     "ctl": "ctl.json", "state": "loop-state.json"})
+                                     "ctl": "loop/ctl.json", "state": "loop/state.json"})
 
     def start(self, frame, q, times=None):
-        """呼叫：在 frame 寫 env.json、args.json，cd 過去跑 bob 的 loop.json（不等）。"""
-        self.write(frame + "/env.json", {"parent": self.p("bob")})
+        """呼叫：在 frame 寫 frame.json、args.json，cd 過去跑 bob 的 loop.json（不等）。"""
+        self.write(frame + "/frame.json", {"parent": self.p("bob")})
         self.write(frame + "/args.json", {"question": q})
         flags = ["--times", str(times)] if times else []
         return subprocess.Popen(["aos", "loop"] + flags + [self.p("bob", "loop.json")], cwd=self.p(frame), env=ENV,
@@ -170,9 +170,9 @@ class AgentCallTest(Tmp):
                          ["user", "assistant", "tool", "assistant"])
         self.assertEqual(len(json.loads(self.read("f2/history.json"))), 2)
         self.assertEqual((out["tools"], out["n"]), (["t"], 3))
-        st = json.loads(self.read("f1/loop-state.json"))
+        st = json.loads(self.read("f1/loop/state.json"))
         self.assertEqual((st["state"], st["runs"]), ("done", 7))           # fsm 結束＝loop 正常結束（stop_on_end）         # intake think route tool think route done
-        self.assertEqual(json.loads(self.read("f1/fsm-state.json")), {"phase": "intake"})    # 走完 end 歸位
+        self.assertEqual(json.loads(self.read("f1/fsm/state.json")), {"phase": "intake"})    # 走完 end 歸位
         self.assertEqual(json.loads(self.read("f1/work/1/args.json")), {})   # 工具 t 在 work/1/ 跑
 
     def test_same_frame_continues(self):
@@ -195,7 +195,7 @@ class AgentCallTest(Tmp):
         self.assertEqual(r["error"]["code"], "BrainFailed")                  # N-29 形狀
         self.assertIn("Boom", r["error"]["msg"])
         self.assertEqual(len(json.loads(self.read("f/history.json"))), 1)
-        self.assertEqual(json.loads(self.read("f/loop-state.json"))["runs"], 4)   # intake、think×3（第 3 次寫 ret.json、回 halted＝結束）
+        self.assertEqual(json.loads(self.read("f/loop/state.json"))["runs"], 4)   # intake、think×3（第 3 次寫 ret.json、回 halted＝結束）
 
     def test_times_used_up_no_ret(self):
         # 一直叫工具：loop 的 times 用完還沒走到 done＝沒有 ret.json（沒跑完）
@@ -210,17 +210,17 @@ class AgentCallTest(Tmp):
         self.assertEqual((self.ret("f1")["reply"] is not None, self.ret("f2")["reply"] is not None), (True, True))
 
     def test_agent_as_tool(self):
-        # boss 的工具 bob.json＝sh 三步（寫 env.json → 跑 bob 的 loop → 讀 ret.json），frame＝boss 的 work/<n>/
+        # boss 的工具 bob.json＝sh 三步（寫 frame.json → 跑 bob 的 loop → 讀 ret.json），frame＝boss 的 work/<n>/
         import shutil
         shutil.copytree(self.p("bob"), self.p("boss"), ignore=shutil.ignore_patterns("tools"))
         self.write("boss/tools/bob.json", {"argv": ["sh", "-c",
-            "printf '{\"parent\": \"%s\"}' \"$BOB\" > env.json && aos loop \"$BOB/loop.json\" >/dev/null; cat ret.json"],
+            "printf '{\"parent\": \"%s\"}' \"$BOB\" > frame.json && aos loop \"$BOB/loop.json\" >/dev/null; cat ret.json"],
             "envs": {"BOB": self.p("bob")}, "timeout_ms": 30000,
             "_tool": {"description": "問 bob", "parameters": {"type": "object", "properties": {"question": {"type": "string"}}}}})
         self.write("boss/brain.py", BRAIN_PY.replace('"t"', '"bob"').replace(
             '"arguments": "{}"', '"arguments": json.dumps({"question": "hi"})'))
         self.write("boss/brain.json", {"argv": [sys.executable, self.p("boss", "brain.py")]})
-        self.write("f/env.json", {"parent": self.p("boss")})
+        self.write("f/frame.json", {"parent": self.p("boss")})
         self.write("f/args.json", {"question": "use t"})
         self.assertEqual(subprocess.run(["aos", "loop", self.p("boss", "loop.json")], cwd=self.p("f"), env=ENV,
                                         stdout=subprocess.DEVNULL, timeout=60).returncode, 0)
@@ -239,14 +239,14 @@ print(json.dumps({"role": "assistant", "content": "好的：" + json.dumps({"run
 
 class AskJudgeTest(Tmp):
     """demo/kernels/general/judge/ask_judge.py 收定義資料夾當引數（10-15「都按照推薦」：不再寫死 judge/）：
-    另開一個資料夾放 brain.json＋env.json 指回 judge/＝換腦，judge/ 一個字不動。"""
+    另開一個資料夾放 brain.json＋frame.json 指回 judge/＝換腦，judge/ 一個字不動。"""
 
     def test_overlay_definition_swaps_brain(self):
         judge = os.path.join(LIB, "..", "demo", "kernels", "general", "judge")
         before = tree_hash(judge)
         self.write("over/brain.py", JUDGE_BRAIN_PY)
         self.write("over/brain.json", {"argv": [sys.executable, self.p("over", "brain.py")]})
-        self.write("over/env.json", {"parent": os.path.abspath(judge)})
+        self.write("over/frame.json", {"parent": os.path.abspath(judge)})
         r = subprocess.run(["aos-demo", "kernels/general/judge/ask_judge.py", "over"], cwd=self.tmp, env=ENV, input="{}",
                            capture_output=True, text=True, timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
