@@ -1,4 +1,4 @@
-← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**kernel**｜概念：本檔｜規範：還沒有條文（打包 N-03 在 [NORMS 時空](../NORMS/02-設計理念-時空.md)；kernel 公告、`_metainfo` 在 [NORMS 待定](../NORMS/08-待定.md)）｜實作：還沒有（討論見 [thinking 10-13 kernel／agent](../thinking/2026-10-13-kernel-agent.md)）
+← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**kernel**｜概念：本檔｜規範：[N-42](../NORMS/09-kernel.md)（兩種 kernel，草稿；打包 N-03 在 [NORMS 時空](../NORMS/02-設計理念-時空.md)；kernel 公告、`_metainfo` 在 [NORMS 待定](../NORMS/08-待定.md)）｜實作：還沒有（討論見 [thinking 10-13 kernel／agent](../thinking/2026-10-13-kernel-agent.md)）
 
 # kernel
 
@@ -12,3 +12,4 @@
 - **C-28** 沒法直接轉成 POSIX 呼叫的事（人手畫），用**間接抽象化**變成計算任務：拆成多個 POSIX 任務（寄信給畫家、收信、畫歸檔），人在這幾個任務之間、在系統外面做事。（3c）
 - **C-29** 處理單元分兩種：普通 CPU（跑寄信、收信這類一般任務）；外部 PU（畫師、GPU、NPU）——跟外部設備的概念靠攏。（3d）
 - **C-38** 第三層（kernel）的參照物就是時間（tick-tock）與空間（資料夾）：「三回合內搞定」「只動這三個資料夾」「每檔不超過幾 KB」。它只是一個排程；PU 怎麼收任務請求各資料夾各做各的。（3g.6）
+- **C-47** kernel 的定義分兩層（10-15 使用者定）。**原生定義**（寬泛）：能夠管理哪些東西被執行或被使用的一個東西。**aos 實作定義**（為了實作補充）：在當前 aos 計劃下，kernel 就是以 inst／loop／daemon 為基礎，能夠管理某一 inst 是否被執行的，一個正在執行、或是被執行的 inst。相關：資源與排序 C-09～C-15、處理單元 C-29、參照物 C-38、間接抽象化 C-28；kernel 初步分兩種見 [N-42](../NORMS/09-kernel.md)。
