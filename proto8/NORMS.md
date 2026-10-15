@@ -26,7 +26,7 @@
 | 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md) | 同上 | [lib loop](lib/loop.md)、[daemon](lib/daemon.md) |
 | 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md) | 同上 | [lib ctl-state](lib/ctl-state.md) |
 | 基礎設施／命令列、指示詞與路徑 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md) | 同上 | lib `aos_cli`、[directives](lib/directives.md) |
-| 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | [proto8-1](../proto8-1/README.md)；fsm 未動工 |
+| 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | [proto8-1](../proto8-1/README.md)；fsm 在 [lib fsm.md](lib/fsm.md)（基礎實作） |
 | kernel | 還沒有條文（打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | — |
 | agent | 沒有專屬的條（用 fsm 組出來） | [CONCEPTS agent](CONCEPTS/05-agent.md) | — |
 | 待定（不拆，每條標主題） | [08-待定.md](NORMS/08-待定.md) | | |

@@ -14,6 +14,7 @@ LIB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INST = os.path.join(LIB, "aos_inst.py")
 LOOP = os.path.join(LIB, "aos_loop.py")
 DAEMON = os.path.join(LIB, "aos_daemon.py")
+FSM = os.path.join(LIB, "aos_fsm.py")
 sys.path.insert(0, LIB)
 
 
