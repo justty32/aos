@@ -8,7 +8,7 @@ HISTORY = os.environ["DEMO_HISTORY"]
 
 
 def args():
-    """fsm 從 stdin 給的 {"state", "step", "prev"}。"""
+    """fsm 從 stdin 給的 {"state", "step", "prev", "cfg"}（cfg＝那份 fsm 設定整份）。"""
     return json.load(sys.stdin)
 
 

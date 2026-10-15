@@ -5,5 +5,10 @@
     "ask": {"target": "think/ask.json", "next": "review"},
     "review": "think/review.json"
   },
-  "state": {"$env": "DEMO_THINK_STATE"}
+  "state": {"$env": "DEMO_THINK_STATE"},
+
+  "brain": {"$ref": "agent.json#/brain"},
+  "tools": {"$ref": "agent.json#/tools"},
+  "history": {"$ref": "agent.json#/history"},
+  "work": {"$ref": "agent.json#/work"}
 }

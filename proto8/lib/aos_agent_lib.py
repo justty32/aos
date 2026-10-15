@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""agent 的兩格膠水：think（叫腦）、tool（跑工具）。純標準庫。介面與邊緣狀況見同資料夾 agent.md（實作慣例，還不是規範）。
+"""agent 的現成格庫：think（叫腦）、tool（跑工具）。純標準庫。介面與邊緣狀況見同資料夾 agent.md（實作慣例，還不是規範）。
+不是 agent 本體（agent＝fsm＋表）；只是表裡可以直接拿來用的兩格。（10-15 由 aos_agent.py 改名，使用者定）
 
-    python3 aos_agent.py think AGENT.json        （fsm 的格：stdin 讀 fsm 給的 {"state", "step", "prev"}）
-    python3 aos_agent.py tool  AGENT.json
+    python3 aos_agent_lib.py think        （fsm 的格：stdin 讀 fsm 給的 {"state", "step", "prev", "cfg"}）
+    python3 aos_agent_lib.py tool
 
-AGENT.json（可接 `#/位置`，通常就是外層 fsm 那份；fsm 不認得這幾個 key、會忽略）：
+設定從 stdin 的 `cfg` 拿（＝跑這格的那份 fsm 設定整份，10-15 使用者選乙；fsm 不認得這幾個 key、會忽略）：
 
     brain     腦的 aos-inst TARGET。腦＝一支 inst：stdin {"messages", "tools"} → stdout 最後一份＝OpenAI assistant 訊息
     tools     {工具名: aos-inst TARGET}（選填）。工具的說明寫在那張 inst 的 `_tool`：{"description", "parameters"}
     history   對話檔（OpenAI messages 陣列）；只有方法程式寫它，寫法照 N-05
     work      放 N-call.json（工具的引數）、N-ret.json（工具的 stdout）的資料夾
+
+相對路徑從這格的 cwd 算（＝fsm 的 cwd，除非那張格 inst 自己寫了 cwd），跟指示詞、TARGET 一樣。
+巢狀時 cfg 是內層 fsm 的設定；要外層的 key 就在內層設定裡 `$ref` 過去（N-40）。
 
 - think：讀 history、組 {"messages", "tools"}、蓋 stdin 跑腦、把回來的 assistant 訊息接進 history，
   stdout 吐 {"data": {"content", "tool_calls": [工具名...]}}（沒有 next：下一格寫在表上）。
@@ -20,7 +24,7 @@ AGENT.json（可接 `#/位置`，通常就是外層 fsm 那份；fsm 不認得�
   上一拍被殺一半（prev.interrupted）＝不重跑，全回「被中斷」。
 - 出錯（設定不對、腦結束碼非 0、腦回的不是 assistant 訊息）：stderr 吐 {"error": {"code", "msg"}}、退出 1（格出錯）。
 
-相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent（也借 aos_ctl_state.write_json）。
+相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json）。
 """
 import json
 import os
@@ -44,12 +48,10 @@ class AgentError(CliError):
     """設定不對、腦出錯。"""
 
 
-def load_config(target):
-    """AGENT.json（TARGET）→ {"brain", "tools", "history", "work"}；history、work 轉絕對路徑。"""
-    try:
-        doc, _ = aos_cli.load_target(target)
-    except CliError as e:
-        raise AgentError(e.code, e.msg)
+def load_config(doc):
+    """stdin 的 cfg（一份 dict）→ {"brain", "tools", "history", "work"}；history、work 轉絕對路徑（從 cwd 算）。"""
+    if not isinstance(doc, dict):
+        raise AgentError("NoConfig", "stdin 要有 cfg（fsm 的設定整份），不是 %r" % (doc,))
     cfg = {"brain": doc.get("brain"), "tools": doc.get("tools", {})}
     if not (isinstance(cfg["brain"], str) and cfg["brain"]):
         raise AgentError("FieldType", "brain 要是 aos-inst TARGET（字串），不是 %r" % (cfg["brain"],))
@@ -172,13 +174,14 @@ def act(cfg, prev=None):
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 2 or argv[0] not in ("think", "tool"):
-        aos_cli.error("Usage", "aos_agent.py think|tool AGENT.json")
+    if len(argv) != 1 or argv[0] not in ("think", "tool"):
+        aos_cli.error("Usage", "aos_agent_lib.py think|tool（設定從 stdin 的 cfg 拿）")
         return 2
     try:
         args = aos_cli.read_stream(sys.stdin.read())
-        prev = args[0].get("prev") if args and isinstance(args[0], dict) else None
-        cfg = load_config(argv[1])
+        arg = args[0] if args and isinstance(args[0], dict) else {}
+        prev = arg.get("prev")
+        cfg = load_config(arg.get("cfg"))
         data = (think if argv[0] == "think" else act)(cfg, prev)
     except CliError as e:
         aos_cli.error(e.code, e.msg)

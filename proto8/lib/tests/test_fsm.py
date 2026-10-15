@@ -29,8 +29,13 @@ class FsmTest(Tmp):
     def state(self, name="f.state.json"):
         return json.loads(self.read(name))
 
-    def args(self, name):
-        return [json.loads(x) for x in self.read(name + ".args").splitlines() if x.strip()]
+    def args(self, name, cfg=False):
+        """格收到的 stdin；cfg＝False 時拿掉 cfg（另有 test_cell_gets_cfg 專門看它）。"""
+        docs = [json.loads(x) for x in self.read(name + ".args").splitlines() if x.strip()]
+        if not cfg:
+            for d in docs:
+                del d["cfg"]
+        return docs
 
     def out(self, r):
         return [json.loads(x) for x in r.stdout.splitlines()]
@@ -47,6 +52,20 @@ class FsmTest(Tmp):
         self.assertEqual(self.out(r), [{"step": 1, "from": "a", "to": "b", "code": 0, "ms": self.out(r)[0]["ms"]}])
         self.tick(path)
         self.assertEqual(self.args("b"), [{"state": "b", "step": 2, "prev": {"x": 1}}])  # data 下一拍當 prev
+
+    def test_cell_gets_cfg(self):
+        # stdin 多一格 cfg＝這份 fsm 設定整份（指示詞解好；10-15 使用者選乙），fsm 不認得的 key 也照帶
+        os.environ["AOS_TEST_FSM_X"] = "hi"
+        self.addCleanup(os.environ.pop, "AOS_TEST_FSM_X", None)
+        doc = {"start": "a", "states": {"a": sh("a", "true")}, "state": "f.state.json",
+               "brain": "b.json", "x": {"$env": "AOS_TEST_FSM_X"}}
+        path = self.write("f.json", doc)
+        self.assertEqual(self.tick(path).returncode, 0)
+        self.assertEqual(self.args("a", cfg=True)[0]["cfg"], dict(doc, x="hi"))
+        r = subprocess.run([sys.executable, FSM, "--max-steps", "5", path], capture_output=True, text=True,
+                           cwd=self.tmp, timeout=10)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.args("a", cfg=True)[1]["cfg"]["max_steps"], 5)       # 旗標也併進 cfg
 
     def test_static_next_and_stdout_wins(self):
         path = self.fsm({"a": {"target": sh("a", "true"), "next": "b"},
@@ -112,7 +131,7 @@ class FsmTest(Tmp):
 
     def test_killed_midway_reruns_with_interrupted(self):
         path = self.fsm({"a": sh("a", "echo '{\"next\": \"b\", \"data\": 9}'"),
-                         "b": sh("b", "grep -q interrupted b.args || sleep 30")})
+                         "b": sh("b", "grep -q 'interrupte[d]' b.args || sleep 30")})   # [d]：cfg 裡帶著這段字，不能自己配到自己
         self.tick(path)
         p = subprocess.Popen([sys.executable, FSM, path], cwd=self.tmp, start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -164,6 +183,7 @@ class FsmTest(Tmp):
         r = self.tick(outer)                              # 內層 a → b：沒到終點，外層留在 a
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((self.state()["phase"], self.state("inner.state.json")["phase"]), ("a", "b"))
+        self.assertEqual(self.args("ia", cfg=True)[0]["cfg"], json.loads(self.read("inner.json")))   # 內層給的是自己的設定
         self.tick(outer)                                  # 內層 b 回 done（在 end 裡）→ 交給外層，子 phase 歸位
         self.assertEqual(self.state("inner.state.json")["phase"], "a")
         st = self.state()

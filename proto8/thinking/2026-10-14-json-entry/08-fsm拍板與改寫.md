@@ -4,7 +4,7 @@
 
 ## 13. 十題拍板（使用者；★＝沒選 AI 推薦）
 
-1. 本體抽成通用 aos-fsm；agent＝fsm＋預設表資料夾，aos_agent.py 不存在。
+1. 本體抽成通用 aos-fsm；agent＝fsm＋預設表資料夾，aos_agent.py 不存在。〔註：10-15 的 `aos_agent_lib.py` 是現成格的庫、不是 agent 本體。〕
 2. ★ 方法表只用明寫：`states` 一定寫在 agent.json，不靠慣例檔名 `inst-<state>.json`；查不到＝錯（走第 5 題）。
 3. ★ 不做繼承：沒有 extends、沒有搜尋路徑；每個 agent 寫整張表，想沿用就一格一格寫範本路徑或 `$ref`；範本資料夾不是父類。
 4. ★ 下一狀態：「inst 回傳和結束碼都可以。aos fsm 用 inst 回傳」→ 兩種概念上都正當；aos-fsm 採 stdout 最後一份的 `next`。（10-14 晚改：沒吐＝看表上靜態 next，表也沒有才留原狀態，見 [10](10-lisp組合子.md)。）

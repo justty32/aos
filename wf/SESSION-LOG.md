@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **10-15 agent 思考介面＋工具＝inst**（[lib agent.md](../proto8/lib/agent.md)、[thinking 10-15 §5](../proto8/thinking/2026-10-15-topics.md#5-agent-的工具與思考介面)）：`aos_agent.py`（think／tool 兩格）、真腦 `aos_brain_openai.py`（只對本機假伺服器測過）；demo/fsm 改用（`python3 proto8/demo/run.py fsm`，假腦）。open：真 endpoint 還沒跑過（跑順再升規範）；動工自定點（arguments 非 JSON、工具起不來、沒 `_tool`）與 fsm 的（prev 形狀、`running`）等使用者看。
+- **10-15 agent 思考介面＋工具＝inst**（[lib agent.md](../proto8/lib/agent.md)、[thinking 10-15 §5](../proto8/thinking/2026-10-15-topics.md#5-agent-的工具與思考介面)）：`aos_agent_lib.py`（think／tool 兩格的現成格庫，10-15 由 aos_agent.py 改名；設定走 stdin `cfg`，[§6](../proto8/thinking/2026-10-15-topics.md#6-agent-格庫改名設定走-stdin)）、真腦 `aos_brain_openai.py`（只對本機假伺服器測過）；demo/fsm 改用（`python3 proto8/demo/run.py fsm`，假腦）。open：真 endpoint 還沒跑過（跑順再升規範）；動工自定點（arguments 非 JSON、工具起不來、沒 `_tool`）與 fsm 的（prev 形狀、`running`）、§6 的（cfg 相對路徑照格的 cwd、沒 cfg＝`NoConfig`）等使用者看。
 - **10-15 主題重排＋fsm 補細則**（[thinking 10-15](../proto8/thinking/2026-10-15-topics.md)）：NORMS／CONCEPTS 分檔改按主題（設計理念含時空暫定、總則、基礎設施含組合子 tasks＋fsm、kernel、agent），入口有條號 → 檔表；N-35～N-41 修字、fsm 補第一拍／error 格／step／結束碼／心跳（Q12 已對齊）。未決：總則與設計理念要不要併、時空歸屬、[待定](../proto8/NORMS/08-待定.md)其餘。
 - **10-14 夜收工（明天從 [thinking 15 §44 交接](../proto8/thinking/2026-10-14-json-entry/15-ret與半份JSON.md#44-今晚交接明天從這裡開始) 開始）**：inst／loop／daemon 照 N-12 重做、N-18～N-34、tasks 讀 stdout、ret／err 方案 B、半份 JSON 不算，都做完。
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。使用者說之後／不做：指定時間跑、Linux 權限、AOS_DIR、非同步啟動、retry／timeout／while／race。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。

@@ -16,7 +16,7 @@
     max_steps  選填正整數：自上次在 start 起跑了這麼多格，再跑＝MaxSteps 錯（照出錯規則）
 
 一拍：拿鎖 → 讀 ctl → 讀 state（檔還沒有＝從 start 起）→ 查格 → state 先寫 `step`＋`running: true` → 跑格
-（stdin＝`{"state", "step", "prev"}`）→ 讀格 stdout 最後一份 → 換狀態 → 寫 state → stdout 吐一行 → 放鎖。
+（stdin＝`{"state", "step", "prev", "cfg"}`，cfg＝這份設定整份、指示詞解好、旗標併進去）→ 讀格 stdout 最後一份 → 換狀態 → 寫 state → stdout 吐一行 → 放鎖。
 
 state 窗：`{"phase", "step", "running", "data", "last_error", "ctl_seq"}`，只有 fsm 自己寫；不寫時間、pid（N-39）。
 stdout：起了格就吐一行 `{"step", "from", "to", "code", "ms"}`（出錯多 `error`；永遠不帶 `next`）；
@@ -49,7 +49,7 @@ def check_config(doc, ident=None):
         start, states, end = aos_methods.check_table(doc, ident or "<stdin>")
     except MethodsError as e:
         raise FsmError(e.code, e.msg)
-    cfg = {"id": ident, "start": start, "states": states, "end": end}
+    cfg = {"id": ident, "start": start, "states": states, "end": end, "doc": doc}   # doc 原樣給格當 stdin 的 cfg
     for k in ("state", "ctl", "lock"):
         v = doc.get(k)
         if not (v is None or isinstance(v, str) and v):
@@ -105,7 +105,8 @@ def tick(cfg):
         step += 1
         _write(cfg, dict(st, step=step, running=True, ctl_seq=seq))      # 起格前先寫 step：被殺一半下一拍認得出來
         out["step"] = line["step"] = step
-        result, ret = aos_methods.run_cell(inst, inst_id, {"state": phase, "step": step, "prev": prev})
+        result, ret = aos_methods.run_cell(inst, inst_id, {"state": phase, "step": step, "prev": prev,
+                                                                   "cfg": cfg["doc"]})
         line["code"] = result["code"]
         if result["code"] != 0:
             raise MethodsError("CellFailed", "格 %s 結束碼 %d" % (phase, result["code"]))
