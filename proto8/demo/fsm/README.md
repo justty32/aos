@@ -34,7 +34,7 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 
 同樣只改一行：`"brain": "brain/ollama146.json"`。走 ollama 原生 `/api/chat`（`/v1` 設不了 num_ctx）。**用 146 之前先照 [dev-env](../../../wf/workflows/dev-env.md#跨機--離線差異) 的規矩**（看負載、只准小模型、num_ctx 4096、短 keep_alive、試完確認卸載）。
 
-- 10-15 試過：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`、外層停在 thinking。**注意**：ask 失敗後外層每拍都會再叫一次腦（沒有退避），loop 拍 10 次＝打 10 次請求；對共用機器試的時候自己一拍一拍敲、看到錯就停。
+- 10-15 試過：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`、外層停在 thinking。之後補了：內層 state 的 `last_error` 寫出真正原因（`CellFailed: BrainFailed: HttpError: …does not support tools`），連錯 3 次（`max_fails`）內層就停住（`halted: true`）、不再叫腦；要再試就把內層 state 的 `halted` 拿掉。
 
 要非同步就把 ask 換成「丟請求、回 `{"next": "waiting"}`」再加一格 waiting。
 

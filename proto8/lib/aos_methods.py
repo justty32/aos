@@ -10,6 +10,8 @@
   在本行程用 `aos_inst.run()` 跑一次，回 (aos_inst 的結果 dict, 子程式 stdout 最後一份完整 JSON 或 None)。
   stderr、exit、cwd、timeout_ms 照那張 inst 自己寫的。inst 寫了 `stdin_inherit`／`stdout_inherit`＝Conflict（fsm 一定蓋這兩個）。
   aos_inst 自己出錯丟 `MethodsError`（代號照 aos_inst 的）。暫存檔跑完刪掉。
+  結果 dict 多一格 `cell_error`＝格 stderr 裡最後一份 N-29 錯誤 `{"code", "msg"}`（沒有＝None）：沒寫 stderr 的格
+  （本來接 /dev/null）改接暫存檔撿；格自己寫了 stderr 檔就讀那個檔；inherit／merge 的撿不到。（10-15 146 試跑後補）
 - `last_json(text)`：JSON 串流的最後一份完整 JSON（半份不算，N-12）；沒有＝None。
 
 錯誤一律 `MethodsError`（`CliError` 的子類，`code`／`msg`）。相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_fsm。
@@ -70,6 +72,25 @@ def last_json(text):
     return docs[-1] if docs else None
 
 
+def _stderr_error(doc, cwd):
+    """格 stderr 裡最後一份 N-29 錯誤 {"code", "msg"}；沒有、讀不到＝None。stderr 是格自己寫的檔也照讀。"""
+    path = doc.get("stderr")
+    if not path:
+        return None
+    if not os.path.isabs(path) and isinstance(cwd, str):
+        path = os.path.join(cwd, path)
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            docs = aos_cli.read_stream(f.read())
+    except (OSError, ValueError):
+        return None
+    for d in reversed(docs):
+        e = d.get("error") if isinstance(d, dict) else None
+        if isinstance(e, dict) and isinstance(e.get("code"), str):
+            return {"code": e["code"], "msg": str(e.get("msg", ""))}
+    return None
+
+
 def run_cell(inst, ident, args):
     """跑一格：stdin＝args（寫成暫存檔）、stdout 接到暫存檔。回 (aos_inst 結果 dict, stdout 最後一份或 None)。"""
     tmp = tempfile.mkdtemp(prefix="aos-fsm-")
@@ -79,6 +100,8 @@ def run_cell(inst, ident, args):
             json.dump(args, f, ensure_ascii=False)
         doc = dict(inst, stdin=stdin, stdout=stdout, stdout_append=False, stdout_mkdir=False)
         doc.setdefault("id", ident)
+        if not (doc.get("stderr") or doc.get("stderr_inherit") or doc.get("stderr_merge")):
+            doc["stderr"] = os.path.join(tmp, "err.json")     # 沒寫 stderr 的格：本來接 /dev/null，改接暫存檔撿錯
         try:
             result = aos_inst.run(doc)
         except aos_inst.InstError as e:
@@ -88,6 +111,7 @@ def run_cell(inst, ident, args):
                 ret = last_json(f.read())
         except OSError:
             ret = None
+        result["cell_error"] = _stderr_error(doc, inst.get("cwd"))
         return result, ret
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

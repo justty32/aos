@@ -23,6 +23,7 @@
   其餘的回「基礎實作一次只跑一個，這個沒跑」＋stderr 警告。工具名不認得＝回「不認得這個工具」。
   上一拍被殺一半（prev.interrupted）＝不重跑，全回「被中斷」。
 - 出錯（設定不對、腦結束碼非 0、腦回的不是 assistant 訊息）：stderr 吐 {"error": {"code", "msg"}}、退出 1（格出錯）。
+  腦出錯時 msg 帶腦自己 stderr 的錯誤（例 `HttpError: … 回 400：…does not support tools`），fsm 會把它記進 last_error。
 
 相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json）。
 """
@@ -104,7 +105,9 @@ def think(cfg, prev=None):
         except CliError as e:
             raise AgentError(e.code, "腦 %s：%s" % (cfg["brain"], e.msg))
         if result["code"] != 0:
-            raise AgentError("BrainFailed", "腦 %s 結束碼 %s" % (cfg["brain"], result["code"]))
+            be = result.get("cell_error")      # 腦 stderr 的 N-29 錯誤＝真正原因，接進自己的錯誤讓 fsm 看得到
+            raise AgentError("BrainFailed", "%s: %s" % (be["code"], be["msg"]) if be
+                             else "腦 %s 結束碼 %s" % (cfg["brain"], result["code"]))
         if not (isinstance(reply, dict) and reply.get("role") == "assistant"):
             raise AgentError("BadReply", "腦 %s 回的最後一份不是 assistant 訊息：%r" % (cfg["brain"], reply))
         write_json(cfg["history"], msgs + [reply])

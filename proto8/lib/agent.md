@@ -51,7 +51,7 @@ python3 aos_agent_lib.py think      python3 aos_agent_lib.py tool
 - 不是 agent 本體（agent＝fsm＋表，不變）；是表裡可以直接拿來用的兩格。檔名：使用者 10-15 說「aos-agent-lib.py」，proto8/lib 的模組一律底線（連字號 import 不了），所以叫 `aos_agent_lib.py`。
 - **設定走 stdin**（10-15 使用者選乙）：fsm 給格的 stdin 是 `{"state", "step", "prev", "cfg"}`（N-37），`brain`、`tools`、`history`、`work` 從 `cfg` 拿，argv 不再指設定檔；沒 `cfg`＝`NoConfig`、退出 1。相對路徑從格的 cwd 算（沒寫 `cwd` 的格＝跟 fsm 同一個）。巢狀時 `cfg` 是內層 fsm 那份，四個 key 在內層設定裡 `$ref` 到外層（demo 的 `think/fsm.json` 就這樣寫，N-40）。
 
-- **think**：讀 history、組請求（`tools` 從各工具 inst 的 `_tool` 來；沒工具就不帶）、蓋 stdin 跑腦（`aos_methods.run_cell`）、把 assistant 訊息接進 history，stdout `{"data": {"content", "tool_calls": [工具名]}}`。不吐 `next`：下一格寫在表上。history 最後已經是 assistant（上一拍接好才被殺）＝不再叫腦。腦結束碼非 0＝`BrainFailed`、回的不是 assistant 訊息＝`BadReply`，這格退出 1（fsm 記 `CellFailed`）。
+- **think**：讀 history、組請求（`tools` 從各工具 inst 的 `_tool` 來；沒工具就不帶）、蓋 stdin 跑腦（`aos_methods.run_cell`）、把 assistant 訊息接進 history，stdout `{"data": {"content", "tool_calls": [工具名]}}`。不吐 `next`：下一格寫在表上。history 最後已經是 assistant（上一拍接好才被殺）＝不再叫腦。腦結束碼非 0＝`BrainFailed`（白話＝腦 stderr 的錯誤 `代號: 白話`，腦沒吐才寫結束碼）、回的不是 assistant 訊息＝`BadReply`，這格退出 1；fsm 記 `CellFailed: BrainFailed: HttpError: …`，連錯 `max_fails` 次就停住不再叫腦（[fsm.md](fsm.md)）。
 - **tool**：找最後一則 assistant 還沒回的 `tool_calls`，跑一個、接 tool 訊息，stdout `{"data": {"tool", "result"}}`。
 
 ## 邊緣狀況（使用者 10-15 定）
