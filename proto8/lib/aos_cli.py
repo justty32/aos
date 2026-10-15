@@ -5,9 +5,9 @@
 - 設定從哪來（D-3）：給 TARGET（`檔#/位置`）就讀那份檔、不讀 stdin；寫 `-` 讀 stdin；兩個都沒給＝從 `{}` 起
   （只靠旗標與 `--`）。檔與 stdin 都用指示詞 lib 解，基準＝呼叫者的 cwd。
 - 旗標（D-1）：`--times 3` ＝設定的頂層 key `times`（`-` 換成 `_`），蓋過檔或 stdin 的值。每個旗標都要帶一個值；
-  值先當 JSON 解（`3`、`null`、`true`），解不了就當字串。只認各程式給的那幾個純量 key，其他＝UnknownFlag。
+  值先當 JSON 解（`3`、`null`、`true`），解不了就當字串。只認各程式給的那幾個純量 key，其他＝FlagUnknown。
 - `--`（D-2）：後面整段交給程式自己（inst 拿去蓋 `argv`；不收的程式報 Usage）。
-- stdin 是 JSON 串流（N-12）：設定只要一份，多了＝入口錯 `ExtraInput`（退非 0；原本只看第一份、stderr 警告，
+- stdin 是 JSON 串流（N-12）：設定只要一份，多了＝入口錯 `InputExtra`（退非 0；原本只看第一份、stderr 警告，
   10-15 使用者「都按照推薦。」改：N-43 正常退出不寫 stderr）；壞尾丟掉（Q6）。
 - stdout／stderr 也是 JSON 串流：`emit()` 一份一行；錯誤 `{"error": {"code", "msg"}}`（N-29）。沒有「警告」：
   預料到的意外記進自己的窗（例 state 窗的 last_warning），不然就是錯。
@@ -84,7 +84,7 @@ def parse_argv(args, flags):
         if a.startswith("--"):
             key = a[2:].replace("-", "_")
             if key not in flags:
-                raise CliError("UnknownFlag", "不認得的旗標 %s" % a)
+                raise CliError("FlagUnknown", "不認得的旗標 %s" % a)
             if i + 1 >= len(args):
                 raise CliError("Usage", "%s 少了值" % a)
             over[key] = _value(args[i + 1])
@@ -136,7 +136,7 @@ def _load_stdin():
     if not docs:
         raise CliError("JsonSyntax", "stdin 沒有 JSON")
     if len(docs) > 1:
-        raise CliError("ExtraInput", "stdin 有 %d 份 JSON，設定只要一份" % len(docs))
+        raise CliError("InputExtra", "stdin 有 %d 份 JSON，設定只要一份" % len(docs))
     try:
         doc = resolve(docs[0], os.getcwd(), "<stdin>")
     except DirectiveError as e:

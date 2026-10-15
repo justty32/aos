@@ -135,7 +135,7 @@ class TreeTest(Tmp):
 
 class JudgeSchemaTest(Tmp):
     def schema(self):
-        d = os.path.join(DEMO, "kernel2")
+        d = os.path.join(DEMO, "kernels", "general")
         inst = load(os.path.join(d, "judge-rules.json"))
         return load(os.path.join(d, inst["_schema"]))        # 私有 key，普通路徑
 

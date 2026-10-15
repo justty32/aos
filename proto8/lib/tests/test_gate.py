@@ -1,8 +1,8 @@
-"""proto8/lib 的自動測試：LLM kernel（閘門 aos_gate ＋ 身體 aos_gate_kernel）。只用標準庫：
+"""proto8/lib 的自動測試：LLM kernel（閘門 aos_gate ＋ 身體 aos_kernel_llm）。只用標準庫：
 
     python3 -m unittest discover -s proto8/lib/tests
 
-排序類：直接用 aos_gate.post() 丟信、在本行程呼叫 aos_gate_kernel.tick()，看 log 的順序。
+排序類：直接用 aos_gate.post() 丟信、在本行程呼叫 aos_kernel_llm.tick()，看 log 的順序。
 端到端：閘門起真的行程，kernel 在背景執行緒一拍一拍跑。
 """
 import http.server
@@ -18,7 +18,7 @@ from helpers import INST, LIB, Tmp
 from test_agent import _Stub
 
 import aos_gate
-import aos_gate_kernel as K
+import aos_kernel_llm as K
 
 GATE = os.path.join(LIB, "aos_gate.py")
 
@@ -166,7 +166,7 @@ class KernelOrderTest(Tmp):
         self.assertEqual(os.listdir(self.box["reply"]), [])                  # 回信與旁檔都收掉了
 
     def test_bad_config(self):
-        with self.assertRaises(K.KernelError) as e:
+        with self.assertRaises(K.KernelLlmError) as e:
             K.check({"mailbox": "m"})
         self.assertEqual(e.exception.code, "WindowMissing")
 
@@ -284,7 +284,7 @@ class GateEndToEndTest(Tmp):
 
     def test_kernel_cli_under_loop(self):
         """kernel 的身體照 N-12 當 inst 被 aos-loop 拍（stdout 一份摘要）。"""
-        kernel = os.path.join(LIB, "aos_gate_kernel.py")
+        kernel = os.path.join(LIB, "aos_kernel_llm.py")
         r = subprocess.run([sys.executable, kernel, "--mailbox", self.p("mb"), "--state", self.p("k.json")],
                            capture_output=True, text=True, env=self.env)
         self.assertEqual(r.returncode, 0, r.stderr)

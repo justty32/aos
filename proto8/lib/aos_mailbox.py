@@ -1,4 +1,4 @@
-"""kernel 信箱的共用部分（閘門 aos_gate、兩種 kernel 都用）。純標準庫。說明在同資料夾 kernel.md。
+"""kernel 信箱的共用部分（閘門 aos_gate、兩種 kernel 都用）。純標準庫。說明在同資料夾 kernel_llm.md。
 
 信箱＝一個資料夾，四格：tmp/ → new/ → cur/（N-16 Maildir），回信與旁檔在 reply/。
 信＝那張要跑的 inst 本身（inst 族，C-48）：target 的 key 攤在最上層（argv、cwd、`_metainfo`、timeout_ms…），
@@ -14,7 +14,7 @@
 - `run_letter(letter)`：跑一封，回 (回信 dict, 用掉的 token)；token＝stdout 旁檔最後一份的 usage.total_tokens，沒有＝0。
 - `log(path, rec)`：往 log 檔追加一行 JSON（path 是 None＝不記）。
 
-相依：aos_cli ← aos_inst ← aos_mailbox ← aos_gate ← aos_gate_kernel ← aos_kernel_judge ← aos_kernel。
+相依：aos_cli ← aos_inst ← aos_mailbox ← aos_gate ← aos_kernel_llm ← aos_kernel_judge ← aos_kernel_general。
 """
 import json
 import os
@@ -80,7 +80,7 @@ def run_letter(letter):
         except aos_inst.InstError as e:
             return {"error": {"code": e.code, "msg": e.msg}}, 0
     except (KeyError, TypeError, AttributeError) as e:
-        return {"error": {"code": "BadLetter", "msg": "信壞了：%s" % e}}, 0
+        return {"error": {"code": "LetterBad", "msg": "信壞了：%s" % e}}, 0
     try:
         with open(out, encoding="utf-8", errors="replace") as f:
             last = aos_cli.read_stream(f.read())

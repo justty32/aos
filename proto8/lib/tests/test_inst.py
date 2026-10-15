@@ -55,7 +55,7 @@ class Inst(Tmp):
         os.environ["AOS_DIRNAME"] = "a/b"
         with self.assertRaises(aos_inst.InstError) as c:
             aos_inst.find(self.p("b"))
-        self.assertEqual(c.exception.code, "BadDirname")
+        self.assertEqual(c.exception.code, "DirnameBad")
 
     def test_child_code_only_in_exit_file(self):
         self.assertEqual(self.run_inst("r", "exit 7"), "7\n")
@@ -134,10 +134,10 @@ class Inst(Tmp):
         self.assertEqual((res["code"], res["signal"], res["timed_out"], res["id"]), (143, 15, True, "me"))
 
     def test_cli_stdin_flags_dashdash(self):
-        # stdin 多份＝ExtraInput 錯（退非 0、不跑）；一份照跑；旗標蓋過；-- 蓋過 argv
+        # stdin 多份＝InputExtra 錯（退非 0、不跑）；一份照跑；旗標蓋過；-- 蓋過 argv
         r = self.cli("--exit", "s.exit", "-", input='{"argv": ["sh", "-c", "exit 2"], "exit": "no.exit"} {"x": 1}')
         self.assertNotEqual(r.returncode, 0)
-        self.assertEqual(json.loads(r.stderr)["error"]["code"], "ExtraInput")
+        self.assertEqual(json.loads(r.stderr)["error"]["code"], "InputExtra")
         self.assertFalse(os.path.exists(self.p("s.exit")))
         r = self.cli("--exit", "s.exit", "-", input='{"argv": ["sh", "-c", "exit 2"], "exit": "no.exit"}')
         self.assertEqual((r.returncode, r.stderr, self.read("s.exit")), (0, "", "2\n"))
@@ -147,7 +147,7 @@ class Inst(Tmp):
         r = self.cli("-", input='{"argv": ["true"], "stdin_inherit": true}')          # D-5
         self.assertEqual((r.returncode, self.err(r)), (1, "Conflict"))
         r = self.cli("--nope", "1", "--", "true")
-        self.assertEqual((r.returncode, self.err(r)), (1, "UnknownFlag"))
+        self.assertEqual((r.returncode, self.err(r)), (1, "FlagUnknown"))
 
     def node(self, name="node.json"):
         """一份 JSON 放好幾格：clock 是 inst（argv 用 ../ 摸旁邊的 shared）、x 不是物件。"""

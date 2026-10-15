@@ -39,7 +39,7 @@ def handle(table, cmd):
 
 def _dispatch(table, cmd):
     if not isinstance(cmd, dict):
-        raise DaemonError("BadCommand", "指令要是物件")
+        raise DaemonError("CommandBad", "指令要是物件")
     op, ident = cmd.get("op"), cmd.get("id")
     ops = {"add": lambda: table.add(ident), "set": lambda: table.set(ident, cmd.get("how", {})),
            "pause": lambda: table.pause(ident, cmd.get("wait", True)), "resume": lambda: table.resume(ident),
@@ -47,7 +47,7 @@ def _dispatch(table, cmd):
            "remove": lambda: table.remove(ident, cmd.get("wait", True)),
            "state": lambda: table.state(ident), "get": lambda: table.get(ident), "list": table.list}
     if op not in ops:
-        raise DaemonError("UnknownOp", "不認得的 op %r" % (op,))
+        raise DaemonError("OpUnknown", "不認得的 op %r" % (op,))
     return ops[op]()
 
 
@@ -96,7 +96,7 @@ class _Folder:
                     raw = f.read()
                 cmd = json.loads(raw)
             except (OSError, ValueError) as e:
-                reply = {"request": raw, **_error("BadCommand", "讀不了 %s：%s" % (name, e))}
+                reply = {"request": raw, **_error("CommandBad", "讀不了 %s：%s" % (name, e))}
             else:
                 r = handle(table, cmd)
                 if callable(r):

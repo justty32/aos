@@ -1,20 +1,20 @@
-# 通用 kernel（身體 `aos_kernel.py`＋判官 `aos_kernel_judge.py`、規則判官 `judge_rules.py`）
+# 通用 kernel（身體 `aos_kernel_general.py`＋判官 `aos_kernel_judge.py`、規則判官 `judge_rules.py`）
 
-← [proto8/lib](README.md)｜規範：[N-42](../NORMS/09-kernel.md)（第二種：通用管理，判斷交給 agent）｜概念：[C-47](../CONCEPTS/04-kernel.md)｜規劃與決定：[thinking 10-15 通用 kernel](../thinking/2026-10-15-general-kernel.md)｜第一種：[kernel.md](kernel.md)｜demo：[demo/kernel2](../demo/kernel2/run.py)（`python3 proto8/demo/run.py kernel2`）
+← [proto8/lib](README.md)｜規範：[N-42](../NORMS/09-kernel.md)（第二種：通用管理，判斷交給 agent）｜概念：[C-47](../CONCEPTS/04-kernel.md)｜規劃與決定：[thinking 10-15 通用 kernel](../thinking/2026-10-15-general-kernel.md)｜第一種：[kernel_llm.md](kernel_llm.md)｜demo：[demo/kernels/general](../demo/kernels/general/run.py)（`python3 proto8/demo/run.py kernels/general`）
 
 > **基礎實作（N-18 最簡單的）、還不是規範。** 動工時自己定的點列在 [thinking 通用 kernel「動工自定點」](../thinking/2026-10-15-general-kernel.md#動工自定點)。
 
 **閘門不改**：`aos_gate.py` 的 `mailbox`（或環境變數 `AOS_KERNEL`）指到這支的信箱就行；信（＝那張 inst 本身＋`priority`／`reply`／`sent`）與回信（N-30 結果）的形狀同第一種，讀信、認領、跑一封、回信共用 `aos_mailbox.py`。差別只在「誰先跑」由**判官**決定——判官是一張 inst（N-12）：stdin＝kernel 的 state 窗的子集（`queue`、`running`、`slots`、`budget`），stdout 最後一份＝決定。
 
 ```
-呼叫者 ──▶ aos_gate.py ──信──▶ 信箱 new/ ──▶ aos_kernel.py（一拍＝一段忙碌期）──state 窗──▶ 判官 inst ──決定──┐
+呼叫者 ──▶ aos_gate.py ──信──▶ 信箱 new/ ──▶ aos_kernel_general.py（一拍＝一段忙碌期）──state 窗──▶ 判官 inst ──決定──┐
        ◀── stdout／碼 ◀──── reply/<名> ◀──── 一封一條執行緒、各自一支子程式（格在它結束時放）◀─────────────┘
 ```
 
 ## 設定
 
 ```
-python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
+python3 aos_kernel_general.py [--key 值 ...] [KERNEL.json | -]
 ```
 
 | key | 意思 |
@@ -46,13 +46,13 @@ python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 ## 判官的 stdout
 
 ```json
-{"run": ["<信名>"], "defer": ["<信名>"], "reject": [{"id": "<信名>", "error": {"code": "TooExpensive", "msg": "太貴"}}]}
+{"run": ["<信名>"], "defer": ["<信名>"], "reject": [{"id": "<信名>", "error": {"code": "CostTooHigh", "msg": "太貴"}}]}
 ```
 
 - `defer`＝「不是我挑的」，**不是**「一定要等」（使用者 10-15 定）：沒點名的也是 `defer`。不認得的 id 丟掉；`run` 超過該資源空格的照順序截掉（log 的 `cut`）。級數不能改。
 - **補位**：套完判官的決定後，某種資源還有空格，就從**剩下的信**（沒被 `reject`、沒被判官點到起跑的）照第一種的規則（`order`：deadline 插隊＋級數＋aging＋先來後到，每種資源各自）補滿；只在判官答對時補（判官錯整個本來就走規則）。判官控制自己 `run` 的順序與 `reject`，補位只補空格。log：`decide` 多 `backfill: [id…]`，`start` 多 `reason`（`judge`／`backfill`／`rules`／`direct`）。判官全 defer 也不會卡住。
 - `reject`＝回信 `{"error": {code, msg}}`，呼叫端的閘門 stderr 一份 N-29、退出 1。
-- **判官錯只有一條路**：判官這拍沒給合法答案（結束碼非 0、逾時、起不來、形狀不對、同一個 id 出現兩次）＝這拍改用第一種的確定規則（`aos_gate_kernel.order`：deadline 插隊＋級數＋aging＋先來後到，每種資源各自補滿），`judge_error` 記原因（答對一次清回 null）。kernel **不數連錯、不停問、不等人歸零**：下次局面變了照樣問；判官要「連錯幾次就改口或停住」是判官格自己的事（C-53 只處理自己的錯，同 N-38 的精神；10-15 使用者「都同意。」，[盤點第 3 條](../thinking/2026-10-15-principles.md)；原本有 `max_fails`、`judge_fails`）。
+- **判官錯只有一條路**：判官這拍沒給合法答案（結束碼非 0、逾時、起不來、形狀不對、同一個 id 出現兩次）＝這拍改用第一種的確定規則（`aos_kernel_llm.order`：deadline 插隊＋級數＋aging＋先來後到，每種資源各自補滿），`judge_error` 記原因（答對一次清回 null）。kernel **不數連錯、不停問、不等人歸零**：下次局面變了照樣問；判官要「連錯幾次就改口或停住」是判官格自己的事（C-53 只處理自己的錯，同 N-38 的精神；10-15 使用者「都同意。」，[盤點第 3 條](../thinking/2026-10-15-principles.md)；原本有 `max_fails`、`judge_fails`）。
 - **判官自己的腦不走自己**：判官的環境拿掉 `AOS_KERNEL`；它自己的 `envs` 寫 `AOS_KERNEL` 指回這個信箱也拿掉（指別的信箱，例 LLM kernel，照給）。
 
 ## 一拍
@@ -65,8 +65,8 @@ stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback,
 
 ## agent 判官（換一行 TARGET）
 
-`demo/kernel2/judge-agent.json`＝`aos-demo kernel2/judge/ask_judge.py [定義資料夾]`：開一個暫存 frame（`env.json` 指回定義資料夾，沒給＝`judge/`；要換腦就另開一個資料夾放 `brain.json`＋`env.json` 指回 `judge/`、把它當引數給，10-15 使用者「都按照推薦」）、`args.json`＝`{"question": 判官的 stdin（state 窗子集）}`），在裡面跑 `aos loop judge/loop.json`（agent 當函數，[agent-frame.md](agent-frame.md)），讀 `ret.json`，拿 reply 裡的 JSON 物件印出來；ret.json 是錯、沒有、不是 JSON＝退出 1（kernel 退回規則）。`judge/system.md` 開頭 `/no_think`（不靠模型思考，見 [agent-lib.md](agent-lib.md#邊緣狀況使用者-10-15-定)）、說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
+`demo/kernels/general/judge-agent.json`＝`aos-demo kernels/general/judge/ask_judge.py [定義資料夾]`：開一個暫存 frame（`env.json` 指回定義資料夾，沒給＝`judge/`；要換腦就另開一個資料夾放 `brain.json`＋`env.json` 指回 `judge/`、把它當引數給，10-15 使用者「都按照推薦」）、`args.json`＝`{"question": 判官的 stdin（state 窗子集）}`），在裡面跑 `aos loop judge/loop.json`（agent 當函數，[agent-frame.md](agent-frame.md)），讀 `ret.json`，拿 reply 裡的 JSON 物件印出來；ret.json 是錯、沒有、不是 JSON＝退出 1（kernel 退回規則）。`judge/system.md` 開頭 `/no_think`（不靠模型思考，見 [agent-lib.md](agent-lib.md#邊緣狀況使用者-10-15-定)）、說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
 
 ## 測試
 
-`tests/test_kernel.py`（23 個）：判官的答案照辦、stdin＝state 窗子集（只有四個 key）、沒點名＝defer 但空格補位、全 defer 仍跑、判官點一封＋規則補另一格、reject 不補位、沒空格不補、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯照樣每次問（kernel 不數）、局面沒變（有空格）不問、格全滿來新信不問＋格放了才問、0 格從不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。
+`tests/test_kernel_general.py`（23 個）：判官的答案照辦、stdin＝state 窗子集（只有四個 key）、沒點名＝defer 但空格補位、全 defer 仍跑、判官點一封＋規則補另一格、reject 不補位、沒空格不補、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯照樣每次問（kernel 不數）、局面沒變（有空格）不問、格全滿來新信不問＋格放了才問、0 格從不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。

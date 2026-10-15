@@ -55,7 +55,7 @@ class Tick(unittest.TestCase):
                 f.write(bad)
             r = self.run_tick(self.file)
             self.assertEqual(r.returncode, 1, bad)
-            self.assertEqual(self.err(r), "BadContent")
+            self.assertEqual(self.err(r), "ContentBad")
             self.assertEqual(self.read(), bad)
         self.assertEqual(os.listdir(self.tmp), ["clock"])
 

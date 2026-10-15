@@ -18,7 +18,7 @@ class Cli(Tmp):
                          ("x.json", {"times": 3, "cwd": "a b"}, None))
         self.assertEqual(aos_cli.parse_argv(["--times", "null", "-", "--", "echo", "--times"], flags),
                          ("-", {"times": None}, ["echo", "--times"]))
-        for bad, code in ((["--nope", "1"], "UnknownFlag"), (["--times"], "Usage"), (["a", "b"], "Usage")):
+        for bad, code in ((["--nope", "1"], "FlagUnknown"), (["--times"], "Usage"), (["a", "b"], "Usage")):
             with self.subTest(bad=bad), self.assertRaises(aos_cli.CliError) as c:
                 aos_cli.parse_argv(bad, flags)
             self.assertEqual(c.exception.code, code)
@@ -48,7 +48,7 @@ class Cli(Tmp):
         with mock.patch("sys.stdin", io.StringIO('{"times": 1, "id": "me"} {"x": 2}')), \
                 self.assertRaises(aos_cli.CliError) as c:            # 多份＝入口錯（10-15 使用者「都按照推薦。」）
             aos_cli.config(["-"], set())
-        self.assertEqual(c.exception.code, "ExtraInput")
+        self.assertEqual(c.exception.code, "InputExtra")
         self.assertEqual(aos_cli.config([], set()), ({}, None, False, None))
         with self.assertRaises(aos_cli.CliError) as c:
             aos_cli.config([path + "#/times"], set())

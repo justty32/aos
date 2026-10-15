@@ -1,8 +1,8 @@
-"""proto8/lib 的自動測試：通用 kernel（aos_kernel ＋ 判官 aos_kernel_judge、judge_rules）。只用標準庫：
+"""proto8/lib 的自動測試：通用 kernel（aos_kernel_general ＋ 判官 aos_kernel_judge、judge_rules）。只用標準庫：
 
     python3 -m unittest discover -s proto8/lib/tests
 
-多數直接用 aos_gate.post() 丟信、在本行程呼叫 aos_kernel.tick()，看 log 與回信。
+多數直接用 aos_gate.post() 丟信、在本行程呼叫 aos_kernel_general.tick()，看 log 與回信。
 判官是暫存資料夾裡的小 python 腳本（stdin＝state 窗、stdout {"run", "defer", "reject"}）；有的會把被叫的次數記進檔。
 端到端：閘門起真的行程；最後一個起真的 daemon＋loop，收工後查沒有漏行程。
 """
@@ -17,7 +17,7 @@ import time
 from helpers import DAEMON, LIB, Tmp
 
 import aos_gate
-import aos_kernel as K
+import aos_kernel_general as K
 
 GATE = os.path.join(LIB, "aos_gate.py")
 RULES = os.path.join(LIB, "judge_rules.py")
@@ -235,7 +235,7 @@ class KernelTest(Tmp):
         self.assertEqual((self.calls(), self.log("decide")[0]["how"]), (0, "direct"))
 
     def test_reject_reaches_caller_as_n29_error(self):
-        cfg = self.cfg("print(json.dumps({'reject': [{'id': x, 'error': {'code': 'TooExpensive', "
+        cfg = self.cfg("print(json.dumps({'reject': [{'id': x, 'error': {'code': 'CostTooHigh', "
                        "'msg': '太貴'}} for x in q]}))", slots={"llm": 1})
         gate = subprocess.Popen([sys.executable, GATE, "--target", json.dumps({"argv": ["cat"], "_metainfo": {"resource": "llm"}}),
                                  "--mailbox", self.p("mb")], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -259,7 +259,7 @@ class KernelTest(Tmp):
             t.join()
         p = subprocess.CompletedProcess(gate.args, gate.returncode, out, err)
         self.assertEqual(p.returncode, 1)
-        self.assertEqual(json.loads(p.stderr)["error"], {"code": "TooExpensive", "msg": "太貴"})
+        self.assertEqual(json.loads(p.stderr)["error"], {"code": "CostTooHigh", "msg": "太貴"})
 
     # ---- human 格、遞迴、重起 ----
 
@@ -321,9 +321,9 @@ class KernelTest(Tmp):
     def test_bad_config(self):
         for bad in ({"slots": {"llm": -1}}, {"slots": "2"}, {"judge": 3}):
             with self.subTest(bad=bad):
-                with self.assertRaises(K.KernelError):
+                with self.assertRaises(K.KernelGeneralError):
                     K.check(dict({"mailbox": "m", "state": "s"}, **bad))
-        with self.assertRaises(K.KernelError) as e:
+        with self.assertRaises(K.KernelGeneralError) as e:
             K.check({"mailbox": "m"})
         self.assertEqual(e.exception.code, "WindowMissing")
 
@@ -351,7 +351,7 @@ def procs_in(root):
 
 class KernelDaemonTest(Tmp):
     def test_daemon_end_to_end_no_leftovers(self):
-        mb, kernel = self.p("mb"), os.path.join(LIB, "aos_kernel.py")
+        mb, kernel = self.p("mb"), os.path.join(LIB, "aos_kernel_general.py")
         self.write("kernel.json", {"mailbox": mb, "state": self.p("k.state.json"), "slots": {"llm": 1, "human": 1},
                                    "judge": {"argv": [sys.executable, os.path.join(LIB, "judge_rules.py")]}})
         self.write("loop.json", {"inst": {"argv": [sys.executable, kernel, self.p("kernel.json")], "cwd": self.tmp},

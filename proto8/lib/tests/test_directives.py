@@ -27,7 +27,7 @@ class Directives(Tmp):
 
     def test_errors(self):
         self.write("bad.json", "{")
-        self.assertEqual(self.code({"$nope": 1}), "UnknownDirective")
+        self.assertEqual(self.code({"$nope": 1}), "DirectiveUnknown")
         self.assertEqual(self.code({"$env": 1}), "DirectiveValueTypeMismatch")
         self.assertEqual(self.code({"$env": "AOS_TEST_NO_SUCH_VAR"}), "EnvironmentVariableMissing")
         self.assertEqual(self.code({"$ref": "missing.json"}), "ReferenceReadFailed")

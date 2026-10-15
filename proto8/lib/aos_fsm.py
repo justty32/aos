@@ -98,20 +98,20 @@ def tick(cfg):
                                else "格 %s 結束碼 %d" % (phase, result["code"]))
         if not isinstance(ret, dict):
             if not result.get("cell_empty"):
-                raise MethodsError("NoResult", "格 %s 沒吐完整的 JSON 物件（N-12：半份不算）" % phase)
+                raise MethodsError("ResultMissing", "格 %s 沒吐完整的 JSON 物件（N-12：半份不算）" % phase)
             if static is None:
-                raise MethodsError("NoResult", "格 %s 沒輸出，表上也沒寫 next" % phase)
+                raise MethodsError("ResultMissing", "格 %s 沒輸出，表上也沒寫 next" % phase)
             ret = None                          # 沒輸出、表上有 next＝照表上走（N-38）
         nxt = ret["next"] if ret is not None and "next" in ret else static
         if not (nxt is None or isinstance(nxt, str)):
-            raise MethodsError("BadNext", "格 %s 回的 next 要是狀態名，不是 %r" % (phase, nxt))
+            raise MethodsError("NextBad", "格 %s 回的 next 要是狀態名，不是 %r" % (phase, nxt))
         nxt = phase if nxt is None else nxt
         if phase in end or (nxt not in states and nxt in end):
             to, give, ended = start, ret, True     # 結束（N-40 b、c）：phase 歸位，那格的結果原樣交出去（沒輸出＝不吐）
         elif nxt in states:
             to = nxt
         else:
-            raise MethodsError("UnknownNext", "格 %s 回的 next %r 不在表裡也不在 end 裡" % (phase, nxt))
+            raise MethodsError("NextUnknown", "格 %s 回的 next %r 不在表裡也不在 end 裡" % (phase, nxt))
     except MethodsError as e:
         err = {"code": e.code, "msg": e.msg[:ERR_LIMIT]}           # phase 不動（N-38）
     if line["ms"] is None:

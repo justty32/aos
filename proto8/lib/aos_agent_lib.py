@@ -38,7 +38,7 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
   的 frame 預設在這），引數寫成那裡的 args.json 當 stdin、stdout 接到那裡的 stdout.json，在那裡跑那張 inst（inst 自己寫了 cwd
   就照它的），回 {"role": "tool", "tool_call_id", "content": JSON 字串＝aos_inst 的結果（N-30：id、code、signal、timed_out…）
   ＋`result`（工具 stdout 最後一份 JSON）（截 8000 字）}；工具起不來、引數不是 JSON、工具名不認得＝content 是 N-29 形狀
-  {"error": {"code", "msg"}}（代號 InstError 的原代號、BadArguments、UnknownTool）。
+  {"error": {"code", "msg"}}（代號 InstError 的原代號、ArgumentsBad、ToolUnknown）。
   每跑完一個就接進 history（中途被殺，跑完的不重跑）。上一拍被殺一半（work/.tool-running.json 還在、記的是還沒回的第一個
   tool_call id＝跑過一半）＝那個不重跑、回 {"error": {"code": "Interrupted", …}}，其餘照跑。
   stdout 的 data：{"tool": 第一個名, "result": 第一個結果, "tools": [名…], "results": [結果…]}。
@@ -67,7 +67,7 @@ __all__ = ["AgentError", "LIMIT", "act", "chain", "done", "intake", "load_config
 
 
 LIMIT = 8000                                   # 工具結果回給模型最多幾個字
-UNKNOWN = ("UnknownTool", "不認得這個工具")
+UNKNOWN = ("ToolUnknown", "不認得這個工具")
 INTERRUPTED = ("Interrupted", "被中斷，沒重跑")
 
 
@@ -80,7 +80,7 @@ def load_config(doc, need_brain=True):
     if doc is None:
         doc = {}
     if not isinstance(doc, dict):
-        raise AgentError("NoConfig", "stdin 要是設定（物件），不是 %r" % (doc,))
+        raise AgentError("ConfigMissing", "stdin 要是設定（物件），不是 %r" % (doc,))
     doc = dict(doc)
     if "brain" not in doc:
         doc["brain"] = lookup("brain.json")
@@ -167,7 +167,7 @@ def think(cfg):
             raise AgentError("BrainFailed", "%s: %s" % (be["code"], be["msg"]) if be
                              else "腦 %s 結束碼 %s" % (cfg["brain"], result["code"]))
         if not (isinstance(reply, dict) and reply.get("role") == "assistant"):
-            raise AgentError("BadReply", "腦 %s 回的最後一份不是 assistant 訊息：%r" % (cfg["brain"], reply))
+            raise AgentError("ReplyBad", "腦 %s 回的最後一份不是 assistant 訊息：%r" % (cfg["brain"], reply))
         reply = {k: v for k, v in reply.items() if k != "usage"}      # 腦附的用量給 kernel 記額度，不進 history
         write_json(cfg["history"], msgs + [reply])
         try:
@@ -218,7 +218,7 @@ def _run_tool(cfg, call):
     try:
         args = json.loads(fn.get("arguments") or "{}")
     except ValueError:
-        return _err("BadArguments", "arguments 不是 JSON：%s" % fn.get("arguments"))
+        return _err("ArgumentsBad", "arguments 不是 JSON：%s" % fn.get("arguments"))
     try:
         inst, ident = _load_inst(target)
     except AgentError as e:
@@ -320,7 +320,7 @@ def intake(cfg):
     - {"history": [...]}＝history 換成它（呼叫方整段綁進來）；
     - {"question": "…"}＝frame 還沒有 history 就生一份 [user 訊息]，已經有就接在後面當一則新的 user 訊息（同一個 frame 續聊）；
       history 最後一則已經是同一句 user 訊息（上一拍接好了、改名前被殺）＝不再接。
-    沒有 args.json：已經有 history＝照舊往下（呼叫方綁了 history，或接著上次的）；也沒有 history＝NoHistory。"""
+    沒有 args.json：已經有 history＝照舊往下（呼叫方綁了 history，或接著上次的）；也沒有 history＝HistoryMissing。"""
     have = os.path.exists(cfg["history"])
     try:
         with open("args.json", encoding="utf-8") as f:
@@ -328,11 +328,11 @@ def intake(cfg):
     except FileNotFoundError:
         if have:
             return {}
-        raise AgentError("NoHistory", "frame 沒有 history，也沒有 args.json")
+        raise AgentError("HistoryMissing", "frame 沒有 history，也沒有 args.json")
     except OSError as e:
         raise AgentError("ReadFailed", "args.json 讀不了：%s" % e)
     except ValueError as e:
-        raise AgentError("BadArguments", "args.json 不是 JSON：%s" % e)
+        raise AgentError("ArgumentsBad", "args.json 不是 JSON：%s" % e)
     hist = arg.get("history") if isinstance(arg, dict) else None
     if hist is None:
         q = arg.get("question") if isinstance(arg, dict) else None
@@ -373,10 +373,10 @@ def done(cfg):
 
 
 def run_fsm(name="fsm.json"):
-    """照 lookup() 找 name（frame → env.json parent 鏈），跑一拍 aos_fsm；回退出碼。找不到＝NoFsm、1（同 fsm 自己出錯）。"""
+    """照 lookup() 找 name（frame → env.json parent 鏈），跑一拍 aos_fsm；回退出碼。找不到＝FsmMissing、1（同 fsm 自己出錯）。"""
     path = lookup(name)
     if path is None:
-        aos_cli.error("NoFsm", "frame %s 與它的 parent 鏈裡都找不到 %s" % (os.getcwd(), name))
+        aos_cli.error("FsmMissing", "frame %s 與它的 parent 鏈裡都找不到 %s" % (os.getcwd(), name))
         return 1
     import aos_fsm                               # 只有這個子命令要 fsm；放這裡免得格庫平常多載一串
     return aos_fsm.main([path])
@@ -399,7 +399,7 @@ def main(argv=None):
         text = "" if sys.stdin is None or sys.stdin.closed else sys.stdin.read()
         args = aos_cli.read_stream(text)
         if text.strip() and not args:
-            raise AgentError("NoConfig", "stdin 不是 JSON")
+            raise AgentError("ConfigMissing", "stdin 不是 JSON")
         arg = args[0] if args else None
         cfg = load_config(arg, need_brain=cmd == "think")
         if cmd == "route":

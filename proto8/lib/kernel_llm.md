@@ -1,13 +1,13 @@
-# LLM kernel（閘門 `aos_gate.py`＋身體 `aos_gate_kernel.py`）
+# LLM kernel（閘門 `aos_gate.py`＋身體 `aos_kernel_llm.py`）
 
-← [proto8/lib](README.md)｜規範：[N-42](../NORMS/09-kernel.md)（第一種：管 LLM 呼叫）｜概念：[C-47](../CONCEPTS/04-kernel.md)｜決定：[thinking 10-15 kernel 截流](../thinking/2026-10-15-kernel-intercept.md)、[LLM kernel 優先級](../thinking/2026-10-15-llm-kernel.md)｜demo：[demo/kernel](../demo/kernel/run.py)（`python3 proto8/demo/run.py kernel`）
+← [proto8/lib](README.md)｜規範：[N-42](../NORMS/09-kernel.md)（第一種：管 LLM 呼叫）｜概念：[C-47](../CONCEPTS/04-kernel.md)｜決定：[thinking 10-15 kernel 截流](../thinking/2026-10-15-kernel-intercept.md)、[LLM kernel 優先級](../thinking/2026-10-15-llm-kernel.md)｜demo：[demo/kernels/llm](../demo/kernels/llm/run.py)（`python3 proto8/demo/run.py kernels/llm`）
 
 > **基礎實作（N-18 最簡單的）、還不是規範。** 動工時自己定的點列在 [thinking LLM kernel「動工自定點」](../thinking/2026-10-15-llm-kernel.md#動工自定點)。
 
 兩支：**閘門**包住要排隊的 inst（例：腦），**kernel** 是 daemon 底下一個 loop 每拍跑一次的身體。中間是一個信箱資料夾（N-16 Maildir）。信箱的共用部分（讀信、認領、跑一封、回信、log）在 `aos_mailbox.py`，兩種 kernel 都用。
 
 ```
-呼叫者 ──N-12──▶ aos_gate.py ──信──▶ 信箱 tmp/→new/ ──▶ aos_gate_kernel.py（每拍：挑一封、new/→cur/、aos_inst 真跑）
+呼叫者 ──N-12──▶ aos_gate.py ──信──▶ 信箱 tmp/→new/ ──▶ aos_kernel_llm.py（每拍：挑一封、new/→cur/、aos_inst 真跑）
         ◀─stdout／碼──        ◀──────── reply/<名> ◀─────────────── 回信
 ```
 
@@ -25,7 +25,7 @@ python3 aos_gate.py [--target T] [--mailbox DIR] [--wait-ms N] [GATE.json]     #
  "wait_ms": 60000}                    // 選填：排隊（信還在 new/）最多等多久；沒寫＝不限
 ```
 
-- **換腦一行**：agent 定義資料夾的 `brain.json` 換成一張跑閘門的 inst（例 `demo/kernel/boss/brain.json`：`aos gate <閘門設定>`），其他不動；只換某次呼叫＝在那次的 frame 放這份 `brain.json`（demo 的 clerk 就這樣借 boss 的腦）。
+- **換腦一行**：agent 定義資料夾的 `brain.json` 換成一張跑閘門的 inst（例 `demo/kernels/llm/boss/brain.json`：`aos gate <閘門設定>`），其他不動；只換某次呼叫＝在那次的 frame 放這份 `brain.json`（demo 的 clerk 就這樣借 boss 的腦）。
 - **信**（`new/<奈秒時間>.<pid>.json`，名字字典序＝先來後到）＝**target 那張 inst 本身**（inst 族，C-48）：key 攤在最上層（`argv`、`cwd`（轉絕對）、`timeout_ms`、`_metainfo`…；`id`＝target 的 id），加私有 key `priority`、`reply`（回信的絕對路徑 `reply/<名>.json`）、`sent`（epoch 秒）；`stdin`＝旁檔 `reply/<名>.stdin`（呼叫者 stdin 的內容）。kernel 只要把 `stdout`／`stderr` 填成旁檔 `reply/<名>.stdout`／`.stderr`，就能直接 `aos_inst.run(信)`（不認得的 key 一律忽略）。
 - **回信**＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`），或 N-29 形狀 `{"error": {"code", "msg"}}`（aos_inst 起不來時多 `exit`＝它的碼）。閘門讀回信、讀 stdout／stderr 旁檔原樣吐出，回信與旁檔一起刪掉。
 - **呼叫端看到的＝直接叫 target**：stdout、stderr 原樣、退出碼＝target 的碼（測試逐字比過）。**閘門是透明的**：這時 stderr 與碼都是 target 的，不是閘門自己的；target 守 N-43（正常退 0、不寫 stderr）閘門就守。閘門只在自己出錯（下一條）時才說自己的話（10-15 使用者「都按照推薦。」，[盤點 S3](../thinking/2026-10-15-principles.md)）。
@@ -33,10 +33,10 @@ python3 aos_gate.py [--target T] [--mailbox DIR] [--wait-ms N] [GATE.json]     #
 - SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）、stderr 一份 `Signaled`（帶訊號號碼）、退出 1（原 128＋N）；已被拿走的讓它跑完，回信與旁檔沒人收（留在 reply/）。
 - target 在 kernel 的環境跑（環境變數＝kernel 的＋target 的 `envs`，不是呼叫者的）；stdin／stdout／stderr 被閘門蓋掉（同 fsm 的格）。
 
-## kernel `aos_gate_kernel.py`
+## kernel `aos_kernel_llm.py`
 
 ```
-python3 aos_gate_kernel.py [--key 值 ...] [KERNEL.json | -]
+python3 aos_kernel_llm.py [--key 值 ...] [KERNEL.json | -]
 ```
 
 | key | 意思 |
