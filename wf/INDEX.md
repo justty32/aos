@@ -27,6 +27,7 @@
 | [SESSION-LOG.md](SESSION-LOG.md) | 我的 open 進度（hub）|
 | [session_logs/](session_logs/README.md) | SESSION-LOG 搬出的舊條目（按月份全文＋索引；月份檔膨脹再按日拆進 `<月>/`，如 `2026-09/`）|
 | [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的事（只列 open）|
+| [HANDOFF.md](HANDOFF.md) | compact 交接：compact 前頂層寫、compact 後 hook 自動讀回最新一條 |
 
 ## 通用（跨工作流共享）
 
