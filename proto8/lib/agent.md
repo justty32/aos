@@ -70,7 +70,9 @@ python3 aos_agent_lib.py think      python3 aos_agent_lib.py tool
 
 動工時自己定的（等使用者看）：`arguments` 不是 JSON＝回 `{"code": null, "error": …}` 不跑；工具的 inst 起不來（aos_inst 出錯）同樣回 `{"code": null, "error": …}`；工具 inst 沒寫 `_tool`＝空說明、不收引數。
 
-## agent 當函數／當工具（`aos_agent_call.py`，10-15）
+## agent 當函數／當工具
+
+程式：`aos_agent_call.py`（10-15）。
 
 概念：[CONCEPTS C-46](../CONCEPTS/05-agent.md)（使用者 10-15 定，概念層；規範慢慢來）｜決定：[thinking 10-15 §11](../thinking/2026-10-15-topics.md#11-agent-當函數binding當工具)
 
