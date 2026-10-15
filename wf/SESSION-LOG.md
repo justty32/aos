@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **10-15 kernel 定義兩層（C-47）、先做兩種 kernel 基於 daemon（N-42）**（[thinking](../proto8/thinking/2026-10-15-kernel-intercept.md)）：具體機制與六題未決仍開。
+- **10-15 kernel 定義兩層（C-47）、先做兩種 kernel 基於 daemon（N-42）**（[thinking](../proto8/thinking/2026-10-15-kernel-intercept.md)）：具體機制仍開；LLM kernel 六題 10-15 隨意定案（第一版只 priority／deadline）。
 - **10-15 agent 當函數＋binding、當工具**（[C-46](../proto8/CONCEPTS/05-agent.md#agent函數binding)、[thinking §11](../proto8/thinking/2026-10-15-topics.md#11-agent-當函數binding當工具)）：`aos_agent_call.py`＋`aos_agent_lib.py ask`，demo 報時員 `clerk/`。open：動工自定點（定義攤開、工具在 bob/ 跑）等使用者看；真腦實跑由使用者安排。
 - **10-15 agent 思考介面＋工具＝inst**（[lib agent.md](../proto8/lib/agent.md)、thinking 10-15 §5～§10）：格庫、三顆真腦、system 提示都做了；LM Studio 整圈跑通，146 不用。open：動工自定點等使用者看、跑順再升規範。
 - **10-15 主題重排＋fsm 補細則**（[thinking 10-15](../proto8/thinking/2026-10-15-topics.md)）：NORMS／CONCEPTS 分檔改按主題（設計理念含時空暫定、總則、基礎設施含組合子 tasks＋fsm、kernel、agent），入口有條號 → 檔表；N-35～N-41 修字、fsm 補第一拍／error 格／step／結束碼／心跳（Q12 已對齊）。未決：總則與設計理念要不要併、時空歸屬、[待定](../proto8/NORMS/08-待定.md)其餘。
