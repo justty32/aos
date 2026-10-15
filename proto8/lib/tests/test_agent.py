@@ -1,4 +1,4 @@
-"""proto8/lib 的自動測試：agent 的膠水（aos_agent）與真的腦（aos_brain_openai）。只用標準庫：
+"""proto8/lib 的自動測試：agent 的現成格庫（aos_agent_lib）與真的腦（aos_brain_openai）。只用標準庫：
 
     python3 -m unittest discover -s proto8/lib/tests
 
@@ -14,7 +14,7 @@ import threading
 
 from helpers import FSM, LIB, Tmp
 
-AGENT = os.path.join(LIB, "aos_agent.py")
+AGENT = os.path.join(LIB, "aos_agent_lib.py")
 BRAIN = os.path.join(LIB, "aos_brain_openai.py")
 DEMO = os.path.join(LIB, "..", "demo", "fsm")
 
@@ -65,22 +65,29 @@ class AgentRoundTest(Tmp):
 
 
 class AgentCellTest(Tmp):
-    """直接敲 aos_agent.py tool：一次多個 tool_calls、被中斷。"""
+    """直接敲 aos_agent_lib.py tool（設定走 stdin 的 cfg）：一次多個 tool_calls、被中斷、沒 cfg。"""
 
     def setUp(self):
         super().setUp()
         self.write("tools/echo.json", {"argv": ["sh", "-c", "cat; echo"], "_tool": {"description": "回聲"}})
-        self.cfg = self.write("agent.json", {"brain": "brain.json", "tools": {"echo": "tools/echo.json"},
-                                             "history": "h.json", "work": "work"})
+        self.cfg = {"brain": "brain.json", "tools": {"echo": "tools/echo.json"}, "history": "h.json", "work": "work"}
 
     def calls(self, *names):
         tc = [{"id": "c%d" % i, "type": "function", "function": {"name": n, "arguments": '{"x": %d}' % i}}
               for i, n in enumerate(names)]
         self.write("h.json", [{"role": "user", "content": "hi"}, {"role": "assistant", "content": None, "tool_calls": tc}])
 
-    def tool(self, prev=None):
-        return subprocess.run([sys.executable, AGENT, "tool", "agent.json"], cwd=self.tmp, capture_output=True,
-                              text=True, input=json.dumps({"state": "tool", "step": 1, "prev": prev}), timeout=10)
+    def tool(self, prev=None, cfg=True):
+        arg = {"state": "tool", "step": 1, "prev": prev}
+        if cfg:
+            arg["cfg"] = self.cfg
+        return subprocess.run([sys.executable, AGENT, "tool"], cwd=self.tmp, capture_output=True,
+                              text=True, input=json.dumps(arg), timeout=10)
+
+    def test_no_cfg_is_cell_error(self):
+        self.calls("echo")
+        r = self.tool(cfg=False)
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoConfig"))
 
     def test_multiple_tool_calls_runs_first_only(self):
         self.calls("echo", "echo", "nope")
@@ -101,11 +108,11 @@ class AgentCellTest(Tmp):
         self.assertFalse(os.path.exists(self.p("work")))                    # 沒跑工具
 
     def test_tool_specs_from_inst(self):
-        import aos_agent
+        import aos_agent_lib
         cwd = os.getcwd()
         os.chdir(self.tmp)
         try:
-            specs = aos_agent.tool_specs({"echo": "tools/echo.json"})
+            specs = aos_agent_lib.tool_specs({"echo": "tools/echo.json"})
         finally:
             os.chdir(cwd)
         self.assertEqual(specs, [{"type": "function", "function": {
@@ -178,10 +185,9 @@ class BrainOpenaiTest(Tmp):
         _Stub.reply = {"choices": [{"message": {"role": "assistant", "content": "好"}}]}
         self.write("brain.json", {"argv": [sys.executable, BRAIN, "--base-url", self.url, "--model", "m1"]})
         self.write("tools/clock.json", {"argv": ["true"], "_tool": {"description": "時間"}})
-        self.write("agent.json", {"brain": "brain.json", "tools": {"clock": "tools/clock.json"},
-                                  "history": "h.json", "work": "work"})
+        cfg = {"brain": "brain.json", "tools": {"clock": "tools/clock.json"}, "history": "h.json", "work": "work"}
         self.write("h.json", [{"role": "user", "content": "hi"}])
-        r = subprocess.run([sys.executable, AGENT, "think", "agent.json"], cwd=self.tmp, input="{}",
+        r = subprocess.run([sys.executable, AGENT, "think"], cwd=self.tmp, input=json.dumps({"cfg": cfg}),
                            capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(_Stub.seen[0][2]["tools"][0]["function"]["description"], "時間")

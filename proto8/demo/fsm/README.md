@@ -11,13 +11,13 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 ## 裡面有什麼
 
 - `loop.json`：aos-loop 的設定，inst＝`aos_fsm.py agent.json`，跑 10 次、每次隔 100 ms；fsm 每拍吐的那行附加到 `steps.jsonl`。窗都用 `$env` 指到暫存資料夾。
-- `agent.json`：外層 fsm＋agent 設定。`start: idle`，表 `idle → cells/idle.json`、`thinking → think/`（資料夾＝走 aos-inst 的找法，找到 `think/inst.json`）、`tool → cells/tool.json`（表上靜態 `next: thinking`）；state 窗、lock、`max_steps: 10`。fsm 不認得的四個 key 給 agent 膠水用（[agent.md](../../lib/agent.md)）：`brain`（腦的 TARGET）、`tools`（`{"clock": "tools/clock.json"}`）、`history`（`work/history.json`＝OpenAI messages）、`work`。
-- `think/`：內層 fsm。`inst.json` 跑 `aos_fsm.py think/fsm.json`（cwd 跟外層一樣是 demo 資料夾）；表 `ask → review`（ask 帶表上靜態 `next: review`）、`end: ["tool", "idle"]`、自己的 state 窗、沒有 lock 與 ctl。
-- 格（stdin 讀 fsm 給的 `{"state", "step", "prev"}`、stdout 吐 `{"next"?, "data"}`）：
+- `agent.json`：外層 fsm＋agent 設定。`start: idle`，表 `idle → cells/idle.json`、`thinking → think/`（資料夾＝走 aos-inst 的找法，找到 `think/inst.json`）、`tool → cells/tool.json`（表上靜態 `next: thinking`）；state 窗、lock、`max_steps: 10`。fsm 不認得的四個 key 給現成格庫 `aos_agent_lib.py` 用（fsm 把整份設定當 stdin 的 `cfg` 給格，[agent.md](../../lib/agent.md)）：`brain`（腦的 TARGET）、`tools`（`{"clock": "tools/clock.json"}`）、`history`（`work/history.json`＝OpenAI messages）、`work`。
+- `think/`：內層 fsm。`inst.json` 跑 `aos_fsm.py think/fsm.json`（cwd 跟外層一樣是 demo 資料夾）；表 `ask → review`（ask 帶表上靜態 `next: review`）、`end: ["tool", "idle"]`、自己的 state 窗、沒有 lock 與 ctl。內層給格的 `cfg` 是 `think/fsm.json` 自己，所以 `brain`、`tools`、`history`、`work` 四個 key 用 `$ref` 指到 `agent.json`（N-40）。
+- 格（stdin 讀 fsm 給的 `{"state", "step", "prev", "cfg"}`、stdout 吐 `{"next"?, "data"}`）：
   - `cells/idle.py`：`inbox/` 有信就拿最早一封、開新對話（history＝`[user 訊息]`），回 `next: thinking`；沒信不回 next。
-  - `think/ask.json`＝`aos_agent.py think agent.json`（**同步**，N-41）：讀 history、組 `{"messages", "tools"}`、跑腦、接 assistant 訊息。
+  - `think/ask.json`＝`aos_agent_lib.py think`（**同步**，N-41）：讀 history、組 `{"messages", "tools"}`、跑腦、接 assistant 訊息。
   - `think/review.py`：最後一則 assistant 有 `tool_calls`＝`next: tool`，否則寫 `outbox.txt`、`next: idle`（兩個都在 `end`＝交給外層）。
-  - `cells/tool.json`＝`aos_agent.py tool agent.json`：跑第一個 tool_call（引數寫成 `work/N-call.json` 當 stdin）、接 tool 訊息。
+  - `cells/tool.json`＝`aos_agent_lib.py tool`：跑第一個 tool_call（引數寫成 `work/N-call.json` 當 stdin）、接 tool 訊息。
 - `brain/fake.py`（`brain/fake.json`）：假腦，照思考介面。問「幾點」回 OpenAI `tool_calls` 叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回。`brain/openai.json`：真腦（`aos_brain_openai.py`）。
 - `tools/clock.json`＋`clock.py`：工具＝inst，說明在 `_tool`；stdout `{"time": "HH:MM:SS"}`。
 - `run.py`：mktemp 建暫存資料夾（`inbox/` 兩封信「你好」「現在幾點？」、`work/`、窗），起 aos-loop，每 20 ms 看一次兩層 state 窗、每拍跑完印一行；最後印 `steps.jsonl`、history、`outbox.txt`，刪掉暫存資料夾。
