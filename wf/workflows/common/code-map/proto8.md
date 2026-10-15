@@ -10,11 +10,11 @@
 
 **命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`、值的雙形收成物件的 `expand()`；沒有寫 stderr 的警告，預料到的意外記進各自的窗 `last_warning`）、`檔#/位置`＋指示詞（語法糖）`aos_directives.py`。
 
-**inst／loop／daemon**：inst `aos_inst.py`；loop `aos_loop.py`（`stop_on_end`：包的 fsm 走到 end 就結束，N-44）＋共用的 ctl／state `aos_ctl_state.py` 與行程群組 `aos_proc.py`；daemon `aos_daemon.py`（重用 loop 的拍引擎）＋表與策略格 `aos_daemon_table.py`＋指令與控制資料夾 `aos_daemon_folder.py`。
+**inst／loop／daemon**：inst `aos_inst.py`；loop `aos_loop.py`（`stop_on_end`：包的 fsm 走到 end 就結束，N-44）＋共用的 ctl／state `aos_ctl_state.py` 與行程群組 `aos_proc.py`；daemon `aos_daemon.py`（重用 loop 的拍引擎）＋表與策略格 `aos_daemon_table.py`（收子項只看是物件、包 inst.json、填窗，裡面的 loop key 與 inst 不驗，C-52）＋指令與控制資料夾 `aos_daemon_folder.py`。
 
-**fsm**：`aos_fsm.py`（只管狀態→格，state 窗只有 phase）＋方法表 `aos_methods.py`。
+**fsm**：`aos_fsm.py`（只管狀態→格，state 窗只有 phase；格的 stderr 不讀；沒結束的拍自己那行帶 `next: null`，所以外層不必知道某格是 fsm）＋方法表 `aos_methods.py`（跑格：蓋 stdout、不碰 stdin／stderr）。
 
-**agent**：現成格庫 `aos_agent_lib.py`——think／tool（一拍內照順序跑完全部 tool_calls，每個在 `work/<n>/` 跑、寫 `args.json`）／route／intake（args.json 接進 history、接完改名 `args.taken.json`，也刪上一輪 ret.json）／done（寫 ret.json，不碰 ctl），外加給 loop.json 用的 `fsm`（照 lookup 找 fsm.json 跑一拍）；設定＝格 inst 自己的 stdin＋frame 裡 `lookup()`；`system` 選填＝系統提示檔，不進 history。frame 查找（cwd → `frame.json` parent 鏈）在 `aos_frame.py`（格庫 re-export）。agent 當函數／當工具不另寫程式（`aos_agent_call.py` 10-15 退場）：定義資料夾＋frame、工具 inst 用 `sh -c` 三步。
+**agent**：現成格庫 `aos_agent_lib.py`——think（腦的 stderr 不讀，BrainFailed 只說結束碼）／tool（一拍內照順序跑完全部 tool_calls，每個在 `work/<n>/` 跑、寫 `args.json`；工具裡面是什麼不管、不傳，C-52）／route／intake（args.json 接進 history、接完改名 `args.taken.json`，也刪上一輪 ret.json）／done（寫 ret.json，不碰 ctl），外加給 loop.json 用的 `fsm`（照 lookup 找 fsm.json 跑一拍）；設定＝格 inst 自己的 stdin＋frame 裡 `lookup()`；`system` 選填＝系統提示檔，不進 history。frame 查找（cwd → `frame.json` parent 鏈）在 `aos_frame.py`（格庫 re-export）。agent 當函數／當工具不另寫程式（`aos_agent_call.py` 10-15 退場）：定義資料夾＋frame、工具 inst 用 `sh -c` 三步。
 
 **真的腦**：`aos_brain_openai.py`（OpenAI 相容）與 `aos_brain_ollama.py`（ollama 原生 `/api/chat`，能設 num_ctx）；兩顆都在 assistant 訊息頂層帶 `usage` 給 kernel 記額度。
 
