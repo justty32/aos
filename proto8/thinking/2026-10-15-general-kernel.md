@@ -47,3 +47,16 @@
 - 判官一：`judge_rules.py`，同一介面、純規則（先來後到＋同資源不超格）——先用它把形狀、後援、省判官跑通。
 - 判官二：`judge/agent.json`（bob 式），system.md 寫「只回 run／defer／reject」，腦走 LM Studio；錯就退回規則。
 - demo：三個閘門（假腦 sleep、假 cpu 活、假人回信）同時丟信，看 kernel log 的順序與 `judge_fails`。
+
+## 動工自定點
+
+10-15 做了基礎實作（[lib kernel2.md](../lib/kernel2.md)、demo `run.py kernel2`），自己定的、等使用者看：
+
+- **一拍＝一段忙碌期**：一拍裡一封一條執行緒、各自一支子程式，誰跑完就放格、馬上再決定；沒有在跑的才結束這拍。這樣 human 格等人時，llm／cpu 照樣排得動；子程式都在 loop 起的那個行程群組裡，收工整群收、不漏。代價：一拍可能很長，`waited_runs` 在一拍裡不長（另給 `waited_ms`）。
+- **判官的輸入輸出**（使用者 10-15 拍板）：stdin＝kernel 的 state 窗整份（loop 骨架的 `state`／`pid`／`runs`／`last_error`／`beat`＋`queue`、`running`、`slots`、`budget`、`served`、`seen`、`judge_fails`、`judge_error`、`last_sig`）；stdout 保留 `run`／`defer`／`reject`，reject 每項 `{"id", "error": {code, msg}}`。同一個 id 出現兩次＝形狀不對。
+- **省判官的「局面」**＝排隊名單＋在跑名單＋各資源空格；記在 state 窗 `last_sig`，跨拍也沿用（判官全 defer、局面沒變＝一直等到有變化）。
+- **`judge_fails`＝連錯次數**（每次問都算，不是每拍）；判官對一次歸零；到 `max_fails` 停問，人把它改回 0 才再問。
+- **資源**：`_metainfo.resource` 沒寫或 `"none"`＝便宜的，不佔格、不問判官；寫了 `slots` 沒有的＝`ResourceUnknown`。`slots` 純值 n＝`{"llm": n}`。`budget` 只管 `llm` 的信。
+- **判官環境**：一律拿掉繼承的 `AOS_KERNEL`；判官 inst 自己 `envs` 指回本信箱也拿掉，指別的照給。判官沒寫 `timeout_ms`＝30 秒。
+- **agent 判官**：`judge/ask_judge.py` 包 `aos_agent_call`，取最後一句裡第一個 `{` 到最後一個 `}`；沒用 `_tool` schema 硬約束（小模型錯就退回規則）。
+- **新增的 key**：kernel 設定 `slots`（物件）、`judge`、`max_fails`、`poll_ms`；state 窗見上；信不加 key。抄自第一種的幾支小函數（讀信、回信、認領、跑一封）在 `aos_kernel.py` 另一份，日後併。

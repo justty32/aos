@@ -1,0 +1,1 @@
+{"argv": ["python3", "judge/ask_judge.py", "judge/agent.json"], "timeout_ms": 200000}
