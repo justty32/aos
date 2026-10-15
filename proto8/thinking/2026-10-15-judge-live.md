@@ -69,3 +69,5 @@
 ## 決定：補位（使用者 10-15「照建議做補位」）
 
 套完判官的決定後還有空格，就用確定規則從沒被 reject 的剩下的信補滿；判官的 `defer`＝「不是我挑的」。log 的 `decide.backfill`、`start.reason`＝`backfill`。細節見 [kernel2.md](../lib/kernel2.md)。上節「未決 1」就此解（全 defer 不再卡住）。
+
+後續：補位之後的實跑見 [judge-live2](2026-10-15-judge-live2.md)。
