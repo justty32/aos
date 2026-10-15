@@ -6,7 +6,7 @@
     python3 aos_agent_lib.py tool
     python3 aos_agent_lib.py route [--done 名]   （看最後一則 assistant：有 tool_calls＝next tool，否則 next idle（或 --done 給的名））
     python3 aos_agent_lib.py intake        （args.json 接進 history（沒有就生、有就接在後面），接完改名 args.taken.json）
-    python3 aos_agent_lib.py done          （寫 ret.json＝最後一句或連錯的錯誤，再把 ctl.json 寫成 stop）
+    python3 aos_agent_lib.py done          （寫 ret.json＝最後一句或連錯的錯誤；loop 停靠 fsm 結束那行＋loop 的 stop_on_end）
     python3 aos_agent_lib.py fsm [NAME]    （照 lookup() 找 NAME（預設 fsm.json），跑一拍 aos_fsm；定義資料夾的 loop.json 用它，
                                             不必寫自己的路徑）
 
@@ -349,7 +349,7 @@ TAKEN = "args.taken.json"                      # 接進 history 之後 args.json
 
 
 def intake(cfg):
-    """把 cwd 的 args.json（實引數）接進 history，接完改名成 args.taken.json（同一份不會接兩次）：
+    """把 cwd 的 args.json（實引數）接進 history，接完改名成 args.taken.json（同一份不會接兩次），並刪掉上一輪的 ret.json：
     - {"history": [...]}＝history 換成它（呼叫方整段綁進來）；
     - {"question": "…"}＝frame 還沒有 history 就生一份 [user 訊息]，已經有就接在後面當一則新的 user 訊息（同一個 frame 續聊）；
       history 最後一則已經是同一句 user 訊息（上一拍接好了、改名前被殺）＝不再接。
@@ -379,6 +379,10 @@ def intake(cfg):
         raise AgentError("FieldType", "args.json 的 history 要是訊息陣列，不是 %r" % (hist,))
     write_json(cfg["history"], hist)
     os.replace("args.json", TAKEN)
+    try:
+        os.remove("ret.json")                    # 新的一問：上一輪的回傳清掉（這次沒跑完就沒有 ret.json）
+    except FileNotFoundError:
+        pass
     return {}
 
 
@@ -389,9 +393,9 @@ def _last_text(msgs):
     return None
 
 
-def done(cfg, ctl="ctl.json"):
-    """收尾：寫 cwd 的 ret.json——think 連錯停住（work/think-fails.json 在）＝N-29 形狀的錯，否則 {"reply": 最後一句}；
-    再把 ctl（拍這個 fsm 的 loop 的 ctl 窗，預設 cwd 的 ctl.json）寫成 stop。"""
+def done(cfg):
+    """收尾：寫 cwd 的 ret.json——think 連錯停住（work/think-fails.json 在）＝N-29 形狀的錯，否則 {"reply": 最後一句}。
+    不碰 ctl：done 放在表的 end 裡，fsm 結束那行帶 `"end": true`，拍它的 loop 寫了 stop_on_end 就停（10-15 使用者）。"""
     try:
         with open(_fails_file(cfg), encoding="utf-8") as f:
             ret = {"error": json.load(f)["error"]}
@@ -402,7 +406,6 @@ def done(cfg, ctl="ctl.json"):
             msgs = []
         ret = {"reply": _last_text(msgs)}
     write_json("ret.json", ret)
-    write_json(ctl, {"stop": True})
     return {"data": ret}
 
 
@@ -443,7 +446,7 @@ def main(argv=None):
             aos_cli.emit(intake(cfg))
             return 0
         if cmd == "done":
-            aos_cli.emit(done(cfg, arg.get("ctl", "ctl.json") if isinstance(arg, dict) else "ctl.json"))
+            aos_cli.emit(done(cfg))
             return 0
         data = (think if cmd == "think" else act)(cfg)
     except CliError as e:

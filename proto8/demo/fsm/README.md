@@ -14,13 +14,13 @@ python3 proto8/demo/fsm/run.py brain/lmstudio.json      （換腦：在 frame �
 這個資料夾本身就是一個 **agent 定義資料夾**（C-50：表、怎麼拍、每格一張 inst、預設的腦、系統提示、工具；呼叫時一個字都不寫）。所有葉子都寫指令名：`aos …`（PATH 上的 `proto8/bin/aos`）、`aos-demo …`（`demo/bin/aos-demo`：跑 demo 資料夾裡的腳本）。
 
 - `fsm.json`：外層表。`start: idle`；`idle → cells/idle.json`、`thinking → cells/thinking.json`（內層 fsm）、`tool → cells/tool.json`（表上靜態 `next: thinking`）、`done`／`halted → cells/done.json`；`end: ["done", "halted"]`；state 窗 `fsm-state.json`（從 frame 算）。
-- `loop.json`：怎麼拍。`aos agent fsm`（照 frame 的 `env.json` 找到這裡的 fsm.json，不必寫自己在哪）每 100 ms 一次、最多 20 次，每拍那行附加到 frame 的 `steps.jsonl`；`ctl_poll_ms: 1`（done 寫了 stop 馬上看到）。
+- `loop.json`：怎麼拍。`aos agent fsm`（照 frame 的 `env.json` 找到這裡的 fsm.json，不必寫自己在哪）每 100 ms 一次、最多 20 次，每拍那行附加到 frame 的 `steps.jsonl`；`stop_on_end: true`（fsm 走到 end 就停，N-44）。
 - `brain.json`（假腦 `aos-demo fsm/brain/fake.py`）、`system.md`（繁體中文、簡短、需要時用工具）、`tools/clerk.json`（外層只有報時員這一個工具，要時間就得問它）。
 - `cells/`：
   - `idle.json`＝`cells/idle.py`：frame 的 `inbox/` 有信就拿最早一封、開新對話（`history.json`＝`[user 訊息]`），回 `next: thinking`；沒信回 `next: done`。
   - `thinking.json`＝`aos agent fsm think/fsm.json`：內層 fsm（`think/fsm.json`：`ask → review`、`end: ["tool", "idle", "halted"]`、state 窗 `think-state.json`）。`think/ask.json`＝`aos agent think`（**同步**，N-41）；`think/review.py`：最後一則 assistant 有 `tool_calls`＝`next: tool`，否則寫 frame 的 `outbox.txt`、`next: idle`（都在內層的 `end`＝交給外層）。ask 連錯 3 次回 `next: halted`，同樣交給外層。
   - `tool.json`＝`aos agent tool`：跑第一個 tool_call，每次在 frame 的 `work/<n>/` 開新資料夾、引數寫成 `args.json`、在那裡跑。
-  - `done.json`＝`aos agent done`：寫 frame 的 `ret.json`、把 `ctl.json` 寫成 stop（loop 就停）；halted 也用它（ret.json 是錯）。
+  - `done.json`＝`aos agent done`：寫 frame 的 `ret.json`；done 在 `end` 裡，fsm 結束那行帶 `"end": true`，loop 的 `stop_on_end` 看到就停（N-44）；halted 也用它（ret.json 是錯）。
   - `common.py`：idle、review 共用的 history 讀寫（cwd＝frame）。
 - `brain/`：換用的腦。`fake.py`（假腦：問「幾點」有 `clerk` 就叫 clerk、否則叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回）、`openai.json`（`aos brain openai`，預設 LiteLLM）、`lmstudio.json`（本機 LM Studio、`qwen/qwen3-1.7b`）、`ollama146.json`／`qwen146.json`（146 的 ollama——**146 已不准用**（10-15 使用者），只留當範例）。
 - `clerk/`（報時員）：**另一個 agent 定義資料夾**，單層表 `intake → thinking → route → (tool → thinking → route)* → done`（halted 也接 done），`loop.json` 跟外層同一種寫法（`times` 20），腦 `brain.json`＝同一顆假腦，工具 `tools/clock.json`（`clock.py`：stdout `{"time": "HH:MM:SS"}`），`system.md`「你是報時員…」。
@@ -50,7 +50,7 @@ python3 proto8/demo/fsm/run.py brain/lmstudio.json      （換腦：在 frame �
 [ 3.8s] 外層 phase=thinking │ 內層 phase=ask
 …
 [ 4.7s] 外層 phase=done     │ 內層 phase=ask
-[ 5.0s] aos-loop 結束，退出碼 0（stopped）
+[ 5.0s] aos-loop 結束，退出碼 0（done）
 …
 [ 5.0s] == work/1/（叫 clerk 那次的 frame：args.json＝引數；clerk/ 本身沒動，history 累積在這裡）
 [ 5.0s]    args.taken.json：{"question": "現在幾點？"}
@@ -65,4 +65,4 @@ python3 proto8/demo/fsm/run.py brain/lmstudio.json      （換腦：在 frame �
 - 外層在 thinking 時每拍只推內層一步：內層 ask → review 那拍沒到終點，外層的 `to` 還是 thinking。
 - 內層 review 回 `next: idle`／`tool`（在 `end` 裡）：內層 phase 歸位 `ask`，外層換狀態。
 - tool 那拍約 1.7 秒＝報時員整趟跑完（它自己的 loop 敲 7 拍：intake → thinking → route → tool → thinking → route → done）；外層看不到這幾拍，只拿到它的 ret.json。
-- inbox 空了 idle 回 `done`：done 那拍寫 `ret.json`、stop，fsm 結束（phase 歸位 idle），loop 停（`stopped`）。
+- inbox 空了 idle 回 `done`：done 那拍寫 `ret.json`、stop，fsm 結束（phase 歸位 idle），loop 正常結束（`done`）。

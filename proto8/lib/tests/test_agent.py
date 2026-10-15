@@ -62,7 +62,8 @@ class AgentRoundTest(Tmp):
         self.assertEqual([m["role"] for m in sub], ["user", "assistant", "tool", "assistant"])
         self.assertEqual(sub[1]["tool_calls"][0]["function"]["name"], "clock")
         self.assertEqual(json.loads(self.read("work/1/ret.json")), res["result"])
-        self.assertEqual(json.loads(self.read("work/1/ctl.json")), {"stop": True})    # done 格停掉 clerk 的 loop
+        self.assertEqual(json.loads(self.read("work/1/loop-state.json"))["state"], "done")   # fsm 結束＝clerk 的 loop 停
+        self.assertFalse(os.path.exists(self.p("work", "1", "ctl.json")))     # 不靠 ctl
 
     def test_clerk_reused_definition_untouched(self):
         clerk = os.path.join(DEMO, "clerk")
@@ -81,13 +82,13 @@ class AgentRoundTest(Tmp):
         self.assertEqual(json.loads(hist[2]["content"])["error"]["code"], "UnknownTool")   # N-29 形狀
 
     def test_empty_inbox_done_stops(self):
-        # inbox 空了＝idle 回 next done：done 格寫 ret.json、ctl stop，fsm 結束（phase 歸位 idle）
+        # inbox 空了＝idle 回 next done：done 格寫 ret.json，fsm 結束（那行帶 end、phase 歸位 idle）
         r = subprocess.run(["aos", "agent", "fsm"], cwd=self.tmp, env=ENV, capture_output=True, text=True, timeout=30)
         self.assertEqual(json.loads(r.stdout.splitlines()[0])["to"], "done")
         r = subprocess.run(["aos", "agent", "fsm"], cwd=self.tmp, env=ENV, capture_output=True, text=True, timeout=30)
-        self.assertEqual([json.loads(x) for x in r.stdout.splitlines()][-1], {"data": {"reply": None}})
+        out = [json.loads(x) for x in r.stdout.splitlines()]
+        self.assertEqual((out[0]["end"], out[-1]), (True, {"data": {"reply": None}}))
         self.assertEqual(json.loads(self.read("fsm-state.json")), {"phase": "idle"})
-        self.assertEqual(json.loads(self.read("ctl.json")), {"stop": True})
 
 
 class AgentSystemTest(Tmp):
@@ -240,7 +241,7 @@ class AgentFrameTest(Tmp):
         r = self.run_cell("done", fr)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(self.read("fr/ret.json")), {"reply": "n=2"})
-        self.assertEqual(json.loads(self.read("fr/ctl.json")), {"stop": True})
+        self.assertFalse(os.path.exists(self.p("fr", "ctl.json")))           # done 不碰 ctl
         self.write("fr/work/think-fails.json", {"n": 3, "error": {"code": "BrainFailed", "msg": "x"}})
         self.run_cell("done", fr)
         self.assertEqual(json.loads(self.read("fr/ret.json")), {"error": {"code": "BrainFailed", "msg": "x"}})
@@ -267,6 +268,12 @@ class AgentFrameTest(Tmp):
         self.assertEqual([m["content"] for m in json.loads(self.read("fr/history.json"))], ["綁好的", "好", "再問一句"])
         self.assertFalse(os.path.exists(self.p("fr", "args.json")))
         self.assertEqual(json.loads(self.read("fr/args.taken.json")), {"question": "再問一句"})
+        self.write("fr/ret.json", {"reply": "上一輪"})
+        self.write("fr/args.json", {"question": "第三句"})                  # 接新問題時清掉上一輪的 ret.json
+        self.run_cell("intake", fr)
+        self.assertFalse(os.path.exists(self.p("fr", "ret.json")))
+        self.write("fr/history.json", [{"role": "user", "content": "綁好的"}, {"role": "assistant", "content": "好"},
+                                       {"role": "user", "content": "再問一句"}])
         self.write("fr/args.json", {"question": "再問一句"})            # 上一拍接好了、改名前被殺：不重複接
         self.run_cell("intake", fr)
         self.assertEqual(len(json.loads(self.read("fr/history.json"))), 3)
@@ -289,7 +296,8 @@ if first == "fail":
     sys.exit(1)
 if first == "slow":
     time.sleep(0.5)
-if (first == "loop" or last.get("content") == "use t") and last["role"] != "assistant":
+looping = "loop" in [m.get("content") for m in msgs if m["role"] == "user"]
+if (looping or last.get("content") == "use t") and last["role"] != "assistant":
     out = {"role": "assistant", "content": "還在想", "tool_calls": [
         {"id": "c%d" % len(msgs), "type": "function", "function": {"name": "t", "arguments": "{}"}}]}
 else:
@@ -315,7 +323,7 @@ class AgentCallTest(Tmp):
         for k, argv in (("intake", ["intake"]), ("think", ["think"]), ("route", ["route", "--done", "done"]),
                         ("tool", ["tool"]), ("done", ["done"])):
             self.write("bob/cells/%s.json" % k, {"argv": ["aos", "agent"] + argv})
-        self.write("bob/loop.json", {"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "ctl_poll_ms": 1,
+        self.write("bob/loop.json", {"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "stop_on_end": True,
                                      "ctl": "ctl.json", "state": "loop-state.json"})
 
     def start(self, frame, q, times=None):
@@ -345,15 +353,13 @@ class AgentCallTest(Tmp):
         self.assertEqual(len(json.loads(self.read("f2/history.json"))), 2)
         self.assertEqual((out["tools"], out["n"]), (["t"], 3))
         st = json.loads(self.read("f1/loop-state.json"))
-        self.assertEqual((st["state"], st["runs"]), ("stopped", 7))         # intake think route tool think route done
+        self.assertEqual((st["state"], st["runs"]), ("done", 7))           # fsm 結束＝loop 正常結束（stop_on_end）         # intake think route tool think route done
         self.assertEqual(json.loads(self.read("f1/fsm-state.json")), {"phase": "intake"})    # 走完 end 歸位
         self.assertEqual(json.loads(self.read("f1/work/1/args.json")), {})   # 工具 t 在 work/1/ 跑
 
     def test_same_frame_continues(self):
-        # 同一個 frame 再叫一次＝接著那裡的 history（呼叫方先刪掉上次的 ctl.json、ret.json）
+        # 同一個 frame 再叫一次＝接著那裡的 history；呼叫方不用刪東西（intake 清上一輪的 ret.json，loop 不靠 ctl 停）
         self.call("f", "hi")
-        for n in ("ctl.json", "ret.json"):
-            os.remove(self.p("f", n))
         _, out = self.call("f", "再一句")
         self.assertEqual(out["n"], 3)
         self.assertEqual([m["content"] for m in json.loads(self.read("f/history.json"))][2], "再一句")
@@ -375,7 +381,8 @@ class AgentCallTest(Tmp):
 
     def test_times_used_up_no_ret(self):
         # 一直叫工具：loop 的 times 用完還沒走到 done＝沒有 ret.json（沒跑完）
-        p = self.start("f", "loop", times=6)
+        self.call("f", "hi")
+        p = self.start("f", "loop", times=6)                                   # 上一輪的 ret.json 由 intake 清掉
         self.assertEqual(p.wait(30), 0)
         self.assertFalse(os.path.exists(self.p("f", "ret.json")))
 

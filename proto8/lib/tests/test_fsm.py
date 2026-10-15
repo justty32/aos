@@ -85,6 +85,14 @@ class FsmTest(Tmp):
         self.assertEqual(self.out(r)[-1]["error"]["code"], "NoResult")
         self.assertEqual(self.state()["phase"], "a")
 
+    def test_end_line_marked(self):
+        # 結束那拍那行多 "end": true（拍它的 loop 寫了 stop_on_end 就看這個停）；沒結束的拍沒有
+        path = self.fsm({"a": ok("a", '{"next": "b"}'), "b": ok("b", '{"next": "out", "r": 1}')}, end=["out"])
+        r = self.tick(path)
+        self.assertNotIn("end", self.out(r)[0])
+        r = self.tick(path)
+        self.assertEqual((self.out(r)[0]["end"], self.out(r)[-1]), (True, {"next": "out", "r": 1}))
+
     def test_empty_stdout_follows_static_next(self):
         # 格沒輸出（只有空白也算）、表上有 next＝照表上走，不算錯（10-15 使用者，N-38）
         path = self.fsm({"a": {"target": sh("a", "echo"), "next": "b"}, "b": {"target": sh("b", "true"), "next": "a"}})

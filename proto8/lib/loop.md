@@ -19,6 +19,7 @@ python3 proto8/lib/aos_loop.py [--key 值 ...] [LOOP.json | -]
   "grace_ms": 5000,                    // 收掉這次時整群 SIGTERM 之後等多久整群 SIGKILL
   "ctl_poll_ms": 1000,
   "error_wait_ms": 1000,               // aos_inst 自己出錯之後至少隔多久
+  "stop_on_end": false,                // true＝包的 fsm 走到 end（那行帶 "end": true）就結束（N-44）
   "id": null                           // 選填；state 的 id（沒寫＝LOOP.json 的 realpath#/位置；stdin 來＝null）
 }
 ```
@@ -31,6 +32,7 @@ python3 proto8/lib/aos_loop.py [--key 值 ...] [LOOP.json | -]
 - **stdout**（JSON 串流）：每一次一份 `{"run", "code", "ms"}`（只在真的跑了 inst 時吐；loop 一定有 inst，daemon 沒 inst 就不吐），結束時一份 `{"end": "done"|"stopped", "runs", "skipped", "last_code"}`。stderr：aos_inst 的錯誤原樣轉過來，自己的錯誤、警告也是 JSON。
 - **ctl 窗**（宣告式，NORMS N-06～）：`paused`、`stop`（`true` 或 `{"val": true, "now": true}`；now＝當場收掉正在跑的）、`times`、`interval_ms`、`interval_mode`、`seq`（流水號）。沒寫的欄位＝loop.json 的初始值（只在 `want()` 一處）。stop 是終點。壞檔、型別錯、不見了＝維持上一次、警告一次。每次讀整份、內容跟上次不同才重驗。
 - 次數跑完（runs ≥ times）就結束、退出，有 ctl 也一樣；想再跑就重新起。
+- **`stop_on_end`**（N-44）：這次 stdout 裡有 fsm 結束那行（`{"from", "to", "end": true}`）＝不再起新的一次、`end`＝`"done"`。inst 寫了 stdout 檔（附加也行）就讀這次寫進去的那段；沒寫或 inherit＝loop 每次替它接暫存檔、讀完刪。只認帶 `from`、`to` 的那行，格自己的結果帶 `end` 不算。agent 定義資料夾的 loop.json 都寫它（不靠 done 格寫 ctl stop）。
 - **state 窗**：共同骨架（見 [ctl-state](ctl-state.md)，含 `ctl_seq` 與心跳欄位）加上 `skipped`、`last_code`。暫存再改名；內容沒變也每秒碰一次。
 - 退出碼只說 loop 自己：0＝正常結束（子程式回非 0 不算）；最後一次是 aos_inst 自己出錯＝沿用它的碼；被訊號停掉＝128＋N；設定不對＝125。`run()` 正常回 None，否則丟 `LoopError`（`exit` 屬性＝退出碼）。
 - 給 daemon 重用的：拍引擎 `Loop`（掛鉤 `beat()`、`idle()`、`extra()`、`finish_up()`）、`check_config()`／`load_config()`；ctl 那組（`parse_ctl()`、`want()`、`CtlFile`）、state 那組（`STATES`、`state_doc()`、`read_state()`、`StateFile`）、`require()`、`write_json()` 在 `aos_ctl_state.py`；`kill()`／`reap()` 在 `aos_proc.py`。後兩檔的名字 `aos_loop` 都 re-export。

@@ -57,6 +57,26 @@ class LoopTest(Tmp):
                          (os.path.realpath(path), "done", 3, 3))
         self.assertEqual(list(st)[:2], ["id", "state"])
 
+    def test_stop_on_end(self):
+        # 包的 fsm 走到 end（那行帶 "end": true、from、to）＝loop 正常結束，不靠 ctl；沒寫 stop_on_end 就照 times 跑
+        line = '{"from": "a", "to": "a", "end": true}'
+        sh = 'echo x >> l.out; n=$(wc -l < l.out); if [ "$n" -ge 2 ]; then echo \'%s\'; echo \'{"next": "z", "end": true}\'; else echo \'{"from": "a", "to": "b"}\'; fi' % line
+        r = self.cli(self.loop(sh=sh, times=5, stop_on_end=True))              # 沒寫 stdout：loop 接暫存檔讀
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual((self.read("l.out"), self.state()["state"]), ("x\nx\n", "done"))
+        self.assertEqual(json.loads(r.stdout.splitlines()[-1])["end"], "done")
+        os.remove(self.p("l.out"))
+        inst = {"argv": ["sh", "-c", sh], "cwd": self.tmp, "stdout": "steps.jsonl", "stdout_append": True}
+        self.write("steps.jsonl", line + "\n")                                # 以前留下的那行不算
+        self.cli(self.loop(inst=inst, times=5, stop_on_end=True))
+        self.assertEqual(self.read("l.out"), "x\nx\n")
+        os.remove(self.p("l.out"))
+        self.cli(self.loop(sh='echo x >> l.out; echo \'{"next": "z", "end": true}\'', times=3, stop_on_end=True))
+        self.assertEqual(self.read("l.out"), "x\nx\nx\n")                    # 格的結果帶 end 不算（要是 fsm 那行）
+        os.remove(self.p("l.out"))
+        self.cli(self.loop(sh=sh, times=4))
+        self.assertEqual(self.read("l.out"), "x\nx\nx\nx\n")
+
     def test_run_api_and_ref(self):
         self.inst("job", "echo y >> j.out")
         path = self.loop(inst={"$ref": "job/inst.json"}, times=2)

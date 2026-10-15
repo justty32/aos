@@ -30,7 +30,7 @@ python3 proto8/lib/aos_fsm.py [--key 值 ...] [FSM.json | -]
 - **結束**（N-40）：(a) next 在表裡、不在 end＝進入；(b) 剛跑的狀態在 end 裡（next 在表裡也在 end，下一拍跑完它）＝結束；(c) next 不在表裡、在 end＝直接結束；(d) 都不在＝錯。結束＝那格的結果原樣吐成這拍 stdout 最後一份、phase 歸位 `start`。
 - **出錯**（N-38；格結束碼非 0、吐了東西卻沒有完整 JSON 物件、沒輸出又沒寫表上 next、查不到格、next 不對）：phase 不動（下一拍重跑同一格），這拍那行多 `error`: `{"code", "msg"}`，退出碼 1。代號：`CellFailed`（msg＝格自己 stderr 最後一份 N-29 錯誤「代號: 白話」，格沒吐就寫「格 X 結束碼 N」）、`NoResult`、`UnknownState`、`UnknownNext`、`BadNext`，aos_inst 的照原代號。`error` 不是特別的格；要優雅處理、連錯停住，都是格自己的事（例 [agent.md](agent.md) 的 think 連錯回 `halted`）。被殺一半＝phase 沒變＝下一拍重跑，冪等不保證（N-20）。
 - **state 窗**（只有 fsm 寫；不寫時間、pid，N-39）：`{"phase": "thinking"}`。
-- **stdout**：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`；沒起成格＝null）＋`from`、`to`，出錯多 `error`；這行永遠不帶 `next`，所以內層沒結束時外層留在原格。
+- **stdout**：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`；沒起成格＝null）＋`from`、`to`，出錯多 `error`，結束那拍多 `"end": true`（N-44：loop 的 `stop_on_end` 看它停）；這行永遠不帶 `next`，所以內層沒結束時外層留在原格。
 - **巢狀**：某格的 inst 是 `aos_fsm.py 內層.json`。內層有自己的 state 窗、從自己的 TARGET 拿設定，不繼承外層的設定。巢狀格不宜寫表上靜態 next。
 - **不做的**（交給拍它的 loop 或格自己，N-39）：ctl（暫停／停止）、lock、步數上限（loop 的 `times`）、連錯停住。表裡指回自己的遞迴不擋（卡死不防護）。
 - **退出碼**（N-43 只認 0／非 0）：0＝這拍正常；1＝格出錯；125＝fsm 自己出錯（設定不對、窗缺 `WindowMissing`、state 讀不懂 `StateBad` 或寫不了），stderr 吐一份 `{"error": {"code", "msg"}}`。

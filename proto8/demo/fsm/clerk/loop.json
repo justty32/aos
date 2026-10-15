@@ -1,1 +1,1 @@
-{"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "ctl_poll_ms": 1, "ctl": "ctl.json", "state": "loop-state.json"}
+{"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "stop_on_end": true, "ctl": "ctl.json", "state": "loop-state.json"}
