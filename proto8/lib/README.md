@@ -4,7 +4,7 @@
 
 只用 Python 標準庫。
 
-三支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`；相對路徑一律從呼叫者的 cwd 算。TARGET 都可以接 `檔#/位置`（見[指示詞](directives.md)）。三支都照 NORMS N-12 重做（10-14）：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`（N-21～N-27），`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 的 ctl／state 窗必填（N-19）；daemon.json＝loop.json 的超集（N-28）。
+四支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`、`aos_fsm.py x.json`；相對路徑一律從呼叫者的 cwd 算。TARGET 都可以接 `檔#/位置`（見[指示詞](directives.md)）。inst、loop、daemon 照 NORMS N-12 重做（10-14），fsm 10-15 照 N-36～N-41 做了基礎實作：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`（N-21～N-27），`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 的 ctl／state 窗與 fsm 的 state 窗必填（N-19）；daemon.json＝loop.json 的超集（N-28）。
 
 ## 細節（各一份）
 
@@ -14,6 +14,7 @@
 | [directives.md](directives.md) | 指示詞 lib（`$ref`、`$env`、`resolve()`）與命令列 TARGET 的 `檔#/位置`（`split_target`、`target_id`、`locate`） |
 | [inst.md](inst.md) | inst：TARGET、key、`run()`、exit 檔、訊號、API |
 | [loop.md](loop.md) | loop：loop.json、每一次怎麼跑、ctl.json、state.json、退出碼、給 daemon 共用的 |
+| [fsm.md](fsm.md) | fsm：方法表、一拍、prev、下一狀態、出錯與 error 格、step、state 窗、巢狀與 `end`、lock、退出碼 |
 | [daemon.md](daemon.md) | daemon：daemon.json（loop.json 超集）、每拍的身體、children、策略格、table 窗與接回、控制資料夾與指令、收工 |
 | [ctl-state.md](ctl-state.md) | ctl 與 state 的慣例：各層的設定／ctl／state、key 分組、seq 回音、state 骨架（含心跳）、七個狀態值 |
 
@@ -30,9 +31,11 @@
 | `aos_daemon.py` | daemon：命令列＋`run()`、daemon.json、`Daemon`（`aos_loop.Loop` 的子類：每拍掃資料夾＋跑 inst、每圈收屍）；re-export 下面兩檔的名字 |
 | `aos_daemon_table.py` | daemon 的表：`Table`（一條指令一個方法、子項六態、table 窗與接回、`child_exit` 策略格、收工）、`DaemonError` |
 | `aos_daemon_folder.py` | daemon 的指令（`handle()`）與控制資料夾（掃、回覆 `.done`） |
+| `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{target, next}`）、跑一格（`run_cell`：蓋 stdin／stdout、本行程 `aos_inst.run()`）、取 stdout 最後一份（`last_json`） |
+| `aos_fsm.py` | fsm：命令列＋`run()`、一拍（讀 ctl、讀寫 state 窗、跑格、換狀態、error 格、巢狀 `end`、lock） |
 | `tests/` | unittest，見[下面](#測試tests) |
 
-相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`。
+相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 ctl 與 `write_json`）。
 
 ## ctl 與 state 的慣例
 
@@ -44,8 +47,8 @@
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，59 個、約 12 秒。按受測的程式分五個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，73 個、約 20 秒。按受測的程式分六個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 
-inst、loop、daemon 都是單執行緒（loop 多一條轉 stderr 的小執行緒），子程式一律用 `subprocess.Popen` 起，不用 `os.fork()`、不用 `preexec_fn`；cwd、環境變數經 `Popen(cwd=, env=)` 只給子程式，不 `chdir`、不改 `os.environ`。誰起子程序誰負責收：loop 把 aos_inst 起在新 session、daemon 把 loop 起在新 session，收的時候整群送訊號、收屍前整群補 SIGKILL（群組號碼不會先被拿走）。
+inst、loop、daemon、fsm 都是單執行緒（loop 多一條轉 stderr 的小執行緒），子程式一律用 `subprocess.Popen` 起，不用 `os.fork()`、不用 `preexec_fn`；cwd、環境變數經 `Popen(cwd=, env=)` 只給子程式，不 `chdir`、不改 `os.environ`。fsm 的格在本行程用 `aos_inst.run()` 跑（不另起 aos_inst 行程）。誰起子程序誰負責收：loop 把 aos_inst 起在新 session、daemon 把 loop 起在新 session，收的時候整群送訊號、收屍前整群補 SIGKILL（群組號碼不會先被拿走）。

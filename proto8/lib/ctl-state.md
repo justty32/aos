@@ -9,6 +9,7 @@ NORMS N-11 的骨架是「設定檔讀一次 → ctl 蓋過 → state 回報」�
 | inst | inst.json／stdin／旗標 | 沒有（跑一次，沒東西可改；要停用訊號） | 沒有（不開窗；exit 檔只是與舊時代的橋樑，暫定 e） |
 | loop | loop.json／stdin／旗標 | ctl 窗（必填，N-19） | state 窗（必填，N-19） |
 | daemon | daemon.json（loop.json 的超集）／stdin／旗標 | ctl 窗（必填） | state 窗（必填）；子項另有 table 窗 |
+| fsm | fsm.json／stdin／旗標 | ctl 窗（選填；只認 paused／stop＝這拍不起格、seq） | state 窗（必填，N-19）；自己一套欄位 `phase`、`step`、`running`、`data`、`last_error`、`ctl_seq`，不套下面的骨架、不寫時間與 pid（N-39，見 [fsm](fsm.md)） |
 
 key 分四組，每組落在哪幾個檔是固定的：
 
