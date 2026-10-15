@@ -12,11 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-10-15 晚（新 session）
+## 2026-10-15 晚收工（使用者：明早再來）
 
-1. **授權**：「今天可以隨意push」；事情交給子 agent、頂層只交流，需要思考的派 fable。
-2. **正在跑**：inst-exec 第三版（fable，`proto8/thinking/2026-10-15-inst-exec-v3.md`；使用者要 `aos-exec TARGET 旗標 -- argv`、aos-exec 不寫檔不懂 agent、「整套重新思考」）；principles 2／4／5／6 切乾淨＋**KISS 納進最高原則**（fable，改規範與程式）；畫家 demo LiteLLM 實跑（sonnet）；KISS 全面審視 8 份稿（fable ×8，`proto8/thinking/2026-10-15-kiss/`，只寫稿、索引待彙整）。
-3. **使用者新定**：KISS 最高原則；層徹底切割（agent 不知道工具內部、fsm 不讀格 stderr、daemon 不驗子 inst、上層不知道格是不是 fsm；「想要看子層的東西請另外透過其他機制，沒機制就別碰」）。
+1. **授權**：當晚「今天可以隨意push」——**明早新 session 照 user.md 重問 push**。事情交給子 agent、頂層只交流；設計思考派 fable，且先通讀 CONCEPTS／NORMS（[proto8 README 規矩](../proto8/README.md)）；交稿頂層先對 N-12、C-48／N-45、C-56 KISS、層徹底切割、少用 sh。**不要一言不合改 workflow／memory**——要寫規矩先問寫哪。
+2. **已定**：inst-exec 第四版 [v4](../proto8/thinking/2026-10-15-inst-exec-v4.md)——「C-50 選 a（JSON 是正本、資料夾只是拆檔），其他都按照推薦」：一個 agent 定義＝一張 inst（一份大 JSON）、aos-exec TARGET 必填不寫檔、`stdin_inline: true` 才內嵌、工具一律走 frame（args.json 進 ret.json 出）、agent 當工具 argv 直接 `aos loop`、frame.json 退場。KISS 彙整 [kiss/README](../proto8/thinking/2026-10-15-kiss/README.md) 六批全照推薦（含★翻案）；PLAN「刪掉」。
+3. **進行中**：批次 1「純刪」fable 在跑（含 C-50 改寫、刪 PLAN），完成會自己 commit＋push；明早先看 git log 與彙整總表的「已做」標記，接著批次 2（v4 實作）→3 loop／daemon／窗→4 fsm／agent→5 kernel→6 文件，**依序、不平行**。
+4. **當晚新定**：C-56 KISS 最高原則、C-52 加嚴、N-45（設計假設沒有指示詞，JSON 大沒關係）、user.md「少用 sh」、N-37 `next: null`、N-28／N-38／N-40 切乾淨。畫家 demo LiteLLM 實跑通過（[paint-live](../proto8/thinking/2026-10-15-paint-live.md)）。
 
 ## 2026-10-15 深夜（使用者關 session 前）
 
