@@ -47,9 +47,9 @@ class FsmTest(Tmp):
         r = self.tick(path)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.state(), {"phase": "b"})                   # state 窗只有 phase（N-39）
-        line = self.out(r)[0]                                             # N-30 結果＋from／to
-        self.assertEqual(set(line), {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file", "from", "to"})
-        self.assertEqual((line["from"], line["to"], line["code"]), ("a", "b", 0))
+        line = self.out(r)[0]                                             # N-30 結果＋from／to＋next null（沒結束）
+        self.assertEqual(set(line), {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file", "from", "to", "next"})
+        self.assertEqual((line["from"], line["to"], line["code"], line["next"]), ("a", "b", 0, None))
         self.tick(path)
         self.assertEqual((self.runs("a"), self.runs("b"), self.state()["phase"]), (1, 1, "b"))
 
@@ -136,18 +136,21 @@ class FsmTest(Tmp):
         self.assertEqual(self.out(r)[-1]["error"]["code"], "NextUnknown")          # N-29 形狀
 
     def test_cell_failure_stays_and_reports(self):
-        # 格出錯＝phase 不動、往外報（帶格 stderr 的 N-29 錯誤）；error 不是特別的格
+        # 格出錯＝phase 不動、往外報（只說結束碼；格的 stderr fsm 不讀、不轉，C-52 切乾淨）；error 不是特別的格
         path = self.fsm({"a": ok("a", '{"next": "b"}'),
-                         "b": sh("b", "echo '{\"error\": {\"code\": \"Boom\", \"msg\": \"壞了\"}}' >&2; exit 3"),
+                         "b": dict(sh("b", "echo '{\"error\": {\"code\": \"Boom\", \"msg\": \"壞了\"}}' >&2; exit 3"),
+                                   stderr="b.err.json"),
                          "error": ok("error")})
         self.tick(path)
         for _ in range(2):
             r = self.tick(path)
             self.assertEqual(r.returncode, 1)
             err = self.out(r)[-1]["error"]
-            self.assertEqual((err["code"], err["msg"]), ("CellFailed", "Boom: 壞了"))
+            self.assertEqual((err["code"], err["msg"]), ("CellFailed", "格 b 結束碼 3"))
             self.assertEqual(self.out(r)[-1]["code"], 3)
             self.assertEqual(self.state()["phase"], "b")
+            self.assertEqual(r.stderr, "")                                         # 格的錯沒轉上來
+        self.assertEqual(json.loads(self.read("b.err.json"))["error"]["code"], "Boom")   # 格自己寫的 stderr 檔才有
         self.assertEqual((self.runs("b"), self.runs("error")), (2, 0))
         path = self.fsm({"a": sh("a", "exit 4")}, name="g")
         self.assertEqual(self.out(self.tick(path))[-1]["error"]["msg"], "格 a 結束碼 4")
@@ -172,14 +175,21 @@ class FsmTest(Tmp):
         self.assertEqual(self.state()["phase"], "a")
 
     def test_nested(self):
+        # 外層不必知道那格是個 fsm（C-52）：表上照樣可以寫靜態 next——內層沒結束時吐 next null＝留原格，結束才交出結果
         inner = self.fsm({"a": ok("ia", '{"next": "b"}'), "b": ok("ib", '{"next": "done", "data": 42}')},
                          name="inner", end=["done"])
-        outer = self.fsm({"a": {"argv": [sys.executable, FSM, inner]}, "done": ok("done")})
-        r = self.tick(outer)                              # 內層 a → b：沒結束，外層留在 a
+        outer = self.fsm({"a": {"val": {"argv": [sys.executable, FSM, inner]}, "next": "done"}, "done": ok("done")})
+        r = self.tick(outer)                              # 內層 a → b：沒結束，外層留在 a（表上的 next 不會帶走）
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((self.state()["phase"], self.state("inner.state.json")["phase"]), ("a", "b"))
         self.tick(outer)                                  # 內層 b 回 done（表外、在 end）→ 結束、交給外層
         self.assertEqual((self.state("inner.state.json")["phase"], self.state()["phase"]), ("a", "done"))
+
+    def test_next_null_stays(self):
+        # 格回 {"next": null}＝「我還沒完」，留原狀態，表上有靜態 next 也不走（N-37）
+        path = self.fsm({"a": {"val": ok("a", '{"next": null, "data": 1}'), "next": "b"}, "b": ok("b")})
+        r = self.tick(path)
+        self.assertEqual((r.returncode, self.state()["phase"]), (0, "a"), r.stdout)
 
     def test_killed_midway_reruns_same_cell(self):
         path = self.fsm({"a": ok("a", '{"next": "b"}'), "b": sh("b", "[ -f again ] || sleep 30; echo '{}'")})

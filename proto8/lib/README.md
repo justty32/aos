@@ -32,10 +32,10 @@
 | `aos_ctl_state.py` | ctl 窗（`parse_ctl`、`want`、`CtlFile`，含 seq）、state 窗（`STATES`、`state_doc`、`read_state`、`StateFile`，含心跳；ctl 壞檔的原因放 `CtlFile.warning`→state 窗 `last_warning`，state 寫不了放 `StateFile.failed`）、`proc_started`、`require`（窗必填）、`write_json`；loop、daemon 共用 |
 | `aos_proc.py` | 子程序的行程群組：等結束、整群送訊號、收屍（`kill`、`reap`）；loop、daemon 共用 |
 | `aos_daemon.py` | daemon：命令列＋`run()`、daemon.json、`Daemon`（`aos_loop.Loop` 的子類：每拍掃資料夾＋跑 inst、每圈收屍）；re-export 下面兩檔的名字 |
-| `aos_daemon_table.py` | daemon 的表：`Table`（一條指令一個方法、子項六態、table 窗與接回、`child_exit` 策略格、收工）、`DaemonError` |
+| `aos_daemon_table.py` | daemon 的表：`Table`（一條指令一個方法、子項六態、table 窗與接回、`child_exit` 策略格、收工；收子項只看是物件、包 inst.json、填窗，裡面不驗，C-52）、`DaemonError` |
 | `aos_daemon_folder.py` | daemon 的指令（`handle()`）與控制資料夾（掃、回覆 `.done`） |
-| `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{val, next}`）、跑一格（`run_cell`：蓋 stdout（給了 args 才蓋 stdin；fsm 跑格不蓋）、本行程 `aos_inst.run()`、撿格 stderr 的 N-29 錯誤當 `cell_error`）、取 stdout 最後一份（`last_json`） |
-| `aos_fsm.py` | fsm（10-15 收工後瘦身）：命令列＋`run()`、一拍（讀寫只有 `phase` 的 state 窗、跑格（不碰 stdin）、換狀態、`end` 四種情形、格出錯 phase 不動退 1） |
+| `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{val, next}`）、跑一格（`run_cell`：蓋 stdout（給了 args 才蓋 stdin；fsm 跑格不蓋）、本行程 `aos_inst.run()`；格的 stderr 不碰、不撿，C-52）、取 stdout 最後一份（`last_json`） |
+| `aos_fsm.py` | fsm（10-15 收工後瘦身）：命令列＋`run()`、一拍（讀寫只有 `phase` 的 state 窗、跑格（不碰 stdin、不讀 stderr）、換狀態（`next: null`＝留原格；沒結束的拍自己那行也帶 `next: null`，外層不必知道這格是 fsm）、`end` 四種情形、格出錯 phase 不動退 1） |
 | `aos_agent_lib.py` | agent 的現成格庫（不是 agent 本體）：`think`、`tool`、`route`、`intake`、`done`、`fsm [NAME]`（照 lookup 找 fsm.json 跑一拍，給定義資料夾的 loop.json 用）；設定＝格 inst 自己的 stdin＋frame 裡 `lookup()`；`tool_specs`、`pending`。各格的細節在 [agent_lib.md](agent_lib.md)；agent 當函數／當工具不另寫程式（`aos_agent_call.py` 10-15 退場），見 [frame.md](frame.md) |
 | `aos_frame.py` | frame 查找（C-46）：`chain()`（frame → `frame.json` 的 parent 鏈）、`lookup()`（找第一個）、`lookup_dir()`（資料夾逐項合併、近的蓋過遠的）；10-15 晚從 `aos_agent_lib.py` 拆出，格庫照樣 re-export |
 | `aos_brain_openai.py` | 真的腦：照思考介面 POST 到 OpenAI 相容的 `/chat/completions`（urllib，不串流，預設 LiteLLM） |
@@ -61,7 +61,7 @@
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，172 個、約 50～70 秒。按受測的程式分十二個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm 含報時員 clerk、兩顆真腦對本機假伺服器）、`test_agent_frame.py`（frame、agent 當函數／當工具、ask_judge 換定義資料夾）、`test_gate.py`（LLM kernel）、`test_kernel_general.py`（通用 kernel）、`test_tree.py`（aos_tree、判官回話的 schema 用手寫最小驗證器驗）、`test_paint_demo.py`（畫家 demo：畫家經工具叫畫筆、frame 巢狀、同 frame 續聊、brain.json 綁定只到那一層）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉；刪前查漏網的 aos_loop／daemon／fsm／gate／kernel 行程（cwd 或命令列路徑在暫存資料夾內），有＝失敗（`helpers.leftovers()`）。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，173 個、約 50～70 秒。按受測的程式分十二個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm 含報時員 clerk、兩顆真腦對本機假伺服器）、`test_agent_frame.py`（frame、agent 當函數／當工具、ask_judge 換定義資料夾）、`test_gate.py`（LLM kernel）、`test_kernel_general.py`（通用 kernel）、`test_tree.py`（aos_tree、判官回話的 schema 用手寫最小驗證器驗）、`test_paint_demo.py`（畫家 demo：畫家經工具叫畫筆、frame 巢狀、同 frame 續聊、brain.json 綁定只到那一層）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉；刪前查漏網的 aos_loop／daemon／fsm／gate／kernel 行程（cwd 或命令列路徑在暫存資料夾內），有＝失敗（`helpers.leftovers()`）。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 

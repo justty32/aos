@@ -17,16 +17,19 @@
 
 一拍：讀 state（檔還沒有＝從 start 起）→ 查格 → 跑格（stdin 照那張 inst 自己寫的，fsm 不碰；stdout 另外接一份來看 next）
 → 換狀態 → 寫 state → stdout 吐一行。
-下一狀態：格 stdout 最後一份完整 JSON 的 `next` ＞ 表上靜態 next ＞ 留原狀態。結束（N-40）：剛跑的狀態在 `end` 裡，
+下一狀態（N-37）：格 stdout 最後一份完整 JSON 的 `next`：字串＝進入那個狀態、**null＝留原狀態**（格說「我還沒完」）；
+沒有 `next` 這個 key ＞ 表上靜態 next ＞ 留原狀態。結束（N-40）：剛跑的狀態在 `end` 裡，
 或回的 next 不在表裡、在 `end` 裡＝這個 fsm 結束：那格的結果原樣吐成這拍 stdout 最後一份、phase 歸位 `start`。
 出錯（N-38）：格結束碼非 0、吐了東西但沒有完整 JSON 物件、沒輸出又沒寫表上 next、查不到格、next 不在表裡也不在 end
 ＝phase 不動、這拍那行多 `error`、退出碼 1。格結束碼 0、stdout 什麼都沒吐、表上有 next＝照表上 next 走（10-15 使用者）。
+格的 stderr fsm 不讀、不轉（C-52 切乾淨，10-15 深夜使用者）：格的錯是格自己的，要留就在那張 inst 寫 `stderr` 檔。
 
 state 窗：`{"phase"}`，只有 fsm 自己寫；不寫時間、pid（N-39）。
 stdout：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、
-`exit_file`；沒起成格的是 null）＋`from`、`to`（出錯多 `error`: {code, msg}，msg 帶格 stderr 最後一份 N-29 錯誤；
-結束那拍多 `"end": true`，拍它的 aos-loop 寫了 `stop_on_end` 就看它停）；
-這行永遠不帶 `next`。
+`exit_file`；沒起成格的是 null）＋`from`、`to`（出錯多 `error`: {code, msg}；
+結束那拍多 `"end": true`，拍它的 aos-loop 寫了 `stop_on_end` 就看它停）。
+沒結束的拍這行帶 `"next": null`——所以 fsm 自己當別人的格時，外層照 N-37 留在原格、不必知道這格是個 fsm；
+結束那拍交出去的是那格的結果（那格沒輸出＝只有這行、不帶 next，外層看它表上的 next）。
 退出碼（N-43 只認 0／非 0）：0＝這拍正常；1＝格出錯（錯在 stdout 那行的 error）或 fsm 自己出錯（設定不對、窗缺、state 讀寫不了；
 stderr 一份錯誤）。原本 fsm 自己的錯是 125（10-15 晚使用者「按照推薦」：N-43 只有 0／非 0，自己的錯一律 1）。
 """
@@ -91,11 +94,9 @@ def tick(cfg):
     try:
         inst, inst_id, static = aos_methods.cell(states, phase, cfg["id"], cfg["base"])
         result, ret = aos_methods.run_cell(inst, inst_id)
-        line.update({k: v for k, v in result.items() if k not in ("cell_error", "cell_empty")})
+        line.update({k: v for k, v in result.items() if k != "cell_empty"})
         if result["code"] != 0:
-            ce = result.get("cell_error")       # 格自己 stderr 的 N-29 錯誤＝真正原因
-            raise MethodsError("CellFailed", "%s: %s" % (ce["code"], ce["msg"]) if ce
-                               else "格 %s 結束碼 %d" % (phase, result["code"]))
+            raise MethodsError("CellFailed", "格 %s 結束碼 %d" % (phase, result["code"]))   # 格的 stderr 不讀（C-52）
         if not isinstance(ret, dict):
             if not result.get("cell_empty"):
                 raise MethodsError("ResultMissing", "格 %s 沒吐完整的 JSON 物件（N-12：半份不算）" % phase)
@@ -119,6 +120,8 @@ def tick(cfg):
     line.update({"from": phase, "to": to})
     if ended:
         line["end"] = True             # 結束那拍的那行（拍它的 loop 寫了 stop_on_end 就看這個停）
+    else:
+        line["next"] = None            # 還沒完：自己當別人的格時，外層照 N-37 留原格（不必知道這格是 fsm，C-52）
     if err:
         line["error"] = err
     _write(cfg, to)

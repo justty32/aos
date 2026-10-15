@@ -26,9 +26,11 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd；只�
 每拍：收屍（每圈都做）→ 掃控制資料夾 → 跑 inst（有的話）。runs＝拍數。paused＝不拍（指令堆著、子項照跑）；
 stop＝收工（now＝子項當場收掉；沒 now＝替它們寫 stop、等它們跑完）；times 跑完同 stop（不帶 now）。
 
-子項：一支子程序 `aos_loop.py -`（自成 session），設定從 stdin 灌進去（`id`＝原 TARGET 的 id）。loop 設定沒寫 ctl／state 的，
+子項：一支子程序 `aos_loop.py -`（自成 session），設定原樣從 stdin 灌進去（`id`＝原 TARGET 的 id）。loop 設定沒寫 ctl／state 的，
 放在 `work_dir/N/ctl.json`、`state.json`；子 loop 的 stdout 丟掉（結果從 state 窗讀）、stderr 落 `work_dir/N/err.json`（只在出錯時長）。
-daemon 只靠兩個窗控制它：寫它的 ctl（帶流水號 seq）、讀它的 state（ctl_seq 趕上＝讀到了）。
+daemon 只管自己這一層（C-52；10-15 深夜使用者「不留」）：收到的 loop 設定只看「是物件、沒 inst 有 argv 就包成跑一次、
+窗沒寫就放 work_dir/N/」，裡面的 loop key、inst 一概不驗；寫錯了子 loop 自己退 1、錯在 err.json，daemon 只看到它結束。
+daemon 只靠兩個窗控制它：寫它的 ctl（帶流水號 seq）、讀它的 state（ctl_seq 趕上＝讀到了；add_times 的現值也從這裡讀）。
 子項六態 phase：starting／running／exited／backoff／stopping／removed，寫在 table 窗（先寫表、再 Popen）。
 子項結束（不是 remove、不是收工）：有 `policies.child_exit` 就跑那格 inst，stdin＝{id, code, exits, last_state}，
 stdout 最後一份＝{action: restart|leave|remove, after_ms}；restart＝退避 after_ms 再起。exits ≥ 5 強制 leave。
@@ -39,7 +41,7 @@ stdout 最後一份＝{action: restart|leave|remove, after_ms}；restart＝退�
 `{"request", "ok", "result"|"error": {"code", "msg"}}`；`.` 開頭不讀；`.done` 由丟的人清。指令一律 {"op", "id", ...}，
 id＝loop.json（或 inst.json）的絕對路徑，可接 `#/位置`：
 
-    add        起一個（inst.json：頂層沒有 inst、有 argv 的，包成只跑一次的 loop）     → result＝id
+    add        起一個（inst.json：頂層沒有 inst、有 argv 的，包成只跑一次的 loop；裡面不驗）     → result＝id
     set        {"how": {times／interval_ms／interval_mode}}               → 改完的狀態物件
     pause      {"wait": B}（預設 true；false＝當場收掉）                    → 狀態物件（等真的停了）
     resume、add_times {"delta": N}                                          → 狀態物件

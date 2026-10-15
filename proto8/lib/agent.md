@@ -23,7 +23,7 @@ agent＝一個定義資料夾：fsm 表＋各狀態跑的 inst（C-50；intake �
 
 - 模型要用工具＝走 OpenAI 內建的 `tool_calls`（不是在文字裡吐 JSON）。
 - **用量**（10-15）：腦可以在 assistant 訊息頂層多帶 `"usage": {"prompt_tokens", "completion_tokens", "total_tokens"}`，給 LLM kernel 記額度（[kernel_llm.md](kernel_llm.md)）；think 接進 history 前拿掉 `usage`，history 照舊是純 OpenAI 訊息。兩顆真腦都會帶（openai：端點回的 `usage` 照抄；ollama：`prompt_eval_count`＋`eval_count` 換成這個形狀），端點沒回就不帶。
-- 出錯：stderr 吐 `{"error": {"code", "msg"}}`（N-29）、結束碼非 0。
+- 出錯：stderr 吐 `{"error": {"code", "msg"}}`（N-29）、結束碼非 0。**think 不讀腦的 stderr**（C-52 切乾淨，10-15 深夜）：腦結束碼非 0＝`BrainFailed`「腦 X 結束碼 N」；要看原因（例 proxy 回的 400 原話）就在 `brain.json` 寫 `"stderr": "work/brain.err.json"` 之類，去讀那個檔。
 - 兩顆腦：demo 的假腦 `demo/fsm/brains/fake.py`（寫死的回覆）、真腦 `aos_brain_openai.py`（POST `<base_url>/chat/completions`，不串流；`base_url` 預設 LiteLLM `http://localhost:4000/v1`、`model` 必填、`api_key_env`＝放金鑰的環境變數名（沒寫＝不帶）、`timeout_ms` 預設 120000；設定從 CONFIG.json 或旗標來，stdin 是請求）。錯誤代號：`HttpError`、`ConnectFailed`、`ResponseBad`、`ApiKeyMissing`。
 - 第三顆：`aos_brain_ollama.py`（ollama 原生 POST `<base_url>/api/chat`，`stream: false`）。**為什麼不走 ollama 的 `/v1`**：OpenAI 相容那條設不了 `num_ctx`，ollama 會用模型預設的 context、可能吃爆顯存；原生的帶 `options.num_ctx`（預設 4096）與 `keep_alive`（預設 `"30s"`）。旗標 `--base-url`（預設 `http://localhost:11434`，不含 `/api`）、`--model`（必填）、`--num-ctx`、`--keep-alive`、`--timeout-ms`。形狀互翻：送出時 assistant 的 `arguments` 字串→物件、`content: null`→`""`、tool 訊息補 `tool_name`；收回時 `arguments` 物件→字串、沒 id 就編 `call_<亂數>_<n>`。錯誤代號 `HttpError`（模型不支援 tools 時 ollama 回 400「does not support tools」也是這個）、`ConnectFailed`、`ResponseBad`。
 - **腦只留 `content`／`tool_calls`**（使用者 10-15「模型想的內容丟掉」）：`reasoning_content` 之類想的字一律不收、不存，真腦翻譯時只取這兩樣；不留旁檔。
@@ -49,7 +49,8 @@ frame/（＝cwd）
 ```
 
 - **system**：think 每次叫腦，都把檔內容當 `{"role":"system","content":…}` 插在送給腦的 messages 最前面；**不寫進 history**（history 只有 user／assistant／tool），所以改 system.md 下一拍就生效。沒寫 `system`＝不帶；寫了但檔不存在或讀不了＝think 格錯誤 `SystemUnreadable`（N-29）。路徑從格的 cwd 算。
-- 工具每次在 `work/<n>/` 新資料夾跑（mkdir 搶號；C-46：工具呼叫的 frame 預設就是這裡；工具 inst 自己寫了 `cwd` 就照它的）：stdin＝`arguments` 解開的 JSON（寫成那裡的 `args.json`），stdout 接到那裡的 `stdout.json`，最後一份＝結果。
+- 工具每次在 `work/<n>/` 新資料夾跑（mkdir 搶號；工具 inst 自己寫了 `cwd` 就照它的）：stdin＝`arguments` 解開的 JSON（寫成那裡的 `args.json`），stdout 接到那裡的 `stdout.json`，最後一份＝結果；stderr 照那張 inst 自己的，agent 不讀。
+- **agent 只看到自己的工具清單**（名字、`_tool` 的說明與參數；C-52 徹底切割，10-15 深夜使用者）：工具裡面在幹嘛——是不是另一個 agent、它把 `work/<n>/` 當不當 frame、綁什麼腦——這層不知道、不傳、不繼承。agent 當工具怎麼寫是那張工具 inst 的事，見 [frame.md](frame.md)。
 - 回給模型：`{"role": "tool", "tool_call_id": …, "content": "<字串>"}`，content＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`）多一格 `result`（工具 stdout 最後一份）的 JSON 字串，截 8000 字；沒跑成（工具名不認得、引數不是 JSON、inst 起不來、沒輪到、被中斷）＝N-29 形狀 `{"error": {"code", "msg"}}`。（10-15 依 C-48 改，原本是 `{"code", "result"}`）
 
 ## 現成格庫（`aos_agent_lib.py`）

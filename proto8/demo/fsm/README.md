@@ -19,7 +19,7 @@ python3 proto8/demo/fsm/run.py brains/lmstudio.json      （換腦：在 frame �
 - `cells/`：
   - `idle.json`＝`cells/idle.py`：frame 的 `inbox/` 有信就拿最早一封、開新對話（`history.json`＝`[user 訊息]`），回 `next: thinking`；沒信回 `next: done`。
   - `thinking.json`＝`aos agent fsm think/fsm.json`：內層 fsm（`think/fsm.json`：`ask → review`、`end: ["tool", "idle", "halted"]`、state 窗 `fsm/think_state.json`）。`think/ask.json`＝`aos agent think`（**同步**，N-41）；`think/review.py`：最後一則 assistant 有 `tool_calls`＝`next: tool`，否則寫 frame 的 `outbox.txt`、`next: idle`（都在內層的 `end`＝交給外層）。ask 連錯 3 次自己把錯寫成 frame 的 `ret.json`、回 `next: halted`，同樣交給外層（外層的 halted 也只在 end＝結束）。
-  - `tool.json`＝`aos agent tool`：跑第一個 tool_call，每次在 frame 的 `work/<n>/` 開新資料夾、引數寫成 `args.json`、在那裡跑。
+  - `tool.json`＝`aos agent tool`：把還沒回的 tool_calls 照順序跑完，每個在 frame 的 `work/<n>/` 開新資料夾、引數寫成 `args.json`、在那裡跑；裡面是不是另一個 agent 它不知道（C-52）。
   - `done.json`＝`aos agent done`：寫 frame 的 `ret.json`；done 在 `end` 裡，fsm 結束那行帶 `"end": true`，loop 的 `stop_on_end` 看到就停（N-44）；halted 不用它（ret.json 的錯由 think 自己寫，done 不讀別格的私檔，10-15「都同意。」）。
   - `common.py`：idle、review 共用的 history 讀寫（cwd＝frame）。
 - `brains/`：換用的腦。`fake.py`（假腦：問「幾點」有 `clerk` 就叫 clerk、否則叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回）、`openai.json`（`aos brain openai`，預設 LiteLLM）、`litellm.json`（本機 LiteLLM、`chatgpt-gpt-6-luna-nothink`，[實跑](../../thinking/2026-10-15-litellm-live.md)）、`lmstudio.json`（本機 LM Studio、`qwen/qwen3-1.7b`）、`ollama/gemma3_1b.json`／`ollama/qwen2_5_14b.json`（146 的 ollama，主機寫在檔內 `--base-url`——**146 已不准用**（10-15 使用者），只留當範例）。

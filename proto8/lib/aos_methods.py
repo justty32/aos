@@ -11,11 +11,11 @@
 - `run_cell(inst, ident, args=None)`：stdout 蓋成暫存檔，在本行程用 `aos_inst.run()` 跑一次，回 (aos_inst 的結果 dict,
   子程式 stdout 最後一份完整 JSON 或 None)。args 是 None（fsm 跑格就是，N-37：fsm 不碰格的 stdin）＝stdin 照那張 inst
   自己寫的；給了 args（think 叫腦）＝stdin 蓋成一份寫著 args 的暫存檔（N-12：stdin＝參數）。
-  stderr、exit、cwd、timeout_ms 照那張 inst 自己寫的。inst 寫了 `stdout_inherit`（給了 args 時還有 `stdin_inherit`）＝Conflict。
+  stderr、exit、cwd、timeout_ms 照那張 inst 自己寫的——**格的 stderr 這裡不讀、不撿**（C-52 切乾淨：格的錯是格自己的，
+  要留就在那張 inst 寫 `stderr` 檔；10-15 深夜使用者「拜託切乾淨」，原本撿成 `cell_error` 已拿掉）。
+  inst 寫了 `stdout_inherit`（給了 args 時還有 `stdin_inherit`）＝Conflict。
   aos_inst 自己出錯丟 `MethodsError`（代號照 aos_inst 的）。暫存檔跑完刪掉。
-  結果 dict 多一格 `cell_error`＝格 stderr 裡最後一份 N-29 錯誤 `{"code", "msg"}`（沒有＝None）：沒寫 stderr 的格
-  （本來接 /dev/null）改接暫存檔撿；格自己寫了 stderr 檔就讀那個檔；inherit／merge 的撿不到。（10-15 146 試跑後補）
-  再多一格 `cell_empty`＝格的 stdout 什麼都沒吐（只有空白也算；fsm 拿它分「沒輸出」與「吐了壞的」，N-38）。
+  結果 dict 多一格 `cell_empty`＝格的 stdout 什麼都沒吐（只有空白也算；fsm 拿它分「沒輸出」與「吐了壞的」，N-38）。
 - `last_json(text)`：JSON 串流的最後一份完整 JSON（半份不算，N-12）；沒有＝None。
 
 錯誤一律 `MethodsError`（`CliError` 的子類，`code`／`msg`）。相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_fsm。
@@ -79,27 +79,9 @@ def last_json(text):
     return docs[-1] if docs else None
 
 
-def _stderr_error(doc, cwd):
-    """格 stderr 裡最後一份 N-29 錯誤 {"code", "msg"}；沒有、讀不到＝None。stderr 是格自己寫的檔也照讀。"""
-    path = doc.get("stderr")
-    if not path:
-        return None
-    if not os.path.isabs(path) and isinstance(cwd, str):
-        path = os.path.join(cwd, path)
-    try:
-        with open(path, encoding="utf-8", errors="replace") as f:
-            docs = aos_cli.read_stream(f.read())
-    except (OSError, ValueError):
-        return None
-    for d in reversed(docs):
-        e = d.get("error") if isinstance(d, dict) else None
-        if isinstance(e, dict) and isinstance(e.get("code"), str):
-            return {"code": e["code"], "msg": str(e.get("msg", ""))}
-    return None
-
-
 def run_cell(inst, ident, args=None):
-    """跑一格：stdout 接到暫存檔；給了 args＝stdin 也蓋成寫著 args 的暫存檔。回 (aos_inst 結果 dict, stdout 最後一份或 None)。"""
+    """跑一格：stdout 接到暫存檔；給了 args＝stdin 也蓋成寫著 args 的暫存檔；stderr 照那張 inst 自己的（不碰）。
+    回 (aos_inst 結果 dict, stdout 最後一份或 None)。"""
     tmp = tempfile.mkdtemp(prefix="aos-fsm-")
     try:
         stdout = os.path.join(tmp, "out.json")
@@ -109,8 +91,6 @@ def run_cell(inst, ident, args=None):
             with open(doc["stdin"], "w", encoding="utf-8") as f:
                 json.dump(args, f, ensure_ascii=False)
         doc.setdefault("id", ident)
-        if not (doc.get("stderr") or doc.get("stderr_inherit") or doc.get("stderr_merge")):
-            doc["stderr"] = os.path.join(tmp, "err.json")     # 沒寫 stderr 的格：本來接 /dev/null，改接暫存檔撿錯
         try:
             result = aos_inst.run(doc)
         except aos_inst.InstError as e:
@@ -120,7 +100,6 @@ def run_cell(inst, ident, args=None):
                 text = f.read()
         except OSError:
             text = ""
-        result["cell_error"] = _stderr_error(doc, inst.get("cwd"))
         result["cell_empty"] = not text.strip()       # stdout 什麼都沒吐（只有空白也算）
         return result, last_json(text)
     finally:

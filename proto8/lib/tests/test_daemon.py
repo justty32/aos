@@ -122,24 +122,27 @@ class Daemon(Tmp):
         self.assertEqual(self.ok({"op": "add_times", "id": ident, "delta": 1})["times"], 2)
         self.until(lambda: self.ok({"op": "get", "id": ident}).get("state") == "done", 10)
         self.assertEqual((self.read("a.out"), self.read("a.exit")), ("x\nx\n", "0\n"))
-        self.write("bad.json", {"argv": []})
-        self.assertEqual(self.err({"op": "add", "id": self.p("bad.json")}), "FieldType")
 
-    def test_add_checks_inst_up_front(self):
-        # 子項的 inst 寫錯：add 當下就回錯在 .done 裡（daemon 端先驗一次，同子 loop 從 stdin 收的那樣），不起子 loop
+    def test_add_does_not_check_inside(self):
+        # daemon 只管自己這一層（C-52；10-15 深夜使用者「不留」）：子項的 loop 設定、inst 寫錯，add 照樣 ok，
+        # 錯由子 loop 自己報（退 1、stderr 落 work_dir/N/err.json），daemon 只看到它結束（phase exited、state stopped）
         self.start()
         bad = {"argv": ["sh", "-c", "true"], "cwd": self.tmp}
-        for name, inst, code in (("e", dict(bad, argv=[]), "FieldType"),
-                                 ("t", dict(bad, timeout_ms=-1), "FieldType"),
-                                 ("i", dict(bad, stdin_inherit=True), "Conflict"),         # 子 loop 從 stdin 灌 inst
-                                 ("v", dict(bad, envs={"X": {"$env": "AOS_NO_SUCH_VAR"}}), "EnvironmentVariableMissing")):
+        cases = (("e", {"inst": dict(bad, argv=[])}, "FieldType"),
+                 ("i", {"inst": dict(bad, stdin_inherit=True)}, "Conflict"),          # 子 loop 從 stdin 灌 inst
+                 ("m", {"inst": bad, "interval_mode": "x"}, "FieldType"),              # loop 層的 key 也不驗
+                 ("s", dict(bad, stdin_inherit=True), "Conflict"))                     # inst.json 包成 loop 也一樣
+        for n, (name, doc, code) in enumerate(cases, 1):
             with self.subTest(name=name):
-                path = self.write(name + ".loop.json", {"inst": inst})
-                self.assertEqual(self.err({"op": "add", "id": path}), code)
-        self.write("si.json", dict(bad, stdin_inherit=True))                   # inst.json 包成 loop 也一樣
-        self.assertEqual(self.err({"op": "add", "id": self.p("si.json")}), "Conflict")
-        self.assertEqual(self.ok({"op": "list"}), [])
-        self.assertFalse(os.path.exists(self.p("loops")) and os.listdir(self.p("loops")))   # 格子收回
+                path = self.write(name + ".json", doc)
+                self.assertEqual(self.ok({"op": "add", "id": path}), os.path.realpath(path))
+                st = self.until(lambda: (lambda s: s if s.get("phase") == "exited" else None)(self.ok({"op": "get", "id": path})))
+                self.assertEqual(st["state"], "stopped")
+                err = [json.loads(x) for x in self.read("loops/%d/err.json" % n).splitlines()]
+                self.assertEqual(err[-1]["error"]["code"], code)
+        self.write("w.json", {"inst": bad, "ctl": 3})                                  # daemon 自己要用的窗才驗
+        self.assertEqual(self.err({"op": "add", "id": self.p("w.json")}), "FieldType")
+        self.assertEqual(sorted(os.listdir(self.p("loops"))), ["1", "2", "3", "4"])     # 那格收回
 
     def test_own_ctl_state_used(self):
         self.start()
