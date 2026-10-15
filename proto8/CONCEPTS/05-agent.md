@@ -17,4 +17,4 @@
 
 ## agent＝函數＋binding
 
-- **C-46** agent 的使用＝函數＋binding：`agent_call(system, history, engine, tools)`；綁好就是 `agent_bob`，用時 `agent_bob.call(history, engine_args, tools_append)`。具體是一個 `bob/` 資料夾（定義：system、腦、工具、表），**呼叫時不變**，所以 bob 是可重複使用的函數。history 累積的地方（**frame**）是另一個參數，很像函數本體的 stack，可以跟實際的 cwd 不一樣。**tools＝函數的包裝**，對 call 來說是「傳進去、可供它使用的函數」（像高階函數的參數）；bob/ 裡綁的 tools 只是預設值；tools 裡可以是另一個 agent 的呼叫（agent 當工具＝呼叫一次 bob），所以能一層層組合。（10-15 使用者定，概念層；相對路徑是技術問題，規範慢慢來；[thinking 10-15 §11](../thinking/2026-10-15-topics.md#11-agent-當函數binding當工具)；實作 [lib agent.md](../lib/agent.md#agent-當函數當工具)）
+- **C-46** agent 的使用＝函數＋binding：`agent_call(system, history, engine, tools)`；綁好就是 `agent_bob`，用時 `agent_bob.call(history, engine_args, tools_append)`。具體是一個 `bob/` 資料夾（定義：system、腦、工具、表），**呼叫時不變**，所以 bob 是可重複使用的函數。history 累積的地方（**frame**）是另一個參數，很像函數本體的 stack，可以跟實際的 cwd 不一樣。**tools＝函數的包裝**，對 call 來說是「傳進去、可供它使用的函數」（像高階函數的參數）；bob/ 裡綁的 tools 只是預設值；tools 裡可以是另一個 agent 的呼叫（agent 當工具＝呼叫一次 bob），所以能一層層組合。（10-15 使用者定，概念層；相對路徑是技術問題，規範慢慢來；[thinking 10-15 §11](../thinking/2026-10-15-topics/04-agent當函數.md#11-agent-當函數binding當工具)；實作 [lib agent.md](../lib/agent.md#agent-當函數當工具)）

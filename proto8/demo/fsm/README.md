@@ -27,23 +27,23 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 
 只改 `agent.json` 一行：`"brain": "brain/fake.json"` → `"brain": "brain/openai.json"`。其他格、表、loop 都不動。
 
-- 端點預設 LiteLLM `http://localhost:4000/v1`（[dev-env](../../../wf/workflows/dev-env.md#模型端點2026-09-25-定10-10-核對)），不用金鑰；先 `curl localhost:4000/v1/models` 看有哪些名字，把 `brain/openai.json` 的 `--model` 改成挑到的（預設寫 `chatgpt-gpt-6-sol`）。
+- 端點預設 LiteLLM `http://localhost:4000/v1`（[dev-env](../../../wf/workflows/dev-env/02-模型端點.md#模型端點2026-09-25-定10-10-核對)），不用金鑰；先 `curl localhost:4000/v1/models` 看有哪些名字，把 `brain/openai.json` 的 `--model` 改成挑到的（預設寫 `chatgpt-gpt-6-sol`）。
 - 換端點加旗標：`--base-url https://api.deepseek.com/v1 --model deepseek-chat --api-key-env DEEPSEEK_API_KEY`，金鑰只放環境變數（`export DEEPSEEK_API_KEY=…`），不寫進檔。
 - 真腦會慢：ask 那拍等多久就阻塞多久（`think/ask.json` 的 `timeout_ms` 200 秒、`loop.json` 的 20 秒要跟著加大）。
 - 報時員的腦另外換：`clerk/brain.json`（路徑從 `clerk/` 算，例 `["python3", "../../../lib/aos_brain_openai.py", …]`）。它整趟都在外層 tool 那一拍裡跑完，真腦時 `loop.json` 的 `timeout_ms` 要蓋得住好幾次叫腦。
 
 ### 換成本機 LM Studio
 
-只改一行：`"brain": "brain/lmstudio.json"`。LM Studio 要先開 server、載好 Qwen3-1.7B，用完 unload、關 server（[dev-env](../../../wf/workflows/dev-env.md#跨機--離線差異)）。10-15 試過整圈跑通，ask 那拍約 4～8 秒（[thinking 10-15 §9](../../thinking/2026-10-15-topics.md#9-試-lm-studioqwen3-17b)）。
+只改一行：`"brain": "brain/lmstudio.json"`。LM Studio 要先開 server、載好 Qwen3-1.7B，用完 unload、關 server（[dev-env](../../../wf/workflows/dev-env/01-跨機與外部工具.md#跨機--離線差異)）。10-15 試過整圈跑通，ask 那拍約 4～8 秒（[thinking 10-15 §9](../../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#9-試-lm-studioqwen3-17b)）。
 
 報時員（外層→clerk→clock）整圈 10-15 實跑過兩趟，一趟 16～20 秒；要實跑得把 `loop.json` 的 `timeout_ms` 加到幾百秒，clerk 的腦也要換成 LM Studio；小模型有時不查 clock 直接編時間（[clerk-live](../../thinking/2026-10-15-clerk-live.md)）。
 
 ### 換成 146 的 ollama（146 已不准用，只留當範例）
 
-同樣只改一行：`"brain": "brain/ollama146.json"`。走 ollama 原生 `/api/chat`（`/v1` 設不了 num_ctx）。**用 146 之前先照 [dev-env](../../../wf/workflows/dev-env.md#跨機--離線差異) 的規矩**（看負載、只准小模型、num_ctx 4096、短 keep_alive、試完確認卸載）。
+同樣只改一行：`"brain": "brain/ollama146.json"`。走 ollama 原生 `/api/chat`（`/v1` 設不了 num_ctx）。**用 146 之前先照 [dev-env](../../../wf/workflows/dev-env/01-跨機與外部工具.md#跨機--離線差異) 的規矩**（看負載、只准小模型、num_ctx 4096、短 keep_alive、試完確認卸載）。
 
 - 10-15 試過：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`、外層停在 thinking。之後補了：內層 state 的 `last_error` 寫出真正原因（`CellFailed: BrainFailed: HttpError: …does not support tools`），連錯 3 次（`max_fails`）內層就停住（`halted: true`）、不再叫腦；要再試就把內層 state 的 `halted` 拿掉。
-- 10-15 試 qwen2.5:14b（`"brain": "brain/qwen146.json"`）：整圈跑通，會叫 `clock`；第一次叫腦含載入約 15 秒，用 loop 拍要把 `loop.json` 的 `timeout_ms` 加大（[thinking 10-15 §8](../../thinking/2026-10-15-topics.md#8-試-146-ollamaqwen2514b)）。
+- 10-15 試 qwen2.5:14b（`"brain": "brain/qwen146.json"`）：整圈跑通，會叫 `clock`；第一次叫腦含載入約 15 秒，用 loop 拍要把 `loop.json` 的 `timeout_ms` 加大（[thinking 10-15 §8](../../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#8-試-146-ollamaqwen2514b)）。
 
 要非同步就把 ask 換成「丟請求、回 `{"next": "waiting"}`」再加一格 waiting。
 

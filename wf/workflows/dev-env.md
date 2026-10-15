@@ -45,44 +45,13 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
 
 做完的 commit 仍盡早 push，本機 gitdir 不算可靠。
 
-## 跨機 / 離線差異
+## 跨機、外部工具、模型端點
 
-兩台輪流開發：家裡 Manjaro Linux（repo 在 `~/repo/simple_tools/aos`）、公司 WSL2 Ubuntu（repo 在 `~/projs/aos`，見下方「公司那台」；2026-10-01 使用者確認仍在用）。沒有 CI 差異，全部驗證都由 agent 跑。[SESSION-LOG](../SESSION-LOG.md) 裡「repo 在 `/mnt/c`」那條已過期。
-
-**公司那台**（2026-09-07 他開場說的，10-01 從那台的舊記憶搬來）：公司 WSL（Ubuntu），repo 在 `~/projs/aos`，codex 在 `~/.local/bin/codex`。兩台都可能是當下這台，所以**開場先確認在哪台、LLM 走哪個端點**。
-
-**10-15 使用者：不再使用 146，一律用本地（LM Studio）**（原話「那就都用本地的就好，別碰146」）。歷史：區網 `192.168.1.146` 有 ollama，10-15 照 ops-notes 五條規矩試過 gemma3:1b／deepseek-r1:8b／qwen2.5:14b（[thinking 10-15 §7](../../proto8/thinking/2026-10-15-topics.md#7-試-146-ollama小模型)、[§8](../../proto8/thinking/2026-10-15-topics.md#8-試-146-ollamaqwen2514b)），qwen 吃掉整機 CPU 後 ops-notes 要求暫停（出處 ops-notes 10-15）。
-
-**10-15 使用者允許在公司這台用 LM Studio 試 agent（Qwen3-1.7B），試完要 unload、關 server**。連法：`lms.exe`（`/mnt/c/Users/WG-Guanyu/.lmstudio/bin/`）`server start -p 1234`（不用 `--bind`）→ `load qwen/qwen3-1.7b -c 4096 --ttl 600 -y`；WSL 是 mirrored 網路，直接 `localhost:1234/v1` 就通；收尾 `unload --all`、`server stop`（[thinking 10-15 §9](../../proto8/thinking/2026-10-15-topics.md#9-試-lm-studioqwen3-17b)）。
-
-公司這台 LiteLLM（localhost:4000）10-14 查過沒開。
-
-## 外部工具與 env var
-
-| 名稱 | 用途 | 怎麼取得 / 設定 |
-|------|------|----------------|
-| vcpkg（`~/dev/vcpkg`）| C++ 相依（nlohmann、curl…）| 見上面流程第 1 步；`VCPKG_ROOT` 可選 |
-| codex CLI（`/usr/bin/codex`）| 10-09 家機實測 9 個 slug 可用（09-24～10-08 曾只剩 `gpt-6-astra`）；清單、呼叫與沙箱見 [aos-teams](dispatch/aos-teams.md) | 已裝；需要的登入由使用者做 |
-| LiteLLM 代理（`localhost:4000/v1`）| 真模型實測的預設端點，見下方「模型端點」| 家機已架好（使用者自己的 `~/repo/llm_proxy`，`litellm --config ./litellm.yaml --port 4000`，10-10 確認在跑）；公司那台未確認；不用 api_key |
-| LM Studio（`localhost:1234`）| 本機真模型（吃 GPU）| 使用者開著才在；換模型前先 unload 舊的；並行實測取鎖見 [resources](resources.md) |
-| 外部 LLM 帳號（Claude OAuth 等）| T5 agent loop 真模型實測 | 要使用者登入 → [WAIT_USER](../WAIT_USER.md)；金鑰不進 repo |
-
-## 模型端點（2026-09-25 定，10-10 核對）
-
-家機的 LiteLLM 已架好、跑在 `localhost:4000`（見上表），開工前仍先 `curl localhost:4000/v1/models` 看當下名單。
-
-
-**只走 LiteLLM `http://localhost:4000/v1`**。使用者 09-25 原話：「只許使用這個，想要啥模型都可以用，額度無上限，可以的話盡量用 codex／gpt 系；就是不能碰 LM Studio」。用之前先 `curl localhost:4000/v1/models` 看當下有哪些名字，強模型優先挑 gpt／codex 系。LiteLLM 沒開時才直連 `https://api.deepseek.com/v1`，金鑰只從環境變數 `DEEPSEEK_API_KEY` 讀，不印、不寫進檔。
-
-**GPU 是他的**：他常在打遊戲，不准碰 LM Studio、不准用 LiteLLM 上的 `ollama-*`（本機、吃 GPU）、不准 `lms load`。`deepseek-*`、gpt、claude 這些雲端的不吃 GPU。
-
-**2026-10-09 使用者准許 aos 的 LLM 包（llmcall／author）接真 AI**：走同一個 LiteLLM，**不用 `lm-*`**（也照舊不用 `ollama-*`），盡量用 gpt 系（`chatgpt-gpt-6-sol`、`chatgpt-gpt-6-astra` 等，帶 `-high`／`-max` 後綴可調推理強度）。token 額度、輸出長度、context 上限**全部拉到極限、不用省**；跑完一個大段落後再依實際消耗量訂限制。
-
-`deepseek-chat` 是別名，回應的 `model` 欄寫 `deepseek-flash`；任何「回應 model 要等於設定」的檢查都要對它放行。
-
-他明講可以用 LM Studio 時：一次只能載一顆，**換模型前先 `lms unload --all`**（VRAM 不夠會回看起來像端點壞掉的錯）；`lms ps` 看載了什麼（`/v1/models` 只代表下載了）；模型 id 用問的、不要猜。gemma 這類會先「想」的模型，想的字數算在 `max_tokens` 裡——冒煙測試不要設 `max_tokens`，要設就 1500 以上。
-
-需要帳號、付費、授權才能取得的：守鐵律 2（授權來源），並在 [WAIT_USER](../WAIT_USER.md) 記一行。
+<!-- wf-nav -->
+| 分檔 | 涵蓋段落 |
+|---|---|
+| [01-跨機與外部工具](dev-env/01-跨機與外部工具.md) | 跨機 / 離線差異；外部工具與 env var |
+| [02-模型端點](dev-env/02-模型端點.md) | 模型端點（2026-09-25 定，10-10 核對） |
 
 ## 交接
 

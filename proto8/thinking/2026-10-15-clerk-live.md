@@ -1,6 +1,6 @@
 # 2026-10-15 報時員（agent 當工具）用 LM Studio 實跑
 
-← [thinking](README.md)｜前一次 LM Studio：[topics §9](2026-10-15-topics.md#9-試-lm-studioqwen3-17b)｜demo：[demo/fsm](../demo/fsm/README.md)｜機制：[agent.md](../lib/agent.md#agent-當函數當工具)
+← [thinking](README.md)｜前一次 LM Studio：[topics §9](2026-10-15-topics/03-試146-qwen與LM-Studio.md#9-試-lm-studioqwen3-17b)｜demo：[demo/fsm](../demo/fsm/README.md)｜機制：[agent.md](../lib/agent.md#agent-當函數當工具)
 
 **原文**：使用者 10-15「用 LM Studio 實跑一次報時員」。
 
