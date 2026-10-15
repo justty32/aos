@@ -105,8 +105,8 @@ class Inst(Tmp):
         self.write("x.json", "#!/bin/sh\n")
         self.write("nf.json", {"argv": ["/no/such/prog"]})
         self.write("nx.json", {"argv": [self.p("x.json")]})
-        for target, code, err in (("nope.json", 125, "ReadFailed"), ("nf.json", 127, "CommandNotFound"),
-                                  ("nx.json", 126, "CommandNotExecutable")):
+        for target, code, err in (("nope.json", 1, "ReadFailed"), ("nf.json", 1, "CommandNotFound"),
+                                  ("nx.json", 1, "CommandNotExecutable")):     # 一律 1，看 code 分（原 125／127／126）
             r = self.cli(self.p(target))
             self.assertEqual((r.returncode, self.err(r)), (code, err))
 
@@ -145,9 +145,9 @@ class Inst(Tmp):
         r = self.cli("--cwd", self.tmp, "--stdout", "d.out", "--", "echo", "hi")
         self.assertEqual((r.returncode, self.read("d.out")), (0, "hi\n"), r.stderr)
         r = self.cli("-", input='{"argv": ["true"], "stdin_inherit": true}')          # D-5
-        self.assertEqual((r.returncode, self.err(r)), (125, "Conflict"))
+        self.assertEqual((r.returncode, self.err(r)), (1, "Conflict"))
         r = self.cli("--nope", "1", "--", "true")
-        self.assertEqual((r.returncode, self.err(r)), (125, "UnknownFlag"))
+        self.assertEqual((r.returncode, self.err(r)), (1, "UnknownFlag"))
 
     def node(self, name="node.json"):
         """一份 JSON 放好幾格：clock 是 inst（argv 用 ../ 摸旁邊的 shared）、x 不是物件。"""

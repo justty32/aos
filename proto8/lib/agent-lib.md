@@ -18,7 +18,7 @@ aos agent think|tool|route [--done 名]|intake|done|fsm [NAME]      （＝python
 - **route**：看最後一則 assistant，有 `tool_calls`＝`{"next": "tool"}`，否則 `{"next": "idle", "data": {"reply"}}`（`--done 名` 把 idle 換掉，定義資料夾寫 `--done done`）。單層表用（demo 的 `clerk/`）。
 - **intake**：把 cwd 的 `args.json`（實引數）接進 history，接完把 `args.json` 改名成 `args.taken.json`、刪掉上一輪的 `ret.json`（同一份不會接兩次；呼叫方下次再寫一份新的 `args.json` 就是新問題）。`{"question"}`：frame 還沒有 `history.json`＝生一份 `[user 訊息]`；已經有＝接在後面當一則新的 user 訊息（同一個 frame 續聊，10-15 使用者「按照建議」）；history 最後一則已經是同一句 user 訊息（上一拍接好了、改名前被殺）＝不再接。`{"history"}`＝整段換掉。沒有 `args.json`：已經有 history＝照舊往下（呼叫方綁了 history，或接著上次的）；也沒有＝`NoHistory`。
 - **done**：寫 cwd 的 `ret.json`＝`{"reply": 最後一句}`，只看自己的輸入（history），不讀別格的私檔（10-15 使用者「都同意。」，[盤點第 8 條](../thinking/2026-10-15-principles.md)）。不碰 ctl：done 在表的 `end` 裡，fsm 結束那拍那行帶 `"end": true`，拍它的 loop 寫了 `stop_on_end` 就停（N-44）。
-- **fsm**（不是格，給 loop.json 用）：照 `lookup()` 找 `NAME`（預設 `fsm.json`），跑一拍 aos_fsm（格的名字從找到的那份所在的資料夾算、窗從 frame 算）。這樣定義資料夾的 `loop.json` 不必寫自己在哪：`{"inst": {"argv": ["aos", "agent", "fsm"]}, …}`；內層 fsm 的格也一樣寫 `aos agent fsm think/fsm.json`。找不到＝`NoFsm`、退出 125。
+- **fsm**（不是格，給 loop.json 用）：照 `lookup()` 找 `NAME`（預設 `fsm.json`），跑一拍 aos_fsm（格的名字從找到的那份所在的資料夾算、窗從 frame 算）。這樣定義資料夾的 `loop.json` 不必寫自己在哪：`{"inst": {"argv": ["aos", "agent", "fsm"]}, …}`；內層 fsm 的格也一樣寫 `aos agent fsm think/fsm.json`。找不到＝`NoFsm`、退出 1。
 - stdin 給的 `brain`、`tools` 值除了 TARGET，也可以是內嵌一張 inst。
 
 ## 邊緣狀況（使用者 10-15 定）

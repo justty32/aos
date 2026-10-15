@@ -166,7 +166,7 @@ def main(argv=None):
         return 0
     except (CliError, ValueError, IndexError) as e:
         aos_cli.error(getattr(e, "code", "Usage"), getattr(e, "msg", str(e)))
-        return 125
+        return 1
 
 
 if __name__ == "__main__":

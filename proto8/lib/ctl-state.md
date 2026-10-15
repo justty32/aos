@@ -40,7 +40,7 @@ key 分四組，每組落在哪幾個檔是固定的：
 }
 ```
 
-各層擴充：loop 加 `skipped`（fixed 跳拍數）、`last_code`（aos_inst 結果的 code）；daemon 加 `skipped`、`last_code`、`loops`（表上幾個；要細節用控制指令查）。daemon 回答子項的 `get`／`list` 時多一格 `phase`（子項六態）。
+各層擴充：loop 加 `skipped`（fixed 跳拍數）、`last_code`（aos_inst 結果的 code）、`signal`（被哪個訊號停掉；沒有＝null，10-15 晚起退出碼不再用 128＋N 說）；daemon 加 `skipped`、`last_code`、`loops`（表上幾個；要細節用控制指令查）。daemon 回答子項的 `get`／`list` 時多一格 `phase`（子項六態）。
 
 **`last_warning`**（10-15 使用者「都按照推薦。」，[盤點 S1](../thinking/2026-10-15-principles.md)）：以前寫 stderr 的警告改記這裡——N-43 正常退出不在 stderr 噴東西。loop：ctl 窗壞檔、不見了、讀不了（`CtlBad`／`CtlMissing`／`CtlReadFailed`，讀到好的那份就清回 null）。daemon 再加表那邊最近一件（`PolicyFailed`、`RestartFailed`、`TableWriteFailed`、收工時寫不了子項 ctl 的 `WriteFailed`；ctl 窗的優先）。**state 窗自己寫不了**（`StateWriteFailed`）沒地方記＝窗壞了，同 N-19 窗缺：收掉身體、結束、stderr 一份錯誤、退 1。
 

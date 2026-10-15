@@ -74,7 +74,7 @@ class AgentFrameTest(Tmp):
         self.assertEqual(json.loads(self.read("fr/st.json")), {"phase": "a"})
         r = subprocess.run(["aos", "agent", "fsm", "nope.json"], cwd=self.p("fr"), env=ENV, capture_output=True,
                            text=True, timeout=10)
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (125, "NoFsm"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoFsm"))
 
     def test_intake_continues_same_frame(self):
         # 同一個 frame 續聊：已經有 history、又來新的 args.json＝接在後面當新的 user 訊息；接完改名，不會接兩次

@@ -197,7 +197,7 @@ class FsmTest(Tmp):
     def test_missing_state_refused(self):
         path = self.write("f.json", {"start": "a", "states": {"a": ok("a")}, "state": None})
         r = self.tick(path)
-        self.assertEqual(r.returncode, 125)
+        self.assertEqual(r.returncode, 1)                       # fsm 自己的錯也是 1（原 125，10-15 晚）
         self.assertEqual(json.loads(r.stderr.splitlines()[-1])["error"]["code"], "WindowMissing")
         self.assertEqual(self.runs("a"), 0)
 

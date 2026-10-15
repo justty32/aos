@@ -14,6 +14,8 @@
 
 「都按照推薦。」（答「正常退出」盤點的 S1～S5；同晚，經主控轉達）
 
+「按照推薦」（答下面「新的待定」A～C，另加一條：被訊號停掉不用 128＋N、一律退 1；同晚，經主控轉達）
+
 「喔剛剛那個我補一句：結束碼0代表正常退出，我這邊的定義(我希望盡量靠近unix傳統)，關於"正常退出"的定義，就是該功能單元中，其行爲有如當初的設計構想、功能介紹、文檔走(當然，走的是定義中正常退出的那條路)，並且是考慮過的狀況的一部分(有被預料到，且是正常的)，一個更簡單一些的定義是不會在stderr噴東西。」
 
 「當然，不在stderr噴東西，不代表結束碼就必須爲0。你當然可以把錯誤輸出到別的地方。」
@@ -36,6 +38,12 @@
   - **S4** `stderr_inherit` 維持，aos_inst 檔頭、lib inst.md、N-26、N-43 寫明是寫單子的人自選、那時 stderr 是子程式的。
   - **S5** 述詞（`aos-not`、`aos-if` 的條件）在 N-34 寫明是 N-43 的 Unix 式例外（同 `test`／`false`／`grep`），N-43 也列進例外。
 - 驗證：proto8 lib 測試 168 → 171 個全過（新增 state 窗寫不了＝錯、策略格錯記 `last_warning` 不寫 stderr、回信寫不進去記 kernel state 窗；判官連錯改成「每次都問、每次退回規則」）；ctest 全綠；fsm、kernel、kernel2、paint demo 假腦實跑正常。
+- 新的待定 A～C 照推薦（「按照推薦」），同晚照做完：
+  - **結束碼只剩 0／1**（N-43 改寫：「0 正常、非 0 有錯，沒了」，aos 的程式說自己的錯一律 1，不再用數字分種類，是哪種錯看 stderr 的 `code`）：aos-inst 自己的 127／126／125 → 1（`exit_code()` 拿掉，信箱回信也不再帶 `exit`）；fsm 自己的 125 → 1；閘門自己的錯（含 kernel 回錯、kernel 那邊 aos_inst 起不來）→ 1；兩種 kernel、aos_tree、`aos agent fsm` 的 125、格庫用法錯的 2 → 1；proto8-1 tasks 自己的錯（Usage、TARGET 不對、aos_inst 起不來、結果讀不到）→ 1。
+  - **被訊號停掉一律 1**（原 128＋N）：loop 退 1、哪個訊號記在 state 窗與結束那份的 `signal`（新欄位，沒有＝null）；閘門、tasks 沒窗＝stderr 一份 `Signaled`（msg 帶號碼）、退 1。**daemon 收到 SIGTERM／SIGINT 照舊退 0**：那是它照設計的收工路（文件寫明），原本就不是 128＋N；`signal` 一樣記在 state 窗與結束那份。
+  - **例外只有兩種，寫進 N-43**：透明轉交別人的碼（閘門＝target 的碼；tasks 的 seq／par／if 回子程式的碼，同 sh 的 `&&`）、述詞（aos-not、aos-if 的條件）。aos-inst 結果與 exit 檔的 `code`（被訊號停掉的子程式是 128＋N）是子程式的碼、是資料，不是退出碼，照留並在 N-30 寫明。
+  - B（state 窗寫不了就收工）、C（`last_warning` 只留最近一件）維持。
+  - 驗證：proto8 lib 171 個、proto8-1 22 個測試全過；ctest 全綠；fsm、kernel、kernel2、paint、proto8-1 demo 假腦實跑正常（proto8-1 demo README 的樣本輸出 125 → 1）。
 
 ## 結論：已有的實例
 
@@ -59,8 +67,6 @@
 - 退非 0、沒寫 stderr、錯誤在文件說好的地方：fsm 格出錯（退 1，錯在這拍 stdout 行的 `error`，N-38）——合；收到訊號 128＋N（loop、閘門、tasks）——Unix 傳統，合；loop／daemon 最後一次 aos_inst 出錯——照第 1 條改成退 1＋stderr 一份自己的錯。
 - **halted（第 9 條）查證**（照第 8 條改完後重看）：think 第 3 次連錯時自己寫 `ret.json` 的錯、回 `{"next": "halted"}`、退 0、不寫 stderr；halted 只在 `end`＝fsm 結束那拍、退 0；loop 的 `stop_on_end` 看到就停、退 0、stderr 空——**符合新定義**。前兩次連錯：think 退 1＋stderr（合）、fsm 退 1、錯在 stdout 行（合）、loop 只記 `last_code`、不寫 stderr。
 
-## 新的待定（這次做的時候發現，附推薦，等使用者看）
+## 新的待定（這次做的時候發現）
 
-- **A. 第 1 條要不要擴到 fsm、閘門、inst、proto8-1 tasks**：這次只改了 loop／daemon。fsm 還是 1／125、閘門自己出錯 125（kernel 那邊 aos_inst 起不來時還沿用它的 127）、aos_inst 125～127、tasks 沿用 aos_inst 的碼。推薦：閘門照透明原則只在「回信是結果」時用 target 的碼，自己的錯（含 kernel 回的錯、aos_inst 起不來）一律 1；fsm、inst 的 125～127 是說自己的（不是往上傳），可留著當慣例（N-43 允許、別人不依賴）；tasks 沿用 aos_inst 的碼改成 1。
-- **B. `StateWriteFailed` 改成錯會不會太兇**：state 窗暫時寫不了（例磁碟滿一下）loop 就收工、退 1。推薦：維持（窗是必填，壞了跟窗缺同一條路，錯誤路徑最少）；要寬鬆就改成「連續 N 秒寫不了才收工」，但多一條路。
-- **C. `last_warning` 只留最近一件**：daemon 表那邊的警告不會自己清（ctl 的會）。推薦：維持（state 窗是現況不是日誌）；要歷史就另開日誌窗。
+A～C 已定（見「決定」）。daemon 收到訊號照舊退 0（照設計的收工路）——若使用者要連 daemon 也一律 1，改一行加測試即可。

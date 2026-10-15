@@ -33,11 +33,11 @@ loop ──跑──> top/inst.json      argv: ["aos-seq", "a", "inner"]
 tasks 的共同規矩（aos-tick 不跑 inst，不適用；細節在各檔檔頭）：
 
 - 參數是 inst 的 TARGET（同 aos_inst：`.json` 或資料夾），相對路徑從自己的 cwd 算。
-- **先全部讀好、驗過才開始**；有一個不對就在 stderr 吐一份錯誤、退出碼 125，一個都不跑。個數不對也是 125（`Usage`）。inst **不必寫 `exit`**（選填，exit 檔只當過渡）。
-- 每個 inst 用子程序 `aos_inst.py TARGET` 跑；**接它的 stdout，子程式的結束碼＝那份結果 JSON（N-12、[N-30](../proto8/NORMS/03-基礎設施-inst.md)）的 `code`**（aos_inst 的退出碼只說它自己，不傳子程式的碼）。寫了 `stdout_inherit` 時子程式的輸出會混在前面，從最後一行往回找第一份帶 `code` 的；找不到＝吐 `ResultUnreadable`、算 125。結果只給 tasks 讀，不漏進 tasks 的 stdout。
+- **先全部讀好、驗過才開始**；有一個不對就在 stderr 吐一份錯誤、退出碼 1，一個都不跑。個數不對也是 1（`Usage`）。tasks 自己的錯一律 1（10-15 晚使用者「按照推薦」，原 125／127／126／128＋N）；seq／par／if 回子程式的碼是透明轉交，aos-not 是述詞（N-34）。inst **不必寫 `exit`**（選填，exit 檔只當過渡）。
+- 每個 inst 用子程序 `aos_inst.py TARGET` 跑；**接它的 stdout，子程式的結束碼＝那份結果 JSON（N-12、[N-30](../proto8/NORMS/03-基礎設施-inst.md)）的 `code`**（aos_inst 的退出碼只說它自己，不傳子程式的碼）。寫了 `stdout_inherit` 時子程式的輸出會混在前面，從最後一行往回找第一份帶 `code` 的；找不到＝吐 `ResultUnreadable`、算 1。結果只給 tasks 讀，不漏進 tasks 的 stdout。
 - **三扇門（N-12）**：tasks 自己的 stdout 不吐東西（空的 JSON 串流，結果就是退出碼；[N-34](../proto8/NORMS/07-基礎設施-組合子.md)）；自己的錯誤直接用 proto8 `aos_cli` 的 `error()`，在 stderr 吐 `{"error": {"code", "msg"}}`，一份一行，跟 aos_inst 的錯誤同一個格式。
-- 跑的途中 aos_inst 自己出錯：它自己在 stderr 吐一份 `{"error": {"code", "msg"}}`（N-12），那一個沿用 aos_inst 的退出碼（參考 127／126／125；seq 就停在那裡、if 的條件起不來不跑 ELSE）。
-- 收到 SIGINT／SIGTERM／SIGHUP：轉給正在跑的 aos_inst（它再轉給子程式、過 inst 的 `grace_ms` 再 SIGKILL）、不再起新的，退出碼＝128＋訊號號碼。
+- 跑的途中 aos_inst 自己出錯：它自己在 stderr 吐一份 `{"error": {"code", "msg"}}`（N-12），那一個算 1（seq 就停在那裡、if 的條件起不來不跑 ELSE）。
+- 收到 SIGINT／SIGTERM／SIGHUP：轉給正在跑的 aos_inst（它再轉給子程式、過 inst 的 `grace_ms` 再 SIGKILL）、不再起新的，stderr 一份 `Signaled`（帶訊號號碼）、退出碼 1。
 - **子程式不開新 session**，留在自己的群組裡：loop 整群收的時候一起收到，不會變孤兒。
 - 結束碼數字只有 0／非 0 是確定的，其他供參考。
 

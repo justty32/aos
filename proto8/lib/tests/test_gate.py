@@ -234,26 +234,29 @@ class GateEndToEndTest(Tmp):
     def test_queue_timeout_withdraws(self):
         r = subprocess.run(self.gate({"argv": ["cat"]}, wait_ms=200), input="x", capture_output=True, text=True,
                            env=self.env, cwd=self.tmp, timeout=20)          # kernel 沒在拍
-        self.assertEqual(r.returncode, 125)
+        self.assertEqual(r.returncode, 1)
         self.assertEqual(json.loads(r.stderr)["error"]["code"], "QueueTimeout")
         self.assertEqual(os.listdir(self.box["new"]) + os.listdir(self.box["reply"]), [])     # 撤信連 stdin 旁檔
 
     def test_sigterm_withdraws(self):
-        p = subprocess.Popen(self.gate({"argv": ["cat"]}), stdin=subprocess.PIPE, env=self.env, cwd=self.tmp)
+        p = subprocess.Popen(self.gate({"argv": ["cat"]}), stdin=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env,
+                             cwd=self.tmp)
         p.stdin.write(b"x")
         p.stdin.close()
         self.until(lambda: os.listdir(self.box["new"]))
         p.send_signal(signal.SIGTERM)
-        self.assertEqual(p.wait(10), 128 + signal.SIGTERM)
+        self.assertEqual(p.wait(10), 1)                           # 原 128＋N；哪個訊號在 stderr 的 Signaled
+        self.assertIn(str(int(signal.SIGTERM)), json.loads(p.stderr.read())["error"]["msg"])
+        p.stderr.close()
         self.assertEqual(os.listdir(self.box["new"]), [])
 
     def test_kernel_error_and_inst_error_codes(self):
         self.kernel()
         r = subprocess.run(self.gate({"argv": ["no-such-prog-xyz"]}), input="", capture_output=True, text=True,
                            env=self.env, cwd=self.tmp, timeout=20)
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (127, "CommandNotFound"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "CommandNotFound"))
         r = subprocess.run([sys.executable, GATE, "-"], input="{}", capture_output=True, text=True, env=self.env)
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (125, "Usage"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "Usage"))
 
     def test_real_brain_usage_counts_budget(self):
         """真的腦（假伺服器回 usage）經閘門：kernel 額度照 usage.total_tokens 加；think 接進 history 的沒有 usage。"""
@@ -291,7 +294,7 @@ class GateEndToEndTest(Tmp):
         self.assertEqual((st["state"], st["runs"], st["last_error"]), ("waiting", 1, None))
         self.assertIn("beat", st)
         r = subprocess.run([sys.executable, kernel, "--mailbox", self.p("mb")], capture_output=True, text=True)
-        self.assertEqual(r.returncode, 125)
+        self.assertEqual(r.returncode, 1)
 
 
 if __name__ == "__main__":

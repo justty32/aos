@@ -144,7 +144,7 @@ class LoopTest(Tmp):
                            text=True, cwd=self.tmp, timeout=10)
         out = [json.loads(x) for x in r.stdout.splitlines()]
         self.assertEqual([(o["run"], o["code"]) for o in out[:2]], [(1, 3), (2, 3)])
-        self.assertEqual(out[2], {"end": "done", "runs": 2, "skipped": 0, "last_code": 3})
+        self.assertEqual(out[2], {"end": "done", "runs": 2, "skipped": 0, "last_code": 3, "signal": None})
         self.assertEqual(self.state("s.state.json")["id"], "me")
         doc["inst"]["stdin_inherit"] = True                         # D-5：inst 從 stdin 灌，stdin_inherit 不行
         r = subprocess.run([sys.executable, LOOP, "-"], input=json.dumps(doc), capture_output=True, text=True, cwd=self.tmp)
@@ -275,7 +275,8 @@ class LoopTest(Tmp):
         self.until(lambda: os.path.exists(self.p("l.pid")) and self.read("l.pid").strip())
         pid = int(self.read("l.pid"))
         proc.send_signal(signal.SIGTERM)
-        self.assertEqual(proc.wait(5), 128 + signal.SIGTERM)
+        self.assertEqual(proc.wait(5), 1)                 # 被訊號停＝1（原 128＋N），哪個訊號記在 state 窗
+        self.assertEqual(self.state()["signal"], signal.SIGTERM)
         self.until(lambda: not alive(pid))
 
     def test_grandchildren_cleared_after_run(self):
@@ -296,7 +297,7 @@ class LoopTest(Tmp):
         proc = self.start(path)
         time.sleep(0.45)
         proc.send_signal(signal.SIGINT)
-        self.assertEqual(proc.wait(5), 128 + signal.SIGINT)
+        self.assertEqual(proc.wait(5), 1)
         self.assertIn(self.state()["runs"], (3, 4, 5, 6))
 
 

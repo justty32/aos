@@ -78,7 +78,7 @@ def run_letter(letter):
         try:
             result = aos_inst.run(doc)
         except aos_inst.InstError as e:
-            return {"error": {"code": e.code, "msg": e.msg}, "exit": aos_inst.exit_code(e)}, 0
+            return {"error": {"code": e.code, "msg": e.msg}}, 0
     except (KeyError, TypeError, AttributeError) as e:
         return {"error": {"code": "BadLetter", "msg": "信壞了：%s" % e}}, 0
     try:

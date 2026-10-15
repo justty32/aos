@@ -18,11 +18,12 @@ kernel 的信箱，等回信，把那支 inst 的 stdout／stderr 原樣吐出�
 回信＝aos_inst 的結果（N-30：id、code、signal、timed_out、pid、ms、exit_file）或 {"error": {"code", "msg"}}；
 target 的 stdout／stderr 在旁檔 reply/<名>.stdout／.stderr（kernel 填進信裡的），閘門讀了吐出、連回信一起刪掉。
 
-退出碼：回信是結果＝它的 `code`（stdout、stderr 原樣吐）；kernel 回錯（DeadlineMissed、BudgetExhausted、KernelRestarted…）、
-QueueTimeout、自己設定不對＝stderr 一份 N-29 錯誤、退出 125（kernel 那邊 aos_inst 起不來＝照 aos_inst 的碼，例 127）。
+退出碼：回信是結果＝它的 `code`（stdout、stderr 原樣吐；透明轉交 target 的碼）；kernel 回錯（DeadlineMissed、BudgetExhausted、
+KernelRestarted、kernel 那邊 aos_inst 起不來…）、QueueTimeout、自己設定不對＝stderr 一份 N-29 錯誤、退出 1（10-15 晚使用者「按照推薦」：N-43 只有 0／非 0，自己的錯一律 1）。
 閘門是透明的：回信是結果時，stderr 與退出碼都是 target 的、不是閘門自己的（target 守 N-43 閘門就守；10-15 使用者
 「都按照推薦。」，盤點 S3）。閘門自己的話只有上面那幾種錯。
-SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）；已被 kernel 拿走的讓它跑完、回信沒人收。
+SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）；已被 kernel 拿走的讓它跑完、回信沒人收；stderr 一份
+`Signaled`（msg 帶訊號號碼）、退出 1（原本 128＋N）。
 
 相依：aos_inst ← aos_mailbox ← aos_gate（← aos_gate_kernel ← aos_kernel_judge ← aos_kernel）。
 """
@@ -46,7 +47,7 @@ LEVELS = {"low": -1, "normal": 0, "high": 1}
 class GateError(CliError):
     """閘門或 kernel 回的錯。`code`＝錯誤代號，`msg`＝白話；`exit`＝命令列退出碼。"""
 
-    def __init__(self, code, msg, exit=125):
+    def __init__(self, code, msg, exit=1):
         super().__init__(code, msg)
         self.exit = exit
 
@@ -183,7 +184,7 @@ def run(doc, stdin_text):
     out, err = outputs(box, name)
     if "error" in rep:
         e = rep["error"]
-        raise GateError(e.get("code", "KernelError"), e.get("msg", ""), rep.get("exit", 125))
+        raise GateError(e.get("code", "KernelError"), e.get("msg", ""), 1)
     return rep, out, err
 
 
@@ -200,9 +201,10 @@ def main(argv=None):
         rep, out, err = run(doc, sys.stdin.read())
     except CliError as e:
         aos_cli.error(e.code, e.msg)
-        return getattr(e, "exit", 125)
+        return 1
     except _Stop as s:
-        return 128 + s.args[0]
+        aos_cli.error("Signaled", "收到訊號 %d，信撤了（已被拿走的照跑、回信沒人收）" % s.args[0])
+        return 1
     sys.stdout.write(out)
     sys.stdout.flush()
     sys.stderr.write(err)

@@ -258,7 +258,7 @@ class KernelTest(Tmp):
             stop.set()
             t.join()
         p = subprocess.CompletedProcess(gate.args, gate.returncode, out, err)
-        self.assertEqual(p.returncode, 125)
+        self.assertEqual(p.returncode, 1)
         self.assertEqual(json.loads(p.stderr)["error"], {"code": "TooExpensive", "msg": "太貴"})
 
     # ---- human 格、遞迴、重起 ----

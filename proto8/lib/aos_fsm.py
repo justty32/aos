@@ -27,7 +27,8 @@ stdout：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果�
 `exit_file`；沒起成格的是 null）＋`from`、`to`（出錯多 `error`: {code, msg}，msg 帶格 stderr 最後一份 N-29 錯誤；
 結束那拍多 `"end": true`，拍它的 aos-loop 寫了 `stop_on_end` 就看它停）；
 這行永遠不帶 `next`。
-退出碼（N-43 只認 0／非 0）：0＝這拍正常；1＝格出錯；125＝fsm 自己出錯（設定不對、窗缺、state 讀寫不了）。
+退出碼（N-43 只認 0／非 0）：0＝這拍正常；1＝格出錯（錯在 stdout 那行的 error）或 fsm 自己出錯（設定不對、窗缺、state 讀寫不了；
+stderr 一份錯誤）。原本 fsm 自己的錯是 125（10-15 晚使用者「按照推薦」：N-43 只有 0／非 0，自己的錯一律 1）。
 """
 import os
 import sys
@@ -47,7 +48,7 @@ ERR_LIMIT = 300                # error.msg 最多幾個字
 
 
 class FsmError(CliError):
-    """fsm 自己出錯（退出碼 125）。"""
+    """fsm 自己出錯（退出碼 1，stderr 一份錯誤）。"""
 
 
 def check_config(doc, ident=None, base=None):
@@ -154,7 +155,7 @@ def main(argv=None):
         return run(doc, ident, None if piped or target is None else base_of(target))
     except CliError as e:
         aos_cli.error(e.code, e.msg)
-        return 125
+        return 1
 
 
 if __name__ == "__main__":

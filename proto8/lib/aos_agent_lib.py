@@ -373,11 +373,11 @@ def done(cfg):
 
 
 def run_fsm(name="fsm.json"):
-    """照 lookup() 找 name（frame → env.json parent 鏈），跑一拍 aos_fsm；回退出碼。找不到＝NoFsm、125（同 fsm 自己出錯）。"""
+    """照 lookup() 找 name（frame → env.json parent 鏈），跑一拍 aos_fsm；回退出碼。找不到＝NoFsm、1（同 fsm 自己出錯）。"""
     path = lookup(name)
     if path is None:
         aos_cli.error("NoFsm", "frame %s 與它的 parent 鏈裡都找不到 %s" % (os.getcwd(), name))
-        return 125
+        return 1
     import aos_fsm                               # 只有這個子命令要 fsm；放這裡免得格庫平常多載一串
     return aos_fsm.main([path])
 
@@ -393,7 +393,7 @@ def main(argv=None):
     if cmd not in ("think", "tool", "route", "intake", "done") or opts:
         aos_cli.error("Usage", "aos_agent_lib.py think|tool|route [--done 名]|intake|done（設定＝stdin 那份＋frame 裡找）"
                                "｜fsm [NAME]")
-        return 2
+        return 1
     cfg = None
     try:
         text = "" if sys.stdin is None or sys.stdin.closed else sys.stdin.read()
