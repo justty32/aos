@@ -18,7 +18,7 @@
     poll_ms    一拍之內多久看一次信箱與跑完的信（沒寫＝50）
 
 一拍（＝一段忙碌期）：cur/ 殘信回 KernelRestarted → 反覆：收跑完的、回信、放格 → 讀 new/（過期、額度、便宜的直接跑）
-→ 局面變了才決定（只有一封且有空格＝直接跑；否則問判官，判官錯＝這次用第一種的規則）→ 照決定認領、起跑
+→ 局面變了才決定（只有一封且有空格＝直接跑；否則問判官，判官錯＝這次用第一種的規則）→ 照決定認領、起跑；判官挑完仍有空格＝補位（沒被 reject 的剩下的信照規則補滿，log reason＝backfill）
 （一封一條執行緒、各自一支子程式）→ 沒有在跑的就結束這拍。格在那封的子程式結束時就放（human 格＝回信落檔或逾時）。
 
 相依：aos_inst ← aos_mailbox（信：讀、認領、跑、回信、log）← aos_gate ← aos_gate_kernel（借 order、deadline）← aos_kernel_judge（判官：跑、讀答案、規則後援）← aos_kernel。
@@ -120,14 +120,14 @@ def tick(cfg):
         t0 = time.monotonic()
         results[name] = run_letter(doc) + (round((time.monotonic() - t0) * 1000),)
 
-    def start(name, doc):
+    def start(name, doc, reason=None):
         path = claim(box, name)
         if path:
             th = threading.Thread(target=go, args=(name, doc), daemon=True)
             running[name] = (th, doc, path, time.time())
             th.start()
             _log(cfg, {"event": "start", "runs": n, "letter": name, "resource": resource(doc),
-                       "priority": doc.get("priority"), "waited": n - seen.get(name, n)})
+                       "priority": doc.get("priority"), "waited": n - seen.get(name, n), "reason": reason})
         return bool(path)
 
     for name in sorted(os.listdir(box["cur"])):              # 上一拍跑到一半的
@@ -205,10 +205,16 @@ def tick(cfg):
                 if left[k] > 0:
                     left[k] -= 1
                     run.append(x)
-            _log(cfg, {"event": "decide", "runs": n, "how": how, "run": run, "cut": len(dec["run"]) - len(run),
+            fill = []
+            if how == "judge":                              # 補位：判官的 defer＝「不是我挑的」，空格仍空就照規則補（被 reject 的不補）
+                rest = {x: d for x, d in queue.items() if x not in run}
+                fill = decide_rules(rest, left, seen, n, now, cfg)["run"] if rest else []
+            _log(cfg, {"event": "decide", "runs": n, "how": how, "run": run, "backfill": fill, "cut": len(dec["run"]) - len(run),
                        "reject": [r["id"] for r in dec["reject"]], "judge_fails": fails, "error": last_err if how == "fallback" else None})
             for x in run:
-                started |= start(x, queue[x])
+                started |= start(x, queue[x], "judge" if how == "judge" else how)
+            for x in fill:
+                started |= start(x, queue[x], "backfill")
         elif queue:
             count["skipped"] += 1
         if not running and not started:
