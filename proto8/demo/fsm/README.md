@@ -11,7 +11,7 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 ## 裡面有什麼
 
 - `loop.json`：aos-loop 的設定，inst＝`aos_fsm.py agent.json`，跑 10 次、每次隔 100 ms；fsm 每拍吐的那行附加到 `steps.jsonl`。窗都用 `$env` 指到暫存資料夾。
-- `agent.json`：外層 fsm＋agent 設定。`start: idle`，表 `idle → cells/idle.json`、`thinking → think/`（資料夾＝走 aos-inst 的找法，找到 `think/inst.json`）、`tool → cells/tool.json`（表上靜態 `next: thinking`）；state 窗、lock、`max_steps: 10`。fsm 不認得的四個 key 給現成格庫 `aos_agent_lib.py` 用（fsm 把整份設定當 stdin 的 `cfg` 給格，[agent.md](../../lib/agent.md)）：`brain`（腦的 TARGET）、`tools`（`{"clock": "tools/clock.json"}`）、`history`（`work/history.json`＝OpenAI messages）、`work`。
+- `agent.json`：外層 fsm＋agent 設定。`start: idle`，表 `idle → cells/idle.json`、`thinking → think/`（資料夾＝走 aos-inst 的找法，找到 `think/inst.json`）、`tool → cells/tool.json`（表上靜態 `next: thinking`）；state 窗、lock、`max_steps: 10`。fsm 不認得的四個 key 給現成格庫 `aos_agent_lib.py` 用（fsm 把整份設定當 stdin 的 `cfg` 給格，[agent.md](../../lib/agent.md)）：`brain`（腦的 TARGET）、`tools`（`{"clock": "tools/clock.json"}`）、`history`（`work/history.json`＝OpenAI messages）、`work`，另有選填 `system`（`system.md`＝系統提示：繁體中文、簡短、需要時用工具；think 每次叫腦時插在最前面，不進 history，`think/fsm.json` 也 `$ref` 過去）。
 - `think/`：內層 fsm。`inst.json` 跑 `aos_fsm.py think/fsm.json`（cwd 跟外層一樣是 demo 資料夾）；表 `ask → review`（ask 帶表上靜態 `next: review`）、`end: ["tool", "idle"]`、自己的 state 窗、沒有 lock 與 ctl。內層給格的 `cfg` 是 `think/fsm.json` 自己，所以 `brain`、`tools`、`history`、`work` 四個 key 用 `$ref` 指到 `agent.json`（N-40）。
 - 格（stdin 讀 fsm 給的 `{"state", "step", "prev", "cfg"}`、stdout 吐 `{"next"?, "data"}`）：
   - `cells/idle.py`：`inbox/` 有信就拿最早一封、開新對話（history＝`[user 訊息]`），回 `next: thinking`；沒信不回 next。

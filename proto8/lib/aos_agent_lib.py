@@ -10,6 +10,8 @@
     brain     腦的 aos-inst TARGET。腦＝一支 inst：stdin {"messages", "tools"} → stdout 最後一份＝OpenAI assistant 訊息
     tools     {工具名: aos-inst TARGET}（選填）。工具的說明寫在那張 inst 的 `_tool`：{"description", "parameters"}
     history   對話檔（OpenAI messages 陣列）；只有方法程式寫它，寫法照 N-05
+    system    系統提示檔的路徑（選填；文字／markdown）。think 每次叫腦都把內容當第一則 system 訊息插在 messages 前，
+              不寫進 history（改檔下一拍就生效）；沒寫＝不帶；寫了但檔不存在或讀不了＝think 格出錯（N-29）
     work      放 N-call.json（工具的引數）、N-ret.json（工具的 stdout）的資料夾
 
 相對路徑從這格的 cwd 算（＝fsm 的 cwd，除非那張格 inst 自己寫了 cwd），跟指示詞、TARGET 一樣。
@@ -54,6 +56,11 @@ def load_config(doc):
     if not isinstance(doc, dict):
         raise AgentError("NoConfig", "stdin 要有 cfg（fsm 的設定整份），不是 %r" % (doc,))
     cfg = {"brain": doc.get("brain"), "tools": doc.get("tools", {})}
+    sysp = doc.get("system")
+    if sysp is not None:
+        if not (isinstance(sysp, str) and sysp):
+            raise AgentError("FieldType", "system 要是檔案路徑字串，不是 %r" % (sysp,))
+        cfg["system"] = os.path.abspath(sysp)
     if not (isinstance(cfg["brain"], str) and cfg["brain"]):
         raise AgentError("FieldType", "brain 要是 aos-inst TARGET（字串），不是 %r" % (cfg["brain"],))
     if not (isinstance(cfg["tools"], dict) and all(isinstance(v, str) for v in cfg["tools"].values())):
@@ -89,13 +96,26 @@ def tool_specs(tools):
     return out
 
 
+def _with_system(cfg, msgs):
+    """有 system 就在最前面插一則 system 訊息（每次現讀檔，不進 history）。"""
+    path = cfg.get("system")
+    if not path:
+        return msgs
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except (OSError, UnicodeDecodeError) as e:
+        raise AgentError("SystemUnreadable", "system 檔 %s 讀不了：%s" % (path, e))
+    return [{"role": "system", "content": text}] + msgs
+
+
 def think(cfg, prev=None):
     """叫一次腦，回這格的 data。"""
     msgs = read_history(cfg["history"])
     if msgs and msgs[-1].get("role") == "assistant":         # 上一拍已經接好了（被殺在吐結果之前）
         reply = msgs[-1]
     else:
-        req = {"messages": msgs}
+        req = {"messages": _with_system(cfg, msgs)}
         specs = tool_specs(cfg["tools"])
         if specs:
             req["tools"] = specs
