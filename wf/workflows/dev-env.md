@@ -54,7 +54,7 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
   2. 不碰 146 的 systemd；試前試後各 GET `/api/ps`，有模型只在 CPU（`size_vram == 0` 而 `size > 0`）就停手回報、不自己修。
   3. `options.num_ctx` 一律 4096～8192（用 4096）——所以走原生 `/api/chat`（`proto8/lib/aos_brain_ollama.py`），不走設不了 num_ctx 的 `/v1`。
   4. `keep_alive` 設短（例 `"30s"`），最後用 `/api/ps` 確認沒模型留著；有就送一次 `keep_alive: 0` 卸掉。
-  5. 只准 gemma3:1b、deepseek-r1:8b，不准 qwen3:32b、qwen2.5:14b；請求數壓少（整件事約 20 次內）；都不支援 tools 就停、不換大模型。10-15 實測兩顆都不支援 tools（見 [proto8 thinking 10-15 §7](../../proto8/thinking/2026-10-15-topics.md#7-試-146-ollama小模型)）。
+  5. 小模型（gemma3:1b／deepseek-r1:8b）不支援工具（10-15 實測，[proto8 thinking 10-15 §7](../../proto8/thinking/2026-10-15-topics.md#7-試-146-ollama小模型)）；**10-15 使用者同意試 qwen2.5:14b**（只限此模型、tag `qwen2.5:14b-instruct-q4_K_M`，同樣守其餘規矩；結果見 [§8](../../proto8/thinking/2026-10-15-topics.md#8-試-146-ollamaqwen2514b)），其他大模型（qwen3:32b 等）仍不准；請求數壓少（整件事約 20 次內）。
 
 公司這台 LiteLLM（localhost:4000）10-14 查過沒開。
 
