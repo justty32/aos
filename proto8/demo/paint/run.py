@@ -2,7 +2,7 @@
 """畫家 demo：畫家 agent 透過工具叫畫筆 agent（agent 當工具）、同一個 frame 續聊、frame 放同名 brain.json 換腦。
 
     python3 proto8/demo/paint/run.py                   （假腦，約 10 秒）
-    python3 proto8/demo/paint/run.py 腦設定.json       （換成那顆腦：畫家、畫筆都綁它；例 ../fsm/brain/lmstudio.json）
+    python3 proto8/demo/paint/run.py 腦設定.json       （換成那顆腦：畫家、畫筆都綁它；例 ../fsm/brains/lmstudio.json）
 
 painter/、brush/ 是兩個定義資料夾，跑完一個字都沒變；所有東西寫在 mktemp 建的 frame 裡，跑完整個刪掉
 （`--keep` 留著，印出路徑）。說明在 README.md。
@@ -60,7 +60,7 @@ def tree_hash(top):
 
 
 def find_brain(arg):
-    """腦設定的路徑：照 cwd 找，沒有再照本資料夾、demo/fsm 找（brain/xxx.json 放在那裡的也認得）。"""
+    """腦設定的路徑：照 cwd 找，沒有再照本資料夾、demo/fsm 找（brains/xxx.json 放在那裡的也認得）。"""
     for base in (os.getcwd(), HERE, os.path.join(ROOT, "demo", "fsm")):
         p = os.path.join(base, arg)
         if os.path.isfile(p):
@@ -121,7 +121,7 @@ def main():
             bind_brain(a, brain)
             say("   換腦：frame A 放 brain.json（%s）、tools/brush.json（多 cp 這顆腦給畫筆）" % os.path.basename(brain))
         else:
-            say("   腦：定義裡的 brain.json（假腦 paint/brain/fake.py）")
+            say("   腦：定義裡的 brain.json（假腦 paint/brains/fake.py）")
         ask(a, "幫我畫一隻貓")
         say("   畫家的 history：%s" % " → ".join(m["role"] for m in read(os.path.join(a, "history.json"))))
         show_frame(a)
@@ -134,10 +134,10 @@ def main():
 
         if not brain:
             say()
-            say("== 3. 換腦（綁定）：frame B 放同名 brain.json（brain/fake-alt.json＝同一支假腦加 --name），蓋過定義的")
+            say("== 3. 換腦（綁定）：frame B 放同名 brain.json（brains/fake_alt.json＝同一支假腦加 --name），蓋過定義的")
             b = os.path.join(tmp, "B")
             write(os.path.join(b, "frame.json"), {"parent": PAINTER})
-            bind_brain(b, os.path.join(HERE, "brain", "fake-alt.json"))
+            bind_brain(b, os.path.join(HERE, "brains", "fake_alt.json"))
             ask(b, "幫我畫一片海")
 
         say()

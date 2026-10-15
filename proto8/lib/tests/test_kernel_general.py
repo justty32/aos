@@ -1,4 +1,4 @@
-"""proto8/lib 的自動測試：通用 kernel（aos_kernel_general ＋ 判官 aos_kernel_judge、judge_rules）。只用標準庫：
+"""proto8/lib 的自動測試：通用 kernel（aos_kernel_general ＋ 判官 aos_kernel_judge、aos_kernel_judge_rules）。只用標準庫：
 
     python3 -m unittest discover -s proto8/lib/tests
 
@@ -20,7 +20,7 @@ import aos_gate
 import aos_kernel_general as K
 
 GATE = os.path.join(LIB, "aos_gate.py")
-RULES = os.path.join(LIB, "judge_rules.py")
+RULES = os.path.join(LIB, "aos_kernel_judge_rules.py")
 WAIT_ANS = "while [ ! -f ans ]; do sleep 0.02; done; cat"
 
 
@@ -353,7 +353,7 @@ class KernelDaemonTest(Tmp):
     def test_daemon_end_to_end_no_leftovers(self):
         mb, kernel = self.p("mb"), os.path.join(LIB, "aos_kernel_general.py")
         self.write("kernel.json", {"mailbox": mb, "state": self.p("k.state.json"), "slots": {"llm": 1, "human": 1},
-                                   "judge": {"argv": [sys.executable, os.path.join(LIB, "judge_rules.py")]}})
+                                   "judge": {"argv": [sys.executable, os.path.join(LIB, "aos_kernel_judge_rules.py")]}})
         self.write("loop.json", {"inst": {"argv": [sys.executable, kernel, self.p("kernel.json")], "cwd": self.tmp},
                                  "times": None, "interval_ms": 50})
         self.write("daemon.json", {"children": [self.p("loop.json")], "interval_ms": 50,

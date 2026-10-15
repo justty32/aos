@@ -15,7 +15,7 @@ id（決定 1，永不為 null）：路徑參照＝realpath（`#/位置`）；�
 循環（決定 3）：同一個 id 已在這條路徑上＝停、留原名字不攤，那個 node 是 `ref`、帶 `"stop": "TreeCycle"`（print 那行尾巴寫 `(TreeCycle)`）。
 深度（決定 4）：`--depth N`（預設 16）超過的同樣留名字不攤，`"stop": "TreeDepth"`。攤出來的路徑參照那份加 `id`（原 id，沒寫才補）。
 兩種都是預料到的正常狀況（遞迴的表），照樣退 0、不寫 stderr（N-43；10-15 使用者「都按照推薦。」，原本 stderr 吐 warning）。
-API：`build(x, depth=16, warn=None)` → (樹 node, 攤好的 doc)；x＝TARGET 字串或 dict。node＝{"id", "kind", "label", "kids": [node]}
+API：`build(x, depth=16, warn=None)` → (樹 node, 攤好的 doc)；x＝TARGET 字串或 dict。node＝{"id", "kind", "label", "children": [node]}
 （停住的 ref 多 `stop`）；warn(code, msg) 想另外收停住的原因可以給，命令列不給。
 """
 import copy
@@ -109,7 +109,7 @@ def build(x, depth=16, warn=None):
 
 def _walk(doc, ident, base, stack, depth, warn, label, from_path):
     out = copy.deepcopy(doc)
-    node = {"id": ident, "kind": _kind(doc), "label": label, "kids": []}
+    node = {"id": ident, "kind": _kind(doc), "label": label, "children": []}
     for path, lab in slots(doc):
         v = doc
         for p in path:
@@ -125,7 +125,7 @@ def _walk(doc, ident, base, stack, depth, warn, label, from_path):
             if sid in stack or len(stack) > depth:
                 warn("TreeCycle" if sid in stack else "TreeDepth",
                      "%s 的 %s 指向 %s：%s，留名字不攤" % (ident, lab, sid, "已在這條路徑上（循環）" if sid in stack else "超過深度 %d" % depth))
-                node["kids"].append({"id": sid, "kind": "ref", "label": lab, "kids": [],
+                node["children"].append({"id": sid, "kind": "ref", "label": lab, "children": [],
                                      "stop": "TreeCycle" if sid in stack else "TreeDepth"})
                 continue
             sbase = os.path.dirname(sid.partition("#")[0])
@@ -133,7 +133,7 @@ def _walk(doc, ident, base, stack, depth, warn, label, from_path):
         else:
             sid = _child_id(ident, path)
             kid, kdoc = _walk(v, sid, base, stack, depth, warn, lab, False)
-        node["kids"].append(kid)
+        node["children"].append(kid)
         cur[path[-1]] = kdoc
     if from_path:
         out.setdefault("id", ident)
@@ -145,7 +145,7 @@ def render(node, indent=0):
     head = "%s%s%s %s" % ("  " * indent, node["label"] + ": " if node["label"] else "", node["kind"], node["id"])
     if node.get("stop"):
         head += " (%s)" % node["stop"]
-    return "\n".join([head] + [render(k, indent + 1) for k in node["kids"]])
+    return "\n".join([head] + [render(k, indent + 1) for k in node["children"]])
 
 
 def main(argv=None):

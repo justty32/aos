@@ -1,1 +1,1 @@
-{"argv": ["aos-demo", "paint/brain/fake.py"], "timeout_ms": 10000}
+{"argv": ["aos-demo", "paint/brains/fake.py"], "timeout_ms": 10000}

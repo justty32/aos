@@ -20,7 +20,7 @@ import aos_loop  # noqa: E402
 class Daemon(Tmp):
     def start(self, **cfg):
         self.ctl = self.p("ctl")
-        self.write("daemon.json", dict({"control_dir": self.ctl, "interval_ms": 20, "ctl_poll_ms": 20,
+        self.write("daemon.json", dict({"ctl_dir": self.ctl, "interval_ms": 20, "ctl_poll_ms": 20,
                                         "grace_ms": 3000, "ctl": self.p("d.ctl.json"), "state": self.p("d.state.json")},
                                        **cfg))
         self.d = subprocess.Popen([sys.executable, DAEMON, self.p("daemon.json")],
@@ -196,12 +196,12 @@ class Daemon(Tmp):
         self.assertEqual(json.loads(self.read("t.json"))["children"], [])
 
     def test_children_policy_inst_body(self):
-        # 候選 g：children 當初始表、policies.child_exit 策略格、inst＝daemon 每拍的身體；control_dir 選填
+        # 候選 g：children 當初始表、policies.child_exit 策略格、inst＝daemon 每拍的身體；ctl_dir 選填
         a = self.loop("a", "echo x >> a.out", times=1)
         self.write("pol.json", {"argv": ["sh", "-c", 'n=$(grep -o \'"exits": [0-9]*\' | grep -o "[0-9]*"); '
                                                   '[ "$n" -lt 3 ] && echo \'{"action": "restart", "after_ms": 10}\' '
                                                   '|| echo \'{"action": "remove"}\'']})
-        self.start(control_dir=None, children=[a], policies={"child_exit": self.p("pol.json")}, table=self.p("t.json"),
+        self.start(ctl_dir=None, children=[a], policies={"child_exit": self.p("pol.json")}, table=self.p("t.json"),
                    inst={"argv": ["sh", "-c", "echo b >> body.out"], "cwd": self.tmp}, times=None, interval_ms=50)
         self.until(lambda: os.path.exists(self.p("a.out")) and self.read("a.out") == "x\n" * 3
                    and json.loads(self.read("t.json"))["children"] == [])
@@ -341,7 +341,7 @@ class Daemon(Tmp):
 
     def test_bad_config(self):
         w = {"ctl": "x.json", "state": "s.json"}
-        for doc in (dict(w, interval_ms=-1), {"control_dir": "c", "ctl": "c/x.json", "state": "s.json"},
+        for doc in (dict(w, interval_ms=-1), {"ctl_dir": "c", "ctl": "c/x.json", "state": "s.json"},
                     dict(w, interval_mode="x"), dict(w, load=True), dict(w, children={}),
                     dict(w, policies={"child_exit": 3})):
             self.write("c.json", doc)

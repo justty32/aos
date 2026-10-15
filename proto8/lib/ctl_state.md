@@ -18,7 +18,7 @@ key 分四組，每組落在哪幾個檔是固定的：
 | 節奏 | `times`、`interval_ms`、`interval_mode` | 初始值 | 期望值（可蓋） | 生效中的值 |
 | 旗子 | `paused`、`stop` | — | `{val, now}` | 併進 `state` 那格 |
 | 回音 | `seq` | — | 流水號（寫的人帶） | `ctl_seq`＝上次採用的那份的 seq |
-| 位置／身體／收尾 | `ctl`、`ctl_poll_ms`、`state`、`inst`（loop 必填、daemon 選填：每拍的身體）、`grace_ms`、`error_wait_ms`、`id`；daemon 另有 `children`、`policies`、`control_dir`、`table`、`load`、`work_dir` | 有 | 不能蓋 | 不回報 |
+| 位置／身體／收尾 | `ctl`、`ctl_poll_ms`、`state`、`inst`（loop 必填、daemon 選填：每拍的身體）、`grace_ms`、`error_wait_ms`、`id`；daemon 另有 `children`、`policies`、`ctl_dir`、`table`、`load`、`work_dir` | 有 | 不能蓋 | 不回報 |
 
 **ctl 窗**（loop、daemon 同一份）：`paused`、`stop`、`times`、`interval_ms`、`interval_mode`、`seq`，規矩照 N-06～N-08。回音以序號為準（N-14）：daemon 寫子 loop 的 ctl 時把 seq 加一，等子 loop 的 state 回報 `ctl_seq` 趕上。
 

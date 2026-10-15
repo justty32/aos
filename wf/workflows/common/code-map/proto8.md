@@ -6,7 +6,7 @@
 
 ### `proto8/lib/`（Python）
 
-逐檔表在 [proto8/lib/README.md](../../../../proto8/lib/README.md)；各程式的細節在同資料夾的 `directives.md`、`inst.md`、`loop.md`、`daemon.md`、`fsm.md`、`agent.md`（＋拆出的 `agent-lib.md`、`agent-frame.md`）、`kernel_llm.md`、`kernel_general.md`、`ctl-state.md`。
+逐檔表在 [proto8/lib/README.md](../../../../proto8/lib/README.md)；各程式的細節在同資料夾的 `directives.md`、`inst.md`、`loop.md`、`daemon.md`、`fsm.md`、`agent.md`（＋拆出的 `agent_lib.md`、`frame.md`）、`kernel_llm.md`、`kernel_general.md`、`ctl_state.md`。
 
 **命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`、值的雙形收成物件的 `expand()`；沒有寫 stderr 的警告，預料到的意外記進各自的窗 `last_warning`）、`檔#/位置`＋指示詞（語法糖）`aos_directives.py`。
 
@@ -18,7 +18,7 @@
 
 **真的腦**：`aos_brain_openai.py`（OpenAI 相容）與 `aos_brain_ollama.py`（ollama 原生 `/api/chat`，能設 num_ctx）；兩顆都在 assistant 訊息頂層帶 `usage` 給 kernel 記額度。
 
-**kernel**：信箱共用 `aos_mailbox.py`（信＝inst、回信＝N-30 結果、stdout／stderr 落旁檔）＋閘門 `aos_gate.py`（兩種 kernel 共用）；LLM kernel 的身體 `aos_kernel_llm.py`（N-42 第一種，細節 `kernel_llm.md`）；通用 kernel 的身體 `aos_kernel_general.py`、判官那一半 `aos_kernel_judge.py`、規則判官 `judge_rules.py`（N-42 第二種，細節 `kernel_general.md`）。
+**kernel**：信箱共用 `aos_mailbox.py`（信＝inst、回信＝N-30 結果、stdout／stderr 落旁檔）＋閘門 `aos_gate.py`（兩種 kernel 共用）；LLM kernel 的身體 `aos_kernel_llm.py`（N-42 第一種，細節 `kernel_llm.md`）；通用 kernel 的身體 `aos_kernel_general.py`、判官那一半 `aos_kernel_judge.py`、規則判官 `aos_kernel_judge_rules.py`（N-42 第二種，細節 `kernel_general.md`）。
 
 **小工具**：inst 樹工具 `aos_tree.py`（print／inline，同像性；看狀況用，不屬規範）。
 
@@ -34,13 +34,13 @@
 
 **薄入口**：`demo/bin/aos-demo`（`aos-demo fsm/x.py`＝從 demo 資料夾算的腳本，其他指令照跑並給 `AOS_DEMO`）。
 
-**fsm／agent**（`demo/fsm/`）：本身是 agent 定義資料夾——`fsm.json`、`loop.json`、`cells/`（idle.py、thinking＝內層 `think/fsm.json`、tool、done）、`brain.json`＝假腦 `brain/fake.py`、`system.md`、`tools/clerk.json`（agent 當工具：`sh -c` 三步叫報時員）；換用的腦 `brain/openai.json`／`litellm.json`／`lmstudio.json`／`ollama146.json`／`qwen146.json`；報時員定義資料夾 `clerk/`（含 `tools/clock.*`）；`run.py` 建 frame、在裡面跑 loop.json。
+**fsm／agent**（`demo/fsm/`）：本身是 agent 定義資料夾——`fsm.json`、`loop.json`、`cells/`（idle.py、thinking＝內層 `think/fsm.json`、tool、done）、`brain.json`＝假腦 `brains/fake.py`、`system.md`、`tools/clerk.json`（agent 當工具：`sh -c` 三步叫報時員）；換用的腦 `brains/openai.json`／`litellm.json`／`lmstudio.json`／`ollama/gemma3_1b.json`／`ollama/qwen2_5_14b.json`（主機寫在檔內 `--base-url`）；報時員定義資料夾 `clerk/`（含 `tools/clock.*`）；`run.py` 建 frame、在裡面跑 loop.json。
 
-**LLM kernel**（`demo/kernels/llm/`）：daemon／loop／kernel 設定由 `run.py` 寫成完整檔、閘門 `gate.json`／`gate-fake.json`、假腦 `brain.py`、腦包閘門的 agent 定義資料夾 `boss/`（工具 `tools/clerk.json` 借 `demo/fsm/clerk/` 並在它的 frame 綁 boss 的腦）。
+**LLM kernel**（`demo/kernels/llm/`）：daemon／loop／kernel 設定由 `run.py` 寫成完整檔、閘門 `gates/brain.json`／`gates/fake.json`、假腦 `brain.py`、腦包閘門的 agent 定義資料夾 `boss/`（工具 `tools/clerk.json` 借 `demo/fsm/clerk/` 並在它的 frame 綁 boss 的腦）。
 
-**通用 kernel**（`demo/kernels/general/`）：設定由 `run.py` 寫成完整檔、活 `job.py`（llm／cpu／human）、閘門 `gate-*.json`、判官 `judge-rules.json`（`_schema`→`judge.schema.json`）／`judge-broken.json`／`judge-agent.json`＋agent 判官定義資料夾 `judge/`（入口 `ask_judge.py [定義資料夾]`：暫存 frame（frame.json 指引數給的資料夾，預設 judge/）跑 `judge/loop.json`、讀 ret.json）。
+**通用 kernel**（`demo/kernels/general/`）：設定由 `run.py` 寫成完整檔、活 `job.py`（llm／cpu／human）、閘門 `gates/*.json`、判官 `judges/rules.json`（`_schema`→`judges/schema.json`）／`judges/broken.json`／`judges/agent.json`＋agent 判官定義資料夾 `judges/agent/`（入口 `ask_judge.py [定義資料夾]`：暫存 frame（frame.json 指引數給的資料夾，預設 judge/）跑 `judge/loop.json`、讀 ret.json）。
 
-**畫家 demo**（[`demo/paint/`](../../../../proto8/demo/paint/README.md)）：兩個 agent 定義資料夾 `painter/`（工具 `tools/brush.json`＝`sh -c` 三步叫畫筆）、`brush/`（工具 `tools/palette.*` 調色盤），假腦 `brain/fake.py`（看帶哪個工具當畫家或畫筆）＋`brain/fake-alt.json`（換腦用），`run.py`＝三段展示＋`bind_brain()`（frame 放 brain.json＋改寫 tools/brush.json 讓畫筆也換）；測試 `tests/test_paint_demo.py`。
+**畫家 demo**（[`demo/paint/`](../../../../proto8/demo/paint/README.md)）：兩個 agent 定義資料夾 `painter/`（工具 `tools/brush.json`＝`sh -c` 三步叫畫筆）、`brush/`（工具 `tools/palette.*` 調色盤），假腦 `brains/fake.py`（看帶哪個工具當畫家或畫筆）＋`brains/fake_alt.json`（換腦用），`run.py`＝三段展示＋`bind_brain()`（frame 放 brain.json＋改寫 tools/brush.json 讓畫筆也換）；測試 `tests/test_paint_demo.py`。
 
 改 proto8 的檔就同步那份。
 

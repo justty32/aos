@@ -8,7 +8,7 @@
 (2) aging：一封 low 跟一串不斷進來的 normal（快腦）；(3) 報時員巢狀（boss 問 clerk、clerk 查 clock），
 兩個 agent 的腦都包了閘門、一格就夠：boss＝定義資料夾 boss/（腦 brain.json＝經閘門叫假腦）；clerk 借 demo/fsm/clerk 的定義，
 boss 的工具 tools/clerk.json 在 clerk 的 frame 放一份 boss 的 brain.json（綁定，蓋過 clerk 預設的腦）。kernel／loop／daemon 的設定在暫存資料夾裡寫成完整檔（不靠指示詞）；
-閘門（gate.json、gate-fake.json）沒寫 mailbox，靠環境變數 AOS_KERNEL。產物放在 mktemp 的暫存資料夾，跑完刪掉。
+閘門（gates/brain.json、gates/fake.json）沒寫 mailbox，靠環境變數 AOS_KERNEL。產物放在 mktemp 的暫存資料夾，跑完刪掉。
 """
 import json
 import os
@@ -33,7 +33,7 @@ def say(msg):
 def call(env, who, priority):
     """一個呼叫者：經閘門叫假腦，stdin＝思考介面的請求。回 Popen。"""
     e = dict(env, AOS_PRIORITY=json.dumps(priority)) if priority is not None else env
-    p = subprocess.Popen([sys.executable, GATE, "gate.json"], cwd=HERE, env=e, stdin=subprocess.PIPE,
+    p = subprocess.Popen([sys.executable, GATE, "gates/brain.json"], cwd=HERE, env=e, stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     p.stdin.write(json.dumps({"messages": [{"role": "user", "content": who}]}, ensure_ascii=False))
     p.stdin.close()

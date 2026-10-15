@@ -163,13 +163,13 @@
    "abbr": "llm",
    "full": "large language model",
    "meaning": "大語言模型",
-   "example": "gate-llm.json、LLM kernel"
+   "example": "gates/llm.json、LLM kernel"
   },
   {
    "abbr": "cpu",
    "full": "central processing unit",
    "meaning": "資源種類名",
-   "example": "gate-cpu.json"
+   "example": "gates/cpu.json"
   },
   {
    "abbr": "url",

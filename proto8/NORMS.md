@@ -24,7 +24,7 @@
 | 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-12 stdio、N-18 實作分級、N-29 stderr 形狀、N-35 `檔#/位置`、N-43 結束碼 | 出自 C-07、C-45、C-53 | lib `aos_cli`、[directives](lib/directives.md) |
 | 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md) | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [lib inst](lib/inst.md) |
 | 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md) | 同上 | [lib loop](lib/loop.md)、[daemon](lib/daemon.md) |
-| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md) | 同上 | [lib ctl-state](lib/ctl-state.md) |
+| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md) | 同上 | [lib ctl_state](lib/ctl_state.md) |
 | 基礎設施／命令列、指示詞與路徑 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md) | 同上 | lib `aos_cli`、[directives](lib/directives.md) |
 | 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | [proto8-1](../proto8-1/README.md)；fsm 在 [lib fsm.md](lib/fsm.md)（基礎實作） |
 | kernel | [09-kernel.md](NORMS/09-kernel.md)：N-42（打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | — |

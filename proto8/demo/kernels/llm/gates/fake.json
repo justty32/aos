@@ -1,0 +1,1 @@
+{"target": {"argv": ["aos-demo", "fsm/brains/fake.py"], "timeout_ms": 10000}}

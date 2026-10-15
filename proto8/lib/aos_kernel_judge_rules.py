@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """規則判官（假判官）：通用 kernel（aos_kernel_general.py）的判官格，純規則、跟 agent 判官同一個介面。純標準庫。
 
-    python3 judge_rules.py      （stdin＝kernel 的 state 窗子集 queue／running／slots／budget；stdout 一份 {"run", "defer", "reject"}）
+    python3 aos_kernel_judge_rules.py      （stdin＝kernel 的 state 窗子集 queue／running／slots／budget；stdout 一份 {"run", "defer", "reject"}）
 
 用到 state 窗的 queue {id: {priority, _metainfo, …}} 與 slots {資源: {total, used}}。規則：human 的信先排，
 再看級數（low／normal／high＝-1／0／1，數字取正負號），再先來後到（id 字典序）；每種資源補滿空格的進 run，
