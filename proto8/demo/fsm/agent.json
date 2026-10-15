@@ -11,6 +11,7 @@
 
   "brain": "brain/fake.json",
   "tools": {"clock": "tools/clock.json"},
+  "system": "system.md",
   "history": {"$env": "DEMO_HISTORY"},
   "work": {"$env": "DEMO_WORK"}
 }

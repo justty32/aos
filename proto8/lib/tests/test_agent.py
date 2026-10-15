@@ -65,6 +65,44 @@ class AgentRoundTest(Tmp):
         self.assertTrue(hist[2]["content"].startswith("不認得這個工具"))
 
 
+class AgentSystemTest(Tmp):
+    """system 提示檔：第一則 system 訊息、不進 history、檔不存在＝格出錯。"""
+
+    def setUp(self):
+        super().setUp()
+        self.write("brain.py", "import json, sys\nreq = json.load(sys.stdin)\n"
+                   "open('seen.json', 'w').write(json.dumps(req))\n"
+                   "print(json.dumps({'role': 'assistant', 'content': 'ok'}))\n")
+        self.write("brain.json", {"argv": ["python3", "brain.py"]})
+        self.write("h.json", [{"role": "user", "content": "hi"}])
+        self.cfg = {"brain": "brain.json", "tools": {}, "history": "h.json", "work": "work"}
+
+    def think(self, cfg):
+        stdin = json.dumps({"state": "thinking", "step": 1, "prev": None, "cfg": cfg})
+        return subprocess.run([sys.executable, AGENT, "think"], cwd=self.tmp, input=stdin,
+                              capture_output=True, text=True, timeout=30)
+
+    def test_system_first_and_not_in_history(self):
+        self.write("system.md", "用繁體中文")
+        r = self.think(dict(self.cfg, system="system.md"))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        seen = json.loads(self.read("seen.json"))["messages"]
+        self.assertEqual(seen[0], {"role": "system", "content": "用繁體中文"})
+        self.assertEqual(seen[1]["role"], "user")
+        self.assertEqual([m["role"] for m in json.loads(self.read("h.json"))], ["user", "assistant"])
+
+    def test_no_system_key_no_system_message(self):
+        r = self.think(self.cfg)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([m["role"] for m in json.loads(self.read("seen.json"))["messages"]], ["user"])
+
+    def test_missing_system_file_is_cell_error(self):
+        r = self.think(dict(self.cfg, system="nope.md"))
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(json.loads(r.stderr.strip().splitlines()[-1])["error"]["code"], "SystemUnreadable")
+        self.assertEqual(len(json.loads(self.read("h.json"))), 1)
+
+
 class AgentCellTest(Tmp):
     """直接敲 aos_agent_lib.py tool（設定走 stdin 的 cfg）：一次多個 tool_calls、被中斷、沒 cfg。"""
 

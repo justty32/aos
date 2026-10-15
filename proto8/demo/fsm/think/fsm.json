@@ -9,6 +9,7 @@
 
   "brain": {"$ref": "agent.json#/brain"},
   "tools": {"$ref": "agent.json#/tools"},
+  "system": {"$ref": "agent.json#/system"},
   "history": {"$ref": "agent.json#/history"},
   "work": {"$ref": "agent.json#/work"}
 }
