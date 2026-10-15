@@ -12,6 +12,8 @@ python3 proto8/demo/run.py
 
 另一個 demo：**fsm**（aos-loop 拍 aos-fsm，像個小 agent：idle → thinking（內層 fsm：ask → review）→ tool → …，ask 照思考介面叫腦、tool 跑 inst 工具；預設假腦，換真 LLM 只改 agent.json 的 `brain`）——`python3 proto8/demo/run.py fsm`，說明在 [fsm/README.md](fsm/README.md)。
 
+再一個：**LLM kernel**（daemon 底下的 loop 每拍跑 kernel；呼叫者經閘門叫同一顆睡 1 秒的假腦：low 最後、deadline 快到插隊、過期丟掉、aging、報時員巢狀只包腦一格就夠）——`python3 proto8/demo/run.py kernel`，說明在 [lib kernel.md](../lib/kernel.md)、腳本 `kernel/run.py` 檔頭。
+
 ## 裡面有什麼
 
 - `once/inst.json`：跑一次就結束，印一行、結束碼 3。`once/loop.json` 用 `$ref` 指它（跑 1 次）。

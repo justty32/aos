@@ -36,3 +36,15 @@
 ## 未決
 
 無（`class` 排序、每發送者配額留待之後）。
+
+## 動工自定點
+
+10-15 做了基礎實作（[lib kernel.md](../lib/kernel.md)），自己定的、等使用者看：
+
+- 名字：閘門 `aos_gate.py`、身體 `aos_gate_kernel.py`；信箱 `tmp/ new/ cur/ reply/`。
+- `wait_ms` 只算排隊（信還在 new/），被拿走後等它跑完；沒寫＝不限。
+- `deadline`：ISO 字串或 epoch 秒；剩不到 `near_ms`（30 秒）插隊，同級也是近的先。
+- `_metainfo` 的「便宜」看 `cost`（數字，沒寫＝0）。
+- aging 不封頂：等久了 low 可以超過 high。
+- 一拍＝跑一次身體（閒的拍也算）；`slots`>1＝同一拍幾封一起跑，等最慢的。
+- 閘門與 kernel 自己的錯一律退出 125；target 在 kernel 的環境跑，不帶呼叫者的環境變數。

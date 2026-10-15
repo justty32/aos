@@ -12,6 +12,7 @@
 
 ## 最新進度
 
+- **10-15 LLM kernel 基礎實作**（[lib kernel.md](../proto8/lib/kernel.md)、demo `run.py kernel`）：閘門＋daemon 底下拍的 kernel，排序／過期／aging／額度／殘信都有測試。open：[動工自定點](../proto8/thinking/2026-10-15-llm-kernel.md#動工自定點)等使用者看；真腦（LM Studio）包閘門實跑未做。
 - **10-15 kernel 定義兩層（C-47）、先做兩種 kernel 基於 daemon（N-42）**（[thinking](../proto8/thinking/2026-10-15-kernel-intercept.md)）：具體機制仍開；LLM kernel 六題 10-15 隨意定案（第一版只 priority／deadline）。
 - **10-15 agent 當函數＋binding、當工具**（[C-46](../proto8/CONCEPTS/05-agent.md#agent函數binding)、[thinking §11](../proto8/thinking/2026-10-15-topics.md#11-agent-當函數binding當工具)）：`aos_agent_call.py`＋`aos_agent_lib.py ask`，demo 報時員 `clerk/`。open：動工自定點（定義攤開、工具在 bob/ 跑）等使用者看；真腦實跑由使用者安排。
 - **10-15 agent 思考介面＋工具＝inst**（[lib agent.md](../proto8/lib/agent.md)、thinking 10-15 §5～§10）：格庫、三顆真腦、system 提示都做了；LM Studio 整圈跑通，146 不用。open：動工自定點等使用者看、跑順再升規範。
