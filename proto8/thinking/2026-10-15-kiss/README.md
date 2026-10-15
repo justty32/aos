@@ -61,28 +61,28 @@
 
 欄位：編號｜區｜現況 → KISS 版（一句）｜翻案？（★＝推翻使用者親定，附日期與原話出處）｜來源稿。「隨 v4」＝跟第四版綁在一起、形狀照它。
 
-### 批次 1：純刪、彼此不相依、不碰第四版的形狀
+### 批次 1：純刪、彼此不相依、不碰第四版的形狀（**已做**，10-15 深夜四個 commit；自定點見 [10-15 session log](../../../wf/session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)）
 
 | 編號 | 區 | 現況 → KISS 版 | 翻案？ | 來源 |
 |---|---|---|---|---|
-| 1.1 | inst | `exit`／`exit_append`／`exit_mkdir`、`read_exit()`、N-30／N-12「exit 檔出現也算」、demo once／tick、test_tick 的 exit 檔 → 全刪，子程式的碼只在結果的 `code` | ★ 10-12「子程式的碼進 exit 檔」（[inst 進 json](../2026-10-12-inst-json.md)）、10-14 深夜「exit 檔出現也算跑完」（N-12） | 鳥瞰 9、組合子 7、總則 5 |
-| 1.2 | inst | 12 個布林 → **只砍 `stdin_inherit`／`stdout_inherit`／`stderr_inherit`**（寫 `/dev/stdin`／`/dev/stdout`／`/dev/stderr` 路徑就是繼承；N-26 整條與三條 Conflict 檢查消失，第四版 D 說的「`stdin_inline` 與 `stdin_inherit` 同時寫＝Conflict」也跟著不用）；`*_append`、`*_mkdir`、`cwd_mkdir`、`stderr_merge`、`envs_clear` **留**，第四版的 `stdin_inline` 加進來。風險：原稿要全砍換 `>>`／`2>&1`／`mkdir -p`，使用者偏好少用 sh，不採 | — | 鳥瞰 10（重判）、第四版 D |
-| 1.3 | loop | `interval_mode: fixed`＋`skipped`、`error_wait_ms`、`ctl_poll_ms`、loop 自己的 `grace_ms` → 只留 `interval_ms`：跑完隔一段再起、ctl 每圈讀、出錯不另算、收身體＝SIGTERM 後等 aos_inst 自己收（它保證過 `grace_ms`） | — | 鳥瞰 11、loop L1 L2、窗 5 6 7 |
-| 1.4 | ctl | `paused`／`stop` 的 `{"val", "now"}` 雙形 → 只收布林；當場停＝送訊號 | ★ N-07 10-12（[ctl 規範](../2026-10-12-ctl-norms.md)） | 鳥瞰 12、loop L3、窗 1 |
-| 1.5 | agent | `aos_brain_ollama.py`、`brain ollama`、7 個測試、demo/fsm/brains/ollama → 刪，只留 OpenAI 相容一顆 | — | 鳥瞰 8、agent 11 |
-| 1.6 | agent | 腦自己的 HTTP `timeout_ms` → 刪，只留 inst 的 `timeout_ms` | — | agent 12 |
-| 1.7 | agent | `LIMIT` 截 8000 字、`.tool-running.json`／`Interrupted`、tool stdout 四格、intake 兩形＋`args.taken.json`、設定 key `history`／`work`／`halt_*`、11 個代號、`AgentError`、`need_brain` → 不截；被殺就重跑；stdout 一格 `{"data": {"tools": […]}}`；intake 只收 `question`、吃完刪 `args.json`；設定只剩 `brain`／`tools`／`system`（`history.json`、`work/` 固定在 cwd）；代號 6 個；直接丟 `CliError` | — | agent 4～10、fsm 6～8 |
-| 1.8 | kernel | 閘門 `wait_ms`／`poll_ms`／`QueueTimeout`、`_metainfo.resource` 沒寫＝直接跑、只有一封直接跑、判官 `defer`、`JUDGE_TIMEOUT_MS` 預設 30 秒、`log` jsonl、`slots` 純值糖、三個空錯誤類別、閘門驗 priority、三處刪旁檔、ask_judge 五種代號 → 全刪或收成一條（資源沒寫＝`ResourceUnknown`；有信有空格就問判官；判官只回 `{run, reject}`；任何失敗一律 `JudgeFailed`） | ★ `defer`：10-15 使用者「隨意」定三種話（[通用 kernel](../2026-10-15-general-kernel.md)）——跑、不跑、沒說三種還在，少一個 key | kernel 4 7 8 9 10 11 14 15 18 20 22 |
-| 1.9 | kernel | 閘門讀 `AOS_KERNEL`／`AOS_PRIORITY`、kernel 替判官清 `AOS_KERNEL`、`aos-demo` export `AOS_DEMO` → 閘門不認環境變數（`mailbox`／`priority` 寫在 gate.json）；kernel 跑判官一個 key 都不碰；`aos-demo` 只留「`.py` 轉指令名」那一招 | — | 鳥瞰 17 20、kernel 5 6 |
-| 1.10 | 共通 | `$at`、位置相對寫法 `./`／`../`／空檔名、`~0`／`~1`、7 個代號、`DirectiveError`、`aos_directives.py`、`expand(key=)`、`directives.md` → `$ref` 只收「檔#/從根算的位置」；一個 `DirectiveBad`；併進 `aos_cli.py` 一檔；檔頭就是說明 | — | 總則 14～19 22 |
-| 1.11 | 共通 | `aos_tree.py`＋`test_tree.py`（含自製 schema 驗證器）→ 刪（第三版已定 6；`schema.json` 留當資料） | — | 總則 21 |
-| 1.12 | fsm | 檔頭與 fsm.md「舊 key `ctl`／`lock`／`max_steps` 也忽略」＋`test_old_keys_ignored` → 刪（不認得的 key 忽略是通則） | — | fsm 11 |
-| 1.13 | loop | `aos_loop` 把 `aos_ctl_state`／`aos_proc` 再 export 一遍 → 刪，誰用誰直接 import | — | loop M1、窗 18 |
-| 1.14 | 共通 | `write_json` 只建一層、不 `-p` → `makedirs(exist_ok=True)` 一句 | ★ 10-15 晚盤點 P3「都按照推薦」（小） | 窗 23 |
-| 1.15 | demo | kernels/llm demo 在 clerk 的 frame 放 boss 的 `brain.json`、paint 的 `--keep`／換腦靠在下層 frame 放檔 → demo 不示範「上層伸手進下層的 frame」；要換 clerk 的腦改 clerk 自己的定義 | — | 鳥瞰 16 |
-| 1.16 | demo | `demo/tick` 印 `date`、跟 aos-tick 同名不同事 → 改成真的 `aos tick clock`，README 改看 clock 檔 1→5 | — | 組合子 8 |
-| 1.17 | tasks | 四支（316 行、14 測試、12 張 inst 的 demo）→ **不砍**（原稿換 sh；使用者「少用 sh」＋「地位等同 C 的 stdlib」）。改瘦身：`aos-not` 刪（反過來寫 `aos-if X 失敗格 成功格`；N-43 述詞例外、N-34 述詞句跟著刪）、「先全部驗過才跑」砍（跑到哪讀到哪）、proto8-1 整個併進 proto8/lib（一個 lib、一個 bin、`aos seq|par|if|tick`） | ★ 述詞例外 10-15 晚「都按照推薦」（S5）；tick 搬家只改路徑 | 組合子 1～4（重判） |
-| 1.18 | 待定 | 08 待定 §28「回合數格式算不算規範」→ 結案＝不是（aos-tick 是糖，格式寫在它檔頭） | 替他結案，一句可翻 | 組合子 6 |
+| 1.1 | inst | `exit`／`exit_append`／`exit_mkdir`、`read_exit()`、N-30／N-12「exit 檔出現也算」、demo once／tick、test_tick 的 exit 檔 → 全刪，子程式的碼只在結果的 `code` | ★ 10-12「子程式的碼進 exit 檔」（[inst 進 json](../2026-10-12-inst-json.md)）、10-14 深夜「exit 檔出現也算跑完」（N-12） | 鳥瞰 9、組合子 7、總則 5 ｜ **已做** cb20249a |
+| 1.2 | inst | 12 個布林 → **只砍 `stdin_inherit`／`stdout_inherit`／`stderr_inherit`**（寫 `/dev/stdin`／`/dev/stdout`／`/dev/stderr` 路徑就是繼承；N-26 整條與三條 Conflict 檢查消失，第四版 D 說的「`stdin_inline` 與 `stdin_inherit` 同時寫＝Conflict」也跟著不用）；`*_append`、`*_mkdir`、`cwd_mkdir`、`stderr_merge`、`envs_clear` **留**，第四版的 `stdin_inline` 加進來。風險：原稿要全砍換 `>>`／`2>&1`／`mkdir -p`，使用者偏好少用 sh，不採 | — | 鳥瞰 10（重判）、第四版 D ｜ **已做** cb20249a |
+| 1.3 | loop | `interval_mode: fixed`＋`skipped`、`error_wait_ms`、`ctl_poll_ms`、loop 自己的 `grace_ms` → 只留 `interval_ms`：跑完隔一段再起、ctl 每圈讀、出錯不另算、收身體＝SIGTERM 後等 aos_inst 自己收（它保證過 `grace_ms`） | — | 鳥瞰 11、loop L1 L2、窗 5 6 7 ｜ **已做** cb20249a |
+| 1.4 | ctl | `paused`／`stop` 的 `{"val", "now"}` 雙形 → 只收布林；當場停＝送訊號 | ★ N-07 10-12（[ctl 規範](../2026-10-12-ctl-norms.md)） | 鳥瞰 12、loop L3、窗 1 ｜ **已做** cb20249a |
+| 1.5 | agent | `aos_brain_ollama.py`、`brain ollama`、7 個測試、demo/fsm/brains/ollama → 刪，只留 OpenAI 相容一顆 | — | 鳥瞰 8、agent 11 ｜ **已做** fa6629ee |
+| 1.6 | agent | 腦自己的 HTTP `timeout_ms` → 刪，只留 inst 的 `timeout_ms` | — | agent 12 ｜ **已做** fa6629ee |
+| 1.7 | agent | `LIMIT` 截 8000 字、`.tool-running.json`／`Interrupted`、tool stdout 四格、intake 兩形＋`args.taken.json`、設定 key `history`／`work`／`halt_*`、11 個代號、`AgentError`、`need_brain` → 不截；被殺就重跑；stdout 一格 `{"data": {"tools": […]}}`；intake 只收 `question`、吃完刪 `args.json`；設定只剩 `brain`／`tools`／`system`（`history.json`、`work/` 固定在 cwd）；代號 6 個；直接丟 `CliError` | — | agent 4～10、fsm 6～8 ｜ **已做** fa6629ee（halt_after／halt_state 留到批次 4、FsmMissing 留到批次 2） |
+| 1.8 | kernel | 閘門 `wait_ms`／`poll_ms`／`QueueTimeout`、`_metainfo.resource` 沒寫＝直接跑、只有一封直接跑、判官 `defer`、`JUDGE_TIMEOUT_MS` 預設 30 秒、`log` jsonl、`slots` 純值糖、三個空錯誤類別、閘門驗 priority、三處刪旁檔、ask_judge 五種代號 → 全刪或收成一條（資源沒寫＝`ResourceUnknown`；有信有空格就問判官；判官只回 `{run, reject}`；任何失敗一律 `JudgeFailed`） | ★ `defer`：10-15 使用者「隨意」定三種話（[通用 kernel](../2026-10-15-general-kernel.md)）——跑、不跑、沒說三種還在，少一個 key | kernel 4 7 8 9 10 11 14 15 18 20 22 ｜ **已做** 7d833687（defer 刪＝三種話還在、少一個 key） |
+| 1.9 | kernel | 閘門讀 `AOS_KERNEL`／`AOS_PRIORITY`、kernel 替判官清 `AOS_KERNEL`、`aos-demo` export `AOS_DEMO` → 閘門不認環境變數（`mailbox`／`priority` 寫在 gate.json）；kernel 跑判官一個 key 都不碰；`aos-demo` 只留「`.py` 轉指令名」那一招 | — | 鳥瞰 17 20、kernel 5 6 ｜ **已做** 7d833687（`aos-demo` 的 AOS_DEMO 那招留到批次 2：三張 sh -c 工具 inst 還靠它，2.7 本來就隨 v4 退場） |
+| 1.10 | 共通 | `$at`、位置相對寫法 `./`／`../`／空檔名、`~0`／`~1`、7 個代號、`DirectiveError`、`aos_directives.py`、`expand(key=)`、`directives.md` → `$ref` 只收「檔#/從根算的位置」；一個 `DirectiveBad`；併進 `aos_cli.py` 一檔；檔頭就是說明 | — | 總則 14～19 22 ｜ **已做** cb20249a |
+| 1.11 | 共通 | `aos_tree.py`＋`test_tree.py`（含自製 schema 驗證器）→ 刪（第三版已定 6；`schema.json` 留當資料） | — | 總則 21 ｜ **已做** cb20249a |
+| 1.12 | fsm | 檔頭與 fsm.md「舊 key `ctl`／`lock`／`max_steps` 也忽略」＋`test_old_keys_ignored` → 刪（不認得的 key 忽略是通則） | — | fsm 11 ｜ **已做** cb20249a |
+| 1.13 | loop | `aos_loop` 把 `aos_ctl_state`／`aos_proc` 再 export 一遍 → 刪，誰用誰直接 import | — | loop M1、窗 18 ｜ **已做** cb20249a |
+| 1.14 | 共通 | `write_json` 只建一層、不 `-p` → `makedirs(exist_ok=True)` 一句 | ★ 10-15 晚盤點 P3「都按照推薦」（小） | 窗 23 ｜ **已做** cb20249a |
+| 1.15 | demo | kernels/llm demo 在 clerk 的 frame 放 boss 的 `brain.json`、paint 的 `--keep`／換腦靠在下層 frame 放檔 → demo 不示範「上層伸手進下層的 frame」；要換 clerk 的腦改 clerk 自己的定義 | — | 鳥瞰 16 ｜ **已做** fa6629ee |
+| 1.16 | demo | `demo/tick` 印 `date`、跟 aos-tick 同名不同事 → 改成真的 `aos tick clock`，README 改看 clock 檔 1→5 | — | 組合子 8 ｜ **已做** a0c7214d |
+| 1.17 | tasks | 四支（316 行、14 測試、12 張 inst 的 demo）→ **不砍**（原稿換 sh；使用者「少用 sh」＋「地位等同 C 的 stdlib」）。改瘦身：`aos-not` 刪（反過來寫 `aos-if X 失敗格 成功格`；N-43 述詞例外、N-34 述詞句跟著刪）、「先全部驗過才跑」砍（跑到哪讀到哪）、proto8-1 整個併進 proto8/lib（一個 lib、一個 bin、`aos seq|par|if|tick`） | ★ 述詞例外 10-15 晚「都按照推薦」（S5）；tick 搬家只改路徑 | 組合子 1～4（重判） ｜ **已做** a0c7214d（proto8-1 整個併進 proto8：lib、tests、demo/tasks；述詞例外隨 aos-not 刪） |
+| 1.18 | 待定 | 08 待定 §28「回合數格式算不算規範」→ 結案＝不是（aos-tick 是糖，格式寫在它檔頭） | 替他結案，一句可翻 | 組合子 6 ｜ **已做** cb20249a（替他結案，一句可翻） |
 
 ### 批次 2：隨 v4（inst／aos-exec／TARGET／frame，跟第四版一起做）
 
@@ -155,7 +155,7 @@
 | 6.7 | NORMS | 08 待定 11 條裡 6 條整條劃掉附原文、「argv[0] 規矩」四小點、`grace_ms` 慣例住在待定 → 劃掉的刪（user.md「被推翻的直接刪」同一把尺）、剩 5 條 open；`grace_ms` 建議值搬 lib loop.md 一行 | — | 總則 8、鳥瞰 23 |
 | 6.8 | NORMS | NORMS.md 三張表（主題、條號→檔 44 列、各批出處 10 段）＋ 9 個分檔＋62 bytes 的 README → 只留主題表；6.1～6.7 做完約 12 KB，併回一份 NORMS.md（主題當 `##`，條號不重編），NORMS/ 資料夾刪 | ★ 10-15「按主題分」——主題留當標題，只是不一主題一檔 | 總則 9 10、鳥瞰 22（鳥瞰 24 只併小檔不採） |
 | 6.9 | lib 說明 | 一支程式三處說明（檔頭、`lib/x.md` 重講＋沿革、`lib/README.md` 11 KB 每檔一長句＋相依圖＋十二個測試檔各在測什麼）、fsm.md「格放哪：慣例 cells/」段 → 檔頭＝唯一出處；`lib/x.md` 只留 JSON 形狀與一個例子；`lib/README.md` 一檔一行＋怎麼跑測試（目標 3 KB）；「格放哪」段刪 | — | 鳥瞰 25 26、總則 20、組合子 13 |
-| 6.10 | proto8 | `proto8/README.md`（artifact 連結、restart §3g、「PLAN 擱置」…）、`PLAN.md`＋`PLAN/`（12 KB，AI 提案，檔頭自己說「高度錯」） → README 只留一段話＋四行；PLAN 刪 | ★ PLAN 10-11「留著當樣本」，10-12 夜規矩在後（整份 AI 產出就刪）——刪前問一句 | 鳥瞰 27 28 |
+| 6.10 | proto8 | `proto8/README.md`（artifact 連結、restart §3g、「PLAN 擱置」…）、`PLAN.md`＋`PLAN/`（12 KB，AI 提案，檔頭自己說「高度錯」） → README 只留一段話＋四行；PLAN 刪 | ★ PLAN 10-11「留著當樣本」，10-12 夜規矩在後（整份 AI 產出就刪）——刪前問一句 | 鳥瞰 27 28 ｜ **已做** cb20249a（使用者「刪掉」） |
 | 6.11 | repo | C++ `core/` 與 proto8 同一疊東西、執行檔都叫 `aos`、誰先在 PATH 誰贏 → 根 README 與 `core/README.md` 寫明 C++ 那套封存（只維持 ctest 綠、不收新功能）；proto8 的 `aos` 是日常唯一入口；真要刪 C++ 另拍板 | — | 鳥瞰 29 |
 | 6.12 | bin | `bin/aos` 手寫 case 表（`inst|loop|daemon|fsm|gate|tree`、kernel 兩種、brain 兩種、agent 特例對到 `aos_agent_lib.py`） → 子命令＝lib 裡有 `aos_<名>.py` 就能跑（`$1 $2` 底線接起來找），沒有就 Usage 錯；`aos_agent_lib.py` 改名 `aos_agent.py`（C-54 程式名⇄檔名） | — | 組合子 14 |
 
