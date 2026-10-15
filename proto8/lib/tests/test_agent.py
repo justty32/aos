@@ -361,27 +361,29 @@ class BrainOllamaTest(BrainOpenaiTest):
 
     def test_no_tools_400_surfaces_and_stops(self):
         # 146 試跑的情形：腦回 400 → think 格 BrainFailed 帶原因 → fsm 那行的 error 看得到；
-        # 10-15 收工後連錯停住是格自己的事（N-38）：think 錯第 3 次改回 next halted，之後不再打
+        # 10-15 收工後連錯停住是格自己的事（N-38）：think 錯第 3 次自己寫好 ret.json 的錯、改回 next halted；
+        # halted 只寫在 end、不在 states（不經 done 格，盤點第 8 條）＝這拍 fsm 結束
         _Stub.status, _Stub.reply = 400, {"error": "m1 does not support tools"}
         self.write("brain.json", {"argv": [sys.executable, OLLAMA, "--base-url", self.url, "--model", "m1"]})
         self.write("tools/clock.json", {"argv": ["true"], "_tool": {"description": "時間"}})
         self.write("h.json", [{"role": "user", "content": "幾點"}])
         self.write("cfg.json", {"brain": "brain.json", "tools": {"clock": "tools/clock.json"},
                                 "history": "h.json", "work": "work"})
-        self.write("f.json", {"start": "ask", "state": "f.state.json", "states": {
-            "ask": {"argv": [sys.executable, AGENT, "think"], "stdin": "cfg.json"},
-            "halted": {"argv": ["sh", "-c", "echo '{}'"]}}})
+        self.write("f.json", {"start": "ask", "state": "f.state.json", "end": ["halted"], "states": {
+            "ask": {"argv": [sys.executable, AGENT, "think"], "stdin": "cfg.json"}}})
         codes = []
-        for _ in range(5):
+        for _ in range(3):
             r = subprocess.run([sys.executable, FSM, "f.json"], cwd=self.tmp, capture_output=True, text=True, timeout=10)
             codes.append(r.returncode)
             if r.returncode:
                 err = json.loads(r.stdout.splitlines()[-1])["error"]
                 self.assertTrue(err["msg"].startswith("BrainFailed: HttpError: "), err)
                 self.assertIn("does not support tools", err["msg"])
-        self.assertEqual(codes, [1, 1, 0, 0, 0])
-        self.assertEqual((json.loads(self.read("f.state.json"))["phase"], len(_Stub.seen)), ("halted", 3))
+        self.assertEqual(codes, [1, 1, 0])
+        self.assertEqual(json.loads(r.stdout.splitlines()[0])["end"], True)               # 走到 end：這個 fsm 結束
+        self.assertEqual((json.loads(self.read("f.state.json"))["phase"], len(_Stub.seen)), ("ask", 3))
         self.assertEqual(json.loads(self.read("work/think-fails.json"))["n"], 3)
+        self.assertEqual(json.loads(self.read("ret.json"))["error"]["code"], "BrainFailed")   # think 自己寫的
 
     def test_bad_num_ctx(self):
         r = self.ollama({"messages": []}, "--num-ctx", "big")

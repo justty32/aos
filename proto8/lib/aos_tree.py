@@ -12,9 +12,11 @@ id（決定 1，永不為 null）：路徑參照＝realpath（`#/位置`）；�
 整棵從 dict 來沒有檔＝`sha256:內容雜湊` 當外層 id。
 路徑（決定 2）：找子 inst 的名字（槽位裡的字串、檔裡的指示詞）從**那份檔所在的資料夾**算；從 dict 來的從呼叫者 cwd 算。
 葉子 inst 自己的路徑（argv、cwd、串流）原樣不動——照 aos_inst 一律是執行時的 cwd 算，攤平不改它們（所以攤成一份也照樣跑）。
-循環（決定 3）：同一個 id 已在這條路徑上＝停、留原名字不攤、stderr 一份 N-29 形狀的 warning `TreeCycle`。
-深度（決定 4）：`--depth N`（預設 16）超過的留名字不攤，warning `TreeDepth`。攤出來的路徑參照那份加 `id`（原 id，沒寫才補）。
-API：`build(x, depth=16, warn=None)` → (樹 node, 攤好的 doc)；x＝TARGET 字串或 dict。node＝{"id", "kind", "label", "kids": [node]}。
+循環（決定 3）：同一個 id 已在這條路徑上＝停、留原名字不攤，那個 node 是 `ref`、帶 `"stop": "TreeCycle"`（print 那行尾巴寫 `(TreeCycle)`）。
+深度（決定 4）：`--depth N`（預設 16）超過的同樣留名字不攤，`"stop": "TreeDepth"`。攤出來的路徑參照那份加 `id`（原 id，沒寫才補）。
+兩種都是預料到的正常狀況（遞迴的表），照樣退 0、不寫 stderr（N-43；10-15 使用者「都按照推薦。」，原本 stderr 吐 warning）。
+API：`build(x, depth=16, warn=None)` → (樹 node, 攤好的 doc)；x＝TARGET 字串或 dict。node＝{"id", "kind", "label", "kids": [node]}
+（停住的 ref 多 `stop`）；warn(code, msg) 想另外收停住的原因可以給，命令列不給。
 """
 import copy
 import hashlib
@@ -123,7 +125,8 @@ def _walk(doc, ident, base, stack, depth, warn, label, from_path):
             if sid in stack or len(stack) > depth:
                 warn("TreeCycle" if sid in stack else "TreeDepth",
                      "%s 的 %s 指向 %s：%s，留名字不攤" % (ident, lab, sid, "已在這條路徑上（循環）" if sid in stack else "超過深度 %d" % depth))
-                node["kids"].append({"id": sid, "kind": "ref", "label": lab, "kids": []})
+                node["kids"].append({"id": sid, "kind": "ref", "label": lab, "kids": [],
+                                     "stop": "TreeCycle" if sid in stack else "TreeDepth"})
                 continue
             sbase = os.path.dirname(sid.partition("#")[0])
             kid, kdoc = _walk(sub, sid, sbase, stack + (sid,), depth, warn, lab, True)
@@ -140,6 +143,8 @@ def _walk(doc, ident, base, stack, depth, warn, label, from_path):
 def render(node, indent=0):
     """樹 node → 縮排的多行文字。"""
     head = "%s%s%s %s" % ("  " * indent, node["label"] + ": " if node["label"] else "", node["kind"], node["id"])
+    if node.get("stop"):
+        head += " (%s)" % node["stop"]
     return "\n".join([head] + [render(k, indent + 1) for k in node["kids"]])
 
 
@@ -153,7 +158,7 @@ def main(argv=None):
             del args[i:i + 2]
         if len(args) != 2 or args[0] not in ("print", "inline"):
             raise CliError("Usage", "用法：aos_tree.py print|inline TARGET [--depth N]")
-        node, doc = build(args[1], depth, aos_cli.warn)
+        node, doc = build(args[1], depth)
         if args[0] == "print":
             print(render(node))
         else:

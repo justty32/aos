@@ -4,7 +4,7 @@
     python3 aos_brain_ollama.py [--key 值 ...] [CONFIG.json]   < {"messages": [...], "tools": [...]}
 
 為什麼不走 ollama 的 OpenAI 相容 `/v1`：那條設不了 `num_ctx`（context 長度），ollama 會用模型預設、可能吃爆顯存。
-- stdin＝請求（JSON 串流只看第一份）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools，ollama 收同樣形狀）。
+- stdin＝請求（一份；多份＝ExtraInput 錯）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools，ollama 收同樣形狀）。
 - stdout＝一份 OpenAI assistant 訊息 `{"role": "assistant", "content", "tool_calls"?, "usage"?}`，跟 aos_brain_openai 一樣
   （usage 由 prompt_eval_count＋eval_count 換成 OpenAI 形狀）。
 - 兩邊形狀的翻譯：
@@ -128,7 +128,7 @@ def main(argv=None):
         if not (docs and isinstance(docs[0], dict)):
             raise CliError("JsonSyntax", "stdin 要有一份請求 {\"messages\", \"tools\"}")
         if len(docs) > 1:
-            aos_cli.warn("ExtraInput", "stdin 有 %d 份 JSON，只看第一份" % len(docs))
+            raise CliError("ExtraInput", "stdin 有 %d 份 JSON，請求只要一份" % len(docs))
         aos_cli.emit(ask(cfg, docs[0]))
     except CliError as e:
         aos_cli.error(e.code, e.msg)

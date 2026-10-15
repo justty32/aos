@@ -1,10 +1,11 @@
 """ctl.json 與 state.json：loop、daemon 共用的那一層（NORMS N-11「設定檔讀一次 → ctl 蓋過 → state 回報」的後兩段）。純標準庫。
 
 - ctl.json（宣告式；N-06～N-08）：`parse_ctl()` 驗內容、`want()` 算期望狀態（ctl 沒寫的欄位回到初始值，規矩只在這裡）、
-  `CtlFile` 每次讀、內容變了才採用（壞檔維持上一次、印一次）。寫的人可以帶流水號 `seq`（非負整數），
+  `CtlFile` 每次讀、內容變了才採用（壞檔維持上一次；原因記在 `warning`，由 loop／daemon 寫進 state 窗的 `last_warning`，
+  不寫 stderr——N-43：照設計預料到的狀況不在 stderr 噴東西，10-15 使用者「都按照推薦。」）。寫的人可以帶流水號 `seq`（非負整數），
   讀的人在 state 回報 `ctl_seq`＝上次採用的那份的 seq（N-14 回音以序號為準；暫定 c）。
 - state.json：`STATES`（七個狀態值）、`state_doc()`（共同骨架）、`read_state()`、`StateFile`（內容有變才寫，
-  沒變也每 `BEAT_MS` 碰一次）；欄位、狀態值、讀、寫都只在這裡。心跳（N-17）：骨架帶 `pid`、`started`（/proc 的啟動時間，
+  沒變也每 `BEAT_MS` 碰一次；寫不了＝記在 `failed`，loop／daemon 看到就收工、退 1——窗壞了同 N-19 窗缺）；欄位、狀態值、讀、寫都只在這裡。心跳（N-17）：骨架帶 `pid`、`started`（/proc 的啟動時間，
   clock ticks）、`boot_id`，寫的時候蓋上 `beat`（寫的那一刻，epoch 秒）。
 - `require()`：窗必填（N-19：loop／daemon 的 `state`、`ctl` 缺 key 或 null＝報錯不執行）。
 - `write_json()`：先寫 `.名字.tmp` 再改名。
@@ -15,7 +16,7 @@ import json
 import os
 import time
 
-from aos_cli import is_int, warn
+from aos_cli import is_int
 
 __all__ = ["BEAT_MS", "CtlFile", "STATES", "StateFile", "parse_ctl", "proc_started", "read_state", "require", "state_doc", "want",
            "write_json"]
@@ -69,7 +70,8 @@ class CtlFile:
 
     不用 (ino, mtime, size) 判斷有沒有變：ext4 的 mtime 粒度約 4 ms、改名蓋過去的 inode 會交替重用，
     4 ms 內的等長改動會撞同一把 key 而漏掉。ctl.json 很小，直接讀內容比和 stat 差不多便宜。
-    `seq`（state 的 ctl_seq 回音，N-14）＝上一次採用的內容裡的 `seq`（沒寫＝None），`good` 裡不放 seq。"""
+    `seq`（state 的 ctl_seq 回音，N-14）＝上一次採用的內容裡的 `seq`（沒寫＝None），`good` 裡不放 seq。
+    `warning`＝現在為什麼沒採用（「代號: 白話」；採用了＝None），loop／daemon 放進 state 窗的 `last_warning`。"""
 
     def __init__(self, path, name="loop"):
         self.path = path
@@ -79,12 +81,10 @@ class CtlFile:
         self.err = None       # raw 是壞的時的原因
         self.good = {}
         self.seq = None
-        self.said = None
+        self.warning = None
 
     def _say(self, code, msg):
-        if self.said != (code, msg):
-            self.said = (code, msg)
-            warn(code, "%s: %s" % (self.name, msg))
+        self.warning = "%s: %s" % (code, msg)
 
     def poll(self):
         try:
@@ -108,7 +108,7 @@ class CtlFile:
             return
         self.good = {k: v for k, v in self.parsed.items() if k != "seq"}
         self.seq = self.parsed.get("seq")
-        self.said = None
+        self.warning = None
 
 
 def write_json(path, doc):
@@ -155,7 +155,8 @@ def _proc():
 
 def state_doc(ident, state, w, ctl, runs, last_error, **extra):
     """一份狀態物件。共同骨架：id、state（STATES 之一）、pid、started、boot_id、runs、times、interval_ms、interval_mode、
-    last_error、ctl_seq；各層擴充放 extra（loop：skipped、last_code；daemon：skipped、loops＝個數）。"""
+    last_error、ctl_seq；各層擴充放 extra（loop：skipped、last_code、last_warning；daemon 再加 loops＝個數）。
+    last_warning＝跑起來之後預料到、不結束也不算錯的意外（「代號: 白話」；沒有＝null），取代以前寫 stderr 的警告（N-08、N-29）。"""
     assert state in STATES, state
     started, boot = _proc()
     st = {"id": ident, "state": state, "pid": os.getpid(), "started": started, "boot_id": boot, "runs": runs,
@@ -184,11 +185,11 @@ def read_state(path):
 
 class StateFile:
     """state.json 的寫者：內容有變才寫（暫存再改名），沒變也每 beat_ms 碰一次（心跳，蓋上 `beat`）；
-    寫不了印一次、不算錯。path＝None 就什麼都不做。"""
+    寫不了＝`failed` 記原因（「白話」），不丟例外：用的人（loop／daemon）看到就收工、退 1。path＝None 就什麼都不做。"""
 
     def __init__(self, path, name, beat_ms=BEAT_MS):
         self.path, self.name, self.beat_ms = path, name, beat_ms
-        self.written = self.said = None
+        self.written = self.failed = None
         self.beat = 0
 
     def write(self, st):
@@ -199,7 +200,4 @@ class StateFile:
             write_json(self.path, dict(st, beat=round(now, 3)))
             self.written, self.beat = st, now
         except OSError as e:
-            msg = "%s: 寫不了 state.json %s：%s" % (self.name, self.path, e)
-            if self.said != msg:
-                self.said = msg
-                warn("StateWriteFailed", msg)
+            self.failed = self.failed or "%s: 寫不了 state.json %s：%s" % (self.name, self.path, e)

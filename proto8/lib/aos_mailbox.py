@@ -10,7 +10,7 @@
 - `side(reply_path, kind)`：回信路徑 → 旁檔路徑（kind＝stdin／stdout／stderr）。
 - `read_letter(path)`：讀一封（不是物件、讀不了＝None）。
 - `claim(box, name)`：new/ → cur/；被撤走了回 None。
-- `reply(letter, rep)`：寫回信（照 N-05）；寫不進去＝stderr 警告。
+- `reply(letter, rep)`：寫回信（照 N-05）；寫不進去＝回「ReplyFailed: 白話」（kernel 記進 state 窗的 last_warning，不寫 stderr），寫好＝None。
 - `run_letter(letter)`：跑一封，回 (回信 dict, 用掉的 token)；token＝stdout 旁檔最後一份的 usage.total_tokens，沒有＝0。
 - `log(path, rec)`：往 log 檔追加一行 JSON（path 是 None＝不記）。
 
@@ -60,10 +60,12 @@ def claim(box, name):
 
 
 def reply(letter, rep):
+    """寫回信；寫好回 None，寫不進去回「ReplyFailed: 白話」（kernel 記進自己的 state 窗，N-43 不寫 stderr）。"""
     try:
         write_json(letter["reply"], rep)
     except (OSError, KeyError, TypeError):
-        aos_cli.warn("ReplyFailed", "回信寫不進 %r" % (letter.get("reply") if isinstance(letter, dict) else None,))
+        return "ReplyFailed: 回信寫不進 %r" % (letter.get("reply") if isinstance(letter, dict) else None,)
+    return None
 
 
 def run_letter(letter):

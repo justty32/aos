@@ -6,8 +6,8 @@
 
 設定：
     mailbox      信箱資料夾（同閘門的 mailbox；必填）
-    state        kernel 的 state 窗（必填，N-19）：loop 骨架的 state／pid／runs／last_error／beat，
-                 加 seen（每封信第一次看到的 runs）、budget {limit, used, day}、served
+    state        kernel 的 state 窗（必填，N-19）：loop 骨架的 state／pid／runs／last_error／last_warning／beat，
+                 last_warning＝這拍最後一件回信寫不進去（ReplyFailed，不寫 stderr）；加 seen（每封信第一次看到的 runs）、budget {limit, used, day}、served
     slots        一拍最多跑幾封（沒寫＝1；>1 時同一拍的幾封一起跑，等最慢的跑完這拍才結束）
     budget       一天的 token 額度（全局；沒寫或 null＝不限）。用量＝回信 stdout 最後一份的 usage.total_tokens，沒有＝0
     aging_ticks  每等幾拍升一級（沒寫＝10）
@@ -118,10 +118,15 @@ def tick(cfg):
     bud = st.get("budget") if isinstance(st.get("budget"), dict) else {}
     used = bud.get("used", 0) if bud.get("day") == today else 0
     now = time.time()
-    served, dropped = [], []
+    served, dropped, warned = [], [], []
+
+    def send(doc, rep):
+        w = reply(doc, rep)
+        if w:
+            warned.append(w)
 
     def drop(name, doc, code, msg, path):
-        reply(doc, {"error": {"code": code, "msg": msg}})
+        send(doc, {"error": {"code": code, "msg": msg}})
         os.remove(path)
         seen.pop(name, None)
         dropped.append({"letter": name, "error": code})
@@ -175,7 +180,7 @@ def tick(cfg):
     for name, doc, path in picked:
         rep, tokens, ms = results[name]
         used += tokens
-        reply(doc, rep)
+        send(doc, rep)
         os.remove(path)
         rec = {"letter": name, "priority": doc.get("priority"), "waited": n - seen.pop(name, n), "ms": ms,
                "code": rep.get("code")}
@@ -189,7 +194,7 @@ def tick(cfg):
     budget = {"limit": cfg["budget"], "used": used, "day": today}
     served_all = (st.get("served") if _int(st.get("served"), 0) else 0) + len(served)
     write_json(cfg["state"], {"state": "waiting", "pid": os.getpid(), "runs": n, "last_error": None,
-                              "beat": round(time.time(), 3), "seen": seen, "budget": budget, "served": served_all})
+                              "last_warning": warned[-1] if warned else None, "beat": round(time.time(), 3), "seen": seen, "budget": budget, "served": served_all})
     return {"runs": n, "served": served, "dropped": dropped, "waiting": len(live), "budget": budget}
 
 

@@ -6,7 +6,6 @@
     "idle": "cells/idle.json",
     "thinking": "cells/thinking.json",
     "tool": {"target": "cells/tool.json", "next": "thinking"},
-    "done": "cells/done.json",
-    "halted": "cells/done.json"
+    "done": "cells/done.json"
   }
 }

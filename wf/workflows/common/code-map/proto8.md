@@ -8,7 +8,7 @@
 
 逐檔表在 [proto8/lib/README.md](../../../../proto8/lib/README.md)；各程式的細節在同資料夾的 `directives.md`、`inst.md`、`loop.md`、`daemon.md`、`fsm.md`、`agent.md`（＋拆出的 `agent-lib.md`、`agent-frame.md`）、`kernel.md`、`kernel2.md`、`ctl-state.md`。
 
-**命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`）、`檔#/位置`＋指示詞（語法糖）`aos_directives.py`。
+**命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`；沒有寫 stderr 的警告，預料到的意外記進各自的窗 `last_warning`）、`檔#/位置`＋指示詞（語法糖）`aos_directives.py`。
 
 **inst／loop／daemon**：inst `aos_inst.py`；loop `aos_loop.py`（`stop_on_end`：包的 fsm 走到 end 就結束，N-44）＋共用的 ctl／state `aos_ctl_state.py` 與行程群組 `aos_proc.py`；daemon `aos_daemon.py`（重用 loop 的拍引擎）＋表與策略格 `aos_daemon_table.py`＋指令與控制資料夾 `aos_daemon_folder.py`。
 

@@ -20,6 +20,8 @@ target 的 stdout／stderr 在旁檔 reply/<名>.stdout／.stderr（kernel 填�
 
 退出碼：回信是結果＝它的 `code`（stdout、stderr 原樣吐）；kernel 回錯（DeadlineMissed、BudgetExhausted、KernelRestarted…）、
 QueueTimeout、自己設定不對＝stderr 一份 N-29 錯誤、退出 125（kernel 那邊 aos_inst 起不來＝照 aos_inst 的碼，例 127）。
+閘門是透明的：回信是結果時，stderr 與退出碼都是 target 的、不是閘門自己的（target 守 N-43 閘門就守；10-15 使用者
+「都按照推薦。」，盤點 S3）。閘門自己的話只有上面那幾種錯。
 SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）；已被 kernel 拿走的讓它跑完、回信沒人收。
 
 相依：aos_inst ← aos_mailbox ← aos_gate（← aos_gate_kernel ← aos_kernel_judge ← aos_kernel）。

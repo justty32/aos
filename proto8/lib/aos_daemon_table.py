@@ -113,12 +113,10 @@ class Table:
         self.entries = {}
         self.closing = False
         self.written = None
-        self.said = None
+        self.warning = None         # 最近一件意外（「代號: 白話」）：daemon 放進 state 窗的 last_warning，不寫 stderr
 
     def _say(self, code, msg):
-        if self.said != (code, msg):
-            self.said = (code, msg)
-            aos_cli.warn(code, msg)
+        self.warning = "%s: %s" % (code, msg)
 
     # ---- 起子項 ----
 
@@ -347,7 +345,7 @@ class Table:
                 try:
                     e.update_ctl(stop=True)
                 except DaemonError as err:
-                    aos_cli.warn(err.code, err.msg)
+                    self._say(err.code, err.msg)
             while not got and any(not e.exited() for e in live):
                 self.tick()
                 time.sleep(0.02)

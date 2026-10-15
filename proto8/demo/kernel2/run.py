@@ -6,7 +6,8 @@
     python3 proto8/demo/kernel2/run.py judge-agent.json      （第 1 段改用 agent 判官，要先開 LM Studio；demo 預設不跑）
 
 兩段：(1) 規則判官（judge-rules.json，假判官）：格數 llm 1、cpu 2、human 1，看 log 的起跑順序；
-(2) 壞掉的判官（judge-broken.json，回的不是答案）：每次問都錯→這次退回確定規則，連錯 2 次（max_fails）就停在規則。
+(2) 壞掉的判官（judge-broken.json，回的不是答案）：每次問都錯→那拍退回確定規則（判官出錯只有這一條路；kernel 不數連錯，
+要停住是判官格自己的事——10-15 使用者「都同意。」）。
 設定檔（daemon／loop／kernel）在暫存資料夾裡寫成完整檔；跑完收 daemon、確認沒漏行程、刪暫存資料夾。
 """
 import json
@@ -37,11 +38,11 @@ def write(path, doc):
     return path
 
 
-def start_daemon(tmp, judge, max_fails, human):
+def start_daemon(tmp, judge, human):
     """在 tmp 寫完整的 kernel／loop／daemon 設定（不靠指示詞），起 daemon。回 (Popen, 信箱, log, state)。"""
     mb, log, st = (os.path.join(tmp, x) for x in ("mb", "kernel.log.jsonl", "kernel.state.json"))
     k = write(os.path.join(tmp, "kernel.json"), {"mailbox": mb, "state": st, "log": log, "judge": os.path.join(HERE, judge),
-                                                 "max_fails": max_fails, "slots": {"llm": 1, "cpu": 2, "human": 1}})
+                                                 "slots": {"llm": 1, "cpu": 2, "human": 1}})
     lp = write(os.path.join(tmp, "loop.json"), {"inst": {"argv": [sys.executable, KERNEL, k], "cwd": HERE},
                                                 "times": None, "interval_ms": 100})
     d = write(os.path.join(tmp, "daemon.json"), {"children": [lp], "interval_ms": 100, "ctl": os.path.join(tmp, "d.ctl.json"),
@@ -99,13 +100,13 @@ def show_log(log, names, t0):
             print("         %s 丟掉 %s：%s" % (t, names.get(r["letter"], "?"), r["error"]))
 
 
-def scenario(tmp, judge, plan, max_fails=3):
+def scenario(tmp, judge, plan):
     os.makedirs(tmp)
     human = os.path.join(tmp, "human")
     os.makedirs(human)
     stop = threading.Event()
     threading.Thread(target=fake_human, args=(human, stop), daemon=True).start()
-    d, mb, log, st = start_daemon(tmp, judge, max_fails, human)
+    d, mb, log, st = start_daemon(tmp, judge, human)
     names = {}
     try:
         t0 = time.time()
@@ -124,7 +125,7 @@ def scenario(tmp, judge, plan, max_fails=3):
         show_log(log, names, t0)
         with open(st, encoding="utf-8") as f:
             s = json.load(f)
-        say("   kernel state 窗：runs %d、served %d、judge_fails %d、judge_error %s" % (s["runs"], s["served"], s["judge_fails"], json.dumps(s["judge_error"], ensure_ascii=False)))
+        say("   kernel state 窗：runs %d、served %d、judge_error %s" % (s["runs"], s["served"], json.dumps(s["judge_error"], ensure_ascii=False)))
     finally:
         stop.set()
         say("   daemon 收工，退出碼 %d" % stop_daemon(d))
@@ -157,10 +158,10 @@ def main():
             ("L-low", "gate-llm.json", "low"), ("C1", "gate-cpu.json", None), ("H1", "gate-human.json", None),
             ("L-normal", "gate-llm.json", None), ("C2", "gate-cpu.json", None), ("L-high", "gate-llm.json", "high"),
             ("H2", "gate-human.json", None), ("C3", "gate-cpu.json", None)])
-        say("== 2. 壞掉的判官（judge-broken.json，max_fails 2）：每次問都錯 → 這次退回規則；連錯 2 次就不再問")
+        say("== 2. 壞掉的判官（judge-broken.json）：每次問都錯 → 那拍退回規則（kernel 不數連錯）")
         scenario(os.path.join(tmp, "s2"), "judge-broken.json", [
             ("L-low", "gate-llm.json", "low"), ("L-high", "gate-llm.json", "high"), ("L-normal", "gate-llm.json", None),
-            ("C1", "gate-cpu.json", None), ("C2", "gate-cpu.json", None), ("C3", "gate-cpu.json", None)], max_fails=2)
+            ("C1", "gate-cpu.json", None), ("C2", "gate-cpu.json", None), ("C3", "gate-cpu.json", None)])
     finally:
         time.sleep(0.3)
         left = leftovers(tmp)

@@ -119,6 +119,17 @@ class KernelOrderTest(Tmp):
         self.assertEqual(self.reply(n)["error"]["code"], "KernelRestarted")
         self.assertEqual(os.listdir(self.box["cur"]), [])
 
+    def test_reply_failed_goes_to_state(self):
+        # 回信寫不進去：記進 kernel state 窗的 last_warning，不寫 stderr（N-43；10-15「都按照推薦。」）
+        n = self.send("a")
+        os.mkdir(os.path.join(self.box["reply"], n))          # 回信的位置被一個資料夾佔住
+        K.tick(self.cfg)
+        with open(self.p("k.state.json")) as f:
+            self.assertTrue(json.load(f)["last_warning"].startswith("ReplyFailed"))
+        K.tick(self.cfg)                                       # 下一拍沒事＝清回 null
+        with open(self.p("k.state.json")) as f:
+            self.assertIsNone(json.load(f)["last_warning"])
+
     def test_slots(self):
         for w in "abc":
             self.send(w, sh="sleep 0.3; cat")

@@ -34,12 +34,15 @@ key 分四組，每組落在哪幾個檔是固定的：
   "runs": 2,                   // 身體跑了幾次（loop：inst；daemon：拍數）
   "times": 5, "interval_ms": 1000, "interval_mode": "after",   // 節奏組＝生效中的值
   "last_error": null,          // 最後一次自己出錯的那行；沒有＝null
+  "last_warning": null,        // 跑起來後預料到、不結束也不算錯的意外（「代號: 白話」）；沒有＝null
   "ctl_seq": 3,                // 上次採用的 ctl 的 seq；沒有＝null
   "beat": 1791985930.186       // 寫的那一刻（epoch 秒）；內容沒變也每秒碰一次
 }
 ```
 
 各層擴充：loop 加 `skipped`（fixed 跳拍數）、`last_code`（aos_inst 結果的 code）；daemon 加 `skipped`、`last_code`、`loops`（表上幾個；要細節用控制指令查）。daemon 回答子項的 `get`／`list` 時多一格 `phase`（子項六態）。
+
+**`last_warning`**（10-15 使用者「都按照推薦。」，[盤點 S1](../thinking/2026-10-15-principles.md)）：以前寫 stderr 的警告改記這裡——N-43 正常退出不在 stderr 噴東西。loop：ctl 窗壞檔、不見了、讀不了（`CtlBad`／`CtlMissing`／`CtlReadFailed`，讀到好的那份就清回 null）。daemon 再加表那邊最近一件（`PolicyFailed`、`RestartFailed`、`TableWriteFailed`、收工時寫不了子項 ctl 的 `WriteFailed`；ctl 窗的優先）。**state 窗自己寫不了**（`StateWriteFailed`）沒地方記＝窗壞了，同 N-19 窗缺：收掉身體、結束、stderr 一份錯誤、退 1。
 
 **狀態值**：一套七個（`aos_loop.STATES`），意思固定，各層用得到哪幾個不限。daemon 子項的六態 `phase` 是另一套，在 table 窗（暫定 b：撞名不改）。
 

@@ -15,7 +15,7 @@ clerk/
                    "thinking": {"target": "cells/think.json", "next": "route"},
                    "route": "cells/route.json",                       // 回 {"next": "tool"} 或 {"next": "done"}
                    "tool": {"target": "cells/tool.json", "next": "thinking"},
-                   "done": "cells/done.json", "halted": "cells/done.json"}}   // halted＝think 連錯自己跳來
+                   "done": "cells/done.json"}}   // halted 只在 end：think 連錯自己寫好 ret.json、跳去就結束
   loop.json     {"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "stop_on_end": true, "ctl": "ctl.json", "state": "loop-state.json"}
   cells/intake.json  {"argv": ["aos", "agent", "intake"]}      think／route（--done done）／tool／done 同樣一行
   brain.json  system.md  tools/clock.json
@@ -30,7 +30,7 @@ cd frame && echo '{"parent": "/abs/clerk"}' > env.json && echo '{"question": "�
   && aos loop /abs/clerk/loop.json >/dev/null; cat ret.json
 ```
 
-- 一趟：intake（args.json → history）→ think → route → (tool → think → route)* → done（寫 `ret.json`＝`{"reply"}`；done 在 `end` 裡，fsm 結束那行帶 `"end": true`，loop 的 `stop_on_end` 看到就停，N-44）。think 連錯 3 次＝halted → 同一張 done 格寫 `{"error": {"code", "msg"}}`。走完 end，fsm 的 phase 歸位 `intake`。
+- 一趟：intake（args.json → history）→ think → route → (tool → think → route)* → done（寫 `ret.json`＝`{"reply"}`；done 在 `end` 裡，fsm 結束那行帶 `"end": true`，loop 的 `stop_on_end` 看到就停，N-44）。think 連錯 3 次＝think 自己寫 `ret.json`＝`{"error": {"code", "msg"}}`、回 `next: halted`（只在 `end`、不在 `states`）＝fsm 結束，不經 done 格（10-15 使用者「都同意。」，[盤點第 8 條](../thinking/2026-10-15-principles.md)）。走完 end，fsm 的 phase 歸位 `intake`。
 - **成敗看 `ret.json`**：走到 halted 時 loop 照樣退 0、state `done`（C-52：loop 只說自己這一層，不把 agent 的失敗當自己的錯；10-15 使用者「都同意。」），呼叫方看 `ret.json` 有沒有 `error`。
 - loop 的 `times` 用完還沒走到 done＝沒有 `ret.json`（沒跑完）。
 - **同一個 frame 再叫一次**＝接著那裡的 history：呼叫方只要再寫一份 `args.json`；intake 把它接在後面、順手刪上一輪的 `ret.json`（這次沒跑完就讀不到舊的）。不必刪 `ctl.json`：done 不寫 ctl，loop 靠 fsm 結束那行停。

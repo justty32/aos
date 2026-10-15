@@ -8,17 +8,17 @@
 設定：
     mailbox    信箱資料夾（同閘門的 mailbox；必填）
     state      state 窗（必填，N-19）：loop 骨架的 state／pid／runs／last_error／beat，加 kernel 的 queue、running、
-               slots、budget、served、seen（每封信第一次看到的 runs）、judge_fails、judge_error、last_sig；判官的 stdin＝這份只留 queue／running／slots／budget
+               slots、budget、served、seen（每封信第一次看到的 runs）、judge_error、last_sig；判官的 stdin＝這份只留 queue／running／slots／budget
     slots      每種資源幾格 {"llm": 1, "cpu": 2, "human": 1}；純值 n＝{"llm": n}（沒寫＝1）。信的 `_metainfo.resource`
                沒寫或 "none"＝便宜的，不佔格、直接跑；寫了但這裡沒有＝回 ResourceUnknown
     judge      判官：TARGET 或內嵌 inst（沒寫＝一律用規則）。stdin＝state 窗的 queue、running、slots、budget（子集），
                stdout＝{"run": [id], "defer": [id], "reject": [{"id", "error": {code, msg}}]}（見 aos_kernel_judge）
-    max_fails  判官連錯幾次就一直用規則、等人把 state 窗的 judge_fails 歸零（沒寫＝3）
     budget、aging_ticks、near_ms、log  同第一種（aos_gate_kernel.py）；budget 只管 llm 的信
     poll_ms    一拍之內多久看一次信箱與跑完的信（沒寫＝50）
 
 一拍（＝一段忙碌期）：cur/ 殘信回 KernelRestarted → 反覆：收跑完的、回信、放格 → 讀 new/（過期、額度、便宜的直接跑）
-→ 局面變了才決定（只有一封且有空格＝直接跑；否則問判官，判官錯＝這次用第一種的規則）→ 照決定認領、起跑；判官挑完仍有空格＝補位（沒被 reject 的剩下的信照規則補滿，log reason＝backfill）
+→ 局面變了才決定（只有一封且有空格＝直接跑；否則問判官，判官這拍沒給合法答案＝這拍用第一種的規則——判官出錯只有這一條路，
+  kernel 不數連錯、不停問：要連錯幾次就改口或停住，是判官格自己的事（C-53；10-15 使用者「都同意。」，盤點第 3 條））→ 照決定認領、起跑；判官挑完仍有空格＝補位（沒被 reject 的剩下的信照規則補滿，log reason＝backfill）
 （一封一條執行緒、各自一支子程式）→ 沒有在跑的就結束這拍。格在那封的子程式結束時就放（human 格＝回信落檔或逾時）。
 
 相依：aos_inst ← aos_mailbox（信：讀、認領、跑、回信、log）← aos_gate ← aos_gate_kernel（借 order、deadline）← aos_kernel_judge（判官：跑、讀答案、規則後援）← aos_kernel。
@@ -40,7 +40,7 @@ from aos_kernel_judge import ask_judge, decide_rules, resource
 
 __all__ = ["FLAGS", "KernelError", "check", "main", "tick"]
 
-FLAGS = ("mailbox", "state", "slots", "judge", "max_fails", "budget", "aging_ticks", "near_ms", "poll_ms", "log")
+FLAGS = ("mailbox", "state", "slots", "judge", "budget", "aging_ticks", "near_ms", "poll_ms", "log")
 
 
 class KernelError(CliError):
@@ -53,12 +53,12 @@ def check(doc):
         if not isinstance(doc.get(k), str):
             raise KernelError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
     slots = doc.get("slots", 1)
-    c = dict(doc, slots={"llm": slots} if _int(slots, 0) else slots, judge=doc.get("judge"), max_fails=doc.get("max_fails", 3),
+    c = dict(doc, slots={"llm": slots} if _int(slots, 0) else slots, judge=doc.get("judge"),
              budget=doc.get("budget"), aging_ticks=doc.get("aging_ticks", 10), near_ms=doc.get("near_ms", 30000),
              poll_ms=doc.get("poll_ms", 50))
     if not (isinstance(c["slots"], dict) and all(isinstance(k, str) and _int(v, 0) for k, v in c["slots"].items())):
         raise KernelError("FieldType", "slots 要是 {資源: ≥0 的整數}，不是 %r" % (c["slots"],))
-    for k, lo in (("max_fails", 1), ("aging_ticks", 1), ("near_ms", 0), ("poll_ms", 1)):
+    for k, lo in (("aging_ticks", 1), ("near_ms", 0), ("poll_ms", 1)):
         if not _int(c[k], lo):
             raise KernelError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
     if not (c["budget"] is None or _int(c["budget"], 0)):
@@ -90,24 +90,29 @@ def tick(cfg):
     today = datetime.date.today().isoformat()
     bud = st.get("budget") if isinstance(st.get("budget"), dict) else {}
     used = [bud.get("used", 0) if bud.get("day") == today else 0]
-    fails = st.get("judge_fails", 0) if _int(st.get("judge_fails"), 0) else 0
     last_sig, last_err = st.get("last_sig"), st.get("judge_error")
     count = {"asked": 0, "fallback": 0, "direct": 0, "skipped": 0}
-    served, dropped, running, results, queue, busy = [], [], {}, {}, {}, {}
+    served, dropped, running, results, queue, busy, warned = [], [], {}, {}, {}, {}, []
 
     def window(word, now):
         """state 窗整份（loop 骨架的 state、pid、runs、last_error、beat＋kernel 的 key）；判官的 stdin 是它的子集。"""
-        return {"state": word, "pid": os.getpid(), "runs": n, "last_error": None, "beat": round(now, 3),
+        return {"state": word, "pid": os.getpid(), "runs": n, "last_error": None,
+                "last_warning": warned[-1] if warned else None, "beat": round(now, 3),
                 "served": st.get("served", 0) + len(served) if _int(st.get("served"), 0) else len(served),
                 "budget": {"limit": cfg["budget"], "used": used[0], "day": today},
                 "slots": {k: {"total": cfg["slots"][k], "used": busy.get(k, 0)} for k in cfg["slots"]},
                 "running": {x: {"resource": resource(v[1]), "since": round(v[3], 3)} for x, v in running.items()},
                 "queue": {x: {"priority": d.get("priority"), "_metainfo": d.get("_metainfo"),
                               "waited_runs": n - seen.get(x, n), "waited_ms": _waited_ms(d, now)} for x, d in queue.items()},
-                "seen": seen, "judge_fails": fails, "judge_error": last_err, "last_sig": last_sig}
+                "seen": seen, "judge_error": last_err, "last_sig": last_sig}
+
+    def send(doc, rep):
+        w = reply(doc, rep)                         # 回信寫不進去＝記進 state 窗的 last_warning（不寫 stderr）
+        if w:
+            warned.append(w)
 
     def drop(name, doc, code, msg, path):
-        reply(doc, {"error": {"code": code, "msg": msg}})
+        send(doc, {"error": {"code": code, "msg": msg}})
         os.remove(path)
         seen.pop(name, None)
         dropped.append({"letter": name, "error": code})
@@ -136,7 +141,7 @@ def tick(cfg):
             _, doc, path, _ = running.pop(name)
             rep, tokens, ms = results.pop(name)
             used[0] += tokens
-            reply(doc, rep)
+            send(doc, rep)
             os.remove(path)
             rec = {"letter": name, "resource": resource(doc), "waited": n - seen.pop(name, n), "ms": ms,
                    "code": rep.get("code")}
@@ -183,12 +188,12 @@ def tick(cfg):
             write_json(cfg["state"], snap)                  # 局面外顯（N-13）；判官的 stdin＝這份的子集
             if only and free[resource(queue[only])] > 0:
                 how, dec = "direct", {"run": [only], "defer": [], "reject": []}
-            elif cfg["judge"] is not None and fails < cfg["max_fails"]:
+            elif cfg["judge"] is not None:
                 try:
                     dec, how = ask_judge(cfg, snap, set(queue)), "judge"
-                    fails, last_err = 0, None
-                except ValueError as e:
-                    fails, last_err = fails + 1, str(e)
+                    last_err = None
+                except ValueError as e:                     # 判官這拍沒給合法答案＝這拍用規則（唯一一條錯誤路徑）
+                    last_err = str(e)
                     dec, how = decide_rules(queue, free, seen, n, now, cfg), "fallback"
             else:
                 dec, how = decide_rules(queue, free, seen, n, now, cfg), "rules"
@@ -208,7 +213,7 @@ def tick(cfg):
                 rest = {x: d for x, d in queue.items() if x not in run}
                 fill = decide_rules(rest, left, seen, n, now, cfg)["run"] if rest else []
             _log(cfg, {"event": "decide", "runs": n, "how": how, "run": run, "backfill": fill, "cut": len(dec["run"]) - len(run),
-                       "reject": [r["id"] for r in dec["reject"]], "judge_fails": fails, "error": last_err if how == "fallback" else None})
+                       "reject": [r["id"] for r in dec["reject"]], "error": last_err if how == "fallback" else None})
             for x in run:
                 started |= start(x, queue[x], "judge" if how == "judge" else how)
             for x in fill:
@@ -226,7 +231,7 @@ def tick(cfg):
     final = window("waiting", time.time())
     write_json(cfg["state"], final)
     return {"runs": n, "served": served, "dropped": dropped, "waiting": len(live), "budget": final["budget"],
-            "judge": dict(count, fails=fails, on_rules=cfg["judge"] is not None and fails >= cfg["max_fails"])}
+            "judge": count}
 
 
 def main(argv=None):

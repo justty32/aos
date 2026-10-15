@@ -103,9 +103,9 @@ class LoopTest(Tmp):
 
     def test_bad_inst_fails_start(self):
         r = self.cli(self.loop(inst={"argv": [{"$env": "AOS_TEST_NOPE"}]}))
-        self.assertEqual(r.returncode, 125)
+        self.assertEqual(r.returncode, 1)                       # loop 只退 0／1（盤點第 1 條），代號在 stderr
         self.assertIn("EnvironmentVariableMissing", r.stderr)
-        self.assertEqual(self.cli(self.loop(inst={"argv": []})).returncode, 125)
+        self.assertEqual(self.cli(self.loop(inst={"argv": []})).returncode, 1)
 
     def test_target_pointer(self):
         # loop.json 的一格當 loop 本體；inst 裡的 ../ 照整份檔算；id＝realpath#/位置
@@ -117,10 +117,10 @@ class LoopTest(Tmp):
         self.assertEqual((r.returncode, self.read("n.out")), (0, "z\nz\n"), r.stderr)
         self.assertEqual(self.state("n.state.json")["id"], os.path.realpath(path) + "#/job")
         r = self.cli(path + "#/x")                                      # 指到的不是物件
-        self.assertEqual((r.returncode, self.err(r)), (125, "FieldType"))
+        self.assertEqual((r.returncode, self.err(r)), (1, "FieldType"))
         self.assertIn(os.path.realpath(path) + "#/x", r.stderr)
         r = self.cli(path + "#job")
-        self.assertEqual((r.returncode, self.err(r)), (125, "ReferencePointerInvalid"))
+        self.assertEqual((r.returncode, self.err(r)), (1, "ReferencePointerInvalid"))
 
     def test_last_code_from_inst_stdout(self):
         # 沒寫 exit 也拿得到碼：aos_inst 的 stdout 結果（N-12）
@@ -134,7 +134,7 @@ class LoopTest(Tmp):
             with self.subTest(outer=outer):
                 path = self.loop(sh="echo x >> w.out", **outer)
                 r = self.cli(path)
-                self.assertEqual((r.returncode, self.err(r)), (125, "WindowMissing"))
+                self.assertEqual((r.returncode, self.err(r)), (1, "WindowMissing"))
         self.assertFalse(os.path.exists(self.p("w.out")))
 
     def test_stdout_stream_stdin_flags(self):
@@ -148,13 +148,15 @@ class LoopTest(Tmp):
         self.assertEqual(self.state("s.state.json")["id"], "me")
         doc["inst"]["stdin_inherit"] = True                         # D-5：inst 從 stdin 灌，stdin_inherit 不行
         r = subprocess.run([sys.executable, LOOP, "-"], input=json.dumps(doc), capture_output=True, text=True, cwd=self.tmp)
-        self.assertEqual((r.returncode, self.err(r)), (125, "Conflict"))
+        self.assertEqual((r.returncode, self.err(r)), (1, "Conflict"))
 
-    def test_inst_error_inherited(self):
+    def test_inst_error_not_inherited(self):
+        # 最後一次 aos_inst 自己出錯：loop 退 1（不沿用 aos_inst 的 127）、stderr 只有 loop 自己那一份錯誤（aos_inst 的不轉，S2）
         path = self.loop(inst={"argv": ["/no/such/prog"]}, times=2, error_wait_ms=50)
         r = self.cli(path)
-        self.assertEqual(r.returncode, 127)
-        self.assertIn("CommandNotFound", r.stderr)
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertEqual(self.err(r), "CommandNotFound")
         self.assertTrue(self.state()["last_error"].startswith("CommandNotFound"))
         # 中途出錯後來好了不算：最後一次正常＝0
         self.write("ok.exit", "")
@@ -162,14 +164,20 @@ class LoopTest(Tmp):
                   times=2, error_wait_ms=10)
         self.assertEqual(self.cli(self.p("m.loop.json")).returncode, 0)
 
+    def test_state_write_failed_is_error(self):
+        # state 窗寫不了＝窗壞了（同 N-19 窗缺）：收工、stderr 一份 StateWriteFailed、退 1（原本警告一次照跑，10-15「都按照推薦。」）
+        path = self.loop(sh="sleep 30", times=None, state="no/such/dir/s.json")
+        r = self.cli(path)
+        self.assertEqual((r.returncode, self.err(r)), (1, "StateWriteFailed"))
+
     def test_bad_loop_json(self):
         w = {"ctl": "c.json", "state": "s.json"}
         for doc in (dict(w, times=1), dict(w, inst={"argv": ["true"]}, times=-1),
                     dict(w, inst={}, interval_mode="x"), "{"):
             with self.subTest(doc=doc):
                 r = self.cli(self.write("bad.json", doc))
-                self.assertEqual(r.returncode, 125)
-        self.assertEqual(self.cli(self.p("nope.json")).returncode, 125)
+                self.assertEqual(r.returncode, 1)
+        self.assertEqual(self.cli(self.p("nope.json")).returncode, 1)
 
     def test_want_reverts_to_initial(self):
         init = {"paused": (False, False), "times": 3}
@@ -251,15 +259,15 @@ class LoopTest(Tmp):
         path = self.loop(sh="echo $$ > l.pid; exec sleep 30", times=None, ctl="l.ctl.json")
         proc = self.start(path)
         self.until(lambda: os.path.exists(self.p("l.pid")))
-        self.ctl("{")                                   # 壞檔：整份不採用、印一次、照跑
-        time.sleep(0.15)
+        self.ctl("{")                                   # 壞檔：整份不採用、記進 state 的 last_warning、照跑（N-08）
+        self.until(lambda: ((self.state() or {}).get("last_warning") or "").startswith("CtlBad"))
         os.remove(self.p("l.ctl.json"))                 # 不見了：維持上一次
-        time.sleep(0.2)
+        self.until(lambda: ((self.state() or {}).get("last_warning") or "").startswith("CtlMissing"))
         self.assertIsNone(proc.poll())
         self.ctl({"stop": {"val": True, "now": True}})
         self.assertEqual(proc.wait(5), 0)
-        err = proc.stderr.read()
-        self.assertEqual((err.count("CtlBad"), err.count("CtlMissing")), (1, 1), err)
+        self.assertIsNone(self.state()["last_warning"])  # 讀到好的就清掉
+        self.assertEqual(proc.stderr.read(), "")         # 不寫 stderr（N-43）
 
     def test_sigterm_clears_group(self):
         path = self.loop(sh="sleep 30 & echo $! > l.pid; wait", times=None, grace_ms=300)

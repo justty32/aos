@@ -7,8 +7,10 @@
 - 旗標（D-1）：`--times 3` ＝設定的頂層 key `times`（`-` 換成 `_`），蓋過檔或 stdin 的值。每個旗標都要帶一個值；
   值先當 JSON 解（`3`、`null`、`true`），解不了就當字串。只認各程式給的那幾個純量 key，其他＝UnknownFlag。
 - `--`（D-2）：後面整段交給程式自己（inst 拿去蓋 `argv`；不收的程式報 Usage）。
-- stdin 是 JSON 串流（N-12）：只看第一份，其餘在 stderr 警告一次（04 第 5 題）；壞尾丟掉（Q6）。
-- stdout／stderr 也是 JSON 串流：`emit()` 一份一行；錯誤 `{"error": {"code", "msg"}}`、警告 `{"warning": {...}}`。
+- stdin 是 JSON 串流（N-12）：設定只要一份，多了＝入口錯 `ExtraInput`（退非 0；原本只看第一份、stderr 警告，
+  10-15 使用者「都按照推薦。」改：N-43 正常退出不寫 stderr）；壞尾丟掉（Q6）。
+- stdout／stderr 也是 JSON 串流：`emit()` 一份一行；錯誤 `{"error": {"code", "msg"}}`（N-29）。沒有「警告」：
+  預料到的意外記進自己的窗（例 state 窗的 last_warning），不然就是錯。
 """
 import json
 import os
@@ -16,7 +18,7 @@ import sys
 
 from aos_directives import DirectiveError, resolve, split_target, target_id
 
-__all__ = ["CliError", "config", "emit", "error", "is_int", "load_target", "parse_argv", "read_stream", "warn"]
+__all__ = ["CliError", "config", "emit", "error", "is_int", "load_target", "parse_argv", "read_stream"]
 
 
 class CliError(Exception):
@@ -59,10 +61,6 @@ def emit(doc, stream=None):
 
 def error(code, msg):
     emit({"error": {"code": code, "msg": msg}}, sys.stderr)
-
-
-def warn(code, msg):
-    emit({"warning": {"code": code, "msg": msg}}, sys.stderr)
 
 
 # ---- 命令列 ----
@@ -130,7 +128,7 @@ def _load_stdin():
     if not docs:
         raise CliError("JsonSyntax", "stdin 沒有 JSON")
     if len(docs) > 1:
-        warn("ExtraInput", "stdin 有 %d 份 JSON，只看第一份" % len(docs))
+        raise CliError("ExtraInput", "stdin 有 %d 份 JSON，設定只要一份" % len(docs))
     try:
         doc = resolve(docs[0], os.getcwd(), "<stdin>")
     except DirectiveError as e:

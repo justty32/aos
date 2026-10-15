@@ -82,7 +82,7 @@ class TreeTest(Tmp):
         self.assertEqual(r.returncode, 0, r.stderr)
         lines = r.stdout.splitlines()
         self.assertTrue(lines[0].startswith("fsm "))
-        for lab in ("states/thinking", "states/tool", "states/halted"):
+        for lab in ("states/thinking", "states/tool", "states/done"):
             self.assertTrue(any(l.startswith("  " + lab + ": inst /") for l in lines), lab)
 
     def test_inline_runs_same(self):
@@ -113,16 +113,17 @@ class TreeTest(Tmp):
         self.write("y.json", {"start": "a", "states": {"a": "x.json", "b": {"argv": ["true"]}}})
         tool = os.path.join(LIB, "aos_tree.py")
         r = subprocess.run([sys.executable, tool, "inline", "x.json"], capture_output=True, text=True, cwd=self.tmp, timeout=10)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        w = json.loads(r.stderr.splitlines()[0])["warning"]
-        self.assertEqual(w["code"], "TreeCycle")
+        self.assertEqual((r.returncode, r.stderr), (0, ""))           # 循環是預料到的：退 0、不寫 stderr（N-43）
         out = json.loads(r.stdout)
         self.assertEqual(out["states"]["a"]["states"]["a"], "x.json")      # 循環處留名字
         self.assertIn("b", out["states"]["a"]["states"])
         r = subprocess.run([sys.executable, tool, "inline", "x.json", "--depth", "0"], capture_output=True, text=True,
                            cwd=self.tmp, timeout=10)
-        self.assertEqual(json.loads(r.stderr.splitlines()[0])["warning"]["code"], "TreeDepth")
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(json.loads(r.stdout)["states"]["a"], "y.json")
+        r = subprocess.run([sys.executable, tool, "print", "x.json"], capture_output=True, text=True, cwd=self.tmp, timeout=10)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertIn("(TreeCycle)", r.stdout)                              # 停住的 ref 在那行尾巴標出來
 
     def test_missing_target_is_error(self):
         self.write("x.json", {"start": "a", "states": {"a": "nope.json"}})
