@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """通用 kernel 的身體（N-42 第二種，基礎實作）：判斷交給「判官」——表上一格 aos-inst TARGET（規則腳本或 agent）。
-一拍＝跑一次本程式，由 aos-loop 拍（loop 掛在 aos-daemon 底下）。閘門照舊用 aos_gate.py，`kernel` 指到這裡的信箱，
-信的形狀同第一種。純標準庫。說明在同資料夾 kernel2.md。
+一拍＝跑一次本程式，由 aos-loop 拍（loop 掛在 aos-daemon 底下）。閘門照舊用 aos_gate.py，`mailbox` 指到這裡的信箱，
+信（＝那張 inst 本身）與回信的形狀同第一種（aos_mailbox）。純標準庫。說明在同資料夾 kernel2.md。
 
     python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 
 設定：
-    mailbox    信箱資料夾（同閘門的 kernel；必填）
+    mailbox    信箱資料夾（同閘門的 mailbox；必填）
     state      state 窗（必填，N-19）：loop 骨架的 state／pid／runs／last_error／beat，加 kernel 的 queue、running、
                slots、budget、served、seen（每封信第一次看到的 runs）、judge_fails、judge_error、last_sig；判官的 stdin＝這份
     slots      每種資源幾格 {"llm": 1, "cpu": 2, "human": 1}；純值 n＝{"llm": n}（沒寫＝1）。信的 `_metainfo.resource`
@@ -21,26 +21,23 @@
 → 局面變了才決定（只有一封且有空格＝直接跑；否則問判官，判官錯＝這次用第一種的規則）→ 照決定認領、起跑
 （一封一條執行緒、各自一支子程式）→ 沒有在跑的就結束這拍。格在那封的子程式結束時就放（human 格＝回信落檔或逾時）。
 
-相依：aos_inst ← aos_gate ← aos_gate_kernel（借 order、deadline）← aos_kernel_judge（判官：跑、讀答案、規則後援）← aos_kernel。
+相依：aos_inst ← aos_mailbox（信：讀、認領、跑、回信、log）← aos_gate ← aos_gate_kernel（借 order、deadline）← aos_kernel_judge（判官：跑、讀答案、規則後援）← aos_kernel。
 """
 import datetime
 import json
 import os
-import shutil
 import sys
-import tempfile
 import threading
 import time
 
 import aos_cli
-import aos_gate
-import aos_inst
 from aos_cli import CliError
 from aos_ctl_state import write_json
 from aos_gate_kernel import deadline
+from aos_mailbox import claim, log, mailbox, read_letter, reply, run_letter
 from aos_kernel_judge import ask_judge, decide_rules, resource
 
-__all__ = ["FLAGS", "KernelError", "check", "main", "run_letter", "tick"]
+__all__ = ["FLAGS", "KernelError", "check", "main", "tick"]
 
 FLAGS = ("mailbox", "state", "slots", "judge", "max_fails", "budget", "aging_ticks", "near_ms", "poll_ms", "log")
 
@@ -76,85 +73,21 @@ def check(doc):
     return c
 
 
-# ---- 信 ----（下面幾支抄自 aos_gate_kernel.py，日後可併）
-
-def _read(path):
-    try:
-        with open(path, encoding="utf-8") as f:
-            doc = json.load(f)
-        return doc if isinstance(doc, dict) else None
-    except (OSError, ValueError):
-        return None
-
-
-def _reply(doc, rep):
-    try:
-        write_json(doc["reply"], rep)
-    except (OSError, KeyError, TypeError):
-        aos_cli.warn("ReplyFailed", "回信寫不進 %r" % (doc.get("reply"),))
-
-
-def _claim(box, name):
-    dst = os.path.join(box["cur"], name)
-    try:
-        os.rename(os.path.join(box["new"], name), dst)
-        return dst
-    except FileNotFoundError:
-        return None
-
-
-def run_letter(doc):
-    """跑一封信，回 (回信 dict, 用掉的 token)。"""
-    tmp = tempfile.mkdtemp(prefix="aos-kernel-")
-    try:
-        files = {k: os.path.join(tmp, k) for k in ("stdin", "stdout", "stderr")}
-        with open(files["stdin"], "w", encoding="utf-8") as f:
-            f.write(doc.get("stdin") or "")
-        inst = dict(doc["inst"], stdin=files["stdin"], stdout=files["stdout"], stdin_inherit=False,
-                    stdout_inherit=False, stdout_append=False, stdout_mkdir=False,
-                    stderr_inherit=False, stderr_append=False, stderr_mkdir=False)
-        inst["stderr"] = None if inst.get("stderr_merge") else files["stderr"]
-        try:
-            result = aos_inst.run(inst)
-        except aos_inst.InstError as e:
-            return {"error": {"code": e.code, "msg": e.msg}, "exit": aos_inst.exit_code(e)}, 0
-        out = {}
-        for k in ("stdout", "stderr"):
-            try:
-                with open(files[k], encoding="utf-8", errors="replace") as f:
-                    out[k] = f.read()
-            except OSError:
-                out[k] = ""
-        last = aos_cli.read_stream(out["stdout"])
-        usage = last[-1].get("usage") if last and isinstance(last[-1], dict) else None
-        used = usage.get("total_tokens") if isinstance(usage, dict) else None
-        return dict(out, result=result), (used if _int(used, 0) else 0)
-    except (KeyError, TypeError) as e:
-        return {"error": {"code": "BadLetter", "msg": "信壞了：%s" % e}}, 0
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
-
 def _waited_ms(doc, now):
     sent = doc.get("sent")
     return round((now - sent) * 1000) if isinstance(sent, (int, float)) and not isinstance(sent, bool) else None
 
 
 def _log(cfg, rec):
-    if cfg.get("log"):
-        try:
-            with open(cfg["log"], "a", encoding="utf-8") as f:
-                f.write(json.dumps(dict(rec, t=round(time.time(), 3)), ensure_ascii=False) + "\n")
-        except OSError:
-            pass
+    log(cfg.get("log"), dict(rec, t=round(time.time(), 3)))
 
 
 # ---- 一拍 ----
 
 def tick(cfg):
     """跑一拍（一段忙碌期），回摘要 dict。"""
-    box = aos_gate.mailbox(cfg["mailbox"])
-    st = _read(cfg["state"]) or {}
+    box = mailbox(cfg["mailbox"])
+    st = read_letter(cfg["state"]) or {}
     n = (st.get("runs") if _int(st.get("runs"), 0) else 0) + 1
     seen = st.get("seen") if isinstance(st.get("seen"), dict) else {}
     today = datetime.date.today().isoformat()
@@ -177,7 +110,7 @@ def tick(cfg):
                 "seen": seen, "judge_fails": fails, "judge_error": last_err, "last_sig": last_sig}
 
     def drop(name, doc, code, msg, path):
-        _reply(doc, {"error": {"code": code, "msg": msg}})
+        reply(doc, {"error": {"code": code, "msg": msg}})
         os.remove(path)
         seen.pop(name, None)
         dropped.append({"letter": name, "error": code})
@@ -188,7 +121,7 @@ def tick(cfg):
         results[name] = run_letter(doc) + (round((time.monotonic() - t0) * 1000),)
 
     def start(name, doc):
-        path = _claim(box, name)
+        path = claim(box, name)
         if path:
             th = threading.Thread(target=go, args=(name, doc), daemon=True)
             running[name] = (th, doc, path, time.time())
@@ -199,17 +132,17 @@ def tick(cfg):
 
     for name in sorted(os.listdir(box["cur"])):              # 上一拍跑到一半的
         path = os.path.join(box["cur"], name)
-        drop(name, _read(path) or {}, "KernelRestarted", "kernel 重起時這封跑到一半，不重跑（N-20）", path)
+        drop(name, read_letter(path) or {}, "KernelRestarted", "kernel 重起時這封跑到一半，不重跑（N-20）", path)
 
     while True:
         for name in [x for x, v in running.items() if not v[0].is_alive()]:     # 收跑完的、放格
             _, doc, path, _ = running.pop(name)
             rep, tokens, ms = results.pop(name)
             used[0] += tokens
-            _reply(doc, rep)
+            reply(doc, rep)
             os.remove(path)
             rec = {"letter": name, "resource": resource(doc), "waited": n - seen.pop(name, n), "ms": ms,
-                   "code": rep["result"]["code"] if "result" in rep else None}
+                   "code": rep.get("code")}
             if "error" in rep:
                 rec["error"] = rep["error"]["code"]
             served.append(rec)
@@ -217,7 +150,7 @@ def tick(cfg):
 
         now, queue, started = time.time(), {}, False
         for name in sorted(os.listdir(box["new"])):          # 收信
-            doc = _read(os.path.join(box["new"], name))
+            doc = read_letter(os.path.join(box["new"], name))
             if doc is None:
                 continue
             seen.setdefault(name, n)
@@ -230,7 +163,7 @@ def tick(cfg):
             elif k == "llm" and cfg["budget"] is not None and used[0] >= cfg["budget"]:
                 why = ("BudgetExhausted", "今天的 token 額度用完了（%d／%d）" % (used[0], cfg["budget"]))
             if why:
-                path = _claim(box, name)
+                path = claim(box, name)
                 if path:
                     drop(name, doc, why[0], why[1], path)
             elif k is None:
@@ -263,7 +196,7 @@ def tick(cfg):
                 dec, how = decide_rules(queue, free, seen, n, now, cfg), "rules"
             count[{"judge": "asked", "rules": "fallback"}.get(how, how)] += 1
             for r in dec["reject"]:
-                path = _claim(box, r["id"])
+                path = claim(box, r["id"])
                 if path:
                     drop(r["id"], queue.pop(r["id"]), r["error"]["code"], r["error"]["msg"], path)
             left, run = dict(free), []
