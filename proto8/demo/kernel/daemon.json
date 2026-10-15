@@ -1,6 +1,0 @@
-{
-  "children": ["loop.json"],
-  "interval_ms": 100,
-  "ctl": {"$env": "DEMO_DAEMON_CTL"},
-  "state": {"$env": "DEMO_DAEMON_STATE"}
-}

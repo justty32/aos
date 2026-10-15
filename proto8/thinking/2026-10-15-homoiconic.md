@@ -48,4 +48,4 @@
 
 ## 動工（10-15）
 
-[aos_tree.py](../lib/aos_tree.py)（`print`／`inline`，不跑任何東西）與 [test_tree.py](../lib/tests/test_tree.py) 做好了；`outline`（物件攤成資料夾）還沒做。判官 schema 放 [judge.schema.json](../demo/kernel2/judge.schema.json)，`judge-rules.json` 用普通路徑 key `_schema` 指它；測試用手寫最小驗證器驗 `judge_rules.py` 的輸出，執行期不驗。
+〔10-15 使用者：aos_tree 只是看看狀況的小工具，不納入規範；它的 id／inline 行為是工具自己的做法。〕 [aos_tree.py](../lib/aos_tree.py)（`print`／`inline`，不跑任何東西）與 [test_tree.py](../lib/tests/test_tree.py) 做好了；`outline`（物件攤成資料夾）還沒做。判官 schema 放 [judge.schema.json](../demo/kernel2/judge.schema.json)，`judge-rules.json` 用普通路徑 key `_schema` 指它；測試用手寫最小驗證器驗 `judge_rules.py` 的輸出，執行期不驗。
