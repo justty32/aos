@@ -7,17 +7,67 @@
 | 層 | 是什麼 | 在哪 |
 |---|---|---|
 | 概念 | aos 怎麼看世界（例：時空＝tick-tock＋資料夾） | [CONCEPTS.md](CONCEPTS.md) |
-| 規範 | 從概念推出來、大家都要守的 | 本檔（條文在 NORMS/ 分檔） |
+| 規範 | 從概念推出來、大家都要守的 | 本檔（條文按主題放在 NORMS/ 分檔） |
 | 語法糖 | 符合規範、方便用，**不要求一定用** | proto8/lib（inst、loop、daemon）、proto8-1（tasks、aos-tick） |
 
 本檔（含分檔）只收使用者親口定下的規範（條號 N-）；AI 提的、還沒定的放在最後「待定」，不算數。
 
 <!-- wf-nav -->
-| 分檔 | 涵蓋段落 |
+## 主題（10-15 使用者定：概念、規範、實作之外，再用主題分）
+
+每個主題都有自己的概念、規範、實作；各分檔第一行寫出三者在哪。條號不重編，條文原樣搬過來。
+
+| 主題 | 規範分檔 | 概念 | 實作 |
+|---|---|---|---|
+| 設計理念 | 沒有專屬的條 | [CONCEPTS 設計理念](CONCEPTS/01-設計理念.md) | — |
+| 設計理念／時空（暫定） | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | proto8-1 `aos-tick` |
+| 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-12 stdio、N-18 實作分級、N-29 stderr 形狀、N-35 `檔#/位置` | 出自 C-07、C-45 | lib `aos_cli`、[directives](lib/directives.md) |
+| 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md) | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [lib inst](lib/inst.md) |
+| 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md) | 同上 | [lib loop](lib/loop.md)、[daemon](lib/daemon.md) |
+| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md) | 同上 | [lib ctl-state](lib/ctl-state.md) |
+| 基礎設施／命令列、指示詞與路徑 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md) | 同上 | lib `aos_cli`、[directives](lib/directives.md) |
+| 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | [proto8-1](../proto8-1/README.md)；fsm 未動工 |
+| kernel | 還沒有條文（打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | — |
+| agent | 沒有專屬的條（用 fsm 組出來） | [CONCEPTS agent](CONCEPTS/05-agent.md) | — |
+| 待定（不拆，每條標主題） | [08-待定.md](NORMS/08-待定.md) | | |
+
+> **總則與設計理念**目前分兩份（設計理念只有概念、總則只有規範），使用者之後可能併成一個主題。時空放在設計理念下是暫定。
+
+## 條號 → 檔
+
+| 條號 | 檔 |
 |---|---|
-| [01-定了的-N01至N13.md](NORMS/01-定了的-N01至N13.md) | 定了的：時空 N-01～N-03、inst.json N-04、控制 N-05～N-11、呼叫程式的 stdio N-12、內部狀態的外顯 N-13 |
-| [02-窗的族譜-N14至N17.md](NORMS/02-窗的族譜-N14至N17.md) | 定了的（續）：窗的族譜 N-14 總則、N-15 鎖、N-16 信箱、N-17 心跳（10-14 草稿） |
-| [03-實作分級-N18至N20.md](NORMS/03-實作分級-N18至N20.md) | 定了的（續）：N-18 基礎實作／標準實作兩級與錯誤歸類、N-19 loop／daemon 的 state／ctl 與 fsm 的 state 必填、N-20 巢狀重跑不保證冪等（10-14 夜草稿） |
-| [04-待定.md](NORMS/04-待定.md) | 待定（AI 整理的候選，使用者還沒定）；a～f 暫定預設也記在這（h 已拍板，移到 06／lib） |
-| [05-命令列與daemon-N21至N28.md](NORMS/05-命令列與daemon-N21至N28.md) | 定了的（續）：N-21～N-27 命令列與參數（D-1～D-6）、N-28 daemon.json＝loop.json 超集、inst＝daemon 每拍的身體（10-14 夜草稿） |
-| [06-實作細則-N29至N34.md](NORMS/06-實作細則-N29至N34.md) | 定了的（續）：10-14 夜動工細則（原待定 h）——N-29 stderr 形狀、N-30 inst 結果與 exit 選填、N-31 loop／daemon stdout、N-32 心跳細則、N-33 ctl seq、N-34 tasks 讀 stdout（10-14 深夜草稿） |
+| N-01～N-03 | [設計理念-時空](NORMS/02-設計理念-時空.md) |
+| N-04 | [基礎設施-inst](NORMS/03-基礎設施-inst.md) |
+| N-05 | [總則](NORMS/01-總則.md) |
+| N-06～N-09 | [基礎設施-窗](NORMS/05-基礎設施-窗.md) |
+| N-10 | [基礎設施-loop與daemon](NORMS/04-基礎設施-loop與daemon.md) |
+| N-11 | [基礎設施-窗](NORMS/05-基礎設施-窗.md) |
+| N-12 | [總則](NORMS/01-總則.md) |
+| N-13～N-17 | [基礎設施-窗](NORMS/05-基礎設施-窗.md) |
+| N-18 | [總則](NORMS/01-總則.md) |
+| N-19 | [基礎設施-窗](NORMS/05-基礎設施-窗.md) |
+| N-20 | [基礎設施-組合子](NORMS/07-基礎設施-組合子.md)（fsm） |
+| N-21～N-23 | [基礎設施-命令列與指示詞](NORMS/06-基礎設施-命令列與指示詞.md) |
+| N-24～N-27 | [基礎設施-inst](NORMS/03-基礎設施-inst.md) |
+| N-28 | [基礎設施-loop與daemon](NORMS/04-基礎設施-loop與daemon.md) |
+| N-29 | [總則](NORMS/01-總則.md) |
+| N-30 | [基礎設施-inst](NORMS/03-基礎設施-inst.md) |
+| N-31 | [基礎設施-loop與daemon](NORMS/04-基礎設施-loop與daemon.md) |
+| N-32、N-33 | [基礎設施-窗](NORMS/05-基礎設施-窗.md) |
+| N-34 | [基礎設施-組合子](NORMS/07-基礎設施-組合子.md)（tasks） |
+| N-35 | [總則](NORMS/01-總則.md) |
+| N-36～N-41 | [基礎設施-組合子](NORMS/07-基礎設施-組合子.md)（fsm） |
+
+## 各批出處
+
+條文是一批一批定的（10-15 前按日期分檔）；每批的來源：
+
+- **N-01～N-03** 時空：來自 C-05、C-37、C-44。**N-04** inst.json：來自 C-42b。
+- **N-05～N-11** 控制：來自 C-36；使用者 10-12 夜授權「ctl 規範你可以開 agent 去定」、拍板「沒寫的回初始值，其他都照建議」，條文照 [thinking 10-12 ctl 規範](thinking/2026-10-12-ctl-norms.md) 寫入。
+- **N-12** 呼叫程式的 stdio、**N-13** 內部狀態的外顯：來自 [thinking 10-14 JSON 入口](thinking/2026-10-14-json-entry.md)（N-13 是 §1i～§1k）。
+- **N-14～N-17** 窗的族譜：來自 [thinking 10-14 JSON 入口](thinking/2026-10-14-json-entry.md) §1p、[IPC 研究頁](https://claude.ai/artifact/7QcbQjrK2h7U9LPcApwpvH)；N-13 只有 state／ctl 兩扇窗，這批把它擴成一族。
+- **N-18～N-20** 實作分級、loop／daemon 的窗必填、巢狀重跑：來自 [thinking 10-14 §31](thinking/2026-10-14-json-entry/12-七題回覆.md)。
+- **N-21～N-28** 命令列與參數、daemon.json 放 inst：D-1～D-6 是使用者 10-14 下午拍板的（[thinking 04](thinking/2026-10-14-json-entry/04-argv與七題.md) §4.1；D-1 後來放寬，[05](thinking/2026-10-14-json-entry/05-aos-llm-agent題.md) Q10），10-14 夜重做 inst／loop／daemon 時照 [13 §38](thinking/2026-10-14-json-entry/13-動工前拍板.md) 落成條文。N-28 是候選 g，使用者 10-14 夜末拍板。全部是**草稿**。
+- **N-29～N-34** 動工細則（原待定 h）：10-14 夜重做 inst／loop／daemon 時，代理人遇到規範沒寫清楚的地方，照 N-18 挑最簡單的先做、記成待定 h1～h16；**使用者 10-14 深夜拍板「全照建議」**（[thinking 14](thinking/2026-10-14-json-entry/14-h拍板.md)）。跨程式的約定落成這幾條；只跟 daemon 實作有關的（h10～h14）寫在 [lib daemon.md](lib/daemon.md) 當實作說明；h9 補進 N-28；h1、h2 補進 N-21、N-22。全部是**草稿**。
+- **N-35～N-41** 路徑寫法、aos-fsm：10-15 早使用者定：「`檔#/位置` 可以列進」「aos-fsm 可以寫入規範」。內容取自已拍板的討論（[thinking 10-13 json-path](thinking/2026-10-13-json-path.md)、[thinking 10-14 06～10、12](thinking/2026-10-14-json-entry/06-fsm.md)）；全部是**草稿**。只是 aos-fsm 程式寫法的（方法表 lib、預設表資料夾、不做繼承、一份 JSON 樹為主）不進規範，留在 thinking 與之後的 lib 說明。10-15 同日再定：fsm 第一拍、error 格、`step`、結束碼、窗與心跳（補進 N-36、N-38、N-39，[thinking 10-15](thinking/2026-10-15-topics.md)），N-35、N-37、N-40、N-41 照原意修字。

@@ -50,7 +50,7 @@
 |---|---|---|---|
 | inst.json | `aos-inst x.json` | `argv`、`cwd`、`envs`、`stdin`／`stdout`／`stderr`、`exit`＋布林、`timeout_ms`、`grace_ms`（見 [inst 進 json](../2026-10-12-inst-json.md)） | — |
 | loop.json | `aos-loop x.json` | `times`、`interval_ms`、`interval_mode`、`grace_ms`、`ctl`、`ctl_poll_ms`、`state`、`error_wait_ms` | `inst`：一份 inst.json 格式，或 `{"$ref": …}` |
-| daemon.json | `aos-daemon x.json` | loop 那一組（`times`、`interval_ms`、`ctl`、`ctl_poll_ms`、`state`、`grace_ms`）＋ `control_dir`、`load`、`save`、`work_dir` | `inst`＝daemon 自己每拍跑一次的身體（選填；10-14 夜使用者拍板候選 g，daemon.json＝loop.json 的超集，見 [NORMS N-28](../../NORMS/05-命令列與daemon-N21至N28.md)）；表上每個 loop 是一支 `aos-loop` 子程序 |
+| daemon.json | `aos-daemon x.json` | loop 那一組（`times`、`interval_ms`、`ctl`、`ctl_poll_ms`、`state`、`grace_ms`）＋ `control_dir`、`load`、`save`、`work_dir` | `inst`＝daemon 自己每拍跑一次的身體（選填；10-14 夜使用者拍板候選 g，daemon.json＝loop.json 的超集，見 [NORMS N-28](../../NORMS/04-基礎設施-loop與daemon.md)）；表上每個 loop 是一支 `aos-loop` 子程序 |
 
 ### 2.1 loop.json
 
