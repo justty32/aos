@@ -11,11 +11,11 @@
 
 | 分檔 | 主題 | 條號 |
 |---|---|---|
-| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48 |
+| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51 |
 | [02-設計理念-時空.md](CONCEPTS/02-設計理念-時空.md) | 設計理念／時空 | C-05、C-06、C-16、C-17、C-26、C-27、C-30～C-33、C-35、C-37、C-44 |
-| [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、組合子（tasks、fsm） | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b |
+| [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、組合子（tasks、fsm） | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b、C-49 |
 | [04-kernel.md](CONCEPTS/04-kernel.md) | kernel | C-09～C-15、C-28、C-29、C-38、C-47 |
-| [05-agent.md](CONCEPTS/05-agent.md) | agent：腦、工具、可預測性、函數＋binding（狀態機那幾條隨 fsm 在基礎設施） | C-19～C-23（含 C-22b）、C-40、C-42、C-46 |
+| [05-agent.md](CONCEPTS/05-agent.md) | agent：腦、工具、可預測性、函數＋binding（狀態機那幾條隨 fsm 在基礎設施） | C-19～C-23（含 C-22b）、C-40、C-42、C-46、C-50 |
 | [附錄1-名詞.md](CONCEPTS/附錄1-名詞.md) | 附錄 | 1. 名詞（daemon 兩義各一列） |
 | [附錄2-例子與待接.md](CONCEPTS/附錄2-例子與待接.md) | 附錄 | 3. 兩個例子、4. 還沒接起來的 16 條、5. AI 對自己的提醒 |
 
@@ -54,3 +54,6 @@
 | C-46 | [agent](CONCEPTS/05-agent.md) |
 | C-47 | [kernel](CONCEPTS/04-kernel.md) |
 | C-48 | [設計理念](CONCEPTS/01-設計理念.md) |
+| C-49 | [基礎設施](CONCEPTS/03-基礎設施.md)（fsm） |
+| C-50 | [agent](CONCEPTS/05-agent.md) |
+| C-51 | [設計理念](CONCEPTS/01-設計理念.md) |

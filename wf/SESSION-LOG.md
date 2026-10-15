@@ -12,14 +12,7 @@
 
 ## 最新進度
 
-- **10-15 收工後使用者意見（只記、未動工；下次開工先處理）**：
-  1. fsm 要很單純：「當現在是A狀態的時候，執行指定inst，就這樣，那個狀態內部、inst內部的東西，fsm不該管。」（牽動 N-36～N-41、`aos_fsm.py`：running／error_from／max_fails／halted／last_error、格的 stdin 帶 fsm_state、N-40 外層 cfg 當預設，這些哪些該移出 fsm 待使用者定）
-  2. agent 同理：「程式方面的實作可以擠在一坨，共用一些lib，但是在實際的資料夾布局和json那塊仍要保持單純」（牽動 `aos_agent_call.py`／`bob/` 定義＋frame＋cwd、tools／tools_append、`_tool`、system.md、clerk/ 等的資料夾與 JSON 是否太複雜，待重看）
-  3. agent 結構：「agent基於狀態機，在某狀態下跑某個inst，所以複雜度主要集中在那些inst。然後agent call,binding那塊，我也希望不要用程式去實作，而是應該用現有的這套json+資料夾+inst機制去實現」（牽動 C-46、`aos_agent_call.py`、`aos_agent_lib.py ask`：call／binding 改成純 json＋資料夾＋inst 表達，不靠專用程式）
-  4. 理由：「json加上資料夾，他就是lisp了，用lisp做binding更加舒服」（呼應 C-48 值＝純值或 obj 如 3 與 (+ 1 2)、[同像性](../proto8/thinking/2026-10-15-homoiconic.md)：binding 當 Lisp 式環境／let 來想）
-  5. 檔案系統⇄json 互通：「檔案系統和json是可以互通的，資料夾可以當作object，資料夾名稱就是key，而json本身就是.json內部就是一個小型的檔案系統，所以在此情況下，不只是我們的inst體系，也包括其他各類格式，都可以用這套概念去套。但是我會覺得，建議不要濫用，因為雖然可以互通，但畢竟在細節上有差異」（呼應 N-35 `檔#/位置`、aos tree inline；aos tree 本身仍不入規範）
-  6. json schema：「json schema，在我們現在這套大量依賴json的體系狀況下，想必會有更多的施展空間」（呼應[同像性](../proto8/thinking/2026-10-15-homoiconic.md)裡 schema 當 class／interface、驗證選用；可往 inst、state 窗、工具 `_tool` 說明等延伸）
-  7. 「json schema是否可以用來規範資料夾，或許」（接第 5 點：資料夾＝object 時，同一份 schema 可描述資料夾布局，如 agent 定義資料夾該有哪些檔；待評估，注意第 5 點「細節有差異」）
+- **意見 1～7 已拍板、規範已改，程式還沒動**（[意見 1～4](../proto8/thinking/2026-10-15-opinions-1-4.md)、[5～7](../proto8/thinking/2026-10-15-opinions-5-7.md)；改了 N-19、N-27、N-35～N-40、C-46，新增 C-49～C-51）：程式待辦 9 項 → [10-15 § 意見 1～7 程式待辦](session_logs/2026-10/2026-10-15.md#意見-17-程式待辦)。
 - **10-15 收工**：使用者說「先大致到這邊……接下來是我要來做理解」→ 下一步等使用者讀完再開口。今日成果：主題分檔、fsm 規範＋實作、agent（工具＝inst、思考介面、系統提示、函數＋binding、當工具）、C-47／N-42 兩種 kernel 原型、C-48 JSON 規矩＋同像性；五份網頁已更新（https://claude.ai/artifact/<id>）：概念 QJjGNnKFhKeS7r1f5bHzu7、實作 ATizWpsmAa2qutXWZ2owjm、58 題 DKBifn39yRtYDGjwGEAzC5、inst/loop/daemon HGkzKJKAsEAwhv1dQPQX8d、aos-llm與fsm K2aQ7KCad1u3dFTfDvArda。等使用者看：各 thinking 的「動工自定點」（[llm-kernel](../proto8/thinking/2026-10-15-llm-kernel.md#動工自定點)、[general-kernel](../proto8/thinking/2026-10-15-general-kernel.md#動工自定點)、[json-families](../proto8/thinking/2026-10-15-json-families.md)、[topics/04-agent當函數](../proto8/thinking/2026-10-15-topics/04-agent當函數.md)、[judge-live2](../proto8/thinking/2026-10-15-judge-live2.md)）。open 候選：對話太長、agent 收信、標準實作、規範草稿定稿。細節 → [10-15](session_logs/2026-10/2026-10-15.md)。
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。
 - 已搬走（open 已解）：10-14 收工交棒、10-13 `檔#/位置`／kernel-agent、10-12 thinking 精簡與清帳 → [10-14](session_logs/2026-10/2026-10-14.md)、[10-13](session_logs/2026-10/2026-10-13.md)、[10-12](session_logs/2026-10/2026-10-12.md)。
