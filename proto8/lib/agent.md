@@ -8,7 +8,7 @@ agent＝一份 fsm（idle → thinking → tool → thinking → … → idle）
 
 ## 思考介面（腦）
 
-腦＝一支照 N-12 呼叫的 inst，stdin／stdout 是固定形狀（OpenAI chat completions 的那一塊）：
+腦＝一支照 N-12 呼叫的 inst，stdin／stdout 是固定形狀（OpenAI chat completions 的那一塊；10-15 收工後使用者再確認「維持openai格式」）：
 
 ```jsonc
 // stdin：請求
