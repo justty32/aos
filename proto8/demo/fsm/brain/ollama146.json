@@ -1,0 +1,1 @@
+{"argv": ["python3", "../../lib/aos_brain_ollama.py", "--base-url", "http://192.168.1.146:11434", "--model", "gemma3:1b", "--num-ctx", "4096", "--keep-alive", "30s"], "timeout_ms": 180000}
