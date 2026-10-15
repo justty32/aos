@@ -10,6 +10,7 @@
 
 - **[NORMS.md](NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；語法糖符合規範但不強制。
 - **[lib/](lib/README.md)**：函式庫：指示詞 lib、inst、loop、daemon。
+- **[bin/](bin/aos)**：薄入口 `aos`（`aos <名> …`＝`python3 lib/aos_<名>.py …`、`aos agent …`、`aos brain openai|ollama …`）；放進 PATH，inst 的 argv 就寫指令名（C-50）。跟 C++ 的 aos 執行檔同名不相干。
 - **[proto8-1](../proto8-1/README.md)**：tasks——在 aos_inst 之上的小程式（aos-seq、aos-par、aos-if、aos-not），用這裡的 lib。
 - **[demo/](demo/README.md)**：`python3 proto8/demo/run.py`，daemon 從起到收走一遍、每條指令和回覆都印出來。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。

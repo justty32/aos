@@ -1,6 +1,7 @@
 {
   "start": "ask",
-  "end": ["tool", "idle"],
+  "state": "think-state.json",
+  "end": ["tool", "idle", "halted"],
   "states": {
     "ask": {"target": "ask.json", "next": "review"},
     "review": "review.json"

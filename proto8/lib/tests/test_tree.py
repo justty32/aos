@@ -76,12 +76,13 @@ class TreeTest(Tmp):
         self.assertEqual(node["kids"][1]["id"], node["id"] + "#/states/b/target")
 
     def test_demo_agent_tree(self):
-        r = subprocess.run([sys.executable, os.path.join(LIB, "aos_tree.py"), "print", "agent.json"], cwd=os.path.join(DEMO, "fsm"),
+        # demo/fsm 是定義資料夾（C-50）：表在 fsm.json，腦、工具是旁邊的檔，不在表裡
+        r = subprocess.run([sys.executable, os.path.join(LIB, "aos_tree.py"), "print", "fsm.json"], cwd=os.path.join(DEMO, "fsm"),
                            capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 0, r.stderr)
         lines = r.stdout.splitlines()
-        self.assertTrue(lines[0].startswith("fsm+agent "))
-        for lab in ("states/thinking", "brain", "tools/clerk"):
+        self.assertTrue(lines[0].startswith("fsm "))
+        for lab in ("states/thinking", "states/tool", "states/halted"):
             self.assertTrue(any(l.startswith("  " + lab + ": inst /") for l in lines), lab)
 
     def test_inline_runs_same(self):

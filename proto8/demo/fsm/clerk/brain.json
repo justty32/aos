@@ -1,1 +1,1 @@
-{"argv": ["python3", "../brain/fake.py"], "timeout_ms": 10000}
+{"argv": ["aos-demo", "fsm/brain/fake.py"], "timeout_ms": 10000}

@@ -1,10 +1,12 @@
-# agent（現成格庫 `aos_agent_lib.py`＋當函數 `aos_agent_call.py`＋真的腦 `aos_brain_openai.py`／`aos_brain_ollama.py`）
+# agent（定義資料夾＋現成格庫 `aos_agent_lib.py`＋真的腦 `aos_brain_openai.py`／`aos_brain_ollama.py`）
 
 ← [proto8/lib](README.md)｜概念：[CONCEPTS agent](../CONCEPTS/05-agent.md)｜狀態機：[fsm.md](fsm.md)｜demo：[demo/fsm](../demo/fsm/README.md)｜決定：[thinking 10-15 §5](../thinking/2026-10-15-topics/02-agent工具與試146.md#5-agent-的工具與思考介面)
 
 > **這是實作慣例，還不是規範。** 使用者 10-15 定了方向；等接過一次真的 endpoint、跑順了，再升成 NORMS 的條。
 
-agent＝一份 fsm（idle → thinking → tool → thinking → … → idle）。這裡定兩件事：**思考介面**（換腦只換一個 TARGET）與**工具＝inst**。
+agent＝一個定義資料夾：fsm 表＋各狀態跑的 inst（C-50；intake → thinking → route → tool → thinking → … → done）。這裡定三件事：**思考介面**（換腦只換一個 TARGET）、**工具＝inst**、**agent 當函數／當工具**（定義資料夾＋frame，C-46）。
+
+葉子一律寫指令名（C-50）：PATH 前面接 `proto8/bin`，`aos agent think`、`aos brain openai`、`aos loop` 等就找得到（`proto8/bin/aos` 是薄入口，`aos <名>`＝`python3 lib/aos_<名>.py`；跟 C++ 的 aos 執行檔同名不相干，誰先在 PATH 上用誰）。demo 自己的腳本走 `demo/bin/aos-demo`（`aos-demo fsm/brain/fake.py`＝從 demo 資料夾算的路徑，跟 cwd 無關；其他指令照跑、環境多 `AOS_DEMO`＝demo 資料夾）。
 
 ## 思考介面（腦）
 
@@ -26,42 +28,46 @@ agent＝一份 fsm（idle → thinking → tool → thinking → … → idle）
 - 第三顆：`aos_brain_ollama.py`（ollama 原生 POST `<base_url>/api/chat`，`stream: false`）。**為什麼不走 ollama 的 `/v1`**：OpenAI 相容那條設不了 `num_ctx`，ollama 會用模型預設的 context、可能吃爆顯存；原生的帶 `options.num_ctx`（預設 4096）與 `keep_alive`（預設 `"30s"`）。旗標 `--base-url`（預設 `http://localhost:11434`，不含 `/api`）、`--model`（必填）、`--num-ctx`、`--keep-alive`、`--timeout-ms`。形狀互翻：送出時 assistant 的 `arguments` 字串→物件、`content: null`→`""`、tool 訊息補 `tool_name`；收回時 `arguments` 物件→字串、沒 id 就編 `call_<亂數>_<n>`。錯誤代號 `HttpError`（模型不支援 tools 時 ollama 回 400「does not support tools」也是這個）、`ConnectFailed`、`BadResponse`。
 - **腦只留 `content`／`tool_calls`**（使用者 10-15「模型想的內容丟掉」）：`reasoning_content` 之類想的字一律不收、不存，真腦翻譯時只取這兩樣；不留旁檔。
 - **aos 從不依賴模型的思考內容，只算最後的答案**（使用者 10-15：厲害模型的端點如 Claude／GPT 會把思考加密或乾脆不給，說是防蒸餾）：設計、解析、測試都只看 `content`／`tool_calls`。會想的小模型就叫它別想（例 Qwen3 在 system 開頭寫 `/no_think`，[agent 判官](kernel2.md#agent-判官換一行-target)就這樣），免得想太久或把輸出長度耗光、`content` 空掉。
-- **換腦**：agent.json 的 `brain` 換一個 inst TARGET，其他不動。
+- **換腦**：換定義資料夾的 `brain.json`；只換這一次呼叫＝在 frame 放一份 `brain.json`（綁定，蓋過定義的）。
 - **10-15 實測 146 ollama**（[thinking §7](../thinking/2026-10-15-topics/02-agent工具與試146.md#7-試-146-ollama小模型)）：gemma3:1b、deepseek-r1:8b 都回 400「does not support tools」，模型沒載進去；腦這層照規矩回 `HttpError`。要在 ollama 上跑工具得換有 tools 能力的模型。**同日試 qwen2.5:14b**（使用者准，[§8](../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#8-試-146-ollamaqwen2514b)）：整圈跑通、`tool_calls` 形狀對，但帶 tools 時回覆語言亂跳（泰文、韓文）。
 
 ## 工具＝inst
 
-```jsonc
-// agent.json（跟 fsm 同一份；fsm 不認得這幾個 key、會忽略，但會整份當格的 stdin）
-"brain": "brain/fake.json",
-"tools": {"clock": "tools/clock.json"},     // 名字 → aos-inst TARGET（可接 #/位置，N-35）
-"system": "system.md",                      // 選填：系統提示檔（文字／markdown）
-"history": "work/history.json",             // 對話檔＝OpenAI messages 陣列；只有方法程式寫它（N-05）
-"work": "work/"                             // 放 N-call.json（引數）、N-ret.json（工具的 stdout）
-
-// tools/clock.json：工具自己的 inst，說明放 `_tool`（aos_inst 不認得的 key 一律忽略；不用 _metainfo）
-{"argv": ["python3", "tools/clock.py"], "_tool": {"description": "查現在的時間", "parameters": {"type": "object", "properties": {}}}}
+```
+clerk/                         ← 定義資料夾（呼叫時不寫）
+  brain.json                   ← 腦（一張 inst）
+  system.md                    ← 選填：系統提示（文字／markdown）
+  tools/clock.json             ← 工具：名字＝檔名去掉 .json，值＝一張 inst
+frame/（＝cwd）
+  history.json                 ← 對話檔＝OpenAI messages 陣列；只有方法程式寫它（N-05）
+  work/<n>/                    ← 工具每次一個新號碼資料夾：args.json（引數）、stdout.json（工具的 stdout）
 ```
 
-- **system**：think 每次叫腦，都把檔內容當 `{"role":"system","content":…}` 插在送給腦的 messages 最前面；**不寫進 history**（history 只有 user／assistant／tool），所以改 system.md 下一拍就生效。沒寫 `system`＝不帶；寫了但檔不存在或讀不了＝think 格錯誤 `SystemUnreadable`（N-29）。路徑從格的 cwd 算；內層 fsm 沒寫就從外層 cfg 來（N-40）。
-- 工具的 stdin＝`arguments` 解開的 JSON（寫成 `work/N-call.json`，N＝那時 history 幾則），stdout 最後一份＝結果。
+```jsonc
+// tools/clock.json：工具自己的 inst，說明放 `_tool`（aos_inst 不認得的 key 一律忽略；不用 _metainfo）
+{"argv": ["aos-demo", "fsm/clerk/tools/clock.py"], "_tool": {"description": "查現在的時間", "parameters": {"type": "object", "properties": {}}}}
+```
+
+- **system**：think 每次叫腦，都把檔內容當 `{"role":"system","content":…}` 插在送給腦的 messages 最前面；**不寫進 history**（history 只有 user／assistant／tool），所以改 system.md 下一拍就生效。沒寫 `system`＝不帶；寫了但檔不存在或讀不了＝think 格錯誤 `SystemUnreadable`（N-29）。路徑從格的 cwd 算。
+- 工具每次在 `work/<n>/` 新資料夾跑（mkdir 搶號；C-46：工具呼叫的 frame 預設就是這裡；工具 inst 自己寫了 `cwd` 就照它的）：stdin＝`arguments` 解開的 JSON（寫成那裡的 `args.json`），stdout 接到那裡的 `stdout.json`，最後一份＝結果。
 - 回給模型：`{"role": "tool", "tool_call_id": …, "content": "<字串>"}`，content＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`）多一格 `result`（工具 stdout 最後一份）的 JSON 字串，截 8000 字；沒跑成（工具名不認得、引數不是 JSON、inst 起不來、沒輪到、被中斷）＝N-29 形狀 `{"error": {"code", "msg"}}`。（10-15 依 C-48 改，原本是 `{"code", "result"}`）
 
 ## 現成格庫（`aos_agent_lib.py`）
 
 ```
-python3 aos_agent_lib.py think|tool|route [--done 名]|intake|done
+aos agent think|tool|route [--done 名]|intake|done|fsm [NAME]      （＝python3 aos_agent_lib.py …）
 ```
 
 - 不是 agent 本體（agent＝fsm＋表，不變）；是表裡可以直接拿來用的兩格。檔名：使用者 10-15 說「aos-agent-lib.py」，proto8/lib 的模組一律底線（連字號 import 不了），所以叫 `aos_agent_lib.py`。
-- **設定從哪來**（10-15 收工後改：fsm 不再餵格 stdin，N-37）：stdin＝那張格 inst 自己 `stdin` 指的檔（沒寫＝空）；那份的 key 優先，沒寫的照 frame（＝cwd）找——`lookup()`：先找 cwd，找不到照 cwd 裡 `env.json` 的 `parent` 往上找（C-46，繞圈或超過 16 層就停）。`brain`＝`brain.json`、`tools`＝`tools/*.json`（`lookup_dir()`：各層逐項合併、近的蓋過遠的；名字＝檔名去掉 `.json`）、`system`＝`system.md`（有才帶）、`history`＝cwd 的 `history.json`、`work`＝cwd 的 `work/`。stdin 不是物件＝`NoConfig`、退出 1。相對路徑從格的 cwd 算。舊的「fsm 設定整份當 stdin」寫法：把那份設定寫成檔、各格 inst 的 `stdin` 指它就照舊能用（demo/fsm 的 `bind()`、`aos_agent_call` 目前就這樣過渡）。
+- **設定從哪來**（10-15 收工後改：fsm 不再餵格 stdin，N-37）：stdin＝那張格 inst 自己 `stdin` 指的檔（沒寫＝空）；那份的 key 優先，沒寫的照 frame（＝cwd）找——`lookup()`：先找 cwd，找不到照 cwd 裡 `env.json` 的 `parent` 往上找（C-46，繞圈或超過 16 層就停）。`brain`＝`brain.json`、`tools`＝`tools/*.json`（`lookup_dir()`：各層逐項合併、近的蓋過遠的；名字＝檔名去掉 `.json`）、`system`＝`system.md`（有才帶）、`history`＝cwd 的 `history.json`、`work`＝cwd 的 `work/`。stdin 不是物件＝`NoConfig`、退出 1。相對路徑從格的 cwd 算。定義資料夾的格都不寫 stdin，全靠 frame 找。
 
 - **think**：讀 history、組請求（`tools` 從各工具 inst 的 `_tool` 來；沒工具就不帶）、蓋 stdin 跑腦（`aos_methods.run_cell`）、把 assistant 訊息（拿掉頂層 `usage`）接進 history，stdout `{"data": {"content", "tool_calls": [工具名]}}`。不吐 `next`：下一格寫在表上。history 最後已經是 assistant（上一拍接好才被殺）＝不再叫腦。腦結束碼非 0＝`BrainFailed`（白話＝腦 stderr 的錯誤 `代號: 白話`，腦沒吐才寫結束碼）、回的不是 assistant 訊息＝`BadReply`，這格退出 1，fsm 那行的 `error` 是 `CellFailed: BrainFailed: HttpError: …`。**連錯停住是格自己的事**（N-38）：次數記在 `work/think-fails.json`（成功一次就刪），到 `halt_after`（預設 3）次＝不報錯、改吐 `{"next": halt_state（預設 "halted"）, "data": {"error"}}`——表上要有那個狀態（例 done 格寫錯誤的 ret.json），不然 fsm 報 `UnknownNext`、每拍再叫一次腦。
-- **tool**：找最後一則 assistant 還沒回的 `tool_calls`，跑一個、接 tool 訊息，stdout `{"data": {"tool", "result"}}`。工具的環境多一個 `AOS_WORK`＝這個 agent 的 work（給 `ask` 放子 agent 的 frame）。跑工具前寫 `work/.tool-running.json`（記 tool_call id）、跑完刪：下一拍看到它還在、同一個 id＝上一拍被殺一半。
-- **route**：看最後一則 assistant，有 `tool_calls`＝`{"next": "tool"}`，否則 `{"next": "idle", "data": {"reply"}}`（`--done 名` 把 idle 換掉）。單層表用（demo 的 `clerk/`）。
+- **tool**：找最後一則 assistant 還沒回的 `tool_calls`，跑一個、接 tool 訊息，stdout `{"data": {"tool", "result"}}`。跑工具前寫 `work/.tool-running.json`（記 tool_call id）、跑完刪：下一拍看到它還在、同一個 id＝上一拍被殺一半。
+- **route**：看最後一則 assistant，有 `tool_calls`＝`{"next": "tool"}`，否則 `{"next": "idle", "data": {"reply"}}`（`--done 名` 把 idle 換掉，定義資料夾寫 `--done done`）。單層表用（demo 的 `clerk/`）。
 - **intake**：把 cwd 的 `args.json`（實引數）接進 history，接完把 `args.json` 改名成 `args.taken.json`（同一份不會接兩次；呼叫方下次再寫一份新的 `args.json` 就是新問題）。`{"question"}`：frame 還沒有 `history.json`＝生一份 `[user 訊息]`；已經有＝接在後面當一則新的 user 訊息（同一個 frame 續聊，10-15 使用者「按照建議」）；history 最後一則已經是同一句 user 訊息（上一拍接好了、改名前被殺）＝不再接。`{"history"}`＝整段換掉。沒有 `args.json`：已經有 history＝照舊往下（呼叫方綁了 history，或接著上次的）；也沒有＝`NoHistory`。
 - **done**：寫 cwd 的 `ret.json`（`work/think-fails.json` 在＝`{"error"}`，否則 `{"reply": 最後一句}`），再把 `ctl.json`（stdin 可給 `ctl` 換位置）寫成 `{"stop": true}`，讓拍它的 loop 停。
-- `brain`、`tools` 的值除了 TARGET，也可以是內嵌一張 inst（`aos_agent_call` 攤開定義時就給這種）。
+- **fsm**（不是格，給 loop.json 用）：照 `lookup()` 找 `NAME`（預設 `fsm.json`），跑一拍 aos_fsm（格的名字從找到的那份所在的資料夾算、窗從 frame 算）。這樣定義資料夾的 `loop.json` 不必寫自己在哪：`{"inst": {"argv": ["aos", "agent", "fsm"]}, …}`；內層 fsm 的格也一樣寫 `aos agent fsm think/fsm.json`。找不到＝`NoFsm`、退出 125。
+- stdin 給的 `brain`、`tools` 值除了 TARGET，也可以是內嵌一張 inst。
 
 ## 邊緣狀況（使用者 10-15 定）
 
@@ -70,45 +76,52 @@ python3 aos_agent_lib.py think|tool|route [--done 名]|intake|done
 | 工具名不認得 | 回模型一則 tool 訊息 `{"error": {"code": "UnknownTool", "msg": "不認得這個工具：名"}}`，不算 fsm 的錯 |
 | 一次回好幾個 `tool_calls` | 只跑第一個；其餘各回 `{"error": {"code": "Skipped", "msg": "基礎實作一次只跑一個，這個沒跑"}}`（OpenAI 要每個 id 都有回才能再問），stderr 警告 `ToolCallsSkipped` |
 | 引數不合 schema | 不驗；工具自己報錯（code≠0），照樣回模型 |
-| tool 格被殺一半（`work/.tool-running.json` 還在、同一個 id；舊的 `fsm_state.running` 為 true 也算，N-38） | 不重跑工具，還沒回的全回 `{"error": {"code": "Interrupted", …}}` |
+| tool 格被殺一半（`work/.tool-running.json` 還在、同一個 id，N-38） | 不重跑工具，還沒回的全回 `{"error": {"code": "Interrupted", …}}` |
 
 動工時自己定的（等使用者看）：`arguments` 不是 JSON＝回 `{"error": {"code": "BadArguments", …}}` 不跑；工具的 inst 起不來（aos_inst 出錯）＝回 aos_inst 的錯（同形狀、原代號）；工具 inst 沒寫 `_tool`＝空說明、不收引數。
 
 ## agent 當函數／當工具
 
-程式：`aos_agent_call.py`（10-15）。
+概念：[CONCEPTS C-46、C-50](../CONCEPTS/05-agent.md)｜決定：[thinking 意見 1～4](../thinking/2026-10-15-opinions-1-4.md#callbindinglisp-式)（10-15 收工後：call／binding 不寫專用程式，用 json＋資料夾＋inst；原本的 `aos_agent_call.py`、`aos_agent_lib.py ask` 已退場）
 
-概念：[CONCEPTS C-46](../CONCEPTS/05-agent.md)（使用者 10-15 定，概念層；規範慢慢來）｜決定：[thinking 10-15 §11](../thinking/2026-10-15-topics/04-agent當函數.md#11-agent-當函數binding當工具)
-
-三個地方分開：**定義**（`bob/`：agent.json＝fsm 表＋brain、tools、system；呼叫時不寫）、**frame**（像 stack：`history.json`、`state.json`、`work/`、`lock/`；每次呼叫／每個實例一個）、**cwd**（呼叫者在哪）。
-
-```python
-bob = aos_agent_call.Agent("bob/agent.json")          # binding
-bob.call(frame, history=None, engine_args=None, tools=None, tools_append=None, cwd=None, max_ticks=20)
-# → {"reply": 最後一則 assistant 的字, "ticks": 敲了幾拍}；錯丟 CallError
-```
-
-- **怎麼做到的**（動工自定，不動 inst／loop 的通則；第二批退場）：前端把定義攤開——表上的格、brain、tools、system（有用指示詞的話也一樣）一律從 bob/ 算，讀成內嵌 inst；這些 inst 沒寫 `cwd` 就在 bob/ 跑（argv 裡的相對路徑也照 bob/ 算）。state、history、work 指進 frame；lock 是 `frame/lock/`，前端拿著整趟。攤開的設定寫成 `frame/work/agent.cfg.json`，每格 inst 的 `stdin` 指它（10-15 收工後 fsm 不再餵格 stdin 的過渡）。然後在本行程一拍一拍 `aos_fsm.run()`，fsm 吐出 `next` 在 `end` 裡的那份＝做完。
-- **history**：給了＝frame 的 history 換成它、刪 frame 的 state（從 start 來）；沒給＝接著 frame 裡的（沒有＝`NoHistory`）。
-- **engine_args**：list＝接在腦 inst 的 argv 後（例 `["--model", "x"]`）；dict＝蓋過腦 inst 的 key。
-- **tools**（呼叫時的工具＝一等參數，像高階函數傳進去的函數）：給了 `tools`＝整份取代 bob 綁的預設；`tools_append`＝再加；都沒給＝用 bob 綁的。呼叫時給的工具，相對路徑從 cwd 算、沒寫 cwd 就在 cwd 跑。
-- **限制**：只攤開最上層的表；格若是內層 fsm（`aos_fsm.py 內層.json`），它在 bob/ 跑，但它自己的 state 不會被指進 frame——當函數用的定義寫成單層表（`think → route → tool`）。
-
-### 當工具：`aos_agent_lib.py ask`
+**定義資料夾**（照 Lisp 的函數本體；呼叫時一個字都不寫，所以能重複用）：
 
 ```
-python3 aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json      # stdin {"question"} 或 {"history"}
+clerk/
+  fsm.json      {"start": "intake", "state": "fsm-state.json", "end": ["done", "halted"], "states": {
+                   "intake": {"target": "cells/intake.json", "next": "thinking"},
+                   "thinking": {"target": "cells/think.json", "next": "route"},
+                   "route": "cells/route.json",                       // 回 {"next": "tool"} 或 {"next": "done"}
+                   "tool": {"target": "cells/tool.json", "next": "thinking"},
+                   "done": "cells/done.json", "halted": "cells/done.json"}}   // halted＝think 連錯自己跳來
+  loop.json     {"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "ctl_poll_ms": 1, "ctl": "ctl.json", "state": "loop-state.json"}
+  cells/intake.json  {"argv": ["aos", "agent", "intake"]}      think／route（--done done）／tool／done 同樣一行
+  brain.json  system.md  tools/clock.json
 ```
 
-- 寫成一張工具 inst（說明照舊放 `_tool`），父 agent 的 tools 放它。每次呼叫＝新對話（history＝`[user 問題]`），除非 stdin 給 `history`。
-- frame：`--frame`；沒給＝`$AOS_WORK/ask-<n>/`（父 agent 的 work，tool 格給的；n＝第一個還沒有的號碼，mkdir 搶），再沒有＝`./ask-<n>/`。完整對話留在 frame 給人看，父 agent 只拿到最後一句。
-- stdout 一份：成功 `{"reply", "ticks"}` 退 0；失敗 N-29 形狀 `{"error": {"code", "msg"}}`（`MaxTicks` 旁邊多 `partial`）退 1——吐在 stdout，父 agent 的 tool 訊息 `result` 裡看得到。（10-15 依 C-48 改，原本是 `{"error": 代號, "msg"}`）
+**frame**＝被叫者跑的 cwd，放哪由呼叫方決定（C-46）。裡面：`env.json` `{"parent": "<定義資料夾>"}`（找名字往上一層）、`args.json`（實引數，intake 接走後改名 `args.taken.json`）、`ret.json`（回傳）、`history.json`、`fsm-state.json`、`loop-state.json`、`ctl.json`、`work/`。放同名檔＝綁定：`brain.json` 蓋過定義的腦、`tools/x.json` 追加或同名蓋過（逐項合併；「整份取代」不支援）、`history.json` 綁一段對話。
 
-| 情況 | 結果 |
-|---|---|
-| 同一個 frame 有人在用（`lock/` 在） | `Busy`；不同 frame 可以同時跑 |
-| 敲到 `--max-ticks`（預設 20）還沒到 end | `MaxTicks`，多 `partial`＝最後一則有字的 assistant |
-| 子 agent 的格出錯 | `SubAgentFailed`，msg＝fsm 那行的 `error`（「代號: 白話」）；不重試 |
-| 遞迴太深（環境變數 `AOS_ASK_DEPTH` 每層 +1，超過 3） | `TooDeep`，不建 frame |
+**呼叫**（直接叫）：
 
-三道上限：`--max-ticks`、子 agent 自己的 `max_steps`、那張工具 inst 的 `timeout_ms`（demo 的 `tools/clerk.json` 120000；父 agent 的 tool 格 `timeout_ms` 要更大，demo 改 150000）。
+```
+cd frame && echo '{"parent": "/abs/clerk"}' > env.json && echo '{"question": "幾點？"}' > args.json \
+  && aos loop /abs/clerk/loop.json >/dev/null; cat ret.json
+```
+
+- 一趟：intake（args.json → history）→ think → route → (tool → think → route)* → done（寫 `ret.json`＝`{"reply"}`，把 `ctl.json` 寫成 stop，拍它的 loop 就停）。think 連錯 3 次＝halted → 同一張 done 格寫 `{"error": {"code", "msg"}}`。走完 end，fsm 的 phase 歸位 `intake`。
+- loop 的 `times` 用完還沒走到 done＝沒有 `ret.json`（沒跑完）。
+- `ctl_poll_ms: 1`：done 格寫了 stop 之後 loop 要馬上看到，不然會多起一拍（loop 預設每 1000 ms 才看一次 ctl）。
+- **同一個 frame 再叫一次**＝接著那裡的 history（intake 把新的 args.json 接在後面）；呼叫方先刪上次留下的 `ctl.json`（stop 是終點，不刪 loop 一起來就停）與 `ret.json`（免得這次沒跑完卻讀到上次的）。
+- 兩個呼叫同時指同一個 frame 不擋（卡死不防護）；不同 frame 可以同時跑。
+
+**當工具**：工具 inst 用 `sh -c` 三步（寫 env.json → 跑被叫者的 loop → 讀 ret.json）。tool 格每次在 `work/<n>/` 開新資料夾、寫好 `args.json`、在那裡跑它，所以那裡就是被叫者的 frame；`cat ret.json` 的內容就是工具結果，父 agent 的 tool 訊息 `result` 看得到（錯也是 N-29 形狀）。demo 的 `tools/clerk.json`：
+
+```jsonc
+{"argv": ["aos-demo", "sh", "-c",
+   "printf '{\"parent\": \"%s\"}' \"$AOS_DEMO/fsm/clerk\" > env.json && aos loop \"$AOS_DEMO/fsm/clerk/loop.json\" >/dev/null; cat ret.json"],
+ "timeout_ms": 120000, "_tool": {"description": "問報時員…", "parameters": {…}}}
+```
+
+- 綁定也在這一步做：例 `demo/kernel/boss/tools/clerk.json` 多一步 `cp …/boss/brain.json brain.json`，報時員就改用 boss 的腦（經閘門）。
+- 上限：被叫者 loop 的 `times`、那張工具 inst 的 `timeout_ms`（父 agent 的 tool 格 `timeout_ms` 要更大）；遞迴深度不另外擋（Busy、TooDeep、MaxTicks 都拿掉了）。
+- 定義資料夾的路徑：demo 用 `aos-demo` 給的 `AOS_DEMO` 拼絕對路徑；不在 demo 裡就直接寫絕對路徑。

@@ -1,1 +1,1 @@
-{"argv": ["python3", "../../lib/aos_agent_lib.py", "tool"], "timeout_ms": 150000}
+{"argv": ["aos", "agent", "tool"], "timeout_ms": 150000}

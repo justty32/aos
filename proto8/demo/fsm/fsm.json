@@ -1,0 +1,12 @@
+{
+  "start": "idle",
+  "state": "fsm-state.json",
+  "end": ["done", "halted"],
+  "states": {
+    "idle": "cells/idle.json",
+    "thinking": "cells/thinking.json",
+    "tool": {"target": "cells/tool.json", "next": "thinking"},
+    "done": "cells/done.json",
+    "halted": "cells/done.json"
+  }
+}

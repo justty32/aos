@@ -66,7 +66,7 @@ stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback,
 
 ## agent 判官（換一行 TARGET）
 
-`demo/kernel2/judge-agent.json`＝`python3 judge/ask_judge.py judge/agent.json`：把判官的 stdin（state 窗子集）當 user 訊息交給 bob 式 agent（`aos_agent_call`），拿它最後一句裡的 JSON 物件印出來；錯＝退出 1（kernel 退回規則）。`judge/system.md` 開頭 `/no_think`（不靠模型思考，見 [agent.md](agent.md#邊緣狀況使用者-10-15-定)）、說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
+`demo/kernel2/judge-agent.json`＝`aos-demo kernel2/judge/ask_judge.py`：開一個暫存 frame（`env.json` 指回定義資料夾 `judge/`、`args.json`＝`{"question": 判官的 stdin（state 窗子集）}`），在裡面跑 `aos loop judge/loop.json`（agent 當函數，[agent.md](agent.md#agent-當函數當工具)），讀 `ret.json`，拿 reply 裡的 JSON 物件印出來；ret.json 是錯、沒有、不是 JSON＝退出 1（kernel 退回規則）。`judge/system.md` 開頭 `/no_think`（不靠模型思考，見 [agent.md](agent.md#邊緣狀況使用者-10-15-定)）、說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
 
 ## 測試
 
