@@ -12,6 +12,7 @@
 
 ## 最新進度
 
+- **10-15 C-48 收斂（都照建議）**（[thinking json-families § 動工](../proto8/thinking/2026-10-15-json-families.md#動工10-15使用者都照建議)）：閘門的信＝inst 族、回信＝N-30（共用 `aos_mailbox.py`）；fsm 格 stdin＝設定＋`fsm_state`；N-40 外層 cfg 當預設；N-22／35／37～40 去指示詞。open：動工自定點等使用者看。
 - **10-15 通用 kernel 基礎實作（N-42 第二種）**（[lib kernel2.md](../proto8/lib/kernel2.md)、demo `run.py kernel2`）：判官＝一張 inst，stdin＝state 窗、stdout run／defer／reject；規則判官、壞判官退回規則、human 格都有測試。open：[動工自定點](../proto8/thinking/2026-10-15-general-kernel.md#動工自定點)等使用者看；agent 判官（LM Studio）未實跑。
 - **10-15 LLM kernel 基礎實作**（[lib kernel.md](../proto8/lib/kernel.md)、demo `run.py kernel`）：閘門＋daemon 底下拍的 kernel，排序／過期／aging／額度／殘信都有測試。open：[動工自定點](../proto8/thinking/2026-10-15-llm-kernel.md#動工自定點)等使用者看；真腦（LM Studio）包閘門實跑未做。
 - **10-15 kernel 定義兩層（C-47）、先做兩種 kernel 基於 daemon（N-42）**（[thinking](../proto8/thinking/2026-10-15-kernel-intercept.md)）：具體機制仍開；LLM kernel 六題 10-15 隨意定案（第一版只 priority／deadline）。
