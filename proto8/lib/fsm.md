@@ -29,7 +29,7 @@ python3 proto8/lib/aos_fsm.py [--key 值 ...] [FSM.json | -]
 - 設定從哪來照 `aos_cli`：FSM.json（可接 `#/位置`）、`-`＝stdin；`--start`、`--state`、`--ctl`、`--lock`、`--max-steps` 鏡射；`states`、`end` 不鏡射；`--` 不收。`run(x)` 收路徑或一份設定 dict。相對路徑一律從呼叫者的 cwd 算（格的 TARGET 也是）。
 - **一拍**：拿鎖（有 lock）→ 讀 ctl（有 ctl；paused 或 stop＝這拍不起格，只把 seq 回音寫進 state，退出 0）→ 讀 state 窗（檔還沒有＝從 `start` 起）→ 查格 → **先把 `step`＋`running: true` 寫進 state** → 跑格 → 讀格 stdout 最後一份完整 JSON → 換狀態、寫 state → stdout 吐一行 → 放鎖。
 - **跑一格**（`aos_methods.run_cell`）：在本行程用 `aos_inst.run()` 跑那張 inst，stdin 蓋成一份暫存檔 `{"state": 現在狀態, "step": 第幾格, "prev": …}`、stdout 蓋成暫存檔（跑完刪掉）；stderr、exit、cwd、`timeout_ms` 照那張 inst 自己寫的。inst 寫了 `stdin_inherit`／`stdout_inherit`＝Conflict（格出錯）。
-- **prev**：平常＝上一格回的 `data`（state 窗的 `data`）；上一拍被殺一半（state 的 `running` 還是 true）＝`{"interrupted": true, "data": …}`，重進同狀態、不撿舊結果；進 error 格＝`{"state": 原狀態, "error": "代號: 白話", "data": 原 data}`。
+- **prev**：平常＝上一格回的 `data`（state 窗的 `data`）；上一拍被殺一半（state 的 `running` 還是 true）＝`{"interrupted": true, "data": …}`，重進同狀態、不撿舊結果；進 error 格＝`{"state": 原狀態, "error": "代號: 白話", "data": 原 data}`。（已寫進 N-37、N-38）
 - **下一狀態**：格 stdout 最後一份的 `next` ＞ 表上靜態 `next` ＞ 留原狀態。`data`＝那份的 `data`（沒寫＝null）。`next` 不在表裡：在 `end` 裡＝交給外層（phase 歸位 `start`，那份結果原樣吐成這拍 stdout 最後一份），都不在＝錯。
 - **出錯**（格結束碼非 0、aos_inst 自己出錯、查不到格、`next` 不對、走到 `max_steps`）：有 `error` 格＝phase 改 `error`、`step` 歸零，下一拍才跑它；沒有、或 error 格自己出錯＝留原狀態。兩種都記 `last_error`（「代號: 白話」）。代號：`CellFailed`、`UnknownState`、`UnknownNext`、`BadNext`、`MaxSteps`，aos_inst 的照原代號。
 - **step**：自上次在 `start` 起跑了幾格；新狀態是 `start` 或進 error 格就歸零。`step` ≥ `max_steps` 時再跑＝`MaxSteps`（不起格）。
