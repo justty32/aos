@@ -12,7 +12,6 @@
     budget       一天的 token 額度（全局；沒寫或 null＝不限）。用量＝回信 stdout 最後一份的 usage.total_tokens，沒有＝0
     aging_ticks  每等幾拍升一級（沒寫＝10）
     near_ms      deadline 剩不到這麼久＝插隊（沒寫＝30000）
-    log          選填：每處理一封往這個檔追加一行 JSON（給人看順序）
 
 一拍：
 1. cur/ 裡還有信＝上一拍跑到一半被收掉（kernel 重起）→ 回錯 KernelRestarted、刪信，不重跑（N-20）。
@@ -21,7 +20,7 @@
    數字取正負號；有效級數＝級數＋等了幾拍 // aging_ticks）→ deadline 近的先 → `_metainfo.cost` 小的先（沒寫＝0）→ 先來後到。
 4. 認領（new/ → cur/；被閘門撤走的跳過）、信本身就是 inst：填 stdout／stderr 旁檔、aos_inst.run() 跑、
    回信＝結果（N-30）、刪信（aos_mailbox.run_letter）。
-stdout 一份 {"runs", "served", "dropped", "waiting", "budget"}。設定不對＝stderr 錯誤、退出 1。
+stdout 一份 {"runs", "served", "dropped", "waiting", "budget"}（served 的順序＝服務順序；沒有 log 檔）。設定不對＝stderr 錯誤、退出 1。
 
 相依：aos_inst ← aos_mailbox ← aos_gate ← aos_kernel_llm（也借 aos_ctl_state 的 write_json）。
 """
@@ -37,31 +36,25 @@ import aos_gate
 from aos_cli import CliError
 from aos_cli import is_int as _int
 from aos_ctl_state import write_json
-from aos_mailbox import claim, log, mailbox, read_letter, reply, run_letter
+from aos_mailbox import claim, mailbox, read_letter, reply, run_letter
 
-__all__ = ["FLAGS", "KernelLlmError", "check", "level", "main", "order", "tick"]
+__all__ = ["FLAGS", "check", "level", "main", "order", "tick"]
 
-FLAGS = ("mailbox", "state", "slots", "budget", "aging_ticks", "near_ms", "log")
-
-
-class KernelLlmError(CliError):
-    pass
+FLAGS = ("mailbox", "state", "slots", "budget", "aging_ticks", "near_ms")
 
 
 def check(doc):
     """驗設定、補預設，回一份新的 dict。"""
     for k in ("mailbox", "state"):
         if not isinstance(doc.get(k), str):
-            raise KernelLlmError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
+            raise CliError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
     c = dict(doc, slots=doc.get("slots", 1), budget=doc.get("budget"),
              aging_ticks=doc.get("aging_ticks", 10), near_ms=doc.get("near_ms", 30000))
     for k, lo in (("slots", 1), ("aging_ticks", 1), ("near_ms", 0)):
         if not _int(c[k], lo):
-            raise KernelLlmError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
+            raise CliError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
     if not (c["budget"] is None or _int(c["budget"], 0)):
-        raise KernelLlmError("FieldType", "budget 要是非負整數或 null，不是 %r" % (c["budget"],))
-    if not (c.get("log") is None or isinstance(c["log"], str)):
-        raise KernelLlmError("FieldType", "log 要是路徑字串，不是 %r" % (c["log"],))
+        raise CliError("FieldType", "budget 要是非負整數或 null，不是 %r" % (c["budget"],))
     return c
 
 
@@ -130,8 +123,6 @@ def tick(cfg):
         os.remove(path)
         seen.pop(name, None)
         dropped.append({"letter": name, "error": code})
-        log(cfg.get("log"), {"runs": n, "letter": name, "priority": doc.get("priority"), "error": code,
-                   "sent": doc.get("sent")})
 
     for name in sorted(os.listdir(box["cur"])):              # 1. 上一拍跑到一半的
         path = os.path.join(box["cur"], name)
@@ -187,7 +178,6 @@ def tick(cfg):
         if "error" in rep:
             rec["error"] = rep["error"]["code"]
         served.append(rec)
-        log(cfg.get("log"), dict(rec, runs=n, sent=doc.get("sent")))
 
     live = set(os.listdir(box["new"]))
     seen = {k: v for k, v in seen.items() if k in live}
@@ -203,7 +193,7 @@ def main(argv=None):
     try:
         doc, _, _, rest = aos_cli.config(args, FLAGS)
         if rest is not None:
-            raise KernelLlmError("Usage", "kernel 不收 `--`")
+            raise CliError("Usage", "kernel 不收 `--`")
         aos_cli.emit(tick(check(doc)))
         return 0
     except CliError as e:

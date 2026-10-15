@@ -1,1 +1,1 @@
-{"target": {"argv": ["python3", "job.py", "llm", "0.8"], "timeout_ms": 10000, "_metainfo": {"resource": "llm"}}}
+{"target": {"argv": ["python3", "job.py", "llm", "0.8"], "timeout_ms": 10000, "_metainfo": {"resource": "llm"}}, "mailbox": {"$env": "AOS_KERNEL"}}

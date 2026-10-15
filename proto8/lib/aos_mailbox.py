@@ -12,7 +12,6 @@
 - `claim(box, name)`：new/ → cur/；被撤走了回 None。
 - `reply(letter, rep)`：寫回信（照 N-05）；寫不進去＝回「ReplyFailed: 白話」（kernel 記進 state 窗的 last_warning，不寫 stderr），寫好＝None。
 - `run_letter(letter)`：跑一封，回 (回信 dict, 用掉的 token)；token＝stdout 旁檔最後一份的 usage.total_tokens，沒有＝0。
-- `log(path, rec)`：往 log 檔追加一行 JSON（path 是 None＝不記）。
 
 相依：aos_cli ← aos_inst ← aos_mailbox ← aos_gate ← aos_kernel_llm ← aos_kernel_judge ← aos_kernel_general。
 """
@@ -23,7 +22,7 @@ import aos_cli
 import aos_inst
 from aos_ctl_state import write_json
 
-__all__ = ["claim", "log", "mailbox", "read_letter", "reply", "run_letter", "side"]
+__all__ = ["claim", "mailbox", "read_letter", "reply", "run_letter", "side"]
 
 
 def mailbox(path):
@@ -89,11 +88,3 @@ def run_letter(letter):
     used = usage.get("total_tokens") if isinstance(usage, dict) else None
     return result, (used if isinstance(used, int) and not isinstance(used, bool) and used >= 0 else 0)
 
-
-def log(path, rec):
-    if path:
-        try:
-            with open(path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-        except OSError:
-            pass

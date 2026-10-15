@@ -18,7 +18,7 @@
 
 **真的腦**：`aos_brain_openai.py`（OpenAI 相容；唯一一顆，ollama 原生那顆 10-15 深夜刪；自己不設逾時）；在 assistant 訊息頂層帶 `usage` 給 kernel 記額度。
 
-**kernel**：信箱共用 `aos_mailbox.py`（信＝inst、回信＝N-30 結果、stdout／stderr 落旁檔）＋閘門 `aos_gate.py`（兩種 kernel 共用）；LLM kernel 的身體 `aos_kernel_llm.py`（N-42 第一種，細節 `kernel_llm.md`）；通用 kernel 的身體 `aos_kernel_general.py`、判官那一半 `aos_kernel_judge.py`、規則判官 `aos_kernel_judge_rules.py`（N-42 第二種，細節 `kernel_general.md`）。
+**kernel**：信箱共用 `aos_mailbox.py`（信＝inst、回信＝N-30 結果、stdout／stderr 落旁檔；沒有 log）＋閘門 `aos_gate.py`（兩種 kernel 共用；`mailbox` 必填、不認環境變數、沒有 `wait_ms`／`QueueTimeout`，10-15 深夜 KISS 批次 1）；LLM kernel 的身體 `aos_kernel_llm.py`（N-42 第一種，細節 `kernel_llm.md`）；通用 kernel 的身體 `aos_kernel_general.py`（`slots` 只收物件、資源沒寫＝`ResourceUnknown`、一封也問判官）、判官那一半 `aos_kernel_judge.py`（答案 `{run, reject}`，不碰判官的環境與逾時）、規則判官 `aos_kernel_judge_rules.py`（N-42 第二種，細節 `kernel_general.md`）。
 
 **薄入口**：`proto8/bin/aos`（`aos <名>`＝`python3 lib/aos_<名>.py`、`aos kernel llm|general`、`aos agent …`、`aos brain …`，放進 PATH 讓 argv 寫指令名；`tree` 隨 aos_tree 一起刪）。
 
@@ -34,9 +34,9 @@
 
 **fsm／agent**（`demo/fsm/`）：本身是 agent 定義資料夾——`fsm.json`、`loop.json`、`cells/`（idle.py、thinking＝內層 `think/fsm.json`、tool、done）、`brain.json`＝假腦 `brains/fake.py`、`system.md`、`tools/clerk.json`（agent 當工具：`sh -c` 三步叫報時員）；換用的腦 `brains/openai.json`／`litellm.json`／`lmstudio.json`；報時員定義資料夾 `clerk/`（含 `tools/clock.*`）；`run.py` 建 frame、在裡面跑 loop.json。
 
-**LLM kernel**（`demo/kernels/llm/`）：daemon／loop／kernel 設定由 `run.py` 寫成完整檔、閘門 `gates/brain.json`／`gates/fake.json`、假腦 `brain.py`、腦包閘門的 agent 定義資料夾 `boss/`（工具 `tools/clerk.json` 借 `demo/fsm/clerk/`；clerk 用自己的腦，不從上層伸手進它的 frame）。
+**LLM kernel**（`demo/kernels/llm/`）：daemon／loop／kernel 設定由 `run.py` 寫成完整檔、閘門 `gates/brain.json`／`gates/fake.json`（mailbox 寫 `{"$env": "AOS_KERNEL"}`，demo 省字）、假腦 `brain.py`、腦包閘門的 agent 定義資料夾 `boss/`（工具 `tools/clerk.json` 借 `demo/fsm/clerk/`；clerk 用自己的腦，不從上層伸手進它的 frame）。
 
-**通用 kernel**（`demo/kernels/general/`）：設定由 `run.py` 寫成完整檔、活 `job.py`（llm／cpu／human）、閘門 `gates/*.json`、判官 `judges/rules.json`（`_schema`→`judges/schema.json`）／`judges/broken.json`／`judges/agent.json`＋agent 判官定義資料夾 `judges/agent/`（入口 `ask_judge.py [定義資料夾]`：暫存 frame（frame.json 指引數給的資料夾，預設 judge/）跑 `judge/loop.json`、讀 ret.json）。
+**通用 kernel**（`demo/kernels/general/`）：設定由 `run.py` 寫成完整檔、活 `job.py`（llm／cpu／human）、閘門 `gates/*.json`、判官 `judges/rules.json`（`_schema`→`judges/schema.json`）／`judges/broken.json`／`judges/agent.json`＋agent 判官定義資料夾 `judges/agent/`（入口 `ask_judge.py [定義資料夾]`：暫存 frame（frame.json 指引數給的資料夾，預設 judge/）跑 `judge/loop.json`、讀 ret.json 原樣印；失敗一律 `JudgeFailed`）。
 
 **畫家 demo**（[`demo/paint/`](../../../../proto8/demo/paint/README.md)）：兩個 agent 定義資料夾 `painter/`（工具 `tools/brush.json`＝`sh -c` 三步叫畫筆）、`brush/`（工具 `tools/palette.*` 調色盤），假腦 `brains/fake.py`（看帶哪個工具當畫家或畫筆）＋`brains/fake_alt.json`（換腦用），`run.py`＝三段展示＋`bind_brain()`（frame 放 brain.json，只換畫家這一層）；測試 `tests/test_paint_demo.py`。
 
