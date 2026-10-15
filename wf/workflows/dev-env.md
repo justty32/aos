@@ -49,14 +49,11 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
 
 兩台輪流開發：家裡 Manjaro Linux（repo 在 `~/repo/simple_tools/aos`）、公司 WSL2 Ubuntu（repo 在 `~/projs/aos`，見下方「公司那台」；2026-10-01 使用者確認仍在用）。沒有 CI 差異，全部驗證都由 agent 跑。[SESSION-LOG](../SESSION-LOG.md) 裡「repo 在 `/mnt/c`」那條已過期。
 
-**10-15 暫停**：ops-notes 回報（使用者定）——146 上 model_entry live 與 smartbox receiver 被觸發的時段 CPU 不能被佔；qwen 試跑時雖 100% GPU，整機 CPU idle 曾掉到 1.9%（ollama 容器約 19.5 核）。在 ops-notes 回報『CPU 保護時段』之前，**不准對 146 的 ollama 發任何請求**。之後只在允許時段送，且監控要先開、等第一筆取樣出來再開跑（上次漏取載入高峰）。
+**公司那台**（2026-09-07 他開場說的，10-01 從那台的舊記憶搬來）：公司 WSL（Ubuntu），repo 在 `~/projs/aos`，codex 在 `~/.local/bin/codex`。兩台都可能是當下這台，所以**開場先確認在哪台、LLM 走哪個端點**。
 
-**公司那台**（2026-09-07 他開場說的，10-01 從那台的舊記憶搬來）：公司 WSL（Ubuntu），repo 在 `~/projs/aos`，codex 在 `~/.local/bin/codex`。區網 **`192.168.1.146`** 有 ollama（當時有 qwen2.5:14b、qwen3:32b、deepseek-r1:8b、gemma3:1b）；142 那台沒開 ollama 的口（他一開始說錯）。兩台都可能是當下這台，所以**開場先確認在哪台、LLM 走哪個端點**；**2026-10-15 使用者允許輕量試用 146 ollama**（小模型 gemma3:1b／deepseek-r1:8b；146 上跑著很重要的東西），**試前先確認負載**（10-14「公司這台不要用 146」由此取代）。規矩五條（出處 ops-notes 10-15，犯任一條＝立刻停手回報）：
-  1. 只從這台走 ollama HTTP API 叫模型；不 ssh 146、不動任何 docker（restart／recreate／stop）、不 `ollama pull/create/rm`。
-  2. 不碰 146 的 systemd；試前試後各 GET `/api/ps`，有模型只在 CPU（`size_vram == 0` 而 `size > 0`）就停手回報、不自己修。
-  3. `options.num_ctx` 一律 4096～8192（用 4096）——所以走原生 `/api/chat`（`proto8/lib/aos_brain_ollama.py`），不走設不了 num_ctx 的 `/v1`。
-  4. `keep_alive` 設短（例 `"30s"`），最後用 `/api/ps` 確認沒模型留著；有就送一次 `keep_alive: 0` 卸掉。
-  5. 小模型（gemma3:1b／deepseek-r1:8b）不支援工具（10-15 實測，[proto8 thinking 10-15 §7](../../proto8/thinking/2026-10-15-topics.md#7-試-146-ollama小模型)）；**10-15 使用者同意試 qwen2.5:14b**（只限此模型、tag `qwen2.5:14b-instruct-q4_K_M`，同樣守其餘規矩；結果見 [§8](../../proto8/thinking/2026-10-15-topics.md#8-試-146-ollamaqwen2514b)），其他大模型（qwen3:32b 等）仍不准；請求數壓少（整件事約 20 次內）。
+**10-15 使用者：不再使用 146，一律用本地（LM Studio）**（原話「那就都用本地的就好，別碰146」）。歷史：區網 `192.168.1.146` 有 ollama，10-15 照 ops-notes 五條規矩試過 gemma3:1b／deepseek-r1:8b／qwen2.5:14b（[thinking 10-15 §7](../../proto8/thinking/2026-10-15-topics.md#7-試-146-ollama小模型)、[§8](../../proto8/thinking/2026-10-15-topics.md#8-試-146-ollamaqwen2514b)），qwen 吃掉整機 CPU 後 ops-notes 要求暫停（出處 ops-notes 10-15）。
+
+**10-15 使用者允許在公司這台用 LM Studio 試 agent（Qwen3-1.7B），試完要 unload、關 server**。連法：`lms.exe`（`/mnt/c/Users/WG-Guanyu/.lmstudio/bin/`）`server start -p 1234`（不用 `--bind`）→ `load qwen/qwen3-1.7b -c 4096 --ttl 600 -y`；WSL 是 mirrored 網路，直接 `localhost:1234/v1` 就通；收尾 `unload --all`、`server stop`（[thinking 10-15 §9](../../proto8/thinking/2026-10-15-topics.md#9-試-lm-studioqwen3-17b)）。
 
 公司這台 LiteLLM（localhost:4000）10-14 查過沒開。
 
