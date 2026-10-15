@@ -6,7 +6,8 @@
 
 三段：(1) 級數／deadline：先一封佔住唯一的格，再同時丟 low、normal、high、deadline 快到、deadline 已過；
 (2) aging：一封 low 跟一串不斷進來的 normal（快腦）；(3) 報時員巢狀（boss 問 clerk、clerk 查 clock），
-兩個 agent 的腦都包了閘門、一格就夠。kernel／loop／daemon 的設定在暫存資料夾裡寫成完整檔（不靠指示詞）；
+兩個 agent 的腦都包了閘門、一格就夠：boss＝定義資料夾 boss/（腦 brain.json＝經閘門叫假腦）；clerk 借 demo/fsm/clerk 的定義，
+boss 的工具 tools/clerk.json 在 clerk 的 frame 放一份 boss 的 brain.json（綁定，蓋過 clerk 預設的腦）。kernel／loop／daemon 的設定在暫存資料夾裡寫成完整檔（不靠指示詞）；
 閘門（gate.json、gate-fake.json）沒寫 mailbox，靠環境變數 AOS_KERNEL。產物放在 mktemp 的暫存資料夾，跑完刪掉。
 """
 import json
@@ -21,6 +22,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 LIB = os.path.join(HERE, "..", "..", "lib")
 GATE, DAEMON = os.path.join(LIB, "aos_gate.py"), os.path.join(LIB, "aos_daemon.py")
+ROOT = os.path.dirname(os.path.dirname(HERE))            # proto8/
 T0 = time.monotonic()
 
 
@@ -89,7 +91,8 @@ def finish(procs):
 def main():
     tmp = tempfile.mkdtemp(prefix="aos-kernel-demo-")
     log, kstate = os.path.join(tmp, "kernel.log.jsonl"), os.path.join(tmp, "kernel.state.json")
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", AOS_KERNEL=os.path.join(tmp, "mb"))   # 閘門的信箱
+    path = os.pathsep.join([os.path.join(ROOT, "bin"), os.path.join(ROOT, "demo", "bin"), os.environ.get("PATH", "")])
+    env = dict(os.environ, PATH=path, PYTHONDONTWRITEBYTECODE="1", AOS_KERNEL=os.path.join(tmp, "mb"))   # 閘門的信箱
     say("暫存資料夾 %s；daemon 底下的 loop 每 100 ms 拍一次 kernel（slots 1）" % tmp)
     daemon = subprocess.Popen([sys.executable, DAEMON, configs(tmp, log, kstate)], cwd=tmp, env=env,
                               stdout=subprocess.DEVNULL)
@@ -132,12 +135,17 @@ def main():
         n += len(order)
 
         say("== 3. 報時員巢狀：boss 問「現在幾點？」→ 叫工具 clerk（另一個 agent）→ clerk 叫 clock；兩個腦都經閘門")
-        sys.path.insert(0, LIB)
-        os.environ.update(AOS_KERNEL=env["AOS_KERNEL"], PYTHONDONTWRITEBYTECODE="1")
-        import aos_agent_call
-        out = aos_agent_call.Agent(os.path.join(HERE, "boss", "agent.json")).call(
-            os.path.join(tmp, "frame"), history=[{"role": "user", "content": "現在幾點？"}], cwd=tmp)
-        say("   boss 回：%s（敲了 %d 拍）" % (out["reply"], out["ticks"]))
+        frame = os.path.join(tmp, "frame")                 # 呼叫方選的 frame：env.json 指回定義、args.json＝問題
+        os.makedirs(frame)
+        write(os.path.join(frame, "env.json"), {"parent": os.path.join(HERE, "boss")})
+        write(os.path.join(frame, "args.json"), {"question": "現在幾點？"})
+        subprocess.run(["aos", "loop", os.path.join(HERE, "boss", "loop.json")], cwd=frame, env=env,
+                       stdout=subprocess.DEVNULL, timeout=120)
+        with open(os.path.join(frame, "ret.json"), encoding="utf-8") as f:
+            ret = json.load(f)
+        with open(os.path.join(frame, "loop-state.json"), encoding="utf-8") as f:
+            ticks = json.load(f)["runs"]
+        say("   boss 回：%s（boss 的 loop 敲了 %d 拍；clerk 的 frame 在 boss 的 work/1/）" % (ret.get("reply") or ret, ticks))
         for r in log_since(log, n, {}):
             say("   拍 %-3d 一次腦 %4d ms（一格一次一封；boss 等 clerk 時不佔格）" % (r["runs"], r["ms"]))
         with open(kstate, encoding="utf-8") as f:

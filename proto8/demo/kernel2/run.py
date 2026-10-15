@@ -22,6 +22,8 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 LIB = os.path.abspath(os.path.join(HERE, "..", "..", "lib"))
 GATE, DAEMON, KERNEL = (os.path.join(LIB, x) for x in ("aos_gate.py", "aos_daemon.py", "aos_kernel.py"))
+ROOT = os.path.dirname(os.path.dirname(HERE))            # proto8/
+PATH = os.pathsep.join([os.path.join(ROOT, "bin"), os.path.join(ROOT, "demo", "bin"), os.environ.get("PATH", "")])
 T0 = time.monotonic()
 
 
@@ -44,7 +46,7 @@ def start_daemon(tmp, judge, max_fails, human):
                                                 "times": None, "interval_ms": 100})
     d = write(os.path.join(tmp, "daemon.json"), {"children": [lp], "interval_ms": 100, "ctl": os.path.join(tmp, "d.ctl.json"),
                                                  "state": os.path.join(tmp, "d.state.json")})
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", DEMO_HUMAN=human)   # 被包住的活在 kernel 的環境跑
+    env = dict(os.environ, PATH=PATH, PYTHONDONTWRITEBYTECODE="1", DEMO_HUMAN=human)   # 被包住的活在 kernel 的環境跑
     return subprocess.Popen([sys.executable, DAEMON, d], cwd=tmp, env=env, stdout=subprocess.DEVNULL), mb, log, st
 
 
@@ -71,7 +73,7 @@ def fake_human(d, stop, delay=1.5):
 
 
 def call(mb, gate, who, priority=None):
-    env = dict(os.environ, AOS_KERNEL=mb, PYTHONDONTWRITEBYTECODE="1")
+    env = dict(os.environ, PATH=PATH, AOS_KERNEL=mb, PYTHONDONTWRITEBYTECODE="1")
     if priority:
         env["AOS_PRIORITY"] = priority
     p = subprocess.Popen([sys.executable, GATE, gate], cwd=HERE, env=env, stdin=subprocess.PIPE,

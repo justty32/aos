@@ -1,4 +1,4 @@
-← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**agent**｜概念：本檔｜規範：沒有專屬的條；agent 是用 fsm 組出來的（一個定義資料夾，C-50），fsm 的概念與規範在基礎設施——[CONCEPTS § fsm](03-基礎設施.md#fsm)、[NORMS 組合子 § fsm](../NORMS/07-基礎設施-組合子.md#fsm)｜實作：思考介面與工具＝inst（實作慣例，還不是規範）在 [lib agent.md](../lib/agent.md)（現成格庫 `aos_agent_lib.py`；10-15 收工後的新布局還沒動工，程式待辦見 [SESSION-LOG](../../wf/SESSION-LOG.md#最新進度)）；fsm 基礎實作在 [lib fsm.md](../lib/fsm.md)，同步版 demo 在 [demo/fsm](../demo/fsm/README.md)
+← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**agent**｜概念：本檔｜規範：沒有專屬的條；agent 是用 fsm 組出來的（一個定義資料夾，C-50），fsm 的概念與規範在基礎設施——[CONCEPTS § fsm](03-基礎設施.md#fsm)、[NORMS 組合子 § fsm](../NORMS/07-基礎設施-組合子.md#fsm)｜實作：思考介面與工具＝inst（實作慣例，還不是規範）在 [lib agent.md](../lib/agent.md)（現成格庫 `aos_agent_lib.py`；10-15 收工後的新布局已照 C-46／C-50 做好：定義資料夾＋frame、agent 當工具＝`sh -c` 三步，`aos_agent_call.py` 退場）；fsm 基礎實作在 [lib fsm.md](../lib/fsm.md)，同步版 demo 在 [demo/fsm](../demo/fsm/README.md)
 
 # agent
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""agent 的現成格庫：think（叫腦）、tool（跑工具）、route、intake、done。純標準庫。介面與邊緣狀況見同資料夾 agent.md
+"""agent 的現成格庫：think（叫腦）、tool（跑工具）、route、intake、done，外加給 loop.json 用的 fsm。純標準庫。介面與邊緣狀況見同資料夾 agent.md
 （實作慣例，還不是規範）。不是 agent 本體（agent＝fsm＋表）；只是表裡可以直接拿來用的幾格。（10-15 由 aos_agent.py 改名）
 
     python3 aos_agent_lib.py think
@@ -7,7 +7,10 @@
     python3 aos_agent_lib.py route [--done 名]   （看最後一則 assistant：有 tool_calls＝next tool，否則 next idle（或 --done 給的名））
     python3 aos_agent_lib.py intake        （args.json 接進 history（沒有就生、有就接在後面），接完改名 args.taken.json）
     python3 aos_agent_lib.py done          （寫 ret.json＝最後一句或連錯的錯誤，再把 ctl.json 寫成 stop）
-    python3 aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json   （agent 當工具，見 aos_agent_call；第二批退場）
+    python3 aos_agent_lib.py fsm [NAME]    （照 lookup() 找 NAME（預設 fsm.json），跑一拍 aos_fsm；定義資料夾的 loop.json 用它，
+                                            不必寫自己的路徑）
+
+PATH 上有 proto8/bin 時寫 `aos agent think` 等（C-50：葉子用指令名）。
 
 **設定從哪來**（10-15 收工後：fsm 不再餵格 stdin，N-37）：stdin 那份（那張格 inst 自己的 `stdin` 指的檔；沒有＝空）的 key
 優先，沒寫的照 frame（＝cwd）找——`lookup()`：先找 cwd，找不到照 cwd 裡 `env.json` 的 `parent` 往上一層找（C-46）：
@@ -15,11 +18,12 @@ brain＝`brain.json`、tools＝`tools/*.json`（各層逐項合併、近的蓋�
 history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
 
     brain     腦的 aos-inst TARGET（或內嵌一張 inst）。腦＝一支 inst：stdin {"messages", "tools"} → stdout 最後一份＝OpenAI assistant 訊息
-    tools     {工具名: aos-inst TARGET 或內嵌 inst}（選填）。工具跑的時候環境多一個 AOS_WORK＝這裡的 work。工具的說明寫在那張 inst 的 `_tool`：{"description", "parameters"}
+    tools     {工具名: aos-inst TARGET 或內嵌 inst}（選填）。工具的說明寫在那張 inst 的 `_tool`：{"description", "parameters"}
     history   對話檔（OpenAI messages 陣列）；只有方法程式寫它，寫法照 N-05
     system    系統提示檔的路徑（選填；文字／markdown）。think 每次叫腦都把內容當第一則 system 訊息插在 messages 前，
               不寫進 history（改檔下一拍就生效）；沒寫＝不帶；寫了但檔不存在或讀不了＝think 格出錯（N-29）
-    work      放 N-call.json（工具的引數）、N-ret.json（工具的 stdout）的資料夾
+    work      工具每次在這裡開一個新號碼資料夾 work/<n>/ 跑（args.json＝引數、stdout.json＝工具的 stdout）；
+              think-fails.json、.tool-running.json 也放這裡
 
     halt_after  選填，預設 3：think 連錯幾次就不再報錯、改回 {"next": halt_state}（N-38：連錯停住是格自己的事）
     halt_state  選填，預設 "halted"
@@ -29,18 +33,19 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
 - think：讀 history、組 {"messages", "tools"}、蓋 stdin 跑腦、把回來的 assistant 訊息（拿掉頂層 `usage`）接進 history，
   stdout 吐 {"data": {"content", "tool_calls": [工具名...]}}（沒有 next：下一格寫在表上）。
   history 最後一則已經是 assistant（上一拍接好了才被殺）＝不再叫腦。
-- tool：找 history 最後一則 assistant 還沒回的 tool_calls，只跑第一個：引數寫成 work/N-call.json 當 stdin、
-  跑那張 inst，回 {"role": "tool", "tool_call_id", "content": JSON 字串＝aos_inst 的結果（N-30：id、code、signal、timed_out…）
+- tool：找 history 最後一則 assistant 還沒回的 tool_calls，只跑第一個：mkdir 搶一個新號碼資料夾 work/<n>/（C-46：工具呼叫
+  的 frame 預設在這），引數寫成那裡的 args.json 當 stdin、stdout 接到那裡的 stdout.json，在那裡跑那張 inst（inst 自己寫了 cwd
+  就照它的），回 {"role": "tool", "tool_call_id", "content": JSON 字串＝aos_inst 的結果（N-30：id、code、signal、timed_out…）
   ＋`result`（工具 stdout 最後一份 JSON）（截 8000 字）}；工具起不來、引數不是 JSON、工具名不認得＝content 是 N-29 形狀
   {"error": {"code", "msg"}}（代號 InstError 的原代號、BadArguments、UnknownTool）。
   其餘的回 {"error": {"code": "Skipped", …}}＋stderr 警告。上一拍被殺一半（work/.tool-running.json 還在、
-  記的是同一個 tool_call id＝跑過一半；舊的 stdin 帶 `fsm_state.running` 為 true 也算）＝不重跑，全回 {"error": {"code": "Interrupted", …}}。
+  記的是同一個 tool_call id＝跑過一半）＝不重跑，全回 {"error": {"code": "Interrupted", …}}。
 - 出錯（設定不對、腦結束碼非 0、腦回的不是 assistant 訊息）：stderr 吐 {"error": {"code", "msg"}}、退出 1（格出錯）。
   腦出錯時 msg 帶腦自己 stderr 的錯誤（例 `HttpError: … 回 400：…does not support tools`），fsm 那行的 error 看得到。
   think 連錯：次數記在 work/think-fails.json（成功一次就刪），到 halt_after 次＝不報錯、改吐
   {"next": halt_state, "data": {"error"}}，交給表上那個狀態（例 done 格寫錯誤的 ret.json）。
 
-相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json）。
+相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json；fsm 子命令才載 aos_fsm）。
 """
 import json
 import os
@@ -52,8 +57,8 @@ import aos_methods
 from aos_cli import CliError
 from aos_ctl_state import write_json
 
-__all__ = ["AgentError", "LIMIT", "act", "chain", "done", "intake", "load_config", "lookup", "lookup_dir", "pending",
-           "read_history", "route", "think", "tool_specs"]
+__all__ = ["AgentError", "LIMIT", "act", "chain", "done", "intake", "load_config", "lookup", "lookup_dir", "new_dir",
+           "pending", "read_history", "route", "think", "tool_specs"]
 
 MAX_CHAIN = 16                                 # env.json 的 parent 最多往上找幾層
 
@@ -145,7 +150,7 @@ def read_history(path):
 
 
 def _load_inst(target):
-    if isinstance(target, dict):                 # 內嵌 inst（aos_agent_call 攤開定義時給的）
+    if isinstance(target, dict):                 # 內嵌 inst
         return target, target.get("id")
     try:
         return aos_cli.load_target(target, aos_inst._file)
@@ -177,7 +182,7 @@ def _with_system(cfg, msgs):
     return [{"role": "system", "content": text}] + msgs
 
 
-def think(cfg, interrupted=False):
+def think(cfg):
     """叫一次腦，回這格的 data。"""
     msgs = read_history(cfg["history"])
     if msgs and msgs[-1].get("role") == "assistant":         # 上一拍已經接好了（被殺在吐結果之前）
@@ -226,8 +231,21 @@ def _err(code, msg):
     return json.dumps({"error": {"code": code, "msg": msg}}, ensure_ascii=False)
 
 
-def _run_tool(cfg, call, n):
-    """跑一個工具，回 tool 訊息的 content（字串）。"""
+def new_dir(base):
+    """base/<n>/：挑第一個還沒有的號碼建起來（mkdir 原子，兩個同時叫不會撞），回絕對路徑。"""
+    os.makedirs(base, exist_ok=True)
+    n = 1
+    while True:
+        p = os.path.join(base, str(n))
+        try:
+            os.mkdir(p)
+            return p
+        except FileExistsError:
+            n += 1
+
+
+def _run_tool(cfg, call):
+    """跑一個工具，回 tool 訊息的 content（字串）。每次在 work/<n>/ 新資料夾跑，引數寫成那裡的 args.json。"""
     fn = call.get("function", {})
     target = cfg["tools"].get(fn.get("name"))
     if target is None:
@@ -236,36 +254,40 @@ def _run_tool(cfg, call, n):
         args = json.loads(fn.get("arguments") or "{}")
     except ValueError:
         return _err("BadArguments", "arguments 不是 JSON：%s" % fn.get("arguments"))
-    os.makedirs(cfg["work"], exist_ok=True)
-    call_file, ret_file = (os.path.join(cfg["work"], "%d-%s.json" % (n, k)) for k in ("call", "ret"))
+    try:
+        inst, ident = _load_inst(target)
+    except AgentError as e:
+        return _err(e.code, e.msg)
+    d = new_dir(cfg["work"])
+    call_file, out_file = os.path.join(d, "args.json"), os.path.join(d, "stdout.json")
     write_json(call_file, args)
-    inst, ident = _load_inst(target)
-    doc = dict(inst, stdin=call_file, stdout=ret_file, stdout_append=False, stdout_mkdir=False,
+    doc = dict(inst, stdin=call_file, stdout=out_file, stdout_append=False, stdout_mkdir=False,
                stdin_inherit=False, stdout_inherit=False)
     doc.setdefault("id", ident)
-    doc["envs"] = dict(inst.get("envs") or {}, AOS_WORK=cfg["work"])    # agent 當工具時，子 agent 的 frame 預設放這裡
+    doc.setdefault("cwd", d)                     # 工具呼叫的 frame＝work/<n>/（inst 自己寫了 cwd 就照它的）
     try:
         result = aos_inst.run(doc)
     except aos_inst.InstError as e:
         return _err(e.code, e.msg)
     try:
-        with open(ret_file, encoding="utf-8", errors="replace") as f:
+        with open(out_file, encoding="utf-8", errors="replace") as f:
             last = aos_methods.last_json(f.read())
     except OSError:
         last = None
     return json.dumps(dict(result, result=last), ensure_ascii=False)[:LIMIT]
 
 
-def act(cfg, interrupted=False):
-    """跑還沒回的第一個工具呼叫，其餘回「沒跑」；回這格的 data。interrupted＝上一拍被殺一半（不重跑）。"""
+def act(cfg):
+    """跑還沒回的第一個工具呼叫，其餘回「沒跑」；回這格的 data。上一拍被殺一半（.tool-running.json 還在）＝不重跑。"""
     msgs = read_history(cfg["history"])
     calls = pending(msgs)
     if not calls:
         return {"tool": None}
     mark = os.path.join(cfg["work"], ".tool-running.json")     # 跑工具前寫、跑完刪：還在且同一個 id＝上一拍被殺一半
+    interrupted = False
     try:
         with open(mark, encoding="utf-8") as f:
-            interrupted = interrupted or json.load(f).get("id") == calls[0].get("id")
+            interrupted = json.load(f).get("id") == calls[0].get("id")
     except (OSError, ValueError, AttributeError):
         pass
     if interrupted:
@@ -279,13 +301,13 @@ def act(cfg, interrupted=False):
                      % (len(calls), first["function"]["name"]))
     os.makedirs(cfg["work"], exist_ok=True)
     write_json(mark, {"id": first.get("id")})
-    content = _run_tool(cfg, first, len(msgs))
+    content = _run_tool(cfg, first)
     write_json(cfg["history"], msgs + [_answer(first, content)] + [_answer(c, _err(*SKIPPED)) for c in rest])
     _rm(mark)
     return {"tool": first["function"]["name"], "result": content}
 
 
-def route(cfg, interrupted=False, done="idle"):
+def route(cfg, done="idle"):
     """看 history 最後一則 assistant：有 tool_calls＝{"next": "tool"}，否則 {"next": done（預設 idle）, data.reply}。"""
     msgs = read_history(cfg["history"])
     last = msgs[-1] if msgs else {}
@@ -384,20 +406,27 @@ def done(cfg, ctl="ctl.json"):
     return {"data": ret}
 
 
+def run_fsm(name="fsm.json"):
+    """照 lookup() 找 name（frame → env.json parent 鏈），跑一拍 aos_fsm；回退出碼。找不到＝NoFsm、125（同 fsm 自己出錯）。"""
+    path = lookup(name)
+    if path is None:
+        aos_cli.error("NoFsm", "frame %s 與它的 parent 鏈裡都找不到 %s" % (os.getcwd(), name))
+        return 125
+    import aos_fsm                               # 只有這個子命令要 fsm；放這裡免得格庫平常多載一串
+    return aos_fsm.main([path])
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    if argv and argv[0] == "ask":
-        import aos_agent_call                    # 只有 ask 要 fsm；放這裡免得格庫平常多載一串
-        out, code = aos_agent_call.ask(argv[1:], sys.stdin.read())
-        aos_cli.emit(out)
-        return code
     cmd, opts = (argv[0] if argv else None), argv[1:]
+    if cmd == "fsm" and len(opts) <= 1:
+        return run_fsm(*opts)
     route_done = "idle"
     if cmd == "route" and len(opts) == 2 and opts[0] == "--done":
         route_done, opts = opts[1], []
     if cmd not in ("think", "tool", "route", "intake", "done") or opts:
         aos_cli.error("Usage", "aos_agent_lib.py think|tool|route [--done 名]|intake|done（設定＝stdin 那份＋frame 裡找）"
-                               "｜ask [--frame DIR] [--max-ticks N] AGENT.json")
+                               "｜fsm [NAME]")
         return 2
     cfg = None
     try:
@@ -406,11 +435,9 @@ def main(argv=None):
         if text.strip() and not args:
             raise AgentError("NoConfig", "stdin 不是 JSON")
         arg = args[0] if args else None
-        win = arg.get("fsm_state") if isinstance(arg, dict) else None
-        interrupted = isinstance(win, dict) and win.get("running") is True      # 舊的 fsm_state（相容）
         cfg = load_config(arg, need_brain=cmd == "think")
         if cmd == "route":
-            aos_cli.emit(route(cfg, interrupted, route_done))
+            aos_cli.emit(route(cfg, route_done))
             return 0
         if cmd == "intake":
             aos_cli.emit(intake(cfg))
@@ -418,7 +445,7 @@ def main(argv=None):
         if cmd == "done":
             aos_cli.emit(done(cfg, arg.get("ctl", "ctl.json") if isinstance(arg, dict) else "ctl.json"))
             return 0
-        data = (think if cmd == "think" else act)(cfg, interrupted)
+        data = (think if cmd == "think" else act)(cfg)
     except CliError as e:
         if cmd == "think" and cfg is not None and e.code != "SystemUnreadable":
             halt = _think_failed(cfg, e)

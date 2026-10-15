@@ -1,0 +1,2 @@
+{"inst": {"argv": ["aos", "agent", "fsm"], "stdout": "steps.jsonl", "stdout_append": true},
+ "times": 20, "interval_ms": 100, "ctl_poll_ms": 1, "ctl": "ctl.json", "state": "loop-state.json"}

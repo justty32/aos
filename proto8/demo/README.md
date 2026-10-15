@@ -10,7 +10,9 @@ python3 proto8/demo/run.py
 
 從哪裡跑都行，約 8 秒。只用 Python 標準庫和 `sh`、`date`。
 
-另一個 demo：**fsm**（aos-loop 拍 aos-fsm，像個小 agent：idle → thinking（內層 fsm：ask → review）→ tool → …，ask 照思考介面叫腦、tool 跑 inst 工具；預設假腦，換真 LLM 只改 agent.json 的 `brain`）——`python3 proto8/demo/run.py fsm`，說明在 [fsm/README.md](fsm/README.md)。
+另一個 demo：**fsm**（`demo/fsm` 本身是一個 agent 定義資料夾：在暫存 frame 裡跑它的 loop.json，idle → thinking（內層 fsm：ask → review）→ tool → … → done，ask 照思考介面叫腦、tool 跑 inst 工具（其中 clerk＝另一個 agent）；預設假腦，換真 LLM＝`python3 proto8/demo/fsm/run.py brain/lmstudio.json`）——`python3 proto8/demo/run.py fsm`，說明在 [fsm/README.md](fsm/README.md)。
+
+三個 agent 的 demo 都要 PATH 上有 `proto8/bin`（`aos`）與 `demo/bin`（[`aos-demo`](bin/aos-demo)：`aos-demo fsm/brain/fake.py`＝從 demo 資料夾算的腳本、其他指令照跑並多給 `AOS_DEMO`＝demo 資料夾）；各 `run.py` 自己會接上。
 
 再一個：**LLM kernel**（daemon 底下的 loop 每拍跑 kernel；呼叫者經閘門叫同一顆睡 1 秒的假腦：low 最後、deadline 快到插隊、過期丟掉、aging、報時員巢狀只包腦一格就夠）——`python3 proto8/demo/run.py kernel`，說明在 [lib kernel.md](../lib/kernel.md)、腳本 `kernel/run.py` 檔頭。
 

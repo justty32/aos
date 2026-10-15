@@ -25,7 +25,7 @@ python3 aos_gate.py [--target T] [--mailbox DIR] [--wait-ms N] [GATE.json]     #
  "wait_ms": 60000}                    // 選填：排隊（信還在 new/）最多等多久；沒寫＝不限
 ```
 
-- **換腦一行**：agent.json 的 `brain` 指到一張跑閘門的 inst（`{"argv": ["python3", ".../aos_gate.py", "gate.json"]}`），其他不動。
+- **換腦一行**：agent 定義資料夾的 `brain.json` 換成一張跑閘門的 inst（例 `demo/kernel/boss/brain.json`：`aos gate <閘門設定>`），其他不動；只換某次呼叫＝在那次的 frame 放這份 `brain.json`（demo 的 clerk 就這樣借 boss 的腦）。
 - **信**（`new/<奈秒時間>.<pid>.json`，名字字典序＝先來後到）＝**target 那張 inst 本身**（inst 族，C-48）：key 攤在最上層（`argv`、`cwd`（轉絕對）、`timeout_ms`、`_metainfo`…；`id`＝target 的 id），加私有 key `priority`、`reply`（回信的絕對路徑 `reply/<名>.json`）、`sent`（epoch 秒）；`stdin`＝旁檔 `reply/<名>.stdin`（呼叫者 stdin 的內容）。kernel 只要把 `stdout`／`stderr` 填成旁檔 `reply/<名>.stdout`／`.stderr`，就能直接 `aos_inst.run(信)`（不認得的 key 一律忽略）。
 - **回信**＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`），或 N-29 形狀 `{"error": {"code", "msg"}}`（aos_inst 起不來時多 `exit`＝它的碼）。閘門讀回信、讀 stdout／stderr 旁檔原樣吐出，回信與旁檔一起刪掉。
 - **呼叫端看到的＝直接叫 target**：stdout、stderr 原樣、退出碼＝target 的碼（測試逐字比過）。
@@ -60,7 +60,7 @@ stdout 一份 `{runs, served, dropped, waiting, budget}`（log 每行也記 `run
 
 ## 慣例：只包葉子
 
-kernel 一格一次一封。**只包腦（或單一貴工具）**：boss 的腦回完才去叫 clerk，clerk 的腦再排隊，一格就夠（demo 第 3 段）。要是包了「會再叫別人的工具」（例：整個 `ask`），它佔著格等裡面的腦，裡面的腦排不到＝卡死；使用者 10-15 定「卡死就卡死」，不做機制，靠這條慣例。
+kernel 一格一次一封。**只包腦（或單一貴工具）**：boss 的腦回完才去叫 clerk，clerk 的腦再排隊，一格就夠（demo 第 3 段）。要是包了「會再叫別人的工具」（例：整個 agent 當工具的那張 inst），它佔著格等裡面的腦，裡面的腦排不到＝卡死；使用者 10-15 定「卡死就卡死」，不做機制，靠這條慣例。
 
 ## 測試
 

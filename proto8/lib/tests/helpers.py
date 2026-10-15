@@ -1,4 +1,4 @@
-"""proto8/lib 測試共用的部分：路徑、暫存資料夾的基底類別 `Tmp`、`alive()`、`leftovers()`。不是測試檔（discover 只收 test*.py）。
+"""proto8/lib 測試共用的部分：路徑、`ENV`（PATH 前面接 proto8/bin、demo/bin）、暫存資料夾的基底類別 `Tmp`、`alive()`、`leftovers()`。不是測試檔（discover 只收 test*.py）。
 
 每個測試在 mktemp 建的暫存資料夾裡跑，跑完刪掉。刪之前查一次：cwd 在暫存資料夾裡的 aos_loop／aos_daemon 行程
 還活著＝漏了（例：daemon 被 SIGKILL，自成 session 的子 loop 變孤兒），整群砍掉、這個測試算失敗。
@@ -17,6 +17,10 @@ INST = os.path.join(LIB, "aos_inst.py")
 LOOP = os.path.join(LIB, "aos_loop.py")
 DAEMON = os.path.join(LIB, "aos_daemon.py")
 FSM = os.path.join(LIB, "aos_fsm.py")
+BIN = os.path.join(LIB, "..", "bin")                       # proto8 的 aos 入口（C-50：葉子用指令名）
+DEMO_BIN = os.path.join(LIB, "..", "demo", "bin")         # demo 的 aos-demo 入口
+ENV = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
+           PATH=os.pathsep.join([os.path.abspath(BIN), os.path.abspath(DEMO_BIN), os.environ.get("PATH", "")]))
 sys.path.insert(0, LIB)
 
 
