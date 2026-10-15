@@ -20,7 +20,8 @@
 - 回 {"reply", "ticks"}；出錯丟 CallError（code：Busy、MaxTicks（帶 partial）、SubAgentFailed、TooDeep、NoHistory…）。
 
 `aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json`（stdin {"question", "history"?}）就是包這個：
-frame 沒給＝`$AOS_WORK/ask-<n>/`（AOS_WORK＝呼叫它的那個 agent 的 work，tool 格會給），再沒有＝`./ask-<n>/`。
+出錯時 stdout 一份 N-29 形狀 {"error": {"code", "msg"}}（MaxTicks 旁邊多 `partial`）、退出 1——吐在 stdout 是為了
+讓叫它的 tool 格把它當工具結果交給模型。frame 沒給＝`$AOS_WORK/ask-<n>/`（AOS_WORK＝呼叫它的那個 agent 的 work，tool 格會給），再沒有＝`./ask-<n>/`。
 遞迴：環境變數 AOS_ASK_DEPTH 每層 +1，超過 MAX_DEPTH＝TooDeep。
 
 相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_fsm ← aos_agent_call。
@@ -212,6 +213,5 @@ def ask(argv, stdin_text):
         return Agent(rest[0]).call(frame, history=hist, max_ticks=max_ticks), 0
     except (CallError, CliError, IndexError, ValueError) as e:
         code, msg = (e.code, e.msg) if isinstance(e, CliError) else ("Usage", str(e))
-        out = {"error": code, "msg": msg}
-        out.update(getattr(e, "extra", {}))
+        out = dict(getattr(e, "extra", {}), error={"code": code, "msg": msg})     # N-29 形狀（partial 等照帶在旁邊）
         return out, 1

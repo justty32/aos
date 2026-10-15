@@ -4,6 +4,8 @@
     python3 proto8/demo/run.py fsm        （或直接 python3 proto8/demo/fsm/run.py）
 
 產物（inbox、work、outbox、窗、steps.jsonl）都放在 mktemp 建的暫存資料夾，跑完整個刪掉。
+不靠指示詞：repo 裡的 agent.json、think/fsm.json 只寫定義（表、brain、tools、system）；執行期的 key（state、lock、
+history、work、內層的 state）由 `bind()` 填進暫存資料夾裡的副本 agent.json，loop 的設定也在那裡寫成完整檔。
 """
 import json
 import os
@@ -30,6 +32,28 @@ def read(path):
         return None
 
 
+def write(path, doc):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=2)
+    return path
+
+
+def bind(tmp):
+    """把 demo 的定義綁到暫存資料夾 tmp：寫 tmp/agent.json（＝repo 的 agent.json＋state、lock、history、work；
+    thinking 格換成帶 `--state` 旗標的同一張 inst，內層 state 窗指進 tmp）。回 tmp/agent.json 的路徑。
+    格的相對路徑照舊從 demo 資料夾算（跑的時候 cwd＝demo 資料夾）。"""
+    with open(os.path.join(HERE, "agent.json"), encoding="utf-8") as f:
+        doc = json.load(f)
+    with open(os.path.join(HERE, "think", "inst.json"), encoding="utf-8") as f:
+        think = json.load(f)
+    a = think["argv"]
+    think["argv"] = a[:2] + ["--state", os.path.join(tmp, "think.state.json")] + a[2:]
+    doc["states"] = dict(doc["states"], thinking=think)
+    doc.update(state=os.path.join(tmp, "agent.state.json"), lock=os.path.join(tmp, "agent.lock"),
+               history=os.path.join(tmp, "work", "history.json"), work=os.path.join(tmp, "work"))
+    return write(os.path.join(tmp, "agent.json"), doc)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="aos-fsm-demo-")
     for d in ("inbox", "work"):
@@ -39,14 +63,16 @@ def main():
             f.write(text)
     w = {k: os.path.join(tmp, v) for k, v in (("state", "agent.state.json"), ("think", "think.state.json"),
                                                ("steps", "steps.jsonl"), ("loop_state", "loop.state.json"))}
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", DEMO_DIR=tmp, DEMO_STATE=w["state"], DEMO_THINK_STATE=w["think"],
-               DEMO_LOCK=os.path.join(tmp, "agent.lock"), DEMO_STEPS=w["steps"],
-               DEMO_HISTORY=os.path.join(tmp, "work", "history.json"), DEMO_WORK=os.path.join(tmp, "work"),
-               DEMO_LOOP_CTL=os.path.join(tmp, "loop.ctl.json"), DEMO_LOOP_STATE=w["loop_state"])
+    agent = bind(tmp)
+    loop_json = write(os.path.join(tmp, "loop.json"), {
+        "inst": {"argv": ["python3", "../../lib/aos_fsm.py", agent], "stdout": w["steps"], "stdout_append": True,
+                 "timeout_ms": 20000},
+        "ctl": os.path.join(tmp, "loop.ctl.json"), "state": w["loop_state"], "times": 10, "interval_ms": 100})
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", DEMO_DIR=tmp)
     say("暫存資料夾 %s；inbox 放了兩封信：「你好」「現在幾點？」" % tmp)
     say("aos-loop 拍 aos-fsm 10 次、每次隔 100 ms；thinking 格是內層 fsm（ask → review），ask 叫腦（agent.json 的 brain：假的腦，睡 0.4 秒）")
     say("外層的工具只有 clerk（報時員＝另一個 agent，定義在 clerk/）：問時間就得問它，它自己再用 clock")
-    loop = subprocess.Popen([sys.executable, LOOP, "loop.json"], cwd=HERE, env=env, stdout=subprocess.DEVNULL)
+    loop = subprocess.Popen([sys.executable, LOOP, loop_json], cwd=HERE, env=env, stdout=subprocess.DEVNULL)
     seen = None
     try:
         while loop.poll() is None:

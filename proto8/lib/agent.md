@@ -31,7 +31,7 @@ agent＝一份 fsm（idle → thinking → tool → thinking → … → idle）
 ## 工具＝inst
 
 ```jsonc
-// agent.json（跟 fsm 同一份；fsm 不認得這幾個 key、會忽略，但會整份當 stdin 的 cfg 給格）
+// agent.json（跟 fsm 同一份；fsm 不認得這幾個 key、會忽略，但會整份當格的 stdin）
 "brain": "brain/fake.json",
 "tools": {"clock": "tools/clock.json"},     // 名字 → aos-inst TARGET（可接 #/位置，N-35）
 "system": "system.md",                      // 選填：系統提示檔（文字／markdown）
@@ -42,9 +42,9 @@ agent＝一份 fsm（idle → thinking → tool → thinking → … → idle）
 {"argv": ["python3", "tools/clock.py"], "_tool": {"description": "查現在的時間", "parameters": {"type": "object", "properties": {}}}}
 ```
 
-- **system**：think 每次叫腦，都把檔內容當 `{"role":"system","content":…}` 插在送給腦的 messages 最前面；**不寫進 history**（history 只有 user／assistant／tool），所以改 system.md 下一拍就生效。沒寫 `system`＝不帶；寫了但檔不存在或讀不了＝think 格錯誤 `SystemUnreadable`（N-29）。路徑從格的 cwd 算；內層 fsm 同樣 `$ref`。
+- **system**：think 每次叫腦，都把檔內容當 `{"role":"system","content":…}` 插在送給腦的 messages 最前面；**不寫進 history**（history 只有 user／assistant／tool），所以改 system.md 下一拍就生效。沒寫 `system`＝不帶；寫了但檔不存在或讀不了＝think 格錯誤 `SystemUnreadable`（N-29）。路徑從格的 cwd 算；內層 fsm 沒寫就從外層 cfg 來（N-40）。
 - 工具的 stdin＝`arguments` 解開的 JSON（寫成 `work/N-call.json`，N＝那時 history 幾則），stdout 最後一份＝結果。
-- 回給模型：`{"role": "tool", "tool_call_id": …, "content": "<字串>"}`，content＝`{"code": 工具的結束碼, "result": stdout 最後一份}` 的 JSON 字串，截 8000 字。
+- 回給模型：`{"role": "tool", "tool_call_id": …, "content": "<字串>"}`，content＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`）多一格 `result`（工具 stdout 最後一份）的 JSON 字串，截 8000 字；沒跑成（工具名不認得、引數不是 JSON、inst 起不來、沒輪到、被中斷）＝N-29 形狀 `{"error": {"code", "msg"}}`。（10-15 依 C-48 改，原本是 `{"code", "result"}`）
 
 ## 現成格庫（`aos_agent_lib.py`）
 
@@ -53,7 +53,7 @@ python3 aos_agent_lib.py think      python3 aos_agent_lib.py tool
 ```
 
 - 不是 agent 本體（agent＝fsm＋表，不變）；是表裡可以直接拿來用的兩格。檔名：使用者 10-15 說「aos-agent-lib.py」，proto8/lib 的模組一律底線（連字號 import 不了），所以叫 `aos_agent_lib.py`。
-- **設定走 stdin**（10-15 使用者選乙）：fsm 給格的 stdin 是 `{"state", "step", "prev", "cfg"}`（N-37），`brain`、`tools`、`history`、`work`（與選填的 `system`）從 `cfg` 拿，argv 不再指設定檔；沒 `cfg`＝`NoConfig`、退出 1。相對路徑從格的 cwd 算（沒寫 `cwd` 的格＝跟 fsm 同一個）。巢狀時 `cfg` 是內層 fsm 那份，四個 key 在內層設定裡 `$ref` 到外層（demo 的 `think/fsm.json` 就這樣寫，N-40）。
+- **設定走 stdin**（10-15 使用者選乙；同日依 C-48 改形狀）：fsm 給格的 stdin＝fsm 設定本身多一個 key `fsm_state`（state 窗整份，N-37），`brain`、`tools`、`history`、`work`（與選填的 `system`）就從這份拿，argv 不再指設定檔；stdin 不是物件＝`NoConfig`、退出 1。`fsm_state.running` 為 true＝上一拍被殺一半。相對路徑從格的 cwd 算（沒寫 `cwd` 的格＝跟 fsm 同一個）。巢狀時是內層 fsm 那份，內層沒寫的 key 從外層 cfg 來（N-40：外層 cfg 當預設），所以 demo 的 `think/fsm.json` 只寫表。
 
 - **think**：讀 history、組請求（`tools` 從各工具 inst 的 `_tool` 來；沒工具就不帶）、蓋 stdin 跑腦（`aos_methods.run_cell`）、把 assistant 訊息（拿掉頂層 `usage`）接進 history，stdout `{"data": {"content", "tool_calls": [工具名]}}`。不吐 `next`：下一格寫在表上。history 最後已經是 assistant（上一拍接好才被殺）＝不再叫腦。腦結束碼非 0＝`BrainFailed`（白話＝腦 stderr 的錯誤 `代號: 白話`，腦沒吐才寫結束碼）、回的不是 assistant 訊息＝`BadReply`，這格退出 1；fsm 記 `CellFailed: BrainFailed: HttpError: …`，連錯 `max_fails` 次就停住不再叫腦（[fsm.md](fsm.md)）。
 - **tool**：找最後一則 assistant 還沒回的 `tool_calls`，跑一個、接 tool 訊息，stdout `{"data": {"tool", "result"}}`。工具的環境多一個 `AOS_WORK`＝這個 agent 的 work（給 `ask` 放子 agent 的 frame）。
@@ -64,12 +64,12 @@ python3 aos_agent_lib.py think      python3 aos_agent_lib.py tool
 
 | 情況 | 基礎實作 |
 |---|---|
-| 工具名不認得 | 回模型一則 tool 訊息「不認得這個工具：名」，不算 fsm 的錯 |
-| 一次回好幾個 `tool_calls` | 只跑第一個；其餘各回「基礎實作一次只跑一個，這個沒跑」（OpenAI 要每個 id 都有回才能再問），stderr 警告 `ToolCallsSkipped` |
+| 工具名不認得 | 回模型一則 tool 訊息 `{"error": {"code": "UnknownTool", "msg": "不認得這個工具：名"}}`，不算 fsm 的錯 |
+| 一次回好幾個 `tool_calls` | 只跑第一個；其餘各回 `{"error": {"code": "Skipped", "msg": "基礎實作一次只跑一個，這個沒跑"}}`（OpenAI 要每個 id 都有回才能再問），stderr 警告 `ToolCallsSkipped` |
 | 引數不合 schema | 不驗；工具自己報錯（code≠0），照樣回模型 |
-| tool 格被殺一半（`prev.interrupted`，N-38） | 不重跑工具，還沒回的全回「被中斷」 |
+| tool 格被殺一半（`fsm_state.running` 為 true，N-38） | 不重跑工具，還沒回的全回 `{"error": {"code": "Interrupted", …}}` |
 
-動工時自己定的（等使用者看）：`arguments` 不是 JSON＝回 `{"code": null, "error": …}` 不跑；工具的 inst 起不來（aos_inst 出錯）同樣回 `{"code": null, "error": …}`；工具 inst 沒寫 `_tool`＝空說明、不收引數。
+動工時自己定的（等使用者看）：`arguments` 不是 JSON＝回 `{"error": {"code": "BadArguments", …}}` 不跑；工具的 inst 起不來（aos_inst 出錯）＝回 aos_inst 的錯（同形狀、原代號）；工具 inst 沒寫 `_tool`＝空說明、不收引數。
 
 ## agent 當函數／當工具
 
@@ -85,11 +85,11 @@ bob.call(frame, history=None, engine_args=None, tools=None, tools_append=None, c
 # → {"reply": 最後一則 assistant 的字, "ticks": 敲了幾拍}；錯丟 CallError
 ```
 
-- **怎麼做到的**（動工自定，不動 inst／loop／`$ref` 的通則）：前端把定義攤開——表上的格、brain、tools、system（含 `$ref`）一律從 bob/ 算，讀成內嵌 inst；這些 inst 沒寫 `cwd` 就在 bob/ 跑（argv 裡的相對路徑也照 bob/ 算）。state、history、work 指進 frame；lock 是 `frame/lock/`，前端拿著整趟（fsm 不開 lock、ctl）。然後在本行程一拍一拍 `aos_fsm.run()`，fsm 吐出 `next` 在 `end` 裡的那份＝做完。
+- **怎麼做到的**（動工自定，不動 inst／loop 的通則）：前端把定義攤開——表上的格、brain、tools、system（有用指示詞的話也一樣）一律從 bob/ 算，讀成內嵌 inst；這些 inst 沒寫 `cwd` 就在 bob/ 跑（argv 裡的相對路徑也照 bob/ 算）。state、history、work 指進 frame；lock 是 `frame/lock/`，前端拿著整趟（fsm 不開 lock、ctl）。然後在本行程一拍一拍 `aos_fsm.run()`，fsm 吐出 `next` 在 `end` 裡的那份＝做完。
 - **history**：給了＝frame 的 history 換成它、刪 frame 的 state（從 start 來）；沒給＝接著 frame 裡的（沒有＝`NoHistory`）。
 - **engine_args**：list＝接在腦 inst 的 argv 後（例 `["--model", "x"]`）；dict＝蓋過腦 inst 的 key。
 - **tools**（呼叫時的工具＝一等參數，像高階函數傳進去的函數）：給了 `tools`＝整份取代 bob 綁的預設；`tools_append`＝再加；都沒給＝用 bob 綁的。呼叫時給的工具，相對路徑從 cwd 算、沒寫 cwd 就在 cwd 跑。
-- **限制**：只攤開最上層的表；格若是內層 fsm（`aos_fsm.py 內層.json`），它在 bob/ 跑、自己的 `$ref` 照 bob/ 算，但執行期的 key 不會被指進 frame——當函數用的定義寫成單層表（`think → route → tool`）。
+- **限制**：只攤開最上層的表；格若是內層 fsm（`aos_fsm.py 內層.json`），它在 bob/ 跑，但它自己的 state 不會被指進 frame——當函數用的定義寫成單層表（`think → route → tool`）。
 
 ### 當工具：`aos_agent_lib.py ask`
 
@@ -99,7 +99,7 @@ python3 aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json      #
 
 - 寫成一張工具 inst（說明照舊放 `_tool`），父 agent 的 tools 放它。每次呼叫＝新對話（history＝`[user 問題]`），除非 stdin 給 `history`。
 - frame：`--frame`；沒給＝`$AOS_WORK/ask-<n>/`（父 agent 的 work，tool 格給的；n＝第一個還沒有的號碼，mkdir 搶），再沒有＝`./ask-<n>/`。完整對話留在 frame 給人看，父 agent 只拿到最後一句。
-- stdout 一份：成功 `{"reply", "ticks"}` 退 0；失敗 `{"error": 代號, "msg", …}` 退 1（父 agent 的 tool 訊息裡看得到）。
+- stdout 一份：成功 `{"reply", "ticks"}` 退 0；失敗 N-29 形狀 `{"error": {"code", "msg"}}`（`MaxTicks` 旁邊多 `partial`）退 1——吐在 stdout，父 agent 的 tool 訊息 `result` 裡看得到。（10-15 依 C-48 改，原本是 `{"error": 代號, "msg"}`）
 
 | 情況 | 結果 |
 |---|---|
