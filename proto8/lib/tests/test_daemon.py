@@ -171,6 +171,7 @@ class Daemon(Tmp):
         self.start(table=self.p("t.json"))
         a = self.loop("a", "echo x >> a.out", times=None, interval_ms=100000)
         self.ok({"op": "add", "id": a})
+        self.until(lambda: os.path.exists(self.p("a.out")))     # 先等第一次跑完，pause 才不會搶在它前面
         self.ok({"op": "pause", "id": a})
         t = json.loads(self.read("t.json"))
         self.assertEqual(t["kind"], "aos-daemon-table")
