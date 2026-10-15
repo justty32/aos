@@ -15,6 +15,7 @@
   aos_inst 自己出錯丟 `MethodsError`（代號照 aos_inst 的）。暫存檔跑完刪掉。
   結果 dict 多一格 `cell_error`＝格 stderr 裡最後一份 N-29 錯誤 `{"code", "msg"}`（沒有＝None）：沒寫 stderr 的格
   （本來接 /dev/null）改接暫存檔撿；格自己寫了 stderr 檔就讀那個檔；inherit／merge 的撿不到。（10-15 146 試跑後補）
+  再多一格 `cell_empty`＝格的 stdout 什麼都沒吐（只有空白也算；fsm 拿它分「沒輸出」與「吐了壞的」，N-38）。
 - `last_json(text)`：JSON 串流的最後一份完整 JSON（半份不算，N-12）；沒有＝None。
 
 錯誤一律 `MethodsError`（`CliError` 的子類，`code`／`msg`）。相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_fsm。
@@ -116,10 +117,11 @@ def run_cell(inst, ident, args=None):
             raise MethodsError(e.code, e.msg)
         try:
             with open(stdout, encoding="utf-8", errors="replace") as f:
-                ret = last_json(f.read())
+                text = f.read()
         except OSError:
-            ret = None
+            text = ""
         result["cell_error"] = _stderr_error(doc, inst.get("cwd"))
-        return result, ret
+        result["cell_empty"] = not text.strip()       # stdout 什麼都沒吐（只有空白也算）
+        return result, last_json(text)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

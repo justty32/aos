@@ -85,6 +85,32 @@ class FsmTest(Tmp):
         self.assertEqual(self.out(r)[-1]["error"]["code"], "NoResult")
         self.assertEqual(self.state()["phase"], "a")
 
+    def test_empty_stdout_follows_static_next(self):
+        # 格沒輸出（只有空白也算）、表上有 next＝照表上走，不算錯（10-15 使用者，N-38）
+        path = self.fsm({"a": {"target": sh("a", "echo"), "next": "b"}, "b": {"target": sh("b", "true"), "next": "a"}})
+        r = self.tick(path)
+        self.assertEqual((r.returncode, self.state()["phase"]), (0, "b"), r.stdout)
+        self.assertEqual(len(self.out(r)), 1)
+        r = self.tick(path)
+        self.assertEqual((r.returncode, self.state()["phase"]), (0, "a"), r.stdout)
+
+    def test_empty_stdout_end_gives_nothing(self):
+        # 沒輸出的格在 end 裡＝結束、phase 歸位，只吐那一行（沒有結果可交）
+        path = self.fsm({"a": {"target": sh("a", "true"), "next": "b"}, "b": sh("b", "true")}, end=["b"])
+        self.tick(path)
+        r = self.tick(path)
+        self.assertEqual((r.returncode, self.state()["phase"]), (1, "b"))       # b 沒輸出也沒 next＝錯
+        self.write("f.json", {"start": "a", "states": {"a": {"target": sh("a", "true"), "next": "out"}},
+                              "end": ["out"], "state": "g.state.json"})
+        r = self.tick(self.p("f.json"))
+        self.assertEqual((r.returncode, len(self.out(r)), self.state("g.state.json")["phase"]), (0, 1, "a"))
+
+    def test_non_json_output_with_static_next_is_error(self):
+        # 吐了東西但不是完整 JSON＝錯，表上有 next 也一樣
+        path = self.fsm({"a": {"target": sh("a", "echo hello; printf '{\"next\": \"b\"'"), "next": "b"}, "b": ok("b")})
+        r = self.tick(path)
+        self.assertEqual((r.returncode, self.out(r)[-1]["error"]["code"], self.state()["phase"]), (1, "NoResult", "a"))
+
     def test_cell_names_from_config_folder(self):
         # 格的相對路徑從 fsm 設定檔所在的資料夾算（N-36），不是 cwd
         os.makedirs(self.p("sub"))

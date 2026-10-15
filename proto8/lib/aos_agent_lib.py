@@ -5,7 +5,7 @@
     python3 aos_agent_lib.py think
     python3 aos_agent_lib.py tool
     python3 aos_agent_lib.py route [--done 名]   （看最後一則 assistant：有 tool_calls＝next tool，否則 next idle（或 --done 給的名））
-    python3 aos_agent_lib.py intake        （frame 還沒有 history＝從 args.json 的 question／history 生一份）
+    python3 aos_agent_lib.py intake        （args.json 接進 history（沒有就生、有就接在後面），接完改名 args.taken.json）
     python3 aos_agent_lib.py done          （寫 ret.json＝最後一句或連錯的錯誤，再把 ctl.json 寫成 stop）
     python3 aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json   （agent 當工具，見 aos_agent_call；第二批退場）
 
@@ -323,16 +323,25 @@ def _think_failed(cfg, e):
     return None
 
 
+TAKEN = "args.taken.json"                      # 接進 history 之後 args.json 改成這個名字（同一份不會接兩次）
+
+
 def intake(cfg):
-    """frame 還沒有 history＝從 cwd 的 args.json 生：{"history": [...]} 照用、{"question": "…"} 變成一則 user 訊息。
-    已經有 history＝什麼都不做（呼叫方綁了 history，或接著上次的對話）。"""
-    if os.path.exists(cfg["history"]):
-        return {}
+    """把 cwd 的 args.json（實引數）接進 history，接完改名成 args.taken.json（同一份不會接兩次）：
+    - {"history": [...]}＝history 換成它（呼叫方整段綁進來）；
+    - {"question": "…"}＝frame 還沒有 history 就生一份 [user 訊息]，已經有就接在後面當一則新的 user 訊息（同一個 frame 續聊）；
+      history 最後一則已經是同一句 user 訊息（上一拍接好了、改名前被殺）＝不再接。
+    沒有 args.json：已經有 history＝照舊往下（呼叫方綁了 history，或接著上次的）；也沒有 history＝NoHistory。"""
+    have = os.path.exists(cfg["history"])
     try:
         with open("args.json", encoding="utf-8") as f:
             arg = json.load(f)
-    except OSError:
+    except FileNotFoundError:
+        if have:
+            return {}
         raise AgentError("NoHistory", "frame 沒有 history，也沒有 args.json")
+    except OSError as e:
+        raise AgentError("ReadFailed", "args.json 讀不了：%s" % e)
     except ValueError as e:
         raise AgentError("BadArguments", "args.json 不是 JSON：%s" % e)
     hist = arg.get("history") if isinstance(arg, dict) else None
@@ -340,8 +349,14 @@ def intake(cfg):
         q = arg.get("question") if isinstance(arg, dict) else None
         if not isinstance(q, str):
             raise AgentError("FieldType", "args.json 要有 question（字串）或 history")
-        hist = [{"role": "user", "content": q}]
+        msg = {"role": "user", "content": q}
+        hist = read_history(cfg["history"]) if have else []
+        if not (hist and hist[-1] == msg):
+            hist = hist + [msg]
+    elif not isinstance(hist, list):
+        raise AgentError("FieldType", "args.json 的 history 要是訊息陣列，不是 %r" % (hist,))
     write_json(cfg["history"], hist)
+    os.replace("args.json", TAKEN)
     return {}
 
 

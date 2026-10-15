@@ -222,11 +222,22 @@ class AgentFrameTest(Tmp):
         self.run_cell("done", fr)
         self.assertEqual(json.loads(self.read("fr/ret.json")), {"error": {"code": "BrainFailed", "msg": "x"}})
 
-    def test_intake_keeps_bound_history(self):
-        self.write("fr/history.json", [{"role": "user", "content": "綁好的"}])
-        self.write("fr/args.json", {"question": "別理我"})
-        self.assertEqual(self.run_cell("intake", self.p("fr")).returncode, 0)
-        self.assertEqual(json.loads(self.read("fr/history.json"))[0]["content"], "綁好的")
+    def test_intake_continues_same_frame(self):
+        # 同一個 frame 續聊：已經有 history、又來新的 args.json＝接在後面當新的 user 訊息；接完改名，不會接兩次
+        self.write("fr/history.json", [{"role": "user", "content": "綁好的"}, {"role": "assistant", "content": "好"}])
+        self.write("fr/args.json", {"question": "再問一句"})
+        fr = self.p("fr")
+        for _ in range(2):
+            self.assertEqual(self.run_cell("intake", fr).returncode, 0)
+        self.assertEqual([m["content"] for m in json.loads(self.read("fr/history.json"))], ["綁好的", "好", "再問一句"])
+        self.assertFalse(os.path.exists(self.p("fr", "args.json")))
+        self.assertEqual(json.loads(self.read("fr/args.taken.json")), {"question": "再問一句"})
+        self.write("fr/args.json", {"question": "再問一句"})            # 上一拍接好了、改名前被殺：不重複接
+        self.run_cell("intake", fr)
+        self.assertEqual(len(json.loads(self.read("fr/history.json"))), 3)
+        self.write("fr/args.json", {"history": [{"role": "user", "content": "整段換掉"}]})
+        self.run_cell("intake", fr)
+        self.assertEqual(json.loads(self.read("fr/history.json")), [{"role": "user", "content": "整段換掉"}])
         os.makedirs(self.p("empty"))
         r = self.run_cell("intake", self.p("empty"))
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoHistory"))
