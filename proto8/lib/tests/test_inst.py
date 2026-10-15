@@ -41,6 +41,22 @@ class Inst(Tmp):
             aos_inst.find(self.p("empty"))
         self.assertEqual(c.exception.code, "NotFound")
 
+    def test_find_follows_aos_dirname(self):
+        # 資料夾 TARGET 先找 $AOS_DIRNAME/inst.json（沒設＝.aos；空字串＝資料夾本身；N-35）
+        self.write("b/.aos/inst.json", {"argv": ["true"]})
+        self.write("b/meta/inst.json", {"argv": ["true"]})
+        self.write("b/inst.json", {"argv": ["true"]})
+        old = os.environ.pop("AOS_DIRNAME", None)
+        self.addCleanup(lambda: os.environ.__setitem__("AOS_DIRNAME", old) if old is not None
+                        else os.environ.pop("AOS_DIRNAME", None))
+        for name, want in (("meta", "b/meta/inst.json"), ("", "b/inst.json"), ("nope", "b/inst.json")):
+            os.environ["AOS_DIRNAME"] = name
+            self.assertEqual(aos_inst.find(self.p("b")), os.path.realpath(self.p(want)), name)
+        os.environ["AOS_DIRNAME"] = "a/b"
+        with self.assertRaises(aos_inst.InstError) as c:
+            aos_inst.find(self.p("b"))
+        self.assertEqual(c.exception.code, "BadDirname")
+
     def test_child_code_only_in_exit_file(self):
         self.assertEqual(self.run_inst("r", "exit 7"), "7\n")
         self.assertEqual(aos_inst.run(self.inst("n", "exit 7"))["code"], 7)      # 沒寫 exit：照樣正常，碼在結果裡

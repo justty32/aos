@@ -10,10 +10,10 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 
 ## 裡面有什麼
 
-- **不靠指示詞**（10-15 依 C-48）：repo 裡的 `agent.json`、`think/fsm.json` 只寫定義；`run.py` 的 `bind()` 把執行期的 key（`state`、`lock`、`history`、`work`）填進暫存資料夾裡的副本 `agent.json`，thinking 格換成同一張 `think/inst.json` 加 `--state <暫存>/think.state.json` 旗標；aos-loop 的設定也寫成暫存資料夾裡的完整檔（inst＝`aos_fsm.py <副本>`，跑 10 次、每次隔 100 ms；fsm 每拍吐的那行附加到 `steps.jsonl`）。cwd 照舊是 demo 資料夾，所以格的相對路徑不變。
-- `agent.json`：外層 fsm＋agent 設定（定義）。`start: idle`，表 `idle → cells/idle.json`、`thinking → think/`（資料夾＝走 aos-inst 的找法，找到 `think/inst.json`）、`tool → cells/tool.json`（表上靜態 `next: thinking`）；`max_steps: 10`（state 窗、lock 由 `bind()` 填）。fsm 不認得的 key 給現成格庫 `aos_agent_lib.py` 用（fsm 把整份設定＋`fsm_state` 當格的 stdin，[agent.md](../../lib/agent.md)）：`brain`（腦的 TARGET）、`tools`（`{"clerk": "tools/clerk.json"}`：外層只有報時員這一個工具，要時間就得問它）、`history`（`work/history.json`＝OpenAI messages）、`work`（這兩個由 `bind()` 填），另有選填 `system`（`system.md`＝系統提示：繁體中文、簡短、需要時用工具；think 每次叫腦時插在最前面，不進 history）。
-- `think/`：內層 fsm。`inst.json` 跑 `aos_fsm.py think/fsm.json`（cwd 跟外層一樣是 demo 資料夾）；表 `ask → review`（ask 帶表上靜態 `next: review`）、`end: ["tool", "idle"]`、自己的 state 窗（`--state` 旗標給）、沒有 lock 與 ctl。`think/fsm.json` 只寫表：`brain`、`tools`、`system`、`history`、`work` 從外層餵的 stdin 來（N-40：外層 cfg 當預設）。
-- 格（stdin＝fsm 設定本身＋`fsm_state`（state 窗整份）、stdout 吐 `{"next"?, "data"}`；`cells/common.py` 從 stdin 的 `history` 讀寫對話）：
+- **不靠指示詞**（10-15 依 C-48）：repo 裡的 `agent.json`、`think/fsm.json` 只寫定義；`run.py` 的 `bind()` 把執行期的 key（`state`、`lock`、`history`、`work`）填進暫存資料夾裡的副本 `agent.json`（`lock` 已不歸 fsm，不再填），格都攤成內嵌 inst、`stdin` 指副本，thinking 格換成 `aos_fsm.py <暫存>/think.json`（內層表的副本，state 窗指進暫存）；aos-loop 的設定也寫成暫存資料夾裡的完整檔（inst＝`aos_fsm.py <副本>`，跑 10 次、每次隔 100 ms；fsm 每拍吐的那行附加到 `steps.jsonl`）。cwd 照舊是 demo 資料夾，所以格的相對路徑不變。
+- `agent.json`：外層 fsm＋agent 設定（定義）。`start: idle`，表 `idle → cells/idle.json`、`thinking → think/`（資料夾＝走 aos-inst 的找法，找到 `think/inst.json`）、`tool → cells/tool.json`（表上靜態 `next: thinking`）；`max_steps: 10`（fsm 已不認得，忽略；state 窗由 `bind()` 填）。fsm 不認得的 key 給現成格庫 `aos_agent_lib.py` 用（10-15 收工後 fsm 不再餵格 stdin：`bind()` 把格攤成內嵌 inst、`stdin` 指暫存副本 `agent.json`，[agent.md](../../lib/agent.md)；第二批改成定義資料夾）：`brain`（腦的 TARGET）、`tools`（`{"clerk": "tools/clerk.json"}`：外層只有報時員這一個工具，要時間就得問它）、`history`（`work/history.json`＝OpenAI messages）、`work`（這兩個由 `bind()` 填），另有選填 `system`（`system.md`＝系統提示：繁體中文、簡短、需要時用工具；think 每次叫腦時插在最前面，不進 history）。
+- `think/`：內層 fsm。`inst.json` 跑 `aos_fsm.py think/fsm.json`（cwd 跟外層一樣是 demo 資料夾）；表 `ask → review`（ask 帶表上靜態 `next: review`）、`end: ["tool", "idle"]`、自己的 state 窗（`--state` 旗標給）、沒有 lock 與 ctl。`think/fsm.json` 只寫表（格名字從 `think/` 算）；`bind()` 把它攤成暫存的 `think.json`，內層的格 `stdin` 同樣指外層副本。
+- 格（stdin＝`bind()` 寫的副本 agent.json、stdout 吐 `{"next"?, "data"}`；`cells/common.py` 從 stdin 的 `history` 讀寫對話）：
   - `cells/idle.py`：`inbox/` 有信就拿最早一封、開新對話（history＝`[user 訊息]`），回 `next: thinking`；沒信不回 next。
   - `think/ask.json`＝`aos_agent_lib.py think`（**同步**，N-41）：讀 history、組 `{"messages", "tools"}`、跑腦、接 assistant 訊息。
   - `think/review.py`：最後一則 assistant 有 `tool_calls`＝`next: tool`，否則寫 `outbox.txt`、`next: idle`（兩個都在 `end`＝交給外層）。
@@ -42,7 +42,7 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 
 同樣只改一行：`"brain": "brain/ollama146.json"`。走 ollama 原生 `/api/chat`（`/v1` 設不了 num_ctx）。**用 146 之前先照 [dev-env](../../../wf/workflows/dev-env/01-跨機與外部工具.md#跨機--離線差異) 的規矩**（看負載、只准小模型、num_ctx 4096、短 keep_alive、試完確認卸載）。
 
-- 10-15 試過：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`、外層停在 thinking。之後補了：內層 state 的 `last_error` 寫出真正原因（`CellFailed: BrainFailed: HttpError: …does not support tools`），連錯 3 次（`max_fails`）內層就停住（`halted: true`）、不再叫腦；要再試就把內層 state 的 `halted` 拿掉。
+- 10-15 試過：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`、外層停在 thinking。之後補了：內層 state 的 `last_error` 寫出真正原因（`CellFailed: BrainFailed: HttpError: …does not support tools`），連錯 3 次（`max_fails`）內層就停住（`halted: true`）、不再叫腦。〔10-15 收工後：fsm 不再管連錯，改由 think 格自己數、回 `halted`（[agent.md](../../lib/agent.md)），demo 的表還沒有 halted 狀態，第二批補。〕
 - 10-15 試 qwen2.5:14b（`"brain": "brain/qwen146.json"`）：整圈跑通，會叫 `clock`；第一次叫腦含載入約 15 秒，用 loop 拍要把 loop 設定（`run.py`）的 `timeout_ms` 加大（[thinking 10-15 §8](../../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#8-試-146-ollamaqwen2514b)）。
 
 要非同步就把 ask 換成「丟請求、回 `{"next": "waiting"}`」再加一格 waiting。

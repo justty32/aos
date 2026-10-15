@@ -35,7 +35,7 @@ import aos_cli
 import aos_fsm
 import aos_inst
 from aos_cli import CliError
-from aos_ctl_state import read_state, write_json
+from aos_ctl_state import write_json
 from aos_directives import DirectiveError, resolve, split_target
 
 __all__ = ["Agent", "CallError", "MAX_DEPTH", "MAX_TICKS", "ask"]
@@ -105,6 +105,14 @@ class Agent:
                    work=os.path.join(frame, "work"))
         if d.get("system"):
             doc["system"] = os.path.join(bob, d["system"])
+        # 10-15 收工後 fsm 不再餵格 stdin（N-37）：把攤開的設定寫成 frame 裡的一份檔，每格的 inst 用 `stdin` 指它
+        # （過渡做法，第二批 aos_agent_call 退場時一起拿掉）
+        cfg_file = os.path.join(frame, "work", "agent.cfg.json")
+        os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+        for name, c in states.items():
+            inst = c["target"] if "target" in c else c
+            inst["stdin"] = cfg_file
+        write_json(cfg_file, doc)
         return doc
 
     def call(self, frame, history=None, engine_args=None, tools=None, tools_append=None, cwd=None,
@@ -142,9 +150,9 @@ class Agent:
             except CliError as e:
                 raise CallError("SubAgentFailed", "%s: %s" % (e.code, e.msg))
             out = aos_cli.read_stream(buf.getvalue())
-            st = read_state(doc["state"]) or {}
-            if any(isinstance(o, dict) and "error" in o for o in out) or st.get("halted"):
-                raise CallError("SubAgentFailed", st.get("last_error") or "停住了（halted）")
+            errs = [o["error"] for o in out if isinstance(o, dict) and isinstance(o.get("error"), dict)]
+            if errs:
+                raise CallError("SubAgentFailed", "%s: %s" % (errs[-1].get("code"), errs[-1].get("msg")))
             if any(isinstance(o, dict) and o.get("next") in end for o in out):
                 return {"reply": _last_text(doc["history"]), "ticks": n}
         raise CallError("MaxTicks", "敲了 %d 拍還沒走到 end" % max_ticks, partial=_last_text(doc["history"]))
