@@ -120,6 +120,56 @@ class FsmTest(Tmp):
         self.assertEqual(st["phase"], "error")            # error 格自己出錯不再跳
         self.assertIn("結束碼 2", st["last_error"])
 
+    def test_last_error_has_cell_own_error(self):
+        # 格 stderr 吐 N-29 錯誤＝真正原因，接進 last_error（10-15 146 試跑後補）；沒吐就照舊寫結束碼
+        path = self.fsm({"a": sh("a", "echo '{\"error\": {\"code\": \"BrainFailed\", \"msg\": \"HttpError: 400 no tools\"}}' >&2; exit 1")})
+        self.tick(path)
+        self.assertEqual(self.state()["last_error"], "CellFailed: BrainFailed: HttpError: 400 no tools")
+        path = self.fsm({"a": sh("a", "exit 4")}, name="g")
+        self.tick(path)
+        self.assertEqual(self.state("g.state.json")["last_error"], "CellFailed: 格 a 結束碼 4")
+
+    def test_stops_after_max_fails(self):
+        path = self.fsm({"a": sh("a", "exit 1")}, max_fails=2)
+        self.tick(path)
+        self.assertEqual((self.state()["fails"], self.state()["halted"]), (1, False))
+        self.tick(path)
+        self.assertEqual((self.state()["fails"], self.state()["halted"]), (2, True))
+        for _ in range(3):
+            r = self.tick(path)
+            self.assertEqual((r.returncode, r.stdout), (0, ""))          # 停住：不起格、不吐
+        self.assertEqual(len(self.args("a")), 2)
+        st = self.state()
+        st["halted"] = False                                              # 人接手：拿掉 halted，再試一次
+        self.write("f.state.json", st)
+        self.tick(path)
+        self.assertEqual(len(self.args("a")), 3)
+        self.assertEqual((self.state()["fails"], self.state()["halted"]), (3, True))   # 又錯＝馬上再停
+
+    def test_default_max_fails_and_reset_on_success(self):
+        # 錯兩次、成功一次歸零、再錯兩次也不停（預設 3）；錯第三次才停
+        self.write("n", "")
+        path = self.fsm({"a": sh("a", "echo x >> n; c=$(wc -l < n); [ $c -ne 3 ] && [ $c -lt 6 ] && exit 1; true")})
+        for _ in range(5):
+            self.tick(path)
+        self.assertEqual((self.state()["fails"], self.state()["halted"]), (2, False))
+        self.tick(path)
+        self.assertEqual((self.state()["fails"], self.state()["halted"]), (0, False))  # 第 6 次成功
+        path2 = self.fsm({"a": sh("a", "exit 1")}, name="g")
+        for _ in range(4):
+            self.tick(path2)
+        self.assertEqual(len(self.args("a")), 9)                          # g 起了 3 次（a 共 6＋3）
+        self.assertEqual((self.state("g.state.json")["fails"], self.state("g.state.json")["halted"]), (3, True))
+
+    def test_error_cell_then_halt(self):
+        # 有 error 格照舊跳去；error 格也一直錯＝連續錯到 max_fails 就停住等人
+        path = self.fsm({"a": sh("a", "exit 1"), "error": sh("error", "exit 2")})
+        for _ in range(5):
+            self.tick(path)
+        st = self.state()
+        self.assertEqual((st["phase"], st["fails"], st["halted"]), ("error", 3, True))
+        self.assertEqual(len(self.args("error")), 2)
+
     def test_max_steps(self):
         path = self.fsm({"a": sh("a", "echo '{\"next\": \"b\"}'"), "b": sh("b", "true")}, max_steps=2)
         for _ in range(4):

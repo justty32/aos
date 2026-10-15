@@ -249,6 +249,23 @@ class BrainOllamaTest(BrainOpenaiTest):
         r = self.ollama({"messages": []})
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "BadResponse"))
 
+    def test_no_tools_400_surfaces_and_stops(self):
+        # 146 試跑的情形：腦回 400 → think 格 BrainFailed 帶原因 → fsm 的 last_error 看得到；錯 3 次就停住不再打
+        _Stub.status, _Stub.reply = 400, {"error": "m1 does not support tools"}
+        self.write("brain.json", {"argv": [sys.executable, OLLAMA, "--base-url", self.url, "--model", "m1"]})
+        self.write("tools/clock.json", {"argv": ["true"], "_tool": {"description": "時間"}})
+        self.write("h.json", [{"role": "user", "content": "幾點"}])
+        self.write("f.json", {"start": "ask", "states": {"ask": {"argv": [sys.executable, AGENT, "think"]}},
+                              "state": "f.state.json", "brain": "brain.json", "tools": {"clock": "tools/clock.json"},
+                              "history": "h.json", "work": "work"})
+        for _ in range(5):
+            r = subprocess.run([sys.executable, FSM, "f.json"], cwd=self.tmp, capture_output=True, text=True, timeout=10)
+            self.assertEqual(r.returncode, 0, r.stderr)
+        st = json.loads(self.read("f.state.json"))
+        self.assertTrue(st["last_error"].startswith("CellFailed: BrainFailed: HttpError: "), st["last_error"])
+        self.assertIn("does not support tools", st["last_error"])
+        self.assertEqual((st["fails"], st["halted"], len(_Stub.seen)), (3, True, 3))
+
     def test_bad_num_ctx(self):
         r = self.ollama({"messages": []}, "--num-ctx", "big")
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "FieldType"))
