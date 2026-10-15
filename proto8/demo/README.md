@@ -14,6 +14,8 @@ python3 proto8/demo/run.py
 
 再一個：**LLM kernel**（daemon 底下的 loop 每拍跑 kernel；呼叫者經閘門叫同一顆睡 1 秒的假腦：low 最後、deadline 快到插隊、過期丟掉、aging、報時員巢狀只包腦一格就夠）——`python3 proto8/demo/run.py kernel`，說明在 [lib kernel.md](../lib/kernel.md)、腳本 `kernel/run.py` 檔頭。
 
+再一個：**通用 kernel**（判官是一張 inst；假腦 llm、假 cpu 活、問人 human 三種同時搶，格數 1／2／1；第二段判官壞掉→退回規則、連錯 2 次停在規則）——`python3 proto8/demo/run.py kernel2`，說明在 [lib kernel2.md](../lib/kernel2.md)、腳本 `kernel2/run.py` 檔頭；agent 判官（LM Studio）`python3 proto8/demo/kernel2/run.py judge-agent.json`。
+
 ## 裡面有什麼
 
 - `once/inst.json`：跑一次就結束，印一行、結束碼 3。`once/loop.json` 用 `$ref` 指它（跑 1 次）。

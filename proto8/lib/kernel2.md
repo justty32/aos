@@ -1,0 +1,72 @@
+# 通用 kernel（身體 `aos_kernel.py`＋判官 `aos_kernel_judge.py`、規則判官 `judge_rules.py`）
+
+← [proto8/lib](README.md)｜規範：[N-42](../NORMS/09-kernel.md)（第二種：通用管理，判斷交給 agent）｜概念：[C-47](../CONCEPTS/04-kernel.md)｜規劃與決定：[thinking 10-15 通用 kernel](../thinking/2026-10-15-general-kernel.md)｜第一種：[kernel.md](kernel.md)｜demo：[demo/kernel2](../demo/kernel2/run.py)（`python3 proto8/demo/run.py kernel2`）
+
+> **基礎實作（N-18 最簡單的）、還不是規範。** 動工時自己定的點列在 [thinking 通用 kernel「動工自定點」](../thinking/2026-10-15-general-kernel.md#動工自定點)。
+
+**閘門不改**：`aos_gate.py` 的 `kernel` 指到這支的信箱就行，信的形狀同第一種（inst 加 key）。差別只在「誰先跑」由**判官**決定——判官是一張 inst（N-12）：stdin＝kernel 的 state 窗整份，stdout 最後一份＝決定。
+
+```
+呼叫者 ──▶ aos_gate.py ──信──▶ 信箱 new/ ──▶ aos_kernel.py（一拍＝一段忙碌期）──state 窗──▶ 判官 inst ──決定──┐
+       ◀── stdout／碼 ◀──── reply/<名> ◀──── 一封一條執行緒、各自一支子程式（格在它結束時放）◀─────────────┘
+```
+
+## 設定
+
+```
+python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
+```
+
+| key | 意思 |
+|---|---|
+| `mailbox` | 信箱資料夾（必填，同閘門的 `kernel`） |
+| `state` | state 窗（必填，N-19），欄位見下 |
+| `slots` | 每種資源幾格：`{"llm": 1, "cpu": 2, "human": 1}`；純值 `n`＝`{"llm": n}`（沒寫＝1） |
+| `judge` | 判官：TARGET 或一張 inst（沒寫＝一律用規則）；沒寫 `timeout_ms`＝30000 |
+| `max_fails` | 判官連錯幾次就一直用規則（3），等人把 state 窗的 `judge_fails` 改回 0 |
+| `budget`、`aging_ticks`、`near_ms`、`log` | 同第一種；`budget` 只管 `llm` 的信 |
+| `poll_ms` | 一拍之內多久看一次信箱與跑完的信（50） |
+
+**資源**＝信的 `_metainfo.resource`（從 target 的 inst 照抄）：沒寫或 `"none"`＝便宜的，不佔格、不問判官、直接跑；寫了但 `slots` 沒有＝回 `ResourceUnknown`。`human`＝人的注意力（C-28、C-29）：那支 inst 等人回信落檔，格就一直佔著，回信到或它的 `timeout_ms` 到才放。
+
+## state 窗＝判官的 stdin
+
+沿用 loop 骨架的名字（`state`、`pid`、`runs`、`last_error`、`beat`），加 kernel 自己的 key。每次要決定前寫一份、拍完寫一份；判官拿到的就是剛寫的那份（N-13 外顯）。
+
+```jsonc
+{"state": "running", "pid": 123, "runs": 7, "last_error": null, "beat": 1792...,   // runs＝第幾拍
+ "queue":   {"<信名>": {"priority": {...}, "_metainfo": {...}, "waited_runs": 2, "waited_ms": 830}},
+ "running": {"<信名>": {"resource": "human", "since": 1792...}},
+ "slots":   {"llm": {"total": 1, "used": 1}, "cpu": {"total": 2, "used": 0}},
+ "budget":  {"limit": null, "used": 0, "day": "2026-10-15"},
+ "served": 12, "seen": {"<信名>": 5}, "judge_fails": 0, "judge_error": null, "last_sig": [...]}
+```
+
+不給信的 stdin 內容；要讓判官知道是什麼活，作者在 `_metainfo.summary` 寫一句。
+
+## 判官的 stdout
+
+```json
+{"run": ["<信名>"], "defer": ["<信名>"], "reject": [{"id": "<信名>", "error": {"code": "TooExpensive", "msg": "太貴"}}]}
+```
+
+- 沒點名的＝`defer`；不認得的 id 丟掉；`run` 超過該資源空格的照順序截掉（log 的 `cut`）。級數不能改。
+- `reject`＝回信 `{"error": {code, msg}}`，呼叫端的閘門 stderr 一份 N-29、退出 125。
+- **判官錯**（結束碼非 0、逾時、起不來、形狀不對、同一個 id 出現兩次）＝這次改用第一種的確定規則（`aos_gate_kernel.order`：deadline 插隊＋級數＋aging＋先來後到，每種資源各自補滿），`judge_fails`＋1、`judge_error` 記原因；判官對一次就歸零。連錯 `max_fails` 次就不再問，等人歸零。
+- **判官自己的腦不走自己**：判官的環境拿掉 `AOS_KERNEL`；它自己的 `envs` 寫 `AOS_KERNEL` 指回這個信箱也拿掉（指別的信箱，例 LLM kernel，照給）。
+
+## 一拍
+
+1. `cur/` 還有信＝上一拍被收掉（kernel 重起）→ 回 `KernelRestarted`、不重跑（N-20）。
+2. 反覆：收跑完的（回信、放格）→ 讀 `new/`（過期 `DeadlineMissed`、資源不認得、`llm` 額度見底 `BudgetExhausted`、便宜的直接起跑）→ **局面變了才決定**（排隊的名單、在跑的名單、空格數跟上次一樣＝不問，沿用；只有一封且有空格＝直接跑；否則問判官）→ 照決定認領（new/→cur/）、起跑。
+3. 沒有在跑的、這輪也沒起新的＝這拍結束。所以一拍可能很長（例：等人回信），期間新來的信照樣被收、被排。
+
+stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback, direct, skipped, fails, on_rules}}`；設定不對＝stderr 錯誤、退出 125。
+
+## agent 判官（換一行 TARGET）
+
+`demo/kernel2/judge-agent.json`＝`python3 judge/ask_judge.py judge/agent.json`：把 state 窗當 user 訊息交給 bob 式 agent（`aos_agent_call`），拿它最後一句裡的 JSON 物件印出來；錯＝退出 1（kernel 退回規則）。`judge/system.md` 說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
+
+## 測試
+
+`tests/test_kernel.py`（17 個）：判官的答案照辦、stdin 就是 state 窗、沒點名＝defer、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯到 `max_fails` 停在規則＋人歸零後再問、局面沒變不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。
