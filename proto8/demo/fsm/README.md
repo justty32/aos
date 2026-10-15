@@ -22,7 +22,7 @@ python3 proto8/demo/fsm/run.py brains/lmstudio.json      （換腦：在 frame �
   - `tool.json`＝`aos agent tool`：把還沒回的 tool_calls 照順序跑完，每個在 frame 的 `work/<n>/` 開新資料夾、引數寫成 `args.json`、在那裡跑；裡面是不是另一個 agent 它不知道（C-52）。
   - `done.json`＝`aos agent done`：寫 frame 的 `ret.json`；done 在 `end` 裡，fsm 結束那行帶 `"end": true`，loop 的 `stop_on_end` 看到就停（N-44）；halted 不用它（ret.json 的錯由 think 自己寫，done 不讀別格的私檔，10-15「都同意。」）。
   - `common.py`：idle、review 共用的 history 讀寫（cwd＝frame）。
-- `brains/`：換用的腦。`fake.py`（假腦：問「幾點」有 `clerk` 就叫 clerk、否則叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回）、`openai.json`（`aos brain openai`，預設 LiteLLM）、`litellm.json`（本機 LiteLLM、`chatgpt-gpt-6-luna-nothink`，[實跑](../../thinking/2026-10-15-litellm-live.md)）、`lmstudio.json`（本機 LM Studio、`qwen/qwen3-1.7b`）、`ollama/gemma3_1b.json`／`ollama/qwen2_5_14b.json`（146 的 ollama，主機寫在檔內 `--base-url`——**146 已不准用**（10-15 使用者），只留當範例）。
+- `brains/`：換用的腦。`fake.py`（假腦：問「幾點」有 `clerk` 就叫 clerk、否則叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回）、`openai.json`（`aos brain openai`，預設 LiteLLM）、`litellm.json`（本機 LiteLLM、`chatgpt-gpt-6-luna-nothink`，[實跑](../../thinking/2026-10-15-litellm-live.md)）、`lmstudio.json`（本機 LM Studio、`qwen/qwen3-1.7b`）。ollama 要用就走它的 OpenAI 相容 `/v1`（`aos brain openai --base-url http://主機:11434/v1`），原生那顆腦與 `ollama/` 兩份設定 10-15 深夜刪。
 - `clerk/`（報時員）：**另一個 agent 定義資料夾**，單層表 `intake → thinking → route → (tool → thinking → route)* → done`（halted 只在 end），`loop.json` 跟外層同一種寫法（`times` 20），腦 `brain.json`＝同一顆假腦，工具 `tools/clock.json`（`clock.py`：stdout `{"time": "HH:MM:SS"}`），`system.md`「你是報時員…」。
 - `tools/clerk.json`：**agent 當工具**（[agent.md](../../lib/agent.md#agent-當函數當工具)）＝`sh -c` 三步：在工具的資料夾（tool 格開的 `work/<n>/`＝clerk 這次的 frame）寫 `frame.json` 指回 `clerk/` → `aos loop clerk/loop.json` → `cat ret.json`。`clerk/` 一個字都不寫——同一個函數重複用（測試 `test_clerk_reused_definition_untouched` 問兩次、比 `clerk/` 前後的雜湊）。外層只拿到 clerk 的 `ret.json`（`{"reply"}`）。
 - `run.py`：mktemp 建一個 frame（`frame.json` 指回這裡、`inbox/` 兩封信「你好」「現在幾點？」；給了 `brains/xxx.json` 就複製成 frame 的 `brain.json`），在 frame 裡起 `aos loop demo/fsm/loop.json`（PATH 接上 `proto8/bin`、`demo/bin`），每 20 ms 看一次兩層 state 窗、變了就印一行；最後印 `steps.jsonl`、history、報時員的 frame（`work/1/`）、`outbox.txt`、`ret.json`，刪掉 frame。
@@ -33,7 +33,7 @@ python3 proto8/demo/fsm/run.py brains/lmstudio.json      （換腦：在 frame �
 
 - LM Studio 要先開 server、載好 Qwen3-1.7B，用完 unload、關 server（[dev-env](../../../wf/workflows/dev-env/01-跨機與外部工具.md#跨機--離線差異)）。10-15 試過整圈跑通，ask 那拍約 4～8 秒（[thinking 10-15 §9](../../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#9-試-lm-studioqwen3-17b)）。
 - LiteLLM 端點預設 `http://localhost:4000/v1`（[dev-env](../../../wf/workflows/dev-env/02-模型端點.md#模型端點2026-09-25-定10-10-核對)），不用金鑰；先 `curl localhost:4000/v1/models` 看有哪些名字，把 `brains/openai.json` 的 `--model` 改成挑到的。換端點加旗標：`--base-url https://api.deepseek.com/v1 --model deepseek-chat --api-key-env DEEPSEEK_API_KEY`，金鑰只放環境變數。
-- 報時員的腦另外換：改 `clerk/brain.json`，或像 [demo/kernels/llm](../kernels/llm/run.py) 那樣讓工具在 clerk 的 frame 放一份 `brain.json`。它整趟都在外層 tool 那一拍裡跑完；小模型有時不查 clock 直接編時間（[clerk-live](../../thinking/2026-10-15-clerk-live.md)）。
+- 報時員的腦另外換：改 `clerk/brain.json`（demo 不示範上層伸手進下層的 frame）。它整趟都在外層 tool 那一拍裡跑完；小模型有時不查 clock 直接編時間（[clerk-live](../../thinking/2026-10-15-clerk-live.md)）。
 - 真腦會慢：ask 那拍等多久就阻塞多久（`think/ask.json` 的 `timeout_ms` 200 秒）。
 - 10-15 試過 146 ollama：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`；現在 think 連錯 3 次自己寫 `ret.json`（那個錯）、回 `halted`＝外層也結束，loop 停掉（不再每拍叫腦）。qwen2.5:14b 整圈跑通（[thinking 10-15 §8](../../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#8-試-146-ollamaqwen2514b)）。
 
@@ -53,7 +53,6 @@ python3 proto8/demo/fsm/run.py brains/lmstudio.json      （換腦：在 frame �
 [ 5.0s] aos-loop 結束，退出碼 0（done）
 …
 [ 5.0s] == work/1/（叫 clerk 那次的 frame：args.json＝引數；clerk/ 本身沒動，history 累積在這裡）
-[ 5.0s]    args.taken.json：{"question": "現在幾點？"}
 [ 5.0s]    {"role": "user", "content": "現在幾點？"}
 [ 5.0s]    {"role": "assistant", "content": null, "tool_calls": [{… "name": "clock", "arguments": "{}"}}]}
 [ 5.0s]    {"role": "tool", "tool_call_id": "call_2_0", "content": "{\"id\": \"…/clerk/tools/clock.json\", \"code\": 0, …, \"result\": {\"time\": \"18:50:50\"}}"}

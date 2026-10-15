@@ -21,7 +21,7 @@ clerk/
   brain.json  system.md  tools/clock.json
 ```
 
-**frame**＝被叫者跑的 cwd，放哪由呼叫方決定（C-46）。裡面：`frame.json` `{"parent": "<定義資料夾>"}`（找名字往上一層）、`args.json`（實引數，intake 接走後改名 `args.taken.json`）、`ret.json`（回傳）、`history.json`、`fsm/state.json`、`loop/state.json`、`loop/ctl.json`（窗按擁有者分資料夾、窗名統一 `state.json`／`ctl.json`，10-15 盤點 P3）、`work/`（think 的私檔 `work/think.json`）。放同名檔＝綁定：`brain.json` 蓋過定義的腦、`tools/x.json` 追加或同名蓋過（逐項合併；「整份取代」不支援）、`history.json` 綁一段對話。
+**frame**＝被叫者跑的 cwd，放哪由呼叫方決定（C-46）。裡面：`frame.json` `{"parent": "<定義資料夾>"}`（找名字往上一層）、`args.json`（實引數，intake 接走就刪）、`ret.json`（回傳）、`history.json`、`fsm/state.json`、`loop/state.json`、`loop/ctl.json`（窗按擁有者分資料夾、窗名統一 `state.json`／`ctl.json`，10-15 盤點 P3）、`work/`（think 的私檔 `work/think.json`）。放同名檔＝綁定：`brain.json` 蓋過定義的腦、`tools/x.json` 追加或同名蓋過（逐項合併；「整份取代」不支援）、`history.json` 綁一段對話。
 
 **呼叫**（直接叫）：
 
@@ -33,7 +33,7 @@ cd frame && echo '{"parent": "/abs/clerk"}' > frame.json && echo '{"question": "
 - 一趟：intake（args.json → history）→ think → route → (tool → think → route)* → done（寫 `ret.json`＝`{"reply"}`；done 在 `end` 裡，fsm 結束那行帶 `"end": true`，loop 的 `stop_on_end` 看到就停，N-44）。think 連錯 3 次＝think 自己寫 `ret.json`＝`{"error": {"code", "msg"}}`、回 `next: halted`（只在 `end`、不在 `states`）＝fsm 結束，不經 done 格（10-15 使用者「都同意。」，[盤點第 8 條](../thinking/2026-10-15-principles.md)）。走完 end，fsm 的 phase 歸位 `intake`。
 - **成敗看 `ret.json`**：走到 halted 時 loop 照樣退 0、state `done`（C-52：loop 只說自己這一層，不把 agent 的失敗當自己的錯；10-15 使用者「都同意。」），呼叫方看 `ret.json` 有沒有 `error`。
 - loop 的 `times` 用完還沒走到 done＝沒有 `ret.json`（沒跑完）。
-- **同一個 frame 再叫一次**＝接著那裡的 history：呼叫方只要再寫一份 `args.json`；intake 把它接在後面、順手刪上一輪的 `ret.json`（這次沒跑完就讀不到舊的）。不必刪 `loop/ctl.json`：done 不寫 ctl，loop 靠 fsm 結束那行停。
+- **同一個 frame 再叫一次**＝接著那裡的 history：呼叫方只要再寫一份 `args.json`；intake 把它接在後面。上一輪的 `ret.json` intake 不碰——呼叫方要分「這次沒跑完」就自己先刪（10-15 深夜 KISS 批次 1）。不必刪 `loop/ctl.json`：done 不寫 ctl，loop 靠 fsm 結束那行停。
 - 兩個呼叫同時指同一個 frame 不擋（卡死不防護）；不同 frame 可以同時跑。
 
 **當工具**：工具 inst 用 `sh -c` 三步（寫 frame.json → 跑被叫者的 loop → 讀 ret.json）。父 agent 的 tool 格只是在 `work/<n>/` 跑一張 inst、寫好 `args.json`——它不知道裡面是另一個 agent（C-52 徹底切割，10-15 深夜）；是這張工具 inst 自己把 cwd 當成被叫者的 frame。`cat ret.json` 的內容就是工具結果，父 agent 的 tool 訊息 `result` 看得到（錯也是 N-29 形狀）。（工具叫 agent 的寫法——三步還是 aos-exec——等 [inst-exec 稿](../thinking/2026-10-15-inst-exec.md)定；這裡只定「agent 這層不知道」。）demo 的 `tools/clerk.json`：
@@ -44,9 +44,7 @@ cd frame && echo '{"parent": "/abs/clerk"}' > frame.json && echo '{"question": "
  "timeout_ms": 120000, "_tool": {"description": "問報時員…", "parameters": {…}}}
 ```
 
-- 綁定也在這一步做：例 `demo/kernels/llm/boss/tools/clerk.json` 多一步 `cp …/boss/brain.json brain.json`，報時員就改用 boss 的腦（經閘門）。
 
-**換腦只換那一層、什麼都不往下傳**（10-15 使用者「都按照推薦」，[litellm 實跑 #1](../thinking/2026-10-15-litellm-live.md#拍板10-15)；10-15 深夜加嚴成 C-52「完全切割，徹底切割，不得有任何殘留」）：子 agent 沿**自己 frame** 的 `frame.json` 往上找（`chain()` 只看 frame 自己的 frame.json，不看呼叫方），所以呼叫方 frame 放的 `brain.json` 不會傳到子 agent；agent 這層也沒有任何機制把東西傳給工具裡的 agent。要換子 agent 的腦，是**那張工具 inst** 自己的事——在它裡面把 `brain.json` 放進子 agent 的 frame（像上面 boss 的 `cp`），或在 frame 放一份同名工具蓋過定義的（`demo/paint/run.py` 的 `bind_brain()` 就是改寫工具 inst）。
-- 查過（10-15）：boss 叫報時員用的是 boss **定義資料夾**那顆經閘門的假腦，是因為 `boss/tools/clerk.json` 那行 `cp "$AOS_DEMO/kernels/llm/boss/brain.json"` 寫死抄定義的腦，不是綁定從 boss 的 frame 漏下去；報時員自己的定義（`demo/fsm/clerk/brain.json`）是不經閘門的假腦。boss 的 frame 換了腦，報時員照樣用那行抄的那顆——這正是「只換那一層」。
+**換腦只換那一層、什麼都不往下傳**（10-15 使用者「都按照推薦」，[litellm 實跑 #1](../thinking/2026-10-15-litellm-live.md#拍板10-15)；10-15 深夜加嚴成 C-52「完全切割，徹底切割，不得有任何殘留」）：子 agent 沿**自己 frame** 的 `frame.json` 往上找（`chain()` 只看 frame 自己的 frame.json，不看呼叫方），所以呼叫方 frame 放的 `brain.json` 不會傳到子 agent；agent 這層也沒有任何機制把東西傳給工具裡的 agent。要換子 agent 的腦＝改子 agent 自己的定義（或它的 `brain.json` 本身就是閘門）；demo 不再示範「上層伸手進下層的 frame」（原本 boss 的工具 `cp` boss 的腦進 clerk 的 frame、paint 的 `bind_brain()` 改寫工具 inst，10-15 深夜 KISS 批次 1 拿掉，[KISS 彙整](../thinking/2026-10-15-kiss/README.md) 1.15）。
 - 上限：被叫者 loop 的 `times`、那張工具 inst 的 `timeout_ms`（父 agent 的 tool 格 `timeout_ms` 要更大）；遞迴深度不另外擋（Busy、TooDeep、MaxTicks 都拿掉了）。
 - 定義資料夾的路徑：demo 用 `aos-demo` 給的 `AOS_DEMO` 拼絕對路徑；不在 demo 裡就直接寫絕對路徑。

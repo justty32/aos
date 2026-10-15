@@ -1,4 +1,5 @@
 """畫家 demo（demo/paint）：畫家 agent 經工具叫畫筆 agent；frame 巢狀、同 frame 續聊、frame 放 brain.json 換腦只換那一層。
+demo 不示範上層伸手進下層的 frame（10-15 深夜 KISS 批次 1，1.15）。
 
 用假腦（demo/paint/brains/fake.py）；frame 在暫存資料夾，定義資料夾 painter/、brush/ 不動。
 """
@@ -14,7 +15,7 @@ from helpers import ENV, LIB, Tmp
 PAINT = os.path.realpath(os.path.join(LIB, "..", "demo", "paint"))
 PAINTER = os.path.join(PAINT, "painter")
 _spec = importlib.util.spec_from_file_location("paint_run", os.path.join(PAINT, "run.py"))
-paint_run = importlib.util.module_from_spec(_spec)           # demo 的 run.py（tree_hash、bind_brain）
+paint_run = importlib.util.module_from_spec(_spec)           # demo 的 run.py（tree_hash）
 _spec.loader.exec_module(paint_run)
 
 
@@ -50,11 +51,7 @@ class PaintDemoTest(Tmp):
         self.write("B/brain.json", self.read_abs(alt))
         r = self.call("B", "幫我畫一片海")
         self.assertTrue(r.startswith("〔換過的假腦〕"))
-        self.assertIn("畫筆說：備好了：藍、白。", r)
-        # bind_brain 再綁工具：畫筆也換
-        os.makedirs(self.p("C"))
-        paint_run.bind_brain(self.p("C"), alt)
-        self.assertIn("畫筆說：〔換過的假腦〕備好了", self.call("C", "幫我畫一片海"))
+        self.assertIn("畫筆說：備好了：藍、白。", r)                   # 畫筆照用自己定義的腦
 
     def test_run_script(self):
         p = subprocess.run([sys.executable, os.path.join(PAINT, "run.py")], env=ENV, capture_output=True,

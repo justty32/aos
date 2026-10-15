@@ -3,7 +3,7 @@
 #   aos inst|loop|daemon|fsm|gate ...                          → python3 lib/aos_<名>.py ...
 #   aos kernel llm|general ...                                  → python3 lib/aos_kernel_<名>.py ...（兩種 kernel，N-42）
 #   aos agent think|tool|route|intake|done|fsm ...             → python3 lib/aos_agent_lib.py ...
-#   aos brain openai|ollama ...                                → python3 lib/aos_brain_<名>.py ...
+#   aos brain openai ...                                       → python3 lib/aos_brain_openai.py ...（只有 OpenAI 相容一顆）
 # 跟 C++ 的 aos 執行檔同名但不相干；誰先在 PATH 上就用誰（proto8 的測試與 demo 把本資料夾排最前面）。
 lib="$(dirname "$(readlink -f "$0")")/../lib"
 cmd="$1"
@@ -17,8 +17,8 @@ case "$cmd" in
   agent) exec python3 "$lib/aos_agent_lib.py" "$@" ;;
   brain)
     case "$1" in
-      openai|ollama) b="$1"; shift; exec python3 "$lib/aos_brain_$b.py" "$@" ;;
+      openai) shift; exec python3 "$lib/aos_brain_openai.py" "$@" ;;
     esac ;;
 esac
-printf '{"error": {"code": "Usage", "msg": "aos inst|loop|daemon|fsm|gate|kernel llm|general|agent|brain openai|ollama ...（proto8 入口），不認得 %s"}}\n' "$cmd $1" >&2
+printf '{"error": {"code": "Usage", "msg": "aos inst|loop|daemon|fsm|gate|kernel llm|general|agent|brain openai ...（proto8 入口），不認得 %s"}}\n' "$cmd $1" >&2
 exit 1

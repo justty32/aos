@@ -14,9 +14,9 @@ python3 proto8/demo/run.py
 
 三個 agent 的 demo 都要 PATH 上有 `proto8/bin`（`aos`）與 `demo/bin`（[`aos-demo`](bin/aos-demo)：`aos-demo fsm/brains/fake.py`＝從 demo 資料夾算的腳本、其他指令照跑並多給 `AOS_DEMO`＝demo 資料夾）；各 `run.py` 自己會接上。
 
-再一個：**畫家**（使用者 10-11 舉的例子：畫家 agent 透過工具叫畫筆 agent；看 frame 巢狀、同 frame 續聊、frame 放 brain.json 換腦）——`python3 proto8/demo/paint/run.py [腦設定.json]`，說明在 [paint/README.md](paint/README.md)。
+再一個：**畫家**（使用者 10-11 舉的例子：畫家 agent 透過工具叫畫筆 agent；看 frame 巢狀、同 frame 續聊、frame 放 brain.json 換腦只換那一層）——`python3 proto8/demo/paint/run.py [腦設定.json]`，說明在 [paint/README.md](paint/README.md)。
 
-再一個：**LLM kernel**（daemon 底下的 loop 每拍跑 kernel；呼叫者經閘門叫同一顆睡 1 秒的假腦：low 最後、deadline 快到插隊、過期丟掉、aging、報時員巢狀只包腦一格就夠）——`python3 proto8/demo/run.py kernels/llm`，說明在 [lib kernel_llm.md](../lib/kernel_llm.md)、腳本 `kernels/llm/run.py` 檔頭。
+再一個：**LLM kernel**（daemon 底下的 loop 每拍跑 kernel；呼叫者經閘門叫同一顆睡 1 秒的假腦：low 最後、deadline 快到插隊、過期丟掉、aging、報時員巢狀只包 boss 的腦一格就夠）——`python3 proto8/demo/run.py kernels/llm`，說明在 [lib kernel_llm.md](../lib/kernel_llm.md)、腳本 `kernels/llm/run.py` 檔頭。
 
 再一個：**通用 kernel**（判官是一張 inst；假腦 llm、假 cpu 活、問人 human 三種同時搶，格數 1／2／1；第二段判官壞掉→每次都退回規則（kernel 不數連錯））——`python3 proto8/demo/run.py kernels/general`，說明在 [lib kernel_general.md](../lib/kernel_general.md)、腳本 `kernels/general/run.py` 檔頭；agent 判官（LM Studio）`python3 proto8/demo/kernels/general/run.py judges/agent.json`。
 
