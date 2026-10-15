@@ -1,0 +1,14 @@
+{
+  "start": "thinking",
+  "end": ["idle"],
+  "states": {
+    "thinking": {"target": {"argv": ["python3", "../../../lib/aos_agent_lib.py", "think"], "timeout_ms": 200000}, "next": "route"},
+    "route": {"argv": ["python3", "../../../lib/aos_agent_lib.py", "route"]},
+    "tool": {"target": {"argv": ["python3", "../../../lib/aos_agent_lib.py", "tool"], "timeout_ms": 30000}, "next": "thinking"}
+  },
+  "max_steps": 10,
+
+  "brain": "brain.json",
+  "tools": {"clock": "clock.json"},
+  "system": "system.md"
+}

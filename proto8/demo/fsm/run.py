@@ -45,6 +45,7 @@ def main():
                DEMO_LOOP_CTL=os.path.join(tmp, "loop.ctl.json"), DEMO_LOOP_STATE=w["loop_state"])
     say("暫存資料夾 %s；inbox 放了兩封信：「你好」「現在幾點？」" % tmp)
     say("aos-loop 拍 aos-fsm 10 次、每次隔 100 ms；thinking 格是內層 fsm（ask → review），ask 叫腦（agent.json 的 brain：假的腦，睡 0.4 秒）")
+    say("外層的工具只有 clerk（報時員＝另一個 agent，定義在 clerk/）：問時間就得問它，它自己再用 clock")
     loop = subprocess.Popen([sys.executable, LOOP, "loop.json"], cwd=HERE, env=env, stdout=subprocess.DEVNULL)
     seen = None
     try:
@@ -65,6 +66,10 @@ def main():
         say("== work/history.json（OpenAI messages，最後一段對話）")
         for m in read(os.path.join(tmp, "work", "history.json")) or []:
             say("   " + json.dumps(m, ensure_ascii=False))
+        for fr in sorted(n for n in os.listdir(os.path.join(tmp, "work")) if n.startswith("ask-")):
+            say("== work/%s/history.json（報時員 clerk 的 frame：clerk/ 本身沒動，history 累積在這裡）" % fr)
+            for m in read(os.path.join(tmp, "work", fr, "history.json")) or []:
+                say("   " + json.dumps(m, ensure_ascii=False))
         say("== outbox.txt")
         with open(os.path.join(tmp, "outbox.txt"), encoding="utf-8") as f:
             for line in f:

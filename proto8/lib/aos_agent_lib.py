@@ -4,11 +4,13 @@
 
     python3 aos_agent_lib.py think        （fsm 的格：stdin 讀 fsm 給的 {"state", "step", "prev", "cfg"}）
     python3 aos_agent_lib.py tool
+    python3 aos_agent_lib.py route        （看最後一則 assistant：有 tool_calls＝next tool，否則 next idle）
+    python3 aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json   （agent 當工具，見 aos_agent_call）
 
 設定從 stdin 的 `cfg` 拿（＝跑這格的那份 fsm 設定整份，10-15 使用者選乙；fsm 不認得這幾個 key、會忽略）：
 
-    brain     腦的 aos-inst TARGET。腦＝一支 inst：stdin {"messages", "tools"} → stdout 最後一份＝OpenAI assistant 訊息
-    tools     {工具名: aos-inst TARGET}（選填）。工具的說明寫在那張 inst 的 `_tool`：{"description", "parameters"}
+    brain     腦的 aos-inst TARGET（或內嵌一張 inst）。腦＝一支 inst：stdin {"messages", "tools"} → stdout 最後一份＝OpenAI assistant 訊息
+    tools     {工具名: aos-inst TARGET 或內嵌 inst}（選填）。工具跑的時候環境多一個 AOS_WORK＝這裡的 work。工具的說明寫在那張 inst 的 `_tool`：{"description", "parameters"}
     history   對話檔（OpenAI messages 陣列）；只有方法程式寫它，寫法照 N-05
     system    系統提示檔的路徑（選填；文字／markdown）。think 每次叫腦都把內容當第一則 system 訊息插在 messages 前，
               不寫進 history（改檔下一拍就生效）；沒寫＝不帶；寫了但檔不存在或讀不了＝think 格出錯（N-29）
@@ -39,7 +41,7 @@ import aos_methods
 from aos_cli import CliError
 from aos_ctl_state import write_json
 
-__all__ = ["AgentError", "LIMIT", "act", "load_config", "pending", "read_history", "think", "tool_specs"]
+__all__ = ["AgentError", "LIMIT", "act", "load_config", "pending", "read_history", "route", "think", "tool_specs"]
 
 LIMIT = 8000                                   # 工具結果回給模型最多幾個字
 SKIPPED = "基礎實作一次只跑一個，這個沒跑"
@@ -61,9 +63,9 @@ def load_config(doc):
         if not (isinstance(sysp, str) and sysp):
             raise AgentError("FieldType", "system 要是檔案路徑字串，不是 %r" % (sysp,))
         cfg["system"] = os.path.abspath(sysp)
-    if not (isinstance(cfg["brain"], str) and cfg["brain"]):
-        raise AgentError("FieldType", "brain 要是 aos-inst TARGET（字串），不是 %r" % (cfg["brain"],))
-    if not (isinstance(cfg["tools"], dict) and all(isinstance(v, str) for v in cfg["tools"].values())):
+    if not (isinstance(cfg["brain"], str) and cfg["brain"] or isinstance(cfg["brain"], dict)):
+        raise AgentError("FieldType", "brain 要是 aos-inst TARGET（字串）或一張 inst，不是 %r" % (cfg["brain"],))
+    if not (isinstance(cfg["tools"], dict) and all(isinstance(v, (str, dict)) for v in cfg["tools"].values())):
         raise AgentError("FieldType", "tools 要是 {工具名: aos-inst TARGET}，不是 %r" % (cfg["tools"],))
     for k in ("history", "work"):
         v = doc.get(k)
@@ -79,6 +81,8 @@ def read_history(path):
 
 
 def _load_inst(target):
+    if isinstance(target, dict):                 # 內嵌 inst（aos_agent_call 攤開定義時給的）
+        return target, target.get("id")
     try:
         return aos_cli.load_target(target, aos_inst._file)
     except CliError as e:
@@ -165,6 +169,7 @@ def _run_tool(cfg, call, n):
     doc = dict(inst, stdin=call_file, stdout=ret_file, stdout_append=False, stdout_mkdir=False,
                stdin_inherit=False, stdout_inherit=False)
     doc.setdefault("id", ident)
+    doc["envs"] = dict(inst.get("envs") or {}, AOS_WORK=cfg["work"])    # agent 當工具時，子 agent 的 frame 預設放這裡
     try:
         result = aos_inst.run(doc)
     except aos_inst.InstError as e:
@@ -195,16 +200,33 @@ def act(cfg, prev=None):
     return {"tool": first["function"]["name"], "result": content}
 
 
+def route(cfg, prev=None):
+    """看 history 最後一則 assistant：有 tool_calls＝{"next": "tool"}，否則 {"next": "idle", data.reply}。"""
+    msgs = read_history(cfg["history"])
+    last = msgs[-1] if msgs else {}
+    if last.get("role") == "assistant" and last.get("tool_calls"):
+        return {"next": "tool", "data": {"tool_calls": [c["function"]["name"] for c in last["tool_calls"]]}}
+    return {"next": "idle", "data": {"reply": last.get("content")}}
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 1 or argv[0] not in ("think", "tool"):
-        aos_cli.error("Usage", "aos_agent_lib.py think|tool（設定從 stdin 的 cfg 拿）")
+    if argv and argv[0] == "ask":
+        import aos_agent_call                    # 只有 ask 要 fsm；放這裡免得格庫平常多載一串
+        out, code = aos_agent_call.ask(argv[1:], sys.stdin.read())
+        aos_cli.emit(out)
+        return code
+    if len(argv) != 1 or argv[0] not in ("think", "tool", "route"):
+        aos_cli.error("Usage", "aos_agent_lib.py think|tool|route（設定從 stdin 的 cfg 拿）｜ask [--frame DIR] [--max-ticks N] AGENT.json")
         return 2
     try:
         args = aos_cli.read_stream(sys.stdin.read())
         arg = args[0] if args and isinstance(args[0], dict) else {}
         prev = arg.get("prev")
         cfg = load_config(arg.get("cfg"))
+        if argv[0] == "route":
+            aos_cli.emit(route(cfg, prev))
+            return 0
         data = (think if argv[0] == "think" else act)(cfg, prev)
     except CliError as e:
         aos_cli.error(e.code, e.msg)
