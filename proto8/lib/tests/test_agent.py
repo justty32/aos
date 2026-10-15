@@ -360,8 +360,13 @@ class BrainOpenaiTest(Tmp):
         r = self.brain({"messages": []}, "--timeout-ms", "3000")
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "ConnectFailed"))
 
+    def test_usage_passed_through(self):
+        _Stub.reply = dict(_Stub.reply, usage={"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7})
+        out = json.loads(self.brain({"messages": []}).stdout)
+        self.assertEqual((out["role"], out["usage"]["total_tokens"]), ("assistant", 7))
+
     def test_think_cell_through_real_brain(self):
-        _Stub.reply = {"choices": [{"message": {"role": "assistant", "content": "好"}}]}
+        _Stub.reply = {"choices": [{"message": {"role": "assistant", "content": "好"}}], "usage": {"total_tokens": 3}}
         self.write("brain.json", {"argv": [sys.executable, BRAIN, "--base-url", self.url, "--model", "m1"]})
         self.write("tools/clock.json", {"argv": ["true"], "_tool": {"description": "時間"}})
         cfg = {"brain": "brain.json", "tools": {"clock": "tools/clock.json"}, "history": "h.json", "work": "work"}
@@ -370,7 +375,7 @@ class BrainOpenaiTest(Tmp):
                            capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(_Stub.seen[0][2]["tools"][0]["function"]["description"], "時間")
-        self.assertEqual(json.loads(self.read("h.json"))[-1], {"role": "assistant", "content": "好"})
+        self.assertEqual(json.loads(self.read("h.json"))[-1], {"role": "assistant", "content": "好"})   # usage 沒進 history
         self.assertEqual(json.loads(r.stdout), {"data": {"content": "好", "tool_calls": []}})
 
 
@@ -400,6 +405,14 @@ class BrainOllamaTest(BrainOpenaiTest):
         call = out["tool_calls"][0]
         self.assertTrue(call["id"].startswith("call_"))
         self.assertEqual((call["type"], call["function"]), ("function", {"name": "clock", "arguments": '{"tz": "UTC"}'}))
+
+    def test_usage_from_eval_counts(self):
+        _Stub.reply = dict(_Stub.reply, prompt_eval_count=10, eval_count=4)
+        out = json.loads(self.ollama({"messages": []}).stdout)
+        self.assertEqual(out["usage"], {"prompt_tokens": 10, "completion_tokens": 4, "total_tokens": 14})
+
+    def test_usage_passed_through(self):
+        pass                                    # openai 專屬；ollama 的在 test_usage_from_eval_counts
 
     def test_flags_and_history_translated(self):
         _Stub.reply = {"message": {"role": "assistant", "content": "現在 10 點"}}
