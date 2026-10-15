@@ -184,26 +184,19 @@ class KernelTest(Tmp):
                 self.assertEqual([r["how"] for r in self.log("decide")][0], "fallback")
                 self.assertEqual(len(out["served"]), 2)
                 self.assertEqual(self.stdout(self.log("start")[0]["letter"]), "b")   # 規則：high 先
-                self.assertGreaterEqual(self.state()["judge_fails"], 1)
+                self.assertNotIn("judge_fails", self.state())          # kernel 不數連錯（盤點第 3 條）
                 self.assertTrue(self.state()["judge_error"])
 
-    def test_max_fails_stays_on_rules_until_cleared(self):
-        cfg = self.cfg("sys.exit(3)", max_fails=2)
+    def test_judge_keeps_failing_each_tick_uses_rules(self):
+        # 判官錯只有一條路：這拍用規則；kernel 不數連錯、不停問、不等人歸零（判官要停住是它自己的事；10-15「都同意。」）
+        cfg = self.cfg("sys.exit(3)")
         for _ in range(4):
             self.send("a")
             self.send("b")
             out = K.tick(cfg)
-        self.assertEqual(self.calls(), 2)
-        self.assertTrue(out["judge"]["on_rules"])
-        self.assertIn("rules", [r["how"] for r in self.log("decide")])
-        st = self.state()
-        st["judge_fails"] = 0                                        # 人把它歸零
-        with open(self.p("k.state.json"), "w") as f:
-            json.dump(st, f)
-        self.send("a")
-        self.send("b")
-        K.tick(cfg)
-        self.assertEqual(self.calls(), 3)
+        self.assertEqual(self.calls(), 4)
+        self.assertEqual([r["how"] for r in self.log("decide") if r["how"] != "direct"], ["fallback"] * 4)
+        self.assertNotIn("on_rules", out["judge"])
 
     def test_skip_judge_when_unchanged(self):
         a, b = self.send("a"), self.send("b")
@@ -326,7 +319,7 @@ class KernelTest(Tmp):
         self.assertEqual(out["dropped"], [{"letter": n, "error": "KernelRestarted"}])
 
     def test_bad_config(self):
-        for bad in ({"slots": {"llm": -1}}, {"slots": "2"}, {"max_fails": 0}, {"judge": 3}):
+        for bad in ({"slots": {"llm": -1}}, {"slots": "2"}, {"judge": 3}):
             with self.subTest(bad=bad):
                 with self.assertRaises(K.KernelError):
                     K.check(dict({"mailbox": "m", "state": "s"}, **bad))

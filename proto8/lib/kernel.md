@@ -28,7 +28,7 @@ python3 aos_gate.py [--target T] [--mailbox DIR] [--wait-ms N] [GATE.json]     #
 - **換腦一行**：agent 定義資料夾的 `brain.json` 換成一張跑閘門的 inst（例 `demo/kernel/boss/brain.json`：`aos gate <閘門設定>`），其他不動；只換某次呼叫＝在那次的 frame 放這份 `brain.json`（demo 的 clerk 就這樣借 boss 的腦）。
 - **信**（`new/<奈秒時間>.<pid>.json`，名字字典序＝先來後到）＝**target 那張 inst 本身**（inst 族，C-48）：key 攤在最上層（`argv`、`cwd`（轉絕對）、`timeout_ms`、`_metainfo`…；`id`＝target 的 id），加私有 key `priority`、`reply`（回信的絕對路徑 `reply/<名>.json`）、`sent`（epoch 秒）；`stdin`＝旁檔 `reply/<名>.stdin`（呼叫者 stdin 的內容）。kernel 只要把 `stdout`／`stderr` 填成旁檔 `reply/<名>.stdout`／`.stderr`，就能直接 `aos_inst.run(信)`（不認得的 key 一律忽略）。
 - **回信**＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`），或 N-29 形狀 `{"error": {"code", "msg"}}`（aos_inst 起不來時多 `exit`＝它的碼）。閘門讀回信、讀 stdout／stderr 旁檔原樣吐出，回信與旁檔一起刪掉。
-- **呼叫端看到的＝直接叫 target**：stdout、stderr 原樣、退出碼＝target 的碼（測試逐字比過）。
+- **呼叫端看到的＝直接叫 target**：stdout、stderr 原樣、退出碼＝target 的碼（測試逐字比過）。**閘門是透明的**：這時 stderr 與碼都是 target 的，不是閘門自己的；target 守 N-43（正常退 0、不寫 stderr）閘門就守。閘門只在自己出錯（下一條）時才說自己的話（10-15 使用者「都按照推薦。」，[盤點 S3](../thinking/2026-10-15-principles.md)）。
 - 錯（stderr 一份 N-29、退出 125）：`QueueTimeout`（排隊超過 `wait_ms`，信撤回）、kernel 回的 `DeadlineMissed`／`BudgetExhausted`／`KernelRestarted`、設定不對、`Usage`（不收 `-`：stdin 是請求本身）。kernel 那邊 target 起不來＝照 aos_inst 的碼（例 127 `CommandNotFound`）。
 - SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）、退出 128＋N；已被拿走的讓它跑完，回信與旁檔沒人收（留在 reply/）。
 - target 在 kernel 的環境跑（環境變數＝kernel 的＋target 的 `envs`，不是呼叫者的）；stdin／stdout／stderr 被閘門蓋掉（同 fsm 的格）。
@@ -42,7 +42,7 @@ python3 aos_gate_kernel.py [--key 值 ...] [KERNEL.json | -]
 | key | 意思 |
 |---|---|
 | `mailbox` | 信箱資料夾（必填） |
-| `state` | state 窗（必填，N-19）：loop 骨架的名字 `{state: "waiting", pid, runs, last_error, beat}`，加 `seen`（每封信第一次看到的 runs）、`budget: {limit, used, day}`、`served` |
+| `state` | state 窗（必填，N-19）：loop 骨架的名字 `{state: "waiting", pid, runs, last_error, last_warning, beat}`（`last_warning`＝這拍最後一件回信寫不進去 `ReplyFailed`；不寫 stderr），加 `seen`（每封信第一次看到的 runs）、`budget: {limit, used, day}`、`served` |
 | `slots` | 一拍最多跑幾封（1）；>1＝同一拍幾封一起跑，等最慢的跑完這拍才結束 |
 | `budget` | 一天的 token 額度（null＝不限）；用量＝target stdout（旁檔）最後一份的 `usage.total_tokens`，沒有＝0；換日歸零。兩顆真腦都在 assistant 訊息頂層帶 `usage`（[agent.md](agent.md)），包閘門就計得到 |
 | `aging_ticks` | 每等幾拍升一級（10） |

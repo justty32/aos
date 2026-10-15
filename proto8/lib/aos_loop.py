@@ -25,14 +25,15 @@ loop.json（先用指示詞 lib 解，基準＝呼叫者的 cwd；只在起來�
     id             選填字串，state 的 id（沒寫＝LOOP.json 的 realpath（有 `#/位置` 就接上）；從 stdin 來又沒寫＝null）
 
 ctl、state 的相對路徑從呼叫者的 cwd 算。ctl 窗起來時不在沒關係（還沒有控制，之後出現了照樣讀）。
-`inst` 不對（解不開、型別錯、寫了 stdin_inherit）＝起不來，退出碼沿用 aos_inst 的（參考 125）。
+`inst` 不對（解不開、型別錯、寫了 stdin_inherit）＝起不來，stderr 一份錯誤（代號照 aos_inst 的）、退出 1。
 
 每一次：起子程序 `aos_inst.py -`（自成一個 session），解好的 inst 從 stdin 灌進去 → 等它結束 → 整群補 SIGKILL 清孫程式 → 收屍。
 aos_inst 的退出碼只說它自己：0＝子程式跑完，`last_code`＝它 stdout 那份結果的 code；
 非 0＝aos_inst 自己出錯，`last_error`＝它 stderr 最後一份錯誤（「代號: 白話」）。被收掉的那次也算跑過一次。
+aos_inst 的 stderr 不轉到 loop 自己的 stderr（C-52 只管自己這一層；10-15 使用者「都按照推薦。」），只記在 state 窗的 last_error。
 
 stdout（N-12，JSON 串流）：每一次一份 {"run": 第幾次, "code": last_code, "ms": 跑了幾毫秒}，結束時一份
-{"end": "done"|"stopped", "runs", "skipped", "last_code"}。stderr：aos_inst 的錯誤原樣轉過來，自己的錯誤與警告也是 JSON。
+{"end": "done"|"stopped", "runs", "skipped", "last_code"}。stderr：只有 loop 自己的錯誤（N-29 JSON），沒有警告。
 
 ctl 窗（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣」，loop 只讀不寫，每 ctl_poll_ms 看一次，
 每次讀整份、內容跟上次不同才重驗。認的欄位（都選填；不認的忽略）：
@@ -44,20 +45,23 @@ ctl 窗（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣�
     seq            流水號（非負整數），state 的 ctl_seq 回報上次採用的那份
 
 `true`＝`{"val": true, "now": false}`。兩個都寫了 stop 壓過 paused。沒寫的欄位＝loop.json 的初始值（集中在 `want()`）。
-壞 JSON、不是物件、型別不對：整份不採用，維持上一次的好狀態，stderr 警告一次。檔不見了：維持上一次、警告一次。
+壞 JSON、不是物件、型別不對：整份不採用，維持上一次的好狀態，原因記在 state 窗的 last_warning（不寫 stderr，N-08）。
+檔不見了：維持上一次、同樣記 last_warning。之後讀到好的那份就清回 null。
 
 次數跑完（runs ≥ times）就結束、退出（有 ctl 也一樣）；想再跑就重新起。
 
 state 窗（骨架跟 daemon 共用，見 lib ctl-state.md）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、
 `pid`、`started`、`boot_id`、`runs`、`times`、`interval_ms`、`interval_mode`、`last_error`、`ctl_seq`、`beat`；
-loop 自己多 `skipped`、`last_code`。內容沒變也每秒碰一次（心跳）。先寫 `.名字.tmp` 再改名；寫不了警告一次、不算錯。
+loop 自己多 `skipped`、`last_code`、`last_warning`。內容沒變也每秒碰一次（心跳）。先寫 `.名字.tmp` 再改名；
+寫不了＝窗壞了（同 N-19 窗缺）：收掉正在跑的那次、結束，stderr 一份 StateWriteFailed、退出 1。
 
 收到 SIGINT／SIGTERM／SIGHUP（只在主執行緒接）：收掉正在跑的那次（整群 SIGTERM，過 grace_ms 整群 SIGKILL）、不再起新的。
 
-退出碼只說 loop 自己（數字只供參考）：
+退出碼只說 loop 自己，不沿用下層的碼（C-52；10-15 使用者「都同意。」，盤點第 1 條）：
 - 0＝正常結束（次數跑完、stop）；子程式回非 0 不算錯（在 last_code）。
-- 看最後一次：最後一次是 aos_inst 自己出錯＝沿用 aos_inst 的退出碼；中途出錯後來好了不算。
-- 被訊號停掉＝128＋訊號號碼；設定不對、用法不對＝125。
+- 1＝有錯：設定不對、用法不對、state 窗寫不了、或最後一次是 aos_inst 自己出錯（stderr 一份錯誤，代號＝last_error 的代號；
+  細節在 state 窗 last_error）；中途出錯後來好了不算。
+- 被訊號停掉＝128＋訊號號碼（Unix 傳統）。
 `run()` 正常回 None，其餘丟 `LoopError`（`exit` 屬性＝上面的退出碼）。
 
 給 daemon 重用的拍引擎：`Loop` 類別的 `beat()`（到點時做什麼）、`idle()`（每一圈都做）、`extra()`（state 多的欄位）、
@@ -94,7 +98,7 @@ _PATHS = ("ctl", "state", "table", "work_dir", "control_dir")
 class LoopError(CliError):
     """loop 自己出錯。`code`＝錯誤代號，`msg`＝白話，`exit`＝命令列退出碼，`str(e)`＝「代號: 白話」。"""
 
-    def __init__(self, code, msg, exit=125):
+    def __init__(self, code, msg, exit=1):
         super().__init__(code, msg)
         self.exit = exit
 
@@ -133,19 +137,16 @@ def load_config(path, defaults=DEFAULTS, need_inst=True, err=LoopError):
 # ---- 子程序（行程群組的 kill／reap 在 aos_proc）----
 
 class _Tail:
-    """讀一條管子到底，記住最後一行非空的；echo＝原樣轉到自己的 stderr。"""
+    """讀一條管子到底，記住最後一行非空的（不轉到自己的 stderr：下層的錯只記進 state 窗，C-52）。"""
 
-    def __init__(self, pipe, echo):
+    def __init__(self, pipe):
         self.last = None
-        self.thread = threading.Thread(target=self._read, args=(pipe, echo), daemon=True)
+        self.thread = threading.Thread(target=self._read, args=(pipe,), daemon=True)
         self.thread.start()
 
-    def _read(self, pipe, echo):
+    def _read(self, pipe):
         for line in pipe:
             text = line.decode("utf-8", "replace")
-            if echo:
-                sys.stderr.write(text)
-                sys.stderr.flush()
             if text.strip():
                 self.last = text.strip()
         pipe.close()
@@ -179,7 +180,7 @@ class Loop:
             try:
                 aos_inst.parse(cfg["inst"], os.getcwd(), ident or "<stdin>", piped=True)
             except aos_inst.InstError as e:
-                raise LoopError(e.code, e.msg, aos_inst.exit_code(e))
+                raise LoopError(e.code, e.msg)
             self.inst = json.dumps(cfg["inst"]).encode("utf-8")
         self.initial = {"paused": (False, False), "stop": (False, False), "times": cfg["times"],
                         "interval_ms": cfg["interval_ms"], "interval_mode": cfg["interval_mode"]}
@@ -187,7 +188,7 @@ class Loop:
         self.state_file = StateFile(cfg["state"], self.name)
         self.runs = self.skipped = 0
         self.last_code = self.last_error = None
-        self.inst_exit = 0          # 最後一次是 aos_inst 自己出錯＝它的退出碼，否則 0
+        self.inst_exit = 0          # 最後一次是 aos_inst 自己出錯＝它的退出碼（只用來判斷有沒有錯，不往上傳），否則 0
         self.proc = None
         self.stopping = False       # stop 讀到過一次就算數
         self.ended = False          # stop_on_end：包的 fsm 走到 end 了
@@ -216,6 +217,10 @@ class Loop:
     def error_now(self):
         """state 的 last_error。"""
         return self.last_error
+
+    def warning_now(self):
+        """state 的 last_warning（daemon 再加表與子項的）。"""
+        return self.ctl.warning
 
     def finish_up(self, final, now, got):
         """結束前（daemon：存檔、收子項）。final＝"done"／"stopped"，now＝要不要當場收。"""
@@ -267,7 +272,7 @@ class Loop:
         payload = self._payload()
         self.proc = subprocess.Popen([sys.executable, AOS_INST, "-"], start_new_session=True,
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.out, self.err = _Tail(self.proc.stdout, False), _Tail(self.proc.stderr, True)
+        self.out, self.err = _Tail(self.proc.stdout), _Tail(self.proc.stderr)
         try:
             self.proc.stdin.write(payload)
             self.proc.stdin.close()
@@ -333,7 +338,8 @@ class Loop:
             state = "done"
         else:
             state = "waiting"
-        return state_doc(self.id, state, w, self.ctl, self.runs, self.error_now(), **self.extra())
+        return state_doc(self.id, state, w, self.ctl, self.runs, self.error_now(), last_warning=self.warning_now(),
+                         **self.extra())
 
     def serve(self, got):
         c = self.cfg
@@ -371,6 +377,9 @@ class Loop:
                     if not w["paused"][0] and now >= self.due(w):
                         self.start(w, now)
                 self.state_file.write(self.status(w))
+                if self.state_file.failed:          # 窗壞了：收工（正在跑的那次在 finally 收掉）
+                    final, now_ = "stopped", True
+                    break
                 time.sleep(0.01 if self.proc else 0.02)
         finally:
             if self.proc:
@@ -394,9 +403,11 @@ class Loop:
                 signal.signal(s, h)
         if got:
             raise LoopError("Signaled", "收到訊號 %d" % got[0], 128 + got[0])
+        if self.state_file.failed:
+            raise LoopError("StateWriteFailed", self.state_file.failed)
         if self.inst_exit:
             code = (self.last_error or "InstError").split(":")[0]
-            raise LoopError(code, "最後一次 aos_inst 自己出錯：%s" % self.last_error, self.inst_exit)
+            raise LoopError(code, "最後一次 aos_inst 自己出錯：%s" % self.last_error)
 
 
 def run(x):
@@ -416,12 +427,12 @@ def main(argv=None):
         Loop(*check_config(ident, doc)).run()
         return 0
     except LoopError as e:
-        if e.code != "Signaled" and not e.msg.startswith("最後一次"):
+        if e.code != "Signaled":
             aos_cli.error(e.code, e.msg)
         return e.exit
     except CliError as e:
         aos_cli.error(e.code, e.msg)
-        return 125
+        return 1
 
 
 if __name__ == "__main__":

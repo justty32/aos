@@ -62,7 +62,7 @@ frame 裡放 `brain.json` 只蓋到**這個 frame 的 agent**。畫筆的 frame 
 
 ## 展示到的機制
 
-- fsm 只管「狀態 → 哪一張 inst」，`end` 寫 done／halted；走到 end 那拍 loop 看 `stop_on_end` 就停。
+- fsm 只管「狀態 → 哪一張 inst」，`end` 寫 done／halted（halted 不在 states：think 連錯自己寫好 ret.json 的錯）；走到 end 那拍 loop 看 `stop_on_end` 就停。
 - agent＝定義資料夾（fsm.json＋cells 各格 inst＋brain.json＋tools）；呼叫＝frame 資料夾當 cwd（env.json／args.json／ret.json）。
 - 工具＝inst；agent 當工具＝工具 inst 用 sh 三步叫另一個 agent，frame 是 tool 格開的 `work/<n>/`。
 - 腦＝OpenAI chat completions 形狀的 inst；frame 放同名檔＝綁定。

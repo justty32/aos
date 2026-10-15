@@ -301,7 +301,7 @@ class Daemon(Tmp):
         self.assertIn("skipped", st)
         la = self.until(lambda: self.ok({"op": "get", "id": a}).get("runs") == 1 and self.ok({"op": "get", "id": a}))
         common = {"id", "state", "pid", "started", "boot_id", "beat", "runs", "times", "interval_ms", "interval_mode",
-                  "ctl_seq", "last_error"}
+                  "ctl_seq", "last_error", "last_warning"}
         self.assertLessEqual(common, set(st))
         self.assertLessEqual(common, set(la))
         self.write("d.ctl.json", {"interval_mode": "after"})
@@ -311,6 +311,16 @@ class Daemon(Tmp):
         self.assertEqual((st["state"], st["loops"]), ("stopped", 1))     # 收工表留著（給下次接回）
         for v in (st["state"], la["state"]):
             self.assertIn(v, aos_loop.STATES)
+
+    def test_policy_failed_goes_to_state_not_stderr(self):
+        # 策略格回的不對＝當 leave，原因記在 state 窗的 last_warning，不寫 stderr（N-43；10-15「都按照推薦。」）
+        self.write("pol.json", {"argv": ["sh", "-c", "echo '{\"action\": \"fly\"}'"]})
+        a = self.loop("a", times=1)
+        self.start(children=[a], policies={"child_exit": self.p("pol.json")})
+        self.until(lambda: ((self.dstate() or {}).get("last_warning") or "").startswith("PolicyFailed"))
+        self.d.send_signal(signal.SIGTERM)
+        self.assertEqual(self.d.wait(10), 0)
+        self.assertEqual(self.d.stderr.read(), "")
 
     def test_state_last_error_scan_failed(self):
         self.start()

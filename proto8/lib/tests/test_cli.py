@@ -32,11 +32,13 @@ class Cli(Tmp):
         doc, ident, piped, rest = aos_cli.config(["--times", "4", path], {"times"})
         self.assertEqual((doc["times"], ident, piped, rest), (4, os.path.realpath(path), False, None))
         self.assertEqual(aos_cli.config([path + "#/node"], set())[1], os.path.realpath(path) + "#/node")
-        with mock.patch("sys.stdin", io.StringIO('{"times": 1, "id": "me"} {"x": 2}')), \
-                mock.patch("sys.stderr", io.StringIO()) as err:
+        with mock.patch("sys.stdin", io.StringIO('{"times": 1, "id": "me"}')):
             doc, ident, piped, _ = aos_cli.config(["-"], set())
         self.assertEqual((doc, ident, piped), ({"times": 1, "id": "me"}, "me", True))
-        self.assertIn("ExtraInput", err.getvalue())
+        with mock.patch("sys.stdin", io.StringIO('{"times": 1, "id": "me"} {"x": 2}')), \
+                self.assertRaises(aos_cli.CliError) as c:            # 多份＝入口錯（10-15 使用者「都按照推薦。」）
+            aos_cli.config(["-"], set())
+        self.assertEqual(c.exception.code, "ExtraInput")
         self.assertEqual(aos_cli.config([], set()), ({}, None, False, None))
         with self.assertRaises(aos_cli.CliError) as c:
             aos_cli.config([path + "#/times"], set())

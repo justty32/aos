@@ -51,8 +51,10 @@ error.code（只供參考）：BadCommand、UnknownOp、FieldType、NotFound、E
 
 stdout 同 loop：跑了 inst 的拍一份 {run, code, ms}（沒 inst＝不吐）、結束一份總結。state 窗：共同骨架加 skipped、last_code、loops（表上幾個）；
 last_error＝inst 自己出錯那行，沒有就是最近一圈掃資料夾的錯（ScanFailed、ReplyFailed），都沒有＝null。
-跑起來之後出意外不結束，stderr 吐一份警告（同一件事一次）。退出碼：0＝正常收工（含收到 SIGTERM／SIGINT）；
-1＝起不來；最後一拍 inst 自己出錯＝沿用它的碼（同 loop）。
+跑起來之後出意外（PolicyFailed、RestartFailed、TableWriteFailed、收工時寫不了子項 ctl 的 WriteFailed）不結束、不寫 stderr，
+記在 state 窗的 last_warning（「代號: 白話」，最近一件；ctl 窗壞檔的優先）；子 loop 自己的 stderr 落 work_dir/N/err.json，不轉上來
+（C-52；10-15 使用者「都按照推薦。」）。退出碼只說 daemon 自己、不沿用下層的碼：0＝正常收工（含收到 SIGTERM／SIGINT）；
+1＝起不來、state 窗寫不了、最後一拍 inst 自己出錯（stderr 一份錯誤，同 loop）。
 """
 import os
 import sys
@@ -138,6 +140,9 @@ class Daemon(Loop):
     def error_now(self):
         return self.last_error or (self.folder.last_error if self.folder else None)
 
+    def warning_now(self):
+        return self.ctl.warning or self.table.warning
+
     def finish_up(self, final, now, got):
         self.table.shutdown(now, self.cfg["grace_ms"], got)
         if self.folder:
@@ -165,10 +170,6 @@ def main(argv=None):
             raise DaemonError("Usage", "aos_daemon 不收 --")
         Daemon(*check(ident, doc)).run()
         return 0
-    except LoopError as e:
-        if not e.msg.startswith("最後一次"):
-            aos_cli.error(e.code, e.msg)
-        return e.exit if e.msg.startswith("最後一次") else 1
     except CliError as e:
         aos_cli.error(e.code, e.msg)
         return 1

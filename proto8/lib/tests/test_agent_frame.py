@@ -61,8 +61,8 @@ class AgentFrameTest(Tmp):
         self.assertEqual(json.loads(self.read("fr/ret.json")), {"reply": "n=2"})
         self.assertFalse(os.path.exists(self.p("fr", "ctl.json")))           # done 不碰 ctl
         self.write("fr/work/think-fails.json", {"n": 3, "error": {"code": "BrainFailed", "msg": "x"}})
-        self.run_cell("done", fr)
-        self.assertEqual(json.loads(self.read("fr/ret.json")), {"error": {"code": "BrainFailed", "msg": "x"}})
+        self.run_cell("done", fr)                                            # done 不讀 think 的私檔（盤點第 8 條）
+        self.assertEqual(json.loads(self.read("fr/ret.json")), {"reply": "n=2"})
 
     def test_fsm_subcommand_looks_up_table(self):
         # aos agent fsm：照 env.json 的 parent 鏈找 fsm.json，格名字從它所在的資料夾算、state 窗從 frame 算
@@ -137,7 +137,7 @@ class AgentCallTest(Tmp):
             "intake": {"target": "cells/intake.json", "next": "thinking"},
             "thinking": {"target": "cells/think.json", "next": "route"},
             "route": "cells/route.json", "tool": {"target": "cells/tool.json", "next": "thinking"},
-            "done": "cells/done.json", "halted": "cells/done.json"}})
+            "done": "cells/done.json"}})                 # halted 只在 end：think 自己寫好 ret.json 的錯
         for k, argv in (("intake", ["intake"]), ("think", ["think"]), ("route", ["route", "--done", "done"]),
                         ("tool", ["tool"]), ("done", ["done"])):
             self.write("bob/cells/%s.json" % k, {"argv": ["aos", "agent"] + argv})
@@ -195,7 +195,7 @@ class AgentCallTest(Tmp):
         self.assertEqual(r["error"]["code"], "BrainFailed")                  # N-29 形狀
         self.assertIn("Boom", r["error"]["msg"])
         self.assertEqual(len(json.loads(self.read("f/history.json"))), 1)
-        self.assertEqual(json.loads(self.read("f/loop-state.json"))["runs"], 5)   # intake、think×3（第 3 次回 halted）、halted
+        self.assertEqual(json.loads(self.read("f/loop-state.json"))["runs"], 4)   # intake、think×3（第 3 次寫 ret.json、回 halted＝結束）
 
     def test_times_used_up_no_ret(self):
         # 一直叫工具：loop 的 times 用完還沒走到 done＝沒有 ret.json（沒跑完）

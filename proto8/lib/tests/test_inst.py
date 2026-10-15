@@ -134,10 +134,13 @@ class Inst(Tmp):
         self.assertEqual((res["code"], res["signal"], res["timed_out"], res["id"]), (143, 15, True, "me"))
 
     def test_cli_stdin_flags_dashdash(self):
-        # stdin 只看第一份、其餘警告；旗標蓋過；-- 蓋過 argv
+        # stdin 多份＝ExtraInput 錯（退非 0、不跑）；一份照跑；旗標蓋過；-- 蓋過 argv
         r = self.cli("--exit", "s.exit", "-", input='{"argv": ["sh", "-c", "exit 2"], "exit": "no.exit"} {"x": 1}')
-        self.assertEqual((r.returncode, self.read("s.exit")), (0, "2\n"), r.stderr)
-        self.assertEqual(json.loads(r.stderr)["warning"]["code"], "ExtraInput")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertEqual(json.loads(r.stderr)["error"]["code"], "ExtraInput")
+        self.assertFalse(os.path.exists(self.p("s.exit")))
+        r = self.cli("--exit", "s.exit", "-", input='{"argv": ["sh", "-c", "exit 2"], "exit": "no.exit"}')
+        self.assertEqual((r.returncode, r.stderr, self.read("s.exit")), (0, "", "2\n"))
         self.assertIsNone(json.loads(r.stdout)["id"])                              # stdin 來又沒寫 id＝null
         r = self.cli("--cwd", self.tmp, "--stdout", "d.out", "--", "echo", "hi")
         self.assertEqual((r.returncode, self.read("d.out")), (0, "hi\n"), r.stderr)

@@ -7,7 +7,6 @@
     "thinking": {"target": "cells/think.json", "next": "route"},
     "route": "cells/route.json",
     "tool": {"target": "cells/tool.json", "next": "thinking"},
-    "done": "cells/done.json",
-    "halted": "cells/done.json"
+    "done": "cells/done.json"
   }
 }

@@ -1,12 +1,11 @@
 """daemon 的指令與控制資料夾：一條指令 → 一問一答（`handle()`），控制資料夾每圈掃一次（`_Folder`）。純標準庫。
 
 指令格式、回覆格式、error.code 的規矩見 aos_daemon 的檔頭；這裡只放實作。
-出意外不往上丟：印到 stderr（同一件事印一次），記成這圈的 last_error。
+出意外不往上丟、不寫 stderr：記成這圈的 last_error（daemon 放進 state 窗）。
 """
 import json
 import os
 
-from aos_cli import warn
 from aos_daemon_table import DaemonError
 from aos_loop import write_json
 
@@ -57,16 +56,13 @@ def _dispatch(table, cmd):
 class _Folder:
     def __init__(self, d):
         self.d = d
-        self.said, self.given_up, self.pending = {}, set(), {}
+        self.given_up, self.pending = set(), {}
         self.last_error = None      # 最近一圈出的最後一個錯（state 的 last_error）；那圈沒錯＝None
         self.errors = []
 
     def say(self, key, msg):
-        """同一件事只往 stderr 印一次；key 的訊息變了才再印。不管印沒印，都記成這圈的 last_error。"""
+        """記成這圈的 last_error（「代號: 白話」）；不寫 stderr（N-43：預料到的意外，daemon 照樣跑）。"""
         self.errors.append(msg)
-        if self.said.get(key) != msg:
-            self.said[key] = msg
-            warn(msg.split(":")[0], msg.split(": ", 1)[1])
 
     def flush(self):
         for name, (path, cmd, ready) in list(self.pending.items()):
@@ -76,7 +72,7 @@ class _Folder:
                 self.reply(path, {"request": cmd, **r})
 
     def scan(self, table):
-        """處理一圈。出意外不往上丟：印到 stderr，下一圈照常。"""
+        """處理一圈。出意外不往上丟：記成 last_error，下一圈照常。"""
         self.errors = []
         try:
             self._scan(table)
@@ -90,7 +86,6 @@ class _Folder:
             self.say("list", "ScanFailed: 看不了控制資料夾 %s：%s" % (self.d, e))
             self.flush()
             return
-        self.said.pop("list", None)
         for name in names:
             if name.startswith(".") or not name.endswith(".json") or name in self.given_up or name in self.pending:
                 continue

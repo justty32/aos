@@ -3,7 +3,7 @@
 
     python3 aos_inst.py [--key 值 ...] [TARGET | -] [-- argv...]
 
-設定從哪來照 aos_cli（NORMS N-12、D-1～D-3）：TARGET 檔、`-`＝stdin（JSON 串流只看第一份）、都沒給＝`{}`；
+設定從哪來照 aos_cli（NORMS N-12、D-1～D-3）：TARGET 檔、`-`＝stdin（一份；多份＝ExtraInput 錯）、都沒給＝`{}`；
 純量 key 都有同名旗標（`--timeout-ms 100`、`--cwd-mkdir true`…），蓋過檔或 stdin；`--` 後面整段蓋過 `argv`。
 設定從 stdin 來時 `stdin_inherit` ＝Conflict（stdin 已經被設定用掉了，D-5）。
 
@@ -20,6 +20,8 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/$AOS_DIRNAME/inst.json`
     envs            {名字: 字串}，疊在現有環境上；envs_clear: true 改成從空的開始
     stdin           從哪個檔讀；stdin_inherit: true 改接呼叫者的
     stdout/stderr   寫到哪個檔（覆寫）；*_append 改附加、*_mkdir 先建上層資料夾、*_inherit 改接呼叫者的
+                    （stderr_inherit 是寫單子的人自選的接法：這時呼叫者 stderr 上的東西是子程式的、不是 aos_inst 的，
+                    aos_inst 自己照樣只在出錯時寫 stderr、正常退 0；10-15 使用者「都按照推薦。」，盤點 S4）
     stderr_merge    true＝stderr 併進 stdout
     exit            選填：子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔（要碼讀 stdout 的結果就好，N-30）；
                     exit_append 改附加一行、exit_mkdir 先建上層資料夾

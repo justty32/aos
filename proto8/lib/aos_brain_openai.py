@@ -3,7 +3,7 @@
 
     python3 aos_brain_openai.py [--key 值 ...] [CONFIG.json]   < {"messages": [...], "tools": [...]}
 
-- stdin＝請求（JSON 串流只看第一份）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools）。
+- stdin＝請求（一份；多份＝ExtraInput 錯）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools）。
 - stdout＝一份 OpenAI assistant 訊息 `{"role": "assistant", "content", "tool_calls"?, "usage"?}`（取 choices[0].message）；
   端點有回 `usage` 就照抄在頂層（給 LLM kernel 記額度；think 格接進 history 前拿掉）。
 - 設定從 CONFIG.json（可接 `#/位置`）或旗標來（stdin 已經是請求，不收 `-`）：
@@ -84,7 +84,7 @@ def main(argv=None):
         if not (docs and isinstance(docs[0], dict)):
             raise CliError("JsonSyntax", "stdin 要有一份請求 {\"messages\", \"tools\"}")
         if len(docs) > 1:
-            aos_cli.warn("ExtraInput", "stdin 有 %d 份 JSON，只看第一份" % len(docs))
+            raise CliError("ExtraInput", "stdin 有 %d 份 JSON，請求只要一份" % len(docs))
         aos_cli.emit(ask(cfg, docs[0]))
     except CliError as e:
         aos_cli.error(e.code, e.msg)

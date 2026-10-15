@@ -6,7 +6,7 @@
     python3 aos_agent_lib.py tool
     python3 aos_agent_lib.py route [--done 名]   （看最後一則 assistant：有 tool_calls＝next tool，否則 next idle（或 --done 給的名））
     python3 aos_agent_lib.py intake        （args.json 接進 history（沒有就生、有就接在後面），接完改名 args.taken.json）
-    python3 aos_agent_lib.py done          （寫 ret.json＝最後一句或連錯的錯誤；loop 停靠 fsm 結束那行＋loop 的 stop_on_end）
+    python3 aos_agent_lib.py done          （寫 ret.json＝最後一句；loop 停靠 fsm 結束那行＋loop 的 stop_on_end）
     python3 aos_agent_lib.py fsm [NAME]    （照 lookup() 找 NAME（預設 fsm.json），跑一拍 aos_fsm；定義資料夾的 loop.json 用它，
                                             不必寫自己的路徑）
 
@@ -44,8 +44,10 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
   stdout 的 data：{"tool": 第一個名, "result": 第一個結果, "tools": [名…], "results": [結果…]}。
 - 出錯（設定不對、腦結束碼非 0、腦回的不是 assistant 訊息）：stderr 吐 {"error": {"code", "msg"}}、退出 1（格出錯）。
   腦出錯時 msg 帶腦自己 stderr 的錯誤（例 `HttpError: … 回 400：…does not support tools`），fsm 那行的 error 看得到。
-  think 連錯：次數記在 work/think-fails.json（成功一次就刪），到 halt_after 次＝不報錯、改吐
-  {"next": halt_state, "data": {"error"}}，交給表上那個狀態（例 done 格寫錯誤的 ret.json）。
+  think 連錯：次數記在 work/think-fails.json（think 自己的私檔，成功一次就刪），到 halt_after 次＝不報錯，**自己**把要交出去的錯
+  寫成 cwd 的 ret.json（{"error": {"code", "msg"}}），再吐 {"next": halt_state, "data": {"error"}}。halt_state 寫在表的 `end`、
+  不寫進 `states`（N-40：next 不在表裡、在 end 裡＝這個 fsm 結束），不經 done 格——格之間不互看私檔（C-52；10-15 使用者
+  「都同意。」，盤點第 8 條；原本 done 讀 think-fails.json 寫錯誤的 ret.json）。
 
 相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json、aos_frame 的 lookup；fsm 子命令才載 aos_fsm）。
 """
@@ -291,7 +293,8 @@ def _fails_file(cfg):
 
 
 def _think_failed(cfg, e):
-    """think 出錯：記一次；到 halt_after 次＝回 {"next": halt_state, "data": {"error"}}（不再報錯），否則回 None（照常報錯）。"""
+    """think 出錯：記一次；到 halt_after 次＝自己寫好 ret.json 的錯、回 {"next": halt_state, "data": {"error"}}（不再報錯），
+    否則回 None（照常報錯）。"""
     path = _fails_file(cfg)
     try:
         with open(path, encoding="utf-8") as f:
@@ -304,6 +307,7 @@ def _think_failed(cfg, e):
     write_json(path, {"n": n, "error": err})
     limit = cfg.get("halt_after")
     if isinstance(limit, int) and not isinstance(limit, bool) and n >= limit:
+        write_json("ret.json", {"error": err})        # 要交出去的錯 think 自己寫好（done 不讀 think 的私檔）
         return {"next": cfg.get("halt_state") or "halted", "data": {"error": err}}
     return None
 
@@ -357,17 +361,13 @@ def _last_text(msgs):
 
 
 def done(cfg):
-    """收尾：寫 cwd 的 ret.json——think 連錯停住（work/think-fails.json 在）＝N-29 形狀的錯，否則 {"reply": 最後一句}。
-    不碰 ctl：done 放在表的 end 裡，fsm 結束那行帶 `"end": true`，拍它的 loop 寫了 stop_on_end 就停（10-15 使用者）。"""
+    """收尾：寫 cwd 的 ret.json＝{"reply": 最後一句}。只看自己的輸入（history）；think 連錯停住時 ret.json 由 think 自己寫、
+    不經 done。不碰 ctl：done 放在表的 end 裡，fsm 結束那行帶 `"end": true`，拍它的 loop 寫了 stop_on_end 就停（10-15 使用者）。"""
     try:
-        with open(_fails_file(cfg), encoding="utf-8") as f:
-            ret = {"error": json.load(f)["error"]}
-    except (OSError, ValueError, KeyError, TypeError):
-        try:
-            msgs = read_history(cfg["history"])
-        except (OSError, ValueError):
-            msgs = []
-        ret = {"reply": _last_text(msgs)}
+        msgs = read_history(cfg["history"])
+    except (OSError, ValueError):
+        msgs = []
+    ret = {"reply": _last_text(msgs)}
     write_json("ret.json", ret)
     return {"data": ret}
 
