@@ -49,6 +49,8 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
 
 兩台輪流開發：家裡 Manjaro Linux（repo 在 `~/repo/simple_tools/aos`）、公司 WSL2 Ubuntu（repo 在 `~/projs/aos`，見下方「公司那台」；2026-10-01 使用者確認仍在用）。沒有 CI 差異，全部驗證都由 agent 跑。[SESSION-LOG](../SESSION-LOG.md) 裡「repo 在 `/mnt/c`」那條已過期。
 
+**10-15 暫停**：ops-notes 回報（使用者定）——146 上 model_entry live 與 smartbox receiver 被觸發的時段 CPU 不能被佔；qwen 試跑時雖 100% GPU，整機 CPU idle 曾掉到 1.9%（ollama 容器約 19.5 核）。在 ops-notes 回報『CPU 保護時段』之前，**不准對 146 的 ollama 發任何請求**。之後只在允許時段送，且監控要先開、等第一筆取樣出來再開跑（上次漏取載入高峰）。
+
 **公司那台**（2026-09-07 他開場說的，10-01 從那台的舊記憶搬來）：公司 WSL（Ubuntu），repo 在 `~/projs/aos`，codex 在 `~/.local/bin/codex`。區網 **`192.168.1.146`** 有 ollama（當時有 qwen2.5:14b、qwen3:32b、deepseek-r1:8b、gemma3:1b）；142 那台沒開 ollama 的口（他一開始說錯）。兩台都可能是當下這台，所以**開場先確認在哪台、LLM 走哪個端點**；**2026-10-15 使用者允許輕量試用 146 ollama**（小模型 gemma3:1b／deepseek-r1:8b；146 上跑著很重要的東西），**試前先確認負載**（10-14「公司這台不要用 146」由此取代）。規矩五條（出處 ops-notes 10-15，犯任一條＝立刻停手回報）：
   1. 只從這台走 ollama HTTP API 叫模型；不 ssh 146、不動任何 docker（restart／recreate／stop）、不 `ollama pull/create/rm`。
   2. 不碰 146 的 systemd；試前試後各 GET `/api/ps`，有模型只在 CPU（`size_vram == 0` 而 `size > 0`）就停手回報、不自己修。
