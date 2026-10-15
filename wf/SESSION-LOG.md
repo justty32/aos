@@ -12,8 +12,9 @@
 
 ## 最新進度
 
+- **10-15 aos-fsm 基礎實作＋同步版 demo**：`proto8/lib/aos_fsm.py`＋`aos_methods.py`（[fsm.md](../proto8/lib/fsm.md)）、[demo/fsm](../proto8/demo/fsm/README.md)（`python3 proto8/demo/run.py fsm`，假 LLM）。動工自定點（prev 形狀、state 多 `running`）等使用者看。
 - **10-15 主題重排＋fsm 補細則**（[thinking 10-15](../proto8/thinking/2026-10-15-topics.md)）：NORMS／CONCEPTS 分檔改按主題（設計理念含時空暫定、總則、基礎設施含組合子 tasks＋fsm、kernel、agent），入口有條號 → 檔表；N-35～N-41 修字、fsm 補第一拍／error 格／step／結束碼／心跳（Q12 已對齊）。未決：總則與設計理念要不要併、時空歸屬、[待定](../proto8/NORMS/08-待定.md)其餘。
-- **10-14 夜收工（明天從 [thinking 15 §44 交接](../proto8/thinking/2026-10-14-json-entry/15-ret與半份JSON.md#44-今晚交接明天從這裡開始) 開始）**：inst／loop／daemon 照 N-12 重做（基礎實作）、N-18～N-34、tasks 讀 stdout 都做完；深夜再定 ret／err 採方案 B（子 loop stdout 丟掉）、半份 JSON 不算（N-12 附註）。**下一步等使用者開口**（候選：aos-fsm 同步版 demo）。
+- **10-14 夜收工（明天從 [thinking 15 §44 交接](../proto8/thinking/2026-10-14-json-entry/15-ret與半份JSON.md#44-今晚交接明天從這裡開始) 開始）**：inst／loop／daemon 照 N-12 重做、N-18～N-34、tasks 讀 stdout、ret／err 方案 B、半份 JSON 不算，都做完。
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。使用者說之後／不做：指定時間跑、Linux 權限、AOS_DIR、非同步啟動、retry／timeout／while／race。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。
 - **proto8 thinking 精簡**：10-12 夜使用者要求 thinking 只留原文整理、決策、結論、未決（規矩見 [user.md](workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改)）。已刪 13 份 AI 產出、精簡其餘五份（[索引](../proto8/thinking/README.md)）；舊版見 git 22285099。
 - **proto8 10-13**：`檔#/位置` 已做（D1；`#/` 統一照檔案系統 D1a）；`_metainfo` 格式自由、inst 的可選 key、通用寫法之後在規範定（D4、D5）；見 [json-path](../proto8/thinking/2026-10-13-json-path.md)。晚上重構拆檔＋tidy，報告 [tidy 10-13](workflows/tidy/reports/2026-10-13-proto8-wf.md)。之後改語音輸入（字可能聽錯，意思不明就確認）。kernel／agent 概念見 [kernel-agent](../proto8/thinking/2026-10-13-kernel-agent.md)，細節等規劃 agent 時說。**下一步等使用者開口。**
