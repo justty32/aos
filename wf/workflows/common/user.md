@@ -43,6 +43,12 @@ agent 不用重猜的事。always-on 鐵律在 [AGENTS.md](../../../AGENTS.md)�
 他回來會說「跟我說說這段時間發生了啥、你做了哪些大決定」——這時用白話報告：發生了什麼、我替他做了哪些決定（附翻案位置）。
 因此不在時要**隨手記一份代定清單**（記在當天的 SESSION-LOG 條目或該輪的筆記裡），報告時照它講。
 
+## compact 前先寫交接（2026-10-15 定）
+
+他發現 compact 之後頂層會變笨——忘了規範、忘了這個 session 裡給過的授權和偏好。原文：「像這種comapct後變笨的狀況，有可以改善的方法嗎」「好，派人去設 hook」。
+
+所以：**他說要 compact 前，頂層先把交接寫進 [wf/HANDOFF.md](../../HANDOFF.md)**——session 內授權（push、在家／出門、模型分配）、正在討論的設計與已定／未定、當晚新定的規範條目編號。compact 後 repo 根 `.claude/settings.json` 的 SessionStart hook（matcher `compact`）會跑 [`wf/tools/compact_reload.sh`](../../tools/compact_reload.sh)，把本檔全文和 HANDOFF 最新一條自動讀回來。
+
 ## 開發階段不設行數上限（2026-10-09 定）
 
 原型開發階段**不設核心行數上限**；等到成果整理階段再重構、拆檔、濃縮。
