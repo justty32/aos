@@ -4,7 +4,7 @@
 
 只用 Python 標準庫。
 
-四支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`、`aos_fsm.py x.json`；相對路徑一律從呼叫者的 cwd 算。TARGET 都可以接 `檔#/位置`（N-35）。inst、loop、daemon 照 NORMS N-12 重做（10-14），fsm 10-15 照 N-36～N-41 做了基礎實作，LLM kernel（`aos_gate.py`＋`aos_gate_kernel.py`，N-42）與通用 kernel（`aos_kernel.py`）10-15 做了基礎實作：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`（N-21～N-27），`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 的 ctl／state 窗與 fsm 的 state 窗必填（N-19）；daemon.json＝loop.json 的超集（N-28）。
+四支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`、`aos_fsm.py x.json`；相對路徑一律從呼叫者的 cwd 算（fsm 表上的字串格例外：從 fsm 設定檔所在的資料夾算，N-36）。TARGET 都可以接 `檔#/位置`（N-35）。inst、loop、daemon 照 NORMS N-12 重做（10-14），fsm 10-15 照 N-36～N-41 做了基礎實作，LLM kernel（`aos_gate.py`＋`aos_gate_kernel.py`，N-42）與通用 kernel（`aos_kernel.py`）10-15 做了基礎實作：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`（N-21～N-27），`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 的 ctl／state 窗與 fsm 的 state 窗必填（N-19）；daemon.json＝loop.json 的超集（N-28）。
 
 ## 細節（各一份）
 
@@ -13,7 +13,7 @@
 | （`aos_cli.py` 檔頭） | 命令列與三扇門：TARGET／`-`／旗標／`--` 合成設定、JSON 串流讀寫（N-12 程式範本） |
 | [inst.md](inst.md) | inst：TARGET、key、`run()`、exit 檔、訊號、API |
 | [loop.md](loop.md) | loop：loop.json、每一次怎麼跑、ctl.json、state.json、退出碼、給 daemon 共用的 |
-| [fsm.md](fsm.md) | fsm：方法表、一拍、格的 stdin（設定＋`fsm_state`）、下一狀態、出錯與 error 格、連錯停住（`max_fails`／`halted`）、step、state 窗、巢狀與 `end`、lock、退出碼 |
+| [fsm.md](fsm.md) | fsm（10-15 收工後瘦身）：方法表與相對路徑、一拍、格的 stdin 不碰、下一狀態、`end` 四種情形、出錯（phase 不動）、state 窗只有 phase、巢狀、不做的事、退出碼 |
 | [agent.md](agent.md) | agent（實作慣例，還不是規範）：思考介面（換腦＝換一個 TARGET）、工具＝inst（`tools`＋`_tool`）、tool 訊息、邊緣狀況 |
 | [daemon.md](daemon.md) | daemon：daemon.json（loop.json 超集）、每拍的身體、children、策略格、table 窗與接回、控制資料夾與指令、收工 |
 | [kernel.md](kernel.md) | LLM kernel（N-42 第一種，基礎實作）：閘門的設定與信、kernel 一拍、排序規則、額度、只包葉子的慣例 |
@@ -27,17 +27,17 @@
 |---|---|
 | `aos_cli.py` | 命令列與 stdio（`config()`、`parse_argv()`、`load_target()`、`read_stream()`、`emit()`／`error()`／`warn()`、`CliError`）；三支共用，N-12 的程式範本；proto8-1 的 tasks、aos-tick 也借 `error()` 吐 stderr |
 | `aos_directives.py` | 命令列 TARGET 的 `檔#/位置`（大家共用）；順帶解指示詞（語法糖，有用才有作用） |
-| `aos_inst.py` | inst：設定從 TARGET／stdin／旗標來、解好、挑認得的 key、跑一次、stdout 吐一份結果（命令列＋`run()`） |
+| `aos_inst.py` | inst：設定從 TARGET／stdin／旗標來、解好、挑認得的 key、跑一次、stdout 吐一份結果（命令列＋`run()`）；資料夾 TARGET 找 `$AOS_DIRNAME/inst.json`（`dirname()`） |
 | `aos_loop.py` | loop：包一個 inst，跑幾次、隔多久、讀 ctl 窗、寫 state 窗、stdout 每次一份結果（命令列＋`run()`＋拍引擎 `Loop`＋`check_config()`／`load_config()`）；re-export 下面兩檔的名字 |
 | `aos_ctl_state.py` | ctl 窗（`parse_ctl`、`want`、`CtlFile`，含 seq）、state 窗（`STATES`、`state_doc`、`read_state`、`StateFile`，含心跳）、`proc_started`、`require`（窗必填）、`write_json`；loop、daemon 共用 |
 | `aos_proc.py` | 子程序的行程群組：等結束、整群送訊號、收屍（`kill`、`reap`）；loop、daemon 共用 |
 | `aos_daemon.py` | daemon：命令列＋`run()`、daemon.json、`Daemon`（`aos_loop.Loop` 的子類：每拍掃資料夾＋跑 inst、每圈收屍）；re-export 下面兩檔的名字 |
 | `aos_daemon_table.py` | daemon 的表：`Table`（一條指令一個方法、子項六態、table 窗與接回、`child_exit` 策略格、收工）、`DaemonError` |
 | `aos_daemon_folder.py` | daemon 的指令（`handle()`）與控制資料夾（掃、回覆 `.done`） |
-| `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{target, next}`）、跑一格（`run_cell`：蓋 stdin／stdout、本行程 `aos_inst.run()`、撿格 stderr 的 N-29 錯誤當 `cell_error`）、取 stdout 最後一份（`last_json`） |
-| `aos_fsm.py` | fsm：命令列＋`run()`、一拍（讀 ctl、讀寫 state 窗、跑格、換狀態、error 格、連錯停住、巢狀 `end`、lock） |
-| `aos_agent_lib.py` | agent 的現成格庫（不是 agent 本體；10-15 由 `aos_agent.py` 改名）：設定＝fsm 給的 stdin（fsm 設定本身＋`fsm_state`）；`think`（讀 history、組請求、跑腦、接 assistant 訊息）、`tool`（跑第一個 tool_call、接 tool 訊息）、`route`（有 tool_calls＝next tool，否則 idle）、`ask`（轉給 `aos_agent_call`）；`tool_specs`、`pending`；brain／tools 可以是 TARGET 或內嵌 inst |
-| `aos_agent_call.py` | agent 當函數＋binding（10-15 使用者定的概念 C-46）：`Agent(bob/agent.json).call(frame, history, engine_args, tools, tools_append, cwd)`——定義的路徑從 bob/ 算、攤成內嵌 inst，執行期（history／state／work／lock）放 frame，本行程一拍一拍敲 aos_fsm 到 `end`；`ask()`＝`aos_agent_lib.py ask` 的本體（agent 當工具：frame、lock、MaxTicks、Busy、遞迴層數） |
+| `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{target, next}`）、跑一格（`run_cell`：蓋 stdout（給了 args 才蓋 stdin；fsm 跑格不蓋）、本行程 `aos_inst.run()`、撿格 stderr 的 N-29 錯誤當 `cell_error`）、取 stdout 最後一份（`last_json`） |
+| `aos_fsm.py` | fsm（10-15 收工後瘦身）：命令列＋`run()`、一拍（讀寫只有 `phase` 的 state 窗、跑格（不碰 stdin）、換狀態、`end` 四種情形、格出錯 phase 不動退 1） |
+| `aos_agent_lib.py` | agent 的現成格庫（不是 agent 本體；10-15 由 `aos_agent.py` 改名）：設定＝格 inst 自己的 stdin＋frame 裡 `lookup()`（cwd → `env.json` parent 鏈；`lookup_dir()` 逐項合併）；`think`（連錯到 `halt_after` 改回 next halted）（讀 history、組請求、跑腦、接 assistant 訊息）、`tool`（跑第一個 tool_call、接 tool 訊息）、`route`（有 tool_calls＝next tool，否則 idle 或 `--done` 給的名）、`intake`（args.json → history）、`done`（寫 ret.json、ctl stop）、`ask`（轉給 `aos_agent_call`）；`tool_specs`、`pending`；brain／tools 可以是 TARGET 或內嵌 inst |
+| `aos_agent_call.py` | agent 當函數＋binding（10-15 使用者定的概念 C-46）：`Agent(bob/agent.json).call(frame, history, engine_args, tools, tools_append, cwd)`——定義的路徑從 bob/ 算、攤成內嵌 inst，執行期（history／state／work／lock）放 frame，攤開的設定寫成 `frame/work/agent.cfg.json` 給各格當 stdin（過渡，第二批退場），本行程一拍一拍敲 aos_fsm 到 `end`；`ask()`＝`aos_agent_lib.py ask` 的本體（agent 當工具：frame、lock、MaxTicks、Busy、遞迴層數） |
 | `aos_brain_openai.py` | 真的腦：照思考介面 POST 到 OpenAI 相容的 `/chat/completions`（urllib，不串流，預設 LiteLLM） |
 | `aos_brain_ollama.py` | 真的腦（ollama 原生）：POST `/api/chat`，帶 `options.num_ctx`、`keep_alive`；兩邊訊息形狀互翻（arguments 字串↔物件、補 id／`tool_name`） |
 | `aos_mailbox.py` | kernel 信箱共用（閘門、兩種 kernel）：`mailbox`、旁檔路徑 `side`、`read_letter`、`claim`、`reply`、`run_letter`（信＝inst，`aos_inst.run(信)`，stdout／stderr 落旁檔，回 N-30 結果＋token）、`log` |
@@ -49,7 +49,7 @@
 | `judge_rules.py` | 規則判官（假判官）：human 先、再級數、再先來後到，每種資源補滿空格 |
 | `tests/` | unittest，見[下面](#測試tests) |
 
-相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 ctl 與 `write_json`）；agent：`aos_methods` ← `aos_agent_lib`（也借 `write_json`），`aos_fsm` ← `aos_agent_call`（`aos_agent_lib` 只在 `ask` 時才載它），`aos_brain_openai`、`aos_brain_ollama` 只靠 `aos_cli`；kernel：`aos_inst` ← `aos_mailbox`（也借 `write_json`）← `aos_gate` ← `aos_gate_kernel` ← `aos_kernel_judge` ← `aos_kernel`；`judge_rules` 獨立（只用標準庫）。
+相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 `read_state`、`write_json`）；agent：`aos_methods` ← `aos_agent_lib`（也借 `write_json`），`aos_fsm` ← `aos_agent_call`（`aos_agent_lib` 只在 `ask` 時才載它），`aos_brain_openai`、`aos_brain_ollama` 只靠 `aos_cli`；kernel：`aos_inst` ← `aos_mailbox`（也借 `write_json`）← `aos_gate` ← `aos_gate_kernel` ← `aos_kernel_judge` ← `aos_kernel`；`judge_rules` 獨立（只用標準庫）。
 
 ## ctl 與 state 的慣例
 

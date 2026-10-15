@@ -173,6 +173,65 @@ class AgentCellTest(Tmp):
             "name": "echo", "description": "回聲", "parameters": {"type": "object", "properties": {}}}}])
 
 
+class AgentFrameTest(Tmp):
+    """10-15 收工後的 frame：lookup()（frame → env.json parent 鏈）、intake、done（C-46）。"""
+
+    def run_cell(self, cmd, cwd, *extra):
+        return subprocess.run([sys.executable, AGENT, cmd] + list(extra), cwd=cwd, capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL, timeout=10)
+
+    def test_lookup_chain_and_dir_merge(self):
+        import aos_agent_lib
+        self.write("def/brain.json", {"argv": ["x"]})
+        self.write("def/tools/clock.json", {"argv": ["c"]})
+        self.write("def/tools/t.json", {"argv": ["t0"]})
+        self.write("fr/env.json", {"parent": "../def"})
+        self.write("fr/tools/t.json", {"argv": ["t1"]})                      # 同名蓋過
+        self.write("fr/tools/extra.json", {"argv": ["e"]})                   # 追加
+        fr = self.p("fr")
+        self.assertEqual(aos_agent_lib.chain(fr), [os.path.realpath(fr), os.path.realpath(self.p("def"))])
+        self.assertEqual(aos_agent_lib.lookup("brain.json", fr), os.path.join(os.path.realpath(self.p("def")), "brain.json"))
+        self.assertIsNone(aos_agent_lib.lookup("nope", fr))
+        tools = aos_agent_lib.lookup_dir("tools", fr)
+        self.assertEqual(sorted(tools), ["clock.json", "extra.json", "t.json"])
+        self.assertTrue(tools["t.json"].startswith(os.path.realpath(fr)))
+        self.write("def/env.json", {"parent": "../fr"})                       # 繞圈：停
+        self.assertEqual(len(aos_agent_lib.chain(fr)), 2)
+
+    def test_intake_think_route_done_in_frame(self):
+        self.write("def/brain.py", "import json, sys\nreq = json.load(sys.stdin)\n"
+                   "print(json.dumps({'role': 'assistant', 'content': 'n=%d' % len(req['messages'])}))\n")
+        self.write("def/brain.json", {"argv": [sys.executable, self.p("def", "brain.py")]})
+        self.write("def/system.md", "簡短")
+        self.write("fr/env.json", {"parent": "../def"})
+        self.write("fr/args.json", {"question": "幾點"})
+        fr = self.p("fr")
+        r = self.run_cell("intake", fr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(self.read("fr/history.json")), [{"role": "user", "content": "幾點"}])
+        r = self.run_cell("think", fr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(self.read("fr/history.json"))[-1]["content"], "n=2")   # system＋user
+        r = self.run_cell("route", fr, "--done", "done")
+        self.assertEqual(json.loads(r.stdout)["next"], "done")
+        r = self.run_cell("done", fr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(self.read("fr/ret.json")), {"reply": "n=2"})
+        self.assertEqual(json.loads(self.read("fr/ctl.json")), {"stop": True})
+        self.write("fr/work/think-fails.json", {"n": 3, "error": {"code": "BrainFailed", "msg": "x"}})
+        self.run_cell("done", fr)
+        self.assertEqual(json.loads(self.read("fr/ret.json")), {"error": {"code": "BrainFailed", "msg": "x"}})
+
+    def test_intake_keeps_bound_history(self):
+        self.write("fr/history.json", [{"role": "user", "content": "綁好的"}])
+        self.write("fr/args.json", {"question": "別理我"})
+        self.assertEqual(self.run_cell("intake", self.p("fr")).returncode, 0)
+        self.assertEqual(json.loads(self.read("fr/history.json"))[0]["content"], "綁好的")
+        os.makedirs(self.p("empty"))
+        r = self.run_cell("intake", self.p("empty"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoHistory"))
+
+
 BRAIN_PY = """import json, sys, time
 req = json.load(sys.stdin)
 msgs = req["messages"]
@@ -441,21 +500,28 @@ class BrainOllamaTest(BrainOpenaiTest):
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "BadResponse"))
 
     def test_no_tools_400_surfaces_and_stops(self):
-        # 146 試跑的情形：腦回 400 → think 格 BrainFailed 帶原因 → fsm 的 last_error 看得到；錯 3 次就停住不再打
+        # 146 試跑的情形：腦回 400 → think 格 BrainFailed 帶原因 → fsm 那行的 error 看得到；
+        # 10-15 收工後連錯停住是格自己的事（N-38）：think 錯第 3 次改回 next halted，之後不再打
         _Stub.status, _Stub.reply = 400, {"error": "m1 does not support tools"}
         self.write("brain.json", {"argv": [sys.executable, OLLAMA, "--base-url", self.url, "--model", "m1"]})
         self.write("tools/clock.json", {"argv": ["true"], "_tool": {"description": "時間"}})
         self.write("h.json", [{"role": "user", "content": "幾點"}])
-        self.write("f.json", {"start": "ask", "states": {"ask": {"argv": [sys.executable, AGENT, "think"]}},
-                              "state": "f.state.json", "brain": "brain.json", "tools": {"clock": "tools/clock.json"},
-                              "history": "h.json", "work": "work"})
+        self.write("cfg.json", {"brain": "brain.json", "tools": {"clock": "tools/clock.json"},
+                                "history": "h.json", "work": "work"})
+        self.write("f.json", {"start": "ask", "state": "f.state.json", "states": {
+            "ask": {"argv": [sys.executable, AGENT, "think"], "stdin": "cfg.json"},
+            "halted": {"argv": ["sh", "-c", "echo '{}'"]}}})
+        codes = []
         for _ in range(5):
             r = subprocess.run([sys.executable, FSM, "f.json"], cwd=self.tmp, capture_output=True, text=True, timeout=10)
-            self.assertEqual(r.returncode, 0, r.stderr)
-        st = json.loads(self.read("f.state.json"))
-        self.assertTrue(st["last_error"].startswith("CellFailed: BrainFailed: HttpError: "), st["last_error"])
-        self.assertIn("does not support tools", st["last_error"])
-        self.assertEqual((st["fails"], st["halted"], len(_Stub.seen)), (3, True, 3))
+            codes.append(r.returncode)
+            if r.returncode:
+                err = json.loads(r.stdout.splitlines()[-1])["error"]
+                self.assertTrue(err["msg"].startswith("BrainFailed: HttpError: "), err)
+                self.assertIn("does not support tools", err["msg"])
+        self.assertEqual(codes, [1, 1, 0, 0, 0])
+        self.assertEqual((json.loads(self.read("f.state.json"))["phase"], len(_Stub.seen)), ("halted", 3))
+        self.assertEqual(json.loads(self.read("work/think-fails.json"))["n"], 3)
 
     def test_bad_num_ctx(self):
         r = self.ollama({"messages": []}, "--num-ctx", "big")

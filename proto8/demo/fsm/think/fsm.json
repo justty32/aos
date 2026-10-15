@@ -2,7 +2,7 @@
   "start": "ask",
   "end": ["tool", "idle"],
   "states": {
-    "ask": {"target": "think/ask.json", "next": "review"},
-    "review": "think/review.json"
+    "ask": {"target": "ask.json", "next": "review"},
+    "review": "review.json"
   }
 }

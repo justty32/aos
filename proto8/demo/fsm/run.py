@@ -38,20 +38,43 @@ def write(path, doc):
     return path
 
 
+def _cell(v, cfg):
+    """格（TARGET 字串、內嵌 inst、或 {target, next}）→ 內嵌 inst，`stdin` 指 cfg（10-15 收工後 fsm 不再餵格 stdin，
+    格的設定由自己的 inst 的 stdin 給；第二批改成定義資料夾時這段拿掉）。TARGET 從 demo 資料夾算。"""
+    nxt = None
+    if isinstance(v, dict) and "target" in v:
+        v, nxt = v["target"], v.get("next")
+    if isinstance(v, str):
+        path = os.path.join(HERE, v)
+        if os.path.isdir(path):
+            path = os.path.join(path, "inst.json")
+        with open(path, encoding="utf-8") as f:
+            v = json.load(f)
+    v = dict(v, stdin=cfg)
+    return {"target": v, "next": nxt} if nxt else v
+
+
 def bind(tmp):
-    """把 demo 的定義綁到暫存資料夾 tmp：寫 tmp/agent.json（＝repo 的 agent.json＋state、lock、history、work；
-    thinking 格換成帶 `--state` 旗標的同一張 inst，內層 state 窗指進 tmp）。回 tmp/agent.json 的路徑。
-    格的相對路徑照舊從 demo 資料夾算（跑的時候 cwd＝demo 資料夾）。"""
+    """把 demo 的定義綁到暫存資料夾 tmp：寫 tmp/agent.json（＝repo 的 agent.json＋state、history、work）。
+    格都攤成內嵌 inst、`stdin` 指 tmp/agent.json（格從這裡拿 brain、tools、history…）；thinking 格＝內層 fsm，
+    內層表 think/fsm.json 也攤成 tmp/think.json（state 窗指進 tmp）。回 tmp/agent.json 的路徑。
+    格的 argv 相對路徑照舊從 demo 資料夾算（跑的時候 cwd＝demo 資料夾）。"""
+    agent = os.path.join(tmp, "agent.json")
     with open(os.path.join(HERE, "agent.json"), encoding="utf-8") as f:
         doc = json.load(f)
-    with open(os.path.join(HERE, "think", "inst.json"), encoding="utf-8") as f:
-        think = json.load(f)
-    a = think["argv"]
-    think["argv"] = a[:2] + ["--state", os.path.join(tmp, "think.state.json")] + a[2:]
-    doc["states"] = dict(doc["states"], thinking=think)
-    doc.update(state=os.path.join(tmp, "agent.state.json"), lock=os.path.join(tmp, "agent.lock"),
+    with open(os.path.join(HERE, "think", "fsm.json"), encoding="utf-8") as f:
+        inner = json.load(f)
+    inner["states"] = {k: _cell(os.path.join("think", v) if isinstance(v, str) else
+                                dict(v, target=os.path.join("think", v["target"])) if isinstance(v.get("target"), str) else v,
+                                agent)
+                       for k, v in inner["states"].items()}
+    inner["state"] = os.path.join(tmp, "think.state.json")
+    write(os.path.join(tmp, "think.json"), inner)
+    states = {k: _cell(v, agent) for k, v in doc["states"].items() if k != "thinking"}
+    states["thinking"] = {"argv": ["python3", "../../lib/aos_fsm.py", os.path.join(tmp, "think.json")]}
+    doc.update(states=states, state=os.path.join(tmp, "agent.state.json"),
                history=os.path.join(tmp, "work", "history.json"), work=os.path.join(tmp, "work"))
-    return write(os.path.join(tmp, "agent.json"), doc)
+    return write(agent, doc)
 
 
 def main():
@@ -77,12 +100,10 @@ def main():
     try:
         while loop.poll() is None:
             st, sub = read(w["state"]) or {}, read(w["think"]) or {}
-            now = (st.get("phase"), st.get("step"), sub.get("phase"))
-            if st and st.get("running") is False and now != seen:        # 只印每拍跑完的樣子（跑格中 running 是 true）
+            now = (st.get("phase"), sub.get("phase"))
+            if st and now != seen:                                        # 狀態變了就印一行
                 seen = now
-                say("外層 phase=%-8s step=%s │ 內層 phase=%-6s │ data=%s"
-                    % (st["phase"], st["step"], sub.get("phase", "-"),
-                       json.dumps(st.get("data"), ensure_ascii=False)))
+                say("外層 phase=%-8s │ 內層 phase=%-6s" % (st["phase"], sub.get("phase", "-")))
             time.sleep(0.02)
         say("aos-loop 結束，退出碼 %d" % loop.returncode)
         say("== steps.jsonl（外層 fsm 每拍吐的那行）")

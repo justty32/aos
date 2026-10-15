@@ -7,7 +7,7 @@
 純量 key 都有同名旗標（`--timeout-ms 100`、`--cwd-mkdir true`…），蓋過檔或 stdin；`--` 後面整段蓋過 `argv`。
 設定從 stdin 來時 `stdin_inherit` ＝Conflict（stdin 已經被設定用掉了，D-5）。
 
-TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/.aos/inst.json`，沒有再找 `<資料夾>/inst.json`）。
+TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/$AOS_DIRNAME/inst.json`（沒設＝`.aos`），沒有再找 `<資料夾>/inst.json`）。
 後面可以接 `#/位置`（JSON pointer，寫法同指示詞 `$ref`）：只跑那份檔裡那一格（要是物件）。遇到第一個 `#` 就切，
 檔名含 `#` 的不支援；資料夾先照上面找到 inst.json 再套位置。那一格是整份檔的視窗：裡面 `$ref` 的位置照整份檔算。
 相對路徑的基準一律是呼叫者現在的工作目錄：指示詞的相對檔名、`cwd` 這個 key 從這裡算；
@@ -58,7 +58,7 @@ import aos_cli
 from aos_cli import CliError
 from aos_directives import DirectiveError, resolve, split_target, target_id
 
-__all__ = ["FLAGS", "InstError", "exit_code", "find", "load", "main", "parse", "read_exit", "run"]
+__all__ = ["FLAGS", "InstError", "dirname", "exit_code", "find", "load", "main", "parse", "read_exit", "run"]
 
 _BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
           "stdout_append", "stdout_mkdir", "stdout_inherit",
@@ -104,13 +104,24 @@ def _find(target):
     return _file(file), pos
 
 
+def dirname():
+    """資料夾 TARGET 裡放 inst.json 的子資料夾名：環境變數 `AOS_DIRNAME`，沒設＝`.aos`；空字串＝資料夾本身
+    （同 proto7-1 的 aos_dirname；N-35）。含 `/`、或是 `.`、`..`＝`BadDirname`。"""
+    n = os.environ.get("AOS_DIRNAME")
+    n = ".aos" if n is None else n
+    if "/" in n or n in (".", ".."):
+        raise InstError("BadDirname", "AOS_DIRNAME 要是單一資料夾名或空字串（不含 /、不是 . 或 ..）：%r" % n)
+    return n
+
+
 def _file(file):
-    """TARGET 的檔那一段 → inst.json 的 realpath（資料夾：先找 .aos/inst.json 再找 inst.json）。"""
+    """TARGET 的檔那一段 → inst.json 的 realpath（資料夾：先找 $AOS_DIRNAME/inst.json 再找 inst.json）。"""
     if os.path.isdir(file):
-        for p in (os.path.join(file, ".aos", "inst.json"), os.path.join(file, "inst.json")):
+        sub = dirname()
+        for p in (os.path.join(file, sub, "inst.json"), os.path.join(file, "inst.json")):
             if os.path.isfile(p):
                 return os.path.realpath(p)
-        raise InstError("NotFound", "%s 裡沒有 .aos/inst.json 也沒有 inst.json" % file)
+        raise InstError("NotFound", "%s 裡沒有 %s/inst.json 也沒有 inst.json" % (file, sub or "."))
     return os.path.realpath(file)
 
 

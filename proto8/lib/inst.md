@@ -8,7 +8,7 @@
 python3 proto8/lib/aos_inst.py [--key 值 ...] [TARGET | -] [-- argv...]
 ```
 
-- 設定從哪來（`aos_cli`，D-1～D-3）：TARGET＝`.json` 檔，或資料夾（找 `.aos/inst.json`，沒有再找 `inst.json`），後面可接 `#/位置`（見[指示詞](directives.md)）；`-`＝從 stdin 讀（JSON 串流只看第一份，其餘 stderr 警告）；兩個都沒給＝`{}`。給 TARGET 就不讀 stdin。
+- 設定從哪來（`aos_cli`，D-1～D-3）：TARGET＝`.json` 檔，或資料夾（找 `$AOS_DIRNAME/inst.json`（環境變數，沒設＝`.aos`，空字串＝資料夾本身；不合法＝`BadDirname`，N-35），沒有再找 `inst.json`），後面可接 `#/位置`（見[指示詞](directives.md)）；`-`＝從 stdin 讀（JSON 串流只看第一份，其餘 stderr 警告）；兩個都沒給＝`{}`。給 TARGET 就不讀 stdin。
 - 旗標：純量 key 都有同名旗標（`--timeout-ms 100`、`--cwd-mkdir true`、`--id x`…，每個都要帶值，值先當 JSON 解、解不了當字串），蓋過檔或 stdin；`envs` 這種物件不鏡射。`--` 後面整段蓋過 `argv`。
 - 基準一律是呼叫者的 cwd：指示詞的檔名、`cwd` 這個 key 從這裡算。`cwd` 沒寫＝呼叫者的 cwd；`stdin`／`stdout`／`stderr`／`exit` 的相對路徑從解出來的 `cwd` 算。
 - key：`argv`（必填）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`、`timeout_ms`（沒寫＝不限）、`grace_ms`（沒寫＝2000）、`id`（選填字串），加上布林的 `cwd_mkdir`、`envs_clear`、`*_inherit`、`*_append`、`*_mkdir`、`stderr_merge`。完整說明在檔頭。

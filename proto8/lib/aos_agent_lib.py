@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""agent 的現成格庫：think（叫腦）、tool（跑工具）。純標準庫。介面與邊緣狀況見同資料夾 agent.md（實作慣例，還不是規範）。
-不是 agent 本體（agent＝fsm＋表）；只是表裡可以直接拿來用的兩格。（10-15 由 aos_agent.py 改名，使用者定）
+"""agent 的現成格庫：think（叫腦）、tool（跑工具）、route、intake、done。純標準庫。介面與邊緣狀況見同資料夾 agent.md
+（實作慣例，還不是規範）。不是 agent 本體（agent＝fsm＋表）；只是表裡可以直接拿來用的幾格。（10-15 由 aos_agent.py 改名）
 
-    python3 aos_agent_lib.py think        （fsm 的格：stdin＝fsm 設定本身＋`fsm_state`（state 窗整份），N-37）
+    python3 aos_agent_lib.py think
     python3 aos_agent_lib.py tool
-    python3 aos_agent_lib.py route        （看最後一則 assistant：有 tool_calls＝next tool，否則 next idle）
-    python3 aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json   （agent 當工具，見 aos_agent_call）
+    python3 aos_agent_lib.py route [--done 名]   （看最後一則 assistant：有 tool_calls＝next tool，否則 next idle（或 --done 給的名））
+    python3 aos_agent_lib.py intake        （frame 還沒有 history＝從 args.json 的 question／history 生一份）
+    python3 aos_agent_lib.py done          （寫 ret.json＝最後一句或連錯的錯誤，再把 ctl.json 寫成 stop）
+    python3 aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json   （agent 當工具，見 aos_agent_call；第二批退場）
 
-設定就是 stdin 那份（＝跑這格的那份 fsm 設定整份，10-15 使用者選乙；fsm 不認得這幾個 key、會忽略）：
+**設定從哪來**（10-15 收工後：fsm 不再餵格 stdin，N-37）：stdin 那份（那張格 inst 自己的 `stdin` 指的檔；沒有＝空）的 key
+優先，沒寫的照 frame（＝cwd）找——`lookup()`：先找 cwd，找不到照 cwd 裡 `env.json` 的 `parent` 往上一層找（C-46）：
+brain＝`brain.json`、tools＝`tools/*.json`（各層逐項合併、近的蓋過遠的；名字＝檔名去掉 .json）、system＝`system.md`（有才帶）、
+history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
 
     brain     腦的 aos-inst TARGET（或內嵌一張 inst）。腦＝一支 inst：stdin {"messages", "tools"} → stdout 最後一份＝OpenAI assistant 訊息
     tools     {工具名: aos-inst TARGET 或內嵌 inst}（選填）。工具跑的時候環境多一個 AOS_WORK＝這裡的 work。工具的說明寫在那張 inst 的 `_tool`：{"description", "parameters"}
@@ -16,8 +21,10 @@
               不寫進 history（改檔下一拍就生效）；沒寫＝不帶；寫了但檔不存在或讀不了＝think 格出錯（N-29）
     work      放 N-call.json（工具的引數）、N-ret.json（工具的 stdout）的資料夾
 
+    halt_after  選填，預設 3：think 連錯幾次就不再報錯、改回 {"next": halt_state}（N-38：連錯停住是格自己的事）
+    halt_state  選填，預設 "halted"
+
 相對路徑從這格的 cwd 算（＝fsm 的 cwd，除非那張格 inst 自己寫了 cwd），跟指示詞、TARGET 一樣。
-巢狀時 stdin 是內層 fsm 的設定，內層沒寫的 key 從外層 cfg 來（N-40：外層 cfg 當預設），所以內層不必再寫一次 brain、history…。
 
 - think：讀 history、組 {"messages", "tools"}、蓋 stdin 跑腦、把回來的 assistant 訊息（拿掉頂層 `usage`）接進 history，
   stdout 吐 {"data": {"content", "tool_calls": [工具名...]}}（沒有 next：下一格寫在表上）。
@@ -26,10 +33,12 @@
   跑那張 inst，回 {"role": "tool", "tool_call_id", "content": JSON 字串＝aos_inst 的結果（N-30：id、code、signal、timed_out…）
   ＋`result`（工具 stdout 最後一份 JSON）（截 8000 字）}；工具起不來、引數不是 JSON、工具名不認得＝content 是 N-29 形狀
   {"error": {"code", "msg"}}（代號 InstError 的原代號、BadArguments、UnknownTool）。
-  其餘的回 {"error": {"code": "Skipped", …}}＋stderr 警告。上一拍被殺一半（fsm_state.running 為 true）＝不重跑，
-  全回 {"error": {"code": "Interrupted", …}}。
+  其餘的回 {"error": {"code": "Skipped", …}}＋stderr 警告。上一拍被殺一半（work/.tool-running.json 還在、
+  記的是同一個 tool_call id＝跑過一半；舊的 stdin 帶 `fsm_state.running` 為 true 也算）＝不重跑，全回 {"error": {"code": "Interrupted", …}}。
 - 出錯（設定不對、腦結束碼非 0、腦回的不是 assistant 訊息）：stderr 吐 {"error": {"code", "msg"}}、退出 1（格出錯）。
-  腦出錯時 msg 帶腦自己 stderr 的錯誤（例 `HttpError: … 回 400：…does not support tools`），fsm 會把它記進 last_error。
+  腦出錯時 msg 帶腦自己 stderr 的錯誤（例 `HttpError: … 回 400：…does not support tools`），fsm 那行的 error 看得到。
+  think 連錯：次數記在 work/think-fails.json（成功一次就刪），到 halt_after 次＝不報錯、改吐
+  {"next": halt_state, "data": {"error"}}，交給表上那個狀態（例 done 格寫錯誤的 ret.json）。
 
 相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json）。
 """
@@ -43,7 +52,10 @@ import aos_methods
 from aos_cli import CliError
 from aos_ctl_state import write_json
 
-__all__ = ["AgentError", "LIMIT", "act", "load_config", "pending", "read_history", "route", "think", "tool_specs"]
+__all__ = ["AgentError", "LIMIT", "act", "chain", "done", "intake", "load_config", "lookup", "lookup_dir", "pending",
+           "read_history", "route", "think", "tool_specs"]
+
+MAX_CHAIN = 16                                 # env.json 的 parent 最多往上找幾層
 
 LIMIT = 8000                                   # 工具結果回給模型最多幾個字
 SKIPPED = ("Skipped", "基礎實作一次只跑一個，這個沒跑")
@@ -55,17 +67,67 @@ class AgentError(CliError):
     """設定不對、腦出錯。"""
 
 
-def load_config(doc):
-    """stdin 那份（fsm 的設定整份）→ {"brain", "tools", "history", "work"}；history、work 轉絕對路徑（從 cwd 算）。"""
+def chain(start=None):
+    """frame（start，預設 cwd）→ 找名字的資料夾順序：自己、env.json 的 parent、parent 的 parent…（C-46）。
+    parent 的相對路徑從那個 env.json 所在的資料夾算；繞圈（realpath 重複）或超過 MAX_CHAIN 層就停。"""
+    d, out = os.path.realpath(start or os.getcwd()), []
+    while d and d not in out and len(out) < MAX_CHAIN:
+        out.append(d)
+        try:
+            with open(os.path.join(d, "env.json"), encoding="utf-8") as f:
+                parent = json.load(f).get("parent")
+        except (OSError, ValueError, AttributeError):
+            break
+        if not (isinstance(parent, str) and parent):
+            break
+        d = os.path.realpath(os.path.join(d, parent))
+    return out
+
+
+def lookup(name, start=None):
+    """照 chain() 的順序找 name（檔或資料夾），回第一個找到的絕對路徑；都沒有＝None。"""
+    for d in chain(start):
+        p = os.path.join(d, name)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def lookup_dir(name, start=None):
+    """資料夾值逐項找：各層 name/ 底下的項目聯集，同名以近的為準（＝追加＋蓋過）。回 {項目名: 絕對路徑}。"""
+    out = {}
+    for d in chain(start):
+        p = os.path.join(d, name)
+        if os.path.isdir(p):
+            for n in sorted(os.listdir(p)):
+                if not n.startswith("."):
+                    out.setdefault(n, os.path.join(p, n))
+    return out
+
+
+def load_config(doc, need_brain=True):
+    """設定（stdin 那份；None＝沒有）→ {"brain", "tools", "history", "work", ["system"]}。沒寫的照 frame（cwd）找。"""
+    if doc is None:
+        doc = {}
     if not isinstance(doc, dict):
-        raise AgentError("NoConfig", "stdin 要是 fsm 的設定（物件），不是 %r" % (doc,))
-    cfg = {"brain": doc.get("brain"), "tools": doc.get("tools", {})}
+        raise AgentError("NoConfig", "stdin 要是設定（物件），不是 %r" % (doc,))
+    doc = dict(doc)
+    if "brain" not in doc:
+        doc["brain"] = lookup("brain.json")
+    if "tools" not in doc:
+        doc["tools"] = {n[:-5]: p for n, p in lookup_dir("tools").items() if n.endswith(".json")}
+    if "system" not in doc:
+        doc["system"] = lookup("system.md")
+    doc.setdefault("history", "history.json")
+    doc.setdefault("work", "work")
+    cfg = {"brain": doc.get("brain"), "tools": doc.get("tools", {}),
+           "halt_after": doc.get("halt_after", 3), "halt_state": doc.get("halt_state", "halted")}
     sysp = doc.get("system")
     if sysp is not None:
         if not (isinstance(sysp, str) and sysp):
             raise AgentError("FieldType", "system 要是檔案路徑字串，不是 %r" % (sysp,))
         cfg["system"] = os.path.abspath(sysp)
-    if not (isinstance(cfg["brain"], str) and cfg["brain"] or isinstance(cfg["brain"], dict)):
+    if need_brain and not (isinstance(cfg["brain"], str) and cfg["brain"] or isinstance(cfg["brain"], dict)):
         raise AgentError("FieldType", "brain 要是 aos-inst TARGET（字串）或一張 inst，不是 %r" % (cfg["brain"],))
     if not (isinstance(cfg["tools"], dict) and all(isinstance(v, (str, dict)) for v in cfg["tools"].values())):
         raise AgentError("FieldType", "tools 要是 {工具名: aos-inst TARGET}，不是 %r" % (cfg["tools"],))
@@ -138,6 +200,10 @@ def think(cfg, interrupted=False):
             raise AgentError("BadReply", "腦 %s 回的最後一份不是 assistant 訊息：%r" % (cfg["brain"], reply))
         reply = {k: v for k, v in reply.items() if k != "usage"}      # 腦附的用量給 kernel 記額度，不進 history
         write_json(cfg["history"], msgs + [reply])
+        try:
+            os.remove(_fails_file(cfg))                              # 成功一次：連錯歸零
+        except OSError:
+            pass
     calls = reply.get("tool_calls") or []
     return {"content": reply.get("content"), "tool_calls": [c["function"]["name"] for c in calls]}
 
@@ -196,26 +262,111 @@ def act(cfg, interrupted=False):
     calls = pending(msgs)
     if not calls:
         return {"tool": None}
+    mark = os.path.join(cfg["work"], ".tool-running.json")     # 跑工具前寫、跑完刪：還在且同一個 id＝上一拍被殺一半
+    try:
+        with open(mark, encoding="utf-8") as f:
+            interrupted = interrupted or json.load(f).get("id") == calls[0].get("id")
+    except (OSError, ValueError, AttributeError):
+        pass
     if interrupted:
         content = _err(*INTERRUPTED)
         write_json(cfg["history"], msgs + [_answer(c, content) for c in calls])
+        _rm(mark)
         return {"tool": calls[0]["function"]["name"], "result": content}
     first, rest = calls[0], calls[1:]
     if rest:
         aos_cli.warn("ToolCallsSkipped", "一次回了 %d 個工具呼叫，基礎實作只跑第一個（%s）"
                      % (len(calls), first["function"]["name"]))
+    os.makedirs(cfg["work"], exist_ok=True)
+    write_json(mark, {"id": first.get("id")})
     content = _run_tool(cfg, first, len(msgs))
     write_json(cfg["history"], msgs + [_answer(first, content)] + [_answer(c, _err(*SKIPPED)) for c in rest])
+    _rm(mark)
     return {"tool": first["function"]["name"], "result": content}
 
 
-def route(cfg, interrupted=False):
-    """看 history 最後一則 assistant：有 tool_calls＝{"next": "tool"}，否則 {"next": "idle", data.reply}。"""
+def route(cfg, interrupted=False, done="idle"):
+    """看 history 最後一則 assistant：有 tool_calls＝{"next": "tool"}，否則 {"next": done（預設 idle）, data.reply}。"""
     msgs = read_history(cfg["history"])
     last = msgs[-1] if msgs else {}
     if last.get("role") == "assistant" and last.get("tool_calls"):
         return {"next": "tool", "data": {"tool_calls": [c["function"]["name"] for c in last["tool_calls"]]}}
-    return {"next": "idle", "data": {"reply": last.get("content")}}
+    return {"next": done, "data": {"reply": last.get("content")}}
+
+
+def _rm(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def _fails_file(cfg):
+    return os.path.join(cfg["work"], "think-fails.json")
+
+
+def _think_failed(cfg, e):
+    """think 出錯：記一次；到 halt_after 次＝回 {"next": halt_state, "data": {"error"}}（不再報錯），否則回 None（照常報錯）。"""
+    path = _fails_file(cfg)
+    try:
+        with open(path, encoding="utf-8") as f:
+            n = int(json.load(f).get("n", 0))
+    except (OSError, ValueError, AttributeError, TypeError):
+        n = 0
+    n += 1
+    err = {"code": e.code, "msg": e.msg}
+    os.makedirs(cfg["work"], exist_ok=True)
+    write_json(path, {"n": n, "error": err})
+    limit = cfg.get("halt_after")
+    if isinstance(limit, int) and not isinstance(limit, bool) and n >= limit:
+        return {"next": cfg.get("halt_state") or "halted", "data": {"error": err}}
+    return None
+
+
+def intake(cfg):
+    """frame 還沒有 history＝從 cwd 的 args.json 生：{"history": [...]} 照用、{"question": "…"} 變成一則 user 訊息。
+    已經有 history＝什麼都不做（呼叫方綁了 history，或接著上次的對話）。"""
+    if os.path.exists(cfg["history"]):
+        return {}
+    try:
+        with open("args.json", encoding="utf-8") as f:
+            arg = json.load(f)
+    except OSError:
+        raise AgentError("NoHistory", "frame 沒有 history，也沒有 args.json")
+    except ValueError as e:
+        raise AgentError("BadArguments", "args.json 不是 JSON：%s" % e)
+    hist = arg.get("history") if isinstance(arg, dict) else None
+    if hist is None:
+        q = arg.get("question") if isinstance(arg, dict) else None
+        if not isinstance(q, str):
+            raise AgentError("FieldType", "args.json 要有 question（字串）或 history")
+        hist = [{"role": "user", "content": q}]
+    write_json(cfg["history"], hist)
+    return {}
+
+
+def _last_text(msgs):
+    for m in reversed(msgs):
+        if m.get("role") == "assistant" and m.get("content"):
+            return m["content"]
+    return None
+
+
+def done(cfg, ctl="ctl.json"):
+    """收尾：寫 cwd 的 ret.json——think 連錯停住（work/think-fails.json 在）＝N-29 形狀的錯，否則 {"reply": 最後一句}；
+    再把 ctl（拍這個 fsm 的 loop 的 ctl 窗，預設 cwd 的 ctl.json）寫成 stop。"""
+    try:
+        with open(_fails_file(cfg), encoding="utf-8") as f:
+            ret = {"error": json.load(f)["error"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        try:
+            msgs = read_history(cfg["history"])
+        except (OSError, ValueError):
+            msgs = []
+        ret = {"reply": _last_text(msgs)}
+    write_json("ret.json", ret)
+    write_json(ctl, {"stop": True})
+    return {"data": ret}
 
 
 def main(argv=None):
@@ -225,20 +376,40 @@ def main(argv=None):
         out, code = aos_agent_call.ask(argv[1:], sys.stdin.read())
         aos_cli.emit(out)
         return code
-    if len(argv) != 1 or argv[0] not in ("think", "tool", "route"):
-        aos_cli.error("Usage", "aos_agent_lib.py think|tool|route（設定＝stdin 那份）｜ask [--frame DIR] [--max-ticks N] AGENT.json")
+    cmd, opts = (argv[0] if argv else None), argv[1:]
+    route_done = "idle"
+    if cmd == "route" and len(opts) == 2 and opts[0] == "--done":
+        route_done, opts = opts[1], []
+    if cmd not in ("think", "tool", "route", "intake", "done") or opts:
+        aos_cli.error("Usage", "aos_agent_lib.py think|tool|route [--done 名]|intake|done（設定＝stdin 那份＋frame 裡找）"
+                               "｜ask [--frame DIR] [--max-ticks N] AGENT.json")
         return 2
+    cfg = None
     try:
-        args = aos_cli.read_stream(sys.stdin.read())
+        text = "" if sys.stdin is None or sys.stdin.closed else sys.stdin.read()
+        args = aos_cli.read_stream(text)
+        if text.strip() and not args:
+            raise AgentError("NoConfig", "stdin 不是 JSON")
         arg = args[0] if args else None
         win = arg.get("fsm_state") if isinstance(arg, dict) else None
-        interrupted = isinstance(win, dict) and win.get("running") is True      # 上一拍被殺一半（N-38）
-        cfg = load_config(arg)
-        if argv[0] == "route":
-            aos_cli.emit(route(cfg, interrupted))
+        interrupted = isinstance(win, dict) and win.get("running") is True      # 舊的 fsm_state（相容）
+        cfg = load_config(arg, need_brain=cmd == "think")
+        if cmd == "route":
+            aos_cli.emit(route(cfg, interrupted, route_done))
             return 0
-        data = (think if argv[0] == "think" else act)(cfg, interrupted)
+        if cmd == "intake":
+            aos_cli.emit(intake(cfg))
+            return 0
+        if cmd == "done":
+            aos_cli.emit(done(cfg, arg.get("ctl", "ctl.json") if isinstance(arg, dict) else "ctl.json"))
+            return 0
+        data = (think if cmd == "think" else act)(cfg, interrupted)
     except CliError as e:
+        if cmd == "think" and cfg is not None and e.code != "SystemUnreadable":
+            halt = _think_failed(cfg, e)
+            if halt is not None:
+                aos_cli.emit(halt)
+                return 0
         aos_cli.error(e.code, e.msg)
         return 1
     except (OSError, ValueError) as e:

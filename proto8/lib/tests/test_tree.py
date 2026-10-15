@@ -104,9 +104,8 @@ class TreeTest(Tmp):
             r = subprocess.run([sys.executable, FSM, p], capture_output=True, text=True, cwd=self.tmp, timeout=10)
             self.assertEqual(r.returncode, 0, r.stderr)
         a, b = (load(self.p(n)) for n in ("f.state.json", "inl.state.json"))
-        for k in ("phase", "data", "step", "last_error"):
-            self.assertEqual((k, a[k]), (k, b[k]))
-        self.assertEqual((a["phase"], a["data"]), ("b", {"x": 1}))
+        self.assertEqual(a, b)                                  # 10-15 收工後 state 窗只剩 phase（N-39）
+        self.assertEqual(a, {"phase": "b"})
 
     def test_cli_inline_cycle_and_depth(self):
         self.write("x.json", {"start": "a", "states": {"a": "y.json"}})
