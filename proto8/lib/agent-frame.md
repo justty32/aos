@@ -11,10 +11,10 @@
 ```
 clerk/
   fsm.json      {"start": "intake", "state": "fsm-state.json", "end": ["done", "halted"], "states": {
-                   "intake": {"target": "cells/intake.json", "next": "thinking"},
-                   "thinking": {"target": "cells/think.json", "next": "route"},
+                   "intake": {"val": "cells/intake.json", "next": "thinking"},
+                   "thinking": {"val": "cells/think.json", "next": "route"},
                    "route": "cells/route.json",                       // 回 {"next": "tool"} 或 {"next": "done"}
-                   "tool": {"target": "cells/tool.json", "next": "thinking"},
+                   "tool": {"val": "cells/tool.json", "next": "thinking"},
                    "done": "cells/done.json"}}   // halted 只在 end：think 連錯自己寫好 ret.json、跳去就結束
   loop.json     {"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "stop_on_end": true, "ctl": "ctl.json", "state": "loop-state.json"}
   cells/intake.json  {"argv": ["aos", "agent", "intake"]}      think／route（--done done）／tool／done 同樣一行

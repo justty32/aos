@@ -28,7 +28,17 @@
 | 讀的人 | 連結不斷（入口保留） | 兩形都收（純值＝只給了原值那一格） |
 | 降級 | 子項消失就併回單檔 | 只剩原值那一格就縮回純值 |
 
-## 未決：JSON 那邊「原值放哪個 key」（AI 查現況，附推薦，等使用者定）
+## 拍板（10-15 晚）
+
+使用者原文：「都按照推薦」（對本稿的 A～C 與命名盤點 P1～P7、M1～M9 一起回）。
+
+- **選 A：原值一律 `val`**。已做：`priority` 的 `{"level"}` → `{"val"}`（lib gate、LLM kernel 的 `level()`、規則判官、kernel.md、demo kernel、測試）；fsm 格 `{"target", "next"}` → `{"val", "next"}`（`aos_methods.cell`、`aos_tree.slots`、N-36、fsm.md、agent-frame 說明、六張 demo fsm.json、測試）；think 連錯計數 `{"n", "error"}` → `{"val", "error"}`。ctl 本來就是 `val`。
+- **共用 helper**：`aos_cli.expand(v, key="val")` 已加（物件照抄一份、純值包成 `{key: v}`、None 照回），ctl 的 `paused`／`stop`、gate 的 `priority`、think 的計數改用它；測試 `test_cli.test_expand`。
+- **例外（AI 實作時發現，最小做法先過）**：fsm 的格不能直接 `expand`——格的「純值」本身可能就是物件（內嵌 inst），所以仍是「物件裡有 `val`＝展開形，沒有＝內嵌 inst」。內嵌 inst 不會有 `val` 這個 key，目前不衝突。
+- **`_notes`**：照推薦固定叫 `_notes`，寫進 C-48 的例子。
+- 落點：[C-48、C-55](../CONCEPTS/01-設計理念.md)、[N-36](../NORMS/07-基礎設施-組合子.md)。
+
+## 未決（已拍板，見上）：JSON 那邊「原值放哪個 key」（AI 查現況，附推薦）
 
 使用者例子用 **`val`**；C-48 現行沒定 key 名，現況三處三個名字：
 

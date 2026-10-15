@@ -100,8 +100,8 @@ def main():
     try:
         say("== 1. 級數與 deadline：X 先佔住唯一的格（腦睡 1 秒），趁這時丟五封")
         now = time.time()
-        plan = [("X", None), ("A-low", "low"), ("B-normal", None), ("C-high", {"level": "high", "class": "chat"}),
-                ("D-低但快到", {"level": "low", "deadline": now + 20}), ("E-已過期", {"level": "high", "deadline": now - 1})]
+        plan = [("X", None), ("A-low", "low"), ("B-normal", None), ("C-high", {"val": "high", "class": "chat"}),
+                ("D-低但快到", {"val": "low", "deadline": now + 20}), ("E-已過期", {"val": "high", "deadline": now - 1})]
         procs = []
         for i, (who, pri) in enumerate(plan):
             p = call(env, who, pri)

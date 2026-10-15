@@ -23,6 +23,16 @@ class Cli(Tmp):
                 aos_cli.parse_argv(bad, flags)
             self.assertEqual(c.exception.code, code)
 
+    def test_expand(self):
+        """值的雙形（C-55）：純值包成 {"val": 值}、物件照抄一份、None 照回；key 可換。"""
+        self.assertEqual(aos_cli.expand(3), {"val": 3})
+        self.assertEqual(aos_cli.expand(False), {"val": False})
+        d = {"val": "low", "deadline": 1}
+        self.assertEqual(aos_cli.expand(d), d)
+        self.assertIsNot(aos_cli.expand(d), d)
+        self.assertIsNone(aos_cli.expand(None))
+        self.assertEqual(aos_cli.expand("x", key="k"), {"k": "x"})
+
     def test_read_stream(self):
         self.assertEqual(aos_cli.read_stream('{"a": 1}\n{\n "b": 2\n} 3 {"bad'), [{"a": 1}, {"b": 2}, 3])
         self.assertEqual(aos_cli.read_stream("  \n"), [])

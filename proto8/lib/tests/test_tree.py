@@ -47,7 +47,7 @@ class TreeTest(Tmp):
         self.write("a.json", {"argv": ["sh", "-c", "cat >/dev/null; echo '{\"next\": \"b\", \"data\": {\"x\": 1}}'"]})
         self.write("sub/b.json", {"argv": ["true"]})
         self.write("f.json", {"start": "a", "state": "f.state.json", "states": {
-            "a": {"target": "a.json", "next": "b"},
+            "a": {"val": "a.json", "next": "b"},
             "b": "sub/b.json",
             "c": {"argv": ["true"]}}})
         return self.p("f.json")
@@ -65,7 +65,7 @@ class TreeTest(Tmp):
         self.assertEqual([k["label"] for k in node["kids"]], ["states/a", "states/b", "states/c"])
 
     def test_ids_never_null_and_dict_root(self):
-        node, doc = aos_tree.build({"start": "a", "states": {"a": {"argv": ["true"]}, "b": {"target": {"argv": ["true"]}}}})
+        node, doc = aos_tree.build({"start": "a", "states": {"a": {"argv": ["true"]}, "b": {"val": {"argv": ["true"]}}}})
 
         def ids(n):
             return [n["id"]] + [i for k in n["kids"] for i in ids(k)]
@@ -73,7 +73,7 @@ class TreeTest(Tmp):
         self.assertEqual(len(all_ids), 3)
         self.assertTrue(all(isinstance(i, str) and i for i in all_ids))
         self.assertTrue(node["id"].startswith("sha256:"))
-        self.assertEqual(node["kids"][1]["id"], node["id"] + "#/states/b/target")
+        self.assertEqual(node["kids"][1]["id"], node["id"] + "#/states/b/val")
 
     def test_demo_agent_tree(self):
         # demo/fsm 是定義資料夾（C-50）：表在 fsm.json，腦、工具是旁邊的檔，不在表裡
@@ -147,8 +147,8 @@ class JudgeSchemaTest(Tmp):
 
     def test_judge_rules_output_matches_schema(self):
         sc = self.schema()["stdout"]
-        snap = {"queue": {"a": {"priority": {"level": "low"}, "_metainfo": {"resource": "llm"}},
-                          "b": {"priority": {"level": "high"}, "_metainfo": {"resource": "llm"}},
+        snap = {"queue": {"a": {"priority": {"val": "low"}, "_metainfo": {"resource": "llm"}},
+                          "b": {"priority": {"val": "high"}, "_metainfo": {"resource": "llm"}},
                           "c": {"_metainfo": {"resource": "human"}}},
                 "slots": {"llm": {"total": 1, "used": 0}, "human": {"total": 1, "used": 0}}}
         out = self.run_judge(snap)

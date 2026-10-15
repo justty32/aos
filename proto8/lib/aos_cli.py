@@ -18,7 +18,7 @@ import sys
 
 from aos_directives import DirectiveError, resolve, split_target, target_id
 
-__all__ = ["CliError", "config", "emit", "error", "is_int", "load_target", "parse_argv", "read_stream"]
+__all__ = ["CliError", "config", "emit", "error", "expand", "is_int", "load_target", "parse_argv", "read_stream"]
 
 
 class CliError(Exception):
@@ -33,6 +33,14 @@ class CliError(Exception):
 def is_int(v, least=None):
     """JSON 整數（true／false 不算）；給了 least 就還要 ≥ least。各程式驗設定共用。"""
     return isinstance(v, int) and not isinstance(v, bool) and (least is None or v >= least)
+
+
+def expand(v, key="val"):
+    """值的雙形（C-48、C-55）收成物件：物件照抄一份、純值包成 `{key: v}`、None 照回 None。
+    讀的人一律先 expand 再只看自己認得的 key；原值固定在 `val`（10-15 使用者「都按照推薦」）。型別各程式自己驗。"""
+    if v is None:
+        return None
+    return dict(v) if isinstance(v, dict) else {key: v}
 
 
 # ---- 三扇門：JSON 串流 ----

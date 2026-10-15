@@ -7,7 +7,7 @@
 - `cell(states, name, ident, base=None)` → (inst 設定 dict, inst 的 id, 表上靜態 next 或 None)。格的寫法三種：
   字串＝aos-inst TARGET（檔、資料夾、可接 `#/位置`；照 aos-inst 的找法；相對路徑從 base 算＝fsm 設定檔所在的資料夾，
   base 是 None＝呼叫者的 cwd，N-36）、物件＝內嵌一張 inst、
-  `{"target": 前兩種之一, "next": "<狀態名>"}`＝帶表上靜態 next（物件有 `target` 就算這種）。查不到那格＝`UnknownState`。
+  `{"val": 前兩種之一, "next": "<狀態名>"}`＝帶表上靜態 next（物件有 `val` 就算這種；原值固定叫 val，C-55）。查不到那格＝`UnknownState`。
 - `run_cell(inst, ident, args=None)`：stdout 蓋成暫存檔，在本行程用 `aos_inst.run()` 跑一次，回 (aos_inst 的結果 dict,
   子程式 stdout 最後一份完整 JSON 或 None)。args 是 None（fsm 跑格就是，N-37：fsm 不碰格的 stdin）＝stdin 照那張 inst
   自己寫的；給了 args（think 叫腦）＝stdin 蓋成一份寫著 args 的暫存檔（N-12：stdin＝參數）。
@@ -56,8 +56,8 @@ def cell(states, name, ident=None, base=None):
     if name not in states:
         raise MethodsError("UnknownState", "表裡沒有狀態 %r" % (name,))
     v, nxt = states[name], None
-    if isinstance(v, dict) and "target" in v:
-        v, nxt = v["target"], v.get("next")
+    if isinstance(v, dict) and "val" in v:                 # 展開形：原值在 val（C-55）；沒 val 的物件＝內嵌 inst
+        v, nxt = v["val"], v.get("next")
         if not (nxt is None or isinstance(nxt, str)):
             raise MethodsError("FieldType", "格 %s 的 next 要是狀態名，不是 %r" % (name, nxt))
     if isinstance(v, str):

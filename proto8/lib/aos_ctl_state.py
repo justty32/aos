@@ -16,7 +16,7 @@ import json
 import os
 import time
 
-from aos_cli import is_int
+from aos_cli import expand, is_int
 
 __all__ = ["BEAT_MS", "CtlFile", "STATES", "StateFile", "parse_ctl", "proc_started", "read_state", "require", "state_doc", "want",
            "write_json"]
@@ -34,8 +34,7 @@ def _int(v, least=0):
 
 def _flag(v):
     """paused／stop 的值 → (val, now)。`true`＝(True, False)。不對回 None。"""
-    if isinstance(v, bool):
-        return (v, False)
+    v = expand(v)
     if isinstance(v, dict) and isinstance(v.get("val"), bool) and isinstance(v.get("now", False), bool):
         return (v["val"], v.get("now", False))
     return None

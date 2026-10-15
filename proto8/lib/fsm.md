@@ -15,7 +15,7 @@ python3 proto8/lib/aos_fsm.py [--key 值 ...] [FSM.json | -]
     "idle": "idle.json",                    //   aos-inst TARGET（檔、資料夾、可接 #/位置）；相對路徑從本檔所在的資料夾算
     "thinking": "think/",                   //   資料夾＝aos-inst 的找法；裡面可以是另一個 aos_fsm（巢狀）
     "tool": {"argv": ["python3", "tool.py"], "stdin": "cfg.json"},   //   內嵌一張 inst；格要參數就寫自己的 stdin
-    "done": {"target": "done.json", "next": "idle"}                  //   帶表上靜態 next
+    "done": {"val": "done.json", "next": "idle"}                  //   帶表上靜態 next
   },
   "end": ["done", "out"],                   // 選填：名字可以在表裡（跑完那格就結束）也可以不在（回這個 next 就結束）
   "state": "fsm-state.json"                 // 必填（N-19）；從 cwd 算

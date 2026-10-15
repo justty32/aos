@@ -25,7 +25,7 @@
 
 | 檔 | 是什麼 |
 |---|---|
-| `aos_cli.py` | 命令列與 stdio（`config()`、`parse_argv()`、`load_target()`、`read_stream()`、`emit()`／`error()`、`CliError`（10-15 拿掉 `warn()`：不寫 stderr 警告，N-43）、驗設定共用的 `is_int()`）；三支共用，N-12 的程式範本；proto8-1 的 tasks、aos-tick 也借 `error()` 吐 stderr |
+| `aos_cli.py` | 命令列與 stdio（`config()`、`parse_argv()`、`load_target()`、`read_stream()`、`emit()`／`error()`、`CliError`（10-15 拿掉 `warn()`：不寫 stderr 警告，N-43）、驗設定共用的 `is_int()`、值的雙形收成物件的 `expand(v, key="val")`（C-55，ctl 的 paused／stop、gate 的 priority、think 的連錯計數都用它））；三支共用，N-12 的程式範本；proto8-1 的 tasks、aos-tick 也借 `error()` 吐 stderr |
 | `aos_directives.py` | 命令列 TARGET 的 `檔#/位置`（大家共用）；順帶解指示詞（語法糖，有用才有作用） |
 | `aos_inst.py` | inst：設定從 TARGET／stdin／旗標來、解好、挑認得的 key、跑一次、stdout 吐一份結果（命令列＋`run()`）；資料夾 TARGET 找 `$AOS_DIRNAME/inst.json`（`dirname()`） |
 | `aos_loop.py` | loop（`stop_on_end`＝包的 fsm 走到 end 就結束，N-44）：包一個 inst，跑幾次、隔多久、讀 ctl 窗、寫 state 窗、stdout 每次一份結果（命令列＋`run()`＋拍引擎 `Loop`＋`check_config()`／`load_config()`）；re-export 下面兩檔的名字 |
@@ -34,7 +34,7 @@
 | `aos_daemon.py` | daemon：命令列＋`run()`、daemon.json、`Daemon`（`aos_loop.Loop` 的子類：每拍掃資料夾＋跑 inst、每圈收屍）；re-export 下面兩檔的名字 |
 | `aos_daemon_table.py` | daemon 的表：`Table`（一條指令一個方法、子項六態、table 窗與接回、`child_exit` 策略格、收工）、`DaemonError` |
 | `aos_daemon_folder.py` | daemon 的指令（`handle()`）與控制資料夾（掃、回覆 `.done`） |
-| `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{target, next}`）、跑一格（`run_cell`：蓋 stdout（給了 args 才蓋 stdin；fsm 跑格不蓋）、本行程 `aos_inst.run()`、撿格 stderr 的 N-29 錯誤當 `cell_error`）、取 stdout 最後一份（`last_json`） |
+| `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{val, next}`）、跑一格（`run_cell`：蓋 stdout（給了 args 才蓋 stdin；fsm 跑格不蓋）、本行程 `aos_inst.run()`、撿格 stderr 的 N-29 錯誤當 `cell_error`）、取 stdout 最後一份（`last_json`） |
 | `aos_fsm.py` | fsm（10-15 收工後瘦身）：命令列＋`run()`、一拍（讀寫只有 `phase` 的 state 窗、跑格（不碰 stdin）、換狀態、`end` 四種情形、格出錯 phase 不動退 1） |
 | `aos_agent_lib.py` | agent 的現成格庫（不是 agent 本體）：`think`、`tool`、`route`、`intake`、`done`、`fsm [NAME]`（照 lookup 找 fsm.json 跑一拍，給定義資料夾的 loop.json 用）；設定＝格 inst 自己的 stdin＋frame 裡 `lookup()`；`tool_specs`、`pending`。各格的細節在 [agent-lib.md](agent-lib.md)；agent 當函數／當工具不另寫程式（`aos_agent_call.py` 10-15 退場），見 [agent-frame.md](agent-frame.md) |
 | `aos_frame.py` | frame 查找（C-46）：`chain()`（frame → `env.json` 的 parent 鏈）、`lookup()`（找第一個）、`lookup_dir()`（資料夾逐項合併、近的蓋過遠的）；10-15 晚從 `aos_agent_lib.py` 拆出，格庫照樣 re-export |

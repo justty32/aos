@@ -65,8 +65,8 @@ class FsmTest(Tmp):
         self.assertEqual(json.loads(self.read("b.in")), {"q": 1})
 
     def test_static_next_and_stdout_wins(self):
-        path = self.fsm({"a": {"target": ok("a"), "next": "b"},
-                         "b": {"target": ok("b", '{"next": "a"}'), "next": "b"}})
+        path = self.fsm({"a": {"val": ok("a"), "next": "b"},
+                         "b": {"val": ok("b", '{"next": "a"}'), "next": "b"}})
         self.tick(path)
         self.assertEqual(self.state()["phase"], "b")      # 沒吐 next＝表上靜態 next
         self.tick(path)
@@ -95,7 +95,7 @@ class FsmTest(Tmp):
 
     def test_empty_stdout_follows_static_next(self):
         # 格沒輸出（只有空白也算）、表上有 next＝照表上走，不算錯（10-15 使用者，N-38）
-        path = self.fsm({"a": {"target": sh("a", "echo"), "next": "b"}, "b": {"target": sh("b", "true"), "next": "a"}})
+        path = self.fsm({"a": {"val": sh("a", "echo"), "next": "b"}, "b": {"val": sh("b", "true"), "next": "a"}})
         r = self.tick(path)
         self.assertEqual((r.returncode, self.state()["phase"]), (0, "b"), r.stdout)
         self.assertEqual(len(self.out(r)), 1)
@@ -104,18 +104,18 @@ class FsmTest(Tmp):
 
     def test_empty_stdout_end_gives_nothing(self):
         # 沒輸出的格在 end 裡＝結束、phase 歸位，只吐那一行（沒有結果可交）
-        path = self.fsm({"a": {"target": sh("a", "true"), "next": "b"}, "b": sh("b", "true")}, end=["b"])
+        path = self.fsm({"a": {"val": sh("a", "true"), "next": "b"}, "b": sh("b", "true")}, end=["b"])
         self.tick(path)
         r = self.tick(path)
         self.assertEqual((r.returncode, self.state()["phase"]), (1, "b"))       # b 沒輸出也沒 next＝錯
-        self.write("f.json", {"start": "a", "states": {"a": {"target": sh("a", "true"), "next": "out"}},
+        self.write("f.json", {"start": "a", "states": {"a": {"val": sh("a", "true"), "next": "out"}},
                               "end": ["out"], "state": "g.state.json"})
         r = self.tick(self.p("f.json"))
         self.assertEqual((r.returncode, len(self.out(r)), self.state("g.state.json")["phase"]), (0, 1, "a"))
 
     def test_non_json_output_with_static_next_is_error(self):
         # 吐了東西但不是完整 JSON＝錯，表上有 next 也一樣
-        path = self.fsm({"a": {"target": sh("a", "echo hello; printf '{\"next\": \"b\"'"), "next": "b"}, "b": ok("b")})
+        path = self.fsm({"a": {"val": sh("a", "echo hello; printf '{\"next\": \"b\"'"), "next": "b"}, "b": ok("b")})
         r = self.tick(path)
         self.assertEqual((r.returncode, self.out(r)[-1]["error"]["code"], self.state()["phase"]), (1, "NoResult", "a"))
 
@@ -212,7 +212,7 @@ class FsmTest(Tmp):
         self.assertEqual((self.runs("a"), self.runs("b")), (1, 2))
 
     def test_methods_cell_forms(self):
-        states = {"x": "nope/", "y": 3, "z": {"target": {"argv": ["true"]}, "next": "x"}}
+        states = {"x": "nope/", "y": 3, "z": {"val": {"argv": ["true"]}, "next": "x"}}
         with self.assertRaises(aos_methods.MethodsError) as e:
             aos_methods.cell(states, "w")
         self.assertEqual(e.exception.code, "UnknownState")

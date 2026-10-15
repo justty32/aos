@@ -58,7 +58,7 @@ class KernelOrderTest(Tmp):
     def test_level_order(self):
         self.send("a", "low")
         self.send("b")
-        self.send("c", {"level": "high", "class": "chat"})       # 不認得的 key 照帶
+        self.send("c", {"val": "high", "class": "chat"})       # 不認得的 key 照帶
         self.send("d", 0)
         self.send("e", 5)                                        # 數字取正負號＝high
         self.assertEqual(self.drain(), ["c", "e", "b", "d", "a"])
@@ -66,14 +66,14 @@ class KernelOrderTest(Tmp):
     def test_deadline_jump_and_within_level(self):
         far = time.time() + 3600
         self.send("a", "high")
-        self.send("b", {"level": "low", "deadline": time.time() + 10})      # 剩不到 near_ms＝插隊
+        self.send("b", {"val": "low", "deadline": time.time() + 10})      # 剩不到 near_ms＝插隊
         self.send("c", {"deadline": far + 10})
         self.send("d", {"deadline": datetime_iso(far)})                       # ISO 字串也收；同級 deadline 近的先
         self.send("e")
         self.assertEqual(self.drain(), ["b", "a", "d", "c", "e"])
 
     def test_deadline_passed_dropped(self):
-        n = self.send("late", {"level": "high", "deadline": time.time() - 1})
+        n = self.send("late", {"val": "high", "deadline": time.time() - 1})
         self.send("ok")
         out = K.tick(self.cfg)
         self.assertEqual(out["dropped"], [{"letter": n, "error": "DeadlineMissed"}])
@@ -152,7 +152,7 @@ class KernelOrderTest(Tmp):
         with open(os.path.join(self.box["new"], name)) as f:
             lt = json.load(f)
         self.assertEqual((lt["argv"][0], lt["timeout_ms"], lt["_metainfo"], lt["priority"], lt["cwd"]),
-                         ("sh", 5000, {"cost": 2}, {"level": "high"}, os.path.realpath(self.tmp)))
+                         ("sh", 5000, {"cost": 2}, {"val": "high"}, os.path.realpath(self.tmp)))
         self.assertEqual(lt["id"], os.path.realpath(self.p("t.json")))
         self.assertNotIn("kind", lt)
         self.assertEqual(lt["reply"], os.path.join(self.box["reply"], name))

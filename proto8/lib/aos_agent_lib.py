@@ -298,13 +298,13 @@ def _think_failed(cfg, e):
     path = _fails_file(cfg)
     try:
         with open(path, encoding="utf-8") as f:
-            n = int(json.load(f).get("n", 0))
+            n = int(aos_cli.expand(json.load(f)).get("val", 0))   # 計數長成物件：{"val": 次數, "error"}（C-55）
     except (OSError, ValueError, AttributeError, TypeError):
         n = 0
     n += 1
     err = {"code": e.code, "msg": e.msg}
     os.makedirs(cfg["work"], exist_ok=True)
-    write_json(path, {"n": n, "error": err})
+    write_json(path, {"val": n, "error": err})
     limit = cfg.get("halt_after")
     if isinstance(limit, int) and not isinstance(limit, bool) and n >= limit:
         write_json("ret.json", {"error": err})        # 要交出去的錯 think 自己寫好（done 不讀 think 的私檔）
