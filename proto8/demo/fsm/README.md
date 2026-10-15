@@ -18,7 +18,7 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
   - `think/ask.json`＝`aos_agent_lib.py think`（**同步**，N-41）：讀 history、組 `{"messages", "tools"}`、跑腦、接 assistant 訊息。
   - `think/review.py`：最後一則 assistant 有 `tool_calls`＝`next: tool`，否則寫 `outbox.txt`、`next: idle`（兩個都在 `end`＝交給外層）。
   - `cells/tool.json`＝`aos_agent_lib.py tool`：跑第一個 tool_call（引數寫成 `work/N-call.json` 當 stdin）、接 tool 訊息。
-- `brain/fake.py`（`brain/fake.json`）：假腦，照思考介面。問「幾點」回 OpenAI `tool_calls` 叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回。`brain/openai.json`：真腦（`aos_brain_openai.py`）；`brain/ollama146.json`：ollama 原生真腦（`aos_brain_ollama.py`，146、gemma3:1b、num_ctx 4096、keep_alive 30s）。
+- `brain/fake.py`（`brain/fake.json`）：假腦，照思考介面。問「幾點」回 OpenAI `tool_calls` 叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回。`brain/openai.json`：真腦（`aos_brain_openai.py`）；`brain/ollama146.json`：ollama 原生真腦（`aos_brain_ollama.py`，146、gemma3:1b、num_ctx 4096、keep_alive 30s）；`brain/qwen146.json`：同上換 qwen2.5:14b（10-15 跑通過一圈）。
 - `tools/clock.json`＋`clock.py`：工具＝inst，說明在 `_tool`；stdout `{"time": "HH:MM:SS"}`。
 - `run.py`：mktemp 建暫存資料夾（`inbox/` 兩封信「你好」「現在幾點？」、`work/`、窗），起 aos-loop，每 20 ms 看一次兩層 state 窗、每拍跑完印一行；最後印 `steps.jsonl`、history、`outbox.txt`，刪掉暫存資料夾。
 
@@ -35,6 +35,7 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 同樣只改一行：`"brain": "brain/ollama146.json"`。走 ollama 原生 `/api/chat`（`/v1` 設不了 num_ctx）。**用 146 之前先照 [dev-env](../../../wf/workflows/dev-env.md#跨機--離線差異) 的規矩**（看負載、只准小模型、num_ctx 4096、短 keep_alive、試完確認卸載）。
 
 - 10-15 試過：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`、外層停在 thinking。之後補了：內層 state 的 `last_error` 寫出真正原因（`CellFailed: BrainFailed: HttpError: …does not support tools`），連錯 3 次（`max_fails`）內層就停住（`halted: true`）、不再叫腦；要再試就把內層 state 的 `halted` 拿掉。
+- 10-15 試 qwen2.5:14b（`"brain": "brain/qwen146.json"`）：整圈跑通，會叫 `clock`；第一次叫腦含載入約 15 秒，用 loop 拍要把 `loop.json` 的 `timeout_ms` 加大（[thinking 10-15 §8](../../thinking/2026-10-15-topics.md#8-試-146-ollamaqwen2514b)）。
 
 要非同步就把 ask 換成「丟請求、回 `{"next": "waiting"}`」再加一格 waiting。
 
