@@ -206,16 +206,35 @@ class KernelTest(Tmp):
         self.assertEqual(self.calls(), 3)
 
     def test_skip_judge_when_unchanged(self):
+        a, b = self.send("a"), self.send("b")
+        cfg = self.cfg("print(json.dumps({'defer': q}))")            # 有空格：局面一樣（名單、在跑、空格）就不問
+        self.write("k.state.json", {"last_sig": [sorted([a, b]), [], [["llm", 1]]]})   # 上次問的就是這個局面
+        out = K.tick(cfg)
+        self.assertEqual((self.calls(), out["judge"]["skipped"]), (0, 1))
+        self.send("c")                                                # 名單變了：問
+        K.tick(cfg)
+        self.assertGreaterEqual(self.calls(), 1)
+
+    def test_no_judge_when_all_slots_busy_then_asked_when_freed(self):
+        self.send("hold", sh="sleep 0.5; cat")
+        time.sleep(0.05)
+        cfg = self.cfg("print(json.dumps({'defer': q}))", slots={"llm": 1})
+        out = {}
+        t = threading.Thread(target=lambda: out.update(K.tick(cfg)))
+        t.start()
+        time.sleep(0.2)                                               # hold 佔著唯一的格
+        self.send("x")
+        self.send("y")                                                # 格全滿又來新信：不問判官
+        t.join()
+        self.assertGreaterEqual(out["judge"]["skipped"], 1)
+        self.assertEqual(self.calls(), 1)                             # 只在 hold 放格、x／y 兩封都排著時問一次
+        self.assertEqual(len(self.log("done")), 3)
+
+    def test_no_judge_at_all_with_zero_slots(self):
         self.send("a")
         self.send("b")
-        cfg = self.cfg("print(json.dumps({'defer': q}))", slots={"llm": 0})   # 沒空格＝補位也補不了，局面不變
-        K.tick(cfg)
-        out = K.tick(cfg)
-        self.assertEqual(self.calls(), 1)
-        self.assertEqual(out["judge"]["skipped"], 1)
-        self.send("c")
-        K.tick(cfg)
-        self.assertEqual(self.calls(), 2)
+        out = K.tick(self.cfg("print(json.dumps({'defer': q}))", slots={"llm": 0}))
+        self.assertEqual((self.calls(), out["judge"]["skipped"], out["waiting"]), (0, 1, 2))
 
     def test_single_letter_with_free_slot_skips_judge(self):
         self.send("a")
@@ -224,7 +243,14 @@ class KernelTest(Tmp):
 
     def test_reject_reaches_caller_as_n29_error(self):
         cfg = self.cfg("print(json.dumps({'reject': [{'id': x, 'error': {'code': 'TooExpensive', "
-                       "'msg': '太貴'}} for x in q]}))", slots={"llm": 0})
+                       "'msg': '太貴'}} for x in q]}))", slots={"llm": 1})
+        gate = subprocess.Popen([sys.executable, GATE, "--target", json.dumps({"argv": ["cat"], "_metainfo": {"resource": "llm"}}),
+                                 "--mailbox", self.p("mb")], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for _ in range(500):                                          # 閘門的信到了，再補一封：兩封＋有空格才問判官
+            if os.listdir(self.box["new"]):
+                break
+            time.sleep(0.01)
+        self.send("pre")
         stop = threading.Event()
 
         def beat():
@@ -234,11 +260,11 @@ class KernelTest(Tmp):
         t = threading.Thread(target=beat, daemon=True)
         t.start()
         try:
-            p = subprocess.run([sys.executable, GATE, "--target", json.dumps({"argv": ["cat"], "_metainfo": {"resource": "llm"}}),
-                                "--mailbox", self.p("mb")], input="hi", capture_output=True, text=True, timeout=10)
+            out, err = gate.communicate(timeout=10)
         finally:
             stop.set()
             t.join()
+        p = subprocess.CompletedProcess(gate.args, gate.returncode, out, err)
         self.assertEqual(p.returncode, 125)
         self.assertEqual(json.loads(p.stderr)["error"], {"code": "TooExpensive", "msg": "太貴"})
 

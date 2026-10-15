@@ -178,7 +178,8 @@ def tick(cfg):
         free = {k: max(cfg["slots"][k] - busy[k], 0) for k in cfg["slots"]}
         sig = [sorted(queue), sorted(running), sorted(free.items())]
         sig = json.loads(json.dumps(sig))
-        if queue and sig != last_sig:
+        can_start = any(free[resource(d)] > 0 for d in queue.values())    # 排隊的信沒有一種資源有空格＝這拍什麼也起不了，不問判官
+        if queue and can_start and sig != last_sig:
             last_sig = sig
             only = next(iter(queue)) if len(queue) == 1 else None
             snap = window("running", now)
