@@ -5,13 +5,9 @@
     "thinking": "think/",
     "tool": {"target": "cells/tool.json", "next": "thinking"}
   },
-  "state": {"$env": "DEMO_STATE"},
-  "lock": {"$env": "DEMO_LOCK"},
   "max_steps": 10,
 
   "brain": "brain/fake.json",
   "tools": {"clerk": "tools/clerk.json"},
-  "system": "system.md",
-  "history": {"$env": "DEMO_HISTORY"},
-  "work": {"$env": "DEMO_WORK"}
+  "system": "system.md"
 }

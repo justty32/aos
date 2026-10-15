@@ -27,11 +27,11 @@ python3 proto8/lib/aos_fsm.py [--key 值 ...] [FSM.json | -]
 }
 ```
 
-- 設定從哪來照 `aos_cli`：FSM.json（可接 `#/位置`）、`-`＝stdin；`--start`、`--state`、`--ctl`、`--lock`、`--max-steps`、`--max-fails` 鏡射；`states`、`end` 不鏡射；`--` 不收。`run(x)` 收路徑或一份設定 dict。相對路徑一律從呼叫者的 cwd 算（格的 TARGET 也是）。
+- 設定從哪來照 `aos_cli`：FSM.json（可接 `#/位置`）、`-`＝stdin；給了 FSM.json 而 stdin 是一般檔（被外層 fsm 當格跑時就是）＝stdin 第一份物件當預設（N-40，見「巢狀」）；`--start`、`--state`、`--ctl`、`--lock`、`--max-steps`、`--max-fails` 鏡射；`states`、`end` 不鏡射；`--` 不收。`run(x, ident=None, defaults=None)` 收路徑或一份設定 dict。相對路徑一律從呼叫者的 cwd 算（格的 TARGET 也是）。
 - **一拍**：拿鎖（有 lock）→ 讀 ctl（有 ctl；paused 或 stop＝這拍不起格，只把 seq 回音寫進 state，退出 0）→ 讀 state 窗（檔還沒有＝從 `start` 起）→ 查格 → **先把 `step`＋`running: true` 寫進 state** → 跑格 → 讀格 stdout 最後一份完整 JSON → 換狀態、寫 state → stdout 吐一行 → 放鎖。
-- **跑一格**（`aos_methods.run_cell`）：在本行程用 `aos_inst.run()` 跑那張 inst，stdin 蓋成一份暫存檔 `{"state": 現在狀態, "step": 第幾格, "prev": …, "cfg": 這份 fsm 設定整份}`、stdout 蓋成暫存檔（跑完刪掉）；stderr、exit、cwd、`timeout_ms` 照那張 inst 自己寫的。inst 寫了 `stdin_inherit`／`stdout_inherit`＝Conflict（格出錯）。
-- **cfg**（N-37，10-15 使用者選乙）：就是這拍拿到的設定（指示詞解好、旗標併進去；fsm 不認得的 key 也照帶），路徑原樣、不轉絕對——格照自己的 cwd 算（沒寫 `cwd` 的格＝跟 fsm 同一個 cwd）。格要的設定（例：agent 的 `brain`、`history`）就從這裡拿，不必再在 argv 指一次設定檔。
-- **prev**：平常＝上一格回的 `data`（state 窗的 `data`）；上一拍被殺一半（state 的 `running` 還是 true）＝`{"interrupted": true, "data": …}`，重進同狀態、不撿舊結果；進 error 格＝`{"state": 原狀態, "error": "代號: 白話", "data": 原 data}`。（已寫進 N-37、N-38）
+- **跑一格**（`aos_methods.run_cell`）：在本行程用 `aos_inst.run()` 跑那張 inst，stdin 蓋成一份暫存檔＝**這份 fsm 設定本身＋`fsm_state`（這拍起格前讀到的 state 窗整份）**、stdout 蓋成暫存檔（跑完刪掉）；stderr、exit、cwd、`timeout_ms` 照那張 inst 自己寫的。inst 寫了 `stdin_inherit`／`stdout_inherit`＝Conflict（格出錯）。
+- **設定**（N-37，10-15 使用者選乙；同日依 C-48 改成「設定本身＋一個 key」）：就是這拍拿到的設定（旗標併進去；有用指示詞的話先解好；fsm 不認得的 key 也照帶），路徑原樣、不轉絕對——格照自己的 cwd 算（沒寫 `cwd` 的格＝跟 fsm 同一個 cwd）。格要的設定（例：agent 的 `brain`、`history`）就從這裡拿，不必再在 argv 指一次設定檔。
+- **`fsm_state`**（取代原本的 `state`／`step`／`prev` 與 prev 的三種形狀，10-15 使用者「都照建議」）：格要的都在窗裡——`data`＝上一格回的；`running: true`＝上一拍被殺一半（重進同狀態、不撿舊結果）；進 error 格時 `phase`＝`error`、`last_error`＝「代號: 白話」、`error_from`＝原狀態、`data` 照留；這格是第幾格＝`step`＋1。key 名 `fsm_state` 不叫 `state`：設定裡 `state` 已經是窗的路徑。
 - **下一狀態**：格 stdout 最後一份的 `next` ＞ 表上靜態 `next` ＞ 留原狀態。`data`＝那份的 `data`（沒寫＝null）。`next` 不在表裡：在 `end` 裡＝交給外層（phase 歸位 `start`，那份結果原樣吐成這拍 stdout 最後一份），都不在＝錯。
 - **出錯**（格結束碼非 0、aos_inst 自己出錯、查不到格、`next` 不對、走到 `max_steps`）：有 `error` 格＝phase 改 `error`、`step` 歸零，下一拍才跑它；沒有、或 error 格自己出錯＝留原狀態。兩種都記 `last_error`（「代號: 白話」，截 300 字）。代號：`CellFailed`、`UnknownState`、`UnknownNext`、`BadNext`、`MaxSteps`，aos_inst 的照原代號。
 - **真正原因**（10-15 146 試跑後補）：`CellFailed` 的白話＝格自己 stderr 最後一份 N-29 錯誤（`代號: 白話`），例 `CellFailed: BrainFailed: HttpError: http://…/api/chat 回 400：{"error":"… does not support tools"}`；格沒吐就寫「格 X 結束碼 N」。怎麼撿：沒寫 stderr 的格（本來接 /dev/null）由 `run_cell` 改接暫存檔；格自己寫了 stderr 檔就讀那個檔；`stderr_inherit`／`stderr_merge` 的撿不到。
@@ -40,11 +40,11 @@ python3 proto8/lib/aos_fsm.py [--key 值 ...] [FSM.json | -]
 - **state 窗**（只有 fsm 寫；不寫時間、pid，N-39）：
 
 ```jsonc
-{"phase": "thinking", "step": 2, "running": false, "data": {"q": "…"}, "last_error": null, "ctl_seq": 3, "fails": 0, "halted": false}
+{"phase": "thinking", "step": 2, "running": false, "data": {"q": "…"}, "last_error": null, "error_from": null, "ctl_seq": 3, "fails": 0, "halted": false}
 ```
 
-- **stdout**：起了格（或查格就出錯）吐一行 `{"step", "from", "to", "code", "ms"}`，出錯多一格 `error`；這行永遠不帶 `next`，所以內層沒到終點時外層留在原格。ctl 擋下、停住（`halted`）的那拍什麼都不吐。
-- **巢狀**：某格的 inst 是 `aos_fsm.py 內層.json`。內層有自己的 state 窗、不開 lock 與 ctl（沿用外層）、從自己的 TARGET 拿設定（不讀外層給的 stdin，要外層的東西就 `$ref` 或讀共用檔），給自己格的 `cfg` 也是內層那份；巢狀格不宜寫表上靜態 next。
+- **stdout**：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`；沒起成格＝這些是 null）＋`step`、`from`、`to`，出錯多一格 `error`: `{"code", "msg"}`（N-29 形狀）；這行永遠不帶 `next`，所以內層沒到終點時外層留在原格。ctl 擋下、停住（`halted`）的那拍什麼都不吐。
+- **巢狀**：某格的 inst 是 `aos_fsm.py 內層.json`。內層有自己的 state 窗、不開 lock 與 ctl（沿用外層）、從自己的 TARGET 拿設定，**外層餵的 stdin（外層 cfg）當預設**：內層沒寫的 key 才用外層的（N-40，10-15 使用者「都照建議」）；fsm 自己的 key（`start`、`states`、`end`、`state`、`ctl`、`lock`、`max_steps`、`max_fails`）與 `fsm_state` 不繼承（動工自定：繼承外層的 lock 會撞鎖、state 會撞窗）。給自己格的就是合起來那份。只在 stdin 是一般檔時讀（終端機、pipe、/dev/null 不讀，不會卡住）——這是 N-21「給 TARGET 就不讀 stdin」對內層 fsm 的例外。巢狀格不宜寫表上靜態 next。
 - **lock**：mkdir 那個資料夾，已經在＝`LockBusy`、不碰 state；退出前 rmdir。被 SIGKILL 的那拍鎖會留著，要人清（基礎實作不處理）。
 - **退出碼只說 fsm 自己**：0＝這拍做完（格出錯由表處理也是 0）；125＝設定不對、窗缺（`WindowMissing`）、拿不到鎖、state 讀不懂（`StateBad`）或寫不了，stderr 吐一份 `{"error": {"code", "msg"}}`。
 - 格怎麼跑是格的事（N-41）：同步（等 LLM 回覆才結束）或非同步（丟請求、回 `{"next": "waiting"}`）都行，都不自己 setsid／fork；格裡放 loop／daemon 會阻塞一拍，靠那張 inst 的 `timeout_ms` 守。
