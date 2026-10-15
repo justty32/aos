@@ -8,10 +8,10 @@
 設定：
     mailbox    信箱資料夾（同閘門的 mailbox；必填）
     state      state 窗（必填，N-19）：loop 骨架的 state／pid／runs／last_error／beat，加 kernel 的 queue、running、
-               slots、budget、served、seen（每封信第一次看到的 runs）、judge_fails、judge_error、last_sig；判官的 stdin＝這份
+               slots、budget、served、seen（每封信第一次看到的 runs）、judge_fails、judge_error、last_sig；判官的 stdin＝這份只留 queue／running／slots／budget
     slots      每種資源幾格 {"llm": 1, "cpu": 2, "human": 1}；純值 n＝{"llm": n}（沒寫＝1）。信的 `_metainfo.resource`
                沒寫或 "none"＝便宜的，不佔格、直接跑；寫了但這裡沒有＝回 ResourceUnknown
-    judge      判官：TARGET 或內嵌 inst（沒寫＝一律用規則）。stdin＝state 窗整份，
+    judge      判官：TARGET 或內嵌 inst（沒寫＝一律用規則）。stdin＝state 窗的 queue、running、slots、budget（子集），
                stdout＝{"run": [id], "defer": [id], "reject": [{"id", "error": {code, msg}}]}（見 aos_kernel_judge）
     max_fails  判官連錯幾次就一直用規則、等人把 state 窗的 judge_fails 歸零（沒寫＝3）
     budget、aging_ticks、near_ms、log  同第一種（aos_gate_kernel.py）；budget 只管 llm 的信
@@ -99,7 +99,7 @@ def tick(cfg):
     served, dropped, running, results, queue, busy = [], [], {}, {}, {}, {}
 
     def window(word, now):
-        """state 窗整份（loop 骨架的 state、pid、runs、last_error、beat＋kernel 的 key）；也是判官的 stdin。"""
+        """state 窗整份（loop 骨架的 state、pid、runs、last_error、beat＋kernel 的 key）；判官的 stdin 是它的子集。"""
         return {"state": word, "pid": os.getpid(), "runs": n, "last_error": None, "beat": round(now, 3),
                 "served": st.get("served", 0) + len(served) if _int(st.get("served"), 0) else len(served),
                 "budget": {"limit": cfg["budget"], "used": used[0], "day": today},
@@ -182,7 +182,7 @@ def tick(cfg):
             last_sig = sig
             only = next(iter(queue)) if len(queue) == 1 else None
             snap = window("running", now)
-            write_json(cfg["state"], snap)                  # 局面外顯（N-13）；判官的 stdin 就是這份
+            write_json(cfg["state"], snap)                  # 局面外顯（N-13）；判官的 stdin＝這份的子集
             if only and free[resource(queue[only])] > 0:
                 how, dec = "direct", {"run": [only], "defer": [], "reject": []}
             elif cfg["judge"] is not None and fails < cfg["max_fails"]:

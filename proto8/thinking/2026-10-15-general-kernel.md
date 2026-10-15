@@ -53,7 +53,7 @@
 10-15 做了基礎實作（[lib kernel2.md](../lib/kernel2.md)、demo `run.py kernel2`），自己定的、等使用者看：
 
 - **一拍＝一段忙碌期**：一拍裡一封一條執行緒、各自一支子程式，誰跑完就放格、馬上再決定；沒有在跑的才結束這拍。這樣 human 格等人時，llm／cpu 照樣排得動；子程式都在 loop 起的那個行程群組裡，收工整群收、不漏。代價：一拍可能很長，`waited_runs` 在一拍裡不長（另給 `waited_ms`）。
-- **判官的輸入輸出**（使用者 10-15 拍板）：stdin＝kernel 的 state 窗整份（loop 骨架的 `state`／`pid`／`runs`／`last_error`／`beat`＋`queue`、`running`、`slots`、`budget`、`served`、`seen`、`judge_fails`、`judge_error`、`last_sig`）；stdout 保留 `run`／`defer`／`reject`，reject 每項 `{"id", "error": {code, msg}}`。同一個 id 出現兩次＝形狀不對。
+- **判官的輸入輸出**（使用者 10-15 拍板）：stdin＝kernel 的 state 窗整份（loop 骨架的 `state`／`pid`／`runs`／`last_error`／`beat`＋`queue`、`running`、`slots`、`budget`、`served`、`seen`、`judge_fails`、`judge_error`、`last_sig`）；stdout 保留 `run`／`defer`／`reject`，reject 每項 `{"id", "error": {code, msg}}`。同一個 id 出現兩次＝形狀不對。**10-15 再改（使用者「剩下都隨意」）**：stdin 瘦成 state 窗的子集 `queue`／`running`／`slots`／`budget`（同一份物件、不是新格式，C-48），兩種判官都這樣；整份太大，小模型判官慢（[實跑](2026-10-15-judge-live.md)）。
 - **省判官的「局面」**＝排隊名單＋在跑名單＋各資源空格；記在 state 窗 `last_sig`，跨拍也沿用（判官全 defer、局面沒變＝一直等到有變化）。
 - **`judge_fails`＝連錯次數**（每次問都算，不是每拍）；判官對一次歸零；到 `max_fails` 停問，人把它改回 0 才再問。
 - **資源**：`_metainfo.resource` 沒寫或 `"none"`＝便宜的，不佔格、不問判官；寫了 `slots` 沒有的＝`ResourceUnknown`。`slots` 純值 n＝`{"llm": n}`。`budget` 只管 `llm` 的信。

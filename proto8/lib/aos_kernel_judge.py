@@ -1,6 +1,6 @@
 """通用 kernel（aos_kernel.py）的判官那一半：跑判官格、讀它的答案、判官錯時用的確定規則。純標準庫。說明在 kernel2.md。
 
-判官＝一張 inst（N-12）：stdin＝kernel 的 state 窗整份（含 queue、running、slots、budget），
+判官＝一張 inst（N-12）：stdin＝kernel 的 state 窗只留 queue、running、slots、budget 四個 key（同一份物件的子集，C-48），
 stdout 最後一份＝{"run": [id…], "defer": [id…], "reject": [{"id", "error": {"code", "msg"}}]}（reject 的錯誤＝N-29 形狀）。
 
 相依：aos_inst ← aos_gate_kernel（order）← aos_kernel_judge ← aos_kernel。
@@ -15,9 +15,10 @@ import aos_inst
 from aos_cli import CliError
 from aos_gate_kernel import order
 
-__all__ = ["JUDGE_TIMEOUT_MS", "ask_judge", "decide_rules", "parse_decision", "resource"]
+__all__ = ["JUDGE_KEYS", "JUDGE_TIMEOUT_MS", "ask_judge", "decide_rules", "parse_decision", "resource"]
 
 JUDGE_TIMEOUT_MS = 30000     # 判官 inst 沒寫 timeout_ms 時的上限
+JUDGE_KEYS = ("queue", "running", "slots", "budget")   # 判官的 stdin＝state 窗的這幾個 key（輸入小，小模型才快）
 
 
 def resource(doc):
@@ -65,7 +66,7 @@ def decide_rules(queue, free, seen, n, now, cfg):
 
 
 def ask_judge(cfg, snap, ids):
-    """跑判官格：stdin＝局面。回決定；結束碼非 0、逾時、起不來、形狀不對丟 ValueError（帶原因）。"""
+    """跑判官格：stdin＝state 窗 snap 的 JUDGE_KEYS 子集。回決定；結束碼非 0、逾時、起不來、形狀不對丟 ValueError（帶原因）。"""
     j = cfg["judge"]
     try:
         inst = aos_inst.load(j) if isinstance(j, str) else aos_inst.parse(j, os.getcwd(), "<judge>")
@@ -79,7 +80,7 @@ def ask_judge(cfg, snap, ids):
     try:
         files = {k: os.path.join(tmp, k) for k in ("stdin", "stdout")}
         with open(files["stdin"], "w", encoding="utf-8") as f:
-            json.dump(snap, f, ensure_ascii=False)
+            json.dump({k: snap[k] for k in JUDGE_KEYS if k in snap}, f, ensure_ascii=False)
         inst = dict(inst, envs=envs, envs_clear=True, stdin=files["stdin"], stdout=files["stdout"], stderr=None,
                     stdin_inherit=False, stdout_inherit=False, stdout_append=False, stdout_mkdir=False,
                     stderr_merge=False, stderr_inherit=False, timeout_ms=inst["timeout_ms"] or JUDGE_TIMEOUT_MS)

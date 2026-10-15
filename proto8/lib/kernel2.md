@@ -4,7 +4,7 @@
 
 > **基礎實作（N-18 最簡單的）、還不是規範。** 動工時自己定的點列在 [thinking 通用 kernel「動工自定點」](../thinking/2026-10-15-general-kernel.md#動工自定點)。
 
-**閘門不改**：`aos_gate.py` 的 `mailbox`（或環境變數 `AOS_KERNEL`）指到這支的信箱就行；信（＝那張 inst 本身＋`priority`／`reply`／`sent`）與回信（N-30 結果）的形狀同第一種，讀信、認領、跑一封、回信共用 `aos_mailbox.py`。差別只在「誰先跑」由**判官**決定——判官是一張 inst（N-12）：stdin＝kernel 的 state 窗整份，stdout 最後一份＝決定。
+**閘門不改**：`aos_gate.py` 的 `mailbox`（或環境變數 `AOS_KERNEL`）指到這支的信箱就行；信（＝那張 inst 本身＋`priority`／`reply`／`sent`）與回信（N-30 結果）的形狀同第一種，讀信、認領、跑一封、回信共用 `aos_mailbox.py`。差別只在「誰先跑」由**判官**決定——判官是一張 inst（N-12）：stdin＝kernel 的 state 窗的子集（`queue`、`running`、`slots`、`budget`），stdout 最後一份＝決定。
 
 ```
 呼叫者 ──▶ aos_gate.py ──信──▶ 信箱 new/ ──▶ aos_kernel.py（一拍＝一段忙碌期）──state 窗──▶ 判官 inst ──決定──┐
@@ -29,9 +29,9 @@ python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 
 **資源**＝信的 `_metainfo.resource`（信就是 target 那張 inst，它寫的 `_metainfo` 原樣在最上層）：沒寫或 `"none"`＝便宜的，不佔格、不問判官、直接跑；寫了但 `slots` 沒有＝回 `ResourceUnknown`。`human`＝人的注意力（C-28、C-29）：那支 inst 等人回信落檔，格就一直佔著，回信到或它的 `timeout_ms` 到才放。
 
-## state 窗＝判官的 stdin
+## state 窗（判官的 stdin＝它的子集）
 
-沿用 loop 骨架的名字（`state`、`pid`、`runs`、`last_error`、`beat`），加 kernel 自己的 key。每次要決定前寫一份、拍完寫一份；判官拿到的就是剛寫的那份（N-13 外顯）。
+沿用 loop 骨架的名字（`state`、`pid`、`runs`、`last_error`、`beat`），加 kernel 自己的 key。每次要決定前寫一份、拍完寫一份；判官拿到的是剛寫的那份**只留 `queue`、`running`、`slots`、`budget`**（同一份物件的子集，不是新格式；`aos_kernel_judge.JUDGE_KEYS`）。10-15 起規則判官、agent 判官都這樣——整份給小模型太大、太慢（[實跑](../thinking/2026-10-15-judge-live.md)）。
 
 ```jsonc
 {"state": "running", "pid": 123, "runs": 7, "last_error": null, "beat": 1792...,   // runs＝第幾拍
@@ -65,8 +65,8 @@ stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback,
 
 ## agent 判官（換一行 TARGET）
 
-`demo/kernel2/judge-agent.json`＝`python3 judge/ask_judge.py judge/agent.json`：把 state 窗當 user 訊息交給 bob 式 agent（`aos_agent_call`），拿它最後一句裡的 JSON 物件印出來；錯＝退出 1（kernel 退回規則）。`judge/system.md` 說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
+`demo/kernel2/judge-agent.json`＝`python3 judge/ask_judge.py judge/agent.json`：把判官的 stdin（state 窗子集）當 user 訊息交給 bob 式 agent（`aos_agent_call`），拿它最後一句裡的 JSON 物件印出來；錯＝退出 1（kernel 退回規則）。`judge/system.md` 開頭 `/no_think`（不靠模型思考，見 [agent.md](agent.md#邊緣狀況使用者-10-15-定)）、說只回那三種話，腦預設 LM Studio（`judge/brain.json`）。kernel 設定的 `judge` 從 `judge-rules.json` 換成它就好；demo 預設不跑它。
 
 ## 測試
 
-`tests/test_kernel.py`（17 個）：判官的答案照辦、stdin 就是 state 窗、沒點名＝defer、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯到 `max_fails` 停在規則＋人歸零後再問、局面沒變不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。
+`tests/test_kernel.py`（17 個）：判官的答案照辦、stdin＝state 窗子集（只有四個 key）、沒點名＝defer、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯到 `max_fails` 停在規則＋人歸零後再問、局面沒變不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。

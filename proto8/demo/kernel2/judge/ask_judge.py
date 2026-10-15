@@ -1,9 +1,10 @@
-"""agent 判官的入口：通用 kernel 的判官格（stdin＝kernel 的 state 窗、stdout＝{run, defer, reject}）↔ agent 當函數（aos_agent_call）。
+"""agent 判官的入口：通用 kernel 的判官格（stdin＝kernel 的 state 窗子集 queue／running／slots／budget、stdout＝{run, defer, reject}）↔ agent 當函數（aos_agent_call）。
 
     python3 judge/ask_judge.py judge/agent.json      （kernel 設定的 judge 指 judge-agent.json 就換上它）
 
-把 state 窗原樣當 user 訊息交給 agent，拿它最後一句話裡的 JSON 物件（第一個 { 到最後一個 }）印出來。
+把它原樣當 user 訊息交給 agent，拿它最後一句話裡的 JSON 物件（第一個 { 到最後一個 }）印出來。
 agent 出錯、回的不是 JSON＝stderr 一份錯誤、退出 1——kernel 這拍就退回規則。frame 用完就刪。
+只看最後的答案，不靠模型的思考內容（system.md 開頭 /no_think，Qwen3 會照辦；見 lib agent.md）。
 """
 import json
 import os
