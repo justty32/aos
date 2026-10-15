@@ -1,0 +1,223 @@
+{
+ "contract": "wf-table/1",
+ "source": "01-設計理念.md",
+ "extracted": "2026-10-15",
+ "columns": [
+  "abbr",
+  "full",
+  "meaning",
+  "example"
+ ],
+ "rows": [
+  {
+   "abbr": "ctl",
+   "full": "control",
+   "meaning": "控制：宣告式 ctl 窗、指令式控制資料夾",
+   "example": "ctl.json、ctl_poll_ms、ctl_seq、ctl_dir"
+  },
+  {
+   "abbr": "inst",
+   "full": "instruction",
+   "meaning": "一筆要跑的指令（argv＋怎麼跑）",
+   "example": "inst.json、loop.json 的 inst、aos-inst"
+  },
+  {
+   "abbr": "fsm",
+   "full": "finite state machine",
+   "meaning": "狀態機組合子",
+   "example": "fsm.json、aos-fsm、fsm-state.json"
+  },
+  {
+   "abbr": "cfg",
+   "full": "configuration",
+   "meaning": "設定（一份 JSON 設定）",
+   "example": "程式裡的 cfg 變數；新 key 要表示設定時用它"
+  },
+  {
+   "abbr": "dir",
+   "full": "directory",
+   "meaning": "資料夾（後綴，表示值是資料夾）",
+   "example": "work_dir、ctl_dir、AOS_DIRNAME"
+  },
+  {
+   "abbr": "path",
+   "full": "path",
+   "meaning": "路徑（後綴，表示值是路徑；不是縮寫，列著跟 dir 對照）",
+   "example": "doc_path（wf 資料檔）"
+  },
+  {
+   "abbr": "env",
+   "full": "environment",
+   "meaning": "環境變數（只用在這個意思）",
+   "example": "envs、envs_clear、$env、AOS_ 開頭的環境變數"
+  },
+  {
+   "abbr": "args",
+   "full": "arguments",
+   "meaning": "呼叫的引數（本身是複數，照原樣）",
+   "example": "frame 的 args.json"
+  },
+  {
+   "abbr": "argv",
+   "full": "argument vector",
+   "meaning": "命令列（C 傳統）",
+   "example": "inst 的 argv"
+  },
+  {
+   "abbr": "ret",
+   "full": "return value",
+   "meaning": "回傳值",
+   "example": "frame 的 ret.json"
+  },
+  {
+   "abbr": "msg",
+   "full": "message",
+   "meaning": "白話訊息",
+   "example": "{\"error\": {\"code\", \"msg\"}}（N-29）"
+  },
+  {
+   "abbr": "tmp",
+   "full": "temporary",
+   "meaning": "暫存（Maildir 慣例：還沒寫完）",
+   "example": "信箱 tmp/"
+  },
+  {
+   "abbr": "cur",
+   "full": "current",
+   "meaning": "目前（Maildir 慣例：已認領）",
+   "example": "信箱 cur/"
+  },
+  {
+   "abbr": "cwd",
+   "full": "current working directory",
+   "meaning": "工作目錄（POSIX）",
+   "example": "inst 的 cwd、cwd_mkdir"
+  },
+  {
+   "abbr": "ms",
+   "full": "millisecond",
+   "meaning": "毫秒（單位後綴）",
+   "example": "timeout_ms、interval_ms、grace_ms"
+  },
+  {
+   "abbr": "seq",
+   "full": "sequence number",
+   "meaning": "流水號",
+   "example": "ctl 的 seq、state 的 ctl_seq"
+  },
+  {
+   "abbr": "id",
+   "full": "identifier",
+   "meaning": "身分",
+   "example": "realpath#/位置（N-35）"
+  },
+  {
+   "abbr": "pid",
+   "full": "process id",
+   "meaning": "行程號（POSIX）",
+   "example": "daemon table 子項的 pid"
+  },
+  {
+   "abbr": "op",
+   "full": "operation",
+   "meaning": "控制資料夾指令的動作",
+   "example": "{\"op\", \"id\"}（lib daemon）"
+  },
+  {
+   "abbr": "val",
+   "full": "value",
+   "meaning": "值",
+   "example": "ctl 的 {\"val\", \"now\"}（N-06）"
+  },
+  {
+   "abbr": "max",
+   "full": "maximum",
+   "meaning": "上限（前綴，大家都知道的慣例）",
+   "example": "max_fails"
+  },
+  {
+   "abbr": "mkdir",
+   "full": "make directory",
+   "meaning": "沒有就建資料夾（Unix 指令名）",
+   "example": "cwd_mkdir、exit_mkdir"
+  },
+  {
+   "abbr": "ref",
+   "full": "reference",
+   "meaning": "指到另一份檔（指示詞）",
+   "example": "$ref"
+  },
+  {
+   "abbr": "meta",
+   "full": "metadata",
+   "meaning": "附註資訊",
+   "example": "_metainfo"
+  },
+  {
+   "abbr": "stdin",
+   "full": "standard input",
+   "meaning": "標準輸入（stdout、stderr 同理）",
+   "example": "inst 的 stdin、stdout_append"
+  },
+  {
+   "abbr": "llm",
+   "full": "large language model",
+   "meaning": "大語言模型",
+   "example": "gate-llm.json、LLM kernel"
+  },
+  {
+   "abbr": "cpu",
+   "full": "central processing unit",
+   "meaning": "資源種類名",
+   "example": "gate-cpu.json"
+  },
+  {
+   "abbr": "url",
+   "full": "uniform resource locator",
+   "meaning": "網址",
+   "example": "base_url"
+  },
+  {
+   "abbr": "api",
+   "full": "application programming interface",
+   "meaning": "API",
+   "example": "api_key_env"
+  },
+  {
+   "abbr": "cli",
+   "full": "command-line interface",
+   "meaning": "命令列程式共用部分",
+   "example": "aos_cli.py"
+  },
+  {
+   "abbr": "proc",
+   "full": "process",
+   "meaning": "行程",
+   "example": "aos_proc.py"
+  },
+  {
+   "abbr": "lib",
+   "full": "library",
+   "meaning": "函式庫資料夾",
+   "example": "proto8/lib"
+  },
+  {
+   "abbr": "bin",
+   "full": "binary",
+   "meaning": "可執行檔資料夾（Unix 慣例）",
+   "example": "proto8/bin"
+  },
+  {
+   "abbr": "demo",
+   "full": "demonstration",
+   "meaning": "示範",
+   "example": "proto8/demo、aos-demo"
+  },
+  {
+   "abbr": "abbr",
+   "full": "abbreviation",
+   "meaning": "縮寫（本表）",
+   "example": "CONCEPTS/abbr.json"
+  }
+ ]
+}

@@ -19,7 +19,7 @@
 
 | 主題 | 規範分檔 | 概念 | 實作 |
 |---|---|---|---|
-| 設計理念 | 沒有專屬的條（C-52 巢狀只管自己這一層、C-53 錯誤只處理自己的，各條都照它） | [CONCEPTS 設計理念](CONCEPTS/01-設計理念.md) | — |
+| 設計理念 | 沒有專屬的條（C-52 巢狀只管自己這一層、C-53 錯誤只處理自己的，各條都照它；C-54 命名＋[縮寫表](CONCEPTS/abbr.json)） | [CONCEPTS 設計理念](CONCEPTS/01-設計理念.md) | — |
 | 設計理念／時空 | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | proto8-1 `aos-tick` |
 | 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-12 stdio、N-18 實作分級、N-29 stderr 形狀、N-35 `檔#/位置`、N-43 結束碼 | 出自 C-07、C-45、C-53 | lib `aos_cli`、[directives](lib/directives.md) |
 | 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md) | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [lib inst](lib/inst.md) |
