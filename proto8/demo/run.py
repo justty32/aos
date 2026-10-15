@@ -6,7 +6,7 @@
     python3 proto8/demo/run.py kernels/llm （改跑 LLM kernel 的 demo，見 kernels/llm/run.py）
     python3 proto8/demo/run.py kernels/general （改跑通用 kernel 的 demo，見 kernels/general/run.py）
 
-產物（控制資料夾、stdout、exit 檔）都放在 mktemp 建的暫存資料夾，跑完整個刪掉。
+產物（控制資料夾、子程式的 stdout）都放在 mktemp 建的暫存資料夾，跑完整個刪掉。
 """
 import json
 import os
@@ -104,7 +104,7 @@ def main():
         say("== SIGTERM")
         daemon.send_signal(signal.SIGTERM)
         say("daemon 結束，退出碼 %d" % daemon.wait(10))
-        for name in ("once.out", "once.exit", "tick.out", "tick.exit"):
+        for name in ("once.out", "tick.out"):
             say("out/%-9s %s" % (name, " ".join(lines(out, name))))
     finally:
         if daemon.poll() is None:

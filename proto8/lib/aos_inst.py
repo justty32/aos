@@ -1,35 +1,31 @@
 #!/usr/bin/env python3
-"""inst：讀一份 JSON、用指示詞 lib 解好、挑認得的 key、跑一次。純標準庫。
+"""inst：讀一份 JSON、解好指示詞、挑認得的 key、跑一次。純標準庫。
 
     python3 aos_inst.py [--key 值 ...] [TARGET | -] [-- argv...]
 
-設定從哪來照 aos_cli（NORMS N-12、D-1～D-3）：TARGET 檔、`-`＝stdin（一份；多份＝InputExtra 錯）、都沒給＝`{}`；
+設定從哪來照 aos_cli（NORMS N-12、N-21～N-24）：TARGET 檔、`-`＝stdin（一份；多份＝InputExtra 錯）、都沒給＝`{}`；
 純量 key 都有同名旗標（`--timeout-ms 100`、`--cwd-mkdir true`…），蓋過檔或 stdin；`--` 後面整段蓋過 `argv`。
-設定從 stdin 來時 `stdin_inherit` ＝Conflict（stdin 已經被設定用掉了，D-5）。
 
 TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/$AOS_DIRNAME/inst.json`（沒設＝`.aos`），沒有再找 `<資料夾>/inst.json`）。
-後面可以接 `#/位置`（JSON pointer，寫法同指示詞 `$ref`）：只跑那份檔裡那一格（要是物件）。遇到第一個 `#` 就切，
-檔名含 `#` 的不支援；資料夾先照上面找到 inst.json 再套位置。那一格是整份檔的視窗：裡面 `$ref` 的位置照整份檔算。
+後面可以接 `#/位置`（N-35）：只跑那份檔裡那一格（要是物件）。遇到第一個 `#` 就切，檔名含 `#` 的不支援；
+資料夾先照上面找到 inst.json 再套位置。
 相對路徑的基準一律是呼叫者現在的工作目錄：指示詞的相對檔名、`cwd` 這個 key 從這裡算；
-`stdin`／`stdout`／`stderr`／`exit` 的相對路徑從解出來的 `cwd` 算。
+`stdin`／`stdout`／`stderr` 的相對路徑從解出來的 `cwd` 算。
 
 認得的 key（其他一律忽略）：
 
     argv            非空字串陣列（必填）
     cwd             在哪跑（沒寫＝呼叫 aos_inst 時的 cwd）；cwd_mkdir: true 先建好
     envs            {名字: 字串}，疊在現有環境上；envs_clear: true 改成從空的開始
-    stdin           從哪個檔讀；stdin_inherit: true 改接呼叫者的
-    stdout/stderr   寫到哪個檔（覆寫）；*_append 改附加、*_mkdir 先建上層資料夾、*_inherit 改接呼叫者的
-                    （stderr_inherit 是寫單子的人自選的接法：這時呼叫者 stderr 上的東西是子程式的、不是 aos_inst 的，
-                    aos_inst 自己照樣只在出錯時寫 stderr、正常退 0；10-15 使用者「都按照推薦。」，盤點 S4）
+    stdin           從哪個檔讀（沒寫＝/dev/null；要接呼叫者的就寫 /dev/stdin）
+    stdout/stderr   寫到哪個檔（覆寫；沒寫＝/dev/null；要接呼叫者的就寫 /dev/stdout、/dev/stderr）；
+                    *_append 改附加、*_mkdir 先建上層資料夾
     stderr_merge    true＝stderr 併進 stdout
-    exit            選填：子程式跑完，把它的結束碼（十進位＋換行）寫進這個檔（要碼讀 stdout 的結果就好，N-30）；
-                    exit_append 改附加一行、exit_mkdir 先建上層資料夾
     timeout_ms      最多跑幾毫秒（正整數；沒寫或 null＝不限），到了就收掉
     grace_ms        收掉＝先 SIGTERM，過 grace_ms 還沒結束再 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
     id              選填字串，原樣放進結果（沒寫＝TARGET 的 id；從 stdin 來又沒寫＝null）
 
-沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
+布林 key 沒寫＝false。
 
 JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼承：子程式留在 aos_inst 的行程群組與 session，
 終端機的 Ctrl-C、`timeout` 指令這類整群送的訊號，子程式和 aos_inst 一起收到。
@@ -37,15 +33,13 @@ JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼�
 送 SIGTERM 給 aos_inst（它轉給子程式），過一段時間整群 SIGKILL（aos_loop 就這樣做）。
 
 結果（N-12：stdout＝返回值）：跑完往 stdout 吐一份 JSON
-    {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file"}
-code＝子程式的碼（資料、照實轉交子程式的；被訊號停掉＝128＋訊號號碼，同 exit 檔）、signal＝訊號號碼或 null、timed_out＝被 timeout_ms 收掉、
-pid＝子程式的 pid、ms＝跑了幾毫秒、exit_file＝exit 檔的路徑或 null。`run()` 回同一份 dict。
-- `exit` 選填，寫了就照寫（與舊時代的橋樑，暫定 e；要子程式的碼讀上面那份結果的 code）：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
-  根本沒起來就不寫。寫不進去不管，不算錯。
+    {"id", "code", "signal", "timed_out", "pid", "ms"}
+code＝子程式的碼（資料、照實轉交子程式的；被訊號停掉＝128＋訊號號碼）、signal＝訊號號碼或 null、timed_out＝被 timeout_ms 收掉、
+pid＝子程式的 pid、ms＝跑了幾毫秒。`run()` 回同一份 dict。
 - aos_inst 自己的碼＝命令列退出碼／`run()` 有沒有丟例外：0＝正常做完（子程式回幾號、被限時收掉都算正常做完）；
   非 0＝aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…），`run()` 丟 `InstError`，命令列 stderr 吐一份
-  `{"error": {"code", "msg"}}`、退出碼一律 1（原本 127／126／125 照 env 慣例，收掉（10-15 晚使用者「按照推薦」：N-43 只有 0／非 0，自己的錯一律 1）；是哪種錯看 code）。
-命令列（和在主執行緒呼叫的 `run()`）收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit；
+  `{"error": {"code", "msg"}}`、退出碼一律 1（N-43；是哪種錯看 code）。
+命令列（和在主執行緒呼叫的 `run()`）收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束；
 轉過去之後過 grace_ms 還沒結束就 SIGKILL。
 """
 import os
@@ -56,39 +50,24 @@ import threading
 import time
 
 import aos_cli
-from aos_cli import CliError
+from aos_cli import CliError, resolve, split_target, target_id
 from aos_cli import is_int as _int
-from aos_directives import DirectiveError, resolve, split_target, target_id
 
-__all__ = ["FLAGS", "InstError", "dirname", "find", "load", "main", "parse", "read_exit", "run"]
+__all__ = ["FLAGS", "InstError", "dirname", "find", "load", "main", "parse", "run"]
 
-_BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
-          "stdout_append", "stdout_mkdir", "stdout_inherit",
-          "stderr_append", "stderr_mkdir", "stderr_inherit", "stderr_merge",
-          "exit_append", "exit_mkdir")
+_BOOLS = ("cwd_mkdir", "envs_clear", "stdout_append", "stdout_mkdir", "stderr_append", "stderr_mkdir", "stderr_merge")
 
 
 class InstError(CliError):
     """這份 inst 被拒。`code`＝錯誤代號，`msg`＝白話，`str(e)`＝「代號: 白話」。指示詞的錯照原代號包進來。"""
 
 
-FLAGS = ("id", "cwd", "stdin", "stdout", "stderr", "exit", "timeout_ms", "grace_ms") + _BOOLS     # 鏡射成旗標的 key
-
-
-def read_exit(path):
-    """讀 exit 檔最後一行的結束碼（exit_append 時每次附加一行，所以看最後一行）。
-    檔不在、讀不了、內容不是整數都回 None。過渡用：loop、tasks 都改讀 stdout 那份結果的 code 了。"""
-    try:
-        with open(path, encoding="utf-8") as f:
-            lines = f.read().split()
-        return int(lines[-1]) if lines else None
-    except (OSError, ValueError):
-        return None
+FLAGS = ("id", "cwd", "stdin", "stdout", "stderr", "timeout_ms", "grace_ms") + _BOOLS     # 鏡射成旗標的 key
 
 
 def find(target):
     """TARGET → id：inst.json 的路徑（realpath：絕對、沒有 . 與 ..、捷徑都解開；同一份檔永遠得到同一個字串），
-    TARGET 有 `#/位置` 就再接上 `#` 與正規化過的位置（同一份檔兩個位置＝兩個 id）。"""
+    TARGET 有 `#/位置` 就再接上（同一份檔兩個位置＝兩個 id）。"""
     return target_id(*_find(target))
 
 
@@ -96,14 +75,14 @@ def _find(target):
     """TARGET → (inst.json 的 realpath, 位置 tuple)。"""
     try:
         file, pos = split_target(target)
-    except DirectiveError as e:
+    except CliError as e:
         raise InstError(e.code, e.msg)
     return _file(file), pos
 
 
 def dirname():
-    """資料夾 TARGET 裡放 inst.json 的子資料夾名：環境變數 `AOS_DIRNAME`，沒設＝`.aos`；空字串＝資料夾本身
-    （同 proto7-1 的 aos_dirname；N-35）。含 `/`、或是 `.`、`..`＝`DirnameBad`。"""
+    """資料夾 TARGET 裡放 inst.json 的子資料夾名：環境變數 `AOS_DIRNAME`，沒設＝`.aos`；空字串＝資料夾本身（N-35）。
+    含 `/`、或是 `.`、`..`＝`DirnameBad`。"""
     n = os.environ.get("AOS_DIRNAME")
     n = ".aos" if n is None else n
     if "/" in n or n in (".", ".."):
@@ -131,15 +110,14 @@ def load(target):
     return parse(doc, os.getcwd(), ident)
 
 
-def parse(doc, base_dir, ident="<input>", at=(), piped=False):
+def parse(doc, base_dir, ident="<input>", at=()):
     """解指示詞、驗認得的 key，回一個欄位都填好的 dict（路徑都是絕對的，None＝沒寫）。
     `ident`＝doc 從哪來（`load()` 給 inst.json 的 realpath），指示詞的錯誤訊息用它指出是哪份檔。
-    `at`＝inst 在 doc 裡的位置（TARGET 的 `#/位置`；`()`＝整份），指到的那一格要是物件。
-    `piped`＝設定是從 stdin 讀的：`stdin_inherit` 就是 Conflict（D-5）。"""
+    `at`＝inst 在 doc 裡的位置（TARGET 的 `#/位置`；`()`＝整份），指到的那一格要是物件。"""
     base_dir = os.path.abspath(base_dir)
     try:
         doc = resolve(doc, base_dir, ident, at)
-    except DirectiveError as e:
+    except CliError as e:
         raise InstError(e.code, e.msg)
     if not isinstance(doc, dict):
         raise InstError("FieldType", "inst %s 要是物件，不是 %s" % (target_id(ident, at), type(doc).__name__))
@@ -159,8 +137,8 @@ def parse(doc, base_dir, ident="<input>", at=(), piped=False):
         raise InstError("FieldType", "envs 要是 {名字: 字串}，不是 %r" % (envs,))
     inst["envs"] = envs
 
-    # cwd 從基準算，沒寫＝呼叫者現在的 cwd；三個串流與 exit 從解出來的 cwd 算
-    for k in ("cwd", "stdin", "stdout", "stderr", "exit"):
+    # cwd 從基準算，沒寫＝呼叫者現在的 cwd；三個串流從解出來的 cwd 算
+    for k in ("cwd", "stdin", "stdout", "stderr"):
         v = doc.get(k)
         if v is not None and not isinstance(v, str):
             raise InstError("FieldType", "%s 要是字串路徑，不是 %r" % (k, v))
@@ -177,13 +155,8 @@ def parse(doc, base_dir, ident="<input>", at=(), piped=False):
         raise InstError("FieldType", "grace_ms 要是非負整數，不是 %r" % (g,))
     inst["timeout_ms"], inst["grace_ms"] = t, g
 
-    for k in ("stdin", "stdout", "stderr"):
-        if inst[k + "_inherit"] and inst[k] is not None:
-            raise InstError("Conflict", "%s 跟 %s_inherit 只能二選一" % (k, k))
-    if inst["stderr_merge"] and (inst["stderr"] is not None or inst["stderr_inherit"]):
-        raise InstError("Conflict", "stderr_merge 不能再寫 stderr 或 stderr_inherit")
-    if piped and inst["stdin_inherit"]:
-        raise InstError("Conflict", "設定從 stdin 來，stdin_inherit 接不到東西")
+    if inst["stderr_merge"] and inst["stderr"] is not None:
+        raise InstError("Conflict", "stderr_merge 不能再寫 stderr")
     return inst
 
 
@@ -198,9 +171,9 @@ _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
 def run(x):
-    """跟命令列一樣跑一次：x＝TARGET（路徑，可接 `#/位置`）或一份設定 dict（D-4；基準＝呼叫者的 cwd）。
-    起那個 posix 呼叫、等它結束，把子程式的結束碼寫進 exit 檔（自己結束＝它的碼，被訊號停掉＝128＋訊號號碼）。
-    回結果 dict（同命令列的 stdout）；單子有問題、起不來丟 `InstError`。子程式回幾號、被限時收掉都算正常做完。
+    """跟命令列一樣跑一次：x＝TARGET（路徑，可接 `#/位置`）或一份設定 dict（N-25；基準＝呼叫者的 cwd）。
+    起那個 posix 呼叫、等它結束，回結果 dict（同命令列的 stdout）；單子有問題、起不來丟 `InstError`。
+    子程式回幾號、被限時收掉都算正常做完。
 
     在主執行緒呼叫時，跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者，轉給子程式；
     轉過去之後再等 grace_ms，還沒結束就 SIGKILL。不在主執行緒就不轉（Python 只准主執行緒接訊號）。"""
@@ -235,16 +208,10 @@ def _run(inst):
         except BaseException as e:
             interrupted = e
             rc = _stop(child, grace_ms)
-        code = rc if rc >= 0 else 128 - rc
-        if inst["exit"] is not None:
-            try:
-                _write_exit(inst["exit"], code, inst["exit_append"], inst["exit_mkdir"])
-            except OSError:
-                pass        # 寫不進去不管
         if interrupted is not None:
             raise interrupted
-        return {"id": inst["id"], "code": code, "signal": -rc if rc < 0 else None, "timed_out": timed_out,
-                "pid": child.pid, "ms": round((time.monotonic() - t0) * 1000), "exit_file": inst["exit"]}
+        return {"id": inst["id"], "code": rc if rc >= 0 else 128 - rc, "signal": -rc if rc < 0 else None,
+                "timed_out": timed_out, "pid": child.pid, "ms": round((time.monotonic() - t0) * 1000)}
     finally:
         for sig, handler in old.items():
             signal.signal(sig, handler)
@@ -315,18 +282,8 @@ def _stop(child, grace_ms):
             pass
 
 
-def _write_exit(path, code, append, mkdir):
-    """結束碼寫成「十進位＋換行」。"""
-    if mkdir:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "a" if append else "w") as f:
-        f.write("%d\n" % code)
-
-
 def _stream(inst, k, opened):
-    """一個串流要接什麼：None＝接呼叫者的；否則開檔（沒寫路徑就是 /dev/null）。"""
-    if inst[k + "_inherit"]:
-        return None
+    """一個串流接哪個檔：沒寫路徑就是 /dev/null。"""
     path = inst[k] or os.devnull
     if k == "stdin":
         f = open(path, "rb")
@@ -344,7 +301,7 @@ def main(argv=None):
         doc, ident, piped, rest = aos_cli.config(args, FLAGS, _file)
         if rest is not None:
             doc["argv"] = rest
-        aos_cli.emit(_run(parse(doc, os.getcwd(), ident or ("<stdin>" if piped else "<input>"), piped=piped)))
+        aos_cli.emit(_run(parse(doc, os.getcwd(), ident or ("<stdin>" if piped else "<input>"))))
         return 0
     except CliError as e:
         aos_cli.error(e.code, e.msg)

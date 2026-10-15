@@ -18,10 +18,8 @@ import aos_inst  # noqa: E402
 
 class Inst(Tmp):
     def run_inst(self, name, sh, **keys):
-        """寫 NAME/inst.json、run() 一次，回 exit 檔的內容（結果 dict 的 code 要跟 exit 檔一樣）。"""
-        res = aos_inst.run(self.inst(name, sh, exit=name + ".exit", **keys))
-        self.assertEqual("%d\n" % res["code"], self.read(name + ".exit").splitlines()[-1] + "\n")
-        return self.read(name + ".exit")
+        """寫 NAME/inst.json、run() 一次，回結果的 code（子程式的碼只在這份結果裡，N-30）。"""
+        return aos_inst.run(self.inst(name, sh, **keys))["code"]
 
     def cli(self, *args, input=None):
         return subprocess.run([sys.executable, INST, *args], capture_output=True, text=True, cwd=self.tmp, input=input)
@@ -57,25 +55,32 @@ class Inst(Tmp):
             aos_inst.find(self.p("b"))
         self.assertEqual(c.exception.code, "DirnameBad")
 
-    def test_child_code_only_in_exit_file(self):
-        self.assertEqual(self.run_inst("r", "exit 7"), "7\n")
-        self.assertEqual(aos_inst.run(self.inst("n", "exit 7"))["code"], 7)      # 沒寫 exit：照樣正常，碼在結果裡
+    def test_child_code_in_result(self):
+        self.assertEqual(self.run_inst("r", "exit 7"), 7)
+        self.assertEqual(self.run_inst("z", "true"), 0)
 
-    def test_exit_and_streams(self):
-        self.assertEqual(self.run_inst("a", "echo hi; echo err >&2; exit 3", stdout="a.out", stderr_merge=True), "3\n")
+    def test_streams(self):
+        self.assertEqual(self.run_inst("a", "echo hi; echo err >&2; exit 3", stdout="a.out", stderr_merge=True), 3)
         self.assertEqual(self.read("a.out"), "hi\nerr\n")
+        for sh in ("echo 1", "echo 2"):
+            self.run_inst("b", sh, stdout="b.out", stdout_append=True)
+        self.assertEqual(self.read("b.out"), "1\n2\n")
+        self.run_inst("c", "echo deep", stdout="d/e/c.out", stdout_mkdir=True)
+        self.assertEqual(self.read("d/e/c.out"), "deep\n")
 
-    def test_exit_append_and_read_exit(self):
-        for sh in ("exit 1", "exit 2"):
-            self.run_inst("a", sh, exit_append=True)
-        self.assertEqual(self.read("a.exit"), "1\n2\n")
-        self.assertEqual(aos_inst.read_exit(self.p("a.exit")), 2)
-        self.assertIsNone(aos_inst.read_exit(self.p("nope.exit")))
+    def test_dev_streams_inherit(self):
+        # 要接呼叫者的串流就寫 /dev/stdin、/dev/stdout、/dev/stderr（沒有 *_inherit 布林了）
+        r = self.cli("--stdin", "/dev/stdin", "--stdout", "/dev/stdout", "--stderr", "/dev/stderr", "--",
+                     "sh", "-c", "read x; echo got $x; echo e >&2", input="hi\n")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.splitlines()[0], "got hi")
+        self.assertEqual(json.loads(r.stdout.splitlines()[-1])["code"], 0)
+        self.assertEqual(r.stderr, "e\n")
 
     def test_timeout_and_grace_in_json(self):
-        self.assertEqual(self.run_inst("t", "sleep 5", timeout_ms=100), "143\n")
+        self.assertEqual(self.run_inst("t", "sleep 5", timeout_ms=100), 143)
         t0 = time.monotonic()
-        self.assertEqual(self.run_inst("k", "trap '' TERM; sleep 5", timeout_ms=100, grace_ms=200), "137\n")
+        self.assertEqual(self.run_inst("k", "trap '' TERM; sleep 5", timeout_ms=100, grace_ms=200), 137)
         self.assertLess(time.monotonic() - t0, 2)
 
     def test_timeout_grace_types(self):
@@ -86,7 +91,7 @@ class Inst(Tmp):
 
     def test_errors(self):
         for keys, code in (({"argv": []}, "FieldType"), ({"argv": ["/no/such/prog"]}, "CommandNotFound"),
-                           ({"argv": ["true"], "stdout": "x", "stdout_inherit": True}, "Conflict"),
+                           ({"argv": ["true"], "stderr": "x", "stderr_merge": True}, "Conflict"),
                            ({"argv": ["true"], "cwd": "/no/such/dir"}, "CwdMissing")):
             with self.subTest(keys=keys), self.assertRaises(aos_inst.InstError) as c:
                 aos_inst.run(self.write("e.json", keys))
@@ -96,77 +101,73 @@ class Inst(Tmp):
         self.write("e.json", {"argv": ["x", {"$env": "AOS_TEST_NOPE"}]})
         with self.assertRaises(aos_inst.InstError) as c:
             aos_inst.load(self.p("e.json"))
+        self.assertEqual(c.exception.code, "DirectiveBad")
         self.assertIn(os.path.realpath(self.p("e.json")) + ":/argv/1", c.exception.msg)
 
     def test_cli(self):
-        # 退出碼只說 aos_inst 自己：子程式回 5 照樣 0，5 在 exit 檔
-        d = self.inst("c", "exit 5", exit="c.exit")
-        self.assertEqual((self.cli(d).returncode, self.read("c.exit")), (0, "5\n"))
+        # 退出碼只說 aos_inst 自己：子程式回 5 照樣 0，5 在結果裡
+        r = self.cli(self.inst("c", "exit 5"))
+        self.assertEqual((r.returncode, json.loads(r.stdout)["code"]), (0, 5))
         self.write("x.json", "#!/bin/sh\n")
         self.write("nf.json", {"argv": ["/no/such/prog"]})
         self.write("nx.json", {"argv": [self.p("x.json")]})
         for target, code, err in (("nope.json", 1, "ReadFailed"), ("nf.json", 1, "CommandNotFound"),
-                                  ("nx.json", 1, "CommandNotExecutable")):     # 一律 1，看 code 分（原 125／127／126）
+                                  ("nx.json", 1, "CommandNotExecutable")):     # 一律 1，看 code 分
             r = self.cli(self.p(target))
             self.assertEqual((r.returncode, self.err(r)), (code, err))
 
     def test_cli_forwards_signal_then_grace(self):
         # 收到 SIGTERM 轉給子程式；子程式不理就過 grace_ms SIGKILL；aos_inst 自己照樣 0
-        d = self.inst("s", "trap '' TERM; echo go > s.go; sleep 30", exit="s.exit", grace_ms=200)
-        proc = subprocess.Popen([sys.executable, INST, d], cwd=self.tmp, stdout=subprocess.DEVNULL)
+        d = self.inst("s", "trap '' TERM; echo go > s.go; sleep 30", grace_ms=200)
+        proc = subprocess.Popen([sys.executable, INST, d], cwd=self.tmp, stdout=subprocess.PIPE, text=True)
         self.addCleanup(lambda: proc.poll() is None and proc.kill())
         self.until(lambda: os.path.exists(self.p("s.go")))
         t0 = time.monotonic()
         proc.send_signal(signal.SIGTERM)
-        self.assertEqual(proc.wait(5), 0)
+        out, _ = proc.communicate(timeout=5)
+        self.assertEqual(proc.returncode, 0)
         self.assertLess(time.monotonic() - t0, 2)
-        self.assertEqual(self.read("s.exit"), "137\n")
+        self.assertEqual(json.loads(out)["code"], 137)
 
     def test_cli_stdout_result(self):
-        # stdout＝一份結果；exit 檔照寫
-        r = self.cli(self.inst("o", "exit 4", exit="o.exit", timeout_ms=5000))
+        r = self.cli(self.inst("o", "exit 4", timeout_ms=5000))
         res = json.loads(r.stdout)
-        self.assertEqual(set(res), {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file"})
-        self.assertEqual((res["code"], res["signal"], res["timed_out"], res["exit_file"], res["id"]),
-                         (4, None, False, self.p("o.exit"), os.path.realpath(self.p("o/inst.json"))))
-        self.assertEqual(self.read("o.exit"), "4\n")
+        self.assertEqual(set(res), {"id", "code", "signal", "timed_out", "pid", "ms"})
+        self.assertEqual((res["code"], res["signal"], res["timed_out"], res["id"]),
+                         (4, None, False, os.path.realpath(self.p("o/inst.json"))))
         res = aos_inst.run({"argv": ["sleep", "5"], "timeout_ms": 100, "id": "me"})     # run(dict)
         self.assertEqual((res["code"], res["signal"], res["timed_out"], res["id"]), (143, 15, True, "me"))
 
     def test_cli_stdin_flags_dashdash(self):
         # stdin 多份＝InputExtra 錯（退非 0、不跑）；一份照跑；旗標蓋過；-- 蓋過 argv
-        r = self.cli("--exit", "s.exit", "-", input='{"argv": ["sh", "-c", "exit 2"], "exit": "no.exit"} {"x": 1}')
+        r = self.cli("-", input='{"argv": ["sh", "-c", "echo x > s.out"]} {"x": 1}')
         self.assertNotEqual(r.returncode, 0)
         self.assertEqual(json.loads(r.stderr)["error"]["code"], "InputExtra")
-        self.assertFalse(os.path.exists(self.p("s.exit")))
-        r = self.cli("--exit", "s.exit", "-", input='{"argv": ["sh", "-c", "exit 2"], "exit": "no.exit"}')
-        self.assertEqual((r.returncode, r.stderr, self.read("s.exit")), (0, "", "2\n"))
+        self.assertFalse(os.path.exists(self.p("s.out")))
+        r = self.cli("--timeout-ms", "5000", "-", input='{"argv": ["sh", "-c", "exit 2"]}')
+        self.assertEqual((r.returncode, r.stderr, json.loads(r.stdout)["code"]), (0, "", 2))
         self.assertIsNone(json.loads(r.stdout)["id"])                              # stdin 來又沒寫 id＝null
         r = self.cli("--cwd", self.tmp, "--stdout", "d.out", "--", "echo", "hi")
         self.assertEqual((r.returncode, self.read("d.out")), (0, "hi\n"), r.stderr)
-        r = self.cli("-", input='{"argv": ["true"], "stdin_inherit": true}')          # D-5
-        self.assertEqual((r.returncode, self.err(r)), (1, "Conflict"))
         r = self.cli("--nope", "1", "--", "true")
         self.assertEqual((r.returncode, self.err(r)), (1, "FlagUnknown"))
 
     def node(self, name="node.json"):
-        """一份 JSON 放好幾格：clock 是 inst（argv 用 ../ 摸旁邊的 shared）、x 不是物件。"""
-        return self.write(name, {"shared": {"sh": "echo hi >> c.out"},
-                                 "clock": {"argv": ["sh", "-c", {"$ref": "#../../../shared/sh"}], "cwd": self.tmp,
-                                           "exit": "c.exit", "exit_append": True},
+        """一份 JSON 放好幾格：clock 是 inst（argv 用 $ref 指旁邊的小檔）、x 不是物件。"""
+        self.write("shared.json", {"sh": "echo hi >> c.out"})
+        return self.write(name, {"clock": {"argv": ["sh", "-c", {"$ref": self.p("shared.json") + "#/sh"}], "cwd": self.tmp},
                                  "x": 5})
 
     def test_target_pointer(self):
         path = self.node()
         real = os.path.realpath(path)
-        self.assertEqual(aos_inst.run(path + "#/clock")["code"], 0)   # 視窗：$ref 的 ../ 照整份檔算
-        self.assertEqual((self.read("c.out"), self.read("c.exit")), ("hi\n", "0\n"))
+        self.assertEqual(aos_inst.run(path + "#/clock")["code"], 0)
+        self.assertEqual(self.read("c.out"), "hi\n")
         self.assertEqual(aos_inst.find(path + "#/clock"), real + "#/clock")
-        self.assertEqual(aos_inst.find(path + "#/clock/../clock"), real + "#/clock")
         for whole in (path, path + "#", path + "#/"):                  # 沒 pointer 或 #/ ＝純 realpath
             self.assertEqual(aos_inst.find(whole), real)
-        for target, code in ((path + "#/x", "FieldType"), (path + "#/nope", "ReferencePointerInvalid"),
-                             (path + "#clock", "ReferencePointerInvalid"), (path + "#/", "FieldType")):
+        for target, code in ((path + "#/x", "FieldType"), (path + "#/nope", "PointerBad"),
+                             (path + "#clock", "PointerBad"), (path + "#/", "FieldType")):
             with self.subTest(target=target), self.assertRaises(aos_inst.InstError) as c:
                 aos_inst.run(target)
             self.assertEqual(c.exception.code, code)
@@ -186,7 +187,7 @@ class Inst(Tmp):
         self.write("a#b.json", {"argv": ["true"]})
         with self.assertRaises(aos_inst.InstError) as c:
             aos_inst.run(self.p("a#b.json"))
-        self.assertEqual(c.exception.code, "ReferencePointerInvalid")
+        self.assertEqual(c.exception.code, "PointerBad")
 
 
 if __name__ == "__main__":

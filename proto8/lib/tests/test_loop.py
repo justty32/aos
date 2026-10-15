@@ -14,14 +14,15 @@ import unittest
 from unittest import mock
 
 from helpers import LOOP, Tmp, alive
+import aos_ctl_state  # noqa: E402
 import aos_loop  # noqa: E402
 
 
 class LoopTest(Tmp):
     def loop(self, name="l", sh="true", **outer):
-        """寫 NAME.loop.json（inst 內嵌：在暫存資料夾用 sh 跑 SH、exit 附加到 NAME.exit；窗 NAME.ctl.json、NAME.state.json），回路徑。"""
-        inst = outer.pop("inst", {"argv": ["sh", "-c", sh], "cwd": self.tmp, "exit": name + ".exit", "exit_append": True})
-        return self.write(name + ".loop.json", dict({"inst": inst, "ctl_poll_ms": 20, "ctl": name + ".ctl.json",
+        """寫 NAME.loop.json（inst 內嵌：在暫存資料夾用 sh 跑 SH；窗 NAME.ctl.json、NAME.state.json），回路徑。"""
+        inst = outer.pop("inst", {"argv": ["sh", "-c", sh], "cwd": self.tmp})
+        return self.write(name + ".loop.json", dict({"inst": inst, "ctl": name + ".ctl.json",
                                                      "state": name + ".state.json"}, **outer))
 
     def err(self, r):
@@ -51,7 +52,8 @@ class LoopTest(Tmp):
         path = self.loop(sh="echo x >> l.out; exit 3", times=3, state="l.state.json")
         r = self.cli(path)
         self.assertEqual(r.returncode, 0, r.stderr)     # 子程式回 3 不算 loop 出錯
-        self.assertEqual((self.read("l.out"), self.read("l.exit")), ("x\nx\nx\n", "3\n3\n3\n"))
+        self.assertEqual(self.read("l.out"), "x\nx\nx\n")
+        self.assertEqual([json.loads(x)["code"] for x in r.stdout.splitlines()[:3]], [3, 3, 3])
         st = self.state()
         self.assertEqual((st["id"], st["state"], st["runs"], st["last_code"]),
                          (os.path.realpath(path), "done", 3, 3))
@@ -104,13 +106,13 @@ class LoopTest(Tmp):
     def test_bad_inst_fails_start(self):
         r = self.cli(self.loop(inst={"argv": [{"$env": "AOS_TEST_NOPE"}]}))
         self.assertEqual(r.returncode, 1)                       # loop 只退 0／1（盤點第 1 條），代號在 stderr
-        self.assertIn("EnvironmentVariableMissing", r.stderr)
+        self.assertIn("DirectiveBad", r.stderr)
         self.assertEqual(self.cli(self.loop(inst={"argv": []})).returncode, 1)
 
     def test_target_pointer(self):
         # loop.json 的一格當 loop 本體；inst 裡的 ../ 照整份檔算；id＝realpath#/位置
-        path = self.write("node.json", {"cmd": "echo z >> n.out",
-                                        "job": {"inst": {"argv": ["sh", "-c", {"$ref": "#../../../../cmd"}], "cwd": self.tmp},
+        self.write("cmd.json", {"cmd": "echo z >> n.out"})
+        path = self.write("node.json", {"job": {"inst": {"argv": ["sh", "-c", {"$ref": "cmd.json#/cmd"}], "cwd": self.tmp},
                                                 "times": 2, "state": "n.state.json", "ctl": "n.ctl.json"},
                                         "x": [1]})
         r = self.cli(path + "#/job")
@@ -120,7 +122,7 @@ class LoopTest(Tmp):
         self.assertEqual((r.returncode, self.err(r)), (1, "FieldType"))
         self.assertIn(os.path.realpath(path) + "#/x", r.stderr)
         r = self.cli(path + "#job")
-        self.assertEqual((r.returncode, self.err(r)), (1, "ReferencePointerInvalid"))
+        self.assertEqual((r.returncode, self.err(r)), (1, "PointerBad"))
 
     def test_last_code_from_inst_stdout(self):
         # 沒寫 exit 也拿得到碼：aos_inst 的 stdout 結果（N-12）
@@ -144,83 +146,78 @@ class LoopTest(Tmp):
                            text=True, cwd=self.tmp, timeout=10)
         out = [json.loads(x) for x in r.stdout.splitlines()]
         self.assertEqual([(o["run"], o["code"]) for o in out[:2]], [(1, 3), (2, 3)])
-        self.assertEqual(out[2], {"end": "done", "runs": 2, "skipped": 0, "last_code": 3, "signal": None})
+        self.assertEqual(out[2], {"end": "done", "runs": 2, "last_code": 3, "signal": None})
         self.assertEqual(self.state("s.state.json")["id"], "me")
-        doc["inst"]["stdin_inherit"] = True                         # D-5：inst 從 stdin 灌，stdin_inherit 不行
-        r = subprocess.run([sys.executable, LOOP, "-"], input=json.dumps(doc), capture_output=True, text=True, cwd=self.tmp)
-        self.assertEqual((r.returncode, self.err(r)), (1, "Conflict"))
 
     def test_inst_error_not_inherited(self):
         # 最後一次 aos_inst 自己出錯：loop 退 1（不沿用 aos_inst 的 127）、stderr 只有 loop 自己那一份錯誤（aos_inst 的不轉，S2）
-        path = self.loop(inst={"argv": ["/no/such/prog"]}, times=2, error_wait_ms=50)
+        path = self.loop(inst={"argv": ["/no/such/prog"]}, times=2)
         r = self.cli(path)
         self.assertEqual(r.returncode, 1)
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
         self.assertEqual(self.err(r), "CommandNotFound")
         self.assertTrue(self.state()["last_error"].startswith("CommandNotFound"))
         # 中途出錯後來好了不算：最後一次正常＝0
-        self.write("ok.exit", "")
         self.loop("m", inst={"argv": ["sh", "-c", "[ -e flag ] || { touch flag; exec /no/such; }"], "cwd": self.tmp},
-                  times=2, error_wait_ms=10)
+                  times=2)
         self.assertEqual(self.cli(self.p("m.loop.json")).returncode, 0)
 
     def test_state_write_failed_is_error(self):
         # state 窗寫不了＝窗壞了（同 N-19 窗缺）：收工、stderr 一份 StateWriteFailed、退 1（原本警告一次照跑，10-15「都按照推薦。」）
-        path = self.loop(sh="sleep 30", times=None, state="no/such/dir/s.json")
+        path = self.loop(sh="sleep 30", times=None, state="l.loop.json/s.json")     # 上層是個檔，建不了
         r = self.cli(path)
         self.assertEqual((r.returncode, self.err(r)), (1, "StateWriteFailed"))
 
     def test_bad_loop_json(self):
         w = {"ctl": "c.json", "state": "s.json"}
         for doc in (dict(w, times=1), dict(w, inst={"argv": ["true"]}, times=-1),
-                    dict(w, inst={}, interval_mode="x"), "{"):
+                    dict(w, inst={}, interval_ms="x"), "{"):
             with self.subTest(doc=doc):
                 r = self.cli(self.write("bad.json", doc))
                 self.assertEqual(r.returncode, 1)
         self.assertEqual(self.cli(self.p("nope.json")).returncode, 1)
 
     def test_want_reverts_to_initial(self):
-        init = {"paused": (False, False), "times": 3}
-        self.assertEqual(aos_loop.want(init, {"times": 5})["times"], 5)
-        self.assertEqual(aos_loop.want(init, {})["times"], 3)
-        self.assertEqual(aos_loop.parse_ctl({"stop": True, "paused": {"val": True, "now": True}, "x": 1}),
-                         {"stop": (True, False), "paused": (True, True)})
-        for bad in ([], {"stop": "yes"}, {"paused": {"now": True}}, {"times": "5"}, {"interval_mode": "x"}):
+        init = {"paused": False, "times": 3}
+        self.assertEqual(aos_ctl_state.want(init, {"times": 5})["times"], 5)
+        self.assertEqual(aos_ctl_state.want(init, {})["times"], 3)
+        self.assertEqual(aos_ctl_state.parse_ctl({"stop": True, "paused": True, "x": 1}), {"stop": True, "paused": True})
+        for bad in ([], {"stop": "yes"}, {"paused": {"val": True, "now": True}}, {"times": "5"}):    # 旗子只收布林
             with self.subTest(bad=bad), self.assertRaises(ValueError):
-                aos_loop.parse_ctl(bad)
+                aos_ctl_state.parse_ctl(bad)
 
     def test_ctl_same_stat_change_detected(self):
         """4 ms 內等長改名蓋過：ino／mtime／size 全撞（ext4 實測會發生），第二次仍要讀到；壞檔維持上一次。"""
-        ctl = aos_loop.CtlFile(self.p("c.json"))
-        aos_loop.write_json(self.p("c.json"), {"times": 5})
+        ctl = aos_ctl_state.CtlFile(self.p("c.json"))
+        aos_ctl_state.write_json(self.p("c.json"), {"times": 5})
         fixed = os.stat(self.p("c.json"))
         with mock.patch("os.stat", return_value=fixed), mock.patch("os.fstat", return_value=fixed):
             ctl.poll()
             self.assertEqual(ctl.good, {"times": 5})
-            aos_loop.write_json(self.p("c.json"), {"times": 6})     # 等長
+            aos_ctl_state.write_json(self.p("c.json"), {"times": 6})     # 等長
             ctl.poll()
             self.assertEqual(ctl.good, {"times": 6})
-            aos_loop.write_json(self.p("c.json"), {"paused": True})
+            aos_ctl_state.write_json(self.p("c.json"), {"paused": True})
             ctl.poll()
-            self.assertEqual(ctl.good, {"paused": (True, False)})
+            self.assertEqual(ctl.good, {"paused": True})
             with open(self.p("c.json"), "w") as f:                    # 壞檔：維持上一次
                 f.write("{")
             ctl.poll()
-            self.assertEqual(ctl.good, {"paused": (True, False)})
+            self.assertEqual(ctl.good, {"paused": True})
 
     def test_ctl_seq_and_heartbeat(self):
         """ctl 帶流水號 seq，回報 ctl_seq（不進 good）；state 帶心跳欄位，內容沒變也每 beat_ms 碰一次。"""
-        ctl = aos_loop.CtlFile(self.p("c.json"))
-        aos_loop.write_json(self.p("c.json"), {"times": 5, "seq": 7})
+        ctl = aos_ctl_state.CtlFile(self.p("c.json"))
+        aos_ctl_state.write_json(self.p("c.json"), {"times": 5, "seq": 7})
         ctl.poll()
         self.assertEqual((ctl.good, ctl.seq), ({"times": 5}, 7))
         with self.assertRaises(ValueError):
-            aos_loop.parse_ctl({"seq": "7"})
-        w = {"times": 1, "interval_ms": 0, "interval_mode": "after"}
-        st = aos_loop.state_doc("x", "waiting", w, ctl, 0, None)
+            aos_ctl_state.parse_ctl({"seq": "7"})
+        w = {"times": 1, "interval_ms": 0}
+        st = aos_ctl_state.state_doc("x", "waiting", w, ctl, 0, None)
         self.assertEqual((st["ctl_seq"], st["pid"]), (7, os.getpid()))
         self.assertTrue(isinstance(st["started"], int) and st["boot_id"])
-        sf = aos_loop.StateFile(self.p("s.json"), "t", beat_ms=50)
+        sf = aos_ctl_state.StateFile(self.p("s.json"), "t", beat_ms=50)
         sf.write(st)
         b1 = self.state("s.json")["beat"]
         sf.write(st)
@@ -243,34 +240,23 @@ class LoopTest(Tmp):
         self.assertEqual((st["state"], st["runs"]), ("done", 2))
         self.assertEqual(st["ctl_seq"], 3)
 
-    def test_ctl_now_kills_current(self):
+    def test_bad_ctl_then_stop(self):
         self.ctl({})
-        path = self.loop(sh="echo $$ > l.pid; exec sleep 30", times=None, ctl="l.ctl.json", state="l.state.json")
+        path = self.loop(sh="sleep 0.1", times=None, ctl="l.ctl.json")
         proc = self.start(path)
-        self.until(lambda: os.path.exists(self.p("l.pid")))
-        self.ctl({"paused": {"val": True, "now": True}})
-        self.until(lambda: (self.state() or {}).get("state") == "paused")
-        self.assertEqual(self.read("l.exit"), "143\n")
-        self.ctl({"stop": {"val": True, "now": False}})
-        self.assertEqual(proc.wait(5), 0)
-
-    def test_stop_now_and_bad_ctl(self):
-        self.ctl({})
-        path = self.loop(sh="echo $$ > l.pid; exec sleep 30", times=None, ctl="l.ctl.json")
-        proc = self.start(path)
-        self.until(lambda: os.path.exists(self.p("l.pid")))
+        self.until(lambda: self.state())
         self.ctl("{")                                   # 壞檔：整份不採用、記進 state 的 last_warning、照跑（N-08）
         self.until(lambda: ((self.state() or {}).get("last_warning") or "").startswith("CtlBad"))
         os.remove(self.p("l.ctl.json"))                 # 不見了：維持上一次
         self.until(lambda: ((self.state() or {}).get("last_warning") or "").startswith("CtlMissing"))
         self.assertIsNone(proc.poll())
-        self.ctl({"stop": {"val": True, "now": True}})
+        self.ctl({"stop": True})                        # stop 只收布林；這次跑完就結束（當場收掉＝送訊號）
         self.assertEqual(proc.wait(5), 0)
         self.assertIsNone(self.state()["last_warning"])  # 讀到好的就清掉
         self.assertEqual(proc.stderr.read(), "")         # 不寫 stderr（N-43）
 
     def test_sigterm_clears_group(self):
-        path = self.loop(sh="sleep 30 & echo $! > l.pid; wait", times=None, grace_ms=300)
+        path = self.loop(sh="sleep 30 & echo $! > l.pid; wait", times=None)
         proc = self.start(path)
         self.until(lambda: os.path.exists(self.p("l.pid")) and self.read("l.pid").strip())
         pid = int(self.read("l.pid"))
@@ -283,22 +269,6 @@ class LoopTest(Tmp):
         self.cli(self.loop(sh="sleep 30 & echo $! > l.pid"))
         pid = int(self.read("l.pid"))
         self.until(lambda: not alive(pid))
-
-    def test_fixed_skips_missed_ticks(self):
-        path = self.loop(sh="sleep 0.25", times=3, interval_ms=100, interval_mode="fixed", state="l.state.json")
-        t0 = time.monotonic()
-        self.assertEqual(self.cli(path).returncode, 0)
-        st = self.state()
-        self.assertGreaterEqual(st["skipped"], 4)       # 每次 0.25 秒、週期 0.1 秒：每次跳過兩拍
-        self.assertLess(time.monotonic() - t0, 2)
-
-    def test_error_wait(self):
-        path = self.loop(inst={"argv": ["/no/such/prog"]}, times=None, error_wait_ms=100, state="l.state.json")
-        proc = self.start(path)
-        time.sleep(0.45)
-        proc.send_signal(signal.SIGINT)
-        self.assertEqual(proc.wait(5), 1)
-        self.assertIn(self.state()["runs"], (3, 4, 5, 6))
 
 
 if __name__ == "__main__":

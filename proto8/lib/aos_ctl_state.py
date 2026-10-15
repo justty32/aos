@@ -2,13 +2,13 @@
 
 - ctl.json（宣告式；N-06～N-08）：`parse_ctl()` 驗內容、`want()` 算期望狀態（ctl 沒寫的欄位回到初始值，規矩只在這裡）、
   `CtlFile` 每次讀、內容變了才採用（壞檔維持上一次；原因記在 `warning`，由 loop／daemon 寫進 state 窗的 `last_warning`，
-  不寫 stderr——N-43：照設計預料到的狀況不在 stderr 噴東西，10-15 使用者「都按照推薦。」）。寫的人可以帶流水號 `seq`（非負整數），
-  讀的人在 state 回報 `ctl_seq`＝上次採用的那份的 seq（N-14 回音以序號為準；暫定 c）。
+  不寫 stderr，N-43）。`paused`／`stop` 只收布林（要當場收掉正在跑的＝對 loop 送訊號）。寫的人可以帶流水號 `seq`
+  （非負整數），讀的人在 state 回報 `ctl_seq`＝上次採用的那份的 seq（N-14、N-33）。
 - state.json：`STATES`（七個狀態值）、`state_doc()`（共同骨架）、`read_state()`、`StateFile`（內容有變才寫，
-  沒變也每 `BEAT_MS` 碰一次；寫不了＝記在 `failed`，loop／daemon 看到就收工、退 1——窗壞了同 N-19 窗缺）；欄位、狀態值、讀、寫都只在這裡。心跳（N-17）：骨架帶 `pid`、`started`（/proc 的啟動時間，
-  clock ticks）、`boot_id`，寫的時候蓋上 `beat`（寫的那一刻，epoch 秒）。
+  沒變也每 `BEAT_MS` 碰一次；寫不了＝記在 `failed`，loop／daemon 看到就收工、退 1——窗壞了同 N-19 窗缺）。
+  心跳（N-17）：骨架帶 `pid`、`started`（/proc 的啟動時間，clock ticks）、`boot_id`，寫的時候蓋上 `beat`（寫的那一刻，epoch 秒）。
 - `require()`：窗必填（N-19：loop／daemon 的 `state`、`ctl` 缺 key 或 null＝報錯不執行）。
-- `write_json()`：先寫 `.名字.tmp` 再改名。
+- `write_json()`：先寫 `.名字.tmp` 再改名；窗所在的資料夾沒有就建（makedirs）。
 
 規矩的白話說明在 aos_loop、aos_daemon 的檔頭與 lib README；這裡只放實作。
 """
@@ -16,14 +16,12 @@ import json
 import os
 import time
 
-from aos_cli import expand, is_int
+from aos_cli import is_int
 
 __all__ = ["BEAT_MS", "CtlFile", "STATES", "StateFile", "parse_ctl", "proc_started", "read_state", "require", "state_doc", "want",
            "write_json"]
 
 BEAT_MS = 1000      # 心跳：state 內容沒變也每隔這麼久碰一次（N-17；預設值未定，暫定 1 秒）
-
-_MODES = ("after", "fixed")
 
 
 def _int(v, least=0):
@@ -32,26 +30,13 @@ def _int(v, least=0):
 
 # ---- ctl.json ----
 
-def _flag(v):
-    """paused／stop 的值 → (val, now)。`true`＝(True, False)。不對回 None。"""
-    v = expand(v)
-    if isinstance(v, dict) and isinstance(v.get("val"), bool) and isinstance(v.get("now", False), bool):
-        return (v["val"], v.get("now", False))
-    return None
-
-
 def parse_ctl(doc):
-    """驗 ctl.json 的內容，回只含有寫的欄位的 dict（paused／stop 變成 (val, now)）；不對丟 ValueError。"""
+    """驗 ctl.json 的內容，回只含有寫的欄位的 dict；不對丟 ValueError。"""
     if not isinstance(doc, dict):
         raise ValueError("ctl 要是物件")
     out = {}
-    for k in ("paused", "stop"):
-        if k in doc:
-            out[k] = _flag(doc[k])
-            if out[k] is None:
-                raise ValueError("%s 要是 true／false 或 {\"val\": 布林, \"now\": 布林}，不是 %r" % (k, doc[k]))
-    for k, ok in (("times", lambda v: v is None or _int(v)), ("interval_ms", _int),
-                  ("interval_mode", lambda v: v in _MODES), ("seq", _int)):
+    for k, ok in (("paused", lambda v: isinstance(v, bool)), ("stop", lambda v: isinstance(v, bool)),
+                  ("times", lambda v: v is None or _int(v)), ("interval_ms", _int), ("seq", _int)):
         if k in doc:
             if not ok(doc[k]):
                 raise ValueError("%s 的值不對：%r" % (k, doc[k]))
@@ -111,14 +96,13 @@ class CtlFile:
 
 
 def write_json(path, doc):
-    """先寫同資料夾的 `.名字.tmp` 再改名蓋過去。所在的那一層資料夾沒有就建**一層**（像 mkdir、不 -p：frame 的
-    `loop/state.json`、`fsm/state.json` 由窗的寫者自己建，10-15 盤點 P3；再上層也沒有＝照樣寫不了）。失敗丟 OSError（暫存檔清掉）。"""
+    """先寫同資料夾的 `.名字.tmp` 再改名蓋過去；所在的資料夾沒有就建。失敗丟 OSError（暫存檔清掉）。"""
     d, name = os.path.split(path)
     tmp = os.path.join(d, "." + name + ".tmp")
     try:
         if d:
             try:
-                os.mkdir(d)
+                os.makedirs(d, exist_ok=True)
             except FileExistsError:
                 pass
         with open(tmp, "w", encoding="utf-8") as f:
@@ -159,13 +143,13 @@ def _proc():
 
 
 def state_doc(ident, state, w, ctl, runs, last_error, **extra):
-    """一份狀態物件。共同骨架：id、state（STATES 之一）、pid、started、boot_id、runs、times、interval_ms、interval_mode、
-    last_error、ctl_seq；各層擴充放 extra（loop：skipped、last_code、last_warning；daemon 再加 loops＝個數）。
+    """一份狀態物件。共同骨架：id、state（STATES 之一）、pid、started、boot_id、runs、times、interval_ms、
+    last_error、ctl_seq；各層擴充放 extra（loop：last_code、last_warning；daemon 再加 loops＝個數）。
     last_warning＝跑起來之後預料到、不結束也不算錯的意外（「代號: 白話」；沒有＝null），取代以前寫 stderr 的警告（N-08、N-29）。"""
     assert state in STATES, state
     started, boot = _proc()
     st = {"id": ident, "state": state, "pid": os.getpid(), "started": started, "boot_id": boot, "runs": runs,
-          "times": w["times"], "interval_ms": w["interval_ms"], "interval_mode": w["interval_mode"], "last_error": last_error}
+          "times": w["times"], "interval_ms": w["interval_ms"], "last_error": last_error}
     st.update(extra)
     st["ctl_seq"] = ctl.seq if ctl else None
     return st

@@ -51,7 +51,7 @@ frame/（＝cwd）
 - **system**：think 每次叫腦，都把檔內容當 `{"role":"system","content":…}` 插在送給腦的 messages 最前面；**不寫進 history**（history 只有 user／assistant／tool），所以改 system.md 下一拍就生效。沒寫 `system`＝不帶；寫了但檔不存在或讀不了＝think 格錯誤 `SystemUnreadable`（N-29）。路徑從格的 cwd 算。
 - 工具每次在 `work/<n>/` 新資料夾跑（mkdir 搶號；工具 inst 自己寫了 `cwd` 就照它的）：stdin＝`arguments` 解開的 JSON（寫成那裡的 `args.json`），stdout 接到那裡的 `stdout.json`，最後一份＝結果；stderr 照那張 inst 自己的，agent 不讀。
 - **agent 只看到自己的工具清單**（名字、`_tool` 的說明與參數；C-52 徹底切割，10-15 深夜使用者）：工具裡面在幹嘛——是不是另一個 agent、它把 `work/<n>/` 當不當 frame、綁什麼腦——這層不知道、不傳、不繼承。agent 當工具怎麼寫是那張工具 inst 的事，見 [frame.md](frame.md)。
-- 回給模型：`{"role": "tool", "tool_call_id": …, "content": "<字串>"}`，content＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`）多一格 `result`（工具 stdout 最後一份）的 JSON 字串，截 8000 字；沒跑成（工具名不認得、引數不是 JSON、inst 起不來、沒輪到、被中斷）＝N-29 形狀 `{"error": {"code", "msg"}}`。（10-15 依 C-48 改，原本是 `{"code", "result"}`）
+- 回給模型：`{"role": "tool", "tool_call_id": …, "content": "<字串>"}`，content＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`）多一格 `result`（工具 stdout 最後一份）的 JSON 字串，截 8000 字；沒跑成（工具名不認得、引數不是 JSON、inst 起不來、沒輪到、被中斷）＝N-29 形狀 `{"error": {"code", "msg"}}`。（10-15 依 C-48 改，原本是 `{"code", "result"}`）
 
 ## 現成格庫（`aos_agent_lib.py`）
 

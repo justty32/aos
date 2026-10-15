@@ -50,7 +50,7 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
   不寫進 `states`（N-40：next 不在表裡、在 end 裡＝這個 fsm 結束），不經 done 格——格之間不互看私檔（C-52；10-15 使用者
   「都同意。」，盤點第 8 條；原本 done 讀 think.json 寫錯誤的 ret.json）。
 
-相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json、aos_frame 的 lookup；fsm 子命令才載 aos_fsm）。
+相依：aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json、aos_frame 的 lookup；fsm 子命令才載 aos_fsm）。
 """
 import json
 import os
@@ -225,8 +225,7 @@ def _run_tool(cfg, call):
     d = new_dir(cfg["work"])
     call_file, out_file = os.path.join(d, "args.json"), os.path.join(d, "stdout.json")
     write_json(call_file, args)
-    doc = dict(inst, stdin=call_file, stdout=out_file, stdout_append=False, stdout_mkdir=False,
-               stdin_inherit=False, stdout_inherit=False)
+    doc = dict(inst, stdin=call_file, stdout=out_file, stdout_append=False, stdout_mkdir=False)
     doc.setdefault("id", ident)
     doc.setdefault("cwd", d)                     # 工具在 work/<n>/ 跑（inst 自己寫了 cwd 就照它的）；裡面是什麼 agent 不管（C-52）
     try:

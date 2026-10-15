@@ -27,7 +27,7 @@ python3 aos_gate.py [--target T] [--mailbox DIR] [--wait-ms N] [GATE.json]     #
 
 - **換腦一行**：agent 定義資料夾的 `brain.json` 換成一張跑閘門的 inst（例 `demo/kernels/llm/boss/brain.json`：`aos gate <閘門設定>`），其他不動；只換某次呼叫＝在那次的 frame 放這份 `brain.json`（demo 的 clerk 就這樣借 boss 的腦）。
 - **信**（`new/<奈秒時間>.<pid>.json`，名字字典序＝先來後到）＝**target 那張 inst 本身**（inst 族，C-48）：key 攤在最上層（`argv`、`cwd`（轉絕對）、`timeout_ms`、`_metainfo`…；`id`＝target 的 id），加私有 key `priority`、`reply`（回信的絕對路徑 `reply/<名>.json`）、`sent`（epoch 秒）；`stdin`＝旁檔 `reply/<名>.stdin`（呼叫者 stdin 的內容）。kernel 只要把 `stdout`／`stderr` 填成旁檔 `reply/<名>.stdout`／`.stderr`，就能直接 `aos_inst.run(信)`（不認得的 key 一律忽略）。
-- **回信**＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`），或 N-29 形狀 `{"error": {"code", "msg"}}`（aos_inst 起不來時多 `exit`＝它的碼）。閘門讀回信、讀 stdout／stderr 旁檔原樣吐出，回信與旁檔一起刪掉。
+- **回信**＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`），或 N-29 形狀 `{"error": {"code", "msg"}}`。閘門讀回信、讀 stdout／stderr 旁檔原樣吐出，回信與旁檔一起刪掉。
 - **呼叫端看到的＝直接叫 target**：stdout、stderr 原樣、退出碼＝target 的碼（測試逐字比過）。**閘門是透明的**：這時 stderr 與碼都是 target 的，不是閘門自己的；target 守 N-43（正常退 0、不寫 stderr）閘門就守。閘門只在自己出錯（下一條）時才說自己的話（10-15 使用者「都按照推薦。」，[盤點 S3](../thinking/2026-10-15-principles.md)）。
 - 錯（stderr 一份 N-29、退出 1；原 125，10-15 晚使用者「按照推薦」）：`QueueTimeout`（排隊超過 `wait_ms`，信撤回）、kernel 回的 `DeadlineMissed`／`BudgetExhausted`／`KernelRestarted`、設定不對、`Usage`（不收 `-`：stdin 是請求本身）。kernel 那邊 target 起不來（例 `CommandNotFound`）也是 1。
 - SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）、stderr 一份 `Signaled`（帶訊號號碼）、退出 1（原 128＋N）；已被拿走的讓它跑完，回信與旁檔沒人收（留在 reply/）。

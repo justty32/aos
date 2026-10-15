@@ -13,7 +13,7 @@
     end     選填，名字的陣列（可以在表裡、也可以不在，N-40）
     state   state 窗（必填，N-19；缺 key 或 null＝WindowMissing、不執行）
 
-不認得的 key 一律忽略（C-48；舊設定的 ctl、lock、max_steps、max_fails 也是）。
+不認得的 key 一律忽略（C-48）。
 
 一拍：讀 state（檔還沒有＝從 start 起）→ 查格 → 跑格（stdin 照那張 inst 自己寫的，fsm 不碰；stdout 另外接一份來看 next）
 → 換狀態 → 寫 state → stdout 吐一行。
@@ -25,8 +25,8 @@
 格的 stderr fsm 不讀、不轉（C-52 切乾淨，10-15 深夜使用者）：格的錯是格自己的，要留就在那張 inst 寫 `stderr` 檔。
 
 state 窗：`{"phase"}`，只有 fsm 自己寫；不寫時間、pid（N-39）。
-stdout：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、
-`exit_file`；沒起成格的是 null）＋`from`、`to`（出錯多 `error`: {code, msg}；
+stdout：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`；
+沒起成格的是 null）＋`from`、`to`（出錯多 `error`: {code, msg}；
 結束那拍多 `"end": true`，拍它的 aos-loop 寫了 `stop_on_end` 就看它停）。
 沒結束的拍這行帶 `"next": null`——所以 fsm 自己當別人的格時，外層照 N-37 留在原格、不必知道這格是個 fsm；
 結束那拍交出去的是那格的結果（那格沒輸出＝只有這行、不帶 next，外層看它表上的 next）。
@@ -89,7 +89,7 @@ def tick(cfg):
     start, states, end = cfg["start"], cfg["states"], cfg["end"]
     phase = _read(cfg)
     to, give, err, ended = phase, None, None, False
-    line = {"id": None, "code": None, "signal": None, "timed_out": False, "pid": None, "ms": None, "exit_file": None}
+    line = {"id": None, "code": None, "signal": None, "timed_out": False, "pid": None, "ms": None}
     t0 = time.monotonic()
     try:
         inst, inst_id, static = aos_methods.cell(states, phase, cfg["id"], cfg["base"])

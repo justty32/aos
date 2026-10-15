@@ -1,8 +1,8 @@
 # KISS 審視彙整：8 份稿去重、衝突、總表、批次（10-15 深夜）
 
-← [討論紀錄](../README.md)｜8 份稿（各稿不改）：[鳥瞰](overview.md)、[loop／daemon](loop-daemon.md)、[窗](windows.md)、[fsm](fsm.md)、[kernel](kernel.md)、[agent](agent.md)、[總則與共通](general.md)、[組合子](combinators.md)｜相關：[inst-exec 第四版](../2026-10-15-inst-exec-v4.md)（使用者答了第三版 A～L，第四版未決 C～P 等他看）、[原則稿](../2026-10-15-principles.md)（切乾淨＋KISS，已做）
+← [討論紀錄](../README.md)｜8 份稿（各稿不改）：[鳥瞰](overview.md)、[loop／daemon](loop-daemon.md)、[窗](windows.md)、[fsm](fsm.md)、[kernel](kernel.md)、[agent](agent.md)、[總則與共通](general.md)、[組合子](combinators.md)｜相關：[inst-exec 第四版](../2026-10-15-inst-exec-v4.md)（使用者答了第三版 A～L；第四版矛盾與未決 C～P 10-15 深夜已定：「C-50 選 a，其他都按照推薦」）、[原則稿](../2026-10-15-principles.md)（切乾淨＋KISS，已做）
 
-> 使用者 10-15 深夜：「拿KISS原則重新去思考各種東西」「去思考現有的規範和實作。概念倒是不用。」KISS 是最高原則（C-56），層要徹底切割（C-52 加嚴：「想要看子層的東西請另外透過其他機制，沒機制就別碰」）。本檔只彙整，程式、規範一個字都沒改。每條只給一個推薦。
+> 使用者 10-15 深夜：「拿KISS原則重新去思考各種東西」「去思考現有的規範和實作。概念倒是不用。」KISS 是最高原則（C-56），層要徹底切割（C-52 加嚴：「想要看子層的東西請另外透過其他機制，沒機制就別碰」）。本檔只彙整，每條只給一個推薦。**10-15 深夜使用者拍板**：「C-50 選 a，其他都按照推薦」——總表與衝突表照推薦做（含 ★ 翻案）；6.10 PLAN 使用者另說「刪掉」。各條做完標「已做（commit）」。
 
 ## 摘要：砍完剩什麼
 
@@ -25,7 +25,7 @@
 
 ## 使用者對第三版的回覆怎麼影響本彙整
 
-使用者 10-15 深夜回 inst-exec 第三版：**A** TARGET 必填；**D** inst 的 `stdin` 不收內嵌 JSON（要的話另開一個 key 明說，第四版推薦 `stdin_inline: true`）；**G** 不要 `sh`，工具 argv 直接 `aos loop`，「少用sh」（已記進 user.md）；**H**「不要濫用內嵌，指示詞只是用來拆檔用的」，再追加「後續都默認沒有指示詞能用，但不用擔心json太大」→ **N-45**；其餘照推薦。[第四版](../2026-10-15-inst-exec-v4.md)已寫好（一個 agent 的定義＝一張 inst、跑在哪 cwd 就是 frame、工具一律走 frame：`work/<n>/` 的 args.json 進、ret.json 出、agent 不碰工具的 stdin／stdout、agent 當工具＝argv 直接 `aos loop`），未決 C～P 等使用者。所以：
+使用者 10-15 深夜回 inst-exec 第三版：**A** TARGET 必填；**D** inst 的 `stdin` 不收內嵌 JSON（要的話另開一個 key 明說，第四版推薦 `stdin_inline: true`）；**G** 不要 `sh`，工具 argv 直接 `aos loop`，「少用sh」（已記進 user.md）；**H**「不要濫用內嵌，指示詞只是用來拆檔用的」，再追加「後續都默認沒有指示詞能用，但不用擔心json太大」→ **N-45**；其餘照推薦。[第四版](../2026-10-15-inst-exec-v4.md)已寫好（一個 agent 的定義＝一張 inst、跑在哪 cwd 就是 frame、工具一律走 frame：`work/<n>/` 的 args.json 進、ret.json 出、agent 不碰工具的 stdin／stdout、agent 當工具＝argv 直接 `aos loop`），未決 C～P 10-15 深夜已定照推薦。所以：
 
 - 凡是碰 inst／aos-exec／TARGET／frame／「定義在哪」的條目，本檔標「**隨 v4**」＝跟第四版一起做、形狀照它，這裡不另定。
 - 凡是原稿推薦「用 `sh -c` 取代程式」的，風險欄加「使用者偏好少用 sh」並**重判**。重判後翻掉的有四條：tasks 四支換 sh（不砍，改瘦身）、inst 布林換 `>>`／`2>&1`／`mkdir -p`（只砍三個 `*_inherit`，其餘留）、agent 的 `work/<n>/` 換工具自己 `mktemp`（不砍）、`檔#/位置` 退出 aos-exec（不退：設計假設沒有指示詞，一份檔放多張 inst 要有路可指，C-48）。

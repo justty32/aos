@@ -7,14 +7,14 @@ import os
 import signal
 import time
 
-__all__ = ["kill", "reap"]
+__all__ = ["kill", "reap", "stop"]
 
 
 def _exited(pid, timeout):
-    """等 pid 結束、不收屍，最多 timeout 秒，回結束了沒。"""
-    end = time.monotonic() + timeout
+    """等 pid 結束、不收屍，最多 timeout 秒（None＝不限），回結束了沒。"""
+    end = None if timeout is None else time.monotonic() + timeout
     while os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is None:
-        if time.monotonic() >= end:
+        if end is not None and time.monotonic() >= end:
             return False
         time.sleep(0.01)
     return True
@@ -33,8 +33,15 @@ def reap(proc):
     return proc.wait()
 
 
+def stop(proc):
+    """整群 SIGTERM，等它自己結束（aos_inst 保證過它的 grace_ms 會收掉子程式並結束，C-53 出口保證），收屍，回 returncode。"""
+    _killpg(proc.pid, signal.SIGTERM)
+    _exited(proc.pid, None)
+    return reap(proc)
+
+
 def kill(proc, grace_ms):
-    """整群 SIGTERM，等 grace_ms 還沒結束就整群 SIGKILL，收屍，回 returncode。"""
+    """整群 SIGTERM，等 grace_ms 還沒結束就整群 SIGKILL，收屍，回 returncode（daemon 收子 loop 用）。"""
     _killpg(proc.pid, signal.SIGTERM)
     _exited(proc.pid, grace_ms / 1000)
     return reap(proc)

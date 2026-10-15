@@ -7,7 +7,7 @@ import json
 import os
 
 from aos_daemon_table import DaemonError
-from aos_loop import write_json
+from aos_ctl_state import write_json
 
 __all__ = ["handle"]
 
@@ -42,7 +42,7 @@ def _dispatch(table, cmd):
         raise DaemonError("CommandBad", "指令要是物件")
     op, ident = cmd.get("op"), cmd.get("id")
     ops = {"add": lambda: table.add(ident), "set": lambda: table.set(ident, cmd.get("how", {})),
-           "pause": lambda: table.pause(ident, cmd.get("wait", True)), "resume": lambda: table.resume(ident),
+           "pause": lambda: table.pause(ident), "resume": lambda: table.resume(ident),
            "add_times": lambda: table.add_times(ident, cmd.get("delta")),
            "remove": lambda: table.remove(ident, cmd.get("wait", True)),
            "state": lambda: table.state(ident), "get": lambda: table.get(ident), "list": table.list}

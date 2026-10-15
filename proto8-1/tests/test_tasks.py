@@ -102,8 +102,8 @@ class Tasks(unittest.TestCase):
         self.assertEqual((r.returncode, r.stdout, r.stderr), (4, "", ""))
 
     def test_inherited_stdout_does_not_confuse_result(self):
-        # 寫了 stdout_inherit：子程式自己的輸出（甚至長得像結果）混在 aos_inst 的 stdout 前面，碼照樣取最後那份結果
-        a = self.inst("a", ["sh", "-c", "echo '{\"code\": 0}'; echo hi; exit 6"], stdout_inherit=True)
+        # stdout 接呼叫者的（/dev/stdout）：子程式自己的輸出（甚至長得像結果）混在 aos_inst 的 stdout 前面，碼照樣取最後那份結果
+        a = self.inst("a", ["sh", "-c", "echo '{\"code\": 0}'; echo hi; exit 6"], stdout="/dev/stdout")
         r = self.cli(SEQ, a)
         self.assertEqual((r.returncode, r.stdout, r.stderr), (6, "", ""))
 
@@ -208,20 +208,17 @@ class Tasks(unittest.TestCase):
         self.until(lambda: not alive(int(self.read("s2.pid"))))
 
     def test_loop_stop_now_clears_children(self):
-        # aos-loop 收掉這次（ctl 的 stop now）：aos-seq 的子程式沒開新 session，跟著整群一起收掉
+        # aos-loop 被收掉：aos-seq 的子程式沒開新 session，跟著整群一起收掉
         s1 = self.inst("s1", ["sh", "-c", "echo $$ > s1.pid; exec sleep 30"])
         top = self.inst("top", [os.path.join(BIN, "aos-seq"), s1])
         with open(self.p("l.json"), "w") as f:
-            json.dump({"inst": {"$ref": top + "/inst.json"}, "ctl": "l.ctl.json", "state": "l.state.json",
-                       "ctl_poll_ms": 20}, f)
+            json.dump({"inst": {"$ref": top + "/inst.json"}, "ctl": "l.ctl.json", "state": "l.state.json"}, f)
         proc = subprocess.Popen([sys.executable, LOOP, "l.json"], cwd=self.tmp, stdout=subprocess.DEVNULL)
         self.addCleanup(lambda: proc.poll() is None and proc.kill())
         self.until(lambda: os.path.exists(self.p("s1.pid")))
         pid = int(self.read("s1.pid"))
-        with open(self.p(".l.ctl.json"), "w") as f:
-            json.dump({"stop": {"val": True, "now": True}}, f)
-        os.replace(self.p(".l.ctl.json"), self.p("l.ctl.json"))
-        self.assertEqual(proc.wait(10), 0)
+        proc.send_signal(signal.SIGTERM)                       # 當場收掉＝對 loop 送訊號（ctl 只收布林）
+        self.assertEqual(proc.wait(10), 1)
         self.until(lambda: not alive(pid))
 
 

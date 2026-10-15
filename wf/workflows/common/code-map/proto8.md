@@ -6,11 +6,11 @@
 
 ### `proto8/lib/`（Python）
 
-逐檔表在 [proto8/lib/README.md](../../../../proto8/lib/README.md)；各程式的細節在同資料夾的 `directives.md`、`inst.md`、`loop.md`、`daemon.md`、`fsm.md`、`agent.md`（＋拆出的 `agent_lib.md`、`frame.md`）、`kernel_llm.md`、`kernel_general.md`、`ctl_state.md`。
+逐檔表在 [proto8/lib/README.md](../../../../proto8/lib/README.md)；各程式的細節在同資料夾的 `inst.md`、`loop.md`、`daemon.md`、`fsm.md`、`agent.md`（＋拆出的 `agent_lib.md`、`frame.md`）、`kernel_llm.md`、`kernel_general.md`、`ctl_state.md`。
 
-**命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`、值的雙形收成物件的 `expand()`；沒有寫 stderr 的警告，預料到的意外記進各自的窗 `last_warning`）、`檔#/位置`＋指示詞（語法糖）`aos_directives.py`。
+**命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`、值的雙形收成物件的 `expand()`；沒有寫 stderr 的警告，預料到的意外記進各自的窗 `last_warning`；`檔#/位置`＋指示詞（語法糖，`$ref` 只收「檔#/從根算的位置」）10-15 深夜從 `aos_directives.py` 併進來）。
 
-**inst／loop／daemon**：inst `aos_inst.py`；loop `aos_loop.py`（`stop_on_end`：包的 fsm 走到 end 就結束，N-44）＋共用的 ctl／state `aos_ctl_state.py` 與行程群組 `aos_proc.py`；daemon `aos_daemon.py`（重用 loop 的拍引擎）＋表與策略格 `aos_daemon_table.py`（收子項只看是物件、包 inst.json、填窗，裡面的 loop key 與 inst 不驗，C-52）＋指令與控制資料夾 `aos_daemon_folder.py`。
+**inst／loop／daemon**：inst `aos_inst.py`（沒有 exit 檔、沒有 `*_inherit`；10-15 深夜 KISS 批次 1）；loop `aos_loop.py`（`stop_on_end`：包的 fsm 走到 end 就結束，N-44；只有「跑完再隔」一種節奏、每圈讀 ctl、收身體＝SIGTERM 後等 aos_inst 自己收）＋共用的 ctl／state `aos_ctl_state.py`（`paused`／`stop` 只收布林）與行程群組 `aos_proc.py`；daemon `aos_daemon.py`（重用 loop 的拍引擎）＋表與策略格 `aos_daemon_table.py`（收子項只看是物件、包 inst.json、填窗，裡面的 loop key 與 inst 不驗，C-52）＋指令與控制資料夾 `aos_daemon_folder.py`。
 
 **fsm**：`aos_fsm.py`（只管狀態→格，state 窗只有 phase；格的 stderr 不讀；沒結束的拍自己那行帶 `next: null`，所以外層不必知道某格是 fsm）＋方法表 `aos_methods.py`（跑格：蓋 stdout、不碰 stdin／stderr）。
 
@@ -20,9 +20,7 @@
 
 **kernel**：信箱共用 `aos_mailbox.py`（信＝inst、回信＝N-30 結果、stdout／stderr 落旁檔）＋閘門 `aos_gate.py`（兩種 kernel 共用）；LLM kernel 的身體 `aos_kernel_llm.py`（N-42 第一種，細節 `kernel_llm.md`）；通用 kernel 的身體 `aos_kernel_general.py`、判官那一半 `aos_kernel_judge.py`、規則判官 `aos_kernel_judge_rules.py`（N-42 第二種，細節 `kernel_general.md`）。
 
-**小工具**：inst 樹工具 `aos_tree.py`（print／inline，同像性；看狀況用，不屬規範）。
-
-**薄入口**：`proto8/bin/aos`（`aos <名>`＝`python3 lib/aos_<名>.py`、`aos kernel llm|general`、`aos agent …`、`aos brain …`，放進 PATH 讓 argv 寫指令名）。
+**薄入口**：`proto8/bin/aos`（`aos <名>`＝`python3 lib/aos_<名>.py`、`aos kernel llm|general`、`aos agent …`、`aos brain …`，放進 PATH 讓 argv 寫指令名；`tree` 隨 aos_tree 一起刪）。
 
 **測試**：`tests/` 按程式分檔（`helpers.ENV` 把 `proto8/bin`、`demo/bin` 接到 PATH 前面）。
 
@@ -30,7 +28,7 @@
 
 總覽在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
 
-**daemon**：`daemon.json`、`run.py` 等（見 demo README）。
+**daemon**：`daemon.json`、`run.py`、`once/`、`tick/`（inst 沒有 exit 檔了，結果看 stdout 與 state 窗；見 demo README）。
 
 **薄入口**：`demo/bin/aos-demo`（`aos-demo fsm/x.py`＝從 demo 資料夾算的腳本，其他指令照跑並給 `AOS_DEMO`）。
 
