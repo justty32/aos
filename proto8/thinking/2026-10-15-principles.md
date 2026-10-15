@@ -8,10 +8,24 @@
 
 （開頭「都按照推薦」答的是前一輪的推薦，由主控另行處理，不在本檔。）
 
+同晚補充（照貼）：
+
+「都同意。」（答下面盤點的第 1、3、8、9 條）
+
+「喔剛剛那個我補一句：結束碼0代表正常退出，我這邊的定義(我希望盡量靠近unix傳統)，關於"正常退出"的定義，就是該功能單元中，其行爲有如當初的設計構想、功能介紹、文檔走(當然，走的是定義中正常退出的那條路)，並且是考慮過的狀況的一部分(有被預料到，且是正常的)，一個更簡單一些的定義是不會在stderr噴東西。」
+
+「當然，不在stderr噴東西，不代表結束碼就必須爲0。你當然可以把錯誤輸出到別的地方。」
+
 ## 決定
 
 - 兩條寫成設計理念 **C-52**（巢狀：只管自己這一層）、**C-53**（錯誤：只處理自己的錯；對別人的錯三種姿態；錯誤路徑濃縮）。
 - 「先前的標準」＝proto7 設計原則 9、10：KISS、錯誤分類同類走同一分支（＝濃縮錯誤路徑）、很多東西默認正常、誤用不歸組件管、先定義組件功能（要求呼叫者保證什麼＝入口、它保證什麼＝出口、明確不管）。C-53 接著它寫，不另起爐灶；proto8 已有的 N-18（錯誤歸類）、N-20、N-29、N-43、N-38、「卡死不防護」都是它的實例，條文不動、只補指向。
+- 盤點第 1、3、8、9 條照推薦（「都同意。」）：
+  - **1** 每層只退 0／非 0 說自己，下層的碼只放 stdout／stderr 的 JSON，不沿用下層的結束碼。
+  - **3** kernel2 判官錯濃縮成一條「判官這拍沒給合法答案＝這拍用規則」，連錯計數交給判官格自己，拿掉「等人歸零」。
+  - **8** think 連錯時自己寫好要交的錯，done 格不讀 think 的 `work/think-fails.json`。
+  - **9** halted 時 loop 退 0 維持：照 C-52，loop 只說自己這一層（它照設計拍完、正常結束），agent 的錯在 `ret.json`；lib agent 寫明「看 ret.json」。
+- 「正常退出」的定義寫進 N-43：照設計、文檔走正常那條路、是預料到的狀況；簡化判準＝不在 stderr 噴東西。反向不成立：退非 0 時錯誤可以寫到別處（文件說好的地方）。
 - 「納入 kernel 評估」記成待定（[NORMS 待定 【kernel】](../NORMS/08-待定.md)）。
 
 ## 結論：已有的實例
@@ -22,13 +36,32 @@
 
 ## 未決：跟兩條原則不完全合的地方（AI 盤點，附推薦，等使用者看）
 
-1. **結束碼往上傳**：lib loop「最後一次是 aos_inst 自己出錯＝沿用它的碼」、daemon 同；fsm 1／125、閘門 125、inst 125～127 各有意思。推薦：每層只退 0／1 說自己，下層的碼只放 stdout／stderr 的 JSON（N-43 已允許，只是收斂慣例）。
+1. 【已定，照推薦】**結束碼往上傳**：lib loop「最後一次是 aos_inst 自己出錯＝沿用它的碼」、daemon 同；fsm 1／125、閘門 125、inst 125～127 各有意思。推薦：每層只退 0／1 說自己，下層的碼只放 stdout／stderr 的 JSON（N-43 已允許，只是收斂慣例）。
 2. **daemon `add` 先驗 inst**（原 h15）：daemon 替兩層下的 inst 做入口檢查。推薦：維持（入口檢查是姿態 (a) 的一種），但說明寫成「daemon 驗的是它收的那份 loop 設定」，驗不到的交給子 loop 自己報。
-3. **kernel2 判官錯的路徑太多**：退回規則、補位、`judge_fails`、`max_fails` 後等人歸零。推薦：濃縮成一條「判官這拍沒給合法答案＝這拍用規則」；連錯計數交給判官格自己（同 N-38 的精神），拿掉「等人歸零」。
+3. 【已定，照推薦】**kernel2 判官錯的路徑太多**：退回規則、補位、`judge_fails`、`max_fails` 後等人歸零。推薦：濃縮成一條「判官這拍沒給合法答案＝這拍用規則」；連錯計數交給判官格自己（同 N-38 的精神），拿掉「等人歸零」。
 4. **fsm 讀格的 stderr**（N-38 把格 stderr 最後一份錯誤放進自己的 stdout）：fsm 往下看了一層。推薦：可接受（只轉述、不處理），寫明「轉述不解讀」。
 5. **巢狀格不宜寫表上靜態 next**（N-40）：上層得知道那格是不是另一個 fsm。推薦：維持，當成格作者的責任寫在 lib fsm.md 即可。
 6. **綁定不往子 agent 傳**（[LiteLLM 實跑](2026-10-15-litellm-live.md) 問題 1）：照 C-52 推薦「子 agent 一律用自己的定義，要換就由呼叫方在工具綁定裡明給」，不訂繼承。
 7. **`ask_judge.py` 寫死 `parent`**（同上問題 2）：一層寫死另一層的位置。推薦：照 boss 靠 frame 綁定。
-8. **done 格讀 think 的 `work/think-fails.json`**：格之間互看對方的私檔。推薦：think 連錯時自己寫好要交的錯（或直接寫 ret.json），done 只看自己的輸入。
-9. **halted 時 loop 退 0**（同上問題 4）：照 C-52 是對的（loop 只說自己），agent 的錯在 `ret.json`。推薦：維持，在 lib agent 寫明「看 ret.json」。
+8. 【已定，照推薦】**done 格讀 think 的 `work/think-fails.json`**：格之間互看對方的私檔。推薦：think 連錯時自己寫好要交的錯（或直接寫 ret.json），done 只看自己的輸入。
+9. 【已定，照推薦】**halted 時 loop 退 0**（同上問題 4）：照 C-52 是對的（loop 只說自己），agent 的錯在 `ret.json`。推薦：維持，在 lib agent 寫明「看 ret.json」。
 10. **文件小矛盾**：NORMS 總則檔頭寫「之後可能併」，已對齊「維持分開」（本次修）。lib `ctl-state.md` 的 fsm 列、`directives.md` 的 exit 檔說法另一個 agent 同晚已照 N-39、N-30 修好。
+
+## 未決：跟「正常退出」定義（N-43）不合的地方（AI 只讀程式盤點，附推薦，等使用者看）
+
+重點是「退 0 卻寫 stderr」；「退非 0 沒寫 stderr」只要錯誤寫在文件說好的地方就不算衝突。程式由另一個 agent 在改，這裡都沒動。
+
+**退 0 卻寫 stderr**
+1. **警告一律走 stderr、照樣退 0**：`aos_cli` 的 `ExtraInput`（stdin 多份只看第一份，三支基礎程式與兩顆腦都有）；ctl 窗壞檔「印一次、不退出」（N-08，`aos_ctl_state`）、`StateWriteFailed`；daemon 的 `ScanFailed`／`ReplyFailed`／`PolicyFailed`／`RestartFailed`／`TableWriteFailed`；信箱 `ReplyFailed`；tool 格 `ToolCallsSkipped`；`aos_tree` 的 `TreeCycle`／`TreeDepth`。N-29 的 warning 形狀本身就是寫 stderr。推薦：有 state 窗的（loop、daemon、kernel）把警告改記進 state 窗（例 `last_warning`），stderr 只留錯；`ExtraInput` 改成入口錯（非 0）；`ToolCallsSkipped` 已在給模型的 tool 訊息裡，拿掉 stderr；N-29 的 warning 形狀改成「寫到窗或日誌，不寫 stderr」。要不要另訂「警告不破壞正常退出」的例外，由使用者定。
+2. **loop／daemon 轉述 aos_inst 的錯**：loop 把 aos_inst 自己的 stderr 原樣轉到自己的 stderr（`_Tail` echo），之後繼續拍，最後一次正常就退 0。推薦：照 C-52 不轉述，只記 state 窗的 `last_error`（已經有記），要留全文就寫到 `work_dir` 的檔。
+3. **閘門轉交 target 的 stderr**：閘門把 target 的 stderr 旁檔原樣吐出，退出碼＝target 的碼。只是轉交，target 守規矩它就守。推薦：維持，寫明「閘門透明，stderr 與碼都是 target 的」。
+4. **inst 寫了 `stderr_inherit`**：子程式的 stderr 直接流到呼叫者，aos_inst 自己照樣退 0。是使用者自己選的接法。推薦：維持，說明裡寫明這時 stderr 不是 aos_inst 的。
+
+**退非 0、沒寫 stderr（錯誤在別處，只需確認有文件）**
+5. fsm 格出錯：退 1，錯誤在這拍 stdout 那行的 `error`（N-38 有寫）——合。
+6. loop／daemon 最後一次是 aos_inst 自己出錯：沿用它的碼、自己不再寫（早先已轉述過、state 窗有 `last_error`）——照已定的第 1 條，之後改成只退 0／非 0，錯誤看 state 窗。
+7. 收到訊號退 128＋N（loop、閘門、tasks）：Unix 傳統，合。
+8. **tasks 把結果當結束碼**（N-34；`aos-not` 子程式成功時退 1、`aos-if` 條件不成立…）：這裡非 0 是「答案是假」，不是「有錯」，跟 N-43「非 0＝有錯」字面不合，但跟 Unix 的 `false`、`test` 一樣。推薦：在 N-34 寫明是 N-43 的例外（述詞程式），或改成 stdout 吐答案、結束碼只說有沒有錯；使用者定。
+
+**halted（第 9 條）查證**：think 第 3 次連錯時改回 `{"next": "halted"}`、退 0、不寫 stderr；done 格寫 `ret.json` 的錯、退 0；fsm 退 0；demo 的 loop.json 沒給 fsm 的 inst 寫 `stderr`（接 /dev/null），aos_inst 自己沒錯，所以 loop 的 stderr 是空的、退 0——**符合新定義**。前兩次連錯：think 退 1＋stderr（合）、fsm 退 1、錯在 stdout 行（合，第 5 條）、loop 只記 `last_code`、不寫 stderr、退 0（合）。
+
