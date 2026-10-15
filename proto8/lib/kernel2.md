@@ -50,7 +50,8 @@ python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 {"run": ["<信名>"], "defer": ["<信名>"], "reject": [{"id": "<信名>", "error": {"code": "TooExpensive", "msg": "太貴"}}]}
 ```
 
-- 沒點名的＝`defer`；不認得的 id 丟掉；`run` 超過該資源空格的照順序截掉（log 的 `cut`）。級數不能改。
+- `defer`＝「不是我挑的」，**不是**「一定要等」（使用者 10-15 定）：沒點名的也是 `defer`。不認得的 id 丟掉；`run` 超過該資源空格的照順序截掉（log 的 `cut`）。級數不能改。
+- **補位**：套完判官的決定後，某種資源還有空格，就從**剩下的信**（沒被 `reject`、沒被判官點到起跑的）照第一種的規則（`order`：deadline 插隊＋級數＋aging＋先來後到，每種資源各自）補滿；只在判官答對時補（判官錯整個本來就走規則）。判官控制自己 `run` 的順序與 `reject`，補位只補空格。log：`decide` 多 `backfill: [id…]`，`start` 多 `reason`（`judge`／`backfill`／`rules`／`direct`）。判官全 defer 也不會卡住。
 - `reject`＝回信 `{"error": {code, msg}}`，呼叫端的閘門 stderr 一份 N-29、退出 125。
 - **判官錯**（結束碼非 0、逾時、起不來、形狀不對、同一個 id 出現兩次）＝這次改用第一種的確定規則（`aos_gate_kernel.order`：deadline 插隊＋級數＋aging＋先來後到，每種資源各自補滿），`judge_fails`＋1、`judge_error` 記原因；判官對一次就歸零。連錯 `max_fails` 次就不再問，等人歸零。
 - **判官自己的腦不走自己**：判官的環境拿掉 `AOS_KERNEL`；它自己的 `envs` 寫 `AOS_KERNEL` 指回這個信箱也拿掉（指別的信箱，例 LLM kernel，照給）。
@@ -69,4 +70,4 @@ stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback,
 
 ## 測試
 
-`tests/test_kernel.py`（17 個）：判官的答案照辦、stdin＝state 窗子集（只有四個 key）、沒點名＝defer、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯到 `max_fails` 停在規則＋人歸零後再問、局面沒變不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。
+`tests/test_kernel.py`（21 個）：判官的答案照辦、stdin＝state 窗子集（只有四個 key）、沒點名＝defer 但空格補位、全 defer 仍跑、判官點一封＋規則補另一格、reject 不補位、沒空格不補、超格截掉、便宜的不佔格不問、不認得的資源、reject 到呼叫端是 N-29、判官錯五種都退回規則、連錯到 `max_fails` 停在規則＋人歸零後再問、局面沒變不問、一封有空格直接跑、human 格回信／逾時就放、判官環境沒有自己的信箱、重起回 `KernelRestarted`、設定錯、真的 daemon＋loop 端到端收工後沒漏行程。

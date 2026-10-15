@@ -106,10 +106,45 @@ class KernelTest(Tmp):
     def test_unnamed_is_defer(self):
         self.send("a")
         self.send("b")
-        out = K.tick(self.cfg("print(json.dumps({}))"))
-        self.assertEqual(out["served"], [])
-        self.assertEqual(out["waiting"], 2)
+        out = K.tick(self.cfg("print(json.dumps({}))"))          # 判官全沒點名＝defer，但格是空的：補位照跑
+        self.assertEqual(len(out["served"]), 2)
         self.assertEqual(self.log("decide")[0]["run"], [])
+        self.assertEqual(len(self.log("decide")[0]["backfill"]), 1)
+
+    def test_defer_all_still_runs_by_backfill(self):
+        names = [self.send(x) for x in "ab"]
+        self.send("c", priority="high")
+        out = K.tick(self.cfg("print(json.dumps({'defer': q}))", slots={"llm": 2}))
+        d = self.log("decide")[0]
+        self.assertEqual(d["run"], [])
+        self.assertEqual(len(d["backfill"]), 2)
+        self.assertIn(self.log("start")[0]["letter"], d["backfill"])
+        self.assertEqual([s["reason"] for s in self.log("start")[:2]], ["backfill", "backfill"])
+        self.assertEqual(len(out["served"]), 3)
+
+    def test_judge_pick_plus_backfill_by_rules(self):
+        a, b = self.send("a"), self.send("b", priority="high")
+        c = self.send("c")
+        K.tick(self.cfg("print(json.dumps({'run': [q[0]]}))", slots={"llm": 2}))   # 判官點最先來的 a，另一格由規則補 high 的 b
+        d = self.log("decide")[0]
+        self.assertEqual((d["run"], d["backfill"]), ([a], [b]))
+        st = self.log("start")
+        self.assertEqual([(x["letter"], x["reason"]) for x in st[:2]], [(a, "judge"), (b, "backfill")])
+
+    def test_rejected_not_backfilled(self):
+        a, b = self.send("a"), self.send("b")
+        K.tick(self.cfg("print(json.dumps({'reject': [{'id': q[0], 'error': {'code': 'No', 'msg': 'x'}}]}))", slots={"llm": 2}))
+        self.assertEqual(self.reply(a)["error"]["code"], "No")
+        self.assertEqual(self.log("decide")[0]["backfill"], [b])
+        self.assertEqual([x["letter"] for x in self.log("start")], [b])
+
+    def test_no_backfill_without_free_slot(self):
+        for x in "abc":
+            self.send(x)
+        K.tick(self.cfg("print(json.dumps({'run': [q[-1]]}))"))
+        d = self.log("decide")[0]
+        self.assertEqual(d["backfill"], [])
+        self.assertEqual(d["run"], [self.log("start")[0]["letter"]])
 
     def test_overflow_truncated(self):
         self.send("a")
@@ -173,7 +208,7 @@ class KernelTest(Tmp):
     def test_skip_judge_when_unchanged(self):
         self.send("a")
         self.send("b")
-        cfg = self.cfg("print(json.dumps({'defer': q}))")
+        cfg = self.cfg("print(json.dumps({'defer': q}))", slots={"llm": 0})   # 沒空格＝補位也補不了，局面不變
         K.tick(cfg)
         out = K.tick(cfg)
         self.assertEqual(self.calls(), 1)
