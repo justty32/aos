@@ -25,7 +25,7 @@
 | 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md) | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [lib inst](lib/inst.md) |
 | 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md) | 同上 | [lib loop](lib/loop.md)、[daemon](lib/daemon.md) |
 | 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md) | 同上 | [lib ctl_state](lib/ctl_state.md) |
-| 基礎設施／命令列、指示詞與路徑 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md) | 同上 | lib `aos_cli`、[directives](lib/directives.md) |
+| 基礎設施／命令列、指示詞與路徑 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md)：N-21～N-23 命令列、N-45 設計不靠指示詞 | 同上 | lib `aos_cli`、[directives](lib/directives.md) |
 | 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | [proto8-1](../proto8-1/README.md)；fsm 在 [lib fsm.md](lib/fsm.md)（基礎實作） |
 | kernel | [09-kernel.md](NORMS/09-kernel.md)：N-42（打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | — |
 | agent | 沒有專屬的條（用 fsm 組出來） | [CONCEPTS agent](CONCEPTS/05-agent.md) | — |
@@ -60,6 +60,7 @@
 | N-36～N-41 | [基礎設施-組合子](NORMS/07-基礎設施-組合子.md)（fsm） |
 | N-42 | [kernel](NORMS/09-kernel.md) |
 | N-43 | [總則](NORMS/01-總則.md) |
+| N-45 | [基礎設施-命令列與指示詞](NORMS/06-基礎設施-命令列與指示詞.md)（指示詞） |
 
 ## 各批出處
 
