@@ -33,7 +33,7 @@ python3 proto8/demo/fsm/run.py brain/lmstudio.json      （換腦：在 frame �
 
 - LM Studio 要先開 server、載好 Qwen3-1.7B，用完 unload、關 server（[dev-env](../../../wf/workflows/dev-env/01-跨機與外部工具.md#跨機--離線差異)）。10-15 試過整圈跑通，ask 那拍約 4～8 秒（[thinking 10-15 §9](../../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#9-試-lm-studioqwen3-17b)）。
 - LiteLLM 端點預設 `http://localhost:4000/v1`（[dev-env](../../../wf/workflows/dev-env/02-模型端點.md#模型端點2026-09-25-定10-10-核對)），不用金鑰；先 `curl localhost:4000/v1/models` 看有哪些名字，把 `brain/openai.json` 的 `--model` 改成挑到的。換端點加旗標：`--base-url https://api.deepseek.com/v1 --model deepseek-chat --api-key-env DEEPSEEK_API_KEY`，金鑰只放環境變數。
-- 報時員的腦另外換：改 `clerk/brain.json`，或像 [demo/kernel](../kernel/run.py) 那樣讓工具在 clerk 的 frame 放一份 `brain.json`。它整趟都在外層 tool 那一拍裡跑完；小模型有時不查 clock 直接編時間（[clerk-live](../../thinking/2026-10-15-clerk-live.md)）。
+- 報時員的腦另外換：改 `clerk/brain.json`，或像 [demo/kernels/llm](../kernels/llm/run.py) 那樣讓工具在 clerk 的 frame 放一份 `brain.json`。它整趟都在外層 tool 那一拍裡跑完；小模型有時不查 clock 直接編時間（[clerk-live](../../thinking/2026-10-15-clerk-live.md)）。
 - 真腦會慢：ask 那拍等多久就阻塞多久（`think/ask.json` 的 `timeout_ms` 200 秒）。
 - 10-15 試過 146 ollama：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`；現在 think 連錯 3 次自己寫 `ret.json`（那個錯）、回 `halted`＝外層也結束，loop 停掉（不再每拍叫腦）。qwen2.5:14b 整圈跑通（[thinking 10-15 §8](../../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#8-試-146-ollamaqwen2514b)）。
 

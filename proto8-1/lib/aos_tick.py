@@ -8,7 +8,7 @@
 - 先寫同資料夾的 `.名字.tmp` 再用 os.replace 蓋過去，讀的人不會看到寫一半的。不 fsync。
 - stdout 不吐東西（N-12：結果就是 FILE 本身與退出碼）。出錯一律在 stderr 吐一份 `{"error": {"code", "msg"}}`
   （同 proto8 的 aos_cli）、退出碼 1，FILE 不動：
-  BadContent＝內容不是 `\\d+` 加可有可無的一個換行（空檔也算）；ReadFailed／WriteFailed＝讀／寫不了；
+  ContentBad＝內容不是 `\\d+` 加可有可無的一個換行（空檔也算）；ReadFailed／WriteFailed＝讀／寫不了；
   Usage＝參數不是剛好一個。
 
 tick-tock 就是一個時鐘（CONCEPTS C-44）：不包任務、不保證什麼，大家要看就去讀 FILE。打包是規範，之後由 kernel 做。
@@ -31,7 +31,7 @@ class TickError(Exception):
 
 
 def tick(path):
-    """FILE 的回合數加一，回新的數。出錯丟 `TickError`（code＝BadContent／ReadFailed／WriteFailed），FILE 不動。"""
+    """FILE 的回合數加一，回新的數。出錯丟 `TickError`（code＝ContentBad／ReadFailed／WriteFailed），FILE 不動。"""
     try:
         with open(path, "rb") as f:
             raw = f.read()
@@ -40,7 +40,7 @@ def tick(path):
     except OSError as e:
         raise TickError("ReadFailed", "讀不了 %s：%s" % (path, e.strerror or e))
     if not re.fullmatch(rb"\d+\n?", raw):          # bytes 的 \d 只認 0-9
-        raise TickError("BadContent", "%s 的內容不是回合數：%r" % (path, raw[:40]))
+        raise TickError("ContentBad", "%s 的內容不是回合數：%r" % (path, raw[:40]))
     n = int(raw) + 1
     tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")
     try:

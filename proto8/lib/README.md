@@ -4,7 +4,7 @@
 
 只用 Python 標準庫。
 
-四支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`、`aos_fsm.py x.json`（PATH 接上 [`../bin`](../bin/aos) 就寫 `aos inst x.json`、`aos agent think` 等指令名，C-50）；相對路徑一律從呼叫者的 cwd 算（fsm 表上的字串格例外：從 fsm 設定檔所在的資料夾算，N-36）。TARGET 都可以接 `檔#/位置`（N-35）。inst、loop、daemon 照 NORMS N-12 重做（10-14），fsm 10-15 照 N-36～N-41 做了基礎實作，LLM kernel（`aos_gate.py`＋`aos_gate_kernel.py`，N-42）與通用 kernel（`aos_kernel.py`）10-15 做了基礎實作：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`（N-21～N-27），`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 的 ctl／state 窗與 fsm 的 state 窗必填（N-19）；daemon.json＝loop.json 的超集（N-28）。
+四支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`、`aos_fsm.py x.json`（PATH 接上 [`../bin`](../bin/aos) 就寫 `aos inst x.json`、`aos agent think` 等指令名，C-50）；相對路徑一律從呼叫者的 cwd 算（fsm 表上的字串格例外：從 fsm 設定檔所在的資料夾算，N-36）。TARGET 都可以接 `檔#/位置`（N-35）。inst、loop、daemon 照 NORMS N-12 重做（10-14），fsm 10-15 照 N-36～N-41 做了基礎實作，LLM kernel（`aos_gate.py`＋`aos_kernel_llm.py`，N-42）與通用 kernel（`aos_kernel_general.py`）10-15 做了基礎實作：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`（N-21～N-27），`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 的 ctl／state 窗與 fsm 的 state 窗必填（N-19）；daemon.json＝loop.json 的超集（N-28）。
 
 ## 細節（各一份）
 
@@ -16,8 +16,8 @@
 | [fsm.md](fsm.md) | fsm（10-15 收工後瘦身）：方法表與相對路徑、一拍、格的 stdin 不碰、下一狀態、`end` 四種情形、出錯（phase 不動）、state 窗只有 phase、巢狀、不做的事、退出碼 |
 | [agent.md](agent.md) | agent（實作慣例，還不是規範）：思考介面（換腦＝換一個 TARGET）、工具＝inst（`tools/`＋`_tool`、每次 `work/<n>/`）、tool 訊息；拆出去的兩份：[agent-lib.md](agent-lib.md)（現成格庫＋邊緣狀況）、[agent-frame.md](agent-frame.md)（agent 當函數／當工具：定義資料夾＋frame、`sh -c` 三步） |
 | [daemon.md](daemon.md) | daemon：daemon.json（loop.json 超集）、每拍的身體、children、策略格、table 窗與接回、控制資料夾與指令、收工 |
-| [kernel.md](kernel.md) | LLM kernel（N-42 第一種，基礎實作）：閘門的設定與信、kernel 一拍、排序規則、額度、只包葉子的慣例 |
-| [kernel2.md](kernel2.md) | 通用 kernel（N-42 第二種，基礎實作）：資源格、判官 stdin＝state 窗子集、判官的 run／defer／reject、判官錯退回規則、human 格、agent 判官 |
+| [kernel_llm.md](kernel_llm.md) | LLM kernel（N-42 第一種，基礎實作）：閘門的設定與信、kernel 一拍、排序規則、額度、只包葉子的慣例 |
+| [kernel_general.md](kernel_general.md) | 通用 kernel（N-42 第二種，基礎實作）：資源格、判官 stdin＝state 窗子集、判官的 run／defer／reject、判官錯退回規則、human 格、agent 判官 |
 | [ctl-state.md](ctl-state.md) | ctl 與 state 的慣例：各層的設定／ctl／state、key 分組、seq 回音、state 骨架（含心跳）、七個狀態值 |
 | [directives.md](directives.md) | 語法糖（C-48：只是把 JSON 拆成小檔、讀環境變數的便利，設計不靠它）：指示詞 lib（`$ref`、`$env`、`resolve()`），以及命令列 TARGET 的 `檔#/位置`（N-35）的實作（`split_target`、`target_id`、`locate`） |
 
@@ -42,14 +42,14 @@
 | `aos_brain_ollama.py` | 真的腦（ollama 原生）：POST `/api/chat`，帶 `options.num_ctx`、`keep_alive`；兩邊訊息形狀互翻（arguments 字串↔物件、補 id／`tool_name`） |
 | `aos_mailbox.py` | kernel 信箱共用（閘門、兩種 kernel）：`mailbox`、旁檔路徑 `side`、`read_letter`、`claim`、`reply`（寫不進去回「ReplyFailed: …」給 kernel 記進 state 窗 `last_warning`）、`run_letter`（信＝inst，`aos_inst.run(信)`，stdout／stderr 落旁檔，回 N-30 結果＋token）、`log` |
 | `aos_gate.py` | 兩種 kernel 共用的閘門：信＝target 那張 inst 本身＋私有 key `priority`／`reply`／`sent`，stdin 內容寫旁檔、`stdin` 放路徑；丟進信箱（`mailbox`，沒寫＝`AOS_KERNEL`）、等回信（N-30 結果）、讀旁檔原樣吐 stdout／stderr、用 target 的碼退出；`wait_ms`→`QueueTimeout`、收訊號撤信 |
-| `aos_gate_kernel.py` | LLM kernel 的身體（每拍一次，給 aos-loop 拍）：cur/ 殘信回錯、過期／額度見底回錯、排序挑 `slots` 封、`aos_inst.run()` 跑、回信；state 窗照 loop 骨架（`state`、`pid`、`runs`、`last_error`、`beat`）＋`seen`、`budget`、`served` |
-| `aos_kernel.py` | 通用 kernel 的身體（N-42 第二種，給 aos-loop 拍；一拍＝一段忙碌期）：每種資源各幾格、局面變了才問判官、照決定起跑（一封一條執行緒）、格在子程式結束時放；判官的 stdin＝state 窗的 queue／running／slots／budget |
+| `aos_kernel_llm.py` | LLM kernel 的身體（每拍一次，給 aos-loop 拍）：cur/ 殘信回錯、過期／額度見底回錯、排序挑 `slots` 封、`aos_inst.run()` 跑、回信；state 窗照 loop 骨架（`state`、`pid`、`runs`、`last_error`、`beat`）＋`seen`、`budget`、`served` |
+| `aos_kernel_general.py` | 通用 kernel 的身體（N-42 第二種，給 aos-loop 拍；一拍＝一段忙碌期）：每種資源各幾格、局面變了才問判官、照決定起跑（一封一條執行緒）、格在子程式結束時放；判官的 stdin＝state 窗的 queue／running／slots／budget |
 | `aos_kernel_judge.py` | 通用 kernel 的判官那一半：跑判官 inst（拿掉自己的 `AOS_KERNEL`）、驗 `{run, defer, reject}`、判官錯時的確定規則 |
 | `aos_tree.py` | 看狀況的小工具，不屬規範（10-15 使用者）。inst 樹工具（同像性，10-15）：`print TARGET` 畫樹（每行 `位置: 種類 id`）、`inline TARGET` 把路徑參照全攤成一份 JSON（循環／深度限制留名字、那個 ref 帶 `stop`，print 行尾標出；不寫 stderr）；只看位置認 inst，不跑任何東西；`build()`／`render()`／`slots()` |
 | `judge_rules.py` | 規則判官（假判官）：human 先、再級數、再先來後到，每種資源補滿空格 |
 | `tests/` | unittest，見[下面](#測試tests) |
 
-相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 `read_state`、`write_json`）；agent：`aos_methods` ← `aos_agent_lib`（也借 `write_json`、`aos_frame`；`fsm` 子命令才載 `aos_fsm`），`aos_brain_openai`、`aos_brain_ollama` 只靠 `aos_cli`；kernel：`aos_inst` ← `aos_mailbox`（也借 `write_json`）← `aos_gate` ← `aos_gate_kernel` ← `aos_kernel_judge` ← `aos_kernel`；`judge_rules` 獨立（只用標準庫）。
+相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 `read_state`、`write_json`）；agent：`aos_methods` ← `aos_agent_lib`（也借 `write_json`、`aos_frame`；`fsm` 子命令才載 `aos_fsm`），`aos_brain_openai`、`aos_brain_ollama` 只靠 `aos_cli`；kernel：`aos_inst` ← `aos_mailbox`（也借 `write_json`）← `aos_gate` ← `aos_kernel_llm` ← `aos_kernel_judge` ← `aos_kernel_general`；`judge_rules` 獨立（只用標準庫）。
 
 ## ctl 與 state 的慣例
 
@@ -61,7 +61,7 @@
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，171 個、約 50～70 秒。按受測的程式分十二個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm 含報時員 clerk、兩顆真腦對本機假伺服器）、`test_agent_frame.py`（frame、agent 當函數／當工具、ask_judge 換定義資料夾）、`test_gate.py`（LLM kernel）、`test_kernel.py`（通用 kernel）、`test_tree.py`（aos_tree、判官回話的 schema 用手寫最小驗證器驗）、`test_paint_demo.py`（畫家 demo：畫家經工具叫畫筆、frame 巢狀、同 frame 續聊、brain.json 綁定只到那一層）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉；刪前查漏網的 aos_loop／daemon／fsm／gate／kernel 行程（cwd 或命令列路徑在暫存資料夾內），有＝失敗（`helpers.leftovers()`）。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，171 個、約 50～70 秒。按受測的程式分十二個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm 含報時員 clerk、兩顆真腦對本機假伺服器）、`test_agent_frame.py`（frame、agent 當函數／當工具、ask_judge 換定義資料夾）、`test_gate.py`（LLM kernel）、`test_kernel_general.py`（通用 kernel）、`test_tree.py`（aos_tree、判官回話的 schema 用手寫最小驗證器驗）、`test_paint_demo.py`（畫家 demo：畫家經工具叫畫筆、frame 巢狀、同 frame 續聊、brain.json 綁定只到那一層）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉；刪前查漏網的 aos_loop／daemon／fsm／gate／kernel 行程（cwd 或命令列路徑在暫存資料夾內），有＝失敗（`helpers.leftovers()`）。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 

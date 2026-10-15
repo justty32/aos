@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""proto8 通用 kernel 的 demo：aos-daemon 底下一個 aos-loop 拍通用 kernel（aos_kernel.py），判官是表上一格 inst。
+"""proto8 通用 kernel 的 demo：aos-daemon 底下一個 aos-loop 拍通用 kernel（aos_kernel_general.py），判官是表上一格 inst。
 三種被閘門包住的活同時搶：假腦（resource llm，睡 0.8 秒）、假 cpu 活（cpu，睡 0.6 秒）、問人（human，假人 1.5 秒後回信）。
 
-    python3 proto8/demo/run.py kernel2                       （或直接 python3 proto8/demo/kernel2/run.py）
-    python3 proto8/demo/kernel2/run.py judge-agent.json      （第 1 段改用 agent 判官，要先開 LM Studio；demo 預設不跑）
+    python3 proto8/demo/run.py kernels/general                     （或直接 python3 proto8/demo/kernels/general/run.py）
+    python3 proto8/demo/kernels/general/run.py judge-agent.json      （第 1 段改用 agent 判官，要先開 LM Studio；demo 預設不跑）
 
 兩段：(1) 規則判官（judge-rules.json，假判官）：格數 llm 1、cpu 2、human 1，看 log 的起跑順序；
 (2) 壞掉的判官（judge-broken.json，回的不是答案）：每次問都錯→那拍退回確定規則（判官出錯只有這一條路；kernel 不數連錯，
@@ -21,9 +21,9 @@ import threading
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-LIB = os.path.abspath(os.path.join(HERE, "..", "..", "lib"))
-GATE, DAEMON, KERNEL = (os.path.join(LIB, x) for x in ("aos_gate.py", "aos_daemon.py", "aos_kernel.py"))
-ROOT = os.path.dirname(os.path.dirname(HERE))            # proto8/
+LIB = os.path.abspath(os.path.join(HERE, "..", "..", "..", "lib"))
+GATE, DAEMON, KERNEL = (os.path.join(LIB, x) for x in ("aos_gate.py", "aos_daemon.py", "aos_kernel_general.py"))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))   # proto8/
 PATH = os.pathsep.join([os.path.join(ROOT, "bin"), os.path.join(ROOT, "demo", "bin"), os.environ.get("PATH", "")])
 T0 = time.monotonic()
 
@@ -150,7 +150,7 @@ def leftovers(root):
 
 def main():
     judge = sys.argv[1] if sys.argv[1:] and sys.argv[1].endswith(".json") else "judge-rules.json"
-    tmp = tempfile.mkdtemp(prefix="aos-kernel2-demo-")
+    tmp = tempfile.mkdtemp(prefix="aos-kernel-general-demo-")
     say("暫存資料夾 %s；格數 llm 1、cpu 2、human 1；daemon 底下的 loop 每 100 ms 拍一次 kernel" % tmp)
     try:
         say("== 1. 判官 %s：兩封問人、三封假腦（low／high／沒寫）、三封 cpu 同時丟" % judge)

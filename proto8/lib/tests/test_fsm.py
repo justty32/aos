@@ -82,7 +82,7 @@ class FsmTest(Tmp):
         path = self.fsm({"a": sh("a", "true")})
         r = self.tick(path)
         self.assertEqual(r.returncode, 1)
-        self.assertEqual(self.out(r)[-1]["error"]["code"], "NoResult")
+        self.assertEqual(self.out(r)[-1]["error"]["code"], "ResultMissing")
         self.assertEqual(self.state()["phase"], "a")
 
     def test_end_line_marked(self):
@@ -117,7 +117,7 @@ class FsmTest(Tmp):
         # 吐了東西但不是完整 JSON＝錯，表上有 next 也一樣
         path = self.fsm({"a": {"val": sh("a", "echo hello; printf '{\"next\": \"b\"'"), "next": "b"}, "b": ok("b")})
         r = self.tick(path)
-        self.assertEqual((r.returncode, self.out(r)[-1]["error"]["code"], self.state()["phase"]), (1, "NoResult", "a"))
+        self.assertEqual((r.returncode, self.out(r)[-1]["error"]["code"], self.state()["phase"]), (1, "ResultMissing", "a"))
 
     def test_cell_names_from_config_folder(self):
         # 格的相對路徑從 fsm 設定檔所在的資料夾算（N-36），不是 cwd
@@ -133,7 +133,7 @@ class FsmTest(Tmp):
         r = self.tick(path)
         self.assertEqual(r.returncode, 1)                 # 格出錯：fsm 退非 0（N-43）
         self.assertEqual(self.state()["phase"], "a")
-        self.assertEqual(self.out(r)[-1]["error"]["code"], "UnknownNext")          # N-29 形狀
+        self.assertEqual(self.out(r)[-1]["error"]["code"], "NextUnknown")          # N-29 形狀
 
     def test_cell_failure_stays_and_reports(self):
         # 格出錯＝phase 不動、往外報（帶格 stderr 的 N-29 錯誤）；error 不是特別的格
@@ -215,7 +215,7 @@ class FsmTest(Tmp):
         states = {"x": "nope/", "y": 3, "z": {"val": {"argv": ["true"]}, "next": "x"}}
         with self.assertRaises(aos_methods.MethodsError) as e:
             aos_methods.cell(states, "w")
-        self.assertEqual(e.exception.code, "UnknownState")
+        self.assertEqual(e.exception.code, "StateUnknown")
         with self.assertRaises(aos_methods.MethodsError):
             aos_methods.cell(states, "y")
         self.assertEqual(aos_methods.cell(states, "z", "/f.json"), ({"argv": ["true"]}, "/f.json#/states/z", "x"))

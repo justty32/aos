@@ -3,7 +3,7 @@
 
     python3 aos_inst.py [--key 值 ...] [TARGET | -] [-- argv...]
 
-設定從哪來照 aos_cli（NORMS N-12、D-1～D-3）：TARGET 檔、`-`＝stdin（一份；多份＝ExtraInput 錯）、都沒給＝`{}`；
+設定從哪來照 aos_cli（NORMS N-12、D-1～D-3）：TARGET 檔、`-`＝stdin（一份；多份＝InputExtra 錯）、都沒給＝`{}`；
 純量 key 都有同名旗標（`--timeout-ms 100`、`--cwd-mkdir true`…），蓋過檔或 stdin；`--` 後面整段蓋過 `argv`。
 設定從 stdin 來時 `stdin_inherit` ＝Conflict（stdin 已經被設定用掉了，D-5）。
 
@@ -103,11 +103,11 @@ def _find(target):
 
 def dirname():
     """資料夾 TARGET 裡放 inst.json 的子資料夾名：環境變數 `AOS_DIRNAME`，沒設＝`.aos`；空字串＝資料夾本身
-    （同 proto7-1 的 aos_dirname；N-35）。含 `/`、或是 `.`、`..`＝`BadDirname`。"""
+    （同 proto7-1 的 aos_dirname；N-35）。含 `/`、或是 `.`、`..`＝`DirnameBad`。"""
     n = os.environ.get("AOS_DIRNAME")
     n = ".aos" if n is None else n
     if "/" in n or n in (".", ".."):
-        raise InstError("BadDirname", "AOS_DIRNAME 要是單一資料夾名或空字串（不含 /、不是 . 或 ..）：%r" % n)
+        raise InstError("DirnameBad", "AOS_DIRNAME 要是單一資料夾名或空字串（不含 /、不是 . 或 ..）：%r" % n)
     return n
 
 

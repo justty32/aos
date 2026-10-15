@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """通用 kernel 的身體（N-42 第二種，基礎實作）：判斷交給「判官」——表上一格 aos-inst TARGET（規則腳本或 agent）。
 一拍＝跑一次本程式，由 aos-loop 拍（loop 掛在 aos-daemon 底下）。閘門照舊用 aos_gate.py，`mailbox` 指到這裡的信箱，
-信（＝那張 inst 本身）與回信的形狀同第一種（aos_mailbox）。純標準庫。說明在同資料夾 kernel2.md。
+信（＝那張 inst 本身）與回信的形狀同第一種（aos_mailbox）。純標準庫。說明在同資料夾 kernel_general.md。
 
-    python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
+    python3 aos_kernel_general.py [--key 值 ...] [KERNEL.json | -]
 
 設定：
     mailbox    信箱資料夾（同閘門的 mailbox；必填）
@@ -13,7 +13,7 @@
                沒寫或 "none"＝便宜的，不佔格、直接跑；寫了但這裡沒有＝回 ResourceUnknown
     judge      判官：TARGET 或內嵌 inst（沒寫＝一律用規則）。stdin＝state 窗的 queue、running、slots、budget（子集），
                stdout＝{"run": [id], "defer": [id], "reject": [{"id", "error": {code, msg}}]}（見 aos_kernel_judge）
-    budget、aging_ticks、near_ms、log  同第一種（aos_gate_kernel.py）；budget 只管 llm 的信
+    budget、aging_ticks、near_ms、log  同第一種（aos_kernel_llm.py）；budget 只管 llm 的信
     poll_ms    一拍之內多久看一次信箱與跑完的信（沒寫＝50）
 
 一拍（＝一段忙碌期）：cur/ 殘信回 KernelRestarted → 反覆：收跑完的、回信、放格 → 讀 new/（過期、額度、便宜的直接跑）
@@ -21,7 +21,7 @@
   kernel 不數連錯、不停問：要連錯幾次就改口或停住，是判官格自己的事（C-53；10-15 使用者「都同意。」，盤點第 3 條））→ 照決定認領、起跑；判官挑完仍有空格＝補位（沒被 reject 的剩下的信照規則補滿，log reason＝backfill）
 （一封一條執行緒、各自一支子程式）→ 沒有在跑的就結束這拍。格在那封的子程式結束時就放（human 格＝回信落檔或逾時）。
 
-相依：aos_inst ← aos_mailbox（信：讀、認領、跑、回信、log）← aos_gate ← aos_gate_kernel（借 order、deadline）← aos_kernel_judge（判官：跑、讀答案、規則後援）← aos_kernel。
+相依：aos_inst ← aos_mailbox（信：讀、認領、跑、回信、log）← aos_gate ← aos_kernel_llm（借 order、deadline）← aos_kernel_judge（判官：跑、讀答案、規則後援）← aos_kernel_general。
 """
 import datetime
 import json
@@ -34,16 +34,16 @@ import aos_cli
 from aos_cli import CliError
 from aos_cli import is_int as _int
 from aos_ctl_state import write_json
-from aos_gate_kernel import deadline
+from aos_kernel_llm import deadline
 from aos_mailbox import claim, log, mailbox, read_letter, reply, run_letter
 from aos_kernel_judge import ask_judge, decide_rules, resource
 
-__all__ = ["FLAGS", "KernelError", "check", "main", "tick"]
+__all__ = ["FLAGS", "KernelGeneralError", "check", "main", "tick"]
 
 FLAGS = ("mailbox", "state", "slots", "judge", "budget", "aging_ticks", "near_ms", "poll_ms", "log")
 
 
-class KernelError(CliError):
+class KernelGeneralError(CliError):
     pass
 
 
@@ -51,22 +51,22 @@ def check(doc):
     """驗設定、補預設，回一份新的 dict。"""
     for k in ("mailbox", "state"):
         if not isinstance(doc.get(k), str):
-            raise KernelError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
+            raise KernelGeneralError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
     slots = doc.get("slots", 1)
     c = dict(doc, slots={"llm": slots} if _int(slots, 0) else slots, judge=doc.get("judge"),
              budget=doc.get("budget"), aging_ticks=doc.get("aging_ticks", 10), near_ms=doc.get("near_ms", 30000),
              poll_ms=doc.get("poll_ms", 50))
     if not (isinstance(c["slots"], dict) and all(isinstance(k, str) and _int(v, 0) for k, v in c["slots"].items())):
-        raise KernelError("FieldType", "slots 要是 {資源: ≥0 的整數}，不是 %r" % (c["slots"],))
+        raise KernelGeneralError("FieldType", "slots 要是 {資源: ≥0 的整數}，不是 %r" % (c["slots"],))
     for k, lo in (("aging_ticks", 1), ("near_ms", 0), ("poll_ms", 1)):
         if not _int(c[k], lo):
-            raise KernelError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
+            raise KernelGeneralError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
     if not (c["budget"] is None or _int(c["budget"], 0)):
-        raise KernelError("FieldType", "budget 要是非負整數或 null，不是 %r" % (c["budget"],))
+        raise KernelGeneralError("FieldType", "budget 要是非負整數或 null，不是 %r" % (c["budget"],))
     if not (c["judge"] is None or isinstance(c["judge"], (str, dict))):
-        raise KernelError("FieldType", "judge 要是 TARGET 或一張 inst，不是 %r" % (c["judge"],))
+        raise KernelGeneralError("FieldType", "judge 要是 TARGET 或一張 inst，不是 %r" % (c["judge"],))
     if not (c.get("log") is None or isinstance(c["log"], str)):
-        raise KernelError("FieldType", "log 要是路徑字串，不是 %r" % (c["log"],))
+        raise KernelGeneralError("FieldType", "log 要是路徑字串，不是 %r" % (c["log"],))
     return c
 
 
@@ -239,7 +239,7 @@ def main(argv=None):
     try:
         doc, _, _, rest = aos_cli.config(args, FLAGS)
         if rest is not None:
-            raise KernelError("Usage", "kernel 不收 `--`")
+            raise KernelGeneralError("Usage", "kernel 不收 `--`")
         aos_cli.emit(tick(check(doc)))
         return 0
     except CliError as e:

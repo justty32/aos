@@ -1,6 +1,6 @@
 # 2026-10-15 agent 判官實跑（LM Studio Qwen3-1.7B）
 
-← [討論紀錄](README.md)｜前情：[通用 kernel](2026-10-15-general-kernel.md)｜程式：[lib kernel.md](../lib/kernel.md)、demo `proto8/demo/kernel2/`
+← [討論紀錄](README.md)｜前情：[通用 kernel](2026-10-15-general-kernel.md)｜程式：[lib kernel.md](../lib/kernel_llm.md)、demo `proto8/demo/kernel2/`
 
 ## 原文（10-15）
 
@@ -39,7 +39,7 @@
 「我覺得不用想...因為以後實際去使用那些厲害模型的 endpoint 如 claude/gpt，會發現他們都會把思考過程加密，或是乾脆不給，聲稱是為了防蒸餾。剩下都隨意」
 
 1. **不靠模型思考**：判官 `judge/system.md` 開頭 `/no_think`；原則寫進 [lib agent.md](../lib/agent.md#思考介面腦)——aos 從不依賴思考內容，只算最後的答案。
-2. **判官輸入瘦身**（隨意，照建議）：stdin＝state 窗只留 `queue`／`running`／`slots`／`budget`（同一份物件的子集，C-48 不新增格式），兩種判官都這樣（[kernel2.md](../lib/kernel2.md#state-窗判官的-stdin它的子集)）。
+2. **判官輸入瘦身**（隨意，照建議）：stdin＝state 窗只留 `queue`／`running`／`slots`／`budget`（同一份物件的子集，C-48 不新增格式），兩種判官都這樣（[kernel2.md](../lib/kernel_general.md#state-窗判官的-stdin它的子集)）。
 3. **重跑**：見下節。
 
 ## 重跑（10-15，`/no_think`＋瘦身後）
@@ -68,6 +68,6 @@
 
 ## 決定：補位（使用者 10-15「照建議做補位」）
 
-套完判官的決定後還有空格，就用確定規則從沒被 reject 的剩下的信補滿；判官的 `defer`＝「不是我挑的」。log 的 `decide.backfill`、`start.reason`＝`backfill`。細節見 [kernel2.md](../lib/kernel2.md)。上節「未決 1」就此解（全 defer 不再卡住）。
+套完判官的決定後還有空格，就用確定規則從沒被 reject 的剩下的信補滿；判官的 `defer`＝「不是我挑的」。log 的 `decide.backfill`、`start.reason`＝`backfill`。細節見 [kernel2.md](../lib/kernel_general.md)。上節「未決 1」就此解（全 defer 不再卡住）。
 
 後續：補位之後的實跑見 [judge-live2](2026-10-15-judge-live2.md)。

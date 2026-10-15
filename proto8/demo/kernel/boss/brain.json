@@ -1,1 +1,0 @@
-{"argv": ["aos-demo", "sh", "-c", "exec aos gate \"$AOS_DEMO/kernel/gate-fake.json\""], "timeout_ms": 200000}

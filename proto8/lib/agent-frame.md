@@ -44,9 +44,9 @@ cd frame && echo '{"parent": "/abs/clerk"}' > env.json && echo '{"question": "�
  "timeout_ms": 120000, "_tool": {"description": "問報時員…", "parameters": {…}}}
 ```
 
-- 綁定也在這一步做：例 `demo/kernel/boss/tools/clerk.json` 多一步 `cp …/boss/brain.json brain.json`，報時員就改用 boss 的腦（經閘門）。
+- 綁定也在這一步做：例 `demo/kernels/llm/boss/tools/clerk.json` 多一步 `cp …/boss/brain.json brain.json`，報時員就改用 boss 的腦（經閘門）。
 
 **換腦只換那一層**（10-15 使用者「都按照推薦」，[litellm 實跑 #1](../thinking/2026-10-15-litellm-live.md#拍板10-15)）：子 agent 沿**自己 frame** 的 `env.json` 往上找（`chain()` 只看 frame 自己的 env.json，不看呼叫方），所以呼叫方 frame 放的 `brain.json` 不會傳到子 agent。呼叫方要換子 agent 的腦，就在**子 agent 的 frame** 放 `brain.json`——寫在當工具的那張 inst 裡（像上面 boss 的 `cp`），或在 frame 放一份同名工具蓋過定義的（`demo/paint/run.py` 的 `bind_brain()`）。
-- 查過（10-15）：boss 叫報時員用的是 boss **定義資料夾**那顆經閘門的假腦，是因為 `boss/tools/clerk.json` 那行 `cp "$AOS_DEMO/kernel/boss/brain.json"` 寫死抄定義的腦，不是綁定從 boss 的 frame 漏下去；報時員自己的定義（`demo/fsm/clerk/brain.json`）是不經閘門的假腦。boss 的 frame 換了腦，報時員照樣用那行抄的那顆——這正是「只換那一層」。
+- 查過（10-15）：boss 叫報時員用的是 boss **定義資料夾**那顆經閘門的假腦，是因為 `boss/tools/clerk.json` 那行 `cp "$AOS_DEMO/kernels/llm/boss/brain.json"` 寫死抄定義的腦，不是綁定從 boss 的 frame 漏下去；報時員自己的定義（`demo/fsm/clerk/brain.json`）是不經閘門的假腦。boss 的 frame 換了腦，報時員照樣用那行抄的那顆——這正是「只換那一層」。
 - 上限：被叫者 loop 的 `times`、那張工具 inst 的 `timeout_ms`（父 agent 的 tool 格 `timeout_ms` 要更大）；遞迴深度不另外擋（Busy、TooDeep、MaxTicks 都拿掉了）。
 - 定義資料夾的路徑：demo 用 `aos-demo` 給的 `AOS_DEMO` 拼絕對路徑；不在 demo 裡就直接寫絕對路徑。

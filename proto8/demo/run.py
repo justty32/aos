@@ -3,8 +3,8 @@
 
     python3 proto8/demo/run.py
     python3 proto8/demo/run.py fsm     （改跑 fsm 的 demo，見 fsm/run.py）
-    python3 proto8/demo/run.py kernel  （改跑 LLM kernel 的 demo，見 kernel/run.py）
-    python3 proto8/demo/run.py kernel2 （改跑通用 kernel 的 demo，見 kernel2/run.py）
+    python3 proto8/demo/run.py kernels/llm （改跑 LLM kernel 的 demo，見 kernels/llm/run.py）
+    python3 proto8/demo/run.py kernels/general （改跑通用 kernel 的 demo，見 kernels/general/run.py）
 
 產物（控制資料夾、stdout、exit 檔）都放在 mktemp 建的暫存資料夾，跑完整個刪掉。
 """
@@ -115,7 +115,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] in (["fsm"], ["kernel"], ["kernel2"]):
+    if sys.argv[1:] in (["fsm"], ["kernels/llm"], ["kernels/general"]):
         import runpy
         runpy.run_path(os.path.join(HERE, sys.argv[1], "run.py"), run_name="__main__")
     else:

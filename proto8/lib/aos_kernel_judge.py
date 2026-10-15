@@ -1,9 +1,9 @@
-"""通用 kernel（aos_kernel.py）的判官那一半：跑判官格、讀它的答案、判官錯時用的確定規則。純標準庫。說明在 kernel2.md。
+"""通用 kernel（aos_kernel_general.py）的判官那一半：跑判官格、讀它的答案、判官錯時用的確定規則。純標準庫。說明在 kernel_general.md。
 
 判官＝一張 inst（N-12）：stdin＝kernel 的 state 窗只留 queue、running、slots、budget 四個 key（同一份物件的子集，C-48），
 stdout 最後一份＝{"run": [id…], "defer": [id…], "reject": [{"id", "error": {"code", "msg"}}]}（reject 的錯誤＝N-29 形狀）。
 
-相依：aos_inst ← aos_gate_kernel（order）← aos_kernel_judge ← aos_kernel。
+相依：aos_inst ← aos_kernel_llm（order）← aos_kernel_judge ← aos_kernel_general。
 """
 import json
 import os
@@ -13,7 +13,7 @@ import tempfile
 import aos_cli
 import aos_inst
 from aos_cli import CliError
-from aos_gate_kernel import order
+from aos_kernel_llm import order
 
 __all__ = ["JUDGE_KEYS", "JUDGE_TIMEOUT_MS", "ask_judge", "decide_rules", "parse_decision", "resource"]
 

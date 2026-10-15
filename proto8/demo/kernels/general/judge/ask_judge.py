@@ -1,7 +1,7 @@
 """agent 判官的入口：通用 kernel 的判官格（stdin＝kernel 的 state 窗子集 queue／running／slots／budget、stdout＝{run, defer, reject}）
 ↔ agent 當函數（定義資料夾 judge/，C-46：json＋資料夾＋inst，不靠專用程式）。
 
-    aos-demo kernel2/judge/ask_judge.py [定義資料夾]   （kernel 設定的 judge 指 judge-agent.json 就換上它；PATH 要有 proto8/bin、demo/bin）
+    aos-demo kernels/general/judge/ask_judge.py [定義資料夾]   （kernel 設定的 judge 指 judge-agent.json 就換上它；PATH 要有 proto8/bin、demo/bin）
 
 定義資料夾＝暫存 frame 的 env.json 的 parent，沒給＝本資料夾 judge/；相對路徑從 cwd 算。要換腦不必改 judge/ 也不必抄腳本：
 另開一個資料夾放 brain.json＋env.json（{"parent": "…/judge"}），把它當引數給（frame 照 env.json 鏈往上找，近的蓋遠的，C-46）。
@@ -31,7 +31,7 @@ if len(sys.argv) > 2:
     fail("Usage", "ask_judge.py [定義資料夾]")
 parent = os.path.abspath(sys.argv[1]) if len(sys.argv) == 2 else HERE
 if not os.path.isdir(parent):
-    fail("NoDefinition", "定義資料夾 %s 不存在" % parent)
+    fail("DefinitionMissing", "定義資料夾 %s 不存在" % parent)
 snap = sys.stdin.read()
 frame = tempfile.mkdtemp(prefix="aos-judge-frame-")
 try:
@@ -43,7 +43,7 @@ try:
         with open(os.path.join(frame, "ret.json"), encoding="utf-8") as f:
             ret = json.load(f)
     except (OSError, ValueError):
-        fail("NoReturn", "agent 判官沒寫 ret.json（沒跑完）")
+        fail("ReturnMissing", "agent 判官沒寫 ret.json（沒跑完）")
     if "error" in ret:
         fail("JudgeFailed", "agent 判官出錯：%s" % json.dumps(ret["error"], ensure_ascii=False))
     text = ret.get("reply") or ""

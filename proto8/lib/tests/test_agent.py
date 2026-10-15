@@ -79,7 +79,7 @@ class AgentRoundTest(Tmp):
         steps, hist = self.round("亂叫一個")
         self.assertEqual(steps[-1]["to"], "idle")
         self.assertTrue(all("error" not in s for s in steps))                # 不是 fsm 的錯
-        self.assertEqual(json.loads(hist[2]["content"])["error"]["code"], "UnknownTool")   # N-29 形狀
+        self.assertEqual(json.loads(hist[2]["content"])["error"]["code"], "ToolUnknown")   # N-29 形狀
 
     def test_empty_inbox_done_stops(self):
         # inbox 空了＝idle 回 next done：done 格寫 ret.json，fsm 結束（那行帶 end、phase 歸位 idle）
@@ -149,7 +149,7 @@ class AgentCellTest(Tmp):
     def test_no_cfg_is_cell_error(self):
         self.calls("echo")
         r = self.tool(cfg=False)
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoConfig"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "ConfigMissing"))
 
     def test_multiple_tool_calls_all_run_in_order(self):
         # 10-15 使用者「都按照推薦」：一拍內照順序全部跑，每個 id 都有對應的 tool 訊息（原本只跑第一個、其餘 Skipped）
@@ -162,7 +162,7 @@ class AgentCellTest(Tmp):
         res = [json.loads(m["content"]) for m in hist[2:]]
         self.assertEqual((res[0]["code"], res[0]["result"], res[0]["id"]), (0, {"x": 0}, self.p("tools", "echo.json")))
         self.assertEqual((res[1]["code"], res[1]["result"]), (0, {"x": 1}))           # 第二個也真的跑了
-        self.assertEqual(res[2]["error"]["code"], "UnknownTool")
+        self.assertEqual(res[2]["error"]["code"], "ToolUnknown")
         self.assertEqual([json.loads(self.read("work/%d/args.json" % n)) for n in (1, 2)], [{"x": 0}, {"x": 1}])
         data = json.loads(r.stdout)["data"]
         self.assertEqual((data["tool"], data["tools"]), ("echo", ["echo", "echo", "nope"]))
@@ -357,7 +357,7 @@ class BrainOllamaTest(BrainOpenaiTest):
         self.assertIn("does not support tools", err["msg"])
         _Stub.status, _Stub.reply = 200, {"nope": 1}
         r = self.ollama({"messages": []})
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "BadResponse"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "ResponseBad"))
 
     def test_no_tools_400_surfaces_and_stops(self):
         # 146 試跑的情形：腦回 400 → think 格 BrainFailed 帶原因 → fsm 那行的 error 看得到；

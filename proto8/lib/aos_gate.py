@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """閘門（gate）：LLM kernel（N-42 第一種）與通用 kernel 共用的包裝。不自己跑，把「真正要跑的 inst」當成一封信丟進
 kernel 的信箱，等回信，把那支 inst 的 stdout／stderr 原樣吐出、用它的結束碼退出——呼叫端看到的是一次普通的 N-12／N-30 呼叫。
-純標準庫。說明在同資料夾 kernel.md。
+純標準庫。說明在同資料夾 kernel_llm.md。
 
     python3 aos_gate.py [--key 值 ...] [GATE.json]          （stdin＝要轉給真正 inst 的內容，原樣）
 
@@ -25,7 +25,7 @@ KernelRestarted、kernel 那邊 aos_inst 起不來…）、QueueTimeout、自己
 SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）；已被 kernel 拿走的讓它跑完、回信沒人收；stderr 一份
 `Signaled`（msg 帶訊號號碼）、退出 1（原本 128＋N）。
 
-相依：aos_inst ← aos_mailbox ← aos_gate（← aos_gate_kernel ← aos_kernel_judge ← aos_kernel）。
+相依：aos_inst ← aos_mailbox ← aos_gate（← aos_kernel_llm ← aos_kernel_judge ← aos_kernel_general）。
 """
 import json
 import os

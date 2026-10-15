@@ -1,6 +1,7 @@
 #!/bin/sh
 # proto8 的 aos 入口（原型，薄入口）：放進 PATH 就能在 inst 的 argv 寫指令名（C-50），不寫相對腳本路徑。
-#   aos inst|loop|daemon|fsm|gate|kernel|gate-kernel|tree ...  → python3 lib/aos_<名>.py ...
+#   aos inst|loop|daemon|fsm|gate|tree ...                     → python3 lib/aos_<名>.py ...
+#   aos kernel llm|general ...                                  → python3 lib/aos_kernel_<名>.py ...（兩種 kernel，N-42）
 #   aos agent think|tool|route|intake|done|fsm ...             → python3 lib/aos_agent_lib.py ...
 #   aos brain openai|ollama ...                                → python3 lib/aos_brain_<名>.py ...
 # 跟 C++ 的 aos 執行檔同名但不相干；誰先在 PATH 上就用誰（proto8 的測試與 demo 把本資料夾排最前面）。
@@ -8,13 +9,16 @@ lib="$(dirname "$(readlink -f "$0")")/../lib"
 cmd="$1"
 [ $# -gt 0 ] && shift
 case "$cmd" in
-  inst|loop|daemon|fsm|gate|kernel|tree) exec python3 "$lib/aos_$cmd.py" "$@" ;;
-  gate-kernel) exec python3 "$lib/aos_gate_kernel.py" "$@" ;;
+  inst|loop|daemon|fsm|gate|tree) exec python3 "$lib/aos_$cmd.py" "$@" ;;
+  kernel)
+    case "$1" in
+      llm|general) k="$1"; shift; exec python3 "$lib/aos_kernel_$k.py" "$@" ;;
+    esac ;;
   agent) exec python3 "$lib/aos_agent_lib.py" "$@" ;;
   brain)
     case "$1" in
       openai|ollama) b="$1"; shift; exec python3 "$lib/aos_brain_$b.py" "$@" ;;
     esac ;;
 esac
-printf '{"error": {"code": "Usage", "msg": "aos inst|loop|daemon|fsm|gate|kernel|gate-kernel|tree|agent|brain openai|ollama ...（proto8 入口），不認得 %s"}}\n' "$cmd $1" >&2
-exit 2
+printf '{"error": {"code": "Usage", "msg": "aos inst|loop|daemon|fsm|gate|kernel llm|general|tree|agent|brain openai|ollama ...（proto8 入口），不認得 %s"}}\n' "$cmd $1" >&2
+exit 1

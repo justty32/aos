@@ -74,7 +74,7 @@ class AgentFrameTest(Tmp):
         self.assertEqual(json.loads(self.read("fr/st.json")), {"phase": "a"})
         r = subprocess.run(["aos", "agent", "fsm", "nope.json"], cwd=self.p("fr"), env=ENV, capture_output=True,
                            text=True, timeout=10)
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoFsm"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "FsmMissing"))
 
     def test_intake_continues_same_frame(self):
         # 同一個 frame 續聊：已經有 history、又來新的 args.json＝接在後面當新的 user 訊息；接完改名，不會接兩次
@@ -100,7 +100,7 @@ class AgentFrameTest(Tmp):
         self.assertEqual(json.loads(self.read("fr/history.json")), [{"role": "user", "content": "整段換掉"}])
         os.makedirs(self.p("empty"))
         r = self.run_cell("intake", self.p("empty"))
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoHistory"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "HistoryMissing"))
 
 
 BRAIN_PY = """import json, sys, time
@@ -238,20 +238,20 @@ print(json.dumps({"role": "assistant", "content": "好的：" + json.dumps({"run
 
 
 class AskJudgeTest(Tmp):
-    """demo/kernel2/judge/ask_judge.py 收定義資料夾當引數（10-15「都按照推薦」：不再寫死 judge/）：
+    """demo/kernels/general/judge/ask_judge.py 收定義資料夾當引數（10-15「都按照推薦」：不再寫死 judge/）：
     另開一個資料夾放 brain.json＋env.json 指回 judge/＝換腦，judge/ 一個字不動。"""
 
     def test_overlay_definition_swaps_brain(self):
-        judge = os.path.join(LIB, "..", "demo", "kernel2", "judge")
+        judge = os.path.join(LIB, "..", "demo", "kernels", "general", "judge")
         before = tree_hash(judge)
         self.write("over/brain.py", JUDGE_BRAIN_PY)
         self.write("over/brain.json", {"argv": [sys.executable, self.p("over", "brain.py")]})
         self.write("over/env.json", {"parent": os.path.abspath(judge)})
-        r = subprocess.run(["aos-demo", "kernel2/judge/ask_judge.py", "over"], cwd=self.tmp, env=ENV, input="{}",
+        r = subprocess.run(["aos-demo", "kernels/general/judge/ask_judge.py", "over"], cwd=self.tmp, env=ENV, input="{}",
                            capture_output=True, text=True, timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout), {"run": ["L1"], "defer": [], "reject": []})
         self.assertEqual(tree_hash(judge), before)
-        r = subprocess.run(["aos-demo", "kernel2/judge/ask_judge.py", "nope"], cwd=self.tmp, env=ENV, input="{}",
+        r = subprocess.run(["aos-demo", "kernels/general/judge/ask_judge.py", "nope"], cwd=self.tmp, env=ENV, input="{}",
                            capture_output=True, text=True, timeout=10)
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoDefinition"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "DefinitionMissing"))

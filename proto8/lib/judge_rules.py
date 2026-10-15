@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""規則判官（假判官）：通用 kernel（aos_kernel.py）的判官格，純規則、跟 agent 判官同一個介面。純標準庫。
+"""規則判官（假判官）：通用 kernel（aos_kernel_general.py）的判官格，純規則、跟 agent 判官同一個介面。純標準庫。
 
     python3 judge_rules.py      （stdin＝kernel 的 state 窗子集 queue／running／slots／budget；stdout 一份 {"run", "defer", "reject"}）
 

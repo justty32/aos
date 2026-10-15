@@ -6,9 +6,9 @@
 
 ### `proto8/lib/`（Python）
 
-逐檔表在 [proto8/lib/README.md](../../../../proto8/lib/README.md)；各程式的細節在同資料夾的 `directives.md`、`inst.md`、`loop.md`、`daemon.md`、`fsm.md`、`agent.md`（＋拆出的 `agent-lib.md`、`agent-frame.md`）、`kernel.md`、`kernel2.md`、`ctl-state.md`。
+逐檔表在 [proto8/lib/README.md](../../../../proto8/lib/README.md)；各程式的細節在同資料夾的 `directives.md`、`inst.md`、`loop.md`、`daemon.md`、`fsm.md`、`agent.md`（＋拆出的 `agent-lib.md`、`agent-frame.md`）、`kernel_llm.md`、`kernel_general.md`、`ctl-state.md`。
 
-**命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`；沒有寫 stderr 的警告，預料到的意外記進各自的窗 `last_warning`）、`檔#/位置`＋指示詞（語法糖）`aos_directives.py`。
+**命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`、值的雙形收成物件的 `expand()`；沒有寫 stderr 的警告，預料到的意外記進各自的窗 `last_warning`）、`檔#/位置`＋指示詞（語法糖）`aos_directives.py`。
 
 **inst／loop／daemon**：inst `aos_inst.py`；loop `aos_loop.py`（`stop_on_end`：包的 fsm 走到 end 就結束，N-44）＋共用的 ctl／state `aos_ctl_state.py` 與行程群組 `aos_proc.py`；daemon `aos_daemon.py`（重用 loop 的拍引擎）＋表與策略格 `aos_daemon_table.py`＋指令與控制資料夾 `aos_daemon_folder.py`。
 
@@ -18,11 +18,11 @@
 
 **真的腦**：`aos_brain_openai.py`（OpenAI 相容）與 `aos_brain_ollama.py`（ollama 原生 `/api/chat`，能設 num_ctx）；兩顆都在 assistant 訊息頂層帶 `usage` 給 kernel 記額度。
 
-**kernel**：信箱共用 `aos_mailbox.py`（信＝inst、回信＝N-30 結果、stdout／stderr 落旁檔）＋閘門 `aos_gate.py`（兩種 kernel 共用）；LLM kernel 的身體 `aos_gate_kernel.py`（N-42 第一種，細節 `kernel.md`）；通用 kernel 的身體 `aos_kernel.py`、判官那一半 `aos_kernel_judge.py`、規則判官 `judge_rules.py`（N-42 第二種，細節 `kernel2.md`）。
+**kernel**：信箱共用 `aos_mailbox.py`（信＝inst、回信＝N-30 結果、stdout／stderr 落旁檔）＋閘門 `aos_gate.py`（兩種 kernel 共用）；LLM kernel 的身體 `aos_kernel_llm.py`（N-42 第一種，細節 `kernel_llm.md`）；通用 kernel 的身體 `aos_kernel_general.py`、判官那一半 `aos_kernel_judge.py`、規則判官 `judge_rules.py`（N-42 第二種，細節 `kernel_general.md`）。
 
 **小工具**：inst 樹工具 `aos_tree.py`（print／inline，同像性；看狀況用，不屬規範）。
 
-**薄入口**：`proto8/bin/aos`（`aos <名>`＝`python3 lib/aos_<名>.py`、`aos agent …`、`aos brain …`，放進 PATH 讓 argv 寫指令名）。
+**薄入口**：`proto8/bin/aos`（`aos <名>`＝`python3 lib/aos_<名>.py`、`aos kernel llm|general`、`aos agent …`、`aos brain …`，放進 PATH 讓 argv 寫指令名）。
 
 **測試**：`tests/` 按程式分檔（`helpers.ENV` 把 `proto8/bin`、`demo/bin` 接到 PATH 前面）。
 
@@ -36,9 +36,9 @@
 
 **fsm／agent**（`demo/fsm/`）：本身是 agent 定義資料夾——`fsm.json`、`loop.json`、`cells/`（idle.py、thinking＝內層 `think/fsm.json`、tool、done）、`brain.json`＝假腦 `brain/fake.py`、`system.md`、`tools/clerk.json`（agent 當工具：`sh -c` 三步叫報時員）；換用的腦 `brain/openai.json`／`litellm.json`／`lmstudio.json`／`ollama146.json`／`qwen146.json`；報時員定義資料夾 `clerk/`（含 `tools/clock.*`）；`run.py` 建 frame、在裡面跑 loop.json。
 
-**LLM kernel**（`demo/kernel/`）：daemon／loop／kernel 設定由 `run.py` 寫成完整檔、閘門 `gate.json`／`gate-fake.json`、假腦 `brain.py`、腦包閘門的 agent 定義資料夾 `boss/`（工具 `tools/clerk.json` 借 `demo/fsm/clerk/` 並在它的 frame 綁 boss 的腦）。
+**LLM kernel**（`demo/kernels/llm/`）：daemon／loop／kernel 設定由 `run.py` 寫成完整檔、閘門 `gate.json`／`gate-fake.json`、假腦 `brain.py`、腦包閘門的 agent 定義資料夾 `boss/`（工具 `tools/clerk.json` 借 `demo/fsm/clerk/` 並在它的 frame 綁 boss 的腦）。
 
-**通用 kernel**（`demo/kernel2/`）：設定由 `run.py` 寫成完整檔、活 `job.py`（llm／cpu／human）、閘門 `gate-*.json`、判官 `judge-rules.json`（`_schema`→`judge.schema.json`）／`judge-broken.json`／`judge-agent.json`＋agent 判官定義資料夾 `judge/`（入口 `ask_judge.py [定義資料夾]`：暫存 frame（env.json 指引數給的資料夾，預設 judge/）跑 `judge/loop.json`、讀 ret.json）。
+**通用 kernel**（`demo/kernels/general/`）：設定由 `run.py` 寫成完整檔、活 `job.py`（llm／cpu／human）、閘門 `gate-*.json`、判官 `judge-rules.json`（`_schema`→`judge.schema.json`）／`judge-broken.json`／`judge-agent.json`＋agent 判官定義資料夾 `judge/`（入口 `ask_judge.py [定義資料夾]`：暫存 frame（env.json 指引數給的資料夾，預設 judge/）跑 `judge/loop.json`、讀 ret.json）。
 
 **畫家 demo**（[`demo/paint/`](../../../../proto8/demo/paint/README.md)）：兩個 agent 定義資料夾 `painter/`（工具 `tools/brush.json`＝`sh -c` 三步叫畫筆）、`brush/`（工具 `tools/palette.*` 調色盤），假腦 `brain/fake.py`（看帶哪個工具當畫家或畫筆）＋`brain/fake-alt.json`（換腦用），`run.py`＝三段展示＋`bind_brain()`（frame 放 brain.json＋改寫 tools/brush.json 讓畫筆也換）；測試 `tests/test_paint_demo.py`。
 

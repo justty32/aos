@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""proto8 LLM kernel 的 demo：aos-daemon 底下一個 aos-loop 每 100 ms 拍一次 kernel（aos_gate_kernel.py），
+"""proto8 LLM kernel 的 demo：aos-daemon 底下一個 aos-loop 每 100 ms 拍一次 kernel（aos_kernel_llm.py），
 呼叫者都經閘門（aos_gate.py）叫同一顆假腦（睡 1 秒），看 kernel 照什麼順序服務。
 
-    python3 proto8/demo/run.py kernel        （或直接 python3 proto8/demo/kernel/run.py）
+    python3 proto8/demo/run.py kernels/llm    （或直接 python3 proto8/demo/kernels/llm/run.py）
 
 三段：(1) 級數／deadline：先一封佔住唯一的格，再同時丟 low、normal、high、deadline 快到、deadline 已過；
 (2) aging：一封 low 跟一串不斷進來的 normal（快腦）；(3) 報時員巢狀（boss 問 clerk、clerk 查 clock），
@@ -20,9 +20,9 @@ import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-LIB = os.path.join(HERE, "..", "..", "lib")
+LIB = os.path.join(HERE, "..", "..", "..", "lib")
 GATE, DAEMON = os.path.join(LIB, "aos_gate.py"), os.path.join(LIB, "aos_daemon.py")
-ROOT = os.path.dirname(os.path.dirname(HERE))            # proto8/
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))   # proto8/
 T0 = time.monotonic()
 
 
@@ -50,7 +50,7 @@ def configs(tmp, log, state):
     """kernel（slots 1、額度 10 萬）／loop（每 100 ms 拍一次）／daemon 的完整設定寫進 tmp，回 daemon.json 的路徑。"""
     k = write(os.path.join(tmp, "kernel.json"), {"mailbox": os.path.join(tmp, "mb"), "state": state, "log": log,
                                                  "slots": 1, "budget": 100000, "aging_ticks": 10, "near_ms": 30000})
-    lp = write(os.path.join(tmp, "loop.json"), {"inst": {"argv": [sys.executable, os.path.join(LIB, "aos_gate_kernel.py"), k],
+    lp = write(os.path.join(tmp, "loop.json"), {"inst": {"argv": [sys.executable, os.path.join(LIB, "aos_kernel_llm.py"), k],
                                                          "cwd": HERE}, "times": None, "interval_ms": 100})
     return write(os.path.join(tmp, "daemon.json"), {"children": [lp], "interval_ms": 100,
                                                     "ctl": os.path.join(tmp, "daemon.ctl.json"),

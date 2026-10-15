@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """LLM kernel 的身體（N-42 第一種，基礎實作）：一拍＝跑一次本程式，由 aos-loop 拍（loop 掛在 aos-daemon 底下）。
-每拍看閘門（aos_gate.py）丟進信箱的信，挑下一封、真跑、寫回信。純標準庫。說明在同資料夾 kernel.md。
+每拍看閘門（aos_gate.py）丟進信箱的信，挑下一封、真跑、寫回信。純標準庫。說明在同資料夾 kernel_llm.md。
 
-    python3 aos_gate_kernel.py [--key 值 ...] [KERNEL.json | -]
+    python3 aos_kernel_llm.py [--key 值 ...] [KERNEL.json | -]
 
 設定：
     mailbox      信箱資料夾（同閘門的 mailbox；必填）
@@ -23,7 +23,7 @@
    回信＝結果（N-30）、刪信（aos_mailbox.run_letter）。
 stdout 一份 {"runs", "served", "dropped", "waiting", "budget"}。設定不對＝stderr 錯誤、退出 1。
 
-相依：aos_inst ← aos_mailbox ← aos_gate ← aos_gate_kernel（也借 aos_ctl_state 的 write_json）。
+相依：aos_inst ← aos_mailbox ← aos_gate ← aos_kernel_llm（也借 aos_ctl_state 的 write_json）。
 """
 import datetime
 import math
@@ -39,12 +39,12 @@ from aos_cli import is_int as _int
 from aos_ctl_state import write_json
 from aos_mailbox import claim, log, mailbox, read_letter, reply, run_letter
 
-__all__ = ["FLAGS", "KernelError", "check", "level", "main", "order", "tick"]
+__all__ = ["FLAGS", "KernelLlmError", "check", "level", "main", "order", "tick"]
 
 FLAGS = ("mailbox", "state", "slots", "budget", "aging_ticks", "near_ms", "log")
 
 
-class KernelError(CliError):
+class KernelLlmError(CliError):
     pass
 
 
@@ -52,16 +52,16 @@ def check(doc):
     """驗設定、補預設，回一份新的 dict。"""
     for k in ("mailbox", "state"):
         if not isinstance(doc.get(k), str):
-            raise KernelError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
+            raise KernelLlmError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
     c = dict(doc, slots=doc.get("slots", 1), budget=doc.get("budget"),
              aging_ticks=doc.get("aging_ticks", 10), near_ms=doc.get("near_ms", 30000))
     for k, lo in (("slots", 1), ("aging_ticks", 1), ("near_ms", 0)):
         if not _int(c[k], lo):
-            raise KernelError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
+            raise KernelLlmError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
     if not (c["budget"] is None or _int(c["budget"], 0)):
-        raise KernelError("FieldType", "budget 要是非負整數或 null，不是 %r" % (c["budget"],))
+        raise KernelLlmError("FieldType", "budget 要是非負整數或 null，不是 %r" % (c["budget"],))
     if not (c.get("log") is None or isinstance(c["log"], str)):
-        raise KernelError("FieldType", "log 要是路徑字串，不是 %r" % (c["log"],))
+        raise KernelLlmError("FieldType", "log 要是路徑字串，不是 %r" % (c["log"],))
     return c
 
 
@@ -203,7 +203,7 @@ def main(argv=None):
     try:
         doc, _, _, rest = aos_cli.config(args, FLAGS)
         if rest is not None:
-            raise KernelError("Usage", "kernel 不收 `--`")
+            raise KernelLlmError("Usage", "kernel 不收 `--`")
         aos_cli.emit(tick(check(doc)))
         return 0
     except CliError as e:

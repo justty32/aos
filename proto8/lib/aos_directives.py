@@ -16,7 +16,7 @@
 - `{"$env": "NAME"}`：讀環境變數 `NAME`。不存在＝錯誤；存在但空＝空字串。
 
 錯了一律丟 `DirectiveError`，`code` 是下面七種之一：
-`UnknownDirective`、`DirectiveValueTypeMismatch`、`EnvironmentVariableMissing`、
+`DirectiveUnknown`、`DirectiveValueTypeMismatch`、`EnvironmentVariableMissing`、
 `ReferenceReadFailed`、`ReferenceJsonInvalid`、`ReferencePointerInvalid`、`ReferenceCycle`。
 
 命令列 TARGET 的 `檔#/位置`（aos_inst、aos_loop、aos_daemon 共用，位置的寫法同 `$ref`）：
@@ -102,7 +102,7 @@ class _Resolver:
             if name not in os.environ:
                 raise DirectiveError("EnvironmentVariableMissing", "%s 的 $env 找不到變數 %s" % (where, name))
             return os.environ[name]
-        raise DirectiveError("UnknownDirective",
+        raise DirectiveError("DirectiveUnknown",
                              "%s 的 %s 不認得，只有 $ref、$env"
                              % (where, "、".join(repr(k) for k in d if isinstance(k, str) and k.startswith("$"))))
 

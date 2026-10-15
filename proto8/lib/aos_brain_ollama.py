@@ -4,7 +4,7 @@
     python3 aos_brain_ollama.py [--key 值 ...] [CONFIG.json]   < {"messages": [...], "tools": [...]}
 
 為什麼不走 ollama 的 OpenAI 相容 `/v1`：那條設不了 `num_ctx`（context 長度），ollama 會用模型預設、可能吃爆顯存。
-- stdin＝請求（一份；多份＝ExtraInput 錯）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools，ollama 收同樣形狀）。
+- stdin＝請求（一份；多份＝InputExtra 錯）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools，ollama 收同樣形狀）。
 - stdout＝一份 OpenAI assistant 訊息 `{"role": "assistant", "content", "tool_calls"?, "usage"?}`，跟 aos_brain_openai 一樣
   （usage 由 prompt_eval_count＋eval_count 換成 OpenAI 形狀）。
 - 兩邊形狀的翻譯：
@@ -19,7 +19,7 @@
       timeout_ms   預設 120000
   不串流（stream: false）。
 - 出錯：stderr 吐 {"error": {"code", "msg"}}、退出 1。代號：HttpError（含模型不支援 tools 時 ollama 回的 400）、
-  ConnectFailed、BadResponse，設定的照 aos_cli。
+  ConnectFailed、ResponseBad，設定的照 aos_cli。
 """
 import json
 import os
@@ -117,7 +117,7 @@ def ask(cfg, req):
             out["usage"] = {"prompt_tokens": p, "completion_tokens": c, "total_tokens": p + c}
         return out
     except (ValueError, KeyError, IndexError, TypeError, AttributeError):
-        raise CliError("BadResponse", "%s 回的不是 ollama chat 回應：%s" % (url, raw[:500].decode("utf-8", "replace")))
+        raise CliError("ResponseBad", "%s 回的不是 ollama chat 回應：%s" % (url, raw[:500].decode("utf-8", "replace")))
 
 
 def main(argv=None):
@@ -128,7 +128,7 @@ def main(argv=None):
         if not (docs and isinstance(docs[0], dict)):
             raise CliError("JsonSyntax", "stdin 要有一份請求 {\"messages\", \"tools\"}")
         if len(docs) > 1:
-            raise CliError("ExtraInput", "stdin 有 %d 份 JSON，請求只要一份" % len(docs))
+            raise CliError("InputExtra", "stdin 有 %d 份 JSON，請求只要一份" % len(docs))
         aos_cli.emit(ask(cfg, docs[0]))
     except CliError as e:
         aos_cli.error(e.code, e.msg)

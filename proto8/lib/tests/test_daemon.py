@@ -93,12 +93,12 @@ class Daemon(Tmp):
         self.assertEqual(self.err({"op": "add", "id": "a.loop.json"}), "FieldType")
         self.assertEqual(self.err({"op": "add", "id": self.p("nope.json")}), "NotFound")
         self.assertEqual(self.err({"op": "set", "id": a, "how": {"timeout_ms": 5}}), "FieldType")
-        self.assertEqual(self.err({"op": "jump"}), "UnknownOp")
+        self.assertEqual(self.err({"op": "jump"}), "OpUnknown")
         self.assertEqual(self.err({"op": "add_times", "id": a, "delta": "x"}), "FieldType")
-        self.assertEqual(self.err({"op": "save", "path": self.p("x.json")}), "UnknownOp")     # save／load 併進 table 窗
+        self.assertEqual(self.err({"op": "save", "path": self.p("x.json")}), "OpUnknown")     # save／load 併進 table 窗
         self.write("ctl/bad.json", "{")
         r = self.get(self.p("ctl/bad.json.done"))
-        self.assertEqual((r["request"], r["error"]["code"]), ("{", "BadCommand"))
+        self.assertEqual((r["request"], r["error"]["code"]), ("{", "CommandBad"))
         self.assertEqual(self.stop(), 0)
         self.assertEqual(os.listdir(self.p("loops")), ["1"])        # remove 刪那格；收工留著（給下次接回）
 

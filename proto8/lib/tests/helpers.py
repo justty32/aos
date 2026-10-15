@@ -81,7 +81,7 @@ def alive(pid):
         return False
 
 
-def leftovers(root, names=("aos_loop.py", "aos_daemon.py", "aos_gate.py", "aos_fsm.py", "aos_kernel.py", "aos_gate_kernel.py", "aos_kernel_judge.py")):
+def leftovers(root, names=("aos_loop.py", "aos_daemon.py", "aos_gate.py", "aos_fsm.py", "aos_kernel_general.py", "aos_kernel_llm.py", "aos_kernel_judge.py")):
     """cwd 或命令列路徑在 root 底下、命令列有 names 之一的行程：[(pid, 命令列), ...]（讀 /proc；不收殭屍）。"""
     root = os.path.realpath(root)
 

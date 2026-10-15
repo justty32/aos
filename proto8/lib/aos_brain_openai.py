@@ -3,7 +3,7 @@
 
     python3 aos_brain_openai.py [--key 值 ...] [CONFIG.json]   < {"messages": [...], "tools": [...]}
 
-- stdin＝請求（一份；多份＝ExtraInput 錯）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools）。
+- stdin＝請求（一份；多份＝InputExtra 錯）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools）。
 - stdout＝一份 OpenAI assistant 訊息 `{"role": "assistant", "content", "tool_calls"?, "usage"?}`（取 choices[0].message）；
   端點有回 `usage` 就照抄在頂層（給 LLM kernel 記額度；think 格接進 history 前拿掉）。
 - 設定從 CONFIG.json（可接 `#/位置`）或旗標來（stdin 已經是請求，不收 `-`）：
@@ -12,7 +12,7 @@
       api_key_env  選填：放金鑰的環境變數名（例 DEEPSEEK_API_KEY）；沒寫＝不帶 Authorization（LiteLLM 不用）
       timeout_ms   預設 120000
   金鑰只從環境變數讀，不寫進檔、不印。不串流。
-- 出錯：stderr 吐 {"error": {"code", "msg"}}、退出 1。代號：HttpError、ConnectFailed、BadResponse、NoApiKey，設定的照 aos_cli。
+- 出錯：stderr 吐 {"error": {"code", "msg"}}、退出 1。代號：HttpError、ConnectFailed、ResponseBad、ApiKeyMissing，設定的照 aos_cli。
 """
 import json
 import os
@@ -49,7 +49,7 @@ def ask(cfg, req):
     if cfg["api_key_env"]:
         key = os.environ.get(cfg["api_key_env"])
         if not key:
-            raise CliError("NoApiKey", "環境變數 %s 沒有設" % cfg["api_key_env"])
+            raise CliError("ApiKeyMissing", "環境變數 %s 沒有設" % cfg["api_key_env"])
         headers["Authorization"] = "Bearer " + key
     url = cfg["base_url"].rstrip("/") + "/chat/completions"
     r = urllib.request.Request(url, json.dumps(body).encode("utf-8"), headers, method="POST")
@@ -72,7 +72,7 @@ def ask(cfg, req):
         if isinstance(doc.get("usage"), dict):
             out["usage"] = doc["usage"]
     except (ValueError, KeyError, IndexError, TypeError, AttributeError):
-        raise CliError("BadResponse", "%s 回的不是 chat completion：%s" % (url, raw[:500].decode("utf-8", "replace")))
+        raise CliError("ResponseBad", "%s 回的不是 chat completion：%s" % (url, raw[:500].decode("utf-8", "replace")))
     return out
 
 
@@ -84,7 +84,7 @@ def main(argv=None):
         if not (docs and isinstance(docs[0], dict)):
             raise CliError("JsonSyntax", "stdin 要有一份請求 {\"messages\", \"tools\"}")
         if len(docs) > 1:
-            raise CliError("ExtraInput", "stdin 有 %d 份 JSON，請求只要一份" % len(docs))
+            raise CliError("InputExtra", "stdin 有 %d 份 JSON，請求只要一份" % len(docs))
         aos_cli.emit(ask(cfg, docs[0]))
     except CliError as e:
         aos_cli.error(e.code, e.msg)
