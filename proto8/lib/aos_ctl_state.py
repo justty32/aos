@@ -15,7 +15,7 @@ import json
 import os
 import time
 
-from aos_cli import warn
+from aos_cli import is_int, warn
 
 __all__ = ["BEAT_MS", "CtlFile", "STATES", "StateFile", "parse_ctl", "proc_started", "read_state", "require", "state_doc", "want",
            "write_json"]
@@ -26,7 +26,7 @@ _MODES = ("after", "fixed")
 
 
 def _int(v, least=0):
-    return isinstance(v, int) and not isinstance(v, bool) and v >= least
+    return is_int(v, least)
 
 
 # ---- ctl.json ----

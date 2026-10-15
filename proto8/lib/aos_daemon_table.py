@@ -20,7 +20,7 @@ import time
 import aos_cli
 import aos_inst
 import aos_loop
-from aos_cli import CliError
+from aos_cli import CliError, is_int
 from aos_ctl_state import proc_started
 from aos_directives import DirectiveError, split_target, target_id
 from aos_loop import check_config, parse_ctl, read_state, reap, write_json
@@ -87,7 +87,7 @@ class _Entry:
     def update_ctl(self, **fields):
         """讀現在的 ctl、改幾格、流水號 seq 加一、整份寫回（暫存再改名），回這次的 seq（N-14 回音以序號為準）。"""
         doc = self.ctl_doc()
-        seq = (doc.get("seq") if aos_loop._int(doc.get("seq")) else 0) + 1
+        seq = (doc.get("seq") if is_int(doc.get("seq"), 0) else 0) + 1
         try:
             write_json(self.ctl, dict(doc, seq=seq, **fields))
         except OSError as e:
@@ -101,7 +101,7 @@ class _Entry:
             if self.exited():
                 return st
             s = st.get("ctl_seq")
-            return st if aos_loop._int(s) and s >= seq and settled(st) else None
+            return st if is_int(s, 0) and s >= seq and settled(st) else None
         return ready
 
 
@@ -226,7 +226,7 @@ class Table:
             with open(fout, encoding="utf-8") as f:
                 outs = [o for o in aos_cli.read_stream(f.read()) if isinstance(o, dict)]
             act = outs[-1]
-            if act.get("action") not in ("restart", "leave", "remove") or not aos_loop._int(act.get("after_ms", 0)):
+            if act.get("action") not in ("restart", "leave", "remove") or not is_int(act.get("after_ms", 0), 0):
                 raise ValueError("策略格回的不對：%r" % (act,))
         except (CliError, OSError, ValueError, IndexError) as err:
             self._say("PolicyFailed", "%s 的 child_exit 策略格出錯（%s），當成 leave" % (e.id, err))
@@ -295,14 +295,14 @@ class Table:
         return e.acked(e.update_ctl(paused=False))
 
     def add_times(self, path, delta):
-        if not aos_loop._int(delta, -2 ** 63):
+        if not is_int(delta, -2 ** 63):
             raise DaemonError("FieldType", "delta 要是整數，不是 %r" % (delta,))
         e = self._get(path)
         doc = e.ctl_doc()
         times = doc["times"] if "times" in doc else e.times
         if times is None:
             raise DaemonError("Conflict", "%s 是不限次數，不能加減" % e.id)
-        if not aos_loop._int(times):
+        if not is_int(times, 0):
             raise DaemonError("Conflict", "%s 的 ctl 裡 times 不對：%r" % (e.id, times))
         return e.acked(e.update_ctl(times=max(0, times + delta)))
 

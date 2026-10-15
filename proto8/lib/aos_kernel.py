@@ -32,6 +32,7 @@ import time
 
 import aos_cli
 from aos_cli import CliError
+from aos_cli import is_int as _int
 from aos_ctl_state import write_json
 from aos_gate_kernel import deadline
 from aos_mailbox import claim, log, mailbox, read_letter, reply, run_letter
@@ -44,10 +45,6 @@ FLAGS = ("mailbox", "state", "slots", "judge", "max_fails", "budget", "aging_tic
 
 class KernelError(CliError):
     pass
-
-
-def _int(v, lo):
-    return isinstance(v, int) and not isinstance(v, bool) and v >= lo
 
 
 def check(doc):

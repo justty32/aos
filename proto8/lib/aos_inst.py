@@ -56,6 +56,7 @@ import time
 
 import aos_cli
 from aos_cli import CliError
+from aos_cli import is_int as _int
 from aos_directives import DirectiveError, resolve, split_target, target_id
 
 __all__ = ["FLAGS", "InstError", "dirname", "exit_code", "find", "load", "main", "parse", "read_exit", "run"]
@@ -251,10 +252,6 @@ def _run(inst):
     finally:
         for sig, handler in old.items():
             signal.signal(sig, handler)
-
-
-def _int(v):
-    return isinstance(v, int) and not isinstance(v, bool)
 
 
 def _start(inst):
