@@ -20,7 +20,7 @@
 | 主題 | 規範分檔 | 概念 | 實作 |
 |---|---|---|---|
 | 設計理念 | 沒有專屬的條 | [CONCEPTS 設計理念](CONCEPTS/01-設計理念.md) | — |
-| 設計理念／時空（暫定） | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | proto8-1 `aos-tick` |
+| 設計理念／時空 | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | proto8-1 `aos-tick` |
 | 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-12 stdio、N-18 實作分級、N-29 stderr 形狀、N-35 `檔#/位置` | 出自 C-07、C-45 | lib `aos_cli`、[directives](lib/directives.md) |
 | 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md) | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [lib inst](lib/inst.md) |
 | 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md) | 同上 | [lib loop](lib/loop.md)、[daemon](lib/daemon.md) |
@@ -31,7 +31,7 @@
 | agent | 沒有專屬的條（用 fsm 組出來） | [CONCEPTS agent](CONCEPTS/05-agent.md) | — |
 | 待定（不拆，每條標主題） | [08-待定.md](NORMS/08-待定.md) | | |
 
-> **總則與設計理念**目前分兩份（設計理念只有概念、總則只有規範），使用者之後可能併成一個主題。時空放在設計理念下是暫定。
+> **總則與設計理念**分兩份（設計理念只有概念、總則只有規範；總則＝跨主題的規範，設計理念＝概念）。10-15 使用者「隨你」：維持分開。時空放在設計理念下也定案（同日「隨你」）。
 
 ## 條號 → 檔
 
