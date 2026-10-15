@@ -33,13 +33,15 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
 - think：讀 history、組 {"messages", "tools"}、蓋 stdin 跑腦、把回來的 assistant 訊息（拿掉頂層 `usage`）接進 history，
   stdout 吐 {"data": {"content", "tool_calls": [工具名...]}}（沒有 next：下一格寫在表上）。
   history 最後一則已經是 assistant（上一拍接好了才被殺）＝不再叫腦。
-- tool：找 history 最後一則 assistant 還沒回的 tool_calls，只跑第一個：mkdir 搶一個新號碼資料夾 work/<n>/（C-46：工具呼叫
+- tool：找 history 最後一則 assistant 還沒回的 tool_calls，一拍內照順序全部跑（10-15 使用者「都按照推薦」；原本只跑第一個、
+  其餘回 Skipped）：每個都 mkdir 搶一個新號碼資料夾 work/<n>/（C-46：工具呼叫
   的 frame 預設在這），引數寫成那裡的 args.json 當 stdin、stdout 接到那裡的 stdout.json，在那裡跑那張 inst（inst 自己寫了 cwd
   就照它的），回 {"role": "tool", "tool_call_id", "content": JSON 字串＝aos_inst 的結果（N-30：id、code、signal、timed_out…）
   ＋`result`（工具 stdout 最後一份 JSON）（截 8000 字）}；工具起不來、引數不是 JSON、工具名不認得＝content 是 N-29 形狀
   {"error": {"code", "msg"}}（代號 InstError 的原代號、BadArguments、UnknownTool）。
-  其餘的回 {"error": {"code": "Skipped", …}}＋stderr 警告。上一拍被殺一半（work/.tool-running.json 還在、
-  記的是同一個 tool_call id＝跑過一半）＝不重跑，全回 {"error": {"code": "Interrupted", …}}。
+  每跑完一個就接進 history（中途被殺，跑完的不重跑）。上一拍被殺一半（work/.tool-running.json 還在、記的是還沒回的第一個
+  tool_call id＝跑過一半）＝那個不重跑、回 {"error": {"code": "Interrupted", …}}，其餘照跑。
+  stdout 的 data：{"tool": 第一個名, "result": 第一個結果, "tools": [名…], "results": [結果…]}。
 - 出錯（設定不對、腦結束碼非 0、腦回的不是 assistant 訊息）：stderr 吐 {"error": {"code", "msg"}}、退出 1（格出錯）。
   腦出錯時 msg 帶腦自己 stderr 的錯誤（例 `HttpError: … 回 400：…does not support tools`），fsm 那行的 error 看得到。
   think 連錯：次數記在 work/think-fails.json（成功一次就刪），到 halt_after 次＝不報錯、改吐
@@ -63,7 +65,6 @@ __all__ = ["AgentError", "LIMIT", "act", "chain", "done", "intake", "load_config
 
 
 LIMIT = 8000                                   # 工具結果回給模型最多幾個字
-SKIPPED = ("Skipped", "基礎實作一次只跑一個，這個沒跑")
 UNKNOWN = ("UnknownTool", "不認得這個工具")
 INTERRUPTED = ("Interrupted", "被中斷，沒重跑")
 
@@ -240,33 +241,33 @@ def _run_tool(cfg, call):
 
 
 def act(cfg):
-    """跑還沒回的第一個工具呼叫，其餘回「沒跑」；回這格的 data。上一拍被殺一半（.tool-running.json 還在）＝不重跑。"""
+    """照順序跑完最後一則 assistant 還沒回的每個工具呼叫（一拍內），每跑完一個就把它的 tool 訊息接進 history；回這格的 data。
+    上一拍被殺一半（.tool-running.json 還在、記的是還沒回的第一個 id）＝那個不重跑、回 Interrupted，其餘照跑。"""
     msgs = read_history(cfg["history"])
     calls = pending(msgs)
     if not calls:
         return {"tool": None}
-    mark = os.path.join(cfg["work"], ".tool-running.json")     # 跑工具前寫、跑完刪：還在且同一個 id＝上一拍被殺一半
+    mark = os.path.join(cfg["work"], ".tool-running.json")     # 跑每個工具前寫、跑完刪：還在且同一個 id＝上一拍被殺一半
     interrupted = False
     try:
         with open(mark, encoding="utf-8") as f:
             interrupted = json.load(f).get("id") == calls[0].get("id")
     except (OSError, ValueError, AttributeError):
         pass
-    if interrupted:
-        content = _err(*INTERRUPTED)
-        write_json(cfg["history"], msgs + [_answer(c, content) for c in calls])
-        _rm(mark)
-        return {"tool": calls[0]["function"]["name"], "result": content}
-    first, rest = calls[0], calls[1:]
-    if rest:
-        aos_cli.warn("ToolCallsSkipped", "一次回了 %d 個工具呼叫，基礎實作只跑第一個（%s）"
-                     % (len(calls), first["function"]["name"]))
     os.makedirs(cfg["work"], exist_ok=True)
-    write_json(mark, {"id": first.get("id")})
-    content = _run_tool(cfg, first)
-    write_json(cfg["history"], msgs + [_answer(first, content)] + [_answer(c, _err(*SKIPPED)) for c in rest])
-    _rm(mark)
-    return {"tool": first["function"]["name"], "result": content}
+    names, results = [], []
+    for i, call in enumerate(calls):
+        if i == 0 and interrupted:
+            content = _err(*INTERRUPTED)
+        else:
+            write_json(mark, {"id": call.get("id")})
+            content = _run_tool(cfg, call)
+        msgs = msgs + [_answer(call, content)]
+        write_json(cfg["history"], msgs)                         # 一個一個接：中途被殺，跑完的不會重跑
+        _rm(mark)
+        names.append(call.get("function", {}).get("name"))
+        results.append(content)
+    return {"tool": names[0], "result": results[0], "tools": names, "results": results}
 
 
 def route(cfg, done="idle"):

@@ -151,17 +151,37 @@ class AgentCellTest(Tmp):
         r = self.tool(cfg=False)
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoConfig"))
 
-    def test_multiple_tool_calls_runs_first_only(self):
+    def test_multiple_tool_calls_all_run_in_order(self):
+        # 10-15 使用者「都按照推薦」：一拍內照順序全部跑，每個 id 都有對應的 tool 訊息（原本只跑第一個、其餘 Skipped）
         self.calls("echo", "echo", "nope")
         r = self.tool()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stderr.splitlines()[0])["warning"]["code"], "ToolCallsSkipped")
+        self.assertEqual(r.stderr, "")                                                 # 不再警告 ToolCallsSkipped
         hist = json.loads(self.read("h.json"))
-        self.assertEqual([m.get("tool_call_id") for m in hist[2:]], ["c0", "c1", "c2"])   # 每個 id 都有回
-        res = json.loads(hist[2]["content"])                                          # N-30 結果＋result
-        self.assertEqual((res["code"], res["result"], res["id"]), (0, {"x": 0}, self.p("tools", "echo.json")))
-        self.assertEqual([json.loads(m["content"])["error"]["code"] for m in hist[3:]], ["Skipped"] * 2)
+        self.assertEqual([m.get("tool_call_id") for m in hist[2:]], ["c0", "c1", "c2"])   # 照順序、每個 id 都有回
+        res = [json.loads(m["content"]) for m in hist[2:]]
+        self.assertEqual((res[0]["code"], res[0]["result"], res[0]["id"]), (0, {"x": 0}, self.p("tools", "echo.json")))
+        self.assertEqual((res[1]["code"], res[1]["result"]), (0, {"x": 1}))           # 第二個也真的跑了
+        self.assertEqual(res[2]["error"]["code"], "UnknownTool")
+        self.assertEqual([json.loads(self.read("work/%d/args.json" % n)) for n in (1, 2)], [{"x": 0}, {"x": 1}])
+        data = json.loads(r.stdout)["data"]
+        self.assertEqual((data["tool"], data["tools"]), ("echo", ["echo", "echo", "nope"]))
+        self.assertFalse(os.path.exists(self.p("work", ".tool-running.json")))
         self.assertEqual(self.tool().stdout.strip(), '{"data": {"tool": null}}')    # 都回過了＝什麼都不跑
+
+    def test_interrupted_in_middle_skips_only_that_one(self):
+        # 兩個工具，第一個已經回了、第二個跑到一半被殺：第二個回 Interrupted 不重跑，第三個照跑
+        self.calls("echo", "echo", "echo")
+        hist = json.loads(self.read("h.json"))
+        self.write("h.json", hist + [{"role": "tool", "tool_call_id": "c0", "content": "{}"}])
+        self.write("work/.tool-running.json", {"id": "c1"})
+        r = self.tool()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        hist = json.loads(self.read("h.json"))
+        self.assertEqual([m.get("tool_call_id") for m in hist[2:]], ["c0", "c1", "c2"])
+        self.assertEqual(json.loads(hist[3]["content"])["error"]["code"], "Interrupted")
+        self.assertEqual(json.loads(hist[4]["content"])["result"], {"x": 2})
+        self.assertEqual(sorted(os.listdir(self.p("work"))), ["1"])                # 只跑了 c2
 
     def test_each_call_in_new_numbered_folder(self):
         # 工具每次在 work/<n>/ 新資料夾跑（C-46 工具呼叫的 frame 預設），引數寫成那裡的 args.json

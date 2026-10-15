@@ -33,3 +33,15 @@
 3. **平行 tool_calls 第二個被 `Skipped`**，GPT 類很常一次發多個；模型看到 Skipped 只會說「沒成功」，不會自己重叫。推薦：基礎實作的 tool 格一拍跑完全部（照順序），或 Skipped 的訊息直接寫「請再叫一次」。
 4. **halted 時 loop 退出碼 0、state `done`**，呼叫方只能看 `ret.json` 有沒有 `error` 才知道失敗（N-43 只管 0／非 0）。現在 demo 都有看 ret.json，先記下。
 5. proxy 每次多塞約 1600 prompt tokens（codex 後端），額度算法（LLM kernel 的 token 額度）會被它放大；只是提醒。
+
+## 拍板（10-15）
+
+**原文**：使用者對上面 5 題與畫家 demo 兩個自定點「**都按照推薦**」；其中第 4 題後來被他的新原則推翻（C-52「只管自己這一層」，見 CONCEPTS），他回「**都同意。**」。
+
+1. **換腦只換那一層**：子 agent 沿自己 frame 的 `env.json` 往上找，不看呼叫方；要換子 agent 的腦就在它的 frame 放 `brain.json`。程式本來就是這樣；boss 叫報時員用 boss 定義的腦，是 `boss/tools/clerk.json` 寫死 `cp` 定義的 brain.json，不是漏下去（[agent-frame.md](../lib/agent-frame.md)）。
+2. **ask_judge.py 收定義資料夾當引數**（沒給＝`judge/`）；換腦＝另開資料夾放 `brain.json`＋`env.json` 指回 `judge/`。
+3. **多個 tool_calls 一拍照順序跑完**，每個回對應 id；`Skipped` 拿掉（[agent-lib.md](../lib/agent-lib.md)）。
+4. ~~halted 時 loop 退非 0~~ **取消**：C-52 推翻，loop 照舊退 0，外面看 `ret.json` 的 `error`。
+5. **proxy 多塞 token**：不處理。
+
+畫家 demo（[demo/paint](../demo/paint/README.md)）：畫家想到才把畫筆當工具叫＝維持；`brain.json` 只換那一層＝維持（同 1）。

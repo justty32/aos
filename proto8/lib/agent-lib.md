@@ -14,7 +14,7 @@ aos agent think|tool|route [--done 名]|intake|done|fsm [NAME]      （＝python
 - **設定從哪來**（10-15 收工後改：fsm 不再餵格 stdin，N-37）：stdin＝那張格 inst 自己 `stdin` 指的檔（沒寫＝空）；那份的 key 優先，沒寫的照 frame（＝cwd）找——`lookup()`：先找 cwd，找不到照 cwd 裡 `env.json` 的 `parent` 往上找（C-46，繞圈或超過 16 層就停）。`brain`＝`brain.json`、`tools`＝`tools/*.json`（`lookup_dir()`：各層逐項合併、近的蓋過遠的；名字＝檔名去掉 `.json`）、`system`＝`system.md`（有才帶）、`history`＝cwd 的 `history.json`、`work`＝cwd 的 `work/`。stdin 不是物件＝`NoConfig`、退出 1。相對路徑從格的 cwd 算。定義資料夾的格都不寫 stdin，全靠 frame 找。
 
 - **think**：讀 history、組請求（`tools` 從各工具 inst 的 `_tool` 來；沒工具就不帶）、蓋 stdin 跑腦（`aos_methods.run_cell`）、把 assistant 訊息（拿掉頂層 `usage`）接進 history，stdout `{"data": {"content", "tool_calls": [工具名]}}`。不吐 `next`：下一格寫在表上。history 最後已經是 assistant（上一拍接好才被殺）＝不再叫腦。腦結束碼非 0＝`BrainFailed`（白話＝腦 stderr 的錯誤 `代號: 白話`，腦沒吐才寫結束碼）、回的不是 assistant 訊息＝`BadReply`，這格退出 1，fsm 那行的 `error` 是 `CellFailed: BrainFailed: HttpError: …`。**連錯停住是格自己的事**（N-38）：次數記在 `work/think-fails.json`（成功一次就刪），到 `halt_after`（預設 3）次＝不報錯、改吐 `{"next": halt_state（預設 "halted"）, "data": {"error"}}`——表上要有那個狀態（例 done 格寫錯誤的 ret.json），不然 fsm 報 `UnknownNext`、每拍再叫一次腦。
-- **tool**：找最後一則 assistant 還沒回的 `tool_calls`，跑一個、接 tool 訊息，stdout `{"data": {"tool", "result"}}`。跑工具前寫 `work/.tool-running.json`（記 tool_call id）、跑完刪：下一拍看到它還在、同一個 id＝上一拍被殺一半。
+- **tool**：找最後一則 assistant 還沒回的 `tool_calls`，一拍內照順序全部跑、每跑完一個就接一則 tool 訊息，stdout `{"data": {"tool", "result", "tools", "results"}}`（`tool`／`result`＝第一個，`tools`／`results`＝全部）。每個工具跑前寫 `work/.tool-running.json`（記 tool_call id）、跑完刪：下一拍看到它還在、是還沒回的第一個 id＝上一拍被殺一半。
 - **route**：看最後一則 assistant，有 `tool_calls`＝`{"next": "tool"}`，否則 `{"next": "idle", "data": {"reply"}}`（`--done 名` 把 idle 換掉，定義資料夾寫 `--done done`）。單層表用（demo 的 `clerk/`）。
 - **intake**：把 cwd 的 `args.json`（實引數）接進 history，接完把 `args.json` 改名成 `args.taken.json`、刪掉上一輪的 `ret.json`（同一份不會接兩次；呼叫方下次再寫一份新的 `args.json` 就是新問題）。`{"question"}`：frame 還沒有 `history.json`＝生一份 `[user 訊息]`；已經有＝接在後面當一則新的 user 訊息（同一個 frame 續聊，10-15 使用者「按照建議」）；history 最後一則已經是同一句 user 訊息（上一拍接好了、改名前被殺）＝不再接。`{"history"}`＝整段換掉。沒有 `args.json`：已經有 history＝照舊往下（呼叫方綁了 history，或接著上次的）；也沒有＝`NoHistory`。
 - **done**：寫 cwd 的 `ret.json`（`work/think-fails.json` 在＝`{"error"}`，否則 `{"reply": 最後一句}`）。不碰 ctl：done 在表的 `end` 裡，fsm 結束那拍那行帶 `"end": true`，拍它的 loop 寫了 `stop_on_end` 就停（N-44）。
@@ -26,8 +26,8 @@ aos agent think|tool|route [--done 名]|intake|done|fsm [NAME]      （＝python
 | 情況 | 基礎實作 |
 |---|---|
 | 工具名不認得 | 回模型一則 tool 訊息 `{"error": {"code": "UnknownTool", "msg": "不認得這個工具：名"}}`，不算 fsm 的錯 |
-| 一次回好幾個 `tool_calls` | 只跑第一個；其餘各回 `{"error": {"code": "Skipped", "msg": "基礎實作一次只跑一個，這個沒跑"}}`（OpenAI 要每個 id 都有回才能再問），stderr 警告 `ToolCallsSkipped` |
+| 一次回好幾個 `tool_calls` | 一拍內照順序全部跑，每個都回對應 `tool_call_id` 的 tool 訊息（OpenAI 要每個 id 都有回才能再問）；跑完一個就接進 history。（10-15 使用者「都按照推薦」，[litellm 實跑 #3](../thinking/2026-10-15-litellm-live.md#拍板10-15)；原本只跑第一個、其餘回 `Skipped`） |
 | 引數不合 schema | 不驗；工具自己報錯（code≠0），照樣回模型 |
-| tool 格被殺一半（`work/.tool-running.json` 還在、同一個 id，N-38） | 不重跑工具，還沒回的全回 `{"error": {"code": "Interrupted", …}}` |
+| tool 格被殺一半（`work/.tool-running.json` 還在、同一個 id，N-38） | 跑到一半的那個不重跑、回 `{"error": {"code": "Interrupted", …}}`；它前面跑完的已經接進 history，後面的照跑 |
 
 動工時自己定的（等使用者看）：`arguments` 不是 JSON＝回 `{"error": {"code": "BadArguments", …}}` 不跑；工具的 inst 起不來（aos_inst 出錯）＝回 aos_inst 的錯（同形狀、原代號）；工具 inst 沒寫 `_tool`＝空說明、不收引數。

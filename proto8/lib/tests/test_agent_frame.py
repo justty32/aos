@@ -228,3 +228,30 @@ class AgentCallTest(Tmp):
         self.assertEqual(json.loads(sub["reply"])["n"], 1)
         tool_msg = json.loads(json.loads(self.read("f/history.json"))[2]["content"])
         self.assertEqual(tool_msg["result"], sub)
+
+
+JUDGE_BRAIN_PY = r"""
+import json, sys
+req = json.load(sys.stdin)
+print(json.dumps({"role": "assistant", "content": "好的：" + json.dumps({"run": ["L1"], "defer": [], "reject": []})}))
+"""
+
+
+class AskJudgeTest(Tmp):
+    """demo/kernel2/judge/ask_judge.py 收定義資料夾當引數（10-15「都按照推薦」：不再寫死 judge/）：
+    另開一個資料夾放 brain.json＋env.json 指回 judge/＝換腦，judge/ 一個字不動。"""
+
+    def test_overlay_definition_swaps_brain(self):
+        judge = os.path.join(LIB, "..", "demo", "kernel2", "judge")
+        before = tree_hash(judge)
+        self.write("over/brain.py", JUDGE_BRAIN_PY)
+        self.write("over/brain.json", {"argv": [sys.executable, self.p("over", "brain.py")]})
+        self.write("over/env.json", {"parent": os.path.abspath(judge)})
+        r = subprocess.run(["aos-demo", "kernel2/judge/ask_judge.py", "over"], cwd=self.tmp, env=ENV, input="{}",
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), {"run": ["L1"], "defer": [], "reject": []})
+        self.assertEqual(tree_hash(judge), before)
+        r = subprocess.run(["aos-demo", "kernel2/judge/ask_judge.py", "nope"], cwd=self.tmp, env=ENV, input="{}",
+                           capture_output=True, text=True, timeout=10)
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "NoDefinition"))
