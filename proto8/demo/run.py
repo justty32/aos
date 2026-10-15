@@ -6,7 +6,7 @@
     python3 proto8/demo/run.py kernels/llm （改跑 LLM kernel 的 demo，見 kernels/llm/run.py）
     python3 proto8/demo/run.py kernels/general （改跑通用 kernel 的 demo，見 kernels/general/run.py）
 
-產物（控制資料夾、子程式的 stdout）都放在 mktemp 建的暫存資料夾，跑完整個刪掉。
+產物（控制資料夾、子程式的 stdout、時鐘檔）都放在 mktemp 建的暫存資料夾，跑完整個刪掉。
 """
 import json
 import os
@@ -69,6 +69,7 @@ def main():
     os.makedirs(out)
     # daemon.json、inst.json 用 {"$env": ...} 讀這幾個變數（daemon 自己的 ctl／state 窗必填）；id 要寫絕對路徑
     env = dict(os.environ, DEMO_CTL=ctl, DEMO_OUT=out, PYTHONDONTWRITEBYTECODE="1",
+               PATH=os.pathsep.join([os.path.join(HERE, "..", "bin"), os.environ.get("PATH", "")]),   # tick 的 argv 寫 `aos tick`
                DEMO_DAEMON_CTL=os.path.join(tmp, "daemon.ctl.json"), DEMO_DAEMON_STATE=os.path.join(tmp, "daemon.state.json"))
     say("暫存資料夾 %s（ctl/ 放指令、out/ 放子程式的輸出）" % tmp)
     # daemon 沒 inst：stdout 只在收工時吐一份總結，直接印出來
@@ -76,18 +77,18 @@ def main():
     say("daemon 起來了，pid %d" % daemon.pid)
     n = iter(range(1, 100))
     try:
-        say("== add：once 跑一次；tick 跑 5 次、每次隔 1 秒（次數、間隔寫在 tick/loop.json）")
+        say("== add：once 跑一次；tick（aos tick：out/clock 的回合數加一）跑 5 次、每次隔 1 秒（次數、間隔寫在 tick/loop.json）")
         send(ctl, next(n), {"op": "add", "id": ONCE})
         send(ctl, next(n), {"op": "add", "id": TICK})
         time.sleep(1.5)
         say("== list：once 已經 done，tick 跑了幾次")
         send(ctl, next(n), {"op": "list"})
         send(ctl, next(n), {"op": "state", "id": TICK})
-        say("== pause tick，等 2.5 秒，tick.out 不該再長")
+        say("== pause tick，等 2.5 秒，clock 不該再動")
         send(ctl, next(n), {"op": "pause", "id": TICK})
-        before = len(lines(out, "tick.out"))
+        before = lines(out, "clock")
         time.sleep(2.5)
-        say("   tick.out：暫停時 %d 行，2.5 秒後 %d 行" % (before, len(lines(out, "tick.out"))))
+        say("   clock：暫停時 %s，2.5 秒後 %s" % (before, lines(out, "clock")))
         send(ctl, next(n), {"op": "state", "id": TICK})
         say("== add_times +2，resume，再等 2.5 秒")
         send(ctl, next(n), {"op": "add_times", "id": TICK, "delta": 2})
@@ -104,7 +105,7 @@ def main():
         say("== SIGTERM")
         daemon.send_signal(signal.SIGTERM)
         say("daemon 結束，退出碼 %d" % daemon.wait(10))
-        for name in ("once.out", "tick.out"):
+        for name in ("once.out", "clock"):
             say("out/%-9s %s" % (name, " ".join(lines(out, name))))
     finally:
         if daemon.poll() is None:

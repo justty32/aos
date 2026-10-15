@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "aos",
+    "if",
+    "pipeline/check",
+    "pipeline/ok",
+    "pipeline/again"
+  ],
+  "stderr": "/dev/stderr"
+}

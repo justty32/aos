@@ -1,6 +1,6 @@
 # proto8 規範
 
-← [proto8](README.md)｜概念層：[CONCEPTS.md](CONCEPTS.md)｜語法糖：[lib/](lib/README.md)、[proto8-1](../proto8-1/README.md)
+← [proto8](README.md)｜概念層：[CONCEPTS.md](CONCEPTS.md)｜語法糖：[lib/](lib/README.md)
 
 **比起實作，更重要的是規範**（C-45）。三層：
 
@@ -8,7 +8,7 @@
 |---|---|---|
 | 概念 | aos 怎麼看世界（例：時空＝tick-tock＋資料夾） | [CONCEPTS.md](CONCEPTS.md) |
 | 規範 | 從概念推出來、大家都要守的 | 本檔（條文按主題放在 NORMS/ 分檔） |
-| 語法糖 | 符合規範、方便用，**不要求一定用** | proto8/lib（inst、loop、daemon）、proto8-1（tasks、aos-tick） |
+| 語法糖 | 符合規範、方便用，**不要求一定用** | proto8/lib（inst、loop、daemon、tasks、aos-tick…） |
 
 本檔（含分檔）只收使用者親口定下的規範（條號 N-）；AI 提的、還沒定的放在最後「待定」，不算數。
 
@@ -20,13 +20,13 @@
 | 主題 | 規範分檔 | 概念 | 實作 |
 |---|---|---|---|
 | 設計理念 | 沒有專屬的條（C-56 KISS 是最高原則；C-52 巢狀只管自己這一層、C-53 錯誤只處理自己的，各條都照它；C-54 命名＋[縮寫表](CONCEPTS/abbr.json)） | [CONCEPTS 設計理念](CONCEPTS/01-設計理念.md) | — |
-| 設計理念／時空 | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | proto8-1 `aos-tick` |
+| 設計理念／時空 | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | lib `aos tick` |
 | 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-12 stdio、N-18 實作分級、N-29 stderr 形狀、N-35 `檔#/位置`、N-43 結束碼 | 出自 C-07、C-45、C-53 | lib `aos_cli` |
 | 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md) | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [lib inst](lib/inst.md) |
 | 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md) | 同上 | [lib loop](lib/loop.md)、[daemon](lib/daemon.md) |
 | 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md) | 同上 | [lib ctl_state](lib/ctl_state.md) |
 | 基礎設施／命令列、指示詞與路徑 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md)：N-21～N-23 命令列、N-45 設計不靠指示詞 | 同上 | lib `aos_cli` |
-| 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | [proto8-1](../proto8-1/README.md)；fsm 在 [lib fsm.md](lib/fsm.md)（基礎實作） |
+| 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | tasks（`aos seq|par|if`）在 lib；fsm 在 [lib fsm.md](lib/fsm.md)（基礎實作） |
 | kernel | [09-kernel.md](NORMS/09-kernel.md)：N-42（打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | — |
 | agent | 沒有專屬的條（用 fsm 組出來） | [CONCEPTS agent](CONCEPTS/05-agent.md) | — |
 | 待定（不拆，每條標主題） | [08-待定.md](NORMS/08-待定.md) | | |

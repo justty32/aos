@@ -1,0 +1,18 @@
+{
+  "argv": [
+    "aos",
+    "seq",
+    "pipeline/reset",
+    "pipeline/retry",
+    "pipeline/work",
+    "pipeline/finish"
+  ],
+  "envs": {
+    "MAX_TRIES": "4",
+    "READY_AT": "3"
+  },
+  "stderr": {
+    "$env": "DEMO_LOG"
+  },
+  "stderr_append": true
+}

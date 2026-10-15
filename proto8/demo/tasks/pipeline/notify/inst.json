@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "sh",
+    "-c",
+    "read v; sleep 0.5; echo \"通知：$v 可以上線\""
+  ],
+  "cwd": {
+    "$env": "DEMO_WORK"
+  },
+  "stdin": "probe.out",
+  "stdout": "notify.txt",
+  "stderr": "/dev/stderr"
+}

@@ -16,7 +16,7 @@
 
 1. **授權**：當晚「今天可以隨意push」——**明早新 session 照 user.md 重問 push**。事情交給子 agent、頂層只交流；設計思考派 fable，且先通讀 CONCEPTS／NORMS（[proto8 README 規矩](../proto8/README.md)）；交稿頂層先對 N-12、C-48／N-45、C-56 KISS、層徹底切割、少用 sh。**不要一言不合改 workflow／memory**——要寫規矩先問寫哪。
 2. **已定**：inst-exec 第四版 [v4](../proto8/thinking/2026-10-15-inst-exec-v4.md)——「C-50 選 a（JSON 是正本、資料夾只是拆檔），其他都按照推薦」：一個 agent 定義＝一張 inst（一份大 JSON）、aos-exec TARGET 必填不寫檔、`stdin_inline: true` 才內嵌、工具一律走 frame（args.json 進 ret.json 出）、agent 當工具 argv 直接 `aos loop`、frame.json 退場。KISS 彙整 [kiss/README](../proto8/thinking/2026-10-15-kiss/README.md) 六批全照推薦（含★翻案）；PLAN「刪掉」。
-3. **進行中**：批次 1「純刪」fable 在跑（含 C-50 改寫、刪 PLAN），完成會自己 commit＋push；明早先看 git log 與彙整總表的「已做」標記，接著批次 2（v4 實作）→3 loop／daemon／窗→4 fsm／agent→5 kernel→6 文件，**依序、不平行**。
+3. **批次 1「純刪」做完、已推**（含 C-50 改寫、刪 PLAN、proto8-1 併進 proto8/lib；四個 commit 見 git log，彙整總表已標「已做」；自定 8 條在 [10-15 session log](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)，最要看的是 `aos-demo` 的 AOS_DEMO 留到批次 2）。接著批次 2（v4 實作）→3 loop／daemon／窗→4 fsm／agent→5 kernel→6 文件，**依序、不平行**。
 4. **當晚新定**：C-56 KISS 最高原則、C-52 加嚴、N-45（設計假設沒有指示詞，JSON 大沒關係）、user.md「少用 sh」、N-37 `next: null`、N-28／N-38／N-40 切乾淨。畫家 demo LiteLLM 實跑通過（[paint-live](../proto8/thinking/2026-10-15-paint-live.md)）。
 
 ## 2026-10-15 深夜（使用者關 session 前）
