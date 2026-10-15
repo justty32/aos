@@ -382,7 +382,7 @@ class BrainOllamaTest(BrainOpenaiTest):
         self.assertEqual(codes, [1, 1, 0])
         self.assertEqual(json.loads(r.stdout.splitlines()[0])["end"], True)               # 走到 end：這個 fsm 結束
         self.assertEqual((json.loads(self.read("f.state.json"))["phase"], len(_Stub.seen)), ("ask", 3))
-        self.assertEqual(json.loads(self.read("work/think-fails.json"))["n"], 3)
+        self.assertEqual(json.loads(self.read("work/think-fails.json"))["val"], 3)
         self.assertEqual(json.loads(self.read("ret.json"))["error"]["code"], "BrainFailed")   # think 自己寫的
 
     def test_bad_num_ctx(self):

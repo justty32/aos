@@ -6,7 +6,7 @@
 
 TARGET 同 aos_inst（檔、資料夾、可接 `#/位置`）。只動純資料、不跑任何東西、不改任何執行期程式。
 
-只看位置（決定 5）：fsm 的 `states` 格（字串／物件／`{"target"}`）、loop／daemon 的 `inst`、daemon 的 `children`、
+只看位置（決定 5）：fsm 的 `states` 格（字串／物件／`{"val"}`）、loop／daemon 的 `inst`、daemon 的 `children`、
 gate 的 `target`、agent 的 `brain`／`tools`／`judge`。別的 key 一律當資料，不跟進。
 id（決定 1，永不為 null）：路徑參照＝realpath（`#/位置`）；內嵌＝外層 id 接 `#/位置`（例 `外層#/states/think`）；
 整棵從 dict 來沒有檔＝`sha256:內容雜湊` 當外層 id。
@@ -37,9 +37,9 @@ def slots(doc):
     out = []
     ok = lambda v: isinstance(v, (str, dict))
     for n, v in (doc.get("states") if isinstance(doc.get("states"), dict) else {}).items():
-        if isinstance(v, dict) and "target" in v:
-            if ok(v["target"]):
-                out.append((("states", n, "target"), "states/" + n))
+        if isinstance(v, dict) and "val" in v:
+            if ok(v["val"]):
+                out.append((("states", n, "val"), "states/" + n))
         elif ok(v):
             out.append((("states", n), "states/" + n))
     for k in ("inst", "target", "brain", "judge"):

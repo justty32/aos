@@ -14,7 +14,7 @@ LEVELS = {"low": -1, "normal": 0, "high": 1}
 
 
 def level(pri):
-    v = (pri or {}).get("level") if isinstance(pri, dict) else None
+    v = (pri or {}).get("val") if isinstance(pri, dict) else None
     if isinstance(v, str):
         return LEVELS.get(v.lower(), 0)
     if isinstance(v, (int, float)) and not isinstance(v, bool):

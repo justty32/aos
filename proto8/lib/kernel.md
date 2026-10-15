@@ -21,7 +21,7 @@ python3 aos_gate.py [--target T] [--mailbox DIR] [--wait-ms N] [GATE.json]     #
 // gate.json（相對路徑從呼叫者的 cwd 算）
 {"target": "brain.json",              // 真正要跑的 inst：TARGET（可接 #/位置）或內嵌一張 inst（必填）
  "mailbox": "/run/aos/llm-mb",        // 信箱資料夾；沒寫＝環境變數 AOS_KERNEL（demo 都靠這個，設定檔不寫）
- "priority": "low",                   // 選填：純量＝{"level": 值}；物件 {"level", "deadline", …} 照帶；沒寫＝環境變數 AOS_PRIORITY
+ "priority": "low",                   // 選填：純量＝{"val": 值}；物件 {"val", "deadline", …} 照帶；沒寫＝環境變數 AOS_PRIORITY
  "wait_ms": 60000}                    // 選填：排隊（信還在 new/）最多等多久；沒寫＝不限
 ```
 

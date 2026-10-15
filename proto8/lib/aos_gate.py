@@ -8,7 +8,7 @@ kernel 的信箱，等回信，把那支 inst 的 stdout／stderr 原樣吐出�
 設定（aos_cli；不收 `-`，因為 stdin 是請求本身）：
     target    真正要跑的 inst：TARGET（可接 `#/位置`，從呼叫者的 cwd 算）或內嵌一張 inst（必填）
     mailbox   kernel 的信箱資料夾（N-16 Maildir：tmp/ → new/ → cur/；回信與旁檔在 reply/）；沒寫＝環境變數 AOS_KERNEL
-    priority  呼叫者說的「這次多急」：純量（"low"／"normal"／"high"、數字）＝{"level": 那個值}；物件 {level, deadline, …}
+    priority  呼叫者說的「這次多急」：純量（"low"／"normal"／"high"、數字）＝{"val": 那個值}；物件 {val, deadline, …}
               照帶（不認得的 key 照帶）；沒寫＝環境變數 AOS_PRIORITY（先當 JSON 解，解不了當字串）；再沒有＝不填
     wait_ms   排隊最多等幾毫秒（只算信還在 new/ 的時間；kernel 拿走之後就等它跑完）；到了撤信、回 QueueTimeout；沒寫＝不限
     poll_ms   多久看一次回信（沒寫＝50）
@@ -53,13 +53,9 @@ class GateError(CliError):
 
 
 def normalize_priority(p):
-    """呼叫者給的 priority → 物件（純量＝{"level": 值}；物件照抄；None＝None）。不認得的 key 照帶。"""
-    if p is None:
-        return None
-    if isinstance(p, dict):
-        return dict(p)
-    if isinstance(p, (str, int, float)) and not isinstance(p, bool):
-        return {"level": p}
+    """呼叫者給的 priority → 物件（純量＝{"val": 值}；物件照抄；None＝None）。不認得的 key 照帶。"""
+    if p is None or isinstance(p, dict) or isinstance(p, (str, int, float)) and not isinstance(p, bool):
+        return aos_cli.expand(p)
     raise GateError("FieldType", "priority 要是字串、數字或物件，不是 %r" % (p,))
 
 

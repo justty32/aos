@@ -60,7 +60,7 @@ class AgentFrameTest(Tmp):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(self.read("fr/ret.json")), {"reply": "n=2"})
         self.assertFalse(os.path.exists(self.p("fr", "ctl.json")))           # done 不碰 ctl
-        self.write("fr/work/think-fails.json", {"n": 3, "error": {"code": "BrainFailed", "msg": "x"}})
+        self.write("fr/work/think-fails.json", {"val": 3, "error": {"code": "BrainFailed", "msg": "x"}})
         self.run_cell("done", fr)                                            # done 不讀 think 的私檔（盤點第 8 條）
         self.assertEqual(json.loads(self.read("fr/ret.json")), {"reply": "n=2"})
 
@@ -134,9 +134,9 @@ class AgentCallTest(Tmp):
         self.write("bob/brain.json", {"argv": [sys.executable, self.p("bob", "brain.py")]})
         self.write("bob/tools/t.json", {"argv": ["sh", "-c", "cat; echo"], "_tool": {"description": "回聲"}})
         self.write("bob/fsm.json", {"start": "intake", "state": "fsm-state.json", "end": ["done", "halted"], "states": {
-            "intake": {"target": "cells/intake.json", "next": "thinking"},
-            "thinking": {"target": "cells/think.json", "next": "route"},
-            "route": "cells/route.json", "tool": {"target": "cells/tool.json", "next": "thinking"},
+            "intake": {"val": "cells/intake.json", "next": "thinking"},
+            "thinking": {"val": "cells/think.json", "next": "route"},
+            "route": "cells/route.json", "tool": {"val": "cells/tool.json", "next": "thinking"},
             "done": "cells/done.json"}})                 # halted 只在 end：think 自己寫好 ret.json 的錯
         for k, argv in (("intake", ["intake"]), ("think", ["think"]), ("route", ["route", "--done", "done"]),
                         ("tool", ["tool"]), ("done", ["done"])):

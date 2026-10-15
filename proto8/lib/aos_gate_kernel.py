@@ -67,7 +67,7 @@ def check(doc):
 
 def level(pri):
     """priority 物件 → 級數：low／normal／high＝-1／0／1；數字取正負號；沒寫、不認得＝0。"""
-    v = (pri or {}).get("level")
+    v = (pri or {}).get("val")
     if isinstance(v, str):
         return aos_gate.LEVELS.get(v.lower(), 0)
     if isinstance(v, (int, float)) and not isinstance(v, bool):

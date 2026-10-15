@@ -98,7 +98,7 @@ class KernelTest(Tmp):
         snap = json.loads(self.read("snap"))
         self.assertEqual(sorted(snap), ["budget", "queue", "running", "slots"])   # state 窗的子集，只留這四個
         self.assertEqual(sorted(snap["queue"]), [a, b])
-        self.assertEqual(snap["queue"][b]["priority"], {"level": "high"})
+        self.assertEqual(snap["queue"][b]["priority"], {"val": "high"})
         self.assertEqual(snap["slots"], {"llm": {"total": 1, "used": 0}})
         st = self.state()                                            # 拍完的 state 窗：同一套 key，queue 空了
         self.assertEqual((st["state"], st["runs"], st["queue"], st["served"]), ("waiting", 1, {}, 2))
