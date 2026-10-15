@@ -48,3 +48,14 @@
 - aging 不封頂：等久了 low 可以超過 high。
 - 一拍＝跑一次身體（閒的拍也算）；`slots`>1＝同一拍幾封一起跑，等最慢的。
 - 閘門與 kernel 自己的錯一律退出 125；target 在 kernel 的環境跑，不帶呼叫者的環境變數。
+
+## 實跑：LM Studio 真腦包閘門（10-15）
+
+使用者 10-15「把 LM Studio 的真腦包上閘門實跑一次」。scratchpad 副本，kernel 在 aos-daemon 底下（`slots` 1），報時員巢狀：boss（閘門 `normal`）→ clerk（閘門 `high`）→ clock；**兩個同時問「現在幾點？」**（A、B），腦＝Qwen3-1.7B（`-c 4096`）。逾時全拉大（腦 180 秒、tool 900 秒、`wait_ms` 600 秒）。共 7 次 chat 請求，約 34 秒；收尾 `unload --all`、`server stop`，`lms ps` 空、1234 連不上、daemon 與子行程無殘留。
+
+- **端到端通了**：A 的 clerk 叫了 clock，回「現在是12:52:15。」（真時間）；B 的 clerk 沒叫 clock、編了 `08:35:12`，boss 照轉（同 [clerk-live](2026-10-15-clerk-live.md) 的老毛病）。
+- **服務順序**（tick 1→7）：A-boss、B-boss（normal，先來後到）→ clerk 的 high 三封 → A、B 的 boss 收尾（normal）。每封 kernel 內跑 3.8～5.4 秒；排隊等：B-boss 3.8 秒（A 佔格）、第一封 clerk 約 4.2 秒（等 B-boss 跑完，**不搶佔跑到一半的**）。
+- **沒看到 high 插 normal 的隊**：因巢狀是串的，clerk 送出時佇列裡沒有等著的 normal；要看到插隊得有真的同時在排的不同級（單元測試、假腦 demo 已證）。這次只證明「高級的 clerk 在 normal 的 boss 之間照樣排得進去、不卡死」。
+- **`waited` 恆為 0**：`slots` 1 時一拍只服務一封，tick 只在服務時才走（7 拍 7 封），等 4 秒的信也只見 0 拍；aging 以「拍」計，在慢腦＋一格下幾乎不會觸發。看排隊要看 `sent` 與回信時間，不是 `waited`。
+- **token 額度沒計到**（`budget.used` 仍是 0）：`aos_brain_openai.py` 只吐 `choices[0].message`，把 LM Studio 回的 `usage` 丟了，kernel 讀不到 `usage.total_tokens`＝0。真腦包閘門時額度形同虛設；要補得改腦（把 `usage` 一起吐，但 agent 接的訊息格式要確認不被多出的 key 弄壞）。**攤給使用者定，這次沒改 lib。**
+- **相對路徑**：閘門 `target` 從**呼叫者的 cwd** 算（不是從 gate.json），agent 的 cwd 是 agent 資料夾，所以寫成 `../lm.json`；一開始寫成 `lm.json` 得 `ReadFailed`（退出 125）。環境變數沿用 kernel 的，閘門設定不用傳 API 環境（LM Studio 不用金鑰）。
