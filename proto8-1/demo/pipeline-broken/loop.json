@@ -1,6 +1,0 @@
-{
-  "inst": {
-    "$ref": "pipeline-broken/inst.json"
-  },
-  "ctl_poll_ms": 100
-}

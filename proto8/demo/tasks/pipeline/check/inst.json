@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "sh",
+    "-c",
+    "n=$(( $(cat tries) + 1 )); echo $n > tries; if [ $n -ge \"$1\" ]; then echo v1.4.2; echo \"  check 第 $n 次：好了\" >&2; else echo \"  check 第 $n 次：還沒好\" >&2; exit 1; fi",
+    "check",
+    {
+      "$env": "READY_AT"
+    }
+  ],
+  "cwd": {
+    "$env": "DEMO_WORK"
+  },
+  "stdout": "probe.out",
+  "stderr": "/dev/stderr"
+}

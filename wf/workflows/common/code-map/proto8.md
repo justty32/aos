@@ -1,6 +1,6 @@
 ← [code map 總圖](../code-map.md)｜[各分冊導覽](README.md)
 
-## proto8／proto8-1 逐檔總覽
+## proto8 逐檔總覽（proto8-1 10-15 深夜併入）
 
 （10-13 從 code-map.md 原文搬來；10-15 晚從一整段長文改成分項，內容沒刪。新增或刪檔時這裡與該 README 一起改。）
 
@@ -28,7 +28,7 @@
 
 總覽在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
 
-**daemon**：`daemon.json`、`run.py`、`once/`、`tick/`（inst 沒有 exit 檔了，結果看 stdout 與 state 窗；見 demo README）。
+**daemon**：`daemon.json`、`run.py`、`once/`、`tick/`（真的 `aos tick clock`；結果看 stdout 與 state 窗；見 demo README）。
 
 **薄入口**：`demo/bin/aos-demo`（`aos-demo fsm/x.py`＝從 demo 資料夾算的腳本，其他指令照跑並給 `AOS_DEMO`）。
 
@@ -42,6 +42,6 @@
 
 改 proto8 的檔就同步那份。
 
-### `proto8-1/`
+### tasks 與 tick（10-15 深夜從 `proto8-1/` 併進 `proto8/lib/`）
 
-tasks：`aos_seq.py`、`aos_par.py`、`aos_if.py`、`aos_not.py`、時鐘 `aos_tick.py`、共用 `aos_tasks.py`（stderr 的錯誤重用 proto8 的 `aos_cli.error()`）、`bin/` 薄入口、測試 `tests/`。逐檔表在 [proto8-1/README.md](../../../../proto8-1/README.md)，demo（daemon 跑 tasks 樹＋寫起來的發現）在 [proto8-1/demo/README.md](../../../../proto8-1/demo/README.md)。
+tasks：`aos_seq.py`、`aos_par.py`、`aos_if.py`（`aos-not` 刪：反過來＝分支對調）、共用 `aos_tasks.py`（起 `aos_inst.py TARGET`、讀結果的 `code`、轉訊號；跑到哪讀到哪）、時鐘 `aos_tick.py`（`aos tick FILE`）；入口都在 `proto8/bin/aos`；測試 `tests/test_tasks.py`、`tests/test_tick.py`；demo（daemon 跑 tasks 樹＋寫起來的發現）在 [proto8/demo/tasks/README.md](../../../../proto8/demo/tasks/README.md)。

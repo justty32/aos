@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "sh",
+    "-c",
+    "read v; sleep 0.5; echo \"報告：$v 檢查通過\""
+  ],
+  "cwd": {
+    "$env": "DEMO_WORK"
+  },
+  "stdin": "probe.out",
+  "stdout": "report.txt",
+  "stderr": "/dev/stderr"
+}

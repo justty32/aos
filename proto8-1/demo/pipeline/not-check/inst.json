@@ -1,7 +1,0 @@
-{
-  "argv": [
-    "aos-not",
-    "pipeline/check"
-  ],
-  "stderr_inherit": true
-}

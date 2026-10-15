@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "aos",
+    "par",
+    "pipeline/report",
+    "pipeline/notify"
+  ],
+  "stderr": "/dev/stderr"
+}

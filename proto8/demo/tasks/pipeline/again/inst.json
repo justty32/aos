@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "aos",
+    "seq",
+    "pipeline/budget",
+    "pipeline/pause",
+    "pipeline/retry"
+  ],
+  "stderr": "/dev/stderr"
+}

@@ -1,0 +1,5 @@
+{
+  "inst": {
+    "$ref": "pipeline/inst.json"
+  }
+}
