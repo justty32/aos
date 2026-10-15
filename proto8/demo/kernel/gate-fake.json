@@ -1,0 +1,1 @@
+{"target": {"argv": ["python3", "../../fsm/brain/fake.py"], "timeout_ms": 10000}, "kernel": {"$env": "AOS_KERNEL"}}
