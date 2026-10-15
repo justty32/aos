@@ -16,7 +16,7 @@ import sys
 
 from aos_directives import DirectiveError, resolve, split_target, target_id
 
-__all__ = ["CliError", "config", "emit", "error", "load_target", "parse_argv", "read_stream", "warn"]
+__all__ = ["CliError", "config", "emit", "error", "is_int", "load_target", "parse_argv", "read_stream", "warn"]
 
 
 class CliError(Exception):
@@ -26,6 +26,11 @@ class CliError(Exception):
         super().__init__("%s: %s" % (code, msg))
         self.code = code
         self.msg = msg
+
+
+def is_int(v, least=None):
+    """JSON 整數（true／false 不算）；給了 least 就還要 ≥ least。各程式驗設定共用。"""
+    return isinstance(v, int) and not isinstance(v, bool) and (least is None or v >= least)
 
 
 # ---- 三扇門：JSON 串流 ----

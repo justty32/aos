@@ -45,7 +45,7 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
   think 連錯：次數記在 work/think-fails.json（成功一次就刪），到 halt_after 次＝不報錯、改吐
   {"next": halt_state, "data": {"error"}}，交給表上那個狀態（例 done 格寫錯誤的 ret.json）。
 
-相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json；fsm 子命令才載 aos_fsm）。
+相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json、aos_frame 的 lookup；fsm 子命令才載 aos_fsm）。
 """
 import json
 import os
@@ -56,11 +56,11 @@ import aos_inst
 import aos_methods
 from aos_cli import CliError
 from aos_ctl_state import write_json
+from aos_frame import chain, lookup, lookup_dir   # frame 查找拆到 aos_frame.py；這裡照樣 re-export
 
 __all__ = ["AgentError", "LIMIT", "act", "chain", "done", "intake", "load_config", "lookup", "lookup_dir", "new_dir",
            "pending", "read_history", "route", "think", "tool_specs"]
 
-MAX_CHAIN = 16                                 # env.json 的 parent 最多往上找幾層
 
 LIMIT = 8000                                   # 工具結果回給模型最多幾個字
 SKIPPED = ("Skipped", "基礎實作一次只跑一個，這個沒跑")
@@ -70,44 +70,6 @@ INTERRUPTED = ("Interrupted", "被中斷，沒重跑")
 
 class AgentError(CliError):
     """設定不對、腦出錯。"""
-
-
-def chain(start=None):
-    """frame（start，預設 cwd）→ 找名字的資料夾順序：自己、env.json 的 parent、parent 的 parent…（C-46）。
-    parent 的相對路徑從那個 env.json 所在的資料夾算；繞圈（realpath 重複）或超過 MAX_CHAIN 層就停。"""
-    d, out = os.path.realpath(start or os.getcwd()), []
-    while d and d not in out and len(out) < MAX_CHAIN:
-        out.append(d)
-        try:
-            with open(os.path.join(d, "env.json"), encoding="utf-8") as f:
-                parent = json.load(f).get("parent")
-        except (OSError, ValueError, AttributeError):
-            break
-        if not (isinstance(parent, str) and parent):
-            break
-        d = os.path.realpath(os.path.join(d, parent))
-    return out
-
-
-def lookup(name, start=None):
-    """照 chain() 的順序找 name（檔或資料夾），回第一個找到的絕對路徑；都沒有＝None。"""
-    for d in chain(start):
-        p = os.path.join(d, name)
-        if os.path.exists(p):
-            return p
-    return None
-
-
-def lookup_dir(name, start=None):
-    """資料夾值逐項找：各層 name/ 底下的項目聯集，同名以近的為準（＝追加＋蓋過）。回 {項目名: 絕對路徑}。"""
-    out = {}
-    for d in chain(start):
-        p = os.path.join(d, name)
-        if os.path.isdir(p):
-            for n in sorted(os.listdir(p)):
-                if not n.startswith("."):
-                    out.setdefault(n, os.path.join(p, n))
-    return out
 
 
 def load_config(doc, need_brain=True):
