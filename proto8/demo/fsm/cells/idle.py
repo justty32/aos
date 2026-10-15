@@ -1,4 +1,4 @@
-"""idle 格：看 inbox/ 有沒有信（*.txt）。有就拿最早那封開一段新對話、回 next=thinking；沒有就不回 next（留在 idle）。"""
+"""idle 格：看 inbox/ 有沒有信（*.txt）。有就拿最早那封開一段新對話（history＝[user 訊息]）、回 next=thinking；沒有就不回 next（留在 idle）。"""
 import os
 
 from common import DIR, args, ret, save
@@ -12,6 +12,6 @@ else:
     path = os.path.join(inbox, mail[0])
     with open(path, encoding="utf-8") as f:
         text = f.read().strip()
-    save([{"role": "user", "text": text}])
+    save([{"role": "user", "content": text}])
     os.remove(path)
     ret({"next": "thinking", "data": {"q": text}})

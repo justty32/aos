@@ -10,7 +10,7 @@ python3 proto8/demo/run.py
 
 從哪裡跑都行，約 8 秒。只用 Python 標準庫和 `sh`、`date`。
 
-另一個 demo：**fsm**（aos-loop 拍 aos-fsm，像個小 agent：idle → thinking（內層 fsm：ask → review）→ tool → …，ask 是假的同步 LLM）——`python3 proto8/demo/run.py fsm`，說明在 [fsm/README.md](fsm/README.md)。
+另一個 demo：**fsm**（aos-loop 拍 aos-fsm，像個小 agent：idle → thinking（內層 fsm：ask → review）→ tool → …，ask 照思考介面叫腦、tool 跑 inst 工具；預設假腦，換真 LLM 只改 agent.json 的 `brain`）——`python3 proto8/demo/run.py fsm`，說明在 [fsm/README.md](fsm/README.md)。
 
 ## 裡面有什麼
 

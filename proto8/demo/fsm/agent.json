@@ -3,9 +3,14 @@
   "states": {
     "idle": "cells/idle.json",
     "thinking": "think/",
-    "tool": "cells/tool.json"
+    "tool": {"target": "cells/tool.json", "next": "thinking"}
   },
   "state": {"$env": "DEMO_STATE"},
   "lock": {"$env": "DEMO_LOCK"},
-  "max_steps": 10
+  "max_steps": 10,
+
+  "brain": "brain/fake.json",
+  "tools": {"clock": "tools/clock.json"},
+  "history": {"$env": "DEMO_HISTORY"},
+  "work": {"$env": "DEMO_WORK"}
 }

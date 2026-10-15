@@ -1,10 +1,10 @@
-"""demo 的格共用：資料夾位置（DEMO_DIR）與對話檔 work/convo.json 的讀寫。"""
+"""demo 的格共用：資料夾位置（DEMO_DIR）與對話檔 history（DEMO_HISTORY，OpenAI messages 陣列）的讀寫。"""
 import json
 import os
 import sys
 
 DIR = os.environ["DEMO_DIR"]
-CONVO = os.path.join(DIR, "work", "convo.json")
+HISTORY = os.environ["DEMO_HISTORY"]
 
 
 def args():
@@ -17,13 +17,13 @@ def ret(doc):
     print(json.dumps(doc, ensure_ascii=False))
 
 
-def convo():
-    with open(CONVO, encoding="utf-8") as f:
+def history():
+    with open(HISTORY, encoding="utf-8") as f:
         return json.load(f)
 
 
 def save(msgs):
-    tmp = os.path.join(os.path.dirname(CONVO), ".convo.json.tmp")       # 先寫 . 開頭的暫存檔再改名（N-05）
+    tmp = os.path.join(os.path.dirname(HISTORY), "." + os.path.basename(HISTORY) + ".tmp")   # 先寫暫存檔再改名（N-05）
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(msgs, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, CONVO)
+    os.replace(tmp, HISTORY)
