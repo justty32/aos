@@ -15,5 +15,5 @@
 ## 2026-10-15 深夜（使用者關 session 前）
 
 1. **授權**：當晚在家；「可以隨意的 push」；事情交給子 agent、頂層只跟使用者交流；需要思考的派 fable。新 session 照 user.md 重問 push。
-2. **正在討論**：inst 路徑／stdin／TARGET 重設計，已定與未定見 [SESSION-LOG 最新進度第一條](SESSION-LOG.md#最新進度) 與稿 [inst-exec](../proto8/thinking/2026-10-15-inst-exec.md)。要點：aos-inst 只吃 stdin、TARGET 全拿掉、aos-exec 當語法糖、`$ref` 從所在檔（symlink 所在處）算、呼叫機制不依賴指示詞（C-48）、刪 aos_tree。compact 後我曾忘記 N-12（stdin 才是標準）與 C-48（指示詞不進正規設計），被使用者拉回——設計題先讀這兩條。
+2. **正在討論**：inst 路徑／stdin／TARGET 重設計，已定與未定見 [SESSION-LOG 最新進度第一條](SESSION-LOG.md#最新進度) 與稿 [inst-exec](../proto8/thinking/2026-10-15-inst-exec.md)（第二版，未決 A～H 等使用者看）。要點：aos-inst 只吃 stdin、TARGET 全拿掉、aos-exec 當語法糖、`$ref` 從所在檔（symlink 所在處）算、呼叫機制不依賴指示詞（C-48，`$abs_path` 不做，改靠 frame.json）、刪 aos_tree。compact 後我曾忘記 N-12（stdin 才是標準）與 C-48（指示詞不進正規設計），被使用者拉回——設計題先讀這兩條。
 3. **當晚新定**：C-52～C-55、N-43 改寫、abbr.json；改名批次（val、P1～P7、M1～M9）已推。
