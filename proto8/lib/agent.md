@@ -1,6 +1,6 @@
 # agent（現成格庫 `aos_agent_lib.py`＋當函數 `aos_agent_call.py`＋真的腦 `aos_brain_openai.py`／`aos_brain_ollama.py`）
 
-← [proto8/lib](README.md)｜概念：[CONCEPTS agent](../CONCEPTS/05-agent.md)｜狀態機：[fsm.md](fsm.md)｜demo：[demo/fsm](../demo/fsm/README.md)｜決定：[thinking 10-15 §5](../thinking/2026-10-15-topics.md#5-agent-的工具與思考介面)
+← [proto8/lib](README.md)｜概念：[CONCEPTS agent](../CONCEPTS/05-agent.md)｜狀態機：[fsm.md](fsm.md)｜demo：[demo/fsm](../demo/fsm/README.md)｜決定：[thinking 10-15 §5](../thinking/2026-10-15-topics/02-agent工具與試146.md#5-agent-的工具與思考介面)
 
 > **這是實作慣例，還不是規範。** 使用者 10-15 定了方向；等接過一次真的 endpoint、跑順了，再升成 NORMS 的條。
 
@@ -25,7 +25,7 @@ agent＝一份 fsm（idle → thinking → tool → thinking → … → idle）
 - 第三顆：`aos_brain_ollama.py`（ollama 原生 POST `<base_url>/api/chat`，`stream: false`）。**為什麼不走 ollama 的 `/v1`**：OpenAI 相容那條設不了 `num_ctx`，ollama 會用模型預設的 context、可能吃爆顯存；原生的帶 `options.num_ctx`（預設 4096）與 `keep_alive`（預設 `"30s"`）。旗標 `--base-url`（預設 `http://localhost:11434`，不含 `/api`）、`--model`（必填）、`--num-ctx`、`--keep-alive`、`--timeout-ms`。形狀互翻：送出時 assistant 的 `arguments` 字串→物件、`content: null`→`""`、tool 訊息補 `tool_name`；收回時 `arguments` 物件→字串、沒 id 就編 `call_<亂數>_<n>`。錯誤代號 `HttpError`（模型不支援 tools 時 ollama 回 400「does not support tools」也是這個）、`ConnectFailed`、`BadResponse`。
 - **腦只留 `content`／`tool_calls`**（使用者 10-15「模型想的內容丟掉」）：`reasoning_content` 之類想的字一律不收、不存，真腦翻譯時只取這兩樣；不留旁檔。
 - **換腦**：agent.json 的 `brain` 換一個 inst TARGET，其他不動。
-- **10-15 實測 146 ollama**（[thinking §7](../thinking/2026-10-15-topics.md#7-試-146-ollama小模型)）：gemma3:1b、deepseek-r1:8b 都回 400「does not support tools」，模型沒載進去；腦這層照規矩回 `HttpError`。要在 ollama 上跑工具得換有 tools 能力的模型。**同日試 qwen2.5:14b**（使用者准，[§8](../thinking/2026-10-15-topics.md#8-試-146-ollamaqwen2514b)）：整圈跑通、`tool_calls` 形狀對，但帶 tools 時回覆語言亂跳（泰文、韓文）。
+- **10-15 實測 146 ollama**（[thinking §7](../thinking/2026-10-15-topics/02-agent工具與試146.md#7-試-146-ollama小模型)）：gemma3:1b、deepseek-r1:8b 都回 400「does not support tools」，模型沒載進去；腦這層照規矩回 `HttpError`。要在 ollama 上跑工具得換有 tools 能力的模型。**同日試 qwen2.5:14b**（使用者准，[§8](../thinking/2026-10-15-topics/03-試146-qwen與LM-Studio.md#8-試-146-ollamaqwen2514b)）：整圈跑通、`tool_calls` 形狀對，但帶 tools 時回覆語言亂跳（泰文、韓文）。
 
 ## 工具＝inst
 
@@ -74,7 +74,7 @@ python3 aos_agent_lib.py think      python3 aos_agent_lib.py tool
 
 程式：`aos_agent_call.py`（10-15）。
 
-概念：[CONCEPTS C-46](../CONCEPTS/05-agent.md)（使用者 10-15 定，概念層；規範慢慢來）｜決定：[thinking 10-15 §11](../thinking/2026-10-15-topics.md#11-agent-當函數binding當工具)
+概念：[CONCEPTS C-46](../CONCEPTS/05-agent.md)（使用者 10-15 定，概念層；規範慢慢來）｜決定：[thinking 10-15 §11](../thinking/2026-10-15-topics/04-agent當函數.md#11-agent-當函數binding當工具)
 
 三個地方分開：**定義**（`bob/`：agent.json＝fsm 表＋brain、tools、system；呼叫時不寫）、**frame**（像 stack：`history.json`、`state.json`、`work/`、`lock/`；每次呼叫／每個實例一個）、**cwd**（呼叫者在哪）。
 
