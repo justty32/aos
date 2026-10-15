@@ -1,4 +1,4 @@
-"""proto8/lib 的自動測試：agent 的現成格庫（aos_agent_lib）與真的腦（aos_brain_openai）。只用標準庫：
+"""proto8/lib 的自動測試：agent 的現成格庫（aos_agent_lib）與真的腦（aos_brain_openai、aos_brain_ollama）。只用標準庫：
 
     python3 -m unittest discover -s proto8/lib/tests
 
@@ -16,6 +16,7 @@ from helpers import FSM, LIB, Tmp
 
 AGENT = os.path.join(LIB, "aos_agent_lib.py")
 BRAIN = os.path.join(LIB, "aos_brain_openai.py")
+OLLAMA = os.path.join(LIB, "aos_brain_ollama.py")
 DEMO = os.path.join(LIB, "..", "demo", "fsm")
 
 
@@ -193,3 +194,65 @@ class BrainOpenaiTest(Tmp):
         self.assertEqual(_Stub.seen[0][2]["tools"][0]["function"]["description"], "時間")
         self.assertEqual(json.loads(self.read("h.json"))[-1], {"role": "assistant", "content": "好"})
         self.assertEqual(json.loads(r.stdout), {"data": {"content": "好", "tool_calls": []}})
+
+
+class BrainOllamaTest(BrainOpenaiTest):
+    """ollama 原生 /api/chat：num_ctx、keep_alive、兩邊形狀的翻譯。沿用上面的假伺服器。"""
+
+    def setUp(self):
+        super().setUp()
+        _Stub.reply = {"model": "m1", "done": True, "message": {"role": "assistant", "content": "", "tool_calls": [
+            {"function": {"name": "clock", "arguments": {"tz": "UTC"}}}]}}
+        self.url = self.url[:-3]                                             # ollama 的 base_url 不含 /v1
+
+    def ollama(self, req, *flags):
+        return subprocess.run([sys.executable, OLLAMA, "--base-url", self.url, "--model", "m1"] + list(flags),
+                              input=json.dumps(req), capture_output=True, text=True, timeout=10)
+
+    def test_request_shape_and_reply_translated(self):
+        tools = [{"type": "function", "function": {"name": "clock", "description": "", "parameters": {}}}]
+        r = self.ollama({"messages": [{"role": "user", "content": "幾點"}], "tools": tools})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        path, _, body = _Stub.seen[0]
+        self.assertEqual(path, "/api/chat")
+        self.assertEqual((body["model"], body["stream"], body["options"], body["keep_alive"], body["tools"]),
+                         ("m1", False, {"num_ctx": 4096}, "30s", tools))
+        out = json.loads(r.stdout)
+        self.assertEqual((out["role"], out["content"]), ("assistant", None))      # 空字串 → null
+        call = out["tool_calls"][0]
+        self.assertTrue(call["id"].startswith("call_"))
+        self.assertEqual((call["type"], call["function"]), ("function", {"name": "clock", "arguments": '{"tz": "UTC"}'}))
+
+    def test_flags_and_history_translated(self):
+        _Stub.reply = {"message": {"role": "assistant", "content": "現在 10 點"}}
+        hist = [{"role": "user", "content": "幾點"},
+                {"role": "assistant", "content": None, "tool_calls": [
+                    {"id": "c9", "type": "function", "function": {"name": "clock", "arguments": '{"tz": "UTC"}'}}]},
+                {"role": "tool", "tool_call_id": "c9", "content": "{\"time\": \"10:00\"}"}]
+        r = self.ollama({"messages": hist}, "--num-ctx", "8192", "--keep-alive", "0")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        body = _Stub.seen[0][2]
+        self.assertEqual((body["options"]["num_ctx"], body["keep_alive"]), (8192, 0))
+        self.assertNotIn("tools", body)
+        a, t = body["messages"][1], body["messages"][2]
+        self.assertEqual((a["content"], a["tool_calls"]), ("", [{"function": {"name": "clock", "arguments": {"tz": "UTC"}}}]))
+        self.assertEqual((t["role"], t["tool_name"], t["tool_call_id"]), ("tool", "clock", "c9"))
+        self.assertEqual(json.loads(r.stdout), {"role": "assistant", "content": "現在 10 點"})
+
+    def test_http_and_bad_response(self):
+        _Stub.status, _Stub.reply = 400, {"error": "m1 does not support tools"}
+        r = self.ollama({"messages": []})
+        err = json.loads(r.stderr)["error"]
+        self.assertEqual((r.returncode, err["code"]), (1, "HttpError"))
+        self.assertIn("does not support tools", err["msg"])
+        _Stub.status, _Stub.reply = 200, {"nope": 1}
+        r = self.ollama({"messages": []})
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "BadResponse"))
+
+    def test_bad_num_ctx(self):
+        r = self.ollama({"messages": []}, "--num-ctx", "big")
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "FieldType"))
+
+    # 父類別的 openai 專屬測試不重跑
+    test_request_has_tools_and_reply_parsed = test_api_key_from_env = None
+    test_http_and_connect_errors = test_think_cell_through_real_brain = None

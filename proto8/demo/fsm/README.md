@@ -18,7 +18,7 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
   - `think/ask.json`＝`aos_agent_lib.py think`（**同步**，N-41）：讀 history、組 `{"messages", "tools"}`、跑腦、接 assistant 訊息。
   - `think/review.py`：最後一則 assistant 有 `tool_calls`＝`next: tool`，否則寫 `outbox.txt`、`next: idle`（兩個都在 `end`＝交給外層）。
   - `cells/tool.json`＝`aos_agent_lib.py tool`：跑第一個 tool_call（引數寫成 `work/N-call.json` 當 stdin）、接 tool 訊息。
-- `brain/fake.py`（`brain/fake.json`）：假腦，照思考介面。問「幾點」回 OpenAI `tool_calls` 叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回。`brain/openai.json`：真腦（`aos_brain_openai.py`）。
+- `brain/fake.py`（`brain/fake.json`）：假腦，照思考介面。問「幾點」回 OpenAI `tool_calls` 叫 `clock`；「兩個」一次叫兩個；「亂」叫不存在的工具；拿到工具結果就照著回。`brain/openai.json`：真腦（`aos_brain_openai.py`）；`brain/ollama146.json`：ollama 原生真腦（`aos_brain_ollama.py`，146、gemma3:1b、num_ctx 4096、keep_alive 30s）。
 - `tools/clock.json`＋`clock.py`：工具＝inst，說明在 `_tool`；stdout `{"time": "HH:MM:SS"}`。
 - `run.py`：mktemp 建暫存資料夾（`inbox/` 兩封信「你好」「現在幾點？」、`work/`、窗），起 aos-loop，每 20 ms 看一次兩層 state 窗、每拍跑完印一行；最後印 `steps.jsonl`、history、`outbox.txt`，刪掉暫存資料夾。
 
@@ -29,6 +29,12 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 - 端點預設 LiteLLM `http://localhost:4000/v1`（[dev-env](../../../wf/workflows/dev-env.md#模型端點2026-09-25-定10-10-核對)），不用金鑰；先 `curl localhost:4000/v1/models` 看有哪些名字，把 `brain/openai.json` 的 `--model` 改成挑到的（預設寫 `chatgpt-gpt-6-sol`）。
 - 換端點加旗標：`--base-url https://api.deepseek.com/v1 --model deepseek-chat --api-key-env DEEPSEEK_API_KEY`，金鑰只放環境變數（`export DEEPSEEK_API_KEY=…`），不寫進檔。
 - 真腦會慢：ask 那拍等多久就阻塞多久（`think/ask.json` 的 `timeout_ms` 200 秒、`loop.json` 的 20 秒要跟著加大）。
+
+### 換成 146 的 ollama
+
+同樣只改一行：`"brain": "brain/ollama146.json"`。走 ollama 原生 `/api/chat`（`/v1` 設不了 num_ctx）。**用 146 之前先照 [dev-env](../../../wf/workflows/dev-env.md#跨機--離線差異) 的規矩**（看負載、只准小模型、num_ctx 4096、短 keep_alive、試完確認卸載）。
+
+- 10-15 試過：gemma3:1b、deepseek-r1:8b 都不支援 tools（ollama 回 400），ask 格 `CellFailed`、外層停在 thinking。**注意**：ask 失敗後外層每拍都會再叫一次腦（沒有退避），loop 拍 10 次＝打 10 次請求；對共用機器試的時候自己一拍一拍敲、看到錯就停。
 
 要非同步就把 ask 換成「丟請求、回 `{"next": "waiting"}`」再加一格 waiting。
 
