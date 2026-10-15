@@ -33,7 +33,7 @@ aos_inst 的退出碼只說它自己：0＝子程式跑完，`last_code`＝它 s
 aos_inst 的 stderr 不轉到 loop 自己的 stderr（C-52 只管自己這一層；10-15 使用者「都按照推薦。」），只記在 state 窗的 last_error。
 
 stdout（N-12，JSON 串流）：每一次一份 {"run": 第幾次, "code": last_code, "ms": 跑了幾毫秒}，結束時一份
-{"end": "done"|"stopped", "runs", "skipped", "last_code"}。stderr：只有 loop 自己的錯誤（N-29 JSON），沒有警告。
+{"end": "done"|"stopped", "runs", "skipped", "last_code", "signal"}（signal＝被哪個訊號停掉，沒有＝null）。stderr：只有 loop 自己的錯誤（N-29 JSON），沒有警告。
 
 ctl 窗（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣」，loop 只讀不寫，每 ctl_poll_ms 看一次，
 每次讀整份、內容跟上次不同才重驗。認的欄位（都選填；不認的忽略）：
@@ -55,13 +55,14 @@ state 窗（骨架跟 daemon 共用，見 lib ctl-state.md）：`id`、`state`�
 loop 自己多 `skipped`、`last_code`、`last_warning`。內容沒變也每秒碰一次（心跳）。先寫 `.名字.tmp` 再改名；
 寫不了＝窗壞了（同 N-19 窗缺）：收掉正在跑的那次、結束，stderr 一份 StateWriteFailed、退出 1。
 
-收到 SIGINT／SIGTERM／SIGHUP（只在主執行緒接）：收掉正在跑的那次（整群 SIGTERM，過 grace_ms 整群 SIGKILL）、不再起新的。
+收到 SIGINT／SIGTERM／SIGHUP（只在主執行緒接）：收掉正在跑的那次（整群 SIGTERM，過 grace_ms 整群 SIGKILL）、不再起新的；
+哪個訊號記在 state 窗的 `signal` 與結束那份的 `signal`（沒被訊號停＝null）。
 
 退出碼只說 loop 自己，不沿用下層的碼（C-52；10-15 使用者「都同意。」，盤點第 1 條）：
 - 0＝正常結束（次數跑完、stop）；子程式回非 0 不算錯（在 last_code）。
 - 1＝有錯：設定不對、用法不對、state 窗寫不了、或最後一次是 aos_inst 自己出錯（stderr 一份錯誤，代號＝last_error 的代號；
   細節在 state 窗 last_error）；中途出錯後來好了不算。
-- 被訊號停掉＝128＋訊號號碼（Unix 傳統）。
+- 被訊號停掉＝1（不寫 stderr；哪個訊號在 state 窗與結束那份的 `signal`）。原本 128＋N，10-15 晚使用者「按照推薦」收掉。
 `run()` 正常回 None，其餘丟 `LoopError`（`exit` 屬性＝上面的退出碼）。
 
 給 daemon 重用的拍引擎：`Loop` 類別的 `beat()`（到點時做什麼）、`idle()`（每一圈都做）、`extra()`（state 多的欄位）、
@@ -190,6 +191,7 @@ class Loop:
         self.last_code = self.last_error = None
         self.inst_exit = 0          # 最後一次是 aos_inst 自己出錯＝它的退出碼（只用來判斷有沒有錯，不往上傳），否則 0
         self.proc = None
+        self.signal = None          # 被哪個訊號停掉（state 窗、結束那份的 signal）
         self.stopping = False       # stop 讀到過一次就算數
         self.ended = False          # stop_on_end：包的 fsm 走到 end 了
         self.watch = None           # stop_on_end：(這次 stdout 的檔, 從哪讀起, 是不是自己接的暫存檔)
@@ -339,7 +341,7 @@ class Loop:
         else:
             state = "waiting"
         return state_doc(self.id, state, w, self.ctl, self.runs, self.error_now(), last_warning=self.warning_now(),
-                         **self.extra())
+                         signal=self.signal, **self.extra())
 
     def serve(self, got):
         c = self.cfg
@@ -357,6 +359,7 @@ class Loop:
                     self.stopping, now_ = True, w["stop"][1]
                 self.idle(w)
                 if got:
+                    self.signal = got[0]
                     if self.proc:
                         self.finish(kill(self.proc, c["grace_ms"]))
                     final = "stopped"
@@ -390,7 +393,7 @@ class Loop:
             finally:
                 self.state_file.write(self.status(w, final or "stopped"))
                 aos_cli.emit({"end": final or "stopped", "runs": self.runs, "skipped": self.skipped,
-                              "last_code": self.last_code})
+                              "last_code": self.last_code, "signal": self.signal})
 
     def run(self):
         main = threading.current_thread() is threading.main_thread()
@@ -402,7 +405,7 @@ class Loop:
             for s, h in old.items():
                 signal.signal(s, h)
         if got:
-            raise LoopError("Signaled", "收到訊號 %d" % got[0], 128 + got[0])
+            raise LoopError("Signaled", "收到訊號 %d" % got[0])
         if self.state_file.failed:
             raise LoopError("StateWriteFailed", self.state_file.failed)
         if self.inst_exit:

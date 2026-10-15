@@ -53,7 +53,7 @@ stdout 同 loop：跑了 inst 的拍一份 {run, code, ms}（沒 inst＝不吐�
 last_error＝inst 自己出錯那行，沒有就是最近一圈掃資料夾的錯（ScanFailed、ReplyFailed），都沒有＝null。
 跑起來之後出意外（PolicyFailed、RestartFailed、TableWriteFailed、收工時寫不了子項 ctl 的 WriteFailed）不結束、不寫 stderr，
 記在 state 窗的 last_warning（「代號: 白話」，最近一件；ctl 窗壞檔的優先）；子 loop 自己的 stderr 落 work_dir/N/err.json，不轉上來
-（C-52；10-15 使用者「都按照推薦。」）。退出碼只說 daemon 自己、不沿用下層的碼：0＝正常收工（含收到 SIGTERM／SIGINT）；
+（C-52；10-15 使用者「都按照推薦。」）。退出碼只說 daemon 自己、不沿用下層的碼：0＝正常收工（含收到 SIGTERM／SIGINT：這是 daemon 照設計的收工路，哪個訊號記在 state 窗與結束那份的 `signal`）；
 1＝起不來、state 窗寫不了、最後一拍 inst 自己出錯（stderr 一份錯誤，同 loop）。
 """
 import os

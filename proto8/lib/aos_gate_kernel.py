@@ -21,7 +21,7 @@
    數字取正負號；有效級數＝級數＋等了幾拍 // aging_ticks）→ deadline 近的先 → `_metainfo.cost` 小的先（沒寫＝0）→ 先來後到。
 4. 認領（new/ → cur/；被閘門撤走的跳過）、信本身就是 inst：填 stdout／stderr 旁檔、aos_inst.run() 跑、
    回信＝結果（N-30）、刪信（aos_mailbox.run_letter）。
-stdout 一份 {"runs", "served", "dropped", "waiting", "budget"}。設定不對＝stderr 錯誤、退出 125。
+stdout 一份 {"runs", "served", "dropped", "waiting", "budget"}。設定不對＝stderr 錯誤、退出 1。
 
 相依：aos_inst ← aos_mailbox ← aos_gate ← aos_gate_kernel（也借 aos_ctl_state 的 write_json）。
 """
@@ -208,10 +208,10 @@ def main(argv=None):
         return 0
     except CliError as e:
         aos_cli.error(e.code, e.msg)
-        return 125
+        return 1
     except OSError as e:
         aos_cli.error("IoFailed", str(e))
-        return 125
+        return 1
 
 
 if __name__ == "__main__":

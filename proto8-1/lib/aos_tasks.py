@@ -7,8 +7,9 @@ tasks 是一組小程式，每支做一件事，跟 aos_inst 一樣是獨立的�
 inst 不必寫 `exit`（選填；exit 檔只是與舊時代的橋樑，暫定 e）。
 三扇門（N-12）：tasks 自己的 stdout 不吐東西（空的 JSON 串流，結果就是退出碼）；自己的錯誤照 aos_cli 吐
 `{"error": {"code", "msg"}}` 到 stderr。
-自己出錯的退出碼（數字只供參考）：125＝用法不對（Usage）、TARGET 不對、aos_inst 的結果讀不到（ResultUnreadable）；
-aos_inst 自己出錯時沿用它的退出碼（127＝找不到程式、126＝不能執行、125＝其他），它自己會在 stderr 吐一份錯誤。
+自己出錯一律退 1（N-43；10-15 晚使用者「按照推薦」，原本 125／沿用 aos_inst 的 127／126／125）：用法不對（Usage）、TARGET 不對、
+aos_inst 的結果讀不到（ResultUnreadable）、aos_inst 自己出錯（它自己會在 stderr 吐一份錯誤）、收到訊號（stderr 一份 `Signaled`，
+原本 128＋N）。子程式跑完回的碼（seq／par／if 的退出碼）是**透明轉交**子程式自己的碼，不是 tasks 的錯；aos-not 是述詞（N-34 例外）。
 要巢狀就讓某個 inst.json 的 argv 再寫一支 tasks 程式。
 """
 import json
@@ -23,7 +24,7 @@ sys.path.insert(0, LIB)
 from aos_cli import error  # noqa: E402
 from aos_inst import InstError, find, load  # noqa: E402
 
-__all__ = ["Signals", "load_all", "result", "start"]
+__all__ = ["Signals", "load_all", "result", "signaled", "start"]
 
 AOS_INST = os.path.join(LIB, "aos_inst.py")
 _CAUGHT = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
@@ -57,15 +58,15 @@ def start(item, sig):
 
 def result(proc, item):
     """等 proc 結束，回 (碼, 子程式有沒有跑完)。跑完＝aos_inst 正常做完、stdout 有結果，碼＝那份結果的 `code`；
-    否則是 tasks 自己這邊的錯：aos_inst 自己出錯＝它的退出碼（被訊號殺掉＝128＋N）；結果讀不到＝吐一份錯誤、125。"""
+    否則是 tasks 自己這邊的錯、碼＝1：aos_inst 自己出錯（它自己吐了錯誤）或被訊號殺掉；結果讀不到＝吐一份錯誤。"""
     out = proc.communicate()[0]
     rc = proc.returncode
     if rc:
-        return (rc if rc > 0 else 128 - rc), False
+        return 1, False
     code = _code(out.decode("utf-8", "replace"))
     if code is None:
         error("ResultUnreadable", "讀不到 %s 的 aos_inst 結果（stdout 沒有帶 code 的 JSON）" % item[0])
-        return 125, False
+        return 1, False
     return code, True
 
 
@@ -80,6 +81,12 @@ def _code(text):
         if isinstance(doc, dict) and isinstance(doc.get("code"), int) and not isinstance(doc["code"], bool):
             return doc["code"]
     return None
+
+
+def signaled(sig):
+    """收到訊號的收尾：stderr 一份 Signaled（哪個訊號）、回 1（原本 128＋N）。"""
+    error("Signaled", "收到訊號 %d，轉給了正在跑的、後面的不跑" % sig)
+    return 1
 
 
 class Signals:

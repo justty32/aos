@@ -217,7 +217,7 @@ class Daemon(Tmp):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.read("l.out"), "y\ny\n")
         out = [json.loads(x) for x in r.stdout.splitlines()]
-        self.assertEqual(out[-1], {"end": "done", "runs": 2, "skipped": 0, "last_code": 0})
+        self.assertEqual(out[-1], {"end": "done", "runs": 2, "skipped": 0, "last_code": 0, "signal": None})
 
     def test_no_inst_only_summary(self):
         # 沒 inst 的拍不吐每拍那份，stdout 只有結束總結
@@ -225,7 +225,7 @@ class Daemon(Tmp):
         r = subprocess.run([sys.executable, DAEMON, path], cwd=self.tmp, capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 0, r.stderr)
         out = [json.loads(x) for x in r.stdout.splitlines()]
-        self.assertEqual(out, [{"end": "done", "runs": 3, "skipped": 0, "last_code": None}])
+        self.assertEqual(out, [{"end": "done", "runs": 3, "skipped": 0, "last_code": None, "signal": None}])
 
     def test_target_pointer(self):
         # 一份檔放好幾格：同一份檔兩個位置＝兩個 loop；inst 那格包成只跑一次

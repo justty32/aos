@@ -38,14 +38,13 @@ JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼�
 
 結果（N-12：stdout＝返回值）：跑完往 stdout 吐一份 JSON
     {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file"}
-code＝子程式的碼（被訊號停掉＝128＋訊號號碼，同 exit 檔）、signal＝訊號號碼或 null、timed_out＝被 timeout_ms 收掉、
+code＝子程式的碼（資料、照實轉交子程式的；被訊號停掉＝128＋訊號號碼，同 exit 檔）、signal＝訊號號碼或 null、timed_out＝被 timeout_ms 收掉、
 pid＝子程式的 pid、ms＝跑了幾毫秒、exit_file＝exit 檔的路徑或 null。`run()` 回同一份 dict。
 - `exit` 選填，寫了就照寫（與舊時代的橋樑，暫定 e；要子程式的碼讀上面那份結果的 code）：自己結束＝它的碼；被訊號停掉＝128＋訊號號碼（SIGTERM＝143、SIGKILL＝137）。
   根本沒起來就不寫。寫不進去不管，不算錯。
 - aos_inst 自己的碼＝命令列退出碼／`run()` 有沒有丟例外：0＝正常做完（子程式回幾號、被限時收掉都算正常做完）；
   非 0＝aos_inst 自己出錯（單子有問題、程式找不到、檔打不開…），`run()` 丟 `InstError`，命令列 stderr 吐一份
-  `{"error": {"code", "msg"}}`。數字只供參考，照 Unix 包裝程式（env、timeout）的慣例：127＝找不到程式、126＝不能執行、
-  125＝其他（`exit_code()`）。
+  `{"error": {"code", "msg"}}`、退出碼一律 1（原本 127／126／125 照 env 慣例，收掉（10-15 晚使用者「按照推薦」：N-43 只有 0／非 0，自己的錯一律 1）；是哪種錯看 code）。
 命令列（和在主執行緒呼叫的 `run()`）收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式，照樣等它結束、寫 exit；
 轉過去之後過 grace_ms 還沒結束就 SIGKILL。
 """
@@ -61,7 +60,7 @@ from aos_cli import CliError
 from aos_cli import is_int as _int
 from aos_directives import DirectiveError, resolve, split_target, target_id
 
-__all__ = ["FLAGS", "InstError", "dirname", "exit_code", "find", "load", "main", "parse", "read_exit", "run"]
+__all__ = ["FLAGS", "InstError", "dirname", "find", "load", "main", "parse", "read_exit", "run"]
 
 _BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
           "stdout_append", "stdout_mkdir", "stdout_inherit",
@@ -74,11 +73,6 @@ class InstError(CliError):
 
 
 FLAGS = ("id", "cwd", "stdin", "stdout", "stderr", "exit", "timeout_ms", "grace_ms") + _BOOLS     # 鏡射成旗標的 key
-
-
-def exit_code(err):
-    """InstError → 命令列退出碼：CommandNotFound＝127、CommandNotExecutable＝126、其他＝125。"""
-    return {"CommandNotFound": 127, "CommandNotExecutable": 126}.get(err.code, 125)
 
 
 def read_exit(path):
@@ -354,7 +348,7 @@ def main(argv=None):
         return 0
     except CliError as e:
         aos_cli.error(e.code, e.msg)
-        return exit_code(e)
+        return 1
 
 
 if __name__ == "__main__":

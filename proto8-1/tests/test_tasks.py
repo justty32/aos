@@ -82,10 +82,10 @@ class Tasks(unittest.TestCase):
         a = self.sh("a", "true")
         for prog in (SEQ, PAR):
             r = self.cli(prog, a, self.p("nope.json"))
-            self.assertEqual(r.returncode, 125)
+            self.assertEqual(r.returncode, 1)                  # 自己的錯一律 1（N-43，10-15 晚）
             self.assertEqual(self.errors(r), ["ReadFailed"])
             r = self.cli(prog)
-            self.assertEqual((r.returncode, self.errors(r)), (125, ["Usage"]))
+            self.assertEqual((r.returncode, self.errors(r)), (1, ["Usage"]))
         self.assertFalse(os.path.exists(self.p("log")))
 
     def test_code_from_inst_stdout_not_exit_file(self):
@@ -120,12 +120,12 @@ class Tasks(unittest.TestCase):
     def test_launch_error(self):
         a, bad, c = self.sh("a", "true"), self.inst("bad", ["/no/such/prog"]), self.sh("c", "true")
         r = self.cli(SEQ, a, bad, c)
-        self.assertEqual((r.returncode, self.read("log")), (127, "a\n"))
+        self.assertEqual((r.returncode, self.read("log")), (1, "a\n"))
         self.assertEqual(self.errors(r), ["CommandNotFound"])          # aos_inst 的 stderr 原樣流過來，也是 JSON
         self.assertEqual(r.stdout, "")                                  # aos_inst 的結果 JSON 不漏出來
         os.remove(self.p("log"))
         r = self.cli(PAR, a, bad, c)
-        self.assertEqual((r.returncode, sorted(self.read("log").split())), (127, ["a", "c"]))
+        self.assertEqual((r.returncode, sorted(self.read("log").split())), (1, ["a", "c"]))
 
     def test_stdout_stays_clean(self):
         # 子 inst 的結果 JSON 不漏到 tasks 的 stdout；tasks 自己也不吐（空的 JSON 串流，結果在退出碼）
@@ -162,16 +162,18 @@ class Tasks(unittest.TestCase):
                 self.assertEqual(self.read("log").split(), log.split())
                 os.remove(self.p("log"))
         for args in ((ok,), (ok, t, e, e)):
-            self.assertEqual(self.cli(IF, *args).returncode, 125)
+            self.assertEqual(self.cli(IF, *args).returncode, 1)
         self.assertFalse(os.path.exists(self.p("log")))
         bad = self.inst("bad", ["/no/such/prog"])
-        self.assertEqual(self.cli(IF, bad, t, e).returncode, 127)      # 條件起不來不跑 ELSE
+        self.assertEqual(self.cli(IF, bad, t, e).returncode, 1)      # 條件起不來不跑 ELSE
         self.assertFalse(os.path.exists(self.p("log")))
 
     def test_not(self):
         ok, ng, bad = self.sh("ok", "true"), self.sh("ng", "exit 2"), self.inst("bad", ["/no/such/prog"])
-        self.assertEqual([self.cli(NOT, x).returncode for x in (ok, ng, bad)], [1, 0, 127])
-        self.assertEqual(self.cli(NOT, ok, ng).returncode, 125)
+        self.assertEqual([self.cli(NOT, x).returncode for x in (ok, ng, bad)], [1, 0, 1])     # 假＝1 不寫 stderr；起不來＝1＋stderr
+        self.assertEqual(self.errors(self.cli(NOT, bad)), ["CommandNotFound"])
+        self.assertEqual(self.cli(NOT, ok).stderr, "")
+        self.assertEqual(self.cli(NOT, ok, ng).returncode, 1)
 
     def test_if_signal_skips_branch(self):
         c = self.inst("c", ["sh", "-c", "echo $$ > c.pid; exec sleep 30"])
@@ -181,7 +183,7 @@ class Tasks(unittest.TestCase):
         self.until(lambda: os.path.exists(self.p("c.pid")))
         time.sleep(0.1)
         proc.send_signal(signal.SIGINT)
-        self.assertEqual(proc.wait(5), 128 + signal.SIGINT)
+        self.assertEqual(proc.wait(5), 1)                    # 被訊號停＝1（stderr 一份 Signaled），原本 128＋N
         self.assertFalse(os.path.exists(self.p("log")))
 
     def signal_test(self, prog):
@@ -193,7 +195,7 @@ class Tasks(unittest.TestCase):
         pid = int(self.read("s1.pid"))
         time.sleep(0.1)
         proc.send_signal(signal.SIGTERM)
-        self.assertEqual(proc.wait(5), 128 + signal.SIGTERM)
+        self.assertEqual(proc.wait(5), 1)
         self.assertFalse(alive(pid))
         return os.path.exists(self.p("s2.pid"))
 

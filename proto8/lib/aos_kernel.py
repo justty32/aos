@@ -244,10 +244,10 @@ def main(argv=None):
         return 0
     except CliError as e:
         aos_cli.error(e.code, e.msg)
-        return 125
+        return 1
     except OSError as e:
         aos_cli.error("IoFailed", str(e))
-        return 125
+        return 1
 
 
 if __name__ == "__main__":

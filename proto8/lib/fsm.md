@@ -33,5 +33,5 @@ python3 proto8/lib/aos_fsm.py [--key 值 ...] [FSM.json | -]
 - **stdout**：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`；沒起成格＝null）＋`from`、`to`，出錯多 `error`，結束那拍多 `"end": true`（N-44：loop 的 `stop_on_end` 看它停）；這行永遠不帶 `next`，所以內層沒結束時外層留在原格。
 - **巢狀**：某格的 inst 是 `aos_fsm.py 內層.json`。內層有自己的 state 窗、從自己的 TARGET 拿設定，不繼承外層的設定。巢狀格不宜寫表上靜態 next。
 - **不做的**（交給拍它的 loop 或格自己，N-39）：ctl（暫停／停止）、lock、步數上限（loop 的 `times`）、連錯停住。表裡指回自己的遞迴不擋（卡死不防護）。
-- **退出碼**（N-43 只認 0／非 0）：0＝這拍正常；1＝格出錯；125＝fsm 自己出錯（設定不對、窗缺 `WindowMissing`、state 讀不懂 `StateBad` 或寫不了），stderr 吐一份 `{"error": {"code", "msg"}}`。
+- **退出碼**（N-43 只認 0／非 0）：0＝這拍正常；1＝格出錯（錯在 stdout 那行的 `error`）或 fsm 自己出錯（設定不對、窗缺 `WindowMissing`、state 讀不懂 `StateBad` 或寫不了；stderr 吐一份 `{"error": {"code", "msg"}}`）。fsm 自己的錯原本 125，10-15 晚使用者「按照推薦」收掉。
 - 格怎麼跑是格的事（N-41）：同步或非同步都行，都不自己 setsid／fork；格裡放 loop／daemon 會阻塞一拍，靠那張 inst 的 `timeout_ms` 守。

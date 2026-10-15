@@ -51,7 +51,7 @@ python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 
 - `defer`＝「不是我挑的」，**不是**「一定要等」（使用者 10-15 定）：沒點名的也是 `defer`。不認得的 id 丟掉；`run` 超過該資源空格的照順序截掉（log 的 `cut`）。級數不能改。
 - **補位**：套完判官的決定後，某種資源還有空格，就從**剩下的信**（沒被 `reject`、沒被判官點到起跑的）照第一種的規則（`order`：deadline 插隊＋級數＋aging＋先來後到，每種資源各自）補滿；只在判官答對時補（判官錯整個本來就走規則）。判官控制自己 `run` 的順序與 `reject`，補位只補空格。log：`decide` 多 `backfill: [id…]`，`start` 多 `reason`（`judge`／`backfill`／`rules`／`direct`）。判官全 defer 也不會卡住。
-- `reject`＝回信 `{"error": {code, msg}}`，呼叫端的閘門 stderr 一份 N-29、退出 125。
+- `reject`＝回信 `{"error": {code, msg}}`，呼叫端的閘門 stderr 一份 N-29、退出 1。
 - **判官錯只有一條路**：判官這拍沒給合法答案（結束碼非 0、逾時、起不來、形狀不對、同一個 id 出現兩次）＝這拍改用第一種的確定規則（`aos_gate_kernel.order`：deadline 插隊＋級數＋aging＋先來後到，每種資源各自補滿），`judge_error` 記原因（答對一次清回 null）。kernel **不數連錯、不停問、不等人歸零**：下次局面變了照樣問；判官要「連錯幾次就改口或停住」是判官格自己的事（C-53 只處理自己的錯，同 N-38 的精神；10-15 使用者「都同意。」，[盤點第 3 條](../thinking/2026-10-15-principles.md)；原本有 `max_fails`、`judge_fails`）。
 - **判官自己的腦不走自己**：判官的環境拿掉 `AOS_KERNEL`；它自己的 `envs` 寫 `AOS_KERNEL` 指回這個信箱也拿掉（指別的信箱，例 LLM kernel，照給）。
 
@@ -61,7 +61,7 @@ python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 2. 反覆：收跑完的（回信、放格）→ 讀 `new/`（過期 `DeadlineMissed`、資源不認得、`llm` 額度見底 `BudgetExhausted`、便宜的直接起跑）→ **局面變了才決定**（排隊的名單、在跑的名單、空格數跟上次一樣＝不問，沿用；**排隊的信沒有任何一種資源有空格＝這拍什麼也起不了，也不問**，格一放才問；只有一封且有空格＝直接跑；否則問判官）→ 照決定認領（new/→cur/）、起跑。
 3. 沒有在跑的、這輪也沒起新的＝這拍結束。所以一拍可能很長（例：等人回信），期間新來的信照樣被收、被排。
 
-stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback, direct, skipped}}`；設定不對＝stderr 錯誤、退出 125。
+stdout 一份 `{runs, served, dropped, waiting, budget, judge: {asked, fallback, direct, skipped}}`；設定不對＝stderr 錯誤、退出 1。
 
 ## agent 判官（換一行 TARGET）
 

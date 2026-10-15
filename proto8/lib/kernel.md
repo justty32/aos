@@ -29,8 +29,8 @@ python3 aos_gate.py [--target T] [--mailbox DIR] [--wait-ms N] [GATE.json]     #
 - **信**（`new/<奈秒時間>.<pid>.json`，名字字典序＝先來後到）＝**target 那張 inst 本身**（inst 族，C-48）：key 攤在最上層（`argv`、`cwd`（轉絕對）、`timeout_ms`、`_metainfo`…；`id`＝target 的 id），加私有 key `priority`、`reply`（回信的絕對路徑 `reply/<名>.json`）、`sent`（epoch 秒）；`stdin`＝旁檔 `reply/<名>.stdin`（呼叫者 stdin 的內容）。kernel 只要把 `stdout`／`stderr` 填成旁檔 `reply/<名>.stdout`／`.stderr`，就能直接 `aos_inst.run(信)`（不認得的 key 一律忽略）。
 - **回信**＝aos_inst 的結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、`exit_file`），或 N-29 形狀 `{"error": {"code", "msg"}}`（aos_inst 起不來時多 `exit`＝它的碼）。閘門讀回信、讀 stdout／stderr 旁檔原樣吐出，回信與旁檔一起刪掉。
 - **呼叫端看到的＝直接叫 target**：stdout、stderr 原樣、退出碼＝target 的碼（測試逐字比過）。**閘門是透明的**：這時 stderr 與碼都是 target 的，不是閘門自己的；target 守 N-43（正常退 0、不寫 stderr）閘門就守。閘門只在自己出錯（下一條）時才說自己的話（10-15 使用者「都按照推薦。」，[盤點 S3](../thinking/2026-10-15-principles.md)）。
-- 錯（stderr 一份 N-29、退出 125）：`QueueTimeout`（排隊超過 `wait_ms`，信撤回）、kernel 回的 `DeadlineMissed`／`BudgetExhausted`／`KernelRestarted`、設定不對、`Usage`（不收 `-`：stdin 是請求本身）。kernel 那邊 target 起不來＝照 aos_inst 的碼（例 127 `CommandNotFound`）。
-- SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）、退出 128＋N；已被拿走的讓它跑完，回信與旁檔沒人收（留在 reply/）。
+- 錯（stderr 一份 N-29、退出 1；原 125，10-15 晚使用者「按照推薦」）：`QueueTimeout`（排隊超過 `wait_ms`，信撤回）、kernel 回的 `DeadlineMissed`／`BudgetExhausted`／`KernelRestarted`、設定不對、`Usage`（不收 `-`：stdin 是請求本身）。kernel 那邊 target 起不來（例 `CommandNotFound`）也是 1。
+- SIGTERM／SIGINT／SIGHUP：信還在 new/ 就撤掉（連 stdin 旁檔）、stderr 一份 `Signaled`（帶訊號號碼）、退出 1（原 128＋N）；已被拿走的讓它跑完，回信與旁檔沒人收（留在 reply/）。
 - target 在 kernel 的環境跑（環境變數＝kernel 的＋target 的 `envs`，不是呼叫者的）；stdin／stdout／stderr 被閘門蓋掉（同 fsm 的格）。
 
 ## kernel `aos_gate_kernel.py`
@@ -56,7 +56,7 @@ python3 aos_gate_kernel.py [--key 值 ...] [KERNEL.json | -]
 3. 排序：**deadline 快到**（剩不到 `near_ms`）的插隊、越近越前 → **有效級數**高的先（`low`／`normal`／`high`＝-1／0／1，數字取正負號，不認得＝0；有效＝級數＋等了幾拍 // `aging_ticks`）→ deadline 近的先 → `_metainfo.cost` 小的先（沒寫＝0）→ 先來後到。
 4. 認領前 `slots` 封（new/→cur/，被撤走的跳過），信本身就是 inst：填 stdout／stderr 旁檔、`aos_inst.run()` 跑、回信＝結果（N-30）、刪信。
 
-stdout 一份 `{runs, served, dropped, waiting, budget}`（log 每行也記 `runs`）；設定不對＝stderr 錯誤、退出 125（`state` 沒寫＝`WindowMissing`）。
+stdout 一份 `{runs, served, dropped, waiting, budget}`（log 每行也記 `runs`）；設定不對＝stderr 錯誤、退出 1（`state` 沒寫＝`WindowMissing`）。
 
 ## 慣例：只包葉子
 
