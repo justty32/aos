@@ -45,17 +45,21 @@ class KernelTest(Tmp):
                              "judge": judge, "slots": {"llm": 1}, "poll_ms": 10}, **kw))
 
     def send(self, text, res="llm", sh="cat", priority=None, **inst):
-        doc = {"kind": "aos-gate-letter", "inst": dict({"argv": ["sh", "-c", sh], "cwd": self.tmp}, **inst),
-               "stdin": text, "priority": aos_gate.normalize_priority(priority), "sent": time.time()}
+        doc = dict({"argv": ["sh", "-c", sh], "cwd": self.tmp}, **inst,
+                   priority=aos_gate.normalize_priority(priority), sent=time.time())     # 信＝那張 inst＋私有 key
         if res is not None:
             doc["_metainfo"] = {"resource": res}
-        name = aos_gate.post(self.box, doc)
+        name = aos_gate.post(self.box, doc, text)
         time.sleep(0.002)
         return name
 
     def reply(self, name):
         with open(os.path.join(self.box["reply"], name)) as f:
             return json.load(f)
+
+    def stdout(self, name):
+        with open(aos_gate.side(os.path.join(self.box["reply"], name), "stdout")) as f:
+            return f.read()
 
     def log(self, event=None):
         try:
@@ -86,7 +90,7 @@ class KernelTest(Tmp):
         self.assertEqual(self.started(names)[0], "c")
         self.assertEqual(self.log("decide")[0]["how"], "judge")
         self.assertEqual(sorted(s["letter"] for s in out["served"]), sorted(names))   # 之後局面變了再問，最後都跑完
-        self.assertEqual(self.reply(next(k for k, v in names.items() if v == "c"))["stdout"], "c")
+        self.assertEqual(self.stdout(next(k for k, v in names.items() if v == "c")), "c")
 
     def test_judge_stdin_is_state_window(self):
         a, b = self.send("a"), self.send("b", priority="high")
@@ -145,7 +149,7 @@ class KernelTest(Tmp):
                 out = K.tick(cfg)
                 self.assertEqual([r["how"] for r in self.log("decide")][0], "fallback")
                 self.assertEqual(len(out["served"]), 2)
-                self.assertEqual(self.reply(self.log("start")[0]["letter"])["stdout"], "b")   # 規則：high 先
+                self.assertEqual(self.stdout(self.log("start")[0]["letter"]), "b")   # 規則：high 先
                 self.assertGreaterEqual(self.state()["judge_fails"], 1)
                 self.assertTrue(self.state()["judge_error"])
 
@@ -197,7 +201,7 @@ class KernelTest(Tmp):
         t.start()
         try:
             p = subprocess.run([sys.executable, GATE, "--target", json.dumps({"argv": ["cat"], "_metainfo": {"resource": "llm"}}),
-                                "--kernel", self.p("mb")], input="hi", capture_output=True, text=True, timeout=10)
+                                "--mailbox", self.p("mb")], input="hi", capture_output=True, text=True, timeout=10)
         finally:
             stop.set()
             t.join()
@@ -224,8 +228,8 @@ class KernelTest(Tmp):
         a = self.send("h1", res="human", sh=WAIT_ANS, timeout_ms=300)
         b = self.send("h2", res="human", sh="cat")
         K.tick(self.cfg(RULES, slots={"human": 1}))
-        self.assertTrue(self.reply(a)["result"]["timed_out"])
-        self.assertEqual(self.reply(b)["stdout"], "h2")
+        self.assertTrue(self.reply(a)["timed_out"])
+        self.assertEqual(self.stdout(b), "h2")
 
     def test_judge_env_has_no_own_mailbox(self):
         self.send("a")

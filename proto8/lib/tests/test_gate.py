@@ -30,11 +30,11 @@ class KernelOrderTest(Tmp):
         self.cfg = K.check({"mailbox": self.p("mb"), "state": self.p("k.state.json"), "log": self.p("log.jsonl")})
 
     def send(self, who, priority=None, meta=None, sh="cat"):
-        doc = {"kind": "aos-gate-letter", "inst": {"argv": ["sh", "-c", sh], "cwd": self.tmp},
-               "stdin": who, "priority": aos_gate.normalize_priority(priority), "sent": time.time()}
+        doc = {"argv": ["sh", "-c", sh], "cwd": self.tmp,                     # 信＝那張 inst 本身＋私有 key
+               "priority": aos_gate.normalize_priority(priority), "sent": time.time()}
         if meta is not None:
             doc["_metainfo"] = meta
-        name = aos_gate.post(self.box, doc)
+        name = aos_gate.post(self.box, doc, who)
         time.sleep(0.002)               # 名字＝奈秒時間，保證先後
         return name
 
@@ -42,11 +42,15 @@ class KernelOrderTest(Tmp):
         with open(os.path.join(self.box["reply"], name)) as f:
             return json.load(f)
 
+    def stdout(self, name):
+        with open(aos_gate.side(os.path.join(self.box["reply"], name), "stdout")) as f:
+            return f.read()
+
     def drain(self, n=20):
         order = []
         for _ in range(n):
             out = K.tick(self.cfg)
-            order += [self.reply(s["letter"])["stdout"] for s in out["served"]]
+            order += [self.stdout(s["letter"]) for s in out["served"]]
             if not out["waiting"]:
                 break
         return order
@@ -82,7 +86,7 @@ class KernelOrderTest(Tmp):
         order = []
         for i in range(14):                                       # 每拍來一封新的 normal、跑一封
             self.send("n%02d" % i)
-            order += [self.reply(s["letter"])["stdout"] for s in K.tick(self.cfg)["served"]]
+            order += [self.stdout(s["letter"]) for s in K.tick(self.cfg)["served"]]
         # 沒 aging＝low 永遠輪不到；等滿 10 拍升成 normal，又是最早來的，第 11 拍輪到它
         self.assertEqual(order.index("low"), 10)
 
@@ -123,6 +127,33 @@ class KernelOrderTest(Tmp):
         self.assertEqual((len(out["served"]), out["waiting"]), (2, 1))
         self.assertLess(time.monotonic() - t0, 0.55)              # 兩封一起跑
 
+    def test_letter_is_inst_and_reply_is_result(self):
+        """信＝target 那張 inst（key 攤平）＋priority／reply／sent，stdin＝旁檔；回信＝aos_inst 的結果（N-30）。"""
+        self.write("t.json", {"argv": ["sh", "-c", "cat; echo e >&2; exit 3"], "timeout_ms": 5000,
+                              "_metainfo": {"cost": 2}})
+        old = os.getcwd()
+        os.chdir(self.tmp)
+        try:
+            box, doc = aos_gate.letter({"target": "t.json", "mailbox": self.p("mb"), "priority": "high"})
+        finally:
+            os.chdir(old)
+        name = aos_gate.post(box, doc, "hi")
+        with open(os.path.join(self.box["new"], name)) as f:
+            lt = json.load(f)
+        self.assertEqual((lt["argv"][0], lt["timeout_ms"], lt["_metainfo"], lt["priority"], lt["cwd"]),
+                         ("sh", 5000, {"cost": 2}, {"level": "high"}, os.path.realpath(self.tmp)))
+        self.assertEqual(lt["id"], os.path.realpath(self.p("t.json")))
+        self.assertNotIn("kind", lt)
+        self.assertEqual(lt["reply"], os.path.join(self.box["reply"], name))
+        with open(lt["stdin"]) as f:
+            self.assertEqual(f.read(), "hi")
+        K.tick(self.cfg)
+        rep = self.reply(name)
+        self.assertEqual(set(rep), {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file"})
+        self.assertEqual((rep["code"], rep["id"]), (3, lt["id"]))
+        self.assertEqual(aos_gate.outputs(self.box, name), ("hi", "e\n"))
+        self.assertEqual(os.listdir(self.box["reply"]), [])                  # 回信與旁檔都收掉了
+
     def test_bad_config(self):
         with self.assertRaises(K.KernelError) as e:
             K.check({"mailbox": "m"})
@@ -158,7 +189,7 @@ class GateEndToEndTest(Tmp):
         self.running.set()
 
     def gate(self, target, **keys):
-        self.write("gate.json", dict({"target": target, "kernel": self.p("mb")}, **keys))
+        self.write("gate.json", dict({"target": target, "mailbox": self.p("mb")}, **keys))
         return [sys.executable, GATE, self.p("gate.json")]
 
     def test_identical_to_direct_call(self):
@@ -181,6 +212,7 @@ class GateEndToEndTest(Tmp):
         self.assertEqual(res["gated"]["code"], 4)
         self.assertEqual(self.read("direct.out"), self.read("gated.out"))
         self.assertEqual(self.read("direct.err"), self.read("gated.err"))
+        self.assertEqual(os.listdir(self.box["reply"]), [])                  # 閘門讀完旁檔就刪
 
     def test_env_priority_and_plain_stdin(self):
         self.kernel()
@@ -193,7 +225,7 @@ class GateEndToEndTest(Tmp):
                            env=self.env, cwd=self.tmp, timeout=20)          # kernel 沒在拍
         self.assertEqual(r.returncode, 125)
         self.assertEqual(json.loads(r.stderr)["error"]["code"], "QueueTimeout")
-        self.assertEqual(os.listdir(self.box["new"]), [])
+        self.assertEqual(os.listdir(self.box["new"]) + os.listdir(self.box["reply"]), [])     # 撤信連 stdin 旁檔
 
     def test_sigterm_withdraws(self):
         p = subprocess.Popen(self.gate({"argv": ["cat"]}), stdin=subprocess.PIPE, env=self.env, cwd=self.tmp)
@@ -230,7 +262,7 @@ class GateEndToEndTest(Tmp):
         cfg = {"brain": "gated.json", "history": "h.json", "work": "work"}
         for _ in range(2):
             r = subprocess.run([sys.executable, os.path.join(LIB, "aos_agent_lib.py"), "think"], cwd=self.tmp,
-                               input=json.dumps({"cfg": cfg}), capture_output=True, text=True, env=self.env, timeout=20)
+                               input=json.dumps(cfg), capture_output=True, text=True, env=self.env, timeout=20)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.write("h.json", json.loads(self.read("h.json")) + [{"role": "user", "content": "再一次"}])
         self.until(lambda: json.loads(self.read("k.state.json"))["budget"]["used"] == 18)   # state 在回信之後才寫
@@ -242,7 +274,11 @@ class GateEndToEndTest(Tmp):
         r = subprocess.run([sys.executable, kernel, "--mailbox", self.p("mb"), "--state", self.p("k.json")],
                            capture_output=True, text=True, env=self.env)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stdout)["tick"], 1)
+        out = json.loads(r.stdout)
+        self.assertEqual(out["runs"], 1)
+        st = json.loads(self.read("k.json"))                     # state 窗用 loop 骨架的名字
+        self.assertEqual((st["state"], st["runs"], st["last_error"]), ("waiting", 1, None))
+        self.assertIn("beat", st)
         r = subprocess.run([sys.executable, kernel, "--mailbox", self.p("mb")], capture_output=True, text=True)
         self.assertEqual(r.returncode, 125)
 

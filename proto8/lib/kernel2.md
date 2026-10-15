@@ -4,7 +4,7 @@
 
 > **基礎實作（N-18 最簡單的）、還不是規範。** 動工時自己定的點列在 [thinking 通用 kernel「動工自定點」](../thinking/2026-10-15-general-kernel.md#動工自定點)。
 
-**閘門不改**：`aos_gate.py` 的 `kernel` 指到這支的信箱就行，信的形狀同第一種（inst 加 key）。差別只在「誰先跑」由**判官**決定——判官是一張 inst（N-12）：stdin＝kernel 的 state 窗整份，stdout 最後一份＝決定。
+**閘門不改**：`aos_gate.py` 的 `mailbox`（或環境變數 `AOS_KERNEL`）指到這支的信箱就行；信（＝那張 inst 本身＋`priority`／`reply`／`sent`）與回信（N-30 結果）的形狀同第一種，讀信、認領、跑一封、回信共用 `aos_mailbox.py`。差別只在「誰先跑」由**判官**決定——判官是一張 inst（N-12）：stdin＝kernel 的 state 窗整份，stdout 最後一份＝決定。
 
 ```
 呼叫者 ──▶ aos_gate.py ──信──▶ 信箱 new/ ──▶ aos_kernel.py（一拍＝一段忙碌期）──state 窗──▶ 判官 inst ──決定──┐
@@ -19,7 +19,7 @@ python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 
 | key | 意思 |
 |---|---|
-| `mailbox` | 信箱資料夾（必填，同閘門的 `kernel`） |
+| `mailbox` | 信箱資料夾（必填，同閘門的 `mailbox`） |
 | `state` | state 窗（必填，N-19），欄位見下 |
 | `slots` | 每種資源幾格：`{"llm": 1, "cpu": 2, "human": 1}`；純值 `n`＝`{"llm": n}`（沒寫＝1） |
 | `judge` | 判官：TARGET 或一張 inst（沒寫＝一律用規則）；沒寫 `timeout_ms`＝30000 |
@@ -27,7 +27,7 @@ python3 aos_kernel.py [--key 值 ...] [KERNEL.json | -]
 | `budget`、`aging_ticks`、`near_ms`、`log` | 同第一種；`budget` 只管 `llm` 的信 |
 | `poll_ms` | 一拍之內多久看一次信箱與跑完的信（50） |
 
-**資源**＝信的 `_metainfo.resource`（從 target 的 inst 照抄）：沒寫或 `"none"`＝便宜的，不佔格、不問判官、直接跑；寫了但 `slots` 沒有＝回 `ResourceUnknown`。`human`＝人的注意力（C-28、C-29）：那支 inst 等人回信落檔，格就一直佔著，回信到或它的 `timeout_ms` 到才放。
+**資源**＝信的 `_metainfo.resource`（信就是 target 那張 inst，它寫的 `_metainfo` 原樣在最上層）：沒寫或 `"none"`＝便宜的，不佔格、不問判官、直接跑；寫了但 `slots` 沒有＝回 `ResourceUnknown`。`human`＝人的注意力（C-28、C-29）：那支 inst 等人回信落檔，格就一直佔著，回信到或它的 `timeout_ms` 到才放。
 
 ## state 窗＝判官的 stdin
 

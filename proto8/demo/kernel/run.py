@@ -6,7 +6,8 @@
 
 三段：(1) 級數／deadline：先一封佔住唯一的格，再同時丟 low、normal、high、deadline 快到、deadline 已過；
 (2) aging：一封 low 跟一串不斷進來的 normal（快腦）；(3) 報時員巢狀（boss 問 clerk、clerk 查 clock），
-兩個 agent 的腦都包了閘門、一格就夠。產物放在 mktemp 的暫存資料夾，跑完刪掉。
+兩個 agent 的腦都包了閘門、一格就夠。kernel／loop／daemon 的設定在暫存資料夾裡寫成完整檔（不靠指示詞）；
+閘門（gate.json、gate-fake.json）沒寫 mailbox，靠環境變數 AOS_KERNEL。產物放在 mktemp 的暫存資料夾，跑完刪掉。
 """
 import json
 import os
@@ -37,6 +38,23 @@ def call(env, who, priority):
     return p
 
 
+def write(path, doc):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=2)
+    return path
+
+
+def configs(tmp, log, state):
+    """kernel（slots 1、額度 10 萬）／loop（每 100 ms 拍一次）／daemon 的完整設定寫進 tmp，回 daemon.json 的路徑。"""
+    k = write(os.path.join(tmp, "kernel.json"), {"mailbox": os.path.join(tmp, "mb"), "state": state, "log": log,
+                                                 "slots": 1, "budget": 100000, "aging_ticks": 10, "near_ms": 30000})
+    lp = write(os.path.join(tmp, "loop.json"), {"inst": {"argv": [sys.executable, os.path.join(LIB, "aos_gate_kernel.py"), k],
+                                                         "cwd": HERE}, "times": None, "interval_ms": 100})
+    return write(os.path.join(tmp, "daemon.json"), {"children": [lp], "interval_ms": 100,
+                                                    "ctl": os.path.join(tmp, "daemon.ctl.json"),
+                                                    "state": os.path.join(tmp, "daemon.state.json")})
+
+
 def log_since(path, start, names):
     """kernel log 第 start 行以後的；letter 名字裡的 pid 換回呼叫者名字。"""
     try:
@@ -55,9 +73,9 @@ def show(rec):
         pri["deadline"] = "送出時%+d 秒" % round(pri["deadline"] - rec["sent"]) if "sent" in rec else pri["deadline"]
     pri = json.dumps(pri or None, ensure_ascii=False)
     if "error" in rec:
-        say("   tick %-3d %-10s 丟掉：%s   priority=%s" % (rec["tick"], rec["who"], rec["error"], pri))
+        say("   拍 %-3d %-10s 丟掉：%s   priority=%s" % (rec["runs"], rec["who"], rec["error"], pri))
     else:
-        say("   tick %-3d %-10s 服務 %4d ms，等了 %2d 拍   priority=%s" % (rec["tick"], rec["who"], rec["ms"], rec["waited"], pri))
+        say("   拍 %-3d %-10s 服務 %4d ms，等了 %2d 拍   priority=%s" % (rec["runs"], rec["who"], rec["ms"], rec["waited"], pri))
 
 
 def finish(procs):
@@ -70,12 +88,11 @@ def finish(procs):
 
 def main():
     tmp = tempfile.mkdtemp(prefix="aos-kernel-demo-")
-    log = os.path.join(tmp, "kernel.log.jsonl")
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", AOS_KERNEL=os.path.join(tmp, "mb"), DEMO_KERNEL_LOG=log,
-               DEMO_KERNEL_STATE=os.path.join(tmp, "kernel.state.json"),
-               DEMO_DAEMON_CTL=os.path.join(tmp, "daemon.ctl.json"), DEMO_DAEMON_STATE=os.path.join(tmp, "daemon.state.json"))
+    log, kstate = os.path.join(tmp, "kernel.log.jsonl"), os.path.join(tmp, "kernel.state.json")
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", AOS_KERNEL=os.path.join(tmp, "mb"))   # 閘門的信箱
     say("暫存資料夾 %s；daemon 底下的 loop 每 100 ms 拍一次 kernel（slots 1）" % tmp)
-    daemon = subprocess.Popen([sys.executable, DAEMON, "daemon.json"], cwd=HERE, env=env, stdout=subprocess.DEVNULL)
+    daemon = subprocess.Popen([sys.executable, DAEMON, configs(tmp, log, kstate)], cwd=tmp, env=env,
+                              stdout=subprocess.DEVNULL)
     names = {}
     try:
         say("== 1. 級數與 deadline：X 先佔住唯一的格（腦睡 1 秒），趁這時丟五封")
@@ -122,8 +139,8 @@ def main():
             os.path.join(tmp, "frame"), history=[{"role": "user", "content": "現在幾點？"}], cwd=tmp)
         say("   boss 回：%s（敲了 %d 拍）" % (out["reply"], out["ticks"]))
         for r in log_since(log, n, {}):
-            say("   tick %-3d 一次腦 %4d ms（一格一次一封；boss 等 clerk 時不佔格）" % (r["tick"], r["ms"]))
-        with open(env["DEMO_KERNEL_STATE"], encoding="utf-8") as f:
+            say("   拍 %-3d 一次腦 %4d ms（一格一次一封；boss 等 clerk 時不佔格）" % (r["runs"], r["ms"]))
+        with open(kstate, encoding="utf-8") as f:
             say("   kernel state 窗的額度：%s" % json.dumps(json.load(f)["budget"]))
     finally:
         daemon.send_signal(signal.SIGTERM)
