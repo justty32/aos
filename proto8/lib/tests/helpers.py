@@ -27,7 +27,7 @@ class Tmp(unittest.TestCase):
         self.addCleanup(self.no_leftovers)          # 比 rmtree 先跑（cleanup 後進先出）
 
     def no_leftovers(self):
-        """暫存資料夾裡還有活著的 aos_loop／aos_daemon＝漏了：等一下下（可能正在收），還在就整群 SIGKILL、算失敗。"""
+        """暫存資料夾裡還有活著的 aos_loop／daemon／fsm／gate／kernel 行程（cwd 或命令列路徑在內）＝漏了：等一下下（可能正在收），還在就整群 SIGKILL、算失敗。"""
         end = time.monotonic() + 2
         while leftovers(self.tmp) and time.monotonic() < end:
             time.sleep(0.05)
@@ -77,9 +77,13 @@ def alive(pid):
         return False
 
 
-def leftovers(root, names=("aos_loop.py", "aos_daemon.py")):
-    """cwd 在 root 底下、命令列有 names 之一的行程：[(pid, 命令列), ...]（讀 /proc；不收殭屍）。"""
+def leftovers(root, names=("aos_loop.py", "aos_daemon.py", "aos_gate.py", "aos_fsm.py", "aos_kernel.py", "aos_gate_kernel.py", "aos_kernel_judge.py")):
+    """cwd 或命令列路徑在 root 底下、命令列有 names 之一的行程：[(pid, 命令列), ...]（讀 /proc；不收殭屍）。"""
     root = os.path.realpath(root)
+
+    def inside(p):
+        return p == root or p.startswith(root + os.sep)
+
     found = []
     for d in os.listdir("/proc"):
         if not d.isdigit():
@@ -87,12 +91,15 @@ def leftovers(root, names=("aos_loop.py", "aos_daemon.py")):
         try:
             cwd = os.readlink("/proc/%s/cwd" % d)
             with open("/proc/%s/cmdline" % d, "rb") as f:
-                cmd = f.read().replace(b"\0", b" ").decode(errors="replace").strip()
+                argv = f.read().decode(errors="replace").split("\0")
             with open("/proc/%s/stat" % d) as f:
                 zombie = f.read().rsplit(")", 1)[1].split()[0] == "Z"
         except OSError:
             continue
-        if not zombie and (cwd == root or cwd.startswith(root + os.sep)) and any(n in cmd for n in names):
+        cmd = " ".join(argv).strip()
+        if zombie or not any(os.path.basename(a) in names for a in argv):
+            continue
+        if inside(cwd) or any(inside(os.path.realpath(x)) for x in argv if x.startswith("/")):
             found.append((int(d), cmd))
     return found
 
