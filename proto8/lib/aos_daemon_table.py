@@ -1,8 +1,12 @@
 """daemon 的表：每個子項是一支長壽的子程序 `aos_loop.py -`，daemon 只靠寫它的 ctl 窗、讀它的 state 窗控制它。純標準庫。
 
 子項六態（`phase`，09 §19）：starting／running／exited／backoff／stopping／removed。表落在 `table` 窗（N-14 一種，只有 daemon 寫）：
-`{"kind": "aos-daemon-table", "children": [列, ...]}`，每列 {id, target, times, work_dir, ctl, state, pid, started, phase,
+`{"kind": "aos-daemon-table", "children": [列, ...]}`，每列 {id, target, work_dir, ctl, state, pid, started, phase,
 exits, last_code}；先寫表、再 Popen。table 窗就是存檔（暫定 d）：`load: true` 起來時讀它接回。
+
+daemon 只管自己這一層（C-52，10-15 深夜使用者「不留」）：收子項時只看它需要的——是物件、沒 inst 有 argv 就包成跑一次、
+ctl／state 沒寫就放 work_dir/N/——裡面的 loop 設定、inst 都不驗、不填預設，原樣從 stdin 灌給子 loop；寫錯了子 loop 自己
+退 1、錯落在 work_dir/N/err.json，daemon 只看到它結束（走策略格）。子項的 times 也不記：add_times 讀它的 ctl／state 窗。
 
 `Table` 一個方法對一條指令（add／set／pause／resume／add_times／remove／state／get／list），加上每圈的 `tick()`
 （收屍、套策略格、退避到點重起、寫表）、`load()`、`shutdown()`。要等 loop 讀到才回的，回一個 ready()：還沒好回 None。
@@ -23,7 +27,7 @@ import aos_loop
 from aos_cli import CliError, is_int
 from aos_ctl_state import proc_started
 from aos_directives import DirectiveError, split_target, target_id
-from aos_loop import check_config, parse_ctl, read_state, reap, write_json
+from aos_loop import parse_ctl, read_state, reap, write_json
 
 __all__ = ["DaemonError", "Table"]
 
@@ -48,14 +52,14 @@ def _read(path):
 class _Entry:
     """表上一個 loop：子程序（或接回的孤兒：只有 pid＋啟動時間）＋它的 ctl、state 窗在哪。"""
 
-    def __init__(self, ident, target, times, workdir, ctl, state):
-        self.id, self.target, self.times, self.workdir, self.ctl, self.state = ident, target, times, workdir, ctl, state
+    def __init__(self, ident, target, workdir, ctl, state):
+        self.id, self.target, self.workdir, self.ctl, self.state = ident, target, workdir, ctl, state
         self.cfg = None             # 灌給 aos_loop 的設定；接回的孤兒沒有（要重起時再讀 target）
         self.proc = self.pid = self.started = self.code = self.retry_at = None
         self.phase, self.exits, self.removing = "starting", 0, False
 
     def row(self):
-        return {"id": self.id, "target": self.target, "times": self.times, "work_dir": self.workdir, "ctl": self.ctl,
+        return {"id": self.id, "target": self.target, "work_dir": self.workdir, "ctl": self.ctl,
                 "state": self.state, "pid": self.pid, "started": self.started, "phase": self.phase,
                 "exits": self.exits, "last_code": self.code}
 
@@ -121,7 +125,8 @@ class Table:
     # ---- 起子項 ----
 
     def _config(self, target, i=None):
-        """TARGET（絕對路徑，可接 `#/位置`；或內嵌物件）→ (id, 解好的 loop 設定)。inst.json 包成只跑一次的 loop。"""
+        """TARGET（絕對路徑，可接 `#/位置`；或內嵌物件）→ (id, 那份 loop 設定原樣)。inst.json（沒 inst、有 argv）包成
+        只跑一次的 loop。只看到「是個物件」為止，裡面不驗（子 loop 自己驗、自己報，C-52）。"""
         if isinstance(target, dict):
             doc, ident = target, target.get("id") or "%s#/children/%d" % (self.daemon_id, i)
         else:
@@ -134,13 +139,23 @@ class Table:
                 doc, ident = aos_cli.load_target(target)
             except CliError as e:
                 raise DaemonError(e.code, e.msg)
+        if not isinstance(doc, dict):
+            raise DaemonError("FieldType", "%s 要是 loop 設定（物件），不是 %r" % (ident, doc))
         if "inst" not in doc and "argv" in doc:
-            try:
-                aos_inst.parse(doc, os.getcwd(), ident)
-            except aos_inst.InstError as e:
-                raise DaemonError(e.code, e.msg)
             doc = {"inst": doc, "times": 1}
         return ident, doc
+
+    def _windows(self, doc, d):
+        """子項的 ctl／state 窗：它自己寫了就用它的（相對路徑從 daemon 的 cwd 算，子 loop 也從這裡起），沒寫＝work_dir/N/。"""
+        out = {}
+        for k in ("ctl", "state"):
+            v = doc.get(k)
+            if v is None:
+                v = os.path.join(d, k + ".json")
+            elif not (isinstance(v, str) and v):
+                raise DaemonError("FieldType", "%s 要是路徑字串，不是 %r" % (k, v))
+            out[k] = os.path.abspath(v)
+        return out
 
     def add(self, target, i=None):
         ident, doc = self._config(target, i)
@@ -154,16 +169,13 @@ class Table:
                 break
             except FileExistsError:
                 continue
-        doc = dict(doc, id=ident, ctl=doc.get("ctl") or os.path.join(d, "ctl.json"),
-                   state=doc.get("state") or os.path.join(d, "state.json"))
         try:
-            _, cfg = check_config(ident, doc, err=DaemonError)
-            _check_inst(ident, cfg)
+            win = self._windows(doc, d)
         except DaemonError:
             shutil.rmtree(d, ignore_errors=True)
             raise
-        e = _Entry(ident, target, cfg["times"], d, cfg["ctl"], cfg["state"])
-        e.cfg = cfg
+        e = _Entry(ident, target, d, win["ctl"], win["state"])
+        e.cfg = dict(doc, id=ident, **win)
         if not os.path.exists(e.ctl):
             write_json(e.ctl, {})
         self.entries[ident] = e
@@ -174,8 +186,7 @@ class Table:
         """先寫表（starting）、再 Popen；子 loop 的 stdout 丟 /dev/null（結果一律從 state 窗讀），
         stderr append 到 work_dir/N/err.json（只在出錯時長）。"""
         if e.cfg is None:                   # 接回的孤兒要重起：重讀 target
-            ident, doc = self._config(e.target)
-            e.cfg = check_config(e.id, dict(doc, id=e.id, ctl=e.ctl, state=e.state), err=DaemonError)[1]
+            e.cfg = dict(self._config(e.target)[1], id=e.id, ctl=e.ctl, state=e.state)
         e.phase, e.proc, e.pid, e.started = "starting", None, None, None
         self.write()
         with open(os.path.join(e.workdir, "err.json"), "ab") as err:
@@ -255,7 +266,7 @@ class Table:
             raise DaemonError("FieldType", "table 窗 %s 的 children 要是陣列" % self.cfg["table"])
         for r in rows:
             try:
-                e = _Entry(r["id"], r["target"], r["times"], r["work_dir"], r["ctl"], r["state"])
+                e = _Entry(r["id"], r["target"], r["work_dir"], r["ctl"], r["state"])
                 e.pid, e.started, e.exits, e.code = r["pid"], r["started"], r["exits"], r["last_code"]
                 e.phase = {"exited": "exited", "backoff": "backoff"}.get(r["phase"], "running")
             except (KeyError, TypeError) as err:
@@ -297,7 +308,7 @@ class Table:
             raise DaemonError("FieldType", "delta 要是整數，不是 %r" % (delta,))
         e = self._get(path)
         doc = e.ctl_doc()
-        times = doc["times"] if "times" in doc else e.times
+        times = doc["times"] if "times" in doc else e.status().get("times")     # 只靠它的兩扇窗（N-28）
         if times is None:
             raise DaemonError("Conflict", "%s 是不限次數，不能加減" % e.id)
         if not is_int(times, 0):
@@ -363,15 +374,6 @@ class Table:
                     e.code = reap(e.proc)
                 e.phase = "exited"
         self.write()
-
-
-def _check_inst(ident, cfg):
-    """子 loop 的 inst 先在 daemon 這邊驗一次（同子 loop 起來時那樣：從 stdin 灌，piped），錯就丟 DaemonError、
-    在 add 當下回在 `.done` 裡，不用等子 loop 起來才落在 err.json。基準＝daemon 的 cwd（子 loop 也從這裡起）。"""
-    try:
-        aos_inst.parse(cfg["inst"], os.getcwd(), ident, piped=True)
-    except aos_inst.InstError as e:
-        raise DaemonError(e.code, e.msg)
 
 
 def _split(target):

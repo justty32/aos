@@ -193,7 +193,7 @@ class AgentCallTest(Tmp):
         _, out = self.call("f", "fail")
         r = self.ret("f")
         self.assertEqual(r["error"]["code"], "BrainFailed")                  # N-29 形狀
-        self.assertIn("Boom", r["error"]["msg"])
+        self.assertNotIn("Boom", r["error"]["msg"])                           # 腦的 stderr 不讀（C-52）：只說結束碼
         self.assertEqual(len(json.loads(self.read("f/history.json"))), 1)
         self.assertEqual(json.loads(self.read("f/loop/state.json"))["runs"], 4)   # intake、think×3（第 3 次寫 ret.json、回 halted＝結束）
 

@@ -36,7 +36,7 @@ cd frame && echo '{"parent": "/abs/clerk"}' > frame.json && echo '{"question": "
 - **同一個 frame 再叫一次**＝接著那裡的 history：呼叫方只要再寫一份 `args.json`；intake 把它接在後面、順手刪上一輪的 `ret.json`（這次沒跑完就讀不到舊的）。不必刪 `loop/ctl.json`：done 不寫 ctl，loop 靠 fsm 結束那行停。
 - 兩個呼叫同時指同一個 frame 不擋（卡死不防護）；不同 frame 可以同時跑。
 
-**當工具**：工具 inst 用 `sh -c` 三步（寫 frame.json → 跑被叫者的 loop → 讀 ret.json）。tool 格每次在 `work/<n>/` 開新資料夾、寫好 `args.json`、在那裡跑它，所以那裡就是被叫者的 frame；`cat ret.json` 的內容就是工具結果，父 agent 的 tool 訊息 `result` 看得到（錯也是 N-29 形狀）。demo 的 `tools/clerk.json`：
+**當工具**：工具 inst 用 `sh -c` 三步（寫 frame.json → 跑被叫者的 loop → 讀 ret.json）。父 agent 的 tool 格只是在 `work/<n>/` 跑一張 inst、寫好 `args.json`——它不知道裡面是另一個 agent（C-52 徹底切割，10-15 深夜）；是這張工具 inst 自己把 cwd 當成被叫者的 frame。`cat ret.json` 的內容就是工具結果，父 agent 的 tool 訊息 `result` 看得到（錯也是 N-29 形狀）。（工具叫 agent 的寫法——三步還是 aos-exec——等 [inst-exec 稿](../thinking/2026-10-15-inst-exec.md)定；這裡只定「agent 這層不知道」。）demo 的 `tools/clerk.json`：
 
 ```jsonc
 {"argv": ["aos-demo", "sh", "-c",
@@ -46,7 +46,7 @@ cd frame && echo '{"parent": "/abs/clerk"}' > frame.json && echo '{"question": "
 
 - 綁定也在這一步做：例 `demo/kernels/llm/boss/tools/clerk.json` 多一步 `cp …/boss/brain.json brain.json`，報時員就改用 boss 的腦（經閘門）。
 
-**換腦只換那一層**（10-15 使用者「都按照推薦」，[litellm 實跑 #1](../thinking/2026-10-15-litellm-live.md#拍板10-15)）：子 agent 沿**自己 frame** 的 `frame.json` 往上找（`chain()` 只看 frame 自己的 frame.json，不看呼叫方），所以呼叫方 frame 放的 `brain.json` 不會傳到子 agent。呼叫方要換子 agent 的腦，就在**子 agent 的 frame** 放 `brain.json`——寫在當工具的那張 inst 裡（像上面 boss 的 `cp`），或在 frame 放一份同名工具蓋過定義的（`demo/paint/run.py` 的 `bind_brain()`）。
+**換腦只換那一層、什麼都不往下傳**（10-15 使用者「都按照推薦」，[litellm 實跑 #1](../thinking/2026-10-15-litellm-live.md#拍板10-15)；10-15 深夜加嚴成 C-52「完全切割，徹底切割，不得有任何殘留」）：子 agent 沿**自己 frame** 的 `frame.json` 往上找（`chain()` 只看 frame 自己的 frame.json，不看呼叫方），所以呼叫方 frame 放的 `brain.json` 不會傳到子 agent；agent 這層也沒有任何機制把東西傳給工具裡的 agent。要換子 agent 的腦，是**那張工具 inst** 自己的事——在它裡面把 `brain.json` 放進子 agent 的 frame（像上面 boss 的 `cp`），或在 frame 放一份同名工具蓋過定義的（`demo/paint/run.py` 的 `bind_brain()` 就是改寫工具 inst）。
 - 查過（10-15）：boss 叫報時員用的是 boss **定義資料夾**那顆經閘門的假腦，是因為 `boss/tools/clerk.json` 那行 `cp "$AOS_DEMO/kernels/llm/boss/brain.json"` 寫死抄定義的腦，不是綁定從 boss 的 frame 漏下去；報時員自己的定義（`demo/fsm/clerk/brain.json`）是不經閘門的假腦。boss 的 frame 換了腦，報時員照樣用那行抄的那顆——這正是「只換那一層」。
 - 上限：被叫者 loop 的 `times`、那張工具 inst 的 `timeout_ms`（父 agent 的 tool 格 `timeout_ms` 要更大）；遞迴深度不另外擋（Busy、TooDeep、MaxTicks 都拿掉了）。
 - 定義資料夾的路徑：demo 用 `aos-demo` 給的 `AOS_DEMO` 拼絕對路徑；不在 demo 裡就直接寫絕對路徑。

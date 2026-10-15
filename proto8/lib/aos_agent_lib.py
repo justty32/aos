@@ -34,16 +34,17 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
   stdout 吐 {"data": {"content", "tool_calls": [工具名...]}}（沒有 next：下一格寫在表上）。
   history 最後一則已經是 assistant（上一拍接好了才被殺）＝不再叫腦。
 - tool：找 history 最後一則 assistant 還沒回的 tool_calls，一拍內照順序全部跑（10-15 使用者「都按照推薦」；原本只跑第一個、
-  其餘回 Skipped）：每個都 mkdir 搶一個新號碼資料夾 work/<n>/（C-46：工具呼叫
-  的 frame 預設在這），引數寫成那裡的 args.json 當 stdin、stdout 接到那裡的 stdout.json，在那裡跑那張 inst（inst 自己寫了 cwd
-  就照它的），回 {"role": "tool", "tool_call_id", "content": JSON 字串＝aos_inst 的結果（N-30：id、code、signal、timed_out…）
-  ＋`result`（工具 stdout 最後一份 JSON）（截 8000 字）}；工具起不來、引數不是 JSON、工具名不認得＝content 是 N-29 形狀
-  {"error": {"code", "msg"}}（代號 InstError 的原代號、ArgumentsBad、ToolUnknown）。
+  其餘回 Skipped）：每個都 mkdir 搶一個新號碼資料夾 work/<n>/，引數寫成那裡的 args.json 當 stdin、stdout 接到那裡的
+  stdout.json，在那裡跑那張 inst（inst 自己寫了 cwd 就照它的），回 {"role": "tool", "tool_call_id", "content": JSON 字串＝
+  aos_inst 的結果（N-30：id、code、signal、timed_out…）＋`result`（工具 stdout 最後一份 JSON）（截 8000 字）}；
+  工具起不來、引數不是 JSON、工具名不認得＝content 是 N-29 形狀 {"error": {"code", "msg"}}（代號 InstError 的原代號、
+  ArgumentsBad、ToolUnknown）。**agent 只看到工具清單**（名字、`_tool` 的說明與參數）：工具裡面是什麼（是不是另一個
+  agent、它的 frame 放哪、綁什麼腦）這層不知道、不傳、不繼承（C-52 徹底切割，10-15 深夜使用者）。
+- 腦與工具的 stderr 這層都不讀（C-52）：腦結束碼非 0＝BrainFailed「腦 X 結束碼 N」；要看原因就在那張 inst 寫 stderr 檔。
   每跑完一個就接進 history（中途被殺，跑完的不重跑）。上一拍被殺一半（work/.tool-running.json 還在、記的是還沒回的第一個
   tool_call id＝跑過一半）＝那個不重跑、回 {"error": {"code": "Interrupted", …}}，其餘照跑。
   stdout 的 data：{"tool": 第一個名, "result": 第一個結果, "tools": [名…], "results": [結果…]}。
 - 出錯（設定不對、腦結束碼非 0、腦回的不是 assistant 訊息）：stderr 吐 {"error": {"code", "msg"}}、退出 1（格出錯）。
-  腦出錯時 msg 帶腦自己 stderr 的錯誤（例 `HttpError: … 回 400：…does not support tools`），fsm 那行的 error 看得到。
   think 連錯：次數記在 work/think.json（think 自己的私檔，成功一次就刪），到 halt_after 次＝不報錯，**自己**把要交出去的錯
   寫成 cwd 的 ret.json（{"error": {"code", "msg"}}），再吐 {"next": halt_state, "data": {"error"}}。halt_state 寫在表的 `end`、
   不寫進 `states`（N-40：next 不在表裡、在 end 裡＝這個 fsm 結束），不經 done 格——格之間不互看私檔（C-52；10-15 使用者
@@ -162,10 +163,8 @@ def think(cfg):
             result, reply = aos_methods.run_cell(inst, ident, req)
         except CliError as e:
             raise AgentError(e.code, "腦 %s：%s" % (cfg["brain"], e.msg))
-        if result["code"] != 0:
-            be = result.get("cell_error")      # 腦 stderr 的 N-29 錯誤＝真正原因，接進自己的錯誤讓 fsm 看得到
-            raise AgentError("BrainFailed", "%s: %s" % (be["code"], be["msg"]) if be
-                             else "腦 %s 結束碼 %s" % (cfg["brain"], result["code"]))
+        if result["code"] != 0:                # 腦的 stderr 不讀（C-52 切乾淨）：要看原因就在 brain.json 寫 stderr 檔
+            raise AgentError("BrainFailed", "腦 %s 結束碼 %s" % (cfg["brain"], result["code"]))
         if not (isinstance(reply, dict) and reply.get("role") == "assistant"):
             raise AgentError("ReplyBad", "腦 %s 回的最後一份不是 assistant 訊息：%r" % (cfg["brain"], reply))
         reply = {k: v for k, v in reply.items() if k != "usage"}      # 腦附的用量給 kernel 記額度，不進 history
@@ -229,7 +228,7 @@ def _run_tool(cfg, call):
     doc = dict(inst, stdin=call_file, stdout=out_file, stdout_append=False, stdout_mkdir=False,
                stdin_inherit=False, stdout_inherit=False)
     doc.setdefault("id", ident)
-    doc.setdefault("cwd", d)                     # 工具呼叫的 frame＝work/<n>/（inst 自己寫了 cwd 就照它的）
+    doc.setdefault("cwd", d)                     # 工具在 work/<n>/ 跑（inst 自己寫了 cwd 就照它的）；裡面是什麼 agent 不管（C-52）
     try:
         result = aos_inst.run(doc)
     except aos_inst.InstError as e:
