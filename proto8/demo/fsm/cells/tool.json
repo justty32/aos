@@ -1,1 +1,1 @@
-{"argv": ["python3", "cells/tool.py"], "timeout_ms": 5000}
+{"argv": ["python3", "../../lib/aos_agent.py", "tool", "agent.json"], "timeout_ms": 30000}

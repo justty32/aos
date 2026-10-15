@@ -1,1 +1,1 @@
-{"argv": ["python3", "fake_llm.py"], "timeout_ms": 10000}
+{"argv": ["python3", "../../lib/aos_agent.py", "think", "agent.json"], "timeout_ms": 200000}

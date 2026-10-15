@@ -41,9 +41,10 @@ def main():
                                                ("steps", "steps.jsonl"), ("loop_state", "loop.state.json"))}
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", DEMO_DIR=tmp, DEMO_STATE=w["state"], DEMO_THINK_STATE=w["think"],
                DEMO_LOCK=os.path.join(tmp, "agent.lock"), DEMO_STEPS=w["steps"],
+               DEMO_HISTORY=os.path.join(tmp, "work", "history.json"), DEMO_WORK=os.path.join(tmp, "work"),
                DEMO_LOOP_CTL=os.path.join(tmp, "loop.ctl.json"), DEMO_LOOP_STATE=w["loop_state"])
     say("暫存資料夾 %s；inbox 放了兩封信：「你好」「現在幾點？」" % tmp)
-    say("aos-loop 拍 aos-fsm 10 次、每次隔 100 ms；thinking 格是內層 fsm（ask → review），ask 是假的同步 LLM（睡 0.4 秒）")
+    say("aos-loop 拍 aos-fsm 10 次、每次隔 100 ms；thinking 格是內層 fsm（ask → review），ask 叫腦（agent.json 的 brain：假的腦，睡 0.4 秒）")
     loop = subprocess.Popen([sys.executable, LOOP, "loop.json"], cwd=HERE, env=env, stdout=subprocess.DEVNULL)
     seen = None
     try:
@@ -61,6 +62,9 @@ def main():
         with open(w["steps"], encoding="utf-8") as f:
             for line in f:
                 say("   " + line.strip())
+        say("== work/history.json（OpenAI messages，最後一段對話）")
+        for m in read(os.path.join(tmp, "work", "history.json")) or []:
+            say("   " + json.dumps(m, ensure_ascii=False))
         say("== outbox.txt")
         with open(os.path.join(tmp, "outbox.txt"), encoding="utf-8") as f:
             for line in f:

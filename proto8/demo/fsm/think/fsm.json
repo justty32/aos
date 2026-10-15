@@ -2,8 +2,8 @@
   "start": "ask",
   "end": ["tool", "idle"],
   "states": {
-    "ask": "ask.json",
-    "review": "review.json"
+    "ask": {"target": "think/ask.json", "next": "review"},
+    "review": "think/review.json"
   },
   "state": {"$env": "DEMO_THINK_STATE"}
 }

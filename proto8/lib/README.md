@@ -15,6 +15,7 @@
 | [inst.md](inst.md) | inst：TARGET、key、`run()`、exit 檔、訊號、API |
 | [loop.md](loop.md) | loop：loop.json、每一次怎麼跑、ctl.json、state.json、退出碼、給 daemon 共用的 |
 | [fsm.md](fsm.md) | fsm：方法表、一拍、prev、下一狀態、出錯與 error 格、step、state 窗、巢狀與 `end`、lock、退出碼 |
+| [agent.md](agent.md) | agent（實作慣例，還不是規範）：思考介面（換腦＝換一個 TARGET）、工具＝inst（`tools`＋`_tool`）、tool 訊息、邊緣狀況 |
 | [daemon.md](daemon.md) | daemon：daemon.json（loop.json 超集）、每拍的身體、children、策略格、table 窗與接回、控制資料夾與指令、收工 |
 | [ctl-state.md](ctl-state.md) | ctl 與 state 的慣例：各層的設定／ctl／state、key 分組、seq 回音、state 骨架（含心跳）、七個狀態值 |
 
@@ -33,9 +34,11 @@
 | `aos_daemon_folder.py` | daemon 的指令（`handle()`）與控制資料夾（掃、回覆 `.done`） |
 | `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{target, next}`）、跑一格（`run_cell`：蓋 stdin／stdout、本行程 `aos_inst.run()`）、取 stdout 最後一份（`last_json`） |
 | `aos_fsm.py` | fsm：命令列＋`run()`、一拍（讀 ctl、讀寫 state 窗、跑格、換狀態、error 格、巢狀 `end`、lock） |
+| `aos_agent.py` | agent 的兩格膠水：`think`（讀 history、組請求、跑腦、接 assistant 訊息）、`tool`（跑第一個 tool_call、接 tool 訊息）；`tool_specs`、`pending` |
+| `aos_brain_openai.py` | 真的腦：照思考介面 POST 到 OpenAI 相容的 `/chat/completions`（urllib，不串流，預設 LiteLLM） |
 | `tests/` | unittest，見[下面](#測試tests) |
 
-相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 ctl 與 `write_json`）。
+相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 ctl 與 `write_json`）；agent：`aos_methods` ← `aos_agent`（也借 `write_json`），`aos_brain_openai` 只靠 `aos_cli`。
 
 ## ctl 與 state 的慣例
 
@@ -47,7 +50,7 @@
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，73 個、約 20 秒。按受測的程式分六個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，82 個、約 20 秒。按受測的程式分七個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm、真腦對本機假伺服器）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 

@@ -1,1 +1,1 @@
-{"argv": ["python3", "../../../lib/aos_fsm.py", "fsm.json"], "cwd": "think"}
+{"argv": ["python3", "../../lib/aos_fsm.py", "think/fsm.json"]}
