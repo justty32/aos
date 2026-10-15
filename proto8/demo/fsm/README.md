@@ -36,6 +36,8 @@ python3 proto8/demo/run.py fsm        （或 python3 proto8/demo/fsm/run.py）
 
 只改一行：`"brain": "brain/lmstudio.json"`。LM Studio 要先開 server、載好 Qwen3-1.7B，用完 unload、關 server（[dev-env](../../../wf/workflows/dev-env.md#跨機--離線差異)）。10-15 試過整圈跑通，ask 那拍約 4～8 秒（[thinking 10-15 §9](../../thinking/2026-10-15-topics.md#9-試-lm-studioqwen3-17b)）。
 
+報時員（外層→clerk→clock）整圈 10-15 實跑過兩趟，一趟 16～20 秒；要實跑得把 `loop.json` 的 `timeout_ms` 加到幾百秒，clerk 的腦也要換成 LM Studio；小模型有時不查 clock 直接編時間（[clerk-live](../../thinking/2026-10-15-clerk-live.md)）。
+
 ### 換成 146 的 ollama（146 已不准用，只留當範例）
 
 同樣只改一行：`"brain": "brain/ollama146.json"`。走 ollama 原生 `/api/chat`（`/v1` 設不了 num_ctx）。**用 146 之前先照 [dev-env](../../../wf/workflows/dev-env.md#跨機--離線差異) 的規矩**（看負載、只准小模型、num_ctx 4096、短 keep_alive、試完確認卸載）。
