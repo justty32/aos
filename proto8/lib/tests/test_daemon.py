@@ -25,13 +25,19 @@ class Daemon(Tmp):
                                        **cfg))
         self.d = subprocess.Popen([sys.executable, DAEMON, self.p("daemon.json")],
                                   cwd=self.tmp, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL, text=True)
-        self.addCleanup(self.stop, signal.SIGKILL)
+        self.addCleanup(self.stop)
         self.n = 0
 
     def stop(self, sig=signal.SIGTERM):
+        """收 daemon。收尾一律 SIGTERM（子項整群收掉）；SIGKILL 只留給要造孤兒的測試——子 loop 自成 session、
+        不跟著 daemon 死（接回靠這個），測試自己得收。SIGTERM 等不到才補 SIGKILL。"""
         if self.d.poll() is None:
             self.d.send_signal(sig)
-        code = self.d.wait(10)
+        try:
+            code = self.d.wait(10)
+        except subprocess.TimeoutExpired:
+            self.d.kill()
+            code = self.d.wait(5)
         self.d.stderr.close()
         return code
 
