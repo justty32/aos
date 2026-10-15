@@ -2,7 +2,7 @@
 
 ← [proto8/lib](README.md)｜上一份：[loop](loop.md)｜下一份：[ctl 與 state 的慣例](ctl-state.md)
 
-daemon＝一個 loop（同一個拍引擎 `aos_loop.Loop`），每拍多做「收屍、掃控制資料夾、套策略格」，同時顧著一群長壽的子 loop。照 NORMS N-12 重做、候選 g 拍板（10-14）：**daemon.json＝loop.json 的嚴格超集**，一份合法的 loop.json 丟給 aos-daemon 也能跑（見 [NORMS N-28](../NORMS/05-命令列與daemon-N21至N28.md)）。
+daemon＝一個 loop（同一個拍引擎 `aos_loop.Loop`），每拍多做「收屍、掃控制資料夾、套策略格」，同時顧著一群長壽的子 loop。照 NORMS N-12 重做、候選 g 拍板（10-14）：**daemon.json＝loop.json 的嚴格超集**，一份合法的 loop.json 丟給 aos-daemon 也能跑（見 [NORMS N-28](../NORMS/04-基礎設施-loop與daemon.md)）。
 
 三個檔：`aos_daemon.py`（命令列、daemon.json、`Daemon` 類別）、`aos_daemon_table.py`（表：`Table`、子項六態、table 窗、策略格、`DaemonError`）、`aos_daemon_folder.py`（指令 `handle()` 與控制資料夾）。
 

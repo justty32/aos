@@ -4,8 +4,8 @@
 
 ## 42. 使用者拍板（經協調 agent 轉達，使用者兩題都說「隨你」）
 
-1. **【拍板】ret／err 無限增長＝方案 B。** 基礎實作：daemon 起子 loop 時 stdout 接 `/dev/null`，結果一律從 state 窗讀；stderr 照舊 append 到 `work_dir/N/err.json`，只在出錯時長，`ret.json` 不再有。標準實作才做：stdout／stderr 選填路徑＋上限輪替、不帶 `load` 重起時清掉 table 沒列到的舊格子。落點：[NORMS 待定](../../NORMS/04-待定.md)該條結案、[lib daemon.md](../../lib/daemon.md)、`aos_daemon_table._spawn()`。
-2. **【拍板】被殺時 stdout 最後一份只寫一半＝半份不算。** 讀的人只認完整、能解析的 JSON；解析不了就忽略；因此找不到結果＝沒有結果。落成 [N-12](../../NORMS/01-定了的-N01至N13.md) 附註。
+1. **【拍板】ret／err 無限增長＝方案 B。** 基礎實作：daemon 起子 loop 時 stdout 接 `/dev/null`，結果一律從 state 窗讀；stderr 照舊 append 到 `work_dir/N/err.json`，只在出錯時長，`ret.json` 不再有。標準實作才做：stdout／stderr 選填路徑＋上限輪替、不帶 `load` 重起時清掉 table 沒列到的舊格子。落點：[NORMS 待定](../../NORMS/08-待定.md)該條結案、[lib daemon.md](../../lib/daemon.md)、`aos_daemon_table._spawn()`。
+2. **【拍板】被殺時 stdout 最後一份只寫一半＝半份不算。** 讀的人只認完整、能解析的 JSON；解析不了就忽略；因此找不到結果＝沒有結果。落成 [N-12](../../NORMS/01-總則.md) 附註。
 
 ## 43. 結論
 
@@ -19,8 +19,8 @@
 - inst／loop／daemon 重做：https://claude.ai/artifact/HGkzKJKAsEAwhv1dQPQX8d
 - aos-llm 與 fsm：https://claude.ai/artifact/K2aQ7KCad1u3dFTfDvArda
 
-**尚未決定**：[NORMS 待定](../../NORMS/04-待定.md)剩下的——aos-fsm 寫成 N 條文、a～f 暫定預設（全部可改）、資料夾別亂弄的細則、argv[0] 程式的規矩、kernel 公告、時鐘格式、`檔#/位置` 要不要列規範、`_metainfo` 通用寫法。
+**尚未決定**：[NORMS 待定](../../NORMS/08-待定.md)剩下的——aos-fsm 寫成 N 條文、a～f 暫定預設（全部可改）、資料夾別亂弄的細則、argv[0] 程式的規矩、kernel 公告、時鐘格式、`檔#/位置` 要不要列規範、`_metainfo` 通用寫法。〔註：10-15 早清帳——`檔#/位置`＝[N-35](../../NORMS/01-總則.md)、aos-fsm＝N-36～N-41 已定；資料夾別亂弄結案、argv[0] 擱置、kernel 公告／時鐘／`_metainfo` 晚點再說。〕
 
-**新發現的不一致**：58 題頁第三組 Q12 說 agent 心跳「可選」，但 [N-32](../../NORMS/06-實作細則-N29至N34.md) 規定每秒一次、不開 key。留給做 aos-fsm 時對齊。
+**新發現的不一致**：58 題頁第三組 Q12 說 agent 心跳「可選」，但 [N-32](../../NORMS/05-基礎設施-窗.md) 規定每秒一次、不開 key。留給做 aos-fsm 時對齊。〔註：**已對齊結案**，10-15 使用者「基礎實作中連時間都不寫，保持極簡」——fsm 是單次程式、壽命一拍，不適用 N-17／N-32 的每秒心跳，生死看拍它的 loop 的 state 窗，寫進 [N-39](../../NORMS/07-基礎設施-組合子.md#fsm)；見 [thinking 10-15](../2026-10-15-topics.md)。〕
 
 **下一步候選**（等使用者開口挑）：aos-fsm 同步版 demo（think 格阻塞跑，基礎實作）；aos-fsm 寫成 N 條文；標準實作的 stdout／stderr 輪替與清舊格子。
