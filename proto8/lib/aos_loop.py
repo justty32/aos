@@ -19,6 +19,9 @@ loop.json（先用指示詞 lib 解，基準＝呼叫者的 cwd；只在起來�
     grace_ms       收掉正在跑的那次時，SIGTERM 之後等多久整群 SIGKILL（非負整數；沒寫＝5000；要比 inst 裡的 grace_ms 長）
     ctl_poll_ms    多久看一次 ctl 窗（正整數；沒寫＝1000）
     error_wait_ms  aos_inst 自己出錯的那次之後，下一次至少隔多久（非負整數；沒寫＝1000）
+    stop_on_end    true＝包的是 aos-fsm（或照它的寫法）時，這次 stdout 裡有 fsm 結束那拍的那行（帶 `"end": true`、`from`、`to`，
+                   N-40）就不再起新的一次、loop 正常結束（end＝"done"）；inst 寫了 stdout 檔就讀這次寫進去的那段，沒寫（或
+                   stdout_inherit）＝loop 每次替它接一個暫存檔、讀完刪掉。沒寫＝false
     id             選填字串，state 的 id（沒寫＝LOOP.json 的 realpath（有 `#/位置` 就接上）；從 stdin 來又沒寫＝null）
 
 ctl、state 的相對路徑從呼叫者的 cwd 算。ctl 窗起來時不在沒關係（還沒有控制，之後出現了照樣讀）。
@@ -67,6 +70,7 @@ import signal
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 
 import aos_cli
@@ -82,7 +86,7 @@ __all__ = ["CtlFile", "Loop", "LoopError", "STATES", "StateFile", "check_config"
 
 AOS_INST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_inst.py")
 DEFAULTS = {"id": None, "times": 1, "interval_ms": 0, "interval_mode": "after", "grace_ms": 5000, "ctl": None,
-            "ctl_poll_ms": 1000, "state": None, "error_wait_ms": 1000}
+            "ctl_poll_ms": 1000, "state": None, "error_wait_ms": 1000, "stop_on_end": False}
 _CAUGHT = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 _PATHS = ("ctl", "state", "table", "work_dir", "control_dir")
 
@@ -99,7 +103,7 @@ def _ok(k, v):
     if k in _PATHS:
         return v is None or isinstance(v, str) and v
     return {"id": v is None or isinstance(v, str), "times": v is None or _int(v), "interval_mode": v in _MODES,
-            "ctl_poll_ms": _int(v, 1), "load": isinstance(v, bool), "children": isinstance(v, list),
+            "ctl_poll_ms": _int(v, 1), "load": isinstance(v, bool), "stop_on_end": isinstance(v, bool), "children": isinstance(v, list),
             "policies": isinstance(v, dict)}.get(k, _int(v))
 
 
@@ -186,6 +190,8 @@ class Loop:
         self.inst_exit = 0          # 最後一次是 aos_inst 自己出錯＝它的退出碼，否則 0
         self.proc = None
         self.stopping = False       # stop 讀到過一次就算數
+        self.ended = False          # stop_on_end：包的 fsm 走到 end 了
+        self.watch = None           # stop_on_end：(這次 stdout 的檔, 從哪讀起, 是不是自己接的暫存檔)
         self.last_end = None        # 上一次結束的時間（monotonic）；None＝還沒跑過
         self.last_err = False
         self.anchor = None          # fixed：第 0 拍的時間
@@ -216,13 +222,54 @@ class Loop:
 
     # ---- 身體 ----
 
+    def _payload(self):
+        """這次灌給 aos_inst 的 inst；stop_on_end 時順便記下要讀哪個 stdout（沒寫檔＝接暫存檔）。"""
+        if not self.cfg.get("stop_on_end"):
+            return self.inst
+        inst = self.cfg["inst"]
+        out = inst.get("stdout")
+        if isinstance(out, str) and out and not inst.get("stdout_inherit"):
+            base = os.path.abspath(inst["cwd"]) if isinstance(inst.get("cwd"), str) else os.getcwd()
+            path = os.path.join(base, out)
+            try:
+                off = os.path.getsize(path) if inst.get("stdout_append") else 0
+            except OSError:
+                off = 0
+            self.watch = (path, off, False)
+            return self.inst
+        fd, path = tempfile.mkstemp(prefix="aos-loop-", suffix=".out")
+        os.close(fd)
+        self.watch = (path, 0, True)
+        doc = dict(inst, stdout=path, stdout_append=False, stdout_mkdir=False, stdout_inherit=False)
+        return json.dumps(doc).encode("utf-8")
+
+    def _saw_end(self):
+        """這次 stdout 裡有沒有 fsm 結束那行（{"from", "to", "end": true}）；暫存檔讀完刪掉。"""
+        path, off, mine = self.watch
+        self.watch = None
+        try:
+            with open(path, "rb") as f:
+                f.seek(off)
+                text = f.read().decode("utf-8", "replace")
+        except OSError:
+            text = ""
+        finally:
+            if mine:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+        return any(isinstance(d, dict) and d.get("end") is True and "from" in d and "to" in d
+                   for d in aos_cli.read_stream(text))
+
     def start_inst(self, now):
         self.t0 = now
+        payload = self._payload()
         self.proc = subprocess.Popen([sys.executable, AOS_INST, "-"], start_new_session=True,
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.out, self.err = _Tail(self.proc.stdout, False), _Tail(self.proc.stderr, True)
         try:
-            self.proc.stdin.write(self.inst)
+            self.proc.stdin.write(payload)
             self.proc.stdin.close()
         except OSError:
             pass        # aos_inst 先死了：照它的退出碼算
@@ -230,6 +277,8 @@ class Loop:
     def finish(self, rc):
         self.out.thread.join(1)
         self.err.thread.join(1)
+        if self.watch is not None and self._saw_end():
+            self.ended = True
         if rc == 0:
             self.record(_json(self.out.last).get("code"), None, 0)
         elif rc > 0:
@@ -316,7 +365,7 @@ class Loop:
                     if self.stopping:
                         final = "stopped"
                         break
-                    if done:
+                    if done or self.ended:
                         final, now_ = "done", False
                         break
                     if not w["paused"][0] and now >= self.due(w):

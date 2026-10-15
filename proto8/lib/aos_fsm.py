@@ -24,7 +24,8 @@
 
 state 窗：`{"phase"}`，只有 fsm 自己寫；不寫時間、pid（N-39）。
 stdout：起了格（或查格就出錯）吐一行＝那格的 aos_inst 結果（N-30：`id`、`code`、`signal`、`timed_out`、`pid`、`ms`、
-`exit_file`；沒起成格的是 null）＋`from`、`to`（出錯多 `error`: {code, msg}，msg 帶格 stderr 最後一份 N-29 錯誤）；
+`exit_file`；沒起成格的是 null）＋`from`、`to`（出錯多 `error`: {code, msg}，msg 帶格 stderr 最後一份 N-29 錯誤；
+結束那拍多 `"end": true`，拍它的 aos-loop 寫了 `stop_on_end` 就看它停）；
 這行永遠不帶 `next`。
 退出碼（N-43 只認 0／非 0）：0＝這拍正常；1＝格出錯；125＝fsm 自己出錯（設定不對、窗缺、state 讀寫不了）。
 """
@@ -83,7 +84,7 @@ def tick(cfg):
     """跑一拍，回退出碼（0 或 CELL_FAILED）。"""
     start, states, end = cfg["start"], cfg["states"], cfg["end"]
     phase = _read(cfg)
-    to, give, err = phase, None, None
+    to, give, err, ended = phase, None, None, False
     line = {"id": None, "code": None, "signal": None, "timed_out": False, "pid": None, "ms": None, "exit_file": None}
     t0 = time.monotonic()
     try:
@@ -105,7 +106,7 @@ def tick(cfg):
             raise MethodsError("BadNext", "格 %s 回的 next 要是狀態名，不是 %r" % (phase, nxt))
         nxt = phase if nxt is None else nxt
         if phase in end or (nxt not in states and nxt in end):
-            to, give = start, ret      # 結束（N-40 b、c）：phase 歸位，那格的結果原樣交出去（沒輸出＝不吐）
+            to, give, ended = start, ret, True     # 結束（N-40 b、c）：phase 歸位，那格的結果原樣交出去（沒輸出＝不吐）
         elif nxt in states:
             to = nxt
         else:
@@ -115,6 +116,8 @@ def tick(cfg):
     if line["ms"] is None:
         line["ms"] = round((time.monotonic() - t0) * 1000)
     line.update({"from": phase, "to": to})
+    if ended:
+        line["end"] = True             # 結束那拍的那行（拍它的 loop 寫了 stop_on_end 就看這個停）
     if err:
         line["error"] = err
     _write(cfg, to)

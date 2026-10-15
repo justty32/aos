@@ -9,6 +9,7 @@ loop 與 daemon 的 state／ctl 窗（含必填 N-19）在[窗](05-基礎設施-
 ## loop（與 daemon 共用）
 
 - **N-31**（原 h6，草稿）loop／daemon 的 stdout：每真的跑了一次 inst 吐一份 `{run, code, ms}`（daemon 沒 inst 就不吐），結束時吐一份總結，`end`＝最後狀態字串（`"done"`／`"stopped"`）。（10-14 深夜）
+- **N-44**（10-15 收工後定，草稿）loop.json 選填 `stop_on_end`（布林，預設 false）：包的是 aos-fsm 時，某一次的 stdout 裡出現 fsm **結束那拍的那行**（N-40：帶 `"end": true` 與 `from`、`to`）＝不再起新的一次，loop 正常結束（`end`＝`"done"`）。訊號走 stdout 不走結束碼（N-43 只定 0／非 0）、不走 ctl（不必寫 stop、不必輪詢）。inst 寫了 stdout 檔就讀這次寫進去的那段；沒寫＝loop 自己替它接一個暫存檔。daemon.json 照 N-28 同義。（使用者 10-15 收工後「都按照推薦」，主控推薦：「fsm 走到 end 時，loop 應直接停，不靠輪詢 ctl」）
 
 ## daemon
 
