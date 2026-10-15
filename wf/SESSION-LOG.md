@@ -12,13 +12,7 @@
 
 ## 最新進度
 
-- **10-15 agent 判官重跑**（[thinking judge-live](../proto8/thinking/2026-10-15-judge-live.md#重跑10-15no_think瘦身後)）：判官 `/no_think`、stdin 瘦成 state 窗子集（queue／running／slots／budget）；LM Studio 1.7B 每次 5～7 秒、5／5 合法，但都全 defer → kernel 卡住。open：全 defer 卡住要不要防、換模型。
-- **10-15 C-48 收斂（都照建議）**（[thinking json-families § 動工](../proto8/thinking/2026-10-15-json-families.md#動工10-15使用者都照建議)）：閘門的信＝inst 族、回信＝N-30（共用 `aos_mailbox.py`）；fsm 格 stdin＝設定＋`fsm_state`；N-40 外層 cfg 當預設；N-22／35／37～40 去指示詞。open：動工自定點等使用者看。
-- **10-15 通用 kernel 基礎實作**（[lib kernel2.md](../proto8/lib/kernel2.md)）：open：[動工自定點](../proto8/thinking/2026-10-15-general-kernel.md#動工自定點)等使用者看。
-- **10-15 LLM kernel 基礎實作**（[lib kernel.md](../proto8/lib/kernel.md)）：open：[動工自定點](../proto8/thinking/2026-10-15-llm-kernel.md#動工自定點)等使用者看；真腦（LM Studio）包閘門實跑未做。
-- **10-15 agent 當函數＋binding、當工具**（[C-46](../proto8/CONCEPTS/05-agent.md#agent函數binding)、[thinking §11](../proto8/thinking/2026-10-15-topics/04-agent當函數.md#11-agent-當函數binding當工具)）：`aos_agent_call.py`＋`aos_agent_lib.py ask`，demo 報時員 `clerk/`。open：動工自定點（定義攤開、工具在 bob/ 跑）等使用者看；真腦實跑由使用者安排。
-- **10-15 agent 思考介面＋工具＝inst**（[lib agent.md](../proto8/lib/agent.md)、thinking 10-15 §5～§10）：open：動工自定點等使用者看、跑順再升規範。
-- **10-15 主題重排＋fsm 補細則**（[thinking 10-15](../proto8/thinking/2026-10-15-topics.md)）：未決：總則與設計理念要不要併、時空歸屬、[待定](../proto8/NORMS/08-待定.md)其餘。
+- **10-15 收工**：使用者說「先大致到這邊……接下來是我要來做理解」→ 下一步等使用者讀完再開口。今日成果：主題分檔、fsm 規範＋實作、agent（工具＝inst、思考介面、系統提示、函數＋binding、當工具）、C-47／N-42 兩種 kernel 原型、C-48 JSON 規矩＋同像性；五份網頁已更新（https://claude.ai/artifact/<id>）：概念 QJjGNnKFhKeS7r1f5bHzu7、實作 ATizWpsmAa2qutXWZ2owjm、58 題 DKBifn39yRtYDGjwGEAzC5、inst/loop/daemon HGkzKJKAsEAwhv1dQPQX8d、aos-llm與fsm K2aQ7KCad1u3dFTfDvArda。等使用者看：各 thinking 的「動工自定點」（[llm-kernel](../proto8/thinking/2026-10-15-llm-kernel.md#動工自定點)、[general-kernel](../proto8/thinking/2026-10-15-general-kernel.md#動工自定點)、[json-families](../proto8/thinking/2026-10-15-json-families.md)、[topics/04-agent當函數](../proto8/thinking/2026-10-15-topics/04-agent當函數.md)、[judge-live2](../proto8/thinking/2026-10-15-judge-live2.md)）。open 候選：對話太長、agent 收信、標準實作、規範草稿定稿。細節 → [10-15](session_logs/2026-10/2026-10-15.md)。
 - **proto8（主線）**：細節在 git log、[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[lib README](../proto8/lib/README.md)。PLAN 擱置。**下一步等使用者開口**：他說「先做 demo」但還沒說開始；restart §4 列了他停在半路的幾處。圖解：概念 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。
 - 已搬走（open 已解）：10-14 收工交棒、10-13 `檔#/位置`／kernel-agent、10-12 thinking 精簡與清帳 → [10-14](session_logs/2026-10/2026-10-14.md)、[10-13](session_logs/2026-10/2026-10-13.md)、[10-12](session_logs/2026-10/2026-10-12.md)。
 - 10-09 留下的約定（全文 [→](session_logs/2026-10/2026-10-09.md#2026-10-09)）：合併用 `../aos-wt/merge.sh <分支>`；對使用者一律 ELI5、少用隊名代號；`proto7/user-advice.md` 不碰。
