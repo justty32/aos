@@ -1,0 +1,1 @@
+{"inst": {"argv": ["aos", "agent", "fsm"]}, "times": 20, "stop_on_end": true, "ctl": "ctl.json", "state": "loop-state.json"}

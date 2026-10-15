@@ -1,0 +1,8 @@
+{
+  "argv": ["aos-demo", "paint/brush/tools/palette.py"],
+  "timeout_ms": 5000,
+  "_tool": {
+    "description": "查調色盤：給一個要畫的東西，回適合的顏色清單。",
+    "parameters": {"type": "object", "properties": {"subject": {"type": "string", "description": "要畫的東西，例如「貓」"}}, "required": ["subject"]}
+  }
+}
