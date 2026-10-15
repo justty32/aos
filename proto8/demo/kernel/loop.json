@@ -1,0 +1,5 @@
+{
+  "inst": {"argv": ["python3", "../../lib/aos_gate_kernel.py", "kernel.json"]},
+  "times": null,
+  "interval_ms": 100
+}

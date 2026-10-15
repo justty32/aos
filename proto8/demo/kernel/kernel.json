@@ -1,0 +1,9 @@
+{
+  "mailbox": {"$env": "AOS_KERNEL"},
+  "state": {"$env": "DEMO_KERNEL_STATE"},
+  "log": {"$env": "DEMO_KERNEL_LOG"},
+  "slots": 1,
+  "budget": 100000,
+  "aging_ticks": 10,
+  "near_ms": 30000
+}

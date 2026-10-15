@@ -1,0 +1,20 @@
+{
+  "start": "thinking",
+  "end": ["idle"],
+  "states": {
+    "thinking": {"target": {"argv": ["python3", "../../../lib/aos_agent_lib.py", "think"], "timeout_ms": 200000}, "next": "route"},
+    "route": {"argv": ["python3", "../../../lib/aos_agent_lib.py", "route"]},
+    "tool": {"target": {"argv": ["python3", "../../../lib/aos_agent_lib.py", "tool"], "timeout_ms": 150000}, "next": "thinking"}
+  },
+  "max_steps": 10,
+
+  "brain": {"argv": ["python3", "../../../lib/aos_gate.py", "../gate-fake.json"]},
+  "tools": {"clerk": {
+    "argv": ["python3", "../../../lib/aos_agent_lib.py", "ask", "../clerk/agent.json"],
+    "timeout_ms": 120000,
+    "_tool": {
+      "description": "問報時員（另一個 agent）。把問題原樣交給它，它會查時間、回一句話。",
+      "parameters": {"type": "object", "properties": {"question": {"type": "string"}}, "required": ["question"]}
+    }
+  }}
+}
