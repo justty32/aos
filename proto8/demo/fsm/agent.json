@@ -10,7 +10,7 @@
   "max_steps": 10,
 
   "brain": "brain/fake.json",
-  "tools": {"clock": "tools/clock.json"},
+  "tools": {"clerk": "tools/clerk.json"},
   "system": "system.md",
   "history": {"$env": "DEMO_HISTORY"},
   "work": {"$env": "DEMO_WORK"}

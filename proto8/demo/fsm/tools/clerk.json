@@ -1,0 +1,8 @@
+{
+  "argv": ["python3", "../../lib/aos_agent_lib.py", "ask", "clerk/agent.json"],
+  "timeout_ms": 120000,
+  "_tool": {
+    "description": "問報時員（另一個 agent）。把問題原樣交給它，它會查時間、回一句話。",
+    "parameters": {"type": "object", "properties": {"question": {"type": "string", "description": "要問報時員的話"}}, "required": ["question"]}
+  }
+}

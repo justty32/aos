@@ -34,12 +34,13 @@
 | `aos_daemon_folder.py` | daemon 的指令（`handle()`）與控制資料夾（掃、回覆 `.done`） |
 | `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{target, next}`）、跑一格（`run_cell`：蓋 stdin／stdout、本行程 `aos_inst.run()`、撿格 stderr 的 N-29 錯誤當 `cell_error`）、取 stdout 最後一份（`last_json`） |
 | `aos_fsm.py` | fsm：命令列＋`run()`、一拍（讀 ctl、讀寫 state 窗、跑格、換狀態、error 格、連錯停住、巢狀 `end`、lock） |
-| `aos_agent_lib.py` | agent 的現成格庫（不是 agent 本體；10-15 由 `aos_agent.py` 改名）：設定從 fsm 給的 stdin `cfg` 拿；`think`（讀 history、組請求、跑腦、接 assistant 訊息）、`tool`（跑第一個 tool_call、接 tool 訊息）；`tool_specs`、`pending` |
+| `aos_agent_lib.py` | agent 的現成格庫（不是 agent 本體；10-15 由 `aos_agent.py` 改名）：設定從 fsm 給的 stdin `cfg` 拿；`think`（讀 history、組請求、跑腦、接 assistant 訊息）、`tool`（跑第一個 tool_call、接 tool 訊息）、`route`（有 tool_calls＝next tool，否則 idle）、`ask`（轉給 `aos_agent_call`）；`tool_specs`、`pending`；brain／tools 可以是 TARGET 或內嵌 inst |
+| `aos_agent_call.py` | agent 當函數＋binding（10-15 使用者定的概念 C-46）：`Agent(bob/agent.json).call(frame, history, engine_args, tools, tools_append, cwd)`——定義的路徑從 bob/ 算、攤成內嵌 inst，執行期（history／state／work／lock）放 frame，本行程一拍一拍敲 aos_fsm 到 `end`；`ask()`＝`aos_agent_lib.py ask` 的本體（agent 當工具：frame、lock、MaxTicks、Busy、遞迴層數） |
 | `aos_brain_openai.py` | 真的腦：照思考介面 POST 到 OpenAI 相容的 `/chat/completions`（urllib，不串流，預設 LiteLLM） |
 | `aos_brain_ollama.py` | 真的腦（ollama 原生）：POST `/api/chat`，帶 `options.num_ctx`、`keep_alive`；兩邊訊息形狀互翻（arguments 字串↔物件、補 id／`tool_name`） |
 | `tests/` | unittest，見[下面](#測試tests) |
 
-相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 ctl 與 `write_json`）；agent：`aos_methods` ← `aos_agent_lib`（也借 `write_json`），`aos_brain_openai`、`aos_brain_ollama` 只靠 `aos_cli`。
+相依只往下：`aos_directives` ← `aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 ctl 與 `write_json`）；agent：`aos_methods` ← `aos_agent_lib`（也借 `write_json`），`aos_fsm` ← `aos_agent_call`（`aos_agent_lib` 只在 `ask` 時才載它），`aos_brain_openai`、`aos_brain_ollama` 只靠 `aos_cli`。
 
 ## ctl 與 state 的慣例
 
@@ -51,7 +52,7 @@
 python3 -m unittest discover -s proto8/lib/tests
 ```
 
-只用標準庫，93 個、約 25 秒。按受測的程式分七個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm、兩顆真腦對本機假伺服器）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
+只用標準庫，107 個、約 37 秒。按受測的程式分七個檔（`test_cli.py`、`test_directives.py`、`test_inst.py`、`test_loop.py`、`test_daemon.py`、`test_fsm.py`、`test_agent.py`（整圈借 demo/fsm 含報時員 clerk、agent 當函數／當工具、兩顆真腦對本機假伺服器）），共用的暫存資料夾基底 `Tmp` 與路徑在 `helpers.py`；loop 與 daemon 都起真的行程、走檔案；每個測試用 mktemp 的暫存資料夾，跑完刪掉。改 lib 就跑一次，新行為補一個測試。
 
 ## 行程與執行緒的規矩
 

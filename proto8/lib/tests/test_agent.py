@@ -12,7 +12,7 @@ import subprocess
 import sys
 import threading
 
-from helpers import FSM, LIB, Tmp
+from helpers import FSM, LIB, Tmp, tree_hash
 
 AGENT = os.path.join(LIB, "aos_agent_lib.py")
 BRAIN = os.path.join(LIB, "aos_brain_openai.py")
@@ -44,19 +44,34 @@ class AgentRoundTest(Tmp):
         return steps, json.loads(self.read("work/history.json"))
 
     def test_full_round_with_tool(self):
+        # 外層的工具只有 clerk（報時員＝另一個 agent）：外層叫 clerk，clerk 在自己的 frame 裡叫 clock
         steps, hist = self.round("現在幾點？")
         self.assertEqual([(s["from"], s["to"]) for s in steps],
                          [("idle", "thinking"), ("thinking", "thinking"), ("thinking", "tool"),
                           ("tool", "thinking"), ("thinking", "thinking"), ("thinking", "idle")])
         self.assertEqual([m["role"] for m in hist], ["user", "assistant", "tool", "assistant"])
         call = hist[1]["tool_calls"][0]
-        self.assertEqual((call["type"], call["function"]["name"]), ("function", "clock"))
+        self.assertEqual((call["type"], call["function"]["name"]), ("function", "clerk"))
+        self.assertEqual(json.loads(call["function"]["arguments"]), {"question": "現在幾點？"})
         self.assertEqual(hist[2]["tool_call_id"], call["id"])
         res = json.loads(hist[2]["content"])
         self.assertEqual(res["code"], 0)
-        self.assertIn("time", res["result"])
-        self.assertTrue(self.read("outbox.txt").startswith("現在是 " + res["result"]["time"]))
-        self.assertEqual(json.loads(self.read("work/2-call.json")), {})       # 引數寫成 N-call.json（N＝那時 history 幾則）
+        self.assertTrue(res["result"]["reply"].startswith("現在是 "))
+        self.assertTrue(self.read("outbox.txt").startswith("報時員說：" + res["result"]["reply"]))
+        self.assertEqual(json.loads(self.read("work/2-call.json")), {"question": "現在幾點？"})
+        sub = json.loads(self.read("work/ask-1/history.json"))                # clerk 的 frame
+        self.assertEqual([m["role"] for m in sub], ["user", "assistant", "tool", "assistant"])
+        self.assertEqual(sub[1]["tool_calls"][0]["function"]["name"], "clock")
+
+    def test_clerk_reused_definition_untouched(self):
+        clerk = os.path.join(DEMO, "clerk")
+        before = tree_hash(clerk)
+        self.round("現在幾點？")
+        os.remove(self.p("outbox.txt"))
+        self.round("幾點了？")
+        self.assertEqual(sorted(n for n in os.listdir(self.p("work")) if n.startswith("ask-")), ["ask-1", "ask-2"])
+        self.assertEqual(json.loads(self.read("work/ask-2/history.json"))[0]["content"], "幾點了？")
+        self.assertEqual(tree_hash(clerk), before)
 
     def test_unknown_tool_goes_back_to_model(self):
         steps, hist = self.round("亂叫一個")
@@ -156,6 +171,131 @@ class AgentCellTest(Tmp):
             os.chdir(cwd)
         self.assertEqual(specs, [{"type": "function", "function": {
             "name": "echo", "description": "回聲", "parameters": {"type": "object", "properties": {}}}}])
+
+
+BRAIN_PY = """import json, sys, time
+req = json.load(sys.stdin)
+msgs = req["messages"]
+last = msgs[-1]
+names = sorted(t["function"]["name"] for t in req.get("tools", []))
+first = msgs[0].get("content") if msgs[0]["role"] == "user" else msgs[1].get("content")
+if first == "fail":
+    print(json.dumps({"error": {"code": "Boom", "msg": "壞了"}}), file=sys.stderr)
+    sys.exit(1)
+if first == "slow":
+    time.sleep(0.5)
+if (first == "loop" or last.get("content") == "use t") and last["role"] != "assistant":
+    out = {"role": "assistant", "content": "還在想", "tool_calls": [
+        {"id": "c%d" % len(msgs), "type": "function", "function": {"name": "t", "arguments": "{}"}}]}
+else:
+    out = {"role": "assistant", "content": json.dumps({"argv": sys.argv[1:], "tools": names, "n": len(msgs)})}
+print(json.dumps(out))
+"""
+
+
+class AgentCallTest(Tmp):
+    """agent 當函數＋binding（aos_agent_call）：bob/＝定義不動、frame＝history 累積處、呼叫時的參數。"""
+
+    def setUp(self):
+        super().setUp()
+        self.write("bob/brain.py", BRAIN_PY)
+        self.write("bob/brain.json", {"argv": [sys.executable, "brain.py"]})          # 相對 bob/
+        self.write("bob/t.json", {"argv": ["sh", "-c", "cat; echo"], "_tool": {"description": "回聲"}})
+        self.write("u.json", {"argv": ["true"]})                                          # 呼叫者這邊的工具
+        cell = lambda k: {"argv": [sys.executable, AGENT, k]}
+        self.write("bob/agent.json", {
+            "start": "thinking", "end": ["idle"], "max_steps": 30,
+            "states": {"thinking": {"target": cell("think"), "next": "route"}, "route": cell("route"),
+                       "tool": {"target": cell("tool"), "next": "thinking"}},
+            "brain": "brain.json", "tools": {"t": "t.json"}})
+        import aos_agent_call
+        self.mod = aos_agent_call
+        self.bob = aos_agent_call.Agent(self.p("bob", "agent.json"))
+
+    def call(self, frame, q=None, **kw):
+        hist = None if q is None else [{"role": "user", "content": q}]
+        out = self.bob.call(self.p(frame), history=hist, cwd=self.tmp, **kw)
+        return out, json.loads(out["reply"])
+
+    def ask(self, frame, q, *flags, env=None):
+        return subprocess.Popen([sys.executable, AGENT, "ask", "--frame", self.p(frame)] + list(flags)
+                                + [self.p("bob", "agent.json")], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                text=True, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", **(env or {})))
+
+    def done(self, p, q):
+        out, _ = p.communicate(json.dumps({"question": q}), timeout=30)
+        return p.returncode, json.loads(out)
+
+    def test_bob_untouched_frames_hold_history(self):
+        before = tree_hash(self.p("bob"))
+        out, r = self.call("f1", "use t")
+        self.call("f2", "hi")
+        self.assertEqual(tree_hash(self.p("bob")), before)
+        self.assertEqual(sorted(os.listdir(self.p("f1"))), ["history.json", "state.json", "work"])
+        self.assertEqual([m["role"] for m in json.loads(self.read("f1/history.json"))],
+                         ["user", "assistant", "tool", "assistant"])
+        self.assertEqual(len(json.loads(self.read("f2/history.json"))), 2)
+        self.assertEqual((r["tools"], out["ticks"]), (["t"], 5))
+
+    def test_history_override_vs_continue(self):
+        self.write("f/history.json", [{"role": "user", "content": "x"}, {"role": "assistant", "content": "y"},
+                                      {"role": "user", "content": "z"}])
+        _, r = self.call("f")                                  # 沒給＝接著 frame 裡的
+        self.assertEqual(r["n"], 3)
+        self.assertEqual(len(json.loads(self.read("f/history.json"))), 4)
+        _, r = self.call("f", "new")                           # 給了＝換掉
+        self.assertEqual(r["n"], 1)
+        self.assertEqual(len(json.loads(self.read("f/history.json"))), 2)
+        with self.assertRaises(self.mod.CallError) as e:
+            self.bob.call(self.p("empty"), cwd=self.tmp)
+        self.assertEqual(e.exception.code, "NoHistory")
+
+    def test_tools_append_and_replace(self):
+        _, r = self.call("f", "hi", tools_append={"u": "u.json"})        # 相對呼叫者的 cwd
+        self.assertEqual(r["tools"], ["t", "u"])
+        _, r = self.call("f", "hi", tools={"u": "u.json"})               # 整份取代 bob 綁的
+        self.assertEqual(r["tools"], ["u"])
+        _, r = self.call("f", "hi", tools={}, tools_append={"u": "u.json"})
+        self.assertEqual(r["tools"], ["u"])
+
+    def test_engine_args(self):
+        _, r = self.call("f", "hi", engine_args=["--model", "m2"])
+        self.assertEqual(r["argv"], ["--model", "m2"])
+        _, r = self.call("f", "hi", engine_args={"argv": [sys.executable, "brain.py", "--x"]})
+        self.assertEqual(r["argv"], ["--x"])
+
+    def test_ask_normal(self):
+        code, out = self.done(self.ask("f", "use t"), "use t")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(set(out), {"reply", "ticks"})
+        self.assertEqual(json.loads(out["reply"])["n"], 3)
+
+    def test_ask_max_ticks(self):
+        code, out = self.done(self.ask("f", "loop", "--max-ticks", "4"), "loop")
+        self.assertEqual((code, out["error"], out["partial"]), (1, "MaxTicks", "還在想"))
+
+    def test_ask_busy_same_frame(self):
+        os.makedirs(self.p("f", "lock"))
+        code, out = self.done(self.ask("f", "hi"), "hi")
+        self.assertEqual((code, out["error"]), (1, "Busy"))
+
+    def test_ask_two_frames_concurrently(self):
+        a, b = self.ask("f1", "slow"), self.ask("f2", "slow")
+        self.assertEqual(self.done(a, "slow")[0], 0)
+        self.assertEqual(self.done(b, "slow")[0], 0)
+
+    def test_ask_depth_limit(self):
+        code, out = self.done(self.ask("f", "hi", env={"AOS_ASK_DEPTH": "3"}), "hi")
+        self.assertEqual((code, out["error"]), (1, "TooDeep"))
+        self.assertFalse(os.path.exists(self.p("f")))
+        code, _ = self.done(self.ask("f", "hi", env={"AOS_ASK_DEPTH": "2"}), "hi")
+        self.assertEqual(code, 0)
+
+    def test_ask_sub_agent_failed(self):
+        code, out = self.done(self.ask("f", "fail"), "fail")
+        self.assertEqual((code, out["error"]), (1, "SubAgentFailed"))
+        self.assertIn("BrainFailed: Boom", out["msg"])
+        self.assertEqual(len(json.loads(self.read("f/history.json"))), 1)       # 沒重試
 
 
 class _Stub(http.server.BaseHTTPRequestHandler):

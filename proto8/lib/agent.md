@@ -1,4 +1,4 @@
-# agent（現成格庫 `aos_agent_lib.py`＋真的腦 `aos_brain_openai.py`／`aos_brain_ollama.py`）
+# agent（現成格庫 `aos_agent_lib.py`＋當函數 `aos_agent_call.py`＋真的腦 `aos_brain_openai.py`／`aos_brain_ollama.py`）
 
 ← [proto8/lib](README.md)｜概念：[CONCEPTS agent](../CONCEPTS/05-agent.md)｜狀態機：[fsm.md](fsm.md)｜demo：[demo/fsm](../demo/fsm/README.md)｜決定：[thinking 10-15 §5](../thinking/2026-10-15-topics.md#5-agent-的工具與思考介面)
 
@@ -55,7 +55,9 @@ python3 aos_agent_lib.py think      python3 aos_agent_lib.py tool
 - **設定走 stdin**（10-15 使用者選乙）：fsm 給格的 stdin 是 `{"state", "step", "prev", "cfg"}`（N-37），`brain`、`tools`、`history`、`work`（與選填的 `system`）從 `cfg` 拿，argv 不再指設定檔；沒 `cfg`＝`NoConfig`、退出 1。相對路徑從格的 cwd 算（沒寫 `cwd` 的格＝跟 fsm 同一個）。巢狀時 `cfg` 是內層 fsm 那份，四個 key 在內層設定裡 `$ref` 到外層（demo 的 `think/fsm.json` 就這樣寫，N-40）。
 
 - **think**：讀 history、組請求（`tools` 從各工具 inst 的 `_tool` 來；沒工具就不帶）、蓋 stdin 跑腦（`aos_methods.run_cell`）、把 assistant 訊息接進 history，stdout `{"data": {"content", "tool_calls": [工具名]}}`。不吐 `next`：下一格寫在表上。history 最後已經是 assistant（上一拍接好才被殺）＝不再叫腦。腦結束碼非 0＝`BrainFailed`（白話＝腦 stderr 的錯誤 `代號: 白話`，腦沒吐才寫結束碼）、回的不是 assistant 訊息＝`BadReply`，這格退出 1；fsm 記 `CellFailed: BrainFailed: HttpError: …`，連錯 `max_fails` 次就停住不再叫腦（[fsm.md](fsm.md)）。
-- **tool**：找最後一則 assistant 還沒回的 `tool_calls`，跑一個、接 tool 訊息，stdout `{"data": {"tool", "result"}}`。
+- **tool**：找最後一則 assistant 還沒回的 `tool_calls`，跑一個、接 tool 訊息，stdout `{"data": {"tool", "result"}}`。工具的環境多一個 `AOS_WORK`＝這個 agent 的 work（給 `ask` 放子 agent 的 frame）。
+- **route**：看最後一則 assistant，有 `tool_calls`＝`{"next": "tool"}`，否則 `{"next": "idle", "data": {"reply"}}`。單層表用（demo 的 `clerk/`）；名字寫死 tool／idle。
+- `brain`、`tools` 的值除了 TARGET，也可以是內嵌一張 inst（`aos_agent_call` 攤開定義時就給這種）。
 
 ## 邊緣狀況（使用者 10-15 定）
 
@@ -67,3 +69,40 @@ python3 aos_agent_lib.py think      python3 aos_agent_lib.py tool
 | tool 格被殺一半（`prev.interrupted`，N-38） | 不重跑工具，還沒回的全回「被中斷」 |
 
 動工時自己定的（等使用者看）：`arguments` 不是 JSON＝回 `{"code": null, "error": …}` 不跑；工具的 inst 起不來（aos_inst 出錯）同樣回 `{"code": null, "error": …}`；工具 inst 沒寫 `_tool`＝空說明、不收引數。
+
+## agent 當函數／當工具（`aos_agent_call.py`，10-15）
+
+概念：[CONCEPTS C-46](../CONCEPTS/05-agent.md)（使用者 10-15 定，概念層；規範慢慢來）｜決定：[thinking 10-15 §11](../thinking/2026-10-15-topics.md#11-agent-當函數binding當工具)
+
+三個地方分開：**定義**（`bob/`：agent.json＝fsm 表＋brain、tools、system；呼叫時不寫）、**frame**（像 stack：`history.json`、`state.json`、`work/`、`lock/`；每次呼叫／每個實例一個）、**cwd**（呼叫者在哪）。
+
+```python
+bob = aos_agent_call.Agent("bob/agent.json")          # binding
+bob.call(frame, history=None, engine_args=None, tools=None, tools_append=None, cwd=None, max_ticks=20)
+# → {"reply": 最後一則 assistant 的字, "ticks": 敲了幾拍}；錯丟 CallError
+```
+
+- **怎麼做到的**（動工自定，不動 inst／loop／`$ref` 的通則）：前端把定義攤開——表上的格、brain、tools、system（含 `$ref`）一律從 bob/ 算，讀成內嵌 inst；這些 inst 沒寫 `cwd` 就在 bob/ 跑（argv 裡的相對路徑也照 bob/ 算）。state、history、work 指進 frame；lock 是 `frame/lock/`，前端拿著整趟（fsm 不開 lock、ctl）。然後在本行程一拍一拍 `aos_fsm.run()`，fsm 吐出 `next` 在 `end` 裡的那份＝做完。
+- **history**：給了＝frame 的 history 換成它、刪 frame 的 state（從 start 來）；沒給＝接著 frame 裡的（沒有＝`NoHistory`）。
+- **engine_args**：list＝接在腦 inst 的 argv 後（例 `["--model", "x"]`）；dict＝蓋過腦 inst 的 key。
+- **tools**（呼叫時的工具＝一等參數，像高階函數傳進去的函數）：給了 `tools`＝整份取代 bob 綁的預設；`tools_append`＝再加；都沒給＝用 bob 綁的。呼叫時給的工具，相對路徑從 cwd 算、沒寫 cwd 就在 cwd 跑。
+- **限制**：只攤開最上層的表；格若是內層 fsm（`aos_fsm.py 內層.json`），它在 bob/ 跑、自己的 `$ref` 照 bob/ 算，但執行期的 key 不會被指進 frame——當函數用的定義寫成單層表（`think → route → tool`）。
+
+### 當工具：`aos_agent_lib.py ask`
+
+```
+python3 aos_agent_lib.py ask [--frame DIR] [--max-ticks N] bob/agent.json      # stdin {"question"} 或 {"history"}
+```
+
+- 寫成一張工具 inst（說明照舊放 `_tool`），父 agent 的 tools 放它。每次呼叫＝新對話（history＝`[user 問題]`），除非 stdin 給 `history`。
+- frame：`--frame`；沒給＝`$AOS_WORK/ask-<n>/`（父 agent 的 work，tool 格給的；n＝第一個還沒有的號碼，mkdir 搶），再沒有＝`./ask-<n>/`。完整對話留在 frame 給人看，父 agent 只拿到最後一句。
+- stdout 一份：成功 `{"reply", "ticks"}` 退 0；失敗 `{"error": 代號, "msg", …}` 退 1（父 agent 的 tool 訊息裡看得到）。
+
+| 情況 | 結果 |
+|---|---|
+| 同一個 frame 有人在用（`lock/` 在） | `Busy`；不同 frame 可以同時跑 |
+| 敲到 `--max-ticks`（預設 20）還沒到 end | `MaxTicks`，多 `partial`＝最後一則有字的 assistant |
+| 子 agent 的格出錯、停住、`max_steps` 到了 | `SubAgentFailed`，msg＝它的 last_error；不重試 |
+| 遞迴太深（環境變數 `AOS_ASK_DEPTH` 每層 +1，超過 3） | `TooDeep`，不建 frame |
+
+三道上限：`--max-ticks`、子 agent 自己的 `max_steps`、那張工具 inst 的 `timeout_ms`（demo 的 `tools/clerk.json` 120000；父 agent 的 tool 格 `timeout_ms` 要更大，demo 改 150000）。

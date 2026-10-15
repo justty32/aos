@@ -58,3 +58,17 @@ def alive(pid):
         return True
     except ProcessLookupError:
         return False
+
+
+def tree_hash(root):
+    """資料夾裡所有檔（含相對路徑）的 sha256；拿來確定「沒被寫過」。"""
+    import hashlib
+    h = hashlib.sha256()
+    for d, dirs, files in sorted(os.walk(root)):
+        dirs.sort()
+        for n in sorted(files):
+            p = os.path.join(d, n)
+            h.update(os.path.relpath(p, root).encode())
+            with open(p, "rb") as f:
+                h.update(f.read())
+    return h.hexdigest()
