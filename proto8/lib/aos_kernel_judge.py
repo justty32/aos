@@ -82,8 +82,8 @@ def ask_judge(cfg, snap, ids):
         with open(files["stdin"], "w", encoding="utf-8") as f:
             json.dump({k: snap[k] for k in JUDGE_KEYS if k in snap}, f, ensure_ascii=False)
         inst = dict(inst, envs=envs, envs_clear=True, stdin=files["stdin"], stdout=files["stdout"], stderr=None,
-                    stdin_inherit=False, stdout_inherit=False, stdout_append=False, stdout_mkdir=False,
-                    stderr_merge=False, stderr_inherit=False, timeout_ms=inst["timeout_ms"] or JUDGE_TIMEOUT_MS)
+                    stdout_append=False, stdout_mkdir=False, stderr_merge=False,
+                    timeout_ms=inst["timeout_ms"] or JUDGE_TIMEOUT_MS)
         try:
             res = aos_inst.run(inst)
         except aos_inst.InstError as e:

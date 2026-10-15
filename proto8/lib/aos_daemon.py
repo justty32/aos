@@ -13,7 +13,7 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd；只�
     ctl、state     自己的 ctl 窗、state 窗（必填，N-19）；ctl 不能放在 ctl_dir 裡
     times          跑幾拍就收工（非負整數；null＝不限，預設——跟 loop 的預設 1 不同）
     interval_ms    每拍隔多久（非負整數；沒寫＝200）
-    interval_mode、ctl_poll_ms、error_wait_ms、id   同 loop
+    id             同 loop
     grace_ms       收工時等底下的 loop 多久，過了整群 SIGKILL（非負整數；沒寫＝10000）
   daemon 多的：
     children       初始表（陣列）：每項＝一個 aos-loop 設定的 TARGET（路徑、`檔#/位置`，或內嵌物件）；起來時等同逐個 add
@@ -24,7 +24,7 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd；只�
     work_dir       每個子項一格 `work_dir/N/`（選填；沒寫＝state 窗旁邊的 loops/）
 
 每拍：收屍（每圈都做）→ 掃控制資料夾 → 跑 inst（有的話）。runs＝拍數。paused＝不拍（指令堆著、子項照跑）；
-stop＝收工（now＝子項當場收掉；沒 now＝替它們寫 stop、等它們跑完）；times 跑完同 stop（不帶 now）。
+stop＝收工（替它們寫 stop、等它們跑完；要當場收掉＝對 daemon 送 SIGTERM）；times 跑完同 stop。
 
 子項：一支子程序 `aos_loop.py -`（自成 session），設定原樣從 stdin 灌進去（`id`＝原 TARGET 的 id）。loop 設定沒寫 ctl／state 的，
 放在 `work_dir/N/ctl.json`、`state.json`；子 loop 的 stdout 丟掉（結果從 state 窗讀）、stderr 落 `work_dir/N/err.json`（只在出錯時長）。
@@ -42,16 +42,16 @@ stdout 最後一份＝{action: restart|leave|remove, after_ms}；restart＝退�
 id＝loop.json（或 inst.json）的絕對路徑，可接 `#/位置`：
 
     add        起一個（inst.json：頂層沒有 inst、有 argv 的，包成只跑一次的 loop；裡面不驗）     → result＝id
-    set        {"how": {times／interval_ms／interval_mode}}               → 改完的狀態物件
-    pause      {"wait": B}（預設 true；false＝當場收掉）                    → 狀態物件（等真的停了）
+    set        {"how": {times／interval_ms}}                               → 改完的狀態物件
+    pause                                                                   → 狀態物件（等真的停了）
     resume、add_times {"delta": N}                                          → 狀態物件
-    remove     {"wait": B}  停掉、等行程結束、從表上拿掉、刪 work_dir/N     → 最後的狀態物件
+    remove     {"wait": B}（預設 true；false＝對子 loop 送 SIGTERM）停掉、等行程結束、從表上拿掉、刪 work_dir/N → 最後的狀態物件
     state      → 狀態字串；get → 狀態物件（它的 state 窗＋phase）；list → [狀態物件, ...]
 
 set／pause／resume／add_times 等 loop 讀到了才回；等的期間指令檔留在原地。
 error.code（只供參考）：CommandBad、OpUnknown、FieldType、NotFound、Exists、Conflict、ReadFailed、JsonSyntax、WriteFailed、Internal。
 
-stdout 同 loop：跑了 inst 的拍一份 {run, code, ms}（沒 inst＝不吐）、結束一份總結。state 窗：共同骨架加 skipped、last_code、loops（表上幾個）；
+stdout 同 loop：跑了 inst 的拍一份 {run, code, ms}（沒 inst＝不吐）、結束一份總結。state 窗：共同骨架加 last_code、loops（表上幾個）；
 last_error＝inst 自己出錯那行，沒有就是最近一圈掃資料夾的錯（ScanFailed、ReplyFailed），都沒有＝null。
 跑起來之後出意外（PolicyFailed、RestartFailed、TableWriteFailed、收工時寫不了子項 ctl 的 WriteFailed）不結束、不寫 stderr，
 記在 state 窗的 last_warning（「代號: 白話」，最近一件；ctl 窗壞檔的優先）；子 loop 自己的 stderr 落 work_dir/N/err.json，不轉上來
@@ -64,11 +64,10 @@ import sys
 import aos_cli
 from aos_cli import CliError
 from aos_loop import DEFAULTS as _LOOP, Loop, LoopError, check_config
-# 表在 aos_daemon_table，指令與控制資料夾在 aos_daemon_folder；這裡 re-export
 from aos_daemon_folder import _Folder, handle
 from aos_daemon_table import AOS_LOOP, DaemonError, Table
 
-__all__ = ["Daemon", "DaemonError", "handle", "load_config", "run"]
+__all__ = ["Daemon", "DaemonError", "load_config", "run"]
 
 DEFAULTS = dict(_LOOP, times=None, interval_ms=200, grace_ms=10000, ctl_dir=None, work_dir=None, table=None,
                 load=False, children=[], policies={})
@@ -137,7 +136,7 @@ class Daemon(Loop):
             self.folder.flush()
 
     def extra(self):
-        return {"skipped": self.skipped, "last_code": self.last_code, "loops": len(self.table.entries)}
+        return {"last_code": self.last_code, "loops": len(self.table.entries)}
 
     def error_now(self):
         return self.last_error or (self.folder.last_error if self.folder else None)

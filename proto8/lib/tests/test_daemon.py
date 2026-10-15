@@ -13,15 +13,14 @@ import time
 import unittest
 
 from helpers import DAEMON, Tmp, alive
+import aos_ctl_state  # noqa: E402
 import aos_daemon  # noqa: E402
-import aos_loop  # noqa: E402
 
 
 class Daemon(Tmp):
     def start(self, **cfg):
         self.ctl = self.p("ctl")
-        self.write("daemon.json", dict({"ctl_dir": self.ctl, "interval_ms": 20, "ctl_poll_ms": 20,
-                                        "grace_ms": 3000, "ctl": self.p("d.ctl.json"), "state": self.p("d.state.json")},
+        self.write("daemon.json", dict({"ctl_dir": self.ctl, "interval_ms": 20, "grace_ms": 3000, "ctl": self.p("d.ctl.json"), "state": self.p("d.state.json")},
                                        **cfg))
         self.d = subprocess.Popen([sys.executable, DAEMON, self.p("daemon.json")],
                                   cwd=self.tmp, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL, text=True)
@@ -42,9 +41,9 @@ class Daemon(Tmp):
         return code
 
     def loop(self, name, sh="true", **outer):
-        """寫 NAME.loop.json（inst 內嵌，loop 的 ctl_poll_ms 20），回絕對路徑。"""
-        inst = {"argv": ["sh", "-c", sh], "cwd": self.tmp, "exit": name + ".exit", "exit_append": True}
-        return self.write(name + ".loop.json", dict({"inst": inst, "ctl_poll_ms": 20}, **outer))
+        """寫 NAME.loop.json（inst 內嵌），回絕對路徑。"""
+        inst = {"argv": ["sh", "-c", sh], "cwd": self.tmp}
+        return self.write(name + ".loop.json", dict({"inst": inst}, **outer))
 
     def put(self, cmd):
         self.n += 1
@@ -115,13 +114,13 @@ class Daemon(Tmp):
 
     def test_add_inst_json_runs_once(self):
         self.start()
-        d = self.inst("a", "sleep 1.5; echo x >> a.out", exit="a.exit")   # 包裝檔的 ctl_poll_ms 是預設 1000
+        d = self.inst("a", "sleep 1.5; echo x >> a.out")
         ident = self.ok({"op": "add", "id": d + "/inst.json"})
         self.assertEqual(ident, os.path.realpath(d + "/inst.json"))
         self.until(lambda: self.ok({"op": "state", "id": ident}) == "running")
         self.assertEqual(self.ok({"op": "add_times", "id": ident, "delta": 1})["times"], 2)
         self.until(lambda: self.ok({"op": "get", "id": ident}).get("state") == "done", 10)
-        self.assertEqual((self.read("a.out"), self.read("a.exit")), ("x\nx\n", "0\n"))
+        self.assertEqual(self.read("a.out"), "x\nx\n")
 
     def test_add_does_not_check_inside(self):
         # daemon 只管自己這一層（C-52；10-15 深夜使用者「不留」）：子項的 loop 設定、inst 寫錯，add 照樣 ok，
@@ -129,9 +128,9 @@ class Daemon(Tmp):
         self.start()
         bad = {"argv": ["sh", "-c", "true"], "cwd": self.tmp}
         cases = (("e", {"inst": dict(bad, argv=[])}, "FieldType"),
-                 ("i", {"inst": dict(bad, stdin_inherit=True)}, "Conflict"),          # 子 loop 從 stdin 灌 inst
-                 ("m", {"inst": bad, "interval_mode": "x"}, "FieldType"),              # loop 層的 key 也不驗
-                 ("s", dict(bad, stdin_inherit=True), "Conflict"))                     # inst.json 包成 loop 也一樣
+                 ("i", {"inst": dict(bad, stderr="x", stderr_merge=True)}, "Conflict"),
+                 ("m", {"inst": bad, "interval_ms": "x"}, "FieldType"),                # loop 層的 key 也不驗
+                 ("s", dict(bad, timeout_ms="x"), "FieldType"))                         # inst.json 包成 loop 也一樣
         for n, (name, doc, code) in enumerate(cases, 1):
             with self.subTest(name=name):
                 path = self.write(name + ".json", doc)
@@ -149,21 +148,26 @@ class Daemon(Tmp):
         a = self.loop("a", times=None, interval_ms=100000, ctl="a.ctl.json", state="a.state.json")
         self.ok({"op": "add", "id": a})
         self.ok({"op": "pause", "id": a})
-        self.assertEqual(json.loads(self.read("a.ctl.json")), {"seq": 1, "paused": {"val": True, "now": False}})
+        self.assertEqual(json.loads(self.read("a.ctl.json")), {"seq": 1, "paused": True})
         st = json.loads(self.read("a.state.json"))
         self.assertEqual((st["state"], st["ctl_seq"]), ("paused", 1))      # 回音以 seq 為準
         self.assertFalse(os.path.exists(self.p("loops/1/ctl.json")))
 
-    def test_pause_now_and_remove_wait(self):
+    def test_pause_and_remove_wait(self):
         self.start()
-        a = self.loop("a", "echo $$ > a.pid; exec sleep 30", times=None)
+        a = self.loop("a", "echo x >> a.out; sleep 0.2", times=None)
         self.ok({"op": "add", "id": a})
-        self.until(lambda: os.path.exists(self.p("a.pid")))
-        st = self.ok({"op": "pause", "id": a, "wait": False})
+        self.until(lambda: os.path.exists(self.p("a.out")))
+        st = self.ok({"op": "pause", "id": a})                 # 等這次跑完、真的停了才回
         self.assertEqual(st["state"], "paused")
-        self.assertEqual(self.read("a.exit"), "143\n")
         st = self.ok({"op": "resume", "id": a})
         self.until(lambda: self.ok({"op": "state", "id": a}) == "running")
+        # remove 不等：對子 loop 送訊號，當場收掉
+        b0 = self.loop("b0", "echo $$ > b0.pid; exec sleep 30", times=None)
+        self.ok({"op": "add", "id": b0})
+        self.until(lambda: os.path.exists(self.p("b0.pid")))
+        self.assertEqual(self.ok({"op": "remove", "id": b0, "wait": False})["state"], "stopped")
+        self.until(lambda: not alive(int(self.read("b0.pid"))))
         # remove 等這次跑完：指令檔留在原地，跑完才回
         b = self.loop("b", "sleep 0.4", times=None)
         self.ok({"op": "add", "id": b})
@@ -220,7 +224,7 @@ class Daemon(Tmp):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.read("l.out"), "y\ny\n")
         out = [json.loads(x) for x in r.stdout.splitlines()]
-        self.assertEqual(out[-1], {"end": "done", "runs": 2, "skipped": 0, "last_code": 0, "signal": None})
+        self.assertEqual(out[-1], {"end": "done", "runs": 2, "last_code": 0, "signal": None})
 
     def test_no_inst_only_summary(self):
         # 沒 inst 的拍不吐每拍那份，stdout 只有結束總結
@@ -228,30 +232,31 @@ class Daemon(Tmp):
         r = subprocess.run([sys.executable, DAEMON, path], cwd=self.tmp, capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 0, r.stderr)
         out = [json.loads(x) for x in r.stdout.splitlines()]
-        self.assertEqual(out, [{"end": "done", "runs": 3, "skipped": 0, "last_code": None, "signal": None}])
+        self.assertEqual(out, [{"end": "done", "runs": 3, "last_code": None, "signal": None}])
 
     def test_target_pointer(self):
         # 一份檔放好幾格：同一份檔兩個位置＝兩個 loop；inst 那格包成只跑一次
         self.start()
         path = self.write("node.json", {
             "a": {"inst": {"argv": ["sh", "-c", "echo a >> a.out"], "cwd": self.tmp}, "times": None,
-                  "interval_ms": 100000, "ctl_poll_ms": 20},
-            "b": {"inst": {"argv": ["true"]}, "times": None, "interval_ms": 100000, "ctl_poll_ms": 20},
-            "c": {"argv": ["sh", "-c", {"$ref": "#../../../a/inst/argv/2"}], "cwd": self.tmp, "exit": "c.exit"},
+                  "interval_ms": 100000},
+            "b": {"inst": {"argv": ["true"]}, "times": None, "interval_ms": 100000},
+            "c": {"argv": ["sh", "-c", {"$ref": self.p("cmd.json") + "#/cmd"}], "cwd": self.tmp},
             "x": 1})
+        self.write("cmd.json", {"cmd": "echo c >> c.out"})
         real = os.path.realpath(path)
         a = self.ok({"op": "add", "id": path + "#/a"})
-        b = self.ok({"op": "add", "id": path + "#/./b"})
+        b = self.ok({"op": "add", "id": path + "#/b"})
         self.assertEqual((a, b), (real + "#/a", real + "#/b"))
         self.until(lambda: self.ok({"op": "get", "id": a}).get("runs") == 1)
         self.assertEqual(self.ok({"op": "get", "id": a})["id"], a)
-        self.assertEqual(self.err({"op": "add", "id": path + "#/b/../b"}), "Exists")
+        self.assertEqual(self.err({"op": "add", "id": path + "#/b/"}), "Exists")
         c = self.ok({"op": "add", "id": path + "#/c"})
         self.until(lambda: self.ok({"op": "state", "id": c}) == "done")
-        self.assertEqual((self.read("a.out"), self.read("c.exit")), ("a\na\n", "0\n"))
+        self.assertEqual((self.read("a.out"), self.read("c.out")), ("a\n", "c\n"))
         self.assertEqual(self.err({"op": "add", "id": path + "#/x"}), "FieldType")
-        self.assertEqual(self.err({"op": "add", "id": path + "#/nope"}), "ReferencePointerInvalid")
-        self.assertEqual(self.err({"op": "add", "id": path + "#a"}), "ReferencePointerInvalid")
+        self.assertEqual(self.err({"op": "add", "id": path + "#/nope"}), "PointerBad")
+        self.assertEqual(self.err({"op": "add", "id": path + "#a"}), "PointerBad")
         self.assertEqual(self.err({"op": "add", "id": "node.json#/a"}), "FieldType")
         self.ok({"op": "remove", "id": c})
 
@@ -293,27 +298,26 @@ class Daemon(Tmp):
         self.assertTrue(json.loads(self.read("ctl/001.json.done"))["ok"])
 
     def test_state_skeleton_shared_with_loop(self):
-        """daemon 的 state.json 跟 loop 同一份骨架：interval_mode 回音、last_error、loops＝個數、狀態值在 STATES 裡。"""
-        self.start(interval_mode="fixed")
+        """daemon 的 state.json 跟 loop 同一份骨架：interval_ms 回音、last_error、loops＝個數、狀態值在 STATES 裡。"""
+        self.start(interval_ms=30)
         a = self.loop("a", times=None, interval_ms=100000, state=self.p("a.state.json"), ctl=self.p("a.ctl.json"))
         self.ok({"op": "add", "id": a})
         st = self.until(lambda: (lambda d: d if d and d.get("loops") else None)(self.dstate()))
         self.assertEqual(st["loops"], 1)
-        self.assertEqual(st["interval_mode"], "fixed")
+        self.assertEqual(st["interval_ms"], 30)
         self.assertIsNone(st["last_error"])
-        self.assertIn("skipped", st)
         la = self.until(lambda: self.ok({"op": "get", "id": a}).get("runs") == 1 and self.ok({"op": "get", "id": a}))
-        common = {"id", "state", "pid", "started", "boot_id", "beat", "runs", "times", "interval_ms", "interval_mode",
+        common = {"id", "state", "pid", "started", "boot_id", "beat", "runs", "times", "interval_ms",
                   "ctl_seq", "last_error", "last_warning"}
         self.assertLessEqual(common, set(st))
         self.assertLessEqual(common, set(la))
-        self.write("d.ctl.json", {"interval_mode": "after"})
-        self.until(lambda: self.dstate()["interval_mode"] == "after")
+        self.write("d.ctl.json", {"interval_ms": 40})
+        self.until(lambda: self.dstate()["interval_ms"] == 40)
         self.assertEqual(self.stop(), 0)
         st = self.dstate()
         self.assertEqual((st["state"], st["loops"]), ("stopped", 1))     # 收工表留著（給下次接回）
         for v in (st["state"], la["state"]):
-            self.assertIn(v, aos_loop.STATES)
+            self.assertIn(v, aos_ctl_state.STATES)
 
     def test_policy_failed_goes_to_state_not_stderr(self):
         # 策略格回的不對＝當 leave，原因記在 state 窗的 last_warning，不寫 stderr（N-43；10-15「都按照推薦。」）
@@ -345,7 +349,7 @@ class Daemon(Tmp):
     def test_bad_config(self):
         w = {"ctl": "x.json", "state": "s.json"}
         for doc in (dict(w, interval_ms=-1), {"ctl_dir": "c", "ctl": "c/x.json", "state": "s.json"},
-                    dict(w, interval_mode="x"), dict(w, load=True), dict(w, children={}),
+                    dict(w, load=True), dict(w, children={}),
                     dict(w, policies={"child_exit": 3})):
             self.write("c.json", doc)
             with self.subTest(doc=doc), self.assertRaises(aos_daemon.DaemonError):

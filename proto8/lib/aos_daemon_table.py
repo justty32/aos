@@ -23,15 +23,14 @@ import time
 
 import aos_cli
 import aos_inst
-import aos_loop
-from aos_cli import CliError, is_int
-from aos_ctl_state import proc_started
-from aos_directives import DirectiveError, split_target, target_id
-from aos_loop import parse_ctl, read_state, reap, write_json
+from aos_cli import CliError, is_int, split_target, target_id
+from aos_ctl_state import parse_ctl, proc_started, read_state, write_json
+from aos_proc import _killpg, reap
 
 __all__ = ["DaemonError", "Table"]
 
 AOS_LOOP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_loop.py")
+AOS_INST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_inst.py")
 MAX_EXITS = 5       # 崩潰迴圈的上限：exits ≥ 5 強制 leave，不問策略格
 
 
@@ -230,7 +229,7 @@ class Table:
             doc = target if isinstance(target, dict) else aos_cli.load_target(target, aos_inst._file)[0]
             fin, fout = os.path.join(e.workdir, "policy.in.json"), os.path.join(e.workdir, "policy.out.json")
             write_json(fin, {"id": e.id, "code": e.code, "exits": e.exits, "last_state": read_state(e.state)})
-            subprocess.run([sys.executable, aos_loop.AOS_INST, "-"], input=json.dumps(dict(doc, stdin=fin, stdout=fout)),
+            subprocess.run([sys.executable, AOS_INST, "-"], input=json.dumps(dict(doc, stdin=fin, stdout=fout)),
                            text=True, stdout=subprocess.DEVNULL)
             with open(fout, encoding="utf-8") as f:
                 outs = [o for o in aos_cli.read_stream(f.read()) if isinstance(o, dict)]
@@ -286,18 +285,17 @@ class Table:
 
     def set(self, path, how):
         e = self._get(path)
-        if not isinstance(how, dict) or not set(how) <= {"times", "interval_ms", "interval_mode"}:
-            raise DaemonError("FieldType", "how 只能有 times／interval_ms／interval_mode，不是 %r" % (how,))
+        if not isinstance(how, dict) or not set(how) <= {"times", "interval_ms"}:
+            raise DaemonError("FieldType", "how 只能有 times／interval_ms，不是 %r" % (how,))
         try:
             parse_ctl(how)
         except ValueError as err:
             raise DaemonError("FieldType", str(err))
         return e.acked(e.update_ctl(**how))
 
-    def pause(self, path, wait=True):
+    def pause(self, path):
         e = self._get(path)
-        _bool(wait)
-        return e.acked(e.update_ctl(paused={"val": True, "now": not wait}), lambda st: st.get("state") == "paused")
+        return e.acked(e.update_ctl(paused=True), lambda st: st.get("state") == "paused")
 
     def resume(self, path):
         e = self._get(path)
@@ -319,7 +317,9 @@ class Table:
         e = self._get(path)
         _bool(wait)
         if not e.exited():
-            e.update_ctl(stop={"val": True, "now": not wait})
+            e.update_ctl(stop=True)
+            if not wait and e.pid:                      # 當場收掉＝對子 loop 送訊號（ctl 只收布林）
+                _killpg(e.pid, signal.SIGTERM)
             e.phase = "stopping"
         e.removing = True
 
@@ -362,14 +362,14 @@ class Table:
                 time.sleep(0.02)
         for e in live:
             if not e.exited() and e.pid:
-                aos_loop._killpg(e.pid, signal.SIGTERM)
+                _killpg(e.pid, signal.SIGTERM)
         end = time.monotonic() + grace_ms / 1000
         while time.monotonic() < end and any(not e.exited() for e in live):
             self.tick()
             time.sleep(0.02)
         for e in live:
             if not e.exited() and e.pid:
-                aos_loop._killpg(e.pid, signal.SIGKILL)
+                _killpg(e.pid, signal.SIGKILL)
                 if e.proc:
                     e.code = reap(e.proc)
                 e.phase = "exited"
@@ -381,7 +381,7 @@ def _split(target):
         raise DaemonError("FieldType", "id 要是 loop.json 的絕對路徑，不是 %r" % (target,))
     try:
         return split_target(target)
-    except DirectiveError as e:
+    except CliError as e:
         raise DaemonError(e.code, e.msg)
 
 

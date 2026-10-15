@@ -1,6 +1,5 @@
 {
   "argv": ["python3", "-c", "print('once: hello'); raise SystemExit(3)"],
   "cwd": {"$env": "DEMO_OUT"},
-  "stdout": "once.out",
-  "exit": "once.exit"
+  "stdout": "once.out"
 }

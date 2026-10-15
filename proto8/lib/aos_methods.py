@@ -13,12 +13,11 @@
   自己寫的；給了 args（think 叫腦）＝stdin 蓋成一份寫著 args 的暫存檔（N-12：stdin＝參數）。
   stderr、exit、cwd、timeout_ms 照那張 inst 自己寫的——**格的 stderr 這裡不讀、不撿**（C-52 切乾淨：格的錯是格自己的，
   要留就在那張 inst 寫 `stderr` 檔；10-15 深夜使用者「拜託切乾淨」，原本撿成 `cell_error` 已拿掉）。
-  inst 寫了 `stdout_inherit`（給了 args 時還有 `stdin_inherit`）＝Conflict。
   aos_inst 自己出錯丟 `MethodsError`（代號照 aos_inst 的）。暫存檔跑完刪掉。
   結果 dict 多一格 `cell_empty`＝格的 stdout 什麼都沒吐（只有空白也算；fsm 拿它分「沒輸出」與「吐了壞的」，N-38）。
 - `last_json(text)`：JSON 串流的最後一份完整 JSON（半份不算，N-12）；沒有＝None。
 
-錯誤一律 `MethodsError`（`CliError` 的子類，`code`／`msg`）。相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_fsm。
+錯誤一律 `MethodsError`（`CliError` 的子類，`code`／`msg`）。相依：aos_cli ← aos_inst ← aos_methods ← aos_fsm。
 """
 import json
 import os
@@ -27,8 +26,7 @@ import tempfile
 
 import aos_cli
 import aos_inst
-from aos_cli import CliError
-from aos_directives import target_id
+from aos_cli import CliError, target_id
 
 __all__ = ["MethodsError", "cell", "check_table", "last_json", "run_cell"]
 

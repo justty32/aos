@@ -48,7 +48,7 @@ class FsmTest(Tmp):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.state(), {"phase": "b"})                   # state 窗只有 phase（N-39）
         line = self.out(r)[0]                                             # N-30 結果＋from／to＋next null（沒結束）
-        self.assertEqual(set(line), {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file", "from", "to", "next"})
+        self.assertEqual(set(line), {"id", "code", "signal", "timed_out", "pid", "ms", "from", "to", "next"})
         self.assertEqual((line["from"], line["to"], line["code"], line["next"]), ("a", "b", 0, None))
         self.tick(path)
         self.assertEqual((self.runs("a"), self.runs("b"), self.state()["phase"]), (1, 1, "b"))
@@ -210,16 +210,6 @@ class FsmTest(Tmp):
         self.assertEqual(r.returncode, 1)                       # fsm 自己的錯也是 1（原 125，10-15 晚）
         self.assertEqual(json.loads(r.stderr.splitlines()[-1])["error"]["code"], "WindowMissing")
         self.assertEqual(self.runs("a"), 0)
-
-    def test_old_keys_ignored(self):
-        # ctl、lock、max_steps、max_fails 已不歸 fsm（N-39）：當不認得的 key 忽略
-        os.mkdir(self.p("f.lock"))
-        self.write("f.ctl.json", {"paused": True})
-        path = self.fsm({"a": ok("a", '{"next": "b"}'), "b": ok("b")}, lock="f.lock", ctl="f.ctl.json",
-                        max_steps=1, max_fails=1)
-        for _ in range(3):
-            self.assertEqual(self.tick(path).returncode, 0)
-        self.assertEqual((self.runs("a"), self.runs("b")), (1, 2))
 
     def test_methods_cell_forms(self):
         states = {"x": "nope/", "y": 3, "z": {"val": {"argv": ["true"]}, "next": "x"}}

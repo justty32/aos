@@ -1,4 +1,3 @@
 {
-  "inst": {"$ref": "once/inst.json"},
-  "ctl_poll_ms": 100
+  "inst": {"$ref": "once/inst.json"}
 }

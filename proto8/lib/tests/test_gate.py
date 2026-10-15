@@ -160,7 +160,7 @@ class KernelOrderTest(Tmp):
             self.assertEqual(f.read(), "hi")
         K.tick(self.cfg)
         rep = self.reply(name)
-        self.assertEqual(set(rep), {"id", "code", "signal", "timed_out", "pid", "ms", "exit_file"})
+        self.assertEqual(set(rep), {"id", "code", "signal", "timed_out", "pid", "ms"})
         self.assertEqual((rep["code"], rep["id"]), (3, lt["id"]))
         self.assertEqual(aos_gate.outputs(self.box, name), ("hi", "e\n"))
         self.assertEqual(os.listdir(self.box["reply"]), [])                  # 回信與旁檔都收掉了
