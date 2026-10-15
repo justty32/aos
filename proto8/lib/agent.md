@@ -20,6 +20,7 @@ agent＝一份 fsm（idle → thinking → tool → thinking → … → idle）
 ```
 
 - 模型要用工具＝走 OpenAI 內建的 `tool_calls`（不是在文字裡吐 JSON）。
+- **用量**（10-15）：腦可以在 assistant 訊息頂層多帶 `"usage": {"prompt_tokens", "completion_tokens", "total_tokens"}`，給 LLM kernel 記額度（[kernel.md](kernel.md)）；think 接進 history 前拿掉 `usage`，history 照舊是純 OpenAI 訊息。兩顆真腦都會帶（openai：端點回的 `usage` 照抄；ollama：`prompt_eval_count`＋`eval_count` 換成這個形狀），端點沒回就不帶。
 - 出錯：stderr 吐 `{"error": {"code", "msg"}}`（N-29）、結束碼非 0。
 - 兩顆腦：demo 的假腦 `demo/fsm/brain/fake.py`（寫死的回覆）、真腦 `aos_brain_openai.py`（POST `<base_url>/chat/completions`，不串流；`base_url` 預設 LiteLLM `http://localhost:4000/v1`、`model` 必填、`api_key_env`＝放金鑰的環境變數名（沒寫＝不帶）、`timeout_ms` 預設 120000；設定從 CONFIG.json 或旗標來，stdin 是請求）。錯誤代號：`HttpError`、`ConnectFailed`、`BadResponse`、`NoApiKey`。
 - 第三顆：`aos_brain_ollama.py`（ollama 原生 POST `<base_url>/api/chat`，`stream: false`）。**為什麼不走 ollama 的 `/v1`**：OpenAI 相容那條設不了 `num_ctx`，ollama 會用模型預設的 context、可能吃爆顯存；原生的帶 `options.num_ctx`（預設 4096）與 `keep_alive`（預設 `"30s"`）。旗標 `--base-url`（預設 `http://localhost:11434`，不含 `/api`）、`--model`（必填）、`--num-ctx`、`--keep-alive`、`--timeout-ms`。形狀互翻：送出時 assistant 的 `arguments` 字串→物件、`content: null`→`""`、tool 訊息補 `tool_name`；收回時 `arguments` 物件→字串、沒 id 就編 `call_<亂數>_<n>`。錯誤代號 `HttpError`（模型不支援 tools 時 ollama 回 400「does not support tools」也是這個）、`ConnectFailed`、`BadResponse`。
@@ -54,7 +55,7 @@ python3 aos_agent_lib.py think      python3 aos_agent_lib.py tool
 - 不是 agent 本體（agent＝fsm＋表，不變）；是表裡可以直接拿來用的兩格。檔名：使用者 10-15 說「aos-agent-lib.py」，proto8/lib 的模組一律底線（連字號 import 不了），所以叫 `aos_agent_lib.py`。
 - **設定走 stdin**（10-15 使用者選乙）：fsm 給格的 stdin 是 `{"state", "step", "prev", "cfg"}`（N-37），`brain`、`tools`、`history`、`work`（與選填的 `system`）從 `cfg` 拿，argv 不再指設定檔；沒 `cfg`＝`NoConfig`、退出 1。相對路徑從格的 cwd 算（沒寫 `cwd` 的格＝跟 fsm 同一個）。巢狀時 `cfg` 是內層 fsm 那份，四個 key 在內層設定裡 `$ref` 到外層（demo 的 `think/fsm.json` 就這樣寫，N-40）。
 
-- **think**：讀 history、組請求（`tools` 從各工具 inst 的 `_tool` 來；沒工具就不帶）、蓋 stdin 跑腦（`aos_methods.run_cell`）、把 assistant 訊息接進 history，stdout `{"data": {"content", "tool_calls": [工具名]}}`。不吐 `next`：下一格寫在表上。history 最後已經是 assistant（上一拍接好才被殺）＝不再叫腦。腦結束碼非 0＝`BrainFailed`（白話＝腦 stderr 的錯誤 `代號: 白話`，腦沒吐才寫結束碼）、回的不是 assistant 訊息＝`BadReply`，這格退出 1；fsm 記 `CellFailed: BrainFailed: HttpError: …`，連錯 `max_fails` 次就停住不再叫腦（[fsm.md](fsm.md)）。
+- **think**：讀 history、組請求（`tools` 從各工具 inst 的 `_tool` 來；沒工具就不帶）、蓋 stdin 跑腦（`aos_methods.run_cell`）、把 assistant 訊息（拿掉頂層 `usage`）接進 history，stdout `{"data": {"content", "tool_calls": [工具名]}}`。不吐 `next`：下一格寫在表上。history 最後已經是 assistant（上一拍接好才被殺）＝不再叫腦。腦結束碼非 0＝`BrainFailed`（白話＝腦 stderr 的錯誤 `代號: 白話`，腦沒吐才寫結束碼）、回的不是 assistant 訊息＝`BadReply`，這格退出 1；fsm 記 `CellFailed: BrainFailed: HttpError: …`，連錯 `max_fails` 次就停住不再叫腦（[fsm.md](fsm.md)）。
 - **tool**：找最後一則 assistant 還沒回的 `tool_calls`，跑一個、接 tool 訊息，stdout `{"data": {"tool", "result"}}`。工具的環境多一個 `AOS_WORK`＝這個 agent 的 work（給 `ask` 放子 agent 的 frame）。
 - **route**：看最後一則 assistant，有 `tool_calls`＝`{"next": "tool"}`，否則 `{"next": "idle", "data": {"reply"}}`。單層表用（demo 的 `clerk/`）；名字寫死 tool／idle。
 - `brain`、`tools` 的值除了 TARGET，也可以是內嵌一張 inst（`aos_agent_call` 攤開定義時就給這種）。

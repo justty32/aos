@@ -43,7 +43,7 @@ python3 aos_gate_kernel.py [--key 值 ...] [KERNEL.json | -]
 | `mailbox` | 信箱資料夾（必填） |
 | `state` | state 窗（必填，N-19）：`{tick, seen（每封信第一次看到的拍）, budget: {limit, used, day}, served, updated}` |
 | `slots` | 一拍最多跑幾封（1）；>1＝同一拍幾封一起跑，等最慢的跑完這拍才結束 |
-| `budget` | 一天的 token 額度（null＝不限）；用量＝回信 stdout 最後一份的 `usage.total_tokens`，沒有＝0；換日歸零 |
+| `budget` | 一天的 token 額度（null＝不限）；用量＝回信 stdout 最後一份的 `usage.total_tokens`，沒有＝0；換日歸零。兩顆真腦都在 assistant 訊息頂層帶 `usage`（[agent.md](agent.md)），包閘門就計得到 |
 | `aging_ticks` | 每等幾拍升一級（10） |
 | `near_ms` | deadline 剩不到這麼久＝插隊（30000） |
 | `log` | 選填：每處理一封追加一行 JSON（demo 拿來看順序） |
@@ -63,4 +63,4 @@ kernel 一格一次一封。**只包腦（或單一貴工具）**：boss 的腦�
 
 ## 測試
 
-`tests/test_gate.py`（15 個）：級數順序、deadline 插隊與同級 deadline、過期 `DeadlineMissed`、aging、`_metainfo.cost`、`BudgetExhausted`（含換日歸零）、cur/ 殘信 `KernelRestarted`、slots、`QueueTimeout` 撤信、SIGTERM 撤信、呼叫端看到的跟直接叫逐字一樣、錯碼、kernel 命令列。
+`tests/test_gate.py`（16 個）：級數順序、deadline 插隊與同級 deadline、過期 `DeadlineMissed`、aging、`_metainfo.cost`、`BudgetExhausted`（含換日歸零）、cur/ 殘信 `KernelRestarted`、slots、`QueueTimeout` 撤信、SIGTERM 撤信、呼叫端看到的跟直接叫逐字一樣、錯碼、kernel 命令列、真腦（假伺服器回 usage）經閘門＋think：額度照加、history 沒有 usage。

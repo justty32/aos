@@ -5,6 +5,7 @@
 排序類：直接用 aos_gate.post() 丟信、在本行程呼叫 aos_gate_kernel.tick()，看 log 的順序。
 端到端：閘門起真的行程，kernel 在背景執行緒一拍一拍跑。
 """
+import http.server
 import json
 import os
 import signal
@@ -14,6 +15,7 @@ import threading
 import time
 
 from helpers import INST, LIB, Tmp
+from test_agent import _Stub
 
 import aos_gate
 import aos_gate_kernel as K
@@ -209,6 +211,30 @@ class GateEndToEndTest(Tmp):
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (127, "CommandNotFound"))
         r = subprocess.run([sys.executable, GATE, "-"], input="{}", capture_output=True, text=True, env=self.env)
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (125, "Usage"))
+
+    def test_real_brain_usage_counts_budget(self):
+        """真的腦（假伺服器回 usage）經閘門：kernel 額度照 usage.total_tokens 加；think 接進 history 的沒有 usage。"""
+        _Stub.seen, _Stub.status = [], 200
+        _Stub.reply = {"choices": [{"message": {"role": "assistant", "content": "好"}}], "usage": {"total_tokens": 9}}
+        srv = http.server.HTTPServer(("127.0.0.1", 0), _Stub)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.server_close)
+        self.addCleanup(srv.shutdown)
+        self.cfg["budget"] = 1000
+        self.kernel()
+        brain = os.path.join(LIB, "aos_brain_openai.py")
+        self.write("brain.json", {"argv": [sys.executable, brain, "--base-url",
+                                           "http://127.0.0.1:%d/v1" % srv.server_port, "--model", "m"]})
+        self.write("gated.json", {"argv": self.gate("brain.json"), "cwd": self.tmp})
+        self.write("h.json", [{"role": "user", "content": "hi"}])
+        cfg = {"brain": "gated.json", "history": "h.json", "work": "work"}
+        for _ in range(2):
+            r = subprocess.run([sys.executable, os.path.join(LIB, "aos_agent_lib.py"), "think"], cwd=self.tmp,
+                               input=json.dumps({"cfg": cfg}), capture_output=True, text=True, env=self.env, timeout=20)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.write("h.json", json.loads(self.read("h.json")) + [{"role": "user", "content": "再一次"}])
+        self.until(lambda: json.loads(self.read("k.state.json"))["budget"]["used"] == 18)   # state 在回信之後才寫
+        self.assertNotIn("usage", json.dumps(json.loads(self.read("h.json"))))
 
     def test_kernel_cli_under_loop(self):
         """kernel 的身體照 N-12 當 inst 被 aos-loop 拍（stdout 一份摘要）。"""

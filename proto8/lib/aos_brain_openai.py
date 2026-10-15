@@ -4,7 +4,8 @@
     python3 aos_brain_openai.py [--key 值 ...] [CONFIG.json]   < {"messages": [...], "tools": [...]}
 
 - stdin＝請求（JSON 串流只看第一份）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools）。
-- stdout＝一份 OpenAI assistant 訊息 `{"role": "assistant", "content", "tool_calls"?}`（取 choices[0].message）。
+- stdout＝一份 OpenAI assistant 訊息 `{"role": "assistant", "content", "tool_calls"?, "usage"?}`（取 choices[0].message）；
+  端點有回 `usage` 就照抄在頂層（給 LLM kernel 記額度；think 格接進 history 前拿掉）。
 - 設定從 CONFIG.json（可接 `#/位置`）或旗標來（stdin 已經是請求，不收 `-`）：
       base_url     預設 http://localhost:4000/v1（LiteLLM，見 wf/workflows/dev-env.md）
       model        必填
@@ -60,13 +61,16 @@ def ask(cfg, req):
     except (urllib.error.URLError, OSError) as e:
         raise CliError("ConnectFailed", "連不上 %s：%s" % (url, e))
     try:
-        msg = json.loads(raw)["choices"][0]["message"]
+        doc = json.loads(raw)
+        msg = doc["choices"][0]["message"]
         out = {"role": "assistant", "content": msg.get("content")}
         if msg.get("tool_calls"):
             out["tool_calls"] = [{"id": c["id"], "type": "function",
                                   "function": {"name": c["function"]["name"],
                                                "arguments": c["function"].get("arguments") or "{}"}}
                                  for c in msg["tool_calls"]]
+        if isinstance(doc.get("usage"), dict):
+            out["usage"] = doc["usage"]
     except (ValueError, KeyError, IndexError, TypeError, AttributeError):
         raise CliError("BadResponse", "%s 回的不是 chat completion：%s" % (url, raw[:500].decode("utf-8", "replace")))
     return out

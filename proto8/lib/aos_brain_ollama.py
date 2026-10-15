@@ -5,7 +5,8 @@
 
 為什麼不走 ollama 的 OpenAI 相容 `/v1`：那條設不了 `num_ctx`（context 長度），ollama 會用模型預設、可能吃爆顯存。
 - stdin＝請求（JSON 串流只看第一份）：`messages`（OpenAI chat messages）、`tools`（選填，OpenAI function tools，ollama 收同樣形狀）。
-- stdout＝一份 OpenAI assistant 訊息 `{"role": "assistant", "content", "tool_calls"?}`，跟 aos_brain_openai 一樣。
+- stdout＝一份 OpenAI assistant 訊息 `{"role": "assistant", "content", "tool_calls"?, "usage"?}`，跟 aos_brain_openai 一樣
+  （usage 由 prompt_eval_count＋eval_count 換成 OpenAI 形狀）。
 - 兩邊形狀的翻譯：
       送出：assistant 的 tool_calls arguments（JSON 字串）→ 物件；content null → ""；
             tool 訊息補 `tool_name`（從前面 assistant 的 tool_calls 用 id 找）。
@@ -108,7 +109,13 @@ def ask(cfg, req):
     except (urllib.error.URLError, OSError) as e:
         raise CliError("ConnectFailed", "連不上 %s：%s" % (url, e))
     try:
-        return from_ollama(json.loads(raw)["message"])
+        doc = json.loads(raw)
+        out = from_ollama(doc["message"])
+        p, c = doc.get("prompt_eval_count"), doc.get("eval_count")
+        if isinstance(p, int) or isinstance(c, int):        # ollama 的計數 → OpenAI 形狀的 usage
+            p, c = p if isinstance(p, int) else 0, c if isinstance(c, int) else 0
+            out["usage"] = {"prompt_tokens": p, "completion_tokens": c, "total_tokens": p + c}
+        return out
     except (ValueError, KeyError, IndexError, TypeError, AttributeError):
         raise CliError("BadResponse", "%s 回的不是 ollama chat 回應：%s" % (url, raw[:500].decode("utf-8", "replace")))
 

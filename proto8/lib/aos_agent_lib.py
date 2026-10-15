@@ -19,7 +19,7 @@
 相對路徑從這格的 cwd 算（＝fsm 的 cwd，除非那張格 inst 自己寫了 cwd），跟指示詞、TARGET 一樣。
 巢狀時 cfg 是內層 fsm 的設定；要外層的 key 就在內層設定裡 `$ref` 過去（N-40）。
 
-- think：讀 history、組 {"messages", "tools"}、蓋 stdin 跑腦、把回來的 assistant 訊息接進 history，
+- think：讀 history、組 {"messages", "tools"}、蓋 stdin 跑腦、把回來的 assistant 訊息（拿掉頂層 `usage`）接進 history，
   stdout 吐 {"data": {"content", "tool_calls": [工具名...]}}（沒有 next：下一格寫在表上）。
   history 最後一則已經是 assistant（上一拍接好了才被殺）＝不再叫腦。
 - tool：找 history 最後一則 assistant 還沒回的 tool_calls，只跑第一個：引數寫成 work/N-call.json 當 stdin、
@@ -134,6 +134,7 @@ def think(cfg, prev=None):
                              else "腦 %s 結束碼 %s" % (cfg["brain"], result["code"]))
         if not (isinstance(reply, dict) and reply.get("role") == "assistant"):
             raise AgentError("BadReply", "腦 %s 回的最後一份不是 assistant 訊息：%r" % (cfg["brain"], reply))
+        reply = {k: v for k, v in reply.items() if k != "usage"}      # 腦附的用量給 kernel 記額度，不進 history
         write_json(cfg["history"], msgs + [reply])
     calls = reply.get("tool_calls") or []
     return {"content": reply.get("content"), "tool_calls": [c["function"]["name"] for c in calls]}

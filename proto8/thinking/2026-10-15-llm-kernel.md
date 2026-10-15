@@ -57,5 +57,10 @@
 - **服務順序**（tick 1→7）：A-boss、B-boss（normal，先來後到）→ clerk 的 high 三封 → A、B 的 boss 收尾（normal）。每封 kernel 內跑 3.8～5.4 秒；排隊等：B-boss 3.8 秒（A 佔格）、第一封 clerk 約 4.2 秒（等 B-boss 跑完，**不搶佔跑到一半的**）。
 - **沒看到 high 插 normal 的隊**：因巢狀是串的，clerk 送出時佇列裡沒有等著的 normal；要看到插隊得有真的同時在排的不同級（單元測試、假腦 demo 已證）。這次只證明「高級的 clerk 在 normal 的 boss 之間照樣排得進去、不卡死」。
 - **`waited` 恆為 0**：`slots` 1 時一拍只服務一封，tick 只在服務時才走（7 拍 7 封），等 4 秒的信也只見 0 拍；aging 以「拍」計，在慢腦＋一格下幾乎不會觸發。看排隊要看 `sent` 與回信時間，不是 `waited`。
-- **token 額度沒計到**（`budget.used` 仍是 0）：`aos_brain_openai.py` 只吐 `choices[0].message`，把 LM Studio 回的 `usage` 丟了，kernel 讀不到 `usage.total_tokens`＝0。真腦包閘門時額度形同虛設；要補得改腦（把 `usage` 一起吐，但 agent 接的訊息格式要確認不被多出的 key 弄壞）。**攤給使用者定，這次沒改 lib。**
+- **token 額度沒計到**（`budget.used` 仍是 0）：`aos_brain_openai.py` 只吐 `choices[0].message`，把 LM Studio 回的 `usage` 丟了，kernel 讀不到 `usage.total_tokens`＝0。真腦包閘門時額度形同虛設；使用者「都隨意」→ 已補：兩顆腦在 assistant 訊息頂層帶 `usage`（stdout 仍一份＝N-12 最後一份），think 接進 history 前拿掉；kernel 不用改（本來就讀 `usage.total_tokens`）。
 - **相對路徑**：閘門 `target` 從**呼叫者的 cwd** 算（不是從 gate.json），agent 的 cwd 是 agent 資料夾，所以寫成 `../lm.json`；一開始寫成 `lm.json` 得 `ReadFailed`（退出 125）。環境變數沿用 kernel 的，閘門設定不用傳 API 環境（LM Studio 不用金鑰）。
+
+## 順手修：測試漏行程（10-15）
+
+- 早上起累積約 75 支孤兒 `aos_loop.py -`：test_daemon 收尾對 daemon 送 SIGKILL，子 loop 自成 session、不跟著死（設計如此，`load` 接回靠它）。
+- 修：收尾改 SIGTERM（等不到才 SIGKILL）；`helpers.Tmp` 刪暫存資料夾前查 cwd 在裡面的 aos_loop／aos_daemon，還活著＝砍掉並算失敗。daemon 行為不改。
