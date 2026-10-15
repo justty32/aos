@@ -38,9 +38,9 @@
 
 **原文**：使用者對上面 5 題與畫家 demo 兩個自定點「**都按照推薦**」；其中第 4 題後來被他的新原則推翻（C-52「只管自己這一層」，見 CONCEPTS），他回「**都同意。**」。
 
-1. **換腦只換那一層**：子 agent 沿自己 frame 的 `env.json` 往上找，不看呼叫方；要換子 agent 的腦就在它的 frame 放 `brain.json`。程式本來就是這樣；boss 叫報時員用 boss 定義的腦，是 `boss/tools/clerk.json` 寫死 `cp` 定義的 brain.json，不是漏下去（[agent-frame.md](../lib/agent-frame.md)）。
+1. **換腦只換那一層**：子 agent 沿自己 frame 的 `env.json` 往上找，不看呼叫方；要換子 agent 的腦就在它的 frame 放 `brain.json`。程式本來就是這樣；boss 叫報時員用 boss 定義的腦，是 `boss/tools/clerk.json` 寫死 `cp` 定義的 brain.json，不是漏下去（[agent-frame.md](../lib/frame.md)）。
 2. **ask_judge.py 收定義資料夾當引數**（沒給＝`judge/`）；換腦＝另開資料夾放 `brain.json`＋`env.json` 指回 `judge/`。
-3. **多個 tool_calls 一拍照順序跑完**，每個回對應 id；`Skipped` 拿掉（[agent-lib.md](../lib/agent-lib.md)）。
+3. **多個 tool_calls 一拍照順序跑完**，每個回對應 id；`Skipped` 拿掉（[agent-lib.md](../lib/agent_lib.md)）。
 4. ~~halted 時 loop 退非 0~~ **取消**：C-52 推翻，loop 照舊退 0，外面看 `ret.json` 的 `error`。
 5. **proxy 多塞 token**：不處理。
 

@@ -10,21 +10,21 @@ python3 proto8/demo/run.py
 
 從哪裡跑都行，約 8 秒。只用 Python 標準庫和 `sh`、`date`。
 
-另一個 demo：**fsm**（`demo/fsm` 本身是一個 agent 定義資料夾：在暫存 frame 裡跑它的 loop.json，idle → thinking（內層 fsm：ask → review）→ tool → … → done，ask 照思考介面叫腦、tool 跑 inst 工具（其中 clerk＝另一個 agent）；預設假腦，換真 LLM＝`python3 proto8/demo/fsm/run.py brain/lmstudio.json`）——`python3 proto8/demo/run.py fsm`，說明在 [fsm/README.md](fsm/README.md)。
+另一個 demo：**fsm**（`demo/fsm` 本身是一個 agent 定義資料夾：在暫存 frame 裡跑它的 loop.json，idle → thinking（內層 fsm：ask → review）→ tool → … → done，ask 照思考介面叫腦、tool 跑 inst 工具（其中 clerk＝另一個 agent）；預設假腦，換真 LLM＝`python3 proto8/demo/fsm/run.py brains/lmstudio.json`）——`python3 proto8/demo/run.py fsm`，說明在 [fsm/README.md](fsm/README.md)。
 
-三個 agent 的 demo 都要 PATH 上有 `proto8/bin`（`aos`）與 `demo/bin`（[`aos-demo`](bin/aos-demo)：`aos-demo fsm/brain/fake.py`＝從 demo 資料夾算的腳本、其他指令照跑並多給 `AOS_DEMO`＝demo 資料夾）；各 `run.py` 自己會接上。
+三個 agent 的 demo 都要 PATH 上有 `proto8/bin`（`aos`）與 `demo/bin`（[`aos-demo`](bin/aos-demo)：`aos-demo fsm/brains/fake.py`＝從 demo 資料夾算的腳本、其他指令照跑並多給 `AOS_DEMO`＝demo 資料夾）；各 `run.py` 自己會接上。
 
 再一個：**畫家**（使用者 10-11 舉的例子：畫家 agent 透過工具叫畫筆 agent；看 frame 巢狀、同 frame 續聊、frame 放 brain.json 換腦）——`python3 proto8/demo/paint/run.py [腦設定.json]`，說明在 [paint/README.md](paint/README.md)。
 
 再一個：**LLM kernel**（daemon 底下的 loop 每拍跑 kernel；呼叫者經閘門叫同一顆睡 1 秒的假腦：low 最後、deadline 快到插隊、過期丟掉、aging、報時員巢狀只包腦一格就夠）——`python3 proto8/demo/run.py kernels/llm`，說明在 [lib kernel_llm.md](../lib/kernel_llm.md)、腳本 `kernels/llm/run.py` 檔頭。
 
-再一個：**通用 kernel**（判官是一張 inst；假腦 llm、假 cpu 活、問人 human 三種同時搶，格數 1／2／1；第二段判官壞掉→每次都退回規則（kernel 不數連錯））——`python3 proto8/demo/run.py kernels/general`，說明在 [lib kernel_general.md](../lib/kernel_general.md)、腳本 `kernels/general/run.py` 檔頭；agent 判官（LM Studio）`python3 proto8/demo/kernels/general/run.py judge-agent.json`。
+再一個：**通用 kernel**（判官是一張 inst；假腦 llm、假 cpu 活、問人 human 三種同時搶，格數 1／2／1；第二段判官壞掉→每次都退回規則（kernel 不數連錯））——`python3 proto8/demo/run.py kernels/general`，說明在 [lib kernel_general.md](../lib/kernel_general.md)、腳本 `kernels/general/run.py` 檔頭；agent 判官（LM Studio）`python3 proto8/demo/kernels/general/run.py judges/agent.json`。
 
 ## 裡面有什麼
 
 - `once/inst.json`：跑一次就結束，印一行、結束碼 3。`once/loop.json` 用 `$ref` 指它（跑 1 次）。
 - `tick/inst.json`：每跑一次往 `tick.out` 追加一行時間、往 `tick.exit` 追加一行結束碼。`tick/loop.json` 用 `$ref` 指它，外層寫 5 次、每次隔 1 秒。
-- `daemon.json`：daemon 的 config。`control_dir` 寫成 `{"$env": "DEMO_CTL"}`，自己的 ctl／state 窗（必填，N-19）也用 `$env` 指到暫存資料夾；daemon 替兩個 loop 放的 ctl、state 窗與它們的 stderr（`err.json`；stdout 丟掉，結果看 state 窗）在暫存資料夾的 `loops/N/` 底下；daemon 沒 inst，自己的 stdout 只在收工時吐一份總結（直接印在畫面上）。
+- `daemon.json`：daemon 的 config。`ctl_dir` 寫成 `{"$env": "DEMO_CTL"}`，自己的 ctl／state 窗（必填，N-19）也用 `$env` 指到暫存資料夾；daemon 替兩個 loop 放的 ctl、state 窗與它們的 stderr（`err.json`；stdout 丟掉，結果看 state 窗）在暫存資料夾的 `loops/N/` 底下；daemon 沒 inst，自己的 stdout 只在收工時吐一份總結（直接印在畫面上）。
 - `run.py`：用 mktemp 建一個暫存資料夾，裡面 `ctl/` 當控制資料夾、`out/` 放子程式的輸出（inst.json 的 `cwd` 寫成 `{"$env": "DEMO_OUT"}`）。指令裡的 `id` 寫絕對路徑（印的時候把本資料夾的路徑省掉）。跑完整個暫存資料夾刪掉，repo 裡不留東西。
 
 ## 它做了什麼

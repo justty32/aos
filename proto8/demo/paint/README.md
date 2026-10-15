@@ -4,7 +4,7 @@
 
 使用者 10-11 說「先實作一個 demo，看實作出來的協議符不符合概念」，舉的例子是：「我要使用這個**畫家 agent**，引數就是『幫我畫這一幅畫』」，畫家裡面還有一個「**畫筆 agent**」幫它準備東西（巢狀）；「agent 也可以變成 agent 的工具」。這個 demo 就照這個例子做。
 
-> **已拍板（10-15 使用者「都按照推薦」）**：使用者原本說的是「先對元素求值，畫家才開始」（畫筆先跑完）；維持**畫家想到了才把畫筆當工具叫**（現在 lib 有的機制）。換腦**只換那一層**：畫筆不跟著畫家換，要換就在畫筆的 frame 放 `brain.json`（見下面「換腦」、[agent-frame.md](../../lib/agent-frame.md)）。
+> **已拍板（10-15 使用者「都按照推薦」）**：使用者原本說的是「先對元素求值，畫家才開始」（畫筆先跑完）；維持**畫家想到了才把畫筆當工具叫**（現在 lib 有的機制）。換腦**只換那一層**：畫筆不跟著畫家換，要換就在畫筆的 frame 放 `brain.json`（見下面「換腦」、[frame.md](../../lib/frame.md)）。
 
 ## 怎麼跑
 
@@ -14,7 +14,7 @@ python3 proto8/demo/paint/run.py 腦設定.json          # 換成真腦：畫家
 python3 proto8/demo/paint/run.py ... --keep           # 跑完不刪 frame，印出路徑讓你自己翻
 ```
 
-從哪裡跑都行。腦設定的路徑先照目前資料夾找，找不到再照本資料夾、`demo/fsm/` 找，所以 `brain/lmstudio.json`、`brain/litellm.json`（放在 `demo/fsm/brain/` 的）直接寫名字就行。腦設定就是一張 inst（例 `{"argv": ["aos", "brain", "openai", "--base-url", "http://localhost:4000/v1", "--model", "…"], "timeout_ms": 180000}`）。真腦要會用工具（OpenAI 的 `tool_calls`）。
+從哪裡跑都行。腦設定的路徑先照目前資料夾找，找不到再照本資料夾、`demo/fsm/` 找，所以 `brains/lmstudio.json`、`brains/litellm.json`（放在 `demo/fsm/brains/` 的）直接寫名字就行。腦設定就是一張 inst（例 `{"argv": ["aos", "brain", "openai", "--base-url", "http://localhost:4000/v1", "--model", "…"], "timeout_ms": 180000}`）。真腦要會用工具（OpenAI 的 `tool_calls`）。
 
 ## 裡面有什麼
 
@@ -29,8 +29,8 @@ paint/
     tools/brush.json  工具「畫筆」＝sh 三步：寫 frame.json 指 brush/ → 跑 brush 的 loop → 印 ret.json
   brush/              ← 畫筆的定義資料夾（同樣的表與格）
     tools/palette.*   工具「調色盤」：要畫貓 → 橘白黑（寫死的表）
-  brain/fake.py       假腦：請求帶 brush 工具就當畫家、帶 palette 就當畫筆
-  brain/fake-alt.json 同一支假腦加 `--name 換過的假腦`（回覆前面多「〔換過的假腦〕」，看得出換了）
+  brains/fake.py       假腦：請求帶 brush 工具就當畫家、帶 palette 就當畫筆
+  brains/fake_alt.json 同一支假腦加 `--name 換過的假腦`（回覆前面多「〔換過的假腦〕」，看得出換了）
   run.py              三段展示
 ```
 
@@ -38,7 +38,7 @@ paint/
 
 1. **叫畫家**：暫存資料夾開 frame A，放 `frame.json`（`{"parent": painter/}`）和 `args.json`（「幫我畫一隻貓」），在 A 裡跑 `aos loop painter/loop.json`。畫家想 → 叫 brush → 畫筆在 A 的 `work/1/` 裡跑（那裡就是畫筆的 frame，`frame.json` 指 `brush/`）→ 畫筆叫 palette（在 `work/1/work/1/` 跑）→ 回「備好了：橘、白、黑。」→ 畫家畫一隻 ASCII 貓，寫進 A 的 `ret.json`。會印出 frame 的資料夾樹，看得到三層巢狀。
 2. **同一個 frame 續聊**：在 A 再寫一份 `args.json`（「再畫一隻狗」）、再跑一次 loop。畫家接著原本的 history（回「第 2 幅」，history 8 則）；畫筆在新的 `work/2/`，是全新的對話。
-3. **換腦（綁定）**：frame B 放一份同名 `brain.json`（fake-alt），蓋過畫家定義裡的。回覆變成「〔換過的假腦〕…」。
+3. **換腦（綁定）**：frame B 放一份同名 `brain.json`（`brains/fake_alt.json`），蓋過畫家定義裡的。回覆變成「〔換過的假腦〕…」。
 
 最後檢查 `painter/`、`brush/` 的雜湊，跑前跑後一樣＝定義資料夾沒被動到。
 

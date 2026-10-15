@@ -1,5 +1,5 @@
 {
-  "control_dir": {
+  "ctl_dir": {
     "$env": "DEMO_CTL"
   },
   "interval_ms": 100,

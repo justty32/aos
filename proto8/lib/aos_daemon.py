@@ -10,7 +10,7 @@
 daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd；只在起來時讀一次）。跟 loop.json 同名的 key 同義：
 
     inst           daemon 自己每拍跑一次的身體（選填；跑法同 loop：阻塞到它結束，記 last_code／last_error）
-    ctl、state     自己的 ctl 窗、state 窗（必填，N-19）；ctl 不能放在 control_dir 裡
+    ctl、state     自己的 ctl 窗、state 窗（必填，N-19）；ctl 不能放在 ctl_dir 裡
     times          跑幾拍就收工（非負整數；null＝不限，預設——跟 loop 的預設 1 不同）
     interval_ms    每拍隔多久（非負整數；沒寫＝200）
     interval_mode、ctl_poll_ms、error_wait_ms、id   同 loop
@@ -18,7 +18,7 @@ daemon.json（先用指示詞 lib 解，基準＝daemon 啟動時的 cwd；只�
   daemon 多的：
     children       初始表（陣列）：每項＝一個 aos-loop 設定的 TARGET（路徑、`檔#/位置`，或內嵌物件）；起來時等同逐個 add
     policies       {"child_exit": inst TARGET}：子項結束時問它怎麼辦（見下）；沒設＝leave
-    control_dir    控制資料夾（選填；沒給＝不掃資料夾，N-13）
+    ctl_dir    指令式控制資料夾（選填；沒給＝不掃資料夾，N-13）；跟宣告式的 ctl 窗是兩樣（原名 control_dir，10-15 盤點 M1）
     table          table 窗的路徑（選填）：子項六態的表，有變就整份寫；也是存檔
     load           true＝起來時讀 table 窗接回（預設 false）
     work_dir       每個子項一格 `work_dir/N/`（選填；沒寫＝state 窗旁邊的 loops/）
@@ -68,7 +68,7 @@ from aos_daemon_table import AOS_LOOP, DaemonError, Table
 
 __all__ = ["Daemon", "DaemonError", "handle", "load_config", "run"]
 
-DEFAULTS = dict(_LOOP, times=None, interval_ms=200, grace_ms=10000, control_dir=None, work_dir=None, table=None,
+DEFAULTS = dict(_LOOP, times=None, interval_ms=200, grace_ms=10000, ctl_dir=None, work_dir=None, table=None,
                 load=False, children=[], policies={})
 
 
@@ -77,9 +77,9 @@ def check(ident, doc):
     ident, cfg = check_config(ident, doc, DEFAULTS, need_inst=False, err=DaemonError)
     if cfg["work_dir"] is None and cfg["state"]:
         cfg["work_dir"] = os.path.join(os.path.dirname(cfg["state"]), "loops")
-    d = cfg["control_dir"]
+    d = cfg["ctl_dir"]
     if d and cfg["ctl"] and os.path.commonpath([cfg["ctl"], d]) == d:
-        raise DaemonError("Conflict", "ctl %s 不能放在 control_dir 裡（會被當成指令讀）" % cfg["ctl"])
+        raise DaemonError("Conflict", "ctl %s 不能放在 ctl_dir 裡（會被當成指令讀）" % cfg["ctl"])
     if not (cfg["policies"].get("child_exit") is None or isinstance(cfg["policies"]["child_exit"], (str, dict))):
         raise DaemonError("FieldType", "policies.child_exit 要是 inst TARGET")
     if cfg["load"] and not cfg["table"]:
@@ -103,12 +103,12 @@ class Daemon(Loop):
         super().__init__(ident, cfg)
         self.table = Table(cfg, ident)
         self.folder = None
-        if cfg["control_dir"]:
+        if cfg["ctl_dir"]:
             try:
-                os.makedirs(cfg["control_dir"], exist_ok=True)
+                os.makedirs(cfg["ctl_dir"], exist_ok=True)
             except OSError as e:
                 raise DaemonError("MkdirFailed", "建不了控制資料夾：%s" % e)
-            self.folder = _Folder(cfg["control_dir"])
+            self.folder = _Folder(cfg["ctl_dir"])
 
     def start_table(self):
         """接回 table 窗、起 children（失敗＝起不來；已經起的收掉）。"""

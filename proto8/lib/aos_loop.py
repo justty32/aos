@@ -50,7 +50,7 @@ ctl 窗（宣告式；NORMS N-06～N-08）：寫的是「我要它現在怎樣�
 
 次數跑完（runs ≥ times）就結束、退出（有 ctl 也一樣）；想再跑就重新起。
 
-state 窗（骨架跟 daemon 共用，見 lib ctl-state.md）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、
+state 窗（骨架跟 daemon 共用，見 lib ctl_state.md）：`id`、`state`（waiting／running／paused／done／stopping／stopped）、
 `pid`、`started`、`boot_id`、`runs`、`times`、`interval_ms`、`interval_mode`、`last_error`、`ctl_seq`、`beat`；
 loop 自己多 `skipped`、`last_code`、`last_warning`。內容沒變也每秒碰一次（心跳）。先寫 `.名字.tmp` 再改名；
 寫不了＝窗壞了（同 N-19 窗缺）：收掉正在跑的那次、結束，stderr 一份 StateWriteFailed、退出 1。
@@ -93,7 +93,7 @@ AOS_INST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos_inst.py
 DEFAULTS = {"id": None, "times": 1, "interval_ms": 0, "interval_mode": "after", "grace_ms": 5000, "ctl": None,
             "ctl_poll_ms": 1000, "state": None, "error_wait_ms": 1000, "stop_on_end": False}
 _CAUGHT = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-_PATHS = ("ctl", "state", "table", "work_dir", "control_dir")
+_PATHS = ("ctl", "state", "table", "work_dir", "ctl_dir")
 
 
 class LoopError(CliError):

@@ -1,6 +1,6 @@
 """畫家 demo（demo/paint）：畫家 agent 經工具叫畫筆 agent；frame 巢狀、同 frame 續聊、frame 放 brain.json 換腦只換那一層。
 
-用假腦（demo/paint/brain/fake.py）；frame 在暫存資料夾，定義資料夾 painter/、brush/ 不動。
+用假腦（demo/paint/brains/fake.py）；frame 在暫存資料夾，定義資料夾 painter/、brush/ 不動。
 """
 import importlib.util
 import json
@@ -46,7 +46,7 @@ class PaintDemoTest(Tmp):
 
     def test_brain_binding_only_reaches_own_frame(self):
         # 只放 brain.json：畫家換腦，畫筆（frame 在 work/1/，frame.json 指 brush/）照用定義的腦
-        alt = os.path.join(PAINT, "brain", "fake-alt.json")
+        alt = os.path.join(PAINT, "brains", "fake_alt.json")
         self.write("B/brain.json", self.read_abs(alt))
         r = self.call("B", "幫我畫一片海")
         self.assertTrue(r.startswith("〔換過的假腦〕"))

@@ -1,6 +1,6 @@
 """proto8/lib 的自動測試：inst 樹工具（aos_tree）與判官回話的 schema。只用標準庫。
 
-schema 驗證只在測試裡做（執行期不驗，C-48）；`validate()` 是手寫的最小驗證器，只支援 judge.schema.json 用到的關鍵字：
+schema 驗證只在測試裡做（執行期不驗，C-48）；`validate()` 是手寫的最小驗證器，只支援 judges/schema.json 用到的關鍵字：
 type、properties、required、items、additionalProperties（false）。
 """
 import json
@@ -62,18 +62,18 @@ class TreeTest(Tmp):
         self.assertIn("states/c: inst %s#/states/c" % real, text)        # 內嵌＝外層 id 接位置
         self.assertIn("states/a: inst " + os.path.realpath(self.p("a.json")), text)
         self.assertIn("states/b: inst " + os.path.realpath(self.p("sub/b.json")), text)
-        self.assertEqual([k["label"] for k in node["kids"]], ["states/a", "states/b", "states/c"])
+        self.assertEqual([k["label"] for k in node["children"]], ["states/a", "states/b", "states/c"])
 
     def test_ids_never_null_and_dict_root(self):
         node, doc = aos_tree.build({"start": "a", "states": {"a": {"argv": ["true"]}, "b": {"val": {"argv": ["true"]}}}})
 
         def ids(n):
-            return [n["id"]] + [i for k in n["kids"] for i in ids(k)]
+            return [n["id"]] + [i for k in n["children"] for i in ids(k)]
         all_ids = ids(node)
         self.assertEqual(len(all_ids), 3)
         self.assertTrue(all(isinstance(i, str) and i for i in all_ids))
         self.assertTrue(node["id"].startswith("sha256:"))
-        self.assertEqual(node["kids"][1]["id"], node["id"] + "#/states/b/val")
+        self.assertEqual(node["children"][1]["id"], node["id"] + "#/states/b/val")
 
     def test_demo_agent_tree(self):
         # demo/fsm 是定義資料夾（C-50）：表在 fsm.json，腦、工具是旁邊的檔，不在表裡
@@ -135,13 +135,15 @@ class TreeTest(Tmp):
 
 class JudgeSchemaTest(Tmp):
     def schema(self):
-        d = os.path.join(DEMO, "kernels", "general")
-        inst = load(os.path.join(d, "judge-rules.json"))
-        return load(os.path.join(d, inst["_schema"]))        # 私有 key，普通路徑
+        d = os.path.join(DEMO, "kernels", "general", "judges")
+        inst = load(os.path.join(d, "rules.json"))
+        return load(os.path.join(d, inst["_schema"]))        # 私有 key，普通路徑（從 rules.json 所在的資料夾算）
 
     def run_judge(self, snap):
-        r = subprocess.run([sys.executable, os.path.join(LIB, "judge_rules.py")], input=json.dumps(snap), capture_output=True,
-                           text=True, timeout=10)
+        # 照 demo 的 judges/rules.json 原樣跑（cwd＝demo 跑 kernel 的地方），連 argv 的相對路徑一起驗
+        d = os.path.join(DEMO, "kernels", "general")
+        r = subprocess.run(load(os.path.join(d, "judges", "rules.json"))["argv"], input=json.dumps(snap), capture_output=True,
+                           text=True, timeout=10, cwd=d)
         self.assertEqual(r.returncode, 0, r.stderr)
         return json.loads(r.stdout)
 

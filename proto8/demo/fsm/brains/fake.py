@@ -2,7 +2,7 @@
 
 睡 0.4 秒假裝等回覆，回覆寫死：問「幾點」就叫工具 clock（OpenAI 的 tool_calls）；問「兩個」一次叫兩個 clock；
 問「亂」叫一個不存在的工具；剛拿到工具結果就照結果回；其他回「收到」。
-工具裡有 clerk（報時員，另一個 agent）時，問「幾點」改叫 clerk、引數 {"question": 原問題}；clerk 回來就轉述。換成真的：frame（或定義資料夾）的 brain.json 換成 brain/openai.json 那種腦設定（例 `run.py brain/litellm.json`）。
+工具裡有 clerk（報時員，另一個 agent）時，問「幾點」改叫 clerk、引數 {"question": 原問題}；clerk 回來就轉述。換成真的：frame（或定義資料夾）的 brain.json 換成 brains/openai.json 那種腦設定（例 `run.py brains/litellm.json`）。
 """
 import json
 import sys

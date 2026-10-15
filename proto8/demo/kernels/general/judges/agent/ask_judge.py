@@ -1,13 +1,13 @@
 """agent 判官的入口：通用 kernel 的判官格（stdin＝kernel 的 state 窗子集 queue／running／slots／budget、stdout＝{run, defer, reject}）
-↔ agent 當函數（定義資料夾 judge/，C-46：json＋資料夾＋inst，不靠專用程式）。
+↔ agent 當函數（定義資料夾 judges/agent/，C-46：json＋資料夾＋inst，不靠專用程式）。
 
-    aos-demo kernels/general/judge/ask_judge.py [定義資料夾]   （kernel 設定的 judge 指 judge-agent.json 就換上它；PATH 要有 proto8/bin、demo/bin）
+    aos-demo kernels/general/judges/agent/ask_judge.py [定義資料夾]   （kernel 設定的 judge 指 judges/agent.json 就換上它；PATH 要有 proto8/bin、demo/bin）
 
-定義資料夾＝暫存 frame 的 frame.json 的 parent，沒給＝本資料夾 judge/；相對路徑從 cwd 算。要換腦不必改 judge/ 也不必抄腳本：
+定義資料夾＝暫存 frame 的 frame.json 的 parent，沒給＝本資料夾 judges/agent/；相對路徑從 cwd 算。要換腦不必改 judges/agent/ 也不必抄腳本：
 另開一個資料夾放 brain.json＋frame.json（{"parent": "…/judge"}），把它當引數給（frame 照 frame.json 鏈往上找，近的蓋遠的，C-46）。
-（10-15 使用者「都按照推薦」：原本寫死 judge/，見 thinking 2026-10-15-litellm-live #2）
+（10-15 使用者「都按照推薦」：原本寫死 judges/agent/，見 thinking 2026-10-15-litellm-live #2）
 
-開一個暫存 frame：frame.json 指回定義資料夾、args.json＝{"question": stdin 原樣}，在 frame 裡跑 `aos loop judge/loop.json`，
+開一個暫存 frame：frame.json 指回定義資料夾、args.json＝{"question": stdin 原樣}，在 frame 裡跑 `aos loop judges/agent/loop.json`，
 讀 ret.json，拿它 reply 裡的 JSON 物件（第一個 { 到最後一個 }）印出來。
 agent 出錯（ret.json 是錯、沒有 ret.json）、回的不是 JSON＝stderr 一份錯誤、退出 1——kernel 這拍就退回規則。frame 用完就刪。
 只看最後的答案，不靠模型的思考內容（system.md 開頭 /no_think，Qwen3 會照辦；見 lib agent.md）。

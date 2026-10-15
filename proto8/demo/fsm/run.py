@@ -3,7 +3,7 @@
 （aos-loop 每 100 ms 拍一次 `aos agent fsm`），inbox 裡放兩封信，看兩層 state 窗怎麼變。
 
     python3 proto8/demo/run.py fsm                          （或直接 python3 proto8/demo/fsm/run.py）
-    python3 proto8/demo/fsm/run.py brain/lmstudio.json      （換腦＝在 frame 放一份 brain.json 蓋過定義的，C-46 綁定）
+    python3 proto8/demo/fsm/run.py brains/lmstudio.json      （換腦＝在 frame 放一份 brain.json 蓋過定義的，C-46 綁定）
 
 frame（暫存資料夾）裡：`frame.json` {"parent": demo/fsm}（找名字往上一層）、inbox/、history、窗、work/、steps.jsonl、ret.json；
 定義資料夾 demo/fsm 一個字都不寫。PATH 前面接 proto8/bin（`aos`）與 demo/bin（`aos-demo`）。跑完整個 frame 刪掉。
