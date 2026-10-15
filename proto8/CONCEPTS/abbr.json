@@ -150,7 +150,7 @@
   {
    "abbr": "meta",
    "full": "metadata",
-   "meaning": "附註資訊",
+   "meaning": "附註資訊（`_metainfo` 已寫進很多條規範，沿用、不改成 `_meta`；10-15 盤點 M8）",
    "example": "_metainfo"
   },
   {
