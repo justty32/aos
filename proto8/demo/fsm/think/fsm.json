@@ -1,0 +1,9 @@
+{
+  "start": "ask",
+  "end": ["tool", "idle"],
+  "states": {
+    "ask": "ask.json",
+    "review": "review.json"
+  },
+  "state": {"$env": "DEMO_THINK_STATE"}
+}

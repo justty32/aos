@@ -2,6 +2,7 @@
 """proto8 daemon 的 demo：起 daemon → 一條條丟控制指令、印回覆 → SIGTERM 收掉 → 印子程式寫出來的檔。
 
     python3 proto8/demo/run.py
+    python3 proto8/demo/run.py fsm     （改跑 fsm 的 demo，見 fsm/run.py）
 
 產物（控制資料夾、stdout、exit 檔）都放在 mktemp 建的暫存資料夾，跑完整個刪掉。
 """
@@ -112,4 +113,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if sys.argv[1:] == ["fsm"]:
+        import runpy
+        runpy.run_path(os.path.join(HERE, "fsm", "run.py"), run_name="__main__")
+    else:
+        main()
