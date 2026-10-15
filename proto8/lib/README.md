@@ -17,7 +17,7 @@
 | [agent.md](agent.md) | agent（實作慣例，還不是規範）：思考介面（換腦＝換一個 TARGET）、工具＝inst（`tools`＋`_tool`）、tool 訊息、邊緣狀況 |
 | [daemon.md](daemon.md) | daemon：daemon.json（loop.json 超集）、每拍的身體、children、策略格、table 窗與接回、控制資料夾與指令、收工 |
 | [kernel.md](kernel.md) | LLM kernel（N-42 第一種，基礎實作）：閘門的設定與信、kernel 一拍、排序規則、額度、只包葉子的慣例 |
-| [kernel2.md](kernel2.md) | 通用 kernel（N-42 第二種，基礎實作）：資源格、state 窗＝判官 stdin、判官的 run／defer／reject、判官錯退回規則、human 格、agent 判官 |
+| [kernel2.md](kernel2.md) | 通用 kernel（N-42 第二種，基礎實作）：資源格、判官 stdin＝state 窗子集、判官的 run／defer／reject、判官錯退回規則、human 格、agent 判官 |
 | [ctl-state.md](ctl-state.md) | ctl 與 state 的慣例：各層的設定／ctl／state、key 分組、seq 回音、state 骨架（含心跳）、七個狀態值 |
 | [directives.md](directives.md) | 語法糖（C-48：只是把 JSON 拆成小檔、讀環境變數的便利，設計不靠它）：指示詞 lib（`$ref`、`$env`、`resolve()`），以及命令列 TARGET 的 `檔#/位置`（N-35）的實作（`split_target`、`target_id`、`locate`） |
 
@@ -43,7 +43,7 @@
 | `aos_mailbox.py` | kernel 信箱共用（閘門、兩種 kernel）：`mailbox`、旁檔路徑 `side`、`read_letter`、`claim`、`reply`、`run_letter`（信＝inst，`aos_inst.run(信)`，stdout／stderr 落旁檔，回 N-30 結果＋token）、`log` |
 | `aos_gate.py` | 兩種 kernel 共用的閘門：信＝target 那張 inst 本身＋私有 key `priority`／`reply`／`sent`，stdin 內容寫旁檔、`stdin` 放路徑；丟進信箱（`mailbox`，沒寫＝`AOS_KERNEL`）、等回信（N-30 結果）、讀旁檔原樣吐 stdout／stderr、用 target 的碼退出；`wait_ms`→`QueueTimeout`、收訊號撤信 |
 | `aos_gate_kernel.py` | LLM kernel 的身體（每拍一次，給 aos-loop 拍）：cur/ 殘信回錯、過期／額度見底回錯、排序挑 `slots` 封、`aos_inst.run()` 跑、回信；state 窗照 loop 骨架（`state`、`pid`、`runs`、`last_error`、`beat`）＋`seen`、`budget`、`served` |
-| `aos_kernel.py` | 通用 kernel 的身體（N-42 第二種，給 aos-loop 拍；一拍＝一段忙碌期）：每種資源各幾格、局面變了才問判官、照決定起跑（一封一條執行緒）、格在子程式結束時放；state 窗就是判官的 stdin |
+| `aos_kernel.py` | 通用 kernel 的身體（N-42 第二種，給 aos-loop 拍；一拍＝一段忙碌期）：每種資源各幾格、局面變了才問判官、照決定起跑（一封一條執行緒）、格在子程式結束時放；判官的 stdin＝state 窗的 queue／running／slots／budget |
 | `aos_kernel_judge.py` | 通用 kernel 的判官那一半：跑判官 inst（拿掉自己的 `AOS_KERNEL`）、驗 `{run, defer, reject}`、判官錯時的確定規則 |
 | `aos_tree.py` | 看狀況的小工具，不屬規範（10-15 使用者）。inst 樹工具（同像性，10-15）：`print TARGET` 畫樹（每行 `位置: 種類 id`）、`inline TARGET` 把路徑參照全攤成一份 JSON（循環／深度限制留名字＋stderr warning）；只看位置認 inst，不跑任何東西；`build()`／`render()`／`slots()` |
 | `judge_rules.py` | 規則判官（假判官）：human 先、再級數、再先來後到，每種資源補滿空格 |

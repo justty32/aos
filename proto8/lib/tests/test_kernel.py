@@ -92,12 +92,11 @@ class KernelTest(Tmp):
         self.assertEqual(sorted(s["letter"] for s in out["served"]), sorted(names))   # 之後局面變了再問，最後都跑完
         self.assertEqual(self.stdout(next(k for k, v in names.items() if v == "c")), "c")
 
-    def test_judge_stdin_is_state_window(self):
+    def test_judge_stdin_is_state_window_subset(self):
         a, b = self.send("a"), self.send("b", priority="high")
         K.tick(self.cfg("json.dump(snap, open('snap', 'w')); print(json.dumps({'run': [q[0]]}))"))
         snap = json.loads(self.read("snap"))
-        for k in ("state", "pid", "runs", "beat", "queue", "running", "slots", "budget", "judge_fails"):
-            self.assertIn(k, snap)
+        self.assertEqual(sorted(snap), ["budget", "queue", "running", "slots"])   # state 窗的子集，只留這四個
         self.assertEqual(sorted(snap["queue"]), [a, b])
         self.assertEqual(snap["queue"][b]["priority"], {"level": "high"})
         self.assertEqual(snap["slots"], {"llm": {"total": 1, "used": 0}})
