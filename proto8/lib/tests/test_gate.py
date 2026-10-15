@@ -2,7 +2,7 @@
 
     python3 -m unittest discover -s proto8/lib/tests
 
-排序類：直接用 aos_gate.post() 丟信、在本行程呼叫 aos_kernel_llm.tick()，看 log 的順序。
+排序類：直接用 aos_gate.post() 丟信、在本行程呼叫 aos_kernel_llm.tick()，看 served 的順序。
 端到端：閘門起真的行程，kernel 在背景執行緒一拍一拍跑。
 """
 import http.server
@@ -17,8 +17,10 @@ import time
 from helpers import INST, LIB, Tmp
 from test_agent import _Stub
 
+import aos_cli
 import aos_gate
 import aos_kernel_llm as K
+from aos_cli import CliError
 
 GATE = os.path.join(LIB, "aos_gate.py")
 
@@ -27,11 +29,11 @@ class KernelOrderTest(Tmp):
     def setUp(self):
         super().setUp()
         self.box = aos_gate.mailbox(self.p("mb"))
-        self.cfg = K.check({"mailbox": self.p("mb"), "state": self.p("k.state.json"), "log": self.p("log.jsonl")})
+        self.cfg = K.check({"mailbox": self.p("mb"), "state": self.p("k.state.json")})
 
     def send(self, who, priority=None, meta=None, sh="cat"):
         doc = {"argv": ["sh", "-c", sh], "cwd": self.tmp,                     # 信＝那張 inst 本身＋私有 key
-               "priority": aos_gate.normalize_priority(priority), "sent": time.time()}
+               "priority": aos_cli.expand(priority), "sent": time.time()}
         if meta is not None:
             doc["_metainfo"] = meta
         name = aos_gate.post(self.box, doc, who)
@@ -166,7 +168,7 @@ class KernelOrderTest(Tmp):
         self.assertEqual(os.listdir(self.box["reply"]), [])                  # 回信與旁檔都收掉了
 
     def test_bad_config(self):
-        with self.assertRaises(K.KernelLlmError) as e:
+        with self.assertRaises(CliError) as e:
             K.check({"mailbox": "m"})
         self.assertEqual(e.exception.code, "WindowMissing")
 
@@ -225,18 +227,14 @@ class GateEndToEndTest(Tmp):
         self.assertEqual(self.read("direct.err"), self.read("gated.err"))
         self.assertEqual(os.listdir(self.box["reply"]), [])                  # 閘門讀完旁檔就刪
 
-    def test_env_priority_and_plain_stdin(self):
+    def test_priority_flag_and_plain_stdin(self):
         self.kernel()
-        r = subprocess.run(self.gate({"argv": ["cat"]}), input="abc", capture_output=True, text=True,
-                           env=dict(self.env, AOS_PRIORITY="high"), cwd=self.tmp, timeout=20)
+        r = subprocess.run(self.gate({"argv": ["cat"]}) + ["--priority", "high"], input="abc", capture_output=True,
+                           text=True, env=self.env, cwd=self.tmp, timeout=20)
         self.assertEqual((r.returncode, r.stdout), (0, "abc"))
-
-    def test_queue_timeout_withdraws(self):
-        r = subprocess.run(self.gate({"argv": ["cat"]}, wait_ms=200), input="x", capture_output=True, text=True,
-                           env=self.env, cwd=self.tmp, timeout=20)          # kernel 沒在拍
-        self.assertEqual(r.returncode, 1)
-        self.assertEqual(json.loads(r.stderr)["error"]["code"], "QueueTimeout")
-        self.assertEqual(os.listdir(self.box["new"]) + os.listdir(self.box["reply"]), [])     # 撤信連 stdin 旁檔
+        r = subprocess.run([sys.executable, GATE, "--target", json.dumps({"argv": ["cat"]})], input="x",
+                           capture_output=True, text=True, env=self.env, cwd=self.tmp, timeout=20)     # 沒 mailbox＝錯（不認環境變數）
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "FieldType"))
 
     def test_sigterm_withdraws(self):
         p = subprocess.Popen(self.gate({"argv": ["cat"]}), stdin=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env,

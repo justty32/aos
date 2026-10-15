@@ -233,7 +233,7 @@ class AgentCallTest(Tmp):
 JUDGE_BRAIN_PY = r"""
 import json, sys
 req = json.load(sys.stdin)
-print(json.dumps({"role": "assistant", "content": "好的：" + json.dumps({"run": ["L1"], "defer": [], "reject": []})}))
+print(json.dumps({"role": "assistant", "content": json.dumps({"run": ["L1"], "reject": []})}))
 """
 
 
@@ -250,8 +250,8 @@ class AskJudgeTest(Tmp):
         r = subprocess.run(["aos-demo", "kernels/general/judges/agent/ask_judge.py", "over"], cwd=self.tmp, env=ENV, input="{}",
                            capture_output=True, text=True, timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stdout), {"run": ["L1"], "defer": [], "reject": []})
+        self.assertEqual(json.loads(r.stdout), {"run": ["L1"], "reject": []})
         self.assertEqual(tree_hash(judge), before)
         r = subprocess.run(["aos-demo", "kernels/general/judges/agent/ask_judge.py", "nope"], cwd=self.tmp, env=ENV, input="{}",
                            capture_output=True, text=True, timeout=10)
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "DefinitionMissing"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "JudgeFailed"))

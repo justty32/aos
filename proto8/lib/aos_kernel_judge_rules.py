@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """規則判官（假判官）：通用 kernel（aos_kernel_general.py）的判官格，純規則、跟 agent 判官同一個介面。純標準庫。
 
-    python3 aos_kernel_judge_rules.py      （stdin＝kernel 的 state 窗子集 queue／running／slots／budget；stdout 一份 {"run", "defer", "reject"}）
+    python3 aos_kernel_judge_rules.py      （stdin＝kernel 的 state 窗子集 queue／running／slots／budget；stdout 一份 {"run", "reject"}）
 
 用到 state 窗的 queue {id: {priority, _metainfo, …}} 與 slots {資源: {total, used}}。規則：human 的信先排，
-再看級數（low／normal／high＝-1／0／1，數字取正負號），再先來後到（id 字典序）；每種資源補滿空格的進 run，
-其餘進 defer。不 reject。
+再看級數（low／normal／high＝-1／0／1，數字取正負號），再先來後到（id 字典序）；每種資源補滿空格的進 run，其餘沒點名。不 reject。
 """
 import json
 import sys
@@ -31,13 +30,12 @@ def decide(snap):
         meta = queue[x].get("_metainfo")
         return meta.get("resource") if isinstance(meta, dict) else None
 
-    out = {"run": [], "defer": [], "reject": []}
+    out = {"run": [], "reject": []}
     for x in sorted(queue, key=lambda x: (res(x) != "human", -level(queue[x].get("priority")), x)):
         k = res(x)
-        go = left.get(k, 0) > 0
-        if go:
+        if left.get(k, 0) > 0:
             left[k] -= 1
-        out["run" if go else "defer"].append(x)
+            out["run"].append(x)
     return out
 
 

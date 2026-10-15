@@ -5,7 +5,7 @@
     python3 proto8/demo/run.py kernels/general                     （或直接 python3 proto8/demo/kernels/general/run.py）
     python3 proto8/demo/kernels/general/run.py judges/agent.json      （第 1 段改用 agent 判官，要先開 LM Studio；demo 預設不跑）
 
-兩段：(1) 規則判官（judges/rules.json，假判官）：格數 llm 1、cpu 2、human 1，看 log 的起跑順序；
+兩段：(1) 規則判官（judges/rules.json，假判官）：格數 llm 1、cpu 2、human 1，看呼叫者回來的順序（kernel 沒有 log 檔）；
 (2) 壞掉的判官（judges/broken.json，回的不是答案）：每次問都錯→那拍退回確定規則（判官出錯只有這一條路；kernel 不數連錯，
 要停住是判官格自己的事——10-15 使用者「都同意。」）。
 設定檔（daemon／loop／kernel）在暫存資料夾裡寫成完整檔；跑完收 daemon、確認沒漏行程、刪暫存資料夾。
@@ -39,16 +39,16 @@ def write(path, doc):
 
 
 def start_daemon(tmp, judge, human):
-    """在 tmp 寫完整的 kernel／loop／daemon 設定（不靠指示詞），起 daemon。回 (Popen, 信箱, log, state)。"""
-    mb, log, st = (os.path.join(tmp, x) for x in ("mb", "kernel.log.jsonl", "kernel.state.json"))
-    k = write(os.path.join(tmp, "kernel.json"), {"mailbox": mb, "state": st, "log": log, "judge": os.path.join(HERE, judge),
+    """在 tmp 寫完整的 kernel／loop／daemon 設定（不靠指示詞），起 daemon。回 (Popen, 信箱, state)。"""
+    mb, st = (os.path.join(tmp, x) for x in ("mb", "kernel.state.json"))
+    k = write(os.path.join(tmp, "kernel.json"), {"mailbox": mb, "state": st, "judge": os.path.join(HERE, judge),
                                                  "slots": {"llm": 1, "cpu": 2, "human": 1}})
     lp = write(os.path.join(tmp, "loop.json"), {"inst": {"argv": [sys.executable, KERNEL, k], "cwd": HERE},
                                                 "times": None, "interval_ms": 100})
     d = write(os.path.join(tmp, "daemon.json"), {"children": [lp], "interval_ms": 100, "ctl": os.path.join(tmp, "d.ctl.json"),
                                                  "state": os.path.join(tmp, "d.state.json")})
     env = dict(os.environ, PATH=PATH, PYTHONDONTWRITEBYTECODE="1", DEMO_HUMAN=human)   # 被包住的活在 kernel 的環境跑
-    return subprocess.Popen([sys.executable, DAEMON, d], cwd=tmp, env=env, stdout=subprocess.DEVNULL), mb, log, st
+    return subprocess.Popen([sys.executable, DAEMON, d], cwd=tmp, env=env, stdout=subprocess.DEVNULL), mb, st
 
 
 def stop_daemon(p):
@@ -74,30 +74,30 @@ def fake_human(d, stop, delay=1.5):
 
 
 def call(mb, gate, who, priority=None):
+    """經閘門丟一封：gate.json 的 mailbox 寫成 {"$env": "AOS_KERNEL"}（demo 省字），priority 用 --priority 旗標。"""
     env = dict(os.environ, PATH=PATH, AOS_KERNEL=mb, PYTHONDONTWRITEBYTECODE="1")
-    if priority:
-        env["AOS_PRIORITY"] = priority
-    p = subprocess.Popen([sys.executable, GATE, gate], cwd=HERE, env=env, stdin=subprocess.PIPE,
+    flags = ["--priority", json.dumps(priority)] if priority else []
+    p = subprocess.Popen([sys.executable, GATE, gate] + flags, cwd=HERE, env=env, stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     p.stdin.write(who)
     p.stdin.close()
     return p
 
 
-def show_log(log, names, t0):
-    with open(log, encoding="utf-8") as f:
-        recs = [json.loads(x) for x in f]
-    for r in recs:
-        t = "+%4.1fs" % (r["t"] - t0)
-        if r["event"] == "decide":
-            run = "、".join(names.get(x, "?") for x in r["run"]) or "（沒有）"
-            extra = "；判官錯：%s" % r["error"] if r.get("error") else ""
-            print("         %s 決定（%-8s）跑 %s%s%s" % (t, r["how"], run, "，截掉 %d" % r["cut"] if r["cut"] else "", extra))
-        elif r["event"] in ("start", "done"):
-            print("         %s %-5s %-9s [%s]%s" % (t, "起跑" if r["event"] == "start" else "跑完", names.get(r["letter"], "?"),
-                                          r["resource"], " %d ms" % r["ms"] if "ms" in r else ""))
-        else:
-            print("         %s 丟掉 %s：%s" % (t, names.get(r["letter"], "?"), r["error"]))
+def wait_all(procs, t0):
+    """等每個呼叫者回來，照回來的先後印一行（誰、資源、幾秒回來、退出碼）。"""
+    left = list(procs)
+    while left:
+        for who, gate, p in list(left):
+            if p.poll() is None:
+                continue
+            left.remove((who, gate, p))
+            err = p.stderr.read().strip()
+            p.stdout.close()
+            p.stderr.close()
+            why = "" if p.returncode == 0 else "：%s" % (json.loads(err)["error"]["code"] if err else "?")
+            print("         +%4.1fs 回來 %-9s [%s] 退出碼 %d%s" % (time.time() - t0, who, gate[6:-5], p.returncode, why))
+        time.sleep(0.02)
 
 
 def scenario(tmp, judge, plan):
@@ -106,34 +106,21 @@ def scenario(tmp, judge, plan):
     os.makedirs(human)
     stop = threading.Event()
     threading.Thread(target=fake_human, args=(human, stop), daemon=True).start()
-    d, mb, log, st = start_daemon(tmp, judge, human)
-    names = {}
+    d, mb, st = start_daemon(tmp, judge, human)
     try:
         t0 = time.time()
         procs = []
         for who, gate, pri in plan:
-            p = call(mb, gate, who, pri)
-            procs.append((who, p))
-            names[p.pid] = who
+            procs.append((who, gate, call(mb, gate, who, pri)))
             time.sleep(0.02)
         say("   丟的順序：%s" % "、".join(w for w, _, _ in plan))
-        for who, p in procs:
-            p.wait(60)
-            p.stdout.close()
-            p.stderr.close()
-        names = {n: names.get(int(n.split(".")[1]), "?") for n in _letters(log)}
-        show_log(log, names, t0)
+        wait_all(procs, t0)
         with open(st, encoding="utf-8") as f:
             s = json.load(f)
         say("   kernel state 窗：runs %d、served %d、judge_error %s" % (s["runs"], s["served"], json.dumps(s["judge_error"], ensure_ascii=False)))
     finally:
         stop.set()
         say("   daemon 收工，退出碼 %d" % stop_daemon(d))
-
-
-def _letters(log):
-    with open(log, encoding="utf-8") as f:
-        return {r["letter"] for r in map(json.loads, f) if "letter" in r}
 
 
 def leftovers(root):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """proto8 LLM kernel 的 demo：aos-daemon 底下一個 aos-loop 每 100 ms 拍一次 kernel（aos_kernel_llm.py），
-呼叫者都經閘門（aos_gate.py）叫同一顆假腦（睡 1 秒），看 kernel 照什麼順序服務。
+呼叫者都經閘門（aos_gate.py）叫同一顆假腦（睡 1 秒），看 kernel 照什麼順序服務（順序＝呼叫者回來的順序；kernel 沒有 log 檔）。
 
     python3 proto8/demo/run.py kernels/llm    （或直接 python3 proto8/demo/kernels/llm/run.py）
 
@@ -8,7 +8,8 @@
 (2) aging：一封 low 跟一串不斷進來的 normal（快腦）；(3) 報時員巢狀（boss 問 clerk、clerk 查 clock）：boss＝定義資料夾 boss/
 （腦 brain.json＝經閘門叫假腦）；clerk 借 demo/fsm/clerk 的定義、用它自己定義的腦（不經閘門；demo 不示範上層伸手進下層的 frame，
 10-15 深夜 KISS 批次 1）——boss 的腦一格就夠，boss 等 clerk 時不佔格。kernel／loop／daemon 的設定在暫存資料夾裡寫成完整檔（不靠指示詞）；
-閘門（gates/brain.json、gates/fake.json）沒寫 mailbox，靠環境變數 AOS_KERNEL。產物放在 mktemp 的暫存資料夾，跑完刪掉。
+閘門（gates/brain.json、gates/fake.json）的 mailbox 寫成 {"$env": "AOS_KERNEL"}（demo 省字的便利，閘門程式自己不認環境變數）；
+priority 用閘門的 --priority 旗標給。產物放在 mktemp 的暫存資料夾，跑完刪掉。
 """
 import json
 import os
@@ -32,8 +33,8 @@ def say(msg):
 
 def call(env, who, priority):
     """一個呼叫者：經閘門叫假腦，stdin＝思考介面的請求。回 Popen。"""
-    e = dict(env, AOS_PRIORITY=json.dumps(priority)) if priority is not None else env
-    p = subprocess.Popen([sys.executable, GATE, "gates/brain.json"], cwd=HERE, env=e, stdin=subprocess.PIPE,
+    flags = ["--priority", json.dumps(priority)] if priority is not None else []
+    p = subprocess.Popen([sys.executable, GATE, "gates/brain.json"] + flags, cwd=HERE, env=env, stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     p.stdin.write(json.dumps({"messages": [{"role": "user", "content": who}]}, ensure_ascii=False))
     p.stdin.close()
@@ -46,9 +47,9 @@ def write(path, doc):
     return path
 
 
-def configs(tmp, log, state):
+def configs(tmp, state):
     """kernel（slots 1、額度 10 萬）／loop（每 100 ms 拍一次）／daemon 的完整設定寫進 tmp，回 daemon.json 的路徑。"""
-    k = write(os.path.join(tmp, "kernel.json"), {"mailbox": os.path.join(tmp, "mb"), "state": state, "log": log,
+    k = write(os.path.join(tmp, "kernel.json"), {"mailbox": os.path.join(tmp, "mb"), "state": state,
                                                  "slots": 1, "budget": 100000, "aging_ticks": 10, "near_ms": 30000})
     lp = write(os.path.join(tmp, "loop.json"), {"inst": {"argv": [sys.executable, os.path.join(LIB, "aos_kernel_llm.py"), k],
                                                          "cwd": HERE}, "times": None, "interval_ms": 100})
@@ -57,46 +58,30 @@ def configs(tmp, log, state):
                                                     "state": os.path.join(tmp, "daemon.state.json")})
 
 
-def log_since(path, start, names):
-    """kernel log 第 start 行以後的；letter 名字裡的 pid 換回呼叫者名字。"""
-    try:
-        with open(path, encoding="utf-8") as f:
-            lines = [json.loads(x) for x in f][start:]
-    except OSError:
-        return []
-    for r in lines:
-        r["who"] = names.get(int(r["letter"].split(".")[1]), "?")
-    return lines
-
-
-def show(rec):
-    pri = dict(rec.get("priority") or {})
-    if isinstance(pri.get("deadline"), (int, float)):
-        pri["deadline"] = "送出時%+d 秒" % round(pri["deadline"] - rec["sent"]) if "sent" in rec else pri["deadline"]
-    pri = json.dumps(pri or None, ensure_ascii=False)
-    if "error" in rec:
-        say("   拍 %-3d %-10s 丟掉：%s   priority=%s" % (rec["runs"], rec["who"], rec["error"], pri))
-    else:
-        say("   拍 %-3d %-10s 服務 %4d ms，等了 %2d 拍   priority=%s" % (rec["runs"], rec["who"], rec["ms"], rec["waited"], pri))
-
-
 def finish(procs):
-    for who, p in procs:
-        out, err = p.stdout.read(), p.stderr.read()
-        p.wait()
-        reply = (json.loads(out).get("content") if out.strip() else None) or json.loads(err)["error"]["code"]
-        say("   %-10s 退出碼 %-3d %s" % (who, p.returncode, reply))
+    """等每個呼叫者回來，照回來的先後印（slots 1：回來的順序＝kernel 服務的順序）。"""
+    left = list(procs)
+    while left:
+        for who, p in list(left):
+            if p.poll() is None:
+                continue
+            left.remove((who, p))
+            out, err = p.stdout.read(), p.stderr.read()
+            p.stdout.close()
+            p.stderr.close()
+            reply = (json.loads(out).get("content") if out.strip() else None) or json.loads(err)["error"]["code"]
+            say("   %-10s 回來了：退出碼 %-3d %s" % (who, p.returncode, reply))
+        time.sleep(0.02)
 
 
 def main():
     tmp = tempfile.mkdtemp(prefix="aos-kernel-demo-")
-    log, kstate = os.path.join(tmp, "kernel.log.jsonl"), os.path.join(tmp, "kernel.state.json")
+    kstate = os.path.join(tmp, "kernel.state.json")
     path = os.pathsep.join([os.path.join(ROOT, "bin"), os.path.join(ROOT, "demo", "bin"), os.environ.get("PATH", "")])
     env = dict(os.environ, PATH=path, PYTHONDONTWRITEBYTECODE="1", AOS_KERNEL=os.path.join(tmp, "mb"))   # 閘門的信箱
     say("暫存資料夾 %s；daemon 底下的 loop 每 100 ms 拍一次 kernel（slots 1）" % tmp)
-    daemon = subprocess.Popen([sys.executable, DAEMON, configs(tmp, log, kstate)], cwd=tmp, env=env,
+    daemon = subprocess.Popen([sys.executable, DAEMON, configs(tmp, kstate)], cwd=tmp, env=env,
                               stdout=subprocess.DEVNULL)
-    names = {}
     try:
         say("== 1. 級數與 deadline：X 先佔住唯一的格（腦睡 1 秒），趁這時丟五封")
         now = time.time()
@@ -104,35 +89,26 @@ def main():
                 ("D-低但快到", {"val": "low", "deadline": now + 20}), ("E-已過期", {"val": "high", "deadline": now - 1})]
         procs = []
         for i, (who, pri) in enumerate(plan):
-            p = call(env, who, pri)
-            names[p.pid] = who
-            procs.append((who, p))
+            procs.append((who, call(env, who, pri)))
             time.sleep(0.4 if i == 0 else 0.05)
-        say("   丟的順序：%s" % "、".join(w for w, _ in plan))
+        say("   丟的順序：%s（E 的 deadline 已過、D 的剩 20 秒＝插隊）" % "、".join(w for w, _ in plan))
+        say("   回來的順序（＝kernel 服務的順序，slots 1）：")
         finish(procs)
-        say("   kernel 的服務順序（log）：")
-        for r in log_since(log, 0, names):
-            show(r)
-        n = len(log_since(log, 0, names))
 
         say("== 2. aging：一封 low（L），之後 normal 不斷進來（快腦 0.05 秒）；每等 10 拍升一級")
-        procs = [("L-low", call(env, "快 L", "low"))]
-        names[procs[0][1].pid] = "L-low"
+        low = call(env, "快 L", "low")
+        after = None
         for i in range(14):
             p = call(env, "快 n%02d" % i, None)
-            names[p.pid] = "n%02d" % i
-            procs.append(("n%02d" % i, p))
             p.wait()                                       # 一封跑完才丟下一封：佇列裡永遠有新來的 normal
-        procs[0][1].wait()
-        for r in log_since(log, n, names):
-            if r["who"] == "L-low" or r["who"] in ("n00", "n09", "n10", "n11"):
-                show(r)
-        order = [r["who"] for r in log_since(log, n, names)]
-        say("   順序：%s" % " ".join(order))
-        for _, p in procs:
             p.stdout.close()
             p.stderr.close()
-        n += len(order)
+            if after is None and low.poll() is not None:
+                after = i
+        low.wait()
+        low.stdout.close()
+        low.stderr.close()
+        say("   L-low 在 n%02d 回來之後才回來（沒 aging＝永遠輪不到；等滿 10 拍升成 normal 就輪到）" % after)
 
         say("== 3. 報時員巢狀：boss 問「現在幾點？」→ 叫工具 clerk（另一個 agent）→ clerk 叫 clock；boss 的腦經閘門、clerk 用自己的")
         frame = os.path.join(tmp, "frame")                 # 呼叫方選的 frame：frame.json 指回定義、args.json＝問題
@@ -145,11 +121,10 @@ def main():
             ret = json.load(f)
         with open(os.path.join(frame, "loop/state.json"), encoding="utf-8") as f:
             ticks = json.load(f)["runs"]
-        say("   boss 回：%s（boss 的 loop 敲了 %d 拍；clerk 的 frame 在 boss 的 work/1/）" % (ret.get("reply") or ret, ticks))
-        for r in log_since(log, n, {}):
-            say("   拍 %-3d boss 叫一次腦 %4d ms（一格一次一封；boss 等 clerk 時不佔格）" % (r["runs"], r["ms"]))
+        say("   boss 回：%s（boss 的 loop 敲了 %d 拍；clerk 的 frame 在 boss 的 work/1/；boss 等 clerk 時不佔格）" % (ret.get("reply") or ret, ticks))
         with open(kstate, encoding="utf-8") as f:
-            say("   kernel state 窗的額度：%s" % json.dumps(json.load(f)["budget"]))
+            st = json.load(f)
+        say("   kernel state 窗：served %d、額度 %s" % (st["served"], json.dumps(st["budget"])))
     finally:
         daemon.send_signal(signal.SIGTERM)
         try:

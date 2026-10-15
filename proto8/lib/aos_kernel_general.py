@@ -9,19 +9,20 @@
     mailbox    信箱資料夾（同閘門的 mailbox；必填）
     state      state 窗（必填，N-19）：loop 骨架的 state／pid／runs／last_error／beat，加 kernel 的 queue、running、
                slots、budget、served、seen（每封信第一次看到的 runs）、judge_error、judge_asked；判官的 stdin＝這份只留 queue／running／slots／budget
-    slots      每種資源幾格 {"llm": 1, "cpu": 2, "human": 1}；純值 n＝{"llm": n}（沒寫＝1）。信的 `_metainfo.resource`
-               沒寫或 "none"＝便宜的，不佔格、直接跑；寫了但這裡沒有＝回 ResourceUnknown
+    slots      每種資源幾格 {"llm": 1, "cpu": 2, "human": 1}（物件；沒寫＝{}）。信的 `_metainfo.resource` 沒寫、或這裡沒有
+               ＝回 ResourceUnknown（會經閘門排隊的 inst 就是要佔格的）
     judge      判官：TARGET 或內嵌 inst（沒寫＝一律用規則）。stdin＝state 窗的 queue、running、slots、budget（子集），
-               stdout＝{"run": [id], "defer": [id], "reject": [{"id", "error": {code, msg}}]}（見 aos_kernel_judge）
-    budget、aging_ticks、near_ms、log  同第一種（aos_kernel_llm.py）；budget 只管 llm 的信
+               stdout＝{"run": [id], "reject": [{"id", "error": {code, msg}}]}（見 aos_kernel_judge）；逾時寫在判官 inst 自己的 timeout_ms
+    budget、aging_ticks、near_ms  同第一種（aos_kernel_llm.py）；budget 只管 llm 的信
     poll_ms    一拍之內多久看一次信箱與跑完的信（沒寫＝50）
 
-一拍（＝一段忙碌期）：cur/ 殘信回 KernelRestarted → 反覆：收跑完的、回信、放格 → 讀 new/（過期、額度、便宜的直接跑）
-→ 局面變了才決定（只有一封且有空格＝直接跑；否則問判官，判官這拍沒給合法答案＝這拍用第一種的規則——判官出錯只有這一條路，
-  kernel 不數連錯、不停問：要連錯幾次就改口或停住，是判官格自己的事（C-53；10-15 使用者「都同意。」，盤點第 3 條））→ 照決定認領、起跑；判官挑完仍有空格＝補位（沒被 reject 的剩下的信照規則補滿，log reason＝backfill）
-（一封一條執行緒、各自一支子程式）→ 沒有在跑的就結束這拍。格在那封的子程式結束時就放（human 格＝回信落檔或逾時）。
+一拍（＝一段忙碌期）：cur/ 殘信回 KernelRestarted → 反覆：收跑完的、回信、放格 → 讀 new/（過期、資源不認得、額度）
+→ 局面變了才決定（有信有空格就問判官，判官這拍沒給合法答案＝這拍用第一種的規則——判官出錯只有這一條路，
+  kernel 不數連錯、不停問：要連錯幾次就改口或停住，是判官格自己的事（C-53））→ 照決定認領、起跑；判官挑完仍有空格＝補位
+  （沒被 reject 的剩下的信照規則補滿）（一封一條執行緒、各自一支子程式）→ 沒有在跑的就結束這拍。
+格在那封的子程式結束時就放（human 格＝回信落檔或逾時）。順序看呼叫端回來的順序；沒有 log 檔（10-15 深夜 KISS 批次 1）。
 
-相依：aos_inst ← aos_mailbox（信：讀、認領、跑、回信、log）← aos_gate ← aos_kernel_llm（借 order、deadline）← aos_kernel_judge（判官：跑、讀答案、規則後援）← aos_kernel_general。
+相依：aos_inst ← aos_mailbox（信：讀、認領、跑、回信）← aos_gate ← aos_kernel_llm（借 order、deadline）← aos_kernel_judge（判官：跑、讀答案、規則後援）← aos_kernel_general。
 """
 import datetime
 import json
@@ -35,48 +36,36 @@ from aos_cli import CliError
 from aos_cli import is_int as _int
 from aos_ctl_state import write_json
 from aos_kernel_llm import deadline
-from aos_mailbox import claim, log, mailbox, read_letter, reply, run_letter
+from aos_mailbox import claim, mailbox, read_letter, reply, run_letter
 from aos_kernel_judge import ask_judge, decide_rules, resource
 
-__all__ = ["FLAGS", "KernelGeneralError", "check", "main", "tick"]
+__all__ = ["FLAGS", "check", "main", "tick"]
 
-FLAGS = ("mailbox", "state", "slots", "judge", "budget", "aging_ticks", "near_ms", "poll_ms", "log")
-
-
-class KernelGeneralError(CliError):
-    pass
+FLAGS = ("mailbox", "state", "judge", "budget", "aging_ticks", "near_ms", "poll_ms")
 
 
 def check(doc):
     """驗設定、補預設，回一份新的 dict。"""
     for k in ("mailbox", "state"):
         if not isinstance(doc.get(k), str):
-            raise KernelGeneralError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
-    slots = doc.get("slots", 1)
-    c = dict(doc, slots={"llm": slots} if _int(slots, 0) else slots, judge=doc.get("judge"),
-             budget=doc.get("budget"), aging_ticks=doc.get("aging_ticks", 10), near_ms=doc.get("near_ms", 30000),
-             poll_ms=doc.get("poll_ms", 50))
+            raise CliError("WindowMissing" if k == "state" else "FieldType", "%s 要是路徑字串（必填），不是 %r" % (k, doc.get(k)))
+    c = dict(doc, slots=doc.get("slots", {}), judge=doc.get("judge"), budget=doc.get("budget"),
+             aging_ticks=doc.get("aging_ticks", 10), near_ms=doc.get("near_ms", 30000), poll_ms=doc.get("poll_ms", 50))
     if not (isinstance(c["slots"], dict) and all(isinstance(k, str) and _int(v, 0) for k, v in c["slots"].items())):
-        raise KernelGeneralError("FieldType", "slots 要是 {資源: ≥0 的整數}，不是 %r" % (c["slots"],))
+        raise CliError("FieldType", "slots 要是 {資源: ≥0 的整數}，不是 %r" % (c["slots"],))
     for k, lo in (("aging_ticks", 1), ("near_ms", 0), ("poll_ms", 1)):
         if not _int(c[k], lo):
-            raise KernelGeneralError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
+            raise CliError("FieldType", "%s 要是 ≥%d 的整數，不是 %r" % (k, lo, c[k]))
     if not (c["budget"] is None or _int(c["budget"], 0)):
-        raise KernelGeneralError("FieldType", "budget 要是非負整數或 null，不是 %r" % (c["budget"],))
+        raise CliError("FieldType", "budget 要是非負整數或 null，不是 %r" % (c["budget"],))
     if not (c["judge"] is None or isinstance(c["judge"], (str, dict))):
-        raise KernelGeneralError("FieldType", "judge 要是 TARGET 或一張 inst，不是 %r" % (c["judge"],))
-    if not (c.get("log") is None or isinstance(c["log"], str)):
-        raise KernelGeneralError("FieldType", "log 要是路徑字串，不是 %r" % (c["log"],))
+        raise CliError("FieldType", "judge 要是 TARGET 或一張 inst，不是 %r" % (c["judge"],))
     return c
 
 
 def _waited_ms(doc, now):
     sent = doc.get("sent")
     return round((now - sent) * 1000) if isinstance(sent, (int, float)) and not isinstance(sent, bool) else None
-
-
-def _log(cfg, rec):
-    log(cfg.get("log"), dict(rec, t=round(time.time(), 3)))
 
 
 # ---- 一拍 ----
@@ -91,7 +80,7 @@ def tick(cfg):
     bud = st.get("budget") if isinstance(st.get("budget"), dict) else {}
     used = [bud.get("used", 0) if bud.get("day") == today else 0]
     judge_asked, last_err = st.get("judge_asked"), st.get("judge_error")
-    count = {"asked": 0, "fallback": 0, "direct": 0, "skipped": 0}
+    count = {"asked": 0, "fallback": 0, "skipped": 0}
     served, dropped, running, results, queue, busy, warned = [], [], {}, {}, {}, {}, []
 
     def window(word, now):
@@ -116,20 +105,17 @@ def tick(cfg):
         os.remove(path)
         seen.pop(name, None)
         dropped.append({"letter": name, "error": code})
-        _log(cfg, {"event": "drop", "runs": n, "letter": name, "resource": resource(doc), "error": code})
 
     def go(name, doc):
         t0 = time.monotonic()
         results[name] = run_letter(doc) + (round((time.monotonic() - t0) * 1000),)
 
-    def start(name, doc, reason=None):
+    def start(name, doc):
         path = claim(box, name)
         if path:
             th = threading.Thread(target=go, args=(name, doc), daemon=True)
             running[name] = (th, doc, path, time.time())
             th.start()
-            _log(cfg, {"event": "start", "runs": n, "letter": name, "resource": resource(doc),
-                       "priority": doc.get("priority"), "waited": n - seen.get(name, n), "reason": reason})
         return bool(path)
 
     for name in sorted(os.listdir(box["cur"])):              # 上一拍跑到一半的
@@ -148,7 +134,6 @@ def tick(cfg):
             if "error" in rep:
                 rec["error"] = rep["error"]["code"]
             served.append(rec)
-            _log(cfg, dict(rec, event="done", runs=n))
 
         now, queue, started = time.time(), {}, False
         for name in sorted(os.listdir(box["new"])):          # 收信
@@ -160,35 +145,29 @@ def tick(cfg):
             why = None
             if dl is not None and dl <= now:
                 why = ("DeadlineMissed", "deadline 已過，沒跑")
-            elif k is not None and k not in cfg["slots"]:
-                why = ("ResourceUnknown", "kernel 沒有 %r 這種資源的格" % k)
+            elif k not in cfg["slots"]:
+                why = ("ResourceUnknown", "kernel 沒有 %r 這種資源的格（信的 _metainfo.resource）" % (k,))
             elif k == "llm" and cfg["budget"] is not None and used[0] >= cfg["budget"]:
                 why = ("BudgetExhausted", "今天的 token 額度用完了（%d／%d）" % (used[0], cfg["budget"]))
             if why:
                 path = claim(box, name)
                 if path:
                     drop(name, doc, why[0], why[1], path)
-            elif k is None:
-                started |= start(name, doc)                 # 便宜的：不佔格、不問判官
             else:
                 queue[name] = doc
 
         busy = {k: 0 for k in cfg["slots"]}
         for _, doc, _, _ in running.values():
-            if resource(doc) is not None:
-                busy[resource(doc)] += 1
+            busy[resource(doc)] += 1
         free = {k: max(cfg["slots"][k] - busy[k], 0) for k in cfg["slots"]}
         sig = [sorted(queue), sorted(running), sorted(free.items())]
         sig = json.loads(json.dumps(sig))
         can_start = any(free[resource(d)] > 0 for d in queue.values())    # 排隊的信沒有一種資源有空格＝這拍什麼也起不了，不問判官
         if queue and can_start and sig != judge_asked:
             judge_asked = sig
-            only = next(iter(queue)) if len(queue) == 1 else None
             snap = window("running", now)
             write_json(cfg["state"], snap)                  # 局面外顯（N-13）；判官的 stdin＝這份的子集
-            if only and free[resource(queue[only])] > 0:
-                how, dec = "direct", {"run": [only], "defer": [], "reject": []}
-            elif cfg["judge"] is not None:
+            if cfg["judge"] is not None:
                 try:
                     dec, how = ask_judge(cfg, snap, set(queue)), "judge"
                     last_err = None
@@ -209,15 +188,11 @@ def tick(cfg):
                     left[k] -= 1
                     run.append(x)
             fill = []
-            if how == "judge":                              # 補位：判官的 defer＝「不是我挑的」，空格仍空就照規則補（被 reject 的不補）
+            if how == "judge":                              # 補位：判官沒點名的＝「不是我挑的」，空格仍空就照規則補（被 reject 的不補）
                 rest = {x: d for x, d in queue.items() if x not in run}
                 fill = decide_rules(rest, left, seen, n, now, cfg)["run"] if rest else []
-            _log(cfg, {"event": "decide", "runs": n, "how": how, "run": run, "backfill": fill, "cut": len(dec["run"]) - len(run),
-                       "reject": [r["id"] for r in dec["reject"]], "error": last_err if how == "fallback" else None})
-            for x in run:
-                started |= start(x, queue[x], "judge" if how == "judge" else how)
-            for x in fill:
-                started |= start(x, queue[x], "backfill")
+            for x in run + fill:
+                started |= start(x, queue[x])
         elif queue:
             count["skipped"] += 1
         if not running and not started:
@@ -239,7 +214,7 @@ def main(argv=None):
     try:
         doc, _, _, rest = aos_cli.config(args, FLAGS)
         if rest is not None:
-            raise KernelGeneralError("Usage", "kernel 不收 `--`")
+            raise CliError("Usage", "kernel 不收 `--`")
         aos_cli.emit(tick(check(doc)))
         return 0
     except CliError as e:

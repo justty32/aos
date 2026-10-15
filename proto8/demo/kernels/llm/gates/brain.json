@@ -1,1 +1,1 @@
-{"target": "brain.json"}
+{"target": "brain.json", "mailbox": {"$env": "AOS_KERNEL"}}

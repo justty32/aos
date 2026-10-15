@@ -37,12 +37,12 @@
 | `aos_agent_lib.py` | agent 的現成格庫（不是 agent 本體）：`think`、`tool`（stdout 一格 `{"tools"}`，結果不截、被殺就重跑）、`route`、`intake`（只收 `question`、吃完刪 args.json）、`done`、`fsm [NAME]`（照 lookup 找 fsm.json 跑一拍，給定義資料夾的 loop.json 用）；設定只有 `brain`／`tools`／`system`（stdin 那份＋frame 裡 `lookup()`），`history.json`、`work/` 固定在 cwd；錯直接丟 `CliError`、代號六個。細節在 [agent_lib.md](agent_lib.md)；agent 當函數／當工具見 [frame.md](frame.md) |
 | `aos_frame.py` | frame 查找（C-46）：`chain()`（frame → `frame.json` 的 parent 鏈）、`lookup()`（找第一個）、`lookup_dir()`（資料夾逐項合併、近的蓋過遠的）；10-15 晚從 `aos_agent_lib.py` 拆出，格庫照樣 re-export |
 | `aos_brain_openai.py` | 真的腦（唯一一顆；ollama 原生那顆 10-15 深夜刪）：照思考介面 POST 到 OpenAI 相容的 `/chat/completions`（urllib，不串流，預設 LiteLLM；自己不設逾時，靠包它的 inst 的 `timeout_ms`） |
-| `aos_mailbox.py` | kernel 信箱共用（閘門、兩種 kernel）：`mailbox`、旁檔路徑 `side`、`read_letter`、`claim`、`reply`（寫不進去回「ReplyFailed: …」給 kernel 記進 state 窗 `last_warning`）、`run_letter`（信＝inst，`aos_inst.run(信)`，stdout／stderr 落旁檔，回 N-30 結果＋token）、`log` |
-| `aos_gate.py` | 兩種 kernel 共用的閘門：信＝target 那張 inst 本身＋私有 key `priority`／`reply`／`sent`，stdin 內容寫旁檔、`stdin` 放路徑；丟進信箱（`mailbox`，沒寫＝`AOS_KERNEL`）、等回信（N-30 結果）、讀旁檔原樣吐 stdout／stderr、用 target 的碼退出；`wait_ms`→`QueueTimeout`、收訊號撤信 |
+| `aos_mailbox.py` | kernel 信箱共用（閘門、兩種 kernel）：`mailbox`、旁檔路徑 `side`、`read_letter`、`claim`、`reply`（寫不進去回「ReplyFailed: …」給 kernel 記進 state 窗 `last_warning`）、`run_letter`（信＝inst，`aos_inst.run(信)`，stdout／stderr 落旁檔，回 N-30 結果＋token） |
+| `aos_gate.py` | 兩種 kernel 共用的閘門：信＝target 那張 inst 本身＋私有 key `priority`／`reply`／`sent`，stdin 內容寫旁檔、`stdin` 放路徑；丟進信箱（`mailbox` 必填，不認環境變數）、等回信（N-30 結果）、讀旁檔原樣吐 stdout／stderr、用 target 的碼退出；收訊號撤信；排隊逾時只靠包它那張 inst 的 `timeout_ms` |
 | `aos_kernel_llm.py` | LLM kernel 的身體（每拍一次，給 aos-loop 拍）：cur/ 殘信回錯、過期／額度見底回錯、排序挑 `slots` 封、`aos_inst.run()` 跑、回信；state 窗照 loop 骨架（`state`、`pid`、`runs`、`last_error`、`beat`）＋`seen`、`budget`、`served` |
-| `aos_kernel_general.py` | 通用 kernel 的身體（N-42 第二種，給 aos-loop 拍；一拍＝一段忙碌期）：每種資源各幾格、局面變了才問判官、照決定起跑（一封一條執行緒）、格在子程式結束時放；判官的 stdin＝state 窗的 queue／running／slots／budget |
-| `aos_kernel_judge.py` | 通用 kernel 的判官那一半：跑判官 inst（拿掉自己的 `AOS_KERNEL`）、驗 `{run, defer, reject}`、判官錯時的確定規則 |
-| `aos_kernel_judge_rules.py` | 規則判官（假判官）：human 先、再級數、再先來後到，每種資源補滿空格 |
+| `aos_kernel_general.py` | 通用 kernel 的身體（N-42 第二種，給 aos-loop 拍；一拍＝一段忙碌期）：每種資源各幾格（`slots` 只收物件；資源沒寫＝`ResourceUnknown`）、局面變了才問判官（有信有空格就問，一封也問）、照決定起跑（一封一條執行緒）、格在子程式結束時放；判官的 stdin＝state 窗的 queue／running／slots／budget；沒有 log 檔 |
+| `aos_kernel_judge.py` | 通用 kernel 的判官那一半：跑判官 inst（環境、逾時一個 key 都不碰）、驗 `{run, reject}`、判官錯時的確定規則 |
+| `aos_kernel_judge_rules.py` | 規則判官（假判官）：human 先、再級數、再先來後到，每種資源補滿空格；回 `{run, reject}` |
 | `tests/` | unittest，見[下面](#測試tests) |
 
 相依只往下：`aos_cli` ← `aos_inst` ← `aos_ctl_state`／`aos_proc` ← `aos_loop` ← `aos_daemon_table` ← `aos_daemon_folder` ← `aos_daemon`；fsm 另一支：`aos_inst` ← `aos_methods` ← `aos_fsm`（`aos_fsm` 也借 `aos_ctl_state` 的 `read_state`、`write_json`）；agent：`aos_methods` ← `aos_agent_lib`（也借 `write_json`、`aos_frame`；`fsm` 子命令才載 `aos_fsm`），`aos_brain_openai` 只靠 `aos_cli`；kernel：`aos_inst` ← `aos_mailbox`（也借 `write_json`）← `aos_gate` ← `aos_kernel_llm` ← `aos_kernel_judge` ← `aos_kernel_general`；`aos_kernel_judge_rules` 獨立（只用標準庫）。
