@@ -72,7 +72,7 @@ def bind_brain(frame, brain):
     """綁定（C-46：frame 放同名檔＝蓋過定義的）：
     ① frame/brain.json＝這顆腦 → 畫家用它；
     ② frame/tools/brush.json＝定義的 brush 工具多一步「把這顆腦 cp 進畫筆的 frame」→ 畫筆也用它（畫筆的 frame 是 work/<n>/，
-       env.json 指回 brush/，找不到畫家這邊的 brain.json，所以要在叫它那一步放進去）。"""
+       frame.json 指回 brush/，找不到畫家這邊的 brain.json，所以要在叫它那一步放進去）。"""
     shutil.copy(brain, os.path.join(frame, "brain.json"))
     tool = read(os.path.join(PAINTER, "tools", "brush.json"))
     tool["argv"][3] = "cp %s brain.json && %s" % (shlex.quote(brain), tool["argv"][3])
@@ -86,7 +86,7 @@ def ask(frame, question):
     t = time.monotonic()
     rc = subprocess.run(["aos", "loop", os.path.join(PAINTER, "loop.json")], cwd=frame, env=env(),
                         stdout=subprocess.DEVNULL).returncode
-    st = read(os.path.join(frame, "loop-state.json")) or {}
+    st = read(os.path.join(frame, "loop/state.json")) or {}
     say("  loop 退出 %d，%s、拍了 %s 次、%.1f 秒" % (rc, st.get("state"), st.get("runs"), time.monotonic() - t))
     ret = read(os.path.join(frame, "ret.json"))
     say("← ret.json：" + ("（沒有：沒走到 done）" if ret is None else
@@ -102,8 +102,8 @@ def show_frame(frame):
         say("  %s/  %s" % ("." if rel == "." else rel, " ".join(sorted(files))))
     for n in sorted((x for x in os.listdir(os.path.join(frame, "work")) if x.isdigit()), key=int):
         w = os.path.join(frame, "work", n)
-        say("  work/%s/env.json %s｜args.taken.json %s" % (
-            n, json.dumps(read(os.path.join(w, "env.json")), ensure_ascii=False).replace(HERE + "/", ""),
+        say("  work/%s/frame.json %s｜args.taken.json %s" % (
+            n, json.dumps(read(os.path.join(w, "frame.json")), ensure_ascii=False).replace(HERE + "/", ""),
             json.dumps(read(os.path.join(w, "args.taken.json")), ensure_ascii=False)))
 
 
@@ -115,8 +115,8 @@ def main():
     tmp = tempfile.mkdtemp(prefix="aos-paint-demo-")
     try:
         a = os.path.join(tmp, "A")
-        write(os.path.join(a, "env.json"), {"parent": PAINTER})
-        say("== 1. 叫畫家（agent 當函數）：frame A＝%s，env.json 指回定義資料夾 painter/" % a)
+        write(os.path.join(a, "frame.json"), {"parent": PAINTER})
+        say("== 1. 叫畫家（agent 當函數）：frame A＝%s，frame.json 指回定義資料夾 painter/" % a)
         if brain:
             bind_brain(a, brain)
             say("   換腦：frame A 放 brain.json（%s）、tools/brush.json（多 cp 這顆腦給畫筆）" % os.path.basename(brain))
@@ -136,7 +136,7 @@ def main():
             say()
             say("== 3. 換腦（綁定）：frame B 放同名 brain.json（brain/fake-alt.json＝同一支假腦加 --name），蓋過定義的")
             b = os.path.join(tmp, "B")
-            write(os.path.join(b, "env.json"), {"parent": PAINTER})
+            write(os.path.join(b, "frame.json"), {"parent": PAINTER})
             bind_brain(b, os.path.join(HERE, "brain", "fake-alt.json"))
             ask(b, "幫我畫一片海")
 

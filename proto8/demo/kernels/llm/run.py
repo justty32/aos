@@ -135,15 +135,15 @@ def main():
         n += len(order)
 
         say("== 3. 報時員巢狀：boss 問「現在幾點？」→ 叫工具 clerk（另一個 agent）→ clerk 叫 clock；兩個腦都經閘門")
-        frame = os.path.join(tmp, "frame")                 # 呼叫方選的 frame：env.json 指回定義、args.json＝問題
+        frame = os.path.join(tmp, "frame")                 # 呼叫方選的 frame：frame.json 指回定義、args.json＝問題
         os.makedirs(frame)
-        write(os.path.join(frame, "env.json"), {"parent": os.path.join(HERE, "boss")})
+        write(os.path.join(frame, "frame.json"), {"parent": os.path.join(HERE, "boss")})
         write(os.path.join(frame, "args.json"), {"question": "現在幾點？"})
         subprocess.run(["aos", "loop", os.path.join(HERE, "boss", "loop.json")], cwd=frame, env=env,
                        stdout=subprocess.DEVNULL, timeout=120)
         with open(os.path.join(frame, "ret.json"), encoding="utf-8") as f:
             ret = json.load(f)
-        with open(os.path.join(frame, "loop-state.json"), encoding="utf-8") as f:
+        with open(os.path.join(frame, "loop/state.json"), encoding="utf-8") as f:
             ticks = json.load(f)["runs"]
         say("   boss 回：%s（boss 的 loop 敲了 %d 拍；clerk 的 frame 在 boss 的 work/1/）" % (ret.get("reply") or ret, ticks))
         for r in log_since(log, n, {}):

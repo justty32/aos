@@ -8,7 +8,7 @@
 設定：
     mailbox    信箱資料夾（同閘門的 mailbox；必填）
     state      state 窗（必填，N-19）：loop 骨架的 state／pid／runs／last_error／beat，加 kernel 的 queue、running、
-               slots、budget、served、seen（每封信第一次看到的 runs）、judge_error、last_sig；判官的 stdin＝這份只留 queue／running／slots／budget
+               slots、budget、served、seen（每封信第一次看到的 runs）、judge_error、judge_asked；判官的 stdin＝這份只留 queue／running／slots／budget
     slots      每種資源幾格 {"llm": 1, "cpu": 2, "human": 1}；純值 n＝{"llm": n}（沒寫＝1）。信的 `_metainfo.resource`
                沒寫或 "none"＝便宜的，不佔格、直接跑；寫了但這裡沒有＝回 ResourceUnknown
     judge      判官：TARGET 或內嵌 inst（沒寫＝一律用規則）。stdin＝state 窗的 queue、running、slots、budget（子集），
@@ -90,7 +90,7 @@ def tick(cfg):
     today = datetime.date.today().isoformat()
     bud = st.get("budget") if isinstance(st.get("budget"), dict) else {}
     used = [bud.get("used", 0) if bud.get("day") == today else 0]
-    last_sig, last_err = st.get("last_sig"), st.get("judge_error")
+    judge_asked, last_err = st.get("judge_asked"), st.get("judge_error")
     count = {"asked": 0, "fallback": 0, "direct": 0, "skipped": 0}
     served, dropped, running, results, queue, busy, warned = [], [], {}, {}, {}, {}, []
 
@@ -104,7 +104,7 @@ def tick(cfg):
                 "running": {x: {"resource": resource(v[1]), "since": round(v[3], 3)} for x, v in running.items()},
                 "queue": {x: {"priority": d.get("priority"), "_metainfo": d.get("_metainfo"),
                               "waited_runs": n - seen.get(x, n), "waited_ms": _waited_ms(d, now)} for x, d in queue.items()},
-                "seen": seen, "judge_error": last_err, "last_sig": last_sig}
+                "seen": seen, "judge_error": last_err, "judge_asked": judge_asked}
 
     def send(doc, rep):
         w = reply(doc, rep)                         # 回信寫不進去＝記進 state 窗的 last_warning（不寫 stderr）
@@ -181,8 +181,8 @@ def tick(cfg):
         sig = [sorted(queue), sorted(running), sorted(free.items())]
         sig = json.loads(json.dumps(sig))
         can_start = any(free[resource(d)] > 0 for d in queue.values())    # 排隊的信沒有一種資源有空格＝這拍什麼也起不了，不問判官
-        if queue and can_start and sig != last_sig:
-            last_sig = sig
+        if queue and can_start and sig != judge_asked:
+            judge_asked = sig
             only = next(iter(queue)) if len(queue) == 1 else None
             snap = window("running", now)
             write_json(cfg["state"], snap)                  # 局面外顯（N-13）；判官的 stdin＝這份的子集

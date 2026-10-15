@@ -37,7 +37,7 @@
 | `aos_methods.py` | 方法表 lib：驗表（`check_table`）、找一格（`cell`：TARGET／內嵌 inst／`{val, next}`）、跑一格（`run_cell`：蓋 stdout（給了 args 才蓋 stdin；fsm 跑格不蓋）、本行程 `aos_inst.run()`、撿格 stderr 的 N-29 錯誤當 `cell_error`）、取 stdout 最後一份（`last_json`） |
 | `aos_fsm.py` | fsm（10-15 收工後瘦身）：命令列＋`run()`、一拍（讀寫只有 `phase` 的 state 窗、跑格（不碰 stdin）、換狀態、`end` 四種情形、格出錯 phase 不動退 1） |
 | `aos_agent_lib.py` | agent 的現成格庫（不是 agent 本體）：`think`、`tool`、`route`、`intake`、`done`、`fsm [NAME]`（照 lookup 找 fsm.json 跑一拍，給定義資料夾的 loop.json 用）；設定＝格 inst 自己的 stdin＋frame 裡 `lookup()`；`tool_specs`、`pending`。各格的細節在 [agent-lib.md](agent-lib.md)；agent 當函數／當工具不另寫程式（`aos_agent_call.py` 10-15 退場），見 [agent-frame.md](agent-frame.md) |
-| `aos_frame.py` | frame 查找（C-46）：`chain()`（frame → `env.json` 的 parent 鏈）、`lookup()`（找第一個）、`lookup_dir()`（資料夾逐項合併、近的蓋過遠的）；10-15 晚從 `aos_agent_lib.py` 拆出，格庫照樣 re-export |
+| `aos_frame.py` | frame 查找（C-46）：`chain()`（frame → `frame.json` 的 parent 鏈）、`lookup()`（找第一個）、`lookup_dir()`（資料夾逐項合併、近的蓋過遠的）；10-15 晚從 `aos_agent_lib.py` 拆出，格庫照樣 re-export |
 | `aos_brain_openai.py` | 真的腦：照思考介面 POST 到 OpenAI 相容的 `/chat/completions`（urllib，不串流，預設 LiteLLM） |
 | `aos_brain_ollama.py` | 真的腦（ollama 原生）：POST `/api/chat`，帶 `options.num_ctx`、`keep_alive`；兩邊訊息形狀互翻（arguments 字串↔物件、補 id／`tool_name`） |
 | `aos_mailbox.py` | kernel 信箱共用（閘門、兩種 kernel）：`mailbox`、旁檔路徑 `side`、`read_letter`、`claim`、`reply`（寫不進去回「ReplyFailed: …」給 kernel 記進 state 窗 `last_warning`）、`run_letter`（信＝inst，`aos_inst.run(信)`，stdout／stderr 落旁檔，回 N-30 結果＋token）、`log` |

@@ -111,10 +111,16 @@ class CtlFile:
 
 
 def write_json(path, doc):
-    """先寫同資料夾的 `.名字.tmp` 再改名蓋過去。失敗丟 OSError（暫存檔清掉）。"""
+    """先寫同資料夾的 `.名字.tmp` 再改名蓋過去。所在的那一層資料夾沒有就建**一層**（像 mkdir、不 -p：frame 的
+    `loop/state.json`、`fsm/state.json` 由窗的寫者自己建，10-15 盤點 P3；再上層也沒有＝照樣寫不了）。失敗丟 OSError（暫存檔清掉）。"""
     d, name = os.path.split(path)
     tmp = os.path.join(d, "." + name + ".tmp")
     try:
+        if d:
+            try:
+                os.mkdir(d)
+            except FileExistsError:
+                pass
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)

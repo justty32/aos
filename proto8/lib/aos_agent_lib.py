@@ -13,7 +13,7 @@
 PATH 上有 proto8/bin 時寫 `aos agent think` 等（C-50：葉子用指令名）。
 
 **設定從哪來**（10-15 收工後：fsm 不再餵格 stdin，N-37）：stdin 那份（那張格 inst 自己的 `stdin` 指的檔；沒有＝空）的 key
-優先，沒寫的照 frame（＝cwd）找——`lookup()`：先找 cwd，找不到照 cwd 裡 `env.json` 的 `parent` 往上一層找（C-46）：
+優先，沒寫的照 frame（＝cwd）找——`lookup()`：先找 cwd，找不到照 cwd 裡 `frame.json` 的 `parent` 往上一層找（C-46）：
 brain＝`brain.json`、tools＝`tools/*.json`（各層逐項合併、近的蓋過遠的；名字＝檔名去掉 .json）、system＝`system.md`（有才帶）、
 history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
 
@@ -23,7 +23,7 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
     system    系統提示檔的路徑（選填；文字／markdown）。think 每次叫腦都把內容當第一則 system 訊息插在 messages 前，
               不寫進 history（改檔下一拍就生效）；沒寫＝不帶；寫了但檔不存在或讀不了＝think 格出錯（N-29）
     work      工具每次在這裡開一個新號碼資料夾 work/<n>/ 跑（args.json＝引數、stdout.json＝工具的 stdout）；
-              think-fails.json、.tool-running.json 也放這裡
+              think.json、.tool-running.json 也放這裡
 
     halt_after  選填，預設 3：think 連錯幾次就不再報錯、改回 {"next": halt_state}（N-38：連錯停住是格自己的事）
     halt_state  選填，預設 "halted"
@@ -44,10 +44,10 @@ history＝cwd 的 `history.json`、work＝cwd 的 `work/`。各 key：
   stdout 的 data：{"tool": 第一個名, "result": 第一個結果, "tools": [名…], "results": [結果…]}。
 - 出錯（設定不對、腦結束碼非 0、腦回的不是 assistant 訊息）：stderr 吐 {"error": {"code", "msg"}}、退出 1（格出錯）。
   腦出錯時 msg 帶腦自己 stderr 的錯誤（例 `HttpError: … 回 400：…does not support tools`），fsm 那行的 error 看得到。
-  think 連錯：次數記在 work/think-fails.json（think 自己的私檔，成功一次就刪），到 halt_after 次＝不報錯，**自己**把要交出去的錯
+  think 連錯：次數記在 work/think.json（think 自己的私檔，成功一次就刪），到 halt_after 次＝不報錯，**自己**把要交出去的錯
   寫成 cwd 的 ret.json（{"error": {"code", "msg"}}），再吐 {"next": halt_state, "data": {"error"}}。halt_state 寫在表的 `end`、
   不寫進 `states`（N-40：next 不在表裡、在 end 裡＝這個 fsm 結束），不經 done 格——格之間不互看私檔（C-52；10-15 使用者
-  「都同意。」，盤點第 8 條；原本 done 讀 think-fails.json 寫錯誤的 ret.json）。
+  「都同意。」，盤點第 8 條；原本 done 讀 think.json 寫錯誤的 ret.json）。
 
 相依：aos_directives ← aos_cli ← aos_inst ← aos_methods ← aos_agent_lib（也借 aos_ctl_state.write_json、aos_frame 的 lookup；fsm 子命令才載 aos_fsm）。
 """
@@ -289,7 +289,7 @@ def _rm(path):
 
 
 def _fails_file(cfg):
-    return os.path.join(cfg["work"], "think-fails.json")
+    return os.path.join(cfg["work"], "think.json")
 
 
 def _think_failed(cfg, e):
@@ -373,7 +373,7 @@ def done(cfg):
 
 
 def run_fsm(name="fsm.json"):
-    """照 lookup() 找 name（frame → env.json parent 鏈），跑一拍 aos_fsm；回退出碼。找不到＝FsmMissing、1（同 fsm 自己出錯）。"""
+    """照 lookup() 找 name（frame → frame.json parent 鏈），跑一拍 aos_fsm；回退出碼。找不到＝FsmMissing、1（同 fsm 自己出錯）。"""
     path = lookup(name)
     if path is None:
         aos_cli.error("FsmMissing", "frame %s 與它的 parent 鏈裡都找不到 %s" % (os.getcwd(), name))

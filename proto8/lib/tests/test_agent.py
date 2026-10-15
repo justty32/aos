@@ -3,7 +3,7 @@ frame 與 agent 當函數／當工具的測試在 test_agent_frame.py。只用�
 
     python3 -m unittest discover -s proto8/lib/tests
 
-整圈用 demo/fsm 那套（假的腦）：在暫存 frame（env.json 指回 demo/fsm）一拍一拍敲 `aos agent fsm`；
+整圈用 demo/fsm 那套（假的腦）：在暫存 frame（frame.json 指回 demo/fsm）一拍一拍敲 `aos agent fsm`；
 真的腦對一個本機假伺服器（http.server）。PATH 照 helpers.ENV。
 """
 import http.server
@@ -28,7 +28,7 @@ class AgentRoundTest(Tmp):
     def setUp(self):
         super().setUp()
         os.makedirs(self.p("inbox"))
-        self.write("env.json", {"parent": DEMO})
+        self.write("frame.json", {"parent": DEMO})
 
     def round(self, text, ticks=8):
         self.write("inbox/01.txt", text)
@@ -57,13 +57,13 @@ class AgentRoundTest(Tmp):
         self.assertTrue(res["result"]["reply"].startswith("現在是 "))
         self.assertTrue(self.read("outbox.txt").startswith("報時員說：" + res["result"]["reply"]))
         self.assertEqual(json.loads(self.read("work/1/args.taken.json")), {"question": "現在幾點？"})   # 引數→clerk 接走
-        self.assertEqual(json.loads(self.read("work/1/env.json")), {"parent": os.path.join(DEMO, "clerk")})
+        self.assertEqual(json.loads(self.read("work/1/frame.json")), {"parent": os.path.join(DEMO, "clerk")})
         sub = json.loads(self.read("work/1/history.json"))                    # clerk 的 frame
         self.assertEqual([m["role"] for m in sub], ["user", "assistant", "tool", "assistant"])
         self.assertEqual(sub[1]["tool_calls"][0]["function"]["name"], "clock")
         self.assertEqual(json.loads(self.read("work/1/ret.json")), res["result"])
-        self.assertEqual(json.loads(self.read("work/1/loop-state.json"))["state"], "done")   # fsm 結束＝clerk 的 loop 停
-        self.assertFalse(os.path.exists(self.p("work", "1", "ctl.json")))     # 不靠 ctl
+        self.assertEqual(json.loads(self.read("work/1/loop/state.json"))["state"], "done")   # fsm 結束＝clerk 的 loop 停
+        self.assertFalse(os.path.exists(self.p("work", "1", "loop", "ctl.json")))     # 不靠 ctl
 
     def test_clerk_reused_definition_untouched(self):
         clerk = os.path.join(DEMO, "clerk")
@@ -88,7 +88,7 @@ class AgentRoundTest(Tmp):
         r = subprocess.run(["aos", "agent", "fsm"], cwd=self.tmp, env=ENV, capture_output=True, text=True, timeout=30)
         out = [json.loads(x) for x in r.stdout.splitlines()]
         self.assertEqual((out[0]["end"], out[-1]), (True, {"data": {"reply": None}}))
-        self.assertEqual(json.loads(self.read("fsm-state.json")), {"phase": "idle"})
+        self.assertEqual(json.loads(self.read("fsm/state.json")), {"phase": "idle"})
 
 
 class AgentSystemTest(Tmp):
@@ -382,7 +382,7 @@ class BrainOllamaTest(BrainOpenaiTest):
         self.assertEqual(codes, [1, 1, 0])
         self.assertEqual(json.loads(r.stdout.splitlines()[0])["end"], True)               # 走到 end：這個 fsm 結束
         self.assertEqual((json.loads(self.read("f.state.json"))["phase"], len(_Stub.seen)), ("ask", 3))
-        self.assertEqual(json.loads(self.read("work/think-fails.json"))["val"], 3)
+        self.assertEqual(json.loads(self.read("work/think.json"))["val"], 3)
         self.assertEqual(json.loads(self.read("ret.json"))["error"]["code"], "BrainFailed")   # think 自己寫的
 
     def test_bad_num_ctx(self):
