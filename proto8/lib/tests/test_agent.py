@@ -1,4 +1,4 @@
-"""proto8/lib 的自動測試：agent 的現成格庫（aos_agent_lib）與真的腦（aos_brain_openai、aos_brain_ollama）。
+"""proto8/lib 的自動測試：agent 的現成格庫（aos_agent_lib）與真的腦（aos_brain_openai）。
 frame 與 agent 當函數／當工具的測試在 test_agent_frame.py。只用標準庫：
 
     python3 -m unittest discover -s proto8/lib/tests
@@ -18,7 +18,6 @@ from helpers import ENV, FSM, LIB, Tmp, tree_hash
 
 AGENT = os.path.join(LIB, "aos_agent_lib.py")
 BRAIN = os.path.join(LIB, "aos_brain_openai.py")
-OLLAMA = os.path.join(LIB, "aos_brain_ollama.py")
 DEMO = os.path.realpath(os.path.join(LIB, "..", "demo", "fsm"))
 
 
@@ -56,7 +55,7 @@ class AgentRoundTest(Tmp):
         self.assertEqual((res["code"], res["signal"], res["timed_out"]), (0, None, False))
         self.assertTrue(res["result"]["reply"].startswith("現在是 "))
         self.assertTrue(self.read("outbox.txt").startswith("報時員說：" + res["result"]["reply"]))
-        self.assertEqual(json.loads(self.read("work/1/args.taken.json")), {"question": "現在幾點？"})   # 引數→clerk 接走
+        self.assertFalse(os.path.exists(self.p("work/1/args.json")))                          # 引數→clerk 接走就刪
         self.assertEqual(json.loads(self.read("work/1/frame.json")), {"parent": os.path.join(DEMO, "clerk")})
         sub = json.loads(self.read("work/1/history.json"))                    # clerk 的 frame
         self.assertEqual([m["role"] for m in sub], ["user", "assistant", "tool", "assistant"])
@@ -100,8 +99,8 @@ class AgentSystemTest(Tmp):
                    "open('seen.json', 'w').write(json.dumps(req))\n"
                    "print(json.dumps({'role': 'assistant', 'content': 'ok'}))\n")
         self.write("brain.json", {"argv": ["python3", "brain.py"]})
-        self.write("h.json", [{"role": "user", "content": "hi"}])
-        self.cfg = {"brain": "brain.json", "tools": {}, "history": "h.json", "work": "work"}
+        self.write("history.json", [{"role": "user", "content": "hi"}])
+        self.cfg = {"brain": "brain.json", "tools": {}}
 
     def think(self, cfg):
         return subprocess.run([sys.executable, AGENT, "think"], cwd=self.tmp, input=json.dumps(cfg),
@@ -114,7 +113,7 @@ class AgentSystemTest(Tmp):
         seen = json.loads(self.read("seen.json"))["messages"]
         self.assertEqual(seen[0], {"role": "system", "content": "用繁體中文"})
         self.assertEqual(seen[1]["role"], "user")
-        self.assertEqual([m["role"] for m in json.loads(self.read("h.json"))], ["user", "assistant"])
+        self.assertEqual([m["role"] for m in json.loads(self.read("history.json"))], ["user", "assistant"])
 
     def test_no_system_key_no_system_message(self):
         r = self.think(self.cfg)
@@ -124,22 +123,22 @@ class AgentSystemTest(Tmp):
     def test_missing_system_file_is_cell_error(self):
         r = self.think(dict(self.cfg, system="nope.md"))
         self.assertEqual(r.returncode, 1)
-        self.assertEqual(json.loads(r.stderr.strip().splitlines()[-1])["error"]["code"], "SystemUnreadable")
-        self.assertEqual(len(json.loads(self.read("h.json"))), 1)
+        self.assertEqual(json.loads(r.stderr.strip().splitlines()[-1])["error"]["code"], "ReadFailed")
+        self.assertEqual(len(json.loads(self.read("history.json"))), 1)
 
 
 class AgentCellTest(Tmp):
-    """直接敲 aos_agent_lib.py tool（stdin＝設定）：一次多個 tool_calls、被中斷、沒設定。"""
+    """直接敲 aos_agent_lib.py tool（stdin＝設定）：一次多個 tool_calls、沒設定。"""
 
     def setUp(self):
         super().setUp()
         self.write("tools/echo.json", {"argv": ["sh", "-c", "cat; pwd > where.txt"], "_tool": {"description": "回聲"}})
-        self.cfg = {"brain": "brain.json", "tools": {"echo": "tools/echo.json"}, "history": "h.json", "work": "work"}
+        self.cfg = {"brain": "brain.json", "tools": {"echo": "tools/echo.json"}}
 
     def calls(self, *names):
         tc = [{"id": "c%d" % i, "type": "function", "function": {"name": n, "arguments": '{"x": %d}' % i}}
               for i, n in enumerate(names)]
-        self.write("h.json", [{"role": "user", "content": "hi"}, {"role": "assistant", "content": None, "tool_calls": tc}])
+        self.write("history.json", [{"role": "user", "content": "hi"}, {"role": "assistant", "content": None, "tool_calls": tc}])
 
     def tool(self, cfg=True):
         arg = self.cfg if cfg else []
@@ -149,7 +148,7 @@ class AgentCellTest(Tmp):
     def test_no_cfg_is_cell_error(self):
         self.calls("echo")
         r = self.tool(cfg=False)
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "ConfigMissing"))
+        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "FieldType"))
 
     def test_multiple_tool_calls_all_run_in_order(self):
         # 10-15 使用者「都按照推薦」：一拍內照順序全部跑，每個 id 都有對應的 tool 訊息（原本只跑第一個、其餘 Skipped）
@@ -157,31 +156,15 @@ class AgentCellTest(Tmp):
         r = self.tool()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stderr, "")                                                 # 不再警告 ToolCallsSkipped
-        hist = json.loads(self.read("h.json"))
+        hist = json.loads(self.read("history.json"))
         self.assertEqual([m.get("tool_call_id") for m in hist[2:]], ["c0", "c1", "c2"])   # 照順序、每個 id 都有回
         res = [json.loads(m["content"]) for m in hist[2:]]
         self.assertEqual((res[0]["code"], res[0]["result"], res[0]["id"]), (0, {"x": 0}, self.p("tools", "echo.json")))
         self.assertEqual((res[1]["code"], res[1]["result"]), (0, {"x": 1}))           # 第二個也真的跑了
         self.assertEqual(res[2]["error"]["code"], "ToolUnknown")
         self.assertEqual([json.loads(self.read("work/%d/args.json" % n)) for n in (1, 2)], [{"x": 0}, {"x": 1}])
-        data = json.loads(r.stdout)["data"]
-        self.assertEqual((data["tool"], data["tools"]), ("echo", ["echo", "echo", "nope"]))
-        self.assertFalse(os.path.exists(self.p("work", ".tool-running.json")))
-        self.assertEqual(self.tool().stdout.strip(), '{"data": {"tool": null}}')    # 都回過了＝什麼都不跑
-
-    def test_interrupted_in_middle_skips_only_that_one(self):
-        # 兩個工具，第一個已經回了、第二個跑到一半被殺：第二個回 Interrupted 不重跑，第三個照跑
-        self.calls("echo", "echo", "echo")
-        hist = json.loads(self.read("h.json"))
-        self.write("h.json", hist + [{"role": "tool", "tool_call_id": "c0", "content": "{}"}])
-        self.write("work/.tool-running.json", {"id": "c1"})
-        r = self.tool()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        hist = json.loads(self.read("h.json"))
-        self.assertEqual([m.get("tool_call_id") for m in hist[2:]], ["c0", "c1", "c2"])
-        self.assertEqual(json.loads(hist[3]["content"])["error"]["code"], "Interrupted")
-        self.assertEqual(json.loads(hist[4]["content"])["result"], {"x": 2})
-        self.assertEqual(sorted(os.listdir(self.p("work"))), ["1"])                # 只跑了 c2
+        self.assertEqual(json.loads(r.stdout), {"data": {"tools": ["echo", "echo", "nope"]}})     # stdout 一格（結果在 history）
+        self.assertEqual(self.tool().stdout.strip(), '{"data": {"tools": []}}')      # 都回過了＝什麼都不跑
 
     def test_each_call_in_new_numbered_folder(self):
         # 工具每次在 work/<n>/ 新資料夾跑（C-46 工具呼叫的 frame 預設），引數寫成那裡的 args.json
@@ -196,14 +179,6 @@ class AgentCellTest(Tmp):
         self.tool()
         self.assertTrue(os.path.exists(self.p("where.txt")))
         self.assertTrue(os.path.exists(self.p("work", "3", "args.json")))
-
-    def test_interrupted_tool_not_rerun(self):
-        self.calls("echo")
-        self.write("work/.tool-running.json", {"id": "c0"})                  # 上一拍跑到一半被殺
-        r = self.tool()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(json.loads(self.read("h.json"))[-1]["content"])["error"]["code"], "Interrupted")
-        self.assertEqual(os.listdir(self.p("work")), [])                    # 沒跑工具、記號刪了
 
     def test_tool_specs_from_inst(self):
         import aos_agent_lib
@@ -276,7 +251,7 @@ class BrainOpenaiTest(Tmp):
         s.bind(("127.0.0.1", 0))
         self.url = "http://127.0.0.1:%d/v1" % s.getsockname()[1]          # 綁了又關＝沒人聽
         s.close()
-        r = self.brain({"messages": []}, "--timeout-ms", "3000")
+        r = self.brain({"messages": []})
         self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "ConnectFailed"))
 
     def test_usage_passed_through(self):
@@ -288,111 +263,11 @@ class BrainOpenaiTest(Tmp):
         _Stub.reply = {"choices": [{"message": {"role": "assistant", "content": "好"}}], "usage": {"total_tokens": 3}}
         self.write("brain.json", {"argv": [sys.executable, BRAIN, "--base-url", self.url, "--model", "m1"]})
         self.write("tools/clock.json", {"argv": ["true"], "_tool": {"description": "時間"}})
-        cfg = {"brain": "brain.json", "tools": {"clock": "tools/clock.json"}, "history": "h.json", "work": "work"}
-        self.write("h.json", [{"role": "user", "content": "hi"}])
+        cfg = {"brain": "brain.json", "tools": {"clock": "tools/clock.json"}}
+        self.write("history.json", [{"role": "user", "content": "hi"}])
         r = subprocess.run([sys.executable, AGENT, "think"], cwd=self.tmp, input=json.dumps(cfg),
                            capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(_Stub.seen[0][2]["tools"][0]["function"]["description"], "時間")
-        self.assertEqual(json.loads(self.read("h.json"))[-1], {"role": "assistant", "content": "好"})   # usage 沒進 history
+        self.assertEqual(json.loads(self.read("history.json"))[-1], {"role": "assistant", "content": "好"})   # usage 沒進 history
         self.assertEqual(json.loads(r.stdout), {"data": {"content": "好", "tool_calls": []}})
-
-
-class BrainOllamaTest(BrainOpenaiTest):
-    """ollama 原生 /api/chat：num_ctx、keep_alive、兩邊形狀的翻譯。沿用上面的假伺服器。"""
-
-    def setUp(self):
-        super().setUp()
-        _Stub.reply = {"model": "m1", "done": True, "message": {"role": "assistant", "content": "", "tool_calls": [
-            {"function": {"name": "clock", "arguments": {"tz": "UTC"}}}]}}
-        self.url = self.url[:-3]                                             # ollama 的 base_url 不含 /v1
-
-    def ollama(self, req, *flags):
-        return subprocess.run([sys.executable, OLLAMA, "--base-url", self.url, "--model", "m1"] + list(flags),
-                              input=json.dumps(req), capture_output=True, text=True, timeout=10)
-
-    def test_request_shape_and_reply_translated(self):
-        tools = [{"type": "function", "function": {"name": "clock", "description": "", "parameters": {}}}]
-        r = self.ollama({"messages": [{"role": "user", "content": "幾點"}], "tools": tools})
-        self.assertEqual(r.returncode, 0, r.stderr)
-        path, _, body = _Stub.seen[0]
-        self.assertEqual(path, "/api/chat")
-        self.assertEqual((body["model"], body["stream"], body["options"], body["keep_alive"], body["tools"]),
-                         ("m1", False, {"num_ctx": 4096}, "30s", tools))
-        out = json.loads(r.stdout)
-        self.assertEqual((out["role"], out["content"]), ("assistant", None))      # 空字串 → null
-        call = out["tool_calls"][0]
-        self.assertTrue(call["id"].startswith("call_"))
-        self.assertEqual((call["type"], call["function"]), ("function", {"name": "clock", "arguments": '{"tz": "UTC"}'}))
-
-    def test_usage_from_eval_counts(self):
-        _Stub.reply = dict(_Stub.reply, prompt_eval_count=10, eval_count=4)
-        out = json.loads(self.ollama({"messages": []}).stdout)
-        self.assertEqual(out["usage"], {"prompt_tokens": 10, "completion_tokens": 4, "total_tokens": 14})
-
-    def test_usage_passed_through(self):
-        pass                                    # openai 專屬；ollama 的在 test_usage_from_eval_counts
-
-    def test_flags_and_history_translated(self):
-        _Stub.reply = {"message": {"role": "assistant", "content": "現在 10 點"}}
-        hist = [{"role": "user", "content": "幾點"},
-                {"role": "assistant", "content": None, "tool_calls": [
-                    {"id": "c9", "type": "function", "function": {"name": "clock", "arguments": '{"tz": "UTC"}'}}]},
-                {"role": "tool", "tool_call_id": "c9", "content": "{\"time\": \"10:00\"}"}]
-        r = self.ollama({"messages": hist}, "--num-ctx", "8192", "--keep-alive", "0")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        body = _Stub.seen[0][2]
-        self.assertEqual((body["options"]["num_ctx"], body["keep_alive"]), (8192, 0))
-        self.assertNotIn("tools", body)
-        a, t = body["messages"][1], body["messages"][2]
-        self.assertEqual((a["content"], a["tool_calls"]), ("", [{"function": {"name": "clock", "arguments": {"tz": "UTC"}}}]))
-        self.assertEqual((t["role"], t["tool_name"], t["tool_call_id"]), ("tool", "clock", "c9"))
-        self.assertEqual(json.loads(r.stdout), {"role": "assistant", "content": "現在 10 點"})
-
-    def test_http_and_bad_response(self):
-        _Stub.status, _Stub.reply = 400, {"error": "m1 does not support tools"}
-        r = self.ollama({"messages": []})
-        err = json.loads(r.stderr)["error"]
-        self.assertEqual((r.returncode, err["code"]), (1, "HttpError"))
-        self.assertIn("does not support tools", err["msg"])
-        _Stub.status, _Stub.reply = 200, {"nope": 1}
-        r = self.ollama({"messages": []})
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "ResponseBad"))
-
-    def test_no_tools_400_surfaces_and_stops(self):
-        # 146 試跑的情形：腦回 400 → think 格 BrainFailed（只說腦的結束碼；腦的 stderr think 不讀，C-52 切乾淨——
-        # 要看原因就在 brain.json 寫 stderr 檔）→ fsm 那行的 error 看得到；
-        # 10-15 收工後連錯停住是格自己的事（N-38）：think 錯第 3 次自己寫好 ret.json 的錯、改回 next halted；
-        # halted 只寫在 end、不在 states（不經 done 格，盤點第 8 條）＝這拍 fsm 結束
-        _Stub.status, _Stub.reply = 400, {"error": "m1 does not support tools"}
-        self.write("brain.json", {"argv": [sys.executable, OLLAMA, "--base-url", self.url, "--model", "m1"],
-                                  "stderr": "brain.err.json"})
-        self.write("tools/clock.json", {"argv": ["true"], "_tool": {"description": "時間"}})
-        self.write("h.json", [{"role": "user", "content": "幾點"}])
-        self.write("cfg.json", {"brain": "brain.json", "tools": {"clock": "tools/clock.json"},
-                                "history": "h.json", "work": "work"})
-        self.write("f.json", {"start": "ask", "state": "f.state.json", "end": ["halted"], "states": {
-            "ask": {"argv": [sys.executable, AGENT, "think"], "stdin": "cfg.json"}}})
-        codes = []
-        for _ in range(3):
-            r = subprocess.run([sys.executable, FSM, "f.json"], cwd=self.tmp, capture_output=True, text=True, timeout=10)
-            codes.append(r.returncode)
-            if r.returncode:
-                err = json.loads(r.stdout.splitlines()[-1])["error"]
-                self.assertEqual((err["code"], err["msg"]), ("CellFailed", "格 ask 結束碼 1"))
-                self.assertEqual(r.stderr, "")
-        self.assertEqual(codes, [1, 1, 0])
-        self.assertIn("does not support tools", json.loads(self.read("brain.err.json"))["error"]["msg"])   # 腦自己的檔才有
-        self.assertEqual(json.loads(r.stdout.splitlines()[0])["end"], True)               # 走到 end：這個 fsm 結束
-        self.assertEqual((json.loads(self.read("f.state.json"))["phase"], len(_Stub.seen)), ("ask", 3))
-        self.assertEqual(json.loads(self.read("work/think.json"))["val"], 3)
-        ret = json.loads(self.read("ret.json"))["error"]                                       # think 自己寫的
-        self.assertEqual((ret["code"], ret["msg"]), ("BrainFailed", "腦 brain.json 結束碼 1"))
-
-    def test_bad_num_ctx(self):
-        r = self.ollama({"messages": []}, "--num-ctx", "big")
-        self.assertEqual((r.returncode, json.loads(r.stderr)["error"]["code"]), (1, "FieldType"))
-
-    # 父類別的 openai 專屬測試不重跑
-    test_request_has_tools_and_reply_parsed = test_api_key_from_env = None
-    test_http_and_connect_errors = test_think_cell_through_real_brain = None

@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""畫家 demo：畫家 agent 透過工具叫畫筆 agent（agent 當工具）、同一個 frame 續聊、frame 放同名 brain.json 換腦。
+"""畫家 demo：畫家 agent 透過工具叫畫筆 agent（agent 當工具）、同一個 frame 續聊、frame 放同名 brain.json 換腦（只換畫家這一層）。
 
     python3 proto8/demo/paint/run.py                   （假腦，約 10 秒）
-    python3 proto8/demo/paint/run.py 腦設定.json       （換成那顆腦：畫家、畫筆都綁它；例 ../fsm/brains/lmstudio.json）
+    python3 proto8/demo/paint/run.py 腦設定.json       （畫家換成那顆腦；畫筆照用自己定義的腦；例 ../fsm/brains/lmstudio.json）
 
-painter/、brush/ 是兩個定義資料夾，跑完一個字都沒變；所有東西寫在 mktemp 建的 frame 裡，跑完整個刪掉
-（`--keep` 留著，印出路徑）。說明在 README.md。
+painter/、brush/ 是兩個定義資料夾，跑完一個字都沒變；所有東西寫在 mktemp 建的 frame 裡，跑完整個刪掉。說明在 README.md。
+demo 不示範「上層伸手進下層的 frame」（要換畫筆的腦＝改畫筆自己的定義；10-15 深夜 KISS 批次 1）。
 """
 import hashlib
 import json
 import os
-import shlex
 import shutil
 import subprocess
 import sys
@@ -69,14 +68,9 @@ def find_brain(arg):
 
 
 def bind_brain(frame, brain):
-    """綁定（C-46：frame 放同名檔＝蓋過定義的）：
-    ① frame/brain.json＝這顆腦 → 畫家用它；
-    ② frame/tools/brush.json＝定義的 brush 工具多一步「把這顆腦 cp 進畫筆的 frame」→ 畫筆也用它（畫筆的 frame 是 work/<n>/，
-       frame.json 指回 brush/，找不到畫家這邊的 brain.json，所以要在叫它那一步放進去）。"""
+    """綁定（C-46：frame 放同名檔＝蓋過定義的）：frame/brain.json＝這顆腦 → 畫家用它。只換這一層；畫筆的 frame 是 work/<n>/、
+    frame.json 指回 brush/，照用自己定義的腦（要換畫筆的腦＝改 brush/ 的定義，不從上層伸手）。"""
     shutil.copy(brain, os.path.join(frame, "brain.json"))
-    tool = read(os.path.join(PAINTER, "tools", "brush.json"))
-    tool["argv"][3] = "cp %s brain.json && %s" % (shlex.quote(brain), tool["argv"][3])
-    write(os.path.join(frame, "tools", "brush.json"), tool)
 
 
 def ask(frame, question):
@@ -102,14 +96,14 @@ def show_frame(frame):
         say("  %s/  %s" % ("." if rel == "." else rel, " ".join(sorted(files))))
     for n in sorted((x for x in os.listdir(os.path.join(frame, "work")) if x.isdigit()), key=int):
         w = os.path.join(frame, "work", n)
-        say("  work/%s/frame.json %s｜args.taken.json %s" % (
+        hist = read(os.path.join(w, "history.json")) or [{}]
+        say("  work/%s/frame.json %s｜第一句 %s" % (
             n, json.dumps(read(os.path.join(w, "frame.json")), ensure_ascii=False).replace(HERE + "/", ""),
-            json.dumps(read(os.path.join(w, "args.taken.json")), ensure_ascii=False)))
+            json.dumps(hist[0].get("content"), ensure_ascii=False)))
 
 
 def main():
-    args = [a for a in sys.argv[1:] if a != "--keep"]
-    keep = "--keep" in sys.argv[1:]
+    args = sys.argv[1:]
     brain = find_brain(args[0]) if args else None
     before = tree_hash(HERE)
     tmp = tempfile.mkdtemp(prefix="aos-paint-demo-")
@@ -119,7 +113,7 @@ def main():
         say("== 1. 叫畫家（agent 當函數）：frame A＝%s，frame.json 指回定義資料夾 painter/" % a)
         if brain:
             bind_brain(a, brain)
-            say("   換腦：frame A 放 brain.json（%s）、tools/brush.json（多 cp 這顆腦給畫筆）" % os.path.basename(brain))
+            say("   換腦：frame A 放 brain.json（%s）；畫筆照用自己定義的腦" % os.path.basename(brain))
         else:
             say("   腦：定義裡的 brain.json（假腦 paint/brains/fake.py）")
         ask(a, "幫我畫一隻貓")
@@ -134,7 +128,7 @@ def main():
 
         if not brain:
             say()
-            say("== 3. 換腦（綁定）：frame B 放同名 brain.json（brains/fake_alt.json＝同一支假腦加 --name），蓋過定義的")
+            say("== 3. 換腦（綁定）：frame B 放同名 brain.json（brains/fake_alt.json＝同一支假腦加 --name），蓋過定義的；只換畫家這一層")
             b = os.path.join(tmp, "B")
             write(os.path.join(b, "frame.json"), {"parent": PAINTER})
             bind_brain(b, os.path.join(HERE, "brains", "fake_alt.json"))
@@ -143,11 +137,8 @@ def main():
         say()
         say("== 定義資料夾 painter/、brush/ 有沒有被動到：%s" % ("沒有（雜湊一樣）" if tree_hash(HERE) == before else "有！"))
     finally:
-        if keep:
-            say("frame 留在 %s" % tmp)
-        else:
-            shutil.rmtree(tmp)
-            say("暫存資料夾刪掉了")
+        shutil.rmtree(tmp)
+        say("暫存資料夾刪掉了")
 
 
 if __name__ == "__main__":

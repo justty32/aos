@@ -272,15 +272,15 @@ class GateEndToEndTest(Tmp):
         self.write("brain.json", {"argv": [sys.executable, brain, "--base-url",
                                            "http://127.0.0.1:%d/v1" % srv.server_port, "--model", "m"]})
         self.write("gated.json", {"argv": self.gate("brain.json"), "cwd": self.tmp})
-        self.write("h.json", [{"role": "user", "content": "hi"}])
-        cfg = {"brain": "gated.json", "history": "h.json", "work": "work"}
+        self.write("history.json", [{"role": "user", "content": "hi"}])
+        cfg = {"brain": "gated.json"}
         for _ in range(2):
             r = subprocess.run([sys.executable, os.path.join(LIB, "aos_agent_lib.py"), "think"], cwd=self.tmp,
                                input=json.dumps(cfg), capture_output=True, text=True, env=self.env, timeout=20)
             self.assertEqual(r.returncode, 0, r.stderr)
-            self.write("h.json", json.loads(self.read("h.json")) + [{"role": "user", "content": "再一次"}])
+            self.write("history.json", json.loads(self.read("history.json")) + [{"role": "user", "content": "再一次"}])
         self.until(lambda: json.loads(self.read("k.state.json"))["budget"]["used"] == 18)   # state 在回信之後才寫
-        self.assertNotIn("usage", json.dumps(json.loads(self.read("h.json"))))
+        self.assertNotIn("usage", json.dumps(json.loads(self.read("history.json"))))
 
     def test_kernel_cli_under_loop(self):
         """kernel 的身體照 N-12 當 inst 被 aos-loop 拍（stdout 一份摘要）。"""

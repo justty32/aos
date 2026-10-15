@@ -10,8 +10,7 @@
       base_url     預設 http://localhost:4000/v1（LiteLLM，見 wf/workflows/dev-env.md）
       model        必填
       api_key_env  選填：放金鑰的環境變數名（例 DEEPSEEK_API_KEY）；沒寫＝不帶 Authorization（LiteLLM 不用）
-      timeout_ms   預設 120000
-  金鑰只從環境變數讀，不寫進檔、不印。不串流。
+  金鑰只從環境變數讀，不寫進檔、不印。不串流。腦自己不設逾時：要限時寫在包它的那張 inst 的 `timeout_ms`（一次呼叫一把尺）。
 - 出錯：stderr 吐 {"error": {"code", "msg"}}、退出 1。代號：HttpError、ConnectFailed、ResponseBad、ApiKeyMissing，設定的照 aos_cli。
 """
 import json
@@ -23,7 +22,7 @@ import urllib.request
 import aos_cli
 from aos_cli import CliError
 
-FLAGS = ("base_url", "model", "api_key_env", "timeout_ms")
+FLAGS = ("base_url", "model", "api_key_env")
 DEFAULT_URL = "http://localhost:4000/v1"
 
 
@@ -31,12 +30,9 @@ def config(argv):
     doc, _, piped, rest = aos_cli.config(argv, FLAGS)
     if piped or rest is not None:
         raise CliError("Usage", "stdin 是請求；設定只從 CONFIG.json 或旗標來，不收 - 與 --")
-    cfg = {"base_url": doc.get("base_url", DEFAULT_URL), "model": doc.get("model"),
-           "api_key_env": doc.get("api_key_env"), "timeout_ms": doc.get("timeout_ms", 120000)}
+    cfg = {"base_url": doc.get("base_url", DEFAULT_URL), "model": doc.get("model"), "api_key_env": doc.get("api_key_env")}
     if not (isinstance(cfg["model"], str) and cfg["model"]):
         raise CliError("FieldType", "model 要是模型名字串，不是 %r" % (cfg["model"],))
-    if not (isinstance(cfg["timeout_ms"], int) and cfg["timeout_ms"] > 0):
-        raise CliError("FieldType", "timeout_ms 要是正整數，不是 %r" % (cfg["timeout_ms"],))
     return cfg
 
 
@@ -54,7 +50,7 @@ def ask(cfg, req):
     url = cfg["base_url"].rstrip("/") + "/chat/completions"
     r = urllib.request.Request(url, json.dumps(body).encode("utf-8"), headers, method="POST")
     try:
-        with urllib.request.urlopen(r, timeout=cfg["timeout_ms"] / 1000) as resp:
+        with urllib.request.urlopen(r) as resp:
             raw = resp.read()
     except urllib.error.HTTPError as e:
         raise CliError("HttpError", "%s 回 %d：%s" % (url, e.code, e.read()[:500].decode("utf-8", "replace")))

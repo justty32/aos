@@ -87,7 +87,6 @@ def main():
         work = os.path.join(tmp, "work")
         for n in sorted((x for x in os.listdir(work) if x.isdigit()), key=int) if os.path.isdir(work) else []:
             say("== work/%s/（叫 clerk 那次的 frame：args.json＝引數；clerk/ 本身沒動，history 累積在這裡）" % n)
-            say("   args.taken.json：%s" % json.dumps(read(os.path.join(work, n, "args.taken.json")), ensure_ascii=False))
             for m in read(os.path.join(work, n, "history.json")) or []:
                 say("   " + json.dumps(m, ensure_ascii=False))
             say("   ret.json：%s" % json.dumps(read(os.path.join(work, n, "ret.json")), ensure_ascii=False))
