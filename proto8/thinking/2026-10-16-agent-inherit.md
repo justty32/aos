@@ -627,3 +627,5 @@ $ mkdir /out/1016 && cd /out/1016 && aos exec . /jobs/report/.aos
 - **C-51**：隱藏資料夾例外不再由環境變數定，就是 `.aos`。
 - **N-45**：零指示詞 ✓（整招沒有 `$ref`／`$env`）。**C-52** ✓（每層站自己的廚房、子廚房在 work/<n>/、什麼都不往下傳，位置在 PATH）。**C-56 寫什麼就做什麼** ✓（`.aos/x` 就是那個檔；`#!` 就是用誰跑我；`aos exec WD TARGET` 就是站哪、掛誰、跑）。**N-12** ✓（stdin＝食譜；話走 prompt.json→intake 的 stdin）。
 - **N-27 第二句再改**：tool 格把 arguments 寫成 `work/<n>/prompt.json`（不是 stdin）。
+- **第六節前兩項同意**：食譜裡放 shebang stub＋PATH 上放捷徑（bob 的工具寫 `{"argv": ["brush"]}`）；「食譜 `.aos/`＋廚房 cwd」一律 `aos exec 廚房 食譜`，推廣到所有東西（使用者：「何等美麗的閉環，這就像是lisp的repl，/ws就是那個啥...」「前兩項我都OK」）。
+- 工具參數要不要改成寫檔：使用者問「關於工具的參數不能再走stdin這塊，這是為啥？」——待答（頂層看法：stdin 只放食譜指的是 agent 程式那一層；工具行程（aos exec）那一層的 stdin 是空的，可以照 N-27 收參數，由 stub 明寫的旗標把它放進廚房）。
