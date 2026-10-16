@@ -12,5 +12,5 @@
     "$env": "DEMO_WORK"
   },
   "stdout": "probe.out",
-  "stderr": "/dev/stderr"
+  "stderr_inherit": true
 }

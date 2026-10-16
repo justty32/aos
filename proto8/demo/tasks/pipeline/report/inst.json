@@ -9,5 +9,5 @@
   },
   "stdin": "probe.out",
   "stdout": "report.txt",
-  "stderr": "/dev/stderr"
+  "stderr_inherit": true
 }

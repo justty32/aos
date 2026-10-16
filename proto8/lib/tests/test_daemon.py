@@ -128,9 +128,11 @@ class Daemon(Tmp):
         self.start()
         bad = {"argv": ["sh", "-c", "true"], "cwd": self.tmp}
         cases = (("e", {"inst": dict(bad, argv=[])}, "FieldType"),
-                 ("i", {"inst": dict(bad, stderr="x", stderr_merge=True)}, "Conflict"),
+                 ("i", {"inst": dict(bad, stdin_inherit=True)}, "Conflict"),          # 子 loop 從 stdin 灌 inst
+                 ("j", {"inst": dict(bad, stderr="x", stderr_merge=True)}, "Conflict"),
                  ("m", {"inst": bad, "interval_ms": "x"}, "FieldType"),                # loop 層的 key 也不驗
-                 ("s", dict(bad, timeout_ms="x"), "FieldType"))                         # inst.json 包成 loop 也一樣
+                 ("s", dict(bad, timeout_ms="x"), "FieldType"),                          # inst.json 包成 loop 也一樣
+                 ("t", dict(bad, stdin_inherit=True), "Conflict"))
         for n, (name, doc, code) in enumerate(cases, 1):
             with self.subTest(name=name):
                 path = self.write(name + ".json", doc)
@@ -141,7 +143,7 @@ class Daemon(Tmp):
                 self.assertEqual(err[-1]["error"]["code"], code)
         self.write("w.json", {"inst": bad, "ctl": 3})                                  # daemon 自己要用的窗才驗
         self.assertEqual(self.err({"op": "add", "id": self.p("w.json")}), "FieldType")
-        self.assertEqual(sorted(os.listdir(self.p("loops"))), ["1", "2", "3", "4"])     # 那格收回
+        self.assertEqual(sorted(os.listdir(self.p("loops"))), ["1", "2", "3", "4", "5", "6"])     # 那格收回
 
     def test_own_ctl_state_used(self):
         self.start()

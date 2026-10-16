@@ -207,7 +207,8 @@ def _run_tool(cfg, call):
     d = new_dir(cfg["work"])
     call_file, out_file = os.path.join(d, "args.json"), os.path.join(d, "stdout.json")
     write_json(call_file, args)
-    doc = dict(inst, stdin=call_file, stdout=out_file, stdout_append=False, stdout_mkdir=False)
+    doc = dict(inst, stdin=call_file, stdout=out_file, stdout_append=False, stdout_mkdir=False,
+               stdin_inherit=False, stdout_inherit=False)
     doc.setdefault("id", ident)
     doc.setdefault("cwd", d)                     # 工具在 work/<n>/ 跑（inst 自己寫了 cwd 就照它的）；裡面是什麼 agent 不管（C-52）
     try:

@@ -5,6 +5,7 @@
 
 設定從哪來照 aos_cli（NORMS N-12、N-21～N-24）：TARGET 檔、`-`＝stdin（一份；多份＝InputExtra 錯）、都沒給＝`{}`；
 純量 key 都有同名旗標（`--timeout-ms 100`、`--cwd-mkdir true`…），蓋過檔或 stdin；`--` 後面整段蓋過 `argv`。
+設定從 stdin 來時 `stdin_inherit` ＝Conflict（stdin 已經被設定用掉了，N-26）。
 
 TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/$AOS_DIRNAME/inst.json`（沒設＝`.aos`），沒有再找 `<資料夾>/inst.json`）。
 後面可以接 `#/位置`（N-35）：只跑那份檔裡那一格（要是物件）。遇到第一個 `#` 就切，檔名含 `#` 的不支援；
@@ -17,15 +18,17 @@ TARGET 是 `.json` 檔，或資料夾（找 `<資料夾>/$AOS_DIRNAME/inst.json`
     argv            非空字串陣列（必填）
     cwd             在哪跑（沒寫＝呼叫 aos_inst 時的 cwd）；cwd_mkdir: true 先建好
     envs            {名字: 字串}，疊在現有環境上；envs_clear: true 改成從空的開始
-    stdin           從哪個檔讀（沒寫＝/dev/null；要接呼叫者的就寫 /dev/stdin）
-    stdout/stderr   寫到哪個檔（覆寫；沒寫＝/dev/null；要接呼叫者的就寫 /dev/stdout、/dev/stderr）；
-                    *_append 改附加、*_mkdir 先建上層資料夾
+    stdin           從哪個檔讀；stdin_inherit: true 改接呼叫者的
+    stdout/stderr   寫到哪個檔（覆寫）；*_append 改附加、*_mkdir 先建上層資料夾、*_inherit 改接呼叫者的
+                    （stderr_inherit 是寫單子的人自選的接法：這時呼叫者 stderr 上的東西是子程式的、不是 aos_inst 的，
+                    aos_inst 自己照樣只在出錯時寫 stderr、正常退 0；N-26）
+                    路徑照字面打開：寫 /dev/stdout 就是開 /dev/stdout 這個檔，不會變成「接呼叫者的」（C-56 寫什麼就做什麼）
     stderr_merge    true＝stderr 併進 stdout
     timeout_ms      最多跑幾毫秒（正整數；沒寫或 null＝不限），到了就收掉
     grace_ms        收掉＝先 SIGTERM，過 grace_ms 還沒結束再 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
     id              選填字串，原樣放進結果（沒寫＝TARGET 的 id；從 stdin 來又沒寫＝null）
 
-布林 key 沒寫＝false。
+沒寫的串流一律接 /dev/null。布林 key 沒寫＝false。
 
 JSON 只寫跟呼叫者不一樣的地方，其他一律從 aos_inst 本身繼承：子程式留在 aos_inst 的行程群組與 session，
 終端機的 Ctrl-C、`timeout` 指令這類整群送的訊號，子程式和 aos_inst 一起收到。
@@ -55,7 +58,9 @@ from aos_cli import is_int as _int
 
 __all__ = ["FLAGS", "InstError", "dirname", "find", "load", "main", "parse", "run"]
 
-_BOOLS = ("cwd_mkdir", "envs_clear", "stdout_append", "stdout_mkdir", "stderr_append", "stderr_mkdir", "stderr_merge")
+_BOOLS = ("cwd_mkdir", "envs_clear", "stdin_inherit",
+          "stdout_append", "stdout_mkdir", "stdout_inherit",
+          "stderr_append", "stderr_mkdir", "stderr_inherit", "stderr_merge")
 
 
 class InstError(CliError):
@@ -110,10 +115,11 @@ def load(target):
     return parse(doc, os.getcwd(), ident)
 
 
-def parse(doc, base_dir, ident="<input>", at=()):
+def parse(doc, base_dir, ident="<input>", at=(), piped=False):
     """解指示詞、驗認得的 key，回一個欄位都填好的 dict（路徑都是絕對的，None＝沒寫）。
     `ident`＝doc 從哪來（`load()` 給 inst.json 的 realpath），指示詞的錯誤訊息用它指出是哪份檔。
-    `at`＝inst 在 doc 裡的位置（TARGET 的 `#/位置`；`()`＝整份），指到的那一格要是物件。"""
+    `at`＝inst 在 doc 裡的位置（TARGET 的 `#/位置`；`()`＝整份），指到的那一格要是物件。
+    `piped`＝設定是從 stdin 讀的：`stdin_inherit` 就是 Conflict（N-26）。"""
     base_dir = os.path.abspath(base_dir)
     try:
         doc = resolve(doc, base_dir, ident, at)
@@ -155,8 +161,13 @@ def parse(doc, base_dir, ident="<input>", at=()):
         raise InstError("FieldType", "grace_ms 要是非負整數，不是 %r" % (g,))
     inst["timeout_ms"], inst["grace_ms"] = t, g
 
-    if inst["stderr_merge"] and inst["stderr"] is not None:
-        raise InstError("Conflict", "stderr_merge 不能再寫 stderr")
+    for k in ("stdin", "stdout", "stderr"):
+        if inst[k + "_inherit"] and inst[k] is not None:
+            raise InstError("Conflict", "%s 跟 %s_inherit 只能二選一" % (k, k))
+    if inst["stderr_merge"] and (inst["stderr"] is not None or inst["stderr_inherit"]):
+        raise InstError("Conflict", "stderr_merge 不能再寫 stderr 或 stderr_inherit")
+    if piped and inst["stdin_inherit"]:
+        raise InstError("Conflict", "設定從 stdin 來，stdin_inherit 接不到東西")
     return inst
 
 
@@ -283,7 +294,9 @@ def _stop(child, grace_ms):
 
 
 def _stream(inst, k, opened):
-    """一個串流接哪個檔：沒寫路徑就是 /dev/null。"""
+    """一個串流要接什麼：None＝接呼叫者的；否則開檔（沒寫路徑就是 /dev/null）。"""
+    if inst[k + "_inherit"]:
+        return None
     path = inst[k] or os.devnull
     if k == "stdin":
         f = open(path, "rb")
@@ -301,7 +314,7 @@ def main(argv=None):
         doc, ident, piped, rest = aos_cli.config(args, FLAGS, _file)
         if rest is not None:
             doc["argv"] = rest
-        aos_cli.emit(_run(parse(doc, os.getcwd(), ident or ("<stdin>" if piped else "<input>"))))
+        aos_cli.emit(_run(parse(doc, os.getcwd(), ident or ("<stdin>" if piped else "<input>"), piped=piped)))
         return 0
     except CliError as e:
         aos_cli.error(e.code, e.msg)

@@ -72,7 +72,8 @@ def run_letter(letter):
     try:
         out = side(letter["reply"], "stdout")
         doc = dict(letter, stdout=out, stderr=None if letter.get("stderr_merge") else side(letter["reply"], "stderr"),
-                   stdout_append=False, stdout_mkdir=False, stderr_append=False, stderr_mkdir=False)
+                   stdin_inherit=False, stdout_inherit=False, stdout_append=False, stdout_mkdir=False,
+                   stderr_inherit=False, stderr_append=False, stderr_mkdir=False)
         try:
             result = aos_inst.run(doc)
         except aos_inst.InstError as e:

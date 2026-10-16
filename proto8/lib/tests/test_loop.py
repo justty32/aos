@@ -148,6 +148,9 @@ class LoopTest(Tmp):
         self.assertEqual([(o["run"], o["code"]) for o in out[:2]], [(1, 3), (2, 3)])
         self.assertEqual(out[2], {"end": "done", "runs": 2, "last_code": 3, "signal": None})
         self.assertEqual(self.state("s.state.json")["id"], "me")
+        doc["inst"]["stdin_inherit"] = True                         # N-26：inst 從 stdin 灌，stdin_inherit 不行
+        r = subprocess.run([sys.executable, LOOP, "-"], input=json.dumps(doc), capture_output=True, text=True, cwd=self.tmp)
+        self.assertEqual((r.returncode, self.err(r)), (1, "Conflict"))
 
     def test_inst_error_not_inherited(self):
         # 最後一次 aos_inst 自己出錯：loop 退 1（不沿用 aos_inst 的 127）、stderr 只有 loop 自己那一份錯誤（aos_inst 的不轉，S2）
