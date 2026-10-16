@@ -12,6 +12,13 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-10-16（公司 WSL）
+
+1. **授權**：今天「隨意 push」；在公司 WSL；事情交給子 agent、頂層只交流；需要思考的派 fable。
+2. **使用者叫停 KISS 批次**：撤回 10-15 深夜「都照推薦」、要重看（「我後悔惹QQ，等一下我想要重新看過」）。批次 1 已做可逐項翻案、批次 2～6 暫停 → [kiss/README 開頭註記](../proto8/thinking/2026-10-15-kiss/README.md)。
+3. **C-56 補「KISS 也是最後原則」**：先滿足各類需求與其他原則，最後回頭把多餘的清掉；不拿「最乾淨、規則最少」抄近路 → [10-16 稿](../proto8/thinking/2026-10-16-kiss-last.md)。具體子原則等使用者再說。
+4. **fable 在想 aos-agent 繼承與 agent 當函數**：稿 `proto8/thinking/2026-10-16-agent-inherit.md`（另一位在寫），已否定 args.json／ret.json。
+
 ## 2026-10-15 晚收工（使用者：明早再來）
 
 1. **授權**：當晚「今天可以隨意push」——**明早新 session 照 user.md 重問 push**。事情交給子 agent、頂層只交流；設計思考派 fable，且先通讀 CONCEPTS／NORMS（[proto8 README 規矩](../proto8/README.md)）；交稿頂層先對 N-12、C-48／N-45、C-56 KISS、層徹底切割、少用 sh。**不要一言不合改 workflow／memory**——要寫規矩先問寫哪。
