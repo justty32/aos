@@ -1,6 +1,6 @@
 # 2026-10-15 JSON 格式族：沿用現有幾族、不依賴指示詞
 
-← [討論紀錄](README.md)｜概念：[C-48](../CONCEPTS/01-設計理念.md)｜相關：[N-35 `檔#/位置`](../NORMS/01-總則.md)、[lib directives.md](../lib/directives.md)、[LLM kernel「json 就是這點好」](2026-10-15-llm-kernel.md)
+← [討論紀錄](README.md)｜概念：[C-48](../CONCEPTS/01-設計理念.md)｜相關：[N-35 `檔#/位置`](../NORMS/01-總則.md)、lib directives.md（10-15 深夜 KISS 批次 1 併進 `aos_cli.py`、本檔刪，見 git 歷史 cb20249a）、[LLM kernel「json 就是這點好」](2026-10-15-llm-kernel.md)
 
 ## 原文（10-15，照記）
 
