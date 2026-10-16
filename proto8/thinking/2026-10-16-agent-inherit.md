@@ -710,3 +710,4 @@ aos exec --say work/3 .aos/tools/brush        # stdin＝模型給的 arguments�
 - `--say`（或改名 `--prompt`）只做「stdin → prompt.json」；回答走食譜 inst 的 stdout（`aos agent -` 結束時吐最後一則 assistant 訊息）。第六節 stub 上的 `--say` 同步改。
 - 捷徑的目標是相對的（`../../../brush/.aos`），bob 與 brush 要在同一棵樹下一起搬；拆開搬就斷（`RecipeMissing`，同第六節）。
 - 不變的：零 sh、零指示詞、零絕對路徑、零環境變數；`work/<n>/` 的深度沒人需要知道。
+- **不用 PATH（第七節）**：brush 的地址寫在 bob 食譜裡的相對捷徑（`.aos/tools/brush`）；工具格站在自己廚房叫門房 `aos exec work/<n> .aos/tools/x`；**工具一律做成食譜資料夾**（`date` 也是 `.aos/tools/date/`）（使用者：「可以不使用PATH嗎？」→ 看完第七節：「好!」）。PATH 只留給人在終端用。工具參數走門房的 stdin（第六節兩層版；使用者：「還是不太懂，但感覺OK，就先這樣吧，以後再來搞懂。」）。
