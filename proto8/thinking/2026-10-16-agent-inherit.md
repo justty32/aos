@@ -46,15 +46,16 @@
 
 要你點頭的只有一件：**工具一律是食譜資料夾**（`date` 也放成 `.aos/tools/date/inst.json`），這樣工具格對每個工具都做同一件事。細節、鬆點在第七節。
 
-## 三分鐘看懂（五）：/ws 保持乾淨——frame 與工作區分開，指標＝捷徑（10-16 夜）
+## 三分鐘看懂（五）：/ws 保持乾淨——一般工具站在工作區、agent 工具站在自己的 frame（10-16 夜重想）
 
-一次一件事。你有兩種東西：**工作區**（/ws，你的檔、成品要留在這）和 **frame**（跑的時候才往裡放的：history、fsm 狀態、每次叫工具開的小格）。
+一次一件事。**工作區**＝/ws，你的檔；**frame**＝跑的時候才往裡放東西的資料夾（history、狀態、每次叫工具開的小格）。
 
-- **站在 frame，不站在工作區**：bob 跑在 `../bob1/` 這種 frame 裡，`.aos` 捷徑、history、`calls/1/`…全在那裡；/ws 一個字都不多。
-- **工作區變成一個指標**：frame 裡一條捷徑 `ws → /ws`（你定的「指標＝捷徑」）。要寫成品就寫 `ws/now.py`，就落在 /ws。
-- **工具要碰工作區，得呼叫方遞指標**：工具在自己的簽名寫「我要 `ws`」，bob 的工具格才在它的小格 `calls/1/` 放一條 `ws → ../../ws`；沒寫就拿不到。能不能寫，看 /ws 的 Linux 權限。
+- bob 站在 frame（例 `/bob1/`）跑；frame 裡兩條捷徑：`.aos → 定義`、`ws → /ws`。/ws 一個字都不多。
+- 每次叫工具，工具格開一個小格 `calls/1/`，裡面也放一條 `ws → ../../ws`，每個工具都一樣，工具格不問對方是誰。
+- **一般工具（write、date）站在工作區**：它的 inst 裡有一行 `"cwd": "ws"`——aos 給的工具範本本來就寫好這行，設計者不用想；寫 `now.py` 就是 `/ws/now.py`。
+- **agent 工具（brush）站在自己的小格**：它的入口不寫 cwd，照 inst 本來的規矩就站在小格＝它的 frame，history 記在那；要碰工作區走 `ws/…`，它的工具再往下也是同一個 /ws。
 
-要你點頭的兩件：**①frame 與工作區分開、工作區＝frame 裡的 `ws` 捷徑**；**②工具在簽名（`_tool`）寫 `"ws": true` 才拿得到指標**。細節在第八節。
+要你點頭的兩件：**①「預設站哪」只靠工具自己入口那一行字（有 `cwd: ws`＝工作區、沒有＝自己的 frame），工具格與門房一律同一個動作**；**②那一行由範本給，不是門房或 inst 偷改預設**（偷改＝同一份 inst 在不同地方跑會不一樣，是暗規則）。細節在第八節 3。
 
 ## 一、使用者原話（10-16，整理版）
 
@@ -442,10 +443,10 @@ WD 讓「不 cd、在呼叫者的廚房工作」有了一個明寫的位置，�
 18. **推廣到所有東西＋瘦身**：任何「定義＋這次在哪做」都是「`.aos/` 食譜＋廚房」、一律 `aos exec WD TARGET`；N-35 改成「檔＝所在資料夾、資料夾＝自己、掛到 WD/.aos」；刪 `AOS_DIRNAME`、exec 的 `檔#/位置`、`aos agent TARGET` 入口；C-50 改成「食譜＝一個 .aos/ 資料夾」。**推薦：是（第六節 4、5）。** 後果：一招記一次；C-50「JSON 是正本」那句反過來。
 19. **不用 PATH：地址放在呼叫者食譜的 `.aos/tools/<名>`（相對捷徑），工具格站在廚房叫門房 `aos exec work/<n> .aos/tools/<名>`；工具一律是食譜資料夾、`tools.json` 退場。** **推薦：是（第七節 2）。** 後果：工具格依賴 exec 的掛與透明轉交；inline 工具搬成資料夾；PATH 只留給人打指令。
 20. **`--say` 只做「stdin → 廚房 prompt.json」（可改名 `--prompt`），回答走食譜 inst 的 stdout（`aos agent -` 結束時吐最後一則 assistant 訊息）。** **推薦：是（第七節 3 的 (a)）。** 理由：一條規則 `date` 與 agent 都通；(b) 看檔案內容決定要不要 say 是暗規則。後果：第六節 stub 的旗標同步改；17 的「印回答」那半句移到 `aos agent -`。
-21. **frame 與工作區分開**：站在 frame 跑（`.aos`、history、狀態、`calls/<n>/` 都在 frame），工作區＝frame 裡的捷徑 `ws`（init 第三個引數）；N-47～N-50 的「工作區（cwd）」改叫 frame。**推薦：是（第八節 1～2）。** 後果：/ws 零殘留；`work/<n>` 改成 frame 的 `calls/<n>`；詞要換。
-22. **工具要碰工作區＝簽名 `_tool` 寫 `"ws": true`，呼叫方才在小格放 `ws → ../../ws`；唯讀靠 Linux 權限。** **推薦：是（第八節 3）。** 後果：預設碰不到工作區；基礎實作不做身分切換。
-23. **入口含 loop、回答靠入口最後一步 say**：定義的 `inst.json`＝`seq(run: loop 拍 agent.json, say: 印 history 最後一則)`，agent.json 不含 loop（N-53）；`--say` 旗標刪、`--prompt` 留；frame 一個資料夾兼 stack／heap、共用記憶之後再加 `mem` 捷徑。**推薦：是（第八節 5、6）。** 後果：待定「agent 當工具誰包 loop」結案＝入口包；20 的 (a) 作廢。
-
+21. **frame 與工作區分開**：站在 frame 跑（`.aos`、history、狀態、`calls/<n>/` 都在 frame），frame 裡固定兩條捷徑 `.aos`、`ws`；frame 的位置由叫的人指定（`aos init FRAME 定義 工作區`）；規範的「工作區（cwd）」改叫 frame。**推薦：是（第八節 1～2）。** 後果：/ws 零殘留；`work/<n>` 改成 `calls/<n>`；詞要換。
+22. **每個小格都放 `ws → ../../ws`（工具格一律同一個動作、不問對方是誰）；「預設站哪」只靠工具自己入口那一行：一般工具的 inst.json 寫 `"cwd": "ws"`（範本給），agent 的入口不寫＝站自己的 frame；能不能寫＝/ws 的 Linux 權限。** 門房、inst 的「沒寫 cwd＝叫的人站的地方」不偷改（偷改＝暗規則）。**推薦：是（第八節 3；使用者「默認 ws 是工具的 cwd」「brush 默認自己的 frame」「風險設計者自管」）。** 後果：站在 ws 的工具只能是 argv 程式＋stdin 那種；多深都是同一個 ws。
+23. **參數與回答都不經門房旗標**：工具格把 arguments 放成小格的 `prompt.json`＋照 N-27 餵 stdin；回答靠定義入口最後一步 `say`（入口＝`seq(run: loop 拍 agent.json, say)`，agent.json 不含 loop，N-53）；門房只剩掛與跑。**推薦：是（第八節 3）。** 後果：`--prompt`／`--say` 不要；待定「agent 當工具誰包 loop」結案＝入口包；20 作廢。
+24. **frame 指到哪是呼叫方的自由（概念層一句）**：frame＝ws 也合法（`ws` 掛成 `ws → .`，`.aos` 與狀態都落進 ws，呼叫方自負）；共用 frame＝共享記憶；tmpfs＝用完即丟；長期保留＝續聊；唯讀給別人看＝可審視（C-64）。**推薦：寫成概念條（第八節 3b）。** 後果：規則不加，只有捷徑指向。
 ## 四、使用者決定（10-16）
 
 - 正規參數入口是 stdin，`aos agent 路徑`、`aos-exec WD TARGET` 這類 argv 寫法都是語法糖（使用者：「argv:[aos,agent,agents/brush]，其實，我一直覺得argv這塊的用法...就像我早期說的，正規參數入口就是stdin，像是aos-exec WD TARGET這個用法是語法糖...」）。
@@ -460,6 +461,8 @@ WD 讓「不 cd、在呼叫者的廚房工作」有了一個明寫的位置，�
 - **agent 是被外面驅動的狀態機、定義不含 loop、連錯不數**（10-16，在 [KISS 重審拍板 4](2026-10-16-kiss-recheck.md#使用者拍板10-16) 定）：使用者：「agent的定義就是一個狀態機，至於這個狀態機怎麼跑、由誰跑，都無所謂。這是概念。但是我們的規範會說，為了讓agent方便審視自己，所以agent就是一個被人驅動的狀態機，需要外面有人用loop驅動他。」所以本稿第二節 3.5 第 4、5 步、3.6、拍板點 7、第七節 3 裡「`aos agent -` 自己一拍一拍跑到 end（才吐回答）」**不採用**：`aos agent` 每次被叫只走一拍，由外面的 loop 驅動（落成 C-62、N-53）。
 
 - **指標＝捷徑**（10-16 夜，第八節之前定）：工具要影響呼叫者的工作區，像 C 函數影響外部變數一樣要透過指標——由呼叫方遞一條指向工作區的捷徑進去，不是工具自己伸手出去；能不能寫由 Linux 權限管（C-64）。（使用者：「除此之外，C語言函數想要影響外部變數，那也是透過指標」→ 頂層問「指標＝一條指向工作區的捷徑？」→「那就是捷徑」）。名字、放哪、誰掛、唯讀怎麼表達是第八節的提案，還沒定。
+- **一般工具預設站在工作區、agent 工具預設站在自己的 frame**（10-16 夜，看了第八節第一版後）：「還要『端菜』，我還以為就是直接把ws當作工具指令的cwd呢」→ 頂層：工具的 inst 自己寫 `"cwd": "ws"` →「對，我覺得這樣會更方便。風險就設計者自己管控」；再補：「我是覺得不用『遞』，而是就是默認true，默認ws就是工具的cwd...可以嗎？」「同樣用捷徑？」「brush這種agent工具，那就是他的cwd默認是他自己的frame。」→ 第八節重想（兩種預設各寫在哪見第八節 3）。
+- **frame 指到哪是呼叫方的自由**（10-16 夜）：「只是我們可以偷偷把它的frame設成ws」「我們可以自由管控他的frame要在哪裡，從而達到各種神奇效果」——frame 放哪由呼叫方決定、agent 不知道也不必知道（C-52）；指到 ws 也合法（代價：history、狀態、`.aos` 都落進 ws，ws 不再乾淨、可能撞名，是呼叫方自己的選擇）；這是概念層刻意保留的自由度，例子與邊緣見第八節 3b。
 - 同時說的（原話，第八節要處理）：「我記得先前還有一個叫做frame的概念，也就是agent當函數，函數運行時候的heap(還是stack?反正就是運行時才會往其中放資料的)，可以指定某個資料夾當heap。用捷徑也不錯。然後我不喜歡/ws底下出現一個work/，這太突兀了，工作區會變得不乾淨。」
 ## 五、自然組合的機制（找）（10-16 夜，AI 提案）
 
@@ -732,33 +735,36 @@ aos exec --say work/3 .aos/tools/brush        # stdin＝模型給的 arguments�
 - 捷徑的目標是相對的（`../../../brush/.aos`），bob 與 brush 要在同一棵樹下一起搬；拆開搬就斷（`RecipeMissing`，同第六節）。
 - 不變的：零 sh、零指示詞、零絕對路徑、零環境變數；`work/<n>/` 的深度沒人需要知道。
 
-## 八、工作區與 frame 分開（10-16 夜，AI 提案；「指標＝捷徑」已定）
+## 八、工作區與 frame 分開（10-16 夜重想，AI 提案；「指標＝捷徑」「工具可直接 cwd: ws、風險設計者自管」已定）
 
 ### 0. 使用者原話（10-16 夜，整理版）
 
 「交給 Fable 把幾種方向走一遍。然後我記得先前還有一個叫做 frame 的概念，也就是 agent 當函數，函數運行時候的 heap（還是 stack？反正就是運行時才會往其中放資料的），可以指定某個資料夾當 heap。用捷徑也不錯。然後我不喜歡 /ws 底下出現一個 work/，這太突兀了，工作區會變得不乾淨。」
 
-「除此之外，C 語言函數想要影響外部變數，那也是透過指標。」→ 頂層：指標＝一條指向工作區的捷徑，給不給、能不能寫由呼叫方與權限決定 →「那就是捷徑」（已定）。
+「除此之外，C 語言函數想要影響外部變數，那也是透過指標。」→「那就是捷徑」（已定：指標＝一條指向工作區的捷徑）。
 
-題目：/ws 是使用者的資料夾，叫 bob「幫我在這個資料夾寫一個 python 腳本」，`now.py` 要落在 /ws，不是 /ws/work/1/；而且 /ws 不能被弄髒。本節照今天全部定案走：stdin 只放定義（C-58）、捷徑接定義（C-59）、門房（C-60）、工具＝定義資料夾、地址在呼叫者定義裡（C-61）、agent 一次一拍由外面 loop 驅動（N-53）、SIGTERM 優雅收工（N-52）、結果看 JSON（C-63）、權限借 Linux（C-64）。
+看了第一版第八節後：「還要『端菜』，我還以為就是直接把 ws 當作工具指令的 cwd 呢」→ 頂層：工具的 inst 自己寫 `"cwd": "ws"` →「對，我覺得這樣會更方便。風險就設計者自己管控」「讓 Fable 重新思考」。再補：「我是覺得不用『遞』，而是就是默認 true，默認 ws 就是工具的 cwd……可以嗎？」「同樣用捷徑？」「brush 這種 agent 工具，那就是他的 cwd 默認是他自己的 frame。」「只是我們可以偷偷把它的 frame 設成 ws」「我們可以自由管控他的 frame 要在哪裡，從而達到各種神奇效果」
 
-### 1. 先把兩個東西分開講
+題目：/ws 是使用者的資料夾，叫 bob「幫我在這個資料夾寫一個 python 腳本」，`now.py` 要落在 /ws；/ws 不能被弄髒。照今天全部定案：stdin 只放定義（C-58）、捷徑接定義（C-59）、門房（C-60）、工具＝定義資料夾、地址在呼叫者定義裡（C-61）、agent 一次一拍由外面 loop 驅動（N-53）、SIGTERM 優雅收工（N-52）、結果看 JSON（C-63）、權限借 Linux（C-64）。
+
+### 1. 兩個東西、兩條捷徑
 
 | | 工作區 | frame |
 |---|---|---|
-| 是什麼 | 使用者的檔、成品要留的地方（/ws） | 跑的時候才往裡放東西的地方：history.json、fsm/state.json、loop 的窗、每次叫工具開的小格 |
-| 誰決定在哪 | 使用者站的地方 | 呼叫方指定（「可以指定某個資料夾當 heap」） |
-| 跟 C 比 | 外部變數 | 函數的 stack frame（＋這次呼叫留下的 heap） |
-| 跟現行規範的對應 | **新詞**（N-47～N-50 裡的「工作區」其實是 cwd、也就是這裡的 frame，詞要換，見 7） | N-47～N-50 說的「工作區（cwd）」 |
+| 是什麼 | 使用者的檔、成品要留的地方（/ws） | 跑的時候才往裡放的：history.json、fsm/state.json、loop 的窗、每次叫工具開的小格 `calls/<n>/` |
+| 誰決定在哪 | 使用者站的地方 | 叫的人指定（「可以指定某個資料夾當 heap」） |
+| 跟 C 比 | 外部變數 | 函數跑起來的 stack frame（續聊＝同一個 frame 再跑；要忘記＝換一個） |
 
-一句話：**站在 frame 跑；工作區是 frame 裡的一條捷徑 `ws`，像 C 傳進來的指標。**
+**站在 frame 跑。frame 裡固定兩條捷徑：`.aos`＝我的定義，`ws`＝我被遞進來的工作區。** 想在工作區做事的 inst 寫 `"cwd": "ws"`（inst 現成的 key，從 frame 算，就是那條捷徑），它就真的站在 /ws 跑；不寫就站在 frame。
 
 ### 2. 走一遍：/ws＋bob＋write＋brush
 
 ```
 /agents/
   bob/.aos/
-    inst.json     {"argv": ["aos", "loop", "-"], "stdin": ".aos/loop.json"}          ← 入口：用 loop 一拍一拍拍 agent.json（N-53）
+    inst.json     {"argv": ["aos", "seq", ".aos/run", ".aos/say"]}            ← 入口：跑到底、再把回答印出來
+    run/inst.json {"argv": ["aos", "loop", "-"], "stdin": ".aos/loop.json"}  ← loop 一拍一拍拍 agent.json（N-53：定義不含 loop，入口含）
+    say/inst.json {"argv": ["aos", "agent", "say"], "stdout": "/dev/stdout"} ← 印 history 最後一則 assistant 訊息
     loop.json     {"inst": {"argv": ["aos", "agent", "-"], "stdin": ".aos/agent.json"},
                    "times": 30, "stop_on_end": true, "ctl": "loop/ctl.json", "state": "loop/state.json"}
     agent.json    {"start": "intake", "state": "fsm/state.json", "end": ["done"],
@@ -766,87 +772,97 @@ aos exec --say work/3 .aos/tools/brush        # stdin＝模型給的 arguments�
                               "think":  {"argv": ["aos", "agent", "think"], "stdin": ".aos/think.json"},
                               "tool":   {"val": {"argv": ["aos", "agent", "tool"], "stdin": ".aos/think.json"}, "next": "think"}}}
     think.json    {"brain": {"argv": ["aos", "brain", "openai", "--model", "gpt-x"]},
-                   "system": "使用者的工作區在 ws/。要寫檔就寫到 ws/ 底下。", "tools": ".aos/tools"}
+                   "system": "你在使用者的資料夾裡幫忙。", "tools": ".aos/tools"}
     tools/
-      write/      inst.json  {"argv": ["python3", ".aos/write.py"], "stdin": "prompt.json",
-                              "_tool": {"description": "把 content 寫成工作區裡的 path", "parameters": {…path, content…}, "ws": true}}
-                  write.py   （讀 prompt.json 的 {path, content}，寫到 ws/<path>）
-      brush → ../../../brush/.aos                                                    ← 另一個 agent（它的 _tool 不寫 ws）
-  brush/.aos/     inst.json  loop.json  agent.json  …  say 見 6
+      write/inst.json  {"argv": ["aos", "write"], "cwd": "ws", "stdin": "/dev/stdin",
+                        "_tool": {"description": "把 content 寫成檔 path（相對於使用者的資料夾）", "parameters": {…path, content…}}}
+      brush → ../../../brush/.aos                                             ← 另一個 agent
+  brush/.aos/     inst.json（同樣 seq run＋say） loop.json agent.json … tools/palette/
 
-/ws/              ← 工作區：使用者站的地方。跑完只多一個 now.py，沒有任何隱藏檔
-/bob1/            ← frame：呼叫方指定的資料夾
-  .aos → /agents/bob/.aos         ← 定義（C-59）
-  ws   → /ws                      ← 指標（已定：指標＝捷徑）
+/ws/              ← 工作區。跑完只多一個 now.py
+/bob1/            ← frame（叫的人指定）
+  .aos → /agents/bob/.aos
+  ws   → /ws
   prompt.json  history.json  fsm/state.json  loop/ctl.json  loop/state.json
-  calls/1/                        ← 叫 write 時開的小格（原 work/<n>，搬進 frame、改名 calls）
-    .aos → /agents/bob/.aos/tools/write   ← 門房掛的（解捷徑後）
-    ws   → ../../ws                       ← 工具格遞的指標（write 的簽名寫了 ws: true）
-    prompt.json                           ← 門房 --prompt 放的參數 {path: "now.py", content: "…"}
-  calls/2/                        ← 叫 brush 時開的小格；brush 沒要 ws，就沒有 ws
-    .aos → /agents/brush/.aos  prompt.json  history.json  fsm/  loop/  calls/…
+  calls/1/                             ← 叫 write 的小格
+    .aos → /agents/bob/.aos/tools/write     門房掛的（解捷徑後）
+    ws   → ../../ws                         工具格放的，每個小格都有
+    prompt.json                             工具格放的參數 {"path": "now.py", "content": "…"}
+  calls/2/                             ← 叫 brush 的小格：brush 自己的 frame
+    .aos → /agents/brush/.aos   ws → ../../ws   prompt.json  history.json  fsm/  loop/  calls/1/（ws → ../../ws …）
 ```
 
-指令（使用者站在 /ws）：
+使用者（站在 /ws）：
 
 ```
-$ cd /ws
-$ aos init /bob1 /agents/bob/.aos .        # 建 frame：.aos → 定義、ws → .（第三個引數就是指標，寫什麼掛什麼）
+$ aos init /bob1 /agents/bob/.aos .      # 建 frame：.aos → 定義、ws → .（寫什麼掛什麼）
 $ echo '"幫我在這個資料夾寫一個印現在時間的 python 腳本 now.py"' > /bob1/prompt.json
-$ aos exec /bob1 .aos                      # 站進 frame，跑 .aos/inst.json（＝loop 拍 agent，走到 end 停）
+$ aos exec /bob1 .aos                    # 站進 frame、跑入口：loop 拍到 end，再 say
+{"role": "assistant", "content": "寫好了，/ws/now.py。"}
 $ ls /ws
-now.py                                     # 成品在工作區；frame 裡才有 history、狀態、calls/
+now.py
 ```
 
-bob 裡面那一拍叫工具時（tool 格站在 /bob1）：
+bob 的工具格（站在 /bob1）每次叫工具都做同樣三件事：
 
 ```
-mkdir calls/1
-ln -s ../../ws calls/1/ws                  # 只因 write 的 _tool 寫了 "ws": true；brush 沒寫就不放
-aos exec --prompt calls/1 .aos/tools/write # stdin＝模型給的 arguments → 門房放成 calls/1/prompt.json；門房掛 .aos、跑 inst.json
+mkdir calls/1；ln -s ../../ws calls/1/ws；把 arguments 寫成 calls/1/prompt.json
+aos exec calls/1 .aos/tools/write      # stdin＝同一份 arguments（N-27）；門房掛 .aos、跑 inst.json；stdout 最後一份＝結果
 ```
 
-write.py 站在 calls/1，寫 `ws/now.py` → 順著捷徑落在 /ws/now.py。它不知道 /ws 在哪、不知道 bob、不知道自己在第幾層。
+- `write` 的 inst 寫了 `"cwd": "ws"`：`aos write` 站在 /ws 跑，從 stdin 讀 `{path, content}`、寫 `now.py`→`/ws/now.py`。它不知道 /ws 在哪、不知道 bob、不知道自己第幾層。
+- `brush` 的 inst 沒寫 `cwd`：站在自己的小格 `calls/2/`（＝它的 frame），intake 讀 `prompt.json`；它的工具格再開 `calls/2/calls/1/`、放 `ws → ../../ws`——一路相對捷徑接回 /ws。每一層只知道「我的 frame 裡有 `ws`」。
 
-### 3. 指標的細節（已定「指標＝捷徑」，以下是提案）
+### 3. 兩種「預設」寫在哪，才不是暗規則
 
-- **叫什麼**：`ws`（工作區；縮寫表已收 WD，`ws` 是給檔名用的小寫版，要不要進 abbr.json 另拍）。一個名字全體系通用（C-54）：人站的那層、agent 的 frame、工具的小格，裡面都叫 `ws`。
-- **放哪**：frame 的最上層（跟 `.aos` 並排）。每個 frame 兩條捷徑：`.aos`＝我的定義、`ws`＝我被允許碰的外部資料夾。`ls -la` 一眼看完。
-- **誰掛**：**呼叫方**。人叫 bob＝`aos init` 的第三個引數；bob 叫工具＝工具格在小格裡放 `ws → ../../ws`（相對，指回自己 frame 的 `ws`，再順著它到 /ws；frame 整個搬走也不斷）。工具自己不掛、不伸手（C-52：指標是傳進來的，不是抓來的）。
-- **給不給**：看被叫者的**簽名**——工具的 `_tool` 多一個 `"ws": true`。`_tool` 本來就是工具格會讀的簽名（說明、參數），這裡多宣告「我收一個指標」；沒寫＝不給＝碰不到工作區（預設安全）。寫什麼就做什麼：簽名寫了才傳。brush 這種子 agent 要不要收 `ws`，看它的 `_tool`，收了就在它的 frame 裡叫 `ws`，它再往下遞不遞是它的事。
-- **唯讀怎麼表達**：捷徑本身管不了讀寫，這正是 C-64 說的「借 Linux 權限」：/ws 的權限（擁有者、群組、模式）決定誰能寫；要讓某個工具只能讀＝讓它以沒有寫權限的身分跑（uid／gid，daemon 那層的事，C-04），或把 /ws 設成那個身分只讀。基礎實作：不做身分切換，指標＝可寫，想保護就 `chmod`。另一種表達——指標名字帶上唯讀（例 `ws_ro`）——只是標籤、沒人強制，不採。
-- **巢狀**：`calls/2/`（brush）裡若有 `ws → ../../ws`，brush 再叫它的工具就是 `calls/2/calls/1/ws → ../../ws`，一路相對捷徑接回 /ws。每一層只看自己的 `ws`。
+使用者要的：一般工具**預設**站在工作區（cwd＝ws），不用遞、不用 `"ws": true`；agent 工具（brush）**預設**站在自己的 frame；最好「同樣用捷徑」做到。照實說：
 
-### 4. 頂層四個方向怎麼樣
+- **可以**：「站在工作區」這件事靠的就是捷徑——每個小格裡那條 `ws → ../../ws`，工具格對每個工具都放、不問對方是誰（C-52）。有了它，`"cwd": "ws"` 這一行在任何小格、任何深度都指到同一個 /ws。
+- **不行的部分**：「檔案裡連那一行都不出現、工具卻站在 ws」做不到——inst 的規矩是「沒寫 `cwd`＝站在叫它的人站的地方」，門房站在小格，所以沒寫就是小格。要讓沒寫的變成 ws，只剩兩條路，兩條都是暗規則：(a) 門房「沒寫 cwd 就改站 ws」——同一份 inst.json 用 `aos inst` 跑和用 `aos exec` 跑會站在不同地方；(b) 工具格看對方是不是 agent 再決定——C-52 不准看。
+- **所以「預設」落在工具自己的入口那一行**：一般工具的 inst.json 寫 `"cwd": "ws"`，agent 的入口不寫。**「默認」由範本提供**：aos 自帶的工具（`aos write`…）與工具範本本來就寫好這行，設計者抄範本就不用想；agent 範本沒這行，brush 自然站在自己的小格。寫什麼就做什麼：那一行在檔案裡看得到，工具格與門房對每個工具做的事一模一樣。
+- **brush（agent 工具）**：入口 `inst.json`（seq run＋say）沒寫 cwd → 站在小格 `calls/2/`＝它的 frame；history、fsm 狀態都記在那；它的 frame 裡本來就有工具格放的 `ws → ../../ws`，所以它要碰工作區走 `ws/…`，它再叫 `write` 時，`calls/2/calls/1/ws → ../../ws` 又接回同一個 /ws。**巢狀多深，ws 都是同一個**，沒有人需要知道深度。
+- **不想碰工作區的一般工具**：不寫 `cwd`（站在自己的小格）；或寫別的。只有兩種寫法：有 `cwd: ws`＝工作區、沒有＝自己的小格。
+- **站在 ws 的工具拿不到自己的 `.aos/`**（`.aos/x` 從 /ws 算就不在）：所以站在 ws 的工具＝靠 argv 程式＋stdin 的那種（`aos write`、`date`、`git`…）；要帶自己的檔就留在小格、寫 `ws/…`。
+- **其餘跟著變簡單**：`_tool` 的 `"ws": true` 簽名不要；門房的 `--prompt`／`--say` 不要（參數＝工具格放小格的 `prompt.json`＋照 N-27 餵 stdin；回答＝定義入口最後一步 `say`，exec 的 stdout 透明轉交）；呼叫方不必知道要不要遞——永遠放 `ws`；frame 放哪＝叫的人指定（`aos init FRAME 定義 工作區`）；/ws 零殘留（frame 別放在 /ws 裡）。
 
-| 方向 | 判 |
-|---|---|
-| ① 小格開一扇門 `work/1/up → /ws` | **就是指標**，只改兩處：門指向**工作區**不是指向呼叫者的 frame（C-52：工具不該看到 bob 的 history），名字叫 `ws`、放在小格最上層；而且只在簽名要了才開 |
-| ② 工具在小格做完、bob 搬成品出來 | 純函數的做法：單一成品走 stdout 回來（N-12）還行；「幫我在這個資料夾寫腳本」這種要改外部的，等於 bob 還要多一個「搬檔」工具、還得知道路徑——那就是 C 裡沒有指標只能靠回傳值，做得到但彆扭。不當主路，但「不收 `ws` 的工具」自然就是這種 |
-| ③ 工具 inst 自己寫 `"cwd": "../.."` | 工具自己伸手出去、還寫死深度；違反「指標是傳進來的」。不採 |
-| ④ 一行指令類工具不開小格、不用定義 | 兩種工具兩套做法＝工具格要看工具是哪種（暗規則）。不採；開小格的代價只是 mkdir＋一條捷徑 |
+### 3b. frame 指到哪是呼叫方的自由（概念層的一句）
 
-### 5. stack 還是 heap：frame 要不要再拆
+frame 放哪由叫的人決定，被叫的 agent 不知道也不必知道（C-52）——這是刻意留下的自由度：**「frame 在哪」只是一條捷徑的指向**，改指向就得到不同效果，規則一條都不用加。例子與各自的邊緣：
 
-- **stack**＝每次呼叫一層、結束收掉（fsm/state、loop 的窗、`calls/<n>/`）；**heap**＝跨呼叫留著（history.json）。
-- 兩個選項：(a) **一個資料夾兩者都裝**（本節的 frame）：要續聊＝指同一個 frame 再跑；要忘記＝換一個 frame；`calls/` 會堆，刪 frame 就清。(b) 拆成兩個：frame 裡再放一條捷徑 `mem → /somewhere/bob-memory`，history 放那邊，frame 可丟、記憶留著；多個 frame 能共用同一份記憶。
-- **推薦 (a)**，(b) 之後要「同一個 bob 在很多 frame 裡共用記憶」時再加——加法只是多一條捷徑，不動任何規則（跟 `ws` 同一招）。這就是 KISS 最後一步：現在用不到就不開。
+| 怎麼指 | 效果 | 邊緣 |
+|---|---|---|
+| **frame＝ws**（叫 brush 時小格就做成指向工作區的捷徑，或人直接 `aos init /ws /agents/bob/.aos /ws`） | agent 直接在使用者的資料夾裡跑，history、狀態留在那裡，像「就地辦公」 | `.aos`、`ws`、`prompt.json`、`history.json`、`fsm/`、`loop/`、`calls/` 全落進 /ws——ws 不再乾淨；跟使用者同名的檔會撞（例使用者自己有 `history.json`）。frame 裡那條 `ws` 要不要有：**要**，掛成 `ws → .`（指回自己），這樣它底下工具的 `../../ws` 照樣接得上，規則不變。這些都是呼叫方自己的選擇與風險 |
+| **兩個 agent 共用一個 frame** | 共享 history＝共享記憶、接力辦同一件事 | 兩個同時跑會互寫 history、fsm 狀態撞窗（N-39 不防護）；一個跑完換另一個才安全。`.aos` 只能指一份定義，兩個 agent 定義不同就得其中一個不經門房、或各自小格 |
+| **frame 放 tmpfs／暫存目錄** | 用完即丟、不留痕跡 | 當機就沒了（想復原的別放這） |
+| **frame 長期保留** | 下次指同一個 frame＝接著聊 | `calls/` 會一直堆，要自己清 |
+| **frame 放在別人唯讀能看的地方**（C-64：擁有者可寫、群組只讀） | 旁人（人、kernel、另一個 agent）隨時能審視它的 history 與狀態，而改不了 | 看的人要遵守「只讀」是權限保證的，不是規矩保證的 |
+| **frame 的 `ws` 指到唯讀的資料夾** | agent 只能看不能改那個工作區 | 工具寫檔會失敗、agent 要自己處理那個錯（C-53） |
+| **frame 的 `ws` 指到另一個 agent 的 frame** | 讓 A 去整理 B 的 history（審視、摘要） | 這就是「上層伸手進下層」，刻意用才做；B 同時在跑就會互寫 |
 
-### 6. 跟今天定案的對照，與回答怎麼回去
+一句話：**定義不動、規則不動，只換捷徑的指向**——這就是「資料夾＝空間、捷徑＝指標」帶來的自由（C-30、C-59）。
 
-- **N-53**：agent.json 裡沒有 loop ✓；loop 寫在定義的**入口** `inst.json`（「這份東西怎麼被跑完」）。agent 當工具時誰包 loop（待定）＝入口包，工具格不必知道。這是入口含 loop、定義不含，要使用者點頭。
-- **回答怎麼回**：agent 一次一拍、不會自己印回答；回答在 frame 的 history.json 最後一則（C-58、C-63 結果看 JSON）。工具格要拿回答＝定義的入口自己最後一步 say：`inst.json` 改成 `{"argv": ["aos", "seq", ".aos/run", ".aos/say"]}`，`run/inst.json`＝上面那張 loop，`say/inst.json`＝`{"argv": ["aos", "agent", "say"], "stdout": "/dev/stdout"}`（印 history 最後一則 assistant 訊息）。exec 的 stdout 透明轉交，工具格讀最後一份。沒有旗標、沒有暗規則，是定義自己寫的。（`--say` 旗標不要了；`--prompt` 留：stdin → frame 的 prompt.json。）
-- **N-52**：loop 收到 SIGTERM 優雅收工、退 0；frame 裡的狀態都在，再 exec 同一個 frame 就接著。✓
-- **C-63**：工具格看的是 say 吐的 JSON、不是碼 ✓。**C-64**：指標的讀寫＝/ws 的權限 ✓。
-- **C-52**：工具只看到 `.aos`、`ws`、`prompt.json`，看不到 bob 的 frame ✓。**C-59／C-60／C-61**：捷徑、門房、工具＝定義資料夾、地址在呼叫者定義裡，全部不動 ✓；只把「工作區（cwd）」改叫 frame、`work/<n>` 改成 frame 裡的 `calls/<n>`。
-- **N-45／零絕對路徑**：`aos init` 寫人打的字；工具格寫 `../../ws`；定義裡只有 `.aos/x` 與 `ws/x` ✓。**C-56**：簽名寫了 `ws` 才傳、init 第三個引數寫什麼掛什麼 ✓。
+### 4. 跟今天定案對照
 
-### 7. 鬆掉的條件（誠實）
+- **C-52**：工具只看得到自己小格裡的 `.aos`、`ws`、`prompt.json`；看不到 bob 的 history；bob 不知道工具站哪 ✓。
+- **C-56 寫什麼就做什麼**：`cwd: "ws"` 就是站進去；`init` 三個引數就是三條東西；工具格三件事固定 ✓。沒有簽名、沒有旗標、沒有「有這個才那樣」。
+- **C-64**：指標能不能寫＝/ws 的擁有者／群組／模式；基礎實作不做身分切換，想保護就 `chmod`（使用者：風險設計者自管）✓。
+- **N-53**：agent.json 沒有 loop；loop 在定義的入口 `run/`（「這份東西怎麼被跑完」）。agent 當工具時誰包 loop（待定）＝入口包，工具格不必知道。要使用者點頭。
+- **N-52／C-63**：loop 被 SIGTERM 優雅收工退 0、狀態都在 frame，再 exec 同一個 frame 就接著；回答看 say 吐的 JSON ✓。
+- **C-58／C-59／C-60／C-61**：不動；只把規範裡「工作區（cwd）」改叫 frame、`work/<n>` 改成 frame 裡的 `calls/<n>`。
+- **N-45、零絕對路徑**：定義裡只有 `.aos/x`、`ws`；工具格寫 `../../ws`；init 寫人打的字 ✓。
 
-1. **詞**：N-47～N-50 的「工作區（WD／cwd）」改叫 **frame**；「工作區」留給使用者的成品區（`ws`）。`aos exec WD TARGET` 的 WD 就是 frame。
-2. `aos init FRAME 定義 [工作區]`：第三個引數＝指標；人不再「站在工作區跑」，而是站在工作區、指一個 frame。
-3. 工具格多一件事：讀工具簽名的 `ws`，有就放 `calls/<n>/ws → ../../ws`。
-4. `work/<n>` → frame 裡的 `calls/<n>`（搬家＋改名）。
-5. 定義的入口 `inst.json` 可以含 loop（agent.json 不含）；回答靠入口最後一步 say；`--say` 旗標刪、`--prompt` 留。
-6. 唯讀指標靠 Linux 身分與權限，基礎實作不做身分切換。
-7. frame 一個資料夾兼 stack 與 heap；共用記憶之後再加 `mem` 捷徑。
+### 5. 原第八節哪裡想複雜了（已刪）
+
+- `_tool` 要宣告 `"ws": true` 才「遞」指標——多一條規則，換來的只是「預設碰不到」；使用者說不用遞、風險自管，刪。每個小格都放 `ws`。
+- 門房 `--prompt`、`--say` 兩個旗標——參數本來就是叫的人放進 frame 的，回答本來就是定義自己印的，門房不該管。
+- 唯讀指標要靠 uid／gid 切換——`chmod` 就夠，其餘之後再看。
+- stack／heap 要不要拆、`mem` 捷徑——frame 一個資料夾兼兩者，用得到再加一條捷徑，不動規則；一句帶過即可。
+
+### 6. 鬆掉的條件（誠實）
+
+1. **詞**：N-47～N-50 的「工作區（WD／cwd）」改叫 **frame**；「工作區」留給使用者的資料夾（`ws`）。`aos exec WD TARGET` 的 WD＝frame。
+2. `aos init FRAME 定義 工作區`：人站在工作區、指一個 frame，不再「站在工作區跑」。
+3. 工具格固定三件事：開小格、放 `ws → ../../ws`、放 `prompt.json`（＋照 N-27 餵 stdin）。C-61「由 stub／旗標把參數放進工具的工作區」改成「工具格自己放」。
+4. `work/<n>` → frame 裡的 `calls/<n>`。
+5. 定義的入口 `inst.json` 可以含 loop 與 say（agent.json 不含 loop）。
+6. 站在 ws 的工具拿不到自己的 `.aos/`，只能是 argv 程式＋stdin 那種。
