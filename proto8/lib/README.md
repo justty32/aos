@@ -4,7 +4,7 @@
 
 只用 Python 標準庫。
 
-四支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`、`aos_fsm.py x.json`（PATH 接上 [`../bin`](../bin/aos) 就寫 `aos inst x.json`、`aos agent think` 等指令名，C-50）；相對路徑一律從呼叫者的 cwd 算（fsm 表上的字串格例外：從 fsm 設定檔所在的資料夾算，N-36）。TARGET 都可以接 `檔#/位置`（N-35）。10-15 深夜 KISS 批次 1（[彙整](../thinking/2026-10-15-kiss/README.md)）純刪：exit 檔、`*_inherit`、loop 的 fixed 節奏與三個 ms 旋鈕、ctl 的 `now`、指示詞的 `$at`／相對位置、aos_tree 都沒了。inst、loop、daemon 照 NORMS N-12 重做（10-14），fsm 10-15 照 N-36～N-41 做了基礎實作，LLM kernel（`aos_gate.py`＋`aos_kernel_llm.py`，N-42）與通用 kernel（`aos_kernel_general.py`）10-15 做了基礎實作：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`（N-21～N-27），`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 的 ctl／state 窗與 fsm 的 state 窗必填（N-19）；daemon.json＝loop.json 的超集（N-28）。
+四支程式一個手感：`aos_inst.py x.json`、`aos_loop.py x.json`、`aos_daemon.py x.json`、`aos_fsm.py x.json`（PATH 接上 [`../bin`](../bin/aos) 就寫 `aos inst x.json`、`aos agent think` 等指令名，C-50）；相對路徑一律從呼叫者的 cwd 算（fsm 表上的字串格目前例外：從 fsm 設定檔所在的資料夾算；N-36 10-16 已改成一律從 cwd 算，程式待改）。TARGET 都可以接 `檔#/位置`（N-35）。10-15 深夜 KISS 批次 1（[彙整](../thinking/2026-10-15-kiss/README.md)）純刪：exit 檔、`*_inherit`、loop 的 fixed 節奏與三個 ms 旋鈕、ctl 的 `now`、指示詞的 `$at`／相對位置、aos_tree 都沒了。inst、loop、daemon 照 NORMS N-12 重做（10-14），fsm 10-15 照 N-36～N-41 做了基礎實作，LLM kernel（`aos_gate.py`＋`aos_kernel_llm.py`，N-42）與通用 kernel（`aos_kernel_general.py`）10-15 做了基礎實作：命令列走 `aos_cli`——`[--key 值 ...] [TARGET | -] [-- argv...]`（N-21～N-27），`-`＝設定從 stdin 來，純量 key 有同名旗標；stdout／stderr 吐 JSON 串流。loop、daemon 的 ctl／state 窗與 fsm 的 state 窗必填（N-19）；daemon.json＝loop.json 的超集（N-28）。
 
 ## 細節（各一份）
 
