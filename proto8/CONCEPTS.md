@@ -11,7 +11,7 @@
 
 | 分檔 | 主題 | 條號 |
 |---|---|---|
-| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51～C-56（**C-56 KISS＝最高原則，也是最後原則**；C-52／C-53 兩條總原則；C-54 命名；旁邊的 [abbr.json](CONCEPTS/abbr.json)＝aos 認可縮寫表；C-55 布局成長） |
+| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51～C-56、C-63、C-64（**C-56 KISS＝最高原則，也是最後原則**；C-52／C-53 兩條總原則；C-54 命名；旁邊的 [abbr.json](CONCEPTS/abbr.json)＝aos 認可縮寫表；C-55 布局成長；C-63 結束碼只是參考、C-64 用檔案為了借 Linux 權限） |
 | [02-設計理念-時空.md](CONCEPTS/02-設計理念-時空.md) | 設計理念／時空 | C-05、C-06、C-16、C-17、C-26、C-27、C-30～C-33、C-35、C-37、C-44 |
 | [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、組合子（tasks、fsm）、定義與工作區（食譜與廚房，10-16） | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b、C-49、C-57、C-59、C-60 |
 | [04-kernel.md](CONCEPTS/04-kernel.md) | kernel | C-09～C-15、C-28、C-29、C-38、C-47 |
@@ -62,7 +62,10 @@
 | C-59、C-60 | [基礎設施](CONCEPTS/03-基礎設施.md)（定義與工作區：`.aos` 捷徑、一律 `aos exec 工作區 定義`） |
 | C-61 | [agent](CONCEPTS/05-agent.md)（工具地址不用 PATH、工具＝定義資料夾、參數兩層） |
 | C-62 | [agent](CONCEPTS/05-agent.md)（agent 的定義＝一台狀態機，怎麼跑、由誰跑概念上不管；10-16 KISS 重審拍板 4） |
+| C-63、C-64 | [設計理念](CONCEPTS/01-設計理念.md)（10-16：結束碼只是參考、結果看 JSON；用檔案為了借 Linux 讀寫權限，例 kernel 當某 daemon ctl 的唯一寫者） |
 
 > **10-16 新設計**（[稿 § 四](thinking/2026-10-16-agent-inherit.md#四使用者決定10-16)）：C-57～C-61 新增，C-46（agent 當函數是概念上的，不要 args.json／ret.json／frame.json）、C-50（定義＝一個 `.aos/` 資料夾）改字；正式名詞「定義（食譜）／工作區（廚房）」。**程式還沒改**；AI 提案裡使用者沒點頭的在 [NORMS 待定](NORMS/08-待定.md)。
 >
 > **10-16 KISS 重審五件拍板**（[稿末尾](thinking/2026-10-16-kiss-recheck.md#使用者拍板10-16)）：C-62 新增（agent 就是一台狀態機）；C-36 註 N-10 刪、C-25 註 agent 一次走一拍、C-50 定「定義不含 loop」。規範面見 [NORMS.md](NORMS.md)（N-52～N-54）。
+>
+> **10-16 兩條邊緣的回答**（[thinking](thinking/2026-10-16-exitcode-perm.md)）：C-63 結束碼只是參考（Unix 時代的遺留）、結果與狀態看 JSON；C-64 用檔案是為了能借 Linux 讀寫權限（例 kernel 當某 daemon ctl 的唯一寫者）。
