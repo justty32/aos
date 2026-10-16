@@ -25,7 +25,7 @@
 | 檔 | 是什麼 |
 |---|---|
 | `aos_cli.py` | 命令列與 stdio（`config()`、`parse_argv()`、`load_target()`、`read_stream()`、`emit()`／`error()`、`CliError`、驗設定共用的 `is_int()`、值的雙形收成物件的 `expand(v)`（C-55，gate 的 priority、think 的連錯計數用它））＋`檔#/位置`（`split_target`、`target_id`、`locate`；錯＝`PointerBad`）＋指示詞（`resolve()`：`$ref` 只收「檔#/從根算的位置」、`$env`；錯＝`DirectiveBad`；10-15 深夜從 `aos_directives.py` 併進來）；大家共用，N-12 的程式範本 |
-| `aos_inst.py` | inst：設定從 TARGET／stdin／旗標來、解好、挑認得的 key、跑一次、stdout 吐一份結果（命令列＋`run()`）；資料夾 TARGET 找 `$AOS_DIRNAME/inst.json`（`dirname()`）；沒有 exit 檔、沒有 `*_inherit`（要接呼叫者的寫 `/dev/std*`） |
+| `aos_inst.py` | inst：設定從 TARGET／stdin／旗標來、解好、挑認得的 key、跑一次、stdout 吐一份結果（命令列＋`run()`）；資料夾 TARGET 找 `$AOS_DIRNAME/inst.json`（`dirname()`）；沒有 exit 檔；要接呼叫者的串流寫 `*_inherit: true`（10-16 帶回來，N-26），`/dev/std*` 只是路徑、照字面開 |
 | `aos_loop.py` | loop（`stop_on_end`＝包的 fsm 走到 end 就結束，N-44）：包一個 inst，跑幾次、隔多久（只有「跑完再隔 interval_ms」一種節奏）、每圈讀 ctl 窗、寫 state 窗、stdout 每次一份結果（命令列＋`run()`＋拍引擎 `Loop`＋`check_config()`／`load_config()`）；收身體＝SIGTERM 後等 aos_inst 自己收 |
 | `aos_ctl_state.py` | ctl 窗（`parse_ctl`：`paused`／`stop` 只收布林、`times`／`interval_ms`／`seq`；`want`、`CtlFile`）、state 窗（`STATES`、`state_doc`、`read_state`、`StateFile`，含心跳；ctl 壞檔的原因放 `CtlFile.warning`→state 窗 `last_warning`，state 寫不了放 `StateFile.failed`）、`proc_started`、`require`（窗必填）、`write_json`（資料夾沒有就 makedirs）；loop、daemon 共用 |
 | `aos_proc.py` | 子程序的行程群組：等結束、整群送訊號、收屍（`stop`＝SIGTERM 後等到底、`kill`＝SIGTERM 等 grace 再 SIGKILL、`reap`）；loop、daemon 共用 |

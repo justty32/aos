@@ -6,5 +6,5 @@
     "pipeline/pause",
     "pipeline/retry"
   ],
-  "stderr": "/dev/stderr"
+  "stderr_inherit": true
 }

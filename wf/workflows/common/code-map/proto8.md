@@ -10,7 +10,7 @@
 
 **命令列與共用**：命令列與 stdio 範本 `aos_cli.py`（含驗設定共用的 `is_int()`、值的雙形收成物件的 `expand()`；沒有寫 stderr 的警告，預料到的意外記進各自的窗 `last_warning`；`檔#/位置`＋指示詞（語法糖，`$ref` 只收「檔#/從根算的位置」）10-15 深夜從 `aos_directives.py` 併進來）。
 
-**inst／loop／daemon**：inst `aos_inst.py`（沒有 exit 檔、沒有 `*_inherit`；10-15 深夜 KISS 批次 1）；loop `aos_loop.py`（`stop_on_end`：包的 fsm 走到 end 就結束，N-44；只有「跑完再隔」一種節奏、每圈讀 ctl、收身體＝SIGTERM 後等 aos_inst 自己收）＋共用的 ctl／state `aos_ctl_state.py`（`paused`／`stop` 只收布林）與行程群組 `aos_proc.py`；daemon `aos_daemon.py`（重用 loop 的拍引擎）＋表與策略格 `aos_daemon_table.py`（收子項只看是物件、包 inst.json、填窗，裡面的 loop key 與 inst 不驗，C-52）＋指令與控制資料夾 `aos_daemon_folder.py`。
+**inst／loop／daemon**：inst `aos_inst.py`（沒有 exit 檔，10-15 深夜 KISS 批次 1；`*_inherit` 10-16 帶回來，N-26）；loop `aos_loop.py`（`stop_on_end`：包的 fsm 走到 end 就結束，N-44；只有「跑完再隔」一種節奏、每圈讀 ctl、收身體＝SIGTERM 後等 aos_inst 自己收）＋共用的 ctl／state `aos_ctl_state.py`（`paused`／`stop` 只收布林）與行程群組 `aos_proc.py`；daemon `aos_daemon.py`（重用 loop 的拍引擎）＋表與策略格 `aos_daemon_table.py`（收子項只看是物件、包 inst.json、填窗，裡面的 loop key 與 inst 不驗，C-52）＋指令與控制資料夾 `aos_daemon_folder.py`。
 
 **fsm**：`aos_fsm.py`（只管狀態→格，state 窗只有 phase；格的 stderr 不讀；沒結束的拍自己那行帶 `next: null`，所以外層不必知道某格是 fsm）＋方法表 `aos_methods.py`（跑格：蓋 stdout、不碰 stdin／stderr）。
 

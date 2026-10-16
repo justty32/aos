@@ -5,5 +5,5 @@
     "pipeline/report",
     "pipeline/notify"
   ],
-  "stderr": "/dev/stderr"
+  "stderr_inherit": true
 }

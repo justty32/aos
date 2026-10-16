@@ -124,7 +124,7 @@ def run_one(ctl, n, work, log, id_, title):
         t.join()
     say("   last_code ＝ %s" % (r and r["last_code"]))
     say("   取樣看到最多 %d 支 tasks 程式同時活著：%s" % (len(peak), " → ".join(peak)))
-    say("   log（各層 stderr 寫 /dev/stderr 一路接上來）：")
+    say("   log（各層 stderr 一路 inherit 上來）：")
     show(log, "")
     for name in ("tries", "probe.out", "report.txt", "notify.txt", "summary.txt"):
         show(os.path.join(work, name), name)

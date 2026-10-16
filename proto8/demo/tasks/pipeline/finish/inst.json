@@ -8,5 +8,5 @@
     "$env": "DEMO_WORK"
   },
   "stdout": "summary.txt",
-  "stderr": "/dev/stderr"
+  "stderr_inherit": true
 }

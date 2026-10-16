@@ -57,8 +57,8 @@ class Tasks(Tmp):
                 self.assertEqual(self.cli(prog, *args).returncode, code)
 
     def test_inherited_stdout_does_not_confuse_result(self):
-        # stdout 接呼叫者的（/dev/stdout）：子程式自己的輸出（甚至長得像結果）混在 aos_inst 的 stdout 前面，碼照樣取最後那份結果
-        a = self.inst("a", "echo '{\"code\": 0}'; echo hi; exit 6", stdout="/dev/stdout")
+        # 寫了 stdout_inherit：子程式自己的輸出（甚至長得像結果）混在 aos_inst 的 stdout 前面，碼照樣取最後那份結果
+        a = self.inst("a", "echo '{\"code\": 0}'; echo hi; exit 6", stdout_inherit=True)
         r = self.cli(SEQ, a)
         self.assertEqual((r.returncode, r.stdout, r.stderr), (6, "", ""))
 

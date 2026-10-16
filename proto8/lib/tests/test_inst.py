@@ -68,9 +68,9 @@ class Inst(Tmp):
         self.run_inst("c", "echo deep", stdout="d/e/c.out", stdout_mkdir=True)
         self.assertEqual(self.read("d/e/c.out"), "deep\n")
 
-    def test_dev_streams_inherit(self):
-        # 要接呼叫者的串流就寫 /dev/stdin、/dev/stdout、/dev/stderr（沒有 *_inherit 布林了）
-        r = self.cli("--stdin", "/dev/stdin", "--stdout", "/dev/stdout", "--stderr", "/dev/stderr", "--",
+    def test_streams_inherit(self):
+        # 要接呼叫者的串流就寫 *_inherit: true（N-26；10-16 帶回來，/dev/std* 只是路徑、不特判）
+        r = self.cli("--stdin-inherit", "true", "--stdout-inherit", "true", "--stderr-inherit", "true", "--",
                      "sh", "-c", "read x; echo got $x; echo e >&2", input="hi\n")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stdout.splitlines()[0], "got hi")
@@ -91,6 +91,8 @@ class Inst(Tmp):
 
     def test_errors(self):
         for keys, code in (({"argv": []}, "FieldType"), ({"argv": ["/no/such/prog"]}, "CommandNotFound"),
+                           ({"argv": ["true"], "stdout": "x", "stdout_inherit": True}, "Conflict"),
+                           ({"argv": ["true"], "stderr_inherit": True, "stderr_merge": True}, "Conflict"),
                            ({"argv": ["true"], "stderr": "x", "stderr_merge": True}, "Conflict"),
                            ({"argv": ["true"], "cwd": "/no/such/dir"}, "CwdMissing")):
             with self.subTest(keys=keys), self.assertRaises(aos_inst.InstError) as c:
@@ -149,6 +151,8 @@ class Inst(Tmp):
         self.assertIsNone(json.loads(r.stdout)["id"])                              # stdin 來又沒寫 id＝null
         r = self.cli("--cwd", self.tmp, "--stdout", "d.out", "--", "echo", "hi")
         self.assertEqual((r.returncode, self.read("d.out")), (0, "hi\n"), r.stderr)
+        r = self.cli("-", input='{"argv": ["true"], "stdin_inherit": true}')          # N-26：stdin 已被設定用掉
+        self.assertEqual((r.returncode, self.err(r)), (1, "Conflict"))
         r = self.cli("--nope", "1", "--", "true")
         self.assertEqual((r.returncode, self.err(r)), (1, "FlagUnknown"))
 

@@ -58,7 +58,7 @@ def result(proc, target):
 
 
 def _code(text):
-    """aos_inst 的 stdout → 結果的 code（整數）或 None。結果是最後一行；stdout 接了呼叫者的（/dev/stdout）時前面可能混著
+    """aos_inst 的 stdout → 結果的 code（整數）或 None。結果是最後一行；寫了 stdout_inherit 時前面可能混著
     子程式自己的輸出，所以從最後一行往回找第一份帶整數 `code` 的物件。"""
     for line in reversed(text.splitlines()):
         try:

@@ -74,7 +74,7 @@ def post(box, doc, stdin_text=""):
     rep = os.path.join(box["reply"], name)
     with open(side(rep, "stdin"), "w", encoding="utf-8") as f:
         f.write(stdin_text or "")
-    doc = dict(doc, stdin=side(rep, "stdin"), reply=rep)
+    doc = dict(doc, stdin=side(rep, "stdin"), stdin_inherit=False, reply=rep)
     tmp = os.path.join(box["tmp"], name)
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False)

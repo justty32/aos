@@ -6,5 +6,5 @@
     "pipeline/ok",
     "pipeline/again"
   ],
-  "stderr": "/dev/stderr"
+  "stderr_inherit": true
 }

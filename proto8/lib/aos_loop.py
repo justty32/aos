@@ -14,12 +14,12 @@ loop.json（先解指示詞，基準＝呼叫者的 cwd；只在起來時讀一�
     times          總共跑幾次（非負整數；null＝不限；沒寫＝1）
     interval_ms    跑完隔多久再起下一次（非負整數；沒寫＝0）
     stop_on_end    true＝包的是 aos-fsm（或照它的寫法）時，這次 stdout 裡有 fsm 結束那拍的那行（帶 `"end": true`、`from`、`to`，
-                   N-40）就不再起新的一次、loop 正常結束（end＝"done"）；inst 寫了 stdout 檔就讀這次寫進去的那段，沒寫
-                   ＝loop 每次替它接一個暫存檔、讀完刪掉。沒寫＝false
+                   N-40）就不再起新的一次、loop 正常結束（end＝"done"）；inst 寫了 stdout 檔就讀這次寫進去的那段，沒寫（或
+                   stdout_inherit）＝loop 每次替它接一個暫存檔、讀完刪掉。沒寫＝false
     id             選填字串，state 的 id（沒寫＝LOOP.json 的 realpath（有 `#/位置` 就接上）；從 stdin 來又沒寫＝null）
 
 ctl、state 的相對路徑從呼叫者的 cwd 算。ctl 窗起來時不在沒關係（還沒有控制，之後出現了照樣讀）。
-`inst` 不對（解不開、型別錯）＝起不來，stderr 一份錯誤（代號照 aos_inst 的）、退出 1。
+`inst` 不對（解不開、型別錯、寫了 stdin_inherit）＝起不來，stderr 一份錯誤（代號照 aos_inst 的）、退出 1。
 
 每一次：起子程序 `aos_inst.py -`（自成一個 session），解好的 inst 從 stdin 灌進去 → 等它結束 → 整群補 SIGKILL 清孫程式 → 收屍。
 aos_inst 的退出碼只說它自己：0＝子程式跑完，`last_code`＝它 stdout 那份結果的 code；
@@ -169,7 +169,7 @@ class Loop:
         self.inst = None
         if cfg["inst"] is not None:
             try:
-                aos_inst.parse(cfg["inst"], os.getcwd(), ident or "<stdin>")
+                aos_inst.parse(cfg["inst"], os.getcwd(), ident or "<stdin>", piped=True)
             except aos_inst.InstError as e:
                 raise LoopError(e.code, e.msg)
             self.inst = json.dumps(cfg["inst"]).encode("utf-8")
@@ -221,7 +221,7 @@ class Loop:
             return self.inst
         inst = self.cfg["inst"]
         out = inst.get("stdout")
-        if isinstance(out, str) and out:
+        if isinstance(out, str) and out and not inst.get("stdout_inherit"):
             base = os.path.abspath(inst["cwd"]) if isinstance(inst.get("cwd"), str) else os.getcwd()
             path = os.path.join(base, out)
             try:
@@ -233,7 +233,7 @@ class Loop:
         fd, path = tempfile.mkstemp(prefix="aos-loop-", suffix=".out")
         os.close(fd)
         self.watch = (path, 0, True)
-        doc = dict(inst, stdout=path, stdout_append=False, stdout_mkdir=False)
+        doc = dict(inst, stdout=path, stdout_append=False, stdout_mkdir=False, stdout_inherit=False)
         return json.dumps(doc).encode("utf-8")
 
     def _saw_end(self):

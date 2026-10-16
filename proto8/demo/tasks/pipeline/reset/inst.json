@@ -7,5 +7,5 @@
   "cwd": {
     "$env": "DEMO_WORK"
   },
-  "stderr": "/dev/stderr"
+  "stderr_inherit": true
 }
