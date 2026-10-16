@@ -18,6 +18,15 @@
 
 這三件拍了，下面十幾個拍板點大多就跟著定了（它們只是把這三件事落到各條規範上）。其他——換腦怎麼寫、工具格怎麼跑、loop 放不放定義裡、WD 的三個邊緣——**之後再看**，推薦都寫在第三節，不急。
 
+## 三分鐘看懂（二）：食譜裡的檔互相用相對路徑，站在廚房找不到——怎麼辦（10-16 夜）
+
+你已經定了：stdin 只放食譜、這次的話放廚房。剩下一個卡點：食譜裡的檔互相指（inst.json → agent.json → tools.json）用相對路徑，站在廚房（/ws）就找不到。你不要大檔、不要 `$ref`、不要絕對路徑、不要編譯、不要暗規則。第五節找了四條路，只有兩條走得通，要你決定一件事：
+
+1. **廚房裡放一條捷徑指向食譜**（推薦）：`aos-agent-init . ../agents/bob` 在廚房做一個 `.aos → /agents/bob/.aos` 的 symlink；食譜裡的檔一律寫 `.aos/agent.json`、`.aos/tools.json`，站在廚房就找得到。沒有新規則——「資料夾裡的 `.aos/` 放 inst.json」是 N-35 本來就有的，symlink 是檔案系統本來就有的（Plan 9 的 bind 最便宜的版本）。鬆掉的條件只有一個：aos-agent-init 會在廚房寫**一個**捷徑。
+2. **用繼承來的檔案描述子當廚房的把手**（備案）：aos-exec 把廚房開成 fd 3，整串定義在 /agents/bob 裡一手接一手轉，碰廚房的地方寫 `/dev/fd/3/…`（跟你接受過的 `/dev/stdin` 同一類）。零新檔；但要改一條 inst 現行規矩（stdin 路徑從 aos-inst 站的地方算，像 shell 的重導）、aos-inst 不能關掉繼承的 fd，而且食譜裡會有一堆 `/dev/fd/3`。
+
+其他兩條（每層各寫一次 cwd、環境變數）都在最後一格斷掉或要 `$env`，第五節有走一遍。**要決定的只有：捷徑（1）還是把手（2）。**
+
 ## 一、使用者原話（10-16，整理版）
 
 1. **agent 用 aos-agent，JSON 裡內嵌 aos-fsm 的東西；想想 Lua 的物件導向**：「agent 那塊我有新想法：可以不純用 aos-fsm。就如同 aos loop 是 inst 的擴張——有點類似 Lua 的物件導向繼承方式——我們也可以用 aos-agent，那個 JSON 格式中就是內嵌 aos-fsm 的東西。Lua 的物件導向這塊請 Fable 思考一下，在我們這套 JSON inst 體系下可以怎麼應用。」
@@ -397,9 +406,112 @@ WD 讓「不 cd、在呼叫者的廚房工作」有了一個明寫的位置，�
 11. **定義裡的相對路徑一律從 WD 算**（照 aos-inst 現行規矩；定義要指自己旁邊的檔＝絕對路徑、內嵌、或 `$ref` 載入時攤平）。**推薦：是（二之三 4 的 A）。** 理由：零新規則；B「從定義檔所在算」要分哪些 key 是定義＝暗規則。後果：甲若要在 WD 跑，定義檔互指全寫絕對。
 12. **inst 自己的 `cwd` 從 WD 往下算**（不是 WD 蓋過、不是報錯）。**推薦：是（二之三 4 的 (c)）。** 理由：跟「`cwd` 從呼叫者的 cwd 算」一字不差。後果：無新規則。
 13. **WD 必填**（不設預設 `.`）。**推薦：必填。** 理由：少一條「一個引數時它是 TARGET」的規則、沒有歧義。後果：多打兩個字。
+14. **食譜裡的相對路徑怎麼在廚房成立**：A 廚房掛捷徑 `.aos → 食譜`（食譜自稱 `.aos/x`；`aos-agent-init` 寫一條捷徑）／B 廚房開成 fd 3、碰廚房寫 `/dev/fd/3/…`（改 inst 串流路徑規矩、不關 fd）。**推薦：A（第五節）。** 後果：aos-agent-init 糖；食譜收進 `.aos/`；v4「aos-exec 不寫檔」鬆一格。
+15. **agent 之間怎麼互指**（painter 的工具是 brush）：裝成 PATH 上的指令 stub（位置只在 stub 裡）vs 食譜裡寫相對位置。**推薦：stub（C-50 葉子用指令名的延伸）。** 之後再看。
 
 ## 四、使用者決定（10-16）
 
 - 正規參數入口是 stdin，`aos agent 路徑`、`aos-exec WD TARGET` 這類 argv 寫法都是語法糖（使用者：「argv:[aos,agent,agents/brush]，其實，我一直覺得argv這塊的用法...就像我早期說的，正規參數入口就是stdin，像是aos-exec WD TARGET這個用法是語法糖...」）。
 - **agent 的 stdin 只放一份，這份是食譜（定義）**（使用者：「stdin只放一份，這份要食譜。」）。「這次的話」放哪還沒定。
 - **「這次的話」放在廚房（工作區）裡，使用時指定廚房的位置**；以後可能做類似 aos-exec 的語法糖，例如 `aos-agent-say`、`aos-agent-init`（使用者：「放在廚房裡，然後使用的時候指定廚房的位置。以後可能會做類似aos-exec那樣的語法糖，比如aos-agent-say, aos-agent-init...」）。
+
+## 五、自然組合的機制（找）（10-16 夜，AI 提案）
+
+### 0. 使用者原話（10-16 夜，整理版）
+
+「哇，可是我不想用 `$ref`……」「JSON 大沒關係的基礎，就是因為我們有 `$ref`……我也不想用絕對路徑。我也不想要用小工具編譯，我想要依靠機制自然組合。我也不想用暗規則……」→ 請 Fable 去找那個新機制。
+
+### 1. 題目（使用者給的情境）
+
+```
+/ws/                      ← 廚房，cwd 在這
+  prompt.json             {"role": "user", "content": "幾點？"}
+/agents/bob/              ← 食譜
+  inst.json               {"argv": ["aos", "agent", "-"], "stdin": "agent.json"}
+  agent.json              fsm 形狀；格的 stdin 指 tools.json
+  tools.json              工具（含 shell 工具）
+$ cd /ws && aos-exec . ../agents/bob
+```
+
+卡點：`"stdin": "agent.json"`、`"stdin": "tools.json"` 是從 cwd 算的，站在 /ws 找不到。被否決的：一份大檔、`$ref`、絕對路徑、編譯工具、「定義路徑從所在檔算」（同一個 key 兩種規則）。
+
+要過的關：寫什麼就做什麼（C-56 補充）、零指示詞（N-45）、零絕對路徑、不編譯、每層只管自己（C-52）、少用 sh、stdin 是正規入口（N-12）、stdin 只放食譜（四）。
+
+### 2. 卡點的本質（一句）
+
+在最後真正幹活的那一格（think／tool），**同時**需要兩個地方：食譜（讀 tools.json）和廚房（寫 history、開 work/）。一個行程只有一個 cwd，所以這兩個地方裡一定有一個要靠**別的東西**指到——不是路徑（否決了），就只能是檔案系統或行程本來就有的機制：捷徑（symlink／bind）、繼承的檔案描述子、環境變數。下面四條各走一遍。
+
+### 3. 候選 A：廚房裡掛一條捷徑指向食譜（symlink＝最便宜的 Plan 9 bind）
+
+N-35 本來就說：TARGET 是資料夾時先找 `<資料夾>/.aos/inst.json`。所以把**廚房**當 TARGET，廚房的 `.aos/` 就是食譜——用一條捷徑掛進來：
+
+```
+/agents/bob/.aos/                      ← 食譜搬進 .aos/ 底下（bob/ 本身就是一個示範廚房）
+  inst.json     {"argv": ["aos", "agent", "-"], "stdin": ".aos/agent.json"}
+  agent.json    {"start": "intake", "state": "fsm/state.json", "end": ["done"],
+                 "states": {
+                   "intake": {"val": {"argv": ["aos", "agent", "intake"], "stdin": "prompt.json"}, "next": "think"},
+                   "think":  {"argv": ["aos", "agent", "think"], "stdin": ".aos/tools.json", "timeout_ms": 200000},
+                   "tool":   {"val": {"argv": ["aos", "agent", "tool"], "stdin": ".aos/tools.json"}, "next": "think"}}}
+  tools.json    {"brain": {"argv": ["aos", "brain", "openai", "--model", "gpt-x"]}, "system": "你是 bob…",
+                 "tools": {"date": {"argv": ["date", "+%H:%M"], "_tool": {…}}}}
+
+$ cd /ws
+$ aos-agent-init . ../agents/bob            # ＝ ln -s ../agents/bob/.aos .aos   （語法糖；廚房多一條捷徑，食譜一字不動）
+$ aos-exec . .                              # ＝ aos inst - < .aos/inst.json    （WD＝.、TARGET＝.：廚房就是 TARGET，N-35 找到 .aos/inst.json）
+{"id": …, "code": 0, …}                     # stdout＝N-30 結果；回答在廚房：
+$ cat history.json                           # […, {"role": "assistant", "content": "三點整。"}]（之後 aos-agent-say 語法糖印最後一則）
+
+/ws/  .aos→/agents/bob/.aos  prompt.json  history.json  fsm/state.json  work/1/
+```
+
+- 每一層都站在廚房；食譜裡**所有**互指都寫 `.aos/x`，從廚房算，剛好對上。沒有任何 key 被賦予第二種意思；`.aos/` 這個名字是 N-35 已有的，捷徑是 `ln -s`。
+- prompt 怎麼進 history：intake 格的 stdin 就是 `prompt.json`（N-12：話走 stdin），接進 cwd 的 history.json。回答怎麼回終端：留在廚房 history.json（四：話放廚房；C-34：結果＝資料夾的變化）；aos-exec 的 stdout 只是 N-30。
+- 在食譜自己的資料夾裡跑也成立：`cd /agents/bob && aos-exec . .`——bob/ 自己就有 `.aos/`，不用捷徑（這就是使用者原本「cd 到 bob/」的那個預設，只是把定義收進 `.aos/`）。
+- 同一份食譜、兩個廚房同時跑：兩條捷徑指同一處，互不相干。
+- 子 agent 當工具：tool 格開 `work/<n>/`，brush 的工具 inst＝`{"argv": ["aos-agent-init", ".", "<brush 在哪>"]…}` 得先掛再跑——「brush 在哪」又是一個位置。Unix 的答案是 **PATH**：把 brush 裝成一個指令（一個 stub `brush`＝`aos-agent-init . /agents/brush && aos-exec . .`），工具 inst 寫 `["brush"]`，跟 `date` 一樣；位置只寫在 stub 裡（安裝品，不在食譜裡）。這是 C-50「葉子用指令名」的延伸，另拍。
+- **鬆掉的條件**：aos-agent-init 會往廚房寫一條捷徑（v4「aos-exec 不寫檔」鬆一格；使用者自己已預告 init 糖）。食譜自稱 `.aos/`——是看得見的慣例，不是暗規則；建議食譜裡直接寫 `.aos`、不跟 `AOS_DIRNAME` 變。
+- 跟 C-30／C-51 的關係：「空間可以掛進外部東西、像 Plan 9」——symlink 就是最小的 bind。跟 C-36「node＝loop 服務的資料夾」、C-39「agent 是一個資料夾」對得上：**廚房就是 agent 這個 node，`.aos/` 是它的食譜。**
+
+### 4. 候選 B：繼承的檔案描述子當廚房的把手（`/dev/fd/3`）
+
+整串定義在 /agents/bob 裡一手接一手轉（相對路徑自然成立），廚房由 aos-exec 開成 fd 3 傳下去，碰廚房的地方寫把手：
+
+```
+/agents/bob/
+  inst.json    {"argv": ["aos", "agent", "-"], "stdin": "agent.json"}
+  agent.json   {"start": "intake", "state": "/dev/fd/3/fsm/state.json", "end": ["done"],
+                "states": {
+                  "intake": {"val": {"argv": ["aos", "agent", "intake"], "cwd": "/dev/fd/3", "stdin": "/dev/fd/3/prompt.json"}, "next": "think"},
+                  "think":  {"argv": ["aos", "agent", "think"], "cwd": "/dev/fd/3", "stdin": "tools.json", "timeout_ms": 200000},
+                  "tool":   {"val": {"argv": ["aos", "agent", "tool"], "cwd": "/dev/fd/3", "stdin": "tools.json"}, "next": "think"}}}
+  tools.json   同上
+
+$ cd /ws && aos-exec . ../agents/bob      # ＝ (cd /agents/bob && aos inst - < inst.json) 3< /ws   ：把廚房開成 fd 3、站在食譜跑
+```
+
+- 每一層都站在食譜；fd 3 是 Unix 預設會繼承的（像 stdin），不用傳、不用寫；要進廚房的格寫 `"cwd": "/dev/fd/3"`，要碰廚房檔案的寫 `/dev/fd/3/…`。`/dev/fd/3` 不是地址、是把手，跟已接受的 `/dev/stdin` 同類；廚房搬去哪都一樣。
+- think 格同時要 `stdin: "tools.json"`（食譜）和 `cwd: /dev/fd/3`（廚房）：這要求 **stdin 路徑從 aos-inst 站的地方算、`cwd` 只給子程式**——也就是 shell 的規矩（`(cd d && prog) < f`，重導在父層開好才換目錄）。inst 現行是「串流從解出來的 cwd 算」，要改這一條。
+- **鬆掉的條件**：改 inst 一條現行規矩（上面那條）；aos-inst／loop／fsm 起子程式時不關掉繼承的 fd（Python 預設會關，程式要改）；食譜裡每個碰廚房的地方都多一截 `/dev/fd/3`；Linux 的 `/proc` 魔法（本機 WSL2 沒問題）。零新檔、零捷徑。
+- 子 agent 當工具：brush 的 stub 一樣（`aos-exec . /agents/brush` 開 work/<n>/ 當 fd 3）。
+
+### 5. 候選 C：每層各寫一次 `cwd`／aos-exec 用 `--cwd` 旗標——在最後一格斷
+
+`aos-exec . ../agents/bob`＝`cd /agents/bob && aos inst --cwd /ws - < inst.json`（N-22 鏡射旗標是現成的）：頂層 inst 站在食譜讀 agent.json、進廚房跑 `aos agent -`。到這裡都好。但 aos-agent 站在廚房起 think 格，格的 `"stdin": "tools.json"` 從廚房算→找不到；寫 `"cwd": "../agents/bob"`？那是把廚房到食譜的相對位置寫死，跟絕對路徑一樣。**最後那一格同時要兩個地方，單靠 cwd 給不了。**（這也是二之三「WD 只救 aos-exec 親手讀的那一張」的另一種說法。）
+
+### 6. 候選 D：環境變數——要 `$env`
+
+`AOS_KITCHEN=/ws` 傳下去，格要用就 `"cwd": {"$env": "AOS_KITCHEN"}`——指示詞，N-45 不靠它；讓格庫程式自己讀環境變數＝暗規則。使用者兩個都不要。真的 Plan 9 bind／mount namespace 也一句帶過：要權限或 user namespace，不是「自然組合」。
+
+### 7. 並排與推薦
+
+| | A 捷徑 | B 把手 | C 各寫 cwd | D 環境變數 |
+|---|---|---|---|---|
+| 食譜裡的字 | `.aos/x` | `x` 與 `/dev/fd/3/…` 兩種 | 要寫死相對位置 | `$env` |
+| 誰站哪 | 全在廚房 | 全在食譜、葉子進廚房 | 頂層食譜、其餘廚房 | — |
+| 要改什麼 | init 寫一條捷徑 | inst 串流路徑規矩、不關 fd | — | — |
+| 暗規則 | 無（`.aos` 是 N-35、捷徑看得見） | 無（但 fd 3＝廚房是要記的約定） | 無 | 有 |
+| 斷在哪 | 不斷 | 不斷 | 最後一格 | N-45 |
+| 跨平台 | 任何檔案系統 | 要 `/dev/fd`／`/proc` | — | — |
+
+**推薦 A。** 它一個 key 都不加、一條 inst 規矩都不改，全靠 N-35 的 `.aos/` 加一條 `ln -s`；而且把「廚房＝agent 的 node、`.aos/`＝食譜」這件事講得很直觀（`ls -la` 就看得見是哪份食譜）。唯一鬆的條件是 init 糖會寫一條捷徑，使用者已預告要做 init。B 留著當備案：零寫檔，但要改 inst 一條規矩、食譜裡一堆 `/dev/fd/3`。
