@@ -515,3 +515,4 @@ $ cd /ws && aos-exec . ../agents/bob      # ＝ (cd /agents/bob && aos inst - < 
 | 跨平台 | 任何檔案系統 | 要 `/dev/fd`／`/proc` | — | — |
 
 **推薦 A。** 它一個 key 都不加、一條 inst 規矩都不改，全靠 N-35 的 `.aos/` 加一條 `ln -s`；而且把「廚房＝agent 的 node、`.aos/`＝食譜」這件事講得很直觀（`ls -la` 就看得見是哪份食譜）。唯一鬆的條件是 init 糖會寫一條捷徑，使用者已預告要做 init。B 留著當備案：零寫檔，但要改 inst 一條規矩、食譜裡一堆 `/dev/fd/3`。
+- **食譜與廚房的接法選「捷徑」**（第五節候選 A：廚房放 `.aos → 食譜的 .aos` 的 symlink，食譜裡互指一律寫 `.aos/x`；使用者：「捷徑。這塊細說」）。
