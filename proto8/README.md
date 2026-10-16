@@ -9,7 +9,7 @@
 ## 入口
 
 - **[NORMS.md](NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；語法糖符合規範但不強制。
-- **10-16 新設計（程式還沒改）**：定義（食譜，一個 `.aos/` 資料夾）＋工作區（廚房，cwd）用 `.aos` 捷徑接，一律 `aos exec 工作區 定義`；stdin 是正規入口、argv 是語法糖；agent 不造 args.json／ret.json／frame.json；工具＝定義資料夾、地址是相對捷徑、不用 PATH → [C-57～C-61](CONCEPTS.md)、[N-46～N-51](NORMS/10-基礎設施-定義與工作區.md)。
+- **10-16 新設計（程式還沒改）**：定義（食譜，一個 `.aos/` 資料夾）＋frame（廚房，cwd；10-16 夜改名，原叫工作區）用 `.aos` 捷徑接，一律 `aos exec frame 定義`；10-16 夜 frame 與使用者的工作區分開、工作區位置＝環境變數 `AOS_WS`（C-65～C-67、N-55、N-56）；stdin 是正規入口、argv 是語法糖；agent 不造 args.json／ret.json／frame.json；工具＝定義資料夾、地址是相對捷徑、不用 PATH → [C-57～C-61](CONCEPTS.md)、[N-46～N-51](NORMS/10-基礎設施-定義與工作區.md)。
 - **[lib/](lib/README.md)**：函式庫（inst、loop、daemon、fsm、agent、kernel、tasks、tick；10-15 深夜 proto8-1 併進來）。
 - **[bin/](bin/aos)**：薄入口 `aos`（`aos <名> …`＝`python3 lib/aos_<名>.py …`、`aos agent …`、`aos brain openai …`）；放進 PATH，inst 的 argv 就寫指令名（C-50；10-16 起定義之間互指不靠 PATH，C-61）。跟 C++ 的 aos 執行檔同名不相干。
 - **[demo/](demo/README.md)**：`python3 proto8/demo/run.py`，daemon 從起到收走一遍、每條指令和回覆都印出來。
