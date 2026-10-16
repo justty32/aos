@@ -15,7 +15,7 @@
 | [02-設計理念-時空.md](CONCEPTS/02-設計理念-時空.md) | 設計理念／時空 | C-05、C-06、C-16、C-17、C-26、C-27、C-30～C-33、C-35、C-37、C-44 |
 | [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、組合子（tasks、fsm）、定義與工作區（食譜與廚房，10-16） | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b、C-49、C-57、C-59、C-60 |
 | [04-kernel.md](CONCEPTS/04-kernel.md) | kernel | C-09～C-15、C-28、C-29、C-38、C-47 |
-| [05-agent.md](CONCEPTS/05-agent.md) | agent：腦、工具、可預測性、函數＋binding、入口與工具（10-16）（狀態機那幾條隨 fsm 在基礎設施） | C-19～C-23（含 C-22b）、C-40、C-42、C-46、C-50、C-58、C-61 |
+| [05-agent.md](CONCEPTS/05-agent.md) | agent：腦、工具、可預測性、函數＋binding、入口與工具（10-16）（狀態機那幾條隨 fsm 在基礎設施） | C-19～C-23（含 C-22b）、C-40、C-42、C-46、C-50、C-58、C-61、C-62 |
 | [附錄1-名詞.md](CONCEPTS/附錄1-名詞.md) | 附錄 | 1. 名詞（daemon 兩義各一列；10-16 加定義／工作區／捷徑／門房） |
 | [附錄2-例子與待接.md](CONCEPTS/附錄2-例子與待接.md) | 附錄 | 3. 兩個例子、4. 還沒接起來的 16 條、5. AI 對自己的提醒 |
 
@@ -61,5 +61,8 @@
 | C-58 | [agent](CONCEPTS/05-agent.md)（stdin 只放定義、這次的話放工作區） |
 | C-59、C-60 | [基礎設施](CONCEPTS/03-基礎設施.md)（定義與工作區：`.aos` 捷徑、一律 `aos exec 工作區 定義`） |
 | C-61 | [agent](CONCEPTS/05-agent.md)（工具地址不用 PATH、工具＝定義資料夾、參數兩層） |
+| C-62 | [agent](CONCEPTS/05-agent.md)（agent 的定義＝一台狀態機，怎麼跑、由誰跑概念上不管；10-16 KISS 重審拍板 4） |
 
 > **10-16 新設計**（[稿 § 四](thinking/2026-10-16-agent-inherit.md#四使用者決定10-16)）：C-57～C-61 新增，C-46（agent 當函數是概念上的，不要 args.json／ret.json／frame.json）、C-50（定義＝一個 `.aos/` 資料夾）改字；正式名詞「定義（食譜）／工作區（廚房）」。**程式還沒改**；AI 提案裡使用者沒點頭的在 [NORMS 待定](NORMS/08-待定.md)。
+>
+> **10-16 KISS 重審五件拍板**（[稿末尾](thinking/2026-10-16-kiss-recheck.md#使用者拍板10-16)）：C-62 新增（agent 就是一台狀態機）；C-36 註 N-10 刪、C-25 註 agent 一次走一拍、C-50 定「定義不含 loop」。規範面見 [NORMS.md](NORMS.md)（N-52～N-54）。
