@@ -224,6 +224,12 @@
    "full": "working directory",
    "meaning": "工作區（廚房）的位置；只當命令列用法裡的佔位名（全大寫跟 TARGET 一樣）",
    "example": "aos exec WD TARGET（N-47）"
+  },
+  {
+   "abbr": "ws",
+   "full": "workspace",
+   "meaning": "工作區：使用者的檔與成品所在的資料夾（不是 frame）",
+   "example": "AOS_WS、frame 裡的 ws 捷徑（C-65、N-55）"
   }
  ]
 }
