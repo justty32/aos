@@ -402,3 +402,4 @@ WD 讓「不 cd、在呼叫者的廚房工作」有了一個明寫的位置，�
 
 - 正規參數入口是 stdin，`aos agent 路徑`、`aos-exec WD TARGET` 這類 argv 寫法都是語法糖（使用者：「argv:[aos,agent,agents/brush]，其實，我一直覺得argv這塊的用法...就像我早期說的，正規參數入口就是stdin，像是aos-exec WD TARGET這個用法是語法糖...」）。
 - **agent 的 stdin 只放一份，這份是食譜（定義）**（使用者：「stdin只放一份，這份要食譜。」）。「這次的話」放哪還沒定。
+- **「這次的話」放在廚房（工作區）裡，使用時指定廚房的位置**；以後可能做類似 aos-exec 的語法糖，例如 `aos-agent-say`、`aos-agent-init`（使用者：「放在廚房裡，然後使用的時候指定廚房的位置。以後可能會做類似aos-exec那樣的語法糖，比如aos-agent-say, aos-agent-init...」）。
