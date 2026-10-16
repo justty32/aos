@@ -90,14 +90,14 @@
 
 | 編號 | 區 | 現況 → KISS 版 | 翻案？ | 來源 |
 |---|---|---|---|---|
-| 2.1 | inst | aos-inst 吃 TARGET、旗標、`-` → **隨 v4**：aos-inst 零引數只吃 stdin；`aos-exec TARGET [--key 值] [-- argv]`（TARGET 必填，A）；旗標與 `-` 只在 aos-exec；NORMS/06 三條變成 aos-exec 檔頭的用法、整檔刪 | — | 第三版 3 4 I、總則 3 |
-| 2.2 | 總則 | N-35 `檔#/位置`、資料夾找 inst.json、id → **留在 aos-exec**（總則稿「退出規範」不採，見衝突表）；id＝`abspath#/位置`（第三版 C） | — | 總則 1（重判） |
-| 2.3 | agent | `frame.json`／`parent` 鏈、`aos_frame.py`（`chain`、`MAX_CHAIN`、繞圈） → **隨 v4**：退場（E 照推薦）；綁定一句「每個名字 cwd 有就用 cwd 的，否則用定義的」（F 照推薦）；「整份取代不支援」句刪 | — | agent 13 14、第三版 E F |
+| 2.1 | inst | aos-inst 吃 TARGET、旗標、`-` → **隨 v4**：aos-inst 零引數只吃 stdin；`aos-exec TARGET [--key 值] [-- argv]`（TARGET 必填，A）；旗標與 `-` 只在 aos-exec；NORMS/06 三條變成 aos-exec 檔頭的用法、整檔刪 | — | 第三版 3 4 I、總則 3 ｜ **10-16 新設計取代，見 [agent-inherit § 四](../2026-10-16-agent-inherit.md#四使用者決定10-16)**：aos-exec 改成 `aos exec 工作區 定義`、argv 全是語法糖（N-46、N-47） |
+| 2.2 | 總則 | N-35 `檔#/位置`、資料夾找 inst.json、id → **留在 aos-exec**（總則稿「退出規範」不採，見衝突表）；id＝`abspath#/位置`（第三版 C） | — | 總則 1（重判） ｜ **10-16 新設計取代，見 [agent-inherit § 四](../2026-10-16-agent-inherit.md#四使用者決定10-16)**：定義用 `.aos` 捷徑接、互指 `.aos/x`（N-48）；`AOS_DIRNAME`／`#/位置` 去留待定 |
+| 2.3 | agent | `frame.json`／`parent` 鏈、`aos_frame.py`（`chain`、`MAX_CHAIN`、繞圈） → **隨 v4**：退場（E 照推薦）；綁定一句「每個名字 cwd 有就用 cwd 的，否則用定義的」（F 照推薦）；「整份取代不支援」句刪 | — | agent 13 14、第三版 E F ｜ **10-16 新設計取代，見 [agent-inherit § 四](../2026-10-16-agent-inherit.md#四使用者決定10-16)**：frame 那套（frame.json、parent、args／ret）不要（C-46）；binding 待定 |
 | 2.4 | agent | `aos agent fsm` 子命令（用 frame 找 fsm.json 再叫 aos_fsm） → **隨 v4**：刪，loop 直接 `aos fsm`（第四版 P） | — | 鳥瞰 7 |
-| 2.5 | 各處 | JSON 裡的 TARGET 字串（daemon `children`、閘門 `target`、kernel judges、fsm 格、agent 的 `brain`／`tools`、tasks）→ **隨 v4** H 表：原本放 TARGET 字串的地方放那份 JSON 本身（資料形，N-45 JSON 大沒關係；children `id` 必填）；N-36「格從設定檔所在資料夾算」句、fsm 的 `FLAGS`／`base_of`／`ident`、`aos_cli.load_target` 一串刪 | — | 第四版 H、fsm 16 |
+| 2.5 | 各處 | JSON 裡的 TARGET 字串（daemon `children`、閘門 `target`、kernel judges、fsm 格、agent 的 `brain`／`tools`、tasks）→ **隨 v4** H 表：原本放 TARGET 字串的地方放那份 JSON 本身（資料形，N-45 JSON 大沒關係；children `id` 必填）；N-36「格從設定檔所在資料夾算」句、fsm 的 `FLAGS`／`base_of`／`ident`、`aos_cli.load_target` 一串刪 | — | 第四版 H、fsm 16 ｜ **10-16 新設計取代，見 [agent-inherit § 四](../2026-10-16-agent-inherit.md#四使用者決定10-16)**：定義與工具都是 `.aos/` 資料夾、地址是相對捷徑（N-48、N-50），不是「放那份 JSON 本身」 |
 | 2.6 | 共通 | `run(x)` 收路徑或 dict、loop 六層入口（`run`／`load_config`／`check_config(ident, doc, defaults, need_inst, err)`／`main`／`Loop.run`／`serve`） → **隨 v4**：`aos_inst.run(dict)` 只收 dict（J）；loop 剩 `main()`（stdin→dict）與 `Loop(cfg).run()`，驗證表只列 loop 自己的 key | — | loop M2、第三版 J |
-| 2.7 | agent | agent 當工具：三張 `sh -c` 三步的工具 inst；tool 格把 args.json 同時當 stdin、接 stdout.json → **隨 v4** G：工具一律走 frame（`work/<n>/` 的 args.json 進、ret.json 出），tool 格不碰工具的 stdin／stdout；agent 當工具＝工具 inst 的 argv 直接 `aos loop`；`AOS_DEMO` 退場。agent 稿 #3「拿掉 `work/<n>/`」不採（要 sh） | — | agent 3（重判）、第四版 G |
-| 2.8 | agent | 五個定義資料夾 `fsm.json` md5 全同、`cells/` 幾乎全同 → **隨 v4** P：lib 放一張預設 inst，demo 各自只換 brain／system／tools（第四版 M：`system` 直接寫字串） | — | 鳥瞰 18 |
+| 2.7 | agent | agent 當工具：三張 `sh -c` 三步的工具 inst；tool 格把 args.json 同時當 stdin、接 stdout.json → **隨 v4** G：工具一律走 frame（`work/<n>/` 的 args.json 進、ret.json 出），tool 格不碰工具的 stdin／stdout；agent 當工具＝工具 inst 的 argv 直接 `aos loop`；`AOS_DEMO` 退場。agent 稿 #3「拿掉 `work/<n>/`」不採（要 sh） | — | agent 3（重判）、第四版 G ｜ **10-16 新設計取代，見 [agent-inherit § 四](../2026-10-16-agent-inherit.md#四使用者決定10-16)**：工具＝定義資料夾、工具格叫門房 `aos exec work/<n> .aos/tools/<名>`、參數走門房 stdin（N-50），不走 args.json／ret.json |
+| 2.8 | agent | 五個定義資料夾 `fsm.json` md5 全同、`cells/` 幾乎全同 → **隨 v4** P：lib 放一張預設 inst，demo 各自只換 brain／system／tools（第四版 M：`system` 直接寫字串） | — | 鳥瞰 18 ｜ **10-16 新設計取代，見 [agent-inherit § 四](../2026-10-16-agent-inherit.md#四使用者決定10-16)**：agent 定義＝`.aos/` 資料夾（C-50 改字） |
 
 ### 批次 3：loop／daemon／窗重做（一次做完，因為 ctl／state 的形狀牽一髮動全身）
 

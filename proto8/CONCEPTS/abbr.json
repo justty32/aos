@@ -55,7 +55,7 @@
    "abbr": "args",
    "full": "arguments",
    "meaning": "呼叫的引數（本身是複數，照原樣）",
-   "example": "frame 的 args.json"
+   "example": "N-12「stdin＝args」（10-16 起不造 args.json，C-46）"
   },
   {
    "abbr": "argv",
@@ -67,7 +67,7 @@
    "abbr": "ret",
    "full": "return value",
    "meaning": "回傳值",
-   "example": "frame 的 ret.json"
+   "example": "N-12「exit＋stdout＝返回值」（10-16 起不造 ret.json，C-46）"
   },
   {
    "abbr": "msg",
@@ -218,6 +218,12 @@
    "full": "abbreviation",
    "meaning": "縮寫（本表）",
    "example": "CONCEPTS/abbr.json"
+  },
+  {
+   "abbr": "WD",
+   "full": "working directory",
+   "meaning": "工作區（廚房）的位置；只當命令列用法裡的佔位名（全大寫跟 TARGET 一樣）",
+   "example": "aos exec WD TARGET（N-47）"
   }
  ]
 }
