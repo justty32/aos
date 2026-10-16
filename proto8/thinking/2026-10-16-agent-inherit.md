@@ -8,6 +8,16 @@
 >
 > **10-16 晚補**：使用者看完第二節後說他想的 Lua 繼承其實是「一手接一手的轉手鏈」（原話在 [§ 二之二](#二之二兩條路並排轉手鏈shebang-式vs-加-keylua-式10-16-晚補ai-提案)），並新定一條原則「寫什麼就做什麼、不埋暗規則」。二之二把兩條路並排比較，第二節 2.4（內建預設表）、2.5（沒寫 stdin 就餵整份）兩段照新原則**撤回**，拍板點已更新。
 
+## 三分鐘看懂（只講現在要決定的三件事，其他都「之後再看」）
+
+把 bob 想成一張食譜（定義）和一個廚房（工作區）。食譜永遠不改；每次下廚都在某個廚房裡，鍋碗（history、窗、work/）留在那個廚房。現在只要決定三件事：
+
+1. **食譜怎麼寫**：推薦「一份 agent.json、長得就是一張 fsm 表，每一格把自己要的腦／工具／系統提示寫在格裡面」（丙）。另一條路是「七個小檔一手接一手」（甲，你 10-16 晚想的那個），它要先 cd 進食譜的資料夾才跑得動，所以鍋碗會留在食譜旁邊——就是你說的「怪」。
+2. **怎麼叫 bob**：推薦 `echo '"幾點？"' | aos agent 廚房 食譜`——stdin 是這次的話、stdout 是它的回答、廚房是第一個引數（你說的 `WD TARGET`）。不造 args.json／ret.json，因為 stdin／stdout／cwd 本來就是這三樣。
+3. **暗規則一律不要**：表要寫出來、每格的 stdin 要寫出來；程式不藏預設表、不替格偷塞東西。想省事就抄 lib 的範本檔或用 `$ref` 拆檔，那是看得見的。
+
+這三件拍了，下面十幾個拍板點大多就跟著定了（它們只是把這三件事落到各條規範上）。其他——換腦怎麼寫、工具格怎麼跑、loop 放不放定義裡、WD 的三個邊緣——**之後再看**，推薦都寫在第三節，不急。
+
 ## 一、使用者原話（10-16，整理版）
 
 1. **agent 用 aos-agent，JSON 裡內嵌 aos-fsm 的東西；想想 Lua 的物件導向**：「agent 那塊我有新想法：可以不純用 aos-fsm。就如同 aos loop 是 inst 的擴張——有點類似 Lua 的物件導向繼承方式——我們也可以用 aos-agent，那個 JSON 格式中就是內嵌 aos-fsm 的東西。Lua 的物件導向這塊請 Fable 思考一下，在我們這套 JSON inst 體系下可以怎麼應用。」
@@ -311,15 +321,79 @@ Unix 的程式是**用 PATH 找到、在呼叫者的 cwd 跑、靠「自己在�
 - **原拍板點 7「格沒寫 stdin＝自動餵整份 agent.json」→ 撤回，改成「每格的 stdin 自己寫」。** 「沒寫 stdin 平常是 /dev/null、在 agent 裡卻變成整份定義」正是「同一個 key 在不同地方幹不同事」。跟著撤的是 agent 級的三個 key `brain`／`tools`／`system`：它們存在的理由就是要靠那條暗規則送進格裡；拿掉暗規則它們就沒事做，內容直接寫在格的 stdin 裡（第四版 N 的寫法）。
 - 順手照同一把尺再看原稿其餘各點：拍板點 10（stdin 一份 JSON＝user 訊息內容，字串照放、別的照 JSON 文字放）是一條寫明的規則、同一個輸入永遠同一種處理，不算暗規則，維持；拍板點 6（空 stdin＝沒新話、接著跑）也是寫明的一條，維持。
 
-## 三、要使用者拍板的點（每點一句＋推薦＋理由＋後果；10-16 晚更新）
+## 二之三、`aos-exec WD TARGET`（10-16 晚再補，AI 提案）
+
+### 0. 使用者原話（10-16 晚，整理版）
+
+「其實 aos-exec 我覺得可以用另一個使用方式：`aos-exec WD TARGET`，也就是 `aos-exec . bob/`。」（頂層攤了三個邊緣：定義裡的相對路徑從哪算、WD 跟 inst 自己的 `cwd` 撞了聽誰的、WD 必不必填；使用者「好」。）
+
+### 1. 它在說什麼
+
+兩個引數就是兩件事：**WD＝在哪工作（廚房）、TARGET＝定義在哪（食譜）**。這正好把二之二說的「怪」拆開——甲的毛病是定義路徑與資料路徑共用一個 cwd；WD 把「在哪工作」明寫成引數，就不必靠 cd、也不必靠環境變數。寫什麼就做什麼：`aos exec . bob/`＝「站在 `.`，跑 bob/ 這份定義」。
+
+### 2. 跟丙合起來（推薦的組合）
+
+丙的定義裡沒有任何執行期相對路徑（格的內容都在 JSON 裡），所以 WD 只有一個意思：資料落哪。同一個 bob：
+
+```
+/agents/bob/agent.json          ← 二之二 4 那份（一張 fsm 形狀的 agent.json，零指示詞、零執行期路徑）
+~/ws/                           ← 廚房；空的，或已經有上次的 history.json
+
+$ cd 隨便哪裡
+$ echo '"幾點？"' | aos agent ~/ws /agents/bob        # 入口都同一形：WD TARGET；TARGET 是資料夾就找 agent.json
+{"role": "assistant", "content": "三點整。"}           # stdout＝回答
+
+~/ws/history.json  ~/ws/fsm/state.json  ~/ws/work/1/   # 資料全落 WD；/agents/bob/ 一個字都沒動
+```
+
+- painter 把 brush 當工具：`"brush": {"argv": ["aos", "agent", ".", "/agents/brush"], "_tool": {…}}`——WD 寫 `.`，就是 tool 格給它的 `work/<n>/`（子 frame）。工具格仍然不知道這是 agent。
+- 一般的 inst 走 `aos exec WD TARGET`：讀 TARGET 那張 inst（檔或資料夾找 inst.json），站在 WD 跑。
+- 所以「凡是收 TARGET 的入口（`aos exec`、`aos agent`）都長 `WD TARGET`」，一次記住；`aos inst`／`loop`／`fsm` 照第四版只吃 stdin、沒有引數。
+
+### 3. 跟甲合起來會怎樣
+
+```
+$ aos exec ~/ws /agents/bob
+  → 讀 /agents/bob/inst.json＝{"argv": ["aos", "inst", "-"], "stdin": "agent.json"}
+  → 站在 ~/ws 跑它 → 第二環 aos-inst 從 ~/ws 找 agent.json → 找不到，斷在第二環
+```
+
+WD 只救得了 aos-exec 親手讀的**那一張**；第二環起每支程式都是從 pipe 收到設定、不知道「定義檔在哪」，只知道自己站在 WD。要讓甲在 WD 跑得動，只剩一條路：**定義檔之間互指的路徑全部寫絕對**（`"stdin": "/agents/bob/agent.json"`、`"stdin": "/agents/bob/think.json"`…），資料路徑（`loop/ctl.json`、`fsm/state.json`、`work/`）維持相對→落在 WD。這樣能跑、鍋碗也會留在廚房，但食譜搬家就全壞，而且七層行程、結果不在 stdout、當工具撞 C-52 那三樣都還在。所以 WD 跟丙是天生一對，跟甲只是勉強湊合。
+
+### 4. 三個邊緣：選項、推薦、後果
+
+**(1) 定義裡的相對路徑從哪算**
+- A. **一律從 WD 算**（跟 aos-inst 現在的規矩一樣：`cwd`、`stdin`、`stdout` 都從它站的地方算）。定義要指自己旁邊的檔，就寫絕對路徑、或內嵌、或用 `$ref` 在載入時攤平（`$ref` 本來就從檔所在算，是已有的糖）。**推薦 A**：零新規則；丙完全合；甲要寫絕對（它本來就有這個問題）。
+- B. 從定義檔所在算：aos-exec 讀到那張 JSON 後把相對路徑接上 TARGET 的資料夾再交出去。問題：`stdin: "think.json"`（定義）和 `stdout: "loop/state.json"`（資料）長一模一樣，aos-exec 得規定「哪些 key 算定義」——**暗規則**，而且只救第一環。不推薦。
+- C. 兩種路徑用不同寫法明寫（例如定義路徑另加記號）：等於自己發明一個小指示詞，N-45 說設計不靠它。不推薦；要拆檔用 `$ref` 就夠。
+- 後果（選 A）：規範只要一句「aos-exec／aos agent 站在 WD 跑，路徑規矩照 aos-inst」。
+
+**(2) WD 跟 inst 自己的 `cwd` 撞了**
+- (a) WD 蓋過 inst 的 `cwd`：寫了的 key 被默默忽略，違反寫什麼就做什麼。
+- (b) 兩個都寫＝報錯：多一條錯誤路徑，而且這個情況本來有自然的意思。
+- (c) **inst 的 `cwd` 從 WD 往下算**：WD 是「我站哪」，inst 的 `cwd` 是「從這裡再走到哪」——跟 aos-inst 現行「`cwd` 從呼叫者的 cwd 算」一字不差。**推薦 (c)**：零新規則。後果：寫 `aos exec ~/ws bob/`、bob 的 inst 又寫 `"cwd": "sub"`，就在 `~/ws/sub` 跑；絕對的 `cwd` 照舊是絕對。
+
+**(3) WD 必不必填**
+- 必填：`aos exec . bob/` 多打兩個字；不會有「`aos exec bob/` 的 bob/ 到底是 WD 還是 TARGET」的歧義；寫什麼就做什麼。**推薦必填**。
+- 選填、預設 `.`：省兩個字，換一條「一個引數時它是 TARGET」的規則。不推薦。
+- 後果：第四版「`aos-exec TARGET` 必填（A）」改成「`aos-exec WD TARGET` 兩個都必填」；`aos agent` 同形。
+
+### 5. 一句話
+
+WD 讓「不 cd、在呼叫者的廚房工作」有了一個明寫的位置，正好補上甲缺的那一塊；但它只管 aos-exec 親手讀的那一張，定義裡若還有執行期相對路徑（甲的鏈），第二環起還是斷——所以 WD 跟「定義裡沒有執行期路徑」（丙）要一起選。
+
+## 三、要使用者拍板的點（每點一句＋推薦＋理由＋後果；10-16 晚更新，含 WD）
 
 1. **三條路選一條**：甲 轉手鏈（cd 進 bob/、七個檔一手接一手）／乙 加 key（一份 JSON 加三個 agent 級 key＋兩條暗規則）／丙 合起來（agent.json＝一張 fsm、每格 stdin 寫在裡面、`aos agent` 只當邊界）。**推薦：丙。** 理由：不 cd、結果走 stdout、當工具不撞 C-52、零暗規則；甲攤平之後本來就是丙的資料形。後果：C-50 改成「定義＝一張 agent.json（fsm 形狀），不含 loop」；KISS 彙整 3.2（daemon 不繼承 loop）不必照做，N-28 那招留著（丙是它的第二個例子）。
 2. **表一定寫、每格 stdin 一定寫；程式不藏預設表、不替格補 stdin**（原 2、7 兩點撤回）。**推薦：是。** 理由：寫什麼就做什麼。後果：lib 放一份範本 agent.json 給人抄或 `$ref`；agent 級 `brain`／`tools`／`system` 三個 key 不要了；think／tool 兩格的 `tools` 寫兩次或 `$ref`。
 3. **binding＝另一份 JSON；拿掉「資料夾放同名檔蓋過定義」與 parent 鏈**；資料夾只放狀態（history、窗、work）。**推薦：拿掉。** 理由：定義一種來源、狀態一種住處；N-45 零機制也成立。若選甲則替代＝symlink 資料夾。後果：C-46「放同名檔＝綁定」改成「換一份 JSON」；`aos_frame.py` 刪。
 4. **參數與結果：拿掉 args.json／ret.json；`aos agent` stdin＝這次的話（一份 JSON 當 user 訊息內容）、stdout＝最後一則 assistant 訊息、cwd＝frame。** **推薦：是。** 理由：使用者 10-16 原話；N-12＋C-34 本來就有；甲做不到這點（最外層 stdin 是設定）。後果：C-46、N-27 第二句改字；v4 的 G 作廢；agent 跟腦同簽名。
-5. **定義怎麼給 `aos agent`**：`aos agent TARGET`（路徑；stdin 留給話；agent 可裝成指令）／stdin 兩份（定義、話）。**推薦：TARGET。** 理由：stdin 一個意思；工具 inst 的 argv 寫路徑或指令名跟 `clock` 一樣。後果：v4「TARGET 這東西都拿掉」多一個例外（跟 aos-exec 同類）；工具若是 agent 得用路徑或裝成指令。
-6. **aos-exec 不 cd**（第四版立場）；甲的「默認 cd 進定義資料夾」不做。**推薦：不 cd。** 理由：定義與工作區分開；丙的定義沒有執行期路徑，不需要 cd。後果：要在定義資料夾裡工作，人自己 cd。
+5. **定義怎麼給 `aos agent`**：`aos agent WD TARGET`（路徑；stdin 留給話；agent 可裝成指令）／stdin 兩份（定義、話）。**推薦：WD TARGET。** 理由：stdin 一個意思；跟 `aos exec` 同形一次記住；工具 inst 的 argv 寫 `".", "/agents/brush"` 跟 `clock` 一樣是資料。後果：v4「TARGET 這東西都拿掉」多一個例外（跟 aos-exec 同類）；工具若是 agent 得用路徑或裝成指令。
+6. **aos-exec 不默認 cd 進定義資料夾；要站哪用 WD 明寫**（`aos exec WD TARGET`，兩個都必填）。**推薦：是。** 理由：寫什麼就做什麼；定義與工作區分開。後果：第四版 A「`aos-exec TARGET` 必填」改成兩個引數都必填；要在定義資料夾裡工作就寫 `aos exec bob/ bob/`。
 7. **agent 自己跑到 `end` 才結束、上限只靠包它那張 inst 的 `timeout_ms`；定義不含 loop，長壽＝呼叫方包 loop。** **推薦：是。** 理由：C-40 用完即丟、C-36 的層次；一次呼叫一把尺。後果：N-44 `stop_on_end` 可刪；C-50「怎麼拍（loop）」那半句刪。
 8. **tool 格對每張工具只做「cwd＝work/<n>/、stdin＝arguments、stdout 最後一份＝結果」**；agent 當工具＝`{"argv": ["aos", "agent", "/路徑"]}` 或裝成指令。**推薦：是。** 理由：N-12、N-27 原意；C-52 徹底不知道工具裡是什麼。後果：v4 G、KISS 2.7 改寫；三張 `sh -c` 工具 inst 改成一行 argv，`AOS_DEMO` 可退場。
 9. **格庫瘦身：intake／done／route 消失，think 自己回 next，`aos agent fsm` 刪，連錯計數刪。** **推薦：是。** 理由：這些格做的事要麼進了 `aos agent` 的兩步，要麼跟「每層只說自己」重複。後果：agent.md、agent_lib.md、frame.md 三份併成一份。
 10. **輸入的形狀**：stdin 一份 JSON＝user 訊息的內容（字串照放、物件照 JSON 文字放），不收整則訊息物件；空 stdin＝沒新話、接著跑；要綁整段對話就放 history.json。**推薦：是（一條寫明的規則）。** 替代＝也認 `{"role", "content"}` 整則訊息（多一形）。後果：模型給工具的 arguments（物件）直接就是子 agent 的輸入，不用轉。
+11. **定義裡的相對路徑一律從 WD 算**（照 aos-inst 現行規矩；定義要指自己旁邊的檔＝絕對路徑、內嵌、或 `$ref` 載入時攤平）。**推薦：是（二之三 4 的 A）。** 理由：零新規則；B「從定義檔所在算」要分哪些 key 是定義＝暗規則。後果：甲若要在 WD 跑，定義檔互指全寫絕對。
+12. **inst 自己的 `cwd` 從 WD 往下算**（不是 WD 蓋過、不是報錯）。**推薦：是（二之三 4 的 (c)）。** 理由：跟「`cwd` 從呼叫者的 cwd 算」一字不差。後果：無新規則。
+13. **WD 必填**（不設預設 `.`）。**推薦：必填。** 理由：少一條「一個引數時它是 TARGET」的規則、沒有歧義。後果：多打兩個字。
