@@ -2,4 +2,4 @@
 
 # kernel 規範
 
-- **N-42**（10-15 定，草稿）先做兩種 kernel，都基於 daemon：(1) 管 LLM 呼叫的 kernel；(2) 通用管理的 kernel（以 agent 作判斷）。具體機制再規劃（[thinking 10-15 kernel 截流](../thinking/2026-10-15-kernel-intercept.md)有閘門／信箱草案；六題未決 10-15 使用者「隨意」、照建議預設定案，見 [LLM kernel](../thinking/2026-10-15-llm-kernel.md)）。兩種都有基礎實作：[lib kernel_llm.md](../lib/kernel_llm.md)、[lib kernel_general.md](../lib/kernel_general.md)。出自 C-47。
+- **N-42**（10-15 定，草稿）先做兩種 kernel，都基於 daemon：(1) 管 LLM 呼叫的 kernel；(2) 通用管理的 kernel（以 agent 作判斷）。具體機制再規劃（[thinking 10-15 kernel 截流](../thinking/2026-10-15-kernel-intercept.md)有閘門／信箱草案；六題未決 10-15 使用者「隨意」、照建議預設定案，見 [LLM kernel](../thinking/2026-10-15-llm-kernel.md)）。兩種都有基礎實作：[lib kernel_llm.md](../lib/kernel_llm.md)、[lib kernel_general.md](../lib/kernel_general.md)。出自 C-47。**10-16 維持兩支**：KISS 重審曾推薦「兩支併成一支、沒寫判官＝管 LLM 的那種」，使用者：「兩隻kernel不併成一支。」（[KISS 重審拍板 5](../thinking/2026-10-16-kiss-recheck.md#使用者拍板10-16)），彙整 5.1 撤回。
