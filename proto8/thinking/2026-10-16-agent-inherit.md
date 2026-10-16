@@ -436,8 +436,14 @@ WD 讓「不 cd、在呼叫者的廚房工作」有了一個明寫的位置，�
 ## 四、使用者決定（10-16）
 
 - 正規參數入口是 stdin，`aos agent 路徑`、`aos-exec WD TARGET` 這類 argv 寫法都是語法糖（使用者：「argv:[aos,agent,agents/brush]，其實，我一直覺得argv這塊的用法...就像我早期說的，正規參數入口就是stdin，像是aos-exec WD TARGET這個用法是語法糖...」）。
-- **agent 的 stdin 只放一份，這份是食譜（定義）**（使用者：「stdin只放一份，這份要食譜。」）。「這次的話」放哪還沒定。
+- **agent 的 stdin 只放一份，這份是食譜（定義）**（使用者：「stdin只放一份，這份要食譜。」）。
 - **「這次的話」放在廚房（工作區）裡，使用時指定廚房的位置**；以後可能做類似 aos-exec 的語法糖，例如 `aos-agent-say`、`aos-agent-init`（使用者：「放在廚房裡，然後使用的時候指定廚房的位置。以後可能會做類似aos-exec那樣的語法糖，比如aos-agent-say, aos-agent-init...」）。
+- **agent 當函數是概念上的**：JSON＋資料夾就是 Lisp 的 list、本身就是函數，不造 args.json／ret.json（frame.json 那套跟著不要）——原話在[第一節](#一使用者原話10-16整理版)第 2 段。
+- 以下四條是 10-16 夜在第五～七節之後陸續定的，原本記在各節末尾，10-16 收進本節（第二～七節其餘都是 AI 提案，沒列在本節的不算定了；落成見 [CONCEPTS C-46、C-50、C-57～C-61](../CONCEPTS.md)、[NORMS N-46～N-51](../NORMS/10-基礎設施-定義與工作區.md)，沒點頭的進 [待定](../NORMS/08-待定.md)）。
+- **食譜與廚房的接法選「捷徑」**（第五節候選 A：廚房放 `.aos → 食譜的 .aos` 的 symlink，食譜裡互指一律寫 `.aos/x`；使用者：「捷徑。這塊細說」）。
+- **第六節前兩項同意**：食譜裡放 shebang stub＋PATH 上放捷徑（bob 的工具寫 `{"argv": ["brush"]}`）；「食譜 `.aos/`＋廚房 cwd」一律 `aos exec 廚房 食譜`，推廣到所有東西（使用者：「何等美麗的閉環，這就像是lisp的repl，/ws就是那個啥...」「前兩項我都OK」）。
+- **工具參數走門房（`aos exec`）的 stdin，分兩層**：使用者問「關於工具的參數不能再走stdin這塊，這是為啥？」——答：stdin 只放食譜指的是 agent 程式那一層；工具行程（門房 `aos exec`）那一層的 stdin 是空的，照 N-27 收參數，由 stub／旗標明寫把它放進廚房（第六節 2 的 4、5）。使用者：「還是不太懂，但感覺OK，就先這樣吧，以後再來搞懂。」
+- **不用 PATH（第七節）**：brush 的地址寫在 bob 食譜裡的相對捷徑（`.aos/tools/brush`）；工具格站在自己廚房叫門房 `aos exec work/<n> .aos/tools/x`；**工具一律做成食譜資料夾**（`date` 也是 `.aos/tools/date/`）（使用者：「可以不使用PATH嗎？」→ 看完第七節：「好!」）。PATH 只留給人在終端用。
 
 ## 五、自然組合的機制（找）（10-16 夜，AI 提案）
 
@@ -539,7 +545,6 @@ $ cd /ws && aos-exec . ../agents/bob      # ＝ (cd /agents/bob && aos inst - < 
 | 跨平台 | 任何檔案系統 | 要 `/dev/fd`／`/proc` | — | — |
 
 **推薦 A。** 它一個 key 都不加、一條 inst 規矩都不改，全靠 N-35 的 `.aos/` 加一條 `ln -s`；而且把「廚房＝agent 的 node、`.aos/`＝食譜」這件事講得很直觀（`ls -la` 就看得見是哪份食譜）。唯一鬆的條件是 init 糖會寫一條捷徑，使用者已預告要做 init。B 留著當備案：零寫檔，但要改 inst 一條規矩、食譜裡一堆 `/dev/fd/3`。
-- **食譜與廚房的接法選「捷徑」**（第五節候選 A：廚房放 `.aos → 食譜的 .aos` 的 symlink，食譜裡互指一律寫 `.aos/x`；使用者：「捷徑。這塊細說」）。
 
 ## 六、捷徑：agent 當工具與推廣到一般函數（10-16 夜，AI 提案）
 
@@ -639,8 +644,6 @@ $ mkdir /out/1016 && cd /out/1016 && aos exec . /jobs/report/.aos
 - **C-51**：隱藏資料夾例外不再由環境變數定，就是 `.aos`。
 - **N-45**：零指示詞 ✓（整招沒有 `$ref`／`$env`）。**C-52** ✓（每層站自己的廚房、子廚房在 work/<n>/、什麼都不往下傳，位置在 PATH）。**C-56 寫什麼就做什麼** ✓（`.aos/x` 就是那個檔；`#!` 就是用誰跑我；`aos exec WD TARGET` 就是站哪、掛誰、跑）。**N-12** ✓（stdin＝食譜；話走 prompt.json→intake 的 stdin）。
 - **N-27 第二句再改**：tool 格把 arguments 寫成 `work/<n>/prompt.json`（不是 stdin）。
-- **第六節前兩項同意**：食譜裡放 shebang stub＋PATH 上放捷徑（bob 的工具寫 `{"argv": ["brush"]}`）；「食譜 `.aos/`＋廚房 cwd」一律 `aos exec 廚房 食譜`，推廣到所有東西（使用者：「何等美麗的閉環，這就像是lisp的repl，/ws就是那個啥...」「前兩項我都OK」）。
-- 工具參數要不要改成寫檔：使用者問「關於工具的參數不能再走stdin這塊，這是為啥？」——待答（頂層看法：stdin 只放食譜指的是 agent 程式那一層；工具行程（aos exec）那一層的 stdin 是空的，可以照 N-27 收參數，由 stub 明寫的旗標把它放進廚房）。
 
 ## 七、不用 PATH：地址放哪（10-16 夜，AI 提案）
 
@@ -710,4 +713,3 @@ aos exec --say work/3 .aos/tools/brush        # stdin＝模型給的 arguments�
 - `--say`（或改名 `--prompt`）只做「stdin → prompt.json」；回答走食譜 inst 的 stdout（`aos agent -` 結束時吐最後一則 assistant 訊息）。第六節 stub 上的 `--say` 同步改。
 - 捷徑的目標是相對的（`../../../brush/.aos`），bob 與 brush 要在同一棵樹下一起搬；拆開搬就斷（`RecipeMissing`，同第六節）。
 - 不變的：零 sh、零指示詞、零絕對路徑、零環境變數；`work/<n>/` 的深度沒人需要知道。
-- **不用 PATH（第七節）**：brush 的地址寫在 bob 食譜裡的相對捷徑（`.aos/tools/brush`）；工具格站在自己廚房叫門房 `aos exec work/<n> .aos/tools/x`；**工具一律做成食譜資料夾**（`date` 也是 `.aos/tools/date/`）（使用者：「可以不使用PATH嗎？」→ 看完第七節：「好!」）。PATH 只留給人在終端用。工具參數走門房的 stdin（第六節兩層版；使用者：「還是不太懂，但感覺OK，就先這樣吧，以後再來搞懂。」）。
