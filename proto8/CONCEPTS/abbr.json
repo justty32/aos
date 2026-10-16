@@ -228,8 +228,8 @@
   {
    "abbr": "ws",
    "full": "workspace",
-   "meaning": "工作區：使用者的檔與成品所在的資料夾（不是 frame）",
-   "example": "AOS_WS、frame 裡的 ws 捷徑（C-65、N-55）"
+   "meaning": "工作區：使用者的檔與成品所在的資料夾（不是 stack）",
+   "example": "AOS_WS、stack 裡的 ws 捷徑（C-65、N-55）"
   }
  ]
 }
