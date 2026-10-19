@@ -1,0 +1,9 @@
+#!/bin/sh
+# think：取 inbox 第一題，把「要寫的答案」放進 $AOS_WS/plan。預設假腦；設 AOS_BRAIN_URL 則問 OpenAI 相容的模型。
+f=$(ls "$AOS_WS"/inbox/* | head -n 1); name=$(basename "$f")
+echo "$name" > "$AOS_WS/current"
+if [ -n "$AOS_BRAIN_URL" ]; then
+  python3 brain.py "$f" > "$AOS_WS/plan" || exit 1
+else
+  echo "FAKE ANSWER to: $(cat "$f")" > "$AOS_WS/plan"
+fi

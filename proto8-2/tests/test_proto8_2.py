@@ -1,0 +1,101 @@
+import os, subprocess, tempfile, threading, unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+EXEC = str(ROOT / "bin" / "aos-exec")
+BOB = str(ROOT / "demo" / "agent-bob")
+
+
+def run(*args, env=None, **kw):
+    e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY")}
+    e.update(env or {})
+    return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
+
+
+def prog(parent, name, body, mode=0o755, entry=".aos/inst"):
+    d = Path(parent) / name
+    (d / entry).parent.mkdir(parents=True, exist_ok=True)
+    (d / entry).write_text("#!/bin/sh\n" + body)
+    (d / entry).chmod(mode)
+    return str(d)
+
+
+def workspace(tmp, name, question):
+    ws = Path(tmp) / name
+    (ws / "inbox").mkdir(parents=True)
+    (ws / "inbox" / "q.txt").write_text(question)
+    return ws
+
+
+class T(unittest.TestCase):
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.tmp = self._t.name
+        self.addCleanup(self._t.cleanup)
+
+    def test_missing_entry(self):
+        d = Path(self.tmp, "p"); d.mkdir()
+        r = run(EXEC, self.tmp, str(d))
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("入口不存在", r.stderr)
+
+    def test_not_executable(self):
+        d = prog(self.tmp, "p", "echo hi\n", mode=0o644)
+        r = run(EXEC, self.tmp, d)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("不可執行", r.stderr)
+
+    def test_dash_reuses_aos_ws(self):
+        d = prog(self.tmp, "p", 'echo "$AOS_WS"\n')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, "-", d, env={"AOS_WS": str(ws)})
+        self.assertEqual(r.stdout.strip(), str(ws))
+        r = run(EXEC, "-", d)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("AOS_WS", r.stderr)
+
+    def test_args_stdin_cwd_and_custom_entry(self):
+        d = prog(self.tmp, "p", 'pwd; echo "$@"; cat\n', entry="main.sh")
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, str(ws), d, "a", "b", input="from stdin", env={"AOS_ENTRY": "main.sh"})
+        self.assertTrue(r.stdout.startswith(d + "\na b\nfrom stdin"))
+
+    def test_nested_same_workspace(self):
+        inner = prog(self.tmp, "outer/inner", 'echo "$AOS_WS" > "$AOS_WS/seen"\n')
+        outer = prog(self.tmp, "outer", f'aos-exec - {inner}\n')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, str(ws), outer)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual((ws / "seen").read_text().strip(), str(ws))
+
+    def test_demo_flow(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        r = run(EXEC, str(ws), BOB)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual((ws / "trace.log").read_text().split(), ["idle", "think", "act", "idle"])
+        self.assertIn("hello", (ws / "out" / "q.txt").read_text())
+        self.assertTrue((ws / "done" / "q.txt").exists())
+        self.assertFalse((ws / "inbox" / "q.txt").exists())
+
+    def test_two_workspaces_concurrently(self):
+        a, b = workspace(self.tmp, "a", "AAA"), workspace(self.tmp, "b", "BBB")
+        rs = {}
+        ths = [threading.Thread(target=lambda w=w: rs.update({w: run(EXEC, str(w), BOB)})) for w in (a, b)]
+        [t.start() for t in ths]; [t.join() for t in ths]
+        for w, tag in ((a, "AAA"), (b, "BBB")):
+            self.assertEqual(rs[w].returncode, 0, rs[w].stderr)
+            out = (w / "out" / "q.txt").read_text()
+            self.assertIn(tag, out)
+        self.assertNotIn("BBB", (a / "out" / "q.txt").read_text())
+        self.assertEqual(list(Path(BOB).glob("state")), [])  # 定義資料夾保持乾淨
+
+    def test_loop_failure_code(self):
+        prog(self.tmp, "agent/bad", "exit 7\n")
+        agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
+        Path(agent, "loop.json").write_text('{"run": "bad", "max": 3}')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        self.assertEqual(run(EXEC, str(ws), agent).returncode, 7)
+
+
+if __name__ == "__main__":
+    unittest.main()
