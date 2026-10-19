@@ -9,9 +9,9 @@
 | 概念 | aos 怎麼看世界（例：時空＝tick-tock＋資料夾；資料夾＝程式） | [CONCEPTS.md](CONCEPTS.md) |
 | 規範 | 從概念推出來、大家都要守的 | 本檔（條文按主題放在 NORMS/ 分檔） |
 | 慣例 | 我們自己人寫 aos agent 時照抄的標準形狀（P-05～P-40），**不要求別人守** | [CONVENTION.md](CONVENTION.md) |
-| 程式 | 符合規範的實作與範例，**不要求一定用** | [proto8/bin](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm；Python，10-19 晚照 § 14～§ 21 改完）、[proto8/demo](demo/README.md)（agent-bob、agent-ann）；`proto8/impls/`（使用者假日的 C／C++ 參考實作，git 未追蹤：只提供 `aos-exec` 一支命令列，已照 § 14～§ 21 做，inst 是 C lib）；舊的 lib 10-19 進 git 歷史 |
+| 程式 | 符合規範的實作與範例，**不要求一定用** | [proto8/bin](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm；Python，10-19 晚照 § 14～§ 21 改完）、[proto8/demo](demo/README.md)（agent-bob、agent-ann）；`proto8/impls/`（使用者假日的 C／C++ 參考實作，git 未追蹤：提供 `aos-exec`、`aos-loop`、`aos-fsm` 三支命令列，已照 § 14～§ 24 做，inst 是 C lib，只剩 aos-daemon 待重寫）；舊的 lib 10-19 進 git 歷史 |
 
-本檔（含分檔）只收使用者親口定下的規範（條號 N-）；AI 提的、還沒定的放在最後「待定」，不算數。**10-19 併入 proto8-2**：10-16 那套（stdin 是正規入口、`.aos` 捷徑、門房、結束碼只是參考…）作廢，條號只留在下面的條號表；daemon、kernel、tasks、窗的條文留著、標「現無實作」。**10-19 下班前～晚**（[ideas § 14～§ 21](thinking/2026-10-19-ideas.md)）：入口放寬成四種、`aos-exec XXX`、五個環境變數、`#/` 尋址（N-57～N-60 改、新增 N-61、N-62）；兩版實作（impls 的 C++、bin 的 Python）都已照做，仍不同的三處（impls 只有 aos-exec 一支命令列、錯誤一行有沒有代號、`$ref` 只有 impls 有）在 [NORMS/10](NORMS/10-基礎設施-定義與工作區.md) 開頭。**10-19 晚規範總覽四題**（[ideas § 22](thinking/2026-10-19-ideas.md)）：daemon／窗的 key 改用現行 loop.json 的 `run`／`max`（N-06、N-07、N-11、N-28）、設定只認設定檔（N-11）、指示詞保留 `$ref`（N-45）；「+x 沒 `#!`」的檔三處一致改用 `/bin/sh` 跑（使用者「乙」，N-59 第 5 件、N-60）。
+本檔（含分檔）只收使用者親口定下的規範（條號 N-）；AI 提的、還沒定的放在最後「待定」，不算數。**10-19 併入 proto8-2**：10-16 那套（stdin 是正規入口、`.aos` 捷徑、門房、結束碼只是參考…）作廢，條號只留在下面的條號表；daemon、kernel、tasks、窗的條文留著、標「現無實作」。**10-19 下班前～晚**（[ideas § 14～§ 21](thinking/2026-10-19-ideas.md)）：入口放寬成四種、`aos-exec XXX`、五個環境變數、`#/` 尋址（N-57～N-60 改、新增 N-61、N-62）；兩版實作（impls 的 C++、bin 的 Python）都已照做，仍不同的三處（impls 沒有 aos-inst 命令列、錯誤一行有沒有代號、`$ref` 只有 impls 有）在 [NORMS/10](NORMS/10-基礎設施-定義與工作區.md) 開頭。**10-19 晚規範總覽四題**（[ideas § 22](thinking/2026-10-19-ideas.md)）：daemon／窗的 key 改用現行 loop.json 的 `run`／`max`（N-06、N-07、N-11、N-28）、設定只認設定檔（N-11）、指示詞保留 `$ref`（N-45）；「+x 沒 `#!`」的檔三處一致改用 `/bin/sh` 跑（使用者「乙」，N-59 第 5 件、N-60）。
 
 <!-- wf-nav -->
 ## 主題（10-15 使用者定：概念、規範、實作之外，再用主題分）
