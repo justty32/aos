@@ -9,7 +9,9 @@ CATHY = str(ROOT / "demo" / "agent-bob" / "act" / "tools" / "cathy")
 
 
 def run(*args, env=None, **kw):
+    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec／aos-loop／aos-fsm，由呼叫者把 bin/ 放進 PATH
     e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
+    e["PATH"] = str(ROOT / "bin") + os.pathsep + e.get("PATH", "")
     e.update(env or {})
     return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
 

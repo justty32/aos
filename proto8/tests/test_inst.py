@@ -10,7 +10,9 @@ import aos_inst  # noqa: E402
 
 
 def run(*args, env=None, **kw):
+    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec／aos-inst，由呼叫者把 bin/ 放進 PATH
     e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
+    e["PATH"] = str(BIN) + os.pathsep + e.get("PATH", "")
     e.update(env or {})
     return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
 
@@ -66,8 +68,8 @@ class T(unittest.TestCase):
 
     def test_run_result_shape(self):
         res = aos_inst.run({"argv": ["sh", "-c", "exit 3"]})
-        self.assertEqual(set(res), {"code", "signal", "timed_out", "pid", "ms"})
-        self.assertEqual((res["code"], res["signal"], res["timed_out"]), (3, None, False))
+        self.assertEqual(set(res), {"code", "signal", "timed_out", "pid", "ms", "received"})
+        self.assertEqual((res["code"], res["signal"], res["timed_out"], res["received"]), (3, None, False, None))
 
     def test_stdout_to_file_and_append(self):
         d = self.tmp / "w"; d.mkdir()

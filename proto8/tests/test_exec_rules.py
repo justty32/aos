@@ -11,7 +11,8 @@ BIN_DIR = str(ROOT / "bin")
 
 def env_of(extra=None):
     e = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    e["PATH"] = os.pathsep.join(p for p in e.get("PATH", "").split(os.pathsep) if p != BIN_DIR)
+    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec，由呼叫者把 bin/ 放 PATH 最前面（env 可蓋掉）
+    e["PATH"] = os.pathsep.join([BIN_DIR] + [p for p in e.get("PATH", "").split(os.pathsep) if p != BIN_DIR])
     e.update(extra or {})
     return e
 
@@ -203,11 +204,11 @@ class T(unittest.TestCase):
         self.assertEqual((rc, out.split()),
                          (0, ["out:%s/_exec" % ro, "in:%s/_exec" % Path(inner).resolve(), "out:%s/_exec" % ro]))
 
-    def test_path_not_duplicated(self):
+    def test_path_passed_as_is(self):
+        # ideas § 24：aos 的程式都不動 PATH，原樣傳下去（不加自己的 bin）
         d = prog(self.t, "p", 'echo "$PATH"\n')
-        self.assertEqual(run(d, self.t, env={"PATH": BIN_DIR + ":/usr/bin:/bin"})[1].strip(),
-                         BIN_DIR + ":/usr/bin:/bin")
-        self.assertEqual(run(d, self.t, env={"PATH": "/usr/bin:/bin"})[1].strip(), BIN_DIR + ":/usr/bin:/bin")
+        for path in (BIN_DIR + ":/usr/bin:/bin", "/usr/bin:/bin"):
+            self.assertEqual(run(d, self.t, env={"PATH": path})[1].strip(), path)
 
     def test_entry_is_dir(self):
         Path(self.t, "p", "_exec").mkdir(parents=True)

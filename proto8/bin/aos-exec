@@ -7,7 +7,7 @@ XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd�
 全字串陣列＝argv（exec，同 execvp：沒 #! 改用 /bin/sh 跑）、有 argv 的物件＝inst 單子（行程內 aos_inst.run，以子程式的碼結束）、
 沒 argv 的物件＝取 [$AOS_ENTRY] 再判一次（只往下一層）、字串＝路徑轉向（從寫著它的檔所在的資料夾算，繞圈＝入口壞）。
 開跑前 export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.aos/，建好）、AOS_CF（實際的檔）、AOS_CD（它的資料夾），
-自己的 bin/ 放進 PATH（已在就不疊），cd 到 AOS_CD。args 接在入口後面，stdin 原樣給入口。
+cd 到 AOS_CD；PATH 不動、原樣傳下去（ideas § 24；入口裡要叫 aos-exec、aos-loop… 由呼叫者事先放進 PATH）。args 接在入口後面，stdin 原樣給入口。
 自己的錯退 1，stderr 一行「aos-exec: 原因」（N-60）。
 """
 import errno
@@ -141,7 +141,7 @@ def launch(kind, val, f, args):
         err = execv(argv[0], argv)
     else:   # 同 execvp：照 PATH 一段段 execv；找不到換下一段，別的錯（沒 +x…）記第一個、也換下一段
         last = first = None
-        for d in os.environ["PATH"].split(":"):
+        for d in (os.environ.get("PATH") or "/bin:/usr/bin").split(":"):   # 沒設＝/bin:/usr/bin（只拿來找，不 export）
             last = execv(os.path.join(d, argv[0]), argv)
             if first is None and not isinstance(last, (FileNotFoundError, NotADirectoryError)):
                 first = last
@@ -165,12 +165,9 @@ def main(argv):
             os.makedirs(stack, exist_ok=True)
         except OSError as e:
             raise Fail("建不了 AOS_STACK：%s（%s）" % (stack, e.strerror))
-        path = os.environ.get("PATH") or "/bin:/usr/bin"
-        if BIN not in path.split(":"):
-            path = BIN + ":" + path
         cd = os.path.dirname(f)
         os.environ.update(AOS_WS=ws, AOS_STACK=os.path.join(os.path.abspath(stack), ""),
-                          AOS_CF=f, AOS_CD=cd, PATH=path)
+                          AOS_CF=f, AOS_CD=cd)
         os.chdir(cd)
         return launch(kind, val, f, args)
     except Fail as e:

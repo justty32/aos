@@ -1,4 +1,4 @@
-import datetime, json, os, subprocess, tempfile, time, unittest
+import datetime, json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -152,6 +152,50 @@ class T(unittest.TestCase):
                 break
             time.sleep(0.05)
         self.assertTrue(gone, "內層的 sleep 還活著")
+
+    def test_string_cell_path_as_is(self):
+        # ideas § 24：aos 的程式都不動 PATH，字串格看到的 PATH 跟 fsm 收到的一樣（不加任何 bin）
+        self.cell("a", 'echo "$PATH" > "$AOS_STACK/path"\n')
+        self.table({"a": {"val": "a", "next": "a"}})
+        path = str(BIN) + ":/usr/bin:/bin"
+        self.assertEqual(self.beat(env={"PATH": path}).returncode, 0)
+        self.assertEqual((self.stack / "path").read_text().strip(), path)
+
+    # 訊號（ideas § 24；移植自 proto8/impls/aos-fsm/tests/test_cli.py 的 C 段）
+    def start(self):
+        e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
+        e["PATH"] = str(BIN) + os.pathsep + e["PATH"]
+        e["AOS_STACK"] = str(self.stack)
+        return subprocess.Popen([FSM, str(self.tmp / "fsm.json")], cwd=str(self.tmp), env=e,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+    def wait_file(self, path, secs=10):
+        end = time.monotonic() + secs
+        while time.monotonic() < end:
+            if path.exists():
+                return True
+            time.sleep(0.02)
+        return False
+
+    def test_sigterm_cell_finishes_then_143(self):
+        # 格收到轉來的 SIGTERM 收好、退 0：trace 有一行、state 照樣換，fsm 再以 143 結束（P-36）
+        self.cell("a", 'trap \'exit 0\' TERM\ntouch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
+        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
+        p = self.start()
+        ok = self.wait_file(self.stack / "up")
+        p.send_signal(signal.SIGTERM)
+        out, err = p.communicate(timeout=20)
+        self.assertEqual((ok, p.returncode, err, self.state(), self.trace()[0]["code"]), (True, 143, "", "b\n", 0))
+
+    def test_sigint_inst_cell(self):
+        self.table({"a": {"val": {"argv": ["sh", "-c", 'touch "$AOS_STACK/up"; exec sleep 30']}, "next": "a"}})
+        p = self.start()
+        ok = self.wait_file(self.stack / "up")
+        p.send_signal(signal.SIGINT)
+        out, err = p.communicate(timeout=20)
+        x = self.trace()[0]
+        self.assertEqual((ok, p.returncode, x["code"], x["signal"], (self.stack / "state").exists()),
+                         (True, 130, 130, 2, False))
 
 
 if __name__ == "__main__":

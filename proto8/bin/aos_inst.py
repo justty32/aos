@@ -18,7 +18,8 @@ os.path.join(值, 子路徑)。變數沒設＝單子的錯。只有 $env，沒�
 
 結束碼：命令列退出碼＝子程式的碼（透明轉交；被訊號停掉＝128＋訊號號碼）。aos-inst 自己的錯
 （單子壞、程式找不到、$env 沒設）退 1，stderr 一行「aos-inst: 原因」。
-run() 回 {"code", "signal", "timed_out", "pid", "ms"}；子程式回幾號、被逾時收掉都算正常跑完，
+run() 回 {"code", "signal", "timed_out", "pid", "ms", "received"}（received＝跑的期間收到、轉給子程式的第一個
+SIGINT／SIGTERM／SIGHUP，沒有＝None；給 aos-loop／aos-fsm「收完這拍再以 128＋N 結束」用）；子程式回幾號、被逾時收掉都算正常跑完，
 單子有問題或起不來丟 InstError。
 
 行程群組（P-36）：子程式自成一個行程群組（start_new_session），逾時與轉來的訊號都對整個群組送
@@ -132,8 +133,10 @@ def _run(inst):
     child = None
     pending = []
     killed_at = []      # 第一次轉訊號之後的 SIGKILL 期限
+    received = []       # 收到的訊號（結果的 received＝第一個）
 
     def forward(signum, frame):
+        received.append(signum)
         if not killed_at:
             killed_at.append(time.monotonic() + grace_ms / 1000)
         if child is None:
@@ -157,7 +160,8 @@ def _run(inst):
         if interrupted is not None:
             raise interrupted
         return {"code": rc if rc >= 0 else 128 - rc, "signal": -rc if rc < 0 else None,
-                "timed_out": timed_out, "pid": child.pid, "ms": round((time.monotonic() - t0) * 1000)}
+                "timed_out": timed_out, "pid": child.pid, "ms": round((time.monotonic() - t0) * 1000),
+                "received": received[0] if received else None}
     finally:
         for sig, handler in old.items():
             signal.signal(sig, handler)
