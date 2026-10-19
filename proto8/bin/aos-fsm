@@ -2,7 +2,7 @@
 """aos-fsm FSM.json — fsm 一拍只跑一格。
 FSM.json: {"start": "idle", "states": {"idle": {"val": "idle", "next": "think"},
                                          "think": {"val": {"argv": [...], ...}, "next": "act"}, ...}}
-讀 $AOS_STACK/state（純文字一行狀態名；沒有＝start，格式與 shell 版相同）；查格；
+讀 $AOS_STACK/state（純文字一行狀態名；沒有＝start，格式與 shell 版相同；寫的時候先寫 .state 再改名，N-05）；查格；
 val 是字串＝`aos-exec <它>`（相對路徑從 cwd 算）、是物件＝單子，行程內 aos_inst.run()。
 每拍在 $AOS_STACK/trace.jsonl 追加一行 {"at","state","code","signal","timed_out","ms"}（at＝這拍開始的 UTC 時間）。
 結束碼 0 才把 next 寫進 state；以那格的碼退出（10 與其他非 0 原樣往上，狀態都不動）。
@@ -57,8 +57,10 @@ def main():
         f.write(json.dumps({"at": at, "state": state, "code": res["code"], "signal": res["signal"],
                             "timed_out": res["timed_out"], "ms": res["ms"]}, ensure_ascii=False) + "\n")
     if res["code"] == 0:
-        with open(sfile, "w", encoding="utf-8") as f:
+        tmp = os.path.join(stack, ".state")   # N-05：先寫 . 開頭的暫存檔再改名蓋過去，讀的人不會讀到半份
+        with open(tmp, "w", encoding="utf-8") as f:
             f.write(cell["next"] + "\n")
+        os.replace(tmp, sfile)
     sys.exit(res["code"])
 
 

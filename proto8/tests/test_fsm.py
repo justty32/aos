@@ -53,6 +53,17 @@ class T(unittest.TestCase):
         self.assertEqual(self.state(), "a\n")
         self.assertEqual(list(self.tmp.glob("state")), [])
 
+    def test_state_written_by_rename_not_in_place(self):
+        # N-05：先寫 .state 再改名蓋過去——蓋完 inode 換了、不留暫存檔
+        self.cell("a", "exit 0\n"); self.cell("b", "exit 0\n")
+        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "b", "next": "a"}})
+        (self.stack / "state").write_text("a\n")
+        before = os.stat(self.stack / "state").st_ino
+        self.assertEqual(self.beat().returncode, 0)
+        self.assertEqual(self.state(), "b\n")
+        self.assertNotEqual(os.stat(self.stack / "state").st_ino, before)
+        self.assertFalse((self.stack / ".state").exists())
+
     def test_cell_10_passes_up_and_state_unchanged(self):
         self.cell("a", "exit 10\n"); self.cell("b", "exit 0\n")
         self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "b", "next": "a"}})

@@ -233,6 +233,27 @@ class T(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((ws / ".aos" / "n").read_text().split(), ["x", "x", "x"])
 
+    def test_loop_reaching_max_exits_0_with_empty_stderr(self):
+        # N-43：正常退出不寫 stderr（要知道有沒有跑滿看 trace.jsonl 行數）
+        agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
+        Path(agent, "loop.json").write_text(json.dumps({"run": {"argv": ["true"]}, "max": 2}))
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, agent, str(ws))
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+
+    def test_brain_writes_current_by_rename(self):
+        # N-05：current 先寫 .current 再改名
+        for agent in (BOB, ANN):
+            ws = workspace(self.tmp, "ws-" + Path(agent).name, "1+1？")
+            stack = ws / ".aos"; stack.mkdir()
+            (stack / "current").write_text("old\n")
+            before = os.stat(stack / "current").st_ino
+            r = run("python3", str(Path(agent) / "brain.py"), env={"AOS_WS": str(ws), "AOS_STACK": str(stack)})
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual((stack / "current").read_text(), "q.txt\n")
+            self.assertNotEqual(os.stat(stack / "current").st_ino, before)
+            self.assertFalse((stack / ".current").exists())
+
     def test_loop_embedded_inst_stop_and_failure_codes(self):
         for code, want in ((10, 0), (7, 7)):
             agent = prog(self.tmp, f"agent{code}", "aos-loop loop.json\n")

@@ -8,7 +8,9 @@ names = sorted(os.listdir(os.path.join(ws, "inbox")))
 if not names:
     sys.exit("agent-bob: inbox 是空的")
 name = names[0]
-open(os.path.join(stack, "current"), "w").write(name + "\n")
+tmp = os.path.join(stack, ".current")       # N-05：先寫 . 開頭的暫存檔再改名
+open(tmp, "w").write(name + "\n")
+os.replace(tmp, os.path.join(stack, "current"))
 question = open(os.path.join(ws, "inbox", name)).read()
 url = os.environ.get("AOS_BRAIN_URL")
 if not url:
