@@ -146,15 +146,17 @@ echo $next > "$AOS_STACK/state"
 
 stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；入口怎麼收「這次要做啥」；一格同步還是非同步；agent 當工具時題目與答案走什麼形狀（看那隻 agent 自己的說明，P-32）；巢狀多深（P-37）。（§ 2、§ 4、§ 9「inbox 先不管」；拍板點 1；N-41）
 
-## 十、程式對這份的落實（兩版都改完；只剩分工上的不同）
+## 十、程式對這份的落實（兩版都改完；只剩分工上的不同，§ 24 bin 版正在改）
 
 第一、二輪都做完了（10-19），做法與每步的紀錄見當時的 PLAN（git 歷史 8d69bcb4 的 `proto8-2/PLAN.md`；第一輪四項、第二輪六步）。併入 proto8 時 aos-fsm／brain.py 寫檔改先暫存再改名（N-05）、aos-loop 跑滿 max 不寫 stderr（N-43）。第一、二輪的慣例沒有程式落後的地方。
 
-**10-19 下班前～晚的 § 14～§ 21（N-57～N-62、C-73、P-40）兩版都做了**：impls 的 aos-exec（C++，45 組測試）；`proto8/bin`（使用者 § 21「舊版一起改」：aos-exec 從 sh 改寫成 Python、對齊 impls，93 個測試，demo 照跑）。慣例沒有程式落後的地方。兩版**仍然不同**的地方（是分工，不是落後；條文裡各條都標了）：
-- 命令列：impls 只提供 `aos-exec` 一支，inst 是 C lib（§ 20）；bin 版有 `aos-exec`、`aos-inst`、`aos-loop`、`aos-fsm` 四支。所以 P-28 的 (A)、(1) 只在 bin 版能用，(2) 內嵌單子只有 bin 版的 loop／fsm 有（impls 的 loop／fsm 等 aos-exec 好了再來，[NORMS 待定](NORMS/08-待定.md)）；兩版都認的寫法是 (B)（P-40）。
+**10-19 下班前～晚的 § 14～§ 21（N-57～N-62、C-73、P-40）兩版都做了**：impls 的 aos-exec（C++，45 組測試）；`proto8/bin`（使用者 § 21「舊版一起改」：aos-exec 從 sh 改寫成 Python、對齊 impls，93 個測試，demo 照跑）。慣例沒有程式落後的地方。**§ 23** impls 的 aos-loop 重寫、aos-fsm 新做（各 24、23 組測試＋demo 整合測試）。**§ 24** 只有 bin 版還在改（見下面「訊號與 PATH」那條）。兩版**仍然不同**的地方（除了 § 24 那條，都是分工、不是落後；條文裡各條都標了）：
+- 命令列：impls 提供 `aos-exec`、`aos-loop`、`aos-fsm` 三支（loop／fsm 照 [ideas § 23](thinking/2026-10-19-ideas.md)「重寫吧，fsm一起做」重寫／新做），inst 是 C lib、沒有 `aos-inst` 命令列（§ 20）；bin 版有 `aos-exec`、`aos-inst`、`aos-loop`、`aos-fsm` 四支。所以 P-28 的 (A)、(1) 只在 bin 版能用；(2) 內嵌單子兩版的 loop／fsm 都有（`run`／`val` 寫成物件＝單子在行程內跑：impls 交給 aos-exec 公開 API 的 `run_inst`，bin 版呼叫 `aos_inst.run()`）；(B) 兩版都認（P-40）。impls 的 `aos-daemon` 仍待重寫、建置不起來（[NORMS 待定](NORMS/08-待定.md)）。
+- 字串的 `run`／`val`（`aos-exec 那個資料夾`）：bin 版的 loop／fsm 每拍叫一次 PATH 上的 `aos-exec` 子程式；impls 的不叫命令列，在子行程裡走 aos-exec 的公開 API（找入口、備環境變數、cd、開跑），錯誤照 aos-exec 的格式說。結果一樣（aos-fsm 的 `test_demo` 比過 bob、ann 兩版的結束碼、stderr、工作區每個檔）。
+- 訊號與 PATH（[ideas § 24](thinking/2026-10-19-ideas.md)，兩版都要照做，不是分工）：loop／fsm 收到 SIGINT／SIGTERM／SIGHUP 先轉給正在跑的那拍、收完以 128＋N 結束（P-36）；aos-exec、aos-loop、aos-fsm 都不動 PATH、原樣傳下去（P-39、N-59）。impls 三支已照做；bin 版正在改（改完之前 bin 的 loop／fsm 收到訊號就死、aos-exec 仍把自己的 `bin/` 加進 PATH）。
 - 單子當入口：兩版 aos-exec 都留在行程裡當監工、以子程式的碼結束；impls 交給 C lib，bin 版呼叫 `aos_inst.run()`（Python）。
-- 錯誤一行：impls `aos-exec: 代號 原因`，bin `aos-exec: 原因`（原因開頭固定幾種，見 [bin/README](bin/README.md)）；N-60 兩種都合。
-- 指示詞：impls 的單子解 `$env` 與 `$ref`（aos-directive 庫）；bin 的 `aos_inst.py` 只解 `$env`、沒有 `$ref`（N-45；使用者 10-19 晚定保留 `$ref`，[ideas § 22](thinking/2026-10-19-ideas.md)）。範本只用 `$env`（P-31），所以 demo 兩版都跑得動。
+- 錯誤一行：impls 三支都是 `程式名: 代號 原因`（例 `aos-exec: 代號 原因`），bin `程式名: 原因`（原因開頭固定幾種，見 [bin/README](bin/README.md)）；N-60 兩種都合。
+- 指示詞：impls 的單子（aos-exec 的入口、loop／fsm 內嵌的）解 `$env` 與 `$ref`（aos-directive 庫）；bin 的 `aos_inst.py` 只解 `$env`、沒有 `$ref`（N-45；使用者 10-19 晚定保留 `$ref`，[ideas § 22](thinking/2026-10-19-ideas.md)）。範本只用 `$env`（P-31），所以 demo 兩版都跑得動。
 - demo 不受影響（兩隻 agent 的入口都是可執行檔、單子都內嵌在 fsm.json）。
 
 ## 十一、要使用者決定的
