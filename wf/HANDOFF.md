@@ -16,4 +16,5 @@
 
 1. **授權**：使用者 /goal「可以隨意commit,push，但是必須使用WSL的git global setting，也就是justty32」——commit／push 一律在 WSL 跑 git（`wsl -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && git …'`）。WSL 的 git 沒設 credential helper，`git push origin main`（https）會卡在等密碼；改走 SSH 推：`GIT_SSH_COMMAND="ssh -o BatchMode=yes" git push git@github.com:justty32/aos.git main`，推完 `git fetch origin` 同步追蹤分支。事情盡量交給子 agent；需要思考的派 fable；sonnet 只做雜事或簡單工作；要動手做事的 agent（sonnet 除外）先讀過 wf 規矩。
 2. **現況**：proto8-2 已併進 proto8（[session log 10-19](session_logs/2026-10/2026-10-19.md#proto8-2-併進-proto810-19)），現行以 proto8 的 CONCEPTS／NORMS／CONVENTION 為準；10-16 那套（食譜與廚房、門房、`.aos` 捷徑等）已作廢，舊 lib 在 git aa2fec1f。
-3. **待辦**：daemon、兩種 kernel、tasks、tick、腦的工具呼叫待照新做法重寫，等使用者說先做哪個（[NORMS 待定](../proto8/NORMS/08-待定.md)）。重寫順序稿已排好（[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)），使用者「這些都是實作細節，之後再說沒關係。我還在高空飛。」——他在想大方向，別拿實作細節打斷。信箱、WAIT_USER 皆空。
+3. **今天下午定的**（[session log 10-19 下午](session_logs/2026-10/2026-10-19.md#下午-session健檢重寫順序資料夾比喻四題入口改-_exec10-19)）：C-71 資料夾用 table 比喻、C-72 JSON＝單檔 table、C-41 元素求值由 entry 決定（quote）、C-43「編譯」＝用 lua／lisp 生成資料夾佈局；入口預設改 `_exec`（工作區 stack 仍 `.aos/`）。
+4. **待辦**：daemon、兩種 kernel、tasks、tick、腦的工具呼叫待照新做法重寫，等使用者說先做哪個（[NORMS 待定](../proto8/NORMS/08-待定.md)）。重寫順序稿已排好（[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)），使用者「這些都是實作細節，之後再說沒關係。我還在高空飛。」——他在想大方向，別拿實作細節打斷。信箱、WAIT_USER 皆空。
