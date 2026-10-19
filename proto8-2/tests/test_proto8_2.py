@@ -265,6 +265,12 @@ class T(unittest.TestCase):
         for n in ("state", "trace.jsonl", "plan", "current"):
             self.assertEqual(list(Path(ANN).rglob(n)), [], n)   # 定義資料夾乾淨
 
+    def test_ann_has_no_cell_folders(self):
+        execs = sorted(str(p.relative_to(ANN)) for p in Path(ANN).rglob("exec") if p.parent.name == ".aos")
+        self.assertEqual(execs, [".aos/exec"])
+        self.assertEqual(sorted(p.name for p in Path(ANN).iterdir()),
+                         [".aos", "act.py", "brain.py", "fsm.json", "idle.py", "loop.json"])
+
     def test_stamp_tool_alone(self):
         stamp = str(Path(BOB) / "act" / "tools" / "stamp")
         ws = Path(self.tmp, "ws"); ws.mkdir()

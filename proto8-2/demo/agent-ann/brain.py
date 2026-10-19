@@ -3,10 +3,10 @@
 import json, os, sys, urllib.request
 stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
 if not stack:
-    sys.exit("agent-bob: 沒設定 AOS_STACK")
+    sys.exit("agent-ann: 沒設定 AOS_STACK")
 names = sorted(os.listdir(os.path.join(ws, "inbox")))
 if not names:
-    sys.exit("agent-bob: inbox 是空的")
+    sys.exit("agent-ann: inbox 是空的")
 name = names[0]
 open(os.path.join(stack, "current"), "w").write(name + "\n")
 question = open(os.path.join(ws, "inbox", name)).read()
