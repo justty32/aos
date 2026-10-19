@@ -10,7 +10,7 @@
 
 ## 現況
 
-10-19 使用者定了：資料夾＝程式、入口＝`$AOS_ENTRY`（預設 `.aos/exec`）、三個環境變數、`aos-exec DIR [WS]`、inst 四種用法可選並存、慣例拍板點 1～3。原話在 [thinking/ideas](thinking/2026-10-19-ideas.md)；整套 aos agent 慣例（結論版，條號 P-01～P-30）在 [CONVENTION.md](CONVENTION.md)，程式還沒照它改的地方列在它第十節。方向、範圍、是否接替 proto8 都還沒定。
+10-19 使用者定了：資料夾＝程式、入口＝`$AOS_ENTRY`（預設 `.aos/exec`）、三個環境變數、`aos-exec DIR [WS]`、inst 四種用法可選並存、慣例拍板點 1～3。原話在 [thinking/ideas](thinking/2026-10-19-ideas.md)；整套 aos agent 慣例（結論版，條號 P-01～P-30）在 [CONVENTION.md](CONVENTION.md)，程式還沒照它改的地方列在它第十節；那四項怎麼做、分幾步、每步要同步哪幾條，在 [PLAN.md](PLAN.md)（10-19 fable 規劃，只規劃、還沒動手）。方向、範圍、是否接替 proto8 都還沒定。
 
 ## 原型怎麼跑（10-19）
 
