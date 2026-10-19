@@ -4,11 +4,11 @@ FSM.json: {"start": "idle", "states": {"idle": {"val": "idle", "next": "think"},
                                          "think": {"val": {"argv": [...], ...}, "next": "act"}, ...}}
 讀 $AOS_STACK/state（純文字一行狀態名；沒有＝start，格式與 shell 版相同）；查格；
 val 是字串＝`aos-exec <它>`（相對路徑從 cwd 算）、是物件＝單子，行程內 aos_inst.run()。
-每拍在 $AOS_STACK/trace.jsonl 追加一行 {"state","code","signal","timed_out","ms"}。
+每拍在 $AOS_STACK/trace.jsonl 追加一行 {"at","state","code","signal","timed_out","ms"}（at＝這拍開始的 UTC 時間）。
 結束碼 0 才把 next 寫進 state；以那格的碼退出（10 與其他非 0 原樣往上，狀態都不動）。
 只看格的結束碼，不讀格的 stdout、不轉述格的 stderr。自己的錯（沒設 AOS_STACK、表壞、查不到格、單子壞）
 退 1，stderr 一行 `aos-fsm: 原因`。"""
-import json, os, subprocess, sys, time
+import datetime, json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_inst
 
@@ -42,6 +42,7 @@ def main():
     val = cell["val"]
     if not isinstance(val, (str, dict)):
         die(f"狀態 {state} 的 val 要是子資料夾名或單子")
+    at = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     if isinstance(val, str):
         t0 = time.monotonic()
         rc = subprocess.call(["aos-exec", val])
@@ -53,7 +54,7 @@ def main():
         except aos_inst.InstError as e:
             die(f"狀態 {state}：{e}")
     with open(os.path.join(stack, "trace.jsonl"), "a", encoding="utf-8") as f:
-        f.write(json.dumps({"state": state, "code": res["code"], "signal": res["signal"],
+        f.write(json.dumps({"at": at, "state": state, "code": res["code"], "signal": res["signal"],
                             "timed_out": res["timed_out"], "ms": res["ms"]}, ensure_ascii=False) + "\n")
     if res["code"] == 0:
         with open(sfile, "w", encoding="utf-8") as f:

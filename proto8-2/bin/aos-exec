@@ -20,7 +20,8 @@ else
   die "入口不存在：$dir/$entry（也沒有 $entry.json）"
 fi
 AOS_WS=$(cd "$ws" && pwd) || exit 1
-PATH=$(cd "$(dirname "$0")" && pwd):$PATH
+bin=$(cd "$(dirname "$0")" && pwd)
+case ":$PATH:" in *":$bin:"*) ;; *) PATH=$bin:$PATH ;; esac
 AOS_STACK=${AOS_STACK:-$AOS_WS/.aos/}
 mkdir -p "$AOS_STACK" || exit 1
 AOS_STACK=$(cd "$AOS_STACK" && pwd)/

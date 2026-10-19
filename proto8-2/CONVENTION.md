@@ -149,13 +149,10 @@ stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；�
 
 ## 十、程式還沒照這份改的地方
 
-第一輪四項已全部做完（10-19），做法見 [PLAN.md](PLAN.md) 第一輪。**第二輪**（本稿 10-19 定、程式還沒改，步驟見 [PLAN 第二輪](PLAN.md#第二輪混合範本與巢狀2026-10-19-fable-規劃)）：
+第一輪四項已全部做完（10-19），做法見 [PLAN.md](PLAN.md) 第一輪。**第二輪**（本稿 10-19 定、步驟 1（行程群組、`at`、PATH 去重）已做，其餘程式還沒改，步驟見 [PLAN 第二輪](PLAN.md#第二輪混合範本與巢狀2026-10-19-fable-規劃)）：
 
 1. `demo/agent-bob` 改成第二節的混合範本（`fsm.json`、`idle/`、`act/`、`brain.py` 在根；`fsm/` 刪；`tools/stamp` 搬到 cathy 的 act 底下）；`demo/agent-ann` 改成全內嵌對照（P-27、P-29、§ 八）。
 2. 新增 `demo/agent-bob/act/tools/cathy/`（完整 agent，被 bob 的 act 當工具叫；她的 act 叫 `tools/stamp`）（P-32、P-33、P-35）。
-3. `bin/aos_inst.py`：單子起的程式自成一個行程群組，逾時與轉來的訊號打整個群組（P-36）。
-4. `bin/aos-fsm`：`trace.jsonl` 每行加 `at`（P-38）。
-5. `bin/aos-exec`：`bin/` 已在 PATH 裡就不再疊一份（P-39）。
 
 ## 十一、要使用者決定的
 

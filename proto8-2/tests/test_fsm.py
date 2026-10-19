@@ -1,4 +1,4 @@
-import json, os, subprocess, tempfile, unittest
+import datetime, json, os, subprocess, tempfile, unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -96,7 +96,9 @@ class T(unittest.TestCase):
             self.beat()
         tr = self.trace()
         self.assertEqual([(t["state"], t["code"]) for t in tr], [("a", 0), ("b", 5), ("b", 5)])
-        self.assertEqual(set(tr[0]), {"state", "code", "signal", "timed_out", "ms"})
+        self.assertEqual(set(tr[0]), {"at", "state", "code", "signal", "timed_out", "ms"})
+        for t in tr:
+            datetime.datetime.fromisoformat(t["at"])
 
     def test_requires_stack(self):
         self.table({"a": {"val": {"argv": ["true"]}, "next": "a"}})

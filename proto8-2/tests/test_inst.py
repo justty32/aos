@@ -1,4 +1,4 @@
-import json, os, subprocess, sys, tempfile, unittest
+import json, os, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -132,6 +132,36 @@ class T(unittest.TestCase):
         lines = (ws / ".aos" / "plan").read_text().split("\n")
         self.assertEqual(lines[0], str(d))
         self.assertEqual(lines[1], "arg1")
+
+
+    def test_timeout_kills_grandchildren(self):
+        nl = chr(10)
+        inner = self.tmp / "inner" / ".aos"; inner.mkdir(parents=True)
+        (inner / "exec").write_text("#!/bin/sh" + nl + 'echo $$ > "$AOS_STACK/pid"' + nl + "exec sleep 30" + nl)
+        (inner / "exec").chmod(0o755)
+        outer = self.tmp / "outer" / ".aos"; outer.mkdir(parents=True)
+        (outer / "exec").write_text("#!/bin/sh" + nl + "aos-exec %s" % (self.tmp / "inner") + nl)
+        (outer / "exec").chmod(0o755)
+        ws = self.tmp / "ws"; ws.mkdir()
+        old = os.environ.copy()
+        os.environ["PATH"] = str(BIN) + os.pathsep + os.environ["PATH"]
+        os.environ.pop("AOS_STACK", None); os.environ.pop("AOS_WS", None)
+        try:
+            res = aos_inst.run({"argv": ["aos-exec", str(self.tmp / "outer"), str(ws)],
+                                "timeout_ms": 300, "grace_ms": 200})
+        finally:
+            os.environ.clear(); os.environ.update(old)
+        self.assertTrue(res["timed_out"])
+        pid = int((ws / ".aos" / "pid").read_text())
+        gone = False
+        for _ in range(20):
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                gone = True
+                break
+            time.sleep(0.05)
+        self.assertTrue(gone, "孫程式 sleep 還活著")
 
 
 if __name__ == "__main__":

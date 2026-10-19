@@ -289,6 +289,15 @@ class T(unittest.TestCase):
         self.assertFalse((ws / ".aos" / "runs").exists())     # 子 stack 分開
         self.assertEqual(list(Path(BOB).rglob("runs")), [])    # 定義資料夾乾淨
 
+    def test_path_not_duplicated(self):
+        c = prog(self.tmp, "c", 'echo "$PATH"' + chr(10))
+        b = prog(self.tmp, "b", f'aos-exec {c} > "$AOS_WS/path"' + chr(10))
+        a = prog(self.tmp, "a", f'aos-exec {b}' + chr(10))
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        self.assertEqual(run(EXEC, a, str(ws)).returncode, 0)
+        parts = (ws / "path").read_text().strip().split(":")
+        self.assertEqual(parts.count(str(ROOT / "bin")), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
