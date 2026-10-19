@@ -23,9 +23,13 @@ run() 回 {"code", "signal", "timed_out", "pid", "ms"}；子程式回幾號、�
 
 行程群組（P-36）：子程式自成一個行程群組（start_new_session），逾時與轉來的訊號都對整個群組送
 （killpg），grace 到了 SIGKILL 整個群組——子程式底下的孫程式一起收掉。
+
+argv[0] 是 +x 但沒有 #! 的檔（ENOEXEC）時照 execvp 的做法改用 `/bin/sh 那個檔 args...` 再起一次（ideas § 21「不擋」）。
 """
+import errno
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -171,10 +175,20 @@ def _start(inst):
             stderr = _stream(inst, "stderr", opened)
         except OSError as e:
             raise InstError("串流開不了：%s" % e)
-        try:
-            return subprocess.Popen(inst["argv"], cwd=inst["cwd"], env=env,
-                                    stdin=stdin, stdout=stdout, stderr=stderr,
+        def popen(argv):
+            return subprocess.Popen(argv, cwd=inst["cwd"], env=env, stdin=stdin, stdout=stdout, stderr=stderr,
                                     start_new_session=True)
+        try:
+            try:
+                return popen(inst["argv"])
+            except OSError as e:
+                if e.errno != errno.ENOEXEC:
+                    raise
+                # 同 execvp：+x 但沒 #! 的檔改用 /bin/sh 跑（ideas § 21「不擋」；aos-exec 的 argv 陣列入口不這樣）
+                prog = inst["argv"][0]
+                if "/" not in prog:
+                    prog = shutil.which(prog, path=env.get("PATH", os.defpath)) or prog
+                return popen(["/bin/sh", prog] + inst["argv"][1:])
         except FileNotFoundError:
             raise InstError("找不到要跑的程式 %s" % inst["argv"][0])
         except PermissionError:

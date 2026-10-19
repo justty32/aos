@@ -302,6 +302,17 @@ class T(unittest.TestCase):
         p.stdout.close()
         self.assertEqual((rc, time.monotonic() - t0 < 2), (137, True))
 
+    def test_inst_noshebang_runs_by_sh(self):
+        # § 21「不擋」：單子的 argv[0] 是 +x 沒 #! 的檔 → 照 execvp 改用 /bin/sh 跑；argv 陣列入口跑同一個檔仍報錯
+        put(Path(self.t, "q", "nosb"), 'echo "sh:$1"\n', 0o755)
+        self.assertEqual(self.json_entry({"argv": ["./nosb", "a"]})[:2], (0, "sh:a\n"))
+        tools = Path(self.t, "tools")
+        put(tools / "nosb2", 'echo "path:$1"\n', 0o755)
+        env = {"PATH": "%s:/usr/bin:/bin" % tools}
+        self.assertEqual(self.json_entry({"argv": ["nosb2"]}, "b", env=env)[:2], (0, "path:b\n"))
+        self.assertEqual(self.json_entry(["./nosb", "a"])[:3:2], (1, "起不來"))
+        self.assertEqual(self.json_entry(["nosb2"], env=env)[:3:2], (1, "起不來"))
+
     def test_inst_bad(self):
         put(Path(self.t, "q", "_exec"), "{not json")
         self.assertEqual(run(str(Path(self.t, "q")), self.t)[:3:2], (1, "入口壞"))

@@ -10,7 +10,7 @@
 
 使用者 10-19 定：**資料夾＝程式**，入口 `$AOS_ENTRY`（預設 `_exec`，必須是可執行檔；10-19 晚改，原 `.aos/exec`，[ideas § 13](thinking/2026-10-19-ideas.md)），aos 只訂三個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`）和一支 `aos-exec DIR [WS]`；巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套（stdin 是正規入口、`.aos` 捷徑、門房、結束碼只是參考…）作廢，原話與裁定在 [thinking/2026-10-19-ideas.md](thinking/2026-10-19-ideas.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。程式照這個做完：agent-bob 叫 cathy 叫 stamp 四層、agent-ann 全內嵌對照，測試 65 個。
 
-**10-19 下班前～晚再定**（[ideas § 14～§ 20](thinking/2026-10-19-ideas.md)）：入口放寬成四種（可執行檔、inst 單子、argv 陣列、`js[$AOS_ENTRY]` 的值——單子、陣列或字串路徑；C-73）、`aos-exec XXX`（XXX 可為資料夾、檔、`檔#/指標`，找不到補 `XXX.json`；N-58、N-61）、環境變數加 `AOS_CF`／`AOS_CD` 成五個（N-57）、`#/` 尋址（N-62）；impls 只提供 `aos-exec` 一支命令列、inst 是 C lib、JSON 不進 C 庫（§ 20）。**兩版實作**：`proto8/impls/aos-exec`（使用者假日寫的 C++ 參考實作，git 未追蹤）已照 § 14～§ 19 做完（45 組測試）；`proto8/bin` 的 Python 版 10-19 晚也照改了（使用者 § 21「舊版一起改」；aos-exec 從 sh 改寫成 Python，測試 92 個），條文裡「proto8/bin 待照新規則更新」的標記待改。
+**10-19 下班前～晚再定**（[ideas § 14～§ 20](thinking/2026-10-19-ideas.md)）：入口放寬成四種（可執行檔、inst 單子、argv 陣列、`js[$AOS_ENTRY]` 的值——單子、陣列或字串路徑；C-73）、`aos-exec XXX`（XXX 可為資料夾、檔、`檔#/指標`，找不到補 `XXX.json`；N-58、N-61）、環境變數加 `AOS_CF`／`AOS_CD` 成五個（N-57）、`#/` 尋址（N-62）；impls 只提供 `aos-exec` 一支命令列、inst 是 C lib、JSON 不進 C 庫（§ 20）。**兩版實作**：`proto8/impls/aos-exec`（使用者假日寫的 C++ 參考實作，git 未追蹤）已照 § 14～§ 19 做完（45 組測試）；`proto8/bin` 的 Python 版 10-19 晚也照改了（使用者 § 21「舊版一起改」；aos-exec 從 sh 改寫成 Python，測試 93 個），條文裡「proto8/bin 待照新規則更新」的標記待改。
 
 **舊 lib 已刪進 git 歷史**（inst、loop、daemon、fsm、agent 格庫、兩種 kernel、tasks、tick；27 支模組＋說明＋169 個測試＋六組 demo＋舊 `bin/aos`）：要找回用 `git show aa2fec1f:proto8/lib/README.md`（aa2fec1f 是刪除前最後一個有它的 commit）。daemon、kernel、tasks、tick、腦的工具呼叫現在**沒有實作**，概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](NORMS/08-待定.md)）。
 
