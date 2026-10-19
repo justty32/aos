@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parent.parent
 EXEC = str(ROOT / "bin" / "aos-exec")
 BOB = str(ROOT / "demo" / "agent-bob")
 ANN = str(ROOT / "demo" / "agent-ann")
+CATHY = str(ROOT / "demo" / "agent-bob" / "act" / "tools" / "cathy")
 
 
 def run(*args, env=None, **kw):
@@ -272,7 +273,7 @@ class T(unittest.TestCase):
                          [".aos", "act.py", "brain.py", "fsm.json", "idle.py", "loop.json"])
 
     def test_stamp_tool_alone(self):
-        stamp = str(Path(BOB) / "act" / "tools" / "stamp")
+        stamp = str(Path(CATHY) / "act" / "tools" / "stamp")
         ws = Path(self.tmp, "ws"); ws.mkdir()
         for n in ("1", "2"):
             r = run(EXEC, stamp, str(ws), input="body text\n")
@@ -282,24 +283,83 @@ class T(unittest.TestCase):
             self.assertEqual(lines[1], "body text")
             self.assertEqual((ws / ".aos" / "runs").read_text().strip(), n)
 
-    def test_bob_act_goes_through_stamp_with_own_stack(self):
+    def test_nested_three_levels(self):
         ws = workspace(self.tmp, "ws", "hello")
-        self.assertEqual(run(EXEC, BOB, str(ws)).returncode, 0)
+        r = run(EXEC, BOB, str(ws))
+        self.assertEqual(r.returncode, 0, r.stderr)
         out = (ws / "out" / "q.txt").read_text().split("\n")
         self.assertTrue(out[0].startswith("# "))
-        self.assertIn("hello", out[1])
-        self.assertEqual((ws / ".aos" / "stamp" / "runs").read_text().strip(), "1")
-        self.assertFalse((ws / ".aos" / "runs").exists())     # 子 stack 分開
+        self.assertIn("FAKE ANSWER to: FAKE ANSWER to: hello", out[1])   # 兩層假腦疊出來
+        st = ws / ".aos"
+        for f in ("state", "current", "plan", "trace.jsonl"):
+            self.assertTrue((st / f).is_file(), f)
+            self.assertTrue((st / "cathy" / f).is_file(), "cathy/" + f)
+        self.assertTrue((st / "cathy/ws/done/q.txt").exists())
+        self.assertTrue((st / "cathy/ws/out/q.txt").exists())
+        self.assertEqual((st / "cathy/stamp/runs").read_text().strip(), "1")
+        self.assertFalse((st / "runs").exists())      # 子 stack 分開
+        self.assertFalse((st / "ws").exists())
         self.assertEqual(list(Path(BOB).rglob("runs")), [])    # 定義資料夾乾淨
 
-    def test_path_not_duplicated(self):
-        c = prog(self.tmp, "c", 'echo "$PATH"' + chr(10))
-        b = prog(self.tmp, "b", f'aos-exec {c} > "$AOS_WS/path"' + chr(10))
-        a = prog(self.tmp, "a", f'aos-exec {b}' + chr(10))
+    def test_cathy_does_not_touch_bob_ws(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        self.assertEqual(run(EXEC, BOB, str(ws)).returncode, 0)
+        self.assertEqual(list((ws / "inbox").iterdir()), [])
+        self.assertTrue((ws / "done" / "q.txt").exists())
+        self.assertEqual([p.name for p in (ws / "out").iterdir()], ["q.txt"])
+        self.assertEqual(sorted(p.name for p in ws.iterdir()), [".aos", "done", "inbox", "out"])
+        self.assertTrue((ws / ".aos/cathy/trace.jsonl").exists())
+        self.assertEqual(len((ws / ".aos/trace.jsonl").read_text().splitlines()), 4)
+
+    def test_two_questions_substack_reused_not_leaking(self):
+        ws = Path(self.tmp, "ws"); (ws / "inbox").mkdir(parents=True)
+        (ws / "inbox" / "q1.txt").write_text("AAA")
+        (ws / "inbox" / "q2.txt").write_text("BBB")
+        r = run(EXEC, BOB, str(ws))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        a, b = (ws / "out" / "q1.txt").read_text(), (ws / "out" / "q2.txt").read_text()
+        self.assertIn("AAA", a); self.assertNotIn("BBB", a)
+        self.assertIn("BBB", b); self.assertNotIn("AAA", b)
+        c = ws / ".aos" / "cathy"
+        self.assertEqual((c / "state").read_text(), "idle\n")
+        self.assertEqual(len((c / "trace.jsonl").read_text().splitlines()), 8)
+        self.assertEqual(sorted(p.name for p in (c / "ws" / "done").iterdir()), ["q1.txt", "q2.txt"])
+        self.assertEqual((c / "current").read_text().strip(), "q2.txt")
+        self.assertEqual(len((ws / ".aos" / "trace.jsonl").read_text().splitlines()), 7)
+
+    def test_cathy_standalone(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        r = run(EXEC, CATHY, str(ws))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("hello", (ws / "out" / "q.txt").read_text())
+        self.assertTrue((ws / "done" / "q.txt").exists())
+        self.assertEqual((ws / ".aos" / "stamp" / "runs").read_text().strip(), "1")
+
+    def test_sub_agent_stop_code_not_leaking(self):
+        outer = prog(self.tmp, "outer", "exec aos-loop loop.json\n")
+        Path(outer, "loop.json").write_text('{"run": {"argv": ["aos-fsm", "fsm.json"]}, "max": 2}')
+        Path(outer, "fsm.json").write_text(json.dumps({"start": "s", "states": {
+            "s": {"val": "sub", "next": "t"}, "t": {"val": {"argv": ["true"]}, "next": "s"}}}))
+        prog(outer, "sub", "exec aos-loop loop.json\n")
+        Path(outer, "sub", "loop.json").write_text('{"run": "idle", "max": 5}')
+        prog(Path(outer, "sub"), "idle", "exit 10\n")
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        self.assertEqual(run(EXEC, a, str(ws)).returncode, 0)
-        parts = (ws / "path").read_text().strip().split(":")
-        self.assertEqual(parts.count(str(ROOT / "bin")), 1)
+        r = run(EXEC, outer, str(ws))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        tr = [json.loads(l) for l in (ws / ".aos" / "trace.jsonl").read_text().splitlines()]
+        self.assertEqual([(t["state"], t["code"]) for t in tr], [("s", 0), ("t", 0)])   # 外層沒被誤停
+        self.assertEqual((ws / ".aos" / "state").read_text(), "s\n")
+
+    def test_cathy_failure_stops_bob(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        (ws / ".aos" / "cathy").mkdir(parents=True)
+        (ws / ".aos" / "cathy" / "state").write_text("act\n")      # 停在半路、沒有 current
+        r = run(EXEC, BOB, str(ws))
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual((ws / ".aos" / "state").read_text(), "act\n")
+        self.assertIn("cathy 失敗", r.stderr)
+        self.assertIn("agent-cathy act", r.stderr)      # cathy 自己那層的一行
+        self.assertTrue((ws / "inbox" / "q.txt").exists())
 
 
 if __name__ == "__main__":

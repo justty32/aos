@@ -1,0 +1,2 @@
+#!/bin/sh
+exec aos-loop loop.json
