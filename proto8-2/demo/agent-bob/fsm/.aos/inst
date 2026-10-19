@@ -1,8 +1,0 @@
-#!/bin/sh
-# fsm：讀 $AOS_WS/state（預設 idle），執行該狀態的子程式；成功才轉下一個狀態。idle→think→act→idle
-state=$(cat "$AOS_WS/state" 2>/dev/null || echo idle)
-echo "$state" >> "$AOS_WS/trace.log"
-aos-exec - "$state"; rc=$?
-[ $rc -eq 0 ] || exit $rc
-case $state in idle) next=think;; think) next=act;; *) next=idle;; esac
-echo $next > "$AOS_WS/state"

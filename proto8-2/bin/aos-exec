@@ -1,15 +1,19 @@
 #!/bin/sh
 # aos-exec WS DIR [args...] — 在工作區 WS 執行 DIR 這個程式（DIR 的入口 $AOS_ENTRY）。WS 給 - 沿用 $AOS_WS。
+# AOS_STACK 沒設就用 $AOS_WS/.aos/（自動建立），設了就沿用；巢狀子程式共用同一個。
 die() { echo "aos-exec: $*" >&2; exit 2; }
 [ $# -ge 2 ] || die "usage: aos-exec WS DIR [args...]"
 ws=$1; dir=$2; shift 2
 if [ "$ws" = "-" ]; then [ -n "$AOS_WS" ] || die "WS 是 - 但 AOS_WS 沒設"; ws=$AOS_WS; fi
 [ -d "$ws" ] || die "工作區不存在：$ws"
 [ -d "$dir" ] || die "程式資料夾不存在：$dir"
-entry=${AOS_ENTRY:-.aos/inst}
+entry=${AOS_ENTRY:-.aos/exec}
 [ -e "$dir/$entry" ] || die "入口不存在：$dir/$entry"
 [ -x "$dir/$entry" ] || die "入口不可執行（要 chmod +x）：$dir/$entry"
 AOS_WS=$(cd "$ws" && pwd) || exit 2
 PATH=$(cd "$(dirname "$0")" && pwd):$PATH
-export AOS_WS PATH
+AOS_STACK=${AOS_STACK:-$AOS_WS/.aos/}
+mkdir -p "$AOS_STACK" || exit 2
+AOS_STACK=$(cd "$AOS_STACK" && pwd)/
+export AOS_WS AOS_STACK PATH
 cd "$dir" && exec "./$entry" "$@"

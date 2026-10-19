@@ -7,12 +7,12 @@ BOB = str(ROOT / "demo" / "agent-bob")
 
 
 def run(*args, env=None, **kw):
-    e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY")}
+    e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
     e.update(env or {})
     return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
 
 
-def prog(parent, name, body, mode=0o755, entry=".aos/inst"):
+def prog(parent, name, body, mode=0o755, entry=".aos/exec"):
     d = Path(parent) / name
     (d / entry).parent.mkdir(parents=True, exist_ok=True)
     (d / entry).write_text("#!/bin/sh\n" + body)
@@ -72,7 +72,7 @@ class T(unittest.TestCase):
         ws = workspace(self.tmp, "ws", "hello")
         r = run(EXEC, str(ws), BOB)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((ws / "trace.log").read_text().split(), ["idle", "think", "act", "idle"])
+        self.assertEqual((ws / ".aos" / "trace.log").read_text().split(), ["idle", "think", "act", "idle"])
         self.assertIn("hello", (ws / "out" / "q.txt").read_text())
         self.assertTrue((ws / "done" / "q.txt").exists())
         self.assertFalse((ws / "inbox" / "q.txt").exists())
@@ -87,7 +87,42 @@ class T(unittest.TestCase):
             out = (w / "out" / "q.txt").read_text()
             self.assertIn(tag, out)
         self.assertNotIn("BBB", (a / "out" / "q.txt").read_text())
-        self.assertEqual(list(Path(BOB).glob("state")), [])  # 定義資料夾保持乾淨
+        self.assertEqual(list(Path(BOB).rglob("state")), [])  # 定義資料夾保持乾淨
+        self.assertEqual(list(Path(BOB).rglob("trace.log")), [])
+        self.assertNotEqual((a / ".aos" / "plan").read_text(), (b / ".aos" / "plan").read_text())
+
+    def test_stack_default_and_override(self):
+        d = prog(self.tmp, "p", 'echo "$AOS_STACK"\n')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, str(ws), d)
+        self.assertEqual(r.stdout.strip(), str(ws) + "/.aos/")
+        self.assertTrue((ws / ".aos").is_dir())
+        mine = Path(self.tmp, "mystack")
+        r = run(EXEC, str(ws), d, env={"AOS_STACK": str(mine)})
+        self.assertEqual(r.stdout.strip(), str(mine) + "/")
+        self.assertTrue(mine.is_dir())
+
+    def test_nested_shares_stack(self):
+        inner = prog(self.tmp, "outer/inner", 'echo "$AOS_STACK" > "$AOS_STACK/seen"\n')
+        outer = prog(self.tmp, "outer", f'aos-exec - {inner}\n')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        self.assertEqual(run(EXEC, str(ws), outer).returncode, 0)
+        self.assertEqual((ws / ".aos" / "seen").read_text().strip(), str(ws) + "/.aos/")
+
+    def test_bob_state_in_stack_not_ws_or_def(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        self.assertEqual(run(EXEC, str(ws), BOB).returncode, 0)
+        for n in ("state", "trace.log", "plan", "current"):
+            self.assertTrue((ws / ".aos" / n).exists(), n)
+            self.assertFalse((ws / n).exists(), n)
+            self.assertEqual(list(Path(BOB).rglob(n)), [])
+
+    def test_bob_requires_stack(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        for sub in ("fsm", "fsm/think", "fsm/act"):
+            r = run(str(Path(BOB) / sub / ".aos/exec"), env={"AOS_WS": str(ws)})
+            self.assertNotEqual(r.returncode, 0, sub)
+            self.assertIn("沒設定 AOS_STACK", r.stderr, sub)
 
     def test_loop_failure_code(self):
         prog(self.tmp, "agent/bad", "exit 7\n")

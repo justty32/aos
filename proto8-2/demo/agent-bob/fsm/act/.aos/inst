@@ -1,6 +1,0 @@
-#!/bin/sh
-# act：執行 plan——把答案寫進 $AOS_WS/out/<題名>，題目搬到 done/
-name=$(cat "$AOS_WS/current")
-mkdir -p "$AOS_WS/out" "$AOS_WS/done"
-cp "$AOS_WS/plan" "$AOS_WS/out/$name"
-mv "$AOS_WS/inbox/$name" "$AOS_WS/done/$name"
