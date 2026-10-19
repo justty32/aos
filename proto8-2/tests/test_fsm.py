@@ -1,4 +1,4 @@
-import datetime, json, os, subprocess, tempfile, unittest
+import datetime, json, os, subprocess, tempfile, time, unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -119,6 +119,28 @@ class T(unittest.TestCase):
             self.assertEqual(r.returncode, 1, str(f))
             self.assertEqual(len(r.stderr.strip().splitlines()), 1, str(f))
             self.assertTrue(r.stderr.startswith("aos-fsm: "), str(f))
+
+    def test_outer_timeout_kills_nested_tree(self):
+        self.cell("slow/inner", 'echo $$ > "$AOS_STACK/pid"\nexec sleep 30\n')
+        self.cell("slow", "aos-exec inner\n")
+        self.table({"a": {"val": {"argv": ["aos-exec", "slow"], "timeout_ms": 300, "grace_ms": 200},
+                          "next": "a"}})
+        t0 = time.monotonic()
+        r = self.beat()
+        self.assertLess(time.monotonic() - t0, 10)   # 孤兒 sleep 會握著 pipe 拖滿 30 秒
+        self.assertNotEqual(r.returncode, 0)
+        self.assertTrue(self.trace()[0]["timed_out"])
+        self.assertFalse((self.stack / "state").exists())
+        pid = int((self.stack / "pid").read_text())
+        gone = False
+        for _ in range(20):
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                gone = True
+                break
+            time.sleep(0.05)
+        self.assertTrue(gone, "內層的 sleep 還活著")
 
 
 if __name__ == "__main__":
