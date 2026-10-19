@@ -89,19 +89,21 @@ class T(unittest.TestCase):
     def test_not_x_not_json_and_x_without_shebang(self):
         put(Path(self.t, "p", "_exec"), "echo hi\n")
         self.assertEqual(run(str(Path(self.t, "p")), self.t)[:3:2], (1, "入口壞"))
-        put(Path(self.t, "x", "_exec"), "echo hi\n", 0o755)
-        self.assertEqual(run(str(Path(self.t, "x")), self.t)[:3:2], (1, "起不來"))     # 不退回 sh
+        put(Path(self.t, "x", "_exec"), 'echo "hi:$1:$0"\n', 0o755)
+        x = str(Path(self.t, "x"))      # § 22：+x 沒 #! 同 execvp 改用 /bin/sh 跑（$0＝那個檔）
+        self.assertEqual(run(x, self.t, "a")[:2], (0, "hi:a:%s\n" % Path(x, "_exec").resolve()))
 
-    def test_argv_no_sh_fallback(self):
+    def test_argv_sh_fallback(self):
+        # § 22：argv 陣列入口的檔 +x 沒 #! → 同 execvp 改用 /bin/sh 跑（有 / 的、照 PATH 找到的都是）
         self.assertEqual(self.json_entry(["no-such-cmd-xyz"])[:3:2], (1, "起不來"))
-        put(Path(self.t, "q", "noshebang"), "echo hi\n", 0o755)
-        self.assertEqual(self.json_entry(["./noshebang"])[:3:2], (1, "起不來"))
+        put(Path(self.t, "q", "noshebang"), 'echo "hi:$1"\n', 0o755)
+        self.assertEqual(self.json_entry(["./noshebang"], "a")[:2], (0, "hi:a\n"))
         tools = Path(self.t, "tools")
-        put(tools / "mytool", "echo hi\n", 0o755)
+        put(tools / "mytool", 'echo "my:$1"\n', 0o755)
         put(tools / "good", "#!/bin/sh\necho good:$1\n", 0o755)
         put(tools / "nox", "#!/bin/sh\necho nox\n", 0o644)
         path = {"PATH": "%s:/usr/bin:/bin" % tools}
-        self.assertEqual(self.json_entry(["mytool"], env=path)[:3:2], (1, "起不來"))
+        self.assertEqual(self.json_entry(["mytool", "b"], env=path)[:2], (0, "my:b\n"))
         self.assertEqual(self.json_entry(["good"], "x", env=path)[:2], (0, "good:x\n"))
         self.assertEqual(self.json_entry(["nox"], env=path)[:3:2], (1, "起不來"))
         later = Path(self.t, "later")
@@ -303,15 +305,15 @@ class T(unittest.TestCase):
         self.assertEqual((rc, time.monotonic() - t0 < 2), (137, True))
 
     def test_inst_noshebang_runs_by_sh(self):
-        # § 21「不擋」：單子的 argv[0] 是 +x 沒 #! 的檔 → 照 execvp 改用 /bin/sh 跑；argv 陣列入口跑同一個檔仍報錯
+        # § 21「不擋」：單子的 argv[0] 是 +x 沒 #! 的檔 → 照 execvp 改用 /bin/sh 跑；§ 22 起 argv 陣列入口也一樣
         put(Path(self.t, "q", "nosb"), 'echo "sh:$1"\n', 0o755)
         self.assertEqual(self.json_entry({"argv": ["./nosb", "a"]})[:2], (0, "sh:a\n"))
         tools = Path(self.t, "tools")
         put(tools / "nosb2", 'echo "path:$1"\n', 0o755)
         env = {"PATH": "%s:/usr/bin:/bin" % tools}
         self.assertEqual(self.json_entry({"argv": ["nosb2"]}, "b", env=env)[:2], (0, "path:b\n"))
-        self.assertEqual(self.json_entry(["./nosb", "a"])[:3:2], (1, "起不來"))
-        self.assertEqual(self.json_entry(["nosb2"], env=env)[:3:2], (1, "起不來"))
+        self.assertEqual(self.json_entry(["./nosb", "a"])[:2], (0, "sh:a\n"))
+        self.assertEqual(self.json_entry(["nosb2", "b"], env=env)[:2], (0, "path:b\n"))
 
     def test_inst_bad(self):
         put(Path(self.t, "q", "_exec"), "{not json")
