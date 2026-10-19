@@ -12,20 +12,20 @@
   {
    "abbr": "ctl",
    "full": "control",
-   "meaning": "控制：宣告式 ctl 窗、指令式控制資料夾",
-   "example": "ctl.json、ctl_poll_ms、ctl_seq、ctl_dir"
+   "meaning": "控制：宣告式 ctl 窗（N-06；指令式控制資料夾 10-16 隨 N-10 刪）",
+   "example": "ctl.json、ctl_seq"
   },
   {
    "abbr": "inst",
    "full": "instruction",
    "meaning": "一筆要跑的指令（argv＋怎麼跑）",
-   "example": "inst.json、loop.json 的 inst、aos-inst"
+   "example": "inst 單子（{\"argv\", …}，P-28）、aos-inst（bin 版）、impls 的 inst C lib"
   },
   {
    "abbr": "fsm",
    "full": "finite state machine",
    "meaning": "狀態機組合子",
-   "example": "fsm.json、aos-fsm、fsm/state.json"
+   "example": "fsm.json、aos-fsm、$AOS_STACK/state（N-39）"
   },
   {
    "abbr": "cfg",
@@ -37,7 +37,7 @@
    "abbr": "dir",
    "full": "directory",
    "meaning": "資料夾（後綴，表示值是資料夾）",
-   "example": "work_dir、ctl_dir"
+   "example": "work_dir（N-28）"
   },
   {
    "abbr": "path",
@@ -91,7 +91,7 @@
    "abbr": "cwd",
    "full": "current working directory",
    "meaning": "工作目錄（POSIX）",
-   "example": "inst 的 cwd、cwd_mkdir"
+   "example": "inst 單子的 cwd（P-28）"
   },
   {
    "abbr": "ms",
@@ -115,31 +115,31 @@
    "abbr": "pid",
    "full": "process id",
    "meaning": "行程號（POSIX）",
-   "example": "daemon table 子項的 pid"
+   "example": "daemon state 窗 children 各項的 pid（N-28）"
   },
   {
    "abbr": "op",
    "full": "operation",
-   "meaning": "控制資料夾指令的動作",
-   "example": "{\"op\", \"id\"}（lib daemon）"
+   "meaning": "（原控制資料夾指令的動作；10-16 隨 N-10 刪，現在沒有地方用）",
+   "example": "（無）"
   },
   {
    "abbr": "val",
    "full": "value",
    "meaning": "值",
-   "example": "ctl 的 {\"val\", \"now\"}（N-06）"
+   "example": "fsm 表每格的 val（N-36）"
   },
   {
    "abbr": "max",
    "full": "maximum",
    "meaning": "上限（前綴，大家都知道的慣例）",
-   "example": "max_fails"
+   "example": "loop.json 的 max（P-06）、daemon 的 max（N-28）"
   },
   {
    "abbr": "mkdir",
    "full": "make directory",
    "meaning": "沒有就建資料夾（Unix 指令名）",
-   "example": "cwd_mkdir、exit_mkdir"
+   "example": "鎖窗靠 mkdir 建成功拿到鎖（N-15）；impls 代號 MkdirFailed"
   },
   {
    "abbr": "meta",
@@ -157,13 +157,13 @@
    "abbr": "llm",
    "full": "large language model",
    "meaning": "大語言模型",
-   "example": "gates/llm.json、LLM kernel"
+   "example": "AOS_BRAIN_*（P-23）、LLM kernel（N-42）"
   },
   {
    "abbr": "cpu",
    "full": "central processing unit",
    "meaning": "資源種類名",
-   "example": "gates/cpu.json"
+   "example": "kernel 的資源種類（C-47；現無實作）"
   },
   {
    "abbr": "url",
@@ -181,19 +181,19 @@
    "abbr": "cli",
    "full": "command-line interface",
    "meaning": "命令列程式共用部分",
-   "example": "aos_cli.py"
+   "example": "impls 的 tests/test_cli.py（命令列黑箱）"
   },
   {
    "abbr": "proc",
    "full": "process",
    "meaning": "行程",
-   "example": "aos_proc.py"
+   "example": "/proc/<pid>/stat（N-32 啟動時間）"
   },
   {
    "abbr": "lib",
    "full": "library",
    "meaning": "函式庫資料夾",
-   "example": "proto8/lib"
+   "example": "impls 的 inst C lib（libaos）、lib/libaos-exec.a"
   },
   {
    "abbr": "bin",

@@ -11,7 +11,7 @@
 | 慣例 | 我們自己人寫 aos agent 時照抄的標準形狀（P-05～P-40），**不要求別人守** | [CONVENTION.md](CONVENTION.md) |
 | 程式 | 符合規範的實作與範例，**不要求一定用** | [proto8/bin](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm；Python，10-19 晚照 § 14～§ 21 改完）、[proto8/demo](demo/README.md)（agent-bob、agent-ann）；`proto8/impls/`（使用者假日的 C／C++ 參考實作，git 未追蹤：只提供 `aos-exec` 一支命令列，已照 § 14～§ 21 做，inst 是 C lib）；舊的 lib 10-19 進 git 歷史 |
 
-本檔（含分檔）只收使用者親口定下的規範（條號 N-）；AI 提的、還沒定的放在最後「待定」，不算數。**10-19 併入 proto8-2**：10-16 那套（stdin 是正規入口、`.aos` 捷徑、門房、結束碼只是參考…）作廢，條號只留在下面的條號表；daemon、kernel、tasks、窗的條文留著、標「現無實作」。**10-19 下班前～晚**（[ideas § 14～§ 21](thinking/2026-10-19-ideas.md)）：入口放寬成四種、`aos-exec XXX`、五個環境變數、`#/` 尋址（N-57～N-60 改、新增 N-61、N-62）；兩版實作（impls 的 C++、bin 的 Python）都已照做，仍不同的兩處（impls 只有 aos-exec 一支命令列、錯誤一行有沒有代號）在 [NORMS/10](NORMS/10-基礎設施-定義與工作區.md) 開頭。
+本檔（含分檔）只收使用者親口定下的規範（條號 N-）；AI 提的、還沒定的放在最後「待定」，不算數。**10-19 併入 proto8-2**：10-16 那套（stdin 是正規入口、`.aos` 捷徑、門房、結束碼只是參考…）作廢，條號只留在下面的條號表；daemon、kernel、tasks、窗的條文留著、標「現無實作」。**10-19 下班前～晚**（[ideas § 14～§ 21](thinking/2026-10-19-ideas.md)）：入口放寬成四種、`aos-exec XXX`、五個環境變數、`#/` 尋址（N-57～N-60 改、新增 N-61、N-62）；兩版實作（impls 的 C++、bin 的 Python）都已照做，仍不同的三處（impls 只有 aos-exec 一支命令列、錯誤一行有沒有代號、`$ref` 只有 impls 有）在 [NORMS/10](NORMS/10-基礎設施-定義與工作區.md) 開頭。**10-19 晚規範總覽四題**（[ideas § 22](thinking/2026-10-19-ideas.md)）：daemon／窗的 key 改用現行 loop.json 的 `run`／`max`（N-06、N-07、N-11、N-28）、設定只認設定檔（N-11）、指示詞保留 `$ref`（N-45）；「+x 沒 `#!`」的檔三處一致改用 `/bin/sh` 跑（使用者「乙」，N-59 第 6 件、N-60）。
 
 <!-- wf-nav -->
 ## 主題（10-15 使用者定：概念、規範、實作之外，再用主題分）
@@ -25,8 +25,8 @@
 | 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-18 實作分級、N-43 結束碼（0／10／其他非 0，10-19 改） | 出自 C-07、C-45、C-53 | [bin](bin/README.md) |
 | 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md)：N-04、N-25、N-27、N-30（10-19 改成新 aos-inst；impls 線沒有 aos-inst 命令列、inst 是 C lib，§ 20） | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [aos-inst](bin/README.md)（bin 版）；impls：aos-exec 行程內跑 |
 | 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md)：N-10（10-16 刪，條號留作錨點）、N-28、N-54 | 同上 | loop＝[aos-loop](bin/README.md)；daemon 現無實作 |
-| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md)：N-06～N-09、N-11、N-13～N-17、N-32、N-33（現無實作；agent 這層只剩 N-13：內部狀態外顯成 `$AOS_STACK` 裡的檔） | 同上 | 現無實作 |
-| 基礎設施／指示詞 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md)：N-45 指示詞只有 `$env`（10-19 改） | 同上 | [aos-inst](bin/README.md)（bin 版）；impls：aos-exec |
+| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md)：N-06～N-09、N-11、N-13～N-17、N-32、N-33（現無實作；agent 這層只剩 N-13：內部狀態外顯成 `$AOS_STACK` 裡的檔；節奏 key 10-19 晚改用 `max`、設定只認設定檔） | 同上 | 現無實作 |
+| 基礎設施／指示詞 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md)：N-45 指示詞 `$env`（含 `path`）與 `$ref`（10-19 晚改；`$ref` 目前只有 impls 有） | 同上 | [aos-inst](bin/README.md)（bin 版，只有 `$env`）；impls：aos-exec＋aos-directive 庫 |
 | 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md)：N-20、N-34（tasks，現無實作）、N-36、N-38、N-39、N-41（fsm，10-19 改） | 同上 | fsm＝[aos-fsm](bin/README.md)；tasks 現無實作 |
 | kernel | [09-kernel.md](NORMS/09-kernel.md)：N-42 兩種兩支（10-16 使用者「不併」；打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | 現無實作 |
 | 基礎設施／資料夾程式與執行（10-19 整份重寫；10-19 下班前～晚補 § 14～§ 21） | [10-基礎設施-定義與工作區.md](NORMS/10-基礎設施-定義與工作區.md)：N-57 五個環境變數（加 `AOS_CF`、`AOS_CD`）與入口四種、N-58 `aos-exec XXX [WS [args...]]`、N-59 aos-exec 只做這幾件事（找入口、export、cd、exec 或行程內跑單子）、N-60 aos-exec 自己的錯退 1、N-61 找入口與種類判斷（補 `.json`、`js[$AOS_ENTRY]`、字串轉向、繞圈偵測）、N-62 `#/` 尋址；N-50 工具＝資料夾程式、不用 PATH；N-53 aos 的 agent 被外面的 loop 一拍一拍驅動；N-55 工作區位置＝`AOS_WS` | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md#資料夾程式工作區與-stack10-19)（C-65～C-67）、[C-68～C-73](CONCEPTS/01-設計理念.md#資料夾程式與環境變數10-19-使用者定)、C-62（agent＝狀態機） | [aos-exec](bin/README.md)（bin 版）與 impls 的 aos-exec（兩版都已照做）、[demo](demo/README.md) |
@@ -73,7 +73,7 @@
 | N-42 | [kernel](NORMS/09-kernel.md)（現無實作） |
 | N-43 | [總則](NORMS/01-總則.md)（10-19 改：0／10／其他非 0） |
 | N-44 | 作廢（10-19，由 N-43、CONVENTION P-19 取代：loop 停靠停止碼 10，不靠 stdout 的 `end`） |
-| N-45 | [基礎設施-命令列與指示詞](NORMS/06-基礎設施-命令列與指示詞.md)（10-19 改：只有 `$env`） |
+| N-45 | [基礎設施-命令列與指示詞](NORMS/06-基礎設施-命令列與指示詞.md)（10-19 晚改：`$env`（含 `path`）與 `$ref`，`$ref` 目前只有 impls 有） |
 | N-46 | 作廢（10-19，由 N-59 取代：「這次要做啥」隨意，aos-exec 原樣透傳 args 與 stdin） |
 | N-47 | 作廢（10-19，由 N-58 取代：`aos-exec XXX [WS [args...]]`，原 `aos-exec DIR`） |
 | N-48 | 作廢（10-19，由 N-59 取代：起跑 cwd＝定義資料夾、檔用相對路徑，不掛捷徑） |
@@ -107,4 +107,5 @@
 - **10-16 夜 stack 與工作區**（[稿 § 四](thinking/2026-10-16-agent-inherit.md#四使用者決定10-16)、[§ 八](thinking/2026-10-16-agent-inherit.md#八工作區與-frame-分開10-16-夜重想ai-提案指標捷徑工具可直接-cwd-ws風險設計者自管已定)）：使用者定指標、stack 放哪是呼叫方的自由；看完稿 § 八「三分鐘看懂（五）」：「我覺得不錯。不過是不是可以採用環境變數？」→「可以用$env啊」→ N-45 兩案選「A」。新 N-55（工作區位置＝環境變數 `AOS_WS`）；概念 C-65～C-67、C-48 改。使用者另把 cwd 的稱呼從 frame 改成 stack：「不過frame那塊能不能換成stack(或heap)?。」→ 頂層推薦 stack →「好！」；heap 保留給以後跨呼叫共用的記憶，目前沒有機制。
 - **10-19 proto8-2 併進 proto8**（[ideas § 1～§ 11](thinking/2026-10-19-ideas.md)）：使用者 10-19 定資料夾＝程式、入口 `AOS_ENTRY`、三個環境變數（下班前加成五個，N-57）、`aos-exec`，並對 10-16 那套說「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」，一律走今天的做法；轉正時「b。這是個大工程，現行規範也要跟著改」，三件都「按照建議」。作廢 20 條（取代 15、刪 5，見上表）、改寫 21 條、新增 N-57～N-60（原 CONVENTION P-01～P-04）；舊 lib 進 git 歷史，daemon、kernel、tasks、窗的條文留著、標「現無實作」；N-52 作廢、被外層逾時殺掉＝那格失敗（P-36）。慣例整套（P-05～P-39）搬成 [CONVENTION.md](CONVENTION.md)。
 - **10-19 下班前～晚 entry／aos-exec 新規則與 impls**（[ideas § 14～§ 20](thinking/2026-10-19-ideas.md)）：使用者口述 entry 的定義（§ 14 四種）、aos-exec 找入口（§ 15、§ 17：資料夾→`$AOS_ENTRY`→`.json`、非資料夾無副檔名補 `.json`、JSON 內只找 `js[$AOS_ENTRY]`、值可為字串路徑）、審出的四題「1. 確實要改寫例子。2.好。3按照建議。4.aos-exec自己要做偵測。」（§ 18）、再加 `AOS_CF`／`AOS_CD` 與 `#/` 尋址（§ 19「#/。」「同意做」）、impls 只提供 aos-exec 一支 CLI、inst 是 C lib、「json不要寫進去」（§ 20）。落成：N-57～N-60 改、新增 N-61、N-62；C-69、C-72 改、新增 C-73；CONVENTION P-05、P-26、P-28～P-31、P-33、P-36、P-39 加註、新增 P-40；縮寫表加 `cf`、`cd`。impls 的 aos-exec 已照做（45 組測試）。
-- **10-19 晚 § 21 三件**（[ideas § 21](thinking/2026-10-19-ideas.md)，使用者「刪。不擋。舊版一起改。」「a」）：刪 `impls/aos-inst/`（碼併進 aos-exec；impls 的 loop／daemon 因此暫時建置不起來，先放著，[待定](NORMS/08-待定.md)）；inst 單子的 `argv[0]` 沒 `#!` 時不擋、照 execvp 由 sh 跑（N-59 第 6 件、N-60 加註；aos-exec 自己 exec 的入口照舊不退回 sh）；`proto8/bin` 照 § 14～§ 20 一起改（aos-exec 從 sh 改寫成 Python，93 個測試；N-57～N-62 的「待照新規則更新」標記收掉，兩版仍不同的兩處寫在 NORMS/10 開頭）。
+- **10-19 晚 § 21 三件**（[ideas § 21](thinking/2026-10-19-ideas.md)，使用者「刪。不擋。舊版一起改。」「a」）：刪 `impls/aos-inst/`（碼併進 aos-exec；impls 的 loop／daemon 因此暫時建置不起來，先放著，[待定](NORMS/08-待定.md)）；inst 單子的 `argv[0]` 沒 `#!` 時不擋、照 execvp 由 sh 跑（N-59 第 6 件、N-60 加註；當時 aos-exec 自己 exec 的入口不退回 sh，§ 22 使用者選「乙」後三處一致都退回 sh）；`proto8/bin` 照 § 14～§ 20 一起改（aos-exec 從 sh 改寫成 Python，93 個測試；N-57～N-62 的「待照新規則更新」標記收掉，兩版仍不同的地方寫在 NORMS/10 開頭）。
+- **10-19 晚規範總覽四題**（[ideas § 22](thinking/2026-10-19-ideas.md)，使用者「1.那就用到最新的吧。2.捨棄舊的。3.改交給sh這塊我不懂，我們以前有說過嗎？4.impls這塊，指示詞是OK的」）：1 daemon／窗／loop 的 key 統一用現行 loop.json 的 `run`／`max`（N-06、N-07、N-11、N-28 改字；`interval_ms` 等 daemon 才有的選填 key 日後當 loop 的選填 key 長出來、未實作；rewrite-order 第 1 題結案）；2 N-11「設定檔」只認 JSON 檔路徑，stdin／argv 旗標那套刪；3「+x 沒 `#!`」三處行為不同——頂層白話解釋後使用者選「乙」：可執行檔入口、argv 陣列入口、單子 `argv[0]` 三處一律改用 `/bin/sh` 跑（N-59 第 6 件、N-60、N-61 種類、P-05、P-28、P-40 改；兩版實作都照做）；4 N-45 指示詞寫成 `$env`（含 `path`）與 `$ref`，`$ref` 語意照 impls 的 aos-directive，bin 版沒有（列進兩版分歧第 3 處）。順手清過時處：N-05 例子、N-13 引 N-38／N-39、N-43 去掉「impls 版」標籤、NORMS/08 argv[0] 那條整理成一句、縮寫表例子、CONCEPTS/03 規範範圍補 N-61／N-62、P-33／C-65／C-66 改引 N-59。

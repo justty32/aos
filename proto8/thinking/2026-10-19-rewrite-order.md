@@ -20,6 +20,8 @@ daemon 的規範 N-28 說 daemon.json 是 loop.json 的嚴格超集、同名 key
 
 推薦：`max`、`run`，跟著跑得動的程式走。
 
+→ **已定（10-19 晚，[ideas § 22](2026-10-19-ideas.md)）**：使用者「那就用到最新的吧」＝`run`／`max`；N-06、N-07、N-11、N-28 已改字，`interval_ms` 等照上面「日後當 loop 的選填 key 長出來」。
+
 ### 2. tasks（seq／par／if）在新做法下還要不要做（方向問題）
 
 10-15 你說 tasks「地位等同於 C 語言的 stdlib」（CONCEPTS § tasks、N-34）。10-19 之後入口和格可以是 shell 檔，而 shell 本來就有這三樣：`aos-exec a && aos-exec b` 是 seq、`aos-exec a & aos-exec b & wait` 是 par、`if aos-exec c; then …; fi` 是 if。你 10-12 也說過「aos seq 那些流程控制的東西，很多其實都是不必要的」。C-56 最後一步要把多餘的清掉。
