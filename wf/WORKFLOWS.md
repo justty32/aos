@@ -17,7 +17,7 @@
 | 「我想開發 / 修改某個功能」「**修 bug**」 | **feature-dev** | [workflows/feature-dev/README.md](workflows/feature-dev/README.md) |
 | 「**加一個新的小專案 / 新工具**」 | **add-subproject** | [workflows/add-subproject.md](workflows/add-subproject.md) |
 | 「**我有個 idea**」「把這個構想記下來」「要重新拷問 X」 | **ideas** | 現行落點：[proto8/CONCEPTS.md](../proto8/CONCEPTS.md)（概念層）、[proto8/thinking/](../proto8/thinking/README.md)（討論紀錄）；舊的 ideas 13 章已封存 |
-| 「**寫 spec**」「照構想集定規格」「新實作要照什麼寫」 | **spec** | 現行落點：[proto8/NORMS.md](../proto8/NORMS.md)（規範）；上一代 proto7-2 照 [proto7-2/spec.md](../proto7-2/spec.md)（核心 spec 是 [proto7/spec/core.md](../proto7/spec/core.md)），proto6 照 [proto6/spec](../proto6/spec/README.md)；舊的 09-05 規格已封存 |
+| 「**寫 spec**」「照構想集定規格」「新實作要照什麼寫」 | **spec** | 現行落點：[proto8/NORMS.md](../proto8/NORMS.md)（規範）、[proto8/CONVENTION.md](../proto8/CONVENTION.md)（aos agent 慣例）；上一代 proto7-2 照 [proto7-2/spec.md](../proto7-2/spec.md)（核心 spec 是 [proto7/spec/core.md](../proto7/spec/core.md)），proto6 照 [proto6/spec](../proto6/spec/README.md)；舊的 09-05 規格已封存 |
 | 「**接下來做什麼**」「照進度表推進」「動工前該讀什麼」 | **roadmap** | 現行落點：[SESSION-LOG.md](SESSION-LOG.md)（open 進度與下一步）；舊的 roadmap 已封存 |
 | 「**開個研討會討論 X**」「找幾個 agent 一起腦力激盪」「給我一些靈感」 | **workshop** | [workflows/workshop/README.md](workflows/workshop/README.md)（已累積的紀錄與待決問題見 [INDEX](workflows/workshop/INDEX.md)）|
 | 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon** | [workflows/hackathon/README.md](workflows/hackathon/README.md)（已辦場次見 [INDEX](workflows/hackathon/INDEX.md)）|

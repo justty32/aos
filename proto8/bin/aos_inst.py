@@ -1,4 +1,4 @@
-"""aos-inst：讀一張單子（JSON）、跑一次子程式。純標準庫。proto8-2 自己的一份，不 import proto8。
+"""aos-inst：讀一張單子（JSON）、跑一次子程式。純標準庫，不 import 別的。
 
     aos-inst FILE [args...]        FILE 第一行是 `#!` 就丟掉那一行，剩下當 JSON；args 接在 argv 後面
     import aos_inst; aos_inst.run(dict 或 FILE)    行程內跑，回結果 dict（aos-loop／aos-fsm 用）

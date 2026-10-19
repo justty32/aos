@@ -16,6 +16,8 @@
 
 使用者 17:00 關機下班，回家再繼續。
 
+> **10-19 更新**：proto8-2 已併進 proto8（七批，見 [session log 10-19](session_logs/2026-10/2026-10-19.md#proto8-2-併進-proto810-19)）；下面 10-16 那套——食譜與廚房、門房 `aos exec`、`.aos` 捷徑、stdin 是正規入口、結束碼只是參考、SIGTERM 退 0（C-57／58／59／60／63、N-12／46～49／51／52／56 等）——**已作廢**，現行以 proto8 的 CONCEPTS／NORMS／CONVENTION 為準；舊 lib 在 git aa2fec1f。
+
 1. **授權**：今天「可以隨意push」；回家開新 session 照 [user.md § push 授權](workflows/common/user.md#push-授權) 重問一次。事情交給子 agent、需要思考的派 fable，頂層只負責交流。使用者今天幾次說頭暈，要求 ELI5、一次一件、慢慢講。
 2. **今天定的**（條號 C-57～C-67、N-46～N-56，全部草稿、程式未改）：
    - C-56 改成「KISS 是最高原則，也是最後原則」，加「寫什麼就做什麼」；`*_inherit`（N-26）帶回來。
