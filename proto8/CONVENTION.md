@@ -1,10 +1,10 @@
 # aos agent 慣例（proto8-2，2026-10-19 結論版）
 
-← [proto8-2](README.md)｜原話與拍板：[thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜跟 proto8 原則相撞、使用者已全部裁定：[CONFLICTS.md](CONFLICTS.md)｜proto8 原則：[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)
+← [proto8-2](../proto8-2/README.md)｜原話與拍板：[thinking/ideas](thinking/2026-10-19-ideas.md)｜跟 proto8 原則相撞、使用者已全部裁定：[CONFLICTS.md](../proto8-2/CONFLICTS.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)
 
 **aos 本身只保證三個環境變數和一支 `aos-exec`**（使用者 § 4）。其餘全是慣例：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。
 
-每條後面括號是依據：§ 幾＝[ideas](../proto8/thinking/2026-10-19-ideas.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。程式還沒照這份改的地方列在第十節。**10-19 第二輪**（§ 10）：範本改成混合寫法（第二、三、八節改寫）、巢狀層層疊疊的規則（第十二節 P-32～P-39）。
+每條後面括號是依據：§ 幾＝[ideas](thinking/2026-10-19-ideas.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。程式還沒照這份改的地方列在第十節。**10-19 第二輪**（§ 10）：範本改成混合寫法（第二、三、八節改寫）、巢狀層層疊疊的規則（第十二節 P-32～P-39）。
 
 ## 一、aos 保證的（不是慣例，是底）
 
@@ -67,7 +67,7 @@ stack 樹就是呼叫樹：`.aos/cathy/stamp/` 一眼看出「bob 叫了 cathy�
 
 ## 六、停與錯
 
-- **P-19** 結束碼三種：`0`＝這圈好了、下一圈；`10`＝正常停（idle 看 inbox 空了）；其他非 0＝失敗。loop 收到 10 以 0 結束；收到其他非 0 以那個碼結束；跑滿 `max` 以 0 結束並在 stderr 提一句。（拍板點 1；原型現狀。與 C-63 相撞，使用者 10-19 定：照用，見 [CONFLICTS 4](CONFLICTS.md)）
+- **P-19** 結束碼三種：`0`＝這圈好了、下一圈；`10`＝正常停（idle 看 inbox 空了）；其他非 0＝失敗。loop 收到 10 以 0 結束；收到其他非 0 以那個碼結束；跑滿 `max` 以 0 結束並在 stderr 提一句。（拍板點 1；原型現狀。與 C-63 相撞，使用者 10-19 定：照用，見 [CONFLICTS 4](../proto8-2/CONFLICTS.md)）
 - **P-20** 任一格失敗＝整個 agent 停下來等人：fsm 不換狀態、loop 以那個碼結束；人修好後再 `aos-exec` 一次，從 `$AOS_STACK/state` 接著做同一格、同一題。不自動重試、不數連錯。（拍板點 3；N-53 腦出錯那拍 phase 不動；N-38）
 - **P-21** 誰的錯誰自己講：格的錯寫在格自己的 stderr；fsm 什麼都不轉述；loop 只說「第幾圈、誰、結束碼幾」。（C-53；N-43 每層只說自己）
 - **P-22** 逾時：shell 版沒人管——某格卡住（模型沒載入、網路不通）loop 只會等，也殺不到孫程式。要逾時就把那格換成 inst 版、寫 `timeout_ms`（P-29）。（N-41「靠那張 inst 的 timeout_ms 守」；inst 討論的結論）
@@ -82,7 +82,7 @@ stack 樹就是呼叫樹：`.aos/cathy/stamp/` 一眼看出「bob 叫了 cathy�
 ## 八、shell 版與 inst 版
 
 - **P-27** 標準範本＝**混合寫法**，就是第二節 agent-bob 的樣子：入口 `#!/bin/sh`＋`exec aos-loop loop.json`；`loop.json` 內嵌單子拍 `aos-fsm fsm.json`；**狀態表一律寫在 `fsm.json`**；一行講完的格（think：跑哪支程式、輸出導去哪、多久逾時）內嵌單子；有真邏輯的格（idle 看 inbox、act 叫工具搬檔）`val` 寫子資料夾名、裡面是 shell；留 `trace.jsonl`。要頻繁改的東西（流程、逾時、誰接誰）全在一份 `fsm.json` 裡；要寫邏輯就開資料夾、用 shell，不用把 shell 塞進 JSON。（§ 10 使用者「好主意」；拍板點 1；§ 7「想要簡單直接，那就上 shell 指令」「單子是資料……在不希望資料夾佈局太複雜的時候很好用」。改掉 10-19 早上的「標準＝shell 版 fsm」）
-- **P-28** inst 單子（`{"argv", "cwd", "stdin", "stdout", "timeout_ms", …}`，key 表與跟 proto8 不同的兩處見 [README 的 `bin/aos-inst`](README.md)）是可選的升級，四種用法都行、可以在同一個 agent 裡混用：(1) `.aos/exec` 是 shebang 小殼、讀旁邊的 `exec.json`；(2) loop／fsm 的設定裡直接內嵌單子（**已做**，`aos-loop`／`bin/aos-fsm`、`demo/agent-ann`）；(A) `.aos/exec` 第一行 `#!/usr/bin/env aos-inst`、後面接 JSON（**已做**，`bin/aos-inst`）；(B) aos-exec 認 `.aos/exec.json`，入口＝可執行檔或單子（**已做**；(1) 小殼＝`#!/bin/sh`＋`exec aos-inst .aos/exec.json "$@"`，也已有測試）。（§ 7「1 跟 2 都要」「接法 3 感覺也是 OK 的」「AB 都可以」；四種都做完了）
+- **P-28** inst 單子（`{"argv", "cwd", "stdin", "stdout", "timeout_ms", …}`，key 表與跟 proto8 不同的兩處見 [README 的 `bin/aos-inst`](../proto8-2/README.md)）是可選的升級，四種用法都行、可以在同一個 agent 裡混用：(1) `.aos/exec` 是 shebang 小殼、讀旁邊的 `exec.json`；(2) loop／fsm 的設定裡直接內嵌單子（**已做**，`aos-loop`／`bin/aos-fsm`、`demo/agent-ann`）；(A) `.aos/exec` 第一行 `#!/usr/bin/env aos-inst`、後面接 JSON（**已做**，`bin/aos-inst`）；(B) aos-exec 認 `.aos/exec.json`，入口＝可執行檔或單子（**已做**；(1) 小殼＝`#!/bin/sh`＋`exec aos-inst .aos/exec.json "$@"`，也已有測試）。（§ 7「1 跟 2 都要」「接法 3 感覺也是 OK 的」「AB 都可以」；四種都做完了）
 - **P-29** 範本給的是 (2)：`fsm.json` 裡內嵌單子（think 那格），範本就是 `demo/agent-bob/fsm.json`（見下面範例）。(A)、(1)、(B) 仍都能用——一個資料夾格自己想要逾時、想用單子寫入口時用 (A)（`.aos/exec` 第一行 `#!/usr/bin/env aos-inst`）——但不是範本。資料夾格要逾時，更直接的寫法是在 `fsm.json` 把那格寫成 `{"argv": ["aos-exec", "act"], "timeout_ms": 600000}`（P-36）。（§ 10；§ 7「AB 都可以」。改掉 10-19 早上的「範本先給 (A)」；這是原討論稿拍板點 5 的答案）
 - **P-30** 用 inst 換到的是四樣：argv 是陣列、不靠 sh 拼字串；`timeout_ms` 逾時收尾、不留孫程式；結果是結構化的（結束碼、訊號、有沒有逾時、毫秒）；單子是資料、可內嵌進別的 JSON。「不走 sh 更快」實測不成立：單獨起一個 aos-inst（Python）比一層 sh 慢 5～6 倍，agent-bob 一圈殼的開銷對一輪 LLM 不到千分之二；省得到的只有 loop／fsm 在行程內直接 `run()` 那種。（§ 7 使用者「都還好。主要是單子是資料這塊……結果是結構化的這塊也很舒服」；10-19 在 WSL 實量的結論）
 - **P-31** 單子要指到 stack 或工作區底下的檔，寫 `{"$env": "AOS_STACK", "path": "plan"}`：意思是「那個環境變數指的資料夾底下的 `plan`」，照 `os.path.join` 接（`AOS_STACK` 結尾有 `/`、`AOS_WS` 沒有，兩種都對；`path` 寫絕對路徑就是絕對路徑）。不帶 `path` 就是整個變數值。**只有 `$env`，沒有 `$ref`**（單子本來就能內嵌，不必拆檔）；變數沒設＝aos-inst 自己的錯、退 1。不用字串內插（`"$AOS_STACK/plan"`）：那是把規則埋進字串的暗規則。（本稿定；PLAN 第一節決定 3；C-48／C-55 值長成物件、同層加屬性；C-56 寫什麼就做什麼；N-45 `$env` 是正式機制）
@@ -149,11 +149,11 @@ stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；�
 
 ## 十、程式還沒照這份改的地方
 
-第一、二輪都做完了（10-19），做法與每步的紀錄見 [PLAN.md](PLAN.md)（第一輪四項、第二輪六步）。目前沒有程式落後於這份慣例的地方。
+第一、二輪都做完了（10-19），做法與每步的紀錄見 [PLAN.md](../proto8-2/PLAN.md)（第一輪四項、第二輪六步）。目前沒有程式落後於這份慣例的地方。
 
 ## 十一、要使用者決定的
 
-第一輪六條已全部裁定（使用者 10-19）。第二輪多一條衝突（N-52「SIGTERM 退 0」↔ P-36「被外層逾時殺掉＝失敗」）與一個方向問題（agent 當工具時題目怎麼交），見 [CONFLICTS.md](CONFLICTS.md) 第 7 條與「方向問題」。
+第一輪六條已全部裁定（使用者 10-19）。第二輪多一條衝突（N-52「SIGTERM 退 0」↔ P-36「被外層逾時殺掉＝失敗」）與一個方向問題（agent 當工具時題目怎麼交），見 [CONFLICTS.md](../proto8-2/CONFLICTS.md) 第 7 條與「方向問題」。
 
 ## 十二、巢狀：層層疊疊（10-19 第二輪）
 

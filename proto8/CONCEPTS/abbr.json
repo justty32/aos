@@ -37,7 +37,7 @@
    "abbr": "dir",
    "full": "directory",
    "meaning": "資料夾（後綴，表示值是資料夾）",
-   "example": "work_dir、ctl_dir、AOS_DIRNAME"
+   "example": "work_dir、ctl_dir"
   },
   {
    "abbr": "path",
@@ -55,7 +55,7 @@
    "abbr": "args",
    "full": "arguments",
    "meaning": "呼叫的引數（本身是複數，照原樣）",
-   "example": "N-12「stdin＝args」（10-16 起不造 args.json，C-46）"
+   "example": "aos-exec 的 args（P-02）"
   },
   {
    "abbr": "argv",
@@ -67,13 +67,13 @@
    "abbr": "ret",
    "full": "return value",
    "meaning": "回傳值",
-   "example": "N-12「exit＋stdout＝返回值」（10-16 起不造 ret.json，C-46）"
+   "example": "結束碼（N-43）"
   },
   {
    "abbr": "msg",
    "full": "message",
    "meaning": "白話訊息",
-   "example": "{\"error\": {\"code\", \"msg\"}}（N-29）"
+   "example": "stderr 一行「程式名: 原因」（P-21）"
   },
   {
    "abbr": "tmp",
@@ -109,7 +109,7 @@
    "abbr": "id",
    "full": "identifier",
    "meaning": "身分",
-   "example": "realpath#/位置（N-35）"
+   "example": "pid（行程身分）"
   },
   {
    "abbr": "pid",
@@ -140,12 +140,6 @@
    "full": "make directory",
    "meaning": "沒有就建資料夾（Unix 指令名）",
    "example": "cwd_mkdir、exit_mkdir"
-  },
-  {
-   "abbr": "ref",
-   "full": "reference",
-   "meaning": "指到另一份檔（指示詞）",
-   "example": "$ref"
   },
   {
    "abbr": "meta",
@@ -220,16 +214,10 @@
    "example": "CONCEPTS/abbr.json"
   },
   {
-   "abbr": "WD",
-   "full": "working directory",
-   "meaning": "工作區（廚房）的位置；只當命令列用法裡的佔位名（全大寫跟 TARGET 一樣）",
-   "example": "aos exec WD TARGET（N-47）"
-  },
-  {
    "abbr": "ws",
    "full": "workspace",
    "meaning": "工作區：使用者的檔與成品所在的資料夾（不是 stack）",
-   "example": "AOS_WS、stack 裡的 ws 捷徑（C-65、N-55）"
+   "example": "AOS_WS（C-65、N-55）"
   }
  ]
 }

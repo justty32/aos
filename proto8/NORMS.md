@@ -28,7 +28,7 @@
 | 基礎設施／命令列、指示詞與路徑 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md)：N-21～N-23 命令列（10-16 起歸語法糖，N-46）、N-45 設計不靠 `$ref`、`$env` 可當正式機制（10-16 夜改） | 同上 | lib `aos_cli` |
 | 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | tasks（`aos seq|par|if`）在 lib；fsm 在 lib fsm.md（已刪，見 git 歷史 aa2fec1f）（基礎實作） |
 | kernel | [09-kernel.md](NORMS/09-kernel.md)：N-42 兩種兩支（10-16 使用者「不併」；打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | — |
-| 基礎設施／定義與工作區（食譜與廚房，10-16） | [10-基礎設施-定義與工作區.md](NORMS/10-基礎設施-定義與工作區.md)：N-46 stdin 正規、argv 是糖；N-47 `aos exec 工作區 定義`；N-48 `.aos` 捷徑、互指 `.aos/x`；N-49 agent stdin＝定義、話放 stack；N-50 工具＝定義資料夾、不用 PATH、參數兩層；N-51 shebang stub；N-53 aos 的 agent 被外面的 loop 一拍一拍驅動、定義不含 loop、連錯不數；N-55 工作區位置＝`AOS_WS`；N-56 一般工具入口寫 `"cwd": {"$env": "AOS_WS"}`、agent 工具站自己的 stack（10-16 夜；N-47～N-51 的 cwd 改叫 stack） | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md#定義與工作區食譜與廚房10-16)（C-57、C-59、C-60、C-65～C-67）、C-62（agent＝狀態機） | **還沒有**（程式待改） |
+| 基礎設施／定義與工作區（食譜與廚房，10-16） | [10-基礎設施-定義與工作區.md](NORMS/10-基礎設施-定義與工作區.md)：N-46 stdin 正規、argv 是糖；N-47 `aos exec 工作區 定義`；N-48 `.aos` 捷徑、互指 `.aos/x`；N-49 agent stdin＝定義、話放 stack；N-50 工具＝定義資料夾、不用 PATH、參數兩層；N-51 shebang stub；N-53 aos 的 agent 被外面的 loop 一拍一拍驅動、定義不含 loop、連錯不數；N-55 工作區位置＝`AOS_WS`；N-56 一般工具入口寫 `"cwd": {"$env": "AOS_WS"}`、agent 工具站自己的 stack（10-16 夜；N-47～N-51 的 cwd 改叫 stack） | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md#資料夾程式工作區與-stack10-19)（C-57、C-59、C-60、C-65～C-67）、C-62（agent＝狀態機） | **還沒有**（程式待改） |
 | agent | 沒有專屬的分檔；10-16 起入口與工具、怎麼被驅動在定義與工作區（N-49、N-50、N-53）；其餘用 fsm 組出來 | [CONCEPTS agent](CONCEPTS/05-agent.md) | — |
 | 待定（不拆，每條標主題） | [08-待定.md](NORMS/08-待定.md) | | |
 

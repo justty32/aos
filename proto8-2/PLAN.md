@@ -1,6 +1,6 @@
 # proto8-2 實作計畫：把 CONVENTION 第十節做掉（2026-10-19，fable 規劃）
 
-← [proto8-2](README.md)｜慣例：[CONVENTION.md](CONVENTION.md)（第十節＝要做的四項）｜原話：[thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜衝突裁定：[CONFLICTS.md](CONFLICTS.md)
+← [proto8-2](README.md)｜慣例：[CONVENTION.md](../proto8/CONVENTION.md)（第十節＝要做的四項）｜原話：[thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜衝突裁定：[CONFLICTS.md](CONFLICTS.md)
 
 四項：(1) inst 四種用法；(2) `tools/` 一個範例工具；(3) aos-exec 自己的錯退 1；(4) 單子指到 `$AOS_STACK` 底下的檔。這份只規劃、不寫程式；每條後面括號是依據（§ 幾＝ideas 原話段號、P-xx＝CONVENTION、C-xx／N-xx＝proto8）。proto8 本身一個字都不動。
 
@@ -118,7 +118,7 @@
 
 ## 第二輪：混合範本與巢狀（2026-10-19 fable 規劃）
 
-起點是 [ideas § 10](../proto8/thinking/2026-10-19-ideas.md)：範本改混合寫法（使用者「好主意」）、以後會層層巢狀。結論寫成 [CONVENTION](CONVENTION.md) 第二、三、八節的改寫與第十二節 P-32～P-39；這裡只排程式怎麼改、分幾步、每步做完的樣子。仍然不碰 proto8。
+起點是 [ideas § 10](../proto8/thinking/2026-10-19-ideas.md)：範本改混合寫法（使用者「好主意」）、以後會層層巢狀。結論寫成 [CONVENTION](../proto8/CONVENTION.md) 第二、三、八節的改寫與第十二節 P-32～P-39；這裡只排程式怎麼改、分幾步、每步做完的樣子。仍然不碰 proto8。
 
 ### 一、關鍵決定（已寫進 CONVENTION，這裡只列程式面）
 

@@ -1,6 +1,6 @@
 # proto8-2 — 從 proto8 長出來的第二輪
 
-← [proto8](../proto8/README.md)｜原話 → [thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜慣例 → [CONVENTION.md](CONVENTION.md)｜要使用者決定的 → [CONFLICTS.md](CONFLICTS.md)
+← [proto8](../proto8/README.md)｜原話 → [thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜慣例 → [CONVENTION.md](../proto8/CONVENTION.md)｜要使用者決定的 → [CONFLICTS.md](CONFLICTS.md)
 
 **2026-10-19 開。** 使用者原話：「我這邊想開proto8-2，我有些新想法。」
 
@@ -10,7 +10,7 @@
 
 ## 現況
 
-10-19 使用者定了：資料夾＝程式、入口＝`$AOS_ENTRY`（預設 `.aos/exec`）、三個環境變數、`aos-exec DIR [WS]`、inst 四種用法可選並存、慣例拍板點 1～3。原話在 [thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)；整套 aos agent 慣例（結論版，條號 P-01～P-39）在 [CONVENTION.md](CONVENTION.md)；程式已照它做完（10-19）：[PLAN.md](PLAN.md) 是當時 fable 規劃的四項怎麼做、分六步的紀錄，六步都已做完（aos-exec 錯退 1、aos-inst、aos-exec 認 exec.json、agent-bob think 改 (A)、aos-fsm＋agent-ann、tools/stamp）。**10-19 第二輪**（[ideas § 10](../proto8/thinking/2026-10-19-ideas.md)）也做完了：範本改混合寫法（agent-bob 是混合、agent-ann 是全內嵌對照）、巢狀層層疊疊的規則定在 [CONVENTION 第十二節](CONVENTION.md)（P-32～P-39），bob 的 act 叫 cathy、cathy 的 act 叫 stamp（四層）；aos_inst 行程群組、aos-fsm 的 `at`、aos-exec PATH 去重；六步的紀錄在 [PLAN 第二輪](PLAN.md)。底下「原型怎麼跑」描述的就是現在的程式。方向、範圍、是否接替 proto8 都還沒定。
+10-19 使用者定了：資料夾＝程式、入口＝`$AOS_ENTRY`（預設 `.aos/exec`）、三個環境變數、`aos-exec DIR [WS]`、inst 四種用法可選並存、慣例拍板點 1～3。原話在 [thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)；整套 aos agent 慣例（結論版，條號 P-01～P-39）在 [CONVENTION.md](../proto8/CONVENTION.md)；程式已照它做完（10-19）：[PLAN.md](PLAN.md) 是當時 fable 規劃的四項怎麼做、分六步的紀錄，六步都已做完（aos-exec 錯退 1、aos-inst、aos-exec 認 exec.json、agent-bob think 改 (A)、aos-fsm＋agent-ann、tools/stamp）。**10-19 第二輪**（[ideas § 10](../proto8/thinking/2026-10-19-ideas.md)）也做完了：範本改混合寫法（agent-bob 是混合、agent-ann 是全內嵌對照）、巢狀層層疊疊的規則定在 [CONVENTION 第十二節](../proto8/CONVENTION.md)（P-32～P-39），bob 的 act 叫 cathy、cathy 的 act 叫 stamp（四層）；aos_inst 行程群組、aos-fsm 的 `at`、aos-exec PATH 去重；六步的紀錄在 [PLAN 第二輪](PLAN.md)。底下「原型怎麼跑」描述的就是現在的程式。方向、範圍、是否接替 proto8 都還沒定。
 
 ## 原型怎麼跑（10-19）
 
@@ -23,7 +23,7 @@ proto8/bin/aos-exec proto8/demo/agent-bob <工作區>    # 自己跑
 cd workspace && aos-exec ../agent-bob             # 慣例用法（WS 省略＝-、沒設 AOS_WS 就用 cwd，使用者 10-19）
 ```
 
-**aos 只訂環境變數**（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`），入口拿到之後「這次要做啥」怎麼收、怎麼用是入口自己的事（使用者 10-19，[ideas § 4](../proto8/thinking/2026-10-19-ideas.md)）；aos-exec 只是把多的 args／stdin 原樣交給它。慣例上入口是 shell 檔；inst 單子是可選的升級，見 [CONVENTION § 八](CONVENTION.md)。
+**aos 只訂環境變數**（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`），入口拿到之後「這次要做啥」怎麼收、怎麼用是入口自己的事（使用者 10-19，[ideas § 4](../proto8/thinking/2026-10-19-ideas.md)）；aos-exec 只是把多的 args／stdin 原樣交給它。慣例上入口是 shell 檔；inst 單子是可選的升級，見 [CONVENTION § 八](../proto8/CONVENTION.md)。
 
 - `bin/aos-exec DIR [WS [args...]]`：WS 省略＝`-`；`-`＝沿用現有 `AOS_WS`，沒設才用 `.`（呼叫當下的 cwd）；給路徑就用那個。轉絕對路徑設成 `AOS_WS`；`AOS_STACK` 沒設就用 `$AOS_WS/.aos/`（轉絕對路徑、不存在就建），有設就沿用，都 export 給子程式；`cd DIR`、exec 入口；args／stdin 原樣透傳；把自己的 `bin/` 放進 PATH（已在就不再疊一份，P-39），所以入口裡直接寫 `aos-loop`、`aos-exec`。入口是可執行檔；沒有它但有旁邊的 `$AOS_ENTRY.json`（例 `.aos/exec.json`）就交給 `aos-inst` 跑（兩個都在用可執行檔）。入口兩種都沒有／不可執行、工作區或 DIR 不存在 → 結束碼 1 並印原因。
 - `bin/aos-inst FILE [args...]`（`bin/aos_inst.py`，純標準庫，proto8-2 自己的一份、不 import proto8）：讀一張單子，第一行是 `#!` 就丟掉，其餘當 JSON，跑一次。所以 `.aos/exec` 第一行寫 `#!/usr/bin/env aos-inst`、下面接 JSON、`chmod +x` 就是入口（CONVENTION P-28 (A)）。認得的 key：`argv`（必填，args 接在後面）、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`stdout_append`、`stderr_append`、`timeout_ms`、`grace_ms`（沒寫 2000；逾時先 SIGTERM、過 grace 再 SIGKILL）；其他 key 忽略。子程式自成一個行程群組，逾時與轉來的訊號打整個群組（killpg），孫程式一起收掉（P-36）。單子裡任何位置的 `{"$env": 名, "path": 子路徑}` 換成該環境變數底下的路徑（P-31）。**跟 proto8 `aos inst` 不同的兩處**：沒寫的串流接呼叫者的（proto8 是接 /dev/null）；命令列結束碼＝子程式的碼（不另吐結果 JSON），aos-inst 自己的錯退 1、stderr 一行 `aos-inst: 原因`。行程內用 `aos_inst.run(單子或檔)` 回 `{"code","signal","timed_out","pid","ms"}`。

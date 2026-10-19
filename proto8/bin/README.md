@@ -1,6 +1,6 @@
 # bin — aos 的指令（資料夾＝程式）
 
-← [proto8](../README.md)｜慣例：[CONVENTION](../../proto8-2/CONVENTION.md)｜demo：[demo](../demo/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`
+← [proto8](../README.md)｜慣例：[CONVENTION](../CONVENTION.md)｜demo：[demo](../demo/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`
 
 **2026-10-19 從 proto8-2 併進來。** 資料夾＝程式；入口＝資料夾裡 `$AOS_ENTRY`（預設 `.aos/exec`）指的可執行檔。純標準庫（shell 與 Python），在 WSL／Linux 跑。**aos 只訂環境變數**（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`），入口拿到之後「這次要做啥」怎麼收、怎麼用是入口自己的事（使用者 10-19，[ideas § 4](../thinking/2026-10-19-ideas.md)）；aos-exec 只是把多的 args／stdin 原樣交給它。
 

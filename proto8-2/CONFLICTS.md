@@ -1,6 +1,6 @@
 # proto8-2 慣例跟 proto8 原則相撞的地方（已全部裁定）
 
-← [proto8-2](README.md)｜慣例：[CONVENTION.md](CONVENTION.md)｜原話：[thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)
+← [proto8-2](README.md)｜慣例：[CONVENTION.md](../proto8/CONVENTION.md)｜原話：[thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)
 
 這份只列**真的衝突**：proto8 裡使用者過去定的原則（C-xx 概念、N-xx 規範、wf user.md 的規矩），跟今天的決定或慣例對不上。措辭差異、程式還沒改的不列。**六條已全部由使用者 10-19 裁定**（總原話：「雖然10/16說那套很棒，但那是帶著鐐銬跳舞……終究不如我們現在直接把鐐銬拿掉」，見 [ideas § 9](../proto8/thinking/2026-10-19-ideas.md)）。每條只留：原則 ↔ 今天、撞在哪、裁定。
 
