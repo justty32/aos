@@ -36,8 +36,8 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
 ## 三、入口、loop、fsm
 
 - **P-05** 入口 `.aos/exec` 一定帶 shebang（`#!/bin/sh`），下一行 `exec aos-loop loop.json`。（§ 4 原話「#usr/bin/sh aos-loop loop.json」。沒有 `#!` 的檔只有從 sh 叫才跑得起來，從 Python、C++ 直接 exec 會失敗，不合 § 1「目標必須是可執行檔」；`exec` 少一層行程、訊號直達 loop——本稿定）
-- **P-06** `loop.json` 只有兩個欄位：`run`＝每圈 `aos-exec` 誰、`max`＝最多幾圈。loop 每圈起一次 `run`，看它的結束碼決定下一步（P-19）。（§ 1；拍板點 1；欄位名為原型自訂）
-- **P-07** fsm 一拍只跑一格：讀 `$AOS_STACK/state`（沒有＝`idle`），`aos-exec` 同名子資料夾；那格 0 才寫下一個狀態、退 0；非 0 就不換狀態、以原碼退。每拍之間狀態都落在 stack，人看得到。（C-62、N-53 agent 是被外面 loop 一拍一拍驅動的狀態機；N-36 一拍一格）
+- **P-06** `loop.json` 只有兩個欄位：`run`＝每圈 `aos-exec` 誰（字串，子資料夾），或每圈跑哪張單子（物件，行程內直接跑，結束碼取它的 `code`）、`max`＝最多幾圈。loop 每圈起一次 `run`，看它的結束碼決定下一步（P-19）。（§ 1；拍板點 1；欄位名為原型自訂）
+- **P-07** fsm 一拍只跑一格：讀 `$AOS_STACK/state`（沒有＝`idle`），`aos-exec` 同名子資料夾；那格 0 才寫下一個狀態、退 0；非 0 就不換狀態、以原碼退。每拍之間狀態都落在 stack，人看得到。（C-62、N-53 agent 是被外面 loop 一拍一拍驅動的狀態機；N-36 一拍一格）（aos-fsm 版：`bin/aos-fsm fsm.json`，表長 `{"start","states":{名:{"val","next"}}}`，`val` 字串＝`aos-exec` 那個子資料夾、物件＝單子；state 檔與 shell 版同一個檔、同一格式，兩種 fsm 可互換；每拍在 `$AOS_STACK/trace.jsonl` 追加一行 `{"state","code","signal","timed_out","ms"}`；範例 `demo/agent-ann`）
 - **P-08** 標準三態 `idle → think → act → idle`。要加狀態＝加一個子資料夾、改 fsm 入口裡那張表；表一定明寫、不靠慣例檔名。（拍板點 1；N-36 表一定明寫）
 - **P-09** 每一格都是資料夾程式。fsm 只看格的結束碼，不讀格的 stderr、不管格裡面怎麼做（同步等腦、或丟請求下一拍再看，都行）。（C-52、N-38、N-41）
 - **P-10** 格之間要傳的東西寫成 stack 裡的檔（agent-bob：`current`＝正在做哪題、`plan`＝腦的草稿），不走 stdout。（N-37「格之間要傳的東西由格自己寫成檔」；§ 2）
@@ -73,7 +73,7 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
 ## 八、shell 版與 inst 版
 
 - **P-27** 標準範本＝shell 版，就是 agent-bob 的樣子（第二節）；其中 think 這一格示範 (A)（單子），其餘格仍是 shell。（拍板點 1；§ 7「想要簡單直接，那就上 shell 指令」）
-- **P-28** inst 單子（`{"argv", "cwd", "stdin", "stdout", "timeout_ms", …}`，key 表與跟 proto8 不同的兩處見 [README 的 `bin/aos-inst`](README.md)）是可選的升級，四種用法都行、可以在同一個 agent 裡混用：(1) `.aos/exec` 是 shebang 小殼、讀旁邊的 `exec.json`；(2) loop／fsm 的設定裡直接內嵌單子；(A) `.aos/exec` 第一行 `#!/usr/bin/env aos-inst`、後面接 JSON（**已做**，`bin/aos-inst`）；(B) aos-exec 認 `.aos/exec.json`，入口＝可執行檔或單子（**已做**；(1) 小殼＝`#!/bin/sh`＋`exec aos-inst .aos/exec.json "$@"`，也已有測試）。（§ 7「1 跟 2 都要」「接法 3 感覺也是 OK 的」「AB 都可以」；只剩 (2) 還沒做）
+- **P-28** inst 單子（`{"argv", "cwd", "stdin", "stdout", "timeout_ms", …}`，key 表與跟 proto8 不同的兩處見 [README 的 `bin/aos-inst`](README.md)）是可選的升級，四種用法都行、可以在同一個 agent 裡混用：(1) `.aos/exec` 是 shebang 小殼、讀旁邊的 `exec.json`；(2) loop／fsm 的設定裡直接內嵌單子（**已做**，`aos-loop`／`bin/aos-fsm`、`demo/agent-ann`）；(A) `.aos/exec` 第一行 `#!/usr/bin/env aos-inst`、後面接 JSON（**已做**，`bin/aos-inst`）；(B) aos-exec 認 `.aos/exec.json`，入口＝可執行檔或單子（**已做**；(1) 小殼＝`#!/bin/sh`＋`exec aos-inst .aos/exec.json "$@"`，也已有測試）。（§ 7「1 跟 2 都要」「接法 3 感覺也是 OK 的」「AB 都可以」；四種都做完了）
 - **P-29** 範本先給 (A)：只換一格的入口檔、佈局跟 shell 版一模一樣，學一次就夠；資料夾開始太多時改用 (2)，一份 `fsm.json` 看完整張表與每格單子。範本就是 `demo/agent-bob/fsm/think/.aos/exec`（見下面範例）。(1) 與 (B) 是 (A) 的等價寫法，不另給範本。（拍板點 1 agent-bob 是標準、佈局不變最省；§ 7「單子是資料這塊……在不希望資料夾佈局太複雜的時候很好用」。這是原討論稿拍板點 5 的答案）
 - **P-30** 用 inst 換到的是四樣：argv 是陣列、不靠 sh 拼字串；`timeout_ms` 逾時收尾、不留孫程式；結果是結構化的（結束碼、訊號、有沒有逾時、毫秒）；單子是資料、可內嵌進別的 JSON。「不走 sh 更快」實測不成立：單獨起一個 aos-inst（Python）比一層 sh 慢 5～6 倍，agent-bob 一圈殼的開銷對一輪 LLM 不到千分之二；省得到的只有 loop／fsm 在行程內直接 `run()` 那種。（§ 7 使用者「都還好。主要是單子是資料這塊……結果是結構化的這塊也很舒服」；10-19 在 WSL 實量的結論）
 - **P-31** 單子要指到 stack 或工作區底下的檔，寫 `{"$env": "AOS_STACK", "path": "plan"}`：意思是「那個環境變數指的資料夾底下的 `plan`」，照 `os.path.join` 接（`AOS_STACK` 結尾有 `/`、`AOS_WS` 沒有，兩種都對；`path` 寫絕對路徑就是絕對路徑）。不帶 `path` 就是整個變數值。**只有 `$env`，沒有 `$ref`**（單子本來就能內嵌，不必拆檔）；變數沒設＝aos-inst 自己的錯、退 1。不用字串內插（`"$AOS_STACK/plan"`）：那是把規則埋進字串的暗規則。（本稿定；PLAN 第一節決定 3；C-48／C-55 值長成物件、同層加屬性；C-56 寫什麼就做什麼；N-45 `$env` 是正式機制）
@@ -98,17 +98,20 @@ inst 版 (A)（`demo/agent-bob/fsm/think/.aos/exec` 實際內容，只換這一�
  "timeout_ms": 120000}
 ```
 
-inst 版 (2)（`fsm/.aos/exec` 改成 `#!/bin/sh`＋`exec aos-fsm fsm.json`，表與單子合成一份；形狀示意，aos-fsm 還沒接 `$AOS_STACK`）：
+inst 版 (2)（`demo/agent-ann` 實際內容：`.aos/exec` 是 `#!/bin/sh`＋`exec aos-loop loop.json`，`loop.json` 是 `{"run": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}`（loop 內嵌單子），表與單子合成這一份 `fsm.json`）：
 
 ```json
 {"start": "idle",
  "states": {
-   "idle":  {"val": {"argv": ["aos-exec", "idle"]}, "next": "think"},
-   "think": {"val": {"argv": ["python3", "think/brain.py"], "timeout_ms": 120000}, "next": "act"},
-   "act":   {"val": {"argv": ["aos-exec", "act"]}, "next": "idle"}}}
+   "idle":  {"val": "idle", "next": "think"},
+   "think": {"val": {"argv": ["python3", "brain.py"],
+                     "stdout": {"$env": "AOS_STACK", "path": "plan"},
+                     "timeout_ms": 120000},
+             "next": "act"},
+   "act":   {"val": "act", "next": "idle"}}}
 ```
 
-格寫成 `{"val", "next"}` 照 N-36；idle、act 仍是子資料夾（看 inbox、搬檔用 sh 最順），think 變成一張單子、拿到逾時。
+格寫成 `{"val", "next"}` 照 N-36；idle、act 仍是子資料夾（看 inbox、搬檔用 sh 最順），think 變成一張單子、拿到逾時。佈局攤平：`idle/`、`act/`、`brain.py` 直接放在 agent 資料夾底下（跟 bob 重複的小檔是 demo 的代價，不跨 agent 互指，P-25）。
 
 ## 九、慣例不管的
 
@@ -116,7 +119,6 @@ stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；�
 
 ## 十、程式還沒照這份改的地方（之後另派）
 
-- inst 還剩一種沒做：aos-loop／aos-fsm 內嵌單子 (2)；aos-fsm 的 state 檔落在 `$AOS_STACK`（P-28、P-29）。
 - `tools/` 還沒有任何工具（P-25）。
 
 ## 十一、要使用者決定的

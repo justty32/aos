@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""aos-fsm FSM.json — fsm 一拍只跑一格。
+FSM.json: {"start": "idle", "states": {"idle": {"val": "idle", "next": "think"},
+                                         "think": {"val": {"argv": [...], ...}, "next": "act"}, ...}}
+讀 $AOS_STACK/state（純文字一行狀態名；沒有＝start，格式與 shell 版相同）；查格；
+val 是字串＝`aos-exec <它>`（相對路徑從 cwd 算）、是物件＝單子，行程內 aos_inst.run()。
+每拍在 $AOS_STACK/trace.jsonl 追加一行 {"state","code","signal","timed_out","ms"}。
+結束碼 0 才把 next 寫進 state；以那格的碼退出（10 與其他非 0 原樣往上，狀態都不動）。
+只看格的結束碼，不讀格的 stdout、不轉述格的 stderr。自己的錯（沒設 AOS_STACK、表壞、查不到格、單子壞）
+退 1，stderr 一行 `aos-fsm: 原因`。"""
+import json, os, subprocess, sys, time
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import aos_inst
+
+
+def die(msg):
+    print(f"aos-fsm: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def main():
+    if len(sys.argv) < 2:
+        die("usage: aos-fsm FSM.json")
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        die("沒設定 AOS_STACK")
+    try:
+        cfg = json.load(open(sys.argv[1], encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        die(f"讀不到或不是 JSON：{sys.argv[1]}（{e}）")
+    states = cfg.get("states") if isinstance(cfg, dict) else None
+    if not isinstance(states, dict) or not isinstance(cfg.get("start"), str):
+        die('fsm.json 要是 {"start": 狀態名, "states": {名: {"val", "next"}}}')
+    sfile = os.path.join(stack, "state")
+    try:
+        state = open(sfile, encoding="utf-8").read().strip() or cfg["start"]
+    except OSError:
+        state = cfg["start"]
+    cell = states.get(state)
+    if not (isinstance(cell, dict) and "val" in cell and isinstance(cell.get("next"), str)):
+        die(f"查不到狀態 {state}（或它不是 {{\"val\", \"next\"}}）")
+    val = cell["val"]
+    if not isinstance(val, (str, dict)):
+        die(f"狀態 {state} 的 val 要是子資料夾名或單子")
+    if isinstance(val, str):
+        t0 = time.monotonic()
+        rc = subprocess.call(["aos-exec", val])
+        res = {"code": rc if rc >= 0 else 128 - rc, "signal": -rc if rc < 0 else None,
+               "timed_out": False, "ms": round((time.monotonic() - t0) * 1000)}
+    else:
+        try:
+            res = aos_inst.run(val)
+        except aos_inst.InstError as e:
+            die(f"狀態 {state}：{e}")
+    with open(os.path.join(stack, "trace.jsonl"), "a", encoding="utf-8") as f:
+        f.write(json.dumps({"state": state, "code": res["code"], "signal": res["signal"],
+                            "timed_out": res["timed_out"], "ms": res["ms"]}, ensure_ascii=False) + "\n")
+    if res["code"] == 0:
+        with open(sfile, "w", encoding="utf-8") as f:
+            f.write(cell["next"] + "\n")
+    sys.exit(res["code"])
+
+
+main()

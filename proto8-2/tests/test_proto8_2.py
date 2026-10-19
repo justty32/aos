@@ -1,9 +1,10 @@
-import os, subprocess, tempfile, threading, unittest
+import json, os, subprocess, tempfile, threading, unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 EXEC = str(ROOT / "bin" / "aos-exec")
 BOB = str(ROOT / "demo" / "agent-bob")
+ANN = str(ROOT / "demo" / "agent-ann")
 
 
 def run(*args, env=None, **kw):
@@ -224,6 +225,48 @@ class T(unittest.TestCase):
         Path(agent, "loop.json").write_text('{"run": "bad", "max": 3}')
         ws = Path(self.tmp, "ws"); ws.mkdir()
         self.assertEqual(run(EXEC, agent, str(ws)).returncode, 7)
+
+    def test_loop_embedded_inst_runs_each_lap(self):
+        agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
+        Path(agent, "loop.json").write_text(json.dumps(
+            {"run": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/n"']}, "max": 3}))
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, agent, str(ws))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual((ws / ".aos" / "n").read_text().split(), ["x", "x", "x"])
+
+    def test_loop_embedded_inst_stop_and_failure_codes(self):
+        for code, want in ((10, 0), (7, 7)):
+            agent = prog(self.tmp, f"agent{code}", "aos-loop loop.json\n")
+            Path(agent, "loop.json").write_text(json.dumps(
+                {"run": {"argv": ["sh", "-c", f"exit {code}"]}, "max": 3}))
+            ws = Path(self.tmp, f"ws{code}"); ws.mkdir()
+            self.assertEqual(run(EXEC, agent, str(ws)).returncode, want)
+
+    def test_loop_own_errors_exit_1_one_line(self):
+        agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        for text in (None, "{nope", '{"max": 2}', '{"run": {"argv": ["no-such-cmd-xyz"]}}'):
+            if text is not None:
+                Path(agent, "loop.json").write_text(text)
+            r = run(EXEC, agent, str(ws))
+            self.assertEqual(r.returncode, 1, text)
+            self.assertEqual(len(r.stderr.strip().splitlines()), 1, text)
+            self.assertTrue(r.stderr.startswith("aos-loop: "), text)
+
+    def test_demo_flow_ann(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        r = run(EXEC, ANN, str(ws))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("hello", (ws / "out" / "q.txt").read_text())
+        self.assertTrue((ws / "done" / "q.txt").exists())
+        self.assertFalse((ws / "inbox" / "q.txt").exists())
+        self.assertEqual((ws / ".aos" / "state").read_text(), "idle\n")
+        tr = [json.loads(l) for l in (ws / ".aos" / "trace.jsonl").read_text().splitlines()]
+        self.assertEqual([(t["state"], t["code"]) for t in tr],
+                         [("idle", 0), ("think", 0), ("act", 0), ("idle", 10)])
+        for n in ("state", "trace.jsonl", "plan", "current"):
+            self.assertEqual(list(Path(ANN).rglob(n)), [], n)   # 定義資料夾乾淨
 
 
 if __name__ == "__main__":

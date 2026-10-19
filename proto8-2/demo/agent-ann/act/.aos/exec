@@ -1,0 +1,7 @@
+#!/bin/sh
+# act：執行 plan（在 stack）——把答案寫進 $AOS_WS/out/<題名>，題目搬到 done/
+[ -n "$AOS_STACK" ] || { echo "agent-bob: 沒設定 AOS_STACK" >&2; exit 1; }
+name=$(cat "$AOS_STACK/current")
+mkdir -p "$AOS_WS/out" "$AOS_WS/done"
+cp "$AOS_STACK/plan" "$AOS_WS/out/$name"
+mv "$AOS_WS/inbox/$name" "$AOS_WS/done/$name"

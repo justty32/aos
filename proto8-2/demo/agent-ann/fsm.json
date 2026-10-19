@@ -1,0 +1,8 @@
+{"start": "idle",
+ "states": {
+   "idle":  {"val": "idle", "next": "think"},
+   "think": {"val": {"argv": ["python3", "brain.py"],
+                     "stdout": {"$env": "AOS_STACK", "path": "plan"},
+                     "timeout_ms": 120000},
+             "next": "act"},
+   "act":   {"val": "act", "next": "idle"}}}

@@ -1,14 +1,49 @@
 #!/usr/bin/env python3
-"""aos-loop LOOP.json — 每圈 `aos-exec <run>`。loop.json: {"run": "子資料夾", "max": 圈數}
-子程式結束碼：0 繼續下一圈；10 要求停（loop 以 0 結束）；其他非 0 失敗（loop 原碼結束）。跑滿 max 圈：結束碼 0。"""
-import json, subprocess, sys
+"""aos-loop LOOP.json — 每圈跑一次 run。loop.json: {"run": 子資料夾 或 一張單子, "max": 圈數}
+run 是字串＝每圈 `aos-exec <run>`；是物件＝單子，行程內 aos_inst.run() 跑（取它的 code）。
+子程式結束碼：0 繼續下一圈；10 要求停（loop 以 0 結束）；其他非 0 失敗（loop 原碼結束）。跑滿 max 圈：結束碼 0。
+自己的錯（檔讀不到、不是 JSON、run 不對、單子壞）退 1，stderr 一行 `aos-loop: 原因`。"""
+import json, os, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import aos_inst
+
 STOP = 10
-cfg = json.load(open(sys.argv[1]))
-for i in range(int(cfg.get("max", 10))):
-    rc = subprocess.call(["aos-exec", cfg["run"]])
-    if rc == STOP:
-        sys.exit(0)
-    if rc:
-        print(f"aos-loop: 第 {i+1} 圈 {cfg['run']} 失敗，結束碼 {rc}", file=sys.stderr)
-        sys.exit(rc)
-print(f"aos-loop: 跑滿 {cfg.get('max', 10)} 圈", file=sys.stderr)
+
+
+def die(msg):
+    print(f"aos-loop: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def main():
+    if len(sys.argv) < 2:
+        die("usage: aos-loop LOOP.json")
+    try:
+        cfg = json.load(open(sys.argv[1], encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        die(f"讀不到或不是 JSON：{sys.argv[1]}（{e}）")
+    if not isinstance(cfg, dict) or not isinstance(cfg.get("run"), (str, dict)):
+        die('loop.json 要是 {"run": 子資料夾或單子, "max": 圈數}')
+    run, mx = cfg["run"], cfg.get("max", 10)
+    if isinstance(mx, bool) or not isinstance(mx, int):
+        die("max 要是整數")
+    name = run if isinstance(run, str) else " ".join(map(str, run.get("argv", ["?"])))
+    for i in range(mx):
+        if isinstance(run, str):
+            rc = subprocess.call(["aos-exec", run])
+            if rc < 0:
+                rc = 128 - rc
+        else:
+            try:
+                rc = aos_inst.run(run)["code"]
+            except aos_inst.InstError as e:
+                die(str(e))
+        if rc == STOP:
+            sys.exit(0)
+        if rc:
+            print(f"aos-loop: 第 {i+1} 圈 {name} 失敗，結束碼 {rc}", file=sys.stderr)
+            sys.exit(rc)
+    print(f"aos-loop: 跑滿 {mx} 圈", file=sys.stderr)
+
+
+main()
