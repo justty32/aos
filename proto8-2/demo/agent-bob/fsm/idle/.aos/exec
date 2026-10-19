@@ -1,3 +1,3 @@
 #!/bin/sh
 # idle：inbox 有題目就結束碼 0（往下走），沒有就 10（請 loop 停）
-ls "$AOS_WS"/inbox/* >/dev/null 2>&1 || exit 10
+ls "$AOS_WD"/inbox/* >/dev/null 2>&1 || exit 10
