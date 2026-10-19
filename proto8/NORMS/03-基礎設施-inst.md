@@ -1,6 +1,6 @@
 ← [回入口 NORMS.md](../NORMS.md)｜主題：**基礎設施／inst**｜概念：[CONCEPTS 基礎設施 § inst](../CONCEPTS/03-基礎設施.md#inst)｜規範：本檔｜實作：[aos-inst](../bin/README.md)（`bin/aos-inst`、`bin/aos_inst.py`）；impls 線（使用者假日的 C／C++ 參考實作，git 未追蹤）inst 是 C lib、不提供命令列，單子由 aos-exec 行程內跑（[ideas § 20](../thinking/2026-10-19-ideas.md)）
 
-> **兩版實作（10-19 晚，§ 20）**：下面講「aos-inst 命令列」「`aos_inst.run()`」的句子是 `proto8/bin` 那版（Python）的樣子。impls 線沒有 aos-inst 命令列（使用者：「aos-inst可以不用，inst和inst json格式，他就是一個C lib，也不提供cli」），單子格式的 JSON 解析不進 C 庫（使用者：「json不要寫進去」）、放在 aos-exec 的 C++ 庫；行程內跑單子的函數是 aos-exec 公開 API 的 `run_inst`，回的東西跟 N-30 的結果同一組欄位（`code`、`signal`、`timed_out`、`pid`、`ms`）。規範本身（單子格式、結果欄位、透明轉交）兩版一樣。
+> **兩版實作（10-19 晚，§ 20、§ 21）**：下面講「aos-inst 命令列」「`aos_inst.run()`」的句子是 `proto8/bin` 那版（Python）的樣子。impls 線沒有 aos-inst 命令列（使用者：「aos-inst可以不用，inst和inst json格式，他就是一個C lib，也不提供cli」），單子格式的 JSON 解析不進 C 庫（使用者：「json不要寫進去」）、放在 aos-exec 的 C++ 庫；行程內跑單子的函數是 aos-exec 公開 API 的 `run_inst`，回的東西跟 N-30 的結果同一組欄位（`code`、`signal`、`timed_out`、`pid`、`ms`）。bin 版的 aos-exec 10-19 晚也改成行程內跑單子（呼叫 `aos_inst.run()`），aos-inst 命令列只剩 CONVENTION P-28 的 (A)、(1) 兩種寫法在用。規範本身（單子格式、結果欄位、透明轉交）兩版一樣；單子的 `argv[0]` 是 `+x` 但沒 `#!` 的檔，兩版都照 execvp 退回 sh 跑（使用者 § 21「不擋」；aos-exec 自己 exec 的入口不在此限，N-60）。
 
 同主題：inst｜[loop 與 daemon](04-基礎設施-loop與daemon.md)｜[窗](05-基礎設施-窗.md)｜[命令列與指示詞](06-基礎設施-命令列與指示詞.md)｜[組合子](07-基礎設施-組合子.md)｜[資料夾程式與執行](10-基礎設施-定義與工作區.md)
 
