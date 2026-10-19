@@ -19,3 +19,4 @@
 3. **今天下午定的**（[session log 10-19 下午](session_logs/2026-10/2026-10-19.md#下午-session健檢重寫順序資料夾比喻四題入口改-_exec10-19)）：C-71 資料夾用 table 比喻、C-72 JSON＝單檔 table、C-41 元素求值由 entry 決定（quote）、C-43「編譯」＝用 lua／lisp 生成資料夾佈局；入口預設改 `_exec`（工作區 stack 仍 `.aos/`）。
 4. **下班前口述**（ideas § 14～§ 19）：entry／aos-exec 新規則、`#/` 尋址、`AOS_CF`／`AOS_CD`，只記錄、待落實（見 SESSION-LOG）。
 5. **待辦**：daemon、兩種 kernel、tasks、tick、腦的工具呼叫待照新做法重寫，等使用者說先做哪個（[NORMS 待定](../proto8/NORMS/08-待定.md)）。重寫順序稿已排好（[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)），使用者「這些都是實作細節，之後再說沒關係。我還在高空飛。」——他在想大方向，別拿實作細節打斷。信箱、WAIT_USER 皆空。
+6. **`proto8/impls/`（未追蹤）**：使用者假日（10-17～18）自己做的 C／C++ 實作（inst／aos-loop／aos-daemon＋util／directive／schema，aos-fsm 只開頭），照已刪的舊 Python lib（git aa2fec1f）寫、沒跟上 `_exec`／`AOS_STACK` 新做法。使用者 10-19 晚：「impls那些是我在假日的時候做的，可以參考」→ 當參考，不刪、不 git add，只此一份。
