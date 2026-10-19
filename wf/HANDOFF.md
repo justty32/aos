@@ -12,9 +12,9 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-10-19（新 session）
+## 2026-10-19 晚（家中 Manjaro 新 session）
 
-1. **授權**：使用者 /goal「可以隨意commit,push，但是必須使用WSL的git global setting，也就是justty32」——commit／push 一律在 WSL 跑 git（`wsl -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && git …'`）。WSL 的 git 沒設 credential helper，`git push origin main`（https）會卡在等密碼；改走 SSH 推：`GIT_SSH_COMMAND="ssh -o BatchMode=yes" git push git@github.com:justty32/aos.git main`，推完 `git fetch origin` 同步追蹤分支。事情盡量交給子 agent；需要思考的派 fable；sonnet 只做雜事或簡單工作；要動手做事的 agent（sonnet 除外）先讀過 wf 規矩。
+1. **授權**：使用者 /goal 原文「事情盡量交給agent做，需要思考的事情交給fable，簡單工作和雜活交給sonnet。你就負責和我交流。可以隨意push」——本 session 每個 commit 後直接 push。在家中 Manjaro：本機 git 已是 justty32（justty32@gmail.com），remote origin 是 SSH（git@github.com:justty32/aos.git），直接 `git push origin main` 即可；公司 Windows 才要走 WSL＋SSH（舊做法見 git 歷史）。頂層只負責跟使用者交流，事情交給子 agent。
 2. **現況**：proto8-2 已併進 proto8（[session log 10-19](session_logs/2026-10/2026-10-19.md#proto8-2-併進-proto810-19)），現行以 proto8 的 CONCEPTS／NORMS／CONVENTION 為準；10-16 那套（食譜與廚房、門房、`.aos` 捷徑等）已作廢，舊 lib 在 git aa2fec1f。
 3. **今天下午定的**（[session log 10-19 下午](session_logs/2026-10/2026-10-19.md#下午-session健檢重寫順序資料夾比喻四題入口改-_exec10-19)）：C-71 資料夾用 table 比喻、C-72 JSON＝單檔 table、C-41 元素求值由 entry 決定（quote）、C-43「編譯」＝用 lua／lisp 生成資料夾佈局；入口預設改 `_exec`（工作區 stack 仍 `.aos/`）。
 4. **下班前口述**（ideas § 14～§ 19）：entry／aos-exec 新規則、`#/` 尋址、`AOS_CF`／`AOS_CD`，只記錄、待落實（見 SESSION-LOG）。
