@@ -268,6 +268,27 @@ class T(unittest.TestCase):
         for n in ("state", "trace.jsonl", "plan", "current"):
             self.assertEqual(list(Path(ANN).rglob(n)), [], n)   # 定義資料夾乾淨
 
+    def test_stamp_tool_alone(self):
+        stamp = str(Path(BOB) / "tools" / "stamp")
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        for n in ("1", "2"):
+            r = run(EXEC, stamp, str(ws), input="body text\n")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            lines = r.stdout.split("\n")
+            self.assertTrue(lines[0].startswith("# "), r.stdout)
+            self.assertEqual(lines[1], "body text")
+            self.assertEqual((ws / ".aos" / "runs").read_text().strip(), n)
+
+    def test_bob_act_goes_through_stamp_with_own_stack(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        self.assertEqual(run(EXEC, BOB, str(ws)).returncode, 0)
+        out = (ws / "out" / "q.txt").read_text().split("\n")
+        self.assertTrue(out[0].startswith("# "))
+        self.assertIn("hello", out[1])
+        self.assertEqual((ws / ".aos" / "stamp" / "runs").read_text().strip(), "1")
+        self.assertFalse((ws / ".aos" / "runs").exists())     # 子 stack 分開
+        self.assertEqual(list(Path(BOB).rglob("runs")), [])    # 定義資料夾乾淨
+
 
 if __name__ == "__main__":
     unittest.main()

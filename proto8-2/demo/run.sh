@@ -9,6 +9,8 @@ for agent in agent-bob agent-ann; do
   cd "$ws" && echo "--- 工作區 $ws" && find . -path ./.aos -prune -o -type f -print | sort
   for f in out/* done/*; do echo "== $f"; cat "$f"; done
   echo "--- stack $ws/.aos/"
-  for f in .aos/*; do echo "== $f"; cat "$f"; done
+  for f in .aos/*; do
+    if [ -d "$f" ]; then echo "== $f/（子 stack）"; ls "$f"; else echo "== $f"; cat "$f"; fi
+  done
   cd "$here"; rm -rf "$ws"
 done

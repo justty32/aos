@@ -23,8 +23,8 @@ agent-bob/                 一個 agent＝一個資料夾程式（§ 1）
   fsm/idle/.aos/exec       inbox 有題→0 往下走；沒題→10 請 loop 停（P-19）
   fsm/think/.aos/exec      (A) 單子：跑 brain.py、stdout 導到 $AOS_STACK/plan、逾時 120 秒（P-12、P-24、P-29）
   fsm/think/brain.py       取一題（P-12）、題名寫 stack 的 current、問腦（假腦或 OpenAI 相容端點、只取 content，P-23），答案印 stdout
-  fsm/act/.aos/exec        照 plan 把答案寫 $AOS_WS/out/、題目搬 done/（P-11、P-24）
-  tools/<名>/              工具＝子資料夾程式，各有自己的 .aos/exec（P-25；原型還沒有）
+  fsm/act/.aos/exec        照 plan、經 tools/stamp 把答案寫 $AOS_WS/out/、題目搬 done/（P-11、P-24、P-17）
+  tools/<名>/              工具＝子資料夾程式，各有自己的 .aos/exec（P-25）；現有 tools/stamp/：stdin 前面加時間戳印出來
 
 workspace/                 ＝$AOS_WS，使用者的（§ 2）
   inbox/<題名>             題目：純文字、一題一檔（拍板點 2）
@@ -53,7 +53,7 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
 
 - **P-15** 執行中的一切（狀態、草稿、紀錄、小格）只寫 `$AOS_STACK`，**定義資料夾不被寫**；所以同一個 agent 可以同時被兩個工作區跑。（C-65；§ 2；原型測試已驗）
 - **P-16** agent 自己的格（fsm／idle／think／act）共用同一個 `$AOS_STACK`——它們是同一台狀態機。stack 裡放什麼、叫什麼，agent 自訂；agent-bob 的 `state`、`current`、`plan`、`trace.log` 是例子不是規範。（拍板點 1「stack 內部自由」；§ 2「剩下的你自己想」；§ 3）
-- **P-17** 叫**別的**資料夾程式（工具、另一個 agent）時，給它自己的 stack：`AOS_STACK=$AOS_STACK/<名>/ aos-exec tools/<名>`。被叫的只看到自己的 stack、不知道上面有誰。叫完不自動收——留著給人看；要收由呼叫方自己 `rm`。（§ 3「子程式的 stack 由 agent-bob 自己訂，有可能他會是 AOS_STACK/think, /act」；C-52 子 agent 只看自己的 stack；C-67 stack 放哪由呼叫方決定；拍板點 3「人來看」。這是原討論稿拍板點 4 的答案）
+- **P-17** 叫**別的**資料夾程式（工具、另一個 agent）時，給它自己的 stack：`AOS_STACK=$AOS_STACK/<名>/ aos-exec tools/<名>`（例：agent-bob 的 act 用 `AOS_STACK=$sub aos-exec ../../tools/stamp`，`sub=$AOS_STACK/stamp/`，工具的 `runs` 落在 `$AOS_STACK/stamp/`）。被叫的只看到自己的 stack、不知道上面有誰。叫完不自動收——留著給人看；要收由呼叫方自己 `rm`。（§ 3「子程式的 stack 由 agent-bob 自己訂，有可能他會是 AOS_STACK/think, /act」；C-52 子 agent 只看自己的 stack；C-67 stack 放哪由呼叫方決定；拍板點 3「人來看」。這是原討論稿拍板點 4 的答案）
 - **P-18** 一個工作區同時跑兩個 agent 時，呼叫方給不同的 `AOS_STACK`（例 `$AOS_WS/.aos/bob/`）；預設值只保證「一個工作區一個 agent」不撞。（C-67；C-53 入口默認正常、誤用不歸組件管）
 
 ## 六、停與錯
@@ -117,9 +117,9 @@ inst 版 (2)（`demo/agent-ann` 實際內容：`.aos/exec` 是 `#!/bin/sh`＋`ex
 
 stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；入口怎麼收「這次要做啥」；一格同步還是非同步。（§ 2、§ 4；拍板點 1；N-41）
 
-## 十、程式還沒照這份改的地方（之後另派）
+## 十、程式還沒照這份改的地方
 
-- `tools/` 還沒有任何工具（P-25）。
+已全部做完（10-19），做法與步驟見 [PLAN.md](PLAN.md)。
 
 ## 十一、要使用者決定的
 

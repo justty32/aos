@@ -1,0 +1,7 @@
+#!/bin/sh
+# stamp：stdin 原樣印到 stdout，最前面加一行「# <UTC 時間>」。每用一次，自己 stack 裡的 runs 加 1。不碰工作區。
+[ -n "$AOS_STACK" ] || { echo "stamp: 沒設定 AOS_STACK" >&2; exit 1; }
+n=$(cat "$AOS_STACK/runs" 2>/dev/null || echo 0)
+echo $((n + 1)) > "$AOS_STACK/runs"
+date -u +"# %Y-%m-%dT%H:%M:%SZ"
+cat
