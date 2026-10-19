@@ -12,6 +12,7 @@
 
 ## 最新進度
 
+- **entry／aos-exec 新規則待落實**（10-19 下班前口述）：[ideas § 14～§ 18](../proto8/thinking/2026-10-19-ideas.md)——entry 四種格式、`aos-exec XXX` 找入口與補 `.json`、`js[$AOS_ENTRY]` 可為字串路徑、有 `argv`＝inst、檔就 cd 到所在資料夾、aos-exec 自己偵測循環；只記錄，CONCEPTS／NORMS（N-57、N-60、P-28）與 bin/aos-exec 未改，等使用者說動工。
 - **待照新做法重寫（10-19 併入後）**：daemon、兩種 kernel、tasks（seq／par／if）、tick、腦的工具呼叫（`tool_calls`）現無實作（舊版在 git aa2fec1f）；概念與規範留著、標「現無實作」；等使用者說要哪個。細節 [NORMS 待定](../proto8/NORMS/08-待定.md)、[session log 10-19 併入](session_logs/2026-10/2026-10-19.md)。fable 排的重寫順序與五題在 [rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)；使用者 10-19「這些都是實作細節，之後再說沒關係。我還在高空飛。」→ 擱著，他回到實作前不主動提。
 - **KISS 批次 1「純刪」已做完、已推**（10-15 深夜，使用者「C-50 選 a，其他都按照推薦」、PLAN「刪掉」）：彙整總表 1.1～1.18 與 6.10 全做（四個 commit cb20249a、fa6629ee、7d833687、a0c7214d），C-50 改成「一張 inst 是正本」、PLAN 刪、proto8-1 併進 proto8/lib；lib 測試 173→169、ctest 全綠。自定點 8 條在 [10-15 § KISS 批次 1](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)（最要看的：`aos-demo` 的 AOS_DEMO 留到批次 2）。~~下一步批次 2～6~~ **暫停**（10-16 使用者撤回「都照推薦」，見上一條）。
 - **compact 後自動讀回**：`.claude/settings.json` SessionStart(compact) hook → [wf/tools/compact_reload.sh](tools/compact_reload.sh)，交接寫 [HANDOFF](HANDOFF.md)（10-15 深夜）。
