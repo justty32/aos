@@ -14,6 +14,6 @@
 
 ## 2026-10-19（新 session）
 
-1. **授權**：使用者 /goal「可以隨意commit,push，但是必須使用WSL的git global setting，也就是justty32」——commit／push 一律在 WSL 跑 git（`wsl -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && git …'`）。事情盡量交給子 agent；需要思考的派 fable；sonnet 只做雜事或簡單工作；要動手做事的 agent（sonnet 除外）先讀過 wf 規矩。
+1. **授權**：使用者 /goal「可以隨意commit,push，但是必須使用WSL的git global setting，也就是justty32」——commit／push 一律在 WSL 跑 git（`wsl -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && git …'`）。WSL 的 git 沒設 credential helper，`git push origin main`（https）會卡在等密碼；改走 SSH 推：`GIT_SSH_COMMAND="ssh -o BatchMode=yes" git push git@github.com:justty32/aos.git main`，推完 `git fetch origin` 同步追蹤分支。事情盡量交給子 agent；需要思考的派 fable；sonnet 只做雜事或簡單工作；要動手做事的 agent（sonnet 除外）先讀過 wf 規矩。
 2. **現況**：proto8-2 已併進 proto8（[session log 10-19](session_logs/2026-10/2026-10-19.md#proto8-2-併進-proto810-19)），現行以 proto8 的 CONCEPTS／NORMS／CONVENTION 為準；10-16 那套（食譜與廚房、門房、`.aos` 捷徑等）已作廢，舊 lib 在 git aa2fec1f。
 3. **待辦**：daemon、兩種 kernel、tasks、tick、腦的工具呼叫待照新做法重寫，等使用者說先做哪個（[NORMS 待定](../proto8/NORMS/08-待定.md)）。信箱、WAIT_USER 皆空。
