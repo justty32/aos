@@ -115,3 +115,87 @@
 
 1. proto8-2 的 aos-inst 跟 proto8 的 `aos inst` 同名、單子 key 同名，但「沒寫的串流接呼叫者的」「結束碼＝子程式的碼」兩處不同（第一節決定 2）。拿 proto8 `lib/inst.md` 來寫 proto8-2 單子的人會踩到這兩處；對策是 P-28 不再指 proto8 inst.md 當語意出處。
 2. aos-fsm 只看格的結束碼、不讀格 stdout 的 `next`（P-09），跟 proto8 N-37 相反——CONFLICTS 4 的延伸，同一條裁定。
+
+## 第二輪：混合範本與巢狀（2026-10-19 fable 規劃）
+
+起點是 [ideas § 10](thinking/2026-10-19-ideas.md)：範本改混合寫法（使用者「好主意」）、以後會層層巢狀。結論寫成 [CONVENTION](CONVENTION.md) 第二、三、八節的改寫與第十二節 P-32～P-39；這裡只排程式怎麼改、分幾步、每步做完的樣子。仍然不碰 proto8。
+
+### 一、關鍵決定（已寫進 CONVENTION，這裡只列程式面）
+
+1. **bob 變成混合範本、ann 變成全內嵌對照、shell fsm 進 git 歷史**（P-27、§ 八）。bob：`loop.json` 內嵌 `aos-fsm fsm.json`；`fsm.json` idle→`"idle"`、think→單子、act→`"act"`；`idle/`、`act/`、`brain.py` 在根；`fsm/` 整個刪。ann：三格全是單子，各指 `idle.py`／`brain.py`／`act.py`，沒有子資料夾。
+2. **cathy 放在 `demo/agent-bob/act/tools/cathy/`，不放 `demo/agent-cathy/`**（P-33）。C-61 說地址寫在呼叫者自己資料夾裡；放外面就得靠捷徑，而本 repo 是 Windows checkout、commit 捷徑不穩（§ 9 先只考慮 Linux，但檔要能在這台 checkout）。cathy 自己也是完整 agent，`aos-exec demo/agent-bob/act/tools/cathy ws` 單獨跑得起來。她的 act 叫 `tools/stamp`（stamp 從 bob 根搬到她底下），所以一次 bob 跑完是四層：bob 的 loop／fsm → act（sh）→ cathy 的 loop／fsm → 她的 act（sh）→ stamp。
+3. **aos_inst 改成行程群組**（P-36）：`Popen(..., start_new_session=True)`；`_stop`、逾時與轉訊號改 `os.killpg(child.pid, sig)`（群組已經沒了就忽略 `ProcessLookupError`）。`run()` 的結果形狀不變。
+4. **aos-fsm 的 trace 行加 `at`**（P-38）：這拍開始的 UTC 時間，`datetime.now(timezone.utc).isoformat(timespec="seconds")`。既有欄位不動。
+5. **aos-exec 的 PATH 不重複疊**（P-39）：`case ":$PATH:" in *":$bin:"*) ;; *) PATH=$bin:$PATH;; esac`。
+
+### 二、每步怎麼做
+
+#### 步 1：底層三改（aos_inst 群組、aos-fsm `at`、aos-exec PATH）← P-36、P-38、P-39
+
+- 動：`bin/aos_inst.py`（`_start` 加 `start_new_session=True`；`_stop`、`_wait` 的 `child.kill()`、`forward` 的 `send_signal` 全改成對群組 `killpg`，包一個小函數 `_sig(child, sig)` 吞 `ProcessLookupError`）；`bin/aos-fsm`（trace 行加 `at`）；`bin/aos-exec`（PATH 去重）。
+- 測：`tests/test_inst.py` 加 `test_timeout_kills_grandchildren`——暫存資料夾程式 `outer/.aos/exec`＝`#!/bin/sh`＋`aos-exec inner`，`inner/.aos/exec`＝`echo $$ > "$AOS_STACK/pid"`＋`exec sleep 30`；用 `aos_inst.run({"argv": ["aos-exec", outer, ws], "timeout_ms": 300, "grace_ms": 200})`，回來後 `timed_out` 為 true、讀 `pid` 檔、`os.kill(pid, 0)` 要丟 `ProcessLookupError`（給 1 秒輪詢等 init 收屍）。`tests/test_fsm.py` 的 `test_trace_jsonl_one_line_per_beat` 欄位集合加 `at`、值能被 `datetime.fromisoformat` 解。`tests/test_proto8_2.py` 加 `test_path_not_duplicated`——三層 `aos-exec` 後 `echo "$PATH"` 裡 `bin` 只出現一次。
+- 文件：README 的 `bin/aos-inst`、`bin/aos-fsm`、`bin/aos-exec` 三條各補一句；CONVENTION 第十節 3、4、5 劃掉。
+
+#### 步 2：bob 改混合範本 ← P-27、P-29、第二節佈局
+
+- 動：`demo/agent-bob/loop.json` → `{"run": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}`；新 `fsm.json`（§ 八範例第一份）；`fsm/idle/` → `idle/`、`fsm/act/` → `act/`、`fsm/think/brain.py` → `brain.py`；刪 `fsm/.aos/exec`、`fsm/think/.aos/exec`。act 這一步先維持「經 `tools/stamp` 寫 out」，stamp 暫放 `act/tools/stamp/`（路徑改 `aos-exec tools/stamp`）；步 4 再換成叫 cathy。
+- 測（`tests/test_proto8_2.py`）：`test_demo_flow` 的 `trace.log` 斷言改成 `trace.jsonl` 四行 `[("idle",0),("think",0),("act",0),("idle",10)]`；`test_bob_state_in_stack_not_ws_or_def` 的檔名 `trace.log` → `trace.jsonl`；`test_bob_requires_stack` 的 `fsm`／`fsm/act` 改成 `act`、think 條改成「`aos-fsm fsm.json` 沒設 `AOS_STACK` 退 1」；`test_bob_think_is_inst_A_and_direct_exec_works` 改成 `test_bob_think_is_embedded_inst`（讀 `fsm.json`，think 的 `val` 是物件且 `argv[0]=="python3"`）；`test_bob_act_goes_through_stamp_with_own_stack` 的 `runs` 路徑暫為 `.aos/stamp/runs`；`test_stamp_tool_alone` 的 stamp 路徑改 `act/tools/stamp`。
+- 文件：README demo 條（agent-bob 段）重寫；CONVENTION 第十節 1 的 bob 半句劃掉。
+
+#### 步 3：ann 改全內嵌對照 ← § 八第二份
+
+- 動：`demo/agent-ann/fsm.json` 三格全單子；新 `idle.py`（`sys.exit(0 if os.listdir(ws/inbox) else 10)`，沒設 `AOS_WS` 用 `.`）、`act.py`（讀 `current`、`plan` 寫 `out/<名>`、`inbox/<名>` 搬 `done/`，沒設 `AOS_STACK` 退 1 並說）；刪 `idle/`、`act/`。
+- 測：`test_demo_flow_ann` 期望不變；加一條 `test_ann_has_no_cell_folders`（`agent-ann` 底下除了根的 `.aos/exec` 沒有別的 `.aos/exec`）。
+- 文件：README agent-ann 條改寫；CONVENTION 第十節 1 的 ann 半句劃掉。
+
+#### 步 4：cathy，bob 的 act 叫她 ← P-32、P-33、P-34、P-35
+
+- 新增 `demo/agent-bob/act/tools/cathy/`：`.aos/exec`、`loop.json`、`fsm.json`、`idle/.aos/exec`、`brain.py`、`act/.aos/exec`——跟步 2 的 bob 一模一樣（複製），只有 act 不同：她的 act 經 `tools/stamp` 寫 `$AOS_WS/out/<名>`（stamp 從 `agent-bob/act/tools/stamp/` 搬到 `cathy/act/tools/stamp/`）。
+- 動 `demo/agent-bob/act/.aos/exec` 改成 § 八範例那份：備 `$sub/ws/inbox/<名>`、`AOS_STACK=$sub aos-exec tools/cathy "$sub/ws" || { echo … >&2; exit 1; }`、從 `$sub/ws/out/<名>` 拿答案、搬 done。bob 的 `act/tools/` 底下只剩 `cathy/`。
+- 測（`tests/test_proto8_2.py`）：
+  - `test_nested_three_levels`（取代 `test_bob_act_goes_through_stamp_with_own_stack`）：bob 跑完退 0；`out/q.txt` 第一行 `# ` 開頭、第二行含 `FAKE ANSWER to: FAKE ANSWER to: hello`（兩層假腦疊出來）；stack 樹：`.aos/{state,current,plan,trace.jsonl}`、`.aos/cathy/{state,current,plan,trace.jsonl}`、`.aos/cathy/ws/{done/q.txt,out/q.txt}`、`.aos/cathy/stamp/runs`＝1；`.aos/` 根下沒有 `runs`、沒有 `ws/`。
+  - `test_cathy_does_not_touch_bob_ws`：bob 跑完，`ws/inbox/` 空、`ws/done/q.txt` 存在、`ws/out/` 只有 `q.txt`、`ws/` 頂層只有 `inbox out done .aos`；cathy 的 `trace.jsonl` 在 `.aos/cathy/`、不在 `.aos/`；bob 的 `trace.jsonl` 恰四行。
+  - `test_two_questions_substack_reused_not_leaking`：inbox 放 `q1.txt`（AAA）、`q2.txt`（BBB），一次跑完；`out/q1.txt` 含 `AAA`、`out/q2.txt` 含 `BBB`、互不含；cathy 的 `state`＝`idle`、`trace.jsonl` 八行、`ws/done/` 兩檔、`current`＝`q2.txt`；bob 的 `trace.jsonl` 七行（idle think act ×2＋idle 10）。
+  - `test_cathy_standalone`：`aos-exec demo/agent-bob/act/tools/cathy ws` 單獨跑、一題一答、`.aos/stamp/runs`＝1。
+  - `test_sub_agent_stop_code_not_leaking`：構一個外層 agent，fsm 一格 `"val": "sub"`，`sub/` 是一隻只有 idle 退 10 的最小 agent（loop＋fsm）；外層那格看到 0、外層 state 前進、外層 loop 不停在那圈。
+  - `test_cathy_failure_stops_bob`：bob 跑之前先在 `ws/.aos/cathy/` 寫 `state`＝`act` 且沒有 `current` → cathy 的 act 失敗 → bob 的 act 退 1 → bob 退 1、bob 的 `state` 停在 `act`、stderr 有 `cathy 失敗` 一行與 cathy 自己那層的一行。
+- 文件：README demo 條補 cathy 與四層；CONVENTION 第十節 2 劃掉。`demo/run.sh` 印 stack 時改成遞迴整棵樹（`find "$ws/.aos" -type f | sort`，每檔印內容；`ws/` 底下只列檔名）。
+
+#### 步 5：外層逾時收掉整棵內層（整合測試）← P-36
+
+- 不改 demo（bob 的 act 不包逾時，範本保持乾淨）；只加測試：`tests/test_fsm.py` 加 `test_outer_timeout_kills_nested_tree`——表一格 `{"val": {"argv": ["aos-exec", "slow"], "timeout_ms": 300, "grace_ms": 200}, "next": "a"}`；`slow/.aos/exec`＝`aos-exec inner`，`inner/.aos/exec`＝`echo $$ > "$AOS_STACK/pid"; exec sleep 30`；一拍後 fsm 退非 0、trace 那行 `timed_out` 為 true、`state` 不存在、`pid` 檔裡的行程不在了。
+- 文件：CONVENTION P-36 的「現況」一段刪、改寫成「已做」；README aos-inst 條補「群組」。
+
+#### 步 6：收尾
+
+- README「現況」段改寫（第二輪做完）；CONVENTION 第十節改成一句「第一、二輪都做完（10-xx）」；wf SESSION-LOG 的 proto8-2 條：測試數、把「範本＝shell」字樣改成混合。
+- `demo/run.sh` 只跑 bob 與 ann（cathy 跟著 bob 跑）。
+
+### 三、順序（每步一個 commit、測試全綠）
+
+| 步 | 做什麼 | 相依 | 做完的樣子 |
+|---|---|---|---|
+| 1 | aos_inst 行程群組、aos-fsm `at`、aos-exec PATH 去重 | 無 | `test_timeout_kills_grandchildren` 綠（孫 `sleep` 不在了）；trace 行有 `at`；三層 PATH 只一份 bin；既有 54 測試不改期望全綠 |
+| 2 | bob 改混合範本（`fsm.json`，`fsm/` 刪，stamp 暫在 `act/tools/`） | 無 | `sh demo/run.sh` 照舊一題一答；`ws/.aos/trace.jsonl` 四行；`agent-bob/` 根下是 `.aos loop.json fsm.json idle brain.py act` |
+| 3 | ann 改全內嵌對照 | 無 | `agent-ann/` 只有 `.aos/exec loop.json fsm.json idle.py brain.py act.py`；`test_demo_flow_ann` 不改期望仍綠 |
+| 4 | cathy；bob 的 act 叫她；stamp 搬到她底下；run.sh 印整棵樹 | 2 | `out/q.txt` 第二行 `FAKE ANSWER to: FAKE ANSWER to: …`；`ws/.aos/cathy/ws/out/q.txt` 存在；`ws/.aos/cathy/stamp/runs`＝1；兩題連跑 cathy 的 `trace.jsonl` 八行；六條新測試綠 |
+| 5 | 外層逾時收掉整棵內層的測試 | 1 | `test_outer_timeout_kills_nested_tree` 綠；P-36「現況」段刪掉 |
+| 6 | README、CONVENTION 第十節、SESSION-LOG 收尾 | 1～5 | 第十節一句話；README 現況說第二輪做完；wf-lint `proto8-2` broken=0 |
+
+每步 commit 前照第一輪的規矩：WSL `python3 -m unittest discover -s proto8-2/tests` 全綠、`sh proto8-2/demo/run.sh` 跑通、`bash wf/tools/wf-lint.sh proto8-2` broken=0、README 跟 bin／demo 同步。
+
+### 四、CONVENTION 要同步的條（彙整）
+
+- 步 1：P-36「現況」保留到步 5；P-38 `at` 已寫；第十節 3、4、5。
+- 步 2：第十節 1（bob 半句）；README agent-bob。
+- 步 3：第十節 1（ann 半句）；README agent-ann。
+- 步 4：第十節 2；README 補 cathy；P-17 例子已是 cathy→stamp，不用動。
+- 步 5：P-36 現況段刪。
+- 步 6：第十節一句話；README 現況。
+
+### 五、要使用者決定的
+
+一條衝突（N-52 ↔ P-36）與一個方向問題（agent 當工具時題目怎麼交）寫在 [CONFLICTS.md](CONFLICTS.md) 第 7 條與「方向問題」；都附了預設做法，使用者沒反對就照預設做、不卡步驟。另外兩處是 fable 自己定、列出讓他知道：
+
+1. cathy 放在 bob 的 `act/tools/` 底下，不是獨立的 `demo/agent-cathy/`（上面決定 2）。要獨立一份給多個 agent 共用，Linux 上在 `tools/` 放捷徑即可（P-33），demo 不示範。
+2. ann 留下來當全內嵌對照、不刪（§ 八要有「零子資料夾」那一端的實物；三支 `.py` 的維護成本很低）。

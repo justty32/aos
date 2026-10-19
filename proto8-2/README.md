@@ -10,7 +10,7 @@
 
 ## 現況
 
-10-19 使用者定了：資料夾＝程式、入口＝`$AOS_ENTRY`（預設 `.aos/exec`）、三個環境變數、`aos-exec DIR [WS]`、inst 四種用法可選並存、慣例拍板點 1～3。原話在 [thinking/ideas](thinking/2026-10-19-ideas.md)；整套 aos agent 慣例（結論版，條號 P-01～P-31）在 [CONVENTION.md](CONVENTION.md)；程式已照它做完（10-19）：[PLAN.md](PLAN.md) 是當時 fable 規劃的四項怎麼做、分六步的紀錄，六步都已做完（aos-exec 錯退 1、aos-inst、aos-exec 認 exec.json、agent-bob think 改 (A)、aos-fsm＋agent-ann、tools/stamp）。方向、範圍、是否接替 proto8 都還沒定。
+10-19 使用者定了：資料夾＝程式、入口＝`$AOS_ENTRY`（預設 `.aos/exec`）、三個環境變數、`aos-exec DIR [WS]`、inst 四種用法可選並存、慣例拍板點 1～3。原話在 [thinking/ideas](thinking/2026-10-19-ideas.md)；整套 aos agent 慣例（結論版，條號 P-01～P-31）在 [CONVENTION.md](CONVENTION.md)；程式已照它做完（10-19）：[PLAN.md](PLAN.md) 是當時 fable 規劃的四項怎麼做、分六步的紀錄，六步都已做完（aos-exec 錯退 1、aos-inst、aos-exec 認 exec.json、agent-bob think 改 (A)、aos-fsm＋agent-ann、tools/stamp）。**10-19 第二輪**（[ideas § 10](thinking/2026-10-19-ideas.md)）：範本改混合寫法、巢狀層層疊疊的規則定在 [CONVENTION 第十二節](CONVENTION.md)（P-32～P-39），程式還沒改、步驟在 [PLAN 第二輪](PLAN.md)；底下「原型怎麼跑」描述的仍是第一輪做完的程式。方向、範圍、是否接替 proto8 都還沒定。
 
 ## 原型怎麼跑（10-19）
 
