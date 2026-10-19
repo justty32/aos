@@ -1,10 +1,4 @@
-#!/bin/sh
-# think：取 inbox 第一題，把「要寫的答案」放進 $AOS_STACK/plan。預設假腦；設 AOS_BRAIN_URL 則問 OpenAI 相容的模型。
-[ -n "$AOS_STACK" ] || { echo "agent-bob: 沒設定 AOS_STACK" >&2; exit 1; }
-f=$(ls "$AOS_WS"/inbox/* | head -n 1); name=$(basename "$f")
-echo "$name" > "$AOS_STACK/current"
-if [ -n "$AOS_BRAIN_URL" ]; then
-  python3 brain.py "$f" > "$AOS_STACK/plan" || exit 1
-else
-  echo "FAKE ANSWER to: $(cat "$f")" > "$AOS_STACK/plan"
-fi
+#!/usr/bin/env aos-inst
+{"argv": ["python3", "brain.py"],
+ "stdout": {"$env": "AOS_STACK", "path": "plan"},
+ "timeout_ms": 120000}

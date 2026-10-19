@@ -184,10 +184,28 @@ class T(unittest.TestCase):
 
     def test_bob_requires_stack(self):
         ws = workspace(self.tmp, "ws", "hello")
-        for sub in ("fsm", "fsm/think", "fsm/act"):
+        for sub in ("fsm", "fsm/act"):
             r = run(str(Path(BOB) / sub / ".aos/exec"), env={"AOS_WS": str(ws)})
             self.assertNotEqual(r.returncode, 0, sub)
             self.assertIn("沒設定 AOS_STACK", r.stderr, sub)
+        # think 是 (A) 單子：$env 找不到 AOS_STACK → aos-inst 退 1，訊息含 AOS_STACK
+        r = run(str(Path(BOB) / "fsm/think/.aos/exec"),
+                env={"AOS_WS": str(ws), "PATH": str(ROOT / "bin") + os.pathsep + os.environ["PATH"]},
+                cwd=str(Path(BOB) / "fsm/think"))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("AOS_STACK", r.stderr)
+
+    def test_bob_think_is_inst_A_and_direct_exec_works(self):
+        think = Path(BOB) / "fsm/think"
+        self.assertTrue((think / ".aos/exec").read_text().startswith("#!/usr/bin/env aos-inst\n"))
+        ws = workspace(self.tmp, "ws", "hello")
+        stack = Path(self.tmp, "stack"); stack.mkdir()
+        env = {"AOS_WS": str(ws), "AOS_STACK": str(stack),
+               "PATH": str(ROOT / "bin") + os.pathsep + os.environ["PATH"]}
+        r = run(str(think / ".aos/exec"), env=env, cwd=str(think))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual((stack / "current").read_text().strip(), "q.txt")
+        self.assertEqual((stack / "plan").read_text(), "FAKE ANSWER to: hello\n")
 
     def test_bob_entry_direct_exec_no_enoexec(self):
         # 入口帶 shebang：不經 sh、直接 exec 也跑得起來（P-05）
