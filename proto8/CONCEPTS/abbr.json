@@ -218,6 +218,18 @@
    "full": "workspace",
    "meaning": "工作區：使用者的檔與成品所在的資料夾（不是 stack）",
    "example": "AOS_WS（C-65、N-55）"
+  },
+  {
+   "abbr": "cf",
+   "full": "current file",
+   "meaning": "現在跑的那個檔：aos-exec 實際執行的入口檔的絕對路徑，不帶 #/…（10-19 下班前，ideas § 19）",
+   "example": "AOS_CF（N-57）"
+  },
+  {
+   "abbr": "cd",
+   "full": "current dir",
+   "meaning": "現在所在的資料夾：AOS_CF 所在的資料夾＝aos-exec cd 進去的地方（只用在環境變數名；不是 Unix 的 cd 指令，10-19 下班前，ideas § 19）",
+   "example": "AOS_CD（N-57）"
   }
  ]
 }

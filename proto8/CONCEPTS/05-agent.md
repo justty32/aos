@@ -27,7 +27,7 @@
 
 出處：[稿 § 四](../thinking/2026-10-16-agent-inherit.md#四使用者決定10-16)、[ideas § 4、§ 10](../thinking/2026-10-19-ideas.md)。名詞：資料夾程式、stack、小格、工作區，見 [CONCEPTS 基礎設施 § 資料夾程式、工作區與 stack](03-基礎設施.md#資料夾程式工作區與-stack10-19)。規範 N-50、N-53；慣例 P-11（題目與答案）、P-17（小格）、P-25、P-32、P-33（工具）。
 
-- **C-61** **工具的地址不用 PATH**：工具是資料夾程式，放在呼叫它的那一格自己的資料夾裡（例 `act/tools/cathy/`），格裡寫 `aos-exec tools/<名>`——從自己 cwd 算的相對路徑、永遠零個 `..`（P-25、P-33），兩份定義一起搬也不斷；**工具一律做成資料夾程式**（`date` 這種也是），所以叫每個工具都做同一件事：給它一個小格（它自己的 stack，P-17）、`aos-exec` 它。工具裡是不是另一個 agent，呼叫的格不知道（C-52）。**工具的參數怎麼進（args、stdin、或 stack 裡的檔）由工具自己的說明定**，aos-exec 保證 args 與 stdin 原樣送到（P-26）。例外：aos 自己的指令（`aos-exec`、`aos-loop`、`aos-fsm`、`aos-inst`）由 aos-exec 把 `bin/` 放進 PATH，入口裡直接寫指令名（P-03、P-39）——那是 aos 的指令，不是工具。PATH 其餘的只留給人在終端打指令。（使用者 10-16 夜：「可以不使用PATH嗎？」→ 看完提案：「好!」）
+- **C-61** **工具的地址不用 PATH**：工具是資料夾程式，放在呼叫它的那一格自己的資料夾裡（例 `act/tools/cathy/`），格裡寫 `aos-exec tools/<名>`——從自己 cwd 算的相對路徑、永遠零個 `..`（P-25、P-33），兩份定義一起搬也不斷；**工具一律做成資料夾程式**（`date` 這種也是），所以叫每個工具都做同一件事：給它一個小格（它自己的 stack，P-17）、`aos-exec` 它。工具裡是不是另一個 agent，呼叫的格不知道（C-52）。**工具的參數怎麼進（args、stdin、或 stack 裡的檔）由工具自己的說明定**，aos-exec 保證 args 與 stdin 原樣送到（P-26）。例外：aos 自己的指令（`aos-exec`、`aos-loop`、`aos-fsm`、`aos-inst`；impls 線現在只有 `aos-exec` 一支，[ideas § 20](../thinking/2026-10-19-ideas.md)）由 aos-exec 把 `bin/` 放進 PATH，入口裡直接寫指令名（P-03、P-39）——那是 aos 的指令，不是工具。PATH 其餘的只留給人在終端打指令。（使用者 10-16 夜：「可以不使用PATH嗎？」→ 看完提案：「好!」）
 
 ## agent 就是一台狀態機（10-16 使用者定）
 
