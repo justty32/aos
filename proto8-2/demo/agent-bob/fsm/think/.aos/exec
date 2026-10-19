@@ -1,4 +1,0 @@
-#!/usr/bin/env aos-inst
-{"argv": ["python3", "brain.py"],
- "stdout": {"$env": "AOS_STACK", "path": "plan"},
- "timeout_ms": 120000}

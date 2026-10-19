@@ -138,7 +138,9 @@ class T(unittest.TestCase):
         ws = workspace(self.tmp, "ws", "hello")
         r = run(EXEC, BOB, str(ws))
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((ws / ".aos" / "trace.log").read_text().split(), ["idle", "think", "act", "idle"])
+        tr = [json.loads(l) for l in (ws / ".aos" / "trace.jsonl").read_text().splitlines()]
+        self.assertEqual([(t["state"], t["code"]) for t in tr],
+                         [("idle", 0), ("think", 0), ("act", 0), ("idle", 10)])
         self.assertIn("hello", (ws / "out" / "q.txt").read_text())
         self.assertTrue((ws / "done" / "q.txt").exists())
         self.assertFalse((ws / "inbox" / "q.txt").exists())
@@ -154,7 +156,7 @@ class T(unittest.TestCase):
             self.assertIn(tag, out)
         self.assertNotIn("BBB", (a / "out" / "q.txt").read_text())
         self.assertEqual(list(Path(BOB).rglob("state")), [])  # 定義資料夾保持乾淨
-        self.assertEqual(list(Path(BOB).rglob("trace.log")), [])
+        self.assertEqual(list(Path(BOB).rglob("trace.jsonl")), [])
         self.assertNotEqual((a / ".aos" / "plan").read_text(), (b / ".aos" / "plan").read_text())
 
     def test_stack_default_and_override(self):
@@ -178,35 +180,30 @@ class T(unittest.TestCase):
     def test_bob_state_in_stack_not_ws_or_def(self):
         ws = workspace(self.tmp, "ws", "hello")
         self.assertEqual(run(EXEC, BOB, str(ws)).returncode, 0)
-        for n in ("state", "trace.log", "plan", "current"):
+        for n in ("state", "trace.jsonl", "plan", "current"):
             self.assertTrue((ws / ".aos" / n).exists(), n)
             self.assertFalse((ws / n).exists(), n)
             self.assertEqual(list(Path(BOB).rglob(n)), [])
 
     def test_bob_requires_stack(self):
         ws = workspace(self.tmp, "ws", "hello")
-        for sub in ("fsm", "fsm/act"):
-            r = run(str(Path(BOB) / sub / ".aos/exec"), env={"AOS_WS": str(ws)})
-            self.assertNotEqual(r.returncode, 0, sub)
-            self.assertIn("沒設定 AOS_STACK", r.stderr, sub)
-        # think 是 (A) 單子：$env 找不到 AOS_STACK → aos-inst 退 1，訊息含 AOS_STACK
-        r = run(str(Path(BOB) / "fsm/think/.aos/exec"),
-                env={"AOS_WS": str(ws), "PATH": str(ROOT / "bin") + os.pathsep + os.environ["PATH"]},
-                cwd=str(Path(BOB) / "fsm/think"))
+        r = run(str(Path(BOB) / "act/.aos/exec"), env={"AOS_WS": str(ws)})
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("沒設定 AOS_STACK", r.stderr)
+        # fsm 本身沒設 AOS_STACK 也退 1
+        r = run(str(ROOT / "bin" / "aos-fsm"), "fsm.json", env={"AOS_WS": str(ws)},
+                cwd=BOB)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("AOS_STACK", r.stderr)
+        self.assertIn("沒設定 AOS_STACK", r.stderr)
 
-    def test_bob_think_is_inst_A_and_direct_exec_works(self):
-        think = Path(BOB) / "fsm/think"
-        self.assertTrue((think / ".aos/exec").read_text().startswith("#!/usr/bin/env aos-inst\n"))
-        ws = workspace(self.tmp, "ws", "hello")
-        stack = Path(self.tmp, "stack"); stack.mkdir()
-        env = {"AOS_WS": str(ws), "AOS_STACK": str(stack),
-               "PATH": str(ROOT / "bin") + os.pathsep + os.environ["PATH"]}
-        r = run(str(think / ".aos/exec"), env=env, cwd=str(think))
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((stack / "current").read_text().strip(), "q.txt")
-        self.assertEqual((stack / "plan").read_text(), "FAKE ANSWER to: hello\n")
+    def test_bob_think_is_embedded_inst(self):
+        cfg = json.loads((Path(BOB) / "fsm.json").read_text())
+        think = cfg["states"]["think"]["val"]
+        self.assertIsInstance(think, dict)
+        self.assertEqual(think["argv"][0], "python3")
+        self.assertEqual(cfg["states"]["idle"]["val"], "idle")   # 資料夾格
+        self.assertEqual(cfg["states"]["act"]["val"], "act")
+        self.assertFalse((Path(BOB) / "fsm").exists())
 
     def test_bob_entry_direct_exec_no_enoexec(self):
         # 入口帶 shebang：不經 sh、直接 exec 也跑得起來（P-05）
@@ -269,7 +266,7 @@ class T(unittest.TestCase):
             self.assertEqual(list(Path(ANN).rglob(n)), [], n)   # 定義資料夾乾淨
 
     def test_stamp_tool_alone(self):
-        stamp = str(Path(BOB) / "tools" / "stamp")
+        stamp = str(Path(BOB) / "act" / "tools" / "stamp")
         ws = Path(self.tmp, "ws"); ws.mkdir()
         for n in ("1", "2"):
             r = run(EXEC, stamp, str(ws), input="body text\n")

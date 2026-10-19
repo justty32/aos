@@ -1,1 +1,1 @@
-{"run": "fsm", "max": 20}
+{"run": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}

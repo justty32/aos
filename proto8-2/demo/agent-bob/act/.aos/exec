@@ -5,5 +5,5 @@ name=$(cat "$AOS_STACK/current")
 mkdir -p "$AOS_WS/out" "$AOS_WS/done"
 plan=$AOS_STACK/plan
 sub=$AOS_STACK/stamp/
-AOS_STACK=$sub aos-exec ../../tools/stamp < "$plan" > "$AOS_WS/out/$name" || exit 1
+AOS_STACK=$sub aos-exec tools/stamp < "$plan" > "$AOS_WS/out/$name" || exit 1
 mv "$AOS_WS/inbox/$name" "$AOS_WS/done/$name"
